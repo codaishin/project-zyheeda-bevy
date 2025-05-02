@@ -30,6 +30,7 @@ use common::{
 		keys::{
 			Key,
 			slot::{Combo, SlotKey},
+			user_input::UserInput,
 		},
 		skill_description::SkillToken,
 		skill_execution::SkillExecution,
@@ -90,7 +91,7 @@ use systems::{
 	dad::{drag::drag, drop::drop},
 	dropdown::select_successor_key::select_successor_key,
 	image_color::image_color,
-	insert_key_code_text::insert_key_code_text,
+	insert_key_code_text::insert_user_input_text,
 	mouse_context::{prime::prime_mouse_context, set_ui::set_ui_mouse_context},
 	on_release_set::OnReleaseSet,
 	render_ui::RenderUi,
@@ -220,7 +221,7 @@ where
 			(
 				SettingsScreen::set_key_bindings_from::<TSettings::TKeyMap<Key>>,
 				KeyBind::<Key>::render_ui::<TLocalization::TLocalizationServer>,
-				KeyBind::<KeyCode>::render_ui::<TLocalization::TLocalizationServer>,
+				KeyBind::<UserInput>::render_ui::<TLocalization::TLocalizationServer>,
 			)
 				.run_if(in_state(settings)),
 		);
@@ -240,7 +241,7 @@ where
 					InsertOn::<MenuBackground>::required(MenuBackground::node),
 					image_color,
 					adjust_global_z_index,
-					insert_key_code_text::<
+					insert_user_input_text::<
 						SlotKey,
 						TSettings::TKeyMap<SlotKey>,
 						TLocalization::TLocalizationServer,

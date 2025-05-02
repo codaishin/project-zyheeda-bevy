@@ -3,18 +3,17 @@ use bevy::{
 		component::Component,
 		system::{Query, Res, ResMut, Resource},
 	},
-	input::keyboard::KeyCode,
 	state::state::NextState,
 	ui::Interaction,
 };
 use common::{
 	states::mouse_context::MouseContext,
-	tools::keys::slot::SlotKey,
-	traits::{accessors::get::GetterRef, key_mappings::GetKeyCode},
+	tools::keys::{slot::SlotKey, user_input::UserInput},
+	traits::{accessors::get::GetterRef, key_mappings::GetUserInput},
 };
 
 pub fn prime_mouse_context<
-	TMap: Resource + GetKeyCode<SlotKey, KeyCode>,
+	TMap: Resource + GetUserInput<SlotKey, UserInput>,
 	TPanel: GetterRef<SlotKey> + Component,
 >(
 	mut mouse_context: ResMut<NextState<MouseContext>>,
@@ -24,16 +23,16 @@ pub fn prime_mouse_context<
 	let get_key_code = get_key_code_from(key_map.as_ref());
 	let key_code = buttons.iter().find(is_pressed).map(get_key_code);
 
-	let Some(key_code) = key_code else {
+	let Some(UserInput::KeyCode(key_code)) = key_code else {
 		return;
 	};
 
 	mouse_context.set(MouseContext::Primed(key_code));
 }
 
-fn get_key_code_from<TMap: GetKeyCode<SlotKey, KeyCode>, TPanel: GetterRef<SlotKey>>(
+fn get_key_code_from<TMap: GetUserInput<SlotKey, UserInput>, TPanel: GetterRef<SlotKey>>(
 	key_map: &'_ TMap,
-) -> impl Fn((&TPanel, &Interaction)) -> KeyCode + '_ {
+) -> impl Fn((&TPanel, &Interaction)) -> UserInput + '_ {
 	|(panel, _): (&TPanel, &Interaction)| key_map.get_key_code(*panel.get())
 }
 
@@ -65,14 +64,14 @@ mod test {
 	}
 
 	#[derive(Resource)]
-	struct _Map(SlotKey, KeyCode);
+	struct _Map(SlotKey, UserInput);
 
-	impl GetKeyCode<SlotKey, KeyCode> for _Map {
-		fn get_key_code(&self, value: SlotKey) -> KeyCode {
+	impl GetUserInput<SlotKey, UserInput> for _Map {
+		fn get_key_code(&self, value: SlotKey) -> UserInput {
 			if value == self.0 {
 				return self.1;
 			}
-			KeyCode::Abort
+			UserInput::from(KeyCode::Abort)
 		}
 	}
 
@@ -89,7 +88,10 @@ mod test {
 
 	#[test]
 	fn prime() {
-		let mut app = setup(_Map(SlotKey::BottomHand(Side::Right), KeyCode::KeyZ));
+		let mut app = setup(_Map(
+			SlotKey::BottomHand(Side::Right),
+			UserInput::from(KeyCode::KeyZ),
+		));
 
 		app.world_mut().spawn((
 			_Panel(SlotKey::BottomHand(Side::Right)),
@@ -112,7 +114,10 @@ mod test {
 
 	#[test]
 	fn do_not_prime_when_not_pressed() {
-		let mut app = setup(_Map(SlotKey::BottomHand(Side::Right), KeyCode::KeyZ));
+		let mut app = setup(_Map(
+			SlotKey::BottomHand(Side::Right),
+			UserInput::from(KeyCode::KeyZ),
+		));
 
 		app.world_mut()
 			.spawn((_Panel(SlotKey::BottomHand(Side::Right)), Interaction::None));
@@ -133,7 +138,10 @@ mod test {
 
 	#[test]
 	fn prime_with_different_key() {
-		let mut app = setup(_Map(SlotKey::BottomHand(Side::Right), KeyCode::KeyT));
+		let mut app = setup(_Map(
+			SlotKey::BottomHand(Side::Right),
+			UserInput::from(KeyCode::KeyT),
+		));
 
 		app.world_mut().spawn((
 			_Panel(SlotKey::BottomHand(Side::Right)),

@@ -5,7 +5,10 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	states::mouse_context::MouseContext,
-	tools::{keys::slot::SlotKey, skill_execution::SkillExecution},
+	tools::{
+		keys::{slot::SlotKey, user_input::UserInput},
+		skill_execution::SkillExecution,
+	},
 	traits::{
 		accessors::get::{GetFieldRef, GetterRef},
 		handles_loadout_menu::GetItem,
@@ -21,13 +24,13 @@ pub fn panel_activity_colors_override<TMap, TPanel, TContainer>(
 	container: Res<TContainer>,
 	mouse_context: Res<State<MouseContext>>,
 ) where
-	TMap: Resource + TryGetKey<KeyCode, SlotKey>,
+	TMap: Resource + TryGetKey<UserInput, SlotKey>,
 	TContainer: Resource + GetItem<SlotKey>,
 	TContainer::TItem: InspectAble<SkillExecution>,
 	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor + GetterRef<SlotKey> + Component,
 {
 	let primed_slot = match mouse_context.get() {
-		MouseContext::Primed(key) => key_map.try_get_key(*key),
+		MouseContext::Primed(key) => key_map.try_get_key(UserInput::from(*key)),
 		_ => None,
 	};
 
@@ -129,11 +132,11 @@ mod tests {
 	#[derive(Resource)]
 	enum _Map {
 		None,
-		Map(KeyCode, SlotKey),
+		Map(UserInput, SlotKey),
 	}
 
-	impl TryGetKey<KeyCode, SlotKey> for _Map {
-		fn try_get_key(&self, value: KeyCode) -> Option<SlotKey> {
+	impl TryGetKey<UserInput, SlotKey> for _Map {
+		fn try_get_key(&self, value: UserInput) -> Option<SlotKey> {
 			match self {
 				_Map::Map(key, slot) if key == &value => Some(*slot),
 				_ => None,
@@ -259,7 +262,10 @@ mod tests {
 	#[test]
 	fn set_to_pressed_when_matching_key_primed_in_mouse_context() {
 		let mut app = setup(
-			_Map::Map(KeyCode::KeyQ, SlotKey::BottomHand(Side::Right)),
+			_Map::Map(
+				UserInput::from(KeyCode::KeyQ),
+				SlotKey::BottomHand(Side::Right),
+			),
 			_Cache::from([]),
 		);
 		let panel = app

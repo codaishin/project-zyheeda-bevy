@@ -2,7 +2,7 @@ use super::{
 	DeleteSkill,
 	SkillSelectDropdownInsertCommand,
 	combo_skill_button::{ComboSkillButton, DropdownTrigger, Vertical},
-	key_code_text_insert_command::KeyCodeTextInsertCommand,
+	key_code_text_insert_command::UserInputTextInsertCommand,
 	key_select_dropdown_command::{AppendSkillCommand, KeySelectDropdownCommand},
 	menu_background::{MenuBackground, WithOverride},
 };
@@ -265,8 +265,8 @@ impl ComboOverview<()> {
 		)
 	}
 
-	pub(crate) fn skill_key_text(key: SlotKey) -> KeyCodeTextInsertCommand<SlotKey> {
-		KeyCodeTextInsertCommand {
+	pub(crate) fn skill_key_text(key: SlotKey) -> UserInputTextInsertCommand<SlotKey> {
+		UserInputTextInsertCommand {
 			key,
 			font: TextFont {
 				font_size: Self::BUTTON_FONT_SIZE,

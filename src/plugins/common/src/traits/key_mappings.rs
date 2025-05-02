@@ -2,69 +2,75 @@ use super::thread_safe::ThreadSafe;
 use bevy::input::ButtonInput;
 use std::hash::Hash;
 
-pub trait GetKeyCode<TKey, TKeyCode> {
-	fn get_key_code(&self, value: TKey) -> TKeyCode;
+pub trait GetUserInput<TKey, TUserInput> {
+	fn get_key_code(&self, value: TKey) -> TUserInput;
 }
 
-pub trait TryGetKey<TKeyCode, TKey> {
-	fn try_get_key(&self, value: TKeyCode) -> Option<TKey>;
+pub trait TryGetKey<TUserInput, TKey> {
+	fn try_get_key(&self, value: TUserInput) -> Option<TKey>;
 }
 
-pub trait Pressed<TKey, TKeyCode>
+pub trait MapKey: Into<Self::TMapKey> {
+	type TMapKey;
+}
+
+pub trait Pressed<TKey, TBevyInput>
 where
-	TKeyCode: Eq + Hash + Copy + ThreadSafe,
+	TBevyInput: Eq + Hash + Copy + ThreadSafe,
 {
-	fn pressed(&self, input: &ButtonInput<TKeyCode>) -> impl Iterator<Item = TKey>;
+	fn pressed(&self, input: &ButtonInput<TBevyInput>) -> impl Iterator<Item = TKey>;
 }
 
-impl<T, TKey, TKeyCode> Pressed<TKey, TKeyCode> for T
+impl<T, TKey, TBevyInput> Pressed<TKey, TBevyInput> for T
 where
-	T: TryGetKey<TKeyCode, TKey>,
+	T: TryGetKey<TBevyInput::TMapKey, TKey>,
 	TKey: Eq + Hash,
-	TKeyCode: Eq + Hash + Copy + ThreadSafe,
+	TBevyInput: MapKey + Eq + Hash + Copy + ThreadSafe,
 {
-	fn pressed(&self, input: &ButtonInput<TKeyCode>) -> impl Iterator<Item = TKey> {
-		input.get_pressed().filter_map(|key| self.try_get_key(*key))
+	fn pressed(&self, input: &ButtonInput<TBevyInput>) -> impl Iterator<Item = TKey> {
+		input
+			.get_pressed()
+			.filter_map(|key| self.try_get_key((*key).into()))
 	}
 }
 
-pub trait JustPressed<TKey, TKeyCode>
+pub trait JustPressed<TKey, TBevyInput>
 where
-	TKeyCode: Eq + Hash + Copy + ThreadSafe,
+	TBevyInput: Eq + Hash + Copy + ThreadSafe,
 {
-	fn just_pressed(&self, input: &ButtonInput<TKeyCode>) -> impl Iterator<Item = TKey>;
+	fn just_pressed(&self, input: &ButtonInput<TBevyInput>) -> impl Iterator<Item = TKey>;
 }
 
-impl<T, TKey, TKeyCode> JustPressed<TKey, TKeyCode> for T
+impl<T, TKey, TBevyInput> JustPressed<TKey, TBevyInput> for T
 where
-	T: TryGetKey<TKeyCode, TKey>,
+	T: TryGetKey<TBevyInput::TMapKey, TKey>,
 	TKey: Eq + Hash,
-	TKeyCode: Eq + Hash + Copy + ThreadSafe,
+	TBevyInput: MapKey + Eq + Hash + Copy + ThreadSafe,
 {
-	fn just_pressed(&self, input: &ButtonInput<TKeyCode>) -> impl Iterator<Item = TKey> {
+	fn just_pressed(&self, input: &ButtonInput<TBevyInput>) -> impl Iterator<Item = TKey> {
 		input
 			.get_just_pressed()
-			.filter_map(|key| self.try_get_key(*key))
+			.filter_map(|key| self.try_get_key((*key).into()))
 	}
 }
 
-pub trait JustReleased<TKey, TKeyCode>
+pub trait JustReleased<TKey, TBevyInput>
 where
-	TKeyCode: Eq + Hash + Copy + ThreadSafe,
+	TBevyInput: MapKey + Eq + Hash + Copy + ThreadSafe,
 {
-	fn just_released(&self, input: &ButtonInput<TKeyCode>) -> impl Iterator<Item = TKey>;
+	fn just_released(&self, input: &ButtonInput<TBevyInput>) -> impl Iterator<Item = TKey>;
 }
 
-impl<T, TKey, TKeyCode> JustReleased<TKey, TKeyCode> for T
+impl<T, TKey, TBevyInput> JustReleased<TKey, TBevyInput> for T
 where
-	T: TryGetKey<TKeyCode, TKey>,
+	T: TryGetKey<TBevyInput::TMapKey, TKey>,
 	TKey: Eq + Hash,
-	TKeyCode: Eq + Hash + Copy + ThreadSafe,
+	TBevyInput: MapKey + Eq + Hash + Copy + ThreadSafe,
 {
-	fn just_released(&self, input: &ButtonInput<TKeyCode>) -> impl Iterator<Item = TKey> {
+	fn just_released(&self, input: &ButtonInput<TBevyInput>) -> impl Iterator<Item = TKey> {
 		input
 			.get_just_released()
-			.filter_map(|key| self.try_get_key(*key))
+			.filter_map(|key| self.try_get_key((*key).into()))
 	}
 }
 
@@ -80,18 +86,37 @@ mod tests {
 	}
 
 	#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-	enum _KeyCode {
+	enum _MapKey {
 		A,
 		B,
 	}
 
+	impl From<_UserInput> for _MapKey {
+		fn from(input: _UserInput) -> Self {
+			match input {
+				_UserInput::A => _MapKey::A,
+				_UserInput::B => _MapKey::B,
+			}
+		}
+	}
+
+	#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+	enum _UserInput {
+		A,
+		B,
+	}
+
+	impl MapKey for _UserInput {
+		type TMapKey = _MapKey;
+	}
+
 	struct _Map;
 
-	impl TryGetKey<_KeyCode, _Key> for _Map {
-		fn try_get_key(&self, value: _KeyCode) -> Option<_Key> {
+	impl TryGetKey<_MapKey, _Key> for _Map {
+		fn try_get_key(&self, value: _MapKey) -> Option<_Key> {
 			match value {
-				_KeyCode::A => Some(_Key::A),
-				_KeyCode::B => Some(_Key::B),
+				_MapKey::A => Some(_Key::A),
+				_MapKey::B => Some(_Key::B),
 			}
 		}
 	}
@@ -101,8 +126,8 @@ mod tests {
 		let map = _Map;
 		let mut input = ButtonInput::default();
 
-		input.press(_KeyCode::A);
-		input.press(_KeyCode::B);
+		input.press(_UserInput::A);
+		input.press(_UserInput::B);
 
 		assert_eq!(
 			HashSet::from([_Key::A, _Key::B]),
@@ -115,9 +140,9 @@ mod tests {
 		let map = _Map;
 		let mut input = ButtonInput::default();
 
-		input.press(_KeyCode::A);
-		input.press(_KeyCode::B);
-		input.clear_just_pressed(_KeyCode::A);
+		input.press(_UserInput::A);
+		input.press(_UserInput::B);
+		input.clear_just_pressed(_UserInput::A);
 
 		assert_eq!(HashSet::from([_Key::B]), map.just_pressed(&input).collect());
 	}
@@ -127,8 +152,8 @@ mod tests {
 		let map = _Map;
 		let mut input = ButtonInput::default();
 
-		input.press(_KeyCode::A);
-		input.press(_KeyCode::B);
+		input.press(_UserInput::A);
+		input.press(_UserInput::B);
 		input.release_all();
 
 		assert_eq!(

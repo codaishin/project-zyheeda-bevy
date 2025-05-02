@@ -2,13 +2,13 @@ pub(crate) mod dto;
 
 use bevy::prelude::*;
 use common::{
-	tools::keys::Key,
+	tools::keys::{Key, user_input::UserInput},
 	traits::{
 		handles_custom_assets::LoadFrom,
 		handles_settings::UpdateKey,
 		iterate::Iterate,
 		iteration::IterFinite,
-		key_mappings::{GetKeyCode, TryGetKey},
+		key_mappings::{GetUserInput, TryGetKey},
 		load_asset::LoadAsset,
 	},
 };
@@ -22,40 +22,40 @@ use std::{
 #[derive(Resource, Asset, TypePath, Default, Debug, PartialEq, Clone)]
 pub struct KeyMap(KeyMapInternal);
 
-impl<TKey> GetKeyCode<TKey, KeyCode> for KeyMap
+impl<TKey> GetUserInput<TKey, UserInput> for KeyMap
 where
 	TKey: Copy,
 	Key: From<TKey>,
-	KeyCode: From<TKey>,
+	UserInput: From<TKey>,
 {
-	fn get_key_code(&self, key: TKey) -> KeyCode {
+	fn get_key_code(&self, key: TKey) -> UserInput {
 		self.0.get_key_code(key)
 	}
 }
 
-impl<TKey> TryGetKey<KeyCode, TKey> for KeyMap
+impl<TKey> TryGetKey<UserInput, TKey> for KeyMap
 where
 	TKey: TryFrom<Key> + Copy,
-	KeyCode: From<TKey> + PartialEq,
+	UserInput: From<TKey> + PartialEq,
 {
-	fn try_get_key(&self, key: KeyCode) -> Option<TKey> {
+	fn try_get_key(&self, key: UserInput) -> Option<TKey> {
 		self.0.try_get_key(key)
 	}
 }
 
-impl<TKey> UpdateKey<TKey, KeyCode> for KeyMap
+impl<TKey> UpdateKey<TKey, UserInput> for KeyMap
 where
 	TKey: Copy,
 	Key: From<TKey> + Hash + Eq + Copy,
-	KeyCode: From<TKey> + Hash + Eq + Copy,
+	UserInput: From<TKey> + Hash + Eq + Copy,
 {
-	fn update_key(&mut self, key: TKey, key_code: KeyCode) {
+	fn update_key(&mut self, key: TKey, key_code: UserInput) {
 		self.0.update_key(key, key_code);
 	}
 }
 
-impl LoadFrom<KeyMapDto<Key, KeyCode>> for KeyMap {
-	fn load_from<TLoadAsset>(dto: KeyMapDto<Key, KeyCode>, asset_server: &mut TLoadAsset) -> Self
+impl LoadFrom<KeyMapDto<Key, UserInput>> for KeyMap {
+	fn load_from<TLoadAsset>(dto: KeyMapDto<Key, UserInput>, asset_server: &mut TLoadAsset) -> Self
 	where
 		TLoadAsset: LoadAsset,
 	{
@@ -64,8 +64,8 @@ impl LoadFrom<KeyMapDto<Key, KeyCode>> for KeyMap {
 }
 
 impl<'a> Iterate<'a> for KeyMap {
-	type TItem = (&'a Key, &'a KeyCode);
-	type TIter = Iter<'a, Key, KeyCode>;
+	type TItem = (&'a Key, &'a UserInput);
+	type TIter = Iter<'a, Key, UserInput>;
 
 	fn iterate(&'a self) -> Self::TIter {
 		self.0.key_to_key_code.iter()
@@ -73,7 +73,7 @@ impl<'a> Iterate<'a> for KeyMap {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-struct KeyMapInternal<TAllKeys = Key, TKeyCode = KeyCode>
+struct KeyMapInternal<TAllKeys = Key, TKeyCode = UserInput>
 where
 	TAllKeys: Hash + Eq,
 	TKeyCode: Hash + Eq,
@@ -104,7 +104,7 @@ where
 	}
 }
 
-impl<TAllKeys, TKey, TKeyCode> GetKeyCode<TKey, TKeyCode> for KeyMapInternal<TAllKeys, TKeyCode>
+impl<TAllKeys, TKey, TKeyCode> GetUserInput<TKey, TKeyCode> for KeyMapInternal<TAllKeys, TKeyCode>
 where
 	TKey: Copy,
 	TAllKeys: From<TKey> + Hash + Eq,

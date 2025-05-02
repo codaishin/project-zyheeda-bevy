@@ -1,6 +1,8 @@
 use super::KeyMap;
-use bevy::input::keyboard::KeyCode;
-use common::{tools::keys::Key, traits::handles_custom_assets::AssetFileExtensions};
+use common::{
+	tools::keys::{Key, user_input::UserInput},
+	traits::handles_custom_assets::AssetFileExtensions,
+};
 use serde::{Deserialize, Serialize};
 use std::hash::Hash;
 
@@ -26,13 +28,13 @@ where
 	}
 }
 
-impl AssetFileExtensions for KeyMapDto<Key, KeyCode> {
+impl AssetFileExtensions for KeyMapDto<Key, UserInput> {
 	fn asset_file_extensions() -> &'static [&'static str] {
 		&[".keys"]
 	}
 }
 
-impl From<KeyMap> for KeyMapDto<Key, KeyCode> {
+impl From<KeyMap> for KeyMapDto<Key, UserInput> {
 	fn from(KeyMap(map): KeyMap) -> Self {
 		Self {
 			keys: Vec::from_iter(map.key_to_key_code),

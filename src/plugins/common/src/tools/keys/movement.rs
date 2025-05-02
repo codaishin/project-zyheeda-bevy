@@ -1,4 +1,4 @@
-use super::{IsNot, Key};
+use super::{IsNot, Key, user_input::UserInput};
 use crate::traits::{
 	handles_localization::Token,
 	iteration::{Iter, IterFinite},
@@ -30,13 +30,13 @@ impl IterFinite for MovementKey {
 	}
 }
 
-impl From<MovementKey> for KeyCode {
+impl From<MovementKey> for UserInput {
 	fn from(value: MovementKey) -> Self {
 		match value {
-			MovementKey::Forward => KeyCode::KeyW,
-			MovementKey::Backward => KeyCode::KeyS,
-			MovementKey::Left => KeyCode::KeyA,
-			MovementKey::Right => KeyCode::KeyD,
+			MovementKey::Forward => Self::from(KeyCode::KeyW),
+			MovementKey::Backward => Self::from(KeyCode::KeyS),
+			MovementKey::Left => Self::from(KeyCode::KeyA),
+			MovementKey::Right => Self::from(KeyCode::KeyD),
 		}
 	}
 }

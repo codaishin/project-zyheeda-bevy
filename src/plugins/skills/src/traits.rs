@@ -1,5 +1,4 @@
 pub(crate) mod advance_combo;
-pub(crate) mod bevy_input;
 pub(crate) mod flush;
 pub(crate) mod follow_up_keys;
 pub(crate) mod is_timed_out;
@@ -10,6 +9,7 @@ pub(crate) mod skill_builder;
 pub(crate) mod skill_state;
 pub(crate) mod spawn_skill_behavior;
 pub(crate) mod state;
+pub(crate) mod user_input;
 pub(crate) mod write_item;
 
 use crate::{
@@ -101,7 +101,11 @@ pub(crate) trait GetSkillBehavior {
 	fn behavior(&self) -> (SlotKey, RunSkillBehavior);
 }
 
-pub trait InputState<TMap: TryGetKey<TKey, SlotKey>, TKey: Eq + Hash> {
+pub trait InputState<TMap, TKey>
+where
+	TMap: TryGetKey<TKey, SlotKey>,
+	TKey: Eq + Hash,
+{
 	fn just_pressed_slots(&self, map: &TMap) -> Vec<SlotKey>;
 	fn pressed_slots(&self, map: &TMap) -> Vec<SlotKey>;
 	fn just_released_slots(&self, map: &TMap) -> Vec<SlotKey>;

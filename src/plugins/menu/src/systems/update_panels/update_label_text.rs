@@ -1,20 +1,20 @@
 use crate::components::Label;
 use bevy::prelude::*;
 use common::{
-	tools::keys::slot::SlotKey,
-	traits::{handles_localization::LocalizeToken, key_mappings::GetKeyCode},
+	tools::keys::{slot::SlotKey, user_input::UserInput},
+	traits::{handles_localization::LocalizeToken, key_mappings::GetUserInput},
 };
 
 type Labels<'a, T> = (&'a Label<T, SlotKey>, &'a mut Text);
 
 pub fn update_label_text<
-	TMap: Resource + GetKeyCode<SlotKey, KeyCode>,
+	TMap: Resource + GetUserInput<SlotKey, UserInput>,
 	TLanguageServer: Resource + LocalizeToken,
-	T: Sync + Send + 'static,
+	TComponent: Sync + Send + 'static,
 >(
 	key_map: Res<TMap>,
 	mut language_server: ResMut<TLanguageServer>,
-	mut labels: Query<Labels<T>, Added<Label<T, SlotKey>>>,
+	mut labels: Query<Labels<TComponent>, Added<Label<TComponent, SlotKey>>>,
 ) {
 	let key_map = key_map.as_ref();
 
@@ -23,12 +23,15 @@ pub fn update_label_text<
 	}
 }
 
-fn update_text<TMap: GetKeyCode<SlotKey, KeyCode>, TLanguageServer: LocalizeToken, T>(
+fn update_text<TMap, TLanguageServer, TComponent>(
 	key_map: &TMap,
 	language_server: &mut TLanguageServer,
-	label: &Label<T, SlotKey>,
+	label: &Label<TComponent, SlotKey>,
 	mut text: Mut<Text>,
-) {
+) where
+	TMap: GetUserInput<SlotKey, UserInput>,
+	TLanguageServer: LocalizeToken,
+{
 	let key = key_map.get_key_code(label.key);
 	let localized = language_server.localize_token(key).or_token();
 	*text = Text::from(localized);
@@ -39,6 +42,7 @@ mod tests {
 	use super::*;
 	use bevy::app::{App, Update};
 	use common::{
+		test_tools::utils::SingleThreadedApp,
 		tools::keys::slot::Side,
 		traits::{
 			handles_localization::{LocalizationResult, Token, localized::Localized},
@@ -56,8 +60,8 @@ mod tests {
 	}
 
 	#[automock]
-	impl GetKeyCode<SlotKey, KeyCode> for _Map {
-		fn get_key_code(&self, value: SlotKey) -> KeyCode {
+	impl GetUserInput<SlotKey, UserInput> for _Map {
+		fn get_key_code(&self, value: SlotKey) -> UserInput {
 			self.mock.get_key_code(value)
 		}
 	}
@@ -77,17 +81,29 @@ mod tests {
 		}
 	}
 
+	fn setup(map: _Map, language_server: _LanguageServer) -> App {
+		let mut app = App::new().single_threaded(Update);
+
+		app.add_systems(Update, update_label_text::<_Map, _LanguageServer, _T>);
+		app.insert_resource(map);
+		app.insert_resource(language_server);
+
+		app
+	}
+
 	#[test]
 	fn add_section_to_text() {
-		let mut app = App::new();
-		app.insert_resource(_Map::new().with_mock(|mock| {
-			mock.expect_get_key_code().return_const(KeyCode::ArrowUp);
-		}));
-		app.insert_resource(_LanguageServer::new().with_mock(|mock| {
-			mock.expect_localize_token()
-				.with(eq(KeyCode::ArrowUp))
-				.return_const(LocalizationResult::Ok(Localized::from("IIIIII")));
-		}));
+		let mut app = setup(
+			_Map::new().with_mock(|mock| {
+				mock.expect_get_key_code()
+					.return_const(UserInput::from(KeyCode::ArrowUp));
+			}),
+			_LanguageServer::new().with_mock(|mock| {
+				mock.expect_localize_token()
+					.with(eq(UserInput::from(KeyCode::ArrowUp)))
+					.return_const(LocalizationResult::Ok(Localized::from("IIIIII")));
+			}),
+		);
 		let id = app
 			.world_mut()
 			.spawn((
@@ -96,7 +112,6 @@ mod tests {
 			))
 			.id();
 
-		app.add_systems(Update, update_label_text::<_Map, _LanguageServer, _T>);
 		app.update();
 
 		assert_eq!(
@@ -110,15 +125,17 @@ mod tests {
 
 	#[test]
 	fn override_original() {
-		let mut app = App::new();
-		app.insert_resource(_Map::new().with_mock(|mock| {
-			mock.expect_get_key_code().return_const(KeyCode::ArrowUp);
-		}));
-		app.insert_resource(_LanguageServer::new().with_mock(|mock| {
-			mock.expect_localize_token()
-				.with(eq(KeyCode::ArrowUp))
-				.return_const(LocalizationResult::Ok(Localized::from("IIIIII")));
-		}));
+		let mut app = setup(
+			_Map::new().with_mock(|mock| {
+				mock.expect_get_key_code()
+					.return_const(UserInput::from(KeyCode::ArrowUp));
+			}),
+			_LanguageServer::new().with_mock(|mock| {
+				mock.expect_localize_token()
+					.with(eq(UserInput::from(KeyCode::ArrowUp)))
+					.return_const(LocalizationResult::Ok(Localized::from("IIIIII")));
+			}),
+		);
 		let id = app
 			.world_mut()
 			.spawn((
@@ -127,7 +144,6 @@ mod tests {
 			))
 			.id();
 
-		app.add_systems(Update, update_label_text::<_Map, _LanguageServer, _T>);
 		app.update();
 
 		assert_eq!(

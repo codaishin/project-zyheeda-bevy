@@ -1,9 +1,9 @@
 use crate::traits::InputState;
-use bevy::{
-	ecs::system::{Res, Resource},
-	input::keyboard::KeyCode,
+use bevy::ecs::system::{Res, Resource};
+use common::{
+	tools::keys::{slot::SlotKey, user_input::UserInput},
+	traits::key_mappings::TryGetKey,
 };
-use common::{tools::keys::slot::SlotKey, traits::key_mappings::TryGetKey};
 
 #[derive(Default, Debug, PartialEq, Clone)]
 pub(crate) struct Input {
@@ -13,17 +13,17 @@ pub(crate) struct Input {
 }
 
 pub(crate) fn get_inputs<
-	TMap: Resource + TryGetKey<KeyCode, SlotKey>,
-	TSuperiorInput: Resource + InputState<TMap, KeyCode>,
-	TInferiorInput: Resource + InputState<TMap, KeyCode>,
+	TMap: Resource + TryGetKey<UserInput, SlotKey>,
+	TSuperiorInput: Resource + InputState<TMap, UserInput>,
+	TInferiorInput: Resource + InputState<TMap, UserInput>,
 >(
 	key_map: Res<TMap>,
-	superior: Res<TSuperiorInput>,
+	superior_a: Res<TSuperiorInput>,
 	inferior: Res<TInferiorInput>,
 ) -> Input {
-	let mut just_pressed = superior.just_pressed_slots(&key_map);
-	let mut pressed = superior.pressed_slots(&key_map);
-	let mut just_released = superior.just_released_slots(&key_map);
+	let mut just_pressed = superior_a.just_pressed_slots(&key_map);
+	let mut pressed = superior_a.pressed_slots(&key_map);
+	let mut just_released = superior_a.just_released_slots(&key_map);
 
 	pressed.extend(inferior.pressed_slots(&key_map));
 	just_pressed.extend(
@@ -52,7 +52,6 @@ mod tests {
 	use bevy::{
 		app::{App, Update},
 		ecs::system::{In, IntoSystem, ResMut, Resource},
-		input::keyboard::KeyCode,
 		utils::default,
 	};
 	use common::{
@@ -66,8 +65,8 @@ mod tests {
 	#[derive(Resource, Clone, Debug, PartialEq)]
 	struct _Map;
 
-	impl TryGetKey<KeyCode, SlotKey> for _Map {
-		fn try_get_key(&self, _: KeyCode) -> Option<SlotKey> {
+	impl TryGetKey<UserInput, SlotKey> for _Map {
+		fn try_get_key(&self, _: UserInput) -> Option<SlotKey> {
 			None
 		}
 	}
@@ -81,7 +80,7 @@ mod tests {
 	}
 
 	#[automock]
-	impl InputState<_Map, KeyCode> for _Superior {
+	impl InputState<_Map, UserInput> for _Superior {
 		fn just_pressed_slots(&self, map: &_Map) -> Vec<SlotKey> {
 			self.mock.just_pressed_slots(map)
 		}
@@ -99,7 +98,7 @@ mod tests {
 	}
 
 	#[automock]
-	impl InputState<_Map, KeyCode> for _Inferior {
+	impl InputState<_Map, UserInput> for _Inferior {
 		fn just_pressed_slots(&self, map: &_Map) -> Vec<SlotKey> {
 			self.mock.just_pressed_slots(map)
 		}

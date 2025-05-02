@@ -2,35 +2,41 @@ use crate::traits::InputState;
 use bevy::{input::keyboard::KeyCode, state::state::State};
 use common::{
 	states::mouse_context::MouseContext,
-	tools::keys::slot::SlotKey,
+	tools::keys::{slot::SlotKey, user_input::UserInput},
 	traits::key_mappings::TryGetKey,
 };
 
-impl<TMap: TryGetKey<KeyCode, SlotKey>> InputState<TMap, KeyCode> for State<MouseContext<KeyCode>> {
+impl<TMap> InputState<TMap, UserInput> for State<MouseContext<KeyCode>>
+where
+	TMap: TryGetKey<UserInput, SlotKey>,
+{
 	fn just_pressed_slots(&self, map: &TMap) -> Vec<SlotKey> {
 		let MouseContext::JustTriggered(key) = self.get() else {
 			return vec![];
 		};
-		get_slot_key(map, key)
+		get_slot_key(map, UserInput::from(*key))
 	}
 
 	fn pressed_slots(&self, map: &TMap) -> Vec<SlotKey> {
 		let MouseContext::Triggered(key) = self.get() else {
 			return vec![];
 		};
-		get_slot_key(map, key)
+		get_slot_key(map, UserInput::from(*key))
 	}
 
 	fn just_released_slots(&self, map: &TMap) -> Vec<SlotKey> {
 		let MouseContext::JustReleased(key) = self.get() else {
 			return vec![];
 		};
-		get_slot_key(map, key)
+		get_slot_key(map, UserInput::from(*key))
 	}
 }
 
-fn get_slot_key<TMap: TryGetKey<KeyCode, SlotKey>>(map: &TMap, key: &KeyCode) -> Vec<SlotKey> {
-	let Some(slot_key) = map.try_get_key(*key) else {
+fn get_slot_key<TMap>(map: &TMap, user_input: UserInput) -> Vec<SlotKey>
+where
+	TMap: TryGetKey<UserInput, SlotKey>,
+{
+	let Some(slot_key) = map.try_get_key(user_input) else {
 		return vec![];
 	};
 	vec![slot_key]
@@ -45,11 +51,11 @@ mod tests {
 
 	struct _Map;
 
-	impl TryGetKey<KeyCode, SlotKey> for _Map {
-		fn try_get_key(&self, value: KeyCode) -> Option<SlotKey> {
+	impl TryGetKey<UserInput, SlotKey> for _Map {
+		fn try_get_key(&self, value: UserInput) -> Option<SlotKey> {
 			match value {
-				KeyCode::KeyC => Some(SlotKey::BottomHand(Side::Right)),
-				KeyCode::KeyD => Some(SlotKey::BottomHand(Side::Right)),
+				UserInput::KeyCode(KeyCode::KeyC) => Some(SlotKey::BottomHand(Side::Right)),
+				UserInput::KeyCode(KeyCode::KeyD) => Some(SlotKey::BottomHand(Side::Right)),
 				_ => None,
 			}
 		}
