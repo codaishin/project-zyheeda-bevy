@@ -2,31 +2,28 @@ use super::{InputState, ShouldEnqueue};
 use bevy::input::{ButtonInput, keyboard::KeyCode};
 use common::{
 	tools::keys::{slot::SlotKey, user_input::UserInput},
-	traits::{key_mappings::TryGetKey, thread_safe::ThreadSafe},
+	traits::key_mappings::TryGetKey,
 };
-use std::hash::Hash;
 
-impl<TMap, TUserInput, TBevyKey> InputState<TMap, TUserInput> for ButtonInput<TBevyKey>
+impl<TMap> InputState<TMap, UserInput> for ButtonInput<UserInput>
 where
-	TMap: TryGetKey<TUserInput, SlotKey>,
-	TUserInput: Eq + Hash + From<TBevyKey>,
-	TBevyKey: Eq + Hash + Copy + ThreadSafe,
+	TMap: TryGetKey<UserInput, SlotKey>,
 {
 	fn just_pressed_slots(&self, map: &TMap) -> Vec<SlotKey> {
 		self.get_just_pressed()
-			.filter_map(|k| map.try_get_key(TUserInput::from(*k)))
+			.filter_map(|k| map.try_get_key(*k))
 			.collect()
 	}
 
 	fn pressed_slots(&self, map: &TMap) -> Vec<SlotKey> {
 		self.get_pressed()
-			.filter_map(|k| map.try_get_key(TUserInput::from(*k)))
+			.filter_map(|k| map.try_get_key(*k))
 			.collect()
 	}
 
 	fn just_released_slots(&self, map: &TMap) -> Vec<SlotKey> {
 		self.get_just_released()
-			.filter_map(|k| map.try_get_key(TUserInput::from(*k)))
+			.filter_map(|k| map.try_get_key(*k))
 			.collect()
 	}
 }
