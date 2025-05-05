@@ -1,16 +1,14 @@
-use bevy::{input::keyboard::KeyCode, prelude::*};
+use crate::tools::keys::user_input::UserInput;
+use bevy::prelude::*;
 use std::{fmt::Debug, hash::Hash};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Default, States)]
-pub enum MouseContext<TKey = KeyCode>
-where
-	TKey: Debug + Hash + Eq + Clone + Sync + Send + 'static,
-{
+pub enum MouseContext {
 	#[default]
 	Default,
 	UI,
-	Primed(TKey),
-	JustTriggered(TKey),
-	Triggered(TKey),
-	JustReleased(TKey),
+	Primed(UserInput),
+	JustTriggered(UserInput),
+	Triggered(UserInput),
+	JustReleased(UserInput),
 }

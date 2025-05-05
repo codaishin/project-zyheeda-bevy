@@ -32,6 +32,7 @@ mod tests {
 		input::keyboard::KeyCode,
 		state::app::{AppExtStates, StatesPlugin},
 	};
+	use common::tools::keys::user_input::UserInput;
 
 	fn setup() -> App {
 		let mut app = App::new();
@@ -50,7 +51,7 @@ mod tests {
 
 		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
-			.set(MouseContext::JustTriggered(KeyCode::KeyB));
+			.set(MouseContext::JustTriggered(UserInput::from(KeyCode::KeyB)));
 
 		app.update();
 		app.update();
@@ -61,7 +62,10 @@ mod tests {
 			.unwrap()
 			.get();
 
-		assert_eq!(&MouseContext::Triggered(KeyCode::KeyB), mouse_context);
+		assert_eq!(
+			&MouseContext::Triggered(UserInput::from(KeyCode::KeyB)),
+			mouse_context
+		);
 	}
 
 	#[test]
@@ -70,7 +74,7 @@ mod tests {
 
 		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
-			.set(MouseContext::Primed(KeyCode::KeyB));
+			.set(MouseContext::Primed(UserInput::from(KeyCode::KeyB)));
 
 		app.update();
 		app.update();
@@ -81,7 +85,10 @@ mod tests {
 			.unwrap()
 			.get();
 
-		assert_eq!(&MouseContext::Primed(KeyCode::KeyB), mouse_context);
+		assert_eq!(
+			&MouseContext::Primed(UserInput::from(KeyCode::KeyB)),
+			mouse_context
+		);
 	}
 
 	#[test]
@@ -90,7 +97,7 @@ mod tests {
 
 		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
-			.set(MouseContext::JustReleased(KeyCode::KeyB));
+			.set(MouseContext::JustReleased(UserInput::from(KeyCode::KeyB)));
 
 		app.update();
 		app.update();
@@ -110,7 +117,7 @@ mod tests {
 
 		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
-			.set(MouseContext::Primed(KeyCode::KeyB));
+			.set(MouseContext::Primed(UserInput::from(KeyCode::KeyB)));
 
 		app.update();
 		app.update();
@@ -121,6 +128,9 @@ mod tests {
 			.unwrap()
 			.get();
 
-		assert_eq!(&MouseContext::Primed(KeyCode::KeyB), mouse_context);
+		assert_eq!(
+			&MouseContext::Primed(UserInput::from(KeyCode::KeyB)),
+			mouse_context
+		);
 	}
 }

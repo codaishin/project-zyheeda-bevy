@@ -1,3 +1,4 @@
+pub mod collect_user_input;
 pub mod insert_required;
 pub mod log;
 pub mod remove_components;

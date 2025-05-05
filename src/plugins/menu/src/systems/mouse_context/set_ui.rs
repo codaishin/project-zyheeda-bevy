@@ -49,6 +49,7 @@ mod tests {
 		state::app::{AppExtStates, StatesPlugin},
 		ui::Interaction,
 	};
+	use common::tools::keys::user_input::UserInput;
 
 	fn setup() -> App {
 		let mut app = App::new();
@@ -145,13 +146,13 @@ mod tests {
 		app.world_mut().spawn(Interaction::None);
 		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
-			.set(MouseContext::Primed(KeyCode::KeyA));
+			.set(MouseContext::Primed(UserInput::from(KeyCode::KeyA)));
 
 		app.update();
 		app.update();
 
 		assert_eq!(
-			&MouseContext::Primed(KeyCode::KeyA),
+			&MouseContext::Primed(UserInput::from(KeyCode::KeyA)),
 			app.world()
 				.get_resource::<State<MouseContext>>()
 				.unwrap()
@@ -166,13 +167,13 @@ mod tests {
 		app.world_mut().spawn(Interaction::None);
 		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
-			.set(MouseContext::JustTriggered(KeyCode::KeyA));
+			.set(MouseContext::JustTriggered(UserInput::from(KeyCode::KeyA)));
 
 		app.update();
 		app.update();
 
 		assert_eq!(
-			&MouseContext::JustTriggered(KeyCode::KeyA),
+			&MouseContext::JustTriggered(UserInput::from(KeyCode::KeyA)),
 			app.world()
 				.get_resource::<State<MouseContext>>()
 				.unwrap()
@@ -187,13 +188,13 @@ mod tests {
 		app.world_mut().spawn(Interaction::None);
 		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
-			.set(MouseContext::Triggered(KeyCode::KeyA));
+			.set(MouseContext::Triggered(UserInput::from(KeyCode::KeyA)));
 
 		app.update();
 		app.update();
 
 		assert_eq!(
-			&MouseContext::Triggered(KeyCode::KeyA),
+			&MouseContext::Triggered(UserInput::from(KeyCode::KeyA)),
 			app.world()
 				.get_resource::<State<MouseContext>>()
 				.unwrap()
@@ -203,7 +204,8 @@ mod tests {
 
 	#[test]
 	fn ignore_when_next_state_is_already_set() {
-		let mut app = setup_with_next_mouse_context(MouseContext::Primed(KeyCode::KeyA));
+		let mut app =
+			setup_with_next_mouse_context(MouseContext::Primed(UserInput::from(KeyCode::KeyA)));
 
 		app.world_mut().spawn(Interaction::Hovered);
 
@@ -211,7 +213,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			&MouseContext::Primed(KeyCode::KeyA),
+			&MouseContext::Primed(UserInput::from(KeyCode::KeyA)),
 			app.world()
 				.get_resource::<State<MouseContext>>()
 				.unwrap()

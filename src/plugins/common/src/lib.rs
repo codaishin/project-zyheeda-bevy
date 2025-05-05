@@ -21,6 +21,7 @@ use components::{
 };
 use labels::Labels;
 use systems::load_asset_model::load_asset_model;
+use tools::keys::user_input::UserInput;
 
 pub struct CommonPlugin;
 
@@ -28,7 +29,9 @@ impl Plugin for CommonPlugin {
 	fn build(&self, app: &mut App) {
 		let on_instantiate = || Labels::PREFAB_INSTANTIATION.label();
 
-		app.add_systems(First, load_asset_model::<AssetServer>)
+		app
+			// Asset loading through `AssetModel` component
+			.add_systems(First, load_asset_model::<AssetServer>)
 			.add_systems(Update, FlipHorizontally::system)
 			.add_systems(
 				on_instantiate(),
@@ -37,7 +40,22 @@ impl Plugin for CommonPlugin {
 					InsertAsset::<StandardMaterial>::system,
 				),
 			)
+			// Child spawning through `SpawnChildren` component
 			.add_systems(on_instantiate(), SpawnChildren::system)
-			.add_systems(on_instantiate(), ObjectId::update_entity);
+			// Handling `ObjectId`s (mapping `Entity`s for persistent object references)
+			.add_systems(on_instantiate(), ObjectId::update_entity)
+			// Collect user inputs
+			.init_resource::<ButtonInput<UserInput>>()
+			.add_systems(
+				PreUpdate,
+				(
+					UserInput::clear,
+					UserInput::collect::<KeyCode>,
+					UserInput::collect::<MouseButton>,
+				)
+					.chain()
+					.in_set(UserInput::SYSTEM)
+					.after(bevy::input::InputSystem),
+			);
 	}
 }

@@ -158,7 +158,7 @@ where
 			.add_systems(
 				Update,
 				(
-					move_on_mouse_click.run_if(in_state(MouseContext::<KeyCode>::Default)),
+					move_on_mouse_click.run_if(in_state(MouseContext::Default)),
 					update_delta.pipe(move_on_wasd).pipe(log),
 					get_faces.pipe(execute_face::<TPlayers::TMouseHover, TPlayers::TCamRay>),
 				)

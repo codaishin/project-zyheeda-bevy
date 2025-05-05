@@ -15,6 +15,7 @@ use common::{
 		Key,
 		movement::MovementKey,
 		slot::{Side, SlotKey},
+		user_input::UserInput,
 	},
 	traits::{
 		handles_localization::{LocalizeToken, localized::Localized},
@@ -28,7 +29,7 @@ use std::collections::HashMap;
 #[derive(Component, Debug, PartialEq, Default)]
 #[require(MenuBackground)]
 pub(crate) struct SettingsScreen {
-	key_bindings: HashMap<Key, KeyCode>,
+	key_bindings: HashMap<Key, UserInput>,
 }
 
 impl LoadUi<AssetServer> for SettingsScreen {
@@ -94,7 +95,7 @@ fn add_title(parent: &mut ChildBuilder, title: Localized) {
 	));
 }
 
-fn add_key_row(parent: &mut ChildBuilder, key: &Key, key_code: &KeyCode) {
+fn add_key_row(parent: &mut ChildBuilder, key: &Key, user_input: &UserInput) {
 	parent
 		.spawn(Node {
 			flex_direction: FlexDirection::Row,
@@ -102,14 +103,14 @@ fn add_key_row(parent: &mut ChildBuilder, key: &Key, key_code: &KeyCode) {
 		})
 		.with_children(|parent| {
 			parent.spawn(KeyBind(*key));
-			parent.spawn(KeyBind(*key_code));
+			parent.spawn(KeyBind(*user_input));
 		});
 }
 
-impl UpdateKeyBindings<Key, KeyCode> for SettingsScreen {
+impl UpdateKeyBindings<Key, UserInput> for SettingsScreen {
 	fn update_key_bindings<TKeyMap>(&mut self, map: &TKeyMap)
 	where
-		for<'a> TKeyMap: Iterate<'a, TItem = (&'a Key, &'a KeyCode)>,
+		for<'a> TKeyMap: Iterate<'a, TItem = (&'a Key, &'a UserInput)>,
 	{
 		self.key_bindings = map
 			.iterate()

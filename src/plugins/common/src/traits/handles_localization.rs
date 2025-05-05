@@ -1,6 +1,7 @@
 pub mod localized;
 
 mod key_code;
+mod mouse_button;
 
 use bevy::prelude::*;
 use localized::Localized;

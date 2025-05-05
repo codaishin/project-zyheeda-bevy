@@ -1,15 +1,17 @@
 pub mod movement;
 pub mod slot;
+pub mod user_input;
 
 use crate::traits::{
 	handles_localization::Token,
 	iteration::{Iter, IterFinite},
 };
-use bevy::{input::keyboard::KeyCode, utils::default};
+use bevy::utils::default;
 use movement::MovementKey;
 use serde::{Deserialize, Serialize};
 use slot::SlotKey;
 use std::marker::PhantomData;
+use user_input::UserInput;
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Key {
@@ -36,11 +38,11 @@ impl IterFinite for Key {
 	}
 }
 
-impl From<Key> for KeyCode {
+impl From<Key> for UserInput {
 	fn from(key: Key) -> Self {
 		match key {
-			Key::Movement(key) => KeyCode::from(key),
-			Key::Slot(key) => KeyCode::from(key),
+			Key::Movement(key) => Self::from(key),
+			Key::Slot(key) => Self::from(key),
 		}
 	}
 }
@@ -81,7 +83,6 @@ where
 mod tests {
 	use super::*;
 	use crate::traits::iteration::IterFinite;
-	use bevy::input::keyboard::KeyCode;
 	use std::collections::HashSet;
 
 	#[test]
@@ -99,10 +100,10 @@ mod tests {
 	fn map_keys() {
 		assert_eq!(
 			MovementKey::iterator()
-				.map(KeyCode::from)
-				.chain(SlotKey::iterator().map(KeyCode::from))
+				.map(UserInput::from)
+				.chain(SlotKey::iterator().map(UserInput::from))
 				.collect::<HashSet<_>>(),
-			Key::iterator().map(KeyCode::from).collect::<HashSet<_>>(),
+			Key::iterator().map(UserInput::from).collect::<HashSet<_>>(),
 		);
 	}
 }

@@ -5,7 +5,7 @@ use crate::traits::{
 };
 use bevy::prelude::*;
 use common::{
-	tools::keys::Key,
+	tools::keys::{Key, user_input::UserInput},
 	traits::{
 		handles_localization::{LocalizeToken, Token},
 		thread_safe::ThreadSafe,
@@ -14,11 +14,11 @@ use common::{
 
 #[derive(Component, Debug, PartialEq)]
 #[require(Node(Self::node), BackgroundColor(Self::background_color))]
-pub(crate) struct KeyBind<TKey>(pub(crate) TKey)
+pub(crate) struct KeyBind<TUserInput>(pub(crate) TUserInput)
 where
 	Self: GetBackgroundColor + GetNode;
 
-impl<TKey> KeyBind<TKey>
+impl<TUserInput> KeyBind<TUserInput>
 where
 	Self: GetBackgroundColor + GetNode,
 {
@@ -34,10 +34,10 @@ where
 	}
 }
 
-impl<TKey> InsertUiContent for KeyBind<TKey>
+impl<TUserInput> InsertUiContent for KeyBind<TUserInput>
 where
 	Self: GetBackgroundColor + GetNode,
-	TKey: Into<Token> + Copy + 'static,
+	TUserInput: Into<Token> + Copy + 'static,
 {
 	fn insert_ui_content<TLocalization>(
 		&self,
@@ -73,7 +73,7 @@ impl GetBackgroundColor for KeyBindAction {
 	}
 }
 
-type KeyBindInput = KeyBind<KeyCode>;
+type KeyBindInput = KeyBind<UserInput>;
 
 impl GetNode for KeyBindInput {
 	fn node() -> Node {

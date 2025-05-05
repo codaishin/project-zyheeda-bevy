@@ -1,22 +1,15 @@
-use bevy::{
-	ecs::{
-		event::{Event, EventWriter},
-		system::{Res, Resource},
-	},
-	input::{ButtonInput, mouse::MouseButton},
-	math::Vec3,
-};
-use common::traits::intersect_at::IntersectAt;
+use bevy::prelude::*;
+use common::{tools::keys::user_input::UserInput, traits::intersect_at::IntersectAt};
 
 impl<T> TriggerMouseClickMovement for T where T: From<Vec3> + Event {}
 
 pub(crate) trait TriggerMouseClickMovement: From<Vec3> + Event {
 	fn trigger_mouse_click_movement<TRay: IntersectAt + Resource>(
-		mouse_input: Res<ButtonInput<MouseButton>>,
+		mouse_input: Res<ButtonInput<UserInput>>,
 		cam_ray: Res<TRay>,
 		mut move_input_events: EventWriter<Self>,
 	) {
-		if !mouse_input.pressed(MouseButton::Left) {
+		if !mouse_input.pressed(UserInput::from(MouseButton::Left)) {
 			return;
 		}
 		let Some(intersection) = cam_ray.intersect_at(0.) else {
@@ -66,7 +59,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(Update, _Event::trigger_mouse_click_movement::<_Ray>);
 		app.add_event::<_Event>();
-		app.init_resource::<ButtonInput<MouseButton>>();
+		app.init_resource::<ButtonInput<UserInput>>();
 		app.insert_resource(ray);
 
 		app
@@ -86,8 +79,8 @@ mod tests {
 				.return_const(Vec3::new(1., 2., 3.));
 		}));
 		app.world_mut()
-			.resource_mut::<ButtonInput<MouseButton>>()
-			.press(MouseButton::Left);
+			.resource_mut::<ButtonInput<UserInput>>()
+			.press(UserInput::from(MouseButton::Left));
 
 		app.update();
 
@@ -100,8 +93,8 @@ mod tests {
 			mock.expect_intersect_at().return_const(Vec3::default());
 		}));
 		app.world_mut()
-			.resource_mut::<ButtonInput<MouseButton>>()
-			.press(MouseButton::Middle);
+			.resource_mut::<ButtonInput<UserInput>>()
+			.press(UserInput::from(MouseButton::Middle));
 
 		app.update();
 
@@ -114,8 +107,8 @@ mod tests {
 			mock.expect_intersect_at().return_const(None);
 		}));
 		app.world_mut()
-			.resource_mut::<ButtonInput<MouseButton>>()
-			.press(MouseButton::Left);
+			.resource_mut::<ButtonInput<UserInput>>()
+			.press(UserInput::from(MouseButton::Left));
 
 		app.update();
 
@@ -131,8 +124,8 @@ mod tests {
 				.return_const(None);
 		}));
 		app.world_mut()
-			.resource_mut::<ButtonInput<MouseButton>>()
-			.press(MouseButton::Left);
+			.resource_mut::<ButtonInput<UserInput>>()
+			.press(UserInput::from(MouseButton::Left));
 
 		app.update();
 	}

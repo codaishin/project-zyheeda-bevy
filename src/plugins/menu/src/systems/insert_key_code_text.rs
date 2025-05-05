@@ -1,20 +1,23 @@
-use crate::components::key_code_text_insert_command::KeyCodeTextInsertCommand;
+use crate::components::key_code_text_insert_command::UserInputTextInsertCommand;
 use bevy::prelude::*;
-use common::traits::{
-	handles_localization::LocalizeToken,
-	key_mappings::GetKeyCode,
-	try_insert_on::TryInsertOn,
-	try_remove_from::TryRemoveFrom,
+use common::{
+	tools::keys::user_input::UserInput,
+	traits::{
+		handles_localization::LocalizeToken,
+		key_mappings::GetUserInput,
+		try_insert_on::TryInsertOn,
+		try_remove_from::TryRemoveFrom,
+	},
 };
 
-pub(crate) fn insert_key_code_text<TKey, TKeyMap, TLanguageServer>(
+pub(crate) fn insert_user_input_text<TKey, TKeyMap, TLanguageServer>(
 	mut commands: Commands,
-	insert_commands: Query<(Entity, &KeyCodeTextInsertCommand<TKey>)>,
+	insert_commands: Query<(Entity, &UserInputTextInsertCommand<TKey>)>,
 	key_map: Res<TKeyMap>,
 	mut language_server: ResMut<TLanguageServer>,
 ) where
 	TKey: Copy + Sync + Send + 'static,
-	TKeyMap: Resource + GetKeyCode<TKey, KeyCode>,
+	TKeyMap: Resource + GetUserInput<TKey, UserInput>,
 	TLanguageServer: Resource + LocalizeToken,
 {
 	for (entity, insert_command) in &insert_commands {
@@ -29,7 +32,7 @@ pub(crate) fn insert_key_code_text<TKey, TKeyMap, TLanguageServer>(
 				insert_command.layout,
 			),
 		);
-		commands.try_remove_from::<KeyCodeTextInsertCommand<TKey>>(entity);
+		commands.try_remove_from::<UserInputTextInsertCommand<TKey>>(entity);
 	}
 }
 
@@ -55,8 +58,8 @@ mod tests {
 	}
 
 	#[automock]
-	impl GetKeyCode<_Key, KeyCode> for _Map {
-		fn get_key_code(&self, value: _Key) -> KeyCode {
+	impl GetUserInput<_Key, UserInput> for _Map {
+		fn get_key_code(&self, value: _Key) -> UserInput {
 			self.mock.get_key_code(value)
 		}
 	}
@@ -85,7 +88,8 @@ mod tests {
 		fn default() -> Self {
 			Self {
 				map: _Map::new().with_mock(|mock| {
-					mock.expect_get_key_code().return_const(KeyCode::KeyA);
+					mock.expect_get_key_code()
+						.return_const(UserInput::from(KeyCode::KeyA));
 				}),
 				language: _LanguageServer::new().with_mock(|mock| {
 					mock.expect_localize_token::<KeyCode>()
@@ -99,7 +103,10 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 		app.insert_resource(map);
 		app.insert_resource(language);
-		app.add_systems(Update, insert_key_code_text::<_Key, _Map, _LanguageServer>);
+		app.add_systems(
+			Update,
+			insert_user_input_text::<_Key, _Map, _LanguageServer>,
+		);
 
 		app
 	}
@@ -108,16 +115,17 @@ mod tests {
 	fn call_language_server_for_correct_key() {
 		let mut app = setup(Setup {
 			map: _Map::new().with_mock(|mock| {
-				mock.expect_get_key_code().return_const(KeyCode::KeyB);
+				mock.expect_get_key_code()
+					.return_const(UserInput::from(KeyCode::KeyB));
 			}),
 			language: _LanguageServer::new().with_mock(|mock| {
 				mock.expect_localize_token()
 					.times(1)
-					.with(eq(KeyCode::KeyB))
+					.with(eq(UserInput::from(KeyCode::KeyB)))
 					.returning(|token| LocalizationResult::Error(Token::from(token).failed()));
 			}),
 		});
-		app.world_mut().spawn(KeyCodeTextInsertCommand {
+		app.world_mut().spawn(UserInputTextInsertCommand {
 			key: _Key,
 			..default()
 		});
@@ -129,16 +137,17 @@ mod tests {
 	fn spawn_text_bundle() {
 		let mut app = setup(Setup {
 			map: _Map::new().with_mock(|mock| {
-				mock.expect_get_key_code().return_const(KeyCode::KeyB);
+				mock.expect_get_key_code()
+					.return_const(UserInput::from(KeyCode::KeyB));
 			}),
 			language: _LanguageServer::new().with_mock(|mock| {
-				mock.expect_localize_token::<KeyCode>()
+				mock.expect_localize_token::<UserInput>()
 					.return_const(LocalizationResult::Ok(Localized::from("my text")));
 			}),
 		});
 		let text = app
 			.world_mut()
-			.spawn(KeyCodeTextInsertCommand::<_Key>::default())
+			.spawn(UserInputTextInsertCommand::<_Key>::default())
 			.id();
 
 		app.update();
@@ -150,14 +159,14 @@ mod tests {
 	fn spawn_text() {
 		let mut app = setup(Setup {
 			language: _LanguageServer::new().with_mock(|mock| {
-				mock.expect_localize_token::<KeyCode>()
+				mock.expect_localize_token::<UserInput>()
 					.return_const(LocalizationResult::Ok(Localized::from("my text")));
 			}),
 			..default()
 		});
 		let text = app
 			.world_mut()
-			.spawn(KeyCodeTextInsertCommand {
+			.spawn(UserInputTextInsertCommand {
 				key: _Key,
 				font: TextFont {
 					font_size: 11.,
@@ -196,35 +205,35 @@ mod tests {
 	fn remove_insert_command() {
 		let mut app = setup(Setup {
 			language: _LanguageServer::new().with_mock(|mock| {
-				mock.expect_localize_token::<KeyCode>()
+				mock.expect_localize_token::<UserInput>()
 					.return_const(LocalizationResult::Ok(Localized::from("my text")));
 			}),
 			..default()
 		});
 		let text = app
 			.world_mut()
-			.spawn(KeyCodeTextInsertCommand::<_Key>::default())
+			.spawn(UserInputTextInsertCommand::<_Key>::default())
 			.id();
 
 		app.update();
 
 		let text = app.world().entity(text);
 
-		assert_eq!(None, text.get::<KeyCodeTextInsertCommand<_Key>>());
+		assert_eq!(None, text.get::<UserInputTextInsertCommand<_Key>>());
 	}
 
 	#[test]
 	fn remove_insert_command_even_when_key_cannot_be_mapped() {
 		let mut app = setup(Setup {
 			language: _LanguageServer::new().with_mock(|mock| {
-				mock.expect_localize_token::<KeyCode>()
+				mock.expect_localize_token::<UserInput>()
 					.returning(|key| LocalizationResult::Error(Token::from(key).failed()));
 			}),
 			..default()
 		});
 		let text = app
 			.world_mut()
-			.spawn(KeyCodeTextInsertCommand {
+			.spawn(UserInputTextInsertCommand {
 				key: _Key,
 				..default()
 			})
@@ -234,6 +243,6 @@ mod tests {
 
 		let text = app.world().entity(text);
 
-		assert_eq!(None, text.get::<KeyCodeTextInsertCommand<_Key>>());
+		assert_eq!(None, text.get::<UserInputTextInsertCommand<_Key>>());
 	}
 }

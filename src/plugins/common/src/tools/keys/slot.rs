@@ -1,4 +1,4 @@
-use super::{IsNot, Key};
+use super::{IsNot, Key, user_input::UserInput};
 use crate::traits::{
 	handles_localization::Token,
 	iteration::{Iter, IterFinite},
@@ -33,13 +33,13 @@ impl IterFinite for SlotKey {
 	}
 }
 
-impl From<SlotKey> for KeyCode {
+impl From<SlotKey> for UserInput {
 	fn from(value: SlotKey) -> Self {
 		match value {
-			SlotKey::TopHand(Side::Left) => KeyCode::Digit1,
-			SlotKey::BottomHand(Side::Left) => KeyCode::Digit2,
-			SlotKey::BottomHand(Side::Right) => KeyCode::Digit3,
-			SlotKey::TopHand(Side::Right) => KeyCode::Digit4,
+			SlotKey::TopHand(Side::Left) => Self::from(KeyCode::Digit1),
+			SlotKey::BottomHand(Side::Left) => Self::from(KeyCode::Digit2),
+			SlotKey::BottomHand(Side::Right) => Self::from(KeyCode::Digit3),
+			SlotKey::TopHand(Side::Right) => Self::from(KeyCode::Digit4),
 		}
 	}
 }

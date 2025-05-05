@@ -17,7 +17,10 @@ use common::{
 		mouse_context::MouseContext,
 	},
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
-	tools::keys::slot::{Side, SlotKey},
+	tools::keys::{
+		slot::{Side, SlotKey},
+		user_input::UserInput,
+	},
 	traits::{
 		handles_assets_for_children::HandlesAssetsForChildren,
 		handles_combo_menu::{ConfigureCombos, HandlesComboMenu},
@@ -155,8 +158,8 @@ where
 			(
 				get_inputs::<
 					TSettings::TKeyMap<SlotKey>,
-					ButtonInput<KeyCode>,
-					State<MouseContext<KeyCode>>,
+					ButtonInput<UserInput>,
+					State<MouseContext>,
 				>
 					.pipe(enqueue::<Slots, Queue, QueuedSkill>),
 				Combos::update::<Queue>,

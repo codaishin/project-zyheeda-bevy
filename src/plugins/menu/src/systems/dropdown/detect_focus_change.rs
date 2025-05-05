@@ -1,16 +1,12 @@
 use crate::components::dropdown::Dropdown;
-use bevy::{
-	input::ButtonInput,
-	prelude::{Entity, MouseButton, Query, Res},
-	ui::Interaction,
-};
-use common::tools::Focus;
+use bevy::prelude::*;
+use common::tools::{Focus, keys::user_input::UserInput};
 
 pub(crate) fn dropdown_detect_focus_change<TItem: Sync + Send + 'static>(
 	dropdowns: Query<(Entity, &Dropdown<TItem>, &Interaction)>,
-	mouse: Res<ButtonInput<MouseButton>>,
+	mouse: Res<ButtonInput<UserInput>>,
 ) -> Focus {
-	if !mouse.just_pressed(MouseButton::Left) {
+	if !mouse.just_pressed(UserInput::from(MouseButton::Left)) {
 		return Focus::Unchanged;
 	}
 
@@ -37,7 +33,7 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.init_resource::<ButtonInput<MouseButton>>();
+		app.init_resource::<ButtonInput<UserInput>>();
 		app.add_systems(
 			Update,
 			dropdown_detect_focus_change::<()>.pipe(
@@ -54,8 +50,8 @@ mod tests {
 	fn return_pressed() {
 		let mut app = setup();
 		app.world_mut()
-			.resource_mut::<ButtonInput<MouseButton>>()
-			.press(MouseButton::Left);
+			.resource_mut::<ButtonInput<UserInput>>()
+			.press(UserInput::from(MouseButton::Left));
 
 		let pressed = app
 			.world_mut()
@@ -73,9 +69,9 @@ mod tests {
 	#[test]
 	fn return_unchanged_if_mouse_left_not_just_pressed() {
 		let mut app = setup();
-		let mut mouse = app.world_mut().resource_mut::<ButtonInput<MouseButton>>();
-		mouse.press(MouseButton::Left);
-		mouse.clear_just_pressed(MouseButton::Left);
+		let mut mouse = app.world_mut().resource_mut::<ButtonInput<UserInput>>();
+		mouse.press(UserInput::from(MouseButton::Left));
+		mouse.clear_just_pressed(UserInput::from(MouseButton::Left));
 
 		app.world_mut()
 			.spawn((Dropdown::<()>::default(), Interaction::Pressed));
@@ -92,8 +88,8 @@ mod tests {
 	fn return_empty_if_not_interaction_pressed() {
 		let mut app = setup();
 		app.world_mut()
-			.resource_mut::<ButtonInput<MouseButton>>()
-			.press(MouseButton::Left);
+			.resource_mut::<ButtonInput<UserInput>>()
+			.press(UserInput::from(MouseButton::Left));
 
 		app.world_mut()
 			.spawn((Dropdown::<()>::default(), Interaction::None));

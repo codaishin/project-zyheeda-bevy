@@ -2,14 +2,14 @@ use bevy::prelude::*;
 
 #[derive(Component, Debug, Default)]
 #[require(Text)]
-pub(crate) struct KeyCodeTextInsertCommand<TKey> {
+pub(crate) struct UserInputTextInsertCommand<TKey> {
 	pub(crate) key: TKey,
 	pub(crate) font: TextFont,
 	pub(crate) color: TextColor,
 	pub(crate) layout: TextLayout,
 }
 
-impl<TKey: PartialEq> PartialEq for KeyCodeTextInsertCommand<TKey> {
+impl<TKey: PartialEq> PartialEq for UserInputTextInsertCommand<TKey> {
 	fn eq(&self, other: &Self) -> bool {
 		if self.key != other.key {
 			return false;

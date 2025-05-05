@@ -1,14 +1,15 @@
 use crate::traits::orbit::Orbit;
 use bevy::{input::mouse::MouseMotion, prelude::*};
+use common::tools::keys::user_input::UserInput;
 
 pub(crate) fn move_on_orbit<TOrbit>(
-	mouse: Res<ButtonInput<MouseButton>>,
+	mouse: Res<ButtonInput<UserInput>>,
 	mut mouse_motion: EventReader<MouseMotion>,
 	mut query: Query<(&TOrbit, &mut Transform)>,
 ) where
 	TOrbit: Orbit + Component,
 {
-	if !mouse.pressed(MouseButton::Right) {
+	if !mouse.pressed(UserInput::from(MouseButton::Right)) {
 		return;
 	}
 
@@ -42,7 +43,7 @@ mod tests {
 
 	fn setup_app() -> App {
 		let mut app = App::new().single_threaded(Update);
-		let input = ButtonInput::<MouseButton>::default();
+		let input = ButtonInput::<UserInput>::default();
 
 		app.add_systems(Update, move_on_orbit::<_Orbit>);
 		app.add_event::<MouseMotion>();
@@ -72,8 +73,8 @@ mod tests {
 				delta: Vec2::new(3., 4.),
 			});
 		app.world_mut()
-			.resource_mut::<ButtonInput<MouseButton>>()
-			.press(MouseButton::Right);
+			.resource_mut::<ButtonInput<UserInput>>()
+			.press(UserInput::from(MouseButton::Right));
 
 		app.update();
 	}
@@ -135,8 +136,8 @@ mod tests {
 				delta: Vec2::new(3., 4.),
 			});
 		app.world_mut()
-			.resource_mut::<ButtonInput<MouseButton>>()
-			.press(MouseButton::Right);
+			.resource_mut::<ButtonInput<UserInput>>()
+			.press(UserInput::from(MouseButton::Right));
 
 		app.update();
 	}
