@@ -1,20 +1,18 @@
-use bevy::{
-	ecs::system::{Res, ResMut},
-	input::{ButtonInput, keyboard::KeyCode},
-	state::state::{FreelyMutableState, NextState, State, States},
-};
-use common::traits::{iteration::IterFinite, states::PlayState};
-
 use crate::traits::reacts_to_menu_hotkeys::ReactsToMenuHotkeys;
+use bevy::{prelude::*, state::state::FreelyMutableState};
+use common::{
+	tools::keys::user_input::UserInput,
+	traits::{iteration::IterFinite, states::PlayState},
+};
 
 pub(crate) fn set_state_from_input<
 	TState: States + FreelyMutableState + PlayState + IterFinite + ReactsToMenuHotkeys + Copy,
 >(
-	keys: Res<ButtonInput<KeyCode>>,
+	keys: Res<ButtonInput<UserInput>>,
 	current_state: Res<State<TState>>,
 	mut next_state: ResMut<NextState<TState>>,
 ) where
-	KeyCode: TryFrom<TState>,
+	UserInput: TryFrom<TState>,
 {
 	if !current_state.reacts_to_menu_hotkeys() {
 		return;
@@ -29,14 +27,14 @@ pub(crate) fn set_state_from_input<
 }
 
 fn get_new_state<TState: States + PlayState + IterFinite + Copy>(
-	keys: &Res<ButtonInput<KeyCode>>,
+	keys: &Res<ButtonInput<UserInput>>,
 	current_state: &TState,
 	state: TState,
 ) -> Option<TState>
 where
-	KeyCode: TryFrom<TState>,
+	UserInput: TryFrom<TState>,
 {
-	let Ok(key) = KeyCode::try_from(state) else {
+	let Ok(key) = UserInput::try_from(state) else {
 		return None;
 	};
 
@@ -101,15 +99,15 @@ mod tests {
 		}
 	}
 
-	impl TryFrom<_State> for KeyCode {
+	impl TryFrom<_State> for UserInput {
 		type Error = ();
 
 		fn try_from(value: _State) -> Result<Self, Self::Error> {
 			match value {
 				_State::Default => Err(()),
 				_State::Play => Err(()),
-				_State::A => Ok(KeyCode::KeyA),
-				_State::B => Ok(KeyCode::KeyB),
+				_State::A => Ok(UserInput::from(KeyCode::KeyA)),
+				_State::B => Ok(UserInput::from(KeyCode::KeyB)),
 				_State::NonReactive => Err(()),
 			}
 		}
@@ -119,7 +117,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 		app.add_plugins(StatesPlugin);
 		app.init_state::<_State>();
-		app.init_resource::<ButtonInput<KeyCode>>();
+		app.init_resource::<ButtonInput<UserInput>>();
 		app.add_systems(Update, set_state_from_input::<_State>);
 
 		app
@@ -130,9 +128,9 @@ mod tests {
 		let mut app = setup();
 		let mut input = app
 			.world_mut()
-			.get_resource_mut::<ButtonInput<KeyCode>>()
+			.get_resource_mut::<ButtonInput<UserInput>>()
 			.unwrap();
-		input.press(KeyCode::KeyA);
+		input.press(UserInput::from(KeyCode::KeyA));
 
 		app.update();
 		app.update();
@@ -146,10 +144,10 @@ mod tests {
 		let mut app = setup();
 		let mut input = app
 			.world_mut()
-			.get_resource_mut::<ButtonInput<KeyCode>>()
+			.get_resource_mut::<ButtonInput<UserInput>>()
 			.unwrap();
-		input.press(KeyCode::KeyA);
-		input.clear_just_pressed(KeyCode::KeyA);
+		input.press(UserInput::from(KeyCode::KeyA));
+		input.clear_just_pressed(UserInput::from(KeyCode::KeyA));
 
 		app.update();
 		app.update();
@@ -163,9 +161,9 @@ mod tests {
 		let mut app = setup();
 		let mut input = app
 			.world_mut()
-			.get_resource_mut::<ButtonInput<KeyCode>>()
+			.get_resource_mut::<ButtonInput<UserInput>>()
 			.unwrap();
-		input.press(KeyCode::KeyA);
+		input.press(UserInput::from(KeyCode::KeyA));
 		app.insert_resource(State::new(_State::A));
 
 		app.update();
@@ -180,9 +178,9 @@ mod tests {
 		let mut app = setup();
 		let mut input = app
 			.world_mut()
-			.get_resource_mut::<ButtonInput<KeyCode>>()
+			.get_resource_mut::<ButtonInput<UserInput>>()
 			.unwrap();
-		input.press(KeyCode::KeyA);
+		input.press(UserInput::from(KeyCode::KeyA));
 
 		app.insert_state(_State::NonReactive);
 		app.update();

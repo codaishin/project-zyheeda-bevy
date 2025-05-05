@@ -9,7 +9,7 @@ use bevy::{
 	ui::Interaction,
 };
 use common::{
-	tools::swap_key::SwapKey,
+	tools::{keys::user_input::UserInput, swap_key::SwapKey},
 	traits::{
 		handles_loadout_menu::SwapValuesByKey,
 		thread_safe::ThreadSafe,
@@ -21,13 +21,13 @@ pub fn drop<TAgent, TKeyDad, TKeyKeyedPanel>(
 	mut commands: Commands,
 	mut agents: Query<(Entity, &mut TAgent, &Dad<TKeyDad>)>,
 	panels: Query<(&Interaction, &KeyedPanel<TKeyKeyedPanel>)>,
-	mouse: Res<ButtonInput<MouseButton>>,
+	mouse: Res<ButtonInput<UserInput>>,
 ) where
 	TAgent: Component + SwapValuesByKey,
 	TKeyDad: ThreadSafe + Copy + Into<SwapKey>,
 	TKeyKeyedPanel: ThreadSafe + Copy + Into<SwapKey>,
 {
-	if !mouse.just_released(MouseButton::Left) {
+	if !mouse.just_released(UserInput::from(MouseButton::Left)) {
 		return;
 	}
 
@@ -88,7 +88,7 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.insert_resource(ButtonInput::<MouseButton>::default());
+		app.insert_resource(ButtonInput::<UserInput>::default());
 		app.add_systems(Update, drop::<_Agent, InventoryKey, SlotKey>);
 
 		app
@@ -98,11 +98,11 @@ mod tests {
 		($app:expr) => {{
 			let mut input = $app
 				.world_mut()
-				.get_resource_mut::<ButtonInput<MouseButton>>()
+				.get_resource_mut::<ButtonInput<UserInput>>()
 				.unwrap();
 
-			input.press(MouseButton::Left);
-			input.release(MouseButton::Left);
+			input.press(UserInput::from(MouseButton::Left));
+			input.release(UserInput::from(MouseButton::Left));
 		}};
 	}
 

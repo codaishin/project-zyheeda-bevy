@@ -30,7 +30,7 @@ pub fn panel_activity_colors_override<TMap, TPanel, TContainer>(
 	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor + GetterRef<SlotKey> + Component,
 {
 	let primed_slot = match mouse_context.get() {
-		MouseContext::Primed(key) => key_map.try_get_key(UserInput::from(*key)),
+		MouseContext::Primed(key) => key_map.try_get_key(*key),
 		_ => None,
 	};
 
@@ -278,7 +278,7 @@ mod tests {
 
 		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
-			.set(MouseContext::Primed(KeyCode::KeyQ));
+			.set(MouseContext::Primed(UserInput::from(KeyCode::KeyQ)));
 		app.update();
 		app.update();
 

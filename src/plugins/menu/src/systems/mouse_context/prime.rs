@@ -20,14 +20,14 @@ pub fn prime_mouse_context<
 	key_map: Res<TMap>,
 	buttons: Query<(&TPanel, &Interaction)>,
 ) {
-	let get_key_code = get_key_code_from(key_map.as_ref());
-	let key_code = buttons.iter().find(is_pressed).map(get_key_code);
+	let user_input = get_key_code_from(key_map.as_ref());
+	let user_input = buttons.iter().find(is_pressed).map(user_input);
 
-	let Some(UserInput::KeyCode(key_code)) = key_code else {
+	let Some(user_input) = user_input else {
 		return;
 	};
 
-	mouse_context.set(MouseContext::Primed(key_code));
+	mouse_context.set(MouseContext::Primed(user_input));
 }
 
 fn get_key_code_from<TMap: GetUserInput<SlotKey, UserInput>, TPanel: GetterRef<SlotKey>>(
@@ -109,7 +109,10 @@ mod test {
 			.get_resource::<State<MouseContext>>()
 			.map(|s| s.get());
 
-		assert_eq!(Some(&MouseContext::Primed(KeyCode::KeyZ)), mouse_context);
+		assert_eq!(
+			Some(&MouseContext::Primed(UserInput::from(KeyCode::KeyZ))),
+			mouse_context
+		);
 	}
 
 	#[test]
@@ -159,6 +162,9 @@ mod test {
 			.get_resource::<State<MouseContext>>()
 			.map(|s| s.get());
 
-		assert_eq!(Some(&MouseContext::Primed(KeyCode::KeyT)), mouse_context);
+		assert_eq!(
+			Some(&MouseContext::Primed(UserInput::from(KeyCode::KeyT))),
+			mouse_context
+		);
 	}
 }

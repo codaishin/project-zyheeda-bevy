@@ -1,7 +1,7 @@
 use super::{InputState, ShouldEnqueue};
 use bevy::input::{ButtonInput, keyboard::KeyCode};
 use common::{
-	tools::keys::slot::SlotKey,
+	tools::keys::{slot::SlotKey, user_input::UserInput},
 	traits::{key_mappings::TryGetKey, thread_safe::ThreadSafe},
 };
 use std::hash::Hash;
@@ -31,9 +31,9 @@ where
 	}
 }
 
-impl ShouldEnqueue for ButtonInput<KeyCode> {
+impl ShouldEnqueue for ButtonInput<UserInput> {
 	fn should_enqueue(&self) -> bool {
-		self.pressed(KeyCode::ShiftLeft)
+		self.pressed(UserInput::from(KeyCode::ShiftLeft))
 	}
 }
 
@@ -46,11 +46,11 @@ mod tests {
 
 	struct _Map;
 
-	impl TryGetKey<KeyCode, SlotKey> for _Map {
-		fn try_get_key(&self, value: KeyCode) -> Option<SlotKey> {
+	impl TryGetKey<UserInput, SlotKey> for _Map {
+		fn try_get_key(&self, value: UserInput) -> Option<SlotKey> {
 			match value {
-				KeyCode::KeyC => Some(SlotKey::BottomHand(Side::Right)),
-				KeyCode::KeyD => Some(SlotKey::BottomHand(Side::Left)),
+				UserInput::KeyCode(KeyCode::KeyC) => Some(SlotKey::BottomHand(Side::Right)),
+				UserInput::KeyCode(KeyCode::KeyD) => Some(SlotKey::BottomHand(Side::Left)),
 				_ => None,
 			}
 		}
@@ -58,12 +58,12 @@ mod tests {
 
 	#[test]
 	fn get_just_pressed() {
-		let mut input = ButtonInput::<KeyCode>::default();
-		input.press(KeyCode::KeyA);
-		input.press(KeyCode::KeyB);
-		input.press(KeyCode::KeyC);
-		input.press(KeyCode::KeyD);
-		input.clear_just_pressed(KeyCode::KeyD);
+		let mut input = ButtonInput::<UserInput>::default();
+		input.press(UserInput::from(KeyCode::KeyA));
+		input.press(UserInput::from(KeyCode::KeyB));
+		input.press(UserInput::from(KeyCode::KeyC));
+		input.press(UserInput::from(KeyCode::KeyD));
+		input.clear_just_pressed(UserInput::from(KeyCode::KeyD));
 
 		assert_eq!(
 			HashSet::from([SlotKey::BottomHand(Side::Right)]),
@@ -73,15 +73,15 @@ mod tests {
 
 	#[test]
 	fn get_pressed() {
-		let mut input = ButtonInput::<KeyCode>::default();
-		input.press(KeyCode::KeyA);
-		input.press(KeyCode::KeyB);
-		input.press(KeyCode::KeyC);
-		input.press(KeyCode::KeyD);
-		input.clear_just_pressed(KeyCode::KeyA);
-		input.clear_just_pressed(KeyCode::KeyB);
-		input.clear_just_pressed(KeyCode::KeyC);
-		input.clear_just_pressed(KeyCode::KeyD);
+		let mut input = ButtonInput::<UserInput>::default();
+		input.press(UserInput::from(KeyCode::KeyA));
+		input.press(UserInput::from(KeyCode::KeyB));
+		input.press(UserInput::from(KeyCode::KeyC));
+		input.press(UserInput::from(KeyCode::KeyD));
+		input.clear_just_pressed(UserInput::from(KeyCode::KeyA));
+		input.clear_just_pressed(UserInput::from(KeyCode::KeyB));
+		input.clear_just_pressed(UserInput::from(KeyCode::KeyC));
+		input.clear_just_pressed(UserInput::from(KeyCode::KeyD));
 
 		assert_eq!(
 			HashSet::from([
@@ -94,18 +94,18 @@ mod tests {
 
 	#[test]
 	fn get_just_released() {
-		let mut input = ButtonInput::<KeyCode>::default();
-		input.press(KeyCode::KeyA);
-		input.press(KeyCode::KeyB);
-		input.press(KeyCode::KeyC);
-		input.press(KeyCode::KeyD);
-		input.release(KeyCode::KeyA);
-		input.release(KeyCode::KeyB);
-		input.release(KeyCode::KeyC);
-		input.clear_just_pressed(KeyCode::KeyA);
-		input.clear_just_pressed(KeyCode::KeyB);
-		input.clear_just_pressed(KeyCode::KeyC);
-		input.clear_just_pressed(KeyCode::KeyD);
+		let mut input = ButtonInput::<UserInput>::default();
+		input.press(UserInput::from(KeyCode::KeyA));
+		input.press(UserInput::from(KeyCode::KeyB));
+		input.press(UserInput::from(KeyCode::KeyC));
+		input.press(UserInput::from(KeyCode::KeyD));
+		input.release(UserInput::from(KeyCode::KeyA));
+		input.release(UserInput::from(KeyCode::KeyB));
+		input.release(UserInput::from(KeyCode::KeyC));
+		input.clear_just_pressed(UserInput::from(KeyCode::KeyA));
+		input.clear_just_pressed(UserInput::from(KeyCode::KeyB));
+		input.clear_just_pressed(UserInput::from(KeyCode::KeyC));
+		input.clear_just_pressed(UserInput::from(KeyCode::KeyD));
 
 		assert_eq!(
 			HashSet::from([SlotKey::BottomHand(Side::Right),]),
@@ -115,16 +115,16 @@ mod tests {
 
 	#[test]
 	fn should_enqueue_false() {
-		let input = ButtonInput::<KeyCode>::default();
+		let input = ButtonInput::<UserInput>::default();
 
 		assert!(!input.should_enqueue());
 	}
 
 	#[test]
 	fn should_enqueue_true() {
-		let mut input = ButtonInput::<KeyCode>::default();
-		input.press(KeyCode::ShiftLeft);
-		input.clear_just_pressed(KeyCode::ShiftLeft);
+		let mut input = ButtonInput::<UserInput>::default();
+		input.press(UserInput::from(KeyCode::ShiftLeft));
+		input.clear_just_pressed(UserInput::from(KeyCode::ShiftLeft));
 
 		assert!(input.should_enqueue());
 	}

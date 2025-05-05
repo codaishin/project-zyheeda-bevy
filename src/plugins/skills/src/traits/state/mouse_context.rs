@@ -1,12 +1,12 @@
 use crate::traits::InputState;
-use bevy::{input::keyboard::KeyCode, state::state::State};
+use bevy::state::state::State;
 use common::{
 	states::mouse_context::MouseContext,
 	tools::keys::{slot::SlotKey, user_input::UserInput},
 	traits::key_mappings::TryGetKey,
 };
 
-impl<TMap> InputState<TMap, UserInput> for State<MouseContext<KeyCode>>
+impl<TMap> InputState<TMap, UserInput> for State<MouseContext>
 where
 	TMap: TryGetKey<UserInput, SlotKey>,
 {
@@ -14,21 +14,21 @@ where
 		let MouseContext::JustTriggered(key) = self.get() else {
 			return vec![];
 		};
-		get_slot_key(map, UserInput::from(*key))
+		get_slot_key(map, *key)
 	}
 
 	fn pressed_slots(&self, map: &TMap) -> Vec<SlotKey> {
 		let MouseContext::Triggered(key) = self.get() else {
 			return vec![];
 		};
-		get_slot_key(map, UserInput::from(*key))
+		get_slot_key(map, *key)
 	}
 
 	fn just_released_slots(&self, map: &TMap) -> Vec<SlotKey> {
 		let MouseContext::JustReleased(key) = self.get() else {
 			return vec![];
 		};
-		get_slot_key(map, UserInput::from(*key))
+		get_slot_key(map, *key)
 	}
 }
 
@@ -63,7 +63,7 @@ mod tests {
 
 	#[test]
 	fn get_just_pressed() {
-		let input = State::new(MouseContext::JustTriggered(KeyCode::KeyC));
+		let input = State::new(MouseContext::JustTriggered(UserInput::from(KeyCode::KeyC)));
 
 		assert_eq!(
 			HashSet::from([SlotKey::BottomHand(Side::Right)]),
@@ -73,7 +73,7 @@ mod tests {
 
 	#[test]
 	fn get_pressed() {
-		let input = State::new(MouseContext::Triggered(KeyCode::KeyC));
+		let input = State::new(MouseContext::Triggered(UserInput::from(KeyCode::KeyC)));
 
 		assert_eq!(
 			HashSet::from([SlotKey::BottomHand(Side::Right),]),
@@ -83,7 +83,7 @@ mod tests {
 
 	#[test]
 	fn get_just_released() {
-		let input = State::new(MouseContext::JustReleased(KeyCode::KeyC));
+		let input = State::new(MouseContext::JustReleased(UserInput::from(KeyCode::KeyC)));
 
 		assert_eq!(
 			HashSet::from([SlotKey::BottomHand(Side::Right)]),

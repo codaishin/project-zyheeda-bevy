@@ -1,16 +1,12 @@
-use bevy::{
-	ecs::system::{Res, ResMut},
-	input::{ButtonInput, mouse::MouseButton},
-	state::state::{NextState, State},
-};
-use common::states::mouse_context::MouseContext;
+use bevy::prelude::*;
+use common::{states::mouse_context::MouseContext, tools::keys::user_input::UserInput};
 
 pub(crate) fn release_triggered_mouse_context(
-	mouse_input: Res<ButtonInput<MouseButton>>,
+	mouse_input: Res<ButtonInput<UserInput>>,
 	context: Res<State<MouseContext>>,
 	mut next_mouse_context: ResMut<NextState<MouseContext>>,
 ) {
-	if !mouse_input.just_released(MouseButton::Left) {
+	if !mouse_input.just_released(UserInput::from(MouseButton::Left)) {
 		return;
 	}
 	if let MouseContext::Triggered(key) | MouseContext::JustTriggered(key) = context.get() {
@@ -26,13 +22,14 @@ mod tests {
 		input::{ButtonInput, keyboard::KeyCode, mouse::MouseButton},
 		state::app::{AppExtStates, StatesPlugin},
 	};
+	use common::tools::keys::user_input::UserInput;
 
 	fn setup() -> App {
 		let mut app = App::new();
 
 		app.add_plugins(StatesPlugin);
 		app.init_state::<MouseContext>();
-		app.init_resource::<ButtonInput<MouseButton>>();
+		app.init_resource::<ButtonInput<UserInput>>();
 		app.add_systems(Update, release_triggered_mouse_context);
 
 		app
@@ -42,12 +39,12 @@ mod tests {
 	fn release_from_triggered() {
 		let mut app = setup();
 
-		let mut mouse_buttons = app.world_mut().resource_mut::<ButtonInput<MouseButton>>();
-		mouse_buttons.press(MouseButton::Left);
-		mouse_buttons.release(MouseButton::Left);
+		let mut mouse_buttons = app.world_mut().resource_mut::<ButtonInput<UserInput>>();
+		mouse_buttons.press(UserInput::from(MouseButton::Left));
+		mouse_buttons.release(UserInput::from(MouseButton::Left));
 		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
-			.set(MouseContext::Triggered(KeyCode::KeyU));
+			.set(MouseContext::Triggered(UserInput::from(KeyCode::KeyU)));
 
 		app.update();
 		app.update();
@@ -58,19 +55,22 @@ mod tests {
 			.unwrap()
 			.get();
 
-		assert_eq!(&MouseContext::JustReleased(KeyCode::KeyU), context);
+		assert_eq!(
+			&MouseContext::JustReleased(UserInput::from(KeyCode::KeyU)),
+			context
+		);
 	}
 
 	#[test]
 	fn release_from_just_triggered() {
 		let mut app = setup();
 
-		let mut mouse_buttons = app.world_mut().resource_mut::<ButtonInput<MouseButton>>();
-		mouse_buttons.press(MouseButton::Left);
-		mouse_buttons.release(MouseButton::Left);
+		let mut mouse_buttons = app.world_mut().resource_mut::<ButtonInput<UserInput>>();
+		mouse_buttons.press(UserInput::from(MouseButton::Left));
+		mouse_buttons.release(UserInput::from(MouseButton::Left));
 		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
-			.set(MouseContext::JustTriggered(KeyCode::KeyU));
+			.set(MouseContext::JustTriggered(UserInput::from(KeyCode::KeyU)));
 
 		app.update();
 		app.update();
@@ -81,20 +81,23 @@ mod tests {
 			.unwrap()
 			.get();
 
-		assert_eq!(&MouseContext::JustReleased(KeyCode::KeyU), context);
+		assert_eq!(
+			&MouseContext::JustReleased(UserInput::from(KeyCode::KeyU)),
+			context
+		);
 	}
 
 	#[test]
 	fn do_not_release_when_mouse_left_not_just_released() {
 		let mut app = setup();
 
-		let mut mouse_buttons = app.world_mut().resource_mut::<ButtonInput<MouseButton>>();
-		mouse_buttons.release(MouseButton::Left);
-		mouse_buttons.clear_just_released(MouseButton::Left);
+		let mut mouse_buttons = app.world_mut().resource_mut::<ButtonInput<UserInput>>();
+		mouse_buttons.release(UserInput::from(MouseButton::Left));
+		mouse_buttons.clear_just_released(UserInput::from(MouseButton::Left));
 
 		app.world_mut()
 			.resource_mut::<NextState<MouseContext>>()
-			.set(MouseContext::Triggered(KeyCode::KeyU));
+			.set(MouseContext::Triggered(UserInput::from(KeyCode::KeyU)));
 
 		app.update();
 		app.update();
@@ -105,6 +108,9 @@ mod tests {
 			.unwrap()
 			.get();
 
-		assert_eq!(&MouseContext::Triggered(KeyCode::KeyU), context);
+		assert_eq!(
+			&MouseContext::Triggered(UserInput::from(KeyCode::KeyU)),
+			context
+		);
 	}
 }

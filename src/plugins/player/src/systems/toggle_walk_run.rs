@@ -3,12 +3,13 @@ use crate::components::{
 	player_movement::{MovementMode, PlayerMovement},
 };
 use bevy::prelude::*;
+use common::tools::keys::user_input::UserInput;
 
 pub fn player_toggle_walk_run(
 	mut player: Query<&mut PlayerMovement, With<Player>>,
-	keys: Res<ButtonInput<KeyCode>>,
+	keys: Res<ButtonInput<UserInput>>,
 ) {
-	if !keys.just_pressed(KeyCode::NumpadSubtract) {
+	if !keys.just_pressed(UserInput::from(KeyCode::NumpadSubtract)) {
 		return;
 	}
 
@@ -29,8 +30,8 @@ mod tests {
 	use super::*;
 	use common::test_tools::utils::SingleThreadedApp;
 
-	fn setup(press: KeyCode) -> App {
-		let mut keys = ButtonInput::<KeyCode>::default();
+	fn setup(press: UserInput) -> App {
+		let mut keys = ButtonInput::<UserInput>::default();
 		let mut app = App::new().single_threaded(Update);
 
 		keys.press(press);
@@ -42,7 +43,7 @@ mod tests {
 
 	#[test]
 	fn toggle_player_walk_to_run() {
-		let mut app = setup(KeyCode::NumpadSubtract);
+		let mut app = setup(UserInput::from(KeyCode::NumpadSubtract));
 		let player = app
 			.world_mut()
 			.spawn((
@@ -67,7 +68,7 @@ mod tests {
 
 	#[test]
 	fn toggle_player_run_to_walk() {
-		let mut app = setup(KeyCode::NumpadSubtract);
+		let mut app = setup(UserInput::from(KeyCode::NumpadSubtract));
 		let player = app
 			.world_mut()
 			.spawn((
@@ -92,7 +93,7 @@ mod tests {
 
 	#[test]
 	fn no_toggle_when_no_input() {
-		let mut app = setup(KeyCode::NumpadSubtract);
+		let mut app = setup(UserInput::from(KeyCode::NumpadSubtract));
 		let player = app
 			.world_mut()
 			.spawn(PlayerMovement {

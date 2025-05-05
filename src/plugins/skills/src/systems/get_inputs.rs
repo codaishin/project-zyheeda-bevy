@@ -18,12 +18,12 @@ pub(crate) fn get_inputs<
 	TInferiorInput: Resource + InputState<TMap, UserInput>,
 >(
 	key_map: Res<TMap>,
-	superior_a: Res<TSuperiorInput>,
+	superior: Res<TSuperiorInput>,
 	inferior: Res<TInferiorInput>,
 ) -> Input {
-	let mut just_pressed = superior_a.just_pressed_slots(&key_map);
-	let mut pressed = superior_a.pressed_slots(&key_map);
-	let mut just_released = superior_a.just_released_slots(&key_map);
+	let mut just_pressed = superior.just_pressed_slots(&key_map);
+	let mut pressed = superior.pressed_slots(&key_map);
+	let mut just_released = superior.just_released_slots(&key_map);
 
 	pressed.extend(inferior.pressed_slots(&key_map));
 	just_pressed.extend(

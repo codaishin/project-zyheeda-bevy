@@ -2,7 +2,7 @@ use crate::traits::change_per_frame::MinDistance;
 use bevy::{ecs::query::QuerySingleError, prelude::*};
 use common::{
 	errors::{Error, Level},
-	tools::speed::Speed,
+	tools::{keys::user_input::UserInput, speed::Speed},
 	traits::{accessors::get::Getter, handles_player::KeyDirection, key_mappings::Pressed},
 };
 use std::{any::type_name, marker::PhantomData, time::Duration};
@@ -13,7 +13,7 @@ pub(crate) trait TriggerDirectionKeyMovement: From<Vec3> + Event + MinDistance {
 	fn trigger_movement<TCamera, TAgent, TMap, TKey>(
 		In(delta): In<Duration>,
 		map: Res<TMap>,
-		input: Res<ButtonInput<KeyCode>>,
+		input: Res<ButtonInput<UserInput>>,
 		mut events: EventWriter<Self>,
 		agents: Query<(&GlobalTransform, &TAgent)>,
 		cameras: Query<&GlobalTransform, With<TCamera>>,
@@ -21,7 +21,7 @@ pub(crate) trait TriggerDirectionKeyMovement: From<Vec3> + Event + MinDistance {
 	where
 		TCamera: KeyDirection<TKey> + Component,
 		TAgent: Getter<Speed> + Component,
-		TMap: Pressed<TKey, KeyCode> + Resource,
+		TMap: Pressed<TKey> + Resource,
 	{
 		let cam_transform = match cameras.get_single() {
 			Err(QuerySingleError::NoEntities(_)) => {
@@ -143,8 +143,8 @@ mod tests {
 	}
 
 	#[automock]
-	impl Pressed<_Key, KeyCode> for _Map {
-		fn pressed(&self, input: &ButtonInput<KeyCode>) -> impl Iterator<Item = _Key> {
+	impl Pressed<_Key> for _Map {
+		fn pressed(&self, input: &ButtonInput<UserInput>) -> impl Iterator<Item = _Key> {
 			self.mock.pressed(input)
 		}
 	}
@@ -231,7 +231,7 @@ mod tests {
 	{
 		let mut app = App::new().single_threaded(Update);
 		app.insert_resource(map);
-		app.init_resource::<ButtonInput<KeyCode>>();
+		app.init_resource::<ButtonInput<UserInput>>();
 		app.add_event::<TEvent>();
 
 		app
@@ -502,15 +502,18 @@ mod tests {
 		let mut app = setup::<_Event>(_Map::new().with_mock(|mock| {
 			mock.expect_pressed().returning(move |input| {
 				assert_eq!(
-					HashSet::from([KeyCode::Katakana, KeyCode::Hiragana]),
+					HashSet::from([
+						UserInput::from(KeyCode::Katakana),
+						UserInput::from(KeyCode::Hiragana)
+					]),
 					input.get_just_pressed().copied().collect::<HashSet<_>>()
 				);
 				Box::new(std::iter::empty())
 			});
 		}));
 		let mut input = ButtonInput::default();
-		input.press(KeyCode::Hiragana);
-		input.press(KeyCode::Katakana);
+		input.press(UserInput::from(KeyCode::Hiragana));
+		input.press(UserInput::from(KeyCode::Katakana));
 		app.insert_resource(input);
 		app.world_mut().spawn((_Cam, GlobalTransform::default()));
 		app.world_mut().spawn((

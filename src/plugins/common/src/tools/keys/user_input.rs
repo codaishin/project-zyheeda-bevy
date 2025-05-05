@@ -1,5 +1,5 @@
 use super::IsNot;
-use crate::traits::{handles_localization::Token, key_mappings::MapKey};
+use crate::traits::handles_localization::Token;
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -18,10 +18,6 @@ impl From<UserInput> for Token {
 	}
 }
 
-impl MapKey for KeyCode {
-	type TMapKey = UserInput;
-}
-
 impl From<KeyCode> for UserInput {
 	fn from(key_code: KeyCode) -> Self {
 		Self::KeyCode(key_code)
@@ -38,10 +34,6 @@ impl TryFrom<UserInput> for KeyCode {
 
 		Ok(key_code)
 	}
-}
-
-impl MapKey for MouseButton {
-	type TMapKey = UserInput;
 }
 
 impl From<MouseButton> for UserInput {
