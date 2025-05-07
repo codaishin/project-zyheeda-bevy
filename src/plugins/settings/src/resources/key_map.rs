@@ -228,7 +228,13 @@ where
 	TKeyCode: Debug + Eq + Hash + TypePath,
 {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "Keys have been assigned multiple times: {:#?}", self)
+		let keys = self
+			.0
+			.iter()
+			.map(|(input, keys)| format!("  - {:?} is assigned to: {:?}", input, keys))
+			.collect::<Vec<_>>()
+			.join("\n");
+		writeln!(f, "Multiple keys assigned to the same input(s):\n{keys}")
 	}
 }
 
@@ -499,6 +505,47 @@ mod tests {
 				)]))),
 				mapper
 			);
+		}
+	}
+
+	mod repeated_assignments {
+		use super::*;
+		use common::assert_count;
+
+		macro_rules! either_or {
+			($a:expr, $b:expr) => {
+				$a || $b
+			};
+			($a:expr, $b:expr,) => {
+				either_or!($a, $b)
+			};
+		}
+
+		#[test]
+		fn display() {
+			let repeated = RepeatedAssignments(HashMap::from([
+				(
+					_Input::C,
+					HashSet::from([_AllKeys::A(_KeyA), _AllKeys::B(_KeyB)]),
+				),
+				(
+					_Input::A,
+					HashSet::from([_AllKeys::A(_KeyA), _AllKeys::B(_KeyB)]),
+				),
+			]));
+
+			let output = repeated.to_string();
+
+			let [header, items @ ..] = assert_count!(3, output.lines());
+			assert_eq!("Multiple keys assigned to the same input(s):", header);
+			assert!(either_or!(
+				items.contains(&"  - A is assigned to: {A(_KeyA), B(_KeyB)}"),
+				items.contains(&"  - A is assigned to: {B(_KeyB), A(_KeyA)}"),
+			));
+			assert!(either_or!(
+				items.contains(&"  - C is assigned to: {A(_KeyA), B(_KeyB)}"),
+				items.contains(&"  - C is assigned to: {B(_KeyB), A(_KeyA)}"),
+			));
 		}
 	}
 }
