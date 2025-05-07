@@ -142,7 +142,10 @@ where
 	}
 
 	fn state_control(&self, app: &mut App) {
-		app.add_systems(Update, set_state_from_input::<GameState>);
+		app.add_systems(
+			Update,
+			set_state_from_input::<GameState, MenuState, TSettings::TKeyMap<MenuState>>,
+		);
 	}
 
 	fn start_menu(&self, app: &mut App) {

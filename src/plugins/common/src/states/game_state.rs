@@ -1,11 +1,8 @@
 use super::menu_state::MenuState;
-use crate::{
-	tools::keys::user_input::UserInput,
-	traits::{
-		handles_load_tracking::LoadGroup,
-		iteration::{Iter, IterFinite},
-		states::PlayState,
-	},
+use crate::traits::{
+	handles_load_tracking::LoadGroup,
+	iteration::{Iter, IterFinite},
+	states::PlayState,
 };
 use bevy::prelude::*;
 
@@ -42,20 +39,6 @@ impl LoadGroup for LoadingGame {
 
 #[derive(Debug, PartialEq)]
 pub struct NoKeySet;
-
-impl TryFrom<GameState> for UserInput {
-	type Error = NoKeySet;
-
-	fn try_from(value: GameState) -> Result<Self, Self::Error> {
-		match value {
-			GameState::Saving => Ok(UserInput::from(KeyCode::F5)),
-			GameState::IngameMenu(MenuState::Inventory) => Ok(UserInput::from(KeyCode::KeyI)),
-			GameState::IngameMenu(MenuState::ComboOverview) => Ok(UserInput::from(KeyCode::KeyK)),
-			GameState::IngameMenu(MenuState::Settings) => Ok(UserInput::from(KeyCode::Escape)),
-			_ => Err(NoKeySet),
-		}
-	}
-}
 
 impl IterFinite for GameState {
 	fn iterator() -> Iter<Self> {
@@ -108,28 +91,6 @@ mod tests {
 				GameState::IngameMenu(MenuState::Settings),
 			],
 			GameState::iterator().take(100).collect::<Vec<_>>(),
-		)
-	}
-
-	#[test]
-	fn get_key_codes() {
-		assert_eq!(
-			vec![
-				Err(NoKeySet),
-				Err(NoKeySet),
-				Err(NoKeySet),
-				Err(NoKeySet),
-				Err(NoKeySet),
-				Err(NoKeySet),
-				Ok(UserInput::from(KeyCode::F5)),
-				Ok(UserInput::from(KeyCode::KeyI)),
-				Ok(UserInput::from(KeyCode::KeyK)),
-				Ok(UserInput::from(KeyCode::Escape)),
-			],
-			GameState::iterator()
-				.take(100)
-				.map(UserInput::try_from)
-				.collect::<Vec<_>>()
 		)
 	}
 }
