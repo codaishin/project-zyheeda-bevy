@@ -1,5 +1,5 @@
-use bevy::math::InvalidDirectionError;
-use std::io::Error as IoError;
+use bevy::{math::InvalidDirectionError, reflect::TypePath};
+use std::{error::Error as StdError, fmt::Display, io::Error as IoError};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Level {
@@ -40,3 +40,14 @@ impl From<IoError> for Error {
 		}
 	}
 }
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, TypePath)]
+pub enum Unreachable {}
+
+impl Display for Unreachable {
+	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+		write!(f, "{:?}: If you see this, the universe broke", self)
+	}
+}
+
+impl StdError for Unreachable {}

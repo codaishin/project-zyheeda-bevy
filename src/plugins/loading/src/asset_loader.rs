@@ -1,8 +1,14 @@
 use crate::folder_asset_loader::{LoadError, ReadError};
-use bevy::asset::{Asset, AssetLoader, LoadContext, io::Reader};
-use common::traits::handles_custom_assets::{AssetFileExtensions, LoadFrom};
+use bevy::{
+	asset::{Asset, AssetLoader, LoadContext, io::Reader},
+	reflect::TypePath,
+};
+use common::traits::{
+	handles_custom_assets::{AssetFileExtensions, TryLoadFrom},
+	thread_safe::ThreadSafe,
+};
 use serde::Deserialize;
-use std::{marker::PhantomData, str::from_utf8};
+use std::{error::Error, marker::PhantomData, str::from_utf8};
 
 pub(crate) struct CustomAssetLoader<TAsset, TDto> {
 	phantom_data: PhantomData<(TAsset, TDto)>,
@@ -28,12 +34,13 @@ impl<TAsset, TDto> Default for CustomAssetLoader<TAsset, TDto> {
 
 impl<TAsset, TDto> AssetLoader for CustomAssetLoader<TAsset, TDto>
 where
-	TAsset: Asset + LoadFrom<TDto>,
+	TAsset: Asset + TryLoadFrom<TDto>,
+	TAsset::TInstantiationError: Error + TypePath + ThreadSafe,
 	for<'a> TDto: Deserialize<'a> + AssetFileExtensions + Sync + Send + 'static,
 {
 	type Asset = TAsset;
 	type Settings = ();
-	type Error = LoadError;
+	type Error = LoadError<TAsset::TInstantiationError>;
 
 	fn extensions(&self) -> &[&str] {
 		TDto::asset_file_extensions()
@@ -53,9 +60,14 @@ where
 			Ok(str) => serde_json::from_str(str),
 		};
 
-		match dto {
-			Ok(dto) => Ok(TAsset::load_from(dto, context)),
-			Err(err) => Err(LoadError::ParseObject(err)),
+		let loaded = match dto {
+			Ok(dto) => TAsset::try_load_from(dto, context),
+			Err(err) => return Err(LoadError::ParseObject(err)),
+		};
+
+		match loaded {
+			Ok(loaded) => Ok(loaded),
+			Err(err) => Err(LoadError::Instantiation(err)),
 		}
 	}
 }

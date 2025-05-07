@@ -6,14 +6,14 @@ use crate::traits::{
 	handles_localization::Token,
 	iteration::{Iter, IterFinite},
 };
-use bevy::utils::default;
+use bevy::{reflect::TypePath, utils::default};
 use movement::MovementKey;
 use serde::{Deserialize, Serialize};
 use slot::SlotKey;
 use std::marker::PhantomData;
 use user_input::UserInput;
 
-#[derive(Clone, Copy, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(TypePath, Clone, Copy, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Key {
 	Movement(MovementKey),
 	Slot(SlotKey),

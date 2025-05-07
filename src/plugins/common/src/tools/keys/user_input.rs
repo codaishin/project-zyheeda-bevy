@@ -3,7 +3,7 @@ use crate::traits::handles_localization::Token;
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
+#[derive(TypePath, Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
 pub enum UserInput {
 	KeyCode(KeyCode),
 	MouseButton(MouseButton),
