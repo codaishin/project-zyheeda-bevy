@@ -2,9 +2,12 @@ pub mod movement;
 pub mod slot;
 pub mod user_input;
 
-use crate::traits::{
-	handles_localization::Token,
-	iteration::{Iter, IterFinite},
+use crate::{
+	states::menu_state::MenuState,
+	traits::{
+		handles_localization::Token,
+		iteration::{Iter, IterFinite},
+	},
 };
 use bevy::{reflect::TypePath, utils::default};
 use movement::MovementKey;
@@ -17,6 +20,7 @@ use user_input::UserInput;
 pub enum Key {
 	Movement(MovementKey),
 	Slot(SlotKey),
+	Menu(MenuState),
 }
 
 impl Default for Key {
@@ -34,6 +38,7 @@ impl IterFinite for Key {
 		match current.0? {
 			Key::Movement(key) => try_next(Key::Movement, key).or(try_fst(Key::Slot)),
 			Key::Slot(key) => try_next(Key::Slot, key),
+			Key::Menu(_) => None,
 		}
 	}
 }
@@ -43,6 +48,7 @@ impl From<Key> for UserInput {
 		match key {
 			Key::Movement(key) => Self::from(key),
 			Key::Slot(key) => Self::from(key),
+			Key::Menu(key) => Self::from(key),
 		}
 	}
 }
@@ -50,8 +56,9 @@ impl From<Key> for UserInput {
 impl From<Key> for Token {
 	fn from(value: Key) -> Self {
 		match value {
-			Key::Movement(movement_key) => Token::from(movement_key),
-			Key::Slot(slot_key) => Token::from(slot_key),
+			Key::Movement(key) => Self::from(key),
+			Key::Slot(key) => Self::from(key),
+			Key::Menu(key) => Self::from(key),
 		}
 	}
 }
