@@ -14,9 +14,13 @@ use common::{
 };
 use dto::KeyMapDto;
 use std::{
-	collections::{HashMap, hash_map::Iter},
+	collections::{
+		HashMap,
+		HashSet,
+		hash_map::{Entry, Iter},
+	},
 	error::Error,
-	fmt::Display,
+	fmt::{Debug, Display},
 	hash::Hash,
 	marker::PhantomData,
 };
@@ -57,7 +61,7 @@ where
 }
 
 impl TryLoadFrom<KeyMapDto<Key, UserInput>> for KeyMap {
-	type TInstantiationError = DoubleAssignments;
+	type TInstantiationError = RepeatedAssignments<Key, UserInput>;
 
 	fn try_load_from<TLoadAsset>(
 		dto: KeyMapDto<Key, UserInput>,
@@ -157,11 +161,11 @@ where
 impl<TAllKeys, TKeyCode> TryLoadFrom<KeyMapDto<TAllKeys, TKeyCode>>
 	for KeyMapInternal<TAllKeys, TKeyCode>
 where
-	TAllKeys: IterFinite + Copy + Hash + Eq,
-	TKeyCode: Copy + Hash + Eq,
+	TAllKeys: IterFinite + Debug + Copy + Hash + Eq + TypePath,
+	TKeyCode: Debug + Copy + Hash + Eq + TypePath,
 	TKeyCode: From<TAllKeys>,
 {
-	type TInstantiationError = DoubleAssignments;
+	type TInstantiationError = RepeatedAssignments<TAllKeys, TKeyCode>;
 
 	fn try_load_from<TLoadAsset>(
 		KeyMapDto { keys }: KeyMapDto<TAllKeys, TKeyCode>,
@@ -175,20 +179,65 @@ where
 			mapper.update_key(key, key_code);
 		}
 
+		if let Some(repeated) = RepeatedAssignments::from_mapper(&mapper) {
+			return Err(repeated);
+		}
+
 		Ok(mapper)
 	}
 }
 
-#[derive(Debug, TypePath)]
-pub struct DoubleAssignments;
+#[derive(TypePath, Debug, PartialEq)]
+pub struct RepeatedAssignments<TAllKeys, TKeyCode>(HashMap<TKeyCode, HashSet<TAllKeys>>)
+where
+	TAllKeys: Debug + Eq + Hash + TypePath,
+	TKeyCode: Debug + Eq + Hash + TypePath;
 
-impl Display for DoubleAssignments {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "Some keys have been assigned twice")
+impl<TAllKeys, TKeyCode> RepeatedAssignments<TAllKeys, TKeyCode>
+where
+	TAllKeys: Debug + Eq + Hash + TypePath + Copy,
+	TKeyCode: Debug + Eq + Hash + TypePath + Copy,
+{
+	fn from_mapper(mapper: &KeyMapInternal<TAllKeys, TKeyCode>) -> Option<Self> {
+		let mut repeated = Self(HashMap::default());
+
+		for (key, input) in &mapper.key_to_key_code {
+			match repeated.0.entry(*input) {
+				Entry::Occupied(mut entry) => {
+					entry.get_mut().insert(*key);
+				}
+				Entry::Vacant(entry) => {
+					entry.insert(HashSet::from([*key]));
+				}
+			}
+		}
+
+		repeated.0.retain(|_, keys| keys.len() > 1);
+
+		if repeated.0.is_empty() {
+			return None;
+		}
+
+		Some(repeated)
 	}
 }
 
-impl Error for DoubleAssignments {}
+impl<TAllKeys, TKeyCode> Display for RepeatedAssignments<TAllKeys, TKeyCode>
+where
+	TAllKeys: Debug + Eq + Hash + TypePath,
+	TKeyCode: Debug + Eq + Hash + TypePath,
+{
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "Keys have been assigned multiple times: {:#?}", self)
+	}
+}
+
+impl<TAllKeys, TKeyCode> Error for RepeatedAssignments<TAllKeys, TKeyCode>
+where
+	TAllKeys: Debug + Eq + Hash + TypePath,
+	TKeyCode: Debug + Eq + Hash + TypePath,
+{
+}
 
 impl<'a> Iterate<'a> for KeyMap {
 	type TItem = (&'a Key, &'a UserInput);
@@ -204,7 +253,7 @@ mod tests {
 	use super::*;
 	use common::traits::iteration::{Iter, IterFinite};
 
-	#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+	#[derive(TypePath, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 	enum _AllKeys {
 		A(_KeyA),
 		B(_KeyB),
@@ -232,7 +281,7 @@ mod tests {
 		}
 	}
 
-	#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+	#[derive(TypePath, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 	struct _KeyA;
 
 	impl From<_KeyA> for _AllKeys {
@@ -258,7 +307,7 @@ mod tests {
 		}
 	}
 
-	#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+	#[derive(TypePath, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 	struct _KeyB;
 
 	impl From<_KeyB> for _AllKeys {
@@ -284,92 +333,101 @@ mod tests {
 		}
 	}
 
-	#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+	#[derive(TypePath, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 	enum _Input {
 		A,
 		B,
 		C,
 	}
 
-	#[test]
-	fn map_to_input() {
-		let mapper = KeyMapInternal::<_AllKeys, _Input>::default();
-		let mapped = mapper.get_key_code(_KeyB);
+	mod map {
+		use super::*;
 
-		assert_eq!(_Input::B, mapped,);
+		#[test]
+		fn to_input() {
+			let mapper = KeyMapInternal::<_AllKeys, _Input>::default();
+			let mapped = mapper.get_key_code(_KeyB);
+
+			assert_eq!(_Input::B, mapped,);
+		}
+
+		#[test]
+		fn to_key_a() {
+			let mapper = KeyMapInternal::<_AllKeys, _Input>::default();
+			let mapped = mapper.try_get_key(_Input::A);
+
+			assert_eq!(Some(_KeyA), mapped);
+		}
+
+		#[test]
+		fn to_key_b() {
+			let mapper = KeyMapInternal::<_AllKeys, _Input>::default();
+			let mapped = mapper.try_get_key(_Input::B);
+
+			assert_eq!(Some(_KeyB), mapped);
+		}
 	}
 
-	#[test]
-	fn map_to_key_a() {
-		let mapper = KeyMapInternal::<_AllKeys, _Input>::default();
-		let mapped = mapper.try_get_key(_Input::A);
+	mod update {
+		use super::*;
 
-		assert_eq!(Some(_KeyA), mapped);
+		#[test]
+		fn key() {
+			let key = _KeyA;
+			let key_code = _Input::B;
+			let mut mapper = KeyMapInternal::<_AllKeys, _Input>::default();
+			mapper.update_key(key, key_code);
+
+			assert_eq!(
+				(key_code, Some(key)),
+				(mapper.get_key_code(key), mapper.try_get_key(key_code))
+			);
+		}
+
+		#[test]
+		fn key_removing_old_key_code_pairing() {
+			let key = _KeyA;
+			let key_code_b = _Input::B;
+			let key_code_c = _Input::C;
+			let mut mapper = KeyMapInternal::<_AllKeys, _Input>::default();
+			mapper.update_key(key, key_code_b);
+			mapper.update_key(key, key_code_c);
+
+			assert_eq!(
+				(key_code_c, Some(key), None as Option<_Input>),
+				(
+					mapper.get_key_code(key),
+					mapper.try_get_key(key_code_c),
+					mapper.try_get_key(key_code_b)
+				)
+			);
+		}
+
+		#[test]
+		fn key_swapping_old_key() {
+			let key_a = _KeyA;
+			let key_b = _KeyB;
+			let key_code_a = _Input::A;
+			let key_code_b = _Input::B;
+			let mut mapper = KeyMapInternal::<_AllKeys, _Input>::default();
+			mapper.update_key(key_a, key_code_a);
+			mapper.update_key(key_b, key_code_a);
+
+			assert_eq!(
+				(key_code_b, Some(key_b), key_code_a, Some(key_a),),
+				(
+					mapper.get_key_code(key_a),
+					mapper.try_get_key(key_code_a),
+					mapper.get_key_code(key_b),
+					mapper.try_get_key(key_code_b),
+				)
+			);
+		}
 	}
 
-	#[test]
-	fn map_to_key_b() {
-		let mapper = KeyMapInternal::<_AllKeys, _Input>::default();
-		let mapped = mapper.try_get_key(_Input::B);
+	mod try_load {
+		use super::*;
 
-		assert_eq!(Some(_KeyB), mapped);
-	}
-
-	#[test]
-	fn update_key() {
-		let key = _KeyA;
-		let key_code = _Input::B;
-		let mut mapper = KeyMapInternal::<_AllKeys, _Input>::default();
-		mapper.update_key(key, key_code);
-
-		assert_eq!(
-			(key_code, Some(key)),
-			(mapper.get_key_code(key), mapper.try_get_key(key_code))
-		);
-	}
-
-	#[test]
-	fn update_key_removing_old_key_code_pairing() {
-		let key = _KeyA;
-		let key_code_b = _Input::B;
-		let key_code_c = _Input::C;
-		let mut mapper = KeyMapInternal::<_AllKeys, _Input>::default();
-		mapper.update_key(key, key_code_b);
-		mapper.update_key(key, key_code_c);
-
-		assert_eq!(
-			(key_code_c, Some(key), None as Option<_Input>),
-			(
-				mapper.get_key_code(key),
-				mapper.try_get_key(key_code_c),
-				mapper.try_get_key(key_code_b)
-			)
-		);
-	}
-
-	#[test]
-	fn update_key_swapping_old_key() {
-		let key_a = _KeyA;
-		let key_b = _KeyB;
-		let key_code_a = _Input::A;
-		let key_code_b = _Input::B;
-		let mut mapper = KeyMapInternal::<_AllKeys, _Input>::default();
-		mapper.update_key(key_a, key_code_a);
-		mapper.update_key(key_b, key_code_a);
-
-		assert_eq!(
-			(key_code_b, Some(key_b), key_code_a, Some(key_a),),
-			(
-				mapper.get_key_code(key_a),
-				mapper.try_get_key(key_code_a),
-				mapper.get_key_code(key_b),
-				mapper.try_get_key(key_code_b),
-			)
-		);
-	}
-
-	#[test]
-	fn load_from_dto() -> Result<(), DoubleAssignments> {
 		struct _Server;
 
 		impl LoadAsset for _Server {
@@ -381,18 +439,66 @@ mod tests {
 			}
 		}
 
-		let dto = KeyMapDto::from([(_AllKeys::A(_KeyA), _Input::C)]);
-		let mapper = KeyMapInternal::try_load_from(dto, &mut _Server)?;
+		#[test]
+		fn from_dto() -> Result<(), RepeatedAssignments<_AllKeys, _Input>> {
+			let dto = KeyMapDto::from([(_AllKeys::A(_KeyA), _Input::C)]);
 
-		assert_eq!(
-			(_Input::C, Some(_KeyA), _Input::B, Some(_KeyB)),
-			(
-				mapper.get_key_code(_KeyA),
-				mapper.try_get_key(_Input::C),
-				mapper.get_key_code(_KeyB),
-				mapper.try_get_key(_Input::B),
-			)
-		);
-		Ok(())
+			let mapper = KeyMapInternal::try_load_from(dto, &mut _Server)?;
+
+			assert_eq!(
+				(_Input::C, Some(_KeyA), _Input::B, Some(_KeyB)),
+				(
+					mapper.get_key_code(_KeyA),
+					mapper.try_get_key(_Input::C),
+					mapper.get_key_code(_KeyB),
+					mapper.try_get_key(_Input::B),
+				)
+			);
+			Ok(())
+		}
+
+		#[derive(TypePath, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+		enum _FaultyKey {
+			A,
+			B,
+			C,
+		}
+
+		impl IterFinite for _FaultyKey {
+			fn iterator() -> Iter<Self> {
+				Iter(Some(_FaultyKey::A))
+			}
+
+			fn next(current: &Iter<Self>) -> Option<Self> {
+				match current.0? {
+					_FaultyKey::A => Some(_FaultyKey::B),
+					_FaultyKey::B => Some(_FaultyKey::C),
+					_FaultyKey::C => None,
+				}
+			}
+		}
+
+		impl From<_FaultyKey> for _Input {
+			fn from(value: _FaultyKey) -> Self {
+				match value {
+					_FaultyKey::A => _Input::A,
+					_FaultyKey::B => _Input::C, // this is the faulty mapping
+					_FaultyKey::C => _Input::C,
+				}
+			}
+		}
+
+		#[test]
+		fn from_dto_error_when_input_assigned_twice() {
+			let mapper = KeyMapInternal::try_load_from(KeyMapDto::from([]), &mut _Server);
+
+			assert_eq!(
+				Err(RepeatedAssignments(HashMap::from([(
+					_Input::C,
+					HashSet::from([_FaultyKey::B, _FaultyKey::C])
+				)]))),
+				mapper
+			);
+		}
 	}
 }
