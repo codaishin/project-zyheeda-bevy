@@ -218,11 +218,6 @@ impl HandlesCustomFolderAssets for LoadingPlugin {
 			.in_app(app, is_loaded::<TAsset>);
 
 		let load_assets = Load::<TLoadGroup>::new(State::LoadAssets);
-		let map_load_results = map_load_results::<
-			TAsset,
-			LoadResult<TAsset, TAsset::TInstantiationError>,
-			AssetServer,
-		>;
 
 		app.init_asset::<LoadResult<TAsset, LoadError<TAsset::TInstantiationError>>>()
 			.init_resource::<AliveAssets<TAsset>>()
@@ -233,7 +228,7 @@ impl HandlesCustomFolderAssets for LoadingPlugin {
 			)
 			.add_systems(
 				Update,
-				map_load_results
+				map_load_results::<TAsset, LoadError<TAsset::TInstantiationError>, AssetServer>
 					.pipe(log_many)
 					.run_if(in_state(load_assets)),
 			);
