@@ -11,15 +11,12 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	tools::keys::{
-		Key,
-		movement::MovementKey,
-		slot::{Side, SlotKey},
-		user_input::UserInput,
-	},
+	states::menu_state::MenuState,
+	tools::keys::{Key, movement::MovementKey, slot::SlotKey, user_input::UserInput},
 	traits::{
-		handles_localization::{LocalizeToken, localized::Localized},
+		handles_localization::{LocalizeToken, Token},
 		iterate::Iterate,
+		iteration::IterFinite,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -32,25 +29,107 @@ pub(crate) struct SettingsScreen {
 	key_bindings: HashMap<Key, UserInput>,
 }
 
+impl SettingsScreen {
+	fn add_title(
+		parent: &mut ChildBuilder,
+		localize: &mut (impl LocalizeToken + ThreadSafe),
+		title: (impl Into<Token> + 'static),
+	) {
+		parent.spawn((
+			Text::new(localize.localize_token(title).or_token()),
+			TextFont {
+				font_size: 40.0,
+				..default()
+			},
+			TextColor(DEFAULT_PANEL_COLORS.text),
+		));
+	}
+
+	fn add_section_title(
+		parent: &mut ChildBuilder,
+		localize: &mut (impl LocalizeToken + ThreadSafe),
+		title: (impl Into<Token> + 'static),
+	) {
+		parent
+			.spawn(Node {
+				justify_content: JustifyContent::Start,
+				..default()
+			})
+			.with_child((
+				Text::new(localize.localize_token(title).or_token()),
+				TextFont {
+					font_size: 20.0,
+					..default()
+				},
+				TextColor(DEFAULT_PANEL_COLORS.text),
+			));
+	}
+
+	fn add_section<T>(
+		&self,
+		parent: &mut ChildBuilder,
+		localize: &mut (impl LocalizeToken + ThreadSafe),
+		title: (impl Into<Token> + 'static),
+	) where
+		T: IterFinite,
+		Key: From<T>,
+	{
+		parent
+			.spawn((
+				Node {
+					width: Val::Px(400.),
+					justify_content: JustifyContent::Center,
+					flex_direction: FlexDirection::Column,
+					padding: UiRect::all(Val::Px(2.)),
+					margin: UiRect::all(Val::Px(2.)),
+					..default()
+				},
+				BackgroundColor(DEFAULT_PANEL_COLORS.empty),
+			))
+			.with_children(|parent| {
+				Self::add_section_title(parent, localize, title);
+				self.add_key_bindings::<T>(parent);
+			});
+	}
+
+	fn add_key_bindings<T>(&self, parent: &mut ChildBuilder)
+	where
+		T: IterFinite,
+		Key: From<T>,
+	{
+		for (key, user_input) in self.keys::<T>() {
+			Self::add_key_row(parent, key, user_input);
+		}
+	}
+
+	fn keys<T>(&self) -> impl Iterator<Item = (Key, UserInput)>
+	where
+		T: IterFinite,
+		Key: From<T>,
+	{
+		T::iterator()
+			.map(Key::from)
+			.filter_map(|key| Some((key, *self.key_bindings.get(&key)?)))
+	}
+
+	fn add_key_row(parent: &mut ChildBuilder, key: Key, user_input: UserInput) {
+		parent
+			.spawn(Node {
+				flex_direction: FlexDirection::Row,
+				..default()
+			})
+			.with_children(|parent| {
+				parent.spawn(KeyBind(key));
+				parent.spawn(KeyBind(user_input));
+			});
+	}
+}
+
 impl LoadUi<AssetServer> for SettingsScreen {
 	fn load_ui(_: &mut AssetServer) -> Self {
 		Self::default()
 	}
 }
-
-const SLOT_KEYS: &[Key] = &[
-	Key::Slot(SlotKey::TopHand(Side::Left)),
-	Key::Slot(SlotKey::BottomHand(Side::Left)),
-	Key::Slot(SlotKey::TopHand(Side::Right)),
-	Key::Slot(SlotKey::BottomHand(Side::Right)),
-];
-
-const MOVEMENT_KEYS: &[Key] = &[
-	Key::Movement(MovementKey::Forward),
-	Key::Movement(MovementKey::Left),
-	Key::Movement(MovementKey::Backward),
-	Key::Movement(MovementKey::Right),
-];
 
 impl InsertUiContent for SettingsScreen {
 	fn insert_ui_content<TLocalization>(
@@ -67,44 +146,12 @@ impl InsertUiContent for SettingsScreen {
 				..default()
 			})
 			.with_children(|parent| {
-				add_title(parent, localize.localize_token("key-bindings").or_token());
-				for key in SLOT_KEYS {
-					let Some(key_code) = self.key_bindings.get(key) else {
-						continue;
-					};
-					add_key_row(parent, key, key_code);
-				}
-				for key in MOVEMENT_KEYS {
-					let Some(key_code) = self.key_bindings.get(key) else {
-						continue;
-					};
-					add_key_row(parent, key, key_code);
-				}
+				Self::add_title(parent, localize, "key-bindings");
+				self.add_section::<SlotKey>(parent, localize, "key-bindings-slots");
+				self.add_section::<MovementKey>(parent, localize, "key-bindings-movement");
+				self.add_section::<MenuState>(parent, localize, "key-bindings-menus");
 			});
 	}
-}
-
-fn add_title(parent: &mut ChildBuilder, title: Localized) {
-	parent.spawn((
-		Text::new(title),
-		TextFont {
-			font_size: 40.0,
-			..default()
-		},
-		TextColor(DEFAULT_PANEL_COLORS.text),
-	));
-}
-
-fn add_key_row(parent: &mut ChildBuilder, key: &Key, user_input: &UserInput) {
-	parent
-		.spawn(Node {
-			flex_direction: FlexDirection::Row,
-			..default()
-		})
-		.with_children(|parent| {
-			parent.spawn(KeyBind(*key));
-			parent.spawn(KeyBind(*user_input));
-		});
 }
 
 impl UpdateKeyBindings<Key, UserInput> for SettingsScreen {
