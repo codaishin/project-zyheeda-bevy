@@ -33,6 +33,10 @@ movement-key-backward = Move backward
 movement-key-left = Move left
 movement-key-right = Move right
 
+menu-inventory = Inventory
+menu-combos = Combos
+menu-settings = Settings
+
 key-code-digit-0 = 0
 key-code-digit-1 = 1
 key-code-digit-2 = 2

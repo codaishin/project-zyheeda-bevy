@@ -37,8 +37,8 @@ impl IterFinite for Key {
 	fn next(current: &Iter<Self>) -> Option<Self> {
 		match current.0? {
 			Key::Movement(key) => try_next(Key::Movement, key).or(try_fst(Key::Slot)),
-			Key::Slot(key) => try_next(Key::Slot, key),
-			Key::Menu(_) => None,
+			Key::Slot(key) => try_next(Key::Slot, key).or(try_fst(Key::Menu)),
+			Key::Menu(key) => try_next(Key::Menu, key),
 		}
 	}
 }
@@ -67,16 +67,9 @@ impl From<Key> for Token {
 pub struct IsNot<TKey>(PhantomData<TKey>);
 
 impl<TKey> IsNot<TKey> {
-	fn key() -> Self {
+	pub fn key() -> Self {
 		Self(PhantomData)
 	}
-}
-
-fn try_next<TInner>(wrap: impl Fn(TInner) -> Key, key: TInner) -> Option<Key>
-where
-	TInner: IterFinite,
-{
-	TInner::next(&Iter(Some(key))).map(wrap)
 }
 
 fn try_fst<TInner>(wrap: impl Fn(TInner) -> Key) -> Option<Key>
@@ -84,6 +77,13 @@ where
 	TInner: IterFinite,
 {
 	TInner::iterator().0.map(wrap)
+}
+
+fn try_next<TInner>(wrap: impl Fn(TInner) -> Key, key: TInner) -> Option<Key>
+where
+	TInner: IterFinite,
+{
+	TInner::next(&Iter(Some(key))).map(wrap)
 }
 
 #[cfg(test)]
@@ -98,6 +98,7 @@ mod tests {
 			MovementKey::iterator()
 				.map(Key::Movement)
 				.chain(SlotKey::iterator().map(Key::Slot))
+				.chain(MenuState::iterator().map(Key::Menu))
 				.collect::<Vec<_>>(),
 			Key::iterator().take(100).collect::<Vec<_>>()
 		);
@@ -109,6 +110,7 @@ mod tests {
 			MovementKey::iterator()
 				.map(UserInput::from)
 				.chain(SlotKey::iterator().map(UserInput::from))
+				.chain(MenuState::iterator().map(UserInput::from))
 				.collect::<HashSet<_>>(),
 			Key::iterator().map(UserInput::from).collect::<HashSet<_>>(),
 		);

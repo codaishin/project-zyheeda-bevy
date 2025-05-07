@@ -1,12 +1,13 @@
-use bevy::{prelude::*, state::state::FreelyMutableState};
-
 pub mod game_state;
 pub mod menu_state;
 pub mod mouse_context;
 
-pub fn transition_to_state<TState: FreelyMutableState + Copy>(
-	state: TState,
-) -> impl Fn(ResMut<NextState<TState>>) {
+use bevy::{prelude::*, state::state::FreelyMutableState};
+
+pub fn transition_to_state<TState>(state: TState) -> impl Fn(ResMut<NextState<TState>>)
+where
+	TState: FreelyMutableState + Copy,
+{
 	move |mut next_state: ResMut<NextState<TState>>| {
 		next_state.set(state);
 	}
