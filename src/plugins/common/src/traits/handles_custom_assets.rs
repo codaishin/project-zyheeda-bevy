@@ -10,7 +10,6 @@ pub trait HandlesCustomAssets {
 	fn register_custom_assets<TAsset, TDto>(app: &mut App)
 	where
 		TAsset: Asset + TryLoadFrom<TDto> + Clone + Debug,
-		TAsset::TInstantiationError: Error + TypePath + ThreadSafe,
 		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + ThreadSafe;
 }
 
@@ -18,7 +17,6 @@ pub trait HandlesCustomFolderAssets {
 	fn register_custom_folder_assets<TAsset, TDto, TLoadGroup>(app: &mut App)
 	where
 		TAsset: Asset + AssetFolderPath + TryLoadFrom<TDto> + Clone + Debug,
-		TAsset::TInstantiationError: Error + TypePath + ThreadSafe,
 		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + ThreadSafe,
 		TLoadGroup: ThreadSafe;
 }
@@ -28,7 +26,7 @@ pub trait AssetFolderPath {
 }
 
 pub trait TryLoadFrom<TFrom>: Sized {
-	type TInstantiationError;
+	type TInstantiationError: Error + TypePath + ThreadSafe;
 
 	fn try_load_from<TLoadAsset>(
 		from: TFrom,

@@ -10,6 +10,7 @@ use common::{
 		iteration::IterFinite,
 		key_mappings::{GetUserInput, TryGetKey},
 		load_asset::LoadAsset,
+		thread_safe::ThreadSafe,
 	},
 };
 use dto::KeyMapDto;
@@ -161,8 +162,8 @@ where
 impl<TAllKeys, TKeyCode> TryLoadFrom<KeyMapDto<TAllKeys, TKeyCode>>
 	for KeyMapInternal<TAllKeys, TKeyCode>
 where
-	TAllKeys: IterFinite + Debug + Copy + Hash + Eq + TypePath,
-	TKeyCode: Debug + Copy + Hash + Eq + TypePath,
+	TAllKeys: IterFinite + Debug + Copy + Hash + Eq + TypePath + ThreadSafe,
+	TKeyCode: Debug + Copy + Hash + Eq + TypePath + ThreadSafe,
 	TKeyCode: From<TAllKeys>,
 {
 	type TInstantiationError = RepeatedAssignments<TAllKeys, TKeyCode>;

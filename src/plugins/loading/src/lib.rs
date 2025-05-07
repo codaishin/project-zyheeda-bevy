@@ -199,7 +199,6 @@ impl HandlesCustomAssets for LoadingPlugin {
 	fn register_custom_assets<TAsset, TDto>(app: &mut App)
 	where
 		TAsset: Asset + TryLoadFrom<TDto> + Clone + std::fmt::Debug,
-		TAsset::TInstantiationError: Error + TypePath + ThreadSafe,
 		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + ThreadSafe,
 	{
 		app.init_asset::<TAsset>()
@@ -211,7 +210,6 @@ impl HandlesCustomFolderAssets for LoadingPlugin {
 	fn register_custom_folder_assets<TAsset, TDto, TLoadGroup>(app: &mut App)
 	where
 		TAsset: Asset + AssetFolderPath + TryLoadFrom<TDto> + Clone + std::fmt::Debug,
-		TAsset::TInstantiationError: Error + TypePath + ThreadSafe,
 		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + ThreadSafe,
 		TLoadGroup: ThreadSafe,
 	{
