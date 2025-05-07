@@ -14,11 +14,11 @@ pub(crate) trait SetKeyBindings<TKey, TKeyCode>:
 	where
 		TKeyMap: for<'a> Iterate<'a, TItem = (&'a TKey, &'a TKeyCode)> + Resource,
 	{
-		if !map.is_changed() {
-			return;
-		}
-
 		for mut component in &mut components {
+			if !map.is_changed() && !component.is_added() {
+				continue;
+			}
+
 			component.update_key_bindings(map.as_ref());
 		}
 	}
@@ -128,6 +128,22 @@ mod tests {
 		app.update();
 		let mut map = app.world_mut().resource_mut::<_Map>();
 		*map = _Map::from(keys);
+		app.update();
+
+		assert_eq!(
+			Some(&_Component::from(keys)),
+			app.world().entity(entity).get::<_Component>()
+		);
+	}
+
+	#[test]
+	fn set_key_bindings_again_when_component_added_and_resource_unchanged() {
+		let keys = [(_Key, _KeyCode)];
+		let map = _Map::from(keys);
+		let mut app = setup(map);
+
+		app.update();
+		let entity = app.world_mut().spawn(_Component::from([])).id();
 		app.update();
 
 		assert_eq!(
