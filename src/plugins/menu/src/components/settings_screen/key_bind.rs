@@ -24,7 +24,7 @@ where
 {
 	fn node_base() -> Node {
 		Node {
-			width: Val::Px(200.0),
+			width: Val::Percent(50.),
 			height: Val::Px(20.0),
 			margin: UiRect::all(Val::Px(2.0)),
 			padding: UiRect::all(Val::Px(2.0)),

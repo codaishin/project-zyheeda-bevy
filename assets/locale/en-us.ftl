@@ -22,6 +22,9 @@ combo-skill-add = Add new combo skill
 combo-skill-delete = Delete skill (and subsequent skills) from combo tree
 
 key-bindings = Key Bindings
+key-bindings-slots = Slots
+key-bindings-movement = Movement
+key-bindings-menus = Menus
 
 slot-key-top-hand-left = Top Hand Left
 slot-key-top-hand-right = Top Hand Right
@@ -32,6 +35,10 @@ movement-key-forward = Move forward
 movement-key-backward = Move backward
 movement-key-left = Move left
 movement-key-right = Move right
+
+menu-inventory = Inventory
+menu-combos = Combos
+menu-settings = Settings
 
 key-code-digit-0 = 0
 key-code-digit-1 = 1
@@ -69,3 +76,4 @@ key-code-key-w = W
 key-code-key-x = X
 key-code-key-y = Y
 key-code-key-z = Z
+key-code-escape = Escape

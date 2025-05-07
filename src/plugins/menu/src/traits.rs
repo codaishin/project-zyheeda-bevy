@@ -9,8 +9,6 @@ pub(crate) mod tooltip_ui_control;
 pub(crate) mod ui_traits;
 pub(crate) mod update_key_bindings;
 
-pub mod reacts_to_menu_hotkeys;
-
 use crate::tools::Layout;
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use build_combo_tree_layout::ComboTreeLayout;
