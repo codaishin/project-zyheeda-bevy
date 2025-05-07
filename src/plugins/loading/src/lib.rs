@@ -25,7 +25,7 @@ use common::{
 			AssetFolderPath,
 			HandlesCustomAssets,
 			HandlesCustomFolderAssets,
-			LoadFrom,
+			TryLoadFrom,
 		},
 		handles_load_tracking::{
 			AssetsProgress,
@@ -48,7 +48,7 @@ use folder_asset_loader::{FolderAssetLoader, LoadError, LoadResult};
 use resources::{alive_assets::AliveAssets, track::Track};
 use serde::Deserialize;
 use states::load_state::State;
-use std::{fmt::Debug, marker::PhantomData};
+use std::{error::Error, fmt::Debug, marker::PhantomData};
 use systems::{
 	begin_loading_folder_assets::begin_loading_folder_assets,
 	is_loaded::is_loaded,
@@ -198,7 +198,8 @@ where
 impl HandlesCustomAssets for LoadingPlugin {
 	fn register_custom_assets<TAsset, TDto>(app: &mut App)
 	where
-		TAsset: Asset + LoadFrom<TDto> + Clone + std::fmt::Debug,
+		TAsset: Asset + TryLoadFrom<TDto> + Clone + std::fmt::Debug,
+		TAsset::TInstantiationError: Error + TypePath + ThreadSafe,
 		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + ThreadSafe,
 	{
 		app.init_asset::<TAsset>()
@@ -209,7 +210,8 @@ impl HandlesCustomAssets for LoadingPlugin {
 impl HandlesCustomFolderAssets for LoadingPlugin {
 	fn register_custom_folder_assets<TAsset, TDto, TLoadGroup>(app: &mut App)
 	where
-		TAsset: Asset + AssetFolderPath + LoadFrom<TDto> + Clone + std::fmt::Debug,
+		TAsset: Asset + AssetFolderPath + TryLoadFrom<TDto> + Clone + std::fmt::Debug,
+		TAsset::TInstantiationError: Error + TypePath + ThreadSafe,
 		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + ThreadSafe,
 		TLoadGroup: ThreadSafe,
 	{
@@ -218,8 +220,13 @@ impl HandlesCustomFolderAssets for LoadingPlugin {
 			.in_app(app, is_loaded::<TAsset>);
 
 		let load_assets = Load::<TLoadGroup>::new(State::LoadAssets);
+		let map_load_results = map_load_results::<
+			TAsset,
+			LoadResult<TAsset, TAsset::TInstantiationError>,
+			AssetServer,
+		>;
 
-		app.init_asset::<LoadResult<TAsset>>()
+		app.init_asset::<LoadResult<TAsset, LoadError<TAsset::TInstantiationError>>>()
 			.init_resource::<AliveAssets<TAsset>>()
 			.register_asset_loader(FolderAssetLoader::<TAsset, TDto>::default())
 			.add_systems(
@@ -228,7 +235,7 @@ impl HandlesCustomFolderAssets for LoadingPlugin {
 			)
 			.add_systems(
 				Update,
-				map_load_results::<TAsset, LoadError, AssetServer>
+				map_load_results
 					.pipe(log_many)
 					.run_if(in_state(load_assets)),
 			);
@@ -238,7 +245,8 @@ impl HandlesCustomFolderAssets for LoadingPlugin {
 impl HandlesAssetResourceLoading for LoadingPlugin {
 	fn register_custom_resource_loading<TResource, TDto, TLoadGroup>(app: &mut App, path: Path)
 	where
-		TResource: Resource + Asset + Clone + LoadFrom<TDto> + Debug,
+		TResource: Resource + Asset + Clone + TryLoadFrom<TDto> + Debug,
+		TResource::TInstantiationError: Error + TypePath + ThreadSafe,
 		for<'a> TDto: Deserialize<'a> + ThreadSafe + AssetFileExtensions,
 		TLoadGroup: LoadGroup + ThreadSafe,
 	{

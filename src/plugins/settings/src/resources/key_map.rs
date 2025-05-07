@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use common::{
 	tools::keys::{Key, user_input::UserInput},
 	traits::{
-		handles_custom_assets::LoadFrom,
+		handles_custom_assets::TryLoadFrom,
 		handles_settings::UpdateKey,
 		iterate::Iterate,
 		iteration::IterFinite,
@@ -15,6 +15,8 @@ use common::{
 use dto::KeyMapDto;
 use std::{
 	collections::{HashMap, hash_map::Iter},
+	error::Error,
+	fmt::Display,
 	hash::Hash,
 	marker::PhantomData,
 };
@@ -54,21 +56,17 @@ where
 	}
 }
 
-impl LoadFrom<KeyMapDto<Key, UserInput>> for KeyMap {
-	fn load_from<TLoadAsset>(dto: KeyMapDto<Key, UserInput>, asset_server: &mut TLoadAsset) -> Self
+impl TryLoadFrom<KeyMapDto<Key, UserInput>> for KeyMap {
+	type TInstantiationError = DoubleAssignments;
+
+	fn try_load_from<TLoadAsset>(
+		dto: KeyMapDto<Key, UserInput>,
+		asset_server: &mut TLoadAsset,
+	) -> Result<Self, Self::TInstantiationError>
 	where
 		TLoadAsset: LoadAsset,
 	{
-		KeyMap(KeyMapInternal::load_from(dto, asset_server))
-	}
-}
-
-impl<'a> Iterate<'a> for KeyMap {
-	type TItem = (&'a Key, &'a UserInput);
-	type TIter = Iter<'a, Key, UserInput>;
-
-	fn iterate(&'a self) -> Self::TIter {
-		self.0.key_to_key_code.iter()
+		KeyMapInternal::try_load_from(dto, asset_server).map(KeyMap)
 	}
 }
 
@@ -156,17 +154,19 @@ where
 	}
 }
 
-impl<TAllKeys, TKeyCode> LoadFrom<KeyMapDto<TAllKeys, TKeyCode>>
+impl<TAllKeys, TKeyCode> TryLoadFrom<KeyMapDto<TAllKeys, TKeyCode>>
 	for KeyMapInternal<TAllKeys, TKeyCode>
 where
 	TAllKeys: IterFinite + Copy + Hash + Eq,
 	TKeyCode: Copy + Hash + Eq,
 	TKeyCode: From<TAllKeys>,
 {
-	fn load_from<TLoadAsset>(
+	type TInstantiationError = DoubleAssignments;
+
+	fn try_load_from<TLoadAsset>(
 		KeyMapDto { keys }: KeyMapDto<TAllKeys, TKeyCode>,
 		_: &mut TLoadAsset,
-	) -> Self
+	) -> Result<Self, Self::TInstantiationError>
 	where
 		TLoadAsset: LoadAsset,
 	{
@@ -175,7 +175,27 @@ where
 			mapper.update_key(key, key_code);
 		}
 
-		mapper
+		Ok(mapper)
+	}
+}
+
+#[derive(Debug, TypePath)]
+pub struct DoubleAssignments;
+
+impl Display for DoubleAssignments {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "Some keys have been assigned twice")
+	}
+}
+
+impl Error for DoubleAssignments {}
+
+impl<'a> Iterate<'a> for KeyMap {
+	type TItem = (&'a Key, &'a UserInput);
+	type TIter = Iter<'a, Key, UserInput>;
+
+	fn iterate(&'a self) -> Self::TIter {
+		self.0.key_to_key_code.iter()
 	}
 }
 
@@ -349,7 +369,7 @@ mod tests {
 	}
 
 	#[test]
-	fn load_from_dto() {
+	fn load_from_dto() -> Result<(), DoubleAssignments> {
 		struct _Server;
 
 		impl LoadAsset for _Server {
@@ -362,7 +382,7 @@ mod tests {
 		}
 
 		let dto = KeyMapDto::from([(_AllKeys::A(_KeyA), _Input::C)]);
-		let mapper = KeyMapInternal::load_from(dto, &mut _Server);
+		let mapper = KeyMapInternal::try_load_from(dto, &mut _Server)?;
 
 		assert_eq!(
 			(_Input::C, Some(_KeyA), _Input::B, Some(_KeyB)),
@@ -373,5 +393,6 @@ mod tests {
 				mapper.try_get_key(_Input::B),
 			)
 		);
+		Ok(())
 	}
 }

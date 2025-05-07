@@ -4,19 +4,21 @@ use super::{
 };
 use bevy::prelude::*;
 use serde::Deserialize;
-use std::fmt::Debug;
+use std::{error::Error, fmt::Debug};
 
 pub trait HandlesCustomAssets {
 	fn register_custom_assets<TAsset, TDto>(app: &mut App)
 	where
-		TAsset: Asset + LoadFrom<TDto> + Clone + Debug,
+		TAsset: Asset + TryLoadFrom<TDto> + Clone + Debug,
+		TAsset::TInstantiationError: Error + TypePath + ThreadSafe,
 		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + ThreadSafe;
 }
 
 pub trait HandlesCustomFolderAssets {
 	fn register_custom_folder_assets<TAsset, TDto, TLoadGroup>(app: &mut App)
 	where
-		TAsset: Asset + AssetFolderPath + LoadFrom<TDto> + Clone + Debug,
+		TAsset: Asset + AssetFolderPath + TryLoadFrom<TDto> + Clone + Debug,
+		TAsset::TInstantiationError: Error + TypePath + ThreadSafe,
 		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + ThreadSafe,
 		TLoadGroup: ThreadSafe;
 }
@@ -25,8 +27,15 @@ pub trait AssetFolderPath {
 	fn asset_folder_path() -> Path;
 }
 
-pub trait LoadFrom<TFrom> {
-	fn load_from<TLoadAsset: LoadAsset>(from: TFrom, asset_server: &mut TLoadAsset) -> Self;
+pub trait TryLoadFrom<TFrom>: Sized {
+	type TInstantiationError;
+
+	fn try_load_from<TLoadAsset>(
+		from: TFrom,
+		asset_server: &mut TLoadAsset,
+	) -> Result<Self, Self::TInstantiationError>
+	where
+		TLoadAsset: LoadAsset;
 }
 
 pub trait AssetFileExtensions {
