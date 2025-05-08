@@ -54,6 +54,7 @@ fn prepare_game(app: &mut App) {
 	let map_generation_plugin = MapGenerationPlugin::depends_on(&prefabs_plugin, &light_plugin);
 	let path_finding_plugin = PathFindingPlugin::depends_on(&map_generation_plugin);
 	let player_plugin = PlayerPlugin::depends_on(
+		&settings_plugin,
 		&game_state_plugin,
 		&animations_plugin,
 		&prefabs_plugin,

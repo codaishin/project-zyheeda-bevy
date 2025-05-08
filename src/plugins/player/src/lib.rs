@@ -9,7 +9,7 @@ use common::{
 	attributes::health::Health,
 	effects::deal_damage::DealDamage,
 	states::mouse_context::MouseContext,
-	tools::action_key::slot::SlotKey,
+	tools::action_key::{movement::MovementKey, slot::SlotKey},
 	traits::{
 		animation::RegisterAnimations,
 		handles_effect::HandlesEffect,
@@ -23,6 +23,7 @@ use common::{
 			HandlesPlayerMouse,
 			PlayerMainCamera,
 		},
+		handles_settings::HandlesSettings,
 		prefab::{RegisterPrefab, RegisterPrefabWithDependency},
 		thread_safe::ThreadSafe,
 	},
@@ -43,9 +44,17 @@ use systems::{
 
 pub struct PlayerPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TGameStates, TAnimation, TPrefabs, TInteractions, TLights>
-	PlayerPlugin<(TGameStates, TAnimation, TPrefabs, TInteractions, TLights)>
+impl<TSettings, TGameStates, TAnimation, TPrefabs, TInteractions, TLights>
+	PlayerPlugin<(
+		TSettings,
+		TGameStates,
+		TAnimation,
+		TPrefabs,
+		TInteractions,
+		TLights,
+	)>
 where
+	TSettings: ThreadSafe + HandlesSettings,
 	TGameStates: ThreadSafe + HandlesGameStates,
 	TAnimation: ThreadSafe + RegisterAnimations,
 	TPrefabs: ThreadSafe + RegisterPrefab,
@@ -53,6 +62,7 @@ where
 	TLights: ThreadSafe + HandlesLights,
 {
 	pub fn depends_on(
+		_: &TSettings,
 		_: &TGameStates,
 		_: &TAnimation,
 		_: &TPrefabs,
@@ -63,9 +73,17 @@ where
 	}
 }
 
-impl<TGameStates, TAnimation, TPrefabs, TInteractions, TLights> Plugin
-	for PlayerPlugin<(TGameStates, TAnimation, TPrefabs, TInteractions, TLights)>
+impl<TSettings, TGameStates, TAnimation, TPrefabs, TInteractions, TLights> Plugin
+	for PlayerPlugin<(
+		TSettings,
+		TGameStates,
+		TAnimation,
+		TPrefabs,
+		TInteractions,
+		TLights,
+	)>
 where
+	TSettings: ThreadSafe + HandlesSettings,
 	TGameStates: ThreadSafe + HandlesGameStates,
 	TAnimation: ThreadSafe + RegisterAnimations,
 	TPrefabs: ThreadSafe + RegisterPrefab,
@@ -91,7 +109,10 @@ where
 				Update,
 				SkillAnimation::system::<TAnimation::TAnimationDispatch>,
 			)
-			.add_systems(Update, player_toggle_walk_run);
+			.add_systems(
+				Update,
+				player_toggle_walk_run::<TSettings::TKeyMap<MovementKey>>,
+			);
 	}
 }
 

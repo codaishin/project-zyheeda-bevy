@@ -3,19 +3,29 @@ use crate::components::{
 	player_movement::{MovementMode, PlayerMovement},
 };
 use bevy::prelude::*;
-use common::tools::action_key::user_input::UserInput;
+use common::{
+	tools::action_key::{movement::MovementKey, user_input::UserInput},
+	traits::key_mappings::JustPressed,
+};
 
-pub fn player_toggle_walk_run(
+pub fn player_toggle_walk_run<TMap>(
 	mut player: Query<&mut PlayerMovement, With<Player>>,
-	keys: Res<ButtonInput<UserInput>>,
-) {
-	if !keys.just_pressed(UserInput::from(KeyCode::NumpadSubtract)) {
+	map: Res<TMap>,
+	input: Res<ButtonInput<UserInput>>,
+) where
+	TMap: JustPressed<MovementKey> + Resource,
+{
+	if !map.just_pressed(&input).any(is_toggle_walk_run) {
 		return;
 	}
 
 	for mut movement in player.iter_mut() {
 		toggle_movement(&mut movement);
 	}
+}
+
+fn is_toggle_walk_run(key: MovementKey) -> bool {
+	key == MovementKey::ToggleWalkRun
 }
 
 fn toggle_movement(PlayerMovement { mode, .. }: &mut PlayerMovement) {
@@ -28,22 +38,44 @@ fn toggle_movement(PlayerMovement { mode, .. }: &mut PlayerMovement) {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::test_tools::utils::SingleThreadedApp;
+	use common::{
+		test_tools::utils::SingleThreadedApp,
+		traits::{iteration::IterFinite, nested_mock::NestedMocks},
+	};
+	use macros::NestedMocks;
+	use mockall::automock;
 
-	fn setup(press: UserInput) -> App {
-		let mut keys = ButtonInput::<UserInput>::default();
+	#[derive(Resource, NestedMocks)]
+	struct _Map {
+		mock: Mock_Map,
+	}
+
+	#[automock]
+	impl JustPressed<MovementKey> for _Map {
+		fn just_pressed(
+			&self,
+			input: &ButtonInput<UserInput>,
+		) -> impl Iterator<Item = MovementKey> {
+			self.mock.just_pressed(input)
+		}
+	}
+
+	fn setup(map: _Map) -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		keys.press(press);
-		app.insert_resource(keys);
-		app.add_systems(Update, player_toggle_walk_run);
+		app.insert_resource(map);
+		app.init_resource::<ButtonInput<UserInput>>();
+		app.add_systems(Update, player_toggle_walk_run::<_Map>);
 
 		app
 	}
 
 	#[test]
 	fn toggle_player_walk_to_run() {
-		let mut app = setup(UserInput::from(KeyCode::NumpadSubtract));
+		let mut app = setup(_Map::new().with_mock(|mock| {
+			mock.expect_just_pressed()
+				.returning(|_| Box::new(std::iter::once(MovementKey::ToggleWalkRun)));
+		}));
 		let player = app
 			.world_mut()
 			.spawn((
@@ -68,7 +100,10 @@ mod tests {
 
 	#[test]
 	fn toggle_player_run_to_walk() {
-		let mut app = setup(UserInput::from(KeyCode::NumpadSubtract));
+		let mut app = setup(_Map::new().with_mock(|mock| {
+			mock.expect_just_pressed()
+				.returning(|_| Box::new(std::iter::once(MovementKey::ToggleWalkRun)));
+		}));
 		let player = app
 			.world_mut()
 			.spawn((
@@ -92,8 +127,12 @@ mod tests {
 	}
 
 	#[test]
-	fn no_toggle_when_no_input() {
-		let mut app = setup(UserInput::from(KeyCode::NumpadSubtract));
+	fn no_toggle_when_no_toggle_input() {
+		let mut app = setup(_Map::new().with_mock(|mock| {
+			mock.expect_just_pressed().returning(|_| {
+				Box::new(MovementKey::iterator().filter(|key| key != &MovementKey::ToggleWalkRun))
+			});
+		}));
 		let player = app
 			.world_mut()
 			.spawn(PlayerMovement {
@@ -111,5 +150,30 @@ mod tests {
 			}),
 			app.world().entity(player).get::<PlayerMovement>()
 		);
+	}
+
+	#[test]
+	fn pass_correct_input_to_map() {
+		let mut input = ButtonInput::default();
+		input.press(UserInput::from(KeyCode::Digit7));
+		let mut app = setup(_Map::new().with_mock(|mock| {
+			mock.expect_just_pressed().returning(|input| {
+				assert_eq!(
+					vec![&UserInput::from(KeyCode::Digit7)],
+					input.get_pressed().collect::<Vec<_>>()
+				);
+				Box::new(std::iter::empty())
+			});
+		}));
+		app.insert_resource(input);
+		app.world_mut().spawn((
+			Player,
+			PlayerMovement {
+				mode: MovementMode::Slow,
+				..default()
+			},
+		));
+
+		app.update();
 	}
 }

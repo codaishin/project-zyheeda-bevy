@@ -17,7 +17,7 @@ impl KeyDirection<MovementKey> for PlayerCamera {
 			MovementKey::Backward => *cam_transform.back() + *cam_transform.down(),
 			MovementKey::Left => *cam_transform.left(),
 			MovementKey::Right => *cam_transform.right(),
-			MovementKey::Pointer => return Err(DirectionError::KeyHasNoDirection(*movement_key)),
+			_ => return Err(DirectionError::KeyHasNoDirection(*movement_key)),
 		};
 
 		Dir3::try_from(direction.with_y(0.)).map_err(DirectionError::Invalid)
@@ -27,7 +27,7 @@ impl KeyDirection<MovementKey> for PlayerCamera {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::assert_eq_approx;
+	use common::{assert_eq_approx, traits::iteration::IterFinite};
 
 	#[test]
 	fn get_directions_default() {
@@ -113,12 +113,30 @@ mod tests {
 	}
 
 	#[test]
-	fn direction_pointer_error() {
-		let transform = GlobalTransform::default();
+	fn direction_error() {
+		let directions = [
+			MovementKey::Forward,
+			MovementKey::Backward,
+			MovementKey::Left,
+			MovementKey::Right,
+		];
+		let non_directional_keys = MovementKey::iterator().filter(|key| !directions.contains(key));
 
-		assert_eq!(
-			Err(DirectionError::KeyHasNoDirection(MovementKey::Pointer)),
-			PlayerCamera::key_direction(&transform, &MovementKey::Pointer),
+		let parsed = non_directional_keys
+			.map(|key| {
+				(
+					key,
+					PlayerCamera::key_direction(&GlobalTransform::default(), &key),
+				)
+			})
+			.collect::<Vec<_>>();
+
+		assert!(
+			parsed.iter().all(
+				|(key, result)| matches!(result, Err(DirectionError::KeyHasNoDirection(k)) if k == key)
+			),
+			"not all were `(key, Err(DirectionError::KeyHasNoDirection(key)))` in: {:?}",
+			parsed
 		);
 	}
 }
