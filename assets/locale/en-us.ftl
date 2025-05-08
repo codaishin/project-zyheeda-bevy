@@ -36,6 +36,8 @@ movement-key-backward = Move backward
 movement-key-left = Move left
 movement-key-right = Move right
 
+camera-key-rotate = Camera Rotation
+
 menu-inventory = Inventory
 menu-combos = Combos
 menu-settings = Settings
