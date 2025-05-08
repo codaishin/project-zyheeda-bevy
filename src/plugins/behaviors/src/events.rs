@@ -3,7 +3,7 @@ use bevy::{ecs::event::Event, math::Vec3};
 use common::tools::speed::Speed;
 use std::{marker::PhantomData, time::Duration};
 
-#[derive(Event, Debug, PartialEq, Clone)]
+#[derive(Event, Debug, PartialEq, Clone, Copy)]
 pub(crate) struct MovePointerEvent(pub(crate) Vec3);
 
 impl From<Vec3> for MovePointerEvent {
@@ -12,7 +12,7 @@ impl From<Vec3> for MovePointerEvent {
 	}
 }
 
-#[derive(Event, Debug, PartialEq, Clone)]
+#[derive(Event, Debug, PartialEq, Clone, Copy)]
 pub(crate) struct MoveDirectionalEvent<TMethod> {
 	pub(crate) target: Vec3,
 	_m: PhantomData<TMethod>,
