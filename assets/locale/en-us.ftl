@@ -25,6 +25,7 @@ key-bindings = Key Bindings
 key-bindings-slots = Slots
 key-bindings-movement = Movement
 key-bindings-menus = Menus
+key-bindings-camera = Camera
 
 slot-key-top-hand-left = Top Hand Left
 slot-key-top-hand-right = Top Hand Right
@@ -79,3 +80,7 @@ key-code-key-x = X
 key-code-key-y = Y
 key-code-key-z = Z
 key-code-escape = Escape
+
+mouse-button-left = Left Mouse Button
+mouse-button-right = Right Mouse Button
+mouse-button-middle = Middle Mouse Button
