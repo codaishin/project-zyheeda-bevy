@@ -36,6 +36,7 @@ movement-key-forward = Move forward
 movement-key-backward = Move backward
 movement-key-left = Move left
 movement-key-right = Move right
+movement-key-pointer = Move to mouse cursor
 
 camera-key-rotate = Camera Rotation
 

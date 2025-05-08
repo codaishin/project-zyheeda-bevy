@@ -1,9 +1,9 @@
-use super::{IsNot, ActionKey, user_input::UserInput};
+use super::{ActionKey, IsNot, user_input::UserInput};
 use crate::traits::{
 	handles_localization::Token,
 	iteration::{Iter, IterFinite},
 };
-use bevy::input::keyboard::KeyCode;
+use bevy::input::{keyboard::KeyCode, mouse::MouseButton};
 use serde::{Deserialize, Serialize};
 
 #[derive(Default, Clone, Copy, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
@@ -13,6 +13,7 @@ pub enum MovementKey {
 	Backward,
 	Left,
 	Right,
+	Pointer,
 }
 
 impl IterFinite for MovementKey {
@@ -25,7 +26,8 @@ impl IterFinite for MovementKey {
 			MovementKey::Forward => Some(MovementKey::Backward),
 			MovementKey::Backward => Some(MovementKey::Left),
 			MovementKey::Left => Some(MovementKey::Right),
-			MovementKey::Right => None,
+			MovementKey::Right => Some(MovementKey::Pointer),
+			MovementKey::Pointer => None,
 		}
 	}
 }
@@ -37,6 +39,7 @@ impl From<MovementKey> for UserInput {
 			MovementKey::Backward => Self::from(KeyCode::KeyS),
 			MovementKey::Left => Self::from(KeyCode::KeyA),
 			MovementKey::Right => Self::from(KeyCode::KeyD),
+			MovementKey::Pointer => Self::from(MouseButton::Left),
 		}
 	}
 }
@@ -65,6 +68,7 @@ impl From<MovementKey> for Token {
 			MovementKey::Backward => Token::from("movement-key-backward"),
 			MovementKey::Left => Token::from("movement-key-left"),
 			MovementKey::Right => Token::from("movement-key-right"),
+			MovementKey::Pointer => Token::from("movement-key-pointer"),
 		}
 	}
 }
@@ -81,6 +85,7 @@ mod tests {
 				MovementKey::Backward,
 				MovementKey::Left,
 				MovementKey::Right,
+				MovementKey::Pointer,
 			],
 			MovementKey::iterator().take(5).collect::<Vec<_>>()
 		);

@@ -48,5 +48,11 @@ pub trait KeyDirection<TKey> {
 	fn key_direction(
 		self_transform: &GlobalTransform,
 		movement_key: &TKey,
-	) -> Result<Dir3, InvalidDirectionError>;
+	) -> Result<Dir3, DirectionError<TKey>>;
+}
+
+#[derive(Debug, PartialEq)]
+pub enum DirectionError<TKey> {
+	Invalid(InvalidDirectionError),
+	KeyHasNoDirection(TKey),
 }

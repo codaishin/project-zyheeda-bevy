@@ -124,14 +124,15 @@ pub(crate) enum QueryError {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{
-		ecs::system::{RunSystemError, RunSystemOnce},
-		math::InvalidDirectionError,
-	};
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		tools::UnitsPerSecond,
-		traits::{clamp_zero_positive::ClampZeroPositive, nested_mock::NestedMocks},
+		traits::{
+			clamp_zero_positive::ClampZeroPositive,
+			handles_player::DirectionError,
+			nested_mock::NestedMocks,
+		},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -173,7 +174,7 @@ mod tests {
 		fn key_direction(
 			self_transform: &GlobalTransform,
 			movement_key: &_Key,
-		) -> Result<Dir3, InvalidDirectionError> {
+		) -> Result<Dir3, DirectionError<_Key>> {
 			Mock_Cam::key_direction(self_transform, movement_key)
 		}
 	}
@@ -208,7 +209,7 @@ mod tests {
 				fn key_direction(
 					self_transform: &GlobalTransform,
 					movement_key: &_Key,
-				) -> Result<Dir3, InvalidDirectionError> {
+				) -> Result<Dir3, DirectionError<_Key>> {
 					Mock_Cam::key_direction(self_transform, movement_key)
 				}
 			}
