@@ -37,6 +37,7 @@ movement-key-backward = Move backward
 movement-key-left = Move left
 movement-key-right = Move right
 movement-key-pointer = Move to mouse cursor
+movement-key-toggle-walk-run = Toggle Walk/Run
 
 camera-key-rotate = Camera Rotation
 
@@ -81,6 +82,7 @@ key-code-key-x = X
 key-code-key-y = Y
 key-code-key-z = Z
 key-code-escape = Escape
+key-code-numpad-subtract = Numpad -
 
 mouse-button-left = Left Mouse Button
 mouse-button-right = Right Mouse Button

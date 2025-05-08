@@ -14,6 +14,7 @@ pub enum MovementKey {
 	Left,
 	Right,
 	Pointer,
+	ToggleWalkRun,
 }
 
 impl IterFinite for MovementKey {
@@ -27,7 +28,8 @@ impl IterFinite for MovementKey {
 			MovementKey::Backward => Some(MovementKey::Left),
 			MovementKey::Left => Some(MovementKey::Right),
 			MovementKey::Right => Some(MovementKey::Pointer),
-			MovementKey::Pointer => None,
+			MovementKey::Pointer => Some(MovementKey::ToggleWalkRun),
+			MovementKey::ToggleWalkRun => None,
 		}
 	}
 }
@@ -40,6 +42,7 @@ impl From<MovementKey> for UserInput {
 			MovementKey::Left => Self::from(KeyCode::KeyA),
 			MovementKey::Right => Self::from(KeyCode::KeyD),
 			MovementKey::Pointer => Self::from(MouseButton::Left),
+			MovementKey::ToggleWalkRun => Self::from(KeyCode::NumpadSubtract),
 		}
 	}
 }
@@ -69,6 +72,7 @@ impl From<MovementKey> for Token {
 			MovementKey::Left => Token::from("movement-key-left"),
 			MovementKey::Right => Token::from("movement-key-right"),
 			MovementKey::Pointer => Token::from("movement-key-pointer"),
+			MovementKey::ToggleWalkRun => Token::from("movement-key-toggle-walk-run"),
 		}
 	}
 }
@@ -86,8 +90,9 @@ mod tests {
 				MovementKey::Left,
 				MovementKey::Right,
 				MovementKey::Pointer,
+				MovementKey::ToggleWalkRun,
 			],
-			MovementKey::iterator().take(5).collect::<Vec<_>>()
+			MovementKey::iterator().take(100).collect::<Vec<_>>()
 		);
 	}
 }
