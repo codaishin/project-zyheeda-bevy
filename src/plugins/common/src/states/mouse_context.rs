@@ -1,4 +1,4 @@
-use crate::tools::keys::user_input::UserInput;
+use crate::tools::action_key::user_input::UserInput;
 use bevy::prelude::*;
 use std::{fmt::Debug, hash::Hash};
 

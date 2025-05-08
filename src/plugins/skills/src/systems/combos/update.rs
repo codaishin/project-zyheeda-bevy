@@ -1,6 +1,6 @@
 use crate::{skills::Skill, traits::write_item::WriteItem};
 use bevy::prelude::*;
-use common::tools::keys::slot::{Combo, SlotKey};
+use common::tools::action_key::slot::{Combo, SlotKey};
 
 impl<T> UpdateCombos for T {}
 
@@ -28,7 +28,7 @@ mod tests {
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
 		test_tools::utils::SingleThreadedApp,
-		tools::keys::slot::Side,
+		tools::action_key::slot::Side,
 		traits::{handles_localization::Token, nested_mock::NestedMocks},
 	};
 	use macros::NestedMocks;

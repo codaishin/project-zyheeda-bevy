@@ -19,52 +19,54 @@ use std::marker::PhantomData;
 use user_input::UserInput;
 
 #[derive(TypePath, Clone, Copy, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
-pub enum Key {
+pub enum ActionKey {
 	Movement(MovementKey),
 	Slot(SlotKey),
 	Menu(MenuState),
 	Camera(CameraKey),
 }
 
-impl Default for Key {
+impl Default for ActionKey {
 	fn default() -> Self {
 		Self::Movement(default())
 	}
 }
 
-impl IterFinite for Key {
+impl IterFinite for ActionKey {
 	fn iterator() -> Iter<Self> {
 		Iter(Some(Self::default()))
 	}
 
 	fn next(current: &Iter<Self>) -> Option<Self> {
 		match current.0? {
-			Key::Movement(key) => try_next(Key::Movement, key).or(try_fst(Key::Slot)),
-			Key::Slot(key) => try_next(Key::Slot, key).or(try_fst(Key::Menu)),
-			Key::Menu(key) => try_next(Key::Menu, key).or(try_fst(Key::Camera)),
-			Key::Camera(key) => try_next(Key::Camera, key),
+			ActionKey::Movement(key) => {
+				try_next(ActionKey::Movement, key).or(try_fst(ActionKey::Slot))
+			}
+			ActionKey::Slot(key) => try_next(ActionKey::Slot, key).or(try_fst(ActionKey::Menu)),
+			ActionKey::Menu(key) => try_next(ActionKey::Menu, key).or(try_fst(ActionKey::Camera)),
+			ActionKey::Camera(key) => try_next(ActionKey::Camera, key),
 		}
 	}
 }
 
-impl From<Key> for UserInput {
-	fn from(key: Key) -> Self {
+impl From<ActionKey> for UserInput {
+	fn from(key: ActionKey) -> Self {
 		match key {
-			Key::Movement(key) => Self::from(key),
-			Key::Slot(key) => Self::from(key),
-			Key::Menu(key) => Self::from(key),
-			Key::Camera(key) => Self::from(key),
+			ActionKey::Movement(key) => Self::from(key),
+			ActionKey::Slot(key) => Self::from(key),
+			ActionKey::Menu(key) => Self::from(key),
+			ActionKey::Camera(key) => Self::from(key),
 		}
 	}
 }
 
-impl From<Key> for Token {
-	fn from(value: Key) -> Self {
+impl From<ActionKey> for Token {
+	fn from(value: ActionKey) -> Self {
 		match value {
-			Key::Movement(key) => Self::from(key),
-			Key::Slot(key) => Self::from(key),
-			Key::Menu(key) => Self::from(key),
-			Key::Camera(key) => Self::from(key),
+			ActionKey::Movement(key) => Self::from(key),
+			ActionKey::Slot(key) => Self::from(key),
+			ActionKey::Menu(key) => Self::from(key),
+			ActionKey::Camera(key) => Self::from(key),
 		}
 	}
 }
@@ -78,14 +80,14 @@ impl<TKey> IsNot<TKey> {
 	}
 }
 
-fn try_fst<TInner>(wrap: impl Fn(TInner) -> Key) -> Option<Key>
+fn try_fst<TInner>(wrap: impl Fn(TInner) -> ActionKey) -> Option<ActionKey>
 where
 	TInner: IterFinite,
 {
 	TInner::iterator().0.map(wrap)
 }
 
-fn try_next<TInner>(wrap: impl Fn(TInner) -> Key, key: TInner) -> Option<Key>
+fn try_next<TInner>(wrap: impl Fn(TInner) -> ActionKey, key: TInner) -> Option<ActionKey>
 where
 	TInner: IterFinite,
 {
@@ -102,12 +104,12 @@ mod tests {
 	fn iter_all_keys() {
 		assert_eq!(
 			MovementKey::iterator()
-				.map(Key::Movement)
-				.chain(SlotKey::iterator().map(Key::Slot))
-				.chain(MenuState::iterator().map(Key::Menu))
-				.chain(CameraKey::iterator().map(Key::Camera))
+				.map(ActionKey::Movement)
+				.chain(SlotKey::iterator().map(ActionKey::Slot))
+				.chain(MenuState::iterator().map(ActionKey::Menu))
+				.chain(CameraKey::iterator().map(ActionKey::Camera))
 				.collect::<Vec<_>>(),
-			Key::iterator().take(100).collect::<Vec<_>>()
+			ActionKey::iterator().take(100).collect::<Vec<_>>()
 		);
 	}
 
@@ -120,7 +122,9 @@ mod tests {
 				.chain(MenuState::iterator().map(UserInput::from))
 				.chain(CameraKey::iterator().map(UserInput::from))
 				.collect::<HashSet<_>>(),
-			Key::iterator().map(UserInput::from).collect::<HashSet<_>>(),
+			ActionKey::iterator()
+				.map(UserInput::from)
+				.collect::<HashSet<_>>(),
 		);
 	}
 }

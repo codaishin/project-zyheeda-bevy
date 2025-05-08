@@ -1,6 +1,6 @@
 use super::KeyMap;
 use common::{
-	tools::keys::{Key, user_input::UserInput},
+	tools::action_key::{ActionKey, user_input::UserInput},
 	traits::handles_custom_assets::AssetFileExtensions,
 };
 use serde::{Deserialize, Serialize};
@@ -28,13 +28,13 @@ where
 	}
 }
 
-impl AssetFileExtensions for KeyMapDto<Key, UserInput> {
+impl AssetFileExtensions for KeyMapDto<ActionKey, UserInput> {
 	fn asset_file_extensions() -> &'static [&'static str] {
 		&[".keys"]
 	}
 }
 
-impl From<KeyMap> for KeyMapDto<Key, UserInput> {
+impl From<KeyMap> for KeyMapDto<ActionKey, UserInput> {
 	fn from(KeyMap(map): KeyMap) -> Self {
 		Self {
 			keys: Vec::from_iter(map.key_to_key_code),

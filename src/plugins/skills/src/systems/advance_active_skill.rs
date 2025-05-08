@@ -4,7 +4,7 @@ use crate::{
 };
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use common::{
-	tools::keys::slot::SlotKey,
+	tools::action_key::slot::SlotKey,
 	traits::{
 		handles_orientation::{Face, HandlesOrientation},
 		handles_player::ConfiguresPlayerSkillAnimations,
@@ -185,7 +185,7 @@ mod tests {
 	use common::{
 		simple_init,
 		test_tools::utils::{Changed, SingleThreadedApp, TickTime},
-		tools::keys::slot::Side,
+		tools::action_key::slot::Side,
 		traits::{mock::Mock, nested_mock::NestedMocks},
 	};
 	use macros::NestedMocks;

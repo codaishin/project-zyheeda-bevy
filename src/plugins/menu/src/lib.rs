@@ -24,14 +24,14 @@ use common::{
 	},
 	systems::insert_required::{InsertOn, InsertRequired},
 	tools::{
-		change::Change,
-		inventory_key::InventoryKey,
-		item_description::ItemToken,
-		keys::{
-			Key,
+		action_key::{
+			ActionKey,
 			slot::{Combo, SlotKey},
 			user_input::UserInput,
 		},
+		change::Change,
+		inventory_key::InventoryKey,
+		item_description::ItemToken,
 		skill_description::SkillToken,
 		skill_execution::SkillExecution,
 		skill_icon::SkillIcon,
@@ -222,8 +222,8 @@ where
 		.add_systems(
 			Update,
 			(
-				SettingsScreen::set_key_bindings_from::<TSettings::TKeyMap<Key>>,
-				KeyBind::<Key>::render_ui::<TLocalization::TLocalizationServer>,
+				SettingsScreen::set_key_bindings_from::<TSettings::TKeyMap<ActionKey>>,
+				KeyBind::<ActionKey>::render_ui::<TLocalization::TLocalizationServer>,
 				KeyBind::<UserInput>::render_ui::<TLocalization::TLocalizationServer>,
 			)
 				.run_if(in_state(settings)),

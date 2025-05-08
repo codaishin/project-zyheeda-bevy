@@ -1,9 +1,9 @@
 use super::{inspect_able::InspectAble, thread_safe::ThreadSafe};
 use crate::tools::{
+	action_key::slot::SlotKey,
 	change::Change,
 	inventory_key::InventoryKey,
 	item_description::ItemToken,
-	keys::slot::SlotKey,
 	skill_description::SkillToken,
 	skill_execution::SkillExecution,
 	skill_icon::SkillIcon,

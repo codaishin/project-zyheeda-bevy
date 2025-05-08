@@ -2,7 +2,7 @@ use super::combo_overview::ComboOverview;
 use crate::{Tooltip, traits::insert_ui_content::InsertUiContent};
 use bevy::prelude::*;
 use common::{
-	tools::{keys::slot::SlotKey, skill_description::SkillToken, skill_icon::SkillIcon},
+	tools::{action_key::slot::SlotKey, skill_description::SkillToken, skill_icon::SkillIcon},
 	traits::{
 		handles_localization::LocalizeToken,
 		inspect_able::{InspectAble, InspectField},

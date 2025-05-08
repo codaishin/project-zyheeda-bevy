@@ -12,8 +12,8 @@ use crate::{
 use bevy::ecs::component::Component;
 use common::{
 	tools::{
+		action_key::slot::{Combo, SlotKey},
 		item_type::{CompatibleItems, ItemType},
-		keys::slot::{Combo, SlotKey},
 		ordered_hash_map::{Entry, OrderedHashMap},
 	},
 	traits::{
@@ -269,7 +269,7 @@ fn append_followups(
 mod tests {
 	use super::*;
 	use bevy::prelude::default;
-	use common::{tools::keys::slot::Side, traits::handles_localization::Token};
+	use common::{tools::action_key::slot::Side, traits::handles_localization::Token};
 	use std::collections::HashSet;
 
 	#[test]

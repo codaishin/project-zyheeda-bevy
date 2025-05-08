@@ -5,7 +5,7 @@ use crate::traits::{
 };
 use bevy::prelude::*;
 use common::{
-	tools::keys::{Key, user_input::UserInput},
+	tools::action_key::{ActionKey, user_input::UserInput},
 	traits::{
 		handles_localization::{LocalizeToken, Token},
 		thread_safe::ThreadSafe,
@@ -57,7 +57,7 @@ where
 	}
 }
 
-type KeyBindAction = KeyBind<Key>;
+type KeyBindAction = KeyBind<ActionKey>;
 
 impl GetNode for KeyBindAction {
 	fn node() -> Node {

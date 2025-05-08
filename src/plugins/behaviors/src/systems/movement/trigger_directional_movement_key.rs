@@ -2,15 +2,15 @@ use crate::traits::change_per_frame::MinDistance;
 use bevy::{ecs::query::QuerySingleError, prelude::*};
 use common::{
 	errors::{Error, Level},
-	tools::{keys::user_input::UserInput, speed::Speed},
+	tools::{action_key::user_input::UserInput, speed::Speed},
 	traits::{accessors::get::Getter, handles_player::KeyDirection, key_mappings::Pressed},
 };
 use std::{any::type_name, marker::PhantomData, time::Duration};
 
-impl<T> TriggerDirectionKeyMovement for T where T: From<Vec3> + Event + MinDistance {}
+impl<T> TriggerDirectionalMovement for T where T: From<Vec3> + Event + MinDistance {}
 
-pub(crate) trait TriggerDirectionKeyMovement: From<Vec3> + Event + MinDistance {
-	fn trigger_movement<TCamera, TAgent, TMap, TKey>(
+pub(crate) trait TriggerDirectionalMovement: From<Vec3> + Event + MinDistance {
+	fn trigger_directional_movement<TCamera, TAgent, TMap, TKey>(
 		In(delta): In<Duration>,
 		map: Res<TMap>,
 		input: Res<ButtonInput<UserInput>>,
@@ -124,14 +124,15 @@ pub(crate) enum QueryError {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{
-		ecs::system::{RunSystemError, RunSystemOnce},
-		math::InvalidDirectionError,
-	};
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		tools::UnitsPerSecond,
-		traits::{clamp_zero_positive::ClampZeroPositive, nested_mock::NestedMocks},
+		traits::{
+			clamp_zero_positive::ClampZeroPositive,
+			handles_player::DirectionError,
+			nested_mock::NestedMocks,
+		},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -173,7 +174,7 @@ mod tests {
 		fn key_direction(
 			self_transform: &GlobalTransform,
 			movement_key: &_Key,
-		) -> Result<Dir3, InvalidDirectionError> {
+		) -> Result<Dir3, DirectionError<_Key>> {
 			Mock_Cam::key_direction(self_transform, movement_key)
 		}
 	}
@@ -208,7 +209,7 @@ mod tests {
 				fn key_direction(
 					self_transform: &GlobalTransform,
 					movement_key: &_Key,
-				) -> Result<Dir3, InvalidDirectionError> {
+				) -> Result<Dir3, DirectionError<_Key>> {
 					Mock_Cam::key_direction(self_transform, movement_key)
 				}
 			}
@@ -257,7 +258,7 @@ mod tests {
 
 		_ = app.world_mut().run_system_once_with(
 			Duration::from_secs(1),
-			_Event::trigger_movement::<_Cam, _Agent, _Map, _Key>,
+			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
 		)?;
 
 		assert_eq!(vec![_Event(Vec3::Z)], move_input_events(&app));
@@ -285,9 +286,10 @@ mod tests {
 		app.world_mut()
 			.spawn((GlobalTransform::default(), _Agent(speed)));
 
-		_ = app
-			.world_mut()
-			.run_system_once_with(delta, _Event::trigger_movement::<_Cam, _Agent, _Map, _Key>)?;
+		_ = app.world_mut().run_system_once_with(
+			delta,
+			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
+		)?;
 		Ok(())
 	}
 
@@ -312,7 +314,7 @@ mod tests {
 
 		_ = app.world_mut().run_system_once_with(
 			Duration::from_secs(1),
-			_Event::trigger_movement::<_Cam, _Agent, _Map, _Key>,
+			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
 		)?;
 
 		assert_eq!(
@@ -342,7 +344,7 @@ mod tests {
 
 		_ = app.world_mut().run_system_once_with(
 			Duration::from_secs(1),
-			_Event::trigger_movement::<_Cam, _Agent, _Map, _Key>,
+			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
 		)?;
 
 		assert_eq!(
@@ -379,7 +381,7 @@ mod tests {
 
 		_ = app.world_mut().run_system_once_with(
 			Duration::from_secs(1),
-			_Event::trigger_movement::<_Cam, _Agent, _Map, _Key>,
+			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
 		)?;
 
 		assert_eq!(
@@ -420,7 +422,7 @@ mod tests {
 
 		_ = app.world_mut().run_system_once_with(
 			Duration::from_secs(1),
-			_Event::trigger_movement::<_Cam, _Agent, _Map, _Key>,
+			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
 		)?;
 
 		assert_eq!(vec![_Event(Vec3::X)], move_input_events(&app));
@@ -455,7 +457,7 @@ mod tests {
 
 		_ = app.world_mut().run_system_once_with(
 			Duration::from_secs(1),
-			_Event::trigger_movement::<_Cam, _Agent, _Map, _Key>,
+			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
 		)?;
 
 		assert_eq!(vec![] as Vec<_Event>, move_input_events(&app));
@@ -486,7 +488,7 @@ mod tests {
 
 		_ = app.world_mut().run_system_once_with(
 			Duration::from_secs(1),
-			_Event::trigger_movement::<_Cam, _Agent, _Map, _Key>,
+			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
 		)?;
 		Ok(())
 	}
@@ -523,7 +525,7 @@ mod tests {
 
 		_ = app.world_mut().run_system_once_with(
 			Duration::from_secs(1),
-			_Event::trigger_movement::<_Cam, _Agent, _Map, _Key>,
+			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
 		)?;
 		Ok(())
 	}
@@ -542,7 +544,7 @@ mod tests {
 
 		let result = app.world_mut().run_system_once_with(
 			Duration::from_secs(1),
-			_Event::trigger_movement::<_Cam, _Agent, _Map, _Key>,
+			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
 		)?;
 
 		assert_eq!(Err(TriggerMovementError::from(QueryError::NoAgent)), result);
@@ -571,7 +573,7 @@ mod tests {
 
 		let result = app.world_mut().run_system_once_with(
 			Duration::from_secs(1),
-			_Event::trigger_movement::<_Cam, _Agent, _Map, _Key>,
+			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
 		)?;
 
 		assert_eq!(
@@ -598,7 +600,7 @@ mod tests {
 
 		let result = app.world_mut().run_system_once_with(
 			Duration::from_secs(1),
-			_Event::trigger_movement::<_Cam, _Agent, _Map, _Key>,
+			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
 		)?;
 
 		assert_eq!(Err(TriggerMovementError::from(QueryError::NoCam)), result);
@@ -624,7 +626,7 @@ mod tests {
 
 		let result = app.world_mut().run_system_once_with(
 			Duration::from_secs(1),
-			_Event::trigger_movement::<_Cam, _Agent, _Map, _Key>,
+			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
 		)?;
 
 		assert_eq!(

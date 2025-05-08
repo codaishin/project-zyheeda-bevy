@@ -9,7 +9,7 @@ use bevy::{
 	ui::Interaction,
 };
 use common::{
-	tools::{keys::user_input::UserInput, swap_key::SwapKey},
+	tools::{action_key::user_input::UserInput, swap_key::SwapKey},
 	traits::{
 		handles_loadout_menu::SwapValuesByKey,
 		thread_safe::ThreadSafe,
@@ -57,8 +57,8 @@ mod tests {
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		tools::{
+			action_key::slot::{Side, SlotKey},
 			inventory_key::InventoryKey,
-			keys::slot::{Side, SlotKey},
 		},
 		traits::nested_mock::NestedMocks,
 	};

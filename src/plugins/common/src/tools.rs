@@ -1,3 +1,4 @@
+pub mod action_key;
 pub mod aggro_range;
 pub mod animation_key;
 pub mod attack_range;
@@ -9,7 +10,6 @@ pub mod handle;
 pub mod inventory_key;
 pub mod item_description;
 pub mod item_type;
-pub mod keys;
 pub mod movement_animation;
 pub mod ordered_hash_map;
 pub mod skill_description;

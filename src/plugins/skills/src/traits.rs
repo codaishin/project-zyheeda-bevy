@@ -18,7 +18,7 @@ use crate::{
 	skills::{AnimationStrategy, RunSkillBehavior, Skill},
 };
 use common::{
-	tools::{item_type::ItemType, keys::slot::SlotKey},
+	tools::{action_key::slot::SlotKey, item_type::ItemType},
 	traits::{key_mappings::TryGetKey, state_duration::StateUpdate},
 };
 use std::hash::Hash;

@@ -3,7 +3,7 @@ use crate::item::Item;
 use bevy::prelude::*;
 use bevy_rapier3d::na::max;
 use common::{
-	tools::{inventory_key::InventoryKey, keys::slot::SlotKey, swap_key::SwapKey},
+	tools::{action_key::slot::SlotKey, inventory_key::InventoryKey, swap_key::SwapKey},
 	traits::handles_loadout_menu::SwapValuesByKey,
 };
 use std::mem;
@@ -68,7 +68,7 @@ mod tests {
 	use super::*;
 	use common::{
 		test_tools::utils::{SingleThreadedApp, new_handle},
-		tools::keys::slot::Side,
+		tools::action_key::slot::Side,
 	};
 
 	fn setup() -> App {

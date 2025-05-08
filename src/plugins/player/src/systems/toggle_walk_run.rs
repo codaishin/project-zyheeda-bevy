@@ -3,7 +3,7 @@ use crate::components::{
 	player_movement::{MovementMode, PlayerMovement},
 };
 use bevy::prelude::*;
-use common::tools::keys::user_input::UserInput;
+use common::tools::action_key::user_input::UserInput;
 
 pub fn player_toggle_walk_run(
 	mut player: Query<&mut PlayerMovement, With<Player>>,

@@ -5,7 +5,7 @@ mod traits;
 use bevy::prelude::*;
 use common::{
 	states::game_state::GameState,
-	tools::keys::camera_key::CameraKey,
+	tools::action_key::camera_key::CameraKey,
 	traits::{
 		handles_graphics::{FirstPassCamera, WorldCameras},
 		handles_player::{HandlesPlayer, PlayerMainCamera},

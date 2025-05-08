@@ -1,5 +1,8 @@
-use bevy::{math::InvalidDirectionError, prelude::*};
-use common::{tools::keys::movement::MovementKey, traits::handles_player::KeyDirection};
+use bevy::prelude::*;
+use common::{
+	tools::action_key::movement::MovementKey,
+	traits::handles_player::{DirectionError, KeyDirection},
+};
 
 #[derive(Component, Debug, PartialEq, Default)]
 pub struct PlayerCamera;
@@ -8,15 +11,16 @@ impl KeyDirection<MovementKey> for PlayerCamera {
 	fn key_direction(
 		cam_transform: &GlobalTransform,
 		movement_key: &MovementKey,
-	) -> Result<Dir3, InvalidDirectionError> {
+	) -> Result<Dir3, DirectionError<MovementKey>> {
 		let direction = match movement_key {
 			MovementKey::Forward => *cam_transform.forward() + *cam_transform.up(),
 			MovementKey::Backward => *cam_transform.back() + *cam_transform.down(),
 			MovementKey::Left => *cam_transform.left(),
 			MovementKey::Right => *cam_transform.right(),
+			MovementKey::Pointer => return Err(DirectionError::KeyHasNoDirection(*movement_key)),
 		};
 
-		Dir3::try_from(direction.with_y(0.))
+		Dir3::try_from(direction.with_y(0.)).map_err(DirectionError::Invalid)
 	}
 }
 
@@ -105,6 +109,16 @@ mod tests {
 				PlayerCamera::key_direction(&transform, &MovementKey::Right),
 			],
 			f32::EPSILON
+		);
+	}
+
+	#[test]
+	fn direction_pointer_error() {
+		let transform = GlobalTransform::default();
+
+		assert_eq!(
+			Err(DirectionError::KeyHasNoDirection(MovementKey::Pointer)),
+			PlayerCamera::key_direction(&transform, &MovementKey::Pointer),
 		);
 	}
 }

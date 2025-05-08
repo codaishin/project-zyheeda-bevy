@@ -1,7 +1,7 @@
 use crate::traits::orbit::Orbit;
 use bevy::{input::mouse::MouseMotion, prelude::*};
 use common::{
-	tools::keys::{camera_key::CameraKey, user_input::UserInput},
+	tools::action_key::{camera_key::CameraKey, user_input::UserInput},
 	traits::key_mappings::Pressed,
 };
 

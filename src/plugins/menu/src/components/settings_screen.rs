@@ -12,8 +12,8 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	states::menu_state::MenuState,
-	tools::keys::{
-		Key,
+	tools::action_key::{
+		ActionKey,
 		camera_key::CameraKey,
 		movement::MovementKey,
 		slot::SlotKey,
@@ -32,7 +32,7 @@ use std::collections::HashMap;
 #[derive(Component, Debug, PartialEq, Default)]
 #[require(MenuBackground)]
 pub(crate) struct SettingsScreen {
-	key_bindings: HashMap<Key, UserInput>,
+	key_bindings: HashMap<ActionKey, UserInput>,
 }
 
 impl SettingsScreen {
@@ -78,7 +78,7 @@ impl SettingsScreen {
 		title: (impl Into<Token> + 'static),
 	) where
 		T: IterFinite,
-		Key: From<T>,
+		ActionKey: From<T>,
 	{
 		parent
 			.spawn((
@@ -101,24 +101,24 @@ impl SettingsScreen {
 	fn add_key_bindings<T>(&self, parent: &mut ChildBuilder)
 	where
 		T: IterFinite,
-		Key: From<T>,
+		ActionKey: From<T>,
 	{
 		for (key, user_input) in self.keys::<T>() {
 			Self::add_key_row(parent, key, user_input);
 		}
 	}
 
-	fn keys<T>(&self) -> impl Iterator<Item = (Key, UserInput)>
+	fn keys<T>(&self) -> impl Iterator<Item = (ActionKey, UserInput)>
 	where
 		T: IterFinite,
-		Key: From<T>,
+		ActionKey: From<T>,
 	{
 		T::iterator()
-			.map(Key::from)
+			.map(ActionKey::from)
 			.filter_map(|key| Some((key, *self.key_bindings.get(&key)?)))
 	}
 
-	fn add_key_row(parent: &mut ChildBuilder, key: Key, user_input: UserInput) {
+	fn add_key_row(parent: &mut ChildBuilder, key: ActionKey, user_input: UserInput) {
 		parent
 			.spawn(Node {
 				flex_direction: FlexDirection::Row,
@@ -161,10 +161,10 @@ impl InsertUiContent for SettingsScreen {
 	}
 }
 
-impl UpdateKeyBindings<Key, UserInput> for SettingsScreen {
+impl UpdateKeyBindings<ActionKey, UserInput> for SettingsScreen {
 	fn update_key_bindings<TKeyMap>(&mut self, map: &TKeyMap)
 	where
-		for<'a> TKeyMap: Iterate<'a, TItem = (&'a Key, &'a UserInput)>,
+		for<'a> TKeyMap: Iterate<'a, TItem = (&'a ActionKey, &'a UserInput)>,
 	{
 		self.key_bindings = map
 			.iterate()

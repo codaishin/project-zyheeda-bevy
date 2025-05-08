@@ -1,7 +1,7 @@
 use crate::components::key_code_text_insert_command::UserInputTextInsertCommand;
 use bevy::prelude::*;
 use common::{
-	tools::keys::user_input::UserInput,
+	tools::action_key::user_input::UserInput,
 	traits::{
 		handles_localization::LocalizeToken,
 		key_mappings::GetUserInput,

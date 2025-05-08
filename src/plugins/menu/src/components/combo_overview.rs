@@ -19,7 +19,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	tools::{keys::slot::SlotKey, skill_description::SkillToken, skill_icon::SkillIcon},
+	tools::{action_key::slot::SlotKey, skill_description::SkillToken, skill_icon::SkillIcon},
 	traits::{
 		handles_localization::{LocalizeToken, localized::Localized},
 		inspect_able::{InspectAble, InspectField},
@@ -730,7 +730,7 @@ mod tests {
 	use super::*;
 	use crate::traits::build_combo_tree_layout::ComboTreeElement;
 	use bevy::asset::{Asset, AssetId, AssetPath};
-	use common::{simple_init, tools::keys::slot::Side, traits::mock::Mock};
+	use common::{simple_init, tools::action_key::slot::Side, traits::mock::Mock};
 	use mockall::{mock, predicate::eq};
 	use uuid::Uuid;
 

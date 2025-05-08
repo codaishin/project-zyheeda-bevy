@@ -21,7 +21,7 @@ use components::{
 };
 use labels::Labels;
 use systems::load_asset_model::load_asset_model;
-use tools::keys::user_input::UserInput;
+use tools::action_key::user_input::UserInput;
 
 pub struct CommonPlugin;
 

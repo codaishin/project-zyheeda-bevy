@@ -3,7 +3,7 @@ use crate::{item::Item, traits::loadout_key::LoadoutKey};
 use bevy::{asset::Handle, prelude::*};
 use common::{
 	components::{AssetModel, essence::Essence},
-	tools::keys::slot::{Side, SlotKey},
+	tools::action_key::slot::{Side, SlotKey},
 	traits::{
 		accessors::get::GetRef,
 		get_asset::GetAsset,

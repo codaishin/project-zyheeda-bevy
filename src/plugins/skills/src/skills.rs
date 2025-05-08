@@ -15,8 +15,8 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	tools::{
+		action_key::slot::SlotKey,
 		item_type::CompatibleItems,
-		keys::slot::SlotKey,
 		skill_description::SkillToken,
 		skill_icon::SkillIcon,
 	},

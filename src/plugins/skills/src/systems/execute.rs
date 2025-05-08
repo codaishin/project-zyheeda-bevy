@@ -95,8 +95,8 @@ mod tests {
 		errors::Level,
 		test_tools::utils::SingleThreadedApp,
 		tools::{
+			action_key::slot::{Side, SlotKey},
 			collider_info::ColliderInfo,
-			keys::slot::{Side, SlotKey},
 		},
 		traits::{
 			handles_skill_behaviors::{Integrity, Motion, ProjectionOffset, Shape},

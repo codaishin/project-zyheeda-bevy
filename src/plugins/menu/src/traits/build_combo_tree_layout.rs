@@ -1,5 +1,5 @@
 use common::{
-	tools::{keys::slot::SlotKey, skill_description::SkillToken, skill_icon::SkillIcon},
+	tools::{action_key::slot::SlotKey, skill_description::SkillToken, skill_icon::SkillIcon},
 	traits::{handles_combo_menu::GetCombosOrdered, inspect_able::InspectAble},
 };
 use std::collections::HashSet;
@@ -152,7 +152,7 @@ mod tests {
 	use super::*;
 	use bevy::prelude::*;
 	use common::{
-		tools::keys::slot::{Combo, Side},
+		tools::action_key::slot::{Combo, Side},
 		traits::handles_localization::Token,
 	};
 

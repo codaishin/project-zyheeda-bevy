@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use common::{
 	states::mouse_context::MouseContext,
 	tools::{
-		keys::{slot::SlotKey, user_input::UserInput},
+		action_key::{slot::SlotKey, user_input::UserInput},
 		skill_execution::SkillExecution,
 	},
 	traits::{
@@ -99,7 +99,7 @@ mod tests {
 	use super::*;
 	use crate::traits::colors::PanelColors;
 	use bevy::state::app::StatesPlugin;
-	use common::{test_tools::utils::SingleThreadedApp, tools::keys::slot::Side};
+	use common::{test_tools::utils::SingleThreadedApp, tools::action_key::slot::Side};
 	use std::collections::HashMap;
 
 	#[derive(Component)]

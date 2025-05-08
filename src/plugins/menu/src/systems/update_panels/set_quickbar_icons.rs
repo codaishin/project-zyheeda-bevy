@@ -1,7 +1,7 @@
 use crate::{components::quickbar_panel::QuickbarPanel, tools::PanelState};
 use bevy::prelude::*;
 use common::{
-	tools::{keys::slot::SlotKey, skill_icon::SkillIcon},
+	tools::{action_key::slot::SlotKey, skill_icon::SkillIcon},
 	traits::{
 		handles_loadout_menu::GetItem,
 		inspect_able::{InspectAble, InspectField},
@@ -38,7 +38,7 @@ mod tests {
 	use crate::{components::quickbar_panel::QuickbarPanel, tools::PanelState};
 	use common::{
 		test_tools::utils::{SingleThreadedApp, new_handle},
-		tools::keys::slot::{Side, SlotKey},
+		tools::action_key::slot::{Side, SlotKey},
 	};
 	use std::collections::HashMap;
 

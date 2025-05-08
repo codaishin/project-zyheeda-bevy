@@ -12,7 +12,7 @@ use common::{
 	labels::Labels,
 	states::{game_state::GameState, mouse_context::MouseContext},
 	systems::log::{log, log_many},
-	tools::keys::movement::MovementKey,
+	tools::action_key::movement::MovementKey,
 	traits::{
 		animation::{HasAnimationsDispatch, RegisterAnimations},
 		handles_destruction::HandlesDestruction,
@@ -51,7 +51,7 @@ use components::{
 	skill_behavior::{skill_contact::SkillContact, skill_projection::SkillProjection},
 	when_traveled_insert::InsertAfterDistanceTraveled,
 };
-use events::{MoveClickEvent, MoveWasdEvent};
+use events::{MoveDirectionalEvent, MovePointerEvent};
 use std::marker::PhantomData;
 use systems::{
 	attack::AttackSystem,
@@ -62,8 +62,8 @@ use systems::{
 		animate_movement::AnimateMovement,
 		execute_move_update::ExecuteMovement,
 		set_player_movement::SetPlayerMovement,
-		trigger_mouse_click_movement::TriggerMouseClickMovement,
-		trigger_movement_key::TriggerDirectionKeyMovement,
+		trigger_directional_movement_key::TriggerDirectionalMovement,
+		trigger_pointer_movement::TriggerPointerMovement,
 	},
 	update_cool_downs::update_cool_downs,
 };
@@ -145,21 +145,25 @@ where
 		TAnimations::register_movement_direction::<Movement<VelocityBased>>(app);
 
 		let update_delta = Labels::UPDATE.delta();
-		let move_on_mouse_click = MoveClickEvent::trigger_mouse_click_movement::<TPlayers::TCamRay>;
-		let move_on_wasd = MoveWasdEvent::<VelocityBased>::trigger_movement::<
-			TPlayers::TPlayerMainCamera,
-			TPlayers::TPlayerMovement,
+		let move_via_pointer = MovePointerEvent::trigger_pointer_movement::<
+			TPlayers::TCamRay,
 			TSettings::TKeyMap<MovementKey>,
-			MovementKey,
 		>;
+		let move_via_direction =
+			MoveDirectionalEvent::<VelocityBased>::trigger_directional_movement::<
+				TPlayers::TPlayerMainCamera,
+				TPlayers::TPlayerMovement,
+				TSettings::TKeyMap<MovementKey>,
+				MovementKey,
+			>;
 
-		app.add_event::<MoveClickEvent>()
-			.add_event::<MoveWasdEvent<VelocityBased>>()
+		app.add_event::<MovePointerEvent>()
+			.add_event::<MoveDirectionalEvent<VelocityBased>>()
 			.add_systems(
 				Update,
 				(
-					move_on_mouse_click.run_if(in_state(MouseContext::Default)),
-					update_delta.pipe(move_on_wasd).pipe(log),
+					move_via_pointer.run_if(in_state(MouseContext::Default)),
+					update_delta.pipe(move_via_direction).pipe(log),
 					get_faces.pipe(execute_face::<TPlayers::TMouseHover, TPlayers::TCamRay>),
 				)
 					.chain()
@@ -179,11 +183,11 @@ where
 				Update,
 				(
 					TPlayers::TPlayerMovement::set::<
-						MoveClickEvent,
+						MovePointerEvent,
 						Movement<PathOrWasd<VelocityBased>>,
 					>,
 					TPlayers::TPlayerMovement::set::<
-						MoveWasdEvent<VelocityBased>,
+						MoveDirectionalEvent<VelocityBased>,
 						Movement<PathOrWasd<VelocityBased>>,
 					>,
 					TPlayers::TPlayerMovement::wasd_or_path::<

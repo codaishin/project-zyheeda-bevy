@@ -17,7 +17,7 @@ use common::{
 		mouse_context::MouseContext,
 	},
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
-	tools::keys::{
+	tools::action_key::{
 		slot::{Side, SlotKey},
 		user_input::UserInput,
 	},

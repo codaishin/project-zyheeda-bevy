@@ -3,9 +3,9 @@ use super::{
 	intersect_at::IntersectAt,
 };
 use crate::tools::{
+	action_key::{movement::MovementKey, slot::SlotKey},
 	collider_info::ColliderInfo,
 	collider_radius::ColliderRadius,
-	keys::{movement::MovementKey, slot::SlotKey},
 	movement_animation::MovementAnimation,
 	speed::Speed,
 };
@@ -48,5 +48,11 @@ pub trait KeyDirection<TKey> {
 	fn key_direction(
 		self_transform: &GlobalTransform,
 		movement_key: &TKey,
-	) -> Result<Dir3, InvalidDirectionError>;
+	) -> Result<Dir3, DirectionError<TKey>>;
+}
+
+#[derive(Debug, PartialEq)]
+pub enum DirectionError<TKey> {
+	Invalid(InvalidDirectionError),
+	KeyHasNoDirection(TKey),
 }

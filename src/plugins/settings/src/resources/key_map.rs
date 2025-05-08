@@ -2,7 +2,7 @@ pub(crate) mod dto;
 
 use bevy::prelude::*;
 use common::{
-	tools::keys::{Key, user_input::UserInput},
+	tools::action_key::{ActionKey, user_input::UserInput},
 	traits::{
 		handles_custom_assets::TryLoadFrom,
 		handles_settings::UpdateKey,
@@ -32,7 +32,7 @@ pub struct KeyMap(KeyMapInternal);
 impl<TKey> GetUserInput<TKey, UserInput> for KeyMap
 where
 	TKey: Copy,
-	Key: From<TKey>,
+	ActionKey: From<TKey>,
 	UserInput: From<TKey>,
 {
 	fn get_key_code(&self, key: TKey) -> UserInput {
@@ -42,7 +42,7 @@ where
 
 impl<TKey> TryGetKey<UserInput, TKey> for KeyMap
 where
-	TKey: TryFrom<Key> + Copy,
+	TKey: TryFrom<ActionKey> + Copy,
 	UserInput: From<TKey> + PartialEq,
 {
 	fn try_get_key(&self, key: UserInput) -> Option<TKey> {
@@ -53,7 +53,7 @@ where
 impl<TKey> UpdateKey<TKey, UserInput> for KeyMap
 where
 	TKey: Copy,
-	Key: From<TKey> + Hash + Eq + Copy,
+	ActionKey: From<TKey> + Hash + Eq + Copy,
 	UserInput: From<TKey> + Hash + Eq + Copy,
 {
 	fn update_key(&mut self, key: TKey, key_code: UserInput) {
@@ -61,11 +61,11 @@ where
 	}
 }
 
-impl TryLoadFrom<KeyMapDto<Key, UserInput>> for KeyMap {
-	type TInstantiationError = RepeatedAssignments<Key, UserInput>;
+impl TryLoadFrom<KeyMapDto<ActionKey, UserInput>> for KeyMap {
+	type TInstantiationError = RepeatedAssignments<ActionKey, UserInput>;
 
 	fn try_load_from<TLoadAsset>(
-		dto: KeyMapDto<Key, UserInput>,
+		dto: KeyMapDto<ActionKey, UserInput>,
 		asset_server: &mut TLoadAsset,
 	) -> Result<Self, Self::TInstantiationError>
 	where
@@ -76,7 +76,7 @@ impl TryLoadFrom<KeyMapDto<Key, UserInput>> for KeyMap {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-struct KeyMapInternal<TAllKeys = Key, TKeyCode = UserInput>
+struct KeyMapInternal<TAllKeys = ActionKey, TKeyCode = UserInput>
 where
 	TAllKeys: Hash + Eq,
 	TKeyCode: Hash + Eq,
@@ -247,8 +247,8 @@ where
 }
 
 impl<'a> Iterate<'a> for KeyMap {
-	type TItem = (&'a Key, &'a UserInput);
-	type TIter = Iter<'a, Key, UserInput>;
+	type TItem = (&'a ActionKey, &'a UserInput);
+	type TIter = Iter<'a, ActionKey, UserInput>;
 
 	fn iterate(&'a self) -> Self::TIter {
 		self.0.key_to_key_code.iter()

@@ -1,6 +1,6 @@
 use bevy::{prelude::*, state::state::FreelyMutableState};
 use common::{
-	tools::keys::user_input::UserInput,
+	tools::action_key::user_input::UserInput,
 	traits::{key_mappings::JustPressed, states::PlayState},
 };
 

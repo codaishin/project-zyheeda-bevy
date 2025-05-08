@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 use common::{
 	tools::{
+		action_key::slot::{Combo, SlotKey},
 		change::Change,
-		keys::slot::{Combo, SlotKey},
 	},
 	traits::{
 		handles_combo_menu::{GetComboAbleSkills, GetCombosOrdered, NextKeys},

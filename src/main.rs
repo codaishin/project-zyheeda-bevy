@@ -133,7 +133,7 @@ fn prepare_game(app: &mut App) {
 pub mod debug_utils {
 	use super::*;
 	use bevy_inspector_egui::quick::WorldInspectorPlugin;
-	use common::tools::keys::user_input::UserInput;
+	use common::tools::action_key::user_input::UserInput;
 	use interactions::events::{InteractionEvent, Ray};
 	use std::ops::Not;
 
