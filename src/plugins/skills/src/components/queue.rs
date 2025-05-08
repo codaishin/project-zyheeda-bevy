@@ -12,7 +12,7 @@ use crate::{
 };
 use bevy::{ecs::component::Component, prelude::*};
 use common::{
-	tools::keys::slot::SlotKey,
+	tools::action_key::slot::SlotKey,
 	traits::{iterate::Iterate, state_duration::StateDuration},
 };
 use std::{
@@ -120,7 +120,7 @@ fn unchanged_length(Queue { queue, state, .. }: &Queue) -> usize {
 mod test_queue_collection {
 	use super::*;
 	use bevy::utils::default;
-	use common::{tools::keys::slot::Side, traits::handles_localization::Token};
+	use common::{tools::action_key::slot::Side, traits::handles_localization::Token};
 
 	#[test]
 	fn enqueue_one_skill() {
@@ -594,7 +594,7 @@ mod test_queue_active_skill {
 		skills::{AnimationStrategy, RunSkillBehavior},
 		traits::skill_builder::SkillShape,
 	};
-	use common::tools::keys::slot::Side;
+	use common::tools::action_key::slot::Side;
 	use test_case::test_case;
 
 	#[test]

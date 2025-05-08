@@ -1,4 +1,4 @@
-use crate::{tools::keys::user_input::UserInput, traits::thread_safe::ThreadSafe};
+use crate::{tools::action_key::user_input::UserInput, traits::thread_safe::ThreadSafe};
 use bevy::prelude::*;
 use std::hash::Hash;
 

@@ -2,7 +2,7 @@ use crate::traits::change_per_frame::MinDistance;
 use bevy::{ecs::query::QuerySingleError, prelude::*};
 use common::{
 	errors::{Error, Level},
-	tools::{keys::user_input::UserInput, speed::Speed},
+	tools::{action_key::user_input::UserInput, speed::Speed},
 	traits::{accessors::get::Getter, handles_player::KeyDirection, key_mappings::Pressed},
 };
 use std::{any::type_name, marker::PhantomData, time::Duration};

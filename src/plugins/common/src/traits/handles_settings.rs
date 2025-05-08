@@ -2,7 +2,7 @@ use super::{
 	iterate::Iterate,
 	key_mappings::{GetUserInput, TryGetKey},
 };
-use crate::tools::keys::{Key, user_input::UserInput};
+use crate::tools::action_key::{ActionKey, user_input::UserInput};
 use bevy::prelude::*;
 
 pub trait HandlesSettings {
@@ -10,10 +10,10 @@ pub trait HandlesSettings {
 		+ GetUserInput<TKey, UserInput>
 		+ TryGetKey<UserInput, TKey>
 		+ UpdateKey<TKey, UserInput>
-		+ for<'a> Iterate<'a, TItem = (&'a Key, &'a UserInput)>
+		+ for<'a> Iterate<'a, TItem = (&'a ActionKey, &'a UserInput)>
 	where
-		Key: From<TKey>,
-		TKey: TryFrom<Key> + Copy,
+		ActionKey: From<TKey>,
+		TKey: TryFrom<ActionKey> + Copy,
 		UserInput: From<TKey> + PartialEq;
 }
 

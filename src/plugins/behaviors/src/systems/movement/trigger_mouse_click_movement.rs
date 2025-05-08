@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::{tools::keys::user_input::UserInput, traits::intersect_at::IntersectAt};
+use common::{tools::action_key::user_input::UserInput, traits::intersect_at::IntersectAt};
 
 impl<T> TriggerMouseClickMovement for T where T: From<Vec3> + Event {}
 

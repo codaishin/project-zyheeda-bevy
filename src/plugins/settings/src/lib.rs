@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use common::{
 	states::game_state::LoadingEssentialAssets,
 	systems::log::log,
-	tools::keys::{Key, user_input::UserInput},
+	tools::action_key::{ActionKey, user_input::UserInput},
 	traits::{
 		handles_asset_resource_loading::HandlesAssetResourceLoading,
 		handles_settings::HandlesSettings,
@@ -21,7 +21,7 @@ use resources::{
 use std::marker::PhantomData;
 use systems::save_changes::SaveChanges;
 
-type KeyMapDto = KeyMapDtoGeneric<Key, UserInput>;
+type KeyMapDto = KeyMapDtoGeneric<ActionKey, UserInput>;
 
 #[derive(Debug, PartialEq)]
 pub struct SettingsPlugin<TDependencies>(PhantomData<TDependencies>);
@@ -59,7 +59,7 @@ impl<TDependencies> HandlesSettings for SettingsPlugin<TDependencies> {
 	type TKeyMap<TKey>
 		= KeyMap
 	where
-		Key: From<TKey>,
-		TKey: TryFrom<Key> + Copy,
+		ActionKey: From<TKey>,
+		TKey: TryFrom<ActionKey> + Copy,
 		UserInput: From<TKey> + PartialEq;
 }

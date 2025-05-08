@@ -1,6 +1,6 @@
 use crate::components::dropdown::Dropdown;
 use bevy::prelude::*;
-use common::tools::{Focus, keys::user_input::UserInput};
+use common::tools::{Focus, action_key::user_input::UserInput};
 
 pub(crate) fn dropdown_detect_focus_change<TItem: Sync + Send + 'static>(
 	dropdowns: Query<(Entity, &Dropdown<TItem>, &Interaction)>,

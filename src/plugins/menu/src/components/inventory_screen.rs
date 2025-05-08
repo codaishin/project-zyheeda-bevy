@@ -5,7 +5,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	tools::{inventory_key::InventoryKey, keys::slot::SlotKey},
+	tools::{action_key::slot::SlotKey, inventory_key::InventoryKey},
 	traits::{
 		handles_localization::{LocalizeToken, localized::Localized},
 		iteration::{IterFinite, IterInfinite},

@@ -10,9 +10,9 @@ use common::{
 	tools::{
 		Units,
 		UnitsPerSecond,
+		action_key::slot::{Side, SlotKey},
 		animation_key::AnimationKey,
 		collider_radius::ColliderRadius,
-		keys::slot::{Side, SlotKey},
 	},
 	traits::{
 		animation::{

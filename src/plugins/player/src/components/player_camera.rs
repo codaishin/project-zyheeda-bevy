@@ -1,5 +1,5 @@
 use bevy::{math::InvalidDirectionError, prelude::*};
-use common::{tools::keys::movement::MovementKey, traits::handles_player::KeyDirection};
+use common::{tools::action_key::movement::MovementKey, traits::handles_player::KeyDirection};
 
 #[derive(Component, Debug, PartialEq, Default)]
 pub struct PlayerCamera;

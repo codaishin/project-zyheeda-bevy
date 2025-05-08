@@ -1,6 +1,6 @@
 use crate::components::DeleteSkill;
 use bevy::{prelude::*, ui::Interaction};
-use common::tools::keys::slot::Combo;
+use common::tools::action_key::slot::Combo;
 
 pub(crate) fn update_combos_view_delete_skill<TSkill>(
 	deletes: Query<(&DeleteSkill, &Interaction)>,
@@ -21,7 +21,7 @@ mod tests {
 	use super::*;
 	use common::{
 		test_tools::utils::SingleThreadedApp,
-		tools::keys::slot::{Side, SlotKey},
+		tools::action_key::slot::{Side, SlotKey},
 	};
 
 	#[derive(Debug, PartialEq)]

@@ -1,7 +1,7 @@
 use super::{InputState, ShouldEnqueue};
 use bevy::input::{ButtonInput, keyboard::KeyCode};
 use common::{
-	tools::keys::{slot::SlotKey, user_input::UserInput},
+	tools::action_key::{slot::SlotKey, user_input::UserInput},
 	traits::key_mappings::TryGetKey,
 };
 
@@ -38,7 +38,7 @@ impl ShouldEnqueue for ButtonInput<UserInput> {
 mod tests {
 	use super::*;
 	use bevy::input::keyboard::KeyCode;
-	use common::tools::keys::slot::Side;
+	use common::tools::action_key::slot::Side;
 	use std::collections::HashSet;
 
 	struct _Map;

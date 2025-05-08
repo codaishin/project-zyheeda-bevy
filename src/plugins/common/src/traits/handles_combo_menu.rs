@@ -1,7 +1,7 @@
 use super::{inspect_able::InspectAble, thread_safe::ThreadSafe};
 use crate::tools::{
+	action_key::slot::{Combo, SlotKey},
 	change::Change,
-	keys::slot::{Combo, SlotKey},
 	skill_description::SkillToken,
 	skill_icon::SkillIcon,
 };

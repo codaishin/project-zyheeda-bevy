@@ -1,6 +1,6 @@
 use super::{AdvanceCombo, SetNextCombo, peek_next_recursive::PeekNextRecursive};
 use crate::{components::combo_node::ComboNode, skills::Skill};
-use common::tools::{item_type::ItemType, keys::slot::SlotKey};
+use common::tools::{action_key::slot::SlotKey, item_type::ItemType};
 
 impl<T> AdvanceCombo for T
 where
@@ -25,7 +25,7 @@ where
 mod tests {
 	use super::*;
 	use bevy::utils::default;
-	use common::{simple_init, tools::keys::slot::Side, traits::handles_localization::Token};
+	use common::{simple_init, tools::action_key::slot::Side, traits::handles_localization::Token};
 	use mockall::{automock, predicate::eq};
 	use std::collections::HashMap;
 

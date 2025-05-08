@@ -58,8 +58,8 @@ mod tests {
 	use common::{
 		test_tools::utils::Changed,
 		tools::{
+			action_key::slot::{Side, SlotKey},
 			item_type::ItemType,
-			keys::slot::{Side, SlotKey},
 		},
 		traits::{handles_localization::Token, nested_mock::NestedMocks},
 	};

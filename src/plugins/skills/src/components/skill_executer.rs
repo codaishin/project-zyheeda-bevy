@@ -7,7 +7,7 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	errors::{Error, Level},
-	tools::keys::slot::SlotKey,
+	tools::action_key::slot::SlotKey,
 	traits::{
 		accessors::get::GetRef,
 		handles_effect::HandlesAllEffects,
@@ -140,7 +140,7 @@ mod tests {
 	use common::{
 		components::Outdated,
 		simple_init,
-		tools::{collider_info::ColliderInfo, keys::slot::Side},
+		tools::{action_key::slot::Side, collider_info::ColliderInfo},
 		traits::{
 			handles_effect::HandlesEffect,
 			handles_skill_behaviors::{Integrity, Motion, ProjectionOffset, Shape},

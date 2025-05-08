@@ -9,9 +9,9 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	tools::{
+		action_key::slot::SlotKey,
 		change::Change,
 		item_type::ItemType,
-		keys::slot::SlotKey,
 		skill_execution::SkillExecution,
 	},
 	traits::iterate::Iterate,
@@ -141,7 +141,7 @@ mod tests {
 	use super::*;
 	use common::{
 		test_tools::utils::{SingleThreadedApp, new_handle},
-		tools::{item_type::ItemType, keys::slot::Side},
+		tools::{action_key::slot::Side, item_type::ItemType},
 		traits::handles_localization::Token,
 	};
 	use std::{array::IntoIter, collections::HashMap, slice::Iter};

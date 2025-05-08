@@ -12,7 +12,7 @@ use common::{
 	labels::Labels,
 	states::{game_state::GameState, mouse_context::MouseContext},
 	systems::log::{log, log_many},
-	tools::keys::movement::MovementKey,
+	tools::action_key::movement::MovementKey,
 	traits::{
 		animation::{HasAnimationsDispatch, RegisterAnimations},
 		handles_destruction::HandlesDestruction,

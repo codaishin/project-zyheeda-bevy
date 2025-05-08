@@ -1,7 +1,7 @@
 use crate::components::Label;
 use bevy::prelude::*;
 use common::{
-	tools::keys::{slot::SlotKey, user_input::UserInput},
+	tools::action_key::{slot::SlotKey, user_input::UserInput},
 	traits::{handles_localization::LocalizeToken, key_mappings::GetUserInput},
 };
 
@@ -43,7 +43,7 @@ mod tests {
 	use bevy::app::{App, Update};
 	use common::{
 		test_tools::utils::SingleThreadedApp,
-		tools::keys::slot::Side,
+		tools::action_key::slot::Side,
 		traits::{
 			handles_localization::{LocalizationResult, Token, localized::Localized},
 			nested_mock::NestedMocks,

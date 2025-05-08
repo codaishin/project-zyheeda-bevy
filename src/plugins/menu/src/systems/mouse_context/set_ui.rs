@@ -49,7 +49,7 @@ mod tests {
 		state::app::{AppExtStates, StatesPlugin},
 		ui::Interaction,
 	};
-	use common::tools::keys::user_input::UserInput;
+	use common::tools::action_key::user_input::UserInput;
 
 	fn setup() -> App {
 		let mut app = App::new();

@@ -1,7 +1,7 @@
 use crate::traits::InputState;
 use bevy::ecs::system::{Res, Resource};
 use common::{
-	tools::keys::{slot::SlotKey, user_input::UserInput},
+	tools::action_key::{slot::SlotKey, user_input::UserInput},
 	traits::key_mappings::TryGetKey,
 };
 
@@ -56,7 +56,7 @@ mod tests {
 	};
 	use common::{
 		test_tools::utils::SingleThreadedApp,
-		tools::keys::slot::Side,
+		tools::action_key::slot::Side,
 		traits::nested_mock::NestedMocks,
 	};
 	use macros::NestedMocks;

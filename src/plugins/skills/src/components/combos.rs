@@ -16,8 +16,8 @@ use crate::{
 use bevy::ecs::component::Component;
 use common::{
 	tools::{
+		action_key::slot::{Combo, SlotKey},
 		item_type::ItemType,
-		keys::slot::{Combo, SlotKey},
 	},
 	traits::{handles_combo_menu::GetCombosOrdered, iterate::Iterate},
 };
@@ -170,7 +170,7 @@ mod tests {
 	use super::*;
 	use bevy::utils::default;
 	use common::{
-		tools::keys::slot::Side,
+		tools::action_key::slot::Side,
 		traits::{handles_localization::Token, nested_mock::NestedMocks},
 	};
 	use macros::NestedMocks;

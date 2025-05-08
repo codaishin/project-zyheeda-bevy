@@ -4,7 +4,7 @@ use crate::{
 	traits::{LoadUi, colors::HasPanelColors, insert_ui_content::InsertUiContent},
 };
 use bevy::prelude::*;
-use common::{tools::keys::slot::SlotKey, traits::iteration::IterFinite};
+use common::{tools::action_key::slot::SlotKey, traits::iteration::IterFinite};
 
 #[derive(Component)]
 #[require(Node(full_screen))]

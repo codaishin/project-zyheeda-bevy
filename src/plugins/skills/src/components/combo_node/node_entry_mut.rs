@@ -2,7 +2,7 @@ use super::{ComboNode, NodeEntryMut};
 use crate::traits::{Insert, ReKey};
 use bevy::prelude::default;
 use common::tools::{
-	keys::slot::SlotKey,
+	action_key::slot::SlotKey,
 	ordered_hash_map::{Entry, OrderedHashMap},
 };
 
@@ -83,7 +83,7 @@ mod tests {
 	use super::*;
 	use crate::{components::combo_node::ComboNode, skills::Skill};
 	use bevy::prelude::default;
-	use common::{tools::keys::slot::Side, traits::handles_localization::Token};
+	use common::{tools::action_key::slot::Side, traits::handles_localization::Token};
 
 	#[test]
 	fn insert_skill() {

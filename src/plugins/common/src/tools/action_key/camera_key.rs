@@ -1,4 +1,4 @@
-use super::{IsNot, Key, user_input::UserInput};
+use super::{IsNot, ActionKey, user_input::UserInput};
 use crate::traits::{
 	handles_localization::Token,
 	iteration::{Iter, IterFinite},
@@ -19,7 +19,7 @@ impl From<CameraKey> for Token {
 	}
 }
 
-impl From<CameraKey> for Key {
+impl From<CameraKey> for ActionKey {
 	fn from(camera_key: CameraKey) -> Self {
 		Self::Camera(camera_key)
 	}
@@ -33,12 +33,12 @@ impl From<CameraKey> for UserInput {
 	}
 }
 
-impl TryFrom<Key> for CameraKey {
+impl TryFrom<ActionKey> for CameraKey {
 	type Error = IsNot<CameraKey>;
 
-	fn try_from(value: Key) -> Result<Self, Self::Error> {
+	fn try_from(value: ActionKey) -> Result<Self, Self::Error> {
 		match value {
-			Key::Camera(camera_key) => Ok(camera_key),
+			ActionKey::Camera(camera_key) => Ok(camera_key),
 			_ => Err(IsNot::key()),
 		}
 	}

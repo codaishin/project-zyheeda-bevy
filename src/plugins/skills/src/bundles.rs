@@ -11,7 +11,7 @@ use crate::{
 	skills::RunSkillBehavior,
 };
 use bevy::prelude::*;
-use common::tools::keys::slot::SlotKey;
+use common::tools::action_key::slot::SlotKey;
 use std::collections::HashMap;
 
 #[derive(Bundle)]

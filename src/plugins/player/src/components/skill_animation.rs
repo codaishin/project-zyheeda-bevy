@@ -1,7 +1,7 @@
 use super::player::Player;
 use bevy::prelude::*;
 use common::{
-	tools::{animation_key::AnimationKey, keys::slot::SlotKey},
+	tools::{action_key::slot::SlotKey, animation_key::AnimationKey},
 	traits::{
 		animation::{Animation, AnimationPriority, PlayMode, StartAnimation, StopAnimation},
 		try_remove_from::TryRemoveFrom,
@@ -57,7 +57,7 @@ mod tests {
 	use crate::components::player::Player;
 	use common::{
 		test_tools::utils::SingleThreadedApp,
-		tools::keys::slot::Side,
+		tools::action_key::slot::Side,
 		traits::{
 			animation::{Animation, AnimationPriority, StartAnimation},
 			nested_mock::NestedMocks,

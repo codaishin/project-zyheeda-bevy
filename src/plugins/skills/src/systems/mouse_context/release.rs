@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::{states::mouse_context::MouseContext, tools::keys::user_input::UserInput};
+use common::{states::mouse_context::MouseContext, tools::action_key::user_input::UserInput};
 
 pub(crate) fn release_triggered_mouse_context(
 	mouse_input: Res<ButtonInput<UserInput>>,
@@ -22,7 +22,7 @@ mod tests {
 		input::{ButtonInput, keyboard::KeyCode, mouse::MouseButton},
 		state::app::{AppExtStates, StatesPlugin},
 	};
-	use common::tools::keys::user_input::UserInput;
+	use common::tools::action_key::user_input::UserInput;
 
 	fn setup() -> App {
 		let mut app = App::new();

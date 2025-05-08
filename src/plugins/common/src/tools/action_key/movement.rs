@@ -1,4 +1,4 @@
-use super::{IsNot, Key, user_input::UserInput};
+use super::{IsNot, ActionKey, user_input::UserInput};
 use crate::traits::{
 	handles_localization::Token,
 	iteration::{Iter, IterFinite},
@@ -41,18 +41,18 @@ impl From<MovementKey> for UserInput {
 	}
 }
 
-impl From<MovementKey> for Key {
+impl From<MovementKey> for ActionKey {
 	fn from(key: MovementKey) -> Self {
 		Self::Movement(key)
 	}
 }
 
-impl TryFrom<Key> for MovementKey {
+impl TryFrom<ActionKey> for MovementKey {
 	type Error = IsNot<MovementKey>;
 
-	fn try_from(key: Key) -> Result<Self, Self::Error> {
+	fn try_from(key: ActionKey) -> Result<Self, Self::Error> {
 		match key {
-			Key::Movement(key) => Ok(key),
+			ActionKey::Movement(key) => Ok(key),
 			_ => Err(IsNot::key()),
 		}
 	}

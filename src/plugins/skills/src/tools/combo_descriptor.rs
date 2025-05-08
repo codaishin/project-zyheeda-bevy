@@ -6,9 +6,9 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	tools::{
+		action_key::slot::{Combo, SlotKey},
 		change::Change,
 		item_type::{CompatibleItems, ItemType},
-		keys::slot::{Combo, SlotKey},
 	},
 	traits::{
 		handles_combo_menu::{GetComboAbleSkills, GetCombosOrdered, NextKeys},
@@ -136,7 +136,7 @@ mod tests {
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
 		test_tools::utils::SingleThreadedApp,
-		tools::{item_type::CompatibleItems, keys::slot::Side},
+		tools::{action_key::slot::Side, item_type::CompatibleItems},
 		traits::handles_localization::Token,
 	};
 
