@@ -5,6 +5,7 @@ mod traits;
 use bevy::prelude::*;
 use common::{
 	states::game_state::GameState,
+	tools::keys::camera_key::CameraKey,
 	traits::{
 		handles_graphics::{FirstPassCamera, WorldCameras},
 		handles_player::{HandlesPlayer, PlayerMainCamera},
@@ -49,7 +50,7 @@ where
 		.add_systems(
 			Update,
 			(
-				move_on_orbit::<OrbitPlayer>,
+				move_on_orbit::<OrbitPlayer, TSettings::TKeyMap<CameraKey>>,
 				move_with_target::<OrbitPlayer>,
 			)
 				.run_if(in_state(GameState::Play)),
