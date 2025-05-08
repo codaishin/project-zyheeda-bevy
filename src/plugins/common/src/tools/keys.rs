@@ -1,3 +1,4 @@
+pub mod camera_key;
 pub mod movement;
 pub mod slot;
 pub mod user_input;
@@ -10,6 +11,7 @@ use crate::{
 	},
 };
 use bevy::{reflect::TypePath, utils::default};
+use camera_key::CameraKey;
 use movement::MovementKey;
 use serde::{Deserialize, Serialize};
 use slot::SlotKey;
@@ -21,6 +23,7 @@ pub enum Key {
 	Movement(MovementKey),
 	Slot(SlotKey),
 	Menu(MenuState),
+	Camera(CameraKey),
 }
 
 impl Default for Key {
@@ -38,7 +41,8 @@ impl IterFinite for Key {
 		match current.0? {
 			Key::Movement(key) => try_next(Key::Movement, key).or(try_fst(Key::Slot)),
 			Key::Slot(key) => try_next(Key::Slot, key).or(try_fst(Key::Menu)),
-			Key::Menu(key) => try_next(Key::Menu, key),
+			Key::Menu(key) => try_next(Key::Menu, key).or(try_fst(Key::Camera)),
+			Key::Camera(key) => try_next(Key::Camera, key),
 		}
 	}
 }
@@ -49,6 +53,7 @@ impl From<Key> for UserInput {
 			Key::Movement(key) => Self::from(key),
 			Key::Slot(key) => Self::from(key),
 			Key::Menu(key) => Self::from(key),
+			Key::Camera(key) => Self::from(key),
 		}
 	}
 }
@@ -59,6 +64,7 @@ impl From<Key> for Token {
 			Key::Movement(key) => Self::from(key),
 			Key::Slot(key) => Self::from(key),
 			Key::Menu(key) => Self::from(key),
+			Key::Camera(key) => Self::from(key),
 		}
 	}
 }
@@ -99,6 +105,7 @@ mod tests {
 				.map(Key::Movement)
 				.chain(SlotKey::iterator().map(Key::Slot))
 				.chain(MenuState::iterator().map(Key::Menu))
+				.chain(CameraKey::iterator().map(Key::Camera))
 				.collect::<Vec<_>>(),
 			Key::iterator().take(100).collect::<Vec<_>>()
 		);
@@ -111,6 +118,7 @@ mod tests {
 				.map(UserInput::from)
 				.chain(SlotKey::iterator().map(UserInput::from))
 				.chain(MenuState::iterator().map(UserInput::from))
+				.chain(CameraKey::iterator().map(UserInput::from))
 				.collect::<HashSet<_>>(),
 			Key::iterator().map(UserInput::from).collect::<HashSet<_>>(),
 		);

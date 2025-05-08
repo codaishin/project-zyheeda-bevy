@@ -98,7 +98,8 @@ fn prepare_game(app: &mut App) {
 		&enemy_plugin,
 		&graphics_plugin,
 	);
-	let camera_control_plugin = CameraControlPlugin::depends_on(&player_plugin, &graphics_plugin);
+	let camera_control_plugin =
+		CameraControlPlugin::depends_on(&settings_plugin, &player_plugin, &graphics_plugin);
 
 	app.add_plugins(DefaultPlugins)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())

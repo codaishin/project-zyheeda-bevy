@@ -12,7 +12,13 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	states::menu_state::MenuState,
-	tools::keys::{Key, movement::MovementKey, slot::SlotKey, user_input::UserInput},
+	tools::keys::{
+		Key,
+		camera_key::CameraKey,
+		movement::MovementKey,
+		slot::SlotKey,
+		user_input::UserInput,
+	},
 	traits::{
 		handles_localization::{LocalizeToken, Token},
 		iterate::Iterate,
@@ -150,6 +156,7 @@ impl InsertUiContent for SettingsScreen {
 				self.add_section::<SlotKey>(parent, localize, "key-bindings-slots");
 				self.add_section::<MovementKey>(parent, localize, "key-bindings-movement");
 				self.add_section::<MenuState>(parent, localize, "key-bindings-menus");
+				self.add_section::<CameraKey>(parent, localize, "key-bindings-camera");
 			});
 	}
 }
