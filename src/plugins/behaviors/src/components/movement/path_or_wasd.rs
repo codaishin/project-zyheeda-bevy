@@ -1,6 +1,6 @@
 use super::Movement;
 use crate::{
-	events::{MovePointerEvent, MoveDirectionalEvent},
+	events::{MoveDirectionalEvent, MovePointerEvent},
 	traits::{IsDone, MovementUpdate},
 };
 use bevy::prelude::*;

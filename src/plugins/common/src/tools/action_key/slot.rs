@@ -1,4 +1,4 @@
-use super::{IsNot, ActionKey, user_input::UserInput};
+use super::{ActionKey, IsNot, user_input::UserInput};
 use crate::traits::{
 	handles_localization::Token,
 	iteration::{Iter, IterFinite},
