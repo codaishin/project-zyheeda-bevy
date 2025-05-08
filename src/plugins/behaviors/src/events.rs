@@ -4,21 +4,21 @@ use common::tools::speed::Speed;
 use std::{marker::PhantomData, time::Duration};
 
 #[derive(Event, Debug, PartialEq, Clone)]
-pub(crate) struct MoveClickEvent(pub(crate) Vec3);
+pub(crate) struct MovePointerEvent(pub(crate) Vec3);
 
-impl From<Vec3> for MoveClickEvent {
+impl From<Vec3> for MovePointerEvent {
 	fn from(translation: Vec3) -> Self {
 		Self(translation)
 	}
 }
 
 #[derive(Event, Debug, PartialEq, Clone)]
-pub(crate) struct MoveWasdEvent<TMethod> {
+pub(crate) struct MoveDirectionalEvent<TMethod> {
 	pub(crate) target: Vec3,
 	_m: PhantomData<TMethod>,
 }
 
-impl<TMethod> From<Vec3> for MoveWasdEvent<TMethod> {
+impl<TMethod> From<Vec3> for MoveDirectionalEvent<TMethod> {
 	fn from(target: Vec3) -> Self {
 		Self {
 			target,
@@ -27,7 +27,7 @@ impl<TMethod> From<Vec3> for MoveWasdEvent<TMethod> {
 	}
 }
 
-impl<TMethod> MinDistance for MoveWasdEvent<TMethod>
+impl<TMethod> MinDistance for MoveDirectionalEvent<TMethod>
 where
 	TMethod: MinDistance,
 {

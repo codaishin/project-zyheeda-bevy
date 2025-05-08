@@ -7,10 +7,10 @@ use common::{
 };
 use std::{any::type_name, marker::PhantomData, time::Duration};
 
-impl<T> TriggerDirectionKeyMovement for T where T: From<Vec3> + Event + MinDistance {}
+impl<T> TriggerDirectionalMovement for T where T: From<Vec3> + Event + MinDistance {}
 
-pub(crate) trait TriggerDirectionKeyMovement: From<Vec3> + Event + MinDistance {
-	fn trigger_movement<TCamera, TAgent, TMap, TKey>(
+pub(crate) trait TriggerDirectionalMovement: From<Vec3> + Event + MinDistance {
+	fn trigger_directional_movement<TCamera, TAgent, TMap, TKey>(
 		In(delta): In<Duration>,
 		map: Res<TMap>,
 		input: Res<ButtonInput<UserInput>>,
@@ -258,7 +258,7 @@ mod tests {
 
 		_ = app.world_mut().run_system_once_with(
 			Duration::from_secs(1),
-			_Event::trigger_movement::<_Cam, _Agent, _Map, _Key>,
+			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
 		)?;
 
 		assert_eq!(vec![_Event(Vec3::Z)], move_input_events(&app));
@@ -286,9 +286,10 @@ mod tests {
 		app.world_mut()
 			.spawn((GlobalTransform::default(), _Agent(speed)));
 
-		_ = app
-			.world_mut()
-			.run_system_once_with(delta, _Event::trigger_movement::<_Cam, _Agent, _Map, _Key>)?;
+		_ = app.world_mut().run_system_once_with(
+			delta,
+			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
+		)?;
 		Ok(())
 	}
 
@@ -313,7 +314,7 @@ mod tests {
 
 		_ = app.world_mut().run_system_once_with(
 			Duration::from_secs(1),
-			_Event::trigger_movement::<_Cam, _Agent, _Map, _Key>,
+			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
 		)?;
 
 		assert_eq!(
@@ -343,7 +344,7 @@ mod tests {
 
 		_ = app.world_mut().run_system_once_with(
 			Duration::from_secs(1),
-			_Event::trigger_movement::<_Cam, _Agent, _Map, _Key>,
+			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
 		)?;
 
 		assert_eq!(
@@ -380,7 +381,7 @@ mod tests {
 
 		_ = app.world_mut().run_system_once_with(
 			Duration::from_secs(1),
-			_Event::trigger_movement::<_Cam, _Agent, _Map, _Key>,
+			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
 		)?;
 
 		assert_eq!(
@@ -421,7 +422,7 @@ mod tests {
 
 		_ = app.world_mut().run_system_once_with(
 			Duration::from_secs(1),
-			_Event::trigger_movement::<_Cam, _Agent, _Map, _Key>,
+			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
 		)?;
 
 		assert_eq!(vec![_Event(Vec3::X)], move_input_events(&app));
@@ -456,7 +457,7 @@ mod tests {
 
 		_ = app.world_mut().run_system_once_with(
 			Duration::from_secs(1),
-			_Event::trigger_movement::<_Cam, _Agent, _Map, _Key>,
+			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
 		)?;
 
 		assert_eq!(vec![] as Vec<_Event>, move_input_events(&app));
@@ -487,7 +488,7 @@ mod tests {
 
 		_ = app.world_mut().run_system_once_with(
 			Duration::from_secs(1),
-			_Event::trigger_movement::<_Cam, _Agent, _Map, _Key>,
+			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
 		)?;
 		Ok(())
 	}
@@ -524,7 +525,7 @@ mod tests {
 
 		_ = app.world_mut().run_system_once_with(
 			Duration::from_secs(1),
-			_Event::trigger_movement::<_Cam, _Agent, _Map, _Key>,
+			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
 		)?;
 		Ok(())
 	}
@@ -543,7 +544,7 @@ mod tests {
 
 		let result = app.world_mut().run_system_once_with(
 			Duration::from_secs(1),
-			_Event::trigger_movement::<_Cam, _Agent, _Map, _Key>,
+			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
 		)?;
 
 		assert_eq!(Err(TriggerMovementError::from(QueryError::NoAgent)), result);
@@ -572,7 +573,7 @@ mod tests {
 
 		let result = app.world_mut().run_system_once_with(
 			Duration::from_secs(1),
-			_Event::trigger_movement::<_Cam, _Agent, _Map, _Key>,
+			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
 		)?;
 
 		assert_eq!(
@@ -599,7 +600,7 @@ mod tests {
 
 		let result = app.world_mut().run_system_once_with(
 			Duration::from_secs(1),
-			_Event::trigger_movement::<_Cam, _Agent, _Map, _Key>,
+			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
 		)?;
 
 		assert_eq!(Err(TriggerMovementError::from(QueryError::NoCam)), result);
@@ -625,7 +626,7 @@ mod tests {
 
 		let result = app.world_mut().run_system_once_with(
 			Duration::from_secs(1),
-			_Event::trigger_movement::<_Cam, _Agent, _Map, _Key>,
+			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
 		)?;
 
 		assert_eq!(
