@@ -25,7 +25,6 @@ use std::{
 	error::Error as StdError,
 	fmt::{Debug, Display},
 	hash::Hash,
-	marker::PhantomData,
 };
 
 #[derive(Resource, Asset, TypePath, Debug, PartialEq, Clone)]
@@ -114,7 +113,6 @@ where
 	TAllActions: Hash + Eq,
 	TInput: Hash + Eq,
 {
-	phantom_data: PhantomData<(TAllActions, TInput)>,
 	action_to_input: HashMap<TAllActions, TInput>,
 	input_to_action: HashMap<TInput, TAllActions>,
 	invalid_inputs: InvalidInputs<TAllActions, TInput>,
@@ -127,7 +125,6 @@ where
 {
 	fn default() -> Self {
 		let mut map = Self {
-			phantom_data: PhantomData,
 			action_to_input: HashMap::default(),
 			input_to_action: HashMap::default(),
 			invalid_inputs: InvalidInputs(HashMap::default()),
