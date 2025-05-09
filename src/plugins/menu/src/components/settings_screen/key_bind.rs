@@ -1,5 +1,6 @@
 pub(crate) mod action;
 pub(crate) mod input;
+pub(crate) mod rebinding;
 
 use crate::traits::{
 	colors::DEFAULT_PANEL_COLORS,

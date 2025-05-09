@@ -73,7 +73,7 @@ use components::{
 	quickbar_panel::QuickbarPanel,
 	settings_screen::{
 		SettingsScreen,
-		key_bind::{KeyBind, action::Action, input::Input},
+		key_bind::{KeyBind, action::Action, input::Input, rebinding::Rebinding},
 	},
 	start_game::StartGame,
 	start_menu::StartMenu,
@@ -219,6 +219,7 @@ where
 	fn settings_screen(&self, app: &mut App) {
 		type KeyBindAction = KeyBind<Action<ActionKey>>;
 		type KeyBindInput = KeyBind<Input<ActionKey, UserInput>>;
+		type KeyRebindInput = KeyBind<Rebinding<ActionKey, UserInput>>;
 
 		let settings = GameState::IngameMenu(MenuState::Settings);
 
@@ -232,6 +233,8 @@ where
 					SettingsScreen::set_key_bindings_from::<TSettings::TKeyMap<ActionKey>>,
 					KeyBindAction::render_ui::<TLocalization::TLocalizationServer>,
 					KeyBindInput::render_ui::<TLocalization::TLocalizationServer>,
+					KeyBindInput::rebind_on_click,
+					KeyRebindInput::render_ui::<TLocalization::TLocalizationServer>,
 				)
 					.run_if(in_state(settings)),
 			);

@@ -87,3 +87,5 @@ key-code-numpad-subtract = Numpad -
 mouse-button-left = Left Mouse Button
 mouse-button-right = Right Mouse Button
 mouse-button-middle = Middle Mouse Button
+
+rebind-text-prompt = Press key to rebind
