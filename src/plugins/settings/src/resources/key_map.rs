@@ -1,7 +1,9 @@
 pub(crate) mod dto;
 
+use crate::traits::drain_invalid_inputs::DrainInvalidInputs;
 use bevy::prelude::*;
 use common::{
+	errors::{Error, Level},
 	tools::action_key::{ActionKey, user_input::UserInput},
 	traits::{
 		handles_custom_assets::TryLoadFrom,
@@ -20,7 +22,7 @@ use std::{
 		HashSet,
 		hash_map::{Entry, Iter},
 	},
-	error::Error,
+	error::Error as StdError,
 	fmt::{Debug, Display},
 	hash::Hash,
 	marker::PhantomData,
@@ -75,6 +77,37 @@ impl TryLoadFrom<KeyMapDto<ActionKey, UserInput>> for KeyMap {
 	}
 }
 
+impl DrainInvalidInputs for KeyMap {
+	type TInvalidInput = (ActionKey, HashSet<UserInput>);
+
+	fn drain_invalid_inputs(&mut self) -> impl Iterator<Item = Self::TInvalidInput> {
+		self.0.invalid_inputs.0.drain()
+	}
+}
+
+#[derive(Debug, PartialEq, Clone)]
+struct InvalidInputs<TAction, TInput>(HashMap<TAction, HashSet<TInput>>)
+where
+	TAction: Eq + Hash,
+	TInput: Eq + Hash;
+
+impl<TAction, TInput> InvalidInputs<TAction, TInput>
+where
+	TAction: Eq + Hash,
+	TInput: Eq + Hash,
+{
+	fn push(&mut self, action: TAction, input: TInput) {
+		match self.0.entry(action) {
+			Entry::Occupied(mut entry) => {
+				entry.get_mut().insert(input);
+			}
+			Entry::Vacant(entry) => {
+				entry.insert(HashSet::from([input]));
+			}
+		};
+	}
+}
+
 #[derive(Debug, PartialEq, Clone)]
 struct KeyMapInternal<TAllActions = ActionKey, TInput = UserInput>
 where
@@ -84,6 +117,7 @@ where
 	phantom_data: PhantomData<(TAllActions, TInput)>,
 	action_to_input: HashMap<TAllActions, TInput>,
 	input_to_action: HashMap<TInput, TAllActions>,
+	invalid_inputs: InvalidInputs<TAllActions, TInput>,
 }
 
 impl<TAction, TInput> Default for KeyMapInternal<TAction, TInput>
@@ -96,6 +130,7 @@ where
 			phantom_data: PhantomData,
 			action_to_input: HashMap::default(),
 			input_to_action: HashMap::default(),
+			invalid_inputs: InvalidInputs(HashMap::default()),
 		};
 
 		for key in TAction::iterator() {
@@ -137,20 +172,25 @@ where
 impl<TAllActions, TAction, TInput> UpdateKey<TAction, TInput>
 	for KeyMapInternal<TAllActions, TInput>
 where
-	TAllActions: From<TAction> + Hash + Eq + Copy,
-	TAction: Copy + InvalidInput<TInput>,
+	TAllActions: From<TAction> + InvalidInput<TInput> + Hash + Eq + Copy,
+	TAction: Copy,
 	TInput: From<TAction> + Hash + Eq + Copy,
 {
 	fn update_key(&mut self, action: TAction, input: TInput) {
-		if action.invalid_input().contains(&input) {
-			return;
-		}
-
 		let old_input = self.get_input(action);
 		let action = TAllActions::from(action);
 
+		if action.invalid_input().contains(&input) {
+			self.invalid_inputs.push(action, input);
+			return;
+		}
+
 		match self.input_to_action.get(&input).copied() {
 			Some(old_action) => {
+				if old_action.invalid_input().contains(&old_input) {
+					self.invalid_inputs.push(old_action, old_input);
+					return;
+				}
 				self.action_to_input.insert(old_action, old_input);
 				self.input_to_action.insert(old_input, old_action);
 			}
@@ -191,6 +231,38 @@ where
 	}
 }
 
+#[derive(TypePath, Debug, PartialEq, Clone)]
+pub struct InvalidInputWarning<TAction, TInput>(HashMap<TAction, HashSet<TInput>>)
+where
+	TAction: Eq + Hash,
+	TInput: Eq + Hash;
+
+impl<TAction, TInput> From<InvalidInputWarning<TAction, TInput>> for Error
+where
+	TAction: InvalidInput<TInput> + Debug + Eq + Hash,
+	TInput: Debug + Eq + Hash,
+{
+	fn from(InvalidInputWarning(warnings): InvalidInputWarning<TAction, TInput>) -> Self {
+		let warnings = warnings
+			.iter()
+			.map(|(action, inputs)| {
+				format!(
+					"  - {:?} tried to set to: {:?} (invalid inputs: {:?})",
+					action,
+					inputs,
+					action.invalid_input()
+				)
+			})
+			.collect::<Vec<_>>()
+			.join("\n");
+
+		Error {
+			msg: format!("Attempted to set invalid inputs:\n{warnings:?}",),
+			lvl: Level::Warning,
+		}
+	}
+}
+
 #[derive(TypePath, Debug, PartialEq)]
 pub enum LoadError<TAllActions, TInput>
 where
@@ -198,7 +270,7 @@ where
 	TInput: Debug + Eq + Hash + TypePath,
 {
 	RepeatedInputs(HashMap<TInput, HashSet<TAllActions>>),
-	MissingInputs(HashMap<TAllActions, InvalidInputs<TInput>>),
+	MissingInputs(HashSet<TAllActions>),
 }
 
 impl<TAllActions, TInput> LoadError<TAllActions, TInput>
@@ -226,17 +298,14 @@ where
 			return Some(Self::RepeatedInputs(repeated));
 		}
 
-		let mut incomplete = HashMap::<TAllActions, InvalidInputs<TInput>>::default();
+		let mut incomplete = HashSet::<TAllActions>::default();
 
 		for action in TAllActions::iterator() {
 			if mapper.action_to_input.contains_key(&action) {
 				continue;
 			}
 
-			incomplete.insert(
-				action,
-				InvalidInputs(HashSet::from_iter(action.invalid_input().iter().copied())),
-			);
+			incomplete.insert(action);
 		}
 
 		if !incomplete.is_empty() {
@@ -247,10 +316,10 @@ where
 	}
 }
 
-impl<TAllKeys, TKeyCode> Display for LoadError<TAllKeys, TKeyCode>
+impl<TAction, TInput> Display for LoadError<TAction, TInput>
 where
-	TAllKeys: Debug + Eq + Hash + TypePath,
-	TKeyCode: Debug + Eq + Hash + TypePath,
+	TAction: Debug + Eq + Hash + TypePath + InvalidInput<TInput>,
+	TInput: Debug + Eq + Hash + TypePath,
 {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
@@ -270,11 +339,16 @@ where
 			LoadError::MissingInputs(missing) => {
 				let actions = missing
 					.iter()
-					.map(|(action, invalid_inputs)| {
-						format!(
-							"  - {:?} had no input. Either missing or part of: {:?}",
-							action, invalid_inputs
-						)
+					.map(|action| {
+						let invalid_actions = action.invalid_input();
+						if invalid_actions.is_empty() {
+							format!("  - {:?} has no input", action)
+						} else {
+							format!(
+								"  - {:?} has no input. Either missing or part of invalid inputs for this action: {:?}",
+								action, invalid_actions
+							)
+						}
 					})
 					.collect::<Vec<_>>()
 					.join("\n");
@@ -284,10 +358,10 @@ where
 	}
 }
 
-impl<TAllKeys, TKeyCode> Error for LoadError<TAllKeys, TKeyCode>
+impl<TAction, TInput> StdError for LoadError<TAction, TInput>
 where
-	TAllKeys: Debug + Eq + Hash + TypePath,
-	TKeyCode: Debug + Eq + Hash + TypePath,
+	TAction: Debug + Eq + Hash + TypePath + InvalidInput<TInput>,
+	TInput: Debug + Eq + Hash + TypePath,
 {
 }
 
@@ -299,11 +373,6 @@ impl<'a> Iterate<'a> for KeyMap {
 		self.0.action_to_input.iter()
 	}
 }
-
-#[derive(Debug, PartialEq)]
-pub struct InvalidInputs<TInput>(HashSet<TInput>)
-where
-	TInput: Eq + Hash;
 
 #[cfg(test)]
 mod tests {
@@ -340,7 +409,10 @@ mod tests {
 
 	impl InvalidInput<_Input> for _AllActions {
 		fn invalid_input(&self) -> &[_Input] {
-			&[]
+			match self {
+				_AllActions::A(action) => action.invalid_input(),
+				_AllActions::B(action) => action.invalid_input(),
+			}
 		}
 	}
 
@@ -501,14 +573,20 @@ mod tests {
 
 		#[test]
 		fn ignore_update_when_attempting_to_use_invalid_key() {
-			let action = _ActionB;
-			let input = _Input::C;
 			let mut mapper = KeyMapInternal::<_AllActions, _Input>::default();
-			mapper.update_key(action, input);
+			mapper.update_key(_ActionB, _Input::C);
 
 			assert_eq!(
-				(_Input::from(action), None as Option<_ActionA>),
-				(mapper.get_input(action), mapper.try_get_action(input))
+				(
+					_Input::from(_ActionB),
+					None as Option<_ActionA>,
+					HashMap::from([(_AllActions::B(_ActionB), HashSet::from([_Input::C]))])
+				),
+				(
+					mapper.get_input(_ActionB),
+					mapper.try_get_action(_Input::C),
+					mapper.invalid_inputs.0
+				)
 			);
 		}
 
@@ -520,12 +598,19 @@ mod tests {
 			mapper.update_key(_ActionA, _Input::B);
 
 			assert_eq!(
-				(_Input::C, Some(_ActionA), _Input::B, Some(_ActionB),),
+				(
+					_Input::C,
+					Some(_ActionA),
+					_Input::B,
+					Some(_ActionB),
+					HashMap::from([(_AllActions::B(_ActionB), HashSet::from([_Input::C]))])
+				),
 				(
 					mapper.get_input(_ActionA),
 					mapper.try_get_action(_Input::C),
 					mapper.get_input(_ActionB),
 					mapper.try_get_action(_Input::B),
+					mapper.invalid_inputs.0
 				)
 			);
 		}
@@ -662,10 +747,7 @@ mod tests {
 				let mapper = KeyMapInternal::try_load_from(KeyMapDto::from([]), &mut _Server);
 
 				assert_eq!(
-					Err(LoadError::MissingInputs(HashMap::from([(
-						_FaultyAction::B,
-						InvalidInputs(HashSet::from([_Input::B]))
-					)]))),
+					Err(LoadError::MissingInputs(HashSet::from([_FaultyAction::B]))),
 					mapper
 				);
 			}
@@ -711,37 +793,19 @@ mod tests {
 
 		#[test]
 		fn display_missing_inputs() {
-			let repeated = LoadError::MissingInputs(HashMap::from([
-				(
-					_AllActions::A(_ActionA),
-					InvalidInputs(HashSet::from([_Input::B, _Input::C])),
-				),
-				(
-					_AllActions::B(_ActionB),
-					InvalidInputs(HashSet::from([_Input::A, _Input::C])),
-				),
+			let repeated = LoadError::MissingInputs(HashSet::from([
+				_AllActions::A(_ActionA),
+				_AllActions::B(_ActionB),
 			]));
 
 			let output = repeated.to_string();
 
 			let [header, items @ ..] = assert_count!(3, output.lines());
 			assert_eq!("Some actions have no input:", header);
-			assert!(either_or!(
-				items.contains(
-					&"  - A(_ActionA) had no input. Either missing or part of: InvalidInputs({B, C})"
-				),
-				items.contains(
-					&"  - A(_ActionA) had no input. Either missing or part of: InvalidInputs({C, B})"
-				),
-			));
-			assert!(either_or!(
-				items.contains(
-					&"  - B(_ActionB) had no input. Either missing or part of: InvalidInputs({A, C})"
-				),
-				items.contains(
-					&"  - B(_ActionB) had no input. Either missing or part of: InvalidInputs({C, A})"
-				),
-			));
+			assert!(items.contains(&"  - A(_ActionA) has no input"),);
+			assert!(items.contains(
+				&"  - B(_ActionB) has no input. Either missing or part of invalid inputs for this action: [C]"
+			),);
 		}
 	}
 }

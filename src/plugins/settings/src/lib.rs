@@ -1,6 +1,7 @@
 pub mod resources;
 
 mod systems;
+mod traits;
 
 use bevy::prelude::*;
 use common::{
