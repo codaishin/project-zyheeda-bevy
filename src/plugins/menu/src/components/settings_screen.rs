@@ -26,7 +26,7 @@ use common::{
 		thread_safe::ThreadSafe,
 	},
 };
-use key_bind::KeyBind;
+use key_bind::{KeyBind, action::Action, input::Input};
 use std::collections::HashMap;
 
 #[derive(Component, Debug, PartialEq, Default)]
@@ -103,8 +103,8 @@ impl SettingsScreen {
 		T: IterFinite,
 		ActionKey: From<T>,
 	{
-		for (key, user_input) in self.keys::<T>() {
-			Self::add_key_row(parent, key, user_input);
+		for (action, input) in self.keys::<T>() {
+			Self::add_key_row(parent, action, input);
 		}
 	}
 
@@ -118,15 +118,15 @@ impl SettingsScreen {
 			.filter_map(|key| Some((key, *self.key_bindings.get(&key)?)))
 	}
 
-	fn add_key_row(parent: &mut ChildBuilder, key: ActionKey, user_input: UserInput) {
+	fn add_key_row(parent: &mut ChildBuilder, action: ActionKey, input: UserInput) {
 		parent
 			.spawn(Node {
 				flex_direction: FlexDirection::Row,
 				..default()
 			})
 			.with_children(|parent| {
-				parent.spawn(KeyBind(key));
-				parent.spawn(KeyBind(user_input));
+				parent.spawn(KeyBind(Action(action)));
+				parent.spawn(KeyBind(Input { action, input }));
 			});
 	}
 }

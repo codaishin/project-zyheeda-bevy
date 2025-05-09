@@ -1,5 +1,5 @@
-mod action_key;
-mod user_input;
+pub(crate) mod action;
+pub(crate) mod input;
 
 use crate::traits::{
 	colors::DEFAULT_PANEL_COLORS,
@@ -12,13 +12,13 @@ use common::traits::{
 	thread_safe::ThreadSafe,
 };
 
-#[derive(Component, Debug, PartialEq)]
+#[derive(Component, Debug, PartialEq, Clone, Copy)]
 #[require(Node(Self::node), BackgroundColor(Self::background_color))]
-pub(crate) struct KeyBind<TUserInput>(pub(crate) TUserInput)
+pub(crate) struct KeyBind<T>(pub(crate) T)
 where
 	Self: GetBackgroundColor + GetNode;
 
-impl<TUserInput> KeyBind<TUserInput>
+impl<T> KeyBind<T>
 where
 	Self: GetBackgroundColor + GetNode,
 {
@@ -34,10 +34,10 @@ where
 	}
 }
 
-impl<TUserInput> InsertUiContent for KeyBind<TUserInput>
+impl<T> InsertUiContent for KeyBind<T>
 where
 	Self: GetBackgroundColor + GetNode,
-	TUserInput: Into<Token> + Copy + 'static,
+	T: Into<Token> + Copy + 'static,
 {
 	fn insert_ui_content<TLocalization>(
 		&self,

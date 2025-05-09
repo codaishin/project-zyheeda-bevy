@@ -71,7 +71,10 @@ use components::{
 	loading_screen::LoadingScreen,
 	menu_background::MenuBackground,
 	quickbar_panel::QuickbarPanel,
-	settings_screen::{SettingsScreen, key_bind::KeyBind},
+	settings_screen::{
+		SettingsScreen,
+		key_bind::{KeyBind, action::Action, input::Input},
+	},
 	start_game::StartGame,
 	start_menu::StartMenu,
 	start_menu_button::StartMenuButton,
@@ -214,20 +217,24 @@ where
 	}
 
 	fn settings_screen(&self, app: &mut App) {
+		type KeyBindAction = KeyBind<Action<ActionKey>>;
+		type KeyBindInput = KeyBind<Input<ActionKey, UserInput>>;
+
 		let settings = GameState::IngameMenu(MenuState::Settings);
 
-		app.add_ui::<SettingsScreen, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
-			settings,
-		)
-		.add_systems(
-			Update,
-			(
-				SettingsScreen::set_key_bindings_from::<TSettings::TKeyMap<ActionKey>>,
-				KeyBind::<ActionKey>::render_ui::<TLocalization::TLocalizationServer>,
-				KeyBind::<UserInput>::render_ui::<TLocalization::TLocalizationServer>,
+		app.register_required_components::<KeyBindInput, Interaction>()
+			.add_ui::<SettingsScreen, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
+				settings,
 			)
-				.run_if(in_state(settings)),
-		);
+			.add_systems(
+				Update,
+				(
+					SettingsScreen::set_key_bindings_from::<TSettings::TKeyMap<ActionKey>>,
+					KeyBindAction::render_ui::<TLocalization::TLocalizationServer>,
+					KeyBindInput::render_ui::<TLocalization::TLocalizationServer>,
+				)
+					.run_if(in_state(settings)),
+			);
 	}
 
 	fn general_systems(&self, app: &mut App) {
