@@ -1,3 +1,124 @@
 {
-	"keys": []
+  "keys": [
+    [
+      {
+        "Slot": {
+          "BottomHand": "Right"
+        }
+      },
+      {
+        "KeyCode": "KeyE"
+      }
+    ],
+    [
+      {
+        "Slot": {
+          "TopHand": "Left"
+        }
+      },
+      {
+        "MouseButton": "Left"
+      }
+    ],
+    [
+      {
+        "Slot": {
+          "BottomHand": "Left"
+        }
+      },
+      {
+        "KeyCode": "KeyQ"
+      }
+    ],
+    [
+      {
+        "Movement": "Forward"
+      },
+      {
+        "KeyCode": "KeyW"
+      }
+    ],
+    [
+      {
+        "Movement": "ToggleWalkRun"
+      },
+      {
+        "KeyCode": "NumpadSubtract"
+      }
+    ],
+    [
+      {
+        "Slot": {
+          "TopHand": "Right"
+        }
+      },
+      {
+        "MouseButton": "Right"
+      }
+    ],
+    [
+      {
+        "Movement": "Left"
+      },
+      {
+        "KeyCode": "KeyA"
+      }
+    ],
+    [
+      {
+        "Camera": "Rotate"
+      },
+      {
+        "MouseButton": "Middle"
+      }
+    ],
+    [
+      {
+        "Menu": "ComboOverview"
+      },
+      {
+        "KeyCode": "KeyK"
+      }
+    ],
+    [
+      {
+        "Movement": "Backward"
+      },
+      {
+        "KeyCode": "KeyS"
+      }
+    ],
+    [
+      {
+        "Movement": "Right"
+      },
+      {
+        "KeyCode": "KeyD"
+      }
+    ],
+    [
+      {
+        "Menu": "Inventory"
+      },
+      {
+        "KeyCode": "KeyI"
+      }
+    ],
+    [
+      {
+        "Movement": "Pointer"
+      },
+      {
+        "KeyCode": "Space"
+      }
+    ],
+    [
+      {
+        "Menu": "Settings"
+      },
+      {
+        "KeyCode": "Escape"
+      }
+    ]
+  ]
 }

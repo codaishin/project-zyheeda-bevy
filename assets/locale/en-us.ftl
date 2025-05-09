@@ -83,6 +83,7 @@ key-code-key-y = Y
 key-code-key-z = Z
 key-code-escape = Escape
 key-code-numpad-subtract = Numpad -
+key-code-space = Space
 
 mouse-button-left = Left Mouse Button
 mouse-button-right = Right Mouse Button
