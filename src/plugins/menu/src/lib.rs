@@ -85,7 +85,7 @@ use components::{
 };
 use events::DropdownEvent;
 use resources::equipment_info::EquipmentInfo;
-use states::menus_change_able::MenusChangAble;
+use states::menus_change_able::MenusChangeable;
 use std::{marker::PhantomData, time::Duration};
 use systems::{
 	adjust_global_z_index::adjust_global_z_index,
@@ -149,13 +149,13 @@ where
 	}
 
 	fn state_control(&self, app: &mut App) {
-		app.insert_state(MenusChangAble(true));
+		app.insert_state(MenusChangeable(true));
 		app.add_systems(
 			Update,
 			(
 				PreventMenuChange::menus_unchangeable_when_present,
 				set_state_from_input::<GameState, MenuState, TSettings::TKeyMap<MenuState>>
-					.run_if(not(in_state(MenusChangAble(false)))),
+					.run_if(not(in_state(MenusChangeable(false)))),
 			)
 				.chain(),
 		);

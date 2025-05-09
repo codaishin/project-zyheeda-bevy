@@ -1,17 +1,17 @@
-use crate::MenusChangAble;
+use crate::MenusChangeable;
 use bevy::prelude::*;
 
 impl<T> MenusUnchangeableWhenPresent for T where T: Component {}
 
 pub(crate) trait MenusUnchangeableWhenPresent: Component + Sized {
 	fn menus_unchangeable_when_present(
-		current_state: Res<State<MenusChangAble>>,
-		mut next_state: ResMut<NextState<MenusChangAble>>,
+		current_state: Res<State<MenusChangeable>>,
+		mut next_state: ResMut<NextState<MenusChangeable>>,
 		blockers: Query<(), With<Self>>,
 	) {
 		match current_state.get() {
-			MenusChangAble(true) if !blockers.is_empty() => next_state.set(MenusChangAble(false)),
-			MenusChangAble(false) if blockers.is_empty() => next_state.set(MenusChangAble(true)),
+			MenusChangeable(true) if !blockers.is_empty() => next_state.set(MenusChangeable(false)),
+			MenusChangeable(false) if blockers.is_empty() => next_state.set(MenusChangeable(true)),
 			_ => {}
 		};
 	}
@@ -20,7 +20,7 @@ pub(crate) trait MenusUnchangeableWhenPresent: Component + Sized {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::MenusChangAble;
+	use crate::MenusChangeable;
 	use bevy::state::app::StatesPlugin;
 	use common::test_tools::utils::SingleThreadedApp;
 
@@ -31,12 +31,12 @@ mod tests {
 	struct _StateChanged(bool);
 
 	impl _StateChanged {
-		fn update(mut commands: Commands, next_state: ResMut<NextState<MenusChangAble>>) {
+		fn update(mut commands: Commands, next_state: ResMut<NextState<MenusChangeable>>) {
 			commands.insert_resource(_StateChanged(next_state.is_changed()));
 		}
 	}
 
-	fn setup(state: MenusChangAble) -> App {
+	fn setup(state: MenusChangeable) -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.add_plugins(StatesPlugin);
@@ -55,15 +55,15 @@ mod tests {
 
 	#[test]
 	fn set_state_to_unchangeable_when_added() {
-		let mut app = setup(MenusChangAble(true));
+		let mut app = setup(MenusChangeable(true));
 		app.world_mut().spawn(_Component);
 
 		app.update();
 		app.update();
 
 		assert_eq!(
-			&MenusChangAble(false),
-			app.world().resource::<State<MenusChangAble>>().get()
+			&MenusChangeable(false),
+			app.world().resource::<State<MenusChangeable>>().get()
 		);
 	}
 
@@ -72,21 +72,21 @@ mod tests {
 		#[derive(Component)]
 		struct _Other;
 
-		let mut app = setup(MenusChangAble(true));
+		let mut app = setup(MenusChangeable(true));
 		app.world_mut().spawn(_Other);
 
 		app.update();
 		app.update();
 
 		assert_eq!(
-			&MenusChangAble(true),
-			app.world().resource::<State<MenusChangAble>>().get()
+			&MenusChangeable(true),
+			app.world().resource::<State<MenusChangeable>>().get()
 		);
 	}
 
 	#[test]
 	fn set_state_to_changeable_when_removed() {
-		let mut app = setup(MenusChangAble(true));
+		let mut app = setup(MenusChangeable(true));
 		let entity = app.world_mut().spawn(_Component).id();
 
 		app.update();
@@ -95,14 +95,14 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			&MenusChangAble(true),
-			app.world().resource::<State<MenusChangAble>>().get()
+			&MenusChangeable(true),
+			app.world().resource::<State<MenusChangeable>>().get()
 		);
 	}
 
 	#[test]
 	fn do_not_update_state_when_no_change_occurred() {
-		let mut app = setup(MenusChangAble(true));
+		let mut app = setup(MenusChangeable(true));
 
 		app.update();
 		app.update();

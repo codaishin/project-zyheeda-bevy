@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 
 #[derive(States, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub(crate) struct MenusChangAble(pub(crate) bool);
+pub(crate) struct MenusChangeable(pub(crate) bool);
 
-impl Default for MenusChangAble {
+impl Default for MenusChangeable {
 	fn default() -> Self {
-		MenusChangAble(true)
+		MenusChangeable(true)
 	}
 }
