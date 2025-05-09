@@ -3,6 +3,7 @@ pub mod traits;
 mod components;
 mod events;
 mod resources;
+mod states;
 mod systems;
 mod tools;
 mod visualization;
@@ -70,6 +71,7 @@ use components::{
 	key_select_dropdown_command::AppendSkillCommand,
 	loading_screen::LoadingScreen,
 	menu_background::MenuBackground,
+	prevent_menu_change::PreventMenuChange,
 	quickbar_panel::QuickbarPanel,
 	settings_screen::{
 		SettingsScreen,
@@ -83,6 +85,7 @@ use components::{
 };
 use events::DropdownEvent;
 use resources::equipment_info::EquipmentInfo;
+use states::menus_change_able::MenusChangAble;
 use std::{marker::PhantomData, time::Duration};
 use systems::{
 	adjust_global_z_index::adjust_global_z_index,
@@ -95,6 +98,7 @@ use systems::{
 	dropdown::select_successor_key::select_successor_key,
 	image_color::image_color,
 	insert_key_code_text::insert_user_input_text,
+	menus_unchangeable_when_present::MenusUnchangeableWhenPresent,
 	mouse_context::{prime::prime_mouse_context, set_ui::set_ui_mouse_context},
 	on_release_set::OnReleaseSet,
 	render_ui::RenderUi,
@@ -145,9 +149,15 @@ where
 	}
 
 	fn state_control(&self, app: &mut App) {
+		app.insert_state(MenusChangAble(true));
 		app.add_systems(
 			Update,
-			set_state_from_input::<GameState, MenuState, TSettings::TKeyMap<MenuState>>,
+			(
+				PreventMenuChange::menus_unchangeable_when_present,
+				set_state_from_input::<GameState, MenuState, TSettings::TKeyMap<MenuState>>
+					.run_if(not(in_state(MenusChangAble(false)))),
+			)
+				.chain(),
 		);
 	}
 
@@ -224,6 +234,7 @@ where
 		let settings = GameState::IngameMenu(MenuState::Settings);
 
 		app.register_required_components::<KeyBindInput, Interaction>()
+			.register_required_components::<KeyRebindInput, PreventMenuChange>()
 			.add_ui::<SettingsScreen, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
 				settings,
 			)
