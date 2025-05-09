@@ -1,15 +1,15 @@
+mod action_key;
+mod user_input;
+
 use crate::traits::{
 	colors::DEFAULT_PANEL_COLORS,
 	insert_ui_content::InsertUiContent,
 	ui_traits::{GetBackgroundColor, GetNode},
 };
 use bevy::prelude::*;
-use common::{
-	tools::action_key::{ActionKey, user_input::UserInput},
-	traits::{
-		handles_localization::{LocalizeToken, Token},
-		thread_safe::ThreadSafe,
-	},
+use common::traits::{
+	handles_localization::{LocalizeToken, Token},
+	thread_safe::ThreadSafe,
 };
 
 #[derive(Component, Debug, PartialEq)]
@@ -54,37 +54,5 @@ where
 			},
 			TextColor::from(DEFAULT_PANEL_COLORS.text),
 		));
-	}
-}
-
-type KeyBindAction = KeyBind<ActionKey>;
-
-impl GetNode for KeyBindAction {
-	fn node() -> Node {
-		let mut node = Self::node_base();
-		node.justify_content = JustifyContent::End;
-		node
-	}
-}
-
-impl GetBackgroundColor for KeyBindAction {
-	fn background_color() -> Color {
-		DEFAULT_PANEL_COLORS.empty
-	}
-}
-
-type KeyBindInput = KeyBind<UserInput>;
-
-impl GetNode for KeyBindInput {
-	fn node() -> Node {
-		let mut node = Self::node_base();
-		node.justify_content = JustifyContent::Center;
-		node
-	}
-}
-
-impl GetBackgroundColor for KeyBindInput {
-	fn background_color() -> Color {
-		DEFAULT_PANEL_COLORS.filled
 	}
 }
