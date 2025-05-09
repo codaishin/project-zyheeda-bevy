@@ -62,7 +62,7 @@ where
 }
 
 impl TryLoadFrom<KeyMapDto<ActionKey, UserInput>> for KeyMap {
-	type TInstantiationError = RepeatedAssignments<ActionKey, UserInput>;
+	type TInstantiationError = LoadError<ActionKey, UserInput>;
 
 	fn try_load_from<TLoadAsset>(
 		dto: KeyMapDto<ActionKey, UserInput>,
@@ -169,7 +169,7 @@ where
 	TAction: InvalidInput<TInput> + IterFinite + Debug + Copy + Hash + Eq + TypePath + ThreadSafe,
 	TInput: From<TAction> + Debug + Copy + Hash + Eq + TypePath + ThreadSafe,
 {
-	type TInstantiationError = RepeatedAssignments<TAction, TInput>;
+	type TInstantiationError = LoadError<TAction, TInput>;
 
 	fn try_load_from<TLoadAsset>(
 		KeyMapDto { actions }: KeyMapDto<TAction, TInput>,
@@ -183,8 +183,8 @@ where
 			mapper.update_key(action, input);
 		}
 
-		if let Some(repeated) = RepeatedAssignments::from_mapper(&mapper) {
-			return Err(repeated);
+		if let Some(error) = LoadError::from_mapper(&mapper) {
+			return Err(error);
 		}
 
 		Ok(mapper)
@@ -192,21 +192,25 @@ where
 }
 
 #[derive(TypePath, Debug, PartialEq)]
-pub struct RepeatedAssignments<TAllKeys, TKeyCode>(HashMap<TKeyCode, HashSet<TAllKeys>>)
+pub enum LoadError<TAllActions, TInput>
 where
-	TAllKeys: Debug + Eq + Hash + TypePath,
-	TKeyCode: Debug + Eq + Hash + TypePath;
+	TAllActions: Debug + Eq + Hash + TypePath,
+	TInput: Debug + Eq + Hash + TypePath,
+{
+	RepeatedInputs(HashMap<TInput, HashSet<TAllActions>>),
+	MissingInputs(HashMap<TAllActions, InvalidInputs<TInput>>),
+}
 
-impl<TAllActions, TInput> RepeatedAssignments<TAllActions, TInput>
+impl<TAllActions, TInput> LoadError<TAllActions, TInput>
 where
-	TAllActions: Debug + Eq + Hash + TypePath + Copy,
+	TAllActions: IterFinite + InvalidInput<TInput> + Debug + Eq + Hash + TypePath + Copy,
 	TInput: Debug + Eq + Hash + TypePath + Copy,
 {
 	fn from_mapper(mapper: &KeyMapInternal<TAllActions, TInput>) -> Option<Self> {
-		let mut repeated = Self(HashMap::default());
+		let mut repeated = HashMap::<TInput, HashSet<TAllActions>>::default();
 
 		for (action, input) in &mapper.action_to_input {
-			match repeated.0.entry(*input) {
+			match repeated.entry(*input) {
 				Entry::Occupied(mut entry) => {
 					entry.get_mut().insert(*action);
 				}
@@ -216,33 +220,71 @@ where
 			}
 		}
 
-		repeated.0.retain(|_, keys| keys.len() > 1);
+		repeated.retain(|_, keys| keys.len() > 1);
 
-		if repeated.0.is_empty() {
-			return None;
+		if !repeated.is_empty() {
+			return Some(Self::RepeatedInputs(repeated));
 		}
 
-		Some(repeated)
+		let mut incomplete = HashMap::<TAllActions, InvalidInputs<TInput>>::default();
+
+		for action in TAllActions::iterator() {
+			if mapper.action_to_input.contains_key(&action) {
+				continue;
+			}
+
+			incomplete.insert(
+				action,
+				InvalidInputs(HashSet::from_iter(action.invalid_input().iter().copied())),
+			);
+		}
+
+		if !incomplete.is_empty() {
+			return Some(Self::MissingInputs(incomplete));
+		}
+
+		None
 	}
 }
 
-impl<TAllKeys, TKeyCode> Display for RepeatedAssignments<TAllKeys, TKeyCode>
+impl<TAllKeys, TKeyCode> Display for LoadError<TAllKeys, TKeyCode>
 where
 	TAllKeys: Debug + Eq + Hash + TypePath,
 	TKeyCode: Debug + Eq + Hash + TypePath,
 {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		let actions = self
-			.0
-			.iter()
-			.map(|(input, actions)| format!("  - {:?} is assigned to: {:?}", input, actions))
-			.collect::<Vec<_>>()
-			.join("\n");
-		writeln!(f, "Multiple keys assigned to the same input(s):\n{actions}")
+		match self {
+			LoadError::RepeatedInputs(repeated) => {
+				let actions = repeated
+					.iter()
+					.map(|(input, actions)| {
+						format!("  - {:?} is assigned to: {:?}", input, actions)
+					})
+					.collect::<Vec<_>>()
+					.join("\n");
+				writeln!(
+					f,
+					"Multiple actions assigned to the same input(s):\n{actions}"
+				)
+			}
+			LoadError::MissingInputs(missing) => {
+				let actions = missing
+					.iter()
+					.map(|(action, invalid_inputs)| {
+						format!(
+							"  - {:?} had no input. Either missing or part of: {:?}",
+							action, invalid_inputs
+						)
+					})
+					.collect::<Vec<_>>()
+					.join("\n");
+				writeln!(f, "Some actions have no input:\n{actions}")
+			}
+		}
 	}
 }
 
-impl<TAllKeys, TKeyCode> Error for RepeatedAssignments<TAllKeys, TKeyCode>
+impl<TAllKeys, TKeyCode> Error for LoadError<TAllKeys, TKeyCode>
 where
 	TAllKeys: Debug + Eq + Hash + TypePath,
 	TKeyCode: Debug + Eq + Hash + TypePath,
@@ -257,6 +299,11 @@ impl<'a> Iterate<'a> for KeyMap {
 		self.0.action_to_input.iter()
 	}
 }
+
+#[derive(Debug, PartialEq)]
+pub struct InvalidInputs<TInput>(HashSet<TInput>)
+where
+	TInput: Eq + Hash;
 
 #[cfg(test)]
 mod tests {
@@ -464,6 +511,24 @@ mod tests {
 				(mapper.get_input(action), mapper.try_get_action(input))
 			);
 		}
+
+		#[test]
+		fn ignore_update_when_swap_would_assign_other_action_with_invalid_key() {
+			let mut mapper = KeyMapInternal::<_AllActions, _Input>::default();
+			mapper.update_key(_ActionA, _Input::C);
+			mapper.update_key(_ActionB, _Input::B);
+			mapper.update_key(_ActionA, _Input::B);
+
+			assert_eq!(
+				(_Input::C, Some(_ActionA), _Input::B, Some(_ActionB),),
+				(
+					mapper.get_input(_ActionA),
+					mapper.try_get_action(_Input::C),
+					mapper.get_input(_ActionB),
+					mapper.try_get_action(_Input::B),
+				)
+			);
+		}
 	}
 
 	mod try_load {
@@ -481,7 +546,7 @@ mod tests {
 		}
 
 		#[test]
-		fn from_dto() -> Result<(), RepeatedAssignments<_AllActions, _Input>> {
+		fn from_dto() -> Result<(), LoadError<_AllActions, _Input>> {
 			let dto = KeyMapDto::from([(_AllActions::A(_ActionA), _Input::C)]);
 
 			let mapper = KeyMapInternal::try_load_from(dto, &mut _Server)?;
@@ -498,73 +563,128 @@ mod tests {
 			Ok(())
 		}
 
-		#[derive(TypePath, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-		enum _FaultyAction {
-			A,
-			B,
-			C,
-		}
+		mod double_inputs {
+			use super::*;
 
-		impl From<_FaultyAction> for _Input {
-			fn from(value: _FaultyAction) -> Self {
-				match value {
-					_FaultyAction::A => _Input::A,
-					_FaultyAction::B => _Input::C, // this is the faulty mapping
-					_FaultyAction::C => _Input::C,
+			#[derive(TypePath, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+			enum _FaultyAction {
+				A,
+				B,
+				C,
+			}
+
+			impl From<_FaultyAction> for _Input {
+				fn from(value: _FaultyAction) -> Self {
+					match value {
+						_FaultyAction::A => _Input::A,
+						_FaultyAction::B => _Input::C, // this is the faulty mapping
+						_FaultyAction::C => _Input::C,
+					}
 				}
 			}
-		}
 
-		impl IterFinite for _FaultyAction {
-			fn iterator() -> Iter<Self> {
-				Iter(Some(_FaultyAction::A))
-			}
+			impl IterFinite for _FaultyAction {
+				fn iterator() -> Iter<Self> {
+					Iter(Some(_FaultyAction::A))
+				}
 
-			fn next(current: &Iter<Self>) -> Option<Self> {
-				match current.0? {
-					_FaultyAction::A => Some(_FaultyAction::B),
-					_FaultyAction::B => Some(_FaultyAction::C),
-					_FaultyAction::C => None,
+				fn next(current: &Iter<Self>) -> Option<Self> {
+					match current.0? {
+						_FaultyAction::A => Some(_FaultyAction::B),
+						_FaultyAction::B => Some(_FaultyAction::C),
+						_FaultyAction::C => None,
+					}
 				}
 			}
-		}
 
-		impl InvalidInput<_Input> for _FaultyAction {
-			fn invalid_input(&self) -> &[_Input] {
-				&[]
+			impl InvalidInput<_Input> for _FaultyAction {
+				fn invalid_input(&self) -> &[_Input] {
+					&[]
+				}
+			}
+
+			#[test]
+			fn from_dto_error() {
+				let mapper = KeyMapInternal::try_load_from(KeyMapDto::from([]), &mut _Server);
+
+				assert_eq!(
+					Err(LoadError::RepeatedInputs(HashMap::from([(
+						_Input::C,
+						HashSet::from([_FaultyAction::B, _FaultyAction::C])
+					)]))),
+					mapper
+				);
 			}
 		}
 
-		#[test]
-		fn from_dto_error_when_input_assigned_twice() {
-			let mapper = KeyMapInternal::try_load_from(KeyMapDto::from([]), &mut _Server);
+		mod missing_inputs {
+			use super::*;
 
-			assert_eq!(
-				Err(RepeatedAssignments(HashMap::from([(
-					_Input::C,
-					HashSet::from([_FaultyAction::B, _FaultyAction::C])
-				)]))),
-				mapper
-			);
+			#[derive(TypePath, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+			enum _FaultyAction {
+				A,
+				B,
+				C,
+			}
+
+			impl From<_FaultyAction> for _Input {
+				fn from(value: _FaultyAction) -> Self {
+					match value {
+						_FaultyAction::A => _Input::A,
+						_FaultyAction::B => _Input::B,
+						_FaultyAction::C => _Input::C,
+					}
+				}
+			}
+
+			impl IterFinite for _FaultyAction {
+				fn iterator() -> Iter<Self> {
+					Iter(Some(_FaultyAction::A))
+				}
+
+				fn next(current: &Iter<Self>) -> Option<Self> {
+					match current.0? {
+						_FaultyAction::A => Some(_FaultyAction::B),
+						_FaultyAction::B => Some(_FaultyAction::C),
+						_FaultyAction::C => None,
+					}
+				}
+			}
+
+			impl InvalidInput<_Input> for _FaultyAction {
+				fn invalid_input(&self) -> &[_Input] {
+					&[_Input::B] // input invalid, thus no input present for action
+				}
+			}
+
+			#[test]
+			fn from_dto_error() {
+				let mapper = KeyMapInternal::try_load_from(KeyMapDto::from([]), &mut _Server);
+
+				assert_eq!(
+					Err(LoadError::MissingInputs(HashMap::from([(
+						_FaultyAction::B,
+						InvalidInputs(HashSet::from([_Input::B]))
+					)]))),
+					mapper
+				);
+			}
 		}
 	}
 
-	mod repeated_assignments {
+	mod load_error {
 		use super::*;
 		use common::assert_count;
 
 		macro_rules! either_or {
-			($a:expr, $b:expr) => {
+			($a:expr, $b:expr $(,)?) => {
 				$a || $b
-			};
-			($a:expr, $b:expr,) => {
-				either_or!($a, $b)
 			};
 		}
 
 		#[test]
-		fn display() {
-			let repeated = RepeatedAssignments(HashMap::from([
+		fn display_repeated_inputs() {
+			let repeated = LoadError::RepeatedInputs(HashMap::from([
 				(
 					_Input::C,
 					HashSet::from([_AllActions::A(_ActionA), _AllActions::B(_ActionB)]),
@@ -578,7 +698,7 @@ mod tests {
 			let output = repeated.to_string();
 
 			let [header, items @ ..] = assert_count!(3, output.lines());
-			assert_eq!("Multiple keys assigned to the same input(s):", header);
+			assert_eq!("Multiple actions assigned to the same input(s):", header);
 			assert!(either_or!(
 				items.contains(&"  - A is assigned to: {A(_ActionA), B(_ActionB)}"),
 				items.contains(&"  - A is assigned to: {B(_ActionB), A(_ActionA)}"),
@@ -586,6 +706,41 @@ mod tests {
 			assert!(either_or!(
 				items.contains(&"  - C is assigned to: {A(_ActionA), B(_ActionB)}"),
 				items.contains(&"  - C is assigned to: {B(_ActionB), A(_ActionA)}"),
+			));
+		}
+
+		#[test]
+		fn display_missing_inputs() {
+			let repeated = LoadError::MissingInputs(HashMap::from([
+				(
+					_AllActions::A(_ActionA),
+					InvalidInputs(HashSet::from([_Input::B, _Input::C])),
+				),
+				(
+					_AllActions::B(_ActionB),
+					InvalidInputs(HashSet::from([_Input::A, _Input::C])),
+				),
+			]));
+
+			let output = repeated.to_string();
+
+			let [header, items @ ..] = assert_count!(3, output.lines());
+			assert_eq!("Some actions have no input:", header);
+			assert!(either_or!(
+				items.contains(
+					&"  - A(_ActionA) had no input. Either missing or part of: InvalidInputs({B, C})"
+				),
+				items.contains(
+					&"  - A(_ActionA) had no input. Either missing or part of: InvalidInputs({C, B})"
+				),
+			));
+			assert!(either_or!(
+				items.contains(
+					&"  - B(_ActionB) had no input. Either missing or part of: InvalidInputs({A, C})"
+				),
+				items.contains(
+					&"  - B(_ActionB) had no input. Either missing or part of: InvalidInputs({C, A})"
+				),
 			));
 		}
 	}
