@@ -235,6 +235,7 @@ where
 					KeyBindInput::render_ui::<TLocalization::TLocalizationServer>,
 					KeyBindInput::rebind_on_click,
 					KeyRebindInput::render_ui::<TLocalization::TLocalizationServer>,
+					KeyRebindInput::rebind_apply::<TSettings::TKeyMap<ActionKey>>,
 				)
 					.run_if(in_state(settings)),
 			);
