@@ -2,13 +2,13 @@ use crate::components::Label;
 use bevy::prelude::*;
 use common::{
 	tools::action_key::{slot::SlotKey, user_input::UserInput},
-	traits::{handles_localization::LocalizeToken, key_mappings::GetUserInput},
+	traits::{handles_localization::LocalizeToken, key_mappings::GetInput},
 };
 
 type Labels<'a, T> = (&'a Label<T, SlotKey>, &'a mut Text);
 
 pub fn update_label_text<
-	TMap: Resource + GetUserInput<SlotKey, UserInput>,
+	TMap: Resource + GetInput<SlotKey, UserInput>,
 	TLanguageServer: Resource + LocalizeToken,
 	TComponent: Sync + Send + 'static,
 >(
@@ -29,10 +29,10 @@ fn update_text<TMap, TLanguageServer, TComponent>(
 	label: &Label<TComponent, SlotKey>,
 	mut text: Mut<Text>,
 ) where
-	TMap: GetUserInput<SlotKey, UserInput>,
+	TMap: GetInput<SlotKey, UserInput>,
 	TLanguageServer: LocalizeToken,
 {
-	let key = key_map.get_key_code(label.key);
+	let key = key_map.get_input(label.key);
 	let localized = language_server.localize_token(key).or_token();
 	*text = Text::from(localized);
 }
@@ -60,9 +60,9 @@ mod tests {
 	}
 
 	#[automock]
-	impl GetUserInput<SlotKey, UserInput> for _Map {
-		fn get_key_code(&self, value: SlotKey) -> UserInput {
-			self.mock.get_key_code(value)
+	impl GetInput<SlotKey, UserInput> for _Map {
+		fn get_input(&self, value: SlotKey) -> UserInput {
+			self.mock.get_input(value)
 		}
 	}
 
@@ -95,7 +95,7 @@ mod tests {
 	fn add_section_to_text() {
 		let mut app = setup(
 			_Map::new().with_mock(|mock| {
-				mock.expect_get_key_code()
+				mock.expect_get_input()
 					.return_const(UserInput::from(KeyCode::ArrowUp));
 			}),
 			_LanguageServer::new().with_mock(|mock| {
@@ -127,7 +127,7 @@ mod tests {
 	fn override_original() {
 		let mut app = setup(
 			_Map::new().with_mock(|mock| {
-				mock.expect_get_key_code()
+				mock.expect_get_input()
 					.return_const(UserInput::from(KeyCode::ArrowUp));
 			}),
 			_LanguageServer::new().with_mock(|mock| {

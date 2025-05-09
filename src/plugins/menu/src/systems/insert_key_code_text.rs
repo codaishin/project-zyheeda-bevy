@@ -4,7 +4,7 @@ use common::{
 	tools::action_key::user_input::UserInput,
 	traits::{
 		handles_localization::LocalizeToken,
-		key_mappings::GetUserInput,
+		key_mappings::GetInput,
 		try_insert_on::TryInsertOn,
 		try_remove_from::TryRemoveFrom,
 	},
@@ -17,11 +17,11 @@ pub(crate) fn insert_user_input_text<TKey, TKeyMap, TLanguageServer>(
 	mut language_server: ResMut<TLanguageServer>,
 ) where
 	TKey: Copy + Sync + Send + 'static,
-	TKeyMap: Resource + GetUserInput<TKey, UserInput>,
+	TKeyMap: Resource + GetInput<TKey, UserInput>,
 	TLanguageServer: Resource + LocalizeToken,
 {
 	for (entity, insert_command) in &insert_commands {
-		let key = key_map.get_key_code(insert_command.key);
+		let key = key_map.get_input(insert_command.key);
 		let localized = language_server.localize_token(key).or_token();
 		commands.try_insert_on(
 			entity,
@@ -58,9 +58,9 @@ mod tests {
 	}
 
 	#[automock]
-	impl GetUserInput<_Key, UserInput> for _Map {
-		fn get_key_code(&self, value: _Key) -> UserInput {
-			self.mock.get_key_code(value)
+	impl GetInput<_Key, UserInput> for _Map {
+		fn get_input(&self, value: _Key) -> UserInput {
+			self.mock.get_input(value)
 		}
 	}
 
@@ -88,7 +88,7 @@ mod tests {
 		fn default() -> Self {
 			Self {
 				map: _Map::new().with_mock(|mock| {
-					mock.expect_get_key_code()
+					mock.expect_get_input()
 						.return_const(UserInput::from(KeyCode::KeyA));
 				}),
 				language: _LanguageServer::new().with_mock(|mock| {
@@ -115,7 +115,7 @@ mod tests {
 	fn call_language_server_for_correct_key() {
 		let mut app = setup(Setup {
 			map: _Map::new().with_mock(|mock| {
-				mock.expect_get_key_code()
+				mock.expect_get_input()
 					.return_const(UserInput::from(KeyCode::KeyB));
 			}),
 			language: _LanguageServer::new().with_mock(|mock| {
@@ -137,7 +137,7 @@ mod tests {
 	fn spawn_text_bundle() {
 		let mut app = setup(Setup {
 			map: _Map::new().with_mock(|mock| {
-				mock.expect_get_key_code()
+				mock.expect_get_input()
 					.return_const(UserInput::from(KeyCode::KeyB));
 			}),
 			language: _LanguageServer::new().with_mock(|mock| {

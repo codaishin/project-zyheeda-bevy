@@ -1,6 +1,7 @@
 use super::{ActionKey, IsNot, user_input::UserInput};
 use crate::traits::{
 	handles_localization::Token,
+	handles_settings::InvalidInput,
 	iteration::{Iter, IterFinite},
 };
 use bevy::input::mouse::MouseButton;
@@ -53,6 +54,12 @@ impl IterFinite for CameraKey {
 		match &current.0? {
 			CameraKey::Rotate => None,
 		}
+	}
+}
+
+impl InvalidInput<UserInput> for CameraKey {
+	fn invalid_input(&self) -> &[UserInput] {
+		const { &[] }
 	}
 }
 

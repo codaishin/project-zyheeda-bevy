@@ -2,7 +2,7 @@ use crate::traits::InputState;
 use bevy::ecs::system::{Res, Resource};
 use common::{
 	tools::action_key::{slot::SlotKey, user_input::UserInput},
-	traits::key_mappings::TryGetKey,
+	traits::key_mappings::TryGetAction,
 };
 
 #[derive(Default, Debug, PartialEq, Clone)]
@@ -13,7 +13,7 @@ pub(crate) struct Input {
 }
 
 pub(crate) fn get_inputs<
-	TMap: Resource + TryGetKey<UserInput, SlotKey>,
+	TMap: Resource + TryGetAction<UserInput, SlotKey>,
 	TSuperiorInput: Resource + InputState<TMap, UserInput>,
 	TInferiorInput: Resource + InputState<TMap, UserInput>,
 >(
@@ -65,8 +65,8 @@ mod tests {
 	#[derive(Resource, Clone, Debug, PartialEq)]
 	struct _Map;
 
-	impl TryGetKey<UserInput, SlotKey> for _Map {
-		fn try_get_key(&self, _: UserInput) -> Option<SlotKey> {
+	impl TryGetAction<UserInput, SlotKey> for _Map {
+		fn try_get_action(&self, _: UserInput) -> Option<SlotKey> {
 			None
 		}
 	}

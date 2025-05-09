@@ -13,7 +13,7 @@ use common::{
 		accessors::get::{GetFieldRef, GetterRef},
 		handles_loadout_menu::GetItem,
 		inspect_able::{InspectAble, InspectField},
-		key_mappings::TryGetKey,
+		key_mappings::TryGetAction,
 	},
 };
 
@@ -24,13 +24,13 @@ pub fn panel_activity_colors_override<TMap, TPanel, TContainer>(
 	container: Res<TContainer>,
 	mouse_context: Res<State<MouseContext>>,
 ) where
-	TMap: Resource + TryGetKey<UserInput, SlotKey>,
+	TMap: Resource + TryGetAction<UserInput, SlotKey>,
 	TContainer: Resource + GetItem<SlotKey>,
 	TContainer::TItem: InspectAble<SkillExecution>,
 	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor + GetterRef<SlotKey> + Component,
 {
 	let primed_slot = match mouse_context.get() {
-		MouseContext::Primed(key) => key_map.try_get_key(*key),
+		MouseContext::Primed(key) => key_map.try_get_action(*key),
 		_ => None,
 	};
 
@@ -135,8 +135,8 @@ mod tests {
 		Map(UserInput, SlotKey),
 	}
 
-	impl TryGetKey<UserInput, SlotKey> for _Map {
-		fn try_get_key(&self, value: UserInput) -> Option<SlotKey> {
+	impl TryGetAction<UserInput, SlotKey> for _Map {
+		fn try_get_action(&self, value: UserInput) -> Option<SlotKey> {
 			match self {
 				_Map::Map(key, slot) if key == &value => Some(*slot),
 				_ => None,

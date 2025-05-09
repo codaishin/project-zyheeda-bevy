@@ -1,6 +1,7 @@
 use super::{ActionKey, IsNot, user_input::UserInput};
 use crate::traits::{
 	handles_localization::Token,
+	handles_settings::InvalidInput,
 	iteration::{Iter, IterFinite},
 };
 use bevy::input::{keyboard::KeyCode, mouse::MouseButton};
@@ -15,23 +16,6 @@ pub enum MovementKey {
 	Right,
 	Pointer,
 	ToggleWalkRun,
-}
-
-impl IterFinite for MovementKey {
-	fn iterator() -> Iter<Self> {
-		Iter(Some(Self::default()))
-	}
-
-	fn next(current: &Iter<Self>) -> Option<Self> {
-		match current.0? {
-			MovementKey::Forward => Some(MovementKey::Backward),
-			MovementKey::Backward => Some(MovementKey::Left),
-			MovementKey::Left => Some(MovementKey::Right),
-			MovementKey::Right => Some(MovementKey::Pointer),
-			MovementKey::Pointer => Some(MovementKey::ToggleWalkRun),
-			MovementKey::ToggleWalkRun => None,
-		}
-	}
 }
 
 impl From<MovementKey> for UserInput {
@@ -74,6 +58,29 @@ impl From<MovementKey> for Token {
 			MovementKey::Pointer => Token::from("movement-key-pointer"),
 			MovementKey::ToggleWalkRun => Token::from("movement-key-toggle-walk-run"),
 		}
+	}
+}
+
+impl IterFinite for MovementKey {
+	fn iterator() -> Iter<Self> {
+		Iter(Some(Self::default()))
+	}
+
+	fn next(current: &Iter<Self>) -> Option<Self> {
+		match current.0? {
+			MovementKey::Forward => Some(MovementKey::Backward),
+			MovementKey::Backward => Some(MovementKey::Left),
+			MovementKey::Left => Some(MovementKey::Right),
+			MovementKey::Right => Some(MovementKey::Pointer),
+			MovementKey::Pointer => Some(MovementKey::ToggleWalkRun),
+			MovementKey::ToggleWalkRun => None,
+		}
+	}
+}
+
+impl InvalidInput<UserInput> for MovementKey {
+	fn invalid_input(&self) -> &[UserInput] {
+		const { &[] }
 	}
 }
 

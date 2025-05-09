@@ -2,57 +2,59 @@ use crate::tools::action_key::user_input::UserInput;
 use bevy::prelude::*;
 use std::hash::Hash;
 
-pub trait GetUserInput<TKey, TUserInput> {
-	fn get_key_code(&self, value: TKey) -> TUserInput;
+pub trait GetInput<TAction, TInput> {
+	fn get_input(&self, value: TAction) -> TInput;
 }
 
-pub trait TryGetKey<TUserInput, TKey> {
-	fn try_get_key(&self, value: TUserInput) -> Option<TKey>;
+pub trait TryGetAction<TInput, TAction> {
+	fn try_get_action(&self, value: TInput) -> Option<TAction>;
 }
 
-pub trait Pressed<TKey> {
-	fn pressed(&self, input: &ButtonInput<UserInput>) -> impl Iterator<Item = TKey>;
+pub trait Pressed<TAction> {
+	fn pressed(&self, input: &ButtonInput<UserInput>) -> impl Iterator<Item = TAction>;
 }
 
-impl<T, TKey> Pressed<TKey> for T
+impl<T, TAction> Pressed<TAction> for T
 where
-	T: TryGetKey<UserInput, TKey>,
-	TKey: Eq + Hash,
+	T: TryGetAction<UserInput, TAction>,
+	TAction: Eq + Hash,
 {
-	fn pressed(&self, input: &ButtonInput<UserInput>) -> impl Iterator<Item = TKey> {
-		input.get_pressed().filter_map(|key| self.try_get_key(*key))
+	fn pressed(&self, input: &ButtonInput<UserInput>) -> impl Iterator<Item = TAction> {
+		input
+			.get_pressed()
+			.filter_map(|key| self.try_get_action(*key))
 	}
 }
 
-pub trait JustPressed<TKey> {
-	fn just_pressed(&self, input: &ButtonInput<UserInput>) -> impl Iterator<Item = TKey>;
+pub trait JustPressed<TAction> {
+	fn just_pressed(&self, input: &ButtonInput<UserInput>) -> impl Iterator<Item = TAction>;
 }
 
-impl<T, TKey> JustPressed<TKey> for T
+impl<T, TAction> JustPressed<TAction> for T
 where
-	T: TryGetKey<UserInput, TKey>,
-	TKey: Eq + Hash,
+	T: TryGetAction<UserInput, TAction>,
+	TAction: Eq + Hash,
 {
-	fn just_pressed(&self, input: &ButtonInput<UserInput>) -> impl Iterator<Item = TKey> {
+	fn just_pressed(&self, input: &ButtonInput<UserInput>) -> impl Iterator<Item = TAction> {
 		input
 			.get_just_pressed()
-			.filter_map(|key| self.try_get_key(*key))
+			.filter_map(|key| self.try_get_action(*key))
 	}
 }
 
-pub trait JustReleased<TKey> {
-	fn just_released(&self, input: &ButtonInput<UserInput>) -> impl Iterator<Item = TKey>;
+pub trait JustReleased<TAction> {
+	fn just_released(&self, input: &ButtonInput<UserInput>) -> impl Iterator<Item = TAction>;
 }
 
-impl<T, TKey> JustReleased<TKey> for T
+impl<T, TAction> JustReleased<TAction> for T
 where
-	T: TryGetKey<UserInput, TKey>,
-	TKey: Eq + Hash,
+	T: TryGetAction<UserInput, TAction>,
+	TAction: Eq + Hash,
 {
-	fn just_released(&self, input: &ButtonInput<UserInput>) -> impl Iterator<Item = TKey> {
+	fn just_released(&self, input: &ButtonInput<UserInput>) -> impl Iterator<Item = TAction> {
 		input
 			.get_just_released()
-			.filter_map(|key| self.try_get_key(*key))
+			.filter_map(|key| self.try_get_action(*key))
 	}
 }
 
@@ -69,8 +71,8 @@ mod tests {
 
 	struct _Map;
 
-	impl TryGetKey<UserInput, _Key> for _Map {
-		fn try_get_key(&self, value: UserInput) -> Option<_Key> {
+	impl TryGetAction<UserInput, _Key> for _Map {
+		fn try_get_action(&self, value: UserInput) -> Option<_Key> {
 			match value {
 				UserInput::KeyCode(KeyCode::KeyA) => Some(_Key::A),
 				UserInput::KeyCode(KeyCode::KeyB) => Some(_Key::B),

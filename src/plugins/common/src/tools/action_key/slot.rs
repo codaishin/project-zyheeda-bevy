@@ -1,6 +1,7 @@
 use super::{ActionKey, IsNot, user_input::UserInput};
 use crate::traits::{
 	handles_localization::Token,
+	handles_settings::InvalidInput,
 	iteration::{Iter, IterFinite},
 };
 use bevy::prelude::*;
@@ -15,21 +16,6 @@ pub enum SlotKey {
 impl Default for SlotKey {
 	fn default() -> Self {
 		Self::BottomHand(Side::Right)
-	}
-}
-
-impl IterFinite for SlotKey {
-	fn iterator() -> Iter<Self> {
-		Iter(Some(SlotKey::TopHand(Side::Left)))
-	}
-
-	fn next(current: &Iter<Self>) -> Option<Self> {
-		match current.0? {
-			SlotKey::TopHand(Side::Left) => Some(SlotKey::BottomHand(Side::Left)),
-			SlotKey::BottomHand(Side::Left) => Some(SlotKey::BottomHand(Side::Right)),
-			SlotKey::BottomHand(Side::Right) => Some(SlotKey::TopHand(Side::Right)),
-			SlotKey::TopHand(Side::Right) => None,
-		}
 	}
 }
 
@@ -69,6 +55,27 @@ impl From<SlotKey> for Token {
 			SlotKey::BottomHand(Side::Left) => Token::from("slot-key-btm-hand-left"),
 			SlotKey::BottomHand(Side::Right) => Token::from("slot-key-btm-hand-right"),
 		}
+	}
+}
+
+impl IterFinite for SlotKey {
+	fn iterator() -> Iter<Self> {
+		Iter(Some(SlotKey::TopHand(Side::Left)))
+	}
+
+	fn next(current: &Iter<Self>) -> Option<Self> {
+		match current.0? {
+			SlotKey::TopHand(Side::Left) => Some(SlotKey::BottomHand(Side::Left)),
+			SlotKey::BottomHand(Side::Left) => Some(SlotKey::BottomHand(Side::Right)),
+			SlotKey::BottomHand(Side::Right) => Some(SlotKey::TopHand(Side::Right)),
+			SlotKey::TopHand(Side::Right) => None,
+		}
+	}
+}
+
+impl InvalidInput<UserInput> for SlotKey {
+	fn invalid_input(&self) -> &[UserInput] {
+		&[]
 	}
 }
 

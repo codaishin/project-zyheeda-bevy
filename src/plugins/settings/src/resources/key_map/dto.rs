@@ -12,18 +12,18 @@ where
 	TAllKeys: Eq + Hash,
 	TKeyCode: PartialEq,
 {
-	pub(crate) keys: Vec<(TAllKeys, TKeyCode)>,
+	pub(crate) actions: Vec<(TAllKeys, TKeyCode)>,
 }
 
-impl<TAllKeys, TKeyCode, const N: usize> From<[(TAllKeys, TKeyCode); N]>
-	for KeyMapDto<TAllKeys, TKeyCode>
+impl<TAllActions, TInput, const N: usize> From<[(TAllActions, TInput); N]>
+	for KeyMapDto<TAllActions, TInput>
 where
-	TAllKeys: Eq + Hash,
-	TKeyCode: PartialEq,
+	TAllActions: Eq + Hash,
+	TInput: PartialEq,
 {
-	fn from(data: [(TAllKeys, TKeyCode); N]) -> Self {
+	fn from(data: [(TAllActions, TInput); N]) -> Self {
 		Self {
-			keys: Vec::from(data),
+			actions: Vec::from(data),
 		}
 	}
 }
@@ -37,7 +37,7 @@ impl AssetFileExtensions for KeyMapDto<ActionKey, UserInput> {
 impl From<KeyMap> for KeyMapDto<ActionKey, UserInput> {
 	fn from(KeyMap(map): KeyMap) -> Self {
 		Self {
-			keys: Vec::from_iter(map.key_to_key_code),
+			actions: Vec::from_iter(map.action_to_input),
 		}
 	}
 }

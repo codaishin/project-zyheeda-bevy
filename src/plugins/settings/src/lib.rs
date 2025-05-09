@@ -9,7 +9,7 @@ use common::{
 	tools::action_key::{ActionKey, user_input::UserInput},
 	traits::{
 		handles_asset_resource_loading::HandlesAssetResourceLoading,
-		handles_settings::HandlesSettings,
+		handles_settings::{HandlesSettings, InvalidInput},
 		load_asset::Path,
 		thread_safe::ThreadSafe,
 	},
@@ -60,6 +60,6 @@ impl<TDependencies> HandlesSettings for SettingsPlugin<TDependencies> {
 		= KeyMap
 	where
 		ActionKey: From<TKey>,
-		TKey: TryFrom<ActionKey> + Copy,
+		TKey: InvalidInput<UserInput> + TryFrom<ActionKey> + Copy,
 		UserInput: From<TKey> + PartialEq;
 }
