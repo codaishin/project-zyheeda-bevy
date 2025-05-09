@@ -3,10 +3,11 @@ use crate::{
 	tools::action_key::{ActionKey, IsNot, user_input::UserInput},
 	traits::{
 		handles_localization::Token,
+		handles_settings::InvalidInput,
 		iteration::{Iter, IterFinite},
 	},
 };
-use bevy::input::keyboard::KeyCode;
+use bevy::input::{keyboard::KeyCode, mouse::MouseButton};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Default, Eq, PartialEq, Debug, Hash, Serialize, Deserialize)]
@@ -82,6 +83,12 @@ impl IterFinite for MenuState {
 			MenuState::ComboOverview => Some(MenuState::Settings),
 			MenuState::Settings => None,
 		}
+	}
+}
+
+impl InvalidInput<UserInput> for MenuState {
+	fn invalid_input(&self) -> &[UserInput] {
+		const { &[UserInput::MouseButton(MouseButton::Left)] }
 	}
 }
 

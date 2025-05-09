@@ -1,14 +1,27 @@
-use crate::resources::asset_writer::{AssetWriter, WriteAsset, WriteError};
+use crate::{
+	resources::asset_writer::{AssetWriter, WriteAsset, WriteError},
+	traits::drain_invalid_inputs::DrainInvalidInputs,
+};
 use bevy::prelude::*;
-use common::traits::load_asset::Path;
+use common::{
+	errors::{Error, Level},
+	tools::action_key::{ActionKey, user_input::UserInput},
+	traits::{handles_settings::InvalidInput, load_asset::Path},
+};
 use serde::Serialize;
+use std::collections::{HashMap, HashSet};
 
-impl<T> SaveChanges for T where T: Resource + Clone {}
+impl<T> SaveChanges for T where
+	T: Resource + Clone + DrainInvalidInputs<TInvalidInput = (ActionKey, HashSet<UserInput>)>
+{
+}
 
-pub(crate) trait SaveChanges: Resource + Clone + Sized {
+pub(crate) trait SaveChanges:
+	Resource + Clone + Sized + DrainInvalidInputs<TInvalidInput = (ActionKey, HashSet<UserInput>)>
+{
 	fn save_changes<TDto>(
 		path: Path,
-	) -> impl Fn(Res<Self>, Res<AssetWriter>) -> Result<(), WriteError>
+	) -> impl Fn(ResMut<Self>, Res<AssetWriter>) -> Result<(), SaveError>
 	where
 		TDto: Serialize + From<Self> + 'static,
 	{
@@ -18,34 +31,98 @@ pub(crate) trait SaveChanges: Resource + Clone + Sized {
 
 fn save_changes<TAsset, TDto, TWriter>(
 	path: Path,
-) -> impl Fn(Res<TAsset>, Res<TWriter>) -> Result<(), TWriter::TError>
+) -> impl Fn(ResMut<TAsset>, Res<TWriter>) -> Result<(), SaveError<TWriter::TError>>
 where
-	TAsset: Resource + Clone,
+	TAsset: Resource + Clone + DrainInvalidInputs<TInvalidInput = (ActionKey, HashSet<UserInput>)>,
 	TDto: Serialize + From<TAsset> + 'static,
 	TWriter: WriteAsset + Resource,
 {
-	move |resource, writer| {
+	move |mut resource, writer| {
 		if resource.is_added() {
-			return Ok(());
+			return invalid_input_or_ok(resource.as_mut());
 		}
 		if !resource.is_changed() {
 			return Ok(());
 		}
 
 		let dto = TDto::from(resource.clone());
-		writer.write(dto, path.clone())
+		if let Err(err) = writer.write(dto, path.clone()) {
+			return Err(SaveError::Writer(err));
+		}
+
+		invalid_input_or_ok(resource.as_mut())
+	}
+}
+
+fn invalid_input_or_ok<TAsset, TError>(resource: &mut TAsset) -> Result<(), SaveError<TError>>
+where
+	TAsset: DrainInvalidInputs<TInvalidInput = (ActionKey, HashSet<UserInput>)>,
+{
+	let errors = resource.drain_invalid_inputs().collect::<HashMap<_, _>>();
+	if !errors.is_empty() {
+		return Err(SaveError::InvalidInput(errors));
+	}
+
+	Ok(())
+}
+
+#[derive(Debug, PartialEq)]
+pub(crate) enum SaveError<TWriteError = WriteError> {
+	Writer(TWriteError),
+	InvalidInput(HashMap<ActionKey, HashSet<UserInput>>),
+}
+
+impl<TWriteError> From<SaveError<TWriteError>> for Error
+where
+	TWriteError: Into<Error>,
+{
+	fn from(error: SaveError<TWriteError>) -> Self {
+		match error {
+			SaveError::Writer(error) => error.into(),
+			SaveError::InvalidInput(invalid_inputs) => {
+				let invalid_inputs = invalid_inputs
+					.iter()
+					.map(|(action, inputs)| {
+						format!(
+							" - Tried to set {action:?} to {inputs:?} which intersects with invalid inputs for this action: {:?}",
+							action.invalid_input().to_vec()
+						)
+					})
+					.collect::<Vec<_>>()
+					.join("\n");
+				Error {
+					msg: format!("Some input settings failed:\n{invalid_inputs}"),
+					lvl: Level::Warning,
+				}
+			}
+		}
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
+	use common::{
+		states::menu_state::MenuState,
+		test_tools::utils::SingleThreadedApp,
+		traits::nested_mock::NestedMocks,
+	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 
-	#[derive(Resource, Debug, PartialEq, Serialize, Clone)]
-	struct _Resource;
+	#[derive(Resource, Debug, PartialEq, Serialize, Clone, Default)]
+	struct _Resource {
+		invalid_inputs: Vec<(ActionKey, HashSet<UserInput>)>,
+	}
+
+	impl DrainInvalidInputs for _Resource {
+		type TInvalidInput = (ActionKey, HashSet<UserInput>);
+
+		fn drain_invalid_inputs(&mut self) -> impl Iterator<Item = Self::TInvalidInput> {
+			// we fake the drain, so we do not have to repopulate this between frames
+			self.invalid_inputs.iter().cloned()
+		}
+	}
 
 	#[derive(Asset, TypePath, Debug, PartialEq, Serialize)]
 	struct _ResourceDto(_Resource);
@@ -83,14 +160,13 @@ mod tests {
 
 	fn update_without_change(app: &mut App) {
 		app.update();
-		app.update();
 	}
 
 	#[derive(Debug, PartialEq, Clone)]
 	pub struct _Error;
 
 	#[derive(Resource, Debug, PartialEq)]
-	struct _Result(Result<(), _Error>);
+	struct _Result(Result<(), SaveError<_Error>>);
 
 	fn setup(writer: _Writer, asset: _Resource, path: Path) -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -114,10 +190,13 @@ mod tests {
 		let writer = _Writer::new().with_mock(|mock| {
 			mock.expect_write()
 				.times(1)
-				.with(eq(_ResourceDto(_Resource)), eq(Path::from("my/path")))
+				.with(
+					eq(_ResourceDto(_Resource::default())),
+					eq(Path::from("my/path")),
+				)
 				.return_const(Ok(()));
 		});
-		let mut app = setup(writer, _Resource, Path::from("my/path"));
+		let mut app = setup(writer, _Resource::default(), Path::from("my/path"));
 
 		update_with_change(&mut app);
 	}
@@ -128,11 +207,14 @@ mod tests {
 			mock.expect_write::<_ResourceDto>()
 				.return_const(Err(_Error));
 		});
-		let mut app = setup(writer, _Resource, Path::from("my/path"));
+		let mut app = setup(writer, _Resource::default(), Path::from("my/path"));
 
 		update_with_change(&mut app);
 
-		assert_eq!(&_Result(Err(_Error)), app.world().resource::<_Result>());
+		assert_eq!(
+			&_Result(Err(SaveError::Writer(_Error))),
+			app.world().resource::<_Result>()
+		);
 	}
 
 	#[test]
@@ -142,8 +224,62 @@ mod tests {
 				.never()
 				.return_const(Ok(()));
 		});
-		let mut app = setup(writer, _Resource, Path::from("my/path"));
+		let mut app = setup(writer, _Resource::default(), Path::from("my/path"));
 
 		update_without_change(&mut app);
+	}
+
+	#[test]
+	fn return_invalid_inputs() {
+		let writer = _Writer::new().with_mock(|mock| {
+			mock.expect_write::<_ResourceDto>().return_const(Ok(()));
+		});
+		let mut app = setup(
+			writer,
+			_Resource {
+				invalid_inputs: Vec::from([(
+					ActionKey::Menu(MenuState::Inventory),
+					HashSet::from([UserInput::from(MouseButton::Left)]),
+				)]),
+			},
+			Path::from("my/path"),
+		);
+
+		update_with_change(&mut app);
+
+		assert_eq!(
+			&_Result(Err(SaveError::InvalidInput(HashMap::from([(
+				ActionKey::Menu(MenuState::Inventory),
+				HashSet::from([UserInput::from(MouseButton::Left)]),
+			)])))),
+			app.world().resource::<_Result>()
+		);
+	}
+
+	#[test]
+	fn return_invalid_inputs_even_when_added() {
+		let writer = _Writer::new().with_mock(|mock| {
+			mock.expect_write::<_ResourceDto>().return_const(Ok(()));
+		});
+		let mut app = setup(
+			writer,
+			_Resource {
+				invalid_inputs: Vec::from([(
+					ActionKey::Menu(MenuState::Inventory),
+					HashSet::from([UserInput::from(MouseButton::Left)]),
+				)]),
+			},
+			Path::from("my/path"),
+		);
+
+		update_without_change(&mut app);
+
+		assert_eq!(
+			&_Result(Err(SaveError::InvalidInput(HashMap::from([(
+				ActionKey::Menu(MenuState::Inventory),
+				HashSet::from([UserInput::from(MouseButton::Left)]),
+			)])))),
+			app.world().resource::<_Result>()
+		);
 	}
 }

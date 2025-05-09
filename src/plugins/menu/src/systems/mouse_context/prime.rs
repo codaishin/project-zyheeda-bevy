@@ -9,11 +9,11 @@ use bevy::{
 use common::{
 	states::mouse_context::MouseContext,
 	tools::action_key::{slot::SlotKey, user_input::UserInput},
-	traits::{accessors::get::GetterRef, key_mappings::GetUserInput},
+	traits::{accessors::get::GetterRef, key_mappings::GetInput},
 };
 
 pub fn prime_mouse_context<
-	TMap: Resource + GetUserInput<SlotKey, UserInput>,
+	TMap: Resource + GetInput<SlotKey, UserInput>,
 	TPanel: GetterRef<SlotKey> + Component,
 >(
 	mut mouse_context: ResMut<NextState<MouseContext>>,
@@ -30,10 +30,10 @@ pub fn prime_mouse_context<
 	mouse_context.set(MouseContext::Primed(user_input));
 }
 
-fn get_key_code_from<TMap: GetUserInput<SlotKey, UserInput>, TPanel: GetterRef<SlotKey>>(
+fn get_key_code_from<TMap: GetInput<SlotKey, UserInput>, TPanel: GetterRef<SlotKey>>(
 	key_map: &'_ TMap,
 ) -> impl Fn((&TPanel, &Interaction)) -> UserInput + '_ {
-	|(panel, _): (&TPanel, &Interaction)| key_map.get_key_code(*panel.get())
+	|(panel, _): (&TPanel, &Interaction)| key_map.get_input(*panel.get())
 }
 
 fn is_pressed<TPanel>((_, interaction): &(&TPanel, &Interaction)) -> bool {
@@ -66,8 +66,8 @@ mod test {
 	#[derive(Resource)]
 	struct _Map(SlotKey, UserInput);
 
-	impl GetUserInput<SlotKey, UserInput> for _Map {
-		fn get_key_code(&self, value: SlotKey) -> UserInput {
+	impl GetInput<SlotKey, UserInput> for _Map {
+		fn get_input(&self, value: SlotKey) -> UserInput {
 			if value == self.0 {
 				return self.1;
 			}

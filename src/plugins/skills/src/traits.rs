@@ -19,7 +19,7 @@ use crate::{
 };
 use common::{
 	tools::{action_key::slot::SlotKey, item_type::ItemType},
-	traits::{key_mappings::TryGetKey, state_duration::StateUpdate},
+	traits::{key_mappings::TryGetAction, state_duration::StateUpdate},
 };
 use std::hash::Hash;
 
@@ -103,7 +103,7 @@ pub(crate) trait GetSkillBehavior {
 
 pub trait InputState<TMap, TKey>
 where
-	TMap: TryGetKey<TKey, SlotKey>,
+	TMap: TryGetAction<TKey, SlotKey>,
 	TKey: Eq + Hash,
 {
 	fn just_pressed_slots(&self, map: &TMap) -> Vec<SlotKey>;

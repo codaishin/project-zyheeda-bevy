@@ -3,6 +3,7 @@ pub mod traits;
 mod components;
 mod events;
 mod resources;
+mod states;
 mod systems;
 mod tools;
 mod visualization;
@@ -70,8 +71,12 @@ use components::{
 	key_select_dropdown_command::AppendSkillCommand,
 	loading_screen::LoadingScreen,
 	menu_background::MenuBackground,
+	prevent_menu_change::PreventMenuChange,
 	quickbar_panel::QuickbarPanel,
-	settings_screen::{SettingsScreen, key_bind::KeyBind},
+	settings_screen::{
+		SettingsScreen,
+		key_bind::{KeyBind, action::Action, input::Input, rebinding::Rebinding},
+	},
 	start_game::StartGame,
 	start_menu::StartMenu,
 	start_menu_button::StartMenuButton,
@@ -80,6 +85,7 @@ use components::{
 };
 use events::DropdownEvent;
 use resources::equipment_info::EquipmentInfo;
+use states::menus_change_able::MenusChangeable;
 use std::{marker::PhantomData, time::Duration};
 use systems::{
 	adjust_global_z_index::adjust_global_z_index,
@@ -92,6 +98,7 @@ use systems::{
 	dropdown::select_successor_key::select_successor_key,
 	image_color::image_color,
 	insert_key_code_text::insert_user_input_text,
+	menus_unchangeable_when_present::MenusUnchangeableWhenPresent,
 	mouse_context::{prime::prime_mouse_context, set_ui::set_ui_mouse_context},
 	on_release_set::OnReleaseSet,
 	render_ui::RenderUi,
@@ -142,9 +149,15 @@ where
 	}
 
 	fn state_control(&self, app: &mut App) {
+		app.insert_state(MenusChangeable(true));
 		app.add_systems(
 			Update,
-			set_state_from_input::<GameState, MenuState, TSettings::TKeyMap<MenuState>>,
+			(
+				PreventMenuChange::menus_unchangeable_when_present,
+				set_state_from_input::<GameState, MenuState, TSettings::TKeyMap<MenuState>>
+					.run_if(not(in_state(MenusChangeable(false)))),
+			)
+				.chain(),
 		);
 	}
 
@@ -214,20 +227,29 @@ where
 	}
 
 	fn settings_screen(&self, app: &mut App) {
+		type KeyBindAction = KeyBind<Action<ActionKey>>;
+		type KeyBindInput = KeyBind<Input<ActionKey, UserInput>>;
+		type KeyRebindInput = KeyBind<Rebinding<ActionKey, UserInput>>;
+
 		let settings = GameState::IngameMenu(MenuState::Settings);
 
-		app.add_ui::<SettingsScreen, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
-			settings,
-		)
-		.add_systems(
-			Update,
-			(
-				SettingsScreen::set_key_bindings_from::<TSettings::TKeyMap<ActionKey>>,
-				KeyBind::<ActionKey>::render_ui::<TLocalization::TLocalizationServer>,
-				KeyBind::<UserInput>::render_ui::<TLocalization::TLocalizationServer>,
+		app.register_required_components::<KeyBindInput, Interaction>()
+			.register_required_components::<KeyRebindInput, PreventMenuChange>()
+			.add_ui::<SettingsScreen, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
+				settings,
 			)
-				.run_if(in_state(settings)),
-		);
+			.add_systems(
+				Update,
+				(
+					SettingsScreen::set_key_bindings_from::<TSettings::TKeyMap<ActionKey>>,
+					KeyBindAction::render_ui::<TLocalization::TLocalizationServer>,
+					KeyBindInput::render_ui::<TLocalization::TLocalizationServer>,
+					KeyBindInput::rebind_on_click,
+					KeyRebindInput::render_ui::<TLocalization::TLocalizationServer>,
+					KeyRebindInput::rebind_apply::<TSettings::TKeyMap<ActionKey>>,
+				)
+					.run_if(in_state(settings)),
+			);
 	}
 
 	fn general_systems(&self, app: &mut App) {

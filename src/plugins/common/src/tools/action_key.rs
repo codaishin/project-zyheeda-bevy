@@ -7,6 +7,7 @@ use crate::{
 	states::menu_state::MenuState,
 	traits::{
 		handles_localization::Token,
+		handles_settings::InvalidInput,
 		iteration::{Iter, IterFinite},
 	},
 };
@@ -32,23 +33,6 @@ impl Default for ActionKey {
 	}
 }
 
-impl IterFinite for ActionKey {
-	fn iterator() -> Iter<Self> {
-		Iter(Some(Self::default()))
-	}
-
-	fn next(current: &Iter<Self>) -> Option<Self> {
-		match current.0? {
-			ActionKey::Movement(key) => {
-				try_next(ActionKey::Movement, key).or(try_fst(ActionKey::Slot))
-			}
-			ActionKey::Slot(key) => try_next(ActionKey::Slot, key).or(try_fst(ActionKey::Menu)),
-			ActionKey::Menu(key) => try_next(ActionKey::Menu, key).or(try_fst(ActionKey::Camera)),
-			ActionKey::Camera(key) => try_next(ActionKey::Camera, key),
-		}
-	}
-}
-
 impl From<ActionKey> for UserInput {
 	fn from(key: ActionKey) -> Self {
 		match key {
@@ -71,6 +55,32 @@ impl From<ActionKey> for Token {
 	}
 }
 
+impl IterFinite for ActionKey {
+	fn iterator() -> Iter<Self> {
+		Iter(Some(Self::default()))
+	}
+
+	fn next(current: &Iter<Self>) -> Option<Self> {
+		match current.0? {
+			ActionKey::Movement(key) => next(ActionKey::Movement, key).or(first(ActionKey::Slot)),
+			ActionKey::Slot(key) => next(ActionKey::Slot, key).or(first(ActionKey::Menu)),
+			ActionKey::Menu(key) => next(ActionKey::Menu, key).or(first(ActionKey::Camera)),
+			ActionKey::Camera(key) => next(ActionKey::Camera, key),
+		}
+	}
+}
+
+impl InvalidInput<UserInput> for ActionKey {
+	fn invalid_input(&self) -> &[UserInput] {
+		match self {
+			ActionKey::Movement(key) => key.invalid_input(),
+			ActionKey::Slot(key) => key.invalid_input(),
+			ActionKey::Menu(key) => key.invalid_input(),
+			ActionKey::Camera(key) => key.invalid_input(),
+		}
+	}
+}
+
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct IsNot<TKey>(PhantomData<TKey>);
 
@@ -80,14 +90,14 @@ impl<TKey> IsNot<TKey> {
 	}
 }
 
-fn try_fst<TInner>(wrap: impl Fn(TInner) -> ActionKey) -> Option<ActionKey>
+fn first<TInner>(wrap: impl Fn(TInner) -> ActionKey) -> Option<ActionKey>
 where
 	TInner: IterFinite,
 {
 	TInner::iterator().0.map(wrap)
 }
 
-fn try_next<TInner>(wrap: impl Fn(TInner) -> ActionKey, key: TInner) -> Option<ActionKey>
+fn next<TInner>(wrap: impl Fn(TInner) -> ActionKey, key: TInner) -> Option<ActionKey>
 where
 	TInner: IterFinite,
 {
@@ -98,13 +108,13 @@ where
 mod tests {
 	use super::*;
 	use crate::traits::iteration::IterFinite;
-	use std::collections::HashSet;
+	use std::collections::{HashMap, HashSet};
 
 	#[test]
 	fn iter_all_keys() {
 		assert_eq!(
-			MovementKey::iterator()
-				.map(ActionKey::Movement)
+			std::iter::empty()
+				.chain(MovementKey::iterator().map(ActionKey::Movement))
 				.chain(SlotKey::iterator().map(ActionKey::Slot))
 				.chain(MenuState::iterator().map(ActionKey::Menu))
 				.chain(CameraKey::iterator().map(ActionKey::Camera))
@@ -116,8 +126,8 @@ mod tests {
 	#[test]
 	fn map_keys() {
 		assert_eq!(
-			MovementKey::iterator()
-				.map(UserInput::from)
+			std::iter::empty()
+				.chain(MovementKey::iterator().map(UserInput::from))
 				.chain(SlotKey::iterator().map(UserInput::from))
 				.chain(MenuState::iterator().map(UserInput::from))
 				.chain(CameraKey::iterator().map(UserInput::from))
@@ -125,6 +135,28 @@ mod tests {
 			ActionKey::iterator()
 				.map(UserInput::from)
 				.collect::<HashSet<_>>(),
+		);
+	}
+
+	#[test]
+	fn map_invalid_input() {
+		fn pair_with_invalid_input<TKey>(key: TKey) -> (ActionKey, Vec<UserInput>)
+		where
+			TKey: Into<ActionKey> + InvalidInput<UserInput> + Copy,
+		{
+			(key.into(), key.invalid_input().to_vec())
+		}
+
+		assert_eq!(
+			std::iter::empty()
+				.chain(MovementKey::iterator().map(pair_with_invalid_input))
+				.chain(SlotKey::iterator().map(pair_with_invalid_input))
+				.chain(MenuState::iterator().map(pair_with_invalid_input))
+				.chain(CameraKey::iterator().map(pair_with_invalid_input))
+				.collect::<HashMap<_, _>>(),
+			ActionKey::iterator()
+				.map(pair_with_invalid_input)
+				.collect::<HashMap<_, _>>(),
 		);
 	}
 }
