@@ -177,6 +177,10 @@ where
 		let old_input = self.get_input(action);
 		let action = TAllActions::from(action);
 
+		if self.input_to_action.get(&input) == Some(&action) {
+			return;
+		}
+
 		if action.invalid_input().contains(&input) {
 			self.invalid_inputs.push(action, input);
 			return;
@@ -254,7 +258,7 @@ where
 			.join("\n");
 
 		Error {
-			msg: format!("Attempted to set invalid inputs:\n{warnings:?}",),
+			msg: format!("Attempted to set invalid inputs:\n{warnings}"),
 			lvl: Level::Warning,
 		}
 	}
