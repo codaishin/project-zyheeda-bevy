@@ -51,7 +51,7 @@ fn load_image<TAssetServer>(
 	let Some(mut entity) = commands.get_entity(entity) else {
 		return;
 	};
-	let handle = server.load_asset(path_buf.clone());
+	let handle = server.load_asset(path_buf);
 	entity.try_insert(ImageNode::new(handle.clone()));
 	icon.image = IconImage::Loading(handle);
 }
