@@ -4,7 +4,7 @@ use super::menu_background::MenuBackground;
 use crate::{
 	LoadUi,
 	traits::{
-		colors::DEFAULT_PANEL_COLORS,
+		colors::PanelColors,
 		insert_ui_content::InsertUiContent,
 		update_key_bindings::UpdateKeyBindings,
 	},
@@ -47,7 +47,6 @@ impl SettingsScreen {
 				font_size: 40.0,
 				..default()
 			},
-			TextColor(DEFAULT_PANEL_COLORS.text),
 		));
 	}
 
@@ -67,7 +66,6 @@ impl SettingsScreen {
 					font_size: 20.0,
 					..default()
 				},
-				TextColor(DEFAULT_PANEL_COLORS.text),
 			));
 	}
 
@@ -90,7 +88,7 @@ impl SettingsScreen {
 					margin: UiRect::all(Val::Px(2.)),
 					..default()
 				},
-				BackgroundColor(DEFAULT_PANEL_COLORS.empty),
+				BackgroundColor(PanelColors::DEFAULT.empty),
 			))
 			.with_children(|parent| {
 				Self::add_section_title(parent, localize, title);

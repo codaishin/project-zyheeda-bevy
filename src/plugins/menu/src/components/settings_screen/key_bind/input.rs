@@ -1,6 +1,6 @@
 use super::KeyBind;
 use crate::traits::{
-	colors::DEFAULT_PANEL_COLORS,
+	colors::PanelColors,
 	ui_traits::{GetBackgroundColor, GetNode},
 };
 use bevy::prelude::*;
@@ -22,7 +22,7 @@ impl<TAction, TInput> GetNode for KeyBind<Input<TAction, TInput>> {
 
 impl<TAction, TInput> GetBackgroundColor for KeyBind<Input<TAction, TInput>> {
 	fn background_color() -> Color {
-		DEFAULT_PANEL_COLORS.filled
+		PanelColors::DEFAULT.filled
 	}
 }
 

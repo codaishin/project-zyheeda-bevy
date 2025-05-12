@@ -1,5 +1,5 @@
 use super::{Tooltip, TooltipUiConfig};
-use crate::traits::{colors::DEFAULT_PANEL_COLORS, insert_ui_content::InsertUiContent};
+use crate::traits::{colors::PanelColors, insert_ui_content::InsertUiContent};
 use bevy::prelude::*;
 use common::traits::handles_localization::{LocalizeToken, localized::Localized};
 
@@ -13,7 +13,7 @@ impl TooltipUiConfig for &'static str {
 	}
 
 	fn background_color() -> BackgroundColor {
-		BackgroundColor(DEFAULT_PANEL_COLORS.text)
+		BackgroundColor(PanelColors::DEFAULT.text)
 	}
 }
 
@@ -33,7 +33,7 @@ impl InsertUiContent for Tooltip<&'static str> {
 				font_size: 20.0,
 				..default()
 			},
-			TextColor(DEFAULT_PANEL_COLORS.filled),
+			TextColor(PanelColors::DEFAULT.filled),
 		));
 	}
 }
@@ -48,7 +48,7 @@ impl TooltipUiConfig for String {
 	}
 
 	fn background_color() -> BackgroundColor {
-		BackgroundColor(DEFAULT_PANEL_COLORS.text)
+		BackgroundColor(PanelColors::DEFAULT.text)
 	}
 }
 
@@ -68,7 +68,7 @@ impl InsertUiContent for Tooltip<String> {
 				font_size: 20.0,
 				..default()
 			},
-			TextColor(DEFAULT_PANEL_COLORS.filled),
+			TextColor(PanelColors::DEFAULT.filled),
 		));
 	}
 }
@@ -83,7 +83,7 @@ impl TooltipUiConfig for Localized {
 	}
 
 	fn background_color() -> BackgroundColor {
-		BackgroundColor(DEFAULT_PANEL_COLORS.text)
+		BackgroundColor(PanelColors::DEFAULT.text)
 	}
 }
 
@@ -95,7 +95,7 @@ impl InsertUiContent for Tooltip<Localized> {
 				font_size: 20.0,
 				..default()
 			},
-			TextColor(DEFAULT_PANEL_COLORS.filled),
+			TextColor(PanelColors::DEFAULT.filled),
 		));
 	}
 }

@@ -1,5 +1,5 @@
 use super::{start_game::StartGame, start_menu_button::StartMenuButton};
-use crate::traits::{LoadUi, colors::DEFAULT_PANEL_COLORS, insert_ui_content::InsertUiContent};
+use crate::traits::{LoadUi, colors::PanelColors, insert_ui_content::InsertUiContent};
 use bevy::prelude::*;
 use common::traits::handles_localization::LocalizeToken;
 
@@ -51,7 +51,7 @@ impl InsertUiContent for StartMenu {
 						font_size: 64.0,
 						..default()
 					},
-					TextColor(DEFAULT_PANEL_COLORS.text),
+					TextColor(PanelColors::DEFAULT.text),
 				));
 			});
 		parent
@@ -75,7 +75,7 @@ impl InsertUiContent for StartMenu {
 						font_size: 32.0,
 						..default()
 					},
-					TextColor(DEFAULT_PANEL_COLORS.text),
+					TextColor(PanelColors::DEFAULT.text),
 				));
 			});
 	}

@@ -1,7 +1,7 @@
-use super::{Label, Quickbar, quickbar_panel::QuickbarPanel};
+use super::{Quickbar, input_label::InputLabel, quickbar_panel::QuickbarPanel};
 use crate::{
 	tools::PanelState,
-	traits::{LoadUi, colors::HasPanelColors, insert_ui_content::InsertUiContent},
+	traits::{LoadUi, insert_ui_content::InsertUiContent},
 };
 use bevy::prelude::*;
 use common::{tools::action_key::slot::SlotKey, traits::iteration::IterFinite};
@@ -63,21 +63,9 @@ fn add_slot(quickbar: &mut ChildBuilder, key: &SlotKey) {
 			background
 				.spawn(get_quickbar_panel(key))
 				.with_children(|panel| {
-					panel.spawn(get_panel_label(key));
+					panel.spawn(InputLabel::<QuickbarPanel, SlotKey>::new(*key));
 				});
 		});
-}
-
-fn get_panel_label(key: &SlotKey) -> (Label<QuickbarPanel, SlotKey>, Text, TextFont, TextColor) {
-	(
-		Label::new(*key),
-		Text::new("?"),
-		TextFont {
-			font_size: 20.0,
-			..default()
-		},
-		TextColor(QuickbarPanel::PANEL_COLORS.text),
-	)
 }
 
 fn get_quickbar_panel(key: &SlotKey) -> (QuickbarPanel, Button, Node) {

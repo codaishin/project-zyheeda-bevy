@@ -1,12 +1,6 @@
 use crate::{
 	tools::PanelState,
-	traits::colors::{
-		DEFAULT_PANEL_COLORS,
-		HasActiveColor,
-		HasPanelColors,
-		HasQueuedColor,
-		PanelColors,
-	},
+	traits::colors::{HasActiveColor, HasPanelColors, HasQueuedColor, PanelColors},
 };
 use bevy::{color::Color, ecs::component::Component};
 use common::{tools::action_key::slot::SlotKey, traits::accessors::get::GetterRef};
@@ -32,10 +26,10 @@ impl GetterRef<SlotKey> for QuickbarPanel {
 impl HasPanelColors for QuickbarPanel {
 	const PANEL_COLORS: PanelColors = PanelColors {
 		pressed: Color::srgb(1., 0.27, 0.1),
-		hovered: DEFAULT_PANEL_COLORS.filled,
-		empty: DEFAULT_PANEL_COLORS.empty,
-		filled: DEFAULT_PANEL_COLORS.filled,
-		text: DEFAULT_PANEL_COLORS.text,
+		hovered: PanelColors::DEFAULT.filled,
+		empty: PanelColors::DEFAULT.empty,
+		filled: PanelColors::DEFAULT.filled,
+		text: PanelColors::DEFAULT.text,
 	};
 }
 

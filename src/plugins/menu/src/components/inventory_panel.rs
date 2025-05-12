@@ -1,6 +1,6 @@
 use crate::{
 	tools::PanelState,
-	traits::colors::{DEFAULT_PANEL_COLORS, HasPanelColors, PanelColors},
+	traits::colors::{HasPanelColors, PanelColors},
 };
 use bevy::ecs::component::Component;
 use common::traits::accessors::{get::GetterRef, set::Setter};
@@ -27,7 +27,7 @@ impl Setter<PanelState> for InventoryPanel {
 }
 
 impl HasPanelColors for InventoryPanel {
-	const PANEL_COLORS: PanelColors = DEFAULT_PANEL_COLORS;
+	const PANEL_COLORS: PanelColors = PanelColors::DEFAULT;
 }
 
 #[cfg(test)]

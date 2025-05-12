@@ -13,7 +13,7 @@ use crate::{
 		LoadUi,
 		UpdateCombosView,
 		build_combo_tree_layout::{ComboTreeElement, ComboTreeLayout, Symbol},
-		colors::DEFAULT_PANEL_COLORS,
+		colors::PanelColors,
 		insert_ui_content::InsertUiContent,
 	},
 };
@@ -119,11 +119,11 @@ impl ComboOverview<()> {
 		let (image, background_color) = match SkillButtonIcon::from(icon) {
 			SkillButtonIcon::Icon(Some(icon)) => (
 				ImageNode::new(icon),
-				BackgroundColor(DEFAULT_PANEL_COLORS.filled),
+				BackgroundColor(PanelColors::DEFAULT.filled),
 			),
 			SkillButtonIcon::Icon(None) => (
 				ImageNode::default(),
-				BackgroundColor(DEFAULT_PANEL_COLORS.filled),
+				BackgroundColor(PanelColors::DEFAULT.filled),
 			),
 			SkillButtonIcon::Transparent => (default(), BackgroundColor(Color::NONE)),
 		};
@@ -194,8 +194,8 @@ impl ComboOverview<()> {
 				align_items: AlignItems::Center,
 				..default()
 			},
-			DEFAULT_PANEL_COLORS.filled.into(),
-			DEFAULT_PANEL_COLORS.text.into(),
+			PanelColors::DEFAULT.filled.into(),
+			PanelColors::DEFAULT.text.into(),
 		)
 	}
 
@@ -210,8 +210,8 @@ impl ComboOverview<()> {
 				align_items: AlignItems::Center,
 				..default()
 			},
-			DEFAULT_PANEL_COLORS.filled.into(),
-			DEFAULT_PANEL_COLORS.text.into(),
+			PanelColors::DEFAULT.filled.into(),
+			PanelColors::DEFAULT.text.into(),
 		)
 	}
 
@@ -226,7 +226,7 @@ impl ComboOverview<()> {
 				border: UiRect::bottom(Val::from(Self::SYMBOL_WIDTH)),
 				..default()
 			},
-			BorderColor::from(DEFAULT_PANEL_COLORS.filled),
+			BorderColor::from(PanelColors::DEFAULT.filled),
 		)
 	}
 
@@ -242,7 +242,7 @@ impl ComboOverview<()> {
 				border: UiRect::left(Val::from(ComboOverview::SYMBOL_WIDTH)),
 				..default()
 			},
-			BorderColor::from(DEFAULT_PANEL_COLORS.filled),
+			BorderColor::from(PanelColors::DEFAULT.filled),
 		)
 	}
 
@@ -261,7 +261,7 @@ impl ComboOverview<()> {
 				},
 				..default()
 			},
-			BorderColor::from(DEFAULT_PANEL_COLORS.filled),
+			BorderColor::from(PanelColors::DEFAULT.filled),
 		)
 	}
 
@@ -272,7 +272,7 @@ impl ComboOverview<()> {
 				font_size: Self::BUTTON_FONT_SIZE,
 				..default()
 			},
-			color: TextColor(DEFAULT_PANEL_COLORS.text),
+			color: TextColor(PanelColors::DEFAULT.text),
 			..default()
 		}
 	}
@@ -284,7 +284,7 @@ impl ComboOverview<()> {
 				font_size: Self::BUTTON_FONT_SIZE,
 				..default()
 			},
-			TextColor(DEFAULT_PANEL_COLORS.text),
+			TextColor(PanelColors::DEFAULT.text),
 		)
 	}
 }
@@ -350,7 +350,7 @@ fn add_title(parent: &mut ChildBuilder, title: Localized) {
 					font_size: 40.,
 					..default()
 				},
-				TextColor(DEFAULT_PANEL_COLORS.text),
+				TextColor(PanelColors::DEFAULT.text),
 			));
 		});
 }

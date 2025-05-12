@@ -1,36 +1,47 @@
-use crate::components::Label;
+use crate::{components::input_label::InputLabel, traits::colors::HasPanelColors};
 use bevy::prelude::*;
 use common::{
-	tools::action_key::{slot::SlotKey, user_input::UserInput},
-	traits::{handles_localization::LocalizeToken, key_mappings::GetInput},
+	tools::action_key::user_input::UserInput,
+	traits::{
+		handles_localization::LocalizeToken,
+		key_mappings::GetInput,
+		thread_safe::ThreadSafe,
+	},
 };
 
-type Labels<'a, T> = (&'a Label<T, SlotKey>, &'a mut Text);
+type InputLabels<'a, T, TKey> = (&'a InputLabel<T, TKey>, &'a mut Text);
 
-pub fn update_label_text<
-	TMap: Resource + GetInput<SlotKey, UserInput>,
-	TLanguageServer: Resource + LocalizeToken,
-	TComponent: Sync + Send + 'static,
->(
-	key_map: Res<TMap>,
-	mut language_server: ResMut<TLanguageServer>,
-	mut labels: Query<Labels<TComponent>, Added<Label<TComponent, SlotKey>>>,
-) {
-	let key_map = key_map.as_ref();
+impl<T, TKey> InputLabel<T, TKey>
+where
+	T: HasPanelColors + ThreadSafe,
+	TKey: Copy + ThreadSafe,
+{
+	pub fn ui<TMap, TLanguageServer>(
+		key_map: Res<TMap>,
+		mut language_server: ResMut<TLanguageServer>,
+		mut labels: Query<InputLabels<T, TKey>, Added<InputLabel<T, TKey>>>,
+	) where
+		TMap: Resource + GetInput<TKey, UserInput>,
+		TLanguageServer: Resource + LocalizeToken,
+	{
+		let key_map = key_map.as_ref();
 
-	for (label, text) in &mut labels {
-		update_text(key_map, language_server.as_mut(), label, text);
+		for (label, text) in &mut labels {
+			update_text(key_map, language_server.as_mut(), label, text);
+		}
 	}
 }
 
-fn update_text<TMap, TLanguageServer, TComponent>(
+fn update_text<TMap, TLanguageServer, T, TKey>(
 	key_map: &TMap,
 	language_server: &mut TLanguageServer,
-	label: &Label<TComponent, SlotKey>,
+	label: &InputLabel<T, TKey>,
 	mut text: Mut<Text>,
 ) where
-	TMap: GetInput<SlotKey, UserInput>,
+	TMap: GetInput<TKey, UserInput>,
 	TLanguageServer: LocalizeToken,
+	T: HasPanelColors,
+	TKey: Copy,
 {
 	let key = key_map.get_input(label.key);
 	let localized = language_server.localize_token(key).or_token();
@@ -39,11 +50,12 @@ fn update_text<TMap, TLanguageServer, TComponent>(
 
 #[cfg(test)]
 mod tests {
+	use crate::traits::colors::PanelColors;
+
 	use super::*;
 	use bevy::app::{App, Update};
 	use common::{
 		test_tools::utils::SingleThreadedApp,
-		tools::action_key::slot::Side,
 		traits::{
 			handles_localization::{LocalizationResult, Token, localized::Localized},
 			nested_mock::NestedMocks,
@@ -54,14 +66,21 @@ mod tests {
 
 	struct _T;
 
+	impl HasPanelColors for _T {
+		const PANEL_COLORS: PanelColors = PanelColors::DEFAULT;
+	}
+
+	#[derive(Clone, Copy)]
+	struct _Key;
+
 	#[derive(Resource, NestedMocks)]
 	struct _Map {
 		mock: Mock_Map,
 	}
 
 	#[automock]
-	impl GetInput<SlotKey, UserInput> for _Map {
-		fn get_input(&self, value: SlotKey) -> UserInput {
+	impl GetInput<_Key, UserInput> for _Map {
+		fn get_input(&self, value: _Key) -> UserInput {
 			self.mock.get_input(value)
 		}
 	}
@@ -84,7 +103,7 @@ mod tests {
 	fn setup(map: _Map, language_server: _LanguageServer) -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, update_label_text::<_Map, _LanguageServer, _T>);
+		app.add_systems(Update, InputLabel::<_T, _Key>::ui::<_Map, _LanguageServer>);
 		app.insert_resource(map);
 		app.insert_resource(language_server);
 
@@ -106,10 +125,7 @@ mod tests {
 		);
 		let id = app
 			.world_mut()
-			.spawn((
-				Label::<_T, SlotKey>::new(SlotKey::BottomHand(Side::Right)),
-				Text::default(),
-			))
+			.spawn((InputLabel::<_T, _Key>::new(_Key), Text::default()))
 			.id();
 
 		app.update();
@@ -139,7 +155,7 @@ mod tests {
 		let id = app
 			.world_mut()
 			.spawn((
-				Label::<_T, SlotKey>::new(SlotKey::BottomHand(Side::Right)),
+				InputLabel::<_T, _Key>::new(_Key),
 				Text::new("OVERRIDE THIS"),
 			))
 			.id();

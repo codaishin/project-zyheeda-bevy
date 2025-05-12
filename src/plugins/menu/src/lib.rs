@@ -65,6 +65,7 @@ use components::{
 	combo_overview::ComboOverview,
 	combo_skill_button::{ComboSkillButton, DropdownItem, Horizontal, Vertical},
 	dropdown::Dropdown,
+	input_label::InputLabel,
 	inventory_panel::InventoryPanel,
 	inventory_screen::InventoryScreen,
 	key_select::{AppendSkill, KeySelect},
@@ -108,7 +109,6 @@ use systems::{
 		activity_colors_override::panel_activity_colors_override,
 		colors::panel_colors,
 		set_quickbar_icons::set_quickbar_icons,
-		update_label_text::update_label_text,
 	},
 };
 use traits::{LoadUi, add_dropdown::AddDropdown, add_tooltip::AddTooltip, add_ui::AddUI};
@@ -201,10 +201,9 @@ where
 			.add_systems(
 				Update,
 				(
-					update_label_text::<
+					InputLabel::<QuickbarPanel, SlotKey>::ui::<
 						TSettings::TKeyMap<SlotKey>,
 						TLocalization::TLocalizationServer,
-						QuickbarPanel,
 					>,
 					panel_colors::<QuickbarPanel>,
 					set_ui_mouse_context,

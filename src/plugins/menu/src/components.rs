@@ -2,6 +2,7 @@ pub(crate) mod button_interaction;
 pub(crate) mod combo_overview;
 pub(crate) mod combo_skill_button;
 pub(crate) mod dropdown;
+pub(crate) mod input_label;
 pub(crate) mod inventory_panel;
 pub(crate) mod inventory_screen;
 pub(crate) mod key_code_text_insert_command;
@@ -28,21 +29,6 @@ pub struct Dad<T>(pub T);
 
 #[derive(Component, Debug, Clone, Copy)]
 pub struct KeyedPanel<TKey>(pub TKey);
-
-#[derive(Component)]
-pub struct Label<T, TKey> {
-	pub key: TKey,
-	phantom_data: PhantomData<T>,
-}
-
-impl<T, TKey> Label<T, TKey> {
-	pub fn new(key: TKey) -> Self {
-		Self {
-			key,
-			phantom_data: PhantomData,
-		}
-	}
-}
 
 #[derive(Component)]
 pub struct Quickbar;
