@@ -354,4 +354,15 @@ pub mod utils {
 	}
 
 	pub use is_changed_resource;
+
+	#[macro_export]
+	macro_rules! repeat_scope {
+		($count:expr, $scope:expr $(,)?) => {{
+			for _ in 0..$count {
+				$scope
+			}
+		}};
+	}
+
+	pub use repeat_scope;
 }
