@@ -271,7 +271,7 @@ where
 						InputLabel::<SlotKey>::icon::<
 							TSettings::TKeyMap<SlotKey>,
 							TLocalization::TLocalizationServer,
-						>("ui_icons"),
+						>("icons/keys"),
 						Icon::load_image,
 						Icon::insert_image,
 					)

@@ -1,7 +1,7 @@
 use super::{Quickbar, input_label::InputLabel, quickbar_panel::QuickbarPanel};
 use crate::{
 	tools::PanelState,
-	traits::{LoadUi, insert_ui_content::InsertUiContent},
+	traits::{LoadUi, colors::PanelColors, insert_ui_content::InsertUiContent},
 };
 use bevy::prelude::*;
 use common::{tools::action_key::slot::SlotKey, traits::iteration::IterFinite};
@@ -36,9 +36,7 @@ fn add_quickbar(parent: &mut ChildBuilder) {
 		.spawn((
 			Quickbar,
 			Node {
-				width: Val::Percent(500.0),
-				height: Val::Px(100.0),
-				border: UiRect::all(Val::Px(20.)),
+				padding: UiRect::all(Val::Px(20.)),
 				..default()
 			},
 		))
@@ -52,9 +50,9 @@ fn add_quickbar(parent: &mut ChildBuilder) {
 fn add_slot(quickbar: &mut ChildBuilder, key: &SlotKey) {
 	quickbar
 		.spawn(Node {
-			width: Val::Px(65.0),
-			height: Val::Px(65.0),
-			margin: UiRect::all(Val::Px(2.0)),
+			width: Val::Px(70.0),
+			height: Val::Px(70.0),
+			margin: UiRect::all(Val::Px(10.0)),
 			justify_content: JustifyContent::Center,
 			align_items: AlignItems::Center,
 			..default()
@@ -62,8 +60,33 @@ fn add_slot(quickbar: &mut ChildBuilder, key: &SlotKey) {
 		.with_children(|background| {
 			background
 				.spawn(get_quickbar_panel(key))
-				.with_children(|panel| {
-					panel.spawn(InputLabel::<SlotKey> { key: *key });
+				.with_children(|parent| {
+					let size = 30.;
+					let border = 2.;
+					let inside = size - border * 2.;
+					let offset = -inside / 2.;
+					parent
+						.spawn((
+							Node {
+								position_type: PositionType::Absolute,
+								left: Val::Px(offset),
+								top: Val::Px(offset),
+								width: Val::Px(size),
+								height: Val::Px(size),
+								border: UiRect::all(Val::Px(border)),
+								..default()
+							},
+							BorderColor::from(PanelColors::DEFAULT.text),
+							BackgroundColor::from(PanelColors::DEFAULT.filled),
+						))
+						.with_child((
+							Node {
+								width: Val::Px(inside),
+								height: Val::Px(inside),
+								..default()
+							},
+							InputLabel::<SlotKey> { key: *key },
+						));
 				});
 		});
 }
