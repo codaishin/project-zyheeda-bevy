@@ -63,7 +63,7 @@ fn add_slot(quickbar: &mut ChildBuilder, key: &SlotKey) {
 			background
 				.spawn(get_quickbar_panel(key))
 				.with_children(|panel| {
-					panel.spawn(InputLabel::<QuickbarPanel, SlotKey>::new(*key));
+					panel.spawn(InputLabel::<SlotKey> { key: *key });
 				});
 		});
 }

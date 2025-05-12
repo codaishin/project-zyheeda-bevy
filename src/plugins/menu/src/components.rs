@@ -2,6 +2,7 @@ pub(crate) mod button_interaction;
 pub(crate) mod combo_overview;
 pub(crate) mod combo_skill_button;
 pub(crate) mod dropdown;
+pub(crate) mod icon;
 pub(crate) mod input_label;
 pub(crate) mod inventory_panel;
 pub(crate) mod inventory_screen;

@@ -201,10 +201,6 @@ where
 			.add_systems(
 				Update,
 				(
-					InputLabel::<QuickbarPanel, SlotKey>::ui::<
-						TSettings::TKeyMap<SlotKey>,
-						TLocalization::TLocalizationServer,
-					>,
 					panel_colors::<QuickbarPanel>,
 					set_ui_mouse_context,
 					prime_mouse_context::<TSettings::TKeyMap<SlotKey>, QuickbarPanel>,
@@ -270,6 +266,10 @@ where
 						TSettings::TKeyMap<SlotKey>,
 						TLocalization::TLocalizationServer,
 					>,
+					InputLabel::<SlotKey>::ui::<
+						TSettings::TKeyMap<SlotKey>,
+						TLocalization::TLocalizationServer,
+					>("ui_icons"),
 				)
 					.run_if(ui_ready),
 			)
