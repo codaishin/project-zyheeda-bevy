@@ -3,7 +3,7 @@ pub(crate) mod input;
 pub(crate) mod rebinding;
 
 use crate::traits::{
-	colors::DEFAULT_PANEL_COLORS,
+	colors::PanelColors,
 	insert_ui_content::InsertUiContent,
 	ui_traits::{GetBackgroundColor, GetNode},
 };
@@ -53,7 +53,7 @@ where
 				font_size: 15.0,
 				..default()
 			},
-			TextColor::from(DEFAULT_PANEL_COLORS.text),
+			TextColor::from(PanelColors::DEFAULT.text),
 		));
 	}
 }

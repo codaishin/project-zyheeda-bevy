@@ -1,7 +1,7 @@
-use super::{Label, Quickbar, quickbar_panel::QuickbarPanel};
+use super::{Quickbar, input_label::InputLabel, quickbar_panel::QuickbarPanel};
 use crate::{
 	tools::PanelState,
-	traits::{LoadUi, colors::HasPanelColors, insert_ui_content::InsertUiContent},
+	traits::{LoadUi, colors::PanelColors, insert_ui_content::InsertUiContent},
 };
 use bevy::prelude::*;
 use common::{tools::action_key::slot::SlotKey, traits::iteration::IterFinite};
@@ -36,9 +36,7 @@ fn add_quickbar(parent: &mut ChildBuilder) {
 		.spawn((
 			Quickbar,
 			Node {
-				width: Val::Percent(500.0),
-				height: Val::Px(100.0),
-				border: UiRect::all(Val::Px(20.)),
+				padding: UiRect::all(Val::Px(20.)),
 				..default()
 			},
 		))
@@ -52,9 +50,9 @@ fn add_quickbar(parent: &mut ChildBuilder) {
 fn add_slot(quickbar: &mut ChildBuilder, key: &SlotKey) {
 	quickbar
 		.spawn(Node {
-			width: Val::Px(65.0),
-			height: Val::Px(65.0),
-			margin: UiRect::all(Val::Px(2.0)),
+			width: Val::Px(70.0),
+			height: Val::Px(70.0),
+			margin: UiRect::all(Val::Px(10.0)),
 			justify_content: JustifyContent::Center,
 			align_items: AlignItems::Center,
 			..default()
@@ -62,22 +60,38 @@ fn add_slot(quickbar: &mut ChildBuilder, key: &SlotKey) {
 		.with_children(|background| {
 			background
 				.spawn(get_quickbar_panel(key))
-				.with_children(|panel| {
-					panel.spawn(get_panel_label(key));
+				.with_children(|parent| {
+					let font_size = 22.;
+					let size = 30.;
+					let border = 2.;
+					let offset = -size / 2. - border;
+					parent
+						.spawn((
+							Node {
+								position_type: PositionType::Absolute,
+								left: Val::Px(offset),
+								top: Val::Px(offset),
+								width: Val::Px(size),
+								height: Val::Px(size),
+								border: UiRect::all(Val::Px(border)),
+								..default()
+							},
+							BorderColor::from(PanelColors::DEFAULT.text),
+							BackgroundColor::from(PanelColors::DEFAULT.filled),
+						))
+						.with_child((
+							Node {
+								margin: UiRect::all(Val::Auto),
+								..default()
+							},
+							TextFont {
+								font_size,
+								..default()
+							},
+							InputLabel::<SlotKey> { key: *key },
+						));
 				});
 		});
-}
-
-fn get_panel_label(key: &SlotKey) -> (Label<QuickbarPanel, SlotKey>, Text, TextFont, TextColor) {
-	(
-		Label::new(*key),
-		Text::new("?"),
-		TextFont {
-			font_size: 20.0,
-			..default()
-		},
-		TextColor(QuickbarPanel::PANEL_COLORS.text),
-	)
 }
 
 fn get_quickbar_panel(key: &SlotKey) -> (QuickbarPanel, Button, Node) {

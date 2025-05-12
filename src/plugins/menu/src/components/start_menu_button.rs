@@ -3,7 +3,7 @@ use common::traits::accessors::get::GetterRef;
 
 use crate::{
 	tools::PanelState,
-	traits::colors::{DEFAULT_PANEL_COLORS, HasPanelColors, PanelColors},
+	traits::colors::{HasPanelColors, PanelColors},
 };
 
 #[derive(Component, Debug, PartialEq)]
@@ -16,5 +16,5 @@ impl GetterRef<PanelState> for StartMenuButton {
 }
 
 impl HasPanelColors for StartMenuButton {
-	const PANEL_COLORS: PanelColors = DEFAULT_PANEL_COLORS;
+	const PANEL_COLORS: PanelColors = PanelColors::DEFAULT;
 }

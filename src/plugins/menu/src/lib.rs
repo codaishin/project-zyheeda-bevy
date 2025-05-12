@@ -65,6 +65,8 @@ use components::{
 	combo_overview::ComboOverview,
 	combo_skill_button::{ComboSkillButton, DropdownItem, Horizontal, Vertical},
 	dropdown::Dropdown,
+	icon::Icon,
+	input_label::InputLabel,
 	inventory_panel::InventoryPanel,
 	inventory_screen::InventoryScreen,
 	key_select::{AppendSkill, KeySelect},
@@ -108,7 +110,6 @@ use systems::{
 		activity_colors_override::panel_activity_colors_override,
 		colors::panel_colors,
 		set_quickbar_icons::set_quickbar_icons,
-		update_label_text::update_label_text,
 	},
 };
 use traits::{LoadUi, add_dropdown::AddDropdown, add_tooltip::AddTooltip, add_ui::AddUI};
@@ -201,11 +202,6 @@ where
 			.add_systems(
 				Update,
 				(
-					update_label_text::<
-						TSettings::TKeyMap<SlotKey>,
-						TLocalization::TLocalizationServer,
-						QuickbarPanel,
-					>,
 					panel_colors::<QuickbarPanel>,
 					set_ui_mouse_context,
 					prime_mouse_context::<TSettings::TKeyMap<SlotKey>, QuickbarPanel>,
@@ -256,6 +252,10 @@ where
 		let no_game_state = GameState::None;
 		let startup_loading = GameState::LoadingEssentialAssets;
 		let ui_ready = not(in_state(no_game_state).or(in_state(startup_loading)));
+		let input_label_icons = InputLabel::<SlotKey>::icon::<
+			TSettings::TKeyMap<SlotKey>,
+			TLocalization::TLocalizationServer,
+		>;
 
 		app.add_tooltip::<TLocalization::TLocalizationServer, &'static str>()
 			.add_tooltip::<TLocalization::TLocalizationServer, String>()
@@ -271,6 +271,14 @@ where
 						TSettings::TKeyMap<SlotKey>,
 						TLocalization::TLocalizationServer,
 					>,
+					(
+						input_label_icons("icons/keys"),
+						Icon::load_image,
+						Icon::insert_image,
+						Icon::insert_image_tooltip,
+						Icon::insert_text,
+					)
+						.chain(),
 				)
 					.run_if(ui_ready),
 			)

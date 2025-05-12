@@ -1,2 +1,6 @@
-/target
+# compiled binaries
+/target/
+
+# temporary files
 *.blend1
+*.png~
