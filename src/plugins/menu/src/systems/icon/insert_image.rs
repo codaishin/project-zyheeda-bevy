@@ -23,7 +23,10 @@ impl Icon {
 mod tests {
 	use super::*;
 	use crate::components::icon::IconImage;
-	use common::test_tools::utils::{SingleThreadedApp, new_handle};
+	use common::{
+		test_tools::utils::{SingleThreadedApp, new_handle},
+		traits::handles_localization::localized::Localized,
+	};
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -40,7 +43,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(Icon {
-				description: String::default(),
+				localized: Localized(String::default()),
 				image: IconImage::Loaded(handle.clone()),
 			})
 			.id();
@@ -63,7 +66,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(Icon {
-				description: String::default(),
+				localized: Localized(String::default()),
 				image: IconImage::Loaded(handle),
 			})
 			.id();
@@ -88,7 +91,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(Icon {
-				description: String::default(),
+				localized: Localized(String::default()),
 				image: IconImage::Loaded(handle.clone()),
 			})
 			.id();

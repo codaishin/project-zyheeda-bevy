@@ -74,7 +74,7 @@ mod tests {
 	use bevy::asset::{AssetLoadError, AssetPath, LoadState, UntypedAssetId, io::AssetReaderError};
 	use common::{
 		test_tools::utils::{SingleThreadedApp, new_handle},
-		traits::nested_mock::NestedMocks,
+		traits::{handles_localization::localized::Localized, nested_mock::NestedMocks},
 	};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
@@ -138,7 +138,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(Icon {
-				description: String::from(""),
+				localized: Localized::from(""),
 				image: IconImage::Path(PathBuf::from("my/path")),
 			})
 			.id();
@@ -167,7 +167,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(Icon {
-				description: String::from(""),
+				localized: Localized::from(""),
 				image: IconImage::Path(PathBuf::from("")),
 			})
 			.id();
@@ -198,7 +198,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(Icon {
-				description: String::from(""),
+				localized: Localized::from(""),
 				image: IconImage::Loading(handle.clone()),
 			})
 			.id();
@@ -231,7 +231,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(Icon {
-				description: String::from(""),
+				localized: Localized::from(""),
 				image: IconImage::Loading(handle),
 			})
 			.id();

@@ -14,7 +14,7 @@ impl Icon {
 				continue;
 			};
 
-			entity.try_insert(Text::from(icon.description.as_str()));
+			entity.try_insert(Text::from(icon.localized.clone()));
 		}
 	}
 }
@@ -23,7 +23,10 @@ impl Icon {
 mod tests {
 	use super::*;
 	use crate::components::icon::IconImage;
-	use common::test_tools::utils::{SingleThreadedApp, new_handle};
+	use common::{
+		test_tools::utils::{SingleThreadedApp, new_handle},
+		traits::handles_localization::localized::Localized,
+	};
 	use std::path::PathBuf;
 	use test_case::test_case;
 
@@ -41,7 +44,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(Icon {
-				description: String::from("my description"),
+				localized: Localized::from("my description"),
 				image: IconImage::None,
 			})
 			.id();
@@ -65,7 +68,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(Icon {
-				description: String::from("my description"),
+				localized: Localized::from("my description"),
 				image,
 			})
 			.id();
@@ -87,7 +90,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(Icon {
-				description: String::from("my description"),
+				localized: Localized::from("my description"),
 				image: IconImage::None,
 			})
 			.id();
@@ -111,7 +114,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(Icon {
-				description: String::from("my description"),
+				localized: Localized::from("my description"),
 				image: IconImage::None,
 			})
 			.id();

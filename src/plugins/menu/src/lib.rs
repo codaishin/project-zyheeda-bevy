@@ -275,6 +275,7 @@ where
 						input_label_icons("icons/keys"),
 						Icon::load_image,
 						Icon::insert_image,
+						Icon::insert_image_tooltip,
 						Icon::insert_text,
 					)
 						.chain(),

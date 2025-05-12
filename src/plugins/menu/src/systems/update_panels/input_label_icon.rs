@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use common::{
 	tools::action_key::user_input::UserInput,
 	traits::{
-		handles_localization::{LocalizeToken, Token, localized::Localized},
+		handles_localization::{LocalizeToken, Token},
 		key_mappings::GetInput,
 		thread_safe::ThreadSafe,
 	},
@@ -57,12 +57,12 @@ fn insert_icon<TMap, TLanguageServer, TKey>(
 	TKey: Copy,
 {
 	let key = key_map.get_input(label.key);
-	let Localized(description) = language_server.localize_token(key).or_token();
+	let localized = language_server.localize_token(key).or_token();
 	let Token(token) = Token::from(key);
 	let path = root.join(format!("{token}.png"));
 
 	entity.insert(Icon {
-		description,
+		localized,
 		image: IconImage::Path(path),
 	});
 }
@@ -146,7 +146,7 @@ mod tests {
 		let Token(token) = Token::from(UserInput::from(KeyCode::ArrowUp));
 		assert_eq!(
 			Some(&Icon {
-				description: String::from("IIIIII"),
+				localized: Localized::from("IIIIII"),
 				image: IconImage::Path(
 					PathBuf::from("icon/root/path").join(format!("{token}.png"))
 				)
