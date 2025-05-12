@@ -11,6 +11,6 @@ pub(crate) struct Icon {
 pub(crate) enum IconImage {
 	Path(PathBuf),
 	Loading(Handle<Image>),
-	Loaded,
-	Failed,
+	Loaded(Handle<Image>),
+	None,
 }

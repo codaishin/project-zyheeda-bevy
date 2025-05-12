@@ -65,6 +65,7 @@ use components::{
 	combo_overview::ComboOverview,
 	combo_skill_button::{ComboSkillButton, DropdownItem, Horizontal, Vertical},
 	dropdown::Dropdown,
+	icon::Icon,
 	input_label::InputLabel,
 	inventory_panel::InventoryPanel,
 	inventory_screen::InventoryScreen,
@@ -266,10 +267,14 @@ where
 						TSettings::TKeyMap<SlotKey>,
 						TLocalization::TLocalizationServer,
 					>,
-					InputLabel::<SlotKey>::ui::<
-						TSettings::TKeyMap<SlotKey>,
-						TLocalization::TLocalizationServer,
-					>("ui_icons"),
+					(
+						InputLabel::<SlotKey>::icon::<
+							TSettings::TKeyMap<SlotKey>,
+							TLocalization::TLocalizationServer,
+						>("ui_icons"),
+						Icon::load_image,
+					)
+						.chain(),
 				)
 					.run_if(ui_ready),
 			)

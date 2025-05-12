@@ -18,7 +18,7 @@ where
 	TKey: Copy + ThreadSafe,
 {
 	#[allow(clippy::type_complexity)]
-	pub fn ui<TMap, TLanguageServer>(
+	pub fn icon<TMap, TLanguageServer>(
 		icon_root_path: impl Into<PathBuf>,
 	) -> impl Fn(
 		Commands,
@@ -118,7 +118,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			InputLabel::<_Key>::ui::<_Map, _LanguageServer>("icon/root/path"),
+			InputLabel::<_Key>::icon::<_Map, _LanguageServer>("icon/root/path"),
 		);
 		app.insert_resource(map);
 		app.insert_resource(language_server);
