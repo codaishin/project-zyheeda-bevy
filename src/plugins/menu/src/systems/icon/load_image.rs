@@ -4,29 +4,21 @@ use common::traits::{get_asset_load_state::GetAssetLoadState, load_asset::LoadAs
 use std::path::PathBuf;
 
 impl Icon {
-	pub(crate) fn load_image(
-		commands: Commands,
-		server: ResMut<AssetServer>,
-		icons: Query<(Entity, &mut Icon)>,
-	) {
-		load_icon_image(commands, server, icons);
+	pub(crate) fn load_image(server: ResMut<AssetServer>, icons: Query<&mut Icon>) {
+		load_icon_image(server, icons);
 	}
 }
 
-fn load_icon_image<TAssetServer>(
-	mut commands: Commands,
-	mut server: ResMut<TAssetServer>,
-	mut icons: Query<(Entity, &mut Icon)>,
-) where
+fn load_icon_image<TAssetServer>(mut server: ResMut<TAssetServer>, mut icons: Query<&mut Icon>)
+where
 	TAssetServer: LoadAsset + GetAssetLoadState + Resource,
 {
-	for (entity, mut icon) in &mut icons {
+	for mut icon in &mut icons {
 		match &icon.image {
 			IconImage::Path(path) => {
 				let path = path.clone();
-				let commands = &mut commands;
 				let server = server.as_mut();
-				load_image(&mut icon, commands, server, path, entity);
+				load_image(&mut icon, server, path);
 			}
 			IconImage::Loading(handle) => {
 				let server = server.as_ref();
@@ -39,20 +31,11 @@ fn load_icon_image<TAssetServer>(
 	}
 }
 
-fn load_image<TAssetServer>(
-	icon: &mut Icon,
-	commands: &mut Commands<'_, '_>,
-	server: &mut TAssetServer,
-	path_buf: PathBuf,
-	entity: Entity,
-) where
+fn load_image<TAssetServer>(icon: &mut Icon, server: &mut TAssetServer, path_buf: PathBuf)
+where
 	TAssetServer: LoadAsset,
 {
-	let Some(mut entity) = commands.get_entity(entity) else {
-		return;
-	};
 	let handle = server.load_asset(path_buf);
-	entity.try_insert(ImageNode::new(handle.clone()));
 	icon.image = IconImage::Loading(handle);
 }
 
@@ -124,7 +107,7 @@ mod tests {
 	}
 
 	#[test]
-	fn load_asset() {
+	fn set_to_loading() {
 		let handle = new_handle();
 		let mut app = setup(_AssetServer::new().with_mock(|mock| {
 			mock.expect_load_asset::<Image, PathBuf>()
@@ -140,35 +123,6 @@ mod tests {
 			.spawn(Icon {
 				localized: Localized::from(""),
 				image: IconImage::Path(PathBuf::from("my/path")),
-			})
-			.id();
-
-		app.update();
-
-		assert_eq!(
-			Some(&handle),
-			app.world()
-				.entity(entity)
-				.get::<ImageNode>()
-				.map(|node| &node.image)
-		);
-	}
-
-	#[test]
-	fn set_to_loading() {
-		let handle = new_handle();
-		let mut app = setup(_AssetServer::new().with_mock(|mock| {
-			mock.expect_load_asset::<Image, PathBuf>()
-				.return_const(handle.clone());
-			mock.expect_get_asset_load_state()
-				.never()
-				.return_const(LoadState::Loaded);
-		}));
-		let entity = app
-			.world_mut()
-			.spawn(Icon {
-				localized: Localized::from(""),
-				image: IconImage::Path(PathBuf::from("")),
 			})
 			.id();
 
