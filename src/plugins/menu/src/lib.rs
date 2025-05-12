@@ -273,6 +273,7 @@ where
 							TLocalization::TLocalizationServer,
 						>("ui_icons"),
 						Icon::load_image,
+						Icon::insert_image,
 					)
 						.chain(),
 				)
