@@ -2,12 +2,50 @@
   "actions": [
     [
       {
-        "Slot": {
-          "BottomHand": "Right"
-        }
+        "Movement": "Forward"
       },
       {
-        "KeyCode": "KeyE"
+        "KeyCode": "KeyW"
+      }
+    ],
+    [
+      {
+        "Movement": "Backward"
+      },
+      {
+        "KeyCode": "KeyS"
+      }
+    ],
+    [
+      {
+        "Movement": "Left"
+      },
+      {
+        "KeyCode": "KeyA"
+      }
+    ],
+    [
+      {
+        "Movement": "Right"
+      },
+      {
+        "KeyCode": "KeyD"
+      }
+    ],
+    [
+      {
+        "Movement": "Pointer"
+      },
+      {
+        "KeyCode": "Space"
+      }
+    ],
+    [
+      {
+        "Movement": "ToggleWalkRun"
+      },
+      {
+        "KeyCode": "NumpadSubtract"
       }
     ],
     [
@@ -32,18 +70,12 @@
     ],
     [
       {
-        "Movement": "Forward"
+        "Slot": {
+          "BottomHand": "Right"
+        }
       },
       {
-        "KeyCode": "KeyW"
-      }
-    ],
-    [
-      {
-        "Movement": "ToggleWalkRun"
-      },
-      {
-        "KeyCode": "NumpadSubtract"
+        "KeyCode": "KeyE"
       }
     ],
     [
@@ -58,18 +90,10 @@
     ],
     [
       {
-        "Movement": "Left"
+        "Menu": "Inventory"
       },
       {
-        "KeyCode": "KeyA"
-      }
-    ],
-    [
-      {
-        "Camera": "Rotate"
-      },
-      {
-        "MouseButton": "Middle"
+        "KeyCode": "KeyI"
       }
     ],
     [
@@ -82,42 +106,18 @@
     ],
     [
       {
-        "Movement": "Backward"
-      },
-      {
-        "KeyCode": "KeyS"
-      }
-    ],
-    [
-      {
-        "Movement": "Right"
-      },
-      {
-        "KeyCode": "KeyD"
-      }
-    ],
-    [
-      {
-        "Menu": "Inventory"
-      },
-      {
-        "KeyCode": "KeyI"
-      }
-    ],
-    [
-      {
-        "Movement": "Pointer"
-      },
-      {
-        "KeyCode": "Space"
-      }
-    ],
-    [
-      {
         "Menu": "Settings"
       },
       {
         "KeyCode": "Escape"
+      }
+    ],
+    [
+      {
+        "Camera": "Rotate"
+      },
+      {
+        "MouseButton": "Middle"
       }
     ]
   ]
