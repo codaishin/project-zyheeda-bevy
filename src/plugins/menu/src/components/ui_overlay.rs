@@ -61,10 +61,10 @@ fn add_slot(quickbar: &mut ChildBuilder, key: &SlotKey) {
 			background
 				.spawn(get_quickbar_panel(key))
 				.with_children(|parent| {
+					let font_size = 22.;
 					let size = 30.;
 					let border = 2.;
-					let inside = size - border * 2.;
-					let offset = -inside / 2.;
+					let offset = -size / 2. - border;
 					parent
 						.spawn((
 							Node {
@@ -81,8 +81,11 @@ fn add_slot(quickbar: &mut ChildBuilder, key: &SlotKey) {
 						))
 						.with_child((
 							Node {
-								width: Val::Px(inside),
-								height: Val::Px(inside),
+								margin: UiRect::all(Val::Auto),
+								..default()
+							},
+							TextFont {
+								font_size,
 								..default()
 							},
 							InputLabel::<SlotKey> { key: *key },

@@ -252,6 +252,10 @@ where
 		let no_game_state = GameState::None;
 		let startup_loading = GameState::LoadingEssentialAssets;
 		let ui_ready = not(in_state(no_game_state).or(in_state(startup_loading)));
+		let input_label_icons = InputLabel::<SlotKey>::icon::<
+			TSettings::TKeyMap<SlotKey>,
+			TLocalization::TLocalizationServer,
+		>;
 
 		app.add_tooltip::<TLocalization::TLocalizationServer, &'static str>()
 			.add_tooltip::<TLocalization::TLocalizationServer, String>()
@@ -268,12 +272,10 @@ where
 						TLocalization::TLocalizationServer,
 					>,
 					(
-						InputLabel::<SlotKey>::icon::<
-							TSettings::TKeyMap<SlotKey>,
-							TLocalization::TLocalizationServer,
-						>("icons/keys"),
+						input_label_icons("icons/keys"),
 						Icon::load_image,
 						Icon::insert_image,
+						Icon::insert_text,
 					)
 						.chain(),
 				)
