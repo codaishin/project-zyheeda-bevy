@@ -80,10 +80,6 @@ fn add_slot(quickbar: &mut ChildBuilder, key: &SlotKey) {
 							BackgroundColor::from(PanelColors::DEFAULT.filled),
 						))
 						.with_child((
-							Node {
-								margin: UiRect::all(Val::Auto),
-								..default()
-							},
 							TextFont {
 								font_size,
 								..default()

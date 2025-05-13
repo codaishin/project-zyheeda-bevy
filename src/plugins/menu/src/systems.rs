@@ -5,7 +5,6 @@ pub(crate) mod despawn;
 pub(crate) mod dropdown;
 pub(crate) mod icon;
 pub(crate) mod image_color;
-pub(crate) mod insert_key_code_text;
 pub(crate) mod menus_unchangeable_when_present;
 pub(crate) mod mouse_context;
 pub(crate) mod on_release_set;
