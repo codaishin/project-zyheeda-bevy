@@ -99,7 +99,6 @@ use systems::{
 	dad::{drag::drag, drop::drop},
 	dropdown::select_successor_key::select_successor_key,
 	image_color::image_color,
-	insert_key_code_text::insert_user_input_text,
 	menus_unchangeable_when_present::MenusUnchangeableWhenPresent,
 	mouse_context::{prime::prime_mouse_context, set_ui::set_ui_mouse_context},
 	on_release_set::OnReleaseSet,
@@ -266,11 +265,6 @@ where
 					InsertOn::<MenuBackground>::required(MenuBackground::node),
 					image_color,
 					adjust_global_z_index,
-					insert_user_input_text::<
-						SlotKey,
-						TSettings::TKeyMap<SlotKey>,
-						TLocalization::TLocalizationServer,
-					>,
 					(
 						input_label_icons("icons/keys"),
 						Icon::load_image,

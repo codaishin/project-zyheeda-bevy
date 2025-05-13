@@ -2,7 +2,7 @@ use super::{
 	DeleteSkill,
 	SkillSelectDropdownInsertCommand,
 	combo_skill_button::{ComboSkillButton, DropdownTrigger, Vertical},
-	key_code_text_insert_command::UserInputTextInsertCommand,
+	input_label::InputLabel,
 	key_select_dropdown_command::{AppendSkillCommand, KeySelectDropdownCommand},
 	menu_background::{MenuBackground, WithOverride},
 };
@@ -87,7 +87,7 @@ impl ComboOverview<()> {
 		border: Pixel(0.0),
 	};
 	pub const KEY_BUTTON_DIMENSIONS: Dimensions = Dimensions {
-		width: Pixel(50.0),
+		width: Pixel(25.0),
 		height: Pixel(25.0),
 		border: Pixel(2.0),
 	};
@@ -190,8 +190,6 @@ impl ComboOverview<()> {
 				width: Val::from(Self::KEY_BUTTON_DIMENSIONS.width),
 				height: Val::from(Self::KEY_BUTTON_DIMENSIONS.height),
 				border: UiRect::from(Self::KEY_BUTTON_DIMENSIONS.border),
-				justify_content: JustifyContent::Center,
-				align_items: AlignItems::Center,
 				..default()
 			},
 			PanelColors::DEFAULT.filled.into(),
@@ -265,16 +263,8 @@ impl ComboOverview<()> {
 		)
 	}
 
-	pub(crate) fn skill_key_text(key: SlotKey) -> UserInputTextInsertCommand<SlotKey> {
-		UserInputTextInsertCommand {
-			key,
-			font: TextFont {
-				font_size: Self::BUTTON_FONT_SIZE,
-				..default()
-			},
-			color: TextColor(PanelColors::DEFAULT.text),
-			..default()
-		}
+	pub(crate) fn skill_key_text(key: SlotKey) -> InputLabel<SlotKey> {
+		InputLabel { key }
 	}
 
 	pub(crate) fn modify_button_text(key: &str) -> (Text, TextFont, TextColor) {

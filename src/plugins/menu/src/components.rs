@@ -6,7 +6,6 @@ pub(crate) mod icon;
 pub(crate) mod input_label;
 pub(crate) mod inventory_panel;
 pub(crate) mod inventory_screen;
-pub(crate) mod key_code_text_insert_command;
 pub(crate) mod key_select;
 pub(crate) mod key_select_dropdown_command;
 pub(crate) mod loading_screen;
