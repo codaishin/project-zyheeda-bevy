@@ -1,4 +1,4 @@
-use crate::components::ui_input::UiInputStateTransition;
+use crate::components::ui_input_primer::UiInputStateTransition;
 use bevy::prelude::*;
 
 impl<T> SetInputState for T where T: UiInputStateTransition + Component {}
@@ -18,7 +18,7 @@ pub(crate) trait SetInputState: UiInputStateTransition + Component {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{components::ui_input::UiInputState, test_tools::utils::SingleThreadedApp};
+	use crate::{components::ui_input_primer::UiInputState, test_tools::utils::SingleThreadedApp};
 	use common::traits::nested_mock::NestedMocks;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};

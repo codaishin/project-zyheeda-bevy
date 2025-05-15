@@ -18,10 +18,13 @@ use components::{
 	insert_asset::InsertAsset,
 	object_id::ObjectId,
 	spawn_children::SpawnChildren,
-	ui_input::UiInput,
+	ui_input_primer::UiInputPrimer,
 };
 use labels::Labels;
-use systems::{load_asset_model::load_asset_model, ui_input::set_input_state::SetInputState};
+use systems::{
+	load_asset_model::load_asset_model,
+	ui_input_primer::set_input_state::SetInputState,
+};
 use tools::action_key::user_input::UserInput;
 
 pub struct CommonPlugin;
@@ -50,7 +53,7 @@ impl Plugin for CommonPlugin {
 			.add_systems(
 				PreUpdate,
 				(
-					UiInput::set_input_state,
+					UiInputPrimer::set_input_state,
 					UserInput::clear,
 					UserInput::collect::<KeyCode>,
 					UserInput::collect::<MouseButton>,

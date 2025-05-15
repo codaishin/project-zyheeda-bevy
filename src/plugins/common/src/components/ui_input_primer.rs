@@ -1,14 +1,24 @@
 use crate::tools::action_key::user_input::UserInput;
 use bevy::prelude::*;
 
+/// Alters user input behavior for the associated UI button.
+///
+/// When this component is attached to a button:
+/// - Pressing the button with the **left mouse button** will *prime* the associated `UserInput`
+///   without updating it in `ButtonInput<UserInput>`.
+/// - While the input is primed, further state changes to `ButtonInput<UserInput>` for that key are
+///   suppressed.
+/// - Pressing and releasing the **left mouse button** a second time will finalize the input,
+///   updating `ButtonInput<UserInput>` as if the corresponding `UserInput` key had been directly
+///   pressed or released.
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
 #[require(Interaction)]
-pub struct UiInput {
+pub struct UiInputPrimer {
 	pub(crate) key: UserInput,
 	pub(crate) state: UiInputState,
 }
 
-impl UiInput {
+impl UiInputPrimer {
 	pub fn new(key: UserInput) -> Self {
 		Self {
 			key,
@@ -34,7 +44,7 @@ pub(crate) trait UiInputStateTransition: Sized {
 	fn set_state(&mut self, state: UiInputState);
 }
 
-impl UiInputStateTransition for UiInput {
+impl UiInputStateTransition for UiInputPrimer {
 	fn get_new_state(&self, interaction: &Interaction) -> Option<UiInputState> {
 		if interaction == &Interaction::Pressed {
 			return match self.state {
@@ -70,7 +80,7 @@ mod tests {
 
 	#[test]
 	fn definition_for_none() {
-		let input = UiInput {
+		let input = UiInputPrimer {
 			key: UserInput::from(KeyCode::KeyA),
 			state: UiInputState::None,
 		};
@@ -87,7 +97,7 @@ mod tests {
 
 	#[test]
 	fn definition_for_primed_before_release() {
-		let input = UiInput {
+		let input = UiInputPrimer {
 			key: UserInput::from(KeyCode::KeyA),
 			state: UiInputState::Primed { released: false },
 		};
@@ -104,7 +114,7 @@ mod tests {
 
 	#[test]
 	fn definition_for_primed_after_release() {
-		let input = UiInput {
+		let input = UiInputPrimer {
 			key: UserInput::from(KeyCode::KeyA),
 			state: UiInputState::Primed { released: true },
 		};
@@ -125,7 +135,7 @@ mod tests {
 
 	#[test]
 	fn definition_for_just_pressed() {
-		let input = UiInput {
+		let input = UiInputPrimer {
 			key: UserInput::from(KeyCode::KeyA),
 			state: UiInputState::JustPressed,
 		};
@@ -146,7 +156,7 @@ mod tests {
 
 	#[test]
 	fn definition_for_pressed() {
-		let input = UiInput {
+		let input = UiInputPrimer {
 			key: UserInput::from(KeyCode::KeyA),
 			state: UiInputState::Pressed,
 		};
@@ -163,7 +173,7 @@ mod tests {
 
 	#[test]
 	fn definition_for_just_released() {
-		let input = UiInput {
+		let input = UiInputPrimer {
 			key: UserInput::from(KeyCode::KeyA),
 			state: UiInputState::JustReleased,
 		};
@@ -184,7 +194,7 @@ mod tests {
 
 	#[test]
 	fn set_new_state() {
-		let mut input = UiInput {
+		let mut input = UiInputPrimer {
 			key: UserInput::from(KeyCode::KeyA),
 			state: UiInputState::None,
 		};
@@ -192,7 +202,7 @@ mod tests {
 		input.set_state(UiInputState::Pressed);
 
 		assert_eq!(
-			UiInput {
+			UiInputPrimer {
 				key: UserInput::from(KeyCode::KeyA),
 				state: UiInputState::Pressed,
 			},

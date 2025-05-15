@@ -3,7 +3,7 @@ pub mod flip;
 pub mod insert_asset;
 pub mod object_id;
 pub mod spawn_children;
-pub mod ui_input;
+pub mod ui_input_primer;
 
 use bevy::{prelude::*, render::view::RenderLayers};
 use bevy_rapier3d::prelude::*;
