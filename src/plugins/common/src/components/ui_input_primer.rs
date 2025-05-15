@@ -74,9 +74,30 @@ impl UiInputStateTransition for UiInputPrimer {
 	}
 }
 
+pub(crate) trait IsKey {
+	fn is_key(&self, key: &UserInput) -> bool;
+}
+
+impl IsKey for UiInputPrimer {
+	fn is_key(&self, key: &UserInput) -> bool {
+		&self.key == key
+	}
+}
+
+pub(crate) trait IsPrimed {
+	fn is_primed(&self) -> bool;
+}
+
+impl IsPrimed for UiInputPrimer {
+	fn is_primed(&self) -> bool {
+		matches!(self.state, UiInputState::Primed { .. })
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use test_case::test_case;
 
 	#[test]
 	fn definition_for_none() {
@@ -208,5 +229,34 @@ mod tests {
 			},
 			input
 		);
+	}
+
+	#[test_case(UiInputState::Primed {released: false}, true; "true if primed not released")]
+	#[test_case(UiInputState::Primed {released: true}, true; "true if primed released")]
+	#[test_case(UiInputState::None, false; "none not primed")]
+	#[test_case(UiInputState::JustPressed, false; "false if just pressed")]
+	#[test_case(UiInputState::Pressed, false; "false if pressed")]
+	#[test_case(UiInputState::JustReleased, false; "false if just released")]
+	fn primed(state: UiInputState, is_primed: bool) {
+		let input = UiInputPrimer {
+			key: UserInput::from(KeyCode::KeyA),
+			state,
+		};
+
+		assert_eq!(is_primed, input.is_primed());
+	}
+
+	#[test]
+	fn is_key_when_matching() {
+		let input = UiInputPrimer::new(UserInput::from(KeyCode::KeyA));
+
+		assert!(input.is_key(&UserInput::from(KeyCode::KeyA)));
+	}
+
+	#[test]
+	fn is_not_key_when_not_matching() {
+		let input = UiInputPrimer::new(UserInput::from(KeyCode::KeyB));
+
+		assert!(!input.is_key(&UserInput::from(KeyCode::KeyA)));
 	}
 }

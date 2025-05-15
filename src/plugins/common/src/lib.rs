@@ -55,8 +55,8 @@ impl Plugin for CommonPlugin {
 				(
 					UiInputPrimer::set_input_state,
 					UserInput::clear,
-					UserInput::collect::<KeyCode>,
-					UserInput::collect::<MouseButton>,
+					UserInput::collect::<KeyCode, UiInputPrimer>,
+					UserInput::collect::<MouseButton, UiInputPrimer>,
 				)
 					.chain()
 					.in_set(UserInput::SYSTEM)
