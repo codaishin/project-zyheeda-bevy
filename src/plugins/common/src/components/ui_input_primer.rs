@@ -31,42 +31,53 @@ impl UiInputPrimer {
 pub(crate) enum UiInputState {
 	#[default]
 	None,
-	Primed {
-		released: bool,
-	},
+	Primed,
 	JustPressed,
 	Pressed,
 	JustReleased,
 }
 
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub(crate) enum MouseUiInteraction {
+	None(LeftMouse),
+	Hovered,
+	Pressed,
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub(crate) enum LeftMouse {
+	None,
+	JustPressed,
+	JustReleased,
+}
+
 pub(crate) trait UiInputStateTransition: Sized {
-	fn get_new_state(&self, interaction: &Interaction) -> Option<UiInputState>;
+	fn get_new_state(&self, interaction: &MouseUiInteraction) -> Option<UiInputState>;
 	fn set_state(&mut self, state: UiInputState);
 }
 
 impl UiInputStateTransition for UiInputPrimer {
-	fn get_new_state(&self, interaction: &Interaction) -> Option<UiInputState> {
-		if interaction == &Interaction::Pressed {
-			return match self.state {
-				UiInputState::None => Some(UiInputState::Primed { released: false }),
-				UiInputState::Primed { released: true } => Some(UiInputState::JustPressed),
-				UiInputState::JustPressed => Some(UiInputState::Pressed),
-				UiInputState::JustReleased => Some(UiInputState::Primed { released: false }),
-				_ => None,
-			};
+	fn get_new_state(&self, interaction: &MouseUiInteraction) -> Option<UiInputState> {
+		match (interaction, self.state) {
+			// prime
+			(MouseUiInteraction::Pressed, UiInputState::None | UiInputState::JustReleased) => {
+				Some(UiInputState::Primed)
+			}
+			// press key
+			(MouseUiInteraction::None(LeftMouse::JustPressed), UiInputState::Primed) => {
+				Some(UiInputState::JustPressed)
+			}
+			// release key
+			(
+				MouseUiInteraction::None(LeftMouse::JustReleased),
+				UiInputState::JustPressed | UiInputState::Pressed,
+			) => Some(UiInputState::JustReleased),
+			// outdated press/release
+			(_, UiInputState::JustPressed) => Some(UiInputState::Pressed),
+			(_, UiInputState::JustReleased) => Some(UiInputState::None),
+			// rest
+			_ => None,
 		}
-
-		if interaction == &Interaction::None {
-			return match self.state {
-				UiInputState::Primed { .. } => Some(UiInputState::Primed { released: true }),
-				UiInputState::JustPressed => Some(UiInputState::JustReleased),
-				UiInputState::Pressed => Some(UiInputState::JustReleased),
-				UiInputState::JustReleased => Some(UiInputState::None),
-				_ => None,
-			};
-		}
-
-		None
 	}
 
 	fn set_state(&mut self, state: UiInputState) {
@@ -107,49 +118,32 @@ mod tests {
 		};
 
 		assert_eq!(
-			(None, None, Some(UiInputState::Primed { released: false })),
+			(None, None, None, None, Some(UiInputState::Primed)),
 			(
-				input.get_new_state(&Interaction::None),
-				input.get_new_state(&Interaction::Hovered),
-				input.get_new_state(&Interaction::Pressed),
+				input.get_new_state(&MouseUiInteraction::None(LeftMouse::None)),
+				input.get_new_state(&MouseUiInteraction::None(LeftMouse::JustPressed)),
+				input.get_new_state(&MouseUiInteraction::None(LeftMouse::JustReleased)),
+				input.get_new_state(&MouseUiInteraction::Hovered),
+				input.get_new_state(&MouseUiInteraction::Pressed),
 			),
 		);
 	}
 
 	#[test]
-	fn definition_for_primed_before_release() {
+	fn definition_for_primed() {
 		let input = UiInputPrimer {
 			key: UserInput::from(KeyCode::KeyA),
-			state: UiInputState::Primed { released: false },
+			state: UiInputState::Primed,
 		};
 
 		assert_eq!(
-			(Some(UiInputState::Primed { released: true }), None, None),
+			(None, Some(UiInputState::JustPressed), None, None, None),
 			(
-				input.get_new_state(&Interaction::None),
-				input.get_new_state(&Interaction::Hovered),
-				input.get_new_state(&Interaction::Pressed),
-			),
-		);
-	}
-
-	#[test]
-	fn definition_for_primed_after_release() {
-		let input = UiInputPrimer {
-			key: UserInput::from(KeyCode::KeyA),
-			state: UiInputState::Primed { released: true },
-		};
-
-		assert_eq!(
-			(
-				Some(UiInputState::Primed { released: true }),
-				None,
-				Some(UiInputState::JustPressed),
-			),
-			(
-				input.get_new_state(&Interaction::None),
-				input.get_new_state(&Interaction::Hovered),
-				input.get_new_state(&Interaction::Pressed),
+				input.get_new_state(&MouseUiInteraction::None(LeftMouse::None)),
+				input.get_new_state(&MouseUiInteraction::None(LeftMouse::JustPressed)),
+				input.get_new_state(&MouseUiInteraction::None(LeftMouse::JustReleased)),
+				input.get_new_state(&MouseUiInteraction::Hovered),
+				input.get_new_state(&MouseUiInteraction::Pressed),
 			),
 		);
 	}
@@ -163,14 +157,18 @@ mod tests {
 
 		assert_eq!(
 			(
+				Some(UiInputState::Pressed),
+				Some(UiInputState::Pressed),
 				Some(UiInputState::JustReleased),
-				None,
+				Some(UiInputState::Pressed),
 				Some(UiInputState::Pressed),
 			),
 			(
-				input.get_new_state(&Interaction::None),
-				input.get_new_state(&Interaction::Hovered),
-				input.get_new_state(&Interaction::Pressed),
+				input.get_new_state(&MouseUiInteraction::None(LeftMouse::None)),
+				input.get_new_state(&MouseUiInteraction::None(LeftMouse::JustPressed)),
+				input.get_new_state(&MouseUiInteraction::None(LeftMouse::JustReleased)),
+				input.get_new_state(&MouseUiInteraction::Hovered),
+				input.get_new_state(&MouseUiInteraction::Pressed),
 			),
 		);
 	}
@@ -183,11 +181,13 @@ mod tests {
 		};
 
 		assert_eq!(
-			(Some(UiInputState::JustReleased), None, None),
+			(None, None, Some(UiInputState::JustReleased), None, None),
 			(
-				input.get_new_state(&Interaction::None),
-				input.get_new_state(&Interaction::Hovered),
-				input.get_new_state(&Interaction::Pressed),
+				input.get_new_state(&MouseUiInteraction::None(LeftMouse::None)),
+				input.get_new_state(&MouseUiInteraction::None(LeftMouse::JustPressed)),
+				input.get_new_state(&MouseUiInteraction::None(LeftMouse::JustReleased)),
+				input.get_new_state(&MouseUiInteraction::Hovered),
+				input.get_new_state(&MouseUiInteraction::Pressed),
 			),
 		);
 	}
@@ -202,13 +202,17 @@ mod tests {
 		assert_eq!(
 			(
 				Some(UiInputState::None),
-				None,
-				Some(UiInputState::Primed { released: false }),
+				Some(UiInputState::None),
+				Some(UiInputState::None),
+				Some(UiInputState::None),
+				Some(UiInputState::Primed),
 			),
 			(
-				input.get_new_state(&Interaction::None),
-				input.get_new_state(&Interaction::Hovered),
-				input.get_new_state(&Interaction::Pressed),
+				input.get_new_state(&MouseUiInteraction::None(LeftMouse::None)),
+				input.get_new_state(&MouseUiInteraction::None(LeftMouse::JustPressed)),
+				input.get_new_state(&MouseUiInteraction::None(LeftMouse::JustReleased)),
+				input.get_new_state(&MouseUiInteraction::Hovered),
+				input.get_new_state(&MouseUiInteraction::Pressed),
 			),
 		);
 	}
@@ -231,8 +235,7 @@ mod tests {
 		);
 	}
 
-	#[test_case(UiInputState::Primed {released: false}, true; "true if primed not released")]
-	#[test_case(UiInputState::Primed {released: true}, true; "true if primed released")]
+	#[test_case(UiInputState::Primed, true; "true if primed")]
 	#[test_case(UiInputState::None, false; "none not primed")]
 	#[test_case(UiInputState::JustPressed, false; "false if just pressed")]
 	#[test_case(UiInputState::Pressed, false; "false if pressed")]
