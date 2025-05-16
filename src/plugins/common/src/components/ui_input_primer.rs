@@ -60,12 +60,12 @@ impl From<UiInputPrimer> for UserInput {
 	}
 }
 
-impl From<&UiInputPrimer> for Input {
+impl From<&UiInputPrimer> for JustChangedInput {
 	fn from(primer: &UiInputPrimer) -> Self {
 		match primer.state {
-			UiInputState::JustPressed => Input::JustPressed(primer.key),
-			UiInputState::JustReleased => Input::JustReleased(primer.key),
-			_ => Input::None,
+			UiInputState::JustPressed => JustChangedInput::JustPressed(primer.key),
+			UiInputState::JustReleased => JustChangedInput::JustReleased(primer.key),
+			_ => JustChangedInput::None,
 		}
 	}
 }
@@ -96,7 +96,7 @@ pub(crate) enum LeftMouse {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub(crate) enum Input {
+pub(crate) enum JustChangedInput {
 	None,
 	JustPressed(UserInput),
 	JustReleased(UserInput),
@@ -194,7 +194,7 @@ mod tests {
 			state: UiInputState::None,
 		};
 
-		assert_eq!(Input::None, Input::from(&input));
+		assert_eq!(JustChangedInput::None, JustChangedInput::from(&input));
 	}
 
 	#[test]
@@ -205,8 +205,8 @@ mod tests {
 		};
 
 		assert_eq!(
-			Input::JustPressed(UserInput::from(KeyCode::ArrowLeft)),
-			Input::from(&input),
+			JustChangedInput::JustPressed(UserInput::from(KeyCode::ArrowLeft)),
+			JustChangedInput::from(&input),
 		);
 	}
 
@@ -218,8 +218,8 @@ mod tests {
 		};
 
 		assert_eq!(
-			Input::JustReleased(UserInput::from(KeyCode::ArrowLeft)),
-			Input::from(&input),
+			JustChangedInput::JustReleased(UserInput::from(KeyCode::ArrowLeft)),
+			JustChangedInput::from(&input),
 		);
 	}
 

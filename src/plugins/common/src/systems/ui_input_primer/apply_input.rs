@@ -1,30 +1,33 @@
-use crate::{components::ui_input_primer::Input, tools::action_key::user_input::UserInput};
+use crate::{
+	components::ui_input_primer::JustChangedInput,
+	tools::action_key::user_input::UserInput,
+};
 use bevy::prelude::*;
 
 impl<T> ApplyInput for T
 where
 	T: Component,
-	for<'a> Input: From<&'a Self>,
+	for<'a> JustChangedInput: From<&'a Self>,
 {
 }
 
 pub(crate) trait ApplyInput: Component + Sized
 where
-	for<'a> Input: From<&'a Self>,
+	for<'a> JustChangedInput: From<&'a Self>,
 {
 	fn apply_input(
 		mut input: ResMut<ButtonInput<UserInput>>,
 		primers: Query<&Self, Changed<Self>>,
 	) {
 		for primer in &primers {
-			match Input::from(primer) {
-				Input::JustPressed(user_input) => {
+			match JustChangedInput::from(primer) {
+				JustChangedInput::JustPressed(user_input) => {
 					input.press(user_input);
 				}
-				Input::JustReleased(user_input) => {
+				JustChangedInput::JustReleased(user_input) => {
 					input.release(user_input);
 				}
-				Input::None => {}
+				JustChangedInput::None => {}
 			}
 		}
 	}
@@ -36,9 +39,9 @@ mod tests {
 	use crate::{test_tools::utils::SingleThreadedApp, tools::action_key::user_input::UserInput};
 
 	#[derive(Component)]
-	struct _Input(Input);
+	struct _Input(JustChangedInput);
 
-	impl From<&_Input> for Input {
+	impl From<&_Input> for JustChangedInput {
 		fn from(_Input(input): &_Input) -> Self {
 			*input
 		}
@@ -66,7 +69,7 @@ mod tests {
 	fn set_just_pressed() {
 		let mut app = setup();
 		app.world_mut()
-			.spawn(_Input(Input::JustPressed(UserInput::from(
+			.spawn(_Input(JustChangedInput::JustPressed(UserInput::from(
 				KeyCode::AltLeft,
 			))));
 
@@ -87,7 +90,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(_Input(Input::JustPressed(UserInput::from(
+			.spawn(_Input(JustChangedInput::JustPressed(UserInput::from(
 				KeyCode::AltLeft,
 			))))
 			.id();
@@ -97,7 +100,7 @@ mod tests {
 			.entity_mut(entity)
 			.get_mut::<_Input>()
 			.unwrap()
-			.0 = Input::JustReleased(UserInput::from(KeyCode::AltLeft));
+			.0 = JustChangedInput::JustReleased(UserInput::from(KeyCode::AltLeft));
 		app.update();
 
 		let input = app.world().resource::<ButtonInput<UserInput>>();
@@ -114,7 +117,7 @@ mod tests {
 	fn do_not_set_twice() {
 		let mut app = setup();
 		app.world_mut()
-			.spawn(_Input(Input::JustPressed(UserInput::from(
+			.spawn(_Input(JustChangedInput::JustPressed(UserInput::from(
 				KeyCode::AltLeft,
 			))));
 
@@ -139,7 +142,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(_Input(Input::JustPressed(UserInput::from(
+			.spawn(_Input(JustChangedInput::JustPressed(UserInput::from(
 				KeyCode::AltLeft,
 			))))
 			.id();
