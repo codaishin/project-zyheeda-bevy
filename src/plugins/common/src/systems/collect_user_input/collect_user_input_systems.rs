@@ -163,6 +163,38 @@ mod tests {
 	}
 
 	#[test]
+	fn do_not_update_input_when_hovering_primer_and_clicking_left_mouse() {
+		let mut app = setup();
+		app.world_mut()
+			.resource_mut::<ButtonInput<MouseButton>>()
+			.press(MouseButton::Left);
+		app.world_mut().spawn((
+			UiInputPrimer {
+				key: UserInput::from(KeyCode::KeyA),
+				state: UiInputState::None,
+			},
+			Interaction::Hovered,
+		));
+		app.world_mut().spawn((
+			UiInputPrimer {
+				key: UserInput::from(MouseButton::Middle),
+				state: UiInputState::None,
+			},
+			Interaction::Hovered,
+		));
+
+		app.update();
+
+		assert_eq!(
+			HashSet::from([]),
+			app.world()
+				.resource::<ButtonInput<UserInput>>()
+				.get_just_pressed()
+				.collect::<HashSet<_>>()
+		);
+	}
+
+	#[test]
 	fn update_primed_input_when_pressing_left_mouse() {
 		let mut app = setup();
 		app.world_mut()

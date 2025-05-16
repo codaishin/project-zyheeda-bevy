@@ -8,9 +8,11 @@ use bevy::prelude::*;
 ///   without updating it in `ButtonInput<UserInput>`.
 /// - While the input is primed, further state changes to `ButtonInput<UserInput>` for that key are
 ///   suppressed.
+/// - While the button is hovered, further state changes to `ButtonInput<UserInput>` for
+///   `UserInput::Mouse(MouseButton::Left)` are suppressed
 /// - Pressing and releasing the **left mouse button** a second time will finalize the input,
 ///   updating `ButtonInput<UserInput>` as if the corresponding `UserInput` key had been directly
-///   pressed or released.
+///   pressed and released.
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
 #[require(Interaction)]
 pub struct UiInputPrimer {
@@ -72,6 +74,7 @@ impl From<&UiInputPrimer> for Input {
 pub(crate) enum UiInputState {
 	#[default]
 	None,
+	Hovered,
 	Primed,
 	JustPressed,
 	Pressed,
@@ -106,24 +109,22 @@ pub(crate) trait UiInputStateTransition: Sized {
 
 impl UiInputStateTransition for UiInputPrimer {
 	fn get_new_state(&self, interaction: &MouseUiInteraction) -> Option<UiInputState> {
-		match (interaction, self.state) {
-			// prime
-			(MouseUiInteraction::Pressed, UiInputState::None | UiInputState::JustReleased) => {
+		match (self.state, interaction) {
+			(UiInputState::None, MouseUiInteraction::Hovered) => Some(UiInputState::Hovered),
+			(UiInputState::None | UiInputState::JustReleased, MouseUiInteraction::Pressed) => {
 				Some(UiInputState::Primed)
 			}
-			// press key
-			(MouseUiInteraction::None(LeftMouse::JustPressed), UiInputState::Primed) => {
+			(UiInputState::Primed, MouseUiInteraction::None(LeftMouse::JustPressed)) => {
 				Some(UiInputState::JustPressed)
 			}
-			// release key
 			(
-				MouseUiInteraction::None(LeftMouse::JustReleased),
 				UiInputState::JustPressed | UiInputState::Pressed,
+				MouseUiInteraction::None(LeftMouse::JustReleased),
 			) => Some(UiInputState::JustReleased),
-			// outdated press/release
-			(_, UiInputState::JustPressed) => Some(UiInputState::Pressed),
-			(_, UiInputState::JustReleased) => Some(UiInputState::None),
-			// rest
+			(UiInputState::Hovered, MouseUiInteraction::Pressed) => Some(UiInputState::Primed),
+			(UiInputState::Hovered, MouseUiInteraction::None(_)) => Some(UiInputState::None),
+			(UiInputState::JustPressed, _) => Some(UiInputState::Pressed),
+			(UiInputState::JustReleased, _) => Some(UiInputState::None),
 			_ => None,
 		}
 	}
@@ -140,6 +141,7 @@ pub(crate) trait KeyPrimed {
 impl KeyPrimed for UiInputPrimer {
 	fn key_primed(&self, key: &UserInput) -> bool {
 		match self.state {
+			UiInputState::Hovered => key == &UserInput::from(MouseButton::Left),
 			UiInputState::Primed => key == &self.key || key == &UserInput::from(MouseButton::Left),
 			UiInputState::JustPressed => key == &UserInput::from(MouseButton::Left),
 			_ => false,
@@ -229,7 +231,38 @@ mod tests {
 		};
 
 		assert_eq!(
-			(None, None, None, None, Some(UiInputState::Primed)),
+			(
+				None,
+				None,
+				None,
+				Some(UiInputState::Hovered),
+				Some(UiInputState::Primed)
+			),
+			(
+				input.get_new_state(&MouseUiInteraction::None(LeftMouse::None)),
+				input.get_new_state(&MouseUiInteraction::None(LeftMouse::JustPressed)),
+				input.get_new_state(&MouseUiInteraction::None(LeftMouse::JustReleased)),
+				input.get_new_state(&MouseUiInteraction::Hovered),
+				input.get_new_state(&MouseUiInteraction::Pressed),
+			),
+		);
+	}
+
+	#[test]
+	fn definition_for_hovered() {
+		let input = UiInputPrimer {
+			key: UserInput::from(KeyCode::KeyA),
+			state: UiInputState::Hovered,
+		};
+
+		assert_eq!(
+			(
+				Some(UiInputState::None),
+				Some(UiInputState::None),
+				Some(UiInputState::None),
+				None,
+				Some(UiInputState::Primed)
+			),
 			(
 				input.get_new_state(&MouseUiInteraction::None(LeftMouse::None)),
 				input.get_new_state(&MouseUiInteraction::None(LeftMouse::JustPressed)),
@@ -351,7 +384,7 @@ mod tests {
 	#[test_case(UiInputState::JustPressed, false; "false if just pressed")]
 	#[test_case(UiInputState::Pressed, false; "false if pressed")]
 	#[test_case(UiInputState::JustReleased, false; "false if just released")]
-	fn primed(state: UiInputState, is_primed: bool) {
+	fn primed_with_matching_key(state: UiInputState, is_primed: bool) {
 		let input = UiInputPrimer {
 			key: UserInput::from(KeyCode::KeyA),
 			state,
@@ -365,6 +398,16 @@ mod tests {
 		let input = UiInputPrimer::from(UserInput::from(KeyCode::KeyA));
 
 		assert!(!input.key_primed(&UserInput::from(KeyCode::KeyB)));
+	}
+
+	#[test]
+	fn is_primed_for_left_mouse_when_hovered() {
+		let input = UiInputPrimer {
+			key: UserInput::from(KeyCode::KeyA),
+			state: UiInputState::Hovered,
+		};
+
+		assert!(input.key_primed(&UserInput::from(MouseButton::Left)));
 	}
 
 	#[test]
