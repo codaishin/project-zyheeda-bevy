@@ -16,7 +16,6 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.insert_resource(keys);
-		app.init_resource::<ButtonInput<UserInput>>();
 		app.add_systems(Update, UserInput::clear);
 
 		app
