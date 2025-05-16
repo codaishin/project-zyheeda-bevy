@@ -3,8 +3,8 @@ use crate::traits::handles_localization::Token;
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, PartialEq, Eq, Clone, Hash, SystemSet)]
-pub struct InputSystem;
+#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub struct UserInputSystem;
 
 #[derive(TypePath, Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
 pub enum UserInput {
@@ -13,7 +13,7 @@ pub enum UserInput {
 }
 
 impl UserInput {
-	pub const SYSTEM: InputSystem = InputSystem;
+	pub const SYSTEM: UserInputSystem = UserInputSystem;
 }
 
 impl From<UserInput> for Token {
