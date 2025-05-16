@@ -5,11 +5,17 @@ impl<T> SetInputState for T where T: UiInputStateTransition + Component {}
 
 pub(crate) trait SetInputState: UiInputStateTransition + Component {
 	fn set_input_state(
-		mut inputs: Query<(&mut Self, &Interaction)>,
+		mut inputs: Query<(&mut Self, Ref<Interaction>)>,
 		mouse: Res<ButtonInput<MouseButton>>,
 	) {
+		let mouse_changed = mouse.is_changed();
+
 		for (mut input, interaction) in &mut inputs {
-			let interaction = match interaction {
+			if !mouse_changed && !interaction.is_changed() {
+				continue;
+			}
+
+			let interaction = match *interaction {
 				Interaction::Pressed => MouseUiInteraction::Pressed,
 				Interaction::Hovered => MouseUiInteraction::Hovered,
 				Interaction::None if mouse.just_pressed(MouseButton::Left) => {
@@ -40,6 +46,7 @@ mod tests {
 	use common::traits::nested_mock::NestedMocks;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
+	use std::ops::DerefMut;
 
 	#[derive(Component, NestedMocks)]
 	struct _Input {
@@ -175,6 +182,52 @@ mod tests {
 		});
 		app.world_mut().spawn((input, Interaction::Hovered));
 
+		app.update();
+	}
+
+	#[test]
+	fn only_set_if_input_changed() {
+		let mut mouse = ButtonInput::default();
+		mouse.press(MouseButton::Left);
+		let mut app = setup(mouse);
+		let input = _Input::new().with_mock(|mock| {
+			mock.expect_get_new_state()
+				.return_const(Some(UiInputState::Pressed));
+			mock.expect_set_state()
+				.times(2)
+				.with(eq(UiInputState::Pressed))
+				.return_const(());
+		});
+		app.world_mut().spawn((input, Interaction::None));
+
+		app.update();
+		app.update();
+		app.world_mut()
+			.resource_mut::<ButtonInput<MouseButton>>()
+			.deref_mut();
+		app.update();
+	}
+
+	#[test]
+	fn also_set_if_interaction_changed() {
+		let mut mouse = ButtonInput::default();
+		mouse.press(MouseButton::Left);
+		let mut app = setup(mouse);
+		let input = _Input::new().with_mock(|mock| {
+			mock.expect_get_new_state()
+				.return_const(Some(UiInputState::Pressed));
+			mock.expect_set_state()
+				.times(2)
+				.with(eq(UiInputState::Pressed))
+				.return_const(());
+		});
+		let entity = app.world_mut().spawn((input, Interaction::None)).id();
+
+		app.update();
+		app.world_mut()
+			.entity_mut(entity)
+			.get_mut::<Interaction>()
+			.as_deref_mut();
 		app.update();
 	}
 }
