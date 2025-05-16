@@ -42,7 +42,7 @@ impl IsWalkable for MapCell {
 	fn is_walkable(&self) -> bool {
 		match self {
 			MapCell::CorridorFloor => true,
-			MapCell::CorridorWall { .. } => false,
+			MapCell::CorridorWall => false,
 		}
 	}
 }

@@ -111,7 +111,6 @@ impl HandlesLoadTracking for LoadingPlugin {
 			);
 	}
 
-	#[must_use]
 	fn register_after_load_system<TLoadGroup>() -> impl RunAfterLoadedInApp
 	where
 		TLoadGroup: ThreadSafe,
@@ -119,7 +118,6 @@ impl HandlesLoadTracking for LoadingPlugin {
 		RegisterAfterLoadSystem(PhantomData::<TLoadGroup>)
 	}
 
-	#[must_use]
 	fn register_load_tracking<T, TLoadGroup, TProgress>()
 	-> impl LoadTrackingInApp + LoadTrackingInSubApp
 	where

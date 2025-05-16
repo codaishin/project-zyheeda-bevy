@@ -221,10 +221,7 @@ where
 	where
 		TCell: GridCellDistanceDefinition + Clone,
 	{
-		let map_handle = &self.map;
-		let cells = maps.get(map_handle).map(|m| m.cells());
-
-		cells
+		maps.get(&self.map).map(|m| m.cells())
 	}
 
 	fn get_cell_counts(cells: &[Vec<TCell>]) -> (usize, usize) {

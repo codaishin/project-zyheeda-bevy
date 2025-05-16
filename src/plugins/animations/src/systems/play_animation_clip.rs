@@ -907,10 +907,9 @@ mod tests {
 			.collect::<Vec<_>>();
 		// each priority has 2 assets each with 2 animations
 		//   -> 4 animations masked by higher priority mask per priority
-		let expected = &std::iter::repeat(0b000000)
-			.take(4)
-			.chain(std::iter::repeat(0b000011).take(4))
-			.chain(std::iter::repeat(0b001111).take(4))
+		let expected = &std::iter::repeat_n(0b000000, 4)
+			.chain(std::iter::repeat_n(0b000011, 4))
+			.chain(std::iter::repeat_n(0b001111, 4))
 			.collect::<Vec<_>>();
 		assert_eq!(
 			expected,
@@ -1009,13 +1008,12 @@ mod tests {
 			.collect::<Vec<_>>();
 		// each asset has 2 animations
 		//   -> 2 animations masked per asset
-		let expected = &std::iter::repeat(0b111110)
-			.take(2)
-			.chain(std::iter::repeat(0b111101).take(2))
-			.chain(std::iter::repeat(0b111011).take(2))
-			.chain(std::iter::repeat(0b110111).take(2))
-			.chain(std::iter::repeat(0b101111).take(2))
-			.chain(std::iter::repeat(0b011111).take(2))
+		let expected = &std::iter::repeat_n(0b111110, 2)
+			.chain(std::iter::repeat_n(0b111101, 2))
+			.chain(std::iter::repeat_n(0b111011, 2))
+			.chain(std::iter::repeat_n(0b110111, 2))
+			.chain(std::iter::repeat_n(0b101111, 2))
+			.chain(std::iter::repeat_n(0b011111, 2))
 			.collect::<Vec<_>>();
 		assert_eq!(
 			expected,
@@ -1101,9 +1099,8 @@ mod tests {
 			.collect::<Vec<_>>();
 		// each asset has 2 animations
 		//   -> 2 animations masked per asset
-		let expected = &std::iter::repeat(0b111110)
-			.take(2)
-			.chain(std::iter::repeat(0b111001).take(2))
+		let expected = &std::iter::repeat_n(0b111110, 2)
+			.chain(std::iter::repeat_n(0b111001, 2))
 			.collect::<Vec<_>>();
 		assert_eq!(
 			expected,
