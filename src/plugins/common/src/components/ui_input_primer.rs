@@ -51,6 +51,23 @@ pub(crate) enum LeftMouse {
 	JustReleased,
 }
 
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub(crate) enum Input {
+	None,
+	JustPressed(UserInput),
+	JustReleased(UserInput),
+}
+
+impl From<&UiInputPrimer> for Input {
+	fn from(primer: &UiInputPrimer) -> Self {
+		match primer.state {
+			UiInputState::JustPressed => Input::JustPressed(primer.key),
+			UiInputState::JustReleased => Input::JustReleased(primer.key),
+			_ => Input::None,
+		}
+	}
+}
+
 pub(crate) trait UiInputStateTransition: Sized {
 	fn get_new_state(&self, interaction: &MouseUiInteraction) -> Option<UiInputState>;
 	fn set_state(&mut self, state: UiInputState);
@@ -109,6 +126,42 @@ impl IsPrimed for UiInputPrimer {
 mod tests {
 	use super::*;
 	use test_case::test_case;
+
+	#[test]
+	fn get_input_none() {
+		let input = UiInputPrimer {
+			key: UserInput::from(KeyCode::ArrowLeft),
+			state: UiInputState::None,
+		};
+
+		assert_eq!(Input::None, Input::from(&input));
+	}
+
+	#[test]
+	fn get_input_just_pressed() {
+		let input = UiInputPrimer {
+			key: UserInput::from(KeyCode::ArrowLeft),
+			state: UiInputState::JustPressed,
+		};
+
+		assert_eq!(
+			Input::JustPressed(UserInput::from(KeyCode::ArrowLeft)),
+			Input::from(&input),
+		);
+	}
+
+	#[test]
+	fn get_input_just_released() {
+		let input = UiInputPrimer {
+			key: UserInput::from(KeyCode::ArrowLeft),
+			state: UiInputState::JustReleased,
+		};
+
+		assert_eq!(
+			Input::JustReleased(UserInput::from(KeyCode::ArrowLeft)),
+			Input::from(&input),
+		);
+	}
 
 	#[test]
 	fn definition_for_none() {

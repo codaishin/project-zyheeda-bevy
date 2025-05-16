@@ -23,7 +23,7 @@ use components::{
 use labels::Labels;
 use systems::{
 	load_asset_model::load_asset_model,
-	ui_input_primer::set_input_state::SetInputState,
+	ui_input_primer::{apply_input::ApplyInput, set_input_state::SetInputState},
 };
 use tools::action_key::user_input::UserInput;
 
@@ -57,6 +57,7 @@ impl Plugin for CommonPlugin {
 					UserInput::clear,
 					UserInput::collect::<KeyCode, UiInputPrimer>,
 					UserInput::collect::<MouseButton, UiInputPrimer>,
+					UiInputPrimer::apply_input,
 				)
 					.chain()
 					.in_set(UserInput::SYSTEM)
