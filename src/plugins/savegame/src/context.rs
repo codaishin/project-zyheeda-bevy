@@ -107,10 +107,7 @@ impl BufferComponents for SaveContext {
 		let errors = self
 			.handlers
 			.iter()
-			.filter_map(|handler| match handler(&mut self.buffer, entity) {
-				Ok(()) => None,
-				Err(err) => Some(err),
-			})
+			.filter_map(|handler| handler(&mut self.buffer, entity).err())
 			.collect::<Vec<_>>();
 
 		match errors.as_slice() {

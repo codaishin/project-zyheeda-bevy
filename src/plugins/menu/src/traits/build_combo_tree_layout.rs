@@ -101,7 +101,7 @@ fn adjust_connections<TSkill>(
 		return;
 	}
 
-	if let Some((preceding_index, preceding)) = current_layout.iter_mut().enumerate().last() {
+	if let Some((preceding_index, preceding)) = current_layout.iter_mut().enumerate().next_back() {
 		*preceding = ComboTreeElement::Symbol(Symbol::Empty);
 		replace_symbols_at(layouts, preceding_index, Symbol::Line, Symbol::Empty);
 	};
