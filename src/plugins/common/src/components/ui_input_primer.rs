@@ -18,11 +18,52 @@ pub struct UiInputPrimer {
 	pub(crate) state: UiInputState,
 }
 
-impl UiInputPrimer {
-	pub fn new(key: UserInput) -> Self {
+impl From<UserInput> for UiInputPrimer {
+	fn from(key: UserInput) -> Self {
 		Self {
 			key,
-			state: UiInputState::default(),
+			state: UiInputState::None,
+		}
+	}
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub struct IsPrimed(pub bool);
+
+impl From<&UiInputPrimer> for IsPrimed {
+	fn from(UiInputPrimer { state, .. }: &UiInputPrimer) -> Self {
+		if state == &UiInputState::Primed {
+			return Self(true);
+		}
+
+		Self(false)
+	}
+}
+
+impl From<UiInputPrimer> for IsPrimed {
+	fn from(value: UiInputPrimer) -> Self {
+		Self::from(&value)
+	}
+}
+
+impl From<&UiInputPrimer> for UserInput {
+	fn from(UiInputPrimer { key, .. }: &UiInputPrimer) -> Self {
+		*key
+	}
+}
+
+impl From<UiInputPrimer> for UserInput {
+	fn from(value: UiInputPrimer) -> Self {
+		Self::from(&value)
+	}
+}
+
+impl From<&UiInputPrimer> for Input {
+	fn from(primer: &UiInputPrimer) -> Self {
+		match primer.state {
+			UiInputState::JustPressed => Input::JustPressed(primer.key),
+			UiInputState::JustReleased => Input::JustReleased(primer.key),
+			_ => Input::None,
 		}
 	}
 }
@@ -56,16 +97,6 @@ pub(crate) enum Input {
 	None,
 	JustPressed(UserInput),
 	JustReleased(UserInput),
-}
-
-impl From<&UiInputPrimer> for Input {
-	fn from(primer: &UiInputPrimer) -> Self {
-		match primer.state {
-			UiInputState::JustPressed => Input::JustPressed(primer.key),
-			UiInputState::JustReleased => Input::JustReleased(primer.key),
-			_ => Input::None,
-		}
-	}
 }
 
 pub(crate) trait UiInputStateTransition: Sized {
@@ -102,23 +133,17 @@ impl UiInputStateTransition for UiInputPrimer {
 	}
 }
 
-pub(crate) trait IsKey {
-	fn is_key(&self, key: &UserInput) -> bool;
+pub(crate) trait KeyPrimed {
+	fn key_primed(&self, key: &UserInput) -> bool;
 }
 
-impl IsKey for UiInputPrimer {
-	fn is_key(&self, key: &UserInput) -> bool {
-		&self.key == key
-	}
-}
-
-pub(crate) trait IsPrimed {
-	fn is_primed(&self) -> bool;
-}
-
-impl IsPrimed for UiInputPrimer {
-	fn is_primed(&self) -> bool {
-		matches!(self.state, UiInputState::Primed { .. })
+impl KeyPrimed for UiInputPrimer {
+	fn key_primed(&self, key: &UserInput) -> bool {
+		match self.state {
+			UiInputState::Primed => key == &self.key || key == &UserInput::from(MouseButton::Left),
+			UiInputState::JustPressed => key == &UserInput::from(MouseButton::Left),
+			_ => false,
+		}
 	}
 }
 
@@ -126,6 +151,39 @@ impl IsPrimed for UiInputPrimer {
 mod tests {
 	use super::*;
 	use test_case::test_case;
+
+	#[test]
+	fn get_is_primed_true() {
+		let input = UiInputPrimer {
+			key: UserInput::from(KeyCode::ArrowLeft),
+			state: UiInputState::Primed,
+		};
+
+		assert_eq!(IsPrimed(true), IsPrimed::from(input))
+	}
+
+	#[test_case(UiInputState::None; "none")]
+	#[test_case(UiInputState::JustPressed; "just pressed")]
+	#[test_case(UiInputState::Pressed; "pressed")]
+	#[test_case(UiInputState::JustReleased; "just released")]
+	fn get_is_primed_false(state: UiInputState) {
+		let input = UiInputPrimer {
+			key: UserInput::from(KeyCode::ArrowLeft),
+			state,
+		};
+
+		assert_eq!(IsPrimed(false), IsPrimed::from(input))
+	}
+
+	#[test]
+	fn get_user_input() {
+		let input = UiInputPrimer {
+			key: UserInput::from(KeyCode::ArrowLeft),
+			state: UiInputState::Primed,
+		};
+
+		assert_eq!(UserInput::from(KeyCode::ArrowLeft), UserInput::from(input))
+	}
 
 	#[test]
 	fn get_input_none() {
@@ -299,20 +357,33 @@ mod tests {
 			state,
 		};
 
-		assert_eq!(is_primed, input.is_primed());
+		assert_eq!(is_primed, input.key_primed(&UserInput::from(KeyCode::KeyA)));
 	}
 
 	#[test]
-	fn is_key_when_matching() {
-		let input = UiInputPrimer::new(UserInput::from(KeyCode::KeyA));
+	fn is_not_primed_for_different_key() {
+		let input = UiInputPrimer::from(UserInput::from(KeyCode::KeyA));
 
-		assert!(input.is_key(&UserInput::from(KeyCode::KeyA)));
+		assert!(!input.key_primed(&UserInput::from(KeyCode::KeyB)));
 	}
 
 	#[test]
-	fn is_not_key_when_not_matching() {
-		let input = UiInputPrimer::new(UserInput::from(KeyCode::KeyB));
+	fn is_primed_for_left_mouse_when_primed() {
+		let input = UiInputPrimer {
+			key: UserInput::from(KeyCode::KeyA),
+			state: UiInputState::Primed,
+		};
 
-		assert!(!input.is_key(&UserInput::from(KeyCode::KeyA)));
+		assert!(input.key_primed(&UserInput::from(MouseButton::Left)));
+	}
+
+	#[test]
+	fn is_primed_for_left_mouse_when_just_pressed() {
+		let input = UiInputPrimer {
+			key: UserInput::from(KeyCode::KeyA),
+			state: UiInputState::JustPressed,
+		};
+
+		assert!(input.key_primed(&UserInput::from(MouseButton::Left)));
 	}
 }
