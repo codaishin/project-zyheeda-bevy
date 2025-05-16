@@ -8,7 +8,6 @@ use bevy_rapier3d::plugin::RapierContext;
 use common::{
 	attributes::health::Health,
 	effects::deal_damage::DealDamage,
-	states::mouse_context::MouseContext,
 	tools::action_key::{movement::MovementKey, slot::SlotKey},
 	traits::{
 		animation::RegisterAnimations,
@@ -95,8 +94,7 @@ where
 		TAnimation::register_animations::<Player>(app);
 		TPrefabs::with_dependency::<(TInteractions, TLights)>().register_prefab::<Player>(app);
 
-		app.init_state::<MouseContext>()
-			.init_resource::<CamRay>()
+		app.init_resource::<CamRay>()
 			.add_systems(
 				First,
 				(

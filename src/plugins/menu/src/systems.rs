@@ -6,7 +6,6 @@ pub(crate) mod dropdown;
 pub(crate) mod icon;
 pub(crate) mod image_color;
 pub(crate) mod menus_unchangeable_when_present;
-pub(crate) mod mouse_context;
 pub(crate) mod on_release_set;
 pub(crate) mod rebind;
 pub(crate) mod render_ui;

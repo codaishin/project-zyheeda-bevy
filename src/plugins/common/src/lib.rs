@@ -20,8 +20,11 @@ use components::{
 	spawn_children::SpawnChildren,
 };
 use labels::Labels;
-use systems::load_asset_model::load_asset_model;
-use tools::action_key::user_input::UserInput;
+use systems::{
+	collect_user_input::collect_user_input_systems::CollectUserInputSystems,
+	load_asset_model::load_asset_model,
+	ui_input_primer::{apply_input::ApplyInput, set_input_state::SetInputState},
+};
 
 pub struct CommonPlugin;
 
@@ -45,17 +48,6 @@ impl Plugin for CommonPlugin {
 			// Handling `ObjectId`s (mapping `Entity`s for persistent object references)
 			.add_systems(on_instantiate(), ObjectId::update_entity)
 			// Collect user inputs
-			.init_resource::<ButtonInput<UserInput>>()
-			.add_systems(
-				PreUpdate,
-				(
-					UserInput::clear,
-					UserInput::collect::<KeyCode>,
-					UserInput::collect::<MouseButton>,
-				)
-					.chain()
-					.in_set(UserInput::SYSTEM)
-					.after(bevy::input::InputSystem),
-			);
+			.collect_user_input();
 	}
 }

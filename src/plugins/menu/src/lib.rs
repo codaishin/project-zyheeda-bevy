@@ -18,6 +18,7 @@ use crate::systems::{
 };
 use bevy::prelude::*;
 use common::{
+	components::ui_input_primer::UiInputPrimer,
 	resources::Shared,
 	states::{
 		game_state::{GameState, LoadingEssentialAssets, LoadingGame},
@@ -100,7 +101,6 @@ use systems::{
 	dropdown::select_successor_key::select_successor_key,
 	image_color::image_color,
 	menus_unchangeable_when_present::MenusUnchangeableWhenPresent,
-	mouse_context::{prime::prime_mouse_context, set_ui::set_ui_mouse_context},
 	on_release_set::OnReleaseSet,
 	render_ui::RenderUi,
 	set_key_bindings::SetKeyBindings,
@@ -201,9 +201,8 @@ where
 			.add_systems(
 				Update,
 				(
+					QuickbarPanel::add_quickbar_primer::<TSettings::TKeyMap<SlotKey>>,
 					panel_colors::<QuickbarPanel>,
-					set_ui_mouse_context,
-					prime_mouse_context::<TSettings::TKeyMap<SlotKey>, QuickbarPanel>,
 				)
 					.run_if(in_state(play)),
 			);
@@ -342,6 +341,7 @@ where
 				panel_activity_colors_override::<
 					TSettings::TKeyMap<SlotKey>,
 					QuickbarPanel,
+					UiInputPrimer,
 					EquipmentInfo<TContainer>,
 				>,
 			)

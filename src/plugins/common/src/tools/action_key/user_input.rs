@@ -3,10 +3,17 @@ use crate::traits::handles_localization::Token;
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
+#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub struct UserInputSystem;
+
 #[derive(TypePath, Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
 pub enum UserInput {
 	KeyCode(KeyCode),
 	MouseButton(MouseButton),
+}
+
+impl UserInput {
+	pub const SYSTEM: UserInputSystem = UserInputSystem;
 }
 
 impl From<UserInput> for Token {
