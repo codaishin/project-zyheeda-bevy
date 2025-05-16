@@ -10,7 +10,7 @@ use bevy_rapier3d::prelude::Velocity;
 use common::{
 	effects::deal_damage::DealDamage,
 	labels::Labels,
-	states::{game_state::GameState, mouse_context::MouseContext},
+	states::game_state::GameState,
 	systems::log::{log, log_many},
 	tools::action_key::movement::MovementKey,
 	traits::{
@@ -162,7 +162,7 @@ where
 			.add_systems(
 				Update,
 				(
-					move_via_pointer.run_if(in_state(MouseContext::Default)),
+					move_via_pointer,
 					update_delta.pipe(move_via_direction).pipe(log),
 					get_faces.pipe(execute_face::<TPlayers::TMouseHover, TPlayers::TCamRay>),
 				)

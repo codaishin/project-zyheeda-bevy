@@ -4,7 +4,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	states::mouse_context::MouseContext,
+	components::ui_input_primer::IsPrimed,
 	tools::{
 		action_key::{slot::SlotKey, user_input::UserInput},
 		skill_execution::SkillExecution,
@@ -13,50 +13,46 @@ use common::{
 		accessors::get::{GetFieldRef, GetterRef},
 		handles_loadout_menu::GetItem,
 		inspect_able::{InspectAble, InspectField},
-		key_mappings::TryGetAction,
+		key_mappings::GetInput,
 	},
 };
 
-pub fn panel_activity_colors_override<TMap, TPanel, TContainer>(
+pub fn panel_activity_colors_override<TMap, TPanel, TPrimer, TContainer>(
 	mut commands: Commands,
-	mut buttons: Query<(Entity, &mut BackgroundColor, &TPanel)>,
-	key_map: Res<TMap>,
+	mut buttons: Query<(Entity, &mut BackgroundColor, &TPanel, &TPrimer)>,
+	map: Res<TMap>,
 	container: Res<TContainer>,
-	mouse_context: Res<State<MouseContext>>,
 ) where
-	TMap: Resource + TryGetAction<UserInput, SlotKey>,
+	TMap: Resource + GetInput<SlotKey, UserInput>,
 	TContainer: Resource + GetItem<SlotKey>,
 	TContainer::TItem: InspectAble<SkillExecution>,
 	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor + GetterRef<SlotKey> + Component,
+	TPrimer: Component,
+	for<'a> &'a TPrimer: Into<IsPrimed> + Into<UserInput>,
 {
-	let primed_slot = match mouse_context.get() {
-		MouseContext::Primed(key) => key_map.try_get_action(*key),
-		_ => None,
-	};
-
-	for (entity, background_color, panel) in &mut buttons {
+	for (entity, background_color, panel, primer) in &mut buttons {
 		let Some(entity) = commands.get_entity(entity) else {
 			continue;
 		};
-		let color = get_color_override::<TPanel, TContainer>(
-			&container,
-			primed_slot,
-			SlotKey::get_field_ref(panel),
-		);
+		let color = get_color_override(container.as_ref(), map.as_ref(), panel, primer);
 		update_color_override(color, entity, background_color);
 	}
 }
 
-fn get_color_override<TPanel, TContainer>(
+fn get_color_override<TContainer, TMap, TPanel, TPrimer>(
 	container: &TContainer,
-	primed_slot: Option<SlotKey>,
-	panel_key: &SlotKey,
+	map: &TMap,
+	panel: &TPanel,
+	primer: &TPrimer,
 ) -> Option<Color>
 where
-	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor,
+	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor + GetterRef<SlotKey>,
 	TContainer: GetItem<SlotKey>,
 	TContainer::TItem: InspectAble<SkillExecution>,
+	TMap: GetInput<SlotKey, UserInput>,
+	for<'a> &'a TPrimer: Into<IsPrimed> + Into<UserInput>,
 {
+	let panel_key = SlotKey::get_field_ref(panel);
 	let state = container
 		.get_item(*panel_key)
 		.map(SkillExecution::inspect_field)
@@ -71,7 +67,9 @@ where
 		return Some(TPanel::QUEUED_COLOR);
 	}
 
-	if &primed_slot? == panel_key {
+	let IsPrimed(primer_is_primed) = primer.into();
+	let primer_key: UserInput = primer.into();
+	if primer_is_primed && map.get_input(*panel_key) == primer_key {
 		return Some(TPanel::PANEL_COLORS.pressed);
 	}
 
@@ -99,8 +97,33 @@ mod tests {
 	use super::*;
 	use crate::traits::colors::PanelColors;
 	use bevy::state::app::StatesPlugin;
-	use common::{test_tools::utils::SingleThreadedApp, tools::action_key::slot::Side};
+	use common::{
+		components::ui_input_primer::IsPrimed,
+		test_tools::utils::SingleThreadedApp,
+		tools::action_key::slot::Side,
+		traits::nested_mock::NestedMocks,
+	};
+	use macros::NestedMocks;
+	use mockall::{automock, predicate::eq};
 	use std::collections::HashMap;
+
+	#[derive(Component)]
+	struct _Primer {
+		key: UserInput,
+		is_primed: IsPrimed,
+	}
+
+	impl From<&_Primer> for UserInput {
+		fn from(_Primer { key, .. }: &_Primer) -> Self {
+			*key
+		}
+	}
+
+	impl From<&_Primer> for IsPrimed {
+		fn from(_Primer { is_primed, .. }: &_Primer) -> Self {
+			*is_primed
+		}
+	}
 
 	#[derive(Component)]
 	struct _Panel(pub SlotKey);
@@ -129,18 +152,24 @@ mod tests {
 		}
 	}
 
-	#[derive(Resource)]
-	enum _Map {
-		None,
-		Map(UserInput, SlotKey),
+	#[derive(Resource, NestedMocks)]
+	struct _Map {
+		mock: Mock_Map,
 	}
 
-	impl TryGetAction<UserInput, SlotKey> for _Map {
-		fn try_get_action(&self, value: UserInput) -> Option<SlotKey> {
-			match self {
-				_Map::Map(key, slot) if key == &value => Some(*slot),
-				_ => None,
-			}
+	impl Default for _Map {
+		fn default() -> Self {
+			Self::new().with_mock(|mock| {
+				mock.expect_get_input()
+					.return_const(UserInput::from(KeyCode::KeyA));
+			})
+		}
+	}
+
+	#[automock]
+	impl GetInput<SlotKey, UserInput> for _Map {
+		fn get_input(&self, value: SlotKey) -> UserInput {
+			self.mock.get_input(value)
 		}
 	}
 
@@ -174,10 +203,9 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			panel_activity_colors_override::<_Map, _Panel, _Cache>,
+			panel_activity_colors_override::<_Map, _Panel, _Primer, _Cache>,
 		);
 		app.add_plugins(StatesPlugin);
-		app.init_state::<MouseContext>();
 		app.insert_resource(key_map);
 		app.insert_resource(cache);
 
@@ -187,7 +215,7 @@ mod tests {
 	#[test]
 	fn set_to_active_when_matching_skill_active() {
 		let mut app = setup(
-			_Map::None,
+			_Map::default(),
 			_Cache::from([(
 				SlotKey::BottomHand(Side::Right),
 				_Item(SkillExecution::Active),
@@ -197,6 +225,10 @@ mod tests {
 			.world_mut()
 			.spawn((
 				BackgroundColor::from(Color::NONE),
+				_Primer {
+					key: UserInput::from(KeyCode::KeyA),
+					is_primed: IsPrimed(false),
+				},
 				_Panel(SlotKey::BottomHand(Side::Right)),
 			))
 			.id();
@@ -213,11 +245,15 @@ mod tests {
 
 	#[test]
 	fn no_override_when_no_matching_skill_active() {
-		let mut app = setup(_Map::None, _Cache::from([]));
+		let mut app = setup(_Map::default(), _Cache::from([]));
 		let panel = app
 			.world_mut()
 			.spawn((
 				BackgroundColor::from(Color::NONE),
+				_Primer {
+					key: UserInput::from(KeyCode::KeyA),
+					is_primed: IsPrimed(false),
+				},
 				_Panel(SlotKey::BottomHand(Side::Right)),
 			))
 			.id();
@@ -235,7 +271,7 @@ mod tests {
 	#[test]
 	fn no_override_when_no_skill_not_active() {
 		let mut app = setup(
-			_Map::None,
+			_Map::default(),
 			_Cache::from([(
 				SlotKey::BottomHand(Side::Right),
 				_Item(SkillExecution::None),
@@ -245,6 +281,10 @@ mod tests {
 			.world_mut()
 			.spawn((
 				BackgroundColor::from(Color::NONE),
+				_Primer {
+					key: UserInput::from(KeyCode::KeyA),
+					is_primed: IsPrimed(false),
+				},
 				_Panel(SlotKey::BottomHand(Side::Right)),
 			))
 			.id();
@@ -260,26 +300,28 @@ mod tests {
 	}
 
 	#[test]
-	fn set_to_pressed_when_matching_key_primed_in_mouse_context() {
+	fn set_to_pressed_when_matching_key_primed() {
 		let mut app = setup(
-			_Map::Map(
-				UserInput::from(KeyCode::KeyQ),
-				SlotKey::BottomHand(Side::Right),
-			),
+			_Map::new().with_mock(|mock| {
+				mock.expect_get_input()
+					.times(1)
+					.with(eq(SlotKey::BottomHand(Side::Right)))
+					.return_const(UserInput::from(KeyCode::KeyQ));
+			}),
 			_Cache::from([]),
 		);
 		let panel = app
 			.world_mut()
 			.spawn((
 				BackgroundColor::from(Color::NONE),
+				_Primer {
+					key: UserInput::from(KeyCode::KeyQ),
+					is_primed: IsPrimed(true),
+				},
 				_Panel(SlotKey::BottomHand(Side::Right)),
 			))
 			.id();
 
-		app.world_mut()
-			.resource_mut::<NextState<MouseContext>>()
-			.set(MouseContext::Primed(UserInput::from(KeyCode::KeyQ)));
-		app.update();
 		app.update();
 
 		let panel = app.world().entity(panel);
@@ -293,7 +335,7 @@ mod tests {
 	#[test]
 	fn set_to_queued_when_matching_with_queued_skill() {
 		let mut app = setup(
-			_Map::None,
+			_Map::default(),
 			_Cache::from([(
 				SlotKey::BottomHand(Side::Right),
 				_Item(SkillExecution::Queued),
@@ -303,6 +345,10 @@ mod tests {
 			.world_mut()
 			.spawn((
 				BackgroundColor::from(Color::NONE),
+				_Primer {
+					key: UserInput::from(KeyCode::KeyA),
+					is_primed: IsPrimed(false),
+				},
 				_Panel(SlotKey::BottomHand(Side::Right)),
 			))
 			.id();

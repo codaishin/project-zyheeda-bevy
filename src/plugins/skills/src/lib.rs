@@ -12,10 +12,7 @@ mod tools;
 use bevy::prelude::*;
 use bundles::{ComboBundle, Loadout};
 use common::{
-	states::{
-		game_state::{GameState, LoadingGame},
-		mouse_context::MouseContext,
-	},
+	states::game_state::{GameState, LoadingGame},
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
 	tools::action_key::{
 		slot::{Side, SlotKey},
@@ -65,11 +62,6 @@ use systems::{
 	flush_skill_combos::flush_skill_combos,
 	get_inputs::get_inputs,
 	loadout_descriptor::LoadoutDescriptor,
-	mouse_context::{
-		advance::{advance_just_released_mouse_context, advance_just_triggered_mouse_context},
-		release::release_triggered_mouse_context,
-		trigger_primed::trigger_primed_mouse_context,
-	},
 	quickbar_descriptor::get_quickbar_descriptors_for,
 };
 use tools::combo_descriptor::ComboDescriptor;
@@ -156,11 +148,7 @@ where
 		app.add_systems(
 			Update,
 			(
-				get_inputs::<
-					TSettings::TKeyMap<SlotKey>,
-					ButtonInput<UserInput>,
-					State<MouseContext>,
-				>
+				get_inputs::<TSettings::TKeyMap<SlotKey>, ButtonInput<UserInput>>
 					.pipe(enqueue::<Slots, Queue, QueuedSkill>),
 				Combos::update::<Queue>,
 				flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
@@ -170,15 +158,6 @@ where
 			)
 				.chain()
 				.run_if(in_state(GameState::Play)),
-		)
-		.add_systems(
-			Update,
-			(
-				trigger_primed_mouse_context,
-				advance_just_triggered_mouse_context,
-				release_triggered_mouse_context,
-				advance_just_released_mouse_context,
-			),
 		);
 	}
 
