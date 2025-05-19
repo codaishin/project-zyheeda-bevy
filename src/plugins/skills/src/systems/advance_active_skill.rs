@@ -2,7 +2,10 @@ use crate::{
 	skills::{AnimationStrategy, RunSkillBehavior, SkillState},
 	traits::{Flush, GetActiveSkill, GetAnimationStrategy, GetSkillBehavior, Schedule},
 };
-use bevy::{ecs::system::EntityCommands, prelude::*};
+use bevy::{
+	ecs::{component::Mutable, system::EntityCommands},
+	prelude::*,
+};
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
@@ -30,10 +33,10 @@ type Components<'a, TGetSkill, TSkillExecutor> = (
 );
 
 pub(crate) fn advance_active_skill<
-	TGetSkill: GetActiveSkill<SkillState> + Component,
+	TGetSkill: GetActiveSkill<SkillState> + Component<Mutability = Mutable>,
 	TPlayerAnimations: ConfiguresPlayerSkillAnimations,
 	TOrientation: HandlesOrientation,
-	TSkillExecutor: Component + Schedule<RunSkillBehavior> + Flush,
+	TSkillExecutor: Component<Mutability = Mutable> + Schedule<RunSkillBehavior> + Flush,
 	TTime: Send + Sync + Default + 'static,
 >(
 	time: Res<Time<TTime>>,
@@ -43,7 +46,7 @@ pub(crate) fn advance_active_skill<
 	let delta = time.delta();
 
 	for (entity, mut dequeue, skill_executer, cleared) in &mut agents {
-		let Some(agent) = commands.get_entity(entity) else {
+		let Ok(agent) = commands.get_entity(entity) else {
 			continue;
 		};
 		let advancement = match dequeue.get_active() {

@@ -8,8 +8,8 @@ use common::{
 #[derive(Component, Debug, PartialEq)]
 #[require(
 	Transform,
-	BlockerInsertCommand(Self::blocker),
-	Collider(Self::collider),
+	BlockerInsertCommand = Self::blocker(),
+	Collider = Self::collider(),
 	NoTarget
 )]
 pub(crate) struct WallCell;

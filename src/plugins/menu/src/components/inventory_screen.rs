@@ -3,7 +3,7 @@ use crate::{
 	tools::PanelState,
 	traits::{LoadUi, colors::HasPanelColors, insert_ui_content::InsertUiContent},
 };
-use bevy::prelude::*;
+use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{
 	tools::{action_key::slot::SlotKey, inventory_key::InventoryKey},
 	traits::{
@@ -27,7 +27,7 @@ impl InsertUiContent for InventoryScreen {
 	fn insert_ui_content<TLocalization>(
 		&self,
 		localize: &mut TLocalization,
-		parent: &mut ChildBuilder,
+		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
 		TLocalization: LocalizeToken,
 	{
@@ -42,7 +42,9 @@ impl InsertUiContent for InventoryScreen {
 	}
 }
 
-fn add_inventory<TLocalization>(localize: &mut TLocalization) -> impl FnMut(&mut ChildBuilder)
+fn add_inventory<TLocalization>(
+	localize: &mut TLocalization,
+) -> impl FnMut(&mut RelatedSpawnerCommands<ChildOf>)
 where
 	TLocalization: LocalizeToken,
 {
@@ -71,7 +73,9 @@ where
 	}
 }
 
-fn add_equipment<TLocalization>(localize: &mut TLocalization) -> impl FnMut(&mut ChildBuilder)
+fn add_equipment<TLocalization>(
+	localize: &mut TLocalization,
+) -> impl FnMut(&mut RelatedSpawnerCommands<ChildOf>)
 where
 	TLocalization: LocalizeToken,
 {
@@ -101,7 +105,7 @@ where
 	}
 }
 
-fn add_title(parent: &mut ChildBuilder, title: Localized) {
+fn add_title(parent: &mut RelatedSpawnerCommands<ChildOf>, title: Localized) {
 	parent
 		.spawn(Node {
 			flex_direction: FlexDirection::Row,
@@ -121,7 +125,7 @@ fn add_title(parent: &mut ChildBuilder, title: Localized) {
 }
 
 fn add_grid<TKey, TLocalization>(
-	parent: &mut ChildBuilder,
+	parent: &mut RelatedSpawnerCommands<ChildOf>,
 	grid_label: Localized,
 	element_count_x: u32,
 	element_count_y: u32,

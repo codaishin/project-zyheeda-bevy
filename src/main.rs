@@ -133,7 +133,7 @@ fn prepare_game(app: &mut App) {
 #[cfg(debug_assertions)]
 pub mod debug_utils {
 	use super::*;
-	use bevy_inspector_egui::quick::WorldInspectorPlugin;
+	use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
 	use common::tools::action_key::user_input::UserInput;
 	use interactions::events::{InteractionEvent, Ray};
 	use std::ops::Not;
@@ -142,6 +142,9 @@ pub mod debug_utils {
 
 	pub fn prepare_debug(app: &mut App) {
 		app.insert_resource(ShowGizmos::No)
+			.add_plugins(EguiPlugin {
+				enable_multipass_for_primary_context: true,
+			})
 			.add_plugins(WorldInspectorPlugin::new())
 			.add_plugins(RapierDebugRenderPlugin::default())
 			.add_systems(Update, toggle_gizmos)

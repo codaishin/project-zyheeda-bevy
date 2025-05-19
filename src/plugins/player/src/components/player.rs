@@ -39,17 +39,17 @@ use std::collections::HashMap;
 
 #[derive(Component, Default, Debug, PartialEq)]
 #[require(
-	PlayerMovement(Player::movement),
+	PlayerMovement = Player::movement(),
 	Transform,
 	Visibility,
-	Name(Self::name),
-	AssetModel(Self::model),
-	FlipHorizontally(Self::flip_metarig),
-	GroundOffset(Self::offset),
-	BlockerInsertCommand(Self::blocker),
-	RigidBody(Self::rigid_body),
-	LockedAxes(Self::locked_axes),
-	GravityScale(Self::gravity_scale)
+	Name = Self::name(),
+	AssetModel = Self::model(),
+	FlipHorizontally = Self::flip_metarig(),
+	GroundOffset = Self::offset(),
+	BlockerInsertCommand = Self::blocker(),
+	RigidBody = Self::rigid_body(),
+	LockedAxes = Self::locked_axes(),
+	GravityScale = Self::gravity_scale(),
 )]
 pub struct Player;
 

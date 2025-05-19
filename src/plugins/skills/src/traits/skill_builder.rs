@@ -78,7 +78,7 @@ where
 		};
 		let projection = commands
 			.spawn(self.build_projection::<TSkillBehaviors>(caster, spawner, target))
-			.set_parent(contact)
+			.insert(ChildOf(contact))
 			.id();
 
 		SkillShape {
@@ -276,7 +276,7 @@ mod tests {
 
 		let shape = app
 			.world_mut()
-			.run_system_once_with((skill, caster, spawner, target), build_skill)?;
+			.run_system_once_with(build_skill, (skill, caster, spawner, target))?;
 
 		assert_eq!(
 			Some(&_Contact),
@@ -308,7 +308,7 @@ mod tests {
 
 		let shape = app
 			.world_mut()
-			.run_system_once_with((skill, caster, spawner, target), build_skill)?;
+			.run_system_once_with(build_skill, (skill, caster, spawner, target))?;
 
 		assert_eq!(
 			Some(&_Projection),
@@ -338,14 +338,14 @@ mod tests {
 
 		let shape = app
 			.world_mut()
-			.run_system_once_with((skill, caster, spawner, target), build_skill)?;
+			.run_system_once_with(build_skill, (skill, caster, spawner, target))?;
 
 		assert_eq!(
 			Some(shape.contact),
 			app.world()
 				.entity(shape.projection)
-				.get::<Parent>()
-				.map(Parent::get)
+				.get::<ChildOf>()
+				.map(ChildOf::parent)
 		);
 		Ok(())
 	}
@@ -371,7 +371,7 @@ mod tests {
 
 		let shape = app
 			.world_mut()
-			.run_system_once_with((skill, caster, spawner, target), build_skill)?;
+			.run_system_once_with(build_skill, (skill, caster, spawner, target))?;
 
 		assert_eq!(OnSkillStop::Stop(shape.contact), shape.on_skill_stop);
 		Ok(())
@@ -398,7 +398,7 @@ mod tests {
 
 		let shape = app
 			.world_mut()
-			.run_system_once_with((skill, caster, spawner, target), build_skill)?;
+			.run_system_once_with(build_skill, (skill, caster, spawner, target))?;
 
 		assert_eq!(OnSkillStop::Ignore, shape.on_skill_stop);
 		Ok(())
@@ -425,7 +425,7 @@ mod tests {
 
 		let shape = app
 			.world_mut()
-			.run_system_once_with((skill, caster, spawner, target), build_skill)?;
+			.run_system_once_with(build_skill, (skill, caster, spawner, target))?;
 
 		assert_eq!(
 			Some(&_Lifetime(Duration::from_nanos(42))),
@@ -455,7 +455,7 @@ mod tests {
 
 		let shape = app
 			.world_mut()
-			.run_system_once_with((skill, caster, spawner, target), build_skill)?;
+			.run_system_once_with(build_skill, (skill, caster, spawner, target))?;
 
 		assert_eq!(OnSkillStop::Ignore, shape.on_skill_stop);
 		Ok(())

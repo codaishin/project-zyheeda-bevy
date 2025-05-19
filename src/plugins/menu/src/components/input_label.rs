@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 #[derive(Component, Debug, PartialEq)]
-#[require(Node(Self::node), TextFont(Self::text_font))]
+#[require(Node = Self::node(), TextFont = Self::text_font())]
 pub struct InputLabel<TKey> {
 	pub key: TKey,
 }

@@ -132,7 +132,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(Duration::from_secs(1), apply_gravity_pull)?;
+			.run_system_once_with(apply_gravity_pull, Duration::from_secs(1))?;
 
 		let agent = app.world().entity(agent);
 		assert_eq!(
@@ -167,7 +167,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(Duration::from_secs(1), apply_gravity_pull)?;
+			.run_system_once_with(apply_gravity_pull, Duration::from_secs(1))?;
 
 		let agent = app.world().entity(agent);
 		assert_eq!(
@@ -213,7 +213,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(Duration::from_secs(1), apply_gravity_pull)?;
+			.run_system_once_with(apply_gravity_pull, Duration::from_secs(1))?;
 
 		let agent = app.world().entity(agent);
 		assert_eq!(
@@ -238,7 +238,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(Duration::from_secs(1), apply_gravity_pull)?;
+			.run_system_once_with(apply_gravity_pull, Duration::from_secs(1))?;
 
 		let agent = app.world().entity(agent);
 		assert_eq!(
@@ -281,7 +281,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(Duration::from_secs(1), apply_gravity_pull)?;
+			.run_system_once_with(apply_gravity_pull, Duration::from_secs(1))?;
 
 		let agent = app.world().entity(agent);
 		assert_eq!(
@@ -304,7 +304,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(Duration::from_secs(1), apply_gravity_pull)?;
+			.run_system_once_with(apply_gravity_pull, Duration::from_secs(1))?;
 
 		let agent = app.world().entity(agent);
 		assert_eq!(None, agent.get::<Immobilized>());
@@ -334,7 +334,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(delta, apply_gravity_pull)?;
+			.run_system_once_with(apply_gravity_pull, delta)?;
 
 		let agent = app.world().entity(agent);
 		assert_eq!(
@@ -371,7 +371,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(Duration::from_millis(499), apply_gravity_pull)?;
+			.run_system_once_with(apply_gravity_pull, Duration::from_millis(499))?;
 
 		let agent = app.world().entity(agent);
 		assert_eq!(

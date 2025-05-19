@@ -13,14 +13,14 @@ pub(crate) fn send_interaction_events<TTracker>(
 	TTracker: Resource + Track<InteractionEvent> + Flush<TResult = Vec<InteractionEvent>>,
 {
 	for (ray, collisions) in interactions.into_iter() {
-		ray_events.send(ray);
+		ray_events.write(ray);
 		for collision in collisions.into_iter() {
 			if tracker.track(&collision) == TrackState::Changed {
-				interaction_events.send(collision);
+				interaction_events.write(collision);
 			}
 		}
 	}
-	interaction_events.send_batch(tracker.flush());
+	interaction_events.write_batch(tracker.flush());
 }
 
 #[cfg(test)]
@@ -83,7 +83,7 @@ mod tests {
 		}));
 
 		app.world_mut()
-			.run_system_once_with(vec![], send_interaction_events::<_Tracker>)
+			.run_system_once_with(send_interaction_events::<_Tracker>, vec![])
 	}
 
 	#[test]
@@ -98,7 +98,7 @@ mod tests {
 		}));
 
 		app.world_mut()
-			.run_system_once_with(vec![], send_interaction_events::<_Tracker>)?;
+			.run_system_once_with(send_interaction_events::<_Tracker>, vec![])?;
 
 		let events = app.world().resource::<Events<InteractionEvent>>();
 		let mut cursor = events.get_cursor();
@@ -128,7 +128,7 @@ mod tests {
 		}));
 
 		app.world_mut()
-			.run_system_once_with(vec![(ray, collisions)], send_interaction_events::<_Tracker>)?;
+			.run_system_once_with(send_interaction_events::<_Tracker>, vec![(ray, collisions)])?;
 
 		let events = app.world().resource::<Events<InteractionEvent<Ray>>>();
 		let mut cursor = events.get_cursor();
@@ -170,7 +170,7 @@ mod tests {
 		}));
 
 		app.world_mut()
-			.run_system_once_with(vec![(ray, collisions)], send_interaction_events::<_Tracker>)?;
+			.run_system_once_with(send_interaction_events::<_Tracker>, vec![(ray, collisions)])?;
 
 		let events = app.world().resource::<Events<InteractionEvent>>();
 		let mut cursor = events.get_cursor();
@@ -202,6 +202,6 @@ mod tests {
 		}));
 
 		app.world_mut()
-			.run_system_once_with(vec![(ray, collisions)], send_interaction_events::<_Tracker>)
+			.run_system_once_with(send_interaction_events::<_Tracker>, vec![(ray, collisions)])
 	}
 }

@@ -79,21 +79,21 @@ mod tests {
 					id: AnimationTargetId::from_name(&Name::from("d")),
 					player,
 				})
-				.set_parent(player)
+				.insert(ChildOf(player))
 				.id(),
 			app.world_mut()
 				.spawn(AnimationTarget {
 					id: AnimationTargetId::from_name(&Name::from("e")),
 					player,
 				})
-				.set_parent(player)
+				.insert(ChildOf(player))
 				.id(),
 			app.world_mut()
 				.spawn(AnimationTarget {
 					id: AnimationTargetId::from_name(&Name::from("f")),
 					player,
 				})
-				.set_parent(player)
+				.insert(ChildOf(player))
 				.id(),
 		];
 
@@ -123,7 +123,7 @@ mod tests {
 					id: AnimationTargetId::from_name(&Name::from("d")),
 					player,
 				})
-				.set_parent(player)
+				.insert(ChildOf(player))
 				.id(),
 			app.world_mut()
 				.spawn(AnimationTarget {
@@ -140,10 +140,10 @@ mod tests {
 		];
 		app.world_mut()
 			.entity_mut(targets[1])
-			.set_parent(targets[0]);
+			.insert(ChildOf(targets[0]));
 		app.world_mut()
 			.entity_mut(targets[2])
-			.set_parent(targets[1]);
+			.insert(ChildOf(targets[1]));
 
 		app.update();
 
@@ -212,21 +212,21 @@ mod tests {
 					id: AnimationTargetId::from_name(&Name::from("d")),
 					player: other,
 				})
-				.set_parent(player)
+				.insert(ChildOf(player))
 				.id(),
 			app.world_mut()
 				.spawn(AnimationTarget {
 					id: AnimationTargetId::from_name(&Name::from("e")),
 					player: other,
 				})
-				.set_parent(player)
+				.insert(ChildOf(player))
 				.id(),
 			app.world_mut()
 				.spawn(AnimationTarget {
 					id: AnimationTargetId::from_name(&Name::from("f")),
 					player: other,
 				})
-				.set_parent(player)
+				.insert(ChildOf(player))
 				.id(),
 		];
 
@@ -279,21 +279,21 @@ mod tests {
 					id: AnimationTargetId::from_name(&Name::from("d")),
 					player,
 				})
-				.set_parent(player)
+				.insert(ChildOf(player))
 				.id(),
 			app.world_mut()
 				.spawn(AnimationTarget {
 					id: AnimationTargetId::from_name(&Name::from("e")),
 					player,
 				})
-				.set_parent(player)
+				.insert(ChildOf(player))
 				.id(),
 			app.world_mut()
 				.spawn(AnimationTarget {
 					id: AnimationTargetId::from_name(&Name::from("f")),
 					player,
 				})
-				.set_parent(player)
+				.insert(ChildOf(player))
 				.id(),
 		];
 

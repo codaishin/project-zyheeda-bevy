@@ -12,7 +12,7 @@ where
 	TAgent: Component + Prefab<TDependency>,
 {
 	let instantiate = |(entity, agent): (Entity, &TAgent)| {
-		let Some(mut entity) = commands.get_entity(entity) else {
+		let Ok(mut entity) = commands.get_entity(entity) else {
 			return Err(Error {
 				msg: format!("Cannot instantiate prefab, because {entity:?} does not exist",),
 				lvl: Level::Error,
@@ -38,9 +38,6 @@ mod tests {
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Component;
-
-	#[derive(Component)]
-	struct _Result<TAsset: Asset>(Handle<TAsset>);
 
 	impl Prefab<()> for _Agent {
 		fn instantiate_on(&self, entity: &mut EntityCommands) -> Result<(), Error> {

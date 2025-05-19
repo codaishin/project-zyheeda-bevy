@@ -1,14 +1,14 @@
 use crate::traits::update_key_bindings::UpdateKeyBindings;
-use bevy::prelude::*;
+use bevy::{ecs::component::Mutable, prelude::*};
 use common::traits::iterate::Iterate;
 
 impl<T, TKey, TKeyCode> SetKeyBindings<TKey, TKeyCode> for T where
-	T: UpdateKeyBindings<TKey, TKeyCode> + Component
+	T: UpdateKeyBindings<TKey, TKeyCode> + Component<Mutability = Mutable>
 {
 }
 
 pub(crate) trait SetKeyBindings<TKey, TKeyCode>:
-	UpdateKeyBindings<TKey, TKeyCode> + Component + Sized
+	UpdateKeyBindings<TKey, TKeyCode> + Component<Mutability = Mutable> + Sized
 {
 	fn set_key_bindings_from<TKeyMap>(map: Res<TKeyMap>, mut components: Query<&mut Self>)
 	where

@@ -4,16 +4,17 @@ use crate::{
 	skills::QueuedSkill,
 	traits::{AdvanceCombo, IterAddedMut},
 };
-use bevy::prelude::*;
+use bevy::{ecs::component::Mutable, prelude::*};
 use common::traits::accessors::get::GetRef;
 
-impl<T> ComboQueueUpdate for T {}
+impl<T> ComboQueueUpdate for T where T: Component<Mutability = Mutable> + AdvanceCombo {}
 
-pub(crate) trait ComboQueueUpdate {
+pub(crate) trait ComboQueueUpdate:
+	Component<Mutability = Mutable> + AdvanceCombo + Sized
+{
 	fn update<TQueue>(mut agents: Query<(&mut Self, &mut TQueue, &Slots)>, items: Res<Assets<Item>>)
 	where
-		Self: AdvanceCombo + Component + Sized,
-		TQueue: IterAddedMut<QueuedSkill> + Component,
+		TQueue: IterAddedMut<QueuedSkill> + Component<Mutability = Mutable>,
 	{
 		for (mut combos, mut queue, slots) in &mut agents {
 			if queue.added_none() {

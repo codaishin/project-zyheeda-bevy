@@ -10,7 +10,7 @@ use common::traits::handles_graphics::StaticRenderLayers;
 pub struct PlayerCamera;
 
 #[derive(Component, Debug, PartialEq)]
-#[require(PlayerCamera, Tonemapping(Self::new), Bloom)]
+#[require(PlayerCamera, Tonemapping = Self::new(), Bloom)]
 pub struct FirstPass {
 	_private: (),
 }
@@ -25,7 +25,7 @@ impl FirstPass {
 			FirstPass::new(),
 			Camera {
 				hdr: true,
-				target: RenderTarget::Image(handle),
+				target: RenderTarget::Image(handle.into()),
 				..default()
 			},
 		)
@@ -41,17 +41,17 @@ impl From<FirstPass> for Tonemapping {
 #[derive(Component, Debug, PartialEq, Default)]
 #[require(
 	PlayerCamera,
-	Camera(Self::default),
-	Tonemapping(Self::default),
+	Camera = Self,
+	Tonemapping = Self,
 	Bloom,
-	RenderLayers(Self::camera_render_layers)
+	RenderLayers = Self::with_default_layer(),
 )]
 pub struct SecondPass;
 
 impl SecondPass {
 	const ORDER: usize = 1;
 
-	fn camera_render_layers() -> RenderLayers {
+	fn with_default_layer() -> RenderLayers {
 		RenderLayers::from_layers(&[0, Self::ORDER])
 	}
 }
@@ -68,7 +68,7 @@ impl From<SecondPass> for Camera {
 
 impl From<SecondPass> for Tonemapping {
 	fn from(_: SecondPass) -> Self {
-		Tonemapping::TonyMcMapface
+		const { Tonemapping::TonyMcMapface }
 	}
 }
 
@@ -81,9 +81,9 @@ impl From<SecondPass> for RenderLayers {
 #[derive(Component, Debug, PartialEq, Default)]
 #[require(
 	PlayerCamera,
-	Camera(Ui::default),
-	Tonemapping(Self::default),
-	RenderLayers(Self::default)
+	Camera = Self,
+	Tonemapping = Self,
+	RenderLayers = Self,
 )]
 pub struct Ui;
 

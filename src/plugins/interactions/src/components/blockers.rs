@@ -21,7 +21,7 @@ pub(crate) trait ApplyBlockerInsertion {
 		mut blockers: Query<&mut Blockers>,
 	) {
 		for (entity, BlockerInsertCommand(values)) in &agents {
-			let Some(mut entity) = commands.get_entity(entity) else {
+			let Ok(mut entity) = commands.get_entity(entity) else {
 				continue;
 			};
 

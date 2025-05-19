@@ -14,10 +14,10 @@ pub(crate) fn remove_not_owned<TOwner: Component>(
 }
 
 fn remove(commands: &mut Commands, id: Entity) {
-	let Some(entity) = commands.get_entity(id) else {
+	let Ok(mut entity) = commands.get_entity(id) else {
 		return;
 	};
-	entity.despawn_recursive();
+	entity.despawn();
 }
 
 #[cfg(test)]
@@ -57,7 +57,7 @@ mod tests {
 			.world_mut()
 			.spawn(UiNodeFor::<_Owner>::with(owner_without_owner_component))
 			.id();
-		let child = app.world_mut().spawn_empty().set_parent(owned).id();
+		let child = app.world_mut().spawn_empty().insert(ChildOf(owned)).id();
 
 		app.update();
 

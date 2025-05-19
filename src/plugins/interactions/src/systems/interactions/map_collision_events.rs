@@ -20,7 +20,7 @@ pub(crate) fn map_collision_events_to<TEvent, TEventTracker>(
 	for collision in collisions.read() {
 		let event = TEvent::from_collision(collision, get_root);
 		if track.track(&event) == TrackState::Changed {
-			interactions.send(event);
+			interactions.write(event);
 		}
 	}
 }

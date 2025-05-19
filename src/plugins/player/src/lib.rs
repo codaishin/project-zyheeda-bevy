@@ -4,7 +4,6 @@ mod resources;
 mod systems;
 
 use bevy::prelude::*;
-use bevy_rapier3d::plugin::RapierContext;
 use common::{
 	attributes::health::Health,
 	effects::deal_damage::DealDamage,
@@ -97,11 +96,7 @@ where
 		app.init_resource::<CamRay>()
 			.add_systems(
 				First,
-				(
-					set_cam_ray::<Camera, PlayerCamera>,
-					set_mouse_hover::<RapierContext>,
-				)
-					.chain(),
+				(set_cam_ray::<Camera, PlayerCamera>, set_mouse_hover).chain(),
 			)
 			.add_systems(
 				Update,

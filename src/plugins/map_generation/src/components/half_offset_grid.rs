@@ -7,11 +7,14 @@ use crate::{
 		is_walkable::IsWalkable,
 	},
 };
-use bevy::{ecs::query::QuerySingleError, prelude::*};
+use bevy::{
+	ecs::{query::QuerySingleError, relationship::RelatedSpawnerCommands},
+	prelude::*,
+};
 use std::collections::HashMap;
 
 #[derive(Component, Debug, PartialEq)]
-#[require(Name(Self::name), Transform, Visibility)]
+#[require(Name = Self::name(), Transform, Visibility)]
 pub(crate) struct HalfOffsetGrid;
 
 impl HalfOffsetGrid {
@@ -29,12 +32,12 @@ impl HalfOffsetGrid {
 		TCell: InsertCellQuadrantComponents + IsWalkable,
 	{
 		let cells = cells.map_err(SpawnCellError::Error)?;
-		let level = grids.get_single().map_err(|error| match error {
+		let level = grids.single().map_err(|error| match error {
 			QuerySingleError::NoEntities(_) => SpawnCellError::NoGrid,
 			QuerySingleError::MultipleEntities(_) => SpawnCellError::MultipleGrids,
 		})?;
 
-		let Some(mut grid) = commands.get_entity(level) else {
+		let Ok(mut grid) = commands.get_entity(level) else {
 			return Err(SpawnCellError::EntityCommandsError); // untested, don't know how to simulate
 		};
 
@@ -52,7 +55,7 @@ impl From<GridGraph> for HalfOffsetGrid {
 
 fn spawn_children<TCell>(
 	cells: Vec<(Vec3, HalfOffsetCell<TCell>)>,
-) -> impl FnOnce(&mut ChildBuilder)
+) -> impl FnOnce(&mut RelatedSpawnerCommands<ChildOf>)
 where
 	TCell: InsertCellQuadrantComponents + IsWalkable,
 {
@@ -63,8 +66,11 @@ where
 	}
 }
 
-fn spawn_quadrant<TCell>(parent: &mut ChildBuilder, pos: Vec3, cell: HalfOffsetCell<TCell>)
-where
+fn spawn_quadrant<TCell>(
+	parent: &mut RelatedSpawnerCommands<ChildOf>,
+	pos: Vec3,
+	cell: HalfOffsetCell<TCell>,
+) where
 	TCell: InsertCellQuadrantComponents + IsWalkable,
 {
 	let quadrants = cell.quadrants();
@@ -186,7 +192,7 @@ mod tests {
 
 		let result = app
 			.world_mut()
-			.run_system_once_with(cells, HalfOffsetGrid::spawn_cells)?;
+			.run_system_once_with(HalfOffsetGrid::spawn_cells, cells)?;
 		let children = assert_count!(4, get_children!(app, grid));
 		assert_eq_unordered!(
 			[
@@ -217,7 +223,7 @@ mod tests {
 
 		let result = app
 			.world_mut()
-			.run_system_once_with(cells, HalfOffsetGrid::spawn_cells)?;
+			.run_system_once_with(HalfOffsetGrid::spawn_cells, cells)?;
 		let children = assert_count!(4, get_children!(app, grid));
 		assert_eq_unordered!(
 			[
@@ -260,7 +266,7 @@ mod tests {
 
 		let result = app
 			.world_mut()
-			.run_system_once_with(cells, HalfOffsetGrid::spawn_cells)?;
+			.run_system_once_with(HalfOffsetGrid::spawn_cells, cells)?;
 		let children = assert_count!(4, get_children!(app, grid));
 		assert_eq_unordered!(
 			[
@@ -299,7 +305,7 @@ mod tests {
 
 		let result = app
 			.world_mut()
-			.run_system_once_with(cells, HalfOffsetGrid::spawn_cells)?;
+			.run_system_once_with(HalfOffsetGrid::spawn_cells, cells)?;
 
 		assert_eq!(Err(SpawnCellError::Error(_Error)), result);
 		Ok(())
@@ -316,7 +322,7 @@ mod tests {
 
 		let result = app
 			.world_mut()
-			.run_system_once_with(cells, HalfOffsetGrid::spawn_cells)?;
+			.run_system_once_with(HalfOffsetGrid::spawn_cells, cells)?;
 
 		assert_eq!(Err(SpawnCellError::NoGrid), result);
 		Ok(())
@@ -331,7 +337,7 @@ mod tests {
 
 		let result = app
 			.world_mut()
-			.run_system_once_with(cells, HalfOffsetGrid::spawn_cells)?;
+			.run_system_once_with(HalfOffsetGrid::spawn_cells, cells)?;
 
 		assert_eq!(Err(SpawnCellError::MultipleGrids), result);
 		Ok(())

@@ -86,7 +86,7 @@ mod tests {
 
 		let entity = app
 			.world_mut()
-			.run_system_once_with((UnitsPerSecond::new(42.), EffectApplies::Once), gravity)?;
+			.run_system_once_with(gravity, (UnitsPerSecond::new(42.), EffectApplies::Once))?;
 
 		assert_eq!(
 			Some(&_Effect(Gravity {

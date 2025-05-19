@@ -29,7 +29,7 @@ where
 	for<'a> TQueue: Component + Iterate<'a, TItem = &'a QueuedSkill>,
 	for<'a> TCombos: Component + PeekNext<'a, TNext = Skill>,
 {
-	let Ok((slots, queue, combos)) = queues.get_single() else {
+	let Ok((slots, queue, combos)) = queues.single() else {
 		return Change::None;
 	};
 

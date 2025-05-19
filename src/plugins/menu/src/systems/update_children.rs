@@ -11,10 +11,10 @@ pub(crate) fn update_children<TComponent, TLocalization>(
 	TLocalization: LocalizeToken + Resource,
 {
 	for (entity, component) in &components {
-		let Some(mut entity) = commands.get_entity(entity) else {
+		let Ok(mut entity) = commands.get_entity(entity) else {
 			continue;
 		};
-		entity.despawn_descendants();
+		entity.despawn_related::<Children>();
 		entity.with_children(|parent| {
 			component.insert_ui_content(localization_server.as_mut(), parent)
 		});
@@ -24,6 +24,7 @@ pub(crate) fn update_children<TComponent, TLocalization>(
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use bevy::ecs::relationship::RelatedSpawnerCommands;
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		traits::{
@@ -48,7 +49,7 @@ mod tests {
 		fn insert_ui_content<TLocalization>(
 			&self,
 			localize: &mut TLocalization,
-			parent: &mut ChildBuilder,
+			parent: &mut RelatedSpawnerCommands<ChildOf>,
 		) where
 			TLocalization: LocalizeToken + ThreadSafe,
 		{
@@ -93,7 +94,7 @@ mod tests {
 		let children = app
 			.world()
 			.iter_entities()
-			.filter_map(|e| Some((e.get::<Parent>()?.get(), e.get::<_Child>()?)));
+			.filter_map(|e| Some((e.get::<ChildOf>()?.parent(), e.get::<_Child>()?)));
 
 		assert_eq!(
 			vec![

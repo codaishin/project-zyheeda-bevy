@@ -21,7 +21,7 @@ pub(crate) trait ExecuteMovement {
 		TMovement: Component + MovementUpdate,
 	{
 		for (id, components, config, movement) in &mut agents {
-			let Some(mut entity) = commands.get_entity(id) else {
+			let Ok(mut entity) = commands.get_entity(id) else {
 				continue;
 			};
 			let speed = Speed::get_field(config);

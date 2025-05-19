@@ -20,13 +20,13 @@ pub(crate) fn add_child_effect_shader<TInteractions, TEffect>(
 			Without<EffectShadersTarget>,
 		),
 	>,
-	parents: Query<&Parent>,
+	children: Query<&ChildOf>,
 ) where
 	TEffect: GetEffectMaterial,
 	TInteractions: HandlesEffect<TEffect>,
 {
 	for entity in &effect_shaders {
-		for parent in parents.iter_ancestors(entity) {
+		for parent in children.iter_ancestors(entity) {
 			let Ok(mut shaders) = effect_shaders_targets.get_mut(parent) else {
 				continue;
 			};
@@ -112,7 +112,9 @@ mod tests {
 	fn add_child_effect_shader_to_effect_shaders() {
 		let mut app = setup(new_handle::<Image>());
 		let shaders = app.world_mut().spawn(EffectShadersTarget::default()).id();
-		app.world_mut().spawn(_EffectComponent).set_parent(shaders);
+		app.world_mut()
+			.spawn(_EffectComponent)
+			.insert(ChildOf(shaders));
 
 		app.update();
 
@@ -134,7 +136,7 @@ mod tests {
 		let shaders = app.world_mut().spawn(EffectShadersTarget::default()).id();
 		app.world_mut()
 			.spawn((EffectShadersTarget::default(), _EffectComponent))
-			.set_parent(shaders);
+			.insert(ChildOf(shaders));
 
 		app.update();
 
@@ -150,8 +152,10 @@ mod tests {
 	fn add_deep_child_effect_shader_to_effect_shaders() {
 		let mut app = setup(new_handle::<Image>());
 		let shaders = app.world_mut().spawn(EffectShadersTarget::default()).id();
-		let child = app.world_mut().spawn_empty().set_parent(shaders).id();
-		app.world_mut().spawn(_EffectComponent).set_parent(child);
+		let child = app.world_mut().spawn_empty().insert(ChildOf(shaders)).id();
+		app.world_mut()
+			.spawn(_EffectComponent)
+			.insert(ChildOf(child));
 
 		app.update();
 
@@ -171,7 +175,9 @@ mod tests {
 	fn add_child_effect_shader_to_effect_shaders_only_once() {
 		let mut app = setup(new_handle::<Image>());
 		let shaders = app.world_mut().spawn(EffectShadersTarget::default()).id();
-		app.world_mut().spawn(_EffectComponent).set_parent(shaders);
+		app.world_mut()
+			.spawn(_EffectComponent)
+			.insert(ChildOf(shaders));
 
 		app.update();
 		app.update();
@@ -195,9 +201,11 @@ mod tests {
 		let child = app
 			.world_mut()
 			.spawn(EffectShadersTarget::default())
-			.set_parent(parent)
+			.insert(ChildOf(parent))
 			.id();
-		app.world_mut().spawn(_EffectComponent).set_parent(child);
+		app.world_mut()
+			.spawn(_EffectComponent)
+			.insert(ChildOf(child));
 
 		app.update();
 
@@ -227,7 +235,9 @@ mod tests {
 		let first_pass = new_handle::<Image>();
 		let mut app = setup(first_pass.clone());
 		let shaders = app.world_mut().spawn(EffectShadersTarget::default()).id();
-		app.world_mut().spawn(_EffectComponent).set_parent(shaders);
+		app.world_mut()
+			.spawn(_EffectComponent)
+			.insert(ChildOf(shaders));
 
 		app.update();
 

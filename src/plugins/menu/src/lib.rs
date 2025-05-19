@@ -16,7 +16,7 @@ use crate::systems::{
 	dropdown::dropdown_skill_select_insert::DropdownSkillSelectInsert,
 	update_panels::set_container_panels::SetContainerPanels,
 };
-use bevy::prelude::*;
+use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
 	components::ui_input_primer::UiInputPrimer,
 	resources::Shared,
@@ -318,7 +318,7 @@ where
 {
 	fn loadout_with_swapper<TSwap>() -> impl ConfigureInventory<TSwap>
 	where
-		TSwap: Component + SwapValuesByKey,
+		TSwap: Component<Mutability = Mutable> + SwapValuesByKey,
 	{
 		InventoryConfiguration(PhantomData::<TLocalization::TLocalizationServer>)
 	}
@@ -355,7 +355,7 @@ struct InventoryConfiguration<TLocalization>(PhantomData<TLocalization>);
 
 impl<TSwap, TLocalization> ConfigureInventory<TSwap> for InventoryConfiguration<TLocalization>
 where
-	TSwap: Component + SwapValuesByKey,
+	TSwap: Component<Mutability = Mutable> + SwapValuesByKey,
 	TLocalization: LocalizeToken + Resource,
 {
 	fn configure<TInventory, TSlots, TSystemMarker1, TSystemMarker2>(

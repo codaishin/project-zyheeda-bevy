@@ -9,7 +9,7 @@ pub(crate) fn load_asset_model<TServer>(
 	for<'a> TServer: Resource + LoadAsset,
 {
 	for (entity, asset_model) in &asset_models {
-		let Some(mut entity) = commands.get_entity(entity) else {
+		let Ok(mut entity) = commands.get_entity(entity) else {
 			continue;
 		};
 

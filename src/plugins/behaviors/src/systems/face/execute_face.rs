@@ -1,11 +1,4 @@
-use bevy::{
-	ecs::{
-		entity::Entity,
-		system::{In, Query, Res, Resource},
-	},
-	math::Vec3,
-	transform::components::Transform,
-};
+use bevy::prelude::*;
 use common::{
 	components::{ColliderRoot, Immobilized},
 	tools::collider_info::ColliderInfo,

@@ -1,6 +1,6 @@
-use bevy::prelude::*;
+use bevy::{ecs::component::Mutable, prelude::*};
 
-pub(crate) trait LightComponent: Component {
+pub(crate) trait LightComponent: Component<Mutability = Mutable> {
 	fn intensity_mut(&mut self) -> &mut f32;
 }
 

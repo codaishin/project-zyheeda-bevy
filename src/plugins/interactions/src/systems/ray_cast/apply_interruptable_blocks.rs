@@ -107,7 +107,7 @@ mod tests {
 
 		let ray_casts = app
 			.world_mut()
-			.run_system_once_with(ray_casts, apply_interruptable_ray_blocks)?;
+			.run_system_once_with(apply_interruptable_ray_blocks, ray_casts)?;
 
 		assert_eq!(
 			HashMap::from([(
@@ -159,7 +159,7 @@ mod tests {
 
 		let ray_casts = app
 			.world_mut()
-			.run_system_once_with(ray_casts, apply_interruptable_ray_blocks)?;
+			.run_system_once_with(apply_interruptable_ray_blocks, ray_casts)?;
 
 		assert_eq!(
 			HashMap::from([(
@@ -209,7 +209,7 @@ mod tests {
 
 		let ray_casts = app
 			.world_mut()
-			.run_system_once_with(ray_casts, apply_interruptable_ray_blocks)?;
+			.run_system_once_with(apply_interruptable_ray_blocks, ray_casts)?;
 
 		assert_eq!(
 			HashMap::from([(
@@ -261,7 +261,7 @@ mod tests {
 
 		let ray_casts = app
 			.world_mut()
-			.run_system_once_with(ray_casts, apply_interruptable_ray_blocks)?;
+			.run_system_once_with(apply_interruptable_ray_blocks, ray_casts)?;
 
 		assert_eq!(
 			HashMap::from([(

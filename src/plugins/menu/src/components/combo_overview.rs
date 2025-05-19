@@ -17,7 +17,7 @@ use crate::{
 		insert_ui_content::InsertUiContent,
 	},
 };
-use bevy::prelude::*;
+use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{
 	tools::{action_key::slot::SlotKey, skill_description::SkillToken, skill_icon::SkillIcon},
 	traits::{
@@ -29,7 +29,7 @@ use common::{
 };
 
 #[derive(Component, Debug, PartialEq)]
-#[require(MenuBackground(Self::menu_background), Name(Self::name))]
+#[require(MenuBackground = Self::menu_background(), Name = Self::name())]
 pub(crate) struct ComboOverview<TSkill>
 where
 	TSkill: ThreadSafe,
@@ -312,7 +312,7 @@ where
 	fn insert_ui_content<TLocalization>(
 		&self,
 		localize: &mut TLocalization,
-		parent: &mut ChildBuilder,
+		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
 		TLocalization: LocalizeToken + 'static,
 	{
@@ -327,7 +327,7 @@ where
 	}
 }
 
-fn add_title(parent: &mut ChildBuilder, title: Localized) {
+fn add_title(parent: &mut RelatedSpawnerCommands<ChildOf>, title: Localized) {
 	parent
 		.spawn(Node {
 			margin: UiRect::all(Val::Px(10.)),
@@ -347,7 +347,7 @@ fn add_title(parent: &mut ChildBuilder, title: Localized) {
 
 fn add_empty_combo<TLocalization>(
 	localize: &mut TLocalization,
-	parent: &mut ChildBuilder,
+	parent: &mut RelatedSpawnerCommands<ChildOf>,
 	icon: &Handle<Image>,
 ) where
 	TLocalization: LocalizeToken + 'static,
@@ -378,7 +378,7 @@ fn add_empty_combo<TLocalization>(
 
 fn add_combo_list<TSkill, TLocalization>(
 	localize: &mut TLocalization,
-	parent: &mut ChildBuilder,
+	parent: &mut RelatedSpawnerCommands<ChildOf>,
 	combo_overview: &ComboOverview<TSkill>,
 ) where
 	TSkill: InspectAble<SkillToken> + InspectAble<SkillIcon> + Clone + PartialEq + ThreadSafe,
@@ -406,7 +406,7 @@ fn add_combo_list<TSkill, TLocalization>(
 
 fn add_combo<TSkill, TLocalization>(
 	localize: &mut TLocalization,
-	parent: &mut ChildBuilder,
+	parent: &mut RelatedSpawnerCommands<ChildOf>,
 	combo: &[ComboTreeElement<TSkill>],
 	local_z: i32,
 	new_skill_icon: &Handle<Image>,
@@ -458,7 +458,7 @@ where
 {
 	fn start_combo(
 		localize: &mut TLocalization,
-		parent: &mut ChildBuilder,
+		parent: &mut RelatedSpawnerCommands<ChildOf>,
 		icon: &Handle<Image>,
 		PanelOverlay(panel_overlays): PanelOverlay<TLocalization>,
 		PanelBackground(panel_backgrounds): PanelBackground,
@@ -481,7 +481,7 @@ where
 
 	fn empty(
 		_: &mut TLocalization,
-		parent: &mut ChildBuilder,
+		parent: &mut RelatedSpawnerCommands<ChildOf>,
 		PanelBackground(panel_background): PanelBackground,
 	) {
 		parent
@@ -510,7 +510,7 @@ where
 	fn spawn_as_child(
 		self,
 		localize: &mut TLocalization,
-		parent: &mut ChildBuilder,
+		parent: &mut RelatedSpawnerCommands<ChildOf>,
 		icon: &Handle<Image>,
 	) {
 		match self {
@@ -541,7 +541,7 @@ where
 
 	fn skill(
 		localize: &mut TLocalization,
-		parent: &mut ChildBuilder,
+		parent: &mut RelatedSpawnerCommands<ChildOf>,
 		key_path: &[SlotKey],
 		skill: &TSkill,
 		PanelOverlay(panel_overlay): PanelOverlay<TLocalization>,
@@ -611,15 +611,16 @@ where
 	}
 }
 
-struct PanelOverlay<TLocalization>(
-	&'static [fn(&[SlotKey], &mut ChildBuilder, &mut TLocalization)],
-)
+type InsertFunc<TLocalization> =
+	fn(&[SlotKey], &mut RelatedSpawnerCommands<ChildOf>, &mut TLocalization);
+
+struct PanelOverlay<TLocalization>(&'static [InsertFunc<TLocalization>])
 where
 	TLocalization: 'static;
 
-struct PanelBackground(&'static [fn(&mut ChildBuilder)]);
+struct PanelBackground(&'static [fn(&mut RelatedSpawnerCommands<ChildOf>)]);
 
-fn add_vertical_background_line(parent: &mut ChildBuilder) {
+fn add_vertical_background_line(parent: &mut RelatedSpawnerCommands<ChildOf>) {
 	parent
 		.spawn(ComboOverview::column_symbol_offset_node())
 		.with_children(|parent| {
@@ -627,7 +628,7 @@ fn add_vertical_background_line(parent: &mut ChildBuilder) {
 		});
 }
 
-fn add_horizontal_background_line(parent: &mut ChildBuilder) {
+fn add_horizontal_background_line(parent: &mut RelatedSpawnerCommands<ChildOf>) {
 	parent
 		.spawn(ComboOverview::row_symbol_offset_node())
 		.with_children(|parent| {
@@ -635,7 +636,7 @@ fn add_horizontal_background_line(parent: &mut ChildBuilder) {
 		});
 }
 
-fn add_background_corner(parent: &mut ChildBuilder) {
+fn add_background_corner(parent: &mut RelatedSpawnerCommands<ChildOf>) {
 	parent
 		.spawn(ComboOverview::row_symbol_offset_node())
 		.with_children(|parent| {
@@ -643,8 +644,11 @@ fn add_background_corner(parent: &mut ChildBuilder) {
 		});
 }
 
-fn add_key<TLocalization>(key_path: &[SlotKey], parent: &mut ChildBuilder, _: &mut TLocalization)
-where
+fn add_key<TLocalization>(
+	key_path: &[SlotKey],
+	parent: &mut RelatedSpawnerCommands<ChildOf>,
+	_: &mut TLocalization,
+) where
 	TLocalization: LocalizeToken,
 {
 	let Some(skill_key) = key_path.last() else {
@@ -664,7 +668,7 @@ where
 
 fn add_append_button<TLocalization>(
 	key_path: &[SlotKey],
-	parent: &mut ChildBuilder,
+	parent: &mut RelatedSpawnerCommands<ChildOf>,
 	localize: &mut TLocalization,
 ) where
 	TLocalization: LocalizeToken,
@@ -691,7 +695,7 @@ fn add_append_button<TLocalization>(
 
 fn add_delete_button<TLocalization>(
 	key_path: &[SlotKey],
-	parent: &mut ChildBuilder,
+	parent: &mut RelatedSpawnerCommands<ChildOf>,
 	localize: &mut TLocalization,
 ) where
 	TLocalization: LocalizeToken,

@@ -5,8 +5,7 @@ pub mod traits;
 mod resources;
 mod systems;
 
-use bevy::prelude::*;
-use bevy_rapier3d::plugin::RapierContext;
+use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
 	self,
 	blocker::{Blocker, BlockerInsertCommand},
@@ -91,7 +90,7 @@ where
 				processing_label.clone(),
 				(
 					map_collision_events_to::<InteractionEvent, TrackInteractionDuplicates>,
-					execute_ray_caster::<RapierContext>
+					execute_ray_caster
 						.pipe(apply_interruptable_ray_blocks)
 						.pipe(map_ray_cast_result_to_interaction_events)
 						.pipe(send_interaction_events::<TrackRayInteractions>),
@@ -104,15 +103,18 @@ where
 }
 
 trait AddInteraction {
-	fn add_interaction<TActor: ActOn<TTarget> + Clone + Component, TTarget: Component>(
-		&mut self,
-	) -> &mut Self;
+	fn add_interaction<TActor, TTarget>(&mut self) -> &mut Self
+	where
+		TActor: ActOn<TTarget> + Clone + Component<Mutability = Mutable>,
+		TTarget: Component<Mutability = Mutable>;
 }
 
 impl AddInteraction for App {
-	fn add_interaction<TActor: ActOn<TTarget> + Clone + Component, TTarget: Component>(
-		&mut self,
-	) -> &mut Self {
+	fn add_interaction<TActor, TTarget>(&mut self) -> &mut Self
+	where
+		TActor: ActOn<TTarget> + Clone + Component<Mutability = Mutable>,
+		TTarget: Component<Mutability = Mutable>,
+	{
 		let label = Labels::PROPAGATION.label();
 		let delta = Labels::PROPAGATION.delta();
 

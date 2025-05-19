@@ -1,5 +1,5 @@
 use crate::traits::{LoadUi, insert_ui_content::InsertUiContent};
-use bevy::prelude::*;
+use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::traits::{
 	handles_load_tracking::{AssetsProgress, DependenciesProgress, Progress},
 	handles_localization::LocalizeToken,
@@ -8,10 +8,10 @@ use std::marker::PhantomData;
 
 #[derive(Component)]
 #[require(
-	Node(full_screen),
-	BackgroundColor(black),
-	ZIndex(ZIndex::max),
-	GlobalZIndex(GlobalZIndex::max)
+	Node = full_screen(),
+	BackgroundColor = black(),
+	ZIndex = ZIndex::max(),
+	GlobalZIndex = GlobalZIndex::max(),
 )]
 pub(crate) struct LoadingScreen<T>(PhantomData<T>)
 where
@@ -60,7 +60,7 @@ impl InsertUiContent for LoadingScreen<AssetsProgress> {
 	fn insert_ui_content<TLocalization>(
 		&self,
 		localize: &mut TLocalization,
-		parent: &mut ChildBuilder,
+		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
 		TLocalization: LocalizeToken,
 	{
@@ -80,7 +80,7 @@ impl InsertUiContent for LoadingScreen<DependenciesProgress> {
 	fn insert_ui_content<TLocalization>(
 		&self,
 		localize: &mut TLocalization,
-		parent: &mut ChildBuilder,
+		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
 		TLocalization: LocalizeToken,
 	{

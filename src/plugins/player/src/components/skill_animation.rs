@@ -1,5 +1,5 @@
 use super::player::Player;
-use bevy::prelude::*;
+use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
 	tools::{action_key::slot::SlotKey, animation_key::AnimationKey},
 	traits::{
@@ -22,7 +22,7 @@ impl SkillAnimation {
 			Added<SkillAnimation>,
 		>,
 	) where
-		TAnimationDispatch: Component + StartAnimation + StopAnimation,
+		TAnimationDispatch: Component<Mutability = Mutable> + StartAnimation + StopAnimation,
 	{
 		for (entity, apply, mut dispatch) in &mut players {
 			match apply {

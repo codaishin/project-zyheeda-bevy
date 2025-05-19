@@ -22,7 +22,7 @@ pub(crate) trait TriggerPointerMovement: From<Vec3> + Event {
 		let Some(intersection) = cam_ray.intersect_at(0.) else {
 			return;
 		};
-		move_input_events.send(Self::from(intersection));
+		move_input_events.write(Self::from(intersection));
 	}
 }
 

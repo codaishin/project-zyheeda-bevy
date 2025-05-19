@@ -153,7 +153,7 @@ fn root_bone<'a>(
 mod tests {
 	use super::*;
 	use crate::components::animation_dispatch::AnimationDispatch;
-	use bevy::{animation::AnimationTargetId, utils::HashMap};
+	use bevy::{animation::AnimationTargetId, platform::collections::HashMap};
 	use common::{
 		test_tools::utils::{SingleThreadedApp, new_handle},
 		traits::{
@@ -338,7 +338,7 @@ mod tests {
 			.insert(bone_components(["root"], root));
 		app.world_mut()
 			.spawn(bone_components(["root", "mask root"], root))
-			.set_parent(root);
+			.insert(ChildOf(root));
 		app.world_mut()
 			.spawn((Name::from("agent"), _Agent, AnimationDispatch::to([root])));
 
@@ -376,10 +376,10 @@ mod tests {
 			.insert(bone_components(["root"], root));
 		app.world_mut()
 			.spawn(bone_components(["root", "mask root"], root))
-			.set_parent(root);
+			.insert(ChildOf(root));
 		app.world_mut()
 			.spawn(bone_components(["root", "not mask root"], root))
-			.set_parent(root);
+			.insert(ChildOf(root));
 		app.world_mut()
 			.spawn((Name::from("agent"), _Agent, AnimationDispatch::to([root])));
 
@@ -418,19 +418,19 @@ mod tests {
 		let mask_root = app
 			.world_mut()
 			.spawn(bone_components(["root", "mask root"], root))
-			.set_parent(root)
+			.insert(ChildOf(root))
 			.id();
 		let child_a = app
 			.world_mut()
 			.spawn(bone_components(["root", "mask root", "child a"], root))
-			.set_parent(mask_root)
+			.insert(ChildOf(mask_root))
 			.id();
 		app.world_mut()
 			.spawn(bone_components(
 				["root", "mask root", "child a", "child b"],
 				root,
 			))
-			.set_parent(child_a);
+			.insert(ChildOf(child_a));
 		app.world_mut()
 			.spawn((Name::from("agent"), _Agent, AnimationDispatch::to([root])));
 
@@ -496,14 +496,14 @@ mod tests {
 		let mask_root = app
 			.world_mut()
 			.spawn(bone_components(["root", "mask root"], root))
-			.set_parent(root)
+			.insert(ChildOf(root))
 			.id();
 		app.world_mut()
 			.spawn(bone_components(["root", "mask root", "child a"], root))
-			.set_parent(mask_root);
+			.insert(ChildOf(mask_root));
 		app.world_mut()
 			.spawn(bone_components(["root", "mask root", "child b"], root))
-			.set_parent(mask_root);
+			.insert(ChildOf(mask_root));
 		app.world_mut()
 			.spawn((Name::from("agent"), _Agent, AnimationDispatch::to([root])));
 
@@ -568,11 +568,11 @@ mod tests {
 		let mask_root = app
 			.world_mut()
 			.spawn(bone_components(["root", "mask root"], root))
-			.set_parent(root)
+			.insert(ChildOf(root))
 			.id();
 		app.world_mut()
 			.spawn(bone_components(["other"], Entity::from_raw(42)))
-			.set_parent(mask_root);
+			.insert(ChildOf(mask_root));
 		app.world_mut()
 			.spawn((Name::from("agent"), _Agent, AnimationDispatch::to([root])));
 
@@ -612,27 +612,27 @@ mod tests {
 		let child = app
 			.world_mut()
 			.spawn(bone_components(["root", "child"], root))
-			.set_parent(root)
+			.insert(ChildOf(root))
 			.id();
 		let a = app
 			.world_mut()
 			.spawn(bone_components(["root", "child", "a"], root))
-			.set_parent(child)
+			.insert(ChildOf(child))
 			.id();
 		app.world_mut()
 			.spawn(bone_components(["root", "child", "a", "a child"], root))
-			.set_parent(a);
+			.insert(ChildOf(a));
 		let b = app
 			.world_mut()
 			.spawn(bone_components(["root", "child", "b"], root))
-			.set_parent(child)
+			.insert(ChildOf(child))
 			.id();
 		app.world_mut()
 			.spawn(bone_components(["root", "child", "b", "b child"], root))
-			.set_parent(b);
+			.insert(ChildOf(b));
 		app.world_mut()
 			.spawn(bone_components(["root", "child", "c"], root))
-			.set_parent(child);
+			.insert(ChildOf(child));
 		app.world_mut()
 			.spawn((Name::from("agent"), _Agent, AnimationDispatch::to([root])));
 

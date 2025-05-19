@@ -13,7 +13,7 @@ use common::{
 		handles_effect::HandlesAllEffects,
 		handles_lifetime::HandlesLifetime,
 		handles_skill_behaviors::HandlesSkillBehaviors,
-		try_despawn_recursive::TryDespawnRecursive,
+		try_despawn::TryDespawn,
 	},
 };
 
@@ -68,7 +68,7 @@ impl<TCommands, TBehavior, TLifetimes, TEffects, TSkillBehavior>
 	Execute<TCommands, TLifetimes, TEffects, TSkillBehavior> for SkillExecuter<TBehavior>
 where
 	TBehavior: SpawnSkillBehavior<TCommands>,
-	TCommands: TryDespawnRecursive,
+	TCommands: TryDespawn,
 	TLifetimes: HandlesLifetime + 'static,
 	TEffects: HandlesAllEffects + 'static,
 	TSkillBehavior: HandlesSkillBehaviors + 'static,
@@ -127,9 +127,9 @@ fn stop<TCommands, TSkillShape>(
 	commands: &mut TCommands,
 ) -> SkillExecuter<TSkillShape>
 where
-	TCommands: TryDespawnRecursive,
+	TCommands: TryDespawn,
 {
-	commands.try_despawn_recursive(*skill);
+	commands.try_despawn(*skill);
 	SkillExecuter::Idle
 }
 
@@ -198,14 +198,14 @@ mod tests {
 	#[derive(Component)]
 	struct _Projection;
 
-	impl TryDespawnRecursive for _Commands {
-		fn try_despawn_recursive(&mut self, _: Entity) {}
+	impl TryDespawn for _Commands {
+		fn try_despawn(&mut self, _: Entity) {}
 	}
 
 	mock! {
 		_Commands {}
-		impl TryDespawnRecursive for _Commands {
-			fn try_despawn_recursive(&mut self, entity: Entity);
+		impl TryDespawn for _Commands {
+			fn try_despawn(&mut self, entity: Entity);
 		}
 	}
 
@@ -323,7 +323,7 @@ mod tests {
 		let spawners = SkillSpawners::new([(None, spawner)]);
 		let target = get_target();
 		let mut commands = Mock_Commands::new_mock(|mock| {
-			mock.expect_try_despawn_recursive().return_const(());
+			mock.expect_try_despawn().return_const(());
 		});
 
 		let executer: _Executer<Mock_Commands> = &mut SkillExecuter::Start {
@@ -438,7 +438,7 @@ mod tests {
 			&mut SkillExecuter::<Mock_Behavior>::Stop(Entity::from_raw(123));
 
 		let mut commands = Mock_Commands::new_mock(|mock| {
-			mock.expect_try_despawn_recursive()
+			mock.expect_try_despawn()
 				.times(1)
 				.with(eq(Entity::from_raw(123)))
 				.return_const(());

@@ -8,7 +8,10 @@ use crate::{
 		track::{IsTracking, Track, Untrack},
 	},
 };
-use bevy::{ecs::query::QueryFilter, prelude::*};
+use bevy::{
+	ecs::{component::Mutable, query::QueryFilter},
+	prelude::*,
+};
 use builder::TrackSystemsBuilder;
 
 impl<TTracker> TrackComponentInSelfAndChildren for TTracker where TTracker: Component {}
@@ -17,7 +20,11 @@ pub trait TrackComponentInSelfAndChildren {
 	fn track_in_self_and_children<TTarget>() -> TrackSystemsBuilder<Self, TTarget, ()>
 	where
 		TTarget: Component,
-		Self: Component + Track<TTarget> + Untrack<TTarget> + IsTracking<TTarget> + Sized,
+		Self: Component<Mutability = Mutable>
+			+ Track<TTarget>
+			+ Untrack<TTarget>
+			+ IsTracking<TTarget>
+			+ Sized,
 	{
 		TrackSystemsBuilder {
 			untrack: |removed_targets: RemovedComponents<TTarget>, trackers: Query<Mut<Self>>| {
@@ -36,7 +43,7 @@ fn track_in_self_and_children<TTracker, TTarget, TFilter>(
 ) where
 	TTarget: Component,
 	TFilter: QueryFilter,
-	TTracker: Track<TTarget> + Component,
+	TTracker: Track<TTarget> + Component<Mutability = Mutable>,
 {
 	if trackers.is_empty() {
 		return;
@@ -61,7 +68,7 @@ fn untrack_in_self_and_children<TTracker, TTarget, TRemoveEvents>(
 	mut trackers: Query<Mut<TTracker>>,
 ) where
 	TTarget: Component,
-	TTracker: IsTracking<TTarget> + Untrack<TTarget> + Component,
+	TTracker: IsTracking<TTarget> + Untrack<TTarget> + Component<Mutability = Mutable>,
 	for<'a> TRemoveEvents: Clear + Read<'a, TReturn: Iterator<Item = Entity>>,
 {
 	if trackers.is_empty() {
@@ -203,7 +210,7 @@ mod tests {
 	fn track_target_entity_from_child_in_tracker() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let tracker = app.world_mut().spawn_empty().id();
-		let target = app.world_mut().spawn(_Target).set_parent(tracker).id();
+		let target = app.world_mut().spawn(_Target).insert(ChildOf(tracker)).id();
 
 		app.world_mut()
 			.entity_mut(tracker)
@@ -222,8 +229,8 @@ mod tests {
 	fn track_target_entity_of_deep_child_in_tracker() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let tracker = app.world_mut().spawn_empty().id();
-		let child = app.world_mut().spawn_empty().set_parent(tracker).id();
-		let deep_child = app.world_mut().spawn(_Target).set_parent(child).id();
+		let child = app.world_mut().spawn_empty().insert(ChildOf(tracker)).id();
+		let deep_child = app.world_mut().spawn(_Target).insert(ChildOf(child)).id();
 
 		app.world_mut()
 			.entity_mut(tracker)
@@ -242,7 +249,7 @@ mod tests {
 	fn do_not_track_when_target_not_new() {
 		let mut app = setup().single_threaded(Update);
 		let tracker = app.world_mut().spawn_empty().id();
-		app.world_mut().spawn(_Target).set_parent(tracker);
+		app.world_mut().spawn(_Target).insert(ChildOf(tracker));
 		app.world_mut()
 			.entity_mut(tracker)
 			.insert(_Tracker::new().with_mock(|mock: &mut Mock_Tracker| {
@@ -258,7 +265,7 @@ mod tests {
 	fn do_not_track_when_target_not_with_filter_component() {
 		let mut app = setup().single_threaded(Update);
 		let tracker = app.world_mut().spawn_empty().id();
-		app.world_mut().spawn(_Target).set_parent(tracker);
+		app.world_mut().spawn(_Target).insert(ChildOf(tracker));
 		app.world_mut()
 			.entity_mut(tracker)
 			.insert(_Tracker::new().with_mock(|mock: &mut Mock_Tracker| {
@@ -277,7 +284,7 @@ mod tests {
 	-> Result<(), RunSystemError> {
 		let mut app = setup();
 		let parent = app.world_mut().spawn_empty().id();
-		let child = app.world_mut().spawn(_Target).set_parent(parent).id();
+		let child = app.world_mut().spawn(_Target).insert(ChildOf(parent)).id();
 
 		app.world_mut()
 			.entity_mut(parent)
@@ -320,8 +327,8 @@ mod tests {
 			}));
 
 		app.world_mut().run_system_once_with(
-			removed,
 			untrack_in_self_and_children::<_Tracker, _Target, In<Mock_Removed>>,
+			removed,
 		)
 	}
 
@@ -342,8 +349,8 @@ mod tests {
 			}));
 
 		app.world_mut().run_system_once_with(
-			removed,
 			untrack_in_self_and_children::<_Tracker, _Target, In<Mock_Removed>>,
+			removed,
 		)
 	}
 
@@ -364,8 +371,8 @@ mod tests {
 			}));
 
 		app.world_mut().run_system_once_with(
-			removed,
 			untrack_in_self_and_children::<_Tracker, _Target, In<Mock_Removed>>,
+			removed,
 		)
 	}
 
@@ -373,7 +380,7 @@ mod tests {
 	fn untrack_target_of_child_entity_in_tracker() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let parent = app.world_mut().spawn_empty().id();
-		let child = app.world_mut().spawn(_Target).set_parent(parent).id();
+		let child = app.world_mut().spawn(_Target).insert(ChildOf(parent)).id();
 		let removed = Mock_Removed::new_mock(|mock| {
 			mock.expect_clear().return_const(());
 			mock.expect_read().return_const(_Read::from([child]));
@@ -393,8 +400,8 @@ mod tests {
 			}));
 
 		app.world_mut().run_system_once_with(
-			removed,
 			untrack_in_self_and_children::<_Tracker, _Target, In<Mock_Removed>>,
+			removed,
 		)
 	}
 
@@ -408,8 +415,8 @@ mod tests {
 		});
 
 		app.world_mut().run_system_once_with(
-			removed,
 			untrack_in_self_and_children::<_Tracker, _Target, In<Mock_Removed>>,
+			removed,
 		)
 	}
 
@@ -423,8 +430,8 @@ mod tests {
 		});
 
 		app.world_mut().run_system_once_with(
-			removed,
 			untrack_in_self_and_children::<_Tracker, _Target, In<Mock_Removed>>,
+			removed,
 		)
 	}
 }

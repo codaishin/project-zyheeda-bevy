@@ -19,7 +19,7 @@ pub(crate) trait ApplyExtraComponents {
 		let target_names = Self::target_names();
 
 		for (id, ..) in new.iter().filter(contained_in(target_names)) {
-			let Some(entity) = &mut commands.get_entity(id) else {
+			let Ok(entity) = &mut commands.get_entity(id) else {
 				continue;
 			};
 			Self::insert_bundle::<TLights>(entity);

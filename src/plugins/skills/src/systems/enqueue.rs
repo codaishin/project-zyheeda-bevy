@@ -4,15 +4,12 @@ use crate::{
 	skills::Skill,
 	traits::{Enqueue, IterMut, Matches, Prime},
 };
-use bevy::{
-	asset::{Assets, Handle},
-	ecs::prelude::*,
-};
+use bevy::{ecs::component::Mutable, prelude::*};
 use common::{tools::action_key::slot::SlotKey, traits::accessors::get::GetRef};
 
 pub(crate) fn enqueue<
 	TSlots: GetRef<SlotKey, Handle<Item>> + Component,
-	TQueue: Enqueue<(Skill, SlotKey)> + IterMut<TQueuedSkill> + Component,
+	TQueue: Enqueue<(Skill, SlotKey)> + IterMut<TQueuedSkill> + Component<Mutability = Mutable>,
 	TQueuedSkill: Prime + Matches<SlotKey>,
 >(
 	input: In<Input>,
@@ -87,12 +84,6 @@ fn get_queued_skill<'a, TQueue: IterMut<TQueuedSkill>, TQueuedSkill: 'a + Matche
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{
-		app::{App, Update},
-		asset::{AssetId, Assets},
-		ecs::system::{IntoSystem, Res, Resource},
-		prelude::default,
-	};
 	use common::{
 		simple_init,
 		test_tools::utils::{SingleThreadedApp, new_handle},
@@ -147,10 +138,14 @@ mod tests {
 
 	struct _SkillLoader;
 
-	fn setup<TEnqueue: Enqueue<(Skill, SlotKey)> + IterMut<Mock_SkillQueued> + Component>(
+	fn setup<TEnqueue>(
 		items: Vec<(AssetId<Item>, Item)>,
 		skills: Vec<(AssetId<Skill>, Skill)>,
-	) -> App {
+	) -> App
+	where
+		TEnqueue:
+			Enqueue<(Skill, SlotKey)> + IterMut<Mock_SkillQueued> + Component<Mutability = Mutable>,
+	{
 		let mut app = App::new().single_threaded(Update);
 		let mut item_assets = Assets::<Item>::default();
 		let mut skill_assets = Assets::<Skill>::default();

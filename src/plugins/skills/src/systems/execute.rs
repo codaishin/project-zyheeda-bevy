@@ -3,7 +3,7 @@ use crate::{
 	components::{SkillTarget, skill_spawners::SkillSpawners},
 	traits::Execute,
 };
-use bevy::prelude::*;
+use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
 	effects::deal_damage::DealDamage,
 	errors::Error,
@@ -17,9 +17,9 @@ use common::{
 	},
 };
 
-impl<T> ExecuteSkills for T {}
+impl<T> ExecuteSkills for T where T: Component<Mutability = Mutable> + Sized {}
 
-pub(crate) trait ExecuteSkills {
+pub(crate) trait ExecuteSkills: Component<Mutability = Mutable> + Sized {
 	fn execute_system<TLifetimes, TEffects, TSkillBehaviors, TPlayers>(
 		cam_ray: Res<TPlayers::TCamRay>,
 		mouse_hover: Res<TPlayers::TMouseHover>,
@@ -28,8 +28,7 @@ pub(crate) trait ExecuteSkills {
 		transforms: Query<&GlobalTransform>,
 	) -> Vec<Result<(), Error>>
 	where
-		for<'w, 's> Self:
-			Component + Execute<Commands<'w, 's>, TLifetimes, TEffects, TSkillBehaviors> + Sized,
+		for<'w, 's> Self: Execute<Commands<'w, 's>, TLifetimes, TEffects, TSkillBehaviors>,
 		for<'w, 's> Error: From<
 			<Self as Execute<Commands<'w, 's>, TLifetimes, TEffects, TSkillBehaviors>>::TError,
 		>,

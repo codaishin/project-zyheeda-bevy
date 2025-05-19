@@ -1,9 +1,11 @@
 use crate::components::ui_input_primer::{LeftMouse, MouseUiInteraction, UiInputStateTransition};
-use bevy::prelude::*;
+use bevy::{ecs::component::Mutable, prelude::*};
 
-impl<T> SetInputState for T where T: UiInputStateTransition + Component {}
+impl<T> SetInputState for T where T: UiInputStateTransition + Component<Mutability = Mutable> {}
 
-pub(crate) trait SetInputState: UiInputStateTransition + Component {
+pub(crate) trait SetInputState:
+	UiInputStateTransition + Component<Mutability = Mutable>
+{
 	fn set_input_state(
 		mut inputs: Query<(&mut Self, Ref<Interaction>)>,
 		mouse: Res<ButtonInput<MouseButton>>,

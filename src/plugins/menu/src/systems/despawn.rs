@@ -5,7 +5,7 @@ pub fn despawn<TComponent: Component>(
 	entities: Query<Entity, With<TComponent>>,
 ) {
 	for entity in &entities {
-		commands.entity(entity).despawn_recursive();
+		commands.entity(entity).despawn();
 	}
 }
 

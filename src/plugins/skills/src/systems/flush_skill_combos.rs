@@ -2,7 +2,7 @@ use crate::{
 	skills::QueuedSkill,
 	traits::{Flush, is_timed_out::IsTimedOut},
 };
-use bevy::prelude::*;
+use bevy::{ecs::component::Mutable, prelude::*};
 use common::traits::{iterate::Iterate, update_cumulative::CumulativeUpdate};
 use std::time::Duration;
 
@@ -10,8 +10,9 @@ pub(crate) fn flush_skill_combos<TCombos, TComboTimeout, TTime, TQueue>(
 	mut agents: Query<(&mut TCombos, Option<&mut TComboTimeout>, &TQueue)>,
 	time: Res<Time<TTime>>,
 ) where
-	TCombos: Flush + Component,
-	TComboTimeout: CumulativeUpdate<Duration> + IsTimedOut + Flush + Component,
+	TCombos: Flush + Component<Mutability = Mutable>,
+	TComboTimeout:
+		CumulativeUpdate<Duration> + IsTimedOut + Flush + Component<Mutability = Mutable>,
 	TTime: Default + Sync + Send + 'static,
 	for<'a> TQueue: Iterate<'a, TItem = &'a QueuedSkill> + Component + 'a,
 {

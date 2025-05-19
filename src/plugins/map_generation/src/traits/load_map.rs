@@ -15,7 +15,7 @@ use bevy::{
 	app::App,
 	asset::AssetApp,
 	ecs::{
-		schedule::{IntoSystemConfigs, ScheduleLabel},
+		schedule::{IntoScheduleConfigs, ScheduleLabel},
 		system::IntoSystem,
 	},
 	reflect::TypePath,

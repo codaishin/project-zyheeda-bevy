@@ -2,7 +2,7 @@ use crate::{
 	components::{acted_on_targets::ActedOnTargets, interacting_entities::InteractingEntities},
 	traits::act_on::ActOn,
 };
-use bevy::prelude::*;
+use bevy::{ecs::component::Mutable, prelude::*};
 use common::{effects::EffectApplies, traits::try_remove_from::TryRemoveFrom};
 use std::time::Duration;
 
@@ -13,12 +13,15 @@ type Components<'a, TActor> = (
 	&'a InteractingEntities,
 );
 
-pub(crate) fn act_interaction<TActor: ActOn<TTarget> + Component, TTarget: Component>(
+pub(crate) fn act_interaction<TActor, TTarget>(
 	In(delta): In<Duration>,
 	mut commands: Commands,
 	mut actors: Query<Components<TActor>>,
 	mut targets: Query<(Entity, &mut TTarget)>,
-) {
+) where
+	TActor: ActOn<TTarget> + Component<Mutability = Mutable>,
+	TTarget: Component<Mutability = Mutable>,
+{
 	for (entity, mut actor, mut acted_on, interactions) in &mut actors {
 		for target in interactions.iter() {
 			let Ok((target_entity, mut target)) = targets.get_mut(*target) else {
@@ -91,8 +94,8 @@ mod tests {
 			}));
 
 		app.world_mut().run_system_once_with(
-			Duration::from_millis(42),
 			act_interaction::<_Actor, _Target>,
+			Duration::from_millis(42),
 		)
 	}
 
@@ -112,7 +115,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(Duration::ZERO, act_interaction::<_Actor, _Target>)?;
+			.run_system_once_with(act_interaction::<_Actor, _Target>, Duration::ZERO)?;
 
 		let actor = app.world().entity(actor);
 
@@ -136,7 +139,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(Duration::ZERO, act_interaction::<_Actor, _Target>)?;
+			.run_system_once_with(act_interaction::<_Actor, _Target>, Duration::ZERO)?;
 
 		let actor = app.world().entity(actor);
 
@@ -170,7 +173,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(Duration::ZERO, act_interaction::<_Actor, _Target>)?;
+			.run_system_once_with(act_interaction::<_Actor, _Target>, Duration::ZERO)?;
 
 		let actor_always = app.world().entity(actor_always);
 		let actor_once_per_target = app.world().entity(actor_once_per_target);
@@ -201,7 +204,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(Duration::ZERO, act_interaction::<_Actor, _Target>)?;
+			.run_system_once_with(act_interaction::<_Actor, _Target>, Duration::ZERO)?;
 
 		let actor = app.world().entity(actor);
 

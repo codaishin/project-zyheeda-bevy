@@ -132,8 +132,8 @@ pub mod utils {
 		($app:expr, $parent:expr) => {
 			$app.world().iter_entities().filter(|entity| {
 				entity
-					.get::<bevy::prelude::Parent>()
-					.map(|p| p.get() == $parent)
+					.get::<bevy::prelude::ChildOf>()
+					.map(|p| p.parent() == $parent)
 					.unwrap_or(false)
 			})
 		};

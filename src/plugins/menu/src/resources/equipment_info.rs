@@ -85,7 +85,7 @@ mod tests {
 		let mut app = setup();
 
 		app.world_mut()
-			.run_system_once_with(Change::Some(_Compatible), EquipmentInfo::update)?;
+			.run_system_once_with(EquipmentInfo::update, Change::Some(_Compatible))?;
 
 		assert_eq!(
 			Some(&EquipmentInfo(_Compatible)),

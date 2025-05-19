@@ -31,7 +31,7 @@ pub fn panel_activity_colors_override<TMap, TPanel, TPrimer, TContainer>(
 	for<'a> &'a TPrimer: Into<IsPrimed> + Into<UserInput>,
 {
 	for (entity, background_color, panel, primer) in &mut buttons {
-		let Some(entity) = commands.get_entity(entity) else {
+		let Ok(entity) = commands.get_entity(entity) else {
 			continue;
 		};
 		let color = get_color_override(container.as_ref(), map.as_ref(), panel, primer);

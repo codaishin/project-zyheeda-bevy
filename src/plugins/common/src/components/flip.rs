@@ -11,7 +11,7 @@ impl FlipHorizontally {
 
 	pub(crate) fn system(
 		flips: Query<&FlipHorizontally>,
-		parents: Query<&Parent>,
+		children: Query<&ChildOf>,
 		mut targets: Query<(Entity, &Name, &mut Transform), Added<Name>>,
 	) {
 		for (entity, name, mut transform) in &mut targets {
@@ -21,8 +21,11 @@ impl FlipHorizontally {
 				};
 				name == target
 			};
+			let has_matching_child_with_flip_command = children
+				.iter_ancestors(entity)
+				.any(is_matching_flip_command);
 
-			if !parents.iter_ancestors(entity).any(is_matching_flip_command) {
+			if !has_matching_child_with_flip_command {
 				continue;
 			}
 
@@ -56,7 +59,7 @@ mod tests {
 				Name::from("my name"),
 				Transform::from_rotation(Quat::from_rotation_y(0.4)),
 			))
-			.set_parent(parent)
+			.insert(ChildOf(parent))
 			.id();
 
 		app.update();
@@ -85,7 +88,7 @@ mod tests {
 				Name::from("my other name"),
 				Transform::from_rotation(Quat::from_rotation_y(0.4)),
 			))
-			.set_parent(parent)
+			.insert(ChildOf(parent))
 			.id();
 
 		app.update();
@@ -107,14 +110,14 @@ mod tests {
 			.world_mut()
 			.spawn(FlipHorizontally::with(Name::from("my name")))
 			.id();
-		let in_between = app.world_mut().spawn_empty().set_parent(parent).id();
+		let in_between = app.world_mut().spawn_empty().insert(ChildOf(parent)).id();
 		let child = app
 			.world_mut()
 			.spawn((
 				Name::from("my name"),
 				Transform::from_rotation(Quat::from_rotation_y(0.2)),
 			))
-			.set_parent(in_between)
+			.insert(ChildOf(in_between))
 			.id();
 
 		app.update();
@@ -143,7 +146,7 @@ mod tests {
 				Name::from("my name"),
 				Transform::from_rotation(Quat::from_rotation_y(0.4)),
 			))
-			.set_parent(parent)
+			.insert(ChildOf(parent))
 			.id();
 
 		app.update();

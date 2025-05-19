@@ -1,6 +1,9 @@
 use super::track_in_self_and_children;
 use crate::traits::track::{IsTracking, Track, Untrack};
-use bevy::{ecs::query::QueryFilter, prelude::*};
+use bevy::{
+	ecs::{component::Mutable, query::QueryFilter},
+	prelude::*,
+};
 
 type UntrackFunc<TTracker, TTarget> = fn(RemovedComponents<TTarget>, Query<Mut<TTracker>>);
 
@@ -39,7 +42,8 @@ where
 
 impl<TTracker, TTarget> TrackSystemsBuilder<TTracker, TTarget, ()>
 where
-	TTracker: Component + Track<TTarget> + Untrack<TTarget> + IsTracking<TTarget>,
+	TTracker:
+		Component<Mutability = Mutable> + Track<TTarget> + Untrack<TTarget> + IsTracking<TTarget>,
 	TTarget: Component,
 {
 	pub fn filter<TFilter>(self) -> TrackSystemsBuilder<TTracker, TTarget, TFilter>

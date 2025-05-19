@@ -82,7 +82,7 @@ impl MeasureFps {
 }
 
 #[derive(Component, Debug, PartialEq)]
-#[require(Node(DisplayFps::top_left), Text)]
+#[require(Node = DisplayFps::top_left(), Text)]
 struct DisplayFps;
 
 impl DisplayFps {
@@ -107,7 +107,7 @@ impl DisplayFps {
 		fps_fixed: Res<Fps<Fixed>>,
 		fps_render: Res<Fps<Render>>,
 	) {
-		let Ok(mut text) = displays.get_single_mut() else {
+		let Ok(mut text) = displays.single_mut() else {
 			return;
 		};
 

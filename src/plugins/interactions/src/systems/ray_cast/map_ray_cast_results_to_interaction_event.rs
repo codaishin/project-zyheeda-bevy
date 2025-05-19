@@ -68,7 +68,7 @@ mod tests {
 
 		let events = app
 			.world_mut()
-			.run_system_once_with(ray_casts, map_ray_cast_result_to_interaction_events)?;
+			.run_system_once_with(map_ray_cast_result_to_interaction_events, ray_casts)?;
 
 		let interaction = InteractionEvent::of(ColliderRoot(Entity::from_raw(5)));
 		assert_eq!(
@@ -122,7 +122,7 @@ mod tests {
 
 		let events = app
 			.world_mut()
-			.run_system_once_with(ray_casts, map_ray_cast_result_to_interaction_events)?;
+			.run_system_once_with(map_ray_cast_result_to_interaction_events, ray_casts)?;
 
 		let interaction = InteractionEvent::of(ColliderRoot(Entity::from_raw(5)));
 		assert_eq!(

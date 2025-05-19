@@ -19,7 +19,7 @@ pub fn drag<TAgent: Component, TKey: Send + Sync + Copy + 'static>(
 		return;
 	};
 
-	let Ok(agent) = agents.get_single() else {
+	let Ok(agent) = agents.single() else {
 		return;
 	};
 	commands.try_insert_on(agent, Dad(panel.0));

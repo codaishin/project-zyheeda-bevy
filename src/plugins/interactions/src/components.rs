@@ -19,7 +19,7 @@ use bevy_rapier3d::{
 use common::traits::cast_ray::TimeOfImpact;
 
 #[derive(Component, Debug, PartialEq, Clone)]
-pub struct RayCaster {
+pub struct RayCasterArgs {
 	pub origin: Vec3,
 	pub direction: Dir3,
 	pub max_toi: TimeOfImpact,
@@ -27,7 +27,7 @@ pub struct RayCaster {
 	pub filter: RayFilter,
 }
 
-impl Default for RayCaster {
+impl Default for RayCasterArgs {
 	fn default() -> Self {
 		Self {
 			origin: Default::default(),

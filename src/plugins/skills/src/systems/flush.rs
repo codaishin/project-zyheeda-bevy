@@ -1,7 +1,13 @@
 use crate::traits::Flush;
-use bevy::{ecs::component::Component, prelude::Query};
+use bevy::{
+	ecs::component::{Component, Mutable},
+	prelude::Query,
+};
 
-pub(crate) fn flush<TFlush: Flush + Component>(mut agents: Query<&mut TFlush>) {
+pub(crate) fn flush<TFlush>(mut agents: Query<&mut TFlush>)
+where
+	TFlush: Flush + Component<Mutability = Mutable>,
+{
 	for mut queue in &mut agents {
 		queue.flush();
 	}

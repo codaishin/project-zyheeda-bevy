@@ -33,7 +33,7 @@ fn clear(commands: &mut Commands, effect_shaders: &EffectShadersTarget, active: 
 
 	for shader in shaders {
 		for entity in &effect_shaders.meshes {
-			let Some(mut entity) = commands.get_entity(*entity) else {
+			let Ok(mut entity) = commands.get_entity(*entity) else {
 				continue;
 			};
 
@@ -45,7 +45,7 @@ fn clear(commands: &mut Commands, effect_shaders: &EffectShadersTarget, active: 
 fn instantiate(commands: &mut Commands, effect_shaders: &EffectShadersTarget) {
 	for shader in &effect_shaders.shaders {
 		for entity in &effect_shaders.meshes {
-			let Some(mut entity) = commands.get_entity(*entity) else {
+			let Ok(mut entity) = commands.get_entity(*entity) else {
 				continue;
 			};
 

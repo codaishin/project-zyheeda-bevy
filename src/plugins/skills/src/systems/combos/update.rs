@@ -1,18 +1,22 @@
 use crate::{skills::Skill, traits::write_item::WriteItem};
-use bevy::prelude::*;
+use bevy::{ecs::component::Mutable, prelude::*};
 use common::tools::action_key::slot::{Combo, SlotKey};
 
-impl<T> UpdateCombos for T {}
+impl<T> UpdateCombos for T where
+	T: Component<Mutability = Mutable> + WriteItem<Vec<SlotKey>, Option<Skill>>
+{
+}
 
-pub(crate) trait UpdateCombos {
+pub(crate) trait UpdateCombos:
+	Component<Mutability = Mutable> + WriteItem<Vec<SlotKey>, Option<Skill>> + Sized
+{
 	fn update_for<TAgent>(
 		In(updated_combos): In<Combo<Option<Skill>>>,
 		mut combos: Query<&mut Self, With<TAgent>>,
 	) where
-		Self: Component + WriteItem<Vec<SlotKey>, Option<Skill>> + Sized,
 		TAgent: Component,
 	{
-		let Ok(mut combos) = combos.get_single_mut() else {
+		let Ok(mut combos) = combos.single_mut() else {
 			return;
 		};
 
@@ -78,6 +82,7 @@ mod tests {
 		));
 
 		app.world_mut().run_system_once_with(
+			_Combos::update_for::<_Agent>,
 			vec![
 				(
 					vec![SlotKey::TopHand(Side::Left)],
@@ -88,7 +93,6 @@ mod tests {
 				),
 				(vec![SlotKey::TopHand(Side::Right)], None),
 			],
-			_Combos::update_for::<_Agent>,
 		)
 	}
 }

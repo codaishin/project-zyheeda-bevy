@@ -1,7 +1,7 @@
-use bevy::prelude::*;
+use bevy::{ecs::system::ScheduleSystem, prelude::*};
 
 pub trait HandlesGameStates {
 	fn on_starting_new_game<TSystem, TMarker>(app: &mut App, systems: TSystem)
 	where
-		TSystem: IntoSystemConfigs<TMarker>;
+		TSystem: IntoScheduleConfigs<ScheduleSystem, TMarker>;
 }

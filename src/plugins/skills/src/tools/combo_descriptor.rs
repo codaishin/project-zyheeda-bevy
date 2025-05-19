@@ -33,7 +33,7 @@ impl ComboDescriptor {
 	where
 		TPlayer: Component,
 	{
-		let Ok((slots, combos)) = slots.get_single() else {
+		let Ok((slots, combos)) = slots.single() else {
 			return Change::None;
 		};
 

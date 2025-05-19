@@ -34,7 +34,7 @@ impl Default for BuildSkillShape {
 	fn default() -> Self {
 		Self::Fn(|commands, _, _, _| {
 			let contact = commands.spawn_empty().id();
-			let projection = commands.spawn_empty().set_parent(contact).id();
+			let projection = commands.spawn(ChildOf(contact)).id();
 			SkillShape {
 				contact,
 				projection,
@@ -54,7 +54,7 @@ impl BuildSkillShape {
 		_: &SkillTarget,
 	) -> SkillShape {
 		let contact = commands.spawn_empty().id();
-		let projection = commands.spawn_empty().set_parent(contact).id();
+		let projection = commands.spawn(ChildOf(contact)).id();
 		let on_skill_stop = OnSkillStop::Stop(contact);
 
 		SkillShape {

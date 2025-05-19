@@ -249,11 +249,11 @@ where
 	let shape =
 		behavior.spawn_shape::<TLifetimes, TSkillBehaviors>(commands, caster, spawner, target);
 
-	if let Some(mut contact) = commands.get_entity(shape.contact) {
+	if let Ok(mut contact) = commands.get_entity(shape.contact) {
 		behavior.start_contact_behavior::<TEffects>(&mut contact, caster, spawner, target);
 	};
 
-	if let Some(mut projection) = commands.get_entity(shape.projection) {
+	if let Ok(mut projection) = commands.get_entity(shape.projection) {
 		behavior.start_projection_behavior::<TEffects>(&mut projection, caster, spawner, target);
 	};
 
@@ -405,14 +405,12 @@ mod tests {
 		let spawner = SkillSpawner(Entity::from_raw(2));
 		let target = get_target();
 
-		app.world_mut().run_system_once_with(
-			move |cmd| {
+		app.world_mut()
+			.run_system_once_with(execute_callback, move |cmd| {
 				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesSkillBehaviors>(
 					cmd, &caster, &spawner, &target,
 				);
-			},
-			execute_callback,
-		)?;
+			})?;
 
 		assert_eq!(
 			vec![&_Args {
@@ -448,14 +446,12 @@ mod tests {
 		let spawner = SkillSpawner(Entity::from_raw(2));
 		let target = get_target();
 
-		app.world_mut().run_system_once_with(
-			move |cmd| {
+		app.world_mut()
+			.run_system_once_with(execute_callback, move |cmd| {
 				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesSkillBehaviors>(
 					cmd, &caster, &spawner, &target,
 				);
-			},
-			execute_callback,
-		)?;
+			})?;
 
 		assert_eq!(
 			vec![&_Args {
@@ -492,14 +488,12 @@ mod tests {
 		let spawner = SkillSpawner(Entity::from_raw(2));
 		let target = get_target();
 
-		app.world_mut().run_system_once_with(
-			move |cmd| {
+		app.world_mut()
+			.run_system_once_with(execute_callback, move |cmd| {
 				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesSkillBehaviors>(
 					cmd, &caster, &spawner, &target,
 				);
-			},
-			execute_callback,
-		)?;
+			})?;
 
 		assert_eq!(
 			vec![&_Args {
@@ -532,14 +526,12 @@ mod tests {
 		let spawner = SkillSpawner(Entity::from_raw(2));
 		let target = get_target();
 
-		app.world_mut().run_system_once_with(
-			move |cmd| {
+		app.world_mut()
+			.run_system_once_with(execute_callback, move |cmd| {
 				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesSkillBehaviors>(
 					cmd, &caster, &spawner, &target,
 				);
-			},
-			execute_callback,
-		)?;
+			})?;
 
 		assert_eq!(
 			vec![&_Args {
@@ -576,14 +568,12 @@ mod tests {
 		let spawner = SkillSpawner(Entity::from_raw(2));
 		let target = get_target();
 
-		app.world_mut().run_system_once_with(
-			move |cmd| {
+		app.world_mut()
+			.run_system_once_with(execute_callback, move |cmd| {
 				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesSkillBehaviors>(
 					cmd, &caster, &spawner, &target,
 				);
-			},
-			execute_callback,
-		)?;
+			})?;
 
 		let spawn_args = app
 			.world()
@@ -626,14 +616,12 @@ mod tests {
 		let spawner = SkillSpawner(Entity::from_raw(2));
 		let target = get_target();
 
-		app.world_mut().run_system_once_with(
-			move |cmd| {
+		app.world_mut()
+			.run_system_once_with(execute_callback, move |cmd| {
 				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesSkillBehaviors>(
 					cmd, &caster, &spawner, &target,
 				);
-			},
-			execute_callback,
-		)?;
+			})?;
 
 		assert_eq!(
 			vec![&_Args {
@@ -669,14 +657,12 @@ mod tests {
 		let spawner = SkillSpawner(Entity::from_raw(2));
 		let target = get_target();
 
-		app.world_mut().run_system_once_with(
-			move |cmd| {
+		app.world_mut()
+			.run_system_once_with(execute_callback, move |cmd| {
 				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesSkillBehaviors>(
 					cmd, &caster, &spawner, &target,
 				);
-			},
-			execute_callback,
-		)?;
+			})?;
 
 		assert_eq!(
 			vec![&_Args {
@@ -716,14 +702,12 @@ mod tests {
 		let spawner = SkillSpawner(Entity::from_raw(2));
 		let target = get_target();
 
-		app.world_mut().run_system_once_with(
-			move |cmd| {
+		app.world_mut()
+			.run_system_once_with(execute_callback, move |cmd| {
 				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesSkillBehaviors>(
 					cmd, &caster, &spawner, &target,
 				);
-			},
-			execute_callback,
-		)?;
+			})?;
 
 		let spawn_args = app
 			.world()
@@ -763,14 +747,12 @@ mod tests {
 		let spawner = SkillSpawner(Entity::from_raw(2));
 		let target = get_target();
 
-		app.world_mut().run_system_once_with(
-			move |cmd| {
+		app.world_mut()
+			.run_system_once_with(execute_callback, move |cmd| {
 				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesSkillBehaviors>(
 					cmd, &caster, &spawner, &target,
 				);
-			},
-			execute_callback,
-		)?;
+			})?;
 
 		assert_eq!(
 			vec![&_Args {
@@ -810,14 +792,12 @@ mod tests {
 		let spawner = SkillSpawner(Entity::from_raw(2));
 		let target = get_target();
 
-		app.world_mut().run_system_once_with(
-			move |cmd| {
+		app.world_mut()
+			.run_system_once_with(execute_callback, move |cmd| {
 				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesSkillBehaviors>(
 					cmd, &caster, &spawner, &target,
 				);
-			},
-			execute_callback,
-		)?;
+			})?;
 
 		let spawn_args = app
 			.world()

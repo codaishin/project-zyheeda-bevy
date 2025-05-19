@@ -8,7 +8,7 @@ use bevy::ecs::{
 };
 use common::traits::{
 	handles_enemies::{Attacker, EnemyAttack, Target},
-	try_despawn_recursive::TryDespawnRecursive,
+	try_despawn::TryDespawn,
 	try_insert_on::TryInsertOn,
 	try_remove_from::TryRemoveFrom,
 };
@@ -38,7 +38,7 @@ pub trait AttackSystem {
 			let Ok(Ongoing(attack)) = ongoing.get(attacker).cloned() else {
 				continue;
 			};
-			commands.try_despawn_recursive(attack);
+			commands.try_despawn(attack);
 			commands.try_remove_from::<Ongoing>(attacker);
 		}
 	}
