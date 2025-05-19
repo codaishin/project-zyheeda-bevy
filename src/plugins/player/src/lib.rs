@@ -7,6 +7,7 @@ use bevy::prelude::*;
 use common::{
 	attributes::health::Health,
 	effects::deal_damage::DealDamage,
+	states::game_state::GameState,
 	tools::action_key::{movement::MovementKey, slot::SlotKey},
 	traits::{
 		animation::RegisterAnimations,
@@ -100,11 +101,11 @@ where
 			)
 			.add_systems(
 				Update,
-				SkillAnimation::system::<TAnimation::TAnimationDispatch>,
-			)
-			.add_systems(
-				Update,
-				player_toggle_walk_run::<TSettings::TKeyMap<MovementKey>>,
+				(
+					SkillAnimation::system::<TAnimation::TAnimationDispatch>,
+					player_toggle_walk_run::<TSettings::TKeyMap<MovementKey>>,
+				)
+					.run_if(not(in_state(GameState::LoadingEssentialAssets))),
 			);
 	}
 }

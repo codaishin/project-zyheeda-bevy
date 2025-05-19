@@ -149,13 +149,17 @@ where
 	}
 
 	fn state_control(&self, app: &mut App) {
+		let changeable = in_state(MenusChangeable(true));
+		let loading_essentials = in_state(GameState::LoadingEssentialAssets);
+		let changeable_and_not_loading = changeable.and(not(loading_essentials));
+
 		app.insert_state(MenusChangeable(true));
 		app.add_systems(
 			Update,
 			(
 				PreventMenuChange::menus_unchangeable_when_present,
 				set_state_from_input::<GameState, MenuState, TSettings::TKeyMap<MenuState>>
-					.run_if(not(in_state(MenusChangeable(false)))),
+					.run_if(changeable_and_not_loading),
 			)
 				.chain(),
 		);
