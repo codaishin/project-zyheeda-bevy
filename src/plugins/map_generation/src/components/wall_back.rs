@@ -19,7 +19,6 @@ impl ExtraComponentsDefinition for WallBack {
 			WallBack,
 			InsertAsset::shared::<WallBack>(|| StandardMaterial {
 				base_color: Color::from(BLACK),
-				depth_bias: f32::MAX,
 				..default()
 			}),
 		));
