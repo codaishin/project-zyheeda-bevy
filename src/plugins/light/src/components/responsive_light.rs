@@ -23,8 +23,8 @@ use std::{any::TypeId, ops::Deref, time::Duration};
 #[require(
 	Transform,
 	Sensor,
-	ActiveEvents(Self::active_events),
-	CollidingEntities
+	ActiveEvents = Self::active_events(),
+	CollidingEntities,
 )]
 pub struct ResponsiveLight {
 	pub light: Light,
@@ -63,7 +63,7 @@ impl ResponsiveLight {
 	{
 		let delta = time.delta();
 		for (entity, change, responsive, mut light) in &mut lights {
-			let Some(mut entity) = commands.get_entity(entity) else {
+			let Ok(mut entity) = commands.get_entity(entity) else {
 				continue;
 			};
 

@@ -4,7 +4,7 @@ mod traits;
 
 use bevy::{
 	app::{App, Plugin, Update},
-	prelude::IntoSystemConfigs,
+	ecs::schedule::IntoScheduleConfigs,
 	render::{camera::Camera, view::RenderLayers},
 };
 use common::{

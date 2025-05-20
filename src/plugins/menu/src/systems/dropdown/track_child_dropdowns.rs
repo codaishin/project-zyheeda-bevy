@@ -4,11 +4,11 @@ use bevy::prelude::*;
 pub(crate) fn dropdown_track_child_dropdowns<TItem: Send + Sync + 'static>(
 	mut events: EventReader<DropdownEvent>,
 	mut dropdown_uis: Query<&mut DropdownUI<TItem>>,
-	parents: Query<&Parent>,
+	children: Query<&ChildOf>,
 ) {
 	for event in events.read() {
 		match event {
-			DropdownEvent::Added(child) => add_child(&mut dropdown_uis, &parents, child),
+			DropdownEvent::Added(child) => add_child(&mut dropdown_uis, &children, child),
 			DropdownEvent::Removed(child) => remove_child(&mut dropdown_uis, child),
 		}
 	}
@@ -16,10 +16,10 @@ pub(crate) fn dropdown_track_child_dropdowns<TItem: Send + Sync + 'static>(
 
 fn add_child<TItem: Send + Sync + 'static>(
 	dropdown_uis: &mut Query<&mut DropdownUI<TItem>>,
-	parents: &Query<&Parent>,
+	children: &Query<&ChildOf>,
 	dropdown_entity: &Entity,
 ) {
-	for ancestor in parents.iter_ancestors(*dropdown_entity) {
+	for ancestor in children.iter_ancestors(*dropdown_entity) {
 		let Ok(mut dropdown_ui) = dropdown_uis.get_mut(ancestor) else {
 			continue;
 		};
@@ -58,7 +58,7 @@ mod tests {
 
 		let source = Entity::from_raw(42);
 		let dropdown = app.world_mut().spawn(DropdownUI::<_Item>::new(source)).id();
-		let child_dropdown = app.world_mut().spawn_empty().set_parent(dropdown).id();
+		let child_dropdown = app.world_mut().spawn(ChildOf(dropdown)).id();
 		app.world_mut()
 			.send_event(DropdownEvent::Added(child_dropdown));
 
@@ -98,7 +98,7 @@ mod tests {
 
 		let source = Entity::from_raw(42);
 		let dropdown = app.world_mut().spawn(DropdownUI::<_Item>::new(source)).id();
-		app.world_mut().spawn_empty().set_parent(dropdown);
+		app.world_mut().spawn(ChildOf(dropdown));
 		let child_dropdown = app.world_mut().spawn_empty().id();
 		app.world_mut()
 			.send_event(DropdownEvent::Added(child_dropdown));
@@ -119,8 +119,8 @@ mod tests {
 
 		let source = Entity::from_raw(42);
 		let dropdown = app.world_mut().spawn(DropdownUI::<_Item>::new(source)).id();
-		let in_between = app.world_mut().spawn_empty().set_parent(dropdown).id();
-		let child_dropdown = app.world_mut().spawn_empty().set_parent(in_between).id();
+		let in_between = app.world_mut().spawn(ChildOf(dropdown)).id();
+		let child_dropdown = app.world_mut().spawn(ChildOf(in_between)).id();
 		app.world_mut()
 			.send_event(DropdownEvent::Added(child_dropdown));
 
@@ -140,8 +140,8 @@ mod tests {
 
 		let source = Entity::from_raw(42);
 		let dropdown = app.world_mut().spawn(DropdownUI::<_Item>::new(source)).id();
-		let child_dropdown_a = app.world_mut().spawn_empty().set_parent(dropdown).id();
-		let child_dropdown_b = app.world_mut().spawn_empty().set_parent(dropdown).id();
+		let child_dropdown_a = app.world_mut().spawn(ChildOf(dropdown)).id();
+		let child_dropdown_b = app.world_mut().spawn(ChildOf(dropdown)).id();
 		app.world_mut()
 			.send_event(DropdownEvent::Added(child_dropdown_a));
 		app.world_mut()

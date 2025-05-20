@@ -80,7 +80,7 @@ mod tests {
 
 		let loaded = app
 			.world_mut()
-			.run_system_once_with(server, is_loaded_internal::<In<_Server>, _Asset>)?;
+			.run_system_once_with(is_loaded_internal::<In<_Server>, _Asset>, server)?;
 
 		assert_eq!(Loaded(true), loaded);
 		Ok(())
@@ -99,7 +99,7 @@ mod tests {
 
 		let loaded = app
 			.world_mut()
-			.run_system_once_with(server, is_loaded_internal::<In<_Server>, _Asset>)?;
+			.run_system_once_with(is_loaded_internal::<In<_Server>, _Asset>, server)?;
 
 		assert_eq!(Loaded(false), loaded);
 		Ok(())
@@ -116,7 +116,7 @@ mod tests {
 
 		let loaded = app
 			.world_mut()
-			.run_system_once_with(server, is_loaded_internal::<In<_Server>, _Asset>)?;
+			.run_system_once_with(is_loaded_internal::<In<_Server>, _Asset>, server)?;
 
 		assert_eq!(Loaded(false), loaded);
 		Ok(())

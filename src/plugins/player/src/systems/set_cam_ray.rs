@@ -15,10 +15,12 @@ pub(crate) fn set_cam_ray<TCamera: GetCamRay + Component, TLabel: Component>(
 	camera: Query<(&TCamera, &GlobalTransform), With<TLabel>>,
 	window: Query<&Window>,
 ) {
-	let Ok((camera, camera_transform)) = camera.get_single() else {
+	let Ok((camera, camera_transform)) = camera.single() else {
 		return;
 	};
-	let window = window.single();
+	let Ok(window) = window.single() else {
+		return;
+	};
 
 	commands.insert_resource(CamRay(camera.get_ray(camera_transform, window)));
 }

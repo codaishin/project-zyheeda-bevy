@@ -139,12 +139,12 @@ mod tests {
 		let mut app = setup(Some(Track::<_LoadGroup, _Progress>::default()));
 
 		app.world_mut().run_system_once_with(
-			Loaded(true),
 			Track::<_LoadGroup, _Progress>::track::<f32, Loaded>,
+			Loaded(true),
 		)?;
 		app.world_mut().run_system_once_with(
-			Loaded(false),
 			Track::<_LoadGroup, _Progress>::track::<u32, Loaded>,
+			Loaded(false),
 		)?;
 
 		assert_eq!(

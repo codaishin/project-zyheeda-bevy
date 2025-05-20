@@ -47,11 +47,11 @@ fn _select_successor_key<TNextKeys, TExtra>(
 }
 
 fn despawn(commands: &mut Commands, entity: Entity) {
-	let Some(entity) = commands.get_entity(entity) else {
+	let Ok(mut entity) = commands.get_entity(entity) else {
 		return;
 	};
 
-	entity.despawn_recursive();
+	entity.despawn();
 }
 
 #[cfg(test)]
@@ -193,7 +193,7 @@ mod tests {
 				key_path: vec![] as Vec<SlotKey>,
 			})
 			.id();
-		let child = app.world_mut().spawn_empty().set_parent(entity).id();
+		let child = app.world_mut().spawn(ChildOf(entity)).id();
 
 		app.update();
 

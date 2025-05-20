@@ -1,10 +1,10 @@
 use crate::components::destroy::Destroy;
 use bevy::prelude::*;
-use common::traits::try_despawn_recursive::TryDespawnRecursive;
+use common::traits::try_despawn::TryDespawn;
 
 pub(crate) fn destroy(mut commands: Commands, mut agents: Query<Entity, With<Destroy>>) {
 	for entity in &mut agents {
-		commands.try_despawn_recursive(entity);
+		commands.try_despawn(entity);
 	}
 }
 
@@ -43,7 +43,7 @@ mod tests {
 	fn despawn_recursive_when_destroy_component_attached() {
 		let mut app = setup();
 		let agent = app.world_mut().spawn(Destroy).id();
-		let child = app.world_mut().spawn_empty().set_parent(agent).id();
+		let child = app.world_mut().spawn(ChildOf(agent)).id();
 
 		app.update();
 

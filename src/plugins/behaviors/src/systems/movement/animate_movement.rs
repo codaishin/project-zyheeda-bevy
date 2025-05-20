@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
 	components::Immobilized,
 	tools::movement_animation::MovementAnimation,
@@ -8,14 +8,13 @@ use common::{
 	},
 };
 
-impl<T> AnimateMovement for T {}
+impl<T> AnimateMovement for T where T: Component + Sized + GetterRefOptional<MovementAnimation> {}
 
-pub(crate) trait AnimateMovement {
+pub(crate) trait AnimateMovement:
+	Component + Sized + GetterRefOptional<MovementAnimation>
+{
 	#[allow(clippy::type_complexity)]
-	fn animate_movement<
-		TMovement: Component,
-		TAnimationDispatch: Component + StartAnimation + StopAnimation,
-	>(
+	fn animate_movement<TMovement, TAnimationDispatch>(
 		mut agents: Query<
 			(Ref<Self>, &mut TAnimationDispatch, Ref<TMovement>),
 			Without<Immobilized>,
@@ -23,7 +22,8 @@ pub(crate) trait AnimateMovement {
 		mut agents_without_movement: Query<&mut TAnimationDispatch, Without<TMovement>>,
 		mut removed_movements: RemovedComponents<TMovement>,
 	) where
-		Self: Component + Sized + GetterRefOptional<MovementAnimation>,
+		TMovement: Component,
+		TAnimationDispatch: Component<Mutability = Mutable> + StartAnimation + StopAnimation,
 	{
 		for (config, dispatch, movement) in &mut agents {
 			start_animation(config, dispatch, movement);
@@ -61,10 +61,13 @@ fn start_animation<TConfig, TMovement, TAnimationDispatch>(
 	dispatch.start_animation(Move, animation.clone());
 }
 
-fn stop_animation<TMovement: Component, TAnimationDispatch: Component + StopAnimation>(
+fn stop_animation<TMovement, TAnimationDispatch>(
 	entity: Entity,
 	agent_without_movement: &mut Query<&mut TAnimationDispatch, Without<TMovement>>,
-) {
+) where
+	TMovement: Component,
+	TAnimationDispatch: Component<Mutability = Mutable> + StopAnimation,
+{
 	let Ok(mut dispatch) = agent_without_movement.get_mut(entity) else {
 		return;
 	};

@@ -3,7 +3,7 @@ use bevy::{color::palettes::css::WHITE, prelude::*, render::view::RenderLayers};
 use common::components::spawn_children::SpawnChildren;
 
 #[derive(Component, Debug, PartialEq, Default)]
-#[require(SpawnChildren(Self::children))]
+#[require(SpawnChildren = Self::children())]
 pub struct DamageEffectShaders;
 
 impl DamageEffectShaders {

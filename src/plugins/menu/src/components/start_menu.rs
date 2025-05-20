@@ -1,10 +1,10 @@
 use super::{start_game::StartGame, start_menu_button::StartMenuButton};
 use crate::traits::{LoadUi, colors::PanelColors, insert_ui_content::InsertUiContent};
-use bevy::prelude::*;
+use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::traits::handles_localization::LocalizeToken;
 
 #[derive(Component)]
-#[require(Node(full_screen))]
+#[require(Node = full_screen())]
 pub(crate) struct StartMenu;
 
 fn full_screen() -> Node {
@@ -28,7 +28,7 @@ impl InsertUiContent for StartMenu {
 	fn insert_ui_content<TLocalization>(
 		&self,
 		localization: &mut TLocalization,
-		parent: &mut ChildBuilder,
+		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
 		TLocalization: LocalizeToken,
 	{

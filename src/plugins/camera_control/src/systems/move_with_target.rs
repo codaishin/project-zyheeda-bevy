@@ -1,10 +1,12 @@
 use crate::traits::move_together::MoveTogether;
-use bevy::prelude::*;
+use bevy::{ecs::component::Mutable, prelude::*};
 
-pub(crate) fn move_with_target<TFollow: MoveTogether + Component>(
+pub(crate) fn move_with_target<TFollow>(
 	targets: Query<&Transform, Without<TFollow>>,
 	mut follower: Query<(&mut Transform, &mut TFollow)>,
-) {
+) where
+	TFollow: MoveTogether + Component<Mutability = Mutable>,
+{
 	for (mut transform, mut follower) in &mut follower {
 		let Some(target) = follower.entity() else {
 			continue;

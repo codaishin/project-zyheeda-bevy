@@ -69,12 +69,14 @@ impl SimplePrefab for Shape {
 			),
 		};
 
+		let root = entity.id();
+
 		entity
 			.try_insert((Transform::from_translation(offset), Visibility::default()))
 			.with_children(|parent| {
 				parent.spawn((model, model_transform));
 				parent.spawn((
-					ColliderRoot(parent.parent_entity()),
+					ColliderRoot(root),
 					collider,
 					collider_transform,
 					ActiveEvents::COLLISION_EVENTS,
@@ -241,7 +243,9 @@ mod tests {
 		exec: impl Fn(&mut EntityCommands) -> T,
 	) -> impl Fn(Commands, Query<Entity>) -> T {
 		move |mut commands, query| {
-			let entity = query.single();
+			let entity = query
+				.single()
+				.expect("U FOOL, AN ENTITY CANNOT BE FOUND HERE");
 			let mut entity = commands.entity(entity);
 
 			exec(&mut entity)
@@ -423,8 +427,8 @@ mod tests {
 
 	fn children_of(app: &App, entity: Entity) -> impl Iterator<Item = EntityRef> {
 		app.world().iter_entities().filter(move |e| {
-			e.get::<Parent>()
-				.map(|p| p.get() == entity)
+			e.get::<ChildOf>()
+				.map(|c| c.parent() == entity)
 				.unwrap_or(false)
 		})
 	}

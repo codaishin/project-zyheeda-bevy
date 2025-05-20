@@ -6,7 +6,7 @@ use crate::{
 	tools::Layout,
 	traits::{GetLayout, GetRootNode, insert_ui_content::InsertUiContent},
 };
-use bevy::prelude::*;
+use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{
 	tools::Focus,
 	traits::{handles_localization::LocalizeToken, thread_safe::ThreadSafe},
@@ -30,7 +30,7 @@ pub(crate) fn dropdown_spawn_focused<TLocalization, TItem>(
 		if !new_focus.contains(&source) {
 			continue;
 		}
-		let Some(mut entity) = commands.get_entity(source) else {
+		let Ok(mut entity) = commands.get_entity(source) else {
 			continue;
 		};
 
@@ -87,7 +87,7 @@ fn repetitions(count: usize, max_index: u16) -> (u16, u16) {
 
 fn spawn_items<TLocalization, TItem>(
 	localization: &mut TLocalization,
-	dropdown_node: &mut ChildBuilder,
+	dropdown_node: &mut RelatedSpawnerCommands<ChildOf>,
 	dropdown: &Dropdown<TItem>,
 ) where
 	TItem: InsertUiContent,
@@ -138,7 +138,7 @@ mod tests {
 				fn insert_ui_content<TLocalization>(
 					&self,
 					_: &mut TLocalization,
-					_: &mut ChildBuilder,
+					_: &mut RelatedSpawnerCommands<ChildOf>,
 				) {
 				}
 			}
@@ -214,7 +214,7 @@ mod tests {
 		fn insert_ui_content<TLocalization>(
 			&self,
 			localization: &mut TLocalization,
-			parent: &mut ChildBuilder,
+			parent: &mut RelatedSpawnerCommands<ChildOf>,
 		) where
 			TLocalization: LocalizeToken,
 		{
@@ -261,7 +261,7 @@ mod tests {
 			$app.world()
 				.iter_entities()
 				.filter_map(|e| {
-					if e.get::<Parent>()?.get() == $entity {
+					if e.get::<ChildOf>()?.parent() == $entity {
 						Some(e)
 					} else {
 						None

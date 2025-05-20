@@ -135,11 +135,11 @@ mod test_with_path {
 		func: impl Fn(&mut EntityCommands, Mut<PathOrWasd<_MoveMethod>>) -> IsDone,
 	) -> impl Fn(Commands, Query<(Entity, &mut PathOrWasd<_MoveMethod>)>) -> IsDone {
 		move |mut commands, mut query| {
-			let Ok((entity, path)) = query.get_single_mut() else {
+			let Ok((entity, path)) = query.single_mut() else {
 				return IsDone(false);
 			};
 
-			let Some(mut entity) = commands.get_entity(entity) else {
+			let Ok(mut entity) = commands.get_entity(entity) else {
 				return IsDone(false);
 			};
 

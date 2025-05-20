@@ -1,6 +1,6 @@
 use super::combo_overview::ComboOverview;
 use crate::{Tooltip, traits::insert_ui_content::InsertUiContent};
-use bevy::prelude::*;
+use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{
 	tools::{action_key::slot::SlotKey, skill_description::SkillToken, skill_icon::SkillIcon},
 	traits::{
@@ -49,7 +49,7 @@ where
 	fn insert_ui_content<TLocalization>(
 		&self,
 		localize: &mut TLocalization,
-		parent: &mut ChildBuilder,
+		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
 		TLocalization: LocalizeToken,
 	{

@@ -1,5 +1,5 @@
 use crate::traits::InputState;
-use bevy::ecs::system::{Res, Resource};
+use bevy::prelude::*;
 use common::{
 	tools::action_key::{slot::SlotKey, user_input::UserInput},
 	traits::key_mappings::TryGetAction,
@@ -29,10 +29,6 @@ pub(crate) fn get_inputs<
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{
-		app::{App, Update},
-		ecs::system::{In, IntoSystem, ResMut, Resource},
-	};
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		tools::action_key::slot::Side,

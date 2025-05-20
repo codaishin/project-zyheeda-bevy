@@ -7,14 +7,14 @@ use crate::traits::{
 	insert_ui_content::InsertUiContent,
 	ui_traits::{GetBackgroundColor, GetNode},
 };
-use bevy::prelude::*;
+use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::traits::{
 	handles_localization::{LocalizeToken, Token},
 	thread_safe::ThreadSafe,
 };
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
-#[require(Node(Self::node), BackgroundColor(Self::background_color))]
+#[require(Node = Self::node(), BackgroundColor = Self::background_color())]
 pub(crate) struct KeyBind<T>(pub(crate) T)
 where
 	Self: GetBackgroundColor + GetNode;
@@ -43,7 +43,7 @@ where
 	fn insert_ui_content<TLocalization>(
 		&self,
 		localization: &mut TLocalization,
-		parent: &mut ChildBuilder,
+		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
 		TLocalization: LocalizeToken + ThreadSafe,
 	{

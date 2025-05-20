@@ -1,19 +1,19 @@
 use crate::traits::{UpdateCombosView, build_combo_tree_layout::BuildComboTreeLayout};
-use bevy::prelude::*;
+use bevy::{ecs::component::Mutable, prelude::*};
 use common::traits::thread_safe::ThreadSafe;
 
-impl<T> UpdateComboOverview for T {}
+impl<T> UpdateComboOverview for T where T: Component<Mutability = Mutable> {}
 
-pub(crate) trait UpdateComboOverview {
+pub(crate) trait UpdateComboOverview: Component<Mutability = Mutable> + Sized {
 	fn update_combos_overview<TSkill, TLayoutBuilder>(
 		layout_builder: Res<TLayoutBuilder>,
 		mut combo_overviews: Query<&mut Self>,
 	) where
-		Self: Component + UpdateCombosView<TSkill> + Sized,
+		Self: UpdateCombosView<TSkill>,
 		TSkill: ThreadSafe,
 		TLayoutBuilder: Resource + BuildComboTreeLayout<TSkill>,
 	{
-		let Ok(mut combo_overview) = combo_overviews.get_single_mut() else {
+		let Ok(mut combo_overview) = combo_overviews.single_mut() else {
 			return;
 		};
 

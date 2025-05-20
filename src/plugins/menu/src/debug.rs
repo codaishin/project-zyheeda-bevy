@@ -10,7 +10,7 @@ use crate::{
 };
 #[cfg(debug_assertions)]
 use crate::{AddUI, traits::insert_ui_content::InsertUiContent};
-use bevy::prelude::*;
+use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{
 	states::game_state::GameState,
 	tools::Index,
@@ -24,7 +24,7 @@ use common::{
 use std::{fmt::Debug, marker::PhantomData, time::Duration};
 
 #[derive(Component)]
-#[require(Node(squared), BackgroundColor(black))]
+#[require(Node = squared(), BackgroundColor = black())]
 struct StateTime<TState>(Duration, Option<TState>);
 
 fn squared() -> Node {
@@ -57,7 +57,11 @@ impl<TState> InsertUiContent for StateTime<TState>
 where
 	TState: Debug + Copy,
 {
-	fn insert_ui_content<TLocalization>(&self, _: &mut TLocalization, parent: &mut ChildBuilder) {
+	fn insert_ui_content<TLocalization>(
+		&self,
+		_: &mut TLocalization,
+		parent: &mut RelatedSpawnerCommands<ChildOf>,
+	) {
 		let state = self.1.map(|s| format!("{s:?}")).unwrap_or("???".into());
 		parent.spawn((
 			Text::new(format!(
@@ -80,7 +84,7 @@ fn update_state_time<TState>(
 ) where
 	TState: States + Copy,
 {
-	let Ok(mut run_time) = run_times.get_single_mut() else {
+	let Ok(mut run_time) = run_times.single_mut() else {
 		return;
 	};
 	run_time.0 += time.delta();
@@ -149,7 +153,11 @@ impl TooltipUiConfig for ButtonTooltip {
 }
 
 impl InsertUiContent for Tooltip<ButtonTooltip> {
-	fn insert_ui_content<TLocalization>(&self, _: &mut TLocalization, parent: &mut ChildBuilder) {
+	fn insert_ui_content<TLocalization>(
+		&self,
+		_: &mut TLocalization,
+		parent: &mut RelatedSpawnerCommands<ChildOf>,
+	) {
 		parent.spawn((Text::new(&self.value().0), DropdownButton::text_style()));
 	}
 }
@@ -197,7 +205,11 @@ impl<TLayout> InsertUiContent for ButtonOption<TLayout>
 where
 	TLayout: ThreadSafe,
 {
-	fn insert_ui_content<TLocalization>(&self, _: &mut TLocalization, parent: &mut ChildBuilder) {
+	fn insert_ui_content<TLocalization>(
+		&self,
+		_: &mut TLocalization,
+		parent: &mut RelatedSpawnerCommands<ChildOf>,
+	) {
 		let option = (
 			DropdownButton::bundle(),
 			self.clone(),
@@ -212,7 +224,11 @@ where
 impl<TLayout: ThreadSafe, TSubLayout: ThreadSafe> InsertUiContent
 	for ButtonOption<TLayout, WithSubDropdown<TSubLayout>>
 {
-	fn insert_ui_content<TLocalization>(&self, _: &mut TLocalization, parent: &mut ChildBuilder) {
+	fn insert_ui_content<TLocalization>(
+		&self,
+		_: &mut TLocalization,
+		parent: &mut RelatedSpawnerCommands<ChildOf>,
+	) {
 		let option = (
 			DropdownButton::bundle(),
 			Dropdown {
@@ -260,10 +276,10 @@ fn update_button_text(
 	buttons: Query<(Entity, &DropdownButton), Changed<DropdownButton>>,
 ) {
 	for (entity, button) in &buttons {
-		let Some(mut entity) = commands.get_entity(entity) else {
+		let Ok(mut entity) = commands.get_entity(entity) else {
 			continue;
 		};
-		entity.despawn_descendants();
+		entity.despawn_related::<Children>();
 		entity.with_children(|parent| {
 			parent.spawn((Text::new(button.text), DropdownButton::text_style()));
 		});

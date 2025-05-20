@@ -38,7 +38,7 @@ pub(crate) trait MovementPath: Component + Getter<ColliderRadius> + Sized {
 			return;
 		}
 
-		let Ok(computer) = computers.get_single() else {
+		let Ok(computer) = computers.single() else {
 			return;
 		};
 

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 #[derive(Component, Default, Debug, PartialEq)]
-#[require(BackgroundColor(Self::gray))]
+#[require(BackgroundColor = Self::gray())]
 pub(crate) struct MenuBackground {
 	overrides: Overrides,
 }

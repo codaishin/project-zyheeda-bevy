@@ -33,7 +33,7 @@ pub(crate) fn tooltip<T, TLocalization, TUI, TUIControl, TWindow>(
 		+ SpawnTooltips<T, TLocalization>,
 	TWindow: Component + MousePosition,
 {
-	let Ok(window) = windows.get_single() else {
+	let Ok(window) = windows.single() else {
 		return;
 	};
 	let Some(position) = window.mouse_position() else {
@@ -65,6 +65,7 @@ fn is_hovering<T: TooltipUiConfig + Sync + Send + 'static>(
 mod tests {
 	use super::*;
 	use crate::{components::tooltip::TooltipUiConfig, traits::insert_ui_content::InsertUiContent};
+	use bevy::ecs::relationship::RelatedSpawnerCommands;
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		traits::{
@@ -95,7 +96,12 @@ mod tests {
 	impl TooltipUiConfig for _T {}
 
 	impl InsertUiContent for Tooltip<_T> {
-		fn insert_ui_content<TLocalization>(&self, _: &mut TLocalization, _: &mut ChildBuilder) {}
+		fn insert_ui_content<TLocalization>(
+			&self,
+			_: &mut TLocalization,
+			_: &mut RelatedSpawnerCommands<ChildOf>,
+		) {
+		}
 	}
 
 	#[derive(Component)]

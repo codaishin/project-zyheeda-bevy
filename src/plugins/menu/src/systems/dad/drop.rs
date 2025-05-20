@@ -1,7 +1,7 @@
 use crate::components::{Dad, KeyedPanel};
 use bevy::{
 	ecs::{
-		component::Component,
+		component::{Component, Mutable},
 		system::{Commands, Query},
 	},
 	input::ButtonInput,
@@ -23,7 +23,7 @@ pub fn drop<TAgent, TKeyDad, TKeyKeyedPanel>(
 	panels: Query<(&Interaction, &KeyedPanel<TKeyKeyedPanel>)>,
 	mouse: Res<ButtonInput<UserInput>>,
 ) where
-	TAgent: Component + SwapValuesByKey,
+	TAgent: Component<Mutability = Mutable> + SwapValuesByKey,
 	TKeyDad: ThreadSafe + Copy + Into<SwapKey>,
 	TKeyKeyedPanel: ThreadSafe + Copy + Into<SwapKey>,
 {
@@ -31,7 +31,7 @@ pub fn drop<TAgent, TKeyDad, TKeyKeyedPanel>(
 		return;
 	}
 
-	let Ok((entity, mut agent, dad)) = agents.get_single_mut() else {
+	let Ok((entity, mut agent, dad)) = agents.single_mut() else {
 		return;
 	};
 

@@ -15,7 +15,7 @@ use common::traits::{handles_localization::LocalizeToken, thread_safe::ThreadSaf
 use std::{marker::PhantomData, time::Duration};
 
 #[derive(Component, Debug, PartialEq, Clone)]
-#[require(Node(T::node), BackgroundColor(T::background_color))]
+#[require(Node = T::node(), BackgroundColor = T::background_color())]
 pub(crate) struct Tooltip<T>(T)
 where
 	T: TooltipUiConfig;
@@ -74,10 +74,10 @@ impl<T: Sync + Send + 'static> DespawnAllTooltips<TooltipUI<T>> for TooltipUICon
 		commands: &mut Commands,
 	) {
 		for (entity, ..) in uis {
-			let Some(entity) = commands.get_entity(entity) else {
+			let Ok(mut entity) = commands.get_entity(entity) else {
 				continue;
 			};
-			entity.despawn_recursive();
+			entity.despawn();
 		}
 	}
 }
@@ -97,10 +97,10 @@ where
 			|(_, ui, _): &(Entity, &TooltipUI<T>, &Node)| outdated.contains(&ui.source);
 
 		for (entity, ..) in uis.iter().filter(is_outdated) {
-			let Some(entity) = commands.get_entity(entity) else {
+			let Ok(mut entity) = commands.get_entity(entity) else {
 				continue;
 			};
-			entity.despawn_recursive();
+			entity.despawn();
 		}
 	}
 }
@@ -153,6 +153,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use bevy::ecs::relationship::RelatedSpawnerCommands;
 	use common::{
 		test_tools::utils::SingleThreadedApp,
 		traits::handles_localization::{LocalizationResult, Token, localized::Localized},
@@ -246,7 +247,7 @@ mod tests {
 		fn insert_ui_content<TLocalization>(
 			&self,
 			localize: &mut TLocalization,
-			parent: &mut ChildBuilder,
+			parent: &mut RelatedSpawnerCommands<ChildOf>,
 		) where
 			TLocalization: LocalizeToken,
 		{
@@ -532,7 +533,7 @@ mod tests {
 		let content = app
 			.world()
 			.iter_entities()
-			.find(|e| e.get::<Parent>().map(|p| p.get()) == Some(*tooltip_ui_child))
+			.find(|e| e.get::<ChildOf>().map(|c| c.parent()) == Some(*tooltip_ui_child))
 			.expect("not matching child found");
 		assert_eq!(
 			Some(&_Child::from("Token: My Content")),

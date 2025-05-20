@@ -95,10 +95,7 @@ fn entity_not_found_error(key: &'static str) -> Error {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{
-		ecs::system::{RunSystemError, RunSystemOnce},
-		utils::HashMap,
-	};
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
 		simple_init,
 		test_tools::utils::new_handle,
@@ -112,6 +109,7 @@ mod tests {
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, mock, predicate::eq};
+	use std::collections::HashMap;
 
 	#[derive(Debug, PartialEq, Clone, Copy, Eq, Hash)]
 	enum _Key {
@@ -235,8 +233,8 @@ mod tests {
 		});
 
 		app.world_mut().run_system_once_with(
-			commands,
 			dispatch_system::<In<Mock_Commands>, _Assets, _Component, _Marker, ()>,
+			commands,
 		)?;
 		Ok(())
 	}
@@ -258,8 +256,8 @@ mod tests {
 		});
 
 		app.world_mut().run_system_once_with(
-			commands,
 			dispatch_system::<In<Mock_Commands>, _Assets, _Component, _Marker, ()>,
+			commands,
 		)?;
 		Ok(())
 	}
@@ -282,8 +280,8 @@ mod tests {
 		});
 
 		app.world_mut().run_system_once_with(
-			commands,
 			dispatch_system::<In<Mock_Commands>, _Assets, _Component, _Marker, ()>,
+			commands,
 		)?;
 		Ok(())
 	}
@@ -310,8 +308,8 @@ mod tests {
 		});
 
 		app.world_mut().run_system_once_with(
-			commands,
 			dispatch_system::<In<Mock_Commands>, _Assets, _Component, _Marker, _Filter>,
+			commands,
 		)?;
 		Ok(())
 	}
@@ -330,8 +328,8 @@ mod tests {
 		});
 
 		let results = app.world_mut().run_system_once_with(
-			commands,
 			dispatch_system::<In<Mock_Commands>, _Assets, _Component, _Marker, ()>,
+			commands,
 		)?;
 
 		assert_eq!(

@@ -41,7 +41,7 @@ where
 	      without_bar_values: Query<NewBars<TSource>, Without<BarValues<TValue>>>,
 	      with_bar_values: Query<OldBars<TSource, TValue>>,
 	      camera: Query<(&TCamera, &GlobalTransform), With<TMainCameraLabel>>| {
-		let Ok((camera, camera_transform)) = camera.get_single() else {
+		let Ok((camera, camera_transform)) = camera.single() else {
 			return;
 		};
 		add_bar_values(get, commands, without_bar_values, camera, camera_transform);

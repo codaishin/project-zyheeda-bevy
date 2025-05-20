@@ -10,7 +10,7 @@ impl Icon {
 			if icon.image != IconImage::None {
 				continue;
 			}
-			let Some(mut entity) = commands.get_entity(entity) else {
+			let Ok(mut entity) = commands.get_entity(entity) else {
 				continue;
 			};
 

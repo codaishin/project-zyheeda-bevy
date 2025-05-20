@@ -5,12 +5,12 @@ use bevy::prelude::*;
 /// This is a command like component and will be removed from
 /// the [`Entity`] after the corresponding children have been added.
 #[derive(Component, Debug, PartialEq)]
-pub struct SpawnChildren(pub fn(&mut ChildBuilder));
+pub struct SpawnChildren(pub fn(&mut ChildSpawnerCommands));
 
 impl SpawnChildren {
 	pub(crate) fn system(mut commands: Commands, spawners: Query<(Entity, &Self)>) {
 		for (entity, spawner) in &spawners {
-			let Some(mut entity) = commands.get_entity(entity) else {
+			let Ok(mut entity) = commands.get_entity(entity) else {
 				continue;
 			};
 			let SpawnChildren(spawn_fn) = spawner;
@@ -32,7 +32,7 @@ impl SpawnChildren {
 ///   Only works, if [`Self::system`] has been registered
 /// </div>
 #[derive(Component, Debug, PartialEq)]
-pub struct SpawnChildrenFromParent<TParent>(pub fn(&mut ChildBuilder, &TParent))
+pub struct SpawnChildrenFromParent<TParent>(pub fn(&mut ChildSpawnerCommands, &TParent))
 where
 	TParent: Component;
 
@@ -42,7 +42,7 @@ where
 {
 	pub fn system(mut commands: Commands, spawners: Query<(Entity, &Self, &TParent)>) {
 		for (entity, spawner, parent) in &spawners {
-			let Some(mut entity) = commands.get_entity(entity) else {
+			let Ok(mut entity) = commands.get_entity(entity) else {
 				continue;
 			};
 			let SpawnChildrenFromParent(spawn_fn) = spawner;

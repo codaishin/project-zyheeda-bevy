@@ -2,17 +2,7 @@ use crate::{
 	components::{Bar, BarValues, UI},
 	traits::UIBarColors,
 };
-use bevy::{
-	ecs::{
-		entity::Entity,
-		system::{Commands, Query},
-		world::Mut,
-	},
-	hierarchy::BuildChildren,
-	math::Vec2,
-	prelude::default,
-	ui::{BackgroundColor, Node, PositionType, Val},
-};
+use bevy::prelude::*;
 use common::components::UiNodeFor;
 
 const BASE_DIMENSIONS: Vec2 = Vec2::new(100., 10.);
@@ -66,7 +56,7 @@ fn add_ui<T: Send + Sync + 'static>(
 			},
 			BackgroundColor::from(BarValues::<T>::foreground_color()),
 		))
-		.set_parent(background)
+		.insert(ChildOf(background))
 		.id();
 	bar_values.ui = Some(UI {
 		foreground,
@@ -96,14 +86,6 @@ fn noop() {}
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{
-		app::{App, Update},
-		color::Color,
-		ecs::world::EntityRef,
-		hierarchy::Parent,
-		math::Vec2,
-		ui::{BackgroundColor, Node},
-	};
 
 	struct _Display;
 
@@ -118,11 +100,11 @@ mod tests {
 	}
 
 	fn no_parent(entity: &EntityRef) -> bool {
-		!entity.contains::<Parent>()
+		!entity.contains::<ChildOf>()
 	}
 
 	fn with_parent(entity: &EntityRef) -> bool {
-		entity.contains::<Parent>()
+		entity.contains::<ChildOf>()
 	}
 
 	#[test]

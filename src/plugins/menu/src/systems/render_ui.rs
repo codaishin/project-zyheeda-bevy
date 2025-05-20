@@ -13,7 +13,7 @@ pub(crate) trait RenderUi: InsertUiContent + Component + Sized {
 		TLocalization: LocalizeToken + Resource,
 	{
 		for (entity, component) in &components {
-			let Some(mut entity) = commands.get_entity(entity) else {
+			let Ok(mut entity) = commands.get_entity(entity) else {
 				continue;
 			};
 			entity.with_children(|parent| {
@@ -26,6 +26,7 @@ pub(crate) trait RenderUi: InsertUiContent + Component + Sized {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use bevy::ecs::relationship::RelatedSpawnerCommands;
 	use common::{
 		assert_count,
 		get_children,
@@ -46,7 +47,7 @@ mod tests {
 		fn insert_ui_content<TLocalization>(
 			&self,
 			localization: &mut TLocalization,
-			parent: &mut ChildBuilder,
+			parent: &mut RelatedSpawnerCommands<ChildOf>,
 		) where
 			TLocalization: LocalizeToken + ThreadSafe,
 		{

@@ -3,11 +3,11 @@ use crate::{
 	tools::PanelState,
 	traits::{LoadUi, colors::PanelColors, insert_ui_content::InsertUiContent},
 };
-use bevy::prelude::*;
+use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{tools::action_key::slot::SlotKey, traits::iteration::IterFinite};
 
 #[derive(Component)]
-#[require(Node(full_screen))]
+#[require(Node = full_screen())]
 pub struct UIOverlay;
 
 fn full_screen() -> Node {
@@ -26,12 +26,16 @@ impl LoadUi<AssetServer> for UIOverlay {
 }
 
 impl InsertUiContent for UIOverlay {
-	fn insert_ui_content<TLocalization>(&self, _: &mut TLocalization, parent: &mut ChildBuilder) {
+	fn insert_ui_content<TLocalization>(
+		&self,
+		_: &mut TLocalization,
+		parent: &mut RelatedSpawnerCommands<ChildOf>,
+	) {
 		add_quickbar(parent);
 	}
 }
 
-fn add_quickbar(parent: &mut ChildBuilder) {
+fn add_quickbar(parent: &mut RelatedSpawnerCommands<ChildOf>) {
 	parent
 		.spawn((
 			Quickbar,
@@ -47,7 +51,7 @@ fn add_quickbar(parent: &mut ChildBuilder) {
 		});
 }
 
-fn add_slot(quickbar: &mut ChildBuilder, key: &SlotKey) {
+fn add_slot(quickbar: &mut RelatedSpawnerCommands<ChildOf>, key: &SlotKey) {
 	quickbar
 		.spawn(Node {
 			width: Val::Px(70.0),

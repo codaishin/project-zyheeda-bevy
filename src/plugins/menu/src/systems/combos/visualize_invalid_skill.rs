@@ -27,7 +27,7 @@ pub(crate) trait VisualizeInvalidSkill {
 			if compatible_skills.contains(&button.skill) {
 				continue;
 			}
-			let Some(mut entity) = commands.get_entity(entity) else {
+			let Ok(mut entity) = commands.get_entity(entity) else {
 				continue;
 			};
 			visualize(&mut entity);

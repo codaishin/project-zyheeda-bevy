@@ -70,7 +70,7 @@ mod tests {
 		ecs::{
 			component::Component,
 			entity::Entity,
-			system::{Commands, Query},
+			system::{Commands, Query, ScheduleSystem},
 		},
 	};
 	use bevy_rapier3d::dynamics::Velocity;
@@ -118,7 +118,7 @@ mod tests {
 		}
 	}
 
-	fn setup<TMarker>(system: impl IntoSystemConfigs<TMarker>) -> App {
+	fn setup<TMarker>(system: impl IntoScheduleConfigs<ScheduleSystem, TMarker>) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(Update, system);
 

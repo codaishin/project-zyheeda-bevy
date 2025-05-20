@@ -9,7 +9,7 @@ use crate::{
 		update_key_bindings::UpdateKeyBindings,
 	},
 };
-use bevy::prelude::*;
+use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{
 	states::menu_state::MenuState,
 	tools::action_key::{
@@ -37,7 +37,7 @@ pub(crate) struct SettingsScreen {
 
 impl SettingsScreen {
 	fn add_title(
-		parent: &mut ChildBuilder,
+		parent: &mut RelatedSpawnerCommands<ChildOf>,
 		localize: &mut (impl LocalizeToken + ThreadSafe),
 		title: (impl Into<Token> + 'static),
 	) {
@@ -51,7 +51,7 @@ impl SettingsScreen {
 	}
 
 	fn add_section_title(
-		parent: &mut ChildBuilder,
+		parent: &mut RelatedSpawnerCommands<ChildOf>,
 		localize: &mut (impl LocalizeToken + ThreadSafe),
 		title: (impl Into<Token> + 'static),
 	) {
@@ -71,7 +71,7 @@ impl SettingsScreen {
 
 	fn add_section<T>(
 		&self,
-		parent: &mut ChildBuilder,
+		parent: &mut RelatedSpawnerCommands<ChildOf>,
 		localize: &mut (impl LocalizeToken + ThreadSafe),
 		title: (impl Into<Token> + 'static),
 	) where
@@ -96,7 +96,7 @@ impl SettingsScreen {
 			});
 	}
 
-	fn add_key_bindings<T>(&self, parent: &mut ChildBuilder)
+	fn add_key_bindings<T>(&self, parent: &mut RelatedSpawnerCommands<ChildOf>)
 	where
 		T: IterFinite,
 		ActionKey: From<T>,
@@ -116,7 +116,11 @@ impl SettingsScreen {
 			.filter_map(|key| Some((key, *self.key_bindings.get(&key)?)))
 	}
 
-	fn add_key_row(parent: &mut ChildBuilder, action: ActionKey, input: UserInput) {
+	fn add_key_row(
+		parent: &mut RelatedSpawnerCommands<ChildOf>,
+		action: ActionKey,
+		input: UserInput,
+	) {
 		parent
 			.spawn(Node {
 				flex_direction: FlexDirection::Row,
@@ -139,7 +143,7 @@ impl InsertUiContent for SettingsScreen {
 	fn insert_ui_content<TLocalization>(
 		&self,
 		localize: &mut TLocalization,
-		parent: &mut ChildBuilder,
+		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
 		TLocalization: LocalizeToken + ThreadSafe,
 	{

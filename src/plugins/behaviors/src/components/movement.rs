@@ -68,7 +68,7 @@ impl<TMovement> Movement<TMovement> {
 		let matches_constraint = |entity: &Entity| valid_entities.contains(*entity);
 
 		for entity in removed.read().filter(matches_constraint) {
-			let Some(mut entity) = commands.get_entity(entity) else {
+			let Ok(mut entity) = commands.get_entity(entity) else {
 				continue;
 			};
 
@@ -104,12 +104,13 @@ pub(crate) trait OnMovementRemoved {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use bevy::ecs::system::ScheduleSystem;
 	use common::test_tools::utils::SingleThreadedApp;
 
 	#[derive(Default)]
 	struct _T;
 
-	fn setup<TMarker>(system: impl IntoSystemConfigs<TMarker>) -> App {
+	fn setup<TMarker>(system: impl IntoScheduleConfigs<ScheduleSystem, TMarker>) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(Update, system);
 

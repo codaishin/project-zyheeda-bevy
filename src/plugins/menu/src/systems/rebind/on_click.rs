@@ -1,6 +1,6 @@
 use crate::{Input, KeyBind, Rebinding};
 use bevy::prelude::*;
-use common::traits::{thread_safe::ThreadSafe, try_despawn_recursive::TryDespawnRecursive};
+use common::traits::{thread_safe::ThreadSafe, try_despawn::TryDespawn};
 
 impl<TAction, TInput> KeyBind<Input<TAction, TInput>>
 where
@@ -16,7 +16,7 @@ where
 				continue;
 			}
 
-			let Some(mut entity) = commands.get_entity(entity) else {
+			let Ok(mut entity) = commands.get_entity(entity) else {
 				continue;
 			};
 
@@ -28,7 +28,7 @@ where
 			};
 
 			for child in children {
-				commands.try_despawn_recursive(*child);
+				commands.try_despawn(*child);
 			}
 		}
 	}
@@ -50,7 +50,7 @@ mod tests {
 	struct _Child;
 
 	impl _Child {
-		fn spawn_nested_once(key_bind: &mut WorldChildBuilder) {
+		fn spawn_nested_once(key_bind: &mut ChildSpawner) {
 			key_bind.spawn(_Child).with_children(|child| {
 				child.spawn(_Child);
 			});
@@ -78,7 +78,7 @@ mod tests {
 				}),
 				Interaction::Pressed,
 			))
-			.set_parent(parent)
+			.insert(ChildOf(parent))
 			.id();
 
 		app.update();

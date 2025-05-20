@@ -8,7 +8,7 @@ pub(crate) struct WindowSize {
 
 impl WindowSize {
 	pub(crate) fn update(mut window_size: ResMut<WindowSize>, windows: Query<&Window>) {
-		let Ok(window) = windows.get_single() else {
+		let Ok(window) = windows.single() else {
 			return;
 		};
 

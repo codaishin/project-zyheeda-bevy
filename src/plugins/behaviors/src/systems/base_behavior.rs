@@ -1,6 +1,6 @@
 use crate::components::{Attack, Chase};
 use bevy::{math::InvalidDirectionError, prelude::*};
-use bevy_rapier3d::plugin::RapierContext;
+use bevy_rapier3d::plugin::ReadRapierContext;
 use common::{
 	components::{ColliderRoot, GroundOffset},
 	tools::{
@@ -8,25 +8,41 @@ use common::{
 		attack_range::AttackRange,
 		exclude_rigid_body::ExcludeRigidBody,
 	},
-	traits::{accessors::get::Getter, cast_ray::CastRay, handles_enemies::EnemyTarget},
+	traits::{
+		accessors::get::Getter,
+		cast_ray::{CastRay, GetRayCaster},
+		handles_enemies::EnemyTarget,
+	},
 };
 
 impl<T> SelectBehavior for T {}
 
 pub(crate) trait SelectBehavior {
 	fn select_behavior<TPlayer>(
+		rapier: ReadRapierContext,
 		commands: Commands,
-		ctx: Query<&RapierContext>,
 		agents: Query<(Entity, &GlobalTransform, Option<&GroundOffset>, &Self)>,
 		players: Query<(Entity, &GlobalTransform, Option<&GroundOffset>), With<TPlayer>>,
 		all: Query<(Entity, &GlobalTransform, Option<&GroundOffset>)>,
 		colliders: Query<&ColliderRoot>,
-	) -> Vec<Result<(), InvalidDirectionError>>
+	) -> BehaviorResults
 	where
 		Self: Component + Sized + Getter<AggroRange> + Getter<AttackRange> + Getter<EnemyTarget>,
 		TPlayer: Component,
 	{
-		select_behavior(commands, ctx, agents, players, all, colliders)
+		BehaviorResults(select_behavior(
+			rapier, commands, agents, players, all, colliders,
+		))
+	}
+}
+
+pub(crate) struct BehaviorResults(Result<Vec<Result<(), InvalidDirectionError>>, BevyError>);
+
+impl TryFrom<BehaviorResults> for Vec<Result<(), InvalidDirectionError>> {
+	type Error = BevyError;
+
+	fn try_from(BehaviorResults(results): BehaviorResults) -> Result<Self, Self::Error> {
+		results
 	}
 }
 
@@ -36,21 +52,21 @@ enum Behavior {
 	Idle,
 }
 
-fn select_behavior<TAgent, TPlayer, TCasteRay>(
+fn select_behavior<TAgent, TPlayer, TGetRayCaster>(
+	ray_caster_source: TGetRayCaster,
 	mut commands: Commands,
-	contexts: Query<&TCasteRay>,
 	agents: Query<(Entity, &GlobalTransform, Option<&GroundOffset>, &TAgent)>,
 	players: Query<(Entity, &GlobalTransform, Option<&GroundOffset>), With<TPlayer>>,
 	all: Query<(Entity, &GlobalTransform, Option<&GroundOffset>)>,
 	colliders: Query<&ColliderRoot>,
-) -> Vec<Result<(), InvalidDirectionError>>
+) -> Result<Vec<Result<(), InvalidDirectionError>>, TGetRayCaster::TError>
 where
 	TAgent: Component + Sized + Getter<AggroRange> + Getter<AttackRange> + Getter<EnemyTarget>,
 	TPlayer: Component,
-	TCasteRay: Component + CastRay<(Ray3d, ExcludeRigidBody)>,
+	TGetRayCaster: GetRayCaster<(Ray3d, ExcludeRigidBody)>,
 {
-	let player = players.get_single().ok();
-	let context = contexts.get_single().ok();
+	let player = players.single().ok();
+	let ray_caster = ray_caster_source.get_ray_caster()?;
 	let mut results = vec![];
 
 	for (entity, transform, ground_offset, agent) in &agents {
@@ -61,7 +77,7 @@ where
 		let Some((target, target_transform, target_ground_offset)) = target else {
 			continue;
 		};
-		let Some(mut entity) = commands.get_entity(entity) else {
+		let Ok(mut entity) = commands.get_entity(entity) else {
 			continue;
 		};
 		let translation = match ground_offset {
@@ -79,7 +95,7 @@ where
 			translation,
 			target,
 			target_translation,
-			context,
+			&ray_caster,
 			&colliders,
 		);
 		match strategy {
@@ -99,21 +115,21 @@ where
 		}
 	}
 
-	results
+	Ok(results)
 }
 
-fn get_strategy<TAgent, TContext>(
+fn get_strategy<TAgent, TCaster>(
 	enemy: Entity,
 	enemy_agent: &TAgent,
 	enemy_translation: Vec3,
 	target: Entity,
 	target_translation: Vec3,
-	context: Option<&TContext>,
+	ray_caster: &TCaster,
 	colliders: &Query<&ColliderRoot>,
 ) -> Result<Behavior, InvalidDirectionError>
 where
 	TAgent: Getter<AggroRange> + Getter<AttackRange>,
-	TContext: CastRay<(Ray3d, ExcludeRigidBody)>,
+	TCaster: CastRay<(Ray3d, ExcludeRigidBody)>,
 {
 	let direction = target_translation - enemy_translation;
 	let distance = direction.length();
@@ -124,16 +140,13 @@ where
 	if distance > attack_range(enemy_agent) {
 		return Ok(Behavior::Chase);
 	}
-	let Some(context) = context else {
-		return Ok(Behavior::Attack);
-	};
 
 	let ray = Ray3d {
 		origin: enemy_translation,
 		direction: Dir3::new(direction)?,
 	};
 
-	match context.cast_ray(&(ray, ExcludeRigidBody(enemy))) {
+	match ray_caster.cast_ray(&(ray, ExcludeRigidBody(enemy))) {
 		Some((hit, ..)) if hit_target(target, hit, colliders) => Ok(Behavior::Attack),
 		_ => Ok(Behavior::Chase),
 	}
@@ -209,13 +222,45 @@ mod tests {
 	#[derive(Component)]
 	struct _Player;
 
-	#[derive(Component, NestedMocks)]
-	struct _Context {
-		mock: Mock_Context,
+	#[derive(NestedMocks)]
+	pub struct _GetRayCaster {
+		mock: Mock_GetRayCaster,
+	}
+
+	impl _GetRayCaster {
+		fn with_no_hit() -> Self {
+			Self::new().with_mock(|mock| {
+				mock.expect_get_ray_caster().returning(|| {
+					Ok(_RayCaster::new().with_mock(|mock| {
+						mock.expect_cast_ray().return_const(None);
+					}))
+				});
+			})
+		}
+	}
+
+	pub enum _ContextQueryError {}
+
+	#[automock]
+	impl GetRayCaster<(Ray3d, ExcludeRigidBody)> for _GetRayCaster {
+		type TError = _ContextQueryError;
+		type TRayCaster<'a>
+			= _RayCaster
+		where
+			Self: 'a;
+
+		fn get_ray_caster(&self) -> Result<Self::TRayCaster<'_>, Self::TError> {
+			self.mock.get_ray_caster()
+		}
+	}
+
+	#[derive(NestedMocks)]
+	pub struct _RayCaster {
+		mock: Mock_RayCaster,
 	}
 
 	#[automock]
-	impl CastRay<(Ray3d, ExcludeRigidBody)> for _Context {
+	impl CastRay<(Ray3d, ExcludeRigidBody)> for _RayCaster {
 		fn cast_ray(&self, ray_data: &(Ray3d, ExcludeRigidBody)) -> Option<(Entity, TimeOfImpact)> {
 			self.mock.cast_ray(ray_data)
 		}
@@ -245,43 +290,14 @@ mod tests {
 			))
 			.id();
 
-		app.world_mut()
-			.run_system_once(select_behavior::<_Enemy, _Player, _Context>)?;
+		Ok(_) = app.world_mut().run_system_once_with(
+			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
+			_GetRayCaster::with_no_hit(),
+		)?;
 
 		let enemy = app.world().entity(enemy);
 		assert_eq!(
 			(Some(&Chase(player)), None),
-			(enemy.get::<Chase>(), enemy.get::<Attack>())
-		);
-		Ok(())
-	}
-
-	#[test]
-	fn attack_player() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		let player = app
-			.world_mut()
-			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Player))
-			.id();
-		let enemy = app
-			.world_mut()
-			.spawn((
-				GlobalTransform::from_xyz(1., 0., 0.5),
-				Chase(player),
-				_Enemy {
-					attack_range: Units::new(1.).into(),
-					aggro_range: Units::new(2.).into(),
-					target: EnemyTarget::Player,
-				},
-			))
-			.id();
-
-		app.world_mut()
-			.run_system_once(select_behavior::<_Enemy, _Player, _Context>)?;
-
-		let enemy = app.world().entity(enemy);
-		assert_eq!(
-			(None, Some(&Attack(player))),
 			(enemy.get::<Chase>(), enemy.get::<Attack>())
 		);
 		Ok(())
@@ -308,8 +324,10 @@ mod tests {
 			))
 			.id();
 
-		app.world_mut()
-			.run_system_once(select_behavior::<_Enemy, _Player, _Context>)?;
+		Ok(_) = app.world_mut().run_system_once_with(
+			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
+			_GetRayCaster::with_no_hit(),
+		)?;
 
 		let enemy = app.world().entity(enemy);
 		assert_eq!((None, None), (enemy.get::<Chase>(), enemy.get::<Attack>()));
@@ -336,43 +354,14 @@ mod tests {
 			))
 			.id();
 
-		app.world_mut()
-			.run_system_once(select_behavior::<_Enemy, _Player, _Context>)?;
+		Ok(_) = app.world_mut().run_system_once_with(
+			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
+			_GetRayCaster::with_no_hit(),
+		)?;
 
 		let enemy = app.world().entity(enemy);
 		assert_eq!(
 			(Some(&Chase(target)), None),
-			(enemy.get::<Chase>(), enemy.get::<Attack>())
-		);
-		Ok(())
-	}
-
-	#[test]
-	fn attack_entity() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		let target = app
-			.world_mut()
-			.spawn(GlobalTransform::from_xyz(1., 0., 0.))
-			.id();
-		let enemy = app
-			.world_mut()
-			.spawn((
-				GlobalTransform::from_xyz(1., 0., 0.5),
-				Chase(target),
-				_Enemy {
-					attack_range: Units::new(1.).into(),
-					aggro_range: Units::new(2.).into(),
-					target: EnemyTarget::Entity(target),
-				},
-			))
-			.id();
-
-		app.world_mut()
-			.run_system_once(select_behavior::<_Enemy, _Player, _Context>)?;
-
-		let enemy = app.world().entity(enemy);
-		assert_eq!(
-			(None, Some(&Attack(target))),
 			(enemy.get::<Chase>(), enemy.get::<Attack>())
 		);
 		Ok(())
@@ -399,8 +388,10 @@ mod tests {
 			))
 			.id();
 
-		app.world_mut()
-			.run_system_once(select_behavior::<_Enemy, _Player, _Context>)?;
+		Ok(_) = app.world_mut().run_system_once_with(
+			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
+			_GetRayCaster::with_no_hit(),
+		)?;
 
 		let enemy = app.world().entity(enemy);
 		assert_eq!((None, None), (enemy.get::<Chase>(), enemy.get::<Attack>()));
@@ -426,12 +417,18 @@ mod tests {
 				},
 			))
 			.id();
-		app.world_mut().spawn(_Context::new().with_mock(|mock| {
-			mock.expect_cast_ray().return_const(None);
-		}));
+		let get_ray_caster = _GetRayCaster::new().with_mock(|mock| {
+			mock.expect_get_ray_caster().times(1).returning(|| {
+				Ok(_RayCaster::new().with_mock(|mock| {
+					mock.expect_cast_ray().return_const(None);
+				}))
+			});
+		});
 
-		app.world_mut()
-			.run_system_once(select_behavior::<_Enemy, _Player, _Context>)?;
+		Ok(_) = app.world_mut().run_system_once_with(
+			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
+			get_ray_caster,
+		)?;
 
 		let enemy = app.world().entity(enemy);
 		assert_eq!(
@@ -460,14 +457,20 @@ mod tests {
 				},
 			))
 			.id();
-		app.world_mut().spawn(_Context::new().with_mock(|mock| {
-			let arbitrary_toi = TimeOfImpact(42.);
-			mock.expect_cast_ray()
-				.return_const(Some((player, arbitrary_toi)));
-		}));
+		let get_ray_caster = _GetRayCaster::new().with_mock(move |mock| {
+			mock.expect_get_ray_caster().times(1).returning(move || {
+				Ok(_RayCaster::new().with_mock(move |mock| {
+					let arbitrary_toi = TimeOfImpact(42.);
+					mock.expect_cast_ray()
+						.return_const(Some((player, arbitrary_toi)));
+				}))
+			});
+		});
 
-		app.world_mut()
-			.run_system_once(select_behavior::<_Enemy, _Player, _Context>)?;
+		Ok(_) = app.world_mut().run_system_once_with(
+			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
+			get_ray_caster,
+		)?;
 
 		let enemy = app.world().entity(enemy);
 		assert_eq!(
@@ -497,15 +500,21 @@ mod tests {
 				},
 			))
 			.id();
-		app.world_mut().spawn(_Context::new().with_mock(|mock| {
-			let arbitrary_toi = TimeOfImpact(42.);
-			let other_entity = Entity::from_raw(100);
-			mock.expect_cast_ray()
-				.return_const(Some((other_entity, arbitrary_toi)));
-		}));
+		let get_ray_caster = _GetRayCaster::new().with_mock(|mock| {
+			mock.expect_get_ray_caster().times(1).returning(|| {
+				Ok(_RayCaster::new().with_mock(|mock| {
+					let arbitrary_toi = TimeOfImpact(42.);
+					let other_entity = Entity::from_raw(100);
+					mock.expect_cast_ray()
+						.return_const(Some((other_entity, arbitrary_toi)));
+				}))
+			});
+		});
 
-		app.world_mut()
-			.run_system_once(select_behavior::<_Enemy, _Player, _Context>)?;
+		Ok(_) = app.world_mut().run_system_once_with(
+			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
+			get_ray_caster,
+		)?;
 
 		let enemy = app.world().entity(enemy);
 		assert_eq!(
@@ -534,22 +543,28 @@ mod tests {
 				},
 			))
 			.id();
-		app.world_mut().spawn(_Context::new().with_mock(|mock| {
-			let direction = Dir3::new(Vec3::new(1., 0., -1.)).expect("TEST DIR INVALID");
-			mock.expect_cast_ray()
-				.times(1)
-				.with(eq((
-					Ray3d {
-						origin: Vec3::new(0., 0., 1.),
-						direction,
-					},
-					ExcludeRigidBody(enemy),
-				)))
-				.return_const(None);
-		}));
+		let get_ray_caster = _GetRayCaster::new().with_mock(move |mock| {
+			mock.expect_get_ray_caster().times(1).returning(move || {
+				Ok(_RayCaster::new().with_mock(move |mock| {
+					let direction = Dir3::new(Vec3::new(1., 0., -1.)).expect("TEST DIR INVALID");
+					mock.expect_cast_ray()
+						.times(1)
+						.with(eq((
+							Ray3d {
+								origin: Vec3::new(0., 0., 1.),
+								direction,
+							},
+							ExcludeRigidBody(enemy),
+						)))
+						.return_const(None);
+				}))
+			});
+		});
 
-		app.world_mut()
-			.run_system_once(select_behavior::<_Enemy, _Player, _Context>)?;
+		Ok(_) = app.world_mut().run_system_once_with(
+			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
+			get_ray_caster,
+		)?;
 		Ok(())
 	}
 
@@ -577,22 +592,28 @@ mod tests {
 				GroundOffset(Vec3::new(0., 1., 0.)),
 			))
 			.id();
-		app.world_mut().spawn(_Context::new().with_mock(|mock| {
-			let direction = Dir3::new(Vec3::new(1., -0.5, -1.)).expect("TEST DIR INVALID");
-			mock.expect_cast_ray()
-				.times(1)
-				.with(eq((
-					Ray3d {
-						origin: Vec3::new(0., 1., 1.),
-						direction,
-					},
-					ExcludeRigidBody(enemy),
-				)))
-				.return_const(None);
-		}));
+		let get_ray_caster = _GetRayCaster::new().with_mock(move |mock| {
+			mock.expect_get_ray_caster().times(1).returning(move || {
+				Ok(_RayCaster::new().with_mock(move |mock| {
+					let direction = Dir3::new(Vec3::new(1., -0.5, -1.)).expect("TEST DIR INVALID");
+					mock.expect_cast_ray()
+						.times(1)
+						.with(eq((
+							Ray3d {
+								origin: Vec3::new(0., 1., 1.),
+								direction,
+							},
+							ExcludeRigidBody(enemy),
+						)))
+						.return_const(None);
+				}))
+			});
+		});
 
-		app.world_mut()
-			.run_system_once(select_behavior::<_Enemy, _Player, _Context>)?;
+		Ok(_) = app.world_mut().run_system_once_with(
+			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
+			get_ray_caster,
+		)?;
 		Ok(())
 	}
 
@@ -612,13 +633,11 @@ mod tests {
 				target: EnemyTarget::Player,
 			},
 		));
-		app.world_mut().spawn(_Context::new().with_mock(|mock| {
-			mock.expect_cast_ray().return_const(None);
-		}));
 
-		let errors = app
-			.world_mut()
-			.run_system_once(select_behavior::<_Enemy, _Player, _Context>)?;
+		let Ok(errors) = app.world_mut().run_system_once_with(
+			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
+			_GetRayCaster::with_no_hit(),
+		)?;
 
 		assert_eq!(vec![Err(InvalidDirectionError::NaN)], errors);
 		Ok(())
@@ -645,14 +664,20 @@ mod tests {
 				},
 			))
 			.id();
-		app.world_mut().spawn(_Context::new().with_mock(|mock| {
-			let arbitrary_toi = TimeOfImpact(42.);
-			mock.expect_cast_ray()
-				.return_const(Some((player_collider, arbitrary_toi)));
-		}));
+		let get_ray_caster = _GetRayCaster::new().with_mock(move |mock| {
+			mock.expect_get_ray_caster().times(1).returning(move || {
+				Ok(_RayCaster::new().with_mock(move |mock| {
+					let arbitrary_toi = TimeOfImpact(42.);
+					mock.expect_cast_ray()
+						.return_const(Some((player_collider, arbitrary_toi)));
+				}))
+			});
+		});
 
-		app.world_mut()
-			.run_system_once(select_behavior::<_Enemy, _Player, _Context>)?;
+		Ok(_) = app.world_mut().run_system_once_with(
+			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
+			get_ray_caster,
+		)?;
 
 		let enemy = app.world().entity(enemy);
 		assert_eq!(

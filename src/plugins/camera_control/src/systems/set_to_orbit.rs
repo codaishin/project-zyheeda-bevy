@@ -17,7 +17,7 @@ pub(crate) trait SetCameraToOrbit {
 		Self: Component + Sized,
 		TPlayer: Component,
 	{
-		let Ok(player) = players.get_single() else {
+		let Ok(player) = players.single() else {
 			return;
 		};
 

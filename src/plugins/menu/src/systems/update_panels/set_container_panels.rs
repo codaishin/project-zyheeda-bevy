@@ -1,5 +1,5 @@
 use crate::{components::KeyedPanel, tools::PanelState};
-use bevy::{hierarchy::Parent, prelude::*};
+use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
 	tools::item_description::ItemToken,
 	traits::{
@@ -12,16 +12,16 @@ use common::{
 };
 use std::hash::Hash;
 
-impl<T> SetContainerPanels for T {}
+impl<T> SetContainerPanels for T where T: Component<Mutability = Mutable> {}
 
-pub trait SetContainerPanels {
+pub trait SetContainerPanels: Component<Mutability = Mutable> + Sized {
 	fn set_container_panels<TLocalization, TKey, TEquipment>(
 		items: Res<TEquipment>,
 		mut localize: ResMut<TLocalization>,
-		mut texts: Query<(&Parent, &mut Text)>,
+		mut texts: Query<(&ChildOf, &mut Text)>,
 		mut panels: Query<(Entity, &KeyedPanel<TKey>, &mut Self)>,
 	) where
-		Self: Component + Setter<PanelState> + Sized,
+		Self: Setter<PanelState>,
 		TLocalization: LocalizeToken + Resource,
 		TKey: Eq + Hash + Copy + ThreadSafe,
 		TEquipment: Resource + GetItem<TKey>,
@@ -46,8 +46,8 @@ pub trait SetContainerPanels {
 	}
 }
 
-fn set_label(texts: &mut Query<(&Parent, &mut Text)>, entity: Entity, label: Localized) {
-	let Some((.., mut text)) = texts.iter_mut().find(|(p, ..)| p.get() == entity) else {
+fn set_label(texts: &mut Query<(&ChildOf, &mut Text)>, entity: Entity, label: Localized) {
+	let Some((.., mut text)) = texts.iter_mut().find(|(c, ..)| c.parent() == entity) else {
 		return;
 	};
 	*text = Text::from(label);
@@ -157,7 +157,11 @@ mod tests {
 				}),
 			))
 			.id();
-		let text = app.world_mut().spawn(Text::new("")).set_parent(panel).id();
+		let text = app
+			.world_mut()
+			.spawn(Text::new(""))
+			.insert(ChildOf(panel))
+			.id();
 
 		app.update();
 
@@ -197,7 +201,11 @@ mod tests {
 				}),
 			))
 			.id();
-		let text = app.world_mut().spawn(Text::new("")).set_parent(panel).id();
+		let text = app
+			.world_mut()
+			.spawn(Text::new(""))
+			.insert(ChildOf(panel))
+			.id();
 
 		app.update();
 
@@ -257,8 +265,12 @@ mod tests {
 				}),
 			))
 			.id();
-		app.world_mut().spawn(()).set_parent(panel);
-		let text = app.world_mut().spawn(Text::new("")).set_parent(panel).id();
+		app.world_mut().spawn(()).insert(ChildOf(panel));
+		let text = app
+			.world_mut()
+			.spawn(Text::new(""))
+			.insert(ChildOf(panel))
+			.id();
 
 		app.update();
 

@@ -11,7 +11,7 @@ impl Icon {
 				continue;
 			}
 
-			let Some(mut entity) = commands.get_entity(entity) else {
+			let Ok(mut entity) = commands.get_entity(entity) else {
 				continue;
 			};
 

@@ -7,7 +7,7 @@ use common::{
 };
 
 #[derive(Component, Debug, PartialEq)]
-#[require(BlockerInsertCommand(Self::blockers))]
+#[require(BlockerInsertCommand = Self::blockers())]
 pub struct ForceShieldEffect(pub(crate) ForceShield);
 
 impl ForceShieldEffect {

@@ -1,10 +1,29 @@
-pub mod rapier_context;
+pub mod read_rapier_context;
+pub mod system_input;
 
 use bevy::ecs::entity::Entity;
 use bevy_rapier3d::{math::Real, prelude::RayIntersection};
 
 #[derive(Debug, Default, PartialEq, PartialOrd, Clone, Copy)]
 pub struct TimeOfImpact(pub Real);
+
+pub trait GetRayCaster<TRayData> {
+	type TError;
+	type TRayCaster<'a>: CastRay<TRayData>
+	where
+		Self: 'a;
+
+	fn get_ray_caster(&self) -> Result<Self::TRayCaster<'_>, Self::TError>;
+}
+
+pub trait GetContinuousSortedRayCaster<TRayData> {
+	type TError;
+	type TRayCaster<'a>: CastRayContinuouslySorted<TRayData>
+	where
+		Self: 'a;
+
+	fn get_continuous_sorted_ray_caster(&self) -> Result<Self::TRayCaster<'_>, Self::TError>;
+}
 
 pub trait CastRay<TRayData> {
 	fn cast_ray(&self, ray_data: &TRayData) -> Option<(Entity, TimeOfImpact)>;
@@ -24,7 +43,10 @@ pub trait CastRayContinuouslySorted<TRayData> {
 	fn cast_ray_continuously_sorted(&self, ray: &TRayData) -> SortedByTimeOfImpactAscending;
 }
 
-impl<T: CastRayContinuously<TRayData>, TRayData> CastRayContinuouslySorted<TRayData> for T {
+impl<T, TRayData> CastRayContinuouslySorted<TRayData> for T
+where
+	T: CastRayContinuously<TRayData>,
+{
 	fn cast_ray_continuously_sorted(&self, ray: &TRayData) -> SortedByTimeOfImpactAscending {
 		let mut results = Vec::new();
 

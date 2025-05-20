@@ -8,7 +8,10 @@ use crate::{
 		to_subdivided::ToSubdivided,
 	},
 };
-use bevy::{ecs::query::QuerySingleError, prelude::*};
+use bevy::{
+	ecs::{query::QuerySingleError, relationship::RelatedSpawnerCommands},
+	prelude::*,
+};
 use common::{
 	errors::{Error, Level as ErrorLevel},
 	traits::{thread_safe::ThreadSafe, try_insert_on::TryInsertOn},
@@ -17,7 +20,7 @@ use error_type_marker::TypeMarker;
 use std::any::type_name;
 
 #[derive(Component, Debug, PartialEq)]
-#[require(Name(Self::name), Transform, Visibility)]
+#[require(Name = Self::name(), Transform, Visibility)]
 pub struct Grid<const SUBDIVISIONS: u8 = 0, TGraph = GridGraph>
 where
 	TGraph: ToSubdivided,
@@ -35,12 +38,12 @@ impl Grid {
 		TCell: InsertCellComponents + GridCellDistanceDefinition,
 	{
 		let cells = cells.map_err(|error| SpawnCellError::Error(error))?;
-		let level = grids.get_single().map_err(|error| match error {
+		let level = grids.single().map_err(|error| match error {
 			QuerySingleError::NoEntities(_) => SpawnCellError::NoGrid,
 			QuerySingleError::MultipleEntities(_) => SpawnCellError::MultipleGrids,
 		})?;
 
-		let Some(mut grid) = commands.get_entity(level) else {
+		let Ok(mut grid) = commands.get_entity(level) else {
 			return Err(SpawnCellError::EntityCommandsError); // untested, don't know how to simulate
 		};
 
@@ -129,7 +132,10 @@ where
 	}
 }
 
-fn spawn_children<TCell>(cells: Vec<(Vec3, TCell)>, scale: Vec3) -> impl FnOnce(&mut ChildBuilder)
+fn spawn_children<TCell>(
+	cells: Vec<(Vec3, TCell)>,
+	scale: Vec3,
+) -> impl FnOnce(&mut RelatedSpawnerCommands<ChildOf>)
 where
 	TCell: InsertCellComponents + GridCellDistanceDefinition,
 {
@@ -296,7 +302,7 @@ mod tests {
 
 		let result = app
 			.world_mut()
-			.run_system_once_with(cells, Grid::spawn_cells)?;
+			.run_system_once_with(Grid::spawn_cells, cells)?;
 
 		let entities = assert_count!(3, get_children!(app, grid));
 		assert_eq!(
@@ -323,7 +329,7 @@ mod tests {
 
 		let result = app
 			.world_mut()
-			.run_system_once_with(cells, Grid::spawn_cells)?;
+			.run_system_once_with(Grid::spawn_cells, cells)?;
 
 		let entities = assert_count!(3, get_children!(app, grid));
 		assert_eq!(
@@ -346,7 +352,7 @@ mod tests {
 
 		let result = app
 			.world_mut()
-			.run_system_once_with(cells, Grid::spawn_cells)?;
+			.run_system_once_with(Grid::spawn_cells, cells)?;
 
 		assert_eq!(Err(SpawnCellError::Error(_Error)), result);
 		Ok(())
@@ -363,7 +369,7 @@ mod tests {
 
 		let result = app
 			.world_mut()
-			.run_system_once_with(cells, Grid::spawn_cells)?;
+			.run_system_once_with(Grid::spawn_cells, cells)?;
 
 		assert_eq!(Err(SpawnCellError::NoGrid), result);
 		Ok(())
@@ -378,7 +384,7 @@ mod tests {
 
 		let result = app
 			.world_mut()
-			.run_system_once_with(cells, Grid::spawn_cells)?;
+			.run_system_once_with(Grid::spawn_cells, cells)?;
 
 		assert_eq!(Err(SpawnCellError::MultipleGrids), result);
 		Ok(())

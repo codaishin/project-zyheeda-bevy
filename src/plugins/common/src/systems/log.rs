@@ -21,23 +21,28 @@ where
 	output(error);
 }
 
-pub fn log_many<TError>(results: In<Vec<Result<(), TError>>>)
+pub fn log_many<TError, TResults>(In(results): In<TResults>)
 where
-	Error: From<TError>,
+	Error: From<TError> + From<TResults::Error>,
+	TResults: TryInto<Vec<Result<(), TError>>>,
 {
-	for error in results.0.into_iter().filter_map(|result| result.err()) {
-		let error = Error::from(error);
-		output(error);
+	match results.try_into() {
+		Ok(results) => {
+			for error in results.into_iter().filter_map(|result| result.err()) {
+				let error = Error::from(error);
+				output(error);
+			}
+		}
+		Err(error) => {
+			let error = Error::from(error);
+			output(error);
+		}
 	}
 }
 
 pub mod test_tools {
 	use super::*;
-	use ::bevy::prelude::Entity;
-	use bevy::ecs::{
-		component::Component,
-		system::{Commands, Resource},
-	};
+	use bevy::prelude::*;
 
 	#[derive(Component, PartialEq, Debug)]
 	pub struct FakeErrorLogMany(pub Vec<Error>);

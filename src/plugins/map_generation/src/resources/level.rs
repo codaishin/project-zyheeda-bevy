@@ -11,11 +11,7 @@ use bevy::prelude::*;
 use common::{
 	errors::{Error, Level as ErrorLevel},
 	tools::handle::default_handle,
-	traits::{
-		load_asset::LoadAsset,
-		thread_safe::ThreadSafe,
-		try_despawn_recursive::TryDespawnRecursive,
-	},
+	traits::{load_asset::LoadAsset, thread_safe::ThreadSafe, try_despawn::TryDespawn},
 };
 use std::collections::HashMap;
 
@@ -192,7 +188,7 @@ where
 		};
 
 		for grid in &grids {
-			commands.try_despawn_recursive(grid);
+			commands.try_despawn(grid);
 		}
 
 		commands.spawn((TGrid::from(graph.clone()), Transform::default()));

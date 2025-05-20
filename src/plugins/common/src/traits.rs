@@ -57,7 +57,7 @@ pub mod states;
 pub mod swap_command;
 pub mod thread_safe;
 pub mod track;
-pub mod try_despawn_recursive;
+pub mod try_despawn;
 pub mod try_insert_on;
 pub mod try_remove_from;
 pub mod update_cumulative;

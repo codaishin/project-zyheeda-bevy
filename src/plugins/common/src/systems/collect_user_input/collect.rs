@@ -42,7 +42,7 @@ impl UserInput {
 mod tests {
 	use super::*;
 	use crate::test_tools::utils::SingleThreadedApp;
-	use bevy::utils::HashSet;
+	use std::collections::HashSet;
 
 	#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 	struct _T(UserInput);

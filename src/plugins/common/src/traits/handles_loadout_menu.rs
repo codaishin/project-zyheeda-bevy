@@ -9,12 +9,12 @@ use crate::tools::{
 	skill_icon::SkillIcon,
 	swap_key::SwapKey,
 };
-use bevy::prelude::*;
+use bevy::{ecs::component::Mutable, prelude::*};
 
 pub trait HandlesLoadoutMenu {
 	fn loadout_with_swapper<TSwap>() -> impl ConfigureInventory<TSwap>
 	where
-		TSwap: Component + SwapValuesByKey;
+		TSwap: Component<Mutability = Mutable> + SwapValuesByKey;
 
 	fn configure_quickbar_menu<TQuickbar, TSystemMarker>(
 		app: &mut App,

@@ -145,6 +145,8 @@ where
 			TPlayers,
 		>;
 
+		app.register_required_components::<TBehaviors::TSkillContact, Transform>();
+		app.register_required_components::<TBehaviors::TSkillContact, Visibility>();
 		app.add_systems(
 			Update,
 			(
@@ -166,7 +168,7 @@ where
 		players: Query<Entity, Added<TPlayers::TPlayer>>,
 		asset_server: Res<AssetServer>,
 	) {
-		let Ok(player) = players.get_single() else {
+		let Ok(player) = players.single() else {
 			return;
 		};
 		let asset_server = asset_server.as_ref();

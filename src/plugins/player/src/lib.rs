@@ -4,10 +4,10 @@ mod resources;
 mod systems;
 
 use bevy::prelude::*;
-use bevy_rapier3d::plugin::RapierContext;
 use common::{
 	attributes::health::Health,
 	effects::deal_damage::DealDamage,
+	states::game_state::GameState,
 	tools::action_key::{movement::MovementKey, slot::SlotKey},
 	traits::{
 		animation::RegisterAnimations,
@@ -97,19 +97,15 @@ where
 		app.init_resource::<CamRay>()
 			.add_systems(
 				First,
+				(set_cam_ray::<Camera, PlayerCamera>, set_mouse_hover).chain(),
+			)
+			.add_systems(
+				Update,
 				(
-					set_cam_ray::<Camera, PlayerCamera>,
-					set_mouse_hover::<RapierContext>,
+					SkillAnimation::system::<TAnimation::TAnimationDispatch>,
+					player_toggle_walk_run::<TSettings::TKeyMap<MovementKey>>,
 				)
-					.chain(),
-			)
-			.add_systems(
-				Update,
-				SkillAnimation::system::<TAnimation::TAnimationDispatch>,
-			)
-			.add_systems(
-				Update,
-				player_toggle_walk_run::<TSettings::TKeyMap<MovementKey>>,
+					.run_if(not(in_state(GameState::LoadingEssentialAssets))),
 			);
 	}
 }

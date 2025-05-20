@@ -171,7 +171,7 @@ mod tests {
 		entities: Query<Entity>,
 	) {
 		for entity in &entities {
-			let Some(mut entity) = commands.get_entity(entity) else {
+			let Ok(mut entity) = commands.get_entity(entity) else {
 				continue;
 			};
 
@@ -185,7 +185,7 @@ mod tests {
 		entities: Query<Entity>,
 	) {
 		for entity in &entities {
-			let Some(mut entity) = commands.get_entity(entity) else {
+			let Ok(mut entity) = commands.get_entity(entity) else {
 				continue;
 			};
 
@@ -201,7 +201,7 @@ mod tests {
 		let entity = app.world_mut().spawn_empty().id();
 
 		app.world_mut()
-			.run_system_once_with(shader, insert_shader_system)?;
+			.run_system_once_with(insert_shader_system, shader)?;
 
 		assert_eq!(
 			Some(&MeshMaterial3d(handle)),
@@ -217,7 +217,7 @@ mod tests {
 		let entity = app.world_mut().spawn_empty().id();
 
 		app.world_mut()
-			.run_system_once_with(shader, insert_shader_system)?;
+			.run_system_once_with(insert_shader_system, shader)?;
 
 		assert_eq!(
 			Some(&Protected::<MeshMaterial3d<_Asset>>::default()),
@@ -241,7 +241,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(shader, remove_shader_system)?;
+			.run_system_once_with(remove_shader_system, shader)?;
 
 		assert_eq!(
 			(None, None),

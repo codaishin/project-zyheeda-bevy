@@ -7,17 +7,17 @@ edition = "2024"
 
 [workspace.dependencies]
 # external
-bevy = { version = "0.15.0", features = ["serialize"] }
-bevy-inspector-egui = "0.28.0"
-bevy_rapier3d = "0.28.0"
+bevy = { version = "0.16.0", features = ["serialize"] }
+bevy-inspector-egui = "0.31.0"
+bevy_rapier3d = "0.30.0"
 fluent = "0.16.1"
 fluent-syntax = "0.11.1"
 mockall = "=0.13.1"
-serde = "1.0.215"
-serde_json = "1.0.133"
+serde = "1.0.219"
+serde_json = "1.0.140"
 tracing = "0.1.41"
-unic-langid = { version = "0.9.5", features = ["macros"] }
-uuid = "1.11.0"
+unic-langid = { version = "0.9.6", features = ["macros"] }
+uuid = "1.16.0"
 test-case = "3.3.1"
 
 # internal

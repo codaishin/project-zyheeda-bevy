@@ -19,7 +19,7 @@ use common::{
 use std::{f32::consts::PI, time::Duration};
 
 #[derive(Component, Debug, PartialEq)]
-#[require(SpawnChildrenFromParent<Self>(Self::model))]
+#[require(SpawnChildrenFromParent::<Self> = Self::model())]
 pub(crate) struct VoidBeam {
 	attack: VoidBeamAttack,
 	attacker: Entity,
@@ -82,9 +82,9 @@ where
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
 #[require(
 	Visibility,
-	Transform(Self::transform),
-	InsertAsset<Mesh>(Self::model),
-	InsertAssetFromSource<StandardMaterial, Self>(Self::material),
+	Transform = Self::transform(),
+	InsertAsset::<Mesh> = Self::model(),
+	InsertAssetFromSource::<StandardMaterial, Self> = Self::material(),
 	NotShadowCaster,
 )]
 pub(crate) struct VoidBeamModel {

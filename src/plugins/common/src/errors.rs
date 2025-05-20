@@ -1,5 +1,5 @@
-use bevy::{math::InvalidDirectionError, reflect::TypePath};
-use std::{error::Error as StdError, fmt::Display, io::Error as IoError};
+use bevy::{ecs::error::BevyError, math::InvalidDirectionError, reflect::TypePath};
+use std::{convert::Infallible, error::Error as StdError, fmt::Display, io::Error as IoError};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Level {
@@ -38,6 +38,21 @@ impl From<IoError> for Error {
 			msg: value.to_string(),
 			lvl: Level::Error,
 		}
+	}
+}
+
+impl From<BevyError> for Error {
+	fn from(value: BevyError) -> Self {
+		Self {
+			msg: value.to_string(),
+			lvl: Level::Error,
+		}
+	}
+}
+
+impl From<Infallible> for Error {
+	fn from(_: Infallible) -> Self {
+		unreachable!("If you managed to get here, I am seriously impressed (not in a good way...)")
 	}
 }
 

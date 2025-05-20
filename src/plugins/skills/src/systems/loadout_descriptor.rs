@@ -24,7 +24,7 @@ pub(crate) trait LoadoutDescriptor {
 		TAgent: Component,
 		Self::TKey: Eq + Hash + Copy,
 	{
-		let Ok(container) = containers.get_single() else {
+		let Ok(container) = containers.single() else {
 			return Change::None;
 		};
 

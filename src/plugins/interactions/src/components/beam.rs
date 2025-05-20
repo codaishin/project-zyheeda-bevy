@@ -1,4 +1,4 @@
-use super::{RayCaster, RayFilter};
+use super::{RayCasterArgs, RayFilter};
 use crate::events::{InteractionEvent, Ray};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
@@ -9,7 +9,7 @@ use common::{
 		cast_ray::TimeOfImpact,
 		handles_interactions::BeamParameters,
 		handles_lifetime::HandlesLifetime,
-		try_despawn_recursive::TryDespawnRecursive,
+		try_despawn::TryDespawn,
 		try_insert_on::TryInsertOn,
 	},
 };
@@ -33,8 +33,8 @@ impl Beam {
 	{
 		for (entity, cmd, ..) in &beams {
 			match commands.get_entity(cmd.source) {
-				Some(_) => defer_beam_ray_cast(&mut commands, &transforms, entity, cmd),
-				None => despawn_beam(&mut commands, entity),
+				Ok(_) => defer_beam_ray_cast(&mut commands, &transforms, entity, cmd),
+				Err(_) => despawn_beam(&mut commands, entity),
 			}
 		}
 
@@ -102,7 +102,7 @@ fn defer_beam_ray_cast(
 
 	commands.try_insert_on(
 		entity,
-		RayCaster {
+		RayCasterArgs {
 			origin,
 			direction,
 			solid: true,
@@ -113,7 +113,7 @@ fn defer_beam_ray_cast(
 }
 
 fn despawn_beam(commands: &mut Commands, entity: Entity) {
-	commands.try_despawn_recursive(entity)
+	commands.try_despawn(entity)
 }
 
 fn get_filter(source: Entity) -> Option<RayFilter> {
@@ -172,7 +172,7 @@ fn unpack_beam_ray(
 mod tests {
 	use super::*;
 	use crate::{
-		components::RayCaster,
+		components::RayCasterArgs,
 		events::{InteractionEvent, Ray},
 	};
 	use common::{
@@ -226,7 +226,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&RayCaster {
+			Some(&RayCasterArgs {
 				origin: Vec3::new(1., 0., 0.),
 				direction: Dir3::Z,
 				max_toi: TimeOfImpact(100.),
@@ -236,7 +236,7 @@ mod tests {
 					.try_into()
 					.unwrap(),
 			}),
-			app.world().entity(beam).get::<RayCaster>()
+			app.world().entity(beam).get::<RayCasterArgs>()
 		);
 	}
 
@@ -269,7 +269,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&RayCaster {
+			Some(&RayCasterArgs {
 				origin: Vec3::new(1., 0., 0.),
 				direction: Vec3::new(0., 1., 4.).normalize().try_into().unwrap(),
 				max_toi: TimeOfImpact(100.),
@@ -279,7 +279,7 @@ mod tests {
 					.try_into()
 					.unwrap(),
 			}),
-			app.world().entity(beam).get::<RayCaster>()
+			app.world().entity(beam).get::<RayCasterArgs>()
 		);
 	}
 
@@ -312,7 +312,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&RayCaster {
+			Some(&RayCasterArgs {
 				origin: Vec3::new(1., 1., 0.),
 				direction: Vec3::new(0., -1., 4.).normalize().try_into().unwrap(),
 				max_toi: TimeOfImpact(100.),
@@ -322,7 +322,7 @@ mod tests {
 					.try_into()
 					.unwrap(),
 			}),
-			app.world().entity(beam).get::<RayCaster>()
+			app.world().entity(beam).get::<RayCasterArgs>()
 		);
 	}
 
@@ -474,7 +474,7 @@ mod tests {
 				params: Parameters::default(),
 			})
 			.id();
-		let child = app.world_mut().spawn_empty().set_parent(beam).id();
+		let child = app.world_mut().spawn(ChildOf(beam)).id();
 		app.world_mut()
 			.send_event(InteractionEvent::of(ColliderRoot(beam)).ray(
 				Ray3d {

@@ -12,10 +12,10 @@ pub trait SetPlayerMovement {
 		TEvent: Event,
 		for<'a> TMovement: Component + From<&'a TEvent>,
 	{
-		let Ok(player) = players.get_single() else {
+		let Ok(player) = players.single() else {
 			return;
 		};
-		let Some(mut player) = commands.get_entity(player) else {
+		let Ok(mut player) = commands.get_entity(player) else {
 			return;
 		};
 

@@ -1,6 +1,6 @@
 mod systems;
 
-use bevy::prelude::*;
+use bevy::{ecs::system::ScheduleSystem, prelude::*};
 use common::{
 	states::{
 		game_state::{GameState, LoadingEssentialAssets, LoadingGame},
@@ -51,7 +51,7 @@ where
 impl<TLoading> HandlesGameStates for GameStatePlugin<TLoading> {
 	fn on_starting_new_game<TSystem, TMarker>(app: &mut App, systems: TSystem)
 	where
-		TSystem: IntoSystemConfigs<TMarker>,
+		TSystem: IntoScheduleConfigs<ScheduleSystem, TMarker>,
 	{
 		app.add_systems(OnEnter(GameState::NewGame), systems);
 	}

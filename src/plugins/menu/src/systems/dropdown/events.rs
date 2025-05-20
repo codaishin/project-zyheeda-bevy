@@ -7,11 +7,11 @@ pub(crate) fn dropdown_events<TItem: Send + Sync + 'static>(
 	mut events: EventWriter<DropdownEvent>,
 ) {
 	for entity in &dropdowns {
-		events.send(DropdownEvent::Added(entity));
+		events.write(DropdownEvent::Added(entity));
 	}
 
 	for entity in removed_dropdowns.read() {
-		events.send(DropdownEvent::Removed(entity));
+		events.write(DropdownEvent::Removed(entity));
 	}
 }
 

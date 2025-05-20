@@ -3,7 +3,7 @@ use bevy::prelude::*;
 
 impl TryRemoveFrom for Commands<'_, '_> {
 	fn try_remove_from<TBundle: Bundle>(&mut self, entity: Entity) {
-		let Some(mut entity) = self.get_entity(entity) else {
+		let Ok(mut entity) = self.get_entity(entity) else {
 			return;
 		};
 		entity.remove::<TBundle>();

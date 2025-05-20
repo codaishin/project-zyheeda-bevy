@@ -37,10 +37,10 @@ fn despawn_and_unfocus<TItem: Sync + Send + 'static>(
 }
 
 fn despawn_entity(commands: &mut Commands, entity: Entity) {
-	let Some(entity) = commands.get_entity(entity) else {
+	let Ok(mut entity) = commands.get_entity(entity) else {
 		return;
 	};
-	entity.despawn_recursive();
+	entity.despawn();
 }
 
 fn unfocus(new_focus: &mut Vec<Entity>, despawned: &Entity) {

@@ -36,7 +36,7 @@ where
 			let key_map = key_map.as_ref();
 
 			for (entity, label) in &mut labels {
-				let Some(entity) = commands.get_entity(entity) else {
+				let Ok(entity) = commands.get_entity(entity) else {
 					continue;
 				};
 				insert_icon(&root, entity, key_map, language_server.as_mut(), label);

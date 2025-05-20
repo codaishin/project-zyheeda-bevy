@@ -1,5 +1,5 @@
 use super::{iteration::IterFinite, load_asset::Path};
-use bevy::prelude::*;
+use bevy::{ecs::component::Mutable, prelude::*};
 use std::collections::HashMap;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
@@ -63,7 +63,7 @@ pub struct Directional {
 }
 
 pub trait HasAnimationsDispatch {
-	type TAnimationDispatch: StartAnimation + StopAnimation + Component;
+	type TAnimationDispatch: StartAnimation + StopAnimation + Component<Mutability = Mutable>;
 }
 
 pub trait ConfigureNewAnimationDispatch {
