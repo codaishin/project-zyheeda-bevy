@@ -145,6 +145,8 @@ where
 			TPlayers,
 		>;
 
+		app.register_required_components::<TBehaviors::TSkillContact, Transform>();
+		app.register_required_components::<TBehaviors::TSkillContact, Visibility>();
 		app.add_systems(
 			Update,
 			(
