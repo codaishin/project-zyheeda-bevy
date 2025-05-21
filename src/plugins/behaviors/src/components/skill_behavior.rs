@@ -12,7 +12,7 @@ use super::{
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::{AssetModel, ColliderRoot},
+	components::{AssetModel, collider_relations::ChildColliderOf},
 	errors::{Error, Level},
 	traits::{
 		handles_destruction::HandlesDestruction,
@@ -76,7 +76,7 @@ impl SimplePrefab for Shape {
 			.with_children(|parent| {
 				parent.spawn((model, model_transform));
 				parent.spawn((
-					ColliderRoot(root),
+					ChildColliderOf(root),
 					collider,
 					collider_transform,
 					ActiveEvents::COLLISION_EVENTS,
@@ -202,7 +202,7 @@ mod tests {
 	use bevy_rapier3d::prelude::ActiveCollisionTypes;
 	use common::{
 		blocker::Blocker,
-		components::{AssetModel, ColliderRoot},
+		components::AssetModel,
 		tools::{Units, UnitsPerSecond},
 		traits::{
 			clamp_zero_positive::ClampZeroPositive,
@@ -614,7 +614,10 @@ mod tests {
 		let child = children_of(&app, entity)
 			.nth(1)
 			.expect("no second entity children");
-		assert_eq!(Some(&ColliderRoot(entity)), child.get::<ColliderRoot>());
+		assert_eq!(
+			Some(&ChildColliderOf(entity)),
+			child.get::<ChildColliderOf>()
+		);
 		Ok(())
 	}
 
@@ -715,7 +718,10 @@ mod tests {
 		let child = children_of(&app, entity)
 			.nth(1)
 			.expect("no second entity children");
-		assert_eq!(Some(&ColliderRoot(entity)), child.get::<ColliderRoot>());
+		assert_eq!(
+			Some(&ChildColliderOf(entity)),
+			child.get::<ChildColliderOf>()
+		);
 		Ok(())
 	}
 }

@@ -6,7 +6,7 @@ use crate::{
 	events::{Collision, InteractionEvent},
 };
 use bevy::prelude::*;
-use common::{components::ColliderRoot, traits::try_insert_on::TryInsertOn};
+use common::{components::collider_relations::ChildColliderOf, traits::try_insert_on::TryInsertOn};
 
 pub(crate) fn apply_fragile_blocks<TDestroy>(
 	mut commands: Commands,
@@ -27,10 +27,10 @@ pub(crate) fn apply_fragile_blocks<TDestroy>(
 }
 
 fn collision_started(
-	InteractionEvent(ColliderRoot(a), collision): &InteractionEvent,
+	InteractionEvent(ChildColliderOf(a), collision): &InteractionEvent,
 ) -> Option<(&Entity, &Entity)> {
 	match collision {
-		Collision::Started(ColliderRoot(b)) => Some((a, b)),
+		Collision::Started(ChildColliderOf(b)) => Some((a, b)),
 		Collision::Ended(_) => None,
 	}
 }
@@ -54,11 +54,7 @@ fn fragile_blocked_entity(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{
-		blocker::Blocker,
-		components::ColliderRoot,
-		test_tools::utils::SingleThreadedApp,
-	};
+	use common::{blocker::Blocker, test_tools::utils::SingleThreadedApp};
 
 	#[derive(Component, Default, Debug, PartialEq)]
 	struct _Destroy;
@@ -87,8 +83,8 @@ mod tests {
 		app.update();
 
 		app.world_mut().send_event(
-			InteractionEvent::of(ColliderRoot(fragile))
-				.collision(Collision::Started(ColliderRoot(blocker))),
+			InteractionEvent::of(ChildColliderOf(fragile))
+				.collision(Collision::Started(ChildColliderOf(blocker))),
 		);
 
 		app.update();
@@ -111,8 +107,8 @@ mod tests {
 		app.update();
 
 		app.world_mut().send_event(
-			InteractionEvent::of(ColliderRoot(fragile))
-				.collision(Collision::Started(ColliderRoot(blocker))),
+			InteractionEvent::of(ChildColliderOf(fragile))
+				.collision(Collision::Started(ChildColliderOf(blocker))),
 		);
 
 		app.update();
@@ -138,8 +134,8 @@ mod tests {
 		app.update();
 
 		app.world_mut().send_event(
-			InteractionEvent::of(ColliderRoot(blocker))
-				.collision(Collision::Started(ColliderRoot(fragile))),
+			InteractionEvent::of(ChildColliderOf(blocker))
+				.collision(Collision::Started(ChildColliderOf(fragile))),
 		);
 
 		app.update();
@@ -162,8 +158,8 @@ mod tests {
 		app.update();
 
 		app.world_mut().send_event(
-			InteractionEvent::of(ColliderRoot(fragile))
-				.collision(Collision::Started(ColliderRoot(blocker))),
+			InteractionEvent::of(ChildColliderOf(fragile))
+				.collision(Collision::Started(ChildColliderOf(blocker))),
 		);
 
 		app.update();

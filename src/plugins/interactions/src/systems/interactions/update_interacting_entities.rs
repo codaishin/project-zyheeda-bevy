@@ -37,7 +37,10 @@ mod tests {
 		app::{App, Update},
 		prelude::Entity,
 	};
-	use common::{components::ColliderRoot, test_tools::utils::SingleThreadedApp};
+	use common::{
+		components::collider_relations::ChildColliderOf,
+		test_tools::utils::SingleThreadedApp,
+	};
 
 	use super::*;
 
@@ -51,14 +54,14 @@ mod tests {
 
 	#[test]
 	fn track_started_events() {
-		let a = ColliderRoot(Entity::from_raw(9));
-		let b = ColliderRoot(Entity::from_raw(10));
+		let a = ChildColliderOf(Entity::from_raw(9));
+		let b = ChildColliderOf(Entity::from_raw(10));
 		let mut app = setup();
 		let entity = app.world_mut().spawn(InteractingEntities::default()).id();
 
 		app.world_mut().send_event_batch([
-			InteractionEvent::of(a).collision(Collision::Started(ColliderRoot(entity))),
-			InteractionEvent::of(ColliderRoot(entity)).collision(Collision::Started(b)),
+			InteractionEvent::of(a).collision(Collision::Started(ChildColliderOf(entity))),
+			InteractionEvent::of(ChildColliderOf(entity)).collision(Collision::Started(b)),
 		]);
 		app.update();
 
@@ -70,9 +73,9 @@ mod tests {
 
 	#[test]
 	fn untrack_ended_events() {
-		let a = ColliderRoot(Entity::from_raw(9));
-		let b = ColliderRoot(Entity::from_raw(10));
-		let c = ColliderRoot(Entity::from_raw(100));
+		let a = ChildColliderOf(Entity::from_raw(9));
+		let b = ChildColliderOf(Entity::from_raw(10));
+		let c = ChildColliderOf(Entity::from_raw(100));
 		let mut app = setup();
 		let entity = app
 			.world_mut()
@@ -80,8 +83,8 @@ mod tests {
 			.id();
 
 		app.world_mut().send_event_batch([
-			InteractionEvent::of(a).collision(Collision::Ended(ColliderRoot(entity))),
-			InteractionEvent::of(ColliderRoot(entity)).collision(Collision::Ended(b)),
+			InteractionEvent::of(a).collision(Collision::Ended(ChildColliderOf(entity))),
+			InteractionEvent::of(ChildColliderOf(entity)).collision(Collision::Ended(b)),
 		]);
 		app.update();
 

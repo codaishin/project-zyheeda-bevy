@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use common::{
-	components::{ColliderRoot, Immobilized},
+	components::{Immobilized, collider_relations::ChildColliderOf},
 	tools::collider_info::ColliderInfo,
 	traits::{
 		accessors::get::GetterRefOptional,
@@ -12,7 +12,7 @@ use common::{
 pub(crate) fn execute_face<TMouseHover, TCursor>(
 	faces: In<Vec<(Entity, Face)>>,
 	mut transforms: Query<(Entity, &mut Transform, Option<&Immobilized>)>,
-	roots: Query<&ColliderRoot>,
+	roots: Query<&ChildColliderOf>,
 	cursor: Res<TCursor>,
 	hover: Res<TMouseHover>,
 ) where
@@ -45,7 +45,7 @@ fn apply_facing(
 fn get_face_targets(
 	transforms: &Query<(Entity, &mut Transform, Option<&Immobilized>)>,
 	faces: Vec<(Entity, Face)>,
-	roots: Query<&ColliderRoot>,
+	roots: Query<&ChildColliderOf>,
 	(target_entity, target): (Option<Entity>, Vec3),
 ) -> Vec<(Entity, Vec3)> {
 	faces
@@ -87,7 +87,7 @@ fn get_translation(
 	transforms.get(entity).ok().map(|(_, t, _)| t.translation)
 }
 
-fn get_root(entity: Entity, roots: &Query<&ColliderRoot>) -> Entity {
+fn get_root(entity: Entity, roots: &Query<&ChildColliderOf>) -> Entity {
 	roots.get(entity).map(|r| r.0).unwrap_or(entity)
 }
 
@@ -100,7 +100,7 @@ mod tests {
 		math::Vec3,
 	};
 	use common::{
-		components::{ColliderRoot, Immobilized},
+		components::Immobilized,
 		test_tools::utils::SingleThreadedApp,
 		traits::nested_mock::NestedMocks,
 	};
@@ -213,7 +213,7 @@ mod tests {
 			.world_mut()
 			.spawn(Transform::from_xyz(10., 11., 12.))
 			.id();
-		let collider = app.world_mut().spawn(ColliderRoot(root)).id();
+		let collider = app.world_mut().spawn(ChildColliderOf(root)).id();
 		app.insert_resource(_MouseHover(Some(ColliderInfo {
 			collider,
 			root: Some(root),
@@ -242,7 +242,7 @@ mod tests {
 				_Face(Face::Cursor),
 			))
 			.id();
-		let collider = app.world_mut().spawn(ColliderRoot(agent)).id();
+		let collider = app.world_mut().spawn(ChildColliderOf(agent)).id();
 		app.insert_resource(_MouseHover(Some(ColliderInfo {
 			collider,
 			root: Some(agent),
@@ -325,7 +325,7 @@ mod tests {
 			.world_mut()
 			.spawn(Transform::from_xyz(10., 11., 12.))
 			.id();
-		let collider = app.world_mut().spawn(ColliderRoot(root)).id();
+		let collider = app.world_mut().spawn(ChildColliderOf(root)).id();
 		let agent = app
 			.world_mut()
 			.spawn((

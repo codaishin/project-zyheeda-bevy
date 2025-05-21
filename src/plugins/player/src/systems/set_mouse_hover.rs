@@ -9,7 +9,7 @@ use bevy::{
 };
 use bevy_rapier3d::plugin::ReadRapierContext;
 use common::{
-	components::{ColliderRoot, NoTarget},
+	components::{NoTarget, collider_relations::ChildColliderOf},
 	tools::collider_info::ColliderInfo,
 	traits::cast_ray::{CastRay, GetRayCaster, TimeOfImpact},
 };
@@ -19,7 +19,7 @@ pub(crate) fn set_mouse_hover(
 	get_ray_caster: ReadRapierContext,
 	commands: Commands,
 	cam_ray: Option<Res<CamRay>>,
-	roots: Query<&ColliderRoot>,
+	roots: Query<&ChildColliderOf>,
 	non_target_ables: Query<(), With<NoTarget>>,
 ) {
 	internal_set_mouse_hover(get_ray_caster, commands, cam_ray, roots, non_target_ables)
@@ -29,7 +29,7 @@ fn internal_set_mouse_hover<TGetRayCaster>(
 	get_ray_caster: TGetRayCaster,
 	mut commands: Commands,
 	cam_ray: Option<Res<CamRay>>,
-	roots: Query<&ColliderRoot>,
+	roots: Query<&ChildColliderOf>,
 	non_target_ables: Query<(), With<NoTarget>>,
 ) where
 	TGetRayCaster: GetRayCaster<Ray3d>,
@@ -47,7 +47,7 @@ fn internal_set_mouse_hover<TGetRayCaster>(
 
 fn get_mouse_hover(
 	collider: Entity,
-	roots: Query<&ColliderRoot>,
+	roots: Query<&ChildColliderOf>,
 	non_target_ables: Query<(), With<NoTarget>>,
 ) -> MouseHover {
 	if non_target_ables.contains(collider) {
@@ -70,8 +70,8 @@ fn ray_cast<TCastRay: CastRay<Ray3d>>(
 	ray_caster.cast_ray(&cam_ray)
 }
 
-fn get_root(entity: Entity, roots: Query<&ColliderRoot>) -> Option<Entity> {
-	roots.get(entity).map(|ColliderRoot(r)| *r).ok()
+fn get_root(entity: Entity, roots: Query<&ChildColliderOf>) -> Option<Entity> {
+	roots.get(entity).map(|ChildColliderOf(r)| *r).ok()
 }
 
 #[cfg(test)]
@@ -172,7 +172,7 @@ mod tests {
 	fn add_target_root() -> Result<(), RunSystemError> {
 		let mut app = setup(test_ray());
 		let root = app.world_mut().spawn_empty().id();
-		let collider = app.world_mut().spawn(ColliderRoot(root)).id();
+		let collider = app.world_mut().spawn(ChildColliderOf(root)).id();
 		let get_ray_caster = _GetRayCaster::new().with_mock(move |mock| {
 			mock.expect_get_ray_caster().returning(move || {
 				Ok(_RayCaster::new().with_mock(move |mock| {
@@ -246,7 +246,7 @@ mod tests {
 	fn set_mouse_hover_none_when_collider_root_marked_as_no_target() -> Result<(), RunSystemError> {
 		let mut app = setup(test_ray());
 		let root = app.world_mut().spawn(NoTarget).id();
-		let collider = app.world_mut().spawn(ColliderRoot(root)).id();
+		let collider = app.world_mut().spawn(ChildColliderOf(root)).id();
 		let get_ray_caster = _GetRayCaster::new().with_mock(move |mock| {
 			mock.expect_get_ray_caster().returning(move || {
 				Ok(_RayCaster::new().with_mock(move |mock| {

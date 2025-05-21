@@ -4,7 +4,12 @@ use bevy_rapier3d::prelude::*;
 use common::{
 	attributes::health::Health,
 	blocker::{Blocker, BlockerInsertCommand},
-	components::{AssetModel, ColliderRoot, GroundOffset, flip::FlipHorizontally},
+	components::{
+		AssetModel,
+		GroundOffset,
+		collider_relations::ChildColliderOf,
+		flip::FlipHorizontally,
+	},
 	effects::deal_damage::DealDamage,
 	errors::Error,
 	tools::{
@@ -288,7 +293,7 @@ where
 					Vec3::new(0.0, 1.4, -0.05),
 					**Self::collider_radius(),
 				),
-				ColliderRoot(root),
+				ChildColliderOf(root),
 			));
 
 		Ok(())

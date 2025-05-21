@@ -1,17 +1,17 @@
 use super::execute_ray_caster::RayCastResult;
 use crate::events::{Collision, InteractionEvent, Ray};
 use bevy::prelude::*;
-use common::components::ColliderRoot;
+use common::components::collider_relations::ChildColliderOf;
 use std::collections::HashMap;
 
 pub(crate) fn map_ray_cast_result_to_interaction_events(
 	In(results): In<HashMap<Entity, RayCastResult>>,
-	roots: Query<&ColliderRoot>,
+	roots: Query<&ChildColliderOf>,
 ) -> Vec<(InteractionEvent<Ray>, Vec<InteractionEvent>)> {
 	let mut events = vec![];
 
 	for (entity, RayCastResult { info }) in results.into_iter() {
-		let ray = InteractionEvent::of(ColliderRoot(entity)).ray(info.ray, info.max_toi);
+		let ray = InteractionEvent::of(ChildColliderOf(entity)).ray(info.ray, info.max_toi);
 		let mut collisions = vec![];
 
 		let root_entity = get_root(entity, &roots);
@@ -27,10 +27,10 @@ pub(crate) fn map_ray_cast_result_to_interaction_events(
 	events
 }
 
-fn get_root(entity: Entity, roots: &Query<&ColliderRoot>) -> ColliderRoot {
+fn get_root(entity: Entity, roots: &Query<&ChildColliderOf>) -> ChildColliderOf {
 	match roots.get(entity) {
 		Ok(root) => *root,
-		Err(_) => ColliderRoot(entity),
+		Err(_) => ChildColliderOf(entity),
 	}
 }
 
@@ -70,7 +70,7 @@ mod tests {
 			.world_mut()
 			.run_system_once_with(map_ray_cast_result_to_interaction_events, ray_casts)?;
 
-		let interaction = InteractionEvent::of(ColliderRoot(Entity::from_raw(5)));
+		let interaction = InteractionEvent::of(ChildColliderOf(Entity::from_raw(5)));
 		assert_eq!(
 			vec![(
 				interaction.ray(
@@ -81,8 +81,10 @@ mod tests {
 					TimeOfImpact(100.)
 				),
 				vec![
-					interaction.collision(Collision::Started(ColliderRoot(Entity::from_raw(42)))),
-					interaction.collision(Collision::Started(ColliderRoot(Entity::from_raw(11)))),
+					interaction
+						.collision(Collision::Started(ChildColliderOf(Entity::from_raw(42)))),
+					interaction
+						.collision(Collision::Started(ChildColliderOf(Entity::from_raw(11)))),
 				]
 			)],
 			events
@@ -97,11 +99,11 @@ mod tests {
 
 		let collider_a = app
 			.world_mut()
-			.spawn(ColliderRoot(Entity::from_raw(42)))
+			.spawn(ChildColliderOf(Entity::from_raw(42)))
 			.id();
 		let collider_b = app
 			.world_mut()
-			.spawn(ColliderRoot(Entity::from_raw(11)))
+			.spawn(ChildColliderOf(Entity::from_raw(11)))
 			.id();
 		let ray_casts = HashMap::from([(
 			Entity::from_raw(5),
@@ -124,7 +126,7 @@ mod tests {
 			.world_mut()
 			.run_system_once_with(map_ray_cast_result_to_interaction_events, ray_casts)?;
 
-		let interaction = InteractionEvent::of(ColliderRoot(Entity::from_raw(5)));
+		let interaction = InteractionEvent::of(ChildColliderOf(Entity::from_raw(5)));
 		assert_eq!(
 			vec![(
 				interaction.ray(
@@ -135,8 +137,10 @@ mod tests {
 					TimeOfImpact(100.)
 				),
 				vec![
-					interaction.collision(Collision::Started(ColliderRoot(Entity::from_raw(42)))),
-					interaction.collision(Collision::Started(ColliderRoot(Entity::from_raw(11)))),
+					interaction
+						.collision(Collision::Started(ChildColliderOf(Entity::from_raw(42)))),
+					interaction
+						.collision(Collision::Started(ChildColliderOf(Entity::from_raw(11)))),
 				]
 			)],
 			events

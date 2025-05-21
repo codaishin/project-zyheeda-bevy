@@ -21,8 +21,8 @@ use common::{
 	},
 	blocker::{Blocker, BlockerInsertCommand},
 	components::{
-		ColliderRoot,
 		GroundOffset,
+		collider_relations::ChildColliderOf,
 		insert_asset::InsertAsset,
 		spawn_children::SpawnChildren,
 	},
@@ -88,7 +88,7 @@ impl VoidSphere {
 			transform_2nd_ring,
 		));
 		parent.spawn((
-			ColliderRoot(root),
+			ChildColliderOf(root),
 			Collider::ball(VOID_SPHERE_OUTER_RADIUS),
 			transform,
 		));

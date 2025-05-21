@@ -1,13 +1,13 @@
 use bevy::prelude::{Component, Entity};
-use common::components::ColliderRoot;
+use common::components::collider_relations::ChildColliderOf;
 use std::collections::HashSet;
 
 #[derive(Component, Default, Debug, PartialEq, Clone)]
-pub struct InteractingEntities(pub(crate) HashSet<ColliderRoot>);
+pub struct InteractingEntities(pub(crate) HashSet<ChildColliderOf>);
 
 impl InteractingEntities {
 	#[cfg(test)]
-	pub(crate) fn new<const N: usize>(entities: [ColliderRoot; N]) -> Self {
+	pub(crate) fn new<const N: usize>(entities: [ChildColliderOf; N]) -> Self {
 		Self(HashSet::from(entities))
 	}
 
@@ -20,11 +20,11 @@ impl InteractingEntities {
 	}
 
 	pub fn contains(&self, entity: &Entity) -> bool {
-		self.0.contains(&ColliderRoot(*entity))
+		self.0.contains(&ChildColliderOf(*entity))
 	}
 
 	pub fn iter(&self) -> impl Iterator<Item = &Entity> {
-		self.0.iter().map(|ColliderRoot(r)| r)
+		self.0.iter().map(|ChildColliderOf(r)| r)
 	}
 }
 
@@ -35,8 +35,8 @@ mod tests {
 	#[test]
 	fn len() {
 		let entities = InteractingEntities::new([
-			ColliderRoot(Entity::from_raw(1)),
-			ColliderRoot(Entity::from_raw(2)),
+			ChildColliderOf(Entity::from_raw(1)),
+			ChildColliderOf(Entity::from_raw(2)),
 		]);
 
 		assert_eq!(2, entities.len());
@@ -45,8 +45,8 @@ mod tests {
 	#[test]
 	fn is_empty() {
 		let not_empty = InteractingEntities::new([
-			ColliderRoot(Entity::from_raw(1)),
-			ColliderRoot(Entity::from_raw(2)),
+			ChildColliderOf(Entity::from_raw(1)),
+			ChildColliderOf(Entity::from_raw(2)),
 		]);
 		let empty = InteractingEntities::new([]);
 
@@ -56,8 +56,8 @@ mod tests {
 	#[test]
 	fn contains() {
 		let entities = InteractingEntities::new([
-			ColliderRoot(Entity::from_raw(1)),
-			ColliderRoot(Entity::from_raw(2)),
+			ChildColliderOf(Entity::from_raw(1)),
+			ChildColliderOf(Entity::from_raw(2)),
 		]);
 
 		assert_eq!(

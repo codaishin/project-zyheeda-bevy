@@ -45,7 +45,10 @@ pub(crate) fn act_interaction<TActor, TTarget>(
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{components::ColliderRoot, traits::nested_mock::NestedMocks};
+	use common::{
+		components::collider_relations::ChildColliderOf,
+		traits::nested_mock::NestedMocks,
+	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 
@@ -81,7 +84,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				ActedOnTargets::<_Actor>::default(),
-				InteractingEntities::new([ColliderRoot(target)]),
+				InteractingEntities::new([ChildColliderOf(target)]),
 			))
 			.id();
 		app.world_mut()
@@ -107,7 +110,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				ActedOnTargets::<_Actor>::default(),
-				InteractingEntities::new([ColliderRoot(target)]),
+				InteractingEntities::new([ChildColliderOf(target)]),
 				_Actor::new().with_mock(|mock| {
 					mock.expect_act().return_const(EffectApplies::Once);
 				}),
@@ -131,7 +134,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				ActedOnTargets::<_Actor>::default(),
-				InteractingEntities::new([ColliderRoot(target)]),
+				InteractingEntities::new([ChildColliderOf(target)]),
 				_Actor::new().with_mock(|mock| {
 					mock.expect_act().return_const(EffectApplies::Once);
 				}),
@@ -155,7 +158,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				ActedOnTargets::<_Actor>::default(),
-				InteractingEntities::new([ColliderRoot(target)]),
+				InteractingEntities::new([ChildColliderOf(target)]),
 				_Actor::new().with_mock(|mock| {
 					mock.expect_act().return_const(EffectApplies::Always);
 				}),
@@ -165,7 +168,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				ActedOnTargets::<_Actor>::default(),
-				InteractingEntities::new([ColliderRoot(target)]),
+				InteractingEntities::new([ChildColliderOf(target)]),
 				_Actor::new().with_mock(|mock| {
 					mock.expect_act().return_const(EffectApplies::OncePerTarget);
 				}),
@@ -196,7 +199,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				ActedOnTargets::<_Actor>::default(),
-				InteractingEntities::new([ColliderRoot(target)]),
+				InteractingEntities::new([ChildColliderOf(target)]),
 				_Actor::new().with_mock(|mock| {
 					mock.expect_act().return_const(EffectApplies::OncePerTarget);
 				}),

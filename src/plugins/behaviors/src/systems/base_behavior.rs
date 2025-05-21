@@ -2,7 +2,7 @@ use crate::components::{Attack, Chase};
 use bevy::{math::InvalidDirectionError, prelude::*};
 use bevy_rapier3d::plugin::ReadRapierContext;
 use common::{
-	components::{ColliderRoot, GroundOffset},
+	components::{GroundOffset, collider_relations::ChildColliderOf},
 	tools::{
 		aggro_range::AggroRange,
 		attack_range::AttackRange,
@@ -24,7 +24,7 @@ pub(crate) trait SelectBehavior {
 		agents: Query<(Entity, &GlobalTransform, Option<&GroundOffset>, &Self)>,
 		players: Query<(Entity, &GlobalTransform, Option<&GroundOffset>), With<TPlayer>>,
 		all: Query<(Entity, &GlobalTransform, Option<&GroundOffset>)>,
-		colliders: Query<&ColliderRoot>,
+		colliders: Query<&ChildColliderOf>,
 	) -> BehaviorResults
 	where
 		Self: Component + Sized + Getter<AggroRange> + Getter<AttackRange> + Getter<EnemyTarget>,
@@ -58,7 +58,7 @@ fn select_behavior<TAgent, TPlayer, TGetRayCaster>(
 	agents: Query<(Entity, &GlobalTransform, Option<&GroundOffset>, &TAgent)>,
 	players: Query<(Entity, &GlobalTransform, Option<&GroundOffset>), With<TPlayer>>,
 	all: Query<(Entity, &GlobalTransform, Option<&GroundOffset>)>,
-	colliders: Query<&ColliderRoot>,
+	colliders: Query<&ChildColliderOf>,
 ) -> Result<Vec<Result<(), InvalidDirectionError>>, TGetRayCaster::TError>
 where
 	TAgent: Component + Sized + Getter<AggroRange> + Getter<AttackRange> + Getter<EnemyTarget>,
@@ -125,7 +125,7 @@ fn get_strategy<TAgent, TCaster>(
 	target: Entity,
 	target_translation: Vec3,
 	ray_caster: &TCaster,
-	colliders: &Query<&ColliderRoot>,
+	colliders: &Query<&ChildColliderOf>,
 ) -> Result<Behavior, InvalidDirectionError>
 where
 	TAgent: Getter<AggroRange> + Getter<AttackRange>,
@@ -166,14 +166,14 @@ where
 	**agent.get()
 }
 
-fn hit_target(target: Entity, hit: Entity, colliders: &Query<&ColliderRoot>) -> bool {
+fn hit_target(target: Entity, hit: Entity, colliders: &Query<&ChildColliderOf>) -> bool {
 	if hit == target {
 		return true;
 	}
 
 	colliders
 		.get(hit)
-		.map(|ColliderRoot(root)| root == &target)
+		.map(|ChildColliderOf(root)| root == &target)
 		.unwrap_or(false)
 }
 
@@ -182,7 +182,7 @@ mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
-		components::{ColliderRoot, GroundOffset},
+		components::GroundOffset,
 		test_tools::utils::SingleThreadedApp,
 		tools::Units,
 		traits::{
@@ -651,7 +651,7 @@ mod tests {
 			.world_mut()
 			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Player))
 			.id();
-		let player_collider = app.world_mut().spawn(ColliderRoot(player)).id();
+		let player_collider = app.world_mut().spawn(ChildColliderOf(player)).id();
 		let enemy = app
 			.world_mut()
 			.spawn((
