@@ -12,7 +12,7 @@ use super::{
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::{AssetModel, collider_relations::ChildColliderOf},
+	components::{AssetModel, collider_relations::ChildColliders},
 	errors::{Error, Level},
 	traits::{
 		handles_destruction::HandlesDestruction,
@@ -69,19 +69,21 @@ impl SimplePrefab for Shape {
 			),
 		};
 
-		let root = entity.id();
-
 		entity
-			.try_insert((Transform::from_translation(offset), Visibility::default()))
+			.try_insert((
+				Transform::from_translation(offset),
+				Visibility::default(),
+				related!(
+					ChildColliders[(
+						collider,
+						collider_transform,
+						ActiveEvents::COLLISION_EVENTS,
+						Sensor,
+					)]
+				),
+			))
 			.with_children(|parent| {
 				parent.spawn((model, model_transform));
-				parent.spawn((
-					ChildColliderOf(root),
-					collider,
-					collider_transform,
-					ActiveEvents::COLLISION_EVENTS,
-					Sensor,
-				));
 			});
 
 		Ok(())
@@ -201,6 +203,7 @@ mod tests {
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use bevy_rapier3d::prelude::ActiveCollisionTypes;
 	use common::{
+		assert_count,
 		blocker::Blocker,
 		components::AssetModel,
 		tools::{Units, UnitsPerSecond},
@@ -521,9 +524,9 @@ mod tests {
 			shape.prefab::<_Interactions, _LifeCycles>(entity, Vec3::ZERO)
 		}))?;
 
-		let child = children_of(&app, entity)
-			.nth(1)
-			.expect("no second entity children");
+		let child_colliders = app.world().entity(entity).get::<ChildColliders>().unwrap();
+		let [child] = assert_count!(1, child_colliders.iter());
+		let child = app.world().entity(child);
 		assert_eq!(
 			(
 				Some(&Transform::default()),
@@ -553,9 +556,9 @@ mod tests {
 			shape.prefab::<_Interactions, _LifeCycles>(entity, Vec3::ZERO)
 		}))?;
 
-		let child = children_of(&app, entity)
-			.nth(1)
-			.expect("no second entity children");
+		let child_colliders = app.world().entity(entity).get::<ChildColliders>().unwrap();
+		let [child] = assert_count!(1, child_colliders.iter());
+		let child = app.world().entity(child);
 		let (_expected_collider, expected_transform) = ring_collider(42.).unwrap();
 		assert_eq!(
 			(
@@ -592,32 +595,10 @@ mod tests {
 			shape.prefab::<_Interactions, _LifeCycles>(entity, Vec3::ZERO)
 		}))?;
 
-		let child = children_of(&app, entity)
-			.nth(1)
-			.expect("no second entity children");
+		let child_colliders = app.world().entity(entity).get::<ChildColliders>().unwrap();
+		let [child] = assert_count!(1, child_colliders.iter());
+		let child = app.world().entity(child);
 		assert!(child.contains::<Sensor>());
-		Ok(())
-	}
-
-	#[test]
-	fn collider_sphere_root() -> Result<(), RunSystemError> {
-		let (mut app, entity) = setup();
-		let shape = Shape::Sphere {
-			radius: Units::new(42.),
-			hollow_collider: false,
-		};
-
-		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			shape.prefab::<_Interactions, _LifeCycles>(entity, Vec3::ZERO)
-		}))?;
-
-		let child = children_of(&app, entity)
-			.nth(1)
-			.expect("no second entity children");
-		assert_eq!(
-			Some(&ChildColliderOf(entity)),
-			child.get::<ChildColliderOf>()
-		);
 		Ok(())
 	}
 
@@ -660,9 +641,9 @@ mod tests {
 			shape.prefab::<_Interactions, _LifeCycles>(entity, Vec3::ZERO)
 		}))?;
 
-		let child = children_of(&app, entity)
-			.nth(1)
-			.expect("no second entity children");
+		let child_colliders = app.world().entity(entity).get::<ChildColliders>().unwrap();
+		let [child] = assert_count!(1, child_colliders.iter());
+		let child = app.world().entity(child);
 		assert_eq!(
 			(
 				Some(&Transform::from_scale(Vec3::new(3., 2., 1.))),
@@ -695,33 +676,10 @@ mod tests {
 			shape.prefab::<_Interactions, _LifeCycles>(entity, Vec3::ZERO)
 		}))?;
 
-		let child = children_of(&app, entity)
-			.nth(1)
-			.expect("no second entity children");
+		let child_colliders = app.world().entity(entity).get::<ChildColliders>().unwrap();
+		let [child] = assert_count!(1, child_colliders.iter());
+		let child = app.world().entity(child);
 		assert!(child.contains::<Sensor>());
-		Ok(())
-	}
-
-	#[test]
-	fn collider_custom_root() -> Result<(), RunSystemError> {
-		let (mut app, entity) = setup();
-		let shape = Shape::Custom {
-			model: AssetModel::path("custom"),
-			collider: Collider::cuboid(1., 2., 3.),
-			scale: Vec3::default(),
-		};
-
-		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			shape.prefab::<_Interactions, _LifeCycles>(entity, Vec3::ZERO)
-		}))?;
-
-		let child = children_of(&app, entity)
-			.nth(1)
-			.expect("no second entity children");
-		assert_eq!(
-			Some(&ChildColliderOf(entity)),
-			child.get::<ChildColliderOf>()
-		);
 		Ok(())
 	}
 }

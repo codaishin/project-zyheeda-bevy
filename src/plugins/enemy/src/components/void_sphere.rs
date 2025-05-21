@@ -22,7 +22,7 @@ use common::{
 	blocker::{Blocker, BlockerInsertCommand},
 	components::{
 		GroundOffset,
-		collider_relations::ChildColliderOf,
+		collider_relations::ChildColliders,
 		insert_asset::InsertAsset,
 		spawn_children::SpawnChildren,
 	},
@@ -71,7 +71,6 @@ impl VoidSphere {
 	}
 
 	fn void_sphere_parts(parent: &mut RelatedSpawnerCommands<ChildOf>) {
-		let root = parent.target_entity();
 		let transform = Transform::from_translation(Self::ground_offset());
 		let mut transform_2nd_ring = transform;
 		transform_2nd_ring.rotate_axis(Dir3::Z, PI / 2.);
@@ -86,11 +85,6 @@ impl VoidSphere {
 			VoidSpherePart::RingB(UnitsPerSecond::new(PI / 75.)),
 			VoidSphereRing,
 			transform_2nd_ring,
-		));
-		parent.spawn((
-			ChildColliderOf(root),
-			Collider::ball(VOID_SPHERE_OUTER_RADIUS),
-			transform,
 		));
 	}
 
@@ -148,6 +142,7 @@ where
 		on.try_insert((
 			Health::new(5.).bundle_via::<TInteractions>(),
 			Affected::by::<Gravity>().bundle_via::<TInteractions>(),
+			related!(ChildColliders[(Collider::ball(VOID_SPHERE_OUTER_RADIUS), transform)]),
 		));
 
 		Ok(())

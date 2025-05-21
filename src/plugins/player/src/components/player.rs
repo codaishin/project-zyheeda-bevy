@@ -7,7 +7,7 @@ use common::{
 	components::{
 		AssetModel,
 		GroundOffset,
-		collider_relations::ChildColliderOf,
+		collider_relations::ChildColliders,
 		flip::FlipHorizontally,
 	},
 	effects::deal_damage::DealDamage,
@@ -283,18 +283,19 @@ where
 	TLights: HandlesLights,
 {
 	fn instantiate_on(&self, entity: &mut EntityCommands) -> Result<(), Error> {
-		let root = entity.id();
-		entity
-			.insert(Health::new(100.).bundle_via::<TInteractions>())
-			.with_child((
-				TLights::responsive_light_trigger(),
-				Collider::capsule(
-					Vec3::new(0.0, 0.2, -0.05),
-					Vec3::new(0.0, 1.4, -0.05),
-					**Self::collider_radius(),
-				),
-				ChildColliderOf(root),
-			));
+		entity.insert((
+			Health::new(100.).bundle_via::<TInteractions>(),
+			related!(
+				ChildColliders[(
+					TLights::responsive_light_trigger(),
+					Collider::capsule(
+						Vec3::new(0.0, 0.2, -0.05),
+						Vec3::new(0.0, 1.4, -0.05),
+						**Self::collider_radius(),
+					),
+				)]
+			),
+		));
 
 		Ok(())
 	}

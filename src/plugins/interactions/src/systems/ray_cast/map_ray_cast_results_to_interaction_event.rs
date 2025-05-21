@@ -97,14 +97,10 @@ mod tests {
 	-> Result<(), RunSystemError> {
 		let mut app = setup();
 
-		let collider_a = app
-			.world_mut()
-			.spawn(ChildColliderOf(Entity::from_raw(42)))
-			.id();
-		let collider_b = app
-			.world_mut()
-			.spawn(ChildColliderOf(Entity::from_raw(11)))
-			.id();
+		let root_a = app.world_mut().spawn_empty().id();
+		let root_b = app.world_mut().spawn_empty().id();
+		let collider_a = app.world_mut().spawn(ChildColliderOf(root_a)).id();
+		let collider_b = app.world_mut().spawn(ChildColliderOf(root_b)).id();
 		let ray_casts = HashMap::from([(
 			Entity::from_raw(5),
 			RayCastResult {
@@ -137,10 +133,8 @@ mod tests {
 					TimeOfImpact(100.)
 				),
 				vec![
-					interaction
-						.collision(Collision::Started(ChildColliderOf(Entity::from_raw(42)))),
-					interaction
-						.collision(Collision::Started(ChildColliderOf(Entity::from_raw(11)))),
+					interaction.collision(Collision::Started(ChildColliderOf(root_a))),
+					interaction.collision(Collision::Started(ChildColliderOf(root_b))),
 				]
 			)],
 			events
