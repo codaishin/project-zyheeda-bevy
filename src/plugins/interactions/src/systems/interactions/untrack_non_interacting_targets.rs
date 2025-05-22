@@ -27,7 +27,7 @@ mod tests {
 		app::{App, Update},
 		prelude::{Component, Entity},
 	};
-	use common::{components::collider_root::ColliderRoot, test_tools::utils::SingleThreadedApp};
+	use common::test_tools::utils::SingleThreadedApp;
 	use std::ops::DerefMut;
 
 	#[derive(Component)]
@@ -46,10 +46,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				InteractingEntities::new([
-					ColliderRoot(Entity::from_raw(100)),
-					ColliderRoot(Entity::from_raw(300)),
-				]),
+				InteractingEntities::new([Entity::from_raw(100), Entity::from_raw(300)]),
 				ActedOnTargets::<_Actor>::new([
 					Entity::from_raw(100),
 					Entity::from_raw(200),
@@ -76,10 +73,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				InteractingEntities::new([
-					ColliderRoot(Entity::from_raw(100)),
-					ColliderRoot(Entity::from_raw(300)),
-				]),
+				InteractingEntities::new([Entity::from_raw(100), Entity::from_raw(300)]),
 				ActedOnTargets::<_Actor>::new([Entity::from_raw(100), Entity::from_raw(300)]),
 			))
 			.id();
@@ -110,10 +104,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				InteractingEntities::new([
-					ColliderRoot(Entity::from_raw(100)),
-					ColliderRoot(Entity::from_raw(300)),
-				]),
+				InteractingEntities::new([Entity::from_raw(100), Entity::from_raw(300)]),
 				ActedOnTargets::<_Actor>::new([Entity::from_raw(100), Entity::from_raw(300)]),
 			))
 			.id();

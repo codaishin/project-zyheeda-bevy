@@ -3,18 +3,14 @@ use crate::{
 	traits::{Flush, Track, TrackState},
 };
 use bevy::prelude::{Entity, Resource};
-use common::components::collider_root::ColliderRoot;
 use std::collections::{HashMap, HashSet, hash_map::Entry};
 
 #[derive(Resource, Default)]
 pub(crate) struct TrackRayInteractions(HashMap<(Entity, Entity), Refreshed>);
 
 impl Track<InteractionEvent> for TrackRayInteractions {
-	fn track(
-		&mut self,
-		InteractionEvent(ColliderRoot(a), collision): &InteractionEvent,
-	) -> TrackState {
-		let Collision::Started(ColliderRoot(b)) = collision else {
+	fn track(&mut self, InteractionEvent(a, collision): &InteractionEvent) -> TrackState {
+		let Collision::Started(b) = collision else {
 			return TrackState::Unchanged;
 		};
 
@@ -52,9 +48,7 @@ impl Flush for TrackRayInteractions {
 		self.0.retain(|key, _| retain.contains(key));
 
 		end.into_iter()
-			.map(|(a, b)| {
-				InteractionEvent::of(ColliderRoot(a)).collision(Collision::Ended(ColliderRoot(b)))
-			})
+			.map(|(a, b)| InteractionEvent::of(a).collision(Collision::Ended(b)))
 			.collect()
 	}
 }
@@ -66,13 +60,12 @@ struct Refreshed(bool);
 mod tests {
 	use super::*;
 	use crate::events::Collision;
-	use common::components::collider_root::ColliderRoot;
 
 	#[test]
 	fn track_return_change_when_empty() {
 		let mut track = TrackRayInteractions::default();
-		let a = ColliderRoot(Entity::from_raw(42));
-		let b = ColliderRoot(Entity::from_raw(43));
+		let a = Entity::from_raw(42);
+		let b = Entity::from_raw(43);
 
 		assert_eq!(
 			TrackState::Changed,
@@ -83,8 +76,8 @@ mod tests {
 	#[test]
 	fn track_return_unchanged_when_tracking_same_interaction_twice() {
 		let mut track = TrackRayInteractions::default();
-		let a = ColliderRoot(Entity::from_raw(42));
-		let b = ColliderRoot(Entity::from_raw(43));
+		let a = Entity::from_raw(42);
+		let b = Entity::from_raw(43);
 
 		assert_eq!(
 			[TrackState::Changed, TrackState::Unchanged],
@@ -105,8 +98,8 @@ mod tests {
 	#[test]
 	fn flush_returns_end_event_for_start_event_that_have_been_slushed_twice() {
 		let mut track = TrackRayInteractions::default();
-		let a = ColliderRoot(Entity::from_raw(42));
-		let b = ColliderRoot(Entity::from_raw(43));
+		let a = Entity::from_raw(42);
+		let b = Entity::from_raw(43);
 
 		track.track(&InteractionEvent::of(a).collision(Collision::Started(b)));
 
@@ -122,8 +115,8 @@ mod tests {
 	#[test]
 	fn flush_returns_no_end_events_when_start_event_refreshed() {
 		let mut track = TrackRayInteractions::default();
-		let a = ColliderRoot(Entity::from_raw(42));
-		let b = ColliderRoot(Entity::from_raw(43));
+		let a = Entity::from_raw(42);
+		let b = Entity::from_raw(43);
 
 		assert_eq!(
 			[
@@ -146,8 +139,8 @@ mod tests {
 	#[test]
 	fn flush_removes_start_events_for_which_end_events_have_been_produced() {
 		let mut track = TrackRayInteractions::default();
-		let a = ColliderRoot(Entity::from_raw(42));
-		let b = ColliderRoot(Entity::from_raw(43));
+		let a = Entity::from_raw(42);
+		let b = Entity::from_raw(43);
 
 		track.track(&InteractionEvent::of(a).collision(Collision::Started(b)));
 

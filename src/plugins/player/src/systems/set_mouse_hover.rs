@@ -9,7 +9,7 @@ use bevy::{
 };
 use bevy_rapier3d::plugin::ReadRapierContext;
 use common::{
-	components::{NoTarget, collider_root::ColliderRoot},
+	components::{NoTarget, collider_relationship::ColliderOfInteractionTarget},
 	tools::collider_info::ColliderInfo,
 	traits::cast_ray::{CastRay, GetRayCaster, TimeOfImpact},
 };
@@ -19,17 +19,17 @@ pub(crate) fn set_mouse_hover(
 	get_ray_caster: ReadRapierContext,
 	commands: Commands,
 	cam_ray: Option<Res<CamRay>>,
-	roots: Query<&ColliderRoot>,
+	targets: Query<&ColliderOfInteractionTarget>,
 	non_target_ables: Query<(), With<NoTarget>>,
 ) {
-	internal_set_mouse_hover(get_ray_caster, commands, cam_ray, roots, non_target_ables)
+	internal_set_mouse_hover(get_ray_caster, commands, cam_ray, targets, non_target_ables)
 }
 
 fn internal_set_mouse_hover<TGetRayCaster>(
 	get_ray_caster: TGetRayCaster,
 	mut commands: Commands,
 	cam_ray: Option<Res<CamRay>>,
-	roots: Query<&ColliderRoot>,
+	targets: Query<&ColliderOfInteractionTarget>,
 	non_target_ables: Query<(), With<NoTarget>>,
 ) where
 	TGetRayCaster: GetRayCaster<Ray3d>,
@@ -38,7 +38,7 @@ fn internal_set_mouse_hover<TGetRayCaster>(
 		return;
 	};
 	let mouse_hover = match ray_cast(cam_ray, ray_caster) {
-		Some((collider, ..)) => get_mouse_hover(collider, roots, non_target_ables),
+		Some((collider, ..)) => get_mouse_hover(collider, targets, non_target_ables),
 		_ => MouseHover::default(),
 	};
 
@@ -47,14 +47,14 @@ fn internal_set_mouse_hover<TGetRayCaster>(
 
 fn get_mouse_hover(
 	collider: Entity,
-	roots: Query<&ColliderRoot>,
+	colliders: Query<&ColliderOfInteractionTarget>,
 	non_target_ables: Query<(), With<NoTarget>>,
 ) -> MouseHover {
 	if non_target_ables.contains(collider) {
 		return MouseHover(None);
 	}
 
-	match get_root(collider, roots) {
+	match get_target(collider, colliders) {
 		Some(root) if non_target_ables.contains(root) => MouseHover(None),
 		root => MouseHover(Some(ColliderInfo { collider, root })),
 	}
@@ -70,8 +70,11 @@ fn ray_cast<TCastRay: CastRay<Ray3d>>(
 	ray_caster.cast_ray(&cam_ray)
 }
 
-fn get_root(entity: Entity, roots: Query<&ColliderRoot>) -> Option<Entity> {
-	roots.get(entity).map(|ColliderRoot(r)| *r).ok()
+fn get_target(entity: Entity, colliders: Query<&ColliderOfInteractionTarget>) -> Option<Entity> {
+	colliders
+		.get(entity)
+		.map(ColliderOfInteractionTarget::target)
+		.ok()
 }
 
 #[cfg(test)]
@@ -172,7 +175,10 @@ mod tests {
 	fn add_target_root() -> Result<(), RunSystemError> {
 		let mut app = setup(test_ray());
 		let root = app.world_mut().spawn_empty().id();
-		let collider = app.world_mut().spawn(ColliderRoot(root)).id();
+		let collider = app
+			.world_mut()
+			.spawn(ColliderOfInteractionTarget::from_raw(root))
+			.id();
 		let get_ray_caster = _GetRayCaster::new().with_mock(move |mock| {
 			mock.expect_get_ray_caster().returning(move || {
 				Ok(_RayCaster::new().with_mock(move |mock| {
@@ -246,7 +252,10 @@ mod tests {
 	fn set_mouse_hover_none_when_collider_root_marked_as_no_target() -> Result<(), RunSystemError> {
 		let mut app = setup(test_ray());
 		let root = app.world_mut().spawn(NoTarget).id();
-		let collider = app.world_mut().spawn(ColliderRoot(root)).id();
+		let collider = app
+			.world_mut()
+			.spawn(ColliderOfInteractionTarget::from_raw(root))
+			.id();
 		let get_ray_caster = _GetRayCaster::new().with_mock(move |mock| {
 			mock.expect_get_ray_caster().returning(move || {
 				Ok(_RayCaster::new().with_mock(move |mock| {

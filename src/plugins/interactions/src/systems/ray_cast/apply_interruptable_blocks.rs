@@ -6,7 +6,7 @@ use crate::components::{
 use bevy::prelude::*;
 use common::{
 	blocker::Blocker,
-	components::collider_root::ColliderRoot,
+	components::collider_relationship::ColliderOfInteractionTarget,
 	traits::cast_ray::TimeOfImpact,
 };
 use std::collections::{HashMap, HashSet};
@@ -15,9 +15,9 @@ pub(crate) fn apply_interruptable_ray_blocks(
 	In(mut ray_casts): In<HashMap<Entity, RayCastResult>>,
 	mut interruptable_rays: Query<(Entity, &Is<InterruptableRay>)>,
 	blockers: Query<&Blockers>,
-	roots: Query<&ColliderRoot>,
+	colliders: Query<&ColliderOfInteractionTarget>,
 ) -> HashMap<Entity, RayCastResult> {
-	let roots = &roots;
+	let colliders = &colliders;
 	let blockers = &blockers;
 
 	for (entity, Is(interruptable)) in &mut interruptable_rays {
@@ -31,7 +31,10 @@ pub(crate) fn apply_interruptable_ray_blocks(
 				return false;
 			}
 
-			let hit = roots.get(*hit).map(|ColliderRoot(r)| *r).unwrap_or(*hit);
+			let hit = colliders
+				.get(*hit)
+				.map(ColliderOfInteractionTarget::target)
+				.unwrap_or(*hit);
 			let hit = blockers.get(hit).ok();
 			if is_interrupted(interruptable, hit) {
 				interrupt = Some(*toi);
@@ -73,7 +76,10 @@ mod tests {
 	use super::*;
 	use crate::events::RayCastInfo;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{components::collider_root::ColliderRoot, traits::cast_ray::TimeOfImpact};
+	use common::{
+		components::collider_relationship::ColliderOfInteractionTarget,
+		traits::cast_ray::TimeOfImpact,
+	};
 
 	fn setup() -> App {
 		App::new()
@@ -138,7 +144,10 @@ mod tests {
 			.world_mut()
 			.spawn(Blockers::new([Blocker::Physical]))
 			.id();
-		let blocker = app.world_mut().spawn(ColliderRoot(root)).id();
+		let blocker = app
+			.world_mut()
+			.spawn(ColliderOfInteractionTarget::from_raw(root))
+			.id();
 		let far = app.world_mut().spawn_empty().id();
 		let interruptable = app
 			.world_mut()

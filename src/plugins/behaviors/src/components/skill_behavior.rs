@@ -12,7 +12,7 @@ use super::{
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::{AssetModel, collider_root::ColliderRoot},
+	components::{AssetModel, collider_relationship::InteractionTarget},
 	errors::{Error, Level},
 	traits::{
 		handles_destruction::HandlesDestruction,
@@ -69,17 +69,19 @@ impl SimplePrefab for Shape {
 			),
 		};
 
-		let root = entity.id();
-
 		entity
-			.try_insert((Transform::from_translation(offset), Visibility::default()))
+			.try_insert((
+				Transform::from_translation(offset),
+				Visibility::default(),
+				InteractionTarget,
+			))
 			.with_children(|parent| {
 				parent.spawn((model, model_transform));
 				parent.spawn((
-					ColliderRoot(root),
 					collider,
 					collider_transform,
 					ActiveEvents::COLLISION_EVENTS,
+					ActiveCollisionTypes::default(),
 					Sensor,
 				));
 			});
@@ -433,7 +435,7 @@ mod tests {
 	}
 
 	#[test]
-	fn transform_and_visibility_sphere() -> Result<(), RunSystemError> {
+	fn collider_root_transform_and_visibility_sphere() -> Result<(), RunSystemError> {
 		let (mut app, entity) = setup();
 		let shape = Shape::Sphere {
 			radius: Units::new(42.),
@@ -446,10 +448,12 @@ mod tests {
 
 		assert_eq!(
 			(
+				Some(&InteractionTarget),
 				Some(&Transform::from_xyz(1., 2., 3.)),
 				Some(&Visibility::Inherited)
 			),
 			(
+				app.world().entity(entity).get::<InteractionTarget>(),
 				app.world().entity(entity).get::<Transform>(),
 				app.world().entity(entity).get::<Visibility>(),
 			)
@@ -458,7 +462,7 @@ mod tests {
 	}
 
 	#[test]
-	fn transform_and_visibility_custom_shape() -> Result<(), RunSystemError> {
+	fn collider_root_transform_and_visibility_custom_shape() -> Result<(), RunSystemError> {
 		let (mut app, entity) = setup();
 		let shape = Shape::Custom {
 			model: AssetModel::path(""),
@@ -472,10 +476,12 @@ mod tests {
 
 		assert_eq!(
 			(
+				Some(&InteractionTarget),
 				Some(&Transform::from_xyz(1., 2., 3.)),
 				Some(&Visibility::Inherited)
 			),
 			(
+				app.world().entity(entity).get::<InteractionTarget>(),
 				app.world().entity(entity).get::<Transform>(),
 				app.world().entity(entity).get::<Visibility>(),
 			)
@@ -599,25 +605,6 @@ mod tests {
 	}
 
 	#[test]
-	fn collider_sphere_root() -> Result<(), RunSystemError> {
-		let (mut app, entity) = setup();
-		let shape = Shape::Sphere {
-			radius: Units::new(42.),
-			hollow_collider: false,
-		};
-
-		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			shape.prefab::<_Interactions, _LifeCycles>(entity, Vec3::ZERO)
-		}))?;
-
-		let child = children_of(&app, entity)
-			.nth(1)
-			.expect("no second entity children");
-		assert_eq!(Some(&ColliderRoot(entity)), child.get::<ColliderRoot>());
-		Ok(())
-	}
-
-	#[test]
 	fn shape_custom() -> Result<(), RunSystemError> {
 		let (mut app, entity) = setup();
 		let shape = Shape::Custom {
@@ -695,26 +682,6 @@ mod tests {
 			.nth(1)
 			.expect("no second entity children");
 		assert!(child.contains::<Sensor>());
-		Ok(())
-	}
-
-	#[test]
-	fn collider_custom_root() -> Result<(), RunSystemError> {
-		let (mut app, entity) = setup();
-		let shape = Shape::Custom {
-			model: AssetModel::path("custom"),
-			collider: Collider::cuboid(1., 2., 3.),
-			scale: Vec3::default(),
-		};
-
-		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			shape.prefab::<_Interactions, _LifeCycles>(entity, Vec3::ZERO)
-		}))?;
-
-		let child = children_of(&app, entity)
-			.nth(1)
-			.expect("no second entity children");
-		assert_eq!(Some(&ColliderRoot(entity)), child.get::<ColliderRoot>());
 		Ok(())
 	}
 }

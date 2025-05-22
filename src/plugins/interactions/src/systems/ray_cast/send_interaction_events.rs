@@ -29,7 +29,6 @@ mod tests {
 	use crate::events::Collision;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
-		components::collider_root::ColliderRoot,
 		test_tools::utils::SingleThreadedApp,
 		traits::{cast_ray::TimeOfImpact, nested_mock::NestedMocks},
 	};
@@ -88,8 +87,8 @@ mod tests {
 
 	#[test]
 	fn send_flushed_events() -> Result<(), RunSystemError> {
-		let a = ColliderRoot(Entity::from_raw(42));
-		let b = ColliderRoot(Entity::from_raw(46));
+		let a = Entity::from_raw(42);
+		let b = Entity::from_raw(46);
 		let mut app = setup(_Tracker::new().with_mock(|mock| {
 			mock.expect_track().return_const(TrackState::Changed);
 			mock.expect_flush().return_const(vec![
@@ -113,7 +112,7 @@ mod tests {
 
 	#[test]
 	fn send_ray_events_from_input() -> Result<(), RunSystemError> {
-		let interaction = InteractionEvent::of(ColliderRoot(Entity::from_raw(11)));
+		let interaction = InteractionEvent::of(Entity::from_raw(11));
 		let ray = interaction.ray(
 			Ray3d::new(
 				Vec3::new(1., 2., 3.),
@@ -149,12 +148,12 @@ mod tests {
 
 	#[test]
 	fn send_changed_collider_events_from_input() -> Result<(), RunSystemError> {
-		let interaction = InteractionEvent::of(ColliderRoot(Entity::from_raw(11)));
+		let interaction = InteractionEvent::of(Entity::from_raw(11));
 		let ray = interaction.ray(Ray3d::new(default(), Dir3::X), default());
 		let collisions = vec![
-			interaction.collision(Collision::Started(ColliderRoot(Entity::from_raw(42)))),
-			interaction.collision(Collision::Started(ColliderRoot(Entity::from_raw(46)))),
-			interaction.collision(Collision::Started(ColliderRoot(Entity::from_raw(99)))),
+			interaction.collision(Collision::Started(Entity::from_raw(42))),
+			interaction.collision(Collision::Started(Entity::from_raw(46))),
+			interaction.collision(Collision::Started(Entity::from_raw(99))),
 		];
 		let mut app = setup(_Tracker::new().with_mock(|mock| {
 			mock.expect_track()
@@ -177,7 +176,7 @@ mod tests {
 		let events = cursor.read(events);
 
 		assert_eq!(
-			vec![&interaction.collision(Collision::Started(ColliderRoot(Entity::from_raw(46))))],
+			vec![&interaction.collision(Collision::Started(Entity::from_raw(46)))],
 			events.collect::<Vec<_>>()
 		);
 		Ok(())
@@ -185,10 +184,9 @@ mod tests {
 
 	#[test]
 	fn call_track_and_then_flush_in_correct_order() -> Result<(), RunSystemError> {
-		let interaction = InteractionEvent::of(ColliderRoot(Entity::from_raw(11)));
+		let interaction = InteractionEvent::of(Entity::from_raw(11));
 		let ray = interaction.ray(Ray3d::new(default(), Dir3::X), default());
-		let collisions =
-			vec![interaction.collision(Collision::Started(ColliderRoot(Entity::from_raw(42))))];
+		let collisions = vec![interaction.collision(Collision::Started(Entity::from_raw(42)))];
 		let mut sequence = Sequence::new();
 		let mut app = setup(_Tracker::new().with_mock(|mock| {
 			mock.expect_track()

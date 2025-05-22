@@ -1,24 +1,24 @@
 use crate::traits::{FromCollisionEvent, Track, TrackState};
 use bevy::prelude::{Event, EventReader, EventWriter, Query, ResMut, Resource};
 use bevy_rapier3d::prelude::CollisionEvent;
-use common::components::collider_root::ColliderRoot;
+use common::components::collider_relationship::ColliderOfInteractionTarget;
 
 pub(crate) fn map_collision_events_to<TEvent, TEventTracker>(
 	mut collisions: EventReader<CollisionEvent>,
 	mut interactions: EventWriter<TEvent>,
-	roots: Query<&ColliderRoot>,
+	colliders: Query<&ColliderOfInteractionTarget>,
 	mut track: ResMut<TEventTracker>,
 ) where
 	TEvent: Event + FromCollisionEvent,
 	TEventTracker: Resource + Track<TEvent>,
 {
-	let get_root = |entity| match roots.get(entity) {
-		Ok(root) => *root,
-		Err(_) => ColliderRoot(entity),
+	let get_target = |entity| match colliders.get(entity) {
+		Ok(collider) => collider.target(),
+		Err(_) => entity,
 	};
 
 	for collision in collisions.read() {
-		let event = TEvent::from_collision(collision, get_root);
+		let event = TEvent::from_collision(collision, get_target);
 		if track.track(&event) == TrackState::Changed {
 			interactions.write(event);
 		}
@@ -71,7 +71,7 @@ mod tests {
 		impl FromCollisionEvent for _Event {
 			fn from_collision<F>(_: &CollisionEvent, _: F) -> Self
 			where
-				F: Fn(Entity) -> ColliderRoot,
+				F: Fn(Entity) -> Entity,
 			{
 				_Event
 			}
@@ -102,12 +102,12 @@ mod tests {
 	#[test]
 	fn write_an_interaction_event_for_each_collision_start_but_use_actual_collider_root_entities() {
 		#[derive(Event, Debug, PartialEq)]
-		struct _Event(ColliderRoot, ColliderRoot);
+		struct _Event(Entity, Entity);
 
 		impl FromCollisionEvent for _Event {
 			fn from_collision<F>(c: &CollisionEvent, get_root: F) -> Self
 			where
-				F: Fn(Entity) -> ColliderRoot,
+				F: Fn(Entity) -> Entity,
 			{
 				let (a, b) = match c {
 					CollisionEvent::Started(a, b, ..) => (a, b),
@@ -120,9 +120,15 @@ mod tests {
 		let mut app = setup::<_Event, true>();
 
 		let a = app.world_mut().spawn_empty().id();
-		let collider_a = app.world_mut().spawn(ColliderRoot(a)).id();
+		let collider_a = app
+			.world_mut()
+			.spawn(ColliderOfInteractionTarget::from_raw(a))
+			.id();
 		let b = app.world_mut().spawn_empty().id();
-		let collider_b = app.world_mut().spawn(ColliderRoot(b)).id();
+		let collider_b = app
+			.world_mut()
+			.spawn(ColliderOfInteractionTarget::from_raw(b))
+			.id();
 
 		app.world_mut().send_event(CollisionEvent::Started(
 			collider_a,
@@ -136,10 +142,7 @@ mod tests {
 		let mut cursor = events.get_cursor();
 		let events = cursor.read(events);
 
-		assert_eq!(
-			vec![&_Event(ColliderRoot(a), ColliderRoot(b))],
-			events.collect::<Vec<_>>()
-		)
+		assert_eq!(vec![&_Event(a, b)], events.collect::<Vec<_>>())
 	}
 
 	#[test]
@@ -150,7 +153,7 @@ mod tests {
 		impl FromCollisionEvent for _Event {
 			fn from_collision<F>(_: &CollisionEvent, _: F) -> Self
 			where
-				F: Fn(Entity) -> ColliderRoot,
+				F: Fn(Entity) -> Entity,
 			{
 				_Event
 			}

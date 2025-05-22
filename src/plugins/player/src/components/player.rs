@@ -4,7 +4,12 @@ use bevy_rapier3d::prelude::*;
 use common::{
 	attributes::health::Health,
 	blocker::{Blocker, BlockerInsertCommand},
-	components::{AssetModel, GroundOffset, collider_root::ColliderRoot, flip::FlipHorizontally},
+	components::{
+		AssetModel,
+		GroundOffset,
+		collider_relationship::InteractionTarget,
+		flip::FlipHorizontally,
+	},
 	effects::deal_damage::DealDamage,
 	errors::Error,
 	tools::{
@@ -48,6 +53,7 @@ use std::collections::HashMap;
 	GroundOffset = Self::offset(),
 	BlockerInsertCommand = Self::blocker(),
 	RigidBody = Self::rigid_body(),
+	InteractionTarget,
 	LockedAxes = Self::locked_axes(),
 	GravityScale = Self::gravity_scale(),
 )]
@@ -278,7 +284,6 @@ where
 	TLights: HandlesLights,
 {
 	fn instantiate_on(&self, entity: &mut EntityCommands) -> Result<(), Error> {
-		let root = entity.id();
 		entity
 			.insert(Health::new(100.).bundle_via::<TInteractions>())
 			.with_child((
@@ -288,7 +293,6 @@ where
 					Vec3::new(0.0, 1.4, -0.05),
 					**Self::collider_radius(),
 				),
-				ColliderRoot(root),
 			));
 
 		Ok(())

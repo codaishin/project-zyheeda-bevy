@@ -11,18 +11,18 @@ pub(crate) fn update_interacting_entities(
 	for InteractionEvent(a, collision) in events.read() {
 		match collision {
 			Collision::Started(b) => {
-				if let Ok(mut agent) = agents.get_mut(a.0) {
+				if let Ok(mut agent) = agents.get_mut(*a) {
 					agent.0.insert(*b);
 				}
-				if let Ok(mut agent) = agents.get_mut(b.0) {
+				if let Ok(mut agent) = agents.get_mut(*b) {
 					agent.0.insert(*a);
 				}
 			}
 			Collision::Ended(b) => {
-				if let Ok(mut agent) = agents.get_mut(a.0) {
+				if let Ok(mut agent) = agents.get_mut(*a) {
 					agent.0.remove(b);
 				}
-				if let Ok(mut agent) = agents.get_mut(b.0) {
+				if let Ok(mut agent) = agents.get_mut(*b) {
 					agent.0.remove(a);
 				}
 			}
@@ -37,7 +37,7 @@ mod tests {
 		app::{App, Update},
 		prelude::Entity,
 	};
-	use common::{components::collider_root::ColliderRoot, test_tools::utils::SingleThreadedApp};
+	use common::test_tools::utils::SingleThreadedApp;
 
 	use super::*;
 
@@ -51,14 +51,14 @@ mod tests {
 
 	#[test]
 	fn track_started_events() {
-		let a = ColliderRoot(Entity::from_raw(9));
-		let b = ColliderRoot(Entity::from_raw(10));
+		let a = Entity::from_raw(9);
+		let b = Entity::from_raw(10);
 		let mut app = setup();
 		let entity = app.world_mut().spawn(InteractingEntities::default()).id();
 
 		app.world_mut().send_event_batch([
-			InteractionEvent::of(a).collision(Collision::Started(ColliderRoot(entity))),
-			InteractionEvent::of(ColliderRoot(entity)).collision(Collision::Started(b)),
+			InteractionEvent::of(a).collision(Collision::Started(entity)),
+			InteractionEvent::of(entity).collision(Collision::Started(b)),
 		]);
 		app.update();
 
@@ -70,9 +70,9 @@ mod tests {
 
 	#[test]
 	fn untrack_ended_events() {
-		let a = ColliderRoot(Entity::from_raw(9));
-		let b = ColliderRoot(Entity::from_raw(10));
-		let c = ColliderRoot(Entity::from_raw(100));
+		let a = Entity::from_raw(9);
+		let b = Entity::from_raw(10);
+		let c = Entity::from_raw(100);
 		let mut app = setup();
 		let entity = app
 			.world_mut()
@@ -80,8 +80,8 @@ mod tests {
 			.id();
 
 		app.world_mut().send_event_batch([
-			InteractionEvent::of(a).collision(Collision::Ended(ColliderRoot(entity))),
-			InteractionEvent::of(ColliderRoot(entity)).collision(Collision::Ended(b)),
+			InteractionEvent::of(a).collision(Collision::Ended(entity)),
+			InteractionEvent::of(entity).collision(Collision::Ended(b)),
 		]);
 		app.update();
 

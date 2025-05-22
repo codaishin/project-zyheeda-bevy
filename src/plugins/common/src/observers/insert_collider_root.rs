@@ -1,66 +1,51 @@
-use crate::{components::collider_root::ColliderRoot, traits::try_insert_on::TryInsertOn};
+use crate::{
+	components::collider_relationship::{ColliderOfInteractionTarget, InteractionTarget},
+	traits::try_insert_on::TryInsertOn,
+};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 
-impl ColliderRoot {
-	pub(crate) fn insert(
+impl ColliderOfInteractionTarget {
+	pub(crate) fn link(
 		trigger: Trigger<OnAdd, Collider>,
 		mut commands: Commands,
-		rigid_bodies: Query<Entity, With<RigidBody>>,
-		children: Query<&ChildOf>,
+		collider_roots: Query<Entity, With<InteractionTarget>>,
+		ancestors: Query<&ChildOf>,
 	) {
-		let get_rigid_body_in_ancestor = |entity| {
-			children
+		let get_target_in_ancestor_of = |entity| {
+			ancestors
 				.iter_ancestors(entity)
-				.find(|ancestor| rigid_bodies.contains(*ancestor))
-		};
-		let get_rigid_body = |entity| {
-			rigid_bodies
-				.get(entity)
-				.ok()
-				.or_else(|| get_rigid_body_in_ancestor(entity))
+				.find(|ancestor| collider_roots.contains(*ancestor))
 		};
 		let entity = trigger.target();
-		let Some(rigid_body_entity) = get_rigid_body(entity) else {
+		let Some(target) = get_target_in_ancestor_of(entity) else {
 			return;
 		};
 
-		commands.try_insert_on(entity, ColliderRoot(rigid_body_entity));
+		commands.try_insert_on(entity, ColliderOfInteractionTarget(target));
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::test_tools::utils::SingleThreadedApp;
+	use crate::{
+		components::collider_relationship::InteractionTarget,
+		test_tools::utils::SingleThreadedApp,
+	};
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_observer(ColliderRoot::insert);
+		app.add_observer(ColliderOfInteractionTarget::link);
 
 		app
 	}
 
 	#[test]
-	fn insert_when_collider_and_rigid_body_on_same_entity() {
+	fn insert_when_collider_on_child_of_target() {
 		let mut app = setup();
-
-		let entity = app
-			.world_mut()
-			.spawn((RigidBody::default(), Collider::default()))
-			.id();
-
-		assert_eq!(
-			Some(&ColliderRoot(entity)),
-			app.world().entity(entity).get::<ColliderRoot>()
-		);
-	}
-
-	#[test]
-	fn insert_when_collider_on_child_of_rigid_body() {
-		let mut app = setup();
-		let entity = app.world_mut().spawn(RigidBody::default()).id();
+		let entity = app.world_mut().spawn(InteractionTarget).id();
 
 		let child = app
 			.world_mut()
@@ -68,15 +53,17 @@ mod tests {
 			.id();
 
 		assert_eq!(
-			Some(&ColliderRoot(entity)),
-			app.world().entity(child).get::<ColliderRoot>()
+			Some(&ColliderOfInteractionTarget(entity)),
+			app.world()
+				.entity(child)
+				.get::<ColliderOfInteractionTarget>()
 		);
 	}
 
 	#[test]
-	fn insert_when_collider_on_child_of_child_of_rigid_body() {
+	fn insert_when_collider_on_child_of_child_of_target() {
 		let mut app = setup();
-		let entity = app.world_mut().spawn(RigidBody::default()).id();
+		let entity = app.world_mut().spawn(InteractionTarget).id();
 		let child = app.world_mut().spawn(ChildOf(entity)).id();
 
 		let child_child = app
@@ -85,8 +72,10 @@ mod tests {
 			.id();
 
 		assert_eq!(
-			Some(&ColliderRoot(entity)),
-			app.world().entity(child_child).get::<ColliderRoot>()
+			Some(&ColliderOfInteractionTarget(entity)),
+			app.world()
+				.entity(child_child)
+				.get::<ColliderOfInteractionTarget>()
 		);
 	}
 
@@ -96,8 +85,11 @@ mod tests {
 		struct _Changed(bool);
 
 		impl _Changed {
-			fn system(mut commands: Commands, collider_roots: Query<(), Changed<ColliderRoot>>) {
-				commands.insert_resource(_Changed(collider_roots.iter().count() > 0));
+			fn system(
+				mut commands: Commands,
+				colliders: Query<(), Changed<ColliderOfInteractionTarget>>,
+			) {
+				commands.insert_resource(_Changed(colliders.iter().count() > 0));
 			}
 		}
 
@@ -106,7 +98,7 @@ mod tests {
 
 		let entity = app
 			.world_mut()
-			.spawn((RigidBody::default(), Collider::default()))
+			.spawn((InteractionTarget, Collider::default()))
 			.id();
 		app.update();
 		app.world_mut()

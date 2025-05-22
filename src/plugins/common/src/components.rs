@@ -1,4 +1,4 @@
-pub mod collider_root;
+pub mod collider_relationship;
 pub mod essence;
 pub mod flip;
 pub mod insert_asset;
