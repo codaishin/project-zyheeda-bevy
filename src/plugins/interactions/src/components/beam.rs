@@ -3,7 +3,7 @@ use crate::events::{InteractionEvent, Ray};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::{ColliderRoot, GroundOffset},
+	components::GroundOffset,
 	tools::Units,
 	traits::{
 		cast_ray::TimeOfImpact,
@@ -38,7 +38,7 @@ impl Beam {
 			}
 		}
 
-		for InteractionEvent(ColliderRoot(source), ray) in ray_cast_events.read() {
+		for InteractionEvent(source, ray) in ray_cast_events.read() {
 			match beams.get(*source) {
 				Ok((entity, cmd, None)) => {
 					spawn_beam::<TLifetimes>(&mut commands, entity, ray, cmd)
@@ -341,14 +341,13 @@ mod tests {
 				},
 			})
 			.id();
-		app.world_mut()
-			.send_event(InteractionEvent::of(ColliderRoot(beam)).ray(
-				Ray3d {
-					origin: Vec3::Z,
-					direction: Dir3::Y,
-				},
-				TimeOfImpact(10.),
-			));
+		app.world_mut().send_event(InteractionEvent::of(beam).ray(
+			Ray3d {
+				origin: Vec3::Z,
+				direction: Dir3::Y,
+			},
+			TimeOfImpact(10.),
+		));
 
 		app.update();
 
@@ -379,14 +378,13 @@ mod tests {
 				params: Parameters::default(),
 			})
 			.id();
-		app.world_mut()
-			.send_event(InteractionEvent::of(ColliderRoot(beam)).ray(
-				Ray3d {
-					origin: Vec3::new(0., 1., 0.),
-					direction: Dir3::X,
-				},
-				TimeOfImpact(10.),
-			));
+		app.world_mut().send_event(InteractionEvent::of(beam).ray(
+			Ray3d {
+				origin: Vec3::new(0., 1., 0.),
+				direction: Dir3::X,
+			},
+			TimeOfImpact(10.),
+		));
 
 		app.update();
 
@@ -428,14 +426,13 @@ mod tests {
 				},
 			))
 			.id();
-		app.world_mut()
-			.send_event(InteractionEvent::of(ColliderRoot(beam)).ray(
-				Ray3d {
-					origin: Vec3::new(0., 1., 0.),
-					direction: Dir3::X,
-				},
-				TimeOfImpact(10.),
-			));
+		app.world_mut().send_event(InteractionEvent::of(beam).ray(
+			Ray3d {
+				origin: Vec3::new(0., 1., 0.),
+				direction: Dir3::X,
+			},
+			TimeOfImpact(10.),
+		));
 
 		app.update();
 
@@ -475,14 +472,13 @@ mod tests {
 			})
 			.id();
 		let child = app.world_mut().spawn(ChildOf(beam)).id();
-		app.world_mut()
-			.send_event(InteractionEvent::of(ColliderRoot(beam)).ray(
-				Ray3d {
-					origin: Vec3::new(0., 1., 0.),
-					direction: Dir3::X,
-				},
-				TimeOfImpact(10.),
-			));
+		app.world_mut().send_event(InteractionEvent::of(beam).ray(
+			Ray3d {
+				origin: Vec3::new(0., 1., 0.),
+				direction: Dir3::X,
+			},
+			TimeOfImpact(10.),
+		));
 
 		app.update();
 		app.world_mut().entity_mut(source).despawn();

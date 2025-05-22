@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use common::{
-	components::{ColliderRoot, Immobilized},
+	components::{Immobilized, collider_relationship::ColliderOfInteractionTarget},
 	tools::collider_info::ColliderInfo,
 	traits::{
 		accessors::get::GetterRefOptional,
@@ -12,7 +12,7 @@ use common::{
 pub(crate) fn execute_face<TMouseHover, TCursor>(
 	faces: In<Vec<(Entity, Face)>>,
 	mut transforms: Query<(Entity, &mut Transform, Option<&Immobilized>)>,
-	roots: Query<&ColliderRoot>,
+	colliders: Query<&ColliderOfInteractionTarget>,
 	cursor: Res<TCursor>,
 	hover: Res<TMouseHover>,
 ) where
@@ -23,7 +23,7 @@ pub(crate) fn execute_face<TMouseHover, TCursor>(
 		return;
 	};
 
-	for (id, target) in get_face_targets(&transforms, faces.0, roots, target) {
+	for (id, target) in get_face_targets(&transforms, faces.0, colliders, target) {
 		apply_facing(&mut transforms, id, target);
 	}
 }
@@ -45,7 +45,7 @@ fn apply_facing(
 fn get_face_targets(
 	transforms: &Query<(Entity, &mut Transform, Option<&Immobilized>)>,
 	faces: Vec<(Entity, Face)>,
-	roots: Query<&ColliderRoot>,
+	colliders: Query<&ColliderOfInteractionTarget>,
 	(target_entity, target): (Option<Entity>, Vec3),
 ) -> Vec<(Entity, Vec3)> {
 	faces
@@ -54,7 +54,7 @@ fn get_face_targets(
 		.filter_map(|(id, face)| {
 			let target = match *face {
 				Face::Cursor => Some(target),
-				Face::Entity(entity) => get_translation(get_root(entity, &roots), transforms),
+				Face::Entity(entity) => get_translation(get_target(entity, &colliders), transforms),
 				Face::Translation(translation) => Some(translation),
 			};
 			Some((*id, target?))
@@ -87,8 +87,11 @@ fn get_translation(
 	transforms.get(entity).ok().map(|(_, t, _)| t.translation)
 }
 
-fn get_root(entity: Entity, roots: &Query<&ColliderRoot>) -> Entity {
-	roots.get(entity).map(|r| r.0).unwrap_or(entity)
+fn get_target(entity: Entity, roots: &Query<&ColliderOfInteractionTarget>) -> Entity {
+	roots
+		.get(entity)
+		.map(ColliderOfInteractionTarget::target)
+		.unwrap_or(entity)
 }
 
 #[cfg(test)]
@@ -99,11 +102,7 @@ mod tests {
 		ecs::{component::Component, system::IntoSystem},
 		math::Vec3,
 	};
-	use common::{
-		components::{ColliderRoot, Immobilized},
-		test_tools::utils::SingleThreadedApp,
-		traits::nested_mock::NestedMocks,
-	};
+	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 
@@ -213,7 +212,10 @@ mod tests {
 			.world_mut()
 			.spawn(Transform::from_xyz(10., 11., 12.))
 			.id();
-		let collider = app.world_mut().spawn(ColliderRoot(root)).id();
+		let collider = app
+			.world_mut()
+			.spawn(ColliderOfInteractionTarget::from_raw(root))
+			.id();
 		app.insert_resource(_MouseHover(Some(ColliderInfo {
 			collider,
 			root: Some(root),
@@ -242,7 +244,10 @@ mod tests {
 				_Face(Face::Cursor),
 			))
 			.id();
-		let collider = app.world_mut().spawn(ColliderRoot(agent)).id();
+		let collider = app
+			.world_mut()
+			.spawn(ColliderOfInteractionTarget::from_raw(agent))
+			.id();
 		app.insert_resource(_MouseHover(Some(ColliderInfo {
 			collider,
 			root: Some(agent),
@@ -325,7 +330,10 @@ mod tests {
 			.world_mut()
 			.spawn(Transform::from_xyz(10., 11., 12.))
 			.id();
-		let collider = app.world_mut().spawn(ColliderRoot(root)).id();
+		let collider = app
+			.world_mut()
+			.spawn(ColliderOfInteractionTarget::from_raw(root))
+			.id();
 		let agent = app
 			.world_mut()
 			.spawn((

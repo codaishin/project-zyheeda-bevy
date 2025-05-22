@@ -1,3 +1,4 @@
+pub mod collider_relationship;
 pub mod essence;
 pub mod flip;
 pub mod insert_asset;
@@ -6,7 +7,6 @@ pub mod spawn_children;
 pub mod ui_input_primer;
 
 use bevy::{prelude::*, render::view::RenderLayers};
-use bevy_rapier3d::prelude::*;
 use flip::FlipHorizontally;
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
@@ -24,10 +24,6 @@ impl From<Vec3> for GroundOffset {
 
 #[derive(Component, Debug, PartialEq)]
 pub struct Immobilized;
-
-#[derive(Component, PartialEq, Eq, Hash, Debug, Clone, Copy, PartialOrd, Ord)]
-#[require(Collider, Transform, ActiveEvents, ActiveCollisionTypes)]
-pub struct ColliderRoot(pub Entity);
 
 #[derive(Component, PartialEq, Debug, Clone, Copy, Default)]
 pub enum Animate<T: Copy + Clone> {

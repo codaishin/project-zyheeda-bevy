@@ -21,8 +21,8 @@ use common::{
 	},
 	blocker::{Blocker, BlockerInsertCommand},
 	components::{
-		ColliderRoot,
 		GroundOffset,
+		collider_relationship::InteractionTarget,
 		insert_asset::InsertAsset,
 		spawn_children::SpawnChildren,
 	},
@@ -45,7 +45,8 @@ use std::{f32::consts::PI, sync::Arc, time::Duration};
 	GroundOffset = Self::ground_offset(),
 	RigidBody = Self::rigid_body(),
 	GravityScale = Self::gravity_scale(),
-	SpawnChildren(Self::void_sphere_parts)
+	SpawnChildren(Self::void_sphere_parts),
+	InteractionTarget,
 )]
 pub struct VoidSphere;
 
@@ -71,7 +72,6 @@ impl VoidSphere {
 	}
 
 	fn void_sphere_parts(parent: &mut RelatedSpawnerCommands<ChildOf>) {
-		let root = parent.target_entity();
 		let transform = Transform::from_translation(Self::ground_offset());
 		let mut transform_2nd_ring = transform;
 		transform_2nd_ring.rotate_axis(Dir3::Z, PI / 2.);
@@ -87,11 +87,7 @@ impl VoidSphere {
 			VoidSphereRing,
 			transform_2nd_ring,
 		));
-		parent.spawn((
-			ColliderRoot(root),
-			Collider::ball(VOID_SPHERE_OUTER_RADIUS),
-			transform,
-		));
+		parent.spawn((Collider::ball(VOID_SPHERE_OUTER_RADIUS), transform));
 	}
 
 	fn as_enemy() -> Enemy {

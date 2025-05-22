@@ -5,22 +5,22 @@ use bevy::{
 	utils::default,
 };
 use bevy_rapier3d::prelude::CollisionEvent;
-use common::{components::ColliderRoot, traits::cast_ray::TimeOfImpact};
+use common::traits::cast_ray::TimeOfImpact;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Ray(pub Ray3d, pub TimeOfImpact);
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Collision {
-	Started(ColliderRoot),
-	Ended(ColliderRoot),
+	Started(Entity),
+	Ended(Entity),
 }
 
 #[derive(Event, Debug, PartialEq, Clone, Copy)]
-pub struct InteractionEvent<TOther = Collision>(pub ColliderRoot, pub TOther);
+pub struct InteractionEvent<TOther = Collision>(pub Entity, pub TOther);
 
 impl InteractionEvent<()> {
-	pub fn of(entity: ColliderRoot) -> Self {
+	pub fn of(entity: Entity) -> Self {
 		Self(entity, ())
 	}
 
@@ -36,7 +36,7 @@ impl InteractionEvent<()> {
 impl FromCollisionEvent for InteractionEvent {
 	fn from_collision<F>(event: &CollisionEvent, get_root: F) -> Self
 	where
-		F: Fn(Entity) -> ColliderRoot,
+		F: Fn(Entity) -> Entity,
 	{
 		match event {
 			CollisionEvent::Started(a, b, ..) => {
@@ -76,9 +76,9 @@ mod tests {
 
 	#[test]
 	fn interaction_event_from_collision_mapped_with_get_root_fn() {
-		const ROOT: ColliderRoot = ColliderRoot(Entity::from_raw(66));
+		const ROOT: Entity = Entity::from_raw(66);
 
-		fn get_root(_: Entity) -> ColliderRoot {
+		fn get_root(_: Entity) -> Entity {
 			ROOT
 		}
 
@@ -108,8 +108,8 @@ mod tests {
 
 	#[test]
 	fn interaction_event_from_collision_mapped_with_correct_entities() {
-		fn get_root(entity: Entity) -> ColliderRoot {
-			ColliderRoot(entity)
+		fn get_root(entity: Entity) -> Entity {
+			entity
 		}
 
 		let collisions = [
@@ -129,10 +129,10 @@ mod tests {
 
 		assert_eq!(
 			[
-				InteractionEvent::of(ColliderRoot(Entity::from_raw(1)))
-					.collision(Collision::Started(ColliderRoot(Entity::from_raw(2)))),
-				InteractionEvent::of(ColliderRoot(Entity::from_raw(3)))
-					.collision(Collision::Ended(ColliderRoot(Entity::from_raw(4))))
+				InteractionEvent::of(Entity::from_raw(1))
+					.collision(Collision::Started(Entity::from_raw(2))),
+				InteractionEvent::of(Entity::from_raw(3))
+					.collision(Collision::Ended(Entity::from_raw(4)))
 			],
 			interactions
 		);
