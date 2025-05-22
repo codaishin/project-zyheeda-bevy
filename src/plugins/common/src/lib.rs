@@ -5,6 +5,7 @@ pub mod dto;
 pub mod effects;
 pub mod errors;
 pub mod labels;
+pub mod observers;
 pub mod resources;
 pub mod states;
 pub mod systems;
@@ -14,6 +15,7 @@ pub mod traits;
 
 use bevy::prelude::*;
 use components::{
+	collider_root::ColliderRoot,
 	flip::FlipHorizontally,
 	insert_asset::InsertAsset,
 	object_id::ObjectId,
@@ -48,6 +50,8 @@ impl Plugin for CommonPlugin {
 			// Handling `ObjectId`s (mapping `Entity`s for persistent object references)
 			.add_systems(on_instantiate(), ObjectId::update_entity)
 			// Collect user inputs
-			.collect_user_input();
+			.collect_user_input()
+			// Point to to collider rigid body
+			.add_observer(ColliderRoot::insert);
 	}
 }
