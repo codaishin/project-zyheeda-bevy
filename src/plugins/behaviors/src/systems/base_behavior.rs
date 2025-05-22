@@ -2,7 +2,7 @@ use crate::components::{Attack, Chase};
 use bevy::{math::InvalidDirectionError, prelude::*};
 use bevy_rapier3d::plugin::ReadRapierContext;
 use common::{
-	components::{ColliderRoot, GroundOffset},
+	components::{GroundOffset, collider_root::ColliderRoot},
 	tools::{
 		aggro_range::AggroRange,
 		attack_range::AttackRange,
@@ -182,7 +182,6 @@ mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
-		components::{ColliderRoot, GroundOffset},
 		test_tools::utils::SingleThreadedApp,
 		tools::Units,
 		traits::{

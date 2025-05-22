@@ -1,7 +1,7 @@
 use crate::traits::{FromCollisionEvent, Track, TrackState};
 use bevy::prelude::{Event, EventReader, EventWriter, Query, ResMut, Resource};
 use bevy_rapier3d::prelude::CollisionEvent;
-use common::components::ColliderRoot;
+use common::components::collider_root::ColliderRoot;
 
 pub(crate) fn map_collision_events_to<TEvent, TEventTracker>(
 	mut collisions: EventReader<CollisionEvent>,

@@ -3,7 +3,7 @@ use crate::{
 	traits::{Flush, Track, TrackState},
 };
 use bevy::prelude::{Entity, Resource};
-use common::components::ColliderRoot;
+use common::components::collider_root::ColliderRoot;
 use std::collections::{HashMap, HashSet, hash_map::Entry};
 
 #[derive(Resource, Default)]
@@ -66,7 +66,7 @@ struct Refreshed(bool);
 mod tests {
 	use super::*;
 	use crate::events::Collision;
-	use common::components::ColliderRoot;
+	use common::components::collider_root::ColliderRoot;
 
 	#[test]
 	fn track_return_change_when_empty() {

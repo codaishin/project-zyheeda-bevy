@@ -4,7 +4,11 @@ use crate::components::{
 	is::{InterruptableRay, Is},
 };
 use bevy::prelude::*;
-use common::{blocker::Blocker, components::ColliderRoot, traits::cast_ray::TimeOfImpact};
+use common::{
+	blocker::Blocker,
+	components::collider_root::ColliderRoot,
+	traits::cast_ray::TimeOfImpact,
+};
 use std::collections::{HashMap, HashSet};
 
 pub(crate) fn apply_interruptable_ray_blocks(
@@ -69,7 +73,7 @@ mod tests {
 	use super::*;
 	use crate::events::RayCastInfo;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{components::ColliderRoot, traits::cast_ray::TimeOfImpact};
+	use common::{components::collider_root::ColliderRoot, traits::cast_ray::TimeOfImpact};
 
 	fn setup() -> App {
 		App::new()

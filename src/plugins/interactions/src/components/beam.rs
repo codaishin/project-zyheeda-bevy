@@ -3,7 +3,7 @@ use crate::events::{InteractionEvent, Ray};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::{ColliderRoot, GroundOffset},
+	components::{GroundOffset, collider_root::ColliderRoot},
 	tools::Units,
 	traits::{
 		cast_ray::TimeOfImpact,

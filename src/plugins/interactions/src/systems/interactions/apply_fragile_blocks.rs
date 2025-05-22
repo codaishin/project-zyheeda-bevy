@@ -6,7 +6,7 @@ use crate::{
 	events::{Collision, InteractionEvent},
 };
 use bevy::prelude::*;
-use common::{components::ColliderRoot, traits::try_insert_on::TryInsertOn};
+use common::{components::collider_root::ColliderRoot, traits::try_insert_on::TryInsertOn};
 
 pub(crate) fn apply_fragile_blocks<TDestroy>(
 	mut commands: Commands,
@@ -56,7 +56,7 @@ mod tests {
 	use super::*;
 	use common::{
 		blocker::Blocker,
-		components::ColliderRoot,
+		components::collider_root::ColliderRoot,
 		test_tools::utils::SingleThreadedApp,
 	};
 

@@ -1,5 +1,5 @@
 use bevy::prelude::{Component, Entity};
-use common::components::ColliderRoot;
+use common::components::collider_root::ColliderRoot;
 use std::collections::HashSet;
 
 #[derive(Component, Default, Debug, PartialEq, Clone)]

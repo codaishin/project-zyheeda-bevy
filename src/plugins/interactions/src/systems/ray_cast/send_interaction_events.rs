@@ -29,7 +29,7 @@ mod tests {
 	use crate::events::Collision;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
-		components::ColliderRoot,
+		components::collider_root::ColliderRoot,
 		test_tools::utils::SingleThreadedApp,
 		traits::{cast_ray::TimeOfImpact, nested_mock::NestedMocks},
 	};

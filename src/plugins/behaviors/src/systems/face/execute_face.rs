@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use common::{
-	components::{ColliderRoot, Immobilized},
+	components::{Immobilized, collider_root::ColliderRoot},
 	tools::collider_info::ColliderInfo,
 	traits::{
 		accessors::get::GetterRefOptional,
@@ -99,11 +99,7 @@ mod tests {
 		ecs::{component::Component, system::IntoSystem},
 		math::Vec3,
 	};
-	use common::{
-		components::{ColliderRoot, Immobilized},
-		test_tools::utils::SingleThreadedApp,
-		traits::nested_mock::NestedMocks,
-	};
+	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 

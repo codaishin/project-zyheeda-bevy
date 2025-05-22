@@ -12,7 +12,7 @@ use super::{
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::{AssetModel, ColliderRoot},
+	components::{AssetModel, collider_root::ColliderRoot},
 	errors::{Error, Level},
 	traits::{
 		handles_destruction::HandlesDestruction,
@@ -202,7 +202,6 @@ mod tests {
 	use bevy_rapier3d::prelude::ActiveCollisionTypes;
 	use common::{
 		blocker::Blocker,
-		components::{AssetModel, ColliderRoot},
 		tools::{Units, UnitsPerSecond},
 		traits::{
 			clamp_zero_positive::ClampZeroPositive,

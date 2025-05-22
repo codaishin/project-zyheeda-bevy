@@ -1,7 +1,7 @@
 use super::execute_ray_caster::RayCastResult;
 use crate::events::{Collision, InteractionEvent, Ray};
 use bevy::prelude::*;
-use common::components::ColliderRoot;
+use common::components::collider_root::ColliderRoot;
 use std::collections::HashMap;
 
 pub(crate) fn map_ray_cast_result_to_interaction_events(

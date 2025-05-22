@@ -6,7 +6,7 @@ use crate::{
 	traits::{Track, TrackState},
 };
 use bevy::prelude::{Entity, Resource};
-use common::components::ColliderRoot;
+use common::components::collider_root::ColliderRoot;
 use interactions_count::{InteractionsCount, RemainingInteractions};
 use sorted_entities::SortedEntities;
 use std::collections::{HashMap, hash_map::Entry};
@@ -65,7 +65,7 @@ mod tests {
 	use super::*;
 	use crate::{events::Collision, traits::TrackState};
 	use bevy::prelude::Entity;
-	use common::components::ColliderRoot;
+	use common::components::collider_root::ColliderRoot;
 
 	#[test]
 	fn single_start() {

@@ -5,7 +5,7 @@ use bevy::{
 	utils::default,
 };
 use bevy_rapier3d::prelude::CollisionEvent;
-use common::{components::ColliderRoot, traits::cast_ray::TimeOfImpact};
+use common::{components::collider_root::ColliderRoot, traits::cast_ray::TimeOfImpact};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Ray(pub Ray3d, pub TimeOfImpact);

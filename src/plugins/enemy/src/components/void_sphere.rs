@@ -21,8 +21,8 @@ use common::{
 	},
 	blocker::{Blocker, BlockerInsertCommand},
 	components::{
-		ColliderRoot,
 		GroundOffset,
+		collider_root::ColliderRoot,
 		insert_asset::InsertAsset,
 		spawn_children::SpawnChildren,
 	},

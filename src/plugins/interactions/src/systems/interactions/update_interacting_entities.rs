@@ -37,7 +37,7 @@ mod tests {
 		app::{App, Update},
 		prelude::Entity,
 	};
-	use common::{components::ColliderRoot, test_tools::utils::SingleThreadedApp};
+	use common::{components::collider_root::ColliderRoot, test_tools::utils::SingleThreadedApp};
 
 	use super::*;
 

@@ -45,7 +45,7 @@ pub(crate) fn act_interaction<TActor, TTarget>(
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{components::ColliderRoot, traits::nested_mock::NestedMocks};
+	use common::{components::collider_root::ColliderRoot, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 

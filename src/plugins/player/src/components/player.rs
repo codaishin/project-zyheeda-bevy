@@ -4,7 +4,7 @@ use bevy_rapier3d::prelude::*;
 use common::{
 	attributes::health::Health,
 	blocker::{Blocker, BlockerInsertCommand},
-	components::{AssetModel, ColliderRoot, GroundOffset, flip::FlipHorizontally},
+	components::{AssetModel, GroundOffset, collider_root::ColliderRoot, flip::FlipHorizontally},
 	effects::deal_damage::DealDamage,
 	errors::Error,
 	tools::{

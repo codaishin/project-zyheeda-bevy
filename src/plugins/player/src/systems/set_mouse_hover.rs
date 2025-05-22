@@ -9,7 +9,7 @@ use bevy::{
 };
 use bevy_rapier3d::plugin::ReadRapierContext;
 use common::{
-	components::{ColliderRoot, NoTarget},
+	components::{NoTarget, collider_root::ColliderRoot},
 	tools::collider_info::ColliderInfo,
 	traits::cast_ray::{CastRay, GetRayCaster, TimeOfImpact},
 };

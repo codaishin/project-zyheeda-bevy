@@ -27,7 +27,7 @@ mod tests {
 		app::{App, Update},
 		prelude::{Component, Entity},
 	};
-	use common::{components::ColliderRoot, test_tools::utils::SingleThreadedApp};
+	use common::{components::collider_root::ColliderRoot, test_tools::utils::SingleThreadedApp};
 	use std::ops::DerefMut;
 
 	#[derive(Component)]
