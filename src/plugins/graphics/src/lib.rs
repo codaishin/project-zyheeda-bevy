@@ -16,16 +16,13 @@ use common::{
 	components::essence::Essence,
 	effects::{deal_damage::DealDamage, force_shield::ForceShield, gravity::Gravity},
 	states::game_state::LoadingGame,
-	systems::{
-		insert_required::{InsertOn, InsertRequired},
-		remove_components::Remove,
-		track_components::TrackComponentInSelfAndChildren,
-	},
+	systems::{remove_components::Remove, track_components::TrackComponentInSelfAndChildren},
 	traits::{
 		handles_effect::{HandlesAllEffects, HandlesEffect},
 		handles_graphics::{FirstPassCamera, UiCamera, WorldCameras},
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInSubApp},
 		handles_skill_behaviors::HandlesSkillBehaviors,
+		register_required_components_mapped::RegisterRequiredComponentsMapped,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -91,18 +88,11 @@ where
 	}
 
 	fn essence_material(app: &mut App) {
-		type InsertOnMeshWithEssence = InsertOn<Essence, With<Mesh3d>, Changed<Essence>>;
-
-		app.register_shader::<EssenceMaterial>().add_systems(
-			Update,
-			(
-				InsertOnMeshWithEssence::required::<MaterialOverride>(|essence| {
-					MaterialOverride::from(essence)
-				}),
-				MaterialOverride::apply_material_exclusivity,
-			)
-				.chain(),
-		);
+		app.register_required_components_mapped::<Essence, MaterialOverride>(|essence| {
+			MaterialOverride::from(essence)
+		})
+		.register_shader::<EssenceMaterial>()
+		.add_systems(Update, MaterialOverride::apply_material_exclusivity);
 	}
 
 	fn cameras(app: &mut App) {

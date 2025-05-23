@@ -15,17 +15,17 @@ use crate::systems::{
 use bevy::prelude::*;
 use common::{
 	labels::Labels,
-	systems::{
-		insert_required::{InsertOn, InsertRequired},
-		track_components::TrackComponentInSelfAndChildren,
-	},
-	traits::animation::{
-		AnimationMaskDefinition,
-		ConfigureNewAnimationDispatch,
-		GetAnimationDefinitions,
-		GetMovementDirection,
-		HasAnimationsDispatch,
-		RegisterAnimations,
+	systems::track_components::TrackComponentInSelfAndChildren,
+	traits::{
+		animation::{
+			AnimationMaskDefinition,
+			ConfigureNewAnimationDispatch,
+			GetAnimationDefinitions,
+			GetMovementDirection,
+			HasAnimationsDispatch,
+			RegisterAnimations,
+		},
+		register_required_components_mapped::RegisterRequiredComponentsMapped,
 	},
 };
 use components::animation_dispatch::AnimationDispatch;
@@ -49,17 +49,17 @@ impl RegisterAnimations for AnimationsPlugin {
 			dispatch
 		};
 
-		app.add_systems(
-			Labels::PREFAB_INSTANTIATION.label(),
-			(
-				InsertOn::<TAgent>::required::<AnimationDispatch>(dispatch),
-				TAgent::init_animation_components::<AnimationGraph, AssetServer>,
-				TAgent::mask_animation_nodes,
-				TAgent::set_animation_mask_bones,
-				TAgent::remove_unused_animation_targets,
-			)
-				.chain(),
-		);
+		app.register_required_components_mapped::<TAgent, AnimationDispatch>(dispatch)
+			.add_systems(
+				Labels::PREFAB_INSTANTIATION.label(),
+				(
+					TAgent::init_animation_components::<AnimationGraph, AssetServer>,
+					TAgent::mask_animation_nodes,
+					TAgent::set_animation_mask_bones,
+					TAgent::remove_unused_animation_targets,
+				)
+					.chain(),
+			);
 	}
 
 	fn register_movement_direction<TMovementDirection>(app: &mut App)
