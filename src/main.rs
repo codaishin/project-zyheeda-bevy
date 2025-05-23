@@ -19,7 +19,6 @@ use map_generation::MapGenerationPlugin;
 use menu::MenuPlugin;
 use path_finding::PathFindingPlugin;
 use player::PlayerPlugin;
-use prefabs::PrefabsPlugin;
 use savegame::SavegamePlugin;
 use settings::SettingsPlugin;
 use skills::SkillsPlugin;
@@ -41,42 +40,34 @@ fn prepare_game(app: &mut App) {
 	let savegame_plugin = SavegamePlugin;
 	let life_cycles_plugin = LifeCyclesPlugin;
 	let animations_plugin = AnimationsPlugin;
-	let prefabs_plugin = PrefabsPlugin;
+	let light_plugin = LightPlugin;
 	let loading_plugin = LoadingPlugin;
 	let settings_plugin = SettingsPlugin::depends_on(&loading_plugin);
 	let localization_plugin = LocalizationPlugin::depends_on(&loading_plugin);
 	let game_state_plugin = GameStatePlugin::depends_on(&loading_plugin);
-	let light_plugin = LightPlugin::depends_on(&prefabs_plugin);
 	let children_assets_dispatch_plugin = ChildrenAssetsDispatchPlugin::depends_on(&loading_plugin);
 	let interactions_plugin = InteractionsPlugin::depends_on(&life_cycles_plugin);
-	let enemy_plugin =
-		EnemyPlugin::depends_on(&game_state_plugin, &prefabs_plugin, &interactions_plugin);
-	let map_generation_plugin = MapGenerationPlugin::depends_on(&prefabs_plugin, &light_plugin);
+	let enemy_plugin = EnemyPlugin::depends_on(&game_state_plugin, &interactions_plugin);
+	let map_generation_plugin = MapGenerationPlugin::depends_on(&light_plugin);
 	let path_finding_plugin = PathFindingPlugin::depends_on(&map_generation_plugin);
 	let player_plugin = PlayerPlugin::depends_on(
 		&settings_plugin,
 		&game_state_plugin,
 		&animations_plugin,
-		&prefabs_plugin,
 		&interactions_plugin,
 		&light_plugin,
 	);
 	let behaviors_plugin = BehaviorsPlugin::depends_on(
 		&settings_plugin,
 		&animations_plugin,
-		&prefabs_plugin,
 		&life_cycles_plugin,
 		&interactions_plugin,
 		&path_finding_plugin,
 		&enemy_plugin,
 		&player_plugin,
 	);
-	let graphics_plugin = GraphicsPlugin::depends_on(
-		&prefabs_plugin,
-		&loading_plugin,
-		&interactions_plugin,
-		&behaviors_plugin,
-	);
+	let graphics_plugin =
+		GraphicsPlugin::depends_on(&loading_plugin, &interactions_plugin, &behaviors_plugin);
 	let menu_plugin = MenuPlugin::depends_on(
 		&loading_plugin,
 		&settings_plugin,
@@ -110,7 +101,6 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(savegame_plugin)
 		.add_plugins(life_cycles_plugin)
 		.add_plugins(settings_plugin)
-		.add_plugins(prefabs_plugin)
 		.add_plugins(graphics_plugin)
 		.add_plugins(interactions_plugin)
 		.add_plugins(children_assets_dispatch_plugin)

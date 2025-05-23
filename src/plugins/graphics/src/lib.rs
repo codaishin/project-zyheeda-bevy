@@ -26,7 +26,6 @@ use common::{
 		handles_graphics::{FirstPassCamera, UiCamera, WorldCameras},
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInSubApp},
 		handles_skill_behaviors::HandlesSkillBehaviors,
-		prefab::RegisterPrefab,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -54,16 +53,13 @@ use traits::{
 
 pub struct GraphicsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TPrefabs, TLoading, TInteractions, TBehaviors>
-	GraphicsPlugin<(TPrefabs, TLoading, TInteractions, TBehaviors)>
+impl<TLoading, TInteractions, TBehaviors> GraphicsPlugin<(TLoading, TInteractions, TBehaviors)>
 where
-	TPrefabs: ThreadSafe + RegisterPrefab,
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TInteractions: ThreadSafe + HandlesAllEffects,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors,
 {
-	#[allow(clippy::type_complexity)]
-	pub fn depends_on(_: &TPrefabs, _: &TLoading, _: &TInteractions, _: &TBehaviors) -> Self {
+	pub fn depends_on(_: &TLoading, _: &TInteractions, _: &TBehaviors) -> Self {
 		Self(PhantomData)
 	}
 
@@ -119,10 +115,9 @@ where
 	}
 }
 
-impl<TPrefabs, TLoading, TInteractions, TBehaviors> Plugin
-	for GraphicsPlugin<(TPrefabs, TLoading, TInteractions, TBehaviors)>
+impl<TLoading, TInteractions, TBehaviors> Plugin
+	for GraphicsPlugin<(TLoading, TInteractions, TBehaviors)>
 where
-	TPrefabs: ThreadSafe + RegisterPrefab,
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TInteractions: ThreadSafe + HandlesAllEffects,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors,

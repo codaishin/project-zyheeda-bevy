@@ -3,12 +3,12 @@ use crate::{errors::Error, systems::log::log};
 use bevy::prelude::*;
 
 impl AddPrefabObserver for App {
-	fn add_prefab_observer<TPrefab, TDependencies>(&mut self)
+	fn add_prefab_observer<TPrefab, TDependencies>(&mut self) -> &mut Self
 	where
 		TPrefab: Prefab<TDependencies>,
 		TDependencies: 'static,
 	{
-		self.add_observer(instantiate_prefab::<TPrefab, TDependencies>.pipe(log));
+		self.add_observer(instantiate_prefab::<TPrefab, TDependencies>.pipe(log))
 	}
 }
 
