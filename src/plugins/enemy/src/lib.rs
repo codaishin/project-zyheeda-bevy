@@ -6,7 +6,7 @@ mod traits;
 use bevy::prelude::*;
 use common::{
 	attributes::{affected_by::AffectedBy, health::Health},
-	components::{insert_asset::InsertAssetFromSource, spawn_children::SpawnChildrenFromParent},
+	components::insert_asset::InsertAssetFromSource,
 	effects::{deal_damage::DealDamage, gravity::Gravity},
 	labels::Labels,
 	traits::{
@@ -56,10 +56,7 @@ where
 			.add_prefab_observer::<VoidBeam, TInteractions>()
 			.add_systems(
 				Labels::PREFAB_INSTANTIATION.label(),
-				(
-					InsertAssetFromSource::<StandardMaterial, VoidBeamModel>::system,
-					SpawnChildrenFromParent::<VoidBeam>::system,
-				),
+				InsertAssetFromSource::<StandardMaterial, VoidBeamModel>::system,
 			)
 			.add_systems(Update, ring_rotation);
 	}
