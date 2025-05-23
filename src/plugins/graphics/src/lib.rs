@@ -22,6 +22,7 @@ use common::{
 		handles_graphics::{FirstPassCamera, UiCamera, WorldCameras},
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInSubApp},
 		handles_skill_behaviors::HandlesSkillBehaviors,
+		prefab::AddPrefabObserver,
 		register_required_components_mapped::RegisterRequiredComponentsMapped,
 		thread_safe::ThreadSafe,
 	},
@@ -72,19 +73,20 @@ where
 
 		app.register_required_components::<TBehaviors::TSkillContact, EffectShadersTarget>()
 			.register_required_components::<TBehaviors::TSkillProjection, EffectShadersTarget>()
-			.register_required_components::<EffectShader<DealDamage>, DamageEffectShaders>();
-		app.add_systems(
-			PostUpdate,
-			(
-				EffectShadersTarget::remove_from_self_and_children::<
-					MeshMaterial3d<StandardMaterial>,
-				>,
-				EffectShadersTarget::track_in_self_and_children::<Mesh3d>().system(),
-				instantiate_effect_shaders,
-				insert_effect_shader_render_layers(SecondPass),
-			)
-				.chain(),
-		);
+			.register_required_components::<EffectShader<DealDamage>, DamageEffectShaders>()
+			.add_prefab_observer::<DamageEffectShaders, ()>()
+			.add_systems(
+				PostUpdate,
+				(
+					EffectShadersTarget::remove_from_self_and_children::<
+						MeshMaterial3d<StandardMaterial>,
+					>,
+					EffectShadersTarget::track_in_self_and_children::<Mesh3d>().system(),
+					instantiate_effect_shaders,
+					insert_effect_shader_render_layers(SecondPass),
+				)
+					.chain(),
+			);
 	}
 
 	fn essence_material(app: &mut App) {

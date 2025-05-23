@@ -2,10 +2,7 @@ use crate::traits::insert_attack::InsertAttack;
 use bevy::{ecs::system::EntityCommands, pbr::NotShadowCaster, prelude::*};
 use common::{
 	blocker::Blocker,
-	components::{
-		insert_asset::{InsertAsset, InsertAssetFromSource},
-		spawn_children::SpawnChildrenFromParent,
-	},
+	components::insert_asset::{InsertAsset, InsertAssetFromSource},
 	effects::deal_damage::DealDamage,
 	errors::Error,
 	tools::Units,
@@ -19,22 +16,11 @@ use common::{
 use std::{f32::consts::PI, time::Duration};
 
 #[derive(Component, Debug, PartialEq)]
-#[require(SpawnChildrenFromParent::<Self> = Self::model(), Visibility, Transform)]
+#[require(Visibility, Transform)]
 pub(crate) struct VoidBeam {
 	attack: VoidBeamAttack,
 	attacker: Entity,
 	target: Entity,
-}
-
-impl VoidBeam {
-	fn model() -> SpawnChildrenFromParent<Self> {
-		SpawnChildrenFromParent(|entity, beam| {
-			entity.spawn(VoidBeamModel {
-				color: beam.attack.color,
-				emissive: beam.attack.emissive,
-			});
-		})
-	}
 }
 
 #[derive(Default, Clone, Copy, Debug, PartialEq)]
@@ -73,6 +59,10 @@ where
 			TInteractions::beam_from(self),
 			TInteractions::is_ray_interrupted_by(&[Blocker::Physical, Blocker::Force]),
 			TInteractions::effect(DealDamage::once_per_second(self.attack.damage)),
+			children![VoidBeamModel {
+				color: self.attack.color,
+				emissive: self.attack.emissive,
+			}],
 		));
 
 		Ok(())
