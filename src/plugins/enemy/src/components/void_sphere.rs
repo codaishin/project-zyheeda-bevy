@@ -33,7 +33,7 @@ use common::{
 		clamp_zero_positive::ClampZeroPositive,
 		handles_effect::HandlesEffect,
 		handles_enemies::EnemyTarget,
-		prefab::{Prefab, sphere},
+		prefab::Prefab,
 	},
 };
 use std::{f32::consts::PI, sync::Arc, time::Duration};
@@ -180,7 +180,11 @@ impl VoidSphereCore {
 	}
 
 	fn mesh() -> InsertAsset<Mesh> {
-		InsertAsset::shared::<Self>(|| sphere(VOID_SPHERE_INNER_RADIUS))
+		InsertAsset::shared::<Self>(|| {
+			Mesh::from(Sphere {
+				radius: VOID_SPHERE_INNER_RADIUS,
+			})
+		})
 	}
 }
 

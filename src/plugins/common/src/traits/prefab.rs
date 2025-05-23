@@ -18,7 +18,3 @@ pub trait RegisterPrefab {
 	where
 		TDependency: 'static;
 }
-
-pub fn sphere(radius: f32) -> Mesh {
-	Mesh::from(Sphere { radius })
-}
