@@ -41,7 +41,6 @@ map_generation = { path = "src/plugins/map_generation" }
 menu = { path = "src/plugins/menu" }
 path_finding = { path = "src/plugins/path_finding" }
 player = { path = "src/plugins/player" }
-prefabs = { path = "src/plugins/prefabs" }
 graphics = { path = "src/plugins/graphics" }
 savegame = { path = "src/plugins/savegame" }
 settings = { path = "src/plugins/settings" }
@@ -97,7 +96,6 @@ map_generation.workspace = true
 menu.workspace = true
 path_finding.workspace = true
 player.workspace = true
-prefabs.workspace = true
 graphics.workspace = true
 savegame.workspace = true
 settings.workspace = true

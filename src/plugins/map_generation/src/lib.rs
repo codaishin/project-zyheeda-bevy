@@ -14,7 +14,6 @@ use common::{
 	traits::{
 		handles_lights::HandlesLights,
 		handles_map_generation::HandlesMapGeneration,
-		prefab::RegisterPrefab,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -27,19 +26,17 @@ use traits::load_map::{LoadMap, LoadMapAsset};
 
 pub struct MapGenerationPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TPrefabs, TLights> MapGenerationPlugin<(TPrefabs, TLights)>
+impl<TLights> MapGenerationPlugin<TLights>
 where
-	TPrefabs: ThreadSafe + RegisterPrefab,
 	TLights: ThreadSafe + HandlesLights,
 {
-	pub fn depends_on(_: &TPrefabs, _: &TLights) -> Self {
-		Self(PhantomData::<(TPrefabs, TLights)>)
+	pub fn depends_on(_: &TLights) -> Self {
+		Self(PhantomData::<TLights>)
 	}
 }
 
-impl<TPrefabs, TLights> Plugin for MapGenerationPlugin<(TPrefabs, TLights)>
+impl<TLights> Plugin for MapGenerationPlugin<TLights>
 where
-	TPrefabs: ThreadSafe + RegisterPrefab,
 	TLights: ThreadSafe + HandlesLights,
 {
 	fn build(&self, app: &mut App) {

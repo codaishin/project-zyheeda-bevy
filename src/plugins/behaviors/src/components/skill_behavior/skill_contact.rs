@@ -22,7 +22,7 @@ where
 	TInteractions: HandlesInteractions,
 	TLifeCycles: HandlesDestruction,
 {
-	fn instantiate_on(&self, entity: &mut EntityCommands) -> Result<(), Error> {
+	fn insert_prefab_components(&self, entity: &mut EntityCommands) -> Result<(), Error> {
 		self.shape
 			.prefab::<TInteractions, TLifeCycles>(entity, Vec3::ZERO)?;
 		self.motion

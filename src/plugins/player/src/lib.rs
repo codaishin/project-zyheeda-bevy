@@ -23,7 +23,7 @@ use common::{
 			PlayerMainCamera,
 		},
 		handles_settings::HandlesSettings,
-		prefab::{RegisterPrefab, RegisterPrefabWithDependency},
+		prefab::AddPrefabObserver,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -43,20 +43,12 @@ use systems::{
 
 pub struct PlayerPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSettings, TGameStates, TAnimation, TPrefabs, TInteractions, TLights>
-	PlayerPlugin<(
-		TSettings,
-		TGameStates,
-		TAnimation,
-		TPrefabs,
-		TInteractions,
-		TLights,
-	)>
+impl<TSettings, TGameStates, TAnimation, TInteractions, TLights>
+	PlayerPlugin<(TSettings, TGameStates, TAnimation, TInteractions, TLights)>
 where
 	TSettings: ThreadSafe + HandlesSettings,
 	TGameStates: ThreadSafe + HandlesGameStates,
 	TAnimation: ThreadSafe + RegisterAnimations,
-	TPrefabs: ThreadSafe + RegisterPrefab,
 	TInteractions: ThreadSafe + HandlesEffect<DealDamage, TTarget = Health>,
 	TLights: ThreadSafe + HandlesLights,
 {
@@ -64,7 +56,6 @@ where
 		_: &TSettings,
 		_: &TGameStates,
 		_: &TAnimation,
-		_: &TPrefabs,
 		_: &TInteractions,
 		_: &TLights,
 	) -> Self {
@@ -72,29 +63,21 @@ where
 	}
 }
 
-impl<TSettings, TGameStates, TAnimation, TPrefabs, TInteractions, TLights> Plugin
-	for PlayerPlugin<(
-		TSettings,
-		TGameStates,
-		TAnimation,
-		TPrefabs,
-		TInteractions,
-		TLights,
-	)>
+impl<TSettings, TGameStates, TAnimation, TInteractions, TLights> Plugin
+	for PlayerPlugin<(TSettings, TGameStates, TAnimation, TInteractions, TLights)>
 where
 	TSettings: ThreadSafe + HandlesSettings,
 	TGameStates: ThreadSafe + HandlesGameStates,
 	TAnimation: ThreadSafe + RegisterAnimations,
-	TPrefabs: ThreadSafe + RegisterPrefab,
 	TInteractions: ThreadSafe + HandlesEffect<DealDamage, TTarget = Health>,
 	TLights: ThreadSafe + HandlesLights,
 {
 	fn build(&self, app: &mut App) {
 		TGameStates::on_starting_new_game(app, Player::spawn);
 		TAnimation::register_animations::<Player>(app);
-		TPrefabs::with_dependency::<(TInteractions, TLights)>().register_prefab::<Player>(app);
 
 		app.init_resource::<CamRay>()
+			.add_prefab_observer::<Player, (TInteractions, TLights)>()
 			.add_systems(
 				First,
 				(set_cam_ray::<Camera, PlayerCamera>, set_mouse_hover).chain(),

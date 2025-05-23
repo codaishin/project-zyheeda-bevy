@@ -4411,18 +4411,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "prefabs"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "bevy_rapier3d",
- "common",
- "mockall",
- "tracing",
- "uuid",
-]
-
-[[package]]
 name = "presser"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4511,7 +4499,6 @@ dependencies = [
  "mockall",
  "path_finding",
  "player",
- "prefabs",
  "savegame",
  "serde",
  "serde_json",

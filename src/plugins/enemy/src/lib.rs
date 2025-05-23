@@ -14,7 +14,7 @@ use common::{
 		handles_enemies::HandlesEnemies,
 		handles_game_states::HandlesGameStates,
 		handles_interactions::HandlesInteractions,
-		prefab::{RegisterPrefab, RegisterPrefabWithDependency},
+		prefab::AddPrefabObserver,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -28,25 +28,22 @@ use systems::void_sphere::ring_rotation::ring_rotation;
 
 pub struct EnemyPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TGameStates, TPrefabs, TInteractions> EnemyPlugin<(TGameStates, TPrefabs, TInteractions)>
+impl<TGameStates, TInteractions> EnemyPlugin<(TGameStates, TInteractions)>
 where
 	TGameStates: ThreadSafe + HandlesGameStates,
-	TPrefabs: ThreadSafe + RegisterPrefab,
 	TInteractions: ThreadSafe
 		+ HandlesInteractions
 		+ HandlesEffect<DealDamage, TTarget = Health>
 		+ HandlesEffect<Gravity, TTarget = AffectedBy<Gravity>>,
 {
-	pub fn depends_on(_: &TGameStates, _: &TPrefabs, _: &TInteractions) -> Self {
+	pub fn depends_on(_: &TGameStates, _: &TInteractions) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TGameStates, TPrefabs, TInteractions> Plugin
-	for EnemyPlugin<(TGameStates, TPrefabs, TInteractions)>
+impl<TGameStates, TInteractions> Plugin for EnemyPlugin<(TGameStates, TInteractions)>
 where
 	TGameStates: ThreadSafe + HandlesGameStates,
-	TPrefabs: ThreadSafe + RegisterPrefab,
 	TInteractions: ThreadSafe
 		+ HandlesInteractions
 		+ HandlesEffect<DealDamage, TTarget = Health>
@@ -54,17 +51,17 @@ where
 {
 	fn build(&self, app: &mut App) {
 		TGameStates::on_starting_new_game(app, VoidSphere::spawn);
-		TPrefabs::with_dependency::<TInteractions>().register_prefab::<VoidSphere>(app);
-		TPrefabs::with_dependency::<TInteractions>().register_prefab::<VoidBeam>(app);
 
-		app.add_systems(
-			Labels::PREFAB_INSTANTIATION.label(),
-			(
-				InsertAssetFromSource::<StandardMaterial, VoidBeamModel>::system,
-				SpawnChildrenFromParent::<VoidBeam>::system,
-			),
-		)
-		.add_systems(Update, ring_rotation);
+		app.add_prefab_observer::<VoidSphere, TInteractions>()
+			.add_prefab_observer::<VoidBeam, TInteractions>()
+			.add_systems(
+				Labels::PREFAB_INSTANTIATION.label(),
+				(
+					InsertAssetFromSource::<StandardMaterial, VoidBeamModel>::system,
+					SpawnChildrenFromParent::<VoidBeam>::system,
+				),
+			)
+			.add_systems(Update, ring_rotation);
 	}
 }
 

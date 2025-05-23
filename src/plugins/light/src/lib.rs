@@ -9,54 +9,39 @@ use common::{
 	states::game_state::GameState,
 	traits::{
 		handles_lights::{HandlesLights, Responsive},
-		prefab::RegisterPrefab,
-		thread_safe::ThreadSafe,
+		prefab::AddPrefabObserver,
 	},
 };
 use components::{
 	responsive_light::ResponsiveLight,
 	responsive_light_trigger::ResponsiveLightTrigger,
 };
-use std::marker::PhantomData;
 use systems::setup_light::setup_light;
 
-pub struct LightPlugin<TDependencies>(PhantomData<TDependencies>);
+pub struct LightPlugin;
 
-impl<TPrefabs> LightPlugin<TPrefabs>
-where
-	TPrefabs: ThreadSafe + RegisterPrefab,
-{
-	pub fn depends_on(_: &TPrefabs) -> Self {
-		Self(PhantomData)
-	}
-}
-
-impl<TPrefabs> Plugin for LightPlugin<TPrefabs>
-where
-	TPrefabs: ThreadSafe + RegisterPrefab,
-{
+impl Plugin for LightPlugin {
 	fn build(&self, app: &mut App) {
-		TPrefabs::register_prefab::<ResponsiveLight>(app);
-
-		app.add_systems(
-			OnEnter(GameState::Loading),
-			setup_light(Self::DEFAULT_LIGHT),
-		)
-		.add_systems(
-			Update,
-			(
-				ResponsiveLight::insert_light,
-				ResponsiveLight::detect_change::<CollidingEntities>,
-				ResponsiveLight::apply_change::<Virtual, PointLight>,
-				ResponsiveLight::apply_change::<Virtual, SpotLight>,
-				ResponsiveLight::apply_change::<Virtual, DirectionalLight>,
+		app.add_prefab_observer::<ResponsiveLight, ()>()
+			.add_systems(
+				OnEnter(GameState::Loading),
+				setup_light(Self::DEFAULT_LIGHT),
 			)
-				.chain(),
-		);
+			.add_systems(
+				Update,
+				(
+					ResponsiveLight::insert_light,
+					ResponsiveLight::detect_change::<CollidingEntities>,
+					ResponsiveLight::apply_change::<Virtual, PointLight>,
+					ResponsiveLight::apply_change::<Virtual, SpotLight>,
+					ResponsiveLight::apply_change::<Virtual, DirectionalLight>,
+				)
+					.chain(),
+			);
 	}
 }
 
-impl<TDependencies> HandlesLights for LightPlugin<TDependencies> {
+impl HandlesLights for LightPlugin {
 	type TResponsiveLightBundle = ResponsiveLight;
 	type TResponsiveLightTrigger = ResponsiveLightTrigger;
 

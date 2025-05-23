@@ -103,7 +103,7 @@ impl ResponsiveLight {
 }
 
 impl Prefab<()> for ResponsiveLight {
-	fn instantiate_on(&self, entity: &mut EntityCommands) -> Result<(), Error> {
+	fn insert_prefab_components(&self, entity: &mut EntityCommands) -> Result<(), Error> {
 		entity.try_insert(Collider::ball(*self.range.deref()));
 
 		Ok(())

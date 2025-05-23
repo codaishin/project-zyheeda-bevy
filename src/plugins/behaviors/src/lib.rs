@@ -36,7 +36,7 @@ use common::{
 			ProjectionOffset,
 			Shape,
 		},
-		prefab::{RegisterPrefab, RegisterPrefabWithDependency},
+		prefab::AddPrefabObserver,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -70,11 +70,10 @@ use systems::{
 
 pub struct BehaviorsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSettings, TAnimations, TPrefabs, TLifeCycles, TInteractions, TPathFinding, TEnemies, TPlayers>
+impl<TSettings, TAnimations, TLifeCycles, TInteractions, TPathFinding, TEnemies, TPlayers>
 	BehaviorsPlugin<(
 		TSettings,
 		TAnimations,
-		TPrefabs,
 		TLifeCycles,
 		TInteractions,
 		TPathFinding,
@@ -84,7 +83,6 @@ impl<TSettings, TAnimations, TPrefabs, TLifeCycles, TInteractions, TPathFinding,
 where
 	TSettings: ThreadSafe + HandlesSettings,
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations,
-	TPrefabs: ThreadSafe + RegisterPrefab,
 	TLifeCycles: ThreadSafe + HandlesDestruction,
 	TInteractions: ThreadSafe + HandlesInteractions + HandlesEffect<DealDamage>,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
@@ -99,7 +97,6 @@ where
 	pub fn depends_on(
 		_: &TSettings,
 		_: &TAnimations,
-		_: &TPrefabs,
 		_: &TLifeCycles,
 		_: &TInteractions,
 		_: &TPathFinding,
@@ -110,12 +107,10 @@ where
 	}
 }
 
-impl<TSettings, TAnimations, TPrefabs, TLifeCycles, TInteractions, TPathFinding, TEnemies, TPlayers>
-	Plugin
+impl<TSettings, TAnimations, TLifeCycles, TInteractions, TPathFinding, TEnemies, TPlayers> Plugin
 	for BehaviorsPlugin<(
 		TSettings,
 		TAnimations,
-		TPrefabs,
 		TLifeCycles,
 		TInteractions,
 		TPathFinding,
@@ -125,7 +120,6 @@ impl<TSettings, TAnimations, TPrefabs, TLifeCycles, TInteractions, TPathFinding,
 where
 	TSettings: ThreadSafe + HandlesSettings,
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations,
-	TPrefabs: ThreadSafe + RegisterPrefab,
 	TLifeCycles: ThreadSafe + HandlesDestruction,
 	TInteractions: ThreadSafe + HandlesInteractions + HandlesEffect<DealDamage>,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
@@ -138,10 +132,6 @@ where
 		+ ConfiguresPlayerMovement,
 {
 	fn build(&self, app: &mut App) {
-		TPrefabs::with_dependency::<(TInteractions, TLifeCycles)>()
-			.register_prefab::<SkillContact>(app);
-		TPrefabs::with_dependency::<(TInteractions, TLifeCycles)>()
-			.register_prefab::<SkillProjection>(app);
 		TAnimations::register_movement_direction::<Movement<VelocityBased>>(app);
 
 		let update_delta = Labels::UPDATE.delta();
@@ -159,6 +149,8 @@ where
 
 		app.add_event::<MovePointerEvent>()
 			.add_event::<MoveDirectionalEvent<VelocityBased>>()
+			.add_prefab_observer::<SkillContact, (TInteractions, TLifeCycles)>()
+			.add_prefab_observer::<SkillProjection, (TInteractions, TLifeCycles)>()
 			.add_systems(
 				Update,
 				(
