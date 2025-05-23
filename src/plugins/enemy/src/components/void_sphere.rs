@@ -114,24 +114,23 @@ where
 		let mut transform_2nd_ring = transform;
 		transform_2nd_ring.rotate_axis(Dir3::Z, PI / 2.);
 
-		entity.try_insert((
-			Health::new(5.).bundle_via::<TInteractions>(),
-			Affected::by::<Gravity>().bundle_via::<TInteractions>(),
-			children![
-				(VoidSpherePart::Core, VoidSphereCore, transform),
-				(
-					VoidSpherePart::RingA(UnitsPerSecond::new(PI / 50.)),
-					VoidSphereRing,
-					transform,
-				),
-				(
-					VoidSpherePart::RingB(UnitsPerSecond::new(PI / 75.)),
-					VoidSphereRing,
-					transform_2nd_ring,
-				),
-				(Collider::ball(VOID_SPHERE_OUTER_RADIUS), transform),
-			],
-		));
+		entity
+			.try_insert((
+				Health::new(5.).bundle_via::<TInteractions>(),
+				Affected::by::<Gravity>().bundle_via::<TInteractions>(),
+			))
+			.with_child((VoidSpherePart::Core, VoidSphereCore, transform))
+			.with_child((
+				VoidSpherePart::RingA(UnitsPerSecond::new(PI / 50.)),
+				VoidSphereRing,
+				transform,
+			))
+			.with_child((
+				VoidSpherePart::RingB(UnitsPerSecond::new(PI / 75.)),
+				VoidSphereRing,
+				transform_2nd_ring,
+			))
+			.with_child((Collider::ball(VOID_SPHERE_OUTER_RADIUS), transform));
 
 		Ok(())
 	}

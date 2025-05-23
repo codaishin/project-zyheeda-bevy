@@ -55,15 +55,16 @@ where
 	TInteractions: HandlesInteractions + HandlesEffect<DealDamage>,
 {
 	fn insert_prefab_components(&self, entity: &mut EntityCommands) -> Result<(), Error> {
-		entity.try_insert((
-			TInteractions::beam_from(self),
-			TInteractions::is_ray_interrupted_by(&[Blocker::Physical, Blocker::Force]),
-			TInteractions::effect(DealDamage::once_per_second(self.attack.damage)),
-			children![VoidBeamModel {
+		entity
+			.try_insert((
+				TInteractions::beam_from(self),
+				TInteractions::is_ray_interrupted_by(&[Blocker::Physical, Blocker::Force]),
+				TInteractions::effect(DealDamage::once_per_second(self.attack.damage)),
+			))
+			.with_child(VoidBeamModel {
 				color: self.attack.color,
 				emissive: self.attack.emissive,
-			}],
-		));
+			});
 
 		Ok(())
 	}
