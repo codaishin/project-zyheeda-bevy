@@ -24,7 +24,6 @@ use common::{
 		game_state::{GameState, LoadingEssentialAssets, LoadingGame},
 		menu_state::MenuState,
 	},
-	systems::insert_required::{InsertOn, InsertRequired},
 	tools::{
 		action_key::{
 			ActionKey,
@@ -58,6 +57,7 @@ use common::{
 		handles_settings::HandlesSettings,
 		inspect_able::InspectAble,
 		load_asset::Path,
+		register_required_components_mapped::RegisterRequiredComponentsMapped,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -259,13 +259,13 @@ where
 			TLocalization::TLocalizationServer,
 		>;
 
-		app.add_tooltip::<TLocalization::TLocalizationServer, &'static str>()
+		app.register_required_components_mapped(MenuBackground::node)
+			.add_tooltip::<TLocalization::TLocalizationServer, &'static str>()
 			.add_tooltip::<TLocalization::TLocalizationServer, String>()
 			.add_tooltip::<TLocalization::TLocalizationServer, Localized>()
 			.add_systems(
 				Update,
 				(
-					InsertOn::<MenuBackground>::required(MenuBackground::node),
 					image_color,
 					adjust_global_z_index,
 					(
