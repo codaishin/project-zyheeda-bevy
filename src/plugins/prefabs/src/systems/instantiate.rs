@@ -18,7 +18,7 @@ where
 				lvl: Level::Error,
 			});
 		};
-		agent.instantiate_on(&mut entity)
+		agent.insert_prefab_components(&mut entity)
 	};
 
 	agents.iter().map(instantiate).collect()
@@ -40,7 +40,7 @@ mod tests {
 	struct _Component;
 
 	impl Prefab<()> for _Agent {
-		fn instantiate_on(&self, entity: &mut EntityCommands) -> Result<(), Error> {
+		fn insert_prefab_components(&self, entity: &mut EntityCommands) -> Result<(), Error> {
 			entity.try_insert(_Component);
 			Ok(())
 		}
@@ -50,7 +50,7 @@ mod tests {
 	struct _AgentWithInstantiationError;
 
 	impl Prefab<()> for _AgentWithInstantiationError {
-		fn instantiate_on(&self, _: &mut EntityCommands) -> Result<(), Error> {
+		fn insert_prefab_components(&self, _: &mut EntityCommands) -> Result<(), Error> {
 			Err(Error {
 				msg: "AAA".to_owned(),
 				lvl: Level::Warning,

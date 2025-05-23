@@ -136,7 +136,7 @@ where
 	TInteractions: HandlesEffect<DealDamage, TTarget = Health>
 		+ HandlesEffect<Gravity, TTarget = AffectedBy<Gravity>>,
 {
-	fn instantiate_on(&self, on: &mut EntityCommands) -> Result<(), Error> {
+	fn insert_prefab_components(&self, on: &mut EntityCommands) -> Result<(), Error> {
 		let transform = Transform::from_translation(Self::ground_offset());
 		let mut transform_2nd_ring = transform;
 		transform_2nd_ring.rotate_axis(Dir3::Z, PI / 2.);

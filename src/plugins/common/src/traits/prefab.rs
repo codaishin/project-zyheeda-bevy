@@ -1,8 +1,10 @@
+mod app;
+
 use crate::errors::Error;
 use bevy::{ecs::system::EntityCommands, prelude::*};
 
-pub trait Prefab<TDependency> {
-	fn instantiate_on(&self, entity: &mut EntityCommands) -> Result<(), Error>;
+pub trait Prefab<TDependency>: Component {
+	fn insert_prefab_components(&self, entity: &mut EntityCommands) -> Result<(), Error>;
 }
 
 pub trait RegisterPrefabWithDependency<TDependency>
@@ -17,4 +19,11 @@ pub trait RegisterPrefab {
 	fn with_dependency<TDependency>() -> impl RegisterPrefabWithDependency<TDependency>
 	where
 		TDependency: 'static;
+}
+
+pub trait AddPrefabObserver {
+	fn add_prefab_observer<TPrefab, TDependencies>(&mut self)
+	where
+		TPrefab: Prefab<TDependencies>,
+		TDependencies: 'static;
 }

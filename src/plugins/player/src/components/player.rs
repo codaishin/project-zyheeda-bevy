@@ -283,7 +283,7 @@ where
 	TInteractions: HandlesEffect<DealDamage, TTarget = Health>,
 	TLights: HandlesLights,
 {
-	fn instantiate_on(&self, entity: &mut EntityCommands) -> Result<(), Error> {
+	fn insert_prefab_components(&self, entity: &mut EntityCommands) -> Result<(), Error> {
 		entity
 			.insert(Health::new(100.).bundle_via::<TInteractions>())
 			.with_child((

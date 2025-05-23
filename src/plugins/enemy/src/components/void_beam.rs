@@ -68,7 +68,7 @@ impl<TInteractions> Prefab<TInteractions> for VoidBeam
 where
 	TInteractions: HandlesInteractions + HandlesEffect<DealDamage>,
 {
-	fn instantiate_on(&self, entity: &mut EntityCommands) -> Result<(), Error> {
+	fn insert_prefab_components(&self, entity: &mut EntityCommands) -> Result<(), Error> {
 		entity.try_insert((
 			TInteractions::beam_from(self),
 			TInteractions::is_ray_interrupted_by(&[Blocker::Physical, Blocker::Force]),

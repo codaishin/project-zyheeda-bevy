@@ -21,7 +21,7 @@ where
 	TInteractions: HandlesInteractions,
 	TLifeCycles: HandlesDestruction,
 {
-	fn instantiate_on(&self, entity: &mut EntityCommands) -> Result<(), Error> {
+	fn insert_prefab_components(&self, entity: &mut EntityCommands) -> Result<(), Error> {
 		let offset = match self.offset {
 			Some(ProjectionOffset(offset)) => offset,
 			_ => Vec3::ZERO,
