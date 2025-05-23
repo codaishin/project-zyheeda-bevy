@@ -284,16 +284,17 @@ where
 	TLights: HandlesLights,
 {
 	fn insert_prefab_components(&self, entity: &mut EntityCommands) -> Result<(), Error> {
-		entity
-			.insert(Health::new(100.).bundle_via::<TInteractions>())
-			.with_child((
+		entity.insert((
+			Health::new(100.).bundle_via::<TInteractions>(),
+			children![(
 				TLights::responsive_light_trigger(),
 				Collider::capsule(
 					Vec3::new(0.0, 0.2, -0.05),
 					Vec3::new(0.0, 1.4, -0.05),
 					**Self::collider_radius(),
 				),
-			));
+			)],
+		));
 
 		Ok(())
 	}

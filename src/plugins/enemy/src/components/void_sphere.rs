@@ -1,7 +1,6 @@
 use super::{enemy::Enemy, void_beam::VoidBeamAttack};
 use bevy::{
 	color::{Color, LinearRgba},
-	ecs::relationship::RelatedSpawnerCommands,
 	math::{Dir3, Vec3, primitives::Torus},
 	pbr::{NotShadowCaster, StandardMaterial},
 	prelude::*,
@@ -20,12 +19,7 @@ use common::{
 		health::Health,
 	},
 	blocker::{Blocker, BlockerInsertCommand},
-	components::{
-		GroundOffset,
-		collider_relationship::InteractionTarget,
-		insert_asset::InsertAsset,
-		spawn_children::SpawnChildren,
-	},
+	components::{GroundOffset, insert_asset::InsertAsset},
 	effects::{deal_damage::DealDamage, gravity::Gravity},
 	errors::Error,
 	tools::{Units, UnitsPerSecond, collider_radius::ColliderRadius},
@@ -45,8 +39,6 @@ use std::{f32::consts::PI, sync::Arc, time::Duration};
 	GroundOffset = Self::ground_offset(),
 	RigidBody = Self::rigid_body(),
 	GravityScale = Self::gravity_scale(),
-	SpawnChildren(Self::void_sphere_parts),
-	InteractionTarget,
 )]
 pub struct VoidSphere;
 
@@ -69,25 +61,6 @@ impl VoidSphere {
 
 	fn gravity_scale() -> GravityScale {
 		GravityScale(0.)
-	}
-
-	fn void_sphere_parts(parent: &mut RelatedSpawnerCommands<ChildOf>) {
-		let transform = Transform::from_translation(Self::ground_offset());
-		let mut transform_2nd_ring = transform;
-		transform_2nd_ring.rotate_axis(Dir3::Z, PI / 2.);
-
-		parent.spawn((VoidSpherePart::Core, VoidSphereCore, transform));
-		parent.spawn((
-			VoidSpherePart::RingA(UnitsPerSecond::new(PI / 50.)),
-			VoidSphereRing,
-			transform,
-		));
-		parent.spawn((
-			VoidSpherePart::RingB(UnitsPerSecond::new(PI / 75.)),
-			VoidSphereRing,
-			transform_2nd_ring,
-		));
-		parent.spawn((Collider::ball(VOID_SPHERE_OUTER_RADIUS), transform));
 	}
 
 	fn as_enemy() -> Enemy {
@@ -136,14 +109,28 @@ where
 	TInteractions: HandlesEffect<DealDamage, TTarget = Health>
 		+ HandlesEffect<Gravity, TTarget = AffectedBy<Gravity>>,
 {
-	fn insert_prefab_components(&self, on: &mut EntityCommands) -> Result<(), Error> {
+	fn insert_prefab_components(&self, entity: &mut EntityCommands) -> Result<(), Error> {
 		let transform = Transform::from_translation(Self::ground_offset());
 		let mut transform_2nd_ring = transform;
 		transform_2nd_ring.rotate_axis(Dir3::Z, PI / 2.);
 
-		on.try_insert((
+		entity.try_insert((
 			Health::new(5.).bundle_via::<TInteractions>(),
 			Affected::by::<Gravity>().bundle_via::<TInteractions>(),
+			children![
+				(VoidSpherePart::Core, VoidSphereCore, transform),
+				(
+					VoidSpherePart::RingA(UnitsPerSecond::new(PI / 50.)),
+					VoidSphereRing,
+					transform,
+				),
+				(
+					VoidSpherePart::RingB(UnitsPerSecond::new(PI / 75.)),
+					VoidSphereRing,
+					transform_2nd_ring,
+				),
+				(Collider::ball(VOID_SPHERE_OUTER_RADIUS), transform),
+			],
 		));
 
 		Ok(())

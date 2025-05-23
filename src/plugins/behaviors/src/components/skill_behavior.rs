@@ -69,22 +69,21 @@ impl SimplePrefab for Shape {
 			),
 		};
 
-		entity
-			.try_insert((
-				Transform::from_translation(offset),
-				Visibility::default(),
-				InteractionTarget,
-			))
-			.with_children(|parent| {
-				parent.spawn((model, model_transform));
-				parent.spawn((
+		entity.try_insert((
+			Transform::from_translation(offset),
+			Visibility::default(),
+			InteractionTarget,
+			children![
+				(model, model_transform),
+				(
 					collider,
 					collider_transform,
 					ActiveEvents::COLLISION_EVENTS,
 					ActiveCollisionTypes::default(),
 					Sensor,
-				));
-			});
+				),
+			],
+		));
 
 		Ok(())
 	}
