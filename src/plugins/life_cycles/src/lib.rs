@@ -2,13 +2,10 @@ mod components;
 mod systems;
 
 use bevy::prelude::*;
-use common::{
-	labels::Labels,
-	traits::{
-		handles_destruction::HandlesDestruction,
-		handles_life::HandlesLife,
-		handles_lifetime::HandlesLifetime,
-	},
+use common::traits::{
+	handles_destruction::HandlesDestruction,
+	handles_life::HandlesLife,
+	handles_lifetime::HandlesLifetime,
 };
 use components::{destroy::Destroy, life::Life, lifetime::Lifetime};
 use std::time::Duration;
@@ -18,8 +15,8 @@ pub struct LifeCyclesPlugin;
 
 impl Plugin for LifeCyclesPlugin {
 	fn build(&self, app: &mut App) {
-		app.add_systems(Labels::PROCESSING.label(), set_dead_to_be_destroyed)
-			.add_systems(Labels::LAST.label(), destroy)
+		app.add_systems(Update, set_dead_to_be_destroyed)
+			.add_systems(Last, destroy)
 			.add_systems(Update, Lifetime::update::<Virtual>);
 	}
 }

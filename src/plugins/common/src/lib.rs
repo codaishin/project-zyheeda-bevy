@@ -4,7 +4,6 @@ pub mod components;
 pub mod dto;
 pub mod effects;
 pub mod errors;
-pub mod labels;
 pub mod observers;
 pub mod resources;
 pub mod states;

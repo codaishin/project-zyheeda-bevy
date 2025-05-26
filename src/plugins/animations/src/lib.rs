@@ -14,7 +14,6 @@ use crate::systems::{
 };
 use bevy::prelude::*;
 use common::{
-	labels::Labels,
 	systems::track_components::TrackComponentInSelfAndChildren,
 	traits::{
 		animation::{
@@ -51,7 +50,7 @@ impl RegisterAnimations for AnimationsPlugin {
 
 		app.register_required_components_mapped::<TAgent, AnimationDispatch>(dispatch)
 			.add_systems(
-				Labels::PREFAB_INSTANTIATION.label(),
+				Update,
 				(
 					TAgent::init_animation_components::<AnimationGraph, AssetServer>,
 					TAgent::mask_animation_nodes,

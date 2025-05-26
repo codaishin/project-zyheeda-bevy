@@ -9,8 +9,8 @@ use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
 	self,
 	blocker::{Blocker, BlockerInsertCommand},
-	labels::Labels,
 	traits::{
+		delta::Delta,
 		handles_destruction::HandlesDestruction,
 		handles_interactions::{BeamParameters, HandlesInteractions},
 		handles_life::HandlesLife,
@@ -68,26 +68,17 @@ where
 	TLifeCyclePlugin: ThreadSafe + HandlesDestruction + HandlesLifetime + HandlesLife,
 {
 	fn build(&self, app: &mut App) {
-		let processing_label = Labels::PROCESSING.label();
-		let processing_delta = Labels::PROCESSING.delta();
-
 		app.add_event::<InteractionEvent>()
 			.add_event::<InteractionEvent<Ray>>()
 			.init_resource::<TrackInteractionDuplicates>()
 			.init_resource::<TrackRayInteractions>()
 			.add_interaction::<DealDamageEffect, TLifeCyclePlugin::TLife>()
 			.add_interaction::<GravityEffect, GravityAffected>()
-			.add_systems(processing_label.clone(), BlockerInsertCommand::apply)
+			.add_systems(Update, BlockerInsertCommand::apply)
+			.add_systems(Update, apply_fragile_blocks::<TLifeCyclePlugin::TDestroy>)
+			.add_systems(Update, Update::delta.pipe(apply_gravity_pull))
 			.add_systems(
-				processing_label.clone(),
-				apply_fragile_blocks::<TLifeCyclePlugin::TDestroy>,
-			)
-			.add_systems(
-				processing_label.clone(),
-				processing_delta.pipe(apply_gravity_pull),
-			)
-			.add_systems(
-				processing_label.clone(),
+				Update,
 				(
 					map_collision_events_to::<InteractionEvent, TrackInteractionDuplicates>,
 					execute_ray_caster
@@ -97,7 +88,7 @@ where
 				)
 					.chain(),
 			)
-			.add_systems(Labels::PROPAGATION.label(), update_interacting_entities)
+			.add_systems(Update, update_interacting_entities)
 			.add_systems(Update, Beam::execute::<TLifeCyclePlugin>);
 	}
 }
@@ -115,15 +106,12 @@ impl AddInteraction for App {
 		TActor: ActOn<TTarget> + Clone + Component<Mutability = Mutable>,
 		TTarget: Component<Mutability = Mutable>,
 	{
-		let label = Labels::PROPAGATION.label();
-		let delta = Labels::PROPAGATION.delta();
-
 		self.add_systems(
-			label,
+			Update,
 			(
 				add_component_to::<TActor, InteractingEntities>,
 				add_component_to::<TActor, ActedOnTargets<TActor>>,
-				delta.pipe(act_interaction::<TActor, TTarget>),
+				Update::delta.pipe(act_interaction::<TActor, TTarget>),
 				untrack_non_interacting_targets::<TActor>,
 			)
 				.chain(),
