@@ -15,6 +15,7 @@ pub mod traits;
 
 use bevy::prelude::*;
 use components::{
+	AssetModel,
 	collider_relationship::ColliderOfInteractionTarget,
 	flip::FlipHorizontally,
 	insert_asset::InsertAsset,
@@ -22,7 +23,6 @@ use components::{
 };
 use systems::{
 	collect_user_input::collect_user_input_systems::CollectUserInputSystems,
-	load_asset_model::load_asset_model,
 	ui_input_primer::{apply_input::ApplyInput, set_input_state::SetInputState},
 };
 
@@ -32,8 +32,8 @@ impl Plugin for CommonPlugin {
 	fn build(&self, app: &mut App) {
 		app
 			// Asset loading through `AssetModel` component
-			.add_systems(First, load_asset_model::<AssetServer>)
 			.add_systems(Update, FlipHorizontally::system)
+			.add_observer(AssetModel::load)
 			.add_observer(InsertAsset::<Mesh>::apply)
 			.add_observer(InsertAsset::<StandardMaterial>::apply)
 			// Handling `ObjectId`s (mapping `Entity`s for persistent object references)
