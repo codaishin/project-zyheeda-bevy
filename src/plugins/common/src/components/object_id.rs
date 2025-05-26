@@ -13,7 +13,7 @@ use uuid::Uuid;
 /// This is achieved via the following heuristics;
 ///
 /// - An internal [`Entity`] field is ignored for serialization/deserialization.
-/// - When using [`GetViaId::get_via_id`]:
+/// - When using [`GetViaId::get_via_id`] (implemented for [`Query`]):
 ///   - uses internal [`Entity`] for performant lookup
 ///   - uses internal fallback [`Uuid`], if internal [`Entity`] is [`None`]
 /// - Updates the internal [`Entity`] field when:
