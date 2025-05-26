@@ -45,10 +45,10 @@ impl Plugin for CommonPlugin {
 				),
 			)
 			// Handling `ObjectId`s (mapping `Entity`s for persistent object references)
-			.add_systems(on_instantiate(), ObjectId::update_entity)
-			// Collect user inputs
-			.collect_user_input()
+			.add_observer(ObjectId::update)
 			// Point link colliders and interaction targets
-			.add_observer(ColliderOfInteractionTarget::link);
+			.add_observer(ColliderOfInteractionTarget::link)
+			// Collect user inputs
+			.collect_user_input();
 	}
 }

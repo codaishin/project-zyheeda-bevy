@@ -27,10 +27,9 @@ pub struct ObjectId {
 }
 
 impl ObjectId {
-	pub(crate) fn update_entity(mut entities: Query<(Entity, &mut Self), Changed<Self>>) {
-		for (entity, mut id) in &mut entities {
-			id.entity = Some(entity);
-		}
+	pub(crate) fn with(mut self, entity: Entity) -> Self {
+		self.entity = Some(entity);
+		self
 	}
 }
 
@@ -107,7 +106,6 @@ impl_get_object_id! { A, B, C, D, E, F, }
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::test_tools::utils::SingleThreadedApp;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use serde_json::{from_str, to_string};
 	use std::sync::{Arc, Mutex};
@@ -321,90 +319,5 @@ mod tests {
 
 		assert_eq!(Some(entity), key.lock().unwrap().entity);
 		Ok(())
-	}
-
-	fn setup() -> App {
-		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, ObjectId::update_entity);
-
-		app
-	}
-
-	#[test]
-	fn update_entity() {
-		let mut app = setup();
-		let fallback = Uuid::new_v4();
-		let entity = app
-			.world_mut()
-			.spawn(ObjectId {
-				fallback,
-				entity: None,
-			})
-			.id();
-
-		app.update();
-
-		assert_eq!(
-			Some(&ObjectId {
-				fallback,
-				entity: Some(entity)
-			}),
-			app.world().entity(entity).get::<ObjectId>()
-		);
-	}
-
-	#[test]
-	fn update_entity_only_once() {
-		#[derive(Resource, Debug, PartialEq, Default)]
-		struct _Changed(bool);
-
-		impl _Changed {
-			fn system(mut commands: Commands, changed: Query<(), Changed<ObjectId>>) {
-				commands.insert_resource(_Changed(changed.iter().count() > 0));
-			}
-		}
-
-		let mut app = setup();
-		let id = Uuid::new_v4();
-		app.world_mut().spawn(ObjectId {
-			fallback: id,
-			entity: None,
-		});
-		app.init_resource::<_Changed>();
-		app.add_systems(PostUpdate, _Changed::system);
-
-		app.update();
-		app.update();
-
-		assert_eq!(&_Changed(false), app.world().resource::<_Changed>());
-	}
-
-	#[test]
-	fn update_again_entity_on_change() {
-		let mut app = setup();
-		let fallback = Uuid::new_v4();
-		let entity = app
-			.world_mut()
-			.spawn(ObjectId {
-				fallback,
-				entity: None,
-			})
-			.id();
-
-		app.update();
-		app.world_mut()
-			.entity_mut(entity)
-			.get_mut::<ObjectId>()
-			.unwrap()
-			.entity = Some(Entity::from_raw(1111));
-		app.update();
-
-		assert_eq!(
-			Some(&ObjectId {
-				fallback,
-				entity: Some(entity)
-			}),
-			app.world().entity(entity).get::<ObjectId>()
-		);
 	}
 }
