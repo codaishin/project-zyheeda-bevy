@@ -9,12 +9,12 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use common::{
 	effects::deal_damage::DealDamage,
-	labels::Labels,
 	states::game_state::GameState,
 	systems::log::{log, log_many},
 	tools::action_key::movement::MovementKey,
 	traits::{
 		animation::{HasAnimationsDispatch, RegisterAnimations},
+		delta::Delta,
 		handles_destruction::HandlesDestruction,
 		handles_effect::HandlesEffect,
 		handles_enemies::HandlesEnemies,
@@ -134,7 +134,6 @@ where
 	fn build(&self, app: &mut App) {
 		TAnimations::register_movement_direction::<Movement<VelocityBased>>(app);
 
-		let update_delta = Labels::UPDATE.delta();
 		let move_via_pointer = MovePointerEvent::trigger_pointer_movement::<
 			TPlayers::TCamRay,
 			TSettings::TKeyMap<MovementKey>,
@@ -155,7 +154,7 @@ where
 				Update,
 				(
 					move_via_pointer,
-					update_delta.pipe(move_via_direction).pipe(log),
+					Update::delta.pipe(move_via_direction).pipe(log),
 					get_faces.pipe(execute_face::<TPlayers::TMouseHover, TPlayers::TCamRay>),
 				)
 					.chain()
@@ -186,12 +185,12 @@ where
 						VelocityBased,
 						TPathFinding::TComputePath,
 					>,
-					update_delta.pipe(
+					Update::delta.pipe(
 						TPlayers::TPlayerMovement::execute_movement::<
 							Movement<PathOrWasd<VelocityBased>>,
 						>,
 					),
-					update_delta.pipe(
+					Update::delta.pipe(
 						TPlayers::TPlayerMovement::execute_movement::<Movement<VelocityBased>>,
 					),
 					TPlayers::TPlayerMovement::animate_movement::<
@@ -208,10 +207,10 @@ where
 					TEnemies::TEnemy::attack,
 					TEnemies::TEnemy::chase::<PathOrWasd<VelocityBased>>,
 					TEnemies::TEnemy::wasd_or_path::<VelocityBased, TPathFinding::TComputePath>,
-					update_delta.pipe(
+					Update::delta.pipe(
 						TEnemies::TEnemy::execute_movement::<Movement<PathOrWasd<VelocityBased>>>,
 					),
-					update_delta
+					Update::delta
 						.pipe(TEnemies::TEnemy::execute_movement::<Movement<VelocityBased>>),
 					TEnemies::TEnemy::animate_movement::<
 						Movement<VelocityBased>,
