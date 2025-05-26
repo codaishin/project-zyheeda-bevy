@@ -1,14 +1,22 @@
-use crate::components::object_id::ObjectId;
+use crate::{components::object_id::ObjectId, traits::try_insert_on::TryInsertOn};
 use bevy::prelude::*;
 
 impl ObjectId {
-	pub(crate) fn update(trigger: Trigger<OnInsert, Self>, mut entities: Query<&mut Self>) {
+	pub(crate) fn update(
+		trigger: Trigger<OnInsert, Self>,
+		mut commands: Commands,
+		entities: Query<&Self>,
+	) {
 		let entity = trigger.target();
-		let Ok(mut object_id) = entities.get_mut(entity) else {
+		let Ok(object_id) = entities.get(entity) else {
 			return;
 		};
 
-		*object_id = object_id.with(entity);
+		if object_id.entity_is_set() {
+			return;
+		}
+
+		commands.try_insert_on(entity, object_id.with(entity));
 	}
 }
 

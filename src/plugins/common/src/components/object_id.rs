@@ -20,6 +20,7 @@ use uuid::Uuid;
 ///   - added to an entity (requires [`crate::CommonPlugin`]).
 ///   - [`GetViaId::get_via_id`] found a match.
 #[derive(Component, Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
+#[component(immutable)]
 pub struct ObjectId {
 	fallback: Uuid,
 	#[serde(skip)]
@@ -30,6 +31,10 @@ impl ObjectId {
 	pub(crate) fn with(mut self, entity: Entity) -> Self {
 		self.entity = Some(entity);
 		self
+	}
+
+	pub(crate) fn entity_is_set(&self) -> bool {
+		self.entity.is_some()
 	}
 }
 
