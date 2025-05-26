@@ -6,9 +6,7 @@ mod traits;
 use bevy::prelude::*;
 use common::{
 	attributes::{affected_by::AffectedBy, health::Health},
-	components::insert_asset::InsertAssetFromSource,
 	effects::{deal_damage::DealDamage, gravity::Gravity},
-	labels::Labels,
 	traits::{
 		handles_effect::HandlesEffect,
 		handles_enemies::HandlesEnemies,
@@ -18,11 +16,7 @@ use common::{
 		thread_safe::ThreadSafe,
 	},
 };
-use components::{
-	enemy::Enemy,
-	void_beam::{VoidBeam, VoidBeamModel},
-	void_sphere::VoidSphere,
-};
+use components::{enemy::Enemy, void_beam::VoidBeam, void_sphere::VoidSphere};
 use std::marker::PhantomData;
 use systems::void_sphere::ring_rotation::ring_rotation;
 
@@ -54,10 +48,6 @@ where
 
 		app.add_prefab_observer::<VoidSphere, TInteractions>()
 			.add_prefab_observer::<VoidBeam, TInteractions>()
-			.add_systems(
-				Labels::PREFAB_INSTANTIATION.label(),
-				InsertAssetFromSource::<StandardMaterial, VoidBeamModel>::system,
-			)
 			.add_systems(Update, ring_rotation);
 	}
 }

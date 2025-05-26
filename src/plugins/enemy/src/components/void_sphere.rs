@@ -74,8 +74,6 @@ impl VoidSphere {
 			target: EnemyTarget::Player,
 			attack: Arc::new(VoidBeamAttack {
 				damage: 10.,
-				color: Color::BLACK,
-				emissive: LinearRgba::new(23.0, 23.0, 23.0, 1.),
 				lifetime: Duration::from_secs(1),
 				range: attack_range,
 			}),
