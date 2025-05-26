@@ -4,7 +4,6 @@ mod systems;
 use crate::systems::dispatch_asset_components::DispatchAssetComponents;
 use bevy::prelude::*;
 use common::{
-	labels::Labels,
 	states::game_state::LoadingGame,
 	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
 	traits::{
@@ -68,9 +67,6 @@ where
 		);
 
 		app.register_required_components::<TParent, ChildrenLookup<TParent, TMarker>>();
-		app.add_systems(
-			Labels::PREFAB_INSTANTIATION.label(),
-			store_children_in_lookup,
-		);
+		app.add_systems(Update, store_children_in_lookup);
 	}
 }
