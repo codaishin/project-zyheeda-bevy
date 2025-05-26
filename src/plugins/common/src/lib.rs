@@ -15,15 +15,14 @@ pub mod traits;
 
 use bevy::prelude::*;
 use components::{
+	AssetModel,
 	collider_relationship::ColliderOfInteractionTarget,
 	flip::FlipHorizontally,
 	insert_asset::InsertAsset,
 	object_id::ObjectId,
 };
-use labels::Labels;
 use systems::{
 	collect_user_input::collect_user_input_systems::CollectUserInputSystems,
-	load_asset_model::load_asset_model,
 	ui_input_primer::{apply_input::ApplyInput, set_input_state::SetInputState},
 };
 
@@ -31,19 +30,12 @@ pub struct CommonPlugin;
 
 impl Plugin for CommonPlugin {
 	fn build(&self, app: &mut App) {
-		let on_instantiate = || Labels::PREFAB_INSTANTIATION.label();
-
 		app
 			// Asset loading through `AssetModel` component
-			.add_systems(First, load_asset_model::<AssetServer>)
 			.add_systems(Update, FlipHorizontally::system)
-			.add_systems(
-				on_instantiate(),
-				(
-					InsertAsset::<Mesh>::system,
-					InsertAsset::<StandardMaterial>::system,
-				),
-			)
+			.add_observer(AssetModel::load)
+			.add_observer(InsertAsset::<Mesh>::apply)
+			.add_observer(InsertAsset::<StandardMaterial>::apply)
 			// Handling `ObjectId`s (mapping `Entity`s for persistent object references)
 			.add_observer(ObjectId::update)
 			// Point link colliders and interaction targets
