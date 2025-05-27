@@ -68,6 +68,9 @@ use systems::{
 	update_cool_downs::update_cool_downs,
 };
 
+#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub struct SkillBehaviorSystems;
+
 pub struct BehaviorsPlugin<TDependencies>(PhantomData<TDependencies>);
 
 impl<TSettings, TAnimations, TLifeCycles, TInteractions, TPathFinding, TEnemies, TPlayers>
@@ -219,20 +222,26 @@ where
 				)
 					.chain(),
 			)
-			.add_systems(Update, GroundTarget::set_position)
 			.add_systems(
 				Update,
-				InsertAfterDistanceTraveled::<TLifeCycles::TDestroy, Velocity>::system,
-			)
-			.add_systems(Update, SetVelocityForward::system)
-			.add_systems(Update, SetPositionAndRotation::<Always>::system)
-			.add_systems(Update, SetPositionAndRotation::<Once>::system);
+				(
+					GroundTarget::set_position,
+					InsertAfterDistanceTraveled::<TLifeCycles::TDestroy, Velocity>::system,
+					SetVelocityForward::system,
+					SetPositionAndRotation::<Always>::system,
+					SetPositionAndRotation::<Once>::system,
+				)
+					.in_set(SkillBehaviorSystems),
+			);
 	}
 }
 
 impl<TDependencies> HandlesSkillBehaviors for BehaviorsPlugin<TDependencies> {
 	type TSkillContact = SkillContact;
 	type TSkillProjection = SkillProjection;
+	type TSkillBehaviorSystems = SkillBehaviorSystems;
+
+	const SKILL_BEHAVIOR_SYSTEMS: Self::TSkillBehaviorSystems = SkillBehaviorSystems;
 
 	fn skill_contact(shape: Shape, integrity: Integrity, motion: Motion) -> Self::TSkillContact {
 		SkillContact {
