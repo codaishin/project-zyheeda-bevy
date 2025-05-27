@@ -135,6 +135,9 @@ mod tests {
 	impl HandlesSkillBehaviors for _HandlesSkillBehaviors {
 		type TSkillContact = _Contact;
 		type TSkillProjection = _Projection;
+		type TSkillBehaviorSystems = _Set;
+
+		const SKILL_BEHAVIOR_SYSTEMS: Self::TSkillBehaviorSystems = _Set;
 
 		fn skill_contact(_: Shape, _: Integrity, _: Motion) -> Self::TSkillContact {
 			panic!("Mock should be called")
@@ -150,6 +153,9 @@ mod tests {
 
 	#[derive(Component, Debug, PartialEq, Clone)]
 	struct _Projection;
+
+	#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone)]
+	struct _Set;
 
 	#[derive(NestedMocks)]
 	struct _Skill {

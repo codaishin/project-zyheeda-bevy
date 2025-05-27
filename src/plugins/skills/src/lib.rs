@@ -159,6 +159,7 @@ where
 				flush::<Queue>,
 			)
 				.chain()
+				.before(TBehaviors::SKILL_BEHAVIOR_SYSTEMS)
 				.run_if(in_state(GameState::Play)),
 		);
 	}
