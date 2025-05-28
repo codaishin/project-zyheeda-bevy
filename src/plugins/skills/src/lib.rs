@@ -103,7 +103,7 @@ where
 	TMenu: ThreadSafe + HandlesLoadoutMenu + HandlesComboMenu,
 {
 	#[allow(clippy::too_many_arguments)]
-	pub fn depends_on(
+	pub fn from_plugins(
 		_: &TLifeCycles,
 		_: &TInteractions,
 		_: &TDispatchChildrenAssets,

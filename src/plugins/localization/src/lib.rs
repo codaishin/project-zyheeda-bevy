@@ -31,7 +31,7 @@ use unic_langid::langid;
 pub struct LocalizationPlugin<TLoading>(PhantomData<TLoading>);
 
 impl<TLoading> LocalizationPlugin<TLoading> {
-	pub fn depends_on(_: &TLoading) -> Self {
+	pub fn from_plugin(_: &TLoading) -> Self {
 		Self(PhantomData)
 	}
 }

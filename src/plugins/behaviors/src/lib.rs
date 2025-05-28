@@ -97,7 +97,7 @@ where
 		+ ConfiguresPlayerMovement,
 {
 	#[allow(clippy::too_many_arguments)]
-	pub fn depends_on(
+	pub fn from_plugins(
 		_: &TSettings,
 		_: &TAnimations,
 		_: &TLifeCycles,

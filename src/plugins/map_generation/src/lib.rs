@@ -30,7 +30,7 @@ impl<TLights> MapGenerationPlugin<TLights>
 where
 	TLights: ThreadSafe + HandlesLights,
 {
-	pub fn depends_on(_: &TLights) -> Self {
+	pub fn from_plugin(_: &TLights) -> Self {
 		Self(PhantomData::<TLights>)
 	}
 }

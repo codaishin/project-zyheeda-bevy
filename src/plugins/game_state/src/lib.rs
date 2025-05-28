@@ -21,7 +21,7 @@ impl<TLoading> GameStatePlugin<TLoading>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 {
-	pub fn depends_on(_: &TLoading) -> Self {
+	pub fn from_plugin(_: &TLoading) -> Self {
 		GameStatePlugin(PhantomData)
 	}
 }

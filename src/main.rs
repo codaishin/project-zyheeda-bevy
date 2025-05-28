@@ -42,22 +42,23 @@ fn prepare_game(app: &mut App) {
 	let animations_plugin = AnimationsPlugin;
 	let light_plugin = LightPlugin;
 	let loading_plugin = LoadingPlugin;
-	let settings_plugin = SettingsPlugin::depends_on(&loading_plugin);
-	let localization_plugin = LocalizationPlugin::depends_on(&loading_plugin);
-	let game_state_plugin = GameStatePlugin::depends_on(&loading_plugin);
-	let children_assets_dispatch_plugin = ChildrenAssetsDispatchPlugin::depends_on(&loading_plugin);
-	let interactions_plugin = InteractionsPlugin::depends_on(&life_cycles_plugin);
-	let enemy_plugin = EnemyPlugin::depends_on(&game_state_plugin, &interactions_plugin);
-	let map_generation_plugin = MapGenerationPlugin::depends_on(&light_plugin);
-	let path_finding_plugin = PathFindingPlugin::depends_on(&map_generation_plugin);
-	let player_plugin = PlayerPlugin::depends_on(
+	let settings_plugin = SettingsPlugin::from_plugin(&loading_plugin);
+	let localization_plugin = LocalizationPlugin::from_plugin(&loading_plugin);
+	let game_state_plugin = GameStatePlugin::from_plugin(&loading_plugin);
+	let children_assets_dispatch_plugin =
+		ChildrenAssetsDispatchPlugin::from_plugin(&loading_plugin);
+	let interactions_plugin = InteractionsPlugin::from_plugin(&life_cycles_plugin);
+	let enemy_plugin = EnemyPlugin::from_plugins(&game_state_plugin, &interactions_plugin);
+	let map_generation_plugin = MapGenerationPlugin::from_plugin(&light_plugin);
+	let path_finding_plugin = PathFindingPlugin::from_plugin(&map_generation_plugin);
+	let player_plugin = PlayerPlugin::from_plugins(
 		&settings_plugin,
 		&game_state_plugin,
 		&animations_plugin,
 		&interactions_plugin,
 		&light_plugin,
 	);
-	let behaviors_plugin = BehaviorsPlugin::depends_on(
+	let behaviors_plugin = BehaviorsPlugin::from_plugins(
 		&settings_plugin,
 		&animations_plugin,
 		&life_cycles_plugin,
@@ -67,14 +68,14 @@ fn prepare_game(app: &mut App) {
 		&player_plugin,
 	);
 	let graphics_plugin =
-		GraphicsPlugin::depends_on(&loading_plugin, &interactions_plugin, &behaviors_plugin);
-	let menu_plugin = MenuPlugin::depends_on(
+		GraphicsPlugin::from_plugins(&loading_plugin, &interactions_plugin, &behaviors_plugin);
+	let menu_plugin = MenuPlugin::from_plugins(
 		&loading_plugin,
 		&settings_plugin,
 		&localization_plugin,
 		&graphics_plugin,
 	);
-	let skills_plugin = SkillsPlugin::depends_on(
+	let skills_plugin = SkillsPlugin::from_plugins(
 		&life_cycles_plugin,
 		&interactions_plugin,
 		&children_assets_dispatch_plugin,
@@ -84,14 +85,14 @@ fn prepare_game(app: &mut App) {
 		&player_plugin,
 		&menu_plugin,
 	);
-	let bars_plugin = BarsPlugin::depends_on(
+	let bars_plugin = BarsPlugin::from_plugins(
 		&life_cycles_plugin,
 		&player_plugin,
 		&enemy_plugin,
 		&graphics_plugin,
 	);
 	let camera_control_plugin =
-		CameraControlPlugin::depends_on(&settings_plugin, &player_plugin, &graphics_plugin);
+		CameraControlPlugin::from_plugins(&settings_plugin, &player_plugin, &graphics_plugin);
 
 	app.add_plugins(DefaultPlugins)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())

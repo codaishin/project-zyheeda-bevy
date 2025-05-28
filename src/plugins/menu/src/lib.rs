@@ -124,7 +124,7 @@ where
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
 {
-	pub fn depends_on(_: &TLoading, _: &TSettings, _: &TLocalization, _: &TGraphics) -> Self {
+	pub fn from_plugins(_: &TLoading, _: &TSettings, _: &TLocalization, _: &TGraphics) -> Self {
 		Self(PhantomData)
 	}
 }
