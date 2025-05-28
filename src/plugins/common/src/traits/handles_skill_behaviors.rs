@@ -9,9 +9,6 @@ use bevy_rapier3d::prelude::*;
 pub trait HandlesSkillBehaviors {
 	type TSkillContact: Component;
 	type TSkillProjection: Component;
-	type TSkillBehaviorSystems: SystemSet;
-
-	const SKILL_BEHAVIOR_SYSTEMS: Self::TSkillBehaviorSystems;
 
 	fn skill_contact(shape: Shape, integrity: Integrity, motion: Motion) -> Self::TSkillContact;
 	fn skill_projection(shape: Shape, offset: Option<ProjectionOffset>) -> Self::TSkillProjection;

@@ -185,9 +185,6 @@ mod tests {
 	impl HandlesSkillBehaviors for _HandlesSkillBehaviors {
 		type TSkillContact = _Contact;
 		type TSkillProjection = _Projection;
-		type TSkillBehaviorSystems = _Set;
-
-		const SKILL_BEHAVIOR_SYSTEMS: Self::TSkillBehaviorSystems = _Set;
 
 		fn skill_contact(_: Shape, _: Integrity, _: Motion) -> Self::TSkillContact {
 			_Contact
@@ -203,9 +200,6 @@ mod tests {
 
 	#[derive(Component)]
 	struct _Projection;
-
-	#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone)]
-	struct _Set;
 
 	impl Execute<Commands<'_, '_>, _HandlesLife, _HandlesEffects, _HandlesSkillBehaviors>
 		for _Executor
