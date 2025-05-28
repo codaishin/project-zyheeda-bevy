@@ -1,3 +1,5 @@
+pub mod persistent_entities;
+
 use bevy::prelude::*;
 use std::{
 	collections::{HashMap, hash_map::Values},
