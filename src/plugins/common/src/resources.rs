@@ -1,4 +1,4 @@
-pub mod persistent_ids;
+pub mod persistent_entities;
 
 use bevy::prelude::*;
 use std::{
