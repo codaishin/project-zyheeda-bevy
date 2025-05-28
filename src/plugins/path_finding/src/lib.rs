@@ -21,7 +21,7 @@ impl<TMaps> PathFindingPlugin<TMaps>
 where
 	TMaps: HandlesMapGeneration + ThreadSafe,
 {
-	pub fn depends_on(_: &TMaps) -> Self {
+	pub fn from_plugin(_: &TMaps) -> Self {
 		Self(PhantomData)
 	}
 }

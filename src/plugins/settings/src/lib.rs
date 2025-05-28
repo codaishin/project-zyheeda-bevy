@@ -31,7 +31,7 @@ impl<TLoading> SettingsPlugin<TLoading>
 where
 	TLoading: ThreadSafe + HandlesAssetResourceLoading,
 {
-	pub fn depends_on(_: &TLoading) -> Self {
+	pub fn from_plugin(_: &TLoading) -> Self {
 		Self(PhantomData)
 	}
 }

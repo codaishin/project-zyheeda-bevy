@@ -37,6 +37,7 @@ use common::{
 			Shape,
 		},
 		prefab::AddPrefabObserver,
+		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -68,9 +69,6 @@ use systems::{
 	update_cool_downs::update_cool_downs,
 };
 
-#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub struct SkillBehaviorSystems;
-
 pub struct BehaviorsPlugin<TDependencies>(PhantomData<TDependencies>);
 
 impl<TSettings, TAnimations, TLifeCycles, TInteractions, TPathFinding, TEnemies, TPlayers>
@@ -97,7 +95,7 @@ where
 		+ ConfiguresPlayerMovement,
 {
 	#[allow(clippy::too_many_arguments)]
-	pub fn depends_on(
+	pub fn from_plugins(
 		_: &TSettings,
 		_: &TAnimations,
 		_: &TLifeCycles,
@@ -161,9 +159,10 @@ where
 					get_faces.pipe(execute_face::<TPlayers::TMouseHover, TPlayers::TCamRay>),
 				)
 					.chain()
+					.in_set(BehaviorSystems)
 					.run_if(in_state(GameState::Play)),
 			)
-			.add_systems(Update, update_cool_downs::<Virtual>)
+			.add_systems(Update, update_cool_downs::<Virtual>.in_set(BehaviorSystems))
 			.add_systems(
 				Update,
 				(
@@ -171,7 +170,8 @@ where
 					Movement::<VelocityBased>::cleanup,
 					PathOrWasd::<VelocityBased>::cleanup,
 				)
-					.chain(),
+					.chain()
+					.in_set(BehaviorSystems),
 			)
 			.add_systems(
 				Update,
@@ -201,7 +201,8 @@ where
 						TAnimations::TAnimationDispatch,
 					>,
 				)
-					.chain(),
+					.chain()
+					.in_set(BehaviorSystems),
 			)
 			.add_systems(
 				Update,
@@ -220,7 +221,8 @@ where
 						TAnimations::TAnimationDispatch,
 					>,
 				)
-					.chain(),
+					.chain()
+					.in_set(BehaviorSystems),
 			)
 			.add_systems(
 				Update,
@@ -231,7 +233,7 @@ where
 					SetPositionAndRotation::<Always>::system,
 					SetPositionAndRotation::<Once>::system,
 				)
-					.in_set(SkillBehaviorSystems),
+					.in_set(BehaviorSystems),
 			);
 	}
 }
@@ -239,9 +241,6 @@ where
 impl<TDependencies> HandlesSkillBehaviors for BehaviorsPlugin<TDependencies> {
 	type TSkillContact = SkillContact;
 	type TSkillProjection = SkillProjection;
-	type TSkillBehaviorSystems = SkillBehaviorSystems;
-
-	const SKILL_BEHAVIOR_SYSTEMS: Self::TSkillBehaviorSystems = SkillBehaviorSystems;
 
 	fn skill_contact(shape: Shape, integrity: Integrity, motion: Motion) -> Self::TSkillContact {
 		SkillContact {
@@ -262,4 +261,13 @@ impl<TDependencies> HandlesOrientation for BehaviorsPlugin<TDependencies> {
 	fn temporarily(face: Face) -> Self::TFaceTemporarily {
 		OverrideFace(face)
 	}
+}
+
+#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub struct BehaviorSystems;
+
+impl<TDependencies> SystemSetDefinition for BehaviorsPlugin<TDependencies> {
+	type TSystemSet = BehaviorSystems;
+
+	const SYSTEMS: Self::TSystemSet = BehaviorSystems;
 }

@@ -34,6 +34,7 @@ use common::{
 		},
 		handles_settings::HandlesSettings,
 		handles_skill_behaviors::HandlesSkillBehaviors,
+		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 		try_insert_on::TryInsertOn,
 	},
@@ -94,7 +95,7 @@ where
 	TDispatchChildrenAssets: ThreadSafe + HandlesAssetsForChildren,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets,
 	TSettings: ThreadSafe + HandlesSettings,
-	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation,
+	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation + SystemSetDefinition,
 	TPlayers: ThreadSafe
 		+ HandlesPlayer
 		+ HandlesPlayerCameras
@@ -103,7 +104,7 @@ where
 	TMenu: ThreadSafe + HandlesLoadoutMenu + HandlesComboMenu,
 {
 	#[allow(clippy::too_many_arguments)]
-	pub fn depends_on(
+	pub fn from_plugins(
 		_: &TLifeCycles,
 		_: &TInteractions,
 		_: &TDispatchChildrenAssets,
@@ -159,7 +160,7 @@ where
 				flush::<Queue>,
 			)
 				.chain()
-				.before(TBehaviors::SKILL_BEHAVIOR_SYSTEMS)
+				.before(TBehaviors::SYSTEMS)
 				.run_if(in_state(GameState::Play)),
 		);
 	}
@@ -264,7 +265,7 @@ where
 	TDispatchChildrenAssets: ThreadSafe + HandlesAssetsForChildren,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets,
 	TSettings: ThreadSafe + HandlesSettings,
-	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation,
+	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation + SystemSetDefinition,
 	TPlayers: ThreadSafe
 		+ HandlesPlayer
 		+ HandlesPlayerCameras

@@ -58,7 +58,7 @@ impl<TLifeCyclePlugin> InteractionsPlugin<TLifeCyclePlugin>
 where
 	TLifeCyclePlugin: ThreadSafe + HandlesDestruction + HandlesLifetime + HandlesLife,
 {
-	pub fn depends_on(_: &TLifeCyclePlugin) -> Self {
+	pub fn from_plugin(_: &TLifeCyclePlugin) -> Self {
 		Self(PhantomData)
 	}
 }

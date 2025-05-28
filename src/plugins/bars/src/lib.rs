@@ -35,7 +35,7 @@ where
 	TEnemies: ThreadSafe + HandlesEnemies,
 	TGraphics: ThreadSafe + UiCamera,
 {
-	pub fn depends_on(_: &TLifeCycle, _: &TPlayers, _: &TEnemies, _: &TGraphics) -> Self {
+	pub fn from_plugins(_: &TLifeCycle, _: &TPlayers, _: &TEnemies, _: &TGraphics) -> Self {
 		Self(PhantomData)
 	}
 }

@@ -30,7 +30,7 @@ where
 		+ HandlesEffect<DealDamage, TTarget = Health>
 		+ HandlesEffect<Gravity, TTarget = AffectedBy<Gravity>>,
 {
-	pub fn depends_on(_: &TGameStates, _: &TInteractions) -> Self {
+	pub fn from_plugins(_: &TGameStates, _: &TInteractions) -> Self {
 		Self(PhantomData)
 	}
 }

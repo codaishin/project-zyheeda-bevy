@@ -29,7 +29,7 @@ where
 	TPlayers: ThreadSafe + HandlesPlayer + PlayerMainCamera,
 	TGraphics: ThreadSafe + WorldCameras + FirstPassCamera,
 {
-	pub fn depends_on(_: &TSettings, _: &TPlayers, _: &TGraphics) -> Self {
+	pub fn from_plugins(_: &TSettings, _: &TPlayers, _: &TGraphics) -> Self {
 		Self(PhantomData)
 	}
 }

@@ -57,6 +57,7 @@ pub mod remove_resource;
 pub mod state_duration;
 pub mod states;
 pub mod swap_command;
+pub mod system_set_definition;
 pub mod thread_safe;
 pub mod track;
 pub mod try_despawn;

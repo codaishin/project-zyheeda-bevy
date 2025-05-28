@@ -52,7 +52,7 @@ where
 	TInteractions: ThreadSafe + HandlesEffect<DealDamage, TTarget = Health>,
 	TLights: ThreadSafe + HandlesLights,
 {
-	pub fn depends_on(
+	pub fn from_plugins(
 		_: &TSettings,
 		_: &TGameStates,
 		_: &TAnimation,

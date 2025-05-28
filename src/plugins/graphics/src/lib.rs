@@ -57,7 +57,7 @@ where
 	TInteractions: ThreadSafe + HandlesAllEffects,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors,
 {
-	pub fn depends_on(_: &TLoading, _: &TInteractions, _: &TBehaviors) -> Self {
+	pub fn from_plugins(_: &TLoading, _: &TInteractions, _: &TBehaviors) -> Self {
 		Self(PhantomData)
 	}
 

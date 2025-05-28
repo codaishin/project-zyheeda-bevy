@@ -27,7 +27,7 @@ impl<TLoading> ChildrenAssetsDispatchPlugin<TLoading>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 {
-	pub fn depends_on(_: &TLoading) -> Self {
+	pub fn from_plugin(_: &TLoading) -> Self {
 		Self(PhantomData)
 	}
 }

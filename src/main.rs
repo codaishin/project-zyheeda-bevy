@@ -37,86 +37,69 @@ fn main() -> AppExit {
 }
 
 fn prepare_game(app: &mut App) {
-	let savegame_plugin = SavegamePlugin;
-	let life_cycles_plugin = LifeCyclesPlugin;
-	let animations_plugin = AnimationsPlugin;
-	let light_plugin = LightPlugin;
-	let loading_plugin = LoadingPlugin;
-	let settings_plugin = SettingsPlugin::depends_on(&loading_plugin);
-	let localization_plugin = LocalizationPlugin::depends_on(&loading_plugin);
-	let game_state_plugin = GameStatePlugin::depends_on(&loading_plugin);
-	let children_assets_dispatch_plugin = ChildrenAssetsDispatchPlugin::depends_on(&loading_plugin);
-	let interactions_plugin = InteractionsPlugin::depends_on(&life_cycles_plugin);
-	let enemy_plugin = EnemyPlugin::depends_on(&game_state_plugin, &interactions_plugin);
-	let map_generation_plugin = MapGenerationPlugin::depends_on(&light_plugin);
-	let path_finding_plugin = PathFindingPlugin::depends_on(&map_generation_plugin);
-	let player_plugin = PlayerPlugin::depends_on(
-		&settings_plugin,
-		&game_state_plugin,
-		&animations_plugin,
-		&interactions_plugin,
-		&light_plugin,
+	let savegame = SavegamePlugin;
+	let life_cycles = LifeCyclesPlugin;
+	let animations = AnimationsPlugin;
+	let light = LightPlugin;
+	let loading = LoadingPlugin;
+	let settings = SettingsPlugin::from_plugin(&loading);
+	let localization = LocalizationPlugin::from_plugin(&loading);
+	let game_state = GameStatePlugin::from_plugin(&loading);
+	let children_assets_dispatch = ChildrenAssetsDispatchPlugin::from_plugin(&loading);
+	let interactions = InteractionsPlugin::from_plugin(&life_cycles);
+	let enemies = EnemyPlugin::from_plugins(&game_state, &interactions);
+	let map_generation = MapGenerationPlugin::from_plugin(&light);
+	let path_finding = PathFindingPlugin::from_plugin(&map_generation);
+	let players =
+		PlayerPlugin::from_plugins(&settings, &game_state, &animations, &interactions, &light);
+	let behaviors = BehaviorsPlugin::from_plugins(
+		&settings,
+		&animations,
+		&life_cycles,
+		&interactions,
+		&path_finding,
+		&enemies,
+		&players,
 	);
-	let behaviors_plugin = BehaviorsPlugin::depends_on(
-		&settings_plugin,
-		&animations_plugin,
-		&life_cycles_plugin,
-		&interactions_plugin,
-		&path_finding_plugin,
-		&enemy_plugin,
-		&player_plugin,
+	let graphics = GraphicsPlugin::from_plugins(&loading, &interactions, &behaviors);
+	let menus = MenuPlugin::from_plugins(&loading, &settings, &localization, &graphics);
+	let skills = SkillsPlugin::from_plugins(
+		&life_cycles,
+		&interactions,
+		&children_assets_dispatch,
+		&loading,
+		&settings,
+		&behaviors,
+		&players,
+		&menus,
 	);
-	let graphics_plugin =
-		GraphicsPlugin::depends_on(&loading_plugin, &interactions_plugin, &behaviors_plugin);
-	let menu_plugin = MenuPlugin::depends_on(
-		&loading_plugin,
-		&settings_plugin,
-		&localization_plugin,
-		&graphics_plugin,
-	);
-	let skills_plugin = SkillsPlugin::depends_on(
-		&life_cycles_plugin,
-		&interactions_plugin,
-		&children_assets_dispatch_plugin,
-		&loading_plugin,
-		&settings_plugin,
-		&behaviors_plugin,
-		&player_plugin,
-		&menu_plugin,
-	);
-	let bars_plugin = BarsPlugin::depends_on(
-		&life_cycles_plugin,
-		&player_plugin,
-		&enemy_plugin,
-		&graphics_plugin,
-	);
-	let camera_control_plugin =
-		CameraControlPlugin::depends_on(&settings_plugin, &player_plugin, &graphics_plugin);
+	let bars = BarsPlugin::from_plugins(&life_cycles, &players, &enemies, &graphics);
+	let camera_control = CameraControlPlugin::from_plugins(&settings, &players, &graphics);
 
 	app.add_plugins(DefaultPlugins)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
 		.add_plugins(CommonPlugin)
 		.add_plugins(FrameLimiterPlugin { target_fps: 60 })
-		.add_plugins(localization_plugin)
-		.add_plugins(savegame_plugin)
-		.add_plugins(life_cycles_plugin)
-		.add_plugins(settings_plugin)
-		.add_plugins(graphics_plugin)
-		.add_plugins(interactions_plugin)
-		.add_plugins(children_assets_dispatch_plugin)
-		.add_plugins(bars_plugin)
-		.add_plugins(animations_plugin)
-		.add_plugins(light_plugin)
-		.add_plugins(player_plugin)
-		.add_plugins(enemy_plugin)
-		.add_plugins(loading_plugin)
-		.add_plugins(map_generation_plugin)
-		.add_plugins(path_finding_plugin)
-		.add_plugins(menu_plugin)
-		.add_plugins(skills_plugin)
-		.add_plugins(behaviors_plugin)
-		.add_plugins(game_state_plugin)
-		.add_plugins(camera_control_plugin)
+		.add_plugins(animations)
+		.add_plugins(bars)
+		.add_plugins(behaviors)
+		.add_plugins(camera_control)
+		.add_plugins(children_assets_dispatch)
+		.add_plugins(enemies)
+		.add_plugins(game_state)
+		.add_plugins(graphics)
+		.add_plugins(interactions)
+		.add_plugins(life_cycles)
+		.add_plugins(light)
+		.add_plugins(loading)
+		.add_plugins(localization)
+		.add_plugins(map_generation)
+		.add_plugins(menus)
+		.add_plugins(path_finding)
+		.add_plugins(players)
+		.add_plugins(savegame)
+		.add_plugins(settings)
+		.add_plugins(skills)
 		.insert_resource(ClearColor(Color::BLACK));
 }
 
