@@ -30,7 +30,10 @@ use unic_langid::langid;
 
 pub struct LocalizationPlugin<TLoading>(PhantomData<TLoading>);
 
-impl<TLoading> LocalizationPlugin<TLoading> {
+impl<TLoading> LocalizationPlugin<TLoading>
+where
+	TLoading: HandlesLoadTracking + ThreadSafe,
+{
 	pub fn from_plugin(_: &TLoading) -> Self {
 		Self(PhantomData)
 	}
