@@ -2,7 +2,6 @@ pub mod collider_relationship;
 pub mod essence;
 pub mod flip;
 pub mod insert_asset;
-pub mod object_id;
 pub mod persistent_entity;
 pub mod ui_input_primer;
 

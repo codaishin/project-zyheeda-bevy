@@ -18,7 +18,6 @@ use components::{
 	collider_relationship::ColliderOfInteractionTarget,
 	flip::FlipHorizontally,
 	insert_asset::InsertAsset,
-	object_id::ObjectId,
 };
 use resources::persistent_entities::PersistentEntities;
 use systems::{
@@ -36,8 +35,6 @@ impl Plugin for CommonPlugin {
 			.add_observer(AssetModel::load)
 			.add_observer(InsertAsset::<Mesh>::apply)
 			.add_observer(InsertAsset::<StandardMaterial>::apply)
-			// Handling `ObjectId`s (mapping `Entity`s for persistent object references)
-			.add_observer(ObjectId::update)
 			// Handle `PersistentEntity`
 			.init_resource::<PersistentEntities>()
 			.add_observer(PersistentEntities::update)
