@@ -2,8 +2,8 @@ use crate::{components::persistent_id::PersistentId, traits::accessors::get::Get
 use bevy::prelude::*;
 use std::collections::HashMap;
 
-#[derive(Resource, Debug, PartialEq)]
-pub struct PersistentIds(HashMap<PersistentId, Entity>);
+#[derive(Resource, Debug, PartialEq, Default)]
+pub struct PersistentIds(pub(crate) HashMap<PersistentId, Entity>);
 
 impl Get<PersistentId, Entity> for PersistentIds {
 	fn get(&self, id: &PersistentId) -> Option<Entity> {

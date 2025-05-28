@@ -20,6 +20,7 @@ use components::{
 	insert_asset::InsertAsset,
 	object_id::ObjectId,
 };
+use resources::persistent_ids::PersistentIds;
 use systems::{
 	collect_user_input::collect_user_input_systems::CollectUserInputSystems,
 	ui_input_primer::{apply_input::ApplyInput, set_input_state::SetInputState},
@@ -37,6 +38,9 @@ impl Plugin for CommonPlugin {
 			.add_observer(InsertAsset::<StandardMaterial>::apply)
 			// Handling `ObjectId`s (mapping `Entity`s for persistent object references)
 			.add_observer(ObjectId::update)
+			// Handle `PersistentId`s
+			.init_resource::<PersistentIds>()
+			.add_observer(PersistentIds::update)
 			// Point link colliders and interaction targets
 			.add_observer(ColliderOfInteractionTarget::link)
 			// Collect user inputs
