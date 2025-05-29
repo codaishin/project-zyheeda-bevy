@@ -25,6 +25,7 @@ use common::{
 			RegisterAnimations,
 		},
 		register_required_components_mapped::RegisterRequiredComponentsMapped,
+		system_set_definition::SystemSetDefinition,
 	},
 };
 use components::animation_dispatch::AnimationDispatch;
@@ -57,7 +58,8 @@ impl RegisterAnimations for AnimationsPlugin {
 					TAgent::set_animation_mask_bones,
 					TAgent::remove_unused_animation_targets,
 				)
-					.chain(),
+					.chain()
+					.in_set(AnimationSystems),
 			);
 	}
 
@@ -67,7 +69,8 @@ impl RegisterAnimations for AnimationsPlugin {
 	{
 		app.add_systems(
 			Update,
-			AnimationDispatch::set_directional_animation_weights::<TMovementDirection>,
+			AnimationDispatch::set_directional_animation_weights::<TMovementDirection>
+				.in_set(AnimationSystems),
 		);
 	}
 }
@@ -80,15 +83,22 @@ impl Plugin for AnimationsPlugin {
 	fn build(&self, app: &mut App) {
 		app.add_systems(
 			Update,
-			AnimationDispatch::play_animation_clip_via::<&mut AnimationPlayer>,
-		)
-		.add_systems(
-			PostUpdate,
 			(
+				AnimationDispatch::play_animation_clip_via::<&mut AnimationPlayer>,
 				AnimationDispatch::track_in_self_and_children::<AnimationPlayer>().system(),
 				AnimationDispatch::track_in_self_and_children::<AnimationGraphHandle>().system(),
 				AnimationDispatch::init_player_components::<AnimationGraphHandle>,
-			),
+			)
+				.in_set(AnimationSystems),
 		);
 	}
+}
+
+#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub struct AnimationSystems;
+
+impl SystemSetDefinition for AnimationsPlugin {
+	type TSystemSet = AnimationSystems;
+
+	const SYSTEMS: Self::TSystemSet = AnimationSystems;
 }
