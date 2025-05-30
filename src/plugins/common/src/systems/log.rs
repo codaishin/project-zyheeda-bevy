@@ -2,23 +2,44 @@ use crate::errors::{Error, Level};
 use bevy::ecs::system::In;
 use tracing::{error, warn};
 
-fn output(error: Error) {
-	match error.lvl {
-		Level::Error => error!("{}", error.msg),
-		Level::Warning => warn!("{}", error.msg),
-	}
-}
-
-pub fn log<TError>(result: In<Result<(), TError>>)
+pub fn log<TError>(In(result): In<Result<(), TError>>)
 where
 	Error: From<TError>,
 {
-	let Err(error) = result.0 else {
+	let Err(error) = result else {
 		return;
 	};
-	let error = Error::from(error);
 
 	output(error);
+}
+
+pub fn log_or_unwrap<TValue, TError>(In(result): In<Result<TValue, TError>>) -> Option<TValue>
+where
+	Error: From<TError>,
+{
+	match result {
+		Err(error) => {
+			output(error);
+			None
+		}
+		Ok(value) => Some(value),
+	}
+}
+
+pub fn log_or_unwrap_option<TValue, TError>(
+	In(result): In<Result<Option<TValue>, TError>>,
+) -> Option<TValue>
+where
+	Error: From<TError>,
+{
+	match result {
+		Err(error) => {
+			output(error);
+			None
+		}
+		Ok(Some(value)) => Some(value),
+		Ok(None) => None,
+	}
 }
 
 pub fn log_many<TError, TResults>(In(results): In<TResults>)
@@ -27,16 +48,23 @@ where
 	TResults: TryInto<Vec<Result<(), TError>>>,
 {
 	match results.try_into() {
+		Err(error) => output(Error::from(error)),
 		Ok(results) => {
 			for error in results.into_iter().filter_map(|result| result.err()) {
-				let error = Error::from(error);
 				output(error);
 			}
 		}
-		Err(error) => {
-			let error = Error::from(error);
-			output(error);
-		}
+	}
+}
+
+fn output<TError>(error: TError)
+where
+	Error: From<TError>,
+{
+	let Error { msg, lvl } = Error::from(error);
+	match lvl {
+		Level::Error => error!(msg),
+		Level::Warning => warn!(msg),
 	}
 }
 

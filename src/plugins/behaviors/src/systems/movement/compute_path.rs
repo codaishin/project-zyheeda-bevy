@@ -23,7 +23,7 @@ type Components<'a, TMoveMethod, TAgent> = (
 );
 
 pub(crate) trait MovementPath: Component + Getter<ColliderRadius> + Sized {
-	fn wasd_or_path<TMoveMethod, TComputer>(
+	fn compute_path<TMoveMethod, TComputer>(
 		mut commands: Commands,
 		mut movements: Query<
 			Components<TMoveMethod, Self>,
@@ -151,7 +151,7 @@ mod test_new_path {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
-			_AgentMovement::wasd_or_path::<_MoveMethod, _ComputePath>,
+			_AgentMovement::compute_path::<_MoveMethod, _ComputePath>,
 		);
 
 		app

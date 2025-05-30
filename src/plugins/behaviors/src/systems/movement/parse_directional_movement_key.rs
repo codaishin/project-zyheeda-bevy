@@ -7,17 +7,16 @@ use common::{
 };
 use std::{any::type_name, marker::PhantomData, time::Duration};
 
-impl<T> TriggerDirectionalMovement for T where T: From<Vec3> + Event + MinDistance {}
+impl<T> ParseDirectionalMovement for T where T: DirectionalMovementInput {}
 
-pub(crate) trait TriggerDirectionalMovement: From<Vec3> + Event + MinDistance {
-	fn trigger_directional_movement<TCamera, TAgent, TMap, TKey>(
+pub(crate) trait ParseDirectionalMovement: DirectionalMovementInput {
+	fn parse<TCamera, TAgent, TMap, TKey>(
 		In(delta): In<Duration>,
 		map: Res<TMap>,
 		input: Res<ButtonInput<UserInput>>,
-		mut events: EventWriter<Self>,
 		agents: Query<(&GlobalTransform, &TAgent)>,
 		cameras: Query<&GlobalTransform, With<TCamera>>,
-	) -> Result<(), TriggerMovementError<TCamera, TAgent>>
+	) -> Result<Option<Self>, TriggerMovementError<TCamera, TAgent>>
 	where
 		TCamera: KeyDirection<TKey> + Component,
 		TAgent: Getter<Speed> + Component,
@@ -41,27 +40,28 @@ pub(crate) trait TriggerDirectionalMovement: From<Vec3> + Event + MinDistance {
 			}
 			Ok(agent) => agent,
 		};
-
 		let translation = transform.translation();
 		let direction = map
 			.pressed(&input)
 			.filter_map(|key| TCamera::key_direction(cam_transform, &key).ok())
 			.fold(Vec3::ZERO, |a, b| a + *b);
-
 		let Some(direction) = direction.try_normalize() else {
-			return Ok(());
+			return Ok(None);
 		};
-
-		events.write(Self::from(
+		let input = Self::from(
 			translation + direction * Self::min_distance(speed.get(), delta) * SCALE_MIN_DISTANCE,
-		));
+		);
 
-		Ok(())
+		Ok(Some(input))
 	}
 }
 
+pub(crate) trait DirectionalMovementInput: From<Vec3> + MinDistance {}
+
 /// Used to compensate fluctuations in update deltas by overestimating the minimal distance
 /// that can be traveled per frame with the current speed.
+/// A value of 1.5 provides a 50% buffer to ensure smooth movement even with frame rate variations.
+/// Lower values may cause stuttering, while higher values may make movement feel less responsive.
 const SCALE_MIN_DISTANCE: f32 = 1.5;
 
 #[derive(Debug, PartialEq)]
@@ -179,23 +179,25 @@ mod tests {
 		}
 	}
 
-	macro_rules! mock_event {
+	macro_rules! mock_input {
 		() => {
-			#[derive(Event, Debug, PartialEq, Clone, Copy)]
-			struct _Event(Vec3);
+			#[derive(Debug, PartialEq, Clone, Copy)]
+			struct _Input(Vec3);
 
 			#[automock]
-			impl MinDistance for _Event {
+			impl MinDistance for _Input {
 				fn min_distance(speed: Speed, delta: Duration) -> f32 {
-					Mock_Event::min_distance(speed, delta)
+					Mock_Input::min_distance(speed, delta)
 				}
 			}
 
-			impl From<Vec3> for _Event {
+			impl From<Vec3> for _Input {
 				fn from(translation: Vec3) -> Self {
 					Self(translation)
 				}
 			}
+
+			impl DirectionalMovementInput for _Input {}
 		};
 	}
 
@@ -216,37 +218,24 @@ mod tests {
 		};
 	}
 
-	fn move_input_events<TEvent>(app: &App) -> Vec<TEvent>
-	where
-		TEvent: Event + Copy,
-	{
-		let events = app.world().resource::<Events<TEvent>>();
-		let mut cursor = events.get_cursor();
-
-		cursor.read(events).copied().collect()
-	}
-
-	fn setup<TEvent>(map: _Map) -> App
-	where
-		TEvent: Event,
-	{
+	fn setup(map: _Map) -> App {
 		let mut app = App::new().single_threaded(Update);
+
 		app.insert_resource(map);
 		app.init_resource::<ButtonInput<UserInput>>();
-		app.add_event::<TEvent>();
 
 		app
 	}
 
 	#[test]
 	fn trigger_single_direction_from_center() -> Result<(), RunSystemError> {
-		mock_event!();
-		let event_ctx = Mock_Event::min_distance_context();
+		mock_input!();
+		let event_ctx = Mock_Input::min_distance_context();
 		event_ctx.expect().return_const(1. / SCALE_MIN_DISTANCE);
 		mock_cam!();
 		let cam_ctx = Mock_Cam::key_direction_context();
 		cam_ctx.expect().returning(|_, _| Ok(Dir3::Z));
-		let mut app = setup::<_Event>(_Map::new().with_mock(|mock| {
+		let mut app = setup(_Map::new().with_mock(|mock| {
 			mock.expect_pressed()
 				.returning(|_| Box::new(std::iter::once(_Key::A)));
 		}));
@@ -256,12 +245,12 @@ mod tests {
 			_Agent(Speed(UnitsPerSecond::new(1.))),
 		));
 
-		_ = app.world_mut().run_system_once_with(
-			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
+		let input = app.world_mut().run_system_once_with(
+			_Input::parse::<_Cam, _Agent, _Map, _Key>,
 			Duration::from_secs(1),
 		)?;
 
-		assert_eq!(vec![_Event(Vec3::Z)], move_input_events(&app));
+		assert_eq!(Ok(Some(_Input(Vec3::Z))), input);
 		Ok(())
 	}
 
@@ -269,8 +258,8 @@ mod tests {
 	fn call_min_distance_with_delta_and_agent_speed() -> Result<(), RunSystemError> {
 		let speed = Speed(UnitsPerSecond::new(42.));
 		let delta = Duration::from_secs(5);
-		mock_event!();
-		let event_ctx = Mock_Event::min_distance_context();
+		mock_input!();
+		let event_ctx = Mock_Input::min_distance_context();
 		event_ctx
 			.expect()
 			.with(eq(speed), eq(delta))
@@ -278,7 +267,7 @@ mod tests {
 		mock_cam!();
 		let cam_ctx = Mock_Cam::key_direction_context();
 		cam_ctx.expect().returning(|_, _| Ok(Dir3::Z));
-		let mut app = setup::<_Event>(_Map::new().with_mock(|mock| {
+		let mut app = setup(_Map::new().with_mock(|mock| {
 			mock.expect_pressed()
 				.returning(|_| Box::new(std::iter::once(_Key::A)));
 		}));
@@ -286,23 +275,22 @@ mod tests {
 		app.world_mut()
 			.spawn((GlobalTransform::default(), _Agent(speed)));
 
-		_ = app.world_mut().run_system_once_with(
-			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
-			delta,
-		)?;
+		_ = app
+			.world_mut()
+			.run_system_once_with(_Input::parse::<_Cam, _Agent, _Map, _Key>, delta)?;
 		Ok(())
 	}
 
 	#[test]
 	fn scale_direction_with_min_distance_and_scale() -> Result<(), RunSystemError> {
-		mock_event!();
+		mock_input!();
 		let min_distance = 4.;
-		let event_ctx = Mock_Event::min_distance_context();
+		let event_ctx = Mock_Input::min_distance_context();
 		event_ctx.expect().return_const(min_distance);
 		mock_cam!();
 		let cam_ctx = Mock_Cam::key_direction_context();
 		cam_ctx.expect().returning(|_, _| Ok(Dir3::Z));
-		let mut app = setup::<_Event>(_Map::new().with_mock(|mock| {
+		let mut app = setup(_Map::new().with_mock(|mock| {
 			mock.expect_pressed()
 				.returning(|_| Box::new(std::iter::once(_Key::A)));
 		}));
@@ -312,27 +300,27 @@ mod tests {
 			_Agent(Speed(UnitsPerSecond::new(42.))),
 		));
 
-		_ = app.world_mut().run_system_once_with(
-			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
+		let input = app.world_mut().run_system_once_with(
+			_Input::parse::<_Cam, _Agent, _Map, _Key>,
 			Duration::from_secs(1),
 		)?;
 
 		assert_eq!(
-			vec![_Event(Vec3::Z * min_distance * SCALE_MIN_DISTANCE)],
-			move_input_events(&app)
+			Ok(Some(_Input(Vec3::Z * min_distance * SCALE_MIN_DISTANCE))),
+			input
 		);
 		Ok(())
 	}
 
 	#[test]
 	fn trigger_single_direction_from_offset() -> Result<(), RunSystemError> {
-		mock_event!();
-		let event_ctx = Mock_Event::min_distance_context();
+		mock_input!();
+		let event_ctx = Mock_Input::min_distance_context();
 		event_ctx.expect().return_const(1. / SCALE_MIN_DISTANCE);
 		mock_cam!();
 		let cam_ctx = Mock_Cam::key_direction_context();
 		cam_ctx.expect().returning(|_, _| Ok(Dir3::Z));
-		let mut app = setup::<_Event>(_Map::new().with_mock(|mock| {
+		let mut app = setup(_Map::new().with_mock(|mock| {
 			mock.expect_pressed()
 				.returning(|_| Box::new(std::iter::once(_Key::A)));
 		}));
@@ -342,22 +330,19 @@ mod tests {
 			_Agent(Speed(UnitsPerSecond::new(42.))),
 		));
 
-		_ = app.world_mut().run_system_once_with(
-			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
+		let input = app.world_mut().run_system_once_with(
+			_Input::parse::<_Cam, _Agent, _Map, _Key>,
 			Duration::from_secs(1),
 		)?;
 
-		assert_eq!(
-			vec![_Event(Vec3::new(1., 2., 3.) + Vec3::Z)],
-			move_input_events(&app)
-		);
+		assert_eq!(Ok(Some(_Input(Vec3::new(1., 2., 3.) + Vec3::Z))), input);
 		Ok(())
 	}
 
 	#[test]
 	fn trigger_accumulated_2_direction_from_center() -> Result<(), RunSystemError> {
-		mock_event!();
-		let event_ctx = Mock_Event::min_distance_context();
+		mock_input!();
+		let event_ctx = Mock_Input::min_distance_context();
 		event_ctx.expect().return_const(1. / SCALE_MIN_DISTANCE);
 		mock_cam!();
 		let cam_ctx = Mock_Cam::key_direction_context();
@@ -369,7 +354,7 @@ mod tests {
 			.expect()
 			.with(eq(GlobalTransform::default()), eq(_Key::B))
 			.returning(|_, _| Ok(Dir3::X));
-		let mut app = setup::<_Event>(_Map::new().with_mock(|mock| {
+		let mut app = setup(_Map::new().with_mock(|mock| {
 			mock.expect_pressed()
 				.returning(|_| Box::new([_Key::A, _Key::B].into_iter()));
 		}));
@@ -379,22 +364,19 @@ mod tests {
 			_Agent(Speed(UnitsPerSecond::new(1.))),
 		));
 
-		_ = app.world_mut().run_system_once_with(
-			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
+		let input = app.world_mut().run_system_once_with(
+			_Input::parse::<_Cam, _Agent, _Map, _Key>,
 			Duration::from_secs(1),
 		)?;
 
-		assert_eq!(
-			vec![_Event((Vec3::Z + Vec3::X).normalize())],
-			move_input_events(&app)
-		);
+		assert_eq!(Ok(Some(_Input((Vec3::Z + Vec3::X).normalize()))), input);
 		Ok(())
 	}
 
 	#[test]
 	fn trigger_accumulated_3_direction_from_center() -> Result<(), RunSystemError> {
-		mock_event!();
-		let event_ctx = Mock_Event::min_distance_context();
+		mock_input!();
+		let event_ctx = Mock_Input::min_distance_context();
 		event_ctx.expect().return_const(1. / SCALE_MIN_DISTANCE);
 		mock_cam!();
 		let cam_ctx = Mock_Cam::key_direction_context();
@@ -410,7 +392,7 @@ mod tests {
 			.expect()
 			.with(eq(GlobalTransform::default()), eq(_Key::C))
 			.returning(|_, _| Ok(Dir3::NEG_Z));
-		let mut app = setup::<_Event>(_Map::new().with_mock(|mock| {
+		let mut app = setup(_Map::new().with_mock(|mock| {
 			mock.expect_pressed()
 				.returning(|_| Box::new([_Key::A, _Key::B, _Key::C].into_iter()));
 		}));
@@ -420,21 +402,21 @@ mod tests {
 			_Agent(Speed(UnitsPerSecond::new(1.))),
 		));
 
-		_ = app.world_mut().run_system_once_with(
-			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
+		let input = app.world_mut().run_system_once_with(
+			_Input::parse::<_Cam, _Agent, _Map, _Key>,
 			Duration::from_secs(1),
 		)?;
 
-		assert_eq!(vec![_Event(Vec3::X)], move_input_events(&app));
+		assert_eq!(Ok(Some(_Input(Vec3::X))), input);
 		Ok(())
 	}
 
 	#[test]
 	fn no_trigger_when_accumulated_2_directions_are_zero_from_center() -> Result<(), RunSystemError>
 	{
-		mock_event!();
+		mock_input!();
 		mock_cam!();
-		let event_ctx = Mock_Event::min_distance_context();
+		let event_ctx = Mock_Input::min_distance_context();
 		event_ctx.expect().return_const(1. / SCALE_MIN_DISTANCE);
 		let cam_ctx = Mock_Cam::key_direction_context();
 		cam_ctx
@@ -445,7 +427,7 @@ mod tests {
 			.expect()
 			.with(eq(GlobalTransform::default()), eq(_Key::B))
 			.returning(|_, _| Ok(Dir3::NEG_Z));
-		let mut app = setup::<_Event>(_Map::new().with_mock(|mock| {
+		let mut app = setup(_Map::new().with_mock(|mock| {
 			mock.expect_pressed()
 				.returning(|_| Box::new([_Key::A, _Key::B].into_iter()));
 		}));
@@ -455,19 +437,19 @@ mod tests {
 			_Agent(Speed(UnitsPerSecond::new(1.))),
 		));
 
-		_ = app.world_mut().run_system_once_with(
-			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
+		let input = app.world_mut().run_system_once_with(
+			_Input::parse::<_Cam, _Agent, _Map, _Key>,
 			Duration::from_secs(1),
 		)?;
 
-		assert_eq!(vec![] as Vec<_Event>, move_input_events(&app));
+		assert_eq!(Ok(None), input);
 		Ok(())
 	}
 
 	#[test]
 	fn use_camera_transform() -> Result<(), RunSystemError> {
-		mock_event!();
-		let event_ctx = Mock_Event::min_distance_context();
+		mock_input!();
+		let event_ctx = Mock_Input::min_distance_context();
 		event_ctx.expect().return_const(1. / SCALE_MIN_DISTANCE);
 		mock_cam!();
 		let cam_ctx = Mock_Cam::key_direction_context();
@@ -475,7 +457,7 @@ mod tests {
 			.expect()
 			.with(eq(GlobalTransform::from_xyz(1., 2., 3.)), eq(_Key::A))
 			.returning(|_, _| Ok(Dir3::Z));
-		let mut app = setup::<_Event>(_Map::new().with_mock(|mock| {
+		let mut app = setup(_Map::new().with_mock(|mock| {
 			mock.expect_pressed()
 				.returning(move |_| Box::new(std::iter::once(_Key::A)));
 		}));
@@ -487,7 +469,7 @@ mod tests {
 		));
 
 		_ = app.world_mut().run_system_once_with(
-			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
+			_Input::parse::<_Cam, _Agent, _Map, _Key>,
 			Duration::from_secs(1),
 		)?;
 		Ok(())
@@ -495,13 +477,13 @@ mod tests {
 
 	#[test]
 	fn use_button_input() -> Result<(), RunSystemError> {
-		mock_event!();
-		let event_ctx = Mock_Event::min_distance_context();
+		mock_input!();
+		let event_ctx = Mock_Input::min_distance_context();
 		event_ctx.expect().return_const(1. / SCALE_MIN_DISTANCE);
 		mock_cam!();
 		let cam_ctx = Mock_Cam::key_direction_context();
 		cam_ctx.expect().returning(|_, _| Ok(Dir3::Z));
-		let mut app = setup::<_Event>(_Map::new().with_mock(|mock| {
+		let mut app = setup(_Map::new().with_mock(|mock| {
 			mock.expect_pressed().returning(move |input| {
 				assert_eq!(
 					HashSet::from([
@@ -524,7 +506,7 @@ mod tests {
 		));
 
 		_ = app.world_mut().run_system_once_with(
-			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
+			_Input::parse::<_Cam, _Agent, _Map, _Key>,
 			Duration::from_secs(1),
 		)?;
 		Ok(())
@@ -532,18 +514,18 @@ mod tests {
 
 	#[test]
 	fn return_no_agent_error() -> Result<(), RunSystemError> {
-		mock_event!();
-		let event_ctx = Mock_Event::min_distance_context();
+		mock_input!();
+		let event_ctx = Mock_Input::min_distance_context();
 		event_ctx.expect().return_const(1. / SCALE_MIN_DISTANCE);
 		mock_cam!();
-		let mut app = setup::<_Event>(_Map::new().with_mock(|mock| {
+		let mut app = setup(_Map::new().with_mock(|mock| {
 			mock.expect_pressed()
 				.returning(|_| Box::new(std::iter::empty()));
 		}));
 		app.world_mut().spawn((_Cam, GlobalTransform::default()));
 
 		let result = app.world_mut().run_system_once_with(
-			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
+			_Input::parse::<_Cam, _Agent, _Map, _Key>,
 			Duration::from_secs(1),
 		)?;
 
@@ -553,11 +535,11 @@ mod tests {
 
 	#[test]
 	fn return_multiple_agents_error() -> Result<(), RunSystemError> {
-		mock_event!();
-		let event_ctx = Mock_Event::min_distance_context();
+		mock_input!();
+		let event_ctx = Mock_Input::min_distance_context();
 		event_ctx.expect().return_const(1. / SCALE_MIN_DISTANCE);
 		mock_cam!();
-		let mut app = setup::<_Event>(_Map::new().with_mock(|mock| {
+		let mut app = setup(_Map::new().with_mock(|mock| {
 			mock.expect_pressed()
 				.returning(|_| Box::new(std::iter::empty()));
 		}));
@@ -572,7 +554,7 @@ mod tests {
 		));
 
 		let result = app.world_mut().run_system_once_with(
-			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
+			_Input::parse::<_Cam, _Agent, _Map, _Key>,
 			Duration::from_secs(1),
 		)?;
 
@@ -585,11 +567,11 @@ mod tests {
 
 	#[test]
 	fn return_no_cam_error() -> Result<(), RunSystemError> {
-		mock_event!();
-		let event_ctx = Mock_Event::min_distance_context();
+		mock_input!();
+		let event_ctx = Mock_Input::min_distance_context();
 		event_ctx.expect().return_const(1. / SCALE_MIN_DISTANCE);
 		mock_cam!();
-		let mut app = setup::<_Event>(_Map::new().with_mock(|mock| {
+		let mut app = setup(_Map::new().with_mock(|mock| {
 			mock.expect_pressed()
 				.returning(|_| Box::new(std::iter::empty()));
 		}));
@@ -599,7 +581,7 @@ mod tests {
 		));
 
 		let result = app.world_mut().run_system_once_with(
-			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
+			_Input::parse::<_Cam, _Agent, _Map, _Key>,
 			Duration::from_secs(1),
 		)?;
 
@@ -609,11 +591,11 @@ mod tests {
 
 	#[test]
 	fn return_multiple_cams_error() -> Result<(), RunSystemError> {
-		mock_event!();
-		let event_ctx = Mock_Event::min_distance_context();
+		mock_input!();
+		let event_ctx = Mock_Input::min_distance_context();
 		event_ctx.expect().return_const(1. / SCALE_MIN_DISTANCE);
 		mock_cam!();
-		let mut app = setup::<_Event>(_Map::new().with_mock(|mock| {
+		let mut app = setup(_Map::new().with_mock(|mock| {
 			mock.expect_pressed()
 				.returning(|_| Box::new(std::iter::empty()));
 		}));
@@ -625,7 +607,7 @@ mod tests {
 		));
 
 		let result = app.world_mut().run_system_once_with(
-			_Event::trigger_directional_movement::<_Cam, _Agent, _Map, _Key>,
+			_Input::parse::<_Cam, _Agent, _Map, _Key>,
 			Duration::from_secs(1),
 		)?;
 

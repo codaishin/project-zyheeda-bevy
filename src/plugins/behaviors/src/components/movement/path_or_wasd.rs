@@ -1,6 +1,7 @@
 use super::Movement;
 use crate::{
-	events::{MoveDirectionalEvent, MovePointerEvent},
+	PointerInput,
+	WasdInput,
 	traits::{IsDone, MovementUpdate},
 };
 use bevy::prelude::*;
@@ -41,19 +42,19 @@ impl<TMoveMethod> Default for PathOrWasd<TMoveMethod> {
 	}
 }
 
-impl<TMoveMethod> From<&MovePointerEvent> for Movement<PathOrWasd<TMoveMethod>> {
-	fn from(MovePointerEvent(target): &MovePointerEvent) -> Self {
+impl<TMoveMethod> From<PointerInput> for Movement<PathOrWasd<TMoveMethod>> {
+	fn from(PointerInput(target): PointerInput) -> Self {
 		Self {
-			target: *target,
+			target,
 			method_cstr: PathOrWasd::new_path,
 		}
 	}
 }
 
-impl<TMoveMethod> From<&MoveDirectionalEvent<TMoveMethod>> for Movement<PathOrWasd<TMoveMethod>> {
-	fn from(MoveDirectionalEvent { target, .. }: &MoveDirectionalEvent<TMoveMethod>) -> Self {
+impl<TMoveMethod> From<WasdInput<TMoveMethod>> for Movement<PathOrWasd<TMoveMethod>> {
+	fn from(WasdInput { target, .. }: WasdInput<TMoveMethod>) -> Self {
 		Self {
-			target: *target,
+			target,
 			method_cstr: PathOrWasd::new_wasd,
 		}
 	}

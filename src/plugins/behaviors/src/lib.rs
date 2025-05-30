@@ -1,16 +1,16 @@
 pub mod components;
-pub mod events;
+pub mod input;
 pub mod traits;
 
 mod systems;
 
-use crate::systems::movement::path::MovementPath;
+use crate::systems::movement::compute_path::MovementPath;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use common::{
 	effects::deal_damage::DealDamage,
 	states::game_state::GameState,
-	systems::log::{log, log_many},
+	systems::log::{log_many, log_or_unwrap_option},
 	tools::action_key::movement::MovementKey,
 	traits::{
 		animation::{HasAnimationsDispatch, RegisterAnimations},
@@ -52,7 +52,7 @@ use components::{
 	skill_behavior::{skill_contact::SkillContact, skill_projection::SkillProjection},
 	when_traveled_insert::InsertAfterDistanceTraveled,
 };
-use events::{MoveDirectionalEvent, MovePointerEvent};
+use input::{pointer_input::PointerInput, wasd_input::WasdInput};
 use std::marker::PhantomData;
 use systems::{
 	attack::AttackSystem,
@@ -62,9 +62,9 @@ use systems::{
 	movement::{
 		animate_movement::AnimateMovement,
 		execute_move_update::ExecuteMovement,
-		set_player_movement::SetPlayerMovement,
-		trigger_directional_movement_key::TriggerDirectionalMovement,
-		trigger_pointer_movement::TriggerPointerMovement,
+		insert_process_component::InsertProcessComponent,
+		parse_directional_movement_key::ParseDirectionalMovement,
+		parse_pointer_movement::ParsePointerMovement,
 	},
 	update_cool_downs::update_cool_downs,
 };
@@ -135,105 +135,105 @@ where
 	fn build(&self, app: &mut App) {
 		TAnimations::register_movement_direction::<Movement<VelocityBased>>(app);
 
-		let move_via_pointer = MovePointerEvent::trigger_pointer_movement::<
-			TPlayers::TCamRay,
+		let point_input = PointerInput::parse::<TPlayers::TCamRay, TSettings::TKeyMap<MovementKey>>;
+		let wasd_input = WasdInput::<VelocityBased>::parse::<
+			TPlayers::TPlayerMainCamera,
+			TPlayers::TPlayerMovement,
 			TSettings::TKeyMap<MovementKey>,
+			MovementKey,
 		>;
-		let move_via_direction =
-			MoveDirectionalEvent::<VelocityBased>::trigger_directional_movement::<
-				TPlayers::TPlayerMainCamera,
-				TPlayers::TPlayerMovement,
-				TSettings::TKeyMap<MovementKey>,
-				MovementKey,
-			>;
+		let wasd_input = Update::delta.pipe(wasd_input).pipe(log_or_unwrap_option);
 
-		app.add_event::<MovePointerEvent>()
-			.add_event::<MoveDirectionalEvent<VelocityBased>>()
-			.add_prefab_observer::<SkillContact, (TInteractions, TLifeCycles)>()
-			.add_prefab_observer::<SkillProjection, (TInteractions, TLifeCycles)>()
+		let compute_player_path =
+			TPlayers::TPlayerMovement::compute_path::<VelocityBased, TPathFinding::TComputePath>;
+		let execute_player_path =
+			TPlayers::TPlayerMovement::execute_movement::<Movement<PathOrWasd<VelocityBased>>>;
+		let execute_player_movement =
+			TPlayers::TPlayerMovement::execute_movement::<Movement<VelocityBased>>;
+		let animate_player_movement = TPlayers::TPlayerMovement::animate_movement::<
+			Movement<VelocityBased>,
+			TAnimations::TAnimationDispatch,
+		>;
+
+		let execute_enemy_path =
+			TEnemies::TEnemy::execute_movement::<Movement<PathOrWasd<VelocityBased>>>;
+		let execute_enemy_movement = TEnemies::TEnemy::execute_movement::<Movement<VelocityBased>>;
+		let animate_enemy_movement = TEnemies::TEnemy::animate_movement::<
+			Movement<VelocityBased>,
+			TAnimations::TAnimationDispatch,
+		>;
+
+		app
+			// general movement
 			.add_systems(
 				Update,
 				(
-					move_via_pointer,
-					Update::delta.pipe(move_via_direction).pipe(log),
-					get_faces.pipe(execute_face::<TPlayers::TMouseHover, TPlayers::TCamRay>),
+					PathOrWasd::<VelocityBased>::cleanup,
+					Movement::<VelocityBased>::cleanup,
 				)
 					.chain()
 					.in_set(BehaviorSystems)
-					.run_if(in_state(GameState::Play)),
+					.before(ConcreteBehaviors),
 			)
-			.add_systems(Update, update_cool_downs::<Virtual>.in_set(BehaviorSystems))
 			.add_systems(
 				Update,
 				(
 					Movement::<VelocityBased>::set_faces,
-					Movement::<VelocityBased>::cleanup,
-					PathOrWasd::<VelocityBased>::cleanup,
+					get_faces.pipe(execute_face::<TPlayers::TMouseHover, TPlayers::TCamRay>),
 				)
 					.chain()
-					.in_set(BehaviorSystems),
+					.in_set(BehaviorSystems)
+					.after(ConcreteBehaviors),
 			)
+			// player behaviors
 			.add_systems(
 				Update,
 				(
-					TPlayers::TPlayerMovement::set::<
-						MovePointerEvent,
-						Movement<PathOrWasd<VelocityBased>>,
-					>,
-					TPlayers::TPlayerMovement::set::<
-						MoveDirectionalEvent<VelocityBased>,
-						Movement<PathOrWasd<VelocityBased>>,
-					>,
-					TPlayers::TPlayerMovement::wasd_or_path::<
-						VelocityBased,
-						TPathFinding::TComputePath,
-					>,
-					Update::delta.pipe(
-						TPlayers::TPlayerMovement::execute_movement::<
-							Movement<PathOrWasd<VelocityBased>>,
-						>,
-					),
-					Update::delta.pipe(
-						TPlayers::TPlayerMovement::execute_movement::<Movement<VelocityBased>>,
-					),
-					TPlayers::TPlayerMovement::animate_movement::<
-						Movement<VelocityBased>,
-						TAnimations::TAnimationDispatch,
-					>,
+					point_input.pipe(TPlayers::TPlayerMovement::insert_process_component),
+					wasd_input.pipe(TPlayers::TPlayerMovement::insert_process_component),
+					compute_player_path,
+					Update::delta.pipe(execute_player_path),
+					Update::delta.pipe(execute_player_movement),
+					animate_player_movement,
 				)
 					.chain()
-					.in_set(BehaviorSystems),
+					.in_set(BehaviorSystems)
+					.in_set(ConcreteBehaviors)
+					.run_if(in_state(GameState::Play)),
 			)
+			// enemy behaviors
 			.add_systems(
 				Update,
 				(
 					TEnemies::TEnemy::select_behavior::<TPlayers::TPlayer>.pipe(log_many),
 					TEnemies::TEnemy::attack,
 					TEnemies::TEnemy::chase::<PathOrWasd<VelocityBased>>,
-					TEnemies::TEnemy::wasd_or_path::<VelocityBased, TPathFinding::TComputePath>,
-					Update::delta.pipe(
-						TEnemies::TEnemy::execute_movement::<Movement<PathOrWasd<VelocityBased>>>,
-					),
-					Update::delta
-						.pipe(TEnemies::TEnemy::execute_movement::<Movement<VelocityBased>>),
-					TEnemies::TEnemy::animate_movement::<
-						Movement<VelocityBased>,
-						TAnimations::TAnimationDispatch,
-					>,
+					TEnemies::TEnemy::compute_path::<VelocityBased, TPathFinding::TComputePath>,
+					Update::delta.pipe(execute_enemy_path),
+					Update::delta.pipe(execute_enemy_movement),
+					animate_enemy_movement,
 				)
 					.chain()
-					.in_set(BehaviorSystems),
+					.in_set(BehaviorSystems)
+					.in_set(ConcreteBehaviors)
+					.run_if(in_state(GameState::Play)),
 			)
+			// skill behaviors
+			.add_prefab_observer::<SkillContact, (TInteractions, TLifeCycles)>()
+			.add_prefab_observer::<SkillProjection, (TInteractions, TLifeCycles)>()
 			.add_systems(
 				Update,
 				(
+					update_cool_downs::<Virtual>,
 					GroundTarget::set_position,
 					InsertAfterDistanceTraveled::<TLifeCycles::TDestroy, Velocity>::system,
 					SetVelocityForward::system,
 					SetPositionAndRotation::<Always>::system,
 					SetPositionAndRotation::<Once>::system,
 				)
-					.in_set(BehaviorSystems),
+					.in_set(BehaviorSystems)
+					.in_set(ConcreteBehaviors)
+					.run_if(in_state(GameState::Play)),
 			);
 	}
 }
@@ -262,6 +262,9 @@ impl<TDependencies> HandlesOrientation for BehaviorsPlugin<TDependencies> {
 		OverrideFace(face)
 	}
 }
+
+#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+struct ConcreteBehaviors;
 
 #[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct BehaviorSystems;
