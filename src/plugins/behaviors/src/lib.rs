@@ -146,20 +146,21 @@ where
 
 		app.add_prefab_observer::<SkillContact, (TInteractions, TLifeCycles)>()
 			.add_prefab_observer::<SkillProjection, (TInteractions, TLifeCycles)>()
-			.add_systems(
-				Update,
-				get_faces
-					.pipe(execute_face::<TPlayers::TMouseHover, TPlayers::TCamRay>)
-					.in_set(BehaviorSystems)
-					.run_if(in_state(GameState::Play)),
-			)
 			.add_systems(Update, update_cool_downs::<Virtual>.in_set(BehaviorSystems))
 			.add_systems(
 				Update,
 				(
 					Movement::<VelocityBased>::set_faces,
-					Movement::<VelocityBased>::cleanup,
+					get_faces.pipe(execute_face::<TPlayers::TMouseHover, TPlayers::TCamRay>),
+				)
+					.chain()
+					.in_set(BehaviorSystems),
+			)
+			.add_systems(
+				Update,
+				(
 					PathOrWasd::<VelocityBased>::cleanup,
+					Movement::<VelocityBased>::cleanup,
 				)
 					.chain()
 					.in_set(BehaviorSystems),
