@@ -1,5 +1,5 @@
 pub mod components;
-pub mod events;
+pub mod input;
 pub mod traits;
 
 mod systems;
@@ -10,7 +10,7 @@ use bevy_rapier3d::prelude::Velocity;
 use common::{
 	effects::deal_damage::DealDamage,
 	states::game_state::GameState,
-	systems::log::{log, log_many},
+	systems::log::{log_many, log_or_unwrap_option},
 	tools::action_key::movement::MovementKey,
 	traits::{
 		animation::{HasAnimationsDispatch, RegisterAnimations},
@@ -52,7 +52,7 @@ use components::{
 	skill_behavior::{skill_contact::SkillContact, skill_projection::SkillProjection},
 	when_traveled_insert::InsertAfterDistanceTraveled,
 };
-use events::{MoveDirectionalEvent, MovePointerEvent};
+use input::{pointer_input::PointerInput, wasd_input::WasdInput};
 use std::marker::PhantomData;
 use systems::{
 	attack::AttackSystem,
@@ -62,9 +62,9 @@ use systems::{
 	movement::{
 		animate_movement::AnimateMovement,
 		execute_move_update::ExecuteMovement,
+		parse_directional_movement_key::ParseDirectionalMovement,
+		parse_pointer_movement::ParsePointerMovement,
 		process_input::ProcessInput,
-		trigger_directional_movement_key::TriggerDirectionalMovement,
-		trigger_pointer_movement::TriggerPointerMovement,
 	},
 	update_cool_downs::update_cool_downs,
 };
@@ -135,30 +135,21 @@ where
 	fn build(&self, app: &mut App) {
 		TAnimations::register_movement_direction::<Movement<VelocityBased>>(app);
 
-		let move_via_pointer = MovePointerEvent::trigger_pointer_movement::<
-			TPlayers::TCamRay,
+		let point_input = PointerInput::parse::<TPlayers::TCamRay, TSettings::TKeyMap<MovementKey>>;
+		let wasd_input = WasdInput::<VelocityBased>::parse::<
+			TPlayers::TPlayerMainCamera,
+			TPlayers::TPlayerMovement,
 			TSettings::TKeyMap<MovementKey>,
+			MovementKey,
 		>;
-		let move_via_direction =
-			MoveDirectionalEvent::<VelocityBased>::trigger_directional_movement::<
-				TPlayers::TPlayerMainCamera,
-				TPlayers::TPlayerMovement,
-				TSettings::TKeyMap<MovementKey>,
-				MovementKey,
-			>;
+		let wasd_input = Update::delta.pipe(wasd_input).pipe(log_or_unwrap_option);
 
-		app.add_event::<MovePointerEvent>()
-			.add_event::<MoveDirectionalEvent<VelocityBased>>()
-			.add_prefab_observer::<SkillContact, (TInteractions, TLifeCycles)>()
+		app.add_prefab_observer::<SkillContact, (TInteractions, TLifeCycles)>()
 			.add_prefab_observer::<SkillProjection, (TInteractions, TLifeCycles)>()
 			.add_systems(
 				Update,
-				(
-					move_via_pointer,
-					Update::delta.pipe(move_via_direction).pipe(log),
-					get_faces.pipe(execute_face::<TPlayers::TMouseHover, TPlayers::TCamRay>),
-				)
-					.chain()
+				get_faces
+					.pipe(execute_face::<TPlayers::TMouseHover, TPlayers::TCamRay>)
 					.in_set(BehaviorSystems)
 					.run_if(in_state(GameState::Play)),
 			)
@@ -176,8 +167,8 @@ where
 			.add_systems(
 				Update,
 				(
-					TPlayers::TPlayerMovement::process::<MovePointerEvent>,
-					TPlayers::TPlayerMovement::process::<MoveDirectionalEvent<VelocityBased>>,
+					point_input.pipe(TPlayers::TPlayerMovement::process),
+					wasd_input.pipe(TPlayers::TPlayerMovement::process),
 					TPlayers::TPlayerMovement::wasd_or_path::<
 						VelocityBased,
 						TPathFinding::TComputePath,
@@ -196,7 +187,8 @@ where
 					>,
 				)
 					.chain()
-					.in_set(BehaviorSystems),
+					.in_set(BehaviorSystems)
+					.run_if(in_state(GameState::Play)),
 			)
 			.add_systems(
 				Update,
@@ -216,7 +208,8 @@ where
 					>,
 				)
 					.chain()
-					.in_set(BehaviorSystems),
+					.in_set(BehaviorSystems)
+					.run_if(in_state(GameState::Play)),
 			)
 			.add_systems(
 				Update,
@@ -227,7 +220,8 @@ where
 					SetPositionAndRotation::<Always>::system,
 					SetPositionAndRotation::<Once>::system,
 				)
-					.in_set(BehaviorSystems),
+					.in_set(BehaviorSystems)
+					.run_if(in_state(GameState::Play)),
 			);
 	}
 }

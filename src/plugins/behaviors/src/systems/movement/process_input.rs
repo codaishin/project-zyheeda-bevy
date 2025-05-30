@@ -4,13 +4,15 @@ impl<T> ProcessInput for T where T: Component + Sized {}
 
 pub trait ProcessInput: Component + Sized {
 	fn process<TInput>(
+		In(input): In<Option<TInput>>,
 		mut commands: Commands,
-		mut input: EventReader<TInput>,
 		players: Query<Entity, With<Self>>,
 	) where
-		TInput: Event + EventProcessComponent,
-		for<'a> TInput::TComponent: From<&'a TInput>,
+		TInput: InputProcessComponent,
 	{
+		let Some(input) = input else {
+			return;
+		};
 		let Ok(player) = players.single() else {
 			return;
 		};
@@ -18,14 +20,12 @@ pub trait ProcessInput: Component + Sized {
 			return;
 		};
 
-		for event in input.read() {
-			player.try_insert(TInput::TComponent::from(event));
-		}
+		player.try_insert(TInput::TComponent::from(input));
 	}
 }
 
-pub(crate) trait EventProcessComponent {
-	type TComponent: Component;
+pub(crate) trait InputProcessComponent: Sized {
+	type TComponent: Component + From<Self>;
 }
 
 #[cfg(test)]
@@ -33,38 +33,36 @@ mod tests {
 	use super::*;
 	use common::test_tools::utils::SingleThreadedApp;
 
-	#[derive(Event)]
-	struct _Event(Vec3);
+	#[derive(Clone, Copy)]
+	struct _Input(Vec3);
 
-	impl EventProcessComponent for _Event {
+	impl InputProcessComponent for _Input {
 		type TComponent = _Movement;
 	}
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Movement(Vec3);
 
-	impl From<&_Event> for _Movement {
-		fn from(_Event(target): &_Event) -> Self {
-			Self(*target)
+	impl From<_Input> for _Movement {
+		fn from(_Input(target): _Input) -> Self {
+			Self(target)
 		}
 	}
 
 	#[derive(Component)]
 	struct _Player;
 
-	fn setup() -> App {
+	fn setup(input: Option<_Input>) -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, _Player::process::<_Event>);
-		app.add_event::<_Event>();
+		app.add_systems(Update, (move || input).pipe(_Player::process));
 
 		app
 	}
 
 	#[test]
 	fn trigger_movement() {
-		let mut app = setup();
+		let mut app = setup(Some(_Input(Vec3::new(1., 2., 3.))));
 		let player = app.world_mut().spawn(_Player).id();
-		app.world_mut().send_event(_Event(Vec3::new(1., 2., 3.)));
 
 		app.update();
 

@@ -4,34 +4,34 @@ use common::{
 	traits::{intersect_at::IntersectAt, key_mappings::Pressed},
 };
 
-impl<T> TriggerPointerMovement for T where T: From<Vec3> + Event {}
+impl<T> ParsePointerMovement for T where T: PointMovementInput {}
 
-pub(crate) trait TriggerPointerMovement: From<Vec3> + Event {
-	fn trigger_pointer_movement<TRay, TMap>(
+pub(crate) trait ParsePointerMovement: PointMovementInput {
+	fn parse<TRay, TMap>(
 		input: Res<ButtonInput<UserInput>>,
 		map: Res<TMap>,
 		cam_ray: Res<TRay>,
-		mut move_input_events: EventWriter<Self>,
-	) where
+	) -> Option<Self>
+	where
 		TRay: IntersectAt + Resource,
 		TMap: Pressed<MovementKey> + Resource,
 	{
 		if !map.pressed(&input).any(|key| key == MovementKey::Pointer) {
-			return;
+			return None;
 		}
-		let Some(intersection) = cam_ray.intersect_at(0.) else {
-			return;
-		};
-		move_input_events.write(Self::from(intersection));
+		let intersection = cam_ray.intersect_at(0.)?;
+		Some(Self::from(intersection))
 	}
 }
+
+pub(crate) trait PointMovementInput: From<Vec3> {}
 
 #[cfg(test)]
 mod tests {
 	use super::*;
 	use bevy::{
 		app::{App, Update},
-		ecs::event::Events,
+		ecs::system::{RunSystemError, RunSystemOnce},
 		math::Vec3,
 	};
 	use common::{
@@ -41,14 +41,16 @@ mod tests {
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 
-	#[derive(Event, Debug, PartialEq, Clone, Copy)]
-	struct _Event(Vec3);
+	#[derive(Debug, PartialEq, Clone, Copy)]
+	struct _Input(Vec3);
 
-	impl From<Vec3> for _Event {
+	impl From<Vec3> for _Input {
 		fn from(translation: Vec3) -> Self {
 			Self(translation)
 		}
 	}
+
+	impl PointMovementInput for _Input {}
 
 	#[derive(Resource, NestedMocks)]
 	struct _Ray {
@@ -80,21 +82,12 @@ mod tests {
 		app.insert_resource(ray);
 		app.insert_resource(map);
 		app.init_resource::<ButtonInput<UserInput>>();
-		app.add_event::<_Event>();
-		app.add_systems(Update, _Event::trigger_pointer_movement::<_Ray, _Map>);
 
 		app
 	}
 
-	fn move_input_events(app: &App) -> Vec<_Event> {
-		let events = app.world().resource::<Events<_Event>>();
-		let mut cursor = events.get_cursor();
-
-		cursor.read(events).copied().collect()
-	}
-
 	#[test]
-	fn trigger_immediately_on_movement_pointer_press() {
+	fn trigger_immediately_on_movement_pointer_press() -> Result<(), RunSystemError> {
 		let mut app = setup(
 			_Ray::new().with_mock(|mock| {
 				mock.expect_intersect_at()
@@ -106,13 +99,16 @@ mod tests {
 			}),
 		);
 
-		app.update();
+		let input = app
+			.world_mut()
+			.run_system_once(_Input::parse::<_Ray, _Map>)?;
 
-		assert_eq!(vec![_Event(Vec3::new(1., 2., 3.))], move_input_events(&app));
+		assert_eq!(Some(_Input(Vec3::new(1., 2., 3.))), input);
+		Ok(())
 	}
 
 	#[test]
-	fn no_event_when_other_movement_button_pressed() {
+	fn no_event_when_other_movement_button_pressed() -> Result<(), RunSystemError> {
 		let mut app = setup(
 			_Ray::new().with_mock(|mock| {
 				mock.expect_intersect_at().return_const(Vec3::default());
@@ -124,13 +120,16 @@ mod tests {
 			}),
 		);
 
-		app.update();
+		let input = app
+			.world_mut()
+			.run_system_once(_Input::parse::<_Ray, _Map>)?;
 
-		assert_eq!(vec![] as Vec<_Event>, move_input_events(&app));
+		assert_eq!(None, input);
+		Ok(())
 	}
 
 	#[test]
-	fn no_event_when_no_intersection() {
+	fn no_event_when_no_intersection() -> Result<(), RunSystemError> {
 		let mut app = setup(
 			_Ray::new().with_mock(|mock| {
 				mock.expect_intersect_at().return_const(None);
@@ -141,13 +140,16 @@ mod tests {
 			}),
 		);
 
-		app.update();
+		let input = app
+			.world_mut()
+			.run_system_once(_Input::parse::<_Ray, _Map>)?;
 
-		assert_eq!(vec![] as Vec<_Event>, move_input_events(&app));
+		assert_eq!(None, input);
+		Ok(())
 	}
 
 	#[test]
-	fn call_intersect_with_height_zero() {
+	fn call_intersect_with_height_zero() -> Result<(), RunSystemError> {
 		let mut app = setup(
 			_Ray::new().with_mock(|mock| {
 				mock.expect_intersect_at()
@@ -161,11 +163,14 @@ mod tests {
 			}),
 		);
 
-		app.update();
+		_ = app
+			.world_mut()
+			.run_system_once(_Input::parse::<_Ray, _Map>)?;
+		Ok(())
 	}
 
 	#[test]
-	fn call_map_with_correct_input() {
+	fn call_map_with_correct_input() -> Result<(), RunSystemError> {
 		let mut input = ButtonInput::default();
 		input.press(UserInput::MouseButton(MouseButton::Back));
 		let mut app = setup(
@@ -184,6 +189,9 @@ mod tests {
 		);
 		app.insert_resource(input);
 
-		app.update();
+		_ = app
+			.world_mut()
+			.run_system_once(_Input::parse::<_Ray, _Map>)?;
+		Ok(())
 	}
 }
