@@ -60,6 +60,8 @@ pub(crate) trait DirectionalMovementInput: From<Vec3> + MinDistance {}
 
 /// Used to compensate fluctuations in update deltas by overestimating the minimal distance
 /// that can be traveled per frame with the current speed.
+/// A value of 1.5 provides a 50% buffer to ensure smooth movement even with frame rate variations.
+/// Lower values may cause stuttering, while higher values may make movement feel less responsive.
 const SCALE_MIN_DISTANCE: f32 = 1.5;
 
 #[derive(Debug, PartialEq)]
