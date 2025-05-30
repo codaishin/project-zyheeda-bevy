@@ -2,8 +2,8 @@ use crate::{
 	Movement,
 	PathOrWasd,
 	systems::movement::{
+		insert_process_component::InputProcessComponent,
 		parse_directional_movement_key::DirectionalMovementInput,
-		process_input::InputProcessComponent,
 	},
 	traits::change_per_frame::MinDistance,
 };

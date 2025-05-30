@@ -4,7 +4,7 @@ pub mod traits;
 
 mod systems;
 
-use crate::systems::movement::path::MovementPath;
+use crate::systems::movement::compute_path::MovementPath;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use common::{
@@ -62,9 +62,9 @@ use systems::{
 	movement::{
 		animate_movement::AnimateMovement,
 		execute_move_update::ExecuteMovement,
+		insert_process_component::InsertProcessComponent,
 		parse_directional_movement_key::ParseDirectionalMovement,
 		parse_pointer_movement::ParsePointerMovement,
-		process_input::ProcessInput,
 	},
 	update_cool_downs::update_cool_downs,
 };
@@ -144,18 +144,27 @@ where
 		>;
 		let wasd_input = Update::delta.pipe(wasd_input).pipe(log_or_unwrap_option);
 
-		app.add_prefab_observer::<SkillContact, (TInteractions, TLifeCycles)>()
-			.add_prefab_observer::<SkillProjection, (TInteractions, TLifeCycles)>()
-			.add_systems(Update, update_cool_downs::<Virtual>.in_set(BehaviorSystems))
-			.add_systems(
-				Update,
-				(
-					Movement::<VelocityBased>::set_faces,
-					get_faces.pipe(execute_face::<TPlayers::TMouseHover, TPlayers::TCamRay>),
-				)
-					.chain()
-					.in_set(BehaviorSystems),
-			)
+		let compute_player_path =
+			TPlayers::TPlayerMovement::compute_path::<VelocityBased, TPathFinding::TComputePath>;
+		let execute_player_path =
+			TPlayers::TPlayerMovement::execute_movement::<Movement<PathOrWasd<VelocityBased>>>;
+		let execute_player_movement =
+			TPlayers::TPlayerMovement::execute_movement::<Movement<VelocityBased>>;
+		let animate_player_movement = TPlayers::TPlayerMovement::animate_movement::<
+			Movement<VelocityBased>,
+			TAnimations::TAnimationDispatch,
+		>;
+
+		let execute_enemy_path =
+			TEnemies::TEnemy::execute_movement::<Movement<PathOrWasd<VelocityBased>>>;
+		let execute_enemy_movement = TEnemies::TEnemy::execute_movement::<Movement<VelocityBased>>;
+		let animate_enemy_movement = TEnemies::TEnemy::animate_movement::<
+			Movement<VelocityBased>,
+			TAnimations::TAnimationDispatch,
+		>;
+
+		app
+			// general movement
 			.add_systems(
 				Update,
 				(
@@ -163,58 +172,59 @@ where
 					Movement::<VelocityBased>::cleanup,
 				)
 					.chain()
-					.in_set(BehaviorSystems),
+					.in_set(BehaviorSystems)
+					.before(ConcreteBehaviors),
 			)
 			.add_systems(
 				Update,
 				(
-					point_input.pipe(TPlayers::TPlayerMovement::process),
-					wasd_input.pipe(TPlayers::TPlayerMovement::process),
-					TPlayers::TPlayerMovement::wasd_or_path::<
-						VelocityBased,
-						TPathFinding::TComputePath,
-					>,
-					Update::delta.pipe(
-						TPlayers::TPlayerMovement::execute_movement::<
-							Movement<PathOrWasd<VelocityBased>>,
-						>,
-					),
-					Update::delta.pipe(
-						TPlayers::TPlayerMovement::execute_movement::<Movement<VelocityBased>>,
-					),
-					TPlayers::TPlayerMovement::animate_movement::<
-						Movement<VelocityBased>,
-						TAnimations::TAnimationDispatch,
-					>,
+					Movement::<VelocityBased>::set_faces,
+					get_faces.pipe(execute_face::<TPlayers::TMouseHover, TPlayers::TCamRay>),
 				)
 					.chain()
 					.in_set(BehaviorSystems)
+					.after(ConcreteBehaviors),
+			)
+			// player behaviors
+			.add_systems(
+				Update,
+				(
+					point_input.pipe(TPlayers::TPlayerMovement::insert_process_component),
+					wasd_input.pipe(TPlayers::TPlayerMovement::insert_process_component),
+					compute_player_path,
+					Update::delta.pipe(execute_player_path),
+					Update::delta.pipe(execute_player_movement),
+					animate_player_movement,
+				)
+					.chain()
+					.in_set(BehaviorSystems)
+					.in_set(ConcreteBehaviors)
 					.run_if(in_state(GameState::Play)),
 			)
+			// enemy behaviors
 			.add_systems(
 				Update,
 				(
 					TEnemies::TEnemy::select_behavior::<TPlayers::TPlayer>.pipe(log_many),
 					TEnemies::TEnemy::attack,
 					TEnemies::TEnemy::chase::<PathOrWasd<VelocityBased>>,
-					TEnemies::TEnemy::wasd_or_path::<VelocityBased, TPathFinding::TComputePath>,
-					Update::delta.pipe(
-						TEnemies::TEnemy::execute_movement::<Movement<PathOrWasd<VelocityBased>>>,
-					),
-					Update::delta
-						.pipe(TEnemies::TEnemy::execute_movement::<Movement<VelocityBased>>),
-					TEnemies::TEnemy::animate_movement::<
-						Movement<VelocityBased>,
-						TAnimations::TAnimationDispatch,
-					>,
+					TEnemies::TEnemy::compute_path::<VelocityBased, TPathFinding::TComputePath>,
+					Update::delta.pipe(execute_enemy_path),
+					Update::delta.pipe(execute_enemy_movement),
+					animate_enemy_movement,
 				)
 					.chain()
 					.in_set(BehaviorSystems)
+					.in_set(ConcreteBehaviors)
 					.run_if(in_state(GameState::Play)),
 			)
+			// skill behaviors
+			.add_prefab_observer::<SkillContact, (TInteractions, TLifeCycles)>()
+			.add_prefab_observer::<SkillProjection, (TInteractions, TLifeCycles)>()
 			.add_systems(
 				Update,
 				(
+					update_cool_downs::<Virtual>,
 					GroundTarget::set_position,
 					InsertAfterDistanceTraveled::<TLifeCycles::TDestroy, Velocity>::system,
 					SetVelocityForward::system,
@@ -222,6 +232,7 @@ where
 					SetPositionAndRotation::<Once>::system,
 				)
 					.in_set(BehaviorSystems)
+					.in_set(ConcreteBehaviors)
 					.run_if(in_state(GameState::Play)),
 			);
 	}
@@ -251,6 +262,9 @@ impl<TDependencies> HandlesOrientation for BehaviorsPlugin<TDependencies> {
 		OverrideFace(face)
 	}
 }
+
+#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+struct ConcreteBehaviors;
 
 #[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct BehaviorSystems;

@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 
-impl<T> ProcessInput for T where T: Component + Sized {}
+impl<T> InsertProcessComponent for T where T: Component + Sized {}
 
-pub trait ProcessInput: Component + Sized {
-	fn process<TInput>(
+pub trait InsertProcessComponent: Component + Sized {
+	fn insert_process_component<TInput>(
 		In(input): In<Option<TInput>>,
 		mut commands: Commands,
 		players: Query<Entity, With<Self>>,
@@ -54,7 +54,10 @@ mod tests {
 
 	fn setup(input: Option<_Input>) -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, (move || input).pipe(_Player::process));
+		app.add_systems(
+			Update,
+			(move || input).pipe(_Player::insert_process_component),
+		);
 
 		app
 	}

@@ -3,8 +3,8 @@ use crate::{
 	PathOrWasd,
 	components::movement::velocity_based::VelocityBased,
 	systems::movement::{
+		insert_process_component::InputProcessComponent,
 		parse_pointer_movement::PointMovementInput,
-		process_input::InputProcessComponent,
 	},
 };
 use bevy::prelude::*;
