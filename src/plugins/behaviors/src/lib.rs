@@ -83,7 +83,7 @@ impl<TSettings, TAnimations, TLifeCycles, TInteractions, TPathFinding, TEnemies,
 	)>
 where
 	TSettings: ThreadSafe + HandlesSettings,
-	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations,
+	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
 	TLifeCycles: ThreadSafe + HandlesDestruction,
 	TInteractions: ThreadSafe + HandlesInteractions + HandlesEffect<DealDamage>,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
@@ -120,7 +120,7 @@ impl<TSettings, TAnimations, TLifeCycles, TInteractions, TPathFinding, TEnemies,
 	)>
 where
 	TSettings: ThreadSafe + HandlesSettings,
-	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations,
+	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
 	TLifeCycles: ThreadSafe + HandlesDestruction,
 	TInteractions: ThreadSafe + HandlesInteractions + HandlesEffect<DealDamage>,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
@@ -164,75 +164,64 @@ where
 		>;
 
 		app
-			// general movement
-			.add_systems(
-				Update,
-				(
-					PathOrWasd::<VelocityBased>::cleanup,
-					Movement::<VelocityBased>::cleanup,
-				)
-					.chain()
-					.in_set(BehaviorSystems)
-					.before(ConcreteBehaviors),
-			)
-			.add_systems(
-				Update,
-				(
-					Movement::<VelocityBased>::set_faces,
-					get_faces.pipe(execute_face::<TPlayers::TMouseHover, TPlayers::TCamRay>),
-				)
-					.chain()
-					.in_set(BehaviorSystems)
-					.after(ConcreteBehaviors),
-			)
-			// player behaviors
-			.add_systems(
-				Update,
-				(
-					point_input.pipe(TPlayers::TPlayerMovement::insert_process_component),
-					wasd_input.pipe(TPlayers::TPlayerMovement::insert_process_component),
-					compute_player_path,
-					Update::delta.pipe(execute_player_path),
-					Update::delta.pipe(execute_player_movement),
-					animate_player_movement,
-				)
-					.chain()
-					.in_set(BehaviorSystems)
-					.in_set(ConcreteBehaviors)
-					.run_if(in_state(GameState::Play)),
-			)
-			// enemy behaviors
-			.add_systems(
-				Update,
-				(
-					TEnemies::TEnemy::select_behavior::<TPlayers::TPlayer>.pipe(log_many),
-					TEnemies::TEnemy::attack,
-					TEnemies::TEnemy::chase::<PathOrWasd<VelocityBased>>,
-					TEnemies::TEnemy::compute_path::<VelocityBased, TPathFinding::TComputePath>,
-					Update::delta.pipe(execute_enemy_path),
-					Update::delta.pipe(execute_enemy_movement),
-					animate_enemy_movement,
-				)
-					.chain()
-					.in_set(BehaviorSystems)
-					.in_set(ConcreteBehaviors)
-					.run_if(in_state(GameState::Play)),
-			)
-			// skill behaviors
+			// Observers
 			.add_prefab_observer::<SkillContact, (TInteractions, TLifeCycles)>()
 			.add_prefab_observer::<SkillProjection, (TInteractions, TLifeCycles)>()
+			// Systems
 			.add_systems(
 				Update,
 				(
-					update_cool_downs::<Virtual>,
-					GroundTarget::set_position,
-					InsertAfterDistanceTraveled::<TLifeCycles::TDestroy, Velocity>::system,
-					SetVelocityForward::system,
-					SetPositionAndRotation::<Always>::system,
-					SetPositionAndRotation::<Once>::system,
+					// Prep systems
+					(
+						PathOrWasd::<VelocityBased>::cleanup,
+						Movement::<VelocityBased>::cleanup,
+					)
+						.chain(),
+					// Player behaviors
+					(
+						point_input.pipe(TPlayers::TPlayerMovement::insert_process_component),
+						wasd_input.pipe(TPlayers::TPlayerMovement::insert_process_component),
+						compute_player_path,
+						Update::delta.pipe(execute_player_path),
+						Update::delta.pipe(execute_player_movement),
+						animate_player_movement,
+					)
+						.chain(),
+					// Enemy behaviors
+					(
+						TEnemies::TEnemy::select_behavior::<TPlayers::TPlayer>.pipe(log_many),
+						TEnemies::TEnemy::attack,
+						TEnemies::TEnemy::chase::<PathOrWasd<VelocityBased>>,
+						TEnemies::TEnemy::compute_path::<VelocityBased, TPathFinding::TComputePath>,
+						Update::delta.pipe(execute_enemy_path),
+						Update::delta.pipe(execute_enemy_movement),
+						animate_enemy_movement,
+					)
+						.chain(),
+					// Skill execution
+					(
+						update_cool_downs::<Virtual>,
+						GroundTarget::set_position,
+						InsertAfterDistanceTraveled::<TLifeCycles::TDestroy, Velocity>::system,
+						SetVelocityForward::system,
+						SetPositionAndRotation::<Always>::system,
+						SetPositionAndRotation::<Once>::system,
+					),
+					// Apply facing
+					(
+						Movement::<VelocityBased>::set_faces,
+						get_faces.pipe(execute_face::<TPlayers::TMouseHover, TPlayers::TCamRay>),
+					)
+						.chain(),
 				)
+					.chain()
 					.in_set(BehaviorSystems)
-					.in_set(ConcreteBehaviors)
+					/* FIXME: `.before()` should synch facing and animation weights, but for some reason it
+					 *         doesn't. Using `.after()` might cause a one frame delay here, but seems to
+					 *         ensure that animation weights are computed off of correct look direction after
+					 *         applying transform facing.
+					 */
+					.after(TAnimations::SYSTEMS)
 					.run_if(in_state(GameState::Play)),
 			);
 	}
@@ -262,9 +251,6 @@ impl<TDependencies> HandlesOrientation for BehaviorsPlugin<TDependencies> {
 		OverrideFace(face)
 	}
 }
-
-#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-struct ConcreteBehaviors;
 
 #[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct BehaviorSystems;
