@@ -1,16 +1,15 @@
 use bevy::prelude::*;
 
-impl<T> SetPlayerMovement for T {}
+impl<T> ProcessInput for T where T: Component + Sized {}
 
-pub trait SetPlayerMovement {
-	fn set<TEvent, TMovement>(
+pub trait ProcessInput: Component + Sized {
+	fn process<TInput>(
 		mut commands: Commands,
-		mut move_input_events: EventReader<TEvent>,
+		mut input: EventReader<TInput>,
 		players: Query<Entity, With<Self>>,
 	) where
-		Self: Component + Sized,
-		TEvent: Event,
-		for<'a> TMovement: Component + From<&'a TEvent>,
+		TInput: Event + EventProcessComponent,
+		for<'a> TInput::TComponent: From<&'a TInput>,
 	{
 		let Ok(player) = players.single() else {
 			return;
@@ -19,10 +18,14 @@ pub trait SetPlayerMovement {
 			return;
 		};
 
-		for event in move_input_events.read() {
-			player.try_insert(TMovement::from(event));
+		for event in input.read() {
+			player.try_insert(TInput::TComponent::from(event));
 		}
 	}
+}
+
+pub(crate) trait EventProcessComponent {
+	type TComponent: Component;
 }
 
 #[cfg(test)]
@@ -32,6 +35,10 @@ mod tests {
 
 	#[derive(Event)]
 	struct _Event(Vec3);
+
+	impl EventProcessComponent for _Event {
+		type TComponent = _Movement;
+	}
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Movement(Vec3);
@@ -47,7 +54,7 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, _Player::set::<_Event, _Movement>);
+		app.add_systems(Update, _Player::process::<_Event>);
 		app.add_event::<_Event>();
 
 		app

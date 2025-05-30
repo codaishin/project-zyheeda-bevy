@@ -62,7 +62,7 @@ use systems::{
 	movement::{
 		animate_movement::AnimateMovement,
 		execute_move_update::ExecuteMovement,
-		set_player_movement::SetPlayerMovement,
+		process_input::ProcessInput,
 		trigger_directional_movement_key::TriggerDirectionalMovement,
 		trigger_pointer_movement::TriggerPointerMovement,
 	},
@@ -176,14 +176,8 @@ where
 			.add_systems(
 				Update,
 				(
-					TPlayers::TPlayerMovement::set::<
-						MovePointerEvent,
-						Movement<PathOrWasd<VelocityBased>>,
-					>,
-					TPlayers::TPlayerMovement::set::<
-						MoveDirectionalEvent<VelocityBased>,
-						Movement<PathOrWasd<VelocityBased>>,
-					>,
+					TPlayers::TPlayerMovement::process::<MovePointerEvent>,
+					TPlayers::TPlayerMovement::process::<MoveDirectionalEvent<VelocityBased>>,
 					TPlayers::TPlayerMovement::wasd_or_path::<
 						VelocityBased,
 						TPathFinding::TComputePath,
