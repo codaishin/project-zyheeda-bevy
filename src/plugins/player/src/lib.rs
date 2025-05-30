@@ -43,19 +43,19 @@ use systems::{
 
 pub struct PlayerPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSettings, TGameStates, TAnimation, TInteractions, TLights>
-	PlayerPlugin<(TSettings, TGameStates, TAnimation, TInteractions, TLights)>
+impl<TSettings, TGameStates, TAnimations, TInteractions, TLights>
+	PlayerPlugin<(TSettings, TGameStates, TAnimations, TInteractions, TLights)>
 where
 	TSettings: ThreadSafe + HandlesSettings,
 	TGameStates: ThreadSafe + HandlesGameStates,
-	TAnimation: ThreadSafe + RegisterAnimations,
+	TAnimations: ThreadSafe + RegisterAnimations,
 	TInteractions: ThreadSafe + HandlesEffect<DealDamage, TTarget = Health>,
 	TLights: ThreadSafe + HandlesLights,
 {
 	pub fn from_plugins(
 		_: &TSettings,
 		_: &TGameStates,
-		_: &TAnimation,
+		_: &TAnimations,
 		_: &TInteractions,
 		_: &TLights,
 	) -> Self {
@@ -63,18 +63,18 @@ where
 	}
 }
 
-impl<TSettings, TGameStates, TAnimation, TInteractions, TLights> Plugin
-	for PlayerPlugin<(TSettings, TGameStates, TAnimation, TInteractions, TLights)>
+impl<TSettings, TGameStates, TAnimations, TInteractions, TLights> Plugin
+	for PlayerPlugin<(TSettings, TGameStates, TAnimations, TInteractions, TLights)>
 where
 	TSettings: ThreadSafe + HandlesSettings,
 	TGameStates: ThreadSafe + HandlesGameStates,
-	TAnimation: ThreadSafe + RegisterAnimations,
+	TAnimations: ThreadSafe + RegisterAnimations,
 	TInteractions: ThreadSafe + HandlesEffect<DealDamage, TTarget = Health>,
 	TLights: ThreadSafe + HandlesLights,
 {
 	fn build(&self, app: &mut App) {
 		TGameStates::on_starting_new_game(app, Player::spawn);
-		TAnimation::register_animations::<Player>(app);
+		TAnimations::register_animations::<Player>(app);
 
 		app.init_resource::<CamRay>()
 			.add_prefab_observer::<Player, (TInteractions, TLights)>()
@@ -85,7 +85,7 @@ where
 			.add_systems(
 				Update,
 				(
-					SkillAnimation::system::<TAnimation::TAnimationDispatch>,
+					SkillAnimation::system::<TAnimations::TAnimationDispatch>,
 					player_toggle_walk_run::<TSettings::TKeyMap<MovementKey>>,
 				)
 					.run_if(not(in_state(GameState::LoadingEssentialAssets))),
