@@ -8,6 +8,8 @@ use common::{
 	},
 };
 
+use crate::components::anchor::AnchorFixPointKey;
+
 #[derive(Component, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct SpawnerFixPoint(pub(crate) Spawner);
 
@@ -35,10 +37,32 @@ impl SpawnerFixPoint {
 	}
 }
 
+impl From<SpawnerFixPoint> for AnchorFixPointKey {
+	fn from(SpawnerFixPoint(spawner): SpawnerFixPoint) -> Self {
+		match spawner {
+			Spawner::Center => AnchorFixPointKey::new::<SpawnerFixPoint>(0),
+			Spawner::Slot(SlotKey::BottomHand(Side::Left)) => {
+				AnchorFixPointKey::new::<SpawnerFixPoint>(1)
+			}
+			Spawner::Slot(SlotKey::BottomHand(Side::Right)) => {
+				AnchorFixPointKey::new::<SpawnerFixPoint>(2)
+			}
+			Spawner::Slot(SlotKey::TopHand(Side::Left)) => {
+				AnchorFixPointKey::new::<SpawnerFixPoint>(3)
+			}
+			Spawner::Slot(SlotKey::TopHand(Side::Right)) => {
+				AnchorFixPointKey::new::<SpawnerFixPoint>(4)
+			}
+		}
+	}
+}
+
 #[cfg(test)]
 mod tests {
+	use std::{any::TypeId, collections::HashSet};
+
 	use super::*;
-	use common::test_tools::utils::SingleThreadedApp;
+	use common::{test_tools::utils::SingleThreadedApp, traits::iteration::IterFinite};
 	use test_case::test_case;
 
 	fn setup() -> App {
@@ -128,5 +152,34 @@ mod tests {
 		app.update();
 
 		assert_eq!(None, app.world().entity(entity).get::<SpawnerFixPoint>());
+	}
+
+	#[test]
+	fn spawner_to_anchor_fix_point_key_has_no_duplicate_values() {
+		let slot_keys = SlotKey::iterator()
+			.map(Spawner::Slot)
+			.chain(std::iter::once(Spawner::Center))
+			.map(SpawnerFixPoint)
+			.collect::<Vec<_>>();
+
+		let anchor_keys = slot_keys
+			.iter()
+			.copied()
+			.map(AnchorFixPointKey::from)
+			.collect::<HashSet<_>>();
+
+		assert_eq!(slot_keys.len(), anchor_keys.len());
+	}
+
+	#[test]
+	fn spawner_to_anchor_fix_point_key_has_correct_source() {
+		let slot_keys = SlotKey::iterator()
+			.map(Spawner::Slot)
+			.chain(std::iter::once(Spawner::Center))
+			.map(SpawnerFixPoint);
+
+		let mut anchor_keys = slot_keys.map(AnchorFixPointKey::from);
+
+		assert!(anchor_keys.all(|key| key.source_type == TypeId::of::<SpawnerFixPoint>()));
 	}
 }

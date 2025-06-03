@@ -1,6 +1,8 @@
 pub mod skill_contact;
 pub mod skill_projection;
 
+use crate::components::anchor::spawner_fix_point::SpawnerFixPoint;
+
 use super::{
 	Always,
 	Once,
@@ -152,7 +154,7 @@ impl SimplePrefab for Motion {
 			Motion::HeldBy { caster } => {
 				entity.try_insert((
 					RigidBody::Fixed,
-					Anchor::<Always>::to(caster).on_fix_point(Spawner::Center),
+					Anchor::<Always>::to(caster).on_fix_point(SpawnerFixPoint(Spawner::Center)),
 				));
 			}
 			Motion::Stationary {
@@ -179,7 +181,7 @@ impl SimplePrefab for Motion {
 					RigidBody::Dynamic,
 					GravityScale(0.),
 					Ccd::enabled(),
-					Anchor::<Once>::to(caster).on_fix_point(spawner),
+					Anchor::<Once>::to(caster).on_fix_point(SpawnerFixPoint(spawner)),
 					SetVelocityForward {
 						rotation: caster,
 						speed,
@@ -279,7 +281,10 @@ mod tests {
 				None,
 				None,
 				None,
-				Some(&Anchor::<Always>::to(Entity::from_raw(11)).on_fix_point(Spawner::Center)),
+				Some(
+					&Anchor::<Always>::to(Entity::from_raw(11))
+						.on_fix_point(SpawnerFixPoint(Spawner::Center))
+				),
 				None,
 				None,
 				None,
@@ -373,7 +378,7 @@ mod tests {
 				None,
 				Some(
 					&Anchor::<Once>::to(Entity::from_raw(55))
-						.on_fix_point(Spawner::Slot(SlotKey::TopHand(Side::Left)))
+						.on_fix_point(SpawnerFixPoint(Spawner::Slot(SlotKey::TopHand(Side::Left))))
 				),
 				Some(&SetVelocityForward {
 					rotation: Entity::from_raw(55),

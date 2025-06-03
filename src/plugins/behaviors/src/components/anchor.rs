@@ -8,13 +8,13 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	errors::{Error, Level},
-	tools::action_key::slot::{Side, SlotKey},
-	traits::{
-		handles_skill_behaviors::Spawner,
-		track::{IsTracking, Track, Untrack},
-	},
+	traits::track::{IsTracking, Track, Untrack},
 };
-use std::{any::type_name, collections::HashMap, marker::PhantomData};
+use std::{
+	any::{TypeId, type_name},
+	collections::HashMap,
+	marker::PhantomData,
+};
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
 pub(crate) struct Anchor<TFilter> {
@@ -94,20 +94,23 @@ impl<TFilter> AnchorBuilder<TFilter> {
 pub struct AnchorFixPoints(HashMap<AnchorFixPointKey, Entity>);
 
 impl Track<SpawnerFixPoint> for AnchorFixPoints {
-	fn track(&mut self, entity: Entity, SpawnerFixPoint(spawner): &SpawnerFixPoint) {
-		self.0.insert((*spawner).into(), entity);
+	fn track(&mut self, entity: Entity, spawner_fix_point: &SpawnerFixPoint) {
+		self.0.insert((*spawner_fix_point).into(), entity);
 	}
 }
 
 impl Untrack<SpawnerFixPoint> for AnchorFixPoints {
 	fn untrack(&mut self, entity: &Entity) {
-		self.0.retain(|_, e| e == entity);
+		self.0
+			.retain(|k, e| e != entity || k.source_type != TypeId::of::<SpawnerFixPoint>());
 	}
 }
 
 impl IsTracking<SpawnerFixPoint> for AnchorFixPoints {
 	fn is_tracking(&self, entity: &Entity) -> bool {
-		self.0.values().any(|e| e == entity)
+		self.0
+			.iter()
+			.any(|(k, e)| e == entity && k.source_type == TypeId::of::<SpawnerFixPoint>())
 	}
 }
 
@@ -123,16 +126,19 @@ where
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub struct AnchorFixPointKey(pub(crate) usize);
+pub struct AnchorFixPointKey {
+	key: usize,
+	source_type: TypeId,
+}
 
-impl From<Spawner> for AnchorFixPointKey {
-	fn from(value: Spawner) -> Self {
-		match value {
-			Spawner::Center => AnchorFixPointKey(0),
-			Spawner::Slot(SlotKey::BottomHand(Side::Left)) => AnchorFixPointKey(1),
-			Spawner::Slot(SlotKey::BottomHand(Side::Right)) => AnchorFixPointKey(2),
-			Spawner::Slot(SlotKey::TopHand(Side::Left)) => AnchorFixPointKey(3),
-			Spawner::Slot(SlotKey::TopHand(Side::Right)) => AnchorFixPointKey(4),
+impl AnchorFixPointKey {
+	fn new<TSource>(key: usize) -> Self
+	where
+		TSource: 'static,
+	{
+		Self {
+			key,
+			source_type: TypeId::of::<TSource>(),
 		}
 	}
 }
@@ -173,8 +179,7 @@ impl From<AnchorError> for Error {
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{test_tools::utils::SingleThreadedApp, traits::iteration::IterFinite};
-	use std::collections::HashSet;
+	use common::{test_tools::utils::SingleThreadedApp, traits::handles_skill_behaviors::Spawner};
 
 	struct _NotIgnored;
 
@@ -198,12 +203,15 @@ mod tests {
 			.id();
 		let entity = app
 			.world_mut()
-			.spawn(AnchorFixPoints::from([(AnchorFixPointKey(11), fix_point)]))
+			.spawn(AnchorFixPoints::from([(
+				AnchorFixPointKey::new::<()>(11),
+				fix_point,
+			)]))
 			.id();
 		let agent = app
 			.world_mut()
 			.spawn((
-				Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey(11)),
+				Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey::new::<()>(11)),
 				Transform::default(),
 			))
 			.id();
@@ -230,12 +238,15 @@ mod tests {
 			.id();
 		let entity = app
 			.world_mut()
-			.spawn(AnchorFixPoints::from([(AnchorFixPointKey(11), fix_point)]))
+			.spawn(AnchorFixPoints::from([(
+				AnchorFixPointKey::new::<()>(11),
+				fix_point,
+			)]))
 			.id();
 		let agent = app
 			.world_mut()
 			.spawn((
-				Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey(11)),
+				Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey::new::<()>(11)),
 				Transform::default(),
 			))
 			.id();
@@ -260,12 +271,15 @@ mod tests {
 			.id();
 		let entity = app
 			.world_mut()
-			.spawn(AnchorFixPoints::from([(AnchorFixPointKey(11), fix_point)]))
+			.spawn(AnchorFixPoints::from([(
+				AnchorFixPointKey::new::<()>(11),
+				fix_point,
+			)]))
 			.id();
 		let agent = app
 			.world_mut()
 			.spawn((
-				Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey(11)),
+				Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey::new::<()>(11)),
 				Transform::from_scale(Vec3::new(3., 4., 5.)),
 			))
 			.id();
@@ -290,12 +304,15 @@ mod tests {
 			.id();
 		let entity = app
 			.world_mut()
-			.spawn(AnchorFixPoints::from([(AnchorFixPointKey(11), fix_point)]))
+			.spawn(AnchorFixPoints::from([(
+				AnchorFixPointKey::new::<()>(11),
+				fix_point,
+			)]))
 			.id();
 		let agent = app
 			.world_mut()
 			.spawn((
-				Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey(11)),
+				Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey::new::<()>(11)),
 				Transform::default(),
 				_Ignore,
 			))
@@ -319,7 +336,7 @@ mod tests {
 		_ = app
 			.world_mut()
 			.spawn((
-				Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey(11)),
+				Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey::new::<()>(11)),
 				Transform::default(),
 			))
 			.id();
@@ -337,7 +354,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app.world_mut().spawn(AnchorFixPoints::default()).id();
 		app.world_mut().spawn((
-			Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey(11)),
+			Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey::new::<()>(11)),
 			Transform::default(),
 		));
 
@@ -346,7 +363,9 @@ mod tests {
 			.run_system_once(Anchor::<_NotIgnored>::system)?;
 
 		assert_eq!(
-			vec![Err(AnchorError::NoFixPointEntityFor(AnchorFixPointKey(11)))],
+			vec![Err(AnchorError::NoFixPointEntityFor(
+				AnchorFixPointKey::new::<()>(11)
+			))],
 			errors
 		);
 		Ok(())
@@ -358,12 +377,15 @@ mod tests {
 		let fix_point = app.world_mut().spawn_empty().id();
 		let entity = app
 			.world_mut()
-			.spawn(AnchorFixPoints::from([(AnchorFixPointKey(11), fix_point)]))
+			.spawn(AnchorFixPoints::from([(
+				AnchorFixPointKey::new::<()>(11),
+				fix_point,
+			)]))
 			.id();
 		_ = app
 			.world_mut()
 			.spawn((
-				Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey(11)),
+				Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey::new::<()>(11)),
 				Transform::default(),
 			))
 			.id();
@@ -380,18 +402,60 @@ mod tests {
 	}
 
 	#[test]
-	fn spawner_to_anchor_fix_point_key_has_no_duplicate_values() {
-		let slot_keys = SlotKey::iterator()
-			.map(Spawner::Slot)
-			.chain(std::iter::once(Spawner::Center))
-			.collect::<Vec<_>>();
+	fn track() {
+		let mut anchor_points = AnchorFixPoints::default();
 
-		let anchor_keys = slot_keys
-			.iter()
-			.copied()
-			.map(AnchorFixPointKey::from)
-			.collect::<HashSet<_>>();
+		anchor_points.track(Entity::from_raw(42), &SpawnerFixPoint(Spawner::Center));
 
-		assert_eq!(slot_keys.len(), anchor_keys.len());
+		assert_eq!(
+			AnchorFixPoints::from([(
+				AnchorFixPointKey::from(SpawnerFixPoint(Spawner::Center)),
+				Entity::from_raw(42)
+			)]),
+			anchor_points
+		);
+	}
+
+	#[test]
+	fn is_tracking() {
+		let anchor_points = AnchorFixPoints::from([(
+			AnchorFixPointKey::from(SpawnerFixPoint(Spawner::Center)),
+			Entity::from_raw(42),
+		)]);
+
+		assert!(anchor_points.is_tracking(&Entity::from_raw(42)));
+	}
+
+	#[test]
+	fn is_tracking_false_on_type_mismatch() {
+		let anchor_points =
+			AnchorFixPoints::from([(AnchorFixPointKey::new::<()>(42), Entity::from_raw(42))]);
+
+		assert!(!anchor_points.is_tracking(&Entity::from_raw(42)));
+	}
+
+	#[test]
+	fn untrack() {
+		let mut anchor_points = AnchorFixPoints::from([(
+			AnchorFixPointKey::from(SpawnerFixPoint(Spawner::Center)),
+			Entity::from_raw(42),
+		)]);
+
+		anchor_points.untrack(&Entity::from_raw(42));
+
+		assert_eq!(AnchorFixPoints::default(), anchor_points);
+	}
+
+	#[test]
+	fn do_not_untrack_on_type_mismatch() {
+		let mut anchor_points =
+			AnchorFixPoints::from([(AnchorFixPointKey::new::<()>(42), Entity::from_raw(42))]);
+
+		anchor_points.untrack(&Entity::from_raw(42));
+
+		assert_eq!(
+			AnchorFixPoints::from([(AnchorFixPointKey::new::<()>(42), Entity::from_raw(42))]),
+			anchor_points
+		);
 	}
 }
