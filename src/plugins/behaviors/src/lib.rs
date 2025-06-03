@@ -45,9 +45,9 @@ use components::{
 	Always,
 	Once,
 	OverrideFace,
+	anchor::Anchor,
 	ground_target::GroundTarget,
 	movement::{Movement, path_or_wasd::PathOrWasd, velocity_based::VelocityBased},
-	set_position_and_rotation::SetPositionAndRotation,
 	set_to_move_forward::SetVelocityForward,
 	skill_behavior::{skill_contact::SkillContact, skill_projection::SkillProjection},
 	when_traveled_insert::InsertAfterDistanceTraveled,
@@ -204,8 +204,8 @@ where
 						GroundTarget::set_position,
 						InsertAfterDistanceTraveled::<TLifeCycles::TDestroy, Velocity>::system,
 						SetVelocityForward::system,
-						SetPositionAndRotation::<Always>::system,
-						SetPositionAndRotation::<Once>::system,
+						Anchor::<Always>::system.pipe(log_many),
+						Anchor::<Once>::system.pipe(log_many),
 					),
 					// Apply facing
 					(

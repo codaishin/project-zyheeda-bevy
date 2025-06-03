@@ -4,8 +4,8 @@ pub mod skill_projection;
 use super::{
 	Always,
 	Once,
+	anchor::Anchor,
 	ground_target::GroundTarget,
-	set_position_and_rotation::SetPositionAndRotation,
 	set_to_move_forward::SetVelocityForward,
 	when_traveled_insert::WhenTraveled,
 };
@@ -150,10 +150,7 @@ impl SimplePrefab for Motion {
 	{
 		match *self {
 			Motion::HeldBy { spawner } => {
-				entity.try_insert((
-					RigidBody::Fixed,
-					SetPositionAndRotation::<Always>::to(spawner),
-				));
+				entity.try_insert((RigidBody::Fixed, Anchor::<Always>::to_fix_point_of(spawner)));
 			}
 			Motion::Stationary {
 				caster,
@@ -179,7 +176,7 @@ impl SimplePrefab for Motion {
 					RigidBody::Dynamic,
 					GravityScale(0.),
 					Ccd::enabled(),
-					SetPositionAndRotation::<Once>::to(spawner),
+					Anchor::<Once>::to_fix_point_of(spawner),
 					SetVelocityForward {
 						rotation: caster,
 						speed,
@@ -275,7 +272,7 @@ mod tests {
 				None,
 				None,
 				None,
-				Some(&SetPositionAndRotation::<Always>::to(Entity::from_raw(11))),
+				Some(&Anchor::<Always>::to_fix_point_of(Entity::from_raw(11))),
 				None,
 				None,
 				None,
@@ -285,12 +282,8 @@ mod tests {
 				app.world().entity(entity).get::<GravityScale>(),
 				app.world().entity(entity).get::<Ccd>(),
 				app.world().entity(entity).get::<GroundTarget>(),
-				app.world()
-					.entity(entity)
-					.get::<SetPositionAndRotation<Always>>(),
-				app.world()
-					.entity(entity)
-					.get::<SetPositionAndRotation<Once>>(),
+				app.world().entity(entity).get::<Anchor<Always>>(),
+				app.world().entity(entity).get::<Anchor<Once>>(),
 				app.world().entity(entity).get::<SetVelocityForward>(),
 				app.world()
 					.entity(entity)
@@ -339,12 +332,8 @@ mod tests {
 				app.world().entity(entity).get::<GravityScale>(),
 				app.world().entity(entity).get::<Ccd>(),
 				app.world().entity(entity).get::<GroundTarget>(),
-				app.world()
-					.entity(entity)
-					.get::<SetPositionAndRotation<Always>>(),
-				app.world()
-					.entity(entity)
-					.get::<SetPositionAndRotation<Once>>(),
+				app.world().entity(entity).get::<Anchor<Always>>(),
+				app.world().entity(entity).get::<Anchor<Once>>(),
 				app.world().entity(entity).get::<SetVelocityForward>(),
 				app.world()
 					.entity(entity)
@@ -375,7 +364,7 @@ mod tests {
 				Some(&Ccd::enabled()),
 				None,
 				None,
-				Some(&SetPositionAndRotation::<Once>::to(Entity::from_raw(66))),
+				Some(&Anchor::<Once>::to_fix_point_of(Entity::from_raw(66))),
 				Some(&SetVelocityForward {
 					rotation: Entity::from_raw(55),
 					speed: UnitsPerSecond::new(11.),
@@ -391,12 +380,8 @@ mod tests {
 				app.world().entity(entity).get::<GravityScale>(),
 				app.world().entity(entity).get::<Ccd>(),
 				app.world().entity(entity).get::<GroundTarget>(),
-				app.world()
-					.entity(entity)
-					.get::<SetPositionAndRotation<Always>>(),
-				app.world()
-					.entity(entity)
-					.get::<SetPositionAndRotation<Once>>(),
+				app.world().entity(entity).get::<Anchor<Always>>(),
+				app.world().entity(entity).get::<Anchor<Once>>(),
 				app.world().entity(entity).get::<SetVelocityForward>(),
 				app.world()
 					.entity(entity)

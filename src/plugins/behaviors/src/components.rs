@@ -1,8 +1,8 @@
 pub mod ground_target;
 pub mod skill_behavior;
 
+pub(crate) mod anchor;
 pub(crate) mod movement;
-pub(crate) mod set_position_and_rotation;
 pub(crate) mod set_to_move_forward;
 pub(crate) mod when_traveled_insert;
 
