@@ -1,7 +1,7 @@
 use crate::{
 	blocker::Blocker,
 	components::AssetModel,
-	tools::{Units, UnitsPerSecond},
+	tools::{Units, UnitsPerSecond, action_key::slot::SlotKey},
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
@@ -36,7 +36,7 @@ pub enum Integrity {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Motion {
 	HeldBy {
-		spawner: Entity,
+		caster: Entity,
 	},
 	Stationary {
 		caster: Entity,
@@ -45,10 +45,17 @@ pub enum Motion {
 	},
 	Projectile {
 		caster: Entity,
-		spawner: Entity,
+		spawner: Spawner,
 		speed: UnitsPerSecond,
 		max_range: Units,
 	},
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Default)]
+pub enum Spawner {
+	#[default]
+	Center,
+	Slot(SlotKey),
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]

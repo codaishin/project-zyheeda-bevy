@@ -17,7 +17,7 @@ use common::{
 	traits::{
 		handles_destruction::HandlesDestruction,
 		handles_interactions::HandlesInteractions,
-		handles_skill_behaviors::{Integrity, Motion, Shape},
+		handles_skill_behaviors::{Integrity, Motion, Shape, Spawner},
 	},
 };
 use std::f32::consts::PI;
@@ -149,8 +149,11 @@ impl SimplePrefab for Motion {
 		TLifeCycles: HandlesDestruction,
 	{
 		match *self {
-			Motion::HeldBy { spawner } => {
-				entity.try_insert((RigidBody::Fixed, Anchor::<Always>::to_fix_point_of(spawner)));
+			Motion::HeldBy { caster } => {
+				entity.try_insert((
+					RigidBody::Fixed,
+					Anchor::<Always>::to(caster).on_fix_point(Spawner::Center),
+				));
 			}
 			Motion::Stationary {
 				caster,
@@ -176,7 +179,7 @@ impl SimplePrefab for Motion {
 					RigidBody::Dynamic,
 					GravityScale(0.),
 					Ccd::enabled(),
-					Anchor::<Once>::to_fix_point_of(spawner),
+					Anchor::<Once>::to(caster).on_fix_point(spawner),
 					SetVelocityForward {
 						rotation: caster,
 						speed,
@@ -199,7 +202,11 @@ mod tests {
 	use bevy_rapier3d::prelude::ActiveCollisionTypes;
 	use common::{
 		blocker::Blocker,
-		tools::{Units, UnitsPerSecond},
+		tools::{
+			Units,
+			UnitsPerSecond,
+			action_key::slot::{Side, SlotKey},
+		},
 		traits::{
 			clamp_zero_positive::ClampZeroPositive,
 			handles_destruction::HandlesDestruction,
@@ -259,7 +266,7 @@ mod tests {
 	fn held_components() -> Result<(), RunSystemError> {
 		let (mut app, entity) = setup();
 		let motion = Motion::HeldBy {
-			spawner: Entity::from_raw(11),
+			caster: Entity::from_raw(11),
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
@@ -272,7 +279,7 @@ mod tests {
 				None,
 				None,
 				None,
-				Some(&Anchor::<Always>::to_fix_point_of(Entity::from_raw(11))),
+				Some(&Anchor::<Always>::to(Entity::from_raw(11)).on_fix_point(Spawner::Center)),
 				None,
 				None,
 				None,
@@ -348,7 +355,7 @@ mod tests {
 		let (mut app, entity) = setup();
 		let motion = Motion::Projectile {
 			caster: Entity::from_raw(55),
-			spawner: Entity::from_raw(66),
+			spawner: Spawner::Slot(SlotKey::TopHand(Side::Left)),
 			speed: UnitsPerSecond::new(11.),
 			max_range: Units::new(1111.),
 		};
@@ -364,7 +371,10 @@ mod tests {
 				Some(&Ccd::enabled()),
 				None,
 				None,
-				Some(&Anchor::<Once>::to_fix_point_of(Entity::from_raw(66))),
+				Some(
+					&Anchor::<Once>::to(Entity::from_raw(55))
+						.on_fix_point(Spawner::Slot(SlotKey::TopHand(Side::Left)))
+				),
 				Some(&SetVelocityForward {
 					rotation: Entity::from_raw(55),
 					speed: UnitsPerSecond::new(11.),

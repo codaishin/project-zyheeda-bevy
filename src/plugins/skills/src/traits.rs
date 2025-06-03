@@ -13,7 +13,7 @@ pub(crate) mod write_item;
 
 use crate::{
 	behaviors::SkillCaster,
-	components::{SkillTarget, skill_spawners::SkillSpawners},
+	components::SkillTarget,
 	skills::{AnimationStrategy, RunSkillBehavior, Skill},
 };
 use common::{
@@ -115,15 +115,7 @@ pub trait Schedule<TBehavior> {
 }
 
 pub(crate) trait Execute<TCommands, TLifetimes, TEffects, TSkillBehavior> {
-	type TError;
-
-	fn execute(
-		&mut self,
-		commands: &mut TCommands,
-		caster: &SkillCaster,
-		spawners: &SkillSpawners,
-		target: &SkillTarget,
-	) -> Result<(), Self::TError>;
+	fn execute(&mut self, commands: &mut TCommands, caster: &SkillCaster, target: &SkillTarget);
 }
 
 pub trait ShouldEnqueue {

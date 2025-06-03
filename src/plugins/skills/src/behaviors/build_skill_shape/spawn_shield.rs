@@ -1,5 +1,5 @@
 use crate::{
-	behaviors::{SkillCaster, SkillSpawner},
+	behaviors::SkillCaster,
 	components::SkillTarget,
 	skills::lifetime_definition::LifeTimeDefinition,
 	traits::skill_builder::{BuildContact, BuildProjection, SkillLifetime},
@@ -17,6 +17,7 @@ use common::{
 			Motion,
 			ProjectionOffset,
 			Shape,
+			Spawner,
 		},
 	},
 };
@@ -28,14 +29,14 @@ pub struct SpawnShield;
 impl BuildContact for SpawnShield {
 	fn build_contact<TSkillBehaviors>(
 		&self,
-		_: &SkillCaster,
-		spawner: &SkillSpawner,
+		caster: &SkillCaster,
+		_: Spawner,
 		_: &SkillTarget,
 	) -> TSkillBehaviors::TSkillContact
 	where
 		TSkillBehaviors: HandlesSkillBehaviors,
 	{
-		let SkillSpawner(spawner) = *spawner;
+		let SkillCaster(caster) = *caster;
 
 		TSkillBehaviors::skill_contact(
 			Shape::Custom {
@@ -44,7 +45,7 @@ impl BuildContact for SpawnShield {
 				scale: Vec3::splat(1.),
 			},
 			Integrity::Solid,
-			Motion::HeldBy { spawner },
+			Motion::HeldBy { caster },
 		)
 	}
 }
@@ -53,7 +54,7 @@ impl BuildProjection for SpawnShield {
 	fn build_projection<TSkillBehaviors>(
 		&self,
 		_: &SkillCaster,
-		_: &SkillSpawner,
+		_: Spawner,
 		_: &SkillTarget,
 	) -> TSkillBehaviors::TSkillProjection
 	where

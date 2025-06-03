@@ -5,7 +5,6 @@ use crate::{
 	behaviors::{
 		SkillBehaviorConfig,
 		SkillCaster,
-		SkillSpawner,
 		build_skill_shape::{BuildSkillShape, OnSkillStop},
 		spawn_on::SpawnOn,
 	},
@@ -27,7 +26,7 @@ use common::{
 		handles_effect::HandlesAllEffects,
 		handles_lifetime::HandlesLifetime,
 		handles_localization::Token,
-		handles_skill_behaviors::HandlesSkillBehaviors,
+		handles_skill_behaviors::{HandlesSkillBehaviors, Spawner},
 		inspect_able::InspectAble,
 		load_asset::Path,
 	},
@@ -215,7 +214,7 @@ impl SpawnSkillBehavior<Commands<'_, '_>> for RunSkillBehavior {
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
-		spawner: &SkillSpawner,
+		spawner: Spawner,
 		target: &SkillTarget,
 	) -> OnSkillStop
 	where
@@ -238,7 +237,7 @@ fn spawn<TLifetimes, TEffects, TSkillBehaviors>(
 	behavior: &SkillBehaviorConfig,
 	commands: &mut Commands,
 	caster: &SkillCaster,
-	spawner: &SkillSpawner,
+	spawner: Spawner,
 	target: &SkillTarget,
 ) -> OnSkillStop
 where
@@ -278,7 +277,7 @@ mod tests {
 	#[derive(Component, Debug, PartialEq)]
 	struct _Args {
 		caster: SkillCaster,
-		spawner: SkillSpawner,
+		spawner: Spawner,
 		target: SkillTarget,
 	}
 
@@ -328,10 +327,10 @@ mod tests {
 		}
 	}
 
-	fn behavior(e: &mut EntityCommands, c: &SkillCaster, s: &SkillSpawner, t: &SkillTarget) {
+	fn behavior(e: &mut EntityCommands, c: &SkillCaster, s: Spawner, t: &SkillTarget) {
 		e.try_insert(_Args {
 			caster: *c,
-			spawner: *s,
+			spawner: s,
 			target: *t,
 		});
 	}
@@ -391,7 +390,7 @@ mod tests {
 					contact: cmd
 						.spawn(_Args {
 							caster: *caster,
-							spawner: *spawner,
+							spawner,
 							target: *target,
 						})
 						.id(),
@@ -402,13 +401,13 @@ mod tests {
 			.spawning_on(SpawnOn::Slot),
 		);
 		let caster = SkillCaster(Entity::from_raw(1));
-		let spawner = SkillSpawner(Entity::from_raw(2));
+		let spawner = Spawner::Center;
 		let target = get_target();
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
 				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesSkillBehaviors>(
-					cmd, &caster, &spawner, &target,
+					cmd, &caster, spawner, &target,
 				);
 			})?;
 
@@ -432,7 +431,7 @@ mod tests {
 					contact: cmd
 						.spawn(_Args {
 							caster: *caster,
-							spawner: *spawner,
+							spawner,
 							target: *target,
 						})
 						.id(),
@@ -443,13 +442,13 @@ mod tests {
 			.spawning_on(SpawnOn::Center),
 		);
 		let caster = SkillCaster(Entity::from_raw(1));
-		let spawner = SkillSpawner(Entity::from_raw(2));
+		let spawner = Spawner::Center;
 		let target = get_target();
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
 				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesSkillBehaviors>(
-					cmd, &caster, &spawner, &target,
+					cmd, &caster, spawner, &target,
 				);
 			})?;
 
@@ -466,12 +465,7 @@ mod tests {
 
 	#[test]
 	fn apply_contact_behavior_on_active() -> Result<(), RunSystemError> {
-		fn shape(
-			cmd: &mut Commands,
-			_: &SkillCaster,
-			_: &SkillSpawner,
-			_: &SkillTarget,
-		) -> SkillShape {
+		fn shape(cmd: &mut Commands, _: &SkillCaster, _: Spawner, _: &SkillTarget) -> SkillShape {
 			SkillShape {
 				contact: cmd.spawn(_Contact).id(),
 				projection: cmd.spawn_empty().id(),
@@ -485,13 +479,13 @@ mod tests {
 				.with_contact_behaviors(vec![SkillBehavior::Fn(behavior)]),
 		);
 		let caster = SkillCaster(Entity::from_raw(1));
-		let spawner = SkillSpawner(Entity::from_raw(2));
+		let spawner = Spawner::Center;
 		let target = get_target();
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
 				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesSkillBehaviors>(
-					cmd, &caster, &spawner, &target,
+					cmd, &caster, spawner, &target,
 				);
 			})?;
 
@@ -514,7 +508,7 @@ mod tests {
 				contact: cmd
 					.spawn(_Args {
 						caster: *caster,
-						spawner: *spawner,
+						spawner,
 						target: *target,
 					})
 					.id(),
@@ -523,13 +517,13 @@ mod tests {
 			}),
 		));
 		let caster = SkillCaster(Entity::from_raw(1));
-		let spawner = SkillSpawner(Entity::from_raw(2));
+		let spawner = Spawner::Center;
 		let target = get_target();
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
 				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesSkillBehaviors>(
-					cmd, &caster, &spawner, &target,
+					cmd, &caster, spawner, &target,
 				);
 			})?;
 
@@ -546,12 +540,7 @@ mod tests {
 
 	#[test]
 	fn apply_projection_behavior_on_active() -> Result<(), RunSystemError> {
-		fn shape(
-			cmd: &mut Commands,
-			_: &SkillCaster,
-			_: &SkillSpawner,
-			_: &SkillTarget,
-		) -> SkillShape {
+		fn shape(cmd: &mut Commands, _: &SkillCaster, _: Spawner, _: &SkillTarget) -> SkillShape {
 			SkillShape {
 				contact: cmd.spawn_empty().id(),
 				projection: cmd.spawn(_Projection).id(),
@@ -565,13 +554,13 @@ mod tests {
 				.with_projection_behaviors(vec![SkillBehavior::Fn(behavior)]),
 		);
 		let caster = SkillCaster(Entity::from_raw(1));
-		let spawner = SkillSpawner(Entity::from_raw(2));
+		let spawner = Spawner::Center;
 		let target = get_target();
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
 				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesSkillBehaviors>(
-					cmd, &caster, &spawner, &target,
+					cmd, &caster, spawner, &target,
 				);
 			})?;
 
@@ -602,7 +591,7 @@ mod tests {
 					contact: cmd
 						.spawn(_Args {
 							caster: *caster,
-							spawner: *spawner,
+							spawner,
 							target: *target,
 						})
 						.id(),
@@ -613,13 +602,13 @@ mod tests {
 			.spawning_on(SpawnOn::Slot),
 		);
 		let caster = SkillCaster(Entity::from_raw(1));
-		let spawner = SkillSpawner(Entity::from_raw(2));
+		let spawner = Spawner::Center;
 		let target = get_target();
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
 				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesSkillBehaviors>(
-					cmd, &caster, &spawner, &target,
+					cmd, &caster, spawner, &target,
 				);
 			})?;
 
@@ -643,7 +632,7 @@ mod tests {
 					contact: cmd
 						.spawn(_Args {
 							caster: *caster,
-							spawner: *spawner,
+							spawner,
 							target: *target,
 						})
 						.id(),
@@ -654,13 +643,13 @@ mod tests {
 			.spawning_on(SpawnOn::Center),
 		);
 		let caster = SkillCaster(Entity::from_raw(1));
-		let spawner = SkillSpawner(Entity::from_raw(2));
+		let spawner = Spawner::Center;
 		let target = get_target();
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
 				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesSkillBehaviors>(
-					cmd, &caster, &spawner, &target,
+					cmd, &caster, spawner, &target,
 				);
 			})?;
 
@@ -680,12 +669,7 @@ mod tests {
 		#[derive(Component)]
 		struct _Contact;
 
-		fn shape(
-			cmd: &mut Commands,
-			_: &SkillCaster,
-			_: &SkillSpawner,
-			_: &SkillTarget,
-		) -> SkillShape {
+		fn shape(cmd: &mut Commands, _: &SkillCaster, _: Spawner, _: &SkillTarget) -> SkillShape {
 			SkillShape {
 				contact: cmd.spawn(_Contact).id(),
 				projection: cmd.spawn_empty().id(),
@@ -699,13 +683,13 @@ mod tests {
 				.with_contact_behaviors(vec![SkillBehavior::Fn(behavior)]),
 		);
 		let caster = SkillCaster(Entity::from_raw(1));
-		let spawner = SkillSpawner(Entity::from_raw(2));
+		let spawner = Spawner::Center;
 		let target = get_target();
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
 				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesSkillBehaviors>(
-					cmd, &caster, &spawner, &target,
+					cmd, &caster, spawner, &target,
 				);
 			})?;
 
@@ -735,7 +719,7 @@ mod tests {
 				contact: cmd
 					.spawn(_Args {
 						caster: *caster,
-						spawner: *spawner,
+						spawner,
 						target: *target,
 					})
 					.id(),
@@ -744,13 +728,13 @@ mod tests {
 			}),
 		));
 		let caster = SkillCaster(Entity::from_raw(1));
-		let spawner = SkillSpawner(Entity::from_raw(2));
+		let spawner = Spawner::Center;
 		let target = get_target();
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
 				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesSkillBehaviors>(
-					cmd, &caster, &spawner, &target,
+					cmd, &caster, spawner, &target,
 				);
 			})?;
 
@@ -770,12 +754,7 @@ mod tests {
 		#[derive(Component)]
 		struct _Projection;
 
-		fn shape(
-			cmd: &mut Commands,
-			_: &SkillCaster,
-			_: &SkillSpawner,
-			_: &SkillTarget,
-		) -> SkillShape {
+		fn shape(cmd: &mut Commands, _: &SkillCaster, _: Spawner, _: &SkillTarget) -> SkillShape {
 			SkillShape {
 				contact: cmd.spawn_empty().id(),
 				projection: cmd.spawn(_Projection).id(),
@@ -789,13 +768,13 @@ mod tests {
 				.with_projection_behaviors(vec![SkillBehavior::Fn(behavior)]),
 		);
 		let caster = SkillCaster(Entity::from_raw(1));
-		let spawner = SkillSpawner(Entity::from_raw(2));
+		let spawner = Spawner::Center;
 		let target = get_target();
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
 				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesSkillBehaviors>(
-					cmd, &caster, &spawner, &target,
+					cmd, &caster, spawner, &target,
 				);
 			})?;
 

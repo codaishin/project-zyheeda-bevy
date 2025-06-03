@@ -1,13 +1,18 @@
 use super::{Always, Once};
 use crate::traits::has_filter::HasFilter;
 use bevy::prelude::*;
-use common::errors::{Error, Level};
-use std::{any::type_name, marker::PhantomData};
+use common::{
+	errors::{Error, Level},
+	tools::action_key::slot::{Side, SlotKey},
+	traits::handles_skill_behaviors::Spawner,
+};
+use std::{any::type_name, collections::HashMap, marker::PhantomData};
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
 pub(crate) struct Anchor<TFilter> {
 	pub(crate) target: Entity,
-	phantom_data: PhantomData<TFilter>,
+	pub(crate) fix_point_key: AnchorFixPointKey,
+	_p: PhantomData<TFilter>,
 }
 
 impl HasFilter for Anchor<Once> {
@@ -22,26 +27,29 @@ impl<TFilter> Anchor<TFilter>
 where
 	Self: HasFilter + Send + Sync + 'static,
 {
-	pub(crate) fn to_fix_point_of(target: Entity) -> Self {
-		Self {
+	pub(crate) fn to(target: Entity) -> AnchorBuilder<TFilter> {
+		AnchorBuilder {
 			target,
-			phantom_data: PhantomData,
+			_p: PhantomData,
 		}
 	}
 
 	pub(crate) fn system(
 		mut agents: Query<(&Self, &mut Transform), <Self as HasFilter>::TFilter>,
-		fix_points: Query<&AnchorFixPoint>,
+		fix_points: Query<&AnchorFixPoints>,
 		transforms: Query<&GlobalTransform>,
 	) -> Vec<Result<(), AnchorError>> {
 		agents
 			.iter_mut()
 			.filter_map(|(anchor, mut anchor_transform)| {
-				let Ok(AnchorFixPoint(fix_point)) = fix_points.get(anchor.target) else {
-					return Some(AnchorError::NoFixPointOn(anchor.target));
+				let Ok(AnchorFixPoints(fix_points)) = fix_points.get(anchor.target) else {
+					return Some(AnchorError::FixPointsMissingOn(anchor.target));
 				};
-				let Ok(fix_point) = transforms.get(*fix_point) else {
-					return Some(AnchorError::NoGlobalTransformOn(*fix_point));
+				let Some(fix_point) = fix_points.get(&anchor.fix_point_key).copied() else {
+					return Some(AnchorError::NoFixPointEntityFor(anchor.fix_point_key));
+				};
+				let Ok(fix_point) = transforms.get(fix_point) else {
+					return Some(AnchorError::GlobalTransformMissingOn(fix_point));
 				};
 
 				let fix_point = Transform::from(*fix_point);
@@ -56,32 +64,76 @@ where
 	}
 }
 
-#[derive(Component, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub struct AnchorFixPoint(Entity);
+pub(crate) struct AnchorBuilder<TFilter> {
+	target: Entity,
+	_p: PhantomData<TFilter>,
+}
+
+impl<TFilter> AnchorBuilder<TFilter> {
+	pub(crate) fn on_fix_point<TFixPoint>(self, fix_point_key: TFixPoint) -> Anchor<TFilter>
+	where
+		TFixPoint: Into<AnchorFixPointKey>,
+	{
+		Anchor {
+			target: self.target,
+			fix_point_key: fix_point_key.into(),
+			_p: PhantomData,
+		}
+	}
+}
+
+#[derive(Component, Debug, PartialEq, Clone)]
+pub struct AnchorFixPoints(HashMap<AnchorFixPointKey, Entity>);
+
+impl<const N: usize> From<[(AnchorFixPointKey, Entity); N]> for AnchorFixPoints {
+	fn from(fix_points: [(AnchorFixPointKey, Entity); N]) -> Self {
+		Self(HashMap::from(fix_points))
+	}
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub struct AnchorFixPointKey(usize);
+
+impl From<Spawner> for AnchorFixPointKey {
+	fn from(value: Spawner) -> Self {
+		match value {
+			Spawner::Center => AnchorFixPointKey(0),
+			Spawner::Slot(SlotKey::BottomHand(Side::Left)) => AnchorFixPointKey(1),
+			Spawner::Slot(SlotKey::BottomHand(Side::Right)) => AnchorFixPointKey(2),
+			Spawner::Slot(SlotKey::TopHand(Side::Left)) => AnchorFixPointKey(3),
+			Spawner::Slot(SlotKey::TopHand(Side::Right)) => AnchorFixPointKey(4),
+		}
+	}
+}
 
 #[derive(Component, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum AnchorError {
-	NoFixPointOn(Entity),
-	NoGlobalTransformOn(Entity),
+	NoFixPointEntityFor(AnchorFixPointKey),
+	FixPointsMissingOn(Entity),
+	GlobalTransformMissingOn(Entity),
 }
 
 impl From<AnchorError> for Error {
 	fn from(error: AnchorError) -> Self {
 		match error {
-			AnchorError::NoFixPointOn(entity) => {
-				let type_name = type_name::<AnchorFixPoint>();
+			AnchorError::FixPointsMissingOn(entity) => {
+				let type_name = type_name::<AnchorFixPoints>();
 				Self {
 					msg: format!("{entity}: {type_name} missing"),
 					lvl: Level::Error,
 				}
 			}
-			AnchorError::NoGlobalTransformOn(entity) => {
+			AnchorError::GlobalTransformMissingOn(entity) => {
 				let type_name = type_name::<GlobalTransform>();
 				Self {
 					msg: format!("{entity}: {type_name} missing"),
 					lvl: Level::Error,
 				}
 			}
+			AnchorError::NoFixPointEntityFor(anchor_fix_point_key) => Self {
+				msg: format!("{anchor_fix_point_key:?} missing"),
+				lvl: Level::Error,
+			},
 		}
 	}
 }
@@ -90,7 +142,8 @@ impl From<AnchorError> for Error {
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::test_tools::utils::SingleThreadedApp;
+	use common::{test_tools::utils::SingleThreadedApp, traits::iteration::IterFinite};
+	use std::collections::HashSet;
 
 	struct _NotIgnored;
 
@@ -112,11 +165,14 @@ mod tests {
 			.world_mut()
 			.spawn(GlobalTransform::from_xyz(4., 11., 9.))
 			.id();
-		let entity = app.world_mut().spawn(AnchorFixPoint(fix_point)).id();
+		let entity = app
+			.world_mut()
+			.spawn(AnchorFixPoints::from([(AnchorFixPointKey(11), fix_point)]))
+			.id();
 		let agent = app
 			.world_mut()
 			.spawn((
-				Anchor::<_NotIgnored>::to_fix_point_of(entity),
+				Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey(11)),
 				Transform::default(),
 			))
 			.id();
@@ -141,11 +197,14 @@ mod tests {
 				Transform::default().looking_at(Vec3::new(0., 0., 1.), Vec3::Y),
 			))
 			.id();
-		let entity = app.world_mut().spawn(AnchorFixPoint(fix_point)).id();
+		let entity = app
+			.world_mut()
+			.spawn(AnchorFixPoints::from([(AnchorFixPointKey(11), fix_point)]))
+			.id();
 		let agent = app
 			.world_mut()
 			.spawn((
-				Anchor::<_NotIgnored>::to_fix_point_of(entity),
+				Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey(11)),
 				Transform::default(),
 			))
 			.id();
@@ -168,11 +227,14 @@ mod tests {
 			.world_mut()
 			.spawn(GlobalTransform::from(Transform::default()))
 			.id();
-		let entity = app.world_mut().spawn(AnchorFixPoint(fix_point)).id();
+		let entity = app
+			.world_mut()
+			.spawn(AnchorFixPoints::from([(AnchorFixPointKey(11), fix_point)]))
+			.id();
 		let agent = app
 			.world_mut()
 			.spawn((
-				Anchor::<_NotIgnored>::to_fix_point_of(entity),
+				Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey(11)),
 				Transform::from_scale(Vec3::new(3., 4., 5.)),
 			))
 			.id();
@@ -195,11 +257,14 @@ mod tests {
 			.world_mut()
 			.spawn(GlobalTransform::from_xyz(4., 11., 9.))
 			.id();
-		let entity = app.world_mut().spawn(AnchorFixPoint(fix_point)).id();
+		let entity = app
+			.world_mut()
+			.spawn(AnchorFixPoints::from([(AnchorFixPointKey(11), fix_point)]))
+			.id();
 		let agent = app
 			.world_mut()
 			.spawn((
-				Anchor::<_NotIgnored>::to_fix_point_of(entity),
+				Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey(11)),
 				Transform::default(),
 				_Ignore,
 			))
@@ -223,7 +288,7 @@ mod tests {
 		_ = app
 			.world_mut()
 			.spawn((
-				Anchor::<_NotIgnored>::to_fix_point_of(entity),
+				Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey(11)),
 				Transform::default(),
 			))
 			.id();
@@ -232,7 +297,27 @@ mod tests {
 			.world_mut()
 			.run_system_once(Anchor::<_NotIgnored>::system)?;
 
-		assert_eq!(vec![Err(AnchorError::NoFixPointOn(entity))], errors);
+		assert_eq!(vec![Err(AnchorError::FixPointsMissingOn(entity))], errors);
+		Ok(())
+	}
+
+	#[test]
+	fn fix_point_entity_missing() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let entity = app.world_mut().spawn(AnchorFixPoints::from([])).id();
+		app.world_mut().spawn((
+			Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey(11)),
+			Transform::default(),
+		));
+
+		let errors = app
+			.world_mut()
+			.run_system_once(Anchor::<_NotIgnored>::system)?;
+
+		assert_eq!(
+			vec![Err(AnchorError::NoFixPointEntityFor(AnchorFixPointKey(11)))],
+			errors
+		);
 		Ok(())
 	}
 
@@ -240,11 +325,14 @@ mod tests {
 	fn transform_missing_on_fix_point() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let fix_point = app.world_mut().spawn_empty().id();
-		let entity = app.world_mut().spawn(AnchorFixPoint(fix_point)).id();
+		let entity = app
+			.world_mut()
+			.spawn(AnchorFixPoints::from([(AnchorFixPointKey(11), fix_point)]))
+			.id();
 		_ = app
 			.world_mut()
 			.spawn((
-				Anchor::<_NotIgnored>::to_fix_point_of(entity),
+				Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey(11)),
 				Transform::default(),
 			))
 			.id();
@@ -254,9 +342,25 @@ mod tests {
 			.run_system_once(Anchor::<_NotIgnored>::system)?;
 
 		assert_eq!(
-			vec![Err(AnchorError::NoGlobalTransformOn(fix_point))],
+			vec![Err(AnchorError::GlobalTransformMissingOn(fix_point))],
 			errors
 		);
 		Ok(())
+	}
+
+	#[test]
+	fn spawner_to_anchor_fix_point_key_has_no_duplicate_values() {
+		let slot_keys = SlotKey::iterator()
+			.map(Spawner::Slot)
+			.chain(std::iter::once(Spawner::Center))
+			.collect::<Vec<_>>();
+
+		let anchor_keys = slot_keys
+			.iter()
+			.copied()
+			.map(AnchorFixPointKey::from)
+			.collect::<HashSet<_>>();
+
+		assert_eq!(slot_keys.len(), anchor_keys.len());
 	}
 }

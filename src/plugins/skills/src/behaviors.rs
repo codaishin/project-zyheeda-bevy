@@ -2,15 +2,18 @@ pub mod build_skill_shape;
 pub mod spawn_on;
 pub mod start_behavior;
 
-use crate::{components::SkillTarget, traits::skill_builder::SkillShape};
+use crate::{
+	behaviors::spawn_on::SpawnOn,
+	components::SkillTarget,
+	traits::skill_builder::SkillShape,
+};
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use build_skill_shape::BuildSkillShape;
 use common::traits::{
 	handles_effect::HandlesAllEffects,
 	handles_lifetime::HandlesLifetime,
-	handles_skill_behaviors::HandlesSkillBehaviors,
+	handles_skill_behaviors::{HandlesSkillBehaviors, Spawner},
 };
-use spawn_on::SpawnOn;
 use start_behavior::SkillBehavior;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -80,7 +83,7 @@ impl SkillBehaviorConfig {
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
-		spawner: &SkillSpawner,
+		spawner: Spawner,
 		target: &SkillTarget,
 	) -> SkillShape
 	where
@@ -95,7 +98,7 @@ impl SkillBehaviorConfig {
 		&self,
 		entity: &mut EntityCommands,
 		caster: &SkillCaster,
-		spawner: &SkillSpawner,
+		spawner: Spawner,
 		target: &SkillTarget,
 	) where
 		TEffects: HandlesAllEffects,
@@ -109,7 +112,7 @@ impl SkillBehaviorConfig {
 		&self,
 		entity: &mut EntityCommands,
 		caster: &SkillCaster,
-		spawner: &SkillSpawner,
+		spawner: Spawner,
 		target: &SkillTarget,
 	) where
 		TEffects: HandlesAllEffects,
