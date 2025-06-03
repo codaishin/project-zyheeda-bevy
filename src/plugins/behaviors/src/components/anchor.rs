@@ -1,10 +1,18 @@
+pub(crate) mod spawner_fix_point;
+
 use super::{Always, Once};
-use crate::traits::has_filter::HasFilter;
+use crate::{
+	components::anchor::spawner_fix_point::SpawnerFixPoint,
+	traits::has_filter::HasFilter,
+};
 use bevy::prelude::*;
 use common::{
 	errors::{Error, Level},
 	tools::action_key::slot::{Side, SlotKey},
-	traits::handles_skill_behaviors::Spawner,
+	traits::{
+		handles_skill_behaviors::Spawner,
+		track::{IsTracking, Track, Untrack},
+	},
 };
 use std::{any::type_name, collections::HashMap, marker::PhantomData};
 
@@ -82,17 +90,40 @@ impl<TFilter> AnchorBuilder<TFilter> {
 	}
 }
 
-#[derive(Component, Debug, PartialEq, Clone)]
+#[derive(Component, Debug, PartialEq, Clone, Default)]
 pub struct AnchorFixPoints(HashMap<AnchorFixPointKey, Entity>);
 
-impl<const N: usize> From<[(AnchorFixPointKey, Entity); N]> for AnchorFixPoints {
-	fn from(fix_points: [(AnchorFixPointKey, Entity); N]) -> Self {
-		Self(HashMap::from(fix_points))
+impl Track<SpawnerFixPoint> for AnchorFixPoints {
+	fn track(&mut self, entity: Entity, SpawnerFixPoint(spawner): &SpawnerFixPoint) {
+		self.0.insert((*spawner).into(), entity);
+	}
+}
+
+impl Untrack<SpawnerFixPoint> for AnchorFixPoints {
+	fn untrack(&mut self, entity: &Entity) {
+		self.0.retain(|_, e| e == entity);
+	}
+}
+
+impl IsTracking<SpawnerFixPoint> for AnchorFixPoints {
+	fn is_tracking(&self, entity: &Entity) -> bool {
+		self.0.values().any(|e| e == entity)
+	}
+}
+
+impl<const N: usize, TKey> From<[(TKey, Entity); N]> for AnchorFixPoints
+where
+	TKey: Into<AnchorFixPointKey>,
+{
+	fn from(fix_points: [(TKey, Entity); N]) -> Self {
+		Self(HashMap::from(
+			fix_points.map(|(key, entity)| (key.into(), entity)),
+		))
 	}
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub struct AnchorFixPointKey(usize);
+pub struct AnchorFixPointKey(pub(crate) usize);
 
 impl From<Spawner> for AnchorFixPointKey {
 	fn from(value: Spawner) -> Self {
@@ -304,7 +335,7 @@ mod tests {
 	#[test]
 	fn fix_point_entity_missing() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let entity = app.world_mut().spawn(AnchorFixPoints::from([])).id();
+		let entity = app.world_mut().spawn(AnchorFixPoints::default()).id();
 		app.world_mut().spawn((
 			Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey(11)),
 			Transform::default(),

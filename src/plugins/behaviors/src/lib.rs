@@ -4,13 +4,19 @@ pub mod traits;
 
 mod systems;
 
-use crate::systems::movement::compute_path::MovementPath;
+use crate::{
+	components::anchor::{AnchorFixPoints, spawner_fix_point::SpawnerFixPoint},
+	systems::movement::compute_path::MovementPath,
+};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use common::{
 	effects::deal_damage::DealDamage,
 	states::game_state::GameState,
-	systems::log::{log_many, log_or_unwrap_option},
+	systems::{
+		log::{log_many, log_or_unwrap_option},
+		track_components::TrackComponentInSelfAndChildren,
+	},
 	tools::action_key::movement::MovementKey,
 	traits::{
 		animation::{HasAnimationsDispatch, RegisterAnimations},
@@ -164,6 +170,8 @@ where
 		>;
 
 		app
+			// Required components
+			.register_required_components::<TPlayers::TPlayer, AnchorFixPoints>()
 			// Observers
 			.add_prefab_observer::<SkillContact, (TInteractions, TLifeCycles)>()
 			.add_prefab_observer::<SkillProjection, (TInteractions, TLifeCycles)>()
@@ -175,6 +183,8 @@ where
 					(
 						PathOrWasd::<VelocityBased>::cleanup,
 						Movement::<VelocityBased>::cleanup,
+						SpawnerFixPoint::insert,
+						AnchorFixPoints::track_in_self_and_children::<SpawnerFixPoint>().system(),
 					)
 						.chain(),
 					// Player behaviors
