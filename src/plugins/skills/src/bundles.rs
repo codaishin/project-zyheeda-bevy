@@ -4,7 +4,6 @@ use crate::{
 		combos_time_out::CombosTimeOut,
 		queue::Queue,
 		skill_executer::SkillExecuter,
-		skill_spawners::SkillSpawners,
 		slots::Slots,
 	},
 	item::Item,
@@ -48,7 +47,6 @@ impl Loadout {
 struct ExecutionBundle {
 	queue: Queue,
 	executor: SkillExecuter<RunSkillBehavior>,
-	skill_spawners: SkillSpawners,
 }
 
 impl Default for ExecutionBundle {
@@ -56,7 +54,6 @@ impl Default for ExecutionBundle {
 		Self {
 			queue: default(),
 			executor: default(),
-			skill_spawners: default(),
 		}
 	}
 }

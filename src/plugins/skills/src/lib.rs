@@ -13,7 +13,6 @@ use bevy::prelude::*;
 use bundles::{ComboBundle, Loadout};
 use common::{
 	states::game_state::{GameState, LoadingGame},
-	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
 	tools::action_key::{
 		slot::{Side, SlotKey},
 		user_input::UserInput,
@@ -46,7 +45,6 @@ use components::{
 	inventory::Inventory,
 	queue::Queue,
 	skill_executer::SkillExecuter,
-	skill_spawners::SkillSpawners,
 	slots::{ForearmItemSlots, HandItemSlots, Slots, SubMeshEssenceSlots},
 	swapper::Swapper,
 };
@@ -130,15 +128,12 @@ where
 		TDispatchChildrenAssets::register_child_asset::<Slots, ForearmItemSlots>(app);
 		TDispatchChildrenAssets::register_child_asset::<Slots, SubMeshEssenceSlots>(app);
 
-		app.add_systems(
-			PreUpdate,
-			SkillSpawners::track_in_self_and_children::<Name>().system(),
-		)
-		.add_systems(Update, Self::set_player_items)
-		.add_systems(Update, Swapper::system);
+		app.add_systems(Update, Self::set_player_items)
+			.add_systems(Update, Swapper::system);
 	}
 
 	fn skill_execution(&self, app: &mut App) {
+		let get_inputs = get_inputs::<TSettings::TKeyMap<SlotKey>, ButtonInput<UserInput>>;
 		let execute_skill = SkillExecuter::<RunSkillBehavior>::execute_system::<
 			TLifeCycles,
 			TInteractions,
@@ -151,12 +146,11 @@ where
 		app.add_systems(
 			Update,
 			(
-				get_inputs::<TSettings::TKeyMap<SlotKey>, ButtonInput<UserInput>>
-					.pipe(enqueue::<Slots, Queue, QueuedSkill>),
+				get_inputs.pipe(enqueue::<Slots, Queue, QueuedSkill>),
 				Combos::update::<Queue>,
 				flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
 				advance_active_skill::<Queue, TPlayers, TBehaviors, SkillExecuter, Virtual>,
-				execute_skill.pipe(log_many),
+				execute_skill,
 				flush::<Queue>,
 			)
 				.chain()

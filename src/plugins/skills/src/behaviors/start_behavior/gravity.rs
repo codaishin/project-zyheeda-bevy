@@ -1,9 +1,9 @@
-use crate::behaviors::{SkillCaster, SkillSpawner, SkillTarget};
+use crate::behaviors::{SkillCaster, SkillTarget};
 use bevy::ecs::system::EntityCommands;
 use common::{
 	effects::{EffectApplies, gravity::Gravity},
 	tools::UnitsPerSecond,
-	traits::handles_effect::HandlesEffect,
+	traits::{handles_effect::HandlesEffect, handles_skill_behaviors::Spawner},
 };
 use serde::{Deserialize, Serialize};
 
@@ -18,7 +18,7 @@ impl StartGravity {
 		&self,
 		entity: &mut EntityCommands,
 		_: &SkillCaster,
-		_: &SkillSpawner,
+		_: Spawner,
 		_: &SkillTarget,
 	) where
 		TEffects: HandlesEffect<Gravity>,
@@ -70,7 +70,7 @@ mod tests {
 		.apply::<_HandlesEffects>(
 			&mut entity,
 			&SkillCaster::from(Entity::from_raw(42)),
-			&SkillSpawner::from(Entity::from_raw(43)),
+			Spawner::Center,
 			&SkillTarget::default(),
 		);
 		entity.id()

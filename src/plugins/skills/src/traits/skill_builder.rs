@@ -1,19 +1,19 @@
 use crate::{
-	behaviors::{SkillCaster, SkillSpawner, build_skill_shape::OnSkillStop},
+	behaviors::{SkillCaster, build_skill_shape::OnSkillStop},
 	components::SkillTarget,
 	skills::lifetime_definition::LifeTimeDefinition,
 };
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use common::traits::{
 	handles_lifetime::HandlesLifetime,
-	handles_skill_behaviors::HandlesSkillBehaviors,
+	handles_skill_behaviors::{HandlesSkillBehaviors, Spawner},
 };
 
 pub(crate) trait BuildContact {
 	fn build_contact<TSkillBehaviors>(
 		&self,
 		caster: &SkillCaster,
-		spawner: &SkillSpawner,
+		spawner: Spawner,
 		target: &SkillTarget,
 	) -> TSkillBehaviors::TSkillContact
 	where
@@ -24,7 +24,7 @@ pub(crate) trait BuildProjection {
 	fn build_projection<TSkillBehaviors>(
 		&self,
 		caster: &SkillCaster,
-		spawner: &SkillSpawner,
+		spawner: Spawner,
 		target: &SkillTarget,
 	) -> TSkillBehaviors::TSkillProjection
 	where
@@ -46,7 +46,7 @@ pub(crate) trait SkillBuilder {
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
-		spawn: &SkillSpawner,
+		spawner: Spawner,
 		target: &SkillTarget,
 	) -> SkillShape
 	where
@@ -62,7 +62,7 @@ where
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
-		spawner: &SkillSpawner,
+		spawner: Spawner,
 		target: &SkillTarget,
 	) -> SkillShape
 	where
@@ -184,7 +184,7 @@ mod tests {
 		fn build_contact<TSkillBehaviors>(
 			&self,
 			caster: &SkillCaster,
-			spawner: &SkillSpawner,
+			spawner: Spawner,
 			target: &SkillTarget,
 		) -> TSkillBehaviors::TSkillContact
 		where
@@ -199,7 +199,7 @@ mod tests {
 		fn build_projection<TSkillBehaviors>(
 			&self,
 			caster: &SkillCaster,
-			spawner: &SkillSpawner,
+			spawner: Spawner,
 			target: &SkillTarget,
 		) -> TSkillBehaviors::TSkillProjection
 		where
@@ -216,7 +216,7 @@ mod tests {
 			fn build_contact<TSkillBehaviors>(
 				&self,
 				caster: &SkillCaster,
-				spawner: &SkillSpawner,
+				spawner: Spawner,
 				target: &SkillTarget,
 			) -> TSkillBehaviors::TSkillContact
 			where
@@ -226,7 +226,7 @@ mod tests {
 			fn build_projection<TSkillBehaviors>(
 				&self,
 				caster: &SkillCaster,
-				spawner: &SkillSpawner,
+				spawner: Spawner,
 				target: &SkillTarget,
 			) -> TSkillBehaviors::TSkillProjection
 			where
@@ -237,14 +237,14 @@ mod tests {
 	simple_init!(Mock_Skill);
 
 	fn build_skill(
-		args: In<(_Skill, SkillCaster, SkillSpawner, SkillTarget)>,
+		args: In<(_Skill, SkillCaster, Spawner, SkillTarget)>,
 		mut commands: Commands,
 	) -> SkillShape {
 		let In((skill, caster, spawner, target)) = args;
 		skill.build::<_HandlesLifetime, _HandlesSkillBehaviors>(
 			&mut commands,
 			&caster,
-			&spawner,
+			spawner,
 			&target,
 		)
 	}
@@ -257,7 +257,7 @@ mod tests {
 	fn spawn_contact() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let caster = SkillCaster(Entity::from_raw(42));
-		let spawner = SkillSpawner(Entity::from_raw(43));
+		let spawner = Spawner::Center;
 		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
@@ -289,7 +289,7 @@ mod tests {
 	fn spawn_projection() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let caster = SkillCaster(Entity::from_raw(42));
-		let spawner = SkillSpawner(Entity::from_raw(43));
+		let spawner = Spawner::Center;
 		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
@@ -321,7 +321,7 @@ mod tests {
 	fn projection_is_child_of_contact() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let caster = SkillCaster(Entity::from_raw(42));
-		let spawner = SkillSpawner(Entity::from_raw(43));
+		let spawner = Spawner::Center;
 		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
@@ -354,7 +354,7 @@ mod tests {
 	fn alive_until_stopped() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let caster = SkillCaster(Entity::from_raw(42));
-		let spawner = SkillSpawner(Entity::from_raw(43));
+		let spawner = Spawner::Center;
 		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
@@ -381,7 +381,7 @@ mod tests {
 	fn unstoppable_life_time() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let caster = SkillCaster(Entity::from_raw(42));
-		let spawner = SkillSpawner(Entity::from_raw(43));
+		let spawner = Spawner::Center;
 		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
@@ -408,7 +408,7 @@ mod tests {
 	fn add_lifetime_to_unstoppable() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let caster = SkillCaster(Entity::from_raw(42));
-		let spawner = SkillSpawner(Entity::from_raw(43));
+		let spawner = Spawner::Center;
 		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
@@ -438,7 +438,7 @@ mod tests {
 	fn infinite_life_time() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let caster = SkillCaster(Entity::from_raw(42));
-		let spawner = SkillSpawner(Entity::from_raw(43));
+		let spawner = Spawner::Center;
 		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()

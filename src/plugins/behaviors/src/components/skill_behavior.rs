@@ -1,11 +1,13 @@
 pub mod skill_contact;
 pub mod skill_projection;
 
+use crate::components::anchor::spawner_fix_point::SpawnerFixPoint;
+
 use super::{
 	Always,
 	Once,
+	anchor::Anchor,
 	ground_target::GroundTarget,
-	set_position_and_rotation::SetPositionAndRotation,
 	set_to_move_forward::SetVelocityForward,
 	when_traveled_insert::WhenTraveled,
 };
@@ -17,7 +19,7 @@ use common::{
 	traits::{
 		handles_destruction::HandlesDestruction,
 		handles_interactions::HandlesInteractions,
-		handles_skill_behaviors::{Integrity, Motion, Shape},
+		handles_skill_behaviors::{Integrity, Motion, Shape, Spawner},
 	},
 };
 use std::f32::consts::PI;
@@ -149,10 +151,10 @@ impl SimplePrefab for Motion {
 		TLifeCycles: HandlesDestruction,
 	{
 		match *self {
-			Motion::HeldBy { spawner } => {
+			Motion::HeldBy { caster } => {
 				entity.try_insert((
 					RigidBody::Fixed,
-					SetPositionAndRotation::<Always>::to(spawner),
+					Anchor::<Always>::to(caster).on_fix_point(SpawnerFixPoint(Spawner::Center)),
 				));
 			}
 			Motion::Stationary {
@@ -179,7 +181,7 @@ impl SimplePrefab for Motion {
 					RigidBody::Dynamic,
 					GravityScale(0.),
 					Ccd::enabled(),
-					SetPositionAndRotation::<Once>::to(spawner),
+					Anchor::<Once>::to(caster).on_fix_point(SpawnerFixPoint(spawner)),
 					SetVelocityForward {
 						rotation: caster,
 						speed,
@@ -202,7 +204,11 @@ mod tests {
 	use bevy_rapier3d::prelude::ActiveCollisionTypes;
 	use common::{
 		blocker::Blocker,
-		tools::{Units, UnitsPerSecond},
+		tools::{
+			Units,
+			UnitsPerSecond,
+			action_key::slot::{Side, SlotKey},
+		},
 		traits::{
 			clamp_zero_positive::ClampZeroPositive,
 			handles_destruction::HandlesDestruction,
@@ -262,7 +268,7 @@ mod tests {
 	fn held_components() -> Result<(), RunSystemError> {
 		let (mut app, entity) = setup();
 		let motion = Motion::HeldBy {
-			spawner: Entity::from_raw(11),
+			caster: Entity::from_raw(11),
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
@@ -275,7 +281,10 @@ mod tests {
 				None,
 				None,
 				None,
-				Some(&SetPositionAndRotation::<Always>::to(Entity::from_raw(11))),
+				Some(
+					&Anchor::<Always>::to(Entity::from_raw(11))
+						.on_fix_point(SpawnerFixPoint(Spawner::Center))
+				),
 				None,
 				None,
 				None,
@@ -285,12 +294,8 @@ mod tests {
 				app.world().entity(entity).get::<GravityScale>(),
 				app.world().entity(entity).get::<Ccd>(),
 				app.world().entity(entity).get::<GroundTarget>(),
-				app.world()
-					.entity(entity)
-					.get::<SetPositionAndRotation<Always>>(),
-				app.world()
-					.entity(entity)
-					.get::<SetPositionAndRotation<Once>>(),
+				app.world().entity(entity).get::<Anchor<Always>>(),
+				app.world().entity(entity).get::<Anchor<Once>>(),
 				app.world().entity(entity).get::<SetVelocityForward>(),
 				app.world()
 					.entity(entity)
@@ -339,12 +344,8 @@ mod tests {
 				app.world().entity(entity).get::<GravityScale>(),
 				app.world().entity(entity).get::<Ccd>(),
 				app.world().entity(entity).get::<GroundTarget>(),
-				app.world()
-					.entity(entity)
-					.get::<SetPositionAndRotation<Always>>(),
-				app.world()
-					.entity(entity)
-					.get::<SetPositionAndRotation<Once>>(),
+				app.world().entity(entity).get::<Anchor<Always>>(),
+				app.world().entity(entity).get::<Anchor<Once>>(),
 				app.world().entity(entity).get::<SetVelocityForward>(),
 				app.world()
 					.entity(entity)
@@ -359,7 +360,7 @@ mod tests {
 		let (mut app, entity) = setup();
 		let motion = Motion::Projectile {
 			caster: Entity::from_raw(55),
-			spawner: Entity::from_raw(66),
+			spawner: Spawner::Slot(SlotKey::TopHand(Side::Left)),
 			speed: UnitsPerSecond::new(11.),
 			max_range: Units::new(1111.),
 		};
@@ -375,7 +376,10 @@ mod tests {
 				Some(&Ccd::enabled()),
 				None,
 				None,
-				Some(&SetPositionAndRotation::<Once>::to(Entity::from_raw(66))),
+				Some(
+					&Anchor::<Once>::to(Entity::from_raw(55))
+						.on_fix_point(SpawnerFixPoint(Spawner::Slot(SlotKey::TopHand(Side::Left))))
+				),
 				Some(&SetVelocityForward {
 					rotation: Entity::from_raw(55),
 					speed: UnitsPerSecond::new(11.),
@@ -391,12 +395,8 @@ mod tests {
 				app.world().entity(entity).get::<GravityScale>(),
 				app.world().entity(entity).get::<Ccd>(),
 				app.world().entity(entity).get::<GroundTarget>(),
-				app.world()
-					.entity(entity)
-					.get::<SetPositionAndRotation<Always>>(),
-				app.world()
-					.entity(entity)
-					.get::<SetPositionAndRotation<Once>>(),
+				app.world().entity(entity).get::<Anchor<Always>>(),
+				app.world().entity(entity).get::<Anchor<Once>>(),
 				app.world().entity(entity).get::<SetVelocityForward>(),
 				app.world()
 					.entity(entity)

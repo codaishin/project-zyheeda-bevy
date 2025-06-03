@@ -2,15 +2,15 @@ pub mod deal_damage;
 pub mod force_shield;
 pub mod gravity;
 
-use super::{SkillCaster, SkillSpawner, SkillTarget};
+use super::{SkillCaster, SkillTarget};
 use bevy::ecs::system::EntityCommands;
-use common::traits::handles_effect::HandlesAllEffects;
+use common::traits::{handles_effect::HandlesAllEffects, handles_skill_behaviors::Spawner};
 use deal_damage::StartDealingDamage;
 use force_shield::StartForceShield;
 use gravity::StartGravity;
 
 #[cfg(test)]
-pub type StartBehaviorFn = fn(&mut EntityCommands, &SkillCaster, &SkillSpawner, &SkillTarget);
+pub type StartBehaviorFn = fn(&mut EntityCommands, &SkillCaster, Spawner, &SkillTarget);
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum SkillBehavior {
@@ -26,17 +26,17 @@ impl SkillBehavior {
 		&self,
 		entity: &mut EntityCommands,
 		caster: &SkillCaster,
-		spawn: &SkillSpawner,
+		spawner: Spawner,
 		target: &SkillTarget,
 	) where
 		TEffects: HandlesAllEffects,
 	{
 		match self {
-			SkillBehavior::Gravity(gr) => gr.apply::<TEffects>(entity, caster, spawn, target),
-			SkillBehavior::Damage(dm) => dm.apply::<TEffects>(entity, caster, spawn, target),
-			SkillBehavior::ForceShield(fc) => fc.apply::<TEffects>(entity, caster, spawn, target),
+			SkillBehavior::Gravity(gr) => gr.apply::<TEffects>(entity, caster, spawner, target),
+			SkillBehavior::Damage(dm) => dm.apply::<TEffects>(entity, caster, spawner, target),
+			SkillBehavior::ForceShield(fc) => fc.apply::<TEffects>(entity, caster, spawner, target),
 			#[cfg(test)]
-			SkillBehavior::Fn(func) => func(entity, caster, spawn, target),
+			SkillBehavior::Fn(func) => func(entity, caster, spawner, target),
 		}
 	}
 }

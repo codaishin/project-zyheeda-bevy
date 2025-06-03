@@ -1,5 +1,5 @@
 use crate::{
-	behaviors::{SkillCaster, SkillSpawner},
+	behaviors::SkillCaster,
 	components::SkillTarget,
 	skills::lifetime_definition::LifeTimeDefinition,
 	traits::skill_builder::{BuildContact, BuildProjection, SkillLifetime},
@@ -9,7 +9,7 @@ use common::{
 	tools::{Units, UnitsPerSecond},
 	traits::{
 		clamp_zero_positive::ClampZeroPositive,
-		handles_skill_behaviors::{HandlesSkillBehaviors, Integrity, Motion, Shape},
+		handles_skill_behaviors::{HandlesSkillBehaviors, Integrity, Motion, Shape, Spawner},
 	},
 };
 use serde::{Deserialize, Serialize};
@@ -21,14 +21,13 @@ impl BuildContact for SpawnProjectile {
 	fn build_contact<TSkillBehaviors>(
 		&self,
 		caster: &SkillCaster,
-		spawner: &SkillSpawner,
+		spawner: Spawner,
 		_: &SkillTarget,
 	) -> TSkillBehaviors::TSkillContact
 	where
 		TSkillBehaviors: HandlesSkillBehaviors,
 	{
 		let SkillCaster(caster) = *caster;
-		let SkillSpawner(spawner) = *spawner;
 
 		TSkillBehaviors::skill_contact(
 			Shape::Sphere {
@@ -52,7 +51,7 @@ impl BuildProjection for SpawnProjectile {
 	fn build_projection<TSkillBehaviors>(
 		&self,
 		_: &SkillCaster,
-		_: &SkillSpawner,
+		_: Spawner,
 		_: &SkillTarget,
 	) -> TSkillBehaviors::TSkillProjection
 	where

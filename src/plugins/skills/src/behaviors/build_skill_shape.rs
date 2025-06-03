@@ -2,19 +2,19 @@ pub mod spawn_ground_target;
 pub mod spawn_projectile;
 pub mod spawn_shield;
 
-use super::{SkillCaster, SkillSpawner, SkillTarget};
+use super::{SkillCaster, SkillTarget};
 use crate::traits::skill_builder::{SkillBuilder, SkillShape};
 use bevy::prelude::*;
 use common::traits::{
 	handles_lifetime::HandlesLifetime,
-	handles_skill_behaviors::HandlesSkillBehaviors,
+	handles_skill_behaviors::{HandlesSkillBehaviors, Spawner},
 };
 use spawn_ground_target::SpawnGroundTargetedAoe;
 use spawn_projectile::SpawnProjectile;
 use spawn_shield::SpawnShield;
 
 pub(crate) type BuildSkillShapeFn =
-	for<'a> fn(&'a mut Commands, &SkillCaster, &SkillSpawner, &SkillTarget) -> SkillShape;
+	for<'a> fn(&'a mut Commands, &SkillCaster, Spawner, &SkillTarget) -> SkillShape;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum OnSkillStop {
@@ -50,7 +50,7 @@ impl BuildSkillShape {
 	fn no_shape(
 		commands: &mut Commands,
 		_: &SkillCaster,
-		_: &SkillSpawner,
+		_: Spawner,
 		_: &SkillTarget,
 	) -> SkillShape {
 		let contact = commands.spawn_empty().id();
@@ -68,7 +68,7 @@ impl BuildSkillShape {
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
-		spawn: &SkillSpawner,
+		spawner: Spawner,
 		target: &SkillTarget,
 	) -> SkillShape
 	where
@@ -76,15 +76,15 @@ impl BuildSkillShape {
 		TSkillBehaviors: HandlesSkillBehaviors + 'static,
 	{
 		match self {
-			Self::Fn(func) => func(commands, caster, spawn, target),
+			Self::Fn(func) => func(commands, caster, spawner, target),
 			Self::GroundTargetedAoe(gt) => {
-				gt.build::<TLifetimes, TSkillBehaviors>(commands, caster, spawn, target)
+				gt.build::<TLifetimes, TSkillBehaviors>(commands, caster, spawner, target)
 			}
 			Self::Projectile(pr) => {
-				pr.build::<TLifetimes, TSkillBehaviors>(commands, caster, spawn, target)
+				pr.build::<TLifetimes, TSkillBehaviors>(commands, caster, spawner, target)
 			}
 			Self::Shield(sh) => {
-				sh.build::<TLifetimes, TSkillBehaviors>(commands, caster, spawn, target)
+				sh.build::<TLifetimes, TSkillBehaviors>(commands, caster, spawner, target)
 			}
 		}
 	}

@@ -1,6 +1,9 @@
-use crate::behaviors::{SkillCaster, SkillSpawner, SkillTarget};
+use crate::behaviors::{SkillCaster, SkillTarget};
 use bevy::ecs::system::EntityCommands;
-use common::{effects::force_shield::ForceShield, traits::handles_effect::HandlesEffect};
+use common::{
+	effects::force_shield::ForceShield,
+	traits::{handles_effect::HandlesEffect, handles_skill_behaviors::Spawner},
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -11,7 +14,7 @@ impl StartForceShield {
 		&self,
 		entity: &mut EntityCommands,
 		_: &SkillCaster,
-		_: &SkillSpawner,
+		_: Spawner,
 		_: &SkillTarget,
 	) where
 		TInteractions: HandlesEffect<ForceShield>,
@@ -50,7 +53,7 @@ mod tests {
 		StartForceShield.apply::<_HandlesInteractions>(
 			&mut entity,
 			&SkillCaster::from(Entity::from_raw(42)),
-			&SkillSpawner::from(Entity::from_raw(43)),
+			Spawner::Center,
 			&SkillTarget::default(),
 		);
 		entity.id()

@@ -1,5 +1,5 @@
 use crate::{
-	behaviors::{SkillCaster, SkillSpawner},
+	behaviors::SkillCaster,
 	components::SkillTarget,
 	skills::lifetime_definition::LifeTimeDefinition,
 	traits::skill_builder::{BuildContact, BuildProjection, SkillLifetime},
@@ -7,7 +7,7 @@ use crate::{
 use common::{
 	dto::duration::DurationDto,
 	tools::Units,
-	traits::handles_skill_behaviors::{HandlesSkillBehaviors, Integrity, Motion, Shape},
+	traits::handles_skill_behaviors::{HandlesSkillBehaviors, Integrity, Motion, Shape, Spawner},
 };
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -33,7 +33,7 @@ impl BuildContact for SpawnGroundTargetedAoe {
 	fn build_contact<TSkillBehaviors>(
 		&self,
 		caster: &SkillCaster,
-		_: &SkillSpawner,
+		_: Spawner,
 		target: &SkillTarget,
 	) -> TSkillBehaviors::TSkillContact
 	where
@@ -61,7 +61,7 @@ impl BuildProjection for SpawnGroundTargetedAoe {
 	fn build_projection<TSkillBehaviors>(
 		&self,
 		_: &SkillCaster,
-		_: &SkillSpawner,
+		_: Spawner,
 		_: &SkillTarget,
 	) -> TSkillBehaviors::TSkillProjection
 	where

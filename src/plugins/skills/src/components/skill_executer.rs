@@ -1,18 +1,16 @@
-use super::{SkillTarget, skill_spawners::SkillSpawners};
+use super::SkillTarget;
 use crate::{
-	behaviors::{SkillCaster, SkillSpawner, build_skill_shape::OnSkillStop, spawn_on::SpawnOn},
+	behaviors::{SkillCaster, build_skill_shape::OnSkillStop, spawn_on::SpawnOn},
 	skills::RunSkillBehavior,
 	traits::{Execute, Flush, Schedule, spawn_skill_behavior::SpawnSkillBehavior},
 };
 use bevy::prelude::*;
 use common::{
-	errors::{Error, Level},
 	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::GetRef,
 		handles_effect::HandlesAllEffects,
 		handles_lifetime::HandlesLifetime,
-		handles_skill_behaviors::HandlesSkillBehaviors,
+		handles_skill_behaviors::{HandlesSkillBehaviors, Spawner},
 		try_despawn::TryDespawn,
 	},
 };
@@ -52,18 +50,6 @@ impl<TBehavior> Flush for SkillExecuter<TBehavior> {
 	}
 }
 
-#[derive(Debug, PartialEq)]
-pub(crate) struct NoSkillSpawner(Option<SlotKey>);
-
-impl From<NoSkillSpawner> for Error {
-	fn from(NoSkillSpawner(slot): NoSkillSpawner) -> Self {
-		Error {
-			msg: format!("Could not find spawner for Slot: {slot:?}"),
-			lvl: Level::Error,
-		}
-	}
-}
-
 impl<TCommands, TBehavior, TLifetimes, TEffects, TSkillBehavior>
 	Execute<TCommands, TLifetimes, TEffects, TSkillBehavior> for SkillExecuter<TBehavior>
 where
@@ -73,18 +59,13 @@ where
 	TEffects: HandlesAllEffects + 'static,
 	TSkillBehavior: HandlesSkillBehaviors + 'static,
 {
-	type TError = NoSkillSpawner;
-
-	fn execute(
-		&mut self,
-		commands: &mut TCommands,
-		caster: &SkillCaster,
-		spawners: &SkillSpawners,
-		target: &SkillTarget,
-	) -> Result<(), Self::TError> {
+	fn execute(&mut self, commands: &mut TCommands, caster: &SkillCaster, target: &SkillTarget) {
 		match self {
 			SkillExecuter::Start { shape, slot_key } => {
-				let spawner = get_spawner(shape, spawners, *slot_key)?;
+				let spawner = match shape.spawn_on() {
+					SpawnOn::Center => Spawner::Center,
+					SpawnOn::Slot => Spawner::Slot(*slot_key),
+				};
 				let on_skill_stop_behavior = shape.spawn::<TLifetimes, TEffects, TSkillBehavior>(
 					commands, caster, spawner, target,
 				);
@@ -99,26 +80,6 @@ where
 			}
 			_ => {}
 		};
-
-		Ok(())
-	}
-}
-
-fn get_spawner<'a, TCommands, TSkillShape>(
-	shape: &TSkillShape,
-	spawners: &'a SkillSpawners,
-	slot_key: SlotKey,
-) -> Result<&'a SkillSpawner, NoSkillSpawner>
-where
-	TSkillShape: SpawnSkillBehavior<TCommands>,
-{
-	let slot_key = match shape.spawn_on() {
-		SpawnOn::Center => None,
-		SpawnOn::Slot => Some(slot_key),
-	};
-	match spawners.get(&slot_key) {
-		Some(spawner) => Ok(spawner),
-		None => Err(NoSkillSpawner(slot_key)),
 	}
 }
 
@@ -136,7 +97,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{behaviors::spawn_on::SpawnOn, components::skill_spawners::SkillSpawners};
+	use crate::behaviors::spawn_on::SpawnOn;
 	use common::{
 		components::Outdated,
 		simple_init,
@@ -223,7 +184,7 @@ mod tests {
 			&self,
 			_: &mut _Commands,
 			_: &SkillCaster,
-			_: &SkillSpawner,
+			_: Spawner,
 			_: &SkillTarget,
 		) -> OnSkillStop
 		where
@@ -243,7 +204,7 @@ mod tests {
 				&self,
 				commands: &mut Mock_Commands,
 				caster: &SkillCaster,
-				spawner: &SkillSpawner,
+				spawner: Spawner,
 				target: &SkillTarget,
 			) -> OnSkillStop
 			where
@@ -255,13 +216,8 @@ mod tests {
 
 	simple_init!(Mock_Behavior);
 
-	type _Executer<'a, TCommands> = &'a mut dyn Execute<
-		TCommands,
-		_HandlesLifetimes,
-		_HandlesEffects,
-		_HandlesSkillBehaviors,
-		TError = NoSkillSpawner,
-	>;
+	type _Executer<'a, TCommands> =
+		&'a mut dyn Execute<TCommands, _HandlesLifetimes, _HandlesEffects, _HandlesSkillBehaviors>;
 
 	fn get_target() -> SkillTarget {
 		SkillTarget {
@@ -296,8 +252,7 @@ mod tests {
 	#[test]
 	fn start_shape_on_slot() {
 		let caster = SkillCaster(Entity::from_raw(1));
-		let spawner = SkillSpawner(Entity::from_raw(2));
-		let spawners = SkillSpawners::new([(Some(SlotKey::BottomHand(Side::Right)), spawner)]);
+		let spawner = Spawner::Slot(SlotKey::BottomHand(Side::Right));
 		let target = get_target();
 
 		let executer: _Executer<Mock_Commands> = &mut SkillExecuter::Start {
@@ -313,14 +268,13 @@ mod tests {
 			}),
 		};
 
-		_ = executer.execute(&mut Mock_Commands::new(), &caster, &spawners, &target);
+		executer.execute(&mut Mock_Commands::new(), &caster, &target);
 	}
 
 	#[test]
 	fn start_shape_on_center() {
 		let caster = SkillCaster(Entity::from_raw(1));
-		let spawner = SkillSpawner(Entity::from_raw(2));
-		let spawners = SkillSpawners::new([(None, spawner)]);
+		let spawner = Spawner::Center;
 		let target = get_target();
 		let mut commands = Mock_Commands::new_mock(|mock| {
 			mock.expect_try_despawn().return_const(());
@@ -339,14 +293,12 @@ mod tests {
 			}),
 		};
 
-		_ = executer.execute(&mut commands, &caster, &spawners, &target);
+		executer.execute(&mut commands, &caster, &target);
 	}
 
 	#[test]
 	fn set_to_idle_when_ignore_on_skill_stop() {
 		let caster = SkillCaster(Entity::from_raw(1));
-		let spawner = SkillSpawner(Entity::from_raw(2));
-		let spawners = SkillSpawners::new([(Some(SlotKey::BottomHand(Side::Right)), spawner)]);
 		let target = get_target();
 
 		let mut executer = SkillExecuter::Start {
@@ -356,7 +308,7 @@ mod tests {
 
 		{
 			let executer: _Executer<_Commands> = &mut executer;
-			_ = executer.execute(&mut _Commands, &caster, &spawners, &target);
+			executer.execute(&mut _Commands, &caster, &target);
 		}
 
 		assert_eq!(SkillExecuter::Idle, executer);
@@ -365,8 +317,6 @@ mod tests {
 	#[test]
 	fn set_to_stoppable_when_stop_on_skill_stop() {
 		let caster = SkillCaster(Entity::from_raw(1));
-		let spawner = SkillSpawner(Entity::from_raw(2));
-		let spawners = SkillSpawners::new([(Some(SlotKey::BottomHand(Side::Right)), spawner)]);
 		let target = get_target();
 
 		let mut executer = SkillExecuter::Start {
@@ -376,35 +326,12 @@ mod tests {
 
 		{
 			let executer: _Executer<_Commands> = &mut executer;
-			_ = executer.execute(&mut _Commands, &caster, &spawners, &target);
+			executer.execute(&mut _Commands, &caster, &target);
 		}
 
 		assert_eq!(
 			SkillExecuter::StartedStoppable(Entity::from_raw(123)),
 			executer
-		);
-	}
-
-	#[test]
-	fn slot_lookup_error_on_start() {
-		let caster = SkillCaster(Entity::from_raw(1));
-		let spawner = SkillSpawner(Entity::from_raw(2));
-		let spawners = SkillSpawners::new([(None, spawner)]);
-		let target = get_target();
-		let executer: _Executer<Mock_Commands> = &mut SkillExecuter::Start {
-			slot_key: SlotKey::BottomHand(Side::Right),
-			shape: Mock_Behavior::new_mock(|mock| {
-				mock.expect_spawn_on().return_const(SpawnOn::Slot);
-				mock.expect_spawn::<_HandlesLifetimes, _HandlesEffects, _HandlesSkillBehaviors>()
-					.return_const(OnSkillStop::Ignore);
-			}),
-		};
-
-		let result = executer.execute(&mut Mock_Commands::new(), &caster, &spawners, &target);
-
-		assert_eq!(
-			Err(NoSkillSpawner(Some(SlotKey::BottomHand(Side::Right)))),
-			result
 		);
 	}
 
@@ -432,7 +359,6 @@ mod tests {
 	#[test]
 	fn despawn_skill_entity_recursively_on_execute_stop() {
 		let caster = SkillCaster(Entity::from_raw(1));
-		let spawners = SkillSpawners::new([]);
 		let target = get_target();
 		let executer: _Executer<Mock_Commands> =
 			&mut SkillExecuter::<Mock_Behavior>::Stop(Entity::from_raw(123));
@@ -444,21 +370,19 @@ mod tests {
 				.return_const(());
 		});
 
-		_ = executer.execute(&mut commands, &caster, &spawners, &target);
+		executer.execute(&mut commands, &caster, &target);
 	}
 
 	#[test]
 	fn set_to_idle_on_stop_execution() {
 		let caster = SkillCaster(Entity::from_raw(1));
-		let spawner = SkillSpawner(Entity::from_raw(2));
-		let spawners = SkillSpawners::new([(None, spawner)]);
 		let target = get_target();
 		let mut commands = _Commands;
 		let mut executer = SkillExecuter::<_ShapeSlotted>::Stop(Entity::from_raw(1));
 
 		{
 			let executer: _Executer<_Commands> = &mut executer;
-			_ = executer.execute(&mut commands, &caster, &spawners, &target);
+			executer.execute(&mut commands, &caster, &target);
 		}
 
 		assert_eq!(SkillExecuter::Idle, executer);
