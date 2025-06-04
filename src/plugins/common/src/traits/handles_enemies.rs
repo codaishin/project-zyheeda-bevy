@@ -1,10 +1,13 @@
 use super::accessors::get::{Getter, GetterRefOptional};
-use crate::tools::{
-	aggro_range::AggroRange,
-	attack_range::AttackRange,
-	collider_radius::ColliderRadius,
-	movement_animation::MovementAnimation,
-	speed::Speed,
+use crate::{
+	components::persistent_entity::PersistentEntity,
+	tools::{
+		aggro_range::AggroRange,
+		attack_range::AttackRange,
+		collider_radius::ColliderRadius,
+		movement_animation::MovementAnimation,
+		speed::Speed,
+	},
 };
 use bevy::prelude::*;
 use std::time::Duration;
@@ -29,11 +32,11 @@ pub trait EnemyAttack {
 pub enum EnemyTarget {
 	#[default]
 	Player,
-	Entity(Entity),
+	Entity(PersistentEntity),
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub struct Attacker(pub Entity);
+pub struct Attacker(pub PersistentEntity);
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub struct Target(pub Entity);
+pub struct Target(pub PersistentEntity);

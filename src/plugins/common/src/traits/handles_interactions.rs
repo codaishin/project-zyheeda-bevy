@@ -1,4 +1,4 @@
-use crate::{blocker::Blocker, tools::Units};
+use crate::{blocker::Blocker, components::persistent_entity::PersistentEntity, tools::Units};
 use bevy::prelude::*;
 use std::time::Duration;
 
@@ -11,8 +11,8 @@ pub trait HandlesInteractions {
 }
 
 pub trait BeamParameters {
-	fn source(&self) -> Entity;
-	fn target(&self) -> Entity;
+	fn source(&self) -> PersistentEntity;
+	fn target(&self) -> PersistentEntity;
 	fn range(&self) -> Units;
 	fn lifetime(&self) -> Duration;
 }

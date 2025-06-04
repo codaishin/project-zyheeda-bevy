@@ -2,7 +2,7 @@ use crate::traits::insert_attack::InsertAttack;
 use bevy::{ecs::system::EntityCommands, pbr::NotShadowCaster, prelude::*};
 use common::{
 	blocker::Blocker,
-	components::insert_asset::InsertAsset,
+	components::{insert_asset::InsertAsset, persistent_entity::PersistentEntity},
 	effects::deal_damage::DealDamage,
 	errors::Error,
 	tools::Units,
@@ -19,16 +19,16 @@ use std::{f32::consts::PI, time::Duration};
 #[require(Visibility, Transform)]
 pub(crate) struct VoidBeam {
 	attack: VoidBeamAttack,
-	attacker: Entity,
-	target: Entity,
+	attacker: PersistentEntity,
+	target: PersistentEntity,
 }
 
 impl BeamParameters for VoidBeam {
-	fn source(&self) -> Entity {
+	fn source(&self) -> PersistentEntity {
 		self.attacker
 	}
 
-	fn target(&self) -> Entity {
+	fn target(&self) -> PersistentEntity {
 		self.target
 	}
 
