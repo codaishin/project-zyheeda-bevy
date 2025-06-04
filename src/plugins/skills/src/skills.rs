@@ -265,7 +265,7 @@ mod tests {
 	use crate::{behaviors::start_behavior::SkillBehavior, traits::skill_builder::SkillShape};
 	use bevy::ecs::system::{EntityCommands, RunSystemError, RunSystemOnce};
 	use common::{
-		components::Outdated,
+		components::{Outdated, persistent_entity::PersistentEntity},
 		test_tools::utils::SingleThreadedApp,
 		tools::collider_info::ColliderInfo,
 		traits::{
@@ -400,7 +400,7 @@ mod tests {
 			}))
 			.spawning_on(SpawnOn::Slot),
 		);
-		let caster = SkillCaster(Entity::from_raw(1));
+		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = Spawner::Center;
 		let target = get_target();
 
@@ -441,7 +441,7 @@ mod tests {
 			}))
 			.spawning_on(SpawnOn::Center),
 		);
-		let caster = SkillCaster(Entity::from_raw(1));
+		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = Spawner::Center;
 		let target = get_target();
 
@@ -478,7 +478,7 @@ mod tests {
 			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(shape))
 				.with_contact_behaviors(vec![SkillBehavior::Fn(behavior)]),
 		);
-		let caster = SkillCaster(Entity::from_raw(1));
+		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = Spawner::Center;
 		let target = get_target();
 
@@ -516,7 +516,7 @@ mod tests {
 				on_skill_stop: OnSkillStop::Ignore,
 			}),
 		));
-		let caster = SkillCaster(Entity::from_raw(1));
+		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = Spawner::Center;
 		let target = get_target();
 
@@ -553,7 +553,7 @@ mod tests {
 			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(shape))
 				.with_projection_behaviors(vec![SkillBehavior::Fn(behavior)]),
 		);
-		let caster = SkillCaster(Entity::from_raw(1));
+		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = Spawner::Center;
 		let target = get_target();
 
@@ -601,7 +601,7 @@ mod tests {
 			}))
 			.spawning_on(SpawnOn::Slot),
 		);
-		let caster = SkillCaster(Entity::from_raw(1));
+		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = Spawner::Center;
 		let target = get_target();
 
@@ -642,7 +642,7 @@ mod tests {
 			}))
 			.spawning_on(SpawnOn::Center),
 		);
-		let caster = SkillCaster(Entity::from_raw(1));
+		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = Spawner::Center;
 		let target = get_target();
 
@@ -682,7 +682,7 @@ mod tests {
 			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(shape))
 				.with_contact_behaviors(vec![SkillBehavior::Fn(behavior)]),
 		);
-		let caster = SkillCaster(Entity::from_raw(1));
+		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = Spawner::Center;
 		let target = get_target();
 
@@ -727,7 +727,7 @@ mod tests {
 				on_skill_stop: OnSkillStop::Ignore,
 			}),
 		));
-		let caster = SkillCaster(Entity::from_raw(1));
+		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = Spawner::Center;
 		let target = get_target();
 
@@ -767,7 +767,7 @@ mod tests {
 			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(shape))
 				.with_projection_behaviors(vec![SkillBehavior::Fn(behavior)]),
 		);
-		let caster = SkillCaster(Entity::from_raw(1));
+		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = Spawner::Center;
 		let target = get_target();
 

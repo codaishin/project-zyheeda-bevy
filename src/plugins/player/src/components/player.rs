@@ -9,6 +9,7 @@ use common::{
 		GroundOffset,
 		collider_relationship::InteractionTarget,
 		flip::FlipHorizontally,
+		persistent_entity::PersistentEntity,
 	},
 	effects::deal_damage::DealDamage,
 	errors::Error,
@@ -56,6 +57,7 @@ use std::collections::HashMap;
 	InteractionTarget,
 	LockedAxes = Self::locked_axes(),
 	GravityScale = Self::gravity_scale(),
+	PersistentEntity,
 )]
 pub struct Player;
 

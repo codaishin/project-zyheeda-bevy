@@ -12,7 +12,7 @@ pub mod test_tools;
 pub mod tools;
 pub mod traits;
 
-use crate::systems::log::log_many;
+use crate::traits::register_persistent_entities::RegisterPersistentEntities;
 use bevy::prelude::*;
 use components::{
 	AssetModel,
@@ -20,7 +20,6 @@ use components::{
 	flip::FlipHorizontally,
 	insert_asset::InsertAsset,
 };
-use resources::persistent_entities::PersistentEntities;
 use systems::{
 	collect_user_input::collect_user_input_systems::CollectUserInputSystems,
 	ui_input_primer::{apply_input::ApplyInput, set_input_state::SetInputState},
@@ -37,12 +36,7 @@ impl Plugin for CommonPlugin {
 			.add_observer(InsertAsset::<Mesh>::apply)
 			.add_observer(InsertAsset::<StandardMaterial>::apply)
 			// Handle `PersistentEntity`
-			.init_resource::<PersistentEntities>()
-			.add_observer(PersistentEntities::update)
-			.add_systems(
-				Update,
-				PersistentEntities::drain_lookup_errors.pipe(log_many),
-			)
+			.register_persistent_entities()
 			// Point link colliders and interaction targets
 			.add_observer(ColliderOfInteractionTarget::link)
 			// Collect user inputs

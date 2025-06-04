@@ -2,7 +2,12 @@ use crate::components::{Attack, Chase};
 use bevy::{math::InvalidDirectionError, prelude::*};
 use bevy_rapier3d::plugin::ReadRapierContext;
 use common::{
-	components::{GroundOffset, collider_relationship::ColliderOfInteractionTarget},
+	components::{
+		GroundOffset,
+		collider_relationship::ColliderOfInteractionTarget,
+		persistent_entity::PersistentEntity,
+	},
+	resources::persistent_entities::PersistentEntities,
 	tools::{
 		aggro_range::AggroRange,
 		attack_range::AttackRange,
@@ -21,17 +26,29 @@ pub(crate) trait SelectBehavior {
 	fn select_behavior<TPlayer>(
 		rapier: ReadRapierContext,
 		commands: Commands,
-		agents: Query<(Entity, &GlobalTransform, Option<&GroundOffset>, &Self)>,
-		players: Query<(Entity, &GlobalTransform, Option<&GroundOffset>), With<TPlayer>>,
-		all: Query<(Entity, &GlobalTransform, Option<&GroundOffset>)>,
+		agents: Query<(
+			&PersistentEntity,
+			&GlobalTransform,
+			Option<&GroundOffset>,
+			&Self,
+		)>,
+		players: Query<(&PersistentEntity, &GlobalTransform, Option<&GroundOffset>), With<TPlayer>>,
+		all: Query<(&PersistentEntity, &GlobalTransform, Option<&GroundOffset>)>,
 		colliders: Query<&ColliderOfInteractionTarget>,
+		persistent_entities: ResMut<PersistentEntities>,
 	) -> BehaviorResults
 	where
 		Self: Component + Sized + Getter<AggroRange> + Getter<AttackRange> + Getter<EnemyTarget>,
 		TPlayer: Component,
 	{
 		BehaviorResults(select_behavior(
-			rapier, commands, agents, players, all, colliders,
+			rapier,
+			commands,
+			agents,
+			players,
+			all,
+			colliders,
+			persistent_entities,
 		))
 	}
 }
@@ -55,10 +72,16 @@ enum Behavior {
 fn select_behavior<TAgent, TPlayer, TGetRayCaster>(
 	ray_caster_source: TGetRayCaster,
 	mut commands: Commands,
-	agents: Query<(Entity, &GlobalTransform, Option<&GroundOffset>, &TAgent)>,
-	players: Query<(Entity, &GlobalTransform, Option<&GroundOffset>), With<TPlayer>>,
-	all: Query<(Entity, &GlobalTransform, Option<&GroundOffset>)>,
+	agents: Query<(
+		&PersistentEntity,
+		&GlobalTransform,
+		Option<&GroundOffset>,
+		&TAgent,
+	)>,
+	players: Query<(&PersistentEntity, &GlobalTransform, Option<&GroundOffset>), With<TPlayer>>,
+	all: Query<(&PersistentEntity, &GlobalTransform, Option<&GroundOffset>)>,
 	colliders: Query<&ColliderOfInteractionTarget>,
+	mut persistent_entities: ResMut<PersistentEntities>,
 ) -> Result<Vec<Result<(), InvalidDirectionError>>, TGetRayCaster::TError>
 where
 	TAgent: Component + Sized + Getter<AggroRange> + Getter<AttackRange> + Getter<EnemyTarget>,
@@ -69,15 +92,20 @@ where
 	let ray_caster = ray_caster_source.get_ray_caster()?;
 	let mut results = vec![];
 
-	for (entity, transform, ground_offset, agent) in &agents {
+	for (persistent_agent_entity, transform, ground_offset, agent) in &agents {
 		let target = match agent.get() {
 			EnemyTarget::Player => player,
-			EnemyTarget::Entity(entity) => all.get(entity).ok(),
+			EnemyTarget::Entity(persistent_entity) => persistent_entities
+				.get_entity(&persistent_entity)
+				.and_then(|entity| all.get(entity).ok()),
 		};
-		let Some((target, target_transform, target_ground_offset)) = target else {
+		let Some((persistent_target, target_transform, target_ground_offset)) = target else {
 			continue;
 		};
-		let Ok(mut entity) = commands.get_entity(entity) else {
+		let Some(target_entity) = persistent_entities.get_entity(persistent_target) else {
+			continue;
+		};
+		let Some(agent_entity) = persistent_entities.get_entity(persistent_agent_entity) else {
 			continue;
 		};
 		let translation = match ground_offset {
@@ -88,29 +116,32 @@ where
 			Some(GroundOffset(ground_offset)) => target_transform.translation() + ground_offset,
 			None => target_transform.translation(),
 		};
-
 		let strategy = get_strategy(
-			entity.id(),
+			agent_entity,
 			agent,
 			translation,
-			target,
+			target_entity,
 			target_translation,
 			&ray_caster,
 			&colliders,
 		);
+		let Ok(mut agent_entity) = commands.get_entity(agent_entity) else {
+			continue;
+		};
+
 		match strategy {
 			Err(error) => results.push(Err(error)),
 			Ok(Behavior::Attack) => {
-				entity.try_insert(Attack(target));
-				entity.remove::<Chase>();
+				agent_entity.try_insert(Attack(*persistent_target));
+				agent_entity.remove::<Chase>();
 			}
 			Ok(Behavior::Chase) => {
-				entity.try_insert(Chase(target));
-				entity.remove::<Attack>();
+				agent_entity.try_insert(Chase(*persistent_target));
+				agent_entity.remove::<Attack>();
 			}
 			Ok(Behavior::Idle) => {
-				entity.remove::<Chase>();
-				entity.remove::<Attack>();
+				agent_entity.remove::<Chase>();
+				agent_entity.remove::<Attack>();
 			}
 		}
 	}
@@ -192,12 +223,17 @@ mod tests {
 			cast_ray::TimeOfImpact,
 			clamp_zero_positive::ClampZeroPositive,
 			nested_mock::NestedMocks,
+			register_persistent_entities::RegisterPersistentEntities,
 		},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
+	use std::sync::LazyLock;
+
+	static ENEMY: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
 
 	#[derive(Component)]
+	#[require(PersistentEntity = *ENEMY)]
 	struct _Enemy {
 		aggro_range: AggroRange,
 		attack_range: AttackRange,
@@ -222,8 +258,17 @@ mod tests {
 		}
 	}
 
+	static PLAYER: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
+
 	#[derive(Component)]
+	#[require(PersistentEntity = *PLAYER)]
 	struct _Player;
+
+	static TARGET: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
+
+	#[derive(Component)]
+	#[require(PersistentEntity = *TARGET)]
+	struct _Target;
 
 	#[derive(NestedMocks)]
 	pub struct _GetRayCaster {
@@ -270,21 +315,23 @@ mod tests {
 	}
 
 	fn setup() -> App {
-		App::new().single_threaded(Update)
+		let mut app = App::new().single_threaded(Update);
+
+		app.register_persistent_entities();
+
+		app
 	}
 
 	#[test]
 	fn chase_player() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let player = app
-			.world_mut()
-			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Player))
-			.id();
+		app.world_mut()
+			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Player));
 		let enemy = app
 			.world_mut()
 			.spawn((
 				GlobalTransform::from_xyz(2., 0., 1.),
-				Attack(player),
+				Attack(*PLAYER),
 				_Enemy {
 					attack_range: Units::new(1.).into(),
 					aggro_range: Units::new(2.).into(),
@@ -300,7 +347,7 @@ mod tests {
 
 		let enemy = app.world().entity(enemy);
 		assert_eq!(
-			(Some(&Chase(player)), None),
+			(Some(&Chase(*PLAYER)), None),
 			(enemy.get::<Chase>(), enemy.get::<Attack>())
 		);
 		Ok(())
@@ -309,16 +356,14 @@ mod tests {
 	#[test]
 	fn do_nothing_when_out_of_aggro_range_of_player() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let player = app
-			.world_mut()
-			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Player))
-			.id();
+		app.world_mut()
+			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Player));
 		let enemy = app
 			.world_mut()
 			.spawn((
 				GlobalTransform::from_xyz(3., 0., 3.),
-				Chase(player),
-				Attack(player),
+				Chase(*PLAYER),
+				Attack(*PLAYER),
 				_Enemy {
 					attack_range: Units::new(1.).into(),
 					aggro_range: Units::new(2.).into(),
@@ -340,19 +385,17 @@ mod tests {
 	#[test]
 	fn chase_entity() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let target = app
-			.world_mut()
-			.spawn(GlobalTransform::from_xyz(1., 0., 0.))
-			.id();
+		app.world_mut()
+			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Target));
 		let enemy = app
 			.world_mut()
 			.spawn((
 				GlobalTransform::from_xyz(2., 0., 1.),
-				Attack(target),
+				Attack(*TARGET),
 				_Enemy {
 					attack_range: Units::new(1.).into(),
 					aggro_range: Units::new(2.).into(),
-					target: EnemyTarget::Entity(target),
+					target: EnemyTarget::Entity(*TARGET),
 				},
 			))
 			.id();
@@ -364,7 +407,7 @@ mod tests {
 
 		let enemy = app.world().entity(enemy);
 		assert_eq!(
-			(Some(&Chase(target)), None),
+			(Some(&Chase(*TARGET)), None),
 			(enemy.get::<Chase>(), enemy.get::<Attack>())
 		);
 		Ok(())
@@ -373,20 +416,18 @@ mod tests {
 	#[test]
 	fn do_nothing_when_out_of_aggro_range_of_entity() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let target = app
-			.world_mut()
-			.spawn(GlobalTransform::from_xyz(1., 0., 0.))
-			.id();
+		app.world_mut()
+			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Target));
 		let enemy = app
 			.world_mut()
 			.spawn((
 				GlobalTransform::from_xyz(3., 0., 3.),
-				Chase(target),
-				Attack(target),
+				Chase(*TARGET),
+				Attack(*TARGET),
 				_Enemy {
 					attack_range: Units::new(1.).into(),
 					aggro_range: Units::new(2.).into(),
-					target: EnemyTarget::Entity(target),
+					target: EnemyTarget::Entity(*TARGET),
 				},
 			))
 			.id();
@@ -404,15 +445,13 @@ mod tests {
 	#[test]
 	fn keep_chasing_player_when_in_attack_range_but_no_los() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let player = app
-			.world_mut()
-			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Player))
-			.id();
+		app.world_mut()
+			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Player));
 		let enemy = app
 			.world_mut()
 			.spawn((
 				GlobalTransform::from_xyz(1., 0., 0.5),
-				Chase(player),
+				Chase(*PLAYER),
 				_Enemy {
 					attack_range: Units::new(1.).into(),
 					aggro_range: Units::new(2.).into(),
@@ -435,7 +474,7 @@ mod tests {
 
 		let enemy = app.world().entity(enemy);
 		assert_eq!(
-			(Some(&Chase(player)), None),
+			(Some(&Chase(*PLAYER)), None),
 			(enemy.get::<Chase>(), enemy.get::<Attack>())
 		);
 		Ok(())
@@ -452,7 +491,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				GlobalTransform::from_xyz(1., 0., 0.5),
-				Chase(player),
+				Chase(*PLAYER),
 				_Enemy {
 					attack_range: Units::new(1.).into(),
 					aggro_range: Units::new(2.).into(),
@@ -477,7 +516,7 @@ mod tests {
 
 		let enemy = app.world().entity(enemy);
 		assert_eq!(
-			(None, Some(&Attack(player)),),
+			(None, Some(&Attack(*PLAYER)),),
 			(enemy.get::<Chase>(), enemy.get::<Attack>())
 		);
 		Ok(())
@@ -487,15 +526,13 @@ mod tests {
 	fn keep_chasing_player_when_in_attack_range_but_no_los_to_player_obstructed()
 	-> Result<(), RunSystemError> {
 		let mut app = setup();
-		let player = app
-			.world_mut()
-			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Player))
-			.id();
+		app.world_mut()
+			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Player));
 		let enemy = app
 			.world_mut()
 			.spawn((
 				GlobalTransform::from_xyz(1., 0., 0.5),
-				Chase(player),
+				Chase(*PLAYER),
 				_Enemy {
 					attack_range: Units::new(1.).into(),
 					aggro_range: Units::new(2.).into(),
@@ -521,7 +558,7 @@ mod tests {
 
 		let enemy = app.world().entity(enemy);
 		assert_eq!(
-			(Some(&Chase(player)), None),
+			(Some(&Chase(*PLAYER)), None),
 			(enemy.get::<Chase>(), enemy.get::<Attack>())
 		);
 		Ok(())
@@ -530,15 +567,13 @@ mod tests {
 	#[test]
 	fn los_check_to_player_with_proper_ray() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let player = app
-			.world_mut()
-			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Player))
-			.id();
+		app.world_mut()
+			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Player));
 		let enemy = app
 			.world_mut()
 			.spawn((
 				GlobalTransform::from_xyz(0., 0., 1.),
-				Chase(player),
+				Chase(*PLAYER),
 				_Enemy {
 					attack_range: Units::new(10.).into(),
 					aggro_range: Units::new(10.).into(),
@@ -574,19 +609,16 @@ mod tests {
 	#[test]
 	fn los_check_to_player_with_proper_ray_using_offsets() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let player = app
-			.world_mut()
-			.spawn((
-				GlobalTransform::from_xyz(1., 0., 0.),
-				_Player,
-				GroundOffset(Vec3::new(0., 0.5, 0.)),
-			))
-			.id();
+		app.world_mut().spawn((
+			GlobalTransform::from_xyz(1., 0., 0.),
+			_Player,
+			GroundOffset(Vec3::new(0., 0.5, 0.)),
+		));
 		let enemy = app
 			.world_mut()
 			.spawn((
 				GlobalTransform::from_xyz(0., 0., 1.),
-				Chase(player),
+				Chase(*PLAYER),
 				_Enemy {
 					attack_range: Units::new(10.).into(),
 					aggro_range: Units::new(10.).into(),
@@ -623,13 +655,11 @@ mod tests {
 	#[test]
 	fn log_direction_error() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let player = app
-			.world_mut()
-			.spawn((GlobalTransform::from_xyz(f32::INFINITY, 0., 0.), _Player))
-			.id();
+		app.world_mut()
+			.spawn((GlobalTransform::from_xyz(f32::INFINITY, 0., 0.), _Player));
 		app.world_mut().spawn((
 			GlobalTransform::from_xyz(f32::INFINITY, 0., 0.5),
-			Chase(player),
+			Chase(*PLAYER),
 			_Enemy {
 				attack_range: Units::new(1.).into(),
 				aggro_range: Units::new(2.).into(),
@@ -662,7 +692,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				GlobalTransform::from_xyz(1., 0., 0.5),
-				Chase(player),
+				Chase(*PLAYER),
 				_Enemy {
 					attack_range: Units::new(1.).into(),
 					aggro_range: Units::new(2.).into(),
@@ -687,7 +717,7 @@ mod tests {
 
 		let enemy = app.world().entity(enemy);
 		assert_eq!(
-			(None, Some(&Attack(player)),),
+			(None, Some(&Attack(*PLAYER))),
 			(enemy.get::<Chase>(), enemy.get::<Attack>())
 		);
 		Ok(())

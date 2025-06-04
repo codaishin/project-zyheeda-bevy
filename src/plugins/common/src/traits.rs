@@ -51,6 +51,7 @@ pub mod nested_mock;
 pub mod ownership_relation;
 pub mod prefab;
 pub mod read;
+pub mod register_persistent_entities;
 pub mod register_required_components_mapped;
 pub mod remove_conditionally;
 pub mod remove_resource;

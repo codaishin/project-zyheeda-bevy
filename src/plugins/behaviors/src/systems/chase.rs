@@ -1,9 +1,8 @@
 use crate::components::{Chase, movement::Movement};
 use bevy::prelude::*;
-use common::traits::{
-	thread_safe::ThreadSafe,
-	try_insert_on::TryInsertOn,
-	try_remove_from::TryRemoveFrom,
+use common::{
+	resources::persistent_entities::PersistentEntities,
+	traits::{thread_safe::ThreadSafe, try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
 };
 
 impl<T> ChaseSystem for T {}
@@ -11,8 +10,9 @@ impl<T> ChaseSystem for T {}
 pub(crate) trait ChaseSystem {
 	fn chase<TMovementMethod>(
 		mut commands: Commands,
-		chasers: Query<(Entity, &Chase), With<Self>>,
+		mut persistent_entities: ResMut<PersistentEntities>,
 		mut removed_chasers: RemovedComponents<Chase>,
+		chasers: Query<(Entity, &Chase), With<Self>>,
 		transforms: Query<&GlobalTransform>,
 	) where
 		Self: Component + Sized,
@@ -23,7 +23,10 @@ pub(crate) trait ChaseSystem {
 		}
 
 		for (entity, Chase(target)) in &chasers {
-			let Ok(target) = transforms.get(*target) else {
+			let Some(target) = persistent_entities.get_entity(target) else {
+				continue;
+			};
+			let Ok(target) = transforms.get(target) else {
 				continue;
 			};
 			commands.try_insert_on(
@@ -37,6 +40,11 @@ pub(crate) trait ChaseSystem {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use common::{
+		components::persistent_entity::PersistentEntity,
+		test_tools::utils::SingleThreadedApp,
+		traits::register_persistent_entities::RegisterPersistentEntities,
+	};
 
 	#[derive(Component)]
 	struct _Agent;
@@ -44,15 +52,19 @@ mod tests {
 	#[derive(Debug, PartialEq, Default)]
 	struct _MovementMethod;
 
-	fn setup(target_position: Vec3) -> (App, Entity) {
-		let mut app = App::new();
-		app.add_systems(Update, _Agent::chase::<_MovementMethod>);
-		let target = app
-			.world_mut()
-			.spawn(GlobalTransform::from_translation(target_position))
-			.id();
+	fn setup(target_position: Vec3) -> (App, PersistentEntity) {
+		let mut app = App::new().single_threaded(Update);
 
-		(app, target)
+		app.register_persistent_entities();
+		app.add_systems(Update, _Agent::chase::<_MovementMethod>);
+
+		let persistent_target = PersistentEntity::default();
+		app.world_mut().spawn((
+			GlobalTransform::from_translation(target_position),
+			persistent_target,
+		));
+
+		(app, persistent_target)
 	}
 
 	#[test]

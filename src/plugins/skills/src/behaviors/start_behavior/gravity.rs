@@ -38,9 +38,11 @@ mod tests {
 		prelude::*,
 	};
 	use common::{
+		components::persistent_entity::PersistentEntity,
 		test_tools::utils::SingleThreadedApp,
 		traits::clamp_zero_positive::ClampZeroPositive,
 	};
+	use std::sync::LazyLock;
 
 	struct _HandlesEffects;
 
@@ -58,6 +60,8 @@ mod tests {
 	#[derive(Component, Debug, PartialEq)]
 	struct _Effect(Gravity);
 
+	static CASTER: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
+
 	fn gravity(
 		In((pull, effect_applies)): In<(UnitsPerSecond, EffectApplies)>,
 		mut commands: Commands,
@@ -69,7 +73,7 @@ mod tests {
 		}
 		.apply::<_HandlesEffects>(
 			&mut entity,
-			&SkillCaster::from(Entity::from_raw(42)),
+			&SkillCaster::from(*CASTER),
 			Spawner::Center,
 			&SkillTarget::default(),
 		);
