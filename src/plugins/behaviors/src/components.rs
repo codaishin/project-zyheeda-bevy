@@ -8,6 +8,7 @@ pub(crate) mod when_traveled_insert;
 
 use bevy::prelude::*;
 use common::{
+	components::persistent_entity::PersistentEntity,
 	tools::UnitsPerSecond,
 	traits::{animation::Animation, handles_orientation::Face},
 };
@@ -39,10 +40,10 @@ pub struct MovementConfig {
 }
 
 #[derive(Component, Debug, PartialEq)]
-pub struct Chase(pub Entity);
+pub struct Chase(pub PersistentEntity);
 
 #[derive(Component, Debug, PartialEq)]
-pub struct Attack(pub Entity);
+pub struct Attack(pub PersistentEntity);
 
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct OnCoolDown(pub Duration);

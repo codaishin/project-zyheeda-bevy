@@ -1,16 +1,13 @@
 use crate::components::{Attack, OnCoolDown};
-use bevy::ecs::{
-	component::Component,
-	entity::Entity,
-	query::Without,
-	removal_detection::RemovedComponents,
-	system::{Commands, Query},
-};
-use common::traits::{
-	handles_enemies::{Attacker, EnemyAttack, Target},
-	try_despawn::TryDespawn,
-	try_insert_on::TryInsertOn,
-	try_remove_from::TryRemoveFrom,
+use bevy::prelude::*;
+use common::{
+	components::persistent_entity::PersistentEntity,
+	traits::{
+		handles_enemies::{Attacker, EnemyAttack, Target},
+		try_despawn::TryDespawn,
+		try_insert_on::TryInsertOn,
+		try_remove_from::TryRemoveFrom,
+	},
 };
 
 impl<T> AttackSystem for T {}
@@ -19,16 +16,20 @@ pub trait AttackSystem {
 	fn attack(
 		mut commands: Commands,
 		mut stop_attacks: RemovedComponents<Attack>,
-		attackers: Query<(Entity, &Self, &Attack), Without<OnCoolDown>>,
+		attackers: Query<(Entity, &PersistentEntity, &Self, &Attack), Without<OnCoolDown>>,
 		ongoing: Query<&Ongoing>,
 	) where
 		Self: Component + EnemyAttack + Sized,
 	{
-		for (entity, enemy, Attack(target)) in &attackers {
+		for (entity, persistent_entity, enemy, Attack(target)) in &attackers {
 			let mut attack_entity = commands.spawn_empty();
 			let attack = attack_entity.id();
 
-			enemy.insert_attack(&mut attack_entity, Attacker(entity), Target(*target));
+			enemy.insert_attack(
+				&mut attack_entity,
+				Attacker(*persistent_entity),
+				Target(*target),
+			);
 			attack_entity
 				.commands()
 				.try_insert_on(entity, (OnCoolDown(enemy.cool_down()), Ongoing(attack)));
@@ -104,27 +105,27 @@ mod tests {
 	#[test]
 	fn use_spawn_function() {
 		let mut app = setup();
-		let attacker = app
-			.world_mut()
-			.spawn((
-				Attack(Entity::from_raw(11)),
-				_Enemy::new().with_mock(|mock| {
-					mock.expect_insert_attack()
-						.times(1)
-						.returning(|entity, attacker, target| {
-							entity.insert(_FakeAttack { attacker, target });
-						});
-					mock.expect_cool_down().return_const(Duration::ZERO);
-				}),
-			))
-			.id();
+		let target = PersistentEntity::default();
+		let attacker = PersistentEntity::default();
+		app.world_mut().spawn((
+			attacker,
+			Attack(target),
+			_Enemy::new().with_mock(|mock| {
+				mock.expect_insert_attack()
+					.times(1)
+					.returning(|entity, attacker, target| {
+						entity.insert(_FakeAttack { attacker, target });
+					});
+				mock.expect_cool_down().return_const(Duration::ZERO);
+			}),
+		));
 
 		app.update();
 
 		assert_eq!(
 			Some(&_FakeAttack {
 				attacker: Attacker(attacker),
-				target: Target(Entity::from_raw(11))
+				target: Target(target)
 			}),
 			app.world()
 				.iter_entities()
@@ -138,7 +139,8 @@ mod tests {
 		let attacker = app
 			.world_mut()
 			.spawn((
-				Attack(Entity::from_raw(11)),
+				PersistentEntity::default(),
+				Attack(PersistentEntity::default()),
 				_Enemy::new().with_mock(|mock| {
 					mock.expect_insert_attack().return_const(());
 					mock.expect_cool_down()
@@ -161,7 +163,8 @@ mod tests {
 		let attacker = app
 			.world_mut()
 			.spawn((
-				Attack(Entity::from_raw(11)),
+				PersistentEntity::default(),
+				Attack(PersistentEntity::default()),
 				OnCoolDown(Duration::from_millis(100)),
 				_Enemy::new().with_mock(|mock| {
 					mock.expect_insert_attack().returning(|entity, _, _| {
@@ -192,7 +195,8 @@ mod tests {
 		let attacker = app
 			.world_mut()
 			.spawn((
-				Attack(Entity::from_raw(11)),
+				PersistentEntity::default(),
+				Attack(PersistentEntity::default()),
 				_Enemy::new().with_mock(|mock| {
 					mock.expect_insert_attack().returning(|entity, _, _| {
 						entity.insert(_FakeAttackEmpty);
@@ -220,7 +224,8 @@ mod tests {
 		let attacker = app
 			.world_mut()
 			.spawn((
-				Attack(Entity::from_raw(11)),
+				PersistentEntity::default(),
+				Attack(PersistentEntity::default()),
 				_Enemy::new().with_mock(|mock| {
 					mock.expect_insert_attack().return_const(());
 					mock.expect_cool_down().return_const(Duration::ZERO);

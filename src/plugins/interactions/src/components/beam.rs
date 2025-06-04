@@ -3,7 +3,7 @@ use crate::events::{InteractionEvent, Ray};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::GroundOffset,
+	components::{GroundOffset, persistent_entity::PersistentEntity},
 	tools::Units,
 	traits::{
 		cast_ray::TimeOfImpact,
@@ -52,8 +52,8 @@ impl Beam {
 
 #[derive(Component, Debug, PartialEq)]
 pub struct BeamCommand {
-	source: Entity,
-	target: Entity,
+	source: PersistentEntity,
+	target: PersistentEntity,
 	params: Parameters,
 }
 
