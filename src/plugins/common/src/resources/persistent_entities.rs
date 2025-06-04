@@ -11,6 +11,21 @@ pub struct PersistentEntities {
 	pub(crate) errors: Vec<LookupError>,
 }
 
+impl PersistentEntities {
+	/// Attempt to retrieve an [`Entity`] for the given [`PersistentEntity`].
+	///
+	/// Failures are logged by the [`crate::CommonPlugin`]. `self` is mutable to allow collection of
+	/// lookup errors, which are used for logging via a dedicated system.
+	pub fn get_entity(&mut self, persistent_entity: &PersistentEntity) -> Option<Entity> {
+		let Some(entity) = self.entities.get(persistent_entity) else {
+			self.errors.push(LookupError(*persistent_entity));
+			return None;
+		};
+
+		Some(*entity)
+	}
+}
+
 #[cfg(test)]
 impl<const N: usize> From<[(PersistentEntity, Entity); N]> for PersistentEntities {
 	fn from(entities: [(PersistentEntity, Entity); N]) -> Self {
@@ -18,25 +33,6 @@ impl<const N: usize> From<[(PersistentEntity, Entity); N]> for PersistentEntitie
 			entities: HashMap::from(entities),
 			errors: vec![],
 		}
-	}
-}
-
-pub trait GetPersistentEntity {
-	/// Attempt to retrieve an `Entity` for the given `PersistentEntity`.
-	///
-	/// Failure should be logged by implementors. `self` is mutable to allow
-	/// collection of lookup errors, which can be used for logging via a dedicated system.
-	fn get_entity(&mut self, id: &PersistentEntity) -> Option<Entity>;
-}
-
-impl GetPersistentEntity for PersistentEntities {
-	fn get_entity(&mut self, persistent_entity: &PersistentEntity) -> Option<Entity> {
-		let Some(entity) = self.entities.get(persistent_entity) else {
-			self.errors.push(LookupError(*persistent_entity));
-			return None;
-		};
-
-		Some(*entity)
 	}
 }
 

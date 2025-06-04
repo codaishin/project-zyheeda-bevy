@@ -7,7 +7,7 @@ use common::{
 		collider_relationship::ColliderOfInteractionTarget,
 		persistent_entity::PersistentEntity,
 	},
-	resources::persistent_entities::{GetPersistentEntity, PersistentEntities},
+	resources::persistent_entities::PersistentEntities,
 	tools::{
 		aggro_range::AggroRange,
 		attack_range::AttackRange,
@@ -69,7 +69,7 @@ enum Behavior {
 	Idle,
 }
 
-fn select_behavior<TAgent, TPlayer, TGetRayCaster, TPersistentEntities>(
+fn select_behavior<TAgent, TPlayer, TGetRayCaster>(
 	ray_caster_source: TGetRayCaster,
 	mut commands: Commands,
 	agents: Query<(
@@ -81,13 +81,12 @@ fn select_behavior<TAgent, TPlayer, TGetRayCaster, TPersistentEntities>(
 	players: Query<(&PersistentEntity, &GlobalTransform, Option<&GroundOffset>), With<TPlayer>>,
 	all: Query<(&PersistentEntity, &GlobalTransform, Option<&GroundOffset>)>,
 	colliders: Query<&ColliderOfInteractionTarget>,
-	mut persistent_entities: ResMut<TPersistentEntities>,
+	mut persistent_entities: ResMut<PersistentEntities>,
 ) -> Result<Vec<Result<(), InvalidDirectionError>>, TGetRayCaster::TError>
 where
 	TAgent: Component + Sized + Getter<AggroRange> + Getter<AttackRange> + Getter<EnemyTarget>,
 	TPlayer: Component,
 	TGetRayCaster: GetRayCaster<(Ray3d, ExcludeRigidBody)>,
-	TPersistentEntities: Resource + GetPersistentEntity,
 {
 	let player = players.single().ok();
 	let ray_caster = ray_caster_source.get_ray_caster()?;
@@ -224,23 +223,12 @@ mod tests {
 			cast_ray::TimeOfImpact,
 			clamp_zero_positive::ClampZeroPositive,
 			nested_mock::NestedMocks,
+			register_persistent_entities::RegisterPersistentEntities,
 		},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::sync::LazyLock;
-
-	#[derive(Resource, NestedMocks)]
-	struct _PersistentEntities {
-		mock: Mock_PersistentEntities,
-	}
-
-	#[automock]
-	impl GetPersistentEntity for _PersistentEntities {
-		fn get_entity(&mut self, id: &PersistentEntity) -> Option<Entity> {
-			self.mock.get_entity(id)
-		}
-	}
 
 	static ENEMY: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
 
@@ -326,19 +314,10 @@ mod tests {
 		}
 	}
 
-	fn couple(app: &mut App, entity: Entity, persistent: PersistentEntity) {
-		let mut persistent_entities = app.world_mut().resource_mut::<_PersistentEntities>();
-		persistent_entities
-			.mock
-			.expect_get_entity()
-			.with(eq(persistent))
-			.return_const(entity);
-	}
-
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.insert_resource(_PersistentEntities::new());
+		app.register_persistent_entities();
 
 		app
 	}
@@ -346,10 +325,8 @@ mod tests {
 	#[test]
 	fn chase_player() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let player = app
-			.world_mut()
-			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Player))
-			.id();
+		app.world_mut()
+			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Player));
 		let enemy = app
 			.world_mut()
 			.spawn((
@@ -362,11 +339,9 @@ mod tests {
 				},
 			))
 			.id();
-		couple(&mut app, player, *PLAYER);
-		couple(&mut app, enemy, *ENEMY);
 
 		Ok(_) = app.world_mut().run_system_once_with(
-			select_behavior::<_Enemy, _Player, In<_GetRayCaster>, _PersistentEntities>,
+			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
 			_GetRayCaster::with_no_hit(),
 		)?;
 
@@ -381,10 +356,8 @@ mod tests {
 	#[test]
 	fn do_nothing_when_out_of_aggro_range_of_player() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let player = app
-			.world_mut()
-			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Player))
-			.id();
+		app.world_mut()
+			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Player));
 		let enemy = app
 			.world_mut()
 			.spawn((
@@ -398,11 +371,9 @@ mod tests {
 				},
 			))
 			.id();
-		couple(&mut app, player, *PLAYER);
-		couple(&mut app, enemy, *ENEMY);
 
 		Ok(_) = app.world_mut().run_system_once_with(
-			select_behavior::<_Enemy, _Player, In<_GetRayCaster>, _PersistentEntities>,
+			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
 			_GetRayCaster::with_no_hit(),
 		)?;
 
@@ -414,10 +385,8 @@ mod tests {
 	#[test]
 	fn chase_entity() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let target = app
-			.world_mut()
-			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Target))
-			.id();
+		app.world_mut()
+			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Target));
 		let enemy = app
 			.world_mut()
 			.spawn((
@@ -430,11 +399,9 @@ mod tests {
 				},
 			))
 			.id();
-		couple(&mut app, target, *TARGET);
-		couple(&mut app, enemy, *ENEMY);
 
 		Ok(_) = app.world_mut().run_system_once_with(
-			select_behavior::<_Enemy, _Player, In<_GetRayCaster>, _PersistentEntities>,
+			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
 			_GetRayCaster::with_no_hit(),
 		)?;
 
@@ -449,10 +416,8 @@ mod tests {
 	#[test]
 	fn do_nothing_when_out_of_aggro_range_of_entity() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let target = app
-			.world_mut()
-			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Target))
-			.id();
+		app.world_mut()
+			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Target));
 		let enemy = app
 			.world_mut()
 			.spawn((
@@ -466,11 +431,9 @@ mod tests {
 				},
 			))
 			.id();
-		couple(&mut app, target, *TARGET);
-		couple(&mut app, enemy, *ENEMY);
 
 		Ok(_) = app.world_mut().run_system_once_with(
-			select_behavior::<_Enemy, _Player, In<_GetRayCaster>, _PersistentEntities>,
+			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
 			_GetRayCaster::with_no_hit(),
 		)?;
 
@@ -482,10 +445,8 @@ mod tests {
 	#[test]
 	fn keep_chasing_player_when_in_attack_range_but_no_los() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let player = app
-			.world_mut()
-			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Player))
-			.id();
+		app.world_mut()
+			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Player));
 		let enemy = app
 			.world_mut()
 			.spawn((
@@ -498,8 +459,6 @@ mod tests {
 				},
 			))
 			.id();
-		couple(&mut app, player, *PLAYER);
-		couple(&mut app, enemy, *ENEMY);
 		let get_ray_caster = _GetRayCaster::new().with_mock(|mock| {
 			mock.expect_get_ray_caster().times(1).returning(|| {
 				Ok(_RayCaster::new().with_mock(|mock| {
@@ -509,7 +468,7 @@ mod tests {
 		});
 
 		Ok(_) = app.world_mut().run_system_once_with(
-			select_behavior::<_Enemy, _Player, In<_GetRayCaster>, _PersistentEntities>,
+			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
 			get_ray_caster,
 		)?;
 
@@ -540,8 +499,6 @@ mod tests {
 				},
 			))
 			.id();
-		couple(&mut app, player, *PLAYER);
-		couple(&mut app, enemy, *ENEMY);
 		let get_ray_caster = _GetRayCaster::new().with_mock(move |mock| {
 			mock.expect_get_ray_caster().times(1).returning(move || {
 				Ok(_RayCaster::new().with_mock(move |mock| {
@@ -553,7 +510,7 @@ mod tests {
 		});
 
 		Ok(_) = app.world_mut().run_system_once_with(
-			select_behavior::<_Enemy, _Player, In<_GetRayCaster>, _PersistentEntities>,
+			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
 			get_ray_caster,
 		)?;
 
@@ -569,10 +526,8 @@ mod tests {
 	fn keep_chasing_player_when_in_attack_range_but_no_los_to_player_obstructed()
 	-> Result<(), RunSystemError> {
 		let mut app = setup();
-		let player = app
-			.world_mut()
-			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Player))
-			.id();
+		app.world_mut()
+			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Player));
 		let enemy = app
 			.world_mut()
 			.spawn((
@@ -585,8 +540,6 @@ mod tests {
 				},
 			))
 			.id();
-		couple(&mut app, player, *PLAYER);
-		couple(&mut app, enemy, *ENEMY);
 		let get_ray_caster = _GetRayCaster::new().with_mock(|mock| {
 			mock.expect_get_ray_caster().times(1).returning(|| {
 				Ok(_RayCaster::new().with_mock(|mock| {
@@ -599,7 +552,7 @@ mod tests {
 		});
 
 		Ok(_) = app.world_mut().run_system_once_with(
-			select_behavior::<_Enemy, _Player, In<_GetRayCaster>, _PersistentEntities>,
+			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
 			get_ray_caster,
 		)?;
 
@@ -614,10 +567,8 @@ mod tests {
 	#[test]
 	fn los_check_to_player_with_proper_ray() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let player = app
-			.world_mut()
-			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Player))
-			.id();
+		app.world_mut()
+			.spawn((GlobalTransform::from_xyz(1., 0., 0.), _Player));
 		let enemy = app
 			.world_mut()
 			.spawn((
@@ -630,8 +581,6 @@ mod tests {
 				},
 			))
 			.id();
-		couple(&mut app, player, *PLAYER);
-		couple(&mut app, enemy, *ENEMY);
 		let get_ray_caster = _GetRayCaster::new().with_mock(move |mock| {
 			mock.expect_get_ray_caster().times(1).returning(move || {
 				Ok(_RayCaster::new().with_mock(move |mock| {
@@ -651,7 +600,7 @@ mod tests {
 		});
 
 		Ok(_) = app.world_mut().run_system_once_with(
-			select_behavior::<_Enemy, _Player, In<_GetRayCaster>, _PersistentEntities>,
+			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
 			get_ray_caster,
 		)?;
 		Ok(())
@@ -660,14 +609,11 @@ mod tests {
 	#[test]
 	fn los_check_to_player_with_proper_ray_using_offsets() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let player = app
-			.world_mut()
-			.spawn((
-				GlobalTransform::from_xyz(1., 0., 0.),
-				_Player,
-				GroundOffset(Vec3::new(0., 0.5, 0.)),
-			))
-			.id();
+		app.world_mut().spawn((
+			GlobalTransform::from_xyz(1., 0., 0.),
+			_Player,
+			GroundOffset(Vec3::new(0., 0.5, 0.)),
+		));
 		let enemy = app
 			.world_mut()
 			.spawn((
@@ -681,8 +627,6 @@ mod tests {
 				GroundOffset(Vec3::new(0., 1., 0.)),
 			))
 			.id();
-		couple(&mut app, player, *PLAYER);
-		couple(&mut app, enemy, *ENEMY);
 		let get_ray_caster = _GetRayCaster::new().with_mock(move |mock| {
 			mock.expect_get_ray_caster().times(1).returning(move || {
 				Ok(_RayCaster::new().with_mock(move |mock| {
@@ -702,7 +646,7 @@ mod tests {
 		});
 
 		Ok(_) = app.world_mut().run_system_once_with(
-			select_behavior::<_Enemy, _Player, In<_GetRayCaster>, _PersistentEntities>,
+			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
 			get_ray_caster,
 		)?;
 		Ok(())
@@ -711,27 +655,20 @@ mod tests {
 	#[test]
 	fn log_direction_error() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let player = app
-			.world_mut()
-			.spawn((GlobalTransform::from_xyz(f32::INFINITY, 0., 0.), _Player))
-			.id();
-		let enemy = app
-			.world_mut()
-			.spawn((
-				GlobalTransform::from_xyz(f32::INFINITY, 0., 0.5),
-				Chase(*PLAYER),
-				_Enemy {
-					attack_range: Units::new(1.).into(),
-					aggro_range: Units::new(2.).into(),
-					target: EnemyTarget::Player,
-				},
-			))
-			.id();
-		couple(&mut app, player, *PLAYER);
-		couple(&mut app, enemy, *ENEMY);
+		app.world_mut()
+			.spawn((GlobalTransform::from_xyz(f32::INFINITY, 0., 0.), _Player));
+		app.world_mut().spawn((
+			GlobalTransform::from_xyz(f32::INFINITY, 0., 0.5),
+			Chase(*PLAYER),
+			_Enemy {
+				attack_range: Units::new(1.).into(),
+				aggro_range: Units::new(2.).into(),
+				target: EnemyTarget::Player,
+			},
+		));
 
 		let Ok(errors) = app.world_mut().run_system_once_with(
-			select_behavior::<_Enemy, _Player, In<_GetRayCaster>, _PersistentEntities>,
+			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
 			_GetRayCaster::with_no_hit(),
 		)?;
 
@@ -763,8 +700,6 @@ mod tests {
 				},
 			))
 			.id();
-		couple(&mut app, player, *PLAYER);
-		couple(&mut app, enemy, *ENEMY);
 		let get_ray_caster = _GetRayCaster::new().with_mock(move |mock| {
 			mock.expect_get_ray_caster().times(1).returning(move || {
 				Ok(_RayCaster::new().with_mock(move |mock| {
@@ -776,7 +711,7 @@ mod tests {
 		});
 
 		Ok(_) = app.world_mut().run_system_once_with(
-			select_behavior::<_Enemy, _Player, In<_GetRayCaster>, _PersistentEntities>,
+			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
 			get_ray_caster,
 		)?;
 

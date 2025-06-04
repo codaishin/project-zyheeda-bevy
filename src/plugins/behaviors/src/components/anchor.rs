@@ -9,7 +9,7 @@ use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
 	errors::{Error, Level},
-	resources::persistent_entities::{GetPersistentEntity, PersistentEntities},
+	resources::persistent_entities::PersistentEntities,
 	traits::track::{IsTracking, Track, Untrack},
 };
 use std::{
@@ -45,29 +45,17 @@ where
 	}
 
 	pub(crate) fn system(
-		agents: Query<(&Self, &mut Transform), <Self as HasFilter>::TFilter>,
-		fix_points: Query<&AnchorFixPoints>,
-		transforms: Query<&GlobalTransform>,
-		persistent_entities: ResMut<PersistentEntities>,
-	) -> Vec<Result<(), AnchorError>> {
-		Self::system_internal(agents, fix_points, transforms, persistent_entities)
-	}
-
-	fn system_internal<TPersistentEntities>(
+		mut persistent_entities: ResMut<PersistentEntities>,
 		mut agents: Query<(&Self, &mut Transform), <Self as HasFilter>::TFilter>,
 		fix_points: Query<&AnchorFixPoints>,
 		transforms: Query<&GlobalTransform>,
-		mut persistent_entities: ResMut<TPersistentEntities>,
-	) -> Vec<Result<(), AnchorError>>
-	where
-		TPersistentEntities: Resource + GetPersistentEntity,
-	{
+	) -> Vec<Result<(), AnchorError>> {
 		agents
 			.iter_mut()
 			.filter_map(|(anchor, mut anchor_transform)| {
 				let target = persistent_entities.get_entity(&anchor.target)?;
 				let Ok(AnchorFixPoints(fix_points)) = fix_points.get(target) else {
-					return Some(AnchorError::FixPointsMissingOn(target));
+					return Some(AnchorError::FixPointsMissingOn(anchor.target));
 				};
 				let Some(fix_point) = fix_points.get(&anchor.fix_point_key).copied() else {
 					return Some(AnchorError::NoFixPointEntityFor(anchor.fix_point_key));
@@ -162,7 +150,7 @@ impl AnchorFixPointKey {
 #[derive(Component, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum AnchorError {
 	NoFixPointEntityFor(AnchorFixPointKey),
-	FixPointsMissingOn(Entity),
+	FixPointsMissingOn(PersistentEntity),
 	GlobalTransformMissingOn(Entity),
 }
 
@@ -172,7 +160,7 @@ impl From<AnchorError> for Error {
 			AnchorError::FixPointsMissingOn(entity) => {
 				let type_name = type_name::<AnchorFixPoints>();
 				Self {
-					msg: format!("{entity}: {type_name} missing"),
+					msg: format!("{entity:?}: {type_name} missing"),
 					lvl: Level::Error,
 				}
 			}
@@ -197,22 +185,11 @@ mod tests {
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
 		test_tools::utils::SingleThreadedApp,
-		traits::{handles_skill_behaviors::Spawner, nested_mock::NestedMocks},
+		traits::{
+			handles_skill_behaviors::Spawner,
+			register_persistent_entities::RegisterPersistentEntities,
+		},
 	};
-	use macros::NestedMocks;
-	use mockall::{automock, predicate::eq};
-
-	#[derive(Resource, NestedMocks)]
-	struct _PersistentEntities {
-		mock: Mock_PersistentEntities,
-	}
-
-	#[automock]
-	impl GetPersistentEntity for _PersistentEntities {
-		fn get_entity(&mut self, id: &PersistentEntity) -> Option<Entity> {
-			self.mock.get_entity(id)
-		}
-	}
 
 	struct _NotIgnored;
 
@@ -224,71 +201,36 @@ mod tests {
 	}
 
 	fn setup() -> App {
-		App::new().single_threaded(Update)
-	}
+		let mut app = App::new().single_threaded(Update);
 
-	#[test]
-	fn use_correct_entity() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		let persistent_entity = PersistentEntity::default();
-		let fix_point = app
-			.world_mut()
-			.spawn(GlobalTransform::from_xyz(4., 11., 9.))
-			.id();
-		let entity = app
-			.world_mut()
-			.spawn(AnchorFixPoints::from([(
-				AnchorFixPointKey::new::<()>(11),
-				fix_point,
-			)]))
-			.id();
-		app.insert_resource(_PersistentEntities::new().with_mock(|mock| {
-			mock.expect_get_entity()
-				.times(1)
-				.with(eq(persistent_entity))
-				.return_const(entity);
-		}));
-		app.world_mut().spawn((
-			Anchor::<_NotIgnored>::to(persistent_entity)
-				.on_fix_point(AnchorFixPointKey::new::<()>(11)),
-			Transform::default(),
-		));
+		app.register_persistent_entities();
 
-		app.world_mut()
-			.run_system_once(Anchor::<_NotIgnored>::system_internal::<_PersistentEntities>)
-			.map(|_| {})
+		app
 	}
 
 	#[test]
 	fn copy_location_translation() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let persistent_entity = PersistentEntity::default();
+		let entity = PersistentEntity::default();
 		let fix_point = app
 			.world_mut()
 			.spawn(GlobalTransform::from_xyz(4., 11., 9.))
 			.id();
-		let entity = app
-			.world_mut()
-			.spawn(AnchorFixPoints::from([(
-				AnchorFixPointKey::new::<()>(11),
-				fix_point,
-			)]))
-			.id();
-		app.insert_resource(_PersistentEntities::new().with_mock(|mock| {
-			mock.expect_get_entity().return_const(entity);
-		}));
+		app.world_mut().spawn((
+			AnchorFixPoints::from([(AnchorFixPointKey::new::<()>(11), fix_point)]),
+			entity,
+		));
 		let agent = app
 			.world_mut()
 			.spawn((
-				Anchor::<_NotIgnored>::to(persistent_entity)
-					.on_fix_point(AnchorFixPointKey::new::<()>(11)),
+				Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey::new::<()>(11)),
 				Transform::default(),
 			))
 			.id();
 
 		_ = app
 			.world_mut()
-			.run_system_once(Anchor::<_NotIgnored>::system_internal::<_PersistentEntities>)?;
+			.run_system_once(Anchor::<_NotIgnored>::system)?;
 
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 11., 9.)),
@@ -300,35 +242,28 @@ mod tests {
 	#[test]
 	fn copy_location_rotation() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let persistent_entity = PersistentEntity::default();
+		let entity = PersistentEntity::default();
 		let fix_point = app
 			.world_mut()
 			.spawn(GlobalTransform::from(
 				Transform::default().looking_at(Vec3::new(0., 0., 1.), Vec3::Y),
 			))
 			.id();
-		let entity = app
-			.world_mut()
-			.spawn(AnchorFixPoints::from([(
-				AnchorFixPointKey::new::<()>(11),
-				fix_point,
-			)]))
-			.id();
-		app.insert_resource(_PersistentEntities::new().with_mock(|mock| {
-			mock.expect_get_entity().return_const(entity);
-		}));
+		app.world_mut().spawn((
+			AnchorFixPoints::from([(AnchorFixPointKey::new::<()>(11), fix_point)]),
+			entity,
+		));
 		let agent = app
 			.world_mut()
 			.spawn((
-				Anchor::<_NotIgnored>::to(persistent_entity)
-					.on_fix_point(AnchorFixPointKey::new::<()>(11)),
+				Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey::new::<()>(11)),
 				Transform::default(),
 			))
 			.id();
 
 		_ = app
 			.world_mut()
-			.run_system_once(Anchor::<_NotIgnored>::system_internal::<_PersistentEntities>)?;
+			.run_system_once(Anchor::<_NotIgnored>::system)?;
 
 		assert_eq!(
 			Some(&Transform::default().looking_at(Vec3::new(0., 0., 1.), Vec3::Y)),
@@ -340,33 +275,26 @@ mod tests {
 	#[test]
 	fn do_not_change_scale() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let persistent_entity = PersistentEntity::default();
+		let entity = PersistentEntity::default();
 		let fix_point = app
 			.world_mut()
 			.spawn(GlobalTransform::from(Transform::default()))
 			.id();
-		let entity = app
-			.world_mut()
-			.spawn(AnchorFixPoints::from([(
-				AnchorFixPointKey::new::<()>(11),
-				fix_point,
-			)]))
-			.id();
-		app.insert_resource(_PersistentEntities::new().with_mock(|mock| {
-			mock.expect_get_entity().return_const(entity);
-		}));
+		app.world_mut().spawn((
+			AnchorFixPoints::from([(AnchorFixPointKey::new::<()>(11), fix_point)]),
+			entity,
+		));
 		let agent = app
 			.world_mut()
 			.spawn((
-				Anchor::<_NotIgnored>::to(persistent_entity)
-					.on_fix_point(AnchorFixPointKey::new::<()>(11)),
+				Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey::new::<()>(11)),
 				Transform::from_scale(Vec3::new(3., 4., 5.)),
 			))
 			.id();
 
 		_ = app
 			.world_mut()
-			.run_system_once(Anchor::<_NotIgnored>::system_internal::<_PersistentEntities>)?;
+			.run_system_once(Anchor::<_NotIgnored>::system)?;
 
 		assert_eq!(
 			Some(&Transform::from_scale(Vec3::new(3., 4., 5.))),
@@ -378,26 +306,19 @@ mod tests {
 	#[test]
 	fn apply_filter() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let persistent_entity = PersistentEntity::default();
+		let entity = PersistentEntity::default();
 		let fix_point = app
 			.world_mut()
 			.spawn(GlobalTransform::from_xyz(4., 11., 9.))
 			.id();
-		let entity = app
-			.world_mut()
-			.spawn(AnchorFixPoints::from([(
-				AnchorFixPointKey::new::<()>(11),
-				fix_point,
-			)]))
-			.id();
-		app.insert_resource(_PersistentEntities::new().with_mock(|mock| {
-			mock.expect_get_entity().return_const(entity);
-		}));
+		app.world_mut().spawn((
+			AnchorFixPoints::from([(AnchorFixPointKey::new::<()>(11), fix_point)]),
+			entity,
+		));
 		let agent = app
 			.world_mut()
 			.spawn((
-				Anchor::<_NotIgnored>::to(persistent_entity)
-					.on_fix_point(AnchorFixPointKey::new::<()>(11)),
+				Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey::new::<()>(11)),
 				Transform::default(),
 				_Ignore,
 			))
@@ -405,7 +326,7 @@ mod tests {
 
 		_ = app
 			.world_mut()
-			.run_system_once(Anchor::<_NotIgnored>::system_internal::<_PersistentEntities>)?;
+			.run_system_once(Anchor::<_NotIgnored>::system)?;
 
 		assert_eq!(
 			Some(&Transform::default()),
@@ -417,23 +338,19 @@ mod tests {
 	#[test]
 	fn fix_point_missing() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let persistent_entity = PersistentEntity::default();
-		let entity = app.world_mut().spawn_empty().id();
+		let entity = PersistentEntity::default();
+		app.world_mut().spawn(entity);
 		_ = app
 			.world_mut()
 			.spawn((
-				Anchor::<_NotIgnored>::to(persistent_entity)
-					.on_fix_point(AnchorFixPointKey::new::<()>(11)),
+				Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey::new::<()>(11)),
 				Transform::default(),
 			))
 			.id();
-		app.insert_resource(_PersistentEntities::new().with_mock(|mock| {
-			mock.expect_get_entity().return_const(entity);
-		}));
 
 		let errors = app
 			.world_mut()
-			.run_system_once(Anchor::<_NotIgnored>::system_internal::<_PersistentEntities>)?;
+			.run_system_once(Anchor::<_NotIgnored>::system)?;
 
 		assert_eq!(vec![Err(AnchorError::FixPointsMissingOn(entity))], errors);
 		Ok(())
@@ -442,20 +359,16 @@ mod tests {
 	#[test]
 	fn fix_point_entity_missing() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let persistent_entity = PersistentEntity::default();
-		let entity = app.world_mut().spawn(AnchorFixPoints::default()).id();
-		app.insert_resource(_PersistentEntities::new().with_mock(|mock| {
-			mock.expect_get_entity().return_const(entity);
-		}));
+		let entity = PersistentEntity::default();
+		app.world_mut().spawn((AnchorFixPoints::default(), entity));
 		app.world_mut().spawn((
-			Anchor::<_NotIgnored>::to(persistent_entity)
-				.on_fix_point(AnchorFixPointKey::new::<()>(11)),
+			Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey::new::<()>(11)),
 			Transform::default(),
 		));
 
 		let errors = app
 			.world_mut()
-			.run_system_once(Anchor::<_NotIgnored>::system_internal::<_PersistentEntities>)?;
+			.run_system_once(Anchor::<_NotIgnored>::system)?;
 
 		assert_eq!(
 			vec![Err(AnchorError::NoFixPointEntityFor(
@@ -469,30 +382,23 @@ mod tests {
 	#[test]
 	fn transform_missing_on_fix_point() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let persistent_entity = PersistentEntity::default();
+		let entity = PersistentEntity::default();
 		let fix_point = app.world_mut().spawn_empty().id();
-		let entity = app
-			.world_mut()
-			.spawn(AnchorFixPoints::from([(
-				AnchorFixPointKey::new::<()>(11),
-				fix_point,
-			)]))
-			.id();
-		app.insert_resource(_PersistentEntities::new().with_mock(|mock| {
-			mock.expect_get_entity().return_const(entity);
-		}));
+		app.world_mut().spawn((
+			AnchorFixPoints::from([(AnchorFixPointKey::new::<()>(11), fix_point)]),
+			entity,
+		));
 		_ = app
 			.world_mut()
 			.spawn((
-				Anchor::<_NotIgnored>::to(persistent_entity)
-					.on_fix_point(AnchorFixPointKey::new::<()>(11)),
+				Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey::new::<()>(11)),
 				Transform::default(),
 			))
 			.id();
 
 		let errors = app
 			.world_mut()
-			.run_system_once(Anchor::<_NotIgnored>::system_internal::<_PersistentEntities>)?;
+			.run_system_once(Anchor::<_NotIgnored>::system)?;
 
 		assert_eq!(
 			vec![Err(AnchorError::GlobalTransformMissingOn(fix_point))],

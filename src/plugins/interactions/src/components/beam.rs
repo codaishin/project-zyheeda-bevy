@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
 	components::{GroundOffset, persistent_entity::PersistentEntity},
-	resources::persistent_entities::{GetPersistentEntity, PersistentEntities},
+	resources::persistent_entities::PersistentEntities,
 	tools::Units,
 	traits::{
 		cast_ray::TimeOfImpact,
@@ -25,49 +25,32 @@ pub(crate) struct Beam {
 
 impl Beam {
 	pub(crate) fn execute<TLifetimes>(
-		commands: Commands,
-		ray_cast_events: EventReader<InteractionEvent<Ray>>,
-		beams: Query<(Entity, &BeamCommand, Option<&Beam>)>,
-		transforms: Query<(&GlobalTransform, Option<&GroundOffset>)>,
-		persistent_entities: ResMut<PersistentEntities>,
-	) where
-		TLifetimes: HandlesLifetime,
-	{
-		Self::execute_internal::<TLifetimes, PersistentEntities>(
-			commands,
-			ray_cast_events,
-			beams,
-			transforms,
-			persistent_entities,
-		);
-	}
-
-	pub(crate) fn execute_internal<TLifetimes, TPersistentEntities>(
 		mut commands: Commands,
 		mut ray_cast_events: EventReader<InteractionEvent<Ray>>,
+		mut persistent_entities: ResMut<PersistentEntities>,
 		beams: Query<(Entity, &BeamCommand, Option<&Beam>)>,
 		transforms: Query<(&GlobalTransform, Option<&GroundOffset>)>,
-		mut persistent_entities: ResMut<TPersistentEntities>,
 	) where
 		TLifetimes: HandlesLifetime,
-		TPersistentEntities: Resource + GetPersistentEntity,
 	{
 		for (entity, cmd, ..) in &beams {
 			let Some(source) = persistent_entities.get_entity(&cmd.source) else {
 				continue;
 			};
-			let Some(target) = persistent_entities.get_entity(&cmd.target) else {
-				continue;
-			};
 			match commands.get_entity(source) {
-				Ok(_) => insert_ray_caster_args(
-					&mut commands,
-					&transforms,
-					entity,
-					source,
-					target,
-					cmd.params.range,
-				),
+				Ok(_) => {
+					let Some(target) = persistent_entities.get_entity(&cmd.target) else {
+						continue;
+					};
+					insert_ray_caster_args(
+						&mut commands,
+						&transforms,
+						entity,
+						source,
+						target,
+						cmd.params.range,
+					);
+				}
 				Err(_) => despawn_beam(&mut commands, entity),
 			}
 		}
@@ -213,23 +196,13 @@ mod tests {
 	};
 	use common::{
 		test_tools::utils::SingleThreadedApp,
-		traits::{cast_ray::TimeOfImpact, clamp_zero_positive::ClampZeroPositive},
+		traits::{
+			cast_ray::TimeOfImpact,
+			clamp_zero_positive::ClampZeroPositive,
+			register_persistent_entities::RegisterPersistentEntities,
+		},
 	};
-	use macros::NestedMocks;
-	use mockall::{automock, predicate::eq};
 	use std::{sync::LazyLock, time::Duration};
-
-	#[derive(Resource, NestedMocks)]
-	struct _PersistentEntities {
-		mock: Mock_PersistentEntities,
-	}
-
-	#[automock]
-	impl GetPersistentEntity for _PersistentEntities {
-		fn get_entity(&mut self, id: &PersistentEntity) -> Option<Entity> {
-			self.mock.get_entity(id)
-		}
-	}
 
 	struct _HandlesLifetime;
 
@@ -242,23 +215,12 @@ mod tests {
 	#[derive(Component, Debug, PartialEq)]
 	struct _LifeTime(Duration);
 
-	fn couple(app: &mut App, entity: Entity, persistent: PersistentEntity) {
-		app.world_mut()
-			.resource_mut::<_PersistentEntities>()
-			.mock
-			.expect_get_entity()
-			.with(eq(persistent))
-			.return_const(entity);
-	}
-
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(
-			Update,
-			Beam::execute_internal::<_HandlesLifetime, _PersistentEntities>,
-		);
+
+		app.register_persistent_entities();
 		app.add_event::<InteractionEvent<Ray>>();
-		app.insert_resource(_PersistentEntities::new());
+		app.add_systems(Update, Beam::execute::<_HandlesLifetime>);
 
 		app
 	}
@@ -273,10 +235,8 @@ mod tests {
 			.world_mut()
 			.spawn((GlobalTransform::from_xyz(1., 0., 0.), *SOURCE))
 			.id();
-		let target = app
-			.world_mut()
-			.spawn((GlobalTransform::from_xyz(1., 0., 4.), *TARGET))
-			.id();
+		app.world_mut()
+			.spawn((GlobalTransform::from_xyz(1., 0., 4.), *TARGET));
 		let beam = app
 			.world_mut()
 			.spawn(BeamCommand {
@@ -288,8 +248,6 @@ mod tests {
 				},
 			})
 			.id();
-		couple(&mut app, source, *SOURCE);
-		couple(&mut app, target, *TARGET);
 
 		app.update();
 
@@ -315,14 +273,11 @@ mod tests {
 			.world_mut()
 			.spawn((GlobalTransform::from_xyz(1., 0., 0.), *SOURCE))
 			.id();
-		let target = app
-			.world_mut()
-			.spawn((
-				GlobalTransform::from_xyz(1., 0., 4.),
-				GroundOffset(Vec3::new(0., 1., 0.)),
-				*TARGET,
-			))
-			.id();
+		app.world_mut().spawn((
+			GlobalTransform::from_xyz(1., 0., 4.),
+			GroundOffset(Vec3::new(0., 1., 0.)),
+			*TARGET,
+		));
 		let beam = app
 			.world_mut()
 			.spawn(BeamCommand {
@@ -334,8 +289,6 @@ mod tests {
 				},
 			})
 			.id();
-		couple(&mut app, source, *SOURCE);
-		couple(&mut app, target, *TARGET);
 
 		app.update();
 
@@ -365,10 +318,8 @@ mod tests {
 				*SOURCE,
 			))
 			.id();
-		let target = app
-			.world_mut()
-			.spawn((GlobalTransform::from_xyz(1., 0., 4.), *TARGET))
-			.id();
+		app.world_mut()
+			.spawn((GlobalTransform::from_xyz(1., 0., 4.), *TARGET));
 		let beam = app
 			.world_mut()
 			.spawn(BeamCommand {
@@ -380,8 +331,6 @@ mod tests {
 				},
 			})
 			.id();
-		couple(&mut app, source, *SOURCE);
-		couple(&mut app, target, *TARGET);
 
 		app.update();
 
@@ -403,10 +352,7 @@ mod tests {
 	#[test]
 	fn spawn_beam_from_interaction() {
 		let mut app = setup();
-		let source = app
-			.world_mut()
-			.spawn((GlobalTransform::default(), *SOURCE))
-			.id();
+		app.world_mut().spawn((GlobalTransform::default(), *SOURCE));
 		let beam = app
 			.world_mut()
 			.spawn(BeamCommand {
@@ -425,8 +371,6 @@ mod tests {
 			},
 			TimeOfImpact(10.),
 		));
-		couple(&mut app, source, *SOURCE);
-		couple(&mut app, Entity::from_raw(default()), *TARGET);
 
 		app.update();
 
@@ -448,10 +392,7 @@ mod tests {
 	#[test]
 	fn set_spatial_components() {
 		let mut app = setup();
-		let source = app
-			.world_mut()
-			.spawn((GlobalTransform::default(), *SOURCE))
-			.id();
+		app.world_mut().spawn((GlobalTransform::default(), *SOURCE));
 		let beam = app
 			.world_mut()
 			.spawn(BeamCommand {
@@ -467,8 +408,6 @@ mod tests {
 			},
 			TimeOfImpact(10.),
 		));
-		couple(&mut app, source, *SOURCE);
-		couple(&mut app, Entity::from_raw(default()), *TARGET);
 
 		app.update();
 
@@ -495,10 +434,7 @@ mod tests {
 	#[test]
 	fn update_transform_only_when_beam_component_already_present() {
 		let mut app = setup();
-		let source = app
-			.world_mut()
-			.spawn((GlobalTransform::default(), *SOURCE))
-			.id();
+		app.world_mut().spawn((GlobalTransform::default(), *SOURCE));
 		let beam = app
 			.world_mut()
 			.spawn((
@@ -520,8 +456,6 @@ mod tests {
 			},
 			TimeOfImpact(10.),
 		));
-		couple(&mut app, source, *SOURCE);
-		couple(&mut app, Entity::from_raw(default()), *TARGET);
 
 		app.update();
 
@@ -571,8 +505,6 @@ mod tests {
 			},
 			TimeOfImpact(10.),
 		));
-		couple(&mut app, source, *SOURCE);
-		couple(&mut app, Entity::from_raw(default()), *TARGET);
 
 		app.update();
 		app.world_mut().entity_mut(source).despawn();
