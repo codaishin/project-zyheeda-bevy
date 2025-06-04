@@ -1,8 +1,6 @@
 pub mod skill_contact;
 pub mod skill_projection;
 
-use crate::components::anchor::spawner_fix_point::SpawnerFixPoint;
-
 use super::{
 	Always,
 	Once,
@@ -11,6 +9,7 @@ use super::{
 	set_to_move_forward::SetVelocityForward,
 	when_traveled_insert::WhenTraveled,
 };
+use crate::components::anchor::spawner_fix_point::SpawnerFixPoint;
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::{
@@ -204,6 +203,7 @@ mod tests {
 	use bevy_rapier3d::prelude::ActiveCollisionTypes;
 	use common::{
 		blocker::Blocker,
+		components::persistent_entity::PersistentEntity,
 		tools::{
 			Units,
 			UnitsPerSecond,
@@ -267,9 +267,8 @@ mod tests {
 	#[test]
 	fn held_components() -> Result<(), RunSystemError> {
 		let (mut app, entity) = setup();
-		let motion = Motion::HeldBy {
-			caster: Entity::from_raw(11),
-		};
+		let caster = PersistentEntity::default();
+		let motion = Motion::HeldBy { caster };
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
 			motion.prefab::<_Interactions, _LifeCycles>(entity, ())
@@ -281,10 +280,7 @@ mod tests {
 				None,
 				None,
 				None,
-				Some(
-					&Anchor::<Always>::to(Entity::from_raw(11))
-						.on_fix_point(SpawnerFixPoint(Spawner::Center))
-				),
+				Some(&Anchor::<Always>::to(caster).on_fix_point(SpawnerFixPoint(Spawner::Center))),
 				None,
 				None,
 				None,
@@ -308,8 +304,9 @@ mod tests {
 	#[test]
 	fn stationary_components() -> Result<(), RunSystemError> {
 		let (mut app, entity) = setup();
+		let caster = PersistentEntity::default();
 		let motion = Motion::Stationary {
-			caster: Entity::from_raw(42),
+			caster,
 			max_cast_range: Units::new(42.),
 			target_ray: Ray3d {
 				origin: Vec3::new(11., 12., 13.),
@@ -327,7 +324,7 @@ mod tests {
 				None,
 				None,
 				Some(&GroundTarget {
-					caster: Entity::from_raw(42),
+					caster,
 					max_cast_range: Units::new(42.),
 					target_ray: Ray3d {
 						origin: Vec3::new(11., 12., 13.),
@@ -358,8 +355,9 @@ mod tests {
 	#[test]
 	fn projectile_components() -> Result<(), RunSystemError> {
 		let (mut app, entity) = setup();
+		let caster = PersistentEntity::default();
 		let motion = Motion::Projectile {
-			caster: Entity::from_raw(55),
+			caster,
 			spawner: Spawner::Slot(SlotKey::TopHand(Side::Left)),
 			speed: UnitsPerSecond::new(11.),
 			max_range: Units::new(1111.),
@@ -377,11 +375,11 @@ mod tests {
 				None,
 				None,
 				Some(
-					&Anchor::<Once>::to(Entity::from_raw(55))
+					&Anchor::<Once>::to(caster)
 						.on_fix_point(SpawnerFixPoint(Spawner::Slot(SlotKey::TopHand(Side::Left))))
 				),
 				Some(&SetVelocityForward {
-					rotation: Entity::from_raw(55),
+					rotation: caster,
 					speed: UnitsPerSecond::new(11.),
 				}),
 				Some(

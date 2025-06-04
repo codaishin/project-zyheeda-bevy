@@ -1,9 +1,14 @@
 use bevy::prelude::*;
-use common::{tools::Units, traits::try_insert_on::TryInsertOn};
+use common::{
+	components::persistent_entity::PersistentEntity,
+	resources::persistent_entities::{GetPersistentEntity, PersistentEntities},
+	tools::Units,
+	traits::try_insert_on::TryInsertOn,
+};
 
 #[derive(Component, Debug, PartialEq, Clone)]
 pub(crate) struct GroundTarget {
-	pub caster: Entity,
+	pub caster: PersistentEntity,
 	pub target_ray: Ray3d,
 	pub max_cast_range: Units,
 }
@@ -16,7 +21,7 @@ impl GroundTarget {
 	};
 
 	#[cfg(test)]
-	fn with_caster(caster: Entity) -> Self {
+	fn with_caster(caster: PersistentEntity) -> Self {
 		use common::traits::clamp_zero_positive::ClampZeroPositive;
 
 		GroundTarget {
@@ -64,17 +69,32 @@ impl GroundTarget {
 	}
 
 	pub(crate) fn set_position(
+		commands: Commands,
+		transforms: Query<&Transform>,
+		ground_targets: Query<(Entity, &GroundTarget), Added<GroundTarget>>,
+		persistent_entities: ResMut<PersistentEntities>,
+	) {
+		Self::set_position_internal(commands, transforms, ground_targets, persistent_entities)
+	}
+
+	fn set_position_internal<TPersistentEntities>(
 		mut commands: Commands,
 		transforms: Query<&Transform>,
 		ground_targets: Query<(Entity, &GroundTarget), Added<GroundTarget>>,
-	) {
+		mut persistent_entities: ResMut<TPersistentEntities>,
+	) where
+		TPersistentEntities: Resource + GetPersistentEntity,
+	{
 		for (entity, ground_target) in &ground_targets {
 			let Some(contact) = ground_target.ground_contact() else {
 				continue;
 			};
+			let Some(caster) = persistent_entities.get_entity(&ground_target.caster) else {
+				continue;
+			};
 			let mut transform = Transform::from_translation(contact);
 
-			if let Ok(caster) = transforms.get(ground_target.caster) {
+			if let Ok(caster) = transforms.get(caster) {
 				ground_target.correct_for_max_range(&mut transform, caster);
 				Self::sync_forward(&mut transform, caster);
 			}
@@ -90,27 +110,71 @@ mod tests {
 	use common::{
 		assert_eq_approx,
 		test_tools::utils::SingleThreadedApp,
-		traits::clamp_zero_positive::ClampZeroPositive,
+		traits::{clamp_zero_positive::ClampZeroPositive, nested_mock::NestedMocks},
 	};
+	use macros::NestedMocks;
+	use mockall::{automock, predicate::eq};
+
+	#[derive(Resource, NestedMocks)]
+	struct _PersistentEntities {
+		mock: Mock_PersistentEntities,
+	}
+
+	#[automock]
+	impl GetPersistentEntity for _PersistentEntities {
+		fn get_entity(&mut self, id: &PersistentEntity) -> Option<Entity> {
+			self.mock.get_entity(id)
+		}
+	}
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, GroundTarget::set_position);
+		app.add_systems(
+			Update,
+			GroundTarget::set_position_internal::<_PersistentEntities>,
+		);
 
 		app
 	}
 
 	#[test]
+	fn use_correct_entity() {
+		let mut app = setup();
+		let persistent_entity = PersistentEntity::default();
+		let caster = app.world_mut().spawn(Transform::default()).id();
+		app.world_mut()
+			.insert_resource(_PersistentEntities::new().with_mock(|mock| {
+				mock.expect_get_entity()
+					.times(1)
+					.with(eq(persistent_entity))
+					.return_const(caster);
+			}));
+		let ray = Ray3d {
+			origin: Vec3::new(2., 5., 1.),
+			direction: Dir3::new_unchecked(Vec3::new(0., -5., 5.).normalize()),
+		};
+		app.world_mut()
+			.spawn(GroundTarget::with_caster(persistent_entity).with_target_ray(ray));
+
+		app.update();
+	}
+
+	#[test]
 	fn set_to_intersection_of_target_ray_and_ground_level() {
 		let mut app = setup();
+		let persistent_entity = PersistentEntity::default();
 		let caster = app.world_mut().spawn(Transform::default()).id();
+		app.world_mut()
+			.insert_resource(_PersistentEntities::new().with_mock(|mock| {
+				mock.expect_get_entity().return_const(caster);
+			}));
 		let ray = Ray3d {
 			origin: Vec3::new(2., 5., 1.),
 			direction: Dir3::new_unchecked(Vec3::new(0., -5., 5.).normalize()),
 		};
 		let entity = app
 			.world_mut()
-			.spawn(GroundTarget::with_caster(caster).with_target_ray(ray))
+			.spawn(GroundTarget::with_caster(persistent_entity).with_target_ray(ray))
 			.id();
 
 		app.update();
@@ -124,7 +188,12 @@ mod tests {
 	#[test]
 	fn limit_by_max_range() {
 		let mut app = setup();
+		let persistent_entity = PersistentEntity::default();
 		let caster = app.world_mut().spawn(Transform::default()).id();
+		app.world_mut()
+			.insert_resource(_PersistentEntities::new().with_mock(|mock| {
+				mock.expect_get_entity().return_const(caster);
+			}));
 		let ray = Ray3d {
 			origin: Vec3::new(6., 1., 8.),
 			direction: Dir3::new_unchecked(Vec3::new(0., -1., 0.)),
@@ -132,7 +201,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(
-				GroundTarget::with_caster(caster)
+				GroundTarget::with_caster(persistent_entity)
 					.with_target_ray(ray)
 					.with_max_range(Units::new(5.)),
 			)
@@ -149,7 +218,12 @@ mod tests {
 	#[test]
 	fn limit_by_max_range_when_caster_offset_from_zero() {
 		let mut app = setup();
+		let persistent_entity = PersistentEntity::default();
 		let caster = app.world_mut().spawn(Transform::from_xyz(1., 0., 0.)).id();
+		app.world_mut()
+			.insert_resource(_PersistentEntities::new().with_mock(|mock| {
+				mock.expect_get_entity().return_const(caster);
+			}));
 		let ray = Ray3d {
 			origin: Vec3::new(7., 1., 8.),
 			direction: Dir3::new_unchecked(Vec3::new(0., -1., 0.)),
@@ -157,7 +231,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(
-				GroundTarget::with_caster(caster)
+				GroundTarget::with_caster(persistent_entity)
 					.with_target_ray(ray)
 					.with_max_range(Units::new(5.)),
 			)
@@ -174,7 +248,12 @@ mod tests {
 	#[test]
 	fn do_not_limit_by_max_range_when_caster_has_no_transform() {
 		let mut app = setup();
+		let persistent_entity = PersistentEntity::default();
 		let caster = app.world_mut().spawn_empty().id();
+		app.world_mut()
+			.insert_resource(_PersistentEntities::new().with_mock(|mock| {
+				mock.expect_get_entity().return_const(caster);
+			}));
 		let ray = Ray3d {
 			origin: Vec3::new(6., 1., 8.),
 			direction: Dir3::new_unchecked(Vec3::new(0., -1., 0.)),
@@ -182,7 +261,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(
-				GroundTarget::with_caster(caster)
+				GroundTarget::with_caster(persistent_entity)
 					.with_target_ray(ray)
 					.with_max_range(Units::new(5.)),
 			)
@@ -199,17 +278,22 @@ mod tests {
 	#[test]
 	fn set_forward_to_caster_forward() {
 		let mut app = setup();
+		let persistent_entity = PersistentEntity::default();
 		let caster = app
 			.world_mut()
 			.spawn(Transform::default().looking_to(Vec3::new(3., 0., 4.), Vec3::Y))
 			.id();
+		app.world_mut()
+			.insert_resource(_PersistentEntities::new().with_mock(|mock| {
+				mock.expect_get_entity().return_const(caster);
+			}));
 		let ray = Ray3d {
 			origin: Vec3::new(1., 1., 1.),
 			direction: Dir3::new_unchecked(Vec3::new(0., -1., 0.).normalize()),
 		};
 		let entity = app
 			.world_mut()
-			.spawn(GroundTarget::with_caster(caster).with_target_ray(ray))
+			.spawn(GroundTarget::with_caster(persistent_entity).with_target_ray(ray))
 			.id();
 
 		app.update();
@@ -224,14 +308,19 @@ mod tests {
 	#[test]
 	fn only_set_transform_when_added() {
 		let mut app = setup();
+		let persistent_entity = PersistentEntity::default();
 		let caster = app.world_mut().spawn(Transform::default()).id();
+		app.world_mut()
+			.insert_resource(_PersistentEntities::new().with_mock(|mock| {
+				mock.expect_get_entity().return_const(caster);
+			}));
 		let ray = Ray3d {
 			origin: Vec3::new(1., 1., 1.),
 			direction: Dir3::new_unchecked(Vec3::new(0., -1., 0.).normalize()),
 		};
 		let entity = app
 			.world_mut()
-			.spawn(GroundTarget::with_caster(caster).with_target_ray(ray))
+			.spawn(GroundTarget::with_caster(persistent_entity).with_target_ray(ray))
 			.id();
 
 		app.update();
