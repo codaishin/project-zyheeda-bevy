@@ -38,7 +38,11 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
 	};
-	use common::test_tools::utils::SingleThreadedApp;
+	use common::{
+		components::persistent_entity::PersistentEntity,
+		test_tools::utils::SingleThreadedApp,
+	};
+	use std::sync::LazyLock;
 
 	struct _HandlesDamage;
 
@@ -58,12 +62,14 @@ mod tests {
 
 	struct _HandlesShading;
 
+	static CASTER: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
+
 	fn damage(damage: StartDealingDamage) -> impl Fn(Commands) -> Entity {
 		move |mut commands| {
 			let mut entity = commands.spawn_empty();
 			damage.apply::<_HandlesDamage>(
 				&mut entity,
-				&SkillCaster::from(Entity::from_raw(42)),
+				&SkillCaster::from(*CASTER),
 				Spawner::Center,
 				&SkillTarget::default(),
 			);

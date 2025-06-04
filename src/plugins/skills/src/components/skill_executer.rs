@@ -99,7 +99,7 @@ mod tests {
 	use super::*;
 	use crate::behaviors::spawn_on::SpawnOn;
 	use common::{
-		components::Outdated,
+		components::{Outdated, persistent_entity::PersistentEntity},
 		simple_init,
 		tools::{action_key::slot::Side, collider_info::ColliderInfo},
 		traits::{
@@ -251,7 +251,7 @@ mod tests {
 
 	#[test]
 	fn start_shape_on_slot() {
-		let caster = SkillCaster(Entity::from_raw(1));
+		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = Spawner::Slot(SlotKey::BottomHand(Side::Right));
 		let target = get_target();
 
@@ -273,7 +273,7 @@ mod tests {
 
 	#[test]
 	fn start_shape_on_center() {
-		let caster = SkillCaster(Entity::from_raw(1));
+		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = Spawner::Center;
 		let target = get_target();
 		let mut commands = Mock_Commands::new_mock(|mock| {
@@ -298,7 +298,7 @@ mod tests {
 
 	#[test]
 	fn set_to_idle_when_ignore_on_skill_stop() {
-		let caster = SkillCaster(Entity::from_raw(1));
+		let caster = SkillCaster(PersistentEntity::default());
 		let target = get_target();
 
 		let mut executer = SkillExecuter::Start {
@@ -316,7 +316,7 @@ mod tests {
 
 	#[test]
 	fn set_to_stoppable_when_stop_on_skill_stop() {
-		let caster = SkillCaster(Entity::from_raw(1));
+		let caster = SkillCaster(PersistentEntity::default());
 		let target = get_target();
 
 		let mut executer = SkillExecuter::Start {
@@ -358,7 +358,7 @@ mod tests {
 
 	#[test]
 	fn despawn_skill_entity_recursively_on_execute_stop() {
-		let caster = SkillCaster(Entity::from_raw(1));
+		let caster = SkillCaster(PersistentEntity::default());
 		let target = get_target();
 		let executer: _Executer<Mock_Commands> =
 			&mut SkillExecuter::<Mock_Behavior>::Stop(Entity::from_raw(123));
@@ -375,7 +375,7 @@ mod tests {
 
 	#[test]
 	fn set_to_idle_on_stop_execution() {
-		let caster = SkillCaster(Entity::from_raw(1));
+		let caster = SkillCaster(PersistentEntity::default());
 		let target = get_target();
 		let mut commands = _Commands;
 		let mut executer = SkillExecuter::<_ShapeSlotted>::Stop(Entity::from_raw(1));

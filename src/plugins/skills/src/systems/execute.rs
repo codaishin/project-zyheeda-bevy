@@ -1,6 +1,7 @@
 use crate::{behaviors::SkillCaster, components::SkillTarget, traits::Execute};
 use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
+	components::persistent_entity::PersistentEntity,
 	effects::deal_damage::DealDamage,
 	tools::collider_info::ColliderInfo,
 	traits::{
@@ -19,7 +20,7 @@ pub(crate) trait ExecuteSkills: Component<Mutability = Mutable> + Sized {
 		cam_ray: Res<TPlayers::TCamRay>,
 		mouse_hover: Res<TPlayers::TMouseHover>,
 		mut commands: Commands,
-		mut agents: Query<(Entity, &mut Self), Changed<Self>>,
+		mut agents: Query<(&PersistentEntity, &mut Self), Changed<Self>>,
 		transforms: Query<&GlobalTransform>,
 	) where
 		for<'w, 's> Self: Execute<Commands<'w, 's>, TLifetimes, TEffects, TSkillBehaviors>,
@@ -32,7 +33,7 @@ pub(crate) trait ExecuteSkills: Component<Mutability = Mutable> + Sized {
 			let Some(target) = get_target(&cam_ray, &mouse_hover, &transforms) else {
 				continue;
 			};
-			skill_executer.execute(&mut commands, &SkillCaster(entity), &target);
+			skill_executer.execute(&mut commands, &SkillCaster(*entity), &target);
 		}
 	}
 }
@@ -244,23 +245,24 @@ mod tests {
 	fn execute_skill() {
 		let mut app = setup();
 		let target = set_target(&mut app);
-		let caster = app.world_mut().spawn_empty().id();
-		app.world_mut()
-			.entity_mut(caster)
-			.insert(_Executor::new().with_mock(|mock| {
+		let persistent_entity = PersistentEntity::default();
+		app.world_mut().spawn((
+			persistent_entity,
+			_Executor::new().with_mock(|mock| {
 				mock.expect_execute().returning(|commands, caster, target| {
 					commands.spawn(_ExecutionArgs {
 						caster: *caster,
 						target: *target,
 					});
 				});
-			}));
+			}),
+		));
 
 		app.update();
 
 		assert_eq!(
 			Some(&_ExecutionArgs {
-				caster: SkillCaster(caster),
+				caster: SkillCaster(persistent_entity),
 				target,
 			}),
 			find_execution_args(&app)
@@ -271,9 +273,12 @@ mod tests {
 	fn execute_skill_only_once() {
 		let mut app = setup();
 		set_target(&mut app);
-		app.world_mut().spawn(_Executor::new().with_mock(|mock| {
-			mock.expect_execute().times(1).return_const(());
-		}));
+		app.world_mut().spawn((
+			PersistentEntity::default(),
+			_Executor::new().with_mock(|mock| {
+				mock.expect_execute().times(1).return_const(());
+			}),
+		));
 
 		app.update();
 		app.update();
@@ -285,9 +290,12 @@ mod tests {
 		set_target(&mut app);
 		let caster = app
 			.world_mut()
-			.spawn(_Executor::new().with_mock(|mock| {
-				mock.expect_execute().times(2).return_const(());
-			}))
+			.spawn((
+				PersistentEntity::default(),
+				_Executor::new().with_mock(|mock| {
+					mock.expect_execute().times(2).return_const(());
+				}),
+			))
 			.id();
 
 		app.update();

@@ -30,7 +30,11 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
 	};
-	use common::test_tools::utils::SingleThreadedApp;
+	use common::{
+		components::persistent_entity::PersistentEntity,
+		test_tools::utils::SingleThreadedApp,
+	};
+	use std::sync::LazyLock;
 
 	struct _HandlesInteractions;
 
@@ -48,11 +52,13 @@ mod tests {
 	#[derive(Component, Debug, PartialEq)]
 	struct _ForceShield(ForceShield);
 
+	static CASTER: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
+
 	fn force_shield(mut commands: Commands) -> Entity {
 		let mut entity = commands.spawn_empty();
 		StartForceShield.apply::<_HandlesInteractions>(
 			&mut entity,
-			&SkillCaster::from(Entity::from_raw(42)),
+			&SkillCaster::from(*CASTER),
 			Spawner::Center,
 			&SkillTarget::default(),
 		);

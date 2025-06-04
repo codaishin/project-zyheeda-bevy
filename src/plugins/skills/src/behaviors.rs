@@ -9,10 +9,13 @@ use crate::{
 };
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use build_skill_shape::BuildSkillShape;
-use common::traits::{
-	handles_effect::HandlesAllEffects,
-	handles_lifetime::HandlesLifetime,
-	handles_skill_behaviors::{HandlesSkillBehaviors, Spawner},
+use common::{
+	components::persistent_entity::PersistentEntity,
+	traits::{
+		handles_effect::HandlesAllEffects,
+		handles_lifetime::HandlesLifetime,
+		handles_skill_behaviors::{HandlesSkillBehaviors, Spawner},
+	},
 };
 use start_behavior::SkillBehavior;
 
@@ -26,11 +29,11 @@ impl From<Entity> for SkillSpawner {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub struct SkillCaster(pub Entity);
+pub struct SkillCaster(pub PersistentEntity);
 
-impl From<Entity> for SkillCaster {
-	fn from(entity: Entity) -> Self {
-		Self(entity)
+impl From<PersistentEntity> for SkillCaster {
+	fn from(persistent: PersistentEntity) -> Self {
+		Self(persistent)
 	}
 }
 
