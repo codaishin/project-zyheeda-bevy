@@ -15,14 +15,16 @@ impl PersistentEntities {
 			return;
 		};
 
-		persistent_entities.0.insert(*persistent_entity, entity);
+		persistent_entities
+			.entities
+			.insert(*persistent_entity, entity);
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{test_tools::utils::SingleThreadedApp, traits::accessors::get::Get};
+	use crate::test_tools::utils::SingleThreadedApp;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -41,9 +43,10 @@ mod tests {
 		let entity = app.world_mut().spawn(persistent_entity).id();
 
 		assert_eq!(
-			Some(entity),
+			Some(&entity),
 			app.world()
 				.resource::<PersistentEntities>()
+				.entities
 				.get(&persistent_entity)
 		);
 	}
@@ -58,9 +61,10 @@ mod tests {
 
 		let entity = entity.id();
 		assert_eq!(
-			Some(entity),
+			Some(&entity),
 			app.world()
 				.resource::<PersistentEntities>()
+				.entities
 				.get(&persistent_entity)
 		);
 	}

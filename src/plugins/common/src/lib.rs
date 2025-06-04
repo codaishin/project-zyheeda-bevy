@@ -12,6 +12,7 @@ pub mod test_tools;
 pub mod tools;
 pub mod traits;
 
+use crate::systems::log::log_many;
 use bevy::prelude::*;
 use components::{
 	AssetModel,
@@ -38,6 +39,10 @@ impl Plugin for CommonPlugin {
 			// Handle `PersistentEntity`
 			.init_resource::<PersistentEntities>()
 			.add_observer(PersistentEntities::update)
+			.add_systems(
+				Update,
+				PersistentEntities::drain_lookup_errors.pipe(log_many),
+			)
 			// Point link colliders and interaction targets
 			.add_observer(ColliderOfInteractionTarget::link)
 			// Collect user inputs
