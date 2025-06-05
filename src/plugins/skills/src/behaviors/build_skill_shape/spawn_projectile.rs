@@ -2,14 +2,24 @@ use crate::{
 	behaviors::SkillCaster,
 	components::SkillTarget,
 	skills::lifetime_definition::LifeTimeDefinition,
-	traits::skill_builder::{BuildContact, BuildProjection, SkillLifetime},
+	traits::skill_builder::{SkillLifetime, SpawnShape},
 };
+use bevy::prelude::*;
 use common::{
 	blocker::Blocker,
 	tools::{Units, UnitsPerSecond},
 	traits::{
 		clamp_zero_positive::ClampZeroPositive,
-		handles_skill_behaviors::{HandlesSkillBehaviors, Integrity, Motion, Shape, Spawner},
+		handles_skill_behaviors::{
+			Contact,
+			HandlesSkillBehaviors,
+			Integrity,
+			Motion,
+			Projection,
+			Shape,
+			SkillEntities,
+			Spawner,
+		},
 	},
 };
 use serde::{Deserialize, Serialize};
@@ -17,52 +27,43 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct SpawnProjectile;
 
-impl BuildContact for SpawnProjectile {
-	fn build_contact<TSkillBehaviors>(
+impl SpawnShape for SpawnProjectile {
+	fn spawn_shape<TSkillBehaviors>(
 		&self,
+		commands: &mut Commands,
 		caster: &SkillCaster,
 		spawner: Spawner,
 		_: &SkillTarget,
-	) -> TSkillBehaviors::TSkillContact
+	) -> SkillEntities
 	where
-		TSkillBehaviors: HandlesSkillBehaviors,
+		TSkillBehaviors: HandlesSkillBehaviors + 'static,
 	{
 		let SkillCaster(caster) = *caster;
 
-		TSkillBehaviors::skill_contact(
-			Shape::Sphere {
-				radius: Units::new(0.05),
-				hollow_collider: false,
+		TSkillBehaviors::spawn_skill(
+			commands,
+			Contact {
+				shape: Shape::Sphere {
+					radius: Units::new(0.05),
+					hollow_collider: false,
+				},
+				integrity: Integrity::Fragile {
+					destroyed_by: vec![Blocker::Physical, Blocker::Force],
+				},
+				motion: Motion::Projectile {
+					caster,
+					spawner,
+					speed: UnitsPerSecond::new(15.),
+					max_range: Units::new(20.),
+				},
 			},
-			Integrity::Fragile {
-				destroyed_by: vec![Blocker::Physical, Blocker::Force],
+			Projection {
+				shape: Shape::Sphere {
+					radius: Units::new(0.5),
+					hollow_collider: false,
+				},
+				offset: None,
 			},
-			Motion::Projectile {
-				caster,
-				spawner,
-				speed: UnitsPerSecond::new(15.),
-				max_range: Units::new(20.),
-			},
-		)
-	}
-}
-
-impl BuildProjection for SpawnProjectile {
-	fn build_projection<TSkillBehaviors>(
-		&self,
-		_: &SkillCaster,
-		_: Spawner,
-		_: &SkillTarget,
-	) -> TSkillBehaviors::TSkillProjection
-	where
-		TSkillBehaviors: HandlesSkillBehaviors,
-	{
-		TSkillBehaviors::skill_projection(
-			Shape::Sphere {
-				radius: Units::new(0.5),
-				hollow_collider: false,
-			},
-			None,
 		)
 	}
 }

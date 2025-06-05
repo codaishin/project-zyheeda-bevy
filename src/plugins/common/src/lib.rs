@@ -12,7 +12,10 @@ pub mod test_tools;
 pub mod tools;
 pub mod traits;
 
-use crate::traits::register_persistent_entities::RegisterPersistentEntities;
+use crate::{
+	components::child_of_persistent::ChildOfPersistent,
+	traits::register_persistent_entities::RegisterPersistentEntities,
+};
 use bevy::prelude::*;
 use components::{
 	AssetModel,
@@ -39,6 +42,8 @@ impl Plugin for CommonPlugin {
 			.register_persistent_entities()
 			// Point link colliders and interaction targets
 			.add_observer(ColliderOfInteractionTarget::link)
+			// Handle child of persistent entity
+			.add_observer(ChildOfPersistent::insert_child_of)
 			// Collect user inputs
 			.collect_user_input();
 	}

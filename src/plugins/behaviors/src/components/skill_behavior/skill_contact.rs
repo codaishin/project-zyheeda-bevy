@@ -5,16 +5,33 @@ use common::{
 	traits::{
 		handles_destruction::HandlesDestruction,
 		handles_interactions::HandlesInteractions,
-		handles_skill_behaviors::{Integrity, Motion, Shape},
+		handles_skill_behaviors::{Contact, Integrity, Motion, Shape},
 		prefab::Prefab,
 	},
 };
 
 #[derive(Component, Debug, Clone)]
+#[require(Visibility, Transform)]
 pub struct SkillContact {
 	pub shape: Shape,
 	pub integrity: Integrity,
 	pub motion: Motion,
+}
+
+impl From<Contact> for SkillContact {
+	fn from(
+		Contact {
+			shape,
+			integrity,
+			motion,
+		}: Contact,
+	) -> Self {
+		Self {
+			shape,
+			integrity,
+			motion,
+		}
+	}
 }
 
 impl<TInteractions, TLifeCycles> Prefab<(TInteractions, TLifeCycles)> for SkillContact

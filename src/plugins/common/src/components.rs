@@ -1,3 +1,4 @@
+pub mod child_of_persistent;
 pub mod collider_relationship;
 pub mod essence;
 pub mod flip;

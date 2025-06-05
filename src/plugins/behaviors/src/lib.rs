@@ -11,6 +11,7 @@ use crate::{
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use common::{
+	components::{child_of_persistent::ChildOfPersistent, persistent_entity::PersistentEntity},
 	effects::deal_damage::DealDamage,
 	states::game_state::GameState,
 	systems::{
@@ -35,13 +36,7 @@ use common::{
 			PlayerMainCamera,
 		},
 		handles_settings::HandlesSettings,
-		handles_skill_behaviors::{
-			HandlesSkillBehaviors,
-			Integrity,
-			Motion,
-			ProjectionOffset,
-			Shape,
-		},
+		handles_skill_behaviors::{Contact, HandlesSkillBehaviors, Projection, SkillEntities},
 		prefab::AddPrefabObserver,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
@@ -241,16 +236,27 @@ impl<TDependencies> HandlesSkillBehaviors for BehaviorsPlugin<TDependencies> {
 	type TSkillContact = SkillContact;
 	type TSkillProjection = SkillProjection;
 
-	fn skill_contact(shape: Shape, integrity: Integrity, motion: Motion) -> Self::TSkillContact {
-		SkillContact {
-			shape,
-			integrity,
-			motion,
-		}
-	}
+	fn spawn_skill(
+		commands: &mut Commands,
+		contact: Contact,
+		projection: Projection,
+	) -> SkillEntities {
+		let persistent_contact = PersistentEntity::default();
+		let contact = commands
+			.spawn((SkillContact::from(contact), persistent_contact))
+			.id();
+		let projection = commands
+			.spawn((
+				SkillProjection::from(projection),
+				ChildOfPersistent(persistent_contact),
+			))
+			.id();
 
-	fn skill_projection(shape: Shape, offset: Option<ProjectionOffset>) -> Self::TSkillProjection {
-		SkillProjection { shape, offset }
+		SkillEntities {
+			root: contact,
+			contact,
+			projection,
+		}
 	}
 }
 
