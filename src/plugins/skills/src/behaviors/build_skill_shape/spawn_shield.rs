@@ -2,7 +2,7 @@ use crate::{
 	behaviors::SkillCaster,
 	components::SkillTarget,
 	skills::lifetime_definition::LifeTimeDefinition,
-	traits::skill_builder::{BuildContact, BuildProjection, SkillLifetime},
+	traits::skill_builder::{SkillLifetime, SpawnShape},
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Collider;
@@ -12,11 +12,14 @@ use common::{
 	traits::{
 		clamp_zero_positive::ClampZeroPositive,
 		handles_skill_behaviors::{
+			Contact,
 			HandlesSkillBehaviors,
 			Integrity,
 			Motion,
+			Projection,
 			ProjectionOffset,
 			Shape,
+			SkillEntities,
 			Spawner,
 		},
 	},
@@ -26,49 +29,39 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct SpawnShield;
 
-impl BuildContact for SpawnShield {
-	fn build_contact<TSkillBehaviors>(
+impl SpawnShape for SpawnShield {
+	fn spawn_shape<TSkillBehaviors>(
 		&self,
+		commands: &mut Commands,
 		caster: &SkillCaster,
 		_: Spawner,
 		_: &SkillTarget,
-	) -> TSkillBehaviors::TSkillContact
+	) -> SkillEntities
 	where
-		TSkillBehaviors: HandlesSkillBehaviors,
+		TSkillBehaviors: HandlesSkillBehaviors + 'static,
 	{
 		let SkillCaster(caster) = *caster;
-
-		TSkillBehaviors::skill_contact(
-			Shape::Custom {
-				model: AssetModel::path("models/shield.glb"),
-				collider: Collider::cuboid(0.5, 0.5, 0.05),
-				scale: Vec3::splat(1.),
-			},
-			Integrity::Solid,
-			Motion::HeldBy { caster },
-		)
-	}
-}
-
-impl BuildProjection for SpawnShield {
-	fn build_projection<TSkillBehaviors>(
-		&self,
-		_: &SkillCaster,
-		_: Spawner,
-		_: &SkillTarget,
-	) -> TSkillBehaviors::TSkillProjection
-	where
-		TSkillBehaviors: HandlesSkillBehaviors,
-	{
 		let radius = 1.;
 		let offset = Vec3::new(0., 0., radius);
 
-		TSkillBehaviors::skill_projection(
-			Shape::Sphere {
-				radius: Units::new(radius),
-				hollow_collider: false,
+		TSkillBehaviors::spawn_skill(
+			commands,
+			Contact {
+				shape: Shape::Custom {
+					model: AssetModel::path("models/shield.glb"),
+					collider: Collider::cuboid(0.5, 0.5, 0.05),
+					scale: Vec3::splat(1.),
+				},
+				integrity: Integrity::Solid,
+				motion: Motion::HeldBy { caster },
 			},
-			Some(ProjectionOffset(offset)),
+			Projection {
+				shape: Shape::Sphere {
+					radius: Units::new(radius),
+					hollow_collider: false,
+				},
+				offset: Some(ProjectionOffset(offset)),
+			},
 		)
 	}
 }

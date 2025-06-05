@@ -104,7 +104,7 @@ mod tests {
 		tools::{action_key::slot::Side, collider_info::ColliderInfo},
 		traits::{
 			handles_effect::HandlesEffect,
-			handles_skill_behaviors::{Integrity, Motion, ProjectionOffset, Shape},
+			handles_skill_behaviors::{Contact, Projection, SkillEntities},
 			mock::Mock,
 		},
 	};
@@ -144,12 +144,12 @@ mod tests {
 		type TSkillContact = _Contact;
 		type TSkillProjection = _Projection;
 
-		fn skill_contact(_: Shape, _: Integrity, _: Motion) -> Self::TSkillContact {
-			_Contact
-		}
-
-		fn skill_projection(_: Shape, _: Option<ProjectionOffset>) -> Self::TSkillProjection {
-			_Projection
+		fn spawn_skill(commands: &mut Commands, _: Contact, _: Projection) -> SkillEntities {
+			SkillEntities {
+				root: commands.spawn_empty().id(),
+				contact: commands.spawn(_Contact).id(),
+				projection: commands.spawn(_Projection).id(),
+			}
 		}
 	}
 

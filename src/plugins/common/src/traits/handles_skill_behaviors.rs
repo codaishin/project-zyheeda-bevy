@@ -10,8 +10,33 @@ pub trait HandlesSkillBehaviors {
 	type TSkillContact: Component;
 	type TSkillProjection: Component;
 
-	fn skill_contact(shape: Shape, integrity: Integrity, motion: Motion) -> Self::TSkillContact;
-	fn skill_projection(shape: Shape, offset: Option<ProjectionOffset>) -> Self::TSkillProjection;
+	fn spawn_skill(
+		commands: &mut Commands,
+		contact: Contact,
+		projection: Projection,
+	) -> SkillEntities;
+}
+
+pub struct Contact {
+	pub shape: Shape,
+	pub integrity: Integrity,
+	pub motion: Motion,
+}
+
+pub struct Projection {
+	pub shape: Shape,
+	pub offset: Option<ProjectionOffset>,
+}
+
+pub struct SkillEntities {
+	pub root: Entity,
+	pub contact: Entity,
+	pub projection: Entity,
+}
+
+pub enum SkillRoot {
+	Contact,
+	Projection,
 }
 
 #[derive(Debug, Clone)]

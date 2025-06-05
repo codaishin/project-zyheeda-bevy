@@ -5,7 +5,7 @@ use common::{
 	traits::{
 		handles_destruction::HandlesDestruction,
 		handles_interactions::HandlesInteractions,
-		handles_skill_behaviors::{ProjectionOffset, Shape},
+		handles_skill_behaviors::{Projection, ProjectionOffset, Shape},
 		prefab::Prefab,
 	},
 };
@@ -14,6 +14,12 @@ use common::{
 pub struct SkillProjection {
 	pub shape: Shape,
 	pub offset: Option<ProjectionOffset>,
+}
+
+impl From<Projection> for SkillProjection {
+	fn from(Projection { shape, offset }: Projection) -> Self {
+		Self { shape, offset }
+	}
 }
 
 impl<TInteractions, TLifeCycles> Prefab<(TInteractions, TLifeCycles)> for SkillProjection
