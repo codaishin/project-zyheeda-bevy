@@ -11,6 +11,7 @@ use crate::{
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use common::{
+	components::{child_of_persistent::ChildOfPersistent, persistent_entity::PersistentEntity},
 	effects::deal_damage::DealDamage,
 	states::game_state::GameState,
 	systems::{
@@ -240,9 +241,15 @@ impl<TDependencies> HandlesSkillBehaviors for BehaviorsPlugin<TDependencies> {
 		contact: Contact,
 		projection: Projection,
 	) -> SkillEntities {
-		let contact = commands.spawn(SkillContact::from(contact)).id();
+		let persistent_contact = PersistentEntity::default();
+		let contact = commands
+			.spawn((SkillContact::from(contact), persistent_contact))
+			.id();
 		let projection = commands
-			.spawn((SkillProjection::from(projection), ChildOf(contact)))
+			.spawn((
+				SkillProjection::from(projection),
+				ChildOfPersistent(persistent_contact),
+			))
 			.id();
 
 		SkillEntities {
