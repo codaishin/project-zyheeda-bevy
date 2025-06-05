@@ -11,6 +11,7 @@ use common::{
 };
 
 #[derive(Component, Debug, Clone)]
+#[require(Visibility, Transform)]
 pub struct SkillContact {
 	pub shape: Shape,
 	pub integrity: Integrity,
