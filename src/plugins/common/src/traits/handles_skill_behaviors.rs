@@ -34,11 +34,6 @@ pub struct SkillEntities {
 	pub projection: Entity,
 }
 
-pub enum SkillRoot {
-	Contact,
-	Projection,
-}
-
 #[derive(Debug, Clone)]
 pub enum Shape {
 	Sphere {
