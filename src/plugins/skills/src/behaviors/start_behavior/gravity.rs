@@ -13,16 +13,16 @@ pub struct StartGravity {
 }
 
 impl StartGravity {
-	pub fn apply<TEffects>(
+	pub fn apply<TInteractions>(
 		&self,
 		entity: &mut EntityCommands,
 		_: &SkillCaster,
 		_: Spawner,
 		_: &SkillTarget,
 	) where
-		TEffects: HandlesEffect<Gravity>,
+		TInteractions: HandlesEffect<Gravity>,
 	{
-		entity.try_insert(TEffects::effect(Gravity {
+		entity.try_insert(TInteractions::effect(Gravity {
 			strength: self.strength,
 		}));
 	}

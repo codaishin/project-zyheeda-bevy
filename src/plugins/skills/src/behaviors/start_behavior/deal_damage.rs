@@ -13,16 +13,16 @@ pub enum StartDealingDamage {
 }
 
 impl StartDealingDamage {
-	pub fn apply<TEffects>(
+	pub fn apply<TInteractions>(
 		&self,
 		entity: &mut EntityCommands,
 		_: &SkillCaster,
 		_: Spawner,
 		_: &SkillTarget,
 	) where
-		TEffects: HandlesEffect<DealDamage>,
+		TInteractions: HandlesEffect<DealDamage>,
 	{
-		entity.try_insert(TEffects::effect(match *self {
+		entity.try_insert(TInteractions::effect(match *self {
 			Self::OneTime(dmg) => DealDamage::once(dmg),
 			Self::OverTime(dmg) => DealDamage::once_per_second(dmg),
 		}));
