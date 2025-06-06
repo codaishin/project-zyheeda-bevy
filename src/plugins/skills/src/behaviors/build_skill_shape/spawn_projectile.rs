@@ -66,7 +66,7 @@ impl SpawnShape for SpawnProjectile {
 					caster,
 					spawner,
 					speed: UnitsPerSecond::new(15.),
-					max_range: Units::new(20.),
+					range: Units::new(20.),
 				},
 			},
 			Projection {
