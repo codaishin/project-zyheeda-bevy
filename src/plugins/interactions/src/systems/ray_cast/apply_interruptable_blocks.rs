@@ -96,7 +96,7 @@ mod tests {
 		let far = app.world_mut().spawn_empty().id();
 		let interruptable = app
 			.world_mut()
-			.spawn(Is::<InterruptableRay>::interacting_with(&[
+			.spawn(Is::<InterruptableRay>::interacting_with([
 				Blocker::Physical,
 			]))
 			.id();
@@ -151,7 +151,7 @@ mod tests {
 		let far = app.world_mut().spawn_empty().id();
 		let interruptable = app
 			.world_mut()
-			.spawn(Is::<InterruptableRay>::interacting_with(&[
+			.spawn(Is::<InterruptableRay>::interacting_with([
 				Blocker::Physical,
 			]))
 			.id();
@@ -192,7 +192,7 @@ mod tests {
 
 	#[test]
 	fn do_nothing_if_not_blocked_by_anything() -> Result<(), RunSystemError> {
-		let no_blockers = &[];
+		let no_blockers = [];
 
 		let mut app = setup();
 		let close = app.world_mut().spawn_empty().id();
@@ -255,7 +255,7 @@ mod tests {
 		let far = app.world_mut().spawn_empty().id();
 		let interruptable = app
 			.world_mut()
-			.spawn(Is::<InterruptableRay>::interacting_with(&[Blocker::Force]))
+			.spawn(Is::<InterruptableRay>::interacting_with([Blocker::Force]))
 			.id();
 		let ray_casts = HashMap::from([(
 			interruptable,

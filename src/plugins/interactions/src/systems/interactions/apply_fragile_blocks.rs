@@ -73,7 +73,7 @@ mod tests {
 
 		let fragile = app
 			.world_mut()
-			.spawn(Is::<Fragile>::interacting_with(&[Blocker::Physical]))
+			.spawn(Is::<Fragile>::interacting_with([Blocker::Physical]))
 			.id();
 		let blocker = app
 			.world_mut()
@@ -98,7 +98,7 @@ mod tests {
 
 		let fragile = app
 			.world_mut()
-			.spawn(Is::<Fragile>::interacting_with(&[Blocker::Physical]))
+			.spawn(Is::<Fragile>::interacting_with([Blocker::Physical]))
 			.id();
 		let blocker = app.world_mut().spawn(Blockers::new([Blocker::Force])).id();
 
@@ -120,7 +120,7 @@ mod tests {
 
 		let fragile = app
 			.world_mut()
-			.spawn(Is::<Fragile>::interacting_with(&[Blocker::Physical]))
+			.spawn(Is::<Fragile>::interacting_with([Blocker::Physical]))
 			.id();
 		let blocker = app
 			.world_mut()
@@ -145,7 +145,7 @@ mod tests {
 
 		let fragile = app
 			.world_mut()
-			.spawn(Is::<Fragile>::interacting_with(&[Blocker::Physical]))
+			.spawn(Is::<Fragile>::interacting_with([Blocker::Physical]))
 			.id();
 		let blocker = app.world_mut().spawn(Blockers::new([Blocker::Force])).id();
 

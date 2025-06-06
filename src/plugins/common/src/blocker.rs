@@ -1,8 +1,9 @@
 use crate::traits::iteration::{Iter, IterFinite};
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
 pub enum Blocker {
 	Physical,
 	Force,
@@ -13,11 +14,8 @@ impl Blocker {
 		BlockerInsertCommand(HashSet::from(blockers))
 	}
 
-	pub fn all<TContainer>() -> TContainer
-	where
-		TContainer: FromIterator<Blocker>,
-	{
-		Blocker::iterator().collect()
+	pub fn all() -> Iter<Blocker> {
+		Blocker::iterator()
 	}
 }
 

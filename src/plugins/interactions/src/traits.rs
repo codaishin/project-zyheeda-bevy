@@ -27,5 +27,7 @@ pub(crate) trait Flush {
 }
 
 pub(crate) trait Blockable {
-	fn blockable(blockers: &[Blocker]) -> Self;
+	fn blockable<TBlockers>(blockers: TBlockers) -> Self
+	where
+		TBlockers: IntoIterator<Item = Blocker>;
 }

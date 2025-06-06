@@ -7,7 +7,9 @@
 	"behavior": {
 		"OnActive": {
 			"shape": {
-				"Projectile": null
+				"Projectile": {
+					"destroyed_by": "All"
+				}
 			},
 			"spawn_on": "Slot",
 			"contact": [

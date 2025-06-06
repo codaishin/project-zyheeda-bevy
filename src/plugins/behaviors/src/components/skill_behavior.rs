@@ -130,7 +130,9 @@ impl SimplePrefab for Integrity {
 		match self {
 			Integrity::Solid => {}
 			Integrity::Fragile { destroyed_by } => {
-				entity.try_insert(TInteractions::is_fragile_when_colliding_with(destroyed_by));
+				entity.try_insert(TInteractions::is_fragile_when_colliding_with(
+					destroyed_by.iter().copied(),
+				));
 			}
 		};
 
@@ -197,6 +199,8 @@ impl SimplePrefab for Motion {
 
 #[cfg(test)]
 mod tests {
+	use std::collections::HashSet;
+
 	use super::*;
 	use crate::components::when_traveled_insert::InsertAfterDistanceTraveled;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
@@ -219,11 +223,18 @@ mod tests {
 	struct _Interactions;
 
 	impl HandlesInteractions for _Interactions {
-		fn is_fragile_when_colliding_with(blockers: &[Blocker]) -> impl Bundle {
-			_IsFragile(Vec::from(blockers))
+		fn is_fragile_when_colliding_with<TBlockers>(blockers: TBlockers) -> impl Bundle
+		where
+			TBlockers: IntoIterator<Item = Blocker>,
+		{
+			_IsFragile(Vec::from_iter(blockers))
 		}
 
-		fn is_ray_interrupted_by(_: &[Blocker]) -> impl Bundle {}
+		fn is_ray_interrupted_by<TBlockers>(_: TBlockers) -> impl Bundle
+		where
+			TBlockers: IntoIterator<Item = Blocker>,
+		{
+		}
 
 		fn beam_from<T>(_: &T) -> impl Bundle
 		where
@@ -408,7 +419,7 @@ mod tests {
 	fn fragile_components() -> Result<(), RunSystemError> {
 		let (mut app, entity) = setup();
 		let integrity = Integrity::Fragile {
-			destroyed_by: vec![Blocker::Physical],
+			destroyed_by: HashSet::from([Blocker::Physical]),
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {

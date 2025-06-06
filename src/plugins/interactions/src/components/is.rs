@@ -11,7 +11,10 @@ where
 	T: Blockable,
 	Is<T>: Component,
 {
-	pub fn interacting_with(blockers: &[Blocker]) -> Self {
+	pub fn interacting_with<TBlockers>(blockers: TBlockers) -> Self
+	where
+		TBlockers: IntoIterator<Item = Blocker>,
+	{
 		Is(T::blockable(blockers))
 	}
 }
@@ -19,15 +22,21 @@ where
 pub struct Fragile(pub(crate) HashSet<Blocker>);
 
 impl Blockable for Fragile {
-	fn blockable(blockers: &[Blocker]) -> Self {
-		Fragile(HashSet::from_iter(blockers.iter().cloned()))
+	fn blockable<TBlockers>(blockers: TBlockers) -> Self
+	where
+		TBlockers: IntoIterator<Item = Blocker>,
+	{
+		Fragile(HashSet::from_iter(blockers))
 	}
 }
 
 pub struct InterruptableRay(pub(crate) HashSet<Blocker>);
 
 impl Blockable for InterruptableRay {
-	fn blockable(blockers: &[Blocker]) -> Self {
-		InterruptableRay(HashSet::from_iter(blockers.iter().cloned()))
+	fn blockable<TBlockers>(blockers: TBlockers) -> Self
+	where
+		TBlockers: IntoIterator<Item = Blocker>,
+	{
+		InterruptableRay(HashSet::from_iter(blockers))
 	}
 }

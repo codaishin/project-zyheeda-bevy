@@ -120,11 +120,17 @@ impl AddInteraction for App {
 }
 
 impl<TDependencies> HandlesInteractions for InteractionsPlugin<TDependencies> {
-	fn is_fragile_when_colliding_with(blockers: &[Blocker]) -> impl Bundle {
+	fn is_fragile_when_colliding_with<TBlockers>(blockers: TBlockers) -> impl Bundle
+	where
+		TBlockers: IntoIterator<Item = Blocker>,
+	{
 		Is::<Fragile>::interacting_with(blockers)
 	}
 
-	fn is_ray_interrupted_by(blockers: &[Blocker]) -> impl Bundle {
+	fn is_ray_interrupted_by<TBlockers>(blockers: TBlockers) -> impl Bundle
+	where
+		TBlockers: IntoIterator<Item = Blocker>,
+	{
 		Is::<InterruptableRay>::interacting_with(blockers)
 	}
 
