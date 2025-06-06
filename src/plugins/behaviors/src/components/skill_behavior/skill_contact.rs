@@ -13,9 +13,16 @@ use common::{
 #[derive(Component, Debug, Clone)]
 #[require(Visibility, Transform)]
 pub struct SkillContact {
-	pub shape: Shape,
-	pub integrity: Integrity,
-	pub motion: Motion,
+	pub(crate) created_from: CreatedFrom,
+	pub(crate) shape: Shape,
+	pub(crate) integrity: Integrity,
+	pub(crate) motion: Motion,
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub(crate) enum CreatedFrom {
+	Contact,
+	Save,
 }
 
 impl From<Contact> for SkillContact {
@@ -27,6 +34,7 @@ impl From<Contact> for SkillContact {
 		}: Contact,
 	) -> Self {
 		Self {
+			created_from: CreatedFrom::Contact,
 			shape,
 			integrity,
 			motion,
@@ -43,7 +51,7 @@ where
 		self.shape
 			.prefab::<TInteractions, TLifeCycles>(entity, Vec3::ZERO)?;
 		self.motion
-			.prefab::<TInteractions, TLifeCycles>(entity, ())?;
+			.prefab::<TInteractions, TLifeCycles>(entity, self.created_from)?;
 		self.integrity
 			.prefab::<TInteractions, TLifeCycles>(entity, ())
 	}
