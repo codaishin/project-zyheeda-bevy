@@ -207,7 +207,11 @@ where
 					(
 						update_cool_downs::<Virtual>,
 						GroundTarget::set_position,
-						InsertAfterDistanceTraveled::<TLifeCycles::TDestroy, Velocity>::system,
+						(
+							InsertAfterDistanceTraveled::<TLifeCycles::TDestroy, Velocity>::system,
+							SkillContact::update_range::<TLifeCycles::TDestroy>,
+						)
+							.chain(),
 						SetVelocityForward::system,
 						Anchor::<Always>::system.pipe(log_many),
 						Anchor::<Once>::system.pipe(log_many),

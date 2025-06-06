@@ -38,7 +38,7 @@ where
 
 	pub(crate) fn insert<TInsert>(self) -> InsertAfterDistanceTraveled<TInsert, TTravel> {
 		InsertAfterDistanceTraveled {
-			distance: self.distance,
+			remaining_distance: self.distance,
 			phantom_data: PhantomData,
 		}
 	}
@@ -46,8 +46,14 @@ where
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
 pub(crate) struct InsertAfterDistanceTraveled<TInsert, TTravel> {
-	distance: Units,
+	remaining_distance: Units,
 	phantom_data: PhantomData<(TInsert, TTravel)>,
+}
+
+impl<TInsert, TTravel> InsertAfterDistanceTraveled<TInsert, TTravel> {
+	pub(crate) fn remaining_distance(&self) -> Units {
+		self.remaining_distance
+	}
 }
 
 impl<TComponent, TTravel> InsertAfterDistanceTraveled<TComponent, TTravel>
@@ -76,11 +82,13 @@ where
 	}
 
 	fn update(&mut self, transform: &Transform, LastTranslation(last): &LastTranslation) -> Done {
-		let Self { distance, .. } = self;
+		let Self {
+			remaining_distance, ..
+		} = self;
 		let direction = transform.translation - *last;
-		let remaining = **distance - direction.length();
+		let remaining = **remaining_distance - direction.length();
 
-		*distance = Units::new(remaining);
+		*remaining_distance = Units::new(remaining);
 
 		Done::when(remaining <= 0.)
 	}
