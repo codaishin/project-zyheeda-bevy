@@ -84,27 +84,31 @@ where
 			.register_required_components::<ForceEffect, InteractingEntities>()
 			.add_observer(ForceEffect::update_blockers_observer)
 			.add_interaction::<ForceEffect, ForceAffected>()
-			// Apply behaviors
+			// Apply interactions
 			.add_event::<InteractionEvent>()
 			.add_event::<InteractionEvent<Ray>>()
 			.init_resource::<TrackInteractionDuplicates>()
 			.init_resource::<TrackRayInteractions>()
-			.add_systems(Update, apply_fragile_blocks::<TLifeCyclePlugin::TDestroy>)
 			.add_systems(
 				Update,
 				(
-					map_collision_events_to::<InteractionEvent, TrackInteractionDuplicates>,
+					apply_fragile_blocks::<TLifeCyclePlugin::TDestroy>,
+					Beam::execute::<TLifeCyclePlugin>,
 					execute_ray_caster
 						.pipe(apply_interruptable_ray_blocks)
 						.pipe(map_ray_cast_result_to_interaction_events)
 						.pipe(send_interaction_events::<TrackRayInteractions>),
+					map_collision_events_to::<InteractionEvent, TrackInteractionDuplicates>,
+					update_interacting_entities, // must be last to ensure `InteractionEvent`s and `InteractingEntities` are synched
 				)
-					.chain(),
-			)
-			.add_systems(Update, update_interacting_entities)
-			.add_systems(Update, Beam::execute::<TLifeCyclePlugin>);
+					.chain()
+					.in_set(CollisionSystems),
+			);
 	}
 }
+
+#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+struct CollisionSystems;
 
 trait AddInteraction {
 	fn add_interaction<TActor, TTarget>(&mut self) -> &mut Self
@@ -129,7 +133,8 @@ impl AddInteraction for App {
 					Update::delta.pipe(TActor::act_on::<TTarget>),
 					Interactions::<TActor, TTarget>::untrack_non_interacting_targets,
 				)
-					.chain(),
+					.chain()
+					.after(CollisionSystems),
 			)
 	}
 }
