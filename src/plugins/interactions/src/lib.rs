@@ -8,7 +8,7 @@ mod systems;
 use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
 	self,
-	blocker::{Blocker, BlockerInsertCommand},
+	blocker::Blocker,
 	traits::{
 		delta::Delta,
 		handles_destruction::HandlesDestruction,
@@ -21,7 +21,6 @@ use common::{
 use components::{
 	acted_on_targets::ActedOnTargets,
 	beam::{Beam, BeamCommand},
-	blockers::ApplyBlockerInsertion,
 	effect::{deal_damage::DealDamageEffect, gravity::GravityEffect},
 	gravity_affected::GravityAffected,
 	interacting_entities::InteractingEntities,
@@ -37,7 +36,6 @@ use systems::{
 	gravity_affected::apply_gravity_pull,
 	interactions::{
 		act_interaction::act_interaction,
-		add_component::add_component_to,
 		apply_fragile_blocks::apply_fragile_blocks,
 		map_collision_events::map_collision_events_to,
 		untrack_non_interacting_targets::untrack_non_interacting_targets,
@@ -74,7 +72,6 @@ where
 			.init_resource::<TrackRayInteractions>()
 			.add_interaction::<DealDamageEffect, TLifeCyclePlugin::TLife>()
 			.add_interaction::<GravityEffect, GravityAffected>()
-			.add_systems(Update, BlockerInsertCommand::apply)
 			.add_systems(Update, apply_fragile_blocks::<TLifeCyclePlugin::TDestroy>)
 			.add_systems(Update, Update::delta.pipe(apply_gravity_pull))
 			.add_systems(
@@ -106,16 +103,19 @@ impl AddInteraction for App {
 		TActor: ActOn<TTarget> + Clone + Component<Mutability = Mutable>,
 		TTarget: Component<Mutability = Mutable>,
 	{
-		self.add_systems(
-			Update,
-			(
-				add_component_to::<TActor, InteractingEntities>,
-				add_component_to::<TActor, ActedOnTargets<TActor>>,
-				Update::delta.pipe(act_interaction::<TActor, TTarget>),
-				untrack_non_interacting_targets::<TActor>,
+		self
+			// require basic interaction tracking
+			.register_required_components::<TActor, InteractingEntities>()
+			.register_required_components::<TActor, ActedOnTargets<TActor>>()
+			//apply interactions
+			.add_systems(
+				Update,
+				(
+					Update::delta.pipe(act_interaction::<TActor, TTarget>),
+					untrack_non_interacting_targets::<TActor>,
+				)
+					.chain(),
 			)
-				.chain(),
-		)
 	}
 }
 

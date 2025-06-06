@@ -1,12 +1,9 @@
 use crate::{
-	components::{
-		blockers::Blockers,
-		is::{Fragile, Is},
-	},
+	components::is::{Fragile, Is},
 	events::{Collision, InteractionEvent},
 };
 use bevy::prelude::*;
-use common::traits::try_insert_on::TryInsertOn;
+use common::{blocker::Blockers, traits::try_insert_on::TryInsertOn};
 
 pub(crate) fn apply_fragile_blocks<TDestroy>(
 	mut commands: Commands,
@@ -77,7 +74,7 @@ mod tests {
 			.id();
 		let blocker = app
 			.world_mut()
-			.spawn(Blockers::new([Blocker::Physical]))
+			.spawn(Blockers::from([Blocker::Physical]))
 			.id();
 
 		app.update();
@@ -100,7 +97,7 @@ mod tests {
 			.world_mut()
 			.spawn(Is::<Fragile>::interacting_with([Blocker::Physical]))
 			.id();
-		let blocker = app.world_mut().spawn(Blockers::new([Blocker::Force])).id();
+		let blocker = app.world_mut().spawn(Blockers::from([Blocker::Force])).id();
 
 		app.update();
 
@@ -124,7 +121,7 @@ mod tests {
 			.id();
 		let blocker = app
 			.world_mut()
-			.spawn(Blockers::new([Blocker::Physical]))
+			.spawn(Blockers::from([Blocker::Physical]))
 			.id();
 
 		app.update();
@@ -147,7 +144,7 @@ mod tests {
 			.world_mut()
 			.spawn(Is::<Fragile>::interacting_with([Blocker::Physical]))
 			.id();
-		let blocker = app.world_mut().spawn(Blockers::new([Blocker::Force])).id();
+		let blocker = app.world_mut().spawn(Blockers::from([Blocker::Force])).id();
 
 		app.update();
 

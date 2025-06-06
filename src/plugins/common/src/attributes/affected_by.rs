@@ -1,3 +1,4 @@
+pub mod force_shield;
 pub mod gravity;
 
 use std::marker::PhantomData;

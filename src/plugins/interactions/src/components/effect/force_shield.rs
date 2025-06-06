@@ -1,23 +1,17 @@
-use crate::InteractionsPlugin;
+use crate::{ActOn, InteractionsPlugin, components::force_affected::ForceAffected};
 use bevy::prelude::*;
 use common::{
-	blocker::{Blocker, BlockerInsertCommand},
-	effects::force_shield::ForceShield,
+	attributes::affected_by::AffectedBy,
+	effects::{EffectApplies, force_shield::ForceShield},
 	traits::handles_effect::HandlesEffect,
 };
+use std::time::Duration;
 
 #[derive(Component, Debug, PartialEq)]
-#[require(BlockerInsertCommand = Self::blockers())]
 pub struct ForceShieldEffect(pub(crate) ForceShield);
 
-impl ForceShieldEffect {
-	fn blockers() -> BlockerInsertCommand {
-		Blocker::insert([Blocker::Force])
-	}
-}
-
 impl<TLifecyclePlugin> HandlesEffect<ForceShield> for InteractionsPlugin<TLifecyclePlugin> {
-	type TTarget = ();
+	type TTarget = AffectedBy<ForceShield>;
 	type TEffectComponent = ForceShieldEffect;
 
 	fn effect(effect: ForceShield) -> Self::TEffectComponent {
@@ -25,4 +19,11 @@ impl<TLifecyclePlugin> HandlesEffect<ForceShield> for InteractionsPlugin<TLifecy
 	}
 
 	fn attribute(_: Self::TTarget) -> impl Bundle {}
+}
+
+impl ActOn<ForceAffected> for ForceShield {
+	fn act(&mut self, _: Entity, _: &mut ForceAffected, _: Duration) -> EffectApplies {
+		// FIXME: Target should be moved outside the force shield on context via some kind of force
+		EffectApplies::Always
+	}
 }

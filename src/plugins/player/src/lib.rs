@@ -5,8 +5,8 @@ mod systems;
 
 use bevy::prelude::*;
 use common::{
-	attributes::health::Health,
-	effects::deal_damage::DealDamage,
+	attributes::{affected_by::AffectedBy, health::Health},
+	effects::{deal_damage::DealDamage, force_shield::ForceShield, gravity::Gravity},
 	states::game_state::GameState,
 	tools::action_key::{movement::MovementKey, slot::SlotKey},
 	traits::{
@@ -69,7 +69,10 @@ where
 	TSettings: ThreadSafe + HandlesSettings,
 	TGameStates: ThreadSafe + HandlesGameStates,
 	TAnimations: ThreadSafe + RegisterAnimations,
-	TInteractions: ThreadSafe + HandlesEffect<DealDamage, TTarget = Health>,
+	TInteractions: ThreadSafe
+		+ HandlesEffect<DealDamage, TTarget = Health>
+		+ HandlesEffect<Gravity, TTarget = AffectedBy<Gravity>>
+		+ HandlesEffect<ForceShield, TTarget = AffectedBy<ForceShield>>,
 	TLights: ThreadSafe + HandlesLights,
 {
 	fn build(&self, app: &mut App) {

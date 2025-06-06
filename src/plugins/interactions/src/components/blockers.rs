@@ -1,16 +1,6 @@
 use bevy::prelude::*;
-use common::blocker::{Blocker, BlockerInsertCommand};
+use common::blocker::{Blocker, Blockers};
 use std::collections::HashSet;
-
-#[derive(Component, Default, Debug, PartialEq)]
-pub(crate) struct Blockers(pub(crate) HashSet<Blocker>);
-
-impl Blockers {
-	#[cfg(test)]
-	pub(crate) fn new<const N: usize>(blockers: [Blocker; N]) -> Self {
-		Self(HashSet::from(blockers))
-	}
-}
 
 impl ApplyBlockerInsertion for BlockerInsertCommand {}
 

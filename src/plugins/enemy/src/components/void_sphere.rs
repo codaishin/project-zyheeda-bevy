@@ -18,7 +18,6 @@ use common::{
 		affected_by::{Affected, AffectedBy},
 		health::Health,
 	},
-	blocker::{Blocker, BlockerInsertCommand},
 	components::{GroundOffset, insert_asset::InsertAsset},
 	effects::{deal_damage::DealDamage, gravity::Gravity},
 	errors::Error,
@@ -35,7 +34,6 @@ use std::{f32::consts::PI, sync::Arc, time::Duration};
 #[derive(Component)]
 #[require(
 	Enemy = VoidSphere::as_enemy(),
-	BlockerInsertCommand = Self::blockers(),
 	GroundOffset = Self::ground_offset(),
 	RigidBody = Self::rigid_body(),
 	GravityScale = Self::gravity_scale(),
@@ -49,10 +47,6 @@ impl VoidSphere {
 
 	const fn ground_offset() -> Vec3 {
 		Vec3::new(0., 1.2, 0.)
-	}
-
-	fn blockers() -> BlockerInsertCommand {
-		Blocker::insert([Blocker::Physical])
 	}
 
 	fn rigid_body() -> RigidBody {

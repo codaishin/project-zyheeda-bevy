@@ -1,11 +1,8 @@
 use super::execute_ray_caster::RayCastResult;
-use crate::components::{
-	blockers::Blockers,
-	is::{InterruptableRay, Is},
-};
+use crate::components::is::{InterruptableRay, Is};
 use bevy::prelude::*;
 use common::{
-	blocker::Blocker,
+	blocker::{Blocker, Blockers},
 	components::collider_relationship::ColliderOfInteractionTarget,
 	traits::cast_ray::TimeOfImpact,
 };
@@ -91,7 +88,7 @@ mod tests {
 		let close = app.world_mut().spawn_empty().id();
 		let blocker = app
 			.world_mut()
-			.spawn(Blockers::new([Blocker::Physical]))
+			.spawn(Blockers::from([Blocker::Physical]))
 			.id();
 		let far = app.world_mut().spawn_empty().id();
 		let interruptable = app
@@ -142,7 +139,7 @@ mod tests {
 		let close = app.world_mut().spawn_empty().id();
 		let root = app
 			.world_mut()
-			.spawn(Blockers::new([Blocker::Physical]))
+			.spawn(Blockers::from([Blocker::Physical]))
 			.id();
 		let blocker = app
 			.world_mut()
@@ -198,7 +195,7 @@ mod tests {
 		let close = app.world_mut().spawn_empty().id();
 		let blocker = app
 			.world_mut()
-			.spawn(Blockers::new([Blocker::Physical]))
+			.spawn(Blockers::from([Blocker::Physical]))
 			.id();
 		let far = app.world_mut().spawn_empty().id();
 		let interruptable = app
@@ -250,7 +247,7 @@ mod tests {
 		let close = app.world_mut().spawn_empty().id();
 		let blocker = app
 			.world_mut()
-			.spawn(Blockers::new([Blocker::Physical]))
+			.spawn(Blockers::from([Blocker::Physical]))
 			.id();
 		let far = app.world_mut().spawn_empty().id();
 		let interruptable = app
