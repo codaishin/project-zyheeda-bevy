@@ -5,6 +5,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
+use std::collections::HashSet;
 
 pub trait HandlesSkillBehaviors {
 	type TSkillContact: Component;
@@ -50,7 +51,7 @@ pub enum Shape {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Integrity {
 	Solid,
-	Fragile { destroyed_by: Vec<Blocker> },
+	Fragile { destroyed_by: HashSet<Blocker> },
 }
 
 #[derive(Debug, PartialEq, Clone)]

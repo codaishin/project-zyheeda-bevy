@@ -2,8 +2,11 @@ use super::player_movement::{Config, MovementMode, PlayerMovement};
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::{
-	attributes::health::Health,
-	blocker::{Blocker, BlockerInsertCommand},
+	attributes::{
+		affected_by::{Affected, AffectedBy},
+		health::Health,
+	},
+	blocker::{Blocker, Blockers},
 	components::{
 		AssetModel,
 		GroundOffset,
@@ -11,7 +14,7 @@ use common::{
 		flip::FlipHorizontally,
 		persistent_entity::PersistentEntity,
 	},
-	effects::deal_damage::DealDamage,
+	effects::{deal_damage::DealDamage, force::Force, gravity::Gravity},
 	errors::Error,
 	tools::{
 		Units,
@@ -52,7 +55,7 @@ use std::collections::HashMap;
 	AssetModel = Self::model(),
 	FlipHorizontally = Self::flip_metarig(),
 	GroundOffset = Self::offset(),
-	BlockerInsertCommand = Self::blocker(),
+	Blockers = [Blocker::Character],
 	RigidBody = Self::rigid_body(),
 	InteractionTarget,
 	LockedAxes = Self::locked_axes(),
@@ -82,10 +85,6 @@ impl Player {
 
 	fn offset() -> GroundOffset {
 		GroundOffset(Vec3::Y)
-	}
-
-	fn blocker() -> BlockerInsertCommand {
-		Blocker::insert([Blocker::Physical])
 	}
 
 	fn rigid_body() -> RigidBody {
@@ -282,12 +281,18 @@ impl ConfigureNewAnimationDispatch for Player {
 
 impl<TInteractions, TLights> Prefab<(TInteractions, TLights)> for Player
 where
-	TInteractions: HandlesEffect<DealDamage, TTarget = Health>,
+	TInteractions: HandlesEffect<DealDamage, TTarget = Health>
+		+ HandlesEffect<Gravity, TTarget = AffectedBy<Gravity>>
+		+ HandlesEffect<Force, TTarget = AffectedBy<Force>>,
 	TLights: HandlesLights,
 {
 	fn insert_prefab_components(&self, entity: &mut EntityCommands) -> Result<(), Error> {
 		entity
-			.insert((Health::new(100.).bundle_via::<TInteractions>(),))
+			.insert((
+				Health::new(100.).bundle_via::<TInteractions>(),
+				Affected::by::<Gravity>().bundle_via::<TInteractions>(),
+				Affected::by::<Force>().bundle_via::<TInteractions>(),
+			))
 			.with_child((
 				TLights::responsive_light_trigger(),
 				Collider::capsule(

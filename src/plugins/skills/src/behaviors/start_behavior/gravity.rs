@@ -1,7 +1,7 @@
 use crate::behaviors::{SkillCaster, SkillTarget};
 use bevy::ecs::system::EntityCommands;
 use common::{
-	effects::{EffectApplies, gravity::Gravity},
+	effects::gravity::Gravity,
 	tools::UnitsPerSecond,
 	traits::{handles_effect::HandlesEffect, handles_skill_behaviors::Spawner},
 };
@@ -10,7 +10,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct StartGravity {
 	strength: UnitsPerSecond,
-	effect_applies: EffectApplies,
 }
 
 impl StartGravity {
@@ -25,7 +24,6 @@ impl StartGravity {
 	{
 		entity.try_insert(TEffects::effect(Gravity {
 			strength: self.strength,
-			effect_applies: self.effect_applies,
 		}));
 	}
 }
@@ -62,16 +60,9 @@ mod tests {
 
 	static CASTER: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
 
-	fn gravity(
-		In((pull, effect_applies)): In<(UnitsPerSecond, EffectApplies)>,
-		mut commands: Commands,
-	) -> Entity {
+	fn gravity(In(pull): In<UnitsPerSecond>, mut commands: Commands) -> Entity {
 		let mut entity = commands.spawn_empty();
-		StartGravity {
-			strength: pull,
-			effect_applies,
-		}
-		.apply::<_HandlesEffects>(
+		StartGravity { strength: pull }.apply::<_HandlesEffects>(
 			&mut entity,
 			&SkillCaster::from(*CASTER),
 			Spawner::Center,
@@ -90,12 +81,11 @@ mod tests {
 
 		let entity = app
 			.world_mut()
-			.run_system_once_with(gravity, (UnitsPerSecond::new(42.), EffectApplies::Once))?;
+			.run_system_once_with(gravity, UnitsPerSecond::new(42.))?;
 
 		assert_eq!(
 			Some(&_Effect(Gravity {
 				strength: UnitsPerSecond::new(42.),
-				effect_applies: EffectApplies::Once,
 			})),
 			app.world().entity(entity).get::<_Effect>()
 		);

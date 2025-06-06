@@ -1,5 +1,6 @@
 pub(crate) mod act_on;
 pub(crate) mod rapier_context;
+pub(crate) mod update_blockers;
 
 use bevy::prelude::Entity;
 use bevy_rapier3d::prelude::CollisionEvent;
@@ -27,5 +28,7 @@ pub(crate) trait Flush {
 }
 
 pub(crate) trait Blockable {
-	fn blockable(blockers: &[Blocker]) -> Self;
+	fn blockable<TBlockers>(blockers: TBlockers) -> Self
+	where
+		TBlockers: IntoIterator<Item = Blocker>;
 }

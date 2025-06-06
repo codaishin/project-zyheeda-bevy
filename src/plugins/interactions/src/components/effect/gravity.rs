@@ -1,12 +1,12 @@
 use crate::{
 	InteractionsPlugin,
 	components::gravity_affected::{GravityAffected, GravityPull},
-	traits::act_on::ActOn,
+	traits::{act_on::ActOn, update_blockers::UpdateBlockers},
 };
 use bevy::prelude::*;
 use common::{
 	attributes::affected_by::AffectedBy,
-	effects::{EffectApplies, gravity::Gravity},
+	effects::gravity::Gravity,
 	traits::handles_effect::HandlesEffect,
 };
 use std::time::Duration;
@@ -27,21 +27,23 @@ impl<TLifecyclePlugin> HandlesEffect<Gravity> for InteractionsPlugin<TLifecycleP
 	}
 }
 
+impl UpdateBlockers for GravityEffect {}
+
 impl ActOn<GravityAffected> for GravityEffect {
-	fn act(
+	fn on_begin_interaction(&mut self, _: Entity, _: &mut GravityAffected) {}
+
+	fn on_repeated_interaction(
 		&mut self,
 		self_entity: Entity,
 		target: &mut GravityAffected,
 		_: Duration,
-	) -> EffectApplies {
-		let Self(gravity) = self;
+	) {
+		let Self(Gravity { strength }) = *self;
 
 		target.push(GravityPull {
-			strength: gravity.strength,
+			strength,
 			towards: self_entity,
 		});
-
-		gravity.effect_applies
 	}
 }
 
@@ -52,30 +54,13 @@ mod tests {
 	use common::{tools::UnitsPerSecond, traits::clamp_zero_positive::ClampZeroPositive};
 
 	#[test]
-	fn proper_action_type() {
-		let mut gravity = GravityEffect(Gravity {
-			strength: UnitsPerSecond::new(42.),
-			effect_applies: EffectApplies::Once,
-		});
-
-		let action_type = gravity.act(
-			Entity::from_raw(42),
-			&mut GravityAffected::default(),
-			Duration::ZERO,
-		);
-
-		assert_eq!(action_type, EffectApplies::Once);
-	}
-
-	#[test]
 	fn add_gravity_pull() {
 		let mut gravity = GravityEffect(Gravity {
 			strength: UnitsPerSecond::new(42.),
-			..default()
 		});
 		let mut gravity_pulls = GravityAffected::default();
 
-		gravity.act(Entity::from_raw(42), &mut gravity_pulls, Duration::ZERO);
+		gravity.on_repeated_interaction(Entity::from_raw(42), &mut gravity_pulls, Duration::ZERO);
 
 		assert_eq!(
 			GravityAffected::new([GravityPull {
@@ -84,5 +69,17 @@ mod tests {
 			}]),
 			gravity_pulls
 		);
+	}
+
+	#[test]
+	fn no_gravity_pull_on_begin() {
+		let mut gravity = GravityEffect(Gravity {
+			strength: UnitsPerSecond::new(42.),
+		});
+		let mut gravity_pulls = GravityAffected::default();
+
+		gravity.on_begin_interaction(Entity::from_raw(42), &mut gravity_pulls);
+
+		assert_eq!(GravityAffected::new([]), gravity_pulls);
 	}
 }

@@ -23,9 +23,18 @@ use common::{
 	},
 };
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct SpawnProjectile;
+pub struct SpawnProjectile {
+	destroyed_by: DestroyedBy,
+}
+
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+enum DestroyedBy {
+	All,
+	AnyOf(HashSet<Blocker>),
+}
 
 impl SpawnShape for SpawnProjectile {
 	fn spawn_shape<TSkillBehaviors>(
@@ -48,7 +57,10 @@ impl SpawnShape for SpawnProjectile {
 					hollow_collider: false,
 				},
 				integrity: Integrity::Fragile {
-					destroyed_by: vec![Blocker::Physical, Blocker::Force],
+					destroyed_by: match &self.destroyed_by {
+						DestroyedBy::All => Blocker::all().collect(),
+						DestroyedBy::AnyOf(blockers) => blockers.clone(),
+					},
 				},
 				motion: Motion::Projectile {
 					caster,

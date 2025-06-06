@@ -1,16 +1,18 @@
 use crate::traits::iteration::{Iter, IterFinite};
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
 pub enum Blocker {
 	Physical,
 	Force,
+	Character,
 }
 
 impl Blocker {
-	pub fn insert<const N: usize>(blockers: [Blocker; N]) -> BlockerInsertCommand {
-		BlockerInsertCommand(HashSet::from(blockers))
+	pub fn all() -> Iter<Blocker> {
+		Blocker::iterator()
 	}
 }
 
@@ -22,10 +24,30 @@ impl IterFinite for Blocker {
 	fn next(current: &Iter<Self>) -> Option<Self> {
 		match current.0? {
 			Blocker::Physical => Some(Blocker::Force),
-			Blocker::Force => None,
+			Blocker::Force => Some(Blocker::Character),
+			Blocker::Character => None,
 		}
 	}
 }
 
-#[derive(Component, Debug, PartialEq)]
-pub struct BlockerInsertCommand(pub HashSet<Blocker>);
+#[derive(Component, Default, Debug, PartialEq)]
+pub struct Blockers(pub HashSet<Blocker>);
+
+impl<const N: usize> From<[Blocker; N]> for Blockers {
+	fn from(blockers: [Blocker; N]) -> Self {
+		Self(HashSet::from(blockers))
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn iterate() {
+		assert_eq!(
+			vec![Blocker::Physical, Blocker::Force, Blocker::Character],
+			Blocker::iterator().take(100).collect::<Vec<_>>()
+		);
+	}
+}

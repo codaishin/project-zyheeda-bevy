@@ -1,5 +1,5 @@
 use bevy::prelude::{Component, Entity};
-use std::collections::HashSet;
+use std::collections::{HashSet, hash_set::Iter};
 
 #[derive(Component, Default, Debug, PartialEq, Clone)]
 pub struct InteractingEntities(pub(crate) HashSet<Entity>);
@@ -22,7 +22,7 @@ impl InteractingEntities {
 		self.0.contains(entity)
 	}
 
-	pub fn iter(&self) -> impl Iterator<Item = &Entity> {
+	pub fn iter(&self) -> Iter<'_, Entity> {
 		self.0.iter()
 	}
 }

@@ -1,6 +1,7 @@
 use crate::traits::insert_attack::InsertAttack;
 use bevy::prelude::*;
 use common::{
+	blocker::{Blocker, Blockers},
 	components::{collider_relationship::InteractionTarget, persistent_entity::PersistentEntity},
 	tools::{
 		Units,
@@ -19,7 +20,7 @@ use common::{
 use std::{sync::Arc, time::Duration};
 
 #[derive(Component, Clone)]
-#[require(InteractionTarget, PersistentEntity)]
+#[require(InteractionTarget, PersistentEntity, Blockers = [Blocker::Character])]
 pub struct Enemy {
 	pub(crate) speed: Speed,
 	pub(crate) movement_animation: Option<MovementAnimation>,
