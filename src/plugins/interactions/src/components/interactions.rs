@@ -47,9 +47,9 @@ where
 	TTarget: Component,
 {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		f.debug_struct("ActedOnEntities")
-			.field("phantom_data", &self._p)
+		f.debug_struct("Interactions")
 			.field("entities", &self.entities)
+			.field("_p", &self._p)
 			.finish()
 	}
 }

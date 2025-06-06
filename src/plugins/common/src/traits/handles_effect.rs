@@ -1,4 +1,4 @@
-use crate::effects::{deal_damage::DealDamage, force_shield::Force, gravity::Gravity};
+use crate::effects::{deal_damage::DealDamage, force::Force, gravity::Gravity};
 use bevy::prelude::{Bundle, Component};
 
 pub trait HandlesAllEffects:

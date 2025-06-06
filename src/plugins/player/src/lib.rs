@@ -6,7 +6,7 @@ mod systems;
 use bevy::prelude::*;
 use common::{
 	attributes::{affected_by::AffectedBy, health::Health},
-	effects::{deal_damage::DealDamage, force_shield::Force, gravity::Gravity},
+	effects::{deal_damage::DealDamage, force::Force, gravity::Gravity},
 	states::game_state::GameState,
 	tools::action_key::{movement::MovementKey, slot::SlotKey},
 	traits::{

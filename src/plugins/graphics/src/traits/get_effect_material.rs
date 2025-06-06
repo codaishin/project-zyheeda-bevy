@@ -1,5 +1,5 @@
 mod deal_damage;
-mod force_shield;
+mod force;
 mod gravity;
 
 use bevy::prelude::*;

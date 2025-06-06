@@ -1,15 +1,15 @@
 use crate::behaviors::{SkillCaster, SkillTarget};
 use bevy::ecs::system::EntityCommands;
 use common::{
-	effects::force_shield::Force,
+	effects::force::Force,
 	traits::{handles_effect::HandlesEffect, handles_skill_behaviors::Spawner},
 };
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct StartForceShield;
+pub struct StartForce;
 
-impl StartForceShield {
+impl StartForce {
 	pub fn apply<TInteractions>(
 		&self,
 		entity: &mut EntityCommands,
@@ -40,23 +40,23 @@ mod tests {
 
 	impl HandlesEffect<Force> for _HandlesInteractions {
 		type TTarget = ();
-		type TEffectComponent = _ForceShield;
+		type TEffectComponent = _Force;
 
 		fn effect(effect: Force) -> Self::TEffectComponent {
-			_ForceShield(effect)
+			_Force(effect)
 		}
 
 		fn attribute(_: Self::TTarget) -> impl Bundle {}
 	}
 
 	#[derive(Component, Debug, PartialEq)]
-	struct _ForceShield(Force);
+	struct _Force(Force);
 
 	static CASTER: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
 
-	fn force_shield(mut commands: Commands) -> Entity {
+	fn force(mut commands: Commands) -> Entity {
 		let mut entity = commands.spawn_empty();
-		StartForceShield.apply::<_HandlesInteractions>(
+		StartForce.apply::<_HandlesInteractions>(
 			&mut entity,
 			&SkillCaster::from(*CASTER),
 			Spawner::Center,
@@ -73,11 +73,11 @@ mod tests {
 	fn spawn_force_marker() -> Result<(), RunSystemError> {
 		let mut app = setup();
 
-		let entity = app.world_mut().run_system_once(force_shield)?;
+		let entity = app.world_mut().run_system_once(force)?;
 
 		assert_eq!(
-			Some(&_ForceShield(Force)),
-			app.world().entity(entity).get::<_ForceShield>()
+			Some(&_Force(Force)),
+			app.world().entity(entity).get::<_Force>()
 		);
 		Ok(())
 	}

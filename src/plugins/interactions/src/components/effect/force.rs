@@ -8,7 +8,7 @@ use bevy::prelude::*;
 use common::{
 	attributes::affected_by::AffectedBy,
 	blocker::{Blocker, Blockers},
-	effects::force_shield::Force,
+	effects::force::Force,
 	traits::handles_effect::HandlesEffect,
 };
 use std::time::Duration;

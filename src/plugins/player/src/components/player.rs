@@ -14,7 +14,7 @@ use common::{
 		flip::FlipHorizontally,
 		persistent_entity::PersistentEntity,
 	},
-	effects::{deal_damage::DealDamage, force_shield::Force, gravity::Gravity},
+	effects::{deal_damage::DealDamage, force::Force, gravity::Gravity},
 	errors::Error,
 	tools::{
 		Units,

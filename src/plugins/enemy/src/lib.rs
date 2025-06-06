@@ -6,7 +6,7 @@ mod traits;
 use bevy::prelude::*;
 use common::{
 	attributes::{affected_by::AffectedBy, health::Health},
-	effects::{deal_damage::DealDamage, force_shield::Force, gravity::Gravity},
+	effects::{deal_damage::DealDamage, force::Force, gravity::Gravity},
 	traits::{
 		handles_effect::HandlesEffect,
 		handles_enemies::HandlesEnemies,

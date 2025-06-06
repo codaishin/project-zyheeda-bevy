@@ -14,7 +14,7 @@ use bevy::{
 };
 use common::{
 	components::essence::Essence,
-	effects::{deal_damage::DealDamage, force_shield::Force, gravity::Gravity},
+	effects::{deal_damage::DealDamage, force::Force, gravity::Gravity},
 	states::game_state::LoadingGame,
 	systems::{remove_components::Remove, track_components::TrackComponentInSelfAndChildren},
 	traits::{
