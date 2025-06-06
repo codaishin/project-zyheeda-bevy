@@ -179,14 +179,14 @@ impl SimplePrefab for Motion {
 				caster,
 				spawner,
 				speed,
-				max_range,
+				range,
 			} => {
 				entity.try_insert((
 					RigidBody::Dynamic,
 					GravityScale(0.),
 					Ccd::enabled(),
 					WhenTraveled::via::<Velocity>()
-						.distance(max_range)
+						.distance(range)
 						.insert::<TLifeCycles::TDestroy>(),
 				));
 
@@ -381,7 +381,7 @@ mod tests {
 			caster,
 			spawner: Spawner::Slot(SlotKey::TopHand(Side::Left)),
 			speed: UnitsPerSecond::new(11.),
-			max_range: Units::new(1111.),
+			range: Units::new(1111.),
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
@@ -433,7 +433,7 @@ mod tests {
 			caster,
 			spawner: Spawner::Slot(SlotKey::TopHand(Side::Left)),
 			speed: UnitsPerSecond::new(11.),
-			max_range: Units::new(1111.),
+			range: Units::new(1111.),
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
