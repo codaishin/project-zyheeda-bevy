@@ -38,16 +38,20 @@ impl<TLife> ActOn<TLife> for DealDamageEffect
 where
 	TLife: ChangeLife,
 {
-	fn act(&mut self, _: Entity, life: &mut TLife, delta: Duration) -> EffectApplies {
-		let Self(DealDamage(damage, apply_method)) = *self;
-
-		let change = match apply_method {
-			EffectApplies::Always => -damage * delta.as_secs_f32(),
-			EffectApplies::Once | EffectApplies::OncePerTarget => -damage,
+	fn on_begin_interaction(&mut self, _: Entity, life: &mut TLife) {
+		let Self(DealDamage(damage, EffectApplies::Once)) = *self else {
+			return;
 		};
-		life.change_by(change);
 
-		apply_method
+		life.change_by(-damage);
+	}
+
+	fn on_repeated_interaction(&mut self, _: Entity, life: &mut TLife, delta: Duration) {
+		let Self(DealDamage(damage, EffectApplies::Always)) = *self else {
+			return;
+		};
+
+		life.change_by(-damage * delta.as_secs_f32());
 	}
 }
 
@@ -76,44 +80,8 @@ mod tests {
 				.return_const(());
 		});
 
-		damage.act(Entity::from_raw(11), &mut life, Duration::from_millis(100));
-	}
-
-	#[test]
-	fn action_type_once() {
-		let mut damage = DealDamageEffect(DealDamage::once(42.));
-		let mut life = Mock_Life::new_mock(|mock| {
-			mock.expect_change_by().return_const(());
-		});
-
-		let action_type = damage.act(Entity::from_raw(11), &mut life, Duration::from_secs(1));
-
-		assert_eq!(EffectApplies::Once, action_type);
-	}
-
-	#[test]
-	fn deal_damage_once_per_target() {
-		let mut damage = DealDamageEffect(DealDamage::once_per_target(42.));
-		let mut life = Mock_Life::new_mock(|mock| {
-			mock.expect_change_by()
-				.times(1)
-				.with(eq(-42.))
-				.return_const(());
-		});
-
-		damage.act(Entity::from_raw(11), &mut life, Duration::from_millis(100));
-	}
-
-	#[test]
-	fn action_type_once_per_target() {
-		let mut damage = DealDamageEffect(DealDamage::once_per_target(42.));
-		let mut life = Mock_Life::new_mock(|mock| {
-			mock.expect_change_by().return_const(());
-		});
-
-		let action_type = damage.act(Entity::from_raw(11), &mut life, Duration::from_secs(1));
-
-		assert_eq!(EffectApplies::OncePerTarget, action_type);
+		damage.on_begin_interaction(Entity::from_raw(11), &mut life);
+		damage.on_repeated_interaction(Entity::from_raw(11), &mut life, Duration::from_millis(100));
 	}
 
 	#[test]
@@ -126,18 +94,7 @@ mod tests {
 				.return_const(());
 		});
 
-		damage.act(Entity::from_raw(11), &mut life, Duration::from_millis(100));
-	}
-
-	#[test]
-	fn action_type_always() {
-		let mut damage = DealDamageEffect(DealDamage::once_per_second(42.));
-		let mut life = Mock_Life::new_mock(|mock| {
-			mock.expect_change_by().return_const(());
-		});
-
-		let action_type = damage.act(Entity::from_raw(11), &mut life, Duration::from_secs(1));
-
-		assert_eq!(EffectApplies::Always, action_type);
+		damage.on_begin_interaction(Entity::from_raw(11), &mut life);
+		damage.on_repeated_interaction(Entity::from_raw(11), &mut life, Duration::from_millis(100));
 	}
 }

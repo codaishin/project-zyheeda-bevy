@@ -1,7 +1,7 @@
-pub mod acted_on_targets;
 pub mod force_affected;
 pub mod gravity_affected;
 pub mod interacting_entities;
+pub mod interactions;
 
 pub(crate) mod beam;
 pub(crate) mod effect;

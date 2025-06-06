@@ -9,5 +9,4 @@ pub enum EffectApplies {
 	#[default]
 	Always,
 	Once,
-	OncePerTarget,
 }

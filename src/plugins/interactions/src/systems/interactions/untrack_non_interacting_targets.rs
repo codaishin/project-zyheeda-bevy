@@ -1,41 +1,38 @@
-use crate::components::{
-	acted_on_targets::ActedOnTargets,
-	interacting_entities::InteractingEntities,
-};
-use bevy::prelude::{Changed, Component, Query};
+use crate::components::{interacting_entities::InteractingEntities, interactions::Interactions};
+use bevy::prelude::*;
 
-pub(crate) fn untrack_non_interacting_targets<TActor: Component>(
-	mut agents: Query<
-		(&InteractingEntities, &mut ActedOnTargets<TActor>),
-		Changed<InteractingEntities>,
-	>,
-) {
-	for (interacting, mut acted_on) in &mut agents {
-		let ActedOnTargets { entities, .. } = acted_on.as_mut();
-		entities.retain(|e| interacting.contains(e));
+impl<TActor, TTarget> Interactions<TActor, TTarget>
+where
+	TActor: Component,
+	TTarget: Component,
+{
+	pub(crate) fn untrack_non_interacting_targets(
+		mut agents: Query<(&mut Self, &InteractingEntities), Changed<InteractingEntities>>,
+	) {
+		for (mut interactions, interacting_entities) in &mut agents {
+			interactions.retain(|e| interacting_entities.contains(e));
+		}
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{
-		acted_on_targets::ActedOnTargets,
-		interacting_entities::InteractingEntities,
-	};
-	use bevy::{
-		app::{App, Update},
-		prelude::{Component, Entity},
-	};
 	use common::test_tools::utils::SingleThreadedApp;
 	use std::ops::DerefMut;
 
 	#[derive(Component)]
 	struct _Actor;
 
+	#[derive(Component)]
+	struct _Target;
+
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, untrack_non_interacting_targets::<_Actor>);
+		app.add_systems(
+			Update,
+			Interactions::<_Actor, _Target>::untrack_non_interacting_targets,
+		);
 
 		app
 	}
@@ -47,7 +44,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				InteractingEntities::new([Entity::from_raw(100), Entity::from_raw(300)]),
-				ActedOnTargets::<_Actor>::new([
+				Interactions::<_Actor, _Target>::from([
 					Entity::from_raw(100),
 					Entity::from_raw(200),
 					Entity::from_raw(300),
@@ -59,11 +56,11 @@ mod tests {
 
 		let entity = app.world().entity(entity);
 		assert_eq!(
-			Some(&ActedOnTargets::<_Actor>::new([
+			Some(&Interactions::<_Actor, _Target>::from([
 				Entity::from_raw(100),
 				Entity::from_raw(300),
 			])),
-			entity.get::<ActedOnTargets<_Actor>>(),
+			entity.get::<Interactions<_Actor, _Target>>(),
 		)
 	}
 
@@ -74,27 +71,29 @@ mod tests {
 			.world_mut()
 			.spawn((
 				InteractingEntities::new([Entity::from_raw(100), Entity::from_raw(300)]),
-				ActedOnTargets::<_Actor>::new([Entity::from_raw(100), Entity::from_raw(300)]),
+				Interactions::<_Actor, _Target>::from([
+					Entity::from_raw(100),
+					Entity::from_raw(300),
+				]),
 			))
 			.id();
 
 		app.update();
 		app.world_mut()
 			.entity_mut(entity)
-			.get_mut::<ActedOnTargets<_Actor>>()
+			.get_mut::<Interactions<_Actor, _Target>>()
 			.unwrap()
-			.entities
 			.insert(Entity::from_raw(123));
 		app.update();
 
 		let entity = app.world().entity(entity);
 		assert_eq!(
-			Some(&ActedOnTargets::<_Actor>::new([
+			Some(&Interactions::<_Actor, _Target>::from([
 				Entity::from_raw(100),
 				Entity::from_raw(300),
 				Entity::from_raw(123),
 			])),
-			entity.get::<ActedOnTargets<_Actor>>(),
+			entity.get::<Interactions<_Actor, _Target>>(),
 		)
 	}
 
@@ -105,7 +104,10 @@ mod tests {
 			.world_mut()
 			.spawn((
 				InteractingEntities::new([Entity::from_raw(100), Entity::from_raw(300)]),
-				ActedOnTargets::<_Actor>::new([Entity::from_raw(100), Entity::from_raw(300)]),
+				Interactions::<_Actor, _Target>::from([
+					Entity::from_raw(100),
+					Entity::from_raw(300),
+				]),
 			))
 			.id();
 
@@ -117,7 +119,7 @@ mod tests {
 			.deref_mut();
 		app.world_mut()
 			.entity_mut(entity)
-			.insert(ActedOnTargets::<_Actor>::new([
+			.insert(Interactions::<_Actor, _Target>::from([
 				Entity::from_raw(100),
 				Entity::from_raw(200),
 				Entity::from_raw(300),
@@ -126,11 +128,11 @@ mod tests {
 
 		let entity = app.world().entity(entity);
 		assert_eq!(
-			Some(&ActedOnTargets::<_Actor>::new([
+			Some(&Interactions::<_Actor, _Target>::from([
 				Entity::from_raw(100),
 				Entity::from_raw(300)
 			])),
-			entity.get::<ActedOnTargets<_Actor>>(),
+			entity.get::<Interactions<_Actor, _Target>>(),
 		)
 	}
 }

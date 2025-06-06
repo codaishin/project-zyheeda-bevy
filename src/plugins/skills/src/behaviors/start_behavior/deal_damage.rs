@@ -8,8 +8,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum StartDealingDamage {
-	SingleTarget(f32),
-	Piercing(f32),
+	OneTime(f32),
 	OverTime(f32),
 }
 
@@ -24,8 +23,7 @@ impl StartDealingDamage {
 		TEffects: HandlesEffect<DealDamage>,
 	{
 		entity.try_insert(TEffects::effect(match *self {
-			Self::SingleTarget(dmg) => DealDamage::once(dmg),
-			Self::Piercing(dmg) => DealDamage::once_per_target(dmg),
+			Self::OneTime(dmg) => DealDamage::once(dmg),
 			Self::OverTime(dmg) => DealDamage::once_per_second(dmg),
 		}));
 	}
@@ -85,29 +83,13 @@ mod tests {
 	fn insert_single_target_damage() -> Result<(), RunSystemError> {
 		let mut app = setup();
 
-		let start_dealing_damage = StartDealingDamage::SingleTarget(42.);
+		let start_dealing_damage = StartDealingDamage::OneTime(42.);
 		let entity = app
 			.world_mut()
 			.run_system_once(damage(start_dealing_damage))?;
 
 		assert_eq!(
 			Some(&_Effect(DealDamage::once(42.))),
-			app.world().entity(entity).get::<_Effect>(),
-		);
-		Ok(())
-	}
-
-	#[test]
-	fn insert_piercing_damage() -> Result<(), RunSystemError> {
-		let mut app = setup();
-
-		let start_dealing_damage = StartDealingDamage::Piercing(42.);
-		let entity = app
-			.world_mut()
-			.run_system_once(damage(start_dealing_damage))?;
-
-		assert_eq!(
-			Some(&_Effect(DealDamage::once_per_target(42.))),
 			app.world().entity(entity).get::<_Effect>(),
 		);
 		Ok(())

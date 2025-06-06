@@ -8,7 +8,7 @@ use bevy::prelude::*;
 use common::{
 	attributes::affected_by::AffectedBy,
 	blocker::{Blocker, Blockers},
-	effects::{EffectApplies, force_shield::Force},
+	effects::force_shield::Force,
 	traits::handles_effect::HandlesEffect,
 };
 use std::time::Duration;
@@ -36,8 +36,9 @@ impl UpdateBlockers for ForceEffect {
 }
 
 impl ActOn<ForceAffected> for ForceEffect {
-	fn act(&mut self, _: Entity, _: &mut ForceAffected, _: Duration) -> EffectApplies {
-		// FIXME: Target should be moved outside the force shield on context via some kind of force
-		EffectApplies::Always
+	fn on_begin_interaction(&mut self, _: Entity, _: &mut ForceAffected) {}
+
+	fn on_repeated_interaction(&mut self, _: Entity, _: &mut ForceAffected, _: Duration) {
+		// FIXME: Target should be moved outside the force effect collider
 	}
 }

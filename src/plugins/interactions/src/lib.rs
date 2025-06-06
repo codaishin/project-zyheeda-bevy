@@ -25,11 +25,11 @@ use common::{
 	},
 };
 use components::{
-	acted_on_targets::ActedOnTargets,
 	beam::{Beam, BeamCommand},
 	effect::{deal_damage::DealDamageEffect, gravity::GravityEffect},
 	gravity_affected::GravityAffected,
 	interacting_entities::InteractingEntities,
+	interactions::Interactions,
 	is::{Fragile, InterruptableRay, Is},
 };
 use events::{InteractionEvent, Ray};
@@ -43,7 +43,6 @@ use systems::{
 	interactions::{
 		apply_fragile_blocks::apply_fragile_blocks,
 		map_collision_events::map_collision_events_to,
-		untrack_non_interacting_targets::untrack_non_interacting_targets,
 		update_interacting_entities::update_interacting_entities,
 	},
 	ray_cast::{
@@ -73,12 +72,16 @@ where
 	fn build(&self, app: &mut App) {
 		app
 			// Deal health damage
+			.register_required_components::<DealDamageEffect, InteractingEntities>()
 			.add_observer(DealDamageEffect::update_blockers_observer)
 			.add_interaction::<DealDamageEffect, TLifeCyclePlugin::TLife>()
 			// Apply gravity effect
+			.register_required_components::<GravityEffect, InteractingEntities>()
 			.add_observer(GravityEffect::update_blockers_observer)
 			.add_interaction::<GravityEffect, GravityAffected>()
+			.add_systems(Update, Update::delta.pipe(apply_gravity_pull))
 			// Apply force effect
+			.register_required_components::<ForceEffect, InteractingEntities>()
 			.add_observer(ForceEffect::update_blockers_observer)
 			.add_interaction::<ForceEffect, ForceAffected>()
 			// Apply behaviors
@@ -87,7 +90,6 @@ where
 			.init_resource::<TrackInteractionDuplicates>()
 			.init_resource::<TrackRayInteractions>()
 			.add_systems(Update, apply_fragile_blocks::<TLifeCyclePlugin::TDestroy>)
-			.add_systems(Update, Update::delta.pipe(apply_gravity_pull))
 			.add_systems(
 				Update,
 				(
@@ -119,14 +121,13 @@ impl AddInteraction for App {
 	{
 		self
 			// require basic interaction tracking
-			.register_required_components::<TActor, InteractingEntities>()
-			.register_required_components::<TActor, ActedOnTargets<TActor>>()
+			.register_required_components::<TActor, Interactions<TActor, TTarget>>()
 			// apply interactions
 			.add_systems(
 				Update,
 				(
 					Update::delta.pipe(TActor::act_on::<TTarget>),
-					untrack_non_interacting_targets::<TActor>,
+					Interactions::<TActor, TTarget>::untrack_non_interacting_targets,
 				)
 					.chain(),
 			)

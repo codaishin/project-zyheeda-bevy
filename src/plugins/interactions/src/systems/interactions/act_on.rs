@@ -1,15 +1,14 @@
 use crate::{
-	components::{acted_on_targets::ActedOnTargets, interacting_entities::InteractingEntities},
+	components::{interacting_entities::InteractingEntities, interactions::Interactions},
 	traits::act_on::ActOn,
 };
 use bevy::{ecs::component::Mutable, prelude::*};
-use common::{effects::EffectApplies, traits::try_remove_from::TryRemoveFrom};
 use std::time::Duration;
 
-type Components<'a, TActor> = (
+type Components<'a, TActor, TTarget> = (
 	Entity,
 	&'a mut TActor,
-	&'a mut ActedOnTargets<TActor>,
+	&'a mut Interactions<TActor, TTarget>,
 	&'a InteractingEntities,
 );
 
@@ -18,27 +17,21 @@ impl<T> ActOnSystem for T where T: Component<Mutability = Mutable> + Sized {}
 pub(crate) trait ActOnSystem: Component<Mutability = Mutable> + Sized {
 	fn act_on<TTarget>(
 		In(delta): In<Duration>,
-		mut commands: Commands,
-		mut actors: Query<Components<Self>>,
+		mut actors: Query<Components<Self, TTarget>>,
 		mut targets: Query<(Entity, &mut TTarget)>,
 	) where
 		Self: ActOn<TTarget>,
 		TTarget: Component<Mutability = Mutable>,
 	{
-		for (entity, mut actor, mut acted_on, interactions) in &mut actors {
-			for target in interactions.iter() {
+		for (entity, mut actor, mut interactions, interacting_entities) in &mut actors {
+			for target in interacting_entities.iter() {
 				let Ok((target_entity, mut target)) = targets.get_mut(*target) else {
 					continue;
 				};
 
-				match actor.act(entity, &mut target, delta) {
-					EffectApplies::Once => {
-						commands.try_remove_from::<Self>(entity);
-					}
-					EffectApplies::OncePerTarget => {
-						acted_on.entities.insert(target_entity);
-					}
-					EffectApplies::Always => {}
+				match interactions.insert(target_entity) {
+					true => actor.on_begin_interaction(entity, &mut target),
+					false => actor.on_repeated_interaction(entity, &mut target, delta),
 				}
 			}
 		}
@@ -47,11 +40,10 @@ pub(crate) trait ActOnSystem: Component<Mutability = Mutable> + Sized {
 
 #[cfg(test)]
 mod tests {
-	use crate::traits::update_blockers::UpdateBlockers;
-
 	use super::*;
+	use crate::traits::update_blockers::UpdateBlockers;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::traits::nested_mock::NestedMocks;
+	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 
@@ -68,38 +60,44 @@ mod tests {
 
 	#[automock]
 	impl ActOn<_Target> for _Actor {
-		fn act(
+		fn on_begin_interaction(&mut self, self_entity: Entity, target: &mut _Target) {
+			self.mock.on_begin_interaction(self_entity, target);
+		}
+
+		fn on_repeated_interaction(
 			&mut self,
 			self_entity: Entity,
 			target: &mut _Target,
 			delta: Duration,
-		) -> EffectApplies {
-			self.mock.act(self_entity, target, delta)
+		) {
+			self.mock
+				.on_repeated_interaction(self_entity, target, delta);
 		}
 	}
 
 	fn setup() -> App {
-		App::new()
+		App::new().single_threaded(Update)
 	}
 
 	#[test]
-	fn act_on_target() -> Result<(), RunSystemError> {
+	fn begin_interaction() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let target = app.world_mut().spawn(_Target).id();
 		let entity = app
 			.world_mut()
 			.spawn((
-				ActedOnTargets::<_Actor>::default(),
+				Interactions::<_Actor, _Target>::default(),
 				InteractingEntities::new([target]),
 			))
 			.id();
 		app.world_mut()
 			.entity_mut(entity)
 			.insert(_Actor::new().with_mock(|mock| {
-				mock.expect_act()
+				mock.expect_on_begin_interaction()
 					.times(1)
-					.with(eq(entity), eq(_Target), eq(Duration::from_millis(42)))
-					.return_const(EffectApplies::Once);
+					.with(eq(entity), eq(_Target))
+					.return_const(());
+				mock.expect_on_repeated_interaction().never();
 			}));
 
 		app.world_mut()
@@ -107,118 +105,57 @@ mod tests {
 	}
 
 	#[test]
-	fn remove_actor() -> Result<(), RunSystemError> {
+	fn track_interacting_entity() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let target = app.world_mut().spawn(_Target).id();
-		let actor = app
+		let entity = app
 			.world_mut()
 			.spawn((
-				ActedOnTargets::<_Actor>::default(),
+				Interactions::<_Actor, _Target>::default(),
 				InteractingEntities::new([target]),
-				_Actor::new().with_mock(|mock| {
-					mock.expect_act().return_const(EffectApplies::Once);
-				}),
 			))
 			.id();
+		app.world_mut()
+			.entity_mut(entity)
+			.insert(_Actor::new().with_mock(|mock| {
+				mock.expect_on_begin_interaction().return_const(());
+				mock.expect_on_repeated_interaction().return_const(());
+			}));
 
 		app.world_mut()
-			.run_system_once_with(_Actor::act_on::<_Target>, Duration::ZERO)?;
-
-		let actor = app.world().entity(actor);
-
-		assert!(!actor.contains::<_Actor>());
-		Ok(())
-	}
-
-	#[test]
-	fn do_not_remove_actor_when_not_acted() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		let target = app.world_mut().spawn_empty().id();
-		let actor = app
-			.world_mut()
-			.spawn((
-				ActedOnTargets::<_Actor>::default(),
-				InteractingEntities::new([target]),
-				_Actor::new().with_mock(|mock| {
-					mock.expect_act().return_const(EffectApplies::Once);
-				}),
-			))
-			.id();
-
-		app.world_mut()
-			.run_system_once_with(_Actor::act_on::<_Target>, Duration::ZERO)?;
-
-		let actor = app.world().entity(actor);
-
-		assert!(actor.contains::<_Actor>());
-		Ok(())
-	}
-
-	#[test]
-	fn do_not_remove_actor_when_action_type_not_once() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		let target = app.world_mut().spawn(_Target).id();
-		let actor_always = app
-			.world_mut()
-			.spawn((
-				ActedOnTargets::<_Actor>::default(),
-				InteractingEntities::new([target]),
-				_Actor::new().with_mock(|mock| {
-					mock.expect_act().return_const(EffectApplies::Always);
-				}),
-			))
-			.id();
-		let actor_once_per_target = app
-			.world_mut()
-			.spawn((
-				ActedOnTargets::<_Actor>::default(),
-				InteractingEntities::new([target]),
-				_Actor::new().with_mock(|mock| {
-					mock.expect_act().return_const(EffectApplies::OncePerTarget);
-				}),
-			))
-			.id();
-
-		app.world_mut()
-			.run_system_once_with(_Actor::act_on::<_Target>, Duration::ZERO)?;
-
-		let actor_always = app.world().entity(actor_always);
-		let actor_once_per_target = app.world().entity(actor_once_per_target);
+			.run_system_once_with(_Actor::act_on::<_Target>, Duration::from_millis(42))?;
 
 		assert_eq!(
-			(true, true),
-			(
-				actor_always.contains::<_Actor>(),
-				actor_once_per_target.contains::<_Actor>()
-			)
+			Some(&Interactions::<_Actor, _Target>::from([target])),
+			app.world()
+				.entity(entity)
+				.get::<Interactions::<_Actor, _Target>>(),
 		);
 		Ok(())
 	}
 
 	#[test]
-	fn add_to_acted_on_when_action_type_is_once_per_target() -> Result<(), RunSystemError> {
+	fn repeat_interaction() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let target = app.world_mut().spawn(_Target).id();
-		let actor = app
+		let entity = app
 			.world_mut()
 			.spawn((
-				ActedOnTargets::<_Actor>::default(),
+				Interactions::<_Actor, _Target>::from([target]),
 				InteractingEntities::new([target]),
-				_Actor::new().with_mock(|mock| {
-					mock.expect_act().return_const(EffectApplies::OncePerTarget);
-				}),
 			))
 			.id();
+		app.world_mut()
+			.entity_mut(entity)
+			.insert(_Actor::new().with_mock(|mock| {
+				mock.expect_on_begin_interaction().never();
+				mock.expect_on_repeated_interaction()
+					.times(1)
+					.with(eq(entity), eq(_Target), eq(Duration::from_millis(42)))
+					.return_const(());
+			}));
 
 		app.world_mut()
-			.run_system_once_with(_Actor::act_on::<_Target>, Duration::ZERO)?;
-
-		let actor = app.world().entity(actor);
-
-		assert_eq!(
-			Some(&ActedOnTargets::new([target])),
-			actor.get::<ActedOnTargets<_Actor>>()
-		);
-		Ok(())
+			.run_system_once_with(_Actor::act_on::<_Target>, Duration::from_millis(42))
 	}
 }

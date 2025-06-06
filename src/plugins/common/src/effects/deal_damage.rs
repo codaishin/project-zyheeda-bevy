@@ -8,10 +8,6 @@ impl DealDamage {
 		DealDamage(amount, EffectApplies::Once)
 	}
 
-	pub fn once_per_target(amount: f32) -> Self {
-		DealDamage(amount, EffectApplies::OncePerTarget)
-	}
-
 	pub fn once_per_second(amount: f32) -> Self {
 		DealDamage(amount, EffectApplies::Always)
 	}
