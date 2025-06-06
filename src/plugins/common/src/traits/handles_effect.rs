@@ -1,13 +1,13 @@
-use crate::effects::{deal_damage::DealDamage, force_shield::ForceShield, gravity::Gravity};
+use crate::effects::{deal_damage::DealDamage, force_shield::Force, gravity::Gravity};
 use bevy::prelude::{Bundle, Component};
 
 pub trait HandlesAllEffects:
-	HandlesEffect<DealDamage> + HandlesEffect<Gravity> + HandlesEffect<ForceShield>
+	HandlesEffect<DealDamage> + HandlesEffect<Gravity> + HandlesEffect<Force>
 {
 }
 
 impl<T> HandlesAllEffects for T where
-	T: HandlesEffect<DealDamage> + HandlesEffect<Gravity> + HandlesEffect<ForceShield>
+	T: HandlesEffect<DealDamage> + HandlesEffect<Gravity> + HandlesEffect<Force>
 {
 }
 

@@ -1,4 +1,7 @@
-use crate::{InteractionsPlugin, traits::act_on::ActOn};
+use crate::{
+	InteractionsPlugin,
+	traits::{act_on::ActOn, update_blockers::UpdateBlockers},
+};
 use bevy::prelude::*;
 use common::{
 	attributes::health::Health,
@@ -28,6 +31,8 @@ where
 		TLifecyclePlugin::TLife::from(health)
 	}
 }
+
+impl UpdateBlockers for DealDamageEffect {}
 
 impl<TLife> ActOn<TLife> for DealDamageEffect
 where

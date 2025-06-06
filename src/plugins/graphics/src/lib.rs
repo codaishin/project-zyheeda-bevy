@@ -14,7 +14,7 @@ use bevy::{
 };
 use common::{
 	components::essence::Essence,
-	effects::{deal_damage::DealDamage, force_shield::ForceShield, gravity::Gravity},
+	effects::{deal_damage::DealDamage, force_shield::Force, gravity::Gravity},
 	states::game_state::LoadingGame,
 	systems::{remove_components::Remove, track_components::TrackComponentInSelfAndChildren},
 	traits::{
@@ -67,7 +67,7 @@ where
 	}
 
 	fn effect_shaders(app: &mut App) {
-		register_custom_effect_shader::<TInteractions, ForceShield>(app);
+		register_custom_effect_shader::<TInteractions, Force>(app);
 		register_custom_effect_shader::<TInteractions, Gravity>(app);
 		register_effect_shader::<TInteractions, DealDamage>(app);
 

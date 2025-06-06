@@ -1,5 +1,6 @@
 pub(crate) mod act_on;
 pub(crate) mod rapier_context;
+pub(crate) mod update_blockers;
 
 use bevy::prelude::Entity;
 use bevy_rapier3d::prelude::CollisionEvent;

@@ -1,7 +1,7 @@
 use crate::behaviors::{SkillCaster, SkillTarget};
 use bevy::ecs::system::EntityCommands;
 use common::{
-	effects::force_shield::ForceShield,
+	effects::force_shield::Force,
 	traits::{handles_effect::HandlesEffect, handles_skill_behaviors::Spawner},
 };
 use serde::{Deserialize, Serialize};
@@ -17,9 +17,9 @@ impl StartForceShield {
 		_: Spawner,
 		_: &SkillTarget,
 	) where
-		TInteractions: HandlesEffect<ForceShield>,
+		TInteractions: HandlesEffect<Force>,
 	{
-		entity.try_insert(TInteractions::effect(ForceShield));
+		entity.try_insert(TInteractions::effect(Force));
 	}
 }
 
@@ -38,11 +38,11 @@ mod tests {
 
 	struct _HandlesInteractions;
 
-	impl HandlesEffect<ForceShield> for _HandlesInteractions {
+	impl HandlesEffect<Force> for _HandlesInteractions {
 		type TTarget = ();
 		type TEffectComponent = _ForceShield;
 
-		fn effect(effect: ForceShield) -> Self::TEffectComponent {
+		fn effect(effect: Force) -> Self::TEffectComponent {
 			_ForceShield(effect)
 		}
 
@@ -50,7 +50,7 @@ mod tests {
 	}
 
 	#[derive(Component, Debug, PartialEq)]
-	struct _ForceShield(ForceShield);
+	struct _ForceShield(Force);
 
 	static CASTER: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
 
@@ -76,7 +76,7 @@ mod tests {
 		let entity = app.world_mut().run_system_once(force_shield)?;
 
 		assert_eq!(
-			Some(&_ForceShield(ForceShield)),
+			Some(&_ForceShield(Force)),
 			app.world().entity(entity).get::<_ForceShield>()
 		);
 		Ok(())

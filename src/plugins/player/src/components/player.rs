@@ -14,7 +14,7 @@ use common::{
 		flip::FlipHorizontally,
 		persistent_entity::PersistentEntity,
 	},
-	effects::{deal_damage::DealDamage, force_shield::ForceShield, gravity::Gravity},
+	effects::{deal_damage::DealDamage, force_shield::Force, gravity::Gravity},
 	errors::Error,
 	tools::{
 		Units,
@@ -283,7 +283,7 @@ impl<TInteractions, TLights> Prefab<(TInteractions, TLights)> for Player
 where
 	TInteractions: HandlesEffect<DealDamage, TTarget = Health>
 		+ HandlesEffect<Gravity, TTarget = AffectedBy<Gravity>>
-		+ HandlesEffect<ForceShield, TTarget = AffectedBy<ForceShield>>,
+		+ HandlesEffect<Force, TTarget = AffectedBy<Force>>,
 	TLights: HandlesLights,
 {
 	fn insert_prefab_components(&self, entity: &mut EntityCommands) -> Result<(), Error> {
@@ -291,7 +291,7 @@ where
 			.insert((
 				Health::new(100.).bundle_via::<TInteractions>(),
 				Affected::by::<Gravity>().bundle_via::<TInteractions>(),
-				Affected::by::<ForceShield>().bundle_via::<TInteractions>(),
+				Affected::by::<Force>().bundle_via::<TInteractions>(),
 			))
 			.with_child((
 				TLights::responsive_light_trigger(),

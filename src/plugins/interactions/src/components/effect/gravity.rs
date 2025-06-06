@@ -1,7 +1,7 @@
 use crate::{
 	InteractionsPlugin,
 	components::gravity_affected::{GravityAffected, GravityPull},
-	traits::act_on::ActOn,
+	traits::{act_on::ActOn, update_blockers::UpdateBlockers},
 };
 use bevy::prelude::*;
 use common::{
@@ -26,6 +26,8 @@ impl<TLifecyclePlugin> HandlesEffect<Gravity> for InteractionsPlugin<TLifecycleP
 		GravityAffected::default()
 	}
 }
+
+impl UpdateBlockers for GravityEffect {}
 
 impl ActOn<GravityAffected> for GravityEffect {
 	fn act(

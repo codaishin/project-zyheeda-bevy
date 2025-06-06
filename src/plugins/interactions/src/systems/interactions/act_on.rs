@@ -13,29 +13,33 @@ type Components<'a, TActor> = (
 	&'a InteractingEntities,
 );
 
-pub(crate) fn act_interaction<TActor, TTarget>(
-	In(delta): In<Duration>,
-	mut commands: Commands,
-	mut actors: Query<Components<TActor>>,
-	mut targets: Query<(Entity, &mut TTarget)>,
-) where
-	TActor: ActOn<TTarget> + Component<Mutability = Mutable>,
-	TTarget: Component<Mutability = Mutable>,
-{
-	for (entity, mut actor, mut acted_on, interactions) in &mut actors {
-		for target in interactions.iter() {
-			let Ok((target_entity, mut target)) = targets.get_mut(*target) else {
-				continue;
-			};
+impl<T> ActOnSystem for T where T: Component<Mutability = Mutable> + Sized {}
 
-			match actor.act(entity, &mut target, delta) {
-				EffectApplies::Once => {
-					commands.try_remove_from::<TActor>(entity);
+pub(crate) trait ActOnSystem: Component<Mutability = Mutable> + Sized {
+	fn act_on<TTarget>(
+		In(delta): In<Duration>,
+		mut commands: Commands,
+		mut actors: Query<Components<Self>>,
+		mut targets: Query<(Entity, &mut TTarget)>,
+	) where
+		Self: ActOn<TTarget>,
+		TTarget: Component<Mutability = Mutable>,
+	{
+		for (entity, mut actor, mut acted_on, interactions) in &mut actors {
+			for target in interactions.iter() {
+				let Ok((target_entity, mut target)) = targets.get_mut(*target) else {
+					continue;
+				};
+
+				match actor.act(entity, &mut target, delta) {
+					EffectApplies::Once => {
+						commands.try_remove_from::<Self>(entity);
+					}
+					EffectApplies::OncePerTarget => {
+						acted_on.entities.insert(target_entity);
+					}
+					EffectApplies::Always => {}
 				}
-				EffectApplies::OncePerTarget => {
-					acted_on.entities.insert(target_entity);
-				}
-				EffectApplies::Always => {}
 			}
 		}
 	}
@@ -43,6 +47,8 @@ pub(crate) fn act_interaction<TActor, TTarget>(
 
 #[cfg(test)]
 mod tests {
+	use crate::traits::update_blockers::UpdateBlockers;
+
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::traits::nested_mock::NestedMocks;
@@ -56,6 +62,9 @@ mod tests {
 
 	#[derive(Component, Debug, PartialEq, Clone, Copy)]
 	pub struct _Target;
+
+	impl UpdateBlockers for _Actor {}
+	impl UpdateBlockers for Mock_Actor {}
 
 	#[automock]
 	impl ActOn<_Target> for _Actor {
@@ -93,10 +102,8 @@ mod tests {
 					.return_const(EffectApplies::Once);
 			}));
 
-		app.world_mut().run_system_once_with(
-			act_interaction::<_Actor, _Target>,
-			Duration::from_millis(42),
-		)
+		app.world_mut()
+			.run_system_once_with(_Actor::act_on::<_Target>, Duration::from_millis(42))
 	}
 
 	#[test]
@@ -115,7 +122,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(act_interaction::<_Actor, _Target>, Duration::ZERO)?;
+			.run_system_once_with(_Actor::act_on::<_Target>, Duration::ZERO)?;
 
 		let actor = app.world().entity(actor);
 
@@ -139,7 +146,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(act_interaction::<_Actor, _Target>, Duration::ZERO)?;
+			.run_system_once_with(_Actor::act_on::<_Target>, Duration::ZERO)?;
 
 		let actor = app.world().entity(actor);
 
@@ -173,7 +180,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(act_interaction::<_Actor, _Target>, Duration::ZERO)?;
+			.run_system_once_with(_Actor::act_on::<_Target>, Duration::ZERO)?;
 
 		let actor_always = app.world().entity(actor_always);
 		let actor_once_per_target = app.world().entity(actor_once_per_target);
@@ -204,7 +211,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once_with(act_interaction::<_Actor, _Target>, Duration::ZERO)?;
+			.run_system_once_with(_Actor::act_on::<_Target>, Duration::ZERO)?;
 
 		let actor = app.world().entity(actor);
 

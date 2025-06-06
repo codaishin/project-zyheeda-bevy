@@ -6,7 +6,7 @@ mod traits;
 use bevy::prelude::*;
 use common::{
 	attributes::{affected_by::AffectedBy, health::Health},
-	effects::{deal_damage::DealDamage, force_shield::ForceShield, gravity::Gravity},
+	effects::{deal_damage::DealDamage, force_shield::Force, gravity::Gravity},
 	traits::{
 		handles_effect::HandlesEffect,
 		handles_enemies::HandlesEnemies,
@@ -42,7 +42,7 @@ where
 		+ HandlesInteractions
 		+ HandlesEffect<DealDamage, TTarget = Health>
 		+ HandlesEffect<Gravity, TTarget = AffectedBy<Gravity>>
-		+ HandlesEffect<ForceShield, TTarget = AffectedBy<ForceShield>>,
+		+ HandlesEffect<Force, TTarget = AffectedBy<Force>>,
 {
 	fn build(&self, app: &mut App) {
 		TGameStates::on_starting_new_game(app, VoidSphere::spawn);

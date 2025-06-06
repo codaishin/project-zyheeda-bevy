@@ -2,9 +2,15 @@ pub mod components;
 pub mod events;
 pub mod traits;
 
+mod observers;
 mod resources;
 mod systems;
 
+use crate::{
+	components::{effect::force::ForceEffect, force_affected::ForceAffected},
+	observers::update_blockers::UpdateBlockersObserver,
+	systems::interactions::act_on::ActOnSystem,
+};
 use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
 	self,
@@ -35,7 +41,6 @@ use std::marker::PhantomData;
 use systems::{
 	gravity_affected::apply_gravity_pull,
 	interactions::{
-		act_interaction::act_interaction,
 		apply_fragile_blocks::apply_fragile_blocks,
 		map_collision_events::map_collision_events_to,
 		untrack_non_interacting_targets::untrack_non_interacting_targets,
@@ -66,12 +71,21 @@ where
 	TLifeCyclePlugin: ThreadSafe + HandlesDestruction + HandlesLifetime + HandlesLife,
 {
 	fn build(&self, app: &mut App) {
-		app.add_event::<InteractionEvent>()
+		app
+			// Deal health damage
+			.add_observer(DealDamageEffect::update_blockers_observer)
+			.add_interaction::<DealDamageEffect, TLifeCyclePlugin::TLife>()
+			// Apply gravity effect
+			.add_observer(GravityEffect::update_blockers_observer)
+			.add_interaction::<GravityEffect, GravityAffected>()
+			// Apply force effect
+			.add_observer(ForceEffect::update_blockers_observer)
+			.add_interaction::<ForceEffect, ForceAffected>()
+			// Apply behaviors
+			.add_event::<InteractionEvent>()
 			.add_event::<InteractionEvent<Ray>>()
 			.init_resource::<TrackInteractionDuplicates>()
 			.init_resource::<TrackRayInteractions>()
-			.add_interaction::<DealDamageEffect, TLifeCyclePlugin::TLife>()
-			.add_interaction::<GravityEffect, GravityAffected>()
 			.add_systems(Update, apply_fragile_blocks::<TLifeCyclePlugin::TDestroy>)
 			.add_systems(Update, Update::delta.pipe(apply_gravity_pull))
 			.add_systems(
@@ -107,11 +121,11 @@ impl AddInteraction for App {
 			// require basic interaction tracking
 			.register_required_components::<TActor, InteractingEntities>()
 			.register_required_components::<TActor, ActedOnTargets<TActor>>()
-			//apply interactions
+			// apply interactions
 			.add_systems(
 				Update,
 				(
-					Update::delta.pipe(act_interaction::<TActor, TTarget>),
+					Update::delta.pipe(TActor::act_on::<TTarget>),
 					untrack_non_interacting_targets::<TActor>,
 				)
 					.chain(),
