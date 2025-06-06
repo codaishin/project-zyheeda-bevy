@@ -9,7 +9,10 @@ use super::{
 	set_to_move_forward::SetVelocityForward,
 	when_traveled_insert::WhenTraveled,
 };
-use crate::components::anchor::spawner_fix_point::SpawnerFixPoint;
+use crate::components::{
+	anchor::spawner_fix_point::SpawnerFixPoint,
+	skill_behavior::skill_contact::CreatedFrom,
+};
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::{
@@ -141,12 +144,12 @@ impl SimplePrefab for Integrity {
 }
 
 impl SimplePrefab for Motion {
-	type TExtra = ();
+	type TExtra = CreatedFrom;
 
 	fn prefab<TInteractions, TLifeCycles>(
 		&self,
 		entity: &mut EntityCommands,
-		_: (),
+		created_from: CreatedFrom,
 	) -> Result<(), Error>
 	where
 		TLifeCycles: HandlesDestruction,
@@ -182,14 +185,21 @@ impl SimplePrefab for Motion {
 					RigidBody::Dynamic,
 					GravityScale(0.),
 					Ccd::enabled(),
+					WhenTraveled::via::<Velocity>()
+						.distance(max_range)
+						.insert::<TLifeCycles::TDestroy>(),
+				));
+
+				if created_from == CreatedFrom::Save {
+					return Ok(());
+				}
+
+				entity.try_insert((
 					Anchor::<Once>::to(caster).on_fix_point(SpawnerFixPoint(spawner)),
 					SetVelocityForward {
 						rotation: caster,
 						speed,
 					},
-					WhenTraveled::via::<Velocity>()
-						.distance(max_range)
-						.insert::<TLifeCycles::TDestroy>(),
 				));
 			}
 		}
@@ -282,7 +292,7 @@ mod tests {
 		let motion = Motion::HeldBy { caster };
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			motion.prefab::<_Interactions, _LifeCycles>(entity, ())
+			motion.prefab::<_Interactions, _LifeCycles>(entity, CreatedFrom::Contact)
 		}))?;
 
 		assert_eq!(
@@ -326,7 +336,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			motion.prefab::<_Interactions, _LifeCycles>(entity, ())
+			motion.prefab::<_Interactions, _LifeCycles>(entity, CreatedFrom::Contact)
 		}))?;
 
 		assert_eq!(
@@ -364,7 +374,7 @@ mod tests {
 	}
 
 	#[test]
-	fn projectile_components() -> Result<(), RunSystemError> {
+	fn projectile_components_when_created_from_contact() -> Result<(), RunSystemError> {
 		let (mut app, entity) = setup();
 		let caster = PersistentEntity::default();
 		let motion = Motion::Projectile {
@@ -375,7 +385,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			motion.prefab::<_Interactions, _LifeCycles>(entity, ())
+			motion.prefab::<_Interactions, _LifeCycles>(entity, CreatedFrom::Contact)
 		}))?;
 
 		assert_eq!(
@@ -393,6 +403,52 @@ mod tests {
 					rotation: caster,
 					speed: UnitsPerSecond::new(11.),
 				}),
+				Some(
+					&WhenTraveled::via::<Velocity>()
+						.distance(Units::new(1111.))
+						.insert::<_Destroy>()
+				),
+			),
+			(
+				app.world().entity(entity).get::<RigidBody>(),
+				app.world().entity(entity).get::<GravityScale>(),
+				app.world().entity(entity).get::<Ccd>(),
+				app.world().entity(entity).get::<GroundTarget>(),
+				app.world().entity(entity).get::<Anchor<Always>>(),
+				app.world().entity(entity).get::<Anchor<Once>>(),
+				app.world().entity(entity).get::<SetVelocityForward>(),
+				app.world()
+					.entity(entity)
+					.get::<InsertAfterDistanceTraveled<_Destroy, Velocity>>(),
+			)
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn projectile_components_when_created_from_save() -> Result<(), RunSystemError> {
+		let (mut app, entity) = setup();
+		let caster = PersistentEntity::default();
+		let motion = Motion::Projectile {
+			caster,
+			spawner: Spawner::Slot(SlotKey::TopHand(Side::Left)),
+			speed: UnitsPerSecond::new(11.),
+			max_range: Units::new(1111.),
+		};
+
+		_ = app.world_mut().run_system_once(test_system(move |entity| {
+			motion.prefab::<_Interactions, _LifeCycles>(entity, CreatedFrom::Save)
+		}))?;
+
+		assert_eq!(
+			(
+				Some(&RigidBody::Dynamic),
+				Some(&GravityScale(0.)),
+				Some(&Ccd::enabled()),
+				None,
+				None,
+				None,
+				None,
 				Some(
 					&WhenTraveled::via::<Velocity>()
 						.distance(Units::new(1111.))
