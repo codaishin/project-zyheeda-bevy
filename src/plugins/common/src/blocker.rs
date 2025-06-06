@@ -12,6 +12,13 @@ impl Blocker {
 	pub fn insert<const N: usize>(blockers: [Blocker; N]) -> BlockerInsertCommand {
 		BlockerInsertCommand(HashSet::from(blockers))
 	}
+
+	pub fn all<TContainer>() -> TContainer
+	where
+		TContainer: FromIterator<Blocker>,
+	{
+		Blocker::iterator().collect()
+	}
 }
 
 impl IterFinite for Blocker {
@@ -29,3 +36,16 @@ impl IterFinite for Blocker {
 
 #[derive(Component, Debug, PartialEq)]
 pub struct BlockerInsertCommand(pub HashSet<Blocker>);
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn iterate() {
+		assert_eq!(
+			vec![Blocker::Physical, Blocker::Force],
+			Blocker::iterator().take(100).collect::<Vec<_>>()
+		);
+	}
+}

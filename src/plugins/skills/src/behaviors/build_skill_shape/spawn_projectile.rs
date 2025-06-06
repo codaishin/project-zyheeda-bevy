@@ -48,7 +48,7 @@ impl SpawnShape for SpawnProjectile {
 					hollow_collider: false,
 				},
 				integrity: Integrity::Fragile {
-					destroyed_by: vec![Blocker::Physical, Blocker::Force],
+					destroyed_by: Blocker::all(),
 				},
 				motion: Motion::Projectile {
 					caster,
