@@ -45,6 +45,9 @@ menu-inventory = Inventory
 menu-combos = Combos
 menu-settings = Settings
 
+save-quick-save = Quick Save
+save-quick-load = Quick Load
+
 key-code-digit-0 = 0
 key-code-digit-1 = 1
 key-code-digit-2 = 2

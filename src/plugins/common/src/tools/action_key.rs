@@ -1,10 +1,12 @@
 pub mod camera_key;
 pub mod movement;
+pub mod save_key;
 pub mod slot;
 pub mod user_input;
 
 use crate::{
 	states::menu_state::MenuState,
+	tools::action_key::save_key::SaveKey,
 	traits::{
 		handles_localization::Token,
 		handles_settings::InvalidInput,
@@ -25,6 +27,7 @@ pub enum ActionKey {
 	Slot(SlotKey),
 	Menu(MenuState),
 	Camera(CameraKey),
+	Save(SaveKey),
 }
 
 impl Default for ActionKey {
@@ -40,6 +43,7 @@ impl From<ActionKey> for UserInput {
 			ActionKey::Slot(key) => Self::from(key),
 			ActionKey::Menu(key) => Self::from(key),
 			ActionKey::Camera(key) => Self::from(key),
+			ActionKey::Save(key) => Self::from(key),
 		}
 	}
 }
@@ -51,6 +55,7 @@ impl From<ActionKey> for Token {
 			ActionKey::Slot(key) => Self::from(key),
 			ActionKey::Menu(key) => Self::from(key),
 			ActionKey::Camera(key) => Self::from(key),
+			ActionKey::Save(key) => Self::from(key),
 		}
 	}
 }
@@ -65,7 +70,8 @@ impl IterFinite for ActionKey {
 			ActionKey::Movement(key) => next(ActionKey::Movement, key).or(first(ActionKey::Slot)),
 			ActionKey::Slot(key) => next(ActionKey::Slot, key).or(first(ActionKey::Menu)),
 			ActionKey::Menu(key) => next(ActionKey::Menu, key).or(first(ActionKey::Camera)),
-			ActionKey::Camera(key) => next(ActionKey::Camera, key),
+			ActionKey::Camera(key) => next(ActionKey::Camera, key).or(first(ActionKey::Save)),
+			ActionKey::Save(key) => next(ActionKey::Save, key),
 		}
 	}
 }
@@ -77,6 +83,7 @@ impl InvalidInput<UserInput> for ActionKey {
 			ActionKey::Slot(key) => key.invalid_input(),
 			ActionKey::Menu(key) => key.invalid_input(),
 			ActionKey::Camera(key) => key.invalid_input(),
+			ActionKey::Save(key) => key.invalid_input(),
 		}
 	}
 }
@@ -114,23 +121,25 @@ mod tests {
 	fn iter_all_keys() {
 		assert_eq!(
 			std::iter::empty()
-				.chain(MovementKey::iterator().map(ActionKey::Movement))
-				.chain(SlotKey::iterator().map(ActionKey::Slot))
-				.chain(MenuState::iterator().map(ActionKey::Menu))
-				.chain(CameraKey::iterator().map(ActionKey::Camera))
+				.chain(MovementKey::iterator().map(ActionKey::from))
+				.chain(SlotKey::iterator().map(ActionKey::from))
+				.chain(MenuState::iterator().map(ActionKey::from))
+				.chain(CameraKey::iterator().map(ActionKey::from))
+				.chain(SaveKey::iterator().map(ActionKey::from))
 				.collect::<Vec<_>>(),
 			ActionKey::iterator().take(100).collect::<Vec<_>>()
 		);
 	}
 
 	#[test]
-	fn map_keys() {
+	fn map_keys_to_user_input() {
 		assert_eq!(
 			std::iter::empty()
 				.chain(MovementKey::iterator().map(UserInput::from))
 				.chain(SlotKey::iterator().map(UserInput::from))
 				.chain(MenuState::iterator().map(UserInput::from))
 				.chain(CameraKey::iterator().map(UserInput::from))
+				.chain(SaveKey::iterator().map(UserInput::from))
 				.collect::<HashSet<_>>(),
 			ActionKey::iterator()
 				.map(UserInput::from)
@@ -153,6 +162,7 @@ mod tests {
 				.chain(SlotKey::iterator().map(pair_with_invalid_input))
 				.chain(MenuState::iterator().map(pair_with_invalid_input))
 				.chain(CameraKey::iterator().map(pair_with_invalid_input))
+				.chain(SaveKey::iterator().map(pair_with_invalid_input))
 				.collect::<HashMap<_, _>>(),
 			ActionKey::iterator()
 				.map(pair_with_invalid_input)
