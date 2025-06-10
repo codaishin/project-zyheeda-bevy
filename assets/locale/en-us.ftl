@@ -26,6 +26,7 @@ key-bindings-slots = Slots
 key-bindings-movement = Movement
 key-bindings-menus = Menus
 key-bindings-camera = Camera
+key-bindings-savegame = Save Game
 
 slot-key-top-hand-left = Top Hand Left
 slot-key-top-hand-right = Top Hand Right
@@ -44,6 +45,9 @@ camera-key-rotate = Camera Rotation
 menu-inventory = Inventory
 menu-combos = Combos
 menu-settings = Settings
+
+save-quick-save = Quick Save
+save-quick-load = Quick Load
 
 key-code-digit-0 = 0
 key-code-digit-1 = 1
@@ -81,6 +85,18 @@ key-code-key-w = W
 key-code-key-x = X
 key-code-key-y = Y
 key-code-key-z = Z
+key-code-f-1 = F1
+key-code-f-2 = F2
+key-code-f-3 = F3
+key-code-f-4 = F4
+key-code-f-5 = F5
+key-code-f-6 = F6
+key-code-f-7 = F7
+key-code-f-8 = F8
+key-code-f-9 = F9
+key-code-f-10 = F10
+key-code-f-11 = F11
+key-code-f-12 = F12
 key-code-escape = Escape
 key-code-numpad-subtract = Numpad -
 key-code-space = Space
