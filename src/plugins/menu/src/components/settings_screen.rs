@@ -16,6 +16,7 @@ use common::{
 		ActionKey,
 		camera_key::CameraKey,
 		movement::MovementKey,
+		save_key::SaveKey,
 		slot::SlotKey,
 		user_input::UserInput,
 	},
@@ -159,6 +160,7 @@ impl InsertUiContent for SettingsScreen {
 				self.add_section::<MovementKey>(parent, localize, "key-bindings-movement");
 				self.add_section::<MenuState>(parent, localize, "key-bindings-menus");
 				self.add_section::<CameraKey>(parent, localize, "key-bindings-camera");
+				self.add_section::<SaveKey>(parent, localize, "key-bindings-savegame");
 			});
 	}
 }
