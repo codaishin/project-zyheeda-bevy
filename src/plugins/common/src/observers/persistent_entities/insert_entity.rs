@@ -5,7 +5,7 @@ use crate::{
 use bevy::prelude::*;
 
 impl PersistentEntities {
-	pub(crate) fn update(
+	pub(crate) fn insert_entity(
 		trigger: Trigger<OnInsert, PersistentEntity>,
 		mut persistent_entities: ResMut<PersistentEntities>,
 		entities: Query<&PersistentEntity>,
@@ -30,7 +30,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.init_resource::<PersistentEntities>();
-		app.add_observer(PersistentEntities::update);
+		app.add_observer(PersistentEntities::insert_entity);
 
 		app
 	}

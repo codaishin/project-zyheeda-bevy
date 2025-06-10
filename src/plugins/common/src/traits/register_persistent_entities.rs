@@ -8,7 +8,8 @@ pub trait RegisterPersistentEntities {
 impl RegisterPersistentEntities for App {
 	fn register_persistent_entities(&mut self) -> &mut Self {
 		self.init_resource::<PersistentEntities>()
-			.add_observer(PersistentEntities::update)
+			.add_observer(PersistentEntities::insert_entity)
+			.add_observer(PersistentEntities::remove_entity)
 			.add_systems(
 				Update,
 				PersistentEntities::drain_lookup_errors.pipe(log_many),
