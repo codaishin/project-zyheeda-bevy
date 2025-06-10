@@ -1,16 +1,26 @@
-use crate::components::{interacting_entities::InteractingEntities, interactions::Interactions};
+use crate::components::{
+	interacting_entities::InteractingEntities,
+	running_interactions::RunningInteractions,
+};
 use bevy::prelude::*;
+use common::resources::persistent_entities::PersistentEntities;
 
-impl<TActor, TTarget> Interactions<TActor, TTarget>
+impl<TActor, TTarget> RunningInteractions<TActor, TTarget>
 where
 	TActor: Component,
 	TTarget: Component,
 {
 	pub(crate) fn untrack_non_interacting_targets(
 		mut agents: Query<(&mut Self, &InteractingEntities), Changed<InteractingEntities>>,
+		mut persistent_entities: ResMut<PersistentEntities>,
 	) {
 		for (mut interactions, interacting_entities) in &mut agents {
-			interactions.retain(|e| interacting_entities.contains(e));
+			interactions.retain(|persistent_entity| {
+				persistent_entities
+					.get_entity(persistent_entity)
+					.map(|entity| interacting_entities.contains(&entity))
+					.unwrap_or(false)
+			});
 		}
 	}
 }
@@ -18,8 +28,11 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::test_tools::utils::SingleThreadedApp;
-	use std::ops::DerefMut;
+	use common::{
+		components::persistent_entity::PersistentEntity,
+		test_tools::utils::SingleThreadedApp,
+		traits::register_persistent_entities::RegisterPersistentEntities,
+	};
 
 	#[derive(Component)]
 	struct _Actor;
@@ -29,9 +42,11 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
+
+		app.register_persistent_entities();
 		app.add_systems(
 			Update,
-			Interactions::<_Actor, _Target>::untrack_non_interacting_targets,
+			RunningInteractions::<_Actor, _Target>::untrack_non_interacting_targets,
 		);
 
 		app
@@ -40,14 +55,17 @@ mod tests {
 	#[test]
 	fn remove_entities_not_contained_in_interacting_entities() {
 		let mut app = setup();
+		let not_interacting = PersistentEntity::default();
+		let interacting = [PersistentEntity::default(), PersistentEntity::default()];
+		let interacting_entities = interacting.map(|e| app.world_mut().spawn(e).id());
 		let entity = app
 			.world_mut()
 			.spawn((
-				InteractingEntities::new([Entity::from_raw(100), Entity::from_raw(300)]),
-				Interactions::<_Actor, _Target>::from([
-					Entity::from_raw(100),
-					Entity::from_raw(200),
-					Entity::from_raw(300),
+				InteractingEntities::new(interacting_entities),
+				RunningInteractions::<_Actor, _Target>::from([
+					interacting[0],
+					interacting[1],
+					not_interacting,
 				]),
 			))
 			.id();
@@ -56,83 +74,76 @@ mod tests {
 
 		let entity = app.world().entity(entity);
 		assert_eq!(
-			Some(&Interactions::<_Actor, _Target>::from([
-				Entity::from_raw(100),
-				Entity::from_raw(300),
-			])),
-			entity.get::<Interactions<_Actor, _Target>>(),
+			Some(&RunningInteractions::<_Actor, _Target>::from(interacting)),
+			entity.get::<RunningInteractions<_Actor, _Target>>(),
 		)
 	}
 
 	#[test]
-	fn do_remove_entities_not_contained_in_not_added_interacting_entities() {
+	fn do_not_remove_entity_when_interacting_entities_not_changed() {
 		let mut app = setup();
+		let interacting = [PersistentEntity::default(), PersistentEntity::default()];
+		let interacting_entities = interacting.map(|e| app.world_mut().spawn(e).id());
 		let entity = app
 			.world_mut()
 			.spawn((
-				InteractingEntities::new([Entity::from_raw(100), Entity::from_raw(300)]),
-				Interactions::<_Actor, _Target>::from([
-					Entity::from_raw(100),
-					Entity::from_raw(300),
-				]),
+				InteractingEntities::new(interacting_entities),
+				RunningInteractions::<_Actor, _Target>::from(interacting),
 			))
 			.id();
 
 		app.update();
+		let extra = PersistentEntity::default();
+		app.world_mut().spawn(extra);
 		app.world_mut()
 			.entity_mut(entity)
-			.get_mut::<Interactions<_Actor, _Target>>()
+			.get_mut::<RunningInteractions<_Actor, _Target>>()
 			.unwrap()
-			.insert(Entity::from_raw(123));
+			.insert(extra);
 		app.update();
 
 		let entity = app.world().entity(entity);
 		assert_eq!(
-			Some(&Interactions::<_Actor, _Target>::from([
-				Entity::from_raw(100),
-				Entity::from_raw(300),
-				Entity::from_raw(123),
+			Some(&RunningInteractions::<_Actor, _Target>::from([
+				interacting[0],
+				interacting[1],
+				extra,
 			])),
-			entity.get::<Interactions<_Actor, _Target>>(),
+			entity.get::<RunningInteractions<_Actor, _Target>>(),
 		)
 	}
 
 	#[test]
-	fn remove_entities_not_contained_in_mutable_dereferenced_interacting_entities() {
+	fn remove_entity_when_interacting_entity_changed() {
 		let mut app = setup();
+		let interacting = [PersistentEntity::default(), PersistentEntity::default()];
+		let interacting_entities = interacting.map(|e| app.world_mut().spawn(e).id());
 		let entity = app
 			.world_mut()
 			.spawn((
-				InteractingEntities::new([Entity::from_raw(100), Entity::from_raw(300)]),
-				Interactions::<_Actor, _Target>::from([
-					Entity::from_raw(100),
-					Entity::from_raw(300),
-				]),
+				InteractingEntities::new(interacting_entities),
+				RunningInteractions::<_Actor, _Target>::from(interacting),
 			))
 			.id();
 
 		app.update();
+		let extra = PersistentEntity::default();
+		app.world_mut().spawn(extra);
+		app.world_mut()
+			.entity_mut(entity)
+			.get_mut::<RunningInteractions<_Actor, _Target>>()
+			.unwrap()
+			.insert(extra);
 		app.world_mut()
 			.entity_mut(entity)
 			.get_mut::<InteractingEntities>()
-			.unwrap()
-			.deref_mut();
-		app.world_mut()
-			.entity_mut(entity)
-			.insert(Interactions::<_Actor, _Target>::from([
-				Entity::from_raw(100),
-				Entity::from_raw(200),
-				Entity::from_raw(300),
-			]));
+			.as_deref_mut();
 		app.update();
 
 		let entity = app.world().entity(entity);
 		assert_eq!(
-			Some(&Interactions::<_Actor, _Target>::from([
-				Entity::from_raw(100),
-				Entity::from_raw(300)
-			])),
-			entity.get::<Interactions<_Actor, _Target>>(),
+			Some(&RunningInteractions::<_Actor, _Target>::from(interacting)),
+			entity.get::<RunningInteractions<_Actor, _Target>>(),
 		)
 	}
 }

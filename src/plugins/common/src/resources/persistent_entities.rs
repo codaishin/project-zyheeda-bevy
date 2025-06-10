@@ -43,7 +43,7 @@ impl From<LookupError> for Error {
 	fn from(LookupError(persistent_entity): LookupError) -> Self {
 		Error {
 			msg: format!("{persistent_entity:?}: no matching entity found"),
-			lvl: Level::Error,
+			lvl: Level::Warning,
 		}
 	}
 }

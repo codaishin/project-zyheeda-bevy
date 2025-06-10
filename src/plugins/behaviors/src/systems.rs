@@ -4,3 +4,4 @@ pub(crate) mod chase;
 pub(crate) mod face;
 pub(crate) mod movement;
 pub(crate) mod update_cool_downs;
+pub(crate) mod update_skill_contact_range;

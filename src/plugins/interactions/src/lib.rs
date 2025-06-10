@@ -29,8 +29,8 @@ use components::{
 	effect::{deal_damage::DealDamageEffect, gravity::GravityEffect},
 	gravity_affected::GravityAffected,
 	interacting_entities::InteractingEntities,
-	interactions::Interactions,
 	is::{Fragile, InterruptableRay, Is},
+	running_interactions::RunningInteractions,
 };
 use events::{InteractionEvent, Ray};
 use resources::{
@@ -125,13 +125,13 @@ impl AddInteraction for App {
 	{
 		self
 			// require basic interaction tracking
-			.register_required_components::<TActor, Interactions<TActor, TTarget>>()
+			.register_required_components::<TActor, RunningInteractions<TActor, TTarget>>()
 			// apply interactions
 			.add_systems(
 				Update,
 				(
 					Update::delta.pipe(TActor::act_on::<TTarget>),
-					Interactions::<TActor, TTarget>::untrack_non_interacting_targets,
+					RunningInteractions::<TActor, TTarget>::untrack_non_interacting_targets,
 				)
 					.chain()
 					.after(CollisionSystems),
