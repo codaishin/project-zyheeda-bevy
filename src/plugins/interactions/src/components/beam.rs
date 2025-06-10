@@ -34,11 +34,8 @@ impl Beam {
 		TLifetimes: HandlesLifetime,
 	{
 		for (entity, cmd, ..) in &beams {
-			let Some(source) = persistent_entities.get_entity(&cmd.source) else {
-				continue;
-			};
-			match commands.get_entity(source) {
-				Ok(_) => {
+			match persistent_entities.get_entity(&cmd.source) {
+				Some(source) => {
 					let Some(target) = persistent_entities.get_entity(&cmd.target) else {
 						continue;
 					};
@@ -51,7 +48,7 @@ impl Beam {
 						cmd.params.range,
 					);
 				}
-				Err(_) => despawn_beam(&mut commands, entity),
+				None => despawn_beam(&mut commands, entity),
 			}
 		}
 
@@ -483,7 +480,7 @@ mod tests {
 	}
 
 	#[test]
-	fn remove_beam_when_source_not_removed() {
+	fn remove_beam_when_source_removed() {
 		let mut app = setup();
 		let source = app
 			.world_mut()
