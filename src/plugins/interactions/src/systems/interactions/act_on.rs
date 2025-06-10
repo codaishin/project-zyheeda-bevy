@@ -1,14 +1,18 @@
 use crate::{
-	components::{interacting_entities::InteractingEntities, interactions::Interactions},
+	components::{
+		interacting_entities::InteractingEntities,
+		running_interactions::RunningInteractions,
+	},
 	traits::act_on::ActOn,
 };
 use bevy::{ecs::component::Mutable, prelude::*};
+use common::components::persistent_entity::PersistentEntity;
 use std::time::Duration;
 
 type Components<'a, TActor, TTarget> = (
 	Entity,
 	&'a mut TActor,
-	&'a mut Interactions<TActor, TTarget>,
+	&'a mut RunningInteractions<TActor, TTarget>,
 	&'a InteractingEntities,
 );
 
@@ -18,7 +22,7 @@ pub(crate) trait ActOnSystem: Component<Mutability = Mutable> + Sized {
 	fn act_on<TTarget>(
 		In(delta): In<Duration>,
 		mut actors: Query<Components<Self, TTarget>>,
-		mut targets: Query<(Entity, &mut TTarget)>,
+		mut targets: Query<(&PersistentEntity, &mut TTarget)>,
 	) where
 		Self: ActOn<TTarget>,
 		TTarget: Component<Mutability = Mutable>,
@@ -29,7 +33,7 @@ pub(crate) trait ActOnSystem: Component<Mutability = Mutable> + Sized {
 					continue;
 				};
 
-				match interactions.insert(target_entity) {
+				match interactions.insert(*target_entity) {
 					true => actor.on_begin_interaction(entity, &mut target),
 					false => actor.on_repeated_interaction(entity, &mut target, delta),
 				}
@@ -40,10 +44,19 @@ pub(crate) trait ActOnSystem: Component<Mutability = Mutable> + Sized {
 
 #[cfg(test)]
 mod tests {
+	use std::sync::LazyLock;
+
 	use super::*;
 	use crate::traits::update_blockers::UpdateBlockers;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
+	use common::{
+		components::persistent_entity::PersistentEntity,
+		test_tools::utils::SingleThreadedApp,
+		traits::{
+			nested_mock::NestedMocks,
+			register_persistent_entities::RegisterPersistentEntities,
+		},
+	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 
@@ -52,7 +65,10 @@ mod tests {
 		mock: Mock_Actor,
 	}
 
+	static TARGET: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
+
 	#[derive(Component, Debug, PartialEq, Clone, Copy)]
+	#[require(PersistentEntity = *TARGET)]
 	pub struct _Target;
 
 	impl UpdateBlockers for _Actor {}
@@ -76,7 +92,11 @@ mod tests {
 	}
 
 	fn setup() -> App {
-		App::new().single_threaded(Update)
+		let mut app = App::new().single_threaded(Update);
+
+		app.register_persistent_entities();
+
+		app
 	}
 
 	#[test]
@@ -86,7 +106,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Interactions::<_Actor, _Target>::default(),
+				RunningInteractions::<_Actor, _Target>::default(),
 				InteractingEntities::new([target]),
 			))
 			.id();
@@ -111,7 +131,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Interactions::<_Actor, _Target>::default(),
+				RunningInteractions::<_Actor, _Target>::default(),
 				InteractingEntities::new([target]),
 			))
 			.id();
@@ -126,10 +146,10 @@ mod tests {
 			.run_system_once_with(_Actor::act_on::<_Target>, Duration::from_millis(42))?;
 
 		assert_eq!(
-			Some(&Interactions::<_Actor, _Target>::from([target])),
+			Some(&RunningInteractions::<_Actor, _Target>::from([*TARGET])),
 			app.world()
 				.entity(entity)
-				.get::<Interactions::<_Actor, _Target>>(),
+				.get::<RunningInteractions::<_Actor, _Target>>(),
 		);
 		Ok(())
 	}
@@ -141,7 +161,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Interactions::<_Actor, _Target>::from([target]),
+				RunningInteractions::<_Actor, _Target>::from([*TARGET]),
 				InteractingEntities::new([target]),
 			))
 			.id();

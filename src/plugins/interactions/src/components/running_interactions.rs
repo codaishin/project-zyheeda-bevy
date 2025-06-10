@@ -1,34 +1,35 @@
-use bevy::prelude::{Component, Entity, default};
+use bevy::prelude::{Component, default};
+use common::components::persistent_entity::PersistentEntity;
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
 #[derive(Component)]
-pub(crate) struct Interactions<TActor, TTarget>
+pub(crate) struct RunningInteractions<TActor, TTarget>
 where
 	TActor: Component,
 	TTarget: Component,
 {
-	entities: HashSet<Entity>,
+	entities: HashSet<PersistentEntity>,
 	_p: PhantomData<(TActor, TTarget)>,
 }
 
-impl<TActor, TTarget> Interactions<TActor, TTarget>
+impl<TActor, TTarget> RunningInteractions<TActor, TTarget>
 where
 	TActor: Component,
 	TTarget: Component,
 {
-	pub(crate) fn insert(&mut self, entity: Entity) -> bool {
+	pub(crate) fn insert(&mut self, entity: PersistentEntity) -> bool {
 		self.entities.insert(entity)
 	}
 
 	pub(crate) fn retain<F>(&mut self, predicate: F)
 	where
-		F: Fn(&Entity) -> bool,
+		F: FnMut(&PersistentEntity) -> bool,
 	{
 		self.entities.retain(predicate);
 	}
 }
 
-impl<TActor, TTarget> Default for Interactions<TActor, TTarget>
+impl<TActor, TTarget> Default for RunningInteractions<TActor, TTarget>
 where
 	TActor: Component,
 	TTarget: Component,
@@ -41,7 +42,7 @@ where
 	}
 }
 
-impl<TActor, TTarget> Debug for Interactions<TActor, TTarget>
+impl<TActor, TTarget> Debug for RunningInteractions<TActor, TTarget>
 where
 	TActor: Component,
 	TTarget: Component,
@@ -54,7 +55,7 @@ where
 	}
 }
 
-impl<TActor, TTarget> PartialEq for Interactions<TActor, TTarget>
+impl<TActor, TTarget> PartialEq for RunningInteractions<TActor, TTarget>
 where
 	TActor: Component,
 	TTarget: Component,
@@ -65,12 +66,13 @@ where
 }
 
 #[cfg(test)]
-impl<TActor, TTarget, const N: usize> From<[Entity; N]> for Interactions<TActor, TTarget>
+impl<TActor, TTarget, const N: usize> From<[PersistentEntity; N]>
+	for RunningInteractions<TActor, TTarget>
 where
 	TActor: Component,
 	TTarget: Component,
 {
-	fn from(entities: [Entity; N]) -> Self {
+	fn from(entities: [PersistentEntity; N]) -> Self {
 		Self {
 			entities: HashSet::from(entities),
 			_p: PhantomData,
