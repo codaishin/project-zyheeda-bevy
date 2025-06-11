@@ -72,6 +72,12 @@ pub enum AssetModel {
 	Path(String),
 }
 
+impl From<&str> for AssetModel {
+	fn from(path: &str) -> Self {
+		Self::Path(path.to_owned())
+	}
+}
+
 impl AssetModel {
 	pub fn path(path: &str) -> AssetModel {
 		AssetModel::Path(path.to_owned())

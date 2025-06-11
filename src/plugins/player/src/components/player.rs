@@ -51,15 +51,15 @@ use std::collections::HashMap;
 	PlayerMovement = Player::movement(),
 	Transform,
 	Visibility,
-	Name = Self::name(),
-	AssetModel = Self::model(),
-	FlipHorizontally = Self::flip_metarig(),
-	GroundOffset = Self::offset(),
+	Name = "Player",
+	AssetModel = Self::MODEL_PATH,
+	FlipHorizontally = FlipHorizontally::with(Name::from("metarig")),
+	GroundOffset = Vec3::Y,
 	Blockers = [Blocker::Character],
-	RigidBody = Self::rigid_body(),
+	RigidBody = RigidBody::Dynamic,
 	InteractionTarget,
-	LockedAxes = Self::locked_axes(),
-	GravityScale = Self::gravity_scale(),
+	LockedAxes = LockedAxes::ROTATION_LOCKED | LockedAxes::TRANSLATION_LOCKED_Y,
+	GravityScale = GravityScale(0.),
 	PersistentEntity,
 )]
 pub struct Player;
@@ -69,34 +69,6 @@ impl Player {
 
 	fn collider_radius() -> ColliderRadius {
 		ColliderRadius(Units::new(0.2))
-	}
-
-	fn name() -> Name {
-		Name::from("Player")
-	}
-
-	fn model() -> AssetModel {
-		AssetModel::path(Player::MODEL_PATH)
-	}
-
-	fn flip_metarig() -> FlipHorizontally {
-		FlipHorizontally::with(Name::from("metarig"))
-	}
-
-	fn offset() -> GroundOffset {
-		GroundOffset(Vec3::Y)
-	}
-
-	fn rigid_body() -> RigidBody {
-		RigidBody::Dynamic
-	}
-
-	fn locked_axes() -> LockedAxes {
-		LockedAxes::ROTATION_LOCKED | LockedAxes::TRANSLATION_LOCKED_Y
-	}
-
-	fn gravity_scale() -> GravityScale {
-		GravityScale(0.)
 	}
 
 	fn animation_path(animation_name: &str) -> Path {
