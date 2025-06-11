@@ -47,11 +47,17 @@ fn prepare_game(app: &mut App) {
 	let game_state = GameStatePlugin::from_plugin(&loading);
 	let children_assets_dispatch = ChildrenAssetsDispatchPlugin::from_plugin(&loading);
 	let interactions = InteractionsPlugin::from_plugin(&life_cycles);
-	let enemies = EnemyPlugin::from_plugins(&game_state, &interactions);
+	let enemies = EnemyPlugin::from_plugins(&game_state, &savegame, &interactions);
 	let map_generation = MapGenerationPlugin::from_plugin(&light);
 	let path_finding = PathFindingPlugin::from_plugin(&map_generation);
-	let players =
-		PlayerPlugin::from_plugins(&settings, &game_state, &animations, &interactions, &light);
+	let players = PlayerPlugin::from_plugins(
+		&settings,
+		&game_state,
+		&savegame,
+		&animations,
+		&interactions,
+		&light,
+	);
 	let behaviors = BehaviorsPlugin::from_plugins(
 		&settings,
 		&animations,

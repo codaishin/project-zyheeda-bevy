@@ -22,6 +22,7 @@ use common::{
 			HandlesPlayerMouse,
 			PlayerMainCamera,
 		},
+		handles_saving::HandlesSaving,
 		handles_settings::HandlesSettings,
 		prefab::AddPrefabObserver,
 		thread_safe::ThreadSafe,
@@ -43,11 +44,19 @@ use systems::{
 
 pub struct PlayerPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSettings, TGameStates, TAnimations, TInteractions, TLights>
-	PlayerPlugin<(TSettings, TGameStates, TAnimations, TInteractions, TLights)>
+impl<TSettings, TGameStates, TSaveGame, TAnimations, TInteractions, TLights>
+	PlayerPlugin<(
+		TSettings,
+		TGameStates,
+		TSaveGame,
+		TAnimations,
+		TInteractions,
+		TLights,
+	)>
 where
 	TSettings: ThreadSafe + HandlesSettings,
 	TGameStates: ThreadSafe + HandlesGameStates,
+	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + RegisterAnimations,
 	TInteractions: ThreadSafe + HandlesEffect<DealDamage, TTarget = Health>,
 	TLights: ThreadSafe + HandlesLights,
@@ -55,6 +64,7 @@ where
 	pub fn from_plugins(
 		_: &TSettings,
 		_: &TGameStates,
+		_: &TSaveGame,
 		_: &TAnimations,
 		_: &TInteractions,
 		_: &TLights,
@@ -63,11 +73,19 @@ where
 	}
 }
 
-impl<TSettings, TGameStates, TAnimations, TInteractions, TLights> Plugin
-	for PlayerPlugin<(TSettings, TGameStates, TAnimations, TInteractions, TLights)>
+impl<TSettings, TGameStates, TSaveGame, TAnimations, TInteractions, TLights> Plugin
+	for PlayerPlugin<(
+		TSettings,
+		TGameStates,
+		TSaveGame,
+		TAnimations,
+		TInteractions,
+		TLights,
+	)>
 where
 	TSettings: ThreadSafe + HandlesSettings,
 	TGameStates: ThreadSafe + HandlesGameStates,
+	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + RegisterAnimations,
 	TInteractions: ThreadSafe
 		+ HandlesEffect<DealDamage, TTarget = Health>
@@ -79,7 +97,8 @@ where
 		TGameStates::on_starting_new_game(app, Player::spawn);
 		TAnimations::register_animations::<Player>(app);
 
-		app.init_resource::<CamRay>()
+		app.register_required_components::<Player, TSaveGame::TSaveEntityMarker>()
+			.init_resource::<CamRay>()
 			.add_prefab_observer::<Player, (TInteractions, TLights)>()
 			.add_systems(
 				First,
