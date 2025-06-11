@@ -60,6 +60,7 @@ fn prepare_game(app: &mut App) {
 	);
 	let behaviors = BehaviorsPlugin::from_plugins(
 		&settings,
+		&savegame,
 		&animations,
 		&life_cycles,
 		&interactions,

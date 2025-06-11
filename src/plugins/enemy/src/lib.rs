@@ -51,9 +51,14 @@ where
 	fn build(&self, app: &mut App) {
 		TGameStates::on_starting_new_game(app, VoidSphere::spawn);
 
-		app.register_required_components::<Enemy, TSaveGame::TSaveEntityMarker>()
+		app
+			// Entities to save
+			.register_required_components::<Enemy, TSaveGame::TSaveEntityMarker>()
+			.register_required_components::<VoidBeam, TSaveGame::TSaveEntityMarker>()
+			// prefabs
 			.add_prefab_observer::<VoidSphere, TInteractions>()
 			.add_prefab_observer::<VoidBeam, TInteractions>()
+			// systems
 			.add_systems(Update, ring_rotation);
 	}
 }
