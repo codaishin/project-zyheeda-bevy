@@ -1,4 +1,9 @@
 use super::TryDespawn;
+use crate::{
+	components::persistent_entity::PersistentEntity,
+	events::despawn_persistent::DespawnPersistent,
+	traits::try_despawn::TryDespawnPersistent,
+};
 use bevy::prelude::*;
 
 impl TryDespawn for Commands<'_, '_> {
@@ -10,13 +15,20 @@ impl TryDespawn for Commands<'_, '_> {
 	}
 }
 
+impl TryDespawnPersistent for Commands<'_, '_> {
+	fn try_despawn_persistent(&mut self, entity: PersistentEntity) {
+		self.trigger(DespawnPersistent(entity));
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::test_tools::utils::SingleThreadedApp;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 
 	fn setup() -> App {
-		App::new()
+		App::new().single_threaded(Update)
 	}
 
 	#[test]
@@ -51,5 +63,30 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once(move |mut commands: Commands| commands.try_despawn(entity))
+	}
+
+	#[test]
+	fn trigger_despawn_persistent() -> Result<(), RunSystemError> {
+		#[derive(Resource, Debug, PartialEq)]
+		struct _Event(DespawnPersistent);
+
+		let mut app = setup();
+		let persistent = PersistentEntity::default();
+
+		app.add_observer(
+			move |trigger: Trigger<DespawnPersistent>, mut commands: Commands| {
+				commands.insert_resource(_Event(*trigger.event()))
+			},
+		);
+		app.world_mut()
+			.run_system_once(move |mut commands: Commands| {
+				commands.try_despawn_persistent(persistent)
+			})?;
+
+		assert_eq!(
+			Some(&_Event(DespawnPersistent(persistent))),
+			app.world().get_resource::<_Event>()
+		);
+		Ok(())
 	}
 }

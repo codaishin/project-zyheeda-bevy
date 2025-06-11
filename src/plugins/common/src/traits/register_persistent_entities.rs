@@ -10,6 +10,7 @@ impl RegisterPersistentEntities for App {
 		self.init_resource::<PersistentEntities>()
 			.add_observer(PersistentEntities::insert_entity)
 			.add_observer(PersistentEntities::remove_entity)
+			.add_observer(PersistentEntities::despawn_entity)
 			.add_systems(
 				Update,
 				PersistentEntities::drain_lookup_errors.pipe(log_many),
