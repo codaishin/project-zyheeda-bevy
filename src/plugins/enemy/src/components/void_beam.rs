@@ -16,7 +16,7 @@ use common::{
 use std::{f32::consts::PI, time::Duration};
 
 #[derive(Component, Debug, PartialEq)]
-#[require(Visibility, Transform)]
+#[require(PersistentEntity, Visibility, Transform)]
 pub(crate) struct VoidBeam {
 	attack: VoidBeamAttack,
 	attacker: PersistentEntity,
