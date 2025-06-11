@@ -5,6 +5,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
 pub trait HandlesSkillBehaviors {
@@ -35,7 +36,7 @@ pub struct SkillEntities {
 	pub projection: Entity,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Shape {
 	Sphere {
 		radius: Units,
@@ -48,13 +49,13 @@ pub enum Shape {
 	},
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum Integrity {
 	Solid,
 	Fragile { destroyed_by: HashSet<Blocker> },
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum Motion {
 	HeldBy {
 		caster: PersistentEntity,
@@ -72,12 +73,12 @@ pub enum Motion {
 	},
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Default)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Default, Serialize, Deserialize)]
 pub enum Spawner {
 	#[default]
 	Center,
 	Slot(SlotKey),
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub struct ProjectionOffset(pub Vec3);

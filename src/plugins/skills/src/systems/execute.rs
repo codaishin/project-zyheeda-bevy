@@ -2,11 +2,9 @@ use crate::{behaviors::SkillCaster, components::SkillTarget, traits::Execute};
 use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
 	components::persistent_entity::PersistentEntity,
-	effects::deal_damage::DealDamage,
 	tools::collider_info::ColliderInfo,
 	traits::{
 		accessors::get::GetterRefOptional,
-		handles_effect::HandlesEffect,
 		handles_lifetime::HandlesLifetime,
 		handles_player::{HandlesPlayerCameras, HandlesPlayerMouse},
 		handles_skill_behaviors::HandlesSkillBehaviors,
@@ -25,7 +23,6 @@ pub(crate) trait ExecuteSkills: Component<Mutability = Mutable> + Sized {
 	) where
 		for<'w, 's> Self: Execute<Commands<'w, 's>, TLifetimes, TEffects, TSkillBehaviors>,
 		TLifetimes: HandlesLifetime,
-		TEffects: HandlesEffect<DealDamage>,
 		TSkillBehaviors: HandlesSkillBehaviors + 'static,
 		TPlayers: HandlesPlayerCameras + HandlesPlayerMouse,
 	{
@@ -120,17 +117,6 @@ mod tests {
 	}
 
 	struct _HandlesEffects;
-
-	impl<T> HandlesEffect<T> for _HandlesEffects {
-		type TTarget = ();
-		type TEffectComponent = _Effect;
-
-		fn effect(_: T) -> _Effect {
-			_Effect
-		}
-
-		fn attribute(_: Self::TTarget) -> impl Bundle {}
-	}
 
 	#[derive(Component)]
 	struct _Effect;

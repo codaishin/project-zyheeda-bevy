@@ -6,15 +6,17 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	attributes::affected_by::AffectedBy,
+	components::persistent_entity::PersistentEntity,
 	effects::gravity::Gravity,
 	traits::handles_effect::HandlesEffect,
 };
+use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
-#[derive(Component, Debug, PartialEq, Clone)]
+#[derive(Component, Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct GravityEffect(pub(crate) Gravity);
 
-impl<TLifecyclePlugin> HandlesEffect<Gravity> for InteractionsPlugin<TLifecyclePlugin> {
+impl<TDependencies> HandlesEffect<Gravity> for InteractionsPlugin<TDependencies> {
 	type TTarget = AffectedBy<Gravity>;
 	type TEffectComponent = GravityEffect;
 
@@ -30,11 +32,11 @@ impl<TLifecyclePlugin> HandlesEffect<Gravity> for InteractionsPlugin<TLifecycleP
 impl UpdateBlockers for GravityEffect {}
 
 impl ActOn<GravityAffected> for GravityEffect {
-	fn on_begin_interaction(&mut self, _: Entity, _: &mut GravityAffected) {}
+	fn on_begin_interaction(&mut self, _: PersistentEntity, _: &mut GravityAffected) {}
 
 	fn on_repeated_interaction(
 		&mut self,
-		self_entity: Entity,
+		self_entity: PersistentEntity,
 		target: &mut GravityAffected,
 		_: Duration,
 	) {
@@ -59,13 +61,14 @@ mod tests {
 			strength: UnitsPerSecond::new(42.),
 		});
 		let mut gravity_pulls = GravityAffected::default();
+		let towards = PersistentEntity::default();
 
-		gravity.on_repeated_interaction(Entity::from_raw(42), &mut gravity_pulls, Duration::ZERO);
+		gravity.on_repeated_interaction(towards, &mut gravity_pulls, Duration::ZERO);
 
 		assert_eq!(
 			GravityAffected::new([GravityPull {
 				strength: UnitsPerSecond::new(42.),
-				towards: Entity::from_raw(42),
+				towards,
 			}]),
 			gravity_pulls
 		);
@@ -78,7 +81,7 @@ mod tests {
 		});
 		let mut gravity_pulls = GravityAffected::default();
 
-		gravity.on_begin_interaction(Entity::from_raw(42), &mut gravity_pulls);
+		gravity.on_begin_interaction(PersistentEntity::default(), &mut gravity_pulls);
 
 		assert_eq!(GravityAffected::new([]), gravity_pulls);
 	}

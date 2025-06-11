@@ -1,3 +1,5 @@
+pub(crate) mod dto;
+
 use super::SimplePrefab;
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use common::{

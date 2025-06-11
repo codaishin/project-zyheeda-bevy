@@ -1,7 +1,8 @@
 use crate::{effects::deal_damage::DealDamage, traits::handles_effect::HandlesEffect};
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub struct Health {
 	pub current: f32,
 	pub max: f32,

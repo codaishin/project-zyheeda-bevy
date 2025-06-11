@@ -8,15 +8,17 @@ use bevy::prelude::*;
 use common::{
 	attributes::affected_by::AffectedBy,
 	blocker::{Blocker, Blockers},
+	components::persistent_entity::PersistentEntity,
 	effects::force::Force,
 	traits::handles_effect::HandlesEffect,
 };
+use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
-#[derive(Component, Debug, PartialEq, Clone)]
+#[derive(Component, Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct ForceEffect(pub(crate) Force);
 
-impl<TLifecyclePlugin> HandlesEffect<Force> for InteractionsPlugin<TLifecyclePlugin> {
+impl<TDependencies> HandlesEffect<Force> for InteractionsPlugin<TDependencies> {
 	type TTarget = AffectedBy<Force>;
 	type TEffectComponent = ForceEffect;
 
@@ -36,9 +38,9 @@ impl UpdateBlockers for ForceEffect {
 }
 
 impl ActOn<ForceAffected> for ForceEffect {
-	fn on_begin_interaction(&mut self, _: Entity, _: &mut ForceAffected) {}
+	fn on_begin_interaction(&mut self, _: PersistentEntity, _: &mut ForceAffected) {}
 
-	fn on_repeated_interaction(&mut self, _: Entity, _: &mut ForceAffected, _: Duration) {
+	fn on_repeated_interaction(&mut self, _: PersistentEntity, _: &mut ForceAffected, _: Duration) {
 		// FIXME: Target should be moved outside the force effect collider
 	}
 }

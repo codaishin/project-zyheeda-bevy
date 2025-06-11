@@ -9,7 +9,9 @@ mod writer;
 
 use crate::systems::buffer::BufferSystem;
 use bevy::prelude::*;
+use bevy_rapier3d::prelude::*;
 use common::{
+	components::persistent_entity::PersistentEntity,
 	states::game_state::GameState,
 	systems::log::log,
 	traits::handles_saving::HandlesSaving,
@@ -26,6 +28,11 @@ impl Plugin for SavegamePlugin {
 	fn build(&self, app: &mut App) {
 		let writer = FileWriter::to_destination("./quick_save.json");
 		let context = Arc::new(Mutex::new(SaveContext::new(writer)));
+
+		Self::register_save_able_component::<Name>(app);
+		Self::register_save_able_component::<Transform>(app);
+		Self::register_save_able_component::<Velocity>(app);
+		Self::register_save_able_component::<PersistentEntity>(app);
 
 		app.init_resource::<Register>()
 			.add_systems(Startup, Register::update_context(context.clone()).pipe(log))

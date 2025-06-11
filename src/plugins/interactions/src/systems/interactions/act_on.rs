@@ -10,7 +10,7 @@ use common::components::persistent_entity::PersistentEntity;
 use std::time::Duration;
 
 type Components<'a, TActor, TTarget> = (
-	Entity,
+	&'a PersistentEntity,
 	&'a mut TActor,
 	&'a mut RunningInteractions<TActor, TTarget>,
 	&'a InteractingEntities,
@@ -34,8 +34,8 @@ pub(crate) trait ActOnSystem: Component<Mutability = Mutable> + Sized {
 				};
 
 				match interactions.insert(*target_entity) {
-					true => actor.on_begin_interaction(entity, &mut target),
-					false => actor.on_repeated_interaction(entity, &mut target, delta),
+					true => actor.on_begin_interaction(*entity, &mut target),
+					false => actor.on_repeated_interaction(*entity, &mut target, delta),
 				}
 			}
 		}
@@ -60,7 +60,10 @@ mod tests {
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 
+	static ACTOR: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
+
 	#[derive(Component, NestedMocks)]
+	#[require(PersistentEntity = *ACTOR)]
 	pub struct _Actor {
 		mock: Mock_Actor,
 	}
@@ -76,13 +79,13 @@ mod tests {
 
 	#[automock]
 	impl ActOn<_Target> for _Actor {
-		fn on_begin_interaction(&mut self, self_entity: Entity, target: &mut _Target) {
+		fn on_begin_interaction(&mut self, self_entity: PersistentEntity, target: &mut _Target) {
 			self.mock.on_begin_interaction(self_entity, target);
 		}
 
 		fn on_repeated_interaction(
 			&mut self,
-			self_entity: Entity,
+			self_entity: PersistentEntity,
 			target: &mut _Target,
 			delta: Duration,
 		) {
@@ -115,7 +118,7 @@ mod tests {
 			.insert(_Actor::new().with_mock(|mock| {
 				mock.expect_on_begin_interaction()
 					.times(1)
-					.with(eq(entity), eq(_Target))
+					.with(eq(*ACTOR), eq(_Target))
 					.return_const(());
 				mock.expect_on_repeated_interaction().never();
 			}));
@@ -171,7 +174,7 @@ mod tests {
 				mock.expect_on_begin_interaction().never();
 				mock.expect_on_repeated_interaction()
 					.times(1)
-					.with(eq(entity), eq(_Target), eq(Duration::from_millis(42)))
+					.with(eq(*ACTOR), eq(_Target), eq(Duration::from_millis(42)))
 					.return_const(());
 			}));
 

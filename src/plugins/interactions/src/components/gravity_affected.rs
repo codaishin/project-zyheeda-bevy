@@ -1,8 +1,9 @@
-use bevy::prelude::{Component, Entity};
-use common::tools::UnitsPerSecond;
+use bevy::prelude::Component;
+use common::{components::persistent_entity::PersistentEntity, tools::UnitsPerSecond};
+use serde::{Deserialize, Serialize};
 use std::{ops::RangeBounds, vec::Drain};
 
-#[derive(Component, Debug, PartialEq, Clone, Default)]
+#[derive(Component, Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
 pub struct GravityAffected {
 	pulls: Vec<GravityPull>,
 }
@@ -31,8 +32,8 @@ impl GravityAffected {
 	}
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct GravityPull {
 	pub(crate) strength: UnitsPerSecond,
-	pub(crate) towards: Entity,
+	pub(crate) towards: PersistentEntity,
 }

@@ -5,7 +5,10 @@ pub mod traits;
 mod systems;
 
 use crate::{
-	components::anchor::{AnchorFixPoints, spawner_fix_point::SpawnerFixPoint},
+	components::{
+		anchor::{AnchorFixPoints, spawner_fix_point::SpawnerFixPoint},
+		skill_behavior::skill_contact::dto::SkillContactDto,
+	},
 	systems::movement::compute_path::MovementPath,
 };
 use bevy::prelude::*;
@@ -135,6 +138,8 @@ where
 {
 	fn build(&self, app: &mut App) {
 		TAnimations::register_movement_direction::<Movement<VelocityBased>>(app);
+		TSaveGame::register_savable_component_dto::<SkillContact, SkillContactDto>(app);
+		TSaveGame::register_savable_component::<SkillProjection>(app);
 
 		let point_input = PointerInput::parse::<TPlayers::TCamRay, TSettings::TKeyMap<MovementKey>>;
 		let wasd_input = WasdInput::<VelocityBased>::parse::<
