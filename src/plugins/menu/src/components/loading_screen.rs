@@ -8,8 +8,8 @@ use std::marker::PhantomData;
 
 #[derive(Component)]
 #[require(
-	Node = full_screen(),
-	BackgroundColor = black(),
+	Node = Self::full_screen(),
+	BackgroundColor = BackgroundColor(Color::BLACK),
 	ZIndex = ZIndex::max(),
 	GlobalZIndex = GlobalZIndex::max(),
 )]
@@ -17,18 +17,19 @@ pub(crate) struct LoadingScreen<T>(PhantomData<T>)
 where
 	T: Progress;
 
-fn full_screen() -> Node {
-	Node {
-		width: Val::Vw(100.),
-		height: Val::Vh(100.),
-		flex_direction: FlexDirection::ColumnReverse,
-		padding: UiRect::bottom(Val::Px(100.)).with_left(Val::Px(50.)),
-		..default()
+impl<T> LoadingScreen<T>
+where
+	T: Progress,
+{
+	fn full_screen() -> Node {
+		Node {
+			width: Val::Vw(100.),
+			height: Val::Vh(100.),
+			flex_direction: FlexDirection::ColumnReverse,
+			padding: UiRect::bottom(Val::Px(100.)).with_left(Val::Px(50.)),
+			..default()
+		}
 	}
-}
-
-fn black() -> BackgroundColor {
-	BackgroundColor(Color::BLACK)
 }
 
 trait Max {

@@ -4,17 +4,19 @@ use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::traits::handles_localization::LocalizeToken;
 
 #[derive(Component)]
-#[require(Node = full_screen())]
+#[require(Node = Self::full_screen())]
 pub(crate) struct StartMenu;
 
-fn full_screen() -> Node {
-	Node {
-		width: Val::Vw(100.0),
-		height: Val::Vh(100.0),
-		align_items: AlignItems::Center,
-		justify_content: JustifyContent::Center,
-		flex_direction: FlexDirection::Column,
-		..default()
+impl StartMenu {
+	fn full_screen() -> Node {
+		Node {
+			width: Val::Vw(100.0),
+			height: Val::Vh(100.0),
+			align_items: AlignItems::Center,
+			justify_content: JustifyContent::Center,
+			flex_direction: FlexDirection::Column,
+			..default()
+		}
 	}
 }
 
