@@ -9,13 +9,7 @@ use common::{
 #[require(
 	Transform,
 	Blockers = [Blocker::Physical],
-	Collider = Self::collider(),
+	Collider = Collider::cuboid(0.5, 0.5, 0.5),
 	NoTarget
 )]
 pub(crate) struct WallCell;
-
-impl WallCell {
-	fn collider() -> Collider {
-		Collider::cuboid(0.5, 0.5, 0.5)
-	}
-}

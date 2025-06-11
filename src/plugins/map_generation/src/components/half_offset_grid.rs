@@ -14,14 +14,10 @@ use bevy::{
 use std::collections::HashMap;
 
 #[derive(Component, Debug, PartialEq)]
-#[require(Name = Self::name(), Transform, Visibility)]
+#[require(Name = "HalfOffsetGrid", Transform, Visibility)]
 pub(crate) struct HalfOffsetGrid;
 
 impl HalfOffsetGrid {
-	const fn name() -> &'static str {
-		"HalfOffsetGrid"
-	}
-
 	#[allow(clippy::type_complexity)]
 	pub(crate) fn spawn_cells<TCell, TError>(
 		In(cells): In<Result<Vec<(Vec3, HalfOffsetCell<TCell>)>, TError>>,
