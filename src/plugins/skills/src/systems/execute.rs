@@ -61,7 +61,7 @@ where
 mod tests {
 	use super::*;
 	use common::{
-		components::Outdated,
+		components::outdated::Outdated,
 		test_tools::utils::SingleThreadedApp,
 		tools::collider_info::ColliderInfo,
 		traits::{

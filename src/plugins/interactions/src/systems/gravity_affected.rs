@@ -5,7 +5,7 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::Velocity;
 use common::{
-	components::Immobilized,
+	components::immobilized::Immobilized,
 	traits::{try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
 };
 use std::time::Duration;

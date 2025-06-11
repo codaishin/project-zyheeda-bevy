@@ -9,7 +9,7 @@ use bevy::{
 };
 use common::{
 	attributes::health::Health,
-	components::UiNodeFor,
+	components::ui_node_for::UiNodeFor,
 	traits::{
 		accessors::get::GetterRef,
 		handles_enemies::HandlesEnemies,
@@ -17,7 +17,6 @@ use common::{
 		handles_life::HandlesLife,
 		handles_player::HandlesPlayer,
 		ownership_relation::OwnershipRelation,
-		register_required_components_mapped::RegisterRequiredComponentsMapped,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -57,7 +56,7 @@ where
 
 		app.register_required_components::<TPlayers::TPlayer, Bar>()
 			.register_required_components::<TEnemies::TEnemy, Bar>()
-			.register_required_components_mapped::<UiNodeFor<Bar>, RenderLayers>(render_layer);
+			.register_required_components_with::<UiNodeFor<Bar>, RenderLayers>(render_layer);
 		app.manage_ownership::<Bar>(Update)
 			.add_systems(Update, (update_life_bars, render_life_bars).chain());
 	}

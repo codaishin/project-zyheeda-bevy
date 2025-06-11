@@ -8,10 +8,10 @@ use common::{
 	},
 	blocker::{Blocker, Blockers},
 	components::{
-		AssetModel,
-		GroundOffset,
+		asset_model::AssetModel,
 		collider_relationship::InteractionTarget,
 		flip::FlipHorizontally,
+		ground_offset::GroundOffset,
 		persistent_entity::PersistentEntity,
 	},
 	effects::{deal_damage::DealDamage, force::Force, gravity::Gravity},

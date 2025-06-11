@@ -1,4 +1,4 @@
-use crate::components::Outdated;
+use crate::components::outdated::Outdated;
 use bevy::prelude::*;
 
 #[derive(Debug, PartialEq, Clone, Copy)]

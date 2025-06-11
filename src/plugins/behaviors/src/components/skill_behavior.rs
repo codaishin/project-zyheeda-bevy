@@ -16,7 +16,7 @@ use crate::components::{
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::{AssetModel, collider_relationship::InteractionTarget},
+	components::{asset_model::AssetModel, collider_relationship::InteractionTarget},
 	errors::{Error, Level},
 	traits::{
 		handles_destruction::HandlesDestruction,

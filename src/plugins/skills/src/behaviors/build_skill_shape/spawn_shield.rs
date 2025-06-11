@@ -7,7 +7,7 @@ use crate::{
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Collider;
 use common::{
-	components::AssetModel,
+	components::asset_model::AssetModel,
 	tools::Units,
 	traits::{
 		clamp_zero_positive::ClampZeroPositive,

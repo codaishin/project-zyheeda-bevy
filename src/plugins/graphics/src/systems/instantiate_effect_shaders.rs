@@ -60,7 +60,7 @@ mod tests {
 	use crate::components::effect_shaders_target::{EffectShaderHandle, EffectShadersTarget};
 	use bevy::render::render_resource::AsBindGroup;
 	use common::{
-		components::Protected,
+		components::protected::Protected,
 		test_tools::utils::{SingleThreadedApp, new_handle},
 	};
 	use std::collections::HashSet;

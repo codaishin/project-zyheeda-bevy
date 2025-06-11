@@ -265,7 +265,7 @@ mod tests {
 	use crate::{behaviors::start_behavior::SkillBehavior, traits::skill_builder::SkillShape};
 	use bevy::ecs::system::{EntityCommands, RunSystemError, RunSystemOnce};
 	use common::{
-		components::{Outdated, persistent_entity::PersistentEntity},
+		components::{outdated::Outdated, persistent_entity::PersistentEntity},
 		test_tools::utils::SingleThreadedApp,
 		tools::collider_info::ColliderInfo,
 		traits::{

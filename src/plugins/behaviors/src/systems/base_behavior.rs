@@ -3,8 +3,8 @@ use bevy::{math::InvalidDirectionError, prelude::*};
 use bevy_rapier3d::plugin::ReadRapierContext;
 use common::{
 	components::{
-		GroundOffset,
 		collider_relationship::ColliderOfInteractionTarget,
+		ground_offset::GroundOffset,
 		persistent_entity::PersistentEntity,
 	},
 	resources::persistent_entities::PersistentEntities,

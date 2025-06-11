@@ -2,7 +2,7 @@ use super::model_render::ModelRender;
 use crate::{item::Item, traits::loadout_key::LoadoutKey};
 use bevy::{asset::Handle, prelude::*};
 use common::{
-	components::{AssetModel, essence::Essence},
+	components::{asset_model::AssetModel, essence::Essence},
 	tools::action_key::slot::{Side, SlotKey},
 	traits::{
 		accessors::get::GetRef,

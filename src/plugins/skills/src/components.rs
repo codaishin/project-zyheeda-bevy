@@ -10,7 +10,7 @@ pub mod swapper;
 pub(crate) mod skill_executer;
 
 use bevy::prelude::*;
-use common::{components::Outdated, tools::collider_info::ColliderInfo};
+use common::{components::outdated::Outdated, tools::collider_info::ColliderInfo};
 
 pub type SkillTarget = SelectInfo<Outdated<GlobalTransform>>;
 

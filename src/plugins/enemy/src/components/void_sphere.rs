@@ -18,7 +18,7 @@ use common::{
 		affected_by::{Affected, AffectedBy},
 		health::Health,
 	},
-	components::{GroundOffset, insert_asset::InsertAsset},
+	components::{ground_offset::GroundOffset, insert_asset::InsertAsset},
 	effects::{deal_damage::DealDamage, gravity::Gravity},
 	errors::Error,
 	tools::{Units, UnitsPerSecond, collider_radius::ColliderRadius},

@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::components::AssetModel;
+use common::components::asset_model::AssetModel;
 
 const CORRIDOR_PATH_PREFIX: &str = "models/corridor/";
 

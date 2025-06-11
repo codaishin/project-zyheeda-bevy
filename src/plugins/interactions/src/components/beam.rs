@@ -3,7 +3,7 @@ use crate::events::{InteractionEvent, Ray};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::{GroundOffset, persistent_entity::PersistentEntity},
+	components::{ground_offset::GroundOffset, persistent_entity::PersistentEntity},
 	resources::persistent_entities::PersistentEntities,
 	tools::Units,
 	traits::{

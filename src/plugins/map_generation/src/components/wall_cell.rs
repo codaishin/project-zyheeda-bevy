@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
 	blocker::{Blocker, Blockers},
-	components::NoTarget,
+	components::no_target::NoTarget,
 };
 
 #[derive(Component, Debug, PartialEq)]
