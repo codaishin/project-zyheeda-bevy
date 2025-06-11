@@ -4,10 +4,15 @@ use crate::{
 };
 use bevy::prelude::*;
 use serde::Serialize;
-use std::sync::{Arc, Mutex};
+use std::{
+	any::TypeId,
+	collections::HashSet,
+	sync::{Arc, Mutex},
+};
 
 #[derive(Resource, Debug, PartialEq, Default)]
 pub(crate) struct Register {
+	registered_types: HashSet<TypeId>,
 	handlers: Handlers,
 }
 
@@ -29,6 +34,13 @@ impl Register {
 	where
 		T: Component + Serialize,
 	{
+		let type_id = TypeId::of::<T>();
+
+		if self.registered_types.contains(&type_id) {
+			return;
+		}
+
+		self.registered_types.insert(type_id);
 		self.handlers.push(SaveContext::handle::<T>);
 	}
 }
@@ -78,6 +90,23 @@ mod test_registration {
 				.collect::<Vec<_>>()
 		)
 	}
+
+	#[test]
+	fn register_components_only_once() {
+		let mut register = Register::default();
+
+		register.register_component::<_A>();
+		register.register_component::<_A>();
+
+		assert_eq!(
+			vec![SaveContext::handle::<_A> as usize],
+			register
+				.handlers
+				.into_iter()
+				.map(|h| h as usize)
+				.collect::<Vec<_>>()
+		)
+	}
 }
 
 #[cfg(test)]
@@ -90,7 +119,10 @@ mod test_update_context {
 
 	fn setup(handlers: Handlers) -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.insert_resource(Register { handlers });
+		app.insert_resource(Register {
+			handlers,
+			..default()
+		});
 
 		app
 	}
