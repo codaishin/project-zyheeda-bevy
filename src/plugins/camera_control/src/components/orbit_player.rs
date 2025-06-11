@@ -5,6 +5,7 @@ use crate::traits::{
 use bevy::prelude::*;
 
 #[derive(Component)]
+#[require(Transform)]
 pub struct OrbitPlayer {
 	pub center: OrbitCenter,
 	pub distance: f32,
