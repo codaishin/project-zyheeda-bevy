@@ -1,5 +1,5 @@
 use crate::{
-	components::{Bar, BarValues},
+	components::{bar::Bar, bar_values::BarValues},
 	traits::{GetScreenPosition, UIBarUpdate},
 };
 use bevy::{

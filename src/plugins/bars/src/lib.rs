@@ -21,7 +21,7 @@ use common::{
 		thread_safe::ThreadSafe,
 	},
 };
-use components::Bar;
+use components::bar::Bar;
 use std::marker::PhantomData;
 use systems::{bar::bar, render_bar::render_bar};
 

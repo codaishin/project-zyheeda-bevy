@@ -1,5 +1,5 @@
 use crate::{
-	components::{Bar, BarValues, UI},
+	components::{bar::Bar, bar_values::BarValues, ui::UI},
 	traits::UIBarColors,
 };
 use bevy::prelude::*;

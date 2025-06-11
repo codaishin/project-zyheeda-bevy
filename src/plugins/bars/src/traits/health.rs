@@ -1,5 +1,5 @@
 use crate::{
-	components::BarValues,
+	components::bar_values::BarValues,
 	traits::{UIBarColors, UIBarUpdate},
 };
 use bevy::color::Color;
