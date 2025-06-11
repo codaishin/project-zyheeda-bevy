@@ -3,7 +3,7 @@ use crate::traits::{IsDone, MovementUpdate, change_per_frame::MinDistance};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use common::{
-	components::Immobilized,
+	components::immobilized::Immobilized,
 	tools::speed::Speed,
 	traits::animation::GetMovementDirection,
 };

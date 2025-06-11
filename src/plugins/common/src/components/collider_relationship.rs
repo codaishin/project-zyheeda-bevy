@@ -1,6 +1,8 @@
 use bevy::{ecs::entity::EntityHashSet, prelude::*};
 use bevy_rapier3d::prelude::*;
 
+use crate::components::persistent_entity::PersistentEntity;
+
 /// Links a [`Collider`] entity to the corresponding [`InteractionTarget`] entity.
 ///
 /// It is inserted automatically by an observer in the [`crate::CommonPlugin`].
@@ -26,6 +28,7 @@ impl ColliderOfInteractionTarget {
 /// Marks an entity as the target for interactions like damaging effects, healing, etc.
 #[derive(Component, PartialEq, Eq, Hash, Debug, Clone, Copy, PartialOrd, Ord, Default)]
 #[component(immutable)]
+#[require(PersistentEntity)]
 pub struct InteractionTarget;
 
 #[derive(Component, PartialEq, Debug, Clone)]

@@ -22,11 +22,11 @@ where
 
 pub(crate) trait TooltipUiConfig {
 	fn node() -> Node {
-		default()
+		Node::default()
 	}
 
 	fn background_color() -> BackgroundColor {
-		default()
+		BackgroundColor::default()
 	}
 }
 

@@ -3,7 +3,7 @@ use crate::events::{InteractionEvent, Ray};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::{GroundOffset, persistent_entity::PersistentEntity},
+	components::{ground_offset::GroundOffset, persistent_entity::PersistentEntity},
 	resources::persistent_entities::PersistentEntities,
 	tools::Units,
 	traits::{
@@ -52,13 +52,13 @@ impl Beam {
 			}
 		}
 
+		let spawn_beam = spawn_beam::<TLifetimes>;
+
 		for InteractionEvent(source, ray) in ray_cast_events.read() {
 			match beams.get(*source) {
-				Ok((entity, cmd, None)) => {
-					spawn_beam::<TLifetimes>(&mut commands, entity, ray, cmd)
-				}
-				Ok((entity, .., Some(_))) => update_beam_transform(&mut commands, entity, ray),
-				Err(_) => {}
+				Err(_) => continue,
+				Ok((entity, cmd, None)) => spawn_beam(&mut commands, entity, ray, cmd),
+				Ok((entity, .., Some(_beam))) => update_beam_transform(&mut commands, entity, ray),
 			}
 		}
 	}

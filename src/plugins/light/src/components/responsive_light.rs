@@ -23,7 +23,7 @@ use std::{any::TypeId, ops::Deref, time::Duration};
 #[require(
 	Transform,
 	Sensor,
-	ActiveEvents = Self::active_events(),
+	ActiveEvents = ActiveEvents::COLLISION_EVENTS,
 	CollidingEntities,
 )]
 pub struct ResponsiveLight {
@@ -38,10 +38,6 @@ pub struct ResponsiveLight {
 }
 
 impl ResponsiveLight {
-	fn active_events() -> ActiveEvents {
-		ActiveEvents::COLLISION_EVENTS
-	}
-
 	pub(crate) fn detect_change<TColliderCollection: HasCollisions + Component>(
 		mut commands: Commands,
 		responsive_lights: Query<(Entity, &TColliderCollection), Changed<TColliderCollection>>,

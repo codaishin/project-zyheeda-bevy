@@ -1,4 +1,4 @@
-use crate::components::UiNodeFor;
+use crate::components::ui_node_for::UiNodeFor;
 use bevy::prelude::*;
 
 pub(crate) fn remove_not_owned<TOwner: Component>(

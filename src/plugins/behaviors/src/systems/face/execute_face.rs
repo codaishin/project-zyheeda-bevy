@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use common::{
-	components::{Immobilized, collider_relationship::ColliderOfInteractionTarget},
+	components::{collider_relationship::ColliderOfInteractionTarget, immobilized::Immobilized},
 	tools::collider_info::ColliderInfo,
 	traits::{
 		accessors::get::GetterRefOptional,

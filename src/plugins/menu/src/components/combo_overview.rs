@@ -29,26 +29,16 @@ use common::{
 };
 
 #[derive(Component, Debug, PartialEq)]
-#[require(MenuBackground = Self::menu_background(), Name = Self::name())]
+#[require(
+	MenuBackground = MenuBackground::default().with(FlexDirection::Column),
+	Name = "Combo Overview",
+)]
 pub(crate) struct ComboOverview<TSkill>
 where
 	TSkill: ThreadSafe,
 {
 	new_skill_icon: Handle<Image>,
 	layout: ComboTreeLayout<TSkill>,
-}
-
-impl<TSkill> ComboOverview<TSkill>
-where
-	TSkill: ThreadSafe,
-{
-	fn menu_background() -> MenuBackground {
-		MenuBackground::default().with(FlexDirection::Column)
-	}
-
-	fn name() -> &'static str {
-		"Combo Overview"
-	}
 }
 
 impl<TSKill> Default for ComboOverview<TSKill>

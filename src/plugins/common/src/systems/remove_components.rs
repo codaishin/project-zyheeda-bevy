@@ -1,5 +1,5 @@
 use crate::{
-	components::Protected,
+	components::protected::Protected,
 	tools::get_recursively::{get_recursively_from, related::Child},
 	traits::try_remove_from::TryRemoveFrom,
 };
@@ -53,7 +53,7 @@ fn remove_components<TCommands, TAgent, TComponent>(
 #[cfg(test)]
 pub mod tests {
 	use super::*;
-	use crate::{components::Protected, simple_init, traits::mock::Mock};
+	use crate::{simple_init, traits::mock::Mock};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use mockall::{mock, predicate::eq};
 

@@ -1,16 +1,12 @@
 use bevy::prelude::*;
 
 #[derive(Component, Default, Debug, PartialEq)]
-#[require(BackgroundColor = Self::gray())]
+#[require(BackgroundColor = BackgroundColor(Color::srgba(0.5, 0.5, 0.5, 0.5)))]
 pub(crate) struct MenuBackground {
 	overrides: Overrides,
 }
 
 impl MenuBackground {
-	fn gray() -> BackgroundColor {
-		BackgroundColor(Color::srgba(0.5, 0.5, 0.5, 0.5))
-	}
-
 	fn full_screen() -> Node {
 		Node {
 			width: Val::Vw(100.0),

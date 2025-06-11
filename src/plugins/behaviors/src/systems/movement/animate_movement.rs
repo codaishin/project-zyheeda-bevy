@@ -1,6 +1,6 @@
 use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
-	components::Immobilized,
+	components::immobilized::Immobilized,
 	tools::movement_animation::MovementAnimation,
 	traits::{
 		accessors::get::GetterRefOptional,

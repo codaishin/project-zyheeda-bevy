@@ -1,9 +1,9 @@
 use crate::{
-	components::{Bar, BarValues, UI},
+	components::{bar::Bar, bar_values::BarValues, ui::UI},
 	traits::UIBarColors,
 };
 use bevy::prelude::*;
-use common::components::UiNodeFor;
+use common::components::ui_node_for::UiNodeFor;
 
 const BASE_DIMENSIONS: Vec2 = Vec2::new(100., 10.);
 

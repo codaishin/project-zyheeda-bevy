@@ -18,7 +18,7 @@ use common::{
 		affected_by::{Affected, AffectedBy},
 		health::Health,
 	},
-	components::{GroundOffset, insert_asset::InsertAsset},
+	components::{ground_offset::GroundOffset, insert_asset::InsertAsset},
 	effects::{deal_damage::DealDamage, gravity::Gravity},
 	errors::Error,
 	tools::{Units, UnitsPerSecond, collider_radius::ColliderRadius},
@@ -33,33 +33,21 @@ use std::{f32::consts::PI, sync::Arc, time::Duration};
 
 #[derive(Component)]
 #[require(
-	Enemy = VoidSphere::as_enemy(),
-	GroundOffset = Self::ground_offset(),
-	RigidBody = Self::rigid_body(),
-	GravityScale = Self::gravity_scale(),
+	Enemy = VoidSphere::with_attack_range(Units::new(5.)),
+	GroundOffset = Self::GROUND_OFFSET,
+	RigidBody = RigidBody::Dynamic,
+	GravityScale = GravityScale(0.),
 )]
 pub struct VoidSphere;
 
 impl VoidSphere {
+	const GROUND_OFFSET: Vec3 = Vec3::new(0., 1.2, 0.);
+
 	fn collider_radius() -> ColliderRadius {
 		ColliderRadius(Units::new(VOID_SPHERE_OUTER_RADIUS))
 	}
 
-	const fn ground_offset() -> Vec3 {
-		Vec3::new(0., 1.2, 0.)
-	}
-
-	fn rigid_body() -> RigidBody {
-		RigidBody::Dynamic
-	}
-
-	fn gravity_scale() -> GravityScale {
-		GravityScale(0.)
-	}
-
-	fn as_enemy() -> Enemy {
-		let attack_range = Units::new(5.);
-
+	fn with_attack_range(attack_range: Units) -> Enemy {
 		Enemy {
 			speed: UnitsPerSecond::new(1.).into(),
 			movement_animation: None,
@@ -102,7 +90,7 @@ where
 		+ HandlesEffect<Gravity, TTarget = AffectedBy<Gravity>>,
 {
 	fn insert_prefab_components(&self, entity: &mut EntityCommands) -> Result<(), Error> {
-		let transform = Transform::from_translation(Self::ground_offset());
+		let transform = Transform::from_translation(Self::GROUND_OFFSET);
 		let mut transform_2nd_ring = transform;
 		transform_2nd_ring.rotate_axis(Dir3::Z, PI / 2.);
 

@@ -1,15 +1,8 @@
 use crate::resources::{cam_ray::CamRay, mouse_hover::MouseHover};
-use bevy::{
-	ecs::{
-		entity::Entity,
-		query::With,
-		system::{Commands, Query, Res},
-	},
-	math::Ray3d,
-};
+use bevy::prelude::*;
 use bevy_rapier3d::plugin::ReadRapierContext;
 use common::{
-	components::{NoTarget, collider_relationship::ColliderOfInteractionTarget},
+	components::{collider_relationship::ColliderOfInteractionTarget, no_target::NoTarget},
 	tools::collider_info::ColliderInfo,
 	traits::cast_ray::{CastRay, GetRayCaster, TimeOfImpact},
 };
@@ -80,16 +73,8 @@ fn get_target(entity: Entity, colliders: Query<&ColliderOfInteractionTarget>) ->
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{
-		app::{App, Update},
-		ecs::{
-			entity::Entity,
-			system::{In, RunSystemError, RunSystemOnce},
-		},
-		math::{Ray3d, Vec3},
-	};
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
-		components::NoTarget,
 		test_tools::utils::SingleThreadedApp,
 		traits::{cast_ray::TimeOfImpact, nested_mock::NestedMocks},
 	};

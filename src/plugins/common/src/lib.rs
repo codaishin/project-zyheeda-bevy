@@ -18,7 +18,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use components::{
-	AssetModel,
+	asset_model::AssetModel,
 	collider_relationship::ColliderOfInteractionTarget,
 	flip::FlipHorizontally,
 	insert_asset::InsertAsset,

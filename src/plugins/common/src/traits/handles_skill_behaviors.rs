@@ -1,6 +1,6 @@
 use crate::{
 	blocker::Blocker,
-	components::{AssetModel, persistent_entity::PersistentEntity},
+	components::{asset_model::AssetModel, persistent_entity::PersistentEntity},
 	tools::{Units, UnitsPerSecond, action_key::slot::SlotKey},
 };
 use bevy::prelude::*;

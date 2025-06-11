@@ -4,7 +4,7 @@ use crate::traits::{
 };
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use common::{
-	components::Protected,
+	components::protected::Protected,
 	traits::track::{IsTracking, Track, Untrack},
 };
 use std::collections::HashSet;
@@ -99,7 +99,7 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		render::render_resource::AsBindGroup,
 	};
-	use common::{components::Protected, test_tools::utils::new_handle};
+	use common::test_tools::utils::new_handle;
 
 	#[test]
 	fn push_mesh_handle() {

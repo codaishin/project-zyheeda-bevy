@@ -99,7 +99,7 @@ mod tests {
 	use super::*;
 	use crate::behaviors::spawn_on::SpawnOn;
 	use common::{
-		components::{Outdated, persistent_entity::PersistentEntity},
+		components::{outdated::Outdated, persistent_entity::PersistentEntity},
 		simple_init,
 		tools::{action_key::slot::Side, collider_info::ColliderInfo},
 		traits::{

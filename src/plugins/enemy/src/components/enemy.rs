@@ -20,7 +20,7 @@ use common::{
 use std::{sync::Arc, time::Duration};
 
 #[derive(Component, Clone)]
-#[require(InteractionTarget, PersistentEntity, Blockers = [Blocker::Character])]
+#[require(InteractionTarget, PersistentEntity, Transform, Blockers = [Blocker::Character])]
 pub struct Enemy {
 	pub(crate) speed: Speed,
 	pub(crate) movement_animation: Option<MovementAnimation>,

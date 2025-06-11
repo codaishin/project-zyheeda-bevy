@@ -1,4 +1,4 @@
-use crate::{components::AssetModel, traits::load_asset::LoadAsset};
+use crate::{components::asset_model::AssetModel, traits::load_asset::LoadAsset};
 use bevy::prelude::*;
 
 impl AssetModel {
@@ -44,7 +44,7 @@ fn load_asset_model<TServer>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{components::AssetModel, test_tools::utils::new_handle};
+	use crate::test_tools::utils::new_handle;
 	use bevy::asset::AssetPath;
 	use common::traits::nested_mock::NestedMocks;
 	use macros::NestedMocks;

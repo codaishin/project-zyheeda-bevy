@@ -7,15 +7,17 @@ use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{tools::action_key::slot::SlotKey, traits::iteration::IterFinite};
 
 #[derive(Component)]
-#[require(Node = full_screen())]
+#[require(Node = Self::full_screen())]
 pub struct UIOverlay;
 
-fn full_screen() -> Node {
-	Node {
-		width: Val::Percent(100.0),
-		height: Val::Percent(100.0),
-		flex_direction: FlexDirection::ColumnReverse,
-		..default()
+impl UIOverlay {
+	fn full_screen() -> Node {
+		Node {
+			width: Val::Percent(100.0),
+			height: Val::Percent(100.0),
+			flex_direction: FlexDirection::ColumnReverse,
+			..default()
+		}
 	}
 }
 
