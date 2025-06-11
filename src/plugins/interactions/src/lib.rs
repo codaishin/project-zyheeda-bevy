@@ -118,7 +118,7 @@ trait AddInteraction {
 	fn add_interaction<TActor, TTarget, TSaveGame>(&mut self) -> &mut Self
 	where
 		TActor: ActOn<TTarget> + Clone + Component<Mutability = Mutable> + Serialize,
-		TTarget: Component<Mutability = Mutable> + Serialize,
+		TTarget: Component<Mutability = Mutable> + Clone + Serialize,
 		TSaveGame: HandlesSaving;
 }
 
@@ -126,12 +126,12 @@ impl AddInteraction for App {
 	fn add_interaction<TActor, TTarget, TSaveGame>(&mut self) -> &mut Self
 	where
 		TActor: ActOn<TTarget> + Clone + Component<Mutability = Mutable> + Serialize,
-		TTarget: Component<Mutability = Mutable> + Serialize,
+		TTarget: Component<Mutability = Mutable> + Clone + Serialize,
 		TSaveGame: HandlesSaving,
 	{
-		TSaveGame::register_save_able_component::<TActor>(self);
-		TSaveGame::register_save_able_component::<TTarget>(self);
-		TSaveGame::register_save_able_component::<RunningInteractions<TActor, TTarget>>(self);
+		TSaveGame::register_savable_component::<TActor>(self);
+		TSaveGame::register_savable_component::<TTarget>(self);
+		TSaveGame::register_savable_component::<RunningInteractions<TActor, TTarget>>(self);
 
 		self.register_required_components::<TActor, RunningInteractions<TActor, TTarget>>()
 			.add_systems(

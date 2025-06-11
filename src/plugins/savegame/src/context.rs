@@ -23,19 +23,21 @@ pub struct SaveContext<TFileWriter = FileWriter> {
 }
 
 impl SaveContext {
-	pub(crate) fn handle<T>(
+	pub(crate) fn handle<T, TDto>(
 		buffer: &mut HashMap<Entity, HashSet<ComponentString>>,
 		entity: EntityRef,
 	) -> Result<(), Error>
 	where
-		T: Component + Serialize,
+		T: Component + Clone,
+		TDto: From<T> + Serialize,
 	{
 		let Some(component) = entity.get::<T>() else {
 			return Ok(());
 		};
 		let component_str = ComponentString {
 			component_name: type_name::<T>(),
-			component_state: from_str(&to_string(component)?)?,
+			dto_name: type_name::<T>(),
+			component_state: from_str(&to_string(&TDto::from(component.clone()))?)?,
 		};
 
 		match buffer.entry(entity.id()) {
@@ -120,17 +122,17 @@ impl BufferComponents for SaveContext {
 #[derive(Debug, PartialEq, Eq, Hash, Serialize, Clone)]
 pub(crate) struct ComponentString {
 	component_name: &'static str,
+	dto_name: &'static str,
 	component_state: Value,
 }
 
 impl ComponentString {
 	/// Manually create json string to omit the possible error of `to_string`
-	/// of `serde_json`. We can safely assume that this won't fail, because both
-	/// the component name and the component state are valid.
+	/// of `serde_json`. We can safely assume that this won't fail, because all fields are valid
 	fn to_json_string(&self) -> String {
 		format!(
-			"{{\"component_name\":\"{}\",\"component_state\":{}}}",
-			self.component_name, self.component_state
+			"{{\"component_name\":\"{}\",\"dto_name\":\"{}\",\"component_state\":{}}}",
+			self.component_name, self.dto_name, self.component_state
 		)
 	}
 }
@@ -163,6 +165,7 @@ mod test_flush {
 	fn write_on_flush() -> Result<(), RunSystemError> {
 		let string_a = ComponentString {
 			component_name: "A",
+			dto_name: "A",
 			component_state: from_str(r#"{"value": 32}"#).unwrap(),
 		};
 		let context = Arc::new(Mutex::new(SaveContext {
@@ -187,10 +190,12 @@ mod test_flush {
 	fn write_multiple_components_per_entity_on_flush() -> Result<(), RunSystemError> {
 		let string_a = ComponentString {
 			component_name: "A",
+			dto_name: "A",
 			component_state: from_str(r#"{"value": 32}"#).unwrap(),
 		};
 		let string_b = ComponentString {
 			component_name: "B",
+			dto_name: "B",
 			component_state: from_str(r#"{"v": 42}"#).unwrap(),
 		};
 		let context = Arc::new(Mutex::new(SaveContext {
@@ -206,11 +211,13 @@ mod test_flush {
 							"[[{},{}]]",
 							to_string(&ComponentString {
 								component_name: "A",
+								dto_name: "A",
 								component_state: from_str(r#"{"value": 32}"#).unwrap(),
 							})
 							.unwrap(),
 							to_string(&ComponentString {
 								component_name: "B",
+								dto_name: "B",
 								component_state: from_str(r#"{"v": 42}"#).unwrap(),
 							})
 							.unwrap(),
@@ -219,11 +226,13 @@ mod test_flush {
 							"[[{},{}]]",
 							to_string(&ComponentString {
 								component_name: "B",
+								dto_name: "B",
 								component_state: from_str(r#"{"v": 42}"#).unwrap(),
 							})
 							.unwrap(),
 							to_string(&ComponentString {
 								component_name: "A",
+								dto_name: "A",
 								component_state: from_str(r#"{"value": 32}"#).unwrap(),
 							})
 							.unwrap(),
@@ -246,10 +255,12 @@ mod test_flush {
 	fn write_multiple_entities_on_flush() -> Result<(), RunSystemError> {
 		let string_a = ComponentString {
 			component_name: "A",
+			dto_name: "A",
 			component_state: from_str(r#"{"value": 32}"#).unwrap(),
 		};
 		let string_b = ComponentString {
 			component_name: "B",
+			dto_name: "B",
 			component_state: from_str(r#"{"v": 42}"#).unwrap(),
 		};
 		let context = Arc::new(Mutex::new(SaveContext {
@@ -265,11 +276,13 @@ mod test_flush {
 							"[[{}],[{}]]",
 							to_string(&ComponentString {
 								component_name: "A",
+								dto_name: "A",
 								component_state: from_str(r#"{"value": 32}"#).unwrap(),
 							})
 							.unwrap(),
 							to_string(&ComponentString {
 								component_name: "B",
+								dto_name: "B",
 								component_state: from_str(r#"{"v": 42}"#).unwrap(),
 							})
 							.unwrap(),
@@ -278,11 +291,13 @@ mod test_flush {
 							"[[{}],[{}]]",
 							to_string(&ComponentString {
 								component_name: "B",
+								dto_name: "B",
 								component_state: from_str(r#"{"v": 42}"#).unwrap(),
 							})
 							.unwrap(),
 							to_string(&ComponentString {
 								component_name: "A",
+								dto_name: "A",
 								component_state: from_str(r#"{"value": 32}"#).unwrap(),
 							})
 							.unwrap(),
@@ -308,6 +323,7 @@ mod test_flush {
 				Entity::from_raw(32),
 				HashSet::from([ComponentString {
 					component_name: "A",
+					dto_name: "A",
 					component_state: from_str(r#"{"value": 32}"#).unwrap(),
 				}]),
 			)]),
@@ -354,6 +370,7 @@ mod test_buffer {
 				Entity::from_raw(42),
 				HashSet::from([ComponentString {
 					component_name: "name",
+					dto_name: "name",
 					component_state: from_str("[\"state\"]").unwrap(),
 				}]),
 			)])
@@ -432,17 +449,17 @@ mod test_handle {
 		}
 	}
 
-	#[derive(Component, Serialize)]
+	#[derive(Component, Serialize, Clone)]
 	struct _A {
 		value: i32,
 	}
 
-	#[derive(Component, Serialize)]
+	#[derive(Component, Serialize, Clone)]
 	struct _B {
 		v: i32,
 	}
 
-	#[derive(Component)]
+	#[derive(Component, Clone)]
 	struct _Fail;
 
 	impl Serialize for _Fail {
@@ -465,13 +482,14 @@ mod test_handle {
 		let entity = app.world_mut().spawn(_A { value: 42 }).id();
 		let entity = app.world().entity(entity);
 
-		_ = SaveContext::handle::<_A>(&mut buffer, entity);
+		_ = SaveContext::handle::<_A, _A>(&mut buffer, entity);
 
 		assert_eq!(
 			HashMap::from([(
 				entity.id(),
 				HashSet::from([ComponentString {
 					component_name: type_name::<_A>(),
+					dto_name: type_name::<_A>(),
 					component_state: from_str(&to_string(&_A { value: 42 }).unwrap()).unwrap()
 				}])
 			)]),
@@ -486,8 +504,8 @@ mod test_handle {
 		let entity = app.world_mut().spawn((_A { value: 42 }, _B { v: 11 })).id();
 		let entity = app.world().entity(entity);
 
-		_ = SaveContext::handle::<_A>(&mut buffer, entity);
-		_ = SaveContext::handle::<_B>(&mut buffer, entity);
+		_ = SaveContext::handle::<_A, _A>(&mut buffer, entity);
+		_ = SaveContext::handle::<_B, _B>(&mut buffer, entity);
 
 		assert_eq!(
 			HashMap::from([(
@@ -495,10 +513,12 @@ mod test_handle {
 				HashSet::from([
 					ComponentString {
 						component_name: type_name::<_A>(),
+						dto_name: type_name::<_A>(),
 						component_state: from_str(&to_string(&_A { value: 42 }).unwrap()).unwrap()
 					},
 					ComponentString {
 						component_name: type_name::<_B>(),
+						dto_name: type_name::<_B>(),
 						component_state: from_str(&to_string(&_B { v: 11 }).unwrap()).unwrap()
 					}
 				])
@@ -514,7 +534,7 @@ mod test_handle {
 		let entity = app.world_mut().spawn(_A { value: 42 }).id();
 		let entity = app.world().entity(entity);
 
-		let result = SaveContext::handle::<_A>(&mut buffer, entity);
+		let result = SaveContext::handle::<_A, _A>(&mut buffer, entity);
 
 		assert!(result.is_ok());
 	}
@@ -526,7 +546,7 @@ mod test_handle {
 		let entity = app.world_mut().spawn(_Fail).id();
 		let entity = app.world().entity(entity);
 
-		let result = SaveContext::handle::<_Fail>(&mut buffer, entity);
+		let result = SaveContext::handle::<_Fail, _Fail>(&mut buffer, entity);
 
 		assert_eq!(
 			Err("Fool! I refuse serialization".to_owned()),

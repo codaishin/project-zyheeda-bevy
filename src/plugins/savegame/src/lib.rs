@@ -19,6 +19,7 @@ use common::{
 use components::save::Save;
 use context::SaveContext;
 use resources::register::Register;
+use serde::Serialize;
 use std::sync::{Arc, Mutex};
 use writer::FileWriter;
 
@@ -29,10 +30,10 @@ impl Plugin for SavegamePlugin {
 		let writer = FileWriter::to_destination("./quick_save.json");
 		let context = Arc::new(Mutex::new(SaveContext::new(writer)));
 
-		Self::register_save_able_component::<Name>(app);
-		Self::register_save_able_component::<Transform>(app);
-		Self::register_save_able_component::<Velocity>(app);
-		Self::register_save_able_component::<PersistentEntity>(app);
+		Self::register_savable_component::<Name>(app);
+		Self::register_savable_component::<Transform>(app);
+		Self::register_savable_component::<Velocity>(app);
+		Self::register_savable_component::<PersistentEntity>(app);
 
 		app.init_resource::<Register>()
 			.add_systems(Startup, Register::update_context(context.clone()).pipe(log))
@@ -50,18 +51,26 @@ impl Plugin for SavegamePlugin {
 impl HandlesSaving for SavegamePlugin {
 	type TSaveEntityMarker = Save;
 
-	fn register_save_able_component<TComponent>(app: &mut App)
+	fn register_savable_component<TComponent>(app: &mut App)
 	where
-		TComponent: Component + serde::Serialize,
+		TComponent: Component + Clone + Serialize,
+	{
+		Self::register_savable_component_dto::<TComponent, TComponent>(app)
+	}
+
+	fn register_savable_component_dto<TComponent, TDto>(app: &mut App)
+	where
+		TComponent: Component + Clone,
+		TDto: From<TComponent> + Serialize,
 	{
 		match app.world_mut().get_resource_mut::<Register>() {
 			None => {
 				let mut register = Register::default();
-				register.register_component::<TComponent>();
+				register.register_component::<TComponent, TDto>();
 				app.insert_resource(register);
 			}
 			Some(mut register) => {
-				register.register_component::<TComponent>();
+				register.register_component::<TComponent, TDto>();
 			}
 		}
 	}
@@ -73,10 +82,10 @@ mod tests {
 	use common::test_tools::utils::SingleThreadedApp;
 	use serde::Serialize;
 
-	#[derive(Component, Serialize)]
+	#[derive(Component, Serialize, Clone)]
 	struct _A;
 
-	#[derive(Component, Serialize)]
+	#[derive(Component, Serialize, Clone)]
 	struct _B;
 
 	fn setup() -> App {
@@ -87,10 +96,10 @@ mod tests {
 	fn register_component() {
 		let mut app = setup();
 
-		SavegamePlugin::register_save_able_component::<_A>(&mut app);
+		SavegamePlugin::register_savable_component::<_A>(&mut app);
 
 		let mut expected = Register::default();
-		expected.register_component::<_A>();
+		expected.register_component::<_A, _A>();
 		assert_eq!(Some(&expected), app.world().get_resource::<Register>());
 	}
 
@@ -98,12 +107,12 @@ mod tests {
 	fn register_components() {
 		let mut app = setup();
 
-		SavegamePlugin::register_save_able_component::<_A>(&mut app);
-		SavegamePlugin::register_save_able_component::<_B>(&mut app);
+		SavegamePlugin::register_savable_component::<_A>(&mut app);
+		SavegamePlugin::register_savable_component::<_B>(&mut app);
 
 		let mut expected = Register::default();
-		expected.register_component::<_A>();
-		expected.register_component::<_B>();
+		expected.register_component::<_A, _A>();
+		expected.register_component::<_B, _B>();
 		assert_eq!(Some(&expected), app.world().get_resource::<Register>());
 	}
 }

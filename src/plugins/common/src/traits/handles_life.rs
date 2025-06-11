@@ -8,6 +8,7 @@ pub trait HandlesLife {
 		+ ChangeLife
 		+ GetterRef<Health>
 		+ From<Health>
+		+ Clone
 		+ Serialize
 		+ Deserialize<'static>;
 }

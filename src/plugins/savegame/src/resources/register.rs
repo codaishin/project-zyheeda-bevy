@@ -30,18 +30,19 @@ impl Register {
 		}
 	}
 
-	pub(crate) fn register_component<T>(&mut self)
+	pub(crate) fn register_component<TComponent, TDto>(&mut self)
 	where
-		T: Component + Serialize,
+		TComponent: Component + Clone,
+		TDto: From<TComponent> + Serialize,
 	{
-		let type_id = TypeId::of::<T>();
+		let type_id = TypeId::of::<TComponent>();
 
 		if self.registered_types.contains(&type_id) {
 			return;
 		}
 
 		self.registered_types.insert(type_id);
-		self.handlers.push(SaveContext::handle::<T>);
+		self.handlers.push(SaveContext::handle::<TComponent, TDto>);
 	}
 }
 
@@ -49,20 +50,20 @@ impl Register {
 mod test_registration {
 	use super::*;
 
-	#[derive(Component, Serialize)]
+	#[derive(Component, Serialize, Clone)]
 	struct _A;
 
-	#[derive(Component, Serialize)]
+	#[derive(Component, Serialize, Clone)]
 	struct _B;
 
 	#[test]
 	fn register_component() {
 		let mut context = Register::default();
 
-		context.register_component::<_A>();
+		context.register_component::<_A, _A>();
 
 		assert_eq!(
-			vec![SaveContext::handle::<_A> as usize],
+			vec![SaveContext::handle::<_A, _A> as usize],
 			context
 				.handlers
 				.into_iter()
@@ -75,13 +76,13 @@ mod test_registration {
 	fn register_components() {
 		let mut register = Register::default();
 
-		register.register_component::<_A>();
-		register.register_component::<_B>();
+		register.register_component::<_A, _A>();
+		register.register_component::<_B, _B>();
 
 		assert_eq!(
 			vec![
-				SaveContext::handle::<_A> as usize,
-				SaveContext::handle::<_B> as usize
+				SaveContext::handle::<_A, _A> as usize,
+				SaveContext::handle::<_B, _B> as usize
 			],
 			register
 				.handlers
@@ -95,11 +96,11 @@ mod test_registration {
 	fn register_components_only_once() {
 		let mut register = Register::default();
 
-		register.register_component::<_A>();
-		register.register_component::<_A>();
+		register.register_component::<_A, _A>();
+		register.register_component::<_A, _A>();
 
 		assert_eq!(
-			vec![SaveContext::handle::<_A> as usize],
+			vec![SaveContext::handle::<_A, _A> as usize],
 			register
 				.handlers
 				.into_iter()

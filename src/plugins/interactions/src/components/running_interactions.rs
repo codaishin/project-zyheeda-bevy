@@ -3,7 +3,7 @@ use common::components::persistent_entity::PersistentEntity;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
-#[derive(Component, Serialize, Deserialize)]
+#[derive(Component, Serialize, Deserialize, Clone)]
 pub(crate) struct RunningInteractions<TActor, TTarget>
 where
 	TActor: Component,
