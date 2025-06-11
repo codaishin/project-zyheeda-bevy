@@ -40,7 +40,13 @@ use common::{
 		},
 		handles_saving::HandlesSaving,
 		handles_settings::HandlesSettings,
-		handles_skill_behaviors::{Contact, HandlesSkillBehaviors, Projection, SkillEntities},
+		handles_skill_behaviors::{
+			Contact,
+			HandlesSkillBehaviors,
+			Projection,
+			SkillEntities,
+			SkillRoot,
+		},
 		prefab::AddPrefabObserver,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
@@ -288,7 +294,10 @@ impl<TDependencies> HandlesSkillBehaviors for BehaviorsPlugin<TDependencies> {
 			.id();
 
 		SkillEntities {
-			root: contact,
+			root: SkillRoot {
+				persistent_entity: persistent_contact,
+				entity: contact,
+			},
 			contact,
 			projection,
 		}

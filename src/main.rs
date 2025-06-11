@@ -71,6 +71,7 @@ fn prepare_game(app: &mut App) {
 	let graphics = GraphicsPlugin::from_plugins(&loading, &interactions, &behaviors);
 	let menus = MenuPlugin::from_plugins(&loading, &settings, &localization, &graphics);
 	let skills = SkillsPlugin::from_plugins(
+		&savegame,
 		&life_cycles,
 		&interactions,
 		&children_assets_dispatch,

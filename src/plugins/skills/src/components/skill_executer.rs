@@ -1,3 +1,5 @@
+pub(crate) mod dto;
+
 use super::SkillTarget;
 use crate::{
 	behaviors::{SkillCaster, build_skill_shape::OnSkillStop, spawn_on::SpawnOn},
@@ -6,16 +8,18 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
+	components::persistent_entity::PersistentEntity,
 	tools::action_key::slot::SlotKey,
 	traits::{
 		handles_effect::HandlesAllEffects,
 		handles_lifetime::HandlesLifetime,
 		handles_skill_behaviors::{HandlesSkillBehaviors, Spawner},
-		try_despawn::TryDespawn,
+		try_despawn::TryDespawnPersistent,
 	},
 };
+use serde::{Deserialize, Serialize};
 
-#[derive(Component, Debug, PartialEq, Default, Clone)]
+#[derive(Component, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
 pub(crate) enum SkillExecuter<TSkillBehavior = RunSkillBehavior> {
 	#[default]
 	Idle,
@@ -23,8 +27,8 @@ pub(crate) enum SkillExecuter<TSkillBehavior = RunSkillBehavior> {
 		slot_key: SlotKey,
 		shape: TSkillBehavior,
 	},
-	StartedStoppable(Entity),
-	Stop(Entity),
+	StartedStoppable(PersistentEntity),
+	Stop(PersistentEntity),
 }
 
 impl<TBehavior> Schedule<TBehavior> for SkillExecuter<TBehavior> {
@@ -54,7 +58,7 @@ impl<TCommands, TBehavior, TLifetimes, TEffects, TSkillBehavior>
 	Execute<TCommands, TLifetimes, TEffects, TSkillBehavior> for SkillExecuter<TBehavior>
 where
 	TBehavior: SpawnSkillBehavior<TCommands>,
-	TCommands: TryDespawn,
+	TCommands: TryDespawnPersistent,
 	TLifetimes: HandlesLifetime + 'static,
 	TEffects: HandlesAllEffects + 'static,
 	TSkillBehavior: HandlesSkillBehaviors + 'static,
@@ -75,8 +79,8 @@ where
 					OnSkillStop::Stop(entity) => SkillExecuter::StartedStoppable(entity),
 				};
 			}
-			SkillExecuter::Stop(skills) => {
-				*self = stop(skills, commands);
+			SkillExecuter::Stop(skill) => {
+				*self = stop(*skill, commands);
 			}
 			_ => {}
 		};
@@ -84,13 +88,13 @@ where
 }
 
 fn stop<TCommands, TSkillShape>(
-	skill: &Entity,
+	skill: PersistentEntity,
 	commands: &mut TCommands,
 ) -> SkillExecuter<TSkillShape>
 where
-	TCommands: TryDespawn,
+	TCommands: TryDespawnPersistent,
 {
-	commands.try_despawn(*skill);
+	commands.try_despawn_persistent(skill);
 	SkillExecuter::Idle
 }
 
@@ -104,7 +108,7 @@ mod tests {
 		tools::{action_key::slot::Side, collider_info::ColliderInfo},
 		traits::{
 			handles_effect::HandlesEffect,
-			handles_skill_behaviors::{Contact, Projection, SkillEntities},
+			handles_skill_behaviors::{Contact, Projection, SkillEntities, SkillRoot},
 			mock::Mock,
 		},
 	};
@@ -146,7 +150,10 @@ mod tests {
 
 		fn spawn_skill(commands: &mut Commands, _: Contact, _: Projection) -> SkillEntities {
 			SkillEntities {
-				root: commands.spawn_empty().id(),
+				root: SkillRoot {
+					entity: commands.spawn_empty().id(),
+					persistent_entity: PersistentEntity::default(),
+				},
 				contact: commands.spawn(_Contact).id(),
 				projection: commands.spawn(_Projection).id(),
 			}
@@ -159,14 +166,14 @@ mod tests {
 	#[derive(Component)]
 	struct _Projection;
 
-	impl TryDespawn for _Commands {
-		fn try_despawn(&mut self, _: Entity) {}
+	impl TryDespawnPersistent for _Commands {
+		fn try_despawn_persistent(&mut self, _: PersistentEntity) {}
 	}
 
 	mock! {
 		_Commands {}
-		impl TryDespawn for _Commands {
-			fn try_despawn(&mut self, entity: Entity);
+		impl TryDespawnPersistent for _Commands {
+			fn try_despawn_persistent(&mut self, entity: PersistentEntity);
 		}
 	}
 
@@ -277,7 +284,7 @@ mod tests {
 		let spawner = Spawner::Center;
 		let target = get_target();
 		let mut commands = Mock_Commands::new_mock(|mock| {
-			mock.expect_try_despawn().return_const(());
+			mock.expect_try_despawn_persistent().return_const(());
 		});
 
 		let executer: _Executer<Mock_Commands> = &mut SkillExecuter::Start {
@@ -318,10 +325,11 @@ mod tests {
 	fn set_to_stoppable_when_stop_on_skill_stop() {
 		let caster = SkillCaster(PersistentEntity::default());
 		let target = get_target();
+		let skill = PersistentEntity::default();
 
 		let mut executer = SkillExecuter::Start {
 			slot_key: SlotKey::BottomHand(Side::Right),
-			shape: _ShapeSlotted(OnSkillStop::Stop(Entity::from_raw(123))),
+			shape: _ShapeSlotted(OnSkillStop::Stop(skill)),
 		};
 
 		{
@@ -329,10 +337,7 @@ mod tests {
 			executer.execute(&mut _Commands, &caster, &target);
 		}
 
-		assert_eq!(
-			SkillExecuter::StartedStoppable(Entity::from_raw(123)),
-			executer
-		);
+		assert_eq!(SkillExecuter::StartedStoppable(skill), executer);
 	}
 
 	#[test]
@@ -349,24 +354,25 @@ mod tests {
 
 	#[test]
 	fn set_to_stop_on_flush_when_set_to_started() {
-		let mut executer = SkillExecuter::<_ShapeSlotted>::StartedStoppable(Entity::from_raw(1));
+		let skill = PersistentEntity::default();
+		let mut executer = SkillExecuter::<_ShapeSlotted>::StartedStoppable(skill);
 
 		executer.flush();
 
-		assert_eq!(SkillExecuter::Stop(Entity::from_raw(1)), executer);
+		assert_eq!(SkillExecuter::Stop(skill), executer);
 	}
 
 	#[test]
 	fn despawn_skill_entity_recursively_on_execute_stop() {
+		let skill = PersistentEntity::default();
 		let caster = SkillCaster(PersistentEntity::default());
 		let target = get_target();
-		let executer: _Executer<Mock_Commands> =
-			&mut SkillExecuter::<Mock_Behavior>::Stop(Entity::from_raw(123));
+		let executer: _Executer<Mock_Commands> = &mut SkillExecuter::<Mock_Behavior>::Stop(skill);
 
 		let mut commands = Mock_Commands::new_mock(|mock| {
-			mock.expect_try_despawn()
+			mock.expect_try_despawn_persistent()
 				.times(1)
-				.with(eq(Entity::from_raw(123)))
+				.with(eq(skill))
 				.return_const(());
 		});
 
@@ -375,10 +381,11 @@ mod tests {
 
 	#[test]
 	fn set_to_idle_on_stop_execution() {
+		let skill = PersistentEntity::default();
 		let caster = SkillCaster(PersistentEntity::default());
 		let target = get_target();
 		let mut commands = _Commands;
-		let mut executer = SkillExecuter::<_ShapeSlotted>::Stop(Entity::from_raw(1));
+		let mut executer = SkillExecuter::<_ShapeSlotted>::Stop(skill);
 
 		{
 			let executer: _Executer<_Commands> = &mut executer;

@@ -62,7 +62,7 @@ mod tests {
 		test_tools::utils::SingleThreadedApp,
 		tools::collider_info::ColliderInfo,
 		traits::{
-			handles_skill_behaviors::{Contact, Projection, SkillEntities},
+			handles_skill_behaviors::{Contact, Projection, SkillEntities, SkillRoot},
 			intersect_at::IntersectAt,
 			nested_mock::NestedMocks,
 		},
@@ -129,7 +129,10 @@ mod tests {
 
 		fn spawn_skill(commands: &mut Commands, _: Contact, _: Projection) -> SkillEntities {
 			SkillEntities {
-				root: commands.spawn_empty().id(),
+				root: SkillRoot {
+					entity: commands.spawn_empty().id(),
+					persistent_entity: PersistentEntity::default(),
+				},
 				contact: commands.spawn(_Contact).id(),
 				projection: commands.spawn(_Projection).id(),
 			}

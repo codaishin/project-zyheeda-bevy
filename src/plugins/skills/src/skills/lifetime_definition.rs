@@ -19,3 +19,13 @@ impl From<LifeTimeDefinition<DurationDto>> for LifeTimeDefinition {
 		}
 	}
 }
+
+impl From<LifeTimeDefinition> for LifeTimeDefinition<DurationDto> {
+	fn from(lifetime_def_duration: LifeTimeDefinition) -> Self {
+		match lifetime_def_duration {
+			LifeTimeDefinition::UntilStopped => Self::UntilStopped,
+			LifeTimeDefinition::Infinite => Self::Infinite,
+			LifeTimeDefinition::UntilOutlived(dto) => Self::UntilOutlived(DurationDto::from(dto)),
+		}
+	}
+}

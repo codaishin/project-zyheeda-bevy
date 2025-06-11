@@ -1,5 +1,7 @@
 pub(crate) mod run_skill_behavior;
 
+use crate::skills::RunSkillBehavior;
+
 use super::{AnimationStrategy, Skill};
 use common::{
 	dto::duration::DurationDto,
@@ -15,7 +17,7 @@ use run_skill_behavior::RunSkillBehaviorDto;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, time::Duration};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub(crate) struct SkillDto {
 	token: String,
 	cast_time: DurationDto,
@@ -42,9 +44,24 @@ impl TryLoadFrom<SkillDto> for Skill {
 			token: Token(skill_data.token),
 			cast_time: Duration::from(skill_data.cast_time),
 			animation: skill_data.animation,
-			behavior: skill_data.behavior.into(),
+			behavior: RunSkillBehavior::from(skill_data.behavior),
 			compatible_items: CompatibleItems(skill_data.is_usable_with),
 			icon: skill_data.icon.map(|icon| asset_server.load_asset(icon)),
 		})
+	}
+}
+
+impl From<Skill> for SkillDto {
+	fn from(skill: Skill) -> Self {
+		Self {
+			token: skill.token.0,
+			cast_time: DurationDto::from(skill.cast_time),
+			animation: skill.animation,
+			behavior: RunSkillBehaviorDto::from(skill.behavior),
+			is_usable_with: skill.compatible_items.0,
+			icon: skill
+				.icon
+				.and_then(|icon| icon.path().map(|path| Path::from(path.to_string()))),
+		}
 	}
 }

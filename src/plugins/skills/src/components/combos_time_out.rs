@@ -1,9 +1,10 @@
 use crate::traits::{Flush, is_timed_out::IsTimedOut};
 use bevy::ecs::component::Component;
 use common::traits::update_cumulative::CumulativeUpdate;
+use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
-#[derive(Component)]
+#[derive(Component, Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct CombosTimeOut {
 	max_duration: Duration,
 	duration: Duration,

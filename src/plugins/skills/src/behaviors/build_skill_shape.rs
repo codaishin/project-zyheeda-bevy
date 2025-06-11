@@ -5,31 +5,37 @@ pub mod spawn_shield;
 use super::{SkillCaster, SkillTarget};
 use crate::traits::skill_builder::{SkillBuilder, SkillShape};
 use bevy::prelude::*;
-use common::traits::{
-	handles_lifetime::HandlesLifetime,
-	handles_skill_behaviors::{HandlesSkillBehaviors, Spawner},
+use common::{
+	components::persistent_entity::PersistentEntity,
+	traits::{
+		handles_lifetime::HandlesLifetime,
+		handles_skill_behaviors::{HandlesSkillBehaviors, Spawner},
+	},
 };
 use spawn_ground_target::SpawnGroundTargetedAoe;
 use spawn_projectile::SpawnProjectile;
 use spawn_shield::SpawnShield;
 
+#[cfg(test)]
 pub(crate) type BuildSkillShapeFn =
 	for<'a> fn(&'a mut Commands, &SkillCaster, Spawner, &SkillTarget) -> SkillShape;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum OnSkillStop {
 	Ignore,
-	Stop(Entity),
+	Stop(PersistentEntity),
 }
 
 #[derive(PartialEq, Debug, Clone)]
 pub(crate) enum BuildSkillShape {
-	Fn(BuildSkillShapeFn),
 	GroundTargetedAoe(SpawnGroundTargetedAoe),
 	Projectile(SpawnProjectile),
 	Shield(SpawnShield),
+	#[cfg(test)]
+	Fn(BuildSkillShapeFn),
 }
 
+#[cfg(test)]
 impl Default for BuildSkillShape {
 	fn default() -> Self {
 		Self::Fn(|commands, _, _, _| {
@@ -45,8 +51,10 @@ impl Default for BuildSkillShape {
 }
 
 impl BuildSkillShape {
+	#[cfg(test)]
 	pub(crate) const NO_SHAPE: BuildSkillShape = BuildSkillShape::Fn(Self::no_shape);
 
+	#[cfg(test)]
 	fn no_shape(
 		commands: &mut Commands,
 		_: &SkillCaster,
@@ -54,8 +62,9 @@ impl BuildSkillShape {
 		_: &SkillTarget,
 	) -> SkillShape {
 		let contact = commands.spawn_empty().id();
-		let projection = commands.spawn(ChildOf(contact)).id();
-		let on_skill_stop = OnSkillStop::Stop(contact);
+		let persistent_contact = PersistentEntity::default();
+		let projection = commands.spawn((ChildOf(contact), persistent_contact)).id();
+		let on_skill_stop = OnSkillStop::Stop(persistent_contact);
 
 		SkillShape {
 			contact,
@@ -76,7 +85,6 @@ impl BuildSkillShape {
 		TSkillBehaviors: HandlesSkillBehaviors + 'static,
 	{
 		match self {
-			Self::Fn(func) => func(commands, caster, spawner, target),
 			Self::GroundTargetedAoe(gt) => {
 				gt.build::<TLifetimes, TSkillBehaviors>(commands, caster, spawner, target)
 			}
@@ -86,6 +94,8 @@ impl BuildSkillShape {
 			Self::Shield(sh) => {
 				sh.build::<TLifetimes, TSkillBehaviors>(commands, caster, spawner, target)
 			}
+			#[cfg(test)]
+			Self::Fn(func) => func(commands, caster, spawner, target),
 		}
 	}
 }

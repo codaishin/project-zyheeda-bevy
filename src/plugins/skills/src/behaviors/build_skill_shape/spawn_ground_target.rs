@@ -39,6 +39,16 @@ impl From<SpawnGroundTargetedAoe<DurationDto>> for SpawnGroundTargetedAoe {
 	}
 }
 
+impl From<SpawnGroundTargetedAoe> for SpawnGroundTargetedAoe<DurationDto> {
+	fn from(with_lifetime_duration: SpawnGroundTargetedAoe) -> Self {
+		Self {
+			lifetime: with_lifetime_duration.lifetime.into(),
+			max_range: with_lifetime_duration.max_range,
+			radius: with_lifetime_duration.radius,
+		}
+	}
+}
+
 impl SpawnShape for SpawnGroundTargetedAoe {
 	fn spawn_shape<TSkillBehaviors>(
 		&self,

@@ -31,9 +31,14 @@ pub struct Projection {
 }
 
 pub struct SkillEntities {
-	pub root: Entity,
+	pub root: SkillRoot,
 	pub contact: Entity,
 	pub projection: Entity,
+}
+
+pub struct SkillRoot {
+	pub entity: Entity,
+	pub persistent_entity: PersistentEntity,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use shape::SkillShapeDto;
 use start_behavior::SkillBehaviorDto;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub(crate) struct SkillBehaviorConfigDto {
 	shape: SkillShapeDto,
 	contact: Vec<SkillBehaviorDto>,
@@ -24,9 +24,25 @@ impl From<SkillBehaviorConfigDto> for SkillBehaviorConfig {
 		let contact = value.contact.into_iter().map(SkillBehavior::from);
 		let projection = value.projection.into_iter().map(SkillBehavior::from);
 
-		Self::from_shape(BuildSkillShape::from(value.shape))
-			.spawning_on(value.spawn_on)
-			.with_contact_behaviors(contact.collect())
-			.with_projection_behaviors(projection.collect())
+		Self {
+			shape: BuildSkillShape::from(value.shape),
+			contact: contact.collect(),
+			projection: projection.collect(),
+			spawn_on: value.spawn_on,
+		}
+	}
+}
+
+impl From<SkillBehaviorConfig> for SkillBehaviorConfigDto {
+	fn from(value: SkillBehaviorConfig) -> Self {
+		let contact = value.contact.into_iter().map(SkillBehaviorDto::from);
+		let projection = value.projection.into_iter().map(SkillBehaviorDto::from);
+
+		Self {
+			shape: SkillShapeDto::from(value.shape),
+			contact: contact.collect(),
+			projection: projection.collect(),
+			spawn_on: value.spawn_on,
+		}
 	}
 }

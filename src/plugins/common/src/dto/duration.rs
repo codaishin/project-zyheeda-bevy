@@ -12,6 +12,14 @@ impl From<DurationDto> for Duration {
 	}
 }
 
+impl From<Duration> for DurationDto {
+	fn from(duration: Duration) -> Self {
+		DurationDto {
+			seconds: duration.as_secs_f32(),
+		}
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -23,5 +31,14 @@ mod tests {
 		let duration = Duration::from(data);
 
 		assert_eq!(Duration::from_secs_f32(42.11), duration);
+	}
+
+	#[test]
+	fn convert_from_duration() {
+		let duration = Duration::from_secs_f32(42.11);
+
+		let data = DurationDto::from(duration);
+
+		assert_eq!(DurationDto { seconds: 42.11 }, data);
 	}
 }

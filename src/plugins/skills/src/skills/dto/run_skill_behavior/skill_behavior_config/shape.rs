@@ -7,7 +7,7 @@ use crate::behaviors::build_skill_shape::{
 use common::dto::duration::DurationDto;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub(crate) enum SkillShapeDto {
 	GroundTargetedAoe(SpawnGroundTargetedAoe<DurationDto>),
 	Projectile(SpawnProjectile),
@@ -20,6 +20,18 @@ impl From<SkillShapeDto> for BuildSkillShape {
 			SkillShapeDto::GroundTargetedAoe(v) => Self::GroundTargetedAoe(v.into()),
 			SkillShapeDto::Projectile(v) => Self::Projectile(v),
 			SkillShapeDto::Shield(v) => Self::Shield(v),
+		}
+	}
+}
+
+impl From<BuildSkillShape> for SkillShapeDto {
+	fn from(value: BuildSkillShape) -> Self {
+		match value {
+			BuildSkillShape::GroundTargetedAoe(v) => SkillShapeDto::GroundTargetedAoe(v.into()),
+			BuildSkillShape::Projectile(v) => SkillShapeDto::Projectile(v),
+			BuildSkillShape::Shield(v) => SkillShapeDto::Shield(v),
+			#[cfg(test)]
+			BuildSkillShape::Fn(_) => panic!("FN CANNOT BE SERIALIZED"),
 		}
 	}
 }

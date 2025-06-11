@@ -14,7 +14,7 @@ use common::{
 	tools::{
 		action_key::slot::{Combo, SlotKey},
 		item_type::{CompatibleItems, ItemType},
-		ordered_hash_map::{Entry, OrderedHashMap},
+		ordered_hash_map::{Entry, IntoIter, OrderedHashMap},
 	},
 	traits::{
 		accessors::get::{GetMut, GetRef},
@@ -31,6 +31,15 @@ pub struct ComboNode<TSkill = Skill>(OrderedHashMap<SlotKey, (TSkill, ComboNode<
 impl<TSkill> ComboNode<TSkill> {
 	pub fn new<const N: usize>(combos: [(SlotKey, (TSkill, ComboNode<TSkill>)); N]) -> Self {
 		Self(OrderedHashMap::from(combos))
+	}
+}
+
+impl IntoIterator for ComboNode {
+	type Item = (SlotKey, (Skill, ComboNode));
+	type IntoIter = IntoIter<SlotKey, (Skill, ComboNode)>;
+
+	fn into_iter(self) -> Self::IntoIter {
+		self.0.into_iter()
 	}
 }
 
