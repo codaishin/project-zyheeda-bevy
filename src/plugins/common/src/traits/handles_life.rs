@@ -1,7 +1,7 @@
 use super::accessors::get::GetterRef;
 use crate::attributes::health::Health;
 use bevy::{ecs::component::Mutable, prelude::Component};
-use serde::{Deserialize, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 
 pub trait HandlesLife {
 	type TLife: Component<Mutability = Mutable>
@@ -10,7 +10,7 @@ pub trait HandlesLife {
 		+ From<Health>
 		+ Clone
 		+ Serialize
-		+ Deserialize<'static>;
+		+ DeserializeOwned;
 }
 
 pub trait ChangeLife {

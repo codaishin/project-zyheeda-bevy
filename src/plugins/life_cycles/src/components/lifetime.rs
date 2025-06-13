@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
 #[derive(Component, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+#[serde(transparent)]
 pub(crate) struct Lifetime(pub(crate) Duration);
 
 impl Lifetime {

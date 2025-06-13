@@ -5,6 +5,7 @@ use std::{ops::RangeBounds, vec::Drain};
 
 #[derive(Component, Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
 pub struct GravityAffected {
+	#[serde(default, skip_serializing_if = "Vec::is_empty")]
 	pulls: Vec<GravityPull>,
 }
 

@@ -3,14 +3,13 @@ use crate::{
 	components::queue::{Queue, State},
 	skills::{Activation, QueuedSkill},
 };
-use common::tools::action_key::slot::SlotKey;
+use common::{dto::duration_secs_f32::DurationSecsF32, tools::action_key::slot::SlotKey};
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct QueueDto {
 	queue: Vec<QueuedSkillDto>,
-	duration: Option<Duration>,
+	duration: Option<DurationSecsF32>,
 	state: State,
 }
 
@@ -18,7 +17,7 @@ impl From<Queue> for QueueDto {
 	fn from(queue: Queue) -> Self {
 		Self {
 			queue: queue.queue.into_iter().map(QueuedSkillDto::from).collect(),
-			duration: queue.duration,
+			duration: queue.duration.map(DurationSecsF32::from),
 			state: queue.state,
 		}
 	}

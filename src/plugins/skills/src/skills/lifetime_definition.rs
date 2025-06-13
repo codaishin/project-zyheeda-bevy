@@ -15,7 +15,9 @@ impl From<LifeTimeDefinition<DurationSecsF32>> for LifeTimeDefinition {
 		match lifetime_def_dto {
 			LifeTimeDefinition::UntilStopped => Self::UntilStopped,
 			LifeTimeDefinition::Infinite => Self::Infinite,
-			LifeTimeDefinition::UntilOutlived(dto) => Self::UntilOutlived(Duration::from(dto)),
+			LifeTimeDefinition::UntilOutlived(duration) => {
+				Self::UntilOutlived(Duration::from(duration))
+			}
 		}
 	}
 }
@@ -25,8 +27,8 @@ impl From<LifeTimeDefinition> for LifeTimeDefinition<DurationSecsF32> {
 		match lifetime_def_duration {
 			LifeTimeDefinition::UntilStopped => Self::UntilStopped,
 			LifeTimeDefinition::Infinite => Self::Infinite,
-			LifeTimeDefinition::UntilOutlived(dto) => {
-				Self::UntilOutlived(DurationSecsF32::from(dto))
+			LifeTimeDefinition::UntilOutlived(duration) => {
+				Self::UntilOutlived(DurationSecsF32::from(duration))
 			}
 		}
 	}
