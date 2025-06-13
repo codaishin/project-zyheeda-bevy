@@ -19,23 +19,27 @@ pub trait HandlesSkillBehaviors {
 	) -> SkillEntities;
 }
 
+#[derive(Debug, Clone)]
 pub struct Contact {
 	pub shape: Shape,
 	pub integrity: Integrity,
 	pub motion: Motion,
 }
 
+#[derive(Debug, Clone)]
 pub struct Projection {
 	pub shape: Shape,
 	pub offset: Option<ProjectionOffset>,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct SkillEntities {
 	pub root: SkillRoot,
 	pub contact: Entity,
 	pub projection: Entity,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct SkillRoot {
 	pub entity: Entity,
 	pub persistent_entity: PersistentEntity,
@@ -54,13 +58,13 @@ pub enum Shape {
 	},
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub enum Integrity {
 	Solid,
 	Fragile { destroyed_by: HashSet<Blocker> },
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum Motion {
 	HeldBy {
 		caster: PersistentEntity,
