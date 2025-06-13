@@ -2,7 +2,7 @@ use crate::components::gravity_affected::{GravityAffected, GravityPull};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use common::{
-	components::{immobilized::Immobilized, persistent_entity::PersistentEntity},
+	components::immobilized::Immobilized,
 	resources::persistent_entities::PersistentEntities,
 	traits::{try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
 };
@@ -15,12 +15,11 @@ pub(crate) fn apply_gravity_pull(
 	mut persistent_entities: ResMut<PersistentEntities>,
 	transforms: Query<&GlobalTransform>,
 ) {
-	let translation = |entity| {
-		let entity = persistent_entities.get_entity(&entity)?;
-		let transform = transforms.get(entity).ok()?;
-		Some(transform.translation())
+	let mut get_pull_center = |pull: &GravityPull| {
+		let towards = persistent_entities.get_entity(&pull.towards)?;
+		let translation = transforms.get(towards).ok()?.translation();
+		Some(translation.with_y(0.))
 	};
-	let mut get_pull_center = pull_towards(translation);
 	let delta_secs = delta.as_secs_f32();
 
 	for (entity, transform, mut gravity_affected) in &mut agents {
@@ -29,7 +28,7 @@ pub(crate) fn apply_gravity_pull(
 			continue;
 		}
 
-		let position = transform.translation;
+		let position = transform.translation.with_y(0.);
 		let mut pull_sum = None;
 
 		for pull in gravity_affected.drain_pulls(..) {
@@ -47,16 +46,7 @@ pub(crate) fn apply_gravity_pull(
 			continue;
 		};
 
-		commands.try_insert_on(entity, ForcedMovement::new(Velocity::linear(pull_sum)));
-	}
-}
-
-fn pull_towards(
-	mut translation: impl FnMut(PersistentEntity) -> Option<Vec3>,
-) -> impl FnMut(&GravityPull) -> Option<Vec3> {
-	move |GravityPull { towards, .. }: &GravityPull| {
-		let translation = translation(*towards)?;
-		Some(Vec3::new(translation.x, 0., translation.z))
+		commands.try_insert_on(entity, (Immobilized, Velocity::linear(pull_sum)));
 	}
 }
 
@@ -70,7 +60,7 @@ fn get_pull_vector(
 
 	match predict(direction, *pull.strength, delta_secs) {
 		Predict::Overshoot => Some(direction / delta_secs),
-		Predict::NormalAdvance => Some(direction.normalize() * *pull.strength),
+		Predict::NormalAdvance => Some(direction.normalize_or_zero() * *pull.strength),
 	}
 }
 
@@ -88,15 +78,6 @@ fn predict(direction: Vec3, pull_strength: f32, delta_secs: f32) -> Predict {
 	Predict::NormalAdvance
 }
 
-#[derive(Bundle)]
-struct ForcedMovement(Velocity, Immobilized);
-
-impl ForcedMovement {
-	fn new(velocity: Velocity) -> Self {
-		ForcedMovement(velocity, Immobilized)
-	}
-}
-
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -108,6 +89,7 @@ mod tests {
 		prelude::Transform,
 	};
 	use common::{
+		components::persistent_entity::PersistentEntity,
 		test_tools::utils::SingleThreadedApp,
 		tools::UnitsPerSecond,
 		traits::{
@@ -384,6 +366,69 @@ mod tests {
 				Some(&Velocity::linear(Vec3::new(-3., 0., 4.).normalize() * 10.)),
 				Some(&Immobilized)
 			),
+			(agent.get::<Velocity>(), agent.get::<Immobilized>())
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn compute_direction_from_zero_elevation_of_agent() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let towards = PersistentEntity::default();
+		app.world_mut().spawn((
+			towards,
+			GlobalTransform::from(Transform::from_translation(Vec3::new(0., 0., 4.))),
+		));
+		let agent = app
+			.world_mut()
+			.spawn((
+				Transform::from_xyz(3., 1., 0.),
+				GravityAffected::new([GravityPull {
+					strength: UnitsPerSecond::new(1.),
+					towards,
+				}]),
+			))
+			.id();
+
+		app.world_mut()
+			.run_system_once_with(apply_gravity_pull, Duration::from_millis(499))?;
+
+		let agent = app.world().entity(agent);
+		assert_eq!(
+			(
+				Some(&Velocity::linear(Vec3::new(-3., 0., 4.).normalize())),
+				Some(&Immobilized)
+			),
+			(agent.get::<Velocity>(), agent.get::<Immobilized>())
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn use_pull_strength_zero_when_delta_zero_and_direction_zero() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let towards = PersistentEntity::default();
+		app.world_mut().spawn((
+			towards,
+			GlobalTransform::from(Transform::from_translation(Vec3::new(3., 0., 0.))),
+		));
+		let agent = app
+			.world_mut()
+			.spawn((
+				Transform::from_xyz(3., 0., 0.),
+				GravityAffected::new([GravityPull {
+					strength: UnitsPerSecond::new(10.),
+					towards,
+				}]),
+			))
+			.id();
+
+		app.world_mut()
+			.run_system_once_with(apply_gravity_pull, Duration::ZERO)?;
+
+		let agent = app.world().entity(agent);
+		assert_eq!(
+			(Some(&Velocity::linear(Vec3::ZERO)), Some(&Immobilized)),
 			(agent.get::<Velocity>(), agent.get::<Immobilized>())
 		);
 		Ok(())
