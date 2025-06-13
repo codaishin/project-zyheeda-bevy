@@ -38,7 +38,7 @@ use resources::{
 	track_interaction_duplicates::TrackInteractionDuplicates,
 	track_ray_interactions::TrackRayInteractions,
 };
-use serde::Serialize;
+use serde::{Serialize, de::DeserializeOwned};
 use std::marker::PhantomData;
 use systems::{
 	gravity_affected::apply_gravity_pull,
@@ -117,16 +117,18 @@ struct CollisionSystems;
 trait AddInteraction {
 	fn add_interaction<TActor, TTarget, TSaveGame>(&mut self) -> &mut Self
 	where
-		TActor: ActOn<TTarget> + Clone + Component<Mutability = Mutable> + Serialize,
-		TTarget: Component<Mutability = Mutable> + Clone + Serialize,
+		TActor:
+			ActOn<TTarget> + Clone + Component<Mutability = Mutable> + Serialize + DeserializeOwned,
+		TTarget: Component<Mutability = Mutable> + Clone + Serialize + DeserializeOwned,
 		TSaveGame: HandlesSaving;
 }
 
 impl AddInteraction for App {
 	fn add_interaction<TActor, TTarget, TSaveGame>(&mut self) -> &mut Self
 	where
-		TActor: ActOn<TTarget> + Clone + Component<Mutability = Mutable> + Serialize,
-		TTarget: Component<Mutability = Mutable> + Clone + Serialize,
+		TActor:
+			ActOn<TTarget> + Clone + Component<Mutability = Mutable> + Serialize + DeserializeOwned,
+		TTarget: Component<Mutability = Mutable> + Clone + Serialize + DeserializeOwned,
 		TSaveGame: HandlesSaving,
 	{
 		TSaveGame::register_savable_component::<TActor>(self);
