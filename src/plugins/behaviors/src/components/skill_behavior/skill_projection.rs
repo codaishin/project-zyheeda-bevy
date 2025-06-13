@@ -5,6 +5,7 @@ use common::{
 	traits::{
 		handles_destruction::HandlesDestruction,
 		handles_interactions::HandlesInteractions,
+		handles_saving::SavableComponent,
 		handles_skill_behaviors::{Projection, ProjectionOffset, Shape},
 		prefab::Prefab,
 	},
@@ -37,4 +38,8 @@ where
 		self.shape
 			.prefab::<TInteractions, TLifeCycles>(entity, offset)
 	}
+}
+
+impl SavableComponent for SkillProjection {
+	type TDto = Self;
 }

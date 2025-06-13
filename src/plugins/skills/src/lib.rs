@@ -144,10 +144,10 @@ where
 	}
 
 	fn skill_execution(&self, app: &mut App) {
-		TSaveGame::register_savable_component_dto::<CombosTimeOut, CombosTimeOutDto>(app);
-		TSaveGame::register_savable_component_dto::<Combos, CombosDto>(app);
-		TSaveGame::register_savable_component_dto::<Queue, QueueDto>(app);
-		TSaveGame::register_savable_component_dto::<SkillExecuter, SkillExecuterDto>(app);
+		TSaveGame::register_savable_component::<CombosTimeOut>(app);
+		TSaveGame::register_savable_component::<Combos>(app);
+		TSaveGame::register_savable_component::<Queue>(app);
+		TSaveGame::register_savable_component::<SkillExecuter>(app);
 
 		let get_inputs = get_inputs::<TSettings::TKeyMap<SlotKey>, ButtonInput<UserInput>>;
 		let execute_skill = SkillExecuter::<RunSkillBehavior>::execute_system::<

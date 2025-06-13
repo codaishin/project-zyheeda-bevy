@@ -21,7 +21,7 @@ use common::{
 		handles_interactions::{BeamParameters, HandlesInteractions},
 		handles_life::HandlesLife,
 		handles_lifetime::HandlesLifetime,
-		handles_saving::HandlesSaving,
+		handles_saving::{HandlesSaving, SavableComponent},
 		thread_safe::ThreadSafe,
 	},
 };
@@ -38,7 +38,6 @@ use resources::{
 	track_interaction_duplicates::TrackInteractionDuplicates,
 	track_ray_interactions::TrackRayInteractions,
 };
-use serde::{Serialize, de::DeserializeOwned};
 use std::marker::PhantomData;
 use systems::{
 	gravity_affected::apply_gravity_pull,
@@ -117,18 +116,16 @@ struct CollisionSystems;
 trait AddInteraction {
 	fn add_interaction<TActor, TTarget, TSaveGame>(&mut self) -> &mut Self
 	where
-		TActor:
-			ActOn<TTarget> + Clone + Component<Mutability = Mutable> + Serialize + DeserializeOwned,
-		TTarget: Component<Mutability = Mutable> + Clone + Serialize + DeserializeOwned,
+		TActor: ActOn<TTarget> + Component<Mutability = Mutable> + SavableComponent,
+		TTarget: Component<Mutability = Mutable> + SavableComponent,
 		TSaveGame: HandlesSaving;
 }
 
 impl AddInteraction for App {
 	fn add_interaction<TActor, TTarget, TSaveGame>(&mut self) -> &mut Self
 	where
-		TActor:
-			ActOn<TTarget> + Clone + Component<Mutability = Mutable> + Serialize + DeserializeOwned,
-		TTarget: Component<Mutability = Mutable> + Clone + Serialize + DeserializeOwned,
+		TActor: ActOn<TTarget> + Component<Mutability = Mutable> + SavableComponent,
+		TTarget: Component<Mutability = Mutable> + SavableComponent,
 		TSaveGame: HandlesSaving,
 	{
 		TSaveGame::register_savable_component::<TActor>(self);

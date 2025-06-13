@@ -1,7 +1,11 @@
 use bevy::prelude::*;
 use common::{
 	attributes::health::Health,
-	traits::{accessors::get::GetterRef, handles_life::ChangeLife},
+	traits::{
+		accessors::get::GetterRef,
+		handles_life::ChangeLife,
+		handles_saving::SavableComponent,
+	},
 };
 use serde::{Deserialize, Serialize};
 
@@ -29,6 +33,10 @@ impl GetterRef<Health> for Life {
 
 		health
 	}
+}
+
+impl SavableComponent for Life {
+	type TDto = Self;
 }
 
 #[cfg(test)]

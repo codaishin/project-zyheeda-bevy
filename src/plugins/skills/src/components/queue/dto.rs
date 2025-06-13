@@ -1,13 +1,19 @@
 use crate::{
 	SkillDto,
 	components::queue::{Queue, State},
-	skills::{Activation, QueuedSkill},
+	skills::{Activation, QueuedSkill, Skill},
 };
-use common::{dto::duration_secs_f32::DurationSecsF32, tools::action_key::slot::SlotKey};
+use common::{
+	dto::duration_secs_f32::DurationSecsF32,
+	errors::Unreachable,
+	tools::action_key::slot::SlotKey,
+	traits::{handles_custom_assets::TryLoadFrom, load_asset::LoadAsset},
+};
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub(crate) struct QueueDto {
+pub struct QueueDto {
 	queue: Vec<QueuedSkillDto>,
 	duration: Option<DurationSecsF32>,
 	state: State,
@@ -20,6 +26,34 @@ impl From<Queue> for QueueDto {
 			duration: queue.duration.map(DurationSecsF32::from),
 			state: queue.state,
 		}
+	}
+}
+
+impl TryLoadFrom<QueueDto> for Queue {
+	type TInstantiationError = Unreachable;
+
+	fn try_load_from<TLoadAsset>(
+		QueueDto {
+			queue,
+			duration,
+			state,
+		}: QueueDto,
+		asset_server: &mut TLoadAsset,
+	) -> Result<Self, Self::TInstantiationError>
+	where
+		TLoadAsset: LoadAsset,
+	{
+		Ok(Self {
+			queue: queue
+				.into_iter()
+				.map(|skill| {
+					let Ok(skill) = QueuedSkill::try_load_from(skill, asset_server);
+					skill
+				})
+				.collect(),
+			duration: duration.map(Duration::from),
+			state,
+		})
 	}
 }
 
@@ -37,5 +71,29 @@ impl From<QueuedSkill> for QueuedSkillDto {
 			slot_key: skill.slot_key,
 			mode: skill.mode,
 		}
+	}
+}
+
+impl TryLoadFrom<QueuedSkillDto> for QueuedSkill {
+	type TInstantiationError = Unreachable;
+
+	fn try_load_from<TLoadAsset>(
+		QueuedSkillDto {
+			skill,
+			slot_key,
+			mode,
+		}: QueuedSkillDto,
+		asset_server: &mut TLoadAsset,
+	) -> Result<Self, Self::TInstantiationError>
+	where
+		TLoadAsset: LoadAsset,
+	{
+		let Ok(skill) = Skill::try_load_from(skill, asset_server);
+
+		Ok(Self {
+			skill,
+			slot_key,
+			mode,
+		})
 	}
 }

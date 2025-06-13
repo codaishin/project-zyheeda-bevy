@@ -1,4 +1,5 @@
-pub mod node_entry_mut;
+pub(crate) mod dto;
+pub(crate) mod node_entry_mut;
 
 use crate::{
 	skills::Skill,

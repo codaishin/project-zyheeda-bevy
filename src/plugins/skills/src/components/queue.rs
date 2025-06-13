@@ -1,6 +1,7 @@
 pub(crate) mod dto;
 
 use crate::{
+	QueueDto,
 	skills::{Activation, AnimationStrategy, QueuedSkill, RunSkillBehavior, Skill, SkillState},
 	traits::{
 		Enqueue,
@@ -15,7 +16,7 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	tools::action_key::slot::SlotKey,
-	traits::{iterate::Iterate, state_duration::StateDuration},
+	traits::{handles_saving::SavableComponent, iterate::Iterate, state_duration::StateDuration},
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -106,6 +107,10 @@ impl IterAddedMut<QueuedSkill> for Queue {
 
 		self.queue.iter_mut().skip(unchanged_length)
 	}
+}
+
+impl SavableComponent for Queue {
+	type TDto = QueueDto;
 }
 
 fn unchanged_length(Queue { queue, state, .. }: &Queue) -> usize {

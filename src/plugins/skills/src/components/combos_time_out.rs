@@ -1,8 +1,11 @@
 pub(crate) mod dto;
 
-use crate::traits::{Flush, is_timed_out::IsTimedOut};
+use crate::{
+	CombosTimeOutDto,
+	traits::{Flush, is_timed_out::IsTimedOut},
+};
 use bevy::ecs::component::Component;
-use common::traits::update_cumulative::CumulativeUpdate;
+use common::traits::{handles_saving::SavableComponent, update_cumulative::CumulativeUpdate};
 use std::time::Duration;
 
 #[derive(Component, Debug, PartialEq, Eq, Hash, Clone, Copy)]
@@ -36,6 +39,10 @@ impl Flush for CombosTimeOut {
 	fn flush(&mut self) {
 		self.duration = Duration::ZERO;
 	}
+}
+
+impl SavableComponent for CombosTimeOut {
+	type TDto = CombosTimeOutDto;
 }
 
 #[cfg(test)]

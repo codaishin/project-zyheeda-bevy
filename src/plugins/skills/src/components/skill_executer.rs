@@ -2,6 +2,7 @@ pub(crate) mod dto;
 
 use super::SkillTarget;
 use crate::{
+	SkillExecuterDto,
 	behaviors::{SkillCaster, build_skill_shape::OnSkillStop, spawn_on::SpawnOn},
 	skills::RunSkillBehavior,
 	traits::{Execute, Flush, Schedule, spawn_skill_behavior::SpawnSkillBehavior},
@@ -13,6 +14,7 @@ use common::{
 	traits::{
 		handles_effect::HandlesAllEffects,
 		handles_lifetime::HandlesLifetime,
+		handles_saving::SavableComponent,
 		handles_skill_behaviors::{HandlesSkillBehaviors, Spawner},
 		try_despawn::TryDespawnPersistent,
 	},
@@ -52,6 +54,10 @@ impl<TBehavior> Flush for SkillExecuter<TBehavior> {
 			_ => {}
 		}
 	}
+}
+
+impl SavableComponent for SkillExecuter {
+	type TDto = SkillExecuterDto;
 }
 
 impl<TCommands, TBehavior, TLifetimes, TEffects, TSkillBehavior>
