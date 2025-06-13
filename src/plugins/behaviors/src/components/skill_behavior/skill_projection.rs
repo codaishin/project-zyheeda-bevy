@@ -9,8 +9,9 @@ use common::{
 		prefab::Prefab,
 	},
 };
+use serde::{Deserialize, Serialize};
 
-#[derive(Component, Debug, Clone)]
+#[derive(Component, Debug, Clone, Serialize, Deserialize)]
 pub struct SkillProjection {
 	pub shape: Shape,
 	pub offset: Option<ProjectionOffset>,

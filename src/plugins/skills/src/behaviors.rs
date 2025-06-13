@@ -39,13 +39,14 @@ impl From<PersistentEntity> for SkillCaster {
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct SkillBehaviorConfig {
-	shape: BuildSkillShape,
-	contact: Vec<SkillBehavior>,
-	projection: Vec<SkillBehavior>,
+	pub(crate) shape: BuildSkillShape,
+	pub(crate) contact: Vec<SkillBehavior>,
+	pub(crate) projection: Vec<SkillBehavior>,
 	pub(crate) spawn_on: SpawnOn,
 }
 
 impl SkillBehaviorConfig {
+	#[cfg(test)]
 	pub(crate) fn from_shape(shape: BuildSkillShape) -> Self {
 		Self {
 			shape,
@@ -55,6 +56,7 @@ impl SkillBehaviorConfig {
 		}
 	}
 
+	#[cfg(test)]
 	pub(crate) fn spawning_on(self, spawn_on: SpawnOn) -> Self {
 		Self {
 			shape: self.shape,
@@ -64,6 +66,7 @@ impl SkillBehaviorConfig {
 		}
 	}
 
+	#[cfg(test)]
 	pub(crate) fn with_contact_behaviors(self, contact: Vec<SkillBehavior>) -> Self {
 		Self {
 			shape: self.shape,
@@ -73,6 +76,7 @@ impl SkillBehaviorConfig {
 		}
 	}
 
+	#[cfg(test)]
 	pub(crate) fn with_projection_behaviors(self, projection: Vec<SkillBehavior>) -> Self {
 		Self {
 			shape: self.shape,

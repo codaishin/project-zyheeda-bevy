@@ -21,6 +21,7 @@ use common::{
 		handles_interactions::{BeamParameters, HandlesInteractions},
 		handles_life::HandlesLife,
 		handles_lifetime::HandlesLifetime,
+		handles_saving::HandlesSaving,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -37,6 +38,7 @@ use resources::{
 	track_interaction_duplicates::TrackInteractionDuplicates,
 	track_ray_interactions::TrackRayInteractions,
 };
+use serde::{Serialize, de::DeserializeOwned};
 use std::marker::PhantomData;
 use systems::{
 	gravity_affected::apply_gravity_pull,
@@ -56,34 +58,36 @@ use traits::act_on::ActOn;
 
 pub struct InteractionsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLifeCyclePlugin> InteractionsPlugin<TLifeCyclePlugin>
+impl<TSaveGame, TLifeCycle> InteractionsPlugin<(TSaveGame, TLifeCycle)>
 where
-	TLifeCyclePlugin: ThreadSafe + HandlesDestruction + HandlesLifetime + HandlesLife,
+	TSaveGame: ThreadSafe + HandlesSaving,
+	TLifeCycle: ThreadSafe + HandlesDestruction + HandlesLifetime + HandlesLife,
 {
-	pub fn from_plugin(_: &TLifeCyclePlugin) -> Self {
+	pub fn from_plugin(_: &TSaveGame, _: &TLifeCycle) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLifeCyclePlugin> Plugin for InteractionsPlugin<TLifeCyclePlugin>
+impl<TSaveGame, TLifeCycle> Plugin for InteractionsPlugin<(TSaveGame, TLifeCycle)>
 where
-	TLifeCyclePlugin: ThreadSafe + HandlesDestruction + HandlesLifetime + HandlesLife,
+	TSaveGame: ThreadSafe + HandlesSaving,
+	TLifeCycle: ThreadSafe + HandlesDestruction + HandlesLifetime + HandlesLife,
 {
 	fn build(&self, app: &mut App) {
 		app
 			// Deal health damage
 			.register_required_components::<DealDamageEffect, InteractingEntities>()
 			.add_observer(DealDamageEffect::update_blockers_observer)
-			.add_interaction::<DealDamageEffect, TLifeCyclePlugin::TLife>()
+			.add_interaction::<DealDamageEffect, TLifeCycle::TLife, TSaveGame>()
 			// Apply gravity effect
 			.register_required_components::<GravityEffect, InteractingEntities>()
 			.add_observer(GravityEffect::update_blockers_observer)
-			.add_interaction::<GravityEffect, GravityAffected>()
+			.add_interaction::<GravityEffect, GravityAffected, TSaveGame>()
 			.add_systems(Update, Update::delta.pipe(apply_gravity_pull))
 			// Apply force effect
 			.register_required_components::<ForceEffect, InteractingEntities>()
 			.add_observer(ForceEffect::update_blockers_observer)
-			.add_interaction::<ForceEffect, ForceAffected>()
+			.add_interaction::<ForceEffect, ForceAffected, TSaveGame>()
 			// Apply interactions
 			.add_event::<InteractionEvent>()
 			.add_event::<InteractionEvent<Ray>>()
@@ -92,8 +96,8 @@ where
 			.add_systems(
 				Update,
 				(
-					apply_fragile_blocks::<TLifeCyclePlugin::TDestroy>,
-					Beam::execute::<TLifeCyclePlugin>,
+					apply_fragile_blocks::<TLifeCycle::TDestroy>,
+					Beam::execute::<TLifeCycle>,
 					execute_ray_caster
 						.pipe(apply_interruptable_ray_blocks)
 						.pipe(map_ray_cast_result_to_interaction_events)
@@ -111,22 +115,27 @@ where
 struct CollisionSystems;
 
 trait AddInteraction {
-	fn add_interaction<TActor, TTarget>(&mut self) -> &mut Self
+	fn add_interaction<TActor, TTarget, TSaveGame>(&mut self) -> &mut Self
 	where
-		TActor: ActOn<TTarget> + Clone + Component<Mutability = Mutable>,
-		TTarget: Component<Mutability = Mutable>;
+		TActor:
+			ActOn<TTarget> + Clone + Component<Mutability = Mutable> + Serialize + DeserializeOwned,
+		TTarget: Component<Mutability = Mutable> + Clone + Serialize + DeserializeOwned,
+		TSaveGame: HandlesSaving;
 }
 
 impl AddInteraction for App {
-	fn add_interaction<TActor, TTarget>(&mut self) -> &mut Self
+	fn add_interaction<TActor, TTarget, TSaveGame>(&mut self) -> &mut Self
 	where
-		TActor: ActOn<TTarget> + Clone + Component<Mutability = Mutable>,
-		TTarget: Component<Mutability = Mutable>,
+		TActor:
+			ActOn<TTarget> + Clone + Component<Mutability = Mutable> + Serialize + DeserializeOwned,
+		TTarget: Component<Mutability = Mutable> + Clone + Serialize + DeserializeOwned,
+		TSaveGame: HandlesSaving,
 	{
-		self
-			// require basic interaction tracking
-			.register_required_components::<TActor, RunningInteractions<TActor, TTarget>>()
-			// apply interactions
+		TSaveGame::register_savable_component::<TActor>(self);
+		TSaveGame::register_savable_component::<TTarget>(self);
+		TSaveGame::register_savable_component::<RunningInteractions<TActor, TTarget>>(self);
+
+		self.register_required_components::<TActor, RunningInteractions<TActor, TTarget>>()
 			.add_systems(
 				Update,
 				(

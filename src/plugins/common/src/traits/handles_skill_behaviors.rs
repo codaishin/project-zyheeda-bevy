@@ -5,6 +5,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
 pub trait HandlesSkillBehaviors {
@@ -18,24 +19,33 @@ pub trait HandlesSkillBehaviors {
 	) -> SkillEntities;
 }
 
+#[derive(Debug, Clone)]
 pub struct Contact {
 	pub shape: Shape,
 	pub integrity: Integrity,
 	pub motion: Motion,
 }
 
+#[derive(Debug, Clone)]
 pub struct Projection {
 	pub shape: Shape,
 	pub offset: Option<ProjectionOffset>,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct SkillEntities {
-	pub root: Entity,
+	pub root: SkillRoot,
 	pub contact: Entity,
 	pub projection: Entity,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub struct SkillRoot {
+	pub entity: Entity,
+	pub persistent_entity: PersistentEntity,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Shape {
 	Sphere {
 		radius: Units,
@@ -48,13 +58,13 @@ pub enum Shape {
 	},
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub enum Integrity {
 	Solid,
 	Fragile { destroyed_by: HashSet<Blocker> },
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum Motion {
 	HeldBy {
 		caster: PersistentEntity,
@@ -72,12 +82,12 @@ pub enum Motion {
 	},
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Default)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Default, Serialize, Deserialize)]
 pub enum Spawner {
 	#[default]
 	Center,
 	Slot(SlotKey),
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub struct ProjectionOffset(pub Vec3);

@@ -1,3 +1,5 @@
+pub(crate) mod dto;
+
 use crate::{
 	skills::{Activation, AnimationStrategy, QueuedSkill, RunSkillBehavior, Skill, SkillState},
 	traits::{
@@ -10,17 +12,18 @@ use crate::{
 		IterMut,
 	},
 };
-use bevy::{ecs::component::Component, prelude::*};
+use bevy::prelude::*;
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{iterate::Iterate, state_duration::StateDuration},
 };
+use serde::{Deserialize, Serialize};
 use std::{
 	collections::{VecDeque, vec_deque::Iter},
 	time::Duration,
 };
 
-#[derive(PartialEq, Debug, Default, Clone)]
+#[derive(PartialEq, Debug, Default, Clone, Serialize, Deserialize)]
 enum State {
 	#[default]
 	Flushed,
@@ -29,7 +32,7 @@ enum State {
 	},
 }
 
-#[derive(Component, PartialEq, Debug, Default)]
+#[derive(Component, PartialEq, Debug, Default, Clone)]
 pub struct Queue {
 	queue: VecDeque<QueuedSkill>,
 	duration: Option<Duration>,
@@ -65,11 +68,7 @@ impl Enqueue<(Skill, SlotKey)> for Queue {
 
 		let (skill, slot_key) = item;
 
-		self.queue.push_back(QueuedSkill {
-			skill,
-			slot_key,
-			..default()
-		});
+		self.queue.push_back(QueuedSkill::new(skill, slot_key));
 	}
 }
 

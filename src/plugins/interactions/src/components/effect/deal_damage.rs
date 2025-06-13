@@ -5,20 +5,23 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	attributes::health::Health,
+	components::persistent_entity::PersistentEntity,
 	effects::{EffectApplies, deal_damage::DealDamage},
 	traits::{
 		handles_effect::HandlesEffect,
 		handles_life::{ChangeLife, HandlesLife},
 	},
 };
+use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
-#[derive(Component, Debug, PartialEq, Clone)]
+#[derive(Component, Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct DealDamageEffect(pub(crate) DealDamage);
 
-impl<TLifecyclePlugin> HandlesEffect<DealDamage> for InteractionsPlugin<TLifecyclePlugin>
+impl<TSaveGame, TLifeCycle> HandlesEffect<DealDamage>
+	for InteractionsPlugin<(TSaveGame, TLifeCycle)>
 where
-	TLifecyclePlugin: HandlesLife,
+	TLifeCycle: HandlesLife,
 {
 	type TTarget = Health;
 	type TEffectComponent = DealDamageEffect;
@@ -28,7 +31,7 @@ where
 	}
 
 	fn attribute(health: Self::TTarget) -> impl Bundle {
-		TLifecyclePlugin::TLife::from(health)
+		TLifeCycle::TLife::from(health)
 	}
 }
 
@@ -38,7 +41,7 @@ impl<TLife> ActOn<TLife> for DealDamageEffect
 where
 	TLife: ChangeLife,
 {
-	fn on_begin_interaction(&mut self, _: Entity, life: &mut TLife) {
+	fn on_begin_interaction(&mut self, _: PersistentEntity, life: &mut TLife) {
 		let Self(DealDamage(damage, EffectApplies::Once)) = *self else {
 			return;
 		};
@@ -46,7 +49,7 @@ where
 		life.change_by(-damage);
 	}
 
-	fn on_repeated_interaction(&mut self, _: Entity, life: &mut TLife, delta: Duration) {
+	fn on_repeated_interaction(&mut self, _: PersistentEntity, life: &mut TLife, delta: Duration) {
 		let Self(DealDamage(damage, EffectApplies::Always)) = *self else {
 			return;
 		};
@@ -80,8 +83,12 @@ mod tests {
 				.return_const(());
 		});
 
-		damage.on_begin_interaction(Entity::from_raw(11), &mut life);
-		damage.on_repeated_interaction(Entity::from_raw(11), &mut life, Duration::from_millis(100));
+		damage.on_begin_interaction(PersistentEntity::default(), &mut life);
+		damage.on_repeated_interaction(
+			PersistentEntity::default(),
+			&mut life,
+			Duration::from_millis(100),
+		);
 	}
 
 	#[test]
@@ -94,7 +101,11 @@ mod tests {
 				.return_const(());
 		});
 
-		damage.on_begin_interaction(Entity::from_raw(11), &mut life);
-		damage.on_repeated_interaction(Entity::from_raw(11), &mut life, Duration::from_millis(100));
+		damage.on_begin_interaction(PersistentEntity::default(), &mut life);
+		damage.on_repeated_interaction(
+			PersistentEntity::default(),
+			&mut life,
+			Duration::from_millis(100),
+		);
 	}
 }

@@ -6,7 +6,7 @@ use crate::behaviors::start_behavior::{
 };
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub(crate) enum SkillBehaviorDto {
 	Gravity(StartGravity),
 	Damage(StartDealingDamage),
@@ -19,6 +19,18 @@ impl From<SkillBehaviorDto> for SkillBehavior {
 			SkillBehaviorDto::Gravity(v) => Self::Gravity(v),
 			SkillBehaviorDto::Damage(v) => Self::Damage(v),
 			SkillBehaviorDto::Force(v) => Self::Force(v),
+		}
+	}
+}
+
+impl From<SkillBehavior> for SkillBehaviorDto {
+	fn from(value: SkillBehavior) -> Self {
+		match value {
+			SkillBehavior::Gravity(v) => Self::Gravity(v),
+			SkillBehavior::Damage(v) => Self::Damage(v),
+			SkillBehavior::Force(v) => Self::Force(v),
+			#[cfg(test)]
+			SkillBehavior::Fn(_) => panic!("FN CANNOT BE SERIALIZED"),
 		}
 	}
 }

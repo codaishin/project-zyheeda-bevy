@@ -5,7 +5,7 @@ use crate::{
 	behaviors::{
 		SkillBehaviorConfig,
 		SkillCaster,
-		build_skill_shape::{BuildSkillShape, OnSkillStop},
+		build_skill_shape::OnSkillStop,
 		spawn_on::SpawnOn,
 	},
 	components::SkillTarget,
@@ -53,7 +53,8 @@ pub enum AnimationStrategy {
 	Animate,
 }
 
-#[derive(PartialEq, Debug, Default, Clone, TypePath, Asset)]
+#[derive(PartialEq, Debug, Clone, TypePath, Asset)]
+#[cfg_attr(test, derive(Default))]
 pub struct Skill {
 	pub token: Token,
 	pub cast_time: Duration,
@@ -103,7 +104,7 @@ impl GetterRef<CompatibleItems> for Skill {
 	}
 }
 
-#[derive(Debug, PartialEq, Clone, Default)]
+#[derive(Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
 pub enum Activation {
 	#[default]
 	Waiting,
@@ -111,11 +112,22 @@ pub enum Activation {
 	ActiveAfter(Duration),
 }
 
-#[derive(Debug, PartialEq, Clone, Default)]
+#[derive(Debug, PartialEq, Clone)]
+#[cfg_attr(test, derive(Default))]
 pub struct QueuedSkill {
 	pub skill: Skill,
 	pub slot_key: SlotKey,
 	pub mode: Activation,
+}
+
+impl QueuedSkill {
+	pub(crate) fn new(skill: Skill, slot_key: SlotKey) -> Self {
+		Self {
+			skill,
+			slot_key,
+			mode: Activation::Waiting,
+		}
+	}
 }
 
 impl Getter<SlotKey> for QueuedSkill {
@@ -196,8 +208,11 @@ pub enum RunSkillBehavior {
 	OnAim(SkillBehaviorConfig),
 }
 
+#[cfg(test)]
 impl Default for RunSkillBehavior {
 	fn default() -> Self {
+		use crate::behaviors::build_skill_shape::BuildSkillShape;
+
 		Self::OnActive(SkillBehaviorConfig::from_shape(BuildSkillShape::NO_SHAPE))
 	}
 }
@@ -262,7 +277,10 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{behaviors::start_behavior::SkillBehavior, traits::skill_builder::SkillShape};
+	use crate::{
+		behaviors::{build_skill_shape::BuildSkillShape, start_behavior::SkillBehavior},
+		traits::skill_builder::SkillShape,
+	};
 	use bevy::ecs::system::{EntityCommands, RunSystemError, RunSystemOnce};
 	use common::{
 		components::{outdated::Outdated, persistent_entity::PersistentEntity},
@@ -270,7 +288,7 @@ mod tests {
 		tools::collider_info::ColliderInfo,
 		traits::{
 			handles_effect::HandlesEffect,
-			handles_skill_behaviors::{Contact, Projection, SkillEntities},
+			handles_skill_behaviors::{Contact, Projection, SkillEntities, SkillRoot},
 		},
 	};
 
@@ -320,7 +338,10 @@ mod tests {
 
 		fn spawn_skill(commands: &mut Commands, _: Contact, _: Projection) -> SkillEntities {
 			SkillEntities {
-				root: commands.spawn_empty().id(),
+				root: SkillRoot {
+					entity: commands.spawn_empty().id(),
+					persistent_entity: PersistentEntity::default(),
+				},
 				contact: commands.spawn(_Contact).id(),
 				projection: commands.spawn(_Projection).id(),
 			}

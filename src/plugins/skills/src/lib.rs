@@ -9,6 +9,12 @@ mod behaviors;
 mod bundles;
 mod tools;
 
+use crate::components::{
+	combos::dto::CombosDto,
+	combos_time_out::dto::CombosTimeOutDto,
+	queue::dto::QueueDto,
+	skill_executer::dto::SkillExecuterDto,
+};
 use bevy::prelude::*;
 use bundles::{ComboBundle, Loadout};
 use common::{
@@ -31,6 +37,7 @@ use common::{
 			HandlesPlayerCameras,
 			HandlesPlayerMouse,
 		},
+		handles_saving::HandlesSaving,
 		handles_settings::HandlesSettings,
 		handles_skill_behaviors::HandlesSkillBehaviors,
 		system_set_definition::SystemSetDefinition,
@@ -68,6 +75,7 @@ use tools::combo_descriptor::ComboDescriptor;
 pub struct SkillsPlugin<TDependencies>(PhantomData<TDependencies>);
 
 impl<
+	TSaveGame,
 	TLifeCycles,
 	TInteractions,
 	TDispatchChildrenAssets,
@@ -78,6 +86,7 @@ impl<
 	TMenu,
 >
 	SkillsPlugin<(
+		TSaveGame,
 		TLifeCycles,
 		TInteractions,
 		TDispatchChildrenAssets,
@@ -88,6 +97,7 @@ impl<
 		TMenu,
 	)>
 where
+	TSaveGame: ThreadSafe + HandlesSaving,
 	TLifeCycles: ThreadSafe + HandlesLifetime,
 	TInteractions: ThreadSafe + HandlesAllEffects,
 	TDispatchChildrenAssets: ThreadSafe + HandlesAssetsForChildren,
@@ -103,6 +113,7 @@ where
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn from_plugins(
+		_: &TSaveGame,
 		_: &TLifeCycles,
 		_: &TInteractions,
 		_: &TDispatchChildrenAssets,
@@ -133,6 +144,11 @@ where
 	}
 
 	fn skill_execution(&self, app: &mut App) {
+		TSaveGame::register_savable_component_dto::<CombosTimeOut, CombosTimeOutDto>(app);
+		TSaveGame::register_savable_component_dto::<Combos, CombosDto>(app);
+		TSaveGame::register_savable_component_dto::<Queue, QueueDto>(app);
+		TSaveGame::register_savable_component_dto::<SkillExecuter, SkillExecuterDto>(app);
+
 		let get_inputs = get_inputs::<TSettings::TKeyMap<SlotKey>, ButtonInput<UserInput>>;
 		let execute_skill = SkillExecuter::<RunSkillBehavior>::execute_system::<
 			TLifeCycles,
@@ -232,6 +248,7 @@ where
 }
 
 impl<
+	TSaveGame,
 	TLifeCycles,
 	TInteractions,
 	TDispatchChildrenAssets,
@@ -242,6 +259,7 @@ impl<
 	TMenu,
 > Plugin
 	for SkillsPlugin<(
+		TSaveGame,
 		TLifeCycles,
 		TInteractions,
 		TDispatchChildrenAssets,
@@ -252,6 +270,7 @@ impl<
 		TMenu,
 	)>
 where
+	TSaveGame: ThreadSafe + HandlesSaving,
 	TLifeCycles: ThreadSafe + HandlesLifetime,
 	TInteractions: ThreadSafe + HandlesAllEffects,
 	TDispatchChildrenAssets: ThreadSafe + HandlesAssetsForChildren,

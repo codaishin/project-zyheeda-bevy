@@ -12,6 +12,8 @@ pub mod test_tools;
 pub mod tools;
 pub mod traits;
 
+mod events;
+
 use crate::{
 	components::child_of_persistent::ChildOfPersistent,
 	traits::register_persistent_entities::RegisterPersistentEntities,

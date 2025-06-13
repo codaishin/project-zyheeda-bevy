@@ -12,6 +12,7 @@ use common::{
 		handles_enemies::HandlesEnemies,
 		handles_game_states::HandlesGameStates,
 		handles_interactions::HandlesInteractions,
+		handles_saving::HandlesSaving,
 		prefab::AddPrefabObserver,
 		thread_safe::ThreadSafe,
 	},
@@ -22,22 +23,25 @@ use systems::void_sphere::ring_rotation::ring_rotation;
 
 pub struct EnemyPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TGameStates, TInteractions> EnemyPlugin<(TGameStates, TInteractions)>
+impl<TGameStates, TSaveGame, TInteractions> EnemyPlugin<(TGameStates, TSaveGame, TInteractions)>
 where
 	TGameStates: ThreadSafe + HandlesGameStates,
+	TSaveGame: ThreadSafe + HandlesSaving,
 	TInteractions: ThreadSafe
 		+ HandlesInteractions
 		+ HandlesEffect<DealDamage, TTarget = Health>
 		+ HandlesEffect<Gravity, TTarget = AffectedBy<Gravity>>,
 {
-	pub fn from_plugins(_: &TGameStates, _: &TInteractions) -> Self {
+	pub fn from_plugins(_: &TGameStates, _: &TSaveGame, _: &TInteractions) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TGameStates, TInteractions> Plugin for EnemyPlugin<(TGameStates, TInteractions)>
+impl<TGameStates, TSaveGame, TInteractions> Plugin
+	for EnemyPlugin<(TGameStates, TSaveGame, TInteractions)>
 where
 	TGameStates: ThreadSafe + HandlesGameStates,
+	TSaveGame: ThreadSafe + HandlesSaving,
 	TInteractions: ThreadSafe
 		+ HandlesInteractions
 		+ HandlesEffect<DealDamage, TTarget = Health>
@@ -47,8 +51,14 @@ where
 	fn build(&self, app: &mut App) {
 		TGameStates::on_starting_new_game(app, VoidSphere::spawn);
 
-		app.add_prefab_observer::<VoidSphere, TInteractions>()
+		app
+			// Entities to save
+			.register_required_components::<Enemy, TSaveGame::TSaveEntityMarker>()
+			.register_required_components::<VoidBeam, TSaveGame::TSaveEntityMarker>()
+			// prefabs
+			.add_prefab_observer::<VoidSphere, TInteractions>()
 			.add_prefab_observer::<VoidBeam, TInteractions>()
+			// systems
 			.add_systems(Update, ring_rotation);
 	}
 }

@@ -1,2 +1,4 @@
-#[derive(Debug, PartialEq, Clone, Copy, Default)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, PartialEq, Clone, Copy, Default, Serialize, Deserialize)]
 pub struct Force;

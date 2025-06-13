@@ -4,10 +4,13 @@ use crate::{
 	skills::lifetime_definition::LifeTimeDefinition,
 };
 use bevy::prelude::*;
-use common::traits::{
-	handles_lifetime::HandlesLifetime,
-	handles_skill_behaviors::{HandlesSkillBehaviors, SkillEntities, Spawner},
-	try_insert_on::TryInsertOn,
+use common::{
+	components::persistent_entity::PersistentEntity,
+	traits::{
+		handles_lifetime::HandlesLifetime,
+		handles_skill_behaviors::{HandlesSkillBehaviors, SkillEntities, Spawner},
+		try_insert_on::TryInsertOn,
+	},
 };
 
 pub(crate) trait SkillBuilder {
@@ -38,12 +41,12 @@ where
 		TLifetimes: HandlesLifetime,
 		TSkillBehaviors: HandlesSkillBehaviors + 'static,
 	{
-		let lifetime = lifetime::<TLifetimes>;
 		let skill_entities = self.spawn_shape::<TSkillBehaviors>(commands, caster, spawner, target);
-		let skill = skill_entities.root;
 		let on_skill_stop = match self.lifetime() {
-			LifeTimeDefinition::UntilStopped => stoppable(skill),
-			LifeTimeDefinition::UntilOutlived(duration) => lifetime(commands, skill, duration),
+			LifeTimeDefinition::UntilStopped => stoppable(skill_entities.root.persistent_entity),
+			LifeTimeDefinition::UntilOutlived(duration) => {
+				lifetime::<TLifetimes>(commands, skill_entities.root.entity, duration)
+			}
 			LifeTimeDefinition::Infinite => infinite(),
 		};
 
@@ -55,7 +58,7 @@ where
 	}
 }
 
-fn stoppable(skill: Entity) -> OnSkillStop {
+fn stoppable(skill: PersistentEntity) -> OnSkillStop {
 	OnSkillStop::Stop(skill)
 }
 
@@ -108,9 +111,9 @@ mod tests {
 	};
 	use common::{
 		components::persistent_entity::PersistentEntity,
-		traits::handles_skill_behaviors::{Contact, Projection, SkillEntities},
+		traits::handles_skill_behaviors::{Contact, Projection, SkillEntities, SkillRoot},
 	};
-	use std::{any::type_name, time::Duration};
+	use std::{any::type_name, sync::LazyLock, time::Duration};
 
 	struct _HandlesSkillBehaviors;
 
@@ -123,7 +126,10 @@ mod tests {
 		}
 	}
 
+	static ROOT: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
+
 	#[derive(Component, Debug, PartialEq, Clone)]
+	#[require(PersistentEntity = *ROOT)]
 	struct _Root {
 		caster: SkillCaster,
 		spawner: Spawner,
@@ -175,17 +181,20 @@ mod tests {
 			TSkillBehaviors: HandlesSkillBehaviors + 'static,
 		{
 			let root = commands
-				.spawn(_Root {
+				.spawn((_Root {
 					caster: *caster,
 					spawner,
 					target: *target,
-				})
+				},))
 				.id();
 			let contact = commands.spawn(_Contact).id();
 			let projection = commands.spawn(_Projection).id();
 
 			SkillEntities {
-				root,
+				root: SkillRoot {
+					entity: root,
+					persistent_entity: *ROOT,
+				},
 				contact,
 				projection,
 			}
@@ -312,8 +321,7 @@ mod tests {
 			.world_mut()
 			.run_system_once_with(build_skill, (skill, caster, spawner, target))?;
 
-		let root = find_entity_with!(_Root, app).id();
-		assert_eq!(OnSkillStop::Stop(root), shape.on_skill_stop);
+		assert_eq!(OnSkillStop::Stop(*ROOT), shape.on_skill_stop);
 		Ok(())
 	}
 

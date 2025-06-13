@@ -1,3 +1,5 @@
+pub(crate) mod dto;
+
 use super::combo_node::ComboNode;
 use crate::{
 	skills::Skill,
@@ -23,7 +25,7 @@ use common::{
 };
 use std::collections::VecDeque;
 
-#[derive(Component, PartialEq, Debug)]
+#[derive(Component, PartialEq, Debug, Clone)]
 pub struct Combos<TComboNode = ComboNode> {
 	config: TComboNode,
 	current: Option<TComboNode>,

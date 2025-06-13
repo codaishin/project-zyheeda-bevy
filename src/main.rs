@@ -38,22 +38,29 @@ fn main() -> AppExit {
 
 fn prepare_game(app: &mut App) {
 	let savegame = SavegamePlugin;
-	let life_cycles = LifeCyclesPlugin;
 	let animations = AnimationsPlugin;
 	let light = LightPlugin;
 	let loading = LoadingPlugin;
+	let life_cycles = LifeCyclesPlugin::from_plugin(&savegame);
 	let settings = SettingsPlugin::from_plugin(&loading);
 	let localization = LocalizationPlugin::from_plugin(&loading);
 	let game_state = GameStatePlugin::from_plugin(&loading);
 	let children_assets_dispatch = ChildrenAssetsDispatchPlugin::from_plugin(&loading);
-	let interactions = InteractionsPlugin::from_plugin(&life_cycles);
-	let enemies = EnemyPlugin::from_plugins(&game_state, &interactions);
+	let interactions = InteractionsPlugin::from_plugin(&savegame, &life_cycles);
+	let enemies = EnemyPlugin::from_plugins(&game_state, &savegame, &interactions);
 	let map_generation = MapGenerationPlugin::from_plugin(&light);
 	let path_finding = PathFindingPlugin::from_plugin(&map_generation);
-	let players =
-		PlayerPlugin::from_plugins(&settings, &game_state, &animations, &interactions, &light);
+	let players = PlayerPlugin::from_plugins(
+		&settings,
+		&game_state,
+		&savegame,
+		&animations,
+		&interactions,
+		&light,
+	);
 	let behaviors = BehaviorsPlugin::from_plugins(
 		&settings,
+		&savegame,
 		&animations,
 		&life_cycles,
 		&interactions,
@@ -64,6 +71,7 @@ fn prepare_game(app: &mut App) {
 	let graphics = GraphicsPlugin::from_plugins(&loading, &interactions, &behaviors);
 	let menus = MenuPlugin::from_plugins(&loading, &settings, &localization, &graphics);
 	let skills = SkillsPlugin::from_plugins(
+		&savegame,
 		&life_cycles,
 		&interactions,
 		&children_assets_dispatch,

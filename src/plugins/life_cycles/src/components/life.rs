@@ -3,8 +3,9 @@ use common::{
 	attributes::health::Health,
 	traits::{accessors::get::GetterRef, handles_life::ChangeLife},
 };
+use serde::{Deserialize, Serialize};
 
-#[derive(Component, Debug, PartialEq, Clone, Copy)]
+#[derive(Component, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub struct Life(pub(crate) Health);
 
 impl ChangeLife for Life {

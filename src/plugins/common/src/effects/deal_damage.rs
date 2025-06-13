@@ -1,6 +1,7 @@
 use super::EffectApplies;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub struct DealDamage(pub f32, pub EffectApplies);
 
 impl DealDamage {

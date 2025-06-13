@@ -1,4 +1,4 @@
-use common::dto::duration::DurationDto;
+use common::dto::duration_secs_f32::DurationSecsF32;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -10,12 +10,26 @@ pub enum LifeTimeDefinition<TDuration = Duration> {
 	UntilOutlived(TDuration),
 }
 
-impl From<LifeTimeDefinition<DurationDto>> for LifeTimeDefinition {
-	fn from(lifetime_def_dto: LifeTimeDefinition<DurationDto>) -> Self {
+impl From<LifeTimeDefinition<DurationSecsF32>> for LifeTimeDefinition {
+	fn from(lifetime_def_dto: LifeTimeDefinition<DurationSecsF32>) -> Self {
 		match lifetime_def_dto {
 			LifeTimeDefinition::UntilStopped => Self::UntilStopped,
 			LifeTimeDefinition::Infinite => Self::Infinite,
-			LifeTimeDefinition::UntilOutlived(dto) => Self::UntilOutlived(Duration::from(dto)),
+			LifeTimeDefinition::UntilOutlived(duration) => {
+				Self::UntilOutlived(Duration::from(duration))
+			}
+		}
+	}
+}
+
+impl From<LifeTimeDefinition> for LifeTimeDefinition<DurationSecsF32> {
+	fn from(lifetime_def_duration: LifeTimeDefinition) -> Self {
+		match lifetime_def_duration {
+			LifeTimeDefinition::UntilStopped => Self::UntilStopped,
+			LifeTimeDefinition::Infinite => Self::Infinite,
+			LifeTimeDefinition::UntilOutlived(duration) => {
+				Self::UntilOutlived(DurationSecsF32::from(duration))
+			}
 		}
 	}
 }

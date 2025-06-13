@@ -5,7 +5,10 @@ pub mod traits;
 mod systems;
 
 use crate::{
-	components::anchor::{AnchorFixPoints, spawner_fix_point::SpawnerFixPoint},
+	components::{
+		anchor::{AnchorFixPoints, spawner_fix_point::SpawnerFixPoint},
+		skill_behavior::skill_contact::dto::SkillContactDto,
+	},
 	systems::movement::compute_path::MovementPath,
 };
 use bevy::prelude::*;
@@ -35,8 +38,15 @@ use common::{
 			HandlesPlayerMouse,
 			PlayerMainCamera,
 		},
+		handles_saving::HandlesSaving,
 		handles_settings::HandlesSettings,
-		handles_skill_behaviors::{Contact, HandlesSkillBehaviors, Projection, SkillEntities},
+		handles_skill_behaviors::{
+			Contact,
+			HandlesSkillBehaviors,
+			Projection,
+			SkillEntities,
+			SkillRoot,
+		},
 		prefab::AddPrefabObserver,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
@@ -72,9 +82,19 @@ use systems::{
 
 pub struct BehaviorsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSettings, TAnimations, TLifeCycles, TInteractions, TPathFinding, TEnemies, TPlayers>
+impl<
+	TSettings,
+	TSaveGame,
+	TAnimations,
+	TLifeCycles,
+	TInteractions,
+	TPathFinding,
+	TEnemies,
+	TPlayers,
+>
 	BehaviorsPlugin<(
 		TSettings,
+		TSaveGame,
 		TAnimations,
 		TLifeCycles,
 		TInteractions,
@@ -84,6 +104,7 @@ impl<TSettings, TAnimations, TLifeCycles, TInteractions, TPathFinding, TEnemies,
 	)>
 where
 	TSettings: ThreadSafe + HandlesSettings,
+	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
 	TLifeCycles: ThreadSafe + HandlesDestruction,
 	TInteractions: ThreadSafe + HandlesInteractions + HandlesEffect<DealDamage>,
@@ -98,6 +119,7 @@ where
 	#[allow(clippy::too_many_arguments)]
 	pub fn from_plugins(
 		_: &TSettings,
+		_: &TSaveGame,
 		_: &TAnimations,
 		_: &TLifeCycles,
 		_: &TInteractions,
@@ -109,9 +131,19 @@ where
 	}
 }
 
-impl<TSettings, TAnimations, TLifeCycles, TInteractions, TPathFinding, TEnemies, TPlayers> Plugin
+impl<
+	TSettings,
+	TSaveGame,
+	TAnimations,
+	TLifeCycles,
+	TInteractions,
+	TPathFinding,
+	TEnemies,
+	TPlayers,
+> Plugin
 	for BehaviorsPlugin<(
 		TSettings,
+		TSaveGame,
 		TAnimations,
 		TLifeCycles,
 		TInteractions,
@@ -121,6 +153,7 @@ impl<TSettings, TAnimations, TLifeCycles, TInteractions, TPathFinding, TEnemies,
 	)>
 where
 	TSettings: ThreadSafe + HandlesSettings,
+	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
 	TLifeCycles: ThreadSafe + HandlesDestruction,
 	TInteractions: ThreadSafe + HandlesInteractions + HandlesEffect<DealDamage>,
@@ -135,6 +168,8 @@ where
 {
 	fn build(&self, app: &mut App) {
 		TAnimations::register_movement_direction::<Movement<VelocityBased>>(app);
+		TSaveGame::register_savable_component_dto::<SkillContact, SkillContactDto>(app);
+		TSaveGame::register_savable_component::<SkillProjection>(app);
 
 		let point_input = PointerInput::parse::<TPlayers::TCamRay, TSettings::TKeyMap<MovementKey>>;
 		let wasd_input = WasdInput::<VelocityBased>::parse::<
@@ -167,6 +202,8 @@ where
 		app
 			// Required components
 			.register_required_components::<TPlayers::TPlayer, AnchorFixPoints>()
+			.register_required_components::<SkillContact, TSaveGame::TSaveEntityMarker>()
+			.register_required_components::<SkillProjection, TSaveGame::TSaveEntityMarker>()
 			// Observers
 			.add_prefab_observer::<SkillContact, (TInteractions, TLifeCycles)>()
 			.add_prefab_observer::<SkillProjection, (TInteractions, TLifeCycles)>()
@@ -257,7 +294,10 @@ impl<TDependencies> HandlesSkillBehaviors for BehaviorsPlugin<TDependencies> {
 			.id();
 
 		SkillEntities {
-			root: contact,
+			root: SkillRoot {
+				persistent_entity: persistent_contact,
+				entity: contact,
+			},
 			contact,
 			projection,
 		}
