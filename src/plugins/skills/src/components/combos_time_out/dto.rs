@@ -1,12 +1,12 @@
 use crate::components::combos_time_out::CombosTimeOut;
-use common::dto::duration::DurationDto;
+use common::dto::duration_secs_f32::DurationSecsF32;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct CombosTimeOutDto {
-	max_duration: DurationDto,
-	duration: DurationDto,
+	max_duration: DurationSecsF32,
+	duration: DurationSecsF32,
 }
 
 impl From<CombosTimeOutDto> for CombosTimeOut {
@@ -31,8 +31,8 @@ impl From<CombosTimeOut> for CombosTimeOutDto {
 		}: CombosTimeOut,
 	) -> Self {
 		Self {
-			max_duration: DurationDto::from(max_duration),
-			duration: DurationDto::from(duration),
+			max_duration: DurationSecsF32::from(max_duration),
+			duration: DurationSecsF32::from(duration),
 		}
 	}
 }

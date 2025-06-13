@@ -1,10 +1,9 @@
 pub(crate) mod run_skill_behavior;
 
-use crate::skills::RunSkillBehavior;
-
 use super::{AnimationStrategy, Skill};
+use crate::skills::RunSkillBehavior;
 use common::{
-	dto::duration::DurationDto,
+	dto::duration_secs_f32::DurationSecsF32,
 	errors::Unreachable,
 	tools::item_type::{CompatibleItems, ItemType},
 	traits::{
@@ -20,7 +19,7 @@ use std::{collections::HashSet, time::Duration};
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub(crate) struct SkillDto {
 	token: String,
-	cast_time: DurationDto,
+	cast_time: DurationSecsF32,
 	animation: AnimationStrategy,
 	behavior: RunSkillBehaviorDto,
 	is_usable_with: HashSet<ItemType>,
@@ -55,7 +54,7 @@ impl From<Skill> for SkillDto {
 	fn from(skill: Skill) -> Self {
 		Self {
 			token: skill.token.0,
-			cast_time: DurationDto::from(skill.cast_time),
+			cast_time: DurationSecsF32::from(skill.cast_time),
 			animation: skill.animation,
 			behavior: RunSkillBehaviorDto::from(skill.behavior),
 			is_usable_with: skill.compatible_items.0,

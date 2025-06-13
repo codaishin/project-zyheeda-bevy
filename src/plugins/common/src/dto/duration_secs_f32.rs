@@ -1,20 +1,24 @@
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
+/// Makes serialized data better readable and smaller than serializing
+/// [`Duration`] directly.
+///
+/// Should be used for durations, where the precision loss is negligible
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
-pub struct DurationDto {
+pub struct DurationSecsF32 {
 	seconds: f32,
 }
 
-impl From<DurationDto> for Duration {
-	fn from(DurationDto { seconds }: DurationDto) -> Self {
+impl From<DurationSecsF32> for Duration {
+	fn from(DurationSecsF32 { seconds }: DurationSecsF32) -> Self {
 		Duration::from_secs_f32(seconds)
 	}
 }
 
-impl From<Duration> for DurationDto {
+impl From<Duration> for DurationSecsF32 {
 	fn from(duration: Duration) -> Self {
-		DurationDto {
+		DurationSecsF32 {
 			seconds: duration.as_secs_f32(),
 		}
 	}
@@ -26,7 +30,7 @@ mod tests {
 
 	#[test]
 	fn convert_to_duration() {
-		let data = DurationDto { seconds: 42.11 };
+		let data = DurationSecsF32 { seconds: 42.11 };
 
 		let duration = Duration::from(data);
 
@@ -37,8 +41,8 @@ mod tests {
 	fn convert_from_duration() {
 		let duration = Duration::from_secs_f32(42.11);
 
-		let data = DurationDto::from(duration);
+		let data = DurationSecsF32::from(duration);
 
-		assert_eq!(DurationDto { seconds: 42.11 }, data);
+		assert_eq!(DurationSecsF32 { seconds: 42.11 }, data);
 	}
 }

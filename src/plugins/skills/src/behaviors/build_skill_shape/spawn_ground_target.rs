@@ -6,7 +6,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	dto::duration::DurationDto,
+	dto::duration_secs_f32::DurationSecsF32,
 	tools::Units,
 	traits::handles_skill_behaviors::{
 		Contact,
@@ -29,8 +29,8 @@ pub struct SpawnGroundTargetedAoe<TDuration = Duration> {
 	pub radius: Units,
 }
 
-impl From<SpawnGroundTargetedAoe<DurationDto>> for SpawnGroundTargetedAoe {
-	fn from(with_lifetime_dto: SpawnGroundTargetedAoe<DurationDto>) -> Self {
+impl From<SpawnGroundTargetedAoe<DurationSecsF32>> for SpawnGroundTargetedAoe {
+	fn from(with_lifetime_dto: SpawnGroundTargetedAoe<DurationSecsF32>) -> Self {
 		Self {
 			lifetime: with_lifetime_dto.lifetime.into(),
 			max_range: with_lifetime_dto.max_range,
@@ -39,7 +39,7 @@ impl From<SpawnGroundTargetedAoe<DurationDto>> for SpawnGroundTargetedAoe {
 	}
 }
 
-impl From<SpawnGroundTargetedAoe> for SpawnGroundTargetedAoe<DurationDto> {
+impl From<SpawnGroundTargetedAoe> for SpawnGroundTargetedAoe<DurationSecsF32> {
 	fn from(with_lifetime_duration: SpawnGroundTargetedAoe) -> Self {
 		Self {
 			lifetime: with_lifetime_duration.lifetime.into(),

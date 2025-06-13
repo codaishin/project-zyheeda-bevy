@@ -4,12 +4,12 @@ use crate::behaviors::build_skill_shape::{
 	spawn_projectile::SpawnProjectile,
 	spawn_shield::SpawnShield,
 };
-use common::dto::duration::DurationDto;
+use common::dto::duration_secs_f32::DurationSecsF32;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub(crate) enum SkillShapeDto {
-	GroundTargetedAoe(SpawnGroundTargetedAoe<DurationDto>),
+	GroundTargetedAoe(SpawnGroundTargetedAoe<DurationSecsF32>),
 	Projectile(SpawnProjectile),
 	Shield(SpawnShield),
 }
