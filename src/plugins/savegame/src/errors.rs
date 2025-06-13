@@ -3,17 +3,19 @@ use common::errors::{Error, Level};
 use serde_json::Error as SerdeJsonError;
 use std::{collections::HashMap, io::Error as IoError};
 
-#[derive(Debug, PartialEq, Clone)]
-pub(crate) enum IoOrLockError<TIoError = IoError> {
-	IoError(TIoError),
+#[derive(Debug)]
+pub(crate) enum ContextFlushError<TIoError = IoError> {
+	WriteError(TIoError),
+	SerdeErrors(SerdeJsonErrors),
 	LockPoisoned(LockPoisonedError),
 }
 
-impl From<IoOrLockError> for Error {
-	fn from(value: IoOrLockError) -> Self {
+impl From<ContextFlushError> for Error {
+	fn from(value: ContextFlushError) -> Self {
 		match value {
-			IoOrLockError::IoError(error) => Self::from(error),
-			IoOrLockError::LockPoisoned(error) => Self::from(error),
+			ContextFlushError::WriteError(error) => Self::from(error),
+			ContextFlushError::SerdeErrors(error) => Self::from(error),
+			ContextFlushError::LockPoisoned(error) => Self::from(error),
 		}
 	}
 }
@@ -66,3 +68,20 @@ impl From<SerializationErrors> for Error {
 
 #[derive(Debug)]
 pub(crate) struct EntitySerializationErrors(pub(crate) Vec<SerdeJsonError>);
+
+#[derive(Debug)]
+pub(crate) struct SerdeJsonErrors(pub(crate) Vec<SerdeJsonError>);
+
+impl From<SerdeJsonErrors> for Error {
+	fn from(SerdeJsonErrors(errors): SerdeJsonErrors) -> Self {
+		let errors = errors
+			.iter()
+			.map(|error| format!("- {error}"))
+			.collect::<Vec<_>>()
+			.join("\n");
+		Self {
+			msg: format!("Failed to serialize data:\n{errors}"),
+			lvl: Level::Error,
+		}
+	}
+}

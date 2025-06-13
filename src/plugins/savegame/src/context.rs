@@ -1,11 +1,11 @@
 use crate::{
-	errors::{EntitySerializationErrors, IoOrLockError, LockPoisonedError},
+	errors::{ContextFlushError, EntitySerializationErrors, LockPoisonedError, SerdeJsonErrors},
 	traits::{execute_save::BufferComponents, write_to_file::WriteToFile},
 	writer::FileWriter,
 };
 use bevy::prelude::*;
 use serde::Serialize;
-use serde_json::{Error, Value, from_str, to_string};
+use serde_json::{Error, Value, to_string, to_value};
 use std::{
 	any::type_name,
 	collections::{HashMap, HashSet, hash_map::Entry},
@@ -36,8 +36,8 @@ impl SaveContext {
 		};
 		let component_str = ComponentString {
 			component_name: type_name::<T>(),
-			dto_name: type_name::<T>(),
-			component_state: from_str(&to_string(&TDto::from(component.clone()))?)?,
+			dto_name: type_name::<TDto>(),
+			component_state: to_value(TDto::from(component.clone()))?,
 		};
 
 		match buffer.entry(entity.id()) {
@@ -63,45 +63,71 @@ impl<TFileWriter> SaveContext<TFileWriter> {
 
 	pub(crate) fn flush_system(
 		context: Arc<Mutex<Self>>,
-	) -> impl Fn() -> Result<(), IoOrLockError<TFileWriter::TError>>
+	) -> impl Fn() -> Result<(), ContextFlushError<TFileWriter::TError>>
 	where
 		TFileWriter: WriteToFile,
 	{
 		move || {
 			let mut context = match context.lock() {
-				Err(_) => return Err(IoOrLockError::LockPoisoned(LockPoisonedError)),
+				Err(_) => return Err(ContextFlushError::LockPoisoned(LockPoisonedError)),
 				Ok(context) => context,
 			};
 
-			match context.flush() {
-				Err(io_error) => Err(IoOrLockError::IoError(io_error)),
-				Ok(()) => Ok(()),
-			}
+			context.flush()
 		}
 	}
 
-	fn flush(&mut self) -> Result<(), TFileWriter::TError>
+	fn flush(&mut self) -> Result<(), ContextFlushError<TFileWriter::TError>>
 	where
 		TFileWriter: WriteToFile,
 	{
+		let mut errors = vec![];
 		let entities = self
 			.buffer
 			.drain()
 			.map(join_entity_components)
+			.filter_map(|result| match result {
+				Ok(value) => Some(value),
+				Err(SerdeJsonErrors(json_errors)) => {
+					errors.extend(json_errors);
+					None
+				}
+			})
 			.collect::<Vec<_>>()
 			.join(",");
-		self.writer.write(format!("[{entities}]"))
+
+		if !errors.is_empty() {
+			return Err(ContextFlushError::SerdeErrors(SerdeJsonErrors(errors)));
+		}
+
+		self.writer
+			.write(format!("[{entities}]"))
+			.map_err(ContextFlushError::WriteError)
 	}
 }
 
-fn join_entity_components((_, component_strings): (Entity, HashSet<ComponentString>)) -> String {
+fn join_entity_components(
+	(_, component_strings): (Entity, HashSet<ComponentString>),
+) -> Result<String, SerdeJsonErrors> {
+	let mut errors = vec![];
 	let components = component_strings
 		.iter()
-		.map(ComponentString::to_json_string)
+		.map(to_string)
+		.filter_map(|result| match result {
+			Ok(value) => Some(value),
+			Err(error) => {
+				errors.push(error);
+				None
+			}
+		})
 		.collect::<Vec<_>>()
 		.join(",");
 
-	format!("[{components}]")
+	if !errors.is_empty() {
+		return Err(SerdeJsonErrors(errors));
+	}
+
+	Ok(format!("[{components}]"))
 }
 
 impl BufferComponents for SaveContext {
@@ -126,23 +152,13 @@ pub(crate) struct ComponentString {
 	component_state: Value,
 }
 
-impl ComponentString {
-	/// Manually create json string to omit the possible error of `to_string`
-	/// of `serde_json`. We can safely assume that this won't fail, because all fields are valid
-	fn to_json_string(&self) -> String {
-		format!(
-			"{{\"component_name\":\"{}\",\"dto_name\":\"{}\",\"component_state\":{}}}",
-			self.component_name, self.dto_name, self.component_state
-		)
-	}
-}
-
 #[cfg(test)]
 mod test_flush {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{simple_init, test_tools::utils::SingleThreadedApp, traits::mock::Mock};
 	use mockall::{mock, predicate::eq};
+	use serde_json::{from_str, to_string};
 
 	#[derive(Debug, PartialEq, Clone)]
 	struct _Error;
@@ -351,6 +367,7 @@ mod test_buffer {
 	use super::*;
 	use common::{simple_init, traits::mock::Mock};
 	use mockall::{automock, predicate::eq};
+	use serde_json::from_str;
 
 	#[automock]
 	trait _Call {
@@ -437,6 +454,7 @@ mod test_handle {
 	use super::*;
 	use common::test_tools::utils::SingleThreadedApp;
 	use serde::Serialize;
+	use serde_json::{from_str, to_string};
 	use std::any::type_name;
 
 	struct _Writer;
@@ -452,6 +470,19 @@ mod test_handle {
 	#[derive(Component, Serialize, Clone)]
 	struct _A {
 		value: i32,
+	}
+
+	#[derive(Serialize, Clone)]
+	struct _ADto {
+		value: String,
+	}
+
+	impl From<_A> for _ADto {
+		fn from(_A { value }: _A) -> Self {
+			Self {
+				value: value.to_string(),
+			}
+		}
 	}
 
 	#[derive(Component, Serialize, Clone)]
@@ -491,6 +522,34 @@ mod test_handle {
 					component_name: type_name::<_A>(),
 					dto_name: type_name::<_A>(),
 					component_state: from_str(&to_string(&_A { value: 42 }).unwrap()).unwrap()
+				}])
+			)]),
+			buffer
+		);
+	}
+
+	#[test]
+	fn serialize_component_with_dto() {
+		let mut app = setup();
+		let mut buffer = HashMap::default();
+		let entity = app.world_mut().spawn(_A { value: 42 }).id();
+		let entity = app.world().entity(entity);
+
+		_ = SaveContext::handle::<_A, _ADto>(&mut buffer, entity);
+
+		assert_eq!(
+			HashMap::from([(
+				entity.id(),
+				HashSet::from([ComponentString {
+					component_name: type_name::<_A>(),
+					dto_name: type_name::<_ADto>(),
+					component_state: from_str(
+						&to_string(&_ADto {
+							value: "42".to_owned()
+						})
+						.unwrap()
+					)
+					.unwrap()
 				}])
 			)]),
 			buffer
