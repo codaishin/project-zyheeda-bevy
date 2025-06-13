@@ -2,6 +2,7 @@ pub(crate) mod dto;
 
 use super::combo_node::ComboNode;
 use crate::{
+	CombosDto,
 	skills::Skill,
 	traits::{
 		GetNode,
@@ -21,7 +22,11 @@ use common::{
 		action_key::slot::{Combo, SlotKey},
 		item_type::ItemType,
 	},
-	traits::{handles_combo_menu::GetCombosOrdered, iterate::Iterate},
+	traits::{
+		handles_combo_menu::GetCombosOrdered,
+		handles_saving::SavableComponent,
+		iterate::Iterate,
+	},
 };
 use std::collections::VecDeque;
 
@@ -165,6 +170,10 @@ where
 	{
 		self.config.followup_keys(after)
 	}
+}
+
+impl SavableComponent for Combos {
+	type TDto = CombosDto;
 }
 
 #[cfg(test)]

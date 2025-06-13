@@ -10,7 +10,7 @@ use common::{
 	blocker::{Blocker, Blockers},
 	components::persistent_entity::PersistentEntity,
 	effects::force::Force,
-	traits::handles_effect::HandlesEffect,
+	traits::{handles_effect::HandlesEffect, handles_saving::SavableComponent},
 };
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -43,4 +43,8 @@ impl ActOn<ForceAffected> for ForceEffect {
 	fn on_repeated_interaction(&mut self, _: PersistentEntity, _: &mut ForceAffected, _: Duration) {
 		// FIXME: Target should be moved outside the force effect collider
 	}
+}
+
+impl SavableComponent for ForceEffect {
+	type TDto = Self;
 }

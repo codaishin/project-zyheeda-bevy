@@ -2,7 +2,8 @@ use super::{
 	load_asset::{LoadAsset, Path},
 	thread_safe::ThreadSafe,
 };
-use bevy::prelude::*;
+use crate::errors::Unreachable;
+use bevy::{app::App, asset::Asset, reflect::TypePath};
 use serde::Deserialize;
 use std::{error::Error, fmt::Debug};
 
@@ -34,6 +35,17 @@ pub trait TryLoadFrom<TFrom>: Sized {
 	) -> Result<Self, Self::TInstantiationError>
 	where
 		TLoadAsset: LoadAsset;
+}
+
+impl<T> TryLoadFrom<T> for T {
+	type TInstantiationError = Unreachable;
+
+	fn try_load_from<TLoadAsset>(from: T, _: &mut TLoadAsset) -> Result<Self, Unreachable>
+	where
+		TLoadAsset: LoadAsset,
+	{
+		Ok(from)
+	}
 }
 
 pub trait AssetFileExtensions {

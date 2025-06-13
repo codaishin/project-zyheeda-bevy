@@ -1,3 +1,6 @@
+mod external_components;
+
+use crate::traits::handles_custom_assets::TryLoadFrom;
 use bevy::prelude::*;
 use serde::{Serialize, de::DeserializeOwned};
 
@@ -6,10 +9,12 @@ pub trait HandlesSaving {
 
 	fn register_savable_component<TComponent>(app: &mut App)
 	where
-		TComponent: Component + Clone + Serialize + DeserializeOwned;
+		TComponent: SavableComponent;
+}
 
-	fn register_savable_component_dto<TComponent, TDto>(app: &mut App)
-	where
-		TComponent: Component + Clone,
-		TDto: From<TComponent> + Serialize + DeserializeOwned;
+pub trait SavableComponent: Component + Sized + Clone + TryLoadFrom<Self::TDto> {
+	/// The data transfer object used for (de)serialization.
+	///
+	/// In the simplest case this can be `Self`.
+	type TDto: From<Self> + Serialize + DeserializeOwned;
 }

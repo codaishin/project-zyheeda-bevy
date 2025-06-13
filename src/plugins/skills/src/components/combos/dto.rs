@@ -1,19 +1,19 @@
-use crate::{
-	SkillDto,
-	components::{combo_node::ComboNode, combos::Combos},
+use crate::components::{
+	combo_node::{ComboNode, dto::ComboNodeDto},
+	combos::Combos,
 };
 use bevy::prelude::*;
-use common::tools::action_key::slot::SlotKey;
+use common::{
+	errors::Unreachable,
+	traits::{handles_custom_assets::TryLoadFrom, load_asset::LoadAsset},
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub(crate) struct CombosDto {
+pub struct CombosDto {
 	config: ComboNodeDto,
 	current: Option<ComboNodeDto>,
 }
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct ComboNodeDto(Vec<(SlotKey, (SkillDto, ComboNodeDto))>);
 
 impl From<Combos> for CombosDto {
 	fn from(Combos { config, current }: Combos) -> Self {
@@ -24,14 +24,25 @@ impl From<Combos> for CombosDto {
 	}
 }
 
-impl From<ComboNode> for ComboNodeDto {
-	fn from(node: ComboNode) -> Self {
-		Self(
-			node.into_iter()
-				.map(|(slot_key, (skill, node))| {
-					(slot_key, (SkillDto::from(skill), Self::from(node)))
-				})
-				.collect(),
-		)
+impl TryLoadFrom<CombosDto> for Combos {
+	type TInstantiationError = Unreachable;
+
+	fn try_load_from<TLoadAsset>(
+		CombosDto { config, current }: CombosDto,
+		asset_server: &mut TLoadAsset,
+	) -> Result<Self, Self::TInstantiationError>
+	where
+		TLoadAsset: LoadAsset,
+	{
+		let Ok(config) = ComboNode::try_load_from(config, asset_server);
+		let current = match current {
+			Some(current) => {
+				let Ok(current) = ComboNode::try_load_from(current, asset_server);
+				Some(current)
+			}
+			None => None,
+		};
+
+		Ok(Self { config, current })
 	}
 }

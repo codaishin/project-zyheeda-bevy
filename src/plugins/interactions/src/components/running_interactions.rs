@@ -1,9 +1,12 @@
 use bevy::prelude::{Component, default};
-use common::components::persistent_entity::PersistentEntity;
+use common::{
+	components::persistent_entity::PersistentEntity,
+	traits::handles_saving::SavableComponent,
+};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
-#[derive(Component, Serialize, Deserialize, Clone)]
+#[derive(Component, Serialize, Deserialize)]
 pub(crate) struct RunningInteractions<TActor, TTarget>
 where
 	TActor: Component,
@@ -11,6 +14,19 @@ where
 {
 	entities: HashSet<PersistentEntity>,
 	_p: PhantomData<(TActor, TTarget)>,
+}
+
+impl<TActor, TTarget> Clone for RunningInteractions<TActor, TTarget>
+where
+	TActor: Component,
+	TTarget: Component,
+{
+	fn clone(&self) -> Self {
+		Self {
+			entities: self.entities.clone(),
+			_p: PhantomData,
+		}
+	}
 }
 
 impl<TActor, TTarget> RunningInteractions<TActor, TTarget>
@@ -64,6 +80,14 @@ where
 	fn eq(&self, other: &Self) -> bool {
 		self._p == other._p && self.entities == other.entities
 	}
+}
+
+impl<TActor, TTarget> SavableComponent for RunningInteractions<TActor, TTarget>
+where
+	TActor: Component,
+	TTarget: Component,
+{
+	type TDto = Self;
 }
 
 #[cfg(test)]

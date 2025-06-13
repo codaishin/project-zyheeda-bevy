@@ -14,12 +14,11 @@ use common::{
 	components::persistent_entity::PersistentEntity,
 	states::game_state::GameState,
 	systems::log::log,
-	traits::handles_saving::HandlesSaving,
+	traits::handles_saving::{HandlesSaving, SavableComponent},
 };
 use components::save::Save;
 use context::SaveContext;
 use resources::register::Register;
-use serde::{Serialize, de::DeserializeOwned};
 use std::sync::{Arc, Mutex};
 use writer::FileWriter;
 
@@ -53,24 +52,16 @@ impl HandlesSaving for SavegamePlugin {
 
 	fn register_savable_component<TComponent>(app: &mut App)
 	where
-		TComponent: Component + Clone + Serialize + DeserializeOwned,
-	{
-		Self::register_savable_component_dto::<TComponent, TComponent>(app)
-	}
-
-	fn register_savable_component_dto<TComponent, TDto>(app: &mut App)
-	where
-		TComponent: Component + Clone,
-		TDto: From<TComponent> + Serialize + DeserializeOwned,
+		TComponent: SavableComponent,
 	{
 		match app.world_mut().get_resource_mut::<Register>() {
 			None => {
 				let mut register = Register::default();
-				register.register_component::<TComponent, TDto>();
+				register.register_component::<TComponent, TComponent::TDto>();
 				app.insert_resource(register);
 			}
 			Some(mut register) => {
-				register.register_component::<TComponent, TDto>();
+				register.register_component::<TComponent, TComponent::TDto>();
 			}
 		}
 	}
@@ -85,8 +76,16 @@ mod tests {
 	#[derive(Component, Serialize, Deserialize, Clone)]
 	struct _A;
 
+	impl SavableComponent for _A {
+		type TDto = Self;
+	}
+
 	#[derive(Component, Serialize, Deserialize, Clone)]
 	struct _B;
+
+	impl SavableComponent for _B {
+		type TDto = Self;
+	}
 
 	fn setup() -> App {
 		App::new().single_threaded(Update)

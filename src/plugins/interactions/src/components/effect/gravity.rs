@@ -8,7 +8,7 @@ use common::{
 	attributes::affected_by::AffectedBy,
 	components::persistent_entity::PersistentEntity,
 	effects::gravity::Gravity,
-	traits::handles_effect::HandlesEffect,
+	traits::{handles_effect::HandlesEffect, handles_saving::SavableComponent},
 };
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -47,6 +47,10 @@ impl ActOn<GravityAffected> for GravityEffect {
 			towards: self_entity,
 		});
 	}
+}
+
+impl SavableComponent for GravityEffect {
+	type TDto = Self;
 }
 
 #[cfg(test)]

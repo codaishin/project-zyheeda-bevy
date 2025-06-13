@@ -1,12 +1,14 @@
 pub(crate) mod dto;
 
 use super::SimplePrefab;
+use crate::components::skill_behavior::skill_contact::dto::SkillContactDto;
 use bevy::{ecs::system::EntityCommands, prelude::*};
 use common::{
 	errors::Error,
 	traits::{
 		handles_destruction::HandlesDestruction,
 		handles_interactions::HandlesInteractions,
+		handles_saving::SavableComponent,
 		handles_skill_behaviors::{Contact, Integrity, Motion, Shape},
 		prefab::Prefab,
 	},
@@ -57,4 +59,8 @@ where
 		self.integrity
 			.prefab::<TInteractions, TLifeCycles>(entity, ())
 	}
+}
+
+impl SavableComponent for SkillContact {
+	type TDto = SkillContactDto;
 }
