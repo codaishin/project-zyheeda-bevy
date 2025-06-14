@@ -1,9 +1,5 @@
 use bevy::prelude::Component;
-use common::{
-	components::persistent_entity::PersistentEntity,
-	tools::UnitsPerSecond,
-	traits::handles_saving::SavableComponent,
-};
+use common::{components::persistent_entity::PersistentEntity, tools::UnitsPerSecond};
 use serde::{Deserialize, Serialize};
 use std::{ops::RangeBounds, vec::Drain};
 
@@ -35,10 +31,6 @@ impl GravityAffected {
 	{
 		self.pulls.drain(range)
 	}
-}
-
-impl SavableComponent for GravityAffected {
-	type TDto = Self;
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]

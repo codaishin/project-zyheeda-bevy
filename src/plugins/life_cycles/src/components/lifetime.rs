@@ -1,6 +1,6 @@
 use super::destroy::Destroy;
 use bevy::prelude::*;
-use common::traits::{handles_saving::SavableComponent, try_insert_on::TryInsertOn};
+use common::traits::try_insert_on::TryInsertOn;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -24,10 +24,6 @@ impl Lifetime {
 			}
 		}
 	}
-}
-
-impl SavableComponent for Lifetime {
-	type TDto = Self;
 }
 
 #[cfg(test)]

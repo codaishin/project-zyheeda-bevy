@@ -76,16 +76,8 @@ mod tests {
 	#[derive(Component, Serialize, Deserialize, Clone)]
 	struct _A;
 
-	impl SavableComponent for _A {
-		type TDto = Self;
-	}
-
 	#[derive(Component, Serialize, Deserialize, Clone)]
 	struct _B;
-
-	impl SavableComponent for _B {
-		type TDto = Self;
-	}
 
 	fn setup() -> App {
 		App::new().single_threaded(Update)
