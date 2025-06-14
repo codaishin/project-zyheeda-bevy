@@ -10,7 +10,6 @@ use common::{
 	traits::{
 		handles_effect::HandlesEffect,
 		handles_life::{ChangeLife, HandlesLife},
-		handles_saving::SavableComponent,
 	},
 };
 use serde::{Deserialize, Serialize};
@@ -57,10 +56,6 @@ where
 
 		life.change_by(-damage * delta.as_secs_f32());
 	}
-}
-
-impl SavableComponent for DealDamageEffect {
-	type TDto = Self;
 }
 
 #[cfg(test)]

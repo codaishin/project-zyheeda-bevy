@@ -1,8 +1,5 @@
 use bevy::prelude::{Component, default};
-use common::{
-	components::persistent_entity::PersistentEntity,
-	traits::handles_saving::SavableComponent,
-};
+use common::components::persistent_entity::PersistentEntity;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
@@ -80,14 +77,6 @@ where
 	fn eq(&self, other: &Self) -> bool {
 		self._p == other._p && self.entities == other.entities
 	}
-}
-
-impl<TActor, TTarget> SavableComponent for RunningInteractions<TActor, TTarget>
-where
-	TActor: Component,
-	TTarget: Component,
-{
-	type TDto = Self;
 }
 
 #[cfg(test)]
