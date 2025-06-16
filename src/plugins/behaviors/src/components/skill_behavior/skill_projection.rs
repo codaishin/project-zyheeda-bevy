@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Component, Debug, Clone, Serialize, Deserialize)]
 pub struct SkillProjection {
 	pub shape: Shape,
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub offset: Option<ProjectionOffset>,
 }
 

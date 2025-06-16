@@ -34,10 +34,14 @@ impl SaveContext {
 		let Some(component) = entity.get::<T>() else {
 			return Ok(());
 		};
+		let comp = type_name::<T>();
 		let component_str = ComponentString {
-			component_name: type_name::<T>(),
-			dto_name: type_name::<TDto>(),
-			component_state: to_value(TDto::from(component.clone()))?,
+			comp,
+			dto: match type_name::<TDto>() {
+				dto if dto == comp => None,
+				dto => Some(dto),
+			},
+			value: to_value(TDto::from(component.clone()))?,
 		};
 
 		match buffer.entry(entity.id()) {
@@ -147,9 +151,15 @@ impl BufferComponents for SaveContext {
 
 #[derive(Debug, PartialEq, Eq, Hash, Serialize, Clone)]
 pub(crate) struct ComponentString {
-	component_name: &'static str,
-	dto_name: &'static str,
-	component_state: Value,
+	/// Component type name, abbreviated to reduce memory usage
+	comp: &'static str,
+
+	/// Component dto type name, abbreviated to reduce memory usage
+	#[serde(skip_serializing_if = "Option::is_none")]
+	dto: Option<&'static str>,
+
+	/// Component serialized value
+	value: Value,
 }
 
 #[cfg(test)]
@@ -180,9 +190,9 @@ mod test_flush {
 	#[test]
 	fn write_on_flush() -> Result<(), RunSystemError> {
 		let string_a = ComponentString {
-			component_name: "A",
-			dto_name: "A",
-			component_state: from_str(r#"{"value": 32}"#).unwrap(),
+			comp: "A",
+			dto: None,
+			value: from_str(r#"{"value": 32}"#).unwrap(),
 		};
 		let context = Arc::new(Mutex::new(SaveContext {
 			buffer: HashMap::from([(Entity::from_raw(11), HashSet::from([string_a.clone()]))]),
@@ -205,14 +215,14 @@ mod test_flush {
 	#[test]
 	fn write_multiple_components_per_entity_on_flush() -> Result<(), RunSystemError> {
 		let string_a = ComponentString {
-			component_name: "A",
-			dto_name: "A",
-			component_state: from_str(r#"{"value": 32}"#).unwrap(),
+			comp: "A",
+			dto: None,
+			value: from_str(r#"{"value": 32}"#).unwrap(),
 		};
 		let string_b = ComponentString {
-			component_name: "B",
-			dto_name: "B",
-			component_state: from_str(r#"{"v": 42}"#).unwrap(),
+			comp: "B",
+			dto: None,
+			value: from_str(r#"{"v": 42}"#).unwrap(),
 		};
 		let context = Arc::new(Mutex::new(SaveContext {
 			buffer: HashMap::from([(
@@ -226,30 +236,30 @@ mod test_flush {
 						let a_b = format!(
 							"[[{},{}]]",
 							to_string(&ComponentString {
-								component_name: "A",
-								dto_name: "A",
-								component_state: from_str(r#"{"value": 32}"#).unwrap(),
+								comp: "A",
+								dto: None,
+								value: from_str(r#"{"value": 32}"#).unwrap(),
 							})
 							.unwrap(),
 							to_string(&ComponentString {
-								component_name: "B",
-								dto_name: "B",
-								component_state: from_str(r#"{"v": 42}"#).unwrap(),
+								comp: "B",
+								dto: None,
+								value: from_str(r#"{"v": 42}"#).unwrap(),
 							})
 							.unwrap(),
 						);
 						let b_a = format!(
 							"[[{},{}]]",
 							to_string(&ComponentString {
-								component_name: "B",
-								dto_name: "B",
-								component_state: from_str(r#"{"v": 42}"#).unwrap(),
+								comp: "B",
+								dto: None,
+								value: from_str(r#"{"v": 42}"#).unwrap(),
 							})
 							.unwrap(),
 							to_string(&ComponentString {
-								component_name: "A",
-								dto_name: "A",
-								component_state: from_str(r#"{"value": 32}"#).unwrap(),
+								comp: "A",
+								dto: None,
+								value: from_str(r#"{"value": 32}"#).unwrap(),
 							})
 							.unwrap(),
 						);
@@ -270,14 +280,14 @@ mod test_flush {
 	#[test]
 	fn write_multiple_entities_on_flush() -> Result<(), RunSystemError> {
 		let string_a = ComponentString {
-			component_name: "A",
-			dto_name: "A",
-			component_state: from_str(r#"{"value": 32}"#).unwrap(),
+			comp: "A",
+			dto: None,
+			value: from_str(r#"{"value": 32}"#).unwrap(),
 		};
 		let string_b = ComponentString {
-			component_name: "B",
-			dto_name: "B",
-			component_state: from_str(r#"{"v": 42}"#).unwrap(),
+			comp: "B",
+			dto: None,
+			value: from_str(r#"{"v": 42}"#).unwrap(),
 		};
 		let context = Arc::new(Mutex::new(SaveContext {
 			buffer: HashMap::from([
@@ -291,30 +301,30 @@ mod test_flush {
 						let a_b = format!(
 							"[[{}],[{}]]",
 							to_string(&ComponentString {
-								component_name: "A",
-								dto_name: "A",
-								component_state: from_str(r#"{"value": 32}"#).unwrap(),
+								comp: "A",
+								dto: None,
+								value: from_str(r#"{"value": 32}"#).unwrap(),
 							})
 							.unwrap(),
 							to_string(&ComponentString {
-								component_name: "B",
-								dto_name: "B",
-								component_state: from_str(r#"{"v": 42}"#).unwrap(),
+								comp: "B",
+								dto: None,
+								value: from_str(r#"{"v": 42}"#).unwrap(),
 							})
 							.unwrap(),
 						);
 						let b_a = format!(
 							"[[{}],[{}]]",
 							to_string(&ComponentString {
-								component_name: "B",
-								dto_name: "B",
-								component_state: from_str(r#"{"v": 42}"#).unwrap(),
+								comp: "B",
+								dto: None,
+								value: from_str(r#"{"v": 42}"#).unwrap(),
 							})
 							.unwrap(),
 							to_string(&ComponentString {
-								component_name: "A",
-								dto_name: "A",
-								component_state: from_str(r#"{"value": 32}"#).unwrap(),
+								comp: "A",
+								dto: None,
+								value: from_str(r#"{"value": 32}"#).unwrap(),
 							})
 							.unwrap(),
 						);
@@ -338,9 +348,9 @@ mod test_flush {
 			buffer: HashMap::from([(
 				Entity::from_raw(32),
 				HashSet::from([ComponentString {
-					component_name: "A",
-					dto_name: "A",
-					component_state: from_str(r#"{"value": 32}"#).unwrap(),
+					comp: "A",
+					dto: None,
+					value: from_str(r#"{"value": 32}"#).unwrap(),
 				}]),
 			)]),
 			writer: Mock_Writer::new_mock(|mock| {
@@ -387,9 +397,9 @@ mod test_buffer {
 			HashMap::from([(
 				Entity::from_raw(42),
 				HashSet::from([ComponentString {
-					component_name: "name",
-					dto_name: "name",
-					component_state: from_str("[\"state\"]").unwrap(),
+					comp: "name",
+					dto: None,
+					value: from_str("[\"state\"]").unwrap(),
 				}]),
 			)])
 		}
@@ -520,9 +530,9 @@ mod test_handle {
 			HashMap::from([(
 				entity.id(),
 				HashSet::from([ComponentString {
-					component_name: type_name::<_A>(),
-					dto_name: type_name::<_A>(),
-					component_state: from_str(&to_string(&_A { value: 42 }).unwrap()).unwrap()
+					comp: type_name::<_A>(),
+					dto: None,
+					value: from_str(&to_string(&_A { value: 42 }).unwrap()).unwrap()
 				}])
 			)]),
 			buffer
@@ -542,9 +552,9 @@ mod test_handle {
 			HashMap::from([(
 				entity.id(),
 				HashSet::from([ComponentString {
-					component_name: type_name::<_A>(),
-					dto_name: type_name::<_ADto>(),
-					component_state: from_str(
+					comp: type_name::<_A>(),
+					dto: Some(type_name::<_ADto>()),
+					value: from_str(
 						&to_string(&_ADto {
 							value: "42".to_owned()
 						})
@@ -572,14 +582,14 @@ mod test_handle {
 				entity.id(),
 				HashSet::from([
 					ComponentString {
-						component_name: type_name::<_A>(),
-						dto_name: type_name::<_A>(),
-						component_state: from_str(&to_string(&_A { value: 42 }).unwrap()).unwrap()
+						comp: type_name::<_A>(),
+						dto: None,
+						value: from_str(&to_string(&_A { value: 42 }).unwrap()).unwrap()
 					},
 					ComponentString {
-						component_name: type_name::<_B>(),
-						dto_name: type_name::<_B>(),
-						component_state: from_str(&to_string(&_B { v: 11 }).unwrap()).unwrap()
+						comp: type_name::<_B>(),
+						dto: None,
+						value: from_str(&to_string(&_B { v: 11 }).unwrap()).unwrap()
 					}
 				])
 			)]),
