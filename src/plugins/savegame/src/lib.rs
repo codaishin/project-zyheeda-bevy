@@ -11,7 +11,7 @@ use crate::systems::{buffer::BufferSystem, trigger_quick_save::TriggerQuickSave}
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::persistent_entity::PersistentEntity,
+	components::{child_of_persistent::ChildOfPersistent, persistent_entity::PersistentEntity},
 	states::game_state::GameState,
 	systems::log::log,
 	tools::action_key::ActionKey,
@@ -74,6 +74,7 @@ where
 		Self::register_savable_component::<Transform>(app);
 		Self::register_savable_component::<Velocity>(app);
 		Self::register_savable_component::<PersistentEntity>(app);
+		Self::register_savable_component::<ChildOfPersistent>(app);
 
 		app.init_resource::<Register>()
 			.add_systems(
