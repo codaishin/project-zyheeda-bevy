@@ -368,6 +368,7 @@ mod test_buffer {
 	use common::{simple_init, traits::mock::Mock};
 	use mockall::{automock, predicate::eq};
 	use serde_json::from_str;
+	use std::path::PathBuf;
 
 	#[automock]
 	trait _Call {
@@ -396,7 +397,7 @@ mod test_buffer {
 		let mut app = setup();
 		let entity = app.world_mut().spawn_empty().id();
 		let entity = app.world().entity(entity);
-		let mut context = SaveContext::new(FileWriter::to_destination(""));
+		let mut context = SaveContext::new(FileWriter::to_destination(PathBuf::new()));
 		context.buffer = get_buffer();
 		context.handlers = vec![|b, e| {
 			Mock_Call::new_mock(|mock| {
@@ -418,7 +419,7 @@ mod test_buffer {
 		let mut app = setup();
 		let entity = app.world_mut().spawn_empty().id();
 		let entity = app.world().entity(entity);
-		let mut context = SaveContext::new(FileWriter::to_destination(""));
+		let mut context = SaveContext::new(FileWriter::to_destination(PathBuf::new()));
 		context.handlers = vec![
 			|b, e| {
 				Mock_Call::new_mock(|mock| {

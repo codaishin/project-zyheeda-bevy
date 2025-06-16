@@ -19,15 +19,32 @@ use common::{
 use components::save::Save;
 use context::SaveContext;
 use resources::register::Register;
-use std::sync::{Arc, Mutex};
+use std::{
+	path::PathBuf,
+	sync::{Arc, Mutex},
+};
 use writer::FileWriter;
 
-pub struct SavegamePlugin;
+pub struct SavegamePlugin {
+	game_directory: PathBuf,
+}
+
+impl SavegamePlugin {
+	pub fn from_game_directory(game_directory: PathBuf) -> Self {
+		Self { game_directory }
+	}
+}
 
 impl Plugin for SavegamePlugin {
 	fn build(&self, app: &mut App) {
-		let writer = FileWriter::to_destination("./quick_save.json");
-		let context = Arc::new(Mutex::new(SaveContext::new(writer)));
+		let quick_save = self
+			.game_directory
+			.clone()
+			.join("Saves")
+			.join("Quick Save")
+			.with_extension("json");
+		let quick_save = FileWriter::to_destination(quick_save);
+		let quick_save = Arc::new(Mutex::new(SaveContext::new(quick_save)));
 
 		Self::register_savable_component::<Name>(app);
 		Self::register_savable_component::<Transform>(app);
@@ -35,12 +52,15 @@ impl Plugin for SavegamePlugin {
 		Self::register_savable_component::<PersistentEntity>(app);
 
 		app.init_resource::<Register>()
-			.add_systems(Startup, Register::update_context(context.clone()).pipe(log))
+			.add_systems(
+				Startup,
+				Register::update_context(quick_save.clone()).pipe(log),
+			)
 			.add_systems(
 				OnEnter(GameState::Saving),
 				(
-					SaveContext::buffer_system(context.clone()).pipe(log),
-					SaveContext::flush_system(context).pipe(log),
+					SaveContext::buffer_system(quick_save.clone()).pipe(log),
+					SaveContext::flush_system(quick_save).pipe(log),
 				)
 					.chain(),
 			);

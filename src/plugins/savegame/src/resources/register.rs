@@ -117,6 +117,7 @@ mod test_update_context {
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::test_tools::utils::SingleThreadedApp;
 	use serde_json::Error;
+	use std::path::PathBuf;
 
 	fn setup(handlers: Handlers) -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -138,7 +139,9 @@ mod test_update_context {
 		}
 
 		let mut app = setup(vec![a, b]);
-		let context = Arc::new(Mutex::new(SaveContext::new(FileWriter::to_destination(""))));
+		let context = Arc::new(Mutex::new(SaveContext::new(FileWriter::to_destination(
+			PathBuf::new(),
+		))));
 
 		_ = app
 			.world_mut()

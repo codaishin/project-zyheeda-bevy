@@ -1,5 +1,3 @@
-use std::process::{ExitCode, Termination};
-
 use animations::AnimationsPlugin;
 use bars::BarsPlugin;
 use behaviors::BehaviorsPlugin;
@@ -24,6 +22,10 @@ use player::PlayerPlugin;
 use savegame::SavegamePlugin;
 use settings::SettingsPlugin;
 use skills::SkillsPlugin;
+use std::{
+	env::home_dir,
+	process::{ExitCode, Termination},
+};
 
 fn main() -> ZyheedaAppExit {
 	let app = &mut App::new();
@@ -39,7 +41,12 @@ fn main() -> ZyheedaAppExit {
 }
 
 fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
-	let savegame = SavegamePlugin;
+	let Some(home) = home_dir() else {
+		return Err(ZyheedaAppError::NoHomeDirectoryFound);
+	};
+	let game_dir = home.join("Games").join("Project Zyheeda");
+
+	let savegame = SavegamePlugin::from_game_directory(game_dir);
 	let animations = AnimationsPlugin;
 	let light = LightPlugin;
 	let loading = LoadingPlugin;
