@@ -22,29 +22,38 @@ use player::PlayerPlugin;
 use savegame::SavegamePlugin;
 use settings::SettingsPlugin;
 use skills::SkillsPlugin;
+use std::{
+	env::home_dir,
+	process::{ExitCode, Termination},
+};
 
-fn main() -> AppExit {
-	let mut app = App::new();
+fn main() -> ZyheedaAppExit {
+	let app = &mut App::new();
 
-	let app = &mut app;
-
-	prepare_game(app);
+	if let Err(error) = prepare_game(app) {
+		return ZyheedaAppExit::from(error);
+	}
 
 	#[cfg(debug_assertions)]
 	debug_utils::prepare_debug(app);
 
-	app.run()
+	ZyheedaAppExit::from(app.run())
 }
 
-fn prepare_game(app: &mut App) {
-	let savegame = SavegamePlugin;
+fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
+	let Some(home) = home_dir() else {
+		return Err(ZyheedaAppError::NoHomeDirectoryFound);
+	};
+	let game_dir = home.join("Games").join("Project Zyheeda");
+
 	let animations = AnimationsPlugin;
 	let light = LightPlugin;
 	let loading = LoadingPlugin;
-	let life_cycles = LifeCyclesPlugin::from_plugin(&savegame);
 	let settings = SettingsPlugin::from_plugin(&loading);
 	let localization = LocalizationPlugin::from_plugin(&loading);
 	let game_state = GameStatePlugin::from_plugin(&loading);
+	let savegame = SavegamePlugin::from_plugin(&settings).with_game_directory(game_dir);
+	let life_cycles = LifeCyclesPlugin::from_plugin(&savegame);
 	let children_assets_dispatch = ChildrenAssetsDispatchPlugin::from_plugin(&loading);
 	let interactions = InteractionsPlugin::from_plugin(&savegame, &life_cycles);
 	let enemies = EnemyPlugin::from_plugins(&game_state, &savegame, &interactions);
@@ -109,6 +118,50 @@ fn prepare_game(app: &mut App) {
 		.add_plugins(settings)
 		.add_plugins(skills)
 		.insert_resource(ClearColor(Color::BLACK));
+
+	Ok(())
+}
+
+enum ZyheedaAppExit {
+	AppExit(AppExit),
+	Error(ZyheedaAppError),
+}
+
+impl From<ZyheedaAppError> for ZyheedaAppExit {
+	fn from(error: ZyheedaAppError) -> Self {
+		Self::Error(error)
+	}
+}
+
+impl From<AppExit> for ZyheedaAppExit {
+	fn from(app_exit: AppExit) -> Self {
+		Self::AppExit(app_exit)
+	}
+}
+
+impl Termination for ZyheedaAppExit {
+	fn report(self) -> std::process::ExitCode {
+		match self {
+			ZyheedaAppExit::AppExit(app_exit) => app_exit.report(),
+			ZyheedaAppExit::Error(error) => {
+				error!("{error:?}");
+				ExitCode::from(error)
+			}
+		}
+	}
+}
+
+#[derive(Debug)]
+enum ZyheedaAppError {
+	NoHomeDirectoryFound,
+}
+
+impl From<ZyheedaAppError> for ExitCode {
+	fn from(error: ZyheedaAppError) -> Self {
+		match error {
+			ZyheedaAppError::NoHomeDirectoryFound => ExitCode::from(10),
+		}
+	}
 }
 
 #[cfg(debug_assertions)]

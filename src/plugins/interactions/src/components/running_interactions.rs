@@ -10,6 +10,7 @@ where
 	TTarget: Component,
 {
 	entities: HashSet<PersistentEntity>,
+	#[serde(skip)]
 	_p: PhantomData<(TActor, TTarget)>,
 }
 

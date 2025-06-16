@@ -7,47 +7,97 @@ mod systems;
 mod traits;
 mod writer;
 
-use crate::systems::buffer::BufferSystem;
+use crate::systems::{buffer::BufferSystem, trigger_quick_save::TriggerQuickSave};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::persistent_entity::PersistentEntity,
+	components::{child_of_persistent::ChildOfPersistent, persistent_entity::PersistentEntity},
 	states::game_state::GameState,
 	systems::log::log,
-	traits::handles_saving::{HandlesSaving, SavableComponent},
+	tools::action_key::ActionKey,
+	traits::{
+		handles_saving::{HandlesSaving, SavableComponent},
+		handles_settings::HandlesSettings,
+		thread_safe::ThreadSafe,
+	},
 };
 use components::save::Save;
 use context::SaveContext;
 use resources::register::Register;
-use std::sync::{Arc, Mutex};
+use std::{
+	marker::PhantomData,
+	path::PathBuf,
+	sync::{Arc, Mutex},
+};
 use writer::FileWriter;
 
-pub struct SavegamePlugin;
+pub struct SavegamePlugin<TDependencies> {
+	game_directory: PathBuf,
+	_p: PhantomData<TDependencies>,
+}
 
-impl Plugin for SavegamePlugin {
+impl<TSettings> SavegamePlugin<TSettings>
+where
+	TSettings: ThreadSafe + HandlesSettings,
+{
+	pub fn from_plugin(_: &TSettings) -> SavegamePluginBuilder<TSettings> {
+		SavegamePluginBuilder(PhantomData)
+	}
+}
+
+pub struct SavegamePluginBuilder<TDependencies>(PhantomData<TDependencies>);
+
+impl<TDependencies> SavegamePluginBuilder<TDependencies> {
+	pub fn with_game_directory(self, game_directory: PathBuf) -> SavegamePlugin<TDependencies> {
+		SavegamePlugin {
+			game_directory,
+			_p: PhantomData,
+		}
+	}
+}
+
+impl<TSettings> Plugin for SavegamePlugin<TSettings>
+where
+	TSettings: ThreadSafe + HandlesSettings,
+{
 	fn build(&self, app: &mut App) {
-		let writer = FileWriter::to_destination("./quick_save.json");
-		let context = Arc::new(Mutex::new(SaveContext::new(writer)));
+		let quick_save = self
+			.game_directory
+			.clone()
+			.join("Saves")
+			.join("Quick Save")
+			.with_extension("json");
+		let quick_save = FileWriter::to_destination(quick_save);
+		let quick_save = Arc::new(Mutex::new(SaveContext::new(quick_save)));
 
 		Self::register_savable_component::<Name>(app);
 		Self::register_savable_component::<Transform>(app);
 		Self::register_savable_component::<Velocity>(app);
 		Self::register_savable_component::<PersistentEntity>(app);
+		Self::register_savable_component::<ChildOfPersistent>(app);
 
 		app.init_resource::<Register>()
-			.add_systems(Startup, Register::update_context(context.clone()).pipe(log))
+			.add_systems(
+				Update,
+				TSettings::TKeyMap::<ActionKey>::trigger_quick_save
+					.run_if(in_state(GameState::Play)),
+			)
+			.add_systems(
+				Startup,
+				Register::update_context(quick_save.clone()).pipe(log),
+			)
 			.add_systems(
 				OnEnter(GameState::Saving),
 				(
-					SaveContext::buffer_system(context.clone()).pipe(log),
-					SaveContext::flush_system(context).pipe(log),
+					SaveContext::buffer_system(quick_save.clone()).pipe(log),
+					SaveContext::flush_system(quick_save).pipe(log),
 				)
 					.chain(),
 			);
 	}
 }
 
-impl HandlesSaving for SavegamePlugin {
+impl<TDependencies> HandlesSaving for SavegamePlugin<TDependencies> {
 	type TSaveEntityMarker = Save;
 
 	fn register_savable_component<TComponent>(app: &mut App)
@@ -83,11 +133,13 @@ mod tests {
 		App::new().single_threaded(Update)
 	}
 
+	struct _Settings;
+
 	#[test]
 	fn register_component() {
 		let mut app = setup();
 
-		SavegamePlugin::register_savable_component::<_A>(&mut app);
+		SavegamePlugin::<()>::register_savable_component::<_A>(&mut app);
 
 		let mut expected = Register::default();
 		expected.register_component::<_A, _A>();
@@ -98,8 +150,8 @@ mod tests {
 	fn register_components() {
 		let mut app = setup();
 
-		SavegamePlugin::register_savable_component::<_A>(&mut app);
-		SavegamePlugin::register_savable_component::<_B>(&mut app);
+		SavegamePlugin::<()>::register_savable_component::<_A>(&mut app);
+		SavegamePlugin::<()>::register_savable_component::<_B>(&mut app);
 
 		let mut expected = Register::default();
 		expected.register_component::<_A, _A>();

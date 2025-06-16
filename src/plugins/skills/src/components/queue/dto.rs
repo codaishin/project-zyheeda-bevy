@@ -15,6 +15,7 @@ use std::time::Duration;
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct QueueDto {
 	queue: Vec<QueuedSkillDto>,
+	#[serde(skip_serializing_if = "Option::is_none")]
 	duration: Option<DurationSecsF32>,
 	state: State,
 }

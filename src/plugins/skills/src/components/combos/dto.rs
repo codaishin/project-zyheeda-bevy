@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct CombosDto {
 	config: ComboNodeDto,
+	#[serde(skip_serializing_if = "Option::is_none")]
 	current: Option<ComboNodeDto>,
 }
 
