@@ -7,35 +7,59 @@ mod systems;
 mod traits;
 mod writer;
 
-use crate::systems::buffer::BufferSystem;
+use crate::systems::{buffer::BufferSystem, trigger_quick_save::TriggerQuickSave};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
 	states::game_state::GameState,
 	systems::log::log,
-	traits::handles_saving::{HandlesSaving, SavableComponent},
+	tools::action_key::ActionKey,
+	traits::{
+		handles_saving::{HandlesSaving, SavableComponent},
+		handles_settings::HandlesSettings,
+		thread_safe::ThreadSafe,
+	},
 };
 use components::save::Save;
 use context::SaveContext;
 use resources::register::Register;
 use std::{
+	marker::PhantomData,
 	path::PathBuf,
 	sync::{Arc, Mutex},
 };
 use writer::FileWriter;
 
-pub struct SavegamePlugin {
+pub struct SavegamePlugin<TDependencies> {
 	game_directory: PathBuf,
+	_p: PhantomData<TDependencies>,
 }
 
-impl SavegamePlugin {
-	pub fn from_game_directory(game_directory: PathBuf) -> Self {
-		Self { game_directory }
+impl<TSettings> SavegamePlugin<TSettings>
+where
+	TSettings: ThreadSafe + HandlesSettings,
+{
+	pub fn from_plugin(_: &TSettings) -> SavegamePluginBuilder<TSettings> {
+		SavegamePluginBuilder(PhantomData)
 	}
 }
 
-impl Plugin for SavegamePlugin {
+pub struct SavegamePluginBuilder<TDependencies>(PhantomData<TDependencies>);
+
+impl<TDependencies> SavegamePluginBuilder<TDependencies> {
+	pub fn with_game_directory(self, game_directory: PathBuf) -> SavegamePlugin<TDependencies> {
+		SavegamePlugin {
+			game_directory,
+			_p: PhantomData,
+		}
+	}
+}
+
+impl<TSettings> Plugin for SavegamePlugin<TSettings>
+where
+	TSettings: ThreadSafe + HandlesSettings,
+{
 	fn build(&self, app: &mut App) {
 		let quick_save = self
 			.game_directory
@@ -53,6 +77,11 @@ impl Plugin for SavegamePlugin {
 
 		app.init_resource::<Register>()
 			.add_systems(
+				Update,
+				TSettings::TKeyMap::<ActionKey>::trigger_quick_save
+					.run_if(in_state(GameState::Play)),
+			)
+			.add_systems(
 				Startup,
 				Register::update_context(quick_save.clone()).pipe(log),
 			)
@@ -67,7 +96,7 @@ impl Plugin for SavegamePlugin {
 	}
 }
 
-impl HandlesSaving for SavegamePlugin {
+impl<TDependencies> HandlesSaving for SavegamePlugin<TDependencies> {
 	type TSaveEntityMarker = Save;
 
 	fn register_savable_component<TComponent>(app: &mut App)
@@ -103,11 +132,13 @@ mod tests {
 		App::new().single_threaded(Update)
 	}
 
+	struct _Settings;
+
 	#[test]
 	fn register_component() {
 		let mut app = setup();
 
-		SavegamePlugin::register_savable_component::<_A>(&mut app);
+		SavegamePlugin::<()>::register_savable_component::<_A>(&mut app);
 
 		let mut expected = Register::default();
 		expected.register_component::<_A, _A>();
@@ -118,8 +149,8 @@ mod tests {
 	fn register_components() {
 		let mut app = setup();
 
-		SavegamePlugin::register_savable_component::<_A>(&mut app);
-		SavegamePlugin::register_savable_component::<_B>(&mut app);
+		SavegamePlugin::<()>::register_savable_component::<_A>(&mut app);
+		SavegamePlugin::<()>::register_savable_component::<_B>(&mut app);
 
 		let mut expected = Register::default();
 		expected.register_component::<_A, _A>();

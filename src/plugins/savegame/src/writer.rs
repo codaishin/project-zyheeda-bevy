@@ -15,7 +15,13 @@ impl FileWriter {
 impl WriteToFile for FileWriter {
 	type TError = Error;
 
-	fn write(&self, string: String) -> Result<(), Self::TError> {
-		fs::write(self.destination.as_path(), string)
+	fn write(&self, string: &str) -> Result<(), Self::TError> {
+		let path = self.destination.as_path();
+
+		if let Some(parent) = path.parent() {
+			fs::create_dir_all(parent)?;
+		}
+
+		fs::write(path, string)
 	}
 }

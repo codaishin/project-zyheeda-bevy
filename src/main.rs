@@ -46,14 +46,14 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	};
 	let game_dir = home.join("Games").join("Project Zyheeda");
 
-	let savegame = SavegamePlugin::from_game_directory(game_dir);
 	let animations = AnimationsPlugin;
 	let light = LightPlugin;
 	let loading = LoadingPlugin;
-	let life_cycles = LifeCyclesPlugin::from_plugin(&savegame);
 	let settings = SettingsPlugin::from_plugin(&loading);
 	let localization = LocalizationPlugin::from_plugin(&loading);
 	let game_state = GameStatePlugin::from_plugin(&loading);
+	let savegame = SavegamePlugin::from_plugin(&settings).with_game_directory(game_dir);
+	let life_cycles = LifeCyclesPlugin::from_plugin(&savegame);
 	let children_assets_dispatch = ChildrenAssetsDispatchPlugin::from_plugin(&loading);
 	let interactions = InteractionsPlugin::from_plugin(&savegame, &life_cycles);
 	let enemies = EnemyPlugin::from_plugins(&game_state, &savegame, &interactions);

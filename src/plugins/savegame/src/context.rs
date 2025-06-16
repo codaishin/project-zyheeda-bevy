@@ -101,7 +101,7 @@ impl<TFileWriter> SaveContext<TFileWriter> {
 		}
 
 		self.writer
-			.write(format!("[{entities}]"))
+			.write(&format!("[{entities}]"))
 			.map_err(ContextFlushError::WriteError)
 	}
 }
@@ -167,7 +167,7 @@ mod test_flush {
 	  _Writer {}
 		impl WriteToFile for _Writer {
 			type TError = _Error;
-			fn write(&self, string: String) -> Result<(), _Error>;
+			fn write(&self, string: &str) -> Result<(), _Error>;
 		}
 	}
 
@@ -253,7 +253,7 @@ mod test_flush {
 							})
 							.unwrap(),
 						);
-						v == &a_b || v == &b_a
+						v == a_b || v == b_a
 					})
 					.return_const(Ok(()));
 			}),
@@ -318,7 +318,7 @@ mod test_flush {
 							})
 							.unwrap(),
 						);
-						v == &a_b || v == &b_a
+						v == a_b || v == b_a
 					})
 					.return_const(Ok(()));
 			}),
@@ -463,7 +463,7 @@ mod test_handle {
 	impl WriteToFile for _Writer {
 		type TError = ();
 
-		fn write(&self, _: String) -> Result<(), Self::TError> {
+		fn write(&self, _: &str) -> Result<(), Self::TError> {
 			panic!("SHOULD NOT BE CALLED");
 		}
 	}
