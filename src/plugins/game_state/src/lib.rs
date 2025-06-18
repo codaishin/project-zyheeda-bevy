@@ -35,6 +35,7 @@ where
 		let new_game = GameState::NewGame;
 		let loading = LoadingGame::LOAD_STATE;
 		let saving = GameState::Saving;
+		let loading_save = GameState::LoadingSave;
 		let play = GameState::Play;
 
 		TLoading::register_load_group::<LoadingEssentialAssets>(app);
@@ -43,6 +44,7 @@ where
 		app.insert_state(loading_essentials)
 			.add_systems(OnEnter(new_game), transition_to_state(loading))
 			.add_systems(OnEnter(saving), transition_to_state(play))
+			.add_systems(OnEnter(loading_save), transition_to_state(loading))
 			.add_systems(OnEnter(play), pause_virtual_time::<false>)
 			.add_systems(OnExit(play), pause_virtual_time::<true>);
 	}
