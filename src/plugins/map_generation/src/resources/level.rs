@@ -4,7 +4,7 @@ use crate::{
 		Obstacles,
 		grid_context::{GridContext, GridDefinition, GridDefinitionError},
 	},
-	map::{Map, half_offset_cell::HalfOffsetCell},
+	map_cells::{MapCells, half_offset_cell::HalfOffsetCell},
 	traits::{GridCellDistanceDefinition, SourcePath, grid_min::GridMin, is_walkable::IsWalkable},
 };
 use bevy::prelude::*;
@@ -20,7 +20,7 @@ pub(crate) struct Level<TCell>
 where
 	TCell: TypePath + ThreadSafe,
 {
-	pub(crate) map: Handle<Map<TCell>>,
+	pub(crate) map: Handle<MapCells<TCell>>,
 	pub(crate) graph: Option<GridGraph>,
 }
 
@@ -28,7 +28,7 @@ impl<TCell> Level<TCell>
 where
 	TCell: TypePath + ThreadSafe,
 {
-	const NO_MAP: Handle<Map<TCell>> = default_handle();
+	const NO_MAP: Handle<MapCells<TCell>> = default_handle();
 
 	pub(crate) fn load_asset(
 		commands: Commands,
@@ -42,7 +42,7 @@ where
 
 	pub(crate) fn set_graph(
 		mut level: ResMut<Self>,
-		maps: Res<Assets<Map<TCell>>>,
+		maps: Res<Assets<MapCells<TCell>>>,
 	) -> Result<(), SetGraphError>
 	where
 		TCell: GridCellDistanceDefinition + IsWalkable + Clone,
@@ -88,7 +88,7 @@ where
 
 	pub(crate) fn grid_cells(
 		level: Res<Self>,
-		maps: Res<Assets<Map<TCell>>>,
+		maps: Res<Assets<MapCells<TCell>>>,
 	) -> Result<Vec<(Vec3, TCell)>, GridError>
 	where
 		TCell: Clone,
@@ -124,7 +124,7 @@ where
 
 	pub(crate) fn half_offset_grid_cells(
 		level: Res<Self>,
-		maps: Res<Assets<Map<TCell>>>,
+		maps: Res<Assets<MapCells<TCell>>>,
 	) -> Result<Vec<(Vec3, HalfOffsetCell<TCell>)>, GridError>
 	where
 		TCell: Clone + GridCellDistanceDefinition,
@@ -213,7 +213,7 @@ where
 		});
 	}
 
-	fn get_map_cells<'a>(&self, maps: &'a Assets<Map<TCell>>) -> Option<&'a Vec<Vec<TCell>>>
+	fn get_map_cells<'a>(&self, maps: &'a Assets<MapCells<TCell>>) -> Option<&'a Vec<Vec<TCell>>>
 	where
 		TCell: GridCellDistanceDefinition + Clone,
 	{
@@ -363,7 +363,7 @@ mod test_load {
 	#[test]
 	fn do_nothing_if_level_already_loaded() {
 		let mut app = setup(_LoadMap::new().with_mock(|mock| {
-			mock.expect_load_asset::<Map<_Cell>, Path>()
+			mock.expect_load_asset::<MapCells<_Cell>, Path>()
 				.never()
 				.return_const(new_handle());
 		}));
@@ -440,11 +440,11 @@ mod test_spawn {
 	struct _Result(Result<(), SetGraphError>);
 
 	fn setup(cells: Vec<Vec<_Cell>>) -> App {
-		let map = new_handle::<Map<_Cell>>();
+		let map = new_handle::<MapCells<_Cell>>();
 		let mut app = App::new().single_threaded(Update);
 		let mut maps = Assets::default();
 
-		maps.insert(&map.clone(), Map::new(cells, vec![]));
+		maps.insert(&map.clone(), MapCells::new(cells, vec![]));
 		app.insert_resource(maps);
 		app.insert_resource(Level { map, ..default() });
 		app.add_systems(
@@ -638,7 +638,7 @@ mod test_spawn {
 	#[test]
 	fn return_asset_error() {
 		let mut app = setup(vec![vec![]]);
-		let mut assets = app.world_mut().resource_mut::<Assets<Map<_Cell>>>();
+		let mut assets = app.world_mut().resource_mut::<Assets<MapCells<_Cell>>>();
 		*assets = Assets::default();
 
 		app.update();
@@ -667,8 +667,8 @@ mod test_get_grid {
 		let mut maps = Assets::default();
 
 		let map = if let Some(cells) = cells {
-			let map = new_handle::<Map<_Cell>>();
-			maps.insert(&map.clone(), Map::new(cells, vec![]));
+			let map = new_handle::<MapCells<_Cell>>();
+			maps.insert(&map.clone(), MapCells::new(cells, vec![]));
 			map
 		} else {
 			Handle::default()
@@ -775,7 +775,7 @@ mod test_get_grid {
 #[cfg(test)]
 mod test_get_half_offset_grid {
 	use super::*;
-	use crate::map::Direction;
+	use crate::map_cells::Direction;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
 		assert_eq_unordered,
@@ -794,8 +794,8 @@ mod test_get_half_offset_grid {
 		let mut maps = Assets::default();
 
 		let map = if let Some(quadrants) = quadrants {
-			let map = new_handle::<Map<_Cell>>();
-			maps.insert(&map.clone(), Map::new(vec![], quadrants));
+			let map = new_handle::<MapCells<_Cell>>();
+			maps.insert(&map.clone(), MapCells::new(vec![], quadrants));
 			map
 		} else {
 			Handle::default()
@@ -951,7 +951,7 @@ mod test_spawn_unique {
 		};
 		let mut app = setup();
 		app.insert_resource(Level {
-			map: Handle::<Map<_Cell>>::default(),
+			map: Handle::<MapCells<_Cell>>::default(),
 			graph: Some(graph.clone()),
 		});
 
@@ -987,7 +987,7 @@ mod test_spawn_unique {
 		let graph = GridGraph::default();
 		let mut app = setup();
 		app.insert_resource(Level {
-			map: Handle::<Map<_Cell>>::default(),
+			map: Handle::<MapCells<_Cell>>::default(),
 			graph: Some(graph.clone()),
 		});
 
@@ -1023,7 +1023,7 @@ mod test_spawn_unique {
 			.spawn(_Grid(GridGraph::default()))
 			.with_child(());
 		app.insert_resource(Level {
-			map: Handle::<Map<_Cell>>::default(),
+			map: Handle::<MapCells<_Cell>>::default(),
 			graph: Some(graph.clone()),
 		});
 
@@ -1063,7 +1063,7 @@ mod test_spawn_unique {
 		let mut app = setup();
 		let entity = app.world_mut().spawn(_NotAGrid).with_child(_NotAGrid).id();
 		app.insert_resource(Level {
-			map: Handle::<Map<_Cell>>::default(),
+			map: Handle::<MapCells<_Cell>>::default(),
 			graph: Some(graph.clone()),
 		});
 
@@ -1088,7 +1088,7 @@ mod test_spawn_unique {
 	fn return_error_when_grid_graph_is_none() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		app.insert_resource(Level {
-			map: Handle::<Map<_Cell>>::default(),
+			map: Handle::<MapCells<_Cell>>::default(),
 			graph: None,
 		});
 

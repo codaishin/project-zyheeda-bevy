@@ -1,7 +1,7 @@
 use super::grid::SpawnCellError;
 use crate::{
 	grid_graph::GridGraph,
-	map::{Direction, half_offset_cell::HalfOffsetCell},
+	map_cells::{Direction, half_offset_cell::HalfOffsetCell},
 	traits::{
 		insert_cell_quadrant_components::{InsertCellQuadrantComponents, Quadrant},
 		is_walkable::IsWalkable,
@@ -109,7 +109,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{map::Direction, traits::insert_cell_quadrant_components::Quadrant};
+	use crate::{map_cells::Direction, traits::insert_cell_quadrant_components::Quadrant};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
 		assert_count,

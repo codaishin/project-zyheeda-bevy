@@ -1,7 +1,7 @@
 mod components;
 mod grid_graph;
 mod line_wide;
-mod map;
+mod map_cells;
 mod map_loader;
 mod resources;
 mod systems;
@@ -19,7 +19,7 @@ use common::{
 };
 use components::{floor_light::FloorLight, grid::Grid, wall_back::WallBack, wall_light::WallLight};
 use grid_graph::GridGraph;
-use map::cell::MapCell;
+use map_cells::corridor::Corridor;
 use std::marker::PhantomData;
 use systems::{apply_extra_components::ApplyExtraComponents, unlit_material::unlit_material};
 use traits::load_map::{LoadMap, LoadMapAsset};
@@ -43,8 +43,8 @@ where
 		let new_game = GameState::NewGame;
 		let loading = GameState::Loading;
 
-		app.load_map_asset::<MapCell>(OnEnter(new_game))
-			.load_map::<MapCell>(OnEnter(loading))
+		app.load_map_asset::<Corridor>(OnEnter(new_game))
+			.load_map::<Corridor>(OnEnter(loading))
 			.add_systems(Update, Grid::<1>::insert)
 			.add_systems(
 				Update,

@@ -7,7 +7,7 @@ use super::{
 };
 use crate::{
 	components::{grid::Grid, half_offset_grid::HalfOffsetGrid},
-	map::Map,
+	map_cells::MapCells,
 	map_loader::TextLoader,
 	resources::level::Level,
 };
@@ -45,8 +45,8 @@ impl LoadMapAsset for App {
 	where
 		TCell: TypePath + From<Option<char>> + SourcePath + Clone + ThreadSafe,
 	{
-		self.init_asset::<Map<TCell>>()
-			.register_asset_loader(TextLoader::<Map<TCell>>::default())
+		self.init_asset::<MapCells<TCell>>()
+			.register_asset_loader(TextLoader::<MapCells<TCell>>::default())
 			.add_systems(label, Level::<TCell>::load_asset)
 	}
 }
