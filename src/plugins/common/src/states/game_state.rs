@@ -16,6 +16,7 @@ pub enum GameState {
 	NewGame,
 	Play,
 	Saving,
+	LoadingSave,
 	IngameMenu(MenuState),
 }
 
@@ -53,7 +54,8 @@ impl IterFinite for GameState {
 			GameState::NewGame => Some(GameState::Loading),
 			GameState::Loading => Some(GameState::Play),
 			GameState::Play => Some(GameState::Saving),
-			GameState::Saving => Some(GameState::IngameMenu(MenuState::Inventory)),
+			GameState::Saving => Some(GameState::LoadingSave),
+			GameState::LoadingSave => Some(GameState::IngameMenu(MenuState::Inventory)),
 			GameState::IngameMenu(MenuState::Inventory) => {
 				Some(GameState::IngameMenu(MenuState::ComboOverview))
 			}
@@ -86,6 +88,7 @@ mod tests {
 				GameState::Loading,
 				GameState::Play,
 				GameState::Saving,
+				GameState::LoadingSave,
 				GameState::IngameMenu(MenuState::Inventory),
 				GameState::IngameMenu(MenuState::ComboOverview),
 				GameState::IngameMenu(MenuState::Settings),
