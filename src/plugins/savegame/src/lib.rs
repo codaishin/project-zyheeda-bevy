@@ -7,14 +7,14 @@ mod systems;
 mod traits;
 mod writer;
 
-use crate::systems::{buffer::BufferSystem, trigger_quick_save::TriggerQuickSave};
+use crate::systems::{buffer::BufferSystem, trigger_state::TriggerState};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
 	components::{child_of_persistent::ChildOfPersistent, persistent_entity::PersistentEntity},
 	states::game_state::GameState,
 	systems::log::log,
-	tools::action_key::ActionKey,
+	tools::action_key::{ActionKey, save_key::SaveKey},
 	traits::{
 		handles_saving::{HandlesSaving, SavableComponent},
 		handles_settings::HandlesSettings,
@@ -61,14 +61,23 @@ where
 	TSettings: ThreadSafe + HandlesSettings,
 {
 	fn build(&self, app: &mut App) {
-		let quick_save = self
+		let quick_save_file = self
 			.game_directory
 			.clone()
 			.join("Saves")
 			.join("Quick Save")
 			.with_extension("json");
-		let quick_save = FileWriter::to_destination(quick_save);
-		let quick_save = Arc::new(Mutex::new(SaveContext::new(quick_save)));
+		let quick_save = Arc::new(Mutex::new(SaveContext::from(FileWriter::to_destination(
+			quick_save_file,
+		))));
+		let trigger_quick_save = TSettings::TKeyMap::<ActionKey>::trigger(
+			ActionKey::Save(SaveKey::QuickSave),
+			GameState::Saving,
+		);
+		let trigger_quick_load = TSettings::TKeyMap::<ActionKey>::trigger(
+			ActionKey::Save(SaveKey::QuickLoad),
+			GameState::LoadingSave,
+		);
 
 		Self::register_savable_component::<Name>(app);
 		Self::register_savable_component::<Transform>(app);
@@ -79,8 +88,7 @@ where
 		app.init_resource::<Register>()
 			.add_systems(
 				Update,
-				TSettings::TKeyMap::<ActionKey>::trigger_quick_save
-					.run_if(in_state(GameState::Play)),
+				(trigger_quick_save, trigger_quick_load).run_if(in_state(GameState::Play)),
 			)
 			.add_systems(
 				Startup,

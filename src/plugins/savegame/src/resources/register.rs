@@ -139,7 +139,7 @@ mod test_update_context {
 		}
 
 		let mut app = setup(vec![a, b]);
-		let context = Arc::new(Mutex::new(SaveContext::new(FileWriter::to_destination(
+		let context = Arc::new(Mutex::new(SaveContext::from(FileWriter::to_destination(
 			PathBuf::new(),
 		))));
 

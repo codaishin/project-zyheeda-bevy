@@ -57,14 +57,6 @@ impl SaveContext {
 }
 
 impl<TFileWriter> SaveContext<TFileWriter> {
-	pub(crate) fn new(writer: TFileWriter) -> Self {
-		Self {
-			writer,
-			handlers: vec![],
-			buffer: HashMap::default(),
-		}
-	}
-
 	pub(crate) fn flush_system(
 		context: Arc<Mutex<Self>>,
 	) -> impl Fn() -> Result<(), ContextFlushError<TFileWriter::TError>>
@@ -107,6 +99,16 @@ impl<TFileWriter> SaveContext<TFileWriter> {
 		self.writer
 			.write(&format!("[{entities}]"))
 			.map_err(ContextFlushError::WriteError)
+	}
+}
+
+impl<TFileWriter> From<TFileWriter> for SaveContext<TFileWriter> {
+	fn from(writer: TFileWriter) -> Self {
+		Self {
+			writer,
+			handlers: vec![],
+			buffer: HashMap::default(),
+		}
 	}
 }
 
@@ -407,7 +409,7 @@ mod test_buffer {
 		let mut app = setup();
 		let entity = app.world_mut().spawn_empty().id();
 		let entity = app.world().entity(entity);
-		let mut context = SaveContext::new(FileWriter::to_destination(PathBuf::new()));
+		let mut context = SaveContext::from(FileWriter::to_destination(PathBuf::new()));
 		context.buffer = get_buffer();
 		context.handlers = vec![|b, e| {
 			Mock_Call::new_mock(|mock| {
@@ -429,7 +431,7 @@ mod test_buffer {
 		let mut app = setup();
 		let entity = app.world_mut().spawn_empty().id();
 		let entity = app.world().entity(entity);
-		let mut context = SaveContext::new(FileWriter::to_destination(PathBuf::new()));
+		let mut context = SaveContext::from(FileWriter::to_destination(PathBuf::new()));
 		context.handlers = vec![
 			|b, e| {
 				Mock_Call::new_mock(|mock| {

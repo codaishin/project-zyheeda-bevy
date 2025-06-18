@@ -1,2 +1,2 @@
 pub(crate) mod buffer;
-pub(crate) mod trigger_quick_save;
+pub(crate) mod trigger_state;
