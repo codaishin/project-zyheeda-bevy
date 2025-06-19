@@ -1,4 +1,4 @@
-pub(crate) mod cell;
+pub(crate) mod corridor;
 pub(crate) mod half_offset_cell;
 
 use bevy::prelude::*;
@@ -7,7 +7,7 @@ use half_offset_cell::HalfOffsetCell;
 use std::fmt::Display;
 
 #[derive(TypePath, Asset, Debug, PartialEq)]
-pub(crate) struct Map<TCell>
+pub(crate) struct MapCells<TCell>
 where
 	TCell: TypePath + ThreadSafe,
 {
@@ -15,7 +15,7 @@ where
 	half_offset_cells: Vec<Vec<HalfOffsetCell<TCell>>>,
 }
 
-impl<TCell> Map<TCell>
+impl<TCell> MapCells<TCell>
 where
 	TCell: TypePath + ThreadSafe,
 {
@@ -36,7 +36,7 @@ where
 	}
 }
 
-impl<TCell> Default for Map<TCell>
+impl<TCell> Default for MapCells<TCell>
 where
 	TCell: TypePath + ThreadSafe,
 {
@@ -48,7 +48,7 @@ where
 	}
 }
 
-impl<TCell> TryFrom<String> for Map<TCell>
+impl<TCell> TryFrom<String> for MapCells<TCell>
 where
 	TCell: From<Option<char>> + TypePath + Clone + ThreadSafe,
 {
@@ -262,7 +262,7 @@ mod tests {
 	#[test]
 	fn empty() {
 		let raw = "".to_string();
-		let map = Map::<_Cell>::try_from(raw);
+		let map = MapCells::<_Cell>::try_from(raw);
 
 		assert_eq!(Err(MapSizeError::Empty), map);
 	}
@@ -270,7 +270,7 @@ mod tests {
 	#[test]
 	fn too_small_z() {
 		let raw = "cx".to_string();
-		let map = Map::<_Cell>::try_from(raw);
+		let map = MapCells::<_Cell>::try_from(raw);
 
 		assert_eq!(Err(MapSizeError::Sizes { x: 2, z: 1 }), map);
 	}
@@ -282,7 +282,7 @@ mod tests {
 			t
 		"
 		.to_string();
-		let map = Map::<_Cell>::try_from(raw);
+		let map = MapCells::<_Cell>::try_from(raw);
 
 		assert_eq!(Err(MapSizeError::Sizes { x: 1, z: 2 }), map);
 	}
@@ -295,7 +295,7 @@ mod tests {
 			u
 		"
 		.to_string();
-		let map = Map::<_Cell>::try_from(raw);
+		let map = MapCells::<_Cell>::try_from(raw);
 
 		assert_eq!(Err(MapSizeError::Sizes { x: 1, z: 3 }), map);
 	}
@@ -303,10 +303,10 @@ mod tests {
 	#[test]
 	fn parse_character() -> Result<(), MapSizeError> {
 		let raw = "xc\nty".to_string();
-		let map = Map::<_Cell>::try_from(raw)?;
+		let map = MapCells::<_Cell>::try_from(raw)?;
 
 		assert_eq!(
-			Map {
+			MapCells {
 				cells: vec![
 					vec![_Cell(Some('x')), _Cell(Some('c'))],
 					vec![_Cell(Some('t')), _Cell(Some('y'))]
@@ -330,10 +330,10 @@ mod tests {
 		  t y
 	  "
 		.to_string();
-		let map = Map::<_Cell>::try_from(raw)?;
+		let map = MapCells::<_Cell>::try_from(raw)?;
 
 		assert_eq!(
-			Map {
+			MapCells {
 				cells: vec![
 					vec![_Cell(Some('x')), _Cell(Some('c'))],
 					vec![_Cell(Some('t')), _Cell(Some('y'))]
@@ -357,10 +357,10 @@ mod tests {
 			erc
 		"
 		.to_string();
-		let map = Map::try_from(raw)?;
+		let map = MapCells::try_from(raw)?;
 
 		assert_eq!(
-			Map {
+			MapCells {
 				cells: vec![
 					vec![_Cell(Some('x')), _Cell(Some('c')), _Cell(Some('t'))],
 					vec![_Cell(Some('e')), _Cell(Some('r')), _Cell(Some('c'))]
@@ -393,10 +393,10 @@ mod tests {
 			er
 		"
 		.to_string();
-		let map = Map::try_from(raw)?;
+		let map = MapCells::try_from(raw)?;
 
 		assert_eq!(
-			Map {
+			MapCells {
 				cells: vec![
 					vec![
 						_Cell(Some('x')),

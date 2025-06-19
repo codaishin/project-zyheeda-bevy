@@ -18,75 +18,67 @@ use crate::{
 	},
 	traits::{
 		GridCellDistanceDefinition,
-		SourcePath,
 		insert_cell_components::InsertCellComponents,
 		insert_cell_quadrant_components::{InsertCellQuadrantComponents, PatternMatches, Quadrant},
 		is_walkable::IsWalkable,
 	},
 };
 use bevy::prelude::*;
-use common::traits::load_asset::Path;
 use std::collections::HashSet;
 
 #[derive(Debug, PartialEq, Clone, TypePath)]
-pub(crate) enum MapCell {
-	CorridorFloor,
-	CorridorWall,
+pub(crate) enum Corridor {
+	Floor,
+	Wall,
 }
 
-impl MapCell {
+impl Corridor {
 	const MODEL_ASSET_CELL_WIDTH: f32 = 2.;
 }
 
-impl IsWalkable for MapCell {
+impl IsWalkable for Corridor {
 	fn is_walkable(&self) -> bool {
 		match self {
-			MapCell::CorridorFloor => true,
-			MapCell::CorridorWall => false,
+			Corridor::Floor => true,
+			Corridor::Wall => false,
 		}
 	}
 }
 
-impl SourcePath for MapCell {
-	fn source_path() -> Path {
-		Path::from("maps/map.txt")
-	}
+impl GridCellDistanceDefinition for Corridor {
+	const CELL_DISTANCE: f32 = Corridor::MODEL_ASSET_CELL_WIDTH;
 }
 
-impl GridCellDistanceDefinition for MapCell {
-	const CELL_DISTANCE: f32 = MapCell::MODEL_ASSET_CELL_WIDTH;
-}
-
-impl From<Option<char>> for MapCell {
+impl From<Option<char>> for Corridor {
 	fn from(symbol: Option<char>) -> Self {
 		let Some(symbol) = symbol else {
-			return MapCell::CorridorWall;
+			return Corridor::Wall;
 		};
 
 		match symbol {
-			'c' => MapCell::CorridorFloor,
-			_ => MapCell::CorridorWall,
+			'c' => Corridor::Floor,
+			_ => Corridor::Wall,
 		}
 	}
 }
 
-impl InsertCellComponents for MapCell {
+impl InsertCellComponents for Corridor {
 	fn offset_height(&self) -> bool {
 		match self {
-			MapCell::CorridorFloor => false,
-			MapCell::CorridorWall => true,
+			Corridor::Floor => false,
+			Corridor::Wall => true,
 		}
 	}
 
 	fn insert_cell_components(&self, entity: &mut EntityCommands) {
 		match self {
-			MapCell::CorridorFloor => entity.insert(FloorCell),
-			MapCell::CorridorWall => entity.insert(WallCell),
+			Corridor::Floor => entity.insert(FloorCell),
+			Corridor::Wall => entity.insert(WallCell),
 		};
 	}
 }
 
-impl InsertCellQuadrantComponents for MapCell {
+impl InsertCellQuadrantComponents for Corridor {
 	fn insert_cell_quadrant_components(
 		&self,
 		entity: &mut EntityCommands,
@@ -94,41 +86,41 @@ impl InsertCellQuadrantComponents for MapCell {
 	) {
 		match self {
 			// Corridor Floor
-			MapCell::CorridorFloor if differences.matches(CORNER_INNER) => {
+			Corridor::Floor if differences.matches(CORNER_INNER) => {
 				entity.insert(CorridorFloorCornerInside);
 			}
-			MapCell::CorridorFloor if differences.matches(CORNER_OUTER) => {
+			Corridor::Floor if differences.matches(CORNER_OUTER) => {
 				entity.insert(CorridorFloorCornerOutside);
 			}
-			MapCell::CorridorFloor if differences.matches(CORNER_OUTER_DIAGONAL) => {
+			Corridor::Floor if differences.matches(CORNER_OUTER_DIAGONAL) => {
 				entity.insert(CorridorFloorCornerOutside);
 			}
-			MapCell::CorridorFloor if differences.contains(&Quadrant::Forward) => {
+			Corridor::Floor if differences.contains(&Quadrant::Forward) => {
 				entity.insert(CorridorFloorForward);
 			}
-			MapCell::CorridorFloor if differences.contains(&Quadrant::Left) => {
+			Corridor::Floor if differences.contains(&Quadrant::Left) => {
 				entity.insert(CorridorFloorLeft);
 			}
-			MapCell::CorridorFloor => {
+			Corridor::Floor => {
 				entity.insert(CorridorFloor);
 			}
 			// Corridor Wall
-			MapCell::CorridorWall if differences.matches(CORNER_INNER) => {
+			Corridor::Wall if differences.matches(CORNER_INNER) => {
 				entity.insert(CorridorWallCornerInside);
 			}
-			MapCell::CorridorWall if differences.matches(CORNER_OUTER) => {
+			Corridor::Wall if differences.matches(CORNER_OUTER) => {
 				entity.insert(CorridorWallCornerOutside);
 			}
-			MapCell::CorridorWall if differences.matches(CORNER_OUTER_DIAGONAL) => {
+			Corridor::Wall if differences.matches(CORNER_OUTER_DIAGONAL) => {
 				entity.insert(CorridorWallCornerOutsideDiagonal);
 			}
-			MapCell::CorridorWall if differences.contains(&Quadrant::Forward) => {
+			Corridor::Wall if differences.contains(&Quadrant::Forward) => {
 				entity.insert(CorridorWallForward);
 			}
-			MapCell::CorridorWall if differences.contains(&Quadrant::Left) => {
+			Corridor::Wall if differences.contains(&Quadrant::Left) => {
 				entity.insert(CorridorWallLeft);
 			}
-			MapCell::CorridorWall => {
+			Corridor::Wall => {
 				entity.insert(CorridorWall);
 			}
 		};
@@ -145,14 +137,14 @@ mod tests {
 
 	#[test]
 	fn is_walkable() {
-		let cell = MapCell::CorridorFloor;
+		let cell = Corridor::Floor;
 
 		assert!(cell.is_walkable());
 	}
 
 	#[test]
 	fn is_not_walkable() {
-		let cell = MapCell::CorridorWall;
+		let cell = Corridor::Wall;
 
 		assert!(!cell.is_walkable());
 	}
@@ -161,26 +153,26 @@ mod tests {
 	fn new_empty_cell() {
 		let symbol = Some('c');
 
-		let cell = MapCell::from(symbol);
+		let cell = Corridor::from(symbol);
 
-		assert_eq!(MapCell::CorridorFloor, cell);
+		assert_eq!(Corridor::Floor, cell);
 	}
 
 	#[test]
 	fn new_wall_cell() {
 		let symbol = Some('は');
 
-		let cell = MapCell::from(symbol);
+		let cell = Corridor::from(symbol);
 
-		assert_eq!(MapCell::CorridorWall, cell);
+		assert_eq!(Corridor::Wall, cell);
 	}
 
 	#[test]
 	fn new_wall_cell_from_none() {
 		let symbol = None;
 
-		let cell = MapCell::from(symbol);
+		let cell = Corridor::from(symbol);
 
-		assert_eq!(MapCell::CorridorWall, cell);
+		assert_eq!(Corridor::Wall, cell);
 	}
 }

@@ -1,1 +1,1 @@
-pub(crate) mod setup_light;
+pub(crate) mod spawn_global_light;

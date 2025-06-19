@@ -8,6 +8,7 @@ edition.workspace = true
 bevy.workspace = true
 bevy_rapier3d.workspace = true
 uuid.workspace = true
+serde.workspace = true
 test-case.workspace = true
 
 # internal

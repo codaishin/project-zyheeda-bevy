@@ -55,6 +55,7 @@ pub mod register_persistent_entities;
 pub mod register_required_components_mapped;
 pub mod remove_conditionally;
 pub mod remove_resource;
+pub mod spawn;
 pub mod state_duration;
 pub mod states;
 pub mod swap_command;
