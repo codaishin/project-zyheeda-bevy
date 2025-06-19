@@ -1,4 +1,7 @@
-use crate::{components::map::MapGridGraph, grid_graph::GridGraph};
+use crate::{
+	components::{cells_ref::CellsRef, map::MapGridGraph},
+	grid_graph::GridGraph,
+};
 use bevy::prelude::*;
 use common::traits::{thread_safe::ThreadSafe, try_despawn::TryDespawn};
 
@@ -6,7 +9,7 @@ impl<TCell> MapGridGraph<TCell>
 where
 	TCell: ThreadSafe,
 {
-	pub(crate) fn spawn_root<TGrid>(
+	pub(crate) fn spawn_child<TGrid>(
 		trigger: Trigger<OnInsert, Self>,
 		maps: Query<(&Self, Option<&Children>)>,
 		grids: Query<&TGrid>,
@@ -23,7 +26,11 @@ where
 			commands.try_despawn(grid);
 		}
 
-		commands.spawn((ChildOf(target), TGrid::from(map.graph().clone())));
+		commands.spawn((
+			ChildOf(target),
+			TGrid::from(map.graph().clone()),
+			CellsRef::<TCell>::from_grid_definition(target),
+		));
 	}
 }
 
@@ -47,7 +54,7 @@ mod tests {
 	use common::{assert_count, get_children, test_tools::utils::SingleThreadedApp};
 	use std::collections::HashMap;
 
-	#[derive(TypePath)]
+	#[derive(TypePath, Debug, PartialEq)]
 	struct _Cell;
 
 	#[derive(Component, Debug, PartialEq)]
@@ -69,7 +76,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_observer(MapGridGraph::<_Cell>::spawn_root::<_Grid>);
+		app.add_observer(MapGridGraph::<_Cell>::spawn_child::<_Grid>);
 
 		app
 	}
@@ -95,6 +102,32 @@ mod tests {
 
 		let [grid] = assert_count!(1, get_children!(app, entity));
 		assert_eq!(Some(&_Grid(graph)), grid.get::<_Grid>());
+	}
+
+	#[test]
+	fn spawn_grid_cell_type() {
+		let graph = GridGraph {
+			nodes: HashMap::from([((0, 0), Vec3::ZERO)]),
+			extra: Obstacles::default(),
+			context: GridContext::try_from(GridDefinition {
+				cell_count_x: 1,
+				cell_count_z: 1,
+				cell_distance: 2.,
+			})
+			.expect("INVALID GRID DEFINITION"),
+		};
+		let mut app = setup();
+
+		let entity = app
+			.world_mut()
+			.spawn(MapGridGraph::<_Cell>::from(graph.clone()))
+			.id();
+
+		let [grid] = assert_count!(1, get_children!(app, entity));
+		assert_eq!(
+			Some(&CellsRef::<_Cell>::from_grid_definition(entity)),
+			grid.get::<CellsRef<_Cell>>()
+		);
 	}
 
 	#[test]

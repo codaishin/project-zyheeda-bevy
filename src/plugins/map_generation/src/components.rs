@@ -1,3 +1,4 @@
+pub(crate) mod cells_ref;
 pub(crate) mod floor_cell;
 pub(crate) mod floor_light;
 pub(crate) mod grid;

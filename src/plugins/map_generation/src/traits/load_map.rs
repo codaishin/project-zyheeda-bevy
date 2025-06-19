@@ -38,7 +38,9 @@ pub(crate) trait RegisterMapAsset {
 			+ Clone
 			+ ThreadSafe
 			+ GridCellDistanceDefinition
-			+ IsWalkable;
+			+ IsWalkable
+			+ InsertCellComponents
+			+ InsertCellQuadrantComponents;
 }
 
 pub(crate) trait LoadMap {
@@ -62,7 +64,9 @@ impl RegisterMapAsset for App {
 			+ Clone
 			+ ThreadSafe
 			+ GridCellDistanceDefinition
-			+ IsWalkable,
+			+ IsWalkable
+			+ InsertCellComponents
+			+ InsertCellQuadrantComponents,
 	{
 		TLoading::register_load_tracking::<MapAssetCells<TCell>, LoadingGame, AssetsProgress>()
 			.in_app(self, MapAssetCells::<TCell>::all_loaded);
@@ -73,8 +77,13 @@ impl RegisterMapAsset for App {
 		self.init_asset::<MapCells<TCell>>()
 			.register_asset_loader(TextLoader::<MapCells<TCell>>::default())
 			.add_observer(MapAssetPath::<TCell>::insert_map_cells)
-			.add_observer(MapGridGraph::<TCell>::spawn_root::<Grid>)
-			.add_observer(MapGridGraph::<TCell>::spawn_root::<HalfOffsetGrid>)
+			.add_observer(MapGridGraph::<TCell>::spawn_child::<Grid>)
+			.add_observer(
+				Grid::compute_cells::<TCell>
+					.pipe(Grid::spawn_cells)
+					.pipe(log),
+			)
+			.add_observer(MapGridGraph::<TCell>::spawn_child::<HalfOffsetGrid>)
 			.add_systems(
 				OnEnter(resolving_dependencies),
 				MapAssetCells::<TCell>::insert_map_graph.pipe(log_many),
@@ -95,13 +104,9 @@ impl LoadMap for App {
 	{
 		self.add_systems(
 			label,
-			(
-				Level::<TCell>::grid_cells.pipe(Grid::spawn_cells).pipe(log),
-				Level::<TCell>::half_offset_grid_cells
-					.pipe(HalfOffsetGrid::spawn_cells)
-					.pipe(log),
-			)
-				.chain(),
+			Level::<TCell>::half_offset_grid_cells
+				.pipe(HalfOffsetGrid::spawn_cells)
+				.pipe(log),
 		)
 	}
 }

@@ -8,10 +8,7 @@ use crate::{
 		to_subdivided::ToSubdivided,
 	},
 };
-use bevy::{
-	ecs::{query::QuerySingleError, relationship::RelatedSpawnerCommands},
-	prelude::*,
-};
+use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{
 	errors::{Error, Level as ErrorLevel},
 	traits::{thread_safe::ThreadSafe, try_insert_on::TryInsertOn},
@@ -28,23 +25,23 @@ where
 	graph: TGraph,
 }
 
+type Cells<TCell> = (Entity, Vec<(Vec3, TCell)>);
+
 impl Grid {
+	pub(crate) fn graph(&self) -> &GridGraph {
+		&self.graph
+	}
+
 	pub(crate) fn spawn_cells<TCell, TError>(
-		In(cells): In<Result<Vec<(Vec3, TCell)>, TError>>,
+		In(cells): In<Result<Cells<TCell>, TError>>,
 		mut commands: Commands,
-		grids: Query<Entity, With<Self>>,
 	) -> Result<(), SpawnCellError<TError, Self>>
 	where
 		TCell: InsertCellComponents + GridCellDistanceDefinition,
 	{
-		let cells = cells.map_err(|error| SpawnCellError::Error(error))?;
-		let level = grids.single().map_err(|error| match error {
-			QuerySingleError::NoEntities(_) => SpawnCellError::NoGrid,
-			QuerySingleError::MultipleEntities(_) => SpawnCellError::MultipleGrids,
-		})?;
-
-		let Ok(mut grid) = commands.get_entity(level) else {
-			return Err(SpawnCellError::EntityCommandsError); // untested, don't know how to simulate
+		let (entity, cells) = cells.map_err(|error| SpawnCellError::Error(error))?;
+		let Ok(mut grid) = commands.get_entity(entity) else {
+			return Err(SpawnCellError::NoGridEntity);
 		};
 
 		let scale = Vec3::splat(TCell::CELL_DISTANCE);
@@ -100,7 +97,7 @@ pub(crate) enum SpawnCellError<TError, TComponent> {
 	Error(TError),
 	NoGrid,
 	MultipleGrids,
-	EntityCommandsError,
+	NoGridEntity,
 	#[allow(private_interfaces)]
 	_P(TypeMarker<TComponent>),
 }
@@ -120,7 +117,7 @@ where
 				msg: format!("Multiple `{}` components exist", type_name::<TComponent>()),
 				lvl: ErrorLevel::Error,
 			},
-			SpawnCellError::EntityCommandsError => Error {
+			SpawnCellError::NoGridEntity => Error {
 				msg: format!(
 					"Failed to retrieve `{}` entity commands",
 					type_name::<TComponent>()
@@ -279,26 +276,29 @@ mod tests {
 	fn spawn_transform_as_children_of_level() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let grid = app.world_mut().spawn(Grid::default()).id();
-		let cells: Result<Vec<(Vec3, _Cell)>, _Error> = Ok(vec![
-			(
-				Vec3::new(1., 2., 3.),
-				_Cell {
-					offset_height: true,
-				},
-			),
-			(
-				Vec3::new(3., 4., 5.),
-				_Cell {
-					offset_height: false,
-				},
-			),
-			(
-				Vec3::new(10., 21., 2.),
-				_Cell {
-					offset_height: true,
-				},
-			),
-		]);
+		let cells: Result<Cells<_>, _Error> = Ok((
+			grid,
+			vec![
+				(
+					Vec3::new(1., 2., 3.),
+					_Cell {
+						offset_height: true,
+					},
+				),
+				(
+					Vec3::new(3., 4., 5.),
+					_Cell {
+						offset_height: false,
+					},
+				),
+				(
+					Vec3::new(10., 21., 2.),
+					_Cell {
+						offset_height: true,
+					},
+				),
+			],
+		));
 
 		let result = app
 			.world_mut()
@@ -321,11 +321,14 @@ mod tests {
 	fn spawn_cell_component() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let grid = app.world_mut().spawn(Grid::default()).id();
-		let cells: Result<Vec<(Vec3, _Cell)>, _Error> = Ok(vec![
-			(Vec3::default(), _Cell::default()),
-			(Vec3::default(), _Cell::default()),
-			(Vec3::default(), _Cell::default()),
-		]);
+		let cells: Result<Cells<_>, _Error> = Ok((
+			grid,
+			vec![
+				(Vec3::default(), _Cell::default()),
+				(Vec3::default(), _Cell::default()),
+				(Vec3::default(), _Cell::default()),
+			],
+		));
 
 		let result = app
 			.world_mut()
@@ -348,7 +351,7 @@ mod tests {
 	fn return_cells_error() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		app.world_mut().spawn(Grid::default());
-		let cells: Result<Vec<(Vec3, _Cell)>, _Error> = Err(_Error);
+		let cells: Result<Cells<_Cell>, _Error> = Err(_Error);
 
 		let result = app
 			.world_mut()
@@ -359,34 +362,16 @@ mod tests {
 	}
 
 	#[test]
-	fn return_no_level_error() -> Result<(), RunSystemError> {
-		#[derive(Component)]
-		struct _NotALevel;
-
+	fn return_commands_error_when_entity_not_valid() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		app.world_mut().spawn(_NotALevel);
-		let cells: Result<Vec<(Vec3, _Cell)>, _Error> = Ok(vec![]);
+		app.world_mut().spawn(Grid::default());
+		let cells: Result<Cells<_Cell>, _Error> = Ok((Entity::from_raw(111), vec![]));
 
 		let result = app
 			.world_mut()
 			.run_system_once_with(Grid::spawn_cells, cells)?;
 
-		assert_eq!(Err(SpawnCellError::NoGrid), result);
-		Ok(())
-	}
-
-	#[test]
-	fn return_multiple_levels_error() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		app.world_mut().spawn(Grid::default());
-		app.world_mut().spawn(Grid::default());
-		let cells: Result<Vec<(Vec3, _Cell)>, _Error> = Ok(vec![]);
-
-		let result = app
-			.world_mut()
-			.run_system_once_with(Grid::spawn_cells, cells)?;
-
-		assert_eq!(Err(SpawnCellError::MultipleGrids), result);
+		assert_eq!(Err(SpawnCellError::NoGridEntity), result);
 		Ok(())
 	}
 }

@@ -34,7 +34,7 @@ impl HalfOffsetGrid {
 		})?;
 
 		let Ok(mut grid) = commands.get_entity(level) else {
-			return Err(SpawnCellError::EntityCommandsError); // untested, don't know how to simulate
+			return Err(SpawnCellError::NoGridEntity); // FIXME: TEST
 		};
 
 		grid.with_children(spawn_children(cells));
