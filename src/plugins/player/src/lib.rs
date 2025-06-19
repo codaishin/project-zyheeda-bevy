@@ -25,6 +25,7 @@ use common::{
 		handles_saving::HandlesSaving,
 		handles_settings::HandlesSettings,
 		prefab::AddPrefabObserver,
+		spawn::Spawn,
 		thread_safe::ThreadSafe,
 	},
 };

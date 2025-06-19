@@ -145,10 +145,6 @@ impl Player {
 			},
 		}
 	}
-
-	pub(crate) fn spawn(mut commands: Commands) {
-		commands.spawn(Player);
-	}
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]

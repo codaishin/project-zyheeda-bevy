@@ -1,4 +1,5 @@
 use super::*;
+use common::traits::spawn::Spawn;
 use std::{
 	marker::PhantomData,
 	ops::DerefMut,
@@ -81,7 +82,7 @@ impl MeasureFps {
 	}
 }
 
-#[derive(Component, Debug, PartialEq)]
+#[derive(Component, Debug, PartialEq, Default)]
 #[require(Node = DisplayFps::top_left(), Text)]
 struct DisplayFps;
 
@@ -95,10 +96,6 @@ impl DisplayFps {
 			height: Val::Px(20.),
 			..default()
 		}
-	}
-
-	fn spawn(mut commands: Commands) {
-		commands.spawn(DisplayFps);
 	}
 
 	fn update(

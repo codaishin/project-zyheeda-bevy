@@ -8,12 +8,14 @@ mod systems;
 mod tools;
 mod traits;
 
+use crate::components::map::demo_map::DemoMap;
 use bevy::prelude::*;
 use common::{
 	states::game_state::GameState,
 	traits::{
 		handles_lights::HandlesLights,
 		handles_map_generation::HandlesMapGeneration,
+		spawn::Spawn,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -45,6 +47,7 @@ where
 
 		app.load_map_asset::<Corridor>(OnEnter(new_game))
 			.load_map::<Corridor>(OnEnter(loading))
+			.add_systems(OnEnter(new_game), DemoMap::spawn)
 			.add_systems(Update, Grid::<1>::insert)
 			.add_systems(
 				Update,
