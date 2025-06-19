@@ -3317,6 +3317,7 @@ dependencies = [
  "bevy_rapier3d",
  "common",
  "mockall",
+ "serde",
  "uuid",
 ]
 
