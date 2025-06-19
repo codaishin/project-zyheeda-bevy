@@ -24,14 +24,16 @@ use common::{
 			HandlesLoadTracking,
 			LoadTrackingInApp,
 		},
+		handles_saving::HandlesSaving,
 		thread_safe::ThreadSafe,
 	},
 };
 
 pub(crate) trait RegisterMapCell {
-	fn register_map_cell<TLoading, TCell>(&mut self) -> &mut App
+	fn register_map_cell<TLoading, TSavegame, TCell>(&mut self) -> &mut App
 	where
 		TLoading: ThreadSafe + HandlesLoadTracking,
+		TSavegame: ThreadSafe + HandlesSaving,
 		TCell: TypePath
 			+ From<Option<char>>
 			+ Clone
@@ -43,9 +45,10 @@ pub(crate) trait RegisterMapCell {
 }
 
 impl RegisterMapCell for App {
-	fn register_map_cell<TLoading, TCell>(&mut self) -> &mut App
+	fn register_map_cell<TLoading, TSavegame, TCell>(&mut self) -> &mut App
 	where
 		TLoading: ThreadSafe + HandlesLoadTracking,
+		TSavegame: ThreadSafe + HandlesSaving,
 		TCell: TypePath
 			+ From<Option<char>>
 			+ Clone
@@ -55,11 +58,16 @@ impl RegisterMapCell for App {
 			+ InsertCellComponents
 			+ InsertCellQuadrantComponents,
 	{
-		TLoading::register_load_tracking::<MapAssetCells<TCell>, LoadingGame, AssetsProgress>()
-			.in_app(self, MapAssetCells::<TCell>::all_loaded);
-
 		let resolving_dependencies =
 			TLoading::processing_state::<LoadingGame, DependenciesProgress>();
+
+		//save maps
+		TSavegame::register_savable_component::<MapAssetPath<TCell>>(self);
+		self.register_required_components::<MapAssetPath<TCell>, TSavegame::TSaveEntityMarker>();
+
+		// Track wether assets have been loaded
+		TLoading::register_load_tracking::<MapAssetCells<TCell>, LoadingGame, AssetsProgress>()
+			.in_app(self, MapAssetCells::<TCell>::all_loaded);
 
 		self
 			// register cell asset

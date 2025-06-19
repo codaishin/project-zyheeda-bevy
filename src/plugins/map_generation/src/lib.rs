@@ -17,6 +17,7 @@ use common::{
 		handles_lights::HandlesLights,
 		handles_load_tracking::HandlesLoadTracking,
 		handles_map_generation::HandlesMapGeneration,
+		handles_saving::HandlesSaving,
 		spawn::Spawn,
 		thread_safe::ThreadSafe,
 	},
@@ -30,23 +31,25 @@ use traits::register_map_cell::RegisterMapCell;
 
 pub struct MapGenerationPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TLights> MapGenerationPlugin<(TLoading, TLights)>
+impl<TLoading, TSavegame, TLights> MapGenerationPlugin<(TLoading, TSavegame, TLights)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
+	TSavegame: ThreadSafe + HandlesSaving,
 	TLights: ThreadSafe + HandlesLights,
 {
-	pub fn from_plugins(_: &TLoading, _: &TLights) -> Self {
+	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TLights) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLoading, TLights> Plugin for MapGenerationPlugin<(TLoading, TLights)>
+impl<TLoading, TSavegame, TLights> Plugin for MapGenerationPlugin<(TLoading, TSavegame, TLights)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
+	TSavegame: ThreadSafe + HandlesSaving,
 	TLights: ThreadSafe + HandlesLights,
 {
 	fn build(&self, app: &mut App) {
-		app.register_map_cell::<TLoading, Corridor>()
+		app.register_map_cell::<TLoading, TSavegame, Corridor>()
 			.add_systems(OnEnter(GameState::NewGame), DemoMap::spawn)
 			.add_systems(Update, Grid::<1>::insert)
 			.add_systems(

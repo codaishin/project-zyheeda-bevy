@@ -6,7 +6,7 @@ use common::traits::{handles_load_tracking::Loaded, load_asset::Path, thread_saf
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 
-#[derive(Component, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Component, Debug, PartialEq, Serialize, Deserialize, Clone)]
 #[component(immutable)]
 pub(crate) struct MapAssetPath<TCell> {
 	pub(crate) asset_path: Path,
