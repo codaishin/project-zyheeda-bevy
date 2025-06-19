@@ -1,10 +1,10 @@
 mod components;
+mod errors;
 mod grid_graph;
 mod line_wide;
 mod map_cells;
 mod map_loader;
 mod observers;
-mod resources;
 mod systems;
 mod tools;
 mod traits;
@@ -26,7 +26,7 @@ use grid_graph::GridGraph;
 use map_cells::corridor::Corridor;
 use std::marker::PhantomData;
 use systems::{apply_extra_components::ApplyExtraComponents, unlit_material::unlit_material};
-use traits::load_map::{LoadMap, RegisterMapAsset};
+use traits::register_map_cell::RegisterMapCell;
 
 pub struct MapGenerationPlugin<TDependencies>(PhantomData<TDependencies>);
 
@@ -46,12 +46,8 @@ where
 	TLights: ThreadSafe + HandlesLights,
 {
 	fn build(&self, app: &mut App) {
-		let new_game = GameState::NewGame;
-		let loading = GameState::Loading;
-
-		app.register_map_asset::<TLoading, Corridor>()
-			.load_map::<Corridor>(OnEnter(loading))
-			.add_systems(OnEnter(new_game), DemoMap::spawn)
+		app.register_map_cell::<TLoading, Corridor>()
+			.add_systems(OnEnter(GameState::NewGame), DemoMap::spawn)
 			.add_systems(Update, Grid::<1>::insert)
 			.add_systems(
 				Update,

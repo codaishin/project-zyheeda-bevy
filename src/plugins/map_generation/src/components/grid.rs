@@ -2,6 +2,7 @@ mod error_type_marker;
 
 use crate::{
 	grid_graph::GridGraph,
+	observers::compute_grid_cells::Cells,
 	traits::{
 		GridCellDistanceDefinition,
 		insert_cell_components::InsertCellComponents,
@@ -24,8 +25,6 @@ where
 {
 	graph: TGraph,
 }
-
-type Cells<TCell> = (Entity, Vec<(Vec3, TCell)>);
 
 impl Grid {
 	pub(crate) fn graph(&self) -> &GridGraph {
@@ -95,8 +94,6 @@ impl<const SUBDIVISIONS: u8> From<&Grid<SUBDIVISIONS>> for GridGraph {
 #[derive(Debug, PartialEq)]
 pub(crate) enum SpawnCellError<TError, TComponent> {
 	Error(TError),
-	NoGrid,
-	MultipleGrids,
 	NoGridEntity,
 	#[allow(private_interfaces)]
 	_P(TypeMarker<TComponent>),
@@ -109,14 +106,6 @@ where
 	fn from(value: SpawnCellError<TError, TComponent>) -> Self {
 		match value {
 			SpawnCellError::Error(error) => Error::from(error),
-			SpawnCellError::NoGrid => Error {
-				msg: format!("No `{}` component exists", type_name::<TComponent>()),
-				lvl: ErrorLevel::Error,
-			},
-			SpawnCellError::MultipleGrids => Error {
-				msg: format!("Multiple `{}` components exist", type_name::<TComponent>()),
-				lvl: ErrorLevel::Error,
-			},
 			SpawnCellError::NoGridEntity => Error {
 				msg: format!(
 					"Failed to retrieve `{}` entity commands",

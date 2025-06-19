@@ -1,12 +1,12 @@
 use crate::{
 	components::map::{MapAssetCells, MapGridGraph},
+	errors::InsertGraphError,
 	grid_graph::{
 		GridGraph,
 		Obstacles,
 		grid_context::{GridContext, GridDefinition},
 	},
 	map_cells::MapCells,
-	resources::level::SetGraphError,
 	traits::{GridCellDistanceDefinition, grid_min::GridMin, is_walkable::IsWalkable},
 };
 use bevy::prelude::*;
@@ -21,10 +21,10 @@ where
 		maps: Query<(Entity, &Self)>,
 		assets: Res<Assets<MapCells<TCell>>>,
 		mut commands: Commands,
-	) -> Vec<Result<(), SetGraphError>> {
+	) -> Vec<Result<(), InsertGraphError>> {
 		let insert_map_graph = |(entity, map): (Entity, &Self)| {
 			let Some(asset) = assets.get(map.cells()) else {
-				return Err(SetGraphError::MapAssetNotFound);
+				return Err(InsertGraphError::MapAssetNotFound);
 			};
 			let (cell_count_x, cell_count_z) = get_cell_counts(asset.cells());
 			let grid_definition = GridDefinition {
@@ -36,7 +36,7 @@ where
 				nodes: HashMap::default(),
 				extra: Obstacles::default(),
 				context: GridContext::try_from(grid_definition)
-					.map_err(SetGraphError::GridDefinitionError)?,
+					.map_err(InsertGraphError::GridDefinitionError)?,
 			};
 			let min = graph.context.grid_min();
 			let mut position = min;
@@ -115,7 +115,7 @@ mod tests {
 	}
 
 	#[derive(Resource, Debug, PartialEq)]
-	struct _Results(Vec<Result<(), SetGraphError>>);
+	struct _Results(Vec<Result<(), InsertGraphError>>);
 
 	fn setup(cells: Vec<Vec<_Cell>>) -> (App, Entity) {
 		let cells_handle = new_handle();
@@ -275,7 +275,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			&_Results(vec![Err(SetGraphError::GridDefinitionError(
+			&_Results(vec![Err(InsertGraphError::GridDefinitionError(
 				GridDefinitionError::CellCountZero
 			))]),
 			app.world().resource::<_Results>()
@@ -291,7 +291,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			&_Results(vec![Err(SetGraphError::MapAssetNotFound)]),
+			&_Results(vec![Err(InsertGraphError::MapAssetNotFound)]),
 			app.world().resource::<_Results>()
 		);
 	}

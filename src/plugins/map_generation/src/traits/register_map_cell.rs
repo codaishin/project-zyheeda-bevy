@@ -12,9 +12,8 @@ use crate::{
 	},
 	map_cells::MapCells,
 	map_loader::TextLoader,
-	resources::level::Level,
 };
-use bevy::{ecs::schedule::ScheduleLabel, prelude::*};
+use bevy::prelude::*;
 use common::{
 	states::game_state::LoadingGame,
 	systems::log::{log, log_many},
@@ -29,8 +28,8 @@ use common::{
 	},
 };
 
-pub(crate) trait RegisterMapAsset {
-	fn register_map_asset<TLoading, TCell>(&mut self) -> &mut App
+pub(crate) trait RegisterMapCell {
+	fn register_map_cell<TLoading, TCell>(&mut self) -> &mut App
 	where
 		TLoading: ThreadSafe + HandlesLoadTracking,
 		TCell: TypePath
@@ -43,20 +42,8 @@ pub(crate) trait RegisterMapAsset {
 			+ InsertCellQuadrantComponents;
 }
 
-pub(crate) trait LoadMap {
-	fn load_map<TCell>(&mut self, label: impl ScheduleLabel) -> &mut App
-	where
-		TCell: GridCellDistanceDefinition
-			+ IsWalkable
-			+ InsertCellComponents
-			+ InsertCellQuadrantComponents
-			+ TypePath
-			+ Clone
-			+ ThreadSafe;
-}
-
-impl RegisterMapAsset for App {
-	fn register_map_asset<TLoading, TCell>(&mut self) -> &mut App
+impl RegisterMapCell for App {
+	fn register_map_cell<TLoading, TCell>(&mut self) -> &mut App
 	where
 		TLoading: ThreadSafe + HandlesLoadTracking,
 		TCell: TypePath
@@ -74,39 +61,29 @@ impl RegisterMapAsset for App {
 		let resolving_dependencies =
 			TLoading::processing_state::<LoadingGame, DependenciesProgress>();
 
-		self.init_asset::<MapCells<TCell>>()
+		self
+			// register cell asset
+			.init_asset::<MapCells<TCell>>()
 			.register_asset_loader(TextLoader::<MapCells<TCell>>::default())
+			// Generate Cells and Graph from asset path
 			.add_observer(MapAssetPath::<TCell>::insert_map_cells)
+			.add_systems(
+				OnEnter(resolving_dependencies),
+				MapAssetCells::<TCell>::insert_map_graph.pipe(log_many),
+			)
+			// Generate grid for navigation
 			.add_observer(MapGridGraph::<TCell>::spawn_child::<Grid>)
 			.add_observer(
 				Grid::compute_cells::<TCell>
 					.pipe(Grid::spawn_cells)
 					.pipe(log),
 			)
+			// Generate grid with 1/2 offset for map models
 			.add_observer(MapGridGraph::<TCell>::spawn_child::<HalfOffsetGrid>)
-			.add_systems(
-				OnEnter(resolving_dependencies),
-				MapAssetCells::<TCell>::insert_map_graph.pipe(log_many),
+			.add_observer(
+				HalfOffsetGrid::compute_cells::<TCell>
+					.pipe(HalfOffsetGrid::spawn_cells)
+					.pipe(log),
 			)
-	}
-}
-
-impl LoadMap for App {
-	fn load_map<TCell>(&mut self, label: impl ScheduleLabel) -> &mut App
-	where
-		TCell: GridCellDistanceDefinition
-			+ IsWalkable
-			+ InsertCellComponents
-			+ InsertCellQuadrantComponents
-			+ TypePath
-			+ Clone
-			+ ThreadSafe,
-	{
-		self.add_systems(
-			label,
-			Level::<TCell>::half_offset_grid_cells
-				.pipe(HalfOffsetGrid::spawn_cells)
-				.pipe(log),
-		)
 	}
 }

@@ -2,15 +2,13 @@ use super::grid::SpawnCellError;
 use crate::{
 	grid_graph::GridGraph,
 	map_cells::{Direction, half_offset_cell::HalfOffsetCell},
+	observers::compute_half_offset_grid_cells::Cells,
 	traits::{
 		insert_cell_quadrant_components::{InsertCellQuadrantComponents, Quadrant},
 		is_walkable::IsWalkable,
 	},
 };
-use bevy::{
-	ecs::{query::QuerySingleError, relationship::RelatedSpawnerCommands},
-	prelude::*,
-};
+use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use std::collections::HashMap;
 
 #[derive(Component, Debug, PartialEq)]
@@ -18,23 +16,16 @@ use std::collections::HashMap;
 pub(crate) struct HalfOffsetGrid;
 
 impl HalfOffsetGrid {
-	#[allow(clippy::type_complexity)]
 	pub(crate) fn spawn_cells<TCell, TError>(
-		In(cells): In<Result<Vec<(Vec3, HalfOffsetCell<TCell>)>, TError>>,
+		In(cells): In<Result<Cells<TCell>, TError>>,
 		mut commands: Commands,
-		grids: Query<Entity, With<Self>>,
 	) -> Result<(), SpawnCellError<TError, Self>>
 	where
 		TCell: InsertCellQuadrantComponents + IsWalkable,
 	{
-		let cells = cells.map_err(SpawnCellError::Error)?;
-		let level = grids.single().map_err(|error| match error {
-			QuerySingleError::NoEntities(_) => SpawnCellError::NoGrid,
-			QuerySingleError::MultipleEntities(_) => SpawnCellError::MultipleGrids,
-		})?;
-
-		let Ok(mut grid) = commands.get_entity(level) else {
-			return Err(SpawnCellError::NoGridEntity); // FIXME: TEST
+		let (entity, cells) = cells.map_err(SpawnCellError::Error)?;
+		let Ok(mut grid) = commands.get_entity(entity) else {
+			return Err(SpawnCellError::NoGridEntity);
 		};
 
 		grid.with_children(spawn_children(cells));
@@ -176,15 +167,18 @@ mod tests {
 	fn spawn_cell_quadrant_transforms() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let grid = app.world_mut().spawn(HalfOffsetGrid).id();
-		let cells: Result<Vec<(Vec3, HalfOffsetCell<_Cell>)>, _Error> = Ok(vec![(
-			Vec3::new(1., 2., 3.),
-			HalfOffsetCell::from([
-				(Direction::NegZ, _Cell::walkable("")),
-				(Direction::X, _Cell::walkable("")),
-				(Direction::Z, _Cell::walkable("")),
-				(Direction::NegX, _Cell::walkable("")),
-			]),
-		)]);
+		let cells: Result<Cells<_Cell>, _Error> = Ok((
+			grid,
+			vec![(
+				Vec3::new(1., 2., 3.),
+				HalfOffsetCell::from([
+					(Direction::NegZ, _Cell::walkable("")),
+					(Direction::X, _Cell::walkable("")),
+					(Direction::Z, _Cell::walkable("")),
+					(Direction::NegX, _Cell::walkable("")),
+				]),
+			)],
+		));
 
 		let result = app
 			.world_mut()
@@ -207,15 +201,18 @@ mod tests {
 	fn spawn_cell_quadrants_all_walkable() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let grid = app.world_mut().spawn(HalfOffsetGrid).id();
-		let cells: Result<Vec<(Vec3, HalfOffsetCell<_Cell>)>, _Error> = Ok(vec![(
-			Vec3::new(1., 2., 3.),
-			HalfOffsetCell::from([
-				(Direction::NegZ, _Cell::walkable("neg z")),
-				(Direction::X, _Cell::walkable("x")),
-				(Direction::Z, _Cell::walkable("z")),
-				(Direction::NegX, _Cell::walkable("neg x")),
-			]),
-		)]);
+		let cells: Result<Cells<_Cell>, _Error> = Ok((
+			grid,
+			vec![(
+				Vec3::new(1., 2., 3.),
+				HalfOffsetCell::from([
+					(Direction::NegZ, _Cell::walkable("neg z")),
+					(Direction::X, _Cell::walkable("x")),
+					(Direction::Z, _Cell::walkable("z")),
+					(Direction::NegX, _Cell::walkable("neg x")),
+				]),
+			)],
+		));
 
 		let result = app
 			.world_mut()
@@ -250,15 +247,18 @@ mod tests {
 	fn spawn_cell_corner() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let grid = app.world_mut().spawn(HalfOffsetGrid).id();
-		let cells: Result<Vec<(Vec3, HalfOffsetCell<_Cell>)>, _Error> = Ok(vec![(
-			Vec3::new(1., 2., 3.),
-			HalfOffsetCell::from([
-				(Direction::X, _Cell::walkable("x")),
-				(Direction::Z, _Cell::walkable("z")),
-				(Direction::NegX, _Cell::walkable("neg x")),
-				(Direction::NegZ, _Cell::not_walkable("neg z")),
-			]),
-		)]);
+		let cells: Result<Cells<_Cell>, _Error> = Ok((
+			grid,
+			vec![(
+				Vec3::new(1., 2., 3.),
+				HalfOffsetCell::from([
+					(Direction::X, _Cell::walkable("x")),
+					(Direction::Z, _Cell::walkable("z")),
+					(Direction::NegX, _Cell::walkable("neg x")),
+					(Direction::NegZ, _Cell::not_walkable("neg z")),
+				]),
+			)],
+		));
 
 		let result = app
 			.world_mut()
@@ -297,45 +297,39 @@ mod tests {
 	fn return_cells_error() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		app.world_mut().spawn(HalfOffsetGrid);
-		let cells: Result<Vec<(Vec3, HalfOffsetCell<_Cell>)>, _Error> = Err(_Error);
+		let mut app = setup();
+		let cells: Result<Cells<_Cell>, _Error> = Ok((
+			Entity::from_raw(123),
+			vec![(
+				Vec3::new(1., 2., 3.),
+				HalfOffsetCell::from([
+					(Direction::X, _Cell::walkable("x")),
+					(Direction::Z, _Cell::walkable("z")),
+					(Direction::NegX, _Cell::walkable("neg x")),
+					(Direction::NegZ, _Cell::not_walkable("neg z")),
+				]),
+			)],
+		));
+
+		let result = app
+			.world_mut()
+			.run_system_once_with(HalfOffsetGrid::spawn_cells, cells)?;
+
+		assert_eq!(Err(SpawnCellError::NoGridEntity), result);
+		Ok(())
+	}
+
+	#[test]
+	fn return_no_entity_error() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		app.world_mut().spawn(HalfOffsetGrid);
+		let cells: Result<Cells<_Cell>, _Error> = Err(_Error);
 
 		let result = app
 			.world_mut()
 			.run_system_once_with(HalfOffsetGrid::spawn_cells, cells)?;
 
 		assert_eq!(Err(SpawnCellError::Error(_Error)), result);
-		Ok(())
-	}
-
-	#[test]
-	fn return_no_level_error() -> Result<(), RunSystemError> {
-		#[derive(Component)]
-		struct _NotALevel;
-
-		let mut app = setup();
-		app.world_mut().spawn(_NotALevel);
-		let cells: Result<Vec<(Vec3, HalfOffsetCell<_Cell>)>, _Error> = Ok(vec![]);
-
-		let result = app
-			.world_mut()
-			.run_system_once_with(HalfOffsetGrid::spawn_cells, cells)?;
-
-		assert_eq!(Err(SpawnCellError::NoGrid), result);
-		Ok(())
-	}
-
-	#[test]
-	fn return_multiple_levels_error() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		app.world_mut().spawn(HalfOffsetGrid);
-		app.world_mut().spawn(HalfOffsetGrid);
-		let cells: Result<Vec<(Vec3, HalfOffsetCell<_Cell>)>, _Error> = Ok(vec![]);
-
-		let result = app
-			.world_mut()
-			.run_system_once_with(HalfOffsetGrid::spawn_cells, cells)?;
-
-		assert_eq!(Err(SpawnCellError::MultipleGrids), result);
 		Ok(())
 	}
 }
