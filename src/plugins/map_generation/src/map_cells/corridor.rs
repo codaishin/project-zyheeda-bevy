@@ -18,14 +18,12 @@ use crate::{
 	},
 	traits::{
 		GridCellDistanceDefinition,
-		SourcePath,
 		insert_cell_components::InsertCellComponents,
 		insert_cell_quadrant_components::{InsertCellQuadrantComponents, PatternMatches, Quadrant},
 		is_walkable::IsWalkable,
 	},
 };
 use bevy::prelude::*;
-use common::traits::load_asset::Path;
 use std::collections::HashSet;
 
 #[derive(Debug, PartialEq, Clone, TypePath)]
@@ -44,12 +42,6 @@ impl IsWalkable for Corridor {
 			Corridor::CorridorFloor => true,
 			Corridor::CorridorWall => false,
 		}
-	}
-}
-
-impl SourcePath for Corridor {
-	fn source_path() -> Path {
-		Path::from("maps/map.txt")
 	}
 }
 

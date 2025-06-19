@@ -7,7 +7,7 @@ pub(crate) mod load_map;
 pub(crate) mod to_subdivided;
 
 use bevy::prelude::*;
-use common::traits::{handles_lights::HandlesLights, load_asset::Path, thread_safe::ThreadSafe};
+use common::traits::{handles_lights::HandlesLights, thread_safe::ThreadSafe};
 
 pub(crate) trait ExtraComponentsDefinition {
 	fn target_names() -> Vec<String>;
@@ -18,8 +18,4 @@ pub(crate) trait ExtraComponentsDefinition {
 
 pub(crate) trait GridCellDistanceDefinition {
 	const CELL_DISTANCE: f32;
-}
-
-pub trait SourcePath {
-	fn source_path() -> Path;
 }

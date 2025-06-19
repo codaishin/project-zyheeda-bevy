@@ -1,12 +1,11 @@
 use super::{
 	GridCellDistanceDefinition,
-	SourcePath,
 	insert_cell_components::InsertCellComponents,
 	insert_cell_quadrant_components::InsertCellQuadrantComponents,
 	is_walkable::IsWalkable,
 };
 use crate::{
-	components::{grid::Grid, half_offset_grid::HalfOffsetGrid},
+	components::{grid::Grid, half_offset_grid::HalfOffsetGrid, map::MapAssetPath},
 	map_cells::MapCells,
 	map_loader::TextLoader,
 	resources::level::Level,
@@ -22,10 +21,10 @@ use bevy::{
 };
 use common::{systems::log::log, traits::thread_safe::ThreadSafe};
 
-pub(crate) trait LoadMapAsset {
-	fn load_map_asset<TCell>(&mut self, label: impl ScheduleLabel) -> &mut App
+pub(crate) trait RegisterMapAsset {
+	fn register_map_asset<TCell>(&mut self) -> &mut App
 	where
-		TCell: TypePath + From<Option<char>> + SourcePath + Clone + ThreadSafe;
+		TCell: TypePath + From<Option<char>> + Clone + ThreadSafe;
 }
 
 pub(crate) trait LoadMap {
@@ -40,14 +39,14 @@ pub(crate) trait LoadMap {
 			+ ThreadSafe;
 }
 
-impl LoadMapAsset for App {
-	fn load_map_asset<TCell>(&mut self, label: impl ScheduleLabel) -> &mut App
+impl RegisterMapAsset for App {
+	fn register_map_asset<TCell>(&mut self) -> &mut App
 	where
-		TCell: TypePath + From<Option<char>> + SourcePath + Clone + ThreadSafe,
+		TCell: TypePath + From<Option<char>> + Clone + ThreadSafe,
 	{
 		self.init_asset::<MapCells<TCell>>()
 			.register_asset_loader(TextLoader::<MapCells<TCell>>::default())
-			.add_systems(label, Level::<TCell>::load_asset)
+			.add_observer(MapAssetPath::<TCell>::insert_map_cells)
 	}
 }
 

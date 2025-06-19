@@ -3418,6 +3418,7 @@ dependencies = [
  "common",
  "macros",
  "mockall",
+ "serde",
  "test-case",
  "uuid",
 ]
