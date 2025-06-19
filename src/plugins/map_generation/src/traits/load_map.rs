@@ -5,7 +5,11 @@ use super::{
 	is_walkable::IsWalkable,
 };
 use crate::{
-	components::{grid::Grid, half_offset_grid::HalfOffsetGrid, map::MapAssetPath},
+	components::{
+		grid::Grid,
+		half_offset_grid::HalfOffsetGrid,
+		map::{MapAssetCells, MapAssetPath},
+	},
 	map_cells::MapCells,
 	map_loader::TextLoader,
 	resources::level::Level,
@@ -19,11 +23,19 @@ use bevy::{
 	},
 	reflect::TypePath,
 };
-use common::{systems::log::log, traits::thread_safe::ThreadSafe};
+use common::{
+	states::game_state::LoadingGame,
+	systems::log::log,
+	traits::{
+		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInApp},
+		thread_safe::ThreadSafe,
+	},
+};
 
 pub(crate) trait RegisterMapAsset {
-	fn register_map_asset<TCell>(&mut self) -> &mut App
+	fn register_map_asset<TLoading, TCell>(&mut self) -> &mut App
 	where
+		TLoading: ThreadSafe + HandlesLoadTracking,
 		TCell: TypePath + From<Option<char>> + Clone + ThreadSafe;
 }
 
@@ -40,10 +52,14 @@ pub(crate) trait LoadMap {
 }
 
 impl RegisterMapAsset for App {
-	fn register_map_asset<TCell>(&mut self) -> &mut App
+	fn register_map_asset<TLoading, TCell>(&mut self) -> &mut App
 	where
+		TLoading: ThreadSafe + HandlesLoadTracking,
 		TCell: TypePath + From<Option<char>> + Clone + ThreadSafe,
 	{
+		TLoading::register_load_tracking::<MapAssetCells<TCell>, LoadingGame, AssetsProgress>()
+			.in_app(self, MapAssetCells::<TCell>::all_loaded);
+
 		self.init_asset::<MapCells<TCell>>()
 			.register_asset_loader(TextLoader::<MapCells<TCell>>::default())
 			.add_observer(MapAssetPath::<TCell>::insert_map_cells)

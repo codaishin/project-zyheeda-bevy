@@ -15,6 +15,7 @@ use common::{
 	states::game_state::GameState,
 	traits::{
 		handles_lights::HandlesLights,
+		handles_load_tracking::HandlesLoadTracking,
 		handles_map_generation::HandlesMapGeneration,
 		spawn::Spawn,
 		thread_safe::ThreadSafe,
@@ -29,24 +30,26 @@ use traits::load_map::{LoadMap, RegisterMapAsset};
 
 pub struct MapGenerationPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLights> MapGenerationPlugin<TLights>
+impl<TLoading, TLights> MapGenerationPlugin<(TLoading, TLights)>
 where
+	TLoading: ThreadSafe + HandlesLoadTracking,
 	TLights: ThreadSafe + HandlesLights,
 {
-	pub fn from_plugin(_: &TLights) -> Self {
-		Self(PhantomData::<TLights>)
+	pub fn from_plugins(_: &TLoading, _: &TLights) -> Self {
+		Self(PhantomData)
 	}
 }
 
-impl<TLights> Plugin for MapGenerationPlugin<TLights>
+impl<TLoading, TLights> Plugin for MapGenerationPlugin<(TLoading, TLights)>
 where
+	TLoading: ThreadSafe + HandlesLoadTracking,
 	TLights: ThreadSafe + HandlesLights,
 {
 	fn build(&self, app: &mut App) {
 		let new_game = GameState::NewGame;
 		let loading = GameState::Loading;
 
-		app.register_map_asset::<Corridor>()
+		app.register_map_asset::<TLoading, Corridor>()
 			.load_map::<Corridor>(OnEnter(loading))
 			.add_systems(OnEnter(new_game), DemoMap::spawn)
 			.add_systems(Update, Grid::<1>::insert)
