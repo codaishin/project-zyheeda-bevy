@@ -8,22 +8,13 @@ use crate::{
 	components::{
 		grid::Grid,
 		half_offset_grid::HalfOffsetGrid,
-		map::{MapAssetCells, MapAssetPath},
+		map::{MapAssetCells, MapAssetPath, MapGridGraph},
 	},
 	map_cells::MapCells,
 	map_loader::TextLoader,
 	resources::level::Level,
 };
-use bevy::{
-	app::App,
-	asset::AssetApp,
-	ecs::{
-		schedule::{IntoScheduleConfigs, ScheduleLabel},
-		system::IntoSystem,
-	},
-	reflect::TypePath,
-	state::state::OnEnter,
-};
+use bevy::{ecs::schedule::ScheduleLabel, prelude::*};
 use common::{
 	states::game_state::LoadingGame,
 	systems::log::{log, log_many},
@@ -82,6 +73,8 @@ impl RegisterMapAsset for App {
 		self.init_asset::<MapCells<TCell>>()
 			.register_asset_loader(TextLoader::<MapCells<TCell>>::default())
 			.add_observer(MapAssetPath::<TCell>::insert_map_cells)
+			.add_observer(MapGridGraph::<TCell>::spawn_root::<Grid>)
+			.add_observer(MapGridGraph::<TCell>::spawn_root::<HalfOffsetGrid>)
 			.add_systems(
 				OnEnter(resolving_dependencies),
 				MapAssetCells::<TCell>::insert_map_graph.pipe(log_many),
@@ -103,8 +96,6 @@ impl LoadMap for App {
 		self.add_systems(
 			label,
 			(
-				Level::<TCell>::spawn_unique::<Grid>.pipe(log),
-				Level::<TCell>::spawn_unique::<HalfOffsetGrid>.pipe(log),
 				Level::<TCell>::grid_cells.pipe(Grid::spawn_cells).pipe(log),
 				Level::<TCell>::half_offset_grid_cells
 					.pipe(HalfOffsetGrid::spawn_cells)

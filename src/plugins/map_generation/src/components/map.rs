@@ -8,19 +8,13 @@ use std::marker::PhantomData;
 
 #[derive(Component, Debug, PartialEq, Serialize, Deserialize)]
 #[component(immutable)]
-pub(crate) struct MapAssetPath<TCell>
-where
-	TCell: TypePath + ThreadSafe,
-{
+pub(crate) struct MapAssetPath<TCell> {
 	pub(crate) asset_path: Path,
 	#[serde(skip)]
 	_p: PhantomData<TCell>,
 }
 
-impl<TCell> From<Path> for MapAssetPath<TCell>
-where
-	TCell: TypePath + ThreadSafe,
-{
+impl<TCell> From<Path> for MapAssetPath<TCell> {
 	fn from(asset_path: Path) -> Self {
 		Self {
 			asset_path,
@@ -71,22 +65,23 @@ where
 
 #[derive(Component, Debug, PartialEq)]
 #[component(immutable)]
-pub(crate) struct MapGridGraph<TCell>
-where
-	TCell: TypePath + ThreadSafe,
-{
+#[require(Transform, Visibility)]
+pub(crate) struct MapGridGraph<TCell> {
 	graph: GridGraph,
 	_p: PhantomData<TCell>,
 }
 
-impl<TCell> From<GridGraph> for MapGridGraph<TCell>
-where
-	TCell: TypePath + ThreadSafe,
-{
+impl<TCell> From<GridGraph> for MapGridGraph<TCell> {
 	fn from(graph: GridGraph) -> Self {
 		Self {
 			graph,
 			_p: PhantomData,
 		}
+	}
+}
+
+impl<TCell> MapGridGraph<TCell> {
+	pub(crate) fn graph(&self) -> &GridGraph {
+		&self.graph
 	}
 }
