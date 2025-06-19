@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use std::marker::PhantomData;
 
-/// Used to refer from child grids to the a parent with
+/// Used to refer from child grids to a parent with
 /// the information about the grid cells
 #[derive(Component, Debug, PartialEq)]
 #[component(immutable)]
