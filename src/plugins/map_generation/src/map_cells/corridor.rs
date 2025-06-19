@@ -28,8 +28,8 @@ use std::collections::HashSet;
 
 #[derive(Debug, PartialEq, Clone, TypePath)]
 pub(crate) enum Corridor {
-	CorridorFloor,
-	CorridorWall,
+	Floor,
+	Wall,
 }
 
 impl Corridor {
@@ -39,8 +39,8 @@ impl Corridor {
 impl IsWalkable for Corridor {
 	fn is_walkable(&self) -> bool {
 		match self {
-			Corridor::CorridorFloor => true,
-			Corridor::CorridorWall => false,
+			Corridor::Floor => true,
+			Corridor::Wall => false,
 		}
 	}
 }
@@ -52,12 +52,12 @@ impl GridCellDistanceDefinition for Corridor {
 impl From<Option<char>> for Corridor {
 	fn from(symbol: Option<char>) -> Self {
 		let Some(symbol) = symbol else {
-			return Corridor::CorridorWall;
+			return Corridor::Wall;
 		};
 
 		match symbol {
-			'c' => Corridor::CorridorFloor,
-			_ => Corridor::CorridorWall,
+			'c' => Corridor::Floor,
+			_ => Corridor::Wall,
 		}
 	}
 }
@@ -65,15 +65,15 @@ impl From<Option<char>> for Corridor {
 impl InsertCellComponents for Corridor {
 	fn offset_height(&self) -> bool {
 		match self {
-			Corridor::CorridorFloor => false,
-			Corridor::CorridorWall => true,
+			Corridor::Floor => false,
+			Corridor::Wall => true,
 		}
 	}
 
 	fn insert_cell_components(&self, entity: &mut EntityCommands) {
 		match self {
-			Corridor::CorridorFloor => entity.insert(FloorCell),
-			Corridor::CorridorWall => entity.insert(WallCell),
+			Corridor::Floor => entity.insert(FloorCell),
+			Corridor::Wall => entity.insert(WallCell),
 		};
 	}
 }
@@ -86,41 +86,41 @@ impl InsertCellQuadrantComponents for Corridor {
 	) {
 		match self {
 			// Corridor Floor
-			Corridor::CorridorFloor if differences.matches(CORNER_INNER) => {
+			Corridor::Floor if differences.matches(CORNER_INNER) => {
 				entity.insert(CorridorFloorCornerInside);
 			}
-			Corridor::CorridorFloor if differences.matches(CORNER_OUTER) => {
+			Corridor::Floor if differences.matches(CORNER_OUTER) => {
 				entity.insert(CorridorFloorCornerOutside);
 			}
-			Corridor::CorridorFloor if differences.matches(CORNER_OUTER_DIAGONAL) => {
+			Corridor::Floor if differences.matches(CORNER_OUTER_DIAGONAL) => {
 				entity.insert(CorridorFloorCornerOutside);
 			}
-			Corridor::CorridorFloor if differences.contains(&Quadrant::Forward) => {
+			Corridor::Floor if differences.contains(&Quadrant::Forward) => {
 				entity.insert(CorridorFloorForward);
 			}
-			Corridor::CorridorFloor if differences.contains(&Quadrant::Left) => {
+			Corridor::Floor if differences.contains(&Quadrant::Left) => {
 				entity.insert(CorridorFloorLeft);
 			}
-			Corridor::CorridorFloor => {
+			Corridor::Floor => {
 				entity.insert(CorridorFloor);
 			}
 			// Corridor Wall
-			Corridor::CorridorWall if differences.matches(CORNER_INNER) => {
+			Corridor::Wall if differences.matches(CORNER_INNER) => {
 				entity.insert(CorridorWallCornerInside);
 			}
-			Corridor::CorridorWall if differences.matches(CORNER_OUTER) => {
+			Corridor::Wall if differences.matches(CORNER_OUTER) => {
 				entity.insert(CorridorWallCornerOutside);
 			}
-			Corridor::CorridorWall if differences.matches(CORNER_OUTER_DIAGONAL) => {
+			Corridor::Wall if differences.matches(CORNER_OUTER_DIAGONAL) => {
 				entity.insert(CorridorWallCornerOutsideDiagonal);
 			}
-			Corridor::CorridorWall if differences.contains(&Quadrant::Forward) => {
+			Corridor::Wall if differences.contains(&Quadrant::Forward) => {
 				entity.insert(CorridorWallForward);
 			}
-			Corridor::CorridorWall if differences.contains(&Quadrant::Left) => {
+			Corridor::Wall if differences.contains(&Quadrant::Left) => {
 				entity.insert(CorridorWallLeft);
 			}
-			Corridor::CorridorWall => {
+			Corridor::Wall => {
 				entity.insert(CorridorWall);
 			}
 		};
@@ -137,14 +137,14 @@ mod tests {
 
 	#[test]
 	fn is_walkable() {
-		let cell = Corridor::CorridorFloor;
+		let cell = Corridor::Floor;
 
 		assert!(cell.is_walkable());
 	}
 
 	#[test]
 	fn is_not_walkable() {
-		let cell = Corridor::CorridorWall;
+		let cell = Corridor::Wall;
 
 		assert!(!cell.is_walkable());
 	}
@@ -155,7 +155,7 @@ mod tests {
 
 		let cell = Corridor::from(symbol);
 
-		assert_eq!(Corridor::CorridorFloor, cell);
+		assert_eq!(Corridor::Floor, cell);
 	}
 
 	#[test]
@@ -164,7 +164,7 @@ mod tests {
 
 		let cell = Corridor::from(symbol);
 
-		assert_eq!(Corridor::CorridorWall, cell);
+		assert_eq!(Corridor::Wall, cell);
 	}
 
 	#[test]
@@ -173,6 +173,6 @@ mod tests {
 
 		let cell = Corridor::from(symbol);
 
-		assert_eq!(Corridor::CorridorWall, cell);
+		assert_eq!(Corridor::Wall, cell);
 	}
 }
