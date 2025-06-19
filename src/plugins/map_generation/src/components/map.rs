@@ -1,6 +1,6 @@
 pub(crate) mod demo_map;
 
-use crate::map_cells::MapCells;
+use crate::{grid_graph::GridGraph, map_cells::MapCells};
 use bevy::prelude::*;
 use common::traits::{handles_load_tracking::Loaded, load_asset::Path, thread_safe::ThreadSafe};
 use serde::{Deserialize, Serialize};
@@ -42,6 +42,15 @@ impl<TCell> MapAssetCells<TCell>
 where
 	TCell: TypePath + ThreadSafe,
 {
+	pub(crate) fn cells(&self) -> &Handle<MapCells<TCell>> {
+		&self.cells
+	}
+}
+
+impl<TCell> MapAssetCells<TCell>
+where
+	TCell: TypePath + ThreadSafe,
+{
 	pub(crate) fn all_loaded(map_cells: Query<&Self>, asset_server: Res<AssetServer>) -> Loaded {
 		Loaded(
 			map_cells
@@ -57,5 +66,27 @@ where
 {
 	fn from(cells: Handle<MapCells<TCell>>) -> Self {
 		Self { cells }
+	}
+}
+
+#[derive(Component, Debug, PartialEq)]
+#[component(immutable)]
+pub(crate) struct MapGridGraph<TCell>
+where
+	TCell: TypePath + ThreadSafe,
+{
+	graph: GridGraph,
+	_p: PhantomData<TCell>,
+}
+
+impl<TCell> From<GridGraph> for MapGridGraph<TCell>
+where
+	TCell: TypePath + ThreadSafe,
+{
+	fn from(graph: GridGraph) -> Self {
+		Self {
+			graph,
+			_p: PhantomData,
+		}
 	}
 }

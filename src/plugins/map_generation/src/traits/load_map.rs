@@ -22,12 +22,18 @@ use bevy::{
 		system::IntoSystem,
 	},
 	reflect::TypePath,
+	state::state::OnEnter,
 };
 use common::{
 	states::game_state::LoadingGame,
-	systems::log::log,
+	systems::log::{log, log_many},
 	traits::{
-		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInApp},
+		handles_load_tracking::{
+			AssetsProgress,
+			DependenciesProgress,
+			HandlesLoadTracking,
+			LoadTrackingInApp,
+		},
 		thread_safe::ThreadSafe,
 	},
 };
@@ -36,7 +42,12 @@ pub(crate) trait RegisterMapAsset {
 	fn register_map_asset<TLoading, TCell>(&mut self) -> &mut App
 	where
 		TLoading: ThreadSafe + HandlesLoadTracking,
-		TCell: TypePath + From<Option<char>> + Clone + ThreadSafe;
+		TCell: TypePath
+			+ From<Option<char>>
+			+ Clone
+			+ ThreadSafe
+			+ GridCellDistanceDefinition
+			+ IsWalkable;
 }
 
 pub(crate) trait LoadMap {
@@ -55,14 +66,26 @@ impl RegisterMapAsset for App {
 	fn register_map_asset<TLoading, TCell>(&mut self) -> &mut App
 	where
 		TLoading: ThreadSafe + HandlesLoadTracking,
-		TCell: TypePath + From<Option<char>> + Clone + ThreadSafe,
+		TCell: TypePath
+			+ From<Option<char>>
+			+ Clone
+			+ ThreadSafe
+			+ GridCellDistanceDefinition
+			+ IsWalkable,
 	{
 		TLoading::register_load_tracking::<MapAssetCells<TCell>, LoadingGame, AssetsProgress>()
 			.in_app(self, MapAssetCells::<TCell>::all_loaded);
 
+		let resolving_dependencies =
+			TLoading::processing_state::<LoadingGame, DependenciesProgress>();
+
 		self.init_asset::<MapCells<TCell>>()
 			.register_asset_loader(TextLoader::<MapCells<TCell>>::default())
 			.add_observer(MapAssetPath::<TCell>::insert_map_cells)
+			.add_systems(
+				OnEnter(resolving_dependencies),
+				MapAssetCells::<TCell>::insert_map_graph.pipe(log_many),
+			)
 	}
 }
 
@@ -80,7 +103,6 @@ impl LoadMap for App {
 		self.add_systems(
 			label,
 			(
-				Level::<TCell>::set_graph.pipe(log),
 				Level::<TCell>::spawn_unique::<Grid>.pipe(log),
 				Level::<TCell>::spawn_unique::<HalfOffsetGrid>.pipe(log),
 				Level::<TCell>::grid_cells.pipe(Grid::spawn_cells).pipe(log),

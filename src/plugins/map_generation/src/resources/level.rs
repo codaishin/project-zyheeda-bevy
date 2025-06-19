@@ -1,18 +1,13 @@
 use crate::{
-	grid_graph::{
-		GridGraph,
-		Obstacles,
-		grid_context::{GridContext, GridDefinition, GridDefinitionError},
-	},
+	grid_graph::{GridGraph, grid_context::GridDefinitionError},
 	map_cells::{MapCells, half_offset_cell::HalfOffsetCell},
-	traits::{GridCellDistanceDefinition, grid_min::GridMin, is_walkable::IsWalkable},
+	traits::GridCellDistanceDefinition,
 };
 use bevy::prelude::*;
 use common::{
 	errors::{Error, Level as ErrorLevel},
 	traits::{thread_safe::ThreadSafe, try_despawn::TryDespawn},
 };
-use std::collections::HashMap;
 
 #[derive(Resource, Debug, PartialEq)]
 pub(crate) struct Level<TCell>
@@ -27,52 +22,6 @@ impl<TCell> Level<TCell>
 where
 	TCell: TypePath + ThreadSafe,
 {
-	pub(crate) fn set_graph(
-		mut level: ResMut<Self>,
-		maps: Res<Assets<MapCells<TCell>>>,
-	) -> Result<(), SetGraphError>
-	where
-		TCell: GridCellDistanceDefinition + IsWalkable + Clone,
-	{
-		if level.graph.is_some() {
-			return Err(SetGraphError::GraphAlreadySet);
-		}
-		let Some(cells) = level.get_map_cells(&maps) else {
-			return Err(SetGraphError::MapAssetNotFound);
-		};
-		let (cell_count_x, cell_count_z) = Self::get_cell_counts(cells);
-		let grid_definition = GridDefinition {
-			cell_count_x,
-			cell_count_z,
-			cell_distance: TCell::CELL_DISTANCE,
-		};
-		let mut graph = GridGraph {
-			nodes: HashMap::default(),
-			extra: Obstacles::default(),
-			context: GridContext::try_from(grid_definition)
-				.map_err(SetGraphError::GridDefinitionError)?,
-		};
-
-		let min = graph.context.grid_min();
-		let mut position = min;
-
-		for (z, cell_line) in cells.iter().enumerate() {
-			for (x, cell) in cell_line.iter().enumerate() {
-				graph.nodes.insert((x, z), position);
-				position.x += TCell::CELL_DISTANCE;
-
-				if !cell.is_walkable() {
-					graph.extra.obstacles.insert((x, z));
-				}
-			}
-			position.x = min.x;
-			position.z += TCell::CELL_DISTANCE;
-		}
-
-		level.graph = Some(graph);
-		Ok(())
-	}
-
 	pub(crate) fn grid_cells(
 		level: Res<Self>,
 		maps: Res<Assets<MapCells<TCell>>>,
@@ -181,24 +130,6 @@ where
 		commands.spawn((TGrid::from(graph.clone()), Transform::default()));
 		Ok(())
 	}
-
-	fn get_map_cells<'a>(&self, maps: &'a Assets<MapCells<TCell>>) -> Option<&'a Vec<Vec<TCell>>>
-	where
-		TCell: GridCellDistanceDefinition + Clone,
-	{
-		maps.get(&self.map).map(|m| m.cells())
-	}
-
-	fn get_cell_counts(cells: &[Vec<TCell>]) -> (usize, usize) {
-		let count_x = cells
-			.iter()
-			.map(|line| line.len())
-			.max()
-			.unwrap_or_default();
-		let count_z = cells.len();
-
-		(count_x, count_z)
-	}
 }
 
 impl<TCell> Default for Level<TCell>
@@ -216,7 +147,6 @@ where
 #[derive(Debug, PartialEq)]
 pub(crate) enum SetGraphError {
 	GridDefinitionError(GridDefinitionError),
-	GraphAlreadySet,
 	MapAssetNotFound,
 }
 
@@ -224,10 +154,6 @@ impl From<SetGraphError> for Error {
 	fn from(error: SetGraphError) -> Self {
 		match error {
 			SetGraphError::GridDefinitionError(error) => Error::from(error),
-			SetGraphError::GraphAlreadySet => Error {
-				msg: "Grid graph was already set".to_owned(),
-				lvl: ErrorLevel::Warning,
-			},
 			SetGraphError::MapAssetNotFound => Error {
 				msg: "Map asset not found".to_owned(),
 				lvl: ErrorLevel::Error,
@@ -265,259 +191,14 @@ impl From<NoGridGraphSet> for Error {
 }
 
 #[cfg(test)]
-mod test_spawn {
-	use super::*;
-	use crate::{
-		grid_graph::{
-			Obstacles,
-			grid_context::{GridContext, GridDefinition},
-		},
-		traits::{GridCellDistanceDefinition, is_walkable::IsWalkable},
-	};
-	use common::test_tools::utils::{SingleThreadedApp, new_handle};
-	use std::collections::{HashMap, HashSet};
-
-	#[derive(Clone, Debug, PartialEq, TypePath)]
-	struct _Cell {
-		is_walkable: bool,
-	}
-
-	impl _Cell {
-		fn walkable() -> Self {
-			Self { is_walkable: true }
-		}
-
-		fn not_walkable() -> Self {
-			Self { is_walkable: false }
-		}
-	}
-
-	impl GridCellDistanceDefinition for _Cell {
-		const CELL_DISTANCE: f32 = 4.;
-	}
-
-	impl IsWalkable for _Cell {
-		fn is_walkable(&self) -> bool {
-			self.is_walkable
-		}
-	}
-
-	#[derive(Resource, Debug, PartialEq)]
-	struct _Result(Result<(), SetGraphError>);
-
-	fn setup(cells: Vec<Vec<_Cell>>) -> App {
-		let map = new_handle::<MapCells<_Cell>>();
-		let mut app = App::new().single_threaded(Update);
-		let mut maps = Assets::default();
-
-		maps.insert(&map.clone(), MapCells::new(cells, vec![]));
-		app.insert_resource(maps);
-		app.insert_resource(Level { map, ..default() });
-		app.add_systems(
-			Update,
-			Level::<_Cell>::set_graph.pipe(|In(result), mut commands: Commands| {
-				commands.insert_resource(_Result(result));
-			}),
-		);
-
-		app
-	}
-
-	fn get_context<TCell>(cell_count_x: usize, cell_count_z: usize) -> GridContext
-	where
-		TCell: GridCellDistanceDefinition,
-	{
-		let grid_definition = GridDefinition {
-			cell_count_x,
-			cell_count_z,
-			cell_distance: TCell::CELL_DISTANCE,
-		};
-		GridContext::try_from(grid_definition).expect("FAULTY")
-	}
-
-	#[test]
-	fn one_by_one_with_no_obstacles() {
-		let mut app = setup(vec![vec![_Cell::walkable()]]);
-
-		app.update();
-
-		assert_eq!(
-			Some(GridGraph {
-				nodes: HashMap::from([((0, 0), Vec3::new(0., 0., 0.))]),
-				extra: Obstacles::default(),
-				context: get_context::<_Cell>(1, 1),
-			}),
-			app.world().resource::<Level<_Cell>>().graph
-		);
-	}
-
-	#[test]
-	fn one_by_two_with_no_obstacles() {
-		let mut app = setup(vec![vec![_Cell::walkable()], vec![_Cell::walkable()]]);
-
-		app.update();
-
-		assert_eq!(
-			Some(GridGraph {
-				nodes: HashMap::from([
-					((0, 0), Vec3::new(0., 0., -2.)),
-					((0, 1), Vec3::new(0., 0., 2.))
-				]),
-				extra: Obstacles::default(),
-				context: get_context::<_Cell>(1, 2),
-			}),
-			app.world().resource::<Level<_Cell>>().graph
-		);
-	}
-
-	#[test]
-	fn center_map() {
-		let mut app = setup(vec![
-			vec![_Cell::walkable(), _Cell::walkable(), _Cell::walkable()],
-			vec![_Cell::walkable(), _Cell::walkable(), _Cell::walkable()],
-			vec![_Cell::walkable(), _Cell::walkable(), _Cell::walkable()],
-		]);
-
-		app.update();
-
-		assert_eq!(
-			Some(GridGraph {
-				nodes: HashMap::from([
-					((0, 0), Vec3::new(-4., 0., -4.)),
-					((1, 0), Vec3::new(0., 0., -4.)),
-					((2, 0), Vec3::new(4., 0., -4.)),
-					((0, 1), Vec3::new(-4., 0., 0.)),
-					((1, 1), Vec3::new(0., 0., 0.)),
-					((2, 1), Vec3::new(4., 0., 0.)),
-					((0, 2), Vec3::new(-4., 0., 4.)),
-					((1, 2), Vec3::new(0., 0., 4.)),
-					((2, 2), Vec3::new(4., 0., 4.)),
-				]),
-				extra: Obstacles::default(),
-				context: get_context::<_Cell>(3, 3),
-			}),
-			app.world().resource::<Level<_Cell>>().graph
-		);
-	}
-
-	#[test]
-	fn center_map_with_different_row_lengths() {
-		let mut app = setup(vec![
-			vec![_Cell::walkable(), _Cell::walkable()],
-			vec![_Cell::walkable(), _Cell::walkable(), _Cell::walkable()],
-			vec![_Cell::walkable()],
-		]);
-
-		app.update();
-
-		assert_eq!(
-			Some(GridGraph {
-				nodes: HashMap::from([
-					((0, 0), Vec3::new(-4., 0., -4.)),
-					((1, 0), Vec3::new(0., 0., -4.)),
-					((0, 1), Vec3::new(-4., 0., 0.)),
-					((1, 1), Vec3::new(0., 0., 0.)),
-					((2, 1), Vec3::new(4., 0., 0.)),
-					((0, 2), Vec3::new(-4., 0., 4.)),
-				]),
-				extra: Obstacles::default(),
-				context: get_context::<_Cell>(3, 3),
-			}),
-			app.world().resource::<Level<_Cell>>().graph
-		);
-	}
-
-	#[test]
-	fn set_obstacles() {
-		let mut app = setup(vec![
-			vec![_Cell::walkable(), _Cell::not_walkable()],
-			vec![_Cell::not_walkable(), _Cell::not_walkable()],
-		]);
-
-		app.update();
-
-		assert_eq!(
-			Some(GridGraph {
-				nodes: HashMap::from([
-					((0, 0), Vec3::new(-2., 0., -2.)),
-					((0, 1), Vec3::new(-2., 0., 2.)),
-					((1, 0), Vec3::new(2., 0., -2.)),
-					((1, 1), Vec3::new(2., 0., 2.)),
-				]),
-				extra: Obstacles {
-					obstacles: HashSet::from([(0, 1), (1, 0), (1, 1)])
-				},
-				context: get_context::<_Cell>(2, 2),
-			}),
-			app.world().resource::<Level<_Cell>>().graph
-		);
-	}
-
-	#[test]
-	fn do_nothing_if_graph_is_already_set() {
-		let mut app = setup(vec![vec![_Cell::walkable()]]);
-
-		app.world_mut().resource_mut::<Level<_Cell>>().graph = Some(GridGraph {
-			nodes: HashMap::default(),
-			extra: Obstacles::default(),
-			context: get_context::<_Cell>(10, 20),
-		});
-		app.update();
-
-		assert_eq!(
-			Some(GridGraph {
-				nodes: HashMap::default(),
-				extra: Obstacles::default(),
-				context: get_context::<_Cell>(10, 20),
-			}),
-			app.world().resource::<Level<_Cell>>().graph
-		);
-	}
-
-	#[test]
-	fn return_grid_error() {
-		let mut app = setup(vec![vec![]]);
-
-		app.update();
-
-		assert_eq!(
-			&_Result(Err(SetGraphError::GridDefinitionError(
-				GridDefinitionError::CellCountZero
-			))),
-			app.world().resource::<_Result>()
-		);
-	}
-
-	#[test]
-	fn return_graph_already_set_error() {
-		let mut app = setup(vec![vec![]]);
-		app.world_mut().resource_mut::<Level<_Cell>>().graph = Some(GridGraph::default());
-
-		app.update();
-
-		assert_eq!(
-			&_Result(Err(SetGraphError::GraphAlreadySet)),
-			app.world().resource::<_Result>()
-		);
-	}
-
-	#[test]
-	fn return_asset_error() {
-		let mut app = setup(vec![vec![]]);
-		let mut assets = app.world_mut().resource_mut::<Assets<MapCells<_Cell>>>();
-		*assets = Assets::default();
-
-		app.update();
-
-		assert_eq!(
-			&_Result(Err(SetGraphError::MapAssetNotFound)),
-			app.world().resource::<_Result>()
-		);
-	}
-}
-
-#[cfg(test)]
 mod test_get_grid {
+	use std::collections::HashMap;
+
+	use crate::grid_graph::{
+		Obstacles,
+		grid_context::{GridContext, GridDefinition},
+	};
+
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
@@ -640,8 +321,16 @@ mod test_get_grid {
 
 #[cfg(test)]
 mod test_get_half_offset_grid {
+	use std::collections::HashMap;
+
 	use super::*;
-	use crate::map_cells::Direction;
+	use crate::{
+		grid_graph::{
+			Obstacles,
+			grid_context::{GridContext, GridDefinition},
+		},
+		map_cells::Direction,
+	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
 		assert_eq_unordered,
@@ -778,6 +467,13 @@ mod test_get_half_offset_grid {
 
 #[cfg(test)]
 mod test_spawn_unique {
+	use std::collections::HashMap;
+
+	use crate::grid_graph::{
+		Obstacles,
+		grid_context::{GridContext, GridDefinition},
+	};
+
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{assert_count, get_children, test_tools::utils::SingleThreadedApp};
