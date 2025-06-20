@@ -17,17 +17,17 @@ impl<T> SaveContext<FileIO, T> {
 		T: InsertEntityComponent<TLoadAsset>,
 	{
 		move |mut commands, mut asset_server| {
-			let Ok(context) = context.lock() else {
+			let Ok(mut context) = context.lock() else {
 				return Err(DeserializationOrLockError::LockPoisoned(LockPoisonedError));
 			};
-			let server = asset_server.as_mut();
-
 			let mut errors = vec![];
+			let server = asset_server.as_mut();
+			let load_buffer = std::mem::take(&mut context.load_buffer);
 
-			for components in context.load_buffer.clone().iter_mut() {
+			for mut components in load_buffer {
 				let entity = &mut commands.spawn_empty();
 				for handler in &context.handlers {
-					let Err(err) = handler.insert_component(entity, components, server) else {
+					let Err(err) = handler.insert_component(entity, &mut components, server) else {
 						continue;
 					};
 					errors.push(err);
@@ -199,6 +199,30 @@ mod tests {
 			)),
 			result,
 		);
+		Ok(())
+	}
+
+	#[test]
+	fn context_is_empty_when_ran() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let components = HashMap::from([(
+			type_name::<_A>().to_owned(),
+			serde_json::from_str("null").unwrap(),
+		)]);
+		let context = Arc::new(Mutex::new(
+			SaveContext::from(FILE_IO.clone())
+				.with_load_buffer([components.clone(), components.clone()])
+				.with_handlers([_FakeHandler::A, _FakeHandler::B]),
+		));
+
+		_ = app
+			.world_mut()
+			.run_system_once(SaveContext::read_buffer_system(context.clone()))?;
+
+		let Ok(context) = context.lock() else {
+			panic!("LOCK FAILED");
+		};
+		assert!(context.load_buffer.is_empty());
 		Ok(())
 	}
 }
