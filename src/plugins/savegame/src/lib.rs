@@ -7,7 +7,7 @@ mod systems;
 mod traits;
 mod writer;
 
-use crate::systems::{buffer::BufferSystem, trigger_state::TriggerState};
+use crate::systems::{trigger_state::TriggerState, write_buffer::WriteBufferSystem};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
@@ -97,8 +97,8 @@ where
 			.add_systems(
 				OnEnter(GameState::Saving),
 				(
-					SaveContext::buffer_system(quick_save.clone()).pipe(log),
-					SaveContext::flush_system(quick_save).pipe(log),
+					SaveContext::write_buffer_system(quick_save.clone()).pipe(log),
+					SaveContext::write_file_system(quick_save).pipe(log),
 				)
 					.chain(),
 			);
