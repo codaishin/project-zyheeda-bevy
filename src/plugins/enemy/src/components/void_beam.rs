@@ -10,7 +10,7 @@ use common::{
 		handles_effect::HandlesEffect,
 		handles_enemies::{Attacker, Target},
 		handles_interactions::{BeamParameters, HandlesInteractions},
-		prefab::Prefab,
+		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
 use std::{f32::consts::PI, time::Duration};
@@ -45,9 +45,12 @@ impl<TInteractions> Prefab<TInteractions> for VoidBeam
 where
 	TInteractions: HandlesInteractions + HandlesEffect<DealDamage>,
 {
-	fn insert_prefab_components(&self, entity: &mut EntityCommands) -> Result<(), Error> {
+	fn insert_prefab_components(
+		&self,
+		entity: &mut impl PrefabEntityCommands,
+	) -> Result<(), Error> {
 		entity
-			.try_insert((
+			.try_insert_if_new((
 				TInteractions::beam_from(self),
 				TInteractions::is_ray_interrupted_by(Blocker::all()),
 				TInteractions::effect(DealDamage::once_per_second(self.attack.damage)),

@@ -2,7 +2,7 @@ pub(crate) mod dto;
 
 use super::SimplePrefab;
 use crate::components::skill_behavior::skill_contact::dto::SkillContactDto;
-use bevy::{ecs::system::EntityCommands, prelude::*};
+use bevy::prelude::*;
 use common::{
 	errors::Error,
 	traits::{
@@ -10,7 +10,7 @@ use common::{
 		handles_interactions::HandlesInteractions,
 		handles_saving::SavableComponent,
 		handles_skill_behaviors::{Contact, Integrity, Motion, Shape},
-		prefab::Prefab,
+		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
 
@@ -51,7 +51,10 @@ where
 	TInteractions: HandlesInteractions,
 	TLifeCycles: HandlesDestruction,
 {
-	fn insert_prefab_components(&self, entity: &mut EntityCommands) -> Result<(), Error> {
+	fn insert_prefab_components(
+		&self,
+		entity: &mut impl PrefabEntityCommands,
+	) -> Result<(), Error> {
 		self.shape
 			.prefab::<TInteractions, TLifeCycles>(entity, Vec3::ZERO)?;
 		self.motion

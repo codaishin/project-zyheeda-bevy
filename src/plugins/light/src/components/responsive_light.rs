@@ -12,7 +12,7 @@ use common::{
 	traits::{
 		handles_lights::{Light, Responsive},
 		has_collisions::HasCollisions,
-		prefab::Prefab,
+		prefab::{Prefab, PrefabEntityCommands},
 		thread_safe::ThreadSafe,
 		try_insert_on::TryInsertOn,
 	},
@@ -99,8 +99,11 @@ impl ResponsiveLight {
 }
 
 impl Prefab<()> for ResponsiveLight {
-	fn insert_prefab_components(&self, entity: &mut EntityCommands) -> Result<(), Error> {
-		entity.try_insert(Collider::ball(*self.range.deref()));
+	fn insert_prefab_components(
+		&self,
+		entity: &mut impl PrefabEntityCommands,
+	) -> Result<(), Error> {
+		entity.try_insert_if_new(Collider::ball(*self.range.deref()));
 
 		Ok(())
 	}

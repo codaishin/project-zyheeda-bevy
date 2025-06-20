@@ -1,5 +1,5 @@
 use super::player_movement::{Config, MovementMode, PlayerMovement};
-use bevy::{ecs::system::EntityCommands, prelude::*};
+use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
 	attributes::{
@@ -41,7 +41,7 @@ use common::{
 		handles_lights::HandlesLights,
 		iteration::{Iter, IterFinite},
 		load_asset::Path,
-		prefab::Prefab,
+		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
 use std::collections::HashMap;
@@ -254,9 +254,12 @@ where
 		+ HandlesEffect<Force, TTarget = AffectedBy<Force>>,
 	TLights: HandlesLights,
 {
-	fn insert_prefab_components(&self, entity: &mut EntityCommands) -> Result<(), Error> {
+	fn insert_prefab_components(
+		&self,
+		entity: &mut impl PrefabEntityCommands,
+	) -> Result<(), Error> {
 		entity
-			.insert((
+			.try_insert_if_new((
 				Health::new(100.).bundle_via::<TInteractions>(),
 				Affected::by::<Gravity>().bundle_via::<TInteractions>(),
 				Affected::by::<Force>().bundle_via::<TInteractions>(),
