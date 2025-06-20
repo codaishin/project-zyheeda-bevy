@@ -21,7 +21,7 @@ impl From<InsertGraphError> for Error {
 
 #[derive(Debug, PartialEq, Clone)]
 pub(crate) enum GridError {
-	NoGridEntity,
+	NoRefToCellDefinition,
 	NoCellDefinition,
 	NoValidMap,
 	GridIndexHasNoCell { x: usize, z: usize },
