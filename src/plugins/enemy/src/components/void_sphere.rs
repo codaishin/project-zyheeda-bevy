@@ -26,7 +26,7 @@ use common::{
 		clamp_zero_positive::ClampZeroPositive,
 		handles_effect::HandlesEffect,
 		handles_enemies::EnemyTarget,
-		prefab::Prefab,
+		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
 use std::{f32::consts::PI, sync::Arc, time::Duration};
@@ -89,13 +89,16 @@ where
 	TInteractions: HandlesEffect<DealDamage, TTarget = Health>
 		+ HandlesEffect<Gravity, TTarget = AffectedBy<Gravity>>,
 {
-	fn insert_prefab_components(&self, entity: &mut EntityCommands) -> Result<(), Error> {
+	fn insert_prefab_components(
+		&self,
+		entity: &mut impl PrefabEntityCommands,
+	) -> Result<(), Error> {
 		let transform = Transform::from_translation(Self::GROUND_OFFSET);
 		let mut transform_2nd_ring = transform;
 		transform_2nd_ring.rotate_axis(Dir3::Z, PI / 2.);
 
 		entity
-			.try_insert((
+			.try_insert_if_new((
 				Health::new(5.).bundle_via::<TInteractions>(),
 				Affected::by::<Gravity>().bundle_via::<TInteractions>(),
 			))

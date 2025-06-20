@@ -37,6 +37,7 @@ mod tests {
 	use crate::{
 		errors::{Error, Level},
 		test_tools::utils::SingleThreadedApp,
+		traits::prefab::PrefabEntityCommands,
 	};
 
 	#[derive(Component)]
@@ -51,9 +52,12 @@ mod tests {
 	struct _Dependency;
 
 	impl Prefab<_Dependency> for _Component {
-		fn insert_prefab_components(&self, entity: &mut EntityCommands) -> Result<(), Error> {
+		fn insert_prefab_components(
+			&self,
+			entity: &mut impl PrefabEntityCommands,
+		) -> Result<(), Error> {
 			match &self.0 {
-				Ok(prefab) => entity.insert(*prefab),
+				Ok(prefab) => entity.try_insert_if_new(*prefab),
 				Err(error) => return Err(error.clone()),
 			};
 

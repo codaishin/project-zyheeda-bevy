@@ -13,7 +13,7 @@ use crate::components::{
 	anchor::spawner_fix_point::SpawnerFixPoint,
 	skill_behavior::skill_contact::CreatedFrom,
 };
-use bevy::{ecs::system::EntityCommands, prelude::*};
+use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
 	components::{asset_model::AssetModel, collider_relationship::InteractionTarget},
@@ -22,6 +22,7 @@ use common::{
 		handles_destruction::HandlesDestruction,
 		handles_interactions::HandlesInteractions,
 		handles_skill_behaviors::{Integrity, Motion, Shape, Spawner},
+		prefab::PrefabEntityCommands,
 	},
 };
 use std::f32::consts::PI;
@@ -31,7 +32,7 @@ trait SimplePrefab {
 
 	fn prefab<TInteractions, TLifeCycles>(
 		&self,
-		entity: &mut EntityCommands,
+		entity: &mut impl PrefabEntityCommands,
 		extra: Self::TExtra,
 	) -> Result<(), Error>
 	where
@@ -46,7 +47,7 @@ impl SimplePrefab for Shape {
 
 	fn prefab<TInteractions, TLifeCycles>(
 		&self,
-		entity: &mut EntityCommands,
+		entity: &mut impl PrefabEntityCommands,
 		offset: Vec3,
 	) -> Result<(), Error> {
 		let ((model, model_transform), (collider, collider_transform)) = match self {
@@ -74,7 +75,7 @@ impl SimplePrefab for Shape {
 		};
 
 		entity
-			.try_insert((
+			.try_insert_if_new((
 				Transform::from_translation(offset),
 				Visibility::default(),
 				InteractionTarget,
@@ -124,7 +125,7 @@ impl SimplePrefab for Integrity {
 
 	fn prefab<TInteractions, TLifeCycles>(
 		&self,
-		entity: &mut EntityCommands,
+		entity: &mut impl PrefabEntityCommands,
 		_: (),
 	) -> Result<(), Error>
 	where
@@ -133,7 +134,7 @@ impl SimplePrefab for Integrity {
 		match self {
 			Integrity::Solid => {}
 			Integrity::Fragile { destroyed_by } => {
-				entity.try_insert(TInteractions::is_fragile_when_colliding_with(
+				entity.try_insert_if_new(TInteractions::is_fragile_when_colliding_with(
 					destroyed_by.iter().copied(),
 				));
 			}
@@ -148,7 +149,7 @@ impl SimplePrefab for Motion {
 
 	fn prefab<TInteractions, TLifeCycles>(
 		&self,
-		entity: &mut EntityCommands,
+		entity: &mut impl PrefabEntityCommands,
 		created_from: CreatedFrom,
 	) -> Result<(), Error>
 	where
@@ -156,7 +157,7 @@ impl SimplePrefab for Motion {
 	{
 		match *self {
 			Motion::HeldBy { caster } => {
-				entity.try_insert((
+				entity.try_insert_if_new((
 					RigidBody::Fixed,
 					Anchor::<Always>::to(caster).on_fix_point(SpawnerFixPoint(Spawner::Center)),
 				));
@@ -166,7 +167,7 @@ impl SimplePrefab for Motion {
 				max_cast_range,
 				target_ray,
 			} => {
-				entity.try_insert((
+				entity.try_insert_if_new((
 					RigidBody::Fixed,
 					GroundTarget {
 						caster,
@@ -181,7 +182,7 @@ impl SimplePrefab for Motion {
 				speed,
 				range,
 			} => {
-				entity.try_insert((
+				entity.try_insert_if_new((
 					RigidBody::Dynamic,
 					GravityScale(0.),
 					Ccd::enabled(),
@@ -194,7 +195,7 @@ impl SimplePrefab for Motion {
 					return Ok(());
 				}
 
-				entity.try_insert((
+				entity.try_insert_if_new((
 					Anchor::<Once>::to(caster).on_fix_point(SpawnerFixPoint(spawner)),
 					SetVelocityForward {
 						rotation: caster,

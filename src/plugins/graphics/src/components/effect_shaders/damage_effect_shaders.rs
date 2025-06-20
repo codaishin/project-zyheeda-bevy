@@ -1,12 +1,18 @@
 use crate::components::camera_labels::SecondPass;
 use bevy::{color::palettes::css::WHITE, prelude::*, render::view::RenderLayers};
-use common::{errors::Error, traits::prefab::Prefab};
+use common::{
+	errors::Error,
+	traits::prefab::{Prefab, PrefabEntityCommands},
+};
 
 #[derive(Component, Debug, PartialEq, Default)]
 pub struct DamageEffectShaders;
 
 impl Prefab<()> for DamageEffectShaders {
-	fn insert_prefab_components(&self, entity: &mut EntityCommands) -> Result<(), Error> {
+	fn insert_prefab_components(
+		&self,
+		entity: &mut impl PrefabEntityCommands,
+	) -> Result<(), Error> {
 		entity.with_child((
 			RenderLayers::from(SecondPass),
 			PointLight {

@@ -1,12 +1,12 @@
 use super::SimplePrefab;
-use bevy::{ecs::system::EntityCommands, prelude::*};
+use bevy::prelude::*;
 use common::{
 	errors::Error,
 	traits::{
 		handles_destruction::HandlesDestruction,
 		handles_interactions::HandlesInteractions,
 		handles_skill_behaviors::{Projection, ProjectionOffset, Shape},
-		prefab::Prefab,
+		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
 use serde::{Deserialize, Serialize};
@@ -29,7 +29,10 @@ where
 	TInteractions: HandlesInteractions,
 	TLifeCycles: HandlesDestruction,
 {
-	fn insert_prefab_components(&self, entity: &mut EntityCommands) -> Result<(), Error> {
+	fn insert_prefab_components(
+		&self,
+		entity: &mut impl PrefabEntityCommands,
+	) -> Result<(), Error> {
 		let offset = match self.offset {
 			Some(ProjectionOffset(offset)) => offset,
 			_ => Vec3::ZERO,
