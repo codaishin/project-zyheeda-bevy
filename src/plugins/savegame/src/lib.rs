@@ -105,9 +105,11 @@ where
 			.add_systems(
 				OnEnter(GameState::LoadingSave),
 				(
+					Save::despawn_all,
 					SaveContext::read_file_system(quick_save.clone()).pipe(log),
 					SaveContext::read_buffer_system(quick_save).pipe(log),
-				),
+				)
+					.chain(),
 			);
 	}
 }
