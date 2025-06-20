@@ -2,10 +2,10 @@ pub mod components;
 
 mod context;
 mod errors;
+mod file_io;
 mod resources;
 mod systems;
 mod traits;
-mod writer;
 
 use crate::systems::{trigger_state::TriggerState, write_buffer::WriteBufferSystem};
 use bevy::prelude::*;
@@ -23,13 +23,13 @@ use common::{
 };
 use components::save::Save;
 use context::SaveContext;
+use file_io::FileIO;
 use resources::register::Register;
 use std::{
 	marker::PhantomData,
 	path::PathBuf,
 	sync::{Arc, Mutex},
 };
-use writer::FileWriter;
 
 pub struct SavegamePlugin<TDependencies> {
 	game_directory: PathBuf,
@@ -67,7 +67,7 @@ where
 			.join("Saves")
 			.join("Quick Save")
 			.with_extension("json");
-		let quick_save = Arc::new(Mutex::new(SaveContext::from(FileWriter::to_destination(
+		let quick_save = Arc::new(Mutex::new(SaveContext::from(FileIO::with_file(
 			quick_save_file,
 		))));
 		let trigger_quick_save = TSettings::TKeyMap::<ActionKey>::trigger(
@@ -98,9 +98,13 @@ where
 				OnEnter(GameState::Saving),
 				(
 					SaveContext::write_buffer_system(quick_save.clone()).pipe(log),
-					SaveContext::write_file_system(quick_save).pipe(log),
+					SaveContext::write_file_system(quick_save.clone()).pipe(log),
 				)
 					.chain(),
+			)
+			.add_systems(
+				OnEnter(GameState::LoadingSave),
+				SaveContext::read_file_system(quick_save.clone()).pipe(log),
 			);
 	}
 }
