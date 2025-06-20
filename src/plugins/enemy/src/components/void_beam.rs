@@ -14,9 +14,10 @@ use common::{
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
+use serde::{Deserialize, Serialize};
 use std::{f32::consts::PI, time::Duration};
 
-#[derive(Component, Debug, PartialEq)]
+#[derive(Component, Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[require(PersistentEntity, Visibility, Transform)]
 pub(crate) struct VoidBeam {
 	attack: VoidBeamAttack,
@@ -100,7 +101,7 @@ impl VoidBeamModel {
 	}
 }
 
-#[derive(Default, Clone, Copy, Debug, PartialEq)]
+#[derive(Default, Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct VoidBeamAttack {
 	pub damage: f32,
 	pub lifetime: Duration,
