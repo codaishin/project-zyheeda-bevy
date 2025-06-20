@@ -25,7 +25,7 @@ impl HalfOffsetGrid {
 	{
 		let entity = trigger.target();
 		let Ok(cells_ref) = grids.get(entity) else {
-			return Err(GridError::NoGridEntity); // untested, technically unreachable
+			return Err(GridError::NoRefToCellDefinition);
 		};
 		let Ok((cells, graph)) = maps.get(cells_ref.cell_definition) else {
 			return Err(GridError::NoCellDefinition);
@@ -272,6 +272,53 @@ mod test_get_half_offset_grid {
 
 		assert_eq!(
 			Some(&_Result(Err(GridError::GridIndexHasNoCell { x: 1, z: 0 }))),
+			app.world().get_resource::<_Result>()
+		);
+	}
+
+	#[test]
+	fn error_when_no_cell_ref() {
+		let grid = GridGraph {
+			nodes: HashMap::from([((0, 0), Vec3::ZERO)]),
+			extra: Obstacles::default(),
+			context: GridContext::try_from(GridDefinition {
+				cell_count_x: 1,
+				cell_count_z: 1,
+				cell_distance: 1.,
+			})
+			.expect("INVALID GRID"),
+		};
+		let (mut app, _) = setup(Some(vec![]), grid);
+
+		app.world_mut().spawn(HalfOffsetGrid);
+
+		assert_eq!(
+			Some(&_Result(Err(GridError::NoRefToCellDefinition))),
+			app.world().get_resource::<_Result>()
+		);
+	}
+
+	#[test]
+	fn error_when_no_valid_cell_ref() {
+		let grid = GridGraph {
+			nodes: HashMap::from([((0, 0), Vec3::ZERO)]),
+			extra: Obstacles::default(),
+			context: GridContext::try_from(GridDefinition {
+				cell_count_x: 1,
+				cell_count_z: 1,
+				cell_distance: 1.,
+			})
+			.expect("INVALID GRID"),
+		};
+		let (mut app, _) = setup(Some(vec![]), grid);
+
+		app.world_mut().spawn((
+			HalfOffsetGrid,
+			CellsRef::<_Cell>::from_grid_definition(Entity::from_raw(123)),
+		));
+
+		assert_eq!(
+			Some(&_Result(Err(GridError::NoCellDefinition))),
 			app.world().get_resource::<_Result>()
 		);
 	}

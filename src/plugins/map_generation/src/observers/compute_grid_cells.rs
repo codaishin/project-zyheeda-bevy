@@ -10,7 +10,7 @@ pub(crate) type Cells<TCell> = (Entity, Vec<(Vec3, TCell)>);
 
 impl Grid {
 	pub(crate) fn compute_cells<TCell>(
-		trigger: Trigger<OnAdd, (Self, CellsRef<TCell>)>,
+		trigger: Trigger<OnAdd, Self>,
 		grids: Query<(&Self, &CellsRef<TCell>)>,
 		cells: Query<&MapAssetCells<TCell>>,
 		assets: Res<Assets<MapCells<TCell>>>,
@@ -20,7 +20,7 @@ impl Grid {
 	{
 		let entity = trigger.target();
 		let Ok((grid, cells_ref)) = grids.get(entity) else {
-			return Err(GridError::NoGridEntity); // untested, technically unreachable
+			return Err(GridError::NoRefToCellDefinition);
 		};
 		let Ok(cells) = cells.get(cells_ref.cell_definition) else {
 			return Err(GridError::NoCellDefinition);
@@ -190,7 +190,19 @@ mod tests {
 	}
 
 	#[test]
-	fn grid_error_no_valid_cell_ref() {
+	fn error_when_no_cell_ref() {
+		let (mut app, _) = setup(Some(vec![]));
+
+		app.world_mut().spawn(Grid::from(GridGraph::default()));
+
+		assert_eq!(
+			Some(&_Result(Err(GridError::NoRefToCellDefinition))),
+			app.world().get_resource::<_Result>()
+		);
+	}
+
+	#[test]
+	fn error_when_no_valid_cell_ref() {
 		let (mut app, _) = setup(None);
 
 		app.world_mut().spawn((
