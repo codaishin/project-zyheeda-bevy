@@ -2339,6 +2339,7 @@ dependencies = [
  "bevy",
  "bevy_rapier3d",
  "common",
+ "serde",
 ]
 
 [[package]]
@@ -4333,6 +4334,7 @@ dependencies = [
  "common",
  "macros",
  "mockall",
+ "serde",
  "test-case",
 ]
 

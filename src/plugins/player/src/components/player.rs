@@ -44,9 +44,10 @@ use common::{
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Component, Default, Debug, PartialEq)]
+#[derive(Component, Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[require(
 	PlayerMovement = Player::movement(),
 	Transform,
