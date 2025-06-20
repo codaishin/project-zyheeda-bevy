@@ -1,4 +1,4 @@
-use crate::traits::write_to_file::WriteToFile;
+use crate::traits::write_file::WriteFile;
 use std::{fs, io::Error, path::PathBuf};
 
 #[derive(Debug, PartialEq)]
@@ -12,7 +12,7 @@ impl FileWriter {
 	}
 }
 
-impl WriteToFile for FileWriter {
+impl WriteFile for FileWriter {
 	type TError = Error;
 
 	fn write(&self, string: &str) -> Result<(), Self::TError> {

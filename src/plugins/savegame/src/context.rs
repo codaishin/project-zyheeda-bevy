@@ -1,6 +1,6 @@
 use crate::{
 	errors::{ContextFlushError, EntitySerializationErrors, LockPoisonedError, SerdeJsonErrors},
-	traits::{execute_save::BufferComponents, write_to_file::WriteToFile},
+	traits::{write_buffer::WriteBuffer, write_file::WriteFile},
 	writer::FileWriter,
 };
 use bevy::prelude::*;
@@ -57,11 +57,11 @@ impl SaveContext {
 }
 
 impl<TFileWriter> SaveContext<TFileWriter> {
-	pub(crate) fn flush_system(
+	pub(crate) fn write_file_system(
 		context: Arc<Mutex<Self>>,
 	) -> impl Fn() -> Result<(), ContextFlushError<TFileWriter::TError>>
 	where
-		TFileWriter: WriteToFile,
+		TFileWriter: WriteFile,
 	{
 		move || {
 			let mut context = match context.lock() {
@@ -69,13 +69,13 @@ impl<TFileWriter> SaveContext<TFileWriter> {
 				Ok(context) => context,
 			};
 
-			context.flush()
+			context.write_and_flush()
 		}
 	}
 
-	fn flush(&mut self) -> Result<(), ContextFlushError<TFileWriter::TError>>
+	fn write_and_flush(&mut self) -> Result<(), ContextFlushError<TFileWriter::TError>>
 	where
-		TFileWriter: WriteToFile,
+		TFileWriter: WriteFile,
 	{
 		let mut errors = vec![];
 		let entities = self
@@ -136,8 +136,8 @@ fn join_entity_components(
 	Ok(format!("[{components}]"))
 }
 
-impl BufferComponents for SaveContext {
-	fn buffer_components(&mut self, entity: EntityRef) -> Result<(), EntitySerializationErrors> {
+impl WriteBuffer for SaveContext {
+	fn write_buffer(&mut self, entity: EntityRef) -> Result<(), EntitySerializationErrors> {
 		let errors = self
 			.handlers
 			.iter()
@@ -177,7 +177,7 @@ mod test_flush {
 
 	mock! {
 	  _Writer {}
-		impl WriteToFile for _Writer {
+		impl WriteFile for _Writer {
 			type TError = _Error;
 			fn write(&self, string: &str) -> Result<(), _Error>;
 		}
@@ -210,7 +210,7 @@ mod test_flush {
 
 		_ = app
 			.world_mut()
-			.run_system_once(SaveContext::flush_system(context))?;
+			.run_system_once(SaveContext::write_file_system(context))?;
 		Ok(())
 	}
 
@@ -275,7 +275,7 @@ mod test_flush {
 
 		_ = app
 			.world_mut()
-			.run_system_once(SaveContext::flush_system(context))?;
+			.run_system_once(SaveContext::write_file_system(context))?;
 		Ok(())
 	}
 
@@ -340,7 +340,7 @@ mod test_flush {
 
 		_ = app
 			.world_mut()
-			.run_system_once(SaveContext::flush_system(context))?;
+			.run_system_once(SaveContext::write_file_system(context))?;
 		Ok(())
 	}
 
@@ -364,7 +364,7 @@ mod test_flush {
 
 		_ = app
 			.world_mut()
-			.run_system_once(SaveContext::flush_system(context.clone()))?;
+			.run_system_once(SaveContext::write_file_system(context.clone()))?;
 
 		assert_eq!(
 			HashMap::default(),
@@ -421,7 +421,7 @@ mod test_buffer {
 			.call(b, e.id())
 		}];
 
-		let result = context.buffer_components(entity);
+		let result = context.write_buffer(entity);
 
 		assert!(result.is_ok());
 	}
@@ -449,7 +449,7 @@ mod test_buffer {
 			},
 		];
 
-		let result = context.buffer_components(entity);
+		let result = context.write_buffer(entity);
 
 		assert_eq!(
 			Err("NOPE, U LOSE|NOPE, U LOSE AGAIN".to_owned()),
@@ -472,7 +472,7 @@ mod test_handle {
 
 	struct _Writer;
 
-	impl WriteToFile for _Writer {
+	impl WriteFile for _Writer {
 		type TError = ();
 
 		fn write(&self, _: &str) -> Result<(), Self::TError> {
