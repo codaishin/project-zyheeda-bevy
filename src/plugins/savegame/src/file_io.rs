@@ -1,7 +1,7 @@
 use crate::traits::{read_file::ReadFile, write_file::WriteFile};
 use std::{fs, io::Error, path::PathBuf};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct FileIO {
 	file: PathBuf,
 }

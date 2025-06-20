@@ -35,6 +35,21 @@ impl From<SerializationOrLockError> for Error {
 	}
 }
 
+#[derive(Debug, PartialEq)]
+pub(crate) enum DeserializationOrLockError {
+	DeserializationErrors(SerdeJsonErrors),
+	LockPoisoned(LockPoisonedError),
+}
+
+impl From<DeserializationOrLockError> for Error {
+	fn from(value: DeserializationOrLockError) -> Self {
+		match value {
+			DeserializationOrLockError::DeserializationErrors(error) => Self::from(error),
+			DeserializationOrLockError::LockPoisoned(error) => Self::from(error),
+		}
+	}
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct LockPoisonedError;
 
