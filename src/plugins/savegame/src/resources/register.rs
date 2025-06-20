@@ -113,7 +113,7 @@ mod test_registration {
 #[cfg(test)]
 mod test_update_context {
 	use super::*;
-	use crate::{context::Buffer, writer::FileWriter};
+	use crate::{context::SaveBuffer, file_io::FileIO};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::test_tools::utils::SingleThreadedApp;
 	use serde_json::Error;
@@ -131,15 +131,15 @@ mod test_update_context {
 
 	#[test]
 	fn update_context() -> Result<(), RunSystemError> {
-		fn a(_: &mut Buffer, _: EntityRef) -> Result<(), Error> {
+		fn a(_: &mut SaveBuffer, _: EntityRef) -> Result<(), Error> {
 			Ok(())
 		}
-		fn b(_: &mut Buffer, _: EntityRef) -> Result<(), Error> {
+		fn b(_: &mut SaveBuffer, _: EntityRef) -> Result<(), Error> {
 			Err(serde::de::Error::custom("Let me break everything"))
 		}
 
 		let mut app = setup(vec![a, b]);
-		let context = Arc::new(Mutex::new(SaveContext::from(FileWriter::to_destination(
+		let context = Arc::new(Mutex::new(SaveContext::from(FileIO::with_file(
 			PathBuf::new(),
 		))));
 

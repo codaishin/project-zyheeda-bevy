@@ -1,25 +1,26 @@
 use crate::{
-	errors::{ContextFlushError, EntitySerializationErrors, LockPoisonedError, SerdeJsonErrors},
-	traits::{write_buffer::WriteBuffer, write_file::WriteFile},
-	writer::FileWriter,
+	errors::EntitySerializationErrors,
+	file_io::FileIO,
+	traits::write_buffer::WriteBuffer,
 };
 use bevy::prelude::*;
-use serde::Serialize;
-use serde_json::{Error, Value, to_string, to_value};
+use serde::{Deserialize, Serialize};
+use serde_json::{Error, Value, to_value};
 use std::{
 	any::type_name,
 	collections::{HashMap, HashSet, hash_map::Entry},
-	sync::{Arc, Mutex},
 };
 
-pub(crate) type Buffer = HashMap<Entity, HashSet<ComponentString>>;
-pub(crate) type Handlers = Vec<fn(&mut Buffer, EntityRef) -> Result<(), Error>>;
+pub(crate) type SaveBuffer = HashMap<Entity, HashSet<ComponentString>>;
+pub(crate) type LoadBuffer = Vec<HashSet<ComponentString>>;
+pub(crate) type Handlers = Vec<fn(&mut SaveBuffer, EntityRef) -> Result<(), Error>>;
 
 #[derive(Debug, PartialEq, Default)]
-pub struct SaveContext<TFileWriter = FileWriter> {
+pub struct SaveContext<TFileIO = FileIO> {
 	pub(crate) handlers: Handlers,
-	writer: TFileWriter,
-	buffer: Buffer,
+	pub(crate) save_buffer: SaveBuffer,
+	pub(crate) load_buffer: LoadBuffer,
+	pub(crate) io: TFileIO,
 }
 
 impl SaveContext {
@@ -36,10 +37,10 @@ impl SaveContext {
 		};
 		let comp = type_name::<T>();
 		let component_str = ComponentString {
-			comp,
+			comp: comp.to_owned(),
 			dto: match type_name::<TDto>() {
 				dto if dto == comp => None,
-				dto => Some(dto),
+				dto => Some(dto.to_owned()),
 			},
 			value: to_value(TDto::from(component.clone()))?,
 		};
@@ -56,84 +57,26 @@ impl SaveContext {
 	}
 }
 
-impl<TFileWriter> SaveContext<TFileWriter> {
-	pub(crate) fn write_file_system(
-		context: Arc<Mutex<Self>>,
-	) -> impl Fn() -> Result<(), ContextFlushError<TFileWriter::TError>>
-	where
-		TFileWriter: WriteFile,
-	{
-		move || {
-			let mut context = match context.lock() {
-				Err(_) => return Err(ContextFlushError::LockPoisoned(LockPoisonedError)),
-				Ok(context) => context,
-			};
-
-			context.write_and_flush()
-		}
-	}
-
-	fn write_and_flush(&mut self) -> Result<(), ContextFlushError<TFileWriter::TError>>
-	where
-		TFileWriter: WriteFile,
-	{
-		let mut errors = vec![];
-		let entities = self
-			.buffer
-			.drain()
-			.map(join_entity_components)
-			.filter_map(|result| match result {
-				Ok(value) => Some(value),
-				Err(SerdeJsonErrors(json_errors)) => {
-					errors.extend(json_errors);
-					None
-				}
-			})
-			.collect::<Vec<_>>()
-			.join(",");
-
-		if !errors.is_empty() {
-			return Err(ContextFlushError::SerdeErrors(SerdeJsonErrors(errors)));
-		}
-
-		self.writer
-			.write(&format!("[{entities}]"))
-			.map_err(ContextFlushError::WriteError)
+#[cfg(test)]
+impl<TFileIO> SaveContext<TFileIO> {
+	pub(crate) fn with_save_buffer<const N: usize>(
+		mut self,
+		buffer: [(Entity, HashSet<ComponentString>); N],
+	) -> Self {
+		self.save_buffer = HashMap::from(buffer);
+		self
 	}
 }
 
 impl<TFileWriter> From<TFileWriter> for SaveContext<TFileWriter> {
 	fn from(writer: TFileWriter) -> Self {
 		Self {
-			writer,
+			io: writer,
 			handlers: vec![],
-			buffer: HashMap::default(),
+			load_buffer: vec![],
+			save_buffer: HashMap::default(),
 		}
 	}
-}
-
-fn join_entity_components(
-	(_, component_strings): (Entity, HashSet<ComponentString>),
-) -> Result<String, SerdeJsonErrors> {
-	let mut errors = vec![];
-	let components = component_strings
-		.iter()
-		.map(to_string)
-		.filter_map(|result| match result {
-			Ok(value) => Some(value),
-			Err(error) => {
-				errors.push(error);
-				None
-			}
-		})
-		.collect::<Vec<_>>()
-		.join(",");
-
-	if !errors.is_empty() {
-		return Err(SerdeJsonErrors(errors));
-	}
-
-	Ok(format!("[{components}]"))
 }
 
 impl WriteBuffer for SaveContext {
@@ -141,7 +84,7 @@ impl WriteBuffer for SaveContext {
 		let errors = self
 			.handlers
 			.iter()
-			.filter_map(|handler| handler(&mut self.buffer, entity).err())
+			.filter_map(|handler| handler(&mut self.save_buffer, entity).err())
 			.collect::<Vec<_>>();
 
 		match errors.as_slice() {
@@ -151,231 +94,21 @@ impl WriteBuffer for SaveContext {
 	}
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Serialize, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
 pub(crate) struct ComponentString {
 	/// Component type name, abbreviated to reduce memory usage
-	comp: &'static str,
+	pub(crate) comp: String,
 
 	/// Component dto type name, abbreviated to reduce memory usage
 	#[serde(skip_serializing_if = "Option::is_none")]
-	dto: Option<&'static str>,
+	pub(crate) dto: Option<String>,
 
 	/// Component serialized value
-	value: Value,
+	pub(crate) value: Value,
 }
 
 #[cfg(test)]
-mod test_flush {
-	use super::*;
-	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{simple_init, test_tools::utils::SingleThreadedApp, traits::mock::Mock};
-	use mockall::{mock, predicate::eq};
-	use serde_json::{from_str, to_string};
-
-	#[derive(Debug, PartialEq, Clone)]
-	struct _Error;
-
-	mock! {
-	  _Writer {}
-		impl WriteFile for _Writer {
-			type TError = _Error;
-			fn write(&self, string: &str) -> Result<(), _Error>;
-		}
-	}
-
-	simple_init!(Mock_Writer);
-
-	fn setup() -> App {
-		App::new().single_threaded(Update)
-	}
-
-	#[test]
-	fn write_on_flush() -> Result<(), RunSystemError> {
-		let string_a = ComponentString {
-			comp: "A",
-			dto: None,
-			value: from_str(r#"{"value": 32}"#).unwrap(),
-		};
-		let context = Arc::new(Mutex::new(SaveContext {
-			buffer: HashMap::from([(Entity::from_raw(11), HashSet::from([string_a.clone()]))]),
-			writer: Mock_Writer::new_mock(|mock| {
-				mock.expect_write()
-					.times(1)
-					.with(eq(format!("[[{}]]", to_string(&string_a).unwrap())))
-					.return_const(Ok(()));
-			}),
-			handlers: vec![],
-		}));
-		let mut app = setup();
-
-		_ = app
-			.world_mut()
-			.run_system_once(SaveContext::write_file_system(context))?;
-		Ok(())
-	}
-
-	#[test]
-	fn write_multiple_components_per_entity_on_flush() -> Result<(), RunSystemError> {
-		let string_a = ComponentString {
-			comp: "A",
-			dto: None,
-			value: from_str(r#"{"value": 32}"#).unwrap(),
-		};
-		let string_b = ComponentString {
-			comp: "B",
-			dto: None,
-			value: from_str(r#"{"v": 42}"#).unwrap(),
-		};
-		let context = Arc::new(Mutex::new(SaveContext {
-			buffer: HashMap::from([(
-				Entity::from_raw(11),
-				HashSet::from([string_a.clone(), string_b.clone()]),
-			)]),
-			writer: Mock_Writer::new_mock(|mock| {
-				mock.expect_write()
-					.times(1)
-					.withf(|v| {
-						let a_b = format!(
-							"[[{},{}]]",
-							to_string(&ComponentString {
-								comp: "A",
-								dto: None,
-								value: from_str(r#"{"value": 32}"#).unwrap(),
-							})
-							.unwrap(),
-							to_string(&ComponentString {
-								comp: "B",
-								dto: None,
-								value: from_str(r#"{"v": 42}"#).unwrap(),
-							})
-							.unwrap(),
-						);
-						let b_a = format!(
-							"[[{},{}]]",
-							to_string(&ComponentString {
-								comp: "B",
-								dto: None,
-								value: from_str(r#"{"v": 42}"#).unwrap(),
-							})
-							.unwrap(),
-							to_string(&ComponentString {
-								comp: "A",
-								dto: None,
-								value: from_str(r#"{"value": 32}"#).unwrap(),
-							})
-							.unwrap(),
-						);
-						v == a_b || v == b_a
-					})
-					.return_const(Ok(()));
-			}),
-			handlers: vec![],
-		}));
-		let mut app = setup();
-
-		_ = app
-			.world_mut()
-			.run_system_once(SaveContext::write_file_system(context))?;
-		Ok(())
-	}
-
-	#[test]
-	fn write_multiple_entities_on_flush() -> Result<(), RunSystemError> {
-		let string_a = ComponentString {
-			comp: "A",
-			dto: None,
-			value: from_str(r#"{"value": 32}"#).unwrap(),
-		};
-		let string_b = ComponentString {
-			comp: "B",
-			dto: None,
-			value: from_str(r#"{"v": 42}"#).unwrap(),
-		};
-		let context = Arc::new(Mutex::new(SaveContext {
-			buffer: HashMap::from([
-				(Entity::from_raw(11), HashSet::from([string_a.clone()])),
-				(Entity::from_raw(12), HashSet::from([string_b.clone()])),
-			]),
-			writer: Mock_Writer::new_mock(|mock| {
-				mock.expect_write()
-					.times(1)
-					.withf(|v| {
-						let a_b = format!(
-							"[[{}],[{}]]",
-							to_string(&ComponentString {
-								comp: "A",
-								dto: None,
-								value: from_str(r#"{"value": 32}"#).unwrap(),
-							})
-							.unwrap(),
-							to_string(&ComponentString {
-								comp: "B",
-								dto: None,
-								value: from_str(r#"{"v": 42}"#).unwrap(),
-							})
-							.unwrap(),
-						);
-						let b_a = format!(
-							"[[{}],[{}]]",
-							to_string(&ComponentString {
-								comp: "B",
-								dto: None,
-								value: from_str(r#"{"v": 42}"#).unwrap(),
-							})
-							.unwrap(),
-							to_string(&ComponentString {
-								comp: "A",
-								dto: None,
-								value: from_str(r#"{"value": 32}"#).unwrap(),
-							})
-							.unwrap(),
-						);
-						v == a_b || v == b_a
-					})
-					.return_const(Ok(()));
-			}),
-			handlers: vec![],
-		}));
-		let mut app = setup();
-
-		_ = app
-			.world_mut()
-			.run_system_once(SaveContext::write_file_system(context))?;
-		Ok(())
-	}
-
-	#[test]
-	fn clear_buffer_on_flush() -> Result<(), RunSystemError> {
-		let context = Arc::new(Mutex::new(SaveContext {
-			buffer: HashMap::from([(
-				Entity::from_raw(32),
-				HashSet::from([ComponentString {
-					comp: "A",
-					dto: None,
-					value: from_str(r#"{"value": 32}"#).unwrap(),
-				}]),
-			)]),
-			writer: Mock_Writer::new_mock(|mock| {
-				mock.expect_write().return_const(Ok(()));
-			}),
-			handlers: vec![],
-		}));
-		let mut app = setup();
-
-		_ = app
-			.world_mut()
-			.run_system_once(SaveContext::write_file_system(context.clone()))?;
-
-		assert_eq!(
-			HashMap::default(),
-			context.lock().expect("COULD NOT LOCK CONTEXT").buffer
-		);
-		Ok(())
-	}
-}
-
-#[cfg(test)]
-mod test_buffer {
+mod test_write_buffer {
 	use super::*;
 	use common::{simple_init, traits::mock::Mock};
 	use mockall::{automock, predicate::eq};
@@ -384,7 +117,7 @@ mod test_buffer {
 
 	#[automock]
 	trait _Call {
-		fn call(&self, buffer: &mut Buffer, entity: Entity) -> Result<(), Error>;
+		fn call(&self, buffer: &mut SaveBuffer, entity: Entity) -> Result<(), Error>;
 	}
 
 	simple_init!(Mock_Call);
@@ -395,11 +128,11 @@ mod test_buffer {
 
 	#[test]
 	fn buffer() {
-		fn get_buffer() -> Buffer {
+		fn get_buffer() -> SaveBuffer {
 			HashMap::from([(
 				Entity::from_raw(42),
 				HashSet::from([ComponentString {
-					comp: "name",
+					comp: "name".to_owned(),
 					dto: None,
 					value: from_str("[\"state\"]").unwrap(),
 				}]),
@@ -409,8 +142,8 @@ mod test_buffer {
 		let mut app = setup();
 		let entity = app.world_mut().spawn_empty().id();
 		let entity = app.world().entity(entity);
-		let mut context = SaveContext::from(FileWriter::to_destination(PathBuf::new()));
-		context.buffer = get_buffer();
+		let mut context = SaveContext::from(FileIO::with_file(PathBuf::new()));
+		context.save_buffer = get_buffer();
 		context.handlers = vec![|b, e| {
 			Mock_Call::new_mock(|mock| {
 				mock.expect_call()
@@ -431,7 +164,7 @@ mod test_buffer {
 		let mut app = setup();
 		let entity = app.world_mut().spawn_empty().id();
 		let entity = app.world().entity(entity);
-		let mut context = SaveContext::from(FileWriter::to_destination(PathBuf::new()));
+		let mut context = SaveContext::from(FileIO::with_file(PathBuf::new()));
 		context.handlers = vec![
 			|b, e| {
 				Mock_Call::new_mock(|mock| {
@@ -465,6 +198,7 @@ mod test_buffer {
 #[cfg(test)]
 mod test_handle {
 	use super::*;
+	use crate::traits::write_file::WriteFile;
 	use common::test_tools::utils::SingleThreadedApp;
 	use serde::Serialize;
 	use serde_json::{from_str, to_string};
@@ -532,7 +266,7 @@ mod test_handle {
 			HashMap::from([(
 				entity.id(),
 				HashSet::from([ComponentString {
-					comp: type_name::<_A>(),
+					comp: type_name::<_A>().to_owned(),
 					dto: None,
 					value: from_str(&to_string(&_A { value: 42 }).unwrap()).unwrap()
 				}])
@@ -554,8 +288,8 @@ mod test_handle {
 			HashMap::from([(
 				entity.id(),
 				HashSet::from([ComponentString {
-					comp: type_name::<_A>(),
-					dto: Some(type_name::<_ADto>()),
+					comp: type_name::<_A>().to_owned(),
+					dto: Some(type_name::<_ADto>().to_owned()),
 					value: from_str(
 						&to_string(&_ADto {
 							value: "42".to_owned()
@@ -584,12 +318,12 @@ mod test_handle {
 				entity.id(),
 				HashSet::from([
 					ComponentString {
-						comp: type_name::<_A>(),
+						comp: type_name::<_A>().to_owned(),
 						dto: None,
 						value: from_str(&to_string(&_A { value: 42 }).unwrap()).unwrap()
 					},
 					ComponentString {
-						comp: type_name::<_B>(),
+						comp: type_name::<_B>().to_owned(),
 						dto: None,
 						value: from_str(&to_string(&_B { v: 11 }).unwrap()).unwrap()
 					}

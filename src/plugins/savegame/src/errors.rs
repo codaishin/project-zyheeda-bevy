@@ -1,21 +1,21 @@
 use bevy::ecs::entity::Entity;
 use common::errors::{Error, Level};
 use serde_json::Error as SerdeJsonError;
-use std::{collections::HashMap, io::Error as IoError};
+use std::{collections::HashMap, io::Error as IOError};
 
-#[derive(Debug)]
-pub(crate) enum ContextFlushError<TIoError = IoError> {
-	WriteError(TIoError),
+#[derive(Debug, PartialEq)]
+pub(crate) enum ContextIOError<TIOError = IOError> {
+	FileError(TIOError),
 	SerdeErrors(SerdeJsonErrors),
 	LockPoisoned(LockPoisonedError),
 }
 
-impl From<ContextFlushError> for Error {
-	fn from(value: ContextFlushError) -> Self {
+impl From<ContextIOError> for Error {
+	fn from(value: ContextIOError) -> Self {
 		match value {
-			ContextFlushError::WriteError(error) => Self::from(error),
-			ContextFlushError::SerdeErrors(error) => Self::from(error),
-			ContextFlushError::LockPoisoned(error) => Self::from(error),
+			ContextIOError::FileError(error) => Self::from(error),
+			ContextIOError::SerdeErrors(error) => Self::from(error),
+			ContextIOError::LockPoisoned(error) => Self::from(error),
 		}
 	}
 }
@@ -71,6 +71,27 @@ pub(crate) struct EntitySerializationErrors(pub(crate) Vec<SerdeJsonError>);
 
 #[derive(Debug)]
 pub(crate) struct SerdeJsonErrors(pub(crate) Vec<SerdeJsonError>);
+
+impl PartialEq for SerdeJsonErrors {
+	fn eq(&self, other: &Self) -> bool {
+		if self.0.len() != other.0.len() {
+			return false;
+		}
+
+		for error in &self.0 {
+			let matches = |other: &SerdeJsonError| {
+				error.line() == other.line()
+					&& error.column() == other.column()
+					&& error.classify() == other.classify()
+			};
+			if !other.0.iter().any(matches) {
+				return false;
+			}
+		}
+
+		true
+	}
+}
 
 impl From<SerdeJsonErrors> for Error {
 	fn from(SerdeJsonErrors(errors): SerdeJsonErrors) -> Self {
