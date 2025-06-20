@@ -1,10 +1,12 @@
 use crate::{
-	context::SaveContext,
+	context::{ComponentString, SaveContext},
 	errors::{ContextIOError, LockPoisonedError, SerdeJsonErrors},
 	traits::read_file::ReadFile,
 };
 use bevy::prelude::*;
 use std::sync::{Arc, Mutex};
+
+type SerializedEntities = Vec<Vec<ComponentString>>;
 
 impl<TFileIO> SaveContext<TFileIO>
 where
@@ -22,10 +24,20 @@ where
 				Err(e) => return Err(ContextIOError::FileError(e)),
 				Ok(entities) => entities,
 			};
-			context.load_buffer = match serde_json::from_str(&entities) {
+			let entities = match serde_json::from_str::<SerializedEntities>(&entities) {
 				Err(e) => return Err(ContextIOError::SerdeErrors(SerdeJsonErrors(vec![e]))),
-				Ok(buffer) => buffer,
+				Ok(components) => components,
 			};
+
+			context.load_buffer = entities
+				.into_iter()
+				.map(|components| {
+					components
+						.into_iter()
+						.map(|ComponentString { comp, value }| (comp, value))
+						.collect()
+				})
+				.collect();
 
 			Ok(())
 		}
@@ -35,11 +47,11 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::context::{ComponentString, LoadBuffer};
+	use crate::context::ComponentString;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{simple_init, test_tools::utils::SingleThreadedApp, traits::mock::Mock};
 	use mockall::mock;
-	use std::collections::HashSet;
+	use std::collections::HashMap;
 
 	#[derive(Debug, PartialEq, Clone)]
 	struct _Error;
@@ -62,7 +74,6 @@ mod tests {
 	fn call_read() -> Result<(), RunSystemError> {
 		let component = serde_json::to_string(&ComponentString {
 			comp: "A".to_owned(),
-			dto: None,
 			value: serde_json::from_str(r#"{"value": 32}"#).unwrap(),
 		})
 		.unwrap();
@@ -86,7 +97,6 @@ mod tests {
 	fn write_load_buffer() -> Result<(), RunSystemError> {
 		let component = serde_json::to_string(&ComponentString {
 			comp: "A".to_owned(),
-			dto: None,
 			value: serde_json::from_str(r#"{"value": 32}"#).unwrap(),
 		})
 		.unwrap();
@@ -103,11 +113,10 @@ mod tests {
 			.run_system_once(SaveContext::read_file_system(context.clone()))?;
 
 		assert_eq!(
-			vec![HashSet::from([ComponentString {
-				comp: "A".to_owned(),
-				dto: None,
-				value: serde_json::from_str(r#"{"value": 32}"#).unwrap(),
-			}])],
+			vec![HashMap::from([(
+				"A".to_owned(),
+				serde_json::from_str(r#"{"value": 32}"#).unwrap(),
+			)])],
 			context.lock().expect("COULD NOT LOCK CONTEXT").load_buffer
 		);
 		Ok(())
@@ -132,7 +141,7 @@ mod tests {
 	#[test]
 	fn deserialize_error() -> Result<(), RunSystemError> {
 		let entities = "[my so very broken entity]".to_owned();
-		let Err(error) = serde_json::from_str::<LoadBuffer>(&entities) else {
+		let Err(error) = serde_json::from_str::<SerializedEntities>(&entities) else {
 			panic!("SETUP BROKEN: EXPECTED ERROR");
 		};
 		let reader = Mock_Reader::new_mock(|mock| {

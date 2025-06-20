@@ -104,7 +104,10 @@ where
 			)
 			.add_systems(
 				OnEnter(GameState::LoadingSave),
-				SaveContext::read_file_system(quick_save.clone()).pipe(log),
+				(
+					SaveContext::read_file_system(quick_save.clone()).pipe(log),
+					SaveContext::read_buffer_system(quick_save).pipe(log),
+				),
 			);
 	}
 }
@@ -118,12 +121,12 @@ impl<TDependencies> HandlesSaving for SavegamePlugin<TDependencies> {
 	{
 		match app.world_mut().get_resource_mut::<Register>() {
 			None => {
-				let mut register = Register::default();
-				register.register_component::<TComponent, TComponent::TDto>();
+				let mut register = Register::<AssetServer>::default();
+				register.register_component::<TComponent>();
 				app.insert_resource(register);
 			}
 			Some(mut register) => {
-				register.register_component::<TComponent, TComponent::TDto>();
+				register.register_component::<TComponent>();
 			}
 		}
 	}
@@ -154,7 +157,7 @@ mod tests {
 		SavegamePlugin::<()>::register_savable_component::<_A>(&mut app);
 
 		let mut expected = Register::default();
-		expected.register_component::<_A, _A>();
+		expected.register_component::<_A>();
 		assert_eq!(Some(&expected), app.world().get_resource::<Register>());
 	}
 
@@ -166,8 +169,8 @@ mod tests {
 		SavegamePlugin::<()>::register_savable_component::<_B>(&mut app);
 
 		let mut expected = Register::default();
-		expected.register_component::<_A, _A>();
-		expected.register_component::<_B, _B>();
+		expected.register_component::<_A>();
+		expected.register_component::<_B>();
 		assert_eq!(Some(&expected), app.world().get_resource::<Register>());
 	}
 }

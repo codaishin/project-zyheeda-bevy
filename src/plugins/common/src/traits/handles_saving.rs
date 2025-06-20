@@ -1,4 +1,4 @@
-use crate::traits::handles_custom_assets::TryLoadFrom;
+use crate::{errors::Unreachable, traits::handles_custom_assets::TryLoadFrom};
 use bevy::prelude::*;
 use serde::{Serialize, de::DeserializeOwned};
 
@@ -10,18 +10,27 @@ pub trait HandlesSaving {
 		TComponent: SavableComponent;
 }
 
-/// Marks components as being able to be (de)serialized.
+/// Marks components as being (de)serializable.
 ///
 /// A blanket implementation exists for components that can use `Self`
-/// as [`TDto`](SavableComponent::TDto).
-pub trait SavableComponent: Component + Sized + Clone + TryLoadFrom<Self::TDto> {
+/// as their [`TDto`](SavableComponent::TDto).
+///
+/// <div class="warning">
+///   `TInstantiationError` is hardcoded to [`Unreachable`] to simplify implementations.
+///   While it could be constrained to types castable to `crate::errors::Error`,
+///   doing so would introduce considerable boilerplate throughout the codebase,
+///   including in awkward or fragile areas.
+/// </div>
+pub trait SavableComponent:
+	Component + Sized + Clone + TryLoadFrom<Self::TDto, TInstantiationError = Unreachable>
+{
 	/// The data transfer object used for (de)serialization.
 	type TDto: From<Self> + Serialize + DeserializeOwned;
 }
 
-impl<T> SavableComponent for T
+impl<TComponent> SavableComponent for TComponent
 where
-	T: Serialize + DeserializeOwned + Clone + Component,
+	TComponent: Serialize + DeserializeOwned + Clone + Component,
 {
 	type TDto = Self;
 }
