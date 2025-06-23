@@ -4,7 +4,7 @@ use crate::traits::{
 };
 use bevy::prelude::*;
 
-#[derive(Component)]
+#[derive(Component, Debug, PartialEq, Clone, Copy)]
 #[require(Transform)]
 pub struct OrbitPlayer {
 	pub center: OrbitCenter,
@@ -12,6 +12,7 @@ pub struct OrbitPlayer {
 	pub sensitivity: f32,
 }
 
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct OrbitCenter {
 	pub entity: Option<Entity>,
 	pub translation: Vec3,

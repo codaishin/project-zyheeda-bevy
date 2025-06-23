@@ -5,6 +5,7 @@ mod traits;
 use bevy::prelude::*;
 use common::{
 	states::game_state::GameState,
+	systems::log::log,
 	tools::action_key::camera_key::CameraKey,
 	traits::{
 		handles_graphics::{FirstPassCamera, WorldCameras},
@@ -45,7 +46,9 @@ where
 		app.register_required_components::<TGraphics::TFirstPassCamera, TPlayers::TPlayerMainCamera>();
 		app.add_systems(
 			Update,
-			TGraphics::TWorldCameras::set_to_orbit::<TPlayers::TPlayer>,
+			TGraphics::TWorldCameras::set_to_orbit::<TPlayers::TPlayer>
+				.pipe(log)
+				.run_if(in_state(GameState::Loading)),
 		)
 		.add_systems(
 			Update,
