@@ -1,5 +1,12 @@
 use bevy::{ecs::error::BevyError, math::InvalidDirectionError, reflect::TypePath};
-use std::{convert::Infallible, error::Error as StdError, fmt::Display, io::Error as IoError};
+use std::{
+	any::type_name,
+	convert::Infallible,
+	error::Error as StdError,
+	fmt::{Debug, Display},
+	io::Error as IoError,
+	marker::PhantomData,
+};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Level {
@@ -66,3 +73,62 @@ impl Display for Unreachable {
 }
 
 impl StdError for Unreachable {}
+
+pub struct UniqueViolation<T> {
+	_p: PhantomData<T>,
+	found: Found,
+}
+
+impl<T> Debug for UniqueViolation<T> {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("UniqueViolation")
+			.field("_p", &self._p)
+			.field("found", &self.found)
+			.finish()
+	}
+}
+
+impl<T> PartialEq for UniqueViolation<T> {
+	fn eq(&self, other: &Self) -> bool {
+		self.found == other.found
+	}
+}
+
+impl UniqueViolation<()> {
+	pub fn found_none_of<T>() -> UniqueViolation<T> {
+		UniqueViolation {
+			_p: PhantomData,
+			found: Found::None,
+		}
+	}
+
+	pub fn found_multiple_of<T>() -> UniqueViolation<T> {
+		UniqueViolation {
+			_p: PhantomData,
+			found: Found::Multiple,
+		}
+	}
+}
+
+#[derive(Debug, PartialEq)]
+enum Found {
+	None,
+	Multiple,
+}
+
+impl<T> From<UniqueViolation<T>> for Error {
+	fn from(UniqueViolation { found, .. }: UniqueViolation<T>) -> Self {
+		let found = match found {
+			Found::None => "none",
+			Found::Multiple => "multiple",
+		};
+		Self {
+			msg: format!(
+				"Found {} {}, when needing one unique",
+				found,
+				type_name::<T>()
+			),
+			lvl: Level::Error,
+		}
+	}
+}
