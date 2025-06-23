@@ -95,14 +95,14 @@ impl<T> PartialEq for UniqueViolation<T> {
 }
 
 impl UniqueViolation<()> {
-	pub fn found_none_of<T>() -> UniqueViolation<T> {
+	pub fn none_of<T>() -> UniqueViolation<T> {
 		UniqueViolation {
 			_p: PhantomData,
 			found: Found::None,
 		}
 	}
 
-	pub fn found_multiple_of<T>() -> UniqueViolation<T> {
+	pub fn multiple_of<T>() -> UniqueViolation<T> {
 		UniqueViolation {
 			_p: PhantomData,
 			found: Found::Multiple,
