@@ -1,5 +1,5 @@
-use super::{InputState, ShouldEnqueue};
-use bevy::input::{ButtonInput, keyboard::KeyCode};
+use super::InputState;
+use bevy::input::ButtonInput;
 use common::{
 	tools::action_key::{slot::SlotKey, user_input::UserInput},
 	traits::key_mappings::TryGetAction,
@@ -25,12 +25,6 @@ where
 		self.get_just_released()
 			.filter_map(|k| map.try_get_action(*k))
 			.collect()
-	}
-}
-
-impl ShouldEnqueue for ButtonInput<UserInput> {
-	fn should_enqueue(&self) -> bool {
-		self.pressed(UserInput::from(KeyCode::ShiftLeft))
 	}
 }
 
@@ -108,21 +102,5 @@ mod tests {
 			HashSet::from([SlotKey::BottomHand(Side::Right),]),
 			HashSet::from_iter(input.just_released_slots(&_Map)),
 		)
-	}
-
-	#[test]
-	fn should_enqueue_false() {
-		let input = ButtonInput::<UserInput>::default();
-
-		assert!(!input.should_enqueue());
-	}
-
-	#[test]
-	fn should_enqueue_true() {
-		let mut input = ButtonInput::<UserInput>::default();
-		input.press(UserInput::from(KeyCode::ShiftLeft));
-		input.clear_just_pressed(UserInput::from(KeyCode::ShiftLeft));
-
-		assert!(input.should_enqueue());
 	}
 }

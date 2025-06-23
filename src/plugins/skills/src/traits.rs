@@ -92,10 +92,6 @@ pub(crate) trait GetAnimationStrategy {
 	fn animation_strategy(&self) -> AnimationStrategy;
 }
 
-pub trait GetStaticSkillBehavior {
-	fn behavior() -> RunSkillBehavior;
-}
-
 pub(crate) trait GetSkillBehavior {
 	fn behavior(&self) -> (SlotKey, RunSkillBehavior);
 }
@@ -116,8 +112,4 @@ pub trait Schedule<TBehavior> {
 
 pub(crate) trait Execute<TCommands, TLifetimes, TEffects, TSkillBehavior> {
 	fn execute(&mut self, commands: &mut TCommands, caster: &SkillCaster, target: &SkillTarget);
-}
-
-pub trait ShouldEnqueue {
-	fn should_enqueue(&self) -> bool;
 }

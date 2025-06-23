@@ -1,22 +1,20 @@
-pub mod components;
-pub mod item;
-pub mod resources;
-pub mod skills;
-pub mod systems;
-pub mod traits;
-
 mod behaviors;
-mod bundles;
+mod components;
+mod item;
+mod resources;
+mod skills;
+mod systems;
 mod tools;
+mod traits;
 
 use crate::components::{
 	combos::dto::CombosDto,
 	combos_time_out::dto::CombosTimeOutDto,
+	loadout::Loadout,
 	queue::dto::QueueDto,
 	skill_executer::dto::SkillExecuterDto,
 };
 use bevy::prelude::*;
-use bundles::{ComboBundle, Loadout};
 use common::{
 	states::game_state::{GameState, LoadingGame},
 	tools::action_key::{
@@ -58,7 +56,7 @@ use components::{
 use item::{Item, dto::ItemDto};
 use macros::item_asset;
 use skills::{QueuedSkill, RunSkillBehavior, Skill, dto::SkillDto};
-use std::{marker::PhantomData, time::Duration};
+use std::marker::PhantomData;
 use systems::{
 	advance_active_skill::advance_active_skill,
 	combos::{queue_update::ComboQueueUpdate, update::UpdateCombos},
@@ -139,7 +137,8 @@ where
 		TDispatchChildrenAssets::register_child_asset::<Slots, ForearmItemSlots>(app);
 		TDispatchChildrenAssets::register_child_asset::<Slots, SubMeshEssenceSlots>(app);
 
-		app.add_systems(Update, Self::set_player_items)
+		app.register_required_components::<TPlayers::TPlayer, Loadout>()
+			.add_systems(Update, Self::set_player_items)
 			.add_systems(Update, Swapper::system);
 	}
 
@@ -188,14 +187,13 @@ where
 			(
 				Swapper::default(),
 				Self::get_inventory(asset_server),
-				Self::get_loadout(asset_server),
-				Self::get_combos(),
+				Self::get_slots(asset_server),
 			),
 		);
 	}
 
-	fn get_loadout(asset_server: &AssetServer) -> Loadout {
-		Loadout::new([
+	fn get_slots(asset_server: &AssetServer) -> Slots {
+		Slots::new([
 			(
 				SlotKey::TopHand(Side::Left),
 				Some(asset_server.load(item_asset!("pistol"))),
@@ -221,12 +219,6 @@ where
 			Some(asset_server.load(item_asset!("pistol"))),
 			Some(asset_server.load(item_asset!("pistol"))),
 		])
-	}
-
-	fn get_combos() -> ComboBundle {
-		let timeout = CombosTimeOut::after(Duration::from_secs(2));
-
-		ComboBundle::with_timeout(timeout)
 	}
 
 	fn config_menus(&self, app: &mut App) {

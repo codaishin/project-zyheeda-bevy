@@ -21,15 +21,6 @@ pub struct Item {
 	pub item_type: ItemType,
 }
 
-impl Item {
-	pub fn with_token(token: &str) -> Self {
-		Self {
-			token: Token::from(token),
-			..default()
-		}
-	}
-}
-
 impl InspectAble<ItemToken> for Item {
 	fn get_inspect_able_field(&self) -> &Token {
 		&self.token

@@ -29,6 +29,7 @@ use std::collections::VecDeque;
 #[derive(Component, Clone, PartialEq, Debug)]
 pub struct ComboNode<TSkill = Skill>(OrderedHashMap<SlotKey, (TSkill, ComboNode<TSkill>)>);
 
+#[cfg(test)]
 impl<TSkill> ComboNode<TSkill> {
 	pub fn new<const N: usize>(combos: [(SlotKey, (TSkill, ComboNode<TSkill>)); N]) -> Self {
 		Self(OrderedHashMap::from(combos))
