@@ -10,6 +10,7 @@ use common::{
 		handles_effect::HandlesEffect,
 		handles_enemies::{Attacker, Target},
 		handles_interactions::{BeamParameters, HandlesInteractions},
+		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
@@ -48,6 +49,7 @@ where
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
+		_: &mut impl LoadAsset,
 	) -> Result<(), Error> {
 		entity
 			.try_insert_if_new((

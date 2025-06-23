@@ -6,6 +6,7 @@ use common::{
 		handles_destruction::HandlesDestruction,
 		handles_interactions::HandlesInteractions,
 		handles_skill_behaviors::{Projection, ProjectionOffset, Shape},
+		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
@@ -32,6 +33,7 @@ where
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
+		_: &mut impl LoadAsset,
 	) -> Result<(), Error> {
 		let offset = match self.offset {
 			Some(ProjectionOffset(offset)) => offset,

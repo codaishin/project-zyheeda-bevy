@@ -1,28 +1,23 @@
-pub mod components;
-pub mod item;
-pub mod resources;
-pub mod skills;
-pub mod systems;
-pub mod traits;
-
 mod behaviors;
-mod bundles;
+mod components;
+mod item;
+mod resources;
+mod skills;
+mod systems;
 mod tools;
+mod traits;
 
 use crate::components::{
 	combos::dto::CombosDto,
 	combos_time_out::dto::CombosTimeOutDto,
+	loadout::Loadout,
 	queue::dto::QueueDto,
 	skill_executer::dto::SkillExecuterDto,
 };
 use bevy::prelude::*;
-use bundles::{ComboBundle, Loadout};
 use common::{
 	states::game_state::{GameState, LoadingGame},
-	tools::action_key::{
-		slot::{Side, SlotKey},
-		user_input::UserInput,
-	},
+	tools::action_key::{slot::SlotKey, user_input::UserInput},
 	traits::{
 		handles_assets_for_children::HandlesAssetsForChildren,
 		handles_combo_menu::{ConfigureCombos, HandlesComboMenu},
@@ -40,9 +35,9 @@ use common::{
 		handles_saving::HandlesSaving,
 		handles_settings::HandlesSettings,
 		handles_skill_behaviors::HandlesSkillBehaviors,
+		prefab::AddPrefabObserver,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
-		try_insert_on::TryInsertOn,
 	},
 };
 use components::{
@@ -56,9 +51,8 @@ use components::{
 	swapper::Swapper,
 };
 use item::{Item, dto::ItemDto};
-use macros::item_asset;
 use skills::{QueuedSkill, RunSkillBehavior, Skill, dto::SkillDto};
-use std::{marker::PhantomData, time::Duration};
+use std::marker::PhantomData;
 use systems::{
 	advance_active_skill::advance_active_skill,
 	combos::{queue_update::ComboQueueUpdate, update::UpdateCombos},
@@ -139,7 +133,8 @@ where
 		TDispatchChildrenAssets::register_child_asset::<Slots, ForearmItemSlots>(app);
 		TDispatchChildrenAssets::register_child_asset::<Slots, SubMeshEssenceSlots>(app);
 
-		app.add_systems(Update, Self::set_player_items)
+		app.register_required_components::<TPlayers::TPlayer, Loadout>()
+			.add_prefab_observer::<Loadout, ()>()
 			.add_systems(Update, Swapper::system);
 	}
 
@@ -171,62 +166,6 @@ where
 				.before(TBehaviors::SYSTEMS)
 				.run_if(in_state(GameState::Play)),
 		);
-	}
-
-	fn set_player_items(
-		mut commands: Commands,
-		players: Query<Entity, Added<TPlayers::TPlayer>>,
-		asset_server: Res<AssetServer>,
-	) {
-		let Ok(player) = players.single() else {
-			return;
-		};
-		let asset_server = asset_server.as_ref();
-
-		commands.try_insert_on(
-			player,
-			(
-				Swapper::default(),
-				Self::get_inventory(asset_server),
-				Self::get_loadout(asset_server),
-				Self::get_combos(),
-			),
-		);
-	}
-
-	fn get_loadout(asset_server: &AssetServer) -> Loadout {
-		Loadout::new([
-			(
-				SlotKey::TopHand(Side::Left),
-				Some(asset_server.load(item_asset!("pistol"))),
-			),
-			(
-				SlotKey::BottomHand(Side::Left),
-				Some(asset_server.load(item_asset!("pistol"))),
-			),
-			(
-				SlotKey::BottomHand(Side::Right),
-				Some(asset_server.load(item_asset!("force_essence"))),
-			),
-			(
-				SlotKey::TopHand(Side::Right),
-				Some(asset_server.load(item_asset!("force_essence"))),
-			),
-		])
-	}
-
-	fn get_inventory(asset_server: &AssetServer) -> Inventory {
-		Inventory::new([
-			Some(asset_server.load(item_asset!("pistol"))),
-			Some(asset_server.load(item_asset!("pistol"))),
-			Some(asset_server.load(item_asset!("pistol"))),
-		])
-	}
-
-	fn get_combos() -> ComboBundle {
-		let timeout = CombosTimeOut::after(Duration::from_secs(2));
-
-		ComboBundle::with_timeout(timeout)
 	}
 
 	fn config_menus(&self, app: &mut App) {

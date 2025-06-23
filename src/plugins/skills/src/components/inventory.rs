@@ -12,9 +12,12 @@ use std::iter::Enumerate;
 #[derive(Component, Debug, PartialEq, Default)]
 pub struct Inventory(pub(crate) Vec<Option<Handle<Item>>>);
 
-impl Inventory {
-	pub fn new<const N: usize>(items: [Option<Handle<Item>>; N]) -> Self {
-		Self(Vec::from(items))
+impl<T> From<T> for Inventory
+where
+	T: IntoIterator<Item = Option<Handle<Item>>>,
+{
+	fn from(items: T) -> Self {
+		Self(Vec::from_iter(items))
 	}
 }
 
@@ -80,14 +83,14 @@ mod tests {
 	#[test]
 	fn get_first_item() {
 		let item = new_handle();
-		let inventory = Inventory::new([Some(item.clone())]);
+		let inventory = Inventory::from([Some(item.clone())]);
 
 		assert_eq!(Some(&item), inventory.get(&InventoryKey(0)));
 	}
 
 	#[test]
 	fn get_none_when_empty() {
-		let inventory = Inventory::new([]);
+		let inventory = Inventory::from([]);
 
 		assert_eq!(None, inventory.get(&InventoryKey(0)));
 	}
@@ -95,7 +98,7 @@ mod tests {
 	#[test]
 	fn get_3rd_item() {
 		let item = new_handle();
-		let inventory = Inventory::new([None, None, Some(item.clone())]);
+		let inventory = Inventory::from([None, None, Some(item.clone())]);
 
 		assert_eq!(Some(&item), inventory.get(&InventoryKey(2)));
 	}
@@ -103,7 +106,7 @@ mod tests {
 	#[test]
 	fn get_item_mut() {
 		let item = new_handle();
-		let mut inventory = Inventory::new([Some(item.clone())]);
+		let mut inventory = Inventory::from([Some(item.clone())]);
 
 		assert_eq!(Some(&mut Some(item)), inventory.get_mut(&InventoryKey(0)));
 	}
@@ -111,24 +114,24 @@ mod tests {
 	#[test]
 	fn get_item_mut_exceeding_range() {
 		let item = new_handle();
-		let mut inventory = Inventory::new([Some(item.clone())]);
+		let mut inventory = Inventory::from([Some(item.clone())]);
 
 		let new_item = new_handle();
 		*inventory.get_mut(&InventoryKey(1)).expect("no item found") = Some(new_item.clone());
 
-		assert_eq!(Inventory::new([Some(item), Some(new_item),]), inventory);
+		assert_eq!(Inventory::from([Some(item), Some(new_item),]), inventory);
 	}
 
 	#[test]
 	fn get_item_mut_exceeding_range_with_gaps() {
 		let item = new_handle();
-		let mut inventory = Inventory::new([Some(item.clone())]);
+		let mut inventory = Inventory::from([Some(item.clone())]);
 
 		let new_item = new_handle();
 		*inventory.get_mut(&InventoryKey(2)).expect("no item found") = Some(new_item.clone());
 
 		assert_eq!(
-			Inventory::new([Some(item), None, Some(new_item),]),
+			Inventory::from([Some(item), None, Some(new_item),]),
 			inventory
 		);
 	}

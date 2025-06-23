@@ -2,7 +2,10 @@ use crate::components::camera_labels::SecondPass;
 use bevy::{color::palettes::css::WHITE, prelude::*, render::view::RenderLayers};
 use common::{
 	errors::Error,
-	traits::prefab::{Prefab, PrefabEntityCommands},
+	traits::{
+		load_asset::LoadAsset,
+		prefab::{Prefab, PrefabEntityCommands},
+	},
 };
 
 #[derive(Component, Debug, PartialEq, Default)]
@@ -12,6 +15,7 @@ impl Prefab<()> for DamageEffectShaders {
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
+		_: &mut impl LoadAsset,
 	) -> Result<(), Error> {
 		entity.with_child((
 			RenderLayers::from(SecondPass),

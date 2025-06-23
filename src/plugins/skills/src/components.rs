@@ -1,13 +1,13 @@
-pub mod combo_node;
-pub mod combos;
-pub mod combos_time_out;
-pub mod inventory;
-pub mod model_render;
-pub mod queue;
-pub mod slots;
-pub mod swapper;
-
+pub(crate) mod combo_node;
+pub(crate) mod combos;
+pub(crate) mod combos_time_out;
+pub(crate) mod inventory;
+pub(crate) mod loadout;
+pub(crate) mod model_render;
+pub(crate) mod queue;
 pub(crate) mod skill_executer;
+pub(crate) mod slots;
+pub(crate) mod swapper;
 
 use bevy::prelude::*;
 use common::{components::outdated::Outdated, tools::collider_info::ColliderInfo};
@@ -35,24 +35,5 @@ impl<T> Default for SelectInfo<T> {
 impl From<Ray3d> for SkillTarget {
 	fn from(ray: Ray3d) -> Self {
 		Self { ray, ..default() }
-	}
-}
-
-impl SkillTarget {
-	pub fn with_ray(self, ray: Ray3d) -> Self {
-		Self {
-			ray,
-			collision_info: self.collision_info,
-		}
-	}
-
-	pub fn with_collision_info(
-		self,
-		collision_info: Option<ColliderInfo<Outdated<GlobalTransform>>>,
-	) -> Self {
-		Self {
-			ray: self.ray,
-			collision_info,
-		}
 	}
 }

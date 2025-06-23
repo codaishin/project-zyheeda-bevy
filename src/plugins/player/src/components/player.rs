@@ -40,7 +40,7 @@ use common::{
 		handles_effect::HandlesEffect,
 		handles_lights::HandlesLights,
 		iteration::{Iter, IterFinite},
-		load_asset::Path,
+		load_asset::{LoadAsset, Path},
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
@@ -257,6 +257,7 @@ where
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
+		_: &mut impl LoadAsset,
 	) -> Result<(), Error> {
 		entity
 			.try_insert_if_new((
