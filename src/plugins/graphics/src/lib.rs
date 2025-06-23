@@ -1,9 +1,9 @@
-pub mod components;
-pub mod materials;
-
-pub(crate) mod resources;
-pub(crate) mod systems;
-pub(crate) mod traits;
+mod components;
+mod materials;
+mod observers;
+mod resources;
+mod systems;
+mod traits;
 
 use bevy::{
 	prelude::*,
@@ -107,7 +107,9 @@ where
 		TSavegame::register_savable_component::<Ui>(app);
 
 		app.init_resource::<WindowSize>()
-			.add_systems(PostStartup, FirstPassImage::instantiate.pipe(spawn_cameras))
+			.add_observer(FirstPass::insert_camera)
+			.add_systems(Startup, FirstPassImage::instantiate)
+			.add_systems(PostStartup, spawn_cameras)
 			.add_systems(
 				First,
 				(WindowSize::update, FirstPassImage::<Image>::update_size).chain(),

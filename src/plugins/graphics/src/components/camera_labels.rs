@@ -1,7 +1,7 @@
 use bevy::{
 	core_pipeline::{bloom::Bloom, tonemapping::Tonemapping},
 	prelude::*,
-	render::{camera::RenderTarget, view::RenderLayers},
+	render::view::RenderLayers,
 };
 use common::traits::handles_graphics::StaticRenderLayers;
 use serde::{Deserialize, Serialize};
@@ -11,27 +11,8 @@ use serde::{Deserialize, Serialize};
 pub struct WorldCamera;
 
 #[derive(Component, Debug, PartialEq, Eq, Hash, Default, Clone, Copy, Serialize, Deserialize)]
-#[require(WorldCamera,Tonemapping = Self::new(), Bloom)]
-pub struct FirstPass {
-	_private: (),
-}
-
-impl FirstPass {
-	fn new() -> Self {
-		FirstPass { _private: () }
-	}
-
-	pub(crate) fn with_target_image(handle: Handle<Image>) -> (FirstPass, Camera) {
-		(
-			FirstPass::new(),
-			Camera {
-				hdr: true,
-				target: RenderTarget::Image(handle.into()),
-				..default()
-			},
-		)
-	}
-}
+#[require(WorldCamera,Tonemapping = Self, Bloom)]
+pub struct FirstPass;
 
 impl From<FirstPass> for Tonemapping {
 	fn from(_: FirstPass) -> Self {
