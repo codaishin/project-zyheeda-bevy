@@ -8,10 +8,10 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Component, Debug, PartialEq, Eq, Hash, Default, Clone, Copy, Serialize, Deserialize)]
 #[require(Camera3d)]
-pub struct PlayerCamera;
+pub struct WorldCamera;
 
 #[derive(Component, Debug, PartialEq)]
-#[require(PlayerCamera, Tonemapping = Self::new(), Bloom)]
+#[require(WorldCamera, Tonemapping = Self::new(), Bloom)]
 pub struct FirstPass {
 	_private: (),
 }
@@ -41,7 +41,7 @@ impl From<FirstPass> for Tonemapping {
 
 #[derive(Component, Debug, PartialEq, Default)]
 #[require(
-	PlayerCamera,
+	WorldCamera,
 	Camera = Self,
 	Tonemapping = Self,
 	Bloom,
@@ -81,7 +81,7 @@ impl From<SecondPass> for RenderLayers {
 
 #[derive(Component, Debug, PartialEq, Default)]
 #[require(
-	PlayerCamera,
+	WorldCamera,
 	Camera = Self,
 	Tonemapping = Self,
 	RenderLayers = Self,

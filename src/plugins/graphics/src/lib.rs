@@ -29,7 +29,7 @@ use common::{
 	},
 };
 use components::{
-	camera_labels::{FirstPass, PlayerCamera, SecondPass, Ui},
+	camera_labels::{FirstPass, SecondPass, Ui, WorldCamera},
 	effect_shaders::{EffectShader, damage_effect_shaders::DamageEffectShaders},
 	effect_shaders_target::EffectShadersTarget,
 	material_override::MaterialOverride,
@@ -101,8 +101,8 @@ where
 	}
 
 	fn cameras(app: &mut App) {
-		TSavegame::register_savable_component::<PlayerCamera>(app);
-		app.register_required_components::<PlayerCamera, TSavegame::TSaveEntityMarker>();
+		TSavegame::register_savable_component::<WorldCamera>(app);
+		app.register_required_components::<WorldCamera, TSavegame::TSaveEntityMarker>();
 
 		app.init_resource::<WindowSize>()
 			.add_systems(PostStartup, FirstPassImage::instantiate.pipe(spawn_cameras))
@@ -188,5 +188,5 @@ impl<TDependencies> FirstPassCamera for GraphicsPlugin<TDependencies> {
 }
 
 impl<TDependencies> WorldCameras for GraphicsPlugin<TDependencies> {
-	type TWorldCameras = PlayerCamera;
+	type TWorldCameras = WorldCamera;
 }
