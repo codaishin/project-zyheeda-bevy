@@ -4,8 +4,9 @@ use bevy::{
 	render::{camera::RenderTarget, view::RenderLayers},
 };
 use common::traits::handles_graphics::StaticRenderLayers;
+use serde::{Deserialize, Serialize};
 
-#[derive(Component, Debug, PartialEq, Default)]
+#[derive(Component, Debug, PartialEq, Eq, Hash, Default, Clone, Copy, Serialize, Deserialize)]
 #[require(Camera3d)]
 pub struct PlayerCamera;
 

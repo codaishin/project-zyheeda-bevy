@@ -10,6 +10,7 @@ use common::{
 	traits::{
 		handles_graphics::{FirstPassCamera, WorldCameras},
 		handles_player::{HandlesPlayer, PlayerMainCamera},
+		handles_saving::HandlesSaving,
 		handles_settings::HandlesSettings,
 		thread_safe::ThreadSafe,
 	},
@@ -24,25 +25,30 @@ use systems::{
 
 pub struct CameraControlPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSettings, TPlayers, TGraphics> CameraControlPlugin<(TSettings, TPlayers, TGraphics)>
+impl<TSettings, TSavegame, TPlayers, TGraphics>
+	CameraControlPlugin<(TSettings, TSavegame, TPlayers, TGraphics)>
 where
 	TSettings: ThreadSafe + HandlesSettings,
+	TSavegame: ThreadSafe + HandlesSaving,
 	TPlayers: ThreadSafe + HandlesPlayer + PlayerMainCamera,
 	TGraphics: ThreadSafe + WorldCameras + FirstPassCamera,
 {
-	pub fn from_plugins(_: &TSettings, _: &TPlayers, _: &TGraphics) -> Self {
+	pub fn from_plugins(_: &TSettings, _: &TSavegame, _: &TPlayers, _: &TGraphics) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TSettings, TPlayers, TGraphics> Plugin
-	for CameraControlPlugin<(TSettings, TPlayers, TGraphics)>
+impl<TSettings, TSavegame, TPlayers, TGraphics> Plugin
+	for CameraControlPlugin<(TSettings, TSavegame, TPlayers, TGraphics)>
 where
 	TSettings: ThreadSafe + HandlesSettings,
+	TSavegame: ThreadSafe + HandlesSaving,
 	TPlayers: ThreadSafe + HandlesPlayer + PlayerMainCamera,
 	TGraphics: ThreadSafe + WorldCameras + FirstPassCamera,
 {
 	fn build(&self, app: &mut App) {
+		TSavegame::register_savable_component::<OrbitPlayer>(app);
+
 		app.register_required_components::<TGraphics::TFirstPassCamera, TPlayers::TPlayerMainCamera>();
 		app.add_systems(
 			Update,

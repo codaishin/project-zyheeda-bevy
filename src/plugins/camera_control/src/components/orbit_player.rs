@@ -4,8 +4,9 @@ use crate::traits::{
 };
 use bevy::prelude::*;
 use common::components::persistent_entity::PersistentEntity;
+use serde::{Deserialize, Serialize};
 
-#[derive(Component, Debug, PartialEq, Clone, Copy)]
+#[derive(Component, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 #[require(Transform)]
 pub struct OrbitPlayer {
 	pub center: OrbitCenter,
@@ -13,7 +14,7 @@ pub struct OrbitPlayer {
 	pub sensitivity: f32,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub struct OrbitCenter {
 	pub entity: Option<PersistentEntity>,
 	pub translation: Vec3,

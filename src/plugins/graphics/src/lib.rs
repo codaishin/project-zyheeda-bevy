@@ -21,6 +21,7 @@ use common::{
 		handles_effect::{HandlesAllEffects, HandlesEffect},
 		handles_graphics::{FirstPassCamera, UiCamera, WorldCameras},
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInSubApp},
+		handles_saving::HandlesSaving,
 		handles_skill_behaviors::HandlesSkillBehaviors,
 		prefab::AddPrefabObserver,
 		register_required_components_mapped::RegisterRequiredComponentsMapped,
@@ -51,13 +52,15 @@ use traits::{
 
 pub struct GraphicsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TInteractions, TBehaviors> GraphicsPlugin<(TLoading, TInteractions, TBehaviors)>
+impl<TLoading, TSavegame, TInteractions, TBehaviors>
+	GraphicsPlugin<(TLoading, TSavegame, TInteractions, TBehaviors)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
+	TSavegame: ThreadSafe + HandlesSaving,
 	TInteractions: ThreadSafe + HandlesAllEffects,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors,
 {
-	pub fn from_plugins(_: &TLoading, _: &TInteractions, _: &TBehaviors) -> Self {
+	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TInteractions, _: &TBehaviors) -> Self {
 		Self(PhantomData)
 	}
 
@@ -98,6 +101,9 @@ where
 	}
 
 	fn cameras(app: &mut App) {
+		TSavegame::register_savable_component::<PlayerCamera>(app);
+		app.register_required_components::<PlayerCamera, TSavegame::TSaveEntityMarker>();
+
 		app.init_resource::<WindowSize>()
 			.add_systems(PostStartup, FirstPassImage::instantiate.pipe(spawn_cameras))
 			.add_systems(
@@ -107,10 +113,11 @@ where
 	}
 }
 
-impl<TLoading, TInteractions, TBehaviors> Plugin
-	for GraphicsPlugin<(TLoading, TInteractions, TBehaviors)>
+impl<TLoading, TSavegame, TInteractions, TBehaviors> Plugin
+	for GraphicsPlugin<(TLoading, TSavegame, TInteractions, TBehaviors)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
+	TSavegame: ThreadSafe + HandlesSaving,
 	TInteractions: ThreadSafe + HandlesAllEffects,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors,
 {
