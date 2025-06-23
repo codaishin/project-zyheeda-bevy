@@ -77,7 +77,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		&enemies,
 		&players,
 	);
-	let graphics = GraphicsPlugin::from_plugins(&loading, &interactions, &behaviors);
+	let graphics = GraphicsPlugin::from_plugins(&loading, &savegame, &interactions, &behaviors);
 	let menus = MenuPlugin::from_plugins(&loading, &settings, &localization, &graphics);
 	let skills = SkillsPlugin::from_plugins(
 		&savegame,
@@ -91,7 +91,8 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		&menus,
 	);
 	let bars = BarsPlugin::from_plugins(&life_cycles, &players, &enemies, &graphics);
-	let camera_control = CameraControlPlugin::from_plugins(&settings, &players, &graphics);
+	let camera_control =
+		CameraControlPlugin::from_plugins(&settings, &savegame, &players, &graphics);
 
 	app.add_plugins(DefaultPlugins)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())

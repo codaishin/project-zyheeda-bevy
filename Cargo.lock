@@ -1757,6 +1757,7 @@ dependencies = [
  "common",
  "macros",
  "mockall",
+ "serde",
  "tracing",
  "uuid",
 ]
@@ -2889,6 +2890,7 @@ dependencies = [
  "common",
  "macros",
  "mockall",
+ "serde",
 ]
 
 [[package]]
@@ -4333,6 +4335,7 @@ dependencies = [
  "common",
  "macros",
  "mockall",
+ "serde",
  "test-case",
 ]
 

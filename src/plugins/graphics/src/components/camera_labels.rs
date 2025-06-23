@@ -1,36 +1,18 @@
 use bevy::{
 	core_pipeline::{bloom::Bloom, tonemapping::Tonemapping},
 	prelude::*,
-	render::{camera::RenderTarget, view::RenderLayers},
+	render::view::RenderLayers,
 };
 use common::traits::handles_graphics::StaticRenderLayers;
+use serde::{Deserialize, Serialize};
 
-#[derive(Component, Debug, PartialEq, Default)]
+#[derive(Component, Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
 #[require(Camera3d)]
-pub struct PlayerCamera;
+pub struct WorldCamera;
 
-#[derive(Component, Debug, PartialEq)]
-#[require(PlayerCamera, Tonemapping = Self::new(), Bloom)]
-pub struct FirstPass {
-	_private: (),
-}
-
-impl FirstPass {
-	fn new() -> Self {
-		FirstPass { _private: () }
-	}
-
-	pub(crate) fn with_target_image(handle: Handle<Image>) -> (FirstPass, Camera) {
-		(
-			FirstPass::new(),
-			Camera {
-				hdr: true,
-				target: RenderTarget::Image(handle.into()),
-				..default()
-			},
-		)
-	}
-}
+#[derive(Component, Debug, PartialEq, Eq, Hash, Default, Clone, Copy, Serialize, Deserialize)]
+#[require(WorldCamera,Tonemapping = Self, Bloom)]
+pub struct FirstPass;
 
 impl From<FirstPass> for Tonemapping {
 	fn from(_: FirstPass) -> Self {
@@ -38,9 +20,9 @@ impl From<FirstPass> for Tonemapping {
 	}
 }
 
-#[derive(Component, Debug, PartialEq, Default)]
+#[derive(Component, Debug, PartialEq, Eq, Hash, Default, Clone, Copy, Serialize, Deserialize)]
 #[require(
-	PlayerCamera,
+	WorldCamera,
 	Camera = Self,
 	Tonemapping = Self,
 	Bloom,
@@ -78,9 +60,9 @@ impl From<SecondPass> for RenderLayers {
 	}
 }
 
-#[derive(Component, Debug, PartialEq, Default)]
+#[derive(Component, Debug, PartialEq, Eq, Hash, Default, Clone, Copy, Serialize, Deserialize)]
 #[require(
-	PlayerCamera,
+	WorldCamera,
 	Camera = Self,
 	Tonemapping = Self,
 	RenderLayers = Self,

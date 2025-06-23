@@ -98,6 +98,8 @@ where
 		TGameStates::on_starting_new_game(app, Player::spawn);
 		TAnimations::register_animations::<Player>(app);
 
+		TSaveGame::register_savable_component::<PlayerCamera>(app);
+
 		app.register_required_components::<Player, TSaveGame::TSaveEntityMarker>()
 			.init_resource::<CamRay>()
 			.add_prefab_observer::<Player, (TInteractions, TLights)>()

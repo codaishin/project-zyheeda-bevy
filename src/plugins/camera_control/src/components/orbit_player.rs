@@ -3,8 +3,10 @@ use crate::traits::{
 	orbit::{Orbit, Vec2Radians},
 };
 use bevy::prelude::*;
+use common::components::persistent_entity::PersistentEntity;
+use serde::{Deserialize, Serialize};
 
-#[derive(Component)]
+#[derive(Component, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 #[require(Transform)]
 pub struct OrbitPlayer {
 	pub center: OrbitCenter,
@@ -12,13 +14,14 @@ pub struct OrbitPlayer {
 	pub sensitivity: f32,
 }
 
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub struct OrbitCenter {
-	pub entity: Option<Entity>,
+	pub entity: Option<PersistentEntity>,
 	pub translation: Vec3,
 }
 
 impl OrbitCenter {
-	pub fn with_entity(mut self, entity: Entity) -> Self {
+	pub fn with_entity(mut self, entity: PersistentEntity) -> Self {
 		self.entity = Some(entity);
 		self
 	}
@@ -48,7 +51,7 @@ impl Orbit for OrbitPlayer {
 }
 
 impl MoveTogether for OrbitPlayer {
-	fn entity(&self) -> Option<Entity> {
+	fn entity(&self) -> Option<PersistentEntity> {
 		self.center.entity
 	}
 

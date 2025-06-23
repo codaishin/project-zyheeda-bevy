@@ -15,7 +15,7 @@ where
 }
 
 impl FirstPassImage {
-	pub(crate) fn instantiate(mut images: ResMut<Assets<Image>>) -> Self {
+	pub(crate) fn instantiate(mut images: ResMut<Assets<Image>>, mut commands: Commands) {
 		let mut image = Image::new_fill(
 			Extent3d::default(),
 			TextureDimension::D2,
@@ -27,9 +27,9 @@ impl FirstPassImage {
 			| TextureUsages::RENDER_ATTACHMENT
 			| TextureUsages::COPY_SRC;
 
-		Self {
+		commands.insert_resource(Self {
 			handle: images.add(image),
-		}
+		});
 	}
 }
 
