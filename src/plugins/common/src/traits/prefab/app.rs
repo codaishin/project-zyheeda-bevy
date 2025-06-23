@@ -1,5 +1,5 @@
 use super::{AddPrefabObserver, Prefab};
-use crate::{errors::Error, systems::log::log};
+use crate::{errors::Error, systems::log::log, traits::load_asset::LoadAsset};
 use bevy::prelude::*;
 
 impl AddPrefabObserver for App {
@@ -8,17 +8,19 @@ impl AddPrefabObserver for App {
 		TPrefab: Prefab<TDependencies>,
 		TDependencies: 'static,
 	{
-		self.add_observer(instantiate_prefab::<TPrefab, TDependencies>.pipe(log))
+		self.add_observer(instantiate_prefab::<TPrefab, TDependencies, AssetServer>.pipe(log))
 	}
 }
 
-fn instantiate_prefab<TPrefab, TDependencies>(
+fn instantiate_prefab<TPrefab, TDependencies, TAssetServer>(
 	trigger: Trigger<OnAdd, TPrefab>,
 	components: Query<&TPrefab>,
 	mut commands: Commands,
+	mut asset_server: ResMut<TAssetServer>,
 ) -> Result<(), Error>
 where
 	TPrefab: Prefab<TDependencies>,
+	TAssetServer: Resource + LoadAsset,
 {
 	let entity = trigger.target();
 	let Ok(component) = components.get(entity) else {
@@ -28,7 +30,7 @@ where
 		return Ok(());
 	};
 
-	component.insert_prefab_components(&mut entity)
+	component.insert_prefab_components(&mut entity, asset_server.as_mut())
 }
 
 #[cfg(test)]
@@ -36,28 +38,52 @@ mod tests {
 	use super::*;
 	use crate::{
 		errors::{Error, Level},
-		test_tools::utils::SingleThreadedApp,
+		test_tools::utils::{SingleThreadedApp, new_handle},
 		traits::prefab::PrefabEntityCommands,
 	};
+	use bevy::asset::AssetPath;
+	use common::traits::nested_mock::NestedMocks;
+	use macros::NestedMocks;
+	use mockall::{automock, predicate::eq};
+
+	#[derive(Asset, TypePath, Debug, PartialEq)]
+	struct _Asset;
 
 	#[derive(Component)]
-	struct _Component(Result<_Prefab, Error>);
-
-	#[derive(Component, Debug, PartialEq, Clone, Copy)]
-	enum _Prefab {
-		A,
-		B,
+	struct _Component {
+		prefab: Result<_Prefab<&'static str>, Error>,
 	}
 
+	#[derive(Component, Debug, PartialEq, Clone)]
+	struct _Prefab<TAsset>(TAsset);
+
 	struct _Dependency;
+
+	#[derive(Resource, NestedMocks)]
+	struct _AssetServer {
+		mock: Mock_AssetServer,
+	}
+
+	#[automock]
+	impl LoadAsset for _AssetServer {
+		fn load_asset<TAsset, TPath>(&mut self, path: TPath) -> Handle<TAsset>
+		where
+			TAsset: Asset,
+			TPath: Into<AssetPath<'static>> + 'static,
+		{
+			self.mock.load_asset(path)
+		}
+	}
 
 	impl Prefab<_Dependency> for _Component {
 		fn insert_prefab_components(
 			&self,
 			entity: &mut impl PrefabEntityCommands,
+			asset_server: &mut impl LoadAsset,
 		) -> Result<(), Error> {
-			match &self.0 {
-				Ok(prefab) => entity.try_insert_if_new(*prefab),
+			match &self.prefab {
+				Ok(_Prefab(path)) => entity
+					.try_insert_if_new(_Prefab::<Handle<_Asset>>(asset_server.load_asset(*path))),
 				Err(error) => return Err(error.clone()),
 			};
 
@@ -72,43 +98,72 @@ mod tests {
 		commands.insert_resource(_Result(result));
 	}
 
-	fn setup() -> App {
+	fn setup(asset_server: _AssetServer) -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_observer(instantiate_prefab::<_Component, _Dependency>.pipe(save_result));
+		app.insert_resource(asset_server);
+		app.add_observer(
+			instantiate_prefab::<_Component, _Dependency, _AssetServer>.pipe(save_result),
+		);
 
 		app
 	}
 
 	#[test]
 	fn call_prefab_instantiation_method() {
-		let mut app = setup();
+		let handle = new_handle();
+		let mut app = setup(_AssetServer::new().with_mock(|mock| {
+			mock.expect_load_asset::<_Asset, &str>()
+				.times(1)
+				.with(eq("my/path"))
+				.return_const(handle.clone());
+		}));
 
-		let entity = app.world_mut().spawn(_Component(Ok(_Prefab::A)));
+		let entity = app.world_mut().spawn(_Component {
+			prefab: Ok(_Prefab("my/path")),
+		});
 
-		assert_eq!(Some(&_Prefab::A), entity.get::<_Prefab>());
+		assert_eq!(
+			Some(&_Prefab(handle)),
+			entity.get::<_Prefab::<Handle<_Asset>>>()
+		);
 	}
 
 	#[test]
 	fn return_error() {
-		let mut app = setup();
+		let mut app = setup(
+			_AssetServer::new().with_mock(|mock: &mut Mock_AssetServer| {
+				mock.expect_load_asset::<_Asset, &str>()
+					.return_const(new_handle());
+			}),
+		);
 		let error = Error {
 			msg: "my error".to_owned(),
 			lvl: Level::Error,
 		};
 
-		let entity = app.world_mut().spawn(_Component(Err(error.clone())));
+		let entity = app.world_mut().spawn(_Component {
+			prefab: Err(error.clone()),
+		});
 
 		assert_eq!(Some(&_Result(Err(error))), entity.get_resource::<_Result>());
 	}
 
 	#[test]
 	fn act_only_once() {
-		let mut app = setup();
+		let mut app = setup(
+			_AssetServer::new().with_mock(|mock: &mut Mock_AssetServer| {
+				mock.expect_load_asset::<_Asset, &str>()
+					.times(1)
+					.return_const(new_handle());
+			}),
+		);
 
-		let mut entity = app.world_mut().spawn(_Component(Ok(_Prefab::A)));
-		entity.insert(_Component(Ok(_Prefab::B)));
-
-		assert_eq!(Some(&_Prefab::A), entity.get::<_Prefab>());
+		let mut entity = app.world_mut().spawn(_Component {
+			prefab: Ok(_Prefab("my/path/a")),
+		});
+		entity.insert(_Component {
+			prefab: Ok(_Prefab("my/path/b")),
+		});
 	}
 }

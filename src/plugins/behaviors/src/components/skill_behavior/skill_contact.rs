@@ -10,6 +10,7 @@ use common::{
 		handles_interactions::HandlesInteractions,
 		handles_saving::SavableComponent,
 		handles_skill_behaviors::{Contact, Integrity, Motion, Shape},
+		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
@@ -54,6 +55,7 @@ where
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
+		_: &mut impl LoadAsset,
 	) -> Result<(), Error> {
 		self.shape
 			.prefab::<TInteractions, TLifeCycles>(entity, Vec3::ZERO)?;

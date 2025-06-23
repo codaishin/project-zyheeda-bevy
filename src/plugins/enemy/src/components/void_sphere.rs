@@ -26,6 +26,7 @@ use common::{
 		clamp_zero_positive::ClampZeroPositive,
 		handles_effect::HandlesEffect,
 		handles_enemies::EnemyTarget,
+		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
@@ -92,6 +93,7 @@ where
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
+		_: &mut impl LoadAsset,
 	) -> Result<(), Error> {
 		let transform = Transform::from_translation(Self::GROUND_OFFSET);
 		let mut transform_2nd_ring = transform;

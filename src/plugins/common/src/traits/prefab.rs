@@ -1,12 +1,15 @@
 mod app;
 mod entity_commands;
 
-use crate::errors::Error;
+use crate::{errors::Error, traits::load_asset::LoadAsset};
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 
 pub trait Prefab<TDependency>: Component {
-	fn insert_prefab_components(&self, entity: &mut impl PrefabEntityCommands)
-	-> Result<(), Error>;
+	fn insert_prefab_components(
+		&self,
+		entity: &mut impl PrefabEntityCommands,
+		assets: &mut impl LoadAsset,
+	) -> Result<(), Error>;
 }
 
 pub trait AddPrefabObserver {
