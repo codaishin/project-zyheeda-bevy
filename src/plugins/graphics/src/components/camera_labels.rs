@@ -6,12 +6,12 @@ use bevy::{
 use common::traits::handles_graphics::StaticRenderLayers;
 use serde::{Deserialize, Serialize};
 
-#[derive(Component, Debug, PartialEq, Eq, Hash, Default, Clone, Copy, Serialize, Deserialize)]
+#[derive(Component, Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
 #[require(Camera3d)]
 pub struct WorldCamera;
 
-#[derive(Component, Debug, PartialEq)]
-#[require(WorldCamera, Tonemapping = Self::new(), Bloom)]
+#[derive(Component, Debug, PartialEq, Eq, Hash, Default, Clone, Copy, Serialize, Deserialize)]
+#[require(WorldCamera,Tonemapping = Self::new(), Bloom)]
 pub struct FirstPass {
 	_private: (),
 }
@@ -39,7 +39,7 @@ impl From<FirstPass> for Tonemapping {
 	}
 }
 
-#[derive(Component, Debug, PartialEq, Default)]
+#[derive(Component, Debug, PartialEq, Eq, Hash, Default, Clone, Copy, Serialize, Deserialize)]
 #[require(
 	WorldCamera,
 	Camera = Self,
@@ -79,7 +79,7 @@ impl From<SecondPass> for RenderLayers {
 	}
 }
 
-#[derive(Component, Debug, PartialEq, Default)]
+#[derive(Component, Debug, PartialEq, Eq, Hash, Default, Clone, Copy, Serialize, Deserialize)]
 #[require(
 	WorldCamera,
 	Camera = Self,

@@ -101,8 +101,10 @@ where
 	}
 
 	fn cameras(app: &mut App) {
-		TSavegame::register_savable_component::<WorldCamera>(app);
 		app.register_required_components::<WorldCamera, TSavegame::TSaveEntityMarker>();
+		TSavegame::register_savable_component::<FirstPass>(app);
+		TSavegame::register_savable_component::<SecondPass>(app);
+		TSavegame::register_savable_component::<Ui>(app);
 
 		app.init_resource::<WindowSize>()
 			.add_systems(PostStartup, FirstPassImage::instantiate.pipe(spawn_cameras))
