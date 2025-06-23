@@ -17,10 +17,7 @@ use crate::components::{
 use bevy::prelude::*;
 use common::{
 	states::game_state::{GameState, LoadingGame},
-	tools::action_key::{
-		slot::{Side, SlotKey},
-		user_input::UserInput,
-	},
+	tools::action_key::{slot::SlotKey, user_input::UserInput},
 	traits::{
 		handles_assets_for_children::HandlesAssetsForChildren,
 		handles_combo_menu::{ConfigureCombos, HandlesComboMenu},
@@ -38,9 +35,9 @@ use common::{
 		handles_saving::HandlesSaving,
 		handles_settings::HandlesSettings,
 		handles_skill_behaviors::HandlesSkillBehaviors,
+		prefab::AddPrefabObserver,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
-		try_insert_on::TryInsertOn,
 	},
 };
 use components::{
@@ -54,7 +51,6 @@ use components::{
 	swapper::Swapper,
 };
 use item::{Item, dto::ItemDto};
-use macros::item_asset;
 use skills::{QueuedSkill, RunSkillBehavior, Skill, dto::SkillDto};
 use std::marker::PhantomData;
 use systems::{
@@ -138,7 +134,7 @@ where
 		TDispatchChildrenAssets::register_child_asset::<Slots, SubMeshEssenceSlots>(app);
 
 		app.register_required_components::<TPlayers::TPlayer, Loadout>()
-			.add_systems(Update, Self::set_player_items)
+			.add_prefab_observer::<Loadout, ()>()
 			.add_systems(Update, Swapper::system);
 	}
 
@@ -170,55 +166,6 @@ where
 				.before(TBehaviors::SYSTEMS)
 				.run_if(in_state(GameState::Play)),
 		);
-	}
-
-	fn set_player_items(
-		mut commands: Commands,
-		players: Query<Entity, Added<TPlayers::TPlayer>>,
-		asset_server: Res<AssetServer>,
-	) {
-		let Ok(player) = players.single() else {
-			return;
-		};
-		let asset_server = asset_server.as_ref();
-
-		commands.try_insert_on(
-			player,
-			(
-				Swapper::default(),
-				Self::get_inventory(asset_server),
-				Self::get_slots(asset_server),
-			),
-		);
-	}
-
-	fn get_slots(asset_server: &AssetServer) -> Slots {
-		Slots::new([
-			(
-				SlotKey::TopHand(Side::Left),
-				Some(asset_server.load(item_asset!("pistol"))),
-			),
-			(
-				SlotKey::BottomHand(Side::Left),
-				Some(asset_server.load(item_asset!("pistol"))),
-			),
-			(
-				SlotKey::BottomHand(Side::Right),
-				Some(asset_server.load(item_asset!("force_essence"))),
-			),
-			(
-				SlotKey::TopHand(Side::Right),
-				Some(asset_server.load(item_asset!("force_essence"))),
-			),
-		])
-	}
-
-	fn get_inventory(asset_server: &AssetServer) -> Inventory {
-		Inventory::new([
-			Some(asset_server.load(item_asset!("pistol"))),
-			Some(asset_server.load(item_asset!("pistol"))),
-			Some(asset_server.load(item_asset!("pistol"))),
-		])
 	}
 
 	fn config_menus(&self, app: &mut App) {

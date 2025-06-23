@@ -16,15 +16,18 @@ use std::{collections::HashMap, fmt::Debug};
 #[derive(Component, Clone, PartialEq, Debug)]
 pub struct Slots(pub HashMap<SlotKey, Option<Handle<Item>>>);
 
-impl Slots {
-	pub fn new<const N: usize>(slots: [(SlotKey, Option<Handle<Item>>); N]) -> Self {
-		Self(HashMap::from(slots))
+impl<T> From<T> for Slots
+where
+	T: IntoIterator<Item = (SlotKey, Option<Handle<Item>>)>,
+{
+	fn from(slots: T) -> Self {
+		Self(HashMap::from_iter(slots))
 	}
 }
 
 impl Default for Slots {
 	fn default() -> Self {
-		Self::new([])
+		Self::from([])
 	}
 }
 
