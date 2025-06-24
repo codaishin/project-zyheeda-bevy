@@ -1,4 +1,5 @@
 use crate::components::slots::Slots;
+use bevy::asset::AssetPath;
 use common::{
 	errors::Unreachable,
 	tools::action_key::slot::SlotKey,
@@ -14,7 +15,12 @@ impl From<Slots> for SlotsDto {
 		Self(
 			items
 				.into_iter()
-				.map(|(key, item)| (key, item.and_then(|item| Some(item.path()?.to_string()))))
+				.map(|(key, item)| {
+					(
+						key,
+						item.and_then(|item| item.path().map(AssetPath::to_string)),
+					)
+				})
 				.collect(),
 		)
 	}

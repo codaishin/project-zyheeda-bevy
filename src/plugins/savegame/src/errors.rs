@@ -3,7 +3,8 @@ use common::errors::{Error, Level};
 use serde_json::Error as SerdeJsonError;
 use std::{collections::HashMap, io::Error as IOError};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 pub(crate) enum ContextIOError<TIOError = IOError> {
 	FileError(TIOError),
 	SerdeErrors(SerdeJsonErrors),
@@ -35,7 +36,8 @@ impl From<SerializationOrLockError> for Error {
 	}
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 pub(crate) enum DeserializationOrLockError {
 	DeserializationErrors(SerdeJsonErrors),
 	LockPoisoned(LockPoisonedError),
@@ -87,6 +89,7 @@ pub(crate) struct EntitySerializationErrors(pub(crate) Vec<SerdeJsonError>);
 #[derive(Debug)]
 pub(crate) struct SerdeJsonErrors(pub(crate) Vec<SerdeJsonError>);
 
+#[cfg(test)]
 impl PartialEq for SerdeJsonErrors {
 	fn eq(&self, other: &Self) -> bool {
 		if self.0.len() != other.0.len() {

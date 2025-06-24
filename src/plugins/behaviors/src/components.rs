@@ -13,7 +13,6 @@ use common::{
 	tools::UnitsPerSecond,
 	traits::{animation::Animation, handles_orientation::Face},
 };
-use std::fmt::Debug;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) struct Always;

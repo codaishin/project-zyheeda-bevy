@@ -41,11 +41,11 @@ impl TryLoadFrom<InventoryDto> for Inventory {
 		dto_items.sort_by(|(a, _), (b, _)| b.cmp(a));
 		let mut dto_items = dto_items.into_iter();
 
-		let Some((max_index, last_item)) = dto_items.next() else {
+		let Some((highest_index, last_item)) = dto_items.next() else {
 			return Ok(Self(vec![]));
 		};
 
-		let mut items = vec![None; max_index];
+		let mut items = vec![None; highest_index];
 		items.push(Some(asset_server.load_asset(last_item)));
 
 		for (index, item) in dto_items {

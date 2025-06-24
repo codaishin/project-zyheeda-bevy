@@ -1,13 +1,11 @@
 use crate::{
-	context::{ComponentString, SaveContext},
+	context::SaveContext,
 	errors::{ContextIOError, LockPoisonedError, SerdeJsonErrors},
 	traits::write_file::WriteFile,
 };
 use bevy::prelude::*;
-use std::{
-	collections::HashSet,
-	sync::{Arc, Mutex},
-};
+use serde_json::to_value;
+use std::sync::{Arc, Mutex};
 
 impl<TFileIO> SaveContext<TFileIO> {
 	pub(crate) fn write_file_system(
@@ -34,57 +32,36 @@ impl<TFileIO> SaveContext<TFileIO> {
 		let entities = self
 			.save_buffer
 			.drain()
-			.map(join_entity_components)
-			.filter_map(|result| match result {
+			.filter_map(|(_, components)| match to_value(&components) {
 				Ok(value) => Some(value),
-				Err(SerdeJsonErrors(json_errors)) => {
-					errors.extend(json_errors);
+				Err(error) => {
+					errors.push(error);
 					None
 				}
 			})
-			.collect::<Vec<_>>()
-			.join(",");
+			.collect::<Vec<_>>();
 
 		if !errors.is_empty() {
 			return Err(ContextIOError::SerdeErrors(SerdeJsonErrors(errors)));
 		}
 
-		self.io
-			.write(&format!("[{entities}]"))
-			.map_err(ContextIOError::FileError)
+		let json = match serde_json::to_string(&entities) {
+			Ok(json) => json,
+			Err(err) => return Err(ContextIOError::SerdeErrors(SerdeJsonErrors(vec![err]))),
+		};
+
+		self.io.write(&json).map_err(ContextIOError::FileError)
 	}
-}
-
-fn join_entity_components(
-	(_, component_strings): (Entity, HashSet<ComponentString>),
-) -> Result<String, SerdeJsonErrors> {
-	let mut errors = vec![];
-	let components = component_strings
-		.iter()
-		.map(serde_json::to_string)
-		.filter_map(|result| match result {
-			Ok(value) => Some(value),
-			Err(error) => {
-				errors.push(error);
-				None
-			}
-		})
-		.collect::<Vec<_>>()
-		.join(",");
-
-	if !errors.is_empty() {
-		return Err(SerdeJsonErrors(errors));
-	}
-
-	Ok(format!("[{components}]"))
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::context::ComponentString;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{simple_init, test_tools::utils::SingleThreadedApp, traits::mock::Mock};
 	use mockall::{mock, predicate::eq};
+	use std::collections::HashSet;
 
 	#[derive(Debug, PartialEq, Clone)]
 	struct _Error;

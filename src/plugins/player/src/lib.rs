@@ -98,8 +98,6 @@ where
 		TGameStates::on_starting_new_game(app, Player::spawn);
 		TAnimations::register_animations::<Player>(app);
 
-		TSaveGame::register_savable_component::<PlayerCamera>(app);
-
 		// Save player
 		app.register_required_components::<Player, TSaveGame::TSaveEntityMarker>();
 		TSaveGame::register_savable_component::<Player>(app);
