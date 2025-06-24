@@ -2,19 +2,19 @@ pub mod components;
 
 mod context;
 mod errors;
+mod file_io;
 mod resources;
 mod systems;
 mod traits;
-mod writer;
 
-use crate::systems::{buffer::BufferSystem, trigger_quick_save::TriggerQuickSave};
+use crate::systems::{trigger_state::TriggerState, write_buffer::WriteBufferSystem};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
 	components::{child_of_persistent::ChildOfPersistent, persistent_entity::PersistentEntity},
 	states::game_state::GameState,
 	systems::log::log,
-	tools::action_key::ActionKey,
+	tools::action_key::{ActionKey, save_key::SaveKey},
 	traits::{
 		handles_saving::{HandlesSaving, SavableComponent},
 		handles_settings::HandlesSettings,
@@ -23,13 +23,13 @@ use common::{
 };
 use components::save::Save;
 use context::SaveContext;
+use file_io::FileIO;
 use resources::register::Register;
 use std::{
 	marker::PhantomData,
 	path::PathBuf,
 	sync::{Arc, Mutex},
 };
-use writer::FileWriter;
 
 pub struct SavegamePlugin<TDependencies> {
 	game_directory: PathBuf,
@@ -61,14 +61,23 @@ where
 	TSettings: ThreadSafe + HandlesSettings,
 {
 	fn build(&self, app: &mut App) {
-		let quick_save = self
+		let quick_save_file = self
 			.game_directory
 			.clone()
 			.join("Saves")
 			.join("Quick Save")
 			.with_extension("json");
-		let quick_save = FileWriter::to_destination(quick_save);
-		let quick_save = Arc::new(Mutex::new(SaveContext::new(quick_save)));
+		let quick_save = Arc::new(Mutex::new(SaveContext::from(FileIO::with_file(
+			quick_save_file,
+		))));
+		let trigger_quick_save = TSettings::TKeyMap::<ActionKey>::trigger(
+			ActionKey::Save(SaveKey::QuickSave),
+			GameState::Saving,
+		);
+		let trigger_quick_load = TSettings::TKeyMap::<ActionKey>::trigger(
+			ActionKey::Save(SaveKey::QuickLoad),
+			GameState::LoadingSave,
+		);
 
 		Self::register_savable_component::<Name>(app);
 		Self::register_savable_component::<Transform>(app);
@@ -79,8 +88,7 @@ where
 		app.init_resource::<Register>()
 			.add_systems(
 				Update,
-				TSettings::TKeyMap::<ActionKey>::trigger_quick_save
-					.run_if(in_state(GameState::Play)),
+				(trigger_quick_save, trigger_quick_load).run_if(in_state(GameState::Play)),
 			)
 			.add_systems(
 				Startup,
@@ -89,8 +97,17 @@ where
 			.add_systems(
 				OnEnter(GameState::Saving),
 				(
-					SaveContext::buffer_system(quick_save.clone()).pipe(log),
-					SaveContext::flush_system(quick_save).pipe(log),
+					SaveContext::write_buffer_system(quick_save.clone()).pipe(log),
+					SaveContext::write_file_system(quick_save.clone()).pipe(log),
+				)
+					.chain(),
+			)
+			.add_systems(
+				OnEnter(GameState::LoadingSave),
+				(
+					Save::despawn_all,
+					SaveContext::read_file_system(quick_save.clone()).pipe(log),
+					SaveContext::read_buffer_system(quick_save).pipe(log),
 				)
 					.chain(),
 			);
@@ -106,12 +123,12 @@ impl<TDependencies> HandlesSaving for SavegamePlugin<TDependencies> {
 	{
 		match app.world_mut().get_resource_mut::<Register>() {
 			None => {
-				let mut register = Register::default();
-				register.register_component::<TComponent, TComponent::TDto>();
+				let mut register = Register::<AssetServer>::default();
+				register.register_component::<TComponent>();
 				app.insert_resource(register);
 			}
 			Some(mut register) => {
-				register.register_component::<TComponent, TComponent::TDto>();
+				register.register_component::<TComponent>();
 			}
 		}
 	}
@@ -142,7 +159,7 @@ mod tests {
 		SavegamePlugin::<()>::register_savable_component::<_A>(&mut app);
 
 		let mut expected = Register::default();
-		expected.register_component::<_A, _A>();
+		expected.register_component::<_A>();
 		assert_eq!(Some(&expected), app.world().get_resource::<Register>());
 	}
 
@@ -154,8 +171,8 @@ mod tests {
 		SavegamePlugin::<()>::register_savable_component::<_B>(&mut app);
 
 		let mut expected = Register::default();
-		expected.register_component::<_A, _A>();
-		expected.register_component::<_B, _B>();
+		expected.register_component::<_A>();
+		expected.register_component::<_B>();
 		assert_eq!(Some(&expected), app.world().get_resource::<Register>());
 	}
 }

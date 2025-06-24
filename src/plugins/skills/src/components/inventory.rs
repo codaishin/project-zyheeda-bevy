@@ -1,15 +1,22 @@
-use crate::{item::Item, traits::loadout_key::LoadoutKey};
+mod dto;
+
+use crate::{
+	components::inventory::dto::InventoryDto,
+	item::Item,
+	traits::loadout_key::LoadoutKey,
+};
 use bevy::{asset::Handle, ecs::component::Component};
 use common::{
 	tools::inventory_key::InventoryKey,
 	traits::{
 		accessors::get::{GetMut, GetRef},
+		handles_saving::SavableComponent,
 		iterate::Iterate,
 	},
 };
 use std::iter::Enumerate;
 
-#[derive(Component, Debug, PartialEq, Default)]
+#[derive(Component, Debug, PartialEq, Default, Clone)]
 pub struct Inventory(pub(crate) Vec<Option<Handle<Item>>>);
 
 impl<T> From<T> for Inventory
@@ -73,6 +80,10 @@ impl<'a> Iterator for Iter<'a> {
 		let (i, item) = self.it.next()?;
 		Some((InventoryKey(i), item))
 	}
+}
+
+impl SavableComponent for Inventory {
+	type TDto = InventoryDto;
 }
 
 #[cfg(test)]

@@ -1,4 +1,4 @@
-use crate::components::OnCoolDown;
+use crate::components::on_cool_down::OnCoolDown;
 use bevy::{
 	ecs::{
 		entity::Entity,

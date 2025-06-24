@@ -132,6 +132,8 @@ where
 		TDispatchChildrenAssets::register_child_asset::<Slots, HandItemSlots>(app);
 		TDispatchChildrenAssets::register_child_asset::<Slots, ForearmItemSlots>(app);
 		TDispatchChildrenAssets::register_child_asset::<Slots, SubMeshEssenceSlots>(app);
+		TSaveGame::register_savable_component::<Inventory>(app);
+		TSaveGame::register_savable_component::<Slots>(app);
 
 		app.register_required_components::<TPlayers::TPlayer, Loadout>()
 			.add_prefab_observer::<Loadout, ()>()

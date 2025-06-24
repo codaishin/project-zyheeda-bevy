@@ -3,6 +3,7 @@ pub mod skill_behavior;
 
 pub(crate) mod anchor;
 pub(crate) mod movement;
+pub(crate) mod on_cool_down;
 pub(crate) mod set_to_move_forward;
 pub(crate) mod when_traveled_insert;
 
@@ -12,7 +13,6 @@ use common::{
 	tools::UnitsPerSecond,
 	traits::{animation::Animation, handles_orientation::Face},
 };
-use std::{fmt::Debug, time::Duration};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) struct Always;
@@ -44,6 +44,3 @@ pub struct Chase(pub PersistentEntity);
 
 #[derive(Component, Debug, PartialEq)]
 pub struct Attack(pub PersistentEntity);
-
-#[derive(Component, Debug, PartialEq)]
-pub(crate) struct OnCoolDown(pub Duration);

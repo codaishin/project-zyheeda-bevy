@@ -1,4 +1,4 @@
-use crate::components::{Attack, OnCoolDown};
+use crate::components::{Attack, on_cool_down::OnCoolDown};
 use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,

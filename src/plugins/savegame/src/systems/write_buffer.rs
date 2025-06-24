@@ -1,7 +1,7 @@
 use crate::{
 	components::save::Save,
 	errors::{LockPoisonedError, SerializationErrors, SerializationOrLockError},
-	traits::execute_save::BufferComponents,
+	traits::write_buffer::WriteBuffer,
 };
 use bevy::prelude::*;
 use std::{
@@ -9,14 +9,14 @@ use std::{
 	sync::{Arc, Mutex},
 };
 
-impl<T> BufferSystem for T {}
+impl<T> WriteBufferSystem for T {}
 
-pub trait BufferSystem {
-	fn buffer_system(
+pub trait WriteBufferSystem {
+	fn write_buffer_system(
 		context: Arc<Mutex<Self>>,
 	) -> impl Fn(&mut World) -> Result<(), SerializationOrLockError>
 	where
-		Self: BufferComponents,
+		Self: WriteBuffer,
 	{
 		move |world| {
 			let Ok(mut context) = context.lock() else {
@@ -26,7 +26,7 @@ pub trait BufferSystem {
 			let errors = world
 				.iter_entities()
 				.filter(|entity| entity.contains::<Save>())
-				.filter_map(|entity| match context.buffer_components(entity) {
+				.filter_map(|entity| match context.write_buffer(entity) {
 					Ok(()) => None,
 					Err(errors) => Some((entity.id(), errors)),
 				})
@@ -52,8 +52,8 @@ mod test_save {
 
 	mock! {
 		_SaveContext {}
-		impl BufferComponents for _SaveContext {
-			fn buffer_components<'a>(&mut self, entity: EntityRef<'a>) -> Result<(), EntitySerializationErrors>;
+		impl WriteBuffer for _SaveContext {
+			fn write_buffer<'a>(&mut self, entity: EntityRef<'a>) -> Result<(), EntitySerializationErrors>;
 		}
 	}
 
@@ -68,7 +68,7 @@ mod test_save {
 		let mut app = setup();
 		let entity = app.world_mut().spawn(Save).id();
 		let context = Mock_SaveContext::new_mock(|mock| {
-			mock.expect_buffer_components()
+			mock.expect_write_buffer()
 				.times(1)
 				.withf(move |entity_ref| entity_ref.id() == entity)
 				.returning(|_| Ok(()));
@@ -77,7 +77,7 @@ mod test_save {
 
 		_ = app
 			.world_mut()
-			.run_system_once(Mock_SaveContext::buffer_system(context))?;
+			.run_system_once(Mock_SaveContext::write_buffer_system(context))?;
 		Ok(())
 	}
 
@@ -86,7 +86,7 @@ mod test_save {
 		let mut app = setup();
 		let entity = app.world_mut().spawn_empty().id();
 		let context = Mock_SaveContext::new_mock(|mock| {
-			mock.expect_buffer_components()
+			mock.expect_write_buffer()
 				.never()
 				.withf(move |entity_ref| entity_ref.id() == entity)
 				.returning(|_| Ok(()));
@@ -95,7 +95,7 @@ mod test_save {
 
 		_ = app
 			.world_mut()
-			.run_system_once(Mock_SaveContext::buffer_system(context))?;
+			.run_system_once(Mock_SaveContext::write_buffer_system(context))?;
 		Ok(())
 	}
 
@@ -105,7 +105,7 @@ mod test_save {
 		let a = app.world_mut().spawn(Save).id();
 		let b = app.world_mut().spawn(Save).id();
 		let context = Mock_SaveContext::new_mock(|mock| {
-			mock.expect_buffer_components().returning(|_| {
+			mock.expect_write_buffer().returning(|_| {
 				Err(EntitySerializationErrors(vec![
 					serde::ser::Error::custom("that"),
 					serde::ser::Error::custom("failed"),
@@ -116,7 +116,7 @@ mod test_save {
 
 		let result = app
 			.world_mut()
-			.run_system_once(Mock_SaveContext::buffer_system(context))?;
+			.run_system_once(Mock_SaveContext::write_buffer_system(context))?;
 
 		assert_eq!(
 			Err(HashMap::from([
