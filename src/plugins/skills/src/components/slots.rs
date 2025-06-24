@@ -1,5 +1,7 @@
+mod dto;
+
 use super::model_render::ModelRender;
-use crate::{item::Item, traits::loadout_key::LoadoutKey};
+use crate::{components::slots::dto::SlotsDto, item::Item, traits::loadout_key::LoadoutKey};
 use bevy::{asset::Handle, prelude::*};
 use common::{
 	components::{asset_model::AssetModel, essence::Essence},
@@ -8,12 +10,13 @@ use common::{
 		accessors::get::GetRef,
 		get_asset::GetAsset,
 		handles_assets_for_children::{ChildAssetComponent, ChildAssetDefinition, ChildName},
+		handles_saving::SavableComponent,
 		iterate::Iterate,
 	},
 };
 use std::{collections::HashMap, fmt::Debug};
 
-#[derive(Component, Clone, PartialEq, Debug)]
+#[derive(Component, PartialEq, Debug, Clone)]
 pub struct Slots(pub HashMap<SlotKey, Option<Handle<Item>>>);
 
 impl<T> From<T> for Slots
@@ -174,6 +177,10 @@ impl ChildAssetDefinition<SubMeshEssenceSlots> for Slots {
 	type TChildKey = SlotKey;
 	type TChildFilter = With<Mesh3d>;
 	type TChildAsset = Item;
+}
+
+impl SavableComponent for Slots {
+	type TDto = SlotsDto;
 }
 
 #[cfg(test)]
