@@ -7,6 +7,7 @@ mod folder_asset_loader;
 mod states;
 
 use crate::{
+	resources::group_loaded::GroupLoaded,
 	states::load_state::Load,
 	systems::{
 		begin_loading_resource::BeginLoadingResource,
@@ -74,11 +75,20 @@ impl HandlesLoadTracking for LoadingPlugin {
 	where
 		TLoadGroup: LoadGroup + ThreadSafe,
 	{
+		let loading = TLoadGroup::LOAD_STATE;
+		let done = TLoadGroup::LOAD_DONE_STATE;
+		let reset = TLoadGroup::load_reset_states();
+
 		let load_assets = Load::<TLoadGroup>::new(State::LoadAssets);
 		let load_deps = Load::<TLoadGroup>::new(State::ResolveDependencies);
-		let done = Load::<TLoadGroup>::new(State::Done);
+		let load_default = Load::<TLoadGroup>::default();
+
+		for reset in reset {
+			app.add_systems(OnEnter(reset), GroupLoaded::<TLoadGroup>::remove);
+		}
 
 		app.init_state::<Load<TLoadGroup>>()
+			.add_systems(OnEnter(loading), transition_to_state(load_assets))
 			.add_systems(
 				OnEnter(load_assets),
 				Track::<TLoadGroup, AssetsProgress>::init,
@@ -96,19 +106,14 @@ impl HandlesLoadTracking for LoadingPlugin {
 				Track::<TLoadGroup, DependenciesProgress>::remove,
 			)
 			.add_systems(
-				OnEnter(TLoadGroup::LOAD_STATE),
-				transition_to_state(load_assets),
-			)
-			.add_systems(
 				Last,
 				(
 					Track::<TLoadGroup, AssetsProgress>::when_all_done_set(load_deps),
+					Track::<TLoadGroup, DependenciesProgress>::when_all_done_set(load_default),
 					Track::<TLoadGroup, DependenciesProgress>::when_all_done_set(done),
-					Track::<TLoadGroup, DependenciesProgress>::when_all_done_set(
-						TLoadGroup::LOAD_DONE_STATE,
-					),
 				),
-			);
+			)
+			.add_systems(OnEnter(done), GroupLoaded::<TLoadGroup>::insert);
 	}
 
 	fn register_after_load_system<TLoadGroup>() -> impl RunAfterLoadedInApp
@@ -141,8 +146,8 @@ where
 		schedule: impl ScheduleLabel,
 		system: impl IntoSystem<(), (), TMarker>,
 	) {
-		let done = Load::<TLoadGroup>::new(State::Done);
-		app.add_systems(schedule, system.run_if(in_state(done)));
+		let group_loaded = resource_exists::<GroupLoaded<TLoadGroup>>;
+		app.add_systems(schedule, system.run_if(group_loaded));
 	}
 }
 

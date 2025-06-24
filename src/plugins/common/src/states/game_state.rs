@@ -36,6 +36,10 @@ impl LoadGroup for LoadingGame {
 
 	const LOAD_STATE: GameState = GameState::Loading;
 	const LOAD_DONE_STATE: GameState = GameState::Play;
+
+	fn load_reset_states() -> Vec<Self::TState> {
+		vec![GameState::NewGame, GameState::LoadingSave]
+	}
 }
 
 #[derive(Debug, PartialEq)]

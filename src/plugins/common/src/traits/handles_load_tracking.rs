@@ -22,6 +22,7 @@ pub trait HandlesLoadTracking {
 		TLoadGroup: ThreadSafe;
 
 	#[must_use]
+	/// Run a system after loading is done, but not if the load plugin has been reset.
 	fn register_load_tracking<T, TLoadGroup, TProgress>()
 	-> impl LoadTrackingInApp + LoadTrackingInSubApp
 	where
@@ -33,8 +34,21 @@ pub trait HandlesLoadTracking {
 pub trait LoadGroup {
 	type TState: FreelyMutableState + Copy;
 
+	/// State to signal that loading has begun. Should be set outside of the plugin.
 	const LOAD_STATE: Self::TState;
+
+	/// State to signal that loading has finished. Should be set by the plugin.
 	const LOAD_DONE_STATE: Self::TState;
+
+	/// States used to signal a load plugin reset.
+	///
+	/// This aims to prevent [`after-load-systems`](HandlesLoadTracking::register_after_load_system)
+	/// from running.
+	///
+	/// Defaults to using `vec![Self::LOAD_STATE]`
+	fn load_reset_states() -> Vec<Self::TState> {
+		vec![Self::LOAD_STATE]
+	}
 }
 
 pub trait RunAfterLoadedInApp {

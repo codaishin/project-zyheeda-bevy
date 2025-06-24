@@ -97,5 +97,4 @@ pub(crate) enum State {
 	Idle,
 	LoadAssets,
 	ResolveDependencies,
-	Done,
 }
