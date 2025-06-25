@@ -1,5 +1,9 @@
 use bevy::prelude::Component;
-use common::{components::persistent_entity::PersistentEntity, tools::UnitsPerSecond};
+use common::{
+	components::persistent_entity::PersistentEntity,
+	impl_savable_self_non_priority,
+	tools::UnitsPerSecond,
+};
 use serde::{Deserialize, Serialize};
 use std::{ops::RangeBounds, vec::Drain};
 
@@ -32,6 +36,8 @@ impl GravityAffected {
 		self.pulls.drain(range)
 	}
 }
+
+impl_savable_self_non_priority!(GravityAffected);
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct GravityPull {

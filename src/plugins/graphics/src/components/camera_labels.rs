@@ -3,7 +3,7 @@ use bevy::{
 	prelude::*,
 	render::view::RenderLayers,
 };
-use common::traits::handles_graphics::StaticRenderLayers;
+use common::{impl_savable_self_non_priority, traits::handles_graphics::StaticRenderLayers};
 use serde::{Deserialize, Serialize};
 
 #[derive(Component, Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
@@ -101,3 +101,5 @@ impl StaticRenderLayers for Ui {
 		RenderLayers::from(Ui)
 	}
 }
+
+impl_savable_self_non_priority!(FirstPass, SecondPass, Ui);

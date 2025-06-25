@@ -8,6 +8,7 @@ use common::{
 	attributes::affected_by::AffectedBy,
 	components::persistent_entity::PersistentEntity,
 	effects::gravity::Gravity,
+	impl_savable_self_non_priority,
 	traits::handles_effect::HandlesEffect,
 };
 use serde::{Deserialize, Serialize};
@@ -48,6 +49,8 @@ impl ActOn<GravityAffected> for GravityEffect {
 		});
 	}
 }
+
+impl_savable_self_non_priority!(GravityEffect);
 
 #[cfg(test)]
 mod tests {

@@ -1,3 +1,4 @@
+use crate::traits::handles_saving::SavableComponent;
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -56,6 +57,12 @@ impl Default for PersistentEntity {
 	fn default() -> Self {
 		Self(Uuid::new_v4())
 	}
+}
+
+impl SavableComponent for PersistentEntity {
+	type TDto = Self;
+
+	const PRIORITY: bool = true;
 }
 
 #[cfg(test)]

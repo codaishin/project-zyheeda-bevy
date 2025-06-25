@@ -21,6 +21,7 @@ use common::{
 	components::{ground_offset::GroundOffset, insert_asset::InsertAsset},
 	effects::{deal_damage::DealDamage, gravity::Gravity},
 	errors::Error,
+	impl_savable_self_non_priority,
 	tools::{Units, UnitsPerSecond, collider_radius::ColliderRadius},
 	traits::{
 		clamp_zero_positive::ClampZeroPositive,
@@ -85,6 +86,8 @@ impl VoidSphere {
 		}
 	}
 }
+
+impl_savable_self_non_priority!(VoidSphere);
 
 impl<TInteractions> Prefab<TInteractions> for VoidSphere
 where

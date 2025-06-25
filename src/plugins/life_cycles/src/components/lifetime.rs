@@ -1,6 +1,6 @@
 use super::destroy::Destroy;
 use bevy::prelude::*;
-use common::traits::try_insert_on::TryInsertOn;
+use common::{impl_savable_self_non_priority, traits::try_insert_on::TryInsertOn};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -25,6 +25,8 @@ impl Lifetime {
 		}
 	}
 }
+
+impl_savable_self_non_priority!(Lifetime);
 
 #[cfg(test)]
 mod tests {

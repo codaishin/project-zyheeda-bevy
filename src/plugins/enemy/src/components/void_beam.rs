@@ -5,6 +5,7 @@ use common::{
 	components::{insert_asset::InsertAsset, persistent_entity::PersistentEntity},
 	effects::deal_damage::DealDamage,
 	errors::Error,
+	impl_savable_self_non_priority,
 	tools::Units,
 	traits::{
 		handles_effect::HandlesEffect,
@@ -63,6 +64,8 @@ where
 		Ok(())
 	}
 }
+
+impl_savable_self_non_priority!(VoidBeam);
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
 #[require(

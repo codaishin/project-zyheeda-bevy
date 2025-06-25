@@ -10,6 +10,7 @@ use common::{
 	blocker::{Blocker, Blockers},
 	components::persistent_entity::PersistentEntity,
 	effects::force::Force,
+	impl_savable_self_non_priority,
 	traits::handles_effect::HandlesEffect,
 };
 use serde::{Deserialize, Serialize};
@@ -44,3 +45,5 @@ impl ActOn<ForceAffected> for ForceEffect {
 		// FIXME: Target should be moved outside the force effect collider
 	}
 }
+
+impl_savable_self_non_priority!(ForceEffect);

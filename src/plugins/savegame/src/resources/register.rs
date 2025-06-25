@@ -54,11 +54,14 @@ where
 	}
 }
 
-impl<TLoadAsset> Default for Register<TLoadAsset> {
+impl<TLoadAsset> Default for Register<TLoadAsset>
+where
+	TLoadAsset: LoadAsset,
+{
 	fn default() -> Self {
 		Self {
-			registered_types: Default::default(),
-			handlers: Default::default(),
+			registered_types: HashSet::default(),
+			handlers: vec![],
 		}
 	}
 }
@@ -72,6 +75,7 @@ impl<TLoadAsset> PartialEq for Register<TLoadAsset> {
 #[cfg(test)]
 mod test_registration {
 	use super::*;
+	use common::{components::persistent_entity::PersistentEntity, impl_savable_self_non_priority};
 	use serde::{Deserialize, Serialize};
 
 	#[derive(Component, Serialize, Deserialize, Clone)]
@@ -80,13 +84,15 @@ mod test_registration {
 	#[derive(Component, Serialize, Deserialize, Clone)]
 	struct _B;
 
+	impl_savable_self_non_priority!(_A, _B);
+
 	#[test]
 	fn register_component() {
-		let mut context = Register::<AssetServer>::default();
+		let mut register = Register::<AssetServer>::default();
 
-		context.register_component::<_A>();
+		register.register_component::<_A>();
 
-		assert_eq!(vec![ComponentHandler::new::<_A>()], context.handlers);
+		assert_eq!(vec![ComponentHandler::new::<_A>()], register.handlers);
 	}
 
 	#[test]
@@ -118,7 +124,7 @@ mod test_update_context {
 	use super::*;
 	use crate::file_io::FileIO;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::test_tools::utils::SingleThreadedApp;
+	use common::{impl_savable_self_non_priority, test_tools::utils::SingleThreadedApp};
 	use serde::{Deserialize, Serialize};
 	use std::path::PathBuf;
 
@@ -137,6 +143,8 @@ mod test_update_context {
 
 		app
 	}
+
+	impl_savable_self_non_priority!(_A, _B);
 
 	#[test]
 	fn update_context() -> Result<(), RunSystemError> {

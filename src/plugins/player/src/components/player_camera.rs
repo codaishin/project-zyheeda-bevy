@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use common::{
+	impl_savable_self_non_priority,
 	tools::action_key::movement::MovementKey,
 	traits::handles_player::{DirectionError, KeyDirection},
 };
@@ -24,6 +25,8 @@ impl KeyDirection<MovementKey> for PlayerCamera {
 		Dir3::try_from(direction.with_y(0.)).map_err(DirectionError::Invalid)
 	}
 }
+
+impl_savable_self_non_priority!(PlayerCamera);
 
 #[cfg(test)]
 mod tests {

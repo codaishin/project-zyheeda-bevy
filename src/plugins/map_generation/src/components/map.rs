@@ -2,11 +2,16 @@ pub(crate) mod demo_map;
 
 use crate::{grid_graph::GridGraph, map_cells::MapCells};
 use bevy::prelude::*;
-use common::traits::{handles_load_tracking::Loaded, load_asset::Path, thread_safe::ThreadSafe};
+use common::traits::{
+	handles_load_tracking::Loaded,
+	handles_saving::SavableComponent,
+	load_asset::Path,
+	thread_safe::ThreadSafe,
+};
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 
-#[derive(Component, Debug, PartialEq, Serialize, Deserialize, Clone)]
+#[derive(Component, Debug, PartialEq, Serialize, Deserialize)]
 #[component(immutable)]
 pub(crate) struct MapAssetPath<TCell> {
 	pub(crate) asset_path: Path,
@@ -21,6 +26,22 @@ impl<TCell> From<Path> for MapAssetPath<TCell> {
 			_p: PhantomData,
 		}
 	}
+}
+
+impl<TCell> Clone for MapAssetPath<TCell> {
+	fn clone(&self) -> Self {
+		Self {
+			asset_path: self.asset_path.clone(),
+			_p: PhantomData,
+		}
+	}
+}
+
+impl<TCell> SavableComponent for MapAssetPath<TCell>
+where
+	TCell: ThreadSafe,
+{
+	type TDto = Self;
 }
 
 #[derive(Component, Debug, PartialEq)]

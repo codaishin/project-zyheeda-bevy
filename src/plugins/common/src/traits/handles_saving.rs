@@ -1,3 +1,5 @@
+mod external;
+
 use crate::{errors::Unreachable, traits::handles_custom_assets::TryLoadFrom};
 use bevy::prelude::*;
 use serde::{Serialize, de::DeserializeOwned};
@@ -26,11 +28,24 @@ pub trait SavableComponent:
 {
 	/// The data transfer object used for (de)serialization.
 	type TDto: From<Self> + Serialize + DeserializeOwned;
+
+	/// Weather this component should be loaded before non priority components from a save file
+	const PRIORITY: bool = false;
 }
 
-impl<TComponent> SavableComponent for TComponent
-where
-	TComponent: Serialize + DeserializeOwned + Clone + Component,
-{
-	type TDto = Self;
+/// Implements [`SavableComponent`] for the provided type(s) with:
+/// - `TDto = Self`
+/// - `PRIORITY = false`
+#[macro_export]
+macro_rules! impl_savable_self_non_priority {
+	($ty:ty) => {
+		impl $crate::traits::handles_saving::SavableComponent for $ty {
+			type TDto = $ty;
+			const PRIORITY: bool = false;
+		}
+	};
+	($ty:ty, $($rest:ty),+ $(,)?) => {
+		impl_savable_self_non_priority!($ty);
+		impl_savable_self_non_priority!($($rest),+);
+	};
 }

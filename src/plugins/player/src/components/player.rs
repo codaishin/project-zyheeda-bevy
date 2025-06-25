@@ -16,6 +16,7 @@ use common::{
 	},
 	effects::{deal_damage::DealDamage, force::Force, gravity::Gravity},
 	errors::Error,
+	impl_savable_self_non_priority,
 	tools::{
 		Units,
 		UnitsPerSecond,
@@ -147,6 +148,8 @@ impl Player {
 		}
 	}
 }
+
+impl_savable_self_non_priority!(Player);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum PlayerAnimationMask {

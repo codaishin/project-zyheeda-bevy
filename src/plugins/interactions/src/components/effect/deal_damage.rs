@@ -7,6 +7,7 @@ use common::{
 	attributes::health::Health,
 	components::persistent_entity::PersistentEntity,
 	effects::{EffectApplies, deal_damage::DealDamage},
+	impl_savable_self_non_priority,
 	traits::{
 		handles_effect::HandlesEffect,
 		handles_life::{ChangeLife, HandlesLife},
@@ -57,6 +58,8 @@ where
 		life.change_by(-damage * delta.as_secs_f32());
 	}
 }
+
+impl_savable_self_non_priority!(DealDamageEffect);
 
 #[cfg(test)]
 mod tests {

@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use common::impl_savable_self_non_priority;
 use serde::{Deserialize, Serialize};
 
 #[derive(Component, Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -15,3 +16,5 @@ impl GlobalLight {
 		}
 	}
 }
+
+impl_savable_self_non_priority!(GlobalLight);

@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use common::{
 	attributes::health::Health,
+	impl_savable_self_non_priority,
 	traits::{accessors::get::GetterRef, handles_life::ChangeLife},
 };
 use serde::{Deserialize, Serialize};
@@ -30,6 +31,8 @@ impl GetterRef<Health> for Life {
 		health
 	}
 }
+
+impl_savable_self_non_priority!(Life);
 
 #[cfg(test)]
 mod tests {

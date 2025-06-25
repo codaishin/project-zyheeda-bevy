@@ -116,6 +116,7 @@ mod tests {
 	use bevy::asset::AssetPath;
 	use common::{
 		errors::Unreachable,
+		impl_savable_self_non_priority,
 		test_tools::utils::SingleThreadedApp,
 		traits::{handles_custom_assets::TryLoadFrom, load_asset::LoadAsset},
 	};
@@ -135,7 +136,7 @@ mod tests {
 		}
 	}
 
-	#[derive(Component, Serialize, Clone, PartialEq, Debug)]
+	#[derive(Component, Clone, PartialEq, Debug)]
 	struct _A {
 		value: i32,
 	}
@@ -195,6 +196,8 @@ mod tests {
 			Err(serde::de::Error::custom("Fool! I refuse deserialization"))
 		}
 	}
+
+	impl_savable_self_non_priority!(_B, _Fail);
 
 	#[derive(Resource, NestedMocks)]
 	struct _LoadAsset {
@@ -327,6 +330,8 @@ mod tests {
 		struct _C {
 			v: i32,
 		}
+
+		impl_savable_self_non_priority!(_C);
 
 		#[derive(Resource)]
 		struct _LoadAsset;

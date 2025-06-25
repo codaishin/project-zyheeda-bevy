@@ -3,7 +3,7 @@ use crate::traits::{
 	orbit::{Orbit, Vec2Radians},
 };
 use bevy::prelude::*;
-use common::components::persistent_entity::PersistentEntity;
+use common::{components::persistent_entity::PersistentEntity, impl_savable_self_non_priority};
 use serde::{Deserialize, Serialize};
 
 #[derive(Component, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
@@ -13,6 +13,8 @@ pub struct OrbitPlayer {
 	pub distance: f32,
 	pub sensitivity: f32,
 }
+
+impl_savable_self_non_priority!(OrbitPlayer);
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub struct OrbitCenter {

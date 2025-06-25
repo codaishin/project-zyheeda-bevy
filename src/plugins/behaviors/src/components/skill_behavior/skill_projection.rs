@@ -2,6 +2,7 @@ use super::SimplePrefab;
 use bevy::prelude::*;
 use common::{
 	errors::Error,
+	impl_savable_self_non_priority,
 	traits::{
 		handles_destruction::HandlesDestruction,
 		handles_interactions::HandlesInteractions,
@@ -18,6 +19,8 @@ pub struct SkillProjection {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub offset: Option<ProjectionOffset>,
 }
+
+impl_savable_self_non_priority!(SkillProjection);
 
 impl From<Projection> for SkillProjection {
 	fn from(Projection { shape, offset }: Projection) -> Self {
