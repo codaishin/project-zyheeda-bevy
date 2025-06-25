@@ -5,7 +5,6 @@ use common::{
 	components::{insert_asset::InsertAsset, persistent_entity::PersistentEntity},
 	effects::deal_damage::DealDamage,
 	errors::Error,
-	impl_savable_self_non_priority,
 	tools::Units,
 	traits::{
 		handles_effect::HandlesEffect,
@@ -15,10 +14,11 @@ use common::{
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
+use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::{f32::consts::PI, time::Duration};
 
-#[derive(Component, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[require(PersistentEntity, Visibility, Transform)]
 pub(crate) struct VoidBeam {
 	attack: VoidBeamAttack,
@@ -64,8 +64,6 @@ where
 		Ok(())
 	}
 }
-
-impl_savable_self_non_priority!(VoidBeam);
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
 #[require(

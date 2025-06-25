@@ -1,8 +1,8 @@
 use bevy::prelude::*;
-use common::impl_savable_self_non_priority;
+use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
-#[derive(Component, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[require(Transform, Visibility)]
 pub(crate) struct GlobalLight(pub(crate) Srgba);
 
@@ -16,5 +16,3 @@ impl GlobalLight {
 		}
 	}
 }
-
-impl_savable_self_non_priority!(GlobalLight);

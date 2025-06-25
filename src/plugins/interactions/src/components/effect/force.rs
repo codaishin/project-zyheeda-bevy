@@ -10,13 +10,13 @@ use common::{
 	blocker::{Blocker, Blockers},
 	components::persistent_entity::PersistentEntity,
 	effects::force::Force,
-	impl_savable_self_non_priority,
 	traits::handles_effect::HandlesEffect,
 };
+use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
-#[derive(Component, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct ForceEffect(pub(crate) Force);
 
 impl<TDependencies> HandlesEffect<Force> for InteractionsPlugin<TDependencies> {
@@ -45,5 +45,3 @@ impl ActOn<ForceAffected> for ForceEffect {
 		// FIXME: Target should be moved outside the force effect collider
 	}
 }
-
-impl_savable_self_non_priority!(ForceEffect);

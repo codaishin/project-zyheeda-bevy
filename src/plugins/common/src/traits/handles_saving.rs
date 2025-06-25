@@ -29,23 +29,73 @@ pub trait SavableComponent:
 	/// The data transfer object used for (de)serialization.
 	type TDto: From<Self> + Serialize + DeserializeOwned;
 
-	/// Weather this component should be loaded before non priority components from a save file
+	/// Whether this component should be loaded before non priority components from a save file
 	const PRIORITY: bool = false;
 }
 
-/// Implements [`SavableComponent`] for the provided type(s) with:
-/// - `TDto = Self`
-/// - `PRIORITY = false`
-#[macro_export]
-macro_rules! impl_savable_self_non_priority {
-	($ty:ty) => {
-		impl $crate::traits::handles_saving::SavableComponent for $ty {
-			type TDto = $ty;
-			const PRIORITY: bool = false;
+#[cfg(test)]
+mod test_savable_component_derive {
+	use super::*;
+	use macros::SavableComponent;
+	use serde::Deserialize;
+	use std::any::TypeId;
+
+	#[derive(Component, SavableComponent, Clone, Serialize, Deserialize)]
+	struct _Default;
+
+	#[derive(Component, SavableComponent, Clone)]
+	#[savable_component(dto = _Dto)]
+	struct _WithDto;
+
+	#[derive(Serialize, Deserialize)]
+	struct _Dto;
+
+	impl From<_WithDto> for _Dto {
+		fn from(_: _WithDto) -> Self {
+			Self
 		}
-	};
-	($ty:ty, $($rest:ty),+ $(,)?) => {
-		impl_savable_self_non_priority!($ty);
-		impl_savable_self_non_priority!($($rest),+);
-	};
+	}
+
+	impl TryLoadFrom<_Dto> for _WithDto {
+		type TInstantiationError = Unreachable;
+
+		fn try_load_from<TLoadAsset>(
+			_: _Dto,
+			_: &mut TLoadAsset,
+		) -> Result<Self, Self::TInstantiationError> {
+			Ok(Self)
+		}
+	}
+
+	#[derive(Component, SavableComponent, Clone, Serialize, Deserialize)]
+	#[savable_component(has_priority)]
+	struct _Priority;
+
+	#[test]
+	fn default_to_self_as_dto() {
+		assert_eq!(
+			TypeId::of::<_Default>(),
+			TypeId::of::<<_Default as SavableComponent>::TDto>()
+		);
+	}
+
+	#[test]
+	#[allow(clippy::assertions_on_constants)]
+	fn default_to_no_priority() {
+		assert!(!_Default::PRIORITY);
+	}
+
+	#[test]
+	fn has_dto() {
+		assert_eq!(
+			TypeId::of::<_Dto>(),
+			TypeId::of::<<_WithDto as SavableComponent>::TDto>()
+		);
+	}
+
+	#[test]
+	#[allow(clippy::assertions_on_constants)]
+	fn has_priority() {
+		assert!(_Priority::PRIORITY);
+	}
 }

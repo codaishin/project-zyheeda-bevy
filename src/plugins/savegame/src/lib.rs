@@ -137,16 +137,15 @@ impl<TDependencies> HandlesSaving for SavegamePlugin<TDependencies> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{impl_savable_self_non_priority, test_tools::utils::SingleThreadedApp};
+	use common::test_tools::utils::SingleThreadedApp;
+	use macros::SavableComponent;
 	use serde::{Deserialize, Serialize};
 
-	#[derive(Component, Serialize, Deserialize, Clone)]
+	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
 	struct _A;
 
-	#[derive(Component, Serialize, Deserialize, Clone)]
+	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
 	struct _B;
-
-	impl_savable_self_non_priority!(_A, _B);
 
 	fn setup() -> App {
 		App::new().single_threaded(Update)

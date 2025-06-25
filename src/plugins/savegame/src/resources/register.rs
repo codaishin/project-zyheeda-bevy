@@ -80,32 +80,22 @@ impl<TLoadAsset> PartialEq for Register<TLoadAsset> {
 #[cfg(test)]
 mod test_registration {
 	use super::*;
-	use common::impl_savable_self_non_priority;
+	use macros::SavableComponent;
 	use serde::{Deserialize, Serialize};
 
-	#[derive(Component, Serialize, Deserialize, Clone)]
+	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
 	struct _A;
 
-	#[derive(Component, Serialize, Deserialize, Clone)]
+	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
 	struct _B;
 
-	impl_savable_self_non_priority!(_A, _B);
-
-	#[derive(Component, Serialize, Deserialize, Clone)]
+	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
+	#[savable_component(has_priority)]
 	struct _PA;
 
-	impl SavableComponent for _PA {
-		type TDto = Self;
-		const PRIORITY: bool = true;
-	}
-
-	#[derive(Component, Serialize, Deserialize, Clone)]
+	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
+	#[savable_component(has_priority)]
 	struct _PB;
-
-	impl SavableComponent for _PB {
-		type TDto = Self;
-		const PRIORITY: bool = true;
-	}
 
 	#[test]
 	fn register_component() {
@@ -181,20 +171,21 @@ mod test_update_context {
 	use super::*;
 	use crate::file_io::FileIO;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{impl_savable_self_non_priority, test_tools::utils::SingleThreadedApp};
+	use common::test_tools::utils::SingleThreadedApp;
+	use macros::SavableComponent;
 	use serde::{Deserialize, Serialize};
 	use std::{ops::Deref, path::PathBuf};
 
-	#[derive(Component, Serialize, Deserialize, Clone)]
+	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
 	struct _A;
 
-	#[derive(Component, Serialize, Deserialize, Clone)]
+	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
 	struct _B;
 
-	#[derive(Component, Serialize, Deserialize, Clone)]
+	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
 	struct _C;
 
-	#[derive(Component, Serialize, Deserialize, Clone)]
+	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
 	struct _D;
 
 	fn setup(handlers: Handlers<ComponentHandler>) -> App {
@@ -206,8 +197,6 @@ mod test_update_context {
 
 		app
 	}
-
-	impl_savable_self_non_priority!(_A, _B, _C, _D);
 
 	#[test]
 	fn update_context() -> Result<(), RunSystemError> {

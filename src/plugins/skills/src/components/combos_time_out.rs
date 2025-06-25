@@ -5,10 +5,12 @@ use crate::{
 	traits::{Flush, is_timed_out::IsTimedOut},
 };
 use bevy::ecs::component::Component;
-use common::traits::{handles_saving::SavableComponent, update_cumulative::CumulativeUpdate};
+use common::traits::update_cumulative::CumulativeUpdate;
+use macros::SavableComponent;
 use std::time::Duration;
 
-#[derive(Component, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+#[savable_component(dto = CombosTimeOutDto)]
 pub struct CombosTimeOut {
 	max_duration: Duration,
 	duration: Duration,
@@ -39,10 +41,6 @@ impl Flush for CombosTimeOut {
 	fn flush(&mut self) {
 		self.duration = Duration::ZERO;
 	}
-}
-
-impl SavableComponent for CombosTimeOut {
-	type TDto = CombosTimeOutDto;
 }
 
 #[cfg(test)]

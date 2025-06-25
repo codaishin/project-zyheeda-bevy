@@ -16,7 +16,6 @@ use common::{
 	},
 	effects::{deal_damage::DealDamage, force::Force, gravity::Gravity},
 	errors::Error,
-	impl_savable_self_non_priority,
 	tools::{
 		Units,
 		UnitsPerSecond,
@@ -45,10 +44,11 @@ use common::{
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
+use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Component, Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Component, SavableComponent, Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[require(
 	PlayerMovement = Player::movement(),
 	Transform,
@@ -148,8 +148,6 @@ impl Player {
 		}
 	}
 }
-
-impl_savable_self_non_priority!(Player);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum PlayerAnimationMask {

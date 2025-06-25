@@ -3,14 +3,27 @@ use bevy::{
 	prelude::*,
 	render::view::RenderLayers,
 };
-use common::{impl_savable_self_non_priority, traits::handles_graphics::StaticRenderLayers};
+use common::traits::handles_graphics::StaticRenderLayers;
+use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
 #[derive(Component, Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
 #[require(Camera3d)]
 pub struct WorldCamera;
 
-#[derive(Component, Debug, PartialEq, Eq, Hash, Default, Clone, Copy, Serialize, Deserialize)]
+#[derive(
+	Component,
+	SavableComponent,
+	Debug,
+	PartialEq,
+	Eq,
+	Hash,
+	Default,
+	Clone,
+	Copy,
+	Serialize,
+	Deserialize,
+)]
 #[require(WorldCamera,Tonemapping = Self, Bloom)]
 pub struct FirstPass;
 
@@ -20,7 +33,19 @@ impl From<FirstPass> for Tonemapping {
 	}
 }
 
-#[derive(Component, Debug, PartialEq, Eq, Hash, Default, Clone, Copy, Serialize, Deserialize)]
+#[derive(
+	Component,
+	SavableComponent,
+	Debug,
+	PartialEq,
+	Eq,
+	Hash,
+	Default,
+	Clone,
+	Copy,
+	Serialize,
+	Deserialize,
+)]
 #[require(
 	WorldCamera,
 	Camera = Self,
@@ -60,7 +85,19 @@ impl From<SecondPass> for RenderLayers {
 	}
 }
 
-#[derive(Component, Debug, PartialEq, Eq, Hash, Default, Clone, Copy, Serialize, Deserialize)]
+#[derive(
+	Component,
+	SavableComponent,
+	Debug,
+	PartialEq,
+	Eq,
+	Hash,
+	Default,
+	Clone,
+	Copy,
+	Serialize,
+	Deserialize,
+)]
 #[require(
 	WorldCamera,
 	Camera = Self,
@@ -101,5 +138,3 @@ impl StaticRenderLayers for Ui {
 		RenderLayers::from(Ui)
 	}
 }
-
-impl_savable_self_non_priority!(FirstPass, SecondPass, Ui);

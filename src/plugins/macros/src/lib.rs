@@ -1,11 +1,21 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{Data, DeriveInput, Fields, Ident, Type, parse, parse_macro_input};
+use syn::{
+	Data,
+	DeriveInput,
+	Error,
+	Fields,
+	Ident,
+	Path,
+	Type,
+	parse_macro_input,
+	spanned::Spanned,
+};
 
 #[proc_macro_derive(ClampZeroPositive)]
 pub fn clamp_zero_positive_derive(input: TokenStream) -> TokenStream {
-	let ast: DeriveInput = parse(input).unwrap();
-	let ident = ast.ident;
+	let input = parse_macro_input!(input as DeriveInput);
+	let ident = input.ident;
 	let implementation = quote! {
 		impl ClampZeroPositive for #ident {
 			fn new(value: f32) -> Self {
@@ -72,7 +82,7 @@ pub fn nested_mocks_derive(input: TokenStream) -> TokenStream {
 		#(#traits)*
 	};
 
-	implementation.into()
+	TokenStream::from(implementation)
 }
 
 enum SetupMockCompileError {
@@ -152,4 +162,85 @@ pub fn item_asset(input: TokenStream) -> TokenStream {
 	TokenStream::from(quote! {
 		#asset_path
 	})
+}
+
+/// Implements the `SavableComponent` trait.
+///
+/// This derive macro supports the following optional attribute:
+///
+/// `#[savable_component(...)]`
+/// - `dto = Type` *(optional)*:
+///   Sets `SavableComponent::TDto` to the given type. Defaults to `Self`.
+///
+/// - `has_priority` *(optional, flag)*:
+///   When present, `SavableComponent::PRIORITY` will be `true`. Defaults to `false`.
+#[proc_macro_derive(SavableComponent, attributes(savable_component))]
+pub fn derive_savable_component(input: TokenStream) -> TokenStream {
+	let common = match crate_root("common") {
+		Ok(common) => common,
+		Err(error) => return error,
+	};
+	let input = parse_macro_input!(input as DeriveInput);
+	let name = &input.ident;
+	let (impl_generics, type_generics, where_clause) = &input.generics.split_for_impl();
+	let mut dto = None;
+	let mut priority = false;
+
+	for attr in input.attrs.iter() {
+		if !attr.path().is_ident("savable_component") {
+			continue;
+		}
+
+		let result = attr.parse_nested_meta(|nested| match nested.path.get_ident() {
+			Some(ident) if ident == "dto" => {
+				dto = Some(nested.value()?.parse::<Type>()?);
+				Ok(())
+			}
+			Some(ident) if ident == "has_priority" => {
+				priority = true;
+				Ok(())
+			}
+			Some(other) => Err(Error::new(
+				nested.path.span(),
+				format!("unknown key word '{other}'"),
+			)),
+			None => Ok(()),
+		});
+
+		if let Err(error) = result {
+			return TokenStream::from(error.to_compile_error());
+		}
+	}
+
+	let dto = match dto {
+		Some(dto) => quote! {#dto},
+		None => quote! {Self},
+	};
+
+	TokenStream::from(quote! {
+		impl #impl_generics #common::traits::handles_saving::SavableComponent for #name #type_generics #where_clause {
+			type TDto = #dto;
+			const PRIORITY: bool = #priority;
+		}
+	})
+}
+
+fn crate_root(name: &str) -> Result<Path, TokenStream> {
+	let name = match std::env::var("CARGO_PKG_NAME") {
+		Ok(n) if n.as_str() == name => "crate",
+		_ => name,
+	};
+
+	let name = match name.parse::<TokenStream>() {
+		Ok(name) => name,
+		Err(error) => {
+			let error = format!("{name}: {error}");
+			return Err(TokenStream::from(quote! {compile_error!(#error)}));
+		}
+	};
+
+	match syn::parse(name) {
+		Ok(name) => Ok(name),
+		Err(error) => Err(TokenStream::from(error.to_compile_error())),
+	}
 }

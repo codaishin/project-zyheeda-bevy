@@ -21,7 +21,6 @@ use common::{
 	components::{ground_offset::GroundOffset, insert_asset::InsertAsset},
 	effects::{deal_damage::DealDamage, gravity::Gravity},
 	errors::Error,
-	impl_savable_self_non_priority,
 	tools::{Units, UnitsPerSecond, collider_radius::ColliderRadius},
 	traits::{
 		clamp_zero_positive::ClampZeroPositive,
@@ -31,10 +30,11 @@ use common::{
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
+use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::{f32::consts::PI, sync::Arc, time::Duration};
 
-#[derive(Component, Clone, Serialize, Deserialize)]
+#[derive(Component, SavableComponent, Clone, Serialize, Deserialize)]
 #[require(
 	Enemy = VoidSphere::with_attack_range(Units::new(5.)),
 	GroundOffset = Self::GROUND_OFFSET,
@@ -86,8 +86,6 @@ impl VoidSphere {
 		}
 	}
 }
-
-impl_savable_self_non_priority!(VoidSphere);
 
 impl<TInteractions> Prefab<TInteractions> for VoidSphere
 where

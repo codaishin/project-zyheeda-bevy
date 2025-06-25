@@ -1,12 +1,12 @@
 use bevy::prelude::*;
 use common::{
 	attributes::health::Health,
-	impl_savable_self_non_priority,
 	traits::{accessors::get::GetterRef, handles_life::ChangeLife},
 };
+use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
-#[derive(Component, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub struct Life(pub(crate) Health);
 
 impl ChangeLife for Life {
@@ -31,8 +31,6 @@ impl GetterRef<Health> for Life {
 		health
 	}
 }
-
-impl_savable_self_non_priority!(Life);
 
 #[cfg(test)]
 mod tests {

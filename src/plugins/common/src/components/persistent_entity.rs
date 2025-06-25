@@ -1,5 +1,5 @@
-use crate::traits::handles_saving::SavableComponent;
 use bevy::prelude::*;
+use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -49,20 +49,17 @@ use uuid::Uuid;
 /// app.world_mut().spawn(MyComponent("name"));
 /// app.update();
 /// ```
-#[derive(Component, Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
+#[derive(
+	Component, SavableComponent, Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize,
+)]
 #[component(immutable)]
+#[savable_component(has_priority)]
 pub struct PersistentEntity(Uuid);
 
 impl Default for PersistentEntity {
 	fn default() -> Self {
 		Self(Uuid::new_v4())
 	}
-}
-
-impl SavableComponent for PersistentEntity {
-	type TDto = Self;
-
-	const PRIORITY: bool = true;
 }
 
 #[cfg(test)]

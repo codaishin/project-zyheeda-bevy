@@ -7,16 +7,16 @@ use common::{
 	attributes::health::Health,
 	components::persistent_entity::PersistentEntity,
 	effects::{EffectApplies, deal_damage::DealDamage},
-	impl_savable_self_non_priority,
 	traits::{
 		handles_effect::HandlesEffect,
 		handles_life::{ChangeLife, HandlesLife},
 	},
 };
+use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
-#[derive(Component, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct DealDamageEffect(pub(crate) DealDamage);
 
 impl<TSaveGame, TLifeCycle> HandlesEffect<DealDamage>
@@ -58,8 +58,6 @@ where
 		life.change_by(-damage * delta.as_secs_f32());
 	}
 }
-
-impl_savable_self_non_priority!(DealDamageEffect);
 
 #[cfg(test)]
 mod tests {

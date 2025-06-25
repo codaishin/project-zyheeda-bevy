@@ -8,13 +8,13 @@ use common::{
 	attributes::affected_by::AffectedBy,
 	components::persistent_entity::PersistentEntity,
 	effects::gravity::Gravity,
-	impl_savable_self_non_priority,
 	traits::handles_effect::HandlesEffect,
 };
+use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
-#[derive(Component, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct GravityEffect(pub(crate) Gravity);
 
 impl<TDependencies> HandlesEffect<Gravity> for InteractionsPlugin<TDependencies> {
@@ -49,8 +49,6 @@ impl ActOn<GravityAffected> for GravityEffect {
 		});
 	}
 }
-
-impl_savable_self_non_priority!(GravityEffect);
 
 #[cfg(test)]
 mod tests {

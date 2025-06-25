@@ -1,12 +1,24 @@
 use bevy::prelude::*;
 use common::{
-	impl_savable_self_non_priority,
 	tools::action_key::movement::MovementKey,
 	traits::handles_player::{DirectionError, KeyDirection},
 };
+use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
-#[derive(Component, Debug, PartialEq, Eq, Hash, Default, Clone, Copy, Serialize, Deserialize)]
+#[derive(
+	Component,
+	SavableComponent,
+	Debug,
+	PartialEq,
+	Eq,
+	Hash,
+	Default,
+	Clone,
+	Copy,
+	Serialize,
+	Deserialize,
+)]
 pub struct PlayerCamera;
 
 impl KeyDirection<MovementKey> for PlayerCamera {
@@ -25,8 +37,6 @@ impl KeyDirection<MovementKey> for PlayerCamera {
 		Dir3::try_from(direction.with_y(0.)).map_err(DirectionError::Invalid)
 	}
 }
-
-impl_savable_self_non_priority!(PlayerCamera);
 
 #[cfg(test)]
 mod tests {

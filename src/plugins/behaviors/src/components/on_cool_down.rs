@@ -2,12 +2,9 @@ pub(crate) mod dto;
 
 use crate::components::on_cool_down::dto::OnCoolDownDto;
 use bevy::prelude::*;
-use common::traits::handles_saving::SavableComponent;
+use macros::SavableComponent;
 use std::time::Duration;
 
-#[derive(Component, Debug, PartialEq, Clone)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
+#[savable_component(dto = OnCoolDownDto)]
 pub(crate) struct OnCoolDown(pub Duration);
-
-impl SavableComponent for OnCoolDown {
-	type TDto = OnCoolDownDto;
-}
