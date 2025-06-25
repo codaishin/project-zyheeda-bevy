@@ -17,11 +17,21 @@ pub(crate) type LoadBuffer = Vec<EntityLoadBuffer>;
 
 #[derive(Debug, PartialEq, Default)]
 pub struct SaveContext<TFileIO = FileIO, TComponentHandler = ComponentHandler> {
-	pub(crate) handlers: Vec<TComponentHandler>,
-	pub(crate) priority_handlers: Vec<TComponentHandler>,
-	pub(crate) save_buffer: SaveBuffer,
-	pub(crate) load_buffer: LoadBuffer,
+	pub(crate) handlers: Handlers<TComponentHandler>,
+	pub(crate) buffers: Buffers,
 	pub(crate) io: TFileIO,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub(crate) struct Handlers<TComponentHandler> {
+	pub(crate) high_priority: Vec<TComponentHandler>,
+	pub(crate) low_priority: Vec<TComponentHandler>,
+}
+
+#[derive(Debug, PartialEq, Default)]
+pub(crate) struct Buffers {
+	pub(crate) save: SaveBuffer,
+	pub(crate) load: LoadBuffer,
 }
 
 #[cfg(test)]
@@ -30,7 +40,7 @@ impl<TFileIO, TComponentHandler> SaveContext<TFileIO, TComponentHandler> {
 	where
 		T: Into<SaveBuffer>,
 	{
-		self.save_buffer = buffer.into();
+		self.buffers.save = buffer.into();
 		self
 	}
 
@@ -38,23 +48,23 @@ impl<TFileIO, TComponentHandler> SaveContext<TFileIO, TComponentHandler> {
 	where
 		T: Into<LoadBuffer>,
 	{
-		self.load_buffer = buffer.into();
+		self.buffers.load = buffer.into();
 		self
 	}
 
-	pub(crate) fn with_handlers<T>(mut self, handlers: T) -> Self
+	pub(crate) fn with_low_priority_handlers<T>(mut self, handlers: T) -> Self
 	where
 		T: Into<Vec<TComponentHandler>>,
 	{
-		self.handlers = handlers.into();
+		self.handlers.low_priority = handlers.into();
 		self
 	}
 
-	pub(crate) fn with_priority_handlers<T>(mut self, handlers: T) -> Self
+	pub(crate) fn with_high_priority_handlers<T>(mut self, handlers: T) -> Self
 	where
 		T: Into<Vec<TComponentHandler>>,
 	{
-		self.priority_handlers = handlers.into();
+		self.handlers.high_priority = handlers.into();
 		self
 	}
 }
@@ -63,10 +73,8 @@ impl<TFileIO, TComponentHandler> From<TFileIO> for SaveContext<TFileIO, TCompone
 	fn from(io: TFileIO) -> Self {
 		Self {
 			io,
-			handlers: vec![],
-			priority_handlers: vec![],
-			load_buffer: vec![],
-			save_buffer: HashMap::default(),
+			handlers: Handlers::default(),
+			buffers: Buffers::default(),
 		}
 	}
 }
@@ -78,10 +86,10 @@ where
 	fn write_buffer(&mut self, entity: EntityRef) -> Result<(), EntitySerializationErrors> {
 		let errors = self
 			.handlers
-			.iter()
+			.all()
 			.filter_map(|handler| {
 				handler
-					.buffer_component(&mut self.save_buffer, entity)
+					.buffer_component(&mut self.buffers.save, entity)
 					.err()
 			})
 			.collect::<Vec<_>>();
@@ -89,6 +97,21 @@ where
 		match errors.as_slice() {
 			[] => Ok(()),
 			_ => Err(EntitySerializationErrors(errors)),
+		}
+	}
+}
+
+impl<TComponentHandler> Handlers<TComponentHandler> {
+	fn all(&self) -> impl Iterator<Item = &TComponentHandler> {
+		self.high_priority.iter().chain(self.low_priority.iter())
+	}
+}
+
+impl<TComponentHandler> Default for Handlers<TComponentHandler> {
+	fn default() -> Self {
+		Self {
+			high_priority: vec![],
+			low_priority: vec![],
 		}
 	}
 }
@@ -123,64 +146,135 @@ mod test_write_buffer {
 		App::new().single_threaded(Update)
 	}
 
-	#[test]
-	fn buffer() {
-		fn get_buffer() -> SaveBuffer {
-			HashMap::from([(
-				Entity::from_raw(42),
-				HashSet::from([ComponentString {
-					comp: "name".to_owned(),
-					value: from_str("[\"state\"]").unwrap(),
-				}]),
-			)])
+	mod low_priority {
+		use super::*;
+
+		#[test]
+		fn buffer() {
+			fn get_buffer() -> SaveBuffer {
+				HashMap::from([(
+					Entity::from_raw(42),
+					HashSet::from([ComponentString {
+						comp: "name".to_owned(),
+						value: from_str("[\"state\"]").unwrap(),
+					}]),
+				)])
+			}
+
+			let mut app = setup();
+			let entity = app.world_mut().spawn_empty().id();
+			let entity = app.world().entity(entity);
+			let id = entity.id();
+			let mut context =
+				SaveContext::<FileIO, Mock_Handler>::from(FileIO::with_file(PathBuf::new()))
+					.with_save_buffer(get_buffer())
+					.with_low_priority_handlers([Mock_Handler::new_mock(|mock| {
+						mock.expect_buffer_component()
+							.times(1)
+							.returning(move |buffer, entity| {
+								assert_eq!((&mut get_buffer(), id), (buffer, entity.id()));
+								Ok(())
+							});
+					})]);
+
+			let result = context.write_buffer(entity);
+
+			assert!(result.is_ok());
 		}
 
-		let mut app = setup();
-		let entity = app.world_mut().spawn_empty().id();
-		let entity = app.world().entity(entity);
-		let id = entity.id();
-		let mut context =
-			SaveContext::<FileIO, Mock_Handler>::from(FileIO::with_file(PathBuf::new()))
-				.with_save_buffer(get_buffer())
-				.with_handlers([Mock_Handler::new_mock(|mock| {
-					mock.expect_buffer_component()
-						.times(1)
-						.returning(move |buffer, entity| {
-							assert_eq!((&mut get_buffer(), id), (buffer, entity.id()));
-							Ok(())
-						});
-				})]);
+		#[test]
+		fn buffer_error() {
+			let mut app = setup();
+			let entity = app.world_mut().spawn_empty().id();
+			let entity = app.world().entity(entity);
+			let mut context = SaveContext::from(FileIO::with_file(PathBuf::new()))
+				.with_low_priority_handlers([
+					Mock_Handler::new_mock(|mock| {
+						mock.expect_buffer_component()
+							.returning(|_, _| Err(serde::ser::Error::custom("NOPE, U LOSE")));
+					}),
+					Mock_Handler::new_mock(|mock| {
+						mock.expect_buffer_component()
+							.returning(|_, _| Err(serde::ser::Error::custom("NOPE, U LOSE AGAIN")));
+					}),
+				]);
 
-		let result = context.write_buffer(entity);
+			let result = context.write_buffer(entity);
 
-		assert!(result.is_ok());
+			assert_eq!(
+				Err("NOPE, U LOSE|NOPE, U LOSE AGAIN".to_owned()),
+				result.map_err(|EntitySerializationErrors(errors)| errors
+					.iter()
+					.map(|error| error.to_string())
+					.collect::<Vec<_>>()
+					.join("|"))
+			);
+		}
 	}
 
-	#[test]
-	fn buffer_error() {
-		let mut app = setup();
-		let entity = app.world_mut().spawn_empty().id();
-		let entity = app.world().entity(entity);
-		let mut context = SaveContext::from(FileIO::with_file(PathBuf::new())).with_handlers([
-			Mock_Handler::new_mock(|mock| {
-				mock.expect_buffer_component()
-					.returning(|_, _| Err(serde::ser::Error::custom("NOPE, U LOSE")));
-			}),
-			Mock_Handler::new_mock(|mock| {
-				mock.expect_buffer_component()
-					.returning(|_, _| Err(serde::ser::Error::custom("NOPE, U LOSE AGAIN")));
-			}),
-		]);
+	mod high_priority {
+		use super::*;
 
-		let result = context.write_buffer(entity);
+		#[test]
+		fn buffer() {
+			fn get_buffer() -> SaveBuffer {
+				HashMap::from([(
+					Entity::from_raw(42),
+					HashSet::from([ComponentString {
+						comp: "name".to_owned(),
+						value: from_str("[\"state\"]").unwrap(),
+					}]),
+				)])
+			}
 
-		assert_eq!(
-			Err("NOPE, U LOSE|NOPE, U LOSE AGAIN".to_owned()),
-			result.map_err(|EntitySerializationErrors(errors)| errors
-				.iter()
-				.map(|error| error.to_string())
-				.collect::<Vec<_>>()
-				.join("|"))
-		);
+			let mut app = setup();
+			let entity = app.world_mut().spawn_empty().id();
+			let entity = app.world().entity(entity);
+			let id = entity.id();
+			let mut context =
+				SaveContext::<FileIO, Mock_Handler>::from(FileIO::with_file(PathBuf::new()))
+					.with_save_buffer(get_buffer())
+					.with_high_priority_handlers([Mock_Handler::new_mock(|mock| {
+						mock.expect_buffer_component()
+							.times(1)
+							.returning(move |buffer, entity| {
+								assert_eq!((&mut get_buffer(), id), (buffer, entity.id()));
+								Ok(())
+							});
+					})]);
+
+			let result = context.write_buffer(entity);
+
+			assert!(result.is_ok());
+		}
+
+		#[test]
+		fn buffer_error() {
+			let mut app = setup();
+			let entity = app.world_mut().spawn_empty().id();
+			let entity = app.world().entity(entity);
+			let mut context = SaveContext::from(FileIO::with_file(PathBuf::new()))
+				.with_high_priority_handlers([
+					Mock_Handler::new_mock(|mock| {
+						mock.expect_buffer_component()
+							.returning(|_, _| Err(serde::ser::Error::custom("NOPE, U LOSE")));
+					}),
+					Mock_Handler::new_mock(|mock| {
+						mock.expect_buffer_component()
+							.returning(|_, _| Err(serde::ser::Error::custom("NOPE, U LOSE AGAIN")));
+					}),
+				]);
+
+			let result = context.write_buffer(entity);
+
+			assert_eq!(
+				Err("NOPE, U LOSE|NOPE, U LOSE AGAIN".to_owned()),
+				result.map_err(|EntitySerializationErrors(errors)| errors
+					.iter()
+					.map(|error| error.to_string())
+					.collect::<Vec<_>>()
+					.join("|"))
+			);
+		}
 	}
 }

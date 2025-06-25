@@ -1,5 +1,5 @@
 use crate::{
-	context::{SaveContext, handler::ComponentHandler},
+	context::{Handlers, SaveContext, handler::ComponentHandler},
 	errors::LockPoisonedError,
 	file_io::FileIO,
 };
@@ -18,8 +18,7 @@ use std::{
 #[derive(Resource, Debug)]
 pub(crate) struct Register<TLoadAsset = AssetServer> {
 	registered_types: HashSet<TypeId>,
-	priority_handlers: Vec<ComponentHandler<TLoadAsset>>,
-	handlers: Vec<ComponentHandler<TLoadAsset>>,
+	handlers: Handlers<ComponentHandler<TLoadAsset>>,
 }
 
 impl<TLoadAsset> Register<TLoadAsset>
@@ -35,7 +34,6 @@ where
 			};
 
 			context.handlers = register.handlers.clone();
-			context.priority_handlers = register.priority_handlers.clone();
 			Ok(())
 		}
 	}
@@ -53,8 +51,8 @@ where
 		self.registered_types.insert(type_id);
 
 		let handlers = match TComponent::PRIORITY {
-			true => &mut self.priority_handlers,
-			false => &mut self.handlers,
+			true => &mut self.handlers.high_priority,
+			false => &mut self.handlers.low_priority,
 		};
 
 		handlers.push(ComponentHandler::new::<TComponent>());
@@ -68,8 +66,7 @@ where
 	fn default() -> Self {
 		Self {
 			registered_types: HashSet::default(),
-			priority_handlers: vec![],
-			handlers: vec![],
+			handlers: Handlers::default(),
 		}
 	}
 }
@@ -116,7 +113,13 @@ mod test_registration {
 
 		register.register_component::<_A>();
 
-		assert_eq!(vec![ComponentHandler::new::<_A>()], register.handlers);
+		assert_eq!(
+			Handlers {
+				low_priority: vec![ComponentHandler::new::<_A>()],
+				high_priority: vec![],
+			},
+			register.handlers,
+		);
 	}
 
 	#[test]
@@ -127,11 +130,11 @@ mod test_registration {
 		register.register_component::<_B>();
 
 		assert_eq!(
-			(
-				vec![],
-				vec![ComponentHandler::new::<_A>(), ComponentHandler::new::<_B>()],
-			),
-			(register.priority_handlers, register.handlers,)
+			Handlers {
+				low_priority: vec![ComponentHandler::new::<_A>(), ComponentHandler::new::<_B>()],
+				high_priority: vec![]
+			},
+			register.handlers,
 		);
 	}
 
@@ -143,14 +146,14 @@ mod test_registration {
 		register.register_component::<_PB>();
 
 		assert_eq!(
-			(
-				vec![
+			Handlers {
+				low_priority: vec![],
+				high_priority: vec![
 					ComponentHandler::new::<_PA>(),
 					ComponentHandler::new::<_PB>()
-				],
-				vec![],
-			),
-			(register.priority_handlers, register.handlers,)
+				]
+			},
+			register.handlers,
 		);
 	}
 
@@ -164,11 +167,11 @@ mod test_registration {
 		register.register_component::<_PA>();
 
 		assert_eq!(
-			(
-				vec![ComponentHandler::new::<_PA>()],
-				vec![ComponentHandler::new::<_A>()],
-			),
-			(register.priority_handlers, register.handlers,)
+			Handlers {
+				high_priority: vec![ComponentHandler::new::<_PA>()],
+				low_priority: vec![ComponentHandler::new::<_A>()],
+			},
+			register.handlers,
 		);
 	}
 }
@@ -194,11 +197,10 @@ mod test_update_context {
 	#[derive(Component, Serialize, Deserialize, Clone)]
 	struct _D;
 
-	fn setup(handlers: Vec<ComponentHandler>, priority_handlers: Vec<ComponentHandler>) -> App {
+	fn setup(handlers: Handlers<ComponentHandler>) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.insert_resource(Register {
 			handlers,
-			priority_handlers,
 			..default()
 		});
 
@@ -209,9 +211,12 @@ mod test_update_context {
 
 	#[test]
 	fn update_context() -> Result<(), RunSystemError> {
-		let handlers = vec![ComponentHandler::new::<_A>(), ComponentHandler::new::<_B>()];
-		let priority = vec![ComponentHandler::new::<_C>(), ComponentHandler::new::<_D>()];
-		let mut app = setup(handlers.clone(), priority.clone());
+		let low = vec![ComponentHandler::new::<_A>(), ComponentHandler::new::<_B>()];
+		let high = vec![ComponentHandler::new::<_C>(), ComponentHandler::new::<_D>()];
+		let mut app = setup(Handlers {
+			low_priority: low.clone(),
+			high_priority: high.clone(),
+		});
 		let context = Arc::new(Mutex::new(SaveContext::from(FileIO::with_file(
 			PathBuf::new(),
 		))));
@@ -222,8 +227,8 @@ mod test_update_context {
 
 		assert_eq!(
 			&SaveContext::from(FileIO::with_file(PathBuf::new()))
-				.with_handlers(handlers)
-				.with_priority_handlers(priority),
+				.with_low_priority_handlers(low)
+				.with_high_priority_handlers(high),
 			context.lock().expect("COULD NOT LOCK CONTEXT").deref(),
 		);
 		Ok(())
