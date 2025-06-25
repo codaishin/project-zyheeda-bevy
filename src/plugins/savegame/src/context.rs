@@ -18,6 +18,7 @@ pub(crate) type LoadBuffer = Vec<EntityLoadBuffer>;
 #[derive(Debug, PartialEq, Default)]
 pub struct SaveContext<TFileIO = FileIO, TComponentHandler = ComponentHandler> {
 	pub(crate) handlers: Vec<TComponentHandler>,
+	pub(crate) priority_handlers: Vec<TComponentHandler>,
 	pub(crate) save_buffer: SaveBuffer,
 	pub(crate) load_buffer: LoadBuffer,
 	pub(crate) io: TFileIO,
@@ -48,6 +49,14 @@ impl<TFileIO, TComponentHandler> SaveContext<TFileIO, TComponentHandler> {
 		self.handlers = handlers.into();
 		self
 	}
+
+	pub(crate) fn with_priority_handlers<T>(mut self, handlers: T) -> Self
+	where
+		T: Into<Vec<TComponentHandler>>,
+	{
+		self.priority_handlers = handlers.into();
+		self
+	}
 }
 
 impl<TFileIO, TComponentHandler> From<TFileIO> for SaveContext<TFileIO, TComponentHandler> {
@@ -55,6 +64,7 @@ impl<TFileIO, TComponentHandler> From<TFileIO> for SaveContext<TFileIO, TCompone
 		Self {
 			io,
 			handlers: vec![],
+			priority_handlers: vec![],
 			load_buffer: vec![],
 			save_buffer: HashMap::default(),
 		}

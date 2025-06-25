@@ -18,6 +18,7 @@ use std::{
 #[derive(Resource, Debug)]
 pub(crate) struct Register<TLoadAsset = AssetServer> {
 	registered_types: HashSet<TypeId>,
+	priority_handlers: Vec<ComponentHandler<TLoadAsset>>,
 	handlers: Vec<ComponentHandler<TLoadAsset>>,
 }
 
@@ -34,6 +35,7 @@ where
 			};
 
 			context.handlers = register.handlers.clone();
+			context.priority_handlers = register.priority_handlers.clone();
 			Ok(())
 		}
 	}
@@ -49,8 +51,13 @@ where
 		}
 
 		self.registered_types.insert(type_id);
-		self.handlers
-			.push(ComponentHandler::<TLoadAsset>::new::<TComponent>());
+
+		let handlers = match TComponent::PRIORITY {
+			true => &mut self.priority_handlers,
+			false => &mut self.handlers,
+		};
+
+		handlers.push(ComponentHandler::new::<TComponent>());
 	}
 }
 
@@ -61,6 +68,7 @@ where
 	fn default() -> Self {
 		Self {
 			registered_types: HashSet::default(),
+			priority_handlers: vec![],
 			handlers: vec![],
 		}
 	}
@@ -75,7 +83,7 @@ impl<TLoadAsset> PartialEq for Register<TLoadAsset> {
 #[cfg(test)]
 mod test_registration {
 	use super::*;
-	use common::{components::persistent_entity::PersistentEntity, impl_savable_self_non_priority};
+	use common::impl_savable_self_non_priority;
 	use serde::{Deserialize, Serialize};
 
 	#[derive(Component, Serialize, Deserialize, Clone)]
@@ -85,6 +93,22 @@ mod test_registration {
 	struct _B;
 
 	impl_savable_self_non_priority!(_A, _B);
+
+	#[derive(Component, Serialize, Deserialize, Clone)]
+	struct _PA;
+
+	impl SavableComponent for _PA {
+		type TDto = Self;
+		const PRIORITY: bool = true;
+	}
+
+	#[derive(Component, Serialize, Deserialize, Clone)]
+	struct _PB;
+
+	impl SavableComponent for _PB {
+		type TDto = Self;
+		const PRIORITY: bool = true;
+	}
 
 	#[test]
 	fn register_component() {
@@ -103,8 +127,30 @@ mod test_registration {
 		register.register_component::<_B>();
 
 		assert_eq!(
-			vec![ComponentHandler::new::<_A>(), ComponentHandler::new::<_B>()],
-			register.handlers,
+			(
+				vec![],
+				vec![ComponentHandler::new::<_A>(), ComponentHandler::new::<_B>()],
+			),
+			(register.priority_handlers, register.handlers,)
+		);
+	}
+
+	#[test]
+	fn register_priority_components() {
+		let mut register = Register::<AssetServer>::default();
+
+		register.register_component::<_PA>();
+		register.register_component::<_PB>();
+
+		assert_eq!(
+			(
+				vec![
+					ComponentHandler::new::<_PA>(),
+					ComponentHandler::new::<_PB>()
+				],
+				vec![],
+			),
+			(register.priority_handlers, register.handlers,)
 		);
 	}
 
@@ -114,8 +160,16 @@ mod test_registration {
 
 		register.register_component::<_A>();
 		register.register_component::<_A>();
+		register.register_component::<_PA>();
+		register.register_component::<_PA>();
 
-		assert_eq!(vec![ComponentHandler::new::<_A>()], register.handlers);
+		assert_eq!(
+			(
+				vec![ComponentHandler::new::<_PA>()],
+				vec![ComponentHandler::new::<_A>()],
+			),
+			(register.priority_handlers, register.handlers,)
+		);
 	}
 }
 
@@ -126,7 +180,7 @@ mod test_update_context {
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{impl_savable_self_non_priority, test_tools::utils::SingleThreadedApp};
 	use serde::{Deserialize, Serialize};
-	use std::path::PathBuf;
+	use std::{ops::Deref, path::PathBuf};
 
 	#[derive(Component, Serialize, Deserialize, Clone)]
 	struct _A;
@@ -134,22 +188,30 @@ mod test_update_context {
 	#[derive(Component, Serialize, Deserialize, Clone)]
 	struct _B;
 
-	fn setup(handlers: Vec<ComponentHandler>) -> App {
+	#[derive(Component, Serialize, Deserialize, Clone)]
+	struct _C;
+
+	#[derive(Component, Serialize, Deserialize, Clone)]
+	struct _D;
+
+	fn setup(handlers: Vec<ComponentHandler>, priority_handlers: Vec<ComponentHandler>) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.insert_resource(Register {
 			handlers,
+			priority_handlers,
 			..default()
 		});
 
 		app
 	}
 
-	impl_savable_self_non_priority!(_A, _B);
+	impl_savable_self_non_priority!(_A, _B, _C, _D);
 
 	#[test]
 	fn update_context() -> Result<(), RunSystemError> {
 		let handlers = vec![ComponentHandler::new::<_A>(), ComponentHandler::new::<_B>()];
-		let mut app = setup(handlers.clone());
+		let priority = vec![ComponentHandler::new::<_C>(), ComponentHandler::new::<_D>()];
+		let mut app = setup(handlers.clone(), priority.clone());
 		let context = Arc::new(Mutex::new(SaveContext::from(FileIO::with_file(
 			PathBuf::new(),
 		))));
@@ -159,8 +221,10 @@ mod test_update_context {
 			.run_system_once(Register::update_context(context.clone()))?;
 
 		assert_eq!(
-			handlers,
-			context.lock().expect("COULD NOT LOCK CONTEXT").handlers,
+			&SaveContext::from(FileIO::with_file(PathBuf::new()))
+				.with_handlers(handlers)
+				.with_priority_handlers(priority),
+			context.lock().expect("COULD NOT LOCK CONTEXT").deref(),
 		);
 		Ok(())
 	}
