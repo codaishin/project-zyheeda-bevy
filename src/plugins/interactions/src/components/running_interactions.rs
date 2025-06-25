@@ -1,9 +1,10 @@
 use bevy::prelude::{Component, default};
 use common::components::persistent_entity::PersistentEntity;
+use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
-#[derive(Component, Serialize, Deserialize)]
+#[derive(Component, SavableComponent, Serialize, Deserialize)]
 pub(crate) struct RunningInteractions<TActor, TTarget>
 where
 	TActor: Component,

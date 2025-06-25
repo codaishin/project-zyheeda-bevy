@@ -4,9 +4,10 @@ use crate::traits::{
 };
 use bevy::prelude::*;
 use common::components::persistent_entity::PersistentEntity;
+use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
-#[derive(Component, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 #[require(Transform)]
 pub struct OrbitPlayer {
 	pub center: OrbitCenter,

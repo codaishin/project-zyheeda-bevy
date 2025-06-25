@@ -1,10 +1,11 @@
 use super::destroy::Destroy;
 use bevy::prelude::*;
 use common::traits::try_insert_on::TryInsertOn;
+use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
-#[derive(Component, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub(crate) struct Lifetime(pub(crate) Duration);
 

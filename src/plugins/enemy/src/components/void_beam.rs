@@ -14,10 +14,11 @@ use common::{
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
+use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::{f32::consts::PI, time::Duration};
 
-#[derive(Component, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[require(PersistentEntity, Visibility, Transform)]
 pub(crate) struct VoidBeam {
 	attack: VoidBeamAttack,

@@ -12,10 +12,11 @@ use common::{
 		handles_life::{ChangeLife, HandlesLife},
 	},
 };
+use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
-#[derive(Component, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct DealDamageEffect(pub(crate) DealDamage);
 
 impl<TSaveGame, TLifeCycle> HandlesEffect<DealDamage>

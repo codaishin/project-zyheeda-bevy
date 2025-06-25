@@ -2340,6 +2340,7 @@ dependencies = [
  "bevy",
  "bevy_rapier3d",
  "common",
+ "macros",
  "serde",
 ]
 
@@ -3308,6 +3309,7 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "common",
+ "macros",
  "mockall",
  "serde",
 ]
@@ -3319,6 +3321,7 @@ dependencies = [
  "bevy",
  "bevy_rapier3d",
  "common",
+ "macros",
  "mockall",
  "serde",
  "uuid",

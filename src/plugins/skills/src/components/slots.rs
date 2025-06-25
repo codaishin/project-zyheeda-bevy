@@ -10,13 +10,14 @@ use common::{
 		accessors::get::GetRef,
 		get_asset::GetAsset,
 		handles_assets_for_children::{ChildAssetComponent, ChildAssetDefinition, ChildName},
-		handles_saving::SavableComponent,
 		iterate::Iterate,
 	},
 };
+use macros::SavableComponent;
 use std::{collections::HashMap, fmt::Debug};
 
-#[derive(Component, PartialEq, Debug, Clone)]
+#[derive(Component, SavableComponent, PartialEq, Debug, Clone)]
+#[savable_component(dto = SlotsDto)]
 pub struct Slots(pub HashMap<SlotKey, Option<Handle<Item>>>);
 
 impl<T> From<T> for Slots
@@ -177,10 +178,6 @@ impl ChildAssetDefinition<SubMeshEssenceSlots> for Slots {
 	type TChildKey = SlotKey;
 	type TChildFilter = With<Mesh3d>;
 	type TChildAsset = Item;
-}
-
-impl SavableComponent for Slots {
-	type TDto = SlotsDto;
 }
 
 #[cfg(test)]

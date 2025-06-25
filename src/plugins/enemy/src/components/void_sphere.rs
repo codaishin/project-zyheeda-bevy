@@ -30,10 +30,11 @@ use common::{
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
+use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::{f32::consts::PI, sync::Arc, time::Duration};
 
-#[derive(Component, Clone, Serialize, Deserialize)]
+#[derive(Component, SavableComponent, Clone, Serialize, Deserialize)]
 #[require(
 	Enemy = VoidSphere::with_attack_range(Units::new(5.)),
 	GroundOffset = Self::GROUND_OFFSET,

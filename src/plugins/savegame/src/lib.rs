@@ -138,12 +138,13 @@ impl<TDependencies> HandlesSaving for SavegamePlugin<TDependencies> {
 mod tests {
 	use super::*;
 	use common::test_tools::utils::SingleThreadedApp;
+	use macros::SavableComponent;
 	use serde::{Deserialize, Serialize};
 
-	#[derive(Component, Serialize, Deserialize, Clone)]
+	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
 	struct _A;
 
-	#[derive(Component, Serialize, Deserialize, Clone)]
+	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
 	struct _B;
 
 	fn setup() -> App {

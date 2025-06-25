@@ -3,9 +3,22 @@ use common::{
 	tools::action_key::movement::MovementKey,
 	traits::handles_player::{DirectionError, KeyDirection},
 };
+use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
-#[derive(Component, Debug, PartialEq, Eq, Hash, Default, Clone, Copy, Serialize, Deserialize)]
+#[derive(
+	Component,
+	SavableComponent,
+	Debug,
+	PartialEq,
+	Eq,
+	Hash,
+	Default,
+	Clone,
+	Copy,
+	Serialize,
+	Deserialize,
+)]
 pub struct PlayerCamera;
 
 impl KeyDirection<MovementKey> for PlayerCamera {

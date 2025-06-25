@@ -10,13 +10,14 @@ use common::{
 	tools::inventory_key::InventoryKey,
 	traits::{
 		accessors::get::{GetMut, GetRef},
-		handles_saving::SavableComponent,
 		iterate::Iterate,
 	},
 };
+use macros::SavableComponent;
 use std::iter::Enumerate;
 
-#[derive(Component, Debug, PartialEq, Default, Clone)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Default, Clone)]
+#[savable_component(dto = InventoryDto)]
 pub struct Inventory(pub(crate) Vec<Option<Handle<Item>>>);
 
 impl<T> From<T> for Inventory
@@ -80,10 +81,6 @@ impl<'a> Iterator for Iter<'a> {
 		let (i, item) = self.it.next()?;
 		Some((InventoryKey(i), item))
 	}
-}
-
-impl SavableComponent for Inventory {
-	type TDto = InventoryDto;
 }
 
 #[cfg(test)]

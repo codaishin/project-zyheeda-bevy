@@ -10,10 +10,11 @@ use common::{
 	effects::gravity::Gravity,
 	traits::handles_effect::HandlesEffect,
 };
+use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
-#[derive(Component, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct GravityEffect(pub(crate) Gravity);
 
 impl<TDependencies> HandlesEffect<Gravity> for InteractionsPlugin<TDependencies> {

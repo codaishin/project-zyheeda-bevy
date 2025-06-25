@@ -119,7 +119,7 @@ mod tests {
 		test_tools::utils::SingleThreadedApp,
 		traits::{handles_custom_assets::TryLoadFrom, load_asset::LoadAsset},
 	};
-	use macros::NestedMocks;
+	use macros::{NestedMocks, SavableComponent};
 	use mockall::automock;
 	use serde::{Deserialize, Serialize};
 	use serde_json::{from_str, to_string};
@@ -135,13 +135,10 @@ mod tests {
 		}
 	}
 
-	#[derive(Component, Serialize, Clone, PartialEq, Debug)]
+	#[derive(Component, SavableComponent, Clone, PartialEq, Debug)]
+	#[savable_component(dto = _ADto)]
 	struct _A {
 		value: i32,
-	}
-
-	impl SavableComponent for _A {
-		type TDto = _ADto;
 	}
 
 	#[derive(Serialize, Deserialize, Clone)]
@@ -170,12 +167,12 @@ mod tests {
 		}
 	}
 
-	#[derive(Component, Serialize, Deserialize, Clone, PartialEq, Debug)]
+	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone, PartialEq, Debug)]
 	struct _B {
 		v: i32,
 	}
 
-	#[derive(Component, Clone)]
+	#[derive(Component, SavableComponent, Clone)]
 	struct _Fail;
 
 	impl Serialize for _Fail {
@@ -323,7 +320,7 @@ mod tests {
 		use super::*;
 		use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 
-		#[derive(Component, Serialize, Deserialize, Clone, PartialEq, Debug)]
+		#[derive(Component, SavableComponent, Serialize, Deserialize, Clone, PartialEq, Debug)]
 		struct _C {
 			v: i32,
 		}

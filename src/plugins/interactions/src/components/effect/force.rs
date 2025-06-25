@@ -12,10 +12,11 @@ use common::{
 	effects::force::Force,
 	traits::handles_effect::HandlesEffect,
 };
+use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
-#[derive(Component, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct ForceEffect(pub(crate) Force);
 
 impl<TDependencies> HandlesEffect<Force> for InteractionsPlugin<TDependencies> {

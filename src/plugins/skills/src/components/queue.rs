@@ -16,8 +16,9 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	tools::action_key::slot::SlotKey,
-	traits::{handles_saving::SavableComponent, iterate::Iterate, state_duration::StateDuration},
+	traits::{iterate::Iterate, state_duration::StateDuration},
 };
+use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::{
 	collections::{VecDeque, vec_deque::Iter},
@@ -33,7 +34,8 @@ enum State {
 	},
 }
 
-#[derive(Component, PartialEq, Debug, Default, Clone)]
+#[derive(Component, SavableComponent, PartialEq, Debug, Default, Clone)]
+#[savable_component(dto = QueueDto)]
 pub struct Queue {
 	queue: VecDeque<QueuedSkill>,
 	duration: Option<Duration>,
@@ -107,10 +109,6 @@ impl IterAddedMut<QueuedSkill> for Queue {
 
 		self.queue.iter_mut().skip(unchanged_length)
 	}
-}
-
-impl SavableComponent for Queue {
-	type TDto = QueueDto;
 }
 
 fn unchanged_length(Queue { queue, state, .. }: &Queue) -> usize {

@@ -11,3 +11,4 @@ serde.workspace = true
 
 # internal
 common.workspace = true
+macros.workspace = true

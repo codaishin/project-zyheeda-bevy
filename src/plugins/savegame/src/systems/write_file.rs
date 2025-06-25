@@ -30,7 +30,8 @@ impl<TFileIO> SaveContext<TFileIO> {
 	{
 		let mut errors = vec![];
 		let entities = self
-			.save_buffer
+			.buffers
+			.save
 			.drain()
 			.filter_map(|(_, components)| match to_value(&components) {
 				Ok(value) => Some(value),
@@ -241,7 +242,8 @@ mod tests {
 			context
 				.lock()
 				.expect("COULD NOT LOCK CONTEXT")
-				.save_buffer
+				.buffers
+				.save
 				.is_empty()
 		);
 		Ok(())

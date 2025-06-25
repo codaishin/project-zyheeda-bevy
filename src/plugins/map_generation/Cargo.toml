@@ -13,10 +13,8 @@ test-case.workspace = true
 
 # internal
 common.workspace = true
+macros.workspace = true
 
 [dev-dependencies]
 # external
 mockall.workspace = true
-
-# internal
-macros.workspace = true

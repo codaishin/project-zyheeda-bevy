@@ -8,15 +8,16 @@ use common::{
 	traits::{
 		handles_destruction::HandlesDestruction,
 		handles_interactions::HandlesInteractions,
-		handles_saving::SavableComponent,
 		handles_skill_behaviors::{Contact, Integrity, Motion, Shape},
 		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
+use macros::SavableComponent;
 
-#[derive(Component, Debug, Clone)]
+#[derive(Component, SavableComponent, Debug, Clone)]
 #[require(Visibility, Transform)]
+#[savable_component(dto = SkillContactDto)]
 pub struct SkillContact {
 	pub(crate) created_from: CreatedFrom,
 	pub(crate) shape: Shape,
@@ -64,8 +65,4 @@ where
 		self.integrity
 			.prefab::<TInteractions, TLifeCycles>(entity, ())
 	}
-}
-
-impl SavableComponent for SkillContact {
-	type TDto = SkillContactDto;
 }

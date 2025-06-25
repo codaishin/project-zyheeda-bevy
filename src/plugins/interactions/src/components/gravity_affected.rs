@@ -1,9 +1,10 @@
 use bevy::prelude::Component;
 use common::{components::persistent_entity::PersistentEntity, tools::UnitsPerSecond};
+use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::{ops::RangeBounds, vec::Drain};
 
-#[derive(Component, Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
 pub struct GravityAffected {
 	#[serde(default, skip_serializing_if = "Vec::is_empty")]
 	pulls: Vec<GravityPull>,

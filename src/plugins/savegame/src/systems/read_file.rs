@@ -29,7 +29,7 @@ where
 				Ok(components) => components,
 			};
 
-			context.load_buffer = entities
+			context.buffers.load = entities
 				.into_iter()
 				.map(|components| {
 					components
@@ -117,7 +117,7 @@ mod tests {
 				"A".to_owned(),
 				serde_json::from_str(r#"{"value": 32}"#).unwrap(),
 			)])],
-			context.lock().expect("COULD NOT LOCK CONTEXT").load_buffer
+			context.lock().expect("COULD NOT LOCK CONTEXT").buffers.load
 		);
 		Ok(())
 	}
