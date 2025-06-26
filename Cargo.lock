@@ -194,6 +194,7 @@ dependencies = [
  "common",
  "macros",
  "mockall",
+ "serde",
  "test-case",
  "tracing",
  "uuid",

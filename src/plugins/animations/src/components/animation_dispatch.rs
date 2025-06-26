@@ -1,12 +1,18 @@
-use crate::traits::{
-	AnimationPlayers,
-	AnimationPlayersWithoutGraph,
-	GetActiveAnimations,
-	GetAllActiveAnimations,
+mod dto;
+
+use crate::{
+	components::animation_dispatch::dto::AnimationDispatchDto,
+	traits::{
+		AnimationPlayers,
+		AnimationPlayersWithoutGraph,
+		GetActiveAnimations,
+		GetAllActiveAnimations,
+	},
 };
 use bevy::prelude::*;
 use common::traits::{
 	animation::{Animation, AnimationPriority, StartAnimation, StopAnimation},
+	handles_saving::SavableComponent,
 	track::{IsTracking, Track, Untrack},
 };
 use std::{
@@ -18,7 +24,7 @@ use std::{
 	hash::Hash,
 };
 
-#[derive(Component, Debug, PartialEq)]
+#[derive(Component, Debug, PartialEq, Clone)]
 pub struct AnimationDispatch<TAnimation = Animation>
 where
 	TAnimation: Eq + Hash,
@@ -89,6 +95,10 @@ where
 			stack: default(),
 		}
 	}
+}
+
+impl SavableComponent for AnimationDispatch {
+	type TDto = AnimationDispatchDto;
 }
 
 impl Track<AnimationPlayer> for AnimationDispatch {

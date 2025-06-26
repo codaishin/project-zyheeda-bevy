@@ -1,5 +1,6 @@
 use super::{iteration::IterFinite, load_asset::Path};
 use bevy::{ecs::component::Mutable, prelude::*};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
@@ -42,7 +43,7 @@ pub enum AnimationMaskDefinition {
 	},
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
 pub enum AnimationAsset {
 	Path(Path),
 	Directional(Directional),
@@ -54,7 +55,7 @@ impl From<&'static str> for AnimationAsset {
 	}
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
 pub struct Directional {
 	pub forward: Path,
 	pub backward: Path,
@@ -89,13 +90,13 @@ pub trait RegisterAnimations: HasAnimationsDispatch {
 		TMovementDirection: Component + GetMovementDirection;
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
 pub enum PlayMode {
 	Replay,
 	Repeat,
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
 pub struct Animation {
 	pub asset: AnimationAsset,
 	pub play_mode: PlayMode,
