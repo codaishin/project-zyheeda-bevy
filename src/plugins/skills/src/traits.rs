@@ -26,16 +26,12 @@ pub(crate) trait Enqueue<TItem> {
 	fn enqueue(&mut self, item: TItem);
 }
 
-pub(crate) trait Matches<T> {
-	fn matches(&self, value: &T) -> bool;
-}
-
 pub(crate) trait Flush {
 	fn flush(&mut self);
 }
 
-pub(crate) trait IterMut<TItem> {
-	fn iter_mut<'a>(&'a mut self) -> impl DoubleEndedIterator<Item = &'a mut TItem>
+pub(crate) trait IterWaitingMut<TItem> {
+	fn iter_waiting_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut TItem>
 	where
 		TItem: 'a;
 }
@@ -103,7 +99,6 @@ where
 {
 	fn just_pressed_slots(&self, map: &TMap) -> Vec<SlotKey>;
 	fn pressed_slots(&self, map: &TMap) -> Vec<SlotKey>;
-	fn just_released_slots(&self, map: &TMap) -> Vec<SlotKey>;
 }
 
 pub trait Schedule<TBehavior> {

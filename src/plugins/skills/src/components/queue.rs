@@ -10,7 +10,7 @@ use crate::{
 		GetAnimationStrategy,
 		GetSkillBehavior,
 		IterAddedMut,
-		IterMut,
+		IterWaitingMut,
 	},
 };
 use bevy::prelude::*;
@@ -87,12 +87,14 @@ impl Flush for Queue {
 	}
 }
 
-impl IterMut<QueuedSkill> for Queue {
-	fn iter_mut<'a>(&'a mut self) -> impl DoubleEndedIterator<Item = &'a mut QueuedSkill>
+impl IterWaitingMut<QueuedSkill> for Queue {
+	fn iter_waiting_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut QueuedSkill>
 	where
 		QueuedSkill: 'a,
 	{
-		self.queue.iter_mut()
+		self.queue
+			.iter_mut()
+			.filter(|skill| skill.mode == Activation::Waiting)
 	}
 }
 
@@ -303,47 +305,6 @@ mod test_queue_collection {
 	}
 
 	#[test]
-	fn iter_mut_with_keys() {
-		let mut queue = Queue::new([]);
-		queue.enqueue((
-			Skill {
-				token: Token::from("skill a"),
-				..default()
-			},
-			SlotKey::BottomHand(Side::Left),
-		));
-		queue.enqueue((
-			Skill {
-				token: Token::from("skill b"),
-				..default()
-			},
-			SlotKey::BottomHand(Side::Right),
-		));
-
-		assert_eq!(
-			vec![
-				&mut QueuedSkill {
-					slot_key: SlotKey::BottomHand(Side::Left),
-					skill: Skill {
-						token: Token::from("skill a"),
-						..default()
-					},
-					..default()
-				},
-				&mut QueuedSkill {
-					slot_key: SlotKey::BottomHand(Side::Right),
-					skill: Skill {
-						token: Token::from("skill b"),
-						..default()
-					},
-					..default()
-				},
-			],
-			queue.iter_mut().collect::<Vec<_>>()
-		)
-	}
-
-	#[test]
 	fn iter_recent_mut() {
 		let mut queue = Queue::new([]);
 		queue.enqueue((
@@ -522,6 +483,42 @@ mod test_queue_collection {
 				queue.iter_added_mut().collect::<Vec<_>>()
 			)
 		)
+	}
+
+	#[test]
+	fn iter_waiting() {
+		let skills = [
+			QueuedSkill {
+				slot_key: SlotKey::BottomHand(Side::Right),
+				skill: Skill {
+					token: Token::from("active"),
+					..default()
+				},
+				mode: Activation::ActiveAfter(Duration::from_millis(100)),
+			},
+			QueuedSkill {
+				slot_key: SlotKey::BottomHand(Side::Right),
+				skill: Skill {
+					token: Token::from("waiting"),
+					..default()
+				},
+				mode: Activation::Waiting,
+			},
+			QueuedSkill {
+				slot_key: SlotKey::BottomHand(Side::Right),
+				skill: Skill {
+					token: Token::from("primed"),
+					..default()
+				},
+				mode: Activation::Primed,
+			},
+		];
+		let mut queue = Queue::new(skills.clone());
+
+		assert_eq!(
+			vec![&skills[1]],
+			queue.iter_waiting_mut().collect::<Vec<_>>()
+		);
 	}
 }
 

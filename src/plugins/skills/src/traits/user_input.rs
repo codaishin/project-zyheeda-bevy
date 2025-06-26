@@ -20,12 +20,6 @@ where
 			.filter_map(|k| map.try_get_action(*k))
 			.collect()
 	}
-
-	fn just_released_slots(&self, map: &TMap) -> Vec<SlotKey> {
-		self.get_just_released()
-			.filter_map(|k| map.try_get_action(*k))
-			.collect()
-	}
 }
 
 #[cfg(test)]
@@ -80,27 +74,6 @@ mod tests {
 				SlotKey::BottomHand(Side::Left),
 			]),
 			HashSet::from_iter(input.pressed_slots(&_Map)),
-		)
-	}
-
-	#[test]
-	fn get_just_released() {
-		let mut input = ButtonInput::<UserInput>::default();
-		input.press(UserInput::from(KeyCode::KeyA));
-		input.press(UserInput::from(KeyCode::KeyB));
-		input.press(UserInput::from(KeyCode::KeyC));
-		input.press(UserInput::from(KeyCode::KeyD));
-		input.release(UserInput::from(KeyCode::KeyA));
-		input.release(UserInput::from(KeyCode::KeyB));
-		input.release(UserInput::from(KeyCode::KeyC));
-		input.clear_just_pressed(UserInput::from(KeyCode::KeyA));
-		input.clear_just_pressed(UserInput::from(KeyCode::KeyB));
-		input.clear_just_pressed(UserInput::from(KeyCode::KeyC));
-		input.clear_just_pressed(UserInput::from(KeyCode::KeyD));
-
-		assert_eq!(
-			HashSet::from([SlotKey::BottomHand(Side::Right),]),
-			HashSet::from_iter(input.just_released_slots(&_Map)),
 		)
 	}
 }
