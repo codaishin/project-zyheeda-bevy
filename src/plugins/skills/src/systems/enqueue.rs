@@ -2,21 +2,25 @@ use super::get_inputs::Input;
 use crate::{
 	item::Item,
 	skills::Skill,
-	traits::{Enqueue, IterMut, Matches, Prime},
+	traits::{Enqueue, IterWaitingMut, Prime},
 };
 use bevy::{ecs::component::Mutable, prelude::*};
-use common::{tools::action_key::slot::SlotKey, traits::accessors::get::GetRef};
+use common::{
+	tools::action_key::slot::SlotKey,
+	traits::accessors::get::{GetField, GetRef, Getter},
+};
 
-pub(crate) fn enqueue<
-	TSlots: GetRef<SlotKey, Handle<Item>> + Component,
-	TQueue: Enqueue<(Skill, SlotKey)> + IterMut<TQueuedSkill> + Component<Mutability = Mutable>,
-	TQueuedSkill: Prime + Matches<SlotKey>,
->(
+pub(crate) fn enqueue<TSlots, TQueue, TQueuedSkill>(
 	input: In<Input>,
 	mut agents: Query<(&TSlots, &mut TQueue)>,
 	items: Res<Assets<Item>>,
 	skills: Res<Assets<Skill>>,
-) {
+) where
+	TSlots: GetRef<SlotKey, Handle<Item>> + Component,
+	TQueue:
+		Enqueue<(Skill, SlotKey)> + IterWaitingMut<TQueuedSkill> + Component<Mutability = Mutable>,
+	TQueuedSkill: Prime + Getter<SlotKey>,
+{
 	for (slots, mut queue) in &mut agents {
 		let queue = queue.as_mut();
 		enqueue_new_skills(&input, queue, slots, &items, &skills);
@@ -24,25 +28,31 @@ pub(crate) fn enqueue<
 	}
 }
 
-fn enqueue_new_skills<TSlots: GetRef<SlotKey, Handle<Item>>, TQueue: Enqueue<(Skill, SlotKey)>>(
+fn enqueue_new_skills<TSlots, TQueue>(
 	input: &In<Input>,
 	queue: &mut TQueue,
 	slots: &TSlots,
 	items: &Assets<Item>,
 	skills: &Assets<Skill>,
-) {
+) where
+	TSlots: GetRef<SlotKey, Handle<Item>>,
+	TQueue: Enqueue<(Skill, SlotKey)>,
+{
 	for key in input.just_pressed.iter() {
 		enqueue_new_skill(key, queue, slots, items, skills);
 	}
 }
 
-fn enqueue_new_skill<TSlots: GetRef<SlotKey, Handle<Item>>, TQueue: Enqueue<(Skill, SlotKey)>>(
+fn enqueue_new_skill<TSlots, TQueue>(
 	key: &SlotKey,
 	queue: &mut TQueue,
 	slots: &TSlots,
 	items: &Assets<Item>,
 	skills: &Assets<Skill>,
-) {
+) where
+	TSlots: GetRef<SlotKey, Handle<Item>>,
+	TQueue: Enqueue<(Skill, SlotKey)>,
+{
 	let skill = slots
 		.get(key)
 		.and_then(|item_handle| items.get(item_handle))
@@ -56,29 +66,17 @@ fn enqueue_new_skill<TSlots: GetRef<SlotKey, Handle<Item>>, TQueue: Enqueue<(Ski
 	queue.enqueue((skill.clone(), *key));
 }
 
-fn prime_skills<TQueue: IterMut<TQueuedSkill>, TQueuedSkill: Prime + Matches<SlotKey>>(
-	input: &In<Input>,
-	queue: &mut TQueue,
-) {
-	for key in input.just_released.iter() {
-		prime_skill(key, queue);
-	}
-}
-
-fn prime_skill<TQueue: IterMut<TQueuedSkill>, TQueuedSkill: Prime + Matches<SlotKey>>(
-	key: &SlotKey,
-	queue: &mut TQueue,
-) {
-	for skill in get_queued_skill(key, queue) {
+fn prime_skills<TQueue, TQueuedSkill>(input: &In<Input>, queue: &mut TQueue)
+where
+	TQueue: IterWaitingMut<TQueuedSkill>,
+	TQueuedSkill: Prime + Getter<SlotKey>,
+{
+	for skill in queue.iter_waiting_mut() {
+		if input.pressed.contains(&SlotKey::get_field(skill)) {
+			continue;
+		}
 		skill.prime();
 	}
-}
-
-fn get_queued_skill<'a, TQueue: IterMut<TQueuedSkill>, TQueuedSkill: 'a + Matches<SlotKey>>(
-	key: &'a SlotKey,
-	queue: &'a mut TQueue,
-) -> impl Iterator<Item = &'a mut TQueuedSkill> {
-	queue.iter_mut().filter(move |skill| skill.matches(key))
 }
 
 #[cfg(test)]
@@ -102,8 +100,8 @@ mod tests {
 		impl Prime for _SkillQueued {
 			fn prime(&mut self) {}
 		}
-		impl Matches<SlotKey> for _SkillQueued {
-			fn matches(&self, slot_key: &SlotKey) -> bool;
+		impl Getter<SlotKey> for _SkillQueued {
+			fn get(&self) -> SlotKey;
 		}
 	}
 
@@ -127,8 +125,8 @@ mod tests {
 		fn enqueue(&mut self, _: (Skill, SlotKey)) {}
 	}
 
-	impl IterMut<Mock_SkillQueued> for _Enqueue {
-		fn iter_mut<'a>(&'a mut self) -> impl DoubleEndedIterator<Item = &'a mut Mock_SkillQueued>
+	impl IterWaitingMut<Mock_SkillQueued> for _Enqueue {
+		fn iter_waiting_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut Mock_SkillQueued>
 		where
 			Mock_SkillQueued: 'a,
 		{
@@ -143,8 +141,9 @@ mod tests {
 		skills: Vec<(AssetId<Skill>, Skill)>,
 	) -> App
 	where
-		TEnqueue:
-			Enqueue<(Skill, SlotKey)> + IterMut<Mock_SkillQueued> + Component<Mutability = Mutable>,
+		TEnqueue: Enqueue<(Skill, SlotKey)>
+			+ IterWaitingMut<Mock_SkillQueued>
+			+ Component<Mutability = Mutable>,
 	{
 		let mut app = App::new().single_threaded(Update);
 		let mut item_assets = Assets::<Item>::default();
@@ -188,10 +187,8 @@ mod tests {
 
 		static mut EMPTY: [Mock_SkillQueued; 0] = [];
 
-		impl IterMut<Mock_SkillQueued> for _Enqueue {
-			fn iter_mut<'a>(
-				&'a mut self,
-			) -> impl DoubleEndedIterator<Item = &'a mut Mock_SkillQueued>
+		impl IterWaitingMut<Mock_SkillQueued> for _Enqueue {
+			fn iter_waiting_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut Mock_SkillQueued>
 			where
 				Mock_SkillQueued: 'a,
 			{
@@ -244,47 +241,20 @@ mod tests {
 	}
 
 	#[test]
-	fn prime_skill() {
+	fn prime_skill_if_its_slot_is_not_pressed() {
+		let right = SlotKey::BottomHand(Side::Right);
+		let left = SlotKey::BottomHand(Side::Left);
 		let mut app = setup::<_Enqueue>(vec![], vec![]);
 		app.world_mut().spawn((
 			_Skills::default(),
 			_Enqueue {
 				queued: vec![Mock_SkillQueued::new_mock(|mock| {
-					mock.expect_prime().times(1).return_const(());
-					mock.expect_matches().return_const(true);
+					mock.expect_get().return_const(left);
+					mock.expect_prime().return_const(());
 				})],
 			},
 		));
-		app.world_mut().resource_mut::<_Input>().0.just_released =
-			vec![SlotKey::BottomHand(Side::Right)];
-
-		app.update();
-	}
-
-	#[test]
-	fn prime_skill_matching_with_key() {
-		let mut app = setup::<_Enqueue>(vec![], vec![]);
-		app.world_mut().spawn((
-			_Skills::default(),
-			_Enqueue {
-				queued: vec![
-					Mock_SkillQueued::new_mock(|mock| {
-						mock.expect_matches()
-							.with(eq(SlotKey::BottomHand(Side::Right)))
-							.return_const(true);
-						mock.expect_prime().times(1).return_const(());
-					}),
-					Mock_SkillQueued::new_mock(|mock| {
-						mock.expect_matches()
-							.with(eq(SlotKey::BottomHand(Side::Right)))
-							.return_const(false);
-						mock.expect_prime().never().return_const(());
-					}),
-				],
-			},
-		));
-		app.world_mut().resource_mut::<_Input>().0.just_released =
-			vec![SlotKey::BottomHand(Side::Right)];
+		app.world_mut().resource_mut::<_Input>().0.pressed = vec![right];
 
 		app.update();
 	}
@@ -298,17 +268,17 @@ mod tests {
 				queued: vec![
 					Mock_SkillQueued::new_mock(|mock| {
 						mock.expect_prime().times(1).return_const(());
-						mock.expect_matches().return_const(true);
+						mock.expect_get()
+							.return_const(SlotKey::BottomHand(Side::Right));
 					}),
 					Mock_SkillQueued::new_mock(|mock| {
 						mock.expect_prime().times(1).return_const(());
-						mock.expect_matches().return_const(true);
+						mock.expect_get()
+							.return_const(SlotKey::BottomHand(Side::Left));
 					}),
 				],
 			},
 		));
-		app.world_mut().resource_mut::<_Input>().0.just_released =
-			vec![SlotKey::BottomHand(Side::Right)];
 
 		app.update();
 	}

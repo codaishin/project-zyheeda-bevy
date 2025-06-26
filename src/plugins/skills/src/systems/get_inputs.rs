@@ -9,7 +9,6 @@ use common::{
 pub(crate) struct Input {
 	pub just_pressed: Vec<SlotKey>,
 	pub pressed: Vec<SlotKey>,
-	pub just_released: Vec<SlotKey>,
 }
 
 pub(crate) fn get_inputs<
@@ -22,7 +21,6 @@ pub(crate) fn get_inputs<
 	Input {
 		just_pressed: input.just_pressed_slots(&key_map),
 		pressed: input.pressed_slots(&key_map),
-		just_released: input.just_released_slots(&key_map),
 	}
 }
 
@@ -62,9 +60,6 @@ mod tests {
 		fn pressed_slots(&self, map: &_Map) -> Vec<SlotKey> {
 			self.mock.pressed_slots(map)
 		}
-		fn just_released_slots(&self, map: &_Map) -> Vec<SlotKey> {
-			self.mock.just_released_slots(map)
-		}
 	}
 
 	fn setup(input: _Input, map: _Map) -> App {
@@ -90,9 +85,6 @@ mod tests {
 					.return_const(vec![SlotKey::BottomHand(Side::Right)]);
 				mock.expect_pressed_slots()
 					.times(1)
-					.return_const(vec![SlotKey::BottomHand(Side::Right)]);
-				mock.expect_just_released_slots()
-					.times(1)
 					.return_const(vec![SlotKey::BottomHand(Side::Left)]);
 			}),
 			_Map,
@@ -105,8 +97,7 @@ mod tests {
 		assert_eq!(
 			&_Result(Input {
 				just_pressed: vec![SlotKey::BottomHand(Side::Right)],
-				pressed: vec![SlotKey::BottomHand(Side::Right)],
-				just_released: vec![SlotKey::BottomHand(Side::Left)],
+				pressed: vec![SlotKey::BottomHand(Side::Left)],
 			}),
 			result
 		);

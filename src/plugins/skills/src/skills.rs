@@ -9,7 +9,7 @@ use crate::{
 		spawn_on::SpawnOn,
 	},
 	components::SkillTarget,
-	traits::{Matches, Prime, spawn_skill_behavior::SpawnSkillBehavior},
+	traits::{Prime, spawn_skill_behavior::SpawnSkillBehavior},
 };
 use bevy::prelude::*;
 use common::{
@@ -150,23 +150,13 @@ impl InspectAble<SkillIcon> for QueuedSkill {
 
 impl Prime for QueuedSkill {
 	fn prime(&mut self) {
-		if self.mode != Activation::Waiting {
-			return;
-		}
 		self.mode = Activation::Primed;
-	}
-}
-
-impl Matches<SlotKey> for QueuedSkill {
-	fn matches(&self, slot_key: &SlotKey) -> bool {
-		&self.slot_key == slot_key
 	}
 }
 
 #[cfg(test)]
 mod test_queued {
 	use super::*;
-	use bevy::utils::default;
 
 	#[test]
 	fn prime_skill() {
@@ -178,21 +168,6 @@ mod test_queued {
 		queued.prime();
 
 		assert_eq!(Activation::Primed, queued.mode);
-	}
-
-	#[test]
-	fn do_not_prime_active() {
-		let mut queued = QueuedSkill {
-			skill: Skill::default(),
-			mode: Activation::ActiveAfter(Duration::from_millis(123)),
-			..default()
-		};
-		queued.prime();
-
-		assert_eq!(
-			Activation::ActiveAfter(Duration::from_millis(123)),
-			queued.mode
-		);
 	}
 }
 

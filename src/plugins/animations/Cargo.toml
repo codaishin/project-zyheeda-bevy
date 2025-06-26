@@ -9,6 +9,7 @@ bevy.workspace = true
 bevy_rapier3d.workspace = true
 tracing.workspace = true
 uuid.workspace = true
+serde.workspace = true
 
 # itnernal
 common.workspace = true

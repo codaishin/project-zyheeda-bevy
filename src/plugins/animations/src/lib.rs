@@ -24,19 +24,31 @@ use common::{
 			HasAnimationsDispatch,
 			RegisterAnimations,
 		},
+		handles_saving::HandlesSaving,
 		register_required_components_mapped::RegisterRequiredComponentsMapped,
 		system_set_definition::SystemSetDefinition,
+		thread_safe::ThreadSafe,
 	},
 };
 use components::animation_dispatch::AnimationDispatch;
+use std::marker::PhantomData;
 use systems::{
 	init_player_components::InitPlayerComponents,
 	play_animation_clip::PlayAnimationClip,
 };
 
-pub struct AnimationsPlugin;
+pub struct AnimationsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl RegisterAnimations for AnimationsPlugin {
+impl<TSavegame> AnimationsPlugin<TSavegame>
+where
+	TSavegame: ThreadSafe + HandlesSaving,
+{
+	pub fn from_plugin(_: &TSavegame) -> Self {
+		Self(PhantomData)
+	}
+}
+
+impl<TDependencies> RegisterAnimations for AnimationsPlugin<TDependencies> {
 	fn register_animations<TAgent>(app: &mut App)
 	where
 		TAgent: Component + GetAnimationDefinitions + ConfigureNewAnimationDispatch,
@@ -75,12 +87,17 @@ impl RegisterAnimations for AnimationsPlugin {
 	}
 }
 
-impl HasAnimationsDispatch for AnimationsPlugin {
+impl<TDependencies> HasAnimationsDispatch for AnimationsPlugin<TDependencies> {
 	type TAnimationDispatch = AnimationDispatch;
 }
 
-impl Plugin for AnimationsPlugin {
+impl<TSavegame> Plugin for AnimationsPlugin<TSavegame>
+where
+	TSavegame: ThreadSafe + HandlesSaving,
+{
 	fn build(&self, app: &mut App) {
+		TSavegame::register_savable_component::<AnimationDispatch>(app);
+
 		app.add_systems(
 			Update,
 			(
@@ -97,7 +114,7 @@ impl Plugin for AnimationsPlugin {
 #[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct AnimationSystems;
 
-impl SystemSetDefinition for AnimationsPlugin {
+impl<TDependencies> SystemSetDefinition for AnimationsPlugin<TDependencies> {
 	type TSystemSet = AnimationSystems;
 
 	const SYSTEMS: Self::TSystemSet = AnimationSystems;

@@ -1,6 +1,11 @@
 use bevy::prelude::*;
 use common::{
-	components::{collider_relationship::ColliderOfInteractionTarget, immobilized::Immobilized},
+	components::{
+		collider_relationship::ColliderOfInteractionTarget,
+		immobilized::Immobilized,
+		persistent_entity::PersistentEntity,
+	},
+	resources::persistent_entities::PersistentEntities,
 	tools::collider_info::ColliderInfo,
 	traits::{
 		accessors::get::GetterRefOptional,
@@ -12,6 +17,7 @@ use common::{
 pub(crate) fn execute_face<TMouseHover, TCursor>(
 	faces: In<Vec<(Entity, Face)>>,
 	mut transforms: Query<(Entity, &mut Transform, Option<&Immobilized>)>,
+	persistent_entities: ResMut<PersistentEntities>,
 	colliders: Query<&ColliderOfInteractionTarget>,
 	cursor: Res<TCursor>,
 	hover: Res<TMouseHover>,
@@ -22,8 +28,10 @@ pub(crate) fn execute_face<TMouseHover, TCursor>(
 	let Some(target) = get_cursor_target(&transforms, &cursor, &hover) else {
 		return;
 	};
+	let face_targets =
+		get_face_targets(&transforms, faces.0, colliders, target, persistent_entities);
 
-	for (id, target) in get_face_targets(&transforms, faces.0, colliders, target) {
+	for (id, target) in face_targets {
 		apply_facing(&mut transforms, id, target);
 	}
 }
@@ -47,15 +55,19 @@ fn get_face_targets(
 	faces: Vec<(Entity, Face)>,
 	colliders: Query<&ColliderOfInteractionTarget>,
 	(target_entity, target): (Option<Entity>, Vec3),
+	mut persistent_entities: ResMut<PersistentEntities>,
 ) -> Vec<(Entity, Vec3)> {
 	faces
 		.iter()
 		.filter(|(id, _)| Some(*id) != target_entity)
 		.filter_map(|(id, face)| {
 			let target = match *face {
-				Face::Cursor => Some(target),
-				Face::Entity(entity) => get_translation(get_target(entity, &colliders), transforms),
 				Face::Translation(translation) => Some(translation),
+				Face::Cursor => Some(target),
+				Face::Entity(entity) => {
+					let target = get_target(entity, &colliders, &mut persistent_entities)?;
+					get_translation(target, transforms)
+				}
 			};
 			Some((*id, target?))
 		})
@@ -87,11 +99,19 @@ fn get_translation(
 	transforms.get(entity).ok().map(|(_, t, _)| t.translation)
 }
 
-fn get_target(entity: Entity, roots: &Query<&ColliderOfInteractionTarget>) -> Entity {
-	roots
-		.get(entity)
-		.map(ColliderOfInteractionTarget::target)
-		.unwrap_or(entity)
+fn get_target(
+	entity: PersistentEntity,
+	roots: &Query<&ColliderOfInteractionTarget>,
+	persistent_entities: &mut PersistentEntities,
+) -> Option<Entity> {
+	let entity = persistent_entities.get_entity(&entity)?;
+
+	Some(
+		roots
+			.get(entity)
+			.map(ColliderOfInteractionTarget::target)
+			.unwrap_or(entity),
+	)
 }
 
 #[cfg(test)]
@@ -102,7 +122,14 @@ mod tests {
 		ecs::{component::Component, system::IntoSystem},
 		math::Vec3,
 	};
-	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
+	use common::{
+		components::persistent_entity::PersistentEntity,
+		test_tools::utils::SingleThreadedApp,
+		traits::{
+			nested_mock::NestedMocks,
+			register_persistent_entities::RegisterPersistentEntities,
+		},
+	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 
@@ -136,6 +163,8 @@ mod tests {
 
 	fn setup(cursor: _Cursor) -> App {
 		let mut app = App::new().single_threaded(Update);
+
+		app.register_persistent_entities();
 		app.add_systems(
 			Update,
 			read_faces.pipe(execute_face::<_MouseHover, _Cursor>),
@@ -330,10 +359,9 @@ mod tests {
 			.world_mut()
 			.spawn(Transform::from_xyz(10., 11., 12.))
 			.id();
-		let collider = app
-			.world_mut()
-			.spawn(ColliderOfInteractionTarget::from_raw(root))
-			.id();
+		let collider = PersistentEntity::default();
+		app.world_mut()
+			.spawn((ColliderOfInteractionTarget::from_raw(root), collider));
 		let agent = app
 			.world_mut()
 			.spawn((
@@ -358,10 +386,9 @@ mod tests {
 			mock.expect_intersect_at()
 				.return_const(Vec3::new(1., 2., 3.));
 		}));
-		let collider = app
-			.world_mut()
-			.spawn(Transform::from_xyz(10., 11., 12.))
-			.id();
+		let collider = PersistentEntity::default();
+		app.world_mut()
+			.spawn((Transform::from_xyz(10., 11., 12.), collider));
 		let agent = app
 			.world_mut()
 			.spawn((
