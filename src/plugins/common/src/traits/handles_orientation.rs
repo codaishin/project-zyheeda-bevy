@@ -1,4 +1,6 @@
+use crate::components::persistent_entity::PersistentEntity;
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
 
 pub trait HandlesOrientation {
 	type TFaceTemporarily: Component;
@@ -6,10 +8,10 @@ pub trait HandlesOrientation {
 	fn temporarily(face: Face) -> Self::TFaceTemporarily;
 }
 
-#[derive(Default, Debug, PartialEq, Clone, Copy)]
+#[derive(Default, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum Face {
 	#[default]
 	Cursor,
-	Entity(Entity),
+	Entity(PersistentEntity),
 	Translation(Vec3),
 }

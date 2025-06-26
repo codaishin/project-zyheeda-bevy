@@ -13,6 +13,8 @@ use common::{
 	tools::UnitsPerSecond,
 	traits::{animation::Animation, handles_orientation::Face},
 };
+use macros::SavableComponent;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) struct Always;
@@ -20,7 +22,7 @@ pub(crate) struct Always;
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) struct Once;
 
-#[derive(Component, Debug, PartialEq)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct OverrideFace(pub Face);
 
 #[derive(Component, Debug, PartialEq)]
