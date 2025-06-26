@@ -31,7 +31,7 @@ pub(crate) trait MovementPath: Component + Getter<ColliderRadius> + Sized {
 		>,
 		computers: Query<&TComputer>,
 	) where
-		TMoveMethod: ThreadSafe,
+		TMoveMethod: ThreadSafe + Default,
 		TComputer: Component + ComputePath,
 	{
 		if movements.is_empty() {
@@ -59,6 +59,7 @@ fn new_movement<TAgent, TMoveMethod, TComputer>(
 where
 	TAgent: Getter<ColliderRadius>,
 	TComputer: ComputePath,
+	TMoveMethod: ThreadSafe,
 {
 	let mut new_movement = movement.new_movement();
 
@@ -83,6 +84,7 @@ fn compute_path<TAgent, TMoveMethod, TComputer>(
 where
 	TAgent: Getter<ColliderRadius>,
 	TComputer: ComputePath,
+	TMoveMethod: ThreadSafe,
 {
 	let start = transform.translation();
 	let end = movement.target;
@@ -110,7 +112,7 @@ mod test_new_path {
 	use mockall::{automock, predicate::eq};
 	use std::{collections::VecDeque, marker::PhantomData};
 
-	#[derive(Debug, PartialEq)]
+	#[derive(Debug, PartialEq, Default)]
 	struct _MoveMethod;
 
 	#[derive(Component, NestedMocks)]
