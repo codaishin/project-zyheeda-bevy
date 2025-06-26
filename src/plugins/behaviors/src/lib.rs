@@ -171,6 +171,7 @@ where
 		TSaveGame::register_savable_component::<SkillContact>(app);
 		TSaveGame::register_savable_component::<SkillProjection>(app);
 		TSaveGame::register_savable_component::<OnCoolDown>(app);
+		TSaveGame::register_savable_component::<Movement<PathOrWasd<VelocityBased>>>(app);
 
 		let point_input = PointerInput::parse::<TPlayers::TCamRay, TSettings::TKeyMap<MovementKey>>;
 		let wasd_input = WasdInput::<VelocityBased>::parse::<

@@ -1,25 +1,37 @@
 pub(crate) mod path_or_wasd;
 pub(crate) mod velocity_based;
 
+mod dto;
+
 use super::SetFace;
+use crate::components::movement::dto::MovementDto;
 use bevy::{ecs::query::QueryFilter, prelude::*};
 use common::{
 	test_tools::utils::ApproxEqual,
 	traits::{
 		handles_orientation::Face,
+		thread_safe::ThreadSafe,
 		try_insert_on::TryInsertOn,
 		try_remove_from::TryRemoveFrom,
 	},
 };
+use macros::SavableComponent;
 
-#[derive(Component, Clone, PartialEq, Debug)]
+#[derive(Component, SavableComponent, PartialEq, Debug)]
 #[require(GlobalTransform)]
-pub(crate) struct Movement<TMovement> {
+#[savable_component(dto = MovementDto<TMovement>)]
+pub(crate) struct Movement<TMovement>
+where
+	TMovement: ThreadSafe + Default,
+{
 	pub(crate) target: Vec3,
 	method_cstr: fn() -> TMovement,
 }
 
-impl<TMovement> Movement<TMovement> {
+impl<TMovement> Movement<TMovement>
+where
+	TMovement: ThreadSafe + Default,
+{
 	#[cfg(test)]
 	pub(crate) fn new(target: Vec3, method_cstr: fn() -> TMovement) -> Self {
 		Self {
@@ -30,7 +42,7 @@ impl<TMovement> Movement<TMovement> {
 
 	pub(crate) fn to(target: Vec3) -> Self
 	where
-		TMovement: Default,
+		TMovement: ThreadSafe + Default,
 	{
 		Self {
 			target,
@@ -79,7 +91,7 @@ impl<TMovement> Movement<TMovement> {
 
 impl<TMovement> Default for Movement<TMovement>
 where
-	TMovement: Default,
+	TMovement: ThreadSafe + Default,
 {
 	fn default() -> Self {
 		Self {
@@ -89,7 +101,22 @@ where
 	}
 }
 
-impl<TMovement> ApproxEqual<f32> for Movement<TMovement> {
+impl<TMovement> Clone for Movement<TMovement>
+where
+	TMovement: ThreadSafe + Default,
+{
+	fn clone(&self) -> Self {
+		Self {
+			target: self.target,
+			method_cstr: self.method_cstr,
+		}
+	}
+}
+
+impl<TMovement> ApproxEqual<f32> for Movement<TMovement>
+where
+	TMovement: ThreadSafe + Default,
+{
 	fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
 		self.target.approx_equal(&other.target, tolerance)
 	}

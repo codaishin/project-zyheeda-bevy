@@ -33,7 +33,10 @@ impl<TMoveMethod> PathOrWasd<TMoveMethod> {
 	}
 }
 
-impl<TMoveMethod> Default for PathOrWasd<TMoveMethod> {
+impl<TMoveMethod> Default for PathOrWasd<TMoveMethod>
+where
+	TMoveMethod: ThreadSafe,
+{
 	fn default() -> Self {
 		Self {
 			mode: Mode::Path(VecDeque::default()),
@@ -42,7 +45,10 @@ impl<TMoveMethod> Default for PathOrWasd<TMoveMethod> {
 	}
 }
 
-impl<TMoveMethod> From<PointerInput> for Movement<PathOrWasd<TMoveMethod>> {
+impl<TMoveMethod> From<PointerInput> for Movement<PathOrWasd<TMoveMethod>>
+where
+	TMoveMethod: ThreadSafe,
+{
 	fn from(PointerInput(target): PointerInput) -> Self {
 		Self {
 			target,
@@ -51,7 +57,10 @@ impl<TMoveMethod> From<PointerInput> for Movement<PathOrWasd<TMoveMethod>> {
 	}
 }
 
-impl<TMoveMethod> From<WasdInput<TMoveMethod>> for Movement<PathOrWasd<TMoveMethod>> {
+impl<TMoveMethod> From<WasdInput<TMoveMethod>> for Movement<PathOrWasd<TMoveMethod>>
+where
+	TMoveMethod: ThreadSafe,
+{
 	fn from(WasdInput { target, .. }: WasdInput<TMoveMethod>) -> Self {
 		Self {
 			target,
@@ -62,7 +71,7 @@ impl<TMoveMethod> From<WasdInput<TMoveMethod>> for Movement<PathOrWasd<TMoveMeth
 
 impl<TMoveMethod> PathOrWasd<TMoveMethod>
 where
-	TMoveMethod: ThreadSafe,
+	TMoveMethod: ThreadSafe + Default,
 {
 	pub(crate) fn cleanup(
 		mut commands: Commands,
@@ -99,7 +108,10 @@ where
 	}
 }
 
-fn next_waypoint<TMoveMethod>(path_or_wasd: &mut PathOrWasd<TMoveMethod>) -> Option<Vec3> {
+fn next_waypoint<TMoveMethod>(path_or_wasd: &mut PathOrWasd<TMoveMethod>) -> Option<Vec3>
+where
+	TMoveMethod: ThreadSafe,
+{
 	match &mut path_or_wasd.mode {
 		Mode::Wasd(target) => target.take(),
 		Mode::Path(path) => path.pop_front(),

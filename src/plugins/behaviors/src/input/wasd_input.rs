@@ -8,7 +8,7 @@ use crate::{
 	traits::change_per_frame::MinDistance,
 };
 use bevy::prelude::*;
-use common::tools::speed::Speed;
+use common::{tools::speed::Speed, traits::thread_safe::ThreadSafe};
 use std::{marker::PhantomData, time::Duration};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -37,7 +37,7 @@ where
 
 impl<TMethod> InputProcessComponent for WasdInput<TMethod>
 where
-	TMethod: 'static,
+	TMethod: ThreadSafe,
 {
 	type TComponent = Movement<PathOrWasd<TMethod>>;
 }
