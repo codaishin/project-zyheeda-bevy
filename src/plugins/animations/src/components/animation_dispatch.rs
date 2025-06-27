@@ -11,7 +11,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::traits::{
-	animation::{Animation, AnimationPriority, StartAnimation, StopAnimation},
+	animation::{Animation, AnimationPriority, SetAnimations, StartAnimation, StopAnimation},
 	handles_saving::SavableComponent,
 	track::{IsTracking, Track, Untrack},
 };
@@ -81,6 +81,14 @@ where
 		TLayer: Into<AnimationPriority>,
 	{
 		self.slot_mut(layer).insert(animation);
+	}
+
+	fn set_animations<TLayer, TAnimations>(&mut self, layer: TLayer, animations: TAnimations)
+	where
+		TLayer: Into<AnimationPriority>,
+		TAnimations: IntoIterator<Item = TAnimation>,
+	{
+		*self.slot_mut(layer) = HashSet::from_iter(animations)
 	}
 }
 
@@ -229,6 +237,16 @@ impl StartAnimation for AnimationDispatch {
 	}
 }
 
+impl SetAnimations for AnimationDispatch {
+	fn set_animations<TLayer, TAnimations>(&mut self, layer: TLayer, animations: TAnimations)
+	where
+		TLayer: Into<AnimationPriority> + 'static,
+		TAnimations: IntoIterator<Item = Animation>,
+	{
+		self.set_animations(layer, animations)
+	}
+}
+
 impl<TAnimation> StopAnimation for AnimationDispatch<TAnimation>
 where
 	TAnimation: Eq + Hash,
@@ -360,6 +378,89 @@ mod tests {
 				HashSet::from([&_Animation::new("low")]),
 				HashSet::from([&_Animation::new("medium")]),
 				HashSet::from([]),
+			],
+			[
+				dispatch.get_active_animations(_Lo).collect::<HashSet<_>>(),
+				dispatch.get_active_animations(_Me).collect::<HashSet<_>>(),
+				dispatch.get_active_animations(_Hi).collect::<HashSet<_>>(),
+			]
+		);
+	}
+
+	#[test]
+	fn override_animations_low() {
+		let mut dispatch = AnimationDispatch::default();
+		dispatch.start_animation(_Lo, _Animation::new("low"));
+		dispatch.start_animation(_Me, _Animation::new("medium"));
+		dispatch.start_animation(_Hi, _Animation::new("high"));
+		dispatch.set_animations(
+			_Lo,
+			[_Animation::new("override 1"), _Animation::new("override 2")],
+		);
+
+		assert_eq!(
+			[
+				HashSet::from([
+					&_Animation::new("override 1"),
+					&_Animation::new("override 2")
+				]),
+				HashSet::from([&_Animation::new("medium")]),
+				HashSet::from([&_Animation::new("high")]),
+			],
+			[
+				dispatch.get_active_animations(_Lo).collect::<HashSet<_>>(),
+				dispatch.get_active_animations(_Me).collect::<HashSet<_>>(),
+				dispatch.get_active_animations(_Hi).collect::<HashSet<_>>(),
+			]
+		);
+	}
+
+	#[test]
+	fn override_animations_medium() {
+		let mut dispatch = AnimationDispatch::default();
+		dispatch.start_animation(_Lo, _Animation::new("low"));
+		dispatch.start_animation(_Me, _Animation::new("medium"));
+		dispatch.start_animation(_Hi, _Animation::new("high"));
+		dispatch.set_animations(
+			_Me,
+			[_Animation::new("override 1"), _Animation::new("override 2")],
+		);
+
+		assert_eq!(
+			[
+				HashSet::from([&_Animation::new("low")]),
+				HashSet::from([
+					&_Animation::new("override 1"),
+					&_Animation::new("override 2")
+				]),
+				HashSet::from([&_Animation::new("high")]),
+			],
+			[
+				dispatch.get_active_animations(_Lo).collect::<HashSet<_>>(),
+				dispatch.get_active_animations(_Me).collect::<HashSet<_>>(),
+				dispatch.get_active_animations(_Hi).collect::<HashSet<_>>(),
+			]
+		);
+	}
+	#[test]
+	fn override_animations_high() {
+		let mut dispatch = AnimationDispatch::default();
+		dispatch.start_animation(_Lo, _Animation::new("low"));
+		dispatch.start_animation(_Me, _Animation::new("medium"));
+		dispatch.start_animation(_Hi, _Animation::new("high"));
+		dispatch.set_animations(
+			_Hi,
+			[_Animation::new("override 1"), _Animation::new("override 2")],
+		);
+
+		assert_eq!(
+			[
+				HashSet::from([&_Animation::new("low")]),
+				HashSet::from([&_Animation::new("medium")]),
+				HashSet::from([
+					&_Animation::new("override 1"),
+					&_Animation::new("override 2")
+				]),
 			],
 			[
 				dispatch.get_active_animations(_Lo).collect::<HashSet<_>>(),
