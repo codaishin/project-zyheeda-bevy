@@ -163,11 +163,7 @@ impl MapSizeError {
 
 impl Display for MapSizeError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(
-			f,
-			"Minimum map size of 2x2 required, but map was {:?}",
-			self
-		)
+		write!(f, "Minimum map size of 2x2 required, but map was {self:?}")
 	}
 }
 

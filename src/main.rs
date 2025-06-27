@@ -196,15 +196,15 @@ pub mod debug_utils {
 		mut ray_cast_events: EventReader<InteractionEvent<Ray>>,
 	) {
 		for collision_event in collision_events.read() {
-			println!("Received collision event: {:?}", collision_event);
+			println!("Received collision event: {collision_event:?}");
 		}
 
 		for contact_force_event in contact_force_events.read() {
-			println!("Received contact force event: {:?}", contact_force_event);
+			println!("Received contact force event: {contact_force_event:?}");
 		}
 
 		for ray_cast_event in ray_cast_events.read() {
-			println!("Received ray cast event: {:?}", ray_cast_event);
+			println!("Received ray cast event: {ray_cast_event:?}");
 		}
 	}
 

@@ -327,9 +327,7 @@ where
 			LoadError::RepeatedInputs(repeated) => {
 				let actions = repeated
 					.iter()
-					.map(|(input, actions)| {
-						format!("  - {:?} is assigned to: {:?}", input, actions)
-					})
+					.map(|(input, actions)| format!("  - {input:?} is assigned to: {actions:?}"))
 					.collect::<Vec<_>>()
 					.join("\n");
 				writeln!(
@@ -343,11 +341,10 @@ where
 					.map(|action| {
 						let invalid_actions = action.invalid_input();
 						if invalid_actions.is_empty() {
-							format!("  - {:?} has no input", action)
+							format!("  - {action:?} has no input")
 						} else {
 							format!(
-								"  - {:?} has no input. Either missing or part of invalid inputs for this action: {:?}",
-								action, invalid_actions
+								"  - {action:?} has no input. Either missing or part of invalid inputs for this action: {invalid_actions:?}"
 							)
 						}
 					})

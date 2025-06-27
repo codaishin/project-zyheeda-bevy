@@ -3,7 +3,7 @@ use bevy::prelude::*;
 
 impl From<KeyCode> for Token {
 	fn from(value: KeyCode) -> Self {
-		let key = format!("{:?}", value);
+		let key = format!("{value:?}");
 		Token(format!("key-code-{}", camel_case_to_kebab(key)))
 	}
 }

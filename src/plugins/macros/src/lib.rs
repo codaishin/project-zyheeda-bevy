@@ -129,7 +129,7 @@ pub fn skill_asset(input: TokenStream) -> TokenStream {
 	};
 
 	let asset_path = format!("skills/{}.skill", literal.value());
-	let path = format!("assets/{}", asset_path);
+	let path = format!("assets/{asset_path}");
 
 	if !std::path::Path::new(&path).exists() {
 		return TokenStream::from(quote! {
@@ -151,7 +151,7 @@ pub fn item_asset(input: TokenStream) -> TokenStream {
 	};
 
 	let asset_path = format!("items/{}.item", literal.value());
-	let path = format!("assets/{}", asset_path);
+	let path = format!("assets/{asset_path}");
 
 	if !std::path::Path::new(&path).exists() {
 		return TokenStream::from(quote! {

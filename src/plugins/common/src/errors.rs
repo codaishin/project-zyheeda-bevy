@@ -68,7 +68,7 @@ pub enum Unreachable {}
 
 impl Display for Unreachable {
 	fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-		write!(f, "{:?}: If you see this, the universe broke", self)
+		write!(f, "{self:?}: If you see this, the universe broke")
 	}
 }
 

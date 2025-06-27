@@ -30,7 +30,7 @@ pub(crate) enum GridError {
 impl From<GridError> for Error {
 	fn from(error: GridError) -> Self {
 		Self {
-			msg: format!("Faulty grid encountered: {:?}", error),
+			msg: format!("Faulty grid encountered: {error:?}"),
 			lvl: Level::Error,
 		}
 	}
