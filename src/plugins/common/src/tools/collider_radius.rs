@@ -1,7 +1,8 @@
 use super::Units;
+use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 
-#[derive(Debug, PartialEq, Default, Clone, Copy)]
+#[derive(Debug, PartialEq, Default, Clone, Copy, Serialize, Deserialize)]
 pub struct ColliderRadius(pub Units);
 
 impl From<Units> for ColliderRadius {

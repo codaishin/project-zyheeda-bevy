@@ -11,8 +11,10 @@ use common::{
 		animation::{Animation, AnimationAsset, PlayMode},
 	},
 };
+use macros::SavableComponent;
+use serde::{Deserialize, Serialize};
 
-#[derive(Component, Clone, Debug, PartialEq, Default)]
+#[derive(Component, SavableComponent, Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct PlayerMovement {
 	pub(crate) collider_radius: ColliderRadius,
 	pub(crate) mode: MovementMode,
@@ -20,14 +22,14 @@ pub struct PlayerMovement {
 	pub(crate) slow: Config,
 }
 
-#[derive(Clone, Copy, PartialEq, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Debug, Default, Serialize, Deserialize)]
 pub(crate) enum MovementMode {
 	#[default]
 	Fast,
 	Slow,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct Config {
 	pub(crate) speed: Speed,
 	pub(crate) animation: MovementAnimation,

@@ -1,7 +1,8 @@
 use super::UnitsPerSecond;
+use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 
-#[derive(Debug, PartialEq, Clone, Copy, Default)]
+#[derive(Debug, PartialEq, Clone, Copy, Default, Serialize, Deserialize)]
 pub struct Speed(pub UnitsPerSecond);
 
 impl From<UnitsPerSecond> for Speed {
