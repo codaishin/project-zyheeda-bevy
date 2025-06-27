@@ -20,7 +20,7 @@ pub trait SetAnimations {
 	fn set_animations<TLayer, TAnimations>(&mut self, layer: TLayer, animations: TAnimations)
 	where
 		TLayer: Into<AnimationPriority> + 'static,
-		TAnimations: IntoIterator<Item = Animation>;
+		TAnimations: IntoIterator<Item = Animation> + 'static;
 }
 
 pub trait StopAnimation {
