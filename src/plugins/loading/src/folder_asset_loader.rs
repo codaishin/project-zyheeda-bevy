@@ -145,13 +145,13 @@ where
 {
 	fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
 		match self {
-			LoadError::IO(err) => write!(f, "Failed to read asset file: {}", err),
+			LoadError::IO(err) => write!(f, "Failed to read asset file: {err}"),
 			LoadError::ParseChars(err) => {
-				write!(f, "Invalid character encoding in asset file: {}", err)
+				write!(f, "Invalid character encoding in asset file: {err}")
 			}
-			LoadError::ParseObject(err) => write!(f, "Failed to parse asset data: {}", err),
+			LoadError::ParseObject(err) => write!(f, "Failed to parse asset data: {err}"),
 			LoadError::Instantiation(err) => {
-				write!(f, "Failed to instantiate object: {}", err)
+				write!(f, "Failed to instantiate object: {err}")
 			}
 		}
 	}

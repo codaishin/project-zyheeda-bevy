@@ -39,9 +39,9 @@ where
 {
 	fn fmt(&self, f: &mut Formatter) -> FmtResult {
 		match self {
-			TextLoaderError::IO(error) => write!(f, "IO: {}", error),
-			TextLoaderError::Parse(error) => write!(f, "Parse: {}", error),
-			TextLoaderError::Custom(error) => write!(f, "Map Size: {}", error),
+			TextLoaderError::IO(error) => write!(f, "IO: {error}"),
+			TextLoaderError::Parse(error) => write!(f, "Parse: {error}"),
+			TextLoaderError::Custom(error) => write!(f, "Map Size: {error}"),
 		}
 	}
 }

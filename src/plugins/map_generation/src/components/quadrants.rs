@@ -48,5 +48,5 @@ pub(crate) struct CorridorWallCornerInside;
 pub(crate) struct CorridorWall;
 
 fn corridor(suffix: &'static str) -> AssetModel {
-	AssetModel::Path(format!("{}{}.glb#Scene0", CORRIDOR_PATH_PREFIX, suffix))
+	AssetModel::Path(format!("{CORRIDOR_PATH_PREFIX}{suffix}.glb#Scene0"))
 }

@@ -45,11 +45,11 @@ pub(crate) fn map_load_results<
 fn error<TError: Debug>(error: &TError, path: Option<AssetPath>) -> Error {
 	match path {
 		Some(path) => Error {
-			msg: format!("{:?}: {:?}", path, error),
+			msg: format!("{path:?}: {error:?}"),
 			lvl: Level::Error,
 		},
 		None => Error {
-			msg: format!("Unknown Path: {:?}", error),
+			msg: format!("Unknown Path: {error:?}"),
 			lvl: Level::Error,
 		},
 	}

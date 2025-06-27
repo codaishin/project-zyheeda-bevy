@@ -149,8 +149,7 @@ mod tests {
 			parsed.iter().all(
 				|(key, result)| matches!(result, Err(DirectionError::KeyHasNoDirection(k)) if k == key)
 			),
-			"not all were `(key, Err(DirectionError::KeyHasNoDirection(key)))` in: {:?}",
-			parsed
+			"not all were `(key, Err(DirectionError::KeyHasNoDirection(key)))` in: {parsed:?}"
 		);
 	}
 }

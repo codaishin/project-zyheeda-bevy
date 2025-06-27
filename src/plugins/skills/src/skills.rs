@@ -69,7 +69,7 @@ impl Display for Skill {
 		let Token(token) = &self.token;
 		match token.as_str() {
 			"" => write!(f, "Skill(<no token>)"),
-			name => write!(f, "Skill({})", name),
+			name => write!(f, "Skill({name})"),
 		}
 	}
 }
