@@ -102,6 +102,7 @@ where
 		app.register_required_components::<Player, TSaveGame::TSaveEntityMarker>();
 		TSaveGame::register_savable_component::<Player>(app);
 		TSaveGame::register_savable_component::<PlayerCamera>(app);
+		TSaveGame::register_savable_component::<PlayerMovement>(app);
 
 		app.init_resource::<CamRay>()
 			.add_prefab_observer::<Player, (TInteractions, TLights)>()

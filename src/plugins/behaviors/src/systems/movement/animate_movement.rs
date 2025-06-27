@@ -4,7 +4,7 @@ use common::{
 	tools::movement_animation::MovementAnimation,
 	traits::{
 		accessors::get::GetterRefOptional,
-		animation::{AnimationPriority, StartAnimation, StopAnimation},
+		animation::{AnimationPriority, SetAnimations, StopAnimation},
 	},
 };
 
@@ -23,7 +23,7 @@ pub(crate) trait AnimateMovement:
 		mut removed_movements: RemovedComponents<TMovement>,
 	) where
 		TMovement: Component,
-		TAnimationDispatch: Component<Mutability = Mutable> + StartAnimation + StopAnimation,
+		TAnimationDispatch: Component<Mutability = Mutable> + SetAnimations + StopAnimation,
 	{
 		for (config, dispatch, movement) in &mut agents {
 			start_animation(config, dispatch, movement);
@@ -50,7 +50,7 @@ fn start_animation<TConfig, TMovement, TAnimationDispatch>(
 	movement: Ref<TMovement>,
 ) where
 	TConfig: GetterRefOptional<MovementAnimation>,
-	TAnimationDispatch: StartAnimation,
+	TAnimationDispatch: SetAnimations,
 {
 	if !movement.is_added() && !config.is_changed() {
 		return;
@@ -58,7 +58,7 @@ fn start_animation<TConfig, TMovement, TAnimationDispatch>(
 	let Some(MovementAnimation(animation)) = &config.get() else {
 		return;
 	};
-	dispatch.start_animation(Move, animation.clone());
+	dispatch.set_animations(Move, [animation.clone()]);
 }
 
 fn stop_animation<TMovement, TAnimationDispatch>(
@@ -105,12 +105,13 @@ mod tests {
 		mock: Mock_AnimationDispatch,
 	}
 
-	impl StartAnimation for _AnimationDispatch {
-		fn start_animation<TLayer>(&mut self, layer: TLayer, animation: Animation)
+	impl SetAnimations for _AnimationDispatch {
+		fn set_animations<TLayer, TAnimations>(&mut self, layer: TLayer, animations: TAnimations)
 		where
 			TLayer: Into<AnimationPriority> + 'static,
+			TAnimations: IntoIterator<Item = Animation> + 'static,
 		{
-			self.mock.start_animation(layer, animation)
+			self.mock.set_animations(layer, animations)
 		}
 	}
 
@@ -125,9 +126,11 @@ mod tests {
 
 	mock! {
 		_AnimationDispatch {}
-		impl StartAnimation for _AnimationDispatch {
-			fn start_animation<TLayer>(&mut self, layer: TLayer, animation: Animation)
-				where TLayer: Into<AnimationPriority> + 'static;
+		impl SetAnimations for _AnimationDispatch {
+			fn set_animations<TLayer, TAnimations>(&mut self, layer: TLayer, animations: TAnimations)
+			where
+				TLayer: Into<AnimationPriority> + 'static,
+				TAnimations: IntoIterator<Item = Animation> + 'static;
 		}
 		impl StopAnimation for _AnimationDispatch {
 			fn stop_animation<TLayer>(&mut self, layer: TLayer)
@@ -153,14 +156,14 @@ mod tests {
 				Animation::new(AnimationAsset::from("fast"), PlayMode::Repeat).into(),
 			)),
 			_AnimationDispatch::new().with_mock(|mock| {
-				mock.expect_start_animation()
+				mock.expect_set_animations::<Move, [Animation; 1]>()
 					.times(1)
 					.with(
 						eq(Move),
-						eq(Animation::new(
+						eq([Animation::new(
 							AnimationAsset::from("fast"),
 							PlayMode::Repeat,
-						)),
+						)]),
 					)
 					.return_const(());
 			}),
@@ -178,7 +181,7 @@ mod tests {
 				Animation::new(AnimationAsset::from(""), PlayMode::Repeat).into(),
 			)),
 			_AnimationDispatch::new().with_mock(|mock| {
-				mock.expect_start_animation::<Move>()
+				mock.expect_set_animations::<Move, [Animation; 1]>()
 					.never()
 					.return_const(());
 			}),
@@ -197,7 +200,8 @@ mod tests {
 					Animation::new(AnimationAsset::from(""), PlayMode::Repeat).into(),
 				)),
 				_AnimationDispatch::new().with_mock(|mock| {
-					mock.expect_start_animation::<Move>().return_const(());
+					mock.expect_set_animations::<Move, [Animation; 1]>()
+						.return_const(());
 					mock.expect_stop_animation::<Move>()
 						.times(1)
 						.return_const(());
@@ -221,7 +225,7 @@ mod tests {
 				Animation::new(AnimationAsset::from(""), PlayMode::Repeat).into(),
 			)),
 			_AnimationDispatch::new().with_mock(|mock| {
-				mock.expect_start_animation::<Move>()
+				mock.expect_set_animations::<Move, [Animation; 1]>()
 					.times(1)
 					.return_const(());
 			}),
@@ -242,7 +246,7 @@ mod tests {
 					Animation::new(AnimationAsset::from(""), PlayMode::Repeat).into(),
 				)),
 				_AnimationDispatch::new().with_mock(|mock| {
-					mock.expect_start_animation::<Move>()
+					mock.expect_set_animations::<Move, [Animation; 1]>()
 						.times(1)
 						.return_const(());
 				}),
@@ -271,7 +275,7 @@ mod tests {
 					Animation::new(AnimationAsset::from(""), PlayMode::Repeat).into(),
 				)),
 				_AnimationDispatch::new().with_mock(|mock| {
-					mock.expect_start_animation::<Move>()
+					mock.expect_set_animations::<Move, [Animation; 1]>()
 						.times(2)
 						.return_const(());
 				}),
@@ -297,7 +301,7 @@ mod tests {
 				Animation::new(AnimationAsset::from(""), PlayMode::Repeat).into(),
 			)),
 			_AnimationDispatch::new().with_mock(|mock| {
-				mock.expect_start_animation::<Move>()
+				mock.expect_set_animations::<Move, [Animation; 1]>()
 					.never()
 					.return_const(());
 			}),

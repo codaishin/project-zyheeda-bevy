@@ -16,6 +16,13 @@ pub trait StartAnimation {
 		TLayer: Into<AnimationPriority> + 'static;
 }
 
+pub trait SetAnimations {
+	fn set_animations<TLayer, TAnimations>(&mut self, layer: TLayer, animations: TAnimations)
+	where
+		TLayer: Into<AnimationPriority> + 'static,
+		TAnimations: IntoIterator<Item = Animation> + 'static;
+}
+
 pub trait StopAnimation {
 	fn stop_animation<TLayer>(&mut self, layer: TLayer)
 	where
@@ -64,7 +71,10 @@ pub struct Directional {
 }
 
 pub trait HasAnimationsDispatch {
-	type TAnimationDispatch: StartAnimation + StopAnimation + Component<Mutability = Mutable>;
+	type TAnimationDispatch: StartAnimation
+		+ SetAnimations
+		+ StopAnimation
+		+ Component<Mutability = Mutable>;
 }
 
 pub trait ConfigureNewAnimationDispatch {
