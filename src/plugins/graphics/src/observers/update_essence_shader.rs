@@ -16,7 +16,7 @@ impl MaterialOverride {
 		assets: ResMut<Assets<EssenceMaterial>>,
 		overrides: Query<&Self>,
 		with_active_standard_material: Query<&MeshMaterial3d<StandardMaterial>>,
-		with_inactive_standard_material: Query<&Inactive>,
+		with_inactive_standard_material: Query<&inactive::Material>,
 	) {
 		Self::update_essence_shader_internal(
 			trigger,
@@ -34,7 +34,7 @@ impl MaterialOverride {
 		assets: ResMut<TAssets>,
 		overrides: Query<&Self>,
 		with_active_standard_material: Query<&MeshMaterial3d<StandardMaterial>>,
-		with_inactive_standard_material: Query<&Inactive>,
+		with_inactive_standard_material: Query<&inactive::Material>,
 	) where
 		TAssets: AddAsset<EssenceMaterial> + Resource,
 	{
@@ -63,12 +63,12 @@ impl MaterialOverride {
 
 fn set_standard_material(
 	mut commands: Commands,
-	with_inactive_standard_material: Query<&Inactive>,
+	with_inactive_standard_material: Query<&inactive::Material>,
 	entity: Entity,
 ) {
 	commands.try_remove_from::<MeshMaterial3d<EssenceMaterial>>(entity);
 
-	let Ok(Inactive(material)) = with_inactive_standard_material.get(entity) else {
+	let Ok(inactive::Material(material)) = with_inactive_standard_material.get(entity) else {
 		return;
 	};
 
@@ -94,11 +94,15 @@ fn set_essence_material<TAssets>(
 		return;
 	};
 
-	commands.try_insert_on(entity, Inactive(material.clone()));
+	commands.try_insert_on(entity, inactive::Material(material.clone()));
 }
 
-#[derive(Component)]
-pub struct Inactive(Handle<StandardMaterial>);
+mod inactive {
+	use super::*;
+
+	#[derive(Component)]
+	pub struct Material(pub(super) Handle<StandardMaterial>);
+}
 
 #[cfg(test)]
 mod tests {
