@@ -97,7 +97,7 @@ where
 			MaterialOverride::from(essence)
 		})
 		.register_shader::<EssenceMaterial>()
-		.add_systems(Update, MaterialOverride::apply_material_exclusivity);
+		.add_observer(MaterialOverride::update_essence_shader);
 	}
 
 	fn cameras(app: &mut App) {
