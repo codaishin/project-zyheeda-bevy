@@ -24,7 +24,7 @@ use common::{
 		handles_saving::HandlesSaving,
 		handles_skill_behaviors::HandlesSkillBehaviors,
 		prefab::AddPrefabObserver,
-		register_required_components_mapped::RegisterRequiredComponentsMapped,
+		register_derived_component::RegisterDerivedComponent,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -93,11 +93,9 @@ where
 	}
 
 	fn essence_material(app: &mut App) {
-		app.register_required_components_mapped::<Essence, MaterialOverride>(|essence| {
-			MaterialOverride::from(essence)
-		})
-		.register_shader::<EssenceMaterial>()
-		.add_observer(MaterialOverride::update_essence_shader);
+		app.register_derived_component::<Essence, MaterialOverride>()
+			.register_shader::<EssenceMaterial>()
+			.add_observer(MaterialOverride::update_essence_shader);
 	}
 
 	fn cameras(app: &mut App) {

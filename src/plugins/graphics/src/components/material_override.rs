@@ -6,7 +6,10 @@ use bevy::{
 	},
 	prelude::*,
 };
-use common::components::essence::Essence;
+use common::{
+	components::essence::Essence,
+	traits::register_derived_component::{DerivableComponentFrom, InsertDerivedComponent},
+};
 
 #[derive(Component, Debug, PartialEq, Clone, Default)]
 #[component(immutable)]
@@ -28,4 +31,8 @@ impl From<&Essence> for MaterialOverride {
 			}),
 		}
 	}
+}
+
+impl DerivableComponentFrom<Essence> for MaterialOverride {
+	const INSERT: InsertDerivedComponent = InsertDerivedComponent::Always;
 }
