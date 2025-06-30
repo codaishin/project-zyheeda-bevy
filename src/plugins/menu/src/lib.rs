@@ -57,7 +57,7 @@ use common::{
 		handles_settings::HandlesSettings,
 		inspect_able::InspectAble,
 		load_asset::Path,
-		register_required_components_mapped::RegisterRequiredComponentsMapped,
+		register_derived_component::RegisterDerivedComponent,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -259,7 +259,7 @@ where
 			TLocalization::TLocalizationServer,
 		>;
 
-		app.register_required_components_mapped(MenuBackground::node)
+		app.register_derived_component::<MenuBackground, Node>()
 			.add_tooltip::<TLocalization::TLocalizationServer, &'static str>()
 			.add_tooltip::<TLocalization::TLocalizationServer, String>()
 			.add_tooltip::<TLocalization::TLocalizationServer, Localized>()

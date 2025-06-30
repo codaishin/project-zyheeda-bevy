@@ -6,6 +6,8 @@ use common::{
 	traits::{
 		handles_map_generation::{Graph, NaivePath},
 		handles_path_finding::ComputePath,
+		register_derived_component::{DerivableComponentFrom, InsertDerivedComponent},
+		thread_safe::ThreadSafe,
 	},
 };
 
@@ -65,6 +67,27 @@ where
 			NaivePath::CannotCompute => vec![self.graph.translation(node)],
 		})
 	}
+}
+
+impl<TMap, TMethod, TGraph> From<&TMap> for Navigation<TMethod, TGraph>
+where
+	for<'a> TGraph: From<&'a TMap>,
+	TMethod: Default,
+{
+	fn from(map: &TMap) -> Self {
+		Self {
+			graph: TGraph::from(map),
+			method: TMethod::default(),
+		}
+	}
+}
+
+impl<TMap, TMethod, TGraph> DerivableComponentFrom<TMap> for Navigation<TMethod, TGraph>
+where
+	for<'a> TGraph: From<&'a TMap> + ThreadSafe,
+	TMethod: Default + ThreadSafe,
+{
+	const INSERT: InsertDerivedComponent = InsertDerivedComponent::IfNew;
 }
 
 impl<TMethod, TGraph> ComputePath for Navigation<TMethod, TGraph>

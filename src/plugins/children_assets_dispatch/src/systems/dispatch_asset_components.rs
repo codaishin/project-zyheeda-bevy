@@ -50,11 +50,11 @@ where
 {
 	let mut errors = vec![];
 
-	for (container, visualize) in &components {
+	for (container, children_lookup) in &components {
 		for key in TComponent::TChildKey::iterator() {
 			let asset = container.get_asset(&key, assets.as_ref());
 			let component = TComponent::TChildAsset::component(asset);
-			let result = dispatch(&mut commands, visualize, key, component);
+			let result = dispatch(&mut commands, children_lookup, key, component);
 			let Err(error) = result else {
 				continue;
 			};

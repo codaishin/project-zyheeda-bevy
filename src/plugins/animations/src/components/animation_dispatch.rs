@@ -11,8 +11,16 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::traits::{
-	animation::{Animation, AnimationPriority, SetAnimations, StartAnimation, StopAnimation},
+	animation::{
+		Animation,
+		AnimationPriority,
+		ConfigureNewAnimationDispatch,
+		SetAnimations,
+		StartAnimation,
+		StopAnimation,
+	},
 	handles_saving::SavableComponent,
+	register_derived_component::{DerivableComponentFrom, InsertDerivedComponent},
 	track::{IsTracking, Track, Untrack},
 };
 use std::{
@@ -107,6 +115,24 @@ where
 
 impl SavableComponent for AnimationDispatch {
 	type TDto = AnimationDispatchDto;
+}
+
+impl<TComponent> From<&TComponent> for AnimationDispatch
+where
+	TComponent: ConfigureNewAnimationDispatch,
+{
+	fn from(component: &TComponent) -> Self {
+		let mut dispatch = AnimationDispatch::default();
+		TComponent::configure_animation_dispatch(component, &mut dispatch);
+		dispatch
+	}
+}
+
+impl<TComponent> DerivableComponentFrom<TComponent> for AnimationDispatch
+where
+	TComponent: ConfigureNewAnimationDispatch,
+{
+	const INSERT: InsertDerivedComponent = InsertDerivedComponent::IfNew;
 }
 
 impl Track<AnimationPlayer> for AnimationDispatch {

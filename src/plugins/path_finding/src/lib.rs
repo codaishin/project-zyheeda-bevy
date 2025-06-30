@@ -8,7 +8,7 @@ use bevy::prelude::*;
 use common::traits::{
 	handles_map_generation::HandlesMapGeneration,
 	handles_path_finding::HandlesPathFinding,
-	register_required_components_mapped::RegisterRequiredComponentsMapped,
+	register_derived_component::RegisterDerivedComponent,
 	thread_safe::ThreadSafe,
 };
 use components::navigation::Navigation;
@@ -31,10 +31,7 @@ where
 	TMaps: HandlesMapGeneration + ThreadSafe,
 {
 	fn build(&self, app: &mut App) {
-		app.register_required_components_mapped(|map: &TMaps::TMap| Navigation {
-			graph: TMaps::TGraph::from(map),
-			method: ThetaStar::default(),
-		});
+		app.register_derived_component::<TMaps::TMap, Navigation<ThetaStar, TMaps::TGraph>>();
 	}
 }
 

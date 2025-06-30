@@ -12,7 +12,7 @@ use common::{
 		handles_lights::{HandlesLights, Responsive},
 		handles_saving::HandlesSaving,
 		prefab::AddPrefabObserver,
-		register_required_components_mapped::RegisterRequiredComponentsMapped,
+		register_derived_component::RegisterDerivedComponent,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -42,9 +42,7 @@ where
 
 		app.add_prefab_observer::<ResponsiveLight, ()>()
 			.register_required_components::<GlobalLight, TSavegame::TSaveEntityMarker>()
-			.register_required_components_mapped::<GlobalLight, DirectionalLight>(
-				GlobalLight::light,
-			)
+			.register_derived_component::<GlobalLight, DirectionalLight>()
 			.add_systems(
 				OnEnter(GameState::NewGame),
 				GlobalLight::spawn(Self::DEFAULT_LIGHT),

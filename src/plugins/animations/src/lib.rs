@@ -25,7 +25,7 @@ use common::{
 			RegisterAnimations,
 		},
 		handles_saving::HandlesSaving,
-		register_required_components_mapped::RegisterRequiredComponentsMapped,
+		register_derived_component::RegisterDerivedComponent,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 	},
@@ -55,13 +55,7 @@ impl<TDependencies> RegisterAnimations for AnimationsPlugin<TDependencies> {
 		for<'a> AnimationMask: From<&'a TAgent::TAnimationMask>,
 		for<'a> AnimationMaskDefinition: From<&'a TAgent::TAnimationMask>,
 	{
-		let dispatch = |agent: &TAgent| {
-			let mut dispatch = AnimationDispatch::default();
-			TAgent::configure_animation_dispatch(agent, &mut dispatch);
-			dispatch
-		};
-
-		app.register_required_components_mapped::<TAgent, AnimationDispatch>(dispatch)
+		app.register_derived_component::<TAgent, AnimationDispatch>()
 			.add_systems(
 				Update,
 				(
