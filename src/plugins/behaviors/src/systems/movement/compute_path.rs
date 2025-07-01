@@ -15,34 +15,38 @@ use std::collections::VecDeque;
 impl<T> MovementPath for T where T: Component + Getter<ColliderRadius> + Sized {}
 
 type PathOrWasdMovement<TMoveMethod> = Movement<PathOrWasd<TMoveMethod>>;
-type Components<'a, TMoveMethod, TAgent> = (
+type Components<'a, TMoveMethod, TAgent, TGetComputer> = (
 	Entity,
 	&'a GlobalTransform,
 	&'a PathOrWasdMovement<TMoveMethod>,
 	&'a TAgent,
+	&'a TGetComputer,
 );
 
 pub(crate) trait MovementPath: Component + Getter<ColliderRadius> + Sized {
-	fn compute_path<TMoveMethod, TComputer>(
+	fn compute_path<TMoveMethod, TComputer, TGetComputer>(
 		mut commands: Commands,
 		mut movements: Query<
-			Components<TMoveMethod, Self>,
+			Components<TMoveMethod, Self, TGetComputer>,
 			Changed<PathOrWasdMovement<TMoveMethod>>,
 		>,
 		computers: Query<&TComputer>,
 	) where
 		TMoveMethod: ThreadSafe + Default,
 		TComputer: Component + ComputePath,
+		TGetComputer: Component + Getter<Option<Entity>>,
 	{
 		if movements.is_empty() {
 			return;
 		}
 
-		let Ok(computer) = computers.single() else {
-			return;
-		};
-
-		for (entity, transform, movement, agent) in &mut movements {
+		for (entity, transform, movement, agent, get_computer) in &mut movements {
+			let Some(computer) = get_computer.get() else {
+				continue;
+			};
+			let Ok(computer) = computers.get(computer) else {
+				continue;
+			};
 			let move_component = new_movement(computer, transform, movement, agent);
 			commands.try_insert_on(entity, move_component);
 			commands.try_remove_from::<Movement<TMoveMethod>>(entity);
@@ -115,6 +119,15 @@ mod test_new_path {
 	#[derive(Debug, PartialEq, Default)]
 	struct _MoveMethod;
 
+	#[derive(Component)]
+	struct _GetComputer(Option<Entity>);
+
+	impl Getter<Option<Entity>> for _GetComputer {
+		fn get(&self) -> Option<Entity> {
+			self.0
+		}
+	}
+
 	#[derive(Component, NestedMocks)]
 	struct _AgentMovement {
 		mock: Mock_AgentMovement,
@@ -153,7 +166,7 @@ mod test_new_path {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
-			_AgentMovement::compute_path::<_MoveMethod, _ComputePath>,
+			_AgentMovement::compute_path::<_MoveMethod, _ComputePath, _GetComputer>,
 		);
 
 		app
@@ -162,21 +175,25 @@ mod test_new_path {
 	#[test]
 	fn set_path() {
 		let mut app = setup();
+		let computer = app
+			.world_mut()
+			.spawn(_ComputePath::new().with_mock(|mock| {
+				mock.expect_compute_path().return_const(Some(vec![
+					Vec3::splat(1.),
+					Vec3::splat(2.),
+					Vec3::splat(3.),
+				]));
+			}))
+			.id();
 		let entity = app
 			.world_mut()
 			.spawn((
 				_AgentMovement::default(),
 				Movement::new(Vec3::default(), PathOrWasd::<_MoveMethod>::new_path),
 				GlobalTransform::default(),
+				_GetComputer(Some(computer)),
 			))
 			.id();
-		app.world_mut().spawn(_ComputePath::new().with_mock(|mock| {
-			mock.expect_compute_path().return_const(Some(vec![
-				Vec3::splat(1.),
-				Vec3::splat(2.),
-				Vec3::splat(3.),
-			]));
-		}));
 
 		app.update();
 
@@ -196,17 +213,21 @@ mod test_new_path {
 	#[test]
 	fn set_no_path_path_when_cannot_be_computed() {
 		let mut app = setup();
+		let computer = app
+			.world_mut()
+			.spawn(_ComputePath::new().with_mock(|mock| {
+				mock.expect_compute_path().return_const(None);
+			}))
+			.id();
 		let entity = app
 			.world_mut()
 			.spawn((
 				_AgentMovement::default(),
 				Movement::new(Vec3::default(), PathOrWasd::<_MoveMethod>::new_path),
 				GlobalTransform::default(),
+				_GetComputer(Some(computer)),
 			))
 			.id();
-		app.world_mut().spawn(_ComputePath::new().with_mock(|mock| {
-			mock.expect_compute_path().return_const(None);
-		}));
 
 		app.update();
 
@@ -222,21 +243,25 @@ mod test_new_path {
 	#[test]
 	fn set_path_ignoring_first_when_matching_translation() {
 		let mut app = setup();
+		let computer = app
+			.world_mut()
+			.spawn(_ComputePath::new().with_mock(|mock| {
+				mock.expect_compute_path().return_const(Some(vec![
+					Vec3::splat(1.),
+					Vec3::splat(2.),
+					Vec3::splat(3.),
+				]));
+			}))
+			.id();
 		let entity = app
 			.world_mut()
 			.spawn((
 				_AgentMovement::default(),
 				Movement::new(Vec3::default(), PathOrWasd::<_MoveMethod>::new_path),
 				GlobalTransform::from_translation(Vec3::splat(1.)),
+				_GetComputer(Some(computer)),
 			))
 			.id();
-		app.world_mut().spawn(_ComputePath::new().with_mock(|mock| {
-			mock.expect_compute_path().return_const(Some(vec![
-				Vec3::splat(1.),
-				Vec3::splat(2.),
-				Vec3::splat(3.),
-			]));
-		}));
 
 		app.update();
 
@@ -252,14 +277,18 @@ mod test_new_path {
 	#[test]
 	fn no_panic_if_path_len_zero() {
 		let mut app = setup();
+		let computer = app
+			.world_mut()
+			.spawn(_ComputePath::new().with_mock(|mock| {
+				mock.expect_compute_path().return_const(Some(vec![]));
+			}))
+			.id();
 		app.world_mut().spawn((
 			_AgentMovement::default(),
 			Movement::new(Vec3::default(), PathOrWasd::<_MoveMethod>::new_path),
 			GlobalTransform::default(),
+			_GetComputer(Some(computer)),
 		));
-		app.world_mut().spawn(_ComputePath::new().with_mock(|mock| {
-			mock.expect_compute_path().return_const(Some(vec![]));
-		}));
 
 		app.update();
 	}
@@ -267,6 +296,16 @@ mod test_new_path {
 	#[test]
 	fn remove_present_movement() {
 		let mut app = setup();
+		let computer = app
+			.world_mut()
+			.spawn(_ComputePath::new().with_mock(|mock| {
+				mock.expect_compute_path().return_const(Some(vec![
+					Vec3::splat(1.),
+					Vec3::splat(2.),
+					Vec3::splat(3.),
+				]));
+			}))
+			.id();
 		let entity = app
 			.world_mut()
 			.spawn((
@@ -274,15 +313,9 @@ mod test_new_path {
 				Movement::new(Vec3::default(), PathOrWasd::<_MoveMethod>::new_path),
 				GlobalTransform::default(),
 				Movement::new(Vec3::default(), || _MoveMethod),
+				_GetComputer(Some(computer)),
 			))
 			.id();
-		app.world_mut().spawn(_ComputePath::new().with_mock(|mock| {
-			mock.expect_compute_path().return_const(Some(vec![
-				Vec3::splat(1.),
-				Vec3::splat(2.),
-				Vec3::splat(3.),
-			]));
-		}));
 
 		app.update();
 
@@ -295,6 +328,19 @@ mod test_new_path {
 	#[test]
 	fn compute_path_correctly() {
 		let mut app = setup();
+		let computer = app
+			.world_mut()
+			.spawn(_ComputePath::new().with_mock(|mock| {
+				mock.expect_compute_path()
+					.times(1)
+					.with(
+						eq(Vec3::new(1., 2., 3.)),
+						eq(Vec3::new(4., 5., 6.)),
+						eq(Units::new(42.)),
+					)
+					.return_const(None);
+			}))
+			.id();
 		app.world_mut().spawn((
 			_AgentMovement::new().with_mock(|mock| {
 				mock.expect_get()
@@ -302,18 +348,8 @@ mod test_new_path {
 			}),
 			Movement::new(Vec3::new(4., 5., 6.), PathOrWasd::<_MoveMethod>::new_path),
 			GlobalTransform::from_xyz(1., 2., 3.),
+			_GetComputer(Some(computer)),
 		));
-
-		app.world_mut().spawn(_ComputePath::new().with_mock(|mock| {
-			mock.expect_compute_path()
-				.times(1)
-				.with(
-					eq(Vec3::new(1., 2., 3.)),
-					eq(Vec3::new(4., 5., 6.)),
-					eq(Units::new(42.)),
-				)
-				.return_const(None);
-		}));
 
 		app.update();
 	}
@@ -321,17 +357,21 @@ mod test_new_path {
 	#[test]
 	fn set_target_when_wasd() {
 		let mut app = setup();
+		let computer = app
+			.world_mut()
+			.spawn(_ComputePath::new().with_mock(|mock| {
+				mock.expect_compute_path().never().return_const(None);
+			}))
+			.id();
 		let entity = app
 			.world_mut()
 			.spawn((
 				_AgentMovement::default(),
 				Movement::new(Vec3::new(1., 2., 3.), PathOrWasd::<_MoveMethod>::new_wasd),
 				GlobalTransform::default(),
+				_GetComputer(Some(computer)),
 			))
 			.id();
-		app.world_mut().spawn(_ComputePath::new().with_mock(|mock| {
-			mock.expect_compute_path().never().return_const(None);
-		}));
 
 		app.update();
 
@@ -347,15 +387,18 @@ mod test_new_path {
 	#[test]
 	fn do_nothing_if_not_changed() {
 		let mut app = setup();
+		let computer = app
+			.world_mut()
+			.spawn(_ComputePath::new().with_mock(|mock| {
+				mock.expect_compute_path().times(1).return_const(None);
+			}))
+			.id();
 		app.world_mut().spawn((
 			_AgentMovement::default(),
 			Movement::new(Vec3::new(4., 5., 6.), PathOrWasd::<_MoveMethod>::new_path),
 			GlobalTransform::from_xyz(1., 2., 3.),
+			_GetComputer(Some(computer)),
 		));
-
-		app.world_mut().spawn(_ComputePath::new().with_mock(|mock| {
-			mock.expect_compute_path().times(1).return_const(None);
-		}));
 
 		app.update();
 		app.update();
@@ -364,24 +407,44 @@ mod test_new_path {
 	#[test]
 	fn compute_again_if_movement_mutably_dereferenced() {
 		let mut app = setup();
+
+		let computer = app
+			.world_mut()
+			.spawn(_ComputePath::new().with_mock(|mock| {
+				mock.expect_compute_path().times(2).return_const(None);
+			}))
+			.id();
 		let entity = app
 			.world_mut()
 			.spawn((
 				_AgentMovement::default(),
 				Movement::new(Vec3::new(4., 5., 6.), PathOrWasd::<_MoveMethod>::new_path),
 				GlobalTransform::from_xyz(1., 2., 3.),
+				_GetComputer(Some(computer)),
 			))
 			.id();
-
-		app.world_mut().spawn(_ComputePath::new().with_mock(|mock| {
-			mock.expect_compute_path().times(2).return_const(None);
-		}));
 
 		app.update();
 		app.world_mut()
 			.entity_mut(entity)
 			.get_mut::<Movement<PathOrWasd<_MoveMethod>>>()
 			.as_deref_mut();
+		app.update();
+	}
+
+	#[test]
+	fn do_nothing_if_computer_reference_invalid() {
+		let mut app = setup();
+		app.world_mut().spawn(_ComputePath::new().with_mock(|mock| {
+			mock.expect_compute_path().never().return_const(None);
+		}));
+		app.world_mut().spawn((
+			_AgentMovement::default(),
+			Movement::new(Vec3::default(), PathOrWasd::<_MoveMethod>::new_path),
+			GlobalTransform::default(),
+			_GetComputer(None),
+		));
+
 		app.update();
 	}
 }
