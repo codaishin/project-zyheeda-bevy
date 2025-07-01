@@ -4,7 +4,7 @@ use common::{
 	tools::collider_radius::ColliderRadius,
 	traits::{
 		accessors::get::{GetField, Getter},
-		handles_path_finding::ComputePath,
+		handles_path_finding::{ComputePath, Computer},
 		thread_safe::ThreadSafe,
 		try_insert_on::TryInsertOn,
 		try_remove_from::TryRemoveFrom,
@@ -34,14 +34,14 @@ pub(crate) trait MovementPath: Component + Getter<ColliderRadius> + Sized {
 	) where
 		TMoveMethod: ThreadSafe + Default,
 		TComputer: Component + ComputePath,
-		TGetComputer: Component + Getter<Option<Entity>>,
+		TGetComputer: Component + Getter<Computer>,
 	{
 		if movements.is_empty() {
 			return;
 		}
 
 		for (entity, transform, movement, agent, get_computer) in &mut movements {
-			let Some(computer) = get_computer.get() else {
+			let Computer::Entity(computer) = get_computer.get() else {
 				continue;
 			};
 			let Ok(computer) = computers.get(computer) else {
@@ -120,10 +120,10 @@ mod test_new_path {
 	struct _MoveMethod;
 
 	#[derive(Component)]
-	struct _GetComputer(Option<Entity>);
+	struct _GetComputer(Computer);
 
-	impl Getter<Option<Entity>> for _GetComputer {
-		fn get(&self) -> Option<Entity> {
+	impl Getter<Computer> for _GetComputer {
+		fn get(&self) -> Computer {
 			self.0
 		}
 	}
@@ -191,7 +191,7 @@ mod test_new_path {
 				_AgentMovement::default(),
 				Movement::new(Vec3::default(), PathOrWasd::<_MoveMethod>::new_path),
 				GlobalTransform::default(),
-				_GetComputer(Some(computer)),
+				_GetComputer(Computer::Entity(computer)),
 			))
 			.id();
 
@@ -225,7 +225,7 @@ mod test_new_path {
 				_AgentMovement::default(),
 				Movement::new(Vec3::default(), PathOrWasd::<_MoveMethod>::new_path),
 				GlobalTransform::default(),
-				_GetComputer(Some(computer)),
+				_GetComputer(Computer::Entity(computer)),
 			))
 			.id();
 
@@ -259,7 +259,7 @@ mod test_new_path {
 				_AgentMovement::default(),
 				Movement::new(Vec3::default(), PathOrWasd::<_MoveMethod>::new_path),
 				GlobalTransform::from_translation(Vec3::splat(1.)),
-				_GetComputer(Some(computer)),
+				_GetComputer(Computer::Entity(computer)),
 			))
 			.id();
 
@@ -287,7 +287,7 @@ mod test_new_path {
 			_AgentMovement::default(),
 			Movement::new(Vec3::default(), PathOrWasd::<_MoveMethod>::new_path),
 			GlobalTransform::default(),
-			_GetComputer(Some(computer)),
+			_GetComputer(Computer::Entity(computer)),
 		));
 
 		app.update();
@@ -313,7 +313,7 @@ mod test_new_path {
 				Movement::new(Vec3::default(), PathOrWasd::<_MoveMethod>::new_path),
 				GlobalTransform::default(),
 				Movement::new(Vec3::default(), || _MoveMethod),
-				_GetComputer(Some(computer)),
+				_GetComputer(Computer::Entity(computer)),
 			))
 			.id();
 
@@ -348,7 +348,7 @@ mod test_new_path {
 			}),
 			Movement::new(Vec3::new(4., 5., 6.), PathOrWasd::<_MoveMethod>::new_path),
 			GlobalTransform::from_xyz(1., 2., 3.),
-			_GetComputer(Some(computer)),
+			_GetComputer(Computer::Entity(computer)),
 		));
 
 		app.update();
@@ -369,7 +369,7 @@ mod test_new_path {
 				_AgentMovement::default(),
 				Movement::new(Vec3::new(1., 2., 3.), PathOrWasd::<_MoveMethod>::new_wasd),
 				GlobalTransform::default(),
-				_GetComputer(Some(computer)),
+				_GetComputer(Computer::Entity(computer)),
 			))
 			.id();
 
@@ -397,7 +397,7 @@ mod test_new_path {
 			_AgentMovement::default(),
 			Movement::new(Vec3::new(4., 5., 6.), PathOrWasd::<_MoveMethod>::new_path),
 			GlobalTransform::from_xyz(1., 2., 3.),
-			_GetComputer(Some(computer)),
+			_GetComputer(Computer::Entity(computer)),
 		));
 
 		app.update();
@@ -420,7 +420,7 @@ mod test_new_path {
 				_AgentMovement::default(),
 				Movement::new(Vec3::new(4., 5., 6.), PathOrWasd::<_MoveMethod>::new_path),
 				GlobalTransform::from_xyz(1., 2., 3.),
-				_GetComputer(Some(computer)),
+				_GetComputer(Computer::Entity(computer)),
 			))
 			.id();
 
@@ -442,7 +442,7 @@ mod test_new_path {
 			_AgentMovement::default(),
 			Movement::new(Vec3::default(), PathOrWasd::<_MoveMethod>::new_path),
 			GlobalTransform::default(),
-			_GetComputer(None),
+			_GetComputer(Computer::None),
 		));
 
 		app.update();

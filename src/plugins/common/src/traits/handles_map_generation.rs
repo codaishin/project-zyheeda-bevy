@@ -6,7 +6,7 @@ use std::hash::Hash;
 pub trait HandlesMapGeneration
 where
 	Self::TMap: Component,
-	Self::TMapAgent: Component + Getter<Option<Entity>> + Default,
+	Self::TMapAgent: Component + Getter<Map> + Default,
 	for<'a> Self::TGraph: Graph + From<&'a Self::TMap> + ThreadSafe,
 {
 	type TMap;
@@ -71,4 +71,10 @@ pub enum NaivePath {
 	Ok,
 	CannotCompute,
 	PartialUntil(Vec3),
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum Map {
+	None,
+	Entity(Entity),
 }
