@@ -1,15 +1,16 @@
-use crate::tools::Units;
-
 use super::thread_safe::ThreadSafe;
+use crate::{tools::Units, traits::accessors::get::Getter};
 use bevy::prelude::*;
 use std::hash::Hash;
 
 pub trait HandlesMapGeneration
 where
 	Self::TMap: Component,
+	Self::TMapAgent: Component + Getter<Option<Entity>> + Default,
 	for<'a> Self::TGraph: Graph + From<&'a Self::TMap> + ThreadSafe,
 {
 	type TMap;
+	type TMapAgent;
 	type TGraph;
 }
 

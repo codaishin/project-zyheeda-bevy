@@ -1,6 +1,7 @@
 pub(crate) mod cells_ref;
 pub(crate) mod floor_cell;
 pub(crate) mod floor_light;
+pub(crate) mod get_grid;
 pub(crate) mod grid;
 pub(crate) mod half_offset_grid;
 pub(crate) mod map;

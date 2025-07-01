@@ -9,7 +9,7 @@ mod systems;
 mod tools;
 mod traits;
 
-use crate::components::map::demo_map::DemoMap;
+use crate::components::{get_grid::GetGrid, map::demo_map::DemoMap};
 use bevy::prelude::*;
 use common::{
 	states::game_state::GameState,
@@ -66,5 +66,6 @@ where
 
 impl<TDependencies> HandlesMapGeneration for MapGenerationPlugin<TDependencies> {
 	type TMap = Grid<1>;
+	type TMapAgent = GetGrid;
 	type TGraph = GridGraph;
 }
