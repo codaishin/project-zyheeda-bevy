@@ -1,4 +1,4 @@
-use crate::components::get_grid::GetGrid;
+use crate::components::{get_grid::GetGrid, grid::Grid};
 use bevy::{ecs::query::QueryFilter, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::traits::cast_ray::{CastRay, GetRayCaster};
@@ -7,16 +7,18 @@ impl GetGrid {
 	pub(crate) fn update<TFilter>(
 		rapier_context: ReadRapierContext,
 		entities: Query<(&mut Self, &GlobalTransform), TFilter>,
+		grids: Query<&Grid>,
 	) where
 		TFilter: QueryFilter,
 	{
-		set_grid_entity(rapier_context, entities);
+		set_grid_entity(rapier_context, entities, grids);
 	}
 }
 
 fn set_grid_entity<TFilter, TGetRayCaster>(
 	get_ray_caster: TGetRayCaster,
 	mut entities: Query<(&mut GetGrid, &GlobalTransform), TFilter>,
+	grids: Query<&Grid>,
 ) where
 	TGetRayCaster: GetRayCaster<Ray3d>,
 	TFilter: QueryFilter,
@@ -34,6 +36,10 @@ fn set_grid_entity<TFilter, TGetRayCaster>(
 		let Some((entity, ..)) = ray_caster.cast_ray(&ray) else {
 			continue;
 		};
+
+		if !grids.contains(entity) {
+			continue;
+		}
 
 		*get_grid = GetGrid(Some(entity));
 	}
@@ -55,7 +61,7 @@ mod tests {
 	use std::convert::Infallible;
 
 	struct _GetRayCaster {
-		ray_caster: fn() -> Mock_RayCaster,
+		ray_caster: Box<dyn Fn() -> Mock_RayCaster>,
 	}
 
 	impl GetRayCaster<Ray3d> for _GetRayCaster {
@@ -89,24 +95,52 @@ mod tests {
 	#[test]
 	fn set_grid() -> Result<(), RunSystemError> {
 		let mut app = setup();
+		let grid = app.world_mut().spawn(Grid::default()).id();
 		let entity = app
 			.world_mut()
 			.spawn((GetGrid::default(), GlobalTransform::default()))
 			.id();
 		let get_ray_caster = _GetRayCaster {
-			ray_caster: || {
+			ray_caster: Box::new(move || {
 				Mock_RayCaster::new_mock(|mock| {
 					mock.expect_cast_ray()
-						.return_const((Entity::from_raw(42), TimeOfImpact(0.)));
+						.return_const((grid, TimeOfImpact(0.)));
 				})
-			},
+			}),
 		};
 
 		app.world_mut()
 			.run_system_once_with(set_grid_entity::<(), In<_GetRayCaster>>, get_ray_caster)?;
 
 		assert_eq!(
-			Some(&GetGrid(Some(Entity::from_raw(42)))),
+			Some(&GetGrid(Some(grid))),
+			app.world().entity(entity).get::<GetGrid>(),
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn do_not_set_grid_if_target_had_no_grid() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let grid = app.world_mut().spawn_empty().id();
+		let entity = app
+			.world_mut()
+			.spawn((GetGrid::default(), GlobalTransform::default()))
+			.id();
+		let get_ray_caster = _GetRayCaster {
+			ray_caster: Box::new(move || {
+				Mock_RayCaster::new_mock(|mock| {
+					mock.expect_cast_ray()
+						.return_const((grid, TimeOfImpact(0.)));
+				})
+			}),
+		};
+
+		app.world_mut()
+			.run_system_once_with(set_grid_entity::<(), In<_GetRayCaster>>, get_ray_caster)?;
+
+		assert_eq!(
+			Some(&GetGrid(None)),
 			app.world().entity(entity).get::<GetGrid>(),
 		);
 		Ok(())
@@ -119,7 +153,7 @@ mod tests {
 		app.world_mut().spawn((GetGrid::default(), transform));
 
 		let get_ray_caster = _GetRayCaster {
-			ray_caster: || {
+			ray_caster: Box::new(|| {
 				Mock_RayCaster::new_mock(|mock| {
 					mock.expect_cast_ray()
 						.times(1)
@@ -129,7 +163,7 @@ mod tests {
 						}))
 						.return_const(None);
 				})
-			},
+			}),
 		};
 
 		app.world_mut()
@@ -142,6 +176,7 @@ mod tests {
 		struct Ignore;
 
 		let mut app = setup();
+		let grid = app.world_mut().spawn(Grid::default()).id();
 		let entities = [
 			app.world_mut()
 				.spawn((GetGrid::default(), GlobalTransform::default(), Ignore))
@@ -151,12 +186,12 @@ mod tests {
 				.id(),
 		];
 		let get_ray_caster = _GetRayCaster {
-			ray_caster: || {
+			ray_caster: Box::new(move || {
 				Mock_RayCaster::new_mock(|mock| {
 					mock.expect_cast_ray()
-						.return_const((Entity::from_raw(42), TimeOfImpact(0.)));
+						.return_const((grid, TimeOfImpact(0.)));
 				})
-			},
+			}),
 		};
 
 		app.world_mut().run_system_once_with(
@@ -165,10 +200,7 @@ mod tests {
 		)?;
 
 		assert_eq!(
-			[
-				Some(&GetGrid(None)),
-				Some(&GetGrid(Some(Entity::from_raw(42)))),
-			],
+			[Some(&GetGrid(None)), Some(&GetGrid(Some(grid)))],
 			app.world().entity(entities).map(|e| e.get::<GetGrid>()),
 		);
 		Ok(())
