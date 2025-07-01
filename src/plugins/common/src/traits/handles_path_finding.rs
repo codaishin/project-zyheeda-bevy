@@ -1,8 +1,9 @@
-use crate::tools::Units;
+use crate::{tools::Units, traits::accessors::get::Getter};
 use bevy::prelude::*;
 
 pub trait HandlesPathFinding {
 	type TComputePath: Component + ComputePath;
+	type TPathAgent: Component + Default + Getter<Option<Entity>>;
 }
 
 pub trait ComputePath {

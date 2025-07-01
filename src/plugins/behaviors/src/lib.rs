@@ -205,6 +205,8 @@ where
 		app
 			// Required components
 			.register_required_components::<TPlayers::TPlayer, AnchorFixPoints>()
+			.register_required_components::<TPlayers::TPlayer, TPathFinding::TPathAgent>()
+			.register_required_components::<TEnemies::TEnemy, TPathFinding::TPathAgent>()
 			.register_required_components::<SkillContact, TSaveGame::TSaveEntityMarker>()
 			.register_required_components::<SkillProjection, TSaveGame::TSaveEntityMarker>()
 			// Observers
