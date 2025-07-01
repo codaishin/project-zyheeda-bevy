@@ -10,15 +10,20 @@ use crate::{
 	},
 };
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
+use bevy_rapier3d::prelude::*;
 use common::{
 	errors::{Error, Level as ErrorLevel},
-	traits::{thread_safe::ThreadSafe, try_insert_on::TryInsertOn},
+	traits::{
+		register_derived_component::{DerivableComponentFrom, InsertDerivedComponent},
+		thread_safe::ThreadSafe,
+		try_insert_on::TryInsertOn,
+	},
 };
 use error_type_marker::TypeMarker;
 use std::any::type_name;
 
 #[derive(Component, Debug, PartialEq)]
-#[require(Name = Self::name(), Transform, Visibility)]
+#[require(Name = Self::name(), Transform, Visibility, Sensor)]
 pub struct Grid<const SUBDIVISIONS: u8 = 0, TGraph = GridGraph>
 where
 	TGraph: ToSubdivided,
@@ -83,6 +88,18 @@ impl From<GridGraph> for Grid {
 	fn from(graph: GridGraph) -> Self {
 		Grid { graph }
 	}
+}
+
+impl From<&Grid> for Collider {
+	fn from(grid: &Grid) -> Self {
+		let Vec3 { x, y, z } = grid.graph.context.half_size();
+
+		Self::cuboid(x, y, z)
+	}
+}
+
+impl DerivableComponentFrom<Grid> for Collider {
+	const INSERT: InsertDerivedComponent = InsertDerivedComponent::IfNew;
 }
 
 impl<const SUBDIVISIONS: u8> From<&Grid<SUBDIVISIONS>> for GridGraph {

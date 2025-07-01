@@ -11,6 +11,7 @@ mod traits;
 
 use crate::components::{get_grid::GetGrid, map::demo_map::DemoMap};
 use bevy::prelude::*;
+use bevy_rapier3d::prelude::Collider;
 use common::{
 	states::game_state::GameState,
 	traits::{
@@ -18,6 +19,7 @@ use common::{
 		handles_load_tracking::HandlesLoadTracking,
 		handles_map_generation::HandlesMapGeneration,
 		handles_saving::HandlesSaving,
+		register_derived_component::RegisterDerivedComponent,
 		spawn::Spawn,
 		thread_safe::ThreadSafe,
 	},
@@ -50,6 +52,7 @@ where
 {
 	fn build(&self, app: &mut App) {
 		app.register_map_cell::<TLoading, TSavegame, Corridor>()
+			.register_derived_component::<Grid, Collider>()
 			.add_systems(OnEnter(GameState::NewGame), DemoMap::spawn)
 			.add_systems(Update, Grid::<1>::insert)
 			.add_systems(

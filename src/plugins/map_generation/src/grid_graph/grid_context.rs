@@ -5,6 +5,22 @@ use common::errors::{Error, Level};
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct GridContext(pub(super) GridDefinition);
 
+impl GridContext {
+	pub(crate) fn half_size(&self) -> Vec3 {
+		let GridDefinition {
+			cell_count_x,
+			cell_count_z,
+			cell_distance,
+		} = self.0;
+
+		Vec3::new(
+			cell_distance * cell_count_x as f32 * 0.5,
+			0.,
+			cell_distance * cell_count_z as f32 * 0.5,
+		)
+	}
+}
+
 impl Default for GridContext {
 	fn default() -> Self {
 		Self(GridDefinition {
@@ -286,6 +302,25 @@ mod tests {
 		let key = context.key_for(target);
 
 		assert_eq!(result, key);
+		Ok(())
+	}
+
+	#[test_case(1, 1, 1., Vec3::new(0.5, 0., 0.5); "one by one")]
+	#[test_case(1, 1, 2., Vec3::new(1., 0., 1.); "one by one with distance two")]
+	#[test_case(3, 2, 1., Vec3::new(1.5, 0., 1.); "three by two")]
+	fn half_size(
+		cell_count_x: usize,
+		cell_count_z: usize,
+		cell_distance: f32,
+		half_size: Vec3,
+	) -> Result<(), GridDefinitionError> {
+		let context = GridContext::try_from(GridDefinition {
+			cell_count_x,
+			cell_count_z,
+			cell_distance,
+		})?;
+
+		assert_eq!(half_size, context.half_size());
 		Ok(())
 	}
 }
