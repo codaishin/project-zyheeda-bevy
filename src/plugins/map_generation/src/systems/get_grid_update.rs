@@ -33,15 +33,10 @@ fn set_grid_entity<TFilter, TGetRayCaster>(
 			direction: Dir3::NEG_Y,
 		};
 
-		let Some((entity, ..)) = ray_caster.cast_ray(&ray) else {
-			continue;
+		*get_grid = match ray_caster.cast_ray(&ray) {
+			Some((entity, ..)) if grids.contains(entity) => GetGrid(Some(entity)),
+			_ => GetGrid(None),
 		};
-
-		if !grids.contains(entity) {
-			continue;
-		}
-
-		*get_grid = GetGrid(Some(entity));
 	}
 }
 
@@ -120,12 +115,43 @@ mod tests {
 	}
 
 	#[test]
-	fn do_not_set_grid_if_target_had_no_grid() -> Result<(), RunSystemError> {
+	fn set_grid_to_none_if_no_hit() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let entity = app
+			.world_mut()
+			.spawn((
+				GetGrid(Some(Entity::from_raw(42))),
+				GlobalTransform::default(),
+			))
+			.id();
+		let get_ray_caster = _GetRayCaster {
+			ray_caster: Box::new(move || {
+				Mock_RayCaster::new_mock(|mock| {
+					mock.expect_cast_ray().return_const(None);
+				})
+			}),
+		};
+
+		app.world_mut()
+			.run_system_once_with(set_grid_entity::<(), In<_GetRayCaster>>, get_ray_caster)?;
+
+		assert_eq!(
+			Some(&GetGrid(None)),
+			app.world().entity(entity).get::<GetGrid>(),
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn set_grid_to_none_if_target_had_no_grid() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let grid = app.world_mut().spawn_empty().id();
 		let entity = app
 			.world_mut()
-			.spawn((GetGrid::default(), GlobalTransform::default()))
+			.spawn((
+				GetGrid(Some(Entity::from_raw(42))),
+				GlobalTransform::default(),
+			))
 			.id();
 		let get_ray_caster = _GetRayCaster {
 			ray_caster: Box::new(move || {
