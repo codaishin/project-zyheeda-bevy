@@ -8,14 +8,14 @@ use common::{
 		persistent_entity::PersistentEntity,
 	},
 	resources::persistent_entities::PersistentEntities,
-	tools::{
-		aggro_range::AggroRange,
-		attack_range::AttackRange,
-		exclude_rigid_body::ExcludeRigidBody,
-	},
+	tools::{aggro_range::AggroRange, attack_range::AttackRange},
 	traits::{
 		accessors::get::Getter,
-		cast_ray::{CastRay, GetRayCaster},
+		cast_ray::{
+			CastRay,
+			GetRayCaster,
+			read_rapier_context::{ExcludeRigidBody, NoSensors},
+		},
 		handles_enemies::EnemyTarget,
 	},
 };
@@ -86,7 +86,7 @@ fn select_behavior<TAgent, TPlayer, TGetRayCaster>(
 where
 	TAgent: Component + Sized + Getter<AggroRange> + Getter<AttackRange> + Getter<EnemyTarget>,
 	TPlayer: Component,
-	TGetRayCaster: GetRayCaster<(Ray3d, ExcludeRigidBody)>,
+	TGetRayCaster: GetRayCaster<(Ray3d, NoSensors, ExcludeRigidBody)>,
 {
 	let player = players.single().ok();
 	let ray_caster = ray_caster_source.get_ray_caster()?;
@@ -160,7 +160,7 @@ fn get_strategy<TAgent, TCaster>(
 ) -> Result<Behavior, InvalidDirectionError>
 where
 	TAgent: Getter<AggroRange> + Getter<AttackRange>,
-	TCaster: CastRay<(Ray3d, ExcludeRigidBody)>,
+	TCaster: CastRay<(Ray3d, NoSensors, ExcludeRigidBody)>,
 {
 	let direction = target_translation - enemy_translation;
 	let distance = direction.length();
@@ -177,7 +177,7 @@ where
 		direction: Dir3::new(direction)?,
 	};
 
-	match ray_caster.cast_ray(&(ray, ExcludeRigidBody(enemy))) {
+	match ray_caster.cast_ray(&(ray, NoSensors, ExcludeRigidBody(enemy))) {
 		Some((hit, ..)) if hit_target(target, hit, colliders) => Ok(Behavior::Attack),
 		_ => Ok(Behavior::Chase),
 	}
@@ -290,7 +290,7 @@ mod tests {
 	pub enum _ContextQueryError {}
 
 	#[automock]
-	impl GetRayCaster<(Ray3d, ExcludeRigidBody)> for _GetRayCaster {
+	impl GetRayCaster<(Ray3d, NoSensors, ExcludeRigidBody)> for _GetRayCaster {
 		type TError = _ContextQueryError;
 		type TRayCaster<'a>
 			= _RayCaster
@@ -308,8 +308,11 @@ mod tests {
 	}
 
 	#[automock]
-	impl CastRay<(Ray3d, ExcludeRigidBody)> for _RayCaster {
-		fn cast_ray(&self, ray_data: &(Ray3d, ExcludeRigidBody)) -> Option<(Entity, TimeOfImpact)> {
+	impl CastRay<(Ray3d, NoSensors, ExcludeRigidBody)> for _RayCaster {
+		fn cast_ray(
+			&self,
+			ray_data: &(Ray3d, NoSensors, ExcludeRigidBody),
+		) -> Option<(Entity, TimeOfImpact)> {
 			self.mock.cast_ray(ray_data)
 		}
 	}
@@ -592,6 +595,7 @@ mod tests {
 								origin: Vec3::new(0., 0., 1.),
 								direction,
 							},
+							NoSensors,
 							ExcludeRigidBody(enemy),
 						)))
 						.return_const(None);
@@ -638,6 +642,7 @@ mod tests {
 								origin: Vec3::new(0., 1., 1.),
 								direction,
 							},
+							NoSensors,
 							ExcludeRigidBody(enemy),
 						)))
 						.return_const(None);

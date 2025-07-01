@@ -5,7 +5,6 @@ pub mod attack_range;
 pub mod change;
 pub mod collider_info;
 pub mod collider_radius;
-pub mod exclude_rigid_body;
 pub mod handle;
 pub mod inventory_key;
 pub mod item_description;

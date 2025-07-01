@@ -4,7 +4,7 @@ use bevy_rapier3d::plugin::ReadRapierContext;
 use common::{
 	components::{collider_relationship::ColliderOfInteractionTarget, no_target::NoTarget},
 	tools::collider_info::ColliderInfo,
-	traits::cast_ray::{CastRay, GetRayCaster, TimeOfImpact},
+	traits::cast_ray::{CastRay, GetRayCaster, TimeOfImpact, read_rapier_context::NoSensors},
 };
 use std::ops::Deref;
 
@@ -25,7 +25,7 @@ fn internal_set_mouse_hover<TGetRayCaster>(
 	targets: Query<&ColliderOfInteractionTarget>,
 	non_target_ables: Query<(), With<NoTarget>>,
 ) where
-	TGetRayCaster: GetRayCaster<Ray3d>,
+	TGetRayCaster: GetRayCaster<(Ray3d, NoSensors)>,
 {
 	let Ok(ray_caster) = get_ray_caster.get_ray_caster() else {
 		return;
@@ -53,14 +53,17 @@ fn get_mouse_hover(
 	}
 }
 
-fn ray_cast<TCastRay: CastRay<Ray3d>>(
+fn ray_cast<TCastRay>(
 	cam_ray: Option<Res<CamRay>>,
 	ray_caster: TCastRay,
-) -> Option<(Entity, TimeOfImpact)> {
+) -> Option<(Entity, TimeOfImpact)>
+where
+	TCastRay: CastRay<(Ray3d, NoSensors)>,
+{
 	let &CamRay(Some(cam_ray)) = cam_ray?.deref() else {
 		return None;
 	};
-	ray_caster.cast_ray(&cam_ray)
+	ray_caster.cast_ray(&(cam_ray, NoSensors))
 }
 
 fn get_target(entity: Entity, colliders: Query<&ColliderOfInteractionTarget>) -> Option<Entity> {
@@ -89,7 +92,7 @@ mod tests {
 	pub enum _GetRayCasterError {}
 
 	#[automock]
-	impl GetRayCaster<Ray3d> for _GetRayCaster {
+	impl GetRayCaster<(Ray3d, NoSensors)> for _GetRayCaster {
 		type TError = _GetRayCasterError;
 		type TRayCaster<'a>
 			= _RayCaster
@@ -107,8 +110,8 @@ mod tests {
 	}
 
 	#[automock]
-	impl CastRay<Ray3d> for _RayCaster {
-		fn cast_ray(&self, ray: &Ray3d) -> Option<(Entity, TimeOfImpact)> {
+	impl CastRay<(Ray3d, NoSensors)> for _RayCaster {
+		fn cast_ray(&self, ray: &(Ray3d, NoSensors)) -> Option<(Entity, TimeOfImpact)> {
 			self.mock.cast_ray(ray)
 		}
 	}
@@ -293,7 +296,7 @@ mod tests {
 				Ok(_RayCaster::new().with_mock(move |mock| {
 					mock.expect_cast_ray()
 						.times(1)
-						.with(eq(test_ray().unwrap()))
+						.with(eq((test_ray().unwrap(), NoSensors)))
 						.return_const(None);
 				}))
 			});

@@ -1,7 +1,7 @@
 use crate::components::{get_grid::GetGrid, grid::Grid};
 use bevy::{ecs::query::QueryFilter, prelude::*};
 use bevy_rapier3d::prelude::*;
-use common::traits::cast_ray::{CastRay, GetRayCaster};
+use common::traits::cast_ray::{CastRay, GetRayCaster, read_rapier_context::OnlySensors};
 
 impl GetGrid {
 	pub(crate) fn update<TFilter>(
@@ -20,7 +20,7 @@ fn set_grid_entity<TFilter, TGetRayCaster>(
 	mut entities: Query<(&mut GetGrid, &GlobalTransform), TFilter>,
 	grids: Query<&Grid>,
 ) where
-	TGetRayCaster: GetRayCaster<Ray3d>,
+	TGetRayCaster: GetRayCaster<(Ray3d, OnlySensors)>,
 	TFilter: QueryFilter,
 {
 	let Ok(ray_caster) = get_ray_caster.get_ray_caster() else {
@@ -33,7 +33,7 @@ fn set_grid_entity<TFilter, TGetRayCaster>(
 			direction: Dir3::NEG_Y,
 		};
 
-		*get_grid = match ray_caster.cast_ray(&ray) {
+		*get_grid = match ray_caster.cast_ray(&(ray, OnlySensors)) {
 			Some((entity, ..)) if grids.contains(entity) => GetGrid(Some(entity)),
 			_ => GetGrid(None),
 		};
@@ -59,7 +59,7 @@ mod tests {
 		ray_caster: Box<dyn Fn() -> Mock_RayCaster>,
 	}
 
-	impl GetRayCaster<Ray3d> for _GetRayCaster {
+	impl GetRayCaster<(Ray3d, OnlySensors)> for _GetRayCaster {
 		type TError = Infallible;
 
 		type TRayCaster<'a>
@@ -74,8 +74,8 @@ mod tests {
 
 	mock! {
 		_RayCaster {}
-		impl CastRay<Ray3d> for _RayCaster {
-			fn cast_ray(&self, ray_data: &Ray3d) -> Option<(Entity, TimeOfImpact)> {
+		impl CastRay<(Ray3d, OnlySensors)> for _RayCaster {
+			fn cast_ray(&self, ray_data: &(Ray3d, OnlySensors)) -> Option<(Entity, TimeOfImpact)> {
 				None
 			}
 		}
@@ -183,10 +183,13 @@ mod tests {
 				Mock_RayCaster::new_mock(|mock| {
 					mock.expect_cast_ray()
 						.times(1)
-						.with(eq(Ray3d {
-							origin: Vec3::new(1., 2., 3.),
-							direction: Dir3::NEG_Y,
-						}))
+						.with(eq((
+							Ray3d {
+								origin: Vec3::new(1., 2., 3.),
+								direction: Dir3::NEG_Y,
+							},
+							OnlySensors,
+						)))
 						.return_const(None);
 				})
 			}),
