@@ -40,4 +40,5 @@ where
 	TMaps: HandlesMapGeneration + ThreadSafe,
 {
 	type TComputePath = Navigation<ThetaStar, TMaps::TGraph>;
+	type TPathAgent = TMaps::TMapAgent;
 }

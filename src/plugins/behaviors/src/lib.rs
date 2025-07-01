@@ -183,8 +183,11 @@ where
 		>;
 		let wasd_input = Update::delta.pipe(wasd_input).pipe(log_or_unwrap_option);
 
-		let compute_player_path =
-			TPlayers::TPlayerMovement::compute_path::<VelocityBased, TPathFinding::TComputePath>;
+		let compute_player_path = TPlayers::TPlayerMovement::compute_path::<
+			VelocityBased,
+			TPathFinding::TComputePath,
+			TPathFinding::TPathAgent,
+		>;
 		let execute_player_path =
 			TPlayers::TPlayerMovement::execute_movement::<Movement<PathOrWasd<VelocityBased>>>;
 		let execute_player_movement =
@@ -194,6 +197,11 @@ where
 			TAnimations::TAnimationDispatch,
 		>;
 
+		let compute_enemy_path = TEnemies::TEnemy::compute_path::<
+			VelocityBased,
+			TPathFinding::TComputePath,
+			TPathFinding::TPathAgent,
+		>;
 		let execute_enemy_path =
 			TEnemies::TEnemy::execute_movement::<Movement<PathOrWasd<VelocityBased>>>;
 		let execute_enemy_movement = TEnemies::TEnemy::execute_movement::<Movement<VelocityBased>>;
@@ -205,6 +213,8 @@ where
 		app
 			// Required components
 			.register_required_components::<TPlayers::TPlayer, AnchorFixPoints>()
+			.register_required_components::<TPlayers::TPlayer, TPathFinding::TPathAgent>()
+			.register_required_components::<TEnemies::TEnemy, TPathFinding::TPathAgent>()
 			.register_required_components::<SkillContact, TSaveGame::TSaveEntityMarker>()
 			.register_required_components::<SkillProjection, TSaveGame::TSaveEntityMarker>()
 			// Observers
@@ -237,7 +247,7 @@ where
 						TEnemies::TEnemy::select_behavior::<TPlayers::TPlayer>.pipe(log_many),
 						TEnemies::TEnemy::attack,
 						TEnemies::TEnemy::chase::<PathOrWasd<VelocityBased>>,
-						TEnemies::TEnemy::compute_path::<VelocityBased, TPathFinding::TComputePath>,
+						compute_enemy_path,
 						Update::delta.pipe(execute_enemy_path),
 						Update::delta.pipe(execute_enemy_movement),
 						animate_enemy_movement,

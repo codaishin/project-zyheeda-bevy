@@ -5,7 +5,6 @@ use super::{
 	GetRayCaster,
 	TimeOfImpact,
 };
-use crate::tools::exclude_rigid_body::ExcludeRigidBody;
 use bevy::{
 	ecs::{entity::Entity, error::BevyError},
 	math::Ray3d,
@@ -47,8 +46,8 @@ where
 	}
 }
 
-impl CastRay<Ray3d> for RapierContext<'_> {
-	fn cast_ray(&self, ray: &Ray3d) -> Option<(Entity, TimeOfImpact)> {
+impl CastRay<(Ray3d, NoSensors)> for RapierContext<'_> {
+	fn cast_ray(&self, (ray, _): &(Ray3d, NoSensors)) -> Option<(Entity, TimeOfImpact)> {
 		self.cast_ray(
 			ray.origin,
 			ray.direction.into(),
@@ -60,10 +59,10 @@ impl CastRay<Ray3d> for RapierContext<'_> {
 	}
 }
 
-impl CastRay<(Ray3d, ExcludeRigidBody)> for RapierContext<'_> {
+impl CastRay<(Ray3d, NoSensors, ExcludeRigidBody)> for RapierContext<'_> {
 	fn cast_ray(
 		&self,
-		(ray, ExcludeRigidBody(rigid_body)): &(Ray3d, ExcludeRigidBody),
+		(ray, _, ExcludeRigidBody(rigid_body)): &(Ray3d, NoSensors, ExcludeRigidBody),
 	) -> Option<(Entity, TimeOfImpact)> {
 		let query_filter =
 			QueryFilter::from(QueryFilterFlags::EXCLUDE_SENSORS).exclude_rigid_body(*rigid_body);
@@ -78,3 +77,27 @@ impl CastRay<(Ray3d, ExcludeRigidBody)> for RapierContext<'_> {
 		.map(|(entity, toi)| (entity, TimeOfImpact(toi)))
 	}
 }
+
+impl CastRay<(Ray3d, OnlySensors)> for RapierContext<'_> {
+	fn cast_ray(&self, (ray, _): &(Ray3d, OnlySensors)) -> Option<(Entity, TimeOfImpact)> {
+		let query_filter = QueryFilter::from(QueryFilterFlags::EXCLUDE_SOLIDS);
+
+		self.cast_ray(
+			ray.origin,
+			ray.direction.into(),
+			Real::MAX,
+			true,
+			query_filter,
+		)
+		.map(|(entity, toi)| (entity, TimeOfImpact(toi)))
+	}
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct ExcludeRigidBody(pub Entity);
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct NoSensors;
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct OnlySensors;

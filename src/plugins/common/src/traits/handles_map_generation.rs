@@ -1,15 +1,16 @@
-use crate::tools::Units;
-
 use super::thread_safe::ThreadSafe;
+use crate::{tools::Units, traits::accessors::get::Getter};
 use bevy::prelude::*;
 use std::hash::Hash;
 
 pub trait HandlesMapGeneration
 where
 	Self::TMap: Component,
+	Self::TMapAgent: Component + Getter<Map> + Default,
 	for<'a> Self::TGraph: Graph + From<&'a Self::TMap> + ThreadSafe,
 {
 	type TMap;
+	type TMapAgent;
 	type TGraph;
 }
 
@@ -70,4 +71,10 @@ pub enum NaivePath {
 	Ok,
 	CannotCompute,
 	PartialUntil(Vec3),
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum Map {
+	None,
+	Entity(Entity),
 }
