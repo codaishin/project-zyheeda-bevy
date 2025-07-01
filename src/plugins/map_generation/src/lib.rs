@@ -54,6 +54,10 @@ where
 		app.register_map_cell::<TLoading, TSavegame, Corridor>()
 			.register_derived_component::<Grid, Collider>()
 			.add_systems(OnEnter(GameState::NewGame), DemoMap::spawn)
+			.add_systems(
+				PreUpdate,
+				GetGrid::update::<Changed<GlobalTransform>>.run_if(in_state(GameState::Play)),
+			)
 			.add_systems(Update, Grid::<1>::insert)
 			.add_systems(
 				Update,
