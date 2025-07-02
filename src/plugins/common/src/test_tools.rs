@@ -268,6 +268,18 @@ pub mod utils {
 
 	pub use assert_eq_unordered;
 
+	/// A simple wrapper around an expression to communicate intent.
+	///
+	/// It just executes the expression.
+	#[macro_export]
+	macro_rules! assert_no_panic {
+		($expr:expr) => {
+			$expr
+		};
+	}
+
+	pub use assert_no_panic;
+
 	pub trait TickTime {
 		fn tick_time(&mut self, delta: Duration);
 	}

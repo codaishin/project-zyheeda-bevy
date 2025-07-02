@@ -17,7 +17,10 @@ use crate::{
 use asset_loader::CustomAssetLoader;
 use bevy::{app::AppLabel, ecs::schedule::ScheduleLabel, prelude::*};
 use common::{
-	states::transition_to_state,
+	states::{
+		game_state::{LoadingEssentialAssets, LoadingGame},
+		transition_to_state,
+	},
 	systems::log::log_many,
 	traits::{
 		handles_asset_resource_loading::HandlesAssetResourceLoading,
@@ -59,7 +62,10 @@ use systems::{
 pub struct LoadingPlugin;
 
 impl Plugin for LoadingPlugin {
-	fn build(&self, _: &mut App) {}
+	fn build(&self, app: &mut App) {
+		Self::register_load_group::<LoadingEssentialAssets>(app);
+		Self::register_load_group::<LoadingGame>(app);
+	}
 }
 
 impl HandlesLoadTracking for LoadingPlugin {

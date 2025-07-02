@@ -28,7 +28,6 @@ camera_control = { path = "src/plugins/camera_control" }
 common = { path = "src/plugins/common" }
 enemy = { path = "src/plugins/enemy" }
 frame_limiter = { path = "src/plugins/frame_limiter" }
-game_state = { path = "src/plugins/game_state" }
 interactions = { path = "src/plugins/interactions" }
 children_assets_dispatch = { path = "src/plugins/children_assets_dispatch" }
 items = { path = "src/plugins/items" }
@@ -84,7 +83,6 @@ camera_control.workspace = true
 common.workspace = true
 enemy.workspace = true
 frame_limiter.workspace = true
-game_state.workspace = true
 interactions.workspace = true
 children_assets_dispatch.workspace = true
 life_cycles.workspace = true

@@ -251,9 +251,7 @@ where
 	}
 
 	fn general_systems(&self, app: &mut App) {
-		let no_game_state = GameState::None;
-		let startup_loading = GameState::LoadingEssentialAssets;
-		let ui_ready = not(in_state(no_game_state).or(in_state(startup_loading)));
+		let ui_ready = not(in_state(GameState::LoadingEssentialAssets));
 		let input_label_icons = InputLabel::<SlotKey>::icon::<
 			TSettings::TKeyMap<SlotKey>,
 			TLocalization::TLocalizationServer,

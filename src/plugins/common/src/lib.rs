@@ -16,7 +16,11 @@ mod events;
 
 use crate::{
 	components::child_of_persistent::ChildOfPersistent,
-	traits::register_persistent_entities::RegisterPersistentEntities,
+	states::game_state::GameState,
+	traits::{
+		register_controlled_state::RegisterControlledState,
+		register_persistent_entities::RegisterPersistentEntities,
+	},
 };
 use bevy::prelude::*;
 use components::{
@@ -35,6 +39,8 @@ pub struct CommonPlugin;
 impl Plugin for CommonPlugin {
 	fn build(&self, app: &mut App) {
 		app
+			// game state control
+			.register_controlled_state::<GameState>()
 			// Asset loading through `AssetModel` component
 			.add_systems(Update, FlipHorizontally::system)
 			.add_observer(AssetModel::load)
