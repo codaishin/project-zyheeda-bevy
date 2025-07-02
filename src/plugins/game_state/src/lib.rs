@@ -1,5 +1,7 @@
+mod resources;
 mod systems;
 
+use crate::resources::last_state::LastState;
 use bevy::{ecs::system::ScheduleSystem, prelude::*};
 use common::{
 	states::{
@@ -42,6 +44,7 @@ where
 		TLoading::register_load_group::<LoadingGame>(app);
 
 		app.insert_state(loading_essentials)
+			.init_resource::<LastState<GameState>>()
 			.add_systems(OnEnter(new_game), transition_to_state(loading))
 			.add_systems(OnEnter(saving), transition_to_state(play))
 			.add_systems(OnEnter(loading_save), transition_to_state(loading))
