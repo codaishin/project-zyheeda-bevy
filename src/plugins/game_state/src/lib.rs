@@ -40,9 +40,6 @@ where
 		let loading_save = GameState::LoadingSave;
 		let play = GameState::Play;
 
-		TLoading::register_load_group::<LoadingEssentialAssets>(app);
-		TLoading::register_load_group::<LoadingGame>(app);
-
 		app.insert_state(loading_essentials)
 			.init_resource::<LastState<GameState>>()
 			.add_systems(StateTransition, LastState::<GameState>::track)
