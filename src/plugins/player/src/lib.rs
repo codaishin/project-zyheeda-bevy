@@ -12,7 +12,6 @@ use common::{
 	traits::{
 		animation::RegisterAnimations,
 		handles_effect::HandlesEffect,
-		handles_game_states::HandlesGameStates,
 		handles_lights::HandlesLights,
 		handles_player::{
 			ConfiguresPlayerMovement,
@@ -45,18 +44,10 @@ use systems::{
 
 pub struct PlayerPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSettings, TGameStates, TSaveGame, TAnimations, TInteractions, TLights>
-	PlayerPlugin<(
-		TSettings,
-		TGameStates,
-		TSaveGame,
-		TAnimations,
-		TInteractions,
-		TLights,
-	)>
+impl<TSettings, TSaveGame, TAnimations, TInteractions, TLights>
+	PlayerPlugin<(TSettings, TSaveGame, TAnimations, TInteractions, TLights)>
 where
 	TSettings: ThreadSafe + HandlesSettings,
-	TGameStates: ThreadSafe + HandlesGameStates,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + RegisterAnimations,
 	TInteractions: ThreadSafe + HandlesEffect<DealDamage, TTarget = Health>,
@@ -64,7 +55,6 @@ where
 {
 	pub fn from_plugins(
 		_: &TSettings,
-		_: &TGameStates,
 		_: &TSaveGame,
 		_: &TAnimations,
 		_: &TInteractions,
@@ -74,18 +64,10 @@ where
 	}
 }
 
-impl<TSettings, TGameStates, TSaveGame, TAnimations, TInteractions, TLights> Plugin
-	for PlayerPlugin<(
-		TSettings,
-		TGameStates,
-		TSaveGame,
-		TAnimations,
-		TInteractions,
-		TLights,
-	)>
+impl<TSettings, TSaveGame, TAnimations, TInteractions, TLights> Plugin
+	for PlayerPlugin<(TSettings, TSaveGame, TAnimations, TInteractions, TLights)>
 where
 	TSettings: ThreadSafe + HandlesSettings,
-	TGameStates: ThreadSafe + HandlesGameStates,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + RegisterAnimations,
 	TInteractions: ThreadSafe
@@ -95,7 +77,6 @@ where
 	TLights: ThreadSafe + HandlesLights,
 {
 	fn build(&self, app: &mut App) {
-		TGameStates::on_starting_new_game(app, Player::spawn);
 		TAnimations::register_animations::<Player>(app);
 
 		// Save player
@@ -110,6 +91,7 @@ where
 				First,
 				(set_cam_ray::<Camera, PlayerCamera>, set_mouse_hover).chain(),
 			)
+			.add_systems(OnEnter(GameState::NewGame), Player::spawn)
 			.add_systems(
 				Update,
 				(

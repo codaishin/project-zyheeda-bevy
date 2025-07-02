@@ -65,19 +65,14 @@ where
 
 #[cfg(test)]
 mod tests {
+	use crate::assert_no_panic;
+
 	use super::*;
 	use bevy::math::Vec3;
 	use bevy_rapier3d::parry::shape::FeatureId;
 	use core::f32;
 
 	struct _Ray;
-
-	// Just for being descriptive in tests
-	macro_rules! assert_no_error {
-		($expr:expr) => {
-			$expr
-		};
-	}
 
 	fn intersection_toi(toi: f32) -> RayIntersection {
 		RayIntersection {
@@ -136,7 +131,7 @@ mod tests {
 
 		let mock = _CastRay;
 
-		let hits = assert_no_error!(mock.cast_ray_continuously_sorted(&_Ray));
+		let hits = assert_no_panic!(mock.cast_ray_continuously_sorted(&_Ray));
 
 		assert_eq!(
 			vec![

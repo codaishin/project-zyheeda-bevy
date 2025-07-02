@@ -1,9 +1,9 @@
 use super::menu_state::MenuState;
 use crate::traits::{
-	automatic_transitions::{AutomaticTransitions, TransitionTo},
+	automatic_transitions::{AutoTransitions, TransitionTo},
 	handles_load_tracking::LoadGroup,
 	iteration::{Iter, IterFinite},
-	pause_control::{OnTransition, PauseControl},
+	pause_control::PauseControl,
 	states::PlayState,
 };
 use bevy::prelude::*;
@@ -21,8 +21,8 @@ pub enum GameState {
 	IngameMenu(MenuState),
 }
 
-impl AutomaticTransitions for GameState {
-	fn transitions() -> &'static [(Self, TransitionTo<Self>)] {
+impl AutoTransitions for GameState {
+	fn auto_transitions() -> &'static [(Self, TransitionTo<Self>)] {
 		const {
 			&[
 				(Self::NewGame, TransitionTo::State(Self::Loading)),
@@ -34,12 +34,8 @@ impl AutomaticTransitions for GameState {
 }
 
 impl PauseControl for GameState {
-	fn pause_transitions() -> &'static [OnTransition<Self>] {
-		const { &[OnTransition::Exit(Self::Play)] }
-	}
-
-	fn unpause_transitions() -> &'static [OnTransition<Self>] {
-		const { &[OnTransition::Enter(Self::Play)] }
+	fn non_pause_states() -> &'static [Self] {
+		const { &[Self::Play] }
 	}
 }
 

@@ -8,7 +8,6 @@ use children_assets_dispatch::ChildrenAssetsDispatchPlugin;
 use common::CommonPlugin;
 use enemy::EnemyPlugin;
 use frame_limiter::FrameLimiterPlugin;
-use game_state::GameStatePlugin;
 use graphics::GraphicsPlugin;
 use interactions::InteractionsPlugin;
 use life_cycles::LifeCyclesPlugin;
@@ -49,24 +48,17 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let loading = LoadingPlugin;
 	let settings = SettingsPlugin::from_plugin(&loading);
 	let localization = LocalizationPlugin::from_plugin(&loading);
-	let game_state = GameStatePlugin::from_plugin(&loading);
 	let savegame = SavegamePlugin::from_plugin(&settings).with_game_directory(game_dir);
 	let animations = AnimationsPlugin::from_plugin(&savegame);
 	let light = LightPlugin::from_plugin(&savegame);
 	let life_cycles = LifeCyclesPlugin::from_plugin(&savegame);
 	let children_assets_dispatch = ChildrenAssetsDispatchPlugin::from_plugin(&loading);
 	let interactions = InteractionsPlugin::from_plugin(&savegame, &life_cycles);
-	let enemies = EnemyPlugin::from_plugins(&game_state, &savegame, &interactions);
+	let enemies = EnemyPlugin::from_plugins(&savegame, &interactions);
 	let map_generation = MapGenerationPlugin::from_plugins(&loading, &savegame, &light);
 	let path_finding = PathFindingPlugin::from_plugin(&map_generation);
-	let players = PlayerPlugin::from_plugins(
-		&settings,
-		&game_state,
-		&savegame,
-		&animations,
-		&interactions,
-		&light,
-	);
+	let players =
+		PlayerPlugin::from_plugins(&settings, &savegame, &animations, &interactions, &light);
 	let behaviors = BehaviorsPlugin::from_plugins(
 		&settings,
 		&savegame,
@@ -104,7 +96,6 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		.add_plugins(camera_control)
 		.add_plugins(children_assets_dispatch)
 		.add_plugins(enemies)
-		.add_plugins(game_state)
 		.add_plugins(graphics)
 		.add_plugins(interactions)
 		.add_plugins(life_cycles)
