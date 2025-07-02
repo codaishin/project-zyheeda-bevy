@@ -8,6 +8,20 @@ use crate::traits::{
 };
 use bevy::prelude::*;
 
+/// Main state to represent the state of the game.
+///
+/// Should be used to control scheduling of state dependent systems like:
+/// - UI
+/// - AI
+/// - physics
+/// - saving/loading
+/// - ...
+///
+/// Various functionalities, including pausing and automatic state transitions
+/// require:
+/// - either [`CommonPlugin`](crate::CommonPlugin): `app.add_plugins(CommonPlugin)`
+/// - or [`RegisterControlledState`](crate::traits::register_controlled_state::RegisterControlledState):
+///   `app.register_controlled_state::<GameState>()`
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Copy, Default, States)]
 pub enum GameState {
 	#[default]
@@ -22,9 +36,9 @@ pub enum GameState {
 }
 
 impl AutoTransitions for GameState {
-	fn auto_transitions() -> &'static [(Self, TransitionTo<Self>)] {
+	fn auto_transitions() -> impl IntoIterator<Item = (Self, TransitionTo<Self>)> {
 		const {
-			&[
+			[
 				(Self::NewGame, TransitionTo::State(Self::Loading)),
 				(Self::Saving, TransitionTo::PreviousState),
 				(Self::LoadingSave, TransitionTo::State(Self::Play)),
@@ -34,8 +48,8 @@ impl AutoTransitions for GameState {
 }
 
 impl PauseControl for GameState {
-	fn non_pause_states() -> &'static [Self] {
-		const { &[Self::Play] }
+	fn non_pause_states() -> impl IntoIterator<Item = Self> {
+		const { [Self::Play] }
 	}
 }
 

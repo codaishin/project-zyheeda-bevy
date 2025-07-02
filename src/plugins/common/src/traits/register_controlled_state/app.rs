@@ -29,17 +29,17 @@ impl RegisterControlledState for App {
 		for (trigger, transition) in TState::auto_transitions() {
 			match transition {
 				TransitionTo::State(state) => {
-					self.add_systems(OnEnter(trigger.clone()), transition_to_state(state.clone()));
+					self.add_systems(OnEnter(trigger), transition_to_state(state));
 				}
 				TransitionTo::PreviousState => {
-					self.add_systems(OnEnter(trigger.clone()), transition_to_previous::<TState>);
+					self.add_systems(OnEnter(trigger), transition_to_previous::<TState>);
 				}
 			}
 		}
 
 		for state in TState::non_pause_states() {
 			self.add_systems(OnEnter(state.clone()), pause_virtual_time::<false>);
-			self.add_systems(OnExit(state.clone()), pause_virtual_time::<true>);
+			self.add_systems(OnExit(state), pause_virtual_time::<true>);
 		}
 
 		self
@@ -146,8 +146,8 @@ mod tests {
 		use super::*;
 
 		impl AutoTransitions for _State {
-			fn auto_transitions() -> &'static [(Self, TransitionTo<Self>)] {
-				&[
+			fn auto_transitions() -> impl IntoIterator<Item = (Self, TransitionTo<Self>)> {
+				[
 					(
 						Self::AutoTransition,
 						TransitionTo::State(Self::AutoTransitioned),
@@ -212,8 +212,8 @@ mod tests {
 		use super::*;
 
 		impl PauseControl for _State {
-			fn non_pause_states() -> &'static [Self] {
-				&[_State::Play]
+			fn non_pause_states() -> impl IntoIterator<Item = Self> {
+				[_State::Play]
 			}
 		}
 
