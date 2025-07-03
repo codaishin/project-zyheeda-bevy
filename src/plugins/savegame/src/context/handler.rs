@@ -128,9 +128,9 @@ mod tests {
 	struct _Writer;
 
 	impl WriteFile for _Writer {
-		type TError = ();
+		type TWriteError = ();
 
-		fn write(&self, _: &str) -> Result<(), Self::TError> {
+		fn write(&self, _: &str) -> Result<(), Self::TWriteError> {
 			panic!("SHOULD NOT BE CALLED");
 		}
 	}

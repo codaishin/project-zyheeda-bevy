@@ -10,7 +10,7 @@ use std::sync::{Arc, Mutex};
 impl<TFileIO> SaveContext<TFileIO> {
 	pub(crate) fn write_file_system(
 		context: Arc<Mutex<Self>>,
-	) -> impl Fn() -> Result<(), ContextIOError<TFileIO::TError>>
+	) -> impl Fn() -> Result<(), ContextIOError<TFileIO::TWriteError>>
 	where
 		TFileIO: WriteFile,
 	{
@@ -24,7 +24,7 @@ impl<TFileIO> SaveContext<TFileIO> {
 		}
 	}
 
-	fn write_and_flush(&mut self) -> Result<(), ContextIOError<TFileIO::TError>>
+	fn write_and_flush(&mut self) -> Result<(), ContextIOError<TFileIO::TWriteError>>
 	where
 		TFileIO: WriteFile,
 	{
@@ -70,7 +70,7 @@ mod tests {
 	mock! {
 	  _Writer {}
 		impl WriteFile for _Writer {
-			type TError = _Error;
+			type TWriteError = _Error;
 			fn write(&self, string: &str) -> Result<(), _Error>;
 		}
 	}

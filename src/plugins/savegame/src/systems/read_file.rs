@@ -14,7 +14,7 @@ where
 {
 	pub(crate) fn read_file_system(
 		context: Arc<Mutex<Self>>,
-	) -> impl Fn() -> Result<(), ContextIOError<TFileIO::TError>> {
+	) -> impl Fn() -> Result<(), ContextIOError<TFileIO::TReadError>> {
 		move || {
 			let mut context = match context.lock() {
 				Err(_) => return Err(ContextIOError::LockPoisoned(LockPoisonedError)),
@@ -59,7 +59,7 @@ mod tests {
 	mock! {
 		_Reader {}
 		impl ReadFile for _Reader {
-			type TError = _Error;
+			type TReadError = _Error;
 			fn read(&self) -> Result<String, _Error>;
 		}
 	}

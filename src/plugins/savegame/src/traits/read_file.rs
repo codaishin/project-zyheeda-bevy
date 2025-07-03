@@ -1,5 +1,5 @@
 pub(crate) trait ReadFile {
-	type TError;
+	type TReadError;
 
-	fn read(&self) -> Result<String, Self::TError>;
+	fn read(&self) -> Result<String, Self::TReadError>;
 }
