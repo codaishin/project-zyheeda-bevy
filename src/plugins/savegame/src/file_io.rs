@@ -7,7 +7,7 @@ use std::{
 	path::{Path, PathBuf},
 };
 
-mod extensions {
+mod prefixes {
 	pub const TMP: &str = "tmp";
 	pub const OLD: &str = "old";
 }
@@ -34,18 +34,14 @@ where
 	fn file_does_not_exist(&self) -> FileError<TIO::TReadError> {
 		let core_path = self.file.with_extension("");
 		let core_path = core_path.to_str().unwrap_or("invalid path");
-		let main_extension = self
-			.file
-			.extension()
-			.and_then(OsStr::to_str)
-			.map(|extension| format!(".{extension}"))
-			.unwrap_or_default();
-		let extensions = [
-			main_extension,
-			format!(".{}", extensions::OLD),
-			format!(".{}", extensions::TMP),
-		]
-		.join("|");
+		let main_extension = self.file.extension().and_then(OsStr::to_str);
+		let old = prefixes::OLD;
+		let tmp = prefixes::TMP;
+
+		let extensions = match main_extension {
+			Some(ext) => format!(".{ext}|.{old}.{ext}|.{tmp}.{ext}"),
+			None => format!("|.{old}|.{tmp}"),
+		};
 
 		FileError::DoesNotExist(format!("{core_path}({extensions})"))
 	}
@@ -58,9 +54,9 @@ where
 	type TWriteError = TIO::TWriteError;
 
 	fn write(&self, string: &str) -> Result<(), Self::TWriteError> {
-		let path = self.file.as_path();
-		let path_tmp = path.with_extension(extensions::TMP);
-		let path_old = path.with_extension(extensions::OLD);
+		let path = &self.file;
+		let path_tmp = path.with_extension_prefix(prefixes::TMP);
+		let path_old = path.with_extension_prefix(prefixes::OLD);
 
 		if let Some(parent) = path.parent() {
 			self.io.create_dir_all(parent)?;
@@ -87,8 +83,8 @@ where
 	fn read(&self) -> Result<String, Self::TReadError> {
 		let paths_to_attempts = [
 			&self.file,
-			&self.file.with_extension(extensions::OLD),
-			&self.file.with_extension(extensions::TMP),
+			&self.file.with_extension_prefix(prefixes::OLD),
+			&self.file.with_extension_prefix(prefixes::TMP),
 		];
 
 		for path in paths_to_attempts {
@@ -166,6 +162,28 @@ impl IORead for IO {
 	}
 }
 
+trait WithExtensionPrefix {
+	/// Prefixes extension
+	///
+	/// With the prefix literal `"prefix"` `/my/path.json` will become `/my/path.prefix.json`.
+	///
+	/// The prefix will be used as the extension if
+	/// - No extension exists
+	/// - Converting the extension to a `&str` fails
+	fn with_extension_prefix(&self, prefix: &str) -> Self;
+}
+
+impl WithExtensionPrefix for PathBuf {
+	fn with_extension_prefix(&self, prefix: &str) -> Self {
+		let new_extension = match self.extension().and_then(OsStr::to_str) {
+			Some(extension) => format!("{prefix}.{extension}"),
+			None => prefix.to_owned(),
+		};
+
+		self.with_extension(new_extension)
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -237,7 +255,7 @@ mod tests {
 					mock.expect_create_dir_all().returning(|_| Ok(()));
 					mock.expect_write().times(1).returning(|path, content| {
 						assert_eq!(
-							(Some("/my/path/to/file.tmp"), "content"),
+							(Some("/my/path/to/file.tmp.json"), "content"),
 							(path.to_str(), content)
 						);
 						Ok(())
@@ -276,15 +294,19 @@ mod tests {
 					mock.expect_rename()
 						.times(1)
 						.withf(|from, to| {
-							(Some("/my/path/to/file.json"), Some("/my/path/to/file.old"))
-								== (from.to_str(), to.to_str())
+							(
+								Some("/my/path/to/file.json"),
+								Some("/my/path/to/file.old.json"),
+							) == (from.to_str(), to.to_str())
 						})
 						.returning(|_, _| Ok(()));
 					mock.expect_rename()
 						.times(1)
 						.withf(|from, to| {
-							(Some("/my/path/to/file.tmp"), Some("/my/path/to/file.json"))
-								== (from.to_str(), to.to_str())
+							(
+								Some("/my/path/to/file.tmp.json"),
+								Some("/my/path/to/file.json"),
+							) == (from.to_str(), to.to_str())
 						})
 						.returning(|_, _| Ok(()));
 				}),
@@ -307,15 +329,19 @@ mod tests {
 					mock.expect_rename()
 						.never()
 						.withf(|from, to| {
-							(Some("/my/path/to/file.json"), Some("/my/path/to/file.old"))
-								== (from.to_str(), to.to_str())
+							(
+								Some("/my/path/to/file.json"),
+								Some("/my/path/to/file.old.json"),
+							) == (from.to_str(), to.to_str())
 						})
 						.returning(|_, _| Ok(()));
 					mock.expect_rename()
 						.times(1)
 						.withf(|from, to| {
-							(Some("/my/path/to/file.tmp"), Some("/my/path/to/file.json"))
-								== (from.to_str(), to.to_str())
+							(
+								Some("/my/path/to/file.tmp.json"),
+								Some("/my/path/to/file.json"),
+							) == (from.to_str(), to.to_str())
 						})
 						.returning(|_, _| Ok(()));
 				}),
@@ -334,14 +360,18 @@ mod tests {
 					mock.expect_exists().return_const(true);
 					mock.expect_rename()
 						.withf(|from, to| {
-							(Some("/my/path/to/file.json"), Some("/my/path/to/file.old"))
-								== (from.to_str(), to.to_str())
+							(
+								Some("/my/path/to/file.json"),
+								Some("/my/path/to/file.old.json"),
+							) == (from.to_str(), to.to_str())
 						})
 						.returning(|_, _| Err(_Error));
 					mock.expect_rename()
 						.withf(|from, to| {
-							(Some("/my/path/to/file.tmp"), Some("/my/path/to/file.json"))
-								== (from.to_str(), to.to_str())
+							(
+								Some("/my/path/to/file.tmp.json"),
+								Some("/my/path/to/file.json"),
+							) == (from.to_str(), to.to_str())
 						})
 						.returning(|_, _| Ok(()));
 				}),
@@ -360,14 +390,18 @@ mod tests {
 					mock.expect_exists().return_const(true);
 					mock.expect_rename()
 						.withf(|from, to| {
-							(Some("/my/path/to/file.json"), Some("/my/path/to/file.old"))
-								== (from.to_str(), to.to_str())
+							(
+								Some("/my/path/to/file.json"),
+								Some("/my/path/to/file.old.json"),
+							) == (from.to_str(), to.to_str())
 						})
 						.returning(|_, _| Ok(()));
 					mock.expect_rename()
 						.withf(|from, to| {
-							(Some("/my/path/to/file.tmp"), Some("/my/path/to/file.json"))
-								== (from.to_str(), to.to_str())
+							(
+								Some("/my/path/to/file.tmp.json"),
+								Some("/my/path/to/file.json"),
+							) == (from.to_str(), to.to_str())
 						})
 						.returning(|_, _| Err(_Error));
 				}),
@@ -398,16 +432,20 @@ mod tests {
 						.times(1)
 						.in_sequence(sequence)
 						.withf(|from, to| {
-							(Some("/my/path/to/file.json"), Some("/my/path/to/file.old"))
-								== (from.to_str(), to.to_str())
+							(
+								Some("/my/path/to/file.json"),
+								Some("/my/path/to/file.old.json"),
+							) == (from.to_str(), to.to_str())
 						})
 						.returning(|_, _| Ok(()));
 					mock.expect_rename()
 						.times(1)
 						.in_sequence(sequence)
 						.withf(|from, to| {
-							(Some("/my/path/to/file.tmp"), Some("/my/path/to/file.json"))
-								== (from.to_str(), to.to_str())
+							(
+								Some("/my/path/to/file.tmp.json"),
+								Some("/my/path/to/file.json"),
+							) == (from.to_str(), to.to_str())
 						})
 						.returning(|_, _| Ok(()));
 				}),
@@ -461,11 +499,11 @@ mod tests {
 						.withf(|path| Some("/my/path/to/file.json") == path.to_str())
 						.return_const(false);
 					mock.expect_exists()
-						.withf(|path| Some("/my/path/to/file.old") == path.to_str())
+						.withf(|path| Some("/my/path/to/file.old.json") == path.to_str())
 						.return_const(true);
 					mock.expect_read_to_string()
 						.times(1)
-						.withf(|path| Some("/my/path/to/file.old") == path.to_str())
+						.withf(|path| Some("/my/path/to/file.old.json") == path.to_str())
 						.returning(|_| Ok(String::from("content old")));
 				}),
 			};
@@ -482,11 +520,11 @@ mod tests {
 						.withf(|path| Some("/my/path/to/file.json") == path.to_str())
 						.return_const(false);
 					mock.expect_exists()
-						.withf(|path| Some("/my/path/to/file.old") == path.to_str())
+						.withf(|path| Some("/my/path/to/file.old.json") == path.to_str())
 						.return_const(true);
 					mock.expect_read_to_string()
 						.times(1)
-						.withf(|path| Some("/my/path/to/file.old") == path.to_str())
+						.withf(|path| Some("/my/path/to/file.old.json") == path.to_str())
 						.returning(|_| Err(_Error));
 				}),
 			};
@@ -503,19 +541,19 @@ mod tests {
 						.withf(|path| Some("/my/path/to/file.json") == path.to_str())
 						.return_const(false);
 					mock.expect_exists()
-						.withf(|path| Some("/my/path/to/file.old") == path.to_str())
+						.withf(|path| Some("/my/path/to/file.old.json") == path.to_str())
 						.return_const(false);
 					mock.expect_exists()
-						.withf(|path| Some("/my/path/to/file.tmp") == path.to_str())
+						.withf(|path| Some("/my/path/to/file.tmp.json") == path.to_str())
 						.return_const(true);
 					mock.expect_read_to_string()
 						.times(1)
-						.withf(|path| Some("/my/path/to/file.tmp") == path.to_str())
-						.returning(|_| Ok(String::from("content old")));
+						.withf(|path| Some("/my/path/to/file.tmp.json") == path.to_str())
+						.returning(|_| Ok(String::from("content tmp")));
 				}),
 			};
 
-			assert_eq!(Ok(String::from("content old")), file_io.read());
+			assert_eq!(Ok(String::from("content tmp")), file_io.read());
 		}
 
 		#[test]
@@ -527,14 +565,14 @@ mod tests {
 						.withf(|path| Some("/my/path/to/file.json") == path.to_str())
 						.return_const(false);
 					mock.expect_exists()
-						.withf(|path| Some("/my/path/to/file.old") == path.to_str())
+						.withf(|path| Some("/my/path/to/file.old.json") == path.to_str())
 						.return_const(false);
 					mock.expect_exists()
-						.withf(|path| Some("/my/path/to/file.tmp") == path.to_str())
+						.withf(|path| Some("/my/path/to/file.tmp.json") == path.to_str())
 						.return_const(true);
 					mock.expect_read_to_string()
 						.times(1)
-						.withf(|path| Some("/my/path/to/file.tmp") == path.to_str())
+						.withf(|path| Some("/my/path/to/file.tmp.json") == path.to_str())
 						.returning(|_| Err(_Error));
 				}),
 			};
@@ -553,7 +591,7 @@ mod tests {
 
 			assert_eq!(
 				Err(FileError::DoesNotExist(
-					"/my/path/to/file(.json|.old|.tmp)".to_owned()
+					"/my/path/to/file(.json|.old.json|.tmp.json)".to_owned()
 				)),
 				file_io.read()
 			);
