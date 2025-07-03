@@ -72,11 +72,11 @@ where
 		))));
 		let trigger_quick_save = TSettings::TKeyMap::<ActionKey>::trigger(
 			ActionKey::Save(SaveKey::QuickSave),
-			GameState::Saving,
+			GameState::Save,
 		);
 		let trigger_quick_load = TSettings::TKeyMap::<ActionKey>::trigger(
 			ActionKey::Save(SaveKey::QuickLoad),
-			GameState::LoadingSave,
+			GameState::LoadSave,
 		);
 
 		Self::register_savable_component::<Name>(app);
@@ -95,7 +95,7 @@ where
 				Register::update_context(quick_save.clone()).pipe(log),
 			)
 			.add_systems(
-				OnEnter(GameState::Saving),
+				OnEnter(GameState::Save),
 				(
 					SaveContext::write_buffer_system(quick_save.clone()).pipe(log),
 					SaveContext::write_file_system(quick_save.clone()).pipe(log),
@@ -103,7 +103,7 @@ where
 					.chain(),
 			)
 			.add_systems(
-				OnEnter(GameState::LoadingSave),
+				OnEnter(GameState::LoadSave),
 				(
 					Save::despawn_all,
 					SaveContext::read_file_system(quick_save.clone()).pipe(log),
