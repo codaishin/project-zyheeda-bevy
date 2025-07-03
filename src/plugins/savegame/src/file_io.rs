@@ -83,8 +83,8 @@ where
 	fn read(&self) -> Result<String, Self::TReadError> {
 		let paths_to_attempts = [
 			&self.file,
-			&self.file.with_extension_prefix(prefixes::OLD),
 			&self.file.with_extension_prefix(prefixes::TMP),
+			&self.file.with_extension_prefix(prefixes::OLD),
 		];
 
 		for path in paths_to_attempts {
@@ -491,57 +491,12 @@ mod tests {
 		}
 
 		#[test]
-		fn read_old_file_if_path_does_not_exist() {
+		fn read_tmp_file_if_path_does_not_exist() {
 			let file_io = FileIO {
 				file: PathBuf::from("/my/path/to/file.json"),
 				io: Mock_IO::new_mock(|mock| {
 					mock.expect_exists()
 						.withf(|path| Some("/my/path/to/file.json") == path.to_str())
-						.return_const(false);
-					mock.expect_exists()
-						.withf(|path| Some("/my/path/to/file.old.json") == path.to_str())
-						.return_const(true);
-					mock.expect_read_to_string()
-						.times(1)
-						.withf(|path| Some("/my/path/to/file.old.json") == path.to_str())
-						.returning(|_| Ok(String::from("content old")));
-				}),
-			};
-
-			assert_eq!(Ok(String::from("content old")), file_io.read());
-		}
-
-		#[test]
-		fn read_old_file_error() {
-			let file_io = FileIO {
-				file: PathBuf::from("/my/path/to/file.json"),
-				io: Mock_IO::new_mock(|mock| {
-					mock.expect_exists()
-						.withf(|path| Some("/my/path/to/file.json") == path.to_str())
-						.return_const(false);
-					mock.expect_exists()
-						.withf(|path| Some("/my/path/to/file.old.json") == path.to_str())
-						.return_const(true);
-					mock.expect_read_to_string()
-						.times(1)
-						.withf(|path| Some("/my/path/to/file.old.json") == path.to_str())
-						.returning(|_| Err(_Error));
-				}),
-			};
-
-			assert_eq!(Err(FileError::IO(_Error)), file_io.read());
-		}
-
-		#[test]
-		fn read_tmp_file_if_old_path_does_not_exist() {
-			let file_io = FileIO {
-				file: PathBuf::from("/my/path/to/file.json"),
-				io: Mock_IO::new_mock(|mock| {
-					mock.expect_exists()
-						.withf(|path| Some("/my/path/to/file.json") == path.to_str())
-						.return_const(false);
-					mock.expect_exists()
-						.withf(|path| Some("/my/path/to/file.old.json") == path.to_str())
 						.return_const(false);
 					mock.expect_exists()
 						.withf(|path| Some("/my/path/to/file.tmp.json") == path.to_str())
@@ -565,14 +520,59 @@ mod tests {
 						.withf(|path| Some("/my/path/to/file.json") == path.to_str())
 						.return_const(false);
 					mock.expect_exists()
-						.withf(|path| Some("/my/path/to/file.old.json") == path.to_str())
-						.return_const(false);
-					mock.expect_exists()
 						.withf(|path| Some("/my/path/to/file.tmp.json") == path.to_str())
 						.return_const(true);
 					mock.expect_read_to_string()
 						.times(1)
 						.withf(|path| Some("/my/path/to/file.tmp.json") == path.to_str())
+						.returning(|_| Err(_Error));
+				}),
+			};
+
+			assert_eq!(Err(FileError::IO(_Error)), file_io.read());
+		}
+
+		#[test]
+		fn read_old_file_if_tmp_path_does_not_exist() {
+			let file_io = FileIO {
+				file: PathBuf::from("/my/path/to/file.json"),
+				io: Mock_IO::new_mock(|mock| {
+					mock.expect_exists()
+						.withf(|path| Some("/my/path/to/file.json") == path.to_str())
+						.return_const(false);
+					mock.expect_exists()
+						.withf(|path| Some("/my/path/to/file.tmp.json") == path.to_str())
+						.return_const(false);
+					mock.expect_exists()
+						.withf(|path| Some("/my/path/to/file.old.json") == path.to_str())
+						.return_const(true);
+					mock.expect_read_to_string()
+						.times(1)
+						.withf(|path| Some("/my/path/to/file.old.json") == path.to_str())
+						.returning(|_| Ok(String::from("content old")));
+				}),
+			};
+
+			assert_eq!(Ok(String::from("content old")), file_io.read());
+		}
+
+		#[test]
+		fn read_old_file_error() {
+			let file_io = FileIO {
+				file: PathBuf::from("/my/path/to/file.json"),
+				io: Mock_IO::new_mock(|mock| {
+					mock.expect_exists()
+						.withf(|path| Some("/my/path/to/file.json") == path.to_str())
+						.return_const(false);
+					mock.expect_exists()
+						.withf(|path| Some("/my/path/to/file.tmp.json") == path.to_str())
+						.return_const(false);
+					mock.expect_exists()
+						.withf(|path| Some("/my/path/to/file.old.json") == path.to_str())
+						.return_const(true);
+					mock.expect_read_to_string()
+						.times(1)
+						.withf(|path| Some("/my/path/to/file.old.json") == path.to_str())
 						.returning(|_| Err(_Error));
 				}),
 			};
