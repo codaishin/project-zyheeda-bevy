@@ -1,5 +1,5 @@
 pub(crate) trait WriteFile {
-	type TError;
+	type TWriteError;
 
-	fn write(&self, string: &str) -> Result<(), Self::TError>;
+	fn write(&self, string: &str) -> Result<(), Self::TWriteError>;
 }

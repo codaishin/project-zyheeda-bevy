@@ -1,20 +1,23 @@
 use bevy::ecs::entity::Entity;
 use common::errors::{Error, Level};
 use serde_json::Error as SerdeJsonError;
-use std::{collections::HashMap, io::Error as IOError};
+use std::collections::HashMap;
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
-pub(crate) enum ContextIOError<TIOError = IOError> {
+pub(crate) enum ContextIOError<TIOError> {
 	FileError(TIOError),
 	SerdeErrors(SerdeJsonErrors),
 	LockPoisoned(LockPoisonedError),
 }
 
-impl From<ContextIOError> for Error {
-	fn from(value: ContextIOError) -> Self {
+impl<TError> From<ContextIOError<TError>> for Error
+where
+	TError: Into<Error>,
+{
+	fn from(value: ContextIOError<TError>) -> Self {
 		match value {
-			ContextIOError::FileError(error) => Self::from(error),
+			ContextIOError::FileError(error) => error.into(),
 			ContextIOError::SerdeErrors(error) => Self::from(error),
 			ContextIOError::LockPoisoned(error) => Self::from(error),
 		}
