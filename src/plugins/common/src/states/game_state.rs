@@ -27,11 +27,11 @@ pub enum GameState {
 	#[default]
 	LoadingEssentialAssets,
 	StartMenu,
-	Loading,
+	LoadDependencies,
 	NewGame,
 	Play,
-	Saving,
-	LoadingSave,
+	Save,
+	LoadSave,
 	IngameMenu(MenuState),
 }
 
@@ -39,9 +39,9 @@ impl AutoTransitions for GameState {
 	fn auto_transitions() -> impl IntoIterator<Item = (Self, TransitionTo<Self>)> {
 		const {
 			[
-				(Self::NewGame, TransitionTo::State(Self::Loading)),
-				(Self::Saving, TransitionTo::PreviousState),
-				(Self::LoadingSave, TransitionTo::State(Self::Play)),
+				(Self::NewGame, TransitionTo::State(Self::LoadDependencies)),
+				(Self::LoadSave, TransitionTo::State(Self::LoadDependencies)),
+				(Self::Save, TransitionTo::PreviousState),
 			]
 		}
 	}
@@ -62,11 +62,11 @@ impl IterFinite for GameState {
 		match current.as_ref()? {
 			GameState::LoadingEssentialAssets => Some(GameState::StartMenu),
 			GameState::StartMenu => Some(GameState::NewGame),
-			GameState::NewGame => Some(GameState::Loading),
-			GameState::Loading => Some(GameState::Play),
-			GameState::Play => Some(GameState::Saving),
-			GameState::Saving => Some(GameState::LoadingSave),
-			GameState::LoadingSave => Some(GameState::IngameMenu(MenuState::Inventory)),
+			GameState::NewGame => Some(GameState::LoadDependencies),
+			GameState::LoadDependencies => Some(GameState::Play),
+			GameState::Play => Some(GameState::Save),
+			GameState::Save => Some(GameState::LoadSave),
+			GameState::LoadSave => Some(GameState::IngameMenu(MenuState::Inventory)),
 			GameState::IngameMenu(MenuState::Inventory) => {
 				Some(GameState::IngameMenu(MenuState::ComboOverview))
 			}
@@ -98,11 +98,11 @@ pub struct LoadingGame;
 impl LoadGroup for LoadingGame {
 	type TState = GameState;
 
-	const LOAD_STATE: GameState = GameState::Loading;
+	const LOAD_STATE: GameState = GameState::LoadDependencies;
 	const LOAD_DONE_STATE: GameState = GameState::Play;
 
 	fn load_reset_states() -> Vec<Self::TState> {
-		vec![GameState::NewGame, GameState::LoadingSave]
+		vec![GameState::NewGame, GameState::LoadSave]
 	}
 }
 
@@ -120,10 +120,10 @@ mod tests {
 				GameState::LoadingEssentialAssets,
 				GameState::StartMenu,
 				GameState::NewGame,
-				GameState::Loading,
+				GameState::LoadDependencies,
 				GameState::Play,
-				GameState::Saving,
-				GameState::LoadingSave,
+				GameState::Save,
+				GameState::LoadSave,
 				GameState::IngameMenu(MenuState::Inventory),
 				GameState::IngameMenu(MenuState::ComboOverview),
 				GameState::IngameMenu(MenuState::Settings),

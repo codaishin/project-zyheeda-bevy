@@ -54,7 +54,7 @@ where
 			Update,
 			TGraphics::TWorldCameras::set_to_orbit::<TPlayers::TPlayer>
 				.pipe(log)
-				.run_if(in_state(GameState::Loading)),
+				.run_if(in_state(GameState::LoadDependencies)),
 		)
 		.add_systems(
 			Update,
