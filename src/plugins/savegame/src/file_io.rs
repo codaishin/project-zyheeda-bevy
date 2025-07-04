@@ -1,4 +1,4 @@
-use crate::traits::{read_file::ReadFile, write_file::WriteFile};
+use crate::traits::{file_exists::FileExists, read_file::ReadFile, write_file::WriteFile};
 use common::errors::{Error, Level};
 use std::{
 	ffi::OsStr,
@@ -45,6 +45,14 @@ where
 
 		FileError::DoesNotExist(format!("{core_path}({extensions})"))
 	}
+
+	fn file_variations(&self) -> impl IntoIterator<Item = PathBuf> {
+		[
+			self.file.clone(),
+			self.file.with_extension_prefix(prefixes::TMP),
+			self.file.with_extension_prefix(prefixes::OLD),
+		]
+	}
 }
 
 impl<TIO> WriteFile for FileIO<TIO>
@@ -81,20 +89,25 @@ where
 	type TReadError = FileError<TIO::TReadError>;
 
 	fn read(&self) -> Result<String, Self::TReadError> {
-		let paths_to_attempts = [
-			&self.file,
-			&self.file.with_extension_prefix(prefixes::TMP),
-			&self.file.with_extension_prefix(prefixes::OLD),
-		];
-
-		for path in paths_to_attempts {
-			if !self.io.exists(path) {
+		for path in self.file_variations() {
+			if !self.io.exists(&path) {
 				continue;
 			}
-			return self.io.read_to_string(path).map_err(FileError::IO);
+			return self.io.read_to_string(&path).map_err(FileError::IO);
 		}
 
 		Err(self.file_does_not_exist())
+	}
+}
+
+impl<TIO> FileExists for FileIO<TIO>
+where
+	TIO: IOWrite + IORead,
+{
+	fn file_exists(&self) -> bool {
+		self.file_variations()
+			.into_iter()
+			.any(|file| self.io.exists(&file))
 	}
 }
 
@@ -595,6 +608,90 @@ mod tests {
 				)),
 				file_io.read()
 			);
+		}
+	}
+
+	mod file_exists {
+		use super::*;
+
+		#[test]
+		fn save_file_exists() {
+			let io = FileIO {
+				file: PathBuf::from("/my/file.json"),
+				io: Mock_IO::new_mock(|mock| {
+					mock.expect_exists()
+						.withf(|path| Some("/my/file.json") == path.to_str())
+						.return_const(true);
+					mock.expect_exists()
+						.withf(|path| Some("/my/file.tmp.json") == path.to_str())
+						.return_const(false);
+					mock.expect_exists()
+						.withf(|path| Some("/my/file.old.json") == path.to_str())
+						.return_const(false);
+				}),
+			};
+
+			assert!(io.file_exists());
+		}
+
+		#[test]
+		fn tmp_file_exists() {
+			let io = FileIO {
+				file: PathBuf::from("/my/file.json"),
+				io: Mock_IO::new_mock(|mock| {
+					mock.expect_exists()
+						.withf(|path| Some("/my/file.json") == path.to_str())
+						.return_const(false);
+					mock.expect_exists()
+						.withf(|path| Some("/my/file.tmp.json") == path.to_str())
+						.return_const(true);
+					mock.expect_exists()
+						.withf(|path| Some("/my/file.old.json") == path.to_str())
+						.return_const(false);
+				}),
+			};
+
+			assert!(io.file_exists());
+		}
+
+		#[test]
+		fn old_file_exists() {
+			let io = FileIO {
+				file: PathBuf::from("/my/file.json"),
+				io: Mock_IO::new_mock(|mock| {
+					mock.expect_exists()
+						.withf(|path| Some("/my/file.json") == path.to_str())
+						.return_const(false);
+					mock.expect_exists()
+						.withf(|path| Some("/my/file.tmp.json") == path.to_str())
+						.return_const(false);
+					mock.expect_exists()
+						.withf(|path| Some("/my/file.old.json") == path.to_str())
+						.return_const(true);
+				}),
+			};
+
+			assert!(io.file_exists());
+		}
+
+		#[test]
+		fn no_file_does_exist() {
+			let io = FileIO {
+				file: PathBuf::from("/my/file.json"),
+				io: Mock_IO::new_mock(|mock| {
+					mock.expect_exists()
+						.withf(|path| Some("/my/file.json") == path.to_str())
+						.return_const(false);
+					mock.expect_exists()
+						.withf(|path| Some("/my/file.tmp.json") == path.to_str())
+						.return_const(false);
+					mock.expect_exists()
+						.withf(|path| Some("/my/file.old.json") == path.to_str())
+						.return_const(false);
+				}),
+			};
+
+			assert!(!io.file_exists());
 		}
 	}
 }
