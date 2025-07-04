@@ -1,4 +1,5 @@
 pub(crate) mod despawn_savable_entities;
+pub(crate) mod file_exists;
 pub(crate) mod read_buffer;
 pub(crate) mod read_file;
 pub(crate) mod trigger_state;

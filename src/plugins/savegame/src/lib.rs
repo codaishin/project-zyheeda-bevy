@@ -88,7 +88,11 @@ where
 		app.init_resource::<Register>()
 			.add_systems(
 				Update,
-				(trigger_quick_save, trigger_quick_load).run_if(in_state(GameState::Play)),
+				(
+					trigger_quick_save,
+					trigger_quick_load.run_if(SaveContext::file_exists(quick_save.clone())),
+				)
+					.run_if(in_state(GameState::Play)),
 			)
 			.add_systems(
 				Startup,
