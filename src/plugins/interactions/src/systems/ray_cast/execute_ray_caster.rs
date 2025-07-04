@@ -56,12 +56,10 @@ mod tests {
 	use crate::events::RayCastInfo;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use bevy_rapier3d::math::Real;
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		traits::{cast_ray::TimeOfImpact, nested_mock::NestedMocks},
-	};
+	use common::traits::cast_ray::TimeOfImpact;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(NestedMocks)]
 	struct _GetRayCaster {

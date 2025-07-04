@@ -77,16 +77,11 @@ fn stop_animation<TMovement, TAnimationDispatch>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		traits::{
-			animation::{Animation, AnimationAsset, PlayMode},
-			nested_mock::NestedMocks,
-		},
-	};
+	use common::traits::animation::{Animation, AnimationAsset, PlayMode};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
 	use std::ops::DerefMut;
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Component)]
 	struct _Agent(Option<MovementAnimation>);

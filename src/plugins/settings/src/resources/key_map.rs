@@ -754,7 +754,7 @@ mod tests {
 
 	mod load_error {
 		use super::*;
-		use common::assert_count;
+		use testing::assert_count;
 
 		macro_rules! either_or {
 			($a:expr, $b:expr $(,)?) => {

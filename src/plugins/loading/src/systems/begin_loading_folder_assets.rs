@@ -25,12 +25,10 @@ mod tests {
 		prelude::Resource,
 		reflect::TypePath,
 	};
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		traits::{load_asset::Path, nested_mock::NestedMocks},
-	};
+	use common::traits::load_asset::Path;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
+	use testing::{NestedMocks, SingleThreadedApp};
 	use uuid::Uuid;
 
 	#[derive(Resource, NestedMocks)]

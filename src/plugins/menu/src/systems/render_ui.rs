@@ -27,18 +27,13 @@ pub(crate) trait RenderUi: InsertUiContent + Component + Sized {
 mod tests {
 	use super::*;
 	use bevy::ecs::relationship::RelatedSpawnerCommands;
-	use common::{
-		assert_count,
-		get_children,
-		test_tools::utils::SingleThreadedApp,
-		traits::{
-			handles_localization::{LocalizationResult, Token, localized::Localized},
-			nested_mock::NestedMocks,
-			thread_safe::ThreadSafe,
-		},
+	use common::traits::{
+		handles_localization::{LocalizationResult, Token, localized::Localized},
+		thread_safe::ThreadSafe,
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
+	use testing::{NestedMocks, SingleThreadedApp, assert_count, get_children};
 
 	#[derive(Component)]
 	struct _Component;

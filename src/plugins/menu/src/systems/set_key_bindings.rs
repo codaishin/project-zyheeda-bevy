@@ -27,8 +27,8 @@ pub(crate) trait SetKeyBindings<TKey, TKeyCode>:
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{test_tools::utils::SingleThreadedApp, traits::iterate::Iterate};
 	use std::collections::{HashMap, hash_map::Iter};
+	use testing::SingleThreadedApp;
 
 	#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 	struct _Key;

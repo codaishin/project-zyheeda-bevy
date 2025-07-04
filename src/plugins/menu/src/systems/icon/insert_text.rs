@@ -23,12 +23,10 @@ impl Icon {
 mod tests {
 	use super::*;
 	use crate::components::icon::IconImage;
-	use common::{
-		test_tools::utils::{SingleThreadedApp, new_handle},
-		traits::handles_localization::localized::Localized,
-	};
+	use common::traits::handles_localization::localized::Localized;
 	use std::path::PathBuf;
 	use test_case::test_case;
+	use testing::{SingleThreadedApp, new_handle};
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);

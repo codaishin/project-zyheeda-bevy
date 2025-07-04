@@ -183,13 +183,11 @@ impl From<AnchorError> for Error {
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		traits::{
-			handles_skill_behaviors::Spawner,
-			register_persistent_entities::RegisterPersistentEntities,
-		},
+	use common::traits::{
+		handles_skill_behaviors::Spawner,
+		register_persistent_entities::RegisterPersistentEntities,
 	};
+	use testing::SingleThreadedApp;
 
 	struct _NotIgnored;
 

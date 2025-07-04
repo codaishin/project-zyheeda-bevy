@@ -34,8 +34,9 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{test_tools::utils::SingleThreadedApp, traits::asset_marker::internal};
+	use crate::traits::asset_marker::internal;
 	use std::sync::Arc;
+	use testing::SingleThreadedApp;
 	#[derive(Asset, TypePath, Debug, PartialEq, Default)]
 	struct _Asset;
 

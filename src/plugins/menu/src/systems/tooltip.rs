@@ -66,15 +66,10 @@ mod tests {
 	use super::*;
 	use crate::{components::tooltip::TooltipUiConfig, traits::insert_ui_content::InsertUiContent};
 	use bevy::ecs::relationship::RelatedSpawnerCommands;
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		traits::{
-			handles_localization::{LocalizationResult, LocalizeToken, Token},
-			nested_mock::NestedMocks,
-		},
-	};
+	use common::traits::handles_localization::{LocalizationResult, LocalizeToken, Token};
 	use macros::NestedMocks;
 	use mockall::mock;
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Component)]
 	struct _Window(Option<Vec2>);

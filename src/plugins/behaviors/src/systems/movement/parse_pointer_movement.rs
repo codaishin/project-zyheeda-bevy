@@ -34,12 +34,10 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		math::Vec3,
 	};
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		traits::{intersect_at::IntersectAt, iteration::IterFinite, nested_mock::NestedMocks},
-	};
+	use common::traits::{intersect_at::IntersectAt, iteration::IterFinite};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Debug, PartialEq, Clone, Copy)]
 	struct _Input(Vec3);

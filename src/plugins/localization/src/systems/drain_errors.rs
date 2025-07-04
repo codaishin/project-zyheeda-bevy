@@ -17,7 +17,7 @@ pub(crate) trait DrainErrors: GetErrorsMut + Resource {
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::test_tools::utils::SingleThreadedApp;
+	use testing::SingleThreadedApp;
 
 	#[derive(Resource)]
 	struct _FtlServer(Vec<_Error>);

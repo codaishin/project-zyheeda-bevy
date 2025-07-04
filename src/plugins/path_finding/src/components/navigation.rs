@@ -153,23 +153,20 @@ impl From<NavGridError> for Error {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{
-		simple_init,
-		traits::{
-			clamp_zero_positive::ClampZeroPositive,
-			handles_map_generation::{
-				GraphLineOfSight,
-				GraphNaivePath,
-				GraphNode,
-				GraphObstacle,
-				GraphSuccessors,
-				GraphTranslation,
-				NaivePath,
-			},
-			mock::Mock,
+	use common::traits::{
+		clamp_zero_positive::ClampZeroPositive,
+		handles_map_generation::{
+			GraphLineOfSight,
+			GraphNaivePath,
+			GraphNode,
+			GraphObstacle,
+			GraphSuccessors,
+			GraphTranslation,
+			NaivePath,
 		},
 	};
 	use mockall::{mock, predicate::eq};
+	use testing::{Mock, simple_init};
 
 	mock! {
 		_Method {}

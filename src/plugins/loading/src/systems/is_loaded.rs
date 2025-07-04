@@ -34,9 +34,9 @@ mod tests {
 		asset::LoadedFolder,
 		ecs::system::{RunSystemError, RunSystemOnce},
 	};
-	use common::{test_tools::utils::new_handle, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
+	use testing::{NestedMocks, new_handle};
 
 	#[derive(Asset, TypePath)]
 	struct _Asset;

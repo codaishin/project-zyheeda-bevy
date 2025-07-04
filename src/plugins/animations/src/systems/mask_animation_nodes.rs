@@ -51,11 +51,9 @@ fn mask_animation_nodes<TAgent, TGraph, TAnimations>(
 mod tests {
 	use super::*;
 	use crate::test_tools::unique_animation_asset;
-	use common::{
-		test_tools::utils::{SingleThreadedApp, new_handle},
-		traits::wrap_handle::{UnwrapHandle, WrapHandle},
-	};
+	use common::traits::wrap_handle::{UnwrapHandle, WrapHandle};
 	use std::{collections::HashMap, slice::Iter};
+	use testing::{SingleThreadedApp, new_handle};
 
 	struct _Animations(Vec<AnimationNodeIndex>);
 

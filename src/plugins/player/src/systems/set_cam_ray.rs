@@ -33,9 +33,9 @@ mod tests {
 		math::{Dir3, Ray3d, Vec3},
 		utils::default,
 	};
-	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::automock;
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Component, NestedMocks)]
 	struct _Camera {

@@ -135,10 +135,10 @@ mod tests {
 	use crate::components::combo_node::ComboNode;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
-		test_tools::utils::SingleThreadedApp,
 		tools::{action_key::slot::Side, item_type::CompatibleItems},
 		traits::handles_localization::Token,
 	};
+	use testing::SingleThreadedApp;
 
 	#[derive(Component)]
 	struct _Player;

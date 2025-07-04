@@ -124,14 +124,11 @@ mod tests {
 	};
 	use common::{
 		components::persistent_entity::PersistentEntity,
-		test_tools::utils::SingleThreadedApp,
-		traits::{
-			nested_mock::NestedMocks,
-			register_persistent_entities::RegisterPersistentEntities,
-		},
+		traits::register_persistent_entities::RegisterPersistentEntities,
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Resource, NestedMocks)]
 	struct _Cursor {

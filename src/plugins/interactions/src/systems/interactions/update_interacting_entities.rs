@@ -37,7 +37,7 @@ mod tests {
 		app::{App, Update},
 		prelude::Entity,
 	};
-	use common::test_tools::utils::SingleThreadedApp;
+	use testing::SingleThreadedApp;
 
 	use super::*;
 

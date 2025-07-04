@@ -18,3 +18,6 @@ macros.workspace = true
 [dev-dependencies]
 # external
 mockall.workspace = true
+
+#internal
+testing.workspace = true

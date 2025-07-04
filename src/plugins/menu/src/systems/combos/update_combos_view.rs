@@ -29,10 +29,10 @@ pub(crate) trait UpdateComboOverview: Component<Mutability = Mutable> + Sized {
 mod tests {
 	use super::*;
 	use crate::traits::build_combo_tree_layout::{ComboTreeElement, ComboTreeLayout, Symbol};
-	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::ops::DerefMut;
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Debug, PartialEq, Clone)]
 	struct _Skill;

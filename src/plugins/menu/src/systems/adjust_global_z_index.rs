@@ -31,7 +31,7 @@ fn is_not_new((.., global_z_index_top): &(Entity, Ref<GlobalZIndexTop>)) -> bool
 mod tests {
 	use super::*;
 	use bevy::app::{App, Update};
-	use common::test_tools::utils::SingleThreadedApp;
+	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);

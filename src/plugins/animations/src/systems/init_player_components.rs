@@ -27,8 +27,8 @@ pub(crate) trait InitPlayerComponents:
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::test_tools::utils::SingleThreadedApp;
 	use std::vec::IntoIter;
+	use testing::SingleThreadedApp;
 
 	#[derive(Component)]
 	struct _Dispatch {

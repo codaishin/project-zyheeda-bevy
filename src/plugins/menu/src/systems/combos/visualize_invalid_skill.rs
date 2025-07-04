@@ -40,13 +40,10 @@ type Button<TSkill> = ComboSkillButton<DropdownTrigger, TSkill>;
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		tools::action_key::slot::{Side, SlotKey},
-		traits::nested_mock::NestedMocks,
-	};
+	use common::tools::action_key::slot::{Side, SlotKey};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Debug, PartialEq, Default, Clone)]
 	struct _Skill(&'static str);

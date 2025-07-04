@@ -56,16 +56,11 @@ fn set_label(texts: &mut Query<(&ChildOf, &mut Text)>, entity: Entity, label: Lo
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		traits::{
-			handles_localization::{LocalizationResult, Token, localized::Localized},
-			nested_mock::NestedMocks,
-		},
-	};
+	use common::traits::handles_localization::{LocalizationResult, Token, localized::Localized};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::collections::HashMap;
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 	struct _Key(usize);

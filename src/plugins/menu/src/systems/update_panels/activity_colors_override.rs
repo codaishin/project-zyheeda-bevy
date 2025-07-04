@@ -97,15 +97,11 @@ mod tests {
 	use super::*;
 	use crate::traits::colors::PanelColors;
 	use bevy::state::app::StatesPlugin;
-	use common::{
-		components::ui_input_primer::IsPrimed,
-		test_tools::utils::SingleThreadedApp,
-		tools::action_key::slot::Side,
-		traits::nested_mock::NestedMocks,
-	};
+	use common::{components::ui_input_primer::IsPrimed, tools::action_key::slot::Side};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::collections::HashMap;
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Component)]
 	struct _Primer {

@@ -28,13 +28,13 @@ mod tests {
 	use bevy_rapier3d::prelude::Velocity;
 	use common::{
 		components::persistent_entity::PersistentEntity,
-		test_tools::utils::SingleThreadedApp,
 		tools::{Units, UnitsPerSecond},
 		traits::{
 			clamp_zero_positive::ClampZeroPositive,
 			handles_skill_behaviors::{Integrity, Motion, Shape, Spawner},
 		},
 	};
+	use testing::SingleThreadedApp;
 
 	#[derive(Component)]
 	struct _Destroy;

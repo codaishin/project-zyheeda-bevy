@@ -247,7 +247,7 @@ mod tests {
 	use super::*;
 	use crate::traits::insert_cell_components::InsertCellComponents;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{assert_count, get_children, test_tools::utils::SingleThreadedApp};
+	use testing::{SingleThreadedApp, assert_count, get_children};
 
 	#[derive(Default)]
 	struct _Cell {

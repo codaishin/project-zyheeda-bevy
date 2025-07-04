@@ -306,11 +306,9 @@ pub struct Obstacles {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{
-		simple_init,
-		traits::{clamp_zero_positive::ClampZeroPositive, mock::Mock},
-	};
+	use common::traits::clamp_zero_positive::ClampZeroPositive;
 	use mockall::{mock, predicate::eq};
+	use testing::{Mock, simple_init};
 
 	mock! {
 		_Mapper {}

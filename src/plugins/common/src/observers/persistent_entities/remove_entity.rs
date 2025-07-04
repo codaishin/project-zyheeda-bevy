@@ -22,8 +22,8 @@ impl PersistentEntities {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::test_tools::utils::SingleThreadedApp;
 	use std::collections::HashMap;
+	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);

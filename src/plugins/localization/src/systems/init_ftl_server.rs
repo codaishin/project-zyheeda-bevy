@@ -22,7 +22,7 @@ where
 #[cfg(test)]
 mod test {
 	use super::*;
-	use common::test_tools::utils::SingleThreadedApp;
+	use testing::SingleThreadedApp;
 	use unic_langid::langid;
 
 	#[derive(Resource, Debug, PartialEq)]

@@ -22,7 +22,7 @@ mod tests {
 		pbr::StandardMaterial,
 		utils::default,
 	};
-	use common::test_tools::utils::SingleThreadedApp;
+	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);

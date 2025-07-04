@@ -29,12 +29,9 @@ where
 mod tests {
 	use super::*;
 	use bevy::asset::AssetPath;
-	use common::{
-		test_tools::utils::{SingleThreadedApp, new_handle},
-		traits::nested_mock::NestedMocks,
-	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
+	use testing::{NestedMocks, SingleThreadedApp, new_handle};
 
 	#[derive(Asset, TypePath, Debug, PartialEq)]
 	struct _Asset;

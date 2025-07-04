@@ -26,7 +26,7 @@ mod tests {
 		input::ButtonInput,
 		prelude::{Commands, In, IntoSystem, MouseButton, Resource},
 	};
-	use common::test_tools::utils::SingleThreadedApp;
+	use testing::SingleThreadedApp;
 
 	#[derive(Resource, Debug, PartialEq)]
 	struct _Result(Focus);

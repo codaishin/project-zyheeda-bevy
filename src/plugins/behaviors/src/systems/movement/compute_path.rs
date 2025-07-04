@@ -107,14 +107,11 @@ where
 #[cfg(test)]
 mod test_new_path {
 	use super::*;
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		tools::Units,
-		traits::{clamp_zero_positive::ClampZeroPositive, nested_mock::NestedMocks},
-	};
+	use common::{tools::Units, traits::clamp_zero_positive::ClampZeroPositive};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::{collections::VecDeque, marker::PhantomData};
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Debug, PartialEq, Default)]
 	struct _MoveMethod;

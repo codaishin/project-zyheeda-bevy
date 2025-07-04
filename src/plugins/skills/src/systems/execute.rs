@@ -59,17 +59,16 @@ mod tests {
 	use super::*;
 	use common::{
 		components::outdated::Outdated,
-		test_tools::utils::SingleThreadedApp,
 		tools::collider_info::ColliderInfo,
 		traits::{
 			handles_skill_behaviors::{Contact, Projection, SkillEntities, SkillRoot},
 			intersect_at::IntersectAt,
-			nested_mock::NestedMocks,
 		},
 	};
 	use macros::NestedMocks;
 	use mockall::mock;
 	use std::{ops::DerefMut, time::Duration};
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	struct _Players;
 

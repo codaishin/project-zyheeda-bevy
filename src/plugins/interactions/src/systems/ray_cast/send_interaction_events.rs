@@ -28,12 +28,10 @@ mod tests {
 	use super::*;
 	use crate::events::Collision;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		traits::{cast_ray::TimeOfImpact, nested_mock::NestedMocks},
-	};
+	use common::traits::cast_ray::TimeOfImpact;
 	use macros::NestedMocks;
 	use mockall::{Sequence, mock, predicate::eq};
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Resource, NestedMocks)]
 	struct _Tracker {

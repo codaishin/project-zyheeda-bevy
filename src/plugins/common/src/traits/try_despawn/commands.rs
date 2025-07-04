@@ -24,8 +24,8 @@ impl TryDespawnPersistent for Commands<'_, '_> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::test_tools::utils::SingleThreadedApp;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
+	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
 		App::new().single_threaded(Update)

@@ -39,11 +39,8 @@ pub(crate) trait ExecuteMovement {
 mod tests {
 	use super::*;
 	use crate::traits::IsDone;
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		tools::UnitsPerSecond,
-		traits::clamp_zero_positive::ClampZeroPositive,
-	};
+	use common::{tools::UnitsPerSecond, traits::clamp_zero_positive::ClampZeroPositive};
+	use testing::SingleThreadedApp;
 
 	#[derive(Component, Default)]
 	struct _Agent(Speed);

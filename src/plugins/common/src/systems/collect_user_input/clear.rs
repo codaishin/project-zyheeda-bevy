@@ -10,7 +10,7 @@ impl UserInput {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::test_tools::utils::SingleThreadedApp;
+	use testing::SingleThreadedApp;
 
 	fn setup(keys: ButtonInput<UserInput>) -> App {
 		let mut app = App::new().single_threaded(Update);

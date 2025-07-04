@@ -30,9 +30,9 @@ mod tests {
 	use super::*;
 	use crate::traits::orbit::Vec2Radians;
 	use bevy::{ecs::event::Events, input::mouse::MouseMotion};
-	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Component, NestedMocks)]
 	struct _Orbit {

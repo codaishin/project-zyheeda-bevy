@@ -25,9 +25,10 @@ where
 mod tests {
 	use super::*;
 	use bevy::utils::default;
-	use common::{simple_init, tools::action_key::slot::Side, traits::handles_localization::Token};
+	use common::{tools::action_key::slot::Side, traits::handles_localization::Token};
 	use mockall::{automock, predicate::eq};
 	use std::collections::HashMap;
+	use testing::simple_init;
 
 	struct _Combos {
 		lookup: HashMap<(SlotKey, ItemType), Skill>,

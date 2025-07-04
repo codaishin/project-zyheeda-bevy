@@ -51,8 +51,8 @@ mod tests {
 		Obstacles,
 		grid_context::{GridContext, GridDefinition},
 	};
-	use common::{assert_count, get_children, test_tools::utils::SingleThreadedApp};
 	use std::collections::HashMap;
+	use testing::{SingleThreadedApp, assert_count, get_children};
 
 	#[derive(TypePath, Debug, PartialEq)]
 	struct _Cell;

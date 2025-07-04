@@ -7,7 +7,6 @@ mod integration_tests {
 	use crate::{
 		components::persistent_entity::PersistentEntity,
 		resources::persistent_entities::PersistentEntities,
-		test_tools::utils::SingleThreadedApp,
 		traits::{
 			register_persistent_entities::RegisterPersistentEntities,
 			try_despawn::{TryDespawn, TryDespawnPersistent},
@@ -17,6 +16,7 @@ mod integration_tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
 	};
+	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);

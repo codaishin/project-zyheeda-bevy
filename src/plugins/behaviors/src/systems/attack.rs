@@ -56,13 +56,11 @@ mod tests {
 		ecs::component::Component,
 		prelude::EntityCommands,
 	};
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		traits::{handles_enemies::EnemyAttack, nested_mock::NestedMocks},
-	};
+	use common::traits::handles_enemies::EnemyAttack;
 	use macros::NestedMocks;
 	use mockall::automock;
 	use std::time::Duration;
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _FakeAttack {

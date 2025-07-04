@@ -40,9 +40,9 @@ where
 mod tests {
 	use super::*;
 	use bevy::state::app::StatesPlugin;
-	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::automock;
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(States, Debug, PartialEq, Eq, Hash, Clone, Copy, Default)]
 	enum _State {

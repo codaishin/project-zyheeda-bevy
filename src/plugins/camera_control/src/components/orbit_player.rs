@@ -67,8 +67,8 @@ impl MoveTogether for OrbitPlayer {
 #[cfg(test)]
 mod test_orbit {
 	use super::*;
-	use common::test_tools::utils::assert_eq_approx;
 	use std::f32::consts::PI;
+	use testing::assert_eq_approx;
 
 	#[test]
 	fn apply_distance() {

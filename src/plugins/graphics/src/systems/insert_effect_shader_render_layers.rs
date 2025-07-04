@@ -27,8 +27,8 @@ mod test {
 		app::{App, Update},
 		utils::default,
 	};
-	use common::test_tools::utils::SingleThreadedApp;
 	use std::collections::HashSet;
+	use testing::SingleThreadedApp;
 
 	fn setup<TPass>(pass: TPass) -> App
 	where

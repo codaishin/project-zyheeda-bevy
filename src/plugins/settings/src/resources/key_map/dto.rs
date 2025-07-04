@@ -49,11 +49,8 @@ mod tests {
 	use super::*;
 	use crate::resources::key_map::KeyMapInternal;
 	use bevy::input::keyboard::KeyCode;
-	use common::{
-		repeat_scope,
-		tools::action_key::camera_key::CameraKey,
-		traits::handles_settings::UpdateKey,
-	};
+	use common::{tools::action_key::camera_key::CameraKey, traits::handles_settings::UpdateKey};
+	use testing::repeat_scope;
 
 	#[test]
 	fn convert_to_dto_with_key_standard_ordering() {

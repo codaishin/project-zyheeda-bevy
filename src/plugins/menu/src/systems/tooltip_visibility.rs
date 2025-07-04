@@ -29,8 +29,8 @@ mod tests {
 		prelude::Entity,
 		time::Real,
 	};
-	use common::test_tools::utils::{SingleThreadedApp, TickTime};
 	use std::time::Duration;
+	use testing::{SingleThreadedApp, TickTime};
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);

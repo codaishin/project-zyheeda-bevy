@@ -191,15 +191,13 @@ mod tests {
 		components::RayCasterArgs,
 		events::{InteractionEvent, Ray},
 	};
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		traits::{
-			cast_ray::TimeOfImpact,
-			clamp_zero_positive::ClampZeroPositive,
-			register_persistent_entities::RegisterPersistentEntities,
-		},
+	use common::traits::{
+		cast_ray::TimeOfImpact,
+		clamp_zero_positive::ClampZeroPositive,
+		register_persistent_entities::RegisterPersistentEntities,
 	};
 	use std::{sync::LazyLock, time::Duration};
+	use testing::SingleThreadedApp;
 
 	struct _HandlesLifetime;
 

@@ -6,14 +6,11 @@ mod dto;
 use super::SetFace;
 use crate::components::movement::dto::MovementDto;
 use bevy::{ecs::query::QueryFilter, prelude::*};
-use common::{
-	test_tools::utils::ApproxEqual,
-	traits::{
-		handles_orientation::Face,
-		thread_safe::ThreadSafe,
-		try_insert_on::TryInsertOn,
-		try_remove_from::TryRemoveFrom,
-	},
+use common::traits::{
+	handles_orientation::Face,
+	thread_safe::ThreadSafe,
+	try_insert_on::TryInsertOn,
+	try_remove_from::TryRemoveFrom,
 };
 use macros::SavableComponent;
 
@@ -113,15 +110,6 @@ where
 	}
 }
 
-impl<TMovement> ApproxEqual<f32> for Movement<TMovement>
-where
-	TMovement: ThreadSafe + Default,
-{
-	fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
-		self.target.approx_equal(&other.target, tolerance)
-	}
-}
-
 pub(crate) trait OnMovementRemoved {
 	type TConstraint: QueryFilter;
 
@@ -132,7 +120,16 @@ pub(crate) trait OnMovementRemoved {
 mod tests {
 	use super::*;
 	use bevy::ecs::system::ScheduleSystem;
-	use common::test_tools::utils::SingleThreadedApp;
+	use testing::{ApproxEqual, SingleThreadedApp};
+
+	impl<TMovement> ApproxEqual<f32> for Movement<TMovement>
+	where
+		TMovement: ThreadSafe + Default,
+	{
+		fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
+			self.target.approx_equal(&other.target, tolerance)
+		}
+	}
 
 	#[derive(Default)]
 	struct _T;

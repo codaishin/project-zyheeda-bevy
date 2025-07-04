@@ -166,13 +166,9 @@ fn add(dst: &mut AnimationMask, src: AnimationMask) {
 
 #[cfg(test)]
 mod tests {
-	use crate::test_tools::leak_iterator;
-
 	use super::*;
-	use common::{
-		test_tools::utils::{SingleThreadedApp, new_handle},
-		traits::{animation::AnimationAsset, nested_mock::NestedMocks},
-	};
+	use crate::test_tools::leak_iterator;
+	use common::traits::animation::AnimationAsset;
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
 	use std::{
@@ -180,6 +176,7 @@ mod tests {
 		ops::DerefMut,
 		slice::Iter,
 	};
+	use testing::{NestedMocks, SingleThreadedApp, new_handle};
 
 	#[derive(Component)]
 	struct _Agent;

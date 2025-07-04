@@ -59,11 +59,11 @@ impl From<SpawnerFixPoint> for AnchorFixPointKey {
 
 #[cfg(test)]
 mod tests {
-	use std::{any::TypeId, collections::HashSet};
-
 	use super::*;
-	use common::{test_tools::utils::SingleThreadedApp, traits::iteration::IterFinite};
+	use common::traits::iteration::IterFinite;
+	use std::{any::TypeId, collections::HashSet};
 	use test_case::test_case;
+	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);

@@ -86,8 +86,8 @@ mod tests {
 		map_cells::MapCells,
 		traits::{GridCellDistanceDefinition, is_walkable::IsWalkable},
 	};
-	use common::test_tools::utils::{SingleThreadedApp, new_handle};
 	use std::collections::{HashMap, HashSet};
+	use testing::{SingleThreadedApp, new_handle};
 
 	#[derive(Clone, Debug, PartialEq, TypePath)]
 	struct _Cell {

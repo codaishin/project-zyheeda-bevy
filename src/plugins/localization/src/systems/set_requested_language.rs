@@ -46,13 +46,10 @@ mod test {
 	use super::*;
 	use crate::{assets::ftl::Ftl, resources::ftl_server::Locale};
 	use bevy::asset::{AssetPath, LoadedFolder};
-	use common::{
-		test_tools::utils::{SingleThreadedApp, new_handle},
-		traits::nested_mock::NestedMocks,
-	};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
 	use std::path::PathBuf;
+	use testing::{NestedMocks, SingleThreadedApp, new_handle};
 	use unic_langid::langid;
 
 	#[derive(Resource, NestedMocks)]

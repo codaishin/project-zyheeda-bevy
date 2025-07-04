@@ -65,12 +65,11 @@ where
 
 #[cfg(test)]
 mod tests {
-	use crate::assert_no_panic;
-
 	use super::*;
 	use bevy::math::Vec3;
 	use bevy_rapier3d::parry::shape::FeatureId;
 	use core::f32;
+	use testing::assert_no_panic;
 
 	struct _Ray;
 

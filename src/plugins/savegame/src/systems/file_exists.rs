@@ -25,8 +25,8 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
 	};
-	use common::{simple_init, test_tools::utils::SingleThreadedApp, traits::mock::Mock};
 	use mockall::mock;
+	use testing::{Mock, SingleThreadedApp, simple_init};
 
 	mock! {
 		_IO {}

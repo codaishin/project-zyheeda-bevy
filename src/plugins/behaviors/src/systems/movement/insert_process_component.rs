@@ -31,7 +31,7 @@ pub(crate) trait InputProcessComponent: Sized {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::test_tools::utils::SingleThreadedApp;
+	use testing::SingleThreadedApp;
 
 	#[derive(Clone, Copy)]
 	struct _Input(Vec3);

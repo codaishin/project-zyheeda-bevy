@@ -42,9 +42,9 @@ mod tests {
 	use super::*;
 	use common::{
 		components::persistent_entity::PersistentEntity,
-		test_tools::utils::SingleThreadedApp,
 		traits::register_persistent_entities::RegisterPersistentEntities,
 	};
+	use testing::SingleThreadedApp;
 
 	#[derive(Component)]
 	struct _Agent;

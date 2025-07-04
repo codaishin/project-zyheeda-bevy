@@ -13,7 +13,7 @@ impl Save {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::test_tools::utils::SingleThreadedApp;
+	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);

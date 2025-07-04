@@ -92,10 +92,10 @@ mod tests {
 		math::{Vec2, Vec3},
 		prelude::Bundle,
 	};
-	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::{collections::VecDeque, ops::DerefMut};
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Component, NestedMocks)]
 	pub struct _Camera {

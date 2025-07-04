@@ -183,7 +183,7 @@ impl ChildAssetDefinition<SubMeshEssenceSlots> for Slots {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::test_tools::utils::new_handle;
+	use testing::new_handle;
 
 	#[test]
 	fn get_off_hand() {

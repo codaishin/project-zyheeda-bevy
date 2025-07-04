@@ -38,7 +38,7 @@ where
 mod tests {
 	use super::*;
 	use crate::Rebinding;
-	use common::{assert_count, test_tools::utils::SingleThreadedApp};
+	use testing::{SingleThreadedApp, assert_count};
 
 	#[derive(Debug, PartialEq, Clone, Copy)]
 	struct _Action;

@@ -38,12 +38,10 @@ fn toggle_movement(PlayerMovement { mode, .. }: &mut PlayerMovement) {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		traits::{iteration::IterFinite, nested_mock::NestedMocks},
-	};
+	use common::traits::iteration::IterFinite;
 	use macros::NestedMocks;
 	use mockall::automock;
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Resource, NestedMocks)]
 	struct _Map {

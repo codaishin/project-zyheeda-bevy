@@ -41,14 +41,11 @@ pub(crate) trait SetInputState:
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		components::ui_input_primer::{LeftMouse, UiInputState},
-		test_tools::utils::SingleThreadedApp,
-	};
-	use common::traits::nested_mock::NestedMocks;
+	use crate::components::ui_input_primer::{LeftMouse, UiInputState};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::ops::DerefMut;
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Component, NestedMocks)]
 	struct _Input {

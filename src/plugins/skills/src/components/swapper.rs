@@ -66,10 +66,8 @@ impl SwapValuesByKey for Swapper {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{
-		test_tools::utils::{SingleThreadedApp, new_handle},
-		tools::action_key::slot::Side,
-	};
+	use common::tools::action_key::slot::Side;
+	use testing::{SingleThreadedApp, new_handle};
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);

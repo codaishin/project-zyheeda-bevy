@@ -41,8 +41,8 @@ impl UserInput {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::test_tools::utils::SingleThreadedApp;
 	use std::collections::HashSet;
+	use testing::SingleThreadedApp;
 
 	#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 	struct _T(UserInput);

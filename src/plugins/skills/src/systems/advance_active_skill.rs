@@ -185,16 +185,12 @@ mod tests {
 		},
 		traits::skill_builder::SkillShape,
 	};
-	use common::{
-		simple_init,
-		test_tools::utils::{Changed, SingleThreadedApp, TickTime},
-		tools::action_key::slot::Side,
-		traits::{mock::Mock, nested_mock::NestedMocks},
-	};
+	use common::tools::action_key::slot::Side;
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
 	use std::{collections::HashSet, ops::DerefMut};
 	use test_case::test_case;
+	use testing::{Changed, Mock, NestedMocks, SingleThreadedApp, TickTime, simple_init};
 
 	#[derive(Component, Default)]
 	struct _Dequeue {

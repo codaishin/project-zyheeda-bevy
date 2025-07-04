@@ -71,7 +71,7 @@ where
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::test_tools::utils::SingleThreadedApp;
+	use testing::SingleThreadedApp;
 
 	#[derive(Debug, PartialEq)]
 	struct _Compatible;

@@ -16,7 +16,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{assert_count, test_tools::utils::SingleThreadedApp};
+	use testing::{SingleThreadedApp, assert_count};
 
 	#[derive(Component, Debug, PartialEq, Default)]
 	struct _Component;

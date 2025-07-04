@@ -56,16 +56,13 @@ mod tests {
 	use super::*;
 	use crate::components::player::Player;
 	use common::{
-		test_tools::utils::SingleThreadedApp,
 		tools::action_key::slot::Side,
-		traits::{
-			animation::{Animation, AnimationPriority, StartAnimation},
-			nested_mock::NestedMocks,
-		},
+		traits::animation::{Animation, AnimationPriority, StartAnimation},
 	};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
 	use test_case::test_case;
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Component, NestedMocks)]
 	struct _Dispatch {

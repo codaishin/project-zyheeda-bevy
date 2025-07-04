@@ -39,7 +39,7 @@ pub(crate) trait RemoveUnusedAnimationTargets: Component {
 mod tests {
 	use super::*;
 	use bevy::animation::{AnimationTarget, AnimationTargetId};
-	use common::test_tools::utils::{SingleThreadedApp, new_handle};
+	use testing::{SingleThreadedApp, new_handle};
 
 	#[derive(Component)]
 	struct _Agent;

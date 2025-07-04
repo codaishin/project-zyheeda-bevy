@@ -82,15 +82,11 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{
-		simple_init,
-		test_tools::utils::{SingleThreadedApp, new_handle},
-		tools::action_key::slot::Side,
-		traits::{handles_localization::Token, mock::Mock, nested_mock::NestedMocks},
-	};
+	use common::{tools::action_key::slot::Side, traits::handles_localization::Token};
 	use macros::NestedMocks;
 	use mockall::{automock, mock, predicate::eq};
 	use std::collections::HashMap;
+	use testing::{Mock, NestedMocks, SingleThreadedApp, new_handle, simple_init};
 
 	#[derive(Resource, Default)]
 	struct _Input(Input);

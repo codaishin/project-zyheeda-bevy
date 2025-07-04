@@ -154,10 +154,8 @@ where
 mod tests {
 	use super::*;
 	use bevy::ecs::relationship::RelatedSpawnerCommands;
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		traits::handles_localization::{LocalizationResult, Token, localized::Localized},
-	};
+	use common::traits::handles_localization::{LocalizationResult, Token, localized::Localized};
+	use testing::SingleThreadedApp;
 
 	#[derive(Resource, Default)]
 	struct _Localize;

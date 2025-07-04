@@ -21,3 +21,4 @@ test-case.workspace = true
 
 # internal
 macros.workspace = true
+testing.workspace = true

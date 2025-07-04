@@ -113,10 +113,8 @@ impl Done {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		traits::clamp_zero_positive::ClampZeroPositive,
-	};
+	use common::traits::clamp_zero_positive::ClampZeroPositive;
+	use testing::SingleThreadedApp;
 
 	#[derive(Component, Debug, PartialEq, Default)]
 	struct _Travel;

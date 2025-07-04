@@ -27,13 +27,10 @@ pub(crate) fn get_inputs<
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		tools::action_key::slot::Side,
-		traits::nested_mock::NestedMocks,
-	};
+	use common::tools::action_key::slot::Side;
 	use macros::NestedMocks;
 	use mockall::automock;
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Resource, Clone, Debug, PartialEq)]
 	struct _Map;

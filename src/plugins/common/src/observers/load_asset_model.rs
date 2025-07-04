@@ -44,11 +44,10 @@ fn load_asset_model<TServer>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::test_tools::utils::new_handle;
 	use bevy::asset::AssetPath;
-	use common::traits::nested_mock::NestedMocks;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
+	use testing::{NestedMocks, new_handle};
 
 	#[derive(Resource, NestedMocks)]
 	struct _AssetServer {
