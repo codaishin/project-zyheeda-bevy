@@ -4516,6 +4516,7 @@ dependencies = [
  "settings",
  "skills",
  "test-case",
+ "testing",
  "tracing",
  "unic-langid",
  "uuid",
@@ -5388,6 +5389,15 @@ dependencies = [
  "quote",
  "syn",
  "test-case-core",
+]
+
+[[package]]
+name = "testing"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_rapier3d",
+ "uuid",
 ]
 
 [[package]]

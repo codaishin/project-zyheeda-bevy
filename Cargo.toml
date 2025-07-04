@@ -44,6 +44,7 @@ graphics = { path = "src/plugins/graphics" }
 savegame = { path = "src/plugins/savegame" }
 settings = { path = "src/plugins/settings" }
 skills = { path = "src/plugins/skills" }
+testing = { path = "src/plugins/testing" }
 
 [profile.test]
 opt-level = 0
@@ -100,5 +101,9 @@ settings.workspace = true
 skills.workspace = true
 
 [dev-dependencies]
+# external
 mockall.workspace = true
 test-case.workspace = true
+
+# internal
+testing.workspace = true
