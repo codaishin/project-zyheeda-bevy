@@ -13,6 +13,21 @@ where
 	output(error);
 }
 
+pub fn log_with_fallback<TValue, TError>(
+	fallback: fn() -> TValue,
+) -> impl Fn(In<Result<TValue, TError>>) -> TValue
+where
+	Error: From<TError>,
+{
+	move |In(result)| match result {
+		Ok(value) => value,
+		Err(error) => {
+			output(error);
+			fallback()
+		}
+	}
+}
+
 pub fn log_or_unwrap<TValue, TError>(In(result): In<Result<TValue, TError>>) -> Option<TValue>
 where
 	Error: From<TError>,

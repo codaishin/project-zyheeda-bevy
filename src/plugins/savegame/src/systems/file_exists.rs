@@ -1,17 +1,19 @@
-use crate::{context::SaveContext, traits::file_exists::FileExists};
+use crate::{context::SaveContext, errors::LockPoisonedError, traits::file_exists::FileExists};
 use std::sync::{Arc, Mutex};
 
 impl<TIO> SaveContext<TIO>
 where
 	TIO: FileExists,
 {
-	pub(crate) fn file_exists(context: Arc<Mutex<Self>>) -> impl Fn() -> bool {
+	pub(crate) fn file_exists(
+		context: Arc<Mutex<Self>>,
+	) -> impl Fn() -> Result<bool, LockPoisonedError> {
 		move || {
 			let Ok(context) = context.lock() else {
-				return false;
+				return Err(LockPoisonedError);
 			};
 
-			context.io.file_exists()
+			Ok(context.io.file_exists())
 		}
 	}
 }
@@ -46,7 +48,8 @@ mod tests {
 			mock.expect_file_exists().return_const(true);
 		}))));
 
-		assert!(
+		assert_eq!(
+			Ok(true),
 			app.world_mut()
 				.run_system_once(SaveContext::file_exists(ctx))?
 		);
@@ -60,8 +63,9 @@ mod tests {
 			mock.expect_file_exists().return_const(false);
 		}))));
 
-		assert!(
-			!app.world_mut()
+		assert_eq!(
+			Ok(false),
+			app.world_mut()
 				.run_system_once(SaveContext::file_exists(ctx))?
 		);
 		Ok(())

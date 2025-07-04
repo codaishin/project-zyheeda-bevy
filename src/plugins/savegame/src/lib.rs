@@ -13,7 +13,7 @@ use bevy_rapier3d::prelude::*;
 use common::{
 	components::{child_of_persistent::ChildOfPersistent, persistent_entity::PersistentEntity},
 	states::game_state::GameState,
-	systems::log::log,
+	systems::log::{log, log_with_fallback},
 	tools::action_key::{ActionKey, save_key::SaveKey},
 	traits::{
 		handles_saving::{HandlesSaving, SavableComponent},
@@ -78,6 +78,8 @@ where
 			ActionKey::Save(SaveKey::QuickLoad),
 			GameState::LoadSave,
 		);
+		let quick_save_file_exists =
+			SaveContext::file_exists(quick_save.clone()).pipe(log_with_fallback(|| false));
 
 		Self::register_savable_component::<Name>(app);
 		Self::register_savable_component::<Transform>(app);
@@ -90,7 +92,7 @@ where
 				Update,
 				(
 					trigger_quick_save,
-					trigger_quick_load.run_if(SaveContext::file_exists(quick_save.clone())),
+					trigger_quick_load.run_if(quick_save_file_exists),
 				)
 					.run_if(in_state(GameState::Play)),
 			)
