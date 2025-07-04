@@ -23,7 +23,7 @@ fn remove(commands: &mut Commands, id: Entity) {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::test_tools::utils::SingleThreadedApp;
+	use testing::SingleThreadedApp;
 
 	#[derive(Component)]
 	struct _Owner;

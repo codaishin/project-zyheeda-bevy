@@ -31,8 +31,8 @@ impl WithChildren for EntityCommands<'_> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{assert_count, get_children, test_tools::utils::SingleThreadedApp};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
+	use testing::{SingleThreadedApp, assert_count, get_children};
 
 	#[derive(Component, Debug, PartialEq, Clone)]
 	struct _Component(&'static str);

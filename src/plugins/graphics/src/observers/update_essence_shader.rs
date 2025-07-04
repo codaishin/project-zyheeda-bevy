@@ -109,9 +109,9 @@ mod tests {
 	use super::*;
 	use crate::materials::essence_material::EssenceMaterial;
 	use bevy::color::palettes::css::RED;
-	use common::{test_tools::utils::new_handle, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
+	use testing::{NestedMocks, new_handle};
 
 	#[derive(Resource, NestedMocks)]
 	struct _Assets {

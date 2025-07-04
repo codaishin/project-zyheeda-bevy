@@ -26,9 +26,9 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Debug, PartialEq, Clone, Copy)]
 	struct _Action;

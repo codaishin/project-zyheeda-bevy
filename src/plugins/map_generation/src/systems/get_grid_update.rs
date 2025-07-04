@@ -44,16 +44,10 @@ fn set_grid_entity<TFilter, TGetRayCaster>(
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{
-		simple_init,
-		test_tools::utils::SingleThreadedApp,
-		traits::{
-			cast_ray::{CastRay, TimeOfImpact},
-			mock::Mock,
-		},
-	};
+	use common::traits::cast_ray::TimeOfImpact;
 	use mockall::{mock, predicate::eq};
 	use std::convert::Infallible;
+	use testing::{Mock, SingleThreadedApp, simple_init};
 
 	struct _GetRayCaster {
 		ray_caster: Box<dyn Fn() -> Mock_RayCaster>,

@@ -53,9 +53,9 @@ fn remove_components<TCommands, TAgent, TComponent>(
 #[cfg(test)]
 pub mod tests {
 	use super::*;
-	use crate::{simple_init, traits::mock::Mock};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use mockall::{mock, predicate::eq};
+	use testing::{Mock, simple_init};
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Agent;

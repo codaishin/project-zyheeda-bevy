@@ -54,10 +54,8 @@ pub(crate) trait SetCameraToOrbit {
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{
-		components::persistent_entity::PersistentEntity,
-		test_tools::utils::SingleThreadedApp,
-	};
+	use common::components::persistent_entity::PersistentEntity;
+	use testing::SingleThreadedApp;
 
 	#[derive(Component)]
 	#[require(PersistentEntity)]

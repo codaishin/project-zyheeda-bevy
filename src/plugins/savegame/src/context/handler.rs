@@ -116,7 +116,6 @@ mod tests {
 	use bevy::asset::AssetPath;
 	use common::{
 		errors::Unreachable,
-		test_tools::utils::SingleThreadedApp,
 		traits::{handles_custom_assets::TryLoadFrom, load_asset::LoadAsset},
 	};
 	use macros::{NestedMocks, SavableComponent};
@@ -124,6 +123,7 @@ mod tests {
 	use serde::{Deserialize, Serialize};
 	use serde_json::{from_str, to_string};
 	use std::{any::type_name, collections::HashMap};
+	use testing::SingleThreadedApp;
 
 	struct _Writer;
 

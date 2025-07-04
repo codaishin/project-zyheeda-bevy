@@ -27,10 +27,8 @@ fn pressed<T>((.., interaction): &(&T, &Interaction)) -> bool {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		tools::action_key::slot::{Side, SlotKey},
-	};
+	use common::tools::action_key::slot::{Side, SlotKey};
+	use testing::SingleThreadedApp;
 
 	#[derive(Debug, PartialEq, Default, Clone)]
 	struct _Skill;

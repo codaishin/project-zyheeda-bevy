@@ -41,7 +41,8 @@ impl KeyDirection<MovementKey> for PlayerCamera {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{assert_eq_approx, traits::iteration::IterFinite};
+	use common::traits::iteration::IterFinite;
+	use testing::assert_eq_approx;
 
 	#[test]
 	fn get_directions_default() {

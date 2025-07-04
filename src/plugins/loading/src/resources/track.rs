@@ -111,7 +111,7 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		state::app::StatesPlugin,
 	};
-	use common::test_tools::utils::SingleThreadedApp;
+	use testing::SingleThreadedApp;
 
 	#[derive(States, Default, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 	struct _State;

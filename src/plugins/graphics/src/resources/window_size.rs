@@ -31,8 +31,8 @@ impl WindowSize {
 mod test {
 	use super::*;
 	use bevy::window::WindowResolution;
-	use common::{is_changed_resource, test_tools::utils::SingleThreadedApp};
 	use std::sync::{Arc, Mutex};
+	use testing::{SingleThreadedApp, is_changed_resource};
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);

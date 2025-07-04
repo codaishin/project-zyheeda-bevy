@@ -73,8 +73,8 @@ fn pause_virtual_time<const PAUSE: bool>(mut time: ResMut<Time<Virtual>>) {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::test_tools::utils::SingleThreadedApp;
 	use bevy::ecs::world::error::TryRunScheduleError;
+	use testing::SingleThreadedApp;
 
 	#[derive(States, Debug, PartialEq, Eq, Hash, Clone, Copy, Default)]
 	enum _State {
@@ -109,7 +109,7 @@ mod tests {
 
 	mod required_plugins {
 		use super::*;
-		use crate::assert_no_panic;
+		use testing::assert_no_panic;
 
 		#[test]
 		fn add_states_plugin() {

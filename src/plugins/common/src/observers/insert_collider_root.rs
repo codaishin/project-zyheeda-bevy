@@ -29,10 +29,8 @@ impl ColliderOfInteractionTarget {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		components::collider_relationship::InteractionTarget,
-		test_tools::utils::SingleThreadedApp,
-	};
+	use crate::components::collider_relationship::InteractionTarget;
+	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);

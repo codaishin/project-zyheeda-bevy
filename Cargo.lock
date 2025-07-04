@@ -196,6 +196,7 @@ dependencies = [
  "mockall",
  "serde",
  "test-case",
+ "testing",
  "tracing",
  "uuid",
 ]
@@ -422,6 +423,7 @@ dependencies = [
  "common",
  "macros",
  "mockall",
+ "testing",
  "tracing",
 ]
 
@@ -448,6 +450,7 @@ dependencies = [
  "mockall",
  "serde",
  "test-case",
+ "testing",
  "tracing",
 ]
 
@@ -1759,6 +1762,7 @@ dependencies = [
  "macros",
  "mockall",
  "serde",
+ "testing",
  "tracing",
  "uuid",
 ]
@@ -1819,6 +1823,7 @@ dependencies = [
  "common",
  "macros",
  "mockall",
+ "testing",
 ]
 
 [[package]]
@@ -1879,6 +1884,7 @@ dependencies = [
  "serde",
  "serde_json",
  "test-case",
+ "testing",
  "tracing",
  "unic-langid",
  "uuid",
@@ -2885,6 +2891,7 @@ dependencies = [
  "macros",
  "mockall",
  "serde",
+ "testing",
 ]
 
 [[package]]
@@ -3069,6 +3076,7 @@ dependencies = [
  "macros",
  "mockall",
  "serde",
+ "testing",
  "tracing",
 ]
 
@@ -3304,6 +3312,7 @@ dependencies = [
  "macros",
  "mockall",
  "serde",
+ "testing",
 ]
 
 [[package]]
@@ -3316,6 +3325,7 @@ dependencies = [
  "macros",
  "mockall",
  "serde",
+ "testing",
  "uuid",
 ]
 
@@ -3341,6 +3351,7 @@ dependencies = [
  "mockall",
  "serde",
  "serde_json",
+ "testing",
  "uuid",
 ]
 
@@ -3354,6 +3365,7 @@ dependencies = [
  "fluent-syntax",
  "macros",
  "mockall",
+ "testing",
  "unic-langid",
 ]
 
@@ -3419,6 +3431,7 @@ dependencies = [
  "mockall",
  "serde",
  "test-case",
+ "testing",
  "uuid",
 ]
 
@@ -3476,6 +3489,7 @@ dependencies = [
  "macros",
  "mockall",
  "test-case",
+ "testing",
  "tracing",
  "uuid",
 ]
@@ -4259,6 +4273,7 @@ dependencies = [
  "common",
  "macros",
  "mockall",
+ "testing",
 ]
 
 [[package]]
@@ -4333,6 +4348,7 @@ dependencies = [
  "mockall",
  "serde",
  "test-case",
+ "testing",
 ]
 
 [[package]]
@@ -4953,6 +4969,7 @@ dependencies = [
  "mockall",
  "serde",
  "serde_json",
+ "testing",
  "uuid",
 ]
 
@@ -5054,6 +5071,7 @@ dependencies = [
  "serde",
  "serde_json",
  "test-case",
+ "testing",
 ]
 
 [[package]]
@@ -5110,6 +5128,7 @@ dependencies = [
  "mockall",
  "serde",
  "test-case",
+ "testing",
  "tracing",
  "uuid",
 ]

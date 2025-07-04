@@ -34,9 +34,9 @@ fn contained_in(target_names: Vec<String>) -> impl Fn(&(Entity, &Name)) -> bool 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{test_tools::utils::SingleThreadedApp, traits::thread_safe::ThreadSafe};
 	use mockall::automock;
 	use std::marker::PhantomData;
+	use testing::SingleThreadedApp;
 
 	struct _Definition;
 

@@ -99,7 +99,7 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		render::render_resource::AsBindGroup,
 	};
-	use common::test_tools::utils::new_handle;
+	use testing::new_handle;
 
 	#[test]
 	fn push_mesh_handle() {

@@ -62,8 +62,8 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{simple_init, traits::mock::Mock};
 	use mockall::{mock, predicate::eq};
+	use testing::{Mock, simple_init};
 
 	mock! {
 		_Life {}

@@ -74,11 +74,8 @@ mod tests {
 		},
 	};
 	use bevy_rapier3d::dynamics::Velocity;
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		tools::UnitsPerSecond,
-		traits::clamp_zero_positive::ClampZeroPositive,
-	};
+	use common::{tools::UnitsPerSecond, traits::clamp_zero_positive::ClampZeroPositive};
+	use testing::SingleThreadedApp;
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Result(IsDone);

@@ -36,7 +36,8 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{test_tools::utils::SingleThreadedApp, tools::action_key::user_input::UserInput};
+	use crate::tools::action_key::user_input::UserInput;
+	use testing::SingleThreadedApp;
 
 	#[derive(Component)]
 	struct _Input(JustChangedInput);

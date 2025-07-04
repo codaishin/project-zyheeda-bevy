@@ -75,13 +75,9 @@ mod test {
 
 	use super::*;
 	use crate::resources::window_size::WindowSize;
-	use common::{
-		is_changed_resource,
-		test_tools::utils::SingleThreadedApp,
-		traits::nested_mock::NestedMocks,
-	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
+	use testing::{NestedMocks, SingleThreadedApp, is_changed_resource};
 
 	#[derive(Asset, TypePath, NestedMocks)]
 	struct _Image {

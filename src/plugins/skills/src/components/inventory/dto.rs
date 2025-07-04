@@ -61,8 +61,8 @@ mod tests {
 	use super::*;
 	use crate::item::Item;
 	use bevy::asset::AssetPath;
-	use common::{simple_init, test_tools::utils::new_handle, traits::mock::Mock};
 	use mockall::{mock, predicate::eq};
+	use testing::{Mock, new_handle, simple_init};
 
 	mock! {
 		_LoadAsset {}

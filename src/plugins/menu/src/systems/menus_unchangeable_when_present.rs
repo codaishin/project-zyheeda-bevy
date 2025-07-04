@@ -22,7 +22,7 @@ mod tests {
 	use super::*;
 	use crate::MenusChangeable;
 	use bevy::state::app::StatesPlugin;
-	use common::test_tools::utils::SingleThreadedApp;
+	use testing::SingleThreadedApp;
 
 	#[derive(Component)]
 	struct _Component;

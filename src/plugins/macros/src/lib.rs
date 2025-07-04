@@ -62,7 +62,7 @@ pub fn nested_mocks_derive(input: TokenStream) -> TokenStream {
 			#field_name: #ty::default(),
 		});
 		traits.push(quote! {
-			impl common::traits::nested_mock::NestedMocks<#ty> for #ident {
+			impl testing::NestedMocks<#ty> for #ident {
 				fn with_mock(mut self, mut configure_fn: impl FnMut(&mut #ty)) -> Self {
 					configure_fn(&mut self.#field_name);
 					self

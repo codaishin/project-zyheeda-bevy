@@ -54,11 +54,9 @@ pub(crate) trait LoadoutDescriptor {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{
-		test_tools::utils::{SingleThreadedApp, new_handle},
-		traits::handles_localization::Token,
-	};
+	use common::traits::handles_localization::Token;
 	use std::{array::IntoIter, collections::HashMap};
+	use testing::{SingleThreadedApp, new_handle};
 
 	#[derive(Component)]
 	struct _Agent;

@@ -143,9 +143,9 @@ impl<TDependencies> HandlesSaving for SavegamePlugin<TDependencies> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::test_tools::utils::SingleThreadedApp;
 	use macros::SavableComponent;
 	use serde::{Deserialize, Serialize};
+	use testing::SingleThreadedApp;
 
 	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
 	struct _A;

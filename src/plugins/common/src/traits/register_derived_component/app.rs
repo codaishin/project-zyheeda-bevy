@@ -82,11 +82,11 @@ impl<TComponent, TRequired> Default for Observing<TComponent, TRequired> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		assert_count,
-		test_tools::utils::SingleThreadedApp,
-		traits::register_derived_component::{DerivableComponentFrom, InsertDerivedComponent},
+	use crate::traits::register_derived_component::{
+		DerivableComponentFrom,
+		InsertDerivedComponent,
 	};
+	use testing::{SingleThreadedApp, assert_count};
 
 	#[derive(Component)]
 	struct _Component;

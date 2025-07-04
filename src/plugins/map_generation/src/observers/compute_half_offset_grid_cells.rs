@@ -88,11 +88,8 @@ mod test_get_half_offset_grid {
 		map_cells::{Direction, MapCells},
 		traits::GridCellDistanceDefinition,
 	};
-	use common::{
-		assert_eq_unordered,
-		test_tools::utils::{SingleThreadedApp, new_handle},
-	};
 	use std::collections::HashMap;
+	use testing::{SingleThreadedApp, assert_eq_unordered, new_handle};
 
 	#[derive(Clone, Debug, PartialEq, TypePath)]
 	struct _Cell(&'static str);

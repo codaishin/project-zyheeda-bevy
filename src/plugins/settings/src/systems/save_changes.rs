@@ -102,13 +102,10 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{
-		states::menu_state::MenuState,
-		test_tools::utils::SingleThreadedApp,
-		traits::nested_mock::NestedMocks,
-	};
+	use common::states::menu_state::MenuState;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Resource, Debug, PartialEq, Serialize, Clone, Default)]
 	struct _Resource {

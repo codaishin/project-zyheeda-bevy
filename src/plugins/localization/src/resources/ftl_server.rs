@@ -234,8 +234,8 @@ impl Display for LnToken {
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::test_tools::utils::{SingleThreadedApp, new_handle};
 	use fluent::resolver::{ResolverError, errors::ReferenceKind};
+	use testing::{SingleThreadedApp, new_handle};
 	use unic_langid::langid;
 
 	#[test]

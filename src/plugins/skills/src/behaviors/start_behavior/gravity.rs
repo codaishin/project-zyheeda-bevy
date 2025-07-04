@@ -37,10 +37,10 @@ mod tests {
 	};
 	use common::{
 		components::persistent_entity::PersistentEntity,
-		test_tools::utils::SingleThreadedApp,
 		traits::clamp_zero_positive::ClampZeroPositive,
 	};
 	use std::sync::LazyLock;
+	use testing::SingleThreadedApp;
 
 	struct _HandlesEffects;
 

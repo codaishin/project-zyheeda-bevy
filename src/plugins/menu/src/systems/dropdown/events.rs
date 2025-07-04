@@ -22,7 +22,7 @@ mod tests {
 		app::{App, Update},
 		prelude::Events,
 	};
-	use common::test_tools::utils::SingleThreadedApp;
+	use testing::SingleThreadedApp;
 
 	struct _Item;
 

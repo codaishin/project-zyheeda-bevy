@@ -58,14 +58,11 @@ fn despawn(commands: &mut Commands, entity: Entity) {
 mod tests {
 	use super::*;
 	use crate::components::key_select_dropdown_command::ExcludeKeys;
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		tools::action_key::slot::{Side, SlotKey},
-		traits::nested_mock::NestedMocks,
-	};
+	use common::tools::action_key::slot::{Side, SlotKey};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::collections::HashSet;
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Resource, NestedMocks)]
 	struct _NextKeys {

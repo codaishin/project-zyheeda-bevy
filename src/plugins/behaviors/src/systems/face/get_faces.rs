@@ -30,7 +30,7 @@ mod tests {
 		},
 		math::Vec3,
 	};
-	use common::test_tools::utils::SingleThreadedApp;
+	use testing::SingleThreadedApp;
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Face(Face);

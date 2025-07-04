@@ -88,12 +88,9 @@ trait AnimationGraphTrait {
 mod tests {
 	use super::*;
 	use bevy::asset::AssetPath;
-	use common::{
-		simple_init,
-		test_tools::utils::{new_handle, new_handle_from},
-		traits::{load_asset::Path, mock::Mock},
-	};
+	use common::traits::load_asset::Path;
 	use mockall::{mock, predicate::eq};
+	use testing::{Mock, new_handle, new_handle_from, simple_init};
 	use uuid::{Uuid, uuid};
 
 	mock! {

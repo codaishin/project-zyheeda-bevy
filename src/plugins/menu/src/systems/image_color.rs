@@ -16,7 +16,7 @@ pub(crate) fn image_color(
 mod tests {
 	use super::*;
 	use crate::components::ImageColorCommand;
-	use common::test_tools::utils::SingleThreadedApp;
+	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);

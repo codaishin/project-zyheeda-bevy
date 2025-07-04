@@ -56,13 +56,10 @@ fn flush_when_timed_out<
 mod tests {
 	use super::*;
 	use crate::skills::QueuedSkill;
-	use common::{
-		test_tools::utils::{SingleThreadedApp, TickTime},
-		traits::nested_mock::NestedMocks,
-	};
 	use macros::NestedMocks;
 	use mockall::{Sequence, mock, predicate::eq};
 	use std::slice::Iter;
+	use testing::{NestedMocks, SingleThreadedApp, TickTime};
 
 	#[derive(Component, NestedMocks)]
 	struct _Timeout {

@@ -34,7 +34,7 @@ mod tests {
 		prelude::{Entity, Events},
 	};
 	use bevy_rapier3d::rapier::prelude::CollisionEventFlags;
-	use common::test_tools::utils::SingleThreadedApp;
+	use testing::SingleThreadedApp;
 
 	#[derive(Resource, Default)]
 	struct _Tracker<const STATE_CHANGED: bool>;

@@ -49,9 +49,9 @@ mod tests {
 	use super::*;
 	use crate::context::ComponentString;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{simple_init, test_tools::utils::SingleThreadedApp, traits::mock::Mock};
 	use mockall::mock;
 	use std::collections::HashMap;
+	use testing::{Mock, SingleThreadedApp, simple_init};
 
 	#[derive(Debug, PartialEq, Clone)]
 	struct _Error;

@@ -23,11 +23,9 @@ impl PersistentEntities {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		components::persistent_entity::PersistentEntity,
-		test_tools::utils::SingleThreadedApp,
-	};
+	use crate::components::persistent_entity::PersistentEntity;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
+	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);

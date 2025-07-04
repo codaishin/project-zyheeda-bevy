@@ -56,19 +56,16 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		traits::{
-			animation::{AnimationAsset, AnimationMaskDefinition},
-			iteration::{Iter, IterFinite},
-			nested_mock::NestedMocks,
-			thread_safe::ThreadSafe,
-			wrap_handle::UnwrapHandle,
-		},
+	use common::traits::{
+		animation::{AnimationAsset, AnimationMaskDefinition},
+		iteration::{Iter, IterFinite},
+		thread_safe::ThreadSafe,
+		wrap_handle::UnwrapHandle,
 	};
 	use macros::NestedMocks;
 	use mockall::automock;
 	use std::collections::{HashMap, HashSet};
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Resource, NestedMocks)]
 	struct _Server {

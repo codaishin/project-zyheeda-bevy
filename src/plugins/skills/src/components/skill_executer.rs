@@ -110,16 +110,15 @@ mod tests {
 	use crate::behaviors::spawn_on::SpawnOn;
 	use common::{
 		components::{outdated::Outdated, persistent_entity::PersistentEntity},
-		simple_init,
 		tools::{action_key::slot::Side, collider_info::ColliderInfo},
 		traits::{
 			handles_effect::HandlesEffect,
 			handles_skill_behaviors::{Contact, Projection, SkillEntities, SkillRoot},
-			mock::Mock,
 		},
 	};
 	use mockall::{mock, predicate::eq};
 	use std::time::Duration;
+	use testing::{Mock, simple_init};
 
 	struct _Commands;
 

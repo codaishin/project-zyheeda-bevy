@@ -96,14 +96,11 @@ impl GroundTarget {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{
-		assert_eq_approx,
-		test_tools::utils::SingleThreadedApp,
-		traits::{
-			clamp_zero_positive::ClampZeroPositive,
-			register_persistent_entities::RegisterPersistentEntities,
-		},
+	use common::traits::{
+		clamp_zero_positive::ClampZeroPositive,
+		register_persistent_entities::RegisterPersistentEntities,
 	};
+	use testing::{SingleThreadedApp, assert_eq_approx};
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);

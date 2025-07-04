@@ -57,16 +57,16 @@ mod tests {
 	use crate::{components::slots::Slots, item::Item, skills::Skill};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
-		test_tools::utils::Changed,
 		tools::{
 			action_key::slot::{Side, SlotKey},
 			item_type::ItemType,
 		},
-		traits::{handles_localization::Token, nested_mock::NestedMocks},
+		traits::handles_localization::Token,
 	};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
 	use std::collections::HashMap;
+	use testing::{Changed, NestedMocks};
 
 	#[derive(Component, NestedMocks)]
 	struct _Combos {

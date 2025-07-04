@@ -36,11 +36,9 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
 	};
-	use common::{
-		components::persistent_entity::PersistentEntity,
-		test_tools::utils::SingleThreadedApp,
-	};
+	use common::components::persistent_entity::PersistentEntity;
 	use std::sync::LazyLock;
+	use testing::SingleThreadedApp;
 
 	struct _HandlesDamage;
 

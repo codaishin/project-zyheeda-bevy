@@ -36,11 +36,9 @@ pub(crate) fn set_quickbar_icons<TContainer>(
 mod tests {
 	use super::*;
 	use crate::{components::quickbar_panel::QuickbarPanel, tools::PanelState};
-	use common::{
-		test_tools::utils::{SingleThreadedApp, new_handle},
-		tools::action_key::slot::{Side, SlotKey},
-	};
+	use common::tools::action_key::slot::{Side, SlotKey};
 	use std::collections::HashMap;
+	use testing::{SingleThreadedApp, new_handle};
 
 	struct _Item(Option<Handle<Image>>);
 

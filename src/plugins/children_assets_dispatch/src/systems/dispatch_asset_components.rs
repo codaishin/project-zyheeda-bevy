@@ -96,20 +96,15 @@ fn entity_not_found_error(key: &'static str) -> Error {
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{
-		simple_init,
-		test_tools::utils::new_handle,
-		traits::{
-			get_asset::GetAsset,
-			handles_assets_for_children::ChildAssetComponent,
-			iteration::{Iter, IterFinite},
-			mock::Mock,
-			nested_mock::NestedMocks,
-		},
+	use common::traits::{
+		get_asset::GetAsset,
+		handles_assets_for_children::ChildAssetComponent,
+		iteration::{Iter, IterFinite},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, mock, predicate::eq};
 	use std::collections::HashMap;
+	use testing::{Mock, NestedMocks, new_handle, simple_init};
 
 	#[derive(Debug, PartialEq, Clone, Copy, Eq, Hash)]
 	enum _Key {

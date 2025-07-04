@@ -29,9 +29,9 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::persistent_entity::PersistentEntity,
-		test_tools::utils::SingleThreadedApp,
 		traits::register_persistent_entities::RegisterPersistentEntities,
 	};
+	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);

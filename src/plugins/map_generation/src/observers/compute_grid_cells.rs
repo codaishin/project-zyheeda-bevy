@@ -69,11 +69,8 @@ mod tests {
 		},
 		map_cells::MapCells,
 	};
-	use common::{
-		assert_eq_unordered,
-		test_tools::utils::{SingleThreadedApp, new_handle},
-	};
 	use std::collections::HashMap;
+	use testing::{SingleThreadedApp, assert_eq_unordered, new_handle};
 
 	#[derive(Resource, Debug, PartialEq, Clone)]
 	struct _Result(Result<(Entity, Vec<(Vec3, _Cell)>), GridError>);

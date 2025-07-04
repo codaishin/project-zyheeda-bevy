@@ -89,12 +89,11 @@ fn untrack_in_self_and_children<TTracker, TTarget, TRemoveEvents>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{simple_init, test_tools::utils::SingleThreadedApp, traits::mock::Mock};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::traits::nested_mock::NestedMocks;
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
 	use std::collections::VecDeque;
+	use testing::{Mock, NestedMocks, SingleThreadedApp, simple_init};
 
 	#[derive(Component, Debug, Default, NestedMocks)]
 	struct _Tracker {

@@ -59,11 +59,9 @@ mod tests {
 	use super::*;
 	use crate::components::effect_shaders_target::{EffectShaderHandle, EffectShadersTarget};
 	use bevy::render::render_resource::AsBindGroup;
-	use common::{
-		components::protected::Protected,
-		test_tools::utils::{SingleThreadedApp, new_handle},
-	};
+	use common::components::protected::Protected;
 	use std::collections::HashSet;
+	use testing::{SingleThreadedApp, new_handle};
 
 	#[derive(Asset, TypePath, Clone, AsBindGroup, PartialEq, Eq, Hash, Debug)]
 	struct _Shader1 {}

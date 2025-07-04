@@ -128,10 +128,10 @@ pub(crate) struct ComponentString {
 #[cfg(test)]
 mod test_write_buffer {
 	use super::*;
-	use common::{simple_init, test_tools::utils::SingleThreadedApp, traits::mock::Mock};
 	use mockall::mock;
 	use serde_json::from_str;
 	use std::path::PathBuf;
+	use testing::{Mock, SingleThreadedApp, simple_init};
 
 	mock! {
 		_Handler {}

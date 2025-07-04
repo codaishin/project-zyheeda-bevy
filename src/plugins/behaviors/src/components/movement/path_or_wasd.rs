@@ -128,12 +128,9 @@ pub(crate) enum Mode {
 mod test_with_path {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		tools::UnitsPerSecond,
-		traits::clamp_zero_positive::ClampZeroPositive,
-	};
+	use common::{tools::UnitsPerSecond, traits::clamp_zero_positive::ClampZeroPositive};
 	use std::sync::LazyLock;
+	use testing::SingleThreadedApp;
 
 	#[derive(Debug, PartialEq, Default)]
 	struct _MoveMethod(Vec3);
@@ -410,7 +407,7 @@ mod test_with_path {
 #[cfg(test)]
 mod test_cleanup {
 	use super::*;
-	use common::test_tools::utils::SingleThreadedApp;
+	use testing::SingleThreadedApp;
 
 	#[derive(Debug, PartialEq, Default)]
 	struct _MoveMethod;

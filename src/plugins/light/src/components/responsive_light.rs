@@ -224,10 +224,10 @@ where
 mod test_detect_change {
 	use super::*;
 	use common::{
-		test_tools::utils::SingleThreadedApp,
 		tools::{Intensity, IntensityChangePerSecond, Units},
 		traits::clamp_zero_positive::ClampZeroPositive,
 	};
+	use testing::SingleThreadedApp;
 
 	#[derive(Component)]
 	struct _Collisions(Vec<Entity>);
@@ -323,11 +323,11 @@ mod test_detect_change {
 mod test_apply_change {
 	use super::*;
 	use common::{
-		test_tools::utils::{SingleThreadedApp, TickTime},
 		tools::{Intensity, IntensityChangePerSecond, Units},
 		traits::clamp_zero_positive::ClampZeroPositive,
 	};
 	use std::time::Duration;
+	use testing::{SingleThreadedApp, TickTime};
 
 	fn light_on_material() -> StandardMaterial {
 		StandardMaterial {
@@ -852,10 +852,8 @@ mod test_apply_change {
 mod test_light_insertion {
 	use super::*;
 	use bevy::color::palettes::css::BEIGE;
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		traits::clamp_zero_positive::ClampZeroPositive,
-	};
+	use common::traits::clamp_zero_positive::ClampZeroPositive;
+	use testing::SingleThreadedApp;
 
 	fn responsive(light: Light) -> ResponsiveLight {
 		ResponsiveLight {

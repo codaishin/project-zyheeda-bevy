@@ -171,10 +171,10 @@ mod test_update_context {
 	use super::*;
 	use crate::file_io::FileIO;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::test_tools::utils::SingleThreadedApp;
 	use macros::SavableComponent;
 	use serde::{Deserialize, Serialize};
 	use std::{ops::Deref, path::PathBuf};
+	use testing::SingleThreadedApp;
 
 	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
 	struct _A;

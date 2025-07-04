@@ -39,14 +39,11 @@ mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use bevy_rapier3d::prelude::Velocity;
-	use common::{
-		assert_eq_approx,
-		test_tools::utils::SingleThreadedApp,
-		traits::{
-			clamp_zero_positive::ClampZeroPositive,
-			register_persistent_entities::RegisterPersistentEntities,
-		},
+	use common::traits::{
+		clamp_zero_positive::ClampZeroPositive,
+		register_persistent_entities::RegisterPersistentEntities,
 	};
+	use testing::{SingleThreadedApp, assert_eq_approx};
 
 	#[derive(Debug, PartialEq)]
 	struct _Movement;

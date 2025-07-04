@@ -714,8 +714,9 @@ mod tests {
 	use super::*;
 	use crate::traits::build_combo_tree_layout::ComboTreeElement;
 	use bevy::asset::{Asset, AssetId, AssetPath};
-	use common::{simple_init, tools::action_key::slot::Side, traits::mock::Mock};
+	use common::tools::action_key::slot::Side;
 	use mockall::{mock, predicate::eq};
+	use testing::{Mock, simple_init};
 	use uuid::Uuid;
 
 	#[derive(Debug, PartialEq, Default, Clone)]

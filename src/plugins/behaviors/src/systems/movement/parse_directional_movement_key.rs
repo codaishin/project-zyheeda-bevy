@@ -126,17 +126,13 @@ mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
-		test_tools::utils::SingleThreadedApp,
 		tools::UnitsPerSecond,
-		traits::{
-			clamp_zero_positive::ClampZeroPositive,
-			handles_player::DirectionError,
-			nested_mock::NestedMocks,
-		},
+		traits::{clamp_zero_positive::ClampZeroPositive, handles_player::DirectionError},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::collections::HashSet;
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Resource, NestedMocks)]
 	struct _Map {

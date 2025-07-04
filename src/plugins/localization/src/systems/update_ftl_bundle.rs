@@ -175,11 +175,8 @@ impl From<SetBundleError> for Error {
 mod tests {
 	use super::*;
 	use crate::resources::ftl_server::Locale;
-	use common::{
-		assert_count,
-		test_tools::utils::{SingleThreadedApp, new_handle},
-	};
 	use fluent::FluentError;
+	use testing::{SingleThreadedApp, assert_count, new_handle};
 	use unic_langid::langid;
 
 	#[derive(Resource)]

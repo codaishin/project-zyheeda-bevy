@@ -90,13 +90,13 @@ mod tests {
 	};
 	use common::{
 		components::persistent_entity::PersistentEntity,
-		test_tools::utils::SingleThreadedApp,
 		tools::UnitsPerSecond,
 		traits::{
 			clamp_zero_positive::ClampZeroPositive,
 			register_persistent_entities::RegisterPersistentEntities,
 		},
 	};
+	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);

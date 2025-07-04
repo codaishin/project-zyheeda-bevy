@@ -55,13 +55,11 @@ mod tests {
 	use super::*;
 	use crate::components::icon::IconImage;
 	use bevy::asset::{AssetLoadError, AssetPath, LoadState, UntypedAssetId, io::AssetReaderError};
-	use common::{
-		test_tools::utils::{SingleThreadedApp, new_handle},
-		traits::{handles_localization::localized::Localized, nested_mock::NestedMocks},
-	};
+	use common::traits::handles_localization::localized::Localized;
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
 	use std::{path::PathBuf, sync::Arc};
+	use testing::{NestedMocks, SingleThreadedApp, new_handle};
 
 	#[derive(Resource, NestedMocks)]
 	struct _AssetServer {

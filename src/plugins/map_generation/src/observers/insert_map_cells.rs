@@ -38,12 +38,10 @@ mod tests {
 	use super::*;
 	use crate::map_cells::MapCells;
 	use bevy::asset::AssetPath;
-	use common::{
-		test_tools::utils::{SingleThreadedApp, new_handle},
-		traits::{load_asset::Path, nested_mock::NestedMocks},
-	};
+	use common::traits::load_asset::Path;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
+	use testing::{NestedMocks, SingleThreadedApp, new_handle};
 
 	#[derive(TypePath, Debug, PartialEq, Clone)]
 	struct _Cell;

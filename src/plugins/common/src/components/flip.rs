@@ -37,7 +37,7 @@ impl FlipHorizontally {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{assert_eq_approx, test_tools::utils::SingleThreadedApp};
+	use testing::{SingleThreadedApp, assert_eq_approx};
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);

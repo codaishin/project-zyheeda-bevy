@@ -39,7 +39,7 @@ fn remove_child<TItem: Send + Sync + 'static>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::test_tools::utils::SingleThreadedApp;
+	use testing::SingleThreadedApp;
 
 	#[derive(Debug, PartialEq)]
 	struct _Item;

@@ -108,20 +108,16 @@ fn weight(body_direction: Dir3, move_direction: Dir3) -> f32 {
 mod tests {
 	use super::*;
 	use crate::components::animation_lookup::{AnimationLookup, Animations, DirectionalIndices};
-	use common::{
-		assert_eq_approx,
-		test_tools::utils::{SingleThreadedApp, new_handle},
-		traits::{
-			animation::{AnimationAsset, PlayMode},
-			iterate::Iterate,
-			nested_mock::NestedMocks,
-			wrap_handle::{UnwrapHandle, WrapHandle},
-		},
+	use common::traits::{
+		animation::{AnimationAsset, PlayMode},
+		iterate::Iterate,
+		wrap_handle::{UnwrapHandle, WrapHandle},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::{collections::HashMap, slice::Iter, vec::IntoIter};
 	use test_case::test_case;
+	use testing::{NestedMocks, SingleThreadedApp, assert_eq_approx, new_handle};
 
 	#[derive(Component)]
 	struct _Dispatch {

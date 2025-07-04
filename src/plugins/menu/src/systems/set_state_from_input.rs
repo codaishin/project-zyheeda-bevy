@@ -31,9 +31,9 @@ mod tests {
 		app::{App, Update},
 		state::app::{AppExtStates, StatesPlugin},
 	};
-	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::automock;
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Default, Debug, PartialEq, States, Hash, Eq, Clone, Copy)]
 	enum _State {

@@ -24,7 +24,7 @@ mod tests {
 	use super::*;
 	use crate::resources::first_pass_image::FirstPassImage;
 	use bevy::{math::FloatOrd, render::camera::RenderTarget};
-	use common::test_tools::utils::{SingleThreadedApp, new_handle};
+	use testing::{SingleThreadedApp, new_handle};
 
 	fn setup(first_pass_image: Handle<Image>) -> App {
 		let mut app = App::new().single_threaded(Update);

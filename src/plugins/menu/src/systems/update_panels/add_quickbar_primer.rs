@@ -25,14 +25,10 @@ impl QuickbarPanel {
 mod tests {
 	use super::*;
 	use crate::tools::PanelState;
-	use common::{
-		components::ui_input_primer::UiInputPrimer,
-		test_tools::utils::SingleThreadedApp,
-		tools::action_key::slot::Side,
-		traits::nested_mock::NestedMocks,
-	};
+	use common::{components::ui_input_primer::UiInputPrimer, tools::action_key::slot::Side};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Resource, NestedMocks)]
 	struct _Map {

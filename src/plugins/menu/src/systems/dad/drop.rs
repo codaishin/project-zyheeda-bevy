@@ -54,16 +54,13 @@ mod tests {
 		app::{App, Update},
 		ui::Interaction,
 	};
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		tools::{
-			action_key::slot::{Side, SlotKey},
-			inventory_key::InventoryKey,
-		},
-		traits::nested_mock::NestedMocks,
+	use common::tools::{
+		action_key::slot::{Side, SlotKey},
+		inventory_key::InventoryKey,
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Component, NestedMocks)]
 	struct _Agent {

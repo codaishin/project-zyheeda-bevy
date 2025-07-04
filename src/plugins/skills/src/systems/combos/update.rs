@@ -30,13 +30,10 @@ pub(crate) trait UpdateCombos:
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		tools::action_key::slot::Side,
-		traits::{handles_localization::Token, nested_mock::NestedMocks},
-	};
+	use common::{tools::action_key::slot::Side, traits::handles_localization::Token};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Component)]
 	struct _Agent;

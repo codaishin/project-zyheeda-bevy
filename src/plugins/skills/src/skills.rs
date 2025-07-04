@@ -259,13 +259,13 @@ mod tests {
 	use bevy::ecs::system::{EntityCommands, RunSystemError, RunSystemOnce};
 	use common::{
 		components::{outdated::Outdated, persistent_entity::PersistentEntity},
-		test_tools::utils::SingleThreadedApp,
 		tools::collider_info::ColliderInfo,
 		traits::{
 			handles_effect::HandlesEffect,
 			handles_skill_behaviors::{Contact, Projection, SkillEntities, SkillRoot},
 		},
 	};
+	use testing::SingleThreadedApp;
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Args {

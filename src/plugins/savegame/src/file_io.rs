@@ -200,8 +200,8 @@ impl WithExtensionPrefix for PathBuf {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{simple_init, traits::mock::Mock};
 	use mockall::{Sequence, mock};
+	use testing::{Mock, simple_init};
 
 	mock! {
 		_IO {}

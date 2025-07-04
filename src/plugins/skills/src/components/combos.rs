@@ -180,16 +180,14 @@ impl SavableComponent for Combos {
 mod tests {
 	use super::*;
 	use bevy::utils::default;
-	use common::{
-		tools::action_key::slot::Side,
-		traits::{handles_localization::Token, nested_mock::NestedMocks},
-	};
+	use common::{tools::action_key::slot::Side, traits::handles_localization::Token};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
 	use std::{
 		cell::RefCell,
 		collections::{HashMap, VecDeque},
 	};
+	use testing::NestedMocks;
 
 	#[derive(Default)]
 	struct _Next(HashMap<(SlotKey, ItemType), Skill>);

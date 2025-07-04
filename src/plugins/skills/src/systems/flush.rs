@@ -17,9 +17,9 @@ where
 mod tests {
 	use super::*;
 	use bevy::prelude::{App, Update};
-	use common::{test_tools::utils::SingleThreadedApp, traits::nested_mock::NestedMocks};
 	use macros::NestedMocks;
 	use mockall::automock;
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Component, NestedMocks)]
 	struct _Dequeue {

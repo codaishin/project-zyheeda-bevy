@@ -140,11 +140,11 @@ fn any_true(values: &[bool]) -> bool {
 mod tests {
 	use super::*;
 	use common::{
-		test_tools::utils::{SingleThreadedApp, new_handle},
 		tools::{action_key::slot::Side, item_type::ItemType},
 		traits::handles_localization::Token,
 	};
 	use std::{array::IntoIter, collections::HashMap, slice::Iter};
+	use testing::{SingleThreadedApp, new_handle};
 
 	#[derive(Component)]
 	struct _Agent;

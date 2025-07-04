@@ -154,13 +154,11 @@ mod tests {
 	use super::*;
 	use crate::components::animation_dispatch::AnimationDispatch;
 	use bevy::{animation::AnimationTargetId, platform::collections::HashMap};
-	use common::{
-		test_tools::utils::{SingleThreadedApp, new_handle},
-		traits::{
-			animation::{AnimationAsset, AnimationMaskDefinition},
-			iteration::{Iter, IterFinite},
-		},
+	use common::traits::{
+		animation::{AnimationAsset, AnimationMaskDefinition},
+		iteration::{Iter, IterFinite},
 	};
+	use testing::{SingleThreadedApp, new_handle};
 
 	macro_rules! agent_animation_definitions {
 		($masks:expr) => {

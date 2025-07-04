@@ -86,7 +86,7 @@ impl<'a> Iterator for Iter<'a> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::test_tools::utils::new_handle;
+	use testing::new_handle;
 
 	#[test]
 	fn get_first_item() {

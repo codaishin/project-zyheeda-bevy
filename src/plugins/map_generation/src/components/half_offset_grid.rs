@@ -102,13 +102,8 @@ mod tests {
 	use super::*;
 	use crate::{map_cells::Direction, traits::insert_cell_quadrant_components::Quadrant};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{
-		assert_count,
-		assert_eq_unordered,
-		get_children,
-		test_tools::utils::SingleThreadedApp,
-	};
 	use std::collections::HashSet;
+	use testing::{SingleThreadedApp, assert_count, assert_eq_unordered, get_children};
 
 	struct _Cell {
 		name: &'static str,

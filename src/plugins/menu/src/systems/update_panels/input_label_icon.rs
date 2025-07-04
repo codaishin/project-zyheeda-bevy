@@ -72,16 +72,11 @@ mod tests {
 	use super::*;
 	use crate::components::icon::{Icon, IconImage};
 	use bevy::app::{App, Update};
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		traits::{
-			handles_localization::{LocalizationResult, Token, localized::Localized},
-			nested_mock::NestedMocks,
-		},
-	};
+	use common::traits::handles_localization::{LocalizationResult, Token, localized::Localized};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::path::PathBuf;
+	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Clone, Copy)]
 	struct _Key;

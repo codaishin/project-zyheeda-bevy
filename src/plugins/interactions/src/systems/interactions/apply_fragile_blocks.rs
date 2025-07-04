@@ -51,7 +51,8 @@ fn fragile_blocked_entity(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{blocker::Blocker, test_tools::utils::SingleThreadedApp};
+	use common::blocker::Blocker;
+	use testing::SingleThreadedApp;
 
 	#[derive(Component, Default, Debug, PartialEq)]
 	struct _Destroy;

@@ -25,13 +25,11 @@ pub(crate) fn update_children<TComponent, TLocalization>(
 mod tests {
 	use super::*;
 	use bevy::ecs::relationship::RelatedSpawnerCommands;
-	use common::{
-		test_tools::utils::SingleThreadedApp,
-		traits::{
-			handles_localization::{LocalizationResult, Token, localized::Localized},
-			thread_safe::ThreadSafe,
-		},
+	use common::traits::{
+		handles_localization::{LocalizationResult, Token, localized::Localized},
+		thread_safe::ThreadSafe,
 	};
+	use testing::SingleThreadedApp;
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Child(Localized);

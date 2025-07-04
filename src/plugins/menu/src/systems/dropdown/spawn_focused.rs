@@ -110,10 +110,10 @@ mod tests {
 		traits::insert_ui_content::InsertUiContent,
 	};
 	use common::{
-		test_tools::utils::SingleThreadedApp,
 		tools::Index,
 		traits::handles_localization::{LocalizationResult, Token, localized::Localized},
 	};
+	use testing::SingleThreadedApp;
 
 	#[derive(Resource, Default, Debug, PartialEq, Clone, Copy)]
 	struct _Localization;

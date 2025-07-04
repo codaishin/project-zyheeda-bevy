@@ -22,7 +22,7 @@ pub(crate) trait InstantiateResource: Resource + Asset + Sized {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::test_tools::utils::{SingleThreadedApp, new_handle};
+	use testing::{SingleThreadedApp, new_handle};
 
 	#[derive(Resource, Asset, TypePath, Debug, PartialEq)]
 	struct _Asset;

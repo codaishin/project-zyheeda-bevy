@@ -100,13 +100,10 @@ mod tests {
 		asset::AssetPath,
 		ecs::system::{RunSystemError, RunSystemOnce},
 	};
-	use common::{
-		assert_count,
-		test_tools::utils::SingleThreadedApp,
-		traits::load_asset::LoadAsset,
-	};
+	use common::traits::load_asset::LoadAsset;
 	use serde::{Deserialize, Serialize};
 	use std::{any::type_name, collections::HashMap, path::PathBuf, sync::LazyLock};
+	use testing::{SingleThreadedApp, assert_count};
 
 	#[derive(Component, Debug, PartialEq, Clone, Serialize, Deserialize)]
 	struct _A(EntityLoadBuffer);
