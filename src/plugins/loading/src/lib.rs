@@ -238,7 +238,7 @@ impl HandlesCustomFolderAssets for LoadingPlugin {
 			.add_systems(
 				Update,
 				map_load_results::<TAsset, LoadError<TAsset::TInstantiationError>, AssetServer>
-					.pipe(OnError::log_many)
+					.pipe(OnError::log)
 					.run_if(in_state(load_assets)),
 			);
 	}

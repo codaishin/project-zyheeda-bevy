@@ -7,6 +7,7 @@ use common::{
 		ground_offset::GroundOffset,
 		persistent_entity::PersistentEntity,
 	},
+	errors::Error,
 	resources::persistent_entities::PersistentEntities,
 	tools::{aggro_range::AggroRange, attack_range::AttackRange},
 	traits::{
@@ -36,12 +37,12 @@ pub(crate) trait SelectBehavior {
 		all: Query<(&PersistentEntity, &GlobalTransform, Option<&GroundOffset>)>,
 		colliders: Query<&ColliderOfInteractionTarget>,
 		persistent_entities: ResMut<PersistentEntities>,
-	) -> BehaviorResults
+	) -> Result<(), BehaviorError>
 	where
 		Self: Component + Sized + Getter<AggroRange> + Getter<AttackRange> + Getter<EnemyTarget>,
 		TPlayer: Component,
 	{
-		BehaviorResults(select_behavior(
+		select_behavior(
 			rapier,
 			commands,
 			agents,
@@ -49,17 +50,27 @@ pub(crate) trait SelectBehavior {
 			all,
 			colliders,
 			persistent_entities,
-		))
+		)
 	}
 }
 
-pub(crate) struct BehaviorResults(Result<Vec<Result<(), InvalidDirectionError>>, BevyError>);
+#[derive(Debug, PartialEq)]
+pub(crate) enum BehaviorError<TNoRayCaster = BevyError> {
+	NoRayCaster(TNoRayCaster),
+	InvalidDirectionErrors(Vec<InvalidDirectionError>),
+}
 
-impl TryFrom<BehaviorResults> for Vec<Result<(), InvalidDirectionError>> {
-	type Error = BevyError;
-
-	fn try_from(BehaviorResults(results): BehaviorResults) -> Result<Self, Self::Error> {
-		results
+impl From<BehaviorError> for Error {
+	fn from(value: BehaviorError) -> Self {
+		match value {
+			BehaviorError::NoRayCaster(bevy_error) => Error::from(bevy_error),
+			BehaviorError::InvalidDirectionErrors(invalid_direction_errors) => Error::Multiple(
+				invalid_direction_errors
+					.into_iter()
+					.map(Error::from)
+					.collect(),
+			),
+		}
 	}
 }
 
@@ -82,19 +93,21 @@ fn select_behavior<TAgent, TPlayer, TGetRayCaster>(
 	all: Query<(&PersistentEntity, &GlobalTransform, Option<&GroundOffset>)>,
 	colliders: Query<&ColliderOfInteractionTarget>,
 	mut persistent_entities: ResMut<PersistentEntities>,
-) -> Result<Vec<Result<(), InvalidDirectionError>>, TGetRayCaster::TError>
+) -> Result<(), BehaviorError<TGetRayCaster::TError>>
 where
 	TAgent: Component + Sized + Getter<AggroRange> + Getter<AttackRange> + Getter<EnemyTarget>,
 	TPlayer: Component,
 	TGetRayCaster: GetRayCaster<(Ray3d, NoSensors, ExcludeRigidBody)>,
 {
-	let player = players.single().ok();
-	let ray_caster = ray_caster_source.get_ray_caster()?;
-	let mut results = vec![];
+	let ray_caster = match ray_caster_source.get_ray_caster() {
+		Ok(ray_caster) => ray_caster,
+		Err(error) => return Err(BehaviorError::NoRayCaster(error)),
+	};
+	let mut invalid_directions = vec![];
 
 	for (persistent_agent_entity, transform, ground_offset, agent) in &agents {
 		let target = match agent.get() {
-			EnemyTarget::Player => player,
+			EnemyTarget::Player => players.single().ok(),
 			EnemyTarget::Entity(persistent_entity) => persistent_entities
 				.get_entity(&persistent_entity)
 				.and_then(|entity| all.get(entity).ok()),
@@ -130,7 +143,7 @@ where
 		};
 
 		match strategy {
-			Err(error) => results.push(Err(error)),
+			Err(invalid_direction) => invalid_directions.push(invalid_direction),
 			Ok(Behavior::Attack) => {
 				agent_entity.try_insert(Attack(*persistent_target));
 				agent_entity.remove::<Chase>();
@@ -146,7 +159,11 @@ where
 		}
 	}
 
-	Ok(results)
+	if !invalid_directions.is_empty() {
+		return Err(BehaviorError::InvalidDirectionErrors(invalid_directions));
+	}
+
+	Ok(())
 }
 
 fn get_strategy<TAgent, TCaster>(
@@ -286,6 +303,7 @@ mod tests {
 		}
 	}
 
+	#[derive(Debug, PartialEq)]
 	pub enum _ContextQueryError {}
 
 	#[automock]
@@ -342,7 +360,7 @@ mod tests {
 			))
 			.id();
 
-		Ok(_) = app.world_mut().run_system_once_with(
+		_ = app.world_mut().run_system_once_with(
 			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
 			_GetRayCaster::with_no_hit(),
 		)?;
@@ -374,7 +392,7 @@ mod tests {
 			))
 			.id();
 
-		Ok(_) = app.world_mut().run_system_once_with(
+		_ = app.world_mut().run_system_once_with(
 			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
 			_GetRayCaster::with_no_hit(),
 		)?;
@@ -402,7 +420,7 @@ mod tests {
 			))
 			.id();
 
-		Ok(_) = app.world_mut().run_system_once_with(
+		_ = app.world_mut().run_system_once_with(
 			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
 			_GetRayCaster::with_no_hit(),
 		)?;
@@ -434,7 +452,7 @@ mod tests {
 			))
 			.id();
 
-		Ok(_) = app.world_mut().run_system_once_with(
+		_ = app.world_mut().run_system_once_with(
 			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
 			_GetRayCaster::with_no_hit(),
 		)?;
@@ -469,7 +487,7 @@ mod tests {
 			});
 		});
 
-		Ok(_) = app.world_mut().run_system_once_with(
+		_ = app.world_mut().run_system_once_with(
 			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
 			get_ray_caster,
 		)?;
@@ -511,7 +529,7 @@ mod tests {
 			});
 		});
 
-		Ok(_) = app.world_mut().run_system_once_with(
+		_ = app.world_mut().run_system_once_with(
 			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
 			get_ray_caster,
 		)?;
@@ -553,7 +571,7 @@ mod tests {
 			});
 		});
 
-		Ok(_) = app.world_mut().run_system_once_with(
+		_ = app.world_mut().run_system_once_with(
 			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
 			get_ray_caster,
 		)?;
@@ -602,7 +620,7 @@ mod tests {
 			});
 		});
 
-		Ok(_) = app.world_mut().run_system_once_with(
+		_ = app.world_mut().run_system_once_with(
 			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
 			get_ray_caster,
 		)?;
@@ -649,7 +667,7 @@ mod tests {
 			});
 		});
 
-		Ok(_) = app.world_mut().run_system_once_with(
+		_ = app.world_mut().run_system_once_with(
 			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
 			get_ray_caster,
 		)?;
@@ -671,12 +689,17 @@ mod tests {
 			},
 		));
 
-		let Ok(errors) = app.world_mut().run_system_once_with(
+		let result = app.world_mut().run_system_once_with(
 			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
 			_GetRayCaster::with_no_hit(),
 		)?;
 
-		assert_eq!(vec![Err(InvalidDirectionError::NaN)], errors);
+		assert_eq!(
+			Err(BehaviorError::InvalidDirectionErrors(vec![
+				InvalidDirectionError::NaN
+			])),
+			result
+		);
 		Ok(())
 	}
 
@@ -714,7 +737,7 @@ mod tests {
 			});
 		});
 
-		Ok(_) = app.world_mut().run_system_once_with(
+		_ = app.world_mut().run_system_once_with(
 			select_behavior::<_Enemy, _Player, In<_GetRayCaster>>,
 			get_ray_caster,
 		)?;

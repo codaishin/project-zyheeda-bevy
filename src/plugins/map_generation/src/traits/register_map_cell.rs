@@ -77,7 +77,7 @@ impl RegisterMapCell for App {
 			.add_observer(MapAssetPath::<TCell>::insert_map_cells)
 			.add_systems(
 				OnEnter(resolving_dependencies),
-				MapAssetCells::<TCell>::insert_map_graph.pipe(OnError::log_many),
+				MapAssetCells::<TCell>::insert_map_graph.pipe(OnError::log),
 			)
 			// Generate grid for navigation
 			.add_observer(MapGridGraph::<TCell>::spawn_child::<Grid>)

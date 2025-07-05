@@ -94,23 +94,23 @@ pub(crate) enum GridDefinitionError {
 impl From<GridDefinitionError> for Error {
 	fn from(error: GridDefinitionError) -> Self {
 		match error {
-			GridDefinitionError::CellCountZero => Error {
+			GridDefinitionError::CellCountZero => Error::Single {
 				msg: "Grid definition is empty".to_owned(),
 				lvl: Level::Error,
 			},
-			GridDefinitionError::CellDistanceZero => Error {
+			GridDefinitionError::CellDistanceZero => Error::Single {
 				msg: "Grid cell distance is zero".to_owned(),
 				lvl: Level::Error,
 			},
-			GridDefinitionError::CellDistanceNegative => Error {
+			GridDefinitionError::CellDistanceNegative => Error::Single {
 				msg: "Grid cell distance is negative".to_owned(),
 				lvl: Level::Error,
 			},
-			GridDefinitionError::CellDistanceNaN => Error {
+			GridDefinitionError::CellDistanceNaN => Error::Single {
 				msg: "Grid cell distance is NaN".to_owned(),
 				lvl: Level::Error,
 			},
-			GridDefinitionError::CellDistanceInfinite => Error {
+			GridDefinitionError::CellDistanceInfinite => Error::Single {
 				msg: "Grid cell distance is infinite".to_owned(),
 				lvl: Level::Error,
 			},

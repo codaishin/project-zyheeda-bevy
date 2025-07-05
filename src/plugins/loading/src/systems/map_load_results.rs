@@ -6,7 +6,7 @@ use bevy::{
 };
 use common::{
 	errors::{Error, Level},
-	traits::get_asset_path::GetAssetPath,
+	traits::{get_asset_path::GetAssetPath, or_ok::OrOk},
 };
 use std::fmt::Debug;
 
@@ -19,9 +19,9 @@ pub(crate) fn map_load_results<
 	mut load_results: ResMut<Assets<LoadResult<TAsset, TError>>>,
 	mut alive_assets: ResMut<AliveAssets<TAsset>>,
 	asset_server: Res<TGetAssetPath>,
-) -> Vec<Result<(), Error>> {
+) -> Result<(), Vec<Error>> {
 	if load_results.is_empty() {
-		return vec![];
+		return Ok(());
 	}
 
 	let mut errors = vec![];
@@ -32,23 +32,23 @@ pub(crate) fn map_load_results<
 				alive_assets.insert(assets.add(asset.clone()));
 			}
 			LoadResult::Err(err) => {
-				errors.push(Err(error(err, asset_server.get_asset_path(asset_id))));
+				errors.push(error(err, asset_server.get_asset_path(asset_id)));
 			}
 		}
 	}
 
 	*load_results = Assets::<LoadResult<TAsset, TError>>::default();
 
-	errors
+	errors.or_ok(|| ())
 }
 
 fn error<TError: Debug>(error: &TError, path: Option<AssetPath>) -> Error {
 	match path {
-		Some(path) => Error {
+		Some(path) => Error::Single {
 			msg: format!("{path:?}: {error:?}"),
 			lvl: Level::Error,
 		},
-		None => Error {
+		None => Error::Single {
 			msg: format!("Unknown Path: {error:?}"),
 			lvl: Level::Error,
 		},
@@ -105,7 +105,8 @@ mod tests {
 	fn add_loaded_asset() -> Result<(), RunSystemError> {
 		let mut app = setup([(LoadResult::Ok(_Asset), None)]);
 
-		app.world_mut()
+		_ = app
+			.world_mut()
 			.run_system_once(map_load_results::<_Asset, _Error, _Server>)?;
 
 		let assets = app.world().resource::<Assets<_Asset>>();
@@ -122,8 +123,8 @@ mod tests {
 			(LoadResult::Ok(_Asset), None),
 			(LoadResult::Err(_Error), None),
 		]);
-
-		app.world_mut()
+		_ = app
+			.world_mut()
 			.run_system_once(map_load_results::<_Asset, _Error, _Server>)?;
 
 		let load_results = app.world().resource::<Assets<LoadResult<_Asset, _Error>>>();
@@ -143,7 +144,7 @@ mod tests {
 			.run_system_once(map_load_results::<_Asset, _Error, _Server>)?;
 
 		assert_eq!(
-			vec![Err(error(&_Error, Some(AssetPath::from("my/path"))))],
+			Err(vec![error(&_Error, Some(AssetPath::from("my/path")))]),
 			results
 		);
 		Ok(())
@@ -153,7 +154,8 @@ mod tests {
 	fn store_asset_handle_so_it_is_not_unloaded() -> Result<(), RunSystemError> {
 		let mut app = setup([(LoadResult::Ok(_Asset), None)]);
 
-		app.world_mut()
+		_ = app
+			.world_mut()
 			.run_system_once(map_load_results::<_Asset, _Error, _Server>)?;
 
 		let assets = app.world().resource::<Assets<_Asset>>();

@@ -55,8 +55,8 @@ where
 				(
 					FtlServer::load_requested_assets(Path::from("locale")),
 					FtlServer::remove_failed_asset_handles,
-					FtlServer::update_ftl_bundle.pipe(OnError::log_many),
-					FtlServer::drain_errors.pipe(OnError::log_many),
+					FtlServer::update_ftl_bundle.pipe(OnError::log),
+					FtlServer::drain_errors.pipe(OnError::log),
 				),
 			);
 	}

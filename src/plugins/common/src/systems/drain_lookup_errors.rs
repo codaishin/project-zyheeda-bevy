@@ -1,11 +1,18 @@
-use crate::resources::persistent_entities::{LookupError, PersistentEntities};
+use crate::{
+	resources::persistent_entities::{LookupError, PersistentEntities},
+	traits::or_ok::OrOk,
+};
 use bevy::prelude::*;
 
 impl PersistentEntities {
 	pub(crate) fn drain_lookup_errors(
 		mut persistent_entities: ResMut<Self>,
-	) -> Vec<Result<(), LookupError>> {
-		persistent_entities.errors.drain(..).map(Err).collect()
+	) -> Result<(), Vec<LookupError>> {
+		persistent_entities
+			.errors
+			.drain(..)
+			.collect::<Vec<_>>()
+			.or_ok(|| ())
 	}
 }
 
@@ -31,7 +38,8 @@ mod tests {
 			..default()
 		});
 
-		app.world_mut()
+		_ = app
+			.world_mut()
 			.run_system_once(PersistentEntities::drain_lookup_errors)?;
 
 		assert!(
@@ -55,7 +63,7 @@ mod tests {
 			.world_mut()
 			.run_system_once(PersistentEntities::drain_lookup_errors)?;
 
-		assert_eq!(vec![Err(error)], errors);
+		assert_eq!(Err(vec![error]), errors);
 		Ok(())
 	}
 }

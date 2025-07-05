@@ -138,11 +138,11 @@ pub enum NavGridError {
 impl From<NavGridError> for Error {
 	fn from(error: NavGridError) -> Self {
 		match error {
-			NavGridError::Empty => Error {
+			NavGridError::Empty => Error::Single {
 				msg: "Source map is empty".to_owned(),
 				lvl: Level::Error,
 			},
-			NavGridError::CellDistanceZero => Error {
+			NavGridError::CellDistanceZero => Error::Single {
 				msg: "`NavMap` cell distance is zero".to_owned(),
 				lvl: Level::Error,
 			},

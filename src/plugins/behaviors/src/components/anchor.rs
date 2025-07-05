@@ -10,7 +10,10 @@ use common::{
 	components::persistent_entity::PersistentEntity,
 	errors::{Error, Level},
 	resources::persistent_entities::PersistentEntities,
-	traits::track::{IsTracking, Track, Untrack},
+	traits::{
+		or_ok::OrOk,
+		track::{IsTracking, Track, Untrack},
+	},
 };
 use std::{
 	any::{TypeId, type_name},
@@ -49,7 +52,7 @@ where
 		mut agents: Query<(&Self, &mut Transform), <Self as HasFilter>::TFilter>,
 		fix_points: Query<&AnchorFixPoints>,
 		transforms: Query<&GlobalTransform>,
-	) -> Vec<Result<(), AnchorError>> {
+	) -> Result<(), Vec<AnchorError>> {
 		agents
 			.iter_mut()
 			.filter_map(|(anchor, mut anchor_transform)| {
@@ -71,8 +74,8 @@ where
 
 				None
 			})
-			.map(Err)
-			.collect()
+			.collect::<Vec<_>>()
+			.or_ok(|| ())
 	}
 }
 
@@ -159,19 +162,19 @@ impl From<AnchorError> for Error {
 		match error {
 			AnchorError::FixPointsMissingOn(entity) => {
 				let type_name = type_name::<AnchorFixPoints>();
-				Self {
+				Self::Single {
 					msg: format!("{entity:?}: {type_name} missing"),
 					lvl: Level::Error,
 				}
 			}
 			AnchorError::GlobalTransformMissingOn(entity) => {
 				let type_name = type_name::<GlobalTransform>();
-				Self {
+				Self::Single {
 					msg: format!("{entity}: {type_name} missing"),
 					lvl: Level::Error,
 				}
 			}
-			AnchorError::NoFixPointEntityFor(anchor_fix_point_key) => Self {
+			AnchorError::NoFixPointEntityFor(anchor_fix_point_key) => Self::Single {
 				msg: format!("{anchor_fix_point_key:?} missing"),
 				lvl: Level::Error,
 			},
@@ -350,7 +353,7 @@ mod tests {
 			.world_mut()
 			.run_system_once(Anchor::<_NotIgnored>::system)?;
 
-		assert_eq!(vec![Err(AnchorError::FixPointsMissingOn(entity))], errors);
+		assert_eq!(Err(vec![AnchorError::FixPointsMissingOn(entity)]), errors);
 		Ok(())
 	}
 
@@ -369,9 +372,9 @@ mod tests {
 			.run_system_once(Anchor::<_NotIgnored>::system)?;
 
 		assert_eq!(
-			vec![Err(AnchorError::NoFixPointEntityFor(
+			Err(vec![AnchorError::NoFixPointEntityFor(
 				AnchorFixPointKey::new::<()>(11)
-			))],
+			)]),
 			errors
 		);
 		Ok(())
@@ -399,7 +402,7 @@ mod tests {
 			.run_system_once(Anchor::<_NotIgnored>::system)?;
 
 		assert_eq!(
-			vec![Err(AnchorError::GlobalTransformMissingOn(fix_point))],
+			Err(vec![AnchorError::GlobalTransformMissingOn(fix_point)]),
 			errors
 		);
 		Ok(())

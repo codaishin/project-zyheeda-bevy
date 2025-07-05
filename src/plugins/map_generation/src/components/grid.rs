@@ -123,7 +123,7 @@ where
 	fn from(value: SpawnCellError<TError, TComponent>) -> Self {
 		match value {
 			SpawnCellError::Error(error) => Error::from(error),
-			SpawnCellError::NoGridEntity => Error {
+			SpawnCellError::NoGridEntity => Error::Single {
 				msg: format!(
 					"Failed to retrieve `{}` entity commands",
 					type_name::<TComponent>()

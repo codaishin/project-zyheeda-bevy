@@ -121,7 +121,7 @@ impl From<FileError> for Error {
 	fn from(error: FileError) -> Self {
 		match error {
 			FileError::IO(error) => Self::from(error),
-			FileError::DoesNotExist(save_game) => Error {
+			FileError::DoesNotExist(save_game) => Error::Single {
 				msg: format!("`{save_game}`: not found",),
 				lvl: Level::Warning,
 			},

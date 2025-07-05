@@ -60,7 +60,7 @@ pub struct LockPoisonedError;
 
 impl From<LockPoisonedError> for Error {
 	fn from(_: LockPoisonedError) -> Self {
-		Self {
+		Self::Single {
 			msg: "lock poisoned".to_owned(),
 			lvl: Level::Error,
 		}
@@ -79,7 +79,7 @@ impl From<SerializationErrors> for Error {
 			})
 			.collect::<String>();
 
-		Self {
+		Self::Single {
 			msg,
 			lvl: Level::Error,
 		}
@@ -121,7 +121,7 @@ impl From<SerdeJsonErrors> for Error {
 			.map(|error| format!("- {error}"))
 			.collect::<Vec<_>>()
 			.join("\n");
-		Self {
+		Self::Single {
 			msg: format!("Failed to serialize data:\n{errors}"),
 			lvl: Level::Error,
 		}

@@ -70,11 +70,11 @@ pub(crate) enum WriteError {
 impl From<WriteError> for Error {
 	fn from(value: WriteError) -> Self {
 		match value {
-			WriteError::Serde(error) => Error {
+			WriteError::Serde(error) => Error::Single {
 				msg: format!("failed to serialize asset: {error}"),
 				lvl: Level::Error,
 			},
-			WriteError::Io(error) => Error {
+			WriteError::Io(error) => Error::Single {
 				msg: format!("failed to save asset: {error}"),
 				lvl: Level::Error,
 			},

@@ -107,7 +107,7 @@ fn ring_collider(radius: f32) -> Result<(Collider, Transform), Error> {
 	);
 
 	let Some(collider) = collider else {
-		return Err(Error {
+		return Err(Error::Single {
 			msg: "Cannot create spherical contact collider".to_owned(),
 			lvl: Level::Error,
 		});

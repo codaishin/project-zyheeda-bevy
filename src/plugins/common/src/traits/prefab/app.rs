@@ -138,7 +138,7 @@ mod tests {
 					.return_const(new_handle());
 			}),
 		);
-		let error = Error {
+		let error = Error::Single {
 			msg: "my error".to_owned(),
 			lvl: Level::Error,
 		};

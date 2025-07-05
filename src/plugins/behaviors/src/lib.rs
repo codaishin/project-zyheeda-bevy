@@ -243,8 +243,7 @@ where
 						.chain(),
 					// Enemy behaviors
 					(
-						TEnemies::TEnemy::select_behavior::<TPlayers::TPlayer>
-							.pipe(OnError::log_many),
+						TEnemies::TEnemy::select_behavior::<TPlayers::TPlayer>.pipe(OnError::log),
 						TEnemies::TEnemy::attack,
 						TEnemies::TEnemy::chase::<PathOrWasd<VelocityBased>>,
 						compute_enemy_path,
@@ -263,8 +262,8 @@ where
 						)
 							.chain(),
 						SetVelocityForward::system,
-						Anchor::<Always>::system.pipe(OnError::log_many),
-						Anchor::<Once>::system.pipe(OnError::log_many),
+						Anchor::<Always>::system.pipe(OnError::log),
+						Anchor::<Once>::system.pipe(OnError::log),
 					),
 					// Apply facing
 					(

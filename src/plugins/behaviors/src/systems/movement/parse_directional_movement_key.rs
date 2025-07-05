@@ -93,19 +93,19 @@ where
 {
 	fn from(error: TriggerMovementError<TCam, TAgent>) -> Self {
 		match error.value {
-			QueryError::NoAgent => Error {
+			QueryError::NoAgent => Error::Single {
 				msg: format!("Found no agent of type {}", type_name::<TAgent>()),
 				lvl: Level::Error,
 			},
-			QueryError::MultipleAgents => Error {
+			QueryError::MultipleAgents => Error::Single {
 				msg: format!("Found multiple agents of type {}", type_name::<TAgent>()),
 				lvl: Level::Error,
 			},
-			QueryError::NoCam => Error {
+			QueryError::NoCam => Error::Single {
 				msg: format!("Found no camera of type {}", type_name::<TCam>()),
 				lvl: Level::Error,
 			},
-			QueryError::MultipleCams => Error {
+			QueryError::MultipleCams => Error::Single {
 				msg: format!("Found multiple cameras of type {}", type_name::<TCam>()),
 				lvl: Level::Error,
 			},

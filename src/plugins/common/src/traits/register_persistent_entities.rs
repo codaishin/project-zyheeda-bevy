@@ -13,7 +13,7 @@ impl RegisterPersistentEntities for App {
 			.add_observer(PersistentEntities::despawn_entity)
 			.add_systems(
 				Update,
-				PersistentEntities::drain_lookup_errors.pipe(OnError::log_many),
+				PersistentEntities::drain_lookup_errors.pipe(OnError::log),
 			)
 	}
 }

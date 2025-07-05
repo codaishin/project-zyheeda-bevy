@@ -90,7 +90,7 @@ where
 					})
 					.collect::<Vec<_>>()
 					.join("\n");
-				Error {
+				Error::Single {
 					msg: format!("Some input settings failed:\n{invalid_inputs}"),
 					lvl: Level::Warning,
 				}
