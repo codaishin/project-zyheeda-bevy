@@ -17,10 +17,7 @@ use common::{
 	components::{child_of_persistent::ChildOfPersistent, persistent_entity::PersistentEntity},
 	effects::deal_damage::DealDamage,
 	states::game_state::GameState,
-	systems::{
-		log::{log_many, log_or_unwrap_option},
-		track_components::TrackComponentInSelfAndChildren,
-	},
+	systems::{log::OnError, track_components::TrackComponentInSelfAndChildren},
 	tools::action_key::movement::MovementKey,
 	traits::{
 		animation::{HasAnimationsDispatch, RegisterAnimations},
@@ -181,7 +178,9 @@ where
 			TSettings::TKeyMap<MovementKey>,
 			MovementKey,
 		>;
-		let wasd_input = Update::delta.pipe(wasd_input).pipe(log_or_unwrap_option);
+		let wasd_input = Update::delta
+			.pipe(wasd_input)
+			.pipe(OnError::log_and_fallback(|| None));
 
 		let compute_player_path = TPlayers::TPlayerMovement::compute_path::<
 			VelocityBased,
@@ -244,7 +243,8 @@ where
 						.chain(),
 					// Enemy behaviors
 					(
-						TEnemies::TEnemy::select_behavior::<TPlayers::TPlayer>.pipe(log_many),
+						TEnemies::TEnemy::select_behavior::<TPlayers::TPlayer>
+							.pipe(OnError::log_many),
 						TEnemies::TEnemy::attack,
 						TEnemies::TEnemy::chase::<PathOrWasd<VelocityBased>>,
 						compute_enemy_path,
@@ -263,8 +263,8 @@ where
 						)
 							.chain(),
 						SetVelocityForward::system,
-						Anchor::<Always>::system.pipe(log_many),
-						Anchor::<Once>::system.pipe(log_many),
+						Anchor::<Always>::system.pipe(OnError::log_many),
+						Anchor::<Once>::system.pipe(OnError::log_many),
 					),
 					// Apply facing
 					(

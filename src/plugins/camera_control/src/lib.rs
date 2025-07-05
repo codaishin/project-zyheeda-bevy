@@ -5,7 +5,7 @@ mod traits;
 use bevy::prelude::*;
 use common::{
 	states::game_state::GameState,
-	systems::log::log,
+	systems::log::OnError,
 	tools::action_key::camera_key::CameraKey,
 	traits::{
 		handles_graphics::{FirstPassCamera, WorldCameras},
@@ -53,7 +53,7 @@ where
 		app.add_systems(
 			Update,
 			TGraphics::TWorldCameras::set_to_orbit::<TPlayers::TPlayer>
-				.pipe(log)
+				.pipe(OnError::log)
 				.run_if(in_state(GameState::LoadDependencies)),
 		)
 		.add_systems(

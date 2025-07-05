@@ -5,7 +5,7 @@ use crate::systems::dispatch_asset_components::DispatchAssetComponents;
 use bevy::prelude::*;
 use common::{
 	states::game_state::LoadingGame,
-	systems::{log::log_many, track_components::TrackComponentInSelfAndChildren},
+	systems::{log::OnError, track_components::TrackComponentInSelfAndChildren},
 	traits::{
 		get_asset::GetAsset,
 		handles_assets_for_children::{ChildAssetDefinition, HandlesAssetsForChildren},
@@ -52,7 +52,7 @@ where
 	{
 		let all_children_present = ChildrenLookup::<TParent, TMarker>::entities_loaded;
 		let dispatch_asset_components =
-			TParent::dispatch_asset_components::<TMarker>.pipe(log_many);
+			TParent::dispatch_asset_components::<TMarker>.pipe(OnError::log_many);
 		let store_children_in_lookup =
 			ChildrenLookup::<TParent, TMarker>::track_in_self_and_children::<Name>()
 				.filter::<TParent::TChildFilter>()

@@ -6,7 +6,7 @@ mod traits;
 use bevy::prelude::*;
 use common::{
 	states::game_state::LoadingEssentialAssets,
-	systems::log::log,
+	systems::log::OnError,
 	tools::action_key::{ActionKey, user_input::UserInput},
 	traits::{
 		handles_asset_resource_loading::HandlesAssetResourceLoading,
@@ -50,7 +50,7 @@ where
 		app.init_resource::<AssetWriter>().add_systems(
 			Update,
 			KeyMap::save_changes::<KeyMapDto>(path)
-				.pipe(log)
+				.pipe(OnError::log)
 				.run_if(resource_exists::<KeyMap>),
 		);
 	}

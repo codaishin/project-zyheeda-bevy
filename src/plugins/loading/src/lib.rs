@@ -21,7 +21,7 @@ use common::{
 		game_state::{LoadingEssentialAssets, LoadingGame},
 		transition_to_state,
 	},
-	systems::log::log_many,
+	systems::log::OnError,
 	traits::{
 		handles_asset_resource_loading::HandlesAssetResourceLoading,
 		handles_custom_assets::{
@@ -238,7 +238,7 @@ impl HandlesCustomFolderAssets for LoadingPlugin {
 			.add_systems(
 				Update,
 				map_load_results::<TAsset, LoadError<TAsset::TInstantiationError>, AssetServer>
-					.pipe(log_many)
+					.pipe(OnError::log_many)
 					.run_if(in_state(load_assets)),
 			);
 	}

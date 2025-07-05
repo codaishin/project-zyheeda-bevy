@@ -2,71 +2,44 @@ use crate::errors::{Error, Level};
 use bevy::ecs::system::In;
 use tracing::{error, warn};
 
-pub fn log<TError>(In(result): In<Result<(), TError>>)
-where
-	Error: From<TError>,
-{
-	let Err(error) = result else {
-		return;
-	};
+pub struct OnError;
 
-	output(error);
-}
+impl OnError {
+	fn void() {}
 
-pub fn log_with_fallback<TValue, TError>(
-	fallback: fn() -> TValue,
-) -> impl Fn(In<Result<TValue, TError>>) -> TValue
-where
-	Error: From<TError>,
-{
-	move |In(result)| match result {
-		Ok(value) => value,
-		Err(error) => {
-			output(error);
-			fallback()
-		}
+	pub fn log<TError>(result: In<Result<(), TError>>)
+	where
+		Error: From<TError>,
+	{
+		Self::log_and_fallback(Self::void)(result)
 	}
-}
 
-pub fn log_or_unwrap<TValue, TError>(In(result): In<Result<TValue, TError>>) -> Option<TValue>
-where
-	Error: From<TError>,
-{
-	match result {
-		Err(error) => {
-			output(error);
-			None
-		}
-		Ok(value) => Some(value),
-	}
-}
-
-pub fn log_or_unwrap_option<TValue, TError>(
-	In(result): In<Result<Option<TValue>, TError>>,
-) -> Option<TValue>
-where
-	Error: From<TError>,
-{
-	match result {
-		Err(error) => {
-			output(error);
-			None
-		}
-		Ok(Some(value)) => Some(value),
-		Ok(None) => None,
-	}
-}
-
-pub fn log_many<TError, TResults>(In(results): In<TResults>)
-where
-	Error: From<TError> + From<TResults::Error>,
-	TResults: TryInto<Vec<Result<(), TError>>>,
-{
-	match results.try_into() {
-		Err(error) => output(Error::from(error)),
-		Ok(results) => {
-			for error in results.into_iter().filter_map(|result| result.err()) {
+	pub fn log_and_fallback<TValue, TError>(
+		fallback: fn() -> TValue,
+	) -> impl Fn(In<Result<TValue, TError>>) -> TValue
+	where
+		Error: From<TError>,
+	{
+		move |In(result)| match result {
+			Ok(value) => value,
+			Err(error) => {
 				output(error);
+				fallback()
+			}
+		}
+	}
+
+	pub fn log_many<TError, TResults>(In(results): In<TResults>)
+	where
+		Error: From<TError> + From<TResults::Error>,
+		TResults: TryInto<Vec<Result<(), TError>>>,
+	{
+		match results.try_into() {
+			Err(error) => output(Error::from(error)),
+			Ok(results) => {
+				for error in results.into_iter().filter_map(|result| result.err()) {
+					output(error);
+				}
 			}
 		}
 	}
