@@ -12,7 +12,6 @@ use crate::components::{
 	combos_time_out::dto::CombosTimeOutDto,
 	loadout::Loadout,
 	queue::dto::QueueDto,
-	skill_executer::dto::SkillExecuterDto,
 };
 use bevy::prelude::*;
 use common::{

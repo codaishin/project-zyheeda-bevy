@@ -185,6 +185,13 @@ pub fn derive_savable_component(input: TokenStream) -> TokenStream {
 	let (impl_generics, type_generics, where_clause) = &input.generics.split_for_impl();
 	let mut dto = None;
 	let mut priority = false;
+	let mut where_clause = match where_clause.cloned() {
+		Some(where_clause) => where_clause,
+		None => syn::WhereClause {
+			where_token: Default::default(),
+			predicates: syn::punctuated::Punctuated::new(),
+		},
+	};
 
 	for attr in input.attrs.iter() {
 		if !attr.path().is_ident("savable_component") {
@@ -216,6 +223,19 @@ pub fn derive_savable_component(input: TokenStream) -> TokenStream {
 		Some(dto) => quote! {#dto},
 		None => quote! {Self},
 	};
+
+	where_clause.predicates.push(syn::parse_quote! {
+		Self: bevy::prelude::Component +
+			Sized +
+			Clone +
+			#common::traits::handles_custom_assets::TryLoadFrom<
+				#dto,
+				TInstantiationError = #common::errors::Unreachable
+			>
+	});
+	where_clause.predicates.push(syn::parse_quote! {
+		#dto: From<Self> + serde::Serialize + serde::de::DeserializeOwned
+	});
 
 	TokenStream::from(quote! {
 		impl #impl_generics #common::traits::handles_saving::SavableComponent for #name #type_generics #where_clause {

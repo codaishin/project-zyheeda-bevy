@@ -1,10 +1,9 @@
-pub(crate) mod dto;
+mod dto;
 
 use super::SkillTarget;
 use crate::{
-	SkillExecuterDto,
 	behaviors::{SkillCaster, build_skill_shape::OnSkillStop, spawn_on::SpawnOn},
-	skills::RunSkillBehavior,
+	skills::{RunSkillBehavior, dto::run_skill_behavior::RunSkillBehaviorDto},
 	traits::{Execute, Flush, Schedule, spawn_skill_behavior::SpawnSkillBehavior},
 };
 use bevy::prelude::*;
@@ -14,14 +13,15 @@ use common::{
 	traits::{
 		handles_effect::HandlesAllEffects,
 		handles_lifetime::HandlesLifetime,
-		handles_saving::SavableComponent,
 		handles_skill_behaviors::{HandlesSkillBehaviors, Spawner},
 		try_despawn::TryDespawnPersistent,
 	},
 };
+use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
-#[derive(Component, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+#[savable_component(dto = SkillExecuter<RunSkillBehaviorDto>)]
 pub(crate) enum SkillExecuter<TSkillBehavior = RunSkillBehavior> {
 	#[default]
 	Idle,
@@ -54,10 +54,6 @@ impl<TBehavior> Flush for SkillExecuter<TBehavior> {
 			_ => {}
 		}
 	}
-}
-
-impl SavableComponent for SkillExecuter {
-	type TDto = SkillExecuterDto;
 }
 
 impl<TCommands, TBehavior, TLifetimes, TEffects, TSkillBehavior>

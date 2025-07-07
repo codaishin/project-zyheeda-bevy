@@ -6,9 +6,8 @@ use common::{
 	errors::Unreachable,
 	traits::{handles_custom_assets::TryLoadFrom, load_asset::LoadAsset},
 };
-pub(crate) type SkillExecuterDto = SkillExecuter<RunSkillBehaviorDto>;
 
-impl From<SkillExecuter> for SkillExecuterDto {
+impl From<SkillExecuter> for SkillExecuter<RunSkillBehaviorDto> {
 	fn from(value: SkillExecuter) -> Self {
 		match value {
 			SkillExecuter::Idle => Self::Idle,
@@ -24,26 +23,26 @@ impl From<SkillExecuter> for SkillExecuterDto {
 	}
 }
 
-impl TryLoadFrom<SkillExecuterDto> for SkillExecuter {
+impl TryLoadFrom<SkillExecuter<RunSkillBehaviorDto>> for SkillExecuter {
 	type TInstantiationError = Unreachable;
 
 	fn try_load_from<TLoadAsset>(
-		value: SkillExecuterDto,
+		value: SkillExecuter<RunSkillBehaviorDto>,
 		_: &mut TLoadAsset,
 	) -> Result<Self, Self::TInstantiationError>
 	where
 		TLoadAsset: LoadAsset,
 	{
 		let executer = match value {
-			SkillExecuterDto::Idle => Self::Idle,
-			SkillExecuterDto::Start { slot_key, shape } => Self::Start {
+			SkillExecuter::Idle => Self::Idle,
+			SkillExecuter::Start { slot_key, shape } => Self::Start {
 				slot_key,
 				shape: RunSkillBehavior::from(shape),
 			},
-			SkillExecuterDto::StartedStoppable(persistent_entity) => {
+			SkillExecuter::StartedStoppable(persistent_entity) => {
 				Self::StartedStoppable(persistent_entity)
 			}
-			SkillExecuterDto::Stop(persistent_entity) => Self::Stop(persistent_entity),
+			SkillExecuter::Stop(persistent_entity) => Self::Stop(persistent_entity),
 		};
 
 		Ok(executer)
@@ -90,7 +89,7 @@ mod tests {
 	#[test_case(SkillExecuter::StartedStoppable(PersistentEntity::default()); "started stoppable")]
 	#[test_case(SkillExecuter::Stop(PersistentEntity::default()); "stop")]
 	fn roundtrip_survives(original: SkillExecuter) {
-		let dto = SkillExecuterDto::from(original.clone());
+		let dto = SkillExecuter::<RunSkillBehaviorDto>::from(original.clone());
 		let Ok(restored) = SkillExecuter::try_load_from(dto, &mut _LoadAsset);
 		assert_eq!(original, restored);
 	}

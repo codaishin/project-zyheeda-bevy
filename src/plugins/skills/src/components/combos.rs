@@ -22,15 +22,13 @@ use common::{
 		action_key::slot::{Combo, SlotKey},
 		item_type::ItemType,
 	},
-	traits::{
-		handles_combo_menu::GetCombosOrdered,
-		handles_saving::SavableComponent,
-		iterate::Iterate,
-	},
+	traits::{handles_combo_menu::GetCombosOrdered, iterate::Iterate},
 };
+use macros::SavableComponent;
 use std::collections::VecDeque;
 
-#[derive(Component, PartialEq, Debug, Clone)]
+#[derive(Component, SavableComponent, PartialEq, Debug, Clone)]
+#[savable_component(dto = CombosDto)]
 pub struct Combos<TComboNode = ComboNode> {
 	config: TComboNode,
 	current: Option<TComboNode>,
@@ -170,10 +168,6 @@ where
 	{
 		self.config.followup_keys(after)
 	}
-}
-
-impl SavableComponent for Combos {
-	type TDto = CombosDto;
 }
 
 #[cfg(test)]

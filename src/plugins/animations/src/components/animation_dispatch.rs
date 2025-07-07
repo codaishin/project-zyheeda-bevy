@@ -19,10 +19,10 @@ use common::traits::{
 		StartAnimation,
 		StopAnimation,
 	},
-	handles_saving::SavableComponent,
 	register_derived_component::{DerivableComponentFrom, InsertDerivedComponent},
 	track::{IsTracking, Track, Untrack},
 };
+use macros::SavableComponent;
 use std::{
 	collections::{
 		HashSet,
@@ -32,7 +32,8 @@ use std::{
 	hash::Hash,
 };
 
-#[derive(Component, Debug, PartialEq, Clone)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
+#[savable_component(dto = AnimationDispatchDto)]
 pub struct AnimationDispatch<TAnimation = Animation>
 where
 	TAnimation: Eq + Hash,
@@ -111,10 +112,6 @@ where
 			stack: default(),
 		}
 	}
-}
-
-impl SavableComponent for AnimationDispatch {
-	type TDto = AnimationDispatchDto;
 }
 
 impl<TComponent> From<&TComponent> for AnimationDispatch
