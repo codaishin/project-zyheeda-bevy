@@ -11,8 +11,9 @@ tracing.workspace = true
 uuid.workspace = true
 serde.workspace = true
 
-# itnernal
+# internal
 common.workspace = true
+macros.workspace = true
 
 [dev-dependencies]
 # external
