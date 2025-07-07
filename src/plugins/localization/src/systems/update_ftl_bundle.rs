@@ -5,7 +5,10 @@ use crate::{
 	traits::current_locale::CurrentLocaleMut,
 };
 use bevy::{asset::LoadedFolder, prelude::*};
-use common::errors::{Error, Level};
+use common::{
+	errors::{Error, Level},
+	traits::or_ok::OrOk,
+};
 use fluent::{FluentError, FluentResource, concurrent::FluentBundle};
 use fluent_syntax::parser::ParserError;
 use unic_langid::LanguageIdentifier;
@@ -18,14 +21,15 @@ pub(crate) trait UpdateFtlBundle: Resource + CurrentLocaleMut {
 		mut events: EventReader<AssetEvent<Ftl>>,
 		files: Res<Assets<Ftl>>,
 		mut folders: ResMut<Assets<LoadedFolder>>,
-	) -> Vec<Result<(), SetBundleError>> {
+	) -> Result<(), Vec<SetBundleError>> {
 		let locale = server.current_locale_mut();
 
 		events
 			.read()
 			.filter_map(added_id)
-			.map(update_bundle(locale, &files, &mut folders))
-			.collect()
+			.filter_map(update_bundle(locale, &files, &mut folders))
+			.collect::<Vec<_>>()
+			.or_ok(|| ())
 	}
 }
 
@@ -40,13 +44,13 @@ fn update_bundle(
 	locale: &mut Locale,
 	assets: &Assets<Ftl>,
 	folders: &mut Assets<LoadedFolder>,
-) -> impl FnMut(&AssetId<Ftl>) -> Result<(), SetBundleError> {
+) -> impl FnMut(&AssetId<Ftl>) -> Option<SetBundleError> {
 	move |id| {
-		let Some(id) = removed_handle_id(id, locale, folders) else {
-			return Ok(());
+		let id = removed_handle_id(id, locale, folders)?;
+		let Ftl(file) = match get_ftl_file(assets, id, &locale.ln) {
+			Ok(ftl_file) => ftl_file,
+			Err(error) => return Some(error),
 		};
-
-		let Ftl(file) = get_ftl_file(assets, id, &locale.ln)?;
 		let (res, parse_errors) = new_resource(file);
 		let bundle = locale
 			.bundle
@@ -54,14 +58,14 @@ fn update_bundle(
 		let fluent_errors = bundle.add_resource(res).err().unwrap_or_default();
 
 		if !parse_errors.is_empty() || !fluent_errors.is_empty() {
-			return Err(SetBundleError::fluent_errors(
+			return Some(SetBundleError::fluent_errors(
 				&locale.ln,
 				parse_errors,
 				fluent_errors,
 			));
 		}
 
-		Ok(())
+		None
 	}
 }
 
@@ -143,11 +147,11 @@ pub(crate) enum SetBundleErrorKind {
 impl From<SetBundleError> for Error {
 	fn from(SetBundleError { ln, kind }: SetBundleError) -> Self {
 		match kind {
-			SetBundleErrorKind::NoFtlFile => Error {
+			SetBundleErrorKind::NoFtlFile => Error::Single {
 				msg: format!("no file found for {ln}"),
 				lvl: Level::Error,
 			},
-			SetBundleErrorKind::FluentError(parse_errors, fluent_errors) => Error {
+			SetBundleErrorKind::FluentError(parse_errors, fluent_errors) => Error::Single {
 				msg: format!(
 					"Fluent errors for language {ln}:\n\
 					 Parse errors:\n\
@@ -189,7 +193,7 @@ mod tests {
 	}
 
 	#[derive(Resource, Debug, PartialEq)]
-	struct _Result(Vec<Result<(), SetBundleError>>);
+	struct _Result(Result<(), Vec<SetBundleError>>);
 
 	fn setup<const N_FILES: usize, const N_FOLDERS: usize>(
 		added: [(AssetEvent<Ftl>, Option<Ftl>); N_FILES],
@@ -513,10 +517,10 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			&_Result(vec![Err(SetBundleError {
+			&_Result(Err(vec![SetBundleError {
 				ln: langid!("en"),
 				kind: SetBundleErrorKind::NoFtlFile
-			})]),
+			}])),
 			app.world().resource::<_Result>()
 		);
 	}
@@ -541,7 +545,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			&_Result(vec![Err(SetBundleError {
+			&_Result(Err(vec![SetBundleError {
 				ln: langid!("en"),
 				kind: SetBundleErrorKind::FluentError(
 					vec![ParserError {
@@ -551,7 +555,7 @@ mod tests {
 					}],
 					vec![]
 				)
-			})]),
+			}])),
 			app.world().resource::<_Result>()
 		);
 	}
@@ -585,12 +589,8 @@ mod tests {
 	}
 
 	macro_rules! assert_singular_override_error {
-		($result:expr, $lang_id:expr, $index:expr) => {
-			let error = match $result {
-				Err(error) => error,
-				Ok(_) => panic!("NO ERROR"),
-			};
-			let (ln, errors) = match error {
+		($error:expr, $lang_id:expr, $index:expr) => {
+			let (ln, errors) = match $error {
 				SetBundleError {
 					ln,
 					kind: SetBundleErrorKind::FluentError(_, errors),
@@ -635,9 +635,11 @@ mod tests {
 
 		app.update();
 
-		let result = app.world().resource::<_Result>();
-		let [_, result] = assert_count!(2, result.0.iter());
-		assert_singular_override_error!(result, langid!("en"), "hello-world");
+		let _Result(Err(errors)) = app.world().resource::<_Result>() else {
+			panic!("NO ERRORS");
+		};
+		let [error] = assert_count!(1, errors.iter());
+		assert_singular_override_error!(error, langid!("en"), "hello-world");
 	}
 
 	#[test]

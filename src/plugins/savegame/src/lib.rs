@@ -13,7 +13,7 @@ use bevy_rapier3d::prelude::*;
 use common::{
 	components::{child_of_persistent::ChildOfPersistent, persistent_entity::PersistentEntity},
 	states::game_state::GameState,
-	systems::log::{log, log_with_fallback},
+	systems::log::OnError,
 	tools::action_key::{ActionKey, save_key::SaveKey},
 	traits::{
 		handles_saving::{HandlesSaving, SavableComponent},
@@ -79,7 +79,7 @@ where
 			GameState::LoadSave,
 		);
 		let quick_save_file_exists =
-			SaveContext::file_exists(quick_save.clone()).pipe(log_with_fallback(|| false));
+			SaveContext::file_exists(quick_save.clone()).pipe(OnError::log_and_fallback(|| false));
 
 		Self::register_savable_component::<Name>(app);
 		Self::register_savable_component::<Transform>(app);
@@ -98,13 +98,13 @@ where
 			)
 			.add_systems(
 				Startup,
-				Register::update_context(quick_save.clone()).pipe(log),
+				Register::update_context(quick_save.clone()).pipe(OnError::log),
 			)
 			.add_systems(
 				OnEnter(GameState::Save),
 				(
-					SaveContext::write_buffer_system(quick_save.clone()).pipe(log),
-					SaveContext::write_file_system(quick_save.clone()).pipe(log),
+					SaveContext::write_buffer_system(quick_save.clone()).pipe(OnError::log),
+					SaveContext::write_file_system(quick_save.clone()).pipe(OnError::log),
 				)
 					.chain(),
 			)
@@ -112,8 +112,8 @@ where
 				OnEnter(GameState::LoadSave),
 				(
 					Save::despawn_all,
-					SaveContext::read_file_system(quick_save.clone()).pipe(log),
-					SaveContext::read_buffer_system(quick_save).pipe(log),
+					SaveContext::read_file_system(quick_save.clone()).pipe(OnError::log),
+					SaveContext::read_buffer_system(quick_save).pipe(OnError::log),
 				)
 					.chain(),
 			);

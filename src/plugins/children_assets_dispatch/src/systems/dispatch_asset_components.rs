@@ -7,6 +7,7 @@ use common::{
 		get_asset::GetAsset,
 		handles_assets_for_children::{ChildAssetComponent, ChildAssetDefinition, ChildName},
 		iteration::IterFinite,
+		or_ok::OrOk,
 		try_insert_on::TryInsertOn,
 	},
 };
@@ -18,7 +19,7 @@ pub(crate) trait DispatchAssetComponents {
 		commands: Commands,
 		assets: Res<Assets<Self::TChildAsset>>,
 		children_lookups: Query<(&Self, &ChildrenLookup<Self, TMarker>), Changed<Self>>,
-	) -> Vec<Result<(), Error>>
+	) -> Result<(), Vec<Error>>
 	where
 		Self: Component
 			+ Sized
@@ -36,7 +37,7 @@ fn dispatch_system<TCommands, TAssets, TComponent, TMarker, TFilter>(
 	mut commands: TCommands,
 	assets: Res<TAssets>,
 	components: Query<(&TComponent, &ChildrenLookup<TComponent, TMarker>), TFilter>,
-) -> Vec<Result<(), Error>>
+) -> Result<(), Vec<Error>>
 where
 	TCommands: TryInsertOn,
 	TAssets: GetRef<Handle<TComponent::TChildAsset>, TComponent::TChildAsset> + Resource,
@@ -58,11 +59,11 @@ where
 			let Err(error) = result else {
 				continue;
 			};
-			errors.push(Err(error));
+			errors.push(error);
 		}
 	}
 
-	errors
+	errors.or_ok(|| ())
 }
 
 fn dispatch<TCommands, TComponent, TMarker>(
@@ -86,7 +87,7 @@ where
 }
 
 fn entity_not_found_error(key: &'static str) -> Error {
-	Error {
+	Error::Single {
 		msg: format!("no entity found for {key}"),
 		lvl: Level::Error,
 	}
@@ -227,7 +228,7 @@ mod tests {
 				.return_const(());
 		});
 
-		app.world_mut().run_system_once_with(
+		_ = app.world_mut().run_system_once_with(
 			dispatch_system::<In<Mock_Commands>, _Assets, _Component, _Marker, ()>,
 			commands,
 		)?;
@@ -250,7 +251,7 @@ mod tests {
 				.return_const(());
 		});
 
-		app.world_mut().run_system_once_with(
+		_ = app.world_mut().run_system_once_with(
 			dispatch_system::<In<Mock_Commands>, _Assets, _Component, _Marker, ()>,
 			commands,
 		)?;
@@ -274,7 +275,7 @@ mod tests {
 			mock.expect_try_insert_on::<_Visualize>().return_const(());
 		});
 
-		app.world_mut().run_system_once_with(
+		_ = app.world_mut().run_system_once_with(
 			dispatch_system::<In<Mock_Commands>, _Assets, _Component, _Marker, ()>,
 			commands,
 		)?;
@@ -302,7 +303,7 @@ mod tests {
 				.return_const(());
 		});
 
-		app.world_mut().run_system_once_with(
+		_ = app.world_mut().run_system_once_with(
 			dispatch_system::<In<Mock_Commands>, _Assets, _Component, _Marker, _Filter>,
 			commands,
 		)?;
@@ -328,10 +329,10 @@ mod tests {
 		)?;
 
 		assert_eq!(
-			vec![
-				Err(entity_not_found_error("a")),
-				Err(entity_not_found_error("b"))
-			],
+			Err(vec![
+				entity_not_found_error("a"),
+				entity_not_found_error("b"),
+			]),
 			results
 		);
 		Ok(())

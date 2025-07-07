@@ -9,7 +9,7 @@ use assets::ftl::{Ftl, loader::FtlLoader};
 use bevy::prelude::*;
 use common::{
 	states::game_state::LoadingEssentialAssets,
-	systems::log::log_many,
+	systems::log::OnError,
 	traits::{
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInApp},
 		handles_localization::HandlesLocalization,
@@ -55,8 +55,8 @@ where
 				(
 					FtlServer::load_requested_assets(Path::from("locale")),
 					FtlServer::remove_failed_asset_handles,
-					FtlServer::update_ftl_bundle.pipe(log_many),
-					FtlServer::drain_errors.pipe(log_many),
+					FtlServer::update_ftl_bundle.pipe(OnError::log),
+					FtlServer::drain_errors.pipe(OnError::log),
 				),
 			);
 	}

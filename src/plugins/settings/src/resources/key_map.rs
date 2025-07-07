@@ -257,7 +257,7 @@ where
 			.collect::<Vec<_>>()
 			.join("\n");
 
-		Error {
+		Error::Single {
 			msg: format!("Attempted to set invalid inputs:\n{warnings}"),
 			lvl: Level::Warning,
 		}

@@ -190,19 +190,19 @@ pub enum FtlError {
 impl From<FtlError> for Error {
 	fn from(error: FtlError) -> Self {
 		match error {
-			FtlError::NoBundle(ln) => Error {
+			FtlError::NoBundle(ln) => Error::Single {
 				msg: format!("no `FluentBundle` for {ln}"),
 				lvl: Level::Error,
 			},
-			FtlError::NoMessageFor(token) => Error {
+			FtlError::NoMessageFor(token) => Error::Single {
 				msg: format!("no message found for {token}"),
 				lvl: Level::Error,
 			},
-			FtlError::NoPatternFor(token) => Error {
+			FtlError::NoPatternFor(token) => Error::Single {
 				msg: format!("no pattern found for {token}"),
 				lvl: Level::Error,
 			},
-			FtlError::FluentErrors { token, errors } => Error {
+			FtlError::FluentErrors { token, errors } => Error::Single {
 				msg: format!(
 					"errors for {token}:\n\
 					 {}",
@@ -210,7 +210,7 @@ impl From<FtlError> for Error {
 				),
 				lvl: Level::Error,
 			},
-			FtlError::FallbackAttempt { token, fallback } => Error {
+			FtlError::FallbackAttempt { token, fallback } => Error::Single {
 				msg: format!("fallback attempted for {token} -> {fallback}"),
 				lvl: Level::Warning,
 			},

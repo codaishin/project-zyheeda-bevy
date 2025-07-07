@@ -15,23 +15,23 @@ pub enum Level {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Error {
-	pub msg: String,
-	pub lvl: Level,
+pub enum Error {
+	Single { msg: String, lvl: Level },
+	Multiple(Vec<Self>),
 }
 
 impl From<InvalidDirectionError> for Error {
 	fn from(value: InvalidDirectionError) -> Self {
 		match value {
-			InvalidDirectionError::Zero => Self {
+			InvalidDirectionError::Zero => Self::Single {
 				msg: "Encountered zero length direction".to_owned(),
 				lvl: Level::Error,
 			},
-			InvalidDirectionError::Infinite => Self {
+			InvalidDirectionError::Infinite => Self::Single {
 				msg: "Encountered infinite length direction".to_owned(),
 				lvl: Level::Error,
 			},
-			InvalidDirectionError::NaN => Self {
+			InvalidDirectionError::NaN => Self::Single {
 				msg: "Encountered NaN length direction".to_owned(),
 				lvl: Level::Error,
 			},
@@ -41,7 +41,7 @@ impl From<InvalidDirectionError> for Error {
 
 impl From<IoError> for Error {
 	fn from(value: IoError) -> Self {
-		Self {
+		Self::Single {
 			msg: value.to_string(),
 			lvl: Level::Error,
 		}
@@ -50,7 +50,7 @@ impl From<IoError> for Error {
 
 impl From<BevyError> for Error {
 	fn from(value: BevyError) -> Self {
-		Self {
+		Self::Single {
 			msg: value.to_string(),
 			lvl: Level::Error,
 		}
@@ -122,7 +122,7 @@ impl<T> From<UniqueViolation<T>> for Error {
 			Found::None => "none",
 			Found::Multiple => "multiple",
 		};
-		Self {
+		Self::Single {
 			msg: format!(
 				"Found {} {}, when needing one unique",
 				found,

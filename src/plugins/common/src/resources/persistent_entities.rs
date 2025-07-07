@@ -41,7 +41,7 @@ pub(crate) struct LookupError(pub(crate) PersistentEntity);
 
 impl From<LookupError> for Error {
 	fn from(LookupError(persistent_entity): LookupError) -> Self {
-		Error {
+		Self::Single {
 			msg: format!("{persistent_entity:?}: no matching entity found"),
 			lvl: Level::Warning,
 		}

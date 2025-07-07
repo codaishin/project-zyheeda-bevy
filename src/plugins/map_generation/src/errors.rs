@@ -11,7 +11,7 @@ impl From<InsertGraphError> for Error {
 	fn from(error: InsertGraphError) -> Self {
 		match error {
 			InsertGraphError::GridDefinitionError(error) => Error::from(error),
-			InsertGraphError::MapAssetNotFound => Error {
+			InsertGraphError::MapAssetNotFound => Error::Single {
 				msg: "Map asset not found".to_owned(),
 				lvl: Level::Error,
 			},
@@ -29,7 +29,7 @@ pub(crate) enum GridError {
 
 impl From<GridError> for Error {
 	fn from(error: GridError) -> Self {
-		Self {
+		Self::Single {
 			msg: format!("Faulty grid encountered: {error:?}"),
 			lvl: Level::Error,
 		}
@@ -41,7 +41,7 @@ pub(crate) struct NoGridGraphSet;
 
 impl From<NoGridGraphSet> for Error {
 	fn from(_: NoGridGraphSet) -> Self {
-		Self {
+		Self::Single {
 			msg: "Grid graph was not set".to_owned(),
 			lvl: Level::Error,
 		}

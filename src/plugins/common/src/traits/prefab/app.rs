@@ -1,5 +1,5 @@
 use super::{AddPrefabObserver, Prefab};
-use crate::{errors::Error, systems::log::log, traits::load_asset::LoadAsset};
+use crate::{errors::Error, systems::log::OnError, traits::load_asset::LoadAsset};
 use bevy::prelude::*;
 
 impl AddPrefabObserver for App {
@@ -8,7 +8,9 @@ impl AddPrefabObserver for App {
 		TPrefab: Prefab<TDependencies>,
 		TDependencies: 'static,
 	{
-		self.add_observer(instantiate_prefab::<TPrefab, TDependencies, AssetServer>.pipe(log))
+		self.add_observer(
+			instantiate_prefab::<TPrefab, TDependencies, AssetServer>.pipe(OnError::log),
+		)
 	}
 }
 
@@ -136,7 +138,7 @@ mod tests {
 					.return_const(new_handle());
 			}),
 		);
-		let error = Error {
+		let error = Error::Single {
 			msg: "my error".to_owned(),
 			lvl: Level::Error,
 		};

@@ -10,7 +10,7 @@ use crate::{
 	traits::{GridCellDistanceDefinition, grid_min::GridMin, is_walkable::IsWalkable},
 };
 use bevy::prelude::*;
-use common::traits::{thread_safe::ThreadSafe, try_insert_on::TryInsertOn};
+use common::traits::{or_ok::OrOk, thread_safe::ThreadSafe, try_insert_on::TryInsertOn};
 use std::collections::HashMap;
 
 impl<TCell> MapAssetCells<TCell>
@@ -21,10 +21,10 @@ where
 		maps: Query<(Entity, &Self)>,
 		assets: Res<Assets<MapCells<TCell>>>,
 		mut commands: Commands,
-	) -> Vec<Result<(), InsertGraphError>> {
+	) -> Result<(), Vec<InsertGraphError>> {
 		let insert_map_graph = |(entity, map): (Entity, &Self)| {
 			let Some(asset) = assets.get(map.cells()) else {
-				return Err(InsertGraphError::MapAssetNotFound);
+				return Some(InsertGraphError::MapAssetNotFound);
 			};
 			let (cell_count_x, cell_count_z) = get_cell_counts(asset.cells());
 			let grid_definition = GridDefinition {
@@ -32,11 +32,14 @@ where
 				cell_count_z,
 				cell_distance: TCell::CELL_DISTANCE,
 			};
+			let context = match GridContext::try_from(grid_definition) {
+				Ok(ctx) => ctx,
+				Err(error) => return Some(InsertGraphError::GridDefinitionError(error)),
+			};
 			let mut graph = GridGraph {
 				nodes: HashMap::default(),
 				extra: Obstacles::default(),
-				context: GridContext::try_from(grid_definition)
-					.map_err(InsertGraphError::GridDefinitionError)?,
+				context,
 			};
 			let min = graph.context.grid_min();
 			let mut position = min;
@@ -55,10 +58,13 @@ where
 			}
 
 			commands.try_insert_on(entity, MapGridGraph::<TCell>::from(graph));
-			Ok(())
+			None
 		};
 
-		maps.into_iter().map(insert_map_graph).collect()
+		maps.into_iter()
+			.filter_map(insert_map_graph)
+			.collect::<Vec<_>>()
+			.or_ok(|| ())
 	}
 }
 
@@ -115,7 +121,7 @@ mod tests {
 	}
 
 	#[derive(Resource, Debug, PartialEq)]
-	struct _Results(Vec<Result<(), InsertGraphError>>);
+	struct _Results(Result<(), Vec<InsertGraphError>>);
 
 	fn setup(cells: Vec<Vec<_Cell>>) -> (App, Entity) {
 		let cells_handle = new_handle();
@@ -275,9 +281,9 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			&_Results(vec![Err(InsertGraphError::GridDefinitionError(
+			&_Results(Err(vec![InsertGraphError::GridDefinitionError(
 				GridDefinitionError::CellCountZero
-			))]),
+			)])),
 			app.world().resource::<_Results>()
 		);
 	}
@@ -291,7 +297,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			&_Results(vec![Err(InsertGraphError::MapAssetNotFound)]),
+			&_Results(Err(vec![InsertGraphError::MapAssetNotFound])),
 			app.world().resource::<_Results>()
 		);
 	}
