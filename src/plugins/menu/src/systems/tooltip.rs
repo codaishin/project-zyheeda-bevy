@@ -1,5 +1,5 @@
 use crate::{
-	components::tooltip::{Tooltip, TooltipUiConfig},
+	components::tooltip::Tooltip,
 	traits::{
 		insert_ui_content::InsertUiContent,
 		tooltip_ui_control::{
@@ -11,7 +11,11 @@ use crate::{
 	},
 };
 use bevy::prelude::*;
-use common::traits::{handles_localization::LocalizeToken, mouse_position::MousePosition};
+use common::traits::{
+	handles_localization::LocalizeToken,
+	mouse_position::MousePosition,
+	thread_safe::ThreadSafe,
+};
 
 pub(crate) fn tooltip<T, TLocalization, TUI, TUIControl, TWindow>(
 	mut commands: Commands,
@@ -22,7 +26,7 @@ pub(crate) fn tooltip<T, TLocalization, TUI, TUIControl, TWindow>(
 	mut tooltip_uis: Query<(Entity, &TUI, &mut Node)>,
 	removed_tooltips: RemovedComponents<Tooltip<T>>,
 ) where
-	T: TooltipUiConfig + Sync + Send + 'static,
+	T: ThreadSafe,
 	TLocalization: LocalizeToken + Resource,
 	Tooltip<T>: InsertUiContent,
 	TUI: Component,
@@ -55,9 +59,7 @@ pub(crate) fn tooltip<T, TLocalization, TUI, TUIControl, TWindow>(
 	}
 }
 
-fn is_hovering<T: TooltipUiConfig + Sync + Send + 'static>(
-	(.., interaction): &(Entity, &Tooltip<T>, &Interaction),
-) -> bool {
+fn is_hovering<T>((.., interaction): &(Entity, &Tooltip<T>, &Interaction)) -> bool {
 	interaction == &&Interaction::Hovered
 }
 

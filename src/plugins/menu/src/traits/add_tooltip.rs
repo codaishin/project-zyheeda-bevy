@@ -1,7 +1,7 @@
 use crate::{
 	Tooltip,
 	TooltipUIControl,
-	components::tooltip::{TooltipUI, TooltipUiConfig},
+	components::tooltip::{TooltipContent, TooltipUiConfig},
 	systems::{tooltip::tooltip, tooltip_visibility::tooltip_visibility},
 };
 use bevy::prelude::*;
@@ -27,7 +27,7 @@ impl AddTooltip for App {
 		self.add_systems(
 			Update,
 			(
-				tooltip::<T, TLocalization, TooltipUI<T>, TooltipUIControl, Window>,
+				tooltip::<T, TLocalization, TooltipContent<T>, TooltipUIControl, Window>,
 				tooltip_visibility::<Real, T>,
 			),
 		)

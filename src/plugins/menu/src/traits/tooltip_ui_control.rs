@@ -1,5 +1,5 @@
 use super::insert_ui_content::InsertUiContent;
-use crate::components::tooltip::{Tooltip, TooltipUiConfig};
+use crate::components::tooltip::Tooltip;
 use bevy::prelude::*;
 use common::traits::{handles_localization::LocalizeToken, thread_safe::ThreadSafe};
 
@@ -11,7 +11,7 @@ pub(crate) trait DespawnAllTooltips<TUI> {
 
 pub(crate) trait DespawnOutdatedTooltips<TUI, T>
 where
-	T: TooltipUiConfig + Send + Sync + 'static,
+	T: ThreadSafe,
 {
 	fn despawn_outdated(
 		&self,
@@ -30,7 +30,6 @@ pub(crate) trait UpdateTooltipPosition<TUI> {
 
 pub(crate) trait SpawnTooltips<T, TLocalization>
 where
-	T: TooltipUiConfig,
 	TLocalization: LocalizeToken + ThreadSafe,
 {
 	fn spawn(
