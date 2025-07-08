@@ -4,8 +4,11 @@ use bevy::prelude::*;
 use common::traits::{handles_localization::LocalizeToken, thread_safe::ThreadSafe};
 
 pub(crate) trait DespawnAllTooltips<TUI> {
-	fn despawn_all(&self, uis: &Query<(Entity, &TUI, &mut Node)>, commands: &mut Commands)
-	where
+	fn despawn_all(
+		&self,
+		uis: &Query<(Entity, &TUI, &mut Node, &ComputedNode)>,
+		commands: &mut Commands,
+	) where
 		TUI: Component + Sized;
 }
 
@@ -15,7 +18,7 @@ where
 {
 	fn despawn_outdated(
 		&self,
-		uis: &Query<(Entity, &TUI, &mut Node)>,
+		uis: &Query<(Entity, &TUI, &mut Node, &ComputedNode)>,
 		commands: &mut Commands,
 		outdated_tooltips: RemovedComponents<Tooltip<T>>,
 	) where
@@ -23,10 +26,16 @@ where
 }
 
 pub(crate) trait UpdateTooltipPosition<TUI> {
-	fn update_position(&self, uis: &mut Query<(Entity, &TUI, &mut Node)>, position: Vec2)
-	where
+	fn update_position(
+		&self,
+		uis: &mut Query<(Entity, &TUI, &mut Node, &ComputedNode)>,
+		position: MouseVec2,
+	) where
 		TUI: Component + Sized;
 }
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub(crate) struct MouseVec2(pub(crate) Vec2);
 
 pub(crate) trait SpawnTooltips<T, TLocalization>
 where
@@ -38,7 +47,6 @@ where
 		localize: &mut TLocalization,
 		tooltip_entity: Entity,
 		tooltip: &Tooltip<T>,
-		position: Vec2,
 	) where
 		Tooltip<T>: InsertUiContent;
 }

@@ -6,6 +6,7 @@ use crate::traits::{
 	tooltip_ui_control::{
 		DespawnAllTooltips,
 		DespawnOutdatedTooltips,
+		MouseVec2,
 		SpawnTooltips,
 		UpdateTooltipPosition,
 	},
@@ -77,13 +78,13 @@ pub(crate) struct TooltipUIControl {
 	pub(crate) tooltip_delay: Duration,
 }
 
-impl<T: Sync + Send + 'static> DespawnAllTooltips<TooltipContent<T>> for TooltipUIControl
+impl<T> DespawnAllTooltips<TooltipContent<T>> for TooltipUIControl
 where
-	T: TooltipUiConfig,
+	T: TooltipUiConfig + ThreadSafe,
 {
 	fn despawn_all(
 		&self,
-		uis: &Query<(Entity, &TooltipContent<T>, &mut Node)>,
+		uis: &Query<(Entity, &TooltipContent<T>, &mut Node, &ComputedNode)>,
 		commands: &mut Commands,
 	) {
 		for (entity, ..) in uis {
@@ -97,17 +98,18 @@ where
 
 impl<T> DespawnOutdatedTooltips<TooltipContent<T>, T> for TooltipUIControl
 where
-	T: TooltipUiConfig + Send + Sync + 'static,
+	T: TooltipUiConfig + ThreadSafe,
 {
 	fn despawn_outdated(
 		&self,
-		uis: &Query<(Entity, &TooltipContent<T>, &mut Node)>,
+		uis: &Query<(Entity, &TooltipContent<T>, &mut Node, &ComputedNode)>,
 		commands: &mut Commands,
 		mut outdated_tooltips: RemovedComponents<Tooltip<T>>,
 	) {
 		let outdated = outdated_tooltips.read().collect::<Vec<_>>();
-		let is_outdated =
-			|(_, ui, _): &(Entity, &TooltipContent<T>, &Node)| outdated.contains(&ui.source);
+		let is_outdated = |(_, ui, ..): &(Entity, &TooltipContent<T>, &Node, &ComputedNode)| {
+			outdated.contains(&ui.source)
+		};
 
 		for (entity, ..) in uis.iter().filter(is_outdated) {
 			let Ok(mut entity) = commands.get_entity(entity) else {
@@ -118,25 +120,26 @@ where
 	}
 }
 
-impl<T: Sync + Send + 'static> UpdateTooltipPosition<TooltipContent<T>> for TooltipUIControl
+impl<T> UpdateTooltipPosition<TooltipContent<T>> for TooltipUIControl
 where
-	T: TooltipUiConfig,
+	T: TooltipUiConfig + ThreadSafe,
 {
 	fn update_position(
 		&self,
-		uis: &mut Query<(Entity, &TooltipContent<T>, &mut Node)>,
-		position: Vec2,
+		uis: &mut Query<(Entity, &TooltipContent<T>, &mut Node, &ComputedNode)>,
+		MouseVec2(position): MouseVec2,
 	) {
-		for (.., mut style) in uis.iter_mut() {
-			style.left = Val::Px(position.x);
-			style.top = Val::Px(position.y);
+		for (.., mut node, computed) in uis.iter_mut() {
+			let height = computed.size.y;
+			node.left = Val::Px(position.x);
+			node.top = Val::Px(position.y - height);
 		}
 	}
 }
 
 impl<T, TLocalization> SpawnTooltips<T, TLocalization> for TooltipUIControl
 where
-	T: TooltipUiConfig + Clone + Send + Sync + 'static,
+	T: TooltipUiConfig + ThreadSafe,
 	Tooltip<T>: InsertUiContent,
 	TLocalization: LocalizeToken + ThreadSafe,
 {
@@ -146,19 +149,9 @@ where
 		localize: &mut TLocalization,
 		tooltip_entity: Entity,
 		tooltip: &Tooltip<T>,
-		position: Vec2,
 	) {
-		let container_node = (
-			TooltipContent::<T>::new(tooltip_entity, self.tooltip_delay),
-			Node {
-				left: Val::Px(position.x),
-				top: Val::Px(position.y),
-				..default()
-			},
-		);
-
 		commands
-			.spawn(container_node)
+			.spawn(TooltipContent::<T>::new(tooltip_entity, self.tooltip_delay))
 			.with_children(|container_node| {
 				tooltip.insert_ui_content(localize, container_node);
 			});
@@ -170,7 +163,7 @@ mod tests {
 	use super::*;
 	use bevy::ecs::relationship::RelatedSpawnerCommands;
 	use common::traits::handles_localization::{LocalizationResult, Token, localized::Localized};
-	use testing::SingleThreadedApp;
+	use testing::{SingleThreadedApp, assert_count, get_children};
 
 	impl TooltipUiConfig for () {}
 
@@ -207,7 +200,8 @@ mod tests {
 		let mut app = new_app();
 		app.add_systems(
 			Update,
-			|uis: Query<(Entity, &TooltipContent<T>, &mut Node)>, mut commands: Commands| {
+			|uis: Query<(Entity, &TooltipContent<T>, &mut Node, &ComputedNode)>,
+			 mut commands: Commands| {
 				TooltipUIControl::default().despawn_all(&uis, &mut commands);
 			},
 		);
@@ -222,7 +216,7 @@ mod tests {
 		let mut app = new_app();
 		app.add_systems(
 			Update,
-			|uis: Query<(Entity, &TooltipContent<T>, &mut Node)>,
+			|uis: Query<(Entity, &TooltipContent<T>, &mut Node, &ComputedNode)>,
 			 mut commands: Commands,
 			 outdated_tooltips: RemovedComponents<Tooltip<T>>| {
 				TooltipUIControl::default().despawn_outdated(
@@ -236,14 +230,14 @@ mod tests {
 		app
 	}
 
-	fn setup_update_position<T>(position: Vec2) -> App
+	fn setup_update_position<T>(position: MouseVec2) -> App
 	where
 		T: TooltipUiConfig + ThreadSafe,
 	{
 		let mut app = new_app();
 		app.add_systems(
 			Update,
-			move |mut uis: Query<(Entity, &TooltipContent<T>, &mut Node)>| {
+			move |mut uis: Query<(Entity, &TooltipContent<T>, &mut Node, &ComputedNode)>| {
 				TooltipUIControl::default().update_position(&mut uis, position);
 			},
 		);
@@ -273,7 +267,7 @@ mod tests {
 		}
 	}
 
-	fn setup_spawn(position: Vec2, tooltip_delay: Duration) -> App {
+	fn setup_spawn(tooltip_delay: Duration) -> App {
 		let mut app = new_app();
 
 		app.init_resource::<_Localize>();
@@ -288,7 +282,6 @@ mod tests {
 						localize.as_mut(),
 						entity,
 						tooltip,
-						position,
 					);
 				}
 			},
@@ -433,7 +426,7 @@ mod tests {
 
 	#[test]
 	fn update_position() {
-		let mut app = setup_update_position::<&'static str>(Vec2 { x: 42., y: 11. });
+		let mut app = setup_update_position::<&'static str>(MouseVec2(Vec2 { x: 42., y: 11. }));
 		let uis = app
 			.world_mut()
 			.spawn_batch([
@@ -474,7 +467,7 @@ mod tests {
 
 	#[test]
 	fn spawn_tooltip() {
-		let mut app = setup_spawn(Vec2 { x: 11., y: 101. }, default());
+		let mut app = setup_spawn(default());
 		app.world_mut().spawn(Tooltip(_T { content: "" }));
 
 		app.update();
@@ -488,8 +481,8 @@ mod tests {
 	}
 
 	#[test]
-	fn spawn_content_of_tooltip_on_child() {
-		let mut app = setup_spawn(default(), default());
+	fn spawn_content_of_tooltip() {
+		let mut app = setup_spawn(default());
 		app.world_mut().spawn(Tooltip(_T {
 			content: "My Content",
 		}));
@@ -504,13 +497,13 @@ mod tests {
 		let [content] = assert_count!(1, get_children!(app, container.id()));
 		assert_eq!(
 			Some(&_Child::from("Token: My Content")),
-			content.get::<_Child>()
+			content.get::<_Child>(),
 		);
 	}
 
 	#[test]
 	fn spawn_tooltip_ui_with_source_reference() {
-		let mut app = setup_spawn(default(), default());
+		let mut app = setup_spawn(default());
 		let tooltip = app.world_mut().spawn(Tooltip(_T { content: "" })).id();
 
 		app.update();
@@ -525,7 +518,7 @@ mod tests {
 
 	#[test]
 	fn spawn_tooltip_ui_with_delay() {
-		let mut app = setup_spawn(default(), Duration::from_secs(4000));
+		let mut app = setup_spawn(Duration::from_secs(4000));
 		app.world_mut().spawn(Tooltip(_T { content: "" }));
 
 		app.update();

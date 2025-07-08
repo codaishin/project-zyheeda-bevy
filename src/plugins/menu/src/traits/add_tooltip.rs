@@ -1,3 +1,4 @@
+use super::insert_ui_content::InsertUiContent;
 use crate::{
 	Tooltip,
 	TooltipUIControl,
@@ -5,14 +6,12 @@ use crate::{
 	systems::{tooltip::tooltip, tooltip_visibility::tooltip_visibility},
 };
 use bevy::prelude::*;
-use common::traits::handles_localization::LocalizeToken;
-
-use super::insert_ui_content::InsertUiContent;
+use common::traits::{handles_localization::LocalizeToken, thread_safe::ThreadSafe};
 
 pub(crate) trait AddTooltip {
 	fn add_tooltip<TLocalization, T>(&mut self) -> &mut Self
 	where
-		T: TooltipUiConfig + Clone + Sync + Send + 'static,
+		T: TooltipUiConfig + ThreadSafe,
 		Tooltip<T>: InsertUiContent,
 		TLocalization: LocalizeToken + Resource;
 }
@@ -20,7 +19,7 @@ pub(crate) trait AddTooltip {
 impl AddTooltip for App {
 	fn add_tooltip<TLocalization, T>(&mut self) -> &mut Self
 	where
-		T: TooltipUiConfig + Clone + Sync + Send + 'static,
+		T: TooltipUiConfig + ThreadSafe,
 		Tooltip<T>: InsertUiContent,
 		TLocalization: LocalizeToken + Resource,
 	{
