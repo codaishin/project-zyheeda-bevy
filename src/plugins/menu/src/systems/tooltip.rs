@@ -1,17 +1,22 @@
 use crate::{
-	components::tooltip::{Tooltip, TooltipUiConfig},
+	components::tooltip::Tooltip,
 	traits::{
 		insert_ui_content::InsertUiContent,
 		tooltip_ui_control::{
 			DespawnAllTooltips,
 			DespawnOutdatedTooltips,
+			MouseVec2,
 			SpawnTooltips,
 			UpdateTooltipPosition,
 		},
 	},
 };
 use bevy::prelude::*;
-use common::traits::{handles_localization::LocalizeToken, mouse_position::MousePosition};
+use common::traits::{
+	handles_localization::LocalizeToken,
+	mouse_position::MousePosition,
+	thread_safe::ThreadSafe,
+};
 
 pub(crate) fn tooltip<T, TLocalization, TUI, TUIControl, TWindow>(
 	mut commands: Commands,
@@ -19,10 +24,10 @@ pub(crate) fn tooltip<T, TLocalization, TUI, TUIControl, TWindow>(
 	ui_control: Res<TUIControl>,
 	windows: Query<&TWindow>,
 	changed_tooltip_interactions: Query<(Entity, &Tooltip<T>, &Interaction), Changed<Interaction>>,
-	mut tooltip_uis: Query<(Entity, &TUI, &mut Node)>,
+	mut tooltip_uis: Query<(Entity, &TUI, &mut Node, &ComputedNode)>,
 	removed_tooltips: RemovedComponents<Tooltip<T>>,
 ) where
-	T: TooltipUiConfig + Sync + Send + 'static,
+	T: ThreadSafe,
 	TLocalization: LocalizeToken + Resource,
 	Tooltip<T>: InsertUiContent,
 	TUI: Component,
@@ -43,7 +48,7 @@ pub(crate) fn tooltip<T, TLocalization, TUI, TUIControl, TWindow>(
 	if !changed_tooltip_interactions.is_empty() {
 		ui_control.despawn_all(&tooltip_uis, &mut commands);
 	} else {
-		ui_control.update_position(&mut tooltip_uis, position);
+		ui_control.update_position(&mut tooltip_uis, MouseVec2(position));
 	}
 
 	if !removed_tooltips.is_empty() {
@@ -51,13 +56,11 @@ pub(crate) fn tooltip<T, TLocalization, TUI, TUIControl, TWindow>(
 	}
 
 	for (entity, tooltip, _) in changed_tooltip_interactions.iter().filter(is_hovering) {
-		ui_control.spawn(&mut commands, &mut localize, entity, tooltip, position);
+		ui_control.spawn(&mut commands, &mut localize, entity, tooltip);
 	}
 }
 
-fn is_hovering<T: TooltipUiConfig + Sync + Send + 'static>(
-	(.., interaction): &(Entity, &Tooltip<T>, &Interaction),
-) -> bool {
+fn is_hovering<T>((.., interaction): &(Entity, &Tooltip<T>, &Interaction)) -> bool {
 	interaction == &&Interaction::Hovered
 }
 
@@ -108,8 +111,11 @@ mod tests {
 	}
 
 	impl DespawnAllTooltips<_UI> for _UIControl {
-		fn despawn_all(&self, uis: &Query<(Entity, &_UI, &mut Node)>, commands: &mut Commands)
-		where
+		fn despawn_all(
+			&self,
+			uis: &Query<(Entity, &_UI, &mut Node, &ComputedNode)>,
+			commands: &mut Commands,
+		) where
 			_UI: Component + Sized,
 		{
 			self.mock.despawn_all(uis, commands)
@@ -119,7 +125,7 @@ mod tests {
 	impl DespawnOutdatedTooltips<_UI, _T> for _UIControl {
 		fn despawn_outdated(
 			&self,
-			uis: &Query<(Entity, &_UI, &mut Node)>,
+			uis: &Query<(Entity, &_UI, &mut Node, &ComputedNode)>,
 			commands: &mut Commands,
 			outdated_tooltips: RemovedComponents<Tooltip<_T>>,
 		) where
@@ -130,8 +136,11 @@ mod tests {
 	}
 
 	impl UpdateTooltipPosition<_UI> for _UIControl {
-		fn update_position(&self, uis: &mut Query<(Entity, &_UI, &mut Node)>, position: Vec2)
-		where
+		fn update_position(
+			&self,
+			uis: &mut Query<(Entity, &_UI, &mut Node, &ComputedNode)>,
+			position: MouseVec2,
+		) where
 			_UI: Component + Sized,
 		{
 			self.mock.update_position(uis, position)
@@ -145,12 +154,10 @@ mod tests {
 			localize: &mut _Localize,
 			tooltip_entity: Entity,
 			tooltip: &Tooltip<_T>,
-			position: Vec2,
 		) where
 			Tooltip<_T>: InsertUiContent,
 		{
-			self.mock
-				.spawn(commands, localize, tooltip_entity, tooltip, position)
+			self.mock.spawn(commands, localize, tooltip_entity, tooltip)
 		}
 	}
 
@@ -169,27 +176,27 @@ mod tests {
 	mock! {
 		_UIControl {}
 		impl DespawnAllTooltips<_UI> for _UIControl {
-			fn despawn_all<'a, 'b, 'c, 'd, 'e, 'f>(
+			fn despawn_all<'a, 'b, 'c, 'd, 'e, 'f, 'g>(
 				&self,
-				uis: &Query<'a, 'b, (Entity, &'c _UI, &'d  mut Node)>,
-				commands: & mut Commands<'e, 'f>
+				uis: &Query<'a, 'b, (Entity, &'c _UI, &'d  mut Node, &'e ComputedNode)>,
+				commands: & mut Commands<'f, 'g>
 			) where
 				Self: Component + Sized;
 		}
 		impl DespawnOutdatedTooltips<_UI, _T> for _UIControl {
-			fn despawn_outdated<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h>(
+			fn despawn_outdated<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i>(
 				&self,
-				uis: &Query<'a, 'b, (Entity, &'c  _UI, &'d  mut Node)>,
-				commands: &mut Commands<'e, 'f>,
-				outdated_tooltips: RemovedComponents<'g, 'h, Tooltip<_T>>,
+				uis: &Query<'a, 'b, (Entity, &'c  _UI, &'d  mut Node, &'e ComputedNode)>,
+				commands: &mut Commands<'f, 'g>,
+				outdated_tooltips: RemovedComponents<'h, 'i, Tooltip<_T>>,
 			) where
 				Self: Component + Sized;
 		}
 		impl UpdateTooltipPosition<_UI> for _UIControl {
-			fn update_position<'a, 'b, 'c, 'd>(
+			fn update_position<'a, 'b, 'c, 'd,'e>(
 				&self,
-				uis: &mut Query<'a, 'b, (Entity, &'c _UI, &'d mut Node)>,
-				position: Vec2
+				uis: &mut Query<'a, 'b, (Entity, &'c _UI, &'d mut Node, &'e ComputedNode)>,
+				position: MouseVec2
 			) where
 				Self: Component + Sized;
 		}
@@ -200,7 +207,6 @@ mod tests {
 				localize: &mut _Localize,
 				entity: Entity,
 				tooltip: &Tooltip<_T>,
-				position: Vec2
 			) where
 				Tooltip<_T>: InsertUiContent;
 		}
@@ -221,7 +227,6 @@ mod tests {
 		struct _Spawn {
 			entity: Entity,
 			tooltip: Tooltip<_T>,
-			position: Vec2,
 			localize: _Localize,
 		}
 
@@ -230,11 +235,10 @@ mod tests {
 			mock.expect_despawn_outdated().return_const(());
 			mock.expect_update_position().return_const(());
 			mock.expect_spawn()
-				.returning(|commands, localize, entity, tooltip, position| {
+				.returning(|commands, localize, entity, tooltip| {
 					commands.insert_resource(_Spawn {
 						entity,
 						tooltip: tooltip.clone(),
-						position,
 						localize: *localize,
 					});
 				});
@@ -259,7 +263,6 @@ mod tests {
 				tooltip: Tooltip::new(_T {
 					content: "My Content",
 				}),
-				position: Vec2 { x: 33., y: 66. },
 				localize: _Localize,
 			}),
 			app.world().get_resource::<_Spawn>()
@@ -327,7 +330,7 @@ mod tests {
 			mock.expect_despawn_outdated().return_const(());
 			mock.expect_spawn().return_const(());
 			mock.expect_update_position()
-				.withf(|_, position| {
+				.withf(|_, MouseVec2(position)| {
 					assert_eq!(Vec2 { x: 33., y: 66. }, *position);
 					true
 				})

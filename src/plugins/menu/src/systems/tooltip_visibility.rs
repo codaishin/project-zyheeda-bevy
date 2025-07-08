@@ -1,14 +1,15 @@
-use crate::components::tooltip::TooltipUI;
+use crate::components::tooltip::{TooltipContent, TooltipUiConfig};
 use bevy::{ecs::system::Res, prelude::Query, render::view::Visibility, time::Time};
+use common::traits::thread_safe::ThreadSafe;
 use std::time::Duration;
 
-pub(crate) fn tooltip_visibility<
-	TTime: Send + Sync + 'static + Default,
-	T: Send + Sync + 'static,
->(
-	mut uis: Query<(&mut TooltipUI<T>, &mut Visibility)>,
+pub(crate) fn tooltip_visibility<TTime, T>(
+	mut uis: Query<(&mut TooltipContent<T>, &mut Visibility)>,
 	time: Res<Time<TTime>>,
-) {
+) where
+	TTime: ThreadSafe + Default,
+	T: TooltipUiConfig + ThreadSafe,
+{
 	let delta = time.delta();
 
 	for (mut ui, mut visibility) in &mut uis {
@@ -47,7 +48,7 @@ mod tests {
 		let tooltip_ui = app
 			.world_mut()
 			.spawn((
-				TooltipUI::<()>::new(Entity::from_raw(42), Duration::from_millis(100)),
+				TooltipContent::<()>::new(Entity::from_raw(42), Duration::from_millis(100)),
 				Visibility::Hidden,
 			))
 			.id();
@@ -66,7 +67,7 @@ mod tests {
 		let tooltip_ui = app
 			.world_mut()
 			.spawn((
-				TooltipUI::<()>::new(Entity::from_raw(42), Duration::from_millis(10)),
+				TooltipContent::<()>::new(Entity::from_raw(42), Duration::from_millis(10)),
 				Visibility::Hidden,
 			))
 			.id();
@@ -85,7 +86,7 @@ mod tests {
 		let tooltip_ui = app
 			.world_mut()
 			.spawn((
-				TooltipUI::<()>::new(Entity::from_raw(42), Duration::from_millis(1000)),
+				TooltipContent::<()>::new(Entity::from_raw(42), Duration::from_millis(1000)),
 				Visibility::Hidden,
 			))
 			.id();
@@ -107,7 +108,7 @@ mod tests {
 		let tooltip_ui = app
 			.world_mut()
 			.spawn((
-				TooltipUI::<()>::new(Entity::from_raw(42), Duration::from_millis(10)),
+				TooltipContent::<()>::new(Entity::from_raw(42), Duration::from_millis(10)),
 				Visibility::Hidden,
 			))
 			.id();
@@ -118,8 +119,11 @@ mod tests {
 		let tooltip_ui = app.world().entity(tooltip_ui);
 
 		assert_eq!(
-			Some(&TooltipUI::<()>::new(Entity::from_raw(42), Duration::ZERO)),
-			tooltip_ui.get::<TooltipUI<()>>()
+			Some(&TooltipContent::<()>::new(
+				Entity::from_raw(42),
+				Duration::ZERO
+			)),
+			tooltip_ui.get::<TooltipContent<()>>()
 		);
 	}
 }
