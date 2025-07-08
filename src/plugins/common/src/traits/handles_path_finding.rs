@@ -10,6 +10,9 @@ use bevy::prelude::*;
 pub trait HandlesPathFinding {
 	type TComputePath: Component + ComputePath;
 	type TPathAgent: Component + Default + Getter<Computer>;
+	type TSystemSet: SystemSet;
+
+	const SYSTEMS: Self::TSystemSet;
 }
 
 pub trait ComputePath {

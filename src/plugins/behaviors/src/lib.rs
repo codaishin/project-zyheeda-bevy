@@ -274,12 +274,8 @@ where
 				)
 					.chain()
 					.in_set(BehaviorSystems)
-					/* FIXME: `.before()` should synch facing and animation weights, but for some reason it
-					 *         doesn't. Using `.after()` might cause a one frame delay here, but seems to
-					 *         ensure that animation weights are computed off of correct look direction after
-					 *         applying transform facing.
-					 */
 					.after(TAnimations::SYSTEMS)
+					.after(TPathFinding::SYSTEMS)
 					.run_if(in_state(GameState::Play)),
 			);
 	}

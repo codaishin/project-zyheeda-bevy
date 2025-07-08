@@ -54,25 +54,29 @@ where
 		app.register_map_cell::<TLoading, TSavegame, Corridor>()
 			.register_derived_component::<Grid, Collider>()
 			.add_systems(OnEnter(GameState::NewGame), DemoMap::spawn)
-			.add_systems(
-				PreUpdate,
-				GetGrid::update::<Changed<GlobalTransform>>.run_if(in_state(GameState::Play)),
-			)
 			.add_systems(Update, Grid::<1>::insert)
 			.add_systems(
 				Update,
 				(
+					GetGrid::update::<Changed<GlobalTransform>>.run_if(in_state(GameState::Play)),
 					WallBack::apply_extra_components::<TLights>,
 					WallLight::apply_extra_components::<TLights>,
 					FloorLight::apply_extra_components::<TLights>,
-				),
+				)
+					.in_set(Self::SYSTEMS),
 			)
 			.add_systems(Update, unlit_material);
 	}
 }
 
+#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone)]
+pub struct MapSystems;
+
 impl<TDependencies> HandlesMapGeneration for MapGenerationPlugin<TDependencies> {
 	type TMap = Grid<1>;
 	type TMapAgent = GetGrid;
 	type TGraph = GridGraph;
+	type TSystemSet = MapSystems;
+
+	const SYSTEMS: Self::TSystemSet = MapSystems;
 }
