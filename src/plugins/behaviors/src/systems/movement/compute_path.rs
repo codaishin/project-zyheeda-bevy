@@ -14,22 +14,18 @@ use std::collections::VecDeque;
 
 impl<T> MovementPath for T where T: Component + Getter<ColliderRadius> + Sized {}
 
-type PathOrWasdMovement<TMoveMethod> = Movement<PathOrWasd<TMoveMethod>>;
 type Components<'a, TMoveMethod, TAgent, TGetComputer> = (
 	Entity,
 	&'a GlobalTransform,
-	&'a PathOrWasdMovement<TMoveMethod>,
 	&'a TAgent,
-	&'a TGetComputer,
+	Ref<'a, Movement<PathOrWasd<TMoveMethod>>>,
+	Ref<'a, TGetComputer>,
 );
 
 pub(crate) trait MovementPath: Component + Getter<ColliderRadius> + Sized {
 	fn compute_path<TMoveMethod, TComputer, TGetComputer>(
 		mut commands: Commands,
-		mut movements: Query<
-			Components<TMoveMethod, Self, TGetComputer>,
-			Changed<PathOrWasdMovement<TMoveMethod>>,
-		>,
+		mut movements: Query<Components<TMoveMethod, Self, TGetComputer>>,
 		computers: Query<&TComputer>,
 	) where
 		TMoveMethod: ThreadSafe + Default,
@@ -40,14 +36,17 @@ pub(crate) trait MovementPath: Component + Getter<ColliderRadius> + Sized {
 			return;
 		}
 
-		for (entity, transform, movement, agent, get_computer) in &mut movements {
+		for (entity, transform, agent, movement, get_computer) in &mut movements {
+			if !movement.is_changed() && !get_computer.is_changed() {
+				continue;
+			}
 			let Computer::Entity(computer) = get_computer.get() else {
 				continue;
 			};
 			let Ok(computer) = computers.get(computer) else {
 				continue;
 			};
-			let move_component = new_movement(computer, transform, movement, agent);
+			let move_component = new_movement(computer, transform, movement.as_ref(), agent);
 			commands.try_insert_on(entity, move_component);
 			commands.try_remove_from::<Movement<TMoveMethod>>(entity);
 		}
@@ -442,6 +441,34 @@ mod test_new_path {
 			_GetComputer(Computer::None),
 		));
 
+		app.update();
+	}
+
+	#[test]
+	fn compute_again_if_computer_reference_changed() {
+		let mut app = setup();
+
+		let computer = app
+			.world_mut()
+			.spawn(_ComputePath::new().with_mock(|mock| {
+				mock.expect_compute_path().times(2).return_const(None);
+			}))
+			.id();
+		let entity = app
+			.world_mut()
+			.spawn((
+				_AgentMovement::default(),
+				Movement::new(Vec3::new(4., 5., 6.), PathOrWasd::<_MoveMethod>::new_path),
+				GlobalTransform::from_xyz(1., 2., 3.),
+				_GetComputer(Computer::Entity(computer)),
+			))
+			.id();
+
+		app.update();
+		app.world_mut()
+			.entity_mut(entity)
+			.get_mut::<_GetComputer>()
+			.as_deref_mut();
 		app.update();
 	}
 }

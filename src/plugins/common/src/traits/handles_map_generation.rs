@@ -3,15 +3,13 @@ use crate::{tools::Units, traits::accessors::get::Getter};
 use bevy::prelude::*;
 use std::hash::Hash;
 
-pub trait HandlesMapGeneration
-where
-	Self::TMap: Component,
-	Self::TMapAgent: Component + Getter<Map> + Default,
-	for<'a> Self::TGraph: Graph + From<&'a Self::TMap> + ThreadSafe,
-{
-	type TMap;
-	type TMapAgent;
-	type TGraph;
+pub trait HandlesMapGeneration {
+	type TMap: Component;
+	type TMapAgent: Component + Getter<Map> + Default;
+	type TGraph: Graph + for<'a> From<&'a Self::TMap> + ThreadSafe;
+	type TSystemSet: SystemSet;
+
+	const SYSTEMS: Self::TSystemSet;
 }
 
 pub trait Graph:
