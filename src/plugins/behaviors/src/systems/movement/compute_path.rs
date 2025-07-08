@@ -14,21 +14,21 @@ use std::collections::VecDeque;
 
 impl<T> MovementPath for T where T: Component + Getter<ColliderRadius> + Sized {}
 
-type PathOrWasdMovement<TMoveMethod> = Movement<PathOrWasd<TMoveMethod>>;
 type Components<'a, TMoveMethod, TAgent, TGetComputer> = (
 	Entity,
 	&'a GlobalTransform,
-	&'a PathOrWasdMovement<TMoveMethod>,
+	&'a Movement<PathOrWasd<TMoveMethod>>,
 	&'a TAgent,
 	&'a TGetComputer,
 );
 
 pub(crate) trait MovementPath: Component + Getter<ColliderRadius> + Sized {
+	#[allow(clippy::type_complexity)]
 	fn compute_path<TMoveMethod, TComputer, TGetComputer>(
 		mut commands: Commands,
 		mut movements: Query<
 			Components<TMoveMethod, Self, TGetComputer>,
-			Changed<PathOrWasdMovement<TMoveMethod>>,
+			Changed<Movement<PathOrWasd<TMoveMethod>>>,
 		>,
 		computers: Query<&TComputer>,
 	) where
