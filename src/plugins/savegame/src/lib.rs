@@ -7,7 +7,10 @@ mod resources;
 mod systems;
 mod traits;
 
-use crate::systems::{trigger_state::TriggerState, write_buffer::WriteBufferSystem};
+use crate::{
+	resources::inspector::Inspector,
+	systems::{trigger_state::TriggerState, write_buffer::WriteBufferSystem},
+};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
@@ -78,8 +81,6 @@ where
 			ActionKey::Save(SaveKey::QuickLoad),
 			GameState::LoadSave,
 		);
-		let quick_save_file_exists =
-			SaveContext::file_exists(quick_save.clone()).pipe(OnError::log_and_fallback(|| false));
 
 		Self::register_savable_component::<Name>(app);
 		Self::register_savable_component::<Transform>(app);
@@ -88,11 +89,14 @@ where
 		Self::register_savable_component::<ChildOfPersistent>(app);
 
 		app.init_resource::<Register>()
+			.insert_resource(Inspector {
+				quick_save: quick_save.clone(),
+			})
 			.add_systems(
 				Update,
 				(
 					trigger_quick_save,
-					trigger_quick_load.run_if(quick_save_file_exists),
+					trigger_quick_load.run_if(Self::can_quick_load()),
 				)
 					.run_if(in_state(GameState::Play)),
 			)
@@ -122,6 +126,12 @@ where
 
 impl<TDependencies> HandlesSaving for SavegamePlugin<TDependencies> {
 	type TSaveEntityMarker = Save;
+
+	fn can_quick_load() -> impl Condition<()> {
+		IntoSystem::into_system(
+			Inspector::<FileIO>::quick_save_file_exists.pipe(OnError::log_and_return(|| false)),
+		)
+	}
 
 	fn register_savable_component<TComponent>(app: &mut App)
 	where
