@@ -1,7 +1,7 @@
 use crate::traits::{current_locale::CurrentLocaleMut, requested_language::UpdateCurrentLocaleMut};
 use bevy::prelude::*;
 use common::traits::{
-	load_asset::{LoadAsset, Path},
+	load_asset::{AssetNotFound, Path, TryLoadAsset},
 	load_folder_assets::LoadFolderAssets,
 };
 use std::path::PathBuf;
@@ -21,7 +21,7 @@ fn load_requested_assets<TFtlServer, TAssetServer>(
 ) -> impl Fn(ResMut<TFtlServer>, ResMut<TAssetServer>)
 where
 	TFtlServer: UpdateCurrentLocaleMut + CurrentLocaleMut + Resource,
-	TAssetServer: LoadAsset + LoadFolderAssets + Resource,
+	TAssetServer: TryLoadAsset + LoadFolderAssets + Resource,
 {
 	move |mut ftl_server, mut asset_server| {
 		if !*ftl_server.update_current_locale() {
@@ -31,12 +31,16 @@ where
 		let locale = ftl_server.current_locale_mut();
 		let ftl = locale.ln.to_string().to_lowercase();
 		let file = PathBuf::from(&*root_path).join(format!("{ftl}.ftl"));
-		let file = asset_server.load_asset(file);
-		let folder = PathBuf::from(&*root_path).join(ftl);
-		let folder = asset_server.load_folder_assets(folder);
 
-		locale.file = Some(file);
-		locale.folder = Some(folder);
+		match asset_server.try_load_asset(file) {
+			Ok(file) => locale.file = Some(file),
+			Err(AssetNotFound) => {
+				let folder = PathBuf::from(&*root_path).join(ftl);
+				let folder = asset_server.load_folder_assets(folder);
+				locale.folder = Some(folder);
+			}
+		}
+
 		*ftl_server.update_current_locale() = false;
 	}
 }
@@ -57,13 +61,16 @@ mod test {
 		mock: Mock_AssetServer,
 	}
 
-	impl LoadAsset for _AssetServer {
-		fn load_asset<TAsset, TPath>(&mut self, path: TPath) -> Handle<TAsset>
+	impl TryLoadAsset for _AssetServer {
+		fn try_load_asset<TAsset, TPath>(
+			&mut self,
+			path: TPath,
+		) -> Result<Handle<TAsset>, AssetNotFound>
 		where
 			TAsset: Asset,
 			TPath: Into<AssetPath<'static>> + 'static,
 		{
-			self.mock.load_asset(path)
+			self.mock.try_load_asset(path)
 		}
 	}
 
@@ -78,11 +85,14 @@ mod test {
 
 	mock! {
 		_AssetServer {}
-		impl LoadAsset for _AssetServer {
-			fn load_asset<TAsset, TPath>(&mut self, path: TPath) -> Handle<TAsset>
-			where
-				TAsset: Asset,
-				TPath: Into<AssetPath<'static>> + 'static;
+		impl TryLoadAsset for _AssetServer {
+			fn try_load_asset<TAsset, TPath>(
+			&mut self,
+			path: TPath,
+		) -> Result<Handle<TAsset>, AssetNotFound>
+		where
+			TAsset: Asset,
+			TPath: Into<AssetPath<'static>> + 'static;
 		}
 		impl LoadFolderAssets for _AssetServer {
 			fn load_folder_assets<TPath>(&self, path: TPath) -> Handle<LoadedFolder>
@@ -121,16 +131,47 @@ mod test {
 	}
 
 	#[test]
-	fn set_assets() {
+	fn set_asset_file() {
 		let file = new_handle::<Ftl>();
 		let file_clone = file.clone();
-		let folder = new_handle();
-		let folder_clone = folder.clone();
 		let server = _AssetServer::new().with_mock(move |mock| {
-			mock.expect_load_asset::<Ftl, PathBuf>()
+			mock.expect_try_load_asset::<Ftl, PathBuf>()
 				.times(1)
 				.with(eq(PathBuf::from("my/path/jp.ftl")))
-				.return_const(file_clone.clone());
+				.return_const(Ok(file_clone.clone()));
+			mock.expect_load_folder_assets::<PathBuf>()
+				.never()
+				.return_const(new_handle());
+		});
+		let mut app = setup(Path::from("my/path"), server);
+		app.insert_resource(_FtlServer {
+			update: true,
+			locale: Locale {
+				ln: langid!("JP"),
+				file: None,
+				folder: None,
+				bundle: None,
+			},
+		});
+
+		app.update();
+
+		let server = app.world().resource::<_FtlServer>();
+		assert_eq!(
+			(&Some(file), &None, false),
+			(&server.locale.file, &server.locale.folder, server.update)
+		);
+	}
+
+	#[test]
+	fn set_asset_folder() {
+		let folder = new_handle::<LoadedFolder>();
+		let folder_clone = folder.clone();
+		let server = _AssetServer::new().with_mock(move |mock| {
+			mock.expect_try_load_asset::<Ftl, PathBuf>()
+				.times(1)
+				.with(eq(PathBuf::from("my/path/jp.ftl")))
+				.return_const(Err(AssetNotFound));
 			mock.expect_load_folder_assets::<PathBuf>()
 				.times(1)
 				.with(eq(PathBuf::from("my/path/jp")))
@@ -151,7 +192,7 @@ mod test {
 
 		let server = app.world().resource::<_FtlServer>();
 		assert_eq!(
-			(&Some(file), &Some(folder), false),
+			(&None, &Some(folder), false),
 			(&server.locale.file, &server.locale.folder, server.update)
 		);
 	}
@@ -159,10 +200,10 @@ mod test {
 	#[test]
 	fn use_language_region() {
 		let server = _AssetServer::new().with_mock(move |mock| {
-			mock.expect_load_asset::<Ftl, PathBuf>()
+			mock.expect_try_load_asset::<Ftl, PathBuf>()
 				.times(1)
 				.with(eq(PathBuf::from("my/path/en-us.ftl")))
-				.return_const(new_handle());
+				.return_const(Err(AssetNotFound));
 			mock.expect_load_folder_assets::<PathBuf>()
 				.times(1)
 				.with(eq(PathBuf::from("my/path/en-us")))
@@ -185,10 +226,10 @@ mod test {
 	#[test]
 	fn use_language_script() {
 		let server = _AssetServer::new().with_mock(move |mock| {
-			mock.expect_load_asset::<Ftl, PathBuf>()
+			mock.expect_try_load_asset::<Ftl, PathBuf>()
 				.times(1)
 				.with(eq(PathBuf::from("my/path/zh-hant.ftl")))
-				.return_const(new_handle());
+				.return_const(Err(AssetNotFound));
 			mock.expect_load_folder_assets::<PathBuf>()
 				.times(1)
 				.with(eq(PathBuf::from("my/path/zh-hant")))
@@ -211,10 +252,10 @@ mod test {
 	#[test]
 	fn use_language_complex() {
 		let server = _AssetServer::new().with_mock(move |mock| {
-			mock.expect_load_asset::<Ftl, PathBuf>()
+			mock.expect_try_load_asset::<Ftl, PathBuf>()
 				.times(1)
 				.with(eq(PathBuf::from("my/path/ja-jpan-jp.ftl")))
-				.return_const(new_handle());
+				.return_const(Err(AssetNotFound));
 			mock.expect_load_folder_assets::<PathBuf>()
 				.times(1)
 				.with(eq(PathBuf::from("my/path/ja-jpan-jp")))
@@ -237,9 +278,9 @@ mod test {
 	#[test]
 	fn do_nothing_when_not_set_for_update() {
 		let server = _AssetServer::new().with_mock(move |mock| {
-			mock.expect_load_asset::<Ftl, PathBuf>()
+			mock.expect_try_load_asset::<Ftl, PathBuf>()
 				.never()
-				.return_const(new_handle());
+				.return_const(Err(AssetNotFound));
 			mock.expect_load_folder_assets::<PathBuf>()
 				.never()
 				.return_const(new_handle());
