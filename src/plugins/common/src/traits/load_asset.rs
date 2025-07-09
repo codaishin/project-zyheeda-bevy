@@ -46,3 +46,16 @@ pub trait LoadAsset {
 		TAsset: Asset,
 		TPath: Into<AssetPath<'static>> + 'static;
 }
+
+pub trait TryLoadAsset {
+	fn try_load_asset<TAsset, TPath>(
+		&mut self,
+		path: TPath,
+	) -> Result<Handle<TAsset>, AssetNotFound>
+	where
+		TAsset: Asset,
+		TPath: Into<AssetPath<'static>> + 'static;
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct AssetNotFound;

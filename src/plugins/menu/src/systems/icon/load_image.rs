@@ -1,6 +1,9 @@
 use crate::components::icon::{Icon, IconImage};
 use bevy::{asset::LoadState, prelude::*};
-use common::traits::{get_asset_load_state::GetAssetLoadState, load_asset::LoadAsset};
+use common::traits::{
+	get_asset_load_state::GetAssetLoadState,
+	load_asset::{AssetNotFound, TryLoadAsset},
+};
 use std::path::PathBuf;
 
 impl Icon {
@@ -11,14 +14,14 @@ impl Icon {
 
 fn load_icon_image<TAssetServer>(mut server: ResMut<TAssetServer>, mut icons: Query<&mut Icon>)
 where
-	TAssetServer: LoadAsset + GetAssetLoadState + Resource,
+	TAssetServer: TryLoadAsset + GetAssetLoadState + Resource,
 {
 	for mut icon in &mut icons {
 		match &icon.image {
 			IconImage::Path(path) => {
 				let path = path.clone();
 				let server = server.as_mut();
-				load_image(&mut icon, server, path);
+				set_loading_or_none(&mut icon, server, path);
 			}
 			IconImage::Loading(handle) => {
 				let server = server.as_ref();
@@ -31,12 +34,14 @@ where
 	}
 }
 
-fn load_image<TAssetServer>(icon: &mut Icon, server: &mut TAssetServer, path_buf: PathBuf)
+fn set_loading_or_none<TAssetServer>(icon: &mut Icon, server: &mut TAssetServer, path_buf: PathBuf)
 where
-	TAssetServer: LoadAsset,
+	TAssetServer: TryLoadAsset,
 {
-	let handle = server.load_asset(path_buf);
-	icon.image = IconImage::Loading(handle);
+	icon.image = match server.try_load_asset(path_buf) {
+		Ok(handle) => IconImage::Loading(handle),
+		Err(AssetNotFound) => IconImage::None,
+	};
 }
 
 fn set_loaded_or_none<TAssetServer>(icon: &mut Icon, server: &TAssetServer, handle: Handle<Image>)
@@ -66,13 +71,16 @@ mod tests {
 		mock: Mock_AssetServer,
 	}
 
-	impl LoadAsset for _AssetServer {
-		fn load_asset<TAsset, TPath>(&mut self, path: TPath) -> Handle<TAsset>
+	impl TryLoadAsset for _AssetServer {
+		fn try_load_asset<TAsset, TPath>(
+			&mut self,
+			path: TPath,
+		) -> Result<Handle<TAsset>, AssetNotFound>
 		where
 			TAsset: Asset,
 			TPath: Into<AssetPath<'static>> + 'static,
 		{
-			self.mock.load_asset(path)
+			self.mock.try_load_asset(path)
 		}
 	}
 
@@ -84,11 +92,14 @@ mod tests {
 
 	mock! {
 		_AssetServer {}
-		impl LoadAsset for _AssetServer {
-			fn load_asset<TAsset, TPath>(&mut self, path: TPath) -> Handle<TAsset>
+		impl TryLoadAsset for _AssetServer {
+			fn try_load_asset<TAsset, TPath>(
+				&mut self,
+				path: TPath
+			) -> Result<Handle<TAsset>, AssetNotFound>
 			where
 				TAsset: Asset,
-				TPath: Into<AssetPath<'static>> + 'static;
+				TPath: Into<AssetPath<'static>> + 'static,;
 		}
 		impl GetAssetLoadState for _AssetServer {
 			fn get_asset_load_state(&self, id: UntypedAssetId) -> Option<LoadState>;
@@ -108,10 +119,10 @@ mod tests {
 	fn set_to_loading() {
 		let handle = new_handle();
 		let mut app = setup(_AssetServer::new().with_mock(|mock| {
-			mock.expect_load_asset::<Image, PathBuf>()
+			mock.expect_try_load_asset::<Image, PathBuf>()
 				.with(eq(PathBuf::from("my/path")))
 				.times(1)
-				.return_const(handle.clone());
+				.return_const(Ok(handle.clone()));
 			mock.expect_get_asset_load_state()
 				.never()
 				.return_const(LoadState::Loaded);
@@ -139,9 +150,9 @@ mod tests {
 	fn set_image_to_loaded() {
 		let handle = new_handle();
 		let mut app = setup(_AssetServer::new().with_mock(|mock| {
-			mock.expect_load_asset::<Image, PathBuf>()
+			mock.expect_try_load_asset::<Image, PathBuf>()
 				.never()
-				.return_const(handle.clone());
+				.return_const(Ok(handle.clone()));
 			mock.expect_get_asset_load_state()
 				.with(eq(handle.id().untyped()))
 				.times(1)
@@ -170,9 +181,9 @@ mod tests {
 	fn set_image_to_none() {
 		let handle = new_handle();
 		let mut app = setup(_AssetServer::new().with_mock(|mock| {
-			mock.expect_load_asset::<Image, PathBuf>()
+			mock.expect_try_load_asset::<Image, PathBuf>()
 				.never()
-				.return_const(handle.clone());
+				.return_const(Ok(handle.clone()));
 			mock.expect_get_asset_load_state()
 				.with(eq(handle.id().untyped()))
 				.times(1)
@@ -185,6 +196,36 @@ mod tests {
 			.spawn(Icon {
 				localized: Localized::from(""),
 				image: IconImage::Loading(handle),
+			})
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&IconImage::None),
+			app.world()
+				.entity(entity)
+				.get::<Icon>()
+				.map(|icon| &icon.image)
+		);
+	}
+
+	#[test]
+	fn set_to_none_if_asset_does_not_exist() {
+		let mut app = setup(_AssetServer::new().with_mock(|mock| {
+			mock.expect_try_load_asset::<Image, PathBuf>()
+				.with(eq(PathBuf::from("my/path")))
+				.times(1)
+				.return_const(Err(AssetNotFound));
+			mock.expect_get_asset_load_state()
+				.never()
+				.return_const(LoadState::Loaded);
+		}));
+		let entity = app
+			.world_mut()
+			.spawn(Icon {
+				localized: Localized::from(""),
+				image: IconImage::Path(PathBuf::from("my/path")),
 			})
 			.id();
 
