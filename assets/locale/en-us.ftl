@@ -4,6 +4,7 @@ loading-assets = Loading Assets ...
 resolving-dependencies = Resolving Dependencies ...
 
 start-menu-new-game = New Game
+start-menu-continue-game = Continue
 
 equipment = Equipment
 
