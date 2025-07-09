@@ -57,6 +57,7 @@ use common::{
 		handles_settings::HandlesSettings,
 		inspect_able::InspectAble,
 		load_asset::Path,
+		prefab::AddPrefabObserver,
 		register_derived_component::RegisterDerivedComponent,
 		thread_safe::ThreadSafe,
 	},
@@ -80,7 +81,6 @@ use components::{
 		SettingsScreen,
 		key_bind::{KeyBind, action::Action, input::Input, rebinding::Rebinding},
 	},
-	start_game::StartGame,
 	start_menu::StartMenu,
 	start_menu_button::StartMenuButton,
 	tooltip::{Tooltip, TooltipUIControl},
@@ -101,10 +101,10 @@ use systems::{
 	dropdown::select_successor_key::select_successor_key,
 	image_color::image_color,
 	menus_unchangeable_when_present::MenusUnchangeableWhenPresent,
-	on_release_set::OnReleaseSet,
 	render_ui::RenderUi,
 	set_key_bindings::SetKeyBindings,
 	set_state_from_input::set_state_from_input,
+	trigger_on_release::TriggerOnRelease,
 	update_panels::{
 		activity_colors_override::panel_activity_colors_override,
 		colors::panel_colors,
@@ -167,19 +167,19 @@ where
 
 	fn start_menu(&self, app: &mut App) {
 		let start_menu = GameState::StartMenu;
-		let new_game = GameState::NewGame;
 
-		app.add_ui::<StartMenu, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
-			start_menu,
-		)
-		.add_systems(
-			Update,
-			(
-				panel_colors::<StartMenuButton>,
-				StartGame::on_release_set(new_game),
+		app.add_prefab_observer::<StartMenuButton, ()>()
+			.add_ui::<StartMenu, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
+				start_menu,
 			)
-				.run_if(in_state(start_menu)),
-		);
+			.add_systems(
+				Update,
+				(
+					panel_colors::<StartMenuButton>,
+					StartMenuButton::trigger_on_release,
+				)
+					.run_if(in_state(start_menu)),
+			);
 	}
 
 	fn loading_screen<TLoadGroup>(&self, app: &mut App)
