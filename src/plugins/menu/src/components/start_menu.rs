@@ -1,8 +1,5 @@
 use super::start_menu_button::StartMenuButton;
-use crate::{
-	components::ui_disabled::UIDisabled,
-	traits::{LoadUi, colors::PanelColors, insert_ui_content::InsertUiContent},
-};
+use crate::traits::{LoadUi, colors::PanelColors, insert_ui_content::InsertUiContent};
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{
 	states::{game_state::GameState, save_state::SaveState},
@@ -69,12 +66,9 @@ impl InsertUiContent for StartMenu {
 			label: new_game,
 			trigger_state: GameState::NewGame,
 		});
-		parent.spawn((
-			UIDisabled,
-			StartMenuButton {
-				label: continue_game,
-				trigger_state: GameState::Save(SaveState::AttemptLoad),
-			},
-		));
+		parent.spawn(StartMenuButton {
+			label: continue_game,
+			trigger_state: GameState::Save(SaveState::AttemptLoad),
+		});
 	}
 }

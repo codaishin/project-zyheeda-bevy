@@ -13,6 +13,7 @@ pub(crate) mod render_ui;
 pub(crate) mod set_key_bindings;
 pub(crate) mod set_state_from_input;
 pub(crate) mod spawn;
+pub(crate) mod start_menu_button;
 pub(crate) mod tooltip;
 pub(crate) mod tooltip_visibility;
 pub(crate) mod trigger_on_release;

@@ -16,6 +16,7 @@ use crate::{
 	systems::{
 		combos::visualize_invalid_skill::VisualizeInvalidSkill,
 		dropdown::dropdown_skill_select_insert::DropdownSkillSelectInsert,
+		start_menu_button::set_activity::Activity,
 		update_panels::set_container_panels::SetContainerPanels,
 	},
 };
@@ -26,6 +27,7 @@ use common::{
 	states::{
 		game_state::{GameState, LoadingEssentialAssets, LoadingGame},
 		menu_state::MenuState,
+		save_state::SaveState,
 	},
 	tools::{
 		action_key::{
@@ -57,6 +59,7 @@ use common::{
 		},
 		handles_loadout_menu::{ConfigureInventory, GetItem, HandlesLoadoutMenu, SwapValuesByKey},
 		handles_localization::{HandlesLocalization, LocalizeToken, localized::Localized},
+		handles_saving::HandlesSaving,
 		handles_settings::HandlesSettings,
 		inspect_able::InspectAble,
 		load_asset::Path,
@@ -119,23 +122,31 @@ use visualization::unusable::Unusable;
 
 pub struct MenuPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TSettings, TLocalization, TGraphics>
-	MenuPlugin<(TLoading, TSettings, TLocalization, TGraphics)>
+impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics>
+	MenuPlugin<(TLoading, TSavegame, TSettings, TLocalization, TGraphics)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
+	TSavegame: ThreadSafe + HandlesSaving,
 	TSettings: ThreadSafe + HandlesSettings,
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
 {
-	pub fn from_plugins(_: &TLoading, _: &TSettings, _: &TLocalization, _: &TGraphics) -> Self {
+	pub fn from_plugins(
+		_: &TLoading,
+		_: &TSavegame,
+		_: &TSettings,
+		_: &TLocalization,
+		_: &TGraphics,
+	) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLoading, TSettings, TLocalization, TGraphics>
-	MenuPlugin<(TLoading, TSettings, TLocalization, TGraphics)>
+impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics>
+	MenuPlugin<(TLoading, TSavegame, TSettings, TLocalization, TGraphics)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
+	TSavegame: ThreadSafe + HandlesSaving,
 	TSettings: ThreadSafe + HandlesSettings,
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
@@ -170,6 +181,13 @@ where
 
 	fn start_menu(&self, app: &mut App) {
 		let start_menu = GameState::StartMenu;
+		let quick_load = GameState::Save(SaveState::AttemptLoad);
+		let enable_or_disable_quick_load_button = TSavegame::can_quick_load()
+			.pipe(|In(can_quick_load)| match can_quick_load {
+				true => Activity::Enable,
+				false => Activity::Disable,
+			})
+			.pipe(StartMenuButton::set_activity(quick_load));
 
 		app.add_prefab_observer::<StartMenuButton, ()>()
 			.add_ui::<StartMenu, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
@@ -178,9 +196,11 @@ where
 			.add_systems(
 				Update,
 				(
+					enable_or_disable_quick_load_button,
 					panel_colors::<StartMenuButton>,
 					StartMenuButton::trigger_on_release,
 				)
+					.chain()
 					.run_if(in_state(start_menu)),
 			);
 	}
@@ -286,10 +306,11 @@ where
 	}
 }
 
-impl<TLoading, TSettings, TLocalization, TGraphics> Plugin
-	for MenuPlugin<(TLoading, TSettings, TLocalization, TGraphics)>
+impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics> Plugin
+	for MenuPlugin<(TLoading, TSavegame, TSettings, TLocalization, TGraphics)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
+	TSavegame: ThreadSafe + HandlesSaving,
 	TSettings: ThreadSafe + HandlesSettings,
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
@@ -317,8 +338,8 @@ where
 	}
 }
 
-impl<TLoading, TSettings, TLocalization, TGraphics> HandlesLoadoutMenu
-	for MenuPlugin<(TLoading, TSettings, TLocalization, TGraphics)>
+impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics> HandlesLoadoutMenu
+	for MenuPlugin<(TLoading, TSavegame, TSettings, TLocalization, TGraphics)>
 where
 	TSettings: HandlesSettings,
 	TLocalization: HandlesLocalization,
@@ -403,8 +424,8 @@ where
 	}
 }
 
-impl<TLoading, TSettings, TLocalization, TGraphics> HandlesComboMenu
-	for MenuPlugin<(TLoading, TSettings, TLocalization, TGraphics)>
+impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics> HandlesComboMenu
+	for MenuPlugin<(TLoading, TSavegame, TSettings, TLocalization, TGraphics)>
 where
 	TLocalization: HandlesLocalization + ThreadSafe,
 	TGraphics: ThreadSafe + UiCamera,
