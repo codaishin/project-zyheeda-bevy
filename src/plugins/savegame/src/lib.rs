@@ -15,7 +15,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
 	components::{child_of_persistent::ChildOfPersistent, persistent_entity::PersistentEntity},
-	states::game_state::GameState,
+	states::{game_state::GameState, save_state::SaveState},
 	systems::log::OnError,
 	tools::action_key::{ActionKey, save_key::SaveKey},
 	traits::{
@@ -75,11 +75,11 @@ where
 		))));
 		let trigger_quick_save = TSettings::TKeyMap::<ActionKey>::trigger(
 			ActionKey::Save(SaveKey::QuickSave),
-			GameState::Save,
+			GameState::Save(SaveState::Save),
 		);
 		let trigger_quick_load = TSettings::TKeyMap::<ActionKey>::trigger(
 			ActionKey::Save(SaveKey::QuickLoad),
-			GameState::LoadSave,
+			GameState::Save(SaveState::Load),
 		);
 
 		Self::register_savable_component::<Name>(app);
@@ -105,7 +105,7 @@ where
 				Register::update_context(quick_save.clone()).pipe(OnError::log),
 			)
 			.add_systems(
-				OnEnter(GameState::Save),
+				OnEnter(GameState::Save(SaveState::Save)),
 				(
 					SaveContext::write_buffer_system(quick_save.clone()).pipe(OnError::log),
 					SaveContext::write_file_system(quick_save.clone()).pipe(OnError::log),
@@ -113,7 +113,7 @@ where
 					.chain(),
 			)
 			.add_systems(
-				OnEnter(GameState::LoadSave),
+				OnEnter(GameState::Save(SaveState::Load)),
 				(
 					Save::despawn_all,
 					SaveContext::read_file_system(quick_save.clone()).pipe(OnError::log),

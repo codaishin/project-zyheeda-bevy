@@ -1,10 +1,14 @@
 use super::menu_state::MenuState;
-use crate::traits::{
-	automatic_transitions::{AutoTransitions, TransitionTo},
-	handles_load_tracking::LoadGroup,
-	iteration::{Iter, IterFinite},
-	pause_control::PauseControl,
-	states::PlayState,
+use crate::{
+	states::save_state::SaveState,
+	tools::iter_helpers::{first, next},
+	traits::{
+		automatic_transitions::{AutoTransitions, TransitionTo},
+		handles_load_tracking::LoadGroup,
+		iteration::{Iter, IterFinite},
+		pause_control::PauseControl,
+		states::PlayState,
+	},
 };
 use bevy::prelude::*;
 
@@ -30,8 +34,7 @@ pub enum GameState {
 	LoadDependencies,
 	NewGame,
 	Play,
-	Save,
-	LoadSave,
+	Save(SaveState),
 	IngameMenu(MenuState),
 }
 
@@ -40,8 +43,11 @@ impl AutoTransitions for GameState {
 		const {
 			[
 				(Self::NewGame, TransitionTo::State(Self::LoadDependencies)),
-				(Self::LoadSave, TransitionTo::State(Self::LoadDependencies)),
-				(Self::Save, TransitionTo::PreviousState),
+				(
+					Self::Save(SaveState::Load),
+					TransitionTo::State(Self::LoadDependencies),
+				),
+				(Self::Save(SaveState::Save), TransitionTo::PreviousState),
 			]
 		}
 	}
@@ -64,16 +70,9 @@ impl IterFinite for GameState {
 			GameState::StartMenu => Some(GameState::NewGame),
 			GameState::NewGame => Some(GameState::LoadDependencies),
 			GameState::LoadDependencies => Some(GameState::Play),
-			GameState::Play => Some(GameState::Save),
-			GameState::Save => Some(GameState::LoadSave),
-			GameState::LoadSave => Some(GameState::IngameMenu(MenuState::Inventory)),
-			GameState::IngameMenu(MenuState::Inventory) => {
-				Some(GameState::IngameMenu(MenuState::ComboOverview))
-			}
-			GameState::IngameMenu(MenuState::ComboOverview) => {
-				Some(GameState::IngameMenu(MenuState::Settings))
-			}
-			GameState::IngameMenu(MenuState::Settings) => None,
+			GameState::Play => first(GameState::Save),
+			GameState::Save(s) => next(GameState::Save, *s).or(first(GameState::IngameMenu)),
+			GameState::IngameMenu(s) => next(GameState::IngameMenu, *s),
 		}
 	}
 }
@@ -102,7 +101,7 @@ impl LoadGroup for LoadingGame {
 	const LOAD_DONE_STATE: GameState = GameState::Play;
 
 	fn load_reset_states() -> Vec<Self::TState> {
-		vec![GameState::NewGame, GameState::LoadSave]
+		vec![GameState::NewGame, GameState::Save(SaveState::Load)]
 	}
 }
 
@@ -115,19 +114,20 @@ mod tests {
 
 	#[test]
 	fn get_all_states() {
-		assert_eq!(
-			vec![
+		let game_states = std::iter::empty()
+			.chain([
 				GameState::LoadingEssentialAssets,
 				GameState::StartMenu,
 				GameState::NewGame,
 				GameState::LoadDependencies,
 				GameState::Play,
-				GameState::Save,
-				GameState::LoadSave,
-				GameState::IngameMenu(MenuState::Inventory),
-				GameState::IngameMenu(MenuState::ComboOverview),
-				GameState::IngameMenu(MenuState::Settings),
-			],
+			])
+			.chain(SaveState::iterator().map(GameState::Save))
+			.chain(MenuState::iterator().map(GameState::IngameMenu))
+			.collect::<Vec<_>>();
+
+		assert_eq!(
+			game_states,
 			GameState::iterator().take(100).collect::<Vec<_>>(),
 		)
 	}

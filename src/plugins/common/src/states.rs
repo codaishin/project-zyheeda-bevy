@@ -1,5 +1,6 @@
 pub mod game_state;
 pub mod menu_state;
+pub mod save_state;
 
 use bevy::{prelude::*, state::state::FreelyMutableState};
 
