@@ -70,7 +70,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		&players,
 	);
 	let graphics = GraphicsPlugin::from_plugins(&loading, &savegame, &interactions, &behaviors);
-	let menus = MenuPlugin::from_plugins(&loading, &settings, &localization, &graphics);
+	let menus = MenuPlugin::from_plugins(&loading, &savegame, &settings, &localization, &graphics);
 	let skills = SkillsPlugin::from_plugins(
 		&savegame,
 		&life_cycles,

@@ -6,15 +6,12 @@ mod traits;
 use crate::components::global_light::GlobalLight;
 use bevy::{color::palettes::css::WHITE, prelude::*};
 use bevy_rapier3d::geometry::CollidingEntities;
-use common::{
-	states::game_state::GameState,
-	traits::{
-		handles_lights::{HandlesLights, Responsive},
-		handles_saving::HandlesSaving,
-		prefab::AddPrefabObserver,
-		register_derived_component::RegisterDerivedComponent,
-		thread_safe::ThreadSafe,
-	},
+use common::traits::{
+	handles_lights::{HandlesLights, Responsive},
+	handles_saving::HandlesSaving,
+	prefab::AddPrefabObserver,
+	register_derived_component::RegisterDerivedComponent,
+	thread_safe::ThreadSafe,
 };
 use components::{
 	responsive_light::ResponsiveLight,
@@ -43,10 +40,7 @@ where
 		app.add_prefab_observer::<ResponsiveLight, ()>()
 			.register_required_components::<GlobalLight, TSavegame::TSaveEntityMarker>()
 			.register_derived_component::<GlobalLight, DirectionalLight>()
-			.add_systems(
-				OnEnter(GameState::NewGame),
-				GlobalLight::spawn(Self::DEFAULT_LIGHT),
-			)
+			.add_systems(Startup, GlobalLight::spawn(Self::DEFAULT_LIGHT))
 			.add_systems(
 				Update,
 				(

@@ -1,7 +1,10 @@
-use super::{start_game::StartGame, start_menu_button::StartMenuButton};
+use super::start_menu_button::StartMenuButton;
 use crate::traits::{LoadUi, colors::PanelColors, insert_ui_content::InsertUiContent};
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
-use common::traits::handles_localization::LocalizeToken;
+use common::{
+	states::{game_state::GameState, save_state::SaveState},
+	traits::handles_localization::LocalizeToken,
+};
 
 #[derive(Component)]
 #[require(Node = Self::full_screen())]
@@ -40,6 +43,9 @@ impl InsertUiContent for StartMenu {
 		let new_game = localization
 			.localize_token("start-menu-new-game")
 			.or_token();
+		let continue_game = localization
+			.localize_token("start-menu-continue-game")
+			.or_token();
 
 		parent
 			.spawn(Node {
@@ -53,32 +59,16 @@ impl InsertUiContent for StartMenu {
 						font_size: 64.0,
 						..default()
 					},
-					TextColor(PanelColors::DEFAULT.text),
+					TextColor(PanelColors::DEFAULT.filled.text),
 				));
 			});
-		parent
-			.spawn((
-				Button,
-				Node {
-					width: Val::Px(300.0),
-					height: Val::Px(100.0),
-					margin: UiRect::all(Val::Px(2.0)),
-					justify_content: JustifyContent::Center,
-					align_items: AlignItems::Center,
-					..default()
-				},
-				StartMenuButton,
-				StartGame,
-			))
-			.with_children(|parent| {
-				parent.spawn((
-					Text::new(new_game),
-					TextFont {
-						font_size: 32.0,
-						..default()
-					},
-					TextColor(PanelColors::DEFAULT.text),
-				));
-			});
+		parent.spawn(StartMenuButton {
+			label: new_game,
+			trigger_state: GameState::NewGame,
+		});
+		parent.spawn(StartMenuButton {
+			label: continue_game,
+			trigger_state: GameState::Save(SaveState::AttemptLoad),
+		});
 	}
 }

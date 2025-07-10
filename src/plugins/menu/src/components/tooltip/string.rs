@@ -13,7 +13,7 @@ impl TooltipUiConfig for &'static str {
 	}
 
 	fn background_color() -> BackgroundColor {
-		BackgroundColor(PanelColors::DEFAULT.text)
+		BackgroundColor(PanelColors::DEFAULT.filled.text)
 	}
 }
 
@@ -33,7 +33,7 @@ impl InsertUiContent for Tooltip<&'static str> {
 				font_size: 20.0,
 				..default()
 			},
-			TextColor(PanelColors::DEFAULT.filled),
+			TextColor(PanelColors::DEFAULT.filled.background),
 		));
 	}
 }
@@ -48,7 +48,7 @@ impl TooltipUiConfig for String {
 	}
 
 	fn background_color() -> BackgroundColor {
-		BackgroundColor(PanelColors::DEFAULT.text)
+		BackgroundColor(PanelColors::DEFAULT.filled.text)
 	}
 }
 
@@ -68,7 +68,7 @@ impl InsertUiContent for Tooltip<String> {
 				font_size: 20.0,
 				..default()
 			},
-			TextColor(PanelColors::DEFAULT.filled),
+			TextColor(PanelColors::DEFAULT.filled.background),
 		));
 	}
 }
@@ -83,7 +83,7 @@ impl TooltipUiConfig for Localized {
 	}
 
 	fn background_color() -> BackgroundColor {
-		BackgroundColor(PanelColors::DEFAULT.text)
+		BackgroundColor(PanelColors::DEFAULT.filled.text)
 	}
 }
 
@@ -99,7 +99,7 @@ impl InsertUiContent for Tooltip<Localized> {
 				font_size: 20.0,
 				..default()
 			},
-			TextColor(PanelColors::DEFAULT.filled),
+			TextColor(PanelColors::DEFAULT.filled.background),
 		));
 	}
 }

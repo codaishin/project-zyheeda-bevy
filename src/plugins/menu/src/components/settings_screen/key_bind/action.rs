@@ -19,7 +19,7 @@ impl<T> GetNode for KeyBind<Action<T>> {
 
 impl<T> GetBackgroundColor for KeyBind<Action<T>> {
 	fn background_color() -> Color {
-		PanelColors::DEFAULT.empty
+		PanelColors::DEFAULT.empty.background
 	}
 }
 

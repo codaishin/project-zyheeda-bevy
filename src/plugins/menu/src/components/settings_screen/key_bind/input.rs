@@ -22,7 +22,7 @@ impl<TAction, TInput> GetNode for KeyBind<Input<TAction, TInput>> {
 
 impl<TAction, TInput> GetBackgroundColor for KeyBind<Input<TAction, TInput>> {
 	fn background_color() -> Color {
-		PanelColors::DEFAULT.filled
+		PanelColors::DEFAULT.filled.background
 	}
 }
 

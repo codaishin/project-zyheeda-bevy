@@ -11,10 +11,14 @@ mod visualization;
 #[cfg(debug_assertions)]
 mod debug;
 
-use crate::systems::{
-	combos::visualize_invalid_skill::VisualizeInvalidSkill,
-	dropdown::dropdown_skill_select_insert::DropdownSkillSelectInsert,
-	update_panels::set_container_panels::SetContainerPanels,
+use crate::{
+	components::{dispatch_text_color::DispatchTextColor, ui_disabled::UIDisabled},
+	systems::{
+		combos::visualize_invalid_skill::VisualizeInvalidSkill,
+		dropdown::dropdown_skill_select_insert::DropdownSkillSelectInsert,
+		start_menu_button::set_activity::Activity,
+		update_panels::set_container_panels::SetContainerPanels,
+	},
 };
 use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
@@ -23,6 +27,7 @@ use common::{
 	states::{
 		game_state::{GameState, LoadingEssentialAssets, LoadingGame},
 		menu_state::MenuState,
+		save_state::SaveState,
 	},
 	tools::{
 		action_key::{
@@ -54,9 +59,11 @@ use common::{
 		},
 		handles_loadout_menu::{ConfigureInventory, GetItem, HandlesLoadoutMenu, SwapValuesByKey},
 		handles_localization::{HandlesLocalization, LocalizeToken, localized::Localized},
+		handles_saving::HandlesSaving,
 		handles_settings::HandlesSettings,
 		inspect_able::InspectAble,
 		load_asset::Path,
+		prefab::AddPrefabObserver,
 		register_derived_component::RegisterDerivedComponent,
 		thread_safe::ThreadSafe,
 	},
@@ -80,7 +87,6 @@ use components::{
 		SettingsScreen,
 		key_bind::{KeyBind, action::Action, input::Input, rebinding::Rebinding},
 	},
-	start_game::StartGame,
 	start_menu::StartMenu,
 	start_menu_button::StartMenuButton,
 	tooltip::{Tooltip, TooltipUIControl},
@@ -101,10 +107,10 @@ use systems::{
 	dropdown::select_successor_key::select_successor_key,
 	image_color::image_color,
 	menus_unchangeable_when_present::MenusUnchangeableWhenPresent,
-	on_release_set::OnReleaseSet,
 	render_ui::RenderUi,
 	set_key_bindings::SetKeyBindings,
 	set_state_from_input::set_state_from_input,
+	trigger_on_release::TriggerOnRelease,
 	update_panels::{
 		activity_colors_override::panel_activity_colors_override,
 		colors::panel_colors,
@@ -116,23 +122,31 @@ use visualization::unusable::Unusable;
 
 pub struct MenuPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TSettings, TLocalization, TGraphics>
-	MenuPlugin<(TLoading, TSettings, TLocalization, TGraphics)>
+impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics>
+	MenuPlugin<(TLoading, TSavegame, TSettings, TLocalization, TGraphics)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
+	TSavegame: ThreadSafe + HandlesSaving,
 	TSettings: ThreadSafe + HandlesSettings,
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
 {
-	pub fn from_plugins(_: &TLoading, _: &TSettings, _: &TLocalization, _: &TGraphics) -> Self {
+	pub fn from_plugins(
+		_: &TLoading,
+		_: &TSavegame,
+		_: &TSettings,
+		_: &TLocalization,
+		_: &TGraphics,
+	) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLoading, TSettings, TLocalization, TGraphics>
-	MenuPlugin<(TLoading, TSettings, TLocalization, TGraphics)>
+impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics>
+	MenuPlugin<(TLoading, TSavegame, TSettings, TLocalization, TGraphics)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
+	TSavegame: ThreadSafe + HandlesSaving,
 	TSettings: ThreadSafe + HandlesSettings,
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
@@ -167,19 +181,28 @@ where
 
 	fn start_menu(&self, app: &mut App) {
 		let start_menu = GameState::StartMenu;
-		let new_game = GameState::NewGame;
+		let quick_load = GameState::Save(SaveState::AttemptLoad);
+		let enable_or_disable_quick_load_button = TSavegame::can_quick_load()
+			.pipe(|In(can_quick_load)| match can_quick_load {
+				true => Activity::Enable,
+				false => Activity::Disable,
+			})
+			.pipe(StartMenuButton::set_activity(quick_load));
 
-		app.add_ui::<StartMenu, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
-			start_menu,
-		)
-		.add_systems(
-			Update,
-			(
-				panel_colors::<StartMenuButton>,
-				StartGame::on_release_set(new_game),
+		app.add_prefab_observer::<StartMenuButton, ()>()
+			.add_ui::<StartMenu, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
+				start_menu,
 			)
-				.run_if(in_state(start_menu)),
-		);
+			.add_systems(
+				Update,
+				(
+					enable_or_disable_quick_load_button,
+					panel_colors::<StartMenuButton>,
+					StartMenuButton::trigger_on_release,
+				)
+					.chain()
+					.run_if(in_state(start_menu)),
+			);
 	}
 
 	fn loading_screen<TLoadGroup>(&self, app: &mut App)
@@ -266,6 +289,8 @@ where
 				(
 					image_color,
 					adjust_global_z_index,
+					DispatchTextColor::apply,
+					UIDisabled::apply,
 					(
 						input_label_icons("icons/keys"),
 						Icon::load_image,
@@ -281,10 +306,11 @@ where
 	}
 }
 
-impl<TLoading, TSettings, TLocalization, TGraphics> Plugin
-	for MenuPlugin<(TLoading, TSettings, TLocalization, TGraphics)>
+impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics> Plugin
+	for MenuPlugin<(TLoading, TSavegame, TSettings, TLocalization, TGraphics)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
+	TSavegame: ThreadSafe + HandlesSaving,
 	TSettings: ThreadSafe + HandlesSettings,
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
@@ -312,8 +338,8 @@ where
 	}
 }
 
-impl<TLoading, TSettings, TLocalization, TGraphics> HandlesLoadoutMenu
-	for MenuPlugin<(TLoading, TSettings, TLocalization, TGraphics)>
+impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics> HandlesLoadoutMenu
+	for MenuPlugin<(TLoading, TSavegame, TSettings, TLocalization, TGraphics)>
 where
 	TSettings: HandlesSettings,
 	TLocalization: HandlesLocalization,
@@ -398,8 +424,8 @@ where
 	}
 }
 
-impl<TLoading, TSettings, TLocalization, TGraphics> HandlesComboMenu
-	for MenuPlugin<(TLoading, TSettings, TLocalization, TGraphics)>
+impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics> HandlesComboMenu
+	for MenuPlugin<(TLoading, TSavegame, TSettings, TLocalization, TGraphics)>
 where
 	TLocalization: HandlesLocalization + ThreadSafe,
 	TGraphics: ThreadSafe + UiCamera,

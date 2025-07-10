@@ -89,7 +89,7 @@ impl SettingsScreen {
 					margin: UiRect::all(Val::Px(2.)),
 					..default()
 				},
-				BackgroundColor(PanelColors::DEFAULT.empty),
+				BackgroundColor(PanelColors::DEFAULT.empty.background),
 			))
 			.with_children(|parent| {
 				Self::add_section_title(parent, localize, title);

@@ -1,32 +1,40 @@
-use crate::{components::ColorOverride, tools::PanelState, traits::colors::HasPanelColors};
-use bevy::{
-	ecs::{component::Component, query::Without, system::Query},
-	ui::{BackgroundColor, Interaction},
+use crate::{
+	components::{ColorOverride, dispatch_text_color::DispatchTextColor, ui_disabled::UIDisabled},
+	tools::PanelState,
+	traits::colors::HasPanelColors,
 };
-use common::traits::accessors::get::GetterRef;
+use bevy::prelude::*;
+use common::traits::{accessors::get::GetterRef, try_insert_on::TryInsertOn};
 
 pub fn panel_colors<TPanel: Component + GetterRef<PanelState> + HasPanelColors>(
-	mut panels: Query<(&mut BackgroundColor, &Interaction, &TPanel), Without<ColorOverride>>,
+	mut commands: Commands,
+	mut panels: Query<(Entity, &Interaction, &TPanel, Option<&UIDisabled>), Without<ColorOverride>>,
 ) {
-	let colors = TPanel::PANEL_COLORS;
-	for (mut color, interaction, panel) in &mut panels {
-		*color = match (interaction, panel.get()) {
-			(Interaction::Pressed, ..) => colors.pressed.into(),
-			(Interaction::Hovered, ..) => colors.hovered.into(),
-			(.., PanelState::Empty) => colors.empty.into(),
-			(.., PanelState::Filled) => colors.filled.into(),
-		}
+	for (entity, interaction, panel, disabled) in &mut panels {
+		let config = match (interaction, panel.get(), disabled) {
+			(.., Some(UIDisabled)) => &TPanel::PANEL_COLORS.disabled,
+			(Interaction::Pressed, ..) => &TPanel::PANEL_COLORS.pressed,
+			(Interaction::Hovered, ..) => &TPanel::PANEL_COLORS.hovered,
+			(_, PanelState::Empty, _) => &TPanel::PANEL_COLORS.empty,
+			(_, PanelState::Filled, _) => &TPanel::PANEL_COLORS.filled,
+		};
+
+		commands.try_insert_on(
+			entity,
+			(
+				BackgroundColor::from(config.background),
+				DispatchTextColor::from(config.text),
+			),
+		);
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::colors::PanelColors;
-	use bevy::{
-		app::{App, Update},
-		color::Color,
-		ui::{BackgroundColor, Interaction},
+	use crate::{
+		components::dispatch_text_color::DispatchTextColor,
+		traits::colors::{ColorConfig, PanelColors},
 	};
 
 	#[derive(Component)]
@@ -49,21 +57,51 @@ mod tests {
 
 	impl HasPanelColors for _Empty {
 		const PANEL_COLORS: PanelColors = PanelColors {
-			pressed: Color::srgb(1., 0., 0.),
-			hovered: Color::srgb(0.5, 0., 0.),
-			empty: Color::srgb(0.25, 0., 0.),
-			filled: Color::srgb(0.125, 0., 0.),
-			text: Color::srgb(0.0625, 0., 0.),
+			disabled: ColorConfig {
+				background: Color::srgb(0., 0., 1.),
+				text: Color::srgb(0., 0.16, 1.),
+			},
+			pressed: ColorConfig {
+				background: Color::srgb(1., 0., 0.),
+				text: Color::srgb(1., 0.12, 0.),
+			},
+			hovered: ColorConfig {
+				background: Color::srgb(0.5, 0., 0.),
+				text: Color::srgb(0.5, 0.12, 0.),
+			},
+			empty: ColorConfig {
+				background: Color::srgb(0.25, 0., 0.),
+				text: Color::srgb(0.25, 0.11, 0.),
+			},
+			filled: ColorConfig {
+				background: Color::srgb(0.125, 0., 0.),
+				text: Color::srgb(0.125, 0.15, 0.),
+			},
 		};
 	}
 
 	impl HasPanelColors for _Filled {
 		const PANEL_COLORS: PanelColors = PanelColors {
-			pressed: Color::srgb(1., 0., 0.),
-			hovered: Color::srgb(0.5, 0., 0.),
-			empty: Color::srgb(0.25, 0., 0.),
-			filled: Color::srgb(0.125, 0., 0.),
-			text: Color::srgb(0.0625, 0., 0.),
+			disabled: ColorConfig {
+				background: Color::srgb(0., 0., 1.),
+				text: Color::NONE,
+			},
+			pressed: ColorConfig {
+				background: Color::srgb(1., 0., 0.),
+				text: Color::NONE,
+			},
+			hovered: ColorConfig {
+				background: Color::srgb(0.5, 0., 0.),
+				text: Color::NONE,
+			},
+			empty: ColorConfig {
+				background: Color::srgb(0.25, 0., 0.),
+				text: Color::NONE,
+			},
+			filled: ColorConfig {
+				background: Color::srgb(0.125, 0., 0.),
+				text: Color::NONE,
+			},
 		};
 	}
 
@@ -89,7 +127,13 @@ mod tests {
 			.unwrap()
 			.0;
 
-		assert_eq!(color, _Empty::PANEL_COLORS.pressed);
+		assert_eq!(
+			(color, app.world().entity(agent).get::<DispatchTextColor>()),
+			(
+				_Empty::PANEL_COLORS.pressed.background,
+				Some(&DispatchTextColor::from(_Empty::PANEL_COLORS.pressed.text))
+			)
+		);
 	}
 
 	#[test]
@@ -114,7 +158,13 @@ mod tests {
 			.unwrap()
 			.0;
 
-		assert_eq!(color, _Empty::PANEL_COLORS.hovered);
+		assert_eq!(
+			(color, app.world().entity(agent).get::<DispatchTextColor>()),
+			(
+				_Empty::PANEL_COLORS.hovered.background,
+				Some(&DispatchTextColor::from(_Empty::PANEL_COLORS.hovered.text))
+			)
+		);
 	}
 
 	#[test]
@@ -139,7 +189,13 @@ mod tests {
 			.unwrap()
 			.0;
 
-		assert_eq!(color, _Empty::PANEL_COLORS.empty);
+		assert_eq!(
+			(color, app.world().entity(agent).get::<DispatchTextColor>()),
+			(
+				_Empty::PANEL_COLORS.empty.background,
+				Some(&DispatchTextColor::from(_Empty::PANEL_COLORS.empty.text))
+			)
+		);
 	}
 
 	#[test]
@@ -164,7 +220,13 @@ mod tests {
 			.unwrap()
 			.0;
 
-		assert_eq!(color, _Empty::PANEL_COLORS.filled);
+		assert_eq!(
+			(color, app.world().entity(agent).get::<DispatchTextColor>()),
+			(
+				_Filled::PANEL_COLORS.filled.background,
+				Some(&DispatchTextColor::from(_Filled::PANEL_COLORS.filled.text))
+			)
+		);
 	}
 
 	#[test]
@@ -191,5 +253,37 @@ mod tests {
 			.0;
 
 		assert_eq!(color, Color::srgb(0.1, 0.2, 0.3));
+	}
+
+	#[test]
+	fn disabled() {
+		let mut app = App::new();
+		let agent = app
+			.world_mut()
+			.spawn((
+				_Empty,
+				Interaction::Pressed,
+				BackgroundColor(Color::srgb(0.1, 0.2, 0.3)),
+				UIDisabled,
+			))
+			.id();
+
+		app.add_systems(Update, panel_colors::<_Empty>);
+		app.update();
+
+		let color = app
+			.world()
+			.entity(agent)
+			.get::<BackgroundColor>()
+			.unwrap()
+			.0;
+
+		assert_eq!(
+			(color, app.world().entity(agent).get::<DispatchTextColor>()),
+			(
+				_Empty::PANEL_COLORS.disabled.background,
+				Some(&DispatchTextColor::from(_Empty::PANEL_COLORS.disabled.text))
+			)
+		);
 	}
 }

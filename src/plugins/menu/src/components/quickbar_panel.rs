@@ -1,6 +1,6 @@
 use crate::{
 	tools::PanelState,
-	traits::colors::{HasActiveColor, HasPanelColors, HasQueuedColor, PanelColors},
+	traits::colors::{ColorConfig, HasActiveColor, HasPanelColors, HasQueuedColor, PanelColors},
 };
 use bevy::{color::Color, ecs::component::Component};
 use common::{tools::action_key::slot::SlotKey, traits::accessors::get::GetterRef};
@@ -25,20 +25,29 @@ impl GetterRef<SlotKey> for QuickbarPanel {
 
 impl HasPanelColors for QuickbarPanel {
 	const PANEL_COLORS: PanelColors = PanelColors {
-		pressed: Color::srgb(1., 0.27, 0.1),
+		disabled: PanelColors::DEFAULT.disabled,
+		pressed: ColorConfig {
+			background: Color::srgb(1., 0.27, 0.1),
+			text: Color::srgb(0.9, 0.9, 0.9),
+		},
 		hovered: PanelColors::DEFAULT.filled,
 		empty: PanelColors::DEFAULT.empty,
 		filled: PanelColors::DEFAULT.filled,
-		text: PanelColors::DEFAULT.text,
 	};
 }
 
 impl HasActiveColor for QuickbarPanel {
-	const ACTIVE_COLOR: Color = Color::srgb(0., 1., 0.);
+	const ACTIVE_COLORS: ColorConfig = ColorConfig {
+		background: Color::srgb(0., 1., 0.),
+		text: Color::srgb(0.9, 0.9, 0.9),
+	};
 }
 
 impl HasQueuedColor for QuickbarPanel {
-	const QUEUED_COLOR: Color = Color::srgb(0., 1., 1.);
+	const QUEUED_COLORS: ColorConfig = ColorConfig {
+		background: Color::srgb(0., 1., 1.),
+		text: Color::srgb(0.9, 0.9, 0.9),
+	};
 }
 
 #[cfg(test)]

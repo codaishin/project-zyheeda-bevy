@@ -1,6 +1,6 @@
 use crate::{
-	components::ColorOverride,
-	traits::colors::{HasActiveColor, HasPanelColors, HasQueuedColor},
+	components::{ColorOverride, dispatch_text_color::DispatchTextColor},
+	traits::colors::{ColorConfig, HasActiveColor, HasPanelColors, HasQueuedColor},
 };
 use bevy::prelude::*;
 use common::{
@@ -19,7 +19,7 @@ use common::{
 
 pub fn panel_activity_colors_override<TMap, TPanel, TPrimer, TContainer>(
 	mut commands: Commands,
-	mut buttons: Query<(Entity, &mut BackgroundColor, &TPanel, &TPrimer)>,
+	mut buttons: Query<(Entity, &TPanel, &TPrimer)>,
 	map: Res<TMap>,
 	container: Res<TContainer>,
 ) where
@@ -30,12 +30,12 @@ pub fn panel_activity_colors_override<TMap, TPanel, TPrimer, TContainer>(
 	TPrimer: Component,
 	for<'a> &'a TPrimer: Into<IsPrimed> + Into<UserInput>,
 {
-	for (entity, background_color, panel, primer) in &mut buttons {
+	for (entity, panel, primer) in &mut buttons {
 		let Ok(entity) = commands.get_entity(entity) else {
 			continue;
 		};
 		let color = get_color_override(container.as_ref(), map.as_ref(), panel, primer);
-		update_color_override(color, entity, background_color);
+		update_color_override(color, entity);
 	}
 }
 
@@ -44,7 +44,7 @@ fn get_color_override<TContainer, TMap, TPanel, TPrimer>(
 	map: &TMap,
 	panel: &TPanel,
 	primer: &TPrimer,
-) -> Option<Color>
+) -> Option<ColorConfig>
 where
 	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor + GetterRef<SlotKey>,
 	TContainer: GetItem<SlotKey>,
@@ -60,11 +60,11 @@ where
 		.unwrap_or_default();
 
 	if state == SkillExecution::Active {
-		return Some(TPanel::ACTIVE_COLOR);
+		return Some(TPanel::ACTIVE_COLORS);
 	}
 
 	if state == SkillExecution::Queued {
-		return Some(TPanel::QUEUED_COLOR);
+		return Some(TPanel::QUEUED_COLORS);
 	}
 
 	let IsPrimed(primer_is_primed) = primer.into();
@@ -76,15 +76,14 @@ where
 	None
 }
 
-fn update_color_override(
-	color: Option<Color>,
-	mut entity: EntityCommands,
-	mut background_color: Mut<BackgroundColor>,
-) {
+fn update_color_override(color: Option<ColorConfig>, mut entity: EntityCommands) {
 	match color {
-		Some(color) => {
-			entity.try_insert(ColorOverride);
-			*background_color = color.into();
+		Some(ColorConfig { background, text }) => {
+			entity.try_insert((
+				ColorOverride,
+				BackgroundColor::from(background),
+				DispatchTextColor::from(text),
+			));
 		}
 		None => {
 			entity.remove::<ColorOverride>();
@@ -95,7 +94,10 @@ fn update_color_override(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::colors::PanelColors;
+	use crate::{
+		components::dispatch_text_color::DispatchTextColor,
+		traits::colors::{ColorConfig, PanelColors},
+	};
 	use bevy::state::app::StatesPlugin;
 	use common::{components::ui_input_primer::IsPrimed, tools::action_key::slot::Side};
 	use macros::NestedMocks;
@@ -125,20 +127,29 @@ mod tests {
 	struct _Panel(pub SlotKey);
 
 	impl HasActiveColor for _Panel {
-		const ACTIVE_COLOR: Color = Color::srgb(0.1, 0.2, 0.3);
+		const ACTIVE_COLORS: ColorConfig = ColorConfig {
+			background: Color::srgb(0.1, 0.2, 0.3),
+			text: Color::srgb(0.1, 0.2, 0.7),
+		};
 	}
 
 	impl HasQueuedColor for _Panel {
-		const QUEUED_COLOR: Color = Color::srgb(0.3, 0.2, 0.1);
+		const QUEUED_COLORS: ColorConfig = ColorConfig {
+			background: Color::srgb(0.3, 0.2, 0.1),
+			text: Color::srgb(0.3, 0.2, 0.7),
+		};
 	}
 
 	impl HasPanelColors for _Panel {
 		const PANEL_COLORS: PanelColors = PanelColors {
-			pressed: Color::srgb(0.1, 1., 0.1),
-			hovered: Color::NONE,
-			empty: Color::NONE,
-			filled: Color::NONE,
-			text: Color::NONE,
+			disabled: ColorConfig::NO_COLORS,
+			pressed: ColorConfig {
+				background: Color::srgb(0.1, 1., 0.1),
+				text: Color::srgb(1., 0.5, 0.25),
+			},
+			hovered: ColorConfig::NO_COLORS,
+			empty: ColorConfig::NO_COLORS,
+			filled: ColorConfig::NO_COLORS,
 		};
 	}
 
@@ -233,9 +244,14 @@ mod tests {
 
 		let panel = app.world().entity(panel);
 		let color = panel.get::<BackgroundColor>().unwrap();
+		let text = panel.get::<DispatchTextColor>();
 		assert_eq!(
-			(_Panel::ACTIVE_COLOR, true),
-			(color.0, panel.contains::<ColorOverride>())
+			(
+				_Panel::ACTIVE_COLORS.background,
+				true,
+				Some(&DispatchTextColor::from(_Panel::ACTIVE_COLORS.text))
+			),
+			(color.0, panel.contains::<ColorOverride>(), text)
 		)
 	}
 
@@ -322,9 +338,14 @@ mod tests {
 
 		let panel = app.world().entity(panel);
 		let color = panel.get::<BackgroundColor>().unwrap();
+		let text = panel.get::<DispatchTextColor>();
 		assert_eq!(
-			(_Panel::PANEL_COLORS.pressed, true),
-			(color.0, panel.contains::<ColorOverride>())
+			(
+				_Panel::PANEL_COLORS.pressed.background,
+				true,
+				Some(&DispatchTextColor::from(_Panel::PANEL_COLORS.pressed.text))
+			),
+			(color.0, panel.contains::<ColorOverride>(), text)
 		)
 	}
 
@@ -353,9 +374,14 @@ mod tests {
 
 		let panel = app.world().entity(panel);
 		let color = panel.get::<BackgroundColor>().unwrap();
+		let text = panel.get::<DispatchTextColor>();
 		assert_eq!(
-			(_Panel::QUEUED_COLOR, true),
-			(color.0, panel.contains::<ColorOverride>())
+			(
+				_Panel::QUEUED_COLORS.background,
+				true,
+				Some(&DispatchTextColor::from(_Panel::QUEUED_COLORS.text))
+			),
+			(color.0, panel.contains::<ColorOverride>(), text)
 		)
 	}
 }
