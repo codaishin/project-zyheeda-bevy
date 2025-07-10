@@ -15,7 +15,12 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
 	components::{child_of_persistent::ChildOfPersistent, persistent_entity::PersistentEntity},
-	states::{game_state::GameState, save_state::SaveState},
+	states::{
+		game_state::GameState,
+		save_state::SaveState,
+		transition_to_previous,
+		transition_to_state,
+	},
 	systems::log::OnError,
 	tools::action_key::{ActionKey, save_key::SaveKey},
 	traits::{
@@ -77,10 +82,12 @@ where
 			ActionKey::Save(SaveKey::QuickSave),
 			GameState::Save(SaveState::Save),
 		);
-		let trigger_quick_load = TSettings::TKeyMap::<ActionKey>::trigger(
+		let trigger_quick_load_attempt = TSettings::TKeyMap::<ActionKey>::trigger(
 			ActionKey::Save(SaveKey::QuickLoad),
-			GameState::Save(SaveState::Load),
+			GameState::Save(SaveState::AttemptLoad),
 		);
+		let transition_to_load = transition_to_state(GameState::Save(SaveState::Load));
+		let transition_to_previous = transition_to_previous::<GameState>;
 
 		Self::register_savable_component::<Name>(app);
 		Self::register_savable_component::<Transform>(app);
@@ -93,16 +100,16 @@ where
 				quick_save: quick_save.clone(),
 			})
 			.add_systems(
+				Startup,
+				Register::update_context(quick_save.clone()).pipe(OnError::log),
+			)
+			.add_systems(
 				Update,
 				(
 					trigger_quick_save,
-					trigger_quick_load.run_if(Self::can_quick_load()),
+					trigger_quick_load_attempt.run_if(Self::can_quick_load()),
 				)
 					.run_if(in_state(GameState::Play)),
-			)
-			.add_systems(
-				Startup,
-				Register::update_context(quick_save.clone()).pipe(OnError::log),
 			)
 			.add_systems(
 				OnEnter(GameState::Save(SaveState::Save)),
@@ -111,6 +118,13 @@ where
 					SaveContext::write_file_system(quick_save.clone()).pipe(OnError::log),
 				)
 					.chain(),
+			)
+			.add_systems(
+				OnEnter(GameState::Save(SaveState::AttemptLoad)),
+				(
+					transition_to_load.run_if(Self::can_quick_load()),
+					transition_to_previous.run_if(not(Self::can_quick_load())),
+				),
 			)
 			.add_systems(
 				OnEnter(GameState::Save(SaveState::Load)),
