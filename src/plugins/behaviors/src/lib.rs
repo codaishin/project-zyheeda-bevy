@@ -180,7 +180,7 @@ where
 		>;
 		let wasd_input = Update::delta
 			.pipe(wasd_input)
-			.pipe(OnError::log_and_fallback(|| None));
+			.pipe(OnError::log_and_return(|| None));
 
 		let compute_player_path = TPlayers::TPlayerMovement::compute_path::<
 			VelocityBased,

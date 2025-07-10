@@ -7,12 +7,20 @@ mod resources;
 mod systems;
 mod traits;
 
-use crate::systems::{trigger_state::TriggerState, write_buffer::WriteBufferSystem};
+use crate::{
+	resources::inspector::Inspector,
+	systems::{trigger_state::TriggerState, write_buffer::WriteBufferSystem},
+};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
 	components::{child_of_persistent::ChildOfPersistent, persistent_entity::PersistentEntity},
-	states::game_state::GameState,
+	states::{
+		game_state::GameState,
+		save_state::SaveState,
+		transition_to_previous,
+		transition_to_state,
+	},
 	systems::log::OnError,
 	tools::action_key::{ActionKey, save_key::SaveKey},
 	traits::{
@@ -72,14 +80,14 @@ where
 		))));
 		let trigger_quick_save = TSettings::TKeyMap::<ActionKey>::trigger(
 			ActionKey::Save(SaveKey::QuickSave),
-			GameState::Save,
+			GameState::Save(SaveState::Save),
 		);
-		let trigger_quick_load = TSettings::TKeyMap::<ActionKey>::trigger(
+		let trigger_quick_load_attempt = TSettings::TKeyMap::<ActionKey>::trigger(
 			ActionKey::Save(SaveKey::QuickLoad),
-			GameState::LoadSave,
+			GameState::Save(SaveState::AttemptLoad),
 		);
-		let quick_save_file_exists =
-			SaveContext::file_exists(quick_save.clone()).pipe(OnError::log_and_fallback(|| false));
+		let transition_to_load = transition_to_state(GameState::Save(SaveState::Load));
+		let transition_to_previous = transition_to_previous::<GameState>;
 
 		Self::register_savable_component::<Name>(app);
 		Self::register_savable_component::<Transform>(app);
@@ -88,20 +96,23 @@ where
 		Self::register_savable_component::<ChildOfPersistent>(app);
 
 		app.init_resource::<Register>()
-			.add_systems(
-				Update,
-				(
-					trigger_quick_save,
-					trigger_quick_load.run_if(quick_save_file_exists),
-				)
-					.run_if(in_state(GameState::Play)),
-			)
+			.insert_resource(Inspector {
+				quick_save: quick_save.clone(),
+			})
 			.add_systems(
 				Startup,
 				Register::update_context(quick_save.clone()).pipe(OnError::log),
 			)
 			.add_systems(
-				OnEnter(GameState::Save),
+				Update,
+				(
+					trigger_quick_save,
+					trigger_quick_load_attempt.run_if(Self::can_quick_load()),
+				)
+					.run_if(in_state(GameState::Play)),
+			)
+			.add_systems(
+				OnEnter(GameState::Save(SaveState::Save)),
 				(
 					SaveContext::write_buffer_system(quick_save.clone()).pipe(OnError::log),
 					SaveContext::write_file_system(quick_save.clone()).pipe(OnError::log),
@@ -109,7 +120,14 @@ where
 					.chain(),
 			)
 			.add_systems(
-				OnEnter(GameState::LoadSave),
+				OnEnter(GameState::Save(SaveState::AttemptLoad)),
+				(
+					transition_to_load.run_if(Self::can_quick_load()),
+					transition_to_previous.run_if(not(Self::can_quick_load())),
+				),
+			)
+			.add_systems(
+				OnEnter(GameState::Save(SaveState::Load)),
 				(
 					Save::despawn_all,
 					SaveContext::read_file_system(quick_save.clone()).pipe(OnError::log),
@@ -122,6 +140,12 @@ where
 
 impl<TDependencies> HandlesSaving for SavegamePlugin<TDependencies> {
 	type TSaveEntityMarker = Save;
+
+	fn can_quick_load() -> impl Condition<()> {
+		IntoSystem::into_system(
+			Inspector::<FileIO>::quick_save_file_exists.pipe(OnError::log_and_return(|| false)),
+		)
+	}
 
 	fn register_savable_component<TComponent>(app: &mut App)
 	where

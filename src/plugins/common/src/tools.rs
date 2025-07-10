@@ -9,6 +9,7 @@ pub mod handle;
 pub mod inventory_key;
 pub mod item_description;
 pub mod item_type;
+pub mod iter_helpers;
 pub mod movement_animation;
 pub mod ordered_hash_map;
 pub mod skill_description;

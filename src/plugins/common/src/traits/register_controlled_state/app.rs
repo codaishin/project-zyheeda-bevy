@@ -1,16 +1,12 @@
 use crate::{
-	states::transition_to_state,
+	states::{transition_to_previous, transition_to_state},
 	traits::{
 		automatic_transitions::{AutoTransitions, TransitionTo},
 		pause_control::PauseControl,
 		register_controlled_state::RegisterControlledState,
 	},
 };
-use bevy::{
-	prelude::*,
-	state::{app::StatesPlugin, state::FreelyMutableState},
-	time::TimePlugin,
-};
+use bevy::{prelude::*, state::app::StatesPlugin, time::TimePlugin};
 
 impl RegisterControlledState for App {
 	fn register_controlled_state<TState>(&mut self) -> &mut Self
@@ -44,22 +40,6 @@ impl RegisterControlledState for App {
 
 		self
 	}
-}
-
-fn transition_to_previous<TState>(
-	mut transition_events: EventReader<StateTransitionEvent<TState>>,
-	mut next_state: ResMut<NextState<TState>>,
-) where
-	TState: FreelyMutableState + Clone,
-{
-	let Some(last_transition) = transition_events.read().last() else {
-		return;
-	};
-	let Some(previous) = last_transition.exited.as_ref() else {
-		return;
-	};
-
-	next_state.set(previous.clone());
 }
 
 fn pause_virtual_time<const PAUSE: bool>(mut time: ResMut<Time<Virtual>>) {

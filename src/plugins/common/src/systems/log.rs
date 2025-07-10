@@ -9,27 +9,27 @@ impl OnError {
 
 	pub fn log<TIn>(result: In<TIn>) -> TIn::TOut
 	where
-		TIn: OnErrorLogAndFallback<TValue = ()>,
+		TIn: OnErrorLogAndReturn<TValue = ()>,
 	{
-		Self::log_and_fallback(Self::void)(result)
+		Self::log_and_return(Self::void)(result)
 	}
 
-	pub fn log_and_fallback<TIn>(fallback: fn() -> TIn::TValue) -> impl Fn(In<TIn>) -> TIn::TOut
+	pub fn log_and_return<TIn>(fallback: fn() -> TIn::TValue) -> impl Fn(In<TIn>) -> TIn::TOut
 	where
-		TIn: OnErrorLogAndFallback,
+		TIn: OnErrorLogAndReturn,
 	{
 		move |In(result)| result.process(fallback)
 	}
 }
 
-pub trait OnErrorLogAndFallback {
+pub trait OnErrorLogAndReturn {
 	type TOut;
 	type TValue;
 
 	fn process(self, fallback: fn() -> Self::TValue) -> Self::TOut;
 }
 
-impl<TValue, TError> OnErrorLogAndFallback for Result<TValue, TError>
+impl<TValue, TError> OnErrorLogAndReturn for Result<TValue, TError>
 where
 	Error: From<TError>,
 {
@@ -47,7 +47,7 @@ where
 	}
 }
 
-impl<TValue, TError> OnErrorLogAndFallback for Vec<Result<TValue, TError>>
+impl<TValue, TError> OnErrorLogAndReturn for Vec<Result<TValue, TError>>
 where
 	Error: From<TError>,
 {

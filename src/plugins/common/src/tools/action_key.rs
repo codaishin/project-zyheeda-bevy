@@ -6,7 +6,10 @@ pub mod user_input;
 
 use crate::{
 	states::menu_state::MenuState,
-	tools::action_key::save_key::SaveKey,
+	tools::{
+		action_key::save_key::SaveKey,
+		iter_helpers::{first, next},
+	},
 	traits::{
 		handles_localization::Token,
 		handles_settings::InvalidInput,
@@ -95,20 +98,6 @@ impl<TKey> IsNot<TKey> {
 	pub fn key() -> Self {
 		Self(PhantomData)
 	}
-}
-
-fn first<TInner>(wrap: impl Fn(TInner) -> ActionKey) -> Option<ActionKey>
-where
-	TInner: IterFinite,
-{
-	TInner::iterator().0.map(wrap)
-}
-
-fn next<TInner>(wrap: impl Fn(TInner) -> ActionKey, key: TInner) -> Option<ActionKey>
-where
-	TInner: IterFinite,
-{
-	TInner::next(&Iter(Some(key))).map(wrap)
 }
 
 #[cfg(test)]

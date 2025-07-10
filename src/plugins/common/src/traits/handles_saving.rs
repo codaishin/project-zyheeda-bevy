@@ -7,6 +7,11 @@ use serde::{Serialize, de::DeserializeOwned};
 pub trait HandlesSaving {
 	type TSaveEntityMarker: Component + Default;
 
+	/// Check whether quick loading is possible
+	///
+	/// Useful for button (dis|en)ables.
+	fn can_quick_load() -> impl Condition<()>;
+
 	fn register_savable_component<TComponent>(app: &mut App)
 	where
 		TComponent: SavableComponent;
