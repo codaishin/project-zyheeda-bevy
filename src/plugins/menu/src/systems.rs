@@ -2,6 +2,7 @@ pub(crate) mod adjust_global_z_index;
 pub(crate) mod combos;
 pub(crate) mod dad;
 pub(crate) mod despawn;
+pub(crate) mod disable_ui;
 pub(crate) mod dispatch_text_colors;
 pub(crate) mod dropdown;
 pub(crate) mod icon;

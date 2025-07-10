@@ -12,7 +12,7 @@ mod visualization;
 mod debug;
 
 use crate::{
-	components::dispatch_text_color::DispatchTextColor,
+	components::{dispatch_text_color::DispatchTextColor, ui_disabled::UIDisabled},
 	systems::{
 		combos::visualize_invalid_skill::VisualizeInvalidSkill,
 		dropdown::dropdown_skill_select_insert::DropdownSkillSelectInsert,
@@ -270,6 +270,7 @@ where
 					image_color,
 					adjust_global_z_index,
 					DispatchTextColor::apply,
+					UIDisabled::apply,
 					(
 						input_label_icons("icons/keys"),
 						Icon::load_image,
