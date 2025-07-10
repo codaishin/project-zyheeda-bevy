@@ -119,7 +119,7 @@ fn add_title(parent: &mut RelatedSpawnerCommands<ChildOf>, title: Localized) {
 					font_size: 40.0,
 					..default()
 				},
-				TextColor(InventoryPanel::PANEL_COLORS.text),
+				TextColor(InventoryPanel::PANEL_COLORS.filled.text),
 			));
 		});
 }
@@ -152,7 +152,7 @@ fn add_grid<TKey, TLocalization>(
 						font_size: 20.0,
 						..default()
 					},
-					TextColor(InventoryPanel::PANEL_COLORS.text),
+					TextColor(InventoryPanel::PANEL_COLORS.filled.text),
 				));
 				for _ in 0..element_count_x {
 					parent
@@ -176,7 +176,6 @@ fn add_grid<TKey, TLocalization>(
 									font_size: 15.0,
 									..default()
 								},
-								TextColor(InventoryPanel::PANEL_COLORS.text),
 							));
 						});
 				}

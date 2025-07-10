@@ -109,11 +109,11 @@ impl ComboOverview<()> {
 		let (image, background_color) = match SkillButtonIcon::from(icon) {
 			SkillButtonIcon::Icon(Some(icon)) => (
 				ImageNode::new(icon),
-				BackgroundColor(PanelColors::DEFAULT.filled),
+				BackgroundColor(PanelColors::DEFAULT.filled.background),
 			),
 			SkillButtonIcon::Icon(None) => (
 				ImageNode::default(),
-				BackgroundColor(PanelColors::DEFAULT.filled),
+				BackgroundColor(PanelColors::DEFAULT.filled.background),
 			),
 			SkillButtonIcon::Transparent => (default(), BackgroundColor(Color::NONE)),
 		};
@@ -182,8 +182,8 @@ impl ComboOverview<()> {
 				border: UiRect::from(Self::KEY_BUTTON_DIMENSIONS.border),
 				..default()
 			},
-			PanelColors::DEFAULT.filled.into(),
-			PanelColors::DEFAULT.text.into(),
+			PanelColors::DEFAULT.filled.background.into(),
+			PanelColors::DEFAULT.filled.text.into(),
 		)
 	}
 
@@ -198,8 +198,8 @@ impl ComboOverview<()> {
 				align_items: AlignItems::Center,
 				..default()
 			},
-			PanelColors::DEFAULT.filled.into(),
-			PanelColors::DEFAULT.text.into(),
+			PanelColors::DEFAULT.filled.background.into(),
+			PanelColors::DEFAULT.filled.text.into(),
 		)
 	}
 
@@ -214,7 +214,7 @@ impl ComboOverview<()> {
 				border: UiRect::bottom(Val::from(Self::SYMBOL_WIDTH)),
 				..default()
 			},
-			BorderColor::from(PanelColors::DEFAULT.filled),
+			BorderColor::from(PanelColors::DEFAULT.filled.background),
 		)
 	}
 
@@ -230,7 +230,7 @@ impl ComboOverview<()> {
 				border: UiRect::left(Val::from(ComboOverview::SYMBOL_WIDTH)),
 				..default()
 			},
-			BorderColor::from(PanelColors::DEFAULT.filled),
+			BorderColor::from(PanelColors::DEFAULT.filled.background),
 		)
 	}
 
@@ -249,7 +249,7 @@ impl ComboOverview<()> {
 				},
 				..default()
 			},
-			BorderColor::from(PanelColors::DEFAULT.filled),
+			BorderColor::from(PanelColors::DEFAULT.filled.background),
 		)
 	}
 
@@ -264,7 +264,7 @@ impl ComboOverview<()> {
 				font_size: Self::BUTTON_FONT_SIZE,
 				..default()
 			},
-			TextColor(PanelColors::DEFAULT.text),
+			TextColor(PanelColors::DEFAULT.filled.text),
 		)
 	}
 }
@@ -330,7 +330,7 @@ fn add_title(parent: &mut RelatedSpawnerCommands<ChildOf>, title: Localized) {
 					font_size: 40.,
 					..default()
 				},
-				TextColor(PanelColors::DEFAULT.text),
+				TextColor(PanelColors::DEFAULT.filled.text),
 			));
 		});
 }

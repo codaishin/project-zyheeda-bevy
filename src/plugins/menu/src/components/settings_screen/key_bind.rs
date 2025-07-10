@@ -53,7 +53,7 @@ where
 				font_size: 15.0,
 				..default()
 			},
-			TextColor::from(PanelColors::DEFAULT.text),
+			TextColor::from(PanelColors::DEFAULT.filled.text),
 		));
 	}
 }

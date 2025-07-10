@@ -11,10 +11,13 @@ mod visualization;
 #[cfg(debug_assertions)]
 mod debug;
 
-use crate::systems::{
-	combos::visualize_invalid_skill::VisualizeInvalidSkill,
-	dropdown::dropdown_skill_select_insert::DropdownSkillSelectInsert,
-	update_panels::set_container_panels::SetContainerPanels,
+use crate::{
+	components::dispatch_text_color::DispatchTextColor,
+	systems::{
+		combos::visualize_invalid_skill::VisualizeInvalidSkill,
+		dropdown::dropdown_skill_select_insert::DropdownSkillSelectInsert,
+		update_panels::set_container_panels::SetContainerPanels,
+	},
 };
 use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
@@ -266,6 +269,7 @@ where
 				(
 					image_color,
 					adjust_global_z_index,
+					DispatchTextColor::apply,
 					(
 						input_label_icons("icons/keys"),
 						Icon::load_image,

@@ -82,14 +82,15 @@ fn add_slot(quickbar: &mut RelatedSpawnerCommands<ChildOf>, key: &SlotKey) {
 								border: UiRect::all(Val::Px(border)),
 								..default()
 							},
-							BorderColor::from(PanelColors::DEFAULT.text),
-							BackgroundColor::from(PanelColors::DEFAULT.filled),
+							BorderColor::from(PanelColors::DEFAULT.filled.text),
+							BackgroundColor::from(PanelColors::DEFAULT.filled.background),
 						))
 						.with_child((
 							TextFont {
 								font_size,
 								..default()
 							},
+							TextColor(PanelColors::DEFAULT.filled.text),
 							InputLabel::<SlotKey> { key: *key },
 						));
 				});

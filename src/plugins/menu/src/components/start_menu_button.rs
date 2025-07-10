@@ -67,7 +67,6 @@ impl Prefab<()> for StartMenuButton {
 				font_size: 32.0,
 				..default()
 			},
-			TextColor(PanelColors::DEFAULT.text),
 		));
 		Ok(())
 	}
