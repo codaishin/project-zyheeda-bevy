@@ -6,14 +6,14 @@ pub mod components;
 
 use bevy::{ecs::query::QueryFilter, prelude::*};
 use common::traits::{
-	handles_map_generation::HandlesMapGeneration,
+	handles_map_generation::{EntityMapFiltered, HandlesMapGeneration},
 	handles_path_finding::HandlesPathFinding,
 	register_derived_component::RegisterDerivedComponent,
 	thread_safe::ThreadSafe,
 };
 use components::navigation::Navigation;
 use methods::theta_star::ThetaStar;
-use std::{collections::HashMap, marker::PhantomData};
+use std::marker::PhantomData;
 
 pub struct PathFindingPlugin<TMap>(PhantomData<TMap>);
 
@@ -46,7 +46,8 @@ where
 
 	type TComputerRef = TMaps::TMapRef;
 
-	fn computer_mapping_of<TFilter>() -> impl IntoSystem<(), HashMap<Entity, Self::TComputerRef>, ()>
+	fn computer_mapping_of<TFilter>()
+	-> impl IntoSystem<(), EntityMapFiltered<Self::TComputerRef, TFilter>, ()>
 	where
 		TFilter: QueryFilter + 'static,
 	{
