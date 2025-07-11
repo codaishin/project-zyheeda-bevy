@@ -190,7 +190,7 @@ mod tests {
 	use mockall::{mock, predicate::eq};
 	use std::{collections::HashSet, ops::DerefMut};
 	use test_case::test_case;
-	use testing::{Changed, Mock, NestedMocks, SingleThreadedApp, TickTime, simple_init};
+	use testing::{IsChanged, Mock, NestedMocks, SingleThreadedApp, TickTime, simple_init};
 
 	#[derive(Component, Default)]
 	struct _Dequeue {
@@ -980,20 +980,16 @@ mod tests {
 					})),
 				},
 				Transform::default(),
-				Changed::<_Executor>::new(false),
 			))
 			.id();
 
-		app.add_systems(PostUpdate, Changed::<_Executor>::detect);
+		app.add_systems(PostUpdate, IsChanged::<_Executor>::detect);
 		app.update();
 		app.update();
 
 		assert_eq!(
-			Some(&false),
-			app.world()
-				.entity(entity)
-				.get::<Changed<_Executor>>()
-				.map(|Changed { changed, .. }| changed)
+			Some(&IsChanged::<_Executor>::FALSE),
+			app.world().entity(entity).get::<IsChanged<_Executor>>()
 		)
 	}
 }

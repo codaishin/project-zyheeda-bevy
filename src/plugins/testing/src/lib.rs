@@ -4,7 +4,8 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::Velocity;
 use std::{
-	any::{Any, TypeId},
+	any::{Any, TypeId, type_name},
+	fmt::Debug,
 	marker::PhantomData,
 	time::Duration,
 };
@@ -321,23 +322,45 @@ pub fn new_handle_from<TAsset: Asset>(uuid: Uuid) -> Handle<TAsset> {
 	Handle::Weak(AssetId::Uuid { uuid })
 }
 
-#[derive(Component, Debug, PartialEq)]
-pub struct Changed<T: Component> {
-	pub changed: bool,
-	phantom_date: PhantomData<T>,
+#[derive(Component, Clone, Copy)]
+pub struct IsChanged<T: Component> {
+	is_changed: bool,
+	_t: PhantomData<T>,
 }
 
-impl<T: Component> Changed<T> {
-	pub fn new(changed: bool) -> Self {
+impl<T: Component> Debug for IsChanged<T> {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("IsChanged")
+			.field("component", &type_name::<T>())
+			.field("is_changed", &self.is_changed)
+			.finish()
+	}
+}
+
+impl<T: Component> PartialEq for IsChanged<T> {
+	fn eq(&self, other: &Self) -> bool {
+		self.is_changed == other.is_changed
+	}
+}
+
+impl<T: Component> IsChanged<T> {
+	pub const TRUE: Self = Self::new(true);
+	pub const FALSE: Self = Self::new(false);
+
+	const fn new(is_changed: bool) -> Self {
 		Self {
-			changed,
-			phantom_date: PhantomData,
+			is_changed,
+			_t: PhantomData,
 		}
 	}
 
-	pub fn detect(mut query: Query<(Ref<T>, &mut Changed<T>)>) {
-		for (component, mut changed) in &mut query {
-			changed.changed = component.is_changed();
+	pub fn detect(mut commands: Commands, mut query: Query<(Entity, Ref<T>)>) {
+		for (entity, component) in &mut query {
+			let Ok(mut entity) = commands.get_entity(entity) else {
+				continue;
+			};
+
+			entity.try_insert(IsChanged::<T>::new(component.is_changed()));
 		}
 	}
 }

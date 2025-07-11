@@ -66,7 +66,7 @@ mod tests {
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
 	use std::collections::HashMap;
-	use testing::{Changed, NestedMocks};
+	use testing::{IsChanged, NestedMocks};
 
 	#[derive(Component, NestedMocks)]
 	struct _Combos {
@@ -231,22 +231,17 @@ mod tests {
 		let mut app = setup_app(items);
 		let entity = app
 			.world_mut()
-			.spawn((
-				Changed::<_Queue>::new(false),
-				_Combos::new(),
-				_Queue::default(),
-				slots,
-			))
+			.spawn((_Combos::new(), _Queue::default(), slots))
 			.id();
 
 		app.add_systems(Update, _Combos::update::<_Queue>);
-		app.add_systems(PostUpdate, Changed::<_Queue>::detect);
+		app.add_systems(PostUpdate, IsChanged::<_Queue>::detect);
 		app.update(); // changed always true, because target was just added
 		app.update();
 
 		assert_eq!(
-			Some(&Changed::new(false)),
-			app.world().entity(entity).get::<Changed<_Queue>>(),
+			Some(&IsChanged::<_Queue>::FALSE),
+			app.world().entity(entity).get::<IsChanged<_Queue>>(),
 		);
 	}
 }
