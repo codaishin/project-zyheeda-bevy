@@ -1,7 +1,7 @@
 use super::thread_safe::ThreadSafe;
 use crate::{tools::Units, traits::accessors::get::Getter};
-use bevy::prelude::*;
-use std::hash::Hash;
+use bevy::{ecs::query::QueryFilter, prelude::*};
+use std::{collections::HashMap, hash::Hash};
 
 pub trait HandlesMapGeneration {
 	type TMap: Component;
@@ -10,6 +10,12 @@ pub trait HandlesMapGeneration {
 	type TSystemSet: SystemSet;
 
 	const SYSTEMS: Self::TSystemSet;
+
+	type TMapRef: Getter<Entity>;
+
+	fn map_mapping_of<TFilter>() -> impl IntoSystem<(), HashMap<Entity, Self::TMapRef>, ()>
+	where
+		TFilter: QueryFilter + 'static;
 }
 
 pub trait Graph:

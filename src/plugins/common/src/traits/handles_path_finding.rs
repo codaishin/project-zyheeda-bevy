@@ -5,7 +5,8 @@ use crate::{
 		handles_map_generation::Map,
 	},
 };
-use bevy::prelude::*;
+use bevy::{ecs::query::QueryFilter, prelude::*};
+use std::collections::HashMap;
 
 pub trait HandlesPathFinding {
 	type TComputePath: Component + ComputePath;
@@ -13,6 +14,12 @@ pub trait HandlesPathFinding {
 	type TSystemSet: SystemSet;
 
 	const SYSTEMS: Self::TSystemSet;
+
+	type TComputerRef: Getter<Entity>;
+
+	fn computer_mapping_of<TFilter>() -> impl IntoSystem<(), HashMap<Entity, Self::TComputerRef>, ()>
+	where
+		TFilter: QueryFilter + 'static;
 }
 
 pub trait ComputePath {
