@@ -4,8 +4,8 @@ use bevy_rapier3d::plugin::ReadRapierContext;
 use common::traits::{
 	accessors::get::Getter,
 	cast_ray::{CastRay, GetRayCaster, read_rapier_context::OnlySensors},
+	handles_map_generation::EntityMapFiltered,
 };
-use std::collections::HashMap;
 
 #[derive(Debug, PartialEq)]
 pub struct EntityOfGrid(Entity);
@@ -15,7 +15,7 @@ impl EntityOfGrid {
 		get_ray_caster: ReadRapierContext,
 		agents: Query<(Entity, &GlobalTransform), TFilter>,
 		grids: Query<(), With<Grid>>,
-	) -> Result<HashMap<Entity, Self>, BevyError>
+	) -> Result<EntityMapFiltered<Self, TFilter>, BevyError>
 	where
 		TFilter: QueryFilter,
 	{
@@ -33,31 +33,28 @@ fn get_grid<TGetRayCaster, TFilter>(
 	get_ray_caster: TGetRayCaster,
 	agents: Query<(Entity, &GlobalTransform), TFilter>,
 	grids: Query<(), With<Grid>>,
-) -> Result<HashMap<Entity, EntityOfGrid>, TGetRayCaster::TError>
+) -> Result<EntityMapFiltered<EntityOfGrid, TFilter>, TGetRayCaster::TError>
 where
 	TGetRayCaster: GetRayCaster<(Ray3d, OnlySensors)>,
 	TFilter: QueryFilter,
 {
 	let ray_caster = get_ray_caster.get_ray_caster()?;
-	let grid_map = agents
-		.iter()
-		.filter_map(|(entity, transform)| {
-			let ray = Ray3d {
-				origin: transform.translation(),
-				direction: Dir3::NEG_Y,
-			};
+	let find_grid = |(entity, transform): (Entity, &GlobalTransform)| {
+		let ray = Ray3d {
+			origin: transform.translation(),
+			direction: Dir3::NEG_Y,
+		};
 
-			let (maybe_grid, ..) = ray_caster.cast_ray(&(ray, OnlySensors))?;
+		let (maybe_grid, ..) = ray_caster.cast_ray(&(ray, OnlySensors))?;
 
-			if !grids.contains(maybe_grid) {
-				return None;
-			}
+		if !grids.contains(maybe_grid) {
+			return None;
+		}
 
-			Some((entity, EntityOfGrid(maybe_grid)))
-		})
-		.collect();
+		Some((entity, EntityOfGrid(maybe_grid)))
+	};
 
-	Ok(grid_map)
+	Ok(EntityMapFiltered::from(agents.iter().filter_map(find_grid)))
 }
 
 #[cfg(test)]
@@ -125,7 +122,10 @@ mod tests {
 			},
 		)?;
 
-		assert_eq!(Ok(HashMap::from([(agent, EntityOfGrid(grid))])), result);
+		assert_eq!(
+			Ok(EntityMapFiltered::from([(agent, EntityOfGrid(grid))])),
+			result
+		);
 		Ok(())
 	}
 
@@ -146,7 +146,7 @@ mod tests {
 			},
 		)?;
 
-		assert_eq!(Ok(HashMap::from([])), result);
+		assert_eq!(Ok(EntityMapFiltered::from([])), result);
 		Ok(())
 	}
 

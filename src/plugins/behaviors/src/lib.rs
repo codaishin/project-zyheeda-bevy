@@ -190,7 +190,7 @@ where
 			VelocityBased,
 			TPathFinding::TComputePath,
 			TPathFinding::TComputerRef,
-		>;
+		>();
 		let execute_player_path =
 			TPlayers::TPlayerMovement::execute_movement::<Movement<PathOrWasd<VelocityBased>>>;
 		let execute_player_movement =
@@ -208,7 +208,7 @@ where
 			VelocityBased,
 			TPathFinding::TComputePath,
 			TPathFinding::TComputerRef,
-		>;
+		>();
 		let execute_enemy_path =
 			TEnemies::TEnemy::execute_movement::<Movement<PathOrWasd<VelocityBased>>>;
 		let execute_enemy_movement = TEnemies::TEnemy::execute_movement::<Movement<VelocityBased>>;
@@ -241,7 +241,7 @@ where
 					(
 						point_input.pipe(TPlayers::TPlayerMovement::insert_process_component),
 						wasd_input.pipe(TPlayers::TPlayerMovement::insert_process_component),
-						player_computers_mapping.pipe(compute_player_path),
+						player_computers_mapping.pipe(compute_player_path.system()),
 						Update::delta.pipe(execute_player_path),
 						Update::delta.pipe(execute_player_movement),
 						animate_player_movement,
@@ -252,7 +252,7 @@ where
 						TEnemies::TEnemy::select_behavior::<TPlayers::TPlayer>.pipe(OnError::log),
 						TEnemies::TEnemy::attack,
 						TEnemies::TEnemy::chase::<PathOrWasd<VelocityBased>>,
-						enemy_computers_mapping.pipe(compute_enemy_path),
+						enemy_computers_mapping.pipe(compute_enemy_path.system()),
 						Update::delta.pipe(execute_enemy_path),
 						Update::delta.pipe(execute_enemy_movement),
 						animate_enemy_movement,

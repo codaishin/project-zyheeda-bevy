@@ -18,7 +18,7 @@ use common::{
 	traits::{
 		handles_lights::HandlesLights,
 		handles_load_tracking::HandlesLoadTracking,
-		handles_map_generation::HandlesMapGeneration,
+		handles_map_generation::{EntityMapFiltered, HandlesMapGeneration},
 		handles_saving::HandlesSaving,
 		register_derived_component::RegisterDerivedComponent,
 		spawn::Spawn,
@@ -28,7 +28,7 @@ use common::{
 use components::{floor_light::FloorLight, grid::Grid, wall_back::WallBack, wall_light::WallLight};
 use grid_graph::GridGraph;
 use map_cells::corridor::Corridor;
-use std::{collections::HashMap, marker::PhantomData};
+use std::marker::PhantomData;
 use systems::{apply_extra_components::ApplyExtraComponents, unlit_material::unlit_material};
 use traits::register_map_cell::RegisterMapCell;
 
@@ -81,12 +81,14 @@ impl<TDependencies> HandlesMapGeneration for MapGenerationPlugin<TDependencies> 
 
 	type TMapRef = EntityOfGrid;
 
-	fn map_mapping_of<TFilter>() -> impl IntoSystem<(), HashMap<Entity, Self::TMapRef>, ()>
+	fn map_mapping_of<TFilter>()
+	-> impl IntoSystem<(), EntityMapFiltered<Self::TMapRef, TFilter>, ()>
 	where
 		TFilter: QueryFilter + 'static,
 	{
 		IntoSystem::into_system(
-			EntityOfGrid::get_grid::<TFilter>.pipe(OnError::log_and_return(HashMap::default)),
+			EntityOfGrid::get_grid::<TFilter>
+				.pipe(OnError::log_and_return(EntityMapFiltered::default)),
 		)
 	}
 }
