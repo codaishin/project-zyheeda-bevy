@@ -182,10 +182,14 @@ where
 			.pipe(wasd_input)
 			.pipe(OnError::log_and_return(|| None));
 
+		let player_computers_mapping = TPathFinding::computer_mapping_of::<(
+			Changed<Movement<PathOrWasd<VelocityBased>>>,
+			With<TPlayers::TPlayerMovement>,
+		)>();
 		let compute_player_path = TPlayers::TPlayerMovement::compute_path::<
 			VelocityBased,
 			TPathFinding::TComputePath,
-			TPathFinding::TPathAgent,
+			TPathFinding::TComputerRef,
 		>;
 		let execute_player_path =
 			TPlayers::TPlayerMovement::execute_movement::<Movement<PathOrWasd<VelocityBased>>>;
@@ -196,10 +200,14 @@ where
 			TAnimations::TAnimationDispatch,
 		>;
 
+		let enemy_computers_mapping = TPathFinding::computer_mapping_of::<(
+			Changed<Movement<PathOrWasd<VelocityBased>>>,
+			With<TEnemies::TEnemy>,
+		)>();
 		let compute_enemy_path = TEnemies::TEnemy::compute_path::<
 			VelocityBased,
 			TPathFinding::TComputePath,
-			TPathFinding::TPathAgent,
+			TPathFinding::TComputerRef,
 		>;
 		let execute_enemy_path =
 			TEnemies::TEnemy::execute_movement::<Movement<PathOrWasd<VelocityBased>>>;
@@ -212,8 +220,6 @@ where
 		app
 			// Required components
 			.register_required_components::<TPlayers::TPlayer, AnchorFixPoints>()
-			.register_required_components::<TPlayers::TPlayer, TPathFinding::TPathAgent>()
-			.register_required_components::<TEnemies::TEnemy, TPathFinding::TPathAgent>()
 			.register_required_components::<SkillContact, TSaveGame::TSaveEntityMarker>()
 			.register_required_components::<SkillProjection, TSaveGame::TSaveEntityMarker>()
 			// Observers
@@ -235,7 +241,7 @@ where
 					(
 						point_input.pipe(TPlayers::TPlayerMovement::insert_process_component),
 						wasd_input.pipe(TPlayers::TPlayerMovement::insert_process_component),
-						compute_player_path,
+						player_computers_mapping.pipe(compute_player_path),
 						Update::delta.pipe(execute_player_path),
 						Update::delta.pipe(execute_player_movement),
 						animate_player_movement,
@@ -246,7 +252,7 @@ where
 						TEnemies::TEnemy::select_behavior::<TPlayers::TPlayer>.pipe(OnError::log),
 						TEnemies::TEnemy::attack,
 						TEnemies::TEnemy::chase::<PathOrWasd<VelocityBased>>,
-						compute_enemy_path,
+						enemy_computers_mapping.pipe(compute_enemy_path),
 						Update::delta.pipe(execute_enemy_path),
 						Update::delta.pipe(execute_enemy_movement),
 						animate_enemy_movement,

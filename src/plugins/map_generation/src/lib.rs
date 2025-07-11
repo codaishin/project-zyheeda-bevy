@@ -9,11 +9,12 @@ mod systems;
 mod tools;
 mod traits;
 
-use crate::components::{get_grid::GetGrid, map::demo_map::DemoMap};
-use bevy::prelude::*;
+use crate::{components::map::demo_map::DemoMap, systems::get_grid::EntityOfGrid};
+use bevy::{ecs::query::QueryFilter, prelude::*};
 use bevy_rapier3d::prelude::Collider;
 use common::{
 	states::game_state::GameState,
+	systems::log::OnError,
 	traits::{
 		handles_lights::HandlesLights,
 		handles_load_tracking::HandlesLoadTracking,
@@ -27,7 +28,7 @@ use common::{
 use components::{floor_light::FloorLight, grid::Grid, wall_back::WallBack, wall_light::WallLight};
 use grid_graph::GridGraph;
 use map_cells::corridor::Corridor;
-use std::marker::PhantomData;
+use std::{collections::HashMap, marker::PhantomData};
 use systems::{apply_extra_components::ApplyExtraComponents, unlit_material::unlit_material};
 use traits::register_map_cell::RegisterMapCell;
 
@@ -58,7 +59,6 @@ where
 			.add_systems(
 				Update,
 				(
-					GetGrid::update::<Changed<GlobalTransform>>.run_if(in_state(GameState::Play)),
 					WallBack::apply_extra_components::<TLights>,
 					WallLight::apply_extra_components::<TLights>,
 					FloorLight::apply_extra_components::<TLights>,
@@ -74,9 +74,19 @@ pub struct MapSystems;
 
 impl<TDependencies> HandlesMapGeneration for MapGenerationPlugin<TDependencies> {
 	type TMap = Grid<1>;
-	type TMapAgent = GetGrid;
 	type TGraph = GridGraph;
 	type TSystemSet = MapSystems;
 
 	const SYSTEMS: Self::TSystemSet = MapSystems;
+
+	type TMapRef = EntityOfGrid;
+
+	fn map_mapping_of<TFilter>() -> impl IntoSystem<(), HashMap<Entity, Self::TMapRef>, ()>
+	where
+		TFilter: QueryFilter + 'static,
+	{
+		IntoSystem::into_system(
+			EntityOfGrid::get_grid::<TFilter>.pipe(OnError::log_and_return(HashMap::default)),
+		)
+	}
 }

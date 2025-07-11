@@ -1,15 +1,20 @@
 use super::thread_safe::ThreadSafe;
 use crate::{tools::Units, traits::accessors::get::Getter};
-use bevy::prelude::*;
-use std::hash::Hash;
+use bevy::{ecs::query::QueryFilter, prelude::*};
+use std::{collections::HashMap, hash::Hash};
 
 pub trait HandlesMapGeneration {
 	type TMap: Component;
-	type TMapAgent: Component + Getter<Map> + Default;
 	type TGraph: Graph + for<'a> From<&'a Self::TMap> + ThreadSafe;
 	type TSystemSet: SystemSet;
 
 	const SYSTEMS: Self::TSystemSet;
+
+	type TMapRef: Getter<Entity>;
+
+	fn map_mapping_of<TFilter>() -> impl IntoSystem<(), HashMap<Entity, Self::TMapRef>, ()>
+	where
+		TFilter: QueryFilter + 'static;
 }
 
 pub trait Graph:
@@ -69,10 +74,4 @@ pub enum NaivePath {
 	Ok,
 	CannotCompute,
 	PartialUntil(Vec3),
-}
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum Map {
-	None,
-	Entity(Entity),
 }
