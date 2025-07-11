@@ -9,10 +9,7 @@ mod systems;
 mod tools;
 mod traits;
 
-use crate::{
-	components::{get_grid::GetGrid, map::demo_map::DemoMap},
-	systems::get_grid::EntityOfGrid,
-};
+use crate::{components::map::demo_map::DemoMap, systems::get_grid::EntityOfGrid};
 use bevy::{ecs::query::QueryFilter, prelude::*};
 use bevy_rapier3d::prelude::Collider;
 use common::{
@@ -62,7 +59,6 @@ where
 			.add_systems(
 				Update,
 				(
-					GetGrid::update::<Changed<GlobalTransform>>.run_if(in_state(GameState::Play)),
 					WallBack::apply_extra_components::<TLights>,
 					WallLight::apply_extra_components::<TLights>,
 					FloorLight::apply_extra_components::<TLights>,
@@ -78,7 +74,6 @@ pub struct MapSystems;
 
 impl<TDependencies> HandlesMapGeneration for MapGenerationPlugin<TDependencies> {
 	type TMap = Grid<1>;
-	type TMapAgent = GetGrid;
 	type TGraph = GridGraph;
 	type TSystemSet = MapSystems;
 

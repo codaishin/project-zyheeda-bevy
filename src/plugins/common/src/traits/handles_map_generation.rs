@@ -5,7 +5,6 @@ use std::{collections::HashMap, hash::Hash};
 
 pub trait HandlesMapGeneration {
 	type TMap: Component;
-	type TMapAgent: Component + Getter<Map> + Default;
 	type TGraph: Graph + for<'a> From<&'a Self::TMap> + ThreadSafe;
 	type TSystemSet: SystemSet;
 
@@ -75,10 +74,4 @@ pub enum NaivePath {
 	Ok,
 	CannotCompute,
 	PartialUntil(Vec3),
-}
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum Map {
-	None,
-	Entity(Entity),
 }
