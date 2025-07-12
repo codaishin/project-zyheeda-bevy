@@ -17,7 +17,6 @@ pub mod handles_asset_resource_loading;
 pub mod handles_assets_for_children;
 pub mod handles_combo_menu;
 pub mod handles_custom_assets;
-pub mod handles_destruction;
 pub mod handles_effect;
 pub mod handles_enemies;
 pub mod handles_graphics;

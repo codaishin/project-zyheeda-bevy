@@ -6,7 +6,6 @@ use bevy::prelude::*;
 use common::{
 	errors::Error,
 	traits::{
-		handles_destruction::HandlesDestruction,
 		handles_interactions::HandlesInteractions,
 		handles_skill_behaviors::{Contact, Integrity, Motion, Shape},
 		load_asset::LoadAsset,
@@ -48,21 +47,19 @@ impl From<Contact> for SkillContact {
 	}
 }
 
-impl<TInteractions, TLifeCycles> Prefab<(TInteractions, TLifeCycles)> for SkillContact
+impl<TInteractions> Prefab<TInteractions> for SkillContact
 where
 	TInteractions: HandlesInteractions,
-	TLifeCycles: HandlesDestruction,
 {
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		_: &mut impl LoadAsset,
 	) -> Result<(), Error> {
-		self.shape
-			.prefab::<TInteractions, TLifeCycles>(entity, Vec3::ZERO)?;
-		self.motion
-			.prefab::<TInteractions, TLifeCycles>(entity, self.created_from)?;
-		self.integrity
-			.prefab::<TInteractions, TLifeCycles>(entity, ())
+		let created_from = self.created_from;
+
+		self.shape.prefab::<TInteractions>(entity, Vec3::ZERO)?;
+		self.motion.prefab::<TInteractions>(entity, created_from)?;
+		self.integrity.prefab::<TInteractions>(entity, ())
 	}
 }

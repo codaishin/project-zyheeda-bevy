@@ -19,7 +19,6 @@ use common::{
 	components::{asset_model::AssetModel, collider_relationship::InteractionTarget},
 	errors::{Error, Level},
 	traits::{
-		handles_destruction::HandlesDestruction,
 		handles_interactions::HandlesInteractions,
 		handles_skill_behaviors::{Integrity, Motion, Shape, Spawner},
 		prefab::PrefabEntityCommands,
@@ -30,14 +29,13 @@ use std::f32::consts::PI;
 trait SimplePrefab {
 	type TExtra;
 
-	fn prefab<TInteractions, TLifeCycles>(
+	fn prefab<TInteractions>(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		extra: Self::TExtra,
 	) -> Result<(), Error>
 	where
-		TInteractions: HandlesInteractions,
-		TLifeCycles: HandlesDestruction;
+		TInteractions: HandlesInteractions;
 }
 
 const SPHERE_MODEL: &str = "models/sphere.glb";
@@ -45,7 +43,7 @@ const SPHERE_MODEL: &str = "models/sphere.glb";
 impl SimplePrefab for Shape {
 	type TExtra = Vec3;
 
-	fn prefab<TInteractions, TLifeCycles>(
+	fn prefab<TInteractions>(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		offset: Vec3,
@@ -123,7 +121,7 @@ fn custom_collider(collider: &Collider, scale: Vec3) -> (Collider, Transform) {
 impl SimplePrefab for Integrity {
 	type TExtra = ();
 
-	fn prefab<TInteractions, TLifeCycles>(
+	fn prefab<TInteractions>(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		_: (),
@@ -147,14 +145,11 @@ impl SimplePrefab for Integrity {
 impl SimplePrefab for Motion {
 	type TExtra = CreatedFrom;
 
-	fn prefab<TInteractions, TLifeCycles>(
+	fn prefab<TInteractions>(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		created_from: CreatedFrom,
-	) -> Result<(), Error>
-	where
-		TLifeCycles: HandlesDestruction,
-	{
+	) -> Result<(), Error> {
 		match *self {
 			Motion::HeldBy { caster } => {
 				entity.try_insert_if_new((
@@ -186,9 +181,7 @@ impl SimplePrefab for Motion {
 					RigidBody::Dynamic,
 					GravityScale(0.),
 					Ccd::enabled(),
-					WhenTraveled::via::<Velocity>()
-						.distance(range)
-						.insert::<TLifeCycles::TDestroy>(),
+					WhenTraveled::via::<Velocity>().distance(range).destroy(),
 				));
 
 				if created_from == CreatedFrom::Save {
@@ -213,7 +206,7 @@ mod tests {
 	use std::collections::HashSet;
 
 	use super::*;
-	use crate::components::when_traveled_insert::InsertAfterDistanceTraveled;
+	use crate::components::when_traveled_insert::DestroyAfterDistanceTraveled;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use bevy_rapier3d::prelude::ActiveCollisionTypes;
 	use common::{
@@ -226,7 +219,6 @@ mod tests {
 		},
 		traits::{
 			clamp_zero_positive::ClampZeroPositive,
-			handles_destruction::HandlesDestruction,
 			handles_interactions::{BeamParameters, HandlesInteractions},
 		},
 	};
@@ -253,15 +245,6 @@ mod tests {
 		{
 		}
 	}
-
-	struct _LifeCycles;
-
-	impl HandlesDestruction for _LifeCycles {
-		type TDestroy = _Destroy;
-	}
-
-	#[derive(Component, Debug, PartialEq, Default)]
-	struct _Destroy;
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _IsFragile(Vec<Blocker>);
@@ -293,7 +276,7 @@ mod tests {
 		let motion = Motion::HeldBy { caster };
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			motion.prefab::<_Interactions, _LifeCycles>(entity, CreatedFrom::Contact)
+			motion.prefab::<_Interactions>(entity, CreatedFrom::Contact)
 		}))?;
 
 		assert_eq!(
@@ -317,7 +300,7 @@ mod tests {
 				app.world().entity(entity).get::<SetVelocityForward>(),
 				app.world()
 					.entity(entity)
-					.get::<InsertAfterDistanceTraveled<_Destroy, Velocity>>(),
+					.get::<DestroyAfterDistanceTraveled<Velocity>>(),
 			)
 		);
 		Ok(())
@@ -337,7 +320,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			motion.prefab::<_Interactions, _LifeCycles>(entity, CreatedFrom::Contact)
+			motion.prefab::<_Interactions>(entity, CreatedFrom::Contact)
 		}))?;
 
 		assert_eq!(
@@ -368,7 +351,7 @@ mod tests {
 				app.world().entity(entity).get::<SetVelocityForward>(),
 				app.world()
 					.entity(entity)
-					.get::<InsertAfterDistanceTraveled<_Destroy, Velocity>>(),
+					.get::<DestroyAfterDistanceTraveled<Velocity>>(),
 			)
 		);
 		Ok(())
@@ -386,7 +369,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			motion.prefab::<_Interactions, _LifeCycles>(entity, CreatedFrom::Contact)
+			motion.prefab::<_Interactions>(entity, CreatedFrom::Contact)
 		}))?;
 
 		assert_eq!(
@@ -407,7 +390,7 @@ mod tests {
 				Some(
 					&WhenTraveled::via::<Velocity>()
 						.distance(Units::new(1111.))
-						.insert::<_Destroy>()
+						.destroy()
 				),
 			),
 			(
@@ -420,7 +403,7 @@ mod tests {
 				app.world().entity(entity).get::<SetVelocityForward>(),
 				app.world()
 					.entity(entity)
-					.get::<InsertAfterDistanceTraveled<_Destroy, Velocity>>(),
+					.get::<DestroyAfterDistanceTraveled<Velocity>>(),
 			)
 		);
 		Ok(())
@@ -438,7 +421,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			motion.prefab::<_Interactions, _LifeCycles>(entity, CreatedFrom::Save)
+			motion.prefab::<_Interactions>(entity, CreatedFrom::Save)
 		}))?;
 
 		assert_eq!(
@@ -453,7 +436,7 @@ mod tests {
 				Some(
 					&WhenTraveled::via::<Velocity>()
 						.distance(Units::new(1111.))
-						.insert::<_Destroy>()
+						.destroy()
 				),
 			),
 			(
@@ -466,7 +449,7 @@ mod tests {
 				app.world().entity(entity).get::<SetVelocityForward>(),
 				app.world()
 					.entity(entity)
-					.get::<InsertAfterDistanceTraveled<_Destroy, Velocity>>(),
+					.get::<DestroyAfterDistanceTraveled<Velocity>>(),
 			)
 		);
 		Ok(())
@@ -480,7 +463,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			integrity.prefab::<_Interactions, _LifeCycles>(entity, ())
+			integrity.prefab::<_Interactions>(entity, ())
 		}))?;
 
 		assert_eq!(
@@ -507,7 +490,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			shape.prefab::<_Interactions, _LifeCycles>(entity, Vec3::new(1., 2., 3.))
+			shape.prefab::<_Interactions>(entity, Vec3::new(1., 2., 3.))
 		}))?;
 
 		assert_eq!(
@@ -535,7 +518,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			shape.prefab::<_Interactions, _LifeCycles>(entity, Vec3::new(1., 2., 3.))
+			shape.prefab::<_Interactions>(entity, Vec3::new(1., 2., 3.))
 		}))?;
 
 		assert_eq!(
@@ -562,7 +545,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			shape.prefab::<_Interactions, _LifeCycles>(entity, Vec3::ZERO)
+			shape.prefab::<_Interactions>(entity, Vec3::ZERO)
 		}))?;
 
 		let child = children_of(&app, entity)
@@ -587,7 +570,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			shape.prefab::<_Interactions, _LifeCycles>(entity, Vec3::ZERO)
+			shape.prefab::<_Interactions>(entity, Vec3::ZERO)
 		}))?;
 
 		let child = children_of(&app, entity)
@@ -619,7 +602,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			shape.prefab::<_Interactions, _LifeCycles>(entity, Vec3::ZERO)
+			shape.prefab::<_Interactions>(entity, Vec3::ZERO)
 		}))?;
 
 		let child = children_of(&app, entity)
@@ -658,7 +641,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			shape.prefab::<_Interactions, _LifeCycles>(entity, Vec3::ZERO)
+			shape.prefab::<_Interactions>(entity, Vec3::ZERO)
 		}))?;
 
 		let child = children_of(&app, entity)
@@ -678,7 +661,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			shape.prefab::<_Interactions, _LifeCycles>(entity, Vec3::ZERO)
+			shape.prefab::<_Interactions>(entity, Vec3::ZERO)
 		}))?;
 
 		let child = children_of(&app, entity)
@@ -704,7 +687,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			shape.prefab::<_Interactions, _LifeCycles>(entity, Vec3::ZERO)
+			shape.prefab::<_Interactions>(entity, Vec3::ZERO)
 		}))?;
 
 		let child = children_of(&app, entity)
@@ -739,7 +722,7 @@ mod tests {
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			shape.prefab::<_Interactions, _LifeCycles>(entity, Vec3::ZERO)
+			shape.prefab::<_Interactions>(entity, Vec3::ZERO)
 		}))?;
 
 		let child = children_of(&app, entity)

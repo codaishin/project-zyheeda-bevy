@@ -1,14 +1,15 @@
-use crate::{InsertAfterDistanceTraveled, components::skill_behavior::skill_contact::SkillContact};
+use crate::{
+	DestroyAfterDistanceTraveled,
+	components::skill_behavior::skill_contact::SkillContact,
+};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use common::traits::handles_skill_behaviors::Motion;
 
 impl SkillContact {
-	pub(crate) fn update_range<TDestroy>(
-		mut contacts: Query<(&mut Self, &InsertAfterDistanceTraveled<TDestroy, Velocity>)>,
-	) where
-		TDestroy: Component,
-	{
+	pub(crate) fn update_range(
+		mut contacts: Query<(&mut Self, &DestroyAfterDistanceTraveled<Velocity>)>,
+	) {
 		for (mut contact, range_limiter) in &mut contacts {
 			let Motion::Projectile { range, .. } = &mut contact.motion else {
 				continue;
@@ -36,9 +37,6 @@ mod tests {
 	};
 	use testing::SingleThreadedApp;
 
-	#[derive(Component)]
-	struct _Destroy;
-
 	impl SkillContact {
 		fn fake_projectile_motion(range: Units) -> Self {
 			Self {
@@ -61,7 +59,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, SkillContact::update_range::<_Destroy>);
+		app.add_systems(Update, SkillContact::update_range);
 
 		app
 	}
@@ -75,7 +73,7 @@ mod tests {
 				SkillContact::fake_projectile_motion(Units::new(100.)),
 				WhenTraveled::via::<Velocity>()
 					.distance(Units::new(42.))
-					.insert::<_Destroy>(),
+					.destroy(),
 			))
 			.id();
 

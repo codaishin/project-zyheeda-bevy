@@ -17,7 +17,6 @@ use common::{
 	blocker::Blocker,
 	traits::{
 		delta::Delta,
-		handles_destruction::HandlesDestruction,
 		handles_interactions::{BeamParameters, HandlesInteractions},
 		handles_life::HandlesLife,
 		handles_lifetime::HandlesLifetime,
@@ -60,7 +59,7 @@ pub struct InteractionsPlugin<TDependencies>(PhantomData<TDependencies>);
 impl<TSaveGame, TLifeCycle> InteractionsPlugin<(TSaveGame, TLifeCycle)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TLifeCycle: ThreadSafe + HandlesDestruction + HandlesLifetime + HandlesLife,
+	TLifeCycle: ThreadSafe + HandlesLifetime + HandlesLife,
 {
 	pub fn from_plugin(_: &TSaveGame, _: &TLifeCycle) -> Self {
 		Self(PhantomData)
@@ -70,7 +69,7 @@ where
 impl<TSaveGame, TLifeCycle> Plugin for InteractionsPlugin<(TSaveGame, TLifeCycle)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TLifeCycle: ThreadSafe + HandlesDestruction + HandlesLifetime + HandlesLife,
+	TLifeCycle: ThreadSafe + HandlesLifetime + HandlesLife,
 {
 	fn build(&self, app: &mut App) {
 		app
@@ -95,7 +94,7 @@ where
 			.add_systems(
 				Update,
 				(
-					apply_fragile_blocks::<TLifeCycle::TDestroy>,
+					apply_fragile_blocks,
 					Beam::execute::<TLifeCycle>,
 					execute_ray_caster
 						.pipe(apply_interruptable_ray_blocks)

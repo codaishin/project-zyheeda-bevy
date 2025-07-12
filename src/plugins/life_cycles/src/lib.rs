@@ -3,15 +3,14 @@ mod systems;
 
 use bevy::prelude::*;
 use common::traits::{
-	handles_destruction::HandlesDestruction,
 	handles_life::HandlesLife,
 	handles_lifetime::HandlesLifetime,
 	handles_saving::HandlesSaving,
 	thread_safe::ThreadSafe,
 };
-use components::{destroy::Destroy, life::Life, lifetime::Lifetime};
+use components::{life::Life, lifetime::Lifetime};
 use std::{marker::PhantomData, time::Duration};
-use systems::{destroy::destroy, destroy_dead::set_dead_to_be_destroyed};
+use systems::destroy_dead::set_dead_to_be_destroyed;
 
 pub struct LifeCyclesPlugin<TDependencies>(PhantomData<TDependencies>);
 
@@ -32,7 +31,6 @@ where
 		TSaveGame::register_savable_component::<Lifetime>(app);
 
 		app.add_systems(Update, set_dead_to_be_destroyed)
-			.add_systems(PostUpdate, destroy)
 			.add_systems(Update, Lifetime::update::<Virtual>);
 	}
 }
@@ -41,10 +39,6 @@ impl<TDependencies> HandlesLifetime for LifeCyclesPlugin<TDependencies> {
 	fn lifetime(duration: Duration) -> impl Bundle {
 		Lifetime(duration)
 	}
-}
-
-impl<TDependencies> HandlesDestruction for LifeCyclesPlugin<TDependencies> {
-	type TDestroy = Destroy;
 }
 
 impl<TDependencies> HandlesLife for LifeCyclesPlugin<TDependencies> {

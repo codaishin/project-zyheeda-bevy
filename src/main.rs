@@ -63,7 +63,6 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		&settings,
 		&savegame,
 		&animations,
-		&life_cycles,
 		&interactions,
 		&path_finding,
 		&enemies,
