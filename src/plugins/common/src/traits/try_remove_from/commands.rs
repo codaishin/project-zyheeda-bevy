@@ -6,7 +6,7 @@ impl TryRemoveFrom for Commands<'_, '_> {
 		let Ok(mut entity) = self.get_entity(entity) else {
 			return;
 		};
-		entity.remove::<TBundle>();
+		entity.try_remove::<TBundle>();
 	}
 }
 
