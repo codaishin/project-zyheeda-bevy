@@ -11,7 +11,7 @@ impl TryDespawn for Commands<'_, '_> {
 		let Ok(mut entity) = self.get_entity(entity) else {
 			return;
 		};
-		entity.despawn();
+		entity.try_despawn();
 	}
 }
 
