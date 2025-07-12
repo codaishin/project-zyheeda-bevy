@@ -258,6 +258,7 @@ where
 					.in_set(BehaviorSystems)
 					.after(TAnimations::SYSTEMS)
 					.after(TPathFinding::SYSTEMS)
+					.after(TInteractions::SYSTEMS)
 					.run_if(in_state(GameState::Play)),
 			);
 	}

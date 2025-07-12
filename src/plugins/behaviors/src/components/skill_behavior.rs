@@ -225,7 +225,14 @@ mod tests {
 
 	struct _Interactions;
 
+	#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone)]
+	struct _Systems;
+
 	impl HandlesInteractions for _Interactions {
+		type TSystems = _Systems;
+
+		const SYSTEMS: Self::TSystems = _Systems;
+
 		fn is_fragile_when_colliding_with<TBlockers>(blockers: TBlockers) -> impl Bundle
 		where
 			TBlockers: IntoIterator<Item = Blocker>,

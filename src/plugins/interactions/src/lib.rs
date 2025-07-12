@@ -139,12 +139,20 @@ impl AddInteraction for App {
 					RunningInteractions::<TActor, TTarget>::untrack_non_interacting_targets,
 				)
 					.chain()
+					.in_set(InteractionSystems)
 					.after(CollisionSystems),
 			)
 	}
 }
 
+#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone)]
+pub struct InteractionSystems;
+
 impl<TDependencies> HandlesInteractions for InteractionsPlugin<TDependencies> {
+	type TSystems = InteractionSystems;
+
+	const SYSTEMS: Self::TSystems = InteractionSystems;
+
 	fn is_fragile_when_colliding_with<TBlockers>(blockers: TBlockers) -> impl Bundle
 	where
 		TBlockers: IntoIterator<Item = Blocker>,
