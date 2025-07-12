@@ -1,10 +1,10 @@
-use crate::components::{destroy::Destroy, life::Life};
+use crate::components::life::Life;
 use bevy::prelude::*;
-use common::traits::try_insert_on::TryInsertOn;
+use common::traits::try_despawn::TryDespawn;
 
 pub(crate) fn set_dead_to_be_destroyed(mut commands: Commands, agents: Query<(Entity, &Life)>) {
 	for entity in agents.iter().filter_map(dead) {
-		commands.try_insert_on(entity, Destroy);
+		commands.try_despawn(entity);
 	}
 }
 
@@ -29,7 +29,7 @@ mod tests {
 	}
 
 	#[test]
-	fn add_destroy_when_health_zero() {
+	fn despawn_when_health_zero() {
 		let mut app = setup();
 		let health = app
 			.world_mut()
@@ -41,13 +41,11 @@ mod tests {
 
 		app.update();
 
-		let health = app.world().entity(health);
-
-		assert!(health.contains::<Destroy>());
+		assert!(app.world().get_entity(health).is_err());
 	}
 
 	#[test]
-	fn don_not_add_destroy_when_health_above_zero() {
+	fn do_not_despawn_when_health_above_zero() {
 		let mut app = setup();
 		let health = app
 			.world_mut()
@@ -59,13 +57,11 @@ mod tests {
 
 		app.update();
 
-		let health = app.world().entity(health);
-
-		assert!(!health.contains::<Destroy>());
+		assert!(app.world().get_entity(health).is_ok());
 	}
 
 	#[test]
-	fn add_destroy_when_health_zero_below_zero() {
+	fn despawn_when_health_zero_below_zero() {
 		let mut app = setup();
 		let health = app
 			.world_mut()
@@ -77,8 +73,6 @@ mod tests {
 
 		app.update();
 
-		let health = app.world().entity(health);
-
-		assert!(health.contains::<Destroy>());
+		assert!(app.world().get_entity(health).is_err());
 	}
 }
