@@ -1,12 +1,6 @@
+use crate::{components::lifetime::Lifetime, traits::try_despawn::TryDespawn};
 use bevy::prelude::*;
-use common::traits::try_despawn::TryDespawn;
-use macros::SavableComponent;
-use serde::{Deserialize, Serialize};
 use std::time::Duration;
-
-#[derive(Component, SavableComponent, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
-#[serde(transparent)]
-pub(crate) struct Lifetime(pub(crate) Duration);
 
 impl Lifetime {
 	pub(crate) fn update<TTime: Default + Sync + Send + 'static>(
@@ -23,6 +17,12 @@ impl Lifetime {
 				commands.try_despawn(entity);
 			}
 		}
+	}
+}
+
+impl From<Duration> for Lifetime {
+	fn from(duration: Duration) -> Self {
+		Self(duration)
 	}
 }
 

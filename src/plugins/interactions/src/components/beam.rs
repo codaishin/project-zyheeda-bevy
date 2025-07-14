@@ -3,13 +3,16 @@ use crate::events::{InteractionEvent, Ray};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::{ground_offset::GroundOffset, persistent_entity::PersistentEntity},
+	components::{
+		ground_offset::GroundOffset,
+		lifetime::Lifetime,
+		persistent_entity::PersistentEntity,
+	},
 	resources::persistent_entities::PersistentEntities,
 	tools::Units,
 	traits::{
 		cast_ray::TimeOfImpact,
 		handles_interactions::BeamParameters,
-		handles_lifetime::HandlesLifetime,
 		try_despawn::TryDespawn,
 		try_insert_on::TryInsertOn,
 	},
@@ -24,15 +27,13 @@ pub(crate) struct Beam {
 }
 
 impl Beam {
-	pub(crate) fn execute<TLifetimes>(
+	pub(crate) fn execute(
 		mut commands: Commands,
 		mut ray_cast_events: EventReader<InteractionEvent<Ray>>,
 		mut persistent_entities: ResMut<PersistentEntities>,
 		beams: Query<(Entity, &BeamCommand, Option<&Beam>)>,
 		transforms: Query<(&GlobalTransform, Option<&GroundOffset>)>,
-	) where
-		TLifetimes: HandlesLifetime,
-	{
+	) {
 		for (entity, cmd, ..) in &beams {
 			match persistent_entities.get_entity(&cmd.source) {
 				Some(source) => {
@@ -51,8 +52,6 @@ impl Beam {
 				None => despawn_beam(&mut commands, entity),
 			}
 		}
-
-		let spawn_beam = spawn_beam::<TLifetimes>;
 
 		for InteractionEvent(source, ray) in ray_cast_events.read() {
 			match beams.get(*source) {
@@ -139,17 +138,14 @@ fn get_filter(source: Entity) -> Option<RayFilter> {
 		.ok()
 }
 
-fn spawn_beam<TLifetimes>(commands: &mut Commands, entity: Entity, ray: &Ray, cmd: &BeamCommand)
-where
-	TLifetimes: HandlesLifetime,
-{
+fn spawn_beam(commands: &mut Commands, entity: Entity, ray: &Ray, cmd: &BeamCommand) {
 	let (source, target, transform) = unpack_beam_ray(ray);
 	commands.try_insert_on(
 		entity,
 		(
 			transform,
 			Beam { source, target },
-			TLifetimes::lifetime(cmd.params.lifetime),
+			Lifetime::from(cmd.params.lifetime),
 		),
 	);
 }
@@ -199,23 +195,12 @@ mod tests {
 	use std::{sync::LazyLock, time::Duration};
 	use testing::SingleThreadedApp;
 
-	struct _HandlesLifetime;
-
-	impl HandlesLifetime for _HandlesLifetime {
-		fn lifetime(duration: Duration) -> impl Bundle {
-			_LifeTime(duration)
-		}
-	}
-
-	#[derive(Component, Debug, PartialEq)]
-	struct _LifeTime(Duration);
-
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.register_persistent_entities();
 		app.add_event::<InteractionEvent<Ray>>();
-		app.add_systems(Update, Beam::execute::<_HandlesLifetime>);
+		app.add_systems(Update, Beam::execute);
 
 		app
 	}
@@ -375,11 +360,11 @@ mod tests {
 					source: Vec3::Z,
 					target: Vec3::new(0., 10., 1.),
 				}),
-				Some(&_LifeTime(Duration::from_millis(100))),
+				Some(&Lifetime::from(Duration::from_millis(100))),
 			),
 			(
 				app.world().entity(beam).get::<Beam>(),
-				app.world().entity(beam).get::<_LifeTime>()
+				app.world().entity(beam).get::<Lifetime>()
 			)
 		);
 	}

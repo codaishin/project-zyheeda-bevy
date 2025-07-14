@@ -7,10 +7,7 @@ use crate::traits::skill_builder::{SkillBuilder, SkillShape};
 use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
-	traits::{
-		handles_lifetime::HandlesLifetime,
-		handles_skill_behaviors::{HandlesSkillBehaviors, Spawner},
-	},
+	traits::handles_skill_behaviors::{HandlesSkillBehaviors, Spawner},
 };
 use spawn_ground_target::SpawnGroundTargetedAoe;
 use spawn_projectile::SpawnProjectile;
@@ -73,7 +70,7 @@ impl BuildSkillShape {
 		}
 	}
 
-	pub(crate) fn build<TLifetimes, TSkillBehaviors>(
+	pub(crate) fn build<TSkillBehaviors>(
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
@@ -81,19 +78,14 @@ impl BuildSkillShape {
 		target: &SkillTarget,
 	) -> SkillShape
 	where
-		TLifetimes: HandlesLifetime,
 		TSkillBehaviors: HandlesSkillBehaviors + 'static,
 	{
 		match self {
 			Self::GroundTargetedAoe(gt) => {
-				gt.build::<TLifetimes, TSkillBehaviors>(commands, caster, spawner, target)
+				gt.build::<TSkillBehaviors>(commands, caster, spawner, target)
 			}
-			Self::Projectile(pr) => {
-				pr.build::<TLifetimes, TSkillBehaviors>(commands, caster, spawner, target)
-			}
-			Self::Shield(sh) => {
-				sh.build::<TLifetimes, TSkillBehaviors>(commands, caster, spawner, target)
-			}
+			Self::Projectile(pr) => pr.build::<TSkillBehaviors>(commands, caster, spawner, target),
+			Self::Shield(sh) => sh.build::<TSkillBehaviors>(commands, caster, spawner, target),
 			#[cfg(test)]
 			Self::Fn(func) => func(commands, caster, spawner, target),
 		}

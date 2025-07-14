@@ -21,8 +21,6 @@ pub mod handles_effect;
 pub mod handles_enemies;
 pub mod handles_graphics;
 pub mod handles_interactions;
-pub mod handles_life;
-pub mod handles_lifetime;
 pub mod handles_lights;
 pub mod handles_load_tracking;
 pub mod handles_loadout_menu;

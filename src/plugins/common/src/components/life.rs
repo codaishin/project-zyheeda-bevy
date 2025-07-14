@@ -1,19 +1,19 @@
-use bevy::prelude::*;
-use common::{
+use crate::{
 	attributes::health::Health,
-	traits::{accessors::get::GetterRef, handles_life::ChangeLife},
+	traits::accessors::get::{GetFieldRef, Getter, GetterRef},
 };
+use bevy::prelude::*;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub struct Life(pub(crate) Health);
 
-impl ChangeLife for Life {
-	fn change_by(&mut self, value: f32) {
+impl Life {
+	pub fn change_by(&mut self, health: f32) {
 		let Life(Health { current, max }) = self;
 
-		*current += value;
+		*current += health;
 		*current = current.min(*max);
 	}
 }
@@ -21,6 +21,12 @@ impl ChangeLife for Life {
 impl From<Health> for Life {
 	fn from(health: Health) -> Self {
 		Life(health)
+	}
+}
+
+impl Getter<Health> for Life {
+	fn get(&self) -> Health {
+		*Health::get_field_ref(self)
 	}
 }
 

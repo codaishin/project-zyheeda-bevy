@@ -105,6 +105,6 @@ pub trait Schedule<TBehavior> {
 	fn schedule(&mut self, slot_key: SlotKey, behavior: TBehavior);
 }
 
-pub(crate) trait Execute<TCommands, TLifetimes, TEffects, TSkillBehavior> {
+pub(crate) trait Execute<TCommands, TEffects, TSkillBehavior> {
 	fn execute(&mut self, commands: &mut TCommands, caster: &SkillCaster, target: &SkillTarget);
 }

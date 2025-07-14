@@ -4,13 +4,12 @@ use crate::{
 };
 use common::traits::{
 	handles_effect::HandlesAllEffects,
-	handles_lifetime::HandlesLifetime,
 	handles_skill_behaviors::{HandlesSkillBehaviors, Spawner},
 };
 
 pub(crate) trait SpawnSkillBehavior<TCommands> {
 	fn spawn_on(&self) -> SpawnOn;
-	fn spawn<TLifetimes, TEffects, TSkillBehaviors>(
+	fn spawn<TEffects, TSkillBehaviors>(
 		&self,
 		commands: &mut TCommands,
 		caster: &SkillCaster,
@@ -18,7 +17,6 @@ pub(crate) trait SpawnSkillBehavior<TCommands> {
 		target: &SkillTarget,
 	) -> OnSkillStop
 	where
-		TLifetimes: HandlesLifetime + 'static,
 		TEffects: HandlesAllEffects + 'static,
 		TSkillBehaviors: HandlesSkillBehaviors + 'static;
 }

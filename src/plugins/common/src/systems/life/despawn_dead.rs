@@ -1,10 +1,11 @@
-use crate::components::life::Life;
+use crate::{components::life::Life, traits::try_despawn::TryDespawn};
 use bevy::prelude::*;
-use common::traits::try_despawn::TryDespawn;
 
-pub(crate) fn set_dead_to_be_destroyed(mut commands: Commands, agents: Query<(Entity, &Life)>) {
-	for entity in agents.iter().filter_map(dead) {
-		commands.try_despawn(entity);
+impl Life {
+	pub(crate) fn despawn_dead(mut commands: Commands, agents: Query<(Entity, &Self)>) {
+		for entity in agents.iter().filter_map(dead) {
+			commands.try_despawn(entity);
+		}
 	}
 }
 
@@ -19,11 +20,11 @@ fn dead((entity, Life(health)): (Entity, &Life)) -> Option<Entity> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::attributes::health::Health;
+	use crate::attributes::health::Health;
 
 	fn setup() -> App {
 		let mut app = App::new();
-		app.add_systems(Update, set_dead_to_be_destroyed);
+		app.add_systems(Update, Life::despawn_dead);
 
 		app
 	}
@@ -33,7 +34,7 @@ mod tests {
 		let mut app = setup();
 		let health = app
 			.world_mut()
-			.spawn(Life(Health {
+			.spawn(Life::from(Health {
 				current: 0.,
 				max: 100.,
 			}))
@@ -49,7 +50,7 @@ mod tests {
 		let mut app = setup();
 		let health = app
 			.world_mut()
-			.spawn(Life(Health {
+			.spawn(Life::from(Health {
 				current: 1.,
 				max: 100.,
 			}))
@@ -65,7 +66,7 @@ mod tests {
 		let mut app = setup();
 		let health = app
 			.world_mut()
-			.spawn(Life(Health {
+			.spawn(Life::from(Health {
 				current: -1.,
 				max: 100.,
 			}))

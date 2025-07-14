@@ -3304,18 +3304,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "life_cycles"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "common",
- "macros",
- "mockall",
- "serde",
- "testing",
-]
-
-[[package]]
 name = "light"
 version = "0.1.0"
 dependencies = [
@@ -4516,7 +4504,6 @@ dependencies = [
  "frame_limiter",
  "graphics",
  "interactions",
- "life_cycles",
  "light",
  "loading",
  "localization",

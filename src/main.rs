@@ -10,7 +10,6 @@ use enemy::EnemyPlugin;
 use frame_limiter::FrameLimiterPlugin;
 use graphics::GraphicsPlugin;
 use interactions::InteractionsPlugin;
-use life_cycles::LifeCyclesPlugin;
 use light::LightPlugin;
 use loading::LoadingPlugin;
 use localization::LocalizationPlugin;
@@ -51,9 +50,8 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let savegame = SavegamePlugin::from_plugin(&settings).with_game_directory(game_dir);
 	let animations = AnimationsPlugin::from_plugin(&savegame);
 	let light = LightPlugin::from_plugin(&savegame);
-	let life_cycles = LifeCyclesPlugin::from_plugin(&savegame);
 	let children_assets_dispatch = ChildrenAssetsDispatchPlugin::from_plugin(&loading);
-	let interactions = InteractionsPlugin::from_plugin(&savegame, &life_cycles);
+	let interactions = InteractionsPlugin::from_plugin(&savegame);
 	let enemies = EnemyPlugin::from_plugins(&savegame, &interactions);
 	let map_generation = MapGenerationPlugin::from_plugins(&loading, &savegame, &light);
 	let path_finding = PathFindingPlugin::from_plugin(&map_generation);
@@ -72,7 +70,6 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let menus = MenuPlugin::from_plugins(&loading, &savegame, &settings, &localization, &graphics);
 	let skills = SkillsPlugin::from_plugins(
 		&savegame,
-		&life_cycles,
 		&interactions,
 		&children_assets_dispatch,
 		&loading,
@@ -81,7 +78,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		&players,
 		&menus,
 	);
-	let bars = BarsPlugin::from_plugins(&life_cycles, &players, &enemies, &graphics);
+	let bars = BarsPlugin::from_plugins(&players, &enemies, &graphics);
 	let camera_control =
 		CameraControlPlugin::from_plugins(&settings, &savegame, &players, &graphics);
 
@@ -97,7 +94,6 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		.add_plugins(enemies)
 		.add_plugins(graphics)
 		.add_plugins(interactions)
-		.add_plugins(life_cycles)
 		.add_plugins(light)
 		.add_plugins(loading)
 		.add_plugins(localization)
