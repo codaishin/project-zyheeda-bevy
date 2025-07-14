@@ -22,7 +22,6 @@ use common::{
 	traits::{
 		animation::{HasAnimationsDispatch, RegisterAnimations},
 		delta::Delta,
-		handles_destruction::HandlesDestruction,
 		handles_effect::HandlesEffect,
 		handles_enemies::HandlesEnemies,
 		handles_interactions::HandlesInteractions,
@@ -58,7 +57,7 @@ use components::{
 	movement::{Movement, path_or_wasd::PathOrWasd, velocity_based::VelocityBased},
 	set_to_move_forward::SetVelocityForward,
 	skill_behavior::{skill_contact::SkillContact, skill_projection::SkillProjection},
-	when_traveled_insert::InsertAfterDistanceTraveled,
+	when_traveled_insert::DestroyAfterDistanceTraveled,
 };
 use input::{pointer_input::PointerInput, wasd_input::WasdInput};
 use std::marker::PhantomData;
@@ -79,21 +78,11 @@ use systems::{
 
 pub struct BehaviorsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<
-	TSettings,
-	TSaveGame,
-	TAnimations,
-	TLifeCycles,
-	TInteractions,
-	TPathFinding,
-	TEnemies,
-	TPlayers,
->
+impl<TSettings, TSaveGame, TAnimations, TInteractions, TPathFinding, TEnemies, TPlayers>
 	BehaviorsPlugin<(
 		TSettings,
 		TSaveGame,
 		TAnimations,
-		TLifeCycles,
 		TInteractions,
 		TPathFinding,
 		TEnemies,
@@ -103,7 +92,6 @@ where
 	TSettings: ThreadSafe + HandlesSettings,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
-	TLifeCycles: ThreadSafe + HandlesDestruction,
 	TInteractions: ThreadSafe + HandlesInteractions + HandlesEffect<DealDamage>,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
 	TEnemies: ThreadSafe + HandlesEnemies,
@@ -118,7 +106,6 @@ where
 		_: &TSettings,
 		_: &TSaveGame,
 		_: &TAnimations,
-		_: &TLifeCycles,
 		_: &TInteractions,
 		_: &TPathFinding,
 		_: &TEnemies,
@@ -128,21 +115,11 @@ where
 	}
 }
 
-impl<
-	TSettings,
-	TSaveGame,
-	TAnimations,
-	TLifeCycles,
-	TInteractions,
-	TPathFinding,
-	TEnemies,
-	TPlayers,
-> Plugin
+impl<TSettings, TSaveGame, TAnimations, TInteractions, TPathFinding, TEnemies, TPlayers> Plugin
 	for BehaviorsPlugin<(
 		TSettings,
 		TSaveGame,
 		TAnimations,
-		TLifeCycles,
 		TInteractions,
 		TPathFinding,
 		TEnemies,
@@ -152,7 +129,6 @@ where
 	TSettings: ThreadSafe + HandlesSettings,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
-	TLifeCycles: ThreadSafe + HandlesDestruction,
 	TInteractions: ThreadSafe + HandlesInteractions + HandlesEffect<DealDamage>,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
 	TEnemies: ThreadSafe + HandlesEnemies,
@@ -223,8 +199,8 @@ where
 			.register_required_components::<SkillContact, TSaveGame::TSaveEntityMarker>()
 			.register_required_components::<SkillProjection, TSaveGame::TSaveEntityMarker>()
 			// Observers
-			.add_prefab_observer::<SkillContact, (TInteractions, TLifeCycles)>()
-			.add_prefab_observer::<SkillProjection, (TInteractions, TLifeCycles)>()
+			.add_prefab_observer::<SkillContact, TInteractions>()
+			.add_prefab_observer::<SkillProjection, TInteractions>()
 			// Systems
 			.add_systems(
 				Update,
@@ -263,8 +239,8 @@ where
 						update_cool_downs::<Virtual>,
 						GroundTarget::set_position,
 						(
-							InsertAfterDistanceTraveled::<TLifeCycles::TDestroy, Velocity>::system,
-							SkillContact::update_range::<TLifeCycles::TDestroy>,
+							DestroyAfterDistanceTraveled::<Velocity>::system,
+							SkillContact::update_range,
 						)
 							.chain(),
 						SetVelocityForward::system,
@@ -282,6 +258,7 @@ where
 					.in_set(BehaviorSystems)
 					.after(TAnimations::SYSTEMS)
 					.after(TPathFinding::SYSTEMS)
+					.after(TInteractions::SYSTEMS)
 					.run_if(in_state(GameState::Play)),
 			);
 	}

@@ -3,22 +3,20 @@ use crate::{
 	events::{Collision, InteractionEvent},
 };
 use bevy::prelude::*;
-use common::{blocker::Blockers, traits::try_insert_on::TryInsertOn};
+use common::{blocker::Blockers, traits::try_despawn::TryDespawn};
 
-pub(crate) fn apply_fragile_blocks<TDestroy>(
+pub(crate) fn apply_fragile_blocks(
 	mut commands: Commands,
 	mut interaction_event: EventReader<InteractionEvent>,
 	fragiles: Query<(Entity, &Is<Fragile>)>,
 	blockers: Query<&Blockers>,
-) where
-	TDestroy: Component + Default,
-{
+) {
 	for (a, b) in interaction_event.read().filter_map(collision_started) {
 		if let Some(fragile) = fragile_blocked_entity(a, b, &fragiles, &blockers) {
-			commands.try_insert_on(fragile, TDestroy::default());
+			commands.try_despawn(fragile);
 		}
 		if let Some(fragile) = fragile_blocked_entity(b, a, &fragiles, &blockers) {
-			commands.try_insert_on(fragile, TDestroy::default());
+			commands.try_despawn(fragile);
 		}
 	}
 }
@@ -54,12 +52,9 @@ mod tests {
 	use common::blocker::Blocker;
 	use testing::SingleThreadedApp;
 
-	#[derive(Component, Default, Debug, PartialEq)]
-	struct _Destroy;
-
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, apply_fragile_blocks::<_Destroy>);
+		app.add_systems(Update, apply_fragile_blocks);
 		app.add_event::<InteractionEvent>();
 
 		app
@@ -85,9 +80,7 @@ mod tests {
 
 		app.update();
 
-		let fragile = app.world().entity(fragile);
-
-		assert_eq!(Some(&_Destroy), fragile.get::<_Destroy>());
+		assert!(app.world().get_entity(fragile).is_err());
 	}
 
 	#[test]
@@ -107,9 +100,7 @@ mod tests {
 
 		app.update();
 
-		let fragile = app.world().entity(fragile);
-
-		assert_eq!(None, fragile.get::<_Destroy>());
+		assert!(app.world().get_entity(fragile).is_ok());
 	}
 
 	#[test]
@@ -132,9 +123,7 @@ mod tests {
 
 		app.update();
 
-		let fragile = app.world().entity(fragile);
-
-		assert_eq!(Some(&_Destroy), fragile.get::<_Destroy>());
+		assert!(app.world().get_entity(fragile).is_err());
 	}
 
 	#[test]
@@ -154,8 +143,6 @@ mod tests {
 
 		app.update();
 
-		let fragile = app.world().entity(fragile);
-
-		assert_eq!(None, fragile.get::<_Destroy>());
+		assert!(app.world().get_entity(fragile).is_ok());
 	}
 }

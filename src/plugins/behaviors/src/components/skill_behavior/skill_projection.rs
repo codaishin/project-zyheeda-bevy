@@ -3,7 +3,6 @@ use bevy::prelude::*;
 use common::{
 	errors::Error,
 	traits::{
-		handles_destruction::HandlesDestruction,
 		handles_interactions::HandlesInteractions,
 		handles_skill_behaviors::{Projection, ProjectionOffset, Shape},
 		load_asset::LoadAsset,
@@ -26,10 +25,9 @@ impl From<Projection> for SkillProjection {
 	}
 }
 
-impl<TInteractions, TLifeCycles> Prefab<(TInteractions, TLifeCycles)> for SkillProjection
+impl<TInteractions> Prefab<TInteractions> for SkillProjection
 where
 	TInteractions: HandlesInteractions,
-	TLifeCycles: HandlesDestruction,
 {
 	fn insert_prefab_components(
 		&self,
@@ -41,7 +39,6 @@ where
 			_ => Vec3::ZERO,
 		};
 
-		self.shape
-			.prefab::<TInteractions, TLifeCycles>(entity, offset)
+		self.shape.prefab::<TInteractions>(entity, offset)
 	}
 }

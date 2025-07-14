@@ -15,12 +15,10 @@ use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
 	self,
 	blocker::Blocker,
+	components::life::Life,
 	traits::{
 		delta::Delta,
-		handles_destruction::HandlesDestruction,
 		handles_interactions::{BeamParameters, HandlesInteractions},
-		handles_life::HandlesLife,
-		handles_lifetime::HandlesLifetime,
 		handles_saving::{HandlesSaving, SavableComponent},
 		thread_safe::ThreadSafe,
 	},
@@ -57,27 +55,25 @@ use traits::act_on::ActOn;
 
 pub struct InteractionsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSaveGame, TLifeCycle> InteractionsPlugin<(TSaveGame, TLifeCycle)>
+impl<TSaveGame> InteractionsPlugin<TSaveGame>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TLifeCycle: ThreadSafe + HandlesDestruction + HandlesLifetime + HandlesLife,
 {
-	pub fn from_plugin(_: &TSaveGame, _: &TLifeCycle) -> Self {
+	pub fn from_plugin(_: &TSaveGame) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TSaveGame, TLifeCycle> Plugin for InteractionsPlugin<(TSaveGame, TLifeCycle)>
+impl<TSaveGame> Plugin for InteractionsPlugin<TSaveGame>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TLifeCycle: ThreadSafe + HandlesDestruction + HandlesLifetime + HandlesLife,
 {
 	fn build(&self, app: &mut App) {
 		app
 			// Deal health damage
 			.register_required_components::<DealDamageEffect, InteractingEntities>()
 			.add_observer(DealDamageEffect::update_blockers_observer)
-			.add_interaction::<DealDamageEffect, TLifeCycle::TLife, TSaveGame>()
+			.add_interaction::<DealDamageEffect, Life, TSaveGame>()
 			// Apply gravity effect
 			.register_required_components::<GravityEffect, InteractingEntities>()
 			.add_observer(GravityEffect::update_blockers_observer)
@@ -95,8 +91,8 @@ where
 			.add_systems(
 				Update,
 				(
-					apply_fragile_blocks::<TLifeCycle::TDestroy>,
-					Beam::execute::<TLifeCycle>,
+					apply_fragile_blocks,
+					Beam::execute,
 					execute_ray_caster
 						.pipe(apply_interruptable_ray_blocks)
 						.pipe(map_ray_cast_result_to_interaction_events)
@@ -140,12 +136,20 @@ impl AddInteraction for App {
 					RunningInteractions::<TActor, TTarget>::untrack_non_interacting_targets,
 				)
 					.chain()
+					.in_set(InteractionSystems)
 					.after(CollisionSystems),
 			)
 	}
 }
 
+#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone)]
+pub struct InteractionSystems;
+
 impl<TDependencies> HandlesInteractions for InteractionsPlugin<TDependencies> {
+	type TSystems = InteractionSystems;
+
+	const SYSTEMS: Self::TSystems = InteractionSystems;
+
 	fn is_fragile_when_colliding_with<TBlockers>(blockers: TBlockers) -> impl Bundle
 	where
 		TBlockers: IntoIterator<Item = Blocker>,

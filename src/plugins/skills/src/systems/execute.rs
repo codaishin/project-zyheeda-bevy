@@ -5,7 +5,6 @@ use common::{
 	tools::collider_info::ColliderInfo,
 	traits::{
 		accessors::get::GetterRefOptional,
-		handles_lifetime::HandlesLifetime,
 		handles_player::{HandlesPlayerCameras, HandlesPlayerMouse},
 		handles_skill_behaviors::HandlesSkillBehaviors,
 	},
@@ -14,15 +13,14 @@ use common::{
 impl<T> ExecuteSkills for T where T: Component<Mutability = Mutable> + Sized {}
 
 pub(crate) trait ExecuteSkills: Component<Mutability = Mutable> + Sized {
-	fn execute_system<TLifetimes, TEffects, TSkillBehaviors, TPlayers>(
+	fn execute_system<TEffects, TSkillBehaviors, TPlayers>(
 		cam_ray: Res<TPlayers::TCamRay>,
 		mouse_hover: Res<TPlayers::TMouseHover>,
 		mut commands: Commands,
 		mut agents: Query<(&PersistentEntity, &mut Self), Changed<Self>>,
 		transforms: Query<&GlobalTransform>,
 	) where
-		for<'w, 's> Self: Execute<Commands<'w, 's>, TLifetimes, TEffects, TSkillBehaviors>,
-		TLifetimes: HandlesLifetime,
+		for<'w, 's> Self: Execute<Commands<'w, 's>, TEffects, TSkillBehaviors>,
 		TSkillBehaviors: HandlesSkillBehaviors + 'static,
 		TPlayers: HandlesPlayerCameras + HandlesPlayerMouse,
 	{
@@ -67,7 +65,7 @@ mod tests {
 	};
 	use macros::NestedMocks;
 	use mockall::mock;
-	use std::{ops::DerefMut, time::Duration};
+	use std::ops::DerefMut;
 	use testing::{NestedMocks, SingleThreadedApp};
 
 	struct _Players;
@@ -109,12 +107,6 @@ mod tests {
 		mock: Mock_Executor,
 	}
 
-	struct _HandlesLife;
-
-	impl HandlesLifetime for _HandlesLife {
-		fn lifetime(_: Duration) -> impl Bundle {}
-	}
-
 	struct _HandlesEffects;
 
 	#[derive(Component)]
@@ -144,9 +136,7 @@ mod tests {
 	#[derive(Component)]
 	struct _Projection;
 
-	impl Execute<Commands<'_, '_>, _HandlesLife, _HandlesEffects, _HandlesSkillBehaviors>
-		for _Executor
-	{
+	impl Execute<Commands<'_, '_>, _HandlesEffects, _HandlesSkillBehaviors> for _Executor {
 		fn execute(&mut self, commands: &mut Commands, caster: &SkillCaster, target: &SkillTarget) {
 			self.mock.execute(commands, caster, target)
 		}
@@ -156,7 +146,6 @@ mod tests {
 		_Executor {}
 		impl<'w, 's> Execute<
 			Commands<'w, 's>,
-			_HandlesLife,
 			_HandlesEffects,
 			_HandlesSkillBehaviors
 		> for _Executor {
@@ -202,12 +191,8 @@ mod tests {
 	}
 
 	fn setup() -> App {
-		let execute_system = _Executor::execute_system::<
-			_HandlesLife,
-			_HandlesEffects,
-			_HandlesSkillBehaviors,
-			_Players,
-		>;
+		let execute_system =
+			_Executor::execute_system::<_HandlesEffects, _HandlesSkillBehaviors, _Players>;
 
 		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<_CamRay>();

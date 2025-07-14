@@ -1,13 +1,6 @@
-use super::destroy::Destroy;
+use crate::{components::lifetime::Lifetime, traits::try_despawn::TryDespawn};
 use bevy::prelude::*;
-use common::traits::try_insert_on::TryInsertOn;
-use macros::SavableComponent;
-use serde::{Deserialize, Serialize};
 use std::time::Duration;
-
-#[derive(Component, SavableComponent, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
-#[serde(transparent)]
-pub(crate) struct Lifetime(pub(crate) Duration);
 
 impl Lifetime {
 	pub(crate) fn update<TTime: Default + Sync + Send + 'static>(
@@ -17,13 +10,19 @@ impl Lifetime {
 	) {
 		let delta = time.delta();
 
-		for (id, mut lifetime) in &mut lifetimes {
+		for (entity, mut lifetime) in &mut lifetimes {
 			if delta < lifetime.0 {
 				lifetime.0 -= delta;
 			} else {
-				commands.try_insert_on(id, Destroy);
+				commands.try_despawn(entity);
 			}
 		}
+	}
+}
+
+impl From<Duration> for Lifetime {
+	fn from(duration: Duration) -> Self {
+		Self(duration)
 	}
 }
 
@@ -58,7 +57,7 @@ mod tests {
 	}
 
 	#[test]
-	fn mark_despawn_when_lifetime_zero() {
+	fn despawn_when_lifetime_zero() {
 		let mut app = setup();
 		let lifetime = app
 			.world_mut()
@@ -68,13 +67,11 @@ mod tests {
 		app.tick_time(Duration::from_secs(100));
 		app.update();
 
-		let lifetime = app.world().entity(lifetime);
-
-		assert_eq!(Some(&Destroy), lifetime.get::<Destroy>());
+		assert!(app.world().get_entity(lifetime).is_err());
 	}
 
 	#[test]
-	fn mark_despawn_when_lifetime_below_zero() {
+	fn despawn_when_lifetime_below_zero() {
 		let mut app = setup();
 		let lifetime = app
 			.world_mut()
@@ -84,8 +81,6 @@ mod tests {
 		app.tick_time(Duration::from_secs(101));
 		app.update();
 
-		let lifetime = app.world().entity(lifetime);
-
-		assert_eq!(Some(&Destroy), lifetime.get::<Destroy>());
+		assert!(app.world().get_entity(lifetime).is_err());
 	}
 }

@@ -13,7 +13,6 @@ use common::{
 	components::persistent_entity::PersistentEntity,
 	traits::{
 		handles_effect::HandlesAllEffects,
-		handles_lifetime::HandlesLifetime,
 		handles_skill_behaviors::{HandlesSkillBehaviors, Spawner},
 	},
 };
@@ -86,7 +85,7 @@ impl SkillBehaviorConfig {
 		}
 	}
 
-	pub(crate) fn spawn_shape<TLifeCycles, TSkillBehaviors>(
+	pub(crate) fn spawn_shape<TSkillBehaviors>(
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
@@ -94,11 +93,10 @@ impl SkillBehaviorConfig {
 		target: &SkillTarget,
 	) -> SkillShape
 	where
-		TLifeCycles: HandlesLifetime,
 		TSkillBehaviors: HandlesSkillBehaviors + 'static,
 	{
 		self.shape
-			.build::<TLifeCycles, TSkillBehaviors>(commands, caster, spawner, target)
+			.build::<TSkillBehaviors>(commands, caster, spawner, target)
 	}
 
 	pub(crate) fn start_contact_behavior<TEffects>(

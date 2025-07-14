@@ -24,7 +24,6 @@ use common::{
 		animation::Animation,
 		handles_custom_assets::AssetFolderPath,
 		handles_effect::HandlesAllEffects,
-		handles_lifetime::HandlesLifetime,
 		handles_localization::Token,
 		handles_skill_behaviors::{HandlesSkillBehaviors, Spawner},
 		inspect_able::InspectAble,
@@ -200,7 +199,7 @@ impl SpawnSkillBehavior<Commands<'_, '_>> for RunSkillBehavior {
 		}
 	}
 
-	fn spawn<TLifetimes, TEffects, TSkillBehaviors>(
+	fn spawn<TEffects, TSkillBehaviors>(
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
@@ -208,22 +207,21 @@ impl SpawnSkillBehavior<Commands<'_, '_>> for RunSkillBehavior {
 		target: &SkillTarget,
 	) -> OnSkillStop
 	where
-		TLifetimes: HandlesLifetime + 'static,
 		TEffects: HandlesAllEffects + 'static,
 		TSkillBehaviors: HandlesSkillBehaviors + 'static,
 	{
 		match self {
-			RunSkillBehavior::OnActive(conf) => spawn::<TLifetimes, TEffects, TSkillBehaviors>(
-				conf, commands, caster, spawner, target,
-			),
-			RunSkillBehavior::OnAim(conf) => spawn::<TLifetimes, TEffects, TSkillBehaviors>(
-				conf, commands, caster, spawner, target,
-			),
+			RunSkillBehavior::OnActive(conf) => {
+				spawn::<TEffects, TSkillBehaviors>(conf, commands, caster, spawner, target)
+			}
+			RunSkillBehavior::OnAim(conf) => {
+				spawn::<TEffects, TSkillBehaviors>(conf, commands, caster, spawner, target)
+			}
 		}
 	}
 }
 
-fn spawn<TLifetimes, TEffects, TSkillBehaviors>(
+fn spawn<TEffects, TSkillBehaviors>(
 	behavior: &SkillBehaviorConfig,
 	commands: &mut Commands,
 	caster: &SkillCaster,
@@ -231,12 +229,10 @@ fn spawn<TLifetimes, TEffects, TSkillBehaviors>(
 	target: &SkillTarget,
 ) -> OnSkillStop
 where
-	TLifetimes: HandlesLifetime + 'static,
 	TEffects: HandlesAllEffects + 'static,
 	TSkillBehaviors: HandlesSkillBehaviors + 'static,
 {
-	let shape =
-		behavior.spawn_shape::<TLifetimes, TSkillBehaviors>(commands, caster, spawner, target);
+	let shape = behavior.spawn_shape::<TSkillBehaviors>(commands, caster, spawner, target);
 
 	if let Ok(mut contact) = commands.get_entity(shape.contact) {
 		behavior.start_contact_behavior::<TEffects>(&mut contact, caster, spawner, target);
@@ -279,12 +275,6 @@ mod tests {
 
 	#[derive(Component)]
 	struct _Projection;
-
-	struct _HandlesLifetime;
-
-	impl HandlesLifetime for _HandlesLifetime {
-		fn lifetime(_: Duration) -> impl Bundle {}
-	}
 
 	struct _HandlesEffects;
 
@@ -402,7 +392,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
-				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesSkillBehaviors>(
+				behavior.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(
 					cmd, &caster, spawner, &target,
 				);
 			})?;
@@ -443,7 +433,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
-				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesSkillBehaviors>(
+				behavior.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(
 					cmd, &caster, spawner, &target,
 				);
 			})?;
@@ -480,7 +470,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
-				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesSkillBehaviors>(
+				behavior.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(
 					cmd, &caster, spawner, &target,
 				);
 			})?;
@@ -518,7 +508,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
-				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesSkillBehaviors>(
+				behavior.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(
 					cmd, &caster, spawner, &target,
 				);
 			})?;
@@ -555,7 +545,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
-				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesSkillBehaviors>(
+				behavior.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(
 					cmd, &caster, spawner, &target,
 				);
 			})?;
@@ -603,7 +593,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
-				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesSkillBehaviors>(
+				behavior.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(
 					cmd, &caster, spawner, &target,
 				);
 			})?;
@@ -644,7 +634,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
-				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesSkillBehaviors>(
+				behavior.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(
 					cmd, &caster, spawner, &target,
 				);
 			})?;
@@ -684,7 +674,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
-				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesSkillBehaviors>(
+				behavior.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(
 					cmd, &caster, spawner, &target,
 				);
 			})?;
@@ -729,7 +719,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
-				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesSkillBehaviors>(
+				behavior.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(
 					cmd, &caster, spawner, &target,
 				);
 			})?;
@@ -769,7 +759,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
-				behavior.spawn::<_HandlesLifetime, _HandlesEffects, _HandlesSkillBehaviors>(
+				behavior.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(
 					cmd, &caster, spawner, &target,
 				);
 			})?;

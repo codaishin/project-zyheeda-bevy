@@ -12,7 +12,6 @@ use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
 		handles_effect::HandlesAllEffects,
-		handles_lifetime::HandlesLifetime,
 		handles_skill_behaviors::{HandlesSkillBehaviors, Spawner},
 		try_despawn::TryDespawnPersistent,
 	},
@@ -56,12 +55,11 @@ impl<TBehavior> Flush for SkillExecuter<TBehavior> {
 	}
 }
 
-impl<TCommands, TBehavior, TLifetimes, TEffects, TSkillBehavior>
-	Execute<TCommands, TLifetimes, TEffects, TSkillBehavior> for SkillExecuter<TBehavior>
+impl<TCommands, TBehavior, TEffects, TSkillBehavior> Execute<TCommands, TEffects, TSkillBehavior>
+	for SkillExecuter<TBehavior>
 where
 	TBehavior: SpawnSkillBehavior<TCommands>,
 	TCommands: TryDespawnPersistent,
-	TLifetimes: HandlesLifetime + 'static,
 	TEffects: HandlesAllEffects + 'static,
 	TSkillBehavior: HandlesSkillBehaviors + 'static,
 {
@@ -72,9 +70,8 @@ where
 					SpawnOn::Center => Spawner::Center,
 					SpawnOn::Slot => Spawner::Slot(*slot_key),
 				};
-				let on_skill_stop_behavior = shape.spawn::<TLifetimes, TEffects, TSkillBehavior>(
-					commands, caster, spawner, target,
-				);
+				let on_skill_stop_behavior =
+					shape.spawn::<TEffects, TSkillBehavior>(commands, caster, spawner, target);
 
 				*self = match on_skill_stop_behavior {
 					OnSkillStop::Ignore => SkillExecuter::Idle,
@@ -113,16 +110,9 @@ mod tests {
 		},
 	};
 	use mockall::{mock, predicate::eq};
-	use std::time::Duration;
 	use testing::{Mock, simple_init};
 
 	struct _Commands;
-
-	struct _HandlesLifetimes;
-
-	impl HandlesLifetime for _HandlesLifetimes {
-		fn lifetime(_: Duration) -> impl Bundle {}
-	}
 
 	struct _HandlesEffects;
 
@@ -188,7 +178,7 @@ mod tests {
 			SpawnOn::Slot
 		}
 
-		fn spawn<TLifetimes, TEffects, TSkillBehaviors>(
+		fn spawn<TEffects, TSkillBehaviors>(
 			&self,
 			_: &mut _Commands,
 			_: &SkillCaster,
@@ -196,7 +186,6 @@ mod tests {
 			_: &SkillTarget,
 		) -> OnSkillStop
 		where
-			TLifetimes: HandlesLifetime + 'static,
 			TEffects: HandlesAllEffects + 'static,
 			TSkillBehaviors: HandlesSkillBehaviors + 'static,
 		{
@@ -208,7 +197,7 @@ mod tests {
 		_Behavior {}
 		impl SpawnSkillBehavior<Mock_Commands> for _Behavior {
 			fn spawn_on(&self) -> SpawnOn;
-			fn spawn<TLifetimes, TEffects, TSkillBehaviors>(
+			fn spawn<TEffects, TSkillBehaviors>(
 				&self,
 				commands: &mut Mock_Commands,
 				caster: &SkillCaster,
@@ -216,7 +205,6 @@ mod tests {
 				target: &SkillTarget,
 			) -> OnSkillStop
 			where
-				TLifetimes: HandlesLifetime + 'static,
 				TEffects: HandlesAllEffects + 'static,
 				TSkillBehaviors: HandlesSkillBehaviors + 'static;
 		}
@@ -225,7 +213,7 @@ mod tests {
 	simple_init!(Mock_Behavior);
 
 	type _Executer<'a, TCommands> =
-		&'a mut dyn Execute<TCommands, _HandlesLifetimes, _HandlesEffects, _HandlesSkillBehaviors>;
+		&'a mut dyn Execute<TCommands, _HandlesEffects, _HandlesSkillBehaviors>;
 
 	fn get_target() -> SkillTarget {
 		SkillTarget {
@@ -267,7 +255,7 @@ mod tests {
 			slot_key: SlotKey::BottomHand(Side::Right),
 			shape: Mock_Behavior::new_mock(|mock| {
 				mock.expect_spawn_on().return_const(SpawnOn::Slot);
-				mock.expect_spawn::<_HandlesLifetimes, _HandlesEffects, _HandlesSkillBehaviors>()
+				mock.expect_spawn::<_HandlesEffects, _HandlesSkillBehaviors>()
 					.withf(move |_, c, s, t| {
 						assert_eq!((&caster, &spawner, &target), (c, s, t));
 						true
@@ -292,7 +280,7 @@ mod tests {
 			slot_key: SlotKey::BottomHand(Side::Right),
 			shape: Mock_Behavior::new_mock(|mock| {
 				mock.expect_spawn_on().return_const(SpawnOn::Center);
-				mock.expect_spawn::<_HandlesLifetimes, _HandlesEffects, _HandlesSkillBehaviors>()
+				mock.expect_spawn::<_HandlesEffects, _HandlesSkillBehaviors>()
 					.withf(move |_, c, s, t| {
 						assert_eq!((&caster, &spawner, &target), (c, s, t));
 						true

@@ -5,16 +5,15 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	components::persistent_entity::PersistentEntity,
+	components::{lifetime::Lifetime, persistent_entity::PersistentEntity},
 	traits::{
-		handles_lifetime::HandlesLifetime,
 		handles_skill_behaviors::{HandlesSkillBehaviors, SkillEntities, Spawner},
 		try_insert_on::TryInsertOn,
 	},
 };
 
 pub(crate) trait SkillBuilder {
-	fn build<TLifetimes, TSkillBehaviors>(
+	fn build<TSkillBehaviors>(
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
@@ -22,7 +21,6 @@ pub(crate) trait SkillBuilder {
 		target: &SkillTarget,
 	) -> SkillShape
 	where
-		TLifetimes: HandlesLifetime,
 		TSkillBehaviors: HandlesSkillBehaviors + 'static;
 }
 
@@ -30,7 +28,7 @@ impl<T> SkillBuilder for T
 where
 	T: SpawnShape + SkillLifetime,
 {
-	fn build<TLifetimes, TSkillBehaviors>(
+	fn build<TSkillBehaviors>(
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
@@ -38,14 +36,13 @@ where
 		target: &SkillTarget,
 	) -> SkillShape
 	where
-		TLifetimes: HandlesLifetime,
 		TSkillBehaviors: HandlesSkillBehaviors + 'static,
 	{
 		let skill_entities = self.spawn_shape::<TSkillBehaviors>(commands, caster, spawner, target);
 		let on_skill_stop = match self.lifetime() {
 			LifeTimeDefinition::UntilStopped => stoppable(skill_entities.root.persistent_entity),
 			LifeTimeDefinition::UntilOutlived(duration) => {
-				lifetime::<TLifetimes>(commands, skill_entities.root.entity, duration)
+				lifetime(commands, skill_entities.root.entity, duration)
 			}
 			LifeTimeDefinition::Infinite => infinite(),
 		};
@@ -62,15 +59,8 @@ fn stoppable(skill: PersistentEntity) -> OnSkillStop {
 	OnSkillStop::Stop(skill)
 }
 
-fn lifetime<TLifetimes>(
-	commands: &mut Commands,
-	skill: Entity,
-	duration: std::time::Duration,
-) -> OnSkillStop
-where
-	TLifetimes: HandlesLifetime,
-{
-	commands.try_insert_on(skill, TLifetimes::lifetime(duration));
+fn lifetime(commands: &mut Commands, skill: Entity, duration: std::time::Duration) -> OnSkillStop {
+	commands.try_insert_on(skill, Lifetime::from(duration));
 	OnSkillStop::Ignore
 }
 
@@ -146,23 +136,6 @@ mod tests {
 		lifetime: LifeTimeDefinition,
 	}
 
-	struct _HandlesLifetime;
-
-	impl HandlesLifetime for _HandlesLifetime {
-		fn lifetime(duration: Duration) -> impl Bundle {
-			_Lifetime(duration)
-		}
-	}
-
-	#[derive(Component, Debug, PartialEq)]
-	struct _Lifetime(Duration);
-
-	impl From<Duration> for _Lifetime {
-		fn from(duration: Duration) -> Self {
-			_Lifetime(duration)
-		}
-	}
-
 	impl SkillLifetime for _Skill {
 		fn lifetime(&self) -> LifeTimeDefinition {
 			self.lifetime
@@ -206,12 +179,7 @@ mod tests {
 		mut commands: Commands,
 	) -> SkillShape {
 		let In((skill, caster, spawner, target)) = args;
-		skill.build::<_HandlesLifetime, _HandlesSkillBehaviors>(
-			&mut commands,
-			&caster,
-			spawner,
-			&target,
-		)
+		skill.build::<_HandlesSkillBehaviors>(&mut commands, &caster, spawner, &target)
 	}
 
 	macro_rules! find_entity_with {
@@ -364,8 +332,8 @@ mod tests {
 
 		let root = find_entity_with!(_Root, app).id();
 		assert_eq!(
-			Some(&_Lifetime(Duration::from_nanos(42))),
-			app.world().entity(root).get::<_Lifetime>()
+			Some(&Lifetime::from(Duration::from_nanos(42))),
+			app.world().entity(root).get::<Lifetime>()
 		);
 		Ok(())
 	}

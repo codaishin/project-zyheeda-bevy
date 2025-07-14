@@ -3,8 +3,8 @@ use common::{
 	tools::Units,
 	traits::{
 		clamp_zero_positive::ClampZeroPositive,
+		try_despawn::TryDespawn,
 		try_insert_on::TryInsertOn,
-		try_remove_from::TryRemoveFrom,
 	},
 };
 use std::marker::PhantomData;
@@ -36,8 +36,8 @@ where
 		self
 	}
 
-	pub(crate) fn insert<TInsert>(self) -> InsertAfterDistanceTraveled<TInsert, TTravel> {
-		InsertAfterDistanceTraveled {
+	pub(crate) fn destroy(self) -> DestroyAfterDistanceTraveled<TTravel> {
+		DestroyAfterDistanceTraveled {
 			remaining_distance: self.distance,
 			phantom_data: PhantomData,
 		}
@@ -45,20 +45,19 @@ where
 }
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
-pub(crate) struct InsertAfterDistanceTraveled<TInsert, TTravel> {
+pub(crate) struct DestroyAfterDistanceTraveled<TTravel> {
 	remaining_distance: Units,
-	phantom_data: PhantomData<(TInsert, TTravel)>,
+	phantom_data: PhantomData<TTravel>,
 }
 
-impl<TInsert, TTravel> InsertAfterDistanceTraveled<TInsert, TTravel> {
+impl<TTravel> DestroyAfterDistanceTraveled<TTravel> {
 	pub(crate) fn remaining_distance(&self) -> Units {
 		self.remaining_distance
 	}
 }
 
-impl<TComponent, TTravel> InsertAfterDistanceTraveled<TComponent, TTravel>
+impl<TTravel> DestroyAfterDistanceTraveled<TTravel>
 where
-	TComponent: Component + Default,
 	TTravel: Component,
 {
 	pub(crate) fn system(
@@ -71,8 +70,7 @@ where
 		for (entity, mut travel, transform, last_translation) in &mut transforms {
 			match last_translation {
 				Some(last_translation) if travel.update(transform, last_translation).done() => {
-					commands.try_insert_on(entity, TComponent::default());
-					commands.try_remove_from::<Self>(entity);
+					commands.try_despawn(entity);
 				}
 				_ => {
 					commands.try_insert_on(entity, LastTranslation(transform.translation));
@@ -119,21 +117,15 @@ mod tests {
 	#[derive(Component, Debug, PartialEq, Default)]
 	struct _Travel;
 
-	#[derive(Component, Debug, PartialEq, Default)]
-	struct _Component;
-
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(
-			Update,
-			InsertAfterDistanceTraveled::<_Component, _Travel>::system,
-		);
+		app.add_systems(Update, DestroyAfterDistanceTraveled::<_Travel>::system);
 
 		app
 	}
 
 	#[test]
-	fn insert_component_when_exceeding_max_travel_distance() {
+	fn destroy_when_exceeding_max_travel_distance() {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
@@ -141,7 +133,7 @@ mod tests {
 				Transform::from_xyz(1., 2., 3.),
 				WhenTraveled::via::<_Travel>()
 					.distance(Units::new(10.))
-					.insert::<_Component>(),
+					.destroy(),
 				_Travel,
 			))
 			.id();
@@ -152,14 +144,11 @@ mod tests {
 			.insert(Transform::from_xyz(1., 12.1, 3.));
 		app.update();
 
-		assert_eq!(
-			Some(&_Component),
-			app.world().entity(entity).get::<_Component>()
-		);
+		assert!(app.world().get_entity(entity).is_err());
 	}
 
 	#[test]
-	fn do_not_insert_component_when_not_exceeding_max_travel_distance() {
+	fn do_not_destroy_when_not_exceeding_max_travel_distance() {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
@@ -167,7 +156,7 @@ mod tests {
 				Transform::from_xyz(1., 2., 3.),
 				WhenTraveled::via::<_Travel>()
 					.distance(Units::new(5.))
-					.insert::<_Component>(),
+					.destroy(),
 				_Travel,
 			))
 			.id();
@@ -178,11 +167,11 @@ mod tests {
 			.insert(Transform::from_xyz(2., 2., 3.));
 		app.update();
 
-		assert_eq!(None, app.world().entity(entity).get::<_Component>());
+		assert!(app.world().get_entity(entity).is_ok());
 	}
 
 	#[test]
-	fn insert_component_when_exceeding_max_travel_distance_back_and_forth() {
+	fn destroy_when_exceeding_max_travel_distance_back_and_forth() {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
@@ -190,7 +179,7 @@ mod tests {
 				Transform::from_xyz(1., 2., 3.),
 				WhenTraveled::via::<_Travel>()
 					.distance(Units::new(2.))
-					.insert::<_Component>(),
+					.destroy(),
 				_Travel,
 			))
 			.id();
@@ -205,14 +194,11 @@ mod tests {
 			.insert(Transform::from_xyz(1., 2., 3.));
 		app.update();
 
-		assert_eq!(
-			Some(&_Component),
-			app.world().entity(entity).get::<_Component>()
-		);
+		assert!(app.world().get_entity(entity).is_err());
 	}
 
 	#[test]
-	fn insert_component_when_matching_max_travel_distance() {
+	fn destroy_when_matching_max_travel_distance() {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
@@ -220,7 +206,7 @@ mod tests {
 				Transform::from_xyz(1., 2., 3.),
 				WhenTraveled::via::<_Travel>()
 					.distance(Units::new(10.))
-					.insert::<_Component>(),
+					.destroy(),
 				_Travel,
 			))
 			.id();
@@ -231,14 +217,11 @@ mod tests {
 			.insert(Transform::from_xyz(1., 12.0, 3.));
 		app.update();
 
-		assert_eq!(
-			Some(&_Component),
-			app.world().entity(entity).get::<_Component>()
-		);
+		assert!(app.world().get_entity(entity).is_err());
 	}
 
 	#[test]
-	fn remove_driving_component_when_travel_distance_reached() {
+	fn only_destroy_travel_component_present() {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
@@ -246,35 +229,7 @@ mod tests {
 				Transform::from_xyz(1., 2., 3.),
 				WhenTraveled::via::<_Travel>()
 					.distance(Units::new(10.))
-					.insert::<_Component>(),
-				_Travel,
-			))
-			.id();
-
-		app.update();
-		app.world_mut()
-			.entity_mut(entity)
-			.insert(Transform::from_xyz(1., 12.0, 3.));
-		app.update();
-
-		assert_eq!(
-			None,
-			app.world()
-				.entity(entity)
-				.get::<InsertAfterDistanceTraveled::<_Component, _Travel>>()
-		);
-	}
-
-	#[test]
-	fn only_apply_when_travel_component_present() {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				Transform::from_xyz(1., 2., 3.),
-				WhenTraveled::via::<_Travel>()
-					.distance(Units::new(10.))
-					.insert::<_Component>(),
+					.destroy(),
 			))
 			.id();
 
@@ -284,6 +239,6 @@ mod tests {
 			.insert(Transform::from_xyz(1., 12.1, 3.));
 		app.update();
 
-		assert_eq!(None, app.world().entity(entity).get::<_Component>());
+		assert!(app.world().get_entity(entity).is_ok());
 	}
 }

@@ -22,7 +22,6 @@ use common::{
 		handles_combo_menu::{ConfigureCombos, HandlesComboMenu},
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
 		handles_effect::HandlesAllEffects,
-		handles_lifetime::HandlesLifetime,
 		handles_loadout_menu::{ConfigureInventory, HandlesLoadoutMenu},
 		handles_orientation::HandlesOrientation,
 		handles_player::{
@@ -69,7 +68,6 @@ pub struct SkillsPlugin<TDependencies>(PhantomData<TDependencies>);
 
 impl<
 	TSaveGame,
-	TLifeCycles,
 	TInteractions,
 	TDispatchChildrenAssets,
 	TLoading,
@@ -80,7 +78,6 @@ impl<
 >
 	SkillsPlugin<(
 		TSaveGame,
-		TLifeCycles,
 		TInteractions,
 		TDispatchChildrenAssets,
 		TLoading,
@@ -91,7 +88,6 @@ impl<
 	)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TLifeCycles: ThreadSafe + HandlesLifetime,
 	TInteractions: ThreadSafe + HandlesAllEffects,
 	TDispatchChildrenAssets: ThreadSafe + HandlesAssetsForChildren,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets,
@@ -107,7 +103,6 @@ where
 	#[allow(clippy::too_many_arguments)]
 	pub fn from_plugins(
 		_: &TSaveGame,
-		_: &TLifeCycles,
 		_: &TInteractions,
 		_: &TDispatchChildrenAssets,
 		_: &TLoading,
@@ -147,7 +142,6 @@ where
 
 		let get_inputs = get_inputs::<TSettings::TKeyMap<SlotKey>, ButtonInput<UserInput>>;
 		let execute_skill = SkillExecuter::<RunSkillBehavior>::execute_system::<
-			TLifeCycles,
 			TInteractions,
 			TBehaviors,
 			TPlayers,
@@ -189,7 +183,6 @@ where
 
 impl<
 	TSaveGame,
-	TLifeCycles,
 	TInteractions,
 	TDispatchChildrenAssets,
 	TLoading,
@@ -200,7 +193,6 @@ impl<
 > Plugin
 	for SkillsPlugin<(
 		TSaveGame,
-		TLifeCycles,
 		TInteractions,
 		TDispatchChildrenAssets,
 		TLoading,
@@ -211,7 +203,6 @@ impl<
 	)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TLifeCycles: ThreadSafe + HandlesLifetime,
 	TInteractions: ThreadSafe + HandlesAllEffects,
 	TDispatchChildrenAssets: ThreadSafe + HandlesAssetsForChildren,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets,
