@@ -12,10 +12,12 @@ use crate::{
 	},
 	map_cells::MapCells,
 	map_loader::TextLoader,
+	resources::color_lookup::{ColorLookup, ColorLookupImage},
+	systems::color_lookup::load_images::ColorLookupAssetPath,
 };
 use bevy::prelude::*;
 use common::{
-	states::game_state::LoadingGame,
+	states::game_state::{GameState, LoadingEssentialAssets, LoadingGame},
 	systems::log::OnError,
 	traits::{
 		handles_load_tracking::{
@@ -41,7 +43,8 @@ pub(crate) trait RegisterMapCell {
 			+ GridCellDistanceDefinition
 			+ IsWalkable
 			+ InsertCellComponents
-			+ InsertCellQuadrantComponents;
+			+ InsertCellQuadrantComponents
+			+ ColorLookupAssetPath;
 }
 
 impl RegisterMapCell for App {
@@ -56,7 +59,8 @@ impl RegisterMapCell for App {
 			+ GridCellDistanceDefinition
 			+ IsWalkable
 			+ InsertCellComponents
-			+ InsertCellQuadrantComponents,
+			+ InsertCellQuadrantComponents
+			+ ColorLookupAssetPath,
 	{
 		let resolving_dependencies =
 			TLoading::processing_state::<LoadingGame, DependenciesProgress>();
@@ -68,11 +72,28 @@ impl RegisterMapCell for App {
 		// Track wether assets have been loaded
 		TLoading::register_load_tracking::<MapAssetCells<TCell>, LoadingGame, AssetsProgress>()
 			.in_app(self, MapAssetCells::<TCell>::all_loaded);
+		TLoading::register_load_tracking::<
+			ColorLookup<TCell>,
+			LoadingEssentialAssets,
+			AssetsProgress,
+		>()
+		.in_app(self, resource_exists::<ColorLookup<TCell>>);
 
 		self
 			// register cell asset
 			.init_asset::<MapCells<TCell>>()
 			.register_asset_loader(TextLoader::<MapCells<TCell>>::default())
+			// Color Lookup
+			.add_systems(
+				OnEnter(GameState::LoadingEssentialAssets),
+				ColorLookupImage::<TCell>::lookup_images,
+			)
+			.add_systems(
+				Update,
+				ColorLookup::<TCell>::parse_images
+					.pipe(OnError::log)
+					.run_if(not(resource_exists::<ColorLookup<TCell>>)),
+			)
 			// Generate Cells and Graph from asset path
 			.add_observer(MapAssetPath::<TCell>::insert_map_cells)
 			.add_systems(

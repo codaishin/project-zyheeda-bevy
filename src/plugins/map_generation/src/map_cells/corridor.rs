@@ -16,6 +16,9 @@ use crate::{
 		},
 		wall_cell::WallCell,
 	},
+	map_cells::parsed_color::ParsedColor,
+	resources::color_lookup::ColorLookup,
+	systems::color_lookup::load_images::ColorLookupAssetPath,
 	traits::{
 		GridCellDistanceDefinition,
 		insert_cell_components::InsertCellComponents,
@@ -60,6 +63,20 @@ impl From<Option<char>> for Corridor {
 			_ => Corridor::Wall,
 		}
 	}
+}
+
+impl From<(ParsedColor, ColorLookup<Corridor>)> for Corridor {
+	fn from((ParsedColor(color), lookup): (ParsedColor, ColorLookup<Corridor>)) -> Self {
+		if matches!(color, Some(color) if color == lookup.floor) {
+			return Corridor::Floor;
+		}
+
+		Corridor::Wall
+	}
+}
+
+impl ColorLookupAssetPath for Corridor {
+	const LOOKUP_ROOT: &str = "maps/lookup/corridor";
 }
 
 impl InsertCellComponents for Corridor {

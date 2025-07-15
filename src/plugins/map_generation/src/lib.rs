@@ -5,6 +5,7 @@ mod line_wide;
 mod map_cells;
 mod map_loader;
 mod observers;
+mod resources;
 mod systems;
 mod tools;
 mod traits;

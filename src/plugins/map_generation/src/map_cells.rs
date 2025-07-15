@@ -1,5 +1,6 @@
 pub(crate) mod corridor;
 pub(crate) mod half_offset_cell;
+pub(crate) mod parsed_color;
 
 use bevy::prelude::*;
 use common::traits::thread_safe::ThreadSafe;
