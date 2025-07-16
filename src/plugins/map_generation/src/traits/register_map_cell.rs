@@ -72,21 +72,21 @@ impl RegisterMapCell for App {
 		let resolving_dependencies =
 			TLoading::processing_state::<LoadingGame, DependenciesProgress>();
 
-		let map_lookup_progress = TLoading::register_load_tracking::<
+		let map_lookup_loaded = TLoading::register_load_tracking::<
 			ColorLookup<TCell>,
 			LoadingEssentialAssets,
 			AssetsProgress,
 		>();
-		let map_asset_progress =
-			TLoading::register_load_tracking::<MapAsset<TCell>, LoadingGame, AssetsProgress>();
+		let map_images_loaded =
+			TLoading::register_load_tracking::<MapImage<TCell>, LoadingGame, AssetsProgress>();
 
 		//save maps
 		TSavegame::register_savable_component::<MapAsset<TCell>>(self);
 		self.register_required_components::<MapAsset<TCell>, TSavegame::TSaveEntityMarker>();
 
 		// Track wether assets have been loaded
-		map_lookup_progress.in_app(self, resource_exists::<ColorLookup<TCell>>);
-		map_asset_progress.in_app(self, MapImage::<TCell>::all_loaded);
+		map_lookup_loaded.in_app(self, resource_exists::<ColorLookup<TCell>>);
+		map_images_loaded.in_app(self, MapImage::<TCell>::all_loaded);
 
 		self
 			// Map color lookup
