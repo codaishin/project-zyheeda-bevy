@@ -1,11 +1,13 @@
-use std::{any::type_name, marker::PhantomData};
-
-use crate::resources::color_lookup::{ColorLookup, ColorLookupImage};
+use crate::{
+	resources::color_lookup::{ColorLookup, ColorLookupImage},
+	traits::pixels::PixelBytes,
+};
 use bevy::prelude::*;
 use common::{
 	errors::{Error, Level, Unreachable},
 	traits::thread_safe::ThreadSafe,
 };
+use std::{any::type_name, marker::PhantomData};
 
 impl<TCell> ColorLookup<TCell>
 where
@@ -17,16 +19,6 @@ where
 		images: Res<Assets<Image>>,
 	) -> Result<(), ParseImagesError<TCell>> {
 		parse_images(commands, lookup, images)
-	}
-}
-
-pub(crate) trait PixelBytes {
-	fn pixel_bytes(&self, coords: UVec3) -> Option<&[u8]>;
-}
-
-impl PixelBytes for Image {
-	fn pixel_bytes(&self, coords: UVec3) -> Option<&[u8]> {
-		self.pixel_bytes(coords)
 	}
 }
 
