@@ -16,6 +16,14 @@ impl<TCell> ColorLookup<TCell> {
 	}
 }
 
+impl<TCell> Clone for ColorLookup<TCell> {
+	fn clone(&self) -> Self {
+		*self
+	}
+}
+
+impl<TCell> Copy for ColorLookup<TCell> {}
+
 #[derive(Resource, Debug)]
 pub(crate) struct ColorLookupImage<TCell, TImage = Image>
 where

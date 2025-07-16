@@ -29,10 +29,11 @@ use crate::{
 use bevy::prelude::*;
 use std::collections::HashSet;
 
-#[derive(Debug, PartialEq, Clone, TypePath)]
+#[derive(Debug, PartialEq, Clone, TypePath, Default)]
 pub(crate) enum Corridor {
-	Floor,
+	#[default]
 	Wall,
+	Floor,
 }
 
 impl Corridor {
@@ -66,8 +67,8 @@ impl From<Option<char>> for Corridor {
 }
 
 impl From<(ParsedColor, ColorLookup<Corridor>)> for Corridor {
-	fn from((ParsedColor(color), lookup): (ParsedColor, ColorLookup<Corridor>)) -> Self {
-		if matches!(color, Some(color) if color == lookup.floor) {
+	fn from((parsed, lookup): (ParsedColor, ColorLookup<Corridor>)) -> Self {
+		if matches!(parsed.color(), Some(color) if color == &lookup.floor) {
 			return Corridor::Floor;
 		}
 

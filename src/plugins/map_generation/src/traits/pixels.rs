@@ -16,6 +16,7 @@ pub(crate) trait PixelBytesIterator {
 	fn iter_pixel_bytes(&self, layer: Layer) -> Self::TIter<'_>;
 }
 
+#[derive(Debug, PartialEq)]
 pub(crate) struct Layer(pub(crate) u32);
 
 impl<TImage> PixelBytesIterator for TImage

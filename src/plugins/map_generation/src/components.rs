@@ -4,6 +4,7 @@ pub(crate) mod floor_light;
 pub(crate) mod grid;
 pub(crate) mod half_offset_grid;
 pub(crate) mod map;
+pub(crate) mod map_cells;
 pub(crate) mod quadrants;
 pub(crate) mod wall_back;
 pub(crate) mod wall_cell;

@@ -107,7 +107,7 @@ fn half_offset_quadrants<TCell>(z: usize, x: usize, grid: &[Vec<TCell>]) -> [(Di
 where
 	TCell: Clone,
 {
-	HalfOffsetCell::with_quadrants(x, z).map(|(x, z, dir)| (dir, grid[z][x].clone()))
+	HalfOffsetCell::directions(x, z).map(|(x, z, dir)| (dir, grid[z][x].clone()))
 }
 
 fn greater_than<T>(than: usize) -> impl FnMut(&(usize, &T)) -> bool {
@@ -243,9 +243,41 @@ impl<'a> From<Option<&'a char>> for Tile {
 }
 
 #[cfg(test)]
-mod tests {
+mod test_direction {
 	use super::*;
 	use test_case::test_case;
+
+	#[test_case(Direction::NegZ, Dir3::NEG_Z; "neg z")]
+	#[test_case(Direction::NegX, Dir3::NEG_X; "neg x")]
+	#[test_case(Direction::Z, Dir3::Z; "z")]
+	#[test_case(Direction::X, Dir3::X; "x")]
+	fn dir3_from_direction(value: Direction, result: Dir3) {
+		assert_eq!(result, Dir3::from(value));
+	}
+
+	#[test_case(Direction::NegZ, Direction::NegX, 1; "neg z once")]
+	#[test_case(Direction::NegX, Direction::Z, 1; "neg x once")]
+	#[test_case(Direction::Z, Direction::X, 1; "z once")]
+	#[test_case(Direction::X, Direction::NegZ, 1; "x once")]
+	#[test_case(Direction::NegZ, Direction::NegZ, 0; "neg z zero")]
+	#[test_case(Direction::NegZ, Direction::Z, 2; "neg z twice")]
+	#[test_case(Direction::NegZ, Direction::X, 3; "neg z thrice")]
+	fn rotate_right(value: Direction, result: Direction, times: u8) {
+		assert_eq!(result, value.rotated_right(times));
+	}
+
+	#[test_case(Direction::NegZ, Direction::X; "neg z")]
+	#[test_case(Direction::NegX, Direction::NegZ; "neg x")]
+	#[test_case(Direction::Z, Direction::NegX; "z")]
+	#[test_case(Direction::X, Direction::Z; "x")]
+	fn rotate_left(value: Direction, result: Direction) {
+		assert_eq!(result, value.rotated_left());
+	}
+}
+
+#[cfg(test)]
+mod test_from_string {
+	use super::*;
 
 	#[derive(TypePath, Debug, PartialEq, Clone)]
 	struct _Cell(Option<char>);
@@ -455,32 +487,5 @@ mod tests {
 			map
 		);
 		Ok(())
-	}
-
-	#[test_case(Direction::NegZ, Dir3::NEG_Z; "neg z")]
-	#[test_case(Direction::NegX, Dir3::NEG_X; "neg x")]
-	#[test_case(Direction::Z, Dir3::Z; "z")]
-	#[test_case(Direction::X, Dir3::X; "x")]
-	fn dir3_from_direction(value: Direction, result: Dir3) {
-		assert_eq!(result, Dir3::from(value));
-	}
-
-	#[test_case(Direction::NegZ, Direction::NegX, 1; "neg z once")]
-	#[test_case(Direction::NegX, Direction::Z, 1; "neg x once")]
-	#[test_case(Direction::Z, Direction::X, 1; "z once")]
-	#[test_case(Direction::X, Direction::NegZ, 1; "x once")]
-	#[test_case(Direction::NegZ, Direction::NegZ, 0; "neg z zero")]
-	#[test_case(Direction::NegZ, Direction::Z, 2; "neg z twice")]
-	#[test_case(Direction::NegZ, Direction::X, 3; "neg z thrice")]
-	fn rotate_right(value: Direction, result: Direction, times: u8) {
-		assert_eq!(result, value.rotated_right(times));
-	}
-
-	#[test_case(Direction::NegZ, Direction::X; "neg z")]
-	#[test_case(Direction::NegX, Direction::NegZ; "neg x")]
-	#[test_case(Direction::Z, Direction::NegX; "z")]
-	#[test_case(Direction::X, Direction::Z; "x")]
-	fn rotate_left(value: Direction, result: Direction) {
-		assert_eq!(result, value.rotated_left());
 	}
 }
