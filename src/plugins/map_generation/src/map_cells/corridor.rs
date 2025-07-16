@@ -24,9 +24,11 @@ use crate::{
 		insert_cell_components::InsertCellComponents,
 		insert_cell_quadrant_components::{InsertCellQuadrantComponents, PatternMatches, Quadrant},
 		is_walkable::IsWalkable,
+		parse_map_image::ParseMapImage,
 	},
 };
 use bevy::prelude::*;
+use common::errors::Unreachable;
 use std::collections::HashSet;
 
 #[derive(Debug, PartialEq, Clone, TypePath, Default)]
@@ -66,13 +68,15 @@ impl From<Option<char>> for Corridor {
 	}
 }
 
-impl From<(ParsedColor, ColorLookup<Corridor>)> for Corridor {
-	fn from((parsed, lookup): (ParsedColor, ColorLookup<Corridor>)) -> Self {
-		if matches!(parsed.color(), Some(color) if color == &lookup.floor) {
-			return Corridor::Floor;
+impl ParseMapImage<ParsedColor, Corridor> for Corridor {
+	type TParseError = Unreachable;
+
+	fn try_parse(image: &ParsedColor, lookup: &ColorLookup<Corridor>) -> Result<Self, Unreachable> {
+		if matches!(image.color(), Some(color) if color == &lookup.floor) {
+			return Ok(Corridor::Floor);
 		}
 
-		Corridor::Wall
+		Ok(Corridor::Wall)
 	}
 }
 

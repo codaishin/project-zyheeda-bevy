@@ -3,7 +3,10 @@ pub(crate) mod half_offset_cell;
 pub(crate) mod parsed_color;
 
 use bevy::prelude::*;
-use common::traits::thread_safe::ThreadSafe;
+use common::{
+	errors::{Error, Level},
+	traits::thread_safe::ThreadSafe,
+};
 use half_offset_cell::HalfOffsetCell;
 use std::fmt::Display;
 
@@ -14,27 +17,6 @@ where
 {
 	cells: Vec<Vec<TCell>>,
 	half_offset_cells: Vec<Vec<HalfOffsetCell<TCell>>>,
-}
-
-impl<TCell> MapCells<TCell>
-where
-	TCell: TypePath + ThreadSafe,
-{
-	pub(crate) fn cells(&self) -> &Vec<Vec<TCell>> {
-		&self.cells
-	}
-
-	pub(crate) fn half_offset_cells(&self) -> &Vec<Vec<HalfOffsetCell<TCell>>> {
-		&self.half_offset_cells
-	}
-
-	#[cfg(test)]
-	pub(crate) fn new(cells: Vec<Vec<TCell>>, quadrants: Vec<Vec<HalfOffsetCell<TCell>>>) -> Self {
-		Self {
-			cells,
-			half_offset_cells: quadrants,
-		}
-	}
 }
 
 impl<TCell> Default for MapCells<TCell>
@@ -165,6 +147,21 @@ impl MapSizeError {
 impl Display for MapSizeError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		write!(f, "Minimum map size of 2x2 required, but map was {self:?}")
+	}
+}
+
+impl From<MapSizeError> for Error {
+	fn from(error: MapSizeError) -> Self {
+		match error {
+			MapSizeError::Empty => Self::Single {
+				msg: String::from("map is empty"),
+				lvl: Level::Error,
+			},
+			MapSizeError::Sizes { x, z } => Self::Single {
+				msg: format!("map too small with x={x} and z={z}"),
+				lvl: Level::Error,
+			},
+		}
 	}
 }
 

@@ -1,71 +1,81 @@
 use crate::{
 	map_cells::{MapSizeError, half_offset_cell::HalfOffsetCell, parsed_color::ParsedColor},
 	resources::color_lookup::ColorLookup,
-	traits::pixels::{Layer, PixelBytesIterator},
+	traits::{
+		parse_map_image::ParseMapImage,
+		pixels::{Layer, PixelBytesIterator},
+	},
 };
 use bevy::prelude::*;
-use common::traits::thread_safe::ThreadSafe;
+use common::{errors::Unreachable, traits::thread_safe::ThreadSafe};
 use std::collections::HashMap;
 
 pub(crate) type CellGrid<TCell> = HashMap<(usize, usize), TCell>;
 
 #[derive(Component, Debug, PartialEq)]
 #[component(immutable)]
-pub(crate) struct MapCells<TCell>
-where
-	TCell: TypePath + ThreadSafe,
-{
+pub(crate) struct MapCells<TCell> {
+	pub(crate) size: Size,
 	pub(crate) cells: CellGrid<TCell>,
 	pub(crate) half_offset_cells: CellGrid<HalfOffsetCell<TCell>>,
 }
 
-impl<TCell> Default for MapCells<TCell>
-where
-	TCell: TypePath + ThreadSafe,
-{
+#[derive(Debug, PartialEq, Default, Clone, Copy)]
+pub(crate) struct Size {
+	pub(crate) x: usize,
+	pub(crate) z: usize,
+}
+
+impl<TCell> Default for MapCells<TCell> {
 	fn default() -> Self {
 		Self {
+			size: Size::default(),
 			cells: CellGrid::default(),
 			half_offset_cells: CellGrid::default(),
 		}
 	}
 }
 
-impl<TCell, TImage> TryFrom<(TImage, ColorLookup<TCell>)> for MapCells<TCell>
+impl<TCell, TImage> ParseMapImage<TImage, TCell> for MapCells<TCell>
 where
 	TImage: PixelBytesIterator,
-	TCell: From<(ParsedColor, ColorLookup<TCell>)> + TypePath + Clone + ThreadSafe + Default,
+	for<'a> TCell:
+		ParseMapImage<ParsedColor, TCell, TParseError = Unreachable> + Clone + ThreadSafe + Default,
 {
-	type Error = MapSizeError;
+	type TParseError = MapSizeError;
 
-	fn try_from((image, lookup): (TImage, ColorLookup<TCell>)) -> Result<Self, Self::Error> {
-		let mut max_x = 0;
-		let mut max_z = 0;
+	fn try_parse(image: &TImage, lookup: &ColorLookup<TCell>) -> Result<Self, MapSizeError> {
+		let mut max = Size { x: 0, z: 0 };
 		let mut cells = CellGrid::default();
 		let mut half_offset_cells = CellGrid::default();
 
 		for (UVec3 { x, y, .. }, bytes) in image.iter_pixel_bytes(Layer(0)) {
 			let x = x as usize;
 			let z = y as usize;
-			max_x = usize::max(x, max_x);
-			max_z = usize::max(z, max_z);
+			max.x = usize::max(x, max.x);
+			max.z = usize::max(z, max.z);
 
-			cells.insert((x, z), TCell::from((ParsedColor::parse(bytes), lookup)));
+			let Ok(cell) = TCell::try_parse(&ParsedColor::parse(bytes), lookup);
+			cells.insert((x, z), cell);
 		}
 
 		if cells.is_empty() {
 			return Err(MapSizeError::Empty);
 		}
 
-		if max_x == 0 || max_z == 0 {
+		if max.x == 0 || max.z == 0 {
 			return Err(MapSizeError::Sizes {
-				x: max_x + 1,
-				z: max_z + 1,
+				x: max.x + 1,
+				z: max.z + 1,
 			});
 		}
 
-		for x in 1..=max_x {
-			for z in 1..=max_z {
+		let size = Size {
+			x: max.x + 1,
+			z: max.z + 1,
+		};
+		for x in 1..size.x {
+			for z in 1..size.z {
 				let directions = HalfOffsetCell::directions(x, z).map(|(x, z, dir)| {
 					let cell = cells.get(&(x, z)).cloned().unwrap_or_default();
 					(dir, cell)
@@ -75,6 +85,7 @@ where
 		}
 
 		Ok(Self {
+			size,
 			cells,
 			half_offset_cells,
 		})
@@ -99,9 +110,14 @@ mod test_from_image {
 		Value((ParsedColor, ColorLookup<Self>)),
 	}
 
-	impl From<(ParsedColor, ColorLookup<Self>)> for _Cell {
-		fn from(value: (ParsedColor, ColorLookup<Self>)) -> Self {
-			_Cell::Value(value)
+	impl ParseMapImage<ParsedColor, Self> for _Cell {
+		type TParseError = Unreachable;
+
+		fn try_parse(
+			parsed_color: &ParsedColor,
+			lookup: &ColorLookup<Self>,
+		) -> Result<Self, Self::TParseError> {
+			Ok(_Cell::Value((*parsed_color, *lookup)))
 		}
 	}
 
@@ -137,7 +153,7 @@ mod test_from_image {
 		let image = _Image(vec![]);
 		let lookup = ColorLookup::new(Color::srgba_u8(0, 0, 0, 0));
 
-		let map = MapCells::<_Cell>::try_from((image, lookup));
+		let map = MapCells::<_Cell>::try_parse(&image, &lookup);
 
 		assert_eq!(Err(MapSizeError::Empty), map);
 	}
@@ -147,7 +163,7 @@ mod test_from_image {
 		let image = _Image(vec![(uvec3(0, 0, 0), &[]), (uvec3(1, 0, 0), &[])]);
 		let lookup = ColorLookup::new(Color::srgba_u8(0, 0, 0, 0));
 
-		let map = MapCells::<_Cell>::try_from((image, lookup));
+		let map = MapCells::<_Cell>::try_parse(&image, &lookup);
 
 		assert_eq!(Err(MapSizeError::Sizes { x: 2, z: 1 }), map);
 	}
@@ -157,7 +173,7 @@ mod test_from_image {
 		let image = _Image(vec![(uvec3(0, 0, 0), &[]), (uvec3(0, 1, 0), &[])]);
 		let lookup = ColorLookup::new(Color::srgba_u8(0, 0, 0, 0));
 
-		let map = MapCells::<_Cell>::try_from((image, lookup));
+		let map = MapCells::<_Cell>::try_parse(&image, &lookup);
 
 		assert_eq!(Err(MapSizeError::Sizes { x: 1, z: 2 }), map);
 	}
@@ -167,7 +183,7 @@ mod test_from_image {
 		let image = _Image(vec![(uvec3(0, 0, 0), &[])]);
 		let lookup = ColorLookup::new(Color::srgba_u8(0, 0, 0, 0));
 
-		let map = MapCells::<_Cell>::try_from((image, lookup));
+		let map = MapCells::<_Cell>::try_parse(&image, &lookup);
 
 		assert_eq!(Err(MapSizeError::Sizes { x: 1, z: 1 }), map);
 	}
@@ -190,7 +206,7 @@ mod test_from_image {
 		});
 		let lookup = ColorLookup::new(Color::srgba_u8(0, 0, 0, 0));
 
-		_ = MapCells::<_Cell>::try_from((image, lookup))
+		_ = MapCells::<_Cell>::try_parse(&image, &lookup)
 	}
 
 	#[test]
@@ -202,10 +218,11 @@ mod test_from_image {
 			(uvec3(1, 1, 0), &[4, 4, 4, 4]),
 		]);
 		let lookup = ColorLookup::new(Color::srgb_u8(1, 2, 3));
-		let map = MapCells::<_Cell>::try_from((image, lookup))?;
+		let map = MapCells::<_Cell>::try_parse(&image, &lookup)?;
 
 		assert_eq!(
 			MapCells {
+				size: Size { x: 2, z: 2 },
 				cells: CellGrid::from([
 					(
 						(0, 0),
@@ -259,10 +276,11 @@ mod test_from_image {
 			(uvec3(1, 1, 0), &[4, 4, 4, 4]),
 		]);
 		let lookup = ColorLookup::new(Color::srgb_u8(1, 2, 3));
-		let map = MapCells::<_Cell>::try_from((image, lookup))?;
+		let map = MapCells::<_Cell>::try_parse(&image, &lookup)?;
 
 		assert_eq!(
 			MapCells {
+				size: Size { x: 2, z: 2 },
 				cells: CellGrid::from([
 					(
 						(0, 0),
@@ -315,10 +333,11 @@ mod test_from_image {
 			(uvec3(2, 2, 0), &[2, 2, 0, 0]),
 		]);
 		let lookup = ColorLookup::new(Color::srgb_u8(1, 2, 3));
-		let map = MapCells::<_Cell>::try_from((image, lookup))?;
+		let map = MapCells::<_Cell>::try_parse(&image, &lookup)?;
 
 		assert_eq!(
 			MapCells {
+				size: Size { x: 3, z: 3 },
 				cells: CellGrid::from([
 					(
 						(0, 0),

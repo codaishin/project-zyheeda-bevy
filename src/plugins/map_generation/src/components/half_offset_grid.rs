@@ -34,8 +34,8 @@ impl HalfOffsetGrid {
 	}
 }
 
-impl From<GridGraph> for HalfOffsetGrid {
-	fn from(_: GridGraph) -> Self {
+impl From<&GridGraph> for HalfOffsetGrid {
+	fn from(_: &GridGraph) -> Self {
 		Self
 	}
 }

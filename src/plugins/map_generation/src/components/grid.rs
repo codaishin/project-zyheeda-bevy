@@ -84,9 +84,11 @@ impl Default for Grid {
 	}
 }
 
-impl From<GridGraph> for Grid {
-	fn from(graph: GridGraph) -> Self {
-		Grid { graph }
+impl From<&GridGraph> for Grid {
+	fn from(graph: &GridGraph) -> Self {
+		Grid {
+			graph: graph.clone(),
+		}
 	}
 }
 

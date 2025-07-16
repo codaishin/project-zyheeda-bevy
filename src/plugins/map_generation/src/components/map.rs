@@ -2,7 +2,7 @@ pub(crate) mod demo_map;
 
 use crate::{grid_graph::GridGraph, map_cells::MapCells};
 use bevy::prelude::*;
-use common::traits::{handles_load_tracking::Loaded, load_asset::Path, thread_safe::ThreadSafe};
+use common::traits::{load_asset::Path, thread_safe::ThreadSafe};
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
@@ -49,28 +49,6 @@ where
 	TCell: TypePath + ThreadSafe,
 {
 	cells: Handle<MapCells<TCell>>,
-}
-
-impl<TCell> MapAssetCells<TCell>
-where
-	TCell: TypePath + ThreadSafe,
-{
-	pub(crate) fn cells(&self) -> &Handle<MapCells<TCell>> {
-		&self.cells
-	}
-}
-
-impl<TCell> MapAssetCells<TCell>
-where
-	TCell: TypePath + ThreadSafe,
-{
-	pub(crate) fn all_loaded(map_cells: Query<&Self>, asset_server: Res<AssetServer>) -> Loaded {
-		Loaded(
-			map_cells
-				.iter()
-				.all(|map_cells| asset_server.is_loaded_with_dependencies(map_cells.cells.id())),
-		)
-	}
 }
 
 impl<TCell> From<Handle<MapCells<TCell>>> for MapAssetCells<TCell>
