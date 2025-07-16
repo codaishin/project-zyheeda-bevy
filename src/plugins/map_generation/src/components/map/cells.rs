@@ -1,5 +1,9 @@
+pub(crate) mod corridor;
+pub(crate) mod half_offset_cell;
+pub(crate) mod parsed_color;
+
 use crate::{
-	map_cells::{MapSizeError, half_offset_cell::HalfOffsetCell, parsed_color::ParsedColor},
+	components::map::cells::{half_offset_cell::HalfOffsetCell, parsed_color::ParsedColor},
 	resources::color_lookup::ColorLookup,
 	traits::{
 		parse_map_image::ParseMapImage,
@@ -7,8 +11,11 @@ use crate::{
 	},
 };
 use bevy::prelude::*;
-use common::{errors::Unreachable, traits::thread_safe::ThreadSafe};
-use std::collections::HashMap;
+use common::{
+	errors::{Error, Level, Unreachable},
+	traits::thread_safe::ThreadSafe,
+};
+use std::{collections::HashMap, fmt::Display};
 
 pub(crate) type CellGrid<TCell> = HashMap<(usize, usize), TCell>;
 
@@ -92,13 +99,85 @@ where
 	}
 }
 
+#[derive(Debug, PartialEq)]
+pub(crate) enum MapSizeError {
+	Empty,
+	Sizes { x: usize, z: usize },
+}
+
+impl Display for MapSizeError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "Minimum map size of 2x2 required, but map was {self:?}")
+	}
+}
+
+impl From<MapSizeError> for Error {
+	fn from(error: MapSizeError) -> Self {
+		match error {
+			MapSizeError::Empty => Self::Single {
+				msg: String::from("map is empty"),
+				lvl: Level::Error,
+			},
+			MapSizeError::Sizes { x, z } => Self::Single {
+				msg: format!("map too small with x={x} and z={z}"),
+				lvl: Level::Error,
+			},
+		}
+	}
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub(crate) enum Direction {
+	X,
+	NegX,
+	Z,
+	NegZ,
+}
+
+impl Direction {
+	pub(crate) const fn rotated_right(self, times: u8) -> Self {
+		if times == 0 {
+			return self;
+		}
+
+		if times > 1 {
+			return self.rotated_right(1).rotated_right(times - 1);
+		}
+
+		match self {
+			Direction::NegZ => Direction::NegX,
+			Direction::NegX => Direction::Z,
+			Direction::Z => Direction::X,
+			Direction::X => Direction::NegZ,
+		}
+	}
+
+	#[cfg(test)]
+	pub(crate) const fn rotated_left(self) -> Self {
+		match self {
+			Direction::NegZ => Direction::X,
+			Direction::NegX => Direction::NegZ,
+			Direction::Z => Direction::NegX,
+			Direction::X => Direction::Z,
+		}
+	}
+}
+
+impl From<Direction> for Dir3 {
+	fn from(dir: Direction) -> Self {
+		match dir {
+			Direction::X => Dir3::X,
+			Direction::NegX => Dir3::NEG_X,
+			Direction::Z => Dir3::Z,
+			Direction::NegZ => Dir3::NEG_Z,
+		}
+	}
+}
+
 #[cfg(test)]
-mod test_from_image {
+mod test_parsing {
 	use super::*;
-	use crate::{
-		map_cells::Direction,
-		traits::pixels::{Bytes, Layer},
-	};
+	use crate::traits::pixels::{Bytes, Layer};
 	use mockall::{mock, predicate::eq};
 	use std::vec::IntoIter;
 	use testing::{Mock, simple_init};
@@ -466,5 +545,38 @@ mod test_from_image {
 			map
 		);
 		Ok(())
+	}
+}
+
+#[cfg(test)]
+mod test_direction {
+	use super::*;
+	use test_case::test_case;
+
+	#[test_case(Direction::NegZ, Dir3::NEG_Z; "neg z")]
+	#[test_case(Direction::NegX, Dir3::NEG_X; "neg x")]
+	#[test_case(Direction::Z, Dir3::Z; "z")]
+	#[test_case(Direction::X, Dir3::X; "x")]
+	fn dir3_from_direction(value: Direction, result: Dir3) {
+		assert_eq!(result, Dir3::from(value));
+	}
+
+	#[test_case(Direction::NegZ, Direction::NegX, 1; "neg z once")]
+	#[test_case(Direction::NegX, Direction::Z, 1; "neg x once")]
+	#[test_case(Direction::Z, Direction::X, 1; "z once")]
+	#[test_case(Direction::X, Direction::NegZ, 1; "x once")]
+	#[test_case(Direction::NegZ, Direction::NegZ, 0; "neg z zero")]
+	#[test_case(Direction::NegZ, Direction::Z, 2; "neg z twice")]
+	#[test_case(Direction::NegZ, Direction::X, 3; "neg z thrice")]
+	fn rotate_right(value: Direction, result: Direction, times: u8) {
+		assert_eq!(result, value.rotated_right(times));
+	}
+
+	#[test_case(Direction::NegZ, Direction::X; "neg z")]
+	#[test_case(Direction::NegX, Direction::NegZ; "neg x")]
+	#[test_case(Direction::Z, Direction::NegX; "z")]
+	#[test_case(Direction::X, Direction::Z; "x")]
+	fn rotate_left(value: Direction, result: Direction) {
+		assert_eq!(result, value.rotated_left());
 	}
 }

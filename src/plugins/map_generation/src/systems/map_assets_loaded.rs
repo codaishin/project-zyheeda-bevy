@@ -1,4 +1,4 @@
-use crate::components::map_image::MapImage;
+use crate::components::map::image::MapImage;
 use bevy::{asset::LoadState, prelude::*};
 use common::traits::{
 	get_asset_load_state::GetAssetLoadState,

@@ -8,12 +8,13 @@ use crate::{
 	components::{
 		grid::Grid,
 		half_offset_grid::HalfOffsetGrid,
-		map::MapGridGraph,
-		map_asset::MapAsset,
-		map_cells::MapCells,
-		map_image::MapImage,
+		map::{
+			asset::MapAsset,
+			cells::{MapCells, parsed_color::ParsedColor},
+			grid_graph::MapGridGraph,
+			image::MapImage,
+		},
 	},
-	map_cells::parsed_color::ParsedColor,
 	resources::color_lookup::{ColorLookup, ColorLookupImage},
 	systems::color_lookup::load_images::ColorLookupAssetPath,
 	traits::parse_map_image::ParseMapImage,
@@ -41,7 +42,6 @@ pub(crate) trait RegisterMapCell {
 		TLoading: ThreadSafe + HandlesLoadTracking,
 		TSavegame: ThreadSafe + HandlesSaving,
 		for<'a> TCell: TypePath
-			+ From<Option<char>>
 			+ ParseMapImage<ParsedColor, TCell, TParseError = Unreachable>
 			+ Clone
 			+ ThreadSafe
@@ -59,7 +59,6 @@ impl RegisterMapCell for App {
 		TLoading: ThreadSafe + HandlesLoadTracking,
 		TSavegame: ThreadSafe + HandlesSaving,
 		for<'a> TCell: TypePath
-			+ From<Option<char>>
 			+ ParseMapImage<ParsedColor, TCell, TParseError = Unreachable>
 			+ Clone
 			+ ThreadSafe

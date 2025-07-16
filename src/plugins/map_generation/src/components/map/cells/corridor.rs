@@ -1,6 +1,7 @@
 use crate::{
 	components::{
 		floor_cell::FloorCell,
+		map::cells::parsed_color::ParsedColor,
 		quadrants::{
 			CorridorFloor,
 			CorridorFloorCornerInside,
@@ -16,7 +17,6 @@ use crate::{
 		},
 		wall_cell::WallCell,
 	},
-	map_cells::parsed_color::ParsedColor,
 	resources::color_lookup::ColorLookup,
 	systems::color_lookup::load_images::ColorLookupAssetPath,
 	traits::{
@@ -104,42 +104,42 @@ impl InsertCellQuadrantComponents for Corridor {
 	fn insert_cell_quadrant_components(
 		&self,
 		entity: &mut EntityCommands,
-		differences: HashSet<Quadrant>,
+		different_quadrants: HashSet<Quadrant>,
 	) {
 		match self {
 			// Corridor Floor
-			Corridor::Floor if differences.matches(CORNER_INNER) => {
+			Corridor::Floor if different_quadrants.matches(CORNER_INNER) => {
 				entity.insert(CorridorFloorCornerInside);
 			}
-			Corridor::Floor if differences.matches(CORNER_OUTER) => {
+			Corridor::Floor if different_quadrants.matches(CORNER_OUTER) => {
 				entity.insert(CorridorFloorCornerOutside);
 			}
-			Corridor::Floor if differences.matches(CORNER_OUTER_DIAGONAL) => {
+			Corridor::Floor if different_quadrants.matches(CORNER_OUTER_DIAGONAL) => {
 				entity.insert(CorridorFloorCornerOutside);
 			}
-			Corridor::Floor if differences.contains(&Quadrant::Forward) => {
+			Corridor::Floor if different_quadrants.contains(&Quadrant::Forward) => {
 				entity.insert(CorridorFloorForward);
 			}
-			Corridor::Floor if differences.contains(&Quadrant::Left) => {
+			Corridor::Floor if different_quadrants.contains(&Quadrant::Left) => {
 				entity.insert(CorridorFloorLeft);
 			}
 			Corridor::Floor => {
 				entity.insert(CorridorFloor);
 			}
 			// Corridor Wall
-			Corridor::Wall if differences.matches(CORNER_INNER) => {
+			Corridor::Wall if different_quadrants.matches(CORNER_INNER) => {
 				entity.insert(CorridorWallCornerInside);
 			}
-			Corridor::Wall if differences.matches(CORNER_OUTER) => {
+			Corridor::Wall if different_quadrants.matches(CORNER_OUTER) => {
 				entity.insert(CorridorWallCornerOutside);
 			}
-			Corridor::Wall if differences.matches(CORNER_OUTER_DIAGONAL) => {
+			Corridor::Wall if different_quadrants.matches(CORNER_OUTER_DIAGONAL) => {
 				entity.insert(CorridorWallCornerOutsideDiagonal);
 			}
-			Corridor::Wall if differences.contains(&Quadrant::Forward) => {
+			Corridor::Wall if different_quadrants.contains(&Quadrant::Forward) => {
 				entity.insert(CorridorWallForward);
 			}
-			Corridor::Wall if differences.contains(&Quadrant::Left) => {
+			Corridor::Wall if different_quadrants.contains(&Quadrant::Left) => {
 				entity.insert(CorridorWallLeft);
 			}
 			Corridor::Wall => {

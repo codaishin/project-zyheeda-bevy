@@ -2,11 +2,12 @@ use crate::{
 	components::{
 		cells_ref::CellsRef,
 		half_offset_grid::HalfOffsetGrid,
-		map::MapGridGraph,
-		map_cells::MapCells,
+		map::{
+			cells::{MapCells, half_offset_cell::HalfOffsetCell},
+			grid_graph::MapGridGraph,
+		},
 	},
 	errors::GridError,
-	map_cells::half_offset_cell::HalfOffsetCell,
 	traits::GridCellDistanceDefinition,
 };
 use bevy::prelude::*;
@@ -59,9 +60,11 @@ impl HalfOffsetGrid {
 mod test_get_half_offset_grid {
 	use super::*;
 	use crate::{
-		components::{cells_ref::CellsRef, map_cells::Size},
+		components::{
+			cells_ref::CellsRef,
+			map::cells::{Direction, Size},
+		},
 		grid_graph::GridGraph,
-		map_cells::Direction,
 		traits::GridCellDistanceDefinition,
 	};
 	use std::collections::HashMap;

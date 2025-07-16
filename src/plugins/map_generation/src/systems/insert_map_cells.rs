@@ -1,5 +1,5 @@
 use crate::{
-	components::{map_cells::MapCells, map_image::MapImage},
+	components::map::{cells::MapCells, image::MapImage},
 	resources::color_lookup::ColorLookup,
 	traits::parse_map_image::ParseMapImage,
 };

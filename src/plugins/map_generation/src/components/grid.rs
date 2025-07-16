@@ -1,5 +1,3 @@
-mod error_type_marker;
-
 use crate::{
 	grid_graph::GridGraph,
 	observers::compute_grid_cells::Cells,
@@ -12,15 +10,14 @@ use crate::{
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::{
-	errors::{Error, Level as ErrorLevel},
+	errors::{Error, Level as ErrorLevel, Unreachable},
 	traits::{
 		register_derived_component::{DerivableComponentFrom, InsertDerivedComponent},
 		thread_safe::ThreadSafe,
 		try_insert_on::TryInsertOn,
 	},
 };
-use error_type_marker::TypeMarker;
-use std::any::type_name;
+use std::{any::type_name, marker::PhantomData};
 
 #[derive(Component, Debug, PartialEq)]
 #[require(Name = Self::name(), Transform, Visibility, Sensor)]
@@ -114,8 +111,7 @@ impl<const SUBDIVISIONS: u8> From<&Grid<SUBDIVISIONS>> for GridGraph {
 pub(crate) enum SpawnCellError<TError, TComponent> {
 	Error(TError),
 	NoGridEntity,
-	#[allow(private_interfaces)]
-	_P(TypeMarker<TComponent>),
+	_P((PhantomData<TComponent>, Unreachable)),
 }
 
 impl<TError, TComponent> From<SpawnCellError<TError, TComponent>> for Error
@@ -132,7 +128,6 @@ where
 				),
 				lvl: ErrorLevel::Error,
 			},
-			SpawnCellError::_P(_) => unreachable!("Should not be possible to build"),
 		}
 	}
 }

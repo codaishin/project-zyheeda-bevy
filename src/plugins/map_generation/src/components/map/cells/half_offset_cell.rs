@@ -1,4 +1,4 @@
-use super::Direction;
+use crate::components::map::cells::Direction;
 use std::collections::HashMap;
 
 #[derive(Debug, PartialEq, Clone)]

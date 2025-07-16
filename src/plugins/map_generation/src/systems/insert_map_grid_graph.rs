@@ -1,5 +1,5 @@
 use crate::{
-	components::{map::MapGridGraph, map_cells::MapCells},
+	components::map::{cells::MapCells, grid_graph::MapGridGraph},
 	grid_graph::{
 		GridGraph,
 		Obstacles,
@@ -76,7 +76,7 @@ where
 mod tests {
 	use super::*;
 	use crate::{
-		components::{map::MapGridGraph, map_cells::Size},
+		components::map::cells::Size,
 		grid_graph::{
 			GridGraph,
 			Obstacles,

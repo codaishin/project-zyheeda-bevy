@@ -1,5 +1,5 @@
 use crate::{
-	components::{cells_ref::CellsRef, grid::Grid, map_cells::MapCells},
+	components::{cells_ref::CellsRef, grid::Grid, map::cells::MapCells},
 	errors::GridError,
 };
 use bevy::prelude::*;

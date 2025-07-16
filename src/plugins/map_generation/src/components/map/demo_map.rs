@@ -1,4 +1,4 @@
-use crate::{components::map_asset::MapAsset, map_cells::corridor::Corridor};
+use crate::components::map::{asset::MapAsset, cells::corridor::Corridor};
 use bevy::prelude::*;
 
 #[derive(Component, Debug, PartialEq, Default)]

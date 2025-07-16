@@ -1,4 +1,4 @@
-use crate::components::{map_asset::MapAsset, map_image::MapImage};
+use crate::components::map::{asset::MapAsset, image::MapImage};
 use bevy::prelude::*;
 use common::traits::{load_asset::LoadAsset, thread_safe::ThreadSafe, try_insert_on::TryInsertOn};
 
@@ -36,7 +36,6 @@ fn load_map_image<TCell, TAssets>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::map_image::MapImage;
 	use bevy::asset::AssetPath;
 	use common::traits::load_asset::Path;
 	use macros::NestedMocks;
