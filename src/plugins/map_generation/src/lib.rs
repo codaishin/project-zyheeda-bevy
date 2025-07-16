@@ -2,14 +2,15 @@ mod components;
 mod errors;
 mod grid_graph;
 mod line_wide;
-mod map_cells;
-mod map_loader;
 mod observers;
+mod resources;
 mod systems;
-mod tools;
 mod traits;
 
-use crate::{components::map::demo_map::DemoMap, systems::get_grid::EntityOfGrid};
+use crate::{
+	components::map::{cells::corridor::Corridor, demo_map::DemoMap},
+	systems::get_grid::EntityOfGrid,
+};
 use bevy::{ecs::query::QueryFilter, prelude::*};
 use bevy_rapier3d::prelude::Collider;
 use common::{
@@ -27,7 +28,6 @@ use common::{
 };
 use components::{floor_light::FloorLight, grid::Grid, wall_back::WallBack, wall_light::WallLight};
 use grid_graph::GridGraph;
-use map_cells::corridor::Corridor;
 use std::marker::PhantomData;
 use systems::{apply_extra_components::ApplyExtraComponents, unlit_material::unlit_material};
 use traits::register_map_cell::RegisterMapCell;

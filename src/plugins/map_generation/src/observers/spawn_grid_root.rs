@@ -1,5 +1,5 @@
 use crate::{
-	components::{cells_ref::CellsRef, map::MapGridGraph},
+	components::{cells_ref::CellsRef, map::grid_graph::MapGridGraph},
 	grid_graph::GridGraph,
 };
 use bevy::prelude::*;
@@ -15,7 +15,7 @@ where
 		grids: Query<&TGrid>,
 		mut commands: Commands,
 	) where
-		TGrid: Component + From<GridGraph>,
+		for<'a> TGrid: Component + From<&'a GridGraph>,
 	{
 		let target = trigger.target();
 		let Ok((map, children)) = maps.get(target) else {
@@ -28,7 +28,7 @@ where
 
 		commands.spawn((
 			ChildOf(target),
-			TGrid::from(map.graph().clone()),
+			TGrid::from(map.graph()),
 			CellsRef::<TCell>::from_grid_definition(target),
 		));
 	}
@@ -60,9 +60,9 @@ mod tests {
 	#[derive(Component, Debug, PartialEq)]
 	struct _Grid(GridGraph);
 
-	impl From<GridGraph> for _Grid {
-		fn from(graph: GridGraph) -> Self {
-			Self(graph)
+	impl From<&GridGraph> for _Grid {
+		fn from(graph: &GridGraph) -> Self {
+			Self(graph.clone())
 		}
 	}
 

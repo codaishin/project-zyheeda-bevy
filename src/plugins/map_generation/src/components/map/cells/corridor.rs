@@ -1,6 +1,7 @@
 use crate::{
 	components::{
 		floor_cell::FloorCell,
+		map::cells::parsed_color::ParsedColor,
 		quadrants::{
 			CorridorFloor,
 			CorridorFloorCornerInside,
@@ -16,20 +17,25 @@ use crate::{
 		},
 		wall_cell::WallCell,
 	},
+	resources::color_lookup::ColorLookup,
+	systems::color_lookup::load_images::ColorLookupAssetPath,
 	traits::{
 		GridCellDistanceDefinition,
 		insert_cell_components::InsertCellComponents,
 		insert_cell_quadrant_components::{InsertCellQuadrantComponents, PatternMatches, Quadrant},
 		is_walkable::IsWalkable,
+		parse_map_image::ParseMapImage,
 	},
 };
 use bevy::prelude::*;
+use common::errors::Unreachable;
 use std::collections::HashSet;
 
-#[derive(Debug, PartialEq, Clone, TypePath)]
+#[derive(Debug, PartialEq, Clone, TypePath, Default)]
 pub(crate) enum Corridor {
-	Floor,
+	#[default]
 	Wall,
+	Floor,
 }
 
 impl Corridor {
@@ -62,6 +68,22 @@ impl From<Option<char>> for Corridor {
 	}
 }
 
+impl ParseMapImage<ParsedColor, Corridor> for Corridor {
+	type TParseError = Unreachable;
+
+	fn try_parse(image: &ParsedColor, lookup: &ColorLookup<Corridor>) -> Result<Self, Unreachable> {
+		if matches!(image.color(), Some(color) if color == &lookup.floor) {
+			return Ok(Corridor::Floor);
+		}
+
+		Ok(Corridor::Wall)
+	}
+}
+
+impl ColorLookupAssetPath for Corridor {
+	const LOOKUP_ROOT: &str = "maps/lookup/corridor";
+}
+
 impl InsertCellComponents for Corridor {
 	fn offset_height(&self) -> bool {
 		match self {
@@ -82,42 +104,42 @@ impl InsertCellQuadrantComponents for Corridor {
 	fn insert_cell_quadrant_components(
 		&self,
 		entity: &mut EntityCommands,
-		differences: HashSet<Quadrant>,
+		different_quadrants: HashSet<Quadrant>,
 	) {
 		match self {
 			// Corridor Floor
-			Corridor::Floor if differences.matches(CORNER_INNER) => {
+			Corridor::Floor if different_quadrants.matches(CORNER_INNER) => {
 				entity.insert(CorridorFloorCornerInside);
 			}
-			Corridor::Floor if differences.matches(CORNER_OUTER) => {
+			Corridor::Floor if different_quadrants.matches(CORNER_OUTER) => {
 				entity.insert(CorridorFloorCornerOutside);
 			}
-			Corridor::Floor if differences.matches(CORNER_OUTER_DIAGONAL) => {
+			Corridor::Floor if different_quadrants.matches(CORNER_OUTER_DIAGONAL) => {
 				entity.insert(CorridorFloorCornerOutside);
 			}
-			Corridor::Floor if differences.contains(&Quadrant::Forward) => {
+			Corridor::Floor if different_quadrants.contains(&Quadrant::Forward) => {
 				entity.insert(CorridorFloorForward);
 			}
-			Corridor::Floor if differences.contains(&Quadrant::Left) => {
+			Corridor::Floor if different_quadrants.contains(&Quadrant::Left) => {
 				entity.insert(CorridorFloorLeft);
 			}
 			Corridor::Floor => {
 				entity.insert(CorridorFloor);
 			}
 			// Corridor Wall
-			Corridor::Wall if differences.matches(CORNER_INNER) => {
+			Corridor::Wall if different_quadrants.matches(CORNER_INNER) => {
 				entity.insert(CorridorWallCornerInside);
 			}
-			Corridor::Wall if differences.matches(CORNER_OUTER) => {
+			Corridor::Wall if different_quadrants.matches(CORNER_OUTER) => {
 				entity.insert(CorridorWallCornerOutside);
 			}
-			Corridor::Wall if differences.matches(CORNER_OUTER_DIAGONAL) => {
+			Corridor::Wall if different_quadrants.matches(CORNER_OUTER_DIAGONAL) => {
 				entity.insert(CorridorWallCornerOutsideDiagonal);
 			}
-			Corridor::Wall if differences.contains(&Quadrant::Forward) => {
+			Corridor::Wall if different_quadrants.contains(&Quadrant::Forward) => {
 				entity.insert(CorridorWallForward);
 			}
-			Corridor::Wall if differences.contains(&Quadrant::Left) => {
+			Corridor::Wall if different_quadrants.contains(&Quadrant::Left) => {
 				entity.insert(CorridorWallLeft);
 			}
 			Corridor::Wall => {

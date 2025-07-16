@@ -1,4 +1,4 @@
-use super::Direction;
+use crate::components::map::cells::Direction;
 use std::collections::HashMap;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -7,12 +7,12 @@ pub(crate) struct HalfOffsetCell<TCell> {
 }
 
 impl HalfOffsetCell<()> {
-	pub(crate) fn with_quadrants(x: usize, z: usize) -> [(usize, usize, Direction); 4] {
+	pub(crate) fn directions(x: usize, z: usize) -> [(usize, usize, Direction); 4] {
 		[
 			(x - 1, z - 1, Direction::Z),
 			(x - 1, z, Direction::X),
-			(x, z, Direction::NegZ),
 			(x, z - 1, Direction::NegX),
+			(x, z, Direction::NegZ),
 		]
 	}
 }

@@ -1,30 +1,10 @@
-use crate::grid_graph::grid_context::GridDefinitionError;
 use common::errors::{Error, Level};
-
-#[derive(Debug, PartialEq)]
-pub(crate) enum InsertGraphError {
-	GridDefinitionError(GridDefinitionError),
-	MapAssetNotFound,
-}
-
-impl From<InsertGraphError> for Error {
-	fn from(error: InsertGraphError) -> Self {
-		match error {
-			InsertGraphError::GridDefinitionError(error) => Error::from(error),
-			InsertGraphError::MapAssetNotFound => Error::Single {
-				msg: "Map asset not found".to_owned(),
-				lvl: Level::Error,
-			},
-		}
-	}
-}
 
 #[derive(Debug, PartialEq, Clone)]
 pub(crate) enum GridError {
 	NoRefToCellDefinition,
 	NoCellDefinition,
-	NoValidMap,
-	GridIndexHasNoCell { x: usize, z: usize },
+	GridIndicesWithNoCell(Vec<(usize, usize)>),
 }
 
 impl From<GridError> for Error {

@@ -1,7 +1,7 @@
 use super::grid::SpawnCellError;
 use crate::{
+	components::map::cells::{Direction, half_offset_cell::HalfOffsetCell},
 	grid_graph::GridGraph,
-	map_cells::{Direction, half_offset_cell::HalfOffsetCell},
 	observers::compute_half_offset_grid_cells::Cells,
 	traits::{
 		insert_cell_quadrant_components::{InsertCellQuadrantComponents, Quadrant},
@@ -34,8 +34,8 @@ impl HalfOffsetGrid {
 	}
 }
 
-impl From<GridGraph> for HalfOffsetGrid {
-	fn from(_: GridGraph) -> Self {
+impl From<&GridGraph> for HalfOffsetGrid {
+	fn from(_: &GridGraph) -> Self {
 		Self
 	}
 }
@@ -100,7 +100,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{map_cells::Direction, traits::insert_cell_quadrant_components::Quadrant};
+	use crate::traits::insert_cell_quadrant_components::Quadrant;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use std::collections::HashSet;
 	use testing::{SingleThreadedApp, assert_count, assert_eq_unordered, get_children};
