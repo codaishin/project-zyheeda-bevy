@@ -1,6 +1,6 @@
-use crate::components::map::{asset::MapAsset, cells::corridor::Corridor};
+use crate::components::map::{cells::corridor::Corridor, folder::MapFolder};
 use bevy::prelude::*;
 
 #[derive(Component, Debug, PartialEq, Default)]
-#[require(MapAsset<Corridor> = MapAsset::from("maps/map.png"))]
+#[require(MapFolder<Corridor> = MapFolder::from("maps/demo_map"))]
 pub(crate) struct DemoMap;

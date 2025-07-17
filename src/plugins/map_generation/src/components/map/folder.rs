@@ -1,20 +1,19 @@
 use bevy::prelude::*;
-use common::traits::load_asset::Path;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
-use std::marker::PhantomData;
+use std::{marker::PhantomData, path::PathBuf};
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[component(immutable)]
-pub(crate) struct MapAsset<TCell> {
-	pub(crate) path: Path,
+pub(crate) struct MapFolder<TCell> {
+	pub(crate) path: PathBuf,
 	#[serde(skip)]
 	_c: PhantomData<TCell>,
 }
 
-impl<TCell, TPath> From<TPath> for MapAsset<TCell>
+impl<TCell, TPath> From<TPath> for MapFolder<TCell>
 where
-	TPath: Into<Path>,
+	TPath: Into<PathBuf>,
 {
 	fn from(path: TPath) -> Self {
 		Self {

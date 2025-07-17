@@ -9,8 +9,8 @@ use crate::{
 		grid::Grid,
 		half_offset_grid::HalfOffsetGrid,
 		map::{
-			asset::MapAsset,
 			cells::{MapCells, parsed_color::ParsedColor},
+			folder::MapFolder,
 			grid_graph::MapGridGraph,
 			image::MapImage,
 		},
@@ -81,8 +81,8 @@ impl RegisterMapCell for App {
 			TLoading::register_load_tracking::<MapImage<TCell>, LoadingGame, AssetsProgress>();
 
 		//save maps
-		TSavegame::register_savable_component::<MapAsset<TCell>>(self);
-		self.register_required_components::<MapAsset<TCell>, TSavegame::TSaveEntityMarker>();
+		TSavegame::register_savable_component::<MapFolder<TCell>>(self);
+		self.register_required_components::<MapFolder<TCell>, TSavegame::TSaveEntityMarker>();
 
 		// Track wether assets have been loaded
 		map_lookup_loaded.in_app(self, resource_exists::<ColorLookup<TCell>>);
@@ -101,7 +101,7 @@ impl RegisterMapCell for App {
 					.run_if(not(resource_exists::<ColorLookup<TCell>>)),
 			)
 			// Load map cells and root graph from image
-			.add_observer(MapAsset::<TCell>::load_map_image)
+			.add_observer(MapFolder::<TCell>::load_map_image)
 			.add_systems(
 				OnEnter(resolving_dependencies),
 				(
