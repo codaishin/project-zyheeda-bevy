@@ -9,16 +9,17 @@ mod traits;
 
 use crate::{
 	components::map::{cells::corridor::Corridor, demo_map::DemoMap},
+	resources::agents::color_lookup::{AgentsLookup, AgentsLookupImages},
 	systems::get_grid::EntityOfGrid,
 };
 use bevy::{ecs::query::QueryFilter, prelude::*};
 use bevy_rapier3d::prelude::Collider;
 use common::{
-	states::game_state::GameState,
+	states::game_state::{GameState, LoadingEssentialAssets},
 	systems::log::OnError,
 	traits::{
 		handles_lights::HandlesLights,
-		handles_load_tracking::HandlesLoadTracking,
+		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInApp},
 		handles_map_generation::{EntityMapFiltered, HandlesMapGeneration},
 		handles_saving::HandlesSaving,
 		register_derived_component::RegisterDerivedComponent,
@@ -52,8 +53,25 @@ where
 	TLights: ThreadSafe + HandlesLights,
 {
 	fn build(&self, app: &mut App) {
+		let register_agents_lookup_load_tracking = TLoading::register_load_tracking::<
+			AgentsLookup,
+			LoadingEssentialAssets,
+			AssetsProgress,
+		>();
+		register_agents_lookup_load_tracking.in_app(app, resource_exists::<AgentsLookup>);
+
 		app.register_map_cell::<TLoading, TSavegame, Corridor>()
 			.register_derived_component::<Grid, Collider>()
+			.add_systems(
+				OnEnter(GameState::LoadingEssentialAssets),
+				AgentsLookupImages::<Image>::lookup_images,
+			)
+			.add_systems(
+				Update,
+				AgentsLookup::parse_images
+					.pipe(OnError::log)
+					.run_if(not(resource_exists::<AgentsLookup>)),
+			)
 			.add_systems(OnEnter(GameState::NewGame), DemoMap::spawn)
 			.add_systems(Update, Grid::<1>::insert)
 			.add_systems(

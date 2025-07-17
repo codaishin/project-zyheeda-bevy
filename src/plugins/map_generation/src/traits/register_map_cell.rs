@@ -15,8 +15,8 @@ use crate::{
 			image::MapImage,
 		},
 	},
-	resources::color_lookup::{ColorLookup, ColorLookupImage},
-	systems::color_lookup::load_images::ColorLookupAssetPath,
+	resources::map::color_lookup::{MapColorLookup, MapColorLookupImage},
+	systems::map_color_lookup::load_images::ColorLookupAssetPath,
 	traits::parse_map_image::ParseMapImage,
 };
 use bevy::prelude::*;
@@ -72,12 +72,12 @@ impl RegisterMapCell for App {
 		let resolving_dependencies =
 			TLoading::processing_state::<LoadingGame, DependenciesProgress>();
 
-		let map_lookup_loaded = TLoading::register_load_tracking::<
-			ColorLookup<TCell>,
+		let register_map_lookup_load_tracking = TLoading::register_load_tracking::<
+			MapColorLookup<TCell>,
 			LoadingEssentialAssets,
 			AssetsProgress,
 		>();
-		let map_images_loaded =
+		let register_map_images_load_tracking =
 			TLoading::register_load_tracking::<MapImage<TCell>, LoadingGame, AssetsProgress>();
 
 		//save maps
@@ -85,20 +85,20 @@ impl RegisterMapCell for App {
 		self.register_required_components::<MapFolder<TCell>, TSavegame::TSaveEntityMarker>();
 
 		// Track wether assets have been loaded
-		map_lookup_loaded.in_app(self, resource_exists::<ColorLookup<TCell>>);
-		map_images_loaded.in_app(self, MapImage::<TCell>::all_loaded);
+		register_map_lookup_load_tracking.in_app(self, resource_exists::<MapColorLookup<TCell>>);
+		register_map_images_load_tracking.in_app(self, MapImage::<TCell>::all_loaded);
 
 		self
 			// Map color lookup
 			.add_systems(
 				OnEnter(GameState::LoadingEssentialAssets),
-				ColorLookupImage::<TCell>::lookup_images,
+				MapColorLookupImage::<TCell>::lookup_images,
 			)
 			.add_systems(
 				Update,
-				ColorLookup::<TCell>::parse_images
+				MapColorLookup::<TCell>::parse_images
 					.pipe(OnError::log)
-					.run_if(not(resource_exists::<ColorLookup<TCell>>)),
+					.run_if(not(resource_exists::<MapColorLookup<TCell>>)),
 			)
 			// Load map cells and root graph from image
 			.add_observer(MapFolder::<TCell>::load_map_image)

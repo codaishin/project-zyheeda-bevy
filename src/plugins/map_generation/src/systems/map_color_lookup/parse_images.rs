@@ -1,5 +1,5 @@
 use crate::{
-	resources::color_lookup::{ColorLookup, ColorLookupImage},
+	resources::map::color_lookup::{MapColorLookup, MapColorLookupImage},
 	traits::pixels::PixelBytes,
 };
 use bevy::prelude::*;
@@ -9,47 +9,49 @@ use common::{
 };
 use std::{any::type_name, marker::PhantomData};
 
-impl<TCell> ColorLookup<TCell>
+impl<TCell> MapColorLookup<TCell>
 where
 	TCell: ThreadSafe,
 {
 	pub(crate) fn parse_images(
 		commands: Commands,
-		lookup: Option<Res<ColorLookupImage<TCell>>>,
+		lookup: Option<Res<MapColorLookupImage<TCell>>>,
 		images: Res<Assets<Image>>,
-	) -> Result<(), ParseImagesError<TCell>> {
+	) -> Result<(), ParseImageError<TCell>> {
 		parse_images(commands, lookup, images)
 	}
 }
 
 fn parse_images<TCell, TImage>(
 	mut commands: Commands,
-	lookup: Option<Res<ColorLookupImage<TCell, TImage>>>,
+	lookup: Option<Res<MapColorLookupImage<TCell, TImage>>>,
 	images: Res<Assets<TImage>>,
-) -> Result<(), ParseImagesError<TCell>>
+) -> Result<(), ParseImageError<TCell>>
 where
 	TCell: ThreadSafe,
 	TImage: Asset + PixelBytes,
 {
 	let Some(lookup) = lookup else {
-		return Err(ParseImagesError::NoLookup);
+		return Err(ParseImageError::NoLookup);
 	};
 	let Some(image) = images.get(&lookup.floor) else {
-		return Err(ParseImagesError::ImageNotLoaded);
+		return Err(ParseImageError::ImageNotLoaded);
 	};
 
 	match image.pixel_bytes(UVec3::ZERO) {
 		Some([r, g, b, a]) => {
-			commands.insert_resource(ColorLookup::<TCell>::new(Color::srgba_u8(*r, *g, *b, *a)));
+			commands.insert_resource(MapColorLookup::<TCell>::new(Color::srgba_u8(
+				*r, *g, *b, *a,
+			)));
 			Ok(())
 		}
-		Some(pixel) => Err(ParseImagesError::PixelWrongFormat(pixel.to_vec())),
-		None => Err(ParseImagesError::NoPixels),
+		Some(pixel) => Err(ParseImageError::PixelWrongFormat(pixel.to_vec())),
+		None => Err(ParseImageError::NoPixels),
 	}
 }
 
 #[derive(Debug, PartialEq)]
-pub(crate) enum ParseImagesError<TCell> {
+pub(crate) enum ParseImageError<TCell> {
 	NoLookup,
 	ImageNotLoaded,
 	NoPixels,
@@ -57,23 +59,23 @@ pub(crate) enum ParseImagesError<TCell> {
 	_P(PhantomData<TCell>, Unreachable),
 }
 
-impl<TCell> From<ParseImagesError<TCell>> for Error {
-	fn from(value: ParseImagesError<TCell>) -> Self {
+impl<TCell> From<ParseImageError<TCell>> for Error {
+	fn from(value: ParseImageError<TCell>) -> Self {
 		let cell_name = type_name::<TCell>();
 		match value {
-			ParseImagesError::NoLookup => Self::Single {
+			ParseImageError::NoLookup => Self::Single {
 				msg: format!("no `ColorLookupImage` loaded for cell type: {cell_name}"),
 				lvl: Level::Warning,
 			},
-			ParseImagesError::ImageNotLoaded => Self::Single {
+			ParseImageError::ImageNotLoaded => Self::Single {
 				msg: format!("no floor lookup image loaded for cell type: {cell_name}"),
 				lvl: Level::Warning,
 			},
-			ParseImagesError::NoPixels => Self::Single {
+			ParseImageError::NoPixels => Self::Single {
 				msg: format!("floor lookup image empty for cell type: {cell_name}"),
 				lvl: Level::Error,
 			},
-			ParseImagesError::PixelWrongFormat(items) => Self::Single {
+			ParseImageError::PixelWrongFormat(items) => Self::Single {
 				msg: format!(
 					"{items:?}: pixel format misaligned for floor lookup image with cell type: {cell_name}"
 				),
@@ -108,7 +110,7 @@ mod tests {
 	}
 
 	fn setup(
-		lookup_images: Option<ColorLookupImage<_Cell, _Image>>,
+		lookup_images: Option<MapColorLookupImage<_Cell, _Image>>,
 		images: impl IntoIterator<Item = (Handle<_Image>, _Image)>,
 	) -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -133,7 +135,7 @@ mod tests {
 			mock.expect_pixel_bytes().return_const(COLOR);
 		});
 		let mut app = setup(
-			Some(ColorLookupImage::new(handle.clone())),
+			Some(MapColorLookupImage::new(handle.clone())),
 			[(handle, image)],
 		);
 
@@ -142,8 +144,8 @@ mod tests {
 			.run_system_once(parse_images::<_Cell, _Image>)?;
 
 		assert_eq!(
-			Some(&ColorLookup::new(Color::srgba_u8(123, 124, 125, 126))),
-			app.world().get_resource::<ColorLookup<_Cell>>(),
+			Some(&MapColorLookup::new(Color::srgba_u8(123, 124, 125, 126))),
+			app.world().get_resource::<MapColorLookup<_Cell>>(),
 		);
 		Ok(())
 	}
@@ -159,7 +161,7 @@ mod tests {
 				.return_const(COLOR);
 		});
 		let mut app = setup(
-			Some(ColorLookupImage::new(handle.clone())),
+			Some(MapColorLookupImage::new(handle.clone())),
 			[(handle, image)],
 		);
 
@@ -202,14 +204,14 @@ mod tests {
 			.world_mut()
 			.run_system_once(parse_images::<_Cell, _Image>)?;
 
-		assert_eq!(Err(ParseImagesError::NoLookup), result);
+		assert_eq!(Err(ParseImageError::NoLookup), result);
 		Ok(())
 	}
 
 	#[test]
 	fn no_image_error() -> Result<(), RunSystemError> {
 		let handle = new_handle();
-		let mut app = setup(Some(ColorLookupImage::new(handle)), []);
+		let mut app = setup(Some(MapColorLookupImage::new(handle)), []);
 
 		_ = app
 			.world_mut()
@@ -219,7 +221,7 @@ mod tests {
 			.world_mut()
 			.run_system_once(parse_images::<_Cell, _Image>)?;
 
-		assert_eq!(Err(ParseImagesError::ImageNotLoaded), result);
+		assert_eq!(Err(ParseImageError::ImageNotLoaded), result);
 		Ok(())
 	}
 
@@ -230,7 +232,7 @@ mod tests {
 			mock.expect_pixel_bytes().return_const(None);
 		});
 		let mut app = setup(
-			Some(ColorLookupImage::new(handle.clone())),
+			Some(MapColorLookupImage::new(handle.clone())),
 			[(handle, image)],
 		);
 
@@ -242,7 +244,7 @@ mod tests {
 			.world_mut()
 			.run_system_once(parse_images::<_Cell, _Image>)?;
 
-		assert_eq!(Err(ParseImagesError::NoPixels), result);
+		assert_eq!(Err(ParseImageError::NoPixels), result);
 		Ok(())
 	}
 
@@ -254,7 +256,7 @@ mod tests {
 			mock.expect_pixel_bytes().return_const(COLOR);
 		});
 		let mut app = setup(
-			Some(ColorLookupImage::new(handle.clone())),
+			Some(MapColorLookupImage::new(handle.clone())),
 			[(handle, image)],
 		);
 
@@ -267,7 +269,7 @@ mod tests {
 			.run_system_once(parse_images::<_Cell, _Image>)?;
 
 		assert_eq!(
-			Err(ParseImagesError::PixelWrongFormat(vec![123, 124, 125])),
+			Err(ParseImageError::PixelWrongFormat(vec![123, 124, 125])),
 			result
 		);
 		Ok(())

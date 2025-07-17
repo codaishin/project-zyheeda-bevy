@@ -17,8 +17,8 @@ use crate::{
 		},
 		wall_cell::WallCell,
 	},
-	resources::color_lookup::ColorLookup,
-	systems::color_lookup::load_images::ColorLookupAssetPath,
+	resources::map::color_lookup::MapColorLookup,
+	systems::map_color_lookup::load_images::ColorLookupAssetPath,
 	traits::{
 		GridCellDistanceDefinition,
 		insert_cell_components::InsertCellComponents,
@@ -71,7 +71,10 @@ impl From<Option<char>> for Corridor {
 impl ParseMapImage<ParsedColor, Corridor> for Corridor {
 	type TParseError = Unreachable;
 
-	fn try_parse(image: &ParsedColor, lookup: &ColorLookup<Corridor>) -> Result<Self, Unreachable> {
+	fn try_parse(
+		image: &ParsedColor,
+		lookup: &MapColorLookup<Corridor>,
+	) -> Result<Self, Unreachable> {
 		if matches!(image.color(), Some(color) if color == &lookup.floor) {
 			return Ok(Corridor::Floor);
 		}

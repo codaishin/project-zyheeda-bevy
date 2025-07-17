@@ -4,7 +4,7 @@ pub(crate) mod parsed_color;
 
 use crate::{
 	components::map::cells::{half_offset_cell::HalfOffsetCell, parsed_color::ParsedColor},
-	resources::color_lookup::ColorLookup,
+	resources::map::color_lookup::MapColorLookup,
 	traits::{
 		parse_map_image::ParseMapImage,
 		pixels::{Layer, PixelBytesIterator},
@@ -51,7 +51,7 @@ where
 {
 	type TParseError = MapSizeError;
 
-	fn try_parse(image: &TImage, lookup: &ColorLookup<TCell>) -> Result<Self, MapSizeError> {
+	fn try_parse(image: &TImage, lookup: &MapColorLookup<TCell>) -> Result<Self, MapSizeError> {
 		let mut max = Size { x: 0, z: 0 };
 		let mut cells = CellGrid::default();
 		let mut half_offset_cells = CellGrid::default();
@@ -186,7 +186,7 @@ mod test_parsing {
 	enum _Cell {
 		#[default]
 		Default,
-		Value((ParsedColor, ColorLookup<Self>)),
+		Value((ParsedColor, MapColorLookup<Self>)),
 	}
 
 	impl ParseMapImage<ParsedColor, Self> for _Cell {
@@ -194,7 +194,7 @@ mod test_parsing {
 
 		fn try_parse(
 			parsed_color: &ParsedColor,
-			lookup: &ColorLookup<Self>,
+			lookup: &MapColorLookup<Self>,
 		) -> Result<Self, Self::TParseError> {
 			Ok(_Cell::Value((*parsed_color, *lookup)))
 		}
@@ -230,7 +230,7 @@ mod test_parsing {
 	#[test]
 	fn empty() {
 		let image = _Image(vec![]);
-		let lookup = ColorLookup::new(Color::srgba_u8(0, 0, 0, 0));
+		let lookup = MapColorLookup::new(Color::srgba_u8(0, 0, 0, 0));
 
 		let map = MapCells::<_Cell>::try_parse(&image, &lookup);
 
@@ -240,7 +240,7 @@ mod test_parsing {
 	#[test]
 	fn too_small_z() {
 		let image = _Image(vec![(uvec3(0, 0, 0), &[]), (uvec3(1, 0, 0), &[])]);
-		let lookup = ColorLookup::new(Color::srgba_u8(0, 0, 0, 0));
+		let lookup = MapColorLookup::new(Color::srgba_u8(0, 0, 0, 0));
 
 		let map = MapCells::<_Cell>::try_parse(&image, &lookup);
 
@@ -250,7 +250,7 @@ mod test_parsing {
 	#[test]
 	fn too_small_x() {
 		let image = _Image(vec![(uvec3(0, 0, 0), &[]), (uvec3(0, 1, 0), &[])]);
-		let lookup = ColorLookup::new(Color::srgba_u8(0, 0, 0, 0));
+		let lookup = MapColorLookup::new(Color::srgba_u8(0, 0, 0, 0));
 
 		let map = MapCells::<_Cell>::try_parse(&image, &lookup);
 
@@ -260,7 +260,7 @@ mod test_parsing {
 	#[test]
 	fn too_small_x_and_z() {
 		let image = _Image(vec![(uvec3(0, 0, 0), &[])]);
-		let lookup = ColorLookup::new(Color::srgba_u8(0, 0, 0, 0));
+		let lookup = MapColorLookup::new(Color::srgba_u8(0, 0, 0, 0));
 
 		let map = MapCells::<_Cell>::try_parse(&image, &lookup);
 
@@ -283,7 +283,7 @@ mod test_parsing {
 					.into_iter()
 				});
 		});
-		let lookup = ColorLookup::new(Color::srgba_u8(0, 0, 0, 0));
+		let lookup = MapColorLookup::new(Color::srgba_u8(0, 0, 0, 0));
 
 		_ = MapCells::<_Cell>::try_parse(&image, &lookup)
 	}
@@ -296,7 +296,7 @@ mod test_parsing {
 			(uvec3(1, 0, 0), &[3, 3, 3, 3]),
 			(uvec3(1, 1, 0), &[4, 4, 4, 4]),
 		]);
-		let lookup = ColorLookup::new(Color::srgb_u8(1, 2, 3));
+		let lookup = MapColorLookup::new(Color::srgb_u8(1, 2, 3));
 		let map = MapCells::<_Cell>::try_parse(&image, &lookup)?;
 
 		assert_eq!(
@@ -354,7 +354,7 @@ mod test_parsing {
 			(uvec3(0, 1, 0), &[2, 2, 2, 2]),
 			(uvec3(1, 1, 0), &[4, 4, 4, 4]),
 		]);
-		let lookup = ColorLookup::new(Color::srgb_u8(1, 2, 3));
+		let lookup = MapColorLookup::new(Color::srgb_u8(1, 2, 3));
 		let map = MapCells::<_Cell>::try_parse(&image, &lookup)?;
 
 		assert_eq!(
@@ -411,7 +411,7 @@ mod test_parsing {
 			(uvec3(2, 1, 0), &[2, 1, 0, 0]),
 			(uvec3(2, 2, 0), &[2, 2, 0, 0]),
 		]);
-		let lookup = ColorLookup::new(Color::srgb_u8(1, 2, 3));
+		let lookup = MapColorLookup::new(Color::srgb_u8(1, 2, 3));
 		let map = MapCells::<_Cell>::try_parse(&image, &lookup)?;
 
 		assert_eq!(
