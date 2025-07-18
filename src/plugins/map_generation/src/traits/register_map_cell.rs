@@ -32,7 +32,6 @@ use common::{
 			LoadTrackingInApp,
 		},
 		handles_saving::HandlesSaving,
-		register_derived_component::RegisterDerivedComponent,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -58,7 +57,6 @@ impl RegisterMapCell for App {
 	fn register_map_cell<TLoading, TSavegame, TCell>(&mut self) -> &mut App
 	where
 		TLoading: ThreadSafe + HandlesLoadTracking,
-		TSavegame: ThreadSafe + HandlesSaving,
 		for<'a> TCell: TypePath
 			+ ParseMapImage<ParsedColor, TParseError = Unreachable, TLookup: Resource>
 			+ Clone
@@ -86,10 +84,6 @@ impl RegisterMapCell for App {
 			AssetsProgress,
 		>();
 
-		//save maps
-		TSavegame::register_savable_component::<MapFolder<TCell>>(self);
-		self.register_required_components::<MapFolder<TCell>, TSavegame::TSaveEntityMarker>();
-
 		// Track wether assets have been loaded
 		register_map_lookup_load_tracking.in_app(self, resource_exists::<MapColorLookup<TCell>>);
 		register_map_images_load_tracking.in_app(self, MapImage::<TCell>::all_loaded);
@@ -108,9 +102,9 @@ impl RegisterMapCell for App {
 					.run_if(not(resource_exists::<MapColorLookup<TCell>>)),
 			)
 			// Load map cells and root graph from image
-			.register_derived_component::<MapFolder<TCell>, MapFolder<Agent<TCell>>>()
 			.add_observer(MapFolder::<TCell>::load_map_image("map.png"))
 			.add_observer(MapFolder::<Agent<TCell>>::load_map_image("agents.png"))
+			.add_systems(Update, MapFolder::<TCell>::load_agents)
 			.add_systems(
 				OnEnter(resolving_dependencies),
 				(

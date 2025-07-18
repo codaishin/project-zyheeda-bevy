@@ -4,11 +4,10 @@ use common::traits::{
 	register_derived_component::{DerivableComponentFrom, InsertDerivedComponent},
 	thread_safe::ThreadSafe,
 };
-use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::{marker::PhantomData, path::PathBuf};
 
-#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Component, Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[component(immutable)]
 pub(crate) struct MapFolder<TCell> {
 	pub(crate) path: PathBuf,

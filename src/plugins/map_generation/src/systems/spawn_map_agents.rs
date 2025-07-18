@@ -1,13 +1,13 @@
 use crate::{
 	components::map::{
-		agents::{Enemy, Player},
+		agents::{AgentsLoaded, Enemy, Player},
 		cells::{MapCells, agent::Agent},
 	},
 	grid_graph::grid_context::{GridContext, GridDefinition, GridDefinitionError},
 	traits::{GridCellDistanceDefinition, grid_min::GridMin},
 };
 use bevy::prelude::*;
-use common::traits::thread_safe::ThreadSafe;
+use common::traits::{thread_safe::ThreadSafe, try_insert_on::TryInsertOn};
 
 impl<TCell> MapCells<Agent<TCell>>
 where
@@ -15,11 +15,11 @@ where
 {
 	pub(crate) fn spawn_map_agents(
 		mut commands: Commands,
-		cells: Query<&Self>,
+		cells: Query<(Entity, &Self)>,
 	) -> Result<(), Vec<GridDefinitionError>> {
 		let mut errors = vec![];
 
-		for MapCells { cells, size, .. } in &cells {
+		for (entity, MapCells { cells, size, .. }) in &cells {
 			let context = GridContext::try_from(GridDefinition {
 				cell_count_x: size.x,
 				cell_count_z: size.z,
@@ -45,6 +45,7 @@ where
 					_ => {}
 				}
 			}
+			commands.try_insert_on(entity, AgentsLoaded);
 		}
 
 		if !errors.is_empty() {
@@ -189,6 +190,26 @@ mod tests {
 			.run_system_once(MapCells::<Agent<_Cell>>::spawn_map_agents)?;
 
 		assert_eq!(Err(vec![GridDefinitionError::CellCountZero]), result);
+		Ok(())
+	}
+
+	#[test]
+	fn insert_agents_loaded() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let entity = app
+			.world_mut()
+			.spawn(MapCells {
+				size: Size { x: 1, z: 1 },
+				cells: HashMap::from([((0, 0), Agent::<_Cell>::Player)]),
+				..default()
+			})
+			.id();
+
+		_ = app
+			.world_mut()
+			.run_system_once(MapCells::<Agent<_Cell>>::spawn_map_agents)?;
+
+		assert!(app.world().entity(entity).contains::<AgentsLoaded>());
 		Ok(())
 	}
 }

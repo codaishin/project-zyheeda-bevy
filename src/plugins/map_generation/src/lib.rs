@@ -9,7 +9,8 @@ mod traits;
 
 use crate::{
 	components::map::{
-		agents::{Enemy, Player},
+		Map,
+		agents::{AgentsLoaded, Enemy, Player},
 		cells::corridor::Corridor,
 		demo_map::DemoMap,
 	},
@@ -78,10 +79,14 @@ where
 		>();
 		register_agents_lookup_load_tracking.in_app(app, resource_exists::<AgentsLookup>);
 
-		app.register_required_components::<Player, TPlayer::TPlayer>()
+		TSavegame::register_savable_component::<AgentsLoaded>(app);
+		TSavegame::register_savable_component::<DemoMap>(app);
+
+		app.register_required_components::<Map, TSavegame::TSaveEntityMarker>()
+			.register_required_components::<Player, TPlayer::TPlayer>()
 			.register_required_components::<Enemy, TEnemies::TEnemy>()
-			.register_map_cell::<TLoading, TSavegame, Corridor>()
 			.register_derived_component::<Grid, Collider>()
+			.register_map_cell::<TLoading, TSavegame, Corridor>()
 			.add_systems(
 				OnEnter(GameState::LoadingEssentialAssets),
 				AgentsLookupImages::<Image>::lookup_images,
