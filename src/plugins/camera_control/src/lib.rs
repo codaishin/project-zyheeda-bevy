@@ -52,16 +52,12 @@ where
 		app.register_required_components::<TGraphics::TFirstPassCamera, TPlayers::TPlayerMainCamera>();
 		app.add_systems(
 			Update,
-			TGraphics::TWorldCameras::set_to_orbit::<TPlayers::TPlayer>
-				.pipe(OnError::log)
-				.run_if(in_state(GameState::LoadDependencies)),
-		)
-		.add_systems(
-			Update,
 			(
+				TGraphics::TWorldCameras::set_to_orbit::<TPlayers::TPlayer>.pipe(OnError::log),
 				move_on_orbit::<OrbitPlayer, TSettings::TKeyMap<CameraKey>>,
 				move_with_target::<OrbitPlayer>,
 			)
+				.chain()
 				.run_if(in_state(GameState::Play)),
 		);
 	}

@@ -24,7 +24,6 @@ use common::{
 		handles_saving::HandlesSaving,
 		handles_settings::HandlesSettings,
 		prefab::AddPrefabObserver,
-		spawn::Spawn,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -91,7 +90,6 @@ where
 				First,
 				(set_cam_ray::<Camera, PlayerCamera>, set_mouse_hover).chain(),
 			)
-			.add_systems(OnEnter(GameState::NewGame), Player::spawn)
 			.add_systems(
 				Update,
 				(

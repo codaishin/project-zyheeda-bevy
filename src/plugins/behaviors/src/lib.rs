@@ -23,7 +23,7 @@ use common::{
 		animation::{HasAnimationsDispatch, RegisterAnimations},
 		delta::Delta,
 		handles_effect::HandlesEffect,
-		handles_enemies::HandlesEnemies,
+		handles_enemies::HandlesEnemyBehaviors,
 		handles_interactions::HandlesInteractions,
 		handles_orientation::{Face, HandlesOrientation},
 		handles_path_finding::HandlesPathFinding,
@@ -94,7 +94,7 @@ where
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
 	TInteractions: ThreadSafe + HandlesInteractions + HandlesEffect<DealDamage>,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
-	TEnemies: ThreadSafe + HandlesEnemies,
+	TEnemies: ThreadSafe + HandlesEnemyBehaviors,
 	TPlayers: ThreadSafe
 		+ HandlesPlayer
 		+ HandlesPlayerCameras
@@ -131,7 +131,7 @@ where
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
 	TInteractions: ThreadSafe + HandlesInteractions + HandlesEffect<DealDamage>,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
-	TEnemies: ThreadSafe + HandlesEnemies,
+	TEnemies: ThreadSafe + HandlesEnemyBehaviors,
 	TPlayers: ThreadSafe
 		+ HandlesPlayer
 		+ PlayerMainCamera
@@ -178,17 +178,18 @@ where
 
 		let enemy_computers_mapping = TPathFinding::computer_mapping_of::<(
 			Changed<Movement<PathOrWasd<VelocityBased>>>,
-			With<TEnemies::TEnemy>,
+			With<TEnemies::TEnemyBehavior>,
 		)>();
-		let compute_enemy_path = TEnemies::TEnemy::compute_path::<
+		let compute_enemy_path = TEnemies::TEnemyBehavior::compute_path::<
 			VelocityBased,
 			TPathFinding::TComputePath,
 			TPathFinding::TComputerRef,
 		>();
 		let execute_enemy_path =
-			TEnemies::TEnemy::execute_movement::<Movement<PathOrWasd<VelocityBased>>>;
-		let execute_enemy_movement = TEnemies::TEnemy::execute_movement::<Movement<VelocityBased>>;
-		let animate_enemy_movement = TEnemies::TEnemy::animate_movement::<
+			TEnemies::TEnemyBehavior::execute_movement::<Movement<PathOrWasd<VelocityBased>>>;
+		let execute_enemy_movement =
+			TEnemies::TEnemyBehavior::execute_movement::<Movement<VelocityBased>>;
+		let animate_enemy_movement = TEnemies::TEnemyBehavior::animate_movement::<
 			Movement<VelocityBased>,
 			TAnimations::TAnimationDispatch,
 		>;
@@ -225,9 +226,10 @@ where
 						.chain(),
 					// Enemy behaviors
 					(
-						TEnemies::TEnemy::select_behavior::<TPlayers::TPlayer>.pipe(OnError::log),
-						TEnemies::TEnemy::attack,
-						TEnemies::TEnemy::chase::<PathOrWasd<VelocityBased>>,
+						TEnemies::TEnemyBehavior::select_behavior::<TPlayers::TPlayer>
+							.pipe(OnError::log),
+						TEnemies::TEnemyBehavior::attack,
+						TEnemies::TEnemyBehavior::chase::<PathOrWasd<VelocityBased>>,
 						enemy_computers_mapping.pipe(compute_enemy_path.system()),
 						Update::delta.pipe(execute_enemy_path),
 						Update::delta.pipe(execute_enemy_movement),

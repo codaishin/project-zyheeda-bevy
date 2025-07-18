@@ -17,8 +17,8 @@ use crate::{
 		},
 		wall_cell::WallCell,
 	},
-	resources::color_lookup::ColorLookup,
-	systems::color_lookup::load_images::ColorLookupAssetPath,
+	resources::map::color_lookup::MapColorLookup,
+	systems::map_color_lookup::load_images::ColorLookupAssetPath,
 	traits::{
 		GridCellDistanceDefinition,
 		insert_cell_components::InsertCellComponents,
@@ -55,23 +55,14 @@ impl GridCellDistanceDefinition for Corridor {
 	const CELL_DISTANCE: f32 = Corridor::MODEL_ASSET_CELL_WIDTH;
 }
 
-impl From<Option<char>> for Corridor {
-	fn from(symbol: Option<char>) -> Self {
-		let Some(symbol) = symbol else {
-			return Corridor::Wall;
-		};
-
-		match symbol {
-			'c' => Corridor::Floor,
-			_ => Corridor::Wall,
-		}
-	}
-}
-
-impl ParseMapImage<ParsedColor, Corridor> for Corridor {
+impl ParseMapImage<ParsedColor> for Corridor {
 	type TParseError = Unreachable;
+	type TLookup = MapColorLookup<Corridor>;
 
-	fn try_parse(image: &ParsedColor, lookup: &ColorLookup<Corridor>) -> Result<Self, Unreachable> {
+	fn try_parse(
+		image: &ParsedColor,
+		lookup: &MapColorLookup<Corridor>,
+	) -> Result<Self, Unreachable> {
 		if matches!(image.color(), Some(color) if color == &lookup.floor) {
 			return Ok(Corridor::Floor);
 		}
@@ -169,32 +160,5 @@ mod tests {
 		let cell = Corridor::Wall;
 
 		assert!(!cell.is_walkable());
-	}
-
-	#[test]
-	fn new_empty_cell() {
-		let symbol = Some('c');
-
-		let cell = Corridor::from(symbol);
-
-		assert_eq!(Corridor::Floor, cell);
-	}
-
-	#[test]
-	fn new_wall_cell() {
-		let symbol = Some('は');
-
-		let cell = Corridor::from(symbol);
-
-		assert_eq!(Corridor::Wall, cell);
-	}
-
-	#[test]
-	fn new_wall_cell_from_none() {
-		let symbol = None;
-
-		let cell = Corridor::from(symbol);
-
-		assert_eq!(Corridor::Wall, cell);
 	}
 }

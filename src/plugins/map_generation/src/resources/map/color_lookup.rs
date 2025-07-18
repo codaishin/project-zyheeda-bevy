@@ -2,12 +2,12 @@ use bevy::prelude::*;
 use std::marker::PhantomData;
 
 #[derive(Resource, Debug, PartialEq)]
-pub(crate) struct ColorLookup<TCell> {
+pub(crate) struct MapColorLookup<TCell> {
 	pub(crate) floor: Color,
 	_c: PhantomData<TCell>,
 }
 
-impl<TCell> ColorLookup<TCell> {
+impl<TCell> MapColorLookup<TCell> {
 	pub(crate) fn new(floor: Color) -> Self {
 		Self {
 			floor,
@@ -16,16 +16,16 @@ impl<TCell> ColorLookup<TCell> {
 	}
 }
 
-impl<TCell> Clone for ColorLookup<TCell> {
+impl<TCell> Clone for MapColorLookup<TCell> {
 	fn clone(&self) -> Self {
 		*self
 	}
 }
 
-impl<TCell> Copy for ColorLookup<TCell> {}
+impl<TCell> Copy for MapColorLookup<TCell> {}
 
 #[derive(Resource, Debug)]
-pub(crate) struct ColorLookupImage<TCell, TImage = Image>
+pub(crate) struct MapColorLookupImage<TCell, TImage = Image>
 where
 	TImage: Asset,
 {
@@ -33,7 +33,7 @@ where
 	_c: PhantomData<TCell>,
 }
 
-impl<TCell, TImage> ColorLookupImage<TCell, TImage>
+impl<TCell, TImage> MapColorLookupImage<TCell, TImage>
 where
 	TImage: Asset,
 {
@@ -45,7 +45,7 @@ where
 	}
 }
 
-impl<TCell, TImage> PartialEq for ColorLookupImage<TCell, TImage>
+impl<TCell, TImage> PartialEq for MapColorLookupImage<TCell, TImage>
 where
 	TImage: Asset,
 {

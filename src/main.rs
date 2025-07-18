@@ -52,11 +52,12 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let light = LightPlugin::from_plugin(&savegame);
 	let children_assets_dispatch = ChildrenAssetsDispatchPlugin::from_plugin(&loading);
 	let interactions = InteractionsPlugin::from_plugin(&savegame);
-	let enemies = EnemyPlugin::from_plugins(&savegame, &interactions);
-	let map_generation = MapGenerationPlugin::from_plugins(&loading, &savegame, &light);
-	let path_finding = PathFindingPlugin::from_plugin(&map_generation);
 	let players =
 		PlayerPlugin::from_plugins(&settings, &savegame, &animations, &interactions, &light);
+	let enemies = EnemyPlugin::from_plugins(&savegame, &interactions);
+	let map_generation =
+		MapGenerationPlugin::from_plugins(&loading, &savegame, &light, &players, &enemies);
+	let path_finding = PathFindingPlugin::from_plugin(&map_generation);
 	let behaviors = BehaviorsPlugin::from_plugins(
 		&settings,
 		&savegame,

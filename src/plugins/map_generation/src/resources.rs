@@ -1,1 +1,2 @@
-pub(crate) mod color_lookup;
+pub(crate) mod agents;
+pub(crate) mod map;

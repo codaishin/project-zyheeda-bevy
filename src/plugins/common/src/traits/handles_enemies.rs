@@ -13,7 +13,12 @@ use bevy::prelude::*;
 use std::time::Duration;
 
 pub trait HandlesEnemies {
-	type TEnemy: Component
+	/// FIXME: Impl a `TEnemy::from(EnemyKind::VoidSphere)` pattern
+	type TEnemy: Component + Default;
+}
+
+pub trait HandlesEnemyBehaviors {
+	type TEnemyBehavior: Component
 		+ Getter<Speed>
 		+ GetterRefOptional<MovementAnimation>
 		+ Getter<EnemyTarget>

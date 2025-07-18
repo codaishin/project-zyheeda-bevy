@@ -1,10 +1,9 @@
-use std::path::PathBuf;
-
-use crate::resources::color_lookup::ColorLookupImage;
+use crate::resources::map::color_lookup::MapColorLookupImage;
 use bevy::prelude::*;
 use common::traits::{load_asset::LoadAsset, thread_safe::ThreadSafe};
+use std::path::PathBuf;
 
-impl<TCell> ColorLookupImage<TCell>
+impl<TCell> MapColorLookupImage<TCell>
 where
 	TCell: ThreadSafe + ColorLookupAssetPath,
 {
@@ -28,7 +27,7 @@ fn lookup_images<TCell, TAssetServer>(
 		.join("floor")
 		.with_extension("png");
 	let floor = asset_server.load_asset(path);
-	commands.insert_resource(ColorLookupImage::<TCell>::new(floor));
+	commands.insert_resource(MapColorLookupImage::<TCell>::new(floor));
 }
 
 #[cfg(test)]
@@ -85,8 +84,8 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&ColorLookupImage::new(floor)),
-			app.world().get_resource::<ColorLookupImage<_Cell>>(),
+			Some(&MapColorLookupImage::new(floor)),
+			app.world().get_resource::<MapColorLookupImage<_Cell>>(),
 		);
 	}
 

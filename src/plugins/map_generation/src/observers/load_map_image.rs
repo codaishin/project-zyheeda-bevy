@@ -1,45 +1,43 @@
-use crate::components::map::{asset::MapAsset, image::MapImage};
+use crate::components::map::{folder::MapFolder, image::MapImage};
 use bevy::prelude::*;
 use common::traits::{load_asset::LoadAsset, thread_safe::ThreadSafe, try_insert_on::TryInsertOn};
 
-impl<TCell> MapAsset<TCell>
+impl<TCell> MapFolder<TCell>
 where
 	TCell: ThreadSafe,
 {
 	pub(crate) fn load_map_image(
-		trigger: Trigger<OnInsert, Self>,
-		commands: Commands,
-		asset_server: ResMut<AssetServer>,
-		assets: Query<&Self>,
-	) {
-		load_map_image(trigger, commands, asset_server, assets)
+		file: &str,
+	) -> impl Fn(Trigger<OnInsert, Self>, Commands, ResMut<AssetServer>, Query<&Self>) {
+		load_map_image(file)
 	}
 }
 
+#[allow(clippy::type_complexity)]
 fn load_map_image<TCell, TAssets>(
-	trigger: Trigger<OnInsert, MapAsset<TCell>>,
-	mut commands: Commands,
-	mut asset_server: ResMut<TAssets>,
-	assets: Query<&MapAsset<TCell>>,
-) where
+	file: &str,
+) -> impl Fn(Trigger<OnInsert, MapFolder<TCell>>, Commands, ResMut<TAssets>, Query<&MapFolder<TCell>>)
+where
 	TCell: ThreadSafe,
 	TAssets: Resource + LoadAsset,
 {
-	let entity = trigger.target();
-	let Ok(MapAsset { path, .. }) = assets.get(entity) else {
-		return;
-	};
-	let handle = asset_server.load_asset(path.clone());
-	commands.try_insert_on(entity, MapImage::<TCell>::from(handle));
+	move |trigger, mut commands, mut asset_server, assets| {
+		let entity = trigger.target();
+		let Ok(MapFolder { path, .. }) = assets.get(entity) else {
+			return;
+		};
+		let handle = asset_server.load_asset(path.join(file));
+		commands.try_insert_on(entity, MapImage::<TCell>::from(handle));
+	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
 	use bevy::asset::AssetPath;
-	use common::traits::load_asset::Path;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
+	use std::path::PathBuf;
 	use testing::{NestedMocks, SingleThreadedApp, new_handle};
 
 	#[derive(Debug, PartialEq)]
@@ -65,7 +63,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.insert_resource(load_assets);
-		app.add_observer(load_map_image::<_Cell, _Assets>);
+		app.add_observer(load_map_image::<_Cell, _Assets>("my.file"));
 
 		app
 	}
@@ -74,12 +72,12 @@ mod tests {
 	fn load_image() {
 		let handle = new_handle();
 		let mut app = setup(_Assets::new().with_mock(|mock| {
-			mock.expect_load_asset::<Image, Path>()
+			mock.expect_load_asset::<Image, PathBuf>()
 				.return_const(handle.clone());
 		}));
 		let entity = app
 			.world_mut()
-			.spawn(MapAsset::<_Cell>::from("my/path"))
+			.spawn(MapFolder::<_Cell>::from("my/path"))
 			.id();
 
 		app.update();
@@ -93,12 +91,12 @@ mod tests {
 	#[test]
 	fn use_correct_path() {
 		let mut app = setup(_Assets::new().with_mock(|mock| {
-			mock.expect_load_asset::<Image, Path>()
-				.with(eq(Path::from("my/path")))
+			mock.expect_load_asset::<Image, PathBuf>()
+				.with(eq(PathBuf::from("my/path").join("my.file")))
 				.times(1)
 				.return_const(new_handle());
 		}));
-		app.world_mut().spawn(MapAsset::<_Cell>::from("my/path"));
+		app.world_mut().spawn(MapFolder::<_Cell>::from("my/path"));
 
 		app.update();
 	}
@@ -106,18 +104,18 @@ mod tests {
 	#[test]
 	fn reload_image_when_reinserted() {
 		let mut app = setup(_Assets::new().with_mock(|mock| {
-			mock.expect_load_asset::<Image, Path>()
-				.with(eq(Path::from("my/path")))
+			mock.expect_load_asset::<Image, PathBuf>()
+				.with(eq(PathBuf::from("my/path").join("my.file")))
 				.times(1)
 				.return_const(new_handle());
-			mock.expect_load_asset::<Image, Path>()
-				.with(eq(Path::from("my/other/path")))
+			mock.expect_load_asset::<Image, PathBuf>()
+				.with(eq(PathBuf::from("my/other/path").join("my.file")))
 				.times(1)
 				.return_const(new_handle());
 		}));
 		app.world_mut()
-			.spawn(MapAsset::<_Cell>::from("my/path"))
-			.insert(MapAsset::<_Cell>::from("my/other/path"));
+			.spawn(MapFolder::<_Cell>::from("my/path"))
+			.insert(MapFolder::<_Cell>::from("my/other/path"));
 
 		app.update();
 	}

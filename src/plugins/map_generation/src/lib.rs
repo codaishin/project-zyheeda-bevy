@@ -8,18 +8,26 @@ mod systems;
 mod traits;
 
 use crate::{
-	components::map::{cells::corridor::Corridor, demo_map::DemoMap},
+	components::map::{
+		Map,
+		agents::{AgentsLoaded, Enemy, Player},
+		cells::corridor::Corridor,
+		demo_map::DemoMap,
+	},
+	resources::agents::color_lookup::{AgentsLookup, AgentsLookupImages},
 	systems::get_grid::EntityOfGrid,
 };
 use bevy::{ecs::query::QueryFilter, prelude::*};
 use bevy_rapier3d::prelude::Collider;
 use common::{
-	states::game_state::GameState,
+	states::game_state::{GameState, LoadingEssentialAssets},
 	systems::log::OnError,
 	traits::{
+		handles_enemies::{HandlesEnemies, HandlesEnemyBehaviors},
 		handles_lights::HandlesLights,
-		handles_load_tracking::HandlesLoadTracking,
+		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInApp},
 		handles_map_generation::{EntityMapFiltered, HandlesMapGeneration},
+		handles_player::HandlesPlayer,
 		handles_saving::HandlesSaving,
 		register_derived_component::RegisterDerivedComponent,
 		spawn::Spawn,
@@ -34,26 +42,61 @@ use traits::register_map_cell::RegisterMapCell;
 
 pub struct MapGenerationPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TSavegame, TLights> MapGenerationPlugin<(TLoading, TSavegame, TLights)>
+impl<TLoading, TSavegame, TLights, TPlayer, TEnemies>
+	MapGenerationPlugin<(TLoading, TSavegame, TLights, TPlayer, TEnemies)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TLights: ThreadSafe + HandlesLights,
+	TPlayer: ThreadSafe + HandlesPlayer,
+	TEnemies: ThreadSafe + HandlesEnemyBehaviors,
 {
-	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TLights) -> Self {
+	pub fn from_plugins(
+		_: &TLoading,
+		_: &TSavegame,
+		_: &TLights,
+		_: &TPlayer,
+		_: &TEnemies,
+	) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLoading, TSavegame, TLights> Plugin for MapGenerationPlugin<(TLoading, TSavegame, TLights)>
+impl<TLoading, TSavegame, TLights, TPlayer, TEnemies> Plugin
+	for MapGenerationPlugin<(TLoading, TSavegame, TLights, TPlayer, TEnemies)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TLights: ThreadSafe + HandlesLights,
+	TPlayer: ThreadSafe + HandlesPlayer,
+	TEnemies: ThreadSafe + HandlesEnemies,
 {
 	fn build(&self, app: &mut App) {
-		app.register_map_cell::<TLoading, TSavegame, Corridor>()
+		let register_agents_lookup_load_tracking = TLoading::register_load_tracking::<
+			AgentsLookup,
+			LoadingEssentialAssets,
+			AssetsProgress,
+		>();
+		register_agents_lookup_load_tracking.in_app(app, resource_exists::<AgentsLookup>);
+
+		TSavegame::register_savable_component::<AgentsLoaded>(app);
+		TSavegame::register_savable_component::<DemoMap>(app);
+
+		app.register_required_components::<Map, TSavegame::TSaveEntityMarker>()
+			.register_required_components::<Player, TPlayer::TPlayer>()
+			.register_required_components::<Enemy, TEnemies::TEnemy>()
 			.register_derived_component::<Grid, Collider>()
+			.register_map_cell::<TLoading, TSavegame, Corridor>()
+			.add_systems(
+				OnEnter(GameState::LoadingEssentialAssets),
+				AgentsLookupImages::<Image>::lookup_images,
+			)
+			.add_systems(
+				Update,
+				AgentsLookup::parse_images
+					.pipe(OnError::log)
+					.run_if(not(resource_exists::<AgentsLookup>)),
+			)
 			.add_systems(OnEnter(GameState::NewGame), DemoMap::spawn)
 			.add_systems(Update, Grid::<1>::insert)
 			.add_systems(

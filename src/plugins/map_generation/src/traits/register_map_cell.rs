@@ -9,14 +9,14 @@ use crate::{
 		grid::Grid,
 		half_offset_grid::HalfOffsetGrid,
 		map::{
-			asset::MapAsset,
-			cells::{MapCells, parsed_color::ParsedColor},
+			cells::{MapCells, agent::Agent, parsed_color::ParsedColor},
+			folder::MapFolder,
 			grid_graph::MapGridGraph,
 			image::MapImage,
 		},
 	},
-	resources::color_lookup::{ColorLookup, ColorLookupImage},
-	systems::color_lookup::load_images::ColorLookupAssetPath,
+	resources::map::color_lookup::{MapColorLookup, MapColorLookupImage},
+	systems::map_color_lookup::load_images::ColorLookupAssetPath,
 	traits::parse_map_image::ParseMapImage,
 };
 use bevy::prelude::*;
@@ -42,7 +42,7 @@ pub(crate) trait RegisterMapCell {
 		TLoading: ThreadSafe + HandlesLoadTracking,
 		TSavegame: ThreadSafe + HandlesSaving,
 		for<'a> TCell: TypePath
-			+ ParseMapImage<ParsedColor, TCell, TParseError = Unreachable>
+			+ ParseMapImage<ParsedColor, TParseError = Unreachable, TLookup: Resource>
 			+ Clone
 			+ ThreadSafe
 			+ GridCellDistanceDefinition
@@ -57,9 +57,8 @@ impl RegisterMapCell for App {
 	fn register_map_cell<TLoading, TSavegame, TCell>(&mut self) -> &mut App
 	where
 		TLoading: ThreadSafe + HandlesLoadTracking,
-		TSavegame: ThreadSafe + HandlesSaving,
 		for<'a> TCell: TypePath
-			+ ParseMapImage<ParsedColor, TCell, TParseError = Unreachable>
+			+ ParseMapImage<ParsedColor, TParseError = Unreachable, TLookup: Resource>
 			+ Clone
 			+ ThreadSafe
 			+ GridCellDistanceDefinition
@@ -72,41 +71,47 @@ impl RegisterMapCell for App {
 		let resolving_dependencies =
 			TLoading::processing_state::<LoadingGame, DependenciesProgress>();
 
-		let map_lookup_loaded = TLoading::register_load_tracking::<
-			ColorLookup<TCell>,
+		let register_map_lookup_load_tracking = TLoading::register_load_tracking::<
+			MapColorLookup<TCell>,
 			LoadingEssentialAssets,
 			AssetsProgress,
 		>();
-		let map_images_loaded =
+		let register_map_images_load_tracking =
 			TLoading::register_load_tracking::<MapImage<TCell>, LoadingGame, AssetsProgress>();
-
-		//save maps
-		TSavegame::register_savable_component::<MapAsset<TCell>>(self);
-		self.register_required_components::<MapAsset<TCell>, TSavegame::TSaveEntityMarker>();
+		let register_agent_images_load_tracking = TLoading::register_load_tracking::<
+			MapImage<Agent<TCell>>,
+			LoadingGame,
+			AssetsProgress,
+		>();
 
 		// Track wether assets have been loaded
-		map_lookup_loaded.in_app(self, resource_exists::<ColorLookup<TCell>>);
-		map_images_loaded.in_app(self, MapImage::<TCell>::all_loaded);
+		register_map_lookup_load_tracking.in_app(self, resource_exists::<MapColorLookup<TCell>>);
+		register_map_images_load_tracking.in_app(self, MapImage::<TCell>::all_loaded);
+		register_agent_images_load_tracking.in_app(self, MapImage::<Agent<TCell>>::all_loaded);
 
 		self
 			// Map color lookup
 			.add_systems(
 				OnEnter(GameState::LoadingEssentialAssets),
-				ColorLookupImage::<TCell>::lookup_images,
+				MapColorLookupImage::<TCell>::lookup_images,
 			)
 			.add_systems(
 				Update,
-				ColorLookup::<TCell>::parse_images
+				MapColorLookup::<TCell>::parse_images
 					.pipe(OnError::log)
-					.run_if(not(resource_exists::<ColorLookup<TCell>>)),
+					.run_if(not(resource_exists::<MapColorLookup<TCell>>)),
 			)
 			// Load map cells and root graph from image
-			.add_observer(MapAsset::<TCell>::load_map_image)
+			.add_observer(MapFolder::<TCell>::load_map_image("map.png"))
+			.add_observer(MapFolder::<Agent<TCell>>::load_map_image("agents.png"))
+			.add_systems(Update, MapFolder::<TCell>::load_agents)
 			.add_systems(
 				OnEnter(resolving_dependencies),
 				(
 					MapImage::<TCell>::insert_map_cells.pipe(OnError::log),
+					MapImage::<Agent<TCell>>::insert_map_cells.pipe(OnError::log),
 					MapCells::<TCell>::insert_map_grid_graph.pipe(OnError::log),
+					MapCells::<Agent<TCell>>::spawn_map_agents.pipe(OnError::log),
 				)
 					.chain(),
 			)

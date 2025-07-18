@@ -244,7 +244,7 @@ pub fn equal_unordered<TEq: EqualUnordered>(left: &TEq, right: &TEq) -> bool {
 
 #[macro_export]
 macro_rules! assert_eq_unordered {
-	($left:expr, $right:expr) => {
+	($left:expr, $right:expr $(,)?) => {
 		match (&$left, &$right) {
 			(left_val, right_val) => {
 				assert!(
