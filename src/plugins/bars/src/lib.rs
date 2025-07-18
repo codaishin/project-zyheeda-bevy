@@ -12,7 +12,7 @@ use common::{
 	components::{life::Life, ui_node_for::UiNodeFor},
 	traits::{
 		accessors::get::GetterRef,
-		handles_enemies::HandlesEnemies,
+		handles_enemies::HandlesEnemyBehaviors,
 		handles_graphics::UiCamera,
 		handles_player::HandlesPlayer,
 		ownership_relation::OwnershipRelation,
@@ -28,7 +28,7 @@ pub struct BarsPlugin<TDependencies>(PhantomData<TDependencies>);
 impl<TPlayers, TEnemies, TGraphics> BarsPlugin<(TPlayers, TEnemies, TGraphics)>
 where
 	TPlayers: ThreadSafe + HandlesPlayer,
-	TEnemies: ThreadSafe + HandlesEnemies,
+	TEnemies: ThreadSafe + HandlesEnemyBehaviors,
 	TGraphics: ThreadSafe + UiCamera,
 {
 	pub fn from_plugins(_: &TPlayers, _: &TEnemies, _: &TGraphics) -> Self {
@@ -39,7 +39,7 @@ where
 impl<TPlayers, TEnemies, TGraphics> Plugin for BarsPlugin<(TPlayers, TEnemies, TGraphics)>
 where
 	TPlayers: ThreadSafe + HandlesPlayer,
-	TEnemies: ThreadSafe + HandlesEnemies,
+	TEnemies: ThreadSafe + HandlesEnemyBehaviors,
 	TGraphics: ThreadSafe + UiCamera,
 {
 	fn build(&self, app: &mut App) {
@@ -48,7 +48,7 @@ where
 		let render_layer = UiNodeFor::<Bar>::render_layer::<TGraphics::TUiCamera>;
 
 		app.register_required_components::<TPlayers::TPlayer, Bar>()
-			.register_required_components::<TEnemies::TEnemy, Bar>()
+			.register_required_components::<TEnemies::TEnemyBehavior, Bar>()
 			.register_required_components_with::<UiNodeFor<Bar>, RenderLayers>(render_layer);
 		app.manage_ownership::<Bar>(Update)
 			.add_systems(Update, (update_life_bars, render_life_bars).chain());

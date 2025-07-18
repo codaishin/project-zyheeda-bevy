@@ -25,9 +25,12 @@ where
 				cell_count_z: size.z,
 				cell_distance: TCell::CELL_DISTANCE,
 			});
-			let Ok(context) = context else {
-				errors.push(GridDefinitionError::CellCountZero);
-				continue;
+			let context = match context {
+				Ok(context) => context,
+				Err(error) => {
+					errors.push(error);
+					continue;
+				}
 			};
 			let min = context.grid_min();
 

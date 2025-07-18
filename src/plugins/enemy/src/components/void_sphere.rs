@@ -1,4 +1,4 @@
-use super::{enemy::Enemy, void_beam::VoidBeamAttack};
+use super::{enemy_behavior::EnemyBehavior, void_beam::VoidBeamAttack};
 use bevy::{
 	color::{Color, LinearRgba},
 	math::{Dir3, Vec3, primitives::Torus},
@@ -34,12 +34,12 @@ use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::{f32::consts::PI, sync::Arc, time::Duration};
 
-#[derive(Component, SavableComponent, Clone, Serialize, Deserialize)]
+#[derive(Component, SavableComponent, Default, Clone, Serialize, Deserialize)]
 #[require(
-	Enemy = VoidSphere::with_attack_range(Units::new(5.)),
 	GroundOffset = Self::GROUND_OFFSET,
 	RigidBody = RigidBody::Dynamic,
 	GravityScale = GravityScale(0.),
+	EnemyBehavior = VoidSphere::with_attack_range(Units::new(5.))
 )]
 pub struct VoidSphere;
 
@@ -50,8 +50,8 @@ impl VoidSphere {
 		ColliderRadius(Units::new(VOID_SPHERE_OUTER_RADIUS))
 	}
 
-	fn with_attack_range(attack_range: Units) -> Enemy {
-		Enemy {
+	pub(crate) fn with_attack_range(attack_range: Units) -> EnemyBehavior {
+		EnemyBehavior {
 			speed: UnitsPerSecond::new(1.).into(),
 			movement_animation: None,
 			aggro_range: Units::new(10.).into(),
@@ -64,25 +64,6 @@ impl VoidSphere {
 			}),
 			cool_down: Duration::from_secs(5),
 			collider_radius: Self::collider_radius(),
-		}
-	}
-
-	pub(crate) fn spawn(mut commands: Commands) {
-		let directions = [
-			("Sphere A", Vec3::new(1., 0., 1.)),
-			("Sphere B", Vec3::new(-1., 0., 1.)),
-			("Sphere C", Vec3::new(1., 0., -1.)),
-			("Sphere D", Vec3::new(-1., 0., -1.)),
-		];
-		let distance = 10.;
-
-		for (name, direction) in directions {
-			commands.spawn((
-				Name::new(name),
-				VoidSphere,
-				Transform::from_translation(direction * distance),
-				Visibility::default(),
-			));
 		}
 	}
 }

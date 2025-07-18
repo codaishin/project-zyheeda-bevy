@@ -22,6 +22,10 @@ pub(crate) trait SetCameraToOrbit {
 		Self: Component + Sized,
 		TPlayer: Component,
 	{
+		if cameras.is_empty() {
+			return Ok(());
+		}
+
 		let player = match players.single() {
 			Ok(player) => player,
 			Err(QuerySingleError::NoEntities(_)) => {
@@ -151,6 +155,18 @@ mod tests {
 			Err(UniqueViolation::multiple_of::<(_Player, PersistentEntity)>()),
 			result
 		);
+		Ok(())
+	}
+
+	#[test]
+	fn do_nothing_if_no_cameras() -> Result<(), RunSystemError> {
+		let mut app = setup();
+
+		let result = app
+			.world_mut()
+			.run_system_once(_Cam::set_to_orbit::<_Player>)?;
+
+		assert_eq!(Ok(()), result);
 		Ok(())
 	}
 }

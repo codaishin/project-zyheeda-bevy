@@ -3,21 +3,21 @@ pub mod components;
 mod systems;
 mod traits;
 
+use crate::components::enemy_behavior::EnemyBehavior;
 use bevy::prelude::*;
 use common::{
 	attributes::{affected_by::AffectedBy, health::Health},
 	effects::{deal_damage::DealDamage, force::Force, gravity::Gravity},
-	states::game_state::GameState,
 	traits::{
 		handles_effect::HandlesEffect,
-		handles_enemies::HandlesEnemies,
+		handles_enemies::{HandlesEnemies, HandlesEnemyBehaviors},
 		handles_interactions::HandlesInteractions,
 		handles_saving::HandlesSaving,
 		prefab::AddPrefabObserver,
 		thread_safe::ThreadSafe,
 	},
 };
-use components::{enemy::Enemy, void_beam::VoidBeam, void_sphere::VoidSphere};
+use components::{void_beam::VoidBeam, void_sphere::VoidSphere};
 use std::marker::PhantomData;
 use systems::void_sphere::ring_rotation::ring_rotation;
 
@@ -57,11 +57,14 @@ where
 		app.add_prefab_observer::<VoidBeam, TInteractions>();
 
 		// behaviors
-		app.add_systems(OnEnter(GameState::NewGame), VoidSphere::spawn);
 		app.add_systems(Update, ring_rotation);
 	}
 }
 
 impl<TDependencies> HandlesEnemies for EnemyPlugin<TDependencies> {
-	type TEnemy = Enemy;
+	type TEnemy = VoidSphere;
+}
+
+impl<TDependencies> HandlesEnemyBehaviors for EnemyPlugin<TDependencies> {
+	type TEnemyBehavior = EnemyBehavior;
 }

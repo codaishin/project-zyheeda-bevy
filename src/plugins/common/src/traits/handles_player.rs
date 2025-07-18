@@ -15,7 +15,7 @@ use bevy::{
 };
 
 pub trait HandlesPlayer {
-	type TPlayer: Component;
+	type TPlayer: Component + Default;
 }
 
 pub trait PlayerMainCamera {
