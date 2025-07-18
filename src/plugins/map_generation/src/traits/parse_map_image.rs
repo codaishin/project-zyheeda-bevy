@@ -1,7 +1,6 @@
-use crate::resources::map::color_lookup::MapColorLookup;
-
-pub(crate) trait ParseMapImage<TImage, TCell>: Sized {
+pub(crate) trait ParseMapImage<TImage>: Sized {
 	type TParseError;
+	type TLookup;
 
-	fn try_parse(image: &TImage, lookup: &MapColorLookup<TCell>) -> Result<Self, Self::TParseError>;
+	fn try_parse(image: &TImage, lookup: &Self::TLookup) -> Result<Self, Self::TParseError>;
 }

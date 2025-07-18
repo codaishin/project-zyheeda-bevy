@@ -9,7 +9,7 @@ use crate::{
 		grid::Grid,
 		half_offset_grid::HalfOffsetGrid,
 		map::{
-			cells::{MapCells, parsed_color::ParsedColor},
+			cells::{MapCells, agent::Agent, parsed_color::ParsedColor},
 			folder::MapFolder,
 			grid_graph::MapGridGraph,
 			image::MapImage,
@@ -32,6 +32,7 @@ use common::{
 			LoadTrackingInApp,
 		},
 		handles_saving::HandlesSaving,
+		register_derived_component::RegisterDerivedComponent,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -42,7 +43,7 @@ pub(crate) trait RegisterMapCell {
 		TLoading: ThreadSafe + HandlesLoadTracking,
 		TSavegame: ThreadSafe + HandlesSaving,
 		for<'a> TCell: TypePath
-			+ ParseMapImage<ParsedColor, TCell, TParseError = Unreachable>
+			+ ParseMapImage<ParsedColor, TParseError = Unreachable, TLookup: Resource>
 			+ Clone
 			+ ThreadSafe
 			+ GridCellDistanceDefinition
@@ -59,7 +60,7 @@ impl RegisterMapCell for App {
 		TLoading: ThreadSafe + HandlesLoadTracking,
 		TSavegame: ThreadSafe + HandlesSaving,
 		for<'a> TCell: TypePath
-			+ ParseMapImage<ParsedColor, TCell, TParseError = Unreachable>
+			+ ParseMapImage<ParsedColor, TParseError = Unreachable, TLookup: Resource>
 			+ Clone
 			+ ThreadSafe
 			+ GridCellDistanceDefinition
@@ -79,6 +80,11 @@ impl RegisterMapCell for App {
 		>();
 		let register_map_images_load_tracking =
 			TLoading::register_load_tracking::<MapImage<TCell>, LoadingGame, AssetsProgress>();
+		let register_agent_images_load_tracking = TLoading::register_load_tracking::<
+			MapImage<Agent<TCell>>,
+			LoadingGame,
+			AssetsProgress,
+		>();
 
 		//save maps
 		TSavegame::register_savable_component::<MapFolder<TCell>>(self);
@@ -87,6 +93,7 @@ impl RegisterMapCell for App {
 		// Track wether assets have been loaded
 		register_map_lookup_load_tracking.in_app(self, resource_exists::<MapColorLookup<TCell>>);
 		register_map_images_load_tracking.in_app(self, MapImage::<TCell>::all_loaded);
+		register_agent_images_load_tracking.in_app(self, MapImage::<Agent<TCell>>::all_loaded);
 
 		self
 			// Map color lookup
@@ -101,12 +108,16 @@ impl RegisterMapCell for App {
 					.run_if(not(resource_exists::<MapColorLookup<TCell>>)),
 			)
 			// Load map cells and root graph from image
-			.add_observer(MapFolder::<TCell>::load_map_image)
+			.register_derived_component::<MapFolder<TCell>, MapFolder<Agent<TCell>>>()
+			.add_observer(MapFolder::<TCell>::load_map_image("map.png"))
+			.add_observer(MapFolder::<Agent<TCell>>::load_map_image("agents.png"))
 			.add_systems(
 				OnEnter(resolving_dependencies),
 				(
 					MapImage::<TCell>::insert_map_cells.pipe(OnError::log),
+					MapImage::<Agent<TCell>>::insert_map_cells.pipe(OnError::log),
 					MapCells::<TCell>::insert_map_grid_graph.pipe(OnError::log),
+					MapCells::<Agent<TCell>>::spawn_map_agents.pipe(OnError::log),
 				)
 					.chain(),
 			)

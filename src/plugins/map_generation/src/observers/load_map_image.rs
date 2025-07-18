@@ -2,37 +2,33 @@ use crate::components::map::{folder::MapFolder, image::MapImage};
 use bevy::prelude::*;
 use common::traits::{load_asset::LoadAsset, thread_safe::ThreadSafe, try_insert_on::TryInsertOn};
 
-const MAP_FILE: &str = "map.png";
-
 impl<TCell> MapFolder<TCell>
 where
 	TCell: ThreadSafe,
 {
 	pub(crate) fn load_map_image(
-		trigger: Trigger<OnInsert, Self>,
-		commands: Commands,
-		asset_server: ResMut<AssetServer>,
-		assets: Query<&Self>,
-	) {
-		load_map_image(trigger, commands, asset_server, assets)
+		file: &str,
+	) -> impl Fn(Trigger<OnInsert, Self>, Commands, ResMut<AssetServer>, Query<&Self>) {
+		load_map_image(file)
 	}
 }
 
+#[allow(clippy::type_complexity)]
 fn load_map_image<TCell, TAssets>(
-	trigger: Trigger<OnInsert, MapFolder<TCell>>,
-	mut commands: Commands,
-	mut asset_server: ResMut<TAssets>,
-	assets: Query<&MapFolder<TCell>>,
-) where
+	file: &str,
+) -> impl Fn(Trigger<OnInsert, MapFolder<TCell>>, Commands, ResMut<TAssets>, Query<&MapFolder<TCell>>)
+where
 	TCell: ThreadSafe,
 	TAssets: Resource + LoadAsset,
 {
-	let entity = trigger.target();
-	let Ok(MapFolder { path, .. }) = assets.get(entity) else {
-		return;
-	};
-	let handle = asset_server.load_asset(path.join(MAP_FILE));
-	commands.try_insert_on(entity, MapImage::<TCell>::from(handle));
+	move |trigger, mut commands, mut asset_server, assets| {
+		let entity = trigger.target();
+		let Ok(MapFolder { path, .. }) = assets.get(entity) else {
+			return;
+		};
+		let handle = asset_server.load_asset(path.join(file));
+		commands.try_insert_on(entity, MapImage::<TCell>::from(handle));
+	}
 }
 
 #[cfg(test)]
@@ -67,7 +63,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.insert_resource(load_assets);
-		app.add_observer(load_map_image::<_Cell, _Assets>);
+		app.add_observer(load_map_image::<_Cell, _Assets>("my.file"));
 
 		app
 	}
@@ -96,7 +92,7 @@ mod tests {
 	fn use_correct_path() {
 		let mut app = setup(_Assets::new().with_mock(|mock| {
 			mock.expect_load_asset::<Image, PathBuf>()
-				.with(eq(PathBuf::from("my/path").join(MAP_FILE)))
+				.with(eq(PathBuf::from("my/path").join("my.file")))
 				.times(1)
 				.return_const(new_handle());
 		}));
@@ -109,11 +105,11 @@ mod tests {
 	fn reload_image_when_reinserted() {
 		let mut app = setup(_Assets::new().with_mock(|mock| {
 			mock.expect_load_asset::<Image, PathBuf>()
-				.with(eq(PathBuf::from("my/path").join(MAP_FILE)))
+				.with(eq(PathBuf::from("my/path").join("my.file")))
 				.times(1)
 				.return_const(new_handle());
 			mock.expect_load_asset::<Image, PathBuf>()
-				.with(eq(PathBuf::from("my/other/path").join(MAP_FILE)))
+				.with(eq(PathBuf::from("my/other/path").join("my.file")))
 				.times(1)
 				.return_const(new_handle());
 		}));

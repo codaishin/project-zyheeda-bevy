@@ -1,4 +1,9 @@
+use crate::components::map::cells::agent::Agent;
 use bevy::prelude::*;
+use common::traits::{
+	register_derived_component::{DerivableComponentFrom, InsertDerivedComponent},
+	thread_safe::ThreadSafe,
+};
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::{marker::PhantomData, path::PathBuf};
@@ -21,4 +26,17 @@ where
 			_c: PhantomData,
 		}
 	}
+}
+
+impl<TCell> From<&MapFolder<TCell>> for MapFolder<Agent<TCell>> {
+	fn from(MapFolder { path, .. }: &MapFolder<TCell>) -> Self {
+		Self::from(path.clone())
+	}
+}
+
+impl<TCell> DerivableComponentFrom<MapFolder<TCell>> for MapFolder<Agent<TCell>>
+where
+	TCell: ThreadSafe,
+{
+	const INSERT: InsertDerivedComponent = InsertDerivedComponent::Always;
 }

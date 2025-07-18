@@ -1,6 +1,5 @@
 use crate::{
 	components::map::{cells::MapCells, image::MapImage},
-	resources::map::color_lookup::MapColorLookup,
 	traits::parse_map_image::ParseMapImage,
 };
 use bevy::prelude::*;
@@ -10,20 +9,21 @@ use common::traits::{
 	try_remove_from::TryRemoveFrom,
 };
 
-pub(crate) type OkOrParseError<TCells, TCell, TImage = Image> =
-	Result<(), Vec<<TCells as ParseMapImage<TImage, TCell>>::TParseError>>;
+type MapCellsLookup<TCell> = <MapCells<TCell> as ParseMapImage<Image>>::TLookup;
+type MapCellsParseError<TCell> = <MapCells<TCell> as ParseMapImage<Image>>::TParseError;
 
 impl<TCell> MapImage<TCell>
 where
 	TCell: ThreadSafe,
-	MapCells<TCell>: ParseMapImage<Image, TCell>,
+	MapCells<TCell>: ParseMapImage<Image>,
+	MapCellsLookup<TCell>: Resource,
 {
 	pub(crate) fn insert_map_cells(
 		commands: Commands,
 		handles: Query<(Entity, &Self)>,
 		images: Res<Assets<Image>>,
-		lookup: Res<MapColorLookup<TCell>>,
-	) -> OkOrParseError<MapCells<TCell>, TCell> {
+		lookup: Res<MapCellsLookup<TCell>>,
+	) -> Result<(), Vec<MapCellsParseError<TCell>>> {
 		insert_map_cells::<MapCells<TCell>, TCell, Image>(commands, handles, images, lookup)
 	}
 }
@@ -32,10 +32,11 @@ fn insert_map_cells<TCells, TCell, TImage>(
 	mut commands: Commands,
 	handles: Query<(Entity, &MapImage<TCell, TImage>)>,
 	images: Res<Assets<TImage>>,
-	lookup: Res<MapColorLookup<TCell>>,
-) -> OkOrParseError<TCells, TCell, TImage>
+	lookup: Res<TCells::TLookup>,
+) -> Result<(), Vec<TCells::TParseError>>
 where
-	TCells: ParseMapImage<TImage, TCell> + Component,
+	TCells: ParseMapImage<TImage> + Component,
+	TCells::TLookup: Resource,
 	TCell: ThreadSafe,
 	TImage: Asset,
 {
@@ -71,6 +72,9 @@ mod tests {
 	use common::errors::Unreachable;
 	use testing::{SingleThreadedApp, new_handle};
 
+	#[derive(Resource, Debug, PartialEq, Default)]
+	struct _Lookup;
+
 	#[derive(Asset, TypePath, Debug, PartialEq, Clone, Copy)]
 	struct _Image;
 
@@ -78,29 +82,25 @@ mod tests {
 	struct _Cell;
 
 	#[derive(Component, Debug, PartialEq)]
-	struct _Cells {
-		image: _Image,
-		lookup: MapColorLookup<_Cell>,
-	}
+	struct _Cells;
 
-	impl ParseMapImage<_Image, _Cell> for _Cells {
+	impl ParseMapImage<_Image> for _Cells {
 		type TParseError = Unreachable;
+		type TLookup = _Lookup;
 
-		fn try_parse(image: &_Image, lookup: &MapColorLookup<_Cell>) -> Result<Self, Unreachable> {
-			Ok(Self {
-				image: *image,
-				lookup: *lookup,
-			})
+		fn try_parse(_: &_Image, _: &_Lookup) -> Result<Self, Unreachable> {
+			Ok(Self)
 		}
 	}
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _CellsFail;
 
-	impl ParseMapImage<_Image, _Cell> for _CellsFail {
+	impl ParseMapImage<_Image> for _CellsFail {
 		type TParseError = _Error;
+		type TLookup = _Lookup;
 
-		fn try_parse(_: &_Image, _: &MapColorLookup<_Cell>) -> Result<Self, _Error> {
+		fn try_parse(_: &_Image, _: &_Lookup) -> Result<Self, _Error> {
 			Err(_Error)
 		}
 	}
@@ -108,10 +108,7 @@ mod tests {
 	#[derive(Debug, PartialEq)]
 	struct _Error;
 
-	fn setup<const N: usize>(
-		images: [(&Handle<_Image>, _Image); N],
-		lookup: MapColorLookup<_Cell>,
-	) -> App {
+	fn setup<const N: usize>(images: [(&Handle<_Image>, _Image); N]) -> App {
 		let mut app = App::new().single_threaded(Update);
 		let mut assets = Assets::default();
 
@@ -119,7 +116,7 @@ mod tests {
 			assets.insert(id, image);
 		}
 		app.insert_resource(assets);
-		app.insert_resource(lookup);
+		app.init_resource::<_Lookup>();
 
 		app
 	}
@@ -128,8 +125,7 @@ mod tests {
 	fn parse_from_image() -> Result<(), RunSystemError> {
 		let handle = new_handle();
 		let images = [(&handle, _Image)];
-		let lookup = MapColorLookup::<_Cell>::new(Color::srgb_u8(1, 2, 3));
-		let mut app = setup(images, lookup);
+		let mut app = setup(images);
 		let entity = app
 			.world_mut()
 			.spawn(MapImage::<_Cell, _Image>::from(handle))
@@ -140,13 +136,7 @@ mod tests {
 			.run_system_once(insert_map_cells::<_Cells, _Cell, _Image>)?;
 
 		assert_eq!(
-			(
-				Some(&_Cells {
-					image: _Image,
-					lookup
-				}),
-				Ok(())
-			),
+			(Some(&_Cells), Ok(())),
 			(app.world().entity(entity).get::<_Cells>(), result),
 		);
 		Ok(())
@@ -156,8 +146,7 @@ mod tests {
 	fn remove_image() -> Result<(), RunSystemError> {
 		let handle = new_handle();
 		let images = [(&handle, _Image)];
-		let lookup = MapColorLookup::<_Cell>::new(Color::srgb_u8(1, 2, 3));
-		let mut app = setup(images, lookup);
+		let mut app = setup(images);
 		let entity = app
 			.world_mut()
 			.spawn(MapImage::<_Cell, _Image>::from(handle))
@@ -179,8 +168,7 @@ mod tests {
 	fn return_error() -> Result<(), RunSystemError> {
 		let handle = new_handle();
 		let images = [(&handle, _Image)];
-		let lookup = MapColorLookup::<_Cell>::new(Color::srgb_u8(1, 2, 3));
-		let mut app = setup(images, lookup);
+		let mut app = setup(images);
 		app.world_mut()
 			.spawn(MapImage::<_Cell, _Image>::from(handle));
 
@@ -196,8 +184,7 @@ mod tests {
 	fn do_not_remove_image_on_error() -> Result<(), RunSystemError> {
 		let handle = new_handle();
 		let images = [(&handle, _Image)];
-		let lookup = MapColorLookup::<_Cell>::new(Color::srgb_u8(1, 2, 3));
-		let mut app = setup(images, lookup);
+		let mut app = setup(images);
 		let entity = app
 			.world_mut()
 			.spawn(MapImage::<_Cell, _Image>::from(handle))

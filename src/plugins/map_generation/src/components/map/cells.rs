@@ -1,10 +1,10 @@
+pub(crate) mod agent;
 pub(crate) mod corridor;
 pub(crate) mod half_offset_cell;
 pub(crate) mod parsed_color;
 
 use crate::{
 	components::map::cells::{half_offset_cell::HalfOffsetCell, parsed_color::ParsedColor},
-	resources::map::color_lookup::MapColorLookup,
 	traits::{
 		parse_map_image::ParseMapImage,
 		pixels::{Layer, PixelBytesIterator},
@@ -24,6 +24,7 @@ pub(crate) type CellGrid<TCell> = HashMap<(usize, usize), TCell>;
 pub(crate) struct MapCells<TCell> {
 	pub(crate) size: Size,
 	pub(crate) cells: CellGrid<TCell>,
+	// FIXME: Either move out or rework as `extra`. It is not needed for agents
 	pub(crate) half_offset_cells: CellGrid<HalfOffsetCell<TCell>>,
 }
 
@@ -43,15 +44,16 @@ impl<TCell> Default for MapCells<TCell> {
 	}
 }
 
-impl<TCell, TImage> ParseMapImage<TImage, TCell> for MapCells<TCell>
+impl<TCell, TImage> ParseMapImage<TImage> for MapCells<TCell>
 where
 	TImage: PixelBytesIterator,
 	for<'a> TCell:
-		ParseMapImage<ParsedColor, TCell, TParseError = Unreachable> + Clone + ThreadSafe + Default,
+		ParseMapImage<ParsedColor, TParseError = Unreachable> + Clone + ThreadSafe + Default,
 {
 	type TParseError = MapSizeError;
+	type TLookup = TCell::TLookup;
 
-	fn try_parse(image: &TImage, lookup: &MapColorLookup<TCell>) -> Result<Self, MapSizeError> {
+	fn try_parse(image: &TImage, lookup: &Self::TLookup) -> Result<Self, MapSizeError> {
 		let mut max = Size { x: 0, z: 0 };
 		let mut cells = CellGrid::default();
 		let mut half_offset_cells = CellGrid::default();
@@ -182,21 +184,21 @@ mod test_parsing {
 	use std::vec::IntoIter;
 	use testing::{Mock, simple_init};
 
+	struct _Lookup;
+
 	#[derive(TypePath, Debug, PartialEq, Clone, Default)]
 	enum _Cell {
 		#[default]
 		Default,
-		Value((ParsedColor, MapColorLookup<Self>)),
+		Value(ParsedColor),
 	}
 
-	impl ParseMapImage<ParsedColor, Self> for _Cell {
+	impl ParseMapImage<ParsedColor> for _Cell {
 		type TParseError = Unreachable;
+		type TLookup = _Lookup;
 
-		fn try_parse(
-			parsed_color: &ParsedColor,
-			lookup: &MapColorLookup<Self>,
-		) -> Result<Self, Self::TParseError> {
-			Ok(_Cell::Value((*parsed_color, *lookup)))
+		fn try_parse(parsed_color: &ParsedColor, _: &_Lookup) -> Result<Self, Self::TParseError> {
+			Ok(_Cell::Value(*parsed_color))
 		}
 	}
 
@@ -230,9 +232,8 @@ mod test_parsing {
 	#[test]
 	fn empty() {
 		let image = _Image(vec![]);
-		let lookup = MapColorLookup::new(Color::srgba_u8(0, 0, 0, 0));
 
-		let map = MapCells::<_Cell>::try_parse(&image, &lookup);
+		let map = MapCells::<_Cell>::try_parse(&image, &_Lookup);
 
 		assert_eq!(Err(MapSizeError::Empty), map);
 	}
@@ -240,9 +241,8 @@ mod test_parsing {
 	#[test]
 	fn too_small_z() {
 		let image = _Image(vec![(uvec3(0, 0, 0), &[]), (uvec3(1, 0, 0), &[])]);
-		let lookup = MapColorLookup::new(Color::srgba_u8(0, 0, 0, 0));
 
-		let map = MapCells::<_Cell>::try_parse(&image, &lookup);
+		let map = MapCells::<_Cell>::try_parse(&image, &_Lookup);
 
 		assert_eq!(Err(MapSizeError::Sizes { x: 2, z: 1 }), map);
 	}
@@ -250,9 +250,8 @@ mod test_parsing {
 	#[test]
 	fn too_small_x() {
 		let image = _Image(vec![(uvec3(0, 0, 0), &[]), (uvec3(0, 1, 0), &[])]);
-		let lookup = MapColorLookup::new(Color::srgba_u8(0, 0, 0, 0));
 
-		let map = MapCells::<_Cell>::try_parse(&image, &lookup);
+		let map = MapCells::<_Cell>::try_parse(&image, &_Lookup);
 
 		assert_eq!(Err(MapSizeError::Sizes { x: 1, z: 2 }), map);
 	}
@@ -260,9 +259,8 @@ mod test_parsing {
 	#[test]
 	fn too_small_x_and_z() {
 		let image = _Image(vec![(uvec3(0, 0, 0), &[])]);
-		let lookup = MapColorLookup::new(Color::srgba_u8(0, 0, 0, 0));
 
-		let map = MapCells::<_Cell>::try_parse(&image, &lookup);
+		let map = MapCells::<_Cell>::try_parse(&image, &_Lookup);
 
 		assert_eq!(Err(MapSizeError::Sizes { x: 1, z: 1 }), map);
 	}
@@ -283,9 +281,8 @@ mod test_parsing {
 					.into_iter()
 				});
 		});
-		let lookup = MapColorLookup::new(Color::srgba_u8(0, 0, 0, 0));
 
-		_ = MapCells::<_Cell>::try_parse(&image, &lookup)
+		_ = MapCells::<_Cell>::try_parse(&image, &_Lookup)
 	}
 
 	#[test]
@@ -296,48 +293,35 @@ mod test_parsing {
 			(uvec3(1, 0, 0), &[3, 3, 3, 3]),
 			(uvec3(1, 1, 0), &[4, 4, 4, 4]),
 		]);
-		let lookup = MapColorLookup::new(Color::srgb_u8(1, 2, 3));
-		let map = MapCells::<_Cell>::try_parse(&image, &lookup)?;
+		let map = MapCells::<_Cell>::try_parse(&image, &_Lookup)?;
 
 		assert_eq!(
 			MapCells {
 				size: Size { x: 2, z: 2 },
 				cells: CellGrid::from([
-					(
-						(0, 0),
-						_Cell::Value((ParsedColor::parse(&[1, 1, 1, 1]), lookup))
-					),
-					(
-						(0, 1),
-						_Cell::Value((ParsedColor::parse(&[2, 2, 2, 2]), lookup))
-					),
-					(
-						(1, 0),
-						_Cell::Value((ParsedColor::parse(&[3, 3, 3, 3]), lookup))
-					),
-					(
-						(1, 1),
-						_Cell::Value((ParsedColor::parse(&[4, 4, 4, 4]), lookup))
-					),
+					((0, 0), _Cell::Value(ParsedColor::parse(&[1, 1, 1, 1]))),
+					((0, 1), _Cell::Value(ParsedColor::parse(&[2, 2, 2, 2]))),
+					((1, 0), _Cell::Value(ParsedColor::parse(&[3, 3, 3, 3]))),
+					((1, 1), _Cell::Value(ParsedColor::parse(&[4, 4, 4, 4]))),
 				]),
 				half_offset_cells: CellGrid::from([(
 					(0, 0),
 					HalfOffsetCell::from([
 						(
 							Direction::Z,
-							_Cell::Value((ParsedColor::parse(&[1, 1, 1, 1]), lookup))
+							_Cell::Value(ParsedColor::parse(&[1, 1, 1, 1]))
 						),
 						(
 							Direction::X,
-							_Cell::Value((ParsedColor::parse(&[2, 2, 2, 2]), lookup))
+							_Cell::Value(ParsedColor::parse(&[2, 2, 2, 2]))
 						),
 						(
 							Direction::NegX,
-							_Cell::Value((ParsedColor::parse(&[3, 3, 3, 3]), lookup))
+							_Cell::Value(ParsedColor::parse(&[3, 3, 3, 3]))
 						),
 						(
 							Direction::NegZ,
-							_Cell::Value((ParsedColor::parse(&[4, 4, 4, 4]), lookup))
+							_Cell::Value(ParsedColor::parse(&[4, 4, 4, 4]))
 						),
 					])
 				)]),
@@ -354,41 +338,31 @@ mod test_parsing {
 			(uvec3(0, 1, 0), &[2, 2, 2, 2]),
 			(uvec3(1, 1, 0), &[4, 4, 4, 4]),
 		]);
-		let lookup = MapColorLookup::new(Color::srgb_u8(1, 2, 3));
-		let map = MapCells::<_Cell>::try_parse(&image, &lookup)?;
+		let map = MapCells::<_Cell>::try_parse(&image, &_Lookup)?;
 
 		assert_eq!(
 			MapCells {
 				size: Size { x: 2, z: 2 },
 				cells: CellGrid::from([
-					(
-						(0, 0),
-						_Cell::Value((ParsedColor::parse(&[1, 1, 1, 1]), lookup))
-					),
-					(
-						(0, 1),
-						_Cell::Value((ParsedColor::parse(&[2, 2, 2, 2]), lookup))
-					),
-					(
-						(1, 1),
-						_Cell::Value((ParsedColor::parse(&[4, 4, 4, 4]), lookup))
-					),
+					((0, 0), _Cell::Value(ParsedColor::parse(&[1, 1, 1, 1]))),
+					((0, 1), _Cell::Value(ParsedColor::parse(&[2, 2, 2, 2]))),
+					((1, 1), _Cell::Value(ParsedColor::parse(&[4, 4, 4, 4]))),
 				]),
 				half_offset_cells: CellGrid::from([(
 					(0, 0),
 					HalfOffsetCell::from([
 						(
 							Direction::Z,
-							_Cell::Value((ParsedColor::parse(&[1, 1, 1, 1]), lookup))
+							_Cell::Value(ParsedColor::parse(&[1, 1, 1, 1]))
 						),
 						(
 							Direction::X,
-							_Cell::Value((ParsedColor::parse(&[2, 2, 2, 2]), lookup))
+							_Cell::Value(ParsedColor::parse(&[2, 2, 2, 2]))
 						),
 						(Direction::NegX, _Cell::Default),
 						(
 							Direction::NegZ,
-							_Cell::Value((ParsedColor::parse(&[4, 4, 4, 4]), lookup))
+							_Cell::Value(ParsedColor::parse(&[4, 4, 4, 4]))
 						),
 					])
 				)]),
@@ -411,49 +385,21 @@ mod test_parsing {
 			(uvec3(2, 1, 0), &[2, 1, 0, 0]),
 			(uvec3(2, 2, 0), &[2, 2, 0, 0]),
 		]);
-		let lookup = MapColorLookup::new(Color::srgb_u8(1, 2, 3));
-		let map = MapCells::<_Cell>::try_parse(&image, &lookup)?;
+		let map = MapCells::<_Cell>::try_parse(&image, &_Lookup)?;
 
 		assert_eq!(
 			MapCells {
 				size: Size { x: 3, z: 3 },
 				cells: CellGrid::from([
-					(
-						(0, 0),
-						_Cell::Value((ParsedColor::parse(&[0, 0, 0, 0]), lookup))
-					),
-					(
-						(0, 1),
-						_Cell::Value((ParsedColor::parse(&[0, 1, 0, 0]), lookup))
-					),
-					(
-						(0, 2),
-						_Cell::Value((ParsedColor::parse(&[0, 2, 0, 0]), lookup))
-					),
-					(
-						(1, 0),
-						_Cell::Value((ParsedColor::parse(&[1, 0, 0, 0]), lookup))
-					),
-					(
-						(1, 1),
-						_Cell::Value((ParsedColor::parse(&[1, 1, 0, 0]), lookup))
-					),
-					(
-						(1, 2),
-						_Cell::Value((ParsedColor::parse(&[1, 2, 0, 0]), lookup))
-					),
-					(
-						(2, 0),
-						_Cell::Value((ParsedColor::parse(&[2, 0, 0, 0]), lookup))
-					),
-					(
-						(2, 1),
-						_Cell::Value((ParsedColor::parse(&[2, 1, 0, 0]), lookup))
-					),
-					(
-						(2, 2),
-						_Cell::Value((ParsedColor::parse(&[2, 2, 0, 0]), lookup))
-					),
+					((0, 0), _Cell::Value(ParsedColor::parse(&[0, 0, 0, 0]))),
+					((0, 1), _Cell::Value(ParsedColor::parse(&[0, 1, 0, 0]))),
+					((0, 2), _Cell::Value(ParsedColor::parse(&[0, 2, 0, 0]))),
+					((1, 0), _Cell::Value(ParsedColor::parse(&[1, 0, 0, 0]))),
+					((1, 1), _Cell::Value(ParsedColor::parse(&[1, 1, 0, 0]))),
+					((1, 2), _Cell::Value(ParsedColor::parse(&[1, 2, 0, 0]))),
+					((2, 0), _Cell::Value(ParsedColor::parse(&[2, 0, 0, 0]))),
+					((2, 1), _Cell::Value(ParsedColor::parse(&[2, 1, 0, 0]))),
+					((2, 2), _Cell::Value(ParsedColor::parse(&[2, 2, 0, 0]))),
 				]),
 				half_offset_cells: CellGrid::from([
 					(
@@ -461,19 +407,19 @@ mod test_parsing {
 						HalfOffsetCell::from([
 							(
 								Direction::Z,
-								_Cell::Value((ParsedColor::parse(&[0, 0, 0, 0]), lookup))
+								_Cell::Value(ParsedColor::parse(&[0, 0, 0, 0]))
 							),
 							(
 								Direction::X,
-								_Cell::Value((ParsedColor::parse(&[0, 1, 0, 0]), lookup))
+								_Cell::Value(ParsedColor::parse(&[0, 1, 0, 0]))
 							),
 							(
 								Direction::NegX,
-								_Cell::Value((ParsedColor::parse(&[1, 0, 0, 0]), lookup))
+								_Cell::Value(ParsedColor::parse(&[1, 0, 0, 0]))
 							),
 							(
 								Direction::NegZ,
-								_Cell::Value((ParsedColor::parse(&[1, 1, 0, 0]), lookup))
+								_Cell::Value(ParsedColor::parse(&[1, 1, 0, 0]))
 							),
 						])
 					),
@@ -482,19 +428,19 @@ mod test_parsing {
 						HalfOffsetCell::from([
 							(
 								Direction::Z,
-								_Cell::Value((ParsedColor::parse(&[0, 1, 0, 0]), lookup))
+								_Cell::Value(ParsedColor::parse(&[0, 1, 0, 0]))
 							),
 							(
 								Direction::X,
-								_Cell::Value((ParsedColor::parse(&[0, 2, 0, 0]), lookup))
+								_Cell::Value(ParsedColor::parse(&[0, 2, 0, 0]))
 							),
 							(
 								Direction::NegX,
-								_Cell::Value((ParsedColor::parse(&[1, 1, 0, 0]), lookup))
+								_Cell::Value(ParsedColor::parse(&[1, 1, 0, 0]))
 							),
 							(
 								Direction::NegZ,
-								_Cell::Value((ParsedColor::parse(&[1, 2, 0, 0]), lookup))
+								_Cell::Value(ParsedColor::parse(&[1, 2, 0, 0]))
 							),
 						])
 					),
@@ -503,19 +449,19 @@ mod test_parsing {
 						HalfOffsetCell::from([
 							(
 								Direction::Z,
-								_Cell::Value((ParsedColor::parse(&[1, 0, 0, 0]), lookup))
+								_Cell::Value(ParsedColor::parse(&[1, 0, 0, 0]))
 							),
 							(
 								Direction::X,
-								_Cell::Value((ParsedColor::parse(&[1, 1, 0, 0]), lookup))
+								_Cell::Value(ParsedColor::parse(&[1, 1, 0, 0]))
 							),
 							(
 								Direction::NegX,
-								_Cell::Value((ParsedColor::parse(&[2, 0, 0, 0]), lookup))
+								_Cell::Value(ParsedColor::parse(&[2, 0, 0, 0]))
 							),
 							(
 								Direction::NegZ,
-								_Cell::Value((ParsedColor::parse(&[2, 1, 0, 0]), lookup))
+								_Cell::Value(ParsedColor::parse(&[2, 1, 0, 0]))
 							),
 						])
 					),
@@ -524,19 +470,19 @@ mod test_parsing {
 						HalfOffsetCell::from([
 							(
 								Direction::Z,
-								_Cell::Value((ParsedColor::parse(&[1, 1, 0, 0]), lookup))
+								_Cell::Value(ParsedColor::parse(&[1, 1, 0, 0]))
 							),
 							(
 								Direction::X,
-								_Cell::Value((ParsedColor::parse(&[1, 2, 0, 0]), lookup))
+								_Cell::Value(ParsedColor::parse(&[1, 2, 0, 0]))
 							),
 							(
 								Direction::NegX,
-								_Cell::Value((ParsedColor::parse(&[2, 1, 0, 0]), lookup))
+								_Cell::Value(ParsedColor::parse(&[2, 1, 0, 0]))
 							),
 							(
 								Direction::NegZ,
-								_Cell::Value((ParsedColor::parse(&[2, 2, 0, 0]), lookup))
+								_Cell::Value(ParsedColor::parse(&[2, 2, 0, 0]))
 							),
 						])
 					),

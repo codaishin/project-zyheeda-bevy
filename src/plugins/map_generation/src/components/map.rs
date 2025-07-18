@@ -1,3 +1,4 @@
+pub(crate) mod agents;
 pub(crate) mod cells;
 pub(crate) mod demo_map;
 pub(crate) mod folder;
