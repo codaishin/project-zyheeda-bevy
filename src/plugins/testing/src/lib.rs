@@ -125,13 +125,19 @@ macro_rules! assert_eq_approx {
 
 #[macro_export]
 macro_rules! get_children {
-	($app:expr, $parent:expr) => {
-		$app.world().iter_entities().filter(|entity| {
-			entity
-				.get::<bevy::prelude::ChildOf>()
-				.map(|p| p.parent() == $parent)
-				.unwrap_or(false)
-		})
+	($app:expr, $parent:expr $(,)?) => {
+		get_children!($app, $parent, |entity| entity)
+	};
+	($app:expr, $parent:expr, $mapper:expr $(,)?) => {
+		$app.world()
+			.iter_entities()
+			.filter(|entity| {
+				entity
+					.get::<bevy::prelude::ChildOf>()
+					.map(|p| p.parent() == $parent)
+					.unwrap_or(false)
+			})
+			.map($mapper)
 	};
 }
 
