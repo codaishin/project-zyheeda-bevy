@@ -1,5 +1,5 @@
 use crate::{
-	components::{cells_ref::CellsRef, map::grid_graph::MapGridGraph, map_child::MapChild},
+	components::{cells_ref::CellsRef, map::grid_graph::MapGridGraph, nav_grid::NavGrid},
 	grid_graph::GridGraph,
 };
 use bevy::prelude::*;
@@ -37,7 +37,7 @@ where
 				CellsRef::<TCell>::from_grid_definition(target),
 			))
 			.id();
-		commands.try_insert_on(target, MapChild::<TGrid>::from(child));
+		commands.try_insert_on(target, NavGrid::<TGrid>::from(child));
 	}
 }
 
@@ -54,12 +54,9 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		components::map_child::MapChild,
-		grid_graph::{
-			Obstacles,
-			grid_context::{GridContext, GridDefinition},
-		},
+	use crate::grid_graph::{
+		Obstacles,
+		grid_context::{GridContext, GridDefinition},
 	};
 	use std::collections::HashMap;
 	use testing::{SingleThreadedApp, assert_count, get_children};
@@ -201,8 +198,8 @@ mod tests {
 
 		let [grid] = assert_count!(1, get_children!(app, entity, |entity| entity.id()));
 		assert_eq!(
-			Some(&MapChild::<_Grid>::from(grid)),
-			app.world().entity(entity).get::<MapChild<_Grid>>()
+			Some(&NavGrid::<_Grid>::from(grid)),
+			app.world().entity(entity).get::<NavGrid<_Grid>>()
 		);
 	}
 }
