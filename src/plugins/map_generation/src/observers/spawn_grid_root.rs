@@ -1,9 +1,13 @@
 use crate::{
-	components::{cells_ref::CellsRef, map::grid_graph::MapGridGraph},
+	components::{cells_ref::CellsRef, map::grid_graph::MapGridGraph, map_child::MapChild},
 	grid_graph::GridGraph,
 };
 use bevy::prelude::*;
-use common::traits::{thread_safe::ThreadSafe, try_despawn::TryDespawn};
+use common::traits::{
+	thread_safe::ThreadSafe,
+	try_despawn::TryDespawn,
+	try_insert_on::TryInsertOn,
+};
 
 impl<TCell> MapGridGraph<TCell>
 where
@@ -26,11 +30,14 @@ where
 			commands.try_despawn(grid);
 		}
 
-		commands.spawn((
-			ChildOf(target),
-			TGrid::from(map.graph()),
-			CellsRef::<TCell>::from_grid_definition(target),
-		));
+		let child = commands
+			.spawn((
+				ChildOf(target),
+				TGrid::from(map.graph()),
+				CellsRef::<TCell>::from_grid_definition(target),
+			))
+			.id();
+		commands.try_insert_on(target, MapChild::<TGrid>::from(child));
 	}
 }
 
@@ -47,9 +54,12 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::grid_graph::{
-		Obstacles,
-		grid_context::{GridContext, GridDefinition},
+	use crate::{
+		components::map_child::MapChild,
+		grid_graph::{
+			Obstacles,
+			grid_context::{GridContext, GridDefinition},
+		},
 	};
 	use std::collections::HashMap;
 	use testing::{SingleThreadedApp, assert_count, get_children};
@@ -168,5 +178,31 @@ mod tests {
 		assert_count!(1, get_children!(app, entity).filter(contains::<_Child>));
 		let [grid] = assert_count!(1, get_children!(app, entity).filter(contains::<_Grid>));
 		assert_eq!(Some(&_Grid(graph_b)), grid.get::<_Grid>());
+	}
+
+	#[test]
+	fn spawn_map_child() {
+		let graph = GridGraph {
+			nodes: HashMap::from([((0, 0), Vec3::ZERO)]),
+			extra: Obstacles::default(),
+			context: GridContext::try_from(GridDefinition {
+				cell_count_x: 1,
+				cell_count_z: 1,
+				cell_distance: 2.,
+			})
+			.expect("INVALID GRID DEFINITION"),
+		};
+		let mut app = setup();
+
+		let entity = app
+			.world_mut()
+			.spawn(MapGridGraph::<_Cell>::from(graph.clone()))
+			.id();
+
+		let [grid] = assert_count!(1, get_children!(app, entity, |entity| entity.id()));
+		assert_eq!(
+			Some(&MapChild::<_Grid>::from(grid)),
+			app.world().entity(entity).get::<MapChild<_Grid>>()
+		);
 	}
 }
