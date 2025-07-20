@@ -14,7 +14,7 @@ use crate::{
 		cells::corridor::Corridor,
 		demo_map::DemoMap,
 	},
-	resources::agents::color_lookup::{AgentsLookup, AgentsLookupImages},
+	resources::agents::color_lookup::{AgentsColorLookup, AgentsColorLookupImages},
 	systems::get_grid::EntityOfGrid,
 };
 use bevy::{ecs::query::QueryFilter, prelude::*};
@@ -73,11 +73,11 @@ where
 {
 	fn build(&self, app: &mut App) {
 		let register_agents_lookup_load_tracking = TLoading::register_load_tracking::<
-			AgentsLookup,
+			AgentsColorLookup,
 			LoadingEssentialAssets,
 			AssetsProgress,
 		>();
-		register_agents_lookup_load_tracking.in_app(app, resource_exists::<AgentsLookup>);
+		register_agents_lookup_load_tracking.in_app(app, resource_exists::<AgentsColorLookup>);
 
 		TSavegame::register_savable_component::<AgentsLoaded>(app);
 		TSavegame::register_savable_component::<DemoMap>(app);
@@ -89,13 +89,13 @@ where
 			.register_map_cell::<TLoading, TSavegame, Corridor>()
 			.add_systems(
 				OnEnter(GameState::LoadingEssentialAssets),
-				AgentsLookupImages::<Image>::lookup_images,
+				AgentsColorLookupImages::<Image>::lookup_images,
 			)
 			.add_systems(
 				Update,
-				AgentsLookup::parse_images
+				AgentsColorLookup::parse_images
 					.pipe(OnError::log)
-					.run_if(not(resource_exists::<AgentsLookup>)),
+					.run_if(not(resource_exists::<AgentsColorLookup>)),
 			)
 			.add_systems(OnEnter(GameState::NewGame), DemoMap::spawn)
 			.add_systems(Update, Grid::<1>::insert)

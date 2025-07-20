@@ -1,6 +1,6 @@
 use crate::{
 	components::map::cells::parsed_color::ParsedColor,
-	resources::agents::color_lookup::AgentsLookup,
+	resources::agents::color_lookup::AgentsColorLookup,
 	traits::{GridCellDistanceDefinition, parse_map_image::ParseMapImage},
 };
 use common::errors::Unreachable;
@@ -24,9 +24,12 @@ where
 
 impl<TCell> ParseMapImage<ParsedColor> for Agent<TCell> {
 	type TParseError = Unreachable;
-	type TLookup = AgentsLookup;
+	type TLookup = AgentsColorLookup;
 
-	fn try_parse(color: &ParsedColor, lookup: &AgentsLookup) -> Result<Self, Self::TParseError> {
+	fn try_parse(
+		color: &ParsedColor,
+		lookup: &AgentsColorLookup,
+	) -> Result<Self, Self::TParseError> {
 		match color.color().as_ref() {
 			Some(color) if color == &&lookup.player => Ok(Self::Player),
 			Some(color) if color == &&lookup.enemy => Ok(Self::Enemy),
