@@ -11,11 +11,7 @@ use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::{
 	errors::{Error, Level as ErrorLevel, Unreachable},
-	traits::{
-		register_derived_component::{DerivableComponentFrom, InsertDerivedComponent},
-		thread_safe::ThreadSafe,
-		try_insert_on::TryInsertOn,
-	},
+	traits::{thread_safe::ThreadSafe, try_insert_on::TryInsertOn},
 };
 use std::{any::type_name, marker::PhantomData};
 
@@ -87,18 +83,6 @@ impl From<&GridGraph> for Grid {
 			graph: graph.clone(),
 		}
 	}
-}
-
-impl From<&Grid> for Collider {
-	fn from(grid: &Grid) -> Self {
-		let Vec3 { x, y, z } = grid.graph.context.half_size();
-
-		Self::cuboid(x, y, z)
-	}
-}
-
-impl DerivableComponentFrom<Grid> for Collider {
-	const INSERT: InsertDerivedComponent = InsertDerivedComponent::IfNew;
 }
 
 impl<const SUBDIVISIONS: u8> From<&Grid<SUBDIVISIONS>> for GridGraph {

@@ -1,21 +1,12 @@
-use crate::{
-	tools::Units,
-	traits::{accessors::get::Getter, handles_map_generation::EntityMapFiltered},
-};
-use bevy::{ecs::query::QueryFilter, prelude::*};
+use crate::{tools::Units, traits::accessors::get::Getter};
+use bevy::prelude::*;
 
 pub trait HandlesPathFinding {
 	type TComputePath: Component + ComputePath;
 	type TSystemSet: SystemSet;
+	type TComputerRef: Component + Getter<Entity>;
 
 	const SYSTEMS: Self::TSystemSet;
-
-	type TComputerRef: Getter<Entity>;
-
-	fn computer_mapping_of<TFilter>()
-	-> impl IntoSystem<(), EntityMapFiltered<Self::TComputerRef, TFilter>, ()>
-	where
-		TFilter: QueryFilter + 'static;
 }
 
 pub trait ComputePath {

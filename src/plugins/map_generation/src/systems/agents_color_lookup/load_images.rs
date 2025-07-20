@@ -1,4 +1,4 @@
-use crate::resources::agents::color_lookup::AgentsLookupImages;
+use crate::resources::agents::color_lookup::AgentsColorLookupImages;
 use bevy::prelude::*;
 use common::traits::load_asset::LoadAsset;
 use std::path::PathBuf;
@@ -7,7 +7,7 @@ const ROOT_PATH: &str = "maps/lookup";
 const PLAYER_FILE: &str = "player.png";
 const ENEMY_FILE: &str = "enemy.png";
 
-impl AgentsLookupImages {
+impl AgentsColorLookupImages {
 	pub(crate) fn lookup_images(commands: Commands, asset_server: ResMut<AssetServer>) {
 		lookup_images(commands, asset_server)
 	}
@@ -21,7 +21,7 @@ where
 	let player = asset_server.load_asset(root.join(PLAYER_FILE));
 	let enemy = asset_server.load_asset(root.join(ENEMY_FILE));
 
-	commands.insert_resource(AgentsLookupImages::<Image> { player, enemy });
+	commands.insert_resource(AgentsColorLookupImages::<Image> { player, enemy });
 }
 
 #[cfg(test)]
@@ -75,7 +75,7 @@ mod tests {
 		assert_eq!(
 			Some(&player),
 			app.world()
-				.get_resource::<AgentsLookupImages>()
+				.get_resource::<AgentsColorLookupImages>()
 				.map(|l| &l.player),
 		);
 	}
@@ -97,7 +97,7 @@ mod tests {
 		assert_eq!(
 			Some(&enemy),
 			app.world()
-				.get_resource::<AgentsLookupImages>()
+				.get_resource::<AgentsColorLookupImages>()
 				.map(|l| &l.enemy),
 		);
 	}

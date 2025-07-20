@@ -1,14 +1,14 @@
 use crate::{
-	resources::agents::color_lookup::{AgentsLookup, AgentsLookupImages},
+	resources::agents::color_lookup::{AgentsColorLookup, AgentsColorLookupImages},
 	systems::map_color_lookup::parse_images::ParseImageError,
 	traits::pixels::PixelBytes,
 };
 use bevy::prelude::*;
 
-impl AgentsLookup {
+impl AgentsColorLookup {
 	pub(crate) fn parse_images(
 		commands: Commands,
-		lookup: Option<Res<AgentsLookupImages>>,
+		lookup: Option<Res<AgentsColorLookupImages>>,
 		images: Res<Assets<Image>>,
 	) -> Result<(), Vec<ParseImageError<()>>> {
 		parse_images(commands, lookup, images)
@@ -17,7 +17,7 @@ impl AgentsLookup {
 
 fn parse_images<TImage>(
 	mut commands: Commands,
-	lookup: Option<Res<AgentsLookupImages<TImage>>>,
+	lookup: Option<Res<AgentsColorLookupImages<TImage>>>,
 	images: Res<Assets<TImage>>,
 ) -> Result<(), Vec<ParseImageError<()>>>
 where
@@ -29,7 +29,7 @@ where
 
 	match player_and_enemy(images, lookup) {
 		[Ok(player), Ok(enemy)] => {
-			commands.insert_resource(AgentsLookup { player, enemy });
+			commands.insert_resource(AgentsColorLookup { player, enemy });
 			Ok(())
 		}
 		result => Err(result.into_iter().filter_map(|r| r.err()).collect()),
@@ -38,7 +38,7 @@ where
 
 fn player_and_enemy<TImage>(
 	images: Res<Assets<TImage>>,
-	lookup: Res<AgentsLookupImages<TImage>>,
+	lookup: Res<AgentsColorLookupImages<TImage>>,
 ) -> [Result<Color, ParseImageError<()>>; 2]
 where
 	TImage: Asset + PixelBytes,
@@ -77,7 +77,7 @@ mod tests {
 	}
 
 	fn setup(
-		lookup_images: Option<AgentsLookupImages<_Image>>,
+		lookup_images: Option<AgentsColorLookupImages<_Image>>,
 		images: impl IntoIterator<Item = (Handle<_Image>, _Image)>,
 	) -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -107,7 +107,7 @@ mod tests {
 			mock.expect_pixel_bytes().return_const(ENEMY_COLOR);
 		});
 		let mut app = setup(
-			Some(AgentsLookupImages {
+			Some(AgentsColorLookupImages {
 				player: player_handle.clone(),
 				enemy: enemy_handle.clone(),
 			}),
@@ -117,11 +117,11 @@ mod tests {
 		_ = app.world_mut().run_system_once(parse_images::<_Image>)?;
 
 		assert_eq!(
-			Some(&AgentsLookup {
+			Some(&AgentsColorLookup {
 				player: Color::srgba_u8(123, 124, 125, 126),
 				enemy: Color::srgba_u8(113, 114, 115, 116),
 			}),
-			app.world().get_resource::<AgentsLookup>(),
+			app.world().get_resource::<AgentsColorLookup>(),
 		);
 		Ok(())
 	}
@@ -145,7 +145,7 @@ mod tests {
 				.return_const(ENEMY_COLOR);
 		});
 		let mut app = setup(
-			Some(AgentsLookupImages {
+			Some(AgentsColorLookupImages {
 				player: player_handle.clone(),
 				enemy: enemy_handle.clone(),
 			}),
@@ -168,7 +168,7 @@ mod tests {
 	#[test]
 	fn no_image_errors() -> Result<(), RunSystemError> {
 		let mut app = setup(
-			Some(AgentsLookupImages {
+			Some(AgentsColorLookupImages {
 				player: new_handle(),
 				enemy: new_handle(),
 			}),
@@ -198,7 +198,7 @@ mod tests {
 			mock.expect_pixel_bytes().return_const(None);
 		});
 		let mut app = setup(
-			Some(AgentsLookupImages {
+			Some(AgentsColorLookupImages {
 				player: player_handle.clone(),
 				enemy: enemy_handle.clone(),
 			}),
@@ -227,7 +227,7 @@ mod tests {
 			mock.expect_pixel_bytes().return_const(ENEMY_COLOR);
 		});
 		let mut app = setup(
-			Some(AgentsLookupImages {
+			Some(AgentsColorLookupImages {
 				player: player_handle.clone(),
 				enemy: enemy_handle.clone(),
 			}),

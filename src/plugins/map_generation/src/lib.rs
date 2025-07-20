@@ -8,17 +8,18 @@ mod systems;
 mod traits;
 
 use crate::{
-	components::map::{
-		Map,
-		agents::{AgentsLoaded, Enemy, Player},
-		cells::corridor::Corridor,
-		demo_map::DemoMap,
+	components::{
+		map::{
+			Map,
+			agents::{AgentsLoaded, Enemy, Player},
+			cells::corridor::Corridor,
+			demo_map::DemoMap,
+		},
+		map_agents::MapAgentOf,
 	},
-	resources::agents::color_lookup::{AgentsLookup, AgentsLookupImages},
-	systems::get_grid::EntityOfGrid,
+	resources::agents::color_lookup::{AgentsColorLookup, AgentsColorLookupImages},
 };
-use bevy::{ecs::query::QueryFilter, prelude::*};
-use bevy_rapier3d::prelude::Collider;
+use bevy::prelude::*;
 use common::{
 	states::game_state::{GameState, LoadingEssentialAssets},
 	systems::log::OnError,
@@ -26,10 +27,9 @@ use common::{
 		handles_enemies::{HandlesEnemies, HandlesEnemyBehaviors},
 		handles_lights::HandlesLights,
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInApp},
-		handles_map_generation::{EntityMapFiltered, HandlesMapGeneration},
+		handles_map_generation::HandlesMapGeneration,
 		handles_player::HandlesPlayer,
 		handles_saving::HandlesSaving,
-		register_derived_component::RegisterDerivedComponent,
 		spawn::Spawn,
 		thread_safe::ThreadSafe,
 	},
@@ -73,11 +73,11 @@ where
 {
 	fn build(&self, app: &mut App) {
 		let register_agents_lookup_load_tracking = TLoading::register_load_tracking::<
-			AgentsLookup,
+			AgentsColorLookup,
 			LoadingEssentialAssets,
 			AssetsProgress,
 		>();
-		register_agents_lookup_load_tracking.in_app(app, resource_exists::<AgentsLookup>);
+		register_agents_lookup_load_tracking.in_app(app, resource_exists::<AgentsColorLookup>);
 
 		TSavegame::register_savable_component::<AgentsLoaded>(app);
 		TSavegame::register_savable_component::<DemoMap>(app);
@@ -85,17 +85,16 @@ where
 		app.register_required_components::<Map, TSavegame::TSaveEntityMarker>()
 			.register_required_components::<Player, TPlayer::TPlayer>()
 			.register_required_components::<Enemy, TEnemies::TEnemy>()
-			.register_derived_component::<Grid, Collider>()
 			.register_map_cell::<TLoading, TSavegame, Corridor>()
 			.add_systems(
 				OnEnter(GameState::LoadingEssentialAssets),
-				AgentsLookupImages::<Image>::lookup_images,
+				AgentsColorLookupImages::<Image>::lookup_images,
 			)
 			.add_systems(
 				Update,
-				AgentsLookup::parse_images
+				AgentsColorLookup::parse_images
 					.pipe(OnError::log)
-					.run_if(not(resource_exists::<AgentsLookup>)),
+					.run_if(not(resource_exists::<AgentsColorLookup>)),
 			)
 			.add_systems(OnEnter(GameState::NewGame), DemoMap::spawn)
 			.add_systems(Update, Grid::<1>::insert)
@@ -122,16 +121,5 @@ impl<TDependencies> HandlesMapGeneration for MapGenerationPlugin<TDependencies> 
 
 	const SYSTEMS: Self::TSystemSet = MapSystems;
 
-	type TMapRef = EntityOfGrid;
-
-	fn map_mapping_of<TFilter>()
-	-> impl IntoSystem<(), EntityMapFiltered<Self::TMapRef, TFilter>, ()>
-	where
-		TFilter: QueryFilter + 'static,
-	{
-		IntoSystem::into_system(
-			EntityOfGrid::get_grid::<TFilter>
-				.pipe(OnError::log_and_return(EntityMapFiltered::default)),
-		)
-	}
+	type TMapRef = MapAgentOf;
 }
