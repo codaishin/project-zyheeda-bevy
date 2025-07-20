@@ -8,17 +8,18 @@ mod systems;
 mod traits;
 
 use crate::{
-	components::map::{
-		Map,
-		agents::{AgentsLoaded, Enemy, Player},
-		cells::corridor::Corridor,
-		demo_map::DemoMap,
+	components::{
+		map::{
+			Map,
+			agents::{AgentsLoaded, Enemy, Player},
+			cells::corridor::Corridor,
+			demo_map::DemoMap,
+		},
+		map_agents::MapAgentOf,
 	},
 	resources::agents::color_lookup::{AgentsColorLookup, AgentsColorLookupImages},
-	systems::get_grid::EntityOfGrid,
 };
-use bevy::{ecs::query::QueryFilter, prelude::*};
-use bevy_rapier3d::prelude::Collider;
+use bevy::prelude::*;
 use common::{
 	states::game_state::{GameState, LoadingEssentialAssets},
 	systems::log::OnError,
@@ -26,10 +27,9 @@ use common::{
 		handles_enemies::{HandlesEnemies, HandlesEnemyBehaviors},
 		handles_lights::HandlesLights,
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInApp},
-		handles_map_generation::{EntityMapFiltered, HandlesMapGeneration},
+		handles_map_generation::HandlesMapGeneration,
 		handles_player::HandlesPlayer,
 		handles_saving::HandlesSaving,
-		register_derived_component::RegisterDerivedComponent,
 		spawn::Spawn,
 		thread_safe::ThreadSafe,
 	},
@@ -85,7 +85,6 @@ where
 		app.register_required_components::<Map, TSavegame::TSaveEntityMarker>()
 			.register_required_components::<Player, TPlayer::TPlayer>()
 			.register_required_components::<Enemy, TEnemies::TEnemy>()
-			.register_derived_component::<Grid, Collider>()
 			.register_map_cell::<TLoading, TSavegame, Corridor>()
 			.add_systems(
 				OnEnter(GameState::LoadingEssentialAssets),
@@ -122,16 +121,5 @@ impl<TDependencies> HandlesMapGeneration for MapGenerationPlugin<TDependencies> 
 
 	const SYSTEMS: Self::TSystemSet = MapSystems;
 
-	type TMapRef = EntityOfGrid;
-
-	fn map_mapping_of<TFilter>()
-	-> impl IntoSystem<(), EntityMapFiltered<Self::TMapRef, TFilter>, ()>
-	where
-		TFilter: QueryFilter + 'static,
-	{
-		IntoSystem::into_system(
-			EntityOfGrid::get_grid::<TFilter>
-				.pipe(OnError::log_and_return(EntityMapFiltered::default)),
-		)
-	}
+	type TMapRef = MapAgentOf;
 }

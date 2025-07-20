@@ -4,9 +4,9 @@ mod traits;
 
 pub mod components;
 
-use bevy::{ecs::query::QueryFilter, prelude::*};
+use bevy::prelude::*;
 use common::traits::{
-	handles_map_generation::{EntityMapFiltered, HandlesMapGeneration},
+	handles_map_generation::HandlesMapGeneration,
 	handles_path_finding::HandlesPathFinding,
 	register_derived_component::RegisterDerivedComponent,
 	thread_safe::ThreadSafe,
@@ -41,16 +41,7 @@ where
 {
 	type TComputePath = Navigation<ThetaStar, TMaps::TGraph>;
 	type TSystemSet = TMaps::TSystemSet;
-
-	const SYSTEMS: Self::TSystemSet = TMaps::SYSTEMS;
-
 	type TComputerRef = TMaps::TMapRef;
 
-	fn computer_mapping_of<TFilter>()
-	-> impl IntoSystem<(), EntityMapFiltered<Self::TComputerRef, TFilter>, ()>
-	where
-		TFilter: QueryFilter + 'static,
-	{
-		TMaps::map_mapping_of::<TFilter>()
-	}
+	const SYSTEMS: Self::TSystemSet = TMaps::SYSTEMS;
 }

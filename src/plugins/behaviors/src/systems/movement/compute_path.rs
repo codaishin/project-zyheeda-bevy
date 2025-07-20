@@ -1,70 +1,48 @@
 use crate::{Movement, PathOrWasd, components::movement::path_or_wasd::Mode};
-use bevy::{ecs::query::QueryFilter, prelude::*};
+use bevy::prelude::*;
 use common::{
 	tools::collider_radius::ColliderRadius,
 	traits::{
-		accessors::get::{GetField, GetRef, Getter},
-		handles_map_generation::EntityMapFiltered,
+		accessors::get::{GetField, Getter},
 		handles_path_finding::ComputePath,
 		thread_safe::ThreadSafe,
 		try_insert_on::TryInsertOn,
 		try_remove_from::TryRemoveFrom,
 	},
 };
-use std::{collections::VecDeque, marker::PhantomData};
+use std::collections::VecDeque;
 
-impl<T> MovementPath for T where T: Component + Getter<ColliderRadius> + Sized {}
-
-pub(crate) trait MovementPath: Component + Getter<ColliderRadius> + Sized {
-	fn compute_path<TMoveMethod, TComputer, TGetComputer>()
-	-> ComputePathSystemBuilder<Self, TMoveMethod, TComputer, TGetComputer> {
-		ComputePathSystemBuilder(PhantomData)
-	}
-}
-
-pub(crate) struct ComputePathSystemBuilder<TAgent, TMoveMethod, TComputer, TGetComputer>(
-	PhantomData<(TAgent, TMoveMethod, TComputer, TGetComputer)>,
-);
-
-type Components<'a, TMoveMethod, TAgent> = (
+type MoveComponents<'a, TAgent, TMoveMethod, TGetComputer> = (
 	Entity,
 	&'a GlobalTransform,
 	&'a TAgent,
 	&'a Movement<PathOrWasd<TMoveMethod>>,
+	&'a TGetComputer,
 );
+type ChangedMovement<TMoveMethod> = Changed<Movement<PathOrWasd<TMoveMethod>>>;
 
-impl<TAgent, TMoveMethod, TComputer, TGetComputer>
-	ComputePathSystemBuilder<TAgent, TMoveMethod, TComputer, TGetComputer>
-where
-	TAgent: Component + Getter<ColliderRadius>,
-	TMoveMethod: ThreadSafe + Default,
-	TComputer: Component + ComputePath,
-	TGetComputer: Getter<Entity>,
-{
-	#[allow(clippy::type_complexity)]
-	pub(crate) fn system<TFilter>(
-		self,
-	) -> impl Fn(
-		In<EntityMapFiltered<TGetComputer, TFilter>>,
-		Commands,
-		Query<Components<TMoveMethod, TAgent>, TFilter>,
-		Query<&TComputer>,
-	)
-	where
-		TFilter: QueryFilter,
+impl<T> MovementPath for T where T: Component + Getter<ColliderRadius> + Sized {}
+
+pub(crate) trait MovementPath: Component + Getter<ColliderRadius> + Sized {
+	fn compute_path<TMoveMethod, TComputer, TGetComputer>(
+		mut commands: Commands,
+		movements: Query<
+			MoveComponents<Self, TMoveMethod, TGetComputer>,
+			ChangedMovement<TMoveMethod>,
+		>,
+		computers: Query<&TComputer>,
+	) where
+		TMoveMethod: ThreadSafe + Default,
+		TComputer: Component + ComputePath,
+		TGetComputer: Component + Getter<Entity>,
 	{
-		|In(mapping), mut commands, mut movements, computers| {
-			for (entity, transform, agent, movement) in &mut movements {
-				let Some(computer_ref) = mapping.get(&entity) else {
-					continue;
-				};
-				let Ok(computer) = computers.get(Entity::get_field(computer_ref)) else {
-					continue;
-				};
-				let move_component = new_movement(computer, transform, movement, agent);
-				commands.try_insert_on(entity, move_component);
-				commands.try_remove_from::<Movement<TMoveMethod>>(entity);
-			}
+		for (entity, transform, agent, movement, get_computer) in &movements {
+			let Ok(computer) = computers.get(Entity::get_field(get_computer)) else {
+				continue;
+			};
+			let move_component = new_movement(computer, transform, movement, agent);
+			commands.try_insert_on(entity, move_component);
+			commands.try_remove_from::<Movement<TMoveMethod>>(entity);
 		}
 	}
 }
@@ -122,16 +100,16 @@ where
 #[cfg(test)]
 mod test_new_path {
 	use super::*;
-	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{tools::Units, traits::clamp_zero_positive::ClampZeroPositive};
 	use macros::NestedMocks;
-	use mockall::{automock, mock, predicate::eq};
+	use mockall::{automock, predicate::eq};
 	use std::{collections::VecDeque, marker::PhantomData};
-	use testing::{Mock, NestedMocks, SingleThreadedApp, simple_init};
+	use testing::{NestedMocks, SingleThreadedApp, assert_no_panic};
 
 	#[derive(Debug, PartialEq, Default)]
 	struct _MoveMethod;
 
+	#[derive(Component)]
 	struct _GetComputer(Entity);
 
 	impl Getter<Entity> for _GetComputer {
@@ -174,23 +152,19 @@ mod test_new_path {
 		}
 	}
 
-	fn test_system<TGetComputer, TFilter>()
-	-> impl IntoSystem<In<EntityMapFiltered<TGetComputer, TFilter>>, (), ()>
-	where
-		TGetComputer: Getter<Entity> + 'static,
-		TFilter: QueryFilter + 'static,
-	{
-		let builder = _AgentMovement::compute_path::<_MoveMethod, _ComputePath, TGetComputer>();
-
-		IntoSystem::into_system(builder.system::<TFilter>())
-	}
-
 	fn setup() -> App {
-		App::new().single_threaded(Update)
+		let mut app = App::new().single_threaded(Update);
+
+		app.add_systems(
+			Update,
+			_AgentMovement::compute_path::<_MoveMethod, _ComputePath, _GetComputer>,
+		);
+
+		app
 	}
 
 	#[test]
-	fn set_path() -> Result<(), RunSystemError> {
+	fn set_path() {
 		let mut app = setup();
 		let computer = app
 			.world_mut()
@@ -208,13 +182,11 @@ mod test_new_path {
 				_AgentMovement::default(),
 				Movement::new(Vec3::default(), PathOrWasd::<_MoveMethod>::new_path),
 				GlobalTransform::default(),
+				_GetComputer(computer),
 			))
 			.id();
 
-		app.world_mut().run_system_once_with(
-			test_system::<_GetComputer, ()>(),
-			EntityMapFiltered::from([(entity, _GetComputer(computer))]),
-		)?;
+		app.update();
 
 		assert_eq!(
 			Some(&PathOrWasd::<_MoveMethod> {
@@ -227,11 +199,10 @@ mod test_new_path {
 			}),
 			app.world().entity(entity).get::<PathOrWasd<_MoveMethod>>()
 		);
-		Ok(())
 	}
 
 	#[test]
-	fn set_no_path_path_when_cannot_be_computed() -> Result<(), RunSystemError> {
+	fn set_no_path_path_when_cannot_be_computed() {
 		let mut app = setup();
 		let computer = app
 			.world_mut()
@@ -245,13 +216,11 @@ mod test_new_path {
 				_AgentMovement::default(),
 				Movement::new(Vec3::default(), PathOrWasd::<_MoveMethod>::new_path),
 				GlobalTransform::default(),
+				_GetComputer(computer),
 			))
 			.id();
 
-		app.world_mut().run_system_once_with(
-			test_system::<_GetComputer, ()>(),
-			EntityMapFiltered::from([(entity, _GetComputer(computer))]),
-		)?;
+		app.update();
 
 		assert_eq!(
 			Some(&PathOrWasd::<_MoveMethod> {
@@ -260,11 +229,10 @@ mod test_new_path {
 			}),
 			app.world().entity(entity).get::<PathOrWasd<_MoveMethod>>()
 		);
-		Ok(())
 	}
 
 	#[test]
-	fn set_path_ignoring_first_when_matching_translation() -> Result<(), RunSystemError> {
+	fn set_path_ignoring_first_when_matching_translation() {
 		let mut app = setup();
 		let computer = app
 			.world_mut()
@@ -282,13 +250,11 @@ mod test_new_path {
 				_AgentMovement::default(),
 				Movement::new(Vec3::default(), PathOrWasd::<_MoveMethod>::new_path),
 				GlobalTransform::from_translation(Vec3::splat(1.)),
+				_GetComputer(computer),
 			))
 			.id();
 
-		app.world_mut().run_system_once_with(
-			test_system::<_GetComputer, ()>(),
-			EntityMapFiltered::from([(entity, _GetComputer(computer))]),
-		)?;
+		app.update();
 
 		assert_eq!(
 			Some(&PathOrWasd::<_MoveMethod> {
@@ -297,11 +263,10 @@ mod test_new_path {
 			}),
 			app.world().entity(entity).get::<PathOrWasd<_MoveMethod>>()
 		);
-		Ok(())
 	}
 
 	#[test]
-	fn no_panic_if_path_len_zero() -> Result<(), RunSystemError> {
+	fn no_panic_if_path_len_zero() {
 		let mut app = setup();
 		let computer = app
 			.world_mut()
@@ -309,23 +274,18 @@ mod test_new_path {
 				mock.expect_compute_path().return_const(Some(vec![]));
 			}))
 			.id();
-		let entity = app
-			.world_mut()
-			.spawn((
-				_AgentMovement::default(),
-				Movement::new(Vec3::default(), PathOrWasd::<_MoveMethod>::new_path),
-				GlobalTransform::default(),
-			))
-			.id();
+		app.world_mut().spawn((
+			_AgentMovement::default(),
+			Movement::new(Vec3::default(), PathOrWasd::<_MoveMethod>::new_path),
+			GlobalTransform::default(),
+			_GetComputer(computer),
+		));
 
-		app.world_mut().run_system_once_with(
-			test_system::<_GetComputer, ()>(),
-			EntityMapFiltered::from([(entity, _GetComputer(computer))]),
-		)
+		assert_no_panic!(app.update());
 	}
 
 	#[test]
-	fn remove_present_movement() -> Result<(), RunSystemError> {
+	fn remove_present_movement() {
 		let mut app = setup();
 		let computer = app
 			.world_mut()
@@ -344,23 +304,20 @@ mod test_new_path {
 				Movement::new(Vec3::default(), PathOrWasd::<_MoveMethod>::new_path),
 				GlobalTransform::default(),
 				Movement::new(Vec3::default(), || _MoveMethod),
+				_GetComputer(computer),
 			))
 			.id();
 
-		app.world_mut().run_system_once_with(
-			test_system::<_GetComputer, ()>(),
-			EntityMapFiltered::from([(entity, _GetComputer(computer))]),
-		)?;
+		app.update();
 
 		assert_eq!(
 			None,
 			app.world().entity(entity).get::<Movement::<_MoveMethod>>()
 		);
-		Ok(())
 	}
 
 	#[test]
-	fn compute_path_correctly() -> Result<(), RunSystemError> {
+	fn compute_path_correctly() {
 		let mut app = setup();
 		let computer = app
 			.world_mut()
@@ -375,26 +332,21 @@ mod test_new_path {
 					.return_const(None);
 			}))
 			.id();
-		let entity = app
-			.world_mut()
-			.spawn((
-				_AgentMovement::new().with_mock(|mock| {
-					mock.expect_get()
-						.return_const(ColliderRadius(Units::new(42.)));
-				}),
-				Movement::new(Vec3::new(4., 5., 6.), PathOrWasd::<_MoveMethod>::new_path),
-				GlobalTransform::from_xyz(1., 2., 3.),
-			))
-			.id();
+		app.world_mut().spawn((
+			_AgentMovement::new().with_mock(|mock| {
+				mock.expect_get()
+					.return_const(ColliderRadius(Units::new(42.)));
+			}),
+			Movement::new(Vec3::new(4., 5., 6.), PathOrWasd::<_MoveMethod>::new_path),
+			GlobalTransform::from_xyz(1., 2., 3.),
+			_GetComputer(computer),
+		));
 
-		app.world_mut().run_system_once_with(
-			test_system::<_GetComputer, ()>(),
-			EntityMapFiltered::from([(entity, _GetComputer(computer))]),
-		)
+		app.update();
 	}
 
 	#[test]
-	fn set_target_when_wasd() -> Result<(), RunSystemError> {
+	fn set_target_when_wasd() {
 		let mut app = setup();
 		let computer = app
 			.world_mut()
@@ -408,13 +360,11 @@ mod test_new_path {
 				_AgentMovement::default(),
 				Movement::new(Vec3::new(1., 2., 3.), PathOrWasd::<_MoveMethod>::new_wasd),
 				GlobalTransform::default(),
+				_GetComputer(computer),
 			))
 			.id();
 
-		app.world_mut().run_system_once_with(
-			test_system::<_GetComputer, ()>(),
-			EntityMapFiltered::from([(entity, _GetComputer(computer))]),
-		)?;
+		app.update();
 
 		assert_eq!(
 			Some(&PathOrWasd::<_MoveMethod> {
@@ -423,59 +373,52 @@ mod test_new_path {
 			}),
 			app.world().entity(entity).get::<PathOrWasd<_MoveMethod>>()
 		);
-		Ok(())
 	}
 
 	#[test]
-	fn apply_filter() -> Result<(), RunSystemError> {
-		#[derive(Component)]
-		struct Ignore;
-
-		mock! {
-			_GetComputer {}
-			impl Getter<Entity> for _GetComputer {
-				fn get(&self) -> Entity;
-			}
-		}
-
-		simple_init!(Mock_GetComputer);
-
+	fn act_only_once() {
 		let mut app = setup();
-		let computer = app.world_mut().spawn_empty().id();
+		let computer = app
+			.world_mut()
+			.spawn(_ComputePath::new().with_mock(|mock| {
+				mock.expect_compute_path().times(1).return_const(None);
+			}))
+			.id();
+		app.world_mut().spawn((
+			_AgentMovement::default(),
+			Movement::new(Vec3::default(), PathOrWasd::<_MoveMethod>::new_path),
+			GlobalTransform::default(),
+			_GetComputer(computer),
+		));
+
+		app.update();
+		app.update();
+	}
+
+	#[test]
+	fn act_again_if_movement_changed() {
+		let mut app = setup();
+		let computer = app
+			.world_mut()
+			.spawn(_ComputePath::new().with_mock(|mock| {
+				mock.expect_compute_path().times(2).return_const(None);
+			}))
+			.id();
 		let entity = app
 			.world_mut()
 			.spawn((
 				_AgentMovement::default(),
 				Movement::new(Vec3::default(), PathOrWasd::<_MoveMethod>::new_path),
 				GlobalTransform::default(),
-			))
-			.id();
-		let ignore = app
-			.world_mut()
-			.spawn((
-				_AgentMovement::default(),
-				Movement::new(Vec3::default(), PathOrWasd::<_MoveMethod>::new_path),
-				GlobalTransform::default(),
-				Ignore,
+				_GetComputer(computer),
 			))
 			.id();
 
-		app.world_mut().run_system_once_with(
-			test_system::<Mock_GetComputer, Without<Ignore>>(),
-			EntityMapFiltered::from([
-				(
-					entity,
-					Mock_GetComputer::new_mock(|mock| {
-						mock.expect_get().times(1).return_const(computer);
-					}),
-				),
-				(
-					ignore,
-					Mock_GetComputer::new_mock(|mock| {
-						mock.expect_get().never();
-					}),
-				),
-			]),
-		)
+		app.update();
+		app.world_mut()
+			.entity_mut(entity)
+			.get_mut::<Movement<PathOrWasd<_MoveMethod>>>()
+			.as_deref_mut();
+		app.update();
 	}
 }
