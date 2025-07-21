@@ -3,11 +3,7 @@ use crate::events::{InteractionEvent, Ray};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::{
-		ground_offset::GroundOffset,
-		lifetime::Lifetime,
-		persistent_entity::PersistentEntity,
-	},
+	components::{ground_offset::GroundOffset, persistent_entity::PersistentEntity},
 	resources::persistent_entities::PersistentEntities,
 	tools::Units,
 	traits::{
@@ -17,7 +13,6 @@ use common::{
 		try_insert_on::TryInsertOn,
 	},
 };
-use std::time::Duration;
 
 #[derive(Component, Debug, PartialEq)]
 #[require(Transform, Visibility)]
@@ -46,7 +41,7 @@ impl Beam {
 						entity,
 						source,
 						target,
-						cmd.params.range,
+						cmd.range,
 					);
 				}
 				None => despawn_beam(&mut commands, entity),
@@ -56,7 +51,7 @@ impl Beam {
 		for InteractionEvent(source, ray) in ray_cast_events.read() {
 			match beams.get(*source) {
 				Err(_) => continue,
-				Ok((entity, cmd, None)) => spawn_beam(&mut commands, entity, ray, cmd),
+				Ok((entity, .., None)) => spawn_beam(&mut commands, entity, ray),
 				Ok((entity, .., Some(_beam))) => update_beam_transform(&mut commands, entity, ray),
 			}
 		}
@@ -67,7 +62,7 @@ impl Beam {
 pub struct BeamCommand {
 	source: PersistentEntity,
 	target: PersistentEntity,
-	params: Parameters,
+	range: Units,
 }
 
 impl<T> From<&T> for BeamCommand
@@ -78,18 +73,9 @@ where
 		BeamCommand {
 			source: value.source(),
 			target: value.target(),
-			params: Parameters {
-				range: value.range(),
-				lifetime: value.lifetime(),
-			},
+			range: value.range(),
 		}
 	}
-}
-
-#[derive(Debug, PartialEq, Default)]
-pub(crate) struct Parameters {
-	range: Units,
-	lifetime: Duration,
 }
 
 fn insert_ray_caster_args(
@@ -138,16 +124,9 @@ fn get_filter(source: Entity) -> Option<RayFilter> {
 		.ok()
 }
 
-fn spawn_beam(commands: &mut Commands, entity: Entity, ray: &Ray, cmd: &BeamCommand) {
+fn spawn_beam(commands: &mut Commands, entity: Entity, ray: &Ray) {
 	let (source, target, transform) = unpack_beam_ray(ray);
-	commands.try_insert_on(
-		entity,
-		(
-			transform,
-			Beam { source, target },
-			Lifetime::from(cmd.params.lifetime),
-		),
-	);
+	commands.try_insert_on(entity, (transform, Beam { source, target }));
 }
 
 fn update_beam_transform(commands: &mut Commands, entity: Entity, ray: &Ray) {
@@ -192,7 +171,7 @@ mod tests {
 		clamp_zero_positive::ClampZeroPositive,
 		register_persistent_entities::RegisterPersistentEntities,
 	};
-	use std::{sync::LazyLock, time::Duration};
+	use std::sync::LazyLock;
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -222,10 +201,7 @@ mod tests {
 			.spawn(BeamCommand {
 				source: *SOURCE,
 				target: *TARGET,
-				params: Parameters {
-					range: Units::new(100.),
-					..default()
-				},
+				range: Units::new(100.),
 			})
 			.id();
 
@@ -263,10 +239,7 @@ mod tests {
 			.spawn(BeamCommand {
 				source: *SOURCE,
 				target: *TARGET,
-				params: Parameters {
-					range: Units::new(100.),
-					..default()
-				},
+				range: Units::new(100.),
 			})
 			.id();
 
@@ -305,10 +278,7 @@ mod tests {
 			.spawn(BeamCommand {
 				source: *SOURCE,
 				target: *TARGET,
-				params: Parameters {
-					range: Units::new(100.),
-					..default()
-				},
+				range: Units::new(100.),
 			})
 			.id();
 
@@ -338,10 +308,7 @@ mod tests {
 			.spawn(BeamCommand {
 				source: *SOURCE,
 				target: *TARGET,
-				params: Parameters {
-					lifetime: Duration::from_millis(100),
-					..default()
-				},
+				range: Units::default(),
 			})
 			.id();
 		app.world_mut().send_event(InteractionEvent::of(beam).ray(
@@ -355,17 +322,11 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			(
-				Some(&Beam {
-					source: Vec3::Z,
-					target: Vec3::new(0., 10., 1.),
-				}),
-				Some(&Lifetime::from(Duration::from_millis(100))),
-			),
-			(
-				app.world().entity(beam).get::<Beam>(),
-				app.world().entity(beam).get::<Lifetime>()
-			)
+			Some(&Beam {
+				source: Vec3::Z,
+				target: Vec3::new(0., 10., 1.),
+			}),
+			app.world().entity(beam).get::<Beam>(),
 		);
 	}
 
@@ -378,7 +339,7 @@ mod tests {
 			.spawn(BeamCommand {
 				source: *SOURCE,
 				target: *TARGET,
-				params: Parameters::default(),
+				range: Units::default(),
 			})
 			.id();
 		app.world_mut().send_event(InteractionEvent::of(beam).ray(
@@ -421,7 +382,7 @@ mod tests {
 				BeamCommand {
 					source: *SOURCE,
 					target: *TARGET,
-					params: Parameters::default(),
+					range: Units::default(),
 				},
 				Beam {
 					source: Vec3::default(),
@@ -474,7 +435,7 @@ mod tests {
 			.spawn(BeamCommand {
 				source: *SOURCE,
 				target: *TARGET,
-				params: Parameters::default(),
+				range: Units::default(),
 			})
 			.id();
 		let child = app.world_mut().spawn(ChildOf(beam)).id();

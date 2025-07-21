@@ -1,6 +1,5 @@
 use crate::{blocker::Blocker, components::persistent_entity::PersistentEntity, tools::Units};
 use bevy::prelude::*;
-use std::time::Duration;
 
 pub trait HandlesInteractions {
 	type TSystems: SystemSet;
@@ -24,5 +23,4 @@ pub trait BeamParameters {
 	fn source(&self) -> PersistentEntity;
 	fn target(&self) -> PersistentEntity;
 	fn range(&self) -> Units;
-	fn lifetime(&self) -> Duration;
 }

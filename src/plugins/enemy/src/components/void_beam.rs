@@ -2,7 +2,11 @@ use crate::traits::insert_attack::InsertAttack;
 use bevy::{ecs::system::EntityCommands, pbr::NotShadowCaster, prelude::*};
 use common::{
 	blocker::Blocker,
-	components::{insert_asset::InsertAsset, persistent_entity::PersistentEntity},
+	components::{
+		insert_asset::InsertAsset,
+		lifetime::Lifetime,
+		persistent_entity::PersistentEntity,
+	},
 	effects::deal_damage::DealDamage,
 	errors::Error,
 	tools::Units,
@@ -21,7 +25,8 @@ use std::{f32::consts::PI, time::Duration};
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[require(PersistentEntity, Visibility, Transform)]
 pub(crate) struct VoidBeam {
-	attack: VoidBeamAttack,
+	damage: f32,
+	range: Units,
 	attacker: PersistentEntity,
 	target: PersistentEntity,
 }
@@ -36,11 +41,7 @@ impl BeamParameters for VoidBeam {
 	}
 
 	fn range(&self) -> Units {
-		self.attack.range
-	}
-
-	fn lifetime(&self) -> Duration {
-		self.attack.lifetime
+		self.range
 	}
 }
 
@@ -57,7 +58,7 @@ where
 			.try_insert_if_new((
 				TInteractions::beam_from(self),
 				TInteractions::is_ray_interrupted_by(Blocker::all()),
-				TInteractions::effect(DealDamage::once_per_second(self.attack.damage)),
+				TInteractions::effect(DealDamage::once_per_second(self.damage)),
 			))
 			.with_child(VoidBeamModel);
 
@@ -116,10 +117,95 @@ impl InsertAttack for VoidBeamAttack {
 		Attacker(attacker): Attacker,
 		Target(target): Target,
 	) {
-		entity.insert(VoidBeam {
-			attack: *self,
-			attacker,
-			target,
-		});
+		entity.insert((
+			Lifetime::from(self.lifetime),
+			VoidBeam {
+				damage: self.damage,
+				range: self.range,
+				attacker,
+				target,
+			},
+		));
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
+	use common::traits::clamp_zero_positive::ClampZeroPositive;
+	use testing::SingleThreadedApp;
+
+	fn setup() -> App {
+		App::new().single_threaded(Update)
+	}
+
+	fn system(
+		entity: Entity,
+		attack: VoidBeamAttack,
+		attacker: Attacker,
+		target: Target,
+	) -> impl Fn(Commands) {
+		move |mut commands: Commands| {
+			let mut entity = commands.entity(entity);
+			attack.insert_attack(&mut entity, attacker, target);
+		}
+	}
+
+	#[test]
+	fn insert_void_beam() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let entity = app.world_mut().spawn_empty().id();
+		let attack = VoidBeamAttack {
+			damage: 42.,
+			lifetime: Duration::from_millis(42),
+			range: Units::new(11.),
+		};
+		let attacker = PersistentEntity::default();
+		let target = PersistentEntity::default();
+
+		app.world_mut().run_system_once(system(
+			entity,
+			attack,
+			Attacker(attacker),
+			Target(target),
+		))?;
+
+		assert_eq!(
+			Some(&VoidBeam {
+				damage: attack.damage,
+				range: attack.range,
+				attacker,
+				target,
+			}),
+			app.world().entity(entity).get::<VoidBeam>()
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn insert_void_beam_life_time() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let entity = app.world_mut().spawn_empty().id();
+		let attack = VoidBeamAttack {
+			damage: 42.,
+			lifetime: Duration::from_millis(42),
+			range: Units::new(11.),
+		};
+		let attacker = PersistentEntity::default();
+		let target = PersistentEntity::default();
+
+		app.world_mut().run_system_once(system(
+			entity,
+			attack,
+			Attacker(attacker),
+			Target(target),
+		))?;
+
+		assert_eq!(
+			Some(&Lifetime::from(attack.lifetime)),
+			app.world().entity(entity).get::<Lifetime>()
+		);
+		Ok(())
 	}
 }
