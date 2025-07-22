@@ -4,3 +4,9 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+# internal
+macros.workspace = true
+
+[dev-dependencies]
+# external
+test-case.workspace = true
