@@ -8,6 +8,7 @@ pub(crate) mod pixels;
 pub(crate) mod register_map_cell;
 pub(crate) mod to_subdivided;
 
+use crate::grid_graph::grid_context::CellDistance;
 use bevy::prelude::*;
 use common::traits::{handles_lights::HandlesLights, thread_safe::ThreadSafe};
 
@@ -19,5 +20,5 @@ pub(crate) trait ExtraComponentsDefinition {
 }
 
 pub(crate) trait GridCellDistanceDefinition {
-	const CELL_DISTANCE: f32;
+	const CELL_DISTANCE: CellDistance;
 }

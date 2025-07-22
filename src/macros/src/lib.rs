@@ -4,10 +4,15 @@ use syn::{
 	Data,
 	DeriveInput,
 	Error,
+	Expr,
+	Field,
 	Fields,
 	Ident,
+	Lit,
 	Path,
+	Token,
 	Type,
+	parse::{Parse, ParseStream},
 	parse_macro_input,
 	spanned::Spanned,
 };
@@ -164,6 +169,157 @@ pub fn item_asset(input: TokenStream) -> TokenStream {
 	})
 }
 
+struct MinArgs {
+	ty: Type,
+	lit: Lit,
+}
+
+impl Parse for MinArgs {
+	fn parse(input: ParseStream) -> syn::Result<Self> {
+		let ty = input.parse::<Type>()?;
+		_ = input.parse::<Token![,]>()?;
+		let lit = input.parse::<Lit>()?;
+		_ = input.parse::<Option<Token![,]>>()?;
+		Ok(Self { ty, lit })
+	}
+}
+
+/// Uses const evaluation against a `#ty::try_new(#lit) -> Result<#ty, SomeError>` function.
+///
+/// Prevents compilation if `#ty::try_new(#lit)` returns an error.
+///
+/// Arguments:
+/// - `#ty:ty`: the type containing `try_new()`
+/// - `#lit:literal`: a literal from which to instantiate `#ty`
+#[proc_macro]
+pub fn new_valid(input: TokenStream) -> TokenStream {
+	let MinArgs { ty, lit } = parse_macro_input!(input);
+
+	TokenStream::from(quote! {{
+		const new: #ty = match <#ty>::try_new(#lit) {
+			Ok(n) => n,
+			Err(_) => panic!(concat!(stringify!(#ty), ": ", #lit, " is invalid"))
+		};
+		new
+	}})
+}
+
+/// Derive in-between limits for a struct with one unnamed field.
+///
+/// It is recommended to mark the unnamed field private in order to prevent bypassing the
+/// limit check.
+/// ```
+#[proc_macro_derive(InBetween, attributes(in_between))]
+pub fn derive_in_between(input: TokenStream) -> TokenStream {
+	let input = parse_macro_input!(input as DeriveInput);
+	let core = match crate_root("zyheeda_core") {
+		Ok(core) => core,
+		Err(error) => return error,
+	};
+	let name = &input.ident;
+	let Some([field]) = get_unnamed_fields(&input) else {
+		return TokenStream::from(
+			Error::new(
+				name.span(),
+				"InBetween: must be a struct with one unnamed field",
+			)
+			.to_compile_error(),
+		);
+	};
+	let ty = &field.ty;
+	let mut has_in_between = false;
+	let mut low = None;
+	let mut high = None;
+
+	for attr in input.attrs.iter() {
+		if !attr.path().is_ident("in_between") {
+			continue;
+		}
+
+		has_in_between = true;
+
+		let result = attr.parse_nested_meta(|nested| match nested.path.get_ident() {
+			Some(ident) if ident == "low" => {
+				low = Some(nested.value()?.parse::<Expr>()?);
+				Ok(())
+			}
+			Some(ident) if ident == "high" => {
+				high = Some(nested.value()?.parse::<Expr>()?);
+				Ok(())
+			}
+			Some(other) => Err(Error::new(
+				nested.path.span(),
+				format!("InBetween: unknown key word '{other}'"),
+			)),
+			None => Ok(()),
+		});
+
+		if let Err(error) = result {
+			return TokenStream::from(error.to_compile_error());
+		}
+	}
+
+	if !has_in_between {
+		return TokenStream::from(
+			Error::new(name.span(), "InBetween: missing attribute `in_between`").to_compile_error(),
+		);
+	}
+	let Some(low) = low else {
+		return TokenStream::from(
+			Error::new(name.span(), "InBetween: missing `in_between` low").to_compile_error(),
+		);
+	};
+	let Some(high) = high else {
+		return TokenStream::from(
+			Error::new(name.span(), "InBetween: missing `in_between` high").to_compile_error(),
+		);
+	};
+	let (impl_generics, type_generics, where_clause) = &input.generics.split_for_impl();
+
+	TokenStream::from(quote! {
+		impl #impl_generics #name #type_generics #where_clause {
+			const LIMITS: (#ty, #ty) = match (#low, #high) {
+				(l, h) if l < h => (l, h),
+				_ => panic!("`InBetween: low` must be lesser than `high`")
+			};
+
+			#[allow(dead_code)]
+			pub const fn try_new(value: #ty) -> Result<Self, #core::errors::NotInBetween<#ty>> {
+				if value <= Self::LIMITS.0 || value >= Self::LIMITS.1 {
+					return Err(#core::errors::NotInBetween {
+						lower_limit: Self::LIMITS.0,
+						upper_limit: Self::LIMITS.1,
+						value,
+					});
+				}
+
+				Ok(Self(value))
+			}
+
+			#[allow(dead_code)]
+			pub fn unwrap(self) -> #ty {
+				self.0
+			}
+		}
+
+		impl #impl_generics TryFrom<#ty> for #name #type_generics #where_clause {
+			type Error = #core::errors::NotInBetween<#ty>;
+
+			fn try_from(value: #ty) -> Result<Self, Self::Error> {
+				Self::try_new(value)
+			}
+		}
+
+		impl #impl_generics std::ops::Deref for #name #type_generics #where_clause {
+			type Target = #ty;
+
+			fn deref(&self) -> &Self::Target {
+				&self.0
+			}
+		}
+	})
+}
+
 /// Implements the `SavableComponent` trait.
 ///
 /// This derive macro supports the following optional attribute:
@@ -243,6 +399,20 @@ pub fn derive_savable_component(input: TokenStream) -> TokenStream {
 			const PRIORITY: bool = #priority;
 		}
 	})
+}
+
+fn get_unnamed_fields<const N: usize>(input: &DeriveInput) -> Option<[&Field; N]> {
+	let data_struct = match &input.data {
+		Data::Struct(data_struct) => data_struct,
+		_ => return None,
+	};
+
+	let unnamed_fields = match &data_struct.fields {
+		Fields::Unnamed(fields) => &fields.unnamed,
+		_ => return None,
+	};
+
+	unnamed_fields.iter().collect::<Vec<_>>().try_into().ok()
 }
 
 fn crate_root(name: &str) -> Result<Path, TokenStream> {

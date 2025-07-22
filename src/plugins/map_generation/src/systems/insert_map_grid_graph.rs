@@ -3,7 +3,7 @@ use crate::{
 	grid_graph::{
 		GridGraph,
 		Obstacles,
-		grid_context::{GridContext, GridDefinition, GridDefinitionError},
+		grid_context::{CellCountZero, GridContext, GridDefinition},
 	},
 	traits::{GridCellDistanceDefinition, grid_min::GridMin, is_walkable::IsWalkable},
 };
@@ -18,7 +18,7 @@ where
 	pub(crate) fn insert_map_grid_graph(
 		maps: Query<(Entity, &Self)>,
 		mut commands: Commands,
-	) -> Result<(), Vec<GridDefinitionError>> {
+	) -> Result<(), Vec<CellCountZero>> {
 		let insert_map_graph = |(entity, map): (Entity, &Self)| {
 			let grid_definition = GridDefinition {
 				cell_count_x: map.size.x,
@@ -40,7 +40,7 @@ where
 			for x in 0..map.size.x {
 				for z in 0..map.size.z {
 					graph.nodes.insert((x, z), position);
-					position.z += TCell::CELL_DISTANCE;
+					position.z += *TCell::CELL_DISTANCE;
 
 					if !is_walkable(map, x, z) {
 						graph.extra.obstacles.insert((x, z));
@@ -48,7 +48,7 @@ where
 				}
 
 				position.z = min.z;
-				position.x += TCell::CELL_DISTANCE;
+				position.x += *TCell::CELL_DISTANCE;
 			}
 
 			commands.try_insert_on(entity, MapGridGraph::<TCell>::from(graph));
@@ -80,11 +80,12 @@ mod tests {
 		grid_graph::{
 			GridGraph,
 			Obstacles,
-			grid_context::{GridContext, GridDefinition, GridDefinitionError},
+			grid_context::{CellCountZero, CellDistance, GridContext, GridDefinition},
 		},
 		traits::{GridCellDistanceDefinition, is_walkable::IsWalkable},
 	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
+	use macros::new_valid;
 	use std::collections::{HashMap, HashSet};
 	use testing::SingleThreadedApp;
 
@@ -104,7 +105,7 @@ mod tests {
 	}
 
 	impl GridCellDistanceDefinition for _Cell {
-		const CELL_DISTANCE: f32 = 4.;
+		const CELL_DISTANCE: CellDistance = new_valid!(CellDistance, 4.);
 	}
 
 	impl IsWalkable for _Cell {
@@ -332,7 +333,7 @@ mod tests {
 			.world_mut()
 			.run_system_once(MapCells::<_Cell>::insert_map_grid_graph)?;
 
-		assert_eq!(Err(vec![GridDefinitionError::CellCountZero]), result);
+		assert_eq!(Err(vec![CellCountZero]), result);
 		Ok(())
 	}
 }

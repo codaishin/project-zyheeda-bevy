@@ -3422,6 +3422,7 @@ dependencies = [
  "test-case",
  "testing",
  "uuid",
+ "zyheeda_core",
 ]
 
 [[package]]
@@ -4524,6 +4525,7 @@ dependencies = [
  "tracing",
  "unic-langid",
  "uuid",
+ "zyheeda_core",
 ]
 
 [[package]]
@@ -6947,4 +6949,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "99a5bab8d7dedf81405c4bb1f2b83ea057643d9cb28778cea9eecddeedd2e028"
 dependencies = [
  "zune-core",
+]
+
+[[package]]
+name = "zyheeda_core"
+version = "0.1.0"
+dependencies = [
+ "macros",
+ "test-case",
 ]
