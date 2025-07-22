@@ -1,0 +1,6 @@
+[package]
+name = "zyheeda_core"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]

@@ -4524,6 +4524,7 @@ dependencies = [
  "tracing",
  "unic-langid",
  "uuid",
+ "zyheeda_core",
 ]
 
 [[package]]
@@ -6948,3 +6949,7 @@ checksum = "99a5bab8d7dedf81405c4bb1f2b83ea057643d9cb28778cea9eecddeedd2e028"
 dependencies = [
  "zune-core",
 ]
+
+[[package]]
+name = "zyheeda_core"
+version = "0.1.0"

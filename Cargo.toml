@@ -1,5 +1,5 @@
 [workspace]
-members = ["src/plugins/*"]
+members = ["src/plugins/*", "src/macros", "src/testing", "src/zyheeda_core"]
 
 [workspace.package]
 version = "0.1.0"
@@ -20,7 +20,7 @@ unic-langid = { version = "0.9.6", features = ["macros"] }
 uuid = "1.16.0"
 test-case = "3.3.1"
 
-# internal
+# internal plugin crates
 animations = { path = "src/plugins/animations" }
 bars = { path = "src/plugins/bars" }
 behaviors = { path = "src/plugins/behaviors" }
@@ -34,7 +34,6 @@ items = { path = "src/plugins/items" }
 light = { path = "src/plugins/light" }
 loading = { path = "src/plugins/loading" }
 localization = { path = "src/plugins/localization" }
-macros = { path = "src/plugins/macros" }
 map_generation = { path = "src/plugins/map_generation" }
 menu = { path = "src/plugins/menu" }
 path_finding = { path = "src/plugins/path_finding" }
@@ -43,7 +42,11 @@ graphics = { path = "src/plugins/graphics" }
 savegame = { path = "src/plugins/savegame" }
 settings = { path = "src/plugins/settings" }
 skills = { path = "src/plugins/skills" }
-testing = { path = "src/plugins/testing" }
+
+# internal crates
+macros = { path = "src/macros" }
+testing = { path = "src/testing" }
+zyheeda_core = { path = "src/zyheeda_core" }
 
 [profile.test]
 opt-level = 0
@@ -75,7 +78,7 @@ tracing.workspace = true
 unic-langid.workspace = true
 uuid.workspace = true
 
-# internal
+# internal plugin crates
 animations.workspace = true
 bars.workspace = true
 behaviors.workspace = true
@@ -88,7 +91,6 @@ children_assets_dispatch.workspace = true
 light.workspace = true
 loading.workspace = true
 localization.workspace = true
-macros.workspace = true
 map_generation.workspace = true
 menu.workspace = true
 path_finding.workspace = true
@@ -97,6 +99,10 @@ graphics.workspace = true
 savegame.workspace = true
 settings.workspace = true
 skills.workspace = true
+
+# internal crates
+macros.workspace = true
+zyheeda_core.workspace = true
 
 [dev-dependencies]
 # external
