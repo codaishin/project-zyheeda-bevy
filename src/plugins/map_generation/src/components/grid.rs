@@ -1,5 +1,5 @@
 use crate::{
-	grid_graph::GridGraph,
+	grid_graph::{GridGraph, grid_context::DividedToZero},
 	observers::compute_grid_cells::Cells,
 	traits::{
 		GridCellDistanceDefinition,
@@ -59,13 +59,28 @@ where
 	pub(crate) fn insert(
 		mut commands: Commands,
 		levels: Query<(Entity, &Grid<0, TGraph>), Changed<Grid<0, TGraph>>>,
-	) where
+	) -> Result<(), Vec<DividedToZero>>
+	where
 		TGraph: ThreadSafe,
 	{
-		for (entity, level) in &levels {
-			let graph = level.graph.to_subdivided(SUBDIVISIONS);
-			commands.try_insert_on(entity, Self { graph });
+		let errors = levels
+			.iter()
+			.filter_map(
+				|(entity, level)| match level.graph.to_subdivided(SUBDIVISIONS) {
+					Ok(graph) => {
+						commands.try_insert_on(entity, Self { graph });
+						None
+					}
+					Err(err) => Some(err),
+				},
+			)
+			.collect::<Vec<_>>();
+
+		if !errors.is_empty() {
+			return Err(errors);
 		}
+
+		Ok(())
 	}
 }
 
@@ -144,15 +159,32 @@ mod test_insert_subdivided {
 		subdivisions: u8,
 	}
 
+	const TO_ZERO_SUBDIVISION: u8 = 42;
+
 	impl ToSubdivided for _Graph {
-		fn to_subdivided(&self, subdivisions: u8) -> Self {
-			_Graph { subdivisions }
+		fn to_subdivided(&self, subdivisions: u8) -> Result<Self, DividedToZero> {
+			if subdivisions == TO_ZERO_SUBDIVISION {
+				return Err(DividedToZero {
+					from: 123.,
+					divisor: TO_ZERO_SUBDIVISION,
+				});
+			}
+
+			Ok(_Graph { subdivisions })
 		}
 	}
 
+	#[derive(Resource, Debug, PartialEq)]
+	struct _Result(Result<(), Vec<DividedToZero>>);
+
 	fn setup<const SUBDIVISIONS: u8>() -> App {
 		let mut app = App::new();
-		app.add_systems(Update, Grid::<SUBDIVISIONS, _Graph>::insert);
+		app.add_systems(
+			Update,
+			Grid::<SUBDIVISIONS, _Graph>::insert.pipe(|In(result), mut commands: Commands| {
+				commands.insert_resource(_Result(result));
+			}),
+		);
 
 		app
 	}
@@ -221,10 +253,43 @@ mod test_insert_subdivided {
 			app.world().entity(entity).get::<Grid::<5, _Graph>>()
 		);
 	}
+
+	#[test]
+	fn return_errors() {
+		let mut app = setup::<TO_ZERO_SUBDIVISION>();
+		app.world_mut().spawn(Grid::<0, _Graph> {
+			graph: _Graph { subdivisions: 0 },
+		});
+
+		app.update();
+
+		assert_eq!(
+			Some(&_Result(Err(vec![DividedToZero {
+				from: 123.,
+				divisor: TO_ZERO_SUBDIVISION,
+			}]))),
+			app.world().get_resource::<_Result>()
+		);
+	}
+
+	#[test]
+	fn return_no_error_when_ok() {
+		let mut app = setup::<5>();
+		app.world_mut().spawn(Grid::<0, _Graph> {
+			graph: _Graph { subdivisions: 0 },
+		});
+
+		app.update();
+
+		assert_eq!(
+			Some(&_Result(Ok(()))),
+			app.world().get_resource::<_Result>()
+		);
+	}
 }
 
 #[cfg(test)]
-mod tests {
+mod test_spawn_cells {
 	use super::*;
 	use crate::{
 		grid_graph::grid_context::CellDistance,

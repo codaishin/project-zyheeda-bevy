@@ -2,26 +2,29 @@ use super::{
 	GridGraph,
 	grid_context::{GridContext, GridDefinition},
 };
-use crate::traits::{grid_min::GridMin, to_subdivided::ToSubdivided};
+use crate::{
+	grid_graph::grid_context::DividedToZero,
+	traits::{grid_min::GridMin, to_subdivided::ToSubdivided},
+};
 use bevy::utils::default;
 
 impl ToSubdivided for GridGraph {
-	fn to_subdivided(&self, subdivisions: u8) -> Self {
+	fn to_subdivided(&self, subdivisions: u8) -> Result<Self, DividedToZero> {
 		match subdivisions {
-			0 => self.clone(),
+			0 => Ok(self.clone()),
 			_ => subdivide(self, subdivisions),
 		}
 	}
 }
 
-fn subdivide(source: &GridGraph, subdivisions: u8) -> GridGraph {
+fn subdivide(source: &GridGraph, subdivisions: u8) -> Result<GridGraph, DividedToZero> {
 	let factor = subdivisions + 1;
 	let GridContext(source_grid) = source.context;
 	let mut subdivided: GridGraph = GridGraph {
 		context: GridContext(GridDefinition {
 			cell_count_x: source_grid.cell_count_x * factor as usize,
 			cell_count_z: source_grid.cell_count_z * factor as usize,
-			cell_distance: source_grid.cell_distance.dived_by(factor),
+			cell_distance: source_grid.cell_distance.dived_by(factor)?,
 		}),
 		..default()
 	};
@@ -44,7 +47,7 @@ fn subdivide(source: &GridGraph, subdivisions: u8) -> GridGraph {
 		translation.z = min.z;
 	}
 
-	subdivided
+	Ok(subdivided)
 }
 
 fn source_key(x: usize, z: usize, factor: u8) -> (usize, usize) {
@@ -58,7 +61,7 @@ mod tests {
 	use super::*;
 	use crate::grid_graph::{
 		Obstacles,
-		grid_context::{CellDistance, GridContext, GridDefinition, CellCountZero},
+		grid_context::{CellCountZero, CellDistance, GridContext, GridDefinition},
 	};
 	use bevy::math::Vec3;
 	use macros::new_valid;
@@ -85,7 +88,7 @@ mod tests {
 
 		let resized = graph.clone().to_subdivided(0);
 
-		assert_eq!(graph, resized);
+		assert_eq!(Ok(graph), resized);
 		Ok(())
 	}
 
@@ -106,7 +109,7 @@ mod tests {
 		let resized = graph.clone().to_subdivided(1);
 
 		assert_eq!(
-			GridGraph {
+			Ok(GridGraph {
 				nodes: HashMap::from([]),
 				extra: Obstacles {
 					obstacles: HashSet::from([]),
@@ -116,7 +119,7 @@ mod tests {
 					cell_count_z: 4,
 					cell_distance: new_valid!(CellDistance, 5.),
 				})?,
-			},
+			}),
 			resized
 		);
 		Ok(())
@@ -144,7 +147,7 @@ mod tests {
 		let resized = graph.to_subdivided(1);
 
 		assert_eq!(
-			GridGraph {
+			Ok(GridGraph {
 				nodes: HashMap::from([
 					// old (0, 0)
 					((0, 0), Vec3::new(-7.5, 0., -7.5)),
@@ -175,7 +178,7 @@ mod tests {
 					cell_count_z: 4,
 					cell_distance: new_valid!(CellDistance, 5.),
 				})?,
-			},
+			}),
 			resized
 		);
 		Ok(())
@@ -201,7 +204,7 @@ mod tests {
 		let resized = graph.clone().to_subdivided(1);
 
 		assert_eq!(
-			GridGraph {
+			Ok(GridGraph {
 				nodes: HashMap::from([
 					// old (0, 0)
 					((0, 0), Vec3::new(-7.5, 0., -7.5)),
@@ -222,7 +225,7 @@ mod tests {
 					cell_count_z: 4,
 					cell_distance: new_valid!(CellDistance, 5.),
 				})?,
-			},
+			}),
 			resized
 		);
 		Ok(())
@@ -250,7 +253,7 @@ mod tests {
 		let resized = graph.clone().to_subdivided(1);
 
 		assert_eq!(
-			GridGraph {
+			Ok(GridGraph {
 				nodes: HashMap::from([
 					// old (0, 0)
 					((0, 0), Vec3::new(-7.5, 0., -7.5)),
@@ -292,7 +295,39 @@ mod tests {
 					cell_count_z: 4,
 					cell_distance: new_valid!(CellDistance, 5.),
 				})?,
+			}),
+			resized
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn subdivide_to_zero() -> Result<(), CellCountZero> {
+		let super_low = (0.0_f32).next_up();
+		let graph = GridGraph {
+			nodes: HashMap::from([
+				((0, 0), Vec3::new(-5., 0., -5.)),
+				((0, 1), Vec3::new(-5., 0., 5.)),
+				((1, 0), Vec3::new(5., 0., -5.)),
+				((1, 1), Vec3::new(5., 0., 5.)),
+			]),
+			extra: Obstacles {
+				obstacles: HashSet::from([(0, 1), (1, 1)]),
 			},
+			context: GridContext::try_from(GridDefinition {
+				cell_count_x: 2,
+				cell_count_z: 2,
+				cell_distance: CellDistance::try_from(super_low).unwrap(),
+			})?,
+		};
+
+		let resized = graph.clone().to_subdivided(10);
+
+		assert_eq!(
+			Err(DividedToZero {
+				from: super_low,
+				divisor: 11
+			}),
 			resized
 		);
 		Ok(())

@@ -97,7 +97,7 @@ where
 					.run_if(not(resource_exists::<AgentsColorLookup>)),
 			)
 			.add_systems(OnEnter(GameState::NewGame), DemoMap::spawn)
-			.add_systems(Update, Grid::<1>::insert)
+			.add_systems(Update, Grid::<1>::insert.pipe(OnError::log))
 			.add_systems(
 				Update,
 				(

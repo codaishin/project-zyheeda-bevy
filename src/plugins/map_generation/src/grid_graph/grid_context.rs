@@ -70,9 +70,26 @@ impl GridDefinition {
 pub(crate) struct CellDistance(f32);
 
 impl CellDistance {
-	pub(crate) fn dived_by(self, rhs: u8) -> Self {
-		// FIXME: should we disallow? In theory we could it could round to 0.
-		Self(self.0 / rhs as f32)
+	pub(crate) fn dived_by(self, divisor: u8) -> Result<Self, DividedToZero> {
+		Self::try_from(self.0 / divisor as f32).map_err(|_| DividedToZero {
+			from: self.0,
+			divisor,
+		})
+	}
+}
+
+#[derive(Debug, PartialEq)]
+pub struct DividedToZero {
+	pub(crate) from: f32,
+	pub(crate) divisor: u8,
+}
+
+impl From<DividedToZero> for Error {
+	fn from(DividedToZero { from, divisor }: DividedToZero) -> Self {
+		Error::Single {
+			msg: format!("dividing cell distance {from} by {divisor} resulted in 0.",),
+			lvl: Level::Error,
+		}
 	}
 }
 
@@ -92,6 +109,7 @@ impl From<CellCountZero> for Error {
 mod tests {
 	use super::*;
 	use test_case::test_case;
+	use zyheeda_core::errors::NotInBetween;
 
 	#[test]
 	fn from_definition() {
@@ -207,6 +225,32 @@ mod tests {
 		let key = context.key_for(target);
 
 		assert_eq!(result, key);
+		Ok(())
+	}
+
+	#[test]
+	fn divide_valid() {
+		let distance = new_valid!(CellDistance, 1.);
+
+		let divided = distance.dived_by(10);
+
+		assert_eq!(Ok(new_valid!(CellDistance, 0.1)), divided);
+	}
+
+	#[test]
+	fn divide_valid_to_zero() -> Result<(), NotInBetween<f32>> {
+		let super_low = (0.0_f32).next_up();
+		let distance = CellDistance::try_from(super_low)?;
+
+		let divided = distance.dived_by(10);
+
+		assert_eq!(
+			Err(DividedToZero {
+				from: super_low,
+				divisor: 10,
+			}),
+			divided
+		);
 		Ok(())
 	}
 }
