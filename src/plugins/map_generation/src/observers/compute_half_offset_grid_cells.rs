@@ -32,7 +32,7 @@ impl HalfOffsetGrid {
 			return Err(GridError::NoCellDefinition);
 		};
 		let graph = graph.graph();
-		let offset = TCell::CELL_DISTANCE / 2.;
+		let offset = *TCell::CELL_DISTANCE / 2.;
 		let mut index_mismatch = vec![];
 		let mut cells = vec![];
 
@@ -64,9 +64,10 @@ mod test_get_half_offset_grid {
 			cells_ref::CellsRef,
 			map::cells::{Direction, Size},
 		},
-		grid_graph::GridGraph,
+		grid_graph::{GridGraph, grid_context::CellDistance},
 		traits::GridCellDistanceDefinition,
 	};
+	use macros::new_valid;
 	use std::collections::HashMap;
 	use testing::{SingleThreadedApp, assert_eq_unordered};
 
@@ -74,7 +75,7 @@ mod test_get_half_offset_grid {
 	struct _Cell(&'static str);
 
 	impl GridCellDistanceDefinition for _Cell {
-		const CELL_DISTANCE: f32 = 2.;
+		const CELL_DISTANCE: CellDistance = new_valid!(CellDistance, 2.);
 	}
 
 	#[derive(Resource, Debug, PartialEq, Clone)]

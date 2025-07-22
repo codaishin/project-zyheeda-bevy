@@ -56,8 +56,9 @@ mod tests {
 	use super::*;
 	use crate::grid_graph::{
 		Obstacles,
-		grid_context::{GridContext, GridDefinition},
+		grid_context::{CellDistance, GridContext, GridDefinition},
 	};
+	use macros::new_valid;
 	use std::collections::HashMap;
 	use testing::{SingleThreadedApp, assert_count, get_children};
 
@@ -96,7 +97,7 @@ mod tests {
 			context: GridContext::try_from(GridDefinition {
 				cell_count_x: 1,
 				cell_count_z: 1,
-				cell_distance: 2.,
+				cell_distance: new_valid!(CellDistance, 2.),
 			})
 			.expect("INVALID GRID DEFINITION"),
 		};
@@ -119,7 +120,7 @@ mod tests {
 			context: GridContext::try_from(GridDefinition {
 				cell_count_x: 1,
 				cell_count_z: 1,
-				cell_distance: 2.,
+				cell_distance: new_valid!(CellDistance, 2.),
 			})
 			.expect("INVALID GRID DEFINITION"),
 		};
@@ -148,7 +149,7 @@ mod tests {
 			context: GridContext::try_from(GridDefinition {
 				cell_count_x: 1,
 				cell_count_z: 1,
-				cell_distance: 2.,
+				cell_distance: new_valid!(CellDistance, 2.),
 			})
 			.expect("INVALID GRID DEFINITION"),
 		};
@@ -158,7 +159,7 @@ mod tests {
 			context: GridContext::try_from(GridDefinition {
 				cell_count_x: 1,
 				cell_count_z: 1,
-				cell_distance: 10.,
+				cell_distance: new_valid!(CellDistance, 10.),
 			})
 			.expect("INVALID GRID DEFINITION"),
 		};
@@ -185,7 +186,7 @@ mod tests {
 			context: GridContext::try_from(GridDefinition {
 				cell_count_x: 1,
 				cell_count_z: 1,
-				cell_distance: 2.,
+				cell_distance: new_valid!(CellDistance, 2.),
 			})
 			.expect("INVALID GRID DEFINITION"),
 		};

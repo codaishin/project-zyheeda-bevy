@@ -17,6 +17,7 @@ use crate::{
 		},
 		wall_cell::WallCell,
 	},
+	grid_graph::grid_context::CellDistance,
 	resources::map::color_lookup::MapColorLookup,
 	systems::map_color_lookup::load_images::ColorLookupAssetPath,
 	traits::{
@@ -29,6 +30,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::errors::Unreachable;
+use macros::new_valid;
 use std::collections::HashSet;
 
 #[derive(Debug, PartialEq, Clone, TypePath, Default)]
@@ -39,7 +41,7 @@ pub(crate) enum Corridor {
 }
 
 impl Corridor {
-	const MODEL_ASSET_CELL_WIDTH: f32 = 2.;
+	const MODEL_ASSET_CELL_WIDTH: CellDistance = new_valid!(CellDistance, 2.);
 }
 
 impl IsWalkable for Corridor {
@@ -52,7 +54,7 @@ impl IsWalkable for Corridor {
 }
 
 impl GridCellDistanceDefinition for Corridor {
-	const CELL_DISTANCE: f32 = Corridor::MODEL_ASSET_CELL_WIDTH;
+	const CELL_DISTANCE: CellDistance = Corridor::MODEL_ASSET_CELL_WIDTH;
 }
 
 impl ParseMapImage<ParsedColor> for Corridor {

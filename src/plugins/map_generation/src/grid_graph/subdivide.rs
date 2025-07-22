@@ -21,7 +21,7 @@ fn subdivide(source: &GridGraph, subdivisions: u8) -> GridGraph {
 		context: GridContext(GridDefinition {
 			cell_count_x: source_grid.cell_count_x * factor as usize,
 			cell_count_z: source_grid.cell_count_z * factor as usize,
-			cell_distance: source_grid.cell_distance / factor as f32,
+			cell_distance: source_grid.cell_distance.dived_by(factor),
 		}),
 		..default()
 	};
@@ -37,10 +37,10 @@ fn subdivide(source: &GridGraph, subdivisions: u8) -> GridGraph {
 			if source.extra.obstacles.contains(&source_key) {
 				subdivided.extra.obstacles.insert((x, z));
 			}
-			translation.z += subdivided.context.0.cell_distance;
+			translation.z += *subdivided.context.0.cell_distance;
 		}
 
-		translation.x += subdivided.context.0.cell_distance;
+		translation.x += *subdivided.context.0.cell_distance;
 		translation.z = min.z;
 	}
 
@@ -58,13 +58,14 @@ mod tests {
 	use super::*;
 	use crate::grid_graph::{
 		Obstacles,
-		grid_context::{GridContext, GridDefinition, GridDefinitionError},
+		grid_context::{CellDistance, GridContext, GridDefinition, CellCountZero},
 	};
 	use bevy::math::Vec3;
+	use macros::new_valid;
 	use std::collections::{HashMap, HashSet};
 
 	#[test]
-	fn subdivide_0_returns_same_graph() -> Result<(), GridDefinitionError> {
+	fn subdivide_0_returns_same_graph() -> Result<(), CellCountZero> {
 		let graph = GridGraph {
 			nodes: HashMap::from([
 				((0, 0), Vec3::new(-5., 0., -5.)),
@@ -78,7 +79,7 @@ mod tests {
 			context: GridContext::try_from(GridDefinition {
 				cell_count_x: 2,
 				cell_count_z: 2,
-				cell_distance: 10.,
+				cell_distance: new_valid!(CellDistance, 10.),
 			})?,
 		};
 
@@ -89,7 +90,7 @@ mod tests {
 	}
 
 	#[test]
-	fn subdivide_1_with_all_empty_nodes() -> Result<(), GridDefinitionError> {
+	fn subdivide_1_with_all_empty_nodes() -> Result<(), CellCountZero> {
 		let graph = GridGraph {
 			nodes: HashMap::from([]),
 			extra: Obstacles {
@@ -98,7 +99,7 @@ mod tests {
 			context: GridContext::try_from(GridDefinition {
 				cell_count_x: 2,
 				cell_count_z: 2,
-				cell_distance: 10.,
+				cell_distance: new_valid!(CellDistance, 10.),
 			})?,
 		};
 
@@ -113,7 +114,7 @@ mod tests {
 				context: GridContext::try_from(GridDefinition {
 					cell_count_x: 4,
 					cell_count_z: 4,
-					cell_distance: 5.,
+					cell_distance: new_valid!(CellDistance, 5.),
 				})?,
 			},
 			resized
@@ -122,7 +123,7 @@ mod tests {
 	}
 
 	#[test]
-	fn subdivide_1_without_obstacles() -> Result<(), GridDefinitionError> {
+	fn subdivide_1_without_obstacles() -> Result<(), CellCountZero> {
 		let graph = GridGraph {
 			nodes: HashMap::from([
 				((0, 0), Vec3::new(-5., 0., -5.)),
@@ -136,7 +137,7 @@ mod tests {
 			context: GridContext::try_from(GridDefinition {
 				cell_count_x: 2,
 				cell_count_z: 2,
-				cell_distance: 10.,
+				cell_distance: new_valid!(CellDistance, 10.),
 			})?,
 		};
 
@@ -172,7 +173,7 @@ mod tests {
 				context: GridContext::try_from(GridDefinition {
 					cell_count_x: 4,
 					cell_count_z: 4,
-					cell_distance: 5.,
+					cell_distance: new_valid!(CellDistance, 5.),
 				})?,
 			},
 			resized
@@ -181,7 +182,7 @@ mod tests {
 	}
 
 	#[test]
-	fn subdivide_1_without_obstacles_and_ignoring_empty_nodes() -> Result<(), GridDefinitionError> {
+	fn subdivide_1_without_obstacles_and_ignoring_empty_nodes() -> Result<(), CellCountZero> {
 		let graph = GridGraph {
 			nodes: HashMap::from([
 				((0, 0), Vec3::new(-5., 0., -5.)),
@@ -193,7 +194,7 @@ mod tests {
 			context: GridContext::try_from(GridDefinition {
 				cell_count_x: 2,
 				cell_count_z: 2,
-				cell_distance: 10.,
+				cell_distance: new_valid!(CellDistance, 10.),
 			})?,
 		};
 
@@ -219,7 +220,7 @@ mod tests {
 				context: GridContext::try_from(GridDefinition {
 					cell_count_x: 4,
 					cell_count_z: 4,
-					cell_distance: 5.,
+					cell_distance: new_valid!(CellDistance, 5.),
 				})?,
 			},
 			resized
@@ -228,7 +229,7 @@ mod tests {
 	}
 
 	#[test]
-	fn subdivide_1() -> Result<(), GridDefinitionError> {
+	fn subdivide_1() -> Result<(), CellCountZero> {
 		let graph = GridGraph {
 			nodes: HashMap::from([
 				((0, 0), Vec3::new(-5., 0., -5.)),
@@ -242,7 +243,7 @@ mod tests {
 			context: GridContext::try_from(GridDefinition {
 				cell_count_x: 2,
 				cell_count_z: 2,
-				cell_distance: 10.,
+				cell_distance: new_valid!(CellDistance, 10.),
 			})?,
 		};
 
@@ -289,7 +290,7 @@ mod tests {
 				context: GridContext::try_from(GridDefinition {
 					cell_count_x: 4,
 					cell_count_z: 4,
-					cell_distance: 5.,
+					cell_distance: new_valid!(CellDistance, 5.),
 				})?,
 			},
 			resized

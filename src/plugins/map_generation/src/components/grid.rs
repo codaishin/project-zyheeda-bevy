@@ -41,7 +41,7 @@ impl Grid {
 			return Err(SpawnCellError::NoGridEntity);
 		};
 
-		let scale = Vec3::splat(TCell::CELL_DISTANCE);
+		let scale = Vec3::splat(*TCell::CELL_DISTANCE);
 		grid.with_children(spawn_children(cells, scale));
 
 		Ok(())
@@ -127,7 +127,7 @@ where
 		for (translation, cell) in cells {
 			let mut transform = Transform::from_translation(translation).with_scale(scale);
 			if cell.offset_height() {
-				transform.translation.y += TCell::CELL_DISTANCE / 2.;
+				transform.translation.y += *TCell::CELL_DISTANCE / 2.;
 			}
 			let mut child = parent.spawn(transform);
 			cell.insert_cell_components(&mut child);
@@ -226,8 +226,12 @@ mod test_insert_subdivided {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::insert_cell_components::InsertCellComponents;
+	use crate::{
+		grid_graph::grid_context::CellDistance,
+		traits::insert_cell_components::InsertCellComponents,
+	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
+	use macros::new_valid;
 	use testing::{SingleThreadedApp, assert_count, get_children};
 
 	#[derive(Default)]
@@ -246,7 +250,7 @@ mod tests {
 	}
 
 	impl GridCellDistanceDefinition for _Cell {
-		const CELL_DISTANCE: f32 = 0.5;
+		const CELL_DISTANCE: CellDistance = new_valid!(CellDistance, 0.5);
 	}
 
 	#[derive(Component, Debug, PartialEq)]

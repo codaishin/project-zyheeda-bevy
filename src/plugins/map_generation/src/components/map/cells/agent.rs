@@ -1,5 +1,6 @@
 use crate::{
 	components::map::cells::parsed_color::ParsedColor,
+	grid_graph::grid_context::CellDistance,
 	resources::agents::color_lookup::AgentsColorLookup,
 	traits::{GridCellDistanceDefinition, parse_map_image::ParseMapImage},
 };
@@ -19,7 +20,7 @@ impl<TCell> GridCellDistanceDefinition for Agent<TCell>
 where
 	TCell: GridCellDistanceDefinition,
 {
-	const CELL_DISTANCE: f32 = TCell::CELL_DISTANCE;
+	const CELL_DISTANCE: CellDistance = TCell::CELL_DISTANCE;
 }
 
 impl<TCell> ParseMapImage<ParsedColor> for Agent<TCell> {

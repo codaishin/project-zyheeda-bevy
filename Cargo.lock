@@ -3422,6 +3422,7 @@ dependencies = [
  "test-case",
  "testing",
  "uuid",
+ "zyheeda_core",
 ]
 
 [[package]]

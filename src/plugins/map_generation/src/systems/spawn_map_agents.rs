@@ -7,7 +7,7 @@ use crate::{
 		map_agents::MapAgentOf,
 		nav_grid::NavGrid,
 	},
-	grid_graph::grid_context::{GridContext, GridDefinition, GridDefinitionError},
+	grid_graph::grid_context::{CellCountZero, GridContext, GridDefinition},
 	traits::{GridCellDistanceDefinition, grid_min::GridMin},
 };
 use bevy::prelude::*;
@@ -20,7 +20,7 @@ where
 	pub(crate) fn spawn_map_agents<TGrid>(
 		mut commands: Commands,
 		cells: Query<(Entity, &Self, &NavGrid<TGrid>)>,
-	) -> Result<(), Vec<GridDefinitionError>>
+	) -> Result<(), Vec<CellCountZero>>
 	where
 		TGrid: ThreadSafe,
 	{
@@ -75,15 +75,19 @@ fn transform<TCell>(x: &usize, z: &usize, min: Vec3) -> Transform
 where
 	TCell: GridCellDistanceDefinition,
 {
-	let translation = min + Vec3::new(*x as f32, 0., *z as f32) * TCell::CELL_DISTANCE;
+	let translation = min + Vec3::new(*x as f32, 0., *z as f32) * *TCell::CELL_DISTANCE;
 	Transform::from_translation(translation)
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{map::cells::Size, map_agents::MapAgentOf};
+	use crate::{
+		components::{map::cells::Size, map_agents::MapAgentOf},
+		grid_graph::grid_context::CellDistance,
+	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
+	use macros::new_valid;
 	use std::collections::HashMap;
 	use testing::{SingleThreadedApp, assert_count, assert_eq_unordered};
 
@@ -94,7 +98,7 @@ mod tests {
 	struct _Cell;
 
 	impl GridCellDistanceDefinition for _Cell {
-		const CELL_DISTANCE: f32 = 4.;
+		const CELL_DISTANCE: CellDistance = new_valid!(CellDistance, 4.);
 	}
 
 	fn setup() -> App {
@@ -223,7 +227,7 @@ mod tests {
 			.world_mut()
 			.run_system_once(MapCells::<Agent<_Cell>>::spawn_map_agents::<_Grid>)?;
 
-		assert_eq!(Err(vec![GridDefinitionError::CellCountZero]), result);
+		assert_eq!(Err(vec![CellCountZero]), result);
 		Ok(())
 	}
 
