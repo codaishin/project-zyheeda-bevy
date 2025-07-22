@@ -6,7 +6,7 @@ use crate::{
 		},
 		map_agents::AgentOfPersistentMap,
 	},
-	grid_graph::grid_context::{CellCountZero, GridContext, GridDefinition},
+	grid_graph::grid_context::GridContext,
 	traits::{GridCellDistanceDefinition, grid_min::GridMin},
 };
 use bevy::prelude::*;
@@ -22,21 +22,12 @@ where
 	pub(crate) fn spawn_map_agents(
 		mut commands: Commands,
 		cells: Query<(Entity, &PersistentEntity, &Self)>,
-	) -> Result<(), Vec<CellCountZero>> {
-		let mut errors = vec![];
-
+	) {
 		for (entity, persistent_entity, MapCells { cells, size, .. }) in &cells {
-			let context = GridContext::try_from(GridDefinition {
+			let context = GridContext {
 				cell_count_x: size.x,
 				cell_count_z: size.z,
 				cell_distance: TCell::CELL_DISTANCE,
-			});
-			let context = match context {
-				Ok(context) => context,
-				Err(error) => {
-					errors.push(error);
-					continue;
-				}
 			};
 			let min = context.grid_min();
 
@@ -61,16 +52,10 @@ where
 			}
 			commands.try_insert_on(entity, AgentsLoaded);
 		}
-
-		if !errors.is_empty() {
-			return Err(errors);
-		}
-
-		Ok(())
 	}
 }
 
-fn transform<TCell>(x: &usize, z: &usize, min: Vec3) -> Transform
+fn transform<TCell>(x: &u32, z: &u32, min: Vec3) -> Transform
 where
 	TCell: GridCellDistanceDefinition,
 {
@@ -81,14 +66,13 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{components::map::cells::Size, grid_graph::grid_context::CellDistance};
-	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
+	use crate::{
+		cell_grid_size::CellGridSize,
+		grid_graph::grid_context::{CellCount, CellDistance},
+	};
 	use macros::new_valid;
 	use std::collections::HashMap;
 	use testing::{SingleThreadedApp, assert_count, assert_eq_unordered};
-
-	#[derive(Component, Debug, PartialEq)]
-	struct _Grid;
 
 	#[derive(Clone, Debug, PartialEq, TypePath)]
 	struct _Cell;
@@ -98,7 +82,11 @@ mod tests {
 	}
 
 	fn setup() -> App {
-		App::new().single_threaded(Update)
+		let mut app = App::new().single_threaded(Update);
+
+		app.add_systems(Update, MapCells::<Agent<_Cell>>::spawn_map_agents);
+
+		app
 	}
 
 	macro_rules! entities_with {
@@ -108,52 +96,55 @@ mod tests {
 	}
 
 	#[test]
-	fn spawn_player_on_1_by_1_grid() -> Result<(), RunSystemError> {
+	fn spawn_player_on_1_by_1_grid() {
 		let mut app = setup();
 		app.world_mut().spawn(MapCells {
-			size: Size { x: 1, z: 1 },
+			size: CellGridSize {
+				x: new_valid!(CellCount, 1),
+				z: new_valid!(CellCount, 1),
+			},
 			cells: HashMap::from([((0, 0), Agent::<_Cell>::Player)]),
 			..default()
 		});
 
-		_ = app
-			.world_mut()
-			.run_system_once(MapCells::<Agent<_Cell>>::spawn_map_agents)?;
+		app.update();
 
 		let [player] = assert_count!(1, entities_with!(Player, app));
 		assert_eq!(
 			Some(&Transform::from_xyz(0., 0., 0.)),
 			player.get::<Transform>(),
 		);
-		Ok(())
 	}
 
 	#[test]
-	fn spawn_enemy_on_1_by_1_grid() -> Result<(), RunSystemError> {
+	fn spawn_enemy_on_1_by_1_grid() {
 		let mut app = setup();
 		app.world_mut().spawn(MapCells {
-			size: Size { x: 1, z: 1 },
+			size: CellGridSize {
+				x: new_valid!(CellCount, 1),
+				z: new_valid!(CellCount, 1),
+			},
 			cells: HashMap::from([((0, 0), Agent::<_Cell>::Enemy)]),
 			..default()
 		});
 
-		_ = app
-			.world_mut()
-			.run_system_once(MapCells::<Agent<_Cell>>::spawn_map_agents)?;
+		app.update();
 
 		let [enemy] = assert_count!(1, entities_with!(Enemy, app));
 		assert_eq!(
 			Some(&Transform::from_xyz(0., 0., 0.)),
 			enemy.get::<Transform>(),
 		);
-		Ok(())
 	}
 
 	#[test]
-	fn spawn_on_3_by_3_grid() -> Result<(), RunSystemError> {
+	fn spawn_on_3_by_3_grid() {
 		let mut app = setup();
 		app.world_mut().spawn(MapCells {
-			size: Size { x: 3, z: 3 },
+			size: CellGridSize {
+				x: new_valid!(CellCount, 3),
+				z: new_valid!(CellCount, 3),
+			},
 			cells: HashMap::from([
 				((0, 0), Agent::<_Cell>::Enemy),
 				((0, 1), Agent::<_Cell>::Enemy),
@@ -168,9 +159,7 @@ mod tests {
 			..default()
 		});
 
-		_ = app
-			.world_mut()
-			.run_system_once(MapCells::<Agent<_Cell>>::spawn_map_agents)?;
+		app.update();
 
 		let [player] = assert_count!(1, entities_with!(Player, app));
 		let enemies = assert_count!(8, entities_with!(Enemy, app));
@@ -191,93 +180,75 @@ mod tests {
 			],
 			enemies.map(|e| e.get::<Transform>()),
 		);
-		Ok(())
 	}
 
 	#[test]
-	fn return_0_by_0_error() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		app.world_mut().spawn(MapCells::<Agent<_Cell>> {
-			size: Size { x: 0, z: 0 },
-			cells: HashMap::from([]),
-			..default()
-		});
-
-		let result = app
-			.world_mut()
-			.run_system_once(MapCells::<Agent<_Cell>>::spawn_map_agents)?;
-
-		assert_eq!(Err(vec![CellCountZero]), result);
-		Ok(())
-	}
-
-	#[test]
-	fn insert_agents_loaded() -> Result<(), RunSystemError> {
+	fn insert_agents_loaded() {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
 			.spawn(MapCells {
-				size: Size { x: 1, z: 1 },
+				size: CellGridSize {
+					x: new_valid!(CellCount, 1),
+					z: new_valid!(CellCount, 1),
+				},
 				cells: HashMap::from([((0, 0), Agent::<_Cell>::Player)]),
 				..default()
 			})
 			.id();
 
-		_ = app
-			.world_mut()
-			.run_system_once(MapCells::<Agent<_Cell>>::spawn_map_agents)?;
+		app.update();
 
 		assert!(app.world().entity(entity).contains::<AgentsLoaded>());
-		Ok(())
 	}
 
 	#[test]
-	fn spawn_player_with_reference() -> Result<(), RunSystemError> {
+	fn spawn_player_with_reference() {
 		let mut app = setup();
 		let persistent_entity = PersistentEntity::default();
 		app.world_mut().spawn((
 			persistent_entity,
 			MapCells {
-				size: Size { x: 1, z: 1 },
+				size: CellGridSize {
+					x: new_valid!(CellCount, 1),
+					z: new_valid!(CellCount, 1),
+				},
 				cells: HashMap::from([((0, 0), Agent::<_Cell>::Player)]),
 				..default()
 			},
 		));
 
-		_ = app
-			.world_mut()
-			.run_system_once(MapCells::<Agent<_Cell>>::spawn_map_agents)?;
+		app.update();
 
 		let [player] = assert_count!(1, entities_with!(Player, app));
 		assert_eq!(
 			Some(&AgentOfPersistentMap(persistent_entity)),
 			player.get::<AgentOfPersistentMap>(),
 		);
-		Ok(())
 	}
 
 	#[test]
-	fn spawn_enemy_with_reference() -> Result<(), RunSystemError> {
+	fn spawn_enemy_with_reference() {
 		let mut app = setup();
 		let persistent_entity = PersistentEntity::default();
 		app.world_mut().spawn((
 			persistent_entity,
 			MapCells {
-				size: Size { x: 1, z: 1 },
+				size: CellGridSize {
+					x: new_valid!(CellCount, 1),
+					z: new_valid!(CellCount, 1),
+				},
 				cells: HashMap::from([((0, 0), Agent::<_Cell>::Enemy)]),
 				..default()
 			},
 		));
 
-		_ = app
-			.world_mut()
-			.run_system_once(MapCells::<Agent<_Cell>>::spawn_map_agents)?;
+		app.update();
 
 		let [enemy] = assert_count!(1, entities_with!(Enemy, app));
 		assert_eq!(
 			Some(&AgentOfPersistentMap(persistent_entity)),
 			enemy.get::<AgentOfPersistentMap>(),
 		);
-		Ok(())
 	}
 }

@@ -4,7 +4,7 @@ use common::errors::{Error, Level};
 pub(crate) enum GridError {
 	NoRefToCellDefinition,
 	NoCellDefinition,
-	GridIndicesWithNoCell(Vec<(usize, usize)>),
+	GridIndicesWithNoCell(Vec<(u32, u32)>),
 }
 
 impl From<GridError> for Error {

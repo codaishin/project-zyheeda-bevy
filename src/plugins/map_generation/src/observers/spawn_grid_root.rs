@@ -56,7 +56,7 @@ mod tests {
 	use super::*;
 	use crate::grid_graph::{
 		Obstacles,
-		grid_context::{CellDistance, GridContext, GridDefinition},
+		grid_context::{CellCount, CellDistance, GridContext},
 	};
 	use macros::new_valid;
 	use std::collections::HashMap;
@@ -94,12 +94,11 @@ mod tests {
 		let graph = GridGraph {
 			nodes: HashMap::from([((0, 0), Vec3::ZERO)]),
 			extra: Obstacles::default(),
-			context: GridContext::try_from(GridDefinition {
-				cell_count_x: 1,
-				cell_count_z: 1,
+			context: GridContext {
+				cell_count_x: new_valid!(CellCount, 1),
+				cell_count_z: new_valid!(CellCount, 1),
 				cell_distance: new_valid!(CellDistance, 2.),
-			})
-			.expect("INVALID GRID DEFINITION"),
+			},
 		};
 		let mut app = setup();
 
@@ -117,12 +116,11 @@ mod tests {
 		let graph = GridGraph {
 			nodes: HashMap::from([((0, 0), Vec3::ZERO)]),
 			extra: Obstacles::default(),
-			context: GridContext::try_from(GridDefinition {
-				cell_count_x: 1,
-				cell_count_z: 1,
+			context: GridContext {
+				cell_count_x: new_valid!(CellCount, 1),
+				cell_count_z: new_valid!(CellCount, 1),
 				cell_distance: new_valid!(CellDistance, 2.),
-			})
-			.expect("INVALID GRID DEFINITION"),
+			},
 		};
 		let mut app = setup();
 
@@ -146,22 +144,20 @@ mod tests {
 		let graph_a = GridGraph {
 			nodes: HashMap::from([((0, 0), Vec3::ZERO)]),
 			extra: Obstacles::default(),
-			context: GridContext::try_from(GridDefinition {
-				cell_count_x: 1,
-				cell_count_z: 1,
+			context: GridContext {
+				cell_count_x: new_valid!(CellCount, 1),
+				cell_count_z: new_valid!(CellCount, 1),
 				cell_distance: new_valid!(CellDistance, 2.),
-			})
-			.expect("INVALID GRID DEFINITION"),
+			},
 		};
 		let graph_b = GridGraph {
 			nodes: HashMap::from([((0, 0), Vec3::ZERO)]),
 			extra: Obstacles::default(),
-			context: GridContext::try_from(GridDefinition {
-				cell_count_x: 1,
-				cell_count_z: 1,
+			context: GridContext {
+				cell_count_x: new_valid!(CellCount, 1),
+				cell_count_z: new_valid!(CellCount, 1),
 				cell_distance: new_valid!(CellDistance, 10.),
-			})
-			.expect("INVALID GRID DEFINITION"),
+			},
 		};
 		let mut app = setup();
 
@@ -183,12 +179,11 @@ mod tests {
 		let graph = GridGraph {
 			nodes: HashMap::from([((0, 0), Vec3::ZERO)]),
 			extra: Obstacles::default(),
-			context: GridContext::try_from(GridDefinition {
-				cell_count_x: 1,
-				cell_count_z: 1,
+			context: GridContext {
+				cell_count_x: new_valid!(CellCount, 1),
+				cell_count_z: new_valid!(CellCount, 1),
 				cell_distance: new_valid!(CellDistance, 2.),
-			})
-			.expect("INVALID GRID DEFINITION"),
+			},
 		};
 		let mut app = setup();
 

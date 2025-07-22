@@ -1,15 +1,12 @@
-use super::{
-	GridGraph,
-	grid_context::{GridContext, GridDefinition},
-};
-use crate::{
-	grid_graph::grid_context::DividedToZero,
-	traits::{grid_min::GridMin, to_subdivided::ToSubdivided},
+use super::{GridGraph, grid_context::GridContext};
+use crate::traits::{
+	grid_min::GridMin,
+	to_subdivided::{SubdivisionError, ToSubdivided},
 };
 use bevy::utils::default;
 
 impl ToSubdivided for GridGraph {
-	fn to_subdivided(&self, subdivisions: u8) -> Result<Self, DividedToZero> {
+	fn to_subdivided(&self, subdivisions: u8) -> Result<Self, SubdivisionError> {
 		match subdivisions {
 			0 => Ok(self.clone()),
 			_ => subdivide(self, subdivisions),
@@ -17,22 +14,31 @@ impl ToSubdivided for GridGraph {
 	}
 }
 
-fn subdivide(source: &GridGraph, subdivisions: u8) -> Result<GridGraph, DividedToZero> {
+fn subdivide(source: &GridGraph, subdivisions: u8) -> Result<GridGraph, SubdivisionError> {
 	let factor = subdivisions + 1;
-	let GridContext(source_grid) = source.context;
+	let source_grid = source.context;
 	let mut subdivided: GridGraph = GridGraph {
-		context: GridContext(GridDefinition {
-			cell_count_x: source_grid.cell_count_x * factor as usize,
-			cell_count_z: source_grid.cell_count_z * factor as usize,
-			cell_distance: source_grid.cell_distance.dived_by(factor)?,
-		}),
+		context: GridContext {
+			cell_count_x: source_grid
+				.cell_count_x
+				.multiply_by(factor)
+				.map_err(SubdivisionError::CellCountMaxedOut)?,
+			cell_count_z: source_grid
+				.cell_count_z
+				.multiply_by(factor)
+				.map_err(SubdivisionError::CellCountMaxedOut)?,
+			cell_distance: source_grid
+				.cell_distance
+				.divided_by(factor)
+				.map_err(SubdivisionError::CellDistanceZero)?,
+		},
 		..default()
 	};
 	let min = subdivided.context.grid_min();
 	let mut translation = min;
 
-	for x in 0..subdivided.context.0.cell_count_x {
-		for z in 0..subdivided.context.0.cell_count_z {
+	for x in 0..*subdivided.context.cell_count_x {
+		for z in 0..*subdivided.context.cell_count_z {
 			let source_key = source_key(x, z, factor);
 			if source.nodes.contains_key(&source_key) {
 				subdivided.nodes.insert((x, z), translation);
@@ -40,20 +46,20 @@ fn subdivide(source: &GridGraph, subdivisions: u8) -> Result<GridGraph, DividedT
 			if source.extra.obstacles.contains(&source_key) {
 				subdivided.extra.obstacles.insert((x, z));
 			}
-			translation.z += *subdivided.context.0.cell_distance;
+			translation.z += *subdivided.context.cell_distance;
 		}
 
-		translation.x += *subdivided.context.0.cell_distance;
+		translation.x += *subdivided.context.cell_distance;
 		translation.z = min.z;
 	}
 
 	Ok(subdivided)
 }
 
-fn source_key(x: usize, z: usize, factor: u8) -> (usize, usize) {
+fn source_key(x: u32, z: u32, factor: u8) -> (u32, u32) {
 	let factor = factor as f32;
 
-	((x as f32 / factor) as usize, (z as f32 / factor) as usize)
+	((x as f32 / factor) as u32, (z as f32 / factor) as u32)
 }
 
 #[cfg(test)]
@@ -61,14 +67,14 @@ mod tests {
 	use super::*;
 	use crate::grid_graph::{
 		Obstacles,
-		grid_context::{CellCountZero, CellDistance, GridContext, GridDefinition},
+		grid_context::{CellCount, CellDistance, GridContext},
 	};
 	use bevy::math::Vec3;
 	use macros::new_valid;
 	use std::collections::{HashMap, HashSet};
 
 	#[test]
-	fn subdivide_0_returns_same_graph() -> Result<(), CellCountZero> {
+	fn subdivide_0_returns_same_graph() {
 		let graph = GridGraph {
 			nodes: HashMap::from([
 				((0, 0), Vec3::new(-5., 0., -5.)),
@@ -79,31 +85,30 @@ mod tests {
 			extra: Obstacles {
 				obstacles: HashSet::from([(0, 1), (1, 1)]),
 			},
-			context: GridContext::try_from(GridDefinition {
-				cell_count_x: 2,
-				cell_count_z: 2,
+			context: GridContext {
+				cell_count_x: new_valid!(CellCount, 2),
+				cell_count_z: new_valid!(CellCount, 2),
 				cell_distance: new_valid!(CellDistance, 10.),
-			})?,
+			},
 		};
 
 		let resized = graph.clone().to_subdivided(0);
 
 		assert_eq!(Ok(graph), resized);
-		Ok(())
 	}
 
 	#[test]
-	fn subdivide_1_with_all_empty_nodes() -> Result<(), CellCountZero> {
+	fn subdivide_1_with_all_empty_nodes() {
 		let graph = GridGraph {
 			nodes: HashMap::from([]),
 			extra: Obstacles {
 				obstacles: HashSet::from([]),
 			},
-			context: GridContext::try_from(GridDefinition {
-				cell_count_x: 2,
-				cell_count_z: 2,
+			context: GridContext {
+				cell_count_x: new_valid!(CellCount, 2),
+				cell_count_z: new_valid!(CellCount, 2),
 				cell_distance: new_valid!(CellDistance, 10.),
-			})?,
+			},
 		};
 
 		let resized = graph.clone().to_subdivided(1);
@@ -114,19 +119,18 @@ mod tests {
 				extra: Obstacles {
 					obstacles: HashSet::from([]),
 				},
-				context: GridContext::try_from(GridDefinition {
-					cell_count_x: 4,
-					cell_count_z: 4,
+				context: GridContext {
+					cell_count_x: new_valid!(CellCount, 4),
+					cell_count_z: new_valid!(CellCount, 4),
 					cell_distance: new_valid!(CellDistance, 5.),
-				})?,
+				},
 			}),
 			resized
 		);
-		Ok(())
 	}
 
 	#[test]
-	fn subdivide_1_without_obstacles() -> Result<(), CellCountZero> {
+	fn subdivide_1_without_obstacles() {
 		let graph = GridGraph {
 			nodes: HashMap::from([
 				((0, 0), Vec3::new(-5., 0., -5.)),
@@ -137,11 +141,11 @@ mod tests {
 			extra: Obstacles {
 				obstacles: HashSet::from([]),
 			},
-			context: GridContext::try_from(GridDefinition {
-				cell_count_x: 2,
-				cell_count_z: 2,
+			context: GridContext {
+				cell_count_x: new_valid!(CellCount, 2),
+				cell_count_z: new_valid!(CellCount, 2),
 				cell_distance: new_valid!(CellDistance, 10.),
-			})?,
+			},
 		};
 
 		let resized = graph.to_subdivided(1);
@@ -173,19 +177,18 @@ mod tests {
 				extra: Obstacles {
 					obstacles: HashSet::from([]),
 				},
-				context: GridContext::try_from(GridDefinition {
-					cell_count_x: 4,
-					cell_count_z: 4,
+				context: GridContext {
+					cell_count_x: new_valid!(CellCount, 4),
+					cell_count_z: new_valid!(CellCount, 4),
 					cell_distance: new_valid!(CellDistance, 5.),
-				})?,
+				},
 			}),
 			resized
 		);
-		Ok(())
 	}
 
 	#[test]
-	fn subdivide_1_without_obstacles_and_ignoring_empty_nodes() -> Result<(), CellCountZero> {
+	fn subdivide_1_without_obstacles_and_ignoring_empty_nodes() {
 		let graph = GridGraph {
 			nodes: HashMap::from([
 				((0, 0), Vec3::new(-5., 0., -5.)),
@@ -194,11 +197,11 @@ mod tests {
 			extra: Obstacles {
 				obstacles: HashSet::from([]),
 			},
-			context: GridContext::try_from(GridDefinition {
-				cell_count_x: 2,
-				cell_count_z: 2,
+			context: GridContext {
+				cell_count_x: new_valid!(CellCount, 2),
+				cell_count_z: new_valid!(CellCount, 2),
 				cell_distance: new_valid!(CellDistance, 10.),
-			})?,
+			},
 		};
 
 		let resized = graph.clone().to_subdivided(1);
@@ -220,19 +223,18 @@ mod tests {
 				extra: Obstacles {
 					obstacles: HashSet::from([]),
 				},
-				context: GridContext::try_from(GridDefinition {
-					cell_count_x: 4,
-					cell_count_z: 4,
+				context: GridContext {
+					cell_count_x: new_valid!(CellCount, 4),
+					cell_count_z: new_valid!(CellCount, 4),
 					cell_distance: new_valid!(CellDistance, 5.),
-				})?,
+				},
 			}),
 			resized
 		);
-		Ok(())
 	}
 
 	#[test]
-	fn subdivide_1() -> Result<(), CellCountZero> {
+	fn subdivide_1() {
 		let graph = GridGraph {
 			nodes: HashMap::from([
 				((0, 0), Vec3::new(-5., 0., -5.)),
@@ -243,11 +245,11 @@ mod tests {
 			extra: Obstacles {
 				obstacles: HashSet::from([(0, 1), (1, 1)]),
 			},
-			context: GridContext::try_from(GridDefinition {
-				cell_count_x: 2,
-				cell_count_z: 2,
+			context: GridContext {
+				cell_count_x: new_valid!(CellCount, 2),
+				cell_count_z: new_valid!(CellCount, 2),
 				cell_distance: new_valid!(CellDistance, 10.),
-			})?,
+			},
 		};
 
 		let resized = graph.clone().to_subdivided(1);
@@ -290,46 +292,13 @@ mod tests {
 						(3, 3),
 					]),
 				},
-				context: GridContext::try_from(GridDefinition {
-					cell_count_x: 4,
-					cell_count_z: 4,
+				context: GridContext {
+					cell_count_x: new_valid!(CellCount, 4),
+					cell_count_z: new_valid!(CellCount, 4),
 					cell_distance: new_valid!(CellDistance, 5.),
-				})?,
+				},
 			}),
 			resized
 		);
-		Ok(())
-	}
-
-	#[test]
-	fn subdivide_to_zero() -> Result<(), CellCountZero> {
-		let super_low = (0.0_f32).next_up();
-		let graph = GridGraph {
-			nodes: HashMap::from([
-				((0, 0), Vec3::new(-5., 0., -5.)),
-				((0, 1), Vec3::new(-5., 0., 5.)),
-				((1, 0), Vec3::new(5., 0., -5.)),
-				((1, 1), Vec3::new(5., 0., 5.)),
-			]),
-			extra: Obstacles {
-				obstacles: HashSet::from([(0, 1), (1, 1)]),
-			},
-			context: GridContext::try_from(GridDefinition {
-				cell_count_x: 2,
-				cell_count_z: 2,
-				cell_distance: CellDistance::try_from(super_low).unwrap(),
-			})?,
-		};
-
-		let resized = graph.clone().to_subdivided(10);
-
-		assert_eq!(
-			Err(DividedToZero {
-				from: super_low,
-				divisor: 11
-			}),
-			resized
-		);
-		Ok(())
 	}
 }

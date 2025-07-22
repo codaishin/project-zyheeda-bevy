@@ -1,3 +1,4 @@
+mod cell_grid_size;
 mod components;
 mod errors;
 mod grid_graph;
