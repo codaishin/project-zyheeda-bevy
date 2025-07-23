@@ -1,7 +1,7 @@
 use crate::traits::{grid_min::GridMin, key_mapper::KeyMapper};
 use bevy::prelude::*;
 use common::errors::{Error, Level};
-use macros::{InBetween, new_valid};
+use macros::{InRange, new_valid};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct GridContext(pub(super) GridDefinition);
@@ -65,8 +65,8 @@ impl GridDefinition {
 	};
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, InBetween)]
-#[in_between(low = 0., high = f32::INFINITY)]
+#[derive(Debug, PartialEq, Clone, Copy, InRange)]
+#[in_range(low = > 0., high = < f32::INFINITY)]
 pub(crate) struct CellDistance(f32);
 
 impl CellDistance {
@@ -109,7 +109,7 @@ impl From<CellCountZero> for Error {
 mod tests {
 	use super::*;
 	use test_case::test_case;
-	use zyheeda_core::errors::NotInBetween;
+	use zyheeda_core::errors::NotInRange;
 
 	#[test]
 	fn from_definition() {
@@ -238,7 +238,7 @@ mod tests {
 	}
 
 	#[test]
-	fn divide_valid_to_zero() -> Result<(), NotInBetween<f32>> {
+	fn divide_valid_to_zero() -> Result<(), NotInRange<f32>> {
 		let super_low = (0.0_f32).next_up();
 		let distance = CellDistance::try_from(super_low)?;
 
