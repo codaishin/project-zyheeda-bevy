@@ -4,7 +4,10 @@ pub(crate) mod half_offset_cell;
 pub(crate) mod parsed_color;
 
 use crate::{
-	components::map::cells::{half_offset_cell::HalfOffsetCell, parsed_color::ParsedColor},
+	components::map::{
+		Map,
+		cells::{half_offset_cell::HalfOffsetCell, parsed_color::ParsedColor},
+	},
 	traits::{
 		parse_map_image::ParseMapImage,
 		pixels::{Layer, PixelBytesIterator},
@@ -21,6 +24,7 @@ pub(crate) type CellGrid<TCell> = HashMap<(usize, usize), TCell>;
 
 #[derive(Component, Debug, PartialEq)]
 #[component(immutable)]
+#[require(Map)]
 pub(crate) struct MapCells<TCell> {
 	pub(crate) size: Size,
 	pub(crate) cells: CellGrid<TCell>,

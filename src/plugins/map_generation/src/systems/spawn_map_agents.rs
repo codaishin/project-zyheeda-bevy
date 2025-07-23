@@ -4,29 +4,28 @@ use crate::{
 			agents::{AgentsLoaded, Enemy, Player},
 			cells::{MapCells, agent::Agent},
 		},
-		map_agents::MapAgentOf,
-		nav_grid::NavGrid,
+		map_agents::AgentOfPersistentMap,
 	},
 	grid_graph::grid_context::{CellCountZero, GridContext, GridDefinition},
 	traits::{GridCellDistanceDefinition, grid_min::GridMin},
 };
 use bevy::prelude::*;
-use common::traits::{thread_safe::ThreadSafe, try_insert_on::TryInsertOn};
+use common::{
+	components::persistent_entity::PersistentEntity,
+	traits::{thread_safe::ThreadSafe, try_insert_on::TryInsertOn},
+};
 
 impl<TCell> MapCells<Agent<TCell>>
 where
 	TCell: GridCellDistanceDefinition + ThreadSafe,
 {
-	pub(crate) fn spawn_map_agents<TGrid>(
+	pub(crate) fn spawn_map_agents(
 		mut commands: Commands,
-		cells: Query<(Entity, &Self, &NavGrid<TGrid>)>,
-	) -> Result<(), Vec<CellCountZero>>
-	where
-		TGrid: ThreadSafe,
-	{
+		cells: Query<(Entity, &PersistentEntity, &Self)>,
+	) -> Result<(), Vec<CellCountZero>> {
 		let mut errors = vec![];
 
-		for (entity, MapCells { cells, size, .. }, nav_grid) in &cells {
+		for (entity, persistent_entity, MapCells { cells, size, .. }) in &cells {
 			let context = GridContext::try_from(GridDefinition {
 				cell_count_x: size.x,
 				cell_count_z: size.z,
@@ -46,14 +45,14 @@ where
 					Agent::Player => {
 						commands.spawn((
 							Player,
-							MapAgentOf(nav_grid.entity),
+							AgentOfPersistentMap(*persistent_entity),
 							transform::<TCell>(x, z, min),
 						));
 					}
 					Agent::Enemy => {
 						commands.spawn((
 							Enemy,
-							MapAgentOf(nav_grid.entity),
+							AgentOfPersistentMap(*persistent_entity),
 							transform::<TCell>(x, z, min),
 						));
 					}
@@ -82,10 +81,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		components::{map::cells::Size, map_agents::MapAgentOf},
-		grid_graph::grid_context::CellDistance,
-	};
+	use crate::{components::map::cells::Size, grid_graph::grid_context::CellDistance};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use macros::new_valid;
 	use std::collections::HashMap;
@@ -114,19 +110,15 @@ mod tests {
 	#[test]
 	fn spawn_player_on_1_by_1_grid() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let grid = app.world_mut().spawn_empty().id();
-		app.world_mut().spawn((
-			MapCells {
-				size: Size { x: 1, z: 1 },
-				cells: HashMap::from([((0, 0), Agent::<_Cell>::Player)]),
-				..default()
-			},
-			NavGrid::<_Grid>::from(grid),
-		));
+		app.world_mut().spawn(MapCells {
+			size: Size { x: 1, z: 1 },
+			cells: HashMap::from([((0, 0), Agent::<_Cell>::Player)]),
+			..default()
+		});
 
 		_ = app
 			.world_mut()
-			.run_system_once(MapCells::<Agent<_Cell>>::spawn_map_agents::<_Grid>)?;
+			.run_system_once(MapCells::<Agent<_Cell>>::spawn_map_agents)?;
 
 		let [player] = assert_count!(1, entities_with!(Player, app));
 		assert_eq!(
@@ -139,19 +131,15 @@ mod tests {
 	#[test]
 	fn spawn_enemy_on_1_by_1_grid() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let grid = app.world_mut().spawn_empty().id();
-		app.world_mut().spawn((
-			MapCells {
-				size: Size { x: 1, z: 1 },
-				cells: HashMap::from([((0, 0), Agent::<_Cell>::Enemy)]),
-				..default()
-			},
-			NavGrid::<_Grid>::from(grid),
-		));
+		app.world_mut().spawn(MapCells {
+			size: Size { x: 1, z: 1 },
+			cells: HashMap::from([((0, 0), Agent::<_Cell>::Enemy)]),
+			..default()
+		});
 
 		_ = app
 			.world_mut()
-			.run_system_once(MapCells::<Agent<_Cell>>::spawn_map_agents::<_Grid>)?;
+			.run_system_once(MapCells::<Agent<_Cell>>::spawn_map_agents)?;
 
 		let [enemy] = assert_count!(1, entities_with!(Enemy, app));
 		assert_eq!(
@@ -164,29 +152,25 @@ mod tests {
 	#[test]
 	fn spawn_on_3_by_3_grid() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let grid = app.world_mut().spawn_empty().id();
-		app.world_mut().spawn((
-			MapCells {
-				size: Size { x: 3, z: 3 },
-				cells: HashMap::from([
-					((0, 0), Agent::<_Cell>::Enemy),
-					((0, 1), Agent::<_Cell>::Enemy),
-					((0, 2), Agent::<_Cell>::Enemy),
-					((1, 0), Agent::<_Cell>::Player),
-					((1, 1), Agent::<_Cell>::Enemy),
-					((1, 2), Agent::<_Cell>::Enemy),
-					((2, 0), Agent::<_Cell>::Enemy),
-					((2, 1), Agent::<_Cell>::Enemy),
-					((2, 2), Agent::<_Cell>::Enemy),
-				]),
-				..default()
-			},
-			NavGrid::<_Grid>::from(grid),
-		));
+		app.world_mut().spawn(MapCells {
+			size: Size { x: 3, z: 3 },
+			cells: HashMap::from([
+				((0, 0), Agent::<_Cell>::Enemy),
+				((0, 1), Agent::<_Cell>::Enemy),
+				((0, 2), Agent::<_Cell>::Enemy),
+				((1, 0), Agent::<_Cell>::Player),
+				((1, 1), Agent::<_Cell>::Enemy),
+				((1, 2), Agent::<_Cell>::Enemy),
+				((2, 0), Agent::<_Cell>::Enemy),
+				((2, 1), Agent::<_Cell>::Enemy),
+				((2, 2), Agent::<_Cell>::Enemy),
+			]),
+			..default()
+		});
 
 		_ = app
 			.world_mut()
-			.run_system_once(MapCells::<Agent<_Cell>>::spawn_map_agents::<_Grid>)?;
+			.run_system_once(MapCells::<Agent<_Cell>>::spawn_map_agents)?;
 
 		let [player] = assert_count!(1, entities_with!(Player, app));
 		let enemies = assert_count!(8, entities_with!(Enemy, app));
@@ -213,19 +197,15 @@ mod tests {
 	#[test]
 	fn return_0_by_0_error() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let grid = app.world_mut().spawn_empty().id();
-		app.world_mut().spawn((
-			MapCells::<Agent<_Cell>> {
-				size: Size { x: 0, z: 0 },
-				cells: HashMap::from([]),
-				..default()
-			},
-			NavGrid::<_Grid>::from(grid),
-		));
+		app.world_mut().spawn(MapCells::<Agent<_Cell>> {
+			size: Size { x: 0, z: 0 },
+			cells: HashMap::from([]),
+			..default()
+		});
 
 		let result = app
 			.world_mut()
-			.run_system_once(MapCells::<Agent<_Cell>>::spawn_map_agents::<_Grid>)?;
+			.run_system_once(MapCells::<Agent<_Cell>>::spawn_map_agents)?;
 
 		assert_eq!(Err(vec![CellCountZero]), result);
 		Ok(())
@@ -234,22 +214,18 @@ mod tests {
 	#[test]
 	fn insert_agents_loaded() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let grid = app.world_mut().spawn_empty().id();
 		let entity = app
 			.world_mut()
-			.spawn((
-				MapCells {
-					size: Size { x: 1, z: 1 },
-					cells: HashMap::from([((0, 0), Agent::<_Cell>::Player)]),
-					..default()
-				},
-				NavGrid::<_Grid>::from(grid),
-			))
+			.spawn(MapCells {
+				size: Size { x: 1, z: 1 },
+				cells: HashMap::from([((0, 0), Agent::<_Cell>::Player)]),
+				..default()
+			})
 			.id();
 
 		_ = app
 			.world_mut()
-			.run_system_once(MapCells::<Agent<_Cell>>::spawn_map_agents::<_Grid>)?;
+			.run_system_once(MapCells::<Agent<_Cell>>::spawn_map_agents)?;
 
 		assert!(app.world().entity(entity).contains::<AgentsLoaded>());
 		Ok(())
@@ -258,44 +234,50 @@ mod tests {
 	#[test]
 	fn spawn_player_with_reference() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let grid = app.world_mut().spawn_empty().id();
+		let persistent_entity = PersistentEntity::default();
 		app.world_mut().spawn((
+			persistent_entity,
 			MapCells {
 				size: Size { x: 1, z: 1 },
 				cells: HashMap::from([((0, 0), Agent::<_Cell>::Player)]),
 				..default()
 			},
-			NavGrid::<_Grid>::from(grid),
 		));
 
 		_ = app
 			.world_mut()
-			.run_system_once(MapCells::<Agent<_Cell>>::spawn_map_agents::<_Grid>)?;
+			.run_system_once(MapCells::<Agent<_Cell>>::spawn_map_agents)?;
 
 		let [player] = assert_count!(1, entities_with!(Player, app));
-		assert_eq!(Some(&MapAgentOf(grid)), player.get::<MapAgentOf>(),);
+		assert_eq!(
+			Some(&AgentOfPersistentMap(persistent_entity)),
+			player.get::<AgentOfPersistentMap>(),
+		);
 		Ok(())
 	}
 
 	#[test]
 	fn spawn_enemy_with_reference() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let grid = app.world_mut().spawn_empty().id();
+		let persistent_entity = PersistentEntity::default();
 		app.world_mut().spawn((
+			persistent_entity,
 			MapCells {
 				size: Size { x: 1, z: 1 },
 				cells: HashMap::from([((0, 0), Agent::<_Cell>::Enemy)]),
 				..default()
 			},
-			NavGrid::<_Grid>::from(grid),
 		));
 
 		_ = app
 			.world_mut()
-			.run_system_once(MapCells::<Agent<_Cell>>::spawn_map_agents::<_Grid>)?;
+			.run_system_once(MapCells::<Agent<_Cell>>::spawn_map_agents)?;
 
 		let [enemy] = assert_count!(1, entities_with!(Enemy, app));
-		assert_eq!(Some(&MapAgentOf(grid)), enemy.get::<MapAgentOf>(),);
+		assert_eq!(
+			Some(&AgentOfPersistentMap(persistent_entity)),
+			enemy.get::<AgentOfPersistentMap>(),
+		);
 		Ok(())
 	}
 }

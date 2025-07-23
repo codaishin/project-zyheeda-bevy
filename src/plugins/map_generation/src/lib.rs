@@ -15,7 +15,7 @@ use crate::{
 			cells::corridor::Corridor,
 			demo_map::DemoMap,
 		},
-		map_agents::MapAgentOf,
+		map_agents::GridAgentOf,
 	},
 	resources::agents::color_lookup::{AgentsColorLookup, AgentsColorLookupImages},
 };
@@ -121,5 +121,5 @@ impl<TDependencies> HandlesMapGeneration for MapGenerationPlugin<TDependencies> 
 
 	const SYSTEMS: Self::TSystemSet = MapSystems;
 
-	type TMapRef = MapAgentOf;
+	type TMapRef = GridAgentOf;
 }
