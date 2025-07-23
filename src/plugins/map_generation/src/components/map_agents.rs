@@ -9,7 +9,7 @@ pub struct GridAgents(EntityHashSet);
 
 #[derive(Component, Debug, PartialEq)]
 #[relationship(relationship_target = GridAgents)]
-pub struct GridAgentOf(Entity);
+pub struct GridAgentOf(pub(crate) Entity);
 
 impl Getter<Entity> for GridAgentOf {
 	fn get(&self) -> Entity {
@@ -18,4 +18,5 @@ impl Getter<Entity> for GridAgentOf {
 }
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Serialize, Deserialize, Clone)]
+#[component(immutable)]
 pub struct AgentOfPersistentMap(pub(crate) PersistentEntity);

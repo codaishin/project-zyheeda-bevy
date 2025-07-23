@@ -15,7 +15,7 @@ use crate::{
 			cells::corridor::Corridor,
 			demo_map::DemoMap,
 		},
-		map_agents::GridAgentOf,
+		map_agents::{AgentOfPersistentMap, GridAgentOf},
 	},
 	resources::agents::color_lookup::{AgentsColorLookup, AgentsColorLookupImages},
 };
@@ -80,6 +80,7 @@ where
 		register_agents_lookup_load_tracking.in_app(app, resource_exists::<AgentsColorLookup>);
 
 		TSavegame::register_savable_component::<AgentsLoaded>(app);
+		TSavegame::register_savable_component::<AgentOfPersistentMap>(app);
 		TSavegame::register_savable_component::<DemoMap>(app);
 
 		app.register_required_components::<Map, TSavegame::TSaveEntityMarker>()
@@ -104,6 +105,7 @@ where
 					WallBack::apply_extra_components::<TLights>,
 					WallLight::apply_extra_components::<TLights>,
 					FloorLight::apply_extra_components::<TLights>,
+					AgentOfPersistentMap::link_to_grid.run_if(in_state(GameState::Play)),
 				)
 					.in_set(Self::SYSTEMS),
 			)
