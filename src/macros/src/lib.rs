@@ -204,19 +204,53 @@ pub fn new_valid(input: TokenStream) -> TokenStream {
 	}})
 }
 
-/// Derive in-between limits for a struct with one unnamed field.
+struct Low {
+	excl: Option<Token![>]>,
+	expr: Expr,
+}
+
+impl Parse for Low {
+	fn parse(input: ParseStream) -> syn::Result<Self> {
+		Ok(Self {
+			excl: input.parse()?,
+			expr: input.parse()?,
+		})
+	}
+}
+
+struct High {
+	excl: Option<Token![<]>,
+	expr: Expr,
+}
+
+impl Parse for High {
+	fn parse(input: ParseStream) -> syn::Result<Self> {
+		Ok(Self {
+			excl: input.parse()?,
+			expr: input.parse()?,
+		})
+	}
+}
+
+/// Derive in-range limits for a struct with one unnamed field.
+///
+/// By default the `low` and `high` limits are inclusive.
+/// - `low` can be made exclusive by prefixing `>` to the value
+/// - `high` can be made exclusive by prefixing `<` to the value
 ///
 /// It is recommended to mark the unnamed field private in order to prevent bypassing the
 /// limit check.
 /// ```
-#[proc_macro_derive(InBetween, attributes(in_between))]
-pub fn derive_in_between(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(InRange, attributes(in_range))]
+pub fn derive_in_range(input: TokenStream) -> TokenStream {
 	let input = parse_macro_input!(input as DeriveInput);
 	let core = match crate_root("zyheeda_core") {
 		Ok(core) => core,
 		Err(error) => return error,
 	};
 	let name = &input.ident;
+	let (impl_generics, type_generics, where_clause) = &input.generics.split_for_impl();
+
 	let Some([field]) = get_unnamed_fields(&input) else {
 		return TokenStream::from(
 			Error::new(
@@ -227,54 +261,87 @@ pub fn derive_in_between(input: TokenStream) -> TokenStream {
 		);
 	};
 	let ty = &field.ty;
-	let mut has_in_between = false;
+
+	let Some(in_range) = find_attribute(&input, "in_range") else {
+		return TokenStream::from(
+			Error::new(name.span(), "InBetween: missing attribute `in_range`").to_compile_error(),
+		);
+	};
 	let mut low = None;
 	let mut high = None;
-
-	for attr in input.attrs.iter() {
-		if !attr.path().is_ident("in_between") {
-			continue;
+	let result = in_range.parse_nested_meta(|nested| match nested.path.get_ident() {
+		Some(ident) if ident == "low" => {
+			low = Some(nested.value()?.parse::<Low>()?);
+			Ok(())
 		}
-
-		has_in_between = true;
-
-		let result = attr.parse_nested_meta(|nested| match nested.path.get_ident() {
-			Some(ident) if ident == "low" => {
-				low = Some(nested.value()?.parse::<Expr>()?);
-				Ok(())
-			}
-			Some(ident) if ident == "high" => {
-				high = Some(nested.value()?.parse::<Expr>()?);
-				Ok(())
-			}
-			Some(other) => Err(Error::new(
-				nested.path.span(),
-				format!("InBetween: unknown key word '{other}'"),
-			)),
-			None => Ok(()),
-		});
-
-		if let Err(error) = result {
-			return TokenStream::from(error.to_compile_error());
+		Some(ident) if ident == "high" => {
+			high = Some(nested.value()?.parse::<High>()?);
+			Ok(())
 		}
+		Some(other) => Err(Error::new(
+			nested.path.span(),
+			format!("InBetween: unknown key word '{other}'"),
+		)),
+		None => Ok(()),
+	});
+
+	if let Err(error) = result {
+		return TokenStream::from(error.to_compile_error());
 	}
 
-	if !has_in_between {
-		return TokenStream::from(
-			Error::new(name.span(), "InBetween: missing attribute `in_between`").to_compile_error(),
-		);
-	}
 	let Some(low) = low else {
 		return TokenStream::from(
-			Error::new(name.span(), "InBetween: missing `in_between` low").to_compile_error(),
+			Error::new(name.span(), "InBetween: missing `in_range` low").to_compile_error(),
 		);
 	};
+	let low_fns = match low.excl.is_some() {
+		true => quote! {
+			const fn low_ok(value: #ty) -> bool {
+				Self::LIMITS.0 < value
+			}
+
+			const fn low_limit(value: #ty) -> #core::errors::Limit<#ty> {
+				#core::errors::Limit::Exclusive(value)
+			}
+		},
+		false => quote! {
+			const fn low_ok(value: #ty) -> bool {
+				Self::LIMITS.0 <= value
+			}
+
+			const fn low_limit(value: #ty) -> #core::errors::Limit<#ty> {
+				#core::errors::Limit::Inclusive(value)
+			}
+		},
+	};
+	let low = low.expr;
+
 	let Some(high) = high else {
 		return TokenStream::from(
-			Error::new(name.span(), "InBetween: missing `in_between` high").to_compile_error(),
+			Error::new(name.span(), "InBetween: missing `in_range` high").to_compile_error(),
 		);
 	};
-	let (impl_generics, type_generics, where_clause) = &input.generics.split_for_impl();
+	let high_fns = match high.excl.is_some() {
+		true => quote! {
+			const fn high_ok(value: #ty) -> bool {
+				Self::LIMITS.1 > value
+			}
+
+			const fn high_limit(value: #ty) -> #core::errors::Limit<#ty> {
+				#core::errors::Limit::Exclusive(value)
+			}
+		},
+		false => quote! {
+			const fn high_ok(value: #ty) -> bool {
+				Self::LIMITS.1 >= value
+			}
+
+			const fn high_limit(value: #ty) -> #core::errors::Limit<#ty> {
+				#core::errors::Limit::Inclusive(value)
+			}
+		},
+	};
+	let high = high.expr;
 
 	TokenStream::from(quote! {
 		impl #impl_generics #name #type_generics #where_clause {
@@ -283,12 +350,15 @@ pub fn derive_in_between(input: TokenStream) -> TokenStream {
 				_ => panic!("`InBetween: low` must be lesser than `high`")
 			};
 
-			#[allow(dead_code)]
-			pub const fn try_new(value: #ty) -> Result<Self, #core::errors::NotInBetween<#ty>> {
-				if value <= Self::LIMITS.0 || value >= Self::LIMITS.1 {
-					return Err(#core::errors::NotInBetween {
-						lower_limit: Self::LIMITS.0,
-						upper_limit: Self::LIMITS.1,
+			#low_fns
+
+			#high_fns
+
+			pub const fn try_new(value: #ty) -> Result<Self, #core::errors::NotInRange<#ty>> {
+				if !Self::low_ok(value) || !Self::high_ok(value) {
+					return Err(#core::errors::NotInRange {
+						lower_limit: Self::low_limit(Self::LIMITS.0),
+						upper_limit: Self::high_limit(Self::LIMITS.1),
 						value,
 					});
 				}
@@ -296,14 +366,13 @@ pub fn derive_in_between(input: TokenStream) -> TokenStream {
 				Ok(Self(value))
 			}
 
-			#[allow(dead_code)]
 			pub fn unwrap(self) -> #ty {
 				self.0
 			}
 		}
 
 		impl #impl_generics TryFrom<#ty> for #name #type_generics #where_clause {
-			type Error = #core::errors::NotInBetween<#ty>;
+			type Error = #core::errors::NotInRange<#ty>;
 
 			fn try_from(value: #ty) -> Result<Self, Self::Error> {
 				Self::try_new(value)
@@ -318,6 +387,10 @@ pub fn derive_in_between(input: TokenStream) -> TokenStream {
 			}
 		}
 	})
+}
+
+fn find_attribute<'a>(input: &'a DeriveInput, name: &str) -> Option<&'a syn::Attribute> {
+	input.attrs.iter().find(|attr| attr.path().is_ident(name))
 }
 
 /// Implements the `SavableComponent` trait.

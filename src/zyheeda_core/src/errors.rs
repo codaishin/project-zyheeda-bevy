@@ -4,23 +4,29 @@ use std::{
 };
 
 #[derive(Debug, PartialEq)]
-pub struct NotInBetween<T> {
-	pub lower_limit: T,
-	pub upper_limit: T,
+pub struct NotInRange<T> {
+	pub lower_limit: Limit<T>,
+	pub upper_limit: Limit<T>,
 	pub value: T,
 }
 
-impl<T> Display for NotInBetween<T>
+#[derive(Debug, PartialEq)]
+pub enum Limit<T> {
+	Inclusive(T),
+	Exclusive(T),
+}
+
+impl<T> Display for NotInRange<T>
 where
 	T: Debug,
 {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		write!(
 			f,
-			"Value `{:?}` is out of bounds. Expected to be greater than `{:?}` and lesser than `{:?}`.",
+			"Value `{:?}` is out of bounds. Expected to be within `{:?}` and `{:?}`.",
 			self.value, self.lower_limit, self.upper_limit,
 		)
 	}
 }
 
-impl<T> Error for NotInBetween<T> where T: Debug {}
+impl<T> Error for NotInRange<T> where T: Debug {}
