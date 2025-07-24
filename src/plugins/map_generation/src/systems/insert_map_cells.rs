@@ -1,6 +1,6 @@
 use crate::{
 	components::map::{cells::MapCells, image::MapImage},
-	traits::parse_map_image::ParseMapImage,
+	traits::{map_cells_extra::MapCellsExtra, parse_map_image::ParseMapImage},
 };
 use bevy::prelude::*;
 use common::traits::{
@@ -14,7 +14,7 @@ type MapCellsParseError<TCell> = <MapCells<TCell> as ParseMapImage<Image>>::TPar
 
 impl<TCell> MapImage<TCell>
 where
-	TCell: ThreadSafe,
+	TCell: ThreadSafe + MapCellsExtra,
 	MapCells<TCell>: ParseMapImage<Image>,
 	MapCellsLookup<TCell>: Resource,
 {

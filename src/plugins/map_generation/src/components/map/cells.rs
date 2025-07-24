@@ -11,6 +11,7 @@ use crate::{
 	},
 	grid_graph::grid_context::CellCount,
 	traits::{
+		map_cells_extra::{CellGridDefinition, MapCellsExtra},
 		parse_map_image::ParseMapImage,
 		pixels::{Layer, PixelBytesIterator},
 	},
@@ -22,24 +23,25 @@ use common::{
 };
 use std::{collections::HashMap, fmt::Display};
 
-pub(crate) type CellGrid<TCell> = HashMap<(u32, u32), TCell>;
-
 #[derive(Component, Debug, PartialEq)]
 #[component(immutable)]
 #[require(Map)]
-pub(crate) struct MapCells<TCell> {
-	pub(crate) size: CellGridSize,
-	pub(crate) cells: CellGrid<TCell>,
-	// FIXME: Either move out or rework as `extra`. It is not needed for agents
-	pub(crate) half_offset_cells: CellGrid<HalfOffsetCell<TCell>>,
+pub(crate) struct MapCells<TCell>
+where
+	TCell: MapCellsExtra,
+{
+	pub(crate) definition: CellGridDefinition<TCell>,
+	pub(crate) extra: TCell::TExtra,
 }
 
-impl<TCell> Default for MapCells<TCell> {
+impl<TCell> Default for MapCells<TCell>
+where
+	TCell: MapCellsExtra<TExtra: Default>,
+{
 	fn default() -> Self {
 		Self {
-			size: CellGridSize::default(),
-			cells: CellGrid::default(),
-			half_offset_cells: CellGrid::default(),
+			definition: CellGridDefinition::default(),
+			extra: TCell::TExtra::default(),
 		}
 	}
 }
@@ -47,16 +49,18 @@ impl<TCell> Default for MapCells<TCell> {
 impl<TCell, TImage> ParseMapImage<TImage> for MapCells<TCell>
 where
 	TImage: PixelBytesIterator,
-	for<'a> TCell:
-		ParseMapImage<ParsedColor, TParseError = Unreachable> + Clone + ThreadSafe + Default,
+	for<'a> TCell: ParseMapImage<ParsedColor, TParseError = Unreachable>
+		+ Clone
+		+ ThreadSafe
+		+ Default
+		+ MapCellsExtra,
 {
 	type TParseError = MapSizeError;
 	type TLookup = TCell::TLookup;
 
 	fn try_parse(image: &TImage, lookup: &Self::TLookup) -> Result<Self, MapSizeError> {
 		let mut indices = (0, 0);
-		let mut cells = CellGrid::default();
-		let mut half_offset_cells = CellGrid::default();
+		let mut cells = HashMap::default();
 
 		for (UVec3 { x, y, .. }, bytes) in image.iter_pixel_bytes(Layer(0)) {
 			indices.0 = u32::max(x, indices.0);
@@ -79,6 +83,45 @@ where
 				z: indices.1,
 			})?,
 		};
+
+		let definition = CellGridDefinition {
+			size,
+			cells: CellGrid(cells),
+		};
+
+		Ok(Self {
+			extra: TCell::TExtra::from(&definition),
+			definition,
+		})
+	}
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub(crate) struct CellGrid<TCell>(pub(crate) HashMap<(u32, u32), TCell>);
+
+impl<TCell> Default for CellGrid<TCell> {
+	fn default() -> Self {
+		Self(HashMap::default())
+	}
+}
+
+impl<TCells, TCell> From<TCells> for CellGrid<TCell>
+where
+	TCells: IntoIterator<Item = ((u32, u32), TCell)>,
+{
+	fn from(cells: TCells) -> Self {
+		Self(HashMap::from_iter(cells))
+	}
+}
+
+impl<TCell> From<&CellGridDefinition<TCell>> for CellGrid<HalfOffsetCell<TCell>>
+where
+	TCell: Clone + Default,
+{
+	fn from(CellGridDefinition { size, cells }: &CellGridDefinition<TCell>) -> Self {
+		let CellGrid(cells) = cells;
+
+		let mut half_offset_cells = HashMap::default();
 		for x in 1..*size.x {
 			for z in 1..*size.z {
 				let directions = HalfOffsetCell::directions(x, z).map(|(x, z, dir)| {
@@ -89,11 +132,7 @@ where
 			}
 		}
 
-		Ok(Self {
-			size,
-			cells,
-			half_offset_cells,
-		})
+		Self(half_offset_cells)
 	}
 }
 
@@ -202,6 +241,10 @@ mod test_parsing {
 		}
 	}
 
+	impl MapCellsExtra for _Cell {
+		type TExtra = ();
+	}
+
 	struct _Image(Vec<(UVec3, Bytes<'static>)>);
 
 	impl PixelBytesIterator for _Image {
@@ -303,37 +346,19 @@ mod test_parsing {
 
 		assert_eq!(
 			MapCells {
-				size: CellGridSize {
-					x: new_valid!(CellCount, 2),
-					z: new_valid!(CellCount, 2),
+				definition: CellGridDefinition {
+					size: CellGridSize {
+						x: new_valid!(CellCount, 2),
+						z: new_valid!(CellCount, 2),
+					},
+					cells: CellGrid::from([
+						((0, 0), _Cell::Value(ParsedColor::parse(&[1, 1, 1, 1]))),
+						((0, 1), _Cell::Value(ParsedColor::parse(&[2, 2, 2, 2]))),
+						((1, 0), _Cell::Value(ParsedColor::parse(&[3, 3, 3, 3]))),
+						((1, 1), _Cell::Value(ParsedColor::parse(&[4, 4, 4, 4]))),
+					]),
 				},
-				cells: CellGrid::from([
-					((0, 0), _Cell::Value(ParsedColor::parse(&[1, 1, 1, 1]))),
-					((0, 1), _Cell::Value(ParsedColor::parse(&[2, 2, 2, 2]))),
-					((1, 0), _Cell::Value(ParsedColor::parse(&[3, 3, 3, 3]))),
-					((1, 1), _Cell::Value(ParsedColor::parse(&[4, 4, 4, 4]))),
-				]),
-				half_offset_cells: CellGrid::from([(
-					(0, 0),
-					HalfOffsetCell::from([
-						(
-							Direction::Z,
-							_Cell::Value(ParsedColor::parse(&[1, 1, 1, 1]))
-						),
-						(
-							Direction::X,
-							_Cell::Value(ParsedColor::parse(&[2, 2, 2, 2]))
-						),
-						(
-							Direction::NegX,
-							_Cell::Value(ParsedColor::parse(&[3, 3, 3, 3]))
-						),
-						(
-							Direction::NegZ,
-							_Cell::Value(ParsedColor::parse(&[4, 4, 4, 4]))
-						),
-					])
-				)]),
+				extra: (),
 			},
 			map
 		);
@@ -351,33 +376,18 @@ mod test_parsing {
 
 		assert_eq!(
 			MapCells {
-				size: CellGridSize {
-					x: new_valid!(CellCount, 2),
-					z: new_valid!(CellCount, 2),
+				definition: CellGridDefinition {
+					size: CellGridSize {
+						x: new_valid!(CellCount, 2),
+						z: new_valid!(CellCount, 2),
+					},
+					cells: CellGrid::from([
+						((0, 0), _Cell::Value(ParsedColor::parse(&[1, 1, 1, 1]))),
+						((0, 1), _Cell::Value(ParsedColor::parse(&[2, 2, 2, 2]))),
+						((1, 1), _Cell::Value(ParsedColor::parse(&[4, 4, 4, 4]))),
+					]),
 				},
-				cells: CellGrid::from([
-					((0, 0), _Cell::Value(ParsedColor::parse(&[1, 1, 1, 1]))),
-					((0, 1), _Cell::Value(ParsedColor::parse(&[2, 2, 2, 2]))),
-					((1, 1), _Cell::Value(ParsedColor::parse(&[4, 4, 4, 4]))),
-				]),
-				half_offset_cells: CellGrid::from([(
-					(0, 0),
-					HalfOffsetCell::from([
-						(
-							Direction::Z,
-							_Cell::Value(ParsedColor::parse(&[1, 1, 1, 1]))
-						),
-						(
-							Direction::X,
-							_Cell::Value(ParsedColor::parse(&[2, 2, 2, 2]))
-						),
-						(Direction::NegX, _Cell::Default),
-						(
-							Direction::NegZ,
-							_Cell::Value(ParsedColor::parse(&[4, 4, 4, 4]))
-						),
-					])
-				)]),
+				extra: (),
 			},
 			map
 		);
@@ -401,111 +411,238 @@ mod test_parsing {
 
 		assert_eq!(
 			MapCells {
-				size: CellGridSize {
-					x: new_valid!(CellCount, 3),
-					z: new_valid!(CellCount, 3),
+				definition: CellGridDefinition {
+					size: CellGridSize {
+						x: new_valid!(CellCount, 3),
+						z: new_valid!(CellCount, 3),
+					},
+					cells: CellGrid::from([
+						((0, 0), _Cell::Value(ParsedColor::parse(&[0, 0, 0, 0]))),
+						((0, 1), _Cell::Value(ParsedColor::parse(&[0, 1, 0, 0]))),
+						((0, 2), _Cell::Value(ParsedColor::parse(&[0, 2, 0, 0]))),
+						((1, 0), _Cell::Value(ParsedColor::parse(&[1, 0, 0, 0]))),
+						((1, 1), _Cell::Value(ParsedColor::parse(&[1, 1, 0, 0]))),
+						((1, 2), _Cell::Value(ParsedColor::parse(&[1, 2, 0, 0]))),
+						((2, 0), _Cell::Value(ParsedColor::parse(&[2, 0, 0, 0]))),
+						((2, 1), _Cell::Value(ParsedColor::parse(&[2, 1, 0, 0]))),
+						((2, 2), _Cell::Value(ParsedColor::parse(&[2, 2, 0, 0]))),
+					]),
 				},
-				cells: CellGrid::from([
-					((0, 0), _Cell::Value(ParsedColor::parse(&[0, 0, 0, 0]))),
-					((0, 1), _Cell::Value(ParsedColor::parse(&[0, 1, 0, 0]))),
-					((0, 2), _Cell::Value(ParsedColor::parse(&[0, 2, 0, 0]))),
-					((1, 0), _Cell::Value(ParsedColor::parse(&[1, 0, 0, 0]))),
-					((1, 1), _Cell::Value(ParsedColor::parse(&[1, 1, 0, 0]))),
-					((1, 2), _Cell::Value(ParsedColor::parse(&[1, 2, 0, 0]))),
-					((2, 0), _Cell::Value(ParsedColor::parse(&[2, 0, 0, 0]))),
-					((2, 1), _Cell::Value(ParsedColor::parse(&[2, 1, 0, 0]))),
-					((2, 2), _Cell::Value(ParsedColor::parse(&[2, 2, 0, 0]))),
-				]),
-				half_offset_cells: CellGrid::from([
-					(
-						(0, 0),
-						HalfOffsetCell::from([
-							(
-								Direction::Z,
-								_Cell::Value(ParsedColor::parse(&[0, 0, 0, 0]))
-							),
-							(
-								Direction::X,
-								_Cell::Value(ParsedColor::parse(&[0, 1, 0, 0]))
-							),
-							(
-								Direction::NegX,
-								_Cell::Value(ParsedColor::parse(&[1, 0, 0, 0]))
-							),
-							(
-								Direction::NegZ,
-								_Cell::Value(ParsedColor::parse(&[1, 1, 0, 0]))
-							),
-						])
-					),
-					(
-						(0, 1),
-						HalfOffsetCell::from([
-							(
-								Direction::Z,
-								_Cell::Value(ParsedColor::parse(&[0, 1, 0, 0]))
-							),
-							(
-								Direction::X,
-								_Cell::Value(ParsedColor::parse(&[0, 2, 0, 0]))
-							),
-							(
-								Direction::NegX,
-								_Cell::Value(ParsedColor::parse(&[1, 1, 0, 0]))
-							),
-							(
-								Direction::NegZ,
-								_Cell::Value(ParsedColor::parse(&[1, 2, 0, 0]))
-							),
-						])
-					),
-					(
-						(1, 0),
-						HalfOffsetCell::from([
-							(
-								Direction::Z,
-								_Cell::Value(ParsedColor::parse(&[1, 0, 0, 0]))
-							),
-							(
-								Direction::X,
-								_Cell::Value(ParsedColor::parse(&[1, 1, 0, 0]))
-							),
-							(
-								Direction::NegX,
-								_Cell::Value(ParsedColor::parse(&[2, 0, 0, 0]))
-							),
-							(
-								Direction::NegZ,
-								_Cell::Value(ParsedColor::parse(&[2, 1, 0, 0]))
-							),
-						])
-					),
-					(
-						(1, 1),
-						HalfOffsetCell::from([
-							(
-								Direction::Z,
-								_Cell::Value(ParsedColor::parse(&[1, 1, 0, 0]))
-							),
-							(
-								Direction::X,
-								_Cell::Value(ParsedColor::parse(&[1, 2, 0, 0]))
-							),
-							(
-								Direction::NegX,
-								_Cell::Value(ParsedColor::parse(&[2, 1, 0, 0]))
-							),
-							(
-								Direction::NegZ,
-								_Cell::Value(ParsedColor::parse(&[2, 2, 0, 0]))
-							),
-						])
-					),
-				]),
+				extra: (),
 			},
 			map
 		);
 		Ok(())
+	}
+
+	#[test]
+	fn half_offset_from_1_by_1() {
+		let definition = CellGridDefinition {
+			size: CellGridSize {
+				x: new_valid!(CellCount, 1),
+				z: new_valid!(CellCount, 1),
+			},
+			cells: CellGrid::from([]),
+		};
+
+		let half_offset_grid = CellGrid::<HalfOffsetCell<_Cell>>::from(&definition);
+
+		assert_eq!(CellGrid::from([]), half_offset_grid);
+	}
+
+	#[test]
+	fn half_offset_from_2_by_2() {
+		let definition = CellGridDefinition {
+			size: CellGridSize {
+				x: new_valid!(CellCount, 2),
+				z: new_valid!(CellCount, 2),
+			},
+			cells: CellGrid::from([
+				((0, 0), _Cell::Value(ParsedColor::parse(&[1, 1, 1, 1]))),
+				((0, 1), _Cell::Value(ParsedColor::parse(&[2, 2, 2, 2]))),
+				((1, 0), _Cell::Value(ParsedColor::parse(&[3, 3, 3, 3]))),
+				((1, 1), _Cell::Value(ParsedColor::parse(&[4, 4, 4, 4]))),
+			]),
+		};
+
+		let half_offset_grid = CellGrid::<HalfOffsetCell<_Cell>>::from(&definition);
+
+		assert_eq!(
+			CellGrid::from([(
+				(0, 0),
+				HalfOffsetCell::from([
+					(
+						Direction::Z,
+						_Cell::Value(ParsedColor::parse(&[1, 1, 1, 1]))
+					),
+					(
+						Direction::X,
+						_Cell::Value(ParsedColor::parse(&[2, 2, 2, 2]))
+					),
+					(
+						Direction::NegX,
+						_Cell::Value(ParsedColor::parse(&[3, 3, 3, 3]))
+					),
+					(
+						Direction::NegZ,
+						_Cell::Value(ParsedColor::parse(&[4, 4, 4, 4]))
+					),
+				])
+			)]),
+			half_offset_grid
+		);
+	}
+
+	#[test]
+	fn half_offset_from_2_by_2_when_cells_missing() {
+		let definition = CellGridDefinition {
+			size: CellGridSize {
+				x: new_valid!(CellCount, 2),
+				z: new_valid!(CellCount, 2),
+			},
+			cells: CellGrid::from([
+				((0, 0), _Cell::Value(ParsedColor::parse(&[1, 1, 1, 1]))),
+				((0, 1), _Cell::Value(ParsedColor::parse(&[2, 2, 2, 2]))),
+				((1, 1), _Cell::Value(ParsedColor::parse(&[4, 4, 4, 4]))),
+			]),
+		};
+
+		let half_offset_grid = CellGrid::<HalfOffsetCell<_Cell>>::from(&definition);
+
+		assert_eq!(
+			CellGrid::from([(
+				(0, 0),
+				HalfOffsetCell::from([
+					(
+						Direction::Z,
+						_Cell::Value(ParsedColor::parse(&[1, 1, 1, 1]))
+					),
+					(
+						Direction::X,
+						_Cell::Value(ParsedColor::parse(&[2, 2, 2, 2]))
+					),
+					(Direction::NegX, _Cell::Default),
+					(
+						Direction::NegZ,
+						_Cell::Value(ParsedColor::parse(&[4, 4, 4, 4]))
+					),
+				])
+			)]),
+			half_offset_grid
+		);
+	}
+
+	#[test]
+	fn half_offset_from_3_by_3() {
+		let definition = CellGridDefinition {
+			size: CellGridSize {
+				x: new_valid!(CellCount, 3),
+				z: new_valid!(CellCount, 3),
+			},
+			cells: CellGrid::from([
+				((0, 0), _Cell::Value(ParsedColor::parse(&[0, 0, 0, 0]))),
+				((0, 1), _Cell::Value(ParsedColor::parse(&[0, 1, 0, 0]))),
+				((0, 2), _Cell::Value(ParsedColor::parse(&[0, 2, 0, 0]))),
+				((1, 0), _Cell::Value(ParsedColor::parse(&[1, 0, 0, 0]))),
+				((1, 1), _Cell::Value(ParsedColor::parse(&[1, 1, 0, 0]))),
+				((1, 2), _Cell::Value(ParsedColor::parse(&[1, 2, 0, 0]))),
+				((2, 0), _Cell::Value(ParsedColor::parse(&[2, 0, 0, 0]))),
+				((2, 1), _Cell::Value(ParsedColor::parse(&[2, 1, 0, 0]))),
+				((2, 2), _Cell::Value(ParsedColor::parse(&[2, 2, 0, 0]))),
+			]),
+		};
+
+		let half_offset_grid = CellGrid::<HalfOffsetCell<_Cell>>::from(&definition);
+
+		assert_eq!(
+			CellGrid::from([
+				(
+					(0, 0),
+					HalfOffsetCell::from([
+						(
+							Direction::Z,
+							_Cell::Value(ParsedColor::parse(&[0, 0, 0, 0]))
+						),
+						(
+							Direction::X,
+							_Cell::Value(ParsedColor::parse(&[0, 1, 0, 0]))
+						),
+						(
+							Direction::NegX,
+							_Cell::Value(ParsedColor::parse(&[1, 0, 0, 0]))
+						),
+						(
+							Direction::NegZ,
+							_Cell::Value(ParsedColor::parse(&[1, 1, 0, 0]))
+						),
+					])
+				),
+				(
+					(0, 1),
+					HalfOffsetCell::from([
+						(
+							Direction::Z,
+							_Cell::Value(ParsedColor::parse(&[0, 1, 0, 0]))
+						),
+						(
+							Direction::X,
+							_Cell::Value(ParsedColor::parse(&[0, 2, 0, 0]))
+						),
+						(
+							Direction::NegX,
+							_Cell::Value(ParsedColor::parse(&[1, 1, 0, 0]))
+						),
+						(
+							Direction::NegZ,
+							_Cell::Value(ParsedColor::parse(&[1, 2, 0, 0]))
+						),
+					])
+				),
+				(
+					(1, 0),
+					HalfOffsetCell::from([
+						(
+							Direction::Z,
+							_Cell::Value(ParsedColor::parse(&[1, 0, 0, 0]))
+						),
+						(
+							Direction::X,
+							_Cell::Value(ParsedColor::parse(&[1, 1, 0, 0]))
+						),
+						(
+							Direction::NegX,
+							_Cell::Value(ParsedColor::parse(&[2, 0, 0, 0]))
+						),
+						(
+							Direction::NegZ,
+							_Cell::Value(ParsedColor::parse(&[2, 1, 0, 0]))
+						),
+					])
+				),
+				(
+					(1, 1),
+					HalfOffsetCell::from([
+						(
+							Direction::Z,
+							_Cell::Value(ParsedColor::parse(&[1, 1, 0, 0]))
+						),
+						(
+							Direction::X,
+							_Cell::Value(ParsedColor::parse(&[1, 2, 0, 0]))
+						),
+						(
+							Direction::NegX,
+							_Cell::Value(ParsedColor::parse(&[2, 1, 0, 0]))
+						),
+						(
+							Direction::NegZ,
+							_Cell::Value(ParsedColor::parse(&[2, 2, 0, 0]))
+						),
+					])
+				),
+			]),
+			half_offset_grid
+		);
 	}
 }
 

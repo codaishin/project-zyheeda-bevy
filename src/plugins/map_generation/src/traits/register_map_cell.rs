@@ -9,7 +9,13 @@ use crate::{
 		grid::Grid,
 		half_offset_grid::HalfOffsetGrid,
 		map::{
-			cells::{MapCells, agent::Agent, parsed_color::ParsedColor},
+			cells::{
+				CellGrid,
+				MapCells,
+				agent::Agent,
+				half_offset_cell::HalfOffsetCell,
+				parsed_color::ParsedColor,
+			},
 			folder::MapFolder,
 			grid_graph::MapGridGraph,
 			image::MapImage,
@@ -17,7 +23,7 @@ use crate::{
 	},
 	resources::map::color_lookup::{MapColorLookup, MapColorLookupImage},
 	systems::map_color_lookup::load_images::ColorLookupAssetPath,
-	traits::parse_map_image::ParseMapImage,
+	traits::{map_cells_extra::MapCellsExtra, parse_map_image::ParseMapImage},
 };
 use bevy::prelude::*;
 use common::{
@@ -50,6 +56,7 @@ pub(crate) trait RegisterMapCell {
 			+ InsertCellComponents
 			+ InsertCellQuadrantComponents
 			+ ColorLookupAssetPath
+			+ MapCellsExtra<TExtra = CellGrid<HalfOffsetCell<TCell>>>
 			+ Default;
 }
 
@@ -66,6 +73,7 @@ impl RegisterMapCell for App {
 			+ InsertCellComponents
 			+ InsertCellQuadrantComponents
 			+ ColorLookupAssetPath
+			+ MapCellsExtra<TExtra = CellGrid<HalfOffsetCell<TCell>>>
 			+ Default,
 	{
 		let resolving_dependencies =
