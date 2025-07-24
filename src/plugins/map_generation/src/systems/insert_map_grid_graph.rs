@@ -50,6 +50,7 @@ where
 	TCell: IsWalkable,
 {
 	map.cells
+		.0
 		.get(&(x, z))
 		.map(|cell| cell.is_walkable())
 		.unwrap_or(false)
@@ -60,6 +61,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		cell_grid_size::CellGridSize,
+		components::map::cells::CellGrid,
 		grid_graph::{
 			GridGraph,
 			Obstacles,
@@ -114,7 +116,7 @@ mod tests {
 					x: new_valid!(CellCount, 2),
 					z: new_valid!(CellCount, 2),
 				},
-				cells: HashMap::from([
+				cells: CellGrid::from([
 					((0, 0), _Cell::walkable()),
 					((0, 1), _Cell::walkable()),
 					((1, 0), _Cell::walkable()),
@@ -155,7 +157,7 @@ mod tests {
 					x: new_valid!(CellCount, 3),
 					z: new_valid!(CellCount, 3),
 				},
-				cells: HashMap::from([
+				cells: CellGrid::from([
 					((0, 0), _Cell::walkable()),
 					((0, 1), _Cell::walkable()),
 					((0, 2), _Cell::walkable()),
@@ -206,7 +208,7 @@ mod tests {
 					x: new_valid!(CellCount, 2),
 					z: new_valid!(CellCount, 2),
 				},
-				cells: HashMap::from([
+				cells: CellGrid::from([
 					((0, 0), _Cell::walkable()),
 					((0, 1), _Cell::not_walkable()),
 					((1, 0), _Cell::not_walkable()),
@@ -249,7 +251,7 @@ mod tests {
 					x: new_valid!(CellCount, 3),
 					z: new_valid!(CellCount, 3),
 				},
-				cells: HashMap::from([
+				cells: CellGrid::from([
 					((0, 0), _Cell::walkable()),
 					((0, 2), _Cell::walkable()),
 					((1, 0), _Cell::walkable()),

@@ -22,8 +22,6 @@ use common::{
 };
 use std::{collections::HashMap, fmt::Display};
 
-pub(crate) type CellGrid<TCell> = HashMap<(u32, u32), TCell>;
-
 #[derive(Component, Debug, PartialEq)]
 #[component(immutable)]
 #[require(Map)]
@@ -55,8 +53,8 @@ where
 
 	fn try_parse(image: &TImage, lookup: &Self::TLookup) -> Result<Self, MapSizeError> {
 		let mut indices = (0, 0);
-		let mut cells = CellGrid::default();
-		let mut half_offset_cells = CellGrid::default();
+		let mut cells = HashMap::default();
+		let mut half_offset_cells = HashMap::default();
 
 		for (UVec3 { x, y, .. }, bytes) in image.iter_pixel_bytes(Layer(0)) {
 			indices.0 = u32::max(x, indices.0);
@@ -91,9 +89,27 @@ where
 
 		Ok(Self {
 			size,
-			cells,
-			half_offset_cells,
+			cells: CellGrid(cells),
+			half_offset_cells: CellGrid(half_offset_cells),
 		})
+	}
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub(crate) struct CellGrid<TCell>(pub(crate) HashMap<(u32, u32), TCell>);
+
+impl<TCell> Default for CellGrid<TCell> {
+	fn default() -> Self {
+		Self(HashMap::default())
+	}
+}
+
+impl<TCells, TCell> From<TCells> for CellGrid<TCell>
+where
+	TCells: IntoIterator<Item = ((u32, u32), TCell)>,
+{
+	fn from(cells: TCells) -> Self {
+		Self(HashMap::from_iter(cells))
 	}
 }
 

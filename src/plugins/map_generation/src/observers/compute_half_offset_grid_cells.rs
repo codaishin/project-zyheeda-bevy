@@ -3,7 +3,7 @@ use crate::{
 		cells_ref::CellsRef,
 		half_offset_grid::HalfOffsetGrid,
 		map::{
-			cells::{MapCells, half_offset_cell::HalfOffsetCell},
+			cells::{CellGrid, MapCells, half_offset_cell::HalfOffsetCell},
 			grid_graph::MapGridGraph,
 		},
 	},
@@ -35,13 +35,14 @@ impl HalfOffsetGrid {
 		let offset = *TCell::CELL_DISTANCE / 2.;
 		let mut index_mismatch = vec![];
 		let mut cells = vec![];
+		let CellGrid(half_offset_cells) = &map.half_offset_cells;
 
 		for x in 0..(*map.size.x - 1) {
 			for z in 0..(*map.size.z - 1) {
 				let Some(translation) = graph.nodes.get(&(x, z)) else {
 					continue;
 				};
-				let Some(cell) = map.half_offset_cells.get(&(x, z)) else {
+				let Some(cell) = half_offset_cells.get(&(x, z)) else {
 					index_mismatch.push((x, z));
 					continue;
 				};
@@ -114,7 +115,7 @@ mod test_get_half_offset_grid {
 						x: new_valid!(CellCount, 2),
 						z: new_valid!(CellCount, 2),
 					},
-					half_offset_cells: HashMap::from([(
+					half_offset_cells: CellGrid::from([(
 						(0, 0),
 						HalfOffsetCell::from([
 							(Direction::Z, _Cell("00")),
@@ -173,7 +174,7 @@ mod test_get_half_offset_grid {
 						x: new_valid!(CellCount, 3),
 						z: new_valid!(CellCount, 2),
 					},
-					half_offset_cells: HashMap::from([
+					half_offset_cells: CellGrid::from([
 						(
 							(0, 0),
 							HalfOffsetCell::from([
@@ -252,7 +253,7 @@ mod test_get_half_offset_grid {
 						x: new_valid!(CellCount, 2),
 						z: new_valid!(CellCount, 2),
 					},
-					half_offset_cells: HashMap::from([(
+					half_offset_cells: CellGrid::from([(
 						(0, 0),
 						HalfOffsetCell::from([
 							(Direction::Z, _Cell("00")),
@@ -306,7 +307,7 @@ mod test_get_half_offset_grid {
 						x: new_valid!(CellCount, 3),
 						z: new_valid!(CellCount, 2),
 					},
-					half_offset_cells: HashMap::from([(
+					half_offset_cells: CellGrid::from([(
 						(0, 0),
 						HalfOffsetCell::from([
 							(Direction::Z, _Cell("00")),

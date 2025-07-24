@@ -2,7 +2,7 @@ use crate::{
 	components::{
 		map::{
 			agents::{AgentsLoaded, Enemy, Player},
-			cells::{MapCells, agent::Agent},
+			cells::{CellGrid, MapCells, agent::Agent},
 		},
 		map_agents::AgentOfPersistentMap,
 	},
@@ -30,6 +30,7 @@ where
 				cell_distance: TCell::CELL_DISTANCE,
 			};
 			let min = context.grid_min();
+			let CellGrid(cells) = cells;
 
 			for ((x, z), cell) in cells.iter() {
 				match cell {
@@ -71,7 +72,6 @@ mod tests {
 		grid_graph::grid_context::{CellCount, CellDistance},
 	};
 	use macros::new_valid;
-	use std::collections::HashMap;
 	use testing::{SingleThreadedApp, assert_count, assert_eq_unordered};
 
 	#[derive(Clone, Debug, PartialEq, TypePath)]
@@ -103,7 +103,7 @@ mod tests {
 				x: new_valid!(CellCount, 1),
 				z: new_valid!(CellCount, 1),
 			},
-			cells: HashMap::from([((0, 0), Agent::<_Cell>::Player)]),
+			cells: CellGrid::from([((0, 0), Agent::<_Cell>::Player)]),
 			..default()
 		});
 
@@ -124,7 +124,7 @@ mod tests {
 				x: new_valid!(CellCount, 1),
 				z: new_valid!(CellCount, 1),
 			},
-			cells: HashMap::from([((0, 0), Agent::<_Cell>::Enemy)]),
+			cells: CellGrid::from([((0, 0), Agent::<_Cell>::Enemy)]),
 			..default()
 		});
 
@@ -145,7 +145,7 @@ mod tests {
 				x: new_valid!(CellCount, 3),
 				z: new_valid!(CellCount, 3),
 			},
-			cells: HashMap::from([
+			cells: CellGrid::from([
 				((0, 0), Agent::<_Cell>::Enemy),
 				((0, 1), Agent::<_Cell>::Enemy),
 				((0, 2), Agent::<_Cell>::Enemy),
@@ -192,7 +192,7 @@ mod tests {
 					x: new_valid!(CellCount, 1),
 					z: new_valid!(CellCount, 1),
 				},
-				cells: HashMap::from([((0, 0), Agent::<_Cell>::Player)]),
+				cells: CellGrid::from([((0, 0), Agent::<_Cell>::Player)]),
 				..default()
 			})
 			.id();
@@ -213,7 +213,7 @@ mod tests {
 					x: new_valid!(CellCount, 1),
 					z: new_valid!(CellCount, 1),
 				},
-				cells: HashMap::from([((0, 0), Agent::<_Cell>::Player)]),
+				cells: CellGrid::from([((0, 0), Agent::<_Cell>::Player)]),
 				..default()
 			},
 		));
@@ -238,7 +238,7 @@ mod tests {
 					x: new_valid!(CellCount, 1),
 					z: new_valid!(CellCount, 1),
 				},
-				cells: HashMap::from([((0, 0), Agent::<_Cell>::Enemy)]),
+				cells: CellGrid::from([((0, 0), Agent::<_Cell>::Enemy)]),
 				..default()
 			},
 		));
