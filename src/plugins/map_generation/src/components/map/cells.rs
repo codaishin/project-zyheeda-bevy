@@ -4,10 +4,12 @@ pub(crate) mod half_offset_cell;
 pub(crate) mod parsed_color;
 
 use crate::{
+	cell_grid_size::CellGridSize,
 	components::map::{
 		Map,
 		cells::{half_offset_cell::HalfOffsetCell, parsed_color::ParsedColor},
 	},
+	grid_graph::grid_context::CellCount,
 	traits::{
 		parse_map_image::ParseMapImage,
 		pixels::{Layer, PixelBytesIterator},
@@ -20,28 +22,22 @@ use common::{
 };
 use std::{collections::HashMap, fmt::Display};
 
-pub(crate) type CellGrid<TCell> = HashMap<(usize, usize), TCell>;
+pub(crate) type CellGrid<TCell> = HashMap<(u32, u32), TCell>;
 
 #[derive(Component, Debug, PartialEq)]
 #[component(immutable)]
 #[require(Map)]
 pub(crate) struct MapCells<TCell> {
-	pub(crate) size: Size,
+	pub(crate) size: CellGridSize,
 	pub(crate) cells: CellGrid<TCell>,
 	// FIXME: Either move out or rework as `extra`. It is not needed for agents
 	pub(crate) half_offset_cells: CellGrid<HalfOffsetCell<TCell>>,
 }
 
-#[derive(Debug, PartialEq, Default, Clone, Copy)]
-pub(crate) struct Size {
-	pub(crate) x: usize,
-	pub(crate) z: usize,
-}
-
 impl<TCell> Default for MapCells<TCell> {
 	fn default() -> Self {
 		Self {
-			size: Size::default(),
+			size: CellGridSize::default(),
 			cells: CellGrid::default(),
 			half_offset_cells: CellGrid::default(),
 		}
@@ -58,37 +54,33 @@ where
 	type TLookup = TCell::TLookup;
 
 	fn try_parse(image: &TImage, lookup: &Self::TLookup) -> Result<Self, MapSizeError> {
-		let mut max = Size { x: 0, z: 0 };
+		let mut indices = (0, 0);
 		let mut cells = CellGrid::default();
 		let mut half_offset_cells = CellGrid::default();
 
 		for (UVec3 { x, y, .. }, bytes) in image.iter_pixel_bytes(Layer(0)) {
-			let x = x as usize;
-			let z = y as usize;
-			max.x = usize::max(x, max.x);
-			max.z = usize::max(z, max.z);
+			indices.0 = u32::max(x, indices.0);
+			indices.1 = u32::max(y, indices.1);
 
 			let Ok(cell) = TCell::try_parse(&ParsedColor::parse(bytes), lookup);
-			cells.insert((x, z), cell);
+			cells.insert((x, y), cell);
 		}
 
 		if cells.is_empty() {
 			return Err(MapSizeError::Empty);
 		}
-
-		if max.x == 0 || max.z == 0 {
-			return Err(MapSizeError::Sizes {
-				x: max.x + 1,
-				z: max.z + 1,
-			});
-		}
-
-		let size = Size {
-			x: max.x + 1,
-			z: max.z + 1,
+		let size = CellGridSize {
+			x: CellCount::try_from_max_index(indices.0).ok_or(MapSizeError::Indices {
+				x: indices.0,
+				z: indices.1,
+			})?,
+			z: CellCount::try_from_max_index(indices.1).ok_or(MapSizeError::Indices {
+				x: indices.0,
+				z: indices.1,
+			})?,
 		};
-		for x in 1..size.x {
-			for z in 1..size.z {
+		for x in 1..*size.x {
+			for z in 1..*size.z {
 				let directions = HalfOffsetCell::directions(x, z).map(|(x, z, dir)| {
 					let cell = cells.get(&(x, z)).cloned().unwrap_or_default();
 					(dir, cell)
@@ -108,7 +100,7 @@ where
 #[derive(Debug, PartialEq)]
 pub(crate) enum MapSizeError {
 	Empty,
-	Sizes { x: usize, z: usize },
+	Indices { x: u32, z: u32 },
 }
 
 impl Display for MapSizeError {
@@ -124,8 +116,11 @@ impl From<MapSizeError> for Error {
 				msg: String::from("map is empty"),
 				lvl: Level::Error,
 			},
-			MapSizeError::Sizes { x, z } => Self::Single {
-				msg: format!("map too small with x={x} and z={z}"),
+			MapSizeError::Indices { x, z } => Self::Single {
+				msg: format!(
+					"indices too large x={x} and z={z} (max allowed {})",
+					u32::MAX - 1
+				),
 				lvl: Level::Error,
 			},
 		}
@@ -184,6 +179,7 @@ impl From<Direction> for Dir3 {
 mod test_parsing {
 	use super::*;
 	use crate::traits::pixels::{Bytes, Layer};
+	use macros::new_valid;
 	use mockall::{mock, predicate::eq};
 	use std::vec::IntoIter;
 	use testing::{Mock, simple_init};
@@ -243,30 +239,36 @@ mod test_parsing {
 	}
 
 	#[test]
-	fn too_small_z() {
-		let image = _Image(vec![(uvec3(0, 0, 0), &[]), (uvec3(1, 0, 0), &[])]);
+	fn too_large_y() {
+		let image = _Image(vec![(uvec3(0, u32::MAX, 0), &[])]);
 
 		let map = MapCells::<_Cell>::try_parse(&image, &_Lookup);
 
-		assert_eq!(Err(MapSizeError::Sizes { x: 2, z: 1 }), map);
+		assert_eq!(Err(MapSizeError::Indices { x: 0, z: u32::MAX }), map);
 	}
 
 	#[test]
-	fn too_small_x() {
-		let image = _Image(vec![(uvec3(0, 0, 0), &[]), (uvec3(0, 1, 0), &[])]);
+	fn too_large_x() {
+		let image = _Image(vec![(uvec3(u32::MAX, 0, 0), &[])]);
 
 		let map = MapCells::<_Cell>::try_parse(&image, &_Lookup);
 
-		assert_eq!(Err(MapSizeError::Sizes { x: 1, z: 2 }), map);
+		assert_eq!(Err(MapSizeError::Indices { x: u32::MAX, z: 0 }), map);
 	}
 
 	#[test]
-	fn too_small_x_and_z() {
-		let image = _Image(vec![(uvec3(0, 0, 0), &[])]);
+	fn too_large_x_and_z() {
+		let image = _Image(vec![(uvec3(u32::MAX, u32::MAX, 0), &[])]);
 
 		let map = MapCells::<_Cell>::try_parse(&image, &_Lookup);
 
-		assert_eq!(Err(MapSizeError::Sizes { x: 1, z: 1 }), map);
+		assert_eq!(
+			Err(MapSizeError::Indices {
+				x: u32::MAX,
+				z: u32::MAX
+			}),
+			map
+		);
 	}
 
 	#[test]
@@ -301,7 +303,10 @@ mod test_parsing {
 
 		assert_eq!(
 			MapCells {
-				size: Size { x: 2, z: 2 },
+				size: CellGridSize {
+					x: new_valid!(CellCount, 2),
+					z: new_valid!(CellCount, 2),
+				},
 				cells: CellGrid::from([
 					((0, 0), _Cell::Value(ParsedColor::parse(&[1, 1, 1, 1]))),
 					((0, 1), _Cell::Value(ParsedColor::parse(&[2, 2, 2, 2]))),
@@ -346,7 +351,10 @@ mod test_parsing {
 
 		assert_eq!(
 			MapCells {
-				size: Size { x: 2, z: 2 },
+				size: CellGridSize {
+					x: new_valid!(CellCount, 2),
+					z: new_valid!(CellCount, 2),
+				},
 				cells: CellGrid::from([
 					((0, 0), _Cell::Value(ParsedColor::parse(&[1, 1, 1, 1]))),
 					((0, 1), _Cell::Value(ParsedColor::parse(&[2, 2, 2, 2]))),
@@ -393,7 +401,10 @@ mod test_parsing {
 
 		assert_eq!(
 			MapCells {
-				size: Size { x: 3, z: 3 },
+				size: CellGridSize {
+					x: new_valid!(CellCount, 3),
+					z: new_valid!(CellCount, 3),
+				},
 				cells: CellGrid::from([
 					((0, 0), _Cell::Value(ParsedColor::parse(&[0, 0, 0, 0]))),
 					((0, 1), _Cell::Value(ParsedColor::parse(&[0, 1, 0, 0]))),

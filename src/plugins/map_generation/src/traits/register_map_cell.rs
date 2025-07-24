@@ -110,8 +110,8 @@ impl RegisterMapCell for App {
 				(
 					MapImage::<TCell>::insert_map_cells.pipe(OnError::log),
 					MapImage::<Agent<TCell>>::insert_map_cells.pipe(OnError::log),
-					MapCells::<TCell>::insert_map_grid_graph.pipe(OnError::log),
-					MapCells::<Agent<TCell>>::spawn_map_agents.pipe(OnError::log),
+					MapCells::<TCell>::insert_map_grid_graph,
+					MapCells::<Agent<TCell>>::spawn_map_agents,
 				)
 					.chain(),
 			)

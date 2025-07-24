@@ -1,10 +1,10 @@
 use crate::{
-	grid_graph::{GridGraph, grid_context::DividedToZero},
+	grid_graph::GridGraph,
 	observers::compute_grid_cells::Cells,
 	traits::{
 		GridCellDistanceDefinition,
 		insert_cell_components::InsertCellComponents,
-		to_subdivided::ToSubdivided,
+		to_subdivided::{SubdivisionError, ToSubdivided},
 	},
 };
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
@@ -59,7 +59,7 @@ where
 	pub(crate) fn insert(
 		mut commands: Commands,
 		levels: Query<(Entity, &Grid<0, TGraph>), Changed<Grid<0, TGraph>>>,
-	) -> Result<(), Vec<DividedToZero>>
+	) -> Result<(), Vec<SubdivisionError>>
 	where
 		TGraph: ThreadSafe,
 	{
@@ -153,6 +153,7 @@ where
 #[cfg(test)]
 mod test_insert_subdivided {
 	use super::*;
+	use crate::grid_graph::grid_context::DividedToZero;
 
 	#[derive(Debug, PartialEq)]
 	struct _Graph {
@@ -162,12 +163,12 @@ mod test_insert_subdivided {
 	const TO_ZERO_SUBDIVISION: u8 = 42;
 
 	impl ToSubdivided for _Graph {
-		fn to_subdivided(&self, subdivisions: u8) -> Result<Self, DividedToZero> {
+		fn to_subdivided(&self, subdivisions: u8) -> Result<Self, SubdivisionError> {
 			if subdivisions == TO_ZERO_SUBDIVISION {
-				return Err(DividedToZero {
+				return Err(SubdivisionError::CellDistanceZero(DividedToZero {
 					from: 123.,
 					divisor: TO_ZERO_SUBDIVISION,
-				});
+				}));
 			}
 
 			Ok(_Graph { subdivisions })
@@ -175,7 +176,7 @@ mod test_insert_subdivided {
 	}
 
 	#[derive(Resource, Debug, PartialEq)]
-	struct _Result(Result<(), Vec<DividedToZero>>);
+	struct _Result(Result<(), Vec<SubdivisionError>>);
 
 	fn setup<const SUBDIVISIONS: u8>() -> App {
 		let mut app = App::new();
@@ -264,10 +265,12 @@ mod test_insert_subdivided {
 		app.update();
 
 		assert_eq!(
-			Some(&_Result(Err(vec![DividedToZero {
-				from: 123.,
-				divisor: TO_ZERO_SUBDIVISION,
-			}]))),
+			Some(&_Result(Err(vec![SubdivisionError::CellDistanceZero(
+				DividedToZero {
+					from: 123.,
+					divisor: TO_ZERO_SUBDIVISION,
+				}
+			)]))),
 			app.world().get_resource::<_Result>()
 		);
 	}

@@ -36,8 +36,8 @@ impl HalfOffsetGrid {
 		let mut index_mismatch = vec![];
 		let mut cells = vec![];
 
-		for x in 0..(map.size.x - 1) {
-			for z in 0..(map.size.z - 1) {
+		for x in 0..(*map.size.x - 1) {
+			for z in 0..(*map.size.z - 1) {
 				let Some(translation) = graph.nodes.get(&(x, z)) else {
 					continue;
 				};
@@ -60,11 +60,12 @@ impl HalfOffsetGrid {
 mod test_get_half_offset_grid {
 	use super::*;
 	use crate::{
-		components::{
-			cells_ref::CellsRef,
-			map::cells::{Direction, Size},
+		cell_grid_size::CellGridSize,
+		components::{cells_ref::CellsRef, map::cells::Direction},
+		grid_graph::{
+			GridGraph,
+			grid_context::{CellCount, CellDistance},
 		},
-		grid_graph::{GridGraph, grid_context::CellDistance},
 		traits::GridCellDistanceDefinition,
 	};
 	use macros::new_valid;
@@ -109,7 +110,10 @@ mod test_get_half_offset_grid {
 					..default()
 				}),
 				MapCells {
-					size: Size { x: 2, z: 2 },
+					size: CellGridSize {
+						x: new_valid!(CellCount, 2),
+						z: new_valid!(CellCount, 2),
+					},
 					half_offset_cells: HashMap::from([(
 						(0, 0),
 						HalfOffsetCell::from([
@@ -165,7 +169,10 @@ mod test_get_half_offset_grid {
 					..default()
 				}),
 				MapCells {
-					size: Size { x: 3, z: 2 },
+					size: CellGridSize {
+						x: new_valid!(CellCount, 3),
+						z: new_valid!(CellCount, 2),
+					},
 					half_offset_cells: HashMap::from([
 						(
 							(0, 0),
@@ -241,7 +248,10 @@ mod test_get_half_offset_grid {
 					..default()
 				}),
 				MapCells {
-					size: Size { x: 2, z: 2 },
+					size: CellGridSize {
+						x: new_valid!(CellCount, 2),
+						z: new_valid!(CellCount, 2),
+					},
 					half_offset_cells: HashMap::from([(
 						(0, 0),
 						HalfOffsetCell::from([
@@ -292,7 +302,10 @@ mod test_get_half_offset_grid {
 					..default()
 				}),
 				MapCells {
-					size: Size { x: 3, z: 2 },
+					size: CellGridSize {
+						x: new_valid!(CellCount, 3),
+						z: new_valid!(CellCount, 2),
+					},
 					half_offset_cells: HashMap::from([(
 						(0, 0),
 						HalfOffsetCell::from([

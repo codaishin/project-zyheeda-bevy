@@ -25,7 +25,7 @@ impl Grid {
 		};
 
 		let mut index_mismatch = None;
-		let cell_translation = |((x, z), translation): (&(usize, usize), &Vec3)| {
+		let cell_translation = |((x, z), translation): (&(u32, u32), &Vec3)| {
 			let x = *x;
 			let z = *z;
 			let Some(cell) = cells.cells.get(&(x, z)) else {

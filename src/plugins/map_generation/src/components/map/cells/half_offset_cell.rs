@@ -7,7 +7,7 @@ pub(crate) struct HalfOffsetCell<TCell> {
 }
 
 impl HalfOffsetCell<()> {
-	pub(crate) fn directions(x: usize, z: usize) -> [(usize, usize, Direction); 4] {
+	pub(crate) fn directions(x: u32, z: u32) -> [(u32, u32, Direction); 4] {
 		[
 			(x - 1, z - 1, Direction::Z),
 			(x - 1, z, Direction::X),

@@ -13,25 +13,25 @@ use std::ops::RangeInclusive;
 pub struct LineWide {
 	orientation: Orientation,
 	new_node: NewNodeFn,
-	range: RangeInclusive<usize>,
+	range: RangeInclusive<u32>,
 }
 
 impl LineWide {
 	pub(crate) fn new(start: &GridGraphNode, end: &GridGraphNode) -> Self {
 		let (low, high, new_node) = Self::normalize_layout(start, end);
 		let (i_low, d_low) = match low.1 > low.0 {
-			true => (1, (low.1 - low.0) as isize),
-			false => (-1, (low.0 - low.1) as isize),
+			true => (1, (low.1 - low.0) as i32),
+			false => (-1, (low.0 - low.1) as i32),
 		};
 
 		let orientation = match d_low {
 			0 => Orientation::Straight { v_low: low.0 },
 			_ => {
-				let d_high = (high.1 - high.0) as isize;
+				let d_high = (high.1 - high.0) as i32;
 				let step = Step {
 					d: (2 * d_low) - d_high,
 					v_lows: [low.0; 2],
-					d_up: (2 * d_low) as usize,
+					d_up: (2 * d_low) as u32,
 					d_down: 2 * (d_low - d_high),
 				};
 
@@ -123,60 +123,60 @@ impl Iterator for LineWide {
 }
 
 enum Orientation {
-	Straight { v_low: usize },
+	Straight { v_low: u32 },
 	Odd(Line),
 }
 
 struct Line {
-	i_low: isize,
-	low_start: usize,
-	low_end: usize,
+	i_low: i32,
+	low_start: u32,
+	low_end: u32,
 	step: Step,
 	additional_nodes: [Option<LineNode>; 3],
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct LineNode {
-	pub(crate) x: usize,
-	pub(crate) z: usize,
+	pub(crate) x: u32,
+	pub(crate) z: u32,
 }
 
-type NewNodeFn = fn(usize, usize) -> LineNode;
+type NewNodeFn = fn(u32, u32) -> LineNode;
 
-struct Low(usize, usize);
+struct Low(u32, u32);
 
 impl Low {
-	fn node(x: usize, z: usize) -> LineNode {
+	fn node(x: u32, z: u32) -> LineNode {
 		LineNode { x: z, z: x }
 	}
 }
 
-struct High(usize, usize);
+struct High(u32, u32);
 
 impl High {
-	fn node(x: usize, z: usize) -> LineNode {
+	fn node(x: u32, z: u32) -> LineNode {
 		LineNode { x, z }
 	}
 }
 
 #[derive(Debug, PartialEq)]
 struct Step {
-	d: isize,
-	v_lows: [usize; 2],
-	d_up: usize,
-	d_down: isize,
+	d: i32,
+	v_lows: [u32; 2],
+	d_up: u32,
+	d_down: i32,
 }
 
 impl Step {
 	#[must_use]
-	fn step(&mut self, i_low: isize) -> Option<()> {
+	fn step(&mut self, i_low: i32) -> Option<()> {
 		if self.d < 0 {
-			self.d += self.d_up as isize;
+			self.d += self.d_up as i32;
 			return Some(());
 		}
 
 		if self.d == 0 {
-			self.d += self.d_up as isize;
+			self.d += self.d_up as i32;
 			self.v_lows[1] = self.v_lows[1].checked_add_signed(i_low)?;
 			return Some(());
 		}
