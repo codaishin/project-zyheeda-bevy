@@ -3,6 +3,7 @@ pub(crate) mod insert_cell_components;
 pub(crate) mod insert_cell_quadrant_components;
 pub(crate) mod is_walkable;
 pub(crate) mod key_mapper;
+pub(crate) mod map_cells_extra;
 pub(crate) mod parse_map_image;
 pub(crate) mod pixels;
 pub(crate) mod register_map_cell;

@@ -1,7 +1,7 @@
 use crate::{
 	components::{
 		floor_cell::FloorCell,
-		map::cells::parsed_color::ParsedColor,
+		map::cells::{CellGrid, half_offset_cell::HalfOffsetCell, parsed_color::ParsedColor},
 		quadrants::{
 			CorridorFloor,
 			CorridorFloorCornerInside,
@@ -25,6 +25,7 @@ use crate::{
 		insert_cell_components::InsertCellComponents,
 		insert_cell_quadrant_components::{InsertCellQuadrantComponents, PatternMatches, Quadrant},
 		is_walkable::IsWalkable,
+		map_cells_extra::MapCellsExtra,
 		parse_map_image::ParseMapImage,
 	},
 };
@@ -71,6 +72,10 @@ impl ParseMapImage<ParsedColor> for Corridor {
 
 		Ok(Corridor::Wall)
 	}
+}
+
+impl MapCellsExtra for Corridor {
+	type TExtra = CellGrid<HalfOffsetCell<Self>>;
 }
 
 impl ColorLookupAssetPath for Corridor {

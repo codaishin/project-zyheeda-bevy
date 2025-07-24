@@ -5,6 +5,7 @@ use crate::{
 		map::cells::{CellGrid, MapCells},
 	},
 	errors::GridError,
+	traits::map_cells_extra::MapCellsExtra,
 };
 use bevy::prelude::*;
 use common::traits::thread_safe::ThreadSafe;
@@ -18,16 +19,16 @@ impl Grid {
 		cells: Query<&MapCells<TCell>>,
 	) -> Result<Cells<TCell>, GridError>
 	where
-		TCell: TypePath + ThreadSafe + Clone,
+		TCell: TypePath + ThreadSafe + Clone + MapCellsExtra,
 	{
 		let entity = trigger.target();
 		let Ok((grid, cells_ref)) = grids.get(entity) else {
 			return Err(GridError::NoRefToCellDefinition);
 		};
-		let Ok(MapCells { cells, .. }) = cells.get(cells_ref.cell_definition) else {
+		let Ok(MapCells { definition, .. }) = cells.get(cells_ref.cell_definition) else {
 			return Err(GridError::NoCellDefinition);
 		};
-		let CellGrid(cells) = &cells;
+		let CellGrid(cells) = &definition.cells;
 
 		let mut index_mismatch = None;
 		let cell_translation = |((x, z), translation): (&(u32, u32), &Vec3)| {
@@ -59,7 +60,11 @@ impl Grid {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{components::map::cells::CellGrid, grid_graph::GridGraph};
+	use crate::{
+		components::map::cells::CellGrid,
+		grid_graph::GridGraph,
+		traits::map_cells_extra::{CellGridDefinition, MapCellsExtra},
+	};
 	use std::collections::HashMap;
 	use testing::{SingleThreadedApp, assert_eq_unordered};
 
@@ -68,6 +73,10 @@ mod tests {
 
 	#[derive(Clone, Debug, PartialEq, TypePath)]
 	struct _Cell(&'static str);
+
+	impl MapCellsExtra for _Cell {
+		type TExtra = ();
+	}
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -87,12 +96,15 @@ mod tests {
 		let cells = app
 			.world_mut()
 			.spawn(MapCells {
-				cells: CellGrid::from([
-					((0, 0), _Cell("00")),
-					((0, 1), _Cell("01")),
-					((1, 0), _Cell("10")),
-					((1, 1), _Cell("11")),
-				]),
+				definition: CellGridDefinition {
+					cells: CellGrid::from([
+						((0, 0), _Cell("00")),
+						((0, 1), _Cell("01")),
+						((1, 0), _Cell("10")),
+						((1, 1), _Cell("11")),
+					]),
+					..default()
+				},
 				..default()
 			})
 			.id();
@@ -140,12 +152,15 @@ mod tests {
 		let cells = app
 			.world_mut()
 			.spawn(MapCells {
-				cells: CellGrid::from([
-					((0, 0), _Cell("00")),
-					((0, 1), _Cell("01")),
-					((1, 0), _Cell("10")),
-					((1, 1), _Cell("11")),
-				]),
+				definition: CellGridDefinition {
+					cells: CellGrid::from([
+						((0, 0), _Cell("00")),
+						((0, 1), _Cell("01")),
+						((1, 0), _Cell("10")),
+						((1, 1), _Cell("11")),
+					]),
+					..default()
+				},
 				..default()
 			})
 			.id();
@@ -201,11 +216,14 @@ mod tests {
 		let cells = app
 			.world_mut()
 			.spawn(MapCells {
-				cells: CellGrid::from([
-					((0, 0), _Cell("00")),
-					((0, 1), _Cell("01")),
-					((1, 1), _Cell("11")),
-				]),
+				definition: CellGridDefinition {
+					cells: CellGrid::from([
+						((0, 0), _Cell("00")),
+						((0, 1), _Cell("01")),
+						((1, 1), _Cell("11")),
+					]),
+					..default()
+				},
 				..default()
 			})
 			.id();

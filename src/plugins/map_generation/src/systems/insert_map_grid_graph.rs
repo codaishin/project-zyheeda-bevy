@@ -1,7 +1,12 @@
 use crate::{
 	components::map::{cells::MapCells, grid_graph::MapGridGraph},
 	grid_graph::{GridGraph, Obstacles, grid_context::GridContext},
-	traits::{GridCellDistanceDefinition, grid_min::GridMin, is_walkable::IsWalkable},
+	traits::{
+		GridCellDistanceDefinition,
+		grid_min::GridMin,
+		is_walkable::IsWalkable,
+		map_cells_extra::MapCellsExtra,
+	},
 };
 use bevy::prelude::*;
 use common::traits::{thread_safe::ThreadSafe, try_insert_on::TryInsertOn};
@@ -9,13 +14,13 @@ use std::collections::HashMap;
 
 impl<TCell> MapCells<TCell>
 where
-	TCell: TypePath + ThreadSafe + GridCellDistanceDefinition + IsWalkable,
+	TCell: TypePath + ThreadSafe + GridCellDistanceDefinition + IsWalkable + MapCellsExtra,
 {
 	pub(crate) fn insert_map_grid_graph(maps: Query<(Entity, &Self)>, mut commands: Commands) {
 		for (entity, map) in &maps {
 			let context = GridContext {
-				cell_count_x: map.size.x,
-				cell_count_z: map.size.z,
+				cell_count_x: map.definition.size.x,
+				cell_count_z: map.definition.size.z,
 				cell_distance: TCell::CELL_DISTANCE,
 			};
 			let mut graph = GridGraph {
@@ -26,8 +31,8 @@ where
 			let min = graph.context.grid_min();
 			let mut position = min;
 
-			for x in 0..*map.size.x {
-				for z in 0..*map.size.z {
+			for x in 0..*map.definition.size.x {
+				for z in 0..*map.definition.size.z {
 					graph.nodes.insert((x, z), position);
 					position.z += *TCell::CELL_DISTANCE;
 
@@ -47,9 +52,10 @@ where
 
 fn is_walkable<TCell>(map: &MapCells<TCell>, x: u32, z: u32) -> bool
 where
-	TCell: IsWalkable,
+	TCell: IsWalkable + MapCellsExtra,
 {
-	map.cells
+	map.definition
+		.cells
 		.0
 		.get(&(x, z))
 		.map(|cell| cell.is_walkable())
@@ -67,7 +73,11 @@ mod tests {
 			Obstacles,
 			grid_context::{CellCount, CellDistance, GridContext},
 		},
-		traits::{GridCellDistanceDefinition, is_walkable::IsWalkable},
+		traits::{
+			GridCellDistanceDefinition,
+			is_walkable::IsWalkable,
+			map_cells_extra::{CellGridDefinition, MapCellsExtra},
+		},
 	};
 	use macros::new_valid;
 	use std::collections::{HashMap, HashSet};
@@ -98,6 +108,10 @@ mod tests {
 		}
 	}
 
+	impl MapCellsExtra for _Cell {
+		type TExtra = ();
+	}
+
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
@@ -112,16 +126,18 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(MapCells {
-				size: CellGridSize {
-					x: new_valid!(CellCount, 2),
-					z: new_valid!(CellCount, 2),
+				definition: CellGridDefinition {
+					size: CellGridSize {
+						x: new_valid!(CellCount, 2),
+						z: new_valid!(CellCount, 2),
+					},
+					cells: CellGrid::from([
+						((0, 0), _Cell::walkable()),
+						((0, 1), _Cell::walkable()),
+						((1, 0), _Cell::walkable()),
+						((1, 1), _Cell::walkable()),
+					]),
 				},
-				cells: CellGrid::from([
-					((0, 0), _Cell::walkable()),
-					((0, 1), _Cell::walkable()),
-					((1, 0), _Cell::walkable()),
-					((1, 1), _Cell::walkable()),
-				]),
 				..default()
 			})
 			.id();
@@ -153,21 +169,23 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(MapCells {
-				size: CellGridSize {
-					x: new_valid!(CellCount, 3),
-					z: new_valid!(CellCount, 3),
+				definition: CellGridDefinition {
+					size: CellGridSize {
+						x: new_valid!(CellCount, 3),
+						z: new_valid!(CellCount, 3),
+					},
+					cells: CellGrid::from([
+						((0, 0), _Cell::walkable()),
+						((0, 1), _Cell::walkable()),
+						((0, 2), _Cell::walkable()),
+						((1, 0), _Cell::walkable()),
+						((1, 1), _Cell::walkable()),
+						((1, 2), _Cell::walkable()),
+						((2, 0), _Cell::walkable()),
+						((2, 1), _Cell::walkable()),
+						((2, 2), _Cell::walkable()),
+					]),
 				},
-				cells: CellGrid::from([
-					((0, 0), _Cell::walkable()),
-					((0, 1), _Cell::walkable()),
-					((0, 2), _Cell::walkable()),
-					((1, 0), _Cell::walkable()),
-					((1, 1), _Cell::walkable()),
-					((1, 2), _Cell::walkable()),
-					((2, 0), _Cell::walkable()),
-					((2, 1), _Cell::walkable()),
-					((2, 2), _Cell::walkable()),
-				]),
 				..default()
 			})
 			.id();
@@ -204,16 +222,18 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(MapCells {
-				size: CellGridSize {
-					x: new_valid!(CellCount, 2),
-					z: new_valid!(CellCount, 2),
+				definition: CellGridDefinition {
+					size: CellGridSize {
+						x: new_valid!(CellCount, 2),
+						z: new_valid!(CellCount, 2),
+					},
+					cells: CellGrid::from([
+						((0, 0), _Cell::walkable()),
+						((0, 1), _Cell::not_walkable()),
+						((1, 0), _Cell::not_walkable()),
+						((1, 1), _Cell::not_walkable()),
+					]),
 				},
-				cells: CellGrid::from([
-					((0, 0), _Cell::walkable()),
-					((0, 1), _Cell::not_walkable()),
-					((1, 0), _Cell::not_walkable()),
-					((1, 1), _Cell::not_walkable()),
-				]),
 				..default()
 			})
 			.id();
@@ -247,18 +267,20 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(MapCells {
-				size: CellGridSize {
-					x: new_valid!(CellCount, 3),
-					z: new_valid!(CellCount, 3),
+				definition: CellGridDefinition {
+					size: CellGridSize {
+						x: new_valid!(CellCount, 3),
+						z: new_valid!(CellCount, 3),
+					},
+					cells: CellGrid::from([
+						((0, 0), _Cell::walkable()),
+						((0, 2), _Cell::walkable()),
+						((1, 0), _Cell::walkable()),
+						((1, 1), _Cell::walkable()),
+						((1, 2), _Cell::walkable()),
+						((2, 2), _Cell::walkable()),
+					]),
 				},
-				cells: CellGrid::from([
-					((0, 0), _Cell::walkable()),
-					((0, 2), _Cell::walkable()),
-					((1, 0), _Cell::walkable()),
-					((1, 1), _Cell::walkable()),
-					((1, 2), _Cell::walkable()),
-					((2, 2), _Cell::walkable()),
-				]),
 				..default()
 			})
 			.id();

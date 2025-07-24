@@ -8,7 +8,7 @@ use crate::{
 		},
 	},
 	errors::GridError,
-	traits::GridCellDistanceDefinition,
+	traits::{GridCellDistanceDefinition, map_cells_extra::MapCellsExtra},
 };
 use bevy::prelude::*;
 use common::traits::thread_safe::ThreadSafe;
@@ -22,7 +22,10 @@ impl HalfOffsetGrid {
 		maps: Query<(&MapGridGraph<TCell>, &MapCells<TCell>)>,
 	) -> Result<Cells<TCell>, GridError>
 	where
-		TCell: TypePath + ThreadSafe + GridCellDistanceDefinition + Clone,
+		TCell: ThreadSafe
+			+ GridCellDistanceDefinition
+			+ Clone
+			+ MapCellsExtra<TExtra = CellGrid<HalfOffsetCell<TCell>>>,
 	{
 		let entity = trigger.target();
 		let Ok(cells_ref) = grids.get(entity) else {
@@ -35,10 +38,10 @@ impl HalfOffsetGrid {
 		let offset = *TCell::CELL_DISTANCE / 2.;
 		let mut index_mismatch = vec![];
 		let mut cells = vec![];
-		let CellGrid(half_offset_cells) = &map.half_offset_cells;
+		let CellGrid(half_offset_cells) = &map.extra;
 
-		for x in 0..(*map.size.x - 1) {
-			for z in 0..(*map.size.z - 1) {
+		for x in 0..(*map.definition.size.x - 1) {
+			for z in 0..(*map.definition.size.z - 1) {
 				let Some(translation) = graph.nodes.get(&(x, z)) else {
 					continue;
 				};
@@ -67,17 +70,24 @@ mod test_get_half_offset_grid {
 			GridGraph,
 			grid_context::{CellCount, CellDistance},
 		},
-		traits::GridCellDistanceDefinition,
+		traits::{
+			GridCellDistanceDefinition,
+			map_cells_extra::{CellGridDefinition, MapCellsExtra},
+		},
 	};
 	use macros::new_valid;
 	use std::collections::HashMap;
 	use testing::{SingleThreadedApp, assert_eq_unordered};
 
-	#[derive(Clone, Debug, PartialEq, TypePath)]
+	#[derive(Debug, PartialEq, Default, Clone)]
 	struct _Cell(&'static str);
 
 	impl GridCellDistanceDefinition for _Cell {
 		const CELL_DISTANCE: CellDistance = new_valid!(CellDistance, 2.);
+	}
+
+	impl MapCellsExtra for _Cell {
+		type TExtra = CellGrid<HalfOffsetCell<Self>>;
 	}
 
 	#[derive(Resource, Debug, PartialEq, Clone)]
@@ -110,12 +120,15 @@ mod test_get_half_offset_grid {
 					]),
 					..default()
 				}),
-				MapCells {
-					size: CellGridSize {
-						x: new_valid!(CellCount, 2),
-						z: new_valid!(CellCount, 2),
+				MapCells::<_Cell> {
+					definition: CellGridDefinition {
+						size: CellGridSize {
+							x: new_valid!(CellCount, 2),
+							z: new_valid!(CellCount, 2),
+						},
+						..default()
 					},
-					half_offset_cells: CellGrid::from([(
+					extra: CellGrid::from([(
 						(0, 0),
 						HalfOffsetCell::from([
 							(Direction::Z, _Cell("00")),
@@ -124,7 +137,6 @@ mod test_get_half_offset_grid {
 							(Direction::NegZ, _Cell("11")),
 						]),
 					)]),
-					..default()
 				},
 			))
 			.id();
@@ -169,12 +181,15 @@ mod test_get_half_offset_grid {
 					]),
 					..default()
 				}),
-				MapCells {
-					size: CellGridSize {
-						x: new_valid!(CellCount, 3),
-						z: new_valid!(CellCount, 2),
+				MapCells::<_Cell> {
+					definition: CellGridDefinition {
+						size: CellGridSize {
+							x: new_valid!(CellCount, 3),
+							z: new_valid!(CellCount, 2),
+						},
+						..default()
 					},
-					half_offset_cells: CellGrid::from([
+					extra: CellGrid::from([
 						(
 							(0, 0),
 							HalfOffsetCell::from([
@@ -194,7 +209,6 @@ mod test_get_half_offset_grid {
 							]),
 						),
 					]),
-					..default()
 				},
 			))
 			.id();
@@ -248,12 +262,15 @@ mod test_get_half_offset_grid {
 					]),
 					..default()
 				}),
-				MapCells {
-					size: CellGridSize {
-						x: new_valid!(CellCount, 2),
-						z: new_valid!(CellCount, 2),
+				MapCells::<_Cell> {
+					definition: CellGridDefinition {
+						size: CellGridSize {
+							x: new_valid!(CellCount, 2),
+							z: new_valid!(CellCount, 2),
+						},
+						..default()
 					},
-					half_offset_cells: CellGrid::from([(
+					extra: CellGrid::from([(
 						(0, 0),
 						HalfOffsetCell::from([
 							(Direction::Z, _Cell("00")),
@@ -262,7 +279,6 @@ mod test_get_half_offset_grid {
 							(Direction::NegZ, _Cell("11")),
 						]),
 					)]),
-					..default()
 				},
 			))
 			.id();
@@ -302,12 +318,15 @@ mod test_get_half_offset_grid {
 					]),
 					..default()
 				}),
-				MapCells {
-					size: CellGridSize {
-						x: new_valid!(CellCount, 3),
-						z: new_valid!(CellCount, 2),
+				MapCells::<_Cell> {
+					definition: CellGridDefinition {
+						size: CellGridSize {
+							x: new_valid!(CellCount, 3),
+							z: new_valid!(CellCount, 2),
+						},
+						..default()
 					},
-					half_offset_cells: CellGrid::from([(
+					extra: CellGrid::from([(
 						(0, 0),
 						HalfOffsetCell::from([
 							(Direction::Z, _Cell("00")),
@@ -316,7 +335,6 @@ mod test_get_half_offset_grid {
 							(Direction::NegZ, _Cell("11")),
 						]),
 					)]),
-					..default()
 				},
 			))
 			.id();

@@ -2,7 +2,11 @@ use crate::{
 	components::map::cells::parsed_color::ParsedColor,
 	grid_graph::grid_context::CellDistance,
 	resources::agents::color_lookup::AgentsColorLookup,
-	traits::{GridCellDistanceDefinition, parse_map_image::ParseMapImage},
+	traits::{
+		GridCellDistanceDefinition,
+		map_cells_extra::MapCellsExtra,
+		parse_map_image::ParseMapImage,
+	},
 };
 use common::errors::Unreachable;
 use std::marker::PhantomData;
@@ -37,4 +41,8 @@ impl<TCell> ParseMapImage<ParsedColor> for Agent<TCell> {
 			_ => Ok(Self::None),
 		}
 	}
+}
+
+impl<TCell> MapCellsExtra for Agent<TCell> {
+	type TExtra = ();
 }

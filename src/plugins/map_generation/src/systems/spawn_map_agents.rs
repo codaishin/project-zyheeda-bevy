@@ -23,14 +23,14 @@ where
 		mut commands: Commands,
 		cells: Query<(Entity, &PersistentEntity, &Self)>,
 	) {
-		for (entity, persistent_entity, MapCells { cells, size, .. }) in &cells {
+		for (entity, persistent_entity, MapCells { definition, .. }) in &cells {
 			let context = GridContext {
-				cell_count_x: size.x,
-				cell_count_z: size.z,
+				cell_count_x: definition.size.x,
+				cell_count_z: definition.size.z,
 				cell_distance: TCell::CELL_DISTANCE,
 			};
 			let min = context.grid_min();
-			let CellGrid(cells) = cells;
+			let CellGrid(cells) = &definition.cells;
 
 			for ((x, z), cell) in cells.iter() {
 				match cell {
@@ -70,6 +70,7 @@ mod tests {
 	use crate::{
 		cell_grid_size::CellGridSize,
 		grid_graph::grid_context::{CellCount, CellDistance},
+		traits::map_cells_extra::CellGridDefinition,
 	};
 	use macros::new_valid;
 	use testing::{SingleThreadedApp, assert_count, assert_eq_unordered};
@@ -99,11 +100,13 @@ mod tests {
 	fn spawn_player_on_1_by_1_grid() {
 		let mut app = setup();
 		app.world_mut().spawn(MapCells {
-			size: CellGridSize {
-				x: new_valid!(CellCount, 1),
-				z: new_valid!(CellCount, 1),
+			definition: CellGridDefinition {
+				size: CellGridSize {
+					x: new_valid!(CellCount, 1),
+					z: new_valid!(CellCount, 1),
+				},
+				cells: CellGrid::from([((0, 0), Agent::<_Cell>::Player)]),
 			},
-			cells: CellGrid::from([((0, 0), Agent::<_Cell>::Player)]),
 			..default()
 		});
 
@@ -120,11 +123,13 @@ mod tests {
 	fn spawn_enemy_on_1_by_1_grid() {
 		let mut app = setup();
 		app.world_mut().spawn(MapCells {
-			size: CellGridSize {
-				x: new_valid!(CellCount, 1),
-				z: new_valid!(CellCount, 1),
+			definition: CellGridDefinition {
+				size: CellGridSize {
+					x: new_valid!(CellCount, 1),
+					z: new_valid!(CellCount, 1),
+				},
+				cells: CellGrid::from([((0, 0), Agent::<_Cell>::Enemy)]),
 			},
-			cells: CellGrid::from([((0, 0), Agent::<_Cell>::Enemy)]),
 			..default()
 		});
 
@@ -141,21 +146,23 @@ mod tests {
 	fn spawn_on_3_by_3_grid() {
 		let mut app = setup();
 		app.world_mut().spawn(MapCells {
-			size: CellGridSize {
-				x: new_valid!(CellCount, 3),
-				z: new_valid!(CellCount, 3),
+			definition: CellGridDefinition {
+				size: CellGridSize {
+					x: new_valid!(CellCount, 3),
+					z: new_valid!(CellCount, 3),
+				},
+				cells: CellGrid::from([
+					((0, 0), Agent::<_Cell>::Enemy),
+					((0, 1), Agent::<_Cell>::Enemy),
+					((0, 2), Agent::<_Cell>::Enemy),
+					((1, 0), Agent::<_Cell>::Player),
+					((1, 1), Agent::<_Cell>::Enemy),
+					((1, 2), Agent::<_Cell>::Enemy),
+					((2, 0), Agent::<_Cell>::Enemy),
+					((2, 1), Agent::<_Cell>::Enemy),
+					((2, 2), Agent::<_Cell>::Enemy),
+				]),
 			},
-			cells: CellGrid::from([
-				((0, 0), Agent::<_Cell>::Enemy),
-				((0, 1), Agent::<_Cell>::Enemy),
-				((0, 2), Agent::<_Cell>::Enemy),
-				((1, 0), Agent::<_Cell>::Player),
-				((1, 1), Agent::<_Cell>::Enemy),
-				((1, 2), Agent::<_Cell>::Enemy),
-				((2, 0), Agent::<_Cell>::Enemy),
-				((2, 1), Agent::<_Cell>::Enemy),
-				((2, 2), Agent::<_Cell>::Enemy),
-			]),
 			..default()
 		});
 
@@ -188,11 +195,13 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(MapCells {
-				size: CellGridSize {
-					x: new_valid!(CellCount, 1),
-					z: new_valid!(CellCount, 1),
+				definition: CellGridDefinition {
+					size: CellGridSize {
+						x: new_valid!(CellCount, 1),
+						z: new_valid!(CellCount, 1),
+					},
+					cells: CellGrid::from([((0, 0), Agent::<_Cell>::Player)]),
 				},
-				cells: CellGrid::from([((0, 0), Agent::<_Cell>::Player)]),
 				..default()
 			})
 			.id();
@@ -209,11 +218,13 @@ mod tests {
 		app.world_mut().spawn((
 			persistent_entity,
 			MapCells {
-				size: CellGridSize {
-					x: new_valid!(CellCount, 1),
-					z: new_valid!(CellCount, 1),
+				definition: CellGridDefinition {
+					size: CellGridSize {
+						x: new_valid!(CellCount, 1),
+						z: new_valid!(CellCount, 1),
+					},
+					cells: CellGrid::from([((0, 0), Agent::<_Cell>::Player)]),
 				},
-				cells: CellGrid::from([((0, 0), Agent::<_Cell>::Player)]),
 				..default()
 			},
 		));
@@ -234,11 +245,13 @@ mod tests {
 		app.world_mut().spawn((
 			persistent_entity,
 			MapCells {
-				size: CellGridSize {
-					x: new_valid!(CellCount, 1),
-					z: new_valid!(CellCount, 1),
+				definition: CellGridDefinition {
+					size: CellGridSize {
+						x: new_valid!(CellCount, 1),
+						z: new_valid!(CellCount, 1),
+					},
+					cells: CellGrid::from([((0, 0), Agent::<_Cell>::Enemy)]),
 				},
-				cells: CellGrid::from([((0, 0), Agent::<_Cell>::Enemy)]),
 				..default()
 			},
 		));
