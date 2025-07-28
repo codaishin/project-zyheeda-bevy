@@ -1,9 +1,9 @@
 use crate::traits::insert_attack::InsertAttack;
 use bevy::{ecs::system::EntityCommands, pbr::NotShadowCaster, prelude::*};
 use common::{
-	blocker::Blocker,
 	components::{
 		insert_asset::InsertAsset,
+		is_blocker::Blocker,
 		lifetime::Lifetime,
 		persistent_entity::PersistentEntity,
 	},

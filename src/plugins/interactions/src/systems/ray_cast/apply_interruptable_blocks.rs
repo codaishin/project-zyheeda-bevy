@@ -1,23 +1,26 @@
 use super::execute_ray_caster::RayCastResult;
-use crate::components::is::{InterruptableRay, Is};
+use crate::components::{blockable::Blockable, blocked_by::BlockedBy};
 use bevy::prelude::*;
 use common::{
-	blocker::{Blocker, Blockers},
-	components::collider_relationship::ColliderOfInteractionTarget,
+	components::{
+		collider_relationship::ColliderOfInteractionTarget,
+		is_blocker::{Blocker, IsBlocker},
+	},
 	traits::cast_ray::TimeOfImpact,
 };
 use std::collections::{HashMap, HashSet};
 
 pub(crate) fn apply_interruptable_ray_blocks(
 	In(mut ray_casts): In<HashMap<Entity, RayCastResult>>,
-	mut interruptable_rays: Query<(Entity, &Is<InterruptableRay>)>,
-	blockers: Query<&Blockers>,
+	mut interruptable_rays: Query<(Entity, &Blockable, &BlockedBy)>,
+	blockers: Query<&IsBlocker>,
 	colliders: Query<&ColliderOfInteractionTarget>,
 ) -> HashMap<Entity, RayCastResult> {
-	let colliders = &colliders;
-	let blockers = &blockers;
+	for (entity, blockable, BlockedBy(interrupters)) in &mut interruptable_rays {
+		if blockable != &Blockable::Beam {
+			continue;
+		}
 
-	for (entity, Is(interruptable)) in &mut interruptable_rays {
 		let Some(ray_cast) = ray_casts.get_mut(&entity) else {
 			continue;
 		};
@@ -33,7 +36,7 @@ pub(crate) fn apply_interruptable_ray_blocks(
 				.map(ColliderOfInteractionTarget::target)
 				.unwrap_or(*hit);
 			let hit = blockers.get(hit).ok();
-			if is_interrupted(interruptable, hit) {
+			if is_interrupted(interrupters, hit) {
 				interrupt = Some(*toi);
 			}
 			true
@@ -56,16 +59,16 @@ pub(crate) fn apply_interruptable_ray_blocks(
 	ray_casts
 }
 
-fn is_interrupted(interruptable: &InterruptableRay, hit: Option<&Blockers>) -> bool {
-	let Some(Blockers(blockers)) = hit else {
+fn is_interrupted(interrupters: &HashSet<Blocker>, hit: Option<&IsBlocker>) -> bool {
+	let Some(IsBlocker(blockers)) = hit else {
 		return false;
 	};
 
-	is_effected(interruptable, blockers)
+	is_effected(interrupters, blockers)
 }
 
-fn is_effected(InterruptableRay(by): &InterruptableRay, blockers: &HashSet<Blocker>) -> bool {
-	by.intersection(blockers).count() != 0
+fn is_effected(interrupters: &HashSet<Blocker>, blockers: &HashSet<Blocker>) -> bool {
+	interrupters.intersection(blockers).next().is_some()
 }
 
 #[cfg(test)]
@@ -88,14 +91,12 @@ mod tests {
 		let close = app.world_mut().spawn_empty().id();
 		let blocker = app
 			.world_mut()
-			.spawn(Blockers::from([Blocker::Physical]))
+			.spawn(IsBlocker::from([Blocker::Physical]))
 			.id();
 		let far = app.world_mut().spawn_empty().id();
 		let interruptable = app
 			.world_mut()
-			.spawn(Is::<InterruptableRay>::interacting_with([
-				Blocker::Physical,
-			]))
+			.spawn((Blockable::Beam, BlockedBy::from([Blocker::Physical])))
 			.id();
 		let ray_casts = HashMap::from([(
 			interruptable,
@@ -139,7 +140,7 @@ mod tests {
 		let close = app.world_mut().spawn_empty().id();
 		let root = app
 			.world_mut()
-			.spawn(Blockers::from([Blocker::Physical]))
+			.spawn(IsBlocker::from([Blocker::Physical]))
 			.id();
 		let blocker = app
 			.world_mut()
@@ -148,9 +149,7 @@ mod tests {
 		let far = app.world_mut().spawn_empty().id();
 		let interruptable = app
 			.world_mut()
-			.spawn(Is::<InterruptableRay>::interacting_with([
-				Blocker::Physical,
-			]))
+			.spawn((Blockable::Beam, BlockedBy::from([Blocker::Physical])))
 			.id();
 		let ray_casts = HashMap::from([(
 			interruptable,
@@ -189,18 +188,16 @@ mod tests {
 
 	#[test]
 	fn do_nothing_if_not_blocked_by_anything() -> Result<(), RunSystemError> {
-		let no_blockers = [];
-
 		let mut app = setup();
 		let close = app.world_mut().spawn_empty().id();
 		let blocker = app
 			.world_mut()
-			.spawn(Blockers::from([Blocker::Physical]))
+			.spawn(IsBlocker::from([Blocker::Physical]))
 			.id();
 		let far = app.world_mut().spawn_empty().id();
 		let interruptable = app
 			.world_mut()
-			.spawn(Is::<InterruptableRay>::interacting_with(no_blockers))
+			.spawn((Blockable::Beam, BlockedBy::from([])))
 			.id();
 		let ray_casts = HashMap::from([(
 			interruptable,
@@ -247,12 +244,64 @@ mod tests {
 		let close = app.world_mut().spawn_empty().id();
 		let blocker = app
 			.world_mut()
-			.spawn(Blockers::from([Blocker::Physical]))
+			.spawn(IsBlocker::from([Blocker::Physical]))
 			.id();
 		let far = app.world_mut().spawn_empty().id();
 		let interruptable = app
 			.world_mut()
-			.spawn(Is::<InterruptableRay>::interacting_with([Blocker::Force]))
+			.spawn((Blockable::Beam, BlockedBy::from([Blocker::Force])))
+			.id();
+		let ray_casts = HashMap::from([(
+			interruptable,
+			RayCastResult {
+				info: RayCastInfo {
+					hits: vec![
+						(close, TimeOfImpact(1.)),
+						(blocker, TimeOfImpact(2.)),
+						(far, TimeOfImpact(3.)),
+					],
+					max_toi: TimeOfImpact(99.),
+					..default()
+				},
+			},
+		)]);
+
+		let ray_casts = app
+			.world_mut()
+			.run_system_once_with(apply_interruptable_ray_blocks, ray_casts)?;
+
+		assert_eq!(
+			HashMap::from([(
+				interruptable,
+				RayCastResult {
+					info: RayCastInfo {
+						hits: vec![
+							(close, TimeOfImpact(1.)),
+							(blocker, TimeOfImpact(2.)),
+							(far, TimeOfImpact(3.)),
+						],
+						max_toi: TimeOfImpact(99.),
+						..default()
+					},
+				}
+			)]),
+			ray_casts
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn do_nothing_if_it_is_no_beam() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let close = app.world_mut().spawn_empty().id();
+		let blocker = app
+			.world_mut()
+			.spawn(IsBlocker::from([Blocker::Physical]))
+			.id();
+		let far = app.world_mut().spawn_empty().id();
+		let interruptable = app
+			.world_mut()
+			.spawn((Blockable::Fragile, BlockedBy::from([Blocker::Physical])))
 			.id();
 		let ray_casts = HashMap::from([(
 			interruptable,

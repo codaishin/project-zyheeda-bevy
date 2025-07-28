@@ -30,12 +30,17 @@ impl IterFinite for Blocker {
 	}
 }
 
+// FIXME: Move to interactions plugin, once dependencies between player, enemy and interactions
+// is figured out: interactions should depend on player/enemy plugins
 #[derive(Component, Default, Debug, PartialEq)]
-pub struct Blockers(pub HashSet<Blocker>);
+pub struct IsBlocker(pub HashSet<Blocker>);
 
-impl<const N: usize> From<[Blocker; N]> for Blockers {
-	fn from(blockers: [Blocker; N]) -> Self {
-		Self(HashSet::from(blockers))
+impl<T> From<T> for IsBlocker
+where
+	T: IntoIterator<Item = Blocker>,
+{
+	fn from(blockers: T) -> Self {
+		Self(HashSet::from_iter(blockers))
 	}
 }
 

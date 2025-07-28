@@ -4,8 +4,9 @@ pub mod interacting_entities;
 pub mod running_interactions;
 
 pub(crate) mod beam;
+pub(crate) mod blockable;
+pub(crate) mod blocked_by;
 pub(crate) mod effect;
-pub(crate) mod is;
 
 use bevy::{
 	ecs::{component::Component, entity::Entity},

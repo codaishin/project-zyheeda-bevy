@@ -7,15 +7,19 @@ mod resources;
 mod systems;
 
 use crate::{
-	components::{effect::force::ForceEffect, force_affected::ForceAffected},
+	components::{
+		blockable::Blockable,
+		blocked_by::BlockedBy,
+		effect::force::ForceEffect,
+		force_affected::ForceAffected,
+	},
 	observers::update_blockers::UpdateBlockersObserver,
 	systems::interactions::act_on::ActOnSystem,
 };
 use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
 	self,
-	blocker::Blocker,
-	components::life::Life,
+	components::{is_blocker::Blocker, life::Life},
 	traits::{
 		delta::Delta,
 		handles_interactions::{BeamParameters, HandlesInteractions},
@@ -28,7 +32,6 @@ use components::{
 	effect::{deal_damage::DealDamageEffect, gravity::GravityEffect},
 	gravity_affected::GravityAffected,
 	interacting_entities::InteractingEntities,
-	is::{Fragile, InterruptableRay, Is},
 	running_interactions::RunningInteractions,
 };
 use events::{InteractionEvent, Ray};
@@ -154,14 +157,14 @@ impl<TDependencies> HandlesInteractions for InteractionsPlugin<TDependencies> {
 	where
 		TBlockers: IntoIterator<Item = Blocker>,
 	{
-		Is::<Fragile>::interacting_with(blockers)
+		(Blockable::Fragile, BlockedBy::from(blockers))
 	}
 
 	fn is_ray_interrupted_by<TBlockers>(blockers: TBlockers) -> impl Bundle
 	where
 		TBlockers: IntoIterator<Item = Blocker>,
 	{
-		Is::<InterruptableRay>::interacting_with(blockers)
+		(Blockable::Beam, BlockedBy::from(blockers))
 	}
 
 	fn beam_from<T>(value: &T) -> impl Bundle

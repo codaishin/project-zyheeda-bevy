@@ -203,15 +203,12 @@ impl SimplePrefab for Motion {
 
 #[cfg(test)]
 mod tests {
-	use std::collections::HashSet;
-
 	use super::*;
 	use crate::components::when_traveled_insert::DestroyAfterDistanceTraveled;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use bevy_rapier3d::prelude::ActiveCollisionTypes;
 	use common::{
-		blocker::Blocker,
-		components::persistent_entity::PersistentEntity,
+		components::{is_blocker::Blocker, persistent_entity::PersistentEntity},
 		tools::{
 			Units,
 			UnitsPerSecond,
@@ -222,6 +219,7 @@ mod tests {
 			handles_interactions::{BeamParameters, HandlesInteractions},
 		},
 	};
+	use std::collections::HashSet;
 
 	struct _Interactions;
 

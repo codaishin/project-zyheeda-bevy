@@ -6,7 +6,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	blocker::Blocker,
+	components::is_blocker::Blocker,
 	tools::{Units, UnitsPerSecond},
 	traits::{
 		clamp_zero_positive::ClampZeroPositive,

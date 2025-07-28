@@ -4,7 +4,6 @@ pub(crate) mod update_blockers;
 
 use bevy::prelude::Entity;
 use bevy_rapier3d::prelude::CollisionEvent;
-use common::blocker::Blocker;
 
 pub trait FromCollisionEvent {
 	fn from_collision<F>(event: &CollisionEvent, get_root: F) -> Self
@@ -25,10 +24,4 @@ pub(crate) trait Track<TEvent> {
 pub(crate) trait Flush {
 	type TResult;
 	fn flush(&mut self) -> Self::TResult;
-}
-
-pub(crate) trait Blockable {
-	fn blockable<TBlockers>(blockers: TBlockers) -> Self
-	where
-		TBlockers: IntoIterator<Item = Blocker>;
 }

@@ -1,8 +1,11 @@
 use crate::traits::insert_attack::InsertAttack;
 use bevy::prelude::*;
 use common::{
-	blocker::{Blocker, Blockers},
-	components::{collider_relationship::InteractionTarget, persistent_entity::PersistentEntity},
+	components::{
+		collider_relationship::InteractionTarget,
+		is_blocker::{Blocker, IsBlocker},
+		persistent_entity::PersistentEntity,
+	},
 	tools::{
 		aggro_range::AggroRange,
 		attack_range::AttackRange,
@@ -23,7 +26,7 @@ use std::{sync::Arc, time::Duration};
 	PersistentEntity,
 	Transform,
 	Visibility,
-	Blockers = [Blocker::Character],
+	IsBlocker = [Blocker::Character],
 )]
 pub struct EnemyBehavior {
 	pub(crate) speed: Speed,

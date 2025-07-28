@@ -1,4 +1,7 @@
-use crate::{blocker::Blocker, components::persistent_entity::PersistentEntity, tools::Units};
+use crate::{
+	components::{is_blocker::Blocker, persistent_entity::PersistentEntity},
+	tools::Units,
+};
 use bevy::prelude::*;
 
 pub trait HandlesInteractions {
