@@ -84,6 +84,11 @@ pub enum Motion {
 		speed: UnitsPerSecond,
 		range: Units,
 	},
+	Beam {
+		caster: PersistentEntity,
+		spawner: Spawner,
+		range: Units,
+	},
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Default, Serialize, Deserialize)]
