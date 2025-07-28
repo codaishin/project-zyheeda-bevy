@@ -1,5 +1,5 @@
 use crate::{
-	context::{ComponentString, EntityLoadBuffer, SaveBuffer},
+	context::{ComponentString, SaveBuffer},
 	errors::SerdeJsonError,
 	traits::{
 		buffer_entity_component::BufferEntityComponent,
@@ -8,7 +8,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::traits::{handles_saving::SavableComponent, load_asset::LoadAsset};
-use serde_json::Error;
+use serde_json::{Error, Value};
 use std::{
 	any::type_name,
 	collections::{HashSet, hash_map::Entry},
@@ -18,11 +18,8 @@ use std::{
 #[derive(Debug, Clone)]
 pub(crate) struct ComponentHandler<TLoadAsset = AssetServer> {
 	buffer_fn: fn(&mut SaveBuffer, EntityRef) -> Result<(), Error>,
-	insert_fn: fn(
-		&mut EntityCommands,
-		&mut EntityLoadBuffer,
-		&mut TLoadAsset,
-	) -> Result<(), SerdeJsonError>,
+	insert_fn: fn(&mut EntityCommands, Value, &mut TLoadAsset) -> Result<(), SerdeJsonError>,
+	component_name_fn: fn() -> &'static str,
 	_p: PhantomData<TLoadAsset>,
 }
 
@@ -37,6 +34,7 @@ where
 		Self {
 			buffer_fn: Self::buffer::<T>,
 			insert_fn: Self::insert::<T>,
+			component_name_fn: || type_name::<T>(),
 			_p: PhantomData,
 		}
 	}
@@ -66,16 +64,13 @@ where
 
 	fn insert<T>(
 		entity: &mut EntityCommands,
-		components: &mut EntityLoadBuffer,
+		component: Value,
 		asset_server: &mut TLoadAsset,
 	) -> Result<(), SerdeJsonError>
 	where
 		T: SavableComponent,
 	{
-		let Some(dto) = components.remove(type_name::<T>()) else {
-			return Ok(());
-		};
-		let dto = serde_json::from_value::<T::TDto>(dto).map_err(SerdeJsonError)?;
+		let dto = serde_json::from_value::<T::TDto>(component).map_err(SerdeJsonError)?;
 		let Ok(component) = T::try_load_from(dto, asset_server);
 
 		entity.try_insert(component);
@@ -104,13 +99,20 @@ impl<TLoadAsset> InsertEntityComponent<TLoadAsset> for ComponentHandler<TLoadAss
 where
 	TLoadAsset: LoadAsset,
 {
+	type TComponent = Value;
+	type TError = SerdeJsonError;
+
 	fn insert_component(
 		&self,
 		entity: &mut EntityCommands,
-		components: &mut EntityLoadBuffer,
+		components: Value,
 		asset_server: &mut TLoadAsset,
 	) -> Result<(), SerdeJsonError> {
 		(self.insert_fn)(entity, components, asset_server)
+	}
+
+	fn component_name(&self) -> &'static str {
+		(self.component_name_fn)()
 	}
 }
 
@@ -324,6 +326,7 @@ mod tests {
 	mod deserialize {
 		use super::*;
 		use bevy::ecs::system::{RunSystemError, RunSystemOnce};
+		use serde_json::json;
 
 		#[derive(Component, SavableComponent, Serialize, Deserialize, Clone, PartialEq, Debug)]
 		struct _C {
@@ -343,13 +346,9 @@ mod tests {
 			}
 		}
 
-		#[derive(Resource, Debug, PartialEq)]
-		struct _Buffer(EntityLoadBuffer);
-
-		fn setup(components: EntityLoadBuffer) -> App {
+		fn setup() -> App {
 			let mut app = App::new().single_threaded(Update);
 
-			app.insert_resource(_Buffer(components));
 			app.insert_resource(_LoadAsset);
 
 			app
@@ -357,23 +356,16 @@ mod tests {
 
 		#[test]
 		fn component_with_dto() -> Result<(), RunSystemError> {
-			let components = HashMap::from([(
-				type_name::<_A>().to_owned(),
-				from_str(&to_string(&_ADto { value: 42 }).unwrap()).unwrap(),
-			)]);
-			let mut app = setup(components);
+			let mut app = setup();
 			let entity = app.world_mut().spawn_empty().id();
 			let handler = ComponentHandler::<_LoadAsset>::new::<_A>();
 
 			_ = app.world_mut().run_system_once(
-				move |mut commands: Commands,
-				      mut buffer: ResMut<_Buffer>,
-				      mut asset_server: ResMut<_LoadAsset>| {
+				move |mut commands: Commands, mut asset_server: ResMut<_LoadAsset>| {
 					let entity = &mut commands.entity(entity);
-					let _Buffer(buffer) = buffer.as_mut();
 					let asset_server = asset_server.as_mut();
 
-					handler.insert_component(entity, buffer, asset_server)
+					handler.insert_component(entity, json!({"value": 42}), asset_server)
 				},
 			)?;
 
@@ -386,113 +378,35 @@ mod tests {
 
 		#[test]
 		fn component_without_dto() -> Result<(), RunSystemError> {
-			let components = HashMap::from([(
-				type_name::<_B>().to_owned(),
-				from_str(&to_string(&_B { v: 42 }).unwrap()).unwrap(),
-			)]);
-			let mut app = setup(components);
+			let mut app = setup();
 			let entity = app.world_mut().spawn_empty().id();
 			let handler = ComponentHandler::<_LoadAsset>::new::<_B>();
 
 			_ = app.world_mut().run_system_once(
-				move |mut commands: Commands,
-				      mut buffer: ResMut<_Buffer>,
-				      mut asset_server: ResMut<_LoadAsset>| {
+				move |mut commands: Commands, mut asset_server: ResMut<_LoadAsset>| {
 					let entity = &mut commands.entity(entity);
-					let _Buffer(buffer) = buffer.as_mut();
 					let asset_server = asset_server.as_mut();
 
-					handler.insert_component(entity, buffer, asset_server)
+					handler.insert_component(entity, json!({"v": 42}), asset_server)
 				},
 			)?;
 
-			assert_eq!(Some(&_B { v: 42 }), app.world().entity(entity).get::<_B>(),);
-			Ok(())
-		}
-
-		#[test]
-		fn ignore_non_matching_component() -> Result<(), RunSystemError> {
-			let components = HashMap::from([(
-				type_name::<_B>().to_owned(),
-				from_str(&to_string(&_B { v: 42 }).unwrap()).unwrap(),
-			)]);
-			let mut app = setup(components);
-			let entity = app.world_mut().spawn_empty().id();
-			let handler = ComponentHandler::<_LoadAsset>::new::<_A>();
-
-			_ = app.world_mut().run_system_once(
-				move |mut commands: Commands,
-				      mut buffer: ResMut<_Buffer>,
-				      mut asset_server: ResMut<_LoadAsset>| {
-					let entity = &mut commands.entity(entity);
-					let _Buffer(buffer) = buffer.as_mut();
-					let asset_server = asset_server.as_mut();
-
-					handler.insert_component(entity, buffer, asset_server)
-				},
-			)?;
-
-			assert_eq!(
-				(false, false),
-				(
-					app.world().entity(entity).contains::<_B>(),
-					app.world().entity(entity).contains::<_A>(),
-				)
-			);
-			Ok(())
-		}
-
-		#[test]
-		fn do_not_components_of_different_types_but_similar_shape() -> Result<(), RunSystemError> {
-			let components = HashMap::from([(
-				type_name::<_B>().to_owned(),
-				from_str(&to_string(&_B { v: 42 }).unwrap()).unwrap(),
-			)]);
-			let mut app = setup(components);
-			let entity = app.world_mut().spawn_empty().id();
-			let handler_b = ComponentHandler::<_LoadAsset>::new::<_B>();
-			let handler_c = ComponentHandler::<_LoadAsset>::new::<_C>();
-
-			app.world_mut().run_system_once(
-				move |mut commands: Commands,
-				      mut buffer: ResMut<_Buffer>,
-				      mut asset_server: ResMut<_LoadAsset>| {
-					let entity = &mut commands.entity(entity);
-					let _Buffer(buffer) = buffer.as_mut();
-					let asset_server = asset_server.as_mut();
-
-					_ = handler_b.insert_component(entity, buffer, asset_server);
-					_ = handler_c.insert_component(entity, buffer, asset_server);
-				},
-			)?;
-
-			assert_eq!(
-				(Some(&_B { v: 42 }), None),
-				(
-					app.world().entity(entity).get::<_B>(),
-					app.world().entity(entity).get::<_C>(),
-				)
-			);
+			assert_eq!(Some(&_B { v: 42 }), app.world().entity(entity).get::<_B>());
 			Ok(())
 		}
 
 		#[test]
 		fn return_errors() -> Result<(), RunSystemError> {
-			let components =
-				HashMap::from([(type_name::<_Fail>().to_owned(), from_str("null").unwrap())]);
-			let mut app = setup(components);
+			let mut app = setup();
 			let entity = app.world_mut().spawn_empty().id();
 			let handler = ComponentHandler::<_LoadAsset>::new::<_Fail>();
 
 			let result = app.world_mut().run_system_once(
-				move |mut commands: Commands,
-				      mut buffer: ResMut<_Buffer>,
-				      mut asset_server: ResMut<_LoadAsset>| {
+				move |mut commands: Commands, mut asset_server: ResMut<_LoadAsset>| {
 					let entity = &mut commands.entity(entity);
-					let _Buffer(buffer) = buffer.as_mut();
 					let asset_server = asset_server.as_mut();
 
-					handler.insert_component(entity, buffer, asset_server)
+					handler.insert_component(entity, json!("{v: 42}"), asset_server)
 				},
 			)?;
 
@@ -506,41 +420,10 @@ mod tests {
 		}
 
 		#[test]
-		fn pop_entity_from_buffer() -> Result<(), RunSystemError> {
-			let components = HashMap::from([
-				(
-					type_name::<_B>().to_owned(),
-					from_str(&to_string(&_B { v: 42 }).unwrap()).unwrap(),
-				),
-				(
-					type_name::<_C>().to_owned(),
-					from_str(&to_string(&_C { v: 42 }).unwrap()).unwrap(),
-				),
-			]);
-			let mut app = setup(components);
-			let entity = app.world_mut().spawn_empty().id();
-			let handler = ComponentHandler::<_LoadAsset>::new::<_B>();
+		fn get_component_name() {
+			let handler = ComponentHandler::<_LoadAsset>::new::<_A>();
 
-			_ = app.world_mut().run_system_once(
-				move |mut commands: Commands,
-				      mut buffer: ResMut<_Buffer>,
-				      mut asset_server: ResMut<_LoadAsset>| {
-					let entity = &mut commands.entity(entity);
-					let _Buffer(buffer) = buffer.as_mut();
-					let asset_server = asset_server.as_mut();
-
-					handler.insert_component(entity, buffer, asset_server)
-				},
-			)?;
-
-			assert_eq!(
-				&_Buffer(HashMap::from([(
-					type_name::<_C>().to_owned(),
-					from_str(&to_string(&_C { v: 42 }).unwrap()).unwrap(),
-				)])),
-				app.world().resource::<_Buffer>()
-			);
-			Ok(())
+			assert_eq!(type_name::<_A>(), handler.component_name());
 		}
 	}
 }

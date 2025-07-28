@@ -8,13 +8,13 @@ use bevy::prelude::*;
 use common::traits::load_asset::LoadAsset;
 use std::sync::{Arc, Mutex};
 
-impl<T> SaveContext<FileIO, T> {
+impl<T, TComponent> SaveContext<FileIO, T, TComponent> {
 	pub(crate) fn read_buffer_system<TLoadAsset>(
 		context: Arc<Mutex<Self>>,
-	) -> impl Fn(Commands, ResMut<TLoadAsset>) -> Result<(), DeserializationOrLockError>
+	) -> impl Fn(Commands, ResMut<TLoadAsset>) -> Result<(), DeserializationOrLockError<T::TError>>
 	where
 		TLoadAsset: Resource + LoadAsset,
-		T: InsertEntityComponent<TLoadAsset>,
+		T: InsertEntityComponent<TLoadAsset, TComponent = TComponent>,
 	{
 		move |commands, asset_server| {
 			let Ok(mut context) = context.lock() else {
@@ -34,11 +34,11 @@ impl<T> SaveContext<FileIO, T> {
 	}
 }
 
-fn new_entities<'a, TAssetServer>(
+fn new_entities<'a, TAssetServer, TComponent, TNoInsert>(
 	mut commands: Commands<'a, 'a>,
-	buffer: &mut LoadBuffer,
+	buffer: &mut LoadBuffer<TComponent>,
 	asset_server: ResMut<'a, TAssetServer>,
-) -> EntitiesBuffer<'a, TAssetServer>
+) -> EntitiesBuffer<'a, TAssetServer, TComponent, TNoInsert>
 where
 	TAssetServer: Resource,
 {
@@ -55,23 +55,25 @@ where
 	}
 }
 
-struct EntitiesBuffer<'a, TAssetServer>
+struct EntitiesBuffer<'a, TAssetServer, TComponent, TNoInsert>
 where
 	TAssetServer: Resource,
 {
-	entities: Vec<(Entity, EntityLoadBuffer)>,
+	entities: Vec<(Entity, EntityLoadBuffer<TComponent>)>,
 	commands: Commands<'a, 'a>,
 	asset_server: ResMut<'a, TAssetServer>,
-	errors: IOErrors<InsertionError>,
+	errors: IOErrors<InsertionError<TNoInsert>>,
 }
 
-impl<'a, TAssetServer> EntitiesBuffer<'a, TAssetServer>
+impl<'a, TAssetServer, TComponent, TNoInsert>
+	EntitiesBuffer<'a, TAssetServer, TComponent, TNoInsert>
 where
 	TAssetServer: Resource + LoadAsset,
 {
 	fn with_components<TComponentHandler>(mut self, handlers: &[TComponentHandler]) -> Self
 	where
-		TComponentHandler: InsertEntityComponent<TAssetServer>,
+		TComponentHandler:
+			InsertEntityComponent<TAssetServer, TComponent = TComponent, TError = TNoInsert>,
 	{
 		let assets = &mut self.asset_server;
 
@@ -80,10 +82,13 @@ where
 				continue;
 			};
 			for handler in handlers {
-				let Err(err) = handler.insert_component(&mut entity, components, assets) else {
+				let Some(component) = components.remove(handler.component_name()) else {
 					continue;
 				};
-				self.errors.0.push(InsertionError::Serde(err));
+				let Err(err) = handler.insert_component(&mut entity, component, assets) else {
+					continue;
+				};
+				self.errors.0.push(InsertionError::CouldNotInsert(err));
 			}
 		}
 
@@ -94,26 +99,26 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{context::EntityLoadBuffer, errors::SerdeJsonError, file_io::FileIO};
+	use crate::file_io::FileIO;
 	use bevy::{
 		asset::AssetPath,
 		ecs::system::{RunSystemError, RunSystemOnce},
 	};
 	use common::traits::load_asset::LoadAsset;
-	use serde::{Deserialize, Serialize};
+	use serde_json::{Value, json};
 	use std::{any::type_name, collections::HashMap, path::PathBuf, sync::LazyLock};
 	use testing::{SingleThreadedApp, assert_count};
 
-	#[derive(Component, Debug, PartialEq, Clone, Serialize, Deserialize)]
-	struct _A(EntityLoadBuffer);
+	#[derive(Component, Debug, PartialEq, Clone)]
+	struct _A(Value);
 
 	#[derive(Component, Debug, PartialEq, Clone)]
 	struct _CountA {
 		a_count: usize,
 	}
 
-	#[derive(Component, Debug, PartialEq, Clone, Serialize, Deserialize)]
-	struct _B(EntityLoadBuffer);
+	#[derive(Component, Debug, PartialEq, Clone)]
+	struct _B(Value);
 
 	#[derive(Resource, Default, Debug, PartialEq)]
 	struct _LoadAsset;
@@ -132,29 +137,42 @@ mod tests {
 		A,
 		B,
 		CountA,
-		Error,
+		ErrorForA,
 	}
 
 	impl InsertEntityComponent<_LoadAsset> for _FakeHandler {
+		type TComponent = Value;
+		type TError = NoInsert;
+
 		fn insert_component<'a>(
 			&self,
 			entity: &mut EntityCommands<'a>,
-			components: &mut EntityLoadBuffer,
+			component: Value,
 			_: &mut _LoadAsset,
-		) -> Result<(), SerdeJsonError> {
+		) -> Result<(), NoInsert> {
 			match self {
-				_FakeHandler::A => entity.insert(_A(components.clone())),
-				_FakeHandler::B => entity.insert(_B(components.clone())),
+				_FakeHandler::A => entity.insert(_A(component)),
+				_FakeHandler::B => entity.insert(_B(component)),
 				_FakeHandler::CountA => entity.insert(_CountA { a_count: 0 }),
-				_FakeHandler::Error => {
-					return Err(SerdeJsonError(serde::de::Error::custom(
-						"Fool! I refuse deserialization",
-					)));
+				_FakeHandler::ErrorForA => {
+					return Err(NoInsert);
 				}
 			};
 			Ok(())
 		}
+
+		fn component_name(&self) -> &'static str {
+			match self {
+				_FakeHandler::A => type_name::<_A>(),
+				_FakeHandler::B => type_name::<_B>(),
+				_FakeHandler::CountA => type_name::<_CountA>(),
+				_FakeHandler::ErrorForA => type_name::<_A>(),
+			}
+		}
 	}
+
+	#[derive(Debug, PartialEq)]
+	struct NoInsert;
 
 	static FILE_IO: LazyLock<FileIO> = LazyLock::new(|| FileIO::with_file(PathBuf::new()));
 
@@ -188,10 +206,7 @@ mod tests {
 	#[test]
 	fn spawn_entity() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let components = HashMap::from([(
-			type_name::<_A>().to_owned(),
-			serde_json::from_str("null").unwrap(),
-		)]);
+		let components = HashMap::from([(type_name::<_A>().to_owned(), json!(null))]);
 		let context = Arc::new(Mutex::new(
 			SaveContext::from(FILE_IO.clone())
 				.with_load_buffer([components.clone()])
@@ -204,7 +219,7 @@ mod tests {
 
 		let [entity] = assert_count!(1, non_observers!(&app));
 		assert_eq!(
-			(Some(&_A(components.clone())), Some(&_B(components.clone()))),
+			(Some(&_A(Value::Null)), None),
 			(entity.get::<_A>(), entity.get::<_B>())
 		);
 		Ok(())
@@ -213,10 +228,7 @@ mod tests {
 	#[test]
 	fn spawn_entity_with_priority_component() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let components = HashMap::from([(
-			type_name::<_A>().to_owned(),
-			serde_json::from_str("null").unwrap(),
-		)]);
+		let components = HashMap::from([(type_name::<_A>().to_owned(), json!(null))]);
 		let context = Arc::new(Mutex::new(
 			SaveContext::from(FILE_IO.clone())
 				.with_load_buffer([components.clone()])
@@ -229,7 +241,7 @@ mod tests {
 
 		let [entity] = assert_count!(1, non_observers!(&app));
 		assert_eq!(
-			(Some(&_A(components.clone())), Some(&_B(components.clone()))),
+			(Some(&_A(json!(null))), None),
 			(entity.get::<_A>(), entity.get::<_B>())
 		);
 		Ok(())
@@ -238,14 +250,8 @@ mod tests {
 	#[test]
 	fn spawn_multiple_entities() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let components_for_entity_1 = HashMap::from([(
-			type_name::<_A>().to_owned(),
-			serde_json::from_str("[1]").unwrap(),
-		)]);
-		let components_for_entity_2 = HashMap::from([(
-			type_name::<_A>().to_owned(),
-			serde_json::from_str("[2]").unwrap(),
-		)]);
+		let components_for_entity_1 = HashMap::from([(type_name::<_A>().to_owned(), json!([1]))]);
+		let components_for_entity_2 = HashMap::from([(type_name::<_A>().to_owned(), json!([2]))]);
 		let context = Arc::new(Mutex::new(
 			SaveContext::from(FILE_IO.clone())
 				.with_load_buffer([
@@ -261,10 +267,7 @@ mod tests {
 
 		let [one, two] = assert_count!(2, non_observers!(&app));
 		assert_eq!(
-			(
-				Some(&_A(components_for_entity_1.clone())),
-				Some(&_A(components_for_entity_2.clone())),
-			),
+			(Some(&_A(json!([1]))), Some(&_A(json!([2]))),),
 			(one.get::<_A>(), two.get::<_A>())
 		);
 		Ok(())
@@ -273,8 +276,14 @@ mod tests {
 	#[test]
 	fn insert_priority_components_on_all_entities_first() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let components_for_entity_1 = HashMap::from([]);
-		let components_for_entity_2 = HashMap::from([]);
+		let components_for_entity_1 = HashMap::from([
+			(type_name::<_CountA>().to_owned(), json!({"a_count": 0})),
+			(type_name::<_A>().to_owned(), json!({"value": 42})),
+		]);
+		let components_for_entity_2 = HashMap::from([
+			(type_name::<_CountA>().to_owned(), json!({"a_count": 0})),
+			(type_name::<_A>().to_owned(), json!({"value": 42})),
+		]);
 		let context = Arc::new(Mutex::new(
 			SaveContext::from(FILE_IO.clone())
 				.with_load_buffer([components_for_entity_1, components_for_entity_2])
@@ -295,17 +304,14 @@ mod tests {
 	}
 
 	#[test]
-	fn return_errors() -> Result<(), RunSystemError> {
+	fn return_high_priority_error() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let components = HashMap::from([(
-			type_name::<_A>().to_owned(),
-			serde_json::from_str("null").unwrap(),
-		)]);
+		let components = HashMap::from([(type_name::<_A>().to_owned(), json!("null"))]);
 		let context = Arc::new(Mutex::new(
 			SaveContext::from(FILE_IO.clone())
-				.with_load_buffer([components.clone()])
-				.with_high_priority_handlers([_FakeHandler::Error, _FakeHandler::Error])
-				.with_low_priority_handlers([_FakeHandler::Error, _FakeHandler::Error]),
+				.with_load_buffer([components])
+				.with_high_priority_handlers([_FakeHandler::ErrorForA])
+				.with_low_priority_handlers([]),
 		));
 
 		let result = app
@@ -314,20 +320,31 @@ mod tests {
 
 		assert_eq!(
 			Err(DeserializationOrLockError::DeserializationErrors(IOErrors(
-				vec![
-					InsertionError::Serde(SerdeJsonError(serde::de::Error::custom(
-						"Fool! I refuse deserialization"
-					))),
-					InsertionError::Serde(SerdeJsonError(serde::de::Error::custom(
-						"Fool! I refuse deserialization"
-					))),
-					InsertionError::Serde(SerdeJsonError(serde::de::Error::custom(
-						"Fool! I refuse deserialization"
-					))),
-					InsertionError::Serde(SerdeJsonError(serde::de::Error::custom(
-						"Fool! I refuse deserialization"
-					))),
-				]
+				vec![InsertionError::CouldNotInsert(NoInsert)]
+			))),
+			result,
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn return_low_priority_error() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let components = HashMap::from([(type_name::<_A>().to_owned(), json!("null"))]);
+		let context = Arc::new(Mutex::new(
+			SaveContext::from(FILE_IO.clone())
+				.with_load_buffer([components])
+				.with_high_priority_handlers([])
+				.with_low_priority_handlers([_FakeHandler::ErrorForA]),
+		));
+
+		let result = app
+			.world_mut()
+			.run_system_once(SaveContext::read_buffer_system(context))?;
+
+		assert_eq!(
+			Err(DeserializationOrLockError::DeserializationErrors(IOErrors(
+				vec![InsertionError::CouldNotInsert(NoInsert)]
 			))),
 			result,
 		);
@@ -337,10 +354,7 @@ mod tests {
 	#[test]
 	fn context_is_empty_when_ran() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let components = HashMap::from([(
-			type_name::<_A>().to_owned(),
-			serde_json::from_str("null").unwrap(),
-		)]);
+		let components = HashMap::from([(type_name::<_A>().to_owned(), json!("null"))]);
 		let context = Arc::new(Mutex::new(
 			SaveContext::from(FILE_IO.clone())
 				.with_load_buffer([components.clone(), components.clone()])

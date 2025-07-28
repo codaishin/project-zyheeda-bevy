@@ -65,13 +65,16 @@ impl From<SerializationOrLockError> for Error {
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
-pub(crate) enum DeserializationOrLockError {
-	DeserializationErrors(IOErrors<InsertionError>),
+pub(crate) enum DeserializationOrLockError<TNoInsert> {
+	DeserializationErrors(IOErrors<InsertionError<TNoInsert>>),
 	LockPoisoned(LockPoisonedError),
 }
 
-impl From<DeserializationOrLockError> for Error {
-	fn from(value: DeserializationOrLockError) -> Self {
+impl<TNoInsert> From<DeserializationOrLockError<TNoInsert>> for Error
+where
+	TNoInsert: Display,
+{
+	fn from(value: DeserializationOrLockError<TNoInsert>) -> Self {
 		match value {
 			DeserializationOrLockError::DeserializationErrors(error) => Self::from(error),
 			DeserializationOrLockError::LockPoisoned(error) => Self::from(error),
@@ -81,15 +84,18 @@ impl From<DeserializationOrLockError> for Error {
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
-pub(crate) enum InsertionError {
-	Serde(SerdeJsonError),
+pub(crate) enum InsertionError<TNoInsert> {
+	CouldNotInsert(TNoInsert),
 	UnknownComponents(Vec<String>),
 }
 
-impl Display for InsertionError {
+impl<TNoInsert> Display for InsertionError<TNoInsert>
+where
+	TNoInsert: Display,
+{
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			InsertionError::Serde(e) => write!(f, "Serde Error: {e}"),
+			InsertionError::CouldNotInsert(e) => write!(f, "Failed Insertion: {e}"),
 			InsertionError::UnknownComponents(c) => write!(f, "UnknownComponents: {c:?}"),
 		}
 	}
