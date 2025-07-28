@@ -199,6 +199,7 @@ impl SimplePrefab for Motion {
 					SetVelocityForward(speed),
 				));
 			}
+			Motion::Beam { .. } => todo!(),
 		}
 		Ok(())
 	}
