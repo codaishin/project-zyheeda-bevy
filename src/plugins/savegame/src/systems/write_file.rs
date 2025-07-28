@@ -1,6 +1,6 @@
 use crate::{
 	context::SaveContext,
-	errors::{ContextIOError, LockPoisonedError, SerdeJsonErrors},
+	errors::{ContextIOError, IOErrors, LockPoisonedError, SerdeJsonError},
 	traits::write_file::WriteFile,
 };
 use bevy::prelude::*;
@@ -36,19 +36,23 @@ impl<TFileIO> SaveContext<TFileIO> {
 			.filter_map(|(_, components)| match to_value(&components) {
 				Ok(value) => Some(value),
 				Err(error) => {
-					errors.push(error);
+					errors.push(SerdeJsonError(error));
 					None
 				}
 			})
 			.collect::<Vec<_>>();
 
 		if !errors.is_empty() {
-			return Err(ContextIOError::SerdeErrors(SerdeJsonErrors(errors)));
+			return Err(ContextIOError::SerdeErrors(IOErrors::from(errors)));
 		}
 
 		let json = match serde_json::to_string(&entities) {
 			Ok(json) => json,
-			Err(err) => return Err(ContextIOError::SerdeErrors(SerdeJsonErrors(vec![err]))),
+			Err(error) => {
+				return Err(ContextIOError::SerdeErrors(IOErrors::from(vec![
+					SerdeJsonError(error),
+				])));
+			}
 		};
 
 		self.io.write(&json).map_err(ContextIOError::FileError)

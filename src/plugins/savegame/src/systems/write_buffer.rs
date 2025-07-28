@@ -45,7 +45,7 @@ pub trait WriteBufferSystem {
 #[cfg(test)]
 mod test_save {
 	use super::*;
-	use crate::errors::EntitySerializationErrors;
+	use crate::errors::{EntitySerializationErrors, SerdeJsonError};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use mockall::mock;
 	use testing::{Mock, SingleThreadedApp, simple_init};
@@ -107,8 +107,8 @@ mod test_save {
 		let context = Mock_SaveContext::new_mock(|mock| {
 			mock.expect_write_buffer().returning(|_| {
 				Err(EntitySerializationErrors(vec![
-					serde::ser::Error::custom("that"),
-					serde::ser::Error::custom("failed"),
+					SerdeJsonError(serde::ser::Error::custom("that")),
+					SerdeJsonError(serde::ser::Error::custom("failed")),
 				]))
 			});
 		});

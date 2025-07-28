@@ -2,7 +2,7 @@ pub(crate) mod handler;
 
 use crate::{
 	context::handler::ComponentHandler,
-	errors::EntitySerializationErrors,
+	errors::{EntitySerializationErrors, SerdeJsonError},
 	file_io::FileIO,
 	traits::{buffer_entity_component::BufferEntityComponent, write_buffer::WriteBuffer},
 };
@@ -12,13 +12,13 @@ use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 
 pub(crate) type SaveBuffer = HashMap<Entity, HashSet<ComponentString>>;
-pub(crate) type EntityLoadBuffer = HashMap<String, Value>;
-pub(crate) type LoadBuffer = Vec<EntityLoadBuffer>;
+pub(crate) type EntityLoadBuffer<TComponent> = HashMap<String, TComponent>;
+pub(crate) type LoadBuffer<TComponent> = Vec<EntityLoadBuffer<TComponent>>;
 
 #[derive(Debug, PartialEq, Default)]
-pub struct SaveContext<TFileIO = FileIO, TComponentHandler = ComponentHandler> {
+pub struct SaveContext<TFileIO = FileIO, TComponentHandler = ComponentHandler, TComponent = Value> {
 	pub(crate) handlers: Handlers<TComponentHandler>,
-	pub(crate) buffers: Buffers,
+	pub(crate) buffers: Buffers<TComponent>,
 	pub(crate) io: TFileIO,
 }
 
@@ -29,9 +29,9 @@ pub(crate) struct Handlers<TComponentHandler> {
 }
 
 #[derive(Debug, PartialEq, Default)]
-pub(crate) struct Buffers {
+pub(crate) struct Buffers<TComponent> {
 	pub(crate) save: SaveBuffer,
-	pub(crate) load: LoadBuffer,
+	pub(crate) load: LoadBuffer<TComponent>,
 }
 
 #[cfg(test)]
@@ -46,7 +46,7 @@ impl<TFileIO, TComponentHandler> SaveContext<TFileIO, TComponentHandler> {
 
 	pub(crate) fn with_load_buffer<T>(mut self, buffer: T) -> Self
 	where
-		T: Into<LoadBuffer>,
+		T: Into<LoadBuffer<Value>>,
 	{
 		self.buffers.load = buffer.into();
 		self
@@ -90,6 +90,7 @@ where
 			.filter_map(|handler| {
 				handler
 					.buffer_component(&mut self.buffers.save, entity)
+					.map_err(SerdeJsonError)
 					.err()
 			})
 			.collect::<Vec<_>>();
