@@ -1,6 +1,9 @@
 use bevy::ecs::entity::Entity;
 use common::errors::{Error, Level};
-use std::{collections::HashMap, fmt::Display};
+use std::{
+	collections::{HashMap, HashSet},
+	fmt::Display,
+};
 
 #[derive(Debug)]
 pub(crate) struct SerdeJsonError(pub(crate) serde_json::Error);
@@ -31,7 +34,7 @@ impl PartialEq for SerdeJsonError {
 #[cfg_attr(test, derive(PartialEq))]
 pub(crate) enum ContextIOError<TIOError> {
 	FileError(TIOError),
-	SerdeErrors(IOErrors<SerdeJsonError>),
+	SerdeErrors(IOErrors<SerdeJsonError, Save>),
 	LockPoisoned(LockPoisonedError),
 }
 
@@ -66,7 +69,7 @@ impl From<SerializationOrLockError> for Error {
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
 pub(crate) enum DeserializationOrLockError<TNoInsert> {
-	DeserializationErrors(IOErrors<InsertionError<TNoInsert>>),
+	DeserializationErrors(IOErrors<InsertionError<TNoInsert>, Load>),
 	LockPoisoned(LockPoisonedError),
 }
 
@@ -86,7 +89,7 @@ where
 #[cfg_attr(test, derive(PartialEq))]
 pub(crate) enum InsertionError<TNoInsert> {
 	CouldNotInsert(TNoInsert),
-	UnknownComponents(Vec<String>),
+	UnknownComponents(HashSet<String>),
 }
 
 impl<TNoInsert> Display for InsertionError<TNoInsert>
@@ -96,7 +99,11 @@ where
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			InsertionError::CouldNotInsert(e) => write!(f, "Failed Insertion: {e}"),
-			InsertionError::UnknownComponents(c) => write!(f, "UnknownComponents: {c:?}"),
+			InsertionError::UnknownComponents(c) => write!(
+				f,
+				"UnknownComponents: [{}]",
+				c.iter().map(String::as_str).collect::<Vec<_>>().join(", ")
+			),
 		}
 	}
 }
@@ -136,21 +143,55 @@ impl From<SerializationErrors> for Error {
 pub(crate) struct EntitySerializationErrors(pub(crate) Vec<SerdeJsonError>);
 
 #[derive(Debug, PartialEq)]
-pub(crate) struct IOErrors<T>(pub(crate) Vec<T>);
+pub(crate) struct IOErrors<T, TPhase> {
+	pub(crate) items: Vec<T>,
+	phase: TPhase,
+}
 
-impl<T> From<IOErrors<T>> for Error
+impl<T, TPhase> From<Vec<T>> for IOErrors<T, TPhase>
+where
+	TPhase: Default,
+{
+	fn from(errors: Vec<T>) -> Self {
+		Self {
+			items: errors,
+			phase: TPhase::default(),
+		}
+	}
+}
+
+impl<T, TPhase> From<IOErrors<T, TPhase>> for Error
 where
 	T: Display,
+	TPhase: Display,
 {
-	fn from(IOErrors(errors): IOErrors<T>) -> Self {
-		let errors = errors
+	fn from(IOErrors { items, phase }: IOErrors<T, TPhase>) -> Self {
+		let errors = items
 			.iter()
-			.map(|error| format!("- {error}"))
+			.map(T::to_string)
 			.collect::<Vec<_>>()
-			.join("\n");
+			.join(", ");
 		Self::Single {
-			msg: format!("IO Operation failed:\n{errors}"),
+			msg: format!("IO Operation ({phase}) failed: [{errors}]"),
 			lvl: Level::Error,
 		}
+	}
+}
+
+#[derive(Debug, PartialEq, Default)]
+pub(crate) struct Save;
+
+impl Display for Save {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "Save")
+	}
+}
+
+#[derive(Debug, PartialEq, Default)]
+pub(crate) struct Load;
+
+impl Display for Load {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "Load")
 	}
 }

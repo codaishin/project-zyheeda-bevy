@@ -26,9 +26,9 @@ where
 			};
 			let entities = match serde_json::from_str::<SerializedEntities>(&entities) {
 				Err(error) => {
-					return Err(ContextIOError::SerdeErrors(IOErrors(vec![SerdeJsonError(
-						error,
-					)])));
+					return Err(ContextIOError::SerdeErrors(IOErrors::from(vec![
+						SerdeJsonError(error),
+					])));
 				}
 				Ok(components) => components,
 			};
@@ -161,9 +161,9 @@ mod tests {
 			.run_system_once(SaveContext::read_file_system(context.clone()))?;
 
 		assert_eq!(
-			Err(ContextIOError::SerdeErrors(IOErrors(vec![SerdeJsonError(
-				error
-			)]))),
+			Err(ContextIOError::SerdeErrors(IOErrors::from(vec![
+				SerdeJsonError(error)
+			]))),
 			result
 		);
 		Ok(())

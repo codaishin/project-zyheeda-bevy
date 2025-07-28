@@ -43,15 +43,15 @@ impl<TFileIO> SaveContext<TFileIO> {
 			.collect::<Vec<_>>();
 
 		if !errors.is_empty() {
-			return Err(ContextIOError::SerdeErrors(IOErrors(errors)));
+			return Err(ContextIOError::SerdeErrors(IOErrors::from(errors)));
 		}
 
 		let json = match serde_json::to_string(&entities) {
 			Ok(json) => json,
 			Err(error) => {
-				return Err(ContextIOError::SerdeErrors(IOErrors(vec![SerdeJsonError(
-					error,
-				)])));
+				return Err(ContextIOError::SerdeErrors(IOErrors::from(vec![
+					SerdeJsonError(error),
+				])));
 			}
 		};
 

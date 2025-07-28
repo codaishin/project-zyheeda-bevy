@@ -1,12 +1,15 @@
 use crate::{
 	context::{EntityLoadBuffer, LoadBuffer, SaveContext},
-	errors::{DeserializationOrLockError, IOErrors, InsertionError, LockPoisonedError},
+	errors::{DeserializationOrLockError, IOErrors, InsertionError, Load, LockPoisonedError},
 	file_io::FileIO,
 	traits::insert_entity_component::InsertEntityComponent,
 };
 use bevy::prelude::*;
 use common::traits::load_asset::LoadAsset;
-use std::sync::{Arc, Mutex};
+use std::{
+	collections::HashSet,
+	sync::{Arc, Mutex},
+};
 
 impl<T, TComponent> SaveContext<FileIO, T, TComponent> {
 	pub(crate) fn read_buffer_system<TLoadAsset>(
@@ -20,11 +23,18 @@ impl<T, TComponent> SaveContext<FileIO, T, TComponent> {
 			let Ok(mut context) = context.lock() else {
 				return Err(DeserializationOrLockError::LockPoisoned(LockPoisonedError));
 			};
-			let entities = new_entities(commands, &mut context.buffers.load, asset_server)
+			let mut entities = new_entities(commands, &mut context.buffers.load, asset_server)
 				.with_components(&context.handlers.high_priority)
 				.with_components(&context.handlers.low_priority);
 
-			match entities.errors.0.as_slice() {
+			if let Some(remaining) = remaining_components(&entities) {
+				entities
+					.errors
+					.items
+					.push(InsertionError::UnknownComponents(remaining));
+			}
+
+			match entities.errors.items.as_slice() {
 				[] => Ok(()),
 				_ => Err(DeserializationOrLockError::DeserializationErrors(
 					entities.errors,
@@ -51,8 +61,29 @@ where
 		entities,
 		commands,
 		asset_server,
-		errors: IOErrors(vec![]),
+		errors: IOErrors::from(vec![]),
 	}
+}
+
+fn remaining_components<TLoadAsset, TComponent, TError>(
+	entities: &EntitiesBuffer<TLoadAsset, TComponent, TError>,
+) -> Option<HashSet<String>>
+where
+	TLoadAsset: Resource,
+{
+	let remaining = HashSet::from_iter(
+		entities
+			.entities
+			.iter()
+			.filter(|&(_, components)| !components.is_empty())
+			.flat_map(|(_, components)| components.keys().cloned()),
+	);
+
+	if remaining.is_empty() {
+		return None;
+	}
+
+	Some(remaining)
 }
 
 struct EntitiesBuffer<'a, TAssetServer, TComponent, TNoInsert>
@@ -62,7 +93,7 @@ where
 	entities: Vec<(Entity, EntityLoadBuffer<TComponent>)>,
 	commands: Commands<'a, 'a>,
 	asset_server: ResMut<'a, TAssetServer>,
-	errors: IOErrors<InsertionError<TNoInsert>>,
+	errors: IOErrors<InsertionError<TNoInsert>, Load>,
 }
 
 impl<'a, TAssetServer, TComponent, TNoInsert>
@@ -88,7 +119,7 @@ where
 				let Err(err) = handler.insert_component(&mut entity, component, assets) else {
 					continue;
 				};
-				self.errors.0.push(InsertionError::CouldNotInsert(err));
+				self.errors.items.push(InsertionError::CouldNotInsert(err));
 			}
 		}
 
@@ -106,7 +137,12 @@ mod tests {
 	};
 	use common::traits::load_asset::LoadAsset;
 	use serde_json::{Value, json};
-	use std::{any::type_name, collections::HashMap, path::PathBuf, sync::LazyLock};
+	use std::{
+		any::type_name,
+		collections::{HashMap, HashSet},
+		path::PathBuf,
+		sync::LazyLock,
+	};
 	use testing::{SingleThreadedApp, assert_count};
 
 	#[derive(Component, Debug, PartialEq, Clone)]
@@ -306,7 +342,7 @@ mod tests {
 	#[test]
 	fn return_high_priority_error() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let components = HashMap::from([(type_name::<_A>().to_owned(), json!("null"))]);
+		let components = HashMap::from([(type_name::<_A>().to_owned(), json!(null))]);
 		let context = Arc::new(Mutex::new(
 			SaveContext::from(FILE_IO.clone())
 				.with_load_buffer([components])
@@ -319,9 +355,9 @@ mod tests {
 			.run_system_once(SaveContext::read_buffer_system(context))?;
 
 		assert_eq!(
-			Err(DeserializationOrLockError::DeserializationErrors(IOErrors(
-				vec![InsertionError::CouldNotInsert(NoInsert)]
-			))),
+			Err(DeserializationOrLockError::DeserializationErrors(
+				IOErrors::from(vec![InsertionError::CouldNotInsert(NoInsert)])
+			)),
 			result,
 		);
 		Ok(())
@@ -330,7 +366,7 @@ mod tests {
 	#[test]
 	fn return_low_priority_error() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let components = HashMap::from([(type_name::<_A>().to_owned(), json!("null"))]);
+		let components = HashMap::from([(type_name::<_A>().to_owned(), json!(null))]);
 		let context = Arc::new(Mutex::new(
 			SaveContext::from(FILE_IO.clone())
 				.with_load_buffer([components])
@@ -343,9 +379,9 @@ mod tests {
 			.run_system_once(SaveContext::read_buffer_system(context))?;
 
 		assert_eq!(
-			Err(DeserializationOrLockError::DeserializationErrors(IOErrors(
-				vec![InsertionError::CouldNotInsert(NoInsert)]
-			))),
+			Err(DeserializationOrLockError::DeserializationErrors(
+				IOErrors::from(vec![InsertionError::CouldNotInsert(NoInsert)])
+			)),
 			result,
 		);
 		Ok(())
@@ -354,7 +390,7 @@ mod tests {
 	#[test]
 	fn context_is_empty_when_ran() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let components = HashMap::from([(type_name::<_A>().to_owned(), json!("null"))]);
+		let components = HashMap::from([(type_name::<_A>().to_owned(), json!(null))]);
 		let context = Arc::new(Mutex::new(
 			SaveContext::from(FILE_IO.clone())
 				.with_load_buffer([components.clone(), components.clone()])
@@ -369,6 +405,69 @@ mod tests {
 			panic!("LOCK FAILED");
 		};
 		assert!(context.buffers.load.is_empty());
+		Ok(())
+	}
+
+	#[test]
+	fn return_error_when_component_present_which_has_no_handler() -> Result<(), RunSystemError> {
+		#[derive(Component)]
+		struct _C;
+
+		let mut app = setup();
+		let components = HashMap::from([(type_name::<_C>().to_owned(), json!(null))]);
+		let context = Arc::new(Mutex::new(
+			SaveContext::from(FILE_IO.clone())
+				.with_load_buffer([components])
+				.with_high_priority_handlers([_FakeHandler::A])
+				.with_low_priority_handlers([_FakeHandler::B]),
+		));
+
+		let result = app
+			.world_mut()
+			.run_system_once(SaveContext::read_buffer_system(context))?;
+
+		assert_eq!(
+			Err(DeserializationOrLockError::DeserializationErrors(
+				IOErrors::from(vec![InsertionError::UnknownComponents(HashSet::from([
+					String::from(type_name::<_C>())
+				]))])
+			)),
+			result,
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn errors_for_missing_handlers_in_one_array() -> Result<(), RunSystemError> {
+		#[derive(Component)]
+		struct _C;
+
+		#[derive(Component)]
+		struct _D;
+
+		let mut app = setup();
+		let components_1 = HashMap::from([(type_name::<_C>().to_owned(), json!(null))]);
+		let components_2 = HashMap::from([(type_name::<_D>().to_owned(), json!(null))]);
+		let context = Arc::new(Mutex::new(
+			SaveContext::from(FILE_IO.clone())
+				.with_load_buffer([components_1, components_2])
+				.with_high_priority_handlers([_FakeHandler::A])
+				.with_low_priority_handlers([_FakeHandler::B]),
+		));
+
+		let result = app
+			.world_mut()
+			.run_system_once(SaveContext::read_buffer_system(context))?;
+
+		assert_eq!(
+			Err(DeserializationOrLockError::DeserializationErrors(
+				IOErrors::from(vec![InsertionError::UnknownComponents(HashSet::from([
+					String::from(type_name::<_C>()),
+					String::from(type_name::<_D>()),
+				]))])
+			)),
+			result,
+		);
 		Ok(())
 	}
 }
