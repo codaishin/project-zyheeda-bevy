@@ -1,6 +1,6 @@
 use crate::{
 	context::{ComponentString, SaveContext},
-	errors::{ContextIOError, LockPoisonedError, SerdeJsonErrors},
+	errors::{ContextIOError, IOErrors, LockPoisonedError, SerdeJsonError},
 	traits::read_file::ReadFile,
 };
 use bevy::prelude::*;
@@ -25,7 +25,11 @@ where
 				Ok(entities) => entities,
 			};
 			let entities = match serde_json::from_str::<SerializedEntities>(&entities) {
-				Err(e) => return Err(ContextIOError::SerdeErrors(SerdeJsonErrors(vec![e]))),
+				Err(error) => {
+					return Err(ContextIOError::SerdeErrors(IOErrors(vec![SerdeJsonError(
+						error,
+					)])));
+				}
 				Ok(components) => components,
 			};
 
@@ -47,7 +51,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::context::ComponentString;
+	use crate::{context::ComponentString, errors::IOErrors};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use mockall::mock;
 	use std::collections::HashMap;
@@ -157,7 +161,9 @@ mod tests {
 			.run_system_once(SaveContext::read_file_system(context.clone()))?;
 
 		assert_eq!(
-			Err(ContextIOError::SerdeErrors(SerdeJsonErrors(vec![error]))),
+			Err(ContextIOError::SerdeErrors(IOErrors(vec![SerdeJsonError(
+				error
+			)]))),
 			result
 		);
 		Ok(())

@@ -1,7 +1,6 @@
-use crate::context::EntityLoadBuffer;
+use crate::{context::EntityLoadBuffer, errors::SerdeJsonError};
 use bevy::prelude::*;
 use common::traits::load_asset::LoadAsset;
-use serde_json::Error;
 
 pub(crate) trait InsertEntityComponent<TLoadAsset>
 where
@@ -12,5 +11,5 @@ where
 		entity: &mut EntityCommands,
 		components: &mut EntityLoadBuffer,
 		asset_server: &mut TLoadAsset,
-	) -> Result<(), Error>;
+	) -> Result<(), SerdeJsonError>;
 }

@@ -1,13 +1,37 @@
 use bevy::ecs::entity::Entity;
 use common::errors::{Error, Level};
-use serde_json::Error as SerdeJsonError;
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
+
+#[derive(Debug)]
+pub(crate) struct SerdeJsonError(pub(crate) serde_json::Error);
+
+impl Display for SerdeJsonError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		self.0.fmt(f)
+	}
+}
+
+#[cfg(test)]
+const SERDE_FIELD_EQUALITIES: &[fn(&serde_json::Error, &serde_json::Error) -> bool] = &[
+	|a, b| a.line() == b.line(),
+	|a, b| a.column() == b.column(),
+	|a, b| a.classify() == b.classify(),
+];
+
+#[cfg(test)]
+impl PartialEq for SerdeJsonError {
+	fn eq(&self, other: &Self) -> bool {
+		SERDE_FIELD_EQUALITIES
+			.iter()
+			.all(|field_equal| field_equal(&self.0, &other.0))
+	}
+}
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
 pub(crate) enum ContextIOError<TIOError> {
 	FileError(TIOError),
-	SerdeErrors(SerdeJsonErrors),
+	SerdeErrors(IOErrors<SerdeJsonError>),
 	LockPoisoned(LockPoisonedError),
 }
 
@@ -42,7 +66,7 @@ impl From<SerializationOrLockError> for Error {
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
 pub(crate) enum DeserializationOrLockError {
-	DeserializationErrors(SerdeJsonErrors),
+	DeserializationErrors(IOErrors<InsertionError>),
 	LockPoisoned(LockPoisonedError),
 }
 
@@ -51,6 +75,22 @@ impl From<DeserializationOrLockError> for Error {
 		match value {
 			DeserializationOrLockError::DeserializationErrors(error) => Self::from(error),
 			DeserializationOrLockError::LockPoisoned(error) => Self::from(error),
+		}
+	}
+}
+
+#[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
+pub(crate) enum InsertionError {
+	Serde(SerdeJsonError),
+	UnknownComponents(Vec<String>),
+}
+
+impl Display for InsertionError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			InsertionError::Serde(e) => write!(f, "Serde Error: {e}"),
+			InsertionError::UnknownComponents(c) => write!(f, "UnknownComponents: {c:?}"),
 		}
 	}
 }
@@ -89,40 +129,21 @@ impl From<SerializationErrors> for Error {
 #[derive(Debug)]
 pub(crate) struct EntitySerializationErrors(pub(crate) Vec<SerdeJsonError>);
 
-#[derive(Debug)]
-pub(crate) struct SerdeJsonErrors(pub(crate) Vec<SerdeJsonError>);
+#[derive(Debug, PartialEq)]
+pub(crate) struct IOErrors<T>(pub(crate) Vec<T>);
 
-#[cfg(test)]
-impl PartialEq for SerdeJsonErrors {
-	fn eq(&self, other: &Self) -> bool {
-		if self.0.len() != other.0.len() {
-			return false;
-		}
-
-		for error in &self.0 {
-			let matches = |other: &SerdeJsonError| {
-				error.line() == other.line()
-					&& error.column() == other.column()
-					&& error.classify() == other.classify()
-			};
-			if !other.0.iter().any(matches) {
-				return false;
-			}
-		}
-
-		true
-	}
-}
-
-impl From<SerdeJsonErrors> for Error {
-	fn from(SerdeJsonErrors(errors): SerdeJsonErrors) -> Self {
+impl<T> From<IOErrors<T>> for Error
+where
+	T: Display,
+{
+	fn from(IOErrors(errors): IOErrors<T>) -> Self {
 		let errors = errors
 			.iter()
 			.map(|error| format!("- {error}"))
 			.collect::<Vec<_>>()
 			.join("\n");
 		Self::Single {
-			msg: format!("Failed to serialize data:\n{errors}"),
+			msg: format!("IO Operation failed:\n{errors}"),
 			lvl: Level::Error,
 		}
 	}

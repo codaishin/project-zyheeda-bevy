@@ -2,7 +2,7 @@ pub(crate) mod handler;
 
 use crate::{
 	context::handler::ComponentHandler,
-	errors::EntitySerializationErrors,
+	errors::{EntitySerializationErrors, SerdeJsonError},
 	file_io::FileIO,
 	traits::{buffer_entity_component::BufferEntityComponent, write_buffer::WriteBuffer},
 };
@@ -90,6 +90,7 @@ where
 			.filter_map(|handler| {
 				handler
 					.buffer_component(&mut self.buffers.save, entity)
+					.map_err(SerdeJsonError)
 					.err()
 			})
 			.collect::<Vec<_>>();

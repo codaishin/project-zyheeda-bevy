@@ -1,12 +1,11 @@
 use crate::{
 	context::{EntityLoadBuffer, LoadBuffer, SaveContext},
-	errors::{DeserializationOrLockError, LockPoisonedError, SerdeJsonErrors},
+	errors::{DeserializationOrLockError, IOErrors, InsertionError, LockPoisonedError},
 	file_io::FileIO,
 	traits::insert_entity_component::InsertEntityComponent,
 };
 use bevy::prelude::*;
 use common::traits::load_asset::LoadAsset;
-use serde_json::Error;
 use std::sync::{Arc, Mutex};
 
 impl<T> SaveContext<FileIO, T> {
@@ -25,10 +24,10 @@ impl<T> SaveContext<FileIO, T> {
 				.with_components(&context.handlers.high_priority)
 				.with_components(&context.handlers.low_priority);
 
-			match entities.errors.as_slice() {
+			match entities.errors.0.as_slice() {
 				[] => Ok(()),
 				_ => Err(DeserializationOrLockError::DeserializationErrors(
-					SerdeJsonErrors(entities.errors),
+					entities.errors,
 				)),
 			}
 		}
@@ -52,7 +51,7 @@ where
 		entities,
 		commands,
 		asset_server,
-		errors: vec![],
+		errors: IOErrors(vec![]),
 	}
 }
 
@@ -63,7 +62,7 @@ where
 	entities: Vec<(Entity, EntityLoadBuffer)>,
 	commands: Commands<'a, 'a>,
 	asset_server: ResMut<'a, TAssetServer>,
-	errors: Vec<Error>,
+	errors: IOErrors<InsertionError>,
 }
 
 impl<'a, TAssetServer> EntitiesBuffer<'a, TAssetServer>
@@ -84,7 +83,7 @@ where
 				let Err(err) = handler.insert_component(&mut entity, components, assets) else {
 					continue;
 				};
-				self.errors.push(err);
+				self.errors.0.push(InsertionError::Serde(err));
 			}
 		}
 
@@ -95,7 +94,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{context::EntityLoadBuffer, errors::SerdeJsonErrors, file_io::FileIO};
+	use crate::{context::EntityLoadBuffer, errors::SerdeJsonError, file_io::FileIO};
 	use bevy::{
 		asset::AssetPath,
 		ecs::system::{RunSystemError, RunSystemOnce},
@@ -142,13 +141,15 @@ mod tests {
 			entity: &mut EntityCommands<'a>,
 			components: &mut EntityLoadBuffer,
 			_: &mut _LoadAsset,
-		) -> Result<(), serde_json::Error> {
+		) -> Result<(), SerdeJsonError> {
 			match self {
 				_FakeHandler::A => entity.insert(_A(components.clone())),
 				_FakeHandler::B => entity.insert(_B(components.clone())),
 				_FakeHandler::CountA => entity.insert(_CountA { a_count: 0 }),
 				_FakeHandler::Error => {
-					return Err(serde::de::Error::custom("Fool! I refuse deserialization"));
+					return Err(SerdeJsonError(serde::de::Error::custom(
+						"Fool! I refuse deserialization",
+					)));
 				}
 			};
 			Ok(())
@@ -312,14 +313,22 @@ mod tests {
 			.run_system_once(SaveContext::read_buffer_system(context))?;
 
 		assert_eq!(
-			Err(DeserializationOrLockError::DeserializationErrors(
-				SerdeJsonErrors(vec![
-					serde::de::Error::custom("Fool! I refuse deserialization"),
-					serde::de::Error::custom("Fool! I refuse deserialization"),
-					serde::de::Error::custom("Fool! I refuse deserialization"),
-					serde::de::Error::custom("Fool! I refuse deserialization"),
-				])
-			)),
+			Err(DeserializationOrLockError::DeserializationErrors(IOErrors(
+				vec![
+					InsertionError::Serde(SerdeJsonError(serde::de::Error::custom(
+						"Fool! I refuse deserialization"
+					))),
+					InsertionError::Serde(SerdeJsonError(serde::de::Error::custom(
+						"Fool! I refuse deserialization"
+					))),
+					InsertionError::Serde(SerdeJsonError(serde::de::Error::custom(
+						"Fool! I refuse deserialization"
+					))),
+					InsertionError::Serde(SerdeJsonError(serde::de::Error::custom(
+						"Fool! I refuse deserialization"
+					))),
+				]
+			))),
 			result,
 		);
 		Ok(())

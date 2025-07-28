@@ -1,5 +1,6 @@
 use crate::{
 	context::{ComponentString, EntityLoadBuffer, SaveBuffer},
+	errors::SerdeJsonError,
 	traits::{
 		buffer_entity_component::BufferEntityComponent,
 		insert_entity_component::InsertEntityComponent,
@@ -17,7 +18,11 @@ use std::{
 #[derive(Debug, Clone)]
 pub(crate) struct ComponentHandler<TLoadAsset = AssetServer> {
 	buffer_fn: fn(&mut SaveBuffer, EntityRef) -> Result<(), Error>,
-	insert_fn: fn(&mut EntityCommands, &mut EntityLoadBuffer, &mut TLoadAsset) -> Result<(), Error>,
+	insert_fn: fn(
+		&mut EntityCommands,
+		&mut EntityLoadBuffer,
+		&mut TLoadAsset,
+	) -> Result<(), SerdeJsonError>,
 	_p: PhantomData<TLoadAsset>,
 }
 
@@ -63,14 +68,14 @@ where
 		entity: &mut EntityCommands,
 		components: &mut EntityLoadBuffer,
 		asset_server: &mut TLoadAsset,
-	) -> Result<(), Error>
+	) -> Result<(), SerdeJsonError>
 	where
 		T: SavableComponent,
 	{
 		let Some(dto) = components.remove(type_name::<T>()) else {
 			return Ok(());
 		};
-		let dto = serde_json::from_value::<T::TDto>(dto)?;
+		let dto = serde_json::from_value::<T::TDto>(dto).map_err(SerdeJsonError)?;
 		let Ok(component) = T::try_load_from(dto, asset_server);
 
 		entity.try_insert(component);
@@ -104,7 +109,7 @@ where
 		entity: &mut EntityCommands,
 		components: &mut EntityLoadBuffer,
 		asset_server: &mut TLoadAsset,
-	) -> Result<(), Error> {
+	) -> Result<(), SerdeJsonError> {
 		(self.insert_fn)(entity, components, asset_server)
 	}
 }
@@ -491,13 +496,11 @@ mod tests {
 				},
 			)?;
 
-			let Err(error) = result else {
-				panic!("SHOULD HAVE BEEN AN ERROR");
-			};
-			let expected: Error = serde::de::Error::custom("Fool! I refuse deserialization");
 			assert_eq!(
-				(expected.classify(), expected.line(), expected.column()),
-				(error.classify(), error.line(), error.column())
+				Err(SerdeJsonError(serde::de::Error::custom(
+					"Fool! I refuse deserialization"
+				))),
+				result
 			);
 			Ok(())
 		}
