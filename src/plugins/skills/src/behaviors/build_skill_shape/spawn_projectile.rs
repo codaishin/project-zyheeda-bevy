@@ -6,7 +6,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	blocker::Blocker,
+	components::is_blocker::Blocker,
 	tools::{Units, UnitsPerSecond},
 	traits::{
 		clamp_zero_positive::ClampZeroPositive,
@@ -58,7 +58,7 @@ impl SpawnShape for SpawnProjectile {
 				},
 				integrity: Integrity::Fragile {
 					destroyed_by: match &self.destroyed_by {
-						DestroyedBy::All => Blocker::all().collect(),
+						DestroyedBy::All => Blocker::all(),
 						DestroyedBy::AnyOf(blockers) => blockers.clone(),
 					},
 				},

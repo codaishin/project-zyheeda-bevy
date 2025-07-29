@@ -7,28 +7,26 @@ mod resources;
 mod systems;
 
 use crate::{
-	components::{effect::force::ForceEffect, force_affected::ForceAffected},
+	components::{blockable::Blockable, effect::force::ForceEffect, force_affected::ForceAffected},
 	observers::update_blockers::UpdateBlockersObserver,
 	systems::interactions::act_on::ActOnSystem,
 };
 use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
 	self,
-	blocker::Blocker,
 	components::life::Life,
 	traits::{
 		delta::Delta,
-		handles_interactions::{BeamParameters, HandlesInteractions},
+		handles_interactions::HandlesInteractions,
 		handles_saving::{HandlesSaving, SavableComponent},
 		thread_safe::ThreadSafe,
 	},
 };
 use components::{
-	beam::{Beam, BeamCommand},
+	active_beam::ActiveBeam,
 	effect::{deal_damage::DealDamageEffect, gravity::GravityEffect},
 	gravity_affected::GravityAffected,
 	interacting_entities::InteractingEntities,
-	is::{Fragile, InterruptableRay, Is},
 	running_interactions::RunningInteractions,
 };
 use events::{InteractionEvent, Ray};
@@ -92,7 +90,7 @@ where
 				Update,
 				(
 					apply_fragile_blocks,
-					Beam::execute,
+					ActiveBeam::execute,
 					execute_ray_caster
 						.pipe(apply_interruptable_ray_blocks)
 						.pipe(map_ray_cast_result_to_interaction_events)
@@ -147,27 +145,7 @@ pub struct InteractionSystems;
 
 impl<TDependencies> HandlesInteractions for InteractionsPlugin<TDependencies> {
 	type TSystems = InteractionSystems;
+	type TInteraction = Blockable;
 
 	const SYSTEMS: Self::TSystems = InteractionSystems;
-
-	fn is_fragile_when_colliding_with<TBlockers>(blockers: TBlockers) -> impl Bundle
-	where
-		TBlockers: IntoIterator<Item = Blocker>,
-	{
-		Is::<Fragile>::interacting_with(blockers)
-	}
-
-	fn is_ray_interrupted_by<TBlockers>(blockers: TBlockers) -> impl Bundle
-	where
-		TBlockers: IntoIterator<Item = Blocker>,
-	{
-		Is::<InterruptableRay>::interacting_with(blockers)
-	}
-
-	fn beam_from<T>(value: &T) -> impl Bundle
-	where
-		T: BeamParameters,
-	{
-		BeamCommand::from(value)
-	}
 }

@@ -1,9 +1,9 @@
 use crate::traits::insert_attack::InsertAttack;
 use bevy::{ecs::system::EntityCommands, pbr::NotShadowCaster, prelude::*};
 use common::{
-	blocker::Blocker,
 	components::{
 		insert_asset::InsertAsset,
+		is_blocker::Blocker,
 		lifetime::Lifetime,
 		persistent_entity::PersistentEntity,
 	},
@@ -13,7 +13,7 @@ use common::{
 	traits::{
 		handles_effect::HandlesEffect,
 		handles_enemies::{Attacker, Target},
-		handles_interactions::{BeamParameters, HandlesInteractions},
+		handles_interactions::{BeamConfig, HandlesInteractions, InteractAble},
 		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
@@ -31,20 +31,6 @@ pub(crate) struct VoidBeam {
 	target: PersistentEntity,
 }
 
-impl BeamParameters for VoidBeam {
-	fn source(&self) -> PersistentEntity {
-		self.attacker
-	}
-
-	fn target(&self) -> PersistentEntity {
-		self.target
-	}
-
-	fn range(&self) -> Units {
-		self.range
-	}
-}
-
 impl<TInteractions> Prefab<TInteractions> for VoidBeam
 where
 	TInteractions: HandlesInteractions + HandlesEffect<DealDamage>,
@@ -56,8 +42,14 @@ where
 	) -> Result<(), Error> {
 		entity
 			.try_insert_if_new((
-				TInteractions::beam_from(self),
-				TInteractions::is_ray_interrupted_by(Blocker::all()),
+				TInteractions::TInteraction::from(InteractAble::Beam {
+					config: BeamConfig {
+						source: self.attacker,
+						target: self.target,
+						range: self.range,
+					},
+					blocked_by: Blocker::all(),
+				}),
 				TInteractions::effect(DealDamage::once_per_second(self.damage)),
 			))
 			.with_child(VoidBeamModel);

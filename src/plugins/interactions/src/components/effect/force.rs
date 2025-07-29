@@ -7,8 +7,10 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	attributes::affected_by::AffectedBy,
-	blocker::{Blocker, Blockers},
-	components::persistent_entity::PersistentEntity,
+	components::{
+		is_blocker::{Blocker, IsBlocker},
+		persistent_entity::PersistentEntity,
+	},
 	effects::force::Force,
 	traits::handles_effect::HandlesEffect,
 };
@@ -33,7 +35,7 @@ impl<TDependencies> HandlesEffect<Force> for InteractionsPlugin<TDependencies> {
 }
 
 impl UpdateBlockers for ForceEffect {
-	fn update_blockers(&self, Blockers(blockers): &mut Blockers) {
+	fn update_blockers(&self, IsBlocker(blockers): &mut IsBlocker) {
 		blockers.insert(Blocker::Force);
 	}
 }

@@ -19,7 +19,7 @@ use common::{
 	components::{asset_model::AssetModel, collider_relationship::InteractionTarget},
 	errors::{Error, Level},
 	traits::{
-		handles_interactions::HandlesInteractions,
+		handles_interactions::{HandlesInteractions, InteractAble},
 		handles_skill_behaviors::{Integrity, Motion, Shape, Spawner},
 		prefab::PrefabEntityCommands,
 	},
@@ -132,8 +132,10 @@ impl SimplePrefab for Integrity {
 		match self {
 			Integrity::Solid => {}
 			Integrity::Fragile { destroyed_by } => {
-				entity.try_insert_if_new(TInteractions::is_fragile_when_colliding_with(
-					destroyed_by.iter().copied(),
+				entity.try_insert_if_new(TInteractions::TInteraction::from(
+					InteractAble::Fragile {
+						destroyed_by: destroyed_by.clone(),
+					},
 				));
 			}
 		};
@@ -203,15 +205,12 @@ impl SimplePrefab for Motion {
 
 #[cfg(test)]
 mod tests {
-	use std::collections::HashSet;
-
 	use super::*;
 	use crate::components::when_traveled_insert::DestroyAfterDistanceTraveled;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use bevy_rapier3d::prelude::ActiveCollisionTypes;
 	use common::{
-		blocker::Blocker,
-		components::persistent_entity::PersistentEntity,
+		components::{is_blocker::Blocker, persistent_entity::PersistentEntity},
 		tools::{
 			Units,
 			UnitsPerSecond,
@@ -219,42 +218,37 @@ mod tests {
 		},
 		traits::{
 			clamp_zero_positive::ClampZeroPositive,
-			handles_interactions::{BeamParameters, HandlesInteractions},
+			handles_interactions::{HandlesInteractions, InteractAble},
 		},
 	};
+	use std::collections::HashSet;
 
 	struct _Interactions;
 
 	#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone)]
 	struct _Systems;
 
-	impl HandlesInteractions for _Interactions {
-		type TSystems = _Systems;
+	#[derive(Component, Debug, PartialEq)]
+	enum _Interaction {
+		Beam,
+		Fragile(HashSet<Blocker>),
+	}
 
-		const SYSTEMS: Self::TSystems = _Systems;
-
-		fn is_fragile_when_colliding_with<TBlockers>(blockers: TBlockers) -> impl Bundle
-		where
-			TBlockers: IntoIterator<Item = Blocker>,
-		{
-			_IsFragile(Vec::from_iter(blockers))
-		}
-
-		fn is_ray_interrupted_by<TBlockers>(_: TBlockers) -> impl Bundle
-		where
-			TBlockers: IntoIterator<Item = Blocker>,
-		{
-		}
-
-		fn beam_from<T>(_: &T) -> impl Bundle
-		where
-			T: BeamParameters,
-		{
+	impl From<InteractAble> for _Interaction {
+		fn from(interaction: InteractAble) -> Self {
+			match interaction {
+				InteractAble::Beam { .. } => Self::Beam,
+				InteractAble::Fragile { destroyed_by } => Self::Fragile(destroyed_by),
+			}
 		}
 	}
 
-	#[derive(Component, Debug, PartialEq)]
-	struct _IsFragile(Vec<Blocker>);
+	impl HandlesInteractions for _Interactions {
+		type TSystems = _Systems;
+		type TInteraction = _Interaction;
+
+		const SYSTEMS: Self::TSystems = _Systems;
+	}
 
 	fn test_system<T>(
 		exec: impl Fn(&mut EntityCommands) -> T,
@@ -474,8 +468,8 @@ mod tests {
 		}))?;
 
 		assert_eq!(
-			Some(&_IsFragile(vec![Blocker::Physical])),
-			app.world().entity(entity).get::<_IsFragile>(),
+			Some(&_Interaction::Fragile([Blocker::Physical].into())),
+			app.world().entity(entity).get::<_Interaction>(),
 		);
 		Ok(())
 	}

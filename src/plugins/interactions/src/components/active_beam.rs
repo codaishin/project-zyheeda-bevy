@@ -1,14 +1,17 @@
 use super::{RayCasterArgs, RayFilter};
-use crate::events::{InteractionEvent, Ray};
+use crate::{
+	components::blockable::Blockable,
+	events::{InteractionEvent, Ray},
+};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::{ground_offset::GroundOffset, persistent_entity::PersistentEntity},
+	components::ground_offset::GroundOffset,
 	resources::persistent_entities::PersistentEntities,
 	tools::Units,
 	traits::{
 		cast_ray::TimeOfImpact,
-		handles_interactions::BeamParameters,
+		handles_interactions::InteractAble,
 		try_despawn::TryDespawn,
 		try_insert_on::TryInsertOn,
 	},
@@ -16,23 +19,27 @@ use common::{
 
 #[derive(Component, Debug, PartialEq)]
 #[require(Transform, Visibility)]
-pub(crate) struct Beam {
+pub(crate) struct ActiveBeam {
 	source: Vec3,
 	target: Vec3,
 }
 
-impl Beam {
+impl ActiveBeam {
 	pub(crate) fn execute(
 		mut commands: Commands,
 		mut ray_cast_events: EventReader<InteractionEvent<Ray>>,
 		mut persistent_entities: ResMut<PersistentEntities>,
-		beams: Query<(Entity, &BeamCommand, Option<&Beam>)>,
+		beams: Query<(Entity, &Blockable, Option<&ActiveBeam>)>,
 		transforms: Query<(&GlobalTransform, Option<&GroundOffset>)>,
 	) {
-		for (entity, cmd, ..) in &beams {
-			match persistent_entities.get_entity(&cmd.source) {
+		for (entity, Blockable(beam), ..) in &beams {
+			let InteractAble::Beam { config: beam, .. } = beam else {
+				continue;
+			};
+
+			match persistent_entities.get_entity(&beam.source) {
 				Some(source) => {
-					let Some(target) = persistent_entities.get_entity(&cmd.target) else {
+					let Some(target) = persistent_entities.get_entity(&beam.target) else {
 						continue;
 					};
 					insert_ray_caster_args(
@@ -41,7 +48,7 @@ impl Beam {
 						entity,
 						source,
 						target,
-						cmd.range,
+						beam.range,
 					);
 				}
 				None => despawn_beam(&mut commands, entity),
@@ -54,26 +61,6 @@ impl Beam {
 				Ok((entity, .., None)) => spawn_beam(&mut commands, entity, ray),
 				Ok((entity, .., Some(_beam))) => update_beam_transform(&mut commands, entity, ray),
 			}
-		}
-	}
-}
-
-#[derive(Component, Debug, PartialEq)]
-pub struct BeamCommand {
-	source: PersistentEntity,
-	target: PersistentEntity,
-	range: Units,
-}
-
-impl<T> From<&T> for BeamCommand
-where
-	T: BeamParameters,
-{
-	fn from(value: &T) -> Self {
-		BeamCommand {
-			source: value.source(),
-			target: value.target(),
-			range: value.range(),
 		}
 	}
 }
@@ -126,7 +113,7 @@ fn get_filter(source: Entity) -> Option<RayFilter> {
 
 fn spawn_beam(commands: &mut Commands, entity: Entity, ray: &Ray) {
 	let (source, target, transform) = unpack_beam_ray(ray);
-	commands.try_insert_on(entity, (transform, Beam { source, target }));
+	commands.try_insert_on(entity, (transform, ActiveBeam { source, target }));
 }
 
 fn update_beam_transform(commands: &mut Commands, entity: Entity, ray: &Ray) {
@@ -166,10 +153,14 @@ mod tests {
 		components::RayCasterArgs,
 		events::{InteractionEvent, Ray},
 	};
-	use common::traits::{
-		cast_ray::TimeOfImpact,
-		clamp_zero_positive::ClampZeroPositive,
-		register_persistent_entities::RegisterPersistentEntities,
+	use common::{
+		components::persistent_entity::PersistentEntity,
+		traits::{
+			cast_ray::TimeOfImpact,
+			clamp_zero_positive::ClampZeroPositive,
+			handles_interactions::BeamConfig,
+			register_persistent_entities::RegisterPersistentEntities,
+		},
 	};
 	use std::sync::LazyLock;
 	use testing::SingleThreadedApp;
@@ -179,7 +170,7 @@ mod tests {
 
 		app.register_persistent_entities();
 		app.add_event::<InteractionEvent<Ray>>();
-		app.add_systems(Update, Beam::execute);
+		app.add_systems(Update, ActiveBeam::execute);
 
 		app
 	}
@@ -198,11 +189,14 @@ mod tests {
 			.spawn((GlobalTransform::from_xyz(1., 0., 4.), *TARGET));
 		let beam = app
 			.world_mut()
-			.spawn(BeamCommand {
-				source: *SOURCE,
-				target: *TARGET,
-				range: Units::new(100.),
-			})
+			.spawn(Blockable(InteractAble::Beam {
+				config: BeamConfig {
+					source: *SOURCE,
+					target: *TARGET,
+					range: Units::new(100.),
+				},
+				blocked_by: default(),
+			}))
 			.id();
 
 		app.update();
@@ -236,11 +230,14 @@ mod tests {
 		));
 		let beam = app
 			.world_mut()
-			.spawn(BeamCommand {
-				source: *SOURCE,
-				target: *TARGET,
-				range: Units::new(100.),
-			})
+			.spawn(Blockable(InteractAble::Beam {
+				config: BeamConfig {
+					source: *SOURCE,
+					target: *TARGET,
+					range: Units::new(100.),
+				},
+				blocked_by: default(),
+			}))
 			.id();
 
 		app.update();
@@ -275,11 +272,14 @@ mod tests {
 			.spawn((GlobalTransform::from_xyz(1., 0., 4.), *TARGET));
 		let beam = app
 			.world_mut()
-			.spawn(BeamCommand {
-				source: *SOURCE,
-				target: *TARGET,
-				range: Units::new(100.),
-			})
+			.spawn(Blockable(InteractAble::Beam {
+				config: BeamConfig {
+					source: *SOURCE,
+					target: *TARGET,
+					range: Units::new(100.),
+				},
+				blocked_by: default(),
+			}))
 			.id();
 
 		app.update();
@@ -305,11 +305,14 @@ mod tests {
 		app.world_mut().spawn((GlobalTransform::default(), *SOURCE));
 		let beam = app
 			.world_mut()
-			.spawn(BeamCommand {
-				source: *SOURCE,
-				target: *TARGET,
-				range: Units::default(),
-			})
+			.spawn(Blockable(InteractAble::Beam {
+				config: BeamConfig {
+					source: *SOURCE,
+					target: *TARGET,
+					range: default(),
+				},
+				blocked_by: default(),
+			}))
 			.id();
 		app.world_mut().send_event(InteractionEvent::of(beam).ray(
 			Ray3d {
@@ -322,11 +325,11 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&Beam {
+			Some(&ActiveBeam {
 				source: Vec3::Z,
-				target: Vec3::new(0., 10., 1.),
+				target: Vec3::new(0., 10., 1.)
 			}),
-			app.world().entity(beam).get::<Beam>(),
+			app.world().entity(beam).get::<ActiveBeam>(),
 		);
 	}
 
@@ -336,11 +339,14 @@ mod tests {
 		app.world_mut().spawn((GlobalTransform::default(), *SOURCE));
 		let beam = app
 			.world_mut()
-			.spawn(BeamCommand {
-				source: *SOURCE,
-				target: *TARGET,
-				range: Units::default(),
-			})
+			.spawn(Blockable(InteractAble::Beam {
+				config: BeamConfig {
+					source: *SOURCE,
+					target: *TARGET,
+					range: default(),
+				},
+				blocked_by: default(),
+			}))
 			.id();
 		app.world_mut().send_event(InteractionEvent::of(beam).ray(
 			Ray3d {
@@ -379,14 +385,17 @@ mod tests {
 		let beam = app
 			.world_mut()
 			.spawn((
-				BeamCommand {
-					source: *SOURCE,
-					target: *TARGET,
-					range: Units::default(),
-				},
-				Beam {
-					source: Vec3::default(),
-					target: Vec3::default(),
+				Blockable(InteractAble::Beam {
+					config: BeamConfig {
+						source: *SOURCE,
+						target: *TARGET,
+						range: default(),
+					},
+					blocked_by: default(),
+				}),
+				ActiveBeam {
+					source: default(),
+					target: default(),
 				},
 			))
 			.id();
@@ -411,14 +420,14 @@ mod tests {
 							z: 10.
 						})
 				),
-				Some(&Beam {
-					source: Vec3::default(),
-					target: Vec3::default(),
+				Some(&ActiveBeam {
+					source: default(),
+					target: default()
 				})
 			),
 			(
 				app.world().entity(beam).get::<Transform>(),
-				app.world().entity(beam).get::<Beam>(),
+				app.world().entity(beam).get::<ActiveBeam>(),
 			),
 		)
 	}
@@ -432,11 +441,14 @@ mod tests {
 			.id();
 		let beam = app
 			.world_mut()
-			.spawn(BeamCommand {
-				source: *SOURCE,
-				target: *TARGET,
-				range: Units::default(),
-			})
+			.spawn(Blockable(InteractAble::Beam {
+				config: BeamConfig {
+					source: *SOURCE,
+					target: *TARGET,
+					range: default(),
+				},
+				blocked_by: default(),
+			}))
 			.id();
 		let child = app.world_mut().spawn(ChildOf(beam)).id();
 		app.world_mut().send_event(InteractionEvent::of(beam).ray(

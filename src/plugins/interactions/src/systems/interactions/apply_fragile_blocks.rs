@@ -1,15 +1,18 @@
 use crate::{
-	components::is::{Fragile, Is},
+	components::blockable::Blockable,
 	events::{Collision, InteractionEvent},
 };
 use bevy::prelude::*;
-use common::{blocker::Blockers, traits::try_despawn::TryDespawn};
+use common::{
+	components::is_blocker::IsBlocker,
+	traits::{handles_interactions::InteractAble::Fragile, try_despawn::TryDespawn},
+};
 
 pub(crate) fn apply_fragile_blocks(
 	mut commands: Commands,
 	mut interaction_event: EventReader<InteractionEvent>,
-	fragiles: Query<(Entity, &Is<Fragile>)>,
-	blockers: Query<&Blockers>,
+	fragiles: Query<(Entity, &Blockable)>,
+	blockers: Query<&IsBlocker>,
 ) {
 	for (a, b) in interaction_event.read().filter_map(collision_started) {
 		if let Some(fragile) = fragile_blocked_entity(a, b, &fragiles, &blockers) {
@@ -33,23 +36,24 @@ fn collision_started(
 fn fragile_blocked_entity(
 	fragile: &Entity,
 	blocker: &Entity,
-	fragiles: &Query<(Entity, &Is<Fragile>)>,
-	blockers: &Query<&Blockers>,
+	fragiles: &Query<(Entity, &Blockable)>,
+	blockers: &Query<&IsBlocker>,
 ) -> Option<Entity> {
-	let blocker = blockers.get(*blocker).ok()?;
-	let (entity, Is(fragile)) = fragiles.get(*fragile).ok()?;
-
-	if blocker.0.intersection(&fragile.0).count() == 0 {
+	let IsBlocker(blocker) = blockers.get(*blocker).ok()?;
+	let Ok((entity, Blockable(Fragile { destroyed_by }))) = fragiles.get(*fragile) else {
 		return None;
-	}
+	};
 
-	Some(entity)
+	blocker.intersection(destroyed_by).next().map(|_| entity)
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::blocker::Blocker;
+	use common::{
+		components::is_blocker::Blocker,
+		traits::handles_interactions::{BeamConfig, InteractAble::Beam},
+	};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -66,11 +70,13 @@ mod tests {
 
 		let fragile = app
 			.world_mut()
-			.spawn(Is::<Fragile>::interacting_with([Blocker::Physical]))
+			.spawn(Blockable(Fragile {
+				destroyed_by: [Blocker::Physical].into(),
+			}))
 			.id();
 		let blocker = app
 			.world_mut()
-			.spawn(Blockers::from([Blocker::Physical]))
+			.spawn(IsBlocker::from([Blocker::Physical]))
 			.id();
 
 		app.update();
@@ -84,14 +90,49 @@ mod tests {
 	}
 
 	#[test]
+	fn do_not_destroy_on_collision_if_not_fragile() {
+		let mut app = setup();
+
+		let fragile = app
+			.world_mut()
+			.spawn(Blockable(Beam {
+				config: BeamConfig {
+					source: default(),
+					target: default(),
+					range: default(),
+				},
+				blocked_by: [Blocker::Physical].into(),
+			}))
+			.id();
+		let blocker = app
+			.world_mut()
+			.spawn(IsBlocker::from([Blocker::Physical]))
+			.id();
+
+		app.update();
+
+		app.world_mut()
+			.send_event(InteractionEvent::of(fragile).collision(Collision::Started(blocker)));
+
+		app.update();
+
+		assert!(app.world().get_entity(fragile).is_ok());
+	}
+
+	#[test]
 	fn do_not_destroy_on_collision_when_the_other_is_non_matching_blocker() {
 		let mut app = setup();
 
 		let fragile = app
 			.world_mut()
-			.spawn(Is::<Fragile>::interacting_with([Blocker::Physical]))
+			.spawn(Blockable(Fragile {
+				destroyed_by: [Blocker::Physical].into(),
+			}))
 			.id();
-		let blocker = app.world_mut().spawn(Blockers::from([Blocker::Force])).id();
+		let blocker = app
+			.world_mut()
+			.spawn(IsBlocker::from([Blocker::Force]))
+			.id();
 
 		app.update();
 
@@ -109,11 +150,13 @@ mod tests {
 
 		let fragile = app
 			.world_mut()
-			.spawn(Is::<Fragile>::interacting_with([Blocker::Physical]))
+			.spawn(Blockable(Fragile {
+				destroyed_by: [Blocker::Physical].into(),
+			}))
 			.id();
 		let blocker = app
 			.world_mut()
-			.spawn(Blockers::from([Blocker::Physical]))
+			.spawn(IsBlocker::from([Blocker::Physical]))
 			.id();
 
 		app.update();
@@ -132,9 +175,14 @@ mod tests {
 
 		let fragile = app
 			.world_mut()
-			.spawn(Is::<Fragile>::interacting_with([Blocker::Physical]))
+			.spawn(Blockable(Fragile {
+				destroyed_by: [Blocker::Physical].into(),
+			}))
 			.id();
-		let blocker = app.world_mut().spawn(Blockers::from([Blocker::Force])).id();
+		let blocker = app
+			.world_mut()
+			.spawn(IsBlocker::from([Blocker::Force]))
+			.id();
 
 		app.update();
 
