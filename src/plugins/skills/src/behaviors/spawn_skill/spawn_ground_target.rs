@@ -5,6 +5,7 @@ use crate::{
 	traits::skill_builder::{SkillLifetime, SpawnShape},
 };
 use common::{
+	components::is_blocker::Blocker,
 	dto::duration_secs_f32::DurationSecsF32,
 	tools::Units,
 	traits::handles_skill_behaviors::{
@@ -68,6 +69,7 @@ impl SpawnShape for SpawnGroundTargetedAoe {
 				shape: Shape::Sphere {
 					radius: self.radius,
 					hollow_collider: true,
+					destroyed_by: Blocker::none(),
 				},
 				motion: Motion::Stationary {
 					caster,
@@ -79,6 +81,7 @@ impl SpawnShape for SpawnGroundTargetedAoe {
 				shape: Shape::Sphere {
 					radius: self.radius,
 					hollow_collider: false,
+					destroyed_by: Blocker::none(),
 				},
 				offset: None,
 			},

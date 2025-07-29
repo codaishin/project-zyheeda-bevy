@@ -7,7 +7,7 @@ use crate::{
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Collider;
 use common::{
-	components::asset_model::AssetModel,
+	components::{asset_model::AssetModel, is_blocker::Blocker},
 	tools::Units,
 	traits::{
 		clamp_zero_positive::ClampZeroPositive,
@@ -51,13 +51,18 @@ impl SpawnShape for SpawnShield {
 					model: AssetModel::path("models/shield.glb").flipped_on("Shield"),
 					collider: Collider::cuboid(0.5, 0.5, 0.05),
 					scale: Vec3::splat(1.),
+					destroyed_by: Blocker::none(),
 				},
-				motion: Motion::HeldBy { caster },
+				motion: Motion::HeldBy {
+					caster,
+					spawner: SkillSpawner::Neutral,
+				},
 			},
 			Projection {
 				shape: Shape::Sphere {
 					radius: Units::new(radius),
 					hollow_collider: false,
+					destroyed_by: Blocker::none(),
 				},
 				offset: Some(ProjectionOffset(offset)),
 			},

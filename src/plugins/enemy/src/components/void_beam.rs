@@ -13,7 +13,7 @@ use common::{
 	traits::{
 		handles_effect::HandlesEffect,
 		handles_enemies::{Attacker, Target},
-		handles_interactions::{BeamEmitter, HandlesInteractions, InteractAble},
+		handles_interactions::{HandlesInteractions, InteractAble},
 		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
@@ -40,19 +40,15 @@ where
 		entity: &mut impl PrefabEntityCommands,
 		_: &mut impl LoadAsset,
 	) -> Result<(), Error> {
-		entity.try_insert_if_new((
-			TInteractions::TInteraction::from(InteractAble::Beam {
-				emitter: BeamEmitter {
-					mounted_on: self.attacker,
+		entity
+			.try_insert_if_new((
+				TInteractions::TInteraction::from(InteractAble::Beam {
 					range: self.range,
-					insert_beam_model: |entity| {
-						entity.try_insert(VoidBeamModel);
-					},
-				},
-				blocked_by: Blocker::all(),
-			}),
-			TInteractions::effect(DealDamage::once_per_second(self.damage)),
-		));
+					blocked_by: Blocker::all(),
+				}),
+				TInteractions::effect(DealDamage::once_per_second(self.damage)),
+			))
+			.with_child(VoidBeamModel);
 
 		Ok(())
 	}
@@ -71,9 +67,14 @@ pub(crate) struct VoidBeamModel;
 impl VoidBeamModel {
 	const COLOR: Color = Color::BLACK;
 	const EMISSIVE: LinearRgba = LinearRgba::new(23.0, 23.0, 23.0, 1.);
+	const HALF_FORWARD: Transform = Transform::from_translation(Vec3 {
+		x: 0.,
+		y: 0.,
+		z: -0.5,
+	});
 
 	fn transform() -> Transform {
-		Transform::from_rotation(Quat::from_rotation_x(PI / 2.))
+		Self::HALF_FORWARD.with_rotation(Quat::from_rotation_x(PI / 2.))
 	}
 
 	fn model() -> InsertAsset<Mesh> {
