@@ -58,7 +58,7 @@ impl SpawnShape for SpawnProjectile {
 				},
 				integrity: Integrity::Fragile {
 					destroyed_by: match &self.destroyed_by {
-						DestroyedBy::All => Blocker::all().collect(),
+						DestroyedBy::All => Blocker::all(),
 						DestroyedBy::AnyOf(blockers) => blockers.clone(),
 					},
 				},

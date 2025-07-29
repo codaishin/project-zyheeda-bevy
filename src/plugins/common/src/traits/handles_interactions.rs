@@ -3,32 +3,29 @@ use crate::{
 	tools::Units,
 };
 use bevy::prelude::*;
+use std::collections::HashSet;
 
 pub trait HandlesInteractions {
 	type TSystems: SystemSet;
-	type TBlockable: Component + BlockableDefinition;
+	type TInteraction: Component + From<InteractAble>;
 
 	const SYSTEMS: Self::TSystems;
-
-	fn beam_from<T>(value: &T) -> impl Bundle
-	where
-		T: BeamParameters;
 }
 
-pub trait BlockableDefinition {
-	fn new<T>(blockable_type: BlockableType, blocked_by: T) -> Self
-	where
-		T: IntoIterator<Item = Blocker>;
+#[derive(Debug, PartialEq, Clone)]
+pub enum InteractAble {
+	Beam {
+		config: BeamConfig,
+		blocked_by: HashSet<Blocker>,
+	},
+	Fragile {
+		destroyed_by: HashSet<Blocker>,
+	},
 }
 
-pub trait BeamParameters {
-	fn source(&self) -> PersistentEntity;
-	fn target(&self) -> PersistentEntity;
-	fn range(&self) -> Units;
-}
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum BlockableType {
-	Beam,
-	Fragile,
+#[derive(Debug, PartialEq, Clone)]
+pub struct BeamConfig {
+	pub source: PersistentEntity,
+	pub target: PersistentEntity,
+	pub range: Units,
 }

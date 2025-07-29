@@ -11,8 +11,11 @@ pub enum Blocker {
 }
 
 impl Blocker {
-	pub fn all() -> Iter<Blocker> {
-		Blocker::iterator()
+	pub fn all<TBlockers>() -> TBlockers
+	where
+		TBlockers: FromIterator<Blocker>,
+	{
+		Blocker::iterator().collect()
 	}
 }
 

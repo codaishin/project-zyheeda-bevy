@@ -3,7 +3,7 @@ pub mod gravity_affected;
 pub mod interacting_entities;
 pub mod running_interactions;
 
-pub(crate) mod beam;
+pub(crate) mod active_beam;
 pub(crate) mod blockable;
 pub(crate) mod effect;
 

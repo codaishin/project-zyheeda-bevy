@@ -19,7 +19,7 @@ use common::{
 	components::{asset_model::AssetModel, collider_relationship::InteractionTarget},
 	errors::{Error, Level},
 	traits::{
-		handles_interactions::{BlockableDefinition, BlockableType, HandlesInteractions},
+		handles_interactions::{HandlesInteractions, InteractAble},
 		handles_skill_behaviors::{Integrity, Motion, Shape, Spawner},
 		prefab::PrefabEntityCommands,
 	},
@@ -132,9 +132,10 @@ impl SimplePrefab for Integrity {
 		match self {
 			Integrity::Solid => {}
 			Integrity::Fragile { destroyed_by } => {
-				entity.try_insert_if_new(TInteractions::TBlockable::new(
-					BlockableType::Fragile,
-					destroyed_by.iter().copied(),
+				entity.try_insert_if_new(TInteractions::TInteraction::from(
+					InteractAble::Fragile {
+						destroyed_by: destroyed_by.clone(),
+					},
 				));
 			}
 		};
@@ -217,12 +218,7 @@ mod tests {
 		},
 		traits::{
 			clamp_zero_positive::ClampZeroPositive,
-			handles_interactions::{
-				BeamParameters,
-				BlockableDefinition,
-				BlockableType,
-				HandlesInteractions,
-			},
+			handles_interactions::{HandlesInteractions, InteractAble},
 		},
 	};
 	use std::collections::HashSet;
@@ -232,33 +228,27 @@ mod tests {
 	#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone)]
 	struct _Systems;
 
-	#[derive(Component)]
-	struct _BlockedBy;
+	#[derive(Component, Debug, PartialEq)]
+	enum _Interaction {
+		Beam,
+		Fragile(HashSet<Blocker>),
+	}
 
-	impl BlockableDefinition for _BlockedBy {
-		fn new<T>(_: BlockableType, _: T) -> Self
-		where
-			T: IntoIterator<Item = Blocker>,
-		{
-			Self
+	impl From<InteractAble> for _Interaction {
+		fn from(interaction: InteractAble) -> Self {
+			match interaction {
+				InteractAble::Beam { .. } => Self::Beam,
+				InteractAble::Fragile { destroyed_by } => Self::Fragile(destroyed_by),
+			}
 		}
 	}
 
 	impl HandlesInteractions for _Interactions {
 		type TSystems = _Systems;
-		type TBlockable = _BlockedBy;
+		type TInteraction = _Interaction;
 
 		const SYSTEMS: Self::TSystems = _Systems;
-
-		fn beam_from<T>(_: &T) -> impl Bundle
-		where
-			T: BeamParameters,
-		{
-		}
 	}
-
-	#[derive(Component, Debug, PartialEq)]
-	struct _IsFragile(Vec<Blocker>);
 
 	fn test_system<T>(
 		exec: impl Fn(&mut EntityCommands) -> T,
@@ -478,8 +468,8 @@ mod tests {
 		}))?;
 
 		assert_eq!(
-			Some(&_IsFragile(vec![Blocker::Physical])),
-			app.world().entity(entity).get::<_IsFragile>(),
+			Some(&_Interaction::Fragile([Blocker::Physical].into())),
+			app.world().entity(entity).get::<_Interaction>(),
 		);
 		Ok(())
 	}

@@ -17,13 +17,13 @@ use common::{
 	components::life::Life,
 	traits::{
 		delta::Delta,
-		handles_interactions::{BeamParameters, HandlesInteractions},
+		handles_interactions::HandlesInteractions,
 		handles_saving::{HandlesSaving, SavableComponent},
 		thread_safe::ThreadSafe,
 	},
 };
 use components::{
-	beam::{Beam, BeamCommand},
+	active_beam::ActiveBeam,
 	effect::{deal_damage::DealDamageEffect, gravity::GravityEffect},
 	gravity_affected::GravityAffected,
 	interacting_entities::InteractingEntities,
@@ -90,7 +90,7 @@ where
 				Update,
 				(
 					apply_fragile_blocks,
-					Beam::execute,
+					ActiveBeam::execute,
 					execute_ray_caster
 						.pipe(apply_interruptable_ray_blocks)
 						.pipe(map_ray_cast_result_to_interaction_events)
@@ -145,14 +145,7 @@ pub struct InteractionSystems;
 
 impl<TDependencies> HandlesInteractions for InteractionsPlugin<TDependencies> {
 	type TSystems = InteractionSystems;
-	type TBlockable = Blockable;
+	type TInteraction = Blockable;
 
 	const SYSTEMS: Self::TSystems = InteractionSystems;
-
-	fn beam_from<T>(value: &T) -> impl Bundle
-	where
-		T: BeamParameters,
-	{
-		BeamCommand::from(value)
-	}
 }
