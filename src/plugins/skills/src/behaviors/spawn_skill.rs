@@ -9,6 +9,7 @@ use common::{
 	traits::handles_skill_behaviors::{HandlesSkillBehaviors, SkillSpawner},
 	zyheeda_commands::ZyheedaCommands,
 };
+use serde::{Deserialize, Serialize};
 use spawn_ground_target::SpawnGroundTargetedAoe;
 use spawn_projectile::SpawnProjectile;
 use spawn_shield::SpawnShield;
@@ -17,15 +18,9 @@ use spawn_shield::SpawnShield;
 pub(crate) type SpawnSkillFn =
 	fn(&mut ZyheedaCommands, &SkillCaster, SkillSpawner, &SkillTarget) -> SkillShape;
 
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum OnSkillStop {
-	Ignore,
-	Stop(PersistentEntity),
-}
-
 #[derive(Debug, Clone)]
 #[cfg_attr(not(test), derive(PartialEq))]
-pub(crate) enum BuildSkillShape {
+pub(crate) enum SpawnSkill {
 	GroundTargetedAoe(SpawnGroundTargetedAoe),
 	Projectile(SpawnProjectile),
 	Shield(SpawnShield),
@@ -34,7 +29,7 @@ pub(crate) enum BuildSkillShape {
 }
 
 #[cfg(test)]
-impl Default for BuildSkillShape {
+impl Default for SpawnSkill {
 	fn default() -> Self {
 		use bevy::prelude::*;
 
@@ -51,7 +46,7 @@ impl Default for BuildSkillShape {
 }
 
 #[cfg(test)]
-impl PartialEq for BuildSkillShape {
+impl PartialEq for SpawnSkill {
 	fn eq(&self, other: &Self) -> bool {
 		match (self, other) {
 			(Self::GroundTargetedAoe(l0), Self::GroundTargetedAoe(r0)) => l0 == r0,
@@ -63,9 +58,9 @@ impl PartialEq for BuildSkillShape {
 	}
 }
 
-impl BuildSkillShape {
+impl SpawnSkill {
 	#[cfg(test)]
-	pub(crate) const NO_SHAPE: BuildSkillShape = BuildSkillShape::Fn(Self::no_shape);
+	pub(crate) const NO_SHAPE: SpawnSkill = SpawnSkill::Fn(Self::no_shape);
 
 	#[cfg(test)]
 	fn no_shape(
@@ -108,4 +103,17 @@ impl BuildSkillShape {
 			Self::Fn(func) => func(commands, caster, spawner, target),
 		}
 	}
+}
+
+#[derive(Default, PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum SpawnOn {
+	#[default]
+	Center,
+	Slot,
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum OnSkillStop {
+	Ignore,
+	Stop(PersistentEntity),
 }

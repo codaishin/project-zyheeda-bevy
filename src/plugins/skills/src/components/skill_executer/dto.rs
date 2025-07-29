@@ -54,7 +54,7 @@ mod tests {
 	use super::*;
 	use crate::behaviors::{
 		SkillBehaviorConfig,
-		build_skill_shape::{BuildSkillShape, spawn_shield::SpawnShield},
+		spawn_skill::{SpawnSkill, spawn_shield::SpawnShield},
 	};
 	use bevy::{asset::AssetPath, prelude::*};
 	use common::{
@@ -67,7 +67,7 @@ mod tests {
 		SkillExecuter::Start {
 			slot_key: SlotKey::from(PlayerSlot::Lower(Side::Left)),
 			shape: RunSkillBehavior::OnAim(SkillBehaviorConfig::from_shape(
-				BuildSkillShape::Shield(SpawnShield),
+				SpawnSkill::Shield(SpawnShield),
 			)),
 		}
 	}
