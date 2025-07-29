@@ -10,7 +10,6 @@ use common::{
 	traits::handles_skill_behaviors::{
 		Contact,
 		HandlesSkillBehaviors,
-		Integrity,
 		Motion,
 		Projection,
 		Shape,
@@ -70,7 +69,6 @@ impl SpawnShape for SpawnGroundTargetedAoe {
 					radius: self.radius,
 					hollow_collider: true,
 				},
-				integrity: Integrity::Solid,
 				motion: Motion::Stationary {
 					caster,
 					max_cast_range: self.max_range,
