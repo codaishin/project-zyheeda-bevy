@@ -54,22 +54,23 @@ impl SpawnShape for SpawnProjectile {
 				shape: Shape::Sphere {
 					radius: Units::new(0.05),
 					hollow_collider: false,
+					destroyed_by: match &self.destroyed_by {
+						DestroyedBy::All => Blocker::all(),
+						DestroyedBy::AnyOf(blockers) => blockers.clone(),
+					},
 				},
 				motion: Motion::Projectile {
 					caster,
 					spawner,
 					speed: UnitsPerSecond::new(15.),
 					range: Units::new(20.),
-					destroyed_by: match &self.destroyed_by {
-						DestroyedBy::All => Blocker::all(),
-						DestroyedBy::AnyOf(blockers) => blockers.clone(),
-					},
 				},
 			},
 			Projection {
 				shape: Shape::Sphere {
 					radius: Units::new(0.5),
 					hollow_collider: false,
+					destroyed_by: Blocker::none(),
 				},
 				offset: None,
 			},

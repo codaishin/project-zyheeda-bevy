@@ -17,6 +17,13 @@ impl Blocker {
 	{
 		Blocker::iterator().collect()
 	}
+
+	pub fn none<TBlockers>() -> TBlockers
+	where
+		TBlockers: FromIterator<Blocker>,
+	{
+		std::iter::empty().collect()
+	}
 }
 
 impl IterFinite for Blocker {

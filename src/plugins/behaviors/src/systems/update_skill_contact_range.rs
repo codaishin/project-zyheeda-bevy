@@ -44,13 +44,13 @@ mod tests {
 				shape: Shape::Sphere {
 					radius: Units::new(1.),
 					hollow_collider: false,
+					destroyed_by: default(),
 				},
 				motion: Motion::Projectile {
 					caster: PersistentEntity::default(),
 					spawner: SkillSpawner::Neutral,
 					speed: UnitsPerSecond::new(1.),
 					range,
-					destroyed_by: default(),
 				},
 			}
 		}
