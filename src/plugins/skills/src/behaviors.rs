@@ -1,14 +1,12 @@
 pub mod attach_skill_effect;
-pub mod build_skill_shape;
-pub mod spawn_on;
+pub mod spawn_skill;
 
 use crate::{
-	behaviors::{attach_skill_effect::AttachEffect, spawn_on::SpawnOn},
+	behaviors::{attach_skill_effect::AttachEffect, spawn_skill::SpawnOn},
 	components::SkillTarget,
 	traits::skill_builder::SkillShape,
 };
 use bevy::prelude::*;
-use build_skill_shape::BuildSkillShape;
 use common::{
 	components::persistent_entity::PersistentEntity,
 	traits::{
@@ -17,6 +15,7 @@ use common::{
 	},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
+use spawn_skill::SpawnSkill;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct SkillCaster(pub PersistentEntity);
@@ -29,7 +28,7 @@ impl From<PersistentEntity> for SkillCaster {
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct SkillBehaviorConfig {
-	pub(crate) shape: BuildSkillShape,
+	pub(crate) shape: SpawnSkill,
 	pub(crate) contact: Vec<AttachEffect>,
 	pub(crate) projection: Vec<AttachEffect>,
 	pub(crate) spawn_on: SpawnOn,
@@ -37,7 +36,7 @@ pub struct SkillBehaviorConfig {
 
 impl SkillBehaviorConfig {
 	#[cfg(test)]
-	pub(crate) fn from_shape(shape: BuildSkillShape) -> Self {
+	pub(crate) fn from_shape(shape: SpawnSkill) -> Self {
 		Self {
 			shape,
 			contact: default(),

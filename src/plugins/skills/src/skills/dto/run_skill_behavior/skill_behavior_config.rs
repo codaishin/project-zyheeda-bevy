@@ -1,19 +1,18 @@
 pub(crate) mod attach_effect;
-pub(crate) mod build_shape;
+pub(crate) mod spawn;
 
 use crate::behaviors::{
 	SkillBehaviorConfig,
 	attach_skill_effect::AttachEffect,
-	build_skill_shape::BuildSkillShape,
-	spawn_on::SpawnOn,
+	spawn_skill::{SpawnOn, SpawnSkill},
 };
 use attach_effect::AttachEffectDto;
-use build_shape::BuildSkillShapeDto;
 use serde::{Deserialize, Serialize};
+use spawn::SpawnSkillDto;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub(crate) struct SkillBehaviorConfigDto {
-	shape: BuildSkillShapeDto,
+	shape: SpawnSkillDto,
 	contact: Vec<AttachEffectDto>,
 	projection: Vec<AttachEffectDto>,
 	spawn_on: SpawnOn,
@@ -25,7 +24,7 @@ impl From<SkillBehaviorConfigDto> for SkillBehaviorConfig {
 		let projection = value.projection.into_iter().map(AttachEffect::from);
 
 		Self {
-			shape: BuildSkillShape::from(value.shape),
+			shape: SpawnSkill::from(value.shape),
 			contact: contact.collect(),
 			projection: projection.collect(),
 			spawn_on: value.spawn_on,
@@ -39,7 +38,7 @@ impl From<SkillBehaviorConfig> for SkillBehaviorConfigDto {
 		let projection = value.projection.into_iter().map(AttachEffectDto::from);
 
 		Self {
-			shape: BuildSkillShapeDto::from(value.shape),
+			shape: SpawnSkillDto::from(value.shape),
 			contact: contact.collect(),
 			projection: projection.collect(),
 			spawn_on: value.spawn_on,

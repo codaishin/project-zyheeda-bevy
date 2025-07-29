@@ -195,7 +195,7 @@ mod tests {
 	use crate::{
 		behaviors::{
 			SkillBehaviorConfig,
-			build_skill_shape::{BuildSkillShape, OnSkillStop},
+			spawn_skill::{OnSkillStop, SpawnSkill},
 		},
 		traits::skill_builder::SkillShape,
 	};
@@ -333,7 +333,7 @@ mod tests {
 	fn skill_behavior(
 		activation_type: impl Fn(SkillBehaviorConfig) -> RunSkillBehavior,
 	) -> RunSkillBehavior {
-		activation_type(SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(
+		activation_type(SkillBehaviorConfig::from_shape(SpawnSkill::Fn(
 			|commands, _, _, _| SkillShape {
 				contact: commands.spawn(()).id(),
 				projection: commands.spawn(()).id(),
