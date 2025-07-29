@@ -5,7 +5,6 @@ pub mod running_interactions;
 
 pub(crate) mod beam;
 pub(crate) mod blockable;
-pub(crate) mod blocked_by;
 pub(crate) mod effect;
 
 use bevy::{

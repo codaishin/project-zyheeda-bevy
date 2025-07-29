@@ -13,7 +13,12 @@ use common::{
 	traits::{
 		handles_effect::HandlesEffect,
 		handles_enemies::{Attacker, Target},
-		handles_interactions::{BeamParameters, HandlesInteractions},
+		handles_interactions::{
+			BeamParameters,
+			BlockableDefinition,
+			BlockableType,
+			HandlesInteractions,
+		},
 		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
@@ -57,7 +62,7 @@ where
 		entity
 			.try_insert_if_new((
 				TInteractions::beam_from(self),
-				TInteractions::is_ray_interrupted_by(Blocker::all()),
+				TInteractions::TBlockable::new(BlockableType::Beam, Blocker::all()),
 				TInteractions::effect(DealDamage::once_per_second(self.damage)),
 			))
 			.with_child(VoidBeamModel);

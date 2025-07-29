@@ -1,23 +1,23 @@
 use super::execute_ray_caster::RayCastResult;
-use crate::components::{blockable::Blockable, blocked_by::BlockedBy};
+use crate::components::blockable::Blockable;
 use bevy::prelude::*;
 use common::{
 	components::{
 		collider_relationship::ColliderOfInteractionTarget,
 		is_blocker::{Blocker, IsBlocker},
 	},
-	traits::cast_ray::TimeOfImpact,
+	traits::{cast_ray::TimeOfImpact, handles_interactions::BlockableType},
 };
 use std::collections::{HashMap, HashSet};
 
 pub(crate) fn apply_interruptable_ray_blocks(
 	In(mut ray_casts): In<HashMap<Entity, RayCastResult>>,
-	mut interruptable_rays: Query<(Entity, &Blockable, &BlockedBy)>,
+	mut interruptable_rays: Query<(Entity, &Blockable)>,
 	blockers: Query<&IsBlocker>,
 	colliders: Query<&ColliderOfInteractionTarget>,
 ) -> HashMap<Entity, RayCastResult> {
-	for (entity, blockable, BlockedBy(interrupters)) in &mut interruptable_rays {
-		if blockable != &Blockable::Beam {
+	for (entity, blockable) in &mut interruptable_rays {
+		if blockable.blockable_type != BlockableType::Beam {
 			continue;
 		}
 
@@ -36,7 +36,7 @@ pub(crate) fn apply_interruptable_ray_blocks(
 				.map(ColliderOfInteractionTarget::target)
 				.unwrap_or(*hit);
 			let hit = blockers.get(hit).ok();
-			if is_interrupted(interrupters, hit) {
+			if is_interrupted(&blockable.blockers, hit) {
 				interrupt = Some(*toi);
 			}
 			true
@@ -78,7 +78,7 @@ mod tests {
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
 		components::collider_relationship::ColliderOfInteractionTarget,
-		traits::cast_ray::TimeOfImpact,
+		traits::{cast_ray::TimeOfImpact, handles_interactions::BlockableDefinition},
 	};
 
 	fn setup() -> App {
@@ -96,7 +96,7 @@ mod tests {
 		let far = app.world_mut().spawn_empty().id();
 		let interruptable = app
 			.world_mut()
-			.spawn((Blockable::Beam, BlockedBy::from([Blocker::Physical])))
+			.spawn(Blockable::new(BlockableType::Beam, [Blocker::Physical]))
 			.id();
 		let ray_casts = HashMap::from([(
 			interruptable,
@@ -149,7 +149,7 @@ mod tests {
 		let far = app.world_mut().spawn_empty().id();
 		let interruptable = app
 			.world_mut()
-			.spawn((Blockable::Beam, BlockedBy::from([Blocker::Physical])))
+			.spawn(Blockable::new(BlockableType::Beam, [Blocker::Physical]))
 			.id();
 		let ray_casts = HashMap::from([(
 			interruptable,
@@ -197,7 +197,7 @@ mod tests {
 		let far = app.world_mut().spawn_empty().id();
 		let interruptable = app
 			.world_mut()
-			.spawn((Blockable::Beam, BlockedBy::from([])))
+			.spawn(Blockable::new(BlockableType::Beam, []))
 			.id();
 		let ray_casts = HashMap::from([(
 			interruptable,
@@ -249,7 +249,7 @@ mod tests {
 		let far = app.world_mut().spawn_empty().id();
 		let interruptable = app
 			.world_mut()
-			.spawn((Blockable::Beam, BlockedBy::from([Blocker::Force])))
+			.spawn(Blockable::new(BlockableType::Beam, [Blocker::Force]))
 			.id();
 		let ray_casts = HashMap::from([(
 			interruptable,
@@ -301,7 +301,7 @@ mod tests {
 		let far = app.world_mut().spawn_empty().id();
 		let interruptable = app
 			.world_mut()
-			.spawn((Blockable::Fragile, BlockedBy::from([Blocker::Physical])))
+			.spawn(Blockable::new(BlockableType::Fragile, [Blocker::Physical]))
 			.id();
 		let ray_casts = HashMap::from([(
 			interruptable,

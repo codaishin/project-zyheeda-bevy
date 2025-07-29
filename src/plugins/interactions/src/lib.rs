@@ -7,19 +7,14 @@ mod resources;
 mod systems;
 
 use crate::{
-	components::{
-		blockable::Blockable,
-		blocked_by::BlockedBy,
-		effect::force::ForceEffect,
-		force_affected::ForceAffected,
-	},
+	components::{blockable::Blockable, effect::force::ForceEffect, force_affected::ForceAffected},
 	observers::update_blockers::UpdateBlockersObserver,
 	systems::interactions::act_on::ActOnSystem,
 };
 use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
 	self,
-	components::{is_blocker::Blocker, life::Life},
+	components::life::Life,
 	traits::{
 		delta::Delta,
 		handles_interactions::{BeamParameters, HandlesInteractions},
@@ -150,22 +145,9 @@ pub struct InteractionSystems;
 
 impl<TDependencies> HandlesInteractions for InteractionsPlugin<TDependencies> {
 	type TSystems = InteractionSystems;
+	type TBlockable = Blockable;
 
 	const SYSTEMS: Self::TSystems = InteractionSystems;
-
-	fn is_fragile_when_colliding_with<TBlockers>(blockers: TBlockers) -> impl Bundle
-	where
-		TBlockers: IntoIterator<Item = Blocker>,
-	{
-		(Blockable::Fragile, BlockedBy::from(blockers))
-	}
-
-	fn is_ray_interrupted_by<TBlockers>(blockers: TBlockers) -> impl Bundle
-	where
-		TBlockers: IntoIterator<Item = Blocker>,
-	{
-		(Blockable::Beam, BlockedBy::from(blockers))
-	}
 
 	fn beam_from<T>(value: &T) -> impl Bundle
 	where

@@ -1,14 +1,20 @@
 use crate::{
-	components::{blockable::Blockable, blocked_by::BlockedBy},
+	components::blockable::Blockable,
 	events::{Collision, InteractionEvent},
 };
 use bevy::prelude::*;
-use common::{components::is_blocker::IsBlocker, traits::try_despawn::TryDespawn};
+use common::{
+	components::is_blocker::IsBlocker,
+	traits::{
+		handles_interactions::BlockableType::{self},
+		try_despawn::TryDespawn,
+	},
+};
 
 pub(crate) fn apply_fragile_blocks(
 	mut commands: Commands,
 	mut interaction_event: EventReader<InteractionEvent>,
-	fragiles: Query<(Entity, &Blockable, &BlockedBy)>,
+	fragiles: Query<(Entity, &Blockable)>,
 	blockers: Query<&IsBlocker>,
 ) {
 	for (a, b) in interaction_event.read().filter_map(collision_started) {
@@ -33,22 +39,29 @@ fn collision_started(
 fn fragile_blocked_entity(
 	fragile: &Entity,
 	blocker: &Entity,
-	fragiles: &Query<(Entity, &Blockable, &BlockedBy)>,
+	fragiles: &Query<(Entity, &Blockable)>,
 	blockers: &Query<&IsBlocker>,
 ) -> Option<Entity> {
 	let IsBlocker(blocker) = blockers.get(*blocker).ok()?;
+	let (entity, blocked_by) = fragiles.get(*fragile).ok()?;
 
-	let Ok((entity, Blockable::Fragile, BlockedBy(destroyers))) = fragiles.get(*fragile) else {
+	if blocked_by.blockable_type != BlockableType::Fragile {
 		return None;
-	};
+	}
 
-	blocker.intersection(destroyers).next().map(|_| entity)
+	blocker
+		.intersection(&blocked_by.blockers)
+		.next()
+		.map(|_| entity)
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::components::is_blocker::Blocker;
+	use common::{
+		components::is_blocker::Blocker,
+		traits::handles_interactions::BlockableDefinition,
+	};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -65,7 +78,7 @@ mod tests {
 
 		let fragile = app
 			.world_mut()
-			.spawn((Blockable::Fragile, BlockedBy::from([Blocker::Physical])))
+			.spawn(Blockable::new(BlockableType::Fragile, [Blocker::Physical]))
 			.id();
 		let blocker = app
 			.world_mut()
@@ -88,7 +101,7 @@ mod tests {
 
 		let fragile = app
 			.world_mut()
-			.spawn((Blockable::Beam, BlockedBy::from([Blocker::Physical])))
+			.spawn(Blockable::new(BlockableType::Beam, [Blocker::Physical]))
 			.id();
 		let blocker = app
 			.world_mut()
@@ -111,7 +124,7 @@ mod tests {
 
 		let fragile = app
 			.world_mut()
-			.spawn((Blockable::Fragile, BlockedBy::from([Blocker::Physical])))
+			.spawn(Blockable::new(BlockableType::Fragile, [Blocker::Physical]))
 			.id();
 		let blocker = app
 			.world_mut()
@@ -134,7 +147,7 @@ mod tests {
 
 		let fragile = app
 			.world_mut()
-			.spawn((Blockable::Fragile, BlockedBy::from([Blocker::Physical])))
+			.spawn(Blockable::new(BlockableType::Fragile, [Blocker::Physical]))
 			.id();
 		let blocker = app
 			.world_mut()
@@ -157,7 +170,7 @@ mod tests {
 
 		let fragile = app
 			.world_mut()
-			.spawn((Blockable::Fragile, BlockedBy::from([Blocker::Physical])))
+			.spawn(Blockable::new(BlockableType::Fragile, [Blocker::Physical]))
 			.id();
 		let blocker = app
 			.world_mut()

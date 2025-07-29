@@ -19,7 +19,7 @@ use common::{
 	components::{asset_model::AssetModel, collider_relationship::InteractionTarget},
 	errors::{Error, Level},
 	traits::{
-		handles_interactions::HandlesInteractions,
+		handles_interactions::{BlockableDefinition, BlockableType, HandlesInteractions},
 		handles_skill_behaviors::{Integrity, Motion, Shape, Spawner},
 		prefab::PrefabEntityCommands,
 	},
@@ -132,7 +132,8 @@ impl SimplePrefab for Integrity {
 		match self {
 			Integrity::Solid => {}
 			Integrity::Fragile { destroyed_by } => {
-				entity.try_insert_if_new(TInteractions::is_fragile_when_colliding_with(
+				entity.try_insert_if_new(TInteractions::TBlockable::new(
+					BlockableType::Fragile,
 					destroyed_by.iter().copied(),
 				));
 			}
@@ -216,7 +217,12 @@ mod tests {
 		},
 		traits::{
 			clamp_zero_positive::ClampZeroPositive,
-			handles_interactions::{BeamParameters, HandlesInteractions},
+			handles_interactions::{
+				BeamParameters,
+				BlockableDefinition,
+				BlockableType,
+				HandlesInteractions,
+			},
 		},
 	};
 	use std::collections::HashSet;
@@ -226,23 +232,23 @@ mod tests {
 	#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone)]
 	struct _Systems;
 
+	#[derive(Component)]
+	struct _BlockedBy;
+
+	impl BlockableDefinition for _BlockedBy {
+		fn new<T>(_: BlockableType, _: T) -> Self
+		where
+			T: IntoIterator<Item = Blocker>,
+		{
+			Self
+		}
+	}
+
 	impl HandlesInteractions for _Interactions {
 		type TSystems = _Systems;
+		type TBlockable = _BlockedBy;
 
 		const SYSTEMS: Self::TSystems = _Systems;
-
-		fn is_fragile_when_colliding_with<TBlockers>(blockers: TBlockers) -> impl Bundle
-		where
-			TBlockers: IntoIterator<Item = Blocker>,
-		{
-			_IsFragile(Vec::from_iter(blockers))
-		}
-
-		fn is_ray_interrupted_by<TBlockers>(_: TBlockers) -> impl Bundle
-		where
-			TBlockers: IntoIterator<Item = Blocker>,
-		{
-		}
 
 		fn beam_from<T>(_: &T) -> impl Bundle
 		where
