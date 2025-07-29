@@ -14,7 +14,6 @@ use common::{
 		handles_skill_behaviors::{
 			Contact,
 			HandlesSkillBehaviors,
-			Integrity,
 			Motion,
 			Projection,
 			ProjectionOffset,
@@ -52,7 +51,6 @@ impl SpawnShape for SpawnShield {
 					collider: Collider::cuboid(0.5, 0.5, 0.05),
 					scale: Vec3::splat(1.),
 				},
-				integrity: Integrity::Solid,
 				motion: Motion::HeldBy { caster },
 			},
 			Projection {

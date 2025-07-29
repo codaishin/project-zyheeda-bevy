@@ -20,7 +20,7 @@ use common::{
 	errors::{Error, Level},
 	traits::{
 		handles_interactions::{HandlesInteractions, InteractAble},
-		handles_skill_behaviors::{Integrity, Motion, Shape, Spawner},
+		handles_skill_behaviors::{Motion, Shape, Spawner},
 		prefab::PrefabEntityCommands,
 	},
 };
@@ -118,32 +118,6 @@ fn custom_collider(collider: &Collider, scale: Vec3) -> (Collider, Transform) {
 	(collider.clone(), Transform::from_scale(scale))
 }
 
-impl SimplePrefab for Integrity {
-	type TExtra = ();
-
-	fn prefab<TInteractions>(
-		&self,
-		entity: &mut impl PrefabEntityCommands,
-		_: (),
-	) -> Result<(), Error>
-	where
-		TInteractions: HandlesInteractions,
-	{
-		match self {
-			Integrity::Solid => {}
-			Integrity::Fragile { destroyed_by } => {
-				entity.try_insert_if_new(TInteractions::TInteraction::from(
-					InteractAble::Fragile {
-						destroyed_by: destroyed_by.clone(),
-					},
-				));
-			}
-		};
-
-		Ok(())
-	}
-}
-
 impl SimplePrefab for Motion {
 	type TExtra = CreatedFrom;
 
@@ -151,8 +125,11 @@ impl SimplePrefab for Motion {
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		created_from: CreatedFrom,
-	) -> Result<(), Error> {
-		match *self {
+	) -> Result<(), Error>
+	where
+		TInteractions: HandlesInteractions,
+	{
+		match self.clone() {
 			Motion::HeldBy { caster } => {
 				entity.try_insert_if_new((
 					RigidBody::Fixed,
@@ -180,12 +157,14 @@ impl SimplePrefab for Motion {
 				spawner,
 				speed,
 				range,
+				destroyed_by,
 			} => {
 				entity.try_insert_if_new((
 					RigidBody::Dynamic,
 					GravityScale(0.),
 					Ccd::enabled(),
 					WhenTraveled::via::<Velocity>().distance(range).destroy(),
+					TInteractions::TInteraction::from(InteractAble::Fragile { destroyed_by }),
 				));
 
 				if created_from == CreatedFrom::Save {
@@ -224,6 +203,7 @@ mod tests {
 		},
 	};
 	use std::collections::HashSet;
+	use testing::{assert_count, get_children};
 
 	struct _Interactions;
 
@@ -298,6 +278,8 @@ mod tests {
 				None,
 				None,
 				None,
+				None,
+				None,
 			),
 			(
 				entity.get::<RigidBody>(),
@@ -331,6 +313,7 @@ mod tests {
 			motion.prefab::<_Interactions>(entity, CreatedFrom::Contact)
 		}))?;
 
+		let entity = app.world().entity(entity);
 		assert_eq!(
 			(
 				Some(&RigidBody::Fixed),
@@ -348,18 +331,18 @@ mod tests {
 				None,
 				None,
 				None,
+				None,
 			),
 			(
-				app.world().entity(entity).get::<RigidBody>(),
-				app.world().entity(entity).get::<GravityScale>(),
-				app.world().entity(entity).get::<Ccd>(),
-				app.world().entity(entity).get::<GroundTarget>(),
-				app.world().entity(entity).get::<Anchor<Always>>(),
-				app.world().entity(entity).get::<Anchor<Once>>(),
-				app.world().entity(entity).get::<SetVelocityForward>(),
-				app.world()
-					.entity(entity)
-					.get::<DestroyAfterDistanceTraveled<Velocity>>(),
+				entity.get::<RigidBody>(),
+				entity.get::<GravityScale>(),
+				entity.get::<Ccd>(),
+				entity.get::<GroundTarget>(),
+				entity.get::<Anchor<Always>>(),
+				entity.get::<Anchor<Once>>(),
+				entity.get::<SetVelocityForward>(),
+				entity.get::<DestroyAfterDistanceTraveled<Velocity>>(),
+				entity.get::<_Interaction>(),
 			)
 		);
 		Ok(())
@@ -374,6 +357,7 @@ mod tests {
 			spawner: Spawner::Slot(SlotKey::TopHand(Side::Left)),
 			speed: UnitsPerSecond::new(11.),
 			range: Units::new(1111.),
+			destroyed_by: [Blocker::Force].into(),
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
@@ -399,6 +383,7 @@ mod tests {
 						.distance(Units::new(1111.))
 						.destroy()
 				),
+				Some(&_Interaction::Fragile([Blocker::Force].into())),
 			),
 			(
 				entity.get::<RigidBody>(),
@@ -409,6 +394,7 @@ mod tests {
 				entity.get::<Anchor<Once>>(),
 				entity.get::<SetVelocityForward>(),
 				entity.get::<DestroyAfterDistanceTraveled<Velocity>>(),
+				entity.get::<_Interaction>(),
 			)
 		);
 		Ok(())
@@ -423,12 +409,14 @@ mod tests {
 			spawner: Spawner::Slot(SlotKey::TopHand(Side::Left)),
 			speed: UnitsPerSecond::new(11.),
 			range: Units::new(1111.),
+			destroyed_by: [Blocker::Force].into(),
 		};
 
 		_ = app.world_mut().run_system_once(test_system(move |entity| {
 			motion.prefab::<_Interactions>(entity, CreatedFrom::Save)
 		}))?;
 
+		let entity = app.world().entity(entity);
 		assert_eq!(
 			(
 				Some(&RigidBody::Dynamic),
@@ -443,47 +431,21 @@ mod tests {
 						.distance(Units::new(1111.))
 						.destroy()
 				),
+				Some(&_Interaction::Fragile([Blocker::Force].into())),
 			),
 			(
-				app.world().entity(entity).get::<RigidBody>(),
-				app.world().entity(entity).get::<GravityScale>(),
-				app.world().entity(entity).get::<Ccd>(),
-				app.world().entity(entity).get::<GroundTarget>(),
-				app.world().entity(entity).get::<Anchor<Always>>(),
-				app.world().entity(entity).get::<Anchor<Once>>(),
-				app.world().entity(entity).get::<SetVelocityForward>(),
-				app.world()
-					.entity(entity)
-					.get::<DestroyAfterDistanceTraveled<Velocity>>(),
+				entity.get::<RigidBody>(),
+				entity.get::<GravityScale>(),
+				entity.get::<Ccd>(),
+				entity.get::<GroundTarget>(),
+				entity.get::<Anchor<Always>>(),
+				entity.get::<Anchor<Once>>(),
+				entity.get::<SetVelocityForward>(),
+				entity.get::<DestroyAfterDistanceTraveled<Velocity>>(),
+				entity.get::<_Interaction>(),
 			)
 		);
 		Ok(())
-	}
-
-	#[test]
-	fn fragile_components() -> Result<(), RunSystemError> {
-		let (mut app, entity) = setup();
-		let integrity = Integrity::Fragile {
-			destroyed_by: HashSet::from([Blocker::Physical]),
-		};
-
-		_ = app.world_mut().run_system_once(test_system(move |entity| {
-			integrity.prefab::<_Interactions>(entity, ())
-		}))?;
-
-		assert_eq!(
-			Some(&_Interaction::Fragile([Blocker::Physical].into())),
-			app.world().entity(entity).get::<_Interaction>(),
-		);
-		Ok(())
-	}
-
-	fn children_of(app: &App, entity: Entity) -> impl Iterator<Item = EntityRef> {
-		app.world().iter_entities().filter(move |e| {
-			e.get::<ChildOf>()
-				.map(|c| c.parent() == entity)
-				.unwrap_or(false)
-		})
 	}
 
 	#[test]
@@ -498,6 +460,7 @@ mod tests {
 			shape.prefab::<_Interactions>(entity, Vec3::new(1., 2., 3.))
 		}))?;
 
+		let entity = app.world().entity(entity);
 		assert_eq!(
 			(
 				Some(&InteractionTarget),
@@ -505,9 +468,9 @@ mod tests {
 				Some(&Visibility::Inherited)
 			),
 			(
-				app.world().entity(entity).get::<InteractionTarget>(),
-				app.world().entity(entity).get::<Transform>(),
-				app.world().entity(entity).get::<Visibility>(),
+				entity.get::<InteractionTarget>(),
+				entity.get::<Transform>(),
+				entity.get::<Visibility>(),
 			)
 		);
 		Ok(())
@@ -526,6 +489,7 @@ mod tests {
 			shape.prefab::<_Interactions>(entity, Vec3::new(1., 2., 3.))
 		}))?;
 
+		let entity = app.world().entity(entity);
 		assert_eq!(
 			(
 				Some(&InteractionTarget),
@@ -533,9 +497,9 @@ mod tests {
 				Some(&Visibility::Inherited)
 			),
 			(
-				app.world().entity(entity).get::<InteractionTarget>(),
-				app.world().entity(entity).get::<Transform>(),
-				app.world().entity(entity).get::<Visibility>(),
+				entity.get::<InteractionTarget>(),
+				entity.get::<Transform>(),
+				entity.get::<Visibility>(),
 			)
 		);
 		Ok(())
@@ -553,9 +517,7 @@ mod tests {
 			shape.prefab::<_Interactions>(entity, Vec3::ZERO)
 		}))?;
 
-		let child = children_of(&app, entity)
-			.next()
-			.expect("no entity children");
+		let [child, ..] = assert_count!(2, get_children!(&app, entity));
 		assert_eq!(
 			(
 				Some(&Transform::from_scale(Vec3::splat(42. * 2.))),
@@ -578,9 +540,7 @@ mod tests {
 			shape.prefab::<_Interactions>(entity, Vec3::ZERO)
 		}))?;
 
-		let child = children_of(&app, entity)
-			.nth(1)
-			.expect("no second entity children");
+		let [.., child] = assert_count!(2, get_children!(&app, entity));
 		assert_eq!(
 			(
 				Some(&Transform::default()),
@@ -610,9 +570,7 @@ mod tests {
 			shape.prefab::<_Interactions>(entity, Vec3::ZERO)
 		}))?;
 
-		let child = children_of(&app, entity)
-			.nth(1)
-			.expect("no second entity children");
+		let [.., child] = assert_count!(2, get_children!(&app, entity));
 		let (_expected_collider, expected_transform) = ring_collider(42.).unwrap();
 		assert_eq!(
 			(
@@ -649,9 +607,7 @@ mod tests {
 			shape.prefab::<_Interactions>(entity, Vec3::ZERO)
 		}))?;
 
-		let child = children_of(&app, entity)
-			.nth(1)
-			.expect("no second entity children");
+		let [.., child] = assert_count!(2, get_children!(&app, entity));
 		assert!(child.contains::<Sensor>());
 		Ok(())
 	}
@@ -669,9 +625,7 @@ mod tests {
 			shape.prefab::<_Interactions>(entity, Vec3::ZERO)
 		}))?;
 
-		let child = children_of(&app, entity)
-			.next()
-			.expect("no entity children");
+		let [child, ..] = assert_count!(2, get_children!(&app, entity));
 		assert_eq!(
 			(
 				Some(&AssetModel::path("custom")),
@@ -695,9 +649,7 @@ mod tests {
 			shape.prefab::<_Interactions>(entity, Vec3::ZERO)
 		}))?;
 
-		let child = children_of(&app, entity)
-			.nth(1)
-			.expect("no second entity children");
+		let [.., child] = assert_count!(2, get_children!(&app, entity));
 		assert_eq!(
 			(
 				Some(&Transform::from_scale(Vec3::new(3., 2., 1.))),
@@ -730,9 +682,7 @@ mod tests {
 			shape.prefab::<_Interactions>(entity, Vec3::ZERO)
 		}))?;
 
-		let child = children_of(&app, entity)
-			.nth(1)
-			.expect("no second entity children");
+		let [.., child] = assert_count!(2, get_children!(&app, entity));
 		assert!(child.contains::<Sensor>());
 		Ok(())
 	}

@@ -25,7 +25,6 @@ pub trait HandlesSkillBehaviors {
 #[derive(Debug, Clone)]
 pub struct Contact {
 	pub shape: Shape,
-	pub integrity: Integrity,
 	pub motion: Motion,
 }
 
@@ -61,13 +60,7 @@ pub enum Shape {
 	},
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
-pub enum Integrity {
-	Solid,
-	Fragile { destroyed_by: HashSet<Blocker> },
-}
-
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum Motion {
 	HeldBy {
 		caster: PersistentEntity,
@@ -82,11 +75,13 @@ pub enum Motion {
 		spawner: Spawner,
 		speed: UnitsPerSecond,
 		range: Units,
+		destroyed_by: HashSet<Blocker>,
 	},
 	Beam {
 		caster: PersistentEntity,
 		spawner: Spawner,
 		range: Units,
+		blocked_by: HashSet<Blocker>,
 	},
 }
 
