@@ -52,11 +52,18 @@ pub enum Shape {
 	Sphere {
 		radius: Units,
 		hollow_collider: bool,
+		destroyed_by: HashSet<Blocker>,
 	},
 	Custom {
 		model: AssetModel,
 		collider: Collider,
 		scale: Vec3,
+		destroyed_by: HashSet<Blocker>,
+	},
+	Beam {
+		range: Units,
+		radius: Units,
+		blocked_by: HashSet<Blocker>,
 	},
 }
 
@@ -64,6 +71,7 @@ pub enum Shape {
 pub enum Motion {
 	HeldBy {
 		caster: PersistentEntity,
+		spawner: Spawner,
 	},
 	Stationary {
 		caster: PersistentEntity,
@@ -75,13 +83,6 @@ pub enum Motion {
 		spawner: Spawner,
 		speed: UnitsPerSecond,
 		range: Units,
-		destroyed_by: HashSet<Blocker>,
-	},
-	Beam {
-		caster: PersistentEntity,
-		spawner: Spawner,
-		range: Units,
-		blocked_by: HashSet<Blocker>,
 	},
 }
 

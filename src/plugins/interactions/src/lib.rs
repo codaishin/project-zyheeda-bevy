@@ -91,7 +91,6 @@ where
 				(
 					apply_fragile_blocks,
 					ActiveBeam::execute,
-					ActiveBeam::visualize,
 					execute_ray_caster
 						.pipe(apply_interruptable_ray_blocks)
 						.pipe(map_ray_cast_result_to_interaction_events)
