@@ -9,31 +9,26 @@ use common::{
 	components::persistent_entity::PersistentEntity,
 	traits::handles_skill_behaviors::{HandlesSkillBehaviors, Spawner},
 };
+use serde::{Deserialize, Serialize};
 use spawn_ground_target::SpawnGroundTargetedAoe;
 use spawn_projectile::SpawnProjectile;
 use spawn_shield::SpawnShield;
 
 #[cfg(test)]
-pub(crate) type BuildSkillShapeFn =
+pub(crate) type SpawnSkillFn =
 	for<'a> fn(&'a mut Commands, &SkillCaster, Spawner, &SkillTarget) -> SkillShape;
 
-#[derive(Debug, PartialEq, Clone)]
-pub enum OnSkillStop {
-	Ignore,
-	Stop(PersistentEntity),
-}
-
 #[derive(PartialEq, Debug, Clone)]
-pub(crate) enum BuildSkillShape {
+pub(crate) enum SpawnSkill {
 	GroundTargetedAoe(SpawnGroundTargetedAoe),
 	Projectile(SpawnProjectile),
 	Shield(SpawnShield),
 	#[cfg(test)]
-	Fn(BuildSkillShapeFn),
+	Fn(SpawnSkillFn),
 }
 
 #[cfg(test)]
-impl Default for BuildSkillShape {
+impl Default for SpawnSkill {
 	fn default() -> Self {
 		Self::Fn(|commands, _, _, _| {
 			let contact = commands.spawn_empty().id();
@@ -47,9 +42,9 @@ impl Default for BuildSkillShape {
 	}
 }
 
-impl BuildSkillShape {
+impl SpawnSkill {
 	#[cfg(test)]
-	pub(crate) const NO_SHAPE: BuildSkillShape = BuildSkillShape::Fn(Self::no_shape);
+	pub(crate) const NO_SHAPE: SpawnSkill = SpawnSkill::Fn(Self::no_shape);
 
 	#[cfg(test)]
 	fn no_shape(
@@ -90,4 +85,17 @@ impl BuildSkillShape {
 			Self::Fn(func) => func(commands, caster, spawner, target),
 		}
 	}
+}
+
+#[derive(Default, PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum SpawnOn {
+	#[default]
+	Center,
+	Slot,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum OnSkillStop {
+	Ignore,
+	Stop(PersistentEntity),
 }

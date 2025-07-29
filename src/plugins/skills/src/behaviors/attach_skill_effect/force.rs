@@ -7,10 +7,10 @@ use common::{
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct StartForce;
+pub struct AttachForce;
 
-impl StartForce {
-	pub fn apply<TInteractions>(
+impl AttachForce {
+	pub fn attach<TInteractions>(
 		&self,
 		entity: &mut EntityCommands,
 		_: &SkillCaster,
@@ -54,7 +54,7 @@ mod tests {
 
 	fn force(mut commands: Commands) -> Entity {
 		let mut entity = commands.spawn_empty();
-		StartForce.apply::<_HandlesInteractions>(
+		AttachForce.attach::<_HandlesInteractions>(
 			&mut entity,
 			&SkillCaster::from(*CASTER),
 			Spawner::Center,

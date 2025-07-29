@@ -2,7 +2,10 @@ mod dto;
 
 use super::SkillTarget;
 use crate::{
-	behaviors::{SkillCaster, build_skill_shape::OnSkillStop, spawn_on::SpawnOn},
+	behaviors::{
+		SkillCaster,
+		spawn_skill::{OnSkillStop, SpawnOn},
+	},
 	skills::{RunSkillBehavior, dto::run_skill_behavior::RunSkillBehaviorDto},
 	traits::{Execute, Flush, Schedule, spawn_skill_behavior::SpawnSkillBehavior},
 };
@@ -100,7 +103,6 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::behaviors::spawn_on::SpawnOn;
 	use common::{
 		components::{outdated::Outdated, persistent_entity::PersistentEntity},
 		tools::{action_key::slot::Side, collider_info::ColliderInfo},

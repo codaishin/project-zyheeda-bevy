@@ -8,12 +8,12 @@ use common::{
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct StartGravity {
+pub struct AttachGravity {
 	strength: UnitsPerSecond,
 }
 
-impl StartGravity {
-	pub fn apply<TInteractions>(
+impl AttachGravity {
+	pub fn attach<TInteractions>(
 		&self,
 		entity: &mut EntityCommands,
 		_: &SkillCaster,
@@ -62,7 +62,7 @@ mod tests {
 
 	fn gravity(In(pull): In<UnitsPerSecond>, mut commands: Commands) -> Entity {
 		let mut entity = commands.spawn_empty();
-		StartGravity { strength: pull }.apply::<_HandlesEffects>(
+		AttachGravity { strength: pull }.attach::<_HandlesEffects>(
 			&mut entity,
 			&SkillCaster::from(*CASTER),
 			Spawner::Center,

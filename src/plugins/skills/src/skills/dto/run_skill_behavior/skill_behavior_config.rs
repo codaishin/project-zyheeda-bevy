@@ -1,31 +1,30 @@
-pub(crate) mod shape;
-pub(crate) mod start_behavior;
+pub(crate) mod attach_effect;
+pub(crate) mod spawn;
 
 use crate::behaviors::{
 	SkillBehaviorConfig,
-	build_skill_shape::BuildSkillShape,
-	spawn_on::SpawnOn,
-	start_behavior::SkillBehavior,
+	attach_skill_effect::AttachEffect,
+	spawn_skill::{SpawnOn, SpawnSkill},
 };
+use attach_effect::AttachEffectDto;
 use serde::{Deserialize, Serialize};
-use shape::SkillShapeDto;
-use start_behavior::SkillBehaviorDto;
+use spawn::SpawnSkillDto;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub(crate) struct SkillBehaviorConfigDto {
-	shape: SkillShapeDto,
-	contact: Vec<SkillBehaviorDto>,
-	projection: Vec<SkillBehaviorDto>,
+	shape: SpawnSkillDto,
+	contact: Vec<AttachEffectDto>,
+	projection: Vec<AttachEffectDto>,
 	spawn_on: SpawnOn,
 }
 
 impl From<SkillBehaviorConfigDto> for SkillBehaviorConfig {
 	fn from(value: SkillBehaviorConfigDto) -> Self {
-		let contact = value.contact.into_iter().map(SkillBehavior::from);
-		let projection = value.projection.into_iter().map(SkillBehavior::from);
+		let contact = value.contact.into_iter().map(AttachEffect::from);
+		let projection = value.projection.into_iter().map(AttachEffect::from);
 
 		Self {
-			shape: BuildSkillShape::from(value.shape),
+			shape: SpawnSkill::from(value.shape),
 			contact: contact.collect(),
 			projection: projection.collect(),
 			spawn_on: value.spawn_on,
@@ -35,11 +34,11 @@ impl From<SkillBehaviorConfigDto> for SkillBehaviorConfig {
 
 impl From<SkillBehaviorConfig> for SkillBehaviorConfigDto {
 	fn from(value: SkillBehaviorConfig) -> Self {
-		let contact = value.contact.into_iter().map(SkillBehaviorDto::from);
-		let projection = value.projection.into_iter().map(SkillBehaviorDto::from);
+		let contact = value.contact.into_iter().map(AttachEffectDto::from);
+		let projection = value.projection.into_iter().map(AttachEffectDto::from);
 
 		Self {
-			shape: SkillShapeDto::from(value.shape),
+			shape: SpawnSkillDto::from(value.shape),
 			contact: contact.collect(),
 			projection: projection.collect(),
 			spawn_on: value.spawn_on,

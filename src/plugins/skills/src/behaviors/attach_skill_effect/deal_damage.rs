@@ -7,13 +7,13 @@ use common::{
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub enum StartDealingDamage {
+pub enum AttachDealingDamage {
 	OneTime(f32),
 	OverTime(f32),
 }
 
-impl StartDealingDamage {
-	pub fn apply<TInteractions>(
+impl AttachDealingDamage {
+	pub fn attach<TInteractions>(
 		&self,
 		entity: &mut EntityCommands,
 		_: &SkillCaster,
@@ -60,10 +60,10 @@ mod tests {
 
 	static CASTER: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
 
-	fn damage(damage: StartDealingDamage) -> impl Fn(Commands) -> Entity {
+	fn damage(damage: AttachDealingDamage) -> impl Fn(Commands) -> Entity {
 		move |mut commands| {
 			let mut entity = commands.spawn_empty();
-			damage.apply::<_HandlesDamage>(
+			damage.attach::<_HandlesDamage>(
 				&mut entity,
 				&SkillCaster::from(*CASTER),
 				Spawner::Center,
@@ -81,7 +81,7 @@ mod tests {
 	fn insert_single_target_damage() -> Result<(), RunSystemError> {
 		let mut app = setup();
 
-		let start_dealing_damage = StartDealingDamage::OneTime(42.);
+		let start_dealing_damage = AttachDealingDamage::OneTime(42.);
 		let entity = app
 			.world_mut()
 			.run_system_once(damage(start_dealing_damage))?;
@@ -97,7 +97,7 @@ mod tests {
 	fn insert_over_time_damage() -> Result<(), RunSystemError> {
 		let mut app = setup();
 
-		let start_dealing_damage = StartDealingDamage::OverTime(42.);
+		let start_dealing_damage = AttachDealingDamage::OverTime(42.);
 		let entity = app
 			.world_mut()
 			.run_system_once(damage(start_dealing_damage))?;
