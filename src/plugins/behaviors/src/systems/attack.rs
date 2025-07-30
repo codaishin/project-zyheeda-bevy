@@ -1,9 +1,10 @@
-use crate::components::{Attack, on_cool_down::OnCoolDown};
+use crate::components::{Attack, OverrideFace, on_cool_down::OnCoolDown};
 use bevy::prelude::*;
 use common::{
 	components::{ground_offset::GroundOffset, persistent_entity::PersistentEntity},
 	traits::{
 		handles_enemies::{Attacker, EnemyAttack, Target},
+		handles_orientation::Face,
 		try_despawn::TryDespawn,
 		try_insert_on::TryInsertOn,
 		try_remove_from::TryRemoveFrom,
@@ -43,7 +44,14 @@ pub trait AttackSystem {
 				Attacker(*persistent_entity),
 				Target(*target),
 			);
-			commands.try_insert_on(entity, (OnCoolDown(enemy.cool_down()), Ongoing(attack)));
+			commands.try_insert_on(
+				entity,
+				(
+					OnCoolDown(enemy.cool_down()),
+					Ongoing(attack),
+					OverrideFace(Face::Entity(*target)),
+				),
+			);
 		}
 
 		for attacker in stop_attacks.read() {
@@ -51,7 +59,7 @@ pub trait AttackSystem {
 				continue;
 			};
 			commands.try_despawn(attack);
-			commands.try_remove_from::<Ongoing>(attacker);
+			commands.try_remove_from::<(Ongoing, OverrideFace)>(attacker);
 		}
 	}
 }
@@ -61,13 +69,15 @@ pub(crate) struct Ongoing(Entity);
 
 #[cfg(test)]
 mod tests {
+	use crate::components::OverrideFace;
+
 	use super::*;
 	use bevy::{
 		app::{App, Update},
 		ecs::component::Component,
 		prelude::EntityCommands,
 	};
-	use common::traits::handles_enemies::EnemyAttack;
+	use common::traits::{handles_enemies::EnemyAttack, handles_orientation::Face};
 	use macros::NestedMocks;
 	use mockall::automock;
 	use std::time::Duration;
@@ -185,13 +195,14 @@ mod tests {
 	}
 
 	#[test]
-	fn insert_cool_down() {
+	fn insert_control_components() {
 		let mut app = setup();
+		let target = PersistentEntity::default();
 		let entity = app
 			.world_mut()
 			.spawn((
 				PersistentEntity::default(),
-				Attack(PersistentEntity::default()),
+				Attack(target),
 				_Enemy::new().with_mock(|mock| {
 					mock.expect_insert_attack().return_const(());
 					mock.expect_cool_down()
@@ -202,9 +213,18 @@ mod tests {
 
 		app.update();
 
+		let [attack] = assert_count!(1, get_children!(app, entity, |e| e.id()));
 		assert_eq!(
-			Some(&OnCoolDown(Duration::from_secs(42))),
-			app.world().entity(entity).get::<OnCoolDown>()
+			(
+				Some(&OnCoolDown(Duration::from_secs(42))),
+				Some(&Ongoing(attack)),
+				Some(&OverrideFace(Face::Entity(target))),
+			),
+			(
+				app.world().entity(entity).get::<OnCoolDown>(),
+				app.world().entity(entity).get::<Ongoing>(),
+				app.world().entity(entity).get::<OverrideFace>(),
+			)
 		);
 	}
 
@@ -265,7 +285,7 @@ mod tests {
 	}
 
 	#[test]
-	fn remove_ongoing_component_when_attack_removed() {
+	fn remove_ongoing_and_face_when_attack_removed() {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
@@ -283,6 +303,12 @@ mod tests {
 		app.world_mut().entity_mut(entity).remove::<Attack>();
 		app.update();
 
-		assert_count!(0, get_children!(app, entity));
+		assert_eq!(
+			(None, None),
+			(
+				app.world().entity(entity).get::<Ongoing>(),
+				app.world().entity(entity).get::<OverrideFace>()
+			)
+		);
 	}
 }
