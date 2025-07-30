@@ -1,7 +1,11 @@
 use crate::components::{Attack, OverrideFace, on_cool_down::OnCoolDown};
 use bevy::prelude::*;
 use common::{
-	components::{ground_offset::GroundOffset, persistent_entity::PersistentEntity},
+	components::{
+		child_of_persistent::ChildOfPersistent,
+		ground_offset::GroundOffset,
+		persistent_entity::PersistentEntity,
+	},
 	traits::{
 		handles_enemies::{Attacker, EnemyAttack, Target},
 		handles_orientation::Face,
@@ -35,8 +39,11 @@ pub trait AttackSystem {
 				Some(GroundOffset(offset)) => *offset,
 				None => Vec3::ZERO,
 			};
-			let mut attack_entity =
-				commands.spawn((ChildOf(entity), Transform::from_translation(offset)));
+			let mut attack_entity = commands.spawn((
+				ChildOf(entity),
+				ChildOfPersistent(*persistent_entity),
+				Transform::from_translation(offset),
+			));
 			let attack = attack_entity.id();
 
 			enemy.insert_attack(
@@ -77,7 +84,10 @@ mod tests {
 		ecs::component::Component,
 		prelude::EntityCommands,
 	};
-	use common::traits::{handles_enemies::EnemyAttack, handles_orientation::Face};
+	use common::{
+		components::child_of_persistent::ChildOfPersistent,
+		traits::{handles_enemies::EnemyAttack, handles_orientation::Face},
+	};
 	use macros::NestedMocks;
 	use mockall::automock;
 	use std::time::Duration;
@@ -188,9 +198,14 @@ mod tests {
 					attacker: Attacker(attacker),
 					target: Target(target)
 				}),
-				Some(&Transform::from_xyz(1., 2., 3.))
+				Some(&Transform::from_xyz(1., 2., 3.)),
+				Some(&ChildOfPersistent(attacker)),
 			),
-			(child.get::<_FakeAttack>(), child.get::<Transform>(),)
+			(
+				child.get::<_FakeAttack>(),
+				child.get::<Transform>(),
+				child.get::<ChildOfPersistent>()
+			)
 		);
 	}
 
