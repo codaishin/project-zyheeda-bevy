@@ -108,7 +108,7 @@ pub fn approx_equal<TEq: ApproxEqual<TT>, TT>(left: &TEq, right: &TEq, tolerance
 
 #[macro_export]
 macro_rules! assert_eq_approx {
-	($left:expr, $right:expr, $tolerance:expr) => {
+	($left:expr, $right:expr, $tolerance:expr $(,)?) => {
 		match (&$left, &$right, &$tolerance) {
 			(left_val, right_val, tolerance_val) => {
 				assert!(

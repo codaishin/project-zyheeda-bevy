@@ -13,7 +13,7 @@ use common::{
 	traits::{
 		handles_effect::HandlesEffect,
 		handles_enemies::{Attacker, Target},
-		handles_interactions::{BeamConfig, HandlesInteractions, InteractAble},
+		handles_interactions::{BeamEmitter, HandlesInteractions, InteractAble},
 		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
@@ -40,19 +40,19 @@ where
 		entity: &mut impl PrefabEntityCommands,
 		_: &mut impl LoadAsset,
 	) -> Result<(), Error> {
-		entity
-			.try_insert_if_new((
-				TInteractions::TInteraction::from(InteractAble::Beam {
-					config: BeamConfig {
-						source: self.attacker,
-						target: self.target,
-						range: self.range,
+		entity.try_insert_if_new((
+			TInteractions::TInteraction::from(InteractAble::Beam {
+				emitter: BeamEmitter {
+					mounted_on: self.attacker,
+					range: self.range,
+					insert_beam_model: |entity| {
+						entity.try_insert(VoidBeamModel);
 					},
-					blocked_by: Blocker::all(),
-				}),
-				TInteractions::effect(DealDamage::once_per_second(self.damage)),
-			))
-			.with_child(VoidBeamModel);
+				},
+				blocked_by: Blocker::all(),
+			}),
+			TInteractions::effect(DealDamage::once_per_second(self.damage)),
+		));
 
 		Ok(())
 	}

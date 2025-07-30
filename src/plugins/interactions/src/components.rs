@@ -17,6 +17,8 @@ use bevy_rapier3d::{
 	pipeline::{QueryFilter, QueryFilterFlags},
 };
 use common::traits::cast_ray::TimeOfImpact;
+#[cfg(test)]
+use testing::ApproxEqual;
 
 #[derive(Component, Debug, PartialEq, Clone)]
 pub struct RayCasterArgs {
@@ -36,6 +38,17 @@ impl Default for RayCasterArgs {
 			solid: Default::default(),
 			filter: Default::default(),
 		}
+	}
+}
+
+#[cfg(test)]
+impl ApproxEqual<f32> for RayCasterArgs {
+	fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
+		self.origin.approx_equal(&other.origin, tolerance)
+			&& self.direction.approx_equal(&other.direction, tolerance)
+			&& self.max_toi.0.approx_equal(&other.max_toi.0, tolerance)
+			&& self.solid == other.solid
+			&& self.filter == other.filter
 	}
 }
 

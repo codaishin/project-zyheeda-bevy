@@ -1,9 +1,14 @@
-use crate::components::{Attack, on_cool_down::OnCoolDown};
+use crate::components::{Attack, OverrideFace, on_cool_down::OnCoolDown};
 use bevy::prelude::*;
 use common::{
-	components::persistent_entity::PersistentEntity,
+	components::{
+		child_of_persistent::ChildOfPersistent,
+		ground_offset::GroundOffset,
+		persistent_entity::PersistentEntity,
+	},
 	traits::{
 		handles_enemies::{Attacker, EnemyAttack, Target},
+		handles_orientation::Face,
 		try_despawn::TryDespawn,
 		try_insert_on::TryInsertOn,
 		try_remove_from::TryRemoveFrom,
@@ -12,17 +17,33 @@ use common::{
 
 impl<T> AttackSystem for T {}
 
+type AttackerComponents<'a, TAttacker> = (
+	Entity,
+	&'a PersistentEntity,
+	&'a TAttacker,
+	&'a Attack,
+	Option<&'a GroundOffset>,
+);
+
 pub trait AttackSystem {
 	fn attack(
 		mut commands: Commands,
 		mut stop_attacks: RemovedComponents<Attack>,
-		attackers: Query<(Entity, &PersistentEntity, &Self, &Attack), Without<OnCoolDown>>,
+		attackers: Query<AttackerComponents<Self>, Without<OnCoolDown>>,
 		ongoing: Query<&Ongoing>,
 	) where
 		Self: Component + EnemyAttack + Sized,
 	{
-		for (entity, persistent_entity, enemy, Attack(target)) in &attackers {
-			let mut attack_entity = commands.spawn_empty();
+		for (entity, persistent_entity, enemy, Attack(target), offset) in &attackers {
+			let offset = match offset {
+				Some(GroundOffset(offset)) => *offset,
+				None => Vec3::ZERO,
+			};
+			let mut attack_entity = commands.spawn((
+				ChildOf(entity),
+				ChildOfPersistent(*persistent_entity),
+				Transform::from_translation(offset),
+			));
 			let attack = attack_entity.id();
 
 			enemy.insert_attack(
@@ -30,9 +51,14 @@ pub trait AttackSystem {
 				Attacker(*persistent_entity),
 				Target(*target),
 			);
-			attack_entity
-				.commands()
-				.try_insert_on(entity, (OnCoolDown(enemy.cool_down()), Ongoing(attack)));
+			commands.try_insert_on(
+				entity,
+				(
+					OnCoolDown(enemy.cool_down()),
+					Ongoing(attack),
+					OverrideFace(Face::Entity(*target)),
+				),
+			);
 		}
 
 		for attacker in stop_attacks.read() {
@@ -40,7 +66,7 @@ pub trait AttackSystem {
 				continue;
 			};
 			commands.try_despawn(attack);
-			commands.try_remove_from::<Ongoing>(attacker);
+			commands.try_remove_from::<(Ongoing, OverrideFace)>(attacker);
 		}
 	}
 }
@@ -50,17 +76,22 @@ pub(crate) struct Ongoing(Entity);
 
 #[cfg(test)]
 mod tests {
+	use crate::components::OverrideFace;
+
 	use super::*;
 	use bevy::{
 		app::{App, Update},
 		ecs::component::Component,
 		prelude::EntityCommands,
 	};
-	use common::traits::handles_enemies::EnemyAttack;
+	use common::{
+		components::child_of_persistent::ChildOfPersistent,
+		traits::{handles_enemies::EnemyAttack, handles_orientation::Face},
+	};
 	use macros::NestedMocks;
 	use mockall::automock;
 	use std::time::Duration;
-	use testing::{NestedMocks, SingleThreadedApp};
+	use testing::{NestedMocks, SingleThreadedApp, assert_count, get_children};
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _FakeAttack {
@@ -105,40 +136,88 @@ mod tests {
 		let mut app = setup();
 		let target = PersistentEntity::default();
 		let attacker = PersistentEntity::default();
-		app.world_mut().spawn((
-			attacker,
-			Attack(target),
-			_Enemy::new().with_mock(|mock| {
-				mock.expect_insert_attack()
-					.times(1)
-					.returning(|entity, attacker, target| {
-						entity.insert(_FakeAttack { attacker, target });
-					});
-				mock.expect_cool_down().return_const(Duration::ZERO);
-			}),
-		));
+		let entity = app
+			.world_mut()
+			.spawn((
+				attacker,
+				Attack(target),
+				_Enemy::new().with_mock(|mock| {
+					mock.expect_insert_attack()
+						.times(1)
+						.returning(|entity, attacker, target| {
+							entity.insert(_FakeAttack { attacker, target });
+						});
+					mock.expect_cool_down().return_const(Duration::ZERO);
+				}),
+			))
+			.id();
 
 		app.update();
 
+		let [child] = assert_count!(1, get_children!(app, entity));
 		assert_eq!(
-			Some(&_FakeAttack {
-				attacker: Attacker(attacker),
-				target: Target(target)
-			}),
-			app.world()
-				.iter_entities()
-				.find_map(|e| e.get::<_FakeAttack>())
+			(
+				Some(&_FakeAttack {
+					attacker: Attacker(attacker),
+					target: Target(target)
+				}),
+				Some(&Transform::default())
+			),
+			(child.get::<_FakeAttack>(), child.get::<Transform>(),)
 		);
 	}
 
 	#[test]
-	fn insert_cool_down() {
+	fn spawn_with_offset() {
 		let mut app = setup();
-		let attacker = app
+		let target = PersistentEntity::default();
+		let attacker = PersistentEntity::default();
+		let entity = app
+			.world_mut()
+			.spawn((
+				attacker,
+				Attack(target),
+				GroundOffset(Vec3::new(1., 2., 3.)),
+				_Enemy::new().with_mock(|mock| {
+					mock.expect_insert_attack()
+						.times(1)
+						.returning(|entity, attacker, target| {
+							entity.insert(_FakeAttack { attacker, target });
+						});
+					mock.expect_cool_down().return_const(Duration::ZERO);
+				}),
+			))
+			.id();
+
+		app.update();
+
+		let [child] = assert_count!(1, get_children!(app, entity));
+		assert_eq!(
+			(
+				Some(&_FakeAttack {
+					attacker: Attacker(attacker),
+					target: Target(target)
+				}),
+				Some(&Transform::from_xyz(1., 2., 3.)),
+				Some(&ChildOfPersistent(attacker)),
+			),
+			(
+				child.get::<_FakeAttack>(),
+				child.get::<Transform>(),
+				child.get::<ChildOfPersistent>()
+			)
+		);
+	}
+
+	#[test]
+	fn insert_control_components() {
+		let mut app = setup();
+		let target = PersistentEntity::default();
+		let entity = app
 			.world_mut()
 			.spawn((
 				PersistentEntity::default(),
-				Attack(PersistentEntity::default()),
+				Attack(target),
 				_Enemy::new().with_mock(|mock| {
 					mock.expect_insert_attack().return_const(());
 					mock.expect_cool_down()
@@ -149,16 +228,25 @@ mod tests {
 
 		app.update();
 
+		let [attack] = assert_count!(1, get_children!(app, entity, |e| e.id()));
 		assert_eq!(
-			Some(&OnCoolDown(Duration::from_secs(42))),
-			app.world().entity(attacker).get::<OnCoolDown>()
+			(
+				Some(&OnCoolDown(Duration::from_secs(42))),
+				Some(&Ongoing(attack)),
+				Some(&OverrideFace(Face::Entity(target))),
+			),
+			(
+				app.world().entity(entity).get::<OnCoolDown>(),
+				app.world().entity(entity).get::<Ongoing>(),
+				app.world().entity(entity).get::<OverrideFace>(),
+			)
 		);
 	}
 
 	#[test]
 	fn do_nothing_when_cool_down_present() {
 		let mut app = setup();
-		let attacker = app
+		let entity = app
 			.world_mut()
 			.spawn((
 				PersistentEntity::default(),
@@ -182,7 +270,7 @@ mod tests {
 				app.world()
 					.iter_entities()
 					.find_map(|e| e.get::<_FakeAttackEmpty>()),
-				app.world().entity(attacker).get::<OnCoolDown>()
+				app.world().entity(entity).get::<OnCoolDown>()
 			)
 		);
 	}
@@ -190,7 +278,7 @@ mod tests {
 	#[test]
 	fn despawn_attack_entity_when_attack_removed() {
 		let mut app = setup();
-		let attacker = app
+		let entity = app
 			.world_mut()
 			.spawn((
 				PersistentEntity::default(),
@@ -205,21 +293,16 @@ mod tests {
 			.id();
 
 		app.update();
-		app.world_mut().entity_mut(attacker).remove::<Attack>();
+		app.world_mut().entity_mut(entity).remove::<Attack>();
 		app.update();
 
-		assert_eq!(
-			None,
-			app.world()
-				.iter_entities()
-				.find_map(|e| e.get::<_FakeAttackEmpty>())
-		);
+		assert_count!(0, get_children!(app, entity));
 	}
 
 	#[test]
-	fn remove_ongoing_component_when_attack_removed() {
+	fn remove_ongoing_and_face_when_attack_removed() {
 		let mut app = setup();
-		let attacker = app
+		let entity = app
 			.world_mut()
 			.spawn((
 				PersistentEntity::default(),
@@ -232,12 +315,15 @@ mod tests {
 			.id();
 
 		app.update();
-		app.world_mut().entity_mut(attacker).remove::<Attack>();
+		app.world_mut().entity_mut(entity).remove::<Attack>();
 		app.update();
 
 		assert_eq!(
-			None,
-			app.world().iter_entities().find_map(|e| e.get::<Ongoing>())
+			(None, None),
+			(
+				app.world().entity(entity).get::<Ongoing>(),
+				app.world().entity(entity).get::<OverrideFace>()
+			)
 		);
 	}
 }
