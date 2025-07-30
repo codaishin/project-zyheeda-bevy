@@ -15,19 +15,22 @@ use common::{
 	},
 };
 
+type BeamComponents<'a> = (
+	Entity,
+	&'a Blockable,
+	&'a mut GlobalTransform,
+	&'a mut Transform,
+	Option<&'a ActiveBeam>,
+);
+
 impl ActiveBeam {
 	pub(crate) fn execute(
 		mut commands: Commands,
 		mut ray_cast_events: EventReader<InteractionEvent<Ray>>,
 		mut persistent_entities: ResMut<PersistentEntities>,
-		mut beams: Query<(
-			Entity,
-			&Blockable,
-			&GlobalTransform,
-			Option<&mut ActiveBeam>,
-		)>,
+		mut beams: Query<BeamComponents>,
 	) {
-		for (entity, Blockable(beam), origin, ..) in &beams {
+		for (entity, Blockable(beam), global_transform, ..) in &beams {
 			let InteractAble::Beam { emitter, .. } = beam else {
 				continue;
 			};
@@ -37,7 +40,7 @@ impl ActiveBeam {
 					update_ray_caster_args(
 						&mut commands,
 						entity,
-						origin,
+						global_transform,
 						mounted_on,
 						emitter.range,
 					);
@@ -46,11 +49,13 @@ impl ActiveBeam {
 			}
 		}
 
-		for InteractionEvent(origin, ray) in ray_cast_events.read() {
-			match beams.get_mut(*origin) {
+		for InteractionEvent(entity, ray) in ray_cast_events.read() {
+			match beams.get_mut(*entity) {
 				Err(_) => continue,
-				Ok((entity, .., None)) => insert_active_beam(&mut commands, entity, ray),
-				Ok((.., Some(beam))) => update_active_beam(beam, ray),
+				Ok((entity, .., mut transform, None)) => {
+					insert_active_beam(&mut commands, entity, transform.as_mut(), ray)
+				}
+				Ok((.., mut transform, Some(_beam))) => update_transform(transform.as_mut(), ray),
 			}
 		}
 	}
@@ -90,25 +95,19 @@ fn get_filter(source: Entity) -> Option<RayFilter> {
 		.ok()
 }
 
-fn insert_active_beam(commands: &mut Commands, entity: Entity, ray: &Ray) {
-	let (source, target) = get_beam_range(&ray.0, ray.1);
-	commands.try_insert_on(entity, ActiveBeam { source, target });
+fn insert_active_beam(
+	commands: &mut Commands,
+	entity: Entity,
+	transform: &mut Transform,
+	ray: &Ray,
+) {
+	commands.try_insert_on(entity, ActiveBeam);
+	update_transform(transform, ray);
 }
 
-fn update_active_beam(mut beam: Mut<ActiveBeam>, ray: &Ray) {
-	let (source, target) = get_beam_range(&ray.0, ray.1);
-	beam.source = source;
-	beam.target = target;
-}
-
-type SourceTranslation = Vec3;
-type TargetTranslation = Vec3;
-
-fn get_beam_range(
-	ray: &Ray3d,
-	TimeOfImpact(toi): TimeOfImpact,
-) -> (SourceTranslation, TargetTranslation) {
-	(ray.origin, ray.origin + *ray.direction * toi)
+fn update_transform(transform: &mut Transform, ray: &Ray) {
+	let TimeOfImpact(toi) = ray.1;
+	transform.scale.z = toi;
 }
 
 #[cfg(test)]
@@ -128,7 +127,7 @@ mod tests {
 		},
 	};
 	use std::sync::LazyLock;
-	use testing::SingleThreadedApp;
+	use testing::{SingleThreadedApp, assert_eq_approx};
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -143,13 +142,14 @@ mod tests {
 	static MOUNTED_ON: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
 
 	#[test]
-	fn insert_ray_caster() {
+	fn insert_ray_caster_from_global_transform() {
 		let mut app = setup();
 		let mounted_on = app.world_mut().spawn(*MOUNTED_ON).id();
 		let beam = app
 			.world_mut()
 			.spawn((
-				GlobalTransform::from(Transform::from_xyz(1., 0., 0.).looking_to(Dir3::Z, Vec3::Y)),
+				GlobalTransform::from(Transform::from_xyz(2., 2., 2.).looking_to(Dir3::X, Vec3::Y)),
+				Transform::from_xyz(1., 0., 0.).looking_to(Dir3::Z, Vec3::Y),
 				Blockable(InteractAble::Beam {
 					emitter: BeamEmitter {
 						mounted_on: *MOUNTED_ON,
@@ -163,10 +163,10 @@ mod tests {
 
 		app.update();
 
-		assert_eq!(
+		assert_eq_approx!(
 			Some(&RayCasterArgs {
-				origin: Vec3::new(1., 0., 0.),
-				direction: Dir3::Z,
+				origin: Vec3::new(2., 2., 2.),
+				direction: Dir3::X,
 				max_toi: TimeOfImpact(100.),
 				solid: true,
 				filter: QueryFilter::default()
@@ -174,7 +174,8 @@ mod tests {
 					.try_into()
 					.unwrap(),
 			}),
-			app.world().entity(beam).get::<RayCasterArgs>()
+			app.world().entity(beam).get::<RayCasterArgs>(),
+			f32::EPSILON,
 		);
 	}
 
@@ -185,7 +186,7 @@ mod tests {
 		let beam = app
 			.world_mut()
 			.spawn((
-				GlobalTransform::from(Transform::from_xyz(1., 0., 0.).looking_to(Dir3::Z, Vec3::Y)),
+				Transform::from_xyz(1., 0., 0.).looking_to(Dir3::Z, Vec3::Y),
 				Blockable(InteractAble::Beam {
 					emitter: BeamEmitter {
 						mounted_on: *MOUNTED_ON,
@@ -199,7 +200,7 @@ mod tests {
 		app.world_mut().send_event(InteractionEvent::of(beam).ray(
 			Ray3d {
 				origin: Vec3::new(1., 0., 0.),
-				direction: Dir3::Z,
+				direction: Dir3::Y,
 			},
 			TimeOfImpact(10.),
 		));
@@ -207,11 +208,18 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&ActiveBeam {
-				source: Vec3::new(1., 0., 0.),
-				target: Vec3::new(1., 0., 10.)
-			}),
-			app.world().entity(beam).get::<ActiveBeam>(),
+			(
+				Some(&ActiveBeam),
+				Some(
+					&Transform::from_xyz(1., 0., 0.)
+						.looking_to(Dir3::Z, Vec3::Y)
+						.with_scale(Vec3::new(1., 1., 10.))
+				)
+			),
+			(
+				app.world().entity(beam).get::<ActiveBeam>(),
+				app.world().entity(beam).get::<Transform>(),
+			)
 		);
 	}
 
@@ -222,7 +230,7 @@ mod tests {
 		let beam = app
 			.world_mut()
 			.spawn((
-				GlobalTransform::from(Transform::from_xyz(1., 0., 0.).looking_to(Dir3::Z, Vec3::Y)),
+				Transform::from_xyz(1., 0., 0.).looking_to(Dir3::Z, Vec3::Y),
 				Blockable(InteractAble::Beam {
 					emitter: BeamEmitter {
 						mounted_on: *MOUNTED_ON,
@@ -244,7 +252,7 @@ mod tests {
 		app.update();
 		app.world_mut().send_event(InteractionEvent::of(beam).ray(
 			Ray3d {
-				origin: Vec3::new(2., 0., 0.),
+				origin: Vec3::new(1., 0., 0.),
 				direction: Dir3::Y,
 			},
 			TimeOfImpact(5.),
@@ -253,11 +261,18 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&ActiveBeam {
-				source: Vec3::new(2., 0., 0.),
-				target: Vec3::new(2., 5., 0.)
-			}),
-			app.world().entity(beam).get::<ActiveBeam>(),
+			(
+				Some(&ActiveBeam),
+				Some(
+					&Transform::from_xyz(1., 0., 0.)
+						.looking_to(Dir3::Z, Vec3::Y)
+						.with_scale(Vec3::new(1., 1., 5.))
+				)
+			),
+			(
+				app.world().entity(beam).get::<ActiveBeam>(),
+				app.world().entity(beam).get::<Transform>(),
+			)
 		);
 	}
 
@@ -268,7 +283,7 @@ mod tests {
 		let beam = app
 			.world_mut()
 			.spawn((
-				GlobalTransform::from(Transform::from_xyz(1., 0., 0.).looking_to(Dir3::Z, Vec3::Y)),
+				Transform::from_xyz(1., 0., 0.).looking_to(Dir3::Z, Vec3::Y),
 				Blockable(InteractAble::Beam {
 					emitter: BeamEmitter {
 						mounted_on: *MOUNTED_ON,
