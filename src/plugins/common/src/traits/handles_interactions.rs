@@ -15,7 +15,7 @@ pub trait HandlesInteractions {
 #[derive(Debug, PartialEq, Clone)]
 pub enum InteractAble {
 	Beam {
-		config: BeamConfig,
+		emitter: BeamEmitter,
 		blocked_by: HashSet<Blocker>,
 	},
 	Fragile {
@@ -24,8 +24,8 @@ pub enum InteractAble {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct BeamConfig {
-	pub source: PersistentEntity,
-	pub target: PersistentEntity,
+pub struct BeamEmitter {
+	pub mounted_on: PersistentEntity,
 	pub range: Units,
+	pub insert_beam_model: fn(&mut EntityCommands),
 }

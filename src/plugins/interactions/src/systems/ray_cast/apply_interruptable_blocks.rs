@@ -78,14 +78,14 @@ mod tests {
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
 		components::collider_relationship::ColliderOfInteractionTarget,
-		traits::{cast_ray::TimeOfImpact, handles_interactions::BeamConfig},
+		traits::{cast_ray::TimeOfImpact, handles_interactions::BeamEmitter},
 	};
 
-	fn default_beam() -> BeamConfig {
-		BeamConfig {
-			source: default(),
-			target: default(),
+	fn default_emitter() -> BeamEmitter {
+		BeamEmitter {
+			mounted_on: default(),
 			range: default(),
+			insert_beam_model: |_| {},
 		}
 	}
 
@@ -105,7 +105,7 @@ mod tests {
 		let interruptable = app
 			.world_mut()
 			.spawn(Blockable(InteractAble::Beam {
-				config: default_beam(),
+				emitter: default_emitter(),
 				blocked_by: [Blocker::Physical].into(),
 			}))
 			.id();
@@ -161,7 +161,7 @@ mod tests {
 		let interruptable = app
 			.world_mut()
 			.spawn(Blockable(InteractAble::Beam {
-				config: default_beam(),
+				emitter: default_emitter(),
 				blocked_by: [Blocker::Physical].into(),
 			}))
 			.id();
@@ -212,7 +212,7 @@ mod tests {
 		let interruptable = app
 			.world_mut()
 			.spawn(Blockable(InteractAble::Beam {
-				config: default_beam(),
+				emitter: default_emitter(),
 				blocked_by: default(),
 			}))
 			.id();
@@ -267,7 +267,7 @@ mod tests {
 		let interruptable = app
 			.world_mut()
 			.spawn(Blockable(InteractAble::Beam {
-				config: default_beam(),
+				emitter: default_emitter(),
 				blocked_by: [Blocker::Force].into(),
 			}))
 			.id();

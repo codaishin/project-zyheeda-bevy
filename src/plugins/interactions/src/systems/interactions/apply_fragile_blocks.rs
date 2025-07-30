@@ -52,7 +52,7 @@ mod tests {
 	use super::*;
 	use common::{
 		components::is_blocker::Blocker,
-		traits::handles_interactions::{BeamConfig, InteractAble::Beam},
+		traits::handles_interactions::{BeamEmitter, InteractAble::Beam},
 	};
 	use testing::SingleThreadedApp;
 
@@ -96,10 +96,10 @@ mod tests {
 		let fragile = app
 			.world_mut()
 			.spawn(Blockable(Beam {
-				config: BeamConfig {
-					source: default(),
-					target: default(),
+				emitter: BeamEmitter {
+					mounted_on: default(),
 					range: default(),
+					insert_beam_model: |_| {},
 				},
 				blocked_by: [Blocker::Physical].into(),
 			}))
