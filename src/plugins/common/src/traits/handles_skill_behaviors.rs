@@ -16,6 +16,9 @@ pub trait HandlesSkillBehaviors {
 	type TSkillContact: Component;
 	type TSkillProjection: Component;
 
+	/// Skills always have a contact and a projection shape.
+	///
+	/// Activity of those shapes should controlled by their attached effects.
 	fn spawn_skill(
 		commands: &mut ZyheedaCommands,
 		contact: Contact,
@@ -23,18 +26,32 @@ pub trait HandlesSkillBehaviors {
 	) -> SkillEntities;
 }
 
+/// Describes the contact shape of a skill
+///
+/// These should be used for physical effects like projectile bodies, barriers or beam cores.
 #[derive(Debug, Clone)]
 pub struct Contact {
 	pub shape: Shape,
 	pub motion: Motion,
 }
 
+/// Describes the projection shape of a skill
+///
+/// These should be used for AoE.
 #[derive(Debug, Clone)]
 pub struct Projection {
 	pub shape: Shape,
 	pub offset: Option<ProjectionOffset>,
 }
 
+/// The entities of a spawned skill.
+///
+/// Skill root should be used to control the lifetime of a skill and can be used to despawn the
+/// whole skill.
+///
+/// Contact components should be added to the contact entity.
+///
+/// Projection/AoE components should be added to the projection entity.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct SkillEntities {
 	pub root: SkillRoot,

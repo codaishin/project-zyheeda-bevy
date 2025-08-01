@@ -1,11 +1,15 @@
+pub mod spawn_beam;
 pub mod spawn_ground_target;
 pub mod spawn_projectile;
 pub mod spawn_shield;
 
 use super::{SkillCaster, SkillTarget};
-use crate::traits::skill_builder::{SkillBuilder, SkillShape};
+use crate::{
+	behaviors::spawn_skill::spawn_beam::SpawnBeam,
+	traits::skill_builder::{SkillBuilder, SkillShape},
+};
 use common::{
-	components::persistent_entity::PersistentEntity,
+	components::{is_blocker::Blocker, persistent_entity::PersistentEntity},
 	traits::handles_skill_behaviors::{HandlesSkillBehaviors, SkillSpawner},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -13,6 +17,7 @@ use serde::{Deserialize, Serialize};
 use spawn_ground_target::SpawnGroundTargetedAoe;
 use spawn_projectile::SpawnProjectile;
 use spawn_shield::SpawnShield;
+use std::collections::HashSet;
 
 #[cfg(test)]
 pub(crate) type SpawnSkillFn =
@@ -23,6 +28,7 @@ pub(crate) type SpawnSkillFn =
 pub(crate) enum SpawnSkill {
 	GroundTargetedAoe(SpawnGroundTargetedAoe),
 	Projectile(SpawnProjectile),
+	Beam(SpawnBeam),
 	Shield(SpawnShield),
 	#[cfg(test)]
 	Fn(SpawnSkillFn),
@@ -98,6 +104,7 @@ impl SpawnSkill {
 				gt.build::<TSkillBehaviors>(commands, caster, spawner, target)
 			}
 			Self::Projectile(pr) => pr.build::<TSkillBehaviors>(commands, caster, spawner, target),
+			Self::Beam(bm) => bm.build::<TSkillBehaviors>(commands, caster, spawner, target),
 			Self::Shield(sh) => sh.build::<TSkillBehaviors>(commands, caster, spawner, target),
 			#[cfg(test)]
 			Self::Fn(func) => func(commands, caster, spawner, target),
@@ -116,4 +123,19 @@ pub enum SpawnOn {
 pub enum OnSkillStop {
 	Ignore,
 	Stop(PersistentEntity),
+}
+
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+enum Blockers {
+	All,
+	AnyOf(HashSet<Blocker>),
+}
+
+impl From<Blockers> for HashSet<Blocker> {
+	fn from(value: Blockers) -> Self {
+		match value {
+			Blockers::All => Blocker::all(),
+			Blockers::AnyOf(blockers) => blockers,
+		}
+	}
 }

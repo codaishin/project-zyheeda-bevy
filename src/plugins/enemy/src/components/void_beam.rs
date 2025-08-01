@@ -72,15 +72,23 @@ impl VoidBeamModel {
 		y: 0.,
 		z: -0.5,
 	});
+	const DIMENSIONS: Vec3 = Vec3 {
+		x: 0.01,
+		y: 1.,
+		z: 0.01,
+	};
+	const ROTATION_X: f32 = PI / 2.;
 
 	fn transform() -> Transform {
-		Self::HALF_FORWARD.with_rotation(Quat::from_rotation_x(PI / 2.))
+		Self::HALF_FORWARD
+			.with_scale(Self::DIMENSIONS)
+			.with_rotation(Quat::from_rotation_x(Self::ROTATION_X))
 	}
 
 	fn model() -> InsertAsset<Mesh> {
 		InsertAsset::shared::<Self>(|| {
 			Mesh::from(Cylinder {
-				radius: 0.01,
+				radius: 1.,
 				half_height: 0.5,
 			})
 		})
