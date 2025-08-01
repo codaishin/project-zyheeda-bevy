@@ -105,8 +105,8 @@ impl ChildAssetComponent<HandItemSlots> for Item {
 			Some(Item {
 				model: ModelRender::Hand(path),
 				..
-			}) => AssetModel::Path(path.clone()),
-			_ => AssetModel::None,
+			}) => AssetModel::path(path),
+			_ => AssetModel::none(),
 		}
 	}
 }
@@ -138,8 +138,8 @@ impl ChildAssetComponent<ForearmItemSlots> for Item {
 			Some(Item {
 				model: ModelRender::Forearm(path),
 				..
-			}) => AssetModel::Path(path.clone()),
-			_ => AssetModel::None,
+			}) => AssetModel::path(path),
+			_ => AssetModel::none(),
 		}
 	}
 }

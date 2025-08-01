@@ -55,7 +55,7 @@ use std::collections::HashMap;
 	Visibility,
 	Name = "Player",
 	AssetModel = Self::MODEL_PATH,
-	FlipHorizontally = FlipHorizontally::with(Name::from("metarig")),
+	FlipHorizontally = FlipHorizontally::on("metarig"),
 	GroundOffset = Vec3::Y,
 	IsBlocker = [Blocker::Character],
 	RigidBody = RigidBody::Dynamic,

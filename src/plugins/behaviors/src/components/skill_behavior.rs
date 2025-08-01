@@ -156,7 +156,9 @@ impl SimplePrefab for Motion {
 			Motion::HeldBy { caster } => {
 				entity.try_insert_if_new((
 					RigidBody::Fixed,
-					Anchor::<Always>::to(caster).on_fix_point(SpawnerFixPoint(Spawner::Center)),
+					Anchor::<Always>::to_target(caster)
+						.on_fix_point(SpawnerFixPoint(Spawner::Center))
+						.with_target_rotation(),
 				));
 			}
 			Motion::Stationary {
@@ -191,11 +193,10 @@ impl SimplePrefab for Motion {
 				}
 
 				entity.try_insert_if_new((
-					Anchor::<Once>::to(caster).on_fix_point(SpawnerFixPoint(spawner)),
-					SetVelocityForward {
-						rotation: caster,
-						speed,
-					},
+					Anchor::<Once>::to_target(caster)
+						.on_fix_point(SpawnerFixPoint(spawner))
+						.with_target_rotation(),
+					SetVelocityForward(speed),
 				));
 			}
 		}
@@ -280,28 +281,33 @@ mod tests {
 			motion.prefab::<_Interactions>(entity, CreatedFrom::Contact)
 		}))?;
 
+		let entity = app.world().entity(entity);
 		assert_eq!(
 			(
 				Some(&RigidBody::Fixed),
 				None,
 				None,
 				None,
-				Some(&Anchor::<Always>::to(caster).on_fix_point(SpawnerFixPoint(Spawner::Center))),
+				Some(
+					&Anchor::<Always>::to_target(caster)
+						.on_fix_point(SpawnerFixPoint(Spawner::Center))
+						.with_target_rotation()
+				),
+				None,
 				None,
 				None,
 				None,
 			),
 			(
-				app.world().entity(entity).get::<RigidBody>(),
-				app.world().entity(entity).get::<GravityScale>(),
-				app.world().entity(entity).get::<Ccd>(),
-				app.world().entity(entity).get::<GroundTarget>(),
-				app.world().entity(entity).get::<Anchor<Always>>(),
-				app.world().entity(entity).get::<Anchor<Once>>(),
-				app.world().entity(entity).get::<SetVelocityForward>(),
-				app.world()
-					.entity(entity)
-					.get::<DestroyAfterDistanceTraveled<Velocity>>(),
+				entity.get::<RigidBody>(),
+				entity.get::<GravityScale>(),
+				entity.get::<Ccd>(),
+				entity.get::<GroundTarget>(),
+				entity.get::<Anchor<Always>>(),
+				entity.get::<Anchor<Once>>(),
+				entity.get::<SetVelocityForward>(),
+				entity.get::<DestroyAfterDistanceTraveled<Velocity>>(),
+				entity.get::<_Interaction>(),
 			)
 		);
 		Ok(())
@@ -373,6 +379,7 @@ mod tests {
 			motion.prefab::<_Interactions>(entity, CreatedFrom::Contact)
 		}))?;
 
+		let entity = app.world().entity(entity);
 		assert_eq!(
 			(
 				Some(&RigidBody::Dynamic),
@@ -381,13 +388,11 @@ mod tests {
 				None,
 				None,
 				Some(
-					&Anchor::<Once>::to(caster)
+					&Anchor::<Once>::to_target(caster)
 						.on_fix_point(SpawnerFixPoint(Spawner::Slot(SlotKey::TopHand(Side::Left))))
+						.with_target_rotation()
 				),
-				Some(&SetVelocityForward {
-					rotation: caster,
-					speed: UnitsPerSecond::new(11.),
-				}),
+				Some(&SetVelocityForward(UnitsPerSecond::new(11.))),
 				Some(
 					&WhenTraveled::via::<Velocity>()
 						.distance(Units::new(1111.))
@@ -395,16 +400,14 @@ mod tests {
 				),
 			),
 			(
-				app.world().entity(entity).get::<RigidBody>(),
-				app.world().entity(entity).get::<GravityScale>(),
-				app.world().entity(entity).get::<Ccd>(),
-				app.world().entity(entity).get::<GroundTarget>(),
-				app.world().entity(entity).get::<Anchor<Always>>(),
-				app.world().entity(entity).get::<Anchor<Once>>(),
-				app.world().entity(entity).get::<SetVelocityForward>(),
-				app.world()
-					.entity(entity)
-					.get::<DestroyAfterDistanceTraveled<Velocity>>(),
+				entity.get::<RigidBody>(),
+				entity.get::<GravityScale>(),
+				entity.get::<Ccd>(),
+				entity.get::<GroundTarget>(),
+				entity.get::<Anchor<Always>>(),
+				entity.get::<Anchor<Once>>(),
+				entity.get::<SetVelocityForward>(),
+				entity.get::<DestroyAfterDistanceTraveled<Velocity>>(),
 			)
 		);
 		Ok(())

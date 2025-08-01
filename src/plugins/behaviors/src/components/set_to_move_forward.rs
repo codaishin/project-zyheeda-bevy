@@ -1,33 +1,21 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use common::{
-	components::persistent_entity::PersistentEntity,
-	resources::persistent_entities::PersistentEntities,
 	tools::UnitsPerSecond,
 	traits::{try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
 };
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
-pub(crate) struct SetVelocityForward {
-	pub(crate) rotation: PersistentEntity,
-	pub(crate) speed: UnitsPerSecond,
-}
+#[require(Transform)]
+pub(crate) struct SetVelocityForward(pub(crate) UnitsPerSecond);
 
 impl SetVelocityForward {
 	pub(crate) fn system(
 		mut commands: Commands,
-		mut persistent_entities: ResMut<PersistentEntities>,
-		set_velocities: Query<(Entity, &Self)>,
-		transforms: Query<&Transform>,
+		set_velocities: Query<(Entity, &Self, &Transform)>,
 	) {
-		for (entity, set_velocity) in &set_velocities {
-			let Some(rotation) = persistent_entities.get_entity(&set_velocity.rotation) else {
-				continue;
-			};
-			let Ok(rotation) = transforms.get(rotation) else {
-				continue;
-			};
-			let movement = rotation.forward() * *set_velocity.speed;
+		for (entity, SetVelocityForward(speed), transform) in &set_velocities {
+			let movement = transform.forward() * **speed;
 			commands.try_insert_on(entity, Velocity::linear(movement));
 			commands.try_remove_from::<SetVelocityForward>(entity);
 		}
@@ -59,17 +47,12 @@ mod tests {
 	#[test]
 	fn insert_velocity() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let target = PersistentEntity::default();
-		app.world_mut().spawn((
-			Transform::default().looking_to(Vec3::new(1., 2., 3.), Vec3::Y),
-			target,
-		));
 		let entity = app
 			.world_mut()
-			.spawn(SetVelocityForward {
-				rotation: target,
-				speed: UnitsPerSecond::new(1.),
-			})
+			.spawn((
+				Transform::default().looking_to(Vec3::new(1., 2., 3.), Vec3::Y),
+				SetVelocityForward(UnitsPerSecond::new(1.)),
+			))
 			.id();
 
 		app.world_mut()
@@ -86,17 +69,12 @@ mod tests {
 	#[test]
 	fn insert_velocity_scaled_by_speed() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let target = PersistentEntity::default();
-		app.world_mut().spawn((
-			Transform::default().looking_to(Vec3::new(1., 2., 3.), Vec3::Y),
-			target,
-		));
 		let entity = app
 			.world_mut()
-			.spawn(SetVelocityForward {
-				rotation: target,
-				speed: UnitsPerSecond::new(10.),
-			})
+			.spawn((
+				Transform::default().looking_to(Vec3::new(1., 2., 3.), Vec3::Y),
+				SetVelocityForward(UnitsPerSecond::new(10.)),
+			))
 			.id();
 
 		app.world_mut()
@@ -113,17 +91,9 @@ mod tests {
 	#[test]
 	fn remove_velocity_setter() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let target = PersistentEntity::default();
-		app.world_mut().spawn((
-			Transform::default().looking_to(Vec3::new(1., 2., 3.), Vec3::Y),
-			target,
-		));
 		let entity = app
 			.world_mut()
-			.spawn(SetVelocityForward {
-				rotation: target,
-				speed: UnitsPerSecond::new(10.),
-			})
+			.spawn(SetVelocityForward(UnitsPerSecond::new(1.)))
 			.id();
 
 		app.world_mut()
