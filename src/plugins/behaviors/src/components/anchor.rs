@@ -25,6 +25,7 @@ use std::{
 pub(crate) struct Anchor<TFilter> {
 	pub(crate) target: PersistentEntity,
 	pub(crate) fix_point_key: AnchorFixPointKey,
+	pub(crate) use_target_rotation: bool,
 	_p: PhantomData<TFilter>,
 }
 
@@ -40,24 +41,29 @@ impl<TFilter> Anchor<TFilter>
 where
 	Self: HasFilter + Send + Sync + 'static,
 {
-	pub(crate) fn to(target: PersistentEntity) -> AnchorBuilder<TFilter> {
+	pub(crate) fn to_target(target: PersistentEntity) -> AnchorBuilder<TFilter> {
 		AnchorBuilder {
 			target,
 			_p: PhantomData,
 		}
 	}
 
+	pub(crate) fn with_target_rotation(mut self) -> Self {
+		self.use_target_rotation = true;
+		self
+	}
+
 	pub(crate) fn system(
 		mut persistent_entities: ResMut<PersistentEntities>,
 		mut agents: Query<(&Self, &mut Transform), <Self as HasFilter>::TFilter>,
-		fix_points: Query<&AnchorFixPoints>,
+		fix_points: Query<(&AnchorFixPoints, &GlobalTransform)>,
 		transforms: Query<&GlobalTransform>,
 	) -> Result<(), Vec<AnchorError>> {
 		agents
 			.iter_mut()
 			.filter_map(|(anchor, mut anchor_transform)| {
 				let target = persistent_entities.get_entity(&anchor.target)?;
-				let Ok(AnchorFixPoints(fix_points)) = fix_points.get(target) else {
+				let Ok((AnchorFixPoints(fix_points), target)) = fix_points.get(target) else {
 					return Some(AnchorError::FixPointsMissingOn(anchor.target));
 				};
 				let Some(fix_point) = fix_points.get(&anchor.fix_point_key).copied() else {
@@ -67,10 +73,12 @@ where
 					return Some(AnchorError::GlobalTransformMissingOn(fix_point));
 				};
 
-				let fix_point = Transform::from(*fix_point);
-
-				anchor_transform.translation = fix_point.translation;
-				anchor_transform.rotation = fix_point.rotation;
+				anchor_transform.translation = fix_point.translation();
+				let rotation = match anchor.use_target_rotation {
+					true => target.rotation(),
+					false => fix_point.rotation(),
+				};
+				anchor_transform.rotation = rotation;
 
 				None
 			})
@@ -85,6 +93,7 @@ pub(crate) struct AnchorBuilder<TFilter> {
 }
 
 impl<TFilter> AnchorBuilder<TFilter> {
+	/// Anchor to selected fix point with that fix point's rotation
 	pub(crate) fn on_fix_point<TFixPoint>(self, fix_point_key: TFixPoint) -> Anchor<TFilter>
 	where
 		TFixPoint: Into<AnchorFixPointKey>,
@@ -92,12 +101,14 @@ impl<TFilter> AnchorBuilder<TFilter> {
 		Anchor {
 			target: self.target,
 			fix_point_key: fix_point_key.into(),
+			use_target_rotation: false,
 			_p: PhantomData,
 		}
 	}
 }
 
 #[derive(Component, Debug, PartialEq, Clone, Default)]
+#[require(GlobalTransform)]
 pub struct AnchorFixPoints(HashMap<AnchorFixPointKey, Entity>);
 
 impl Track<SpawnerFixPoint> for AnchorFixPoints {
@@ -224,7 +235,8 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey::new::<()>(11)),
+				Anchor::<_NotIgnored>::to_target(entity)
+					.on_fix_point(AnchorFixPointKey::new::<()>(11)),
 				Transform::default(),
 			))
 			.id();
@@ -241,7 +253,7 @@ mod tests {
 	}
 
 	#[test]
-	fn copy_location_rotation() -> Result<(), RunSystemError> {
+	fn copy_location_rotation_of_fix_point() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let entity = PersistentEntity::default();
 		let fix_point = app
@@ -257,7 +269,44 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey::new::<()>(11)),
+				Anchor::<_NotIgnored>::to_target(entity)
+					.on_fix_point(AnchorFixPointKey::new::<()>(11)),
+				Transform::default(),
+			))
+			.id();
+
+		_ = app
+			.world_mut()
+			.run_system_once(Anchor::<_NotIgnored>::system)?;
+
+		assert_eq!(
+			Some(&Transform::default().looking_at(Vec3::new(0., 0., 1.), Vec3::Y)),
+			app.world().entity(agent).get::<Transform>()
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn copy_rotation_of_target() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let entity = PersistentEntity::default();
+		let fix_point = app
+			.world_mut()
+			.spawn(GlobalTransform::from(
+				Transform::default().looking_at(Vec3::new(1., 0., 0.), Vec3::Y),
+			))
+			.id();
+		app.world_mut().spawn((
+			AnchorFixPoints::from([(AnchorFixPointKey::new::<()>(11), fix_point)]),
+			entity,
+			GlobalTransform::from(Transform::default().looking_at(Vec3::new(0., 0., 1.), Vec3::Y)),
+		));
+		let agent = app
+			.world_mut()
+			.spawn((
+				Anchor::<_NotIgnored>::to_target(entity)
+					.on_fix_point(AnchorFixPointKey::new::<()>(11))
+					.with_target_rotation(),
 				Transform::default(),
 			))
 			.id();
@@ -288,7 +337,8 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey::new::<()>(11)),
+				Anchor::<_NotIgnored>::to_target(entity)
+					.on_fix_point(AnchorFixPointKey::new::<()>(11)),
 				Transform::from_scale(Vec3::new(3., 4., 5.)),
 			))
 			.id();
@@ -319,7 +369,8 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey::new::<()>(11)),
+				Anchor::<_NotIgnored>::to_target(entity)
+					.on_fix_point(AnchorFixPointKey::new::<()>(11)),
 				Transform::default(),
 				_Ignore,
 			))
@@ -344,7 +395,8 @@ mod tests {
 		_ = app
 			.world_mut()
 			.spawn((
-				Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey::new::<()>(11)),
+				Anchor::<_NotIgnored>::to_target(entity)
+					.on_fix_point(AnchorFixPointKey::new::<()>(11)),
 				Transform::default(),
 			))
 			.id();
@@ -363,7 +415,7 @@ mod tests {
 		let entity = PersistentEntity::default();
 		app.world_mut().spawn((AnchorFixPoints::default(), entity));
 		app.world_mut().spawn((
-			Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey::new::<()>(11)),
+			Anchor::<_NotIgnored>::to_target(entity).on_fix_point(AnchorFixPointKey::new::<()>(11)),
 			Transform::default(),
 		));
 
@@ -392,7 +444,8 @@ mod tests {
 		_ = app
 			.world_mut()
 			.spawn((
-				Anchor::<_NotIgnored>::to(entity).on_fix_point(AnchorFixPointKey::new::<()>(11)),
+				Anchor::<_NotIgnored>::to_target(entity)
+					.on_fix_point(AnchorFixPointKey::new::<()>(11)),
 				Transform::default(),
 			))
 			.id();

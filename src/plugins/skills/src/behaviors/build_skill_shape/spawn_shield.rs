@@ -42,13 +42,13 @@ impl SpawnShape for SpawnShield {
 	{
 		let SkillCaster(caster) = *caster;
 		let radius = 1.;
-		let offset = Vec3::new(0., 0., radius);
+		let offset = Vec3::new(0., 0., -radius);
 
 		TSkillBehaviors::spawn_skill(
 			commands,
 			Contact {
 				shape: Shape::Custom {
-					model: AssetModel::path("models/shield.glb"),
+					model: AssetModel::path("models/shield.glb").flipped_on("Shield"),
 					collider: Collider::cuboid(0.5, 0.5, 0.05),
 					scale: Vec3::splat(1.),
 				},

@@ -232,15 +232,13 @@ where
 					(
 						update_cool_downs::<Virtual>,
 						GroundTarget::set_position,
-						(
-							DestroyAfterDistanceTraveled::<Velocity>::system,
-							SkillContact::update_range,
-						)
-							.chain(),
-						SetVelocityForward::system,
-						Anchor::<Always>::system.pipe(OnError::log),
+						DestroyAfterDistanceTraveled::<Velocity>::system,
+						SkillContact::update_range,
 						Anchor::<Once>::system.pipe(OnError::log),
-					),
+						Anchor::<Always>::system.pipe(OnError::log),
+						SetVelocityForward::system,
+					)
+						.chain(),
 					// Apply facing
 					(
 						Movement::<VelocityBased>::set_faces,

@@ -1,12 +1,15 @@
 use bevy::prelude::*;
 use std::f32::consts::PI;
 
-#[derive(Component)]
+#[derive(Component, Debug, PartialEq)]
 pub struct FlipHorizontally(Name);
 
 impl FlipHorizontally {
-	pub fn with(name: Name) -> Self {
-		Self(name)
+	pub fn on<TName>(name: TName) -> Self
+	where
+		TName: Into<Name>,
+	{
+		Self(name.into())
 	}
 
 	pub(crate) fn system(
@@ -51,7 +54,7 @@ mod tests {
 		let mut app = setup();
 		let parent = app
 			.world_mut()
-			.spawn(FlipHorizontally::with(Name::from("my name")))
+			.spawn(FlipHorizontally::on(Name::from("my name")))
 			.id();
 		let child = app
 			.world_mut()
@@ -80,7 +83,7 @@ mod tests {
 		let mut app = setup();
 		let parent = app
 			.world_mut()
-			.spawn(FlipHorizontally::with(Name::from("my name")))
+			.spawn(FlipHorizontally::on(Name::from("my name")))
 			.id();
 		let child = app
 			.world_mut()
@@ -108,7 +111,7 @@ mod tests {
 		let mut app = setup();
 		let parent = app
 			.world_mut()
-			.spawn(FlipHorizontally::with(Name::from("my name")))
+			.spawn(FlipHorizontally::on(Name::from("my name")))
 			.id();
 		let in_between = app.world_mut().spawn_empty().insert(ChildOf(parent)).id();
 		let child = app
@@ -138,7 +141,7 @@ mod tests {
 		let mut app = setup();
 		let parent = app
 			.world_mut()
-			.spawn(FlipHorizontally::with(Name::from("my name")))
+			.spawn(FlipHorizontally::on(Name::from("my name")))
 			.id();
 		let child = app
 			.world_mut()

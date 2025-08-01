@@ -1,4 +1,10 @@
-use crate::{components::asset_model::AssetModel, traits::load_asset::LoadAsset};
+use crate::{
+	components::{
+		asset_model::{AssetModel, Model},
+		flip::FlipHorizontally,
+	},
+	traits::load_asset::LoadAsset,
+};
 use bevy::prelude::*;
 
 impl AssetModel {
@@ -30,12 +36,16 @@ fn load_asset_model<TServer>(
 		return;
 	};
 
-	let handle = match asset_model {
-		AssetModel::None => Handle::<Scene>::default(),
-		AssetModel::Path(path) => {
+	let handle = match &asset_model.model {
+		Model::None => Handle::<Scene>::default(),
+		Model::Path(path) => {
 			asset_server.load_asset(GltfAssetLabel::Scene(0).from_asset(path.clone()))
 		}
 	};
+
+	if let Some(target) = &asset_model.flip_horizontally {
+		entity.insert(FlipHorizontally::on(target.clone()));
+	}
 
 	entity.insert(SceneRoot(handle));
 	entity.remove::<AssetModel>();
@@ -100,7 +110,7 @@ mod tests {
 			}),
 		);
 
-		let model = app.world_mut().spawn(AssetModel::None).id();
+		let model = app.world_mut().spawn(AssetModel::none()).id();
 
 		assert_eq!(
 			Some(&SceneRoot(Handle::default())),
@@ -134,5 +144,26 @@ mod tests {
 		let model = app.world_mut().spawn(AssetModel::path("my/model.glb")).id();
 
 		assert_eq!(None, app.world().entity(model).get::<AssetModel>(),);
+	}
+
+	#[test]
+	fn insert_flip() {
+		let handle = new_handle();
+		let mut app = setup(
+			_AssetServer::new().with_mock(|mock: &mut Mock_AssetServer| {
+				mock.expect_load_asset::<Scene, AssetPath<'static>>()
+					.return_const(handle.clone());
+			}),
+		);
+
+		let model = app
+			.world_mut()
+			.spawn(AssetModel::path("my/model.glb").flipped_on("flipper"))
+			.id();
+
+		assert_eq!(
+			Some(&FlipHorizontally::on("flipper")),
+			app.world().entity(model).get::<FlipHorizontally>(),
+		);
 	}
 }
