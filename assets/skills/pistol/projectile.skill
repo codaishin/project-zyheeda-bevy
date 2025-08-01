@@ -1,5 +1,5 @@
 {
-	"token": "skill-shoot-hand-gun",
+	"token": "skill-pistol-projectile",
 	"cast_time": {
 		"seconds": 0.2
 	},
@@ -25,5 +25,5 @@
 	"is_usable_with": [
 		"Pistol"
 	],
-	"icon": "icons/pistol.png"
+	"icon": "icons/projectile.png"
 }
