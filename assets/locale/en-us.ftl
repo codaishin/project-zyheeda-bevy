@@ -16,7 +16,8 @@ item-plasma-pistol = Plasma Pistol
 
 skill-force-shield = Force Shield
 skill-gravity-well = Gravity Well
-skill-shoot-hand-gun = Shoot Hand Gun
+skill-pistol-projectile = Pistol Projectile
+skill-pistol-beam = Pistol Beam
 
 combo-skill-menu = Combos
 combo-skill-add = Add new combo skill

@@ -45,7 +45,7 @@ trait SimplePrefab {
 const SPHERE_MODEL: &str = "models/sphere.glb";
 const BEAM_MODEL: fn() -> Mesh = || {
 	Mesh::from(Cylinder {
-		radius: 0.01,
+		radius: 1.,
 		half_height: 0.5,
 	})
 };
@@ -107,7 +107,13 @@ impl SimplePrefab for Shape {
 				}),
 				(
 					Model::Proc(InsertAsset::shared::<Beam>(BEAM_MODEL)),
-					HALF_FORWARD.with_rotation(Quat::from_rotation_x(PI / 2.)),
+					HALF_FORWARD
+						.with_scale(Vec3 {
+							x: **radius,
+							y: 1.,
+							z: **radius,
+						})
+						.with_rotation(Quat::from_rotation_x(PI / 2.)),
 				),
 				(
 					Collider::cylinder(0.5, **radius),
@@ -704,7 +710,15 @@ mod tests {
 				let [child, ..] = assert_count!(2, get_children!(&app, entity));
 				assert_eq!(
 					(
-						Some(&HALF_FORWARD.with_rotation(Quat::from_rotation_x(PI / 2.)),),
+						Some(
+							&HALF_FORWARD
+								.with_scale(Vec3 {
+									x: 2.,
+									y: 1.,
+									z: 2.,
+								})
+								.with_rotation(Quat::from_rotation_x(PI / 2.)),
+						),
 						Some(&InsertAsset::shared::<Beam>(BEAM_MODEL)),
 					),
 					(child.get::<Transform>(), child.get::<InsertAsset<Mesh>>(),)

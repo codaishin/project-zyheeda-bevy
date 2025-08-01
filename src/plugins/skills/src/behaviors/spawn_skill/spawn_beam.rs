@@ -6,8 +6,7 @@ use crate::{
 	traits::skill_builder::{SkillLifetime, SpawnShape},
 };
 use common::{
-	components::is_blocker::Blocker,
-	tools::{Units, UnitsPerSecond},
+	tools::Units,
 	traits::{
 		clamp_zero_positive::ClampZeroPositive,
 		handles_skill_behaviors::{
@@ -23,13 +22,15 @@ use common::{
 	zyheeda_commands::ZyheedaCommands,
 };
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct SpawnProjectile {
-	destroyed_by: Blockers,
+pub struct SpawnBeam {
+	range: Units,
+	blocked_by: Blockers,
 }
 
-impl SpawnShape for SpawnProjectile {
+impl SpawnShape for SpawnBeam {
 	fn spawn_shape<TSkillBehaviors>(
 		&self,
 		commands: &mut ZyheedaCommands,
@@ -45,23 +46,18 @@ impl SpawnShape for SpawnProjectile {
 		TSkillBehaviors::spawn_skill(
 			commands,
 			Contact {
-				shape: Shape::Sphere {
-					radius: Units::new(0.05),
-					hollow_collider: false,
-					destroyed_by: self.destroyed_by.clone().into(),
+				shape: Shape::Beam {
+					range: self.range,
+					radius: Units::new(0.003),
+					blocked_by: self.blocked_by.clone().into(),
 				},
-				motion: Motion::Projectile {
-					caster,
-					spawner,
-					speed: UnitsPerSecond::new(15.),
-					range: Units::new(20.),
-				},
+				motion: Motion::HeldBy { caster, spawner },
 			},
 			Projection {
-				shape: Shape::Sphere {
-					radius: Units::new(0.5),
-					hollow_collider: false,
-					destroyed_by: Blocker::none(),
+				shape: Shape::Beam {
+					range: Units::new(1.0),
+					radius: Units::new(0.2),
+					blocked_by: HashSet::default(),
 				},
 				offset: None,
 			},
@@ -69,8 +65,8 @@ impl SpawnShape for SpawnProjectile {
 	}
 }
 
-impl SkillLifetime for SpawnProjectile {
+impl SkillLifetime for SpawnBeam {
 	fn lifetime(&self) -> LifeTimeDefinition {
-		LifeTimeDefinition::Infinite
+		LifeTimeDefinition::UntilStopped
 	}
 }
