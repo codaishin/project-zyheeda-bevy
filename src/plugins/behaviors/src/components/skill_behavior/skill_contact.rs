@@ -7,7 +7,7 @@ use common::{
 	errors::Error,
 	traits::{
 		handles_interactions::HandlesInteractions,
-		handles_skill_behaviors::{Contact, Motion, Shape},
+		handles_skill_behaviors::{Contact, Motion, ContactShape},
 		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
@@ -19,7 +19,7 @@ use macros::SavableComponent;
 #[savable_component(dto = SkillContactDto)]
 pub struct SkillContact {
 	pub(crate) created_from: CreatedFrom,
-	pub(crate) shape: Shape,
+	pub(crate) shape: ContactShape,
 	pub(crate) motion: Motion,
 }
 

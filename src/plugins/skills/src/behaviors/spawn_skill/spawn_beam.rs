@@ -12,17 +12,17 @@ use common::{
 		clamp_zero_positive::ClampZeroPositive,
 		handles_skill_behaviors::{
 			Contact,
+			ContactShape,
 			HandlesSkillBehaviors,
 			Motion,
 			Projection,
-			Shape,
+			ProjectionShape,
 			SkillEntities,
 			Spawner,
 		},
 	},
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct SpawnBeam {
@@ -46,7 +46,7 @@ impl SpawnShape for SpawnBeam {
 		TSkillBehaviors::spawn_skill(
 			commands,
 			Contact {
-				shape: Shape::Beam {
+				shape: ContactShape::Beam {
 					range: self.range,
 					radius: Units::new(0.003),
 					blocked_by: self.blocked_by.clone().into(),
@@ -54,10 +54,8 @@ impl SpawnShape for SpawnBeam {
 				motion: Motion::HeldBy { caster, spawner },
 			},
 			Projection {
-				shape: Shape::Beam {
-					range: Units::new(1.0),
+				shape: ProjectionShape::Beam {
 					radius: Units::new(0.2),
-					blocked_by: HashSet::default(),
 				},
 				offset: None,
 			},

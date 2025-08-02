@@ -30,7 +30,7 @@ pub trait HandlesSkillBehaviors {
 /// These should be used for physical effects like projectile bodies, barriers or beam cores.
 #[derive(Debug, Clone)]
 pub struct Contact {
-	pub shape: Shape,
+	pub shape: ContactShape,
 	pub motion: Motion,
 }
 
@@ -39,7 +39,7 @@ pub struct Contact {
 /// These should be used for AoE.
 #[derive(Debug, Clone)]
 pub struct Projection {
-	pub shape: Shape,
+	pub shape: ProjectionShape,
 	pub offset: Option<ProjectionOffset>,
 }
 
@@ -65,7 +65,7 @@ pub struct SkillRoot {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Shape {
+pub enum ContactShape {
 	Sphere {
 		radius: Units,
 		hollow_collider: bool,
@@ -81,6 +81,21 @@ pub enum Shape {
 		range: Units,
 		radius: Units,
 		blocked_by: HashSet<Blocker>,
+	},
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ProjectionShape {
+	Sphere {
+		radius: Units,
+	},
+	Custom {
+		model: AssetModel,
+		collider: Collider,
+		scale: Vec3,
+	},
+	Beam {
+		radius: Units,
 	},
 }
 
