@@ -13,11 +13,12 @@ use common::{
 		clamp_zero_positive::ClampZeroPositive,
 		handles_skill_behaviors::{
 			Contact,
+			ContactShape,
 			HandlesSkillBehaviors,
 			Motion,
 			Projection,
 			ProjectionOffset,
-			Shape,
+			ProjectionShape,
 			SkillEntities,
 			SkillSpawner,
 		},
@@ -47,7 +48,7 @@ impl SpawnShape for SpawnShield {
 		TSkillBehaviors::spawn_skill(
 			commands,
 			Contact {
-				shape: Shape::Custom {
+				shape: ContactShape::Custom {
 					model: AssetModel::path("models/shield.glb").flipped_on("Shield"),
 					collider: Collider::cuboid(0.5, 0.5, 0.05),
 					scale: Vec3::splat(1.),
@@ -59,10 +60,8 @@ impl SpawnShape for SpawnShield {
 				},
 			},
 			Projection {
-				shape: Shape::Sphere {
+				shape: ProjectionShape::Sphere {
 					radius: Units::new(radius),
-					hollow_collider: false,
-					destroyed_by: Blocker::none(),
 				},
 				offset: Some(ProjectionOffset(offset)),
 			},

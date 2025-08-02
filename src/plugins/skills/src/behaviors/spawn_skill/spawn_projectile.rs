@@ -6,16 +6,16 @@ use crate::{
 	traits::skill_builder::{SkillLifetime, SpawnShape},
 };
 use common::{
-	components::is_blocker::Blocker,
 	tools::{Units, UnitsPerSecond},
 	traits::{
 		clamp_zero_positive::ClampZeroPositive,
 		handles_skill_behaviors::{
 			Contact,
+			ContactShape,
 			HandlesSkillBehaviors,
 			Motion,
 			Projection,
-			Shape,
+			ProjectionShape,
 			SkillEntities,
 			SkillSpawner,
 		},
@@ -45,7 +45,7 @@ impl SpawnShape for SpawnProjectile {
 		TSkillBehaviors::spawn_skill(
 			commands,
 			Contact {
-				shape: Shape::Sphere {
+				shape: ContactShape::Sphere {
 					radius: Units::new(0.05),
 					hollow_collider: false,
 					destroyed_by: self.destroyed_by.clone().into(),
@@ -58,10 +58,8 @@ impl SpawnShape for SpawnProjectile {
 				},
 			},
 			Projection {
-				shape: Shape::Sphere {
+				shape: ProjectionShape::Sphere {
 					radius: Units::new(0.5),
-					hollow_collider: false,
-					destroyed_by: Blocker::none(),
 				},
 				offset: None,
 			},
