@@ -10,10 +10,11 @@ use common::{
 	tools::Units,
 	traits::handles_skill_behaviors::{
 		Contact,
+		ContactShape,
 		HandlesSkillBehaviors,
 		Motion,
 		Projection,
-		Shape,
+		ProjectionShape,
 		SkillEntities,
 		SkillSpawner,
 	},
@@ -66,7 +67,7 @@ impl SpawnShape for SpawnGroundTargetedAoe {
 		TSkillBehaviors::spawn_skill(
 			commands,
 			Contact {
-				shape: Shape::Sphere {
+				shape: ContactShape::Sphere {
 					radius: self.radius,
 					hollow_collider: true,
 					destroyed_by: Blocker::none(),
@@ -78,10 +79,8 @@ impl SpawnShape for SpawnGroundTargetedAoe {
 				},
 			},
 			Projection {
-				shape: Shape::Sphere {
+				shape: ProjectionShape::Sphere {
 					radius: self.radius,
-					hollow_collider: false,
-					destroyed_by: Blocker::none(),
 				},
 				offset: None,
 			},

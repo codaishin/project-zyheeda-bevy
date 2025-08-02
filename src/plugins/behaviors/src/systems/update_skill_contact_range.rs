@@ -32,7 +32,7 @@ mod tests {
 		tools::{Units, UnitsPerSecond},
 		traits::{
 			clamp_zero_positive::ClampZeroPositive,
-			handles_skill_behaviors::{Motion, Shape, SkillSpawner},
+			handles_skill_behaviors::{ContactShape, Motion, SkillSpawner},
 		},
 	};
 	use testing::SingleThreadedApp;
@@ -41,7 +41,7 @@ mod tests {
 		fn fake_projectile_motion(range: Units) -> Self {
 			Self {
 				created_from: CreatedFrom::Contact,
-				shape: Shape::Sphere {
+				shape: ContactShape::Sphere {
 					radius: Units::new(1.),
 					hollow_collider: false,
 					destroyed_by: default(),

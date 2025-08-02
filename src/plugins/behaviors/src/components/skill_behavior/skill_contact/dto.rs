@@ -3,7 +3,7 @@ use common::{
 	errors::Unreachable,
 	traits::{
 		handles_custom_assets::TryLoadFrom,
-		handles_skill_behaviors::{Motion, Shape},
+		handles_skill_behaviors::{Motion, ContactShape},
 		load_asset::LoadAsset,
 	},
 };
@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SkillContactDto {
-	shape: Shape,
+	shape: ContactShape,
 	motion: Motion,
 }
 
