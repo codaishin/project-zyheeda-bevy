@@ -78,7 +78,7 @@ fn insert_active_beam(
 
 fn update_transform(transform: &mut Transform, ray: &Ray) {
 	let TimeOfImpact(toi) = ray.1;
-	transform.scale.z = toi;
+	transform.scale.z = f32::max(toi, f32::EPSILON);
 }
 
 #[cfg(test)]
@@ -175,6 +175,45 @@ mod tests {
 	}
 
 	#[test]
+	fn insert_active_beam_min_length_epsilon_when_toi_zero() {
+		let mut app = setup();
+		let beam = app
+			.world_mut()
+			.spawn((
+				Transform::from_xyz(1., 0., 0.).looking_to(Dir3::Z, Vec3::Y),
+				Blockable(InteractAble::Beam {
+					range: Units::new(100.),
+					blocked_by: default(),
+				}),
+			))
+			.id();
+		app.world_mut().send_event(InteractionEvent::of(beam).ray(
+			Ray3d {
+				origin: Vec3::new(1., 0., 0.),
+				direction: Dir3::Y,
+			},
+			TimeOfImpact(0.),
+		));
+
+		app.update();
+
+		assert_eq!(
+			(
+				Some(&ActiveBeam),
+				Some(
+					&Transform::from_xyz(1., 0., 0.)
+						.looking_to(Dir3::Z, Vec3::Y)
+						.with_scale(Vec3::new(1., 1., f32::EPSILON))
+				)
+			),
+			(
+				app.world().entity(beam).get::<ActiveBeam>(),
+				app.world().entity(beam).get::<Transform>(),
+			)
+		);
+	}
+
+	#[test]
 	fn update_active_beam() {
 		let mut app = setup();
 		let beam = app
@@ -213,6 +252,54 @@ mod tests {
 					&Transform::from_xyz(1., 0., 0.)
 						.looking_to(Dir3::Z, Vec3::Y)
 						.with_scale(Vec3::new(1., 1., 5.))
+				)
+			),
+			(
+				app.world().entity(beam).get::<ActiveBeam>(),
+				app.world().entity(beam).get::<Transform>(),
+			)
+		);
+	}
+
+	#[test]
+	fn update_active_beam_min_length_epsilon_when_toi_zero() {
+		let mut app = setup();
+		let beam = app
+			.world_mut()
+			.spawn((
+				Transform::from_xyz(1., 0., 0.).looking_to(Dir3::Z, Vec3::Y),
+				Blockable(InteractAble::Beam {
+					range: Units::new(100.),
+					blocked_by: default(),
+				}),
+			))
+			.id();
+		app.world_mut().send_event(InteractionEvent::of(beam).ray(
+			Ray3d {
+				origin: Vec3::new(1., 0., 0.),
+				direction: Dir3::Z,
+			},
+			TimeOfImpact(5.),
+		));
+
+		app.update();
+		app.world_mut().send_event(InteractionEvent::of(beam).ray(
+			Ray3d {
+				origin: Vec3::new(1., 0., 0.),
+				direction: Dir3::Y,
+			},
+			TimeOfImpact(0.),
+		));
+
+		app.update();
+
+		assert_eq!(
+			(
+				Some(&ActiveBeam),
+				Some(
+					&Transform::from_xyz(1., 0., 0.)
+						.looking_to(Dir3::Z, Vec3::Y)
+						.with_scale(Vec3::new(1., 1., f32::EPSILON))
 				)
 			),
 			(
