@@ -15,7 +15,7 @@ use spawn_shield::SpawnShield;
 
 #[cfg(test)]
 pub(crate) type SpawnSkillFn =
-	for<'a> fn(&'a mut Commands, &SkillCaster, SkillSpawner, &SkillTarget) -> SkillShape;
+	fn(&mut Commands, &SkillCaster, SkillSpawner, &SkillTarget) -> SkillShape;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum OnSkillStop {

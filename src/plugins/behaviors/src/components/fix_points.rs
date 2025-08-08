@@ -61,7 +61,7 @@ where
 			.iter_mut()
 			.filter_map(|(anchor, mut anchor_transform)| {
 				let target = persistent_entities.get_entity(&anchor.target)?;
-				let Ok((FixPoints(fix_points), target)) = fix_points.get(target) else {
+				let Ok((FixPoints(fix_points), transform)) = fix_points.get(target) else {
 					return Some(AnchorError::FixPointsMissingOn(anchor.target));
 				};
 				let Some(fix_point) = fix_points.get(&anchor.fix_point_key).copied() else {
@@ -73,7 +73,7 @@ where
 
 				anchor_transform.translation = fix_point.translation();
 				let rotation = match anchor.use_target_rotation {
-					true => target.rotation(),
+					true => transform.rotation(),
 					false => fix_point.rotation(),
 				};
 				anchor_transform.rotation = rotation;

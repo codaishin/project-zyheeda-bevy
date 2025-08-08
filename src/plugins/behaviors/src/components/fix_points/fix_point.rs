@@ -33,13 +33,13 @@ where
 				continue;
 			};
 
-			let spawner = items
+			let fix_point = items
 				.iter()
 				.find(|item| *agent.map(**item) == name.as_str());
 
-			match spawner {
-				Some(spawner) => {
-					commands.try_insert_on(entity, FixPoint(*spawner));
+			match fix_point {
+				Some(fix_point) => {
+					commands.try_insert_on(entity, FixPoint(*fix_point));
 				}
 				None => {
 					commands.try_remove_from::<FixPoint<T>>(entity);
@@ -206,7 +206,7 @@ mod tests {
 	}
 
 	#[test]
-	fn spawner_to_anchor_fix_point_key_has_correct_source() {
+	fn anchor_fix_point_key_has_correct_source() {
 		assert!(
 			[FixPoint(_T::A), FixPoint(_T::B)]
 				.into_iter()
