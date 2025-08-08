@@ -2,12 +2,16 @@ use super::{
 	accessors::get::{Getter, GetterRefOptional},
 	intersect_at::IntersectAt,
 };
-use crate::tools::{
-	action_key::{movement::MovementKey, slot::SlotKey},
-	collider_info::ColliderInfo,
-	collider_radius::ColliderRadius,
-	movement_animation::MovementAnimation,
-	speed::Speed,
+use crate::{
+	tools::{
+		action_key::{movement::MovementKey, slot::SlotKey},
+		bone::Bone,
+		collider_info::ColliderInfo,
+		collider_radius::ColliderRadius,
+		movement_animation::MovementAnimation,
+		speed::Speed,
+	},
+	traits::{handles_skill_behaviors::SkillSpawner, mapper::Mapper},
 };
 use bevy::{
 	math::{InvalidDirectionError, Ray3d},
@@ -15,7 +19,7 @@ use bevy::{
 };
 
 pub trait HandlesPlayer {
-	type TPlayer: Component + Default;
+	type TPlayer: Component + Default + Mapper<SkillSpawner, Bone>;
 }
 
 pub trait PlayerMainCamera {

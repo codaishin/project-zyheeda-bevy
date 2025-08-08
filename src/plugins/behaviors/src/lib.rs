@@ -203,7 +203,7 @@ where
 					(
 						PathOrWasd::<VelocityBased>::cleanup,
 						Movement::<VelocityBased>::cleanup,
-						FixPoint::<SkillSpawner>::insert,
+						FixPoint::<SkillSpawner>::insert_in_children_of::<TPlayers::TPlayer>,
 						FixPoints::track_in_self_and_children::<FixPoint<SkillSpawner>>().system(),
 					)
 						.chain(),

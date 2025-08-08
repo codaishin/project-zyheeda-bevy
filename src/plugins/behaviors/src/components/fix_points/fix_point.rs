@@ -4,6 +4,7 @@ use common::{
 	tools::{Index, bone::Bone},
 	traits::{
 		iteration::IterFinite,
+		mapper::Mapper,
 		thread_safe::ThreadSafe,
 		try_insert_on::TryInsertOn,
 		try_remove_from::TryRemoveFrom,
@@ -15,16 +16,26 @@ pub struct FixPoint<T>(pub(crate) T);
 
 impl<T> FixPoint<T>
 where
-	T: IterFinite + ThreadSafe + Clone + Into<Bone>,
+	T: IterFinite + ThreadSafe,
 {
-	pub(crate) fn insert(mut commands: Commands, names: Query<(Entity, &Name), Changed<Name>>) {
+	pub(crate) fn insert_in_children_of<TAgent>(
+		mut commands: Commands,
+		names: Query<(Entity, &Name), Changed<Name>>,
+		agents: Query<&TAgent>,
+		parents: Query<&ChildOf>,
+	) where
+		TAgent: Component + Mapper<T, Bone>,
+	{
 		let items = T::iterator().collect::<Vec<_>>();
 
 		for (entity, name) in &names {
-			let spawner = items.iter().find(|item| {
-				let Bone(bone) = (*(*item)).into();
-				bone == name.as_str()
-			});
+			let Some(agent) = get_agent(&agents, &parents, entity) else {
+				continue;
+			};
+
+			let spawner = items
+				.iter()
+				.find(|item| *agent.map(**item) == name.as_str());
 
 			match spawner {
 				Some(spawner) => {
@@ -36,6 +47,19 @@ where
 			}
 		}
 	}
+}
+
+fn get_agent<'a, TAgent>(
+	agents: &'a Query<&TAgent>,
+	parents: &Query<&ChildOf>,
+	entity: Entity,
+) -> Option<&'a TAgent>
+where
+	TAgent: Component,
+{
+	parents
+		.iter_ancestors(entity)
+		.find_map(|e| agents.get(e).ok())
 }
 
 impl<T> From<FixPoint<T>> for AnchorFixPointKey
@@ -56,6 +80,18 @@ mod tests {
 	use test_case::test_case;
 	use testing::SingleThreadedApp;
 
+	#[derive(Component)]
+	struct _Agent;
+
+	impl Mapper<_T, Bone> for _Agent {
+		fn map(&self, value: _T) -> Bone {
+			match value {
+				_T::A => Bone("a"),
+				_T::B => Bone("b"),
+			}
+		}
+	}
+
 	#[derive(Debug, PartialEq, Clone, Copy)]
 	enum _T {
 		A,
@@ -75,15 +111,6 @@ mod tests {
 		}
 	}
 
-	impl From<_T> for Bone {
-		fn from(value: _T) -> Self {
-			match value {
-				_T::A => Bone("a"),
-				_T::B => Bone("b"),
-			}
-		}
-	}
-
 	impl From<_T> for Index<usize> {
 		fn from(value: _T) -> Self {
 			match value {
@@ -93,13 +120,10 @@ mod tests {
 		}
 	}
 
-	fn setup<T>() -> App
-	where
-		for<'a> T: IterFinite + Into<Bone> + ThreadSafe,
-	{
+	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, FixPoint::<T>::insert);
+		app.add_systems(Update, FixPoint::<_T>::insert_in_children_of::<_Agent>);
 
 		app
 	}
@@ -108,8 +132,13 @@ mod tests {
 	#[test_case("a", Some(&FixPoint(_T::A)); "a")]
 	#[test_case("b", Some(&FixPoint(_T::B)); "b")]
 	fn insert(name: &str, expected: Option<&FixPoint<_T>>) {
-		let mut app = setup::<_T>();
-		let entity = app.world_mut().spawn(Name::from(name)).id();
+		let mut app = setup();
+		let agent = app.world_mut().spawn(_Agent).id();
+		let in_between = app.world_mut().spawn(ChildOf(agent)).id();
+		let entity = app
+			.world_mut()
+			.spawn((Name::from(name), ChildOf(in_between)))
+			.id();
 
 		app.update();
 
@@ -118,8 +147,13 @@ mod tests {
 
 	#[test]
 	fn act_only_once() {
-		let mut app = setup::<_T>();
-		let entity = app.world_mut().spawn(Name::from("a")).id();
+		let mut app = setup();
+		let agent = app.world_mut().spawn(_Agent).id();
+		let in_between = app.world_mut().spawn(ChildOf(agent)).id();
+		let entity = app
+			.world_mut()
+			.spawn((Name::from("a"), ChildOf(in_between)))
+			.id();
 
 		app.update();
 		app.world_mut().entity_mut(entity).remove::<FixPoint<_T>>();
@@ -130,8 +164,13 @@ mod tests {
 
 	#[test]
 	fn act_again_if_name_changed() {
-		let mut app = setup::<_T>();
-		let entity = app.world_mut().spawn(Name::from("a")).id();
+		let mut app = setup();
+		let agent = app.world_mut().spawn(_Agent).id();
+		let in_between = app.world_mut().spawn(ChildOf(agent)).id();
+		let entity = app
+			.world_mut()
+			.spawn((Name::from("a"), ChildOf(in_between)))
+			.id();
 
 		app.update();
 		app.world_mut()
@@ -149,8 +188,13 @@ mod tests {
 
 	#[test]
 	fn remove_fix_point_when_name_becomes_invalid() {
-		let mut app = setup::<_T>();
-		let entity = app.world_mut().spawn(Name::from("a")).id();
+		let mut app = setup();
+		let agent = app.world_mut().spawn(_Agent).id();
+		let in_between = app.world_mut().spawn(ChildOf(agent)).id();
+		let entity = app
+			.world_mut()
+			.spawn((Name::from("a"), ChildOf(in_between)))
+			.id();
 
 		app.update();
 		app.world_mut()

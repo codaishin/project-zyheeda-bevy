@@ -9,7 +9,6 @@ use crate::{
 		Units,
 		UnitsPerSecond,
 		action_key::slot::{Side, SlotKey},
-		bone::Bone,
 		iter_helpers::{first, next},
 	},
 	traits::iteration::{Iter, IterFinite},
@@ -113,18 +112,6 @@ impl IterFinite for SkillSpawner {
 	}
 }
 
-impl From<SkillSpawner> for Bone {
-	fn from(value: SkillSpawner) -> Self {
-		match value {
-			SkillSpawner::Center => Bone("skill_spawn"),
-			SkillSpawner::Slot(SlotKey::TopHand(Side::Right)) => Bone("skill_spawn_top.R"),
-			SkillSpawner::Slot(SlotKey::TopHand(Side::Left)) => Bone("skill_spawn_top.L"),
-			SkillSpawner::Slot(SlotKey::BottomHand(Side::Right)) => Bone("skill_spawn_bottom.R"),
-			SkillSpawner::Slot(SlotKey::BottomHand(Side::Left)) => Bone("skill_spawn_bottom.L"),
-		}
-	}
-}
-
 impl From<SkillSpawner> for Index<usize> {
 	fn from(value: SkillSpawner) -> Self {
 		match value {
@@ -153,17 +140,6 @@ mod tests {
 				.collect::<Vec<_>>(),
 			SkillSpawner::iterator().take(100).collect::<Vec<_>>()
 		)
-	}
-
-	#[test]
-	fn all_bones_different() {
-		let count = SkillSpawner::iterator().count();
-		let index_count = SkillSpawner::iterator()
-			.map(Bone::from)
-			.collect::<HashSet<_>>()
-			.len();
-
-		assert_eq!(count, index_count)
 	}
 
 	#[test]

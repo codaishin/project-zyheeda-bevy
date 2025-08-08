@@ -111,10 +111,10 @@ pub struct FixPoints(HashMap<AnchorFixPointKey, Entity>);
 
 impl<T> Track<FixPoint<T>> for FixPoints
 where
-	T: 'static + Clone + Into<Index<usize>>,
+	T: 'static + Copy + Into<Index<usize>>,
 {
 	fn track(&mut self, entity: Entity, spawner_fix_point: &FixPoint<T>) {
-		self.0.insert(spawner_fix_point.clone().into(), entity);
+		self.0.insert((*spawner_fix_point).into(), entity);
 	}
 }
 
