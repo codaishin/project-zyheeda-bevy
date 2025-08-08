@@ -1,9 +1,9 @@
+pub mod attach_skill_effect;
 pub mod build_skill_shape;
 pub mod spawn_on;
-pub mod start_behavior;
 
 use crate::{
-	behaviors::spawn_on::SpawnOn,
+	behaviors::{attach_skill_effect::AttachEffect, spawn_on::SpawnOn},
 	components::SkillTarget,
 	traits::skill_builder::SkillShape,
 };
@@ -13,10 +13,9 @@ use common::{
 	components::persistent_entity::PersistentEntity,
 	traits::{
 		handles_effect::HandlesAllEffects,
-		handles_skill_behaviors::{HandlesSkillBehaviors, Spawner},
+		handles_skill_behaviors::{HandlesSkillBehaviors, SkillSpawner},
 	},
 };
-use start_behavior::SkillBehavior;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct SkillCaster(pub PersistentEntity);
@@ -30,8 +29,8 @@ impl From<PersistentEntity> for SkillCaster {
 #[derive(PartialEq, Debug, Clone)]
 pub struct SkillBehaviorConfig {
 	pub(crate) shape: BuildSkillShape,
-	pub(crate) contact: Vec<SkillBehavior>,
-	pub(crate) projection: Vec<SkillBehavior>,
+	pub(crate) contact: Vec<AttachEffect>,
+	pub(crate) projection: Vec<AttachEffect>,
 	pub(crate) spawn_on: SpawnOn,
 }
 
@@ -57,7 +56,7 @@ impl SkillBehaviorConfig {
 	}
 
 	#[cfg(test)]
-	pub(crate) fn with_contact_behaviors(self, contact: Vec<SkillBehavior>) -> Self {
+	pub(crate) fn with_contact_effects(self, contact: Vec<AttachEffect>) -> Self {
 		Self {
 			shape: self.shape,
 			contact,
@@ -67,7 +66,7 @@ impl SkillBehaviorConfig {
 	}
 
 	#[cfg(test)]
-	pub(crate) fn with_projection_behaviors(self, projection: Vec<SkillBehavior>) -> Self {
+	pub(crate) fn with_projection_effects(self, projection: Vec<AttachEffect>) -> Self {
 		Self {
 			shape: self.shape,
 			contact: self.contact,
@@ -80,7 +79,7 @@ impl SkillBehaviorConfig {
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
-		spawner: Spawner,
+		spawner: SkillSpawner,
 		target: &SkillTarget,
 	) -> SkillShape
 	where
@@ -94,13 +93,12 @@ impl SkillBehaviorConfig {
 		&self,
 		entity: &mut EntityCommands,
 		caster: &SkillCaster,
-		spawner: Spawner,
 		target: &SkillTarget,
 	) where
 		TEffects: HandlesAllEffects,
 	{
 		for start in &self.contact {
-			start.apply::<TEffects>(entity, caster, spawner, target);
+			start.attach::<TEffects>(entity, caster, target);
 		}
 	}
 
@@ -108,13 +106,12 @@ impl SkillBehaviorConfig {
 		&self,
 		entity: &mut EntityCommands,
 		caster: &SkillCaster,
-		spawner: Spawner,
 		target: &SkillTarget,
 	) where
 		TEffects: HandlesAllEffects,
 	{
 		for start in &self.projection {
-			start.apply::<TEffects>(entity, caster, spawner, target);
+			start.attach::<TEffects>(entity, caster, target);
 		}
 	}
 }

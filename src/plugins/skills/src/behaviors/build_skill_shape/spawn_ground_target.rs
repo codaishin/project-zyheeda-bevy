@@ -16,7 +16,7 @@ use common::{
 		Projection,
 		Shape,
 		SkillEntities,
-		Spawner,
+		SkillSpawner,
 	},
 };
 use serde::{Deserialize, Serialize};
@@ -54,7 +54,7 @@ impl SpawnShape for SpawnGroundTargetedAoe {
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
-		_: Spawner,
+		_: SkillSpawner,
 		target: &SkillTarget,
 	) -> SkillEntities
 	where

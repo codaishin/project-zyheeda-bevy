@@ -18,7 +18,7 @@ use common::{
 			Projection,
 			Shape,
 			SkillEntities,
-			Spawner,
+			SkillSpawner,
 		},
 	},
 };
@@ -41,7 +41,7 @@ impl SpawnShape for SpawnProjectile {
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
-		spawner: Spawner,
+		spawner: SkillSpawner,
 		_: &SkillTarget,
 	) -> SkillEntities
 	where

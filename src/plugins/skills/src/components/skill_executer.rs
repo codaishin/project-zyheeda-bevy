@@ -12,7 +12,7 @@ use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
 		handles_effect::HandlesAllEffects,
-		handles_skill_behaviors::{HandlesSkillBehaviors, Spawner},
+		handles_skill_behaviors::{HandlesSkillBehaviors, SkillSpawner},
 		try_despawn::TryDespawnPersistent,
 	},
 };
@@ -67,8 +67,8 @@ where
 		match self {
 			SkillExecuter::Start { shape, slot_key } => {
 				let spawner = match shape.spawn_on() {
-					SpawnOn::Center => Spawner::Center,
-					SpawnOn::Slot => Spawner::Slot(*slot_key),
+					SpawnOn::Center => SkillSpawner::Center,
+					SpawnOn::Slot => SkillSpawner::Slot(*slot_key),
 				};
 				let on_skill_stop_behavior =
 					shape.spawn::<TEffects, TSkillBehavior>(commands, caster, spawner, target);
@@ -182,7 +182,7 @@ mod tests {
 			&self,
 			_: &mut _Commands,
 			_: &SkillCaster,
-			_: Spawner,
+			_: SkillSpawner,
 			_: &SkillTarget,
 		) -> OnSkillStop
 		where
@@ -201,7 +201,7 @@ mod tests {
 				&self,
 				commands: &mut Mock_Commands,
 				caster: &SkillCaster,
-				spawner: Spawner,
+				spawner: SkillSpawner,
 				target: &SkillTarget,
 			) -> OnSkillStop
 			where
@@ -248,7 +248,7 @@ mod tests {
 	#[test]
 	fn start_shape_on_slot() {
 		let caster = SkillCaster(PersistentEntity::default());
-		let spawner = Spawner::Slot(SlotKey::BottomHand(Side::Right));
+		let spawner = SkillSpawner::Slot(SlotKey::BottomHand(Side::Right));
 		let target = get_target();
 
 		let executer: _Executer<Mock_Commands> = &mut SkillExecuter::Start {
@@ -270,7 +270,7 @@ mod tests {
 	#[test]
 	fn start_shape_on_center() {
 		let caster = SkillCaster(PersistentEntity::default());
-		let spawner = Spawner::Center;
+		let spawner = SkillSpawner::Center;
 		let target = get_target();
 		let mut commands = Mock_Commands::new_mock(|mock| {
 			mock.expect_try_despawn_persistent().return_const(());

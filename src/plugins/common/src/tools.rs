@@ -2,6 +2,7 @@ pub mod action_key;
 pub mod aggro_range;
 pub mod animation_key;
 pub mod attack_range;
+pub mod bone;
 pub mod change;
 pub mod collider_info;
 pub mod collider_radius;
@@ -25,7 +26,7 @@ use bevy::prelude::Entity;
 use macros::ClampZeroPositive;
 use serde::{Deserialize, Serialize};
 use std::{
-	fmt::{Debug, Formatter, Result},
+	fmt::Debug,
 	ops::{Deref, DerefMut},
 };
 
@@ -72,14 +73,8 @@ pub struct Intensity(f32);
 #[derive(Debug, PartialEq, Clone, ClampZeroPositive)]
 pub struct IntensityChangePerSecond(f32);
 
-#[derive(Default)]
+#[derive(Default, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct Index<T>(pub T);
-
-impl<T: Debug> Debug for Index<T> {
-	fn fmt(&self, formatter: &mut Formatter) -> Result {
-		formatter.debug_tuple("Index").field(&self.0).finish()
-	}
-}
 
 #[derive(Default, Clone, Debug, PartialEq)]
 pub enum Focus {

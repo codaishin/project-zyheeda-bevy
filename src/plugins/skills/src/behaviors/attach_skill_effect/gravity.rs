@@ -3,21 +3,20 @@ use bevy::ecs::system::EntityCommands;
 use common::{
 	effects::gravity::Gravity,
 	tools::UnitsPerSecond,
-	traits::{handles_effect::HandlesEffect, handles_skill_behaviors::Spawner},
+	traits::handles_effect::HandlesEffect,
 };
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct StartGravity {
+pub struct AttachGravity {
 	strength: UnitsPerSecond,
 }
 
-impl StartGravity {
-	pub fn apply<TInteractions>(
+impl AttachGravity {
+	pub fn attach<TInteractions>(
 		&self,
 		entity: &mut EntityCommands,
 		_: &SkillCaster,
-		_: Spawner,
 		_: &SkillTarget,
 	) where
 		TInteractions: HandlesEffect<Gravity>,
@@ -62,10 +61,9 @@ mod tests {
 
 	fn gravity(In(pull): In<UnitsPerSecond>, mut commands: Commands) -> Entity {
 		let mut entity = commands.spawn_empty();
-		StartGravity { strength: pull }.apply::<_HandlesEffects>(
+		AttachGravity { strength: pull }.attach::<_HandlesEffects>(
 			&mut entity,
 			&SkillCaster::from(*CASTER),
-			Spawner::Center,
 			&SkillTarget::default(),
 		);
 		entity.id()

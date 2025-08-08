@@ -32,7 +32,7 @@ mod tests {
 		tools::{Units, UnitsPerSecond},
 		traits::{
 			clamp_zero_positive::ClampZeroPositive,
-			handles_skill_behaviors::{Integrity, Motion, Shape, Spawner},
+			handles_skill_behaviors::{Integrity, Motion, Shape, SkillSpawner},
 		},
 	};
 	use testing::SingleThreadedApp;
@@ -48,7 +48,7 @@ mod tests {
 				integrity: Integrity::Solid,
 				motion: Motion::Projectile {
 					caster: PersistentEntity::default(),
-					spawner: Spawner::Center,
+					spawner: SkillSpawner::Center,
 					speed: UnitsPerSecond::new(1.),
 					range,
 				},

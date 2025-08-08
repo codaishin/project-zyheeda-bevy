@@ -7,7 +7,7 @@ use bevy::prelude::*;
 use common::{
 	components::{lifetime::Lifetime, persistent_entity::PersistentEntity},
 	traits::{
-		handles_skill_behaviors::{HandlesSkillBehaviors, SkillEntities, Spawner},
+		handles_skill_behaviors::{HandlesSkillBehaviors, SkillEntities, SkillSpawner},
 		try_insert_on::TryInsertOn,
 	},
 };
@@ -17,7 +17,7 @@ pub(crate) trait SkillBuilder {
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
-		spawner: Spawner,
+		spawner: SkillSpawner,
 		target: &SkillTarget,
 	) -> SkillShape
 	where
@@ -32,7 +32,7 @@ where
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
-		spawner: Spawner,
+		spawner: SkillSpawner,
 		target: &SkillTarget,
 	) -> SkillShape
 	where
@@ -73,7 +73,7 @@ pub(crate) trait SpawnShape {
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
-		spawner: Spawner,
+		spawner: SkillSpawner,
 		target: &SkillTarget,
 	) -> SkillEntities
 	where
@@ -122,7 +122,7 @@ mod tests {
 	#[require(PersistentEntity = *ROOT)]
 	struct _Root {
 		caster: SkillCaster,
-		spawner: Spawner,
+		spawner: SkillSpawner,
 		target: SkillTarget,
 	}
 
@@ -147,7 +147,7 @@ mod tests {
 			&self,
 			commands: &mut Commands,
 			caster: &SkillCaster,
-			spawner: Spawner,
+			spawner: SkillSpawner,
 			target: &SkillTarget,
 		) -> SkillEntities
 		where
@@ -175,7 +175,7 @@ mod tests {
 	}
 
 	fn build_skill(
-		args: In<(_Skill, SkillCaster, Spawner, SkillTarget)>,
+		args: In<(_Skill, SkillCaster, SkillSpawner, SkillTarget)>,
 		mut commands: Commands,
 	) -> SkillShape {
 		let In((skill, caster, spawner, target)) = args;
@@ -201,7 +201,7 @@ mod tests {
 	fn spawn_contact() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let caster = SkillCaster(PersistentEntity::default());
-		let spawner = Spawner::Center;
+		let spawner = SkillSpawner::Center;
 		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
@@ -225,7 +225,7 @@ mod tests {
 	fn spawn_projection() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let caster = SkillCaster(PersistentEntity::default());
-		let spawner = Spawner::Center;
+		let spawner = SkillSpawner::Center;
 		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
@@ -249,7 +249,7 @@ mod tests {
 	fn use_correct_args() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let caster = SkillCaster(PersistentEntity::default());
-		let spawner = Spawner::Center;
+		let spawner = SkillSpawner::Center;
 		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
@@ -276,7 +276,7 @@ mod tests {
 	fn alive_until_stopped() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let caster = SkillCaster(PersistentEntity::default());
-		let spawner = Spawner::Center;
+		let spawner = SkillSpawner::Center;
 		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
@@ -297,7 +297,7 @@ mod tests {
 	fn unstoppable_life_time() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let caster = SkillCaster(PersistentEntity::default());
-		let spawner = Spawner::Center;
+		let spawner = SkillSpawner::Center;
 		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
@@ -318,7 +318,7 @@ mod tests {
 	fn add_lifetime_to_unstoppable() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let caster = SkillCaster(PersistentEntity::default());
-		let spawner = Spawner::Center;
+		let spawner = SkillSpawner::Center;
 		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
@@ -342,7 +342,7 @@ mod tests {
 	fn infinite_life_time() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let caster = SkillCaster(PersistentEntity::default());
-		let spawner = Spawner::Center;
+		let spawner = SkillSpawner::Center;
 		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()

@@ -4,13 +4,13 @@ pub mod skill_projection;
 use super::{
 	Always,
 	Once,
-	anchor::Anchor,
+	fix_points::Anchor,
 	ground_target::GroundTarget,
 	set_to_move_forward::SetVelocityForward,
 	when_traveled_insert::WhenTraveled,
 };
 use crate::components::{
-	anchor::spawner_fix_point::SpawnerFixPoint,
+	fix_points::fix_point::FixPoint,
 	skill_behavior::skill_contact::CreatedFrom,
 };
 use bevy::prelude::*;
@@ -20,7 +20,7 @@ use common::{
 	errors::{Error, Level},
 	traits::{
 		handles_interactions::{HandlesInteractions, InteractAble},
-		handles_skill_behaviors::{Integrity, Motion, Shape, Spawner},
+		handles_skill_behaviors::{Integrity, Motion, Shape, SkillSpawner},
 		prefab::PrefabEntityCommands,
 	},
 };
@@ -157,7 +157,7 @@ impl SimplePrefab for Motion {
 				entity.try_insert_if_new((
 					RigidBody::Fixed,
 					Anchor::<Always>::to_target(caster)
-						.on_fix_point(SpawnerFixPoint(Spawner::Center))
+						.on_fix_point(FixPoint(SkillSpawner::Center))
 						.with_target_rotation(),
 				));
 			}
@@ -194,7 +194,7 @@ impl SimplePrefab for Motion {
 
 				entity.try_insert_if_new((
 					Anchor::<Once>::to_target(caster)
-						.on_fix_point(SpawnerFixPoint(spawner))
+						.on_fix_point(FixPoint(spawner))
 						.with_target_rotation(),
 					SetVelocityForward(speed),
 				));
@@ -290,7 +290,7 @@ mod tests {
 				None,
 				Some(
 					&Anchor::<Always>::to_target(caster)
-						.on_fix_point(SpawnerFixPoint(Spawner::Center))
+						.on_fix_point(FixPoint(SkillSpawner::Center))
 						.with_target_rotation()
 				),
 				None,
@@ -370,7 +370,7 @@ mod tests {
 		let caster = PersistentEntity::default();
 		let motion = Motion::Projectile {
 			caster,
-			spawner: Spawner::Slot(SlotKey::TopHand(Side::Left)),
+			spawner: SkillSpawner::Slot(SlotKey::TopHand(Side::Left)),
 			speed: UnitsPerSecond::new(11.),
 			range: Units::new(1111.),
 		};
@@ -389,7 +389,7 @@ mod tests {
 				None,
 				Some(
 					&Anchor::<Once>::to_target(caster)
-						.on_fix_point(SpawnerFixPoint(Spawner::Slot(SlotKey::TopHand(Side::Left))))
+						.on_fix_point(FixPoint(SkillSpawner::Slot(SlotKey::TopHand(Side::Left))))
 						.with_target_rotation()
 				),
 				Some(&SetVelocityForward(UnitsPerSecond::new(11.))),
@@ -419,7 +419,7 @@ mod tests {
 		let caster = PersistentEntity::default();
 		let motion = Motion::Projectile {
 			caster,
-			spawner: Spawner::Slot(SlotKey::TopHand(Side::Left)),
+			spawner: SkillSpawner::Slot(SlotKey::TopHand(Side::Left)),
 			speed: UnitsPerSecond::new(11.),
 			range: Units::new(1111.),
 		};
