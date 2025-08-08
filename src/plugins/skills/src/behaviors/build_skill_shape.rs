@@ -7,15 +7,15 @@ use crate::traits::skill_builder::{SkillBuilder, SkillShape};
 use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
-	traits::handles_skill_behaviors::{HandlesSkillBehaviors, Spawner},
+	traits::handles_skill_behaviors::{HandlesSkillBehaviors, SkillSpawner},
 };
 use spawn_ground_target::SpawnGroundTargetedAoe;
 use spawn_projectile::SpawnProjectile;
 use spawn_shield::SpawnShield;
 
 #[cfg(test)]
-pub(crate) type BuildSkillShapeFn =
-	for<'a> fn(&'a mut Commands, &SkillCaster, Spawner, &SkillTarget) -> SkillShape;
+pub(crate) type SpawnSkillFn =
+	fn(&mut Commands, &SkillCaster, SkillSpawner, &SkillTarget) -> SkillShape;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum OnSkillStop {
@@ -30,7 +30,7 @@ pub(crate) enum BuildSkillShape {
 	Projectile(SpawnProjectile),
 	Shield(SpawnShield),
 	#[cfg(test)]
-	Fn(BuildSkillShapeFn),
+	Fn(SpawnSkillFn),
 }
 
 #[cfg(test)]
@@ -69,7 +69,7 @@ impl BuildSkillShape {
 	fn no_shape(
 		commands: &mut Commands,
 		_: &SkillCaster,
-		_: Spawner,
+		_: SkillSpawner,
 		_: &SkillTarget,
 	) -> SkillShape {
 		let contact = commands.spawn_empty().id();
@@ -88,7 +88,7 @@ impl BuildSkillShape {
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
-		spawner: Spawner,
+		spawner: SkillSpawner,
 		target: &SkillTarget,
 	) -> SkillShape
 	where

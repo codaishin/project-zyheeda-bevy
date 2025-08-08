@@ -1,15 +1,13 @@
-pub(crate) mod spawner_fix_point;
+pub(crate) mod fix_point;
 
 use super::{Always, Once};
-use crate::{
-	components::anchor::spawner_fix_point::SpawnerFixPoint,
-	traits::has_filter::HasFilter,
-};
+use crate::{components::fix_points::fix_point::FixPoint, traits::has_filter::HasFilter};
 use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
 	errors::{Error, Level},
 	resources::persistent_entities::PersistentEntities,
+	tools::Index,
 	traits::{
 		or_ok::OrOk,
 		track::{IsTracking, Track, Untrack},
@@ -56,14 +54,14 @@ where
 	pub(crate) fn system(
 		mut persistent_entities: ResMut<PersistentEntities>,
 		mut agents: Query<(&Self, &mut Transform), <Self as HasFilter>::TFilter>,
-		fix_points: Query<(&AnchorFixPoints, &GlobalTransform)>,
+		fix_points: Query<(&FixPoints, &GlobalTransform)>,
 		transforms: Query<&GlobalTransform>,
 	) -> Result<(), Vec<AnchorError>> {
 		agents
 			.iter_mut()
 			.filter_map(|(anchor, mut anchor_transform)| {
 				let target = persistent_entities.get_entity(&anchor.target)?;
-				let Ok((AnchorFixPoints(fix_points), target)) = fix_points.get(target) else {
+				let Ok((FixPoints(fix_points), transform)) = fix_points.get(target) else {
 					return Some(AnchorError::FixPointsMissingOn(anchor.target));
 				};
 				let Some(fix_point) = fix_points.get(&anchor.fix_point_key).copied() else {
@@ -75,7 +73,7 @@ where
 
 				anchor_transform.translation = fix_point.translation();
 				let rotation = match anchor.use_target_rotation {
-					true => target.rotation(),
+					true => transform.rotation(),
 					false => fix_point.rotation(),
 				};
 				anchor_transform.rotation = rotation;
@@ -109,30 +107,39 @@ impl<TFilter> AnchorBuilder<TFilter> {
 
 #[derive(Component, Debug, PartialEq, Clone, Default)]
 #[require(GlobalTransform)]
-pub struct AnchorFixPoints(HashMap<AnchorFixPointKey, Entity>);
+pub struct FixPoints(HashMap<AnchorFixPointKey, Entity>);
 
-impl Track<SpawnerFixPoint> for AnchorFixPoints {
-	fn track(&mut self, entity: Entity, spawner_fix_point: &SpawnerFixPoint) {
+impl<T> Track<FixPoint<T>> for FixPoints
+where
+	T: 'static + Copy + Into<Index<usize>>,
+{
+	fn track(&mut self, entity: Entity, spawner_fix_point: &FixPoint<T>) {
 		self.0.insert((*spawner_fix_point).into(), entity);
 	}
 }
 
-impl Untrack<SpawnerFixPoint> for AnchorFixPoints {
+impl<T> Untrack<FixPoint<T>> for FixPoints
+where
+	T: 'static,
+{
 	fn untrack(&mut self, entity: &Entity) {
 		self.0
-			.retain(|k, e| e != entity || k.source_type != TypeId::of::<SpawnerFixPoint>());
+			.retain(|k, e| e != entity || k.source_type != TypeId::of::<FixPoint<T>>());
 	}
 }
 
-impl IsTracking<SpawnerFixPoint> for AnchorFixPoints {
+impl<T> IsTracking<FixPoint<T>> for FixPoints
+where
+	T: 'static,
+{
 	fn is_tracking(&self, entity: &Entity) -> bool {
 		self.0
 			.iter()
-			.any(|(k, e)| e == entity && k.source_type == TypeId::of::<SpawnerFixPoint>())
+			.any(|(k, e)| e == entity && k.source_type == TypeId::of::<FixPoint<T>>())
 	}
 }
 
-impl<const N: usize, TKey> From<[(TKey, Entity); N]> for AnchorFixPoints
+impl<const N: usize, TKey> From<[(TKey, Entity); N]> for FixPoints
 where
 	TKey: Into<AnchorFixPointKey>,
 {
@@ -172,7 +179,7 @@ impl From<AnchorError> for Error {
 	fn from(error: AnchorError) -> Self {
 		match error {
 			AnchorError::FixPointsMissingOn(entity) => {
-				let type_name = type_name::<AnchorFixPoints>();
+				let type_name = type_name::<FixPoints>();
 				Self::Single {
 					msg: format!("{entity:?}: {type_name} missing"),
 					lvl: Level::Error,
@@ -198,7 +205,7 @@ mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::traits::{
-		handles_skill_behaviors::Spawner,
+		handles_skill_behaviors::SkillSpawner,
 		register_persistent_entities::RegisterPersistentEntities,
 	};
 	use testing::SingleThreadedApp;
@@ -229,7 +236,7 @@ mod tests {
 			.spawn(GlobalTransform::from_xyz(4., 11., 9.))
 			.id();
 		app.world_mut().spawn((
-			AnchorFixPoints::from([(AnchorFixPointKey::new::<()>(11), fix_point)]),
+			FixPoints::from([(AnchorFixPointKey::new::<()>(11), fix_point)]),
 			entity,
 		));
 		let agent = app
@@ -263,7 +270,7 @@ mod tests {
 			))
 			.id();
 		app.world_mut().spawn((
-			AnchorFixPoints::from([(AnchorFixPointKey::new::<()>(11), fix_point)]),
+			FixPoints::from([(AnchorFixPointKey::new::<()>(11), fix_point)]),
 			entity,
 		));
 		let agent = app
@@ -297,7 +304,7 @@ mod tests {
 			))
 			.id();
 		app.world_mut().spawn((
-			AnchorFixPoints::from([(AnchorFixPointKey::new::<()>(11), fix_point)]),
+			FixPoints::from([(AnchorFixPointKey::new::<()>(11), fix_point)]),
 			entity,
 			GlobalTransform::from(Transform::default().looking_at(Vec3::new(0., 0., 1.), Vec3::Y)),
 		));
@@ -331,7 +338,7 @@ mod tests {
 			.spawn(GlobalTransform::from(Transform::default()))
 			.id();
 		app.world_mut().spawn((
-			AnchorFixPoints::from([(AnchorFixPointKey::new::<()>(11), fix_point)]),
+			FixPoints::from([(AnchorFixPointKey::new::<()>(11), fix_point)]),
 			entity,
 		));
 		let agent = app
@@ -363,7 +370,7 @@ mod tests {
 			.spawn(GlobalTransform::from_xyz(4., 11., 9.))
 			.id();
 		app.world_mut().spawn((
-			AnchorFixPoints::from([(AnchorFixPointKey::new::<()>(11), fix_point)]),
+			FixPoints::from([(AnchorFixPointKey::new::<()>(11), fix_point)]),
 			entity,
 		));
 		let agent = app
@@ -413,7 +420,7 @@ mod tests {
 	fn fix_point_entity_missing() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let entity = PersistentEntity::default();
-		app.world_mut().spawn((AnchorFixPoints::default(), entity));
+		app.world_mut().spawn((FixPoints::default(), entity));
 		app.world_mut().spawn((
 			Anchor::<_NotIgnored>::to_target(entity).on_fix_point(AnchorFixPointKey::new::<()>(11)),
 			Transform::default(),
@@ -438,7 +445,7 @@ mod tests {
 		let entity = PersistentEntity::default();
 		let fix_point = app.world_mut().spawn_empty().id();
 		app.world_mut().spawn((
-			AnchorFixPoints::from([(AnchorFixPointKey::new::<()>(11), fix_point)]),
+			FixPoints::from([(AnchorFixPointKey::new::<()>(11), fix_point)]),
 			entity,
 		));
 		_ = app
@@ -463,13 +470,13 @@ mod tests {
 
 	#[test]
 	fn track() {
-		let mut anchor_points = AnchorFixPoints::default();
+		let mut anchor_points = FixPoints::default();
 
-		anchor_points.track(Entity::from_raw(42), &SpawnerFixPoint(Spawner::Center));
+		anchor_points.track(Entity::from_raw(42), &FixPoint(SkillSpawner::Center));
 
 		assert_eq!(
-			AnchorFixPoints::from([(
-				AnchorFixPointKey::from(SpawnerFixPoint(Spawner::Center)),
+			FixPoints::from([(
+				AnchorFixPointKey::from(FixPoint(SkillSpawner::Center)),
 				Entity::from_raw(42)
 			)]),
 			anchor_points
@@ -478,43 +485,49 @@ mod tests {
 
 	#[test]
 	fn is_tracking() {
-		let anchor_points = AnchorFixPoints::from([(
-			AnchorFixPointKey::from(SpawnerFixPoint(Spawner::Center)),
+		let anchor_points = FixPoints::from([(
+			AnchorFixPointKey::from(FixPoint(SkillSpawner::Center)),
 			Entity::from_raw(42),
 		)]);
 
-		assert!(anchor_points.is_tracking(&Entity::from_raw(42)));
+		assert!(IsTracking::<FixPoint<SkillSpawner>>::is_tracking(
+			&anchor_points,
+			&Entity::from_raw(42)
+		));
 	}
 
 	#[test]
 	fn is_tracking_false_on_type_mismatch() {
 		let anchor_points =
-			AnchorFixPoints::from([(AnchorFixPointKey::new::<()>(42), Entity::from_raw(42))]);
+			FixPoints::from([(AnchorFixPointKey::new::<()>(42), Entity::from_raw(42))]);
 
-		assert!(!anchor_points.is_tracking(&Entity::from_raw(42)));
+		assert!(!IsTracking::<FixPoint<SkillSpawner>>::is_tracking(
+			&anchor_points,
+			&Entity::from_raw(42)
+		));
 	}
 
 	#[test]
 	fn untrack() {
-		let mut anchor_points = AnchorFixPoints::from([(
-			AnchorFixPointKey::from(SpawnerFixPoint(Spawner::Center)),
+		let mut anchor_points = FixPoints::from([(
+			AnchorFixPointKey::from(FixPoint(SkillSpawner::Center)),
 			Entity::from_raw(42),
 		)]);
 
-		anchor_points.untrack(&Entity::from_raw(42));
+		Untrack::<FixPoint<SkillSpawner>>::untrack(&mut anchor_points, &Entity::from_raw(42));
 
-		assert_eq!(AnchorFixPoints::default(), anchor_points);
+		assert_eq!(FixPoints::default(), anchor_points);
 	}
 
 	#[test]
 	fn do_not_untrack_on_type_mismatch() {
 		let mut anchor_points =
-			AnchorFixPoints::from([(AnchorFixPointKey::new::<()>(42), Entity::from_raw(42))]);
+			FixPoints::from([(AnchorFixPointKey::new::<()>(42), Entity::from_raw(42))]);
 
-		anchor_points.untrack(&Entity::from_raw(42));
+		Untrack::<FixPoint<SkillSpawner>>::untrack(&mut anchor_points, &Entity::from_raw(42));
 
 		assert_eq!(
-			AnchorFixPoints::from([(AnchorFixPointKey::new::<()>(42), Entity::from_raw(42))]),
+			FixPoints::from([(AnchorFixPointKey::new::<()>(42), Entity::from_raw(42))]),
 			anchor_points
 		);
 	}

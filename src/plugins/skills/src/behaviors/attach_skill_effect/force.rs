@@ -1,20 +1,16 @@
 use crate::behaviors::{SkillCaster, SkillTarget};
 use bevy::ecs::system::EntityCommands;
-use common::{
-	effects::force::Force,
-	traits::{handles_effect::HandlesEffect, handles_skill_behaviors::Spawner},
-};
+use common::{effects::force::Force, traits::handles_effect::HandlesEffect};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct StartForce;
+pub struct AttachForce;
 
-impl StartForce {
-	pub fn apply<TInteractions>(
+impl AttachForce {
+	pub fn attach<TInteractions>(
 		&self,
 		entity: &mut EntityCommands,
 		_: &SkillCaster,
-		_: Spawner,
 		_: &SkillTarget,
 	) where
 		TInteractions: HandlesEffect<Force>,
@@ -54,10 +50,9 @@ mod tests {
 
 	fn force(mut commands: Commands) -> Entity {
 		let mut entity = commands.spawn_empty();
-		StartForce.apply::<_HandlesInteractions>(
+		AttachForce.attach::<_HandlesInteractions>(
 			&mut entity,
 			&SkillCaster::from(*CASTER),
-			Spawner::Center,
 			&SkillTarget::default(),
 		);
 		entity.id()

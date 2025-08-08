@@ -6,7 +6,7 @@ mod systems;
 
 use crate::{
 	components::{
-		anchor::{AnchorFixPoints, spawner_fix_point::SpawnerFixPoint},
+		fix_points::{Anchor, FixPoints, fix_point::FixPoint},
 		on_cool_down::OnCoolDown,
 	},
 	systems::movement::compute_path::MovementPath,
@@ -42,6 +42,7 @@ use common::{
 			Projection,
 			SkillEntities,
 			SkillRoot,
+			SkillSpawner,
 		},
 		prefab::AddPrefabObserver,
 		system_set_definition::SystemSetDefinition,
@@ -52,7 +53,6 @@ use components::{
 	Always,
 	Once,
 	OverrideFace,
-	anchor::Anchor,
 	ground_target::GroundTarget,
 	movement::{Movement, path_or_wasd::PathOrWasd, velocity_based::VelocityBased},
 	set_to_move_forward::SetVelocityForward,
@@ -97,6 +97,7 @@ where
 	TEnemies: ThreadSafe + HandlesEnemyBehaviors,
 	TPlayers: ThreadSafe
 		+ HandlesPlayer
+		+ PlayerMainCamera
 		+ HandlesPlayerCameras
 		+ HandlesPlayerMouse
 		+ ConfiguresPlayerMovement,
@@ -188,7 +189,7 @@ where
 
 		app
 			// Required components
-			.register_required_components::<TPlayers::TPlayer, AnchorFixPoints>()
+			.register_required_components::<TPlayers::TPlayer, FixPoints>()
 			.register_required_components::<SkillContact, TSaveGame::TSaveEntityMarker>()
 			.register_required_components::<SkillProjection, TSaveGame::TSaveEntityMarker>()
 			// Observers
@@ -202,8 +203,8 @@ where
 					(
 						PathOrWasd::<VelocityBased>::cleanup,
 						Movement::<VelocityBased>::cleanup,
-						SpawnerFixPoint::insert,
-						AnchorFixPoints::track_in_self_and_children::<SpawnerFixPoint>().system(),
+						FixPoint::<SkillSpawner>::insert_in_children_of::<TPlayers::TPlayer>,
+						FixPoints::track_in_self_and_children::<FixPoint<SkillSpawner>>().system(),
 					)
 						.chain(),
 					// Player behaviors

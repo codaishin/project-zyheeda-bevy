@@ -1,7 +1,7 @@
 pub mod ground_target;
 pub mod skill_behavior;
 
-pub(crate) mod anchor;
+pub(crate) mod fix_points;
 pub(crate) mod movement;
 pub(crate) mod on_cool_down;
 pub(crate) mod set_to_move_forward;

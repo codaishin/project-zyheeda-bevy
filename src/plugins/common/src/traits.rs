@@ -42,6 +42,7 @@ pub mod iteration;
 pub mod key_mappings;
 pub mod load_asset;
 pub mod load_folder_assets;
+pub mod mapper;
 pub mod mouse_position;
 pub mod or_ok;
 pub mod ownership_relation;

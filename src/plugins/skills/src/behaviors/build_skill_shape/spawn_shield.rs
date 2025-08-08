@@ -20,7 +20,7 @@ use common::{
 			ProjectionOffset,
 			Shape,
 			SkillEntities,
-			Spawner,
+			SkillSpawner,
 		},
 	},
 };
@@ -34,7 +34,7 @@ impl SpawnShape for SpawnShield {
 		&self,
 		commands: &mut Commands,
 		caster: &SkillCaster,
-		_: Spawner,
+		_: SkillSpawner,
 		_: &SkillTarget,
 	) -> SkillEntities
 	where
@@ -52,8 +52,8 @@ impl SpawnShape for SpawnShield {
 					collider: Collider::cuboid(0.5, 0.5, 0.05),
 					scale: Vec3::splat(1.),
 				},
-				integrity: Integrity::Solid,
 				motion: Motion::HeldBy { caster },
+				integrity: Integrity::Solid,
 			},
 			Projection {
 				shape: Shape::Sphere {

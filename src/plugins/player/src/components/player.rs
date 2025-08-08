@@ -21,6 +21,7 @@ use common::{
 		UnitsPerSecond,
 		action_key::slot::{Side, SlotKey},
 		animation_key::AnimationKey,
+		bone::Bone,
 		collider_radius::ColliderRadius,
 	},
 	traits::{
@@ -39,8 +40,10 @@ use common::{
 		clamp_zero_positive::ClampZeroPositive,
 		handles_effect::HandlesEffect,
 		handles_lights::HandlesLights,
+		handles_skill_behaviors::SkillSpawner,
 		iteration::{Iter, IterFinite},
 		load_asset::{LoadAsset, Path},
+		mapper::Mapper,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
@@ -145,6 +148,18 @@ impl Player {
 				)
 				.into(),
 			},
+		}
+	}
+}
+
+impl Mapper<SkillSpawner, Bone> for Player {
+	fn map(&self, skill_spawner: SkillSpawner) -> Bone {
+		match skill_spawner {
+			SkillSpawner::Center => Bone("skill_spawn"),
+			SkillSpawner::Slot(SlotKey::TopHand(Side::Right)) => Bone("skill_spawn_top.R"),
+			SkillSpawner::Slot(SlotKey::TopHand(Side::Left)) => Bone("skill_spawn_top.L"),
+			SkillSpawner::Slot(SlotKey::BottomHand(Side::Right)) => Bone("skill_spawn_bottom.R"),
+			SkillSpawner::Slot(SlotKey::BottomHand(Side::Left)) => Bone("skill_spawn_bottom.L"),
 		}
 	}
 }

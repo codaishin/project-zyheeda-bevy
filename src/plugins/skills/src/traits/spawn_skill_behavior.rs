@@ -4,7 +4,7 @@ use crate::{
 };
 use common::traits::{
 	handles_effect::HandlesAllEffects,
-	handles_skill_behaviors::{HandlesSkillBehaviors, Spawner},
+	handles_skill_behaviors::{HandlesSkillBehaviors, SkillSpawner},
 };
 
 pub(crate) trait SpawnSkillBehavior<TCommands> {
@@ -13,7 +13,7 @@ pub(crate) trait SpawnSkillBehavior<TCommands> {
 		&self,
 		commands: &mut TCommands,
 		caster: &SkillCaster,
-		spawner: Spawner,
+		spawner: SkillSpawner,
 		target: &SkillTarget,
 	) -> OnSkillStop
 	where
