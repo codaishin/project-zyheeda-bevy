@@ -5,7 +5,7 @@ use bevy::prelude::*;
 pub(crate) type Bytes<'a> = &'a [u8];
 
 pub(crate) trait PixelBytes {
-	fn pixel_bytes(&self, coords: UVec3) -> Option<Bytes>;
+	fn pixel_bytes(&self, coords: UVec3) -> Option<Bytes<'_>>;
 }
 
 pub(crate) trait PixelBytesIterator {

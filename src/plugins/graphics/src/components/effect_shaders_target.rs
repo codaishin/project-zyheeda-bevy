@@ -7,7 +7,7 @@ use common::{
 	components::protected::Protected,
 	traits::track::{IsTracking, Track, Untrack},
 };
-use std::collections::HashSet;
+use std::{collections::HashSet, hash::Hash};
 
 #[cfg(test)]
 use bevy::asset::UntypedAssetId;
@@ -36,7 +36,7 @@ impl Untrack<Mesh3d> for EffectShadersTarget {
 	}
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, Eq, Clone)]
 pub(crate) struct EffectShaderHandle {
 	handle: UntypedHandle,
 	insert_into: fn(&mut EntityCommands, &UntypedHandle),
@@ -64,6 +64,22 @@ impl EffectShaderHandle {
 			MeshMaterial3d<TMaterial>,
 			Protected<MeshMaterial3d<TMaterial>>,
 		)>();
+	}
+}
+
+impl PartialEq for EffectShaderHandle {
+	fn eq(&self, other: &Self) -> bool {
+		self.handle == other.handle
+			&& std::ptr::fn_addr_eq(self.insert_into, other.insert_into)
+			&& std::ptr::fn_addr_eq(self.remove_from, other.remove_from)
+	}
+}
+
+impl Hash for EffectShaderHandle {
+	fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+		self.handle.hash(state);
+		self.insert_into.hash(state);
+		self.remove_from.hash(state);
 	}
 }
 

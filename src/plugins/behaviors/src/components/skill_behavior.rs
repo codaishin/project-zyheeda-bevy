@@ -477,7 +477,7 @@ mod tests {
 		Ok(())
 	}
 
-	fn children_of(app: &App, entity: Entity) -> impl Iterator<Item = EntityRef> {
+	fn children_of(app: &App, entity: Entity) -> impl Iterator<Item = EntityRef<'_>> {
 		app.world().iter_entities().filter(move |e| {
 			e.get::<ChildOf>()
 				.map(|c| c.parent() == entity)

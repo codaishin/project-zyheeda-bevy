@@ -21,7 +21,6 @@ use common::{
 	},
 	traits::{
 		accessors::get::{Getter, GetterRef},
-		animation::Animation,
 		handles_custom_assets::AssetFolderPath,
 		handles_effect::HandlesAllEffects,
 		handles_localization::Token,
@@ -35,14 +34,6 @@ use std::{
 	fmt::{Display, Formatter, Result as FmtResult},
 	time::Duration,
 };
-
-#[derive(PartialEq, Debug, Clone)]
-pub struct SkillAnimation {
-	pub(crate) top_hand_left: Animation,
-	pub(crate) top_hand_right: Animation,
-	pub(crate) btm_hand_left: Animation,
-	pub(crate) btm_hand_right: Animation,
-}
 
 #[derive(PartialEq, Debug, Default, Clone, Copy, Serialize, Deserialize)]
 pub enum AnimationStrategy {

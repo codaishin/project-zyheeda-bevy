@@ -14,7 +14,7 @@ use common::traits::{
 };
 use macros::SavableComponent;
 
-#[derive(Component, SavableComponent, PartialEq, Debug)]
+#[derive(Component, SavableComponent, Debug)]
 #[require(GlobalTransform)]
 #[savable_component(dto = MovementDto<TMovement>)]
 pub(crate) struct Movement<TMovement>
@@ -83,6 +83,15 @@ where
 
 			Movement::<TMovement>::on_movement_removed(&mut entity);
 		}
+	}
+}
+
+impl<TMovement> PartialEq for Movement<TMovement>
+where
+	TMovement: ThreadSafe + Default,
+{
+	fn eq(&self, other: &Self) -> bool {
+		self.target == other.target && std::ptr::fn_addr_eq(self.method_cstr, other.method_cstr)
 	}
 }
 

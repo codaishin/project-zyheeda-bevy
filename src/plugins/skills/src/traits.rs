@@ -1,6 +1,5 @@
 pub(crate) mod advance_combo;
 pub(crate) mod flush;
-pub(crate) mod follow_up_keys;
 pub(crate) mod is_timed_out;
 pub(crate) mod loadout_key;
 pub(crate) mod peek_next;
@@ -60,13 +59,6 @@ pub(crate) trait AdvanceCombo {
 
 pub(crate) trait SetNextCombo<TCombo> {
 	fn set_next_combo(&mut self, value: TCombo);
-}
-
-pub trait GetNode<TKey> {
-	type TNode<'a>
-	where
-		Self: 'a;
-	fn node<'a>(&'a self, key: &TKey) -> Option<Self::TNode<'a>>;
 }
 
 pub trait GetNodeMut<TKey> {

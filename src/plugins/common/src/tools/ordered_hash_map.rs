@@ -46,7 +46,7 @@ where
 		self.map.get_mut(key)
 	}
 
-	pub fn entry(&mut self, key: TKey) -> Entry<TKey, TValue> {
+	pub fn entry(&mut self, key: TKey) -> Entry<'_, TKey, TValue> {
 		match self.map.entry(key) {
 			HashMapEntry::Occupied(entry) => Entry::Occupied(OccupiedEntry { entry }),
 			HashMapEntry::Vacant(entry) => Entry::Vacant(VacantEntry {

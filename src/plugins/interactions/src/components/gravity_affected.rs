@@ -26,7 +26,7 @@ impl GravityAffected {
 		self.pulls.push(pull);
 	}
 
-	pub(crate) fn drain_pulls<TRange>(&mut self, range: TRange) -> Drain<GravityPull>
+	pub(crate) fn drain_pulls<TRange>(&mut self, range: TRange) -> Drain<'_, GravityPull>
 	where
 		TRange: RangeBounds<usize>,
 	{

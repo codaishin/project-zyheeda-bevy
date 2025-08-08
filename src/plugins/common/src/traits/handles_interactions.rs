@@ -23,9 +23,17 @@ pub enum InteractAble {
 	},
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct BeamEmitter {
 	pub mounted_on: PersistentEntity,
 	pub range: Units,
 	pub insert_beam_model: fn(&mut EntityCommands),
+}
+
+impl PartialEq for BeamEmitter {
+	fn eq(&self, other: &Self) -> bool {
+		self.mounted_on == other.mounted_on
+			&& self.range == other.range
+			&& std::ptr::fn_addr_eq(self.insert_beam_model, other.insert_beam_model)
+	}
 }

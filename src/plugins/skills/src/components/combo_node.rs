@@ -3,12 +3,7 @@ pub(crate) mod node_entry_mut;
 
 use crate::{
 	skills::Skill,
-	traits::{
-		GetNode,
-		GetNodeMut,
-		follow_up_keys::FollowupKeys,
-		peek_next_recursive::PeekNextRecursive,
-	},
+	traits::{GetNodeMut, peek_next_recursive::PeekNextRecursive},
 };
 use bevy::ecs::component::Component;
 use common::{
@@ -24,7 +19,6 @@ use common::{
 		iterate::Iterate,
 	},
 };
-use std::collections::VecDeque;
 
 #[derive(Component, Clone, PartialEq, Debug)]
 pub struct ComboNode<TSkill = Skill>(OrderedHashMap<SlotKey, (TSkill, ComboNode<TSkill>)>);
@@ -93,12 +87,6 @@ pub struct NodeEntryMut<'a, TSkill> {
 	tree: &'a mut OrderedHashMap<SlotKey, (TSkill, ComboNode<TSkill>)>,
 }
 
-#[derive(Debug, PartialEq)]
-pub struct NodeEntry<'a, TSkill> {
-	key: SlotKey,
-	tree: &'a OrderedHashMap<SlotKey, (TSkill, ComboNode<TSkill>)>,
-}
-
 impl<TKey, TSkill> GetNodeMut<TKey> for ComboNode<TSkill>
 where
 	for<'a> TKey: Iterate<'a, TItem = &'a SlotKey> + 'a,
@@ -120,30 +108,6 @@ where
 		}
 
 		Some(NodeEntryMut { key, tree })
-	}
-}
-
-impl<TKey, TSkill> GetNode<TKey> for ComboNode<TSkill>
-where
-	for<'a> TKey: Iterate<'a, TItem = &'a SlotKey> + 'a,
-{
-	type TNode<'a>
-		= NodeEntry<'a, TSkill>
-	where
-		Self: 'a;
-
-	fn node<'a>(&'a self, slot_key_path: &TKey) -> Option<Self::TNode<'a>> {
-		let mut slot_key_path = slot_key_path.iterate();
-		let mut key = *slot_key_path.next()?;
-		let mut tree = &self.0;
-
-		for next_key in slot_key_path {
-			let (_, node) = tree.get(&key)?;
-			key = *next_key;
-			tree = &node.0;
-		}
-
-		Some(NodeEntry { key, tree })
 	}
 }
 
@@ -214,23 +178,6 @@ impl PeekNextRecursive for ComboNode {
 impl GetCombosOrdered<Skill> for ComboNode {
 	fn combos_ordered(&self) -> Vec<Combo<Skill>> {
 		combos(self, vec![])
-	}
-}
-
-impl FollowupKeys for ComboNode {
-	fn followup_keys<T>(&self, after: T) -> Option<Vec<SlotKey>>
-	where
-		T: Into<VecDeque<SlotKey>>,
-	{
-		let mut after: VecDeque<SlotKey> = after.into();
-
-		let Some(key) = after.pop_front() else {
-			return Some(self.0.keys().copied().collect());
-		};
-
-		let (_, next) = self.0.get(&key)?;
-
-		next.followup_keys(after)
 	}
 }
 
@@ -829,136 +776,6 @@ mod tests {
 	}
 
 	#[test]
-	fn get_a_top_entry() {
-		let conf = [(
-			SlotKey::BottomHand(Side::Right),
-			(
-				Skill {
-					token: Token::from("my skill"),
-					..default()
-				},
-				default(),
-			),
-		)];
-		let root = ComboNode::new(conf.clone());
-		let entry = root.node(&[SlotKey::BottomHand(Side::Right)]);
-
-		assert_eq!(
-			Some(NodeEntry {
-				key: SlotKey::BottomHand(Side::Right),
-				tree: &OrderedHashMap::from(conf),
-			}),
-			entry,
-		)
-	}
-
-	#[test]
-	fn get_a_child_entry() {
-		let child_conf = [(
-			SlotKey::BottomHand(Side::Left),
-			(
-				Skill {
-					token: Token::from("my child skill"),
-					..default()
-				},
-				default(),
-			),
-		)];
-		let conf = [(
-			SlotKey::BottomHand(Side::Right),
-			(
-				Skill {
-					token: Token::from("my skill"),
-					..default()
-				},
-				ComboNode::new(child_conf.clone()),
-			),
-		)];
-		let root = ComboNode::new(conf);
-		let entry = root.node(&[
-			SlotKey::BottomHand(Side::Right),
-			SlotKey::BottomHand(Side::Left),
-		]);
-
-		assert_eq!(
-			Some(NodeEntry {
-				key: SlotKey::BottomHand(Side::Left),
-				tree: &OrderedHashMap::from(child_conf),
-			}),
-			entry,
-		)
-	}
-
-	#[test]
-	fn get_none_when_nothing_found_with_key_path() {
-		let conf = [(
-			SlotKey::BottomHand(Side::Right),
-			(
-				Skill {
-					token: Token::from("my skill"),
-					..default()
-				},
-				ComboNode::new([(
-					SlotKey::BottomHand(Side::Left),
-					(
-						Skill {
-							token: Token::from("my child skill"),
-							..default()
-						},
-						default(),
-					),
-				)]),
-			),
-		)];
-		let root = ComboNode::new(conf);
-		let entry = root.node(&[
-			SlotKey::BottomHand(Side::Right),
-			SlotKey::BottomHand(Side::Left),
-			SlotKey::BottomHand(Side::Right),
-			SlotKey::BottomHand(Side::Left),
-		]);
-
-		assert_eq!(None, entry)
-	}
-
-	#[test]
-	fn get_a_usable_entry_when_only_last_in_key_path_not_found() {
-		let conf = [(
-			SlotKey::BottomHand(Side::Right),
-			(
-				Skill {
-					token: Token::from("my skill"),
-					..default()
-				},
-				ComboNode::new([(
-					SlotKey::BottomHand(Side::Left),
-					(
-						Skill {
-							token: Token::from("my child skill"),
-							..default()
-						},
-						default(),
-					),
-				)]),
-			),
-		)];
-		let root = ComboNode::new(conf);
-		let entry = root.node(&[
-			SlotKey::BottomHand(Side::Right),
-			SlotKey::BottomHand(Side::Left),
-			SlotKey::BottomHand(Side::Right),
-		]);
-
-		assert_eq!(
-			Some(NodeEntry {
-				key: SlotKey::BottomHand(Side::Right),
-				tree: &OrderedHashMap::default(),
-			}),
-			entry,
-		)
-	}
-
-	#[test]
 	fn get_single_single_combo_with_single_skill() {
 		let combos = ComboNode::new([(
 			SlotKey::BottomHand(Side::Right),
@@ -1372,98 +1189,5 @@ mod tests {
 			],
 			combos.combos_ordered()
 		)
-	}
-
-	#[test]
-	fn get_followup_keys_of_empty_path() {
-		let node = ComboNode::new([
-			(
-				SlotKey::TopHand(Side::Right),
-				(Skill::default(), ComboNode::default()),
-			),
-			(
-				SlotKey::TopHand(Side::Left),
-				(Skill::default(), ComboNode::default()),
-			),
-		]);
-
-		let followup_keys = node.followup_keys(vec![]);
-
-		assert_eq!(
-			Some(vec![
-				SlotKey::TopHand(Side::Right),
-				SlotKey::TopHand(Side::Left)
-			]),
-			followup_keys
-		);
-	}
-
-	#[test]
-	fn get_followup_keys_empty_if_combo_empty() {
-		let node = ComboNode::default();
-
-		let followup_keys = node.followup_keys(vec![]);
-
-		assert_eq!(Some(vec![]), followup_keys);
-	}
-
-	#[test]
-	fn get_followup_keys_of_target_path() {
-		let node = ComboNode::new([(
-			SlotKey::TopHand(Side::Left),
-			(
-				Skill::default(),
-				ComboNode::new([(
-					SlotKey::BottomHand(Side::Left),
-					(
-						Skill::default(),
-						ComboNode::new([
-							(
-								SlotKey::BottomHand(Side::Right),
-								(Skill::default(), ComboNode::default()),
-							),
-							(
-								SlotKey::BottomHand(Side::Left),
-								(Skill::default(), ComboNode::default()),
-							),
-						]),
-					),
-				)]),
-			),
-		)]);
-
-		let followup_keys = node.followup_keys(vec![
-			SlotKey::TopHand(Side::Left),
-			SlotKey::BottomHand(Side::Left),
-		]);
-
-		assert_eq!(
-			Some(vec![
-				SlotKey::BottomHand(Side::Right),
-				SlotKey::BottomHand(Side::Left)
-			]),
-			followup_keys
-		);
-	}
-
-	#[test]
-	fn get_followup_keys_none_of_invalid_target_path() {
-		let node = ComboNode::new([(
-			SlotKey::TopHand(Side::Left),
-			(
-				Skill::default(),
-				ComboNode::new([(
-					SlotKey::BottomHand(Side::Left),
-					(Skill::default(), ComboNode::default()),
-				)]),
-			),
-		)]);
-
-		let followup_keys = node.followup_keys(vec![
-			SlotKey::TopHand(Side::Left),
-			SlotKey::BottomHand(Side::Right),
-		]);
-
-		assert_eq!(None, followup_keys);
 	}
 }
