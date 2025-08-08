@@ -23,7 +23,8 @@ pub enum OnSkillStop {
 	Stop(PersistentEntity),
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(Debug, Clone)]
+#[cfg_attr(not(test), derive(PartialEq))]
 pub(crate) enum BuildSkillShape {
 	GroundTargetedAoe(SpawnGroundTargetedAoe),
 	Projectile(SpawnProjectile),
@@ -44,6 +45,19 @@ impl Default for BuildSkillShape {
 				on_skill_stop: OnSkillStop::Ignore,
 			}
 		})
+	}
+}
+
+#[cfg(test)]
+impl PartialEq for BuildSkillShape {
+	fn eq(&self, other: &Self) -> bool {
+		match (self, other) {
+			(Self::GroundTargetedAoe(l0), Self::GroundTargetedAoe(r0)) => l0 == r0,
+			(Self::Projectile(l0), Self::Projectile(r0)) => l0 == r0,
+			(Self::Shield(l0), Self::Shield(r0)) => l0 == r0,
+			(Self::Fn(l0), Self::Fn(r0)) => std::ptr::fn_addr_eq(*l0, *r0),
+			_ => false,
+		}
 	}
 }
 

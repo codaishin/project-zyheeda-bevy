@@ -19,15 +19,6 @@ use common::{
 use start_behavior::SkillBehavior;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub struct SkillSpawner(pub Entity);
-
-impl From<Entity> for SkillSpawner {
-	fn from(entity: Entity) -> Self {
-		Self(entity)
-	}
-}
-
-#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct SkillCaster(pub PersistentEntity);
 
 impl From<PersistentEntity> for SkillCaster {

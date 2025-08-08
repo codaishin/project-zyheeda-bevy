@@ -77,7 +77,7 @@ mod tests {
 	struct _Server(HashMap<UntypedAssetId, Option<AssetPath<'static>>>);
 
 	impl GetAssetPath for _Server {
-		fn get_asset_path<T: Into<UntypedAssetId>>(&self, id: T) -> Option<AssetPath> {
+		fn get_asset_path<T: Into<UntypedAssetId>>(&self, id: T) -> Option<AssetPath<'_>> {
 			let asset_id = id.into();
 			self.0.get(&asset_id).cloned()?
 		}

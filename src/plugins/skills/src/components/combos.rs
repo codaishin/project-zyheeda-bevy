@@ -5,12 +5,10 @@ use crate::{
 	CombosDto,
 	skills::Skill,
 	traits::{
-		GetNode,
 		GetNodeMut,
 		Insert,
 		ReKey,
 		SetNextCombo,
-		follow_up_keys::FollowupKeys,
 		peek_next::PeekNext,
 		peek_next_recursive::PeekNextRecursive,
 		write_item::WriteItem,
@@ -25,7 +23,6 @@ use common::{
 	traits::{handles_combo_menu::GetCombosOrdered, iterate::Iterate},
 };
 use macros::SavableComponent;
-use std::collections::VecDeque;
 
 #[derive(Component, SavableComponent, PartialEq, Debug, Clone)]
 #[savable_component(dto = CombosDto)]
@@ -143,33 +140,6 @@ where
 	}
 }
 
-impl<TNode, TKey> GetNode<TKey> for Combos<TNode>
-where
-	TNode: GetNode<TKey>,
-	for<'a> TKey: Iterate<'a, TItem = &'a SlotKey> + 'a,
-{
-	type TNode<'a>
-		= TNode::TNode<'a>
-	where
-		Self: 'a;
-
-	fn node<'a>(&'a self, key: &TKey) -> Option<Self::TNode<'a>> {
-		self.config.node(key)
-	}
-}
-
-impl<TNode> FollowupKeys for Combos<TNode>
-where
-	TNode: FollowupKeys,
-{
-	fn followup_keys<T>(&self, after: T) -> Option<Vec<SlotKey>>
-	where
-		T: Into<VecDeque<SlotKey>>,
-	{
-		self.config.followup_keys(after)
-	}
-}
-
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -177,10 +147,7 @@ mod tests {
 	use common::{tools::action_key::slot::Side, traits::handles_localization::Token};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
-	use std::{
-		cell::RefCell,
-		collections::{HashMap, VecDeque},
-	};
+	use std::{cell::RefCell, collections::HashMap};
 	use testing::NestedMocks;
 
 	#[derive(Default)]
@@ -326,15 +293,6 @@ mod tests {
 		fn node_mut<'a>(&'a mut self, key: &Vec<SlotKey>) -> Option<Self::TNode<'a>> {
 			self.call_args.get_mut().push(key.clone());
 			self.entry.as_mut()
-		}
-	}
-
-	impl GetNode<Vec<SlotKey>> for _Node {
-		type TNode<'a> = &'a _Entry;
-
-		fn node<'a>(&'a self, key: &Vec<SlotKey>) -> Option<Self::TNode<'a>> {
-			self.call_args.borrow_mut().push(key.clone());
-			self.entry.as_ref()
 		}
 	}
 
@@ -542,56 +500,5 @@ mod tests {
 		);
 
 		assert!(combos.current.is_none());
-	}
-
-	#[test]
-	fn get_node() {
-		let combo = Combos {
-			config: _Node {
-				entry: Some(_Entry::new().with_mock(|mock| {
-					mock.expect_insert().return_const(());
-				})),
-				..default()
-			},
-			current: None,
-		};
-
-		let entry = combo.node(&vec![
-			SlotKey::BottomHand(Side::Right),
-			SlotKey::BottomHand(Side::Left),
-		]);
-
-		assert_eq!(
-			(
-				true,
-				vec![vec![
-					SlotKey::BottomHand(Side::Right),
-					SlotKey::BottomHand(Side::Left)
-				]]
-			),
-			(entry.is_some(), combo.config.call_args.into_inner())
-		)
-	}
-
-	#[test]
-	fn get_followup_keys() {
-		struct _Node;
-
-		impl FollowupKeys for _Node {
-			fn followup_keys<T>(&self, after: T) -> Option<Vec<SlotKey>>
-			where
-				T: Into<VecDeque<SlotKey>>,
-			{
-				assert_eq!(VecDeque::from([SlotKey::TopHand(Side::Left)]), after.into());
-				Some(vec![SlotKey::TopHand(Side::Right)])
-			}
-		}
-
-		let combos = Combos::new(_Node);
-
-		assert_eq!(
-			Some(vec![SlotKey::TopHand(Side::Right)]),
-			combos.followup_keys(vec![SlotKey::TopHand(Side::Left)])
-		);
 	}
 }

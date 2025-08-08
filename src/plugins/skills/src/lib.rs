@@ -1,7 +1,6 @@
 mod behaviors;
 mod components;
 mod item;
-mod resources;
 mod skills;
 mod systems;
 mod tools;

@@ -45,7 +45,7 @@ impl<TKey: Eq + Hash, T: Clone> Shared<TKey, T> {
 		self.map.get(key)
 	}
 
-	pub fn values(&self) -> Values<TKey, T> {
+	pub fn values(&self) -> Values<'_, TKey, T> {
 		self.map.values()
 	}
 }

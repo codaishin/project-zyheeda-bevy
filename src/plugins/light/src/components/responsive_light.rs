@@ -20,7 +20,7 @@ use common::{
 };
 use std::{any::TypeId, ops::Deref, time::Duration};
 
-#[derive(Component, Debug, PartialEq, Clone)]
+#[derive(Component, Debug, Clone)]
 #[require(
 	Transform,
 	Sensor,
@@ -96,6 +96,19 @@ impl ResponsiveLight {
 				Light::Directional(cstr) => insert_light(&mut commands, entity, cstr),
 			}
 		}
+	}
+}
+
+impl PartialEq for ResponsiveLight {
+	fn eq(&self, other: &Self) -> bool {
+		self.light == other.light
+			&& self.range == other.range
+			&& self.max == other.max
+			&& self.change == other.change
+			&& self.marker_on == other.marker_on
+			&& self.marker_off == other.marker_off
+			&& std::ptr::fn_addr_eq(self.light_on_material, other.light_on_material)
+			&& std::ptr::fn_addr_eq(self.light_off_material, other.light_off_material)
 	}
 }
 

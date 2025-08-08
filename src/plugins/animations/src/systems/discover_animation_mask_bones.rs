@@ -162,10 +162,16 @@ mod tests {
 
 	macro_rules! agent_animation_definitions {
 		($masks:expr) => {
-			#[derive(Debug, PartialEq, Clone, Copy)]
+			#[derive(Debug, Clone, Copy)]
 			struct _Mask {
 				id: AnimationMask,
 				def: fn() -> AnimationMaskDefinition,
+			}
+
+			impl PartialEq for _Mask {
+				fn eq(&self, other: &Self) -> bool {
+					self.id == other.id && std::ptr::fn_addr_eq(self.def, other.def)
+				}
 			}
 
 			impl From<&_Mask> for AnimationMask {
