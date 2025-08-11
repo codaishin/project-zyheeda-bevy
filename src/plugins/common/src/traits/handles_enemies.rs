@@ -10,6 +10,7 @@ use crate::{
 		speed::Speed,
 	},
 	traits::{
+		handles_skill_behaviors::SkillSpawner,
 		loadout::LoadoutConfig,
 		mapper::Mapper,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
@@ -36,7 +37,8 @@ pub trait HandlesEnemyBehaviors {
 		+ for<'a> RefInto<'a, ColliderRadius>
 		+ for<'a> Mapper<Bone<'a>, Option<EssenceSlot>>
 		+ for<'a> Mapper<Bone<'a>, Option<HandSlot>>
-		+ for<'a> Mapper<Bone<'a>, Option<ForearmSlot>>;
+		+ for<'a> Mapper<Bone<'a>, Option<ForearmSlot>>
+		+ for<'a> Mapper<Bone<'a>, Option<SkillSpawner>>;
 }
 
 pub trait EnemyAttack {

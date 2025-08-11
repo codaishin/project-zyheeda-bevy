@@ -25,13 +25,16 @@ use common::{
 		Units,
 		UnitsPerSecond,
 		action_key::slot::{NoValidSlotKey, SlotKey},
+		bone::Bone,
 		collider_radius::ColliderRadius,
 	},
 	traits::{
 		clamp_zero_positive::ClampZeroPositive,
 		handles_effect::HandlesEffect,
 		handles_enemies::EnemyTarget,
+		handles_skill_behaviors::SkillSpawner,
 		load_asset::LoadAsset,
+		mapper::Mapper,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
@@ -117,6 +120,16 @@ where
 			));
 
 		Ok(())
+	}
+}
+
+impl Mapper<Bone<'_>, Option<SkillSpawner>> for VoidSphere {
+	fn map(&self, Bone(name): Bone) -> Option<SkillSpawner> {
+		if name != Self::SLOT_NAME {
+			return None;
+		}
+
+		Some(SkillSpawner::Neutral)
 	}
 }
 

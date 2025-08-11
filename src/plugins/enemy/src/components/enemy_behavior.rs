@@ -20,6 +20,7 @@ use common::{
 	},
 	traits::{
 		handles_enemies::{Attacker, EnemyAttack, EnemyTarget, Target},
+		handles_skill_behaviors::SkillSpawner,
 		loadout::LoadoutConfig,
 		mapper::Mapper,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
@@ -125,6 +126,12 @@ impl Mapper<Bone<'_>, Option<ForearmSlot>> for EnemyBehavior {
 		}
 
 		Some(ForearmSlot(SlotKey::from(VoidSphereSlot)))
+	}
+}
+
+impl Mapper<Bone<'_>, Option<SkillSpawner>> for EnemyBehavior {
+	fn map(&self, bone: Bone) -> Option<SkillSpawner> {
+		VoidSphere.map(bone)
 	}
 }
 
