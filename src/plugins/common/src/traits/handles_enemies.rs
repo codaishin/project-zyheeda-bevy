@@ -4,17 +4,19 @@ use crate::{
 	tools::{
 		aggro_range::AggroRange,
 		attack_range::AttackRange,
+		bone::Bone,
 		collider_radius::ColliderRadius,
 		movement_animation::MovementAnimation,
 		speed::Speed,
 	},
+	traits::{handles_skill_behaviors::SkillSpawner, mapper::Mapper},
 };
 use bevy::prelude::*;
 use std::time::Duration;
 
 pub trait HandlesEnemies {
 	/// FIXME: Impl a `TEnemy::from(EnemyKind::VoidSphere)` pattern
-	type TEnemy: Component + Default;
+	type TEnemy: Component + Default + for<'a> Mapper<Bone<'a>, Option<SkillSpawner>>;
 }
 
 pub trait HandlesEnemyBehaviors {

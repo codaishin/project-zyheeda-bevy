@@ -21,12 +21,14 @@ use common::{
 	components::{ground_offset::GroundOffset, insert_asset::InsertAsset},
 	effects::{deal_damage::DealDamage, gravity::Gravity},
 	errors::Error,
-	tools::{Units, UnitsPerSecond, collider_radius::ColliderRadius},
+	tools::{Units, UnitsPerSecond, bone::Bone, collider_radius::ColliderRadius},
 	traits::{
 		clamp_zero_positive::ClampZeroPositive,
 		handles_effect::HandlesEffect,
 		handles_enemies::EnemyTarget,
+		handles_skill_behaviors::SkillSpawner,
 		load_asset::LoadAsset,
+		mapper::Mapper,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
@@ -46,8 +48,17 @@ pub struct VoidSphere;
 impl VoidSphere {
 	const GROUND_OFFSET: Vec3 = Vec3::new(0., 1.2, 0.);
 
+	const INNER_RADIUS: f32 = 0.3;
+	const OUTER_RADIUS: f32 = 0.4;
+	const TORUS_RADIUS: f32 = 0.35;
+	const TORUS_RING_RADIUS: f32 = Self::OUTER_RADIUS - Self::TORUS_RADIUS;
+
+	const SKILL_SPAWN: &str = "skill_spawn";
+	const SKILL_SPAWN_OFFSET: Vec3 =
+		Vec3::new(0., 0., -(Self::OUTER_RADIUS + Self::TORUS_RING_RADIUS));
+
 	fn collider_radius() -> ColliderRadius {
-		ColliderRadius(Units::new(VOID_SPHERE_OUTER_RADIUS))
+		ColliderRadius(Units::new(Self::OUTER_RADIUS))
 	}
 
 	pub(crate) fn with_attack_range(attack_range: Units) -> EnemyBehavior {
@@ -98,16 +109,25 @@ where
 				VoidSphereRing,
 				transform_2nd_ring,
 			))
-			.with_child((Collider::ball(VOID_SPHERE_OUTER_RADIUS), transform));
+			.with_child((Collider::ball(VoidSphere::OUTER_RADIUS), transform))
+			.with_child((
+				Transform::from_translation(Self::SKILL_SPAWN_OFFSET),
+				Name::from(Self::SKILL_SPAWN),
+			));
 
 		Ok(())
 	}
 }
 
-const VOID_SPHERE_INNER_RADIUS: f32 = 0.3;
-const VOID_SPHERE_OUTER_RADIUS: f32 = 0.4;
-const VOID_SPHERE_TORUS_RADIUS: f32 = 0.35;
-const VOID_SPHERE_TORUS_RING_RADIUS: f32 = VOID_SPHERE_OUTER_RADIUS - VOID_SPHERE_TORUS_RADIUS;
+impl Mapper<Bone<'_>, Option<SkillSpawner>> for VoidSphere {
+	fn map(&self, Bone(name): Bone) -> Option<SkillSpawner> {
+		if name != Self::SKILL_SPAWN {
+			return None;
+		}
+
+		Some(SkillSpawner::Neutral)
+	}
+}
 
 #[derive(Component, Clone)]
 #[require(Mesh3d, MeshMaterial3d<StandardMaterial>, NotShadowCaster)]
@@ -136,7 +156,7 @@ impl VoidSphereCore {
 	fn mesh() -> InsertAsset<Mesh> {
 		InsertAsset::shared::<Self>(|| {
 			Mesh::from(Sphere {
-				radius: VOID_SPHERE_INNER_RADIUS,
+				radius: VoidSphere::INNER_RADIUS,
 			})
 		})
 	}
@@ -160,8 +180,8 @@ impl VoidSphereRing {
 	fn mesh() -> InsertAsset<Mesh> {
 		InsertAsset::shared::<Self>(|| {
 			Mesh::from(Torus {
-				major_radius: VOID_SPHERE_TORUS_RADIUS,
-				minor_radius: VOID_SPHERE_TORUS_RING_RADIUS,
+				major_radius: VoidSphere::TORUS_RADIUS,
+				minor_radius: VoidSphere::TORUS_RING_RADIUS,
 			})
 		})
 	}
