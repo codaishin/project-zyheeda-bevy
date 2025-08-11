@@ -3,12 +3,12 @@ use std::{collections::HashSet, hash::Hash};
 use crate::{AppendSkill, Dropdown, KeySelect, traits::GetComponent};
 use bevy::prelude::*;
 use common::{
-	tools::action_key::slot::SlotKey,
+	tools::action_key::slot::PlayerSlot,
 	traits::{iteration::IterFinite, thread_safe::ThreadSafe},
 };
 
 #[derive(Component, Debug, PartialEq)]
-pub(crate) struct KeySelectDropdownCommand<TExtra, TKey = SlotKey> {
+pub(crate) struct KeySelectDropdownCommand<TExtra, TKey = PlayerSlot> {
 	pub(crate) extra: TExtra,
 	pub(crate) key_path: Vec<TKey>,
 }

@@ -1,10 +1,10 @@
 use crate::components::DeleteSkill;
 use bevy::{prelude::*, ui::Interaction};
-use common::tools::action_key::slot::Combo;
+use common::{tools::action_key::slot::PlayerSlot, traits::handles_combo_menu::Combo};
 
 pub(crate) fn update_combos_view_delete_skill<TSkill>(
 	deletes: Query<(&DeleteSkill, &Interaction)>,
-) -> Combo<Option<TSkill>> {
+) -> Combo<PlayerSlot, Option<TSkill>> {
 	deletes
 		.iter()
 		.filter(pressed)
@@ -19,13 +19,13 @@ fn pressed((.., interaction): &(&DeleteSkill, &Interaction)) -> bool {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::tools::action_key::slot::{Side, SlotKey};
+	use common::tools::action_key::slot::Side;
 	use testing::SingleThreadedApp;
 
 	#[derive(Debug, PartialEq)]
 	struct _Skill;
 
-	fn setup(system: fn(In<Combo<Option<_Skill>>>)) -> App {
+	fn setup(system: fn(In<Combo<PlayerSlot, Option<_Skill>>>)) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
@@ -41,8 +41,8 @@ mod tests {
 		app.world_mut().spawn((
 			DeleteSkill {
 				key_path: vec![
-					SlotKey::BottomHand(Side::Left),
-					SlotKey::BottomHand(Side::Right),
+					PlayerSlot::Lower(Side::Left),
+					PlayerSlot::Lower(Side::Right),
 				],
 			},
 			Interaction::Pressed,
@@ -50,12 +50,12 @@ mod tests {
 
 		app.update();
 
-		fn assert_combo(In(combo): In<Combo<Option<_Skill>>>) {
+		fn assert_combo(In(combo): In<Combo<PlayerSlot, Option<_Skill>>>) {
 			assert_eq!(
 				vec![(
 					vec![
-						SlotKey::BottomHand(Side::Left),
-						SlotKey::BottomHand(Side::Right),
+						PlayerSlot::Lower(Side::Left),
+						PlayerSlot::Lower(Side::Right),
 					],
 					None,
 				)],
@@ -70,8 +70,8 @@ mod tests {
 		app.world_mut().spawn((
 			DeleteSkill {
 				key_path: vec![
-					SlotKey::BottomHand(Side::Left),
-					SlotKey::BottomHand(Side::Right),
+					PlayerSlot::Lower(Side::Left),
+					PlayerSlot::Lower(Side::Right),
 				],
 			},
 			Interaction::Hovered,
@@ -79,8 +79,8 @@ mod tests {
 		app.world_mut().spawn((
 			DeleteSkill {
 				key_path: vec![
-					SlotKey::BottomHand(Side::Left),
-					SlotKey::BottomHand(Side::Right),
+					PlayerSlot::Lower(Side::Left),
+					PlayerSlot::Lower(Side::Right),
 				],
 			},
 			Interaction::None,
@@ -88,8 +88,8 @@ mod tests {
 
 		app.update();
 
-		fn assert_combo_empty(In(combo): In<Combo<Option<_Skill>>>) {
-			assert_eq!(vec![] as Combo<Option<_Skill>>, combo);
+		fn assert_combo_empty(In(combo): In<Combo<PlayerSlot, Option<_Skill>>>) {
+			assert_eq!(vec![] as Combo<PlayerSlot, Option<_Skill>>, combo);
 		}
 	}
 }

@@ -157,7 +157,7 @@ impl SimplePrefab for Motion {
 				entity.try_insert_if_new((
 					RigidBody::Fixed,
 					Anchor::<Always>::to_target(caster)
-						.on_fix_point(FixPoint(SkillSpawner::Center))
+						.on_fix_point(FixPoint(SkillSpawner::Neutral))
 						.with_target_rotation(),
 				));
 			}
@@ -212,11 +212,7 @@ mod tests {
 	use bevy_rapier3d::prelude::ActiveCollisionTypes;
 	use common::{
 		components::{is_blocker::Blocker, persistent_entity::PersistentEntity},
-		tools::{
-			Units,
-			UnitsPerSecond,
-			action_key::slot::{Side, SlotKey},
-		},
+		tools::{Units, UnitsPerSecond, action_key::slot::SlotKey},
 		traits::{
 			clamp_zero_positive::ClampZeroPositive,
 			handles_interactions::{HandlesInteractions, InteractAble},
@@ -290,7 +286,7 @@ mod tests {
 				None,
 				Some(
 					&Anchor::<Always>::to_target(caster)
-						.on_fix_point(FixPoint(SkillSpawner::Center))
+						.on_fix_point(FixPoint(SkillSpawner::Neutral))
 						.with_target_rotation()
 				),
 				None,
@@ -370,7 +366,7 @@ mod tests {
 		let caster = PersistentEntity::default();
 		let motion = Motion::Projectile {
 			caster,
-			spawner: SkillSpawner::Slot(SlotKey::TopHand(Side::Left)),
+			spawner: SkillSpawner::Slot(SlotKey(11)),
 			speed: UnitsPerSecond::new(11.),
 			range: Units::new(1111.),
 		};
@@ -389,7 +385,7 @@ mod tests {
 				None,
 				Some(
 					&Anchor::<Once>::to_target(caster)
-						.on_fix_point(FixPoint(SkillSpawner::Slot(SlotKey::TopHand(Side::Left))))
+						.on_fix_point(FixPoint(SkillSpawner::Slot(SlotKey(11))))
 						.with_target_rotation()
 				),
 				Some(&SetVelocityForward(UnitsPerSecond::new(11.))),
@@ -419,7 +415,7 @@ mod tests {
 		let caster = PersistentEntity::default();
 		let motion = Motion::Projectile {
 			caster,
-			spawner: SkillSpawner::Slot(SlotKey::TopHand(Side::Left)),
+			spawner: SkillSpawner::Slot(SlotKey(11)),
 			speed: UnitsPerSecond::new(11.),
 			range: Units::new(1111.),
 		};

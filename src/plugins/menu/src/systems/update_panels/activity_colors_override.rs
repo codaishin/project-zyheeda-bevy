@@ -6,11 +6,11 @@ use bevy::prelude::*;
 use common::{
 	components::ui_input_primer::IsPrimed,
 	tools::{
-		action_key::{slot::SlotKey, user_input::UserInput},
+		action_key::{slot::PlayerSlot, user_input::UserInput},
 		skill_execution::SkillExecution,
 	},
 	traits::{
-		accessors::get::{GetFieldRef, GetterRef},
+		accessors::get::{GetField, Getter},
 		handles_loadout_menu::GetItem,
 		inspect_able::{InspectAble, InspectField},
 		key_mappings::GetInput,
@@ -23,10 +23,10 @@ pub fn panel_activity_colors_override<TMap, TPanel, TPrimer, TContainer>(
 	map: Res<TMap>,
 	container: Res<TContainer>,
 ) where
-	TMap: Resource + GetInput<SlotKey, UserInput>,
-	TContainer: Resource + GetItem<SlotKey>,
+	TMap: Resource + GetInput<PlayerSlot, TInput = UserInput>,
+	TContainer: Resource + GetItem<PlayerSlot>,
 	TContainer::TItem: InspectAble<SkillExecution>,
-	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor + GetterRef<SlotKey> + Component,
+	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor + Getter<PlayerSlot> + Component,
 	TPrimer: Component,
 	for<'a> &'a TPrimer: Into<IsPrimed> + Into<UserInput>,
 {
@@ -46,15 +46,15 @@ fn get_color_override<TContainer, TMap, TPanel, TPrimer>(
 	primer: &TPrimer,
 ) -> Option<ColorConfig>
 where
-	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor + GetterRef<SlotKey>,
-	TContainer: GetItem<SlotKey>,
+	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor + Getter<PlayerSlot>,
+	TContainer: GetItem<PlayerSlot>,
 	TContainer::TItem: InspectAble<SkillExecution>,
-	TMap: GetInput<SlotKey, UserInput>,
+	TMap: GetInput<PlayerSlot, TInput = UserInput>,
 	for<'a> &'a TPrimer: Into<IsPrimed> + Into<UserInput>,
 {
-	let panel_key = SlotKey::get_field_ref(panel);
+	let panel_key = PlayerSlot::get_field(panel);
 	let state = container
-		.get_item(*panel_key)
+		.get_item(panel_key)
 		.map(SkillExecution::inspect_field)
 		.copied()
 		.unwrap_or_default();
@@ -68,8 +68,8 @@ where
 	}
 
 	let IsPrimed(primer_is_primed) = primer.into();
-	let primer_key: UserInput = primer.into();
-	if primer_is_primed && map.get_input(*panel_key) == primer_key {
+	let primer_key: TMap::TInput = primer.into();
+	if primer_is_primed && map.get_input(panel_key) == primer_key {
 		return Some(TPanel::PANEL_COLORS.pressed);
 	}
 
@@ -99,7 +99,10 @@ mod tests {
 		traits::colors::{ColorConfig, PanelColors},
 	};
 	use bevy::state::app::StatesPlugin;
-	use common::{components::ui_input_primer::IsPrimed, tools::action_key::slot::Side};
+	use common::{
+		components::ui_input_primer::IsPrimed,
+		tools::action_key::{slot::Side, user_input::UserInput},
+	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::collections::HashMap;
@@ -124,7 +127,7 @@ mod tests {
 	}
 
 	#[derive(Component)]
-	struct _Panel(pub SlotKey);
+	struct _Panel(pub PlayerSlot);
 
 	impl HasActiveColor for _Panel {
 		const ACTIVE_COLORS: ColorConfig = ColorConfig {
@@ -153,9 +156,9 @@ mod tests {
 		};
 	}
 
-	impl GetterRef<SlotKey> for _Panel {
-		fn get(&self) -> &SlotKey {
-			&self.0
+	impl Getter<PlayerSlot> for _Panel {
+		fn get(&self) -> PlayerSlot {
+			self.0
 		}
 	}
 
@@ -174,25 +177,27 @@ mod tests {
 	}
 
 	#[automock]
-	impl GetInput<SlotKey, UserInput> for _Map {
-		fn get_input(&self, value: SlotKey) -> UserInput {
+	impl GetInput<PlayerSlot> for _Map {
+		type TInput = UserInput;
+
+		fn get_input(&self, value: PlayerSlot) -> UserInput {
 			self.mock.get_input(value)
 		}
 	}
 
 	#[derive(Resource)]
-	struct _Cache(HashMap<SlotKey, _Item>);
+	struct _Cache(HashMap<PlayerSlot, _Item>);
 
-	impl GetItem<SlotKey> for _Cache {
+	impl GetItem<PlayerSlot> for _Cache {
 		type TItem = _Item;
 
-		fn get_item(&self, key: SlotKey) -> Option<&_Item> {
+		fn get_item(&self, key: PlayerSlot) -> Option<&_Item> {
 			self.0.get(&key)
 		}
 	}
 
-	impl<const N: usize> From<[(SlotKey, _Item); N]> for _Cache {
-		fn from(value: [(SlotKey, _Item); N]) -> Self {
+	impl<const N: usize> From<[(PlayerSlot, _Item); N]> for _Cache {
+		fn from(value: [(PlayerSlot, _Item); N]) -> Self {
 			Self(HashMap::from(value))
 		}
 	}
@@ -223,10 +228,7 @@ mod tests {
 	fn set_to_active_when_matching_skill_active() {
 		let mut app = setup(
 			_Map::default(),
-			_Cache::from([(
-				SlotKey::BottomHand(Side::Right),
-				_Item(SkillExecution::Active),
-			)]),
+			_Cache::from([(PlayerSlot::Lower(Side::Left), _Item(SkillExecution::Active))]),
 		);
 		let panel = app
 			.world_mut()
@@ -236,7 +238,7 @@ mod tests {
 					key: UserInput::from(KeyCode::KeyA),
 					is_primed: IsPrimed(false),
 				},
-				_Panel(SlotKey::BottomHand(Side::Right)),
+				_Panel(PlayerSlot::Lower(Side::Left)),
 			))
 			.id();
 
@@ -266,7 +268,7 @@ mod tests {
 					key: UserInput::from(KeyCode::KeyA),
 					is_primed: IsPrimed(false),
 				},
-				_Panel(SlotKey::BottomHand(Side::Right)),
+				_Panel(PlayerSlot::Lower(Side::Left)),
 			))
 			.id();
 
@@ -284,10 +286,7 @@ mod tests {
 	fn no_override_when_no_skill_not_active() {
 		let mut app = setup(
 			_Map::default(),
-			_Cache::from([(
-				SlotKey::BottomHand(Side::Right),
-				_Item(SkillExecution::None),
-			)]),
+			_Cache::from([(PlayerSlot::Lower(Side::Left), _Item(SkillExecution::None))]),
 		);
 		let panel = app
 			.world_mut()
@@ -297,7 +296,7 @@ mod tests {
 					key: UserInput::from(KeyCode::KeyA),
 					is_primed: IsPrimed(false),
 				},
-				_Panel(SlotKey::BottomHand(Side::Right)),
+				_Panel(PlayerSlot::Lower(Side::Left)),
 			))
 			.id();
 
@@ -317,7 +316,7 @@ mod tests {
 			_Map::new().with_mock(|mock| {
 				mock.expect_get_input()
 					.times(1)
-					.with(eq(SlotKey::BottomHand(Side::Right)))
+					.with(eq(PlayerSlot::Lower(Side::Left)))
 					.return_const(UserInput::from(KeyCode::KeyQ));
 			}),
 			_Cache::from([]),
@@ -330,7 +329,7 @@ mod tests {
 					key: UserInput::from(KeyCode::KeyQ),
 					is_primed: IsPrimed(true),
 				},
-				_Panel(SlotKey::BottomHand(Side::Right)),
+				_Panel(PlayerSlot::Lower(Side::Left)),
 			))
 			.id();
 
@@ -353,10 +352,7 @@ mod tests {
 	fn set_to_queued_when_matching_with_queued_skill() {
 		let mut app = setup(
 			_Map::default(),
-			_Cache::from([(
-				SlotKey::BottomHand(Side::Right),
-				_Item(SkillExecution::Queued),
-			)]),
+			_Cache::from([(PlayerSlot::Lower(Side::Left), _Item(SkillExecution::Queued))]),
 		);
 		let panel = app
 			.world_mut()
@@ -366,7 +362,7 @@ mod tests {
 					key: UserInput::from(KeyCode::KeyA),
 					is_primed: IsPrimed(false),
 				},
-				_Panel(SlotKey::BottomHand(Side::Right)),
+				_Panel(PlayerSlot::Lower(Side::Left)),
 			))
 			.id();
 

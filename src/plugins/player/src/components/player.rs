@@ -19,7 +19,7 @@ use common::{
 	tools::{
 		Units,
 		UnitsPerSecond,
-		action_key::slot::{Side, SlotKey},
+		action_key::slot::{PlayerSlot, Side, SlotKey},
 		animation_key::AnimationKey,
 		bone::Bone,
 		collider_radius::ColliderRadius,
@@ -80,16 +80,16 @@ impl Player {
 		Path::from(Self::MODEL_PATH.to_owned() + "#" + animation_name)
 	}
 
-	fn skill_animation_mask_roots(slot: SlotKey) -> Name {
+	fn skill_animation_mask_roots(slot: PlayerSlot) -> Name {
 		match slot {
-			SlotKey::TopHand(Side::Left) => Name::from("top_shoulder.L"),
-			SlotKey::TopHand(Side::Right) => Name::from("top_shoulder.R"),
-			SlotKey::BottomHand(Side::Left) => Name::from("bottom_shoulder.L"),
-			SlotKey::BottomHand(Side::Right) => Name::from("bottom_shoulder.R"),
+			PlayerSlot::Upper(Side::Left) => Name::from("top_shoulder.L"),
+			PlayerSlot::Upper(Side::Right) => Name::from("top_shoulder.R"),
+			PlayerSlot::Lower(Side::Left) => Name::from("bottom_shoulder.L"),
+			PlayerSlot::Lower(Side::Right) => Name::from("bottom_shoulder.R"),
 		}
 	}
 
-	pub fn animation_asset(animation: AnimationKey<SlotKey>) -> AnimationAsset {
+	pub fn animation_asset(animation: AnimationKey<PlayerSlot>) -> AnimationAsset {
 		match animation {
 			AnimationKey::T => AnimationAsset::Path(Player::animation_path("Animation0")),
 			AnimationKey::Idle => AnimationAsset::Path(Player::animation_path("Animation1")),
@@ -100,22 +100,22 @@ impl Player {
 				right: Player::animation_path("Animation5"),
 				left: Player::animation_path("Animation6"),
 			}),
-			AnimationKey::Other(SlotKey::BottomHand(Side::Left)) => {
+			AnimationKey::Other(PlayerSlot::Lower(Side::Left)) => {
 				AnimationAsset::Path(Player::animation_path("Animation7"))
 			}
-			AnimationKey::Other(SlotKey::BottomHand(Side::Right)) => {
+			AnimationKey::Other(PlayerSlot::Lower(Side::Right)) => {
 				AnimationAsset::Path(Player::animation_path("Animation8"))
 			}
-			AnimationKey::Other(SlotKey::TopHand(Side::Left)) => {
+			AnimationKey::Other(PlayerSlot::Upper(Side::Left)) => {
 				AnimationAsset::Path(Player::animation_path("Animation9"))
 			}
-			AnimationKey::Other(SlotKey::TopHand(Side::Right)) => {
+			AnimationKey::Other(PlayerSlot::Upper(Side::Right)) => {
 				AnimationAsset::Path(Player::animation_path("Animation10"))
 			}
 		}
 	}
 
-	fn play_animations(animation_key: AnimationKey<SlotKey>) -> (AnimationAsset, AnimationMask) {
+	fn play_animations(animation_key: AnimationKey<PlayerSlot>) -> (AnimationAsset, AnimationMask) {
 		(
 			Player::animation_asset(animation_key),
 			match animation_key {
@@ -152,14 +152,23 @@ impl Player {
 	}
 }
 
-impl Mapper<SkillSpawner, Bone> for Player {
-	fn map(&self, skill_spawner: SkillSpawner) -> Bone {
-		match skill_spawner {
-			SkillSpawner::Center => Bone("skill_spawn"),
-			SkillSpawner::Slot(SlotKey::TopHand(Side::Right)) => Bone("skill_spawn_top.R"),
-			SkillSpawner::Slot(SlotKey::TopHand(Side::Left)) => Bone("skill_spawn_top.L"),
-			SkillSpawner::Slot(SlotKey::BottomHand(Side::Right)) => Bone("skill_spawn_bottom.R"),
-			SkillSpawner::Slot(SlotKey::BottomHand(Side::Left)) => Bone("skill_spawn_bottom.L"),
+impl<'a> Mapper<Bone<'a>, Option<SkillSpawner>> for Player {
+	fn map(&self, bone: Bone) -> Option<SkillSpawner> {
+		match &bone {
+			Bone("skill_spawn") => Some(SkillSpawner::Neutral),
+			Bone("skill_spawn_top.R") => Some(SkillSpawner::Slot(SlotKey::from(
+				PlayerSlot::Upper(Side::Right),
+			))),
+			Bone("skill_spawn_top.L") => Some(SkillSpawner::Slot(SlotKey::from(
+				PlayerSlot::Upper(Side::Left),
+			))),
+			Bone("skill_spawn_bottom.R") => Some(SkillSpawner::Slot(SlotKey::from(
+				PlayerSlot::Lower(Side::Right),
+			))),
+			Bone("skill_spawn_bottom.L") => Some(SkillSpawner::Slot(SlotKey::from(
+				PlayerSlot::Lower(Side::Left),
+			))),
+			_ => None,
 		}
 	}
 }
@@ -167,7 +176,7 @@ impl Mapper<SkillSpawner, Bone> for Player {
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum PlayerAnimationMask {
 	Body,
-	Slot(SlotKey),
+	Slot(PlayerSlot),
 }
 
 impl PlayerAnimationMask {
@@ -186,9 +195,9 @@ impl IterFinite for PlayerAnimationMask {
 	fn next(current: &Iter<Self>) -> Option<Self> {
 		let Iter(current) = current;
 		match current.as_ref()? {
-			PlayerAnimationMask::Body => Some(Self::Slot(SlotKey::iterator().0?)),
+			PlayerAnimationMask::Body => Some(Self::Slot(PlayerSlot::iterator().0?)),
 			PlayerAnimationMask::Slot(slot_key) => {
-				SlotKey::next(&Iter(Some(*slot_key))).map(Self::Slot)
+				PlayerSlot::next(&Iter(Some(*slot_key))).map(Self::Slot)
 			}
 		}
 	}
@@ -197,10 +206,10 @@ impl From<&PlayerAnimationMask> for AnimationMask {
 	fn from(mask: &PlayerAnimationMask) -> Self {
 		match mask {
 			PlayerAnimationMask::Body => 1 << 0,
-			PlayerAnimationMask::Slot(SlotKey::TopHand(Side::Left)) => 1 << 1,
-			PlayerAnimationMask::Slot(SlotKey::TopHand(Side::Right)) => 1 << 2,
-			PlayerAnimationMask::Slot(SlotKey::BottomHand(Side::Left)) => 1 << 3,
-			PlayerAnimationMask::Slot(SlotKey::BottomHand(Side::Right)) => 1 << 4,
+			PlayerAnimationMask::Slot(PlayerSlot::Upper(Side::Left)) => 1 << 1,
+			PlayerAnimationMask::Slot(PlayerSlot::Upper(Side::Right)) => 1 << 2,
+			PlayerAnimationMask::Slot(PlayerSlot::Lower(Side::Left)) => 1 << 3,
+			PlayerAnimationMask::Slot(PlayerSlot::Lower(Side::Right)) => 1 << 4,
 		}
 	}
 }
@@ -216,7 +225,7 @@ impl From<&PlayerAnimationMask> for AnimationMaskDefinition {
 		match mask {
 			PlayerAnimationMask::Body => AnimationMaskDefinition::Mask {
 				from_root: Name::from("metarig"),
-				exclude_roots: SlotKey::iterator()
+				exclude_roots: PlayerSlot::iterator()
 					.map(Player::skill_animation_mask_roots)
 					.collect(),
 			},
@@ -237,7 +246,7 @@ impl GetAnimationDefinitions for Player {
 	type TAnimationMask = PlayerAnimationMask;
 
 	fn animations() -> HashMap<AnimationAsset, AnimationMask> {
-		HashMap::from_iter(AnimationKey::<SlotKey>::iterator().map(Player::play_animations))
+		HashMap::from_iter(AnimationKey::<PlayerSlot>::iterator().map(Player::play_animations))
 	}
 }
 
@@ -304,7 +313,7 @@ mod tests {
 		assert_eq!(
 			[PlayerAnimationMask::Body]
 				.into_iter()
-				.chain(SlotKey::iterator().map(PlayerAnimationMask::Slot))
+				.chain(PlayerSlot::iterator().map(PlayerAnimationMask::Slot))
 				.collect::<Vec<_>>(),
 			PlayerAnimationMask::iterator()
 				.take(10) // prevent infinite loop when broken

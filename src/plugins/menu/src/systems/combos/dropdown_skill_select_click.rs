@@ -1,13 +1,16 @@
 use crate::components::combo_skill_button::{ComboSkillButton, DropdownItem};
 use bevy::{prelude::*, ui::Interaction};
-use common::{tools::action_key::slot::Combo, traits::thread_safe::ThreadSafe};
+use common::{
+	tools::action_key::slot::PlayerSlot,
+	traits::{handles_combo_menu::Combo, thread_safe::ThreadSafe},
+};
 
 impl<T> DropdownSkillSelectClick for T {}
 
 pub(crate) trait DropdownSkillSelectClick {
 	fn dropdown_skill_select_click<TSkill>(
 		skill_buttons: Query<(&ComboSkillButton<DropdownItem<Self>, TSkill>, &Interaction)>,
-	) -> Combo<Option<TSkill>>
+	) -> Combo<PlayerSlot, Option<TSkill>>
 	where
 		Self: ThreadSafe + Sized,
 		TSkill: ThreadSafe + Clone,
@@ -27,7 +30,7 @@ fn pressed<T>((.., interaction): &(&T, &Interaction)) -> bool {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::tools::action_key::slot::{Side, SlotKey};
+	use common::tools::action_key::slot::Side;
 	use testing::SingleThreadedApp;
 
 	#[derive(Debug, PartialEq, Default, Clone)]
@@ -35,7 +38,7 @@ mod tests {
 
 	struct _Layout;
 
-	fn setup(system: fn(In<Combo<Option<_Skill>>>)) -> App {
+	fn setup(system: fn(In<Combo<PlayerSlot, Option<_Skill>>>)) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
@@ -51,16 +54,16 @@ mod tests {
 		app.world_mut().spawn((
 			ComboSkillButton::<DropdownItem<_Layout>, _Skill>::new(
 				_Skill,
-				vec![SlotKey::BottomHand(Side::Left)],
+				vec![PlayerSlot::Lower(Side::Left)],
 			),
 			Interaction::Pressed,
 		));
 
 		app.update();
 
-		fn assert_combo(In(combos): In<Combo<Option<_Skill>>>) {
+		fn assert_combo(In(combos): In<Combo<PlayerSlot, Option<_Skill>>>) {
 			assert_eq!(
-				vec![(vec![SlotKey::BottomHand(Side::Left)], Some(_Skill))],
+				vec![(vec![PlayerSlot::Lower(Side::Left)], Some(_Skill))],
 				combos
 			);
 		}
@@ -72,22 +75,22 @@ mod tests {
 		app.world_mut().spawn((
 			ComboSkillButton::<DropdownItem<_Layout>, _Skill>::new(
 				_Skill,
-				vec![SlotKey::BottomHand(Side::Left)],
+				vec![PlayerSlot::Lower(Side::Left)],
 			),
 			Interaction::Hovered,
 		));
 		app.world_mut().spawn((
 			ComboSkillButton::<DropdownItem<_Layout>, _Skill>::new(
 				_Skill,
-				vec![SlotKey::BottomHand(Side::Left)],
+				vec![PlayerSlot::Lower(Side::Left)],
 			),
 			Interaction::None,
 		));
 
 		app.update();
 
-		fn assert_no_combo(In(combos): In<Combo<Option<_Skill>>>) {
-			assert_eq!(vec![] as Combo<Option<_Skill>>, combos);
+		fn assert_no_combo(In(combos): In<Combo<PlayerSlot, Option<_Skill>>>) {
+			assert_eq!(vec![] as Combo<PlayerSlot, Option<_Skill>>, combos);
 		}
 	}
 }

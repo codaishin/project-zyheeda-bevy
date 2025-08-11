@@ -1,7 +1,7 @@
 use crate::{components::quickbar_panel::QuickbarPanel, tools::PanelState};
 use bevy::prelude::*;
 use common::{
-	tools::{action_key::slot::SlotKey, skill_icon::SkillIcon},
+	tools::{action_key::slot::PlayerSlot, skill_icon::SkillIcon},
 	traits::{
 		accessors::get::TryApplyOn,
 		handles_loadout_menu::GetItem,
@@ -15,7 +15,7 @@ pub(crate) fn set_quickbar_icons<TContainer>(
 	mut panels: Query<(Entity, &mut QuickbarPanel)>,
 	containers: Res<TContainer>,
 ) where
-	TContainer: Resource + GetItem<SlotKey>,
+	TContainer: Resource + GetItem<PlayerSlot>,
 	TContainer::TItem: InspectAble<SkillIcon>,
 {
 	for (entity, mut panel) in &mut panels {
@@ -39,7 +39,7 @@ pub(crate) fn set_quickbar_icons<TContainer>(
 mod tests {
 	use super::*;
 	use crate::{components::quickbar_panel::QuickbarPanel, tools::PanelState};
-	use common::tools::action_key::slot::{Side, SlotKey};
+	use common::tools::action_key::slot::{PlayerSlot, Side};
 	use std::collections::HashMap;
 	use testing::{SingleThreadedApp, new_handle};
 
@@ -52,18 +52,18 @@ mod tests {
 	}
 
 	#[derive(Resource)]
-	struct _Cache(HashMap<SlotKey, _Item>);
+	struct _Cache(HashMap<PlayerSlot, _Item>);
 
-	impl GetItem<SlotKey> for _Cache {
+	impl GetItem<PlayerSlot> for _Cache {
 		type TItem = _Item;
 
-		fn get_item(&self, key: SlotKey) -> Option<&Self::TItem> {
+		fn get_item(&self, key: PlayerSlot) -> Option<&Self::TItem> {
 			self.0.get(&key)
 		}
 	}
 
-	impl<const N: usize> From<[(SlotKey, _Item); N]> for _Cache {
-		fn from(value: [(SlotKey, _Item); N]) -> Self {
+	impl<const N: usize> From<[(PlayerSlot, _Item); N]> for _Cache {
+		fn from(value: [(PlayerSlot, _Item); N]) -> Self {
 			Self(HashMap::from(value))
 		}
 	}
@@ -79,7 +79,7 @@ mod tests {
 	#[test]
 	fn add_icon_image() {
 		let handle = new_handle();
-		let key = SlotKey::TopHand(Side::Right);
+		let key = PlayerSlot::Upper(Side::Right);
 		let mut app = setup(_Cache::from([(key, _Item(Some(handle.clone())))]));
 		let panel = app
 			.world_mut()
@@ -103,7 +103,7 @@ mod tests {
 
 	#[test]
 	fn set_panel_empty_when_icon_handle_is_none() {
-		let key = SlotKey::TopHand(Side::Right);
+		let key = PlayerSlot::Upper(Side::Right);
 		let mut app = setup(_Cache::from([(key, _Item(None))]));
 		let panel = app
 			.world_mut()
@@ -127,7 +127,7 @@ mod tests {
 
 	#[test]
 	fn set_panel_empty_when_no_descriptor_for_key() {
-		let key = SlotKey::TopHand(Side::Right);
+		let key = PlayerSlot::Upper(Side::Right);
 		let mut app = setup(_Cache::from([]));
 		let panel = app
 			.world_mut()

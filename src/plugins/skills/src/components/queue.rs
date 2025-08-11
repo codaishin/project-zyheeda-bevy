@@ -34,12 +34,22 @@ enum State {
 	},
 }
 
-#[derive(Component, SavableComponent, PartialEq, Debug, Default, Clone)]
+#[derive(Component, SavableComponent, PartialEq, Debug, Clone)]
 #[savable_component(dto = QueueDto)]
 pub struct Queue {
 	queue: VecDeque<QueuedSkill>,
 	duration: Option<Duration>,
 	state: State,
+}
+
+impl Default for Queue {
+	fn default() -> Self {
+		Self {
+			queue: default(),
+			duration: default(),
+			state: default(),
+		}
+	}
 }
 
 #[cfg(test)]
@@ -98,7 +108,9 @@ impl IterWaitingMut<QueuedSkill> for Queue {
 	}
 }
 
-impl IterAddedMut<QueuedSkill> for Queue {
+impl IterAddedMut for Queue {
+	type TItem = QueuedSkill;
+
 	fn added_none(&self) -> bool {
 		unchanged_length(self) == self.queue.len()
 	}
@@ -124,7 +136,7 @@ fn unchanged_length(Queue { queue, state, .. }: &Queue) -> usize {
 mod test_queue_collection {
 	use super::*;
 	use bevy::utils::default;
-	use common::{tools::action_key::slot::Side, traits::handles_localization::Token};
+	use common::traits::handles_localization::Token;
 
 	#[test]
 	fn enqueue_one_skill() {
@@ -134,7 +146,7 @@ mod test_queue_collection {
 				token: Token::from("my skill"),
 				..default()
 			},
-			SlotKey::BottomHand(Side::Right),
+			SlotKey(11),
 		));
 
 		assert_eq!(
@@ -143,7 +155,7 @@ mod test_queue_collection {
 					token: Token::from("my skill"),
 					..default()
 				},
-				slot_key: SlotKey::BottomHand(Side::Right),
+				key: SlotKey(11),
 				..default()
 			}]),
 			queue.queue
@@ -158,20 +170,20 @@ mod test_queue_collection {
 				token: Token::from("skill a"),
 				..default()
 			},
-			SlotKey::BottomHand(Side::Left),
+			SlotKey(42),
 		));
 		queue.enqueue((
 			Skill {
 				token: Token::from("skill b"),
 				..default()
 			},
-			SlotKey::BottomHand(Side::Right),
+			SlotKey(11),
 		));
 
 		assert_eq!(
 			VecDeque::from([
 				QueuedSkill {
-					slot_key: SlotKey::BottomHand(Side::Left),
+					key: SlotKey(42),
 					skill: Skill {
 						token: Token::from("skill a"),
 						..default()
@@ -179,7 +191,7 @@ mod test_queue_collection {
 					..default()
 				},
 				QueuedSkill {
-					slot_key: SlotKey::BottomHand(Side::Right),
+					key: SlotKey(11),
 					skill: Skill {
 						token: Token::from("skill b"),
 						..default()
@@ -194,7 +206,7 @@ mod test_queue_collection {
 	#[test]
 	fn flush_with_one_skill() {
 		let mut queue = Queue::new([QueuedSkill {
-			slot_key: SlotKey::BottomHand(Side::Right),
+			key: SlotKey(11),
 			skill: Skill {
 				token: Token::from("my skill"),
 				..default()
@@ -211,7 +223,7 @@ mod test_queue_collection {
 	fn flush_with_two_skill() {
 		let mut queue = Queue::new([
 			QueuedSkill {
-				slot_key: SlotKey::BottomHand(Side::Left),
+				key: SlotKey(42),
 				skill: Skill {
 					token: Token::from("skill a"),
 					..default()
@@ -219,7 +231,7 @@ mod test_queue_collection {
 				..default()
 			},
 			QueuedSkill {
-				slot_key: SlotKey::BottomHand(Side::Right),
+				key: SlotKey(11),
 				skill: Skill {
 					token: Token::from("skill b"),
 					..default()
@@ -247,7 +259,7 @@ mod test_queue_collection {
 		assert_eq!(
 			(
 				Queue::new([QueuedSkill {
-					slot_key: SlotKey::BottomHand(Side::Right),
+					key: SlotKey(11),
 					skill: Skill {
 						token: Token::from("skill b"),
 						..default()
@@ -264,7 +276,7 @@ mod test_queue_collection {
 	fn iter() {
 		let queue = Queue::new([
 			QueuedSkill {
-				slot_key: SlotKey::BottomHand(Side::Left),
+				key: SlotKey(42),
 				skill: Skill {
 					token: Token::from("skill a"),
 					..default()
@@ -272,7 +284,7 @@ mod test_queue_collection {
 				..default()
 			},
 			QueuedSkill {
-				slot_key: SlotKey::BottomHand(Side::Right),
+				key: SlotKey(11),
 				skill: Skill {
 					token: Token::from("skill b"),
 					..default()
@@ -284,7 +296,7 @@ mod test_queue_collection {
 		assert_eq!(
 			vec![
 				&QueuedSkill {
-					slot_key: SlotKey::BottomHand(Side::Left),
+					key: SlotKey(42),
 					skill: Skill {
 						token: Token::from("skill a"),
 						..default()
@@ -292,7 +304,7 @@ mod test_queue_collection {
 					..default()
 				},
 				&QueuedSkill {
-					slot_key: SlotKey::BottomHand(Side::Right),
+					key: SlotKey(11),
 					skill: Skill {
 						token: Token::from("skill b"),
 						..default()
@@ -313,14 +325,14 @@ mod test_queue_collection {
 
 				..default()
 			},
-			SlotKey::BottomHand(Side::Right),
+			SlotKey(11),
 		));
 		queue.enqueue((
 			Skill {
 				token: Token::from("b"),
 				..default()
 			},
-			SlotKey::BottomHand(Side::Left),
+			SlotKey(42),
 		));
 
 		assert_eq!(
@@ -328,7 +340,7 @@ mod test_queue_collection {
 				false,
 				vec![
 					&mut QueuedSkill {
-						slot_key: SlotKey::BottomHand(Side::Right),
+						key: SlotKey(11),
 						skill: Skill {
 							token: Token::from("a"),
 							..default()
@@ -336,7 +348,7 @@ mod test_queue_collection {
 						..default()
 					},
 					&mut QueuedSkill {
-						slot_key: SlotKey::BottomHand(Side::Left),
+						key: SlotKey(42),
 						skill: Skill {
 							token: Token::from("b"),
 							..default()
@@ -355,7 +367,7 @@ mod test_queue_collection {
 	#[test]
 	fn iter_recent_mut_only_new() {
 		let mut queue = Queue::new([QueuedSkill {
-			slot_key: SlotKey::BottomHand(Side::Right),
+			key: SlotKey(11),
 			skill: Skill {
 				token: Token::from("a"),
 				..default()
@@ -368,7 +380,7 @@ mod test_queue_collection {
 
 				..default()
 			},
-			SlotKey::BottomHand(Side::Right),
+			SlotKey(11),
 		));
 		queue.enqueue((
 			Skill {
@@ -376,7 +388,7 @@ mod test_queue_collection {
 
 				..default()
 			},
-			SlotKey::BottomHand(Side::Left),
+			SlotKey(42),
 		));
 
 		assert_eq!(
@@ -384,7 +396,7 @@ mod test_queue_collection {
 				false,
 				vec![
 					&mut QueuedSkill {
-						slot_key: SlotKey::BottomHand(Side::Right),
+						key: SlotKey(11),
 						skill: Skill {
 							token: Token::from("b"),
 							..default()
@@ -392,7 +404,7 @@ mod test_queue_collection {
 						..default()
 					},
 					&mut QueuedSkill {
-						slot_key: SlotKey::BottomHand(Side::Left),
+						key: SlotKey(42),
 						skill: Skill {
 							token: Token::from("c"),
 							..default()
@@ -411,7 +423,7 @@ mod test_queue_collection {
 	#[test]
 	fn iter_recent_mut_empty_after_flush() {
 		let mut queue = Queue::new([QueuedSkill {
-			slot_key: SlotKey::BottomHand(Side::Right),
+			key: SlotKey(11),
 			skill: Skill {
 				token: Token::from("a"),
 				..default()
@@ -424,7 +436,7 @@ mod test_queue_collection {
 
 				..default()
 			},
-			SlotKey::BottomHand(Side::Right),
+			SlotKey(11),
 		));
 		queue.enqueue((
 			Skill {
@@ -432,7 +444,7 @@ mod test_queue_collection {
 
 				..default()
 			},
-			SlotKey::BottomHand(Side::Left),
+			SlotKey(42),
 		));
 
 		queue.flush();
@@ -449,7 +461,7 @@ mod test_queue_collection {
 	#[test]
 	fn iter_recent_mut_empty_after_flush_with_active_duration() {
 		let mut queue = Queue::new([QueuedSkill {
-			slot_key: SlotKey::BottomHand(Side::Right),
+			key: SlotKey(11),
 			skill: Skill {
 				token: Token::from("a"),
 				..default()
@@ -462,7 +474,7 @@ mod test_queue_collection {
 
 				..default()
 			},
-			SlotKey::BottomHand(Side::Right),
+			SlotKey(11),
 		));
 		queue.enqueue((
 			Skill {
@@ -470,7 +482,7 @@ mod test_queue_collection {
 
 				..default()
 			},
-			SlotKey::BottomHand(Side::Left),
+			SlotKey(42),
 		));
 
 		queue.duration = Some(Duration::from_millis(42));
@@ -489,7 +501,7 @@ mod test_queue_collection {
 	fn iter_waiting() {
 		let skills = [
 			QueuedSkill {
-				slot_key: SlotKey::BottomHand(Side::Right),
+				key: SlotKey(11),
 				skill: Skill {
 					token: Token::from("active"),
 					..default()
@@ -497,7 +509,7 @@ mod test_queue_collection {
 				mode: Activation::ActiveAfter(Duration::from_millis(100)),
 			},
 			QueuedSkill {
-				slot_key: SlotKey::BottomHand(Side::Right),
+				key: SlotKey(11),
 				skill: Skill {
 					token: Token::from("waiting"),
 					..default()
@@ -505,7 +517,7 @@ mod test_queue_collection {
 				mode: Activation::Waiting,
 			},
 			QueuedSkill {
-				slot_key: SlotKey::BottomHand(Side::Right),
+				key: SlotKey(11),
 				skill: Skill {
 					token: Token::from("primed"),
 					..default()
@@ -542,7 +554,7 @@ impl GetActiveSkill<SkillState> for Queue {
 
 		Some(ActiveSkill {
 			skill: &skill.skill,
-			slot_key: &skill.slot_key,
+			slot_key: &skill.key,
 			mode: &mut skill.mode,
 			duration: self.duration.as_mut()?,
 		})
@@ -593,7 +605,6 @@ mod test_queue_active_skill {
 		skills::{AnimationStrategy, RunSkillBehavior},
 		traits::skill_builder::SkillShape,
 	};
-	use common::tools::action_key::slot::Side;
 	use test_case::test_case;
 
 	#[test]
@@ -605,7 +616,7 @@ mod test_queue_active_skill {
 						cast_time: Duration::from_millis(1),
 						..default()
 					},
-					slot_key: SlotKey::BottomHand(Side::Right),
+					key: SlotKey(11),
 					mode: Activation::Waiting,
 				},
 				QueuedSkill::default(),
@@ -633,7 +644,7 @@ mod test_queue_active_skill {
 						cast_time: Duration::from_millis(1),
 						..default()
 					},
-					slot_key: SlotKey::BottomHand(Side::Right),
+					key: SlotKey(11),
 					mode: Activation::Primed,
 				},
 				QueuedSkill::default(),
@@ -661,7 +672,7 @@ mod test_queue_active_skill {
 						cast_time: Duration::from_millis(1),
 						..default()
 					},
-					slot_key: SlotKey::BottomHand(Side::Right),
+					key: SlotKey(11),
 					mode: Activation::ActiveAfter(Duration::from_millis(42)),
 				},
 				QueuedSkill::default(),
@@ -685,7 +696,7 @@ mod test_queue_active_skill {
 		let mut queue = Queue {
 			duration: Some(Duration::from_secs(11)),
 			queue: VecDeque::from([QueuedSkill {
-				slot_key: SlotKey::BottomHand(Side::Right),
+				key: SlotKey(11),
 				..default()
 			}]),
 			..default()
@@ -701,7 +712,7 @@ mod test_queue_active_skill {
 		let mut queue = Queue {
 			duration: Some(Duration::from_secs(11)),
 			queue: VecDeque::from([QueuedSkill {
-				slot_key: SlotKey::BottomHand(Side::Right),
+				key: SlotKey(11),
 				mode: Activation::Primed,
 				..default()
 			}]),
@@ -724,7 +735,7 @@ mod test_queue_active_skill {
 		let mut queue = Queue {
 			duration: Some(Duration::from_secs(11)),
 			queue: VecDeque::from([QueuedSkill {
-				slot_key: SlotKey::BottomHand(Side::Right),
+				key: SlotKey(11),
 				..default()
 			}]),
 			..default()
@@ -740,7 +751,7 @@ mod test_queue_active_skill {
 		let mut queue = Queue {
 			duration: Some(Duration::from_secs(11)),
 			queue: VecDeque::from([QueuedSkill {
-				slot_key: SlotKey::BottomHand(Side::Right),
+				key: SlotKey(11),
 				..default()
 			}]),
 			..default()
@@ -750,7 +761,7 @@ mod test_queue_active_skill {
 
 		assert_eq!(
 			VecDeque::from([QueuedSkill {
-				slot_key: SlotKey::BottomHand(Side::Right),
+				key: SlotKey(11),
 				..default()
 			}]),
 			queue.queue
@@ -762,7 +773,7 @@ mod test_queue_active_skill {
 		let mut queue = Queue {
 			duration: None,
 			queue: VecDeque::from([QueuedSkill {
-				slot_key: SlotKey::BottomHand(Side::Right),
+				key: SlotKey(11),
 				..default()
 			}]),
 			..default()
@@ -803,16 +814,13 @@ mod test_queue_active_skill {
 				behavior: RunSkillBehavior::OnActive(behaviors.clone()),
 				..default()
 			},
-			slot_key: &SlotKey::BottomHand(Side::Left),
+			slot_key: &SlotKey(42),
 			mode: &mut Activation::default(),
 			duration: &mut Duration::default(),
 		};
 
 		assert_eq!(
-			(
-				SlotKey::BottomHand(Side::Left),
-				RunSkillBehavior::OnActive(behaviors)
-			),
+			(SlotKey(42), RunSkillBehavior::OnActive(behaviors)),
 			active.behavior()
 		);
 	}
@@ -831,16 +839,13 @@ mod test_queue_active_skill {
 				behavior: RunSkillBehavior::OnAim(behaviors.clone()),
 				..default()
 			},
-			slot_key: &SlotKey::TopHand(Side::Right),
+			slot_key: &SlotKey(86),
 			mode: &mut Activation::default(),
 			duration: &mut Duration::default(),
 		};
 
 		assert_eq!(
-			(
-				SlotKey::TopHand(Side::Right),
-				RunSkillBehavior::OnAim(behaviors)
-			),
+			(SlotKey(86), RunSkillBehavior::OnAim(behaviors)),
 			active.behavior()
 		);
 	}
@@ -854,9 +859,9 @@ mod test_queue_active_skill {
 				animation,
 				..default()
 			},
-			slot_key: &SlotKey::default(),
-			mode: &mut Activation::default(),
-			duration: &mut Duration::default(),
+			slot_key: &default(),
+			mode: &mut default(),
+			duration: &mut default(),
 		};
 
 		assert_eq!(animation, active.animation_strategy());
@@ -869,7 +874,7 @@ mod test_queue_active_skill {
 				animation: AnimationStrategy::None,
 				..default()
 			},
-			slot_key: &SlotKey::BottomHand(Side::Right),
+			slot_key: &SlotKey(11),
 			mode: &mut Activation::default(),
 			duration: &mut Duration::default(),
 		};
@@ -884,7 +889,7 @@ mod test_queue_active_skill {
 				animation: AnimationStrategy::None,
 				..default()
 			},
-			slot_key: &SlotKey::BottomHand(Side::Right),
+			slot_key: &SlotKey(11),
 			mode: &mut Activation::default(),
 			duration: &mut Duration::default(),
 		};

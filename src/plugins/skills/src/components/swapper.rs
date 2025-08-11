@@ -66,7 +66,7 @@ impl SwapValuesByKey for Swapper {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::tools::action_key::slot::Side;
+	use common::tools::action_key::slot::{PlayerSlot, Side};
 	use testing::{SingleThreadedApp, new_handle};
 
 	fn setup() -> App {
@@ -238,8 +238,14 @@ mod tests {
 				Swapper::default(),
 				Inventory::default(),
 				Slots::from([
-					(SlotKey::BottomHand(Side::Left), Some(a.clone())),
-					(SlotKey::BottomHand(Side::Right), Some(b.clone())),
+					(
+						SlotKey::from(PlayerSlot::Lower(Side::Left)),
+						Some(a.clone()),
+					),
+					(
+						SlotKey::from(PlayerSlot::Lower(Side::Right)),
+						Some(b.clone()),
+					),
 				]),
 			))
 			.id();
@@ -250,15 +256,15 @@ mod tests {
 			.get_mut::<Swapper>()
 			.unwrap()
 			.swap(
-				SwapKey::Slot(SlotKey::BottomHand(Side::Left)),
-				SwapKey::Slot(SlotKey::BottomHand(Side::Right)),
+				SwapKey::Slot(SlotKey::from(PlayerSlot::Lower(Side::Left))),
+				SwapKey::Slot(SlotKey::from(PlayerSlot::Lower(Side::Right))),
 			);
 		app.update();
 
 		assert_eq!(
 			Some(&Slots::from([
-				(SlotKey::BottomHand(Side::Left), Some(b)),
-				(SlotKey::BottomHand(Side::Right), Some(a)),
+				(SlotKey::from(PlayerSlot::Lower(Side::Left)), Some(b)),
+				(SlotKey::from(PlayerSlot::Lower(Side::Right)), Some(a)),
 			])),
 			app.world().entity(agent).get::<Slots>(),
 		);
@@ -273,7 +279,10 @@ mod tests {
 			.spawn((
 				Swapper::default(),
 				Inventory::default(),
-				Slots::from([(SlotKey::BottomHand(Side::Left), Some(item.clone()))]),
+				Slots::from([(
+					SlotKey::from(PlayerSlot::Lower(Side::Left)),
+					Some(item.clone()),
+				)]),
 			))
 			.id();
 
@@ -283,15 +292,15 @@ mod tests {
 			.get_mut::<Swapper>()
 			.unwrap()
 			.swap(
-				SwapKey::Slot(SlotKey::BottomHand(Side::Left)),
-				SwapKey::Slot(SlotKey::BottomHand(Side::Right)),
+				SwapKey::Slot(SlotKey::from(PlayerSlot::Lower(Side::Left))),
+				SwapKey::Slot(SlotKey::from(PlayerSlot::Lower(Side::Right))),
 			);
 		app.update();
 
 		assert_eq!(
 			Some(&Slots::from([
-				(SlotKey::BottomHand(Side::Left), None),
-				(SlotKey::BottomHand(Side::Right), Some(item)),
+				(SlotKey::from(PlayerSlot::Lower(Side::Left)), None),
+				(SlotKey::from(PlayerSlot::Lower(Side::Right)), Some(item)),
 			])),
 			app.world().entity(agent).get::<Slots>(),
 		);
@@ -306,7 +315,10 @@ mod tests {
 			.spawn((
 				Swapper::default(),
 				Inventory::default(),
-				Slots::from([(SlotKey::BottomHand(Side::Left), Some(item.clone()))]),
+				Slots::from([(
+					SlotKey::from(PlayerSlot::Lower(Side::Left)),
+					Some(item.clone()),
+				)]),
 			))
 			.id();
 
@@ -316,15 +328,15 @@ mod tests {
 			.get_mut::<Swapper>()
 			.unwrap()
 			.swap(
-				SwapKey::Slot(SlotKey::BottomHand(Side::Right)),
-				SwapKey::Slot(SlotKey::BottomHand(Side::Left)),
+				SwapKey::Slot(SlotKey::from(PlayerSlot::Lower(Side::Right))),
+				SwapKey::Slot(SlotKey::from(PlayerSlot::Lower(Side::Left))),
 			);
 		app.update();
 
 		assert_eq!(
 			Some(&Slots::from([
-				(SlotKey::BottomHand(Side::Left), None),
-				(SlotKey::BottomHand(Side::Right), Some(item)),
+				(SlotKey::from(PlayerSlot::Lower(Side::Left)), None),
+				(SlotKey::from(PlayerSlot::Lower(Side::Right)), Some(item)),
 			])),
 			app.world().entity(agent).get::<Slots>(),
 		);
@@ -340,7 +352,10 @@ mod tests {
 			.spawn((
 				Swapper::default(),
 				Inventory::from([Some(a.clone())]),
-				Slots::from([(SlotKey::BottomHand(Side::Left), Some(b.clone()))]),
+				Slots::from([(
+					SlotKey::from(PlayerSlot::Lower(Side::Left)),
+					Some(b.clone()),
+				)]),
 			))
 			.id();
 
@@ -350,7 +365,7 @@ mod tests {
 			.get_mut::<Swapper>()
 			.unwrap()
 			.swap(
-				SwapKey::Slot(SlotKey::BottomHand(Side::Left)),
+				SwapKey::Slot(SlotKey::from(PlayerSlot::Lower(Side::Left))),
 				SwapKey::Inventory(InventoryKey(0)),
 			);
 		app.update();
@@ -358,7 +373,10 @@ mod tests {
 		assert_eq!(
 			(
 				Some(&Inventory::from([Some(b)])),
-				Some(&Slots::from([(SlotKey::BottomHand(Side::Left), Some(a)),]))
+				Some(&Slots::from([(
+					SlotKey::from(PlayerSlot::Lower(Side::Left)),
+					Some(a)
+				),]))
 			),
 			(
 				app.world().entity(agent).get::<Inventory>(),
@@ -386,7 +404,7 @@ mod tests {
 			.get_mut::<Swapper>()
 			.unwrap()
 			.swap(
-				SwapKey::Slot(SlotKey::BottomHand(Side::Left)),
+				SwapKey::Slot(SlotKey::from(PlayerSlot::Lower(Side::Left))),
 				SwapKey::Inventory(InventoryKey(0)),
 			);
 		app.update();
@@ -395,7 +413,7 @@ mod tests {
 			(
 				Some(&Inventory::from([None])),
 				Some(&Slots::from([(
-					SlotKey::BottomHand(Side::Left),
+					SlotKey::from(PlayerSlot::Lower(Side::Left)),
 					Some(item)
 				),]))
 			),
@@ -415,7 +433,10 @@ mod tests {
 			.spawn((
 				Swapper::default(),
 				Inventory::from([]),
-				Slots::from([(SlotKey::BottomHand(Side::Left), Some(item.clone()))]),
+				Slots::from([(
+					SlotKey::from(PlayerSlot::Lower(Side::Left)),
+					Some(item.clone()),
+				)]),
 			))
 			.id();
 
@@ -425,7 +446,7 @@ mod tests {
 			.get_mut::<Swapper>()
 			.unwrap()
 			.swap(
-				SwapKey::Slot(SlotKey::BottomHand(Side::Left)),
+				SwapKey::Slot(SlotKey::from(PlayerSlot::Lower(Side::Left))),
 				SwapKey::Inventory(InventoryKey(0)),
 			);
 		app.update();
@@ -433,7 +454,10 @@ mod tests {
 		assert_eq!(
 			(
 				Some(&Inventory::from([Some(item)])),
-				Some(&Slots::from([(SlotKey::BottomHand(Side::Left), None)]))
+				Some(&Slots::from([(
+					SlotKey::from(PlayerSlot::Lower(Side::Left)),
+					None
+				)]))
 			),
 			(
 				app.world().entity(agent).get::<Inventory>(),
@@ -452,7 +476,10 @@ mod tests {
 			.spawn((
 				Swapper::default(),
 				Inventory::from([Some(a.clone())]),
-				Slots::from([(SlotKey::BottomHand(Side::Left), Some(b.clone()))]),
+				Slots::from([(
+					SlotKey::from(PlayerSlot::Lower(Side::Left)),
+					Some(b.clone()),
+				)]),
 			))
 			.id();
 
@@ -463,14 +490,17 @@ mod tests {
 			.unwrap()
 			.swap(
 				SwapKey::Inventory(InventoryKey(0)),
-				SwapKey::Slot(SlotKey::BottomHand(Side::Left)),
+				SwapKey::Slot(SlotKey::from(PlayerSlot::Lower(Side::Left))),
 			);
 		app.update();
 
 		assert_eq!(
 			(
 				Some(&Inventory::from([Some(b)])),
-				Some(&Slots::from([(SlotKey::BottomHand(Side::Left), Some(a)),]))
+				Some(&Slots::from([(
+					SlotKey::from(PlayerSlot::Lower(Side::Left)),
+					Some(a)
+				),]))
 			),
 			(
 				app.world().entity(agent).get::<Inventory>(),

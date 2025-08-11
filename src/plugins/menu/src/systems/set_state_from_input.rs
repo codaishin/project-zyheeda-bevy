@@ -11,7 +11,7 @@ pub(crate) fn set_state_from_input<TState, TMenuState, TKeyMap>(
 	mut next_state: ResMut<NextState<TState>>,
 ) where
 	TState: States + FreelyMutableState + PlayState + From<TMenuState>,
-	TKeyMap: JustPressed<TMenuState> + Resource,
+	TKeyMap: JustPressed<TMenuState, TInput = UserInput> + Resource,
 {
 	let current = current_state.get();
 
@@ -65,6 +65,8 @@ mod tests {
 
 	#[automock]
 	impl JustPressed<_Menu> for _Map {
+		type TInput = UserInput;
+
 		fn just_pressed(&self, input: &ButtonInput<UserInput>) -> impl Iterator<Item = _Menu> {
 			self.mock.just_pressed(input)
 		}

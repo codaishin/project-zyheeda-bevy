@@ -59,13 +59,13 @@ mod tests {
 	use bevy::{asset::AssetPath, prelude::*};
 	use common::{
 		components::persistent_entity::PersistentEntity,
-		tools::action_key::slot::{Side, SlotKey},
+		tools::action_key::slot::{PlayerSlot, Side, SlotKey},
 	};
 	use test_case::test_case;
 
 	fn start_spawn_shield() -> SkillExecuter {
 		SkillExecuter::Start {
-			slot_key: SlotKey::BottomHand(Side::Left),
+			slot_key: SlotKey::from(PlayerSlot::Lower(Side::Left)),
 			shape: RunSkillBehavior::OnAim(SkillBehaviorConfig::from_shape(
 				BuildSkillShape::Shield(SpawnShield),
 			)),

@@ -1,43 +1,51 @@
+use std::any::type_name;
+
 use super::{ActionKey, IsNot, user_input::UserInput};
-use crate::traits::{
-	handles_localization::Token,
-	handles_settings::InvalidInput,
-	iteration::{Iter, IterFinite},
+use crate::{
+	errors::{Error, Level},
+	traits::{
+		handles_localization::Token,
+		handles_settings::InvalidInput,
+		iteration::{Iter, IterFinite},
+	},
 };
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
+#[derive(Clone, Copy, Default, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
+pub struct SlotKey(pub u8);
+
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
-pub enum SlotKey {
-	TopHand(Side),
-	BottomHand(Side),
+pub enum PlayerSlot {
+	Upper(Side),
+	Lower(Side),
 }
 
-impl Default for SlotKey {
+impl Default for PlayerSlot {
 	fn default() -> Self {
-		Self::BottomHand(Side::Right)
+		Self::Lower(Side::Right)
 	}
 }
 
-impl From<SlotKey> for UserInput {
-	fn from(value: SlotKey) -> Self {
+impl From<PlayerSlot> for UserInput {
+	fn from(value: PlayerSlot) -> Self {
 		match value {
-			SlotKey::TopHand(Side::Left) => Self::from(KeyCode::Digit1),
-			SlotKey::BottomHand(Side::Left) => Self::from(KeyCode::Digit2),
-			SlotKey::BottomHand(Side::Right) => Self::from(KeyCode::Digit3),
-			SlotKey::TopHand(Side::Right) => Self::from(KeyCode::Digit4),
+			PlayerSlot::Upper(Side::Left) => Self::from(KeyCode::Digit1),
+			PlayerSlot::Lower(Side::Left) => Self::from(KeyCode::Digit2),
+			PlayerSlot::Lower(Side::Right) => Self::from(KeyCode::Digit3),
+			PlayerSlot::Upper(Side::Right) => Self::from(KeyCode::Digit4),
 		}
 	}
 }
 
-impl From<SlotKey> for ActionKey {
-	fn from(key: SlotKey) -> Self {
+impl From<PlayerSlot> for ActionKey {
+	fn from(key: PlayerSlot) -> Self {
 		Self::Slot(key)
 	}
 }
 
-impl TryFrom<ActionKey> for SlotKey {
-	type Error = IsNot<SlotKey>;
+impl TryFrom<ActionKey> for PlayerSlot {
+	type Error = IsNot<PlayerSlot>;
 
 	fn try_from(key: ActionKey) -> Result<Self, Self::Error> {
 		match key {
@@ -47,35 +55,78 @@ impl TryFrom<ActionKey> for SlotKey {
 	}
 }
 
-impl From<SlotKey> for Token {
-	fn from(value: SlotKey) -> Self {
+impl From<PlayerSlot> for Token {
+	fn from(value: PlayerSlot) -> Self {
 		match value {
-			SlotKey::TopHand(Side::Left) => Token::from("slot-key-top-hand-left"),
-			SlotKey::TopHand(Side::Right) => Token::from("slot-key-top-hand-right"),
-			SlotKey::BottomHand(Side::Left) => Token::from("slot-key-btm-hand-left"),
-			SlotKey::BottomHand(Side::Right) => Token::from("slot-key-btm-hand-right"),
+			PlayerSlot::Upper(Side::Left) => Token::from("slot-key-top-hand-left"),
+			PlayerSlot::Upper(Side::Right) => Token::from("slot-key-top-hand-right"),
+			PlayerSlot::Lower(Side::Left) => Token::from("slot-key-btm-hand-left"),
+			PlayerSlot::Lower(Side::Right) => Token::from("slot-key-btm-hand-right"),
 		}
 	}
 }
 
-impl IterFinite for SlotKey {
+impl IterFinite for PlayerSlot {
 	fn iterator() -> Iter<Self> {
-		Iter(Some(SlotKey::TopHand(Side::Left)))
+		Iter(Some(PlayerSlot::Upper(Side::Left)))
 	}
 
 	fn next(current: &Iter<Self>) -> Option<Self> {
 		match current.0? {
-			SlotKey::TopHand(Side::Left) => Some(SlotKey::BottomHand(Side::Left)),
-			SlotKey::BottomHand(Side::Left) => Some(SlotKey::BottomHand(Side::Right)),
-			SlotKey::BottomHand(Side::Right) => Some(SlotKey::TopHand(Side::Right)),
-			SlotKey::TopHand(Side::Right) => None,
+			PlayerSlot::Upper(Side::Left) => Some(PlayerSlot::Lower(Side::Left)),
+			PlayerSlot::Lower(Side::Left) => Some(PlayerSlot::Lower(Side::Right)),
+			PlayerSlot::Lower(Side::Right) => Some(PlayerSlot::Upper(Side::Right)),
+			PlayerSlot::Upper(Side::Right) => None,
 		}
 	}
 }
 
-impl InvalidInput<UserInput> for SlotKey {
+impl InvalidInput for PlayerSlot {
+	type TInput = UserInput;
+
 	fn invalid_input(&self) -> &[UserInput] {
 		&[]
+	}
+}
+
+impl From<PlayerSlot> for SlotKey {
+	fn from(value: PlayerSlot) -> Self {
+		SlotKey(match value {
+			PlayerSlot::Upper(Side::Left) => 0,
+			PlayerSlot::Lower(Side::Left) => 1,
+			PlayerSlot::Lower(Side::Right) => 2,
+			PlayerSlot::Upper(Side::Right) => 3,
+		})
+	}
+}
+
+impl TryFrom<SlotKey> for PlayerSlot {
+	type Error = NoValidSlotKey;
+
+	fn try_from(SlotKey(value): SlotKey) -> Result<Self, Self::Error> {
+		match value {
+			0 => Ok(PlayerSlot::Upper(Side::Left)),
+			1 => Ok(PlayerSlot::Lower(Side::Left)),
+			2 => Ok(PlayerSlot::Lower(Side::Right)),
+			3 => Ok(PlayerSlot::Upper(Side::Right)),
+			raw => Err(NoValidSlotKey { raw }),
+		}
+	}
+}
+
+#[derive(Debug, PartialEq)]
+pub struct NoValidSlotKey {
+	raw: u8,
+}
+
+impl From<NoValidSlotKey> for Error {
+	fn from(NoValidSlotKey { raw }: NoValidSlotKey) -> Self {
+		let key_name = type_name::<PlayerSlot>();
+
+		Self::Single {
+			msg: format!("the index {raw} is no valid {key_name}"),
+			lvl: Level::Error,
+		}
 	}
 }
 
@@ -85,8 +136,6 @@ pub enum Side {
 	Left,
 }
 
-pub type Combo<TSkill> = Vec<(Vec<SlotKey>, TSkill)>;
-
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -95,12 +144,39 @@ mod tests {
 	fn iter_all_keys() {
 		assert_eq!(
 			vec![
-				SlotKey::TopHand(Side::Left),
-				SlotKey::BottomHand(Side::Left),
-				SlotKey::BottomHand(Side::Right),
-				SlotKey::TopHand(Side::Right),
+				PlayerSlot::Upper(Side::Left),
+				PlayerSlot::Lower(Side::Left),
+				PlayerSlot::Lower(Side::Right),
+				PlayerSlot::Upper(Side::Right),
 			],
-			SlotKey::iterator().collect::<Vec<_>>()
+			PlayerSlot::iterator().collect::<Vec<_>>()
+		);
+	}
+
+	#[test]
+	fn player_key_to_slot_key() {
+		assert_eq!(
+			vec![SlotKey(0), SlotKey(1), SlotKey(2), SlotKey(3)],
+			PlayerSlot::iterator()
+				.map(SlotKey::from)
+				.collect::<Vec<_>>()
+		);
+	}
+
+	#[test]
+	fn slot_key_to_player_key() {
+		assert_eq!(
+			vec![
+				Ok(PlayerSlot::Upper(Side::Left)),
+				Ok(PlayerSlot::Lower(Side::Left)),
+				Ok(PlayerSlot::Lower(Side::Right)),
+				Ok(PlayerSlot::Upper(Side::Right)),
+				Err(NoValidSlotKey { raw: 4 }),
+			],
+			[SlotKey(0), SlotKey(1), SlotKey(2), SlotKey(3), SlotKey(4)]
+				.into_iter()
+				.map(PlayerSlot::try_from)
+				.collect::<Vec<_>>(),
 		);
 	}
 }

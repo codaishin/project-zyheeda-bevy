@@ -19,7 +19,7 @@ use crate::{
 };
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{
-	tools::{action_key::slot::SlotKey, skill_description::SkillToken, skill_icon::SkillIcon},
+	tools::{action_key::slot::PlayerSlot, skill_description::SkillToken, skill_icon::SkillIcon},
 	traits::{
 		handles_localization::{LocalizeToken, localized::Localized},
 		inspect_able::{InspectAble, InspectField},
@@ -253,7 +253,7 @@ impl ComboOverview<()> {
 		)
 	}
 
-	pub(crate) fn skill_key_text(key: SlotKey) -> InputLabel<SlotKey> {
+	pub(crate) fn skill_key_text(key: PlayerSlot) -> InputLabel<PlayerSlot> {
 		InputLabel { key }
 	}
 
@@ -432,7 +432,7 @@ where
 		panel_background: PanelBackground,
 	},
 	Skill {
-		key_path: &'a [SlotKey],
+		key_path: &'a [PlayerSlot],
 		skill: &'a TSkill,
 		panel_overlay: PanelOverlay<TLocalization>,
 		panel_background: PanelBackground,
@@ -532,7 +532,7 @@ where
 	fn skill(
 		localize: &mut TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
-		key_path: &[SlotKey],
+		key_path: &[PlayerSlot],
 		skill: &TSkill,
 		PanelOverlay(panel_overlay): PanelOverlay<TLocalization>,
 		PanelBackground(panel_background): PanelBackground,
@@ -542,7 +542,7 @@ where
 			ComboSkillButton::<DropdownTrigger, TSkill>::new(skill.clone(), key_path.to_vec()),
 			Tooltip::new(localize.localize_token(token).or_token()),
 			ComboOverview::skill_button(SkillIcon::inspect_field(skill).clone()),
-			SkillSelectDropdownInsertCommand::<SlotKey, Vertical>::new(key_path.to_vec()),
+			SkillSelectDropdownInsertCommand::<PlayerSlot, Vertical>::new(key_path.to_vec()),
 		);
 
 		parent
@@ -602,7 +602,7 @@ where
 }
 
 type InsertFunc<TLocalization> =
-	fn(&[SlotKey], &mut RelatedSpawnerCommands<ChildOf>, &mut TLocalization);
+	fn(&[PlayerSlot], &mut RelatedSpawnerCommands<ChildOf>, &mut TLocalization);
 
 struct PanelOverlay<TLocalization>(&'static [InsertFunc<TLocalization>])
 where
@@ -635,7 +635,7 @@ fn add_background_corner(parent: &mut RelatedSpawnerCommands<ChildOf>) {
 }
 
 fn add_key<TLocalization>(
-	key_path: &[SlotKey],
+	key_path: &[PlayerSlot],
 	parent: &mut RelatedSpawnerCommands<ChildOf>,
 	_: &mut TLocalization,
 ) where
@@ -657,7 +657,7 @@ fn add_key<TLocalization>(
 }
 
 fn add_append_button<TLocalization>(
-	key_path: &[SlotKey],
+	key_path: &[PlayerSlot],
 	parent: &mut RelatedSpawnerCommands<ChildOf>,
 	localize: &mut TLocalization,
 ) where
@@ -684,7 +684,7 @@ fn add_append_button<TLocalization>(
 }
 
 fn add_delete_button<TLocalization>(
-	key_path: &[SlotKey],
+	key_path: &[PlayerSlot],
 	parent: &mut RelatedSpawnerCommands<ChildOf>,
 	localize: &mut TLocalization,
 ) where
@@ -726,7 +726,7 @@ mod tests {
 	fn update_combos() {
 		let combos = vec![vec![ComboTreeElement::Leaf {
 			skill: _Skill,
-			key_path: vec![SlotKey::BottomHand(Side::Right)],
+			key_path: vec![PlayerSlot::Lower(Side::Right)],
 		}]];
 		let mut combo_overview = ComboOverview::default();
 		combo_overview.update_combos_view(combos.clone());

@@ -51,7 +51,7 @@
     [
       {
         "Slot": {
-          "TopHand": "Left"
+          "Upper": "Left"
         }
       },
       {
@@ -61,7 +61,7 @@
     [
       {
         "Slot": {
-          "BottomHand": "Left"
+          "Lower": "Left"
         }
       },
       {
@@ -71,7 +71,7 @@
     [
       {
         "Slot": {
-          "BottomHand": "Right"
+          "Lower": "Right"
         }
       },
       {
@@ -81,7 +81,7 @@
     [
       {
         "Slot": {
-          "TopHand": "Right"
+          "Upper": "Right"
         }
       },
       {

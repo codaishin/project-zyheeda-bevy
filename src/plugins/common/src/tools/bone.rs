@@ -1,10 +1,10 @@
 use std::ops::Deref;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
-pub struct Bone(pub &'static str);
+pub struct Bone<'a>(pub &'a str);
 
-impl Deref for Bone {
-	type Target = &'static str;
+impl<'a> Deref for Bone<'a> {
+	type Target = &'a str;
 
 	fn deref(&self) -> &Self::Target {
 		&self.0

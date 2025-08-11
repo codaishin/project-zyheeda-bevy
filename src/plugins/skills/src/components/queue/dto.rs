@@ -61,7 +61,7 @@ impl TryLoadFrom<QueueDto> for Queue {
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct QueuedSkillDto {
 	skill: SkillDto,
-	slot_key: SlotKey,
+	key: SlotKey,
 	mode: Activation,
 }
 
@@ -69,7 +69,7 @@ impl From<QueuedSkill> for QueuedSkillDto {
 	fn from(skill: QueuedSkill) -> Self {
 		Self {
 			skill: SkillDto::from(skill.skill),
-			slot_key: skill.slot_key,
+			key: skill.key,
 			mode: skill.mode,
 		}
 	}
@@ -81,7 +81,7 @@ impl TryLoadFrom<QueuedSkillDto> for QueuedSkill {
 	fn try_load_from<TLoadAsset>(
 		QueuedSkillDto {
 			skill,
-			slot_key,
+			key: slot_key,
 			mode,
 		}: QueuedSkillDto,
 		asset_server: &mut TLoadAsset,
@@ -93,7 +93,7 @@ impl TryLoadFrom<QueuedSkillDto> for QueuedSkill {
 
 		Ok(Self {
 			skill,
-			slot_key,
+			key: slot_key,
 			mode,
 		})
 	}

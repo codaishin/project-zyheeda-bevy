@@ -57,7 +57,9 @@ impl IterFinite for CameraKey {
 	}
 }
 
-impl InvalidInput<UserInput> for CameraKey {
+impl InvalidInput for CameraKey {
+	type TInput = UserInput;
+
 	fn invalid_input(&self) -> &[UserInput] {
 		const { &[] }
 	}

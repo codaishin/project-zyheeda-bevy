@@ -1,21 +1,18 @@
 use super::InputState;
 use bevy::input::ButtonInput;
-use common::{
-	tools::action_key::{slot::SlotKey, user_input::UserInput},
-	traits::key_mappings::TryGetAction,
-};
+use common::traits::key_mappings::{HashCopySafe, TryGetAction};
 
-impl<TMap> InputState<TMap, UserInput> for ButtonInput<UserInput>
+impl<TMap, TOutput> InputState<TMap, TOutput> for ButtonInput<TMap::TInput>
 where
-	TMap: TryGetAction<UserInput, SlotKey>,
+	TMap: TryGetAction<TOutput, TInput: HashCopySafe>,
 {
-	fn just_pressed_slots(&self, map: &TMap) -> Vec<SlotKey> {
+	fn just_pressed_slots(&self, map: &TMap) -> Vec<TOutput> {
 		self.get_just_pressed()
 			.filter_map(|k| map.try_get_action(*k))
 			.collect()
 	}
 
-	fn pressed_slots(&self, map: &TMap) -> Vec<SlotKey> {
+	fn pressed_slots(&self, map: &TMap) -> Vec<TOutput> {
 		self.get_pressed()
 			.filter_map(|k| map.try_get_action(*k))
 			.collect()
@@ -26,16 +23,21 @@ where
 mod tests {
 	use super::*;
 	use bevy::input::keyboard::KeyCode;
-	use common::tools::action_key::slot::Side;
+	use common::tools::action_key::{
+		slot::{PlayerSlot, Side},
+		user_input::UserInput,
+	};
 	use std::collections::HashSet;
 
 	struct _Map;
 
-	impl TryGetAction<UserInput, SlotKey> for _Map {
-		fn try_get_action(&self, value: UserInput) -> Option<SlotKey> {
+	impl TryGetAction<PlayerSlot> for _Map {
+		type TInput = UserInput;
+
+		fn try_get_action(&self, value: UserInput) -> Option<PlayerSlot> {
 			match value {
-				UserInput::KeyCode(KeyCode::KeyC) => Some(SlotKey::BottomHand(Side::Right)),
-				UserInput::KeyCode(KeyCode::KeyD) => Some(SlotKey::BottomHand(Side::Left)),
+				UserInput::KeyCode(KeyCode::KeyC) => Some(PlayerSlot::Lower(Side::Right)),
+				UserInput::KeyCode(KeyCode::KeyD) => Some(PlayerSlot::Lower(Side::Left)),
 				_ => None,
 			}
 		}
@@ -51,7 +53,7 @@ mod tests {
 		input.clear_just_pressed(UserInput::from(KeyCode::KeyD));
 
 		assert_eq!(
-			HashSet::from([SlotKey::BottomHand(Side::Right)]),
+			HashSet::from([PlayerSlot::Lower(Side::Right)]),
 			HashSet::from_iter(input.just_pressed_slots(&_Map)),
 		)
 	}
@@ -70,8 +72,8 @@ mod tests {
 
 		assert_eq!(
 			HashSet::from([
-				SlotKey::BottomHand(Side::Right),
-				SlotKey::BottomHand(Side::Left),
+				PlayerSlot::Lower(Side::Right),
+				PlayerSlot::Lower(Side::Left),
 			]),
 			HashSet::from_iter(input.pressed_slots(&_Map)),
 		)

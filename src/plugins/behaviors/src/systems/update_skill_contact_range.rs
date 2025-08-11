@@ -48,7 +48,7 @@ mod tests {
 				integrity: Integrity::Solid,
 				motion: Motion::Projectile {
 					caster: PersistentEntity::default(),
-					spawner: SkillSpawner::Center,
+					spawner: SkillSpawner::Neutral,
 					speed: UnitsPerSecond::new(1.),
 					range,
 				},

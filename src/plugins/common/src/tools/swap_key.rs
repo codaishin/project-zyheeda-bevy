@@ -1,4 +1,6 @@
-use super::{action_key::slot::SlotKey, inventory_key::InventoryKey};
+use crate::tools::action_key::slot::SlotKey;
+
+use super::inventory_key::InventoryKey;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum SwapKey {
@@ -12,8 +14,11 @@ impl From<InventoryKey> for SwapKey {
 	}
 }
 
-impl From<SlotKey> for SwapKey {
-	fn from(key: SlotKey) -> Self {
-		Self::Slot(key)
+impl<T> From<T> for SwapKey
+where
+	T: Into<SlotKey>,
+{
+	fn from(key: T) -> Self {
+		Self::Slot(key.into())
 	}
 }

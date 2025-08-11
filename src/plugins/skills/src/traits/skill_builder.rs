@@ -208,7 +208,7 @@ mod tests {
 	fn spawn_contact() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let caster = SkillCaster(PersistentEntity::default());
-		let spawner = SkillSpawner::Center;
+		let spawner = SkillSpawner::Neutral;
 		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
@@ -232,7 +232,7 @@ mod tests {
 	fn spawn_projection() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let caster = SkillCaster(PersistentEntity::default());
-		let spawner = SkillSpawner::Center;
+		let spawner = SkillSpawner::Neutral;
 		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
@@ -256,7 +256,7 @@ mod tests {
 	fn use_correct_args() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let caster = SkillCaster(PersistentEntity::default());
-		let spawner = SkillSpawner::Center;
+		let spawner = SkillSpawner::Neutral;
 		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
@@ -283,7 +283,7 @@ mod tests {
 	fn alive_until_stopped() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let caster = SkillCaster(PersistentEntity::default());
-		let spawner = SkillSpawner::Center;
+		let spawner = SkillSpawner::Neutral;
 		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
@@ -304,7 +304,7 @@ mod tests {
 	fn unstoppable_life_time() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let caster = SkillCaster(PersistentEntity::default());
-		let spawner = SkillSpawner::Center;
+		let spawner = SkillSpawner::Neutral;
 		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
@@ -325,7 +325,7 @@ mod tests {
 	fn add_lifetime_to_unstoppable() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let caster = SkillCaster(PersistentEntity::default());
-		let spawner = SkillSpawner::Center;
+		let spawner = SkillSpawner::Neutral;
 		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()
@@ -349,7 +349,7 @@ mod tests {
 	fn infinite_life_time() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let caster = SkillCaster(PersistentEntity::default());
-		let spawner = SkillSpawner::Center;
+		let spawner = SkillSpawner::Neutral;
 		let target = SkillTarget {
 			ray: Ray3d::new(Vec3::X, Dir3::Z),
 			..default()

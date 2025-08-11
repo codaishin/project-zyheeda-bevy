@@ -5,10 +5,10 @@ use super::{
 };
 use crate::traits::{GetComponent, GetKey, insert_ui_content::InsertUiContent};
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
-use common::tools::action_key::slot::SlotKey;
+use common::tools::action_key::slot::PlayerSlot;
 
 #[derive(Debug, PartialEq, Clone)]
-pub(crate) struct AppendSkill<TKey = SlotKey> {
+pub(crate) struct AppendSkill<TKey = PlayerSlot> {
 	pub(crate) on: TKey,
 }
 
@@ -20,14 +20,14 @@ impl<TKey> GetKey<TKey> for AppendSkill<TKey> {
 
 #[derive(Component, Debug, PartialEq, Clone)]
 #[require(Node)]
-pub(crate) struct KeySelect<TExtra, TKey = SlotKey> {
+pub(crate) struct KeySelect<TExtra, TKey = PlayerSlot> {
 	pub(crate) extra: TExtra,
 	pub(crate) key_path: Vec<TKey>,
 }
 
 impl<TExtra> InsertUiContent for KeySelect<TExtra>
 where
-	TExtra: GetKey<SlotKey>,
+	TExtra: GetKey<PlayerSlot>,
 	KeySelect<TExtra>: GetComponent<TInput = ()>,
 {
 	fn insert_ui_content<TLocalization>(

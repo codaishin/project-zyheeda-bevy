@@ -4,14 +4,7 @@ use crate::{
 		is_blocker::Blocker,
 		persistent_entity::PersistentEntity,
 	},
-	tools::{
-		Index,
-		Units,
-		UnitsPerSecond,
-		action_key::slot::{Side, SlotKey},
-		iter_helpers::{first, next},
-	},
-	traits::iteration::{Iter, IterFinite},
+	tools::{Index, Units, UnitsPerSecond, action_key::slot::SlotKey},
 	zyheeda_commands::ZyheedaCommands,
 };
 use bevy::prelude::*;
@@ -96,31 +89,15 @@ pub enum Motion {
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Default, Serialize, Deserialize)]
 pub enum SkillSpawner {
 	#[default]
-	Center,
+	Neutral,
 	Slot(SlotKey),
-}
-
-impl IterFinite for SkillSpawner {
-	fn iterator() -> Iter<Self> {
-		Iter(Some(SkillSpawner::Center))
-	}
-
-	fn next(Iter(current): &Iter<Self>) -> Option<Self> {
-		match current.as_ref()? {
-			SkillSpawner::Center => first(SkillSpawner::Slot),
-			SkillSpawner::Slot(key) => next(SkillSpawner::Slot, *key),
-		}
-	}
 }
 
 impl From<SkillSpawner> for Index<usize> {
 	fn from(value: SkillSpawner) -> Self {
 		match value {
-			SkillSpawner::Center => Index(0),
-			SkillSpawner::Slot(SlotKey::TopHand(Side::Right)) => Index(1),
-			SkillSpawner::Slot(SlotKey::TopHand(Side::Left)) => Index(2),
-			SkillSpawner::Slot(SlotKey::BottomHand(Side::Right)) => Index(3),
-			SkillSpawner::Slot(SlotKey::BottomHand(Side::Left)) => Index(4),
+			SkillSpawner::Neutral => Index(0),
+			SkillSpawner::Slot(SlotKey(slot)) => Index(slot as usize + 1),
 		}
 	}
 }
@@ -133,24 +110,20 @@ mod tests {
 	use super::*;
 
 	#[test]
-	fn iter_spawner() {
+	fn to_index() {
+		let indices = [
+			SkillSpawner::Neutral,
+			SkillSpawner::Slot(SlotKey(0)),
+			SkillSpawner::Slot(SlotKey(42)),
+			SkillSpawner::Slot(SlotKey(255)),
+		]
+		.into_iter()
+		.map(Index::from)
+		.collect::<HashSet<_>>();
+
 		assert_eq!(
-			std::iter::empty()
-				.chain([SkillSpawner::Center])
-				.chain(SlotKey::iterator().map(SkillSpawner::Slot))
-				.collect::<Vec<_>>(),
-			SkillSpawner::iterator().take(100).collect::<Vec<_>>()
-		)
-	}
-
-	#[test]
-	fn all_indices_different() {
-		let count = SkillSpawner::iterator().count();
-		let index_count = SkillSpawner::iterator()
-			.map(Index::from)
-			.collect::<HashSet<_>>()
-			.len();
-
-		assert_eq!(count, index_count)
+			HashSet::from([Index(0), Index(1), Index(43), Index(256)]),
+			indices
+		);
 	}
 }

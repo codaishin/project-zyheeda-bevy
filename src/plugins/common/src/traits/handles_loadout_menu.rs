@@ -1,6 +1,6 @@
 use super::{inspect_able::InspectAble, thread_safe::ThreadSafe};
 use crate::tools::{
-	action_key::slot::SlotKey,
+	action_key::slot::PlayerSlot,
 	change::Change,
 	inventory_key::InventoryKey,
 	item_description::ItemToken,
@@ -20,7 +20,7 @@ pub trait HandlesLoadoutMenu {
 		app: &mut App,
 		get_changed_quickbar: impl IntoSystem<(), Change<TQuickbar>, TSystemMarker>,
 	) where
-		TQuickbar: GetItem<SlotKey> + ThreadSafe,
+		TQuickbar: GetItem<PlayerSlot> + ThreadSafe,
 		TQuickbar::TItem:
 			InspectAble<SkillToken> + InspectAble<SkillIcon> + InspectAble<SkillExecution>;
 }
@@ -34,7 +34,7 @@ pub trait ConfigureInventory<TSwap> {
 	) where
 		TInventory: GetItem<InventoryKey> + ThreadSafe,
 		TInventory::TItem: InspectAble<ItemToken>,
-		TSlots: GetItem<SlotKey> + ThreadSafe,
+		TSlots: GetItem<PlayerSlot> + ThreadSafe,
 		TSlots::TItem: InspectAble<ItemToken>;
 }
 

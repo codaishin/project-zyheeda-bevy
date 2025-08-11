@@ -29,7 +29,7 @@ where
 		Query<(Entity, &InputLabel<TKey>), Added<InputLabel<TKey>>>,
 	)
 	where
-		TMap: Resource + GetInput<TKey, UserInput>,
+		TMap: Resource + GetInput<TKey, TInput = UserInput>,
 		TLanguageServer: Resource + LocalizeToken,
 	{
 		let root = icon_root_path.into();
@@ -54,7 +54,7 @@ fn insert_icon<TMap, TLanguageServer, TKey>(
 	language_server: &mut TLanguageServer,
 	label: &InputLabel<TKey>,
 ) where
-	TMap: GetInput<TKey, UserInput>,
+	TMap: GetInput<TKey, TInput = UserInput>,
 	TLanguageServer: LocalizeToken,
 	TKey: Copy,
 {
@@ -89,7 +89,9 @@ mod tests {
 	}
 
 	#[automock]
-	impl GetInput<_Key, UserInput> for _Map {
+	impl GetInput<_Key> for _Map {
+		type TInput = UserInput;
+
 		fn get_input(&self, value: _Key) -> UserInput {
 			self.mock.get_input(value)
 		}

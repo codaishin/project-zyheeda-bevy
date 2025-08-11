@@ -8,7 +8,7 @@ use std::{
 };
 
 #[derive(PartialEq, Debug, Clone, Eq, Hash)]
-pub enum StateMeta<TStateName: Clone> {
+pub enum StateMeta<TStateName> {
 	Entering(TStateName),
 	In(TStateName),
 	Done,
@@ -19,7 +19,7 @@ pub trait StateDuration<TStateKey> {
 	fn elapsed_mut(&mut self) -> &mut Duration;
 }
 
-pub trait StateUpdate<T: Clone> {
+pub trait StateUpdate<T> {
 	fn update_state(&mut self, delta: Duration) -> HashSet<StateMeta<T>>;
 }
 

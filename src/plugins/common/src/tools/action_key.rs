@@ -20,14 +20,14 @@ use bevy::{reflect::TypePath, utils::default};
 use camera_key::CameraKey;
 use movement::MovementKey;
 use serde::{Deserialize, Serialize};
-use slot::SlotKey;
+use slot::PlayerSlot;
 use std::marker::PhantomData;
 use user_input::UserInput;
 
 #[derive(TypePath, Clone, Copy, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
 pub enum ActionKey {
 	Movement(MovementKey),
-	Slot(SlotKey),
+	Slot(PlayerSlot),
 	Menu(MenuState),
 	Camera(CameraKey),
 	Save(SaveKey),
@@ -79,7 +79,9 @@ impl IterFinite for ActionKey {
 	}
 }
 
-impl InvalidInput<UserInput> for ActionKey {
+impl InvalidInput for ActionKey {
+	type TInput = UserInput;
+
 	fn invalid_input(&self) -> &[UserInput] {
 		match self {
 			ActionKey::Movement(key) => key.invalid_input(),
@@ -111,7 +113,7 @@ mod tests {
 		assert_eq!(
 			std::iter::empty()
 				.chain(MovementKey::iterator().map(ActionKey::from))
-				.chain(SlotKey::iterator().map(ActionKey::from))
+				.chain(PlayerSlot::iterator().map(ActionKey::from))
 				.chain(MenuState::iterator().map(ActionKey::from))
 				.chain(CameraKey::iterator().map(ActionKey::from))
 				.chain(SaveKey::iterator().map(ActionKey::from))
@@ -125,7 +127,7 @@ mod tests {
 		assert_eq!(
 			std::iter::empty()
 				.chain(MovementKey::iterator().map(UserInput::from))
-				.chain(SlotKey::iterator().map(UserInput::from))
+				.chain(PlayerSlot::iterator().map(UserInput::from))
 				.chain(MenuState::iterator().map(UserInput::from))
 				.chain(CameraKey::iterator().map(UserInput::from))
 				.chain(SaveKey::iterator().map(UserInput::from))
@@ -140,7 +142,7 @@ mod tests {
 	fn map_invalid_input() {
 		fn pair_with_invalid_input<TKey>(key: TKey) -> (ActionKey, Vec<UserInput>)
 		where
-			TKey: Into<ActionKey> + InvalidInput<UserInput> + Copy,
+			TKey: Into<ActionKey> + InvalidInput<TInput = UserInput> + Copy,
 		{
 			(key.into(), key.invalid_input().to_vec())
 		}
@@ -148,7 +150,7 @@ mod tests {
 		assert_eq!(
 			std::iter::empty()
 				.chain(MovementKey::iterator().map(pair_with_invalid_input))
-				.chain(SlotKey::iterator().map(pair_with_invalid_input))
+				.chain(PlayerSlot::iterator().map(pair_with_invalid_input))
 				.chain(MenuState::iterator().map(pair_with_invalid_input))
 				.chain(CameraKey::iterator().map(pair_with_invalid_input))
 				.chain(SaveKey::iterator().map(pair_with_invalid_input))

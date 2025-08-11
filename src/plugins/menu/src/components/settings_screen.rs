@@ -17,7 +17,7 @@ use common::{
 		camera_key::CameraKey,
 		movement::MovementKey,
 		save_key::SaveKey,
-		slot::SlotKey,
+		slot::PlayerSlot,
 		user_input::UserInput,
 	},
 	traits::{
@@ -156,7 +156,7 @@ impl InsertUiContent for SettingsScreen {
 			})
 			.with_children(|parent| {
 				Self::add_title(parent, localize, "key-bindings");
-				self.add_section::<SlotKey>(parent, localize, "key-bindings-slots");
+				self.add_section::<PlayerSlot>(parent, localize, "key-bindings-slots");
 				self.add_section::<MovementKey>(parent, localize, "key-bindings-movement");
 				self.add_section::<MenuState>(parent, localize, "key-bindings-menus");
 				self.add_section::<CameraKey>(parent, localize, "key-bindings-camera");

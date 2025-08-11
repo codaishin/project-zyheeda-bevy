@@ -6,7 +6,7 @@ use crate::{
 };
 use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
-	tools::action_key::slot::SlotKey,
+	tools::action_key::slot::{PlayerSlot, SlotKey},
 	traits::accessors::get::{GetField, GetRef, Getter},
 };
 
@@ -44,7 +44,7 @@ fn enqueue_new_skills<TSlots, TQueue>(
 }
 
 fn enqueue_new_skill<TSlots, TQueue>(
-	key: &SlotKey,
+	key: &PlayerSlot,
 	queue: &mut TQueue,
 	slots: &TSlots,
 	items: &Assets<Item>,
@@ -53,8 +53,9 @@ fn enqueue_new_skill<TSlots, TQueue>(
 	for<'a> TSlots: GetRef<SlotKey, TValue<'a> = &'a Handle<Item>> + Component,
 	TQueue: Enqueue<(Skill, SlotKey)>,
 {
+	let key = SlotKey::from(*key);
 	let skill = slots
-		.get(key)
+		.get(&key)
 		.and_then(|item_handle| items.get(item_handle))
 		.and_then(|item| item.skill.as_ref())
 		.and_then(|skill_handle| skills.get(skill_handle));
@@ -63,7 +64,7 @@ fn enqueue_new_skill<TSlots, TQueue>(
 		return;
 	};
 
-	queue.enqueue((skill.clone(), *key));
+	queue.enqueue((skill.clone(), key));
 }
 
 fn prime_skills<TQueue, TQueuedSkill>(input: &In<Input>, queue: &mut TQueue)
@@ -72,7 +73,10 @@ where
 	TQueuedSkill: Prime + Getter<SlotKey>,
 {
 	for skill in queue.iter_waiting_mut() {
-		if input.pressed.contains(&SlotKey::get_field(skill)) {
+		let Ok(key) = PlayerSlot::try_from(SlotKey::get_field(skill)) else {
+			continue;
+		};
+		if input.pressed.contains(&key) {
 			continue;
 		}
 		skill.prime();
@@ -217,7 +221,7 @@ mod tests {
 		);
 
 		let skills = _Skills(HashMap::from([(
-			SlotKey::BottomHand(Side::Right),
+			SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			item.clone(),
 		)]));
 		app.world_mut().spawn((
@@ -230,21 +234,21 @@ mod tests {
 							token: Token::from("my skill"),
 							..default()
 						},
-						SlotKey::BottomHand(Side::Right),
+						SlotKey::from(PlayerSlot::Lower(Side::Right)),
 					)))
 					.return_const(());
 			}),
 		));
 
 		app.world_mut().resource_mut::<_Input>().0.just_pressed =
-			vec![SlotKey::BottomHand(Side::Right)];
+			vec![PlayerSlot::Lower(Side::Right)];
 		app.update();
 	}
 
 	#[test]
 	fn prime_skill_if_its_slot_is_not_pressed() {
-		let right = SlotKey::BottomHand(Side::Right);
-		let left = SlotKey::BottomHand(Side::Left);
+		let right = PlayerSlot::Lower(Side::Right);
+		let left = PlayerSlot::Lower(Side::Left);
 		let mut app = setup::<_Enqueue>(vec![], vec![]);
 		app.world_mut().spawn((
 			_Skills::default(),
@@ -270,12 +274,12 @@ mod tests {
 					Mock_SkillQueued::new_mock(|mock| {
 						mock.expect_prime().times(1).return_const(());
 						mock.expect_get()
-							.return_const(SlotKey::BottomHand(Side::Right));
+							.return_const(PlayerSlot::Lower(Side::Right));
 					}),
 					Mock_SkillQueued::new_mock(|mock| {
 						mock.expect_prime().times(1).return_const(());
 						mock.expect_get()
-							.return_const(SlotKey::BottomHand(Side::Left));
+							.return_const(PlayerSlot::Lower(Side::Left));
 					}),
 				],
 			},

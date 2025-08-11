@@ -2,12 +2,7 @@ use crate::components::fix_points::AnchorFixPointKey;
 use bevy::prelude::*;
 use common::{
 	tools::{Index, bone::Bone},
-	traits::{
-		accessors::get::TryApplyOn,
-		iteration::IterFinite,
-		mapper::Mapper,
-		thread_safe::ThreadSafe,
-	},
+	traits::{accessors::get::TryApplyOn, mapper::Mapper, thread_safe::ThreadSafe},
 	zyheeda_commands::ZyheedaCommands,
 };
 
@@ -16,7 +11,7 @@ pub struct FixPoint<T>(pub(crate) T);
 
 impl<T> FixPoint<T>
 where
-	T: IterFinite + ThreadSafe,
+	T: ThreadSafe,
 {
 	pub(crate) fn insert_in_children_of<TAgent>(
 		mut commands: ZyheedaCommands,
@@ -24,23 +19,17 @@ where
 		agents: Query<&TAgent>,
 		parents: Query<&ChildOf>,
 	) where
-		TAgent: Component + Mapper<T, Bone>,
+		TAgent: Component + for<'a> Mapper<Bone<'a>, Option<T>>,
 	{
-		let items = T::iterator().collect::<Vec<_>>();
-
 		for (entity, name) in &names {
 			let Some(agent) = get_agent(&agents, &parents, entity) else {
 				continue;
 			};
 
-			let fix_point = items
-				.iter()
-				.find(|item| *agent.map(**item) == name.as_str());
-
-			match fix_point {
+			match agent.map(Bone(name.as_str())) {
 				Some(fix_point) => {
 					commands.try_apply_on(&entity, |mut e| {
-						e.try_insert(FixPoint(*fix_point));
+						e.try_insert(FixPoint(fix_point));
 					});
 				}
 				None => {
@@ -87,11 +76,12 @@ mod tests {
 	#[derive(Component)]
 	struct _Agent;
 
-	impl Mapper<_T, Bone> for _Agent {
-		fn map(&self, value: _T) -> Bone {
+	impl<'a> Mapper<Bone<'a>, Option<_T>> for _Agent {
+		fn map(&self, value: Bone) -> Option<_T> {
 			match value {
-				_T::A => Bone("a"),
-				_T::B => Bone("b"),
+				Bone("a") => Some(_T::A),
+				Bone("b") => Some(_T::B),
+				_ => None,
 			}
 		}
 	}

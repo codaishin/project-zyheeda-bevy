@@ -2,7 +2,7 @@ use crate::components::quickbar_panel::QuickbarPanel;
 use bevy::prelude::*;
 use common::{
 	components::ui_input_primer::UiInputPrimer,
-	tools::action_key::{slot::SlotKey, user_input::UserInput},
+	tools::action_key::{slot::PlayerSlot, user_input::UserInput},
 	traits::{accessors::get::TryApplyOn, key_mappings::GetInput},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -13,7 +13,7 @@ impl QuickbarPanel {
 		map: Res<TMap>,
 		panels: Query<(Entity, &Self), Added<Self>>,
 	) where
-		TMap: GetInput<SlotKey, UserInput> + Resource,
+		TMap: GetInput<PlayerSlot, TInput = UserInput> + Resource,
 	{
 		for (entity, panel) in &panels {
 			let input = map.get_input(panel.key);
@@ -39,8 +39,10 @@ mod tests {
 	}
 
 	#[automock]
-	impl GetInput<SlotKey, UserInput> for _Map {
-		fn get_input(&self, value: SlotKey) -> UserInput {
+	impl GetInput<PlayerSlot> for _Map {
+		type TInput = UserInput;
+
+		fn get_input(&self, value: PlayerSlot) -> UserInput {
 			self.mock.get_input(value)
 		}
 	}
@@ -59,13 +61,13 @@ mod tests {
 		let mut app = setup(_Map::new().with_mock(|mock| {
 			mock.expect_get_input()
 				.times(1)
-				.with(eq(SlotKey::TopHand(Side::Left)))
+				.with(eq(PlayerSlot::Upper(Side::Left)))
 				.return_const(UserInput::from(MouseButton::Right));
 		}));
 		let entity = app
 			.world_mut()
 			.spawn(QuickbarPanel {
-				key: SlotKey::TopHand(Side::Left),
+				key: PlayerSlot::Upper(Side::Left),
 				state: PanelState::Empty,
 			})
 			.id();
@@ -86,7 +88,7 @@ mod tests {
 				.return_const(UserInput::from(MouseButton::Right));
 		}));
 		app.world_mut().spawn(QuickbarPanel {
-			key: SlotKey::TopHand(Side::Left),
+			key: PlayerSlot::Upper(Side::Left),
 			state: PanelState::Empty,
 		});
 

@@ -3,23 +3,32 @@ use crate::{
 	traits::colors::{ColorConfig, HasActiveColor, HasPanelColors, HasQueuedColor, PanelColors},
 };
 use bevy::{color::Color, ecs::component::Component};
-use common::{tools::action_key::slot::SlotKey, traits::accessors::get::GetterRef};
+use common::{
+	tools::action_key::slot::{PlayerSlot, SlotKey},
+	traits::accessors::get::Getter,
+};
 
 #[derive(Component)]
 pub struct QuickbarPanel {
-	pub key: SlotKey,
+	pub key: PlayerSlot,
 	pub state: PanelState,
 }
 
-impl GetterRef<PanelState> for QuickbarPanel {
-	fn get(&self) -> &PanelState {
-		&self.state
+impl Getter<PanelState> for QuickbarPanel {
+	fn get(&self) -> PanelState {
+		self.state
 	}
 }
 
-impl GetterRef<SlotKey> for QuickbarPanel {
-	fn get(&self) -> &SlotKey {
-		&self.key
+impl Getter<PlayerSlot> for QuickbarPanel {
+	fn get(&self) -> PlayerSlot {
+		self.key
+	}
+}
+
+impl Getter<SlotKey> for QuickbarPanel {
+	fn get(&self) -> SlotKey {
+		SlotKey::from(self.key)
 	}
 }
 
@@ -52,45 +61,44 @@ impl HasQueuedColor for QuickbarPanel {
 
 #[cfg(test)]
 mod tests {
-	use common::tools::action_key::slot::Side;
-
 	use super::*;
+	use common::tools::action_key::slot::Side;
 
 	#[test]
 	fn get_empty() {
 		let panel = QuickbarPanel {
-			key: SlotKey::BottomHand(Side::Right),
+			key: PlayerSlot::Lower(Side::Right),
 			state: PanelState::Empty,
 		};
-		assert_eq!(&PanelState::Empty, panel.get());
+		assert_eq!(PanelState::Empty, panel.get());
 	}
 
 	#[test]
 	fn get_filled() {
 		let panel = QuickbarPanel {
-			key: SlotKey::BottomHand(Side::Right),
+			key: PlayerSlot::Lower(Side::Right),
 			state: PanelState::Filled,
 		};
-		assert_eq!(&PanelState::Filled, panel.get());
+		assert_eq!(PanelState::Filled, panel.get());
 	}
 
 	#[test]
-	fn get_legs() {
+	fn get_player_slot() {
 		let panel = QuickbarPanel {
-			key: SlotKey::BottomHand(Side::Left),
+			key: PlayerSlot::Lower(Side::Left),
 			state: PanelState::Empty,
 		};
 
-		assert_eq!(&SlotKey::BottomHand(Side::Left), panel.get());
+		assert_eq!(PlayerSlot::Lower(Side::Left), panel.get());
 	}
 
 	#[test]
-	fn get_main_hand() {
+	fn get_slot_key() {
 		let panel = QuickbarPanel {
-			key: SlotKey::BottomHand(Side::Right),
+			key: PlayerSlot::Lower(Side::Left),
 			state: PanelState::Empty,
 		};
 
-		assert_eq!(&SlotKey::BottomHand(Side::Right), panel.get());
+		assert_eq!(SlotKey::from(PlayerSlot::Lower(Side::Left)), panel.get());
 	}
 }

@@ -5,10 +5,10 @@ use crate::components::{
 };
 use bevy::prelude::*;
 use common::{
-	tools::action_key::slot::SlotKey,
+	tools::action_key::slot::PlayerSlot,
 	traits::{
 		accessors::get::TryApplyOn,
-		handles_combo_menu::GetComboAbleSkills,
+		handles_combo_menu::GetComboAblePlayerSkills,
 		thread_safe::ThreadSafe,
 	},
 	zyheeda_commands::ZyheedaCommands,
@@ -19,36 +19,36 @@ impl<T> DropdownSkillSelectInsert for T {}
 pub(crate) trait DropdownSkillSelectInsert {
 	fn dropdown_skill_select_insert<TSkill, TIsCompatible>(
 		mut commands: ZyheedaCommands,
-		dropdown_commands: Query<(Entity, &SkillSelectDropdownInsertCommand<SlotKey, Self>)>,
+		dropdown_commands: Query<(Entity, &SkillSelectDropdownInsertCommand<PlayerSlot, Self>)>,
 		compatible: Res<TIsCompatible>,
 	) where
 		Self: ThreadSafe + Sized,
 		TSkill: Clone + ThreadSafe,
-		TIsCompatible: GetComboAbleSkills<TSkill> + Resource,
+		TIsCompatible: GetComboAblePlayerSkills<TSkill> + Resource,
 	{
 		for (entity, command) in &dropdown_commands {
 			commands.try_apply_on(&entity, |mut e| {
 				if let Some(items) = compatible_skills(command, compatible.as_ref()) {
 					e.try_insert(Dropdown { items });
 				}
-				e.try_remove::<SkillSelectDropdownInsertCommand<SlotKey, Self>>();
+				e.try_remove::<SkillSelectDropdownInsertCommand<PlayerSlot, Self>>();
 			});
 		}
 	}
 }
 
 fn compatible_skills<TLayout, TSkill, TIsCompatible>(
-	command: &SkillSelectDropdownInsertCommand<SlotKey, TLayout>,
+	command: &SkillSelectDropdownInsertCommand<PlayerSlot, TLayout>,
 	compatible: &TIsCompatible,
 ) -> Option<Vec<ComboSkillButton<DropdownItem<TLayout>, TSkill>>>
 where
 	TLayout: ThreadSafe,
 	TSkill: Clone,
-	TIsCompatible: GetComboAbleSkills<TSkill>,
+	TIsCompatible: GetComboAblePlayerSkills<TSkill>,
 {
 	let key = command.key_path.last()?;
 	let skills = compatible
-		.get_combo_able_skills(key)
+		.get_combo_able_player_skills(key)
 		.iter()
 		.map(|skill| {
 			ComboSkillButton::<DropdownItem<TLayout>, TSkill>::new(
@@ -82,9 +82,9 @@ mod tests {
 	}
 
 	#[automock]
-	impl GetComboAbleSkills<_Skill> for _ComboAbleSkills {
-		fn get_combo_able_skills(&self, key: &SlotKey) -> Vec<_Skill> {
-			self.mock.get_combo_able_skills(key)
+	impl GetComboAblePlayerSkills<_Skill> for _ComboAbleSkills {
+		fn get_combo_able_player_skills(&self, key: &PlayerSlot) -> Vec<_Skill> {
+			self.mock.get_combo_able_player_skills(key)
 		}
 	}
 
@@ -109,15 +109,17 @@ mod tests {
 	#[test]
 	fn list_compatible_skills() {
 		let mut app = setup(_ComboAbleSkills::new().with_mock(|mock| {
-			mock.expect_get_combo_able_skills()
-				.with(eq(SlotKey::BottomHand(Side::Right)))
+			mock.expect_get_combo_able_player_skills()
+				.with(eq(PlayerSlot::Lower(Side::Right)))
 				.return_const(vec![_Skill("my skill")]);
 		}));
 		let dropdown = app
 			.world_mut()
-			.spawn(SkillSelectDropdownInsertCommand::<SlotKey, _Layout>::new(
-				vec![SlotKey::BottomHand(Side::Right)],
-			))
+			.spawn(
+				SkillSelectDropdownInsertCommand::<PlayerSlot, _Layout>::new(vec![
+					PlayerSlot::Lower(Side::Right),
+				]),
+			)
 			.id();
 
 		app.update();
@@ -126,7 +128,7 @@ mod tests {
 			Some(&Dropdown {
 				items: vec![ComboSkillButton::<DropdownItem<_Layout>, _Skill>::new(
 					_Skill("my skill"),
-					vec![SlotKey::BottomHand(Side::Right)],
+					vec![PlayerSlot::Lower(Side::Right)],
 				)]
 			}),
 			app.world()
@@ -138,15 +140,17 @@ mod tests {
 	#[test]
 	fn remove_command() {
 		let mut app = setup(_ComboAbleSkills::new().with_mock(|mock| {
-			mock.expect_get_combo_able_skills()
-				.with(eq(SlotKey::BottomHand(Side::Right)))
+			mock.expect_get_combo_able_player_skills()
+				.with(eq(PlayerSlot::Lower(Side::Right)))
 				.return_const(vec![]);
 		}));
 		let dropdown = app
 			.world_mut()
-			.spawn(SkillSelectDropdownInsertCommand::<SlotKey, _Layout>::new(
-				vec![SlotKey::BottomHand(Side::Right)],
-			))
+			.spawn(
+				SkillSelectDropdownInsertCommand::<PlayerSlot, _Layout>::new(vec![
+					PlayerSlot::Lower(Side::Right),
+				]),
+			)
 			.id();
 
 		app.update();

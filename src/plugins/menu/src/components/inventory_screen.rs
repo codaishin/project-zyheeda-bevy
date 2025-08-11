@@ -5,7 +5,7 @@ use crate::{
 };
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{
-	tools::{action_key::slot::SlotKey, inventory_key::InventoryKey},
+	tools::{action_key::slot::PlayerSlot, inventory_key::InventoryKey},
 	traits::{
 		handles_localization::{LocalizeToken, localized::Localized},
 		iteration::{IterFinite, IterInfinite},
@@ -91,7 +91,7 @@ where
 			})
 			.with_children(|parent| {
 				add_title(parent, equipment);
-				for key in SlotKey::iterator() {
+				for key in PlayerSlot::iterator() {
 					add_grid(
 						parent,
 						localize.localize_token(key).or_token(),

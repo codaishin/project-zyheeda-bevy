@@ -1,11 +1,8 @@
 use bevy::prelude::*;
 use common::{
-	tools::{
-		action_key::slot::{Combo, SlotKey},
-		change::Change,
-	},
+	tools::{action_key::slot::PlayerSlot, change::Change},
 	traits::{
-		handles_combo_menu::{GetComboAbleSkills, GetCombosOrdered, NextKeys},
+		handles_combo_menu::{Combo, GetComboAblePlayerSkills, GetCombosOrdered, NextKeys},
 		handles_loadout_menu::GetItem,
 		thread_safe::ThreadSafe,
 	},
@@ -28,30 +25,30 @@ where
 	}
 }
 
-impl<T, TSkill> GetComboAbleSkills<TSkill> for EquipmentInfo<T>
+impl<T, TSkill> GetComboAblePlayerSkills<TSkill> for EquipmentInfo<T>
 where
-	T: GetComboAbleSkills<TSkill>,
+	T: GetComboAblePlayerSkills<TSkill>,
 	TSkill: Clone,
 {
-	fn get_combo_able_skills(&self, key: &SlotKey) -> Vec<TSkill> {
-		self.0.get_combo_able_skills(key)
+	fn get_combo_able_player_skills(&self, key: &PlayerSlot) -> Vec<TSkill> {
+		self.0.get_combo_able_player_skills(key)
 	}
 }
 
-impl<T> NextKeys for EquipmentInfo<T>
+impl<T> NextKeys<PlayerSlot> for EquipmentInfo<T>
 where
-	T: NextKeys,
+	T: NextKeys<PlayerSlot>,
 {
-	fn next_keys(&self, combo_keys: &[SlotKey]) -> HashSet<SlotKey> {
+	fn next_keys(&self, combo_keys: &[PlayerSlot]) -> HashSet<PlayerSlot> {
 		self.0.next_keys(combo_keys)
 	}
 }
 
-impl<T, TSkill> GetCombosOrdered<TSkill> for EquipmentInfo<T>
+impl<T, TSkill> GetCombosOrdered<TSkill, PlayerSlot> for EquipmentInfo<T>
 where
-	T: GetCombosOrdered<TSkill>,
+	T: GetCombosOrdered<TSkill, PlayerSlot>,
 {
-	fn combos_ordered(&self) -> Vec<Combo<TSkill>> {
+	fn combos_ordered(&self) -> Vec<Combo<PlayerSlot, TSkill>> {
 		self.0.combos_ordered()
 	}
 }

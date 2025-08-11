@@ -31,7 +31,7 @@ pub trait OnErrorLogAndReturn {
 
 impl<TValue, TError> OnErrorLogAndReturn for Result<TValue, TError>
 where
-	Error: From<TError>,
+	TError: Into<Error>,
 {
 	type TOut = TValue;
 	type TValue = TValue;
@@ -49,7 +49,7 @@ where
 
 impl<TValue, TError> OnErrorLogAndReturn for Vec<Result<TValue, TError>>
 where
-	Error: From<TError>,
+	TError: Into<Error>,
 {
 	type TOut = Vec<TValue>;
 	type TValue = TValue;
@@ -63,10 +63,10 @@ where
 
 impl<TError> From<Vec<TError>> for Error
 where
-	Error: From<TError>,
+	TError: Into<Error>,
 {
 	fn from(errors: Vec<TError>) -> Self {
-		Self::Multiple(errors.into_iter().map(Error::from).collect())
+		Self::Multiple(errors.into_iter().map(TError::into).collect())
 	}
 }
 

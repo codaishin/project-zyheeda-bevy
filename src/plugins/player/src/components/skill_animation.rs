@@ -1,7 +1,7 @@
 use super::player::Player;
 use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
-	tools::{action_key::slot::SlotKey, animation_key::AnimationKey},
+	tools::{action_key::slot::PlayerSlot, animation_key::AnimationKey},
 	traits::{
 		accessors::get::TryApplyOn,
 		animation::{Animation, AnimationPriority, PlayMode, StartAnimation, StopAnimation},
@@ -11,7 +11,7 @@ use common::{
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
 pub enum SkillAnimation {
-	Start(SlotKey),
+	Start(PlayerSlot),
 	Stop,
 }
 
@@ -111,11 +111,11 @@ mod tests {
 		app
 	}
 
-	#[test_case(SlotKey::TopHand(Side::Left); "top left")]
-	#[test_case(SlotKey::TopHand(Side::Right); "top right")]
-	#[test_case(SlotKey::BottomHand(Side::Left); "bottom left")]
-	#[test_case(SlotKey::BottomHand(Side::Right); "bottom right")]
-	fn play_animation(slot: SlotKey) {
+	#[test_case(PlayerSlot::Upper(Side::Left); "top left")]
+	#[test_case(PlayerSlot::Upper(Side::Right); "top right")]
+	#[test_case(PlayerSlot::Lower(Side::Left); "bottom left")]
+	#[test_case(PlayerSlot::Lower(Side::Right); "bottom right")]
+	fn play_animation(slot: PlayerSlot) {
 		let mut app = setup();
 		app.world_mut().spawn((
 			Player,
@@ -159,7 +159,7 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((
 			Player,
-			SkillAnimation::Start(SlotKey::TopHand(Side::Left)),
+			SkillAnimation::Start(PlayerSlot::Upper(Side::Left)),
 			_Dispatch::new().with_mock(|mock| {
 				mock.expect_start_animation::<Skill>()
 					.times(1)
@@ -178,7 +178,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Player,
-				SkillAnimation::Start(SlotKey::TopHand(Side::Left)),
+				SkillAnimation::Start(PlayerSlot::Upper(Side::Left)),
 				_Dispatch::new().with_mock(|mock| {
 					mock.expect_start_animation::<Skill>()
 						.times(1)

@@ -72,7 +72,7 @@ where
 		match self {
 			SkillExecuter::Start { shape, slot_key } => {
 				let spawner = match shape.spawn_on() {
-					SpawnOn::Center => SkillSpawner::Center,
+					SpawnOn::Center => SkillSpawner::Neutral,
 					SpawnOn::Slot => SkillSpawner::Slot(*slot_key),
 				};
 				let on_skill_stop_behavior =
@@ -106,7 +106,10 @@ mod tests {
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
 		components::{outdated::Outdated, persistent_entity::PersistentEntity},
-		tools::{action_key::slot::Side, collider_info::ColliderInfo},
+		tools::{
+			action_key::slot::{PlayerSlot, Side},
+			collider_info::ColliderInfo,
+		},
 		traits::{
 			handles_effect::HandlesEffect,
 			handles_skill_behaviors::{Contact, Projection, SkillEntities, SkillRoot},
@@ -264,7 +267,7 @@ mod tests {
 	#[test]
 	fn set_self_to_start_skill() {
 		let shape = _ShapeSlotted(OnSkillStop::Ignore);
-		let slot_key = SlotKey::BottomHand(Side::Left);
+		let slot_key = SlotKey::from(PlayerSlot::Lower(Side::Left));
 
 		let mut executer = SkillExecuter::default();
 		executer.schedule(slot_key, shape.clone());
@@ -276,10 +279,10 @@ mod tests {
 	fn start_shape_on_slot() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let caster = SkillCaster(PersistentEntity::default());
-		let spawner = SkillSpawner::Slot(SlotKey::BottomHand(Side::Right));
+		let spawner = SkillSpawner::Slot(SlotKey::from(PlayerSlot::Lower(Side::Right)));
 		let target = get_target();
 		let mut executer = SkillExecuter::Start {
-			slot_key: SlotKey::BottomHand(Side::Right),
+			slot_key: SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			shape: _Behavior {
 				spawn_on: SpawnOn::Slot,
 				on_skill_stop: OnSkillStop::Ignore,
@@ -307,10 +310,10 @@ mod tests {
 	fn start_shape_on_center() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let caster = SkillCaster(PersistentEntity::default());
-		let spawner = SkillSpawner::Center;
+		let spawner = SkillSpawner::Neutral;
 		let target = get_target();
 		let mut executer: SkillExecuter<_Behavior> = SkillExecuter::Start {
-			slot_key: SlotKey::BottomHand(Side::Right),
+			slot_key: SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			shape: _Behavior {
 				spawn_on: SpawnOn::Center,
 				on_skill_stop: OnSkillStop::Ignore,
@@ -340,7 +343,7 @@ mod tests {
 		let caster = SkillCaster(PersistentEntity::default());
 		let target = get_target();
 		let executer = Arc::new(Mutex::new(SkillExecuter::Start {
-			slot_key: SlotKey::BottomHand(Side::Right),
+			slot_key: SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			shape: _Behavior {
 				spawn_on: SpawnOn::Center,
 				on_skill_stop: OnSkillStop::Ignore,
@@ -367,7 +370,7 @@ mod tests {
 		let target = get_target();
 		let entity = PersistentEntity::default();
 		let executer = Arc::new(Mutex::new(SkillExecuter::Start {
-			slot_key: SlotKey::BottomHand(Side::Right),
+			slot_key: SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			shape: _Behavior {
 				spawn_on: SpawnOn::Center,
 				on_skill_stop: OnSkillStop::Stop(entity),
@@ -393,7 +396,7 @@ mod tests {
 	#[test]
 	fn set_to_idle_on_flush_when_set_to_start() {
 		let mut executer = SkillExecuter::Start {
-			slot_key: SlotKey::BottomHand(Side::Right),
+			slot_key: SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			shape: _ShapeSlotted(OnSkillStop::Ignore),
 		};
 

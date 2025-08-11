@@ -473,11 +473,11 @@ mod tests {
 	fn track() {
 		let mut anchor_points = FixPoints::default();
 
-		anchor_points.track(Entity::from_raw(42), &FixPoint(SkillSpawner::Center));
+		anchor_points.track(Entity::from_raw(42), &FixPoint(SkillSpawner::Neutral));
 
 		assert_eq!(
 			FixPoints::from([(
-				AnchorFixPointKey::from(FixPoint(SkillSpawner::Center)),
+				AnchorFixPointKey::from(FixPoint(SkillSpawner::Neutral)),
 				Entity::from_raw(42)
 			)]),
 			anchor_points
@@ -487,7 +487,7 @@ mod tests {
 	#[test]
 	fn is_tracking() {
 		let anchor_points = FixPoints::from([(
-			AnchorFixPointKey::from(FixPoint(SkillSpawner::Center)),
+			AnchorFixPointKey::from(FixPoint(SkillSpawner::Neutral)),
 			Entity::from_raw(42),
 		)]);
 
@@ -511,7 +511,7 @@ mod tests {
 	#[test]
 	fn untrack() {
 		let mut anchor_points = FixPoints::from([(
-			AnchorFixPointKey::from(FixPoint(SkillSpawner::Center)),
+			AnchorFixPointKey::from(FixPoint(SkillSpawner::Neutral)),
 			Entity::from_raw(42),
 		)]);
 

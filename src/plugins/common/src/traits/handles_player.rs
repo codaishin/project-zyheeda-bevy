@@ -3,6 +3,7 @@ use super::{
 	intersect_at::IntersectAt,
 };
 use crate::{
+	errors::Error,
 	tools::{
 		action_key::{movement::MovementKey, slot::SlotKey},
 		bone::Bone,
@@ -19,7 +20,7 @@ use bevy::{
 };
 
 pub trait HandlesPlayer {
-	type TPlayer: Component + Default + Mapper<SkillSpawner, Bone>;
+	type TPlayer: Component + Default + for<'a> Mapper<Bone<'a>, Option<SkillSpawner>>;
 }
 
 pub trait PlayerMainCamera {
@@ -43,8 +44,9 @@ pub trait ConfiguresPlayerMovement {
 
 pub trait ConfiguresPlayerSkillAnimations {
 	type TAnimationMarker: Component;
+	type TError: Into<Error>;
 
-	fn start_skill_animation(slot_key: SlotKey) -> Self::TAnimationMarker;
+	fn start_skill_animation(slot_key: SlotKey) -> Result<Self::TAnimationMarker, Self::TError>;
 	fn stop_skill_animation() -> Self::TAnimationMarker;
 }
 

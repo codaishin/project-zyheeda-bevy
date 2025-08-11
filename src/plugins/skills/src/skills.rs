@@ -107,15 +107,15 @@ pub enum Activation {
 #[cfg_attr(test, derive(Default))]
 pub struct QueuedSkill {
 	pub skill: Skill,
-	pub slot_key: SlotKey,
+	pub key: SlotKey,
 	pub mode: Activation,
 }
 
 impl QueuedSkill {
-	pub(crate) fn new(skill: Skill, slot_key: SlotKey) -> Self {
+	pub(crate) fn new(skill: Skill, key: SlotKey) -> Self {
 		Self {
 			skill,
-			slot_key,
+			key,
 			mode: Activation::Waiting,
 		}
 	}
@@ -123,7 +123,7 @@ impl QueuedSkill {
 
 impl Getter<SlotKey> for QueuedSkill {
 	fn get(&self) -> SlotKey {
-		self.slot_key
+		self.key
 	}
 }
 
@@ -377,7 +377,7 @@ mod tests {
 			.spawning_on(SpawnOn::Slot),
 		);
 		let caster = SkillCaster(PersistentEntity::default());
-		let spawner = SkillSpawner::Center;
+		let spawner = SkillSpawner::Neutral;
 		let target = get_target();
 
 		app.world_mut()
@@ -413,7 +413,7 @@ mod tests {
 			.spawning_on(SpawnOn::Center),
 		);
 		let caster = SkillCaster(PersistentEntity::default());
-		let spawner = SkillSpawner::Center;
+		let spawner = SkillSpawner::Neutral;
 		let target = get_target();
 
 		app.world_mut()
@@ -451,7 +451,7 @@ mod tests {
 				.with_contact_effects(vec![AttachEffect::Fn(effect)]),
 		);
 		let caster = SkillCaster(PersistentEntity::default());
-		let spawner = SkillSpawner::Center;
+		let spawner = SkillSpawner::Neutral;
 		let target = get_target();
 
 		app.world_mut()
@@ -484,7 +484,7 @@ mod tests {
 			}),
 		));
 		let caster = SkillCaster(PersistentEntity::default());
-		let spawner = SkillSpawner::Center;
+		let spawner = SkillSpawner::Neutral;
 		let target = get_target();
 
 		app.world_mut()
@@ -522,7 +522,7 @@ mod tests {
 				.with_projection_effects(vec![AttachEffect::Fn(effect)]),
 		);
 		let caster = SkillCaster(PersistentEntity::default());
-		let spawner = SkillSpawner::Center;
+		let spawner = SkillSpawner::Neutral;
 		let target = get_target();
 
 		app.world_mut()
@@ -562,7 +562,7 @@ mod tests {
 			.spawning_on(SpawnOn::Slot),
 		);
 		let caster = SkillCaster(PersistentEntity::default());
-		let spawner = SkillSpawner::Center;
+		let spawner = SkillSpawner::Neutral;
 		let target = get_target();
 
 		app.world_mut()
@@ -598,7 +598,7 @@ mod tests {
 			.spawning_on(SpawnOn::Center),
 		);
 		let caster = SkillCaster(PersistentEntity::default());
-		let spawner = SkillSpawner::Center;
+		let spawner = SkillSpawner::Neutral;
 		let target = get_target();
 
 		app.world_mut()
@@ -639,7 +639,7 @@ mod tests {
 				.with_contact_effects(vec![AttachEffect::Fn(effect)]),
 		);
 		let caster = SkillCaster(PersistentEntity::default());
-		let spawner = SkillSpawner::Center;
+		let spawner = SkillSpawner::Neutral;
 		let target = get_target();
 
 		app.world_mut()
@@ -676,7 +676,7 @@ mod tests {
 			}),
 		));
 		let caster = SkillCaster(PersistentEntity::default());
-		let spawner = SkillSpawner::Center;
+		let spawner = SkillSpawner::Neutral;
 		let target = get_target();
 
 		app.world_mut()
@@ -717,7 +717,7 @@ mod tests {
 				.with_projection_effects(vec![AttachEffect::Fn(effect)]),
 		);
 		let caster = SkillCaster(PersistentEntity::default());
-		let spawner = SkillSpawner::Center;
+		let spawner = SkillSpawner::Neutral;
 		let target = get_target();
 
 		app.world_mut()

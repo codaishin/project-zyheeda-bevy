@@ -8,7 +8,10 @@ use common::{
 	attributes::{affected_by::AffectedBy, health::Health},
 	effects::{deal_damage::DealDamage, force::Force, gravity::Gravity},
 	states::game_state::GameState,
-	tools::action_key::{movement::MovementKey, slot::SlotKey},
+	tools::action_key::{
+		movement::MovementKey,
+		slot::{NoValidSlotKey, PlayerSlot, SlotKey},
+	},
 	traits::{
 		animation::RegisterAnimations,
 		handles_effect::HandlesEffect,
@@ -119,9 +122,10 @@ impl<TDependencies> ConfiguresPlayerMovement for PlayerPlugin<TDependencies> {
 
 impl<TDependencies> ConfiguresPlayerSkillAnimations for PlayerPlugin<TDependencies> {
 	type TAnimationMarker = SkillAnimation;
+	type TError = NoValidSlotKey;
 
-	fn start_skill_animation(slot_key: SlotKey) -> Self::TAnimationMarker {
-		SkillAnimation::Start(slot_key)
+	fn start_skill_animation(slot_key: SlotKey) -> Result<Self::TAnimationMarker, Self::TError> {
+		Ok(SkillAnimation::Start(PlayerSlot::try_from(slot_key)?))
 	}
 
 	fn stop_skill_animation() -> Self::TAnimationMarker {
