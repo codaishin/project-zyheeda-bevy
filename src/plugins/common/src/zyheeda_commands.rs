@@ -4,7 +4,7 @@ use bevy::{
 };
 
 pub struct ZyheedaCommands<'w, 's> {
-	cmds: Commands<'w, 's>,
+	commands: Commands<'w, 's>,
 }
 
 impl<'w, 's> ZyheedaCommands<'w, 's> {
@@ -12,7 +12,7 @@ impl<'w, 's> ZyheedaCommands<'w, 's> {
 	where
 		TBundle: Bundle,
 	{
-		self.cmds.spawn(bundle)
+		self.commands.spawn(bundle)
 	}
 
 	pub fn try_apply_on<TFn>(&mut self, entity: Entity, apply: TFn)
@@ -25,13 +25,19 @@ impl<'w, 's> ZyheedaCommands<'w, 's> {
 		apply(entity)
 	}
 
+	pub fn insert_resource<TResource>(&mut self, resource: TResource)
+	where
+		TResource: Resource,
+	{
+		self.commands.insert_resource(resource);
+	}
+
 	pub fn get_entity(
 		&mut self,
 		entity: Entity,
 	) -> Result<ZyheedaEntityCommands<'_>, EntityDoesNotExistError> {
-		Ok(ZyheedaEntityCommands {
-			cmds: self.cmds.get_entity(entity)?,
-		})
+		let entity = self.commands.get_entity(entity)?;
+		Ok(ZyheedaEntityCommands { entity })
 	}
 }
 
@@ -53,7 +59,9 @@ unsafe impl<'w, 's> SystemParam for ZyheedaCommands<'w, 's> {
 		change_tick: bevy::ecs::component::Tick,
 	) -> Self::Item<'world, 'state> {
 		ZyheedaCommands {
-			cmds: unsafe { Commands::<'w, 's>::get_param(state, system_meta, world, change_tick) },
+			commands: unsafe {
+				Commands::<'w, 's>::get_param(state, system_meta, world, change_tick)
+			},
 		}
 	}
 
@@ -91,7 +99,7 @@ unsafe impl<'w, 's> SystemParam for ZyheedaCommands<'w, 's> {
 }
 
 pub struct ZyheedaEntityCommands<'a> {
-	cmds: EntityCommands<'a>,
+	entity: EntityCommands<'a>,
 }
 
 impl ZyheedaEntityCommands<'_> {
@@ -99,7 +107,7 @@ impl ZyheedaEntityCommands<'_> {
 	where
 		TBundle: Bundle,
 	{
-		self.cmds.try_insert(bundle);
+		self.entity.try_insert(bundle);
 		self
 	}
 
@@ -107,7 +115,7 @@ impl ZyheedaEntityCommands<'_> {
 	where
 		TBundle: Bundle,
 	{
-		self.cmds.try_insert_if_new(bundle);
+		self.entity.try_insert_if_new(bundle);
 		self
 	}
 
@@ -115,12 +123,12 @@ impl ZyheedaEntityCommands<'_> {
 	where
 		TBundle: Bundle,
 	{
-		self.cmds.try_remove::<TBundle>();
+		self.entity.try_remove::<TBundle>();
 		self
 	}
 
 	pub fn try_despawn(mut self) {
-		self.cmds.try_despawn();
+		self.entity.try_despawn();
 	}
 }
 
@@ -202,7 +210,7 @@ mod test {
 						return;
 					};
 
-					entity_cmds.cmds.despawn();
+					entity_cmds.entity.despawn();
 					entity_cmds.try_insert(_Component(""));
 				})
 		}
@@ -258,7 +266,7 @@ mod test {
 						return;
 					};
 
-					entity_cmds.cmds.despawn();
+					entity_cmds.entity.despawn();
 					entity_cmds.try_insert_if_new(_Component("new"));
 				})
 		}
@@ -331,11 +339,27 @@ mod test {
 						return;
 					};
 
-					entity_cmds.cmds.despawn();
+					entity_cmds.entity.despawn();
 					commands.try_apply_on(entity, |mut e| {
 						e.try_insert(_Component(""));
 					});
 				})
+		}
+
+		#[test]
+		fn insert_resource() -> Result<(), RunSystemError> {
+			#[derive(Resource, Debug, PartialEq)]
+			struct _Resource;
+
+			let mut app = setup();
+
+			app.world_mut()
+				.run_system_once(|mut commands: ZyheedaCommands| {
+					commands.insert_resource(_Resource);
+				})?;
+
+			assert_eq!(Some(&_Resource), app.world().get_resource::<_Resource>());
+			Ok(())
 		}
 	}
 }
