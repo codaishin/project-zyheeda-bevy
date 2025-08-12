@@ -11,5 +11,5 @@ pub trait GetAsset {
 		assets: &'a TAssets,
 	) -> Option<&'a Self::TAsset>
 	where
-		TAssets: GetRef<Handle<Self::TAsset>, Self::TAsset>;
+		TAssets: GetRef<Handle<Self::TAsset>, TValue<'a> = &'a Self::TAsset>;
 }

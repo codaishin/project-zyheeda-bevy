@@ -3,12 +3,11 @@ use bevy::prelude::*;
 use common::{
 	tools::collider_radius::ColliderRadius,
 	traits::{
-		accessors::get::{GetField, Getter},
+		accessors::get::{GetField, Getter, TryApplyOn},
 		handles_path_finding::ComputePath,
 		thread_safe::ThreadSafe,
-		try_insert_on::TryInsertOn,
-		try_remove_from::TryRemoveFrom,
 	},
+	zyheeda_commands::ZyheedaCommands,
 };
 use std::collections::VecDeque;
 
@@ -25,7 +24,7 @@ impl<T> MovementPath for T where T: Component + Getter<ColliderRadius> + Sized {
 
 pub(crate) trait MovementPath: Component + Getter<ColliderRadius> + Sized {
 	fn compute_path<TMoveMethod, TComputer, TGetComputer>(
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		movements: Query<
 			MoveComponents<Self, TMoveMethod, TGetComputer>,
 			ChangedMovement<TMoveMethod>,
@@ -41,8 +40,10 @@ pub(crate) trait MovementPath: Component + Getter<ColliderRadius> + Sized {
 				continue;
 			};
 			let move_component = new_movement(computer, transform, movement, agent);
-			commands.try_insert_on(entity, move_component);
-			commands.try_remove_from::<Movement<TMoveMethod>>(entity);
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_insert(move_component);
+				e.try_remove::<Movement<TMoveMethod>>();
+			});
 		}
 	}
 }

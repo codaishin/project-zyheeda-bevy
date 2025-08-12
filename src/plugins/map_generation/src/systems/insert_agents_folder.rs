@@ -1,6 +1,9 @@
 use crate::components::map::{agents::AgentsLoaded, cells::agent::Agent, folder::MapFolder};
 use bevy::prelude::*;
-use common::traits::{thread_safe::ThreadSafe, try_insert_on::TryInsertOn};
+use common::{
+	traits::{accessors::get::TryApplyOn, thread_safe::ThreadSafe},
+	zyheeda_commands::ZyheedaCommands,
+};
 
 type WithoutAgentsAndNew<T> = (Added<T>, Without<AgentsLoaded>);
 
@@ -9,11 +12,13 @@ where
 	TCell: ThreadSafe,
 {
 	pub(crate) fn load_agents(
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		folders: Query<(Entity, &Self), WithoutAgentsAndNew<Self>>,
 	) {
 		for (entity, MapFolder { path, .. }) in &folders {
-			commands.try_insert_on(entity, MapFolder::<Agent<TCell>>::from(path.clone()));
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_insert(MapFolder::<Agent<TCell>>::from(path.clone()));
+			});
 		}
 	}
 }

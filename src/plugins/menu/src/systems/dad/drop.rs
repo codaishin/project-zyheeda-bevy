@@ -1,24 +1,17 @@
 use crate::components::{Dad, KeyedPanel};
-use bevy::{
-	ecs::{
-		component::{Component, Mutable},
-		system::{Commands, Query},
-	},
-	input::ButtonInput,
-	prelude::{Entity, MouseButton, Res},
-	ui::Interaction,
-};
+use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
 	tools::{action_key::user_input::UserInput, swap_key::SwapKey},
 	traits::{
+		accessors::get::TryApplyOn,
 		handles_loadout_menu::SwapValuesByKey,
 		thread_safe::ThreadSafe,
-		try_remove_from::TryRemoveFrom,
 	},
+	zyheeda_commands::ZyheedaCommands,
 };
 
 pub fn drop<TAgent, TKeyDad, TKeyKeyedPanel>(
-	mut commands: Commands,
+	mut commands: ZyheedaCommands,
 	mut agents: Query<(Entity, &mut TAgent, &Dad<TKeyDad>)>,
 	panels: Query<(&Interaction, &KeyedPanel<TKeyKeyedPanel>)>,
 	mouse: Res<ButtonInput<UserInput>>,
@@ -40,7 +33,9 @@ pub fn drop<TAgent, TKeyDad, TKeyKeyedPanel>(
 	};
 
 	agent.swap(dad.0.into(), keyed_panel.0.into());
-	commands.try_remove_from::<Dad<TKeyDad>>(entity);
+	commands.try_apply_on(&entity, |mut e| {
+		e.try_remove::<Dad<TKeyDad>>();
+	});
 }
 
 fn is_hovered<TDadPanel>((interaction, ..): &(&Interaction, &KeyedPanel<TDadPanel>)) -> bool {

@@ -3,14 +3,15 @@ use bevy::prelude::*;
 use common::{
 	tools::{action_key::slot::SlotKey, skill_icon::SkillIcon},
 	traits::{
+		accessors::get::TryApplyOn,
 		handles_loadout_menu::GetItem,
 		inspect_able::{InspectAble, InspectField},
-		try_insert_on::TryInsertOn,
 	},
+	zyheeda_commands::ZyheedaCommands,
 };
 
 pub(crate) fn set_quickbar_icons<TContainer>(
-	mut commands: Commands,
+	mut commands: ZyheedaCommands,
 	mut panels: Query<(Entity, &mut QuickbarPanel)>,
 	containers: Res<TContainer>,
 ) where
@@ -28,7 +29,9 @@ pub(crate) fn set_quickbar_icons<TContainer>(
 		};
 
 		panel.state = state;
-		commands.try_insert_on(entity, ImageNode::new(image));
+		commands.try_apply_on(&entity, |mut e| {
+			e.try_insert(ImageNode::new(image));
+		});
 	}
 }
 

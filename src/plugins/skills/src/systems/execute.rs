@@ -6,8 +6,8 @@ use common::{
 	traits::{
 		accessors::get::GetterRefOptional,
 		handles_player::{HandlesPlayerCameras, HandlesPlayerMouse},
-		handles_skill_behaviors::HandlesSkillBehaviors,
 	},
+	zyheeda_commands::ZyheedaCommands,
 };
 
 impl<T> ExecuteSkills for T where T: Component<Mutability = Mutable> + Sized {}
@@ -16,12 +16,11 @@ pub(crate) trait ExecuteSkills: Component<Mutability = Mutable> + Sized {
 	fn execute_system<TEffects, TSkillBehaviors, TPlayers>(
 		cam_ray: Res<TPlayers::TCamRay>,
 		mouse_hover: Res<TPlayers::TMouseHover>,
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		mut agents: Query<(&PersistentEntity, &mut Self), Changed<Self>>,
 		transforms: Query<&GlobalTransform>,
 	) where
-		for<'w, 's> Self: Execute<Commands<'w, 's>, TEffects, TSkillBehaviors>,
-		TSkillBehaviors: HandlesSkillBehaviors + 'static,
+		for<'w, 's> Self: Execute<TEffects, TSkillBehaviors>,
 		TPlayers: HandlesPlayerCameras + HandlesPlayerMouse,
 	{
 		for (entity, mut skill_executer) in &mut agents {
@@ -58,15 +57,10 @@ mod tests {
 	use common::{
 		components::outdated::Outdated,
 		tools::collider_info::ColliderInfo,
-		traits::{
-			handles_skill_behaviors::{Contact, Projection, SkillEntities, SkillRoot},
-			intersect_at::IntersectAt,
-		},
+		traits::intersect_at::IntersectAt,
 	};
-	use macros::NestedMocks;
-	use mockall::mock;
 	use std::ops::DerefMut;
-	use testing::{NestedMocks, SingleThreadedApp};
+	use testing::SingleThreadedApp;
 
 	struct _Players;
 
@@ -102,59 +96,18 @@ mod tests {
 		}
 	}
 
-	#[derive(Component, NestedMocks)]
+	#[derive(Component, Debug, PartialEq)]
 	struct _Executor {
-		mock: Mock_Executor,
+		called_with: Vec<(SkillCaster, SkillTarget)>,
 	}
 
 	struct _HandlesEffects;
 
-	#[derive(Component)]
-	struct _Effect;
-
 	struct _HandlesSkillBehaviors;
 
-	impl HandlesSkillBehaviors for _HandlesSkillBehaviors {
-		type TSkillContact = _Contact;
-		type TSkillProjection = _Projection;
-
-		fn spawn_skill(commands: &mut Commands, _: Contact, _: Projection) -> SkillEntities {
-			SkillEntities {
-				root: SkillRoot {
-					entity: commands.spawn_empty().id(),
-					persistent_entity: PersistentEntity::default(),
-				},
-				contact: commands.spawn(_Contact).id(),
-				projection: commands.spawn(_Projection).id(),
-			}
-		}
-	}
-
-	#[derive(Component)]
-	struct _Contact;
-
-	#[derive(Component)]
-	struct _Projection;
-
-	impl Execute<Commands<'_, '_>, _HandlesEffects, _HandlesSkillBehaviors> for _Executor {
-		fn execute(&mut self, commands: &mut Commands, caster: &SkillCaster, target: &SkillTarget) {
-			self.mock.execute(commands, caster, target)
-		}
-	}
-
-	mock! {
-		_Executor {}
-		impl<'w, 's> Execute<
-			Commands<'w, 's>,
-			_HandlesEffects,
-			_HandlesSkillBehaviors
-		> for _Executor {
-			fn execute<'_w, '_s>(
-				&mut self,
-				commands: &mut Commands<'_w, '_s>,
-				caster: &SkillCaster,
-				target: &SkillTarget,
-			);
+	impl Execute<_HandlesEffects, _HandlesSkillBehaviors> for _Executor {
+		fn execute(&mut self, _: &mut ZyheedaCommands, caster: &SkillCaster, target: &SkillTarget) {
+			self.called_with.push((*caster, *target));
 		}
 	}
 
@@ -208,75 +161,88 @@ mod tests {
 		target: SkillTarget,
 	}
 
-	fn find_execution_args(app: &App) -> Option<&_ExecutionArgs> {
-		app.world()
-			.iter_entities()
-			.find_map(|e| e.get::<_ExecutionArgs>())
-	}
-
 	#[test]
 	fn execute_skill() {
 		let mut app = setup();
 		let target = set_target(&mut app);
 		let persistent_entity = PersistentEntity::default();
-		app.world_mut().spawn((
-			persistent_entity,
-			_Executor::new().with_mock(|mock| {
-				mock.expect_execute().returning(|commands, caster, target| {
-					commands.spawn(_ExecutionArgs {
-						caster: *caster,
-						target: *target,
-					});
-				});
-			}),
-		));
+		let entity = app
+			.world_mut()
+			.spawn((
+				persistent_entity,
+				_Executor {
+					called_with: vec![],
+				},
+			))
+			.id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&_ExecutionArgs {
-				caster: SkillCaster(persistent_entity),
-				target,
+			Some(&_Executor {
+				called_with: vec![(SkillCaster(persistent_entity), target)]
 			}),
-			find_execution_args(&app)
+			app.world().entity(entity).get::<_Executor>()
 		);
 	}
 
 	#[test]
 	fn execute_skill_only_once() {
 		let mut app = setup();
-		set_target(&mut app);
-		app.world_mut().spawn((
-			PersistentEntity::default(),
-			_Executor::new().with_mock(|mock| {
-				mock.expect_execute().times(1).return_const(());
-			}),
-		));
+		let target = set_target(&mut app);
+		let persistent_entity = PersistentEntity::default();
+		let entity = app
+			.world_mut()
+			.spawn((
+				persistent_entity,
+				_Executor {
+					called_with: vec![],
+				},
+			))
+			.id();
 
 		app.update();
 		app.update();
+
+		assert_eq!(
+			Some(&_Executor {
+				called_with: vec![(SkillCaster(persistent_entity), target)]
+			}),
+			app.world().entity(entity).get::<_Executor>()
+		);
 	}
 
 	#[test]
 	fn execute_again_after_mutable_deref() {
 		let mut app = setup();
-		set_target(&mut app);
-		let caster = app
+		let target = set_target(&mut app);
+		let persistent_entity = PersistentEntity::default();
+		let entity = app
 			.world_mut()
 			.spawn((
-				PersistentEntity::default(),
-				_Executor::new().with_mock(|mock| {
-					mock.expect_execute().times(2).return_const(());
-				}),
+				persistent_entity,
+				_Executor {
+					called_with: vec![],
+				},
 			))
 			.id();
 
 		app.update();
 		app.world_mut()
-			.entity_mut(caster)
+			.entity_mut(entity)
 			.get_mut::<_Executor>()
 			.unwrap()
 			.deref_mut();
 		app.update();
+
+		assert_eq!(
+			Some(&_Executor {
+				called_with: vec![
+					(SkillCaster(persistent_entity), target),
+					(SkillCaster(persistent_entity), target)
+				]
+			}),
+			app.world().entity(entity).get::<_Executor>()
+		);
 	}
 }

@@ -5,25 +5,26 @@ use crate::components::{
 };
 use bevy::prelude::*;
 use common::{
-	resources::persistent_entities::PersistentEntities,
-	traits::try_insert_on::TryInsertOn,
+	traits::accessors::get::{GetMut, TryApplyOn},
+	zyheeda_commands::ZyheedaCommands,
 };
 
 impl AgentOfPersistentMap {
 	pub(crate) fn link_to_grid(
-		mut persistent_entities: ResMut<PersistentEntities>,
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		maps: Query<&NavGrid<Grid>>,
 		agents: Query<(Entity, &Self), Changed<Self>>,
 	) {
 		for (entity, AgentOfPersistentMap(map)) in &agents {
-			let Some(map) = persistent_entities.get_entity(map) else {
+			let Some(map) = commands.get_mut(map).map(|e| e.id()) else {
 				continue;
 			};
 			let Ok(nav_grid) = maps.get(map) else {
 				continue;
 			};
-			commands.try_insert_on(entity, GridAgentOf(nav_grid.entity));
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_insert(GridAgentOf(nav_grid.entity));
+			});
 		}
 	}
 }

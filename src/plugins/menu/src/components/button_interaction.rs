@@ -1,6 +1,6 @@
 use crate::traits::is_released::IsReleased;
 use bevy::prelude::*;
-use common::traits::try_insert_on::TryInsertOn;
+use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
 #[derive(Component, Debug, PartialEq)]
 pub(crate) enum ButtonInteraction {
@@ -21,7 +21,7 @@ impl From<&Interaction> for ButtonInteraction {
 
 impl ButtonInteraction {
 	pub(crate) fn system(
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		buttons: Query<(Entity, &Interaction, Option<&ButtonInteraction>)>,
 	) {
 		for (entity, interaction, last_interaction) in &buttons {
@@ -30,7 +30,9 @@ impl ButtonInteraction {
 				(_, interaction) => interaction,
 			};
 
-			commands.try_insert_on(entity, interaction);
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_insert(interaction);
+			});
 		}
 	}
 }

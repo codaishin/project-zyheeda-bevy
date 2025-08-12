@@ -1,11 +1,11 @@
 use bevy::{animation::AnimationTarget, prelude::*};
-use common::traits::try_remove_from::TryRemoveFrom;
+use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
 impl<T> RemoveUnusedAnimationTargets for T where T: Component {}
 
 pub(crate) trait RemoveUnusedAnimationTargets: Component {
 	fn remove_unused_animation_targets(
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		graphs: Res<Assets<AnimationGraph>>,
 		players: Query<(Entity, &AnimationGraphHandle), Added<AnimationGraphHandle>>,
 		bones: Query<(Entity, &AnimationTarget)>,
@@ -29,7 +29,9 @@ pub(crate) trait RemoveUnusedAnimationTargets: Component {
 					continue;
 				}
 
-				commands.try_remove_from::<AnimationTarget>(entity);
+				commands.try_apply_on(&entity, |mut e| {
+					e.try_remove::<AnimationTarget>();
+				});
 			}
 		}
 	}

@@ -45,10 +45,15 @@ impl<TSkill> Default for ComboNode<TSkill> {
 	}
 }
 
-impl<TKey> GetRef<TKey, Skill> for ComboNode
+impl<TKey> GetRef<TKey> for ComboNode
 where
 	for<'a> TKey: Iterate<'a, TItem = &'a SlotKey> + 'a,
 {
+	type TValue<'a>
+		= &'a Skill
+	where
+		Self: 'a;
+
 	fn get(&self, slot_key_path: &TKey) -> Option<&Skill> {
 		let mut value = None;
 		let mut combo_map = &self.0;
@@ -63,10 +68,15 @@ where
 	}
 }
 
-impl<TKey> GetMut<TKey, Skill> for ComboNode
+impl<TKey> GetMut<TKey> for ComboNode
 where
 	for<'a> TKey: Iterate<'a, TItem = &'a SlotKey> + 'a,
 {
+	type TValue<'a>
+		= &'a mut Skill
+	where
+		Self: 'a;
+
 	fn get_mut(&mut self, slot_key_path: &TKey) -> Option<&mut Skill> {
 		let mut value = None;
 		let mut combo_map = &mut self.0;

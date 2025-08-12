@@ -1,8 +1,11 @@
 use super::RegisterDerivedComponent;
-use crate::traits::{
-	register_derived_component::DerivableComponentFrom,
-	thread_safe::ThreadSafe,
-	try_insert_on::TryInsertOn,
+use crate::{
+	traits::{
+		accessors::get::TryApplyOn,
+		register_derived_component::DerivableComponentFrom,
+		thread_safe::ThreadSafe,
+	},
+	zyheeda_commands::ZyheedaCommands,
 };
 use bevy::prelude::*;
 use std::marker::PhantomData;
@@ -32,22 +35,7 @@ impl RegisterDerivedComponent for App {
 
 fn insert_if_new<TComponent, TRequired>(
 	trigger: Trigger<OnInsert, TComponent>,
-	mut commands: Commands,
-	components: Query<(&TComponent, Option<&TRequired>)>,
-) where
-	TComponent: Component,
-	for<'a> TRequired: Component + From<&'a TComponent>,
-{
-	let entity = trigger.target();
-	let Ok((component, None)) = components.get(entity) else {
-		return;
-	};
-	commands.try_insert_on(entity, TRequired::from(component));
-}
-
-fn insert_always<TComponent, TRequired>(
-	trigger: Trigger<OnInsert, TComponent>,
-	mut commands: Commands,
+	mut commands: ZyheedaCommands,
 	components: Query<&TComponent>,
 ) where
 	TComponent: Component,
@@ -57,7 +45,26 @@ fn insert_always<TComponent, TRequired>(
 	let Ok(component) = components.get(entity) else {
 		return;
 	};
-	commands.try_insert_on(entity, TRequired::from(component));
+	commands.try_apply_on(&entity, |mut e| {
+		e.try_insert_if_new(TRequired::from(component));
+	});
+}
+
+fn insert_always<TComponent, TRequired>(
+	trigger: Trigger<OnInsert, TComponent>,
+	mut commands: ZyheedaCommands,
+	components: Query<&TComponent>,
+) where
+	TComponent: Component,
+	for<'a> TRequired: Component + From<&'a TComponent>,
+{
+	let entity = trigger.target();
+	let Ok(component) = components.get(entity) else {
+		return;
+	};
+	commands.try_apply_on(&entity, |mut e| {
+		e.try_insert(TRequired::from(component));
+	});
 }
 
 #[derive(Resource)]

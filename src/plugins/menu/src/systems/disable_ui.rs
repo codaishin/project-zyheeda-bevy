@@ -1,17 +1,19 @@
 use crate::components::ui_disabled::UIDisabled;
 use bevy::prelude::*;
-use common::traits::{try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom};
+use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
 impl UIDisabled {
 	pub(crate) fn apply(
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		mut removed_disables: RemovedComponents<UIDisabled>,
 		disabled: Query<Entity, (With<UIDisabled>, With<Interaction>)>,
 		can_be_interactive: Query<(), With<CanBeInteractive>>,
 	) {
 		for entity in &disabled {
-			commands.try_remove_from::<Interaction>(entity);
-			commands.try_insert_on(entity, CanBeInteractive);
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_remove::<Interaction>();
+				e.try_insert(CanBeInteractive);
+			});
 		}
 
 		for entity in removed_disables.read() {
@@ -19,7 +21,9 @@ impl UIDisabled {
 				continue;
 			}
 
-			commands.try_insert_on(entity, Interaction::None);
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_insert(Interaction::None);
+			});
 		}
 	}
 }

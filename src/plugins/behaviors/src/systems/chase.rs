@@ -1,16 +1,18 @@
 use crate::components::{Chase, movement::Movement};
 use bevy::prelude::*;
 use common::{
-	resources::persistent_entities::PersistentEntities,
-	traits::{thread_safe::ThreadSafe, try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
+	traits::{
+		accessors::get::{GetMut, TryApplyOn},
+		thread_safe::ThreadSafe,
+	},
+	zyheeda_commands::ZyheedaCommands,
 };
 
 impl<T> ChaseSystem for T {}
 
 pub(crate) trait ChaseSystem {
 	fn chase<TMovementMethod>(
-		mut commands: Commands,
-		mut persistent_entities: ResMut<PersistentEntities>,
+		mut commands: ZyheedaCommands,
 		mut removed_chasers: RemovedComponents<Chase>,
 		chasers: Query<(Entity, &Chase), With<Self>>,
 		transforms: Query<&GlobalTransform>,
@@ -19,20 +21,21 @@ pub(crate) trait ChaseSystem {
 		TMovementMethod: ThreadSafe + Default,
 	{
 		for entity in removed_chasers.read() {
-			commands.try_remove_from::<Movement<TMovementMethod>>(entity);
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_remove::<Movement<TMovementMethod>>();
+			});
 		}
 
 		for (entity, Chase(target)) in &chasers {
-			let Some(target) = persistent_entities.get_entity(target) else {
+			let Some(target) = commands.get_mut(target) else {
 				continue;
 			};
-			let Ok(target) = transforms.get(target) else {
+			let Ok(target) = transforms.get(target.id()) else {
 				continue;
 			};
-			commands.try_insert_on(
-				entity,
-				Movement::<TMovementMethod>::to(target.translation()),
-			);
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_insert(Movement::<TMovementMethod>::to(target.translation()));
+			});
 		}
 	}
 }

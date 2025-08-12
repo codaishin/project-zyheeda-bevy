@@ -3,20 +3,20 @@ use bevy::{ecs::query::QueryFilter, prelude::*};
 use common::{
 	errors::{Error, Level},
 	traits::{
-		accessors::get::GetRef,
+		accessors::get::{GetRef, TryApplyOn},
 		get_asset::GetAsset,
 		handles_assets_for_children::{ChildAssetComponent, ChildAssetDefinition, ChildName},
 		iteration::IterFinite,
 		or_ok::OrOk,
-		try_insert_on::TryInsertOn,
 	},
+	zyheeda_commands::ZyheedaCommands,
 };
 
 impl<TComponent> DispatchAssetComponents for TComponent {}
 
 pub(crate) trait DispatchAssetComponents {
 	fn dispatch_asset_components<TMarker>(
-		commands: Commands,
+		commands: ZyheedaCommands,
 		assets: Res<Assets<Self::TChildAsset>>,
 		children_lookups: Query<(&Self, &ChildrenLookup<Self, TMarker>), Changed<Self>>,
 	) -> Result<(), Vec<Error>>
@@ -33,14 +33,14 @@ pub(crate) trait DispatchAssetComponents {
 	}
 }
 
-fn dispatch_system<TCommands, TAssets, TComponent, TMarker, TFilter>(
-	mut commands: TCommands,
+fn dispatch_system<TAssets, TComponent, TMarker, TFilter>(
+	mut commands: ZyheedaCommands,
 	assets: Res<TAssets>,
 	components: Query<(&TComponent, &ChildrenLookup<TComponent, TMarker>), TFilter>,
 ) -> Result<(), Vec<Error>>
 where
-	TCommands: TryInsertOn,
-	TAssets: GetRef<Handle<TComponent::TChildAsset>, TComponent::TChildAsset> + Resource,
+	for<'a> TAssets: GetRef<Handle<TComponent::TChildAsset>, TValue<'a> = &'a TComponent::TChildAsset>
+		+ Resource,
 	TComponent: Component
 		+ ChildAssetDefinition<TMarker>
 		+ GetAsset<TKey = TComponent::TChildKey, TAsset = TComponent::TChildAsset>,
@@ -66,14 +66,13 @@ where
 	errors.or_ok(|| ())
 }
 
-fn dispatch<TCommands, TComponent, TMarker>(
-	commands: &mut TCommands,
+fn dispatch<TComponent, TMarker>(
+	commands: &mut ZyheedaCommands,
 	children_lookup: &ChildrenLookup<TComponent, TMarker>,
 	key: TComponent::TChildKey,
 	bundle: impl Bundle,
 ) -> Result<(), Error>
 where
-	TCommands: TryInsertOn,
 	TComponent: ChildAssetDefinition<TMarker>,
 {
 	let key = key.child_name();
@@ -82,7 +81,10 @@ where
 		.get(&Name::from(key))
 		.ok_or(entity_not_found_error(key))?;
 
-	commands.try_insert_on(*entity, bundle);
+	commands.try_apply_on(entity, |mut e| {
+		e.try_insert(bundle);
+	});
+
 	Ok(())
 }
 
@@ -103,9 +105,9 @@ mod tests {
 		iteration::{Iter, IterFinite},
 	};
 	use macros::NestedMocks;
-	use mockall::{automock, mock, predicate::eq};
+	use mockall::{automock, predicate::eq};
 	use std::collections::HashMap;
-	use testing::{Mock, NestedMocks, new_handle, simple_init};
+	use testing::{NestedMocks, new_handle};
 
 	#[derive(Debug, PartialEq, Clone, Copy, Eq, Hash)]
 	enum _Key {
@@ -148,7 +150,7 @@ mod tests {
 			assets: &'a TAssets,
 		) -> Option<&'a Self::TAsset>
 		where
-			TAssets: GetRef<Handle<Self::TAsset>, Self::TAsset>,
+			TAssets: GetRef<Handle<Self::TAsset>, TValue<'a> = &'a Self::TAsset>,
 		{
 			let _Component(handles) = self;
 			let handle = handles.get(key)?;
@@ -190,20 +192,16 @@ mod tests {
 	}
 
 	#[automock]
-	impl GetRef<Handle<_Asset>, _Asset> for _Assets {
+	impl GetRef<Handle<_Asset>> for _Assets {
+		type TValue<'a>
+			= &'a _Asset
+		where
+			Self: 'a;
+
 		fn get<'a>(&'a self, key: &Handle<_Asset>) -> Option<&'a _Asset> {
 			self.mock.get(key)
 		}
 	}
-
-	mock! {
-		_Commands {}
-		impl TryInsertOn for _Commands {
-			fn try_insert_on<TBundle: Bundle>(&mut self, entity: Entity, bundle: TBundle);
-		}
-	}
-
-	simple_init!(Mock_Commands);
 
 	fn setup(assets: _Assets) -> App {
 		let mut app = App::new();
@@ -217,21 +215,20 @@ mod tests {
 		let mut app = setup(_Assets::new().with_mock(|mock| {
 			mock.expect_get().return_const(&_Asset);
 		}));
+		let entity = app.world_mut().spawn_empty().id();
 		app.world_mut().spawn((
-			ChildrenLookup::<_Component, _Marker>::new([(Name::from("a"), Entity::from_raw(42))]),
+			ChildrenLookup::<_Component, _Marker>::new([(Name::from("a"), entity)]),
 			_Component::new([(_Key::A, new_handle())]),
 		));
-		let commands = Mock_Commands::new_mock(|mock| {
-			mock.expect_try_insert_on()
-				.times(1)
-				.with(eq(Entity::from_raw(42)), eq(_Visualize))
-				.return_const(());
-		});
 
-		_ = app.world_mut().run_system_once_with(
-			dispatch_system::<In<Mock_Commands>, _Assets, _Component, _Marker, ()>,
-			commands,
-		)?;
+		_ = app
+			.world_mut()
+			.run_system_once(dispatch_system::<_Assets, _Component, _Marker, ()>)?;
+
+		assert_eq!(
+			Some(&_Visualize),
+			app.world().entity(entity).get::<_Visualize>()
+		);
 		Ok(())
 	}
 
@@ -240,21 +237,20 @@ mod tests {
 		let mut app = setup(_Assets::new().with_mock(|mock| {
 			mock.expect_get().return_const(&_Asset);
 		}));
+		let entity = app.world_mut().spawn_empty().id();
 		app.world_mut().spawn((
-			ChildrenLookup::<_Component, _Marker>::new([(Name::from("b"), Entity::from_raw(42))]),
+			ChildrenLookup::<_Component, _Marker>::new([(Name::from("b"), entity)]),
 			_Component::new([(_Key::B, new_handle())]),
 		));
-		let commands = Mock_Commands::new_mock(|mock| {
-			mock.expect_try_insert_on()
-				.times(1)
-				.with(eq(Entity::from_raw(42)), eq(_Visualize))
-				.return_const(());
-		});
 
-		_ = app.world_mut().run_system_once_with(
-			dispatch_system::<In<Mock_Commands>, _Assets, _Component, _Marker, ()>,
-			commands,
-		)?;
+		_ = app
+			.world_mut()
+			.run_system_once(dispatch_system::<_Assets, _Component, _Marker, ()>)?;
+
+		assert_eq!(
+			Some(&_Visualize),
+			app.world().entity(entity).get::<_Visualize>()
+		);
 		Ok(())
 	}
 
@@ -267,18 +263,15 @@ mod tests {
 				.times(1)
 				.return_const(&_Asset);
 		}));
+		let entity = app.world_mut().spawn_empty().id();
 		app.world_mut().spawn((
-			ChildrenLookup::<_Component, _Marker>::new([(Name::from("a"), Entity::from_raw(42))]),
+			ChildrenLookup::<_Component, _Marker>::new([(Name::from("a"), entity)]),
 			_Component::new([(_Key::A, handle)]),
 		));
-		let commands = Mock_Commands::new_mock(|mock| {
-			mock.expect_try_insert_on::<_Visualize>().return_const(());
-		});
 
-		_ = app.world_mut().run_system_once_with(
-			dispatch_system::<In<Mock_Commands>, _Assets, _Component, _Marker, ()>,
-			commands,
-		)?;
+		_ = app
+			.world_mut()
+			.run_system_once(dispatch_system::<_Assets, _Component, _Marker, ()>)?;
 		Ok(())
 	}
 
@@ -292,21 +285,18 @@ mod tests {
 		let mut app = setup(_Assets::new().with_mock(|mock| {
 			mock.expect_get().never().return_const(&_Asset);
 		}));
+		let entity = app.world_mut().spawn_empty().id();
 		app.world_mut().spawn((
-			ChildrenLookup::<_Component, _Marker>::new([(Name::from("a"), Entity::from_raw(42))]),
+			ChildrenLookup::<_Component, _Marker>::new([(Name::from("a"), entity)]),
 			_Component::new([(_Key::A, new_handle())]),
 			_Ignore,
 		));
-		let commands = Mock_Commands::new_mock(|mock| {
-			mock.expect_try_insert_on::<_Visualize>()
-				.never()
-				.return_const(());
-		});
 
-		_ = app.world_mut().run_system_once_with(
-			dispatch_system::<In<Mock_Commands>, _Assets, _Component, _Marker, _Filter>,
-			commands,
-		)?;
+		_ = app
+			.world_mut()
+			.run_system_once(dispatch_system::<_Assets, _Component, _Marker, _Filter>)?;
+
+		assert_eq!(None, app.world().entity(entity).get::<_Visualize>());
 		Ok(())
 	}
 
@@ -319,14 +309,10 @@ mod tests {
 			ChildrenLookup::<_Component, _Marker>::new([]),
 			_Component::new([]),
 		));
-		let commands = Mock_Commands::new_mock(|mock| {
-			mock.expect_try_insert_on::<_Visualize>().return_const(());
-		});
 
-		let results = app.world_mut().run_system_once_with(
-			dispatch_system::<In<Mock_Commands>, _Assets, _Component, _Marker, ()>,
-			commands,
-		)?;
+		let results = app
+			.world_mut()
+			.run_system_once(dispatch_system::<_Assets, _Component, _Marker, ()>)?;
 
 		assert_eq!(
 			Err(vec![

@@ -3,12 +3,12 @@ use bevy::prelude::*;
 use common::{
 	tools::{Index, bone::Bone},
 	traits::{
+		accessors::get::TryApplyOn,
 		iteration::IterFinite,
 		mapper::Mapper,
 		thread_safe::ThreadSafe,
-		try_insert_on::TryInsertOn,
-		try_remove_from::TryRemoveFrom,
 	},
+	zyheeda_commands::ZyheedaCommands,
 };
 
 #[derive(Component, Debug, PartialEq, Eq, Hash, Clone, Copy)]
@@ -19,7 +19,7 @@ where
 	T: IterFinite + ThreadSafe,
 {
 	pub(crate) fn insert_in_children_of<TAgent>(
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		names: Query<(Entity, &Name), Changed<Name>>,
 		agents: Query<&TAgent>,
 		parents: Query<&ChildOf>,
@@ -39,10 +39,14 @@ where
 
 			match fix_point {
 				Some(fix_point) => {
-					commands.try_insert_on(entity, FixPoint(*fix_point));
+					commands.try_apply_on(&entity, |mut e| {
+						e.try_insert(FixPoint(*fix_point));
+					});
 				}
 				None => {
-					commands.try_remove_from::<FixPoint<T>>(entity);
+					commands.try_apply_on(&entity, |mut e| {
+						e.try_remove::<FixPoint<T>>();
+					});
 				}
 			}
 		}

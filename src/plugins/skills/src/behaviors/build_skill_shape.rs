@@ -4,10 +4,10 @@ pub mod spawn_shield;
 
 use super::{SkillCaster, SkillTarget};
 use crate::traits::skill_builder::{SkillBuilder, SkillShape};
-use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
 	traits::handles_skill_behaviors::{HandlesSkillBehaviors, SkillSpawner},
+	zyheeda_commands::ZyheedaCommands,
 };
 use spawn_ground_target::SpawnGroundTargetedAoe;
 use spawn_projectile::SpawnProjectile;
@@ -15,9 +15,9 @@ use spawn_shield::SpawnShield;
 
 #[cfg(test)]
 pub(crate) type SpawnSkillFn =
-	fn(&mut Commands, &SkillCaster, SkillSpawner, &SkillTarget) -> SkillShape;
+	fn(&mut ZyheedaCommands, &SkillCaster, SkillSpawner, &SkillTarget) -> SkillShape;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum OnSkillStop {
 	Ignore,
 	Stop(PersistentEntity),
@@ -36,8 +36,10 @@ pub(crate) enum BuildSkillShape {
 #[cfg(test)]
 impl Default for BuildSkillShape {
 	fn default() -> Self {
+		use bevy::prelude::*;
+
 		Self::Fn(|commands, _, _, _| {
-			let contact = commands.spawn_empty().id();
+			let contact = commands.spawn(()).id();
 			let projection = commands.spawn(ChildOf(contact)).id();
 			SkillShape {
 				contact,
@@ -67,12 +69,14 @@ impl BuildSkillShape {
 
 	#[cfg(test)]
 	fn no_shape(
-		commands: &mut Commands,
+		commands: &mut ZyheedaCommands,
 		_: &SkillCaster,
 		_: SkillSpawner,
 		_: &SkillTarget,
 	) -> SkillShape {
-		let contact = commands.spawn_empty().id();
+		use bevy::prelude::*;
+
+		let contact = commands.spawn(()).id();
 		let persistent_contact = PersistentEntity::default();
 		let projection = commands.spawn((ChildOf(contact), persistent_contact)).id();
 		let on_skill_stop = OnSkillStop::Stop(persistent_contact);
@@ -86,7 +90,7 @@ impl BuildSkillShape {
 
 	pub(crate) fn build<TSkillBehaviors>(
 		&self,
-		commands: &mut Commands,
+		commands: &mut ZyheedaCommands,
 		caster: &SkillCaster,
 		spawner: SkillSpawner,
 		target: &SkillTarget,

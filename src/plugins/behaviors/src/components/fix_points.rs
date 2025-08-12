@@ -6,12 +6,13 @@ use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
 	errors::{Error, Level},
-	resources::persistent_entities::PersistentEntities,
 	tools::Index,
 	traits::{
+		accessors::get::GetMut,
 		or_ok::OrOk,
 		track::{IsTracking, Track, Untrack},
 	},
+	zyheeda_commands::ZyheedaCommands,
 };
 use std::{
 	any::{TypeId, type_name},
@@ -52,7 +53,7 @@ where
 	}
 
 	pub(crate) fn system(
-		mut persistent_entities: ResMut<PersistentEntities>,
+		mut commands: ZyheedaCommands,
 		mut agents: Query<(&Self, &mut Transform), <Self as HasFilter>::TFilter>,
 		fix_points: Query<(&FixPoints, &GlobalTransform)>,
 		transforms: Query<&GlobalTransform>,
@@ -60,7 +61,7 @@ where
 		agents
 			.iter_mut()
 			.filter_map(|(anchor, mut anchor_transform)| {
-				let target = persistent_entities.get_entity(&anchor.target)?;
+				let target = commands.get_mut(&anchor.target)?.id();
 				let Ok((FixPoints(fix_points), transform)) = fix_points.get(target) else {
 					return Some(AnchorError::FixPointsMissingOn(anchor.target));
 				};

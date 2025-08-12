@@ -15,39 +15,47 @@ use uuid::Uuid;
 /// use bevy::prelude::*;
 /// use common::{
 ///   components::persistent_entity::PersistentEntity,
-///   resources::persistent_entities::PersistentEntities,
 ///   traits::register_persistent_entities::RegisterPersistentEntities,
+///   traits::accessors::get::GetMut,
+///   zyheeda_commands::ZyheedaCommands,
 /// };
 ///
 /// #[derive(Component)]
-/// #[require(PersistentEntity)]
-/// struct MyComponent(&'static str);
+/// struct Seeker {
+///   target: PersistentEntity,
+/// }
 ///
-/// impl MyComponent {
-///   fn demonstrate_persistence_entity_usage(
-///     // needs to be mut, because it buffers failed attempts
-///     mut persistent_entities: ResMut<PersistentEntities>,
-///     entities: Query<&PersistentEntity>,
-///     components: Query<&MyComponent>
+/// #[derive(Component)]
+/// struct Target;
+///
+/// impl Seeker {
+///   fn set_target_name(
+///     mut commands: ZyheedaCommands,
+///     seekers: Query<&Seeker>
 ///   ) {
-///     let Ok(entity) = entities.single() else {
+///     let Ok(Seeker { target }) = seekers.single() else {
 ///       return;
 ///     };
-///     let Some(entity) = persistent_entities.get_entity(entity) else {
+///     let Some(mut entity) = commands.get_mut(target) else {
 ///       return;
 ///     };
-///     let Ok(&MyComponent(name)) = components.get(entity) else {
-///       return;
-///     };
-///     assert_eq!("name", name);
+///     entity.try_insert(Name::from("target"));
 ///   }
 /// }
 ///
 /// let mut app = App::new();
 /// app.register_persistent_entities(); // use `app.add_plugins(CommonPlugin);` for production code
-/// app.add_systems(Update, MyComponent::demonstrate_persistence_entity_usage);
-/// app.world_mut().spawn(MyComponent("name"));
+/// app.add_systems(Update, Seeker::set_target_name);
+///
+/// let target_persistent_entity = PersistentEntity::default();
+/// let target_entity = app.world_mut().spawn((Target, target_persistent_entity)).id();
+/// app.world_mut().spawn(Seeker { target: target_persistent_entity });
 /// app.update();
+///
+/// assert_eq!(
+///   Some(&Name::from("target")),
+///   app.world().entity(target_entity).get::<Name>(),
+/// );
 /// ```
 #[derive(
 	Component, SavableComponent, Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize,

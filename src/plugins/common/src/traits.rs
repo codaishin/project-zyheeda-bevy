@@ -61,8 +61,5 @@ pub mod swap_command;
 pub mod system_set_definition;
 pub mod thread_safe;
 pub mod track;
-pub mod try_despawn;
-pub mod try_insert_on;
-pub mod try_remove_from;
 pub mod update_cumulative;
 pub mod wrap_handle;

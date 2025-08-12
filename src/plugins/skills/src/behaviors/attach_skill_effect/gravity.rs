@@ -1,9 +1,9 @@
 use crate::behaviors::{SkillCaster, SkillTarget};
-use bevy::ecs::system::EntityCommands;
 use common::{
 	effects::gravity::Gravity,
 	tools::UnitsPerSecond,
 	traits::handles_effect::HandlesEffect,
+	zyheeda_commands::ZyheedaEntityCommands,
 };
 use serde::{Deserialize, Serialize};
 
@@ -15,7 +15,7 @@ pub struct AttachGravity {
 impl AttachGravity {
 	pub fn attach<TInteractions>(
 		&self,
-		entity: &mut EntityCommands,
+		entity: &mut ZyheedaEntityCommands,
 		_: &SkillCaster,
 		_: &SkillTarget,
 	) where
@@ -37,6 +37,7 @@ mod tests {
 	use common::{
 		components::persistent_entity::PersistentEntity,
 		traits::clamp_zero_positive::ClampZeroPositive,
+		zyheeda_commands::ZyheedaCommands,
 	};
 	use std::sync::LazyLock;
 	use testing::SingleThreadedApp;
@@ -59,8 +60,8 @@ mod tests {
 
 	static CASTER: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
 
-	fn gravity(In(pull): In<UnitsPerSecond>, mut commands: Commands) -> Entity {
-		let mut entity = commands.spawn_empty();
+	fn gravity(In(pull): In<UnitsPerSecond>, mut commands: ZyheedaCommands) -> Entity {
+		let mut entity = commands.spawn(()).into();
 		AttachGravity { strength: pull }.attach::<_HandlesEffects>(
 			&mut entity,
 			&SkillCaster::from(*CASTER),

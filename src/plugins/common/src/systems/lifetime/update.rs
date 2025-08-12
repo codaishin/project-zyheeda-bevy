@@ -1,10 +1,14 @@
-use crate::{components::lifetime::Lifetime, traits::try_despawn::TryDespawn};
+use crate::{
+	components::lifetime::Lifetime,
+	traits::accessors::get::TryApplyOn,
+	zyheeda_commands::ZyheedaCommands,
+};
 use bevy::prelude::*;
 use std::time::Duration;
 
 impl Lifetime {
 	pub(crate) fn update<TTime: Default + Sync + Send + 'static>(
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		mut lifetimes: Query<(Entity, &mut Lifetime)>,
 		time: Res<Time<TTime>>,
 	) {
@@ -14,7 +18,7 @@ impl Lifetime {
 			if delta < lifetime.0 {
 				lifetime.0 -= delta;
 			} else {
-				commands.try_despawn(entity);
+				commands.try_apply_on(&entity, |e| e.try_despawn());
 			}
 		}
 	}

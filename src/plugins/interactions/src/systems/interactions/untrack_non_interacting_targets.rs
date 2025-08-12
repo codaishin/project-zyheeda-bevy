@@ -3,7 +3,7 @@ use crate::components::{
 	running_interactions::RunningInteractions,
 };
 use bevy::prelude::*;
-use common::resources::persistent_entities::PersistentEntities;
+use common::{traits::accessors::get::GetMut, zyheeda_commands::ZyheedaCommands};
 
 impl<TActor, TTarget> RunningInteractions<TActor, TTarget>
 where
@@ -12,13 +12,13 @@ where
 {
 	pub(crate) fn untrack_non_interacting_targets(
 		mut agents: Query<(&mut Self, &InteractingEntities), Changed<InteractingEntities>>,
-		mut persistent_entities: ResMut<PersistentEntities>,
+		mut commands: ZyheedaCommands,
 	) {
 		for (mut interactions, interacting_entities) in &mut agents {
 			interactions.retain(|persistent_entity| {
-				persistent_entities
-					.get_entity(persistent_entity)
-					.map(|entity| interacting_entities.contains(&entity))
+				commands
+					.get_mut(persistent_entity)
+					.map(|entity| interacting_entities.contains(&entity.id()))
 					.unwrap_or(false)
 			});
 		}

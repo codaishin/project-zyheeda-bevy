@@ -5,19 +5,19 @@ use common::{
 		immobilized::Immobilized,
 		persistent_entity::PersistentEntity,
 	},
-	resources::persistent_entities::PersistentEntities,
 	tools::collider_info::ColliderInfo,
 	traits::{
-		accessors::get::GetterRefOptional,
+		accessors::get::{GetMut, GetterRefOptional},
 		handles_orientation::Face,
 		intersect_at::IntersectAt,
 	},
+	zyheeda_commands::ZyheedaCommands,
 };
 
 pub(crate) fn execute_face<TMouseHover, TCursor>(
-	faces: In<Vec<(Entity, Face)>>,
+	In(faces): In<Vec<(Entity, Face)>>,
 	mut transforms: Query<(Entity, &mut Transform, Option<&Immobilized>)>,
-	persistent_entities: ResMut<PersistentEntities>,
+	commands: ZyheedaCommands,
 	colliders: Query<&ColliderOfInteractionTarget>,
 	cursor: Res<TCursor>,
 	hover: Res<TMouseHover>,
@@ -28,10 +28,8 @@ pub(crate) fn execute_face<TMouseHover, TCursor>(
 	let Some(target) = get_cursor_target(&transforms, &cursor, &hover) else {
 		return;
 	};
-	let face_targets =
-		get_face_targets(&transforms, faces.0, colliders, target, persistent_entities);
 
-	for (id, target) in face_targets {
+	for (id, target) in get_face_targets(&transforms, faces, colliders, target, commands) {
 		apply_facing(&mut transforms, id, target);
 	}
 }
@@ -55,7 +53,7 @@ fn get_face_targets(
 	faces: Vec<(Entity, Face)>,
 	colliders: Query<&ColliderOfInteractionTarget>,
 	(target_entity, target): (Option<Entity>, Vec3),
-	mut persistent_entities: ResMut<PersistentEntities>,
+	mut commands: ZyheedaCommands,
 ) -> Vec<(Entity, Vec3)> {
 	faces
 		.iter()
@@ -65,7 +63,7 @@ fn get_face_targets(
 				Face::Translation(translation) => Some(translation),
 				Face::Cursor => Some(target),
 				Face::Entity(entity) => {
-					let target = get_target(entity, &colliders, &mut persistent_entities)?;
+					let target = get_target(entity, &colliders, &mut commands)?;
 					get_translation(target, transforms)
 				}
 			};
@@ -102,9 +100,9 @@ fn get_translation(
 fn get_target(
 	entity: PersistentEntity,
 	roots: &Query<&ColliderOfInteractionTarget>,
-	persistent_entities: &mut PersistentEntities,
+	commands: &mut ZyheedaCommands,
 ) -> Option<Entity> {
-	let entity = persistent_entities.get_entity(&entity)?;
+	let entity = commands.get_mut(&entity)?.id();
 
 	Some(
 		roots

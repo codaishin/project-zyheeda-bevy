@@ -3,11 +3,14 @@ use crate::{
 	traits::LoadAnimationAssets,
 };
 use bevy::prelude::*;
-use common::traits::{
-	animation::{AnimationMaskDefinition, GetAnimationDefinitions},
-	thread_safe::ThreadSafe,
-	try_insert_on::TryInsertOn,
-	wrap_handle::WrapHandle,
+use common::{
+	traits::{
+		accessors::get::TryApplyOn,
+		animation::{AnimationMaskDefinition, GetAnimationDefinitions},
+		thread_safe::ThreadSafe,
+		wrap_handle::WrapHandle,
+	},
+	zyheeda_commands::ZyheedaCommands,
 };
 use std::collections::HashMap;
 
@@ -26,7 +29,7 @@ where
 	for<'a> AnimationMaskDefinition: From<&'a Self::TAnimationMask>,
 {
 	fn init_animation_components<TGraph, TServer>(
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		mut server: ResMut<TServer>,
 		mut graphs: ResMut<Assets<TGraph>>,
 		agents: Query<Entity, Added<Self>>,
@@ -48,7 +51,9 @@ where
 				)),
 			};
 
-			commands.try_insert_on(entity, (lookup, TGraph::wrap(graph)));
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_insert((lookup, TGraph::wrap(graph)));
+			});
 		}
 	}
 }

@@ -6,7 +6,8 @@ use bevy::{ecs::query::QuerySingleError, prelude::*};
 use common::{
 	components::persistent_entity::PersistentEntity,
 	errors::UniqueViolation,
-	traits::try_insert_on::TryInsertOn,
+	traits::accessors::get::TryApplyOn,
+	zyheeda_commands::ZyheedaCommands,
 };
 use std::f32::consts::PI;
 
@@ -14,7 +15,7 @@ impl<T> SetCameraToOrbit for T {}
 
 pub(crate) trait SetCameraToOrbit {
 	fn set_to_orbit<TPlayer>(
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		cameras: Query<Entity, (With<Self>, Without<OrbitPlayer>)>,
 		players: Query<&PersistentEntity, With<TPlayer>>,
 	) -> Result<(), UniqueViolation<(TPlayer, PersistentEntity)>>
@@ -47,7 +48,9 @@ pub(crate) trait SetCameraToOrbit {
 			orbit.orbit(&mut transform, Vec2Radians::new(-PI / 3., PI / 3.));
 			orbit.sensitivity = 0.005;
 
-			commands.try_insert_on(entity, (transform, orbit));
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_insert((transform, orbit));
+			});
 		}
 
 		Ok(())

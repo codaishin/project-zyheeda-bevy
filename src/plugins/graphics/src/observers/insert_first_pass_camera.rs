@@ -1,21 +1,20 @@
 use crate::{components::camera_labels::FirstPass, resources::first_pass_image::FirstPassImage};
 use bevy::{prelude::*, render::camera::RenderTarget};
-use common::traits::try_insert_on::TryInsertOn;
+use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
 impl FirstPass {
 	pub(crate) fn insert_camera(
 		trigger: Trigger<OnInsert, Self>,
 		first_pass_image: Res<FirstPassImage>,
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 	) {
-		commands.try_insert_on(
-			trigger.target(),
-			Camera {
+		commands.try_apply_on(&trigger.target(), |mut e| {
+			e.try_insert(Camera {
 				hdr: true,
 				target: RenderTarget::Image(first_pass_image.handle.clone().into()),
 				..default()
-			},
-		);
+			});
+		});
 	}
 }
 

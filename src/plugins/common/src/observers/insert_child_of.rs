@@ -1,26 +1,28 @@
 use crate::{
 	components::child_of_persistent::ChildOfPersistent,
-	resources::persistent_entities::PersistentEntities,
-	traits::try_insert_on::TryInsertOn,
+	traits::accessors::get::{GetMut, TryApplyOn},
+	zyheeda_commands::ZyheedaCommands,
 };
 use bevy::prelude::*;
 
 impl ChildOfPersistent {
 	pub(crate) fn insert_child_of(
 		trigger: Trigger<OnInsert, Self>,
-		mut commands: Commands,
-		mut persistent_entities: ResMut<PersistentEntities>,
+		mut commands: ZyheedaCommands,
 		children_of_persistent: Query<&Self>,
 	) {
 		let child = trigger.target();
 		let Ok(ChildOfPersistent(persistent_parent)) = children_of_persistent.get(child) else {
 			return;
 		};
-		let Some(parent) = persistent_entities.get_entity(persistent_parent) else {
+		let Some(parent) = commands.get_mut(persistent_parent) else {
 			return;
 		};
+		let parent = parent.id();
 
-		commands.try_insert_on(child, ChildOf(parent));
+		commands.try_apply_on(&child, |mut e| {
+			e.try_insert(ChildOf(parent));
+		});
 	}
 }
 

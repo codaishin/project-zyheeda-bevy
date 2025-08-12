@@ -4,7 +4,6 @@ use crate::{
 	skills::lifetime_definition::LifeTimeDefinition,
 	traits::skill_builder::{SkillLifetime, SpawnShape},
 };
-use bevy::prelude::*;
 use common::{
 	components::is_blocker::Blocker,
 	tools::{Units, UnitsPerSecond},
@@ -21,6 +20,7 @@ use common::{
 			SkillSpawner,
 		},
 	},
+	zyheeda_commands::ZyheedaCommands,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -39,7 +39,7 @@ enum DestroyedBy {
 impl SpawnShape for SpawnProjectile {
 	fn spawn_shape<TSkillBehaviors>(
 		&self,
-		commands: &mut Commands,
+		commands: &mut ZyheedaCommands,
 		caster: &SkillCaster,
 		spawner: SkillSpawner,
 		_: &SkillTarget,

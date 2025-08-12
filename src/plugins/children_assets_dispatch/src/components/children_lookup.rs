@@ -80,11 +80,15 @@ impl<TContainer, TMarker> Untrack<Name> for ChildrenLookup<TContainer, TMarker> 
 	}
 }
 
-impl<TContainer, TMarker> GetRef<TContainer::TChildKey, Entity>
-	for ChildrenLookup<TContainer, TMarker>
+impl<TContainer, TMarker> GetRef<TContainer::TChildKey> for ChildrenLookup<TContainer, TMarker>
 where
 	TContainer: ChildAssetDefinition<TMarker>,
 {
+	type TValue<'a>
+		= &'a Entity
+	where
+		Self: 'a;
+
 	fn get(&self, key: &TContainer::TChildKey) -> Option<&Entity> {
 		self.entities.get(&Name::from(key.child_name()))
 	}
@@ -143,7 +147,7 @@ mod tests {
 			_: &'a TAssets,
 		) -> Option<&'a Self::TAsset>
 		where
-			TAssets: GetRef<Handle<Self::TAsset>, Self::TAsset>,
+			TAssets: GetRef<Handle<Self::TAsset>, TValue<'a> = &'a Self::TAsset>,
 		{
 			None
 		}

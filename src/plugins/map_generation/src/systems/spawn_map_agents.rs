@@ -12,7 +12,8 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
-	traits::{thread_safe::ThreadSafe, try_insert_on::TryInsertOn},
+	traits::{accessors::get::TryApplyOn, thread_safe::ThreadSafe},
+	zyheeda_commands::ZyheedaCommands,
 };
 
 impl<TCell> MapCells<Agent<TCell>>
@@ -20,7 +21,7 @@ where
 	TCell: GridCellDistanceDefinition + ThreadSafe,
 {
 	pub(crate) fn spawn_map_agents(
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		cells: Query<(Entity, &PersistentEntity, &Self)>,
 	) {
 		for (entity, persistent_entity, MapCells { definition, .. }) in &cells {
@@ -51,7 +52,9 @@ where
 					_ => {}
 				}
 			}
-			commands.try_insert_on(entity, AgentsLoaded);
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_insert(AgentsLoaded);
+			});
 		}
 	}
 }

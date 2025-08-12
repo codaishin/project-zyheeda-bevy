@@ -5,14 +5,13 @@ use crate::{
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
-	resources::persistent_entities::PersistentEntities,
 	tools::Units,
 	traits::{
+		accessors::get::{GetMut, TryApplyOn},
 		cast_ray::TimeOfImpact,
 		handles_interactions::InteractAble,
-		try_despawn::TryDespawn,
-		try_insert_on::TryInsertOn,
 	},
+	zyheeda_commands::ZyheedaCommands,
 };
 
 type BeamComponents<'a> = (
@@ -25,9 +24,8 @@ type BeamComponents<'a> = (
 
 impl ActiveBeam {
 	pub(crate) fn execute(
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		mut ray_cast_events: EventReader<InteractionEvent<Ray>>,
-		mut persistent_entities: ResMut<PersistentEntities>,
 		mut beams: Query<BeamComponents>,
 	) {
 		for (entity, Blockable(beam), global_transform, ..) in &beams {
@@ -35,7 +33,7 @@ impl ActiveBeam {
 				continue;
 			};
 
-			match persistent_entities.get_entity(&emitter.mounted_on) {
+			match commands.get_mut(&emitter.mounted_on).map(|e| e.id()) {
 				Some(mounted_on) => {
 					update_ray_caster_args(
 						&mut commands,
@@ -62,7 +60,7 @@ impl ActiveBeam {
 }
 
 fn update_ray_caster_args(
-	commands: &mut Commands,
+	commands: &mut ZyheedaCommands,
 	entity: Entity,
 	origin: &GlobalTransform,
 	mounted_on: Entity,
@@ -72,20 +70,19 @@ fn update_ray_caster_args(
 		return;
 	};
 
-	commands.try_insert_on(
-		entity,
-		RayCasterArgs {
+	commands.try_apply_on(&entity, |mut e| {
+		e.try_insert(RayCasterArgs {
 			origin: origin.translation(),
 			direction: origin.forward(),
 			solid: true,
 			filter,
 			max_toi: TimeOfImpact(*range),
-		},
-	);
+		});
+	});
 }
 
-fn despawn_beam(commands: &mut Commands, entity: Entity) {
-	commands.try_despawn(entity)
+fn despawn_beam(commands: &mut ZyheedaCommands, entity: Entity) {
+	commands.try_apply_on(&entity, |e| e.try_despawn());
 }
 
 fn get_filter(source: Entity) -> Option<RayFilter> {
@@ -96,12 +93,14 @@ fn get_filter(source: Entity) -> Option<RayFilter> {
 }
 
 fn insert_active_beam(
-	commands: &mut Commands,
+	commands: &mut ZyheedaCommands,
 	entity: Entity,
 	transform: &mut Transform,
 	ray: &Ray,
 ) {
-	commands.try_insert_on(entity, ActiveBeam);
+	commands.try_apply_on(&entity, |mut e| {
+		e.try_insert(ActiveBeam);
+	});
 	update_transform(transform, ray);
 }
 

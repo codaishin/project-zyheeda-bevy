@@ -20,7 +20,7 @@ use common::{
 		skill_icon::SkillIcon,
 	},
 	traits::{
-		accessors::get::{Getter, GetterRef},
+		accessors::get::{GetMut, Getter, GetterRef},
 		handles_custom_assets::AssetFolderPath,
 		handles_effect::HandlesAllEffects,
 		handles_localization::Token,
@@ -28,6 +28,7 @@ use common::{
 		inspect_able::InspectAble,
 		load_asset::Path,
 	},
+	zyheeda_commands::ZyheedaCommands,
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -182,7 +183,7 @@ impl Default for RunSkillBehavior {
 	}
 }
 
-impl SpawnSkillBehavior<Commands<'_, '_>> for RunSkillBehavior {
+impl SpawnSkillBehavior for RunSkillBehavior {
 	fn spawn_on(&self) -> SpawnOn {
 		match self {
 			RunSkillBehavior::OnActive(skill) => skill.spawn_on,
@@ -192,7 +193,7 @@ impl SpawnSkillBehavior<Commands<'_, '_>> for RunSkillBehavior {
 
 	fn spawn<TEffects, TSkillBehaviors>(
 		&self,
-		commands: &mut Commands,
+		commands: &mut ZyheedaCommands,
 		caster: &SkillCaster,
 		spawner: SkillSpawner,
 		target: &SkillTarget,
@@ -214,7 +215,7 @@ impl SpawnSkillBehavior<Commands<'_, '_>> for RunSkillBehavior {
 
 fn spawn<TEffects, TSkillBehaviors>(
 	behavior: &SkillBehaviorConfig,
-	commands: &mut Commands,
+	commands: &mut ZyheedaCommands,
 	caster: &SkillCaster,
 	spawner: SkillSpawner,
 	target: &SkillTarget,
@@ -225,11 +226,11 @@ where
 {
 	let shape = behavior.spawn_shape::<TSkillBehaviors>(commands, caster, spawner, target);
 
-	if let Ok(mut contact) = commands.get_entity(shape.contact) {
+	if let Some(mut contact) = commands.get_mut(&shape.contact) {
 		behavior.start_contact_behavior::<TEffects>(&mut contact, caster, target);
 	};
 
-	if let Ok(mut projection) = commands.get_entity(shape.projection) {
+	if let Some(mut projection) = commands.get_mut(&shape.projection) {
 		behavior.start_projection_behavior::<TEffects>(&mut projection, caster, target);
 	};
 
@@ -243,7 +244,7 @@ mod tests {
 		behaviors::{attach_skill_effect::AttachEffect, build_skill_shape::BuildSkillShape},
 		traits::skill_builder::SkillShape,
 	};
-	use bevy::ecs::system::{EntityCommands, RunSystemError, RunSystemOnce};
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
 		components::{outdated::Outdated, persistent_entity::PersistentEntity},
 		tools::collider_info::ColliderInfo,
@@ -251,6 +252,7 @@ mod tests {
 			handles_effect::HandlesEffect,
 			handles_skill_behaviors::{Contact, Projection, SkillEntities, SkillRoot},
 		},
+		zyheeda_commands::ZyheedaEntityCommands,
 	};
 	use testing::SingleThreadedApp;
 
@@ -291,10 +293,10 @@ mod tests {
 		type TSkillContact = _Contact;
 		type TSkillProjection = _Projection;
 
-		fn spawn_skill(commands: &mut Commands, _: Contact, _: Projection) -> SkillEntities {
+		fn spawn_skill(commands: &mut ZyheedaCommands, _: Contact, _: Projection) -> SkillEntities {
 			SkillEntities {
 				root: SkillRoot {
-					entity: commands.spawn_empty().id(),
+					entity: commands.spawn(()).id(),
 					persistent_entity: PersistentEntity::default(),
 				},
 				contact: commands.spawn(_Contact).id(),
@@ -303,7 +305,7 @@ mod tests {
 		}
 	}
 
-	fn effect(e: &mut EntityCommands, c: &SkillCaster, t: &SkillTarget) {
+	fn effect(e: &mut ZyheedaEntityCommands, c: &SkillCaster, t: &SkillTarget) {
 		e.try_insert(_Args {
 			caster: *c,
 			target: *t,
@@ -329,9 +331,9 @@ mod tests {
 		}
 	}
 
-	fn execute_callback<TCallback>(In(mut callback): In<TCallback>, mut cmd: Commands)
+	fn execute_callback<TCallback>(In(mut callback): In<TCallback>, mut cmd: ZyheedaCommands)
 	where
-		TCallback: FnMut(&mut Commands),
+		TCallback: FnMut(&mut ZyheedaCommands),
 	{
 		callback(&mut cmd);
 	}
@@ -368,7 +370,7 @@ mod tests {
 							target: *target,
 						})
 						.id(),
-					projection: cmd.spawn_empty().id(),
+					projection: cmd.spawn(()).id(),
 					on_skill_stop: OnSkillStop::Ignore,
 				}
 			}))
@@ -404,7 +406,7 @@ mod tests {
 							target: *target,
 						})
 						.id(),
-					projection: cmd.spawn_empty().id(),
+					projection: cmd.spawn(()).id(),
 					on_skill_stop: OnSkillStop::Ignore,
 				}
 			}))
@@ -431,14 +433,14 @@ mod tests {
 	#[test]
 	fn apply_contact_behavior_on_active() -> Result<(), RunSystemError> {
 		fn shape(
-			cmd: &mut Commands,
+			cmd: &mut ZyheedaCommands,
 			_: &SkillCaster,
 			_: SkillSpawner,
 			_: &SkillTarget,
 		) -> SkillShape {
 			SkillShape {
 				contact: cmd.spawn(_Contact).id(),
-				projection: cmd.spawn_empty().id(),
+				projection: cmd.spawn(()).id(),
 				on_skill_stop: OnSkillStop::Ignore,
 			}
 		}
@@ -477,7 +479,7 @@ mod tests {
 						target: *target,
 					})
 					.id(),
-				projection: cmd.spawn_empty().id(),
+				projection: cmd.spawn(()).id(),
 				on_skill_stop: OnSkillStop::Ignore,
 			}),
 		));
@@ -502,13 +504,13 @@ mod tests {
 	#[test]
 	fn apply_projection_behavior_on_active() -> Result<(), RunSystemError> {
 		fn shape(
-			cmd: &mut Commands,
+			cmd: &mut ZyheedaCommands,
 			_: &SkillCaster,
 			_: SkillSpawner,
 			_: &SkillTarget,
 		) -> SkillShape {
 			SkillShape {
-				contact: cmd.spawn_empty().id(),
+				contact: cmd.spawn(()).id(),
 				projection: cmd.spawn(_Projection).id(),
 				on_skill_stop: OnSkillStop::Ignore,
 			}
@@ -553,7 +555,7 @@ mod tests {
 							target: *target,
 						})
 						.id(),
-					projection: cmd.spawn_empty().id(),
+					projection: cmd.spawn(()).id(),
 					on_skill_stop: OnSkillStop::Ignore,
 				}
 			}))
@@ -589,7 +591,7 @@ mod tests {
 							target: *target,
 						})
 						.id(),
-					projection: cmd.spawn_empty().id(),
+					projection: cmd.spawn(()).id(),
 					on_skill_stop: OnSkillStop::Ignore,
 				}
 			}))
@@ -619,14 +621,14 @@ mod tests {
 		struct _Contact;
 
 		fn shape(
-			cmd: &mut Commands,
+			cmd: &mut ZyheedaCommands,
 			_: &SkillCaster,
 			_: SkillSpawner,
 			_: &SkillTarget,
 		) -> SkillShape {
 			SkillShape {
 				contact: cmd.spawn(_Contact).id(),
-				projection: cmd.spawn_empty().id(),
+				projection: cmd.spawn(()).id(),
 				on_skill_stop: OnSkillStop::Ignore,
 			}
 		}
@@ -669,7 +671,7 @@ mod tests {
 						target: *target,
 					})
 					.id(),
-				projection: cmd.spawn_empty().id(),
+				projection: cmd.spawn(()).id(),
 				on_skill_stop: OnSkillStop::Ignore,
 			}),
 		));
@@ -697,13 +699,13 @@ mod tests {
 		struct _Projection;
 
 		fn shape(
-			cmd: &mut Commands,
+			cmd: &mut ZyheedaCommands,
 			_: &SkillCaster,
 			_: SkillSpawner,
 			_: &SkillTarget,
 		) -> SkillShape {
 			SkillShape {
-				contact: cmd.spawn_empty().id(),
+				contact: cmd.spawn(()).id(),
 				projection: cmd.spawn(_Projection).id(),
 				on_skill_stop: OnSkillStop::Ignore,
 			}

@@ -1,4 +1,3 @@
-pub(crate) mod despawn_entity;
 pub(crate) mod insert_entity;
 pub(crate) mod remove_entity;
 
@@ -8,9 +7,10 @@ mod integration_tests {
 		components::persistent_entity::PersistentEntity,
 		resources::persistent_entities::PersistentEntities,
 		traits::{
+			accessors::get::{GetMut, TryApplyOn},
 			register_persistent_entities::RegisterPersistentEntities,
-			try_despawn::{TryDespawn, TryDespawnPersistent},
 		},
+		zyheeda_commands::ZyheedaCommands,
 	};
 	use bevy::{
 		ecs::system::{RunSystemError, RunSystemOnce},
@@ -32,8 +32,8 @@ mod integration_tests {
 		let entity = app.world_mut().spawn(PersistentEntity::default()).id();
 
 		app.world_mut()
-			.run_system_once(move |mut commands: Commands| {
-				commands.try_despawn(entity);
+			.run_system_once(move |mut commands: ZyheedaCommands| {
+				commands.try_apply_on(&entity, |e| e.try_despawn());
 			})?;
 
 		assert!(
@@ -52,8 +52,11 @@ mod integration_tests {
 		app.world_mut().spawn(entity);
 
 		app.world_mut()
-			.run_system_once(move |mut commands: Commands| {
-				commands.try_despawn_persistent(entity);
+			.run_system_once(move |mut commands: ZyheedaCommands| {
+				let Some(entity) = commands.get_mut(&entity) else {
+					return;
+				};
+				entity.try_despawn();
 			})?;
 
 		assert!(

@@ -1,11 +1,8 @@
 use bevy::prelude::*;
 use common::{
 	tools::Units,
-	traits::{
-		clamp_zero_positive::ClampZeroPositive,
-		try_despawn::TryDespawn,
-		try_insert_on::TryInsertOn,
-	},
+	traits::{accessors::get::TryApplyOn, clamp_zero_positive::ClampZeroPositive},
+	zyheeda_commands::ZyheedaCommands,
 };
 use std::marker::PhantomData;
 
@@ -61,7 +58,7 @@ where
 	TTravel: Component,
 {
 	pub(crate) fn system(
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		mut transforms: Query<
 			(Entity, &mut Self, &Transform, Option<&LastTranslation>),
 			With<TTravel>,
@@ -70,10 +67,12 @@ where
 		for (entity, mut travel, transform, last_translation) in &mut transforms {
 			match last_translation {
 				Some(last_translation) if travel.update(transform, last_translation).done() => {
-					commands.try_despawn(entity);
+					commands.try_apply_on(&entity, |e| e.try_despawn());
 				}
 				_ => {
-					commands.try_insert_on(entity, LastTranslation(transform.translation));
+					commands.try_apply_on(&entity, |mut e| {
+						e.try_insert(LastTranslation(transform.translation));
+					});
 				}
 			}
 		}

@@ -1,17 +1,13 @@
 use crate::components::{Dad, KeyedPanel};
 use bevy::{
-	ecs::{
-		component::Component,
-		query::With,
-		system::{Commands, Query},
-	},
+	ecs::{component::Component, query::With, system::Query},
 	prelude::Entity,
 	ui::Interaction,
 };
-use common::traits::try_insert_on::TryInsertOn;
+use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
 pub fn drag<TAgent: Component, TKey: Send + Sync + Copy + 'static>(
-	mut commands: Commands,
+	mut commands: ZyheedaCommands,
 	agents: Query<Entity, With<TAgent>>,
 	panels: Query<(&Interaction, &KeyedPanel<TKey>)>,
 ) {
@@ -22,7 +18,9 @@ pub fn drag<TAgent: Component, TKey: Send + Sync + Copy + 'static>(
 	let Ok(agent) = agents.single() else {
 		return;
 	};
-	commands.try_insert_on(agent, Dad(panel.0));
+	commands.try_apply_on(&agent, |mut e| {
+		e.try_insert(Dad(panel.0));
+	});
 }
 
 fn is_pressed<TKeyedPanel>((interaction, _): &(&Interaction, &KeyedPanel<TKeyedPanel>)) -> bool {

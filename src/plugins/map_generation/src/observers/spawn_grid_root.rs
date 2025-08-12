@@ -3,10 +3,9 @@ use crate::{
 	grid_graph::GridGraph,
 };
 use bevy::prelude::*;
-use common::traits::{
-	thread_safe::ThreadSafe,
-	try_despawn::TryDespawn,
-	try_insert_on::TryInsertOn,
+use common::{
+	traits::{accessors::get::TryApplyOn, thread_safe::ThreadSafe},
+	zyheeda_commands::ZyheedaCommands,
 };
 
 impl<TCell> MapGridGraph<TCell>
@@ -17,7 +16,7 @@ where
 		trigger: Trigger<OnInsert, Self>,
 		maps: Query<(&Self, Option<&Children>)>,
 		grids: Query<&TGrid>,
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 	) where
 		for<'a> TGrid: Component + From<&'a GridGraph>,
 	{
@@ -27,7 +26,7 @@ where
 		};
 
 		for grid in old(children, grids) {
-			commands.try_despawn(grid);
+			commands.try_apply_on(&grid, |e| e.try_despawn());
 		}
 
 		let child = commands
@@ -37,7 +36,9 @@ where
 				CellsRef::<TCell>::from_grid_definition(target),
 			))
 			.id();
-		commands.try_insert_on(target, NavGrid::<TGrid>::from(child));
+		commands.try_apply_on(&target, |mut e| {
+			e.try_insert(NavGrid::<TGrid>::from(child));
+		});
 	}
 }
 

@@ -1,6 +1,9 @@
 use crate::{Input, KeyBind, Rebinding};
 use bevy::prelude::*;
-use common::traits::{thread_safe::ThreadSafe, try_despawn::TryDespawn};
+use common::{
+	traits::{accessors::get::TryApplyOn, thread_safe::ThreadSafe},
+	zyheeda_commands::ZyheedaCommands,
+};
 
 impl<TAction, TInput> KeyBind<Input<TAction, TInput>>
 where
@@ -8,7 +11,7 @@ where
 	TInput: Copy + ThreadSafe,
 {
 	pub(crate) fn rebind_on_click(
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		key_binds: Query<(Entity, &Self, &Interaction, Option<&Children>)>,
 	) {
 		for (entity, KeyBind(input), interaction, children) in &key_binds {
@@ -16,19 +19,17 @@ where
 				continue;
 			}
 
-			let Ok(mut entity) = commands.get_entity(entity) else {
-				continue;
-			};
-
-			entity.try_insert(KeyBind(Rebinding(*input)));
-			entity.remove::<Self>();
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_insert(KeyBind(Rebinding(*input)));
+				e.try_remove::<Self>();
+			});
 
 			let Some(children) = children else {
 				continue;
 			};
 
 			for child in children {
-				commands.try_despawn(*child);
+				commands.try_apply_on(child, |e| e.try_despawn());
 			}
 		}
 	}

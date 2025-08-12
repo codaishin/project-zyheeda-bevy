@@ -1,6 +1,7 @@
 use crate::{
 	components::collider_relationship::{ColliderOfInteractionTarget, InteractionTarget},
-	traits::try_insert_on::TryInsertOn,
+	traits::accessors::get::TryApplyOn,
+	zyheeda_commands::ZyheedaCommands,
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
@@ -8,7 +9,7 @@ use bevy_rapier3d::prelude::*;
 impl ColliderOfInteractionTarget {
 	pub(crate) fn link(
 		trigger: Trigger<OnAdd, Collider>,
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		collider_roots: Query<Entity, With<InteractionTarget>>,
 		ancestors: Query<&ChildOf>,
 	) {
@@ -22,7 +23,9 @@ impl ColliderOfInteractionTarget {
 			return;
 		};
 
-		commands.try_insert_on(entity, ColliderOfInteractionTarget(target));
+		commands.try_apply_on(&entity, |mut e| {
+			e.try_insert(ColliderOfInteractionTarget(target));
+		});
 	}
 }
 

@@ -1,17 +1,22 @@
 use crate::{
 	components::persistent_entity::PersistentEntity,
 	resources::persistent_entities::PersistentEntities,
+	zyheeda_commands::ZyheedaCommands,
 };
 use bevy::prelude::*;
 
 impl PersistentEntities {
 	pub(crate) fn insert_entity(
 		trigger: Trigger<OnInsert, PersistentEntity>,
-		mut persistent_entities: ResMut<PersistentEntities>,
+		commands: ZyheedaCommands,
 		entities: Query<&PersistentEntity>,
 	) {
 		let entity = trigger.target();
 		let Ok(persistent_entity) = entities.get(entity) else {
+			return;
+		};
+
+		let Some(mut persistent_entities) = commands.persistent_entities else {
 			return;
 		};
 

@@ -11,7 +11,8 @@ use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::{
 	errors::{Error, Level as ErrorLevel, Unreachable},
-	traits::{thread_safe::ThreadSafe, try_insert_on::TryInsertOn},
+	traits::{accessors::get::TryApplyOn, thread_safe::ThreadSafe},
+	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
 use std::{any::type_name, marker::PhantomData};
 
@@ -57,7 +58,7 @@ where
 	}
 
 	pub(crate) fn insert(
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		levels: Query<(Entity, &Grid<0, TGraph>), Changed<Grid<0, TGraph>>>,
 	) -> Result<(), Vec<SubdivisionError>>
 	where
@@ -68,7 +69,9 @@ where
 			.filter_map(
 				|(entity, level)| match level.graph.to_subdivided(SUBDIVISIONS) {
 					Ok(graph) => {
-						commands.try_insert_on(entity, Self { graph });
+						commands.try_apply_on(&entity, |mut e| {
+							e.try_insert(Self { graph });
+						});
 						None
 					}
 					Err(err) => Some(err),
@@ -144,7 +147,7 @@ where
 			if cell.offset_height() {
 				transform.translation.y += *TCell::CELL_DISTANCE / 2.;
 			}
-			let mut child = parent.spawn(transform);
+			let mut child = ZyheedaEntityCommands::from(parent.spawn(transform));
 			cell.insert_cell_components(&mut child);
 		}
 	}
@@ -312,8 +315,8 @@ mod test_spawn_cells {
 			self.offset_height
 		}
 
-		fn insert_cell_components(&self, entity: &mut EntityCommands) {
-			entity.insert(_CellComponent);
+		fn insert_cell_components(&self, entity: &mut ZyheedaEntityCommands) {
+			entity.try_insert(_CellComponent);
 		}
 	}
 

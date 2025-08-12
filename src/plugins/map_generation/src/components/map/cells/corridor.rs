@@ -30,7 +30,7 @@ use crate::{
 	},
 };
 use bevy::prelude::*;
-use common::errors::Unreachable;
+use common::{errors::Unreachable, zyheeda_commands::ZyheedaEntityCommands};
 use macros::new_valid;
 use std::collections::HashSet;
 
@@ -90,10 +90,10 @@ impl InsertCellComponents for Corridor {
 		}
 	}
 
-	fn insert_cell_components(&self, entity: &mut EntityCommands) {
+	fn insert_cell_components(&self, entity: &mut ZyheedaEntityCommands) {
 		match self {
-			Corridor::Floor => entity.insert(FloorCell),
-			Corridor::Wall => entity.insert(WallCell),
+			Corridor::Floor => entity.try_insert(FloorCell),
+			Corridor::Wall => entity.try_insert(WallCell),
 		};
 	}
 }
@@ -101,47 +101,47 @@ impl InsertCellComponents for Corridor {
 impl InsertCellQuadrantComponents for Corridor {
 	fn insert_cell_quadrant_components(
 		&self,
-		entity: &mut EntityCommands,
+		entity: &mut ZyheedaEntityCommands,
 		different_quadrants: HashSet<Quadrant>,
 	) {
 		match self {
 			// Corridor Floor
 			Corridor::Floor if different_quadrants.matches(CORNER_INNER) => {
-				entity.insert(CorridorFloorCornerInside);
+				entity.try_insert(CorridorFloorCornerInside);
 			}
 			Corridor::Floor if different_quadrants.matches(CORNER_OUTER) => {
-				entity.insert(CorridorFloorCornerOutside);
+				entity.try_insert(CorridorFloorCornerOutside);
 			}
 			Corridor::Floor if different_quadrants.matches(CORNER_OUTER_DIAGONAL) => {
-				entity.insert(CorridorFloorCornerOutside);
+				entity.try_insert(CorridorFloorCornerOutside);
 			}
 			Corridor::Floor if different_quadrants.contains(&Quadrant::Forward) => {
-				entity.insert(CorridorFloorForward);
+				entity.try_insert(CorridorFloorForward);
 			}
 			Corridor::Floor if different_quadrants.contains(&Quadrant::Left) => {
-				entity.insert(CorridorFloorLeft);
+				entity.try_insert(CorridorFloorLeft);
 			}
 			Corridor::Floor => {
-				entity.insert(CorridorFloor);
+				entity.try_insert(CorridorFloor);
 			}
 			// Corridor Wall
 			Corridor::Wall if different_quadrants.matches(CORNER_INNER) => {
-				entity.insert(CorridorWallCornerInside);
+				entity.try_insert(CorridorWallCornerInside);
 			}
 			Corridor::Wall if different_quadrants.matches(CORNER_OUTER) => {
-				entity.insert(CorridorWallCornerOutside);
+				entity.try_insert(CorridorWallCornerOutside);
 			}
 			Corridor::Wall if different_quadrants.matches(CORNER_OUTER_DIAGONAL) => {
-				entity.insert(CorridorWallCornerOutsideDiagonal);
+				entity.try_insert(CorridorWallCornerOutsideDiagonal);
 			}
 			Corridor::Wall if different_quadrants.contains(&Quadrant::Forward) => {
-				entity.insert(CorridorWallForward);
+				entity.try_insert(CorridorWallForward);
 			}
 			Corridor::Wall if different_quadrants.contains(&Quadrant::Left) => {
-				entity.insert(CorridorWallLeft);
+				entity.try_insert(CorridorWallLeft);
 			}
 			Corridor::Wall => {
-				entity.insert(CorridorWall);
+				entity.try_insert(CorridorWall);
 			}
 		};
 	}

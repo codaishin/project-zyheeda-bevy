@@ -5,21 +5,22 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	components::is_blocker::IsBlocker,
-	traits::{handles_interactions::InteractAble::Fragile, try_despawn::TryDespawn},
+	traits::{accessors::get::TryApplyOn, handles_interactions::InteractAble::Fragile},
+	zyheeda_commands::ZyheedaCommands,
 };
 
 pub(crate) fn apply_fragile_blocks(
-	mut commands: Commands,
+	mut commands: ZyheedaCommands,
 	mut interaction_event: EventReader<InteractionEvent>,
 	fragiles: Query<(Entity, &Blockable)>,
 	blockers: Query<&IsBlocker>,
 ) {
 	for (a, b) in interaction_event.read().filter_map(collision_started) {
 		if let Some(fragile) = fragile_blocked_entity(a, b, &fragiles, &blockers) {
-			commands.try_despawn(fragile);
+			commands.try_apply_on(&fragile, |e| e.try_despawn());
 		}
 		if let Some(fragile) = fragile_blocked_entity(b, a, &fragiles, &blockers) {
-			commands.try_despawn(fragile);
+			commands.try_apply_on(&fragile, |e| e.try_despawn());
 		}
 	}
 }

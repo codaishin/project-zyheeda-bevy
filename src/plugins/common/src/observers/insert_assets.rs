@@ -1,10 +1,7 @@
 use crate::{
 	components::insert_asset::InsertAsset,
-	traits::{
-		asset_marker::AssetMarker,
-		try_insert_on::TryInsertOn,
-		try_remove_from::TryRemoveFrom,
-	},
+	traits::{accessors::get::TryApplyOn, asset_marker::AssetMarker},
+	zyheeda_commands::ZyheedaCommands,
 };
 use bevy::prelude::*;
 use std::{any::TypeId, collections::HashMap};
@@ -15,7 +12,7 @@ where
 {
 	pub(crate) fn apply(
 		trigger: Trigger<OnAdd, Self>,
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		mut caches: Local<HashMap<TypeId, Handle<TAsset>>>,
 		mut assets: ResMut<Assets<TAsset>>,
 		components: Query<&Self>,
@@ -26,8 +23,9 @@ where
 		};
 		let handle = component.get_handle(&mut caches, &mut assets);
 
-		commands.try_insert_on(entity, TAsset::component(handle));
-		commands.try_remove_from::<Self>(entity);
+		commands.try_apply_on(&entity, |mut e| {
+			e.try_remove::<Self>().try_insert(TAsset::component(handle));
+		});
 	}
 }
 

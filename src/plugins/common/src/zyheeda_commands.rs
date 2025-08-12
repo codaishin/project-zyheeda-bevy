@@ -1,10 +1,13 @@
-use bevy::{
-	ecs::{entity::EntityDoesNotExistError, system::SystemParam},
-	prelude::*,
+use crate::{
+	components::persistent_entity::PersistentEntity,
+	resources::persistent_entities::PersistentEntities,
+	traits::accessors::get::GetMut,
 };
+use bevy::{ecs::system::SystemParam, prelude::*};
 
 pub struct ZyheedaCommands<'w, 's> {
 	commands: Commands<'w, 's>,
+	pub(crate) persistent_entities: Option<ResMut<'w, PersistentEntities>>,
 }
 
 impl<'w, 's> ZyheedaCommands<'w, 's> {
@@ -15,41 +18,60 @@ impl<'w, 's> ZyheedaCommands<'w, 's> {
 		self.commands.spawn(bundle)
 	}
 
-	pub fn try_apply_on<TFn>(&mut self, entity: Entity, apply: TFn)
-	where
-		TFn: FnOnce(ZyheedaEntityCommands),
-	{
-		let Ok(entity) = self.get_entity(entity) else {
-			return;
-		};
-		apply(entity)
-	}
-
 	pub fn insert_resource<TResource>(&mut self, resource: TResource)
 	where
 		TResource: Resource,
 	{
 		self.commands.insert_resource(resource);
 	}
+}
 
-	pub fn get_entity(
-		&mut self,
-		entity: Entity,
-	) -> Result<ZyheedaEntityCommands<'_>, EntityDoesNotExistError> {
-		let entity = self.commands.get_entity(entity)?;
-		Ok(ZyheedaEntityCommands { entity })
+impl GetMut<Entity> for ZyheedaCommands<'_, '_> {
+	type TValue<'a>
+		= ZyheedaEntityCommands<'a>
+	where
+		Self: 'a;
+
+	fn get_mut(&mut self, entity: &Entity) -> Option<Self::TValue<'_>> {
+		let entity = self.commands.get_entity(*entity).ok()?;
+		Some(ZyheedaEntityCommands { entity })
+	}
+}
+
+impl GetMut<PersistentEntity> for ZyheedaCommands<'_, '_> {
+	type TValue<'a>
+		= ZyheedaEntityCommands<'a>
+	where
+		Self: 'a;
+
+	/// Attempt to retrieve a [`ZyheedaEntityCommands`] instance for the given [`PersistentEntity`].
+	///
+	/// Requires [`crate::CommonPlugin`].
+	///
+	/// Failures are logged automatically.
+	fn get_mut(&mut self, entity: &PersistentEntity) -> Option<Self::TValue<'_>> {
+		let persistent_entities = self.persistent_entities.as_mut()?;
+		let entity = persistent_entities.get_entity(entity)?;
+		let entity = self.commands.get_entity(entity).ok()?;
+		Some(ZyheedaEntityCommands { entity })
 	}
 }
 
 unsafe impl<'w, 's> SystemParam for ZyheedaCommands<'w, 's> {
-	type State = <Commands<'w, 's> as SystemParam>::State;
+	type State = (
+		<Commands<'w, 's> as SystemParam>::State,
+		<Option<ResMut<'w, PersistentEntities>> as SystemParam>::State,
+	);
 	type Item<'world, 'state> = ZyheedaCommands<'world, 'state>;
 
 	fn init_state(
 		world: &mut World,
 		system_meta: &mut bevy::ecs::system::SystemMeta,
 	) -> Self::State {
-		Commands::<'w, 's>::init_state(world, system_meta)
+		(
+			Commands::<'w, 's>::init_state(world, system_meta),
+			Option::<ResMut<'w, PersistentEntities>>::init_state(world, system_meta),
+		)
 	}
 
 	unsafe fn get_param<'world, 'state>(
@@ -60,7 +82,15 @@ unsafe impl<'w, 's> SystemParam for ZyheedaCommands<'w, 's> {
 	) -> Self::Item<'world, 'state> {
 		ZyheedaCommands {
 			commands: unsafe {
-				Commands::<'w, 's>::get_param(state, system_meta, world, change_tick)
+				Commands::<'w, 's>::get_param(&mut state.0, system_meta, world, change_tick)
+			},
+			persistent_entities: unsafe {
+				Option::<ResMut<'w, PersistentEntities>>::get_param(
+					&mut state.1,
+					system_meta,
+					world,
+					change_tick,
+				)
 			},
 		}
 	}
@@ -70,7 +100,14 @@ unsafe impl<'w, 's> SystemParam for ZyheedaCommands<'w, 's> {
 		archetype: &bevy::ecs::archetype::Archetype,
 		system_meta: &mut bevy::ecs::system::SystemMeta,
 	) {
-		unsafe { Commands::<'w, 's>::new_archetype(state, archetype, system_meta) };
+		unsafe {
+			Commands::<'w, 's>::new_archetype(&mut state.0, archetype, system_meta);
+			Option::<ResMut<'w, PersistentEntities>>::new_archetype(
+				&mut state.1,
+				archetype,
+				system_meta,
+			);
+		};
 	}
 
 	fn apply(
@@ -78,7 +115,8 @@ unsafe impl<'w, 's> SystemParam for ZyheedaCommands<'w, 's> {
 		system_meta: &bevy::ecs::system::SystemMeta,
 		world: &mut World,
 	) {
-		Commands::<'w, 's>::apply(state, system_meta, world);
+		Commands::<'w, 's>::apply(&mut state.0, system_meta, world);
+		Option::<ResMut<'w, PersistentEntities>>::apply(&mut state.1, system_meta, world);
 	}
 
 	fn queue(
@@ -86,7 +124,10 @@ unsafe impl<'w, 's> SystemParam for ZyheedaCommands<'w, 's> {
 		system_meta: &bevy::ecs::system::SystemMeta,
 		world: bevy::ecs::world::DeferredWorld,
 	) {
-		<Commands<'w, 's> as SystemParam>::queue(state, system_meta, world);
+		<Commands<'w, 's> as SystemParam>::queue(&mut state.0, system_meta, world);
+		// No queuing for resources due to:
+		// - `world` being consumed
+		// - `Option<ResMut>` has empty queue impl in bevy 0.16
 	}
 
 	unsafe fn validate_param(
@@ -94,7 +135,11 @@ unsafe impl<'w, 's> SystemParam for ZyheedaCommands<'w, 's> {
 		system_meta: &bevy::ecs::system::SystemMeta,
 		world: bevy::ecs::world::unsafe_world_cell::UnsafeWorldCell,
 	) -> std::result::Result<(), bevy::ecs::system::SystemParamValidationError> {
-		unsafe { Commands::<'w, 's>::validate_param(state, system_meta, world) }
+		unsafe {
+			Commands::<'w, 's>::validate_param(&state.0, system_meta, world)?;
+			Option::<ResMut<'w, PersistentEntities>>::validate_param(&state.1, system_meta, world)?;
+		}
+		Ok(())
 	}
 }
 
@@ -103,6 +148,10 @@ pub struct ZyheedaEntityCommands<'a> {
 }
 
 impl ZyheedaEntityCommands<'_> {
+	pub fn id(&self) -> Entity {
+		self.entity.id()
+	}
+
 	pub fn try_insert<TBundle>(&mut self, bundle: TBundle) -> &mut Self
 	where
 		TBundle: Bundle,
@@ -129,6 +178,12 @@ impl ZyheedaEntityCommands<'_> {
 
 	pub fn try_despawn(mut self) {
 		self.entity.try_despawn();
+	}
+}
+
+impl<'a> From<EntityCommands<'a>> for ZyheedaEntityCommands<'a> {
+	fn from(entity: EntityCommands<'a>) -> Self {
+		Self { entity }
 	}
 }
 
@@ -176,8 +231,27 @@ mod test {
 		Ok(())
 	}
 
-	mod via_entity {
+	mod entity {
 		use super::*;
+
+		#[test]
+		fn id() -> Result<(), RunSystemError> {
+			let mut app = setup();
+			let entity = app.world_mut().spawn_empty().id();
+			static mut GOT: Option<Entity> = None;
+
+			app.world_mut()
+				.run_system_once(move |mut commands: ZyheedaCommands| {
+					let Some(entity_cmds) = commands.get_mut(&entity) else {
+						return;
+					};
+
+					unsafe { GOT = Some(entity_cmds.id()) }
+				})?;
+
+			assert_eq!(Some(entity), unsafe { GOT });
+			Ok(())
+		}
 
 		#[test]
 		fn insert() -> Result<(), RunSystemError> {
@@ -186,7 +260,7 @@ mod test {
 
 			app.world_mut()
 				.run_system_once(move |mut commands: ZyheedaCommands| {
-					let Ok(mut entity_cmds) = commands.get_entity(entity) else {
+					let Some(mut entity_cmds) = commands.get_mut(&entity) else {
 						return;
 					};
 					entity_cmds.try_insert(_Component(""));
@@ -206,7 +280,7 @@ mod test {
 
 			app.world_mut()
 				.run_system_once(move |mut commands: ZyheedaCommands| {
-					let Ok(mut entity_cmds) = commands.get_entity(entity) else {
+					let Some(mut entity_cmds) = commands.get_mut(&entity) else {
 						return;
 					};
 
@@ -222,7 +296,7 @@ mod test {
 
 			app.world_mut()
 				.run_system_once(move |mut commands: ZyheedaCommands| {
-					let Ok(mut entity_cmds) = commands.get_entity(entity) else {
+					let Some(mut entity_cmds) = commands.get_mut(&entity) else {
 						return;
 					};
 					entity_cmds.try_insert_if_new(_Component("new"));
@@ -242,7 +316,7 @@ mod test {
 
 			app.world_mut()
 				.run_system_once(move |mut commands: ZyheedaCommands| {
-					let Ok(mut entity_cmds) = commands.get_entity(entity) else {
+					let Some(mut entity_cmds) = commands.get_mut(&entity) else {
 						return;
 					};
 					entity_cmds.try_insert_if_new(_Component("new"));
@@ -262,7 +336,7 @@ mod test {
 
 			app.world_mut()
 				.run_system_once(move |mut commands: ZyheedaCommands| {
-					let Ok(mut entity_cmds) = commands.get_entity(entity) else {
+					let Some(mut entity_cmds) = commands.get_mut(&entity) else {
 						return;
 					};
 
@@ -278,7 +352,7 @@ mod test {
 
 			app.world_mut()
 				.run_system_once(move |mut commands: ZyheedaCommands| {
-					let Ok(mut entity_cmds) = commands.get_entity(entity) else {
+					let Some(mut entity_cmds) = commands.get_mut(&entity) else {
 						return;
 					};
 					entity_cmds.try_remove::<_Component>();
@@ -295,7 +369,7 @@ mod test {
 
 			app.world_mut()
 				.run_system_once(move |mut commands: ZyheedaCommands| {
-					let Ok(entity_cmds) = commands.get_entity(entity) else {
+					let Some(entity_cmds) = commands.get_mut(&entity) else {
 						return;
 					};
 					entity_cmds.try_despawn();
@@ -306,44 +380,14 @@ mod test {
 		}
 	}
 
-	mod via_commands {
+	mod commands {
 		use super::*;
+		use crate::traits::register_persistent_entities::RegisterPersistentEntities;
 
-		#[test]
-		fn try_apply() -> Result<(), RunSystemError> {
-			let mut app = setup();
-			let entity = app.world_mut().spawn_empty().id();
-
-			app.world_mut()
-				.run_system_once(move |mut commands: ZyheedaCommands| {
-					commands.try_apply_on(entity, |mut e| {
-						e.try_insert(_Component(""));
-					});
-				})?;
-
-			assert_eq!(
-				Some(&_Component("")),
-				app.world().entity(entity).get::<_Component>()
-			);
-			Ok(())
-		}
-
-		#[test]
-		fn no_error_on_try_apply_after_despawn() -> Result<(), RunSystemError> {
-			let mut app = setup();
-			let entity = app.world_mut().spawn_empty().id();
-
-			app.world_mut()
-				.run_system_once(move |mut commands: ZyheedaCommands| {
-					let Ok(mut entity_cmds) = commands.get_entity(entity) else {
-						return;
-					};
-
-					entity_cmds.entity.despawn();
-					commands.try_apply_on(entity, |mut e| {
-						e.try_insert(_Component(""));
-					});
-				})
+		fn setup() -> App {
+			let mut app = App::new().single_threaded(Update);
+			app.register_persistent_entities();
+			app
 		}
 
 		#[test]
@@ -359,6 +403,28 @@ mod test {
 				})?;
 
 			assert_eq!(Some(&_Resource), app.world().get_resource::<_Resource>());
+			Ok(())
+		}
+
+		#[test]
+		fn get_persistent() -> Result<(), RunSystemError> {
+			let mut app = setup();
+			let entity = PersistentEntity::default();
+			let expected = app.world_mut().spawn(entity).id();
+			static mut GOT: Option<Entity> = None;
+
+			app.world_mut()
+				.run_system_once(move |mut commands: ZyheedaCommands| {
+					let Some(entity_cmds) = commands.get_mut(&entity) else {
+						return;
+					};
+
+					unsafe {
+						GOT = Some(entity_cmds.id());
+					}
+				})?;
+
+			assert_eq!(Some(expected), unsafe { GOT });
 			Ok(())
 		}
 	}

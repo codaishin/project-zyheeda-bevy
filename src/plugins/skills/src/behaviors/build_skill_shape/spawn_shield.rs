@@ -23,6 +23,7 @@ use common::{
 			SkillSpawner,
 		},
 	},
+	zyheeda_commands::ZyheedaCommands,
 };
 use serde::{Deserialize, Serialize};
 
@@ -32,7 +33,7 @@ pub struct SpawnShield;
 impl SpawnShape for SpawnShield {
 	fn spawn_shape<TSkillBehaviors>(
 		&self,
-		commands: &mut Commands,
+		commands: &mut ZyheedaCommands,
 		caster: &SkillCaster,
 		_: SkillSpawner,
 		_: &SkillTarget,

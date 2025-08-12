@@ -4,10 +4,13 @@ use crate::{
 	traits::colors::HasPanelColors,
 };
 use bevy::prelude::*;
-use common::traits::{accessors::get::GetterRef, try_insert_on::TryInsertOn};
+use common::{
+	traits::accessors::get::{GetterRef, TryApplyOn},
+	zyheeda_commands::ZyheedaCommands,
+};
 
 pub fn panel_colors<TPanel: Component + GetterRef<PanelState> + HasPanelColors>(
-	mut commands: Commands,
+	mut commands: ZyheedaCommands,
 	mut panels: Query<(Entity, &Interaction, &TPanel, Option<&UIDisabled>), Without<ColorOverride>>,
 ) {
 	for (entity, interaction, panel, disabled) in &mut panels {
@@ -19,13 +22,12 @@ pub fn panel_colors<TPanel: Component + GetterRef<PanelState> + HasPanelColors>(
 			(_, PanelState::Filled, _) => &TPanel::PANEL_COLORS.filled,
 		};
 
-		commands.try_insert_on(
-			entity,
-			(
+		commands.try_apply_on(&entity, |mut e| {
+			e.try_insert((
 				BackgroundColor::from(config.background),
 				DispatchTextColor::from(config.text),
-			),
-		);
+			));
+		});
 	}
 }
 

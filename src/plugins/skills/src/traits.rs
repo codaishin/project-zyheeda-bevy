@@ -18,6 +18,7 @@ use crate::{
 use common::{
 	tools::{action_key::slot::SlotKey, item_type::ItemType},
 	traits::{key_mappings::TryGetAction, state_duration::StateUpdate},
+	zyheeda_commands::ZyheedaCommands,
 };
 use std::hash::Hash;
 
@@ -97,6 +98,11 @@ pub trait Schedule<TBehavior> {
 	fn schedule(&mut self, slot_key: SlotKey, behavior: TBehavior);
 }
 
-pub(crate) trait Execute<TCommands, TEffects, TSkillBehavior> {
-	fn execute(&mut self, commands: &mut TCommands, caster: &SkillCaster, target: &SkillTarget);
+pub(crate) trait Execute<TEffects, TSkillBehavior> {
+	fn execute(
+		&mut self,
+		commands: &mut ZyheedaCommands,
+		caster: &SkillCaster,
+		target: &SkillTarget,
+	);
 }

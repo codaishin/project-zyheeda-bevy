@@ -6,10 +6,12 @@ use bevy::prelude::*;
 use common::{
 	tools::action_key::user_input::UserInput,
 	traits::{
+		accessors::get::GetMut,
 		handles_localization::{LocalizeToken, Token},
 		key_mappings::GetInput,
 		thread_safe::ThreadSafe,
 	},
+	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
 use std::path::{Path, PathBuf};
 
@@ -21,7 +23,7 @@ where
 	pub fn icon<TMap, TLanguageServer>(
 		icon_root_path: impl Into<PathBuf>,
 	) -> impl Fn(
-		Commands,
+		ZyheedaCommands,
 		Res<TMap>,
 		ResMut<TLanguageServer>,
 		Query<(Entity, &InputLabel<TKey>), Added<InputLabel<TKey>>>,
@@ -36,7 +38,7 @@ where
 			let key_map = key_map.as_ref();
 
 			for (entity, label) in &mut labels {
-				let Ok(entity) = commands.get_entity(entity) else {
+				let Some(entity) = commands.get_mut(&entity) else {
 					continue;
 				};
 				insert_icon(&root, entity, key_map, language_server.as_mut(), label);
@@ -47,7 +49,7 @@ where
 
 fn insert_icon<TMap, TLanguageServer, TKey>(
 	root: &Path,
-	mut entity: EntityCommands,
+	mut entity: ZyheedaEntityCommands,
 	key_map: &TMap,
 	language_server: &mut TLanguageServer,
 	label: &InputLabel<TKey>,
@@ -61,7 +63,7 @@ fn insert_icon<TMap, TLanguageServer, TKey>(
 	let Token(token) = Token::from(key);
 	let path = root.join(format!("{token}.png"));
 
-	entity.insert(Icon {
+	entity.try_insert(Icon {
 		localized,
 		image: IconImage::Path(path),
 	});

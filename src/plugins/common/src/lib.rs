@@ -11,8 +11,6 @@ pub mod tools;
 pub mod traits;
 pub mod zyheeda_commands;
 
-mod events;
-
 use crate::{
 	components::{child_of_persistent::ChildOfPersistent, life::Life, lifetime::Lifetime},
 	states::game_state::GameState,

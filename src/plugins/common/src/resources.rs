@@ -1,4 +1,4 @@
-pub mod persistent_entities;
+pub(crate) mod persistent_entities;
 
 use bevy::prelude::*;
 use std::{

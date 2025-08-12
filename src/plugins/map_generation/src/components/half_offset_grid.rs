@@ -9,6 +9,7 @@ use crate::{
 	},
 };
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
+use common::zyheeda_commands::ZyheedaEntityCommands;
 use std::collections::HashMap;
 
 #[derive(Component, Debug, PartialEq)]
@@ -76,7 +77,7 @@ fn spawn_quadrant<TCell>(
 			.collect();
 
 		let transform = Transform::from_translation(pos).looking_to(Dir3::from(*look_dir), Vec3::Y);
-		let mut child = parent.spawn(transform);
+		let mut child = ZyheedaEntityCommands::from(parent.spawn(transform));
 		cell.insert_cell_quadrant_components(&mut child, different_quadrants);
 	}
 }
@@ -129,10 +130,10 @@ mod tests {
 	impl InsertCellQuadrantComponents for _Cell {
 		fn insert_cell_quadrant_components(
 			&self,
-			entity: &mut EntityCommands,
+			entity: &mut ZyheedaEntityCommands,
 			pattern: HashSet<Quadrant>,
 		) {
-			entity.insert(_Quadrant {
+			entity.try_insert(_Quadrant {
 				cell: self.name,
 				differences: pattern,
 			});

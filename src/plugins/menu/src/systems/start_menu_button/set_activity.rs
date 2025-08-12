@@ -2,13 +2,14 @@ use crate::components::{start_menu_button::StartMenuButton, ui_disabled::UIDisab
 use bevy::prelude::*;
 use common::{
 	states::game_state::GameState,
-	traits::{try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
+	traits::accessors::get::TryApplyOn,
+	zyheeda_commands::ZyheedaCommands,
 };
 
 impl StartMenuButton {
 	pub(crate) fn set_activity(
 		target_trigger_state: GameState,
-	) -> impl Fn(In<Activity>, Commands, Query<(Entity, &StartMenuButton)>) {
+	) -> impl Fn(In<Activity>, ZyheedaCommands, Query<(Entity, &StartMenuButton)>) {
 		move |In(activity), mut commands, buttons| {
 			for (entity, StartMenuButton { trigger_state, .. }) in buttons {
 				if trigger_state != &target_trigger_state {
@@ -16,8 +17,12 @@ impl StartMenuButton {
 				}
 
 				match activity {
-					Activity::Enable => commands.try_remove_from::<UIDisabled>(entity),
-					Activity::Disable => commands.try_insert_on(entity, UIDisabled),
+					Activity::Enable => commands.try_apply_on(&entity, |mut e| {
+						e.try_remove::<UIDisabled>();
+					}),
+					Activity::Disable => commands.try_apply_on(&entity, |mut e| {
+						e.try_insert(UIDisabled);
+					}),
 				};
 			}
 		}

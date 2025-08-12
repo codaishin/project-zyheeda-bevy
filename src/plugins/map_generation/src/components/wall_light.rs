@@ -1,6 +1,10 @@
 use crate::traits::ExtraComponentsDefinition;
 use bevy::prelude::*;
-use common::{components::insert_asset::InsertAsset, traits::handles_lights::HandlesLights};
+use common::{
+	components::insert_asset::InsertAsset,
+	traits::handles_lights::HandlesLights,
+	zyheeda_commands::ZyheedaEntityCommands,
+};
 
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct WallLight;
@@ -13,11 +17,11 @@ impl ExtraComponentsDefinition for WallLight {
 			.collect()
 	}
 
-	fn insert_bundle<TLights>(entity: &mut EntityCommands)
+	fn insert_bundle<TLights>(entity: &mut ZyheedaEntityCommands)
 	where
 		TLights: HandlesLights,
 	{
-		entity.insert((
+		entity.try_insert((
 			WallLight,
 			InsertAsset::shared::<WallLight>(|| StandardMaterial {
 				base_color: Color::from(TLights::DEFAULT_LIGHT),
