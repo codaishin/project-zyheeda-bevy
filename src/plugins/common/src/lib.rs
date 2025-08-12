@@ -9,6 +9,7 @@ pub mod states;
 pub mod systems;
 pub mod tools;
 pub mod traits;
+pub mod zyheeda_commands;
 
 mod events;
 
