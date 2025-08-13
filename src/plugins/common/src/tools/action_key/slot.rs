@@ -103,28 +103,28 @@ impl From<PlayerSlot> for SlotKey {
 impl TryFrom<SlotKey> for PlayerSlot {
 	type Error = NoValidSlotKey;
 
-	fn try_from(SlotKey(value): SlotKey) -> Result<Self, Self::Error> {
-		match value {
-			0 => Ok(PlayerSlot::Upper(Side::Left)),
-			1 => Ok(PlayerSlot::Lower(Side::Left)),
-			2 => Ok(PlayerSlot::Lower(Side::Right)),
-			3 => Ok(PlayerSlot::Upper(Side::Right)),
-			raw => Err(NoValidSlotKey { raw }),
+	fn try_from(slot_key: SlotKey) -> Result<Self, Self::Error> {
+		match slot_key {
+			SlotKey(0) => Ok(PlayerSlot::Upper(Side::Left)),
+			SlotKey(1) => Ok(PlayerSlot::Lower(Side::Left)),
+			SlotKey(2) => Ok(PlayerSlot::Lower(Side::Right)),
+			SlotKey(3) => Ok(PlayerSlot::Upper(Side::Right)),
+			slot_key => Err(NoValidSlotKey { slot_key }),
 		}
 	}
 }
 
 #[derive(Debug, PartialEq)]
 pub struct NoValidSlotKey {
-	raw: u8,
+	slot_key: SlotKey,
 }
 
 impl From<NoValidSlotKey> for Error {
-	fn from(NoValidSlotKey { raw }: NoValidSlotKey) -> Self {
+	fn from(NoValidSlotKey { slot_key: raw }: NoValidSlotKey) -> Self {
 		let key_name = type_name::<PlayerSlot>();
 
 		Self::Single {
-			msg: format!("the index {raw} is no valid {key_name}"),
+			msg: format!("the index {raw:?} is no valid {key_name}"),
 			lvl: Level::Error,
 		}
 	}
@@ -171,7 +171,9 @@ mod tests {
 				Ok(PlayerSlot::Lower(Side::Left)),
 				Ok(PlayerSlot::Lower(Side::Right)),
 				Ok(PlayerSlot::Upper(Side::Right)),
-				Err(NoValidSlotKey { raw: 4 }),
+				Err(NoValidSlotKey {
+					slot_key: SlotKey(4)
+				}),
 			],
 			[SlotKey(0), SlotKey(1), SlotKey(2), SlotKey(3), SlotKey(4)]
 				.into_iter()

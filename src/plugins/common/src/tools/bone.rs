@@ -4,9 +4,9 @@ use std::ops::Deref;
 pub struct Bone<'a>(pub &'a str);
 
 impl<'a> Deref for Bone<'a> {
-	type Target = &'a str;
+	type Target = str;
 
 	fn deref(&self) -> &Self::Target {
-		&self.0
+		self.0
 	}
 }

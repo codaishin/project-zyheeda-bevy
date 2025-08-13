@@ -48,12 +48,12 @@ fn add_quickbar(parent: &mut RelatedSpawnerCommands<ChildOf>) {
 		))
 		.with_children(|quickbar| {
 			for slot_key in PlayerSlot::iterator() {
-				add_slot(quickbar, &slot_key);
+				add_slot(quickbar, slot_key);
 			}
 		});
 }
 
-fn add_slot(quickbar: &mut RelatedSpawnerCommands<ChildOf>, key: &PlayerSlot) {
+fn add_slot(quickbar: &mut RelatedSpawnerCommands<ChildOf>, key: PlayerSlot) {
 	quickbar
 		.spawn(Node {
 			width: Val::Px(70.0),
@@ -91,16 +91,16 @@ fn add_slot(quickbar: &mut RelatedSpawnerCommands<ChildOf>, key: &PlayerSlot) {
 								..default()
 							},
 							TextColor(PanelColors::DEFAULT.filled.text),
-							InputLabel::<PlayerSlot> { key: *key },
+							InputLabel::<PlayerSlot> { key },
 						));
 				});
 		});
 }
 
-fn get_quickbar_panel(key: &PlayerSlot) -> (QuickbarPanel, Button, Node) {
+fn get_quickbar_panel(key: PlayerSlot) -> (QuickbarPanel, Button, Node) {
 	(
 		QuickbarPanel {
-			key: *key,
+			key,
 			state: PanelState::Empty,
 		},
 		Button,

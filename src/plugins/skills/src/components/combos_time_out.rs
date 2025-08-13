@@ -4,7 +4,7 @@ use crate::{
 	CombosTimeOutDto,
 	traits::{Flush, is_timed_out::IsTimedOut},
 };
-use bevy::ecs::component::Component;
+use bevy::prelude::*;
 use common::traits::update_cumulative::CumulativeUpdate;
 use macros::SavableComponent;
 use std::time::Duration;

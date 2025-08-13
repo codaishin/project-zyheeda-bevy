@@ -5,7 +5,7 @@ use crate::{
 	skills::Skill,
 	traits::{GetNodeMut, peek_next_recursive::PeekNextRecursive},
 };
-use bevy::ecs::component::Component;
+use bevy::prelude::*;
 use common::{
 	tools::{
 		action_key::slot::SlotKey,
@@ -189,6 +189,9 @@ impl<TKey> GetCombosOrdered<Skill, TKey> for ComboNode
 where
 	TKey: TryFrom<SlotKey> + Clone,
 {
+	/// Retrieve configured combos for the given `TKey`
+	///
+	/// Any slot that does not match `TKey` is dropped in the results.
 	fn combos_ordered(&self) -> Vec<Combo<TKey, Skill>> {
 		combos(self, vec![])
 	}

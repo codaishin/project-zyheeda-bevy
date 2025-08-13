@@ -14,7 +14,7 @@ use crate::{
 		write_item::WriteItem,
 	},
 };
-use bevy::ecs::component::Component;
+use bevy::prelude::*;
 use common::{
 	tools::{action_key::slot::SlotKey, item_type::ItemType},
 	traits::{

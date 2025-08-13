@@ -23,6 +23,7 @@ use common::{
 		animation_key::AnimationKey,
 		bone::Bone,
 		collider_radius::ColliderRadius,
+		iter_helpers::{first, next},
 	},
 	traits::{
 		animation::{
@@ -195,13 +196,12 @@ impl IterFinite for PlayerAnimationMask {
 	fn next(current: &Iter<Self>) -> Option<Self> {
 		let Iter(current) = current;
 		match current.as_ref()? {
-			PlayerAnimationMask::Body => Some(Self::Slot(PlayerSlot::iterator().0?)),
-			PlayerAnimationMask::Slot(slot_key) => {
-				PlayerSlot::next(&Iter(Some(*slot_key))).map(Self::Slot)
-			}
+			PlayerAnimationMask::Body => first(PlayerAnimationMask::Slot),
+			PlayerAnimationMask::Slot(player_slot) => next(PlayerAnimationMask::Slot, *player_slot),
 		}
 	}
 }
+
 impl From<&PlayerAnimationMask> for AnimationMask {
 	fn from(mask: &PlayerAnimationMask) -> Self {
 		match mask {

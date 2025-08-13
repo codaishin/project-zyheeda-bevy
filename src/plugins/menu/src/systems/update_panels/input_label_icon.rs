@@ -4,7 +4,6 @@ use crate::components::{
 };
 use bevy::prelude::*;
 use common::{
-	tools::action_key::user_input::UserInput,
 	traits::{
 		accessors::get::GetMut,
 		handles_localization::{LocalizeToken, Token},
@@ -29,7 +28,8 @@ where
 		Query<(Entity, &InputLabel<TKey>), Added<InputLabel<TKey>>>,
 	)
 	where
-		TMap: Resource + GetInput<TKey, TInput = UserInput>,
+		TMap: Resource + GetInput<TKey>,
+		TMap::TInput: Into<Token>,
 		TLanguageServer: Resource + LocalizeToken,
 	{
 		let root = icon_root_path.into();
@@ -54,13 +54,15 @@ fn insert_icon<TMap, TLanguageServer, TKey>(
 	language_server: &mut TLanguageServer,
 	label: &InputLabel<TKey>,
 ) where
-	TMap: GetInput<TKey, TInput = UserInput>,
+	TMap: GetInput<TKey>,
+	TMap::TInput: Into<Token>,
 	TLanguageServer: LocalizeToken,
 	TKey: Copy,
 {
 	let key = key_map.get_input(label.key);
-	let localized = language_server.localize_token(key).or_token();
-	let Token(token) = Token::from(key);
+	let token = key.into();
+	let localized = language_server.localize_token(token.clone()).or_token();
+	let Token(token) = token;
 	let path = root.join(format!("{token}.png"));
 
 	entity.try_insert(Icon {
@@ -74,7 +76,10 @@ mod tests {
 	use super::*;
 	use crate::components::icon::{Icon, IconImage};
 	use bevy::app::{App, Update};
-	use common::traits::handles_localization::{LocalizationResult, Token, localized::Localized};
+	use common::{
+		tools::action_key::user_input::UserInput,
+		traits::handles_localization::{LocalizationResult, Token, localized::Localized},
+	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::path::PathBuf;
@@ -134,7 +139,7 @@ mod tests {
 			}),
 			_LanguageServer::new().with_mock(|mock| {
 				mock.expect_localize_token()
-					.with(eq(UserInput::from(KeyCode::ArrowUp)))
+					.with(eq(Token::from(UserInput::from(KeyCode::ArrowUp))))
 					.return_const(LocalizationResult::Ok(Localized::from("IIIIII")));
 			}),
 		);
@@ -163,7 +168,7 @@ mod tests {
 			}),
 			_LanguageServer::new().with_mock(|mock| {
 				mock.expect_localize_token()
-					.with(eq(UserInput::from(KeyCode::ArrowUp)))
+					.with(eq(Token::from(UserInput::from(KeyCode::ArrowUp))))
 					.return_const(LocalizationResult::Ok(Localized::from("IIIIII")));
 			}),
 		);

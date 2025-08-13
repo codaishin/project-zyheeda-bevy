@@ -2,7 +2,7 @@ use crate::{
 	tools::PanelState,
 	traits::colors::{HasPanelColors, PanelColors},
 };
-use bevy::ecs::component::Component;
+use bevy::prelude::*;
 use common::traits::accessors::{get::Getter, set::Setter};
 
 #[derive(Component, Debug, PartialEq)]
