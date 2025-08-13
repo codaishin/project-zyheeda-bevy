@@ -7,15 +7,16 @@ use bevy::prelude::*;
 use common::{
 	components::{lifetime::Lifetime, persistent_entity::PersistentEntity},
 	traits::{
+		accessors::get::TryApplyOn,
 		handles_skill_behaviors::{HandlesSkillBehaviors, SkillEntities, SkillSpawner},
-		try_insert_on::TryInsertOn,
 	},
+	zyheeda_commands::ZyheedaCommands,
 };
 
 pub(crate) trait SkillBuilder {
 	fn build<TSkillBehaviors>(
 		&self,
-		commands: &mut Commands,
+		commands: &mut ZyheedaCommands,
 		caster: &SkillCaster,
 		spawner: SkillSpawner,
 		target: &SkillTarget,
@@ -30,7 +31,7 @@ where
 {
 	fn build<TSkillBehaviors>(
 		&self,
-		commands: &mut Commands,
+		commands: &mut ZyheedaCommands,
 		caster: &SkillCaster,
 		spawner: SkillSpawner,
 		target: &SkillTarget,
@@ -59,8 +60,14 @@ fn stoppable(skill: PersistentEntity) -> OnSkillStop {
 	OnSkillStop::Stop(skill)
 }
 
-fn lifetime(commands: &mut Commands, skill: Entity, duration: std::time::Duration) -> OnSkillStop {
-	commands.try_insert_on(skill, Lifetime::from(duration));
+fn lifetime(
+	commands: &mut ZyheedaCommands,
+	skill: Entity,
+	duration: std::time::Duration,
+) -> OnSkillStop {
+	commands.try_apply_on(&skill, |mut e| {
+		e.try_insert(Lifetime::from(duration));
+	});
 	OnSkillStop::Ignore
 }
 
@@ -71,7 +78,7 @@ fn infinite() -> OnSkillStop {
 pub(crate) trait SpawnShape {
 	fn spawn_shape<TSkillBehaviors>(
 		&self,
-		commands: &mut Commands,
+		commands: &mut ZyheedaCommands,
 		caster: &SkillCaster,
 		spawner: SkillSpawner,
 		target: &SkillTarget,
@@ -111,7 +118,7 @@ mod tests {
 		type TSkillContact = _Contact;
 		type TSkillProjection = _Projection;
 
-		fn spawn_skill(_: &mut Commands, _: Contact, _: Projection) -> SkillEntities {
+		fn spawn_skill(_: &mut ZyheedaCommands, _: Contact, _: Projection) -> SkillEntities {
 			panic!("SHOULD NOT BE CALLED")
 		}
 	}
@@ -145,7 +152,7 @@ mod tests {
 	impl SpawnShape for _Skill {
 		fn spawn_shape<TSkillBehaviors>(
 			&self,
-			commands: &mut Commands,
+			commands: &mut ZyheedaCommands,
 			caster: &SkillCaster,
 			spawner: SkillSpawner,
 			target: &SkillTarget,
@@ -176,7 +183,7 @@ mod tests {
 
 	fn build_skill(
 		args: In<(_Skill, SkillCaster, SkillSpawner, SkillTarget)>,
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 	) -> SkillShape {
 		let In((skill, caster, spawner, target)) = args;
 		skill.build::<_HandlesSkillBehaviors>(&mut commands, &caster, spawner, &target)

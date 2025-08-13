@@ -6,16 +6,12 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	tools::action_key::slot::SlotKey,
-	traits::{
-		handles_combo_menu::NextKeys,
-		thread_safe::ThreadSafe,
-		try_insert_on::TryInsertOn,
-		try_remove_from::TryRemoveFrom,
-	},
+	traits::{accessors::get::TryApplyOn, handles_combo_menu::NextKeys, thread_safe::ThreadSafe},
+	zyheeda_commands::ZyheedaCommands,
 };
 
 pub(crate) fn select_successor_key<TNextKeys>(
-	commands: Commands,
+	commands: ZyheedaCommands,
 	next_keys: Res<TNextKeys>,
 	dropdown_commands: Query<(Entity, &KeySelectDropdownCommand<AppendSkillCommand>)>,
 ) where
@@ -23,11 +19,11 @@ pub(crate) fn select_successor_key<TNextKeys>(
 	KeySelectDropdownCommand<AppendSkillCommand>:
 		ThreadSafe + GetComponent<TInput = ExcludeKeys<SlotKey>>,
 {
-	_select_successor_key(commands, next_keys, dropdown_commands);
+	internal_select_successor_key(commands, next_keys, dropdown_commands);
 }
 
-fn _select_successor_key<TNextKeys, TExtra>(
-	mut commands: Commands,
+fn internal_select_successor_key<TNextKeys, TExtra>(
+	mut commands: ZyheedaCommands,
 	next_keys: Res<TNextKeys>,
 	dropdown_commands: Query<(Entity, &KeySelectDropdownCommand<TExtra>)>,
 ) where
@@ -37,21 +33,15 @@ fn _select_successor_key<TNextKeys, TExtra>(
 	for (entity, insert_command) in &dropdown_commands {
 		let next_keys = next_keys.next_keys(&insert_command.key_path);
 		let Some(component) = insert_command.component(ExcludeKeys(next_keys)) else {
-			despawn(&mut commands, entity);
+			commands.try_apply_on(&entity, |e| e.try_despawn());
 			continue;
 		};
 
-		commands.try_insert_on(entity, component);
-		commands.try_remove_from::<KeySelectDropdownCommand<TExtra>>(entity);
+		commands.try_apply_on(&entity, |mut e| {
+			e.try_insert(component);
+			e.try_remove::<KeySelectDropdownCommand<TExtra>>();
+		});
 	}
-}
-
-fn despawn(commands: &mut Commands, entity: Entity) {
-	let Ok(mut entity) = commands.get_entity(entity) else {
-		return;
-	};
-
-	entity.despawn();
 }
 
 #[cfg(test)]
@@ -109,7 +99,7 @@ mod tests {
 	fn setup(next_keys: _NextKeys) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.insert_resource(next_keys);
-		app.add_systems(Update, _select_successor_key::<_NextKeys, _Extra>);
+		app.add_systems(Update, internal_select_successor_key::<_NextKeys, _Extra>);
 
 		app
 	}

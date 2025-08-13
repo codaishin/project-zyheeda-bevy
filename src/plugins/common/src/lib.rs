@@ -9,8 +9,7 @@ pub mod states;
 pub mod systems;
 pub mod tools;
 pub mod traits;
-
-mod events;
+pub mod zyheeda_commands;
 
 use crate::{
 	components::{child_of_persistent::ChildOfPersistent, life::Life, lifetime::Lifetime},

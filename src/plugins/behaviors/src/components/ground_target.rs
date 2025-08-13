@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
-	resources::persistent_entities::PersistentEntities,
 	tools::Units,
-	traits::try_insert_on::TryInsertOn,
+	traits::accessors::get::{GetMut, TryApplyOn},
+	zyheeda_commands::ZyheedaCommands,
 };
 
 #[derive(Component, Debug, PartialEq, Clone)]
@@ -69,8 +69,7 @@ impl GroundTarget {
 	}
 
 	pub(crate) fn set_position(
-		mut commands: Commands,
-		mut persistent_entities: ResMut<PersistentEntities>,
+		mut commands: ZyheedaCommands,
 		transforms: Query<&Transform>,
 		ground_targets: Query<(Entity, &GroundTarget), Added<GroundTarget>>,
 	) {
@@ -78,17 +77,19 @@ impl GroundTarget {
 			let Some(contact) = ground_target.ground_contact() else {
 				continue;
 			};
-			let Some(caster) = persistent_entities.get_entity(&ground_target.caster) else {
+			let Some(caster) = commands.get_mut(&ground_target.caster) else {
 				continue;
 			};
 			let mut transform = Transform::from_translation(contact);
 
-			if let Ok(caster) = transforms.get(caster) {
+			if let Ok(caster) = transforms.get(caster.id()) {
 				ground_target.correct_for_max_range(&mut transform, caster);
 				Self::sync_forward(&mut transform, caster);
 			}
 
-			commands.try_insert_on(entity, transform);
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_insert(transform);
+			});
 		}
 	}
 }

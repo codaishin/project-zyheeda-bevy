@@ -793,8 +793,8 @@ mod test_queue_active_skill {
 	fn test_start_behavior_fn_on_active() {
 		let behaviors =
 			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(|commands, _, _, _| SkillShape {
-				contact: commands.spawn_empty().id(),
-				projection: commands.spawn_empty().id(),
+				contact: commands.spawn(()).id(),
+				projection: commands.spawn(()).id(),
 				on_skill_stop: OnSkillStop::Ignore,
 			}));
 
@@ -821,8 +821,8 @@ mod test_queue_active_skill {
 	fn test_start_behavior_fn_on_aim() {
 		let behaviors =
 			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(|commands, _, _, _| SkillShape {
-				contact: commands.spawn_empty().id(),
-				projection: commands.spawn_empty().id(),
+				contact: commands.spawn(()).id(),
+				projection: commands.spawn(()).id(),
 				on_skill_stop: OnSkillStop::Ignore,
 			}));
 

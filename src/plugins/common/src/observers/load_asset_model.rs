@@ -3,14 +3,15 @@ use crate::{
 		asset_model::{AssetModel, Model},
 		flip::FlipHorizontally,
 	},
-	traits::load_asset::LoadAsset,
+	traits::{accessors::get::GetMut, load_asset::LoadAsset},
+	zyheeda_commands::ZyheedaCommands,
 };
 use bevy::prelude::*;
 
 impl AssetModel {
 	pub(crate) fn load(
 		trigger: Trigger<OnAdd, AssetModel>,
-		commands: Commands,
+		commands: ZyheedaCommands,
 		asset_models: Query<&AssetModel>,
 		asset_server: ResMut<AssetServer>,
 	) {
@@ -20,7 +21,7 @@ impl AssetModel {
 
 fn load_asset_model<TServer>(
 	trigger: Trigger<OnAdd, AssetModel>,
-	mut commands: Commands,
+	mut commands: ZyheedaCommands,
 	asset_models: Query<&AssetModel>,
 	mut asset_server: ResMut<TServer>,
 ) where
@@ -32,7 +33,7 @@ fn load_asset_model<TServer>(
 		return;
 	};
 
-	let Ok(mut entity) = commands.get_entity(entity) else {
+	let Some(mut entity) = commands.get_mut(&entity) else {
 		return;
 	};
 
@@ -44,11 +45,11 @@ fn load_asset_model<TServer>(
 	};
 
 	if let Some(target) = &asset_model.flip_horizontally {
-		entity.insert(FlipHorizontally::on(target.clone()));
+		entity.try_insert(FlipHorizontally::on(target.clone()));
 	}
 
-	entity.insert(SceneRoot(handle));
-	entity.remove::<AssetModel>();
+	entity.try_insert(SceneRoot(handle));
+	entity.try_remove::<AssetModel>();
 }
 
 #[cfg(test)]

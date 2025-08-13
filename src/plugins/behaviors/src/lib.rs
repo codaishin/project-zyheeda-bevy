@@ -48,6 +48,7 @@ use common::{
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 	},
+	zyheeda_commands::ZyheedaCommands,
 };
 use components::{
 	Always,
@@ -262,7 +263,7 @@ impl<TDependencies> HandlesSkillBehaviors for BehaviorsPlugin<TDependencies> {
 	type TSkillProjection = SkillProjection;
 
 	fn spawn_skill(
-		commands: &mut Commands,
+		commands: &mut ZyheedaCommands,
 		contact: Contact,
 		projection: Projection,
 	) -> SkillEntities {

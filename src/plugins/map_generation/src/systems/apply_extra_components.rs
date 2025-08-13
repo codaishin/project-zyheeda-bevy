@@ -1,12 +1,15 @@
 use crate::traits::ExtraComponentsDefinition;
 use bevy::prelude::*;
-use common::traits::{handles_lights::HandlesLights, thread_safe::ThreadSafe};
+use common::{
+	traits::{accessors::get::GetMut, handles_lights::HandlesLights, thread_safe::ThreadSafe},
+	zyheeda_commands::ZyheedaCommands,
+};
 
 impl<T> ApplyExtraComponents for T {}
 
 pub(crate) trait ApplyExtraComponents {
 	fn apply_extra_components<TLights>(
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		new: Query<(Entity, &Name), Added<Name>>,
 	) where
 		Self: ExtraComponentsDefinition,
@@ -19,7 +22,7 @@ pub(crate) trait ApplyExtraComponents {
 		let target_names = Self::target_names();
 
 		for (id, ..) in new.iter().filter(contained_in(target_names)) {
-			let Ok(entity) = &mut commands.get_entity(id) else {
+			let Some(entity) = &mut commands.get_mut(&id) else {
 				continue;
 			};
 			Self::insert_bundle::<TLights>(entity);
@@ -34,6 +37,7 @@ fn contained_in(target_names: Vec<String>) -> impl Fn(&(Entity, &Name)) -> bool 
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use common::zyheeda_commands::ZyheedaEntityCommands;
 	use mockall::automock;
 	use std::marker::PhantomData;
 	use testing::SingleThreadedApp;
@@ -71,11 +75,11 @@ mod tests {
 			vec!["AAA".to_owned()]
 		}
 
-		fn insert_bundle<TLights>(entity: &mut EntityCommands)
+		fn insert_bundle<TLights>(entity: &mut ZyheedaEntityCommands)
 		where
 			TLights: ThreadSafe,
 		{
-			entity.insert(_Component::<TLights>(PhantomData));
+			entity.try_insert(_Component::<TLights>(PhantomData));
 		}
 	}
 
@@ -138,7 +142,7 @@ mod tests {
 			Mock_TargetNames::target_names()
 		}
 
-		fn insert_bundle<TLights>(_entity: &mut EntityCommands)
+		fn insert_bundle<TLights>(_entity: &mut ZyheedaEntityCommands)
 		where
 			TLights: 'static,
 		{

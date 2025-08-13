@@ -1,51 +1,32 @@
 use crate::{
 	components::protected::Protected,
-	tools::get_recursively::{get_recursively_from, related::Child},
-	traits::try_remove_from::TryRemoveFrom,
+	traits::accessors::get::TryApplyOn,
+	zyheeda_commands::ZyheedaCommands,
 };
 use bevy::prelude::*;
+
+impl<TComponent: Component> Remove<TComponent> for TComponent {}
 
 pub trait Remove<TAgent>
 where
 	TAgent: Component,
 {
 	fn remove_from_self_and_children<TComponent>(
-		commands: Commands,
-		agents: Query<Entity, With<TAgent>>,
-		children: Query<&Children>,
-		components_lookup: Query<(), (With<TComponent>, Without<Protected<TComponent>>)>,
-		agents_lookup: Query<(), With<TAgent>>,
+		mut commands: ZyheedaCommands,
+		agents: Query<(), With<TAgent>>,
+		entities: Query<Entity, (With<TComponent>, Without<Protected<TComponent>>)>,
+		parents: Query<&ChildOf>,
 	) where
 		TComponent: Component,
 	{
-		remove_components(commands, agents, children, components_lookup, agents_lookup);
-	}
-}
+		let has_agent = |entity| agents.contains(entity);
+		let parent_or_self_has_agent =
+			|entity: &Entity| has_agent(*entity) || parents.iter_ancestors(*entity).any(has_agent);
 
-impl<TComponent: Component> Remove<TComponent> for TComponent {}
-
-fn remove_components<TCommands, TAgent, TComponent>(
-	mut commands: TCommands,
-	agents: Query<Entity, With<TAgent>>,
-	children: Query<&Children>,
-	components_lookup: Query<(), (With<TComponent>, Without<Protected<TComponent>>)>,
-	agents_lookup: Query<(), With<TAgent>>,
-) where
-	TCommands: TryRemoveFrom,
-	TAgent: Component,
-	TComponent: Component,
-{
-	if agents.is_empty() {
-		return;
-	}
-
-	let children = &|entity| children.get(entity).ok().map(|c| c.iter().map(Child::new));
-	let has_component = &|entity: &Entity| components_lookup.contains(*entity);
-	let is_no_agent = &|Child(entity): &Child| !agents_lookup.contains(*entity);
-
-	for entity in &agents {
-		for entity in get_recursively_from(entity, children, is_no_agent).filter(has_component) {
-			commands.try_remove_from::<TComponent>(entity)
+		for entity in entities.iter().filter(parent_or_self_has_agent) {
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_remove::<TComponent>();
+			});
 		}
 	}
 }
@@ -53,9 +34,7 @@ fn remove_components<TCommands, TAgent, TComponent>(
 #[cfg(test)]
 pub mod tests {
 	use super::*;
-	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use mockall::{mock, predicate::eq};
-	use testing::{Mock, simple_init};
+	use testing::SingleThreadedApp;
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Agent;
@@ -63,39 +42,26 @@ pub mod tests {
 	#[derive(Component, Debug, PartialEq)]
 	struct _Component;
 
-	mock! {
-		_Commands {}
-		impl TryRemoveFrom for _Commands {
-			fn try_remove_from<TBundle: Bundle>(&mut self, entity: Entity);
-		}
-	}
-
-	simple_init!(Mock_Commands);
-
 	fn setup() -> App {
-		App::new()
+		let mut app = App::new().single_threaded(Update);
+
+		app.add_systems(Update, _Agent::remove_from_self_and_children::<_Component>);
+
+		app
 	}
 
 	#[test]
-	fn remove_from_agent() -> Result<(), RunSystemError> {
+	fn remove_from_agent() {
 		let mut app = setup();
 		let parent = app.world_mut().spawn((_Agent, _Component)).id();
 
-		let mock = Mock_Commands::new_mock(|mock| {
-			mock.expect_try_remove_from::<_Component>()
-				.times(1)
-				.with(eq(parent))
-				.return_const(());
-		});
+		app.update();
 
-		app.world_mut().run_system_once_with(
-			remove_components::<In<Mock_Commands>, _Agent, _Component>,
-			mock,
-		)
+		assert_eq!(None, app.world().entity(parent).get::<_Component>());
 	}
 
 	#[test]
-	fn remove_from_child() -> Result<(), RunSystemError> {
+	fn remove_from_child() {
 		let mut app = setup();
 		let parent = app.world_mut().spawn(_Agent).id();
 		let child = app
@@ -104,59 +70,44 @@ pub mod tests {
 			.insert(ChildOf(parent))
 			.id();
 
-		let mock = Mock_Commands::new_mock(|mock| {
-			mock.expect_try_remove_from::<_Component>()
-				.times(1)
-				.with(eq(child))
-				.return_const(());
-		});
+		app.update();
 
-		app.world_mut().run_system_once_with(
-			remove_components::<In<Mock_Commands>, _Agent, _Component>,
-			mock,
-		)
+		assert_eq!(None, app.world().entity(child).get::<_Component>());
 	}
 
 	#[test]
-	fn do_not_remove_when_parent_no_agent() -> Result<(), RunSystemError> {
+	fn do_not_remove_when_parent_no_agent() {
 		let mut app = setup();
-		let parent = app.world_mut().spawn_empty().id();
-		app.world_mut().spawn(_Component).insert(ChildOf(parent));
+		let parent = app.world_mut().spawn(_Component).id();
 
-		let mock = Mock_Commands::new_mock(|mock| {
-			mock.expect_try_remove_from::<_Component>()
-				.never()
-				.return_const(());
-		});
+		app.update();
 
-		app.world_mut().run_system_once_with(
-			remove_components::<In<Mock_Commands>, _Agent, _Component>,
-			mock,
-		)
+		assert_eq!(
+			Some(&_Component),
+			app.world().entity(parent).get::<_Component>(),
+		);
 	}
 
 	#[test]
-	fn do_not_remove_when_protected() -> Result<(), RunSystemError> {
+	fn do_not_remove_when_protected() {
 		let mut app = setup();
 		let parent = app.world_mut().spawn(_Agent).id();
-		app.world_mut()
+		let child = app
+			.world_mut()
 			.spawn((_Component, Protected::<_Component>::default()))
-			.insert(ChildOf(parent));
+			.insert(ChildOf(parent))
+			.id();
 
-		let mock = Mock_Commands::new_mock(|mock| {
-			mock.expect_try_remove_from::<_Component>()
-				.never()
-				.return_const(());
-		});
+		app.update();
 
-		app.world_mut().run_system_once_with(
-			remove_components::<In<Mock_Commands>, _Agent, _Component>,
-			mock,
-		)
+		assert_eq!(
+			Some(&_Component),
+			app.world().entity(child).get::<_Component>(),
+		);
 	}
 
 	#[test]
-	fn remove_from_deep_child() -> Result<(), RunSystemError> {
+	fn remove_from_deep_child() {
 		let mut app = setup();
 		let parent = app.world_mut().spawn(_Agent).id();
 		let child = app.world_mut().spawn_empty().insert(ChildOf(parent)).id();
@@ -166,40 +117,8 @@ pub mod tests {
 			.insert(ChildOf(child))
 			.id();
 
-		let mock = Mock_Commands::new_mock(|mock| {
-			mock.expect_try_remove_from::<_Component>()
-				.times(1)
-				.with(eq(deep_child))
-				.return_const(());
-		});
+		app.update();
 
-		app.world_mut().run_system_once_with(
-			remove_components::<In<Mock_Commands>, _Agent, _Component>,
-			mock,
-		)
-	}
-
-	#[test]
-	fn do_not_remove_from_deep_child_multiple_times_when_nested() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		let parent = app.world_mut().spawn(_Agent).id();
-		let child = app.world_mut().spawn(_Agent).insert(ChildOf(parent)).id();
-		let deep_child = app
-			.world_mut()
-			.spawn(_Component)
-			.insert(ChildOf(child))
-			.id();
-
-		let mock = Mock_Commands::new_mock(|mock| {
-			mock.expect_try_remove_from::<_Component>()
-				.times(1)
-				.with(eq(deep_child))
-				.return_const(());
-		});
-
-		app.world_mut().run_system_once_with(
-			remove_components::<In<Mock_Commands>, _Agent, _Component>,
-			mock,
-		)
+		assert_eq!(None, app.world().entity(deep_child).get::<_Component>(),);
 	}
 }

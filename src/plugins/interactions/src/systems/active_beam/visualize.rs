@@ -1,10 +1,10 @@
 use crate::components::{active_beam::ActiveBeam, blockable::Blockable};
 use bevy::prelude::*;
-use common::traits::handles_interactions::InteractAble;
+use common::{traits::handles_interactions::InteractAble, zyheeda_commands::ZyheedaCommands};
 
 impl ActiveBeam {
 	pub(crate) fn visualize(
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		beams: Query<(Entity, &Blockable), Added<ActiveBeam>>,
 	) {
 		for (entity, Blockable(beam)) in &beams {

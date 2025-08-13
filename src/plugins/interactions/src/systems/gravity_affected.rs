@@ -3,31 +3,32 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use common::{
 	components::immobilized::Immobilized,
-	resources::persistent_entities::PersistentEntities,
-	traits::{try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
+	traits::accessors::get::{GetMut, TryApplyOn},
+	zyheeda_commands::ZyheedaCommands,
 };
 use std::time::Duration;
 
 pub(crate) fn apply_gravity_pull(
 	In(delta): In<Duration>,
-	mut commands: Commands,
+	mut commands: ZyheedaCommands,
 	mut agents: Query<(Entity, &Transform, &mut GravityAffected)>,
-	mut persistent_entities: ResMut<PersistentEntities>,
 	transforms: Query<&GlobalTransform>,
 ) {
-	let mut get_pull_center = |pull: &GravityPull| {
-		let towards = persistent_entities.get_entity(&pull.towards)?;
-		let translation = transforms.get(towards).ok()?.translation();
-		Some(translation.with_y(0.))
-	};
 	let delta_secs = delta.as_secs_f32();
 
 	for (entity, transform, mut gravity_affected) in &mut agents {
 		if gravity_affected.is_not_pulled() {
-			commands.try_remove_from::<Immobilized>(entity);
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_remove::<Immobilized>();
+			});
 			continue;
 		}
 
+		let mut get_pull_center = |pull: &GravityPull| {
+			let towards = commands.get_mut(&pull.towards)?.id();
+			let translation = transforms.get(towards).ok()?.translation();
+			Some(translation.with_y(0.))
+		};
 		let position = transform.translation.with_y(0.);
 		let mut pull_sum = None;
 
@@ -46,7 +47,9 @@ pub(crate) fn apply_gravity_pull(
 			continue;
 		};
 
-		commands.try_insert_on(entity, (Immobilized, Velocity::linear(pull_sum)));
+		commands.try_apply_on(&entity, |mut e| {
+			e.try_insert((Immobilized, Velocity::linear(pull_sum)));
+		});
 	}
 }
 

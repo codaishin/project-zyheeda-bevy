@@ -1,6 +1,9 @@
 use crate::components::map::{folder::MapFolder, image::MapImage};
 use bevy::prelude::*;
-use common::traits::{load_asset::LoadAsset, thread_safe::ThreadSafe, try_insert_on::TryInsertOn};
+use common::{
+	traits::{accessors::get::TryApplyOn, load_asset::LoadAsset, thread_safe::ThreadSafe},
+	zyheeda_commands::ZyheedaCommands,
+};
 
 impl<TCell> MapFolder<TCell>
 where
@@ -8,7 +11,7 @@ where
 {
 	pub(crate) fn load_map_image(
 		file: &str,
-	) -> impl Fn(Trigger<OnInsert, Self>, Commands, ResMut<AssetServer>, Query<&Self>) {
+	) -> impl Fn(Trigger<OnInsert, Self>, ZyheedaCommands, ResMut<AssetServer>, Query<&Self>) {
 		load_map_image(file)
 	}
 }
@@ -16,7 +19,12 @@ where
 #[allow(clippy::type_complexity)]
 fn load_map_image<TCell, TAssets>(
 	file: &str,
-) -> impl Fn(Trigger<OnInsert, MapFolder<TCell>>, Commands, ResMut<TAssets>, Query<&MapFolder<TCell>>)
+) -> impl Fn(
+	Trigger<OnInsert, MapFolder<TCell>>,
+	ZyheedaCommands,
+	ResMut<TAssets>,
+	Query<&MapFolder<TCell>>,
+)
 where
 	TCell: ThreadSafe,
 	TAssets: Resource + LoadAsset,
@@ -27,7 +35,9 @@ where
 			return;
 		};
 		let handle = asset_server.load_asset(path.join(file));
-		commands.try_insert_on(entity, MapImage::<TCell>::from(handle));
+		commands.try_apply_on(&entity, |mut e| {
+			e.try_insert(MapImage::<TCell>::from(handle));
+		});
 	}
 }
 

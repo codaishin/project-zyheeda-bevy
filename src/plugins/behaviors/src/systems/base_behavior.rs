@@ -8,10 +8,9 @@ use common::{
 		persistent_entity::PersistentEntity,
 	},
 	errors::Error,
-	resources::persistent_entities::PersistentEntities,
 	tools::{aggro_range::AggroRange, attack_range::AttackRange},
 	traits::{
-		accessors::get::Getter,
+		accessors::get::{GetMut, Getter},
 		cast_ray::{
 			CastRay,
 			GetRayCaster,
@@ -19,6 +18,7 @@ use common::{
 		},
 		handles_enemies::EnemyTarget,
 	},
+	zyheeda_commands::ZyheedaCommands,
 };
 
 impl<T> SelectBehavior for T {}
@@ -26,7 +26,7 @@ impl<T> SelectBehavior for T {}
 pub(crate) trait SelectBehavior {
 	fn select_behavior<TPlayer>(
 		rapier: ReadRapierContext,
-		commands: Commands,
+		commands: ZyheedaCommands,
 		agents: Query<(
 			&PersistentEntity,
 			&GlobalTransform,
@@ -36,21 +36,12 @@ pub(crate) trait SelectBehavior {
 		players: Query<(&PersistentEntity, &GlobalTransform, Option<&GroundOffset>), With<TPlayer>>,
 		all: Query<(&PersistentEntity, &GlobalTransform, Option<&GroundOffset>)>,
 		colliders: Query<&ColliderOfInteractionTarget>,
-		persistent_entities: ResMut<PersistentEntities>,
 	) -> Result<(), BehaviorError>
 	where
 		Self: Component + Sized + Getter<AggroRange> + Getter<AttackRange> + Getter<EnemyTarget>,
 		TPlayer: Component,
 	{
-		select_behavior(
-			rapier,
-			commands,
-			agents,
-			players,
-			all,
-			colliders,
-			persistent_entities,
-		)
+		select_behavior(rapier, commands, agents, players, all, colliders)
 	}
 }
 
@@ -82,7 +73,7 @@ enum Behavior {
 
 fn select_behavior<TAgent, TPlayer, TGetRayCaster>(
 	ray_caster_source: TGetRayCaster,
-	mut commands: Commands,
+	mut commands: ZyheedaCommands,
 	agents: Query<(
 		&PersistentEntity,
 		&GlobalTransform,
@@ -92,7 +83,6 @@ fn select_behavior<TAgent, TPlayer, TGetRayCaster>(
 	players: Query<(&PersistentEntity, &GlobalTransform, Option<&GroundOffset>), With<TPlayer>>,
 	all: Query<(&PersistentEntity, &GlobalTransform, Option<&GroundOffset>)>,
 	colliders: Query<&ColliderOfInteractionTarget>,
-	mut persistent_entities: ResMut<PersistentEntities>,
 ) -> Result<(), BehaviorError<TGetRayCaster::TError>>
 where
 	TAgent: Component + Sized + Getter<AggroRange> + Getter<AttackRange> + Getter<EnemyTarget>,
@@ -105,20 +95,20 @@ where
 	};
 	let mut invalid_directions = vec![];
 
-	for (persistent_agent_entity, transform, ground_offset, agent) in &agents {
+	for (persistent_agent, transform, ground_offset, agent) in &agents {
 		let target = match agent.get() {
 			EnemyTarget::Player => players.single().ok(),
-			EnemyTarget::Entity(persistent_entity) => persistent_entities
-				.get_entity(&persistent_entity)
-				.and_then(|entity| all.get(entity).ok()),
+			EnemyTarget::Entity(persistent_entity) => commands
+				.get_mut(&persistent_entity)
+				.and_then(|entity| all.get(entity.id()).ok()),
 		};
 		let Some((persistent_target, target_transform, target_ground_offset)) = target else {
 			continue;
 		};
-		let Some(target_entity) = persistent_entities.get_entity(persistent_target) else {
+		let Some(target_entity) = commands.get_mut(persistent_target).map(|e| e.id()) else {
 			continue;
 		};
-		let Some(agent_entity) = persistent_entities.get_entity(persistent_agent_entity) else {
+		let Some(agent_entity) = commands.get_mut(persistent_agent).map(|e| e.id()) else {
 			continue;
 		};
 		let translation = match ground_offset {
@@ -138,7 +128,7 @@ where
 			&ray_caster,
 			&colliders,
 		);
-		let Ok(mut agent_entity) = commands.get_entity(agent_entity) else {
+		let Some(mut agent_entity) = commands.get_mut(&agent_entity) else {
 			continue;
 		};
 
@@ -146,15 +136,15 @@ where
 			Err(invalid_direction) => invalid_directions.push(invalid_direction),
 			Ok(Behavior::Attack) => {
 				agent_entity.try_insert(Attack(*persistent_target));
-				agent_entity.remove::<Chase>();
+				agent_entity.try_remove::<Chase>();
 			}
 			Ok(Behavior::Chase) => {
 				agent_entity.try_insert(Chase(*persistent_target));
-				agent_entity.remove::<Attack>();
+				agent_entity.try_remove::<Attack>();
 			}
 			Ok(Behavior::Idle) => {
-				agent_entity.remove::<Chase>();
-				agent_entity.remove::<Attack>();
+				agent_entity.try_remove::<Chase>();
+				agent_entity.try_remove::<Attack>();
 			}
 		}
 	}

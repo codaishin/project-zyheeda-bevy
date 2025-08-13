@@ -1,9 +1,9 @@
 use crate::components::GlobalZIndexTop;
 use bevy::prelude::*;
-use common::traits::try_insert_on::TryInsertOn;
+use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
 pub(crate) fn adjust_global_z_index(
-	mut commands: Commands,
+	mut commands: ZyheedaCommands,
 	global_z_tops: Query<(Entity, Ref<GlobalZIndexTop>)>,
 ) {
 	let mut top_z_index = global_z_tops
@@ -15,7 +15,9 @@ pub(crate) fn adjust_global_z_index(
 
 	for (entity, ..) in global_z_tops.iter().filter(is_new) {
 		top_z_index += 1;
-		commands.try_insert_on(entity, GlobalZIndex(top_z_index));
+		commands.try_apply_on(&entity, |mut e| {
+			e.try_insert(GlobalZIndex(top_z_index));
+		});
 	}
 }
 

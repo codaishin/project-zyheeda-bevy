@@ -4,7 +4,6 @@ use crate::{
 	skills::lifetime_definition::LifeTimeDefinition,
 	traits::skill_builder::{SkillLifetime, SpawnShape},
 };
-use bevy::prelude::*;
 use common::{
 	dto::duration_secs_f32::DurationSecsF32,
 	tools::Units,
@@ -18,6 +17,7 @@ use common::{
 		SkillEntities,
 		SkillSpawner,
 	},
+	zyheeda_commands::ZyheedaCommands,
 };
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -52,7 +52,7 @@ impl From<SpawnGroundTargetedAoe> for SpawnGroundTargetedAoe<DurationSecsF32> {
 impl SpawnShape for SpawnGroundTargetedAoe {
 	fn spawn_shape<TSkillBehaviors>(
 		&self,
-		commands: &mut Commands,
+		commands: &mut ZyheedaCommands,
 		caster: &SkillCaster,
 		_: SkillSpawner,
 		target: &SkillTarget,

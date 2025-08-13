@@ -1,10 +1,10 @@
-use bevy::prelude::*;
+use common::zyheeda_commands::ZyheedaEntityCommands;
 use std::collections::HashSet;
 
 pub(crate) trait InsertCellQuadrantComponents {
 	fn insert_cell_quadrant_components(
 		&self,
-		entity: &mut EntityCommands,
+		entity: &mut ZyheedaEntityCommands,
 		different_quadrants: HashSet<Quadrant>,
 	);
 }

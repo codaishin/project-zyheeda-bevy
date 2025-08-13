@@ -6,11 +6,14 @@ use crate::{
 	},
 };
 use bevy::prelude::*;
-use common::traits::try_insert_on::TryInsertOn;
+use common::{
+	traits::accessors::get::{GetMut, TryApplyOn},
+	zyheeda_commands::ZyheedaCommands,
+};
 use std::collections::HashSet;
 
 pub(crate) fn instantiate_effect_shaders(
-	mut commands: Commands,
+	mut commands: ZyheedaCommands,
 	effect_shaders: Query<
 		(Entity, &EffectShadersTarget, Option<&Active>),
 		Changed<EffectShadersTarget>,
@@ -19,21 +22,27 @@ pub(crate) fn instantiate_effect_shaders(
 	for (entity, effect_shaders, active) in &effect_shaders {
 		clear(&mut commands, effect_shaders, active);
 		instantiate(&mut commands, effect_shaders);
-		commands.try_insert_on(entity, Active(effect_shaders.shaders.clone()));
+		commands.try_apply_on(&entity, |mut e| {
+			e.try_insert(Active(effect_shaders.shaders.clone()));
+		});
 	}
 }
 
 #[derive(Component)]
 pub(crate) struct Active(HashSet<EffectShaderHandle>);
 
-fn clear(commands: &mut Commands, effect_shaders: &EffectShadersTarget, active: Option<&Active>) {
+fn clear(
+	commands: &mut ZyheedaCommands,
+	effect_shaders: &EffectShadersTarget,
+	active: Option<&Active>,
+) {
 	let Some(Active(shaders)) = active else {
 		return;
 	};
 
 	for shader in shaders {
 		for entity in &effect_shaders.meshes {
-			let Ok(mut entity) = commands.get_entity(*entity) else {
+			let Some(mut entity) = commands.get_mut(entity) else {
 				continue;
 			};
 
@@ -42,10 +51,10 @@ fn clear(commands: &mut Commands, effect_shaders: &EffectShadersTarget, active: 
 	}
 }
 
-fn instantiate(commands: &mut Commands, effect_shaders: &EffectShadersTarget) {
+fn instantiate(commands: &mut ZyheedaCommands, effect_shaders: &EffectShadersTarget) {
 	for shader in &effect_shaders.shaders {
 		for entity in &effect_shaders.meshes {
-			let Ok(mut entity) = commands.get_entity(*entity) else {
+			let Some(mut entity) = commands.get_mut(entity) else {
 				continue;
 			};
 

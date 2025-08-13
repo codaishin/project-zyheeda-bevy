@@ -12,6 +12,7 @@ use crate::{
 		iter_helpers::{first, next},
 	},
 	traits::iteration::{Iter, IterFinite},
+	zyheeda_commands::ZyheedaCommands,
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
@@ -23,7 +24,7 @@ pub trait HandlesSkillBehaviors {
 	type TSkillProjection: Component;
 
 	fn spawn_skill(
-		commands: &mut Commands,
+		commands: &mut ZyheedaCommands,
 		contact: Contact,
 		projection: Projection,
 	) -> SkillEntities;

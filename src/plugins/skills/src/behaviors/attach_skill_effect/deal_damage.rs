@@ -1,6 +1,9 @@
 use crate::behaviors::{SkillCaster, SkillTarget};
-use bevy::ecs::system::EntityCommands;
-use common::{effects::deal_damage::DealDamage, traits::handles_effect::HandlesEffect};
+use common::{
+	effects::deal_damage::DealDamage,
+	traits::handles_effect::HandlesEffect,
+	zyheeda_commands::ZyheedaEntityCommands,
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -12,7 +15,7 @@ pub enum AttachDealingDamage {
 impl AttachDealingDamage {
 	pub fn attach<TInteractions>(
 		&self,
-		entity: &mut EntityCommands,
+		entity: &mut ZyheedaEntityCommands,
 		_: &SkillCaster,
 		_: &SkillTarget,
 	) where
@@ -58,7 +61,7 @@ mod tests {
 
 	fn damage(damage: AttachDealingDamage) -> impl Fn(Commands) -> Entity {
 		move |mut commands| {
-			let mut entity = commands.spawn_empty();
+			let mut entity = commands.spawn(()).into();
 			damage.attach::<_HandlesDamage>(
 				&mut entity,
 				&SkillCaster::from(*CASTER),

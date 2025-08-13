@@ -1,6 +1,6 @@
 use crate::{components::Unlit, traits::ExtraComponentsDefinition};
-use bevy::{color::palettes::css::BLACK, ecs::system::EntityCommands, prelude::*};
-use common::components::insert_asset::InsertAsset;
+use bevy::{color::palettes::css::BLACK, prelude::*};
+use common::{components::insert_asset::InsertAsset, zyheeda_commands::ZyheedaEntityCommands};
 
 #[derive(Component)]
 pub(crate) struct WallBack;
@@ -13,7 +13,7 @@ impl ExtraComponentsDefinition for WallBack {
 			.collect()
 	}
 
-	fn insert_bundle<TLights>(entity: &mut EntityCommands) {
+	fn insert_bundle<TLights>(entity: &mut ZyheedaEntityCommands) {
 		entity.try_insert((
 			Unlit,
 			WallBack,

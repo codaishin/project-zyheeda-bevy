@@ -1,11 +1,11 @@
 use crate::components::save::Save;
 use bevy::prelude::*;
-use common::traits::try_despawn::TryDespawn;
+use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
 impl Save {
-	pub(crate) fn despawn_all(mut commands: Commands, targets: Query<Entity, With<Self>>) {
+	pub(crate) fn despawn_all(mut commands: ZyheedaCommands, targets: Query<Entity, With<Self>>) {
 		for target in &targets {
-			commands.try_despawn(target);
+			commands.try_apply_on(&target, |e| e.try_despawn());
 		}
 	}
 }

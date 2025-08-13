@@ -1,15 +1,9 @@
 use crate::components::on_cool_down::OnCoolDown;
-use bevy::{
-	ecs::{
-		entity::Entity,
-		system::{Commands, Query, Res},
-	},
-	time::Time,
-};
-use common::traits::try_remove_from::TryRemoveFrom;
+use bevy::prelude::*;
+use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
 pub(crate) fn update_cool_downs<TTime: Default + Send + Sync + 'static>(
-	mut commands: Commands,
+	mut commands: ZyheedaCommands,
 	mut cool_downs: Query<(Entity, &mut OnCoolDown)>,
 	time: Res<Time<TTime>>,
 ) {
@@ -17,7 +11,9 @@ pub(crate) fn update_cool_downs<TTime: Default + Send + Sync + 'static>(
 
 	for (id, mut cool_down) in &mut cool_downs {
 		if cool_down.0 <= delta {
-			commands.try_remove_from::<OnCoolDown>(id);
+			commands.try_apply_on(&id, |mut e| {
+				e.try_remove::<OnCoolDown>();
+			});
 		} else {
 			cool_down.0 -= delta;
 		}

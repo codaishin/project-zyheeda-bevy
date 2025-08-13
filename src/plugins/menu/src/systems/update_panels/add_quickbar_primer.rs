@@ -3,12 +3,13 @@ use bevy::prelude::*;
 use common::{
 	components::ui_input_primer::UiInputPrimer,
 	tools::action_key::{slot::SlotKey, user_input::UserInput},
-	traits::{key_mappings::GetInput, try_insert_on::TryInsertOn},
+	traits::{accessors::get::TryApplyOn, key_mappings::GetInput},
+	zyheeda_commands::ZyheedaCommands,
 };
 
 impl QuickbarPanel {
 	pub(crate) fn add_quickbar_primer<TMap>(
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		map: Res<TMap>,
 		panels: Query<(Entity, &Self), Added<Self>>,
 	) where
@@ -16,7 +17,9 @@ impl QuickbarPanel {
 	{
 		for (entity, panel) in &panels {
 			let input = map.get_input(panel.key);
-			commands.try_insert_on(entity, UiInputPrimer::from(input));
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_insert(UiInputPrimer::from(input));
+			});
 		}
 	}
 }

@@ -2,10 +2,11 @@ use crate::traits::{
 	insert_protected_effect_shader::InsertProtectedEffectShader,
 	remove_protected_effect_shader::RemoveProtectedEffectShader,
 };
-use bevy::{ecs::system::EntityCommands, prelude::*};
+use bevy::prelude::*;
 use common::{
 	components::protected::Protected,
 	traits::track::{IsTracking, Track, Untrack},
+	zyheeda_commands::ZyheedaEntityCommands,
 };
 use std::{collections::HashSet, hash::Hash};
 
@@ -39,8 +40,8 @@ impl Untrack<Mesh3d> for EffectShadersTarget {
 #[derive(Debug, Eq, Clone)]
 pub(crate) struct EffectShaderHandle {
 	handle: UntypedHandle,
-	insert_into: fn(&mut EntityCommands, &UntypedHandle),
-	remove_from: fn(&mut EntityCommands),
+	insert_into: fn(&mut ZyheedaEntityCommands, &UntypedHandle),
+	remove_from: fn(&mut ZyheedaEntityCommands),
 }
 
 impl EffectShaderHandle {
@@ -50,17 +51,17 @@ impl EffectShaderHandle {
 	}
 
 	fn insert_protected_handle<TMaterial: Asset + Material>(
-		entity: &mut EntityCommands,
+		entity: &mut ZyheedaEntityCommands,
 		handle: &UntypedHandle,
 	) {
-		entity.insert((
+		entity.try_insert((
 			MeshMaterial3d(handle.clone().typed::<TMaterial>()),
 			Protected::<MeshMaterial3d<TMaterial>>::default(),
 		));
 	}
 
-	fn remove_protected_handle<TMaterial: Asset + Material>(entity: &mut EntityCommands) {
-		entity.remove::<(
+	fn remove_protected_handle<TMaterial: Asset + Material>(entity: &mut ZyheedaEntityCommands) {
+		entity.try_remove::<(
 			MeshMaterial3d<TMaterial>,
 			Protected<MeshMaterial3d<TMaterial>>,
 		)>();
@@ -83,7 +84,7 @@ impl Hash for EffectShaderHandle {
 	}
 }
 
-impl InsertProtectedEffectShader for EntityCommands<'_> {
+impl InsertProtectedEffectShader for ZyheedaEntityCommands<'_> {
 	fn insert_protected_effect_shader(&mut self, effect_shader: &EffectShaderHandle) {
 		let insert_into = effect_shader.insert_into;
 		let handle = &effect_shader.handle;
@@ -91,7 +92,7 @@ impl InsertProtectedEffectShader for EntityCommands<'_> {
 	}
 }
 
-impl RemoveProtectedEffectShader for EntityCommands<'_> {
+impl RemoveProtectedEffectShader for ZyheedaEntityCommands<'_> {
 	fn remove_protected_effect_shader(&mut self, effect_shader: &EffectShaderHandle) {
 		let remove_from = effect_shader.remove_from;
 		remove_from(self)
@@ -115,6 +116,7 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		render::render_resource::AsBindGroup,
 	};
+	use common::{traits::accessors::get::GetMut, zyheeda_commands::ZyheedaCommands};
 	use testing::new_handle;
 
 	#[test]
@@ -183,11 +185,11 @@ mod tests {
 
 	fn insert_shader_system(
 		In(shader): In<EffectShaderHandle>,
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		entities: Query<Entity>,
 	) {
 		for entity in &entities {
-			let Ok(mut entity) = commands.get_entity(entity) else {
+			let Some(mut entity) = commands.get_mut(&entity) else {
 				continue;
 			};
 
@@ -197,11 +199,11 @@ mod tests {
 
 	fn remove_shader_system(
 		In(shader): In<EffectShaderHandle>,
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		entities: Query<Entity>,
 	) {
 		for entity in &entities {
-			let Ok(mut entity) = commands.get_entity(entity) else {
+			let Some(mut entity) = commands.get_mut(&entity) else {
 				continue;
 			};
 

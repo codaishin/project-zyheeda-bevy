@@ -7,7 +7,8 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	tools::speed::Speed,
-	traits::{thread_safe::ThreadSafe, try_remove_from::TryRemoveFrom},
+	traits::{accessors::get::TryApplyOn, thread_safe::ThreadSafe},
+	zyheeda_commands::ZyheedaCommands,
 };
 use std::{collections::VecDeque, marker::PhantomData, time::Duration};
 
@@ -74,11 +75,13 @@ where
 	TMoveMethod: ThreadSafe + Default,
 {
 	pub(crate) fn cleanup(
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		mut removed_paths: RemovedComponents<Movement<Self>>,
 	) {
 		for entity in removed_paths.read() {
-			commands.try_remove_from::<Movement<TMoveMethod>>(entity);
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_remove::<Movement<TMoveMethod>>();
+			});
 		}
 	}
 }

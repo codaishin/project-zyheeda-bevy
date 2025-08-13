@@ -7,7 +7,7 @@ use crate::{
 	components::SkillTarget,
 	traits::skill_builder::SkillShape,
 };
-use bevy::{ecs::system::EntityCommands, prelude::*};
+use bevy::prelude::*;
 use build_skill_shape::BuildSkillShape;
 use common::{
 	components::persistent_entity::PersistentEntity,
@@ -15,6 +15,7 @@ use common::{
 		handles_effect::HandlesAllEffects,
 		handles_skill_behaviors::{HandlesSkillBehaviors, SkillSpawner},
 	},
+	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -77,7 +78,7 @@ impl SkillBehaviorConfig {
 
 	pub(crate) fn spawn_shape<TSkillBehaviors>(
 		&self,
-		commands: &mut Commands,
+		commands: &mut ZyheedaCommands,
 		caster: &SkillCaster,
 		spawner: SkillSpawner,
 		target: &SkillTarget,
@@ -91,7 +92,7 @@ impl SkillBehaviorConfig {
 
 	pub(crate) fn start_contact_behavior<TEffects>(
 		&self,
-		entity: &mut EntityCommands,
+		entity: &mut ZyheedaEntityCommands,
 		caster: &SkillCaster,
 		target: &SkillTarget,
 	) where
@@ -104,7 +105,7 @@ impl SkillBehaviorConfig {
 
 	pub(crate) fn start_projection_behavior<TEffects>(
 		&self,
-		entity: &mut EntityCommands,
+		entity: &mut ZyheedaEntityCommands,
 		caster: &SkillCaster,
 		target: &SkillTarget,
 	) where

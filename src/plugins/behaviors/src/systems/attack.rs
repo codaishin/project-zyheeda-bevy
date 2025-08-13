@@ -7,12 +7,11 @@ use common::{
 		persistent_entity::PersistentEntity,
 	},
 	traits::{
+		accessors::get::TryApplyOn,
 		handles_enemies::{Attacker, EnemyAttack, Target},
 		handles_orientation::Face,
-		try_despawn::TryDespawn,
-		try_insert_on::TryInsertOn,
-		try_remove_from::TryRemoveFrom,
 	},
+	zyheeda_commands::ZyheedaCommands,
 };
 
 impl<T> AttackSystem for T {}
@@ -27,7 +26,7 @@ type AttackerComponents<'a, TAttacker> = (
 
 pub trait AttackSystem {
 	fn attack(
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		mut stop_attacks: RemovedComponents<Attack>,
 		attackers: Query<AttackerComponents<Self>, Without<OnCoolDown>>,
 		ongoing: Query<&Ongoing>,
@@ -51,22 +50,23 @@ pub trait AttackSystem {
 				Attacker(*persistent_entity),
 				Target(*target),
 			);
-			commands.try_insert_on(
-				entity,
-				(
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_insert((
 					OnCoolDown(enemy.cool_down()),
 					Ongoing(attack),
 					OverrideFace(Face::Entity(*target)),
-				),
-			);
+				));
+			});
 		}
 
 		for attacker in stop_attacks.read() {
 			let Ok(Ongoing(attack)) = ongoing.get(attacker).cloned() else {
 				continue;
 			};
-			commands.try_despawn(attack);
-			commands.try_remove_from::<(Ongoing, OverrideFace)>(attacker);
+			commands.try_apply_on(&attack, |e| e.try_despawn());
+			commands.try_apply_on(&attacker, |mut e| {
+				e.try_remove::<(Ongoing, OverrideFace)>();
+			});
 		}
 	}
 }

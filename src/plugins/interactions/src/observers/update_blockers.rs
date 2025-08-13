@@ -1,13 +1,17 @@
 use crate::traits::update_blockers::UpdateBlockers;
 use bevy::prelude::*;
-use common::{components::is_blocker::IsBlocker, traits::try_insert_on::TryInsertOn};
+use common::{
+	components::is_blocker::IsBlocker,
+	traits::accessors::get::TryApplyOn,
+	zyheeda_commands::ZyheedaCommands,
+};
 
 impl<T> UpdateBlockersObserver for T where T: Component + UpdateBlockers {}
 
 pub(crate) trait UpdateBlockersObserver: Component + Sized + UpdateBlockers {
 	fn update_blockers_observer(
 		trigger: Trigger<OnInsert, Self>,
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		mut effects: Query<(&Self, Option<&mut IsBlocker>)>,
 	) {
 		let entity = trigger.target();
@@ -22,7 +26,9 @@ pub(crate) trait UpdateBlockersObserver: Component + Sized + UpdateBlockers {
 			None => {
 				let mut blockers = IsBlocker::from([]);
 				effect.update_blockers(&mut blockers);
-				commands.try_insert_on(entity, blockers);
+				commands.try_apply_on(&entity, |mut e| {
+					e.try_insert(blockers);
+				});
 			}
 		}
 	}

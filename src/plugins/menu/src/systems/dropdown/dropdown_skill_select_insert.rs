@@ -7,18 +7,18 @@ use bevy::prelude::*;
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
+		accessors::get::TryApplyOn,
 		handles_combo_menu::GetComboAbleSkills,
 		thread_safe::ThreadSafe,
-		try_insert_on::TryInsertOn,
-		try_remove_from::TryRemoveFrom,
 	},
+	zyheeda_commands::ZyheedaCommands,
 };
 
 impl<T> DropdownSkillSelectInsert for T {}
 
 pub(crate) trait DropdownSkillSelectInsert {
 	fn dropdown_skill_select_insert<TSkill, TIsCompatible>(
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		dropdown_commands: Query<(Entity, &SkillSelectDropdownInsertCommand<SlotKey, Self>)>,
 		compatible: Res<TIsCompatible>,
 	) where
@@ -27,10 +27,12 @@ pub(crate) trait DropdownSkillSelectInsert {
 		TIsCompatible: GetComboAbleSkills<TSkill> + Resource,
 	{
 		for (entity, command) in &dropdown_commands {
-			if let Some(items) = compatible_skills(command, compatible.as_ref()) {
-				commands.try_insert_on(entity, Dropdown { items });
-			}
-			commands.try_remove_from::<SkillSelectDropdownInsertCommand<SlotKey, Self>>(entity);
+			commands.try_apply_on(&entity, |mut e| {
+				if let Some(items) = compatible_skills(command, compatible.as_ref()) {
+					e.try_insert(Dropdown { items });
+				}
+				e.try_remove::<SkillSelectDropdownInsertCommand<SlotKey, Self>>();
+			});
 		}
 	}
 }

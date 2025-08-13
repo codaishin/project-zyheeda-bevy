@@ -1,10 +1,14 @@
-use crate::{components::life::Life, traits::try_despawn::TryDespawn};
+use crate::{
+	components::life::Life,
+	traits::accessors::get::TryApplyOn,
+	zyheeda_commands::ZyheedaCommands,
+};
 use bevy::prelude::*;
 
 impl Life {
-	pub(crate) fn despawn_dead(mut commands: Commands, agents: Query<(Entity, &Self)>) {
+	pub(crate) fn despawn_dead(mut commands: ZyheedaCommands, agents: Query<(Entity, &Self)>) {
 		for entity in agents.iter().filter_map(dead) {
-			commands.try_despawn(entity);
+			commands.try_apply_on(&entity, |e| e.try_despawn());
 		}
 	}
 }

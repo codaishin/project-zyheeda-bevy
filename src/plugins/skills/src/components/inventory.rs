@@ -29,14 +29,24 @@ where
 	}
 }
 
-impl GetRef<InventoryKey, Handle<Item>> for Inventory {
+impl GetRef<InventoryKey> for Inventory {
+	type TValue<'a>
+		= &'a Handle<Item>
+	where
+		Self: 'a;
+
 	fn get(&self, key: &InventoryKey) -> Option<&Handle<Item>> {
 		let item = self.0.get(key.0)?;
 		item.as_ref()
 	}
 }
 
-impl GetMut<InventoryKey, Option<Handle<Item>>> for Inventory {
+impl GetMut<InventoryKey> for Inventory {
+	type TValue<'a>
+		= &'a mut Option<Handle<Item>>
+	where
+		Self: 'a;
+
 	fn get_mut(&mut self, InventoryKey(index): &InventoryKey) -> Option<&mut Option<Handle<Item>>> {
 		let items = &mut self.0;
 

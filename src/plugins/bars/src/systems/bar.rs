@@ -2,22 +2,14 @@ use crate::{
 	components::{bar::Bar, bar_values::BarValues},
 	traits::{GetScreenPosition, UIBarUpdate},
 };
-use bevy::{
-	ecs::{
-		component::Component,
-		entity::Entity,
-		query::Without,
-		system::{Commands, Query},
-	},
-	prelude::With,
-	transform::components::GlobalTransform,
-};
+use bevy::prelude::*;
+use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
 #[allow(clippy::type_complexity)]
 pub(crate) fn bar<TSource, TValue, TCamera, TMainCameraLabel>(
 	get: fn(&TSource) -> &TValue,
 ) -> impl Fn(
-	Commands,
+	ZyheedaCommands,
 	Query<(Entity, &GlobalTransform, &TSource, &mut Bar), Without<BarValues<TValue>>>,
 	Query<(&GlobalTransform, &TSource, &mut Bar, &mut BarValues<TValue>)>,
 	Query<(&TCamera, &GlobalTransform), With<TMainCameraLabel>>,
@@ -37,7 +29,7 @@ where
 		&'d mut BarValues<TValue>,
 	);
 
-	move |commands: Commands,
+	move |commands: ZyheedaCommands,
 	      without_bar_values: Query<NewBars<TSource>, Without<BarValues<TValue>>>,
 	      with_bar_values: Query<OldBars<TSource, TValue>>,
 	      camera: Query<(&TCamera, &GlobalTransform), With<TMainCameraLabel>>| {
@@ -51,7 +43,7 @@ where
 
 fn add_bar_values<TSource: Component, TValue, TCamera: Component + GetScreenPosition>(
 	get_value: fn(&TSource) -> &TValue,
-	mut commands: Commands,
+	mut commands: ZyheedaCommands,
 	mut agents: Query<(Entity, &GlobalTransform, &TSource, &mut Bar), Without<BarValues<TValue>>>,
 	camera: &TCamera,
 	camera_transform: &GlobalTransform,
@@ -64,7 +56,10 @@ fn add_bar_values<TSource: Component, TValue, TCamera: Component + GetScreenPosi
 		bar.position = camera.get_screen_position(camera_transform, world_position);
 		let mut bar_values = BarValues::default();
 		bar_values.update(get_value(display));
-		commands.entity(id).insert(bar_values);
+
+		commands.try_apply_on(&id, |mut e| {
+			e.try_insert(bar_values);
+		});
 	}
 }
 

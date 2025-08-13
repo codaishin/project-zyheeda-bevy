@@ -6,11 +6,9 @@ mod dto;
 use super::SetFace;
 use crate::components::movement::dto::MovementDto;
 use bevy::{ecs::query::QueryFilter, prelude::*};
-use common::traits::{
-	handles_orientation::Face,
-	thread_safe::ThreadSafe,
-	try_insert_on::TryInsertOn,
-	try_remove_from::TryRemoveFrom,
+use common::{
+	traits::{accessors::get::TryApplyOn, handles_orientation::Face, thread_safe::ThreadSafe},
+	zyheeda_commands::ZyheedaCommands,
 };
 use macros::SavableComponent;
 
@@ -52,18 +50,22 @@ where
 	}
 
 	pub(crate) fn set_faces(
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		mut removed: RemovedComponents<Self>,
 		changed: Query<(Entity, &Self), Changed<Self>>,
 	) where
 		TMovement: Sync + Send + 'static,
 	{
 		for entity in removed.read() {
-			commands.try_remove_from::<SetFace>(entity);
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_remove::<SetFace>();
+			});
 		}
 
 		for (entity, movement) in &changed {
-			commands.try_insert_on(entity, SetFace(Face::Translation(movement.target)));
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_insert(SetFace(Face::Translation(movement.target)));
+			});
 		}
 	}
 

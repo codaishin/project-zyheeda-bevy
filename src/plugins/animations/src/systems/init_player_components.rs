@@ -1,6 +1,6 @@
 use crate::traits::AnimationPlayersWithoutGraph;
 use bevy::prelude::*;
-use common::traits::try_insert_on::TryInsertOn;
+use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
 impl<T> InitPlayerComponents for T where for<'a> T: Component + AnimationPlayersWithoutGraph + Sized {}
 
@@ -8,17 +8,16 @@ pub(crate) trait InitPlayerComponents:
 	Component + AnimationPlayersWithoutGraph + Sized
 {
 	fn init_player_components<TGraphComponent>(
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		agents: Query<(&Self, &TGraphComponent), Changed<Self>>,
 	) where
 		TGraphComponent: Component + Clone,
 	{
 		for (dispatcher, graph_component) in &agents {
 			for entity in dispatcher.animation_players_without_graph() {
-				commands.try_insert_on(
-					entity,
-					(AnimationTransitions::default(), graph_component.clone()),
-				);
+				commands.try_apply_on(&entity, |mut e| {
+					e.try_insert((AnimationTransitions::default(), graph_component.clone()));
+				});
 			}
 		}
 	}

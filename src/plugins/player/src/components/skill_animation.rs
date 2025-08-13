@@ -3,9 +3,10 @@ use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
 	tools::{action_key::slot::SlotKey, animation_key::AnimationKey},
 	traits::{
+		accessors::get::TryApplyOn,
 		animation::{Animation, AnimationPriority, PlayMode, StartAnimation, StopAnimation},
-		try_remove_from::TryRemoveFrom,
 	},
+	zyheeda_commands::ZyheedaCommands,
 };
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
@@ -16,7 +17,7 @@ pub enum SkillAnimation {
 
 impl SkillAnimation {
 	pub(crate) fn system<TAnimationDispatch>(
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		mut players: Query<
 			(Entity, &SkillAnimation, &mut TAnimationDispatch),
 			Added<SkillAnimation>,
@@ -37,7 +38,9 @@ impl SkillAnimation {
 					dispatch.stop_animation(Skill);
 				}
 			};
-			commands.try_remove_from::<SkillAnimation>(entity);
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_remove::<SkillAnimation>();
+			});
 		}
 	}
 }

@@ -3,14 +3,13 @@ pub mod force;
 pub mod gravity;
 
 use super::{SkillCaster, SkillTarget};
-use bevy::ecs::system::EntityCommands;
-use common::traits::handles_effect::HandlesAllEffects;
+use common::{traits::handles_effect::HandlesAllEffects, zyheeda_commands::ZyheedaEntityCommands};
 use deal_damage::AttachDealingDamage;
 use force::AttachForce;
 use gravity::AttachGravity;
 
 #[cfg(test)]
-pub type AttachEffectFn = fn(&mut EntityCommands, &SkillCaster, &SkillTarget);
+pub type AttachEffectFn = fn(&mut ZyheedaEntityCommands, &SkillCaster, &SkillTarget);
 
 #[derive(Debug, Clone)]
 #[cfg_attr(not(test), derive(PartialEq))]
@@ -25,7 +24,7 @@ pub enum AttachEffect {
 impl AttachEffect {
 	pub fn attach<TEffects>(
 		&self,
-		entity: &mut EntityCommands,
+		entity: &mut ZyheedaEntityCommands,
 		caster: &SkillCaster,
 		target: &SkillTarget,
 	) where

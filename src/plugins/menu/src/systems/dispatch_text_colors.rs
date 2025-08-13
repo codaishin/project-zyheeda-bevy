@@ -1,10 +1,10 @@
 use crate::components::dispatch_text_color::DispatchTextColor;
 use bevy::prelude::*;
-use common::traits::try_insert_on::TryInsertOn;
+use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
 impl DispatchTextColor {
 	pub(crate) fn apply(
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		dispatchers: Query<(Entity, &DispatchTextColor), Changed<DispatchTextColor>>,
 		texts: Query<(), With<Text>>,
 		children: Query<&Children>,
@@ -20,7 +20,7 @@ impl DispatchTextColor {
 }
 
 fn insert_color_on_text(
-	commands: &mut Commands,
+	commands: &mut ZyheedaCommands,
 	entity: Entity,
 	color: &Color,
 	texts: Query<(), With<Text>>,
@@ -29,7 +29,9 @@ fn insert_color_on_text(
 		return;
 	}
 
-	commands.try_insert_on(entity, TextColor(*color));
+	commands.try_apply_on(&entity, |mut e| {
+		e.try_insert(TextColor(*color));
+	});
 }
 
 #[cfg(test)]

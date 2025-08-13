@@ -1,11 +1,11 @@
 use crate::traits::move_together::MoveTogether;
 use bevy::{ecs::component::Mutable, prelude::*};
-use common::resources::persistent_entities::PersistentEntities;
+use common::{traits::accessors::get::GetMut, zyheeda_commands::ZyheedaCommands};
 
 pub(crate) fn move_with_target<TFollow>(
 	targets: Query<&Transform, Without<TFollow>>,
 	mut follower: Query<(&mut Transform, &mut TFollow)>,
-	mut persistent_entities: ResMut<PersistentEntities>,
+	mut commands: ZyheedaCommands,
 ) where
 	TFollow: MoveTogether + Component<Mutability = Mutable>,
 {
@@ -13,10 +13,10 @@ pub(crate) fn move_with_target<TFollow>(
 		let Some(target) = follower.entity() else {
 			continue;
 		};
-		let Some(target) = persistent_entities.get_entity(&target) else {
+		let Some(target) = commands.get_mut(&target) else {
 			continue;
 		};
-		let Ok(target) = targets.get(target) else {
+		let Ok(target) = targets.get(target.id()) else {
 			continue;
 		};
 

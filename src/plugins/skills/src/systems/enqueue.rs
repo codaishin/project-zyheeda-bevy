@@ -16,7 +16,7 @@ pub(crate) fn enqueue<TSlots, TQueue, TQueuedSkill>(
 	items: Res<Assets<Item>>,
 	skills: Res<Assets<Skill>>,
 ) where
-	TSlots: GetRef<SlotKey, Handle<Item>> + Component,
+	for<'a> TSlots: GetRef<SlotKey, TValue<'a> = &'a Handle<Item>> + Component,
 	TQueue:
 		Enqueue<(Skill, SlotKey)> + IterWaitingMut<TQueuedSkill> + Component<Mutability = Mutable>,
 	TQueuedSkill: Prime + Getter<SlotKey>,
@@ -35,7 +35,7 @@ fn enqueue_new_skills<TSlots, TQueue>(
 	items: &Assets<Item>,
 	skills: &Assets<Skill>,
 ) where
-	TSlots: GetRef<SlotKey, Handle<Item>>,
+	for<'a> TSlots: GetRef<SlotKey, TValue<'a> = &'a Handle<Item>> + Component,
 	TQueue: Enqueue<(Skill, SlotKey)>,
 {
 	for key in input.just_pressed.iter() {
@@ -50,7 +50,7 @@ fn enqueue_new_skill<TSlots, TQueue>(
 	items: &Assets<Item>,
 	skills: &Assets<Skill>,
 ) where
-	TSlots: GetRef<SlotKey, Handle<Item>>,
+	for<'a> TSlots: GetRef<SlotKey, TValue<'a> = &'a Handle<Item>> + Component,
 	TQueue: Enqueue<(Skill, SlotKey)>,
 {
 	let skill = slots
@@ -106,7 +106,12 @@ mod tests {
 	#[derive(Component, Default)]
 	struct _Skills(HashMap<SlotKey, Handle<Item>>);
 
-	impl GetRef<SlotKey, Handle<Item>> for _Skills {
+	impl GetRef<SlotKey> for _Skills {
+		type TValue<'a>
+			= &'a Handle<Item>
+		where
+			Self: 'a;
+
 		fn get<'a>(&'a self, key: &SlotKey) -> Option<&'a Handle<Item>> {
 			self.0.get(key)
 		}

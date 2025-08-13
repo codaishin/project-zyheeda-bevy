@@ -3,10 +3,9 @@ use crate::{
 	traits::{map_cells_extra::MapCellsExtra, parse_map_image::ParseMapImage},
 };
 use bevy::prelude::*;
-use common::traits::{
-	thread_safe::ThreadSafe,
-	try_insert_on::TryInsertOn,
-	try_remove_from::TryRemoveFrom,
+use common::{
+	traits::{accessors::get::TryApplyOn, thread_safe::ThreadSafe},
+	zyheeda_commands::ZyheedaCommands,
 };
 
 type MapCellsLookup<TCell> = <MapCells<TCell> as ParseMapImage<Image>>::TLookup;
@@ -19,7 +18,7 @@ where
 	MapCellsLookup<TCell>: Resource,
 {
 	pub(crate) fn insert_map_cells(
-		commands: Commands,
+		commands: ZyheedaCommands,
 		handles: Query<(Entity, &Self)>,
 		images: Res<Assets<Image>>,
 		lookup: Res<MapCellsLookup<TCell>>,
@@ -29,7 +28,7 @@ where
 }
 
 fn insert_map_cells<TCells, TCell, TImage>(
-	mut commands: Commands,
+	mut commands: ZyheedaCommands,
 	handles: Query<(Entity, &MapImage<TCell, TImage>)>,
 	images: Res<Assets<TImage>>,
 	lookup: Res<TCells::TLookup>,
@@ -54,8 +53,10 @@ where
 			}
 		};
 
-		commands.try_insert_on(entity, cells);
-		commands.try_remove_from::<MapImage<TCell, TImage>>(entity);
+		commands.try_apply_on(&entity, |mut e| {
+			e.try_insert(cells);
+			e.try_remove::<MapImage<TCell, TImage>>();
+		});
 	}
 
 	if !errors.is_empty() {

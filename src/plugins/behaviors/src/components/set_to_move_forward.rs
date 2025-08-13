@@ -2,7 +2,8 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use common::{
 	tools::UnitsPerSecond,
-	traits::{try_insert_on::TryInsertOn, try_remove_from::TryRemoveFrom},
+	traits::accessors::get::TryApplyOn,
+	zyheeda_commands::ZyheedaCommands,
 };
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
@@ -11,13 +12,15 @@ pub(crate) struct SetVelocityForward(pub(crate) UnitsPerSecond);
 
 impl SetVelocityForward {
 	pub(crate) fn system(
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		set_velocities: Query<(Entity, &Self, &Transform)>,
 	) {
 		for (entity, SetVelocityForward(speed), transform) in &set_velocities {
 			let movement = transform.forward() * **speed;
-			commands.try_insert_on(entity, Velocity::linear(movement));
-			commands.try_remove_from::<SetVelocityForward>(entity);
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_insert(Velocity::linear(movement));
+				e.try_remove::<SetVelocityForward>();
+			});
 		}
 	}
 }

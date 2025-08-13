@@ -1,14 +1,16 @@
 use crate::components::ImageColorCommand;
 use bevy::prelude::*;
-use common::traits::try_remove_from::TryRemoveFrom;
+use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
 pub(crate) fn image_color(
-	mut commands: Commands,
+	mut commands: ZyheedaCommands,
 	mut images: Query<(Entity, &mut ImageNode, &ImageColorCommand)>,
 ) {
 	for (entity, mut image, image_command) in &mut images {
 		image.color = image_command.0;
-		commands.try_remove_from::<ImageColorCommand>(entity);
+		commands.try_apply_on(&entity, |mut e| {
+			e.try_remove::<ImageColorCommand>();
+		});
 	}
 }
 

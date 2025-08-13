@@ -1,6 +1,9 @@
 use crate::behaviors::{SkillCaster, SkillTarget};
-use bevy::ecs::system::EntityCommands;
-use common::{effects::force::Force, traits::handles_effect::HandlesEffect};
+use common::{
+	effects::force::Force,
+	traits::handles_effect::HandlesEffect,
+	zyheeda_commands::ZyheedaEntityCommands,
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -9,7 +12,7 @@ pub struct AttachForce;
 impl AttachForce {
 	pub fn attach<TInteractions>(
 		&self,
-		entity: &mut EntityCommands,
+		entity: &mut ZyheedaEntityCommands,
 		_: &SkillCaster,
 		_: &SkillTarget,
 	) where
@@ -49,7 +52,7 @@ mod tests {
 	static CASTER: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
 
 	fn force(mut commands: Commands) -> Entity {
-		let mut entity = commands.spawn_empty();
+		let mut entity = commands.spawn(()).into();
 		AttachForce.attach::<_HandlesInteractions>(
 			&mut entity,
 			&SkillCaster::from(*CASTER),

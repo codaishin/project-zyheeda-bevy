@@ -9,14 +9,20 @@ use crate::{
 	},
 };
 use bevy::prelude::*;
-use common::traits::{thread_safe::ThreadSafe, try_insert_on::TryInsertOn};
+use common::{
+	traits::{accessors::get::TryApplyOn, thread_safe::ThreadSafe},
+	zyheeda_commands::ZyheedaCommands,
+};
 use std::collections::HashMap;
 
 impl<TCell> MapCells<TCell>
 where
 	TCell: TypePath + ThreadSafe + GridCellDistanceDefinition + IsWalkable + MapCellsExtra,
 {
-	pub(crate) fn insert_map_grid_graph(maps: Query<(Entity, &Self)>, mut commands: Commands) {
+	pub(crate) fn insert_map_grid_graph(
+		maps: Query<(Entity, &Self)>,
+		mut commands: ZyheedaCommands,
+	) {
 		for (entity, map) in &maps {
 			let context = GridContext {
 				cell_count_x: map.definition.size.x,
@@ -45,7 +51,9 @@ where
 				position.x += *TCell::CELL_DISTANCE;
 			}
 
-			commands.try_insert_on(entity, MapGridGraph::<TCell>::from(graph));
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_insert(MapGridGraph::<TCell>::from(graph));
+			});
 		}
 	}
 }

@@ -10,13 +10,14 @@ use common::{
 	errors::Error,
 	tools::{Intensity, IntensityChangePerSecond, Units},
 	traits::{
+		accessors::get::TryApplyOn,
 		handles_lights::{Light, Responsive},
 		has_collisions::HasCollisions,
 		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
 		thread_safe::ThreadSafe,
-		try_insert_on::TryInsertOn,
 	},
+	zyheeda_commands::ZyheedaCommands,
 };
 use std::{any::TypeId, ops::Deref, time::Duration};
 
@@ -40,13 +41,15 @@ pub struct ResponsiveLight {
 
 impl ResponsiveLight {
 	pub(crate) fn detect_change<TColliderCollection: HasCollisions + Component>(
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		responsive_lights: Query<(Entity, &TColliderCollection), Changed<TColliderCollection>>,
 		triggers: Query<&ResponsiveLightTrigger>,
 	) {
 		for (entity, collisions) in &responsive_lights {
 			let change_light = get_change(collisions, &triggers);
-			commands.try_insert_on(entity, change_light);
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_insert(change_light);
+			});
 		}
 	}
 
@@ -86,7 +89,7 @@ impl ResponsiveLight {
 	}
 
 	pub(crate) fn insert_light(
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		lights: Query<(Entity, &Self), Added<Self>>,
 	) {
 		for (entity, responsive) in &lights {
@@ -224,13 +227,15 @@ fn get_change<TColliderCollection: HasCollisions>(
 	ResponsiveLightChange::Decrease
 }
 
-fn insert_light<TLight>(commands: &mut Commands, entity: Entity, cstr: fn() -> TLight)
+fn insert_light<TLight>(commands: &mut ZyheedaCommands, entity: Entity, cstr: fn() -> TLight)
 where
 	TLight: LightComponent,
 {
-	let mut light = cstr();
-	*light.intensity_mut() = 0.;
-	commands.try_insert_on(entity, light);
+	commands.try_apply_on(&entity, |mut e| {
+		let mut light = cstr();
+		*light.intensity_mut() = 0.;
+		e.try_insert(light);
+	});
 }
 
 #[cfg(test)]

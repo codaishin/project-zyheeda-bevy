@@ -289,8 +289,8 @@ mod tests {
 	) -> RunSkillBehavior {
 		activation_type(SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(
 			|commands, _, _, _| SkillShape {
-				contact: commands.spawn_empty().id(),
-				projection: commands.spawn_empty().id(),
+				contact: commands.spawn(()).id(),
+				projection: commands.spawn(()).id(),
 				on_skill_stop: OnSkillStop::Ignore,
 			},
 		)))

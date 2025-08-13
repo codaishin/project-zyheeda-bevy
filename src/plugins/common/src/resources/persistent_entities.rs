@@ -12,11 +12,7 @@ pub struct PersistentEntities {
 }
 
 impl PersistentEntities {
-	/// Attempt to retrieve an [`Entity`] for the given [`PersistentEntity`].
-	///
-	/// Failures are logged by the [`crate::CommonPlugin`]. `self` is mutable to allow collection of
-	/// lookup errors, which are used for logging via a dedicated system.
-	pub fn get_entity(&mut self, persistent_entity: &PersistentEntity) -> Option<Entity> {
+	pub(crate) fn get_entity(&mut self, persistent_entity: &PersistentEntity) -> Option<Entity> {
 		let Some(entity) = self.entities.get(persistent_entity) else {
 			self.errors.push(LookupError(*persistent_entity));
 			return None;

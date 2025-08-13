@@ -1,19 +1,21 @@
 use crate::components::effect_shaders_target::EffectShadersTarget;
 use bevy::{prelude::*, render::view::RenderLayers};
-use common::traits::try_insert_on::TryInsertOn;
+use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
 pub(crate) fn insert_effect_shader_render_layers<TPass>(
 	pass: TPass,
-) -> impl Fn(Commands, Query<&EffectShadersTarget, Changed<EffectShadersTarget>>)
+) -> impl Fn(ZyheedaCommands, Query<&EffectShadersTarget, Changed<EffectShadersTarget>>)
 where
 	RenderLayers: From<TPass>,
 {
 	let layer = RenderLayers::from(pass);
-	move |mut commands: Commands,
+	move |mut commands: ZyheedaCommands,
 	      shader_targets: Query<&EffectShadersTarget, Changed<EffectShadersTarget>>| {
 		for EffectShadersTarget { meshes, .. } in &shader_targets {
 			for entity in meshes.iter() {
-				commands.try_insert_on(*entity, layer.clone());
+				commands.try_apply_on(entity, |mut e| {
+					e.try_insert(layer.clone());
+				});
 			}
 		}
 	}

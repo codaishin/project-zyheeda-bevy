@@ -1,9 +1,12 @@
 use crate::{components::RayCasterArgs, events::RayCastInfo};
 use bevy::prelude::*;
 use bevy_rapier3d::plugin::ReadRapierContext;
-use common::traits::{
-	cast_ray::{CastRayContinuouslySorted, GetContinuousSortedRayCaster},
-	try_remove_from::TryRemoveFrom,
+use common::{
+	traits::{
+		accessors::get::TryApplyOn,
+		cast_ray::{CastRayContinuouslySorted, GetContinuousSortedRayCaster},
+	},
+	zyheeda_commands::ZyheedaCommands,
 };
 use std::collections::HashMap;
 
@@ -14,7 +17,7 @@ pub(crate) struct RayCastResult {
 
 pub(crate) fn execute_ray_caster(
 	cast_ray: ReadRapierContext,
-	commands: Commands,
+	commands: ZyheedaCommands,
 	ray_casters: Query<(Entity, &RayCasterArgs)>,
 ) -> HashMap<Entity, RayCastResult> {
 	internal_execute_ray_caster(cast_ray, commands, ray_casters)
@@ -22,7 +25,7 @@ pub(crate) fn execute_ray_caster(
 
 pub(crate) fn internal_execute_ray_caster<TGetRayCaster>(
 	cast_ray: TGetRayCaster,
-	mut commands: Commands,
+	mut commands: ZyheedaCommands,
 	ray_casters: Query<(Entity, &RayCasterArgs)>,
 ) -> HashMap<Entity, RayCastResult>
 where
@@ -44,7 +47,9 @@ where
 			max_toi: ray_caster_args.max_toi,
 		};
 		results.insert(source, RayCastResult { info });
-		commands.try_remove_from::<RayCasterArgs>(source);
+		commands.try_apply_on(&source, |mut e| {
+			e.try_remove::<RayCasterArgs>();
+		});
 	}
 
 	results
