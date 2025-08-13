@@ -3,15 +3,12 @@ use crate::components::{
 	player_movement::{MovementMode, PlayerMovement},
 };
 use bevy::prelude::*;
-use common::{
-	tools::action_key::{movement::MovementKey, user_input::UserInput},
-	traits::key_mappings::JustPressed,
-};
+use common::{tools::action_key::movement::MovementKey, traits::key_mappings::JustPressed};
 
 pub fn player_toggle_walk_run<TMap>(
 	mut player: Query<&mut PlayerMovement, With<Player>>,
 	map: Res<TMap>,
-	input: Res<ButtonInput<UserInput>>,
+	input: Res<ButtonInput<TMap::TInput>>,
 ) where
 	TMap: JustPressed<MovementKey> + Resource,
 {
@@ -38,7 +35,7 @@ fn toggle_movement(PlayerMovement { mode, .. }: &mut PlayerMovement) {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::iteration::IterFinite;
+	use common::{tools::action_key::user_input::UserInput, traits::iteration::IterFinite};
 	use macros::NestedMocks;
 	use mockall::automock;
 	use testing::{NestedMocks, SingleThreadedApp};
@@ -50,6 +47,8 @@ mod tests {
 
 	#[automock]
 	impl JustPressed<MovementKey> for _Map {
+		type TInput = UserInput;
+
 		fn just_pressed(
 			&self,
 			input: &ButtonInput<UserInput>,

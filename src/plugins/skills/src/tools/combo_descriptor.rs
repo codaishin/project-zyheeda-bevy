@@ -6,12 +6,12 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	tools::{
-		action_key::slot::{Combo, SlotKey},
+		action_key::slot::PlayerSlot,
 		change::Change,
 		item_type::{CompatibleItems, ItemType},
 	},
 	traits::{
-		handles_combo_menu::{GetComboAbleSkills, GetCombosOrdered, NextKeys},
+		handles_combo_menu::{Combo, GetComboAblePlayerSkills, GetCombosOrdered, NextKeys},
 		iteration::IterFinite,
 	},
 };
@@ -19,8 +19,8 @@ use std::collections::{HashMap, HashSet, hash_map::Entry};
 
 #[derive(Debug, PartialEq)]
 pub struct ComboDescriptor {
-	pub compatible_skills: HashMap<SlotKey, Vec<Skill>>,
-	pub combos: Vec<Combo<Skill>>,
+	pub compatible_skills: HashMap<PlayerSlot, Vec<Skill>>,
+	pub combos: Vec<Combo<PlayerSlot, Skill>>,
 }
 
 impl ComboDescriptor {
@@ -43,12 +43,12 @@ impl ComboDescriptor {
 
 		let combos = combos.combos_ordered();
 		let slot_layout = slot_layout(&slots, &items, &skills);
-		let mut compatible_skills = HashMap::<SlotKey, Vec<Skill>>::default();
+		let mut compatible_skills = HashMap::<PlayerSlot, Vec<Skill>>::default();
 
 		for (.., skill) in skills.iter() {
 			let CompatibleItems(compatible_items) = &skill.compatible_items;
 
-			for slot_key in SlotKey::iterator() {
+			for slot_key in PlayerSlot::iterator() {
 				let Some((item_type, ..)) = slot_layout.get(&slot_key) else {
 					continue;
 				};
@@ -81,27 +81,28 @@ fn slot_layout<'a>(
 	slots: &'a Slots,
 	items: &'a Assets<Item>,
 	skills: &'a Assets<Skill>,
-) -> HashMap<SlotKey, (ItemType, Option<&'a Skill>)> {
+) -> HashMap<PlayerSlot, (ItemType, Option<&'a Skill>)> {
 	slots
 		.0
 		.iter()
-		.filter_map(|(key, handle)| {
+		.filter_map(|(key, handle)| Some((PlayerSlot::try_from(*key).ok()?, handle)))
+		.filter_map(|(player_key, handle)| {
 			let handle = handle.as_ref()?;
 			let item = items.get(handle)?;
 			let skill = item.skill.as_ref().and_then(|handle| skills.get(handle));
-			Some((*key, (item.item_type, skill)))
+			Some((player_key, (item.item_type, skill)))
 		})
 		.collect::<HashMap<_, _>>()
 }
 
-impl GetComboAbleSkills<Skill> for ComboDescriptor {
-	fn get_combo_able_skills(&self, key: &SlotKey) -> Vec<Skill> {
+impl GetComboAblePlayerSkills<Skill> for ComboDescriptor {
+	fn get_combo_able_player_skills(&self, key: &PlayerSlot) -> Vec<Skill> {
 		self.compatible_skills.get(key).cloned().unwrap_or_default()
 	}
 }
 
-impl NextKeys for ComboDescriptor {
-	fn next_keys(&self, combo_keys: &[SlotKey]) -> HashSet<SlotKey> {
+impl NextKeys<PlayerSlot> for ComboDescriptor {
+	fn next_keys(&self, combo_keys: &[PlayerSlot]) -> HashSet<PlayerSlot> {
 		let mut next_keys = HashSet::default();
 		let target_len = combo_keys.len();
 
@@ -119,13 +120,13 @@ impl NextKeys for ComboDescriptor {
 	}
 }
 
-impl GetCombosOrdered<Skill> for ComboDescriptor {
-	fn combos_ordered(&self) -> Vec<Combo<Skill>> {
+impl GetCombosOrdered<Skill, PlayerSlot> for ComboDescriptor {
+	fn combos_ordered(&self) -> Vec<Combo<PlayerSlot, Skill>> {
 		self.combos.clone()
 	}
 }
 
-fn matching_length(target_len: usize) -> impl Fn(&&(Vec<SlotKey>, Skill)) -> bool {
+fn matching_length(target_len: usize) -> impl Fn(&&(Vec<PlayerSlot>, Skill)) -> bool {
 	move |(combo_keys, ..)| combo_keys.len() == target_len
 }
 
@@ -135,7 +136,10 @@ mod tests {
 	use crate::components::combo_node::ComboNode;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
-		tools::{action_key::slot::Side, item_type::CompatibleItems},
+		tools::{
+			action_key::slot::{Side, SlotKey},
+			item_type::CompatibleItems,
+		},
 		traits::handles_localization::Token,
 	};
 	use testing::SingleThreadedApp;
@@ -199,7 +203,10 @@ mod tests {
 					..default()
 				},
 			],
-			[(SlotKey::TopHand(Side::Left), ItemType::Pistol)],
+			[(
+				SlotKey::from(PlayerSlot::Upper(Side::Left)),
+				ItemType::Pistol,
+			)],
 			Combos::default(),
 		);
 
@@ -221,7 +228,7 @@ mod tests {
 					..default()
 				},
 			],
-			equipment.get_combo_able_skills(&SlotKey::TopHand(Side::Left))
+			equipment.get_combo_able_player_skills(&PlayerSlot::Upper(Side::Left))
 		);
 		Ok(())
 	}
@@ -232,20 +239,20 @@ mod tests {
 			[],
 			[],
 			Combos::new(ComboNode::new([(
-				SlotKey::BottomHand(Side::Right),
+				SlotKey::from(PlayerSlot::Lower(Side::Right)),
 				(
 					Skill::default(),
 					ComboNode::new([(
-						SlotKey::TopHand(Side::Left),
+						SlotKey::from(PlayerSlot::Upper(Side::Left)),
 						(
 							Skill::default(),
 							ComboNode::new([
 								(
-									SlotKey::BottomHand(Side::Left),
+									SlotKey::from(PlayerSlot::Lower(Side::Left)),
 									(Skill::default(), ComboNode::default()),
 								),
 								(
-									SlotKey::BottomHand(Side::Right),
+									SlotKey::from(PlayerSlot::Lower(Side::Right)),
 									(Skill::default(), ComboNode::default()),
 								),
 							]),
@@ -262,12 +269,12 @@ mod tests {
 
 		assert_eq!(
 			HashSet::from([
-				SlotKey::BottomHand(Side::Left),
-				SlotKey::BottomHand(Side::Right)
+				PlayerSlot::Lower(Side::Left),
+				PlayerSlot::Lower(Side::Right)
 			]),
 			equipment.next_keys(&[
-				SlotKey::BottomHand(Side::Right),
-				SlotKey::TopHand(Side::Left)
+				PlayerSlot::Lower(Side::Right),
+				PlayerSlot::Upper(Side::Left)
 			])
 		);
 		Ok(())
@@ -279,7 +286,7 @@ mod tests {
 			[],
 			[],
 			Combos::new(ComboNode::new([(
-				SlotKey::BottomHand(Side::Right),
+				SlotKey::from(PlayerSlot::Lower(Side::Right)),
 				(
 					Skill {
 						token: Token::from("a"),
@@ -287,7 +294,7 @@ mod tests {
 					},
 					ComboNode::new([
 						(
-							SlotKey::BottomHand(Side::Left),
+							SlotKey::from(PlayerSlot::Lower(Side::Left)),
 							(
 								Skill {
 									token: Token::from("b"),
@@ -297,7 +304,7 @@ mod tests {
 							),
 						),
 						(
-							SlotKey::BottomHand(Side::Right),
+							SlotKey::from(PlayerSlot::Lower(Side::Right)),
 							(
 								Skill {
 									token: Token::from("c"),
@@ -320,7 +327,7 @@ mod tests {
 			vec![
 				vec![
 					(
-						vec![SlotKey::BottomHand(Side::Right)],
+						vec![PlayerSlot::Lower(Side::Right)],
 						Skill {
 							token: Token::from("a"),
 							..default()
@@ -328,8 +335,8 @@ mod tests {
 					),
 					(
 						vec![
-							SlotKey::BottomHand(Side::Right),
-							SlotKey::BottomHand(Side::Left),
+							PlayerSlot::Lower(Side::Right),
+							PlayerSlot::Lower(Side::Left),
 						],
 						Skill {
 							token: Token::from("b"),
@@ -339,7 +346,7 @@ mod tests {
 				],
 				vec![
 					(
-						vec![SlotKey::BottomHand(Side::Right)],
+						vec![PlayerSlot::Lower(Side::Right)],
 						Skill {
 							token: Token::from("a"),
 							..default()
@@ -347,8 +354,8 @@ mod tests {
 					),
 					(
 						vec![
-							SlotKey::BottomHand(Side::Right),
-							SlotKey::BottomHand(Side::Right),
+							PlayerSlot::Lower(Side::Right),
+							PlayerSlot::Lower(Side::Right),
 						],
 						Skill {
 							token: Token::from("c"),

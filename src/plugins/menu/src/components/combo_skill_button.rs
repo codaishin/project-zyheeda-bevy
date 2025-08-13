@@ -2,7 +2,7 @@ use super::combo_overview::ComboOverview;
 use crate::{Tooltip, traits::insert_ui_content::InsertUiContent};
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{
-	tools::{action_key::slot::SlotKey, skill_description::SkillToken, skill_icon::SkillIcon},
+	tools::{action_key::slot::PlayerSlot, skill_description::SkillToken, skill_icon::SkillIcon},
 	traits::{
 		handles_localization::LocalizeToken,
 		inspect_able::{InspectAble, InspectField},
@@ -28,11 +28,11 @@ pub(crate) struct DropdownItem<TLayout>(PhantomData<TLayout>);
 pub(crate) struct ComboSkillButton<T, TSkill> {
 	phantom_data: PhantomData<T>,
 	pub(crate) skill: TSkill,
-	pub(crate) key_path: Vec<SlotKey>,
+	pub(crate) key_path: Vec<PlayerSlot>,
 }
 
 impl<T, TSkill> ComboSkillButton<T, TSkill> {
-	pub(crate) fn new(skill: TSkill, key_path: Vec<SlotKey>) -> ComboSkillButton<T, TSkill> {
+	pub(crate) fn new(skill: TSkill, key_path: Vec<PlayerSlot>) -> ComboSkillButton<T, TSkill> {
 		ComboSkillButton {
 			phantom_data: PhantomData,
 			skill,

@@ -10,7 +10,7 @@ use crate::components::{
 use bevy::prelude::*;
 use common::{
 	errors::Error,
-	tools::action_key::slot::{Side, SlotKey},
+	tools::action_key::slot::{PlayerSlot, Side, SlotKey},
 	traits::{
 		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
@@ -43,19 +43,19 @@ impl Prefab<()> for Loadout {
 			]),
 			Slots::from([
 				(
-					SlotKey::TopHand(Side::Left),
+					SlotKey::from(PlayerSlot::Upper(Side::Left)),
 					Some(assets.load_asset(item_asset!("pistol"))),
 				),
 				(
-					SlotKey::BottomHand(Side::Left),
+					SlotKey::from(PlayerSlot::Lower(Side::Left)),
 					Some(assets.load_asset(item_asset!("pistol"))),
 				),
 				(
-					SlotKey::BottomHand(Side::Right),
+					SlotKey::from(PlayerSlot::Lower(Side::Right)),
 					Some(assets.load_asset(item_asset!("force_essence"))),
 				),
 				(
-					SlotKey::TopHand(Side::Right),
+					SlotKey::from(PlayerSlot::Upper(Side::Right)),
 					Some(assets.load_asset(item_asset!("force_essence"))),
 				),
 			]),

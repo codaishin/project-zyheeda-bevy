@@ -5,7 +5,7 @@ use crate::{components::slots::dto::SlotsDto, item::Item, traits::loadout_key::L
 use bevy::{asset::Handle, prelude::*};
 use common::{
 	components::{asset_model::AssetModel, essence::Essence},
-	tools::action_key::slot::{Side, SlotKey},
+	tools::action_key::slot::{PlayerSlot, Side, SlotKey},
 	traits::{
 		accessors::get::GetRef,
 		get_asset::GetAsset,
@@ -74,7 +74,7 @@ impl<'a> Iterator for Iter<'a> {
 }
 
 impl GetAsset for Slots {
-	type TKey = SlotKey;
+	type TKey = PlayerSlot;
 	type TAsset = Item;
 
 	fn get_asset<'a, TAssets>(
@@ -85,19 +85,19 @@ impl GetAsset for Slots {
 	where
 		TAssets: GetRef<Handle<Self::TAsset>, TValue<'a> = &'a Self::TAsset>,
 	{
-		assets.get(self.get(key)?)
+		assets.get(self.get(&SlotKey::from(*key))?)
 	}
 }
 
 pub(crate) struct HandItemSlots;
 
-impl ChildName<HandItemSlots> for SlotKey {
+impl ChildName<HandItemSlots> for PlayerSlot {
 	fn child_name(&self) -> &'static str {
 		match self {
-			SlotKey::TopHand(Side::Left) => "top_hand_slot.L",
-			SlotKey::TopHand(Side::Right) => "top_hand_slot.R",
-			SlotKey::BottomHand(Side::Left) => "bottom_hand_slot.L",
-			SlotKey::BottomHand(Side::Right) => "bottom_hand_slot.R",
+			PlayerSlot::Upper(Side::Left) => "top_hand_slot.L",
+			PlayerSlot::Upper(Side::Right) => "top_hand_slot.R",
+			PlayerSlot::Lower(Side::Left) => "bottom_hand_slot.L",
+			PlayerSlot::Lower(Side::Right) => "bottom_hand_slot.R",
 		}
 	}
 }
@@ -117,20 +117,20 @@ impl ChildAssetComponent<HandItemSlots> for Item {
 }
 
 impl ChildAssetDefinition<HandItemSlots> for Slots {
-	type TChildKey = SlotKey;
+	type TChildKey = PlayerSlot;
 	type TChildFilter = ();
 	type TChildAsset = Item;
 }
 
 pub(crate) struct ForearmItemSlots;
 
-impl ChildName<ForearmItemSlots> for SlotKey {
+impl ChildName<ForearmItemSlots> for PlayerSlot {
 	fn child_name(&self) -> &'static str {
 		match self {
-			SlotKey::TopHand(Side::Left) => "top_forearm.L",
-			SlotKey::TopHand(Side::Right) => "top_forearm.R",
-			SlotKey::BottomHand(Side::Left) => "bottom_forearm.L",
-			SlotKey::BottomHand(Side::Right) => "bottom_forearm.R",
+			PlayerSlot::Upper(Side::Left) => "top_forearm.L",
+			PlayerSlot::Upper(Side::Right) => "top_forearm.R",
+			PlayerSlot::Lower(Side::Left) => "bottom_forearm.L",
+			PlayerSlot::Lower(Side::Right) => "bottom_forearm.R",
 		}
 	}
 }
@@ -150,20 +150,20 @@ impl ChildAssetComponent<ForearmItemSlots> for Item {
 }
 
 impl ChildAssetDefinition<ForearmItemSlots> for Slots {
-	type TChildKey = SlotKey;
+	type TChildKey = PlayerSlot;
 	type TChildFilter = ();
 	type TChildAsset = Item;
 }
 
 pub(crate) struct SubMeshEssenceSlots;
 
-impl ChildName<SubMeshEssenceSlots> for SlotKey {
+impl ChildName<SubMeshEssenceSlots> for PlayerSlot {
 	fn child_name(&self) -> &'static str {
 		match self {
-			SlotKey::TopHand(Side::Left) => "ArmTopLeftData",
-			SlotKey::TopHand(Side::Right) => "ArmTopRightData",
-			SlotKey::BottomHand(Side::Left) => "ArmBottomLeftData",
-			SlotKey::BottomHand(Side::Right) => "ArmBottomRightData",
+			PlayerSlot::Upper(Side::Left) => "ArmTopLeftData",
+			PlayerSlot::Upper(Side::Right) => "ArmTopRightData",
+			PlayerSlot::Lower(Side::Left) => "ArmBottomLeftData",
+			PlayerSlot::Lower(Side::Right) => "ArmBottomRightData",
 		}
 	}
 }
@@ -180,7 +180,7 @@ impl ChildAssetComponent<SubMeshEssenceSlots> for Item {
 }
 
 impl ChildAssetDefinition<SubMeshEssenceSlots> for Slots {
-	type TChildKey = SlotKey;
+	type TChildKey = PlayerSlot;
 	type TChildFilter = With<Mesh3d>;
 	type TChildAsset = Item;
 }
@@ -191,28 +191,17 @@ mod tests {
 	use testing::new_handle;
 
 	#[test]
-	fn get_off_hand() {
+	fn get_some() {
 		let item = new_handle();
-		let slots = Slots([(SlotKey::BottomHand(Side::Left), Some(item.clone()))].into());
+		let slots = Slots([(SlotKey(2), Some(item.clone()))].into());
 
-		assert_eq!(Some(&item), slots.get(&SlotKey::BottomHand(Side::Left)));
-	}
-
-	#[test]
-	fn get_main_hand() {
-		let item = new_handle();
-		let slots = Slots([(SlotKey::BottomHand(Side::Right), Some(item.clone()))].into());
-
-		assert_eq!(Some(&item), slots.get(&SlotKey::BottomHand(Side::Right)));
+		assert_eq!(Some(&item), slots.get(&SlotKey(2)));
 	}
 
 	#[test]
 	fn get_none() {
-		let slots = Slots([(SlotKey::BottomHand(Side::Right), Some(new_handle()))].into());
+		let slots = Slots([(SlotKey(7), Some(new_handle()))].into());
 
-		assert_eq!(
-			None::<&Handle<Item>>,
-			slots.get(&SlotKey::BottomHand(Side::Left))
-		);
+		assert_eq!(None::<&Handle<Item>>, slots.get(&SlotKey(11)));
 	}
 }

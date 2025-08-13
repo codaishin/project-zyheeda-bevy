@@ -14,7 +14,7 @@ pub(crate) trait ComboQueueUpdate:
 {
 	fn update<TQueue>(mut agents: Query<(&mut Self, &mut TQueue, &Slots)>, items: Res<Assets<Item>>)
 	where
-		TQueue: IterAddedMut<QueuedSkill> + Component<Mutability = Mutable>,
+		TQueue: IterAddedMut<TItem = QueuedSkill> + Component<Mutability = Mutable>,
 	{
 		for (mut combos, mut queue, slots) in &mut agents {
 			if queue.added_none() {
@@ -35,16 +35,14 @@ fn update_skill_with_advanced_combo<TCombos>(
 ) where
 	TCombos: AdvanceCombo,
 {
-	let QueuedSkill {
-		skill, slot_key, ..
-	} = added;
-	let Some(item_handle) = slots.get(slot_key) else {
+	let QueuedSkill { skill, key, .. } = added;
+	let Some(item_handle) = slots.get(key) else {
 		return;
 	};
 	let Some(item) = items.get(item_handle.id()) else {
 		return;
 	};
-	let Some(advanced) = combos.advance_combo(&added.slot_key, &item.item_type) else {
+	let Some(advanced) = combos.advance_combo(*key, &item.item_type) else {
 		return;
 	};
 
@@ -58,7 +56,7 @@ mod tests {
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
 		tools::{
-			action_key::slot::{Side, SlotKey},
+			action_key::slot::{PlayerSlot, Side, SlotKey},
 			item_type::ItemType,
 		},
 		traits::handles_localization::Token,
@@ -76,12 +74,12 @@ mod tests {
 	mock! {
 		_Combos {}
 		impl AdvanceCombo for _Combos {
-			fn advance_combo(&mut self, trigger: &SlotKey, item_type: &ItemType) -> Option<Skill> {}
+			fn advance_combo(&mut self, trigger: SlotKey, item_type: &ItemType) -> Option<Skill> {}
 		}
 	}
 
 	impl AdvanceCombo for _Combos {
-		fn advance_combo(&mut self, trigger: &SlotKey, item_type: &ItemType) -> Option<Skill> {
+		fn advance_combo(&mut self, trigger: SlotKey, item_type: &ItemType) -> Option<Skill> {
 			self.mock.advance_combo(trigger, item_type)
 		}
 	}
@@ -91,7 +89,9 @@ mod tests {
 		added: Vec<QueuedSkill>,
 	}
 
-	impl IterAddedMut<QueuedSkill> for _Queue {
+	impl IterAddedMut for _Queue {
+		type TItem = QueuedSkill;
+
 		fn added_none(&self) -> bool {
 			self.added.is_empty()
 		}
@@ -132,14 +132,14 @@ mod tests {
 	fn call_advance_with_matching_slot_key_and_item_type() -> Result<(), RunSystemError> {
 		let (slots, items) = setup_slots([
 			(
-				SlotKey::BottomHand(Side::Right),
+				SlotKey::from(PlayerSlot::Lower(Side::Right)),
 				Some(Item {
 					item_type: ItemType::ForceEssence,
 					..default()
 				}),
 			),
 			(
-				SlotKey::BottomHand(Side::Left),
+				SlotKey::from(PlayerSlot::Lower(Side::Left)),
 				Some(Item {
 					item_type: ItemType::Pistol,
 					..default()
@@ -152,23 +152,26 @@ mod tests {
 				mock.expect_advance_combo()
 					.times(1)
 					.with(
-						eq(SlotKey::BottomHand(Side::Right)),
+						eq(SlotKey::from(PlayerSlot::Lower(Side::Right))),
 						eq(ItemType::ForceEssence),
 					)
 					.return_const(Skill::default());
 				mock.expect_advance_combo()
 					.times(1)
-					.with(eq(SlotKey::BottomHand(Side::Left)), eq(ItemType::Pistol))
+					.with(
+						eq(SlotKey::from(PlayerSlot::Lower(Side::Left))),
+						eq(ItemType::Pistol),
+					)
 					.return_const(Skill::default());
 			}),
 			_Queue {
 				added: vec![
 					QueuedSkill {
-						slot_key: SlotKey::BottomHand(Side::Right),
+						key: SlotKey::from(PlayerSlot::Lower(Side::Right)),
 						..default()
 					},
 					QueuedSkill {
-						slot_key: SlotKey::BottomHand(Side::Left),
+						key: SlotKey::from(PlayerSlot::Lower(Side::Left)),
 						..default()
 					},
 				],
@@ -181,7 +184,7 @@ mod tests {
 
 	#[test]
 	fn update_skill_with_combo_skills() -> Result<(), RunSystemError> {
-		let (slots, items) = setup_slots([(SlotKey::default(), Some(Item::default()))]);
+		let (slots, items) = setup_slots([(SlotKey(0), Some(Item::default()))]);
 		let mut app = setup_app(items);
 		let agent = app
 			.world_mut()
@@ -216,7 +219,6 @@ mod tests {
 						token: Token::from("replace a"),
 						..default()
 					},
-					slot_key: SlotKey::BottomHand(Side::Right),
 					..default()
 				}],
 			}),

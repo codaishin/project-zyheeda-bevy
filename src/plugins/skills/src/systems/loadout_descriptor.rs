@@ -11,18 +11,18 @@ use std::hash::Hash;
 impl<T> LoadoutDescriptor for T {}
 
 pub(crate) trait LoadoutDescriptor {
-	fn describe_loadout_for<TAgent>(
+	fn describe_loadout_for<TAgent, TTargetKey>(
 		containers: Query<&Self, (With<TAgent>, Changed<Self>)>,
 		items: Res<Assets<Item>>,
 		skills: Res<Assets<Skill>>,
-	) -> Change<Cache<Self::TKey, LoadoutItem>>
+	) -> Change<Cache<TTargetKey, LoadoutItem>>
 	where
 		for<'a> Self: LoadoutKey
 			+ Iterate<'a, TItem = (Self::TKey, &'a Option<Handle<Item>>)>
 			+ Component
 			+ Sized,
 		TAgent: Component,
-		Self::TKey: Eq + Hash + Copy,
+		TTargetKey: TryFrom<Self::TKey> + Eq + Hash + Copy,
 	{
 		let Ok(container) = containers.single() else {
 			return Change::None;
@@ -38,7 +38,7 @@ pub(crate) trait LoadoutDescriptor {
 				let skill_icon = skill.icon.clone();
 
 				Some((
-					key,
+					TTargetKey::try_from(key).ok()?,
 					LoadoutItem {
 						token: item.token.clone(),
 						skill_icon,
@@ -54,18 +54,35 @@ pub(crate) trait LoadoutDescriptor {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::handles_localization::Token;
-	use std::{array::IntoIter, collections::HashMap};
+	use common::{tools::action_key::IsNot, traits::handles_localization::Token};
+	use std::{collections::HashMap, slice::Iter};
 	use testing::{SingleThreadedApp, new_handle};
 
 	#[derive(Component)]
 	struct _Agent;
 
 	#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-	struct _Key;
+	enum _Key {
+		TargetKey,
+		NoTargetKey,
+	}
+
+	#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+	struct _TargetKey;
+
+	impl TryFrom<_Key> for _TargetKey {
+		type Error = IsNot<_TargetKey>;
+
+		fn try_from(key: _Key) -> Result<Self, Self::Error> {
+			match key {
+				_Key::TargetKey => Ok(_TargetKey),
+				_Key::NoTargetKey => Err(IsNot::key()),
+			}
+		}
+	}
 
 	#[derive(Component)]
-	struct _Loadout(Option<Handle<Item>>);
+	struct _Loadout(Vec<(_Key, Option<Handle<Item>>)>);
 
 	impl LoadoutKey for _Loadout {
 		type TKey = _Key;
@@ -73,16 +90,29 @@ mod tests {
 
 	impl<'a> Iterate<'a> for _Loadout {
 		type TItem = (_Key, &'a Option<Handle<Item>>);
-		type TIter = IntoIter<(_Key, &'a Option<Handle<Item>>), 1>;
+		type TIter = _Iter<'a>;
 
 		fn iterate(&'a self) -> Self::TIter {
-			let _Loadout(item) = self;
-			[(_Key, item)].into_iter()
+			let _Loadout(items) = self;
+			_Iter { it: items.iter() }
+		}
+	}
+
+	struct _Iter<'a> {
+		it: Iter<'a, (_Key, Option<Handle<Item>>)>,
+	}
+
+	impl<'a> Iterator for _Iter<'a> {
+		type Item = (_Key, &'a Option<Handle<Item>>);
+
+		fn next(&mut self) -> Option<Self::Item> {
+			let (key, item) = self.it.next()?;
+			Some((*key, item))
 		}
 	}
 
 	#[derive(Resource, Debug, PartialEq)]
-	struct _Result(Change<Cache<_Key, LoadoutItem>>);
+	struct _Result(Change<Cache<_TargetKey, LoadoutItem>>);
 
 	fn setup(item_token: &'static str, skill_icon: Option<Handle<Image>>) -> (App, Handle<Item>) {
 		let mut app = App::new().single_threaded(Update);
@@ -103,7 +133,7 @@ mod tests {
 		app.insert_resource(items);
 		app.add_systems(
 			Update,
-			_Loadout::describe_loadout_for::<_Agent>
+			_Loadout::describe_loadout_for::<_Agent, _TargetKey>
 				.pipe(|In(c), mut commands: Commands| commands.insert_resource(_Result(c))),
 		);
 
@@ -114,13 +144,14 @@ mod tests {
 	fn return_description() {
 		let icon = Some(new_handle());
 		let (mut app, item) = setup("my item", icon.clone());
-		app.world_mut().spawn((_Agent, _Loadout(Some(item))));
+		app.world_mut()
+			.spawn((_Agent, _Loadout(vec![(_Key::TargetKey, Some(item))])));
 
 		app.update();
 
 		assert_eq!(
 			Some(&_Result(Change::Some(Cache(HashMap::from([(
-				_Key,
+				_TargetKey,
 				LoadoutItem {
 					token: Token::from("my item"),
 					skill_icon: icon,
@@ -133,7 +164,8 @@ mod tests {
 	#[test]
 	fn return_none_when_not_changed() {
 		let (mut app, item) = setup("my item", Some(new_handle()));
-		app.world_mut().spawn((_Agent, _Loadout(Some(item))));
+		app.world_mut()
+			.spawn((_Agent, _Loadout(vec![(_Key::TargetKey, Some(item))])));
 
 		app.update();
 		app.update();
@@ -147,7 +179,10 @@ mod tests {
 	#[test]
 	fn return_some_when_changed() {
 		let (mut app, item) = setup("my item", Some(new_handle()));
-		let agent = app.world_mut().spawn((_Agent, _Loadout(Some(item)))).id();
+		let agent = app
+			.world_mut()
+			.spawn((_Agent, _Loadout(vec![(_Key::TargetKey, Some(item))])))
+			.id();
 
 		app.update();
 		app.world_mut()
@@ -165,12 +200,39 @@ mod tests {
 	#[test]
 	fn return_none_when_no_agent() {
 		let (mut app, item) = setup("my item", Some(new_handle()));
-		app.world_mut().spawn(_Loadout(Some(item)));
+		app.world_mut()
+			.spawn(_Loadout(vec![(_Key::TargetKey, Some(item))]));
 
 		app.update();
 
 		assert_eq!(
 			Some(&_Result(Change::None)),
+			app.world().get_resource::<_Result>()
+		);
+	}
+
+	#[test]
+	fn ignore_key_that_cannot_be_mapped() {
+		let icon = Some(new_handle());
+		let (mut app, item) = setup("my item", icon.clone());
+		app.world_mut().spawn((
+			_Agent,
+			_Loadout(vec![
+				(_Key::TargetKey, Some(item)),
+				(_Key::NoTargetKey, Some(new_handle())),
+			]),
+		));
+
+		app.update();
+
+		assert_eq!(
+			Some(&_Result(Change::Some(Cache(HashMap::from([(
+				_TargetKey,
+				LoadoutItem {
+					token: Token::from("my item"),
+					skill_icon: icon,
+				}
+			)]))))),
 			app.world().get_resource::<_Result>()
 		);
 	}

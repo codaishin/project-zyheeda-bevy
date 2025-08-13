@@ -15,10 +15,14 @@ use crate::components::{
 use bevy::prelude::*;
 use common::{
 	states::game_state::{GameState, LoadingGame},
-	tools::action_key::{slot::SlotKey, user_input::UserInput},
+	systems::log::OnError,
+	tools::{
+		action_key::{slot::PlayerSlot, user_input::UserInput},
+		inventory_key::InventoryKey,
+	},
 	traits::{
 		handles_assets_for_children::HandlesAssetsForChildren,
-		handles_combo_menu::{ConfigureCombos, HandlesComboMenu},
+		handles_combo_menu::{ConfigurePlayerCombos, HandlesComboMenu},
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
 		handles_effect::HandlesAllEffects,
 		handles_loadout_menu::{ConfigureInventory, HandlesLoadoutMenu},
@@ -139,7 +143,7 @@ where
 		TSaveGame::register_savable_component::<Queue>(app);
 		TSaveGame::register_savable_component::<SkillExecuter>(app);
 
-		let get_inputs = get_inputs::<TSettings::TKeyMap<SlotKey>, ButtonInput<UserInput>>;
+		let get_inputs = get_inputs::<TSettings::TKeyMap<PlayerSlot>, ButtonInput<UserInput>>;
 		let execute_skill = SkillExecuter::<RunSkillBehavior>::execute_system::<
 			TInteractions,
 			TBehaviors,
@@ -152,7 +156,8 @@ where
 				get_inputs.pipe(enqueue::<Slots, Queue, QueuedSkill>),
 				Combos::update::<Queue>,
 				flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
-				advance_active_skill::<Queue, TPlayers, TBehaviors, SkillExecuter, Virtual>,
+				advance_active_skill::<Queue, TPlayers, TBehaviors, SkillExecuter, Virtual>
+					.pipe(OnError::log),
 				execute_skill,
 				flush::<Queue>,
 			)
@@ -165,8 +170,8 @@ where
 	fn config_menus(&self, app: &mut App) {
 		TMenu::loadout_with_swapper::<Swapper>().configure(
 			app,
-			Inventory::describe_loadout_for::<TPlayers::TPlayer>,
-			Slots::describe_loadout_for::<TPlayers::TPlayer>,
+			Inventory::describe_loadout_for::<TPlayers::TPlayer, InventoryKey>,
+			Slots::describe_loadout_for::<TPlayers::TPlayer, PlayerSlot>,
 		);
 		TMenu::configure_quickbar_menu(
 			app,
@@ -175,7 +180,7 @@ where
 		TMenu::combos_with_skill::<Skill>().configure(
 			app,
 			ComboDescriptor::describe_combos_for::<TPlayers::TPlayer>,
-			Combos::<ComboNode>::update_for::<TPlayers::TPlayer>,
+			Combos::<ComboNode>::update_for::<TPlayers::TPlayer, PlayerSlot>,
 		);
 	}
 }

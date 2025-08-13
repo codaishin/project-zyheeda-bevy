@@ -50,7 +50,7 @@ mod tests {
 		ui::Interaction,
 	};
 	use common::tools::{
-		action_key::slot::{Side, SlotKey},
+		action_key::slot::{PlayerSlot, Side},
 		inventory_key::InventoryKey,
 	};
 	use macros::NestedMocks;
@@ -81,7 +81,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.insert_resource(ButtonInput::<UserInput>::default());
-		app.add_systems(Update, drop::<_Agent, InventoryKey, SlotKey>);
+		app.add_systems(Update, drop::<_Agent, InventoryKey, PlayerSlot>);
 
 		app
 	}
@@ -105,8 +105,8 @@ mod tests {
 			_Agent::new().with_mock(|mock| {
 				mock.expect_swap()
 					.with(
-						eq(SwapKey::Inventory(InventoryKey(42))),
-						eq(SwapKey::Slot(SlotKey::TopHand(Side::Left))),
+						eq(SwapKey::from(InventoryKey(42))),
+						eq(SwapKey::from(PlayerSlot::Upper(Side::Left))),
 					)
 					.times(1)
 					.return_const(());
@@ -117,7 +117,7 @@ mod tests {
 		press_and_release_mouse_left!(app);
 		app.world_mut().spawn((
 			Interaction::Hovered,
-			KeyedPanel(SlotKey::TopHand(Side::Left)),
+			KeyedPanel(PlayerSlot::Upper(Side::Left)),
 		));
 
 		app.update();
@@ -131,7 +131,7 @@ mod tests {
 		press_and_release_mouse_left!(app);
 		app.world_mut().spawn((
 			Interaction::Hovered,
-			KeyedPanel(SlotKey::TopHand(Side::Left)),
+			KeyedPanel(PlayerSlot::Upper(Side::Left)),
 		));
 		app.world_mut()
 			.spawn((Interaction::None, KeyedPanel(22222_f32)));
@@ -152,7 +152,7 @@ mod tests {
 		press_and_release_mouse_left!(app);
 		app.world_mut().spawn((
 			Interaction::Pressed,
-			KeyedPanel(SlotKey::TopHand(Side::Left)),
+			KeyedPanel(PlayerSlot::Upper(Side::Left)),
 		));
 
 		app.update();
@@ -170,7 +170,7 @@ mod tests {
 
 		app.world_mut().spawn((
 			Interaction::Hovered,
-			KeyedPanel(SlotKey::TopHand(Side::Left)),
+			KeyedPanel(PlayerSlot::Upper(Side::Left)),
 		));
 
 		app.update();
@@ -187,7 +187,7 @@ mod tests {
 		press_and_release_mouse_left!(app);
 		app.world_mut().spawn((
 			Interaction::Hovered,
-			KeyedPanel(SlotKey::TopHand(Side::Left)),
+			KeyedPanel(PlayerSlot::Upper(Side::Left)),
 		));
 		app.update();
 

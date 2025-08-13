@@ -78,7 +78,9 @@ impl IterFinite for MovementKey {
 	}
 }
 
-impl InvalidInput<UserInput> for MovementKey {
+impl InvalidInput for MovementKey {
+	type TInput = UserInput;
+
 	fn invalid_input(&self) -> &[UserInput] {
 		const { &[] }
 	}

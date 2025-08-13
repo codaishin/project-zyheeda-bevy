@@ -5,11 +5,11 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	traits::accessors::get::{GetterRef, TryApplyOn},
+	traits::accessors::get::{Getter, TryApplyOn},
 	zyheeda_commands::ZyheedaCommands,
 };
 
-pub fn panel_colors<TPanel: Component + GetterRef<PanelState> + HasPanelColors>(
+pub fn panel_colors<TPanel: Component + Getter<PanelState> + HasPanelColors>(
 	mut commands: ZyheedaCommands,
 	mut panels: Query<(Entity, &Interaction, &TPanel, Option<&UIDisabled>), Without<ColorOverride>>,
 ) {
@@ -42,18 +42,18 @@ mod tests {
 	#[derive(Component)]
 	struct _Empty;
 
-	impl GetterRef<PanelState> for _Empty {
-		fn get(&self) -> &PanelState {
-			&PanelState::Empty
+	impl Getter<PanelState> for _Empty {
+		fn get(&self) -> PanelState {
+			PanelState::Empty
 		}
 	}
 
 	#[derive(Component)]
 	struct _Filled;
 
-	impl GetterRef<PanelState> for _Filled {
-		fn get(&self) -> &PanelState {
-			&PanelState::Filled
+	impl Getter<PanelState> for _Filled {
+		fn get(&self) -> PanelState {
+			PanelState::Filled
 		}
 	}
 

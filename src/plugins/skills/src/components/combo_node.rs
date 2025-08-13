@@ -5,16 +5,16 @@ use crate::{
 	skills::Skill,
 	traits::{GetNodeMut, peek_next_recursive::PeekNextRecursive},
 };
-use bevy::ecs::component::Component;
+use bevy::prelude::*;
 use common::{
 	tools::{
-		action_key::slot::{Combo, SlotKey},
+		action_key::slot::SlotKey,
 		item_type::{CompatibleItems, ItemType},
 		ordered_hash_map::{Entry, IntoIter, OrderedHashMap},
 	},
 	traits::{
 		accessors::get::{GetMut, GetRef},
-		handles_combo_menu::GetCombosOrdered,
+		handles_combo_menu::{Combo, GetCombosOrdered},
 		insert::TryInsert,
 		iterate::Iterate,
 	},
@@ -170,11 +170,11 @@ impl PeekNextRecursive for ComboNode {
 
 	fn peek_next_recursive<'a>(
 		&'a self,
-		trigger: &SlotKey,
+		trigger: SlotKey,
 		item_type: &ItemType,
 	) -> Option<(Self::TNext<'a>, Self::TRecursiveNode<'a>)> {
 		let ComboNode(tree) = self;
-		let (skill, combo) = tree.get(trigger)?;
+		let (skill, combo) = tree.get(&trigger)?;
 		let CompatibleItems(is_usable_with) = &skill.compatible_items;
 
 		if !is_usable_with.contains(item_type) {
@@ -185,42 +185,59 @@ impl PeekNextRecursive for ComboNode {
 	}
 }
 
-impl GetCombosOrdered<Skill> for ComboNode {
-	fn combos_ordered(&self) -> Vec<Combo<Skill>> {
+impl<TKey> GetCombosOrdered<Skill, TKey> for ComboNode
+where
+	TKey: TryFrom<SlotKey> + Clone,
+{
+	/// Retrieve configured combos for the given `TKey`
+	///
+	/// Any slot that does not match `TKey` is dropped in the results.
+	fn combos_ordered(&self) -> Vec<Combo<TKey, Skill>> {
 		combos(self, vec![])
 	}
 }
 
-fn combos(combo_node: &ComboNode, key_path: Vec<SlotKey>) -> Vec<Combo<Skill>> {
-	combo_node
-		.0
-		.iter()
-		.map(build_path(key_path))
+fn combos<TKey>(ComboNode(tree): &ComboNode, key_path: Vec<TKey>) -> Vec<Combo<TKey, Skill>>
+where
+	TKey: TryFrom<SlotKey> + Clone,
+{
+	tree.iter()
+		.filter_map(build_path(key_path))
 		.flat_map(append_followup_combo_steps)
 		.collect()
 }
 
 #[allow(clippy::type_complexity)]
-fn build_path<'a>(
-	key_path: Vec<SlotKey>,
-) -> impl FnMut((&SlotKey, &'a (Skill, ComboNode))) -> (Vec<SlotKey>, &'a Skill, &'a ComboNode) {
+fn build_path<'a, TKey>(
+	key_path: Vec<TKey>,
+) -> impl FnMut((&SlotKey, &'a (Skill, ComboNode))) -> Option<(Vec<TKey>, &'a Skill, &'a ComboNode)>
+where
+	TKey: TryFrom<SlotKey> + Clone,
+{
 	move |(slot_key, (skill, child_node))| {
-		let key_path = [key_path.clone(), vec![*slot_key]].concat();
-		(key_path, skill, child_node)
+		let slot_key = TKey::try_from(*slot_key).ok()?;
+		let key_path = [key_path.clone(), vec![slot_key]].concat();
+		Some((key_path, skill, child_node))
 	}
 }
 
-fn append_followup_combo_steps(
-	(key_path, skill, child_node): (Vec<SlotKey>, &Skill, &ComboNode),
-) -> Vec<Combo<Skill>> {
+fn append_followup_combo_steps<TKey>(
+	(key_path, skill, child_node): (Vec<TKey>, &Skill, &ComboNode),
+) -> Vec<Combo<TKey, Skill>>
+where
+	TKey: TryFrom<SlotKey> + Clone,
+{
 	let followup_combo_steps = combos(child_node, key_path.clone());
 	append_followups((key_path, skill), followup_combo_steps)
 }
 
-fn append_followups(
-	(combo_path, skill): (Vec<SlotKey>, &Skill),
-	followups: Vec<Combo<Skill>>,
-) -> Vec<Combo<Skill>> {
+fn append_followups<TKey>(
+	(combo_path, skill): (Vec<TKey>, &Skill),
+	followups: Vec<Combo<TKey, Skill>>,
+) -> Vec<Combo<TKey, Skill>>
+where
+	TKey: TryFrom<SlotKey> + Clone,
+{
 	let combo_steps = vec![(combo_path, skill.clone())];
 
 	if followups.is_empty() {
@@ -237,13 +254,16 @@ fn append_followups(
 mod tests {
 	use super::*;
 	use bevy::prelude::default;
-	use common::{tools::action_key::slot::Side, traits::handles_localization::Token};
+	use common::{
+		tools::action_key::slot::{PlayerSlot, Side},
+		traits::handles_localization::Token,
+	};
 	use std::collections::HashSet;
 
 	#[test]
 	fn peek_next_from_tree() {
 		let node = ComboNode(OrderedHashMap::from([(
-			SlotKey::BottomHand(Side::Right),
+			SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			(
 				Skill {
 					token: Token::from("first"),
@@ -251,7 +271,7 @@ mod tests {
 					..default()
 				},
 				ComboNode(OrderedHashMap::from([(
-					SlotKey::BottomHand(Side::Right),
+					SlotKey::from(PlayerSlot::Lower(Side::Right)),
 					(
 						Skill {
 							token: Token::from("second"),
@@ -263,7 +283,10 @@ mod tests {
 			),
 		)]));
 
-		let next = node.peek_next_recursive(&SlotKey::BottomHand(Side::Right), &ItemType::Pistol);
+		let next = node.peek_next_recursive(
+			SlotKey::from(PlayerSlot::Lower(Side::Right)),
+			&ItemType::Pistol,
+		);
 
 		assert_eq!(
 			Some((
@@ -273,7 +296,7 @@ mod tests {
 					..default()
 				},
 				&ComboNode(OrderedHashMap::from([(
-					SlotKey::BottomHand(Side::Right),
+					SlotKey::from(PlayerSlot::Lower(Side::Right)),
 					(
 						Skill {
 							token: Token::from("second"),
@@ -290,7 +313,7 @@ mod tests {
 	#[test]
 	fn peek_none_if_item_type_not_usable() {
 		let node = ComboNode(OrderedHashMap::from([(
-			SlotKey::BottomHand(Side::Right),
+			SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			(
 				Skill {
 					token: Token::from("first"),
@@ -298,7 +321,7 @@ mod tests {
 					..default()
 				},
 				ComboNode(OrderedHashMap::from([(
-					SlotKey::BottomHand(Side::Right),
+					SlotKey::from(PlayerSlot::Lower(Side::Right)),
 					(
 						Skill {
 							token: Token::from("second"),
@@ -310,7 +333,10 @@ mod tests {
 			),
 		)]));
 
-		let next = node.peek_next_recursive(&SlotKey::BottomHand(Side::Right), &ItemType::Pistol);
+		let next = node.peek_next_recursive(
+			SlotKey::from(PlayerSlot::Lower(Side::Right)),
+			&ItemType::Pistol,
+		);
 
 		assert_eq!(None as Option<(&Skill, &ComboNode)>, next)
 	}
@@ -318,7 +344,7 @@ mod tests {
 	#[test]
 	fn get_top_skill() {
 		let combos = ComboNode::new([(
-			SlotKey::BottomHand(Side::Right),
+			SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			(
 				Skill {
 					token: Token::from("some skill"),
@@ -328,7 +354,7 @@ mod tests {
 			),
 		)]);
 
-		let skill = combos.get(&[SlotKey::BottomHand(Side::Right)]);
+		let skill = combos.get(&[SlotKey::from(PlayerSlot::Lower(Side::Right))]);
 
 		assert_eq!(
 			Some(&Skill {
@@ -342,14 +368,14 @@ mod tests {
 	#[test]
 	fn get_child_skill() {
 		let combos = ComboNode::new([(
-			SlotKey::BottomHand(Side::Right),
+			SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			(
 				Skill {
 					token: Token::from("some skill"),
 					..default()
 				},
 				ComboNode::new([(
-					SlotKey::BottomHand(Side::Left),
+					SlotKey::from(PlayerSlot::Lower(Side::Left)),
 					(
 						Skill {
 							token: Token::from("some child skill"),
@@ -362,8 +388,8 @@ mod tests {
 		)]);
 
 		let skill = combos.get(&[
-			SlotKey::BottomHand(Side::Right),
-			SlotKey::BottomHand(Side::Left),
+			SlotKey::from(PlayerSlot::Lower(Side::Right)),
+			SlotKey::from(PlayerSlot::Lower(Side::Left)),
 		]);
 
 		assert_eq!(
@@ -378,7 +404,7 @@ mod tests {
 	#[test]
 	fn get_mut_top_skill() {
 		let mut combos = ComboNode::new([(
-			SlotKey::BottomHand(Side::Right),
+			SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			(
 				Skill {
 					token: Token::from("some skill"),
@@ -388,7 +414,9 @@ mod tests {
 			),
 		)]);
 
-		let skill = combos.get_mut(&[SlotKey::BottomHand(Side::Right)]).unwrap();
+		let skill = combos
+			.get_mut(&[SlotKey::from(PlayerSlot::Lower(Side::Right))])
+			.unwrap();
 		*skill = Skill {
 			token: Token::from("new skill"),
 			..default()
@@ -396,7 +424,7 @@ mod tests {
 
 		assert_eq!(
 			ComboNode::new([(
-				SlotKey::BottomHand(Side::Right),
+				SlotKey::from(PlayerSlot::Lower(Side::Right)),
 				(
 					Skill {
 						token: Token::from("new skill"),
@@ -412,14 +440,14 @@ mod tests {
 	#[test]
 	fn get_mut_child_skill() {
 		let mut combos = ComboNode::new([(
-			SlotKey::BottomHand(Side::Right),
+			SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			(
 				Skill {
 					token: Token::from("some skill"),
 					..default()
 				},
 				ComboNode::new([(
-					SlotKey::BottomHand(Side::Left),
+					SlotKey::from(PlayerSlot::Lower(Side::Left)),
 					(
 						Skill {
 							token: Token::from("some child skill"),
@@ -433,8 +461,8 @@ mod tests {
 
 		let skill = combos
 			.get_mut(&[
-				SlotKey::BottomHand(Side::Right),
-				SlotKey::BottomHand(Side::Left),
+				SlotKey::from(PlayerSlot::Lower(Side::Right)),
+				SlotKey::from(PlayerSlot::Lower(Side::Left)),
 			])
 			.unwrap();
 		*skill = Skill {
@@ -444,14 +472,14 @@ mod tests {
 
 		assert_eq!(
 			ComboNode::new([(
-				SlotKey::BottomHand(Side::Right),
+				SlotKey::from(PlayerSlot::Lower(Side::Right)),
 				(
 					Skill {
 						token: Token::from("some skill"),
 						..default()
 					},
 					ComboNode::new([(
-						SlotKey::BottomHand(Side::Left),
+						SlotKey::from(PlayerSlot::Lower(Side::Left)),
 						(
 							Skill {
 								token: Token::from("new skill"),
@@ -471,7 +499,7 @@ mod tests {
 		let mut combos = ComboNode::default();
 
 		let success = combos.try_insert(
-			[SlotKey::BottomHand(Side::Right)],
+			[SlotKey::from(PlayerSlot::Lower(Side::Right))],
 			Skill {
 				token: Token::from("new skill"),
 				..default()
@@ -481,7 +509,7 @@ mod tests {
 		assert_eq!(
 			(
 				ComboNode::new([(
-					SlotKey::BottomHand(Side::Right),
+					SlotKey::from(PlayerSlot::Lower(Side::Right)),
 					(
 						Skill {
 							token: Token::from("new skill"),
@@ -499,14 +527,14 @@ mod tests {
 	#[test]
 	fn try_insert_existing_skill_without_touching_child_skills() {
 		let mut combos = ComboNode::new([(
-			SlotKey::BottomHand(Side::Right),
+			SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			(
 				Skill {
 					token: Token::from("some skill"),
 					..default()
 				},
 				ComboNode::new([(
-					SlotKey::BottomHand(Side::Right),
+					SlotKey::from(PlayerSlot::Lower(Side::Right)),
 					(
 						Skill {
 							token: Token::from("child skill"),
@@ -519,7 +547,7 @@ mod tests {
 		)]);
 
 		let success = combos.try_insert(
-			[SlotKey::BottomHand(Side::Right)],
+			[SlotKey::from(PlayerSlot::Lower(Side::Right))],
 			Skill {
 				token: Token::from("new skill"),
 				..default()
@@ -529,14 +557,14 @@ mod tests {
 		assert_eq!(
 			(
 				ComboNode::new([(
-					SlotKey::BottomHand(Side::Right),
+					SlotKey::from(PlayerSlot::Lower(Side::Right)),
 					(
 						Skill {
 							token: Token::from("new skill"),
 							..default()
 						},
 						ComboNode::new([(
-							SlotKey::BottomHand(Side::Right),
+							SlotKey::from(PlayerSlot::Lower(Side::Right)),
 							(
 								Skill {
 									token: Token::from("child skill"),
@@ -556,7 +584,7 @@ mod tests {
 	#[test]
 	fn try_insert_child_skill() {
 		let mut combos = ComboNode::new([(
-			SlotKey::BottomHand(Side::Right),
+			SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			(
 				Skill {
 					token: Token::from("some skill"),
@@ -568,8 +596,8 @@ mod tests {
 
 		let success = combos.try_insert(
 			[
-				SlotKey::BottomHand(Side::Right),
-				SlotKey::BottomHand(Side::Left),
+				SlotKey::from(PlayerSlot::Lower(Side::Right)),
+				SlotKey::from(PlayerSlot::Lower(Side::Left)),
 			],
 			Skill {
 				token: Token::from("new skill"),
@@ -580,14 +608,14 @@ mod tests {
 		assert_eq!(
 			(
 				ComboNode::new([(
-					SlotKey::BottomHand(Side::Right),
+					SlotKey::from(PlayerSlot::Lower(Side::Right)),
 					(
 						Skill {
 							token: Token::from("some skill"),
 							..default()
 						},
 						ComboNode::new([(
-							SlotKey::BottomHand(Side::Left),
+							SlotKey::from(PlayerSlot::Lower(Side::Left)),
 							(
 								Skill {
 									token: Token::from("new skill"),
@@ -626,8 +654,8 @@ mod tests {
 		let mut combos = ComboNode::default();
 		let success = combos.try_insert(
 			[
-				SlotKey::BottomHand(Side::Right),
-				SlotKey::BottomHand(Side::Right),
+				SlotKey::from(PlayerSlot::Lower(Side::Right)),
+				SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			],
 			Skill {
 				token: Token::from("new skill"),
@@ -658,7 +686,7 @@ mod tests {
 	#[test]
 	fn get_a_mutable_top_entry() {
 		let conf = [(
-			SlotKey::BottomHand(Side::Right),
+			SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			(
 				Skill {
 					token: Token::from("my skill"),
@@ -668,11 +696,11 @@ mod tests {
 			),
 		)];
 		let mut root = ComboNode::new(conf.clone());
-		let entry = root.node_mut(&[SlotKey::BottomHand(Side::Right)]);
+		let entry = root.node_mut(&[SlotKey::from(PlayerSlot::Lower(Side::Right))]);
 
 		assert_eq!(
 			Some(NodeEntryMut {
-				key: SlotKey::BottomHand(Side::Right),
+				key: SlotKey::from(PlayerSlot::Lower(Side::Right)),
 				tree: &mut OrderedHashMap::from(conf),
 			}),
 			entry,
@@ -682,7 +710,7 @@ mod tests {
 	#[test]
 	fn get_a_mutable_child_entry() {
 		let child_conf = [(
-			SlotKey::BottomHand(Side::Left),
+			SlotKey::from(PlayerSlot::Lower(Side::Left)),
 			(
 				Skill {
 					token: Token::from("my child skill"),
@@ -692,7 +720,7 @@ mod tests {
 			),
 		)];
 		let conf = [(
-			SlotKey::BottomHand(Side::Right),
+			SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			(
 				Skill {
 					token: Token::from("my skill"),
@@ -703,13 +731,13 @@ mod tests {
 		)];
 		let mut root = ComboNode::new(conf);
 		let entry = root.node_mut(&[
-			SlotKey::BottomHand(Side::Right),
-			SlotKey::BottomHand(Side::Left),
+			SlotKey::from(PlayerSlot::Lower(Side::Right)),
+			SlotKey::from(PlayerSlot::Lower(Side::Left)),
 		]);
 
 		assert_eq!(
 			Some(NodeEntryMut {
-				key: SlotKey::BottomHand(Side::Left),
+				key: SlotKey::from(PlayerSlot::Lower(Side::Left)),
 				tree: &mut OrderedHashMap::from(child_conf),
 			}),
 			entry,
@@ -719,14 +747,14 @@ mod tests {
 	#[test]
 	fn get_mutable_none_when_nothing_found_with_key_path() {
 		let conf = [(
-			SlotKey::BottomHand(Side::Right),
+			SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			(
 				Skill {
 					token: Token::from("my skill"),
 					..default()
 				},
 				ComboNode::new([(
-					SlotKey::BottomHand(Side::Left),
+					SlotKey::from(PlayerSlot::Lower(Side::Left)),
 					(
 						Skill {
 							token: Token::from("my child skill"),
@@ -739,10 +767,10 @@ mod tests {
 		)];
 		let mut root = ComboNode::new(conf);
 		let entry = root.node_mut(&[
-			SlotKey::BottomHand(Side::Right),
-			SlotKey::BottomHand(Side::Left),
-			SlotKey::BottomHand(Side::Right),
-			SlotKey::BottomHand(Side::Left),
+			SlotKey::from(PlayerSlot::Lower(Side::Right)),
+			SlotKey::from(PlayerSlot::Lower(Side::Left)),
+			SlotKey::from(PlayerSlot::Lower(Side::Right)),
+			SlotKey::from(PlayerSlot::Lower(Side::Left)),
 		]);
 
 		assert_eq!(None, entry)
@@ -751,14 +779,14 @@ mod tests {
 	#[test]
 	fn get_a_mutable_entry_when_only_last_in_key_path_not_found() {
 		let conf = [(
-			SlotKey::BottomHand(Side::Right),
+			SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			(
 				Skill {
 					token: Token::from("my skill"),
 					..default()
 				},
 				ComboNode::new([(
-					SlotKey::BottomHand(Side::Left),
+					SlotKey::from(PlayerSlot::Lower(Side::Left)),
 					(
 						Skill {
 							token: Token::from("my child skill"),
@@ -771,14 +799,14 @@ mod tests {
 		)];
 		let mut root = ComboNode::new(conf);
 		let entry = root.node_mut(&[
-			SlotKey::BottomHand(Side::Right),
-			SlotKey::BottomHand(Side::Left),
-			SlotKey::BottomHand(Side::Right),
+			SlotKey::from(PlayerSlot::Lower(Side::Right)),
+			SlotKey::from(PlayerSlot::Lower(Side::Left)),
+			SlotKey::from(PlayerSlot::Lower(Side::Right)),
 		]);
 
 		assert_eq!(
 			Some(NodeEntryMut {
-				key: SlotKey::BottomHand(Side::Right),
+				key: SlotKey::from(PlayerSlot::Lower(Side::Right)),
 				tree: &mut OrderedHashMap::default(),
 			}),
 			entry,
@@ -788,7 +816,7 @@ mod tests {
 	#[test]
 	fn get_single_single_combo_with_single_skill() {
 		let combos = ComboNode::new([(
-			SlotKey::BottomHand(Side::Right),
+			SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			(
 				Skill {
 					token: Token::from("some skill"),
@@ -800,7 +828,7 @@ mod tests {
 
 		assert_eq!(
 			vec![vec![(
-				vec![SlotKey::BottomHand(Side::Right)],
+				vec![PlayerSlot::Lower(Side::Right)],
 				Skill {
 					token: Token::from("some skill"),
 					..default()
@@ -814,7 +842,7 @@ mod tests {
 	fn get_multiple_combos_with_single_skill() {
 		let combos = ComboNode::new([
 			(
-				SlotKey::BottomHand(Side::Right),
+				SlotKey::from(PlayerSlot::Lower(Side::Right)),
 				(
 					Skill {
 						token: Token::from("some right skill"),
@@ -824,7 +852,7 @@ mod tests {
 				),
 			),
 			(
-				SlotKey::BottomHand(Side::Left),
+				SlotKey::from(PlayerSlot::Lower(Side::Left)),
 				(
 					Skill {
 						token: Token::from("some left skill"),
@@ -838,14 +866,14 @@ mod tests {
 		assert_eq!(
 			vec![
 				vec![(
-					vec![SlotKey::BottomHand(Side::Right)],
+					vec![PlayerSlot::Lower(Side::Right)],
 					Skill {
 						token: Token::from("some right skill"),
 						..default()
 					},
 				)],
 				vec![(
-					vec![SlotKey::BottomHand(Side::Left)],
+					vec![PlayerSlot::Lower(Side::Left)],
 					Skill {
 						token: Token::from("some left skill"),
 						..default()
@@ -859,14 +887,14 @@ mod tests {
 	#[test]
 	fn get_single_combo_with_multiple_skills() {
 		let combos = ComboNode::new([(
-			SlotKey::BottomHand(Side::Right),
+			SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			(
 				Skill {
 					token: Token::from("some skill"),
 					..default()
 				},
 				ComboNode::new([(
-					SlotKey::BottomHand(Side::Left),
+					SlotKey::from(PlayerSlot::Lower(Side::Left)),
 					(
 						Skill {
 							token: Token::from("some child skill"),
@@ -881,7 +909,7 @@ mod tests {
 		assert_eq!(
 			vec![vec![
 				(
-					vec![SlotKey::BottomHand(Side::Right)],
+					vec![PlayerSlot::Lower(Side::Right)],
 					Skill {
 						token: Token::from("some skill"),
 						..default()
@@ -889,8 +917,8 @@ mod tests {
 				),
 				(
 					vec![
-						SlotKey::BottomHand(Side::Right),
-						SlotKey::BottomHand(Side::Left)
+						PlayerSlot::Lower(Side::Right),
+						PlayerSlot::Lower(Side::Left)
 					],
 					Skill {
 						token: Token::from("some child skill"),
@@ -905,7 +933,7 @@ mod tests {
 	#[test]
 	fn get_multiple_combos_with_multiple_child_skills() {
 		let combos = ComboNode::new([(
-			SlotKey::BottomHand(Side::Right),
+			SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			(
 				Skill {
 					token: Token::from("some skill"),
@@ -913,7 +941,7 @@ mod tests {
 				},
 				ComboNode::new([
 					(
-						SlotKey::BottomHand(Side::Right),
+						SlotKey::from(PlayerSlot::Lower(Side::Right)),
 						(
 							Skill {
 								token: Token::from("some right child skill"),
@@ -923,7 +951,7 @@ mod tests {
 						),
 					),
 					(
-						SlotKey::BottomHand(Side::Left),
+						SlotKey::from(PlayerSlot::Lower(Side::Left)),
 						(
 							Skill {
 								token: Token::from("some left child skill"),
@@ -940,7 +968,7 @@ mod tests {
 			vec![
 				vec![
 					(
-						vec![SlotKey::BottomHand(Side::Right)],
+						vec![PlayerSlot::Lower(Side::Right)],
 						Skill {
 							token: Token::from("some skill"),
 							..default()
@@ -948,8 +976,8 @@ mod tests {
 					),
 					(
 						vec![
-							SlotKey::BottomHand(Side::Right),
-							SlotKey::BottomHand(Side::Right)
+							PlayerSlot::Lower(Side::Right),
+							PlayerSlot::Lower(Side::Right)
 						],
 						Skill {
 							token: Token::from("some right child skill"),
@@ -959,7 +987,7 @@ mod tests {
 				],
 				vec![
 					(
-						vec![SlotKey::BottomHand(Side::Right)],
+						vec![PlayerSlot::Lower(Side::Right)],
 						Skill {
 							token: Token::from("some skill"),
 							..default()
@@ -967,8 +995,8 @@ mod tests {
 					),
 					(
 						vec![
-							SlotKey::BottomHand(Side::Right),
-							SlotKey::BottomHand(Side::Left)
+							PlayerSlot::Lower(Side::Right),
+							PlayerSlot::Lower(Side::Left)
 						],
 						Skill {
 							token: Token::from("some left child skill"),
@@ -984,14 +1012,14 @@ mod tests {
 	#[test]
 	fn get_multiple_combo_with_multiple_deep_child_skills() {
 		let combos = ComboNode::new([(
-			SlotKey::BottomHand(Side::Right),
+			SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			(
 				Skill {
 					token: Token::from("some skill"),
 					..default()
 				},
 				ComboNode::new([(
-					SlotKey::BottomHand(Side::Right),
+					SlotKey::from(PlayerSlot::Lower(Side::Right)),
 					(
 						Skill {
 							token: Token::from("some child skill"),
@@ -999,7 +1027,7 @@ mod tests {
 						},
 						ComboNode::new([
 							(
-								SlotKey::BottomHand(Side::Right),
+								SlotKey::from(PlayerSlot::Lower(Side::Right)),
 								(
 									Skill {
 										token: Token::from("some right child skill"),
@@ -1009,7 +1037,7 @@ mod tests {
 								),
 							),
 							(
-								SlotKey::BottomHand(Side::Left),
+								SlotKey::from(PlayerSlot::Lower(Side::Left)),
 								(
 									Skill {
 										token: Token::from("some left child skill"),
@@ -1028,7 +1056,7 @@ mod tests {
 			vec![
 				vec![
 					(
-						vec![SlotKey::BottomHand(Side::Right)],
+						vec![PlayerSlot::Lower(Side::Right)],
 						Skill {
 							token: Token::from("some skill"),
 							..default()
@@ -1036,8 +1064,8 @@ mod tests {
 					),
 					(
 						vec![
-							SlotKey::BottomHand(Side::Right),
-							SlotKey::BottomHand(Side::Right)
+							PlayerSlot::Lower(Side::Right),
+							PlayerSlot::Lower(Side::Right)
 						],
 						Skill {
 							token: Token::from("some child skill"),
@@ -1046,9 +1074,9 @@ mod tests {
 					),
 					(
 						vec![
-							SlotKey::BottomHand(Side::Right),
-							SlotKey::BottomHand(Side::Right),
-							SlotKey::BottomHand(Side::Right),
+							PlayerSlot::Lower(Side::Right),
+							PlayerSlot::Lower(Side::Right),
+							PlayerSlot::Lower(Side::Right),
 						],
 						Skill {
 							token: Token::from("some right child skill"),
@@ -1058,7 +1086,7 @@ mod tests {
 				],
 				vec![
 					(
-						vec![SlotKey::BottomHand(Side::Right)],
+						vec![PlayerSlot::Lower(Side::Right)],
 						Skill {
 							token: Token::from("some skill"),
 							..default()
@@ -1066,8 +1094,8 @@ mod tests {
 					),
 					(
 						vec![
-							SlotKey::BottomHand(Side::Right),
-							SlotKey::BottomHand(Side::Right)
+							PlayerSlot::Lower(Side::Right),
+							PlayerSlot::Lower(Side::Right)
 						],
 						Skill {
 							token: Token::from("some child skill"),
@@ -1076,9 +1104,9 @@ mod tests {
 					),
 					(
 						vec![
-							SlotKey::BottomHand(Side::Right),
-							SlotKey::BottomHand(Side::Right),
-							SlotKey::BottomHand(Side::Left),
+							PlayerSlot::Lower(Side::Right),
+							PlayerSlot::Lower(Side::Right),
+							PlayerSlot::Lower(Side::Left),
 						],
 						Skill {
 							token: Token::from("some left child skill"),
@@ -1094,14 +1122,14 @@ mod tests {
 	#[test]
 	fn get_multiple_combo_with_multiple_deep_child_skills_with_insertion_order_maintained() {
 		let combos = ComboNode::new([(
-			SlotKey::BottomHand(Side::Right),
+			SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			(
 				Skill {
 					token: Token::from("some skill"),
 					..default()
 				},
 				ComboNode::new([(
-					SlotKey::BottomHand(Side::Right),
+					SlotKey::from(PlayerSlot::Lower(Side::Right)),
 					(
 						Skill {
 							token: Token::from("some child skill"),
@@ -1109,7 +1137,7 @@ mod tests {
 						},
 						ComboNode::new([
 							(
-								SlotKey::BottomHand(Side::Left),
+								SlotKey::from(PlayerSlot::Lower(Side::Left)),
 								(
 									Skill {
 										token: Token::from("some left child skill"),
@@ -1119,7 +1147,7 @@ mod tests {
 								),
 							),
 							(
-								SlotKey::BottomHand(Side::Right),
+								SlotKey::from(PlayerSlot::Lower(Side::Right)),
 								(
 									Skill {
 										token: Token::from("some right child skill"),
@@ -1138,7 +1166,7 @@ mod tests {
 			vec![
 				vec![
 					(
-						vec![SlotKey::BottomHand(Side::Right)],
+						vec![PlayerSlot::Lower(Side::Right)],
 						Skill {
 							token: Token::from("some skill"),
 							..default()
@@ -1146,8 +1174,8 @@ mod tests {
 					),
 					(
 						vec![
-							SlotKey::BottomHand(Side::Right),
-							SlotKey::BottomHand(Side::Right)
+							PlayerSlot::Lower(Side::Right),
+							PlayerSlot::Lower(Side::Right)
 						],
 						Skill {
 							token: Token::from("some child skill"),
@@ -1156,9 +1184,9 @@ mod tests {
 					),
 					(
 						vec![
-							SlotKey::BottomHand(Side::Right),
-							SlotKey::BottomHand(Side::Right),
-							SlotKey::BottomHand(Side::Left),
+							PlayerSlot::Lower(Side::Right),
+							PlayerSlot::Lower(Side::Right),
+							PlayerSlot::Lower(Side::Left),
 						],
 						Skill {
 							token: Token::from("some left child skill"),
@@ -1168,7 +1196,7 @@ mod tests {
 				],
 				vec![
 					(
-						vec![SlotKey::BottomHand(Side::Right)],
+						vec![PlayerSlot::Lower(Side::Right)],
 						Skill {
 							token: Token::from("some skill"),
 							..default()
@@ -1176,8 +1204,8 @@ mod tests {
 					),
 					(
 						vec![
-							SlotKey::BottomHand(Side::Right),
-							SlotKey::BottomHand(Side::Right)
+							PlayerSlot::Lower(Side::Right),
+							PlayerSlot::Lower(Side::Right)
 						],
 						Skill {
 							token: Token::from("some child skill"),
@@ -1186,9 +1214,9 @@ mod tests {
 					),
 					(
 						vec![
-							SlotKey::BottomHand(Side::Right),
-							SlotKey::BottomHand(Side::Right),
-							SlotKey::BottomHand(Side::Right),
+							PlayerSlot::Lower(Side::Right),
+							PlayerSlot::Lower(Side::Right),
+							PlayerSlot::Lower(Side::Right),
 						],
 						Skill {
 							token: Token::from("some right child skill"),

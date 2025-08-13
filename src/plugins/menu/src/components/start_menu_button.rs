@@ -10,7 +10,7 @@ use common::{
 	errors::Error,
 	states::game_state::GameState,
 	traits::{
-		accessors::get::GetterRef,
+		accessors::get::Getter,
 		handles_localization::localized::Localized,
 		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
@@ -37,9 +37,9 @@ impl StartMenuButton {
 	}
 }
 
-impl GetterRef<PanelState> for StartMenuButton {
-	fn get(&self) -> &PanelState {
-		&PanelState::Filled
+impl Getter<PanelState> for StartMenuButton {
+	fn get(&self) -> PanelState {
+		PanelState::Filled
 	}
 }
 

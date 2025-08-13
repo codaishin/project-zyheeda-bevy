@@ -86,7 +86,9 @@ impl IterFinite for MenuState {
 	}
 }
 
-impl InvalidInput<UserInput> for MenuState {
+impl InvalidInput for MenuState {
+	type TInput = UserInput;
+
 	fn invalid_input(&self) -> &[UserInput] {
 		const { &[UserInput::MouseButton(MouseButton::Left)] }
 	}

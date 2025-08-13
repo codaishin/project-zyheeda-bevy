@@ -31,7 +31,7 @@ fn clear_entry<TSkill>(entry: &mut NodeEntryMut<TSkill>) {
 	entry.tree.remove(&entry.key);
 }
 
-impl<TSkill> ReKey<SlotKey> for NodeEntryMut<'_, TSkill> {
+impl<TSkill> ReKey for NodeEntryMut<'_, TSkill> {
 	fn re_key(&mut self, new_key: SlotKey) {
 		if self.key == new_key {
 			return;
@@ -83,13 +83,16 @@ mod tests {
 	use super::*;
 	use crate::{components::combo_node::ComboNode, skills::Skill};
 	use bevy::prelude::default;
-	use common::{tools::action_key::slot::Side, traits::handles_localization::Token};
+	use common::{
+		tools::action_key::slot::{PlayerSlot, Side, SlotKey},
+		traits::handles_localization::Token,
+	};
 
 	#[test]
 	fn insert_skill() {
 		let mut tree = OrderedHashMap::from([]);
 		let mut entry = NodeEntryMut {
-			key: SlotKey::BottomHand(Side::Right),
+			key: SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			tree: &mut tree,
 		};
 
@@ -100,7 +103,7 @@ mod tests {
 
 		assert_eq!(
 			OrderedHashMap::from([(
-				SlotKey::BottomHand(Side::Right),
+				SlotKey::from(PlayerSlot::Lower(Side::Right)),
 				(
 					Skill {
 						token: Token::from("my skill"),
@@ -116,11 +119,11 @@ mod tests {
 	#[test]
 	fn insert_skill_without_changing_sub_tree() {
 		let mut tree = OrderedHashMap::from([(
-			SlotKey::BottomHand(Side::Right),
+			SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			(
 				Skill::default(),
 				ComboNode::new([(
-					SlotKey::BottomHand(Side::Right),
+					SlotKey::from(PlayerSlot::Lower(Side::Right)),
 					(
 						Skill {
 							token: Token::from("sub tree skill"),
@@ -132,7 +135,7 @@ mod tests {
 			),
 		)]);
 		let mut entry = NodeEntryMut {
-			key: SlotKey::BottomHand(Side::Right),
+			key: SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			tree: &mut tree,
 		};
 
@@ -143,14 +146,14 @@ mod tests {
 
 		assert_eq!(
 			OrderedHashMap::from([(
-				SlotKey::BottomHand(Side::Right),
+				SlotKey::from(PlayerSlot::Lower(Side::Right)),
 				(
 					Skill {
 						token: Token::from("my skill"),
 						..default()
 					},
 					ComboNode::new([(
-						SlotKey::BottomHand(Side::Right),
+						SlotKey::from(PlayerSlot::Lower(Side::Right)),
 						(
 							Skill {
 								token: Token::from("sub tree skill"),
@@ -169,11 +172,11 @@ mod tests {
 	fn insert_none_clears_corresponding_tree_entry() {
 		let mut tree = OrderedHashMap::from([
 			(
-				SlotKey::BottomHand(Side::Right),
+				SlotKey::from(PlayerSlot::Lower(Side::Right)),
 				(
 					Skill::default(),
 					ComboNode::new([(
-						SlotKey::BottomHand(Side::Right),
+						SlotKey::from(PlayerSlot::Lower(Side::Right)),
 						(
 							Skill {
 								token: Token::from("sub tree skill"),
@@ -185,12 +188,12 @@ mod tests {
 				),
 			),
 			(
-				SlotKey::BottomHand(Side::Left),
+				SlotKey::from(PlayerSlot::Lower(Side::Left)),
 				(Skill::default(), default()),
 			),
 		]);
 		let mut entry = NodeEntryMut {
-			key: SlotKey::BottomHand(Side::Right),
+			key: SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			tree: &mut tree,
 		};
 
@@ -198,7 +201,7 @@ mod tests {
 
 		assert_eq!(
 			OrderedHashMap::from([(
-				SlotKey::BottomHand(Side::Left),
+				SlotKey::from(PlayerSlot::Lower(Side::Left)),
 				(Skill::default(), default())
 			)]),
 			tree
@@ -209,19 +212,19 @@ mod tests {
 	fn rekey_sets_self_key_to_new_key() {
 		let mut tree = OrderedHashMap::from([]);
 		let mut entry = NodeEntryMut::<Skill> {
-			key: SlotKey::BottomHand(Side::Right),
+			key: SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			tree: &mut tree,
 		};
 
-		entry.re_key(SlotKey::BottomHand(Side::Left));
+		entry.re_key(SlotKey::from(PlayerSlot::Lower(Side::Left)));
 
-		assert_eq!(SlotKey::BottomHand(Side::Left), entry.key);
+		assert_eq!(SlotKey::from(PlayerSlot::Lower(Side::Left)), entry.key);
 	}
 
 	#[test]
 	fn rekey_skill_to_other_key() {
 		let mut tree = OrderedHashMap::from([(
-			SlotKey::BottomHand(Side::Right),
+			SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			(
 				Skill {
 					token: Token::from("my skill"),
@@ -231,15 +234,15 @@ mod tests {
 			),
 		)]);
 		let mut entry = NodeEntryMut {
-			key: SlotKey::BottomHand(Side::Right),
+			key: SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			tree: &mut tree,
 		};
 
-		entry.re_key(SlotKey::BottomHand(Side::Left));
+		entry.re_key(SlotKey::from(PlayerSlot::Lower(Side::Left)));
 
 		assert_eq!(
 			OrderedHashMap::from([(
-				SlotKey::BottomHand(Side::Left),
+				SlotKey::from(PlayerSlot::Lower(Side::Left)),
 				(
 					Skill {
 						token: Token::from("my skill"),
@@ -256,14 +259,14 @@ mod tests {
 	fn rekey_skill_merge_with_tree_on_other_key() {
 		let mut tree = OrderedHashMap::from([
 			(
-				SlotKey::BottomHand(Side::Right),
+				SlotKey::from(PlayerSlot::Lower(Side::Right)),
 				(
 					Skill {
 						token: Token::from("my main -> off skill"),
 						..default()
 					},
 					ComboNode::new([(
-						SlotKey::BottomHand(Side::Left),
+						SlotKey::from(PlayerSlot::Lower(Side::Left)),
 						(
 							Skill {
 								token: Token::from("my child off skill"),
@@ -275,14 +278,14 @@ mod tests {
 				),
 			),
 			(
-				SlotKey::BottomHand(Side::Left),
+				SlotKey::from(PlayerSlot::Lower(Side::Left)),
 				(
 					Skill {
 						token: Token::from("my off skill"),
 						..default()
 					},
 					ComboNode::new([(
-						SlotKey::BottomHand(Side::Right),
+						SlotKey::from(PlayerSlot::Lower(Side::Right)),
 						(
 							Skill {
 								token: Token::from("my child main skill"),
@@ -295,15 +298,15 @@ mod tests {
 			),
 		]);
 		let mut entry = NodeEntryMut {
-			key: SlotKey::BottomHand(Side::Right),
+			key: SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			tree: &mut tree,
 		};
 
-		entry.re_key(SlotKey::BottomHand(Side::Left));
+		entry.re_key(SlotKey::from(PlayerSlot::Lower(Side::Left)));
 
 		assert_eq!(
 			OrderedHashMap::from([(
-				SlotKey::BottomHand(Side::Left),
+				SlotKey::from(PlayerSlot::Lower(Side::Left)),
 				(
 					Skill {
 						token: Token::from("my main -> off skill"),
@@ -311,7 +314,7 @@ mod tests {
 					},
 					ComboNode::new([
 						(
-							SlotKey::BottomHand(Side::Left),
+							SlotKey::from(PlayerSlot::Lower(Side::Left)),
 							(
 								Skill {
 									token: Token::from("my child off skill"),
@@ -321,7 +324,7 @@ mod tests {
 							),
 						),
 						(
-							SlotKey::BottomHand(Side::Right),
+							SlotKey::from(PlayerSlot::Lower(Side::Right)),
 							(
 								Skill {
 									token: Token::from("my child main skill"),
@@ -341,21 +344,21 @@ mod tests {
 	fn rekey_skill_merge_with_tree_on_other_key_deeply() {
 		let mut tree = OrderedHashMap::from([
 			(
-				SlotKey::BottomHand(Side::Right),
+				SlotKey::from(PlayerSlot::Lower(Side::Right)),
 				(
 					Skill {
 						token: Token::from("my main -> off skill"),
 						..default()
 					},
 					ComboNode::new([(
-						SlotKey::BottomHand(Side::Left),
+						SlotKey::from(PlayerSlot::Lower(Side::Left)),
 						(
 							Skill {
 								token: Token::from("my child off skill"),
 								..default()
 							},
 							ComboNode::new([(
-								SlotKey::BottomHand(Side::Left),
+								SlotKey::from(PlayerSlot::Lower(Side::Left)),
 								(
 									Skill {
 										token: Token::from("my child child off skill"),
@@ -369,21 +372,21 @@ mod tests {
 				),
 			),
 			(
-				SlotKey::BottomHand(Side::Left),
+				SlotKey::from(PlayerSlot::Lower(Side::Left)),
 				(
 					Skill {
 						token: Token::from("my off skill"),
 						..default()
 					},
 					ComboNode::new([(
-						SlotKey::BottomHand(Side::Left),
+						SlotKey::from(PlayerSlot::Lower(Side::Left)),
 						(
 							Skill {
 								token: Token::from("my child off skill"),
 								..default()
 							},
 							ComboNode::new([(
-								SlotKey::BottomHand(Side::Right),
+								SlotKey::from(PlayerSlot::Lower(Side::Right)),
 								(
 									Skill {
 										token: Token::from("my child child main skill"),
@@ -398,22 +401,22 @@ mod tests {
 			),
 		]);
 		let mut entry = NodeEntryMut {
-			key: SlotKey::BottomHand(Side::Right),
+			key: SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			tree: &mut tree,
 		};
 
-		entry.re_key(SlotKey::BottomHand(Side::Left));
+		entry.re_key(SlotKey::from(PlayerSlot::Lower(Side::Left)));
 
 		assert_eq!(
 			OrderedHashMap::from([(
-				SlotKey::BottomHand(Side::Left),
+				SlotKey::from(PlayerSlot::Lower(Side::Left)),
 				(
 					Skill {
 						token: Token::from("my main -> off skill"),
 						..default()
 					},
 					ComboNode::new([(
-						SlotKey::BottomHand(Side::Left),
+						SlotKey::from(PlayerSlot::Lower(Side::Left)),
 						(
 							Skill {
 								token: Token::from("my child off skill"),
@@ -421,7 +424,7 @@ mod tests {
 							},
 							ComboNode::new([
 								(
-									SlotKey::BottomHand(Side::Left),
+									SlotKey::from(PlayerSlot::Lower(Side::Left)),
 									(
 										Skill {
 											token: Token::from("my child child off skill"),
@@ -431,7 +434,7 @@ mod tests {
 									),
 								),
 								(
-									SlotKey::BottomHand(Side::Right),
+									SlotKey::from(PlayerSlot::Lower(Side::Right)),
 									(
 										Skill {
 											token: Token::from("my child child main skill"),

@@ -1,5 +1,5 @@
 use bevy::{prelude::*, state::state::FreelyMutableState};
-use common::{tools::action_key::user_input::UserInput, traits::key_mappings::JustPressed};
+use common::traits::key_mappings::JustPressed;
 
 impl<T, TActionKey> TriggerState<TActionKey> for T
 where
@@ -12,10 +12,11 @@ pub(crate) trait TriggerState<TActionKey>: Resource + JustPressed<TActionKey>
 where
 	TActionKey: PartialEq + Copy,
 {
+	#[allow(clippy::type_complexity)]
 	fn trigger<TState>(
 		action: TActionKey,
 		state: TState,
-	) -> impl Fn(Res<Self>, Res<ButtonInput<UserInput>>, ResMut<NextState<TState>>)
+	) -> impl Fn(Res<Self>, Res<ButtonInput<Self::TInput>>, ResMut<NextState<TState>>)
 	where
 		TState: FreelyMutableState + Copy,
 	{
@@ -40,6 +41,7 @@ where
 mod tests {
 	use super::*;
 	use bevy::state::app::StatesPlugin;
+	use common::tools::action_key::user_input::UserInput;
 	use macros::NestedMocks;
 	use mockall::automock;
 	use testing::{NestedMocks, SingleThreadedApp};
@@ -65,6 +67,8 @@ mod tests {
 
 	#[automock]
 	impl JustPressed<_Action> for _Map {
+		type TInput = UserInput;
+
 		fn just_pressed(&self, input: &ButtonInput<UserInput>) -> impl Iterator<Item = _Action> {
 			self.mock.just_pressed(input)
 		}

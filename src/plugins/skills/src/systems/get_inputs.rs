@@ -1,19 +1,19 @@
 use crate::traits::InputState;
 use bevy::prelude::*;
 use common::{
-	tools::action_key::{slot::SlotKey, user_input::UserInput},
+	tools::action_key::{slot::PlayerSlot, user_input::UserInput},
 	traits::key_mappings::TryGetAction,
 };
 
 #[derive(Default, Debug, PartialEq, Clone)]
 pub(crate) struct Input {
-	pub just_pressed: Vec<SlotKey>,
-	pub pressed: Vec<SlotKey>,
+	pub just_pressed: Vec<PlayerSlot>,
+	pub pressed: Vec<PlayerSlot>,
 }
 
 pub(crate) fn get_inputs<
-	TMap: Resource + TryGetAction<UserInput, SlotKey>,
-	TInput: Resource + InputState<TMap, UserInput>,
+	TMap: Resource + TryGetAction<PlayerSlot, TInput = UserInput>,
+	TInput: Resource + InputState<TMap, PlayerSlot>,
 >(
 	key_map: Res<TMap>,
 	input: Res<TInput>,
@@ -35,8 +35,10 @@ mod tests {
 	#[derive(Resource, Clone, Debug, PartialEq)]
 	struct _Map;
 
-	impl TryGetAction<UserInput, SlotKey> for _Map {
-		fn try_get_action(&self, _: UserInput) -> Option<SlotKey> {
+	impl TryGetAction<PlayerSlot> for _Map {
+		type TInput = UserInput;
+
+		fn try_get_action(&self, _: UserInput) -> Option<PlayerSlot> {
 			None
 		}
 	}
@@ -50,11 +52,11 @@ mod tests {
 	}
 
 	#[automock]
-	impl InputState<_Map, UserInput> for _Input {
-		fn just_pressed_slots(&self, map: &_Map) -> Vec<SlotKey> {
+	impl InputState<_Map, PlayerSlot> for _Input {
+		fn just_pressed_slots(&self, map: &_Map) -> Vec<PlayerSlot> {
 			self.mock.just_pressed_slots(map)
 		}
-		fn pressed_slots(&self, map: &_Map) -> Vec<SlotKey> {
+		fn pressed_slots(&self, map: &_Map) -> Vec<PlayerSlot> {
 			self.mock.pressed_slots(map)
 		}
 	}
@@ -79,10 +81,10 @@ mod tests {
 			_Input::new().with_mock(|mock| {
 				mock.expect_just_pressed_slots()
 					.times(1)
-					.return_const(vec![SlotKey::BottomHand(Side::Right)]);
+					.return_const(vec![PlayerSlot::Lower(Side::Right)]);
 				mock.expect_pressed_slots()
 					.times(1)
-					.return_const(vec![SlotKey::BottomHand(Side::Left)]);
+					.return_const(vec![PlayerSlot::Lower(Side::Left)]);
 			}),
 			_Map,
 		);
@@ -93,8 +95,8 @@ mod tests {
 
 		assert_eq!(
 			&_Result(Input {
-				just_pressed: vec![SlotKey::BottomHand(Side::Right)],
-				pressed: vec![SlotKey::BottomHand(Side::Left)],
+				just_pressed: vec![PlayerSlot::Lower(Side::Right)],
+				pressed: vec![PlayerSlot::Lower(Side::Left)],
 			}),
 			result
 		);

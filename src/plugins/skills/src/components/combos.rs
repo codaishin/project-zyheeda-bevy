@@ -14,13 +14,13 @@ use crate::{
 		write_item::WriteItem,
 	},
 };
-use bevy::ecs::component::Component;
+use bevy::prelude::*;
 use common::{
-	tools::{
-		action_key::slot::{Combo, SlotKey},
-		item_type::ItemType,
+	tools::{action_key::slot::SlotKey, item_type::ItemType},
+	traits::{
+		handles_combo_menu::{Combo, GetCombosOrdered},
+		iterate::Iterate,
 	},
-	traits::{handles_combo_menu::GetCombosOrdered, iterate::Iterate},
 };
 use macros::SavableComponent;
 
@@ -77,7 +77,7 @@ where
 
 	fn peek_next_recursive<'a>(
 		&'a self,
-		trigger: &SlotKey,
+		trigger: SlotKey,
 		item_type: &ItemType,
 	) -> Option<(Self::TNext<'a>, Self::TRecursiveNode<'a>)> {
 		let Combos { config, current } = self;
@@ -96,14 +96,17 @@ where
 {
 	type TNext = Skill;
 
-	fn peek_next(&'a self, trigger: &SlotKey, item_type: &ItemType) -> Option<&'a Skill> {
+	fn peek_next(&'a self, trigger: SlotKey, item_type: &ItemType) -> Option<&'a Skill> {
 		self.peek_next_recursive(trigger, item_type)
 			.map(|(skill, _)| skill)
 	}
 }
 
-impl<TNode: GetCombosOrdered<Skill>> GetCombosOrdered<Skill> for Combos<TNode> {
-	fn combos_ordered(&self) -> Vec<Combo<Skill>> {
+impl<TNode, TKey> GetCombosOrdered<Skill, TKey> for Combos<TNode>
+where
+	TNode: GetCombosOrdered<Skill, TKey>,
+{
+	fn combos_ordered(&self) -> Vec<Combo<TKey, Skill>> {
 		self.config.combos_ordered()
 	}
 }
@@ -126,7 +129,7 @@ where
 
 impl<TNode, TKey> WriteItem<TKey, SlotKey> for Combos<TNode>
 where
-	for<'a> TNode: GetNodeMut<TKey, TNode<'a>: ReKey<SlotKey>>,
+	for<'a> TNode: GetNodeMut<TKey, TNode<'a>: ReKey>,
 	for<'a> TKey: Iterate<'a, TItem = &'a SlotKey> + 'a,
 {
 	fn write_item(&mut self, key_path: &TKey, key: SlotKey) {
@@ -144,7 +147,10 @@ where
 mod tests {
 	use super::*;
 	use bevy::utils::default;
-	use common::{tools::action_key::slot::Side, traits::handles_localization::Token};
+	use common::{
+		tools::action_key::slot::{PlayerSlot, Side},
+		traits::handles_localization::Token,
+	};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
 	use std::{cell::RefCell, collections::HashMap};
@@ -165,10 +171,10 @@ mod tests {
 
 		fn peek_next_recursive<'a>(
 			&'a self,
-			trigger: &SlotKey,
+			trigger: SlotKey,
 			item_type: &ItemType,
 		) -> Option<(&'a Skill, &'a Self)> {
-			let skill = self.0.get(&(*trigger, *item_type))?;
+			let skill = self.0.get(&(trigger, *item_type))?;
 
 			Some((skill, self))
 		}
@@ -176,7 +182,7 @@ mod tests {
 
 	#[test]
 	fn return_skill() {
-		let trigger = SlotKey::BottomHand(Side::Left);
+		let trigger = SlotKey::from(PlayerSlot::Lower(Side::Left));
 		let item_type = ItemType::ForceEssence;
 		let combos = Combos::new(_Next(HashMap::from([(
 			(trigger, item_type),
@@ -187,7 +193,7 @@ mod tests {
 		)])));
 
 		let skill = combos
-			.peek_next_recursive(&trigger, &item_type)
+			.peek_next_recursive(trigger, &item_type)
 			.map(|(skill, _)| skill);
 
 		assert_eq!(
@@ -201,7 +207,7 @@ mod tests {
 
 	#[test]
 	fn use_combo_used_in_set_next_combo() {
-		let trigger = SlotKey::BottomHand(Side::Left);
+		let trigger = SlotKey::from(PlayerSlot::Lower(Side::Left));
 		let item_type = ItemType::ForceEssence;
 		let first = _Next::default();
 		let next = _Next(HashMap::from([(
@@ -215,7 +221,7 @@ mod tests {
 		combos.set_next_combo(Some(next));
 
 		let skill = combos
-			.peek_next_recursive(&trigger, &item_type)
+			.peek_next_recursive(trigger, &item_type)
 			.map(|(skill, _)| skill);
 
 		assert_eq!(
@@ -229,7 +235,7 @@ mod tests {
 
 	#[test]
 	fn use_original_when_next_combo_returns_none() {
-		let trigger = SlotKey::BottomHand(Side::Left);
+		let trigger = SlotKey::from(PlayerSlot::Lower(Side::Left));
 		let item_type = ItemType::ForceEssence;
 		let first = _Next(HashMap::from([(
 			(trigger, item_type),
@@ -243,7 +249,7 @@ mod tests {
 		combos.set_next_combo(Some(next));
 
 		let skill = combos
-			.peek_next_recursive(&trigger, &item_type)
+			.peek_next_recursive(trigger, &item_type)
 			.map(|(skill, _)| skill);
 
 		assert_eq!(
@@ -255,10 +261,10 @@ mod tests {
 		);
 	}
 
-	struct _ComboNode(Vec<Combo<Skill>>);
+	struct _ComboNode(Vec<Combo<PlayerSlot, Skill>>);
 
-	impl GetCombosOrdered<Skill> for _ComboNode {
-		fn combos_ordered(&self) -> Vec<Combo<Skill>> {
+	impl GetCombosOrdered<Skill, PlayerSlot> for _ComboNode {
+		fn combos_ordered(&self) -> Vec<Combo<PlayerSlot, Skill>> {
 			self.0.clone()
 		}
 	}
@@ -271,8 +277,8 @@ mod tests {
 		};
 		let combos_vec = vec![vec![(
 			vec![
-				SlotKey::BottomHand(Side::Left),
-				SlotKey::BottomHand(Side::Right),
+				PlayerSlot::Lower(Side::Left),
+				PlayerSlot::Lower(Side::Right),
 			],
 			skill,
 		)]];
@@ -301,7 +307,7 @@ mod tests {
 		impl Insert<Option<Skill>> for _Entry {
 			fn insert(&mut self, value: Option<Skill>);
 		}
-		impl ReKey<SlotKey> for _Entry {
+		impl ReKey for _Entry {
 			fn re_key(&mut self, key: SlotKey);
 		}
 	}
@@ -317,7 +323,7 @@ mod tests {
 		}
 	}
 
-	impl ReKey<SlotKey> for &mut _Entry {
+	impl ReKey for &mut _Entry {
 		fn re_key(&mut self, key: SlotKey) {
 			self.mock.re_key(key)
 		}
@@ -334,8 +340,8 @@ mod tests {
 
 		combos.write_item(
 			&vec![
-				SlotKey::BottomHand(Side::Right),
-				SlotKey::BottomHand(Side::Left),
+				SlotKey::from(PlayerSlot::Lower(Side::Right)),
+				SlotKey::from(PlayerSlot::Lower(Side::Left)),
 			],
 			Some(Skill {
 				token: Token::from("my skill"),
@@ -345,8 +351,8 @@ mod tests {
 
 		assert_eq!(
 			vec![vec![
-				SlotKey::BottomHand(Side::Right),
-				SlotKey::BottomHand(Side::Left)
+				SlotKey::from(PlayerSlot::Lower(Side::Right)),
+				SlotKey::from(PlayerSlot::Lower(Side::Left))
 			]],
 			combos.config.call_args.into_inner()
 		)
@@ -368,7 +374,7 @@ mod tests {
 		});
 
 		combos.write_item(
-			&vec![SlotKey::BottomHand(Side::Right)],
+			&vec![SlotKey::from(PlayerSlot::Lower(Side::Right))],
 			Some(Skill {
 				token: Token::from("my skill"),
 				..default()
@@ -389,7 +395,7 @@ mod tests {
 		};
 
 		combos.write_item(
-			&vec![SlotKey::BottomHand(Side::Right)],
+			&vec![SlotKey::from(PlayerSlot::Lower(Side::Right))],
 			Some(Skill {
 				token: Token::from("my skill"),
 				..default()
@@ -410,7 +416,7 @@ mod tests {
 		};
 
 		combos.write_item(
-			&vec![SlotKey::BottomHand(Side::Right)],
+			&vec![SlotKey::from(PlayerSlot::Lower(Side::Right))],
 			Some(Skill {
 				token: Token::from("my skill"),
 				..default()
@@ -431,16 +437,16 @@ mod tests {
 
 		combos.write_item(
 			&vec![
-				SlotKey::BottomHand(Side::Right),
-				SlotKey::BottomHand(Side::Left),
+				SlotKey::from(PlayerSlot::Lower(Side::Right)),
+				SlotKey::from(PlayerSlot::Lower(Side::Left)),
 			],
-			SlotKey::BottomHand(Side::Left),
+			SlotKey::from(PlayerSlot::Lower(Side::Left)),
 		);
 
 		assert_eq!(
 			vec![vec![
-				SlotKey::BottomHand(Side::Right),
-				SlotKey::BottomHand(Side::Left)
+				SlotKey::from(PlayerSlot::Lower(Side::Right)),
+				SlotKey::from(PlayerSlot::Lower(Side::Left))
 			]],
 			combos.config.call_args.into_inner()
 		)
@@ -452,15 +458,15 @@ mod tests {
 			entry: Some(_Entry::new().with_mock(|mock| {
 				mock.expect_re_key()
 					.times(1)
-					.with(eq(SlotKey::BottomHand(Side::Left)))
+					.with(eq(SlotKey::from(PlayerSlot::Lower(Side::Left))))
 					.return_const(());
 			})),
 			..default()
 		});
 
 		combos.write_item(
-			&vec![SlotKey::BottomHand(Side::Right)],
-			SlotKey::BottomHand(Side::Left),
+			&vec![SlotKey::from(PlayerSlot::Lower(Side::Left))],
+			SlotKey::from(PlayerSlot::Lower(Side::Left)),
 		);
 	}
 
@@ -477,8 +483,8 @@ mod tests {
 		};
 
 		combos.write_item(
-			&vec![SlotKey::BottomHand(Side::Right)],
-			SlotKey::BottomHand(Side::Left),
+			&vec![SlotKey::from(PlayerSlot::Lower(Side::Right))],
+			SlotKey::from(PlayerSlot::Lower(Side::Left)),
 		);
 
 		assert!(combos.current.is_none());
@@ -495,8 +501,8 @@ mod tests {
 		};
 
 		combos.write_item(
-			&vec![SlotKey::BottomHand(Side::Right)],
-			SlotKey::BottomHand(Side::Left),
+			&vec![SlotKey::from(PlayerSlot::Lower(Side::Right))],
+			SlotKey::from(PlayerSlot::Lower(Side::Left)),
 		);
 
 		assert!(combos.current.is_none());

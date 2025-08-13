@@ -4,7 +4,7 @@ use crate::{
 	traits::{LoadUi, colors::PanelColors, insert_ui_content::InsertUiContent},
 };
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
-use common::{tools::action_key::slot::SlotKey, traits::iteration::IterFinite};
+use common::{tools::action_key::slot::PlayerSlot, traits::iteration::IterFinite};
 
 #[derive(Component)]
 #[require(Node = Self::full_screen())]
@@ -47,13 +47,13 @@ fn add_quickbar(parent: &mut RelatedSpawnerCommands<ChildOf>) {
 			},
 		))
 		.with_children(|quickbar| {
-			for slot_key in SlotKey::iterator() {
-				add_slot(quickbar, &slot_key);
+			for slot_key in PlayerSlot::iterator() {
+				add_slot(quickbar, slot_key);
 			}
 		});
 }
 
-fn add_slot(quickbar: &mut RelatedSpawnerCommands<ChildOf>, key: &SlotKey) {
+fn add_slot(quickbar: &mut RelatedSpawnerCommands<ChildOf>, key: PlayerSlot) {
 	quickbar
 		.spawn(Node {
 			width: Val::Px(70.0),
@@ -91,16 +91,16 @@ fn add_slot(quickbar: &mut RelatedSpawnerCommands<ChildOf>, key: &SlotKey) {
 								..default()
 							},
 							TextColor(PanelColors::DEFAULT.filled.text),
-							InputLabel::<SlotKey> { key: *key },
+							InputLabel::<PlayerSlot> { key },
 						));
 				});
 		});
 }
 
-fn get_quickbar_panel(key: &SlotKey) -> (QuickbarPanel, Button, Node) {
+fn get_quickbar_panel(key: PlayerSlot) -> (QuickbarPanel, Button, Node) {
 	(
 		QuickbarPanel {
-			key: *key,
+			key,
 			state: PanelState::Empty,
 		},
 		Button,

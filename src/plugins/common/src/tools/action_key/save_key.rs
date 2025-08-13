@@ -63,7 +63,9 @@ impl IterFinite for SaveKey {
 	}
 }
 
-impl InvalidInput<UserInput> for SaveKey {
+impl InvalidInput for SaveKey {
+	type TInput = UserInput;
+
 	fn invalid_input(&self) -> &[UserInput] {
 		const { &[] }
 	}

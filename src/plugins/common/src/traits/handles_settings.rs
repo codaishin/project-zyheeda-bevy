@@ -7,20 +7,26 @@ use bevy::prelude::*;
 
 pub trait HandlesSettings {
 	type TKeyMap<TAction>: Resource
-		+ GetInput<TAction, UserInput>
-		+ TryGetAction<UserInput, TAction>
-		+ UpdateKey<TAction, UserInput>
+		+ GetInput<TAction, TInput = UserInput>
+		+ TryGetAction<TAction, TInput = UserInput>
+		+ UpdateKey<TAction, TInput = UserInput>
 		+ for<'a> Iterate<'a, TItem = (&'a ActionKey, &'a UserInput)>
 	where
-		ActionKey: From<TAction>,
-		TAction: InvalidInput<UserInput> + TryFrom<ActionKey> + Copy,
-		UserInput: From<TAction> + PartialEq;
+		TAction: Copy
+			+ InvalidInput<TInput = UserInput>
+			+ TryFrom<ActionKey>
+			+ Into<ActionKey>
+			+ Into<UserInput>;
 }
 
-pub trait UpdateKey<TAction, TInput> {
-	fn update_key(&mut self, action: TAction, input: TInput);
+pub trait UpdateKey<TAction> {
+	type TInput;
+
+	fn update_key(&mut self, action: TAction, input: Self::TInput);
 }
 
-pub trait InvalidInput<TInput> {
-	fn invalid_input(&self) -> &[TInput];
+pub trait InvalidInput {
+	type TInput;
+
+	fn invalid_input(&self) -> &[Self::TInput];
 }

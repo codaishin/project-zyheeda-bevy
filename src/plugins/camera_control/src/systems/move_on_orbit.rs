@@ -1,12 +1,9 @@
 use crate::traits::orbit::Orbit;
 use bevy::{input::mouse::MouseMotion, prelude::*};
-use common::{
-	tools::action_key::{camera_key::CameraKey, user_input::UserInput},
-	traits::key_mappings::Pressed,
-};
+use common::{tools::action_key::camera_key::CameraKey, traits::key_mappings::Pressed};
 
 pub(crate) fn move_on_orbit<TOrbit, TMap>(
-	input: Res<ButtonInput<UserInput>>,
+	input: Res<ButtonInput<TMap::TInput>>,
 	map: Res<TMap>,
 	mut mouse_motion: EventReader<MouseMotion>,
 	mut query: Query<(&TOrbit, &mut Transform)>,
@@ -30,6 +27,7 @@ mod tests {
 	use super::*;
 	use crate::traits::orbit::Vec2Radians;
 	use bevy::{ecs::event::Events, input::mouse::MouseMotion};
+	use common::tools::action_key::user_input::UserInput;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use testing::{NestedMocks, SingleThreadedApp};
@@ -53,6 +51,8 @@ mod tests {
 
 	#[automock]
 	impl Pressed<CameraKey> for _Map {
+		type TInput = UserInput;
+
 		fn pressed(&self, input: &ButtonInput<UserInput>) -> impl Iterator<Item = CameraKey> {
 			self.mock.pressed(input)
 		}

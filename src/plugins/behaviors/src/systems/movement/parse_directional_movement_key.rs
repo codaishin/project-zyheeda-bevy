@@ -2,7 +2,7 @@ use crate::traits::change_per_frame::MinDistance;
 use bevy::{ecs::query::QuerySingleError, prelude::*};
 use common::{
 	errors::{Error, Level},
-	tools::{action_key::user_input::UserInput, speed::Speed},
+	tools::speed::Speed,
 	traits::{accessors::get::Getter, handles_player::KeyDirection, key_mappings::Pressed},
 };
 use std::{any::type_name, marker::PhantomData, time::Duration};
@@ -13,7 +13,7 @@ pub(crate) trait ParseDirectionalMovement: DirectionalMovementInput {
 	fn parse<TCamera, TAgent, TMap, TKey>(
 		In(delta): In<Duration>,
 		map: Res<TMap>,
-		input: Res<ButtonInput<UserInput>>,
+		input: Res<ButtonInput<TMap::TInput>>,
 		agents: Query<(&GlobalTransform, &TAgent)>,
 		cameras: Query<&GlobalTransform, With<TCamera>>,
 	) -> Result<Option<Self>, TriggerMovementError<TCamera, TAgent>>
@@ -126,7 +126,7 @@ mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
-		tools::UnitsPerSecond,
+		tools::{UnitsPerSecond, action_key::user_input::UserInput},
 		traits::{clamp_zero_positive::ClampZeroPositive, handles_player::DirectionError},
 	};
 	use macros::NestedMocks;
@@ -141,13 +141,15 @@ mod tests {
 
 	#[automock]
 	impl Pressed<_Key> for _Map {
+		type TInput = UserInput;
+
 		fn pressed(&self, input: &ButtonInput<UserInput>) -> impl Iterator<Item = _Key> {
 			self.mock.pressed(input)
 		}
 	}
 
 	#[derive(Debug, PartialEq)]
-	enum _Key {
+	pub enum _Key {
 		A,
 		B,
 		C,

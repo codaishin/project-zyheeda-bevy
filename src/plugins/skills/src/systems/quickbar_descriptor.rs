@@ -9,7 +9,7 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	tools::{
-		action_key::slot::SlotKey,
+		action_key::slot::{PlayerSlot, SlotKey},
 		change::Change,
 		item_type::ItemType,
 		skill_execution::SkillExecution,
@@ -22,7 +22,7 @@ pub(crate) fn get_quickbar_descriptors_for<TAgent, TSlots, TQueue, TCombos>(
 	queues: Query<(Ref<TSlots>, Ref<TQueue>, Ref<TCombos>), With<TAgent>>,
 	items: Res<Assets<Item>>,
 	skills: Res<Assets<Skill>>,
-) -> Change<Cache<SlotKey, QuickbarItem>>
+) -> Change<Cache<PlayerSlot, QuickbarItem>>
 where
 	TAgent: Component,
 	for<'a> TSlots: Component + Iterate<'a, TItem = (SlotKey, &'a Option<Handle<Item>>)>,
@@ -45,13 +45,14 @@ where
 
 	let map = slots
 		.iterate()
-		.filter_map(|(key, handle)| {
+		.filter_map(|(key, handle)| Some((key, PlayerSlot::try_from(key).ok()?, handle)))
+		.filter_map(|(key, player_key, handle)| {
 			let (item, inactive) = get_assets(&items, &skills, handle)?;
-			let (mut skill, execution) = select_skill(&key, inactive, &active, &queued);
-			set_combo_for_inactive(&mut skill, execution, combos, &key, &item.item_type);
+			let (mut skill, execution) = select_skill(key, inactive, &active, &queued);
+			set_combo_for_inactive(&mut skill, execution, combos, key, &item.item_type);
 
 			Some((
-				key,
+				player_key,
 				QuickbarItem {
 					skill_token: skill.token.clone(),
 					skill_icon: skill.icon.clone(),
@@ -65,7 +66,7 @@ where
 }
 
 fn get_key_and_skill(skill: &QueuedSkill) -> (SlotKey, &'_ Skill) {
-	(skill.slot_key, &skill.skill)
+	(skill.key, &skill.skill)
 }
 
 fn collect_without_duplicates<'a>(
@@ -84,17 +85,17 @@ fn collect_without_duplicates<'a>(
 }
 
 fn select_skill<'a>(
-	slot_key: &SlotKey,
+	slot_key: SlotKey,
 	inactive: &'a Skill,
 	active: &Option<(SlotKey, &'a Skill)>,
 	queued: &HashMap<SlotKey, &'a Skill>,
 ) -> (&'a Skill, SkillExecution) {
 	match active {
-		Some((key, queued)) if key == slot_key => return (queued, SkillExecution::Active),
+		Some((key, queued)) if key == &slot_key => return (queued, SkillExecution::Active),
 		_ => {}
 	}
 
-	if let Some(queued) = queued.get(slot_key) {
+	if let Some(queued) = queued.get(&slot_key) {
 		return (*queued, SkillExecution::Queued);
 	}
 
@@ -105,7 +106,7 @@ fn set_combo_for_inactive<'a, TCombos>(
 	skill: &mut &'a Skill,
 	execution: SkillExecution,
 	combos: &'a TCombos,
-	key: &SlotKey,
+	key: SlotKey,
 	item_type: &ItemType,
 ) where
 	TCombos: PeekNext<'a, TNext = Skill>,
@@ -203,13 +204,13 @@ mod tests {
 	impl<'a> PeekNext<'a> for _NextComboSkills {
 		type TNext = Skill;
 
-		fn peek_next(&'a self, trigger: &SlotKey, item_type: &ItemType) -> Option<&'a Self::TNext> {
-			self.0.get(&(*trigger, *item_type))
+		fn peek_next(&'a self, trigger: SlotKey, item_type: &ItemType) -> Option<&'a Self::TNext> {
+			self.0.get(&(trigger, *item_type))
 		}
 	}
 
 	#[derive(Resource, Debug, PartialEq)]
-	struct _Result(Change<Cache<SlotKey, QuickbarItem>>);
+	struct _Result(Change<Cache<PlayerSlot, QuickbarItem>>);
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -233,7 +234,7 @@ mod tests {
 		let icon = Some(new_handle());
 		let slots = _Slots::new(
 			&mut app,
-			SlotKey::TopHand(Side::Left),
+			SlotKey::from(PlayerSlot::Upper(Side::Left)),
 			ItemType::Bracer,
 			"my skill",
 			icon.clone(),
@@ -249,7 +250,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&_Result(Change::Some(Cache(HashMap::from([(
-				SlotKey::TopHand(Side::Left),
+				PlayerSlot::Upper(Side::Left),
 				QuickbarItem {
 					skill_token: Token::from("my skill"),
 					skill_icon: icon,
@@ -266,7 +267,7 @@ mod tests {
 		let icon = Some(new_handle());
 		let slots = _Slots::new(
 			&mut app,
-			SlotKey::TopHand(Side::Left),
+			SlotKey::from(PlayerSlot::Upper(Side::Left)),
 			ItemType::Bracer,
 			"my skill",
 			Some(new_handle()),
@@ -275,7 +276,7 @@ mod tests {
 			_Agent,
 			slots,
 			_Queue(vec![QueuedSkill {
-				slot_key: SlotKey::TopHand(Side::Left),
+				key: SlotKey::from(PlayerSlot::Upper(Side::Left)),
 				skill: Skill {
 					token: Token::from("my active skill"),
 					icon: icon.clone(),
@@ -290,7 +291,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&_Result(Change::Some(Cache(HashMap::from([(
-				SlotKey::TopHand(Side::Left),
+				PlayerSlot::Upper(Side::Left),
 				QuickbarItem {
 					skill_token: Token::from("my active skill"),
 					skill_icon: icon,
@@ -307,7 +308,7 @@ mod tests {
 		let icon = Some(new_handle());
 		let slots = _Slots::new(
 			&mut app,
-			SlotKey::TopHand(Side::Left),
+			SlotKey::from(PlayerSlot::Upper(Side::Left)),
 			ItemType::Bracer,
 			"my skill",
 			Some(new_handle()),
@@ -317,11 +318,11 @@ mod tests {
 			slots,
 			_Queue(vec![
 				QueuedSkill {
-					slot_key: SlotKey::TopHand(Side::Right),
+					key: SlotKey::from(PlayerSlot::Upper(Side::Right)),
 					..default()
 				},
 				QueuedSkill {
-					slot_key: SlotKey::TopHand(Side::Left),
+					key: SlotKey::from(PlayerSlot::Upper(Side::Left)),
 					skill: Skill {
 						token: Token::from("my queued skill"),
 						icon: icon.clone(),
@@ -337,7 +338,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&_Result(Change::Some(Cache(HashMap::from([(
-				SlotKey::TopHand(Side::Left),
+				PlayerSlot::Upper(Side::Left),
 				QuickbarItem {
 					skill_token: Token::from("my queued skill"),
 					skill_icon: icon,
@@ -353,7 +354,7 @@ mod tests {
 		let mut app = setup();
 		let slots = _Slots::new(
 			&mut app,
-			SlotKey::TopHand(Side::Left),
+			SlotKey::from(PlayerSlot::Upper(Side::Left)),
 			ItemType::Bracer,
 			"my skill",
 			None,
@@ -363,11 +364,11 @@ mod tests {
 			slots,
 			_Queue(vec![
 				QueuedSkill {
-					slot_key: SlotKey::TopHand(Side::Right),
+					key: SlotKey::from(PlayerSlot::Upper(Side::Right)),
 					..default()
 				},
 				QueuedSkill {
-					slot_key: SlotKey::TopHand(Side::Left),
+					key: SlotKey::from(PlayerSlot::Upper(Side::Left)),
 					skill: Skill {
 						token: Token::from("my queued skill"),
 						..default()
@@ -375,7 +376,7 @@ mod tests {
 					..default()
 				},
 				QueuedSkill {
-					slot_key: SlotKey::TopHand(Side::Left),
+					key: SlotKey::from(PlayerSlot::Upper(Side::Left)),
 					skill: Skill {
 						token: Token::from("my other queued skill"),
 						..default()
@@ -390,7 +391,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&_Result(Change::Some(Cache(HashMap::from([(
-				SlotKey::TopHand(Side::Left),
+				PlayerSlot::Upper(Side::Left),
 				QuickbarItem {
 					skill_token: Token::from("my queued skill"),
 					execution: SkillExecution::Queued,
@@ -407,7 +408,7 @@ mod tests {
 		let icon = Some(new_handle());
 		let slots = _Slots::new(
 			&mut app,
-			SlotKey::TopHand(Side::Left),
+			SlotKey::from(PlayerSlot::Upper(Side::Left)),
 			ItemType::Bracer,
 			"my skill",
 			Some(new_handle()),
@@ -417,7 +418,10 @@ mod tests {
 			slots,
 			_Queue::default(),
 			_NextComboSkills(HashMap::from([(
-				(SlotKey::TopHand(Side::Left), ItemType::Bracer),
+				(
+					SlotKey::from(PlayerSlot::Upper(Side::Left)),
+					ItemType::Bracer,
+				),
 				Skill {
 					token: Token::from("my combo skill"),
 					icon: icon.clone(),
@@ -430,7 +434,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&_Result(Change::Some(Cache(HashMap::from([(
-				SlotKey::TopHand(Side::Left),
+				PlayerSlot::Upper(Side::Left),
 				QuickbarItem {
 					skill_token: Token::from("my combo skill"),
 					skill_icon: icon,
@@ -446,7 +450,7 @@ mod tests {
 		let mut app = setup();
 		let slots = _Slots::new(
 			&mut app,
-			SlotKey::TopHand(Side::Left),
+			SlotKey::from(PlayerSlot::Upper(Side::Left)),
 			ItemType::Bracer,
 			"my skill",
 			None,
@@ -455,7 +459,7 @@ mod tests {
 			_Agent,
 			slots,
 			_Queue(vec![QueuedSkill {
-				slot_key: SlotKey::TopHand(Side::Left),
+				key: SlotKey::from(PlayerSlot::Upper(Side::Left)),
 				skill: Skill {
 					token: Token::from("my active skill"),
 					..default()
@@ -463,7 +467,10 @@ mod tests {
 				..default()
 			}]),
 			_NextComboSkills(HashMap::from([(
-				(SlotKey::TopHand(Side::Left), ItemType::Bracer),
+				(
+					SlotKey::from(PlayerSlot::Upper(Side::Left)),
+					ItemType::Bracer,
+				),
 				Skill {
 					token: Token::from("my combo skill"),
 					..default()
@@ -475,7 +482,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&_Result(Change::Some(Cache(HashMap::from([(
-				SlotKey::TopHand(Side::Left),
+				PlayerSlot::Upper(Side::Left),
 				QuickbarItem {
 					skill_token: Token::from("my active skill"),
 					execution: SkillExecution::Active,
@@ -491,7 +498,7 @@ mod tests {
 		let mut app = setup();
 		let slots = _Slots::new(
 			&mut app,
-			SlotKey::TopHand(Side::Left),
+			SlotKey::from(PlayerSlot::Upper(Side::Left)),
 			ItemType::Bracer,
 			"my skill",
 			None,
@@ -501,7 +508,7 @@ mod tests {
 			slots,
 			_Queue(vec![
 				QueuedSkill {
-					slot_key: SlotKey::TopHand(Side::Right),
+					key: SlotKey::from(PlayerSlot::Upper(Side::Right)),
 					skill: Skill {
 						token: Token::from("my active skill"),
 						..default()
@@ -509,7 +516,7 @@ mod tests {
 					..default()
 				},
 				QueuedSkill {
-					slot_key: SlotKey::TopHand(Side::Left),
+					key: SlotKey::from(PlayerSlot::Upper(Side::Left)),
 					skill: Skill {
 						token: Token::from("my queued skill"),
 						..default()
@@ -518,7 +525,10 @@ mod tests {
 				},
 			]),
 			_NextComboSkills(HashMap::from([(
-				(SlotKey::TopHand(Side::Left), ItemType::Bracer),
+				(
+					SlotKey::from(PlayerSlot::Upper(Side::Left)),
+					ItemType::Bracer,
+				),
 				Skill {
 					token: Token::from("my combo skill"),
 					..default()
@@ -530,7 +540,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&_Result(Change::Some(Cache(HashMap::from([(
-				SlotKey::TopHand(Side::Left),
+				PlayerSlot::Upper(Side::Left),
 				QuickbarItem {
 					skill_token: Token::from("my queued skill"),
 					execution: SkillExecution::Queued,
@@ -546,7 +556,7 @@ mod tests {
 		let mut app = setup();
 		let slots = _Slots::new(
 			&mut app,
-			SlotKey::TopHand(Side::Left),
+			SlotKey::from(PlayerSlot::Upper(Side::Left)),
 			ItemType::Bracer,
 			"my skill",
 			None,
@@ -572,7 +582,7 @@ mod tests {
 		let mut app = setup();
 		let slots = _Slots::new(
 			&mut app,
-			SlotKey::TopHand(Side::Left),
+			SlotKey::from(PlayerSlot::Upper(Side::Left)),
 			ItemType::Bracer,
 			"my skill",
 			None,
@@ -605,7 +615,7 @@ mod tests {
 		let mut app = setup();
 		let slots = _Slots::new(
 			&mut app,
-			SlotKey::TopHand(Side::Left),
+			SlotKey::from(PlayerSlot::Upper(Side::Left)),
 			ItemType::Bracer,
 			"my skill",
 			None,
@@ -638,7 +648,7 @@ mod tests {
 		let mut app = setup();
 		let slots = _Slots::new(
 			&mut app,
-			SlotKey::TopHand(Side::Left),
+			SlotKey::from(PlayerSlot::Upper(Side::Left)),
 			ItemType::Bracer,
 			"my skill",
 			None,

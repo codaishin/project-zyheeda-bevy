@@ -5,7 +5,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	tools::action_key::slot::SlotKey,
+	tools::action_key::slot::PlayerSlot,
 	traits::{accessors::get::TryApplyOn, handles_combo_menu::NextKeys, thread_safe::ThreadSafe},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -15,9 +15,9 @@ pub(crate) fn select_successor_key<TNextKeys>(
 	next_keys: Res<TNextKeys>,
 	dropdown_commands: Query<(Entity, &KeySelectDropdownCommand<AppendSkillCommand>)>,
 ) where
-	TNextKeys: Resource + NextKeys,
+	TNextKeys: Resource + NextKeys<PlayerSlot>,
 	KeySelectDropdownCommand<AppendSkillCommand>:
-		ThreadSafe + GetComponent<TInput = ExcludeKeys<SlotKey>>,
+		ThreadSafe + GetComponent<TInput = ExcludeKeys<PlayerSlot>>,
 {
 	internal_select_successor_key(commands, next_keys, dropdown_commands);
 }
@@ -27,8 +27,8 @@ fn internal_select_successor_key<TNextKeys, TExtra>(
 	next_keys: Res<TNextKeys>,
 	dropdown_commands: Query<(Entity, &KeySelectDropdownCommand<TExtra>)>,
 ) where
-	TNextKeys: Resource + NextKeys,
-	KeySelectDropdownCommand<TExtra>: ThreadSafe + GetComponent<TInput = ExcludeKeys<SlotKey>>,
+	TNextKeys: Resource + NextKeys<PlayerSlot>,
+	KeySelectDropdownCommand<TExtra>: ThreadSafe + GetComponent<TInput = ExcludeKeys<PlayerSlot>>,
 {
 	for (entity, insert_command) in &dropdown_commands {
 		let next_keys = next_keys.next_keys(&insert_command.key_path);
@@ -48,7 +48,7 @@ fn internal_select_successor_key<TNextKeys, TExtra>(
 mod tests {
 	use super::*;
 	use crate::components::key_select_dropdown_command::ExcludeKeys;
-	use common::tools::action_key::slot::{Side, SlotKey};
+	use common::tools::action_key::slot::{PlayerSlot, Side};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::collections::HashSet;
@@ -69,8 +69,8 @@ mod tests {
 	}
 
 	#[automock]
-	impl NextKeys for _NextKeys {
-		fn next_keys(&self, combo_keys: &[SlotKey]) -> std::collections::HashSet<SlotKey> {
+	impl NextKeys<PlayerSlot> for _NextKeys {
+		fn next_keys(&self, combo_keys: &[PlayerSlot]) -> std::collections::HashSet<PlayerSlot> {
 			self.mock.next_keys(combo_keys)
 		}
 	}
@@ -83,7 +83,7 @@ mod tests {
 
 	impl GetComponent for KeySelectDropdownCommand<_Extra> {
 		type TComponent = _Component;
-		type TInput = ExcludeKeys<SlotKey>;
+		type TInput = ExcludeKeys<PlayerSlot>;
 
 		fn component(&self, excluded: Self::TInput) -> Option<Self::TComponent> {
 			match self.extra {
@@ -94,7 +94,7 @@ mod tests {
 	}
 
 	#[derive(Component, Debug, PartialEq, Clone)]
-	struct _Component(ExcludeKeys<SlotKey>);
+	struct _Component(ExcludeKeys<PlayerSlot>);
 
 	fn setup(next_keys: _NextKeys) -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -107,13 +107,13 @@ mod tests {
 	#[test]
 	fn spawn_component() {
 		let key_path = vec![
-			SlotKey::TopHand(Side::Left),
-			SlotKey::BottomHand(Side::Right),
+			PlayerSlot::Upper(Side::Left),
+			PlayerSlot::Lower(Side::Right),
 		];
 		let mut app = setup(_NextKeys::new().with_mock(|mock| {
 			mock.expect_next_keys()
 				.with(eq(key_path.clone()))
-				.return_const(HashSet::from([SlotKey::TopHand(Side::Left)]));
+				.return_const(HashSet::from([PlayerSlot::Upper(Side::Left)]));
 		}));
 		let entity = app
 			.world_mut()
@@ -126,9 +126,9 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Component(ExcludeKeys(HashSet::from([SlotKey::TopHand(
-				Side::Left
-			)])))),
+			Some(&_Component(ExcludeKeys(HashSet::from([
+				PlayerSlot::Upper(Side::Left)
+			])))),
 			app.world().entity(entity).get::<_Component>()
 		)
 	}
@@ -140,7 +140,7 @@ mod tests {
 			.world_mut()
 			.spawn(KeySelectDropdownCommand {
 				extra: _Extra::Some,
-				key_path: vec![] as Vec<SlotKey>,
+				key_path: vec![] as Vec<PlayerSlot>,
 			})
 			.id();
 		app.update();
@@ -160,7 +160,7 @@ mod tests {
 			.world_mut()
 			.spawn(KeySelectDropdownCommand {
 				extra: _Extra::None,
-				key_path: vec![] as Vec<SlotKey>,
+				key_path: vec![] as Vec<PlayerSlot>,
 			})
 			.id();
 
@@ -177,7 +177,7 @@ mod tests {
 			.world_mut()
 			.spawn(KeySelectDropdownCommand {
 				extra: _Extra::None,
-				key_path: vec![] as Vec<SlotKey>,
+				key_path: vec![] as Vec<PlayerSlot>,
 			})
 			.id();
 		let child = app.world_mut().spawn(ChildOf(entity)).id();

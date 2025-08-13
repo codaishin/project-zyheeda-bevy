@@ -30,11 +30,7 @@ use common::{
 		save_state::SaveState,
 	},
 	tools::{
-		action_key::{
-			ActionKey,
-			slot::{Combo, SlotKey},
-			user_input::UserInput,
-		},
+		action_key::{ActionKey, slot::PlayerSlot, user_input::UserInput},
 		change::Change,
 		inventory_key::InventoryKey,
 		item_description::ItemToken,
@@ -44,8 +40,9 @@ use common::{
 	},
 	traits::{
 		handles_combo_menu::{
-			ConfigureCombos,
-			GetComboAbleSkills,
+			Combo,
+			ConfigurePlayerCombos,
+			GetComboAblePlayerSkills,
 			GetCombosOrdered,
 			HandlesComboMenu,
 			NextKeys,
@@ -228,7 +225,7 @@ where
 			.add_systems(
 				Update,
 				(
-					QuickbarPanel::add_quickbar_primer::<TSettings::TKeyMap<SlotKey>>,
+					QuickbarPanel::add_quickbar_primer::<TSettings::TKeyMap<PlayerSlot>>,
 					panel_colors::<QuickbarPanel>,
 				)
 					.run_if(in_state(play)),
@@ -275,8 +272,8 @@ where
 
 	fn general_systems(&self, app: &mut App) {
 		let ui_ready = not(in_state(GameState::LoadingEssentialAssets));
-		let input_label_icons = InputLabel::<SlotKey>::icon::<
-			TSettings::TKeyMap<SlotKey>,
+		let input_label_icons = InputLabel::<PlayerSlot>::icon::<
+			TSettings::TKeyMap<PlayerSlot>,
 			TLocalization::TLocalizationServer,
 		>;
 
@@ -355,7 +352,7 @@ where
 		app: &mut App,
 		get_changed_quickbar: impl IntoSystem<(), Change<TContainer>, TSystemMarker>,
 	) where
-		TContainer: GetItem<SlotKey> + ThreadSafe,
+		TContainer: GetItem<PlayerSlot> + ThreadSafe,
 		TContainer::TItem:
 			InspectAble<SkillToken> + InspectAble<SkillIcon> + InspectAble<SkillExecution>,
 	{
@@ -367,7 +364,7 @@ where
 				get_changed_quickbar.pipe(EquipmentInfo::update),
 				set_quickbar_icons::<EquipmentInfo<TContainer>>,
 				panel_activity_colors_override::<
-					TSettings::TKeyMap<SlotKey>,
+					TSettings::TKeyMap<PlayerSlot>,
 					QuickbarPanel,
 					UiInputPrimer,
 					EquipmentInfo<TContainer>,
@@ -394,7 +391,7 @@ where
 	) where
 		TInventory: GetItem<InventoryKey> + ThreadSafe,
 		TInventory::TItem: InspectAble<ItemToken>,
-		TSlots: GetItem<SlotKey> + ThreadSafe,
+		TSlots: GetItem<PlayerSlot> + ThreadSafe,
 		TSlots::TItem: InspectAble<ItemToken>,
 	{
 		let inventory = GameState::IngameMenu(MenuState::Inventory);
@@ -409,14 +406,18 @@ where
 					InventoryKey,
 					EquipmentInfo<TInventory>,
 				>,
-				InventoryPanel::set_container_panels::<TLocalization, SlotKey, EquipmentInfo<TSlots>>,
+				InventoryPanel::set_container_panels::<
+					TLocalization,
+					PlayerSlot,
+					EquipmentInfo<TSlots>,
+				>,
 				panel_colors::<InventoryPanel>,
 				drag::<TSwap, InventoryKey>,
-				drag::<TSwap, SlotKey>,
+				drag::<TSwap, PlayerSlot>,
 				drop::<TSwap, InventoryKey, InventoryKey>,
-				drop::<TSwap, InventoryKey, SlotKey>,
-				drop::<TSwap, SlotKey, SlotKey>,
-				drop::<TSwap, SlotKey, InventoryKey>,
+				drop::<TSwap, InventoryKey, PlayerSlot>,
+				drop::<TSwap, PlayerSlot, PlayerSlot>,
+				drop::<TSwap, PlayerSlot, InventoryKey>,
 			)
 				.chain()
 				.run_if(in_state(inventory)),
@@ -430,7 +431,7 @@ where
 	TLocalization: HandlesLocalization + ThreadSafe,
 	TGraphics: ThreadSafe + UiCamera,
 {
-	fn combos_with_skill<TSkill>() -> impl ConfigureCombos<TSkill>
+	fn combos_with_skill<TSkill>() -> impl ConfigurePlayerCombos<TSkill>
 	where
 		TSkill: InspectAble<SkillToken> + InspectAble<SkillIcon> + PartialEq + Clone + ThreadSafe,
 	{
@@ -440,7 +441,7 @@ where
 
 struct ComboConfiguration<TLocalization, TGraphics>(PhantomData<(TLocalization, TGraphics)>);
 
-impl<TGraphics, TLocalization, TSkill> ConfigureCombos<TSkill>
+impl<TGraphics, TLocalization, TSkill> ConfigurePlayerCombos<TSkill>
 	for ComboConfiguration<TLocalization, TGraphics>
 where
 	TGraphics: ThreadSafe + UiCamera,
@@ -453,8 +454,11 @@ where
 		get_changed_combos: impl IntoSystem<(), Change<TEquipment>, M1>,
 		update_combos: TUpdateCombos,
 	) where
-		TUpdateCombos: IntoSystem<In<Combo<Option<TSkill>>>, (), M2> + Copy,
-		TEquipment: GetComboAbleSkills<TSkill> + NextKeys + GetCombosOrdered<TSkill> + ThreadSafe,
+		TUpdateCombos: IntoSystem<In<Combo<PlayerSlot, Option<TSkill>>>, (), M2> + Copy,
+		TEquipment: GetComboAblePlayerSkills<TSkill>
+			+ NextKeys<PlayerSlot>
+			+ GetCombosOrdered<TSkill, PlayerSlot>
+			+ ThreadSafe,
 	{
 		let combo_overview = GameState::IngameMenu(MenuState::ComboOverview);
 

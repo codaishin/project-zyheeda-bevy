@@ -57,10 +57,12 @@ where
 }
 
 impl<TDependencies> HandlesSettings for SettingsPlugin<TDependencies> {
-	type TKeyMap<TKey>
+	type TKeyMap<TAction>
 		= KeyMap
 	where
-		ActionKey: From<TKey>,
-		TKey: InvalidInput<UserInput> + TryFrom<ActionKey> + Copy,
-		UserInput: From<TKey> + PartialEq;
+		TAction: Copy
+			+ InvalidInput<TInput = UserInput>
+			+ TryFrom<ActionKey>
+			+ Into<ActionKey>
+			+ Into<UserInput>;
 }

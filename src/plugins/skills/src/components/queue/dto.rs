@@ -69,7 +69,7 @@ impl From<QueuedSkill> for QueuedSkillDto {
 	fn from(skill: QueuedSkill) -> Self {
 		Self {
 			skill: SkillDto::from(skill.skill),
-			slot_key: skill.slot_key,
+			slot_key: skill.key,
 			mode: skill.mode,
 		}
 	}
@@ -93,7 +93,7 @@ impl TryLoadFrom<QueuedSkillDto> for QueuedSkill {
 
 		Ok(Self {
 			skill,
-			slot_key,
+			key: slot_key,
 			mode,
 		})
 	}

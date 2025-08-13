@@ -1,19 +1,22 @@
 use crate::{Input, KeyBind, Rebinding};
 use bevy::prelude::*;
-use common::traits::{handles_settings::UpdateKey, thread_safe::ThreadSafe};
-use std::hash::Hash;
+use common::traits::{
+	handles_settings::UpdateKey,
+	key_mappings::HashCopySafe,
+	thread_safe::ThreadSafe,
+};
 
 impl<TAction, TInput> KeyBind<Rebinding<TAction, TInput>>
 where
 	TAction: Copy + ThreadSafe,
-	TInput: Copy + Eq + Hash + ThreadSafe,
+	TInput: HashCopySafe,
 {
 	pub(crate) fn rebind_apply<TMap>(
 		mut map: ResMut<TMap>,
 		input: Res<ButtonInput<TInput>>,
 		rebinds: Query<&Self>,
 	) where
-		TMap: UpdateKey<TAction, TInput> + Resource,
+		TMap: UpdateKey<TAction, TInput = TInput> + Resource,
 	{
 		for input in input.get_just_pressed() {
 			for KeyBind(Rebinding(Input { action, .. })) in &rebinds {
@@ -45,7 +48,9 @@ mod tests {
 	}
 
 	#[automock]
-	impl UpdateKey<_Action, _Input> for _Map {
+	impl UpdateKey<_Action> for _Map {
+		type TInput = _Input;
+
 		fn update_key(&mut self, key: _Action, user_input: _Input) {
 			self.mock.update_key(key, user_input)
 		}

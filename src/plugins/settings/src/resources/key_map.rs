@@ -10,7 +10,7 @@ use common::{
 		handles_settings::{InvalidInput, UpdateKey},
 		iterate::Iterate,
 		iteration::IterFinite,
-		key_mappings::{GetInput, TryGetAction},
+		key_mappings::{GetInput, HashCopySafe, TryGetAction},
 		load_asset::LoadAsset,
 		thread_safe::ThreadSafe,
 	},
@@ -30,33 +30,34 @@ use std::{
 #[derive(Resource, Asset, TypePath, Debug, PartialEq, Clone)]
 pub struct KeyMap(KeyMapInternal);
 
-impl<TAction> GetInput<TAction, UserInput> for KeyMap
+impl<TAction> GetInput<TAction> for KeyMap
 where
-	TAction: Copy,
-	ActionKey: From<TAction>,
-	UserInput: From<TAction>,
+	TAction: Copy + Into<ActionKey> + Into<UserInput>,
 {
+	type TInput = UserInput;
+
 	fn get_input(&self, action: TAction) -> UserInput {
 		self.0.get_input(action)
 	}
 }
 
-impl<TAction> TryGetAction<UserInput, TAction> for KeyMap
+impl<TAction> TryGetAction<TAction> for KeyMap
 where
-	TAction: TryFrom<ActionKey> + Copy,
-	UserInput: From<TAction>,
+	TAction: Copy + TryFrom<ActionKey> + Into<UserInput>,
 {
+	type TInput = UserInput;
+
 	fn try_get_action(&self, input: UserInput) -> Option<TAction> {
 		self.0.try_get_action(input)
 	}
 }
 
-impl<TAction> UpdateKey<TAction, UserInput> for KeyMap
+impl<TAction> UpdateKey<TAction> for KeyMap
 where
-	TAction: InvalidInput<UserInput> + Copy,
-	ActionKey: From<TAction>,
-	UserInput: From<TAction>,
+	TAction: Copy + InvalidInput<TInput = UserInput> + Into<ActionKey> + Into<UserInput>,
 {
+	type TInput = TAction::TInput;
+
 	fn update_key(&mut self, action: TAction, input: UserInput) {
 		self.0.update_key(action, input);
 	}
@@ -120,8 +121,8 @@ where
 
 impl<TAction, TInput> Default for KeyMapInternal<TAction, TInput>
 where
-	TAction: InvalidInput<TInput> + IterFinite + Copy + Hash + Eq,
-	TInput: From<TAction> + Copy + Hash + Eq,
+	TAction: Copy + Hash + Eq + IterFinite + InvalidInput<TInput = TInput> + Into<TInput>,
+	TInput: Copy + Hash + Eq,
 {
 	fn default() -> Self {
 		let mut map = Self {
@@ -131,51 +132,57 @@ where
 		};
 
 		for key in TAction::iterator() {
-			map.update_key(key, TInput::from(key));
+			map.update_key(key, key.into());
 		}
 
 		map
 	}
 }
 
-impl<TAllActions, TAction, TInput> GetInput<TAction, TInput> for KeyMapInternal<TAllActions, TInput>
+impl<TAllActions, TAction, TInput> GetInput<TAction> for KeyMapInternal<TAllActions, TInput>
 where
-	TAllActions: From<TAction> + Hash + Eq,
-	TAction: Copy,
-	TInput: From<TAction> + Copy + Hash + Eq,
+	TAllActions: Hash + Eq,
+	TAction: Copy + Into<TAllActions> + Into<TInput>,
+	TInput: Copy + Hash + Eq,
 {
+	type TInput = TInput;
+
 	fn get_input(&self, action: TAction) -> TInput {
-		let Some(input) = self.action_to_input.get(&TAllActions::from(action)) else {
-			return TInput::from(action);
+		let as_all_actions: TAllActions = action.into();
+		let Some(input) = self.action_to_input.get(&as_all_actions) else {
+			let as_input: TInput = action.into();
+			return as_input;
 		};
 
 		*input
 	}
 }
 
-impl<TAllActions, TAction, TInput> TryGetAction<TInput, TAction>
-	for KeyMapInternal<TAllActions, TInput>
+impl<TAllActions, TAction, TInput> TryGetAction<TAction> for KeyMapInternal<TAllActions, TInput>
 where
 	TAllActions: Copy + Hash + Eq,
 	TAction: TryFrom<TAllActions>,
 	TInput: PartialEq + Hash + Eq,
 {
+	type TInput = TInput;
+
 	fn try_get_action(&self, input: TInput) -> Option<TAction> {
 		let action = self.input_to_action.get(&input)?;
 		TAction::try_from(*action).ok()
 	}
 }
 
-impl<TAllActions, TAction, TInput> UpdateKey<TAction, TInput>
-	for KeyMapInternal<TAllActions, TInput>
+impl<TAllActions, TAction, TInput> UpdateKey<TAction> for KeyMapInternal<TAllActions, TInput>
 where
-	TAllActions: From<TAction> + InvalidInput<TInput> + Hash + Eq + Copy,
-	TAction: Copy,
-	TInput: From<TAction> + Hash + Eq + Copy,
+	TAllActions: InvalidInput<TInput = TInput> + Hash + Eq + Copy,
+	TAction: Copy + Into<TAllActions::TInput> + Into<TAllActions>,
+	TAllActions::TInput: Hash + Eq + Copy,
 {
-	fn update_key(&mut self, action: TAction, input: TInput) {
+	type TInput = TInput;
+
+	fn update_key(&mut self, action: TAction, input: TAllActions::TInput) {
 		let old_input = self.get_input(action);
-		let action = TAllActions::from(action);
+		let action: TAllActions = action.into();
 
 		if self.input_to_action.get(&input) == Some(&action) {
 			return;
@@ -207,7 +214,7 @@ where
 
 impl<TAction, TInput> TryLoadFrom<KeyMapDto<TAction, TInput>> for KeyMapInternal<TAction, TInput>
 where
-	TAction: InvalidInput<TInput> + IterFinite + Debug + Copy + Hash + Eq + TypePath + ThreadSafe,
+	TAction: Debug + HashCopySafe + InvalidInput<TInput = TInput> + IterFinite + TypePath,
 	TInput: From<TAction> + Debug + Copy + Hash + Eq + TypePath + ThreadSafe,
 {
 	type TInstantiationError = LoadError<TAction, TInput>;
@@ -240,7 +247,7 @@ where
 
 impl<TAction, TInput> From<InvalidInputWarning<TAction, TInput>> for Error
 where
-	TAction: InvalidInput<TInput> + Debug + Eq + Hash,
+	TAction: InvalidInput<TInput = TInput> + Debug + Eq + Hash,
 	TInput: Debug + Eq + Hash,
 {
 	fn from(InvalidInputWarning(warnings): InvalidInputWarning<TAction, TInput>) -> Self {
@@ -276,7 +283,7 @@ where
 
 impl<TAllActions, TInput> LoadError<TAllActions, TInput>
 where
-	TAllActions: IterFinite + InvalidInput<TInput> + Debug + Eq + Hash + TypePath + Copy,
+	TAllActions: IterFinite + InvalidInput<TInput = TInput> + Debug + Eq + Hash + TypePath + Copy,
 	TInput: Debug + Eq + Hash + TypePath + Copy,
 {
 	fn from_mapper(mapper: &KeyMapInternal<TAllActions, TInput>) -> Option<Self> {
@@ -319,7 +326,7 @@ where
 
 impl<TAction, TInput> Display for LoadError<TAction, TInput>
 where
-	TAction: Debug + Eq + Hash + TypePath + InvalidInput<TInput>,
+	TAction: Debug + Eq + Hash + TypePath + InvalidInput<TInput = TInput>,
 	TInput: Debug + Eq + Hash + TypePath,
 {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -358,7 +365,7 @@ where
 
 impl<TAction, TInput> StdError for LoadError<TAction, TInput>
 where
-	TAction: Debug + Eq + Hash + TypePath + InvalidInput<TInput>,
+	TAction: Debug + Eq + Hash + TypePath + InvalidInput<TInput = TInput>,
 	TInput: Debug + Eq + Hash + TypePath,
 {
 }
@@ -405,7 +412,9 @@ mod tests {
 		}
 	}
 
-	impl InvalidInput<_Input> for _AllActions {
+	impl InvalidInput for _AllActions {
+		type TInput = _Input;
+
 		fn invalid_input(&self) -> &[_Input] {
 			match self {
 				_AllActions::A(action) => action.invalid_input(),
@@ -440,7 +449,9 @@ mod tests {
 		}
 	}
 
-	impl InvalidInput<_Input> for _ActionA {
+	impl InvalidInput for _ActionA {
+		type TInput = _Input;
+
 		fn invalid_input(&self) -> &[_Input] {
 			&[]
 		}
@@ -472,7 +483,9 @@ mod tests {
 		}
 	}
 
-	impl InvalidInput<_Input> for _ActionB {
+	impl InvalidInput for _ActionB {
+		type TInput = _Input;
+
 		fn invalid_input(&self) -> &[_Input] {
 			&[_Input::C]
 		}
@@ -680,7 +693,9 @@ mod tests {
 				}
 			}
 
-			impl InvalidInput<_Input> for _FaultyAction {
+			impl InvalidInput for _FaultyAction {
+				type TInput = _Input;
+
 				fn invalid_input(&self) -> &[_Input] {
 					&[]
 				}
@@ -734,7 +749,9 @@ mod tests {
 				}
 			}
 
-			impl InvalidInput<_Input> for _FaultyAction {
+			impl InvalidInput for _FaultyAction {
+				type TInput = _Input;
+
 				fn invalid_input(&self) -> &[_Input] {
 					&[_Input::B] // input invalid, thus no input present for action
 				}

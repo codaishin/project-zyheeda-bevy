@@ -20,7 +20,6 @@ use common::{
 	traits::{key_mappings::TryGetAction, state_duration::StateUpdate},
 	zyheeda_commands::ZyheedaCommands,
 };
-use std::hash::Hash;
 
 pub(crate) trait Enqueue<TItem> {
 	fn enqueue(&mut self, item: TItem);
@@ -36,18 +35,20 @@ pub(crate) trait IterWaitingMut<TItem> {
 		TItem: 'a;
 }
 
-pub(crate) trait IterAddedMut<TItem> {
+pub(crate) trait IterAddedMut {
+	type TItem;
+
 	fn added_none(&self) -> bool;
-	fn iter_added_mut<'a>(&'a mut self) -> impl DoubleEndedIterator<Item = &'a mut TItem>
+	fn iter_added_mut<'a>(&'a mut self) -> impl DoubleEndedIterator<Item = &'a mut Self::TItem>
 	where
-		TItem: 'a;
+		Self::TItem: 'a;
 }
 
 pub(crate) trait Prime {
 	fn prime(&mut self);
 }
 
-pub(crate) trait GetActiveSkill<TSkillState: Clone> {
+pub(crate) trait GetActiveSkill<TSkillState> {
 	fn get_active(
 		&mut self,
 	) -> Option<impl GetSkillBehavior + GetAnimationStrategy + StateUpdate<TSkillState>>;
@@ -55,7 +56,7 @@ pub(crate) trait GetActiveSkill<TSkillState: Clone> {
 }
 
 pub(crate) trait AdvanceCombo {
-	fn advance_combo(&mut self, trigger: &SlotKey, item_type: &ItemType) -> Option<Skill>;
+	fn advance_combo(&mut self, trigger: SlotKey, item_type: &ItemType) -> Option<Skill>;
 }
 
 pub(crate) trait SetNextCombo<TCombo> {
@@ -73,8 +74,8 @@ pub trait Insert<T> {
 	fn insert(&mut self, value: T);
 }
 
-pub trait ReKey<TKey> {
-	fn re_key(&mut self, key: TKey);
+pub trait ReKey {
+	fn re_key(&mut self, key: SlotKey);
 }
 
 pub(crate) trait GetAnimationStrategy {
@@ -85,13 +86,12 @@ pub(crate) trait GetSkillBehavior {
 	fn behavior(&self) -> (SlotKey, RunSkillBehavior);
 }
 
-pub trait InputState<TMap, TKey>
+pub trait InputState<TMap, TOutput>
 where
-	TMap: TryGetAction<TKey, SlotKey>,
-	TKey: Eq + Hash,
+	TMap: TryGetAction<TOutput>,
 {
-	fn just_pressed_slots(&self, map: &TMap) -> Vec<SlotKey>;
-	fn pressed_slots(&self, map: &TMap) -> Vec<SlotKey>;
+	fn just_pressed_slots(&self, map: &TMap) -> Vec<TOutput>;
+	fn pressed_slots(&self, map: &TMap) -> Vec<TOutput>;
 }
 
 pub trait Schedule<TBehavior> {

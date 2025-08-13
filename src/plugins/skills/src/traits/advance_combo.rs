@@ -8,7 +8,7 @@ where
 		+ SetNextCombo<Option<ComboNode>>
 		+ 'a,
 {
-	fn advance_combo(&mut self, trigger: &SlotKey, item_type: &ItemType) -> Option<Skill> {
+	fn advance_combo(&mut self, trigger: SlotKey, item_type: &ItemType) -> Option<Skill> {
 		let Some((skill, next_combo)) = self.peek_next_recursive(trigger, item_type) else {
 			self.set_next_combo(None);
 			return None;
@@ -25,7 +25,7 @@ where
 mod tests {
 	use super::*;
 	use bevy::utils::default;
-	use common::{tools::action_key::slot::Side, traits::handles_localization::Token};
+	use common::{tools::action_key::slot::SlotKey, traits::handles_localization::Token};
 	use mockall::{automock, predicate::eq};
 	use std::collections::HashMap;
 	use testing::simple_init;
@@ -59,10 +59,10 @@ mod tests {
 
 		fn peek_next_recursive<'a>(
 			&'a self,
-			trigger: &SlotKey,
+			trigger: SlotKey,
 			item_type: &ItemType,
 		) -> Option<(&'a Skill, &'a ComboNode)> {
-			let skill = self.lookup.get(&(*trigger, *item_type))?;
+			let skill = self.lookup.get(&(trigger, *item_type))?;
 
 			Some((skill, &self.node))
 		}
@@ -79,7 +79,7 @@ mod tests {
 
 	fn node() -> ComboNode {
 		ComboNode::new([(
-			SlotKey::BottomHand(Side::Right),
+			SlotKey(11),
 			(
 				Skill {
 					token: Token::from("some skill"),
@@ -94,10 +94,7 @@ mod tests {
 	fn call_set_next_combo_with_next_when_peek_was_some() {
 		let mut combos = _Combos::new(
 			node(),
-			[(
-				(SlotKey::BottomHand(Side::Right), ItemType::Pistol),
-				Skill::default(),
-			)],
+			[((SlotKey(11), ItemType::Pistol), Skill::default())],
 			|mock| {
 				mock.expect_set_next_combo()
 					.times(1)
@@ -106,7 +103,7 @@ mod tests {
 			},
 		);
 
-		combos.advance_combo(&SlotKey::BottomHand(Side::Right), &ItemType::Pistol);
+		combos.advance_combo(SlotKey(11), &ItemType::Pistol);
 	}
 
 	#[test]
@@ -114,7 +111,7 @@ mod tests {
 		let mut combos = _Combos::new(
 			node(),
 			[(
-				(SlotKey::default(), ItemType::default()),
+				(SlotKey(0), ItemType::default()),
 				Skill {
 					token: Token::from("return this"),
 					..default()
@@ -125,7 +122,7 @@ mod tests {
 			},
 		);
 
-		let skill = combos.advance_combo(&SlotKey::default(), &ItemType::default());
+		let skill = combos.advance_combo(SlotKey(0), &ItemType::default());
 
 		assert_eq!(
 			Some(Skill {
@@ -145,7 +142,7 @@ mod tests {
 				.return_const(());
 		});
 
-		combos.advance_combo(&SlotKey::default(), &ItemType::default());
+		combos.advance_combo(SlotKey(0), &ItemType::default());
 	}
 
 	#[test]
@@ -154,7 +151,7 @@ mod tests {
 			mock.expect_set_next_combo().return_const(());
 		});
 
-		let skill = combos.advance_combo(&SlotKey::default(), &ItemType::default());
+		let skill = combos.advance_combo(SlotKey(0), &ItemType::default());
 
 		assert_eq!(None, skill);
 	}

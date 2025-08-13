@@ -42,8 +42,9 @@ pub(crate) fn advance_active_skill<
 	time: Res<Time<TTime>>,
 	mut commands: Commands,
 	mut agents: Query<Components<TGetSkill, TSkillExecutor>>,
-) {
+) -> Result<(), Vec<TPlayerAnimations::TError>> {
 	let delta = time.delta();
+	let mut errors = vec![];
 
 	for (entity, mut dequeue, skill_executer, cleared) in &mut agents {
 		let Ok(agent) = commands.get_entity(entity) else {
@@ -55,6 +56,7 @@ pub(crate) fn advance_active_skill<
 				agent,
 				skill_executer,
 				delta,
+				&mut errors,
 			),
 			None if is_not(cleared) => clear_side_effects::<TPlayerAnimations, TOrientation>(agent),
 			_ => Advancement::InProcess,
@@ -66,6 +68,12 @@ pub(crate) fn advance_active_skill<
 
 		dequeue.clear_active();
 	}
+
+	if !errors.is_empty() {
+		return Err(errors);
+	}
+
+	Ok(())
 }
 
 fn is_not(cleared: Option<&SkillSideEffectsCleared>) -> bool {
@@ -91,6 +99,7 @@ fn advance<TPlayerAnimations, TOrientation, TSkillExecutor>(
 	mut agent: EntityCommands,
 	mut skill_executer: Mut<TSkillExecutor>,
 	delta: Duration,
+	errors: &mut Vec<TPlayerAnimations::TError>,
 ) -> Advancement
 where
 	TPlayerAnimations: ConfiguresPlayerSkillAnimations,
@@ -105,7 +114,9 @@ where
 
 	if states.contains(&StateMeta::Entering(SkillState::Aim)) {
 		agent.try_insert(TOrientation::temporarily(Face::Cursor));
-		animate::<TPlayerAnimations>(skill, agent);
+		if let Err(error) = animate::<TPlayerAnimations>(skill, agent) {
+			errors.push(error);
+		}
 		schedule_start(&mut skill_executer, skill, run_on_aim);
 	}
 
@@ -124,19 +135,22 @@ where
 fn animate<TPlayerAnimations>(
 	skill: &(impl GetAnimationStrategy + GetSkillBehavior),
 	entity: &mut EntityCommands,
-) where
+) -> Result<(), TPlayerAnimations::TError>
+where
 	TPlayerAnimations: ConfiguresPlayerSkillAnimations,
 {
 	let (slot, ..) = skill.behavior();
+
 	match skill.animation_strategy() {
 		AnimationStrategy::Animate => {
-			entity.try_insert(TPlayerAnimations::start_skill_animation(slot));
+			entity.try_insert(TPlayerAnimations::start_skill_animation(slot)?);
 		}
 		AnimationStrategy::DoNotAnimate => {
 			entity.try_insert(TPlayerAnimations::stop_skill_animation());
 		}
 		AnimationStrategy::None => {}
 	}
+	Ok(())
 }
 
 fn run_on_aim<TSkill>(skill: &TSkill) -> Option<(SlotKey, RunSkillBehavior)>
@@ -185,11 +199,13 @@ mod tests {
 		},
 		traits::skill_builder::SkillShape,
 	};
-	use common::tools::action_key::slot::Side;
+	use common::{
+		errors::Error,
+		tools::action_key::slot::{PlayerSlot, Side},
+	};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
 	use std::{collections::HashSet, ops::DerefMut};
-	use test_case::test_case;
 	use testing::{IsChanged, Mock, NestedMocks, SingleThreadedApp, TickTime, simple_init};
 
 	#[derive(Component, Default)]
@@ -228,13 +244,40 @@ mod tests {
 
 	impl ConfiguresPlayerSkillAnimations for _Player {
 		type TAnimationMarker = _SkillAnimation;
+		type TError = _AnimationError;
 
-		fn start_skill_animation(slot_key: SlotKey) -> Self::TAnimationMarker {
-			_SkillAnimation::Start(slot_key)
+		fn start_skill_animation(
+			slot_key: SlotKey,
+		) -> Result<Self::TAnimationMarker, Self::TError> {
+			Ok(_SkillAnimation::Start(slot_key))
 		}
 
 		fn stop_skill_animation() -> Self::TAnimationMarker {
 			_SkillAnimation::Stop
+		}
+	}
+
+	struct _FaultyPlayer;
+
+	impl ConfiguresPlayerSkillAnimations for _FaultyPlayer {
+		type TAnimationMarker = _SkillAnimation;
+		type TError = _AnimationError;
+
+		fn start_skill_animation(_: SlotKey) -> Result<Self::TAnimationMarker, Self::TError> {
+			Err(_AnimationError)
+		}
+
+		fn stop_skill_animation() -> Self::TAnimationMarker {
+			_SkillAnimation::Stop
+		}
+	}
+
+	#[derive(Debug, PartialEq)]
+	struct _AnimationError;
+
+	impl From<_AnimationError> for Error {
+		fn from(_: _AnimationError) -> Self {
+			panic!("not used")
 		}
 	}
 
@@ -296,7 +339,13 @@ mod tests {
 		)))
 	}
 
-	fn setup() -> (App, Entity) {
+	#[derive(Resource, Debug, PartialEq)]
+	struct _Result(Result<(), Vec<_AnimationError>>);
+
+	fn setup<TPlayer>() -> (App, Entity)
+	where
+		TPlayer: ConfiguresPlayerSkillAnimations<TError = _AnimationError> + 'static,
+	{
 		let mut app = App::new().single_threaded(Update);
 		let agent = app
 			.world_mut()
@@ -311,7 +360,11 @@ mod tests {
 		app.update();
 		app.add_systems(
 			Update,
-			advance_active_skill::<_Dequeue, _Player, _HandlesOrientation, _Executor, Real>,
+			advance_active_skill::<_Dequeue, TPlayer, _HandlesOrientation, _Executor, Real>.pipe(
+				|In(r), mut commands: Commands| {
+					commands.insert_resource(_Result(r));
+				},
+			),
 		);
 
 		(app, agent)
@@ -319,7 +372,7 @@ mod tests {
 
 	#[test]
 	fn call_update_with_delta() {
-		let (mut app, agent) = setup();
+		let (mut app, agent) = setup::<_Player>();
 		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
@@ -327,7 +380,7 @@ mod tests {
 						mock.expect_animation_strategy()
 							.return_const(AnimationStrategy::None);
 						mock.expect_behavior()
-							.return_const((SlotKey::default(), RunSkillBehavior::default()));
+							.return_const((SlotKey(0), RunSkillBehavior::default()));
 						mock.expect_update_state()
 							.times(1)
 							.with(eq(Duration::from_millis(100)))
@@ -342,12 +395,9 @@ mod tests {
 		app.update();
 	}
 
-	#[test_case(SlotKey::TopHand(Side::Left); "top left")]
-	#[test_case(SlotKey::TopHand(Side::Right); "top right")]
-	#[test_case(SlotKey::BottomHand(Side::Left); "bottom left")]
-	#[test_case(SlotKey::BottomHand(Side::Right); "bottom right")]
-	fn insert_animation_when_aim_begins(slot: SlotKey) {
-		let (mut app, agent) = setup();
+	#[test]
+	fn insert_animation_when_aim_begins() {
+		let (mut app, agent) = setup::<_Player>();
 		let entity = app
 			.world_mut()
 			.entity_mut(agent)
@@ -358,7 +408,7 @@ mod tests {
 							mock.expect_animation_strategy()
 								.return_const(AnimationStrategy::Animate);
 							mock.expect_behavior()
-								.return_const((slot, RunSkillBehavior::default()));
+								.return_const((SlotKey(42), RunSkillBehavior::default()));
 							mock.expect_update_state().return_const(
 								HashSet::<StateMeta<SkillState>>::from([StateMeta::Entering(
 									SkillState::Aim,
@@ -374,14 +424,14 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_SkillAnimation::Start(slot)),
+			Some(&_SkillAnimation::Start(SlotKey(42))),
 			app.world().entity(entity).get::<_SkillAnimation>()
 		);
 	}
 
 	#[test]
-	fn do_not_insert_animation_when_not_beginning_to_aim() {
-		let (mut app, agent) = setup();
+	fn return_animation_error() {
+		let (mut app, agent) = setup::<_FaultyPlayer>();
 		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(move || {
@@ -389,7 +439,37 @@ mod tests {
 						mock.expect_animation_strategy()
 							.return_const(AnimationStrategy::Animate);
 						mock.expect_behavior()
-							.return_const((SlotKey::default(), RunSkillBehavior::default()));
+							.return_const((SlotKey(42), RunSkillBehavior::default()));
+						mock.expect_update_state().return_const(
+							HashSet::<StateMeta<SkillState>>::from([StateMeta::Entering(
+								SkillState::Aim,
+							)]),
+						);
+					})
+				})),
+			},
+			Transform::default(),
+		));
+
+		app.update();
+
+		assert_eq!(
+			Some(&_Result(Err(vec![_AnimationError]))),
+			app.world().get_resource::<_Result>()
+		);
+	}
+
+	#[test]
+	fn do_not_insert_animation_when_not_beginning_to_aim() {
+		let (mut app, agent) = setup::<_Player>();
+		app.world_mut().entity_mut(agent).insert((
+			_Dequeue {
+				active: Some(Box::new(move || {
+					Mock_Skill::new_mock(|mock| {
+						mock.expect_animation_strategy()
+							.return_const(AnimationStrategy::Animate);
+						mock.expect_behavior()
+							.return_const((SlotKey(0), RunSkillBehavior::default()));
 						mock.expect_update_state().return_const(
 							HashSet::<StateMeta<SkillState>>::from([
 								StateMeta::In(SkillState::Aim),
@@ -409,7 +489,7 @@ mod tests {
 
 	#[test]
 	fn stop_animation_on_when_beginning_to_aim_and_animate_is_do_not_animate() {
-		let (mut app, agent) = setup();
+		let (mut app, agent) = setup::<_Player>();
 		let entity = app
 			.world_mut()
 			.entity_mut(agent)
@@ -420,7 +500,7 @@ mod tests {
 							mock.expect_animation_strategy()
 								.return_const(AnimationStrategy::DoNotAnimate);
 							mock.expect_behavior()
-								.return_const((SlotKey::default(), RunSkillBehavior::default()));
+								.return_const((SlotKey(0), RunSkillBehavior::default()));
 							mock.expect_update_state().return_const(
 								HashSet::<StateMeta<SkillState>>::from([StateMeta::Entering(
 									SkillState::Aim,
@@ -443,7 +523,7 @@ mod tests {
 
 	#[test]
 	fn do_not_stop_animation_when_not_beginning_to_aim_and_animate_is_do_not_animate() {
-		let (mut app, agent) = setup();
+		let (mut app, agent) = setup::<_Player>();
 		let entity = app
 			.world_mut()
 			.entity_mut(agent)
@@ -456,7 +536,7 @@ mod tests {
 								.return_const(AnimationStrategy::DoNotAnimate);
 							skill
 								.expect_behavior()
-								.return_const((SlotKey::default(), RunSkillBehavior::default()));
+								.return_const((SlotKey(0), RunSkillBehavior::default()));
 							skill.expect_update_state().return_const(HashSet::<
 								StateMeta<SkillState>,
 							>::from([
@@ -479,7 +559,7 @@ mod tests {
 
 	#[test]
 	fn do_not_start_or_stop_animation_when_beginning_to_aim_and_animate_is_none() {
-		let (mut app, agent) = setup();
+		let (mut app, agent) = setup::<_Player>();
 		let entity = app
 			.world_mut()
 			.entity_mut(agent)
@@ -490,7 +570,7 @@ mod tests {
 							mock.expect_animation_strategy()
 								.return_const(AnimationStrategy::None);
 							mock.expect_behavior()
-								.return_const((SlotKey::default(), RunSkillBehavior::default()));
+								.return_const((SlotKey(0), RunSkillBehavior::default()));
 							mock.expect_update_state().return_const(
 								HashSet::<StateMeta<SkillState>>::from([StateMeta::Entering(
 									SkillState::Aim,
@@ -510,7 +590,7 @@ mod tests {
 
 	#[test]
 	fn stop_animation_when_no_active_skill() {
-		let (mut app, agent) = setup();
+		let (mut app, agent) = setup::<_Player>();
 		let entity = app
 			.world_mut()
 			.entity_mut(agent)
@@ -527,7 +607,7 @@ mod tests {
 
 	#[test]
 	fn do_not_stop_animation_when_some_active_skill() {
-		let (mut app, agent) = setup();
+		let (mut app, agent) = setup::<_Player>();
 		let entity = app
 			.world_mut()
 			.entity_mut(agent)
@@ -538,7 +618,7 @@ mod tests {
 							mock.expect_animation_strategy()
 								.return_const(AnimationStrategy::None);
 							mock.expect_behavior()
-								.return_const((SlotKey::default(), RunSkillBehavior::default()));
+								.return_const((SlotKey(0), RunSkillBehavior::default()));
 							mock.expect_update_state().return_const(HashSet::default());
 						})
 					})),
@@ -554,7 +634,7 @@ mod tests {
 
 	#[test]
 	fn stop_animation_only_once_when_no_active_skill() {
-		let (mut app, agent) = setup();
+		let (mut app, agent) = setup::<_Player>();
 		let entity = app
 			.world_mut()
 			.entity_mut(agent)
@@ -572,7 +652,7 @@ mod tests {
 
 	#[test]
 	fn stop_animation_only_once_even_when_dequeue_mutably_dereferenced() {
-		let (mut app, agent) = setup();
+		let (mut app, agent) = setup::<_Player>();
 		let entity = app
 			.world_mut()
 			.entity_mut(agent)
@@ -595,7 +675,7 @@ mod tests {
 
 	#[test]
 	fn stop_animation_again_after_another_active_skill_done() {
-		let (mut app, agent) = setup();
+		let (mut app, agent) = setup::<_Player>();
 		let entity = app
 			.world_mut()
 			.entity_mut(agent)
@@ -610,7 +690,7 @@ mod tests {
 				mock.expect_animation_strategy()
 					.return_const(AnimationStrategy::None);
 				mock.expect_behavior()
-					.return_const((SlotKey::default(), RunSkillBehavior::default()));
+					.return_const((SlotKey(0), RunSkillBehavior::default()));
 				mock.expect_update_state()
 					.return_const(HashSet::<StateMeta<SkillState>>::from([]));
 			})
@@ -632,7 +712,7 @@ mod tests {
 
 	#[test]
 	fn clear_queue_of_active() {
-		let (mut app, agent) = setup();
+		let (mut app, agent) = setup::<_FaultyPlayer>();
 		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
@@ -640,7 +720,7 @@ mod tests {
 						mock.expect_animation_strategy()
 							.return_const(AnimationStrategy::None);
 						mock.expect_behavior()
-							.return_const((SlotKey::default(), RunSkillBehavior::default()));
+							.return_const((SlotKey(0), RunSkillBehavior::default()));
 						mock.expect_update_state().return_const(
 							HashSet::<StateMeta<SkillState>>::from([StateMeta::Done]),
 						);
@@ -659,7 +739,7 @@ mod tests {
 
 	#[test]
 	fn do_not_remove_skill_when_not_done() {
-		let (mut app, agent) = setup();
+		let (mut app, agent) = setup::<_FaultyPlayer>();
 		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
@@ -667,7 +747,7 @@ mod tests {
 						mock.expect_animation_strategy()
 							.return_const(AnimationStrategy::None);
 						mock.expect_behavior()
-							.return_const((SlotKey::default(), RunSkillBehavior::default()));
+							.return_const((SlotKey(0), RunSkillBehavior::default()));
 						mock.expect_update_state().return_const(
 							HashSet::<StateMeta<SkillState>>::from([StateMeta::In(
 								SkillState::Active,
@@ -688,7 +768,7 @@ mod tests {
 
 	#[test]
 	fn run_on_active() {
-		let (mut app, agent) = setup();
+		let (mut app, agent) = setup::<_FaultyPlayer>();
 		app.world_mut().entity_mut(agent).insert((
 			_Executor::new().with_mock(|mock| {
 				mock.expect_flush().return_const(());
@@ -697,7 +777,7 @@ mod tests {
 					.withf(|slot_key, start| {
 						assert_eq!(
 							(
-								&SlotKey::TopHand(Side::Left),
+								&SlotKey::from(PlayerSlot::Upper(Side::Left)),
 								&skill_behavior(RunSkillBehavior::OnActive)
 							),
 							(slot_key, start),
@@ -713,7 +793,7 @@ mod tests {
 							.return_const(AnimationStrategy::None);
 						mock.expect_behavior().returning(|| {
 							(
-								SlotKey::TopHand(Side::Left),
+								SlotKey::from(PlayerSlot::Upper(Side::Left)),
 								skill_behavior(RunSkillBehavior::OnActive),
 							)
 						});
@@ -732,7 +812,7 @@ mod tests {
 
 	#[test]
 	fn run_on_aim() {
-		let (mut app, agent) = setup();
+		let (mut app, agent) = setup::<_FaultyPlayer>();
 		app.world_mut().entity_mut(agent).insert((
 			_Executor::new().with_mock(|mock| {
 				mock.expect_flush().return_const(());
@@ -741,7 +821,7 @@ mod tests {
 					.withf(|slot_key, start| {
 						assert_eq!(
 							(
-								&SlotKey::BottomHand(Side::Left),
+								&SlotKey::from(PlayerSlot::Lower(Side::Left)),
 								&skill_behavior(RunSkillBehavior::OnAim)
 							),
 							(slot_key, start),
@@ -757,7 +837,7 @@ mod tests {
 							.return_const(AnimationStrategy::None);
 						mock.expect_behavior().returning(|| {
 							(
-								SlotKey::BottomHand(Side::Left),
+								SlotKey::from(PlayerSlot::Lower(Side::Left)),
 								skill_behavior(RunSkillBehavior::OnAim),
 							)
 						});
@@ -776,7 +856,7 @@ mod tests {
 
 	#[test]
 	fn do_not_run_when_not_activating_this_frame() {
-		let (mut app, agent) = setup();
+		let (mut app, agent) = setup::<_FaultyPlayer>();
 		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
@@ -785,7 +865,7 @@ mod tests {
 							.return_const(AnimationStrategy::None);
 						mock.expect_behavior()
 							.never()
-							.return_const((SlotKey::default(), RunSkillBehavior::default()));
+							.return_const((SlotKey(0), RunSkillBehavior::default()));
 						mock.expect_update_state().return_const(
 							HashSet::<StateMeta<SkillState>>::from([StateMeta::In(
 								SkillState::Active,
@@ -802,7 +882,7 @@ mod tests {
 
 	#[test]
 	fn flush() {
-		let (mut app, agent) = setup();
+		let (mut app, agent) = setup::<_FaultyPlayer>();
 		app.world_mut().entity_mut(agent).insert((
 			_Executor::new().with_mock(|mock| {
 				mock.expect_schedule().return_const(());
@@ -814,7 +894,7 @@ mod tests {
 						mock.expect_animation_strategy()
 							.return_const(AnimationStrategy::None);
 						mock.expect_behavior()
-							.return_const((SlotKey::default(), RunSkillBehavior::default()));
+							.return_const((SlotKey(0), RunSkillBehavior::default()));
 						mock.expect_update_state().return_const(
 							HashSet::<StateMeta<SkillState>>::from([StateMeta::Done]),
 						);
@@ -829,7 +909,7 @@ mod tests {
 
 	#[test]
 	fn do_not_stop_when_not_done() {
-		let (mut app, agent) = setup();
+		let (mut app, agent) = setup::<_FaultyPlayer>();
 		app.world_mut().entity_mut(agent).insert((
 			_Executor::new().with_mock(|mock| {
 				mock.expect_schedule().return_const(());
@@ -841,7 +921,7 @@ mod tests {
 						mock.expect_animation_strategy()
 							.return_const(AnimationStrategy::None);
 						mock.expect_behavior()
-							.return_const((SlotKey::default(), RunSkillBehavior::default()));
+							.return_const((SlotKey(0), RunSkillBehavior::default()));
 						mock.expect_update_state().return_const(
 							HashSet::<StateMeta<SkillState>>::from([StateMeta::In(
 								SkillState::Active,
@@ -858,7 +938,7 @@ mod tests {
 
 	#[test]
 	fn apply_facing() {
-		let (mut app, agent) = setup();
+		let (mut app, agent) = setup::<_FaultyPlayer>();
 		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
@@ -866,7 +946,7 @@ mod tests {
 						mock.expect_animation_strategy()
 							.return_const(AnimationStrategy::None);
 						mock.expect_behavior()
-							.return_const((SlotKey::default(), RunSkillBehavior::default()));
+							.return_const((SlotKey(0), RunSkillBehavior::default()));
 						mock.expect_update_state().return_const(
 							HashSet::<StateMeta<SkillState>>::from([StateMeta::Entering(
 								SkillState::Aim,
@@ -887,7 +967,7 @@ mod tests {
 
 	#[test]
 	fn do_not_apply_facing_when_not_beginning_to_aim() {
-		let (mut app, agent) = setup();
+		let (mut app, agent) = setup::<_FaultyPlayer>();
 		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
@@ -895,7 +975,7 @@ mod tests {
 						mock.expect_animation_strategy()
 							.return_const(AnimationStrategy::None);
 						mock.expect_behavior()
-							.return_const((SlotKey::default(), RunSkillBehavior::default()));
+							.return_const((SlotKey(0), RunSkillBehavior::default()));
 						mock.expect_update_state().return_const(
 							HashSet::<StateMeta<SkillState>>::from([StateMeta::In(
 								SkillState::Aim,
@@ -910,13 +990,12 @@ mod tests {
 		app.update();
 
 		let agent = app.world().entity(agent);
-
 		assert_eq!(None, agent.get::<_TempFace>());
 	}
 
 	#[test]
 	fn apply_facing_override_when_beginning_to_aim() {
-		let (mut app, agent) = setup();
+		let (mut app, agent) = setup::<_FaultyPlayer>();
 		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
@@ -924,7 +1003,7 @@ mod tests {
 						mock.expect_animation_strategy()
 							.return_const(AnimationStrategy::None);
 						mock.expect_behavior()
-							.return_const((SlotKey::default(), RunSkillBehavior::default()));
+							.return_const((SlotKey(0), RunSkillBehavior::default()));
 						mock.expect_update_state().return_const(
 							HashSet::<StateMeta<SkillState>>::from([StateMeta::Entering(
 								SkillState::Aim,
@@ -939,13 +1018,12 @@ mod tests {
 		app.update();
 
 		let agent = app.world().entity(agent);
-
 		assert_eq!(Some(&_TempFace(Face::Cursor)), agent.get::<_TempFace>());
 	}
 
 	#[test]
 	fn no_facing_override_when_no_skill() {
-		let (mut app, agent) = setup();
+		let (mut app, agent) = setup::<_FaultyPlayer>();
 		app.world_mut().entity_mut(agent).insert((
 			_Dequeue { active: None },
 			Transform::from_xyz(-1., -2., -3.),
@@ -955,13 +1033,12 @@ mod tests {
 		app.update();
 
 		let agent = app.world().entity(agent);
-
 		assert_eq!(None, agent.get::<_TempFace>());
 	}
 
 	#[test]
 	fn do_not_mutable_deref_executer_when_skill_states_empty() {
-		let (mut app, agent) = setup();
+		let (mut app, agent) = setup::<_FaultyPlayer>();
 		app = app.single_threaded(PostUpdate);
 		let entity = app
 			.world_mut()
@@ -973,7 +1050,7 @@ mod tests {
 							mock.expect_animation_strategy()
 								.return_const(AnimationStrategy::None);
 							mock.expect_behavior()
-								.return_const((SlotKey::default(), RunSkillBehavior::default()));
+								.return_const((SlotKey(0), RunSkillBehavior::default()));
 							mock.expect_update_state()
 								.return_const(HashSet::<StateMeta<SkillState>>::from([]));
 						})
@@ -990,6 +1067,6 @@ mod tests {
 		assert_eq!(
 			Some(&IsChanged::<_Executor>::FALSE),
 			app.world().entity(entity).get::<IsChanged<_Executor>>()
-		)
+		);
 	}
 }
