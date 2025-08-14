@@ -2,7 +2,7 @@ use super::get_inputs::Input;
 use crate::{
 	item::Item,
 	skills::Skill,
-	traits::{Enqueue, IterWaitingMut, Prime},
+	traits::{Enqueue, IterHoldingMut, ReleaseSkill},
 };
 use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
@@ -18,13 +18,13 @@ pub(crate) fn enqueue<TSlots, TQueue, TQueuedSkill>(
 ) where
 	for<'a> TSlots: GetRef<SlotKey, TValue<'a> = &'a Handle<Item>> + Component,
 	TQueue:
-		Enqueue<(Skill, SlotKey)> + IterWaitingMut<TQueuedSkill> + Component<Mutability = Mutable>,
-	TQueuedSkill: Prime + Getter<SlotKey>,
+		Enqueue<(Skill, SlotKey)> + IterHoldingMut<TQueuedSkill> + Component<Mutability = Mutable>,
+	TQueuedSkill: ReleaseSkill + Getter<SlotKey>,
 {
 	for (slots, mut queue) in &mut agents {
 		let queue = queue.as_mut();
 		enqueue_new_skills(&input, queue, slots, &items, &skills);
-		prime_skills(&input, queue);
+		release_skills(&input, queue);
 	}
 }
 
@@ -67,19 +67,19 @@ fn enqueue_new_skill<TSlots, TQueue>(
 	queue.enqueue((skill.clone(), key));
 }
 
-fn prime_skills<TQueue, TQueuedSkill>(input: &In<Input>, queue: &mut TQueue)
+fn release_skills<TQueue, TQueuedSkill>(input: &In<Input>, queue: &mut TQueue)
 where
-	TQueue: IterWaitingMut<TQueuedSkill>,
-	TQueuedSkill: Prime + Getter<SlotKey>,
+	TQueue: IterHoldingMut<TQueuedSkill>,
+	TQueuedSkill: ReleaseSkill + Getter<SlotKey>,
 {
-	for skill in queue.iter_waiting_mut() {
+	for skill in queue.iter_holding_mut() {
 		let Ok(key) = PlayerSlot::try_from(SlotKey::get_field(skill)) else {
 			continue;
 		};
 		if input.pressed.contains(&key) {
 			continue;
 		}
-		skill.prime();
+		skill.release_skill();
 	}
 }
 
@@ -97,8 +97,8 @@ mod tests {
 
 	mock! {
 		_SkillQueued {}
-		impl Prime for _SkillQueued {
-			fn prime(&mut self) {}
+		impl ReleaseSkill for _SkillQueued {
+			fn release_skill(&mut self) {}
 		}
 		impl Getter<SlotKey> for _SkillQueued {
 			fn get(&self) -> SlotKey;
@@ -130,8 +130,8 @@ mod tests {
 		fn enqueue(&mut self, _: (Skill, SlotKey)) {}
 	}
 
-	impl IterWaitingMut<Mock_SkillQueued> for _Enqueue {
-		fn iter_waiting_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut Mock_SkillQueued>
+	impl IterHoldingMut<Mock_SkillQueued> for _Enqueue {
+		fn iter_holding_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut Mock_SkillQueued>
 		where
 			Mock_SkillQueued: 'a,
 		{
@@ -147,7 +147,7 @@ mod tests {
 	) -> App
 	where
 		TEnqueue: Enqueue<(Skill, SlotKey)>
-			+ IterWaitingMut<Mock_SkillQueued>
+			+ IterHoldingMut<Mock_SkillQueued>
 			+ Component<Mutability = Mutable>,
 	{
 		let mut app = App::new().single_threaded(Update);
@@ -192,8 +192,8 @@ mod tests {
 
 		static mut EMPTY: [Mock_SkillQueued; 0] = [];
 
-		impl IterWaitingMut<Mock_SkillQueued> for _Enqueue {
-			fn iter_waiting_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut Mock_SkillQueued>
+		impl IterHoldingMut<Mock_SkillQueued> for _Enqueue {
+			fn iter_holding_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut Mock_SkillQueued>
 			where
 				Mock_SkillQueued: 'a,
 			{
@@ -246,7 +246,7 @@ mod tests {
 	}
 
 	#[test]
-	fn prime_skill_if_its_slot_is_not_pressed() {
+	fn release_skill_if_its_slot_is_not_pressed() {
 		let right = PlayerSlot::Lower(Side::Right);
 		let left = PlayerSlot::Lower(Side::Left);
 		let mut app = setup::<_Enqueue>(vec![], vec![]);
@@ -255,7 +255,7 @@ mod tests {
 			_Enqueue {
 				queued: vec![Mock_SkillQueued::new_mock(|mock| {
 					mock.expect_get().return_const(left);
-					mock.expect_prime().return_const(());
+					mock.expect_release_skill().return_const(());
 				})],
 			},
 		));
@@ -265,19 +265,19 @@ mod tests {
 	}
 
 	#[test]
-	fn prime_all_in_queue() {
+	fn release_all_in_queue() {
 		let mut app = setup::<_Enqueue>(vec![], vec![]);
 		app.world_mut().spawn((
 			_Skills::default(),
 			_Enqueue {
 				queued: vec![
 					Mock_SkillQueued::new_mock(|mock| {
-						mock.expect_prime().times(1).return_const(());
+						mock.expect_release_skill().times(1).return_const(());
 						mock.expect_get()
 							.return_const(PlayerSlot::Lower(Side::Right));
 					}),
 					Mock_SkillQueued::new_mock(|mock| {
-						mock.expect_prime().times(1).return_const(());
+						mock.expect_release_skill().times(1).return_const(());
 						mock.expect_get()
 							.return_const(PlayerSlot::Lower(Side::Left));
 					}),

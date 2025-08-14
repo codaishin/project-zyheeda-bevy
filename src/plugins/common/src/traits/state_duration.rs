@@ -16,76 +16,77 @@ pub enum StateMeta<TStateName> {
 
 pub trait StateDuration<TStateKey> {
 	fn get_state_duration(&self, key: TStateKey) -> Duration;
-	fn elapsed_mut(&mut self) -> &mut Duration;
+	fn elapsed(&self) -> Duration;
+	fn set_elapsed(&mut self, new_duration: Duration);
 }
 
-pub trait StateUpdate<T> {
-	fn update_state(&mut self, delta: Duration) -> HashSet<StateMeta<T>>;
+pub trait UpdatedStates<T> {
+	fn updated_states(&mut self, delta: Duration) -> HashSet<StateMeta<T>>;
 }
 
 /// Duration clamped at MAX (represented as Infinite) and ZERO
 #[derive(PartialEq, Clone, Copy)]
-enum _SafeDuration {
+enum SafeDuration {
 	Infinite,
 	Finite(Duration),
 }
 
-impl _SafeDuration {
-	const ZERO: _SafeDuration = _SafeDuration::Finite(Duration::ZERO);
+impl SafeDuration {
+	const ZERO: SafeDuration = SafeDuration::Finite(Duration::ZERO);
 }
 
-impl PartialOrd for _SafeDuration {
+impl PartialOrd for SafeDuration {
 	fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
 		match (self, other) {
-			(_SafeDuration::Finite(a), _SafeDuration::Finite(b)) => a.partial_cmp(b),
-			(_SafeDuration::Infinite, _SafeDuration::Infinite) => Some(Ordering::Equal),
-			(_SafeDuration::Infinite, _) => Some(Ordering::Greater),
-			(_, _SafeDuration::Infinite) => Some(Ordering::Less),
+			(SafeDuration::Finite(a), SafeDuration::Finite(b)) => a.partial_cmp(b),
+			(SafeDuration::Infinite, SafeDuration::Infinite) => Some(Ordering::Equal),
+			(SafeDuration::Infinite, _) => Some(Ordering::Greater),
+			(_, SafeDuration::Infinite) => Some(Ordering::Less),
 		}
 	}
 }
 
-impl From<Duration> for _SafeDuration {
+impl From<Duration> for SafeDuration {
 	fn from(value: Duration) -> Self {
 		match value {
-			Duration::MAX => _SafeDuration::Infinite,
-			value => _SafeDuration::Finite(value),
+			Duration::MAX => SafeDuration::Infinite,
+			value => SafeDuration::Finite(value),
 		}
 	}
 }
 
-impl From<_SafeDuration> for Duration {
-	fn from(value: _SafeDuration) -> Self {
+impl From<SafeDuration> for Duration {
+	fn from(value: SafeDuration) -> Self {
 		match value {
-			_SafeDuration::Infinite => Duration::MAX,
-			_SafeDuration::Finite(value) => value,
+			SafeDuration::Infinite => Duration::MAX,
+			SafeDuration::Finite(value) => value,
 		}
 	}
 }
 
-impl Add for _SafeDuration {
-	type Output = _SafeDuration;
+impl Add for SafeDuration {
+	type Output = SafeDuration;
 
 	fn add(self, rhs: Self) -> Self::Output {
 		match (self, rhs) {
-			(_SafeDuration::Finite(a), _SafeDuration::Finite(b)) => a
+			(SafeDuration::Finite(a), SafeDuration::Finite(b)) => a
 				.checked_add(b)
-				.map_or(_SafeDuration::Infinite, _SafeDuration::Finite),
-			_ => _SafeDuration::Infinite,
+				.map_or(SafeDuration::Infinite, SafeDuration::Finite),
+			_ => SafeDuration::Infinite,
 		}
 	}
 }
 
-impl Sub for _SafeDuration {
-	type Output = _SafeDuration;
+impl Sub for SafeDuration {
+	type Output = SafeDuration;
 
 	fn sub(self, rhs: Self) -> Self::Output {
 		match (self, rhs) {
-			(_SafeDuration::Finite(a), _SafeDuration::Finite(b)) => {
-				_SafeDuration::from(a.checked_sub(b).unwrap_or_default())
+			(SafeDuration::Finite(a), SafeDuration::Finite(b)) => {
+				SafeDuration::from(a.checked_sub(b).unwrap_or_default())
 			}
-			(_SafeDuration::Infinite, _) => _SafeDuration::Infinite,
-			_ => _SafeDuration::ZERO,
+			(SafeDuration::Infinite, _) => SafeDuration::Infinite,
+			_ => SafeDuration::ZERO,
 		}
 	}
 }
@@ -93,19 +94,18 @@ impl Sub for _SafeDuration {
 impl<
 	TStateDuration: StateDuration<TStateKey>,
 	TStateKey: IterFinite + Copy + Clone + Eq + Hash + 'static,
-> StateUpdate<TStateKey> for TStateDuration
+> UpdatedStates<TStateKey> for TStateDuration
 {
-	fn update_state(&mut self, delta: Duration) -> HashSet<StateMeta<TStateKey>> {
-		let state_keys = TStateKey::iterator();
+	fn updated_states(&mut self, delta: Duration) -> HashSet<StateMeta<TStateKey>> {
 		let mut states = HashSet::new();
-		let mut state_end = _SafeDuration::ZERO;
-		let before_update = _SafeDuration::from(*self.elapsed_mut());
-		let after_update = before_update + delta.into();
+		let mut state_end = SafeDuration::ZERO;
+		let before_update = SafeDuration::from(self.elapsed());
+		let after_update = before_update + SafeDuration::from(delta);
 
-		for state_key in state_keys {
+		for state_key in TStateKey::iterator() {
 			let state_begin = state_end;
 
-			state_end = state_end + self.get_state_duration(state_key).into();
+			state_end = state_end + SafeDuration::from(self.get_state_duration(state_key));
 			for meta in current_state_metas(before_update, after_update, state_begin, state_end) {
 				states.insert(meta(state_key));
 			}
@@ -115,29 +115,29 @@ impl<
 			states.insert(StateMeta::Done);
 		}
 
-		*self.elapsed_mut() = after_update.into();
+		self.set_elapsed(after_update.into());
 
 		states
 	}
 }
 
 fn current_state_metas<TStateName: IterFinite + Copy + Clone + Eq + Hash + 'static>(
-	before_update: _SafeDuration,
-	after_update: _SafeDuration,
-	state_begin: _SafeDuration,
-	state_end: _SafeDuration,
+	before_update: SafeDuration,
+	after_update: SafeDuration,
+	state_begin: SafeDuration,
+	state_end: SafeDuration,
 ) -> Vec<Box<dyn Fn(TStateName) -> StateMeta<TStateName>>> {
-	match state_end - state_begin > _SafeDuration::ZERO {
+	match state_end - state_begin > SafeDuration::ZERO {
 		true => non_zero_duration_meta(before_update, after_update, state_begin, state_end),
 		false => zero_duration_meta(before_update, after_update, state_begin),
 	}
 }
 
 fn non_zero_duration_meta<TStateName: IterFinite + Copy + Clone + Eq + Hash + 'static>(
-	before_update: _SafeDuration,
-	after_update: _SafeDuration,
-	state_begin: _SafeDuration,
-	state_end: _SafeDuration,
+	before_update: SafeDuration,
+	after_update: SafeDuration,
+	state_begin: SafeDuration,
+	state_end: SafeDuration,
 ) -> Vec<Box<dyn Fn(TStateName) -> StateMeta<TStateName>>> {
 	if after_update <= state_begin {
 		vec![]
@@ -151,9 +151,9 @@ fn non_zero_duration_meta<TStateName: IterFinite + Copy + Clone + Eq + Hash + 's
 }
 
 fn zero_duration_meta<TStateName: IterFinite + Copy + Clone + Eq + Hash + 'static>(
-	before_update: _SafeDuration,
-	after_update: _SafeDuration,
-	current_state: _SafeDuration,
+	before_update: SafeDuration,
+	after_update: SafeDuration,
+	current_state: SafeDuration,
 ) -> Vec<Box<dyn Fn(TStateName) -> StateMeta<TStateName>>> {
 	if before_update <= current_state && current_state <= after_update {
 		vec![Box::new(StateMeta::Entering), Box::new(StateMeta::In)]
@@ -179,7 +179,7 @@ mod tests {
 		pub state_a: Duration,
 		pub state_b: Duration,
 		pub state_c: Duration,
-		pub duration: Duration,
+		pub elapsed: Duration,
 	}
 
 	impl IterFinite for _State {
@@ -197,8 +197,12 @@ mod tests {
 	}
 
 	impl StateDuration<_State> for _Agent {
-		fn elapsed_mut(&mut self) -> &mut Duration {
-			&mut self.duration
+		fn set_elapsed(&mut self, new_duration: Duration) {
+			self.elapsed = new_duration;
+		}
+
+		fn elapsed(&self) -> Duration {
+			self.elapsed
 		}
 
 		fn get_state_duration(&self, state_name: _State) -> Duration {
@@ -214,11 +218,11 @@ mod tests {
 	fn update_duration() {
 		let mut agent = _Agent::default();
 
-		agent.update_state(Duration::from_millis(11));
-		agent.update_state(Duration::from_millis(15));
-		agent.update_state(Duration::from_millis(16));
+		agent.updated_states(Duration::from_millis(11));
+		agent.updated_states(Duration::from_millis(15));
+		agent.updated_states(Duration::from_millis(16));
 
-		assert_eq!(Duration::from_millis(42), agent.duration);
+		assert_eq!(Duration::from_millis(42), agent.elapsed);
 	}
 
 	#[test]
@@ -227,12 +231,12 @@ mod tests {
 			state_a: Duration::from_millis(10),
 			state_b: Duration::from_millis(20),
 			state_c: Duration::from_millis(30),
-			duration: Duration::ZERO,
+			elapsed: Duration::ZERO,
 		};
 
 		assert_eq!(
 			HashSet::from([StateMeta::Entering(_State::A), StateMeta::In(_State::A)]),
-			agent.update_state(Duration::from_millis(9))
+			agent.updated_states(Duration::from_millis(9))
 		);
 	}
 
@@ -242,7 +246,7 @@ mod tests {
 			state_a: Duration::from_millis(10),
 			state_b: Duration::from_millis(20),
 			state_c: Duration::from_millis(30),
-			duration: Duration::from_millis(1),
+			elapsed: Duration::from_millis(1),
 		};
 
 		assert_eq!(
@@ -251,7 +255,7 @@ mod tests {
 				StateMeta::Entering(_State::B),
 				StateMeta::In(_State::B),
 			]),
-			agent.update_state(Duration::from_millis(10))
+			agent.updated_states(Duration::from_millis(10))
 		);
 	}
 
@@ -261,12 +265,12 @@ mod tests {
 			state_a: Duration::from_millis(10),
 			state_b: Duration::from_millis(20),
 			state_c: Duration::from_millis(30),
-			duration: Duration::from_millis(11),
+			elapsed: Duration::from_millis(11),
 		};
 
 		assert_eq!(
 			HashSet::from([StateMeta::In(_State::B)]),
-			agent.update_state(Duration::from_millis(2))
+			agent.updated_states(Duration::from_millis(2))
 		);
 	}
 
@@ -276,7 +280,7 @@ mod tests {
 			state_a: Duration::from_millis(10),
 			state_b: Duration::from_millis(20),
 			state_c: Duration::from_millis(30),
-			duration: Duration::from_millis(5),
+			elapsed: Duration::from_millis(5),
 		};
 
 		assert_eq!(
@@ -285,7 +289,7 @@ mod tests {
 				StateMeta::Entering(_State::B),
 				StateMeta::In(_State::B)
 			]),
-			agent.update_state(Duration::from_millis(10))
+			agent.updated_states(Duration::from_millis(10))
 		);
 	}
 
@@ -295,7 +299,7 @@ mod tests {
 			state_a: Duration::from_millis(1),
 			state_b: Duration::from_millis(2),
 			state_c: Duration::from_millis(3),
-			duration: Duration::ZERO,
+			elapsed: Duration::ZERO,
 		};
 
 		assert_eq!(
@@ -308,7 +312,7 @@ mod tests {
 				StateMeta::In(_State::C),
 				StateMeta::Done,
 			]),
-			agent.update_state(Duration::from_millis(10))
+			agent.updated_states(Duration::from_millis(10))
 		);
 	}
 
@@ -318,7 +322,7 @@ mod tests {
 			state_a: Duration::ZERO,
 			state_b: Duration::ZERO,
 			state_c: Duration::ZERO,
-			duration: Duration::ZERO,
+			elapsed: Duration::ZERO,
 		};
 
 		assert_eq!(
@@ -331,7 +335,7 @@ mod tests {
 				StateMeta::In(_State::C),
 				StateMeta::Done,
 			]),
-			agent.update_state(Duration::from_millis(10))
+			agent.updated_states(Duration::from_millis(10))
 		);
 	}
 
@@ -341,7 +345,7 @@ mod tests {
 			state_a: Duration::from_secs(4),
 			state_b: Duration::ZERO,
 			state_c: Duration::from_secs(4),
-			duration: Duration::ZERO,
+			elapsed: Duration::ZERO,
 		};
 
 		assert_eq!(
@@ -353,7 +357,7 @@ mod tests {
 				StateMeta::Entering(_State::C),
 				StateMeta::In(_State::C),
 			]),
-			agent.update_state(Duration::from_secs(7))
+			agent.updated_states(Duration::from_secs(7))
 		);
 	}
 
@@ -363,12 +367,12 @@ mod tests {
 			state_a: Duration::from_secs(4),
 			state_b: Duration::ZERO,
 			state_c: Duration::from_secs(4),
-			duration: Duration::from_secs(5),
+			elapsed: Duration::from_secs(5),
 		};
 
 		assert_eq!(
 			HashSet::from([StateMeta::In(_State::C),]),
-			agent.update_state(Duration::from_secs(1))
+			agent.updated_states(Duration::from_secs(1))
 		);
 	}
 
@@ -378,12 +382,12 @@ mod tests {
 			state_a: Duration::MAX,
 			state_b: Duration::from_secs(1),
 			state_c: Duration::from_secs(1),
-			duration: Duration::ZERO,
+			elapsed: Duration::ZERO,
 		};
 
 		assert_eq!(
 			HashSet::from([StateMeta::Entering(_State::A), StateMeta::In(_State::A)]),
-			agent.update_state(Duration::from_secs(1))
+			agent.updated_states(Duration::from_secs(1))
 		);
 	}
 
@@ -393,17 +397,17 @@ mod tests {
 			state_a: Duration::from_secs(2),
 			state_b: Duration::from_secs(2),
 			state_c: Duration::from_secs(2),
-			duration: Duration::ZERO,
+			elapsed: Duration::ZERO,
 		};
 
 		let states = [
-			agent.update_state(Duration::from_secs(1)),
-			agent.update_state(Duration::from_secs(1)),
-			agent.update_state(Duration::from_secs(1)),
-			agent.update_state(Duration::from_secs(1)),
-			agent.update_state(Duration::from_secs(1)),
-			agent.update_state(Duration::from_secs(1)),
-			agent.update_state(Duration::from_secs(1)),
+			agent.updated_states(Duration::from_secs(1)),
+			agent.updated_states(Duration::from_secs(1)),
+			agent.updated_states(Duration::from_secs(1)),
+			agent.updated_states(Duration::from_secs(1)),
+			agent.updated_states(Duration::from_secs(1)),
+			agent.updated_states(Duration::from_secs(1)),
+			agent.updated_states(Duration::from_secs(1)),
 		];
 
 		assert_eq!(

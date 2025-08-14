@@ -9,7 +9,7 @@ use crate::{
 		spawn_on::SpawnOn,
 	},
 	components::SkillTarget,
-	traits::{Prime, spawn_skill_behavior::SpawnSkillBehavior},
+	traits::{ReleaseSkill, spawn_skill_behavior::SpawnSkillBehavior},
 };
 use bevy::prelude::*;
 use common::{
@@ -96,11 +96,10 @@ impl GetterRef<CompatibleItems> for Skill {
 }
 
 #[derive(Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
-pub enum Activation {
+pub enum SkillMode {
 	#[default]
-	Waiting,
-	Primed,
-	ActiveAfter(Duration),
+	Hold,
+	Release,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -108,7 +107,7 @@ pub enum Activation {
 pub struct QueuedSkill {
 	pub skill: Skill,
 	pub key: SlotKey,
-	pub mode: Activation,
+	pub skill_mode: SkillMode,
 }
 
 impl QueuedSkill {
@@ -116,7 +115,7 @@ impl QueuedSkill {
 		Self {
 			skill,
 			key,
-			mode: Activation::Waiting,
+			skill_mode: SkillMode::Hold,
 		}
 	}
 }
@@ -139,9 +138,9 @@ impl InspectAble<SkillIcon> for QueuedSkill {
 	}
 }
 
-impl Prime for QueuedSkill {
-	fn prime(&mut self) {
-		self.mode = Activation::Primed;
+impl ReleaseSkill for QueuedSkill {
+	fn release_skill(&mut self) {
+		self.skill_mode = SkillMode::Release;
 	}
 }
 
@@ -153,12 +152,12 @@ mod test_queued {
 	fn prime_skill() {
 		let mut queued = QueuedSkill {
 			skill: Skill::default(),
-			mode: Activation::Waiting,
+			skill_mode: SkillMode::Hold,
 			..default()
 		};
-		queued.prime();
+		queued.release_skill();
 
-		assert_eq!(Activation::Primed, queued.mode);
+		assert_eq!(SkillMode::Release, queued.skill_mode);
 	}
 }
 
