@@ -1,7 +1,7 @@
 use crate::{
 	SkillDto,
-	components::queue::{Queue, State},
-	skills::{Activation, QueuedSkill, Skill},
+	components::queue::{Queue, SkillElapsed, State},
+	skills::{QueuedSkill, Skill, SkillMode},
 };
 use common::{
 	dto::duration_secs_f32::DurationSecsF32,
@@ -16,16 +16,25 @@ use std::time::Duration;
 pub struct QueueDto {
 	queue: Vec<QueuedSkillDto>,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	duration: Option<DurationSecsF32>,
+	elapsed: Option<SkillElapsed<DurationSecsF32>>,
 	state: State,
 }
 
 impl From<Queue> for QueueDto {
-	fn from(queue: Queue) -> Self {
+	fn from(
+		Queue {
+			queue,
+			active: elapsed,
+			state,
+		}: Queue,
+	) -> Self {
 		Self {
-			queue: queue.queue.into_iter().map(QueuedSkillDto::from).collect(),
-			duration: queue.duration.map(DurationSecsF32::from),
-			state: queue.state,
+			queue: queue.into_iter().map(QueuedSkillDto::from).collect(),
+			elapsed: elapsed.map(|SkillElapsed { active, released }| SkillElapsed {
+				active: DurationSecsF32::from(active),
+				released: DurationSecsF32::from(released),
+			}),
+			state,
 		}
 	}
 }
@@ -36,7 +45,7 @@ impl TryLoadFrom<QueueDto> for Queue {
 	fn try_load_from<TLoadAsset>(
 		QueueDto {
 			queue,
-			duration,
+			elapsed,
 			state,
 		}: QueueDto,
 		asset_server: &mut TLoadAsset,
@@ -52,7 +61,10 @@ impl TryLoadFrom<QueueDto> for Queue {
 					skill
 				})
 				.collect(),
-			duration: duration.map(Duration::from),
+			active: elapsed.map(|SkillElapsed { active, released }| SkillElapsed {
+				active: Duration::from(active),
+				released: Duration::from(released),
+			}),
 			state,
 		})
 	}
@@ -61,16 +73,16 @@ impl TryLoadFrom<QueueDto> for Queue {
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct QueuedSkillDto {
 	skill: SkillDto,
-	slot_key: SlotKey,
-	mode: Activation,
+	key: SlotKey,
+	skill_mode: SkillMode,
 }
 
 impl From<QueuedSkill> for QueuedSkillDto {
 	fn from(skill: QueuedSkill) -> Self {
 		Self {
 			skill: SkillDto::from(skill.skill),
-			slot_key: skill.key,
-			mode: skill.mode,
+			key: skill.key,
+			skill_mode: skill.skill_mode,
 		}
 	}
 }
@@ -81,8 +93,8 @@ impl TryLoadFrom<QueuedSkillDto> for QueuedSkill {
 	fn try_load_from<TLoadAsset>(
 		QueuedSkillDto {
 			skill,
-			slot_key,
-			mode,
+			key,
+			skill_mode: activation,
 		}: QueuedSkillDto,
 		asset_server: &mut TLoadAsset,
 	) -> Result<Self, Self::TInstantiationError>
@@ -93,8 +105,8 @@ impl TryLoadFrom<QueuedSkillDto> for QueuedSkill {
 
 		Ok(Self {
 			skill,
-			key: slot_key,
-			mode,
+			key,
+			skill_mode: activation,
 		})
 	}
 }

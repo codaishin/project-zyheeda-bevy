@@ -17,7 +17,7 @@ use crate::{
 };
 use common::{
 	tools::{action_key::slot::SlotKey, item_type::ItemType},
-	traits::{key_mappings::TryGetAction, state_duration::StateUpdate},
+	traits::{key_mappings::TryGetAction, state_duration::UpdatedStates},
 	zyheeda_commands::ZyheedaCommands,
 };
 
@@ -29,8 +29,8 @@ pub(crate) trait Flush {
 	fn flush(&mut self);
 }
 
-pub(crate) trait IterWaitingMut<TItem> {
-	fn iter_waiting_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut TItem>
+pub(crate) trait IterHoldingMut<TItem> {
+	fn iter_holding_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut TItem>
 	where
 		TItem: 'a;
 }
@@ -44,14 +44,21 @@ pub(crate) trait IterAddedMut {
 		Self::TItem: 'a;
 }
 
-pub(crate) trait Prime {
-	fn prime(&mut self);
+pub(crate) trait ReleaseSkill {
+	/// Release a skill. What this means depends on the actual skill behavior.
+	///
+	/// For instance:
+	/// - A shield is dropped.
+	/// - A pistol shoots a projectile
+	fn release_skill(&mut self);
 }
 
 pub(crate) trait GetActiveSkill<TSkillState> {
-	fn get_active(
-		&mut self,
-	) -> Option<impl GetSkillBehavior + GetAnimationStrategy + StateUpdate<TSkillState>>;
+	type TActive<'a>: GetSkillBehavior + GetAnimationStrategy + UpdatedStates<TSkillState>
+	where
+		Self: 'a;
+
+	fn get_active(&mut self) -> Option<Self::TActive<'_>>;
 	fn clear_active(&mut self);
 }
 

@@ -2,7 +2,7 @@ pub(crate) mod dto;
 
 use crate::{
 	QueueDto,
-	skills::{Activation, AnimationStrategy, QueuedSkill, RunSkillBehavior, Skill, SkillState},
+	skills::{AnimationStrategy, QueuedSkill, RunSkillBehavior, Skill, SkillMode, SkillState},
 	traits::{
 		Enqueue,
 		Flush,
@@ -10,7 +10,7 @@ use crate::{
 		GetAnimationStrategy,
 		GetSkillBehavior,
 		IterAddedMut,
-		IterWaitingMut,
+		IterHoldingMut,
 	},
 };
 use bevy::prelude::*;
@@ -38,16 +38,26 @@ enum State {
 #[savable_component(dto = QueueDto)]
 pub struct Queue {
 	queue: VecDeque<QueuedSkill>,
-	duration: Option<Duration>,
+	active: Option<SkillElapsed<Duration>>,
 	state: State,
+}
+
+impl Queue {
+	fn unchanged_length(&self) -> usize {
+		let Queue { queue, state, .. } = self;
+		match state {
+			State::Flushed => queue.len(),
+			State::Changed { len_before_change } => *len_before_change,
+		}
+	}
 }
 
 impl Default for Queue {
 	fn default() -> Self {
 		Self {
-			queue: default(),
-			duration: default(),
-			state: default(),
+			queue: VecDeque::from([]),
+			active: None,
+			state: State::Flushed,
 		}
 	}
 }
@@ -57,7 +67,7 @@ impl Queue {
 	pub fn new<const N: usize>(items: [QueuedSkill; N]) -> Self {
 		Self {
 			queue: VecDeque::from(items),
-			duration: None,
+			active: None,
 			state: State::Flushed,
 		}
 	}
@@ -89,7 +99,7 @@ impl Flush for Queue {
 	fn flush(&mut self) {
 		self.state = State::Flushed;
 
-		if self.duration.is_some() {
+		if self.active.is_some() {
 			return;
 		}
 
@@ -97,14 +107,14 @@ impl Flush for Queue {
 	}
 }
 
-impl IterWaitingMut<QueuedSkill> for Queue {
-	fn iter_waiting_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut QueuedSkill>
+impl IterHoldingMut<QueuedSkill> for Queue {
+	fn iter_holding_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut QueuedSkill>
 	where
 		QueuedSkill: 'a,
 	{
 		self.queue
 			.iter_mut()
-			.filter(|skill| skill.mode == Activation::Waiting)
+			.filter(|skill| skill.skill_mode == SkillMode::Hold)
 	}
 }
 
@@ -112,23 +122,88 @@ impl IterAddedMut for Queue {
 	type TItem = QueuedSkill;
 
 	fn added_none(&self) -> bool {
-		unchanged_length(self) == self.queue.len()
+		self.unchanged_length() == self.queue.len()
 	}
 
 	fn iter_added_mut<'a>(&'a mut self) -> impl DoubleEndedIterator<Item = &'a mut QueuedSkill>
 	where
 		QueuedSkill: 'a,
 	{
-		let unchanged_length = unchanged_length(self);
+		let unchanged_length = self.unchanged_length();
 
 		self.queue.iter_mut().skip(unchanged_length)
 	}
 }
 
-fn unchanged_length(Queue { queue, state, .. }: &Queue) -> usize {
-	match state {
-		State::Flushed => queue.len(),
-		State::Changed { len_before_change } => *len_before_change,
+impl GetActiveSkill<SkillState> for Queue {
+	type TActive<'a>
+		= ActiveSkill<'a>
+	where
+		Self: 'a;
+
+	fn get_active(&mut self) -> Option<Self::TActive<'_>> {
+		let skill = self.queue.front_mut()?;
+		let elapsed = self.active.get_or_insert_default();
+
+		if skill.skill_mode == SkillMode::Release && elapsed.released == Duration::MAX {
+			elapsed.released = elapsed.active;
+		}
+
+		Some(ActiveSkill { skill, elapsed })
+	}
+
+	fn clear_active(&mut self) {
+		self.active = None;
+	}
+}
+
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+pub(crate) struct SkillElapsed<TDuration> {
+	active: TDuration,
+	released: TDuration,
+}
+
+impl Default for SkillElapsed<Duration> {
+	fn default() -> Self {
+		Self {
+			active: Duration::ZERO,
+			released: Duration::MAX,
+		}
+	}
+}
+
+pub(crate) struct ActiveSkill<'a> {
+	skill: &'a mut QueuedSkill,
+	elapsed: &'a mut SkillElapsed<Duration>,
+}
+
+impl StateDuration<SkillState> for ActiveSkill<'_> {
+	fn get_state_duration(&self, key: SkillState) -> Duration {
+		match (key, &self.skill.skill_mode) {
+			(SkillState::Aim, SkillMode::Hold) => Duration::MAX,
+			(SkillState::Aim, SkillMode::Release) => self.elapsed.released,
+			(SkillState::Active, _) => self.skill.skill.cast_time,
+		}
+	}
+
+	fn elapsed(&self) -> Duration {
+		self.elapsed.active
+	}
+
+	fn set_elapsed(&mut self, elapsed: Duration) {
+		self.elapsed.active = elapsed;
+	}
+}
+
+impl GetSkillBehavior for ActiveSkill<'_> {
+	fn behavior(&self) -> (SlotKey, RunSkillBehavior) {
+		(self.skill.key, self.skill.skill.behavior.clone())
+	}
+}
+
+impl GetAnimationStrategy for ActiveSkill<'_> {
+	fn animation_strategy(&self) -> AnimationStrategy {
+		self.skill.skill.animation
 	}
 }
 
@@ -244,7 +319,7 @@ mod test_queue_collection {
 
 		let queue_after_1_flush = Queue {
 			queue: queue.queue.clone(),
-			duration: queue.duration,
+			active: queue.active,
 			state: queue.state.clone(),
 		};
 
@@ -252,7 +327,7 @@ mod test_queue_collection {
 
 		let queue_after_2_flushes = Queue {
 			queue: queue.queue.clone(),
-			duration: queue.duration,
+			active: queue.active,
 			state: queue.state.clone(),
 		};
 
@@ -485,7 +560,7 @@ mod test_queue_collection {
 			SlotKey(42),
 		));
 
-		queue.duration = Some(Duration::from_millis(42));
+		queue.active = Some(SkillElapsed::default());
 		queue.flush();
 
 		assert_eq!(
@@ -498,99 +573,31 @@ mod test_queue_collection {
 	}
 
 	#[test]
-	fn iter_waiting() {
+	fn iter_holding() {
 		let skills = [
+			QueuedSkill {
+				key: SlotKey(11),
+				skill: Skill {
+					token: Token::from("holding"),
+					..default()
+				},
+				skill_mode: SkillMode::Hold,
+			},
 			QueuedSkill {
 				key: SlotKey(11),
 				skill: Skill {
 					token: Token::from("active"),
 					..default()
 				},
-				mode: Activation::ActiveAfter(Duration::from_millis(100)),
-			},
-			QueuedSkill {
-				key: SlotKey(11),
-				skill: Skill {
-					token: Token::from("waiting"),
-					..default()
-				},
-				mode: Activation::Waiting,
-			},
-			QueuedSkill {
-				key: SlotKey(11),
-				skill: Skill {
-					token: Token::from("primed"),
-					..default()
-				},
-				mode: Activation::Primed,
+				skill_mode: SkillMode::Release,
 			},
 		];
 		let mut queue = Queue::new(skills.clone());
 
 		assert_eq!(
-			vec![&skills[1]],
-			queue.iter_waiting_mut().collect::<Vec<_>>()
+			vec![&skills[0]],
+			queue.iter_holding_mut().collect::<Vec<_>>()
 		);
-	}
-}
-
-struct ActiveSkill<'a> {
-	skill: &'a Skill,
-	slot_key: &'a SlotKey,
-	mode: &'a mut Activation,
-	duration: &'a mut Duration,
-}
-
-impl GetActiveSkill<SkillState> for Queue {
-	#[allow(refining_impl_trait)]
-	fn get_active(
-		&mut self,
-	) -> Option<impl GetSkillBehavior + GetAnimationStrategy + StateDuration<SkillState>> {
-		let skill = self.queue.front_mut()?;
-
-		if self.duration.is_none() {
-			self.duration = Some(Duration::default());
-		}
-
-		Some(ActiveSkill {
-			skill: &skill.skill,
-			slot_key: &skill.key,
-			mode: &mut skill.mode,
-			duration: self.duration.as_mut()?,
-		})
-	}
-
-	fn clear_active(&mut self) {
-		self.duration = None;
-	}
-}
-
-impl StateDuration<SkillState> for ActiveSkill<'_> {
-	fn get_state_duration(&self, key: SkillState) -> Duration {
-		match (key, &self.mode) {
-			(SkillState::Aim, Activation::Primed | Activation::Waiting) => Duration::MAX,
-			(SkillState::Aim, Activation::ActiveAfter(duration)) => *duration,
-			(SkillState::Active, _) => self.skill.cast_time,
-		}
-	}
-
-	fn elapsed_mut(&mut self) -> &mut Duration {
-		if let Activation::Primed = self.mode {
-			*self.mode = Activation::ActiveAfter(*self.duration)
-		}
-		self.duration
-	}
-}
-
-impl GetSkillBehavior for ActiveSkill<'_> {
-	fn behavior(&self) -> (SlotKey, RunSkillBehavior) {
-		(*self.slot_key, self.skill.behavior.clone())
-	}
-}
-
-impl GetAnimationStrategy for ActiveSkill<'_> {
-	fn animation_strategy(&self) -> AnimationStrategy {
-		self.skill.animation
 	}
 }
 
@@ -608,8 +615,12 @@ mod test_queue_active_skill {
 	use test_case::test_case;
 
 	#[test]
-	fn get_phasing_times_waiting() {
+	fn get_phase_times_for_holding() {
 		let mut queue = Queue {
+			active: Some(SkillElapsed {
+				active: Duration::from_millis(42),
+				..default()
+			}),
 			queue: VecDeque::from([
 				QueuedSkill {
 					skill: Skill {
@@ -617,7 +628,7 @@ mod test_queue_active_skill {
 						..default()
 					},
 					key: SlotKey(11),
-					mode: Activation::Waiting,
+					skill_mode: SkillMode::Hold,
 				},
 				QueuedSkill::default(),
 			]),
@@ -636,8 +647,12 @@ mod test_queue_active_skill {
 	}
 
 	#[test]
-	fn get_phasing_times_primed() {
+	fn get_phase_times_for_released() {
 		let mut queue = Queue {
+			active: Some(SkillElapsed {
+				active: Duration::from_millis(42),
+				released: Duration::from_millis(100),
+			}),
 			queue: VecDeque::from([
 				QueuedSkill {
 					skill: Skill {
@@ -645,27 +660,31 @@ mod test_queue_active_skill {
 						..default()
 					},
 					key: SlotKey(11),
-					mode: Activation::Primed,
+					skill_mode: SkillMode::Release,
 				},
 				QueuedSkill::default(),
 			]),
 			..default()
 		};
 
-		let manager = queue.get_active().unwrap();
+		let active = queue.get_active().unwrap();
 
 		assert_eq!(
-			[Duration::MAX, Duration::from_millis(1)],
+			[Duration::from_millis(100), Duration::from_millis(1)],
 			[
-				manager.get_state_duration(SkillState::Aim),
-				manager.get_state_duration(SkillState::Active),
+				active.get_state_duration(SkillState::Aim),
+				active.get_state_duration(SkillState::Active),
 			]
 		)
 	}
 
 	#[test]
-	fn get_phasing_times_active() {
+	fn get_phase_times_for_newly_released() {
 		let mut queue = Queue {
+			active: Some(SkillElapsed {
+				active: Duration::from_millis(42),
+				..default()
+			}),
 			queue: VecDeque::from([
 				QueuedSkill {
 					skill: Skill {
@@ -673,28 +692,63 @@ mod test_queue_active_skill {
 						..default()
 					},
 					key: SlotKey(11),
-					mode: Activation::ActiveAfter(Duration::from_millis(42)),
+					skill_mode: SkillMode::Release,
 				},
 				QueuedSkill::default(),
 			]),
 			..default()
 		};
 
-		let manager = queue.get_active().unwrap();
+		let active = queue.get_active().unwrap();
 
 		assert_eq!(
 			[Duration::from_millis(42), Duration::from_millis(1)],
 			[
-				manager.get_state_duration(SkillState::Aim),
-				manager.get_state_duration(SkillState::Active),
+				active.get_state_duration(SkillState::Aim),
+				active.get_state_duration(SkillState::Active),
 			]
+		)
+	}
+
+	#[test]
+	fn set_elapsed_for_newly_released() {
+		let mut queue = Queue {
+			active: Some(SkillElapsed {
+				active: Duration::from_millis(42),
+				..default()
+			}),
+			queue: VecDeque::from([
+				QueuedSkill {
+					skill: Skill {
+						cast_time: Duration::from_millis(1),
+						..default()
+					},
+					key: SlotKey(11),
+					skill_mode: SkillMode::Release,
+				},
+				QueuedSkill::default(),
+			]),
+			..default()
+		};
+
+		_ = queue.get_active();
+
+		assert_eq!(
+			Some(SkillElapsed {
+				active: Duration::from_millis(42),
+				released: Duration::from_millis(42),
+			}),
+			queue.active
 		)
 	}
 
 	#[test]
 	fn get_duration() {
 		let mut queue = Queue {
-			duration: Some(Duration::from_secs(11)),
+			active: Some(SkillElapsed {
+				active: Duration::from_millis(11),
+				..default()
+			}),
 			queue: VecDeque::from([QueuedSkill {
 				key: SlotKey(11),
 				..default()
@@ -702,38 +756,15 @@ mod test_queue_active_skill {
 			..default()
 		};
 
-		let mut manager = queue.get_active().unwrap();
+		let active = queue.get_active().unwrap();
 
-		assert_eq!(&mut Duration::from_secs(11), manager.elapsed_mut())
-	}
-
-	#[test]
-	fn if_first_skill_primed_set_active_with_current_duration() {
-		let mut queue = Queue {
-			duration: Some(Duration::from_secs(11)),
-			queue: VecDeque::from([QueuedSkill {
-				key: SlotKey(11),
-				mode: Activation::Primed,
-				..default()
-			}]),
-			..default()
-		};
-
-		{
-			let mut manager = queue.get_active().unwrap();
-			_ = manager.elapsed_mut();
-		}
-
-		assert_eq!(
-			Activation::ActiveAfter(Duration::from_secs(11)),
-			queue.queue.front().unwrap().mode
-		)
+		assert_eq!(Duration::from_millis(11), active.elapsed())
 	}
 
 	#[test]
 	fn clear_duration_when_calling_clear() {
 		let mut queue = Queue {
-			duration: Some(Duration::from_secs(11)),
+			active: Some(SkillElapsed::default()),
 			queue: VecDeque::from([QueuedSkill {
 				key: SlotKey(11),
 				..default()
@@ -743,13 +774,13 @@ mod test_queue_active_skill {
 
 		queue.clear_active();
 
-		assert_eq!(None, queue.duration);
+		assert_eq!(None, queue.active);
 	}
 
 	#[test]
 	fn do_not_pop_front_on_flush_when_duration_set() {
 		let mut queue = Queue {
-			duration: Some(Duration::from_secs(11)),
+			active: Some(SkillElapsed::default()),
 			queue: VecDeque::from([QueuedSkill {
 				key: SlotKey(11),
 				..default()
@@ -771,7 +802,7 @@ mod test_queue_active_skill {
 	#[test]
 	fn set_default_duration_when_getting_manager() {
 		let mut queue = Queue {
-			duration: None,
+			active: None,
 			queue: VecDeque::from([QueuedSkill {
 				key: SlotKey(11),
 				..default()
@@ -780,11 +811,8 @@ mod test_queue_active_skill {
 		};
 
 		assert_eq!(
-			(Some(Duration::default()), Some(Duration::default())),
-			(
-				queue.get_active().map(|mut m| *m.elapsed_mut()),
-				queue.duration
-			)
+			(Some(Duration::default()), Some(SkillElapsed::default())),
+			(queue.get_active().map(|m| m.elapsed()), queue.active)
 		);
 	}
 
@@ -797,7 +825,7 @@ mod test_queue_active_skill {
 
 		queue.get_active();
 
-		assert_eq!(None, queue.duration);
+		assert_eq!(None, queue.active);
 	}
 
 	#[test]
@@ -810,13 +838,15 @@ mod test_queue_active_skill {
 			}));
 
 		let active = ActiveSkill {
-			skill: &Skill {
-				behavior: RunSkillBehavior::OnActive(behaviors.clone()),
+			skill: &mut QueuedSkill {
+				skill: Skill {
+					behavior: RunSkillBehavior::OnActive(behaviors.clone()),
+					..default()
+				},
+				key: SlotKey(42),
 				..default()
 			},
-			slot_key: &SlotKey(42),
-			mode: &mut Activation::default(),
-			duration: &mut Duration::default(),
+			elapsed: &mut SkillElapsed::default(),
 		};
 
 		assert_eq!(
@@ -835,13 +865,15 @@ mod test_queue_active_skill {
 			}));
 
 		let active = ActiveSkill {
-			skill: &mut Skill {
-				behavior: RunSkillBehavior::OnAim(behaviors.clone()),
+			skill: &mut QueuedSkill {
+				skill: Skill {
+					behavior: RunSkillBehavior::OnAim(behaviors.clone()),
+					..default()
+				},
+				key: SlotKey(86),
 				..default()
 			},
-			slot_key: &SlotKey(86),
-			mode: &mut Activation::default(),
-			duration: &mut Duration::default(),
+			elapsed: &mut SkillElapsed::default(),
 		};
 
 		assert_eq!(
@@ -855,13 +887,15 @@ mod test_queue_active_skill {
 	#[test_case(AnimationStrategy::None; "none")]
 	fn get_animation(animation: AnimationStrategy) {
 		let active = ActiveSkill {
-			skill: &Skill {
-				animation,
+			skill: &mut QueuedSkill {
+				skill: Skill {
+					animation,
+					..default()
+				},
+				key: default(),
 				..default()
 			},
-			slot_key: &default(),
-			mode: &mut default(),
-			duration: &mut default(),
+			elapsed: &mut default(),
 		};
 
 		assert_eq!(animation, active.animation_strategy());
@@ -870,13 +904,15 @@ mod test_queue_active_skill {
 	#[test]
 	fn get_ignore_animation() {
 		let active = ActiveSkill {
-			skill: &mut Skill {
-				animation: AnimationStrategy::None,
-				..default()
+			skill: &mut QueuedSkill {
+				skill: Skill {
+					animation: AnimationStrategy::None,
+					..default()
+				},
+				key: SlotKey(11),
+				skill_mode: SkillMode::default(),
 			},
-			slot_key: &SlotKey(11),
-			mode: &mut Activation::default(),
-			duration: &mut Duration::default(),
+			elapsed: &mut SkillElapsed::default(),
 		};
 
 		assert_eq!(AnimationStrategy::None, active.animation_strategy())
@@ -885,13 +921,15 @@ mod test_queue_active_skill {
 	#[test]
 	fn get_none_animation() {
 		let active = ActiveSkill {
-			skill: &Skill {
-				animation: AnimationStrategy::None,
+			skill: &mut QueuedSkill {
+				skill: Skill {
+					animation: AnimationStrategy::None,
+					..default()
+				},
+				key: SlotKey(11),
 				..default()
 			},
-			slot_key: &SlotKey(11),
-			mode: &mut Activation::default(),
-			duration: &mut Duration::default(),
+			elapsed: &mut SkillElapsed::default(),
 		};
 
 		assert_eq!(AnimationStrategy::None, active.animation_strategy())
