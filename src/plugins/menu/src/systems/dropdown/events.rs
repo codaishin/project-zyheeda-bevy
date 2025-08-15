@@ -1,5 +1,5 @@
 use crate::{components::dropdown::Dropdown, events::DropdownEvent};
-use bevy::prelude::{Added, Entity, EventWriter, Query, RemovedComponents};
+use bevy::prelude::*;
 
 pub(crate) fn dropdown_events<TItem: Send + Sync + 'static>(
 	dropdowns: Query<Entity, Added<Dropdown<TItem>>>,
@@ -18,11 +18,7 @@ pub(crate) fn dropdown_events<TItem: Send + Sync + 'static>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{
-		app::{App, Update},
-		prelude::Events,
-	};
-	use testing::SingleThreadedApp;
+	use testing::{SingleThreadedApp, get_current_update_events};
 
 	struct _Item;
 
@@ -41,12 +37,9 @@ mod tests {
 
 		app.update();
 
-		let events = app.world().resource::<Events<DropdownEvent>>();
-		let mut cursor = events.get_cursor();
-
 		assert_eq!(
 			vec![&DropdownEvent::Added(dropdown)],
-			cursor.read(events).collect::<Vec<_>>()
+			get_current_update_events!(app, DropdownEvent).collect::<Vec<_>>()
 		)
 	}
 
@@ -57,30 +50,21 @@ mod tests {
 
 		app.update();
 
-		let events = app.world().resource::<Events<DropdownEvent>>();
-		let mut cursor = events.get_cursor();
-
 		assert_eq!(
 			vec![] as Vec<&DropdownEvent>,
-			cursor.read(events).collect::<Vec<_>>()
+			get_current_update_events!(app, DropdownEvent).collect::<Vec<_>>()
 		)
 	}
 
 	#[test]
 	fn send_added_event_only_when_added() {
 		let mut app = setup();
-		let dropdown = app.world_mut().spawn(Dropdown::<_Item>::default()).id();
+		app.world_mut().spawn(Dropdown::<_Item>::default());
 
 		app.update();
 		app.update();
 
-		let events = app.world().resource::<Events<DropdownEvent>>();
-		let mut cursor = events.get_cursor();
-
-		assert_eq!(
-			vec![&DropdownEvent::Added(dropdown)],
-			cursor.read(events).collect::<Vec<_>>()
-		)
+		assert_eq!(None, get_current_update_events!(app, DropdownEvent).next())
 	}
 
 	#[test]
@@ -89,22 +73,14 @@ mod tests {
 		let dropdown = app.world_mut().spawn(Dropdown::<_Item>::default()).id();
 
 		app.update();
-
 		app.world_mut()
 			.entity_mut(dropdown)
 			.remove::<Dropdown<_Item>>();
-
 		app.update();
 
-		let events = app.world().resource::<Events<DropdownEvent>>();
-		let mut cursor = events.get_cursor();
-
 		assert_eq!(
-			vec![
-				&DropdownEvent::Added(dropdown),
-				&DropdownEvent::Removed(dropdown)
-			],
-			cursor.read(events).collect::<Vec<_>>()
+			vec![&DropdownEvent::Removed(dropdown)],
+			get_current_update_events!(app, DropdownEvent).collect::<Vec<_>>()
 		)
 	}
 }

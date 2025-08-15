@@ -1,5 +1,5 @@
 use crate::traits::{FromCollisionEvent, Track, TrackState};
-use bevy::prelude::{Event, EventReader, EventWriter, Query, ResMut, Resource};
+use bevy::prelude::*;
 use bevy_rapier3d::prelude::CollisionEvent;
 use common::components::collider_relationship::ColliderOfInteractionTarget;
 
@@ -29,12 +29,8 @@ pub(crate) fn map_collision_events_to<TEvent, TEventTracker>(
 mod tests {
 	use super::*;
 	use crate::traits::TrackState;
-	use bevy::{
-		app::{App, Update},
-		prelude::{Entity, Events},
-	};
 	use bevy_rapier3d::rapier::prelude::CollisionEventFlags;
-	use testing::SingleThreadedApp;
+	use testing::{SingleThreadedApp, get_current_update_events};
 
 	#[derive(Resource, Default)]
 	struct _Tracker<const STATE_CHANGED: bool>;
@@ -92,11 +88,10 @@ mod tests {
 
 		app.update();
 
-		let events = app.world().resource::<Events<_Event>>();
-		let mut cursor = events.get_cursor();
-		let events = cursor.read(events);
-
-		assert_eq!(vec![&_Event, &_Event], events.collect::<Vec<_>>())
+		assert_eq!(
+			vec![&_Event, &_Event],
+			get_current_update_events!(app, _Event).collect::<Vec<_>>()
+		)
 	}
 
 	#[test]
@@ -138,11 +133,10 @@ mod tests {
 
 		app.update();
 
-		let events = app.world().resource::<Events<_Event>>();
-		let mut cursor = events.get_cursor();
-		let events = cursor.read(events);
-
-		assert_eq!(vec![&_Event(a, b)], events.collect::<Vec<_>>())
+		assert_eq!(
+			vec![&_Event(a, b)],
+			get_current_update_events!(app, _Event).collect::<Vec<_>>()
+		)
 	}
 
 	#[test]
@@ -174,10 +168,9 @@ mod tests {
 
 		app.update();
 
-		let events = app.world().resource::<Events<_Event>>();
-		let mut cursor = events.get_cursor();
-		let events = cursor.read(events);
-
-		assert_eq!(vec![] as Vec<&_Event>, events.collect::<Vec<_>>())
+		assert_eq!(
+			vec![] as Vec<&_Event>,
+			get_current_update_events!(app, _Event).collect::<Vec<_>>()
+		)
 	}
 }
