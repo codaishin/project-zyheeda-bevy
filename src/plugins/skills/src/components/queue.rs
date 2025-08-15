@@ -8,9 +8,10 @@ use crate::{
 		Flush,
 		GetActiveSkill,
 		GetAnimationStrategy,
+		GetHoldingMut,
 		GetSkillBehavior,
 		IterAddedMut,
-		IterHoldingMut,
+		IterHolding,
 	},
 };
 use bevy::prelude::*;
@@ -107,13 +108,30 @@ impl Flush for Queue {
 	}
 }
 
-impl IterHoldingMut<QueuedSkill> for Queue {
-	fn iter_holding_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut QueuedSkill>
+impl<TKey> GetHoldingMut<TKey> for Queue
+where
+	TKey: Into<SlotKey>,
+{
+	type TItem = QueuedSkill;
+
+	fn get_holding_mut<'a>(&'a mut self, key: TKey) -> impl Iterator<Item = &'a mut QueuedSkill>
 	where
 		QueuedSkill: 'a,
 	{
+		let key: SlotKey = key.into();
+
 		self.queue
 			.iter_mut()
+			.filter(move |skill| skill.skill_mode == SkillMode::Hold && skill.key == key)
+	}
+}
+
+impl IterHolding for Queue {
+	type TItem = QueuedSkill;
+
+	fn iter_holding(&self) -> impl Iterator<Item = &'_ QueuedSkill> {
+		self.queue
+			.iter()
 			.filter(|skill| skill.skill_mode == SkillMode::Hold)
 	}
 }
@@ -592,11 +610,44 @@ mod test_queue_collection {
 				skill_mode: SkillMode::Release,
 			},
 		];
+		let queue = Queue::new(skills.clone());
+
+		assert_eq!(vec![&skills[0]], queue.iter_holding().collect::<Vec<_>>());
+	}
+
+	#[test]
+	fn get_holding_mut() {
+		let skills = [
+			QueuedSkill {
+				key: SlotKey(12),
+				skill: Skill {
+					token: Token::from("holding"),
+					..default()
+				},
+				skill_mode: SkillMode::Hold,
+			},
+			QueuedSkill {
+				key: SlotKey(11),
+				skill: Skill {
+					token: Token::from("holding"),
+					..default()
+				},
+				skill_mode: SkillMode::Hold,
+			},
+			QueuedSkill {
+				key: SlotKey(11),
+				skill: Skill {
+					token: Token::from("active"),
+					..default()
+				},
+				skill_mode: SkillMode::Release,
+			},
+		];
 		let mut queue = Queue::new(skills.clone());
 
 		assert_eq!(
-			vec![&skills[0]],
-			queue.iter_holding_mut().collect::<Vec<_>>()
+			vec![&skills[1]],
+			queue.get_holding_mut(SlotKey(11)).collect::<Vec<_>>()
 		);
 	}
 }

@@ -29,10 +29,18 @@ pub(crate) trait Flush {
 	fn flush(&mut self);
 }
 
-pub(crate) trait IterHoldingMut<TItem> {
-	fn iter_holding_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut TItem>
+pub(crate) trait IterHolding {
+	type TItem;
+
+	fn iter_holding(&self) -> impl Iterator<Item = &'_ Self::TItem>;
+}
+
+pub(crate) trait GetHoldingMut<TKey> {
+	type TItem;
+
+	fn get_holding_mut<'a>(&'a mut self, key: TKey) -> impl Iterator<Item = &'a mut Self::TItem>
 	where
-		TItem: 'a;
+		Self::TItem: 'a;
 }
 
 pub(crate) trait IterAddedMut {

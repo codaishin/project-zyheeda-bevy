@@ -1,16 +1,20 @@
 mod behaviors;
 mod components;
+mod events;
 mod item;
 mod skills;
 mod systems;
 mod tools;
 mod traits;
 
-use crate::components::{
-	combos::dto::CombosDto,
-	combos_time_out::dto::CombosTimeOutDto,
-	loadout::Loadout,
-	queue::dto::QueueDto,
+use crate::{
+	components::{
+		combos::dto::CombosDto,
+		combos_time_out::dto::CombosTimeOutDto,
+		loadout::Loadout,
+		queue::dto::QueueDto,
+	},
+	events::skill::SkillEvent,
 };
 use bevy::prelude::*;
 use common::{
@@ -52,7 +56,7 @@ use components::{
 	swapper::Swapper,
 };
 use item::{Item, dto::ItemDto};
-use skills::{QueuedSkill, RunSkillBehavior, Skill, dto::SkillDto};
+use skills::{RunSkillBehavior, Skill, dto::SkillDto};
 use std::marker::PhantomData;
 use systems::{
 	advance_active_skill::advance_active_skill,
@@ -150,10 +154,11 @@ where
 			TPlayers,
 		>;
 
-		app.add_systems(
+		app.add_event::<SkillEvent>().add_systems(
 			Update,
 			(
-				get_inputs.pipe(enqueue::<Slots, Queue, QueuedSkill>),
+				get_inputs.pipe(SkillEvent::trigger_from_input_for::<TPlayers::TPlayer, Queue>),
+				enqueue::<Slots, Queue>,
 				Combos::update::<Queue>,
 				flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
 				advance_active_skill::<Queue, TPlayers, TBehaviors, SkillExecuter, Virtual>

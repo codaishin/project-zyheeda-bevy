@@ -1,107 +1,78 @@
-use super::get_inputs::Input;
 use crate::{
+	events::skill::SkillEvent,
 	item::Item,
 	skills::Skill,
-	traits::{Enqueue, IterHoldingMut, ReleaseSkill},
+	traits::{Enqueue, GetHoldingMut, ReleaseSkill},
 };
 use bevy::{ecs::component::Mutable, prelude::*};
-use common::{
-	tools::action_key::slot::{PlayerSlot, SlotKey},
-	traits::accessors::get::{GetRef, RefAs, RefInto},
-};
+use common::{tools::action_key::slot::SlotKey, traits::accessors::get::GetRef};
 
-pub(crate) fn enqueue<TSlots, TQueue, TQueuedSkill>(
-	input: In<Input>,
+pub(crate) fn enqueue<TSlots, TQueue>(
+	mut skill_events: EventReader<SkillEvent>,
 	mut agents: Query<(&TSlots, &mut TQueue)>,
 	items: Res<Assets<Item>>,
 	skills: Res<Assets<Skill>>,
 ) where
+	TQueue: Enqueue<(Skill, SlotKey)> + GetHoldingMut<SlotKey> + Component<Mutability = Mutable>,
+	TQueue::TItem: ReleaseSkill,
 	for<'a> TSlots: GetRef<SlotKey, TValue<'a> = &'a Handle<Item>> + Component,
-	TQueue:
-		Enqueue<(Skill, SlotKey)> + IterHoldingMut<TQueuedSkill> + Component<Mutability = Mutable>,
-	TQueuedSkill: ReleaseSkill + for<'a> RefInto<'a, SlotKey>,
 {
-	for (slots, mut queue) in &mut agents {
-		let queue = queue.as_mut();
-		enqueue_new_skills(&input, queue, slots, &items, &skills);
-		release_skills(&input, queue);
+	for event in skill_events.read() {
+		match event {
+			SkillEvent::Hold { agent, key } => {
+				let Ok((slots, mut queue)) = agents.get_mut(*agent) else {
+					continue;
+				};
+
+				if let Some(skill) = get_skill(key, slots, &items, &skills) {
+					queue.enqueue((skill.clone(), *key));
+				};
+			}
+			SkillEvent::Release { agent, key } => {
+				let Ok((_, mut queue)) = agents.get_mut(*agent) else {
+					continue;
+				};
+
+				for skill in queue.get_holding_mut(*key) {
+					skill.release_skill();
+				}
+			}
+		}
 	}
 }
 
-fn enqueue_new_skills<TSlots, TQueue>(
-	input: &In<Input>,
-	queue: &mut TQueue,
-	slots: &TSlots,
-	items: &Assets<Item>,
-	skills: &Assets<Skill>,
-) where
-	for<'a> TSlots: GetRef<SlotKey, TValue<'a> = &'a Handle<Item>> + Component,
-	TQueue: Enqueue<(Skill, SlotKey)>,
+fn get_skill<'a, TSlots>(
+	key: &SlotKey,
+	slots: &'a TSlots,
+	items: &'a Assets<Item>,
+	skills: &'a Assets<Skill>,
+) -> Option<&'a Skill>
+where
+	TSlots: GetRef<SlotKey, TValue<'a> = &'a Handle<Item>>,
 {
-	for key in input.just_pressed.iter() {
-		enqueue_new_skill(key, queue, slots, items, skills);
-	}
-}
-
-fn enqueue_new_skill<TSlots, TQueue>(
-	key: &PlayerSlot,
-	queue: &mut TQueue,
-	slots: &TSlots,
-	items: &Assets<Item>,
-	skills: &Assets<Skill>,
-) where
-	for<'a> TSlots: GetRef<SlotKey, TValue<'a> = &'a Handle<Item>> + Component,
-	TQueue: Enqueue<(Skill, SlotKey)>,
-{
-	let key = SlotKey::from(*key);
-	let skill = slots
-		.get_ref(&key)
+	slots
+		.get_ref(key)
 		.and_then(|item_handle| items.get(item_handle))
 		.and_then(|item| item.skill.as_ref())
-		.and_then(|skill_handle| skills.get(skill_handle));
-
-	let Some(skill) = skill else {
-		return;
-	};
-
-	queue.enqueue((skill.clone(), key));
-}
-
-fn release_skills<TQueue, TQueuedSkill>(input: &In<Input>, queue: &mut TQueue)
-where
-	TQueue: IterHoldingMut<TQueuedSkill>,
-	TQueuedSkill: ReleaseSkill + for<'a> RefInto<'a, SlotKey>,
-{
-	for skill in queue.iter_holding_mut() {
-		let Ok(key) = PlayerSlot::try_from((*skill).ref_as::<SlotKey>()) else {
-			continue;
-		};
-		if input.pressed.contains(&key) {
-			continue;
-		}
-		skill.release_skill();
-	}
+		.and_then(|skill_handle| skills.get(skill_handle))
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{tools::action_key::slot::Side, traits::handles_localization::Token};
+	use common::{
+		tools::action_key::slot::{PlayerSlot, Side},
+		traits::handles_localization::Token,
+	};
 	use macros::NestedMocks;
 	use mockall::{automock, mock, predicate::eq};
 	use std::collections::HashMap;
 	use testing::{Mock, NestedMocks, SingleThreadedApp, new_handle, simple_init};
 
-	#[derive(Resource, Default)]
-	struct _Input(Input);
-
 	mock! {
 		_SkillQueued {}
 		impl ReleaseSkill for _SkillQueued {
 			fn release_skill(&mut self) {}
-		}
-		impl RefInto<'_,  SlotKey> for _SkillQueued {
-			fn ref_into(&self) -> SlotKey;
 		}
 	}
 
@@ -123,19 +94,27 @@ mod tests {
 
 	#[derive(Component)]
 	struct _Enqueue {
-		queued: Vec<Mock_SkillQueued>,
+		queued: HashMap<SlotKey, Mock_SkillQueued>,
 	}
 
 	impl Enqueue<(Skill, SlotKey)> for _Enqueue {
 		fn enqueue(&mut self, _: (Skill, SlotKey)) {}
 	}
 
-	impl IterHoldingMut<Mock_SkillQueued> for _Enqueue {
-		fn iter_holding_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut Mock_SkillQueued>
+	impl GetHoldingMut<SlotKey> for _Enqueue {
+		type TItem = Mock_SkillQueued;
+
+		fn get_holding_mut<'a>(
+			&'a mut self,
+			key: SlotKey,
+		) -> impl Iterator<Item = &'a mut Mock_SkillQueued>
 		where
 			Mock_SkillQueued: 'a,
 		{
-			self.queued.iter_mut()
+			self.queued
+				.iter_mut()
+				.filter(move |(k, _)| k == &&key)
+				.map(|(_, item)| item)
 		}
 	}
 
@@ -147,7 +126,7 @@ mod tests {
 	) -> App
 	where
 		TEnqueue: Enqueue<(Skill, SlotKey)>
-			+ IterHoldingMut<Mock_SkillQueued>
+			+ GetHoldingMut<SlotKey, TItem = Mock_SkillQueued>
 			+ Component<Mutability = Mutable>,
 	{
 		let mut app = App::new().single_threaded(Update);
@@ -164,20 +143,15 @@ mod tests {
 
 		app.insert_resource(item_assets);
 		app.insert_resource(skill_assets);
-		app.init_resource::<_Input>();
-
-		app.add_systems(
-			Update,
-			(move |input: Res<_Input>| input.0.clone())
-				.pipe(enqueue::<_Skills, TEnqueue, Mock_SkillQueued>),
-		);
+		app.add_event::<SkillEvent>();
+		app.add_systems(Update, enqueue::<_Skills, TEnqueue>);
 
 		app
 	}
 
 	#[allow(static_mut_refs)]
 	#[test]
-	fn enqueue_skill_from_skills() {
+	fn enqueue_skill_hold() {
 		#[derive(Component, NestedMocks)]
 		struct _Enqueue {
 			mock: Mock_Enqueue,
@@ -192,8 +166,13 @@ mod tests {
 
 		static mut EMPTY: [Mock_SkillQueued; 0] = [];
 
-		impl IterHoldingMut<Mock_SkillQueued> for _Enqueue {
-			fn iter_holding_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut Mock_SkillQueued>
+		impl GetHoldingMut<SlotKey> for _Enqueue {
+			type TItem = Mock_SkillQueued;
+
+			fn get_holding_mut<'a>(
+				&mut self,
+				_: SlotKey,
+			) -> impl Iterator<Item = &'a mut Mock_SkillQueued>
 			where
 				Mock_SkillQueued: 'a,
 			{
@@ -224,66 +203,53 @@ mod tests {
 			SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			item.clone(),
 		)]));
-		app.world_mut().spawn((
-			skills,
-			_Enqueue::new().with_mock(|mock| {
-				mock.expect_enqueue()
-					.times(1)
-					.with(eq((
-						Skill {
-							token: Token::from("my skill"),
-							..default()
-						},
-						SlotKey::from(PlayerSlot::Lower(Side::Right)),
-					)))
-					.return_const(());
-			}),
-		));
-
-		app.world_mut().resource_mut::<_Input>().0.just_pressed =
-			vec![PlayerSlot::Lower(Side::Right)];
-		app.update();
-	}
-
-	#[test]
-	fn release_skill_if_its_slot_is_not_pressed() {
-		let right = PlayerSlot::Lower(Side::Right);
-		let left = PlayerSlot::Lower(Side::Left);
-		let mut app = setup::<_Enqueue>(vec![], vec![]);
-		app.world_mut().spawn((
-			_Skills::default(),
-			_Enqueue {
-				queued: vec![Mock_SkillQueued::new_mock(|mock| {
-					mock.expect_ref_into().return_const(left);
-					mock.expect_release_skill().return_const(());
-				})],
-			},
-		));
-		app.world_mut().resource_mut::<_Input>().0.pressed = vec![right];
+		let agent = app
+			.world_mut()
+			.spawn((
+				skills,
+				_Enqueue::new().with_mock(|mock| {
+					mock.expect_enqueue()
+						.times(1)
+						.with(eq((
+							Skill {
+								token: Token::from("my skill"),
+								..default()
+							},
+							SlotKey::from(PlayerSlot::Lower(Side::Right)),
+						)))
+						.return_const(());
+				}),
+			))
+			.id();
+		app.world_mut().send_event(SkillEvent::Hold {
+			agent,
+			key: SlotKey::from(PlayerSlot::Lower(Side::Right)),
+		});
 
 		app.update();
 	}
 
 	#[test]
-	fn release_all_in_queue() {
+	fn release_skill_release() {
 		let mut app = setup::<_Enqueue>(vec![], vec![]);
-		app.world_mut().spawn((
-			_Skills::default(),
-			_Enqueue {
-				queued: vec![
-					Mock_SkillQueued::new_mock(|mock| {
-						mock.expect_release_skill().times(1).return_const(());
-						mock.expect_ref_into()
-							.return_const(PlayerSlot::Lower(Side::Right));
-					}),
-					Mock_SkillQueued::new_mock(|mock| {
-						mock.expect_release_skill().times(1).return_const(());
-						mock.expect_ref_into()
-							.return_const(PlayerSlot::Lower(Side::Left));
-					}),
-				],
-			},
-		));
+		let agent = app
+			.world_mut()
+			.spawn((
+				_Skills::default(),
+				_Enqueue {
+					queued: HashMap::from([(
+						SlotKey::from(PlayerSlot::Lower(Side::Left)),
+						Mock_SkillQueued::new_mock(|mock| {
+							mock.expect_release_skill().times(1).return_const(());
+						}),
+					)]),
+				},
+			))
+			.id();
+		app.world_mut().send_event(SkillEvent::Release {
+			agent,
+			key: SlotKey::from(PlayerSlot::Lower(Side::Left)),
+		});
 
 		app.update();
 	}
