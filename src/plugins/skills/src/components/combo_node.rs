@@ -54,7 +54,7 @@ where
 	where
 		Self: 'a;
 
-	fn get(&self, slot_key_path: &TKey) -> Option<&Skill> {
+	fn get_ref(&self, slot_key_path: &TKey) -> Option<&Skill> {
 		let mut value = None;
 		let mut combo_map = &self.0;
 
@@ -354,7 +354,7 @@ mod tests {
 			),
 		)]);
 
-		let skill = combos.get(&[SlotKey::from(PlayerSlot::Lower(Side::Right))]);
+		let skill = combos.get_ref(&[SlotKey::from(PlayerSlot::Lower(Side::Right))]);
 
 		assert_eq!(
 			Some(&Skill {
@@ -387,7 +387,7 @@ mod tests {
 			),
 		)]);
 
-		let skill = combos.get(&[
+		let skill = combos.get_ref(&[
 			SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			SlotKey::from(PlayerSlot::Lower(Side::Left)),
 		]);

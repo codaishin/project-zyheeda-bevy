@@ -11,7 +11,6 @@ use common::{
 	attributes::health::Health,
 	components::{life::Life, ui_node_for::UiNodeFor},
 	traits::{
-		accessors::get::GetterRef,
 		handles_enemies::HandlesEnemyBehaviors,
 		handles_graphics::UiCamera,
 		handles_player::HandlesPlayer,
@@ -43,7 +42,7 @@ where
 	TGraphics: ThreadSafe + UiCamera,
 {
 	fn build(&self, app: &mut App) {
-		let update_life_bars = bar::<Life, Health, Camera, TGraphics::TUiCamera>(Life::get);
+		let update_life_bars = bar::<Life, Health, Camera, TGraphics::TUiCamera>;
 		let render_life_bars = render_bar::<Health>;
 		let render_layer = UiNodeFor::<Bar>::render_layer::<TGraphics::TUiCamera>;
 

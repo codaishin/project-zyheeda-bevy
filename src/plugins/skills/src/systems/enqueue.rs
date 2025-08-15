@@ -7,7 +7,7 @@ use crate::{
 use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
 	tools::action_key::slot::{PlayerSlot, SlotKey},
-	traits::accessors::get::{GetField, GetRef, Getter},
+	traits::accessors::get::{GetRef, Getter, RefInto},
 };
 
 pub(crate) fn enqueue<TSlots, TQueue, TQueuedSkill>(
@@ -19,7 +19,7 @@ pub(crate) fn enqueue<TSlots, TQueue, TQueuedSkill>(
 	for<'a> TSlots: GetRef<SlotKey, TValue<'a> = &'a Handle<Item>> + Component,
 	TQueue:
 		Enqueue<(Skill, SlotKey)> + IterHoldingMut<TQueuedSkill> + Component<Mutability = Mutable>,
-	TQueuedSkill: ReleaseSkill + Getter<SlotKey>,
+	TQueuedSkill: ReleaseSkill + for<'a> RefInto<'a, SlotKey>,
 {
 	for (slots, mut queue) in &mut agents {
 		let queue = queue.as_mut();
@@ -55,7 +55,7 @@ fn enqueue_new_skill<TSlots, TQueue>(
 {
 	let key = SlotKey::from(*key);
 	let skill = slots
-		.get(&key)
+		.get_ref(&key)
 		.and_then(|item_handle| items.get(item_handle))
 		.and_then(|item| item.skill.as_ref())
 		.and_then(|skill_handle| skills.get(skill_handle));
@@ -70,10 +70,10 @@ fn enqueue_new_skill<TSlots, TQueue>(
 fn release_skills<TQueue, TQueuedSkill>(input: &In<Input>, queue: &mut TQueue)
 where
 	TQueue: IterHoldingMut<TQueuedSkill>,
-	TQueuedSkill: ReleaseSkill + Getter<SlotKey>,
+	TQueuedSkill: ReleaseSkill + for<'a> RefInto<'a, SlotKey>,
 {
 	for skill in queue.iter_holding_mut() {
-		let Ok(key) = PlayerSlot::try_from(SlotKey::get_field(skill)) else {
+		let Ok(key) = PlayerSlot::try_from((*skill).get::<SlotKey>()) else {
 			continue;
 		};
 		if input.pressed.contains(&key) {
@@ -100,8 +100,8 @@ mod tests {
 		impl ReleaseSkill for _SkillQueued {
 			fn release_skill(&mut self) {}
 		}
-		impl Getter<SlotKey> for _SkillQueued {
-			fn get(&self) -> SlotKey;
+		impl RefInto<'_,  SlotKey> for _SkillQueued {
+			fn ref_into(&self) -> SlotKey;
 		}
 	}
 
@@ -116,7 +116,7 @@ mod tests {
 		where
 			Self: 'a;
 
-		fn get<'a>(&'a self, key: &SlotKey) -> Option<&'a Handle<Item>> {
+		fn get_ref<'a>(&'a self, key: &SlotKey) -> Option<&'a Handle<Item>> {
 			self.0.get(key)
 		}
 	}
@@ -254,7 +254,7 @@ mod tests {
 			_Skills::default(),
 			_Enqueue {
 				queued: vec![Mock_SkillQueued::new_mock(|mock| {
-					mock.expect_get().return_const(left);
+					mock.expect_ref_into().return_const(left);
 					mock.expect_release_skill().return_const(());
 				})],
 			},
@@ -273,12 +273,12 @@ mod tests {
 				queued: vec![
 					Mock_SkillQueued::new_mock(|mock| {
 						mock.expect_release_skill().times(1).return_const(());
-						mock.expect_get()
+						mock.expect_ref_into()
 							.return_const(PlayerSlot::Lower(Side::Right));
 					}),
 					Mock_SkillQueued::new_mock(|mock| {
 						mock.expect_release_skill().times(1).return_const(());
-						mock.expect_get()
+						mock.expect_ref_into()
 							.return_const(PlayerSlot::Lower(Side::Left));
 					}),
 				],

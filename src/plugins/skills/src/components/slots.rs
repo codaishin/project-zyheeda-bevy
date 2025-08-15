@@ -41,7 +41,7 @@ impl GetRef<SlotKey> for Slots {
 	where
 		Self: 'a;
 
-	fn get(&self, key: &SlotKey) -> Option<&Handle<Item>> {
+	fn get_ref(&self, key: &SlotKey) -> Option<&Handle<Item>> {
 		let slot = self.0.get(key)?;
 		slot.as_ref()
 	}
@@ -85,7 +85,7 @@ impl GetAsset for Slots {
 	where
 		TAssets: GetRef<Handle<Self::TAsset>, TValue<'a> = &'a Self::TAsset>,
 	{
-		assets.get(self.get(&SlotKey::from(*key))?)
+		assets.get_ref(self.get_ref(&SlotKey::from(*key))?)
 	}
 }
 
@@ -195,13 +195,13 @@ mod tests {
 		let item = new_handle();
 		let slots = Slots([(SlotKey(2), Some(item.clone()))].into());
 
-		assert_eq!(Some(&item), slots.get(&SlotKey(2)));
+		assert_eq!(Some(&item), slots.get_ref(&SlotKey(2)));
 	}
 
 	#[test]
 	fn get_none() {
 		let slots = Slots([(SlotKey(7), Some(new_handle()))].into());
 
-		assert_eq!(None::<&Handle<Item>>, slots.get(&SlotKey(11)));
+		assert_eq!(None::<&Handle<Item>>, slots.get_ref(&SlotKey(11)));
 	}
 }

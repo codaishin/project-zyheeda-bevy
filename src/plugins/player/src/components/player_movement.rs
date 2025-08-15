@@ -6,10 +6,7 @@ use common::{
 		movement_animation::MovementAnimation,
 		speed::Speed,
 	},
-	traits::{
-		accessors::get::{Getter, GetterRefOptional},
-		animation::{Animation, AnimationAsset, PlayMode},
-	},
+	traits::animation::{Animation, AnimationAsset, PlayMode},
 };
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
@@ -44,26 +41,38 @@ impl Default for Config {
 	}
 }
 
-impl Getter<Speed> for PlayerMovement {
-	fn get(&self) -> Speed {
-		match self.mode {
-			MovementMode::Fast => self.fast.speed,
-			MovementMode::Slow => self.slow.speed,
+impl From<&PlayerMovement> for Speed {
+	fn from(
+		PlayerMovement {
+			mode, fast, slow, ..
+		}: &PlayerMovement,
+	) -> Self {
+		match mode {
+			MovementMode::Fast => fast.speed,
+			MovementMode::Slow => slow.speed,
 		}
 	}
 }
 
-impl Getter<ColliderRadius> for PlayerMovement {
-	fn get(&self) -> ColliderRadius {
-		self.collider_radius
+impl From<&PlayerMovement> for ColliderRadius {
+	fn from(
+		PlayerMovement {
+			collider_radius, ..
+		}: &PlayerMovement,
+	) -> Self {
+		*collider_radius
 	}
 }
 
-impl GetterRefOptional<MovementAnimation> for PlayerMovement {
-	fn get(&self) -> Option<&MovementAnimation> {
-		match self.mode {
-			MovementMode::Fast => Some(&self.fast.animation),
-			MovementMode::Slow => Some(&self.slow.animation),
+impl<'a> From<&'a PlayerMovement> for Option<&'a MovementAnimation> {
+	fn from(
+		PlayerMovement {
+			mode, fast, slow, ..
+		}: &'a PlayerMovement,
+	) -> Self {
+		match mode {
+			MovementMode::Fast => Some(&fast.animation),
+			MovementMode::Slow => Some(&slow.animation),
 		}
 	}
 }

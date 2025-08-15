@@ -3,59 +3,58 @@ use crate::{
 	traits::{GetScreenPosition, UIBarUpdate},
 };
 use bevy::prelude::*;
-use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
+use common::{
+	traits::{
+		accessors::get::{Getter, RefInto, TryApplyOn},
+		thread_safe::ThreadSafe,
+	},
+	zyheeda_commands::ZyheedaCommands,
+};
+
+type NewBars<'a, TSource> = (Entity, &'a GlobalTransform, &'a TSource, &'a mut Bar);
+type OldBars<'a, TSource, TValue> = (
+	&'a GlobalTransform,
+	&'a TSource,
+	&'a mut Bar,
+	&'a mut BarValues<TValue>,
+);
 
 #[allow(clippy::type_complexity)]
 pub(crate) fn bar<TSource, TValue, TCamera, TMainCameraLabel>(
-	get: fn(&TSource) -> &TValue,
-) -> impl Fn(
-	ZyheedaCommands,
-	Query<(Entity, &GlobalTransform, &TSource, &mut Bar), Without<BarValues<TValue>>>,
-	Query<(&GlobalTransform, &TSource, &mut Bar, &mut BarValues<TValue>)>,
-	Query<(&TCamera, &GlobalTransform), With<TMainCameraLabel>>,
-)
-where
-	TValue: Sync + Send + 'static,
+	commands: ZyheedaCommands,
+	without_bar_values: Query<NewBars<TSource>, Without<BarValues<TValue>>>,
+	with_bar_values: Query<OldBars<TSource, TValue>>,
+	camera: Query<(&TCamera, &GlobalTransform), With<TMainCameraLabel>>,
+) where
+	TValue: ThreadSafe,
 	BarValues<TValue>: UIBarUpdate<TValue>,
-	TSource: Component,
+	TSource: Component + for<'a> RefInto<'a, &'a TValue>,
 	TCamera: Component + GetScreenPosition,
 	TMainCameraLabel: Component,
 {
-	type NewBars<'a, 'b, 'c, TSource> = (Entity, &'a GlobalTransform, &'b TSource, &'c mut Bar);
-	type OldBars<'a, 'b, 'c, 'd, TSource, TValue> = (
-		&'a GlobalTransform,
-		&'b TSource,
-		&'c mut Bar,
-		&'d mut BarValues<TValue>,
-	);
-
-	move |commands: ZyheedaCommands,
-	      without_bar_values: Query<NewBars<TSource>, Without<BarValues<TValue>>>,
-	      with_bar_values: Query<OldBars<TSource, TValue>>,
-	      camera: Query<(&TCamera, &GlobalTransform), With<TMainCameraLabel>>| {
-		let Ok((camera, camera_transform)) = camera.single() else {
-			return;
-		};
-		add_bar_values(get, commands, without_bar_values, camera, camera_transform);
-		update_bar_values(get, with_bar_values, camera, camera_transform);
-	}
+	let Ok((camera, camera_transform)) = camera.single() else {
+		return;
+	};
+	add_bar_values(commands, without_bar_values, camera, camera_transform);
+	update_bar_values(with_bar_values, camera, camera_transform);
 }
 
-fn add_bar_values<TSource: Component, TValue, TCamera: Component + GetScreenPosition>(
-	get_value: fn(&TSource) -> &TValue,
+fn add_bar_values<TSource, TValue, TCamera>(
 	mut commands: ZyheedaCommands,
 	mut agents: Query<(Entity, &GlobalTransform, &TSource, &mut Bar), Without<BarValues<TValue>>>,
 	camera: &TCamera,
 	camera_transform: &GlobalTransform,
 ) where
-	TValue: Sync + Send + 'static,
+	TValue: ThreadSafe,
+	TSource: Component + for<'a> RefInto<'a, &'a TValue>,
+	TCamera: Component + GetScreenPosition,
 	BarValues<TValue>: UIBarUpdate<TValue>,
 {
 	for (id, transform, display, mut bar) in &mut agents {
 		let world_position = transform.translation() + bar.offset;
 		bar.position = camera.get_screen_position(camera_transform, world_position);
 		let mut bar_values = BarValues::default();
-		bar_values.update(get_value(display));
+		bar_values.update(display.get::<&TValue>());
 
 		commands.try_apply_on(&id, |mut e| {
 			e.try_insert(bar_values);
@@ -63,19 +62,20 @@ fn add_bar_values<TSource: Component, TValue, TCamera: Component + GetScreenPosi
 	}
 }
 
-fn update_bar_values<TSource: Component, TValue, TCamera: Component + GetScreenPosition>(
-	get_value: fn(&TSource) -> &TValue,
+fn update_bar_values<TSource, TValue, TCamera>(
 	mut agents: Query<(&GlobalTransform, &TSource, &mut Bar, &mut BarValues<TValue>)>,
 	camera: &TCamera,
 	camera_transform: &GlobalTransform,
 ) where
-	TValue: Sync + Send + 'static,
+	TValue: ThreadSafe,
+	TSource: Component + for<'a> RefInto<'a, &'a TValue>,
+	TCamera: Component + GetScreenPosition,
 	BarValues<TValue>: UIBarUpdate<TValue>,
 {
 	for (transform, display, mut bar, mut bar_values) in &mut agents {
 		let world_position = transform.translation() + bar.offset;
 		bar.position = camera.get_screen_position(camera_transform, world_position);
-		bar_values.update(get_value(display));
+		bar_values.update(display.get::<&TValue>());
 	}
 }
 
@@ -112,6 +112,12 @@ mod tests {
 	#[derive(Component, Default)]
 	struct _Source(_Value);
 
+	impl<'a> From<&'a _Source> for &'a _Value {
+		fn from(_Source(value): &'a _Source) -> Self {
+			value
+		}
+	}
+
 	#[derive(Default)]
 	struct _Value {
 		current: u8,
@@ -133,10 +139,7 @@ mod tests {
 		TLabel: Bundle + Default,
 	{
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(
-			Update,
-			bar::<_Source, _Value, _Camera, _MainCameraLabel>(|_Source(value)| value),
-		);
+		app.add_systems(Update, bar::<_Source, _Value, _Camera, _MainCameraLabel>);
 
 		match camera {
 			None => {

@@ -11,7 +11,7 @@ pub trait GetRef<TKey> {
 	where
 		Self: 'a;
 
-	fn get(&self, key: &TKey) -> Option<Self::TValue<'_>>;
+	fn get_ref(&self, key: &TKey) -> Option<Self::TValue<'_>>;
 }
 
 pub trait GetMut<TKey> {
@@ -34,41 +34,37 @@ pub trait TryApplyOn<'a, TKey>: GetMut<TKey> + 'a {
 
 impl<'a, T, TEntity> TryApplyOn<'a, TEntity> for T where T: GetMut<TEntity> + 'a {}
 
-pub trait GetterRef<TValue> {
-	fn get(&self) -> &TValue;
+/// A getter style conversion ("into" from a reference)
+///
+/// A blanket implementation exists for types that implement `From<&SomeType>`, which - similar
+/// to `Into` vs. `From` - should be preferably implemented.
+pub trait RefInto<'a, TValue> {
+	fn ref_into(&'a self) -> TValue;
 }
 
-pub trait GetterRefOptional<TValue> {
-	fn get(&self) -> Option<&TValue>;
-}
-
-pub trait Getter<TValue> {
-	fn get(&self) -> TValue;
-}
-
-pub trait GetField<TWithGetter> {
-	fn get_field(source: &TWithGetter) -> Self;
-}
-
-impl<T, TWithGetter> GetField<TWithGetter> for T
+impl<'a, TFrom, TInto> RefInto<'a, TInto> for TFrom
 where
-	TWithGetter: Getter<T>,
+	TFrom: 'a,
+	TInto: From<&'a TFrom> + 'a,
 {
-	fn get_field(source: &TWithGetter) -> Self {
-		source.get()
+	fn ref_into(&'a self) -> TInto {
+		TInto::from(self)
 	}
 }
 
-pub trait GetFieldRef<TWithGetterRef> {
-	fn get_field_ref(source: &TWithGetterRef) -> &Self;
+/// Getter like blanket trait for calling [`RefInto::ref_into()`]
+pub trait Getter {
+	fn get<'a, T>(&'a self) -> T
+	where
+		Self: RefInto<'a, T>;
 }
 
-impl<T, TWithGetterRef> GetFieldRef<TWithGetterRef> for T
-where
-	TWithGetterRef: GetterRef<T>,
-{
-	fn get_field_ref(source: &TWithGetterRef) -> &Self {
-		source.get()
+impl<TSource> Getter for TSource {
+	fn get<'a, T>(&'a self) -> T
+	where
+		Self: RefInto<'a, T>,
+	{
+		self.ref_into()
 	}
 }
 

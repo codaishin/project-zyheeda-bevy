@@ -20,7 +20,7 @@ use common::{
 		skill_icon::SkillIcon,
 	},
 	traits::{
-		accessors::get::{GetMut, Getter, GetterRef},
+		accessors::get::GetMut,
 		handles_custom_assets::AssetFolderPath,
 		handles_effect::HandlesAllEffects,
 		handles_localization::Token,
@@ -83,15 +83,19 @@ impl InspectAble<SkillIcon> for Skill {
 	}
 }
 
-impl GetterRef<Option<Handle<Image>>> for Skill {
-	fn get(&self) -> &Option<Handle<Image>> {
-		&self.icon
+impl<'a> From<&'a Skill> for Option<&'a Handle<Image>> {
+	fn from(Skill { icon, .. }: &'a Skill) -> Self {
+		icon.as_ref()
 	}
 }
 
-impl GetterRef<CompatibleItems> for Skill {
-	fn get(&self) -> &CompatibleItems {
-		&self.compatible_items
+impl<'a> From<&'a Skill> for &'a CompatibleItems {
+	fn from(
+		Skill {
+			compatible_items, ..
+		}: &'a Skill,
+	) -> Self {
+		compatible_items
 	}
 }
 
@@ -120,9 +124,9 @@ impl QueuedSkill {
 	}
 }
 
-impl Getter<SlotKey> for QueuedSkill {
-	fn get(&self) -> SlotKey {
-		self.key
+impl From<&QueuedSkill> for SlotKey {
+	fn from(QueuedSkill { key, .. }: &QueuedSkill) -> Self {
+		*key
 	}
 }
 

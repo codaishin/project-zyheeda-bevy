@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use bevy::prelude::*;
 use common::{
 	components::{
@@ -7,7 +9,7 @@ use common::{
 	},
 	tools::collider_info::ColliderInfo,
 	traits::{
-		accessors::get::{GetMut, GetterRefOptional},
+		accessors::get::{GetMut, Getter, RefInto},
 		handles_orientation::Face,
 		intersect_at::IntersectAt,
 	},
@@ -22,10 +24,10 @@ pub(crate) fn execute_face<TMouseHover, TCursor>(
 	cursor: Res<TCursor>,
 	hover: Res<TMouseHover>,
 ) where
-	TMouseHover: Resource + GetterRefOptional<ColliderInfo<Entity>>,
+	TMouseHover: Resource + for<'a> RefInto<'a, Option<&'a ColliderInfo<Entity>>>,
 	TCursor: IntersectAt + Resource,
 {
-	let Some(target) = get_cursor_target(&transforms, &cursor, &hover) else {
+	let Some(target) = get_cursor_target(&transforms, cursor.deref(), hover.deref()) else {
 		return;
 	};
 
@@ -74,14 +76,14 @@ fn get_face_targets(
 
 fn get_cursor_target<TMouseHover, TCursor>(
 	transforms: &Query<(Entity, &mut Transform, Option<&Immobilized>)>,
-	cursor: &Res<TCursor>,
-	hover: &Res<TMouseHover>,
+	cursor: &TCursor,
+	hover: &TMouseHover,
 ) -> Option<(Option<Entity>, Vec3)>
 where
-	TMouseHover: Resource + GetterRefOptional<ColliderInfo<Entity>>,
+	TMouseHover: Resource + for<'a> RefInto<'a, Option<&'a ColliderInfo<Entity>>>,
 	TCursor: IntersectAt + Resource,
 {
-	let Some(collider_info) = hover.get() else {
+	let Some(collider_info) = hover.get::<Option<&ColliderInfo<Entity>>>() else {
 		return cursor.intersect_at(0.).map(|t| (None, t));
 	};
 
@@ -143,8 +145,8 @@ mod tests {
 	#[derive(Resource, Default)]
 	struct _MouseHover(Option<ColliderInfo<Entity>>);
 
-	impl GetterRefOptional<ColliderInfo<Entity>> for _MouseHover {
-		fn get(&self) -> Option<&ColliderInfo<Entity>> {
+	impl<'a> RefInto<'a, Option<&'a ColliderInfo<Entity>>> for _MouseHover {
+		fn ref_into(&self) -> Option<&ColliderInfo<Entity>> {
 			self.0.as_ref()
 		}
 	}

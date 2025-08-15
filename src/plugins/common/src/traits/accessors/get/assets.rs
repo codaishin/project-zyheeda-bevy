@@ -10,7 +10,7 @@ where
 	where
 		Self: 'a;
 
-	fn get(&self, key: &Handle<TAsset>) -> Option<&TAsset> {
+	fn get_ref(&self, key: &Handle<TAsset>) -> Option<&TAsset> {
 		self.get(key.id())
 	}
 }

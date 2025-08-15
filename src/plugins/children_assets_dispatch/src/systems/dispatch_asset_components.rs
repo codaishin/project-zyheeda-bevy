@@ -154,7 +154,7 @@ mod tests {
 		{
 			let _Component(handles) = self;
 			let handle = handles.get(key)?;
-			assets.get(handle)
+			assets.get_ref(handle)
 		}
 	}
 
@@ -198,8 +198,8 @@ mod tests {
 		where
 			Self: 'a;
 
-		fn get<'a>(&'a self, key: &Handle<_Asset>) -> Option<&'a _Asset> {
-			self.mock.get(key)
+		fn get_ref<'a>(&'a self, key: &Handle<_Asset>) -> Option<&'a _Asset> {
+			self.mock.get_ref(key)
 		}
 	}
 
@@ -213,7 +213,7 @@ mod tests {
 	#[test]
 	fn dispatch_component_to_child() -> Result<(), RunSystemError> {
 		let mut app = setup(_Assets::new().with_mock(|mock| {
-			mock.expect_get().return_const(&_Asset);
+			mock.expect_get_ref().return_const(&_Asset);
 		}));
 		let entity = app.world_mut().spawn_empty().id();
 		app.world_mut().spawn((
@@ -235,7 +235,7 @@ mod tests {
 	#[test]
 	fn dispatch_component_to_different_child() -> Result<(), RunSystemError> {
 		let mut app = setup(_Assets::new().with_mock(|mock| {
-			mock.expect_get().return_const(&_Asset);
+			mock.expect_get_ref().return_const(&_Asset);
 		}));
 		let entity = app.world_mut().spawn_empty().id();
 		app.world_mut().spawn((
@@ -258,7 +258,7 @@ mod tests {
 	fn use_correct_handle() -> Result<(), RunSystemError> {
 		let handle = new_handle();
 		let mut app = setup(_Assets::new().with_mock(|mock| {
-			mock.expect_get()
+			mock.expect_get_ref()
 				.with(eq(handle.clone()))
 				.times(1)
 				.return_const(&_Asset);
@@ -283,7 +283,7 @@ mod tests {
 		type _Filter = Without<_Ignore>;
 
 		let mut app = setup(_Assets::new().with_mock(|mock| {
-			mock.expect_get().never().return_const(&_Asset);
+			mock.expect_get_ref().never().return_const(&_Asset);
 		}));
 		let entity = app.world_mut().spawn_empty().id();
 		app.world_mut().spawn((
@@ -303,7 +303,7 @@ mod tests {
 	#[test]
 	fn return_error_when_key_entity_not_found() -> Result<(), RunSystemError> {
 		let mut app = setup(_Assets::new().with_mock(|mock| {
-			mock.expect_get().return_const(&_Asset);
+			mock.expect_get_ref().return_const(&_Asset);
 		}));
 		app.world_mut().spawn((
 			ChildrenLookup::<_Component, _Marker>::new([]),

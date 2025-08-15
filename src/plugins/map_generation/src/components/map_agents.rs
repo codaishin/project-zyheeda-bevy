@@ -1,5 +1,5 @@
 use bevy::{ecs::entity::EntityHashSet, prelude::*};
-use common::{components::persistent_entity::PersistentEntity, traits::accessors::get::Getter};
+use common::components::persistent_entity::PersistentEntity;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
@@ -11,9 +11,9 @@ pub struct GridAgents(EntityHashSet);
 #[relationship(relationship_target = GridAgents)]
 pub struct GridAgentOf(pub(crate) Entity);
 
-impl Getter<Entity> for GridAgentOf {
-	fn get(&self) -> Entity {
-		self.0
+impl From<&GridAgentOf> for Entity {
+	fn from(GridAgentOf(entity): &GridAgentOf) -> Self {
+		*entity
 	}
 }
 

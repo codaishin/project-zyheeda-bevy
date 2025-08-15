@@ -5,16 +5,16 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	traits::accessors::get::{Getter, TryApplyOn},
+	traits::accessors::get::{Getter, RefInto, TryApplyOn},
 	zyheeda_commands::ZyheedaCommands,
 };
 
-pub fn panel_colors<TPanel: Component + Getter<PanelState> + HasPanelColors>(
+pub fn panel_colors<TPanel: Component + for<'a> RefInto<'a, PanelState> + HasPanelColors>(
 	mut commands: ZyheedaCommands,
 	mut panels: Query<(Entity, &Interaction, &TPanel, Option<&UIDisabled>), Without<ColorOverride>>,
 ) {
 	for (entity, interaction, panel, disabled) in &mut panels {
-		let config = match (interaction, panel.get(), disabled) {
+		let config = match (interaction, panel.get::<PanelState>(), disabled) {
 			(.., Some(UIDisabled)) => &TPanel::PANEL_COLORS.disabled,
 			(Interaction::Pressed, ..) => &TPanel::PANEL_COLORS.pressed,
 			(Interaction::Hovered, ..) => &TPanel::PANEL_COLORS.hovered,
@@ -42,8 +42,8 @@ mod tests {
 	#[derive(Component)]
 	struct _Empty;
 
-	impl Getter<PanelState> for _Empty {
-		fn get(&self) -> PanelState {
+	impl From<&_Empty> for PanelState {
+		fn from(_: &_Empty) -> Self {
 			PanelState::Empty
 		}
 	}
@@ -51,8 +51,8 @@ mod tests {
 	#[derive(Component)]
 	struct _Filled;
 
-	impl Getter<PanelState> for _Filled {
-		fn get(&self) -> PanelState {
+	impl From<&_Filled> for PanelState {
+		fn from(_: &_Filled) -> Self {
 			PanelState::Filled
 		}
 	}

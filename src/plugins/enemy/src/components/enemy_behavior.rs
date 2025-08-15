@@ -13,10 +13,7 @@ use common::{
 		movement_animation::MovementAnimation,
 		speed::Speed,
 	},
-	traits::{
-		accessors::get::{Getter, GetterRefOptional},
-		handles_enemies::{Attacker, EnemyAttack, EnemyTarget, Target},
-	},
+	traits::handles_enemies::{Attacker, EnemyAttack, EnemyTarget, Target},
 };
 use std::{sync::Arc, time::Duration};
 
@@ -39,39 +36,39 @@ pub struct EnemyBehavior {
 	pub(crate) collider_radius: ColliderRadius,
 }
 
-impl Getter<Speed> for EnemyBehavior {
-	fn get(&self) -> Speed {
-		self.speed
+impl From<&EnemyBehavior> for Speed {
+	fn from(enemy: &EnemyBehavior) -> Self {
+		enemy.speed
 	}
 }
 
-impl GetterRefOptional<MovementAnimation> for EnemyBehavior {
-	fn get(&self) -> Option<&MovementAnimation> {
-		self.movement_animation.as_ref()
+impl<'a> From<&'a EnemyBehavior> for Option<&'a MovementAnimation> {
+	fn from(enemy: &'a EnemyBehavior) -> Self {
+		enemy.movement_animation.as_ref()
 	}
 }
 
-impl Getter<AggroRange> for EnemyBehavior {
-	fn get(&self) -> AggroRange {
-		self.aggro_range
+impl From<&EnemyBehavior> for AggroRange {
+	fn from(enemy: &EnemyBehavior) -> Self {
+		enemy.aggro_range
 	}
 }
 
-impl Getter<AttackRange> for EnemyBehavior {
-	fn get(&self) -> AttackRange {
-		self.attack_range
+impl From<&EnemyBehavior> for AttackRange {
+	fn from(enemy: &EnemyBehavior) -> Self {
+		enemy.attack_range
 	}
 }
 
-impl Getter<EnemyTarget> for EnemyBehavior {
-	fn get(&self) -> EnemyTarget {
-		self.target
+impl From<&EnemyBehavior> for EnemyTarget {
+	fn from(enemy: &EnemyBehavior) -> Self {
+		enemy.target
 	}
 }
 
-impl Getter<ColliderRadius> for EnemyBehavior {
-	fn get(&self) -> ColliderRadius {
-		self.collider_radius
+impl From<&EnemyBehavior> for ColliderRadius {
+	fn from(enemy: &EnemyBehavior) -> Self {
+		enemy.collider_radius
 	}
 }
 
