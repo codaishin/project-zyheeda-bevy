@@ -35,7 +35,7 @@ impl GetRef<InventoryKey> for Inventory {
 	where
 		Self: 'a;
 
-	fn get(&self, key: &InventoryKey) -> Option<&Handle<Item>> {
+	fn get_ref(&self, key: &InventoryKey) -> Option<&Handle<Item>> {
 		let item = self.0.get(key.0)?;
 		item.as_ref()
 	}
@@ -103,14 +103,14 @@ mod tests {
 		let item = new_handle();
 		let inventory = Inventory::from([Some(item.clone())]);
 
-		assert_eq!(Some(&item), inventory.get(&InventoryKey(0)));
+		assert_eq!(Some(&item), inventory.get_ref(&InventoryKey(0)));
 	}
 
 	#[test]
 	fn get_none_when_empty() {
 		let inventory = Inventory::from([]);
 
-		assert_eq!(None, inventory.get(&InventoryKey(0)));
+		assert_eq!(None, inventory.get_ref(&InventoryKey(0)));
 	}
 
 	#[test]
@@ -118,7 +118,7 @@ mod tests {
 		let item = new_handle();
 		let inventory = Inventory::from([None, None, Some(item.clone())]);
 
-		assert_eq!(Some(&item), inventory.get(&InventoryKey(2)));
+		assert_eq!(Some(&item), inventory.get_ref(&InventoryKey(2)));
 	}
 
 	#[test]

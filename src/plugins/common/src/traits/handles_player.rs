@@ -1,7 +1,4 @@
-use super::{
-	accessors::get::{Getter, GetterRefOptional},
-	intersect_at::IntersectAt,
-};
+use super::{accessors::get::RefInto, intersect_at::IntersectAt};
 use crate::{
 	errors::Error,
 	tools::{
@@ -28,18 +25,18 @@ pub trait PlayerMainCamera {
 }
 
 pub trait HandlesPlayerCameras {
-	type TCamRay: Resource + GetterRefOptional<Ray3d> + IntersectAt;
+	type TCamRay: Resource + for<'a> RefInto<'a, Option<&'a Ray3d>> + IntersectAt;
 }
 
 pub trait HandlesPlayerMouse {
-	type TMouseHover: Resource + GetterRefOptional<ColliderInfo<Entity>>;
+	type TMouseHover: Resource + for<'a> RefInto<'a, Option<&'a ColliderInfo<Entity>>>;
 }
 
 pub trait ConfiguresPlayerMovement {
 	type TPlayerMovement: Component
-		+ Getter<Speed>
-		+ Getter<ColliderRadius>
-		+ GetterRefOptional<MovementAnimation>;
+		+ for<'a> RefInto<'a, Speed>
+		+ for<'a> RefInto<'a, ColliderRadius>
+		+ for<'a> RefInto<'a, Option<&'a MovementAnimation>>;
 }
 
 pub trait ConfiguresPlayerSkillAnimations {

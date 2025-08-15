@@ -4,7 +4,7 @@ use common::{
 	components::persistent_entity::PersistentEntity,
 	tools::collider_info::ColliderInfo,
 	traits::{
-		accessors::get::GetterRefOptional,
+		accessors::get::RefInto,
 		handles_player::{HandlesPlayerCameras, HandlesPlayerMouse},
 	},
 	zyheeda_commands::ZyheedaCommands,
@@ -15,7 +15,7 @@ impl<T> ExecuteSkills for T where T: Component<Mutability = Mutable> + Sized {}
 pub(crate) trait ExecuteSkills: Component<Mutability = Mutable> + Sized {
 	fn execute_system<TEffects, TSkillBehaviors, TPlayers>(
 		cam_ray: Res<TPlayers::TCamRay>,
-		mouse_hover: Res<TPlayers::TMouseHover>,
+		hover: Res<TPlayers::TMouseHover>,
 		mut commands: ZyheedaCommands,
 		mut agents: Query<(&PersistentEntity, &mut Self), Changed<Self>>,
 		transforms: Query<&GlobalTransform>,
@@ -24,7 +24,7 @@ pub(crate) trait ExecuteSkills: Component<Mutability = Mutable> + Sized {
 		TPlayers: HandlesPlayerCameras + HandlesPlayerMouse,
 	{
 		for (entity, mut skill_executer) in &mut agents {
-			let Some(target) = get_target(&cam_ray, &mouse_hover, &transforms) else {
+			let Some(target) = get_target(cam_ray.as_ref(), hover.as_ref(), &transforms) else {
 				continue;
 			};
 			skill_executer.execute(&mut commands, &SkillCaster(*entity), &target);
@@ -33,20 +33,20 @@ pub(crate) trait ExecuteSkills: Component<Mutability = Mutable> + Sized {
 }
 
 fn get_target<TCamRay, TMouseHover>(
-	cam_ray: &Res<TCamRay>,
-	mouse_hover: &Res<TMouseHover>,
+	cam_ray: &TCamRay,
+	hover: &TMouseHover,
 	transforms: &Query<&GlobalTransform>,
 ) -> Option<SkillTarget>
 where
-	TCamRay: Resource + GetterRefOptional<Ray3d>,
-	TMouseHover: Resource + GetterRefOptional<ColliderInfo<Entity>>,
+	TCamRay: Resource + for<'a> RefInto<'a, Option<&'a Ray3d>>,
+	TMouseHover: Resource + for<'a> RefInto<'a, Option<&'a ColliderInfo<Entity>>>,
 {
 	let get_transform = |entity| transforms.get(entity).ok().cloned();
 
 	Some(SkillTarget {
-		ray: cam_ray.get().cloned()?,
-		collision_info: mouse_hover
-			.get()
+		ray: cam_ray.ref_into().cloned()?,
+		collision_info: hover
+			.ref_into()
 			.and_then(|collider_info| collider_info.with_component(get_transform)),
 	})
 }
@@ -75,9 +75,9 @@ mod tests {
 	#[derive(Resource, Default)]
 	pub struct _CamRay(Option<Ray3d>);
 
-	impl GetterRefOptional<Ray3d> for _CamRay {
-		fn get(&self) -> Option<&Ray3d> {
-			self.0.as_ref()
+	impl<'a> From<&'a _CamRay> for Option<&'a Ray3d> {
+		fn from(_CamRay(ray): &'a _CamRay) -> Self {
+			ray.as_ref()
 		}
 	}
 
@@ -90,9 +90,9 @@ mod tests {
 	#[derive(Resource, Default)]
 	pub struct _MouseHover(Option<ColliderInfo<Entity>>);
 
-	impl GetterRefOptional<ColliderInfo<Entity>> for _MouseHover {
-		fn get(&self) -> Option<&ColliderInfo<Entity>> {
-			self.0.as_ref()
+	impl<'a> From<&'a _MouseHover> for Option<&'a ColliderInfo<Entity>> {
+		fn from(_MouseHover(info): &'a _MouseHover) -> Self {
+			info.as_ref()
 		}
 	}
 

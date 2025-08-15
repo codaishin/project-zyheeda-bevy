@@ -2,7 +2,7 @@ use crate::traits::{IsDone, MovementUpdate};
 use bevy::prelude::*;
 use common::{
 	tools::speed::Speed,
-	traits::accessors::get::{GetField, Getter},
+	traits::accessors::get::{Getter, RefInto},
 };
 use std::time::Duration;
 
@@ -17,15 +17,14 @@ pub(crate) trait ExecuteMovement {
 			TMovement::TConstraint,
 		>,
 	) where
-		Self: Component + Sized + Getter<Speed>,
+		Self: Component + Sized + for<'a> RefInto<'a, Speed>,
 		TMovement: Component + MovementUpdate,
 	{
 		for (id, components, config, movement) in &mut agents {
 			let Ok(mut entity) = commands.get_entity(id) else {
 				continue;
 			};
-			let speed = Speed::get_field(config);
-
+			let speed = config.get::<Speed>();
 			let IsDone(true) = movement.update(&mut entity, components, speed, delta) else {
 				continue;
 			};
@@ -45,8 +44,8 @@ mod tests {
 	#[derive(Component, Default)]
 	struct _Agent(Speed);
 
-	impl Getter<Speed> for _Agent {
-		fn get(&self) -> Speed {
+	impl RefInto<'_, Speed> for _Agent {
+		fn ref_into(&self) -> Speed {
 			self.0
 		}
 	}

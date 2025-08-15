@@ -36,7 +36,7 @@ fn update_skill_with_advanced_combo<TCombos>(
 	TCombos: AdvanceCombo,
 {
 	let QueuedSkill { skill, key, .. } = added;
-	let Some(item_handle) = slots.get(key) else {
+	let Some(item_handle) = slots.get_ref(key) else {
 		return;
 	};
 	let Some(item) = items.get(item_handle.id()) else {

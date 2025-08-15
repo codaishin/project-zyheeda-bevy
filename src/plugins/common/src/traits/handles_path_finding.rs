@@ -1,10 +1,10 @@
-use crate::{tools::Units, traits::accessors::get::Getter};
+use crate::{tools::Units, traits::accessors::get::RefInto};
 use bevy::prelude::*;
 
 pub trait HandlesPathFinding {
 	type TComputePath: Component + ComputePath;
 	type TSystemSet: SystemSet;
-	type TComputerRef: Component + Getter<Entity>;
+	type TComputerRef: Component + for<'a> RefInto<'a, Entity>;
 
 	const SYSTEMS: Self::TSystemSet;
 }

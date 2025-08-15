@@ -5,11 +5,7 @@ use bevy::prelude::*;
 use common::{
 	components::essence::Essence,
 	tools::{item_description::ItemToken, item_type::ItemType},
-	traits::{
-		accessors::get::{Getter, GetterRef},
-		handles_localization::Token,
-		inspect_able::InspectAble,
-	},
+	traits::{handles_localization::Token, inspect_able::InspectAble},
 };
 
 #[derive(Debug, PartialEq, Default, Clone, Asset, TypePath)]
@@ -27,14 +23,14 @@ impl InspectAble<ItemToken> for Item {
 	}
 }
 
-impl Getter<ItemType> for Item {
-	fn get(&self) -> ItemType {
-		self.item_type
+impl From<&Item> for ItemType {
+	fn from(Item { item_type, .. }: &Item) -> Self {
+		*item_type
 	}
 }
 
-impl GetterRef<Option<Handle<Skill>>> for Item {
-	fn get(&self) -> &Option<Handle<Skill>> {
-		&self.skill
+impl<'a> From<&'a Item> for Option<&'a Handle<Skill>> {
+	fn from(Item { skill, .. }: &'a Item) -> Self {
+		skill.as_ref()
 	}
 }

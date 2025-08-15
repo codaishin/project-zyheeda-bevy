@@ -3,10 +3,7 @@ use crate::{
 	traits::colors::{ColorConfig, HasActiveColor, HasPanelColors, HasQueuedColor, PanelColors},
 };
 use bevy::{color::Color, ecs::component::Component};
-use common::{
-	tools::action_key::slot::{PlayerSlot, SlotKey},
-	traits::accessors::get::Getter,
-};
+use common::tools::action_key::slot::{PlayerSlot, SlotKey};
 
 #[derive(Component)]
 pub struct QuickbarPanel {
@@ -14,21 +11,21 @@ pub struct QuickbarPanel {
 	pub state: PanelState,
 }
 
-impl Getter<PanelState> for QuickbarPanel {
-	fn get(&self) -> PanelState {
-		self.state
+impl From<&QuickbarPanel> for PanelState {
+	fn from(QuickbarPanel { state, .. }: &QuickbarPanel) -> Self {
+		*state
 	}
 }
 
-impl Getter<PlayerSlot> for QuickbarPanel {
-	fn get(&self) -> PlayerSlot {
-		self.key
+impl From<&QuickbarPanel> for PlayerSlot {
+	fn from(QuickbarPanel { key, .. }: &QuickbarPanel) -> Self {
+		*key
 	}
 }
 
-impl Getter<SlotKey> for QuickbarPanel {
-	fn get(&self) -> SlotKey {
-		SlotKey::from(self.key)
+impl From<&QuickbarPanel> for SlotKey {
+	fn from(QuickbarPanel { key, .. }: &QuickbarPanel) -> Self {
+		Self::from(*key)
 	}
 }
 
@@ -62,7 +59,7 @@ impl HasQueuedColor for QuickbarPanel {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::tools::action_key::slot::Side;
+	use common::{tools::action_key::slot::Side, traits::accessors::get::Getter};
 
 	#[test]
 	fn get_empty() {
@@ -70,7 +67,7 @@ mod tests {
 			key: PlayerSlot::Lower(Side::Right),
 			state: PanelState::Empty,
 		};
-		assert_eq!(PanelState::Empty, panel.get());
+		assert_eq!(PanelState::Empty, panel.get::<PanelState>());
 	}
 
 	#[test]
@@ -79,7 +76,7 @@ mod tests {
 			key: PlayerSlot::Lower(Side::Right),
 			state: PanelState::Filled,
 		};
-		assert_eq!(PanelState::Filled, panel.get());
+		assert_eq!(PanelState::Filled, panel.get::<PanelState>());
 	}
 
 	#[test]
@@ -89,7 +86,7 @@ mod tests {
 			state: PanelState::Empty,
 		};
 
-		assert_eq!(PlayerSlot::Lower(Side::Left), panel.get());
+		assert_eq!(PlayerSlot::Lower(Side::Left), panel.get::<PlayerSlot>());
 	}
 
 	#[test]
@@ -99,6 +96,9 @@ mod tests {
 			state: PanelState::Empty,
 		};
 
-		assert_eq!(SlotKey::from(PlayerSlot::Lower(Side::Left)), panel.get());
+		assert_eq!(
+			SlotKey::from(PlayerSlot::Lower(Side::Left)),
+			panel.get::<SlotKey>()
+		);
 	}
 }

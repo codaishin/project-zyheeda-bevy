@@ -1,7 +1,4 @@
-use crate::{
-	attributes::health::Health,
-	traits::accessors::get::{GetFieldRef, Getter, GetterRef},
-};
+use crate::attributes::health::Health;
 use bevy::prelude::*;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
@@ -24,17 +21,15 @@ impl From<Health> for Life {
 	}
 }
 
-impl Getter<Health> for Life {
-	fn get(&self) -> Health {
-		*Health::get_field_ref(self)
+impl<'a> From<&'a Life> for &'a Health {
+	fn from(Life(health): &'a Life) -> Self {
+		health
 	}
 }
 
-impl GetterRef<Health> for Life {
-	fn get(&self) -> &Health {
-		let Life(health) = self;
-
-		health
+impl From<&Life> for Health {
+	fn from(Life(health): &Life) -> Self {
+		*health
 	}
 }
 

@@ -3,7 +3,11 @@ use bevy::{ecs::query::QuerySingleError, prelude::*};
 use common::{
 	errors::{Error, Level},
 	tools::speed::Speed,
-	traits::{accessors::get::Getter, handles_player::KeyDirection, key_mappings::Pressed},
+	traits::{
+		accessors::get::{Getter, RefInto},
+		handles_player::KeyDirection,
+		key_mappings::Pressed,
+	},
 };
 use std::{any::type_name, marker::PhantomData, time::Duration};
 
@@ -19,7 +23,7 @@ pub(crate) trait ParseDirectionalMovement: DirectionalMovementInput {
 	) -> Result<Option<Self>, TriggerMovementError<TCamera, TAgent>>
 	where
 		TCamera: KeyDirection<TKey> + Component,
-		TAgent: Getter<Speed> + Component,
+		TAgent: for<'a> RefInto<'a, Speed> + Component,
 		TMap: Pressed<TKey> + Resource,
 	{
 		let cam_transform = match cameras.single() {
@@ -49,7 +53,8 @@ pub(crate) trait ParseDirectionalMovement: DirectionalMovementInput {
 			return Ok(None);
 		};
 		let input = Self::from(
-			translation + direction * Self::min_distance(speed.get(), delta) * SCALE_MIN_DISTANCE,
+			translation
+				+ direction * Self::min_distance(speed.get::<Speed>(), delta) * SCALE_MIN_DISTANCE,
 		);
 
 		Ok(Some(input))
@@ -158,8 +163,8 @@ mod tests {
 	#[derive(Component, Debug, PartialEq)]
 	struct _Agent(Speed);
 
-	impl Getter<Speed> for _Agent {
-		fn get(&self) -> Speed {
+	impl RefInto<'_, Speed> for _Agent {
+		fn ref_into(&self) -> Speed {
 			self.0
 		}
 	}

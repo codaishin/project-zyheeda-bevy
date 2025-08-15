@@ -1,12 +1,12 @@
 use bevy::prelude::*;
-use common::traits::{accessors::get::GetterRefOptional, intersect_at::IntersectAt};
+use common::traits::intersect_at::IntersectAt;
 
 #[derive(Resource, Default)]
 pub struct CamRay(pub(crate) Option<Ray3d>);
 
-impl GetterRefOptional<Ray3d> for CamRay {
-	fn get(&self) -> Option<&Ray3d> {
-		self.0.as_ref()
+impl<'a> From<&'a CamRay> for Option<&'a Ray3d> {
+	fn from(CamRay(ray): &'a CamRay) -> Self {
+		ray.as_ref()
 	}
 }
 

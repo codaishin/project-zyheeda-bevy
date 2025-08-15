@@ -1,4 +1,4 @@
-use super::accessors::get::{Getter, GetterRefOptional};
+use super::accessors::get::RefInto;
 use crate::{
 	components::persistent_entity::PersistentEntity,
 	tools::{
@@ -19,13 +19,13 @@ pub trait HandlesEnemies {
 
 pub trait HandlesEnemyBehaviors {
 	type TEnemyBehavior: Component
-		+ Getter<Speed>
-		+ GetterRefOptional<MovementAnimation>
-		+ Getter<EnemyTarget>
-		+ Getter<AggroRange>
-		+ Getter<AttackRange>
-		+ Getter<ColliderRadius>
-		+ EnemyAttack;
+		+ EnemyAttack
+		+ for<'a> RefInto<'a, Speed>
+		+ for<'a> RefInto<'a, Option<&'a MovementAnimation>>
+		+ for<'a> RefInto<'a, EnemyTarget>
+		+ for<'a> RefInto<'a, AggroRange>
+		+ for<'a> RefInto<'a, AttackRange>
+		+ for<'a> RefInto<'a, ColliderRadius>;
 }
 
 pub trait EnemyAttack {

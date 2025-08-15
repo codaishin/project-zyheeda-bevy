@@ -10,7 +10,7 @@ use common::{
 	errors::Error,
 	tools::{aggro_range::AggroRange, attack_range::AttackRange},
 	traits::{
-		accessors::get::{GetMut, Getter},
+		accessors::get::{GetMut, Getter, RefInto},
 		cast_ray::{
 			CastRay,
 			GetRayCaster,
@@ -38,7 +38,11 @@ pub(crate) trait SelectBehavior {
 		colliders: Query<&ColliderOfInteractionTarget>,
 	) -> Result<(), BehaviorError>
 	where
-		Self: Component + Sized + Getter<AggroRange> + Getter<AttackRange> + Getter<EnemyTarget>,
+		for<'a> Self: Component
+			+ Sized
+			+ RefInto<'a, AggroRange>
+			+ RefInto<'a, AttackRange>
+			+ RefInto<'a, EnemyTarget>,
 		TPlayer: Component,
 	{
 		select_behavior(rapier, commands, agents, players, all, colliders)
@@ -85,7 +89,11 @@ fn select_behavior<TAgent, TPlayer, TGetRayCaster>(
 	colliders: Query<&ColliderOfInteractionTarget>,
 ) -> Result<(), BehaviorError<TGetRayCaster::TError>>
 where
-	TAgent: Component + Sized + Getter<AggroRange> + Getter<AttackRange> + Getter<EnemyTarget>,
+	for<'a> TAgent: Component
+		+ Sized
+		+ RefInto<'a, AggroRange>
+		+ RefInto<'a, AttackRange>
+		+ RefInto<'a, EnemyTarget>,
 	TPlayer: Component,
 	TGetRayCaster: GetRayCaster<(Ray3d, NoSensors, ExcludeRigidBody)>,
 {
@@ -96,7 +104,7 @@ where
 	let mut invalid_directions = vec![];
 
 	for (persistent_agent, transform, ground_offset, agent) in &agents {
-		let target = match agent.get() {
+		let target = match agent.get::<EnemyTarget>() {
 			EnemyTarget::Player => players.single().ok(),
 			EnemyTarget::Entity(persistent_entity) => commands
 				.get_mut(&persistent_entity)
@@ -166,16 +174,16 @@ fn get_strategy<TAgent, TCaster>(
 	colliders: &Query<&ColliderOfInteractionTarget>,
 ) -> Result<Behavior, InvalidDirectionError>
 where
-	TAgent: Getter<AggroRange> + Getter<AttackRange>,
+	for<'a> TAgent: RefInto<'a, AggroRange> + RefInto<'a, AttackRange>,
 	TCaster: CastRay<(Ray3d, NoSensors, ExcludeRigidBody)>,
 {
 	let direction = target_translation - enemy_translation;
 	let distance = direction.length();
 
-	if distance > aggro_range(enemy_agent) {
+	if distance > **enemy_agent.get::<AggroRange>() {
 		return Ok(Behavior::Idle);
 	}
-	if distance > attack_range(enemy_agent) {
+	if distance > **enemy_agent.get::<AttackRange>() {
 		return Ok(Behavior::Chase);
 	}
 
@@ -188,20 +196,6 @@ where
 		Some((hit, ..)) if hit_target(target, hit, colliders) => Ok(Behavior::Attack),
 		_ => Ok(Behavior::Chase),
 	}
-}
-
-fn aggro_range<TAgent>(agent: &TAgent) -> f32
-where
-	TAgent: Getter<AggroRange>,
-{
-	**agent.get()
-}
-
-fn attack_range<TAgent>(agent: &TAgent) -> f32
-where
-	TAgent: Getter<AttackRange>,
-{
-	**agent.get()
 }
 
 fn hit_target(
@@ -246,20 +240,20 @@ mod tests {
 		target: EnemyTarget,
 	}
 
-	impl Getter<AggroRange> for _Enemy {
-		fn get(&self) -> AggroRange {
+	impl RefInto<'_, AggroRange> for _Enemy {
+		fn ref_into(&self) -> AggroRange {
 			self.aggro_range
 		}
 	}
 
-	impl Getter<AttackRange> for _Enemy {
-		fn get(&self) -> AttackRange {
+	impl RefInto<'_, AttackRange> for _Enemy {
+		fn ref_into(&self) -> AttackRange {
 			self.attack_range
 		}
 	}
 
-	impl Getter<EnemyTarget> for _Enemy {
-		fn get(&self) -> EnemyTarget {
+	impl RefInto<'_, EnemyTarget> for _Enemy {
+		fn ref_into(&self) -> EnemyTarget {
 			self.target
 		}
 	}

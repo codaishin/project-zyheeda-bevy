@@ -10,7 +10,7 @@ use common::{
 		skill_execution::SkillExecution,
 	},
 	traits::{
-		accessors::get::{GetField, Getter},
+		accessors::get::{Getter, RefInto},
 		handles_loadout_menu::GetItem,
 		inspect_able::{InspectAble, InspectField},
 		key_mappings::GetInput,
@@ -26,7 +26,11 @@ pub fn panel_activity_colors_override<TMap, TPanel, TPrimer, TContainer>(
 	TMap: Resource + GetInput<PlayerSlot, TInput = UserInput>,
 	TContainer: Resource + GetItem<PlayerSlot>,
 	TContainer::TItem: InspectAble<SkillExecution>,
-	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor + Getter<PlayerSlot> + Component,
+	TPanel: HasActiveColor
+		+ HasPanelColors
+		+ HasQueuedColor
+		+ for<'a> RefInto<'a, PlayerSlot>
+		+ Component,
 	TPrimer: Component,
 	for<'a> &'a TPrimer: Into<IsPrimed> + Into<UserInput>,
 {
@@ -46,13 +50,13 @@ fn get_color_override<TContainer, TMap, TPanel, TPrimer>(
 	primer: &TPrimer,
 ) -> Option<ColorConfig>
 where
-	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor + Getter<PlayerSlot>,
+	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor + for<'a> RefInto<'a, PlayerSlot>,
 	TContainer: GetItem<PlayerSlot>,
 	TContainer::TItem: InspectAble<SkillExecution>,
 	TMap: GetInput<PlayerSlot, TInput = UserInput>,
 	for<'a> &'a TPrimer: Into<IsPrimed> + Into<UserInput>,
 {
-	let panel_key = PlayerSlot::get_field(panel);
+	let panel_key = panel.get::<PlayerSlot>();
 	let state = container
 		.get_item(panel_key)
 		.map(SkillExecution::inspect_field)
@@ -156,9 +160,9 @@ mod tests {
 		};
 	}
 
-	impl Getter<PlayerSlot> for _Panel {
-		fn get(&self) -> PlayerSlot {
-			self.0
+	impl From<&_Panel> for PlayerSlot {
+		fn from(_Panel(slot): &_Panel) -> Self {
+			*slot
 		}
 	}
 

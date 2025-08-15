@@ -3,15 +3,18 @@ use common::{
 	components::immobilized::Immobilized,
 	tools::movement_animation::MovementAnimation,
 	traits::{
-		accessors::get::GetterRefOptional,
+		accessors::get::RefInto,
 		animation::{AnimationPriority, SetAnimations, StopAnimation},
 	},
 };
 
-impl<T> AnimateMovement for T where T: Component + Sized + GetterRefOptional<MovementAnimation> {}
+impl<T> AnimateMovement for T where
+	T: Component + Sized + for<'a> RefInto<'a, Option<&'a MovementAnimation>>
+{
+}
 
 pub(crate) trait AnimateMovement:
-	Component + Sized + GetterRefOptional<MovementAnimation>
+	Component + Sized + for<'a> RefInto<'a, Option<&'a MovementAnimation>>
 {
 	#[allow(clippy::type_complexity)]
 	fn animate_movement<TMovement, TAnimationDispatch>(
@@ -49,13 +52,13 @@ fn start_animation<TConfig, TMovement, TAnimationDispatch>(
 	mut dispatch: Mut<TAnimationDispatch>,
 	movement: Ref<TMovement>,
 ) where
-	TConfig: GetterRefOptional<MovementAnimation>,
+	TConfig: for<'a> RefInto<'a, Option<&'a MovementAnimation>>,
 	TAnimationDispatch: SetAnimations,
 {
 	if !movement.is_added() && !config.is_changed() {
 		return;
 	}
-	let Some(MovementAnimation(animation)) = &config.get() else {
+	let Some(MovementAnimation(animation)) = config.as_ref().ref_into() else {
 		return;
 	};
 	dispatch.set_animations(Move, [animation.clone()]);
@@ -86,9 +89,9 @@ mod tests {
 	#[derive(Component)]
 	struct _Agent(Option<MovementAnimation>);
 
-	impl GetterRefOptional<MovementAnimation> for _Agent {
-		fn get(&self) -> Option<&MovementAnimation> {
-			self.0.as_ref()
+	impl<'a> From<&'a _Agent> for Option<&'a MovementAnimation> {
+		fn from(_Agent(animation): &'a _Agent) -> Self {
+			animation.as_ref()
 		}
 	}
 

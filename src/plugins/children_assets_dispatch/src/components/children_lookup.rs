@@ -89,7 +89,7 @@ where
 	where
 		Self: 'a;
 
-	fn get(&self, key: &TContainer::TChildKey) -> Option<&Entity> {
+	fn get_ref(&self, key: &TContainer::TChildKey) -> Option<&Entity> {
 		self.entities.get(&Name::from(key.child_name()))
 	}
 }
@@ -253,7 +253,7 @@ mod tests {
 			Entity::from_raw(100),
 		)]);
 
-		assert_eq!(Some(&Entity::from_raw(100)), lookup.get(&_Key::A));
+		assert_eq!(Some(&Entity::from_raw(100)), lookup.get_ref(&_Key::A));
 	}
 
 	#[test]
@@ -263,7 +263,7 @@ mod tests {
 			Entity::from_raw(100),
 		)]);
 
-		assert_eq!(Some(&Entity::from_raw(100)), lookup.get(&_Key::B));
+		assert_eq!(Some(&Entity::from_raw(100)), lookup.get_ref(&_Key::B));
 	}
 
 	fn setup() -> App {
