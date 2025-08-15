@@ -31,7 +31,7 @@ mod tests {
 	use common::traits::cast_ray::TimeOfImpact;
 	use macros::NestedMocks;
 	use mockall::{Sequence, mock, predicate::eq};
-	use testing::{NestedMocks, SingleThreadedApp};
+	use testing::{NestedMocks, SingleThreadedApp, get_current_update_events};
 
 	#[derive(Resource, NestedMocks)]
 	struct _Tracker {
@@ -97,13 +97,9 @@ mod tests {
 		app.world_mut()
 			.run_system_once_with(send_interaction_events::<_Tracker>, vec![])?;
 
-		let events = app.world().resource::<Events<InteractionEvent>>();
-		let mut cursor = events.get_cursor();
-		let events = cursor.read(events);
-
 		assert_eq!(
 			vec![&InteractionEvent::of(a).collision(Collision::Started(b)),],
-			events.collect::<Vec<_>>()
+			get_current_update_events!(app, InteractionEvent).collect::<Vec<_>>()
 		);
 		Ok(())
 	}
@@ -127,10 +123,6 @@ mod tests {
 		app.world_mut()
 			.run_system_once_with(send_interaction_events::<_Tracker>, vec![(ray, collisions)])?;
 
-		let events = app.world().resource::<Events<InteractionEvent<Ray>>>();
-		let mut cursor = events.get_cursor();
-		let events = cursor.read(events);
-
 		assert_eq!(
 			vec![&interaction.ray(
 				Ray3d::new(
@@ -139,7 +131,7 @@ mod tests {
 				),
 				TimeOfImpact(900.),
 			)],
-			events.collect::<Vec<_>>()
+			get_current_update_events!(app, InteractionEvent<Ray>).collect::<Vec<_>>()
 		);
 		Ok(())
 	}
@@ -169,13 +161,9 @@ mod tests {
 		app.world_mut()
 			.run_system_once_with(send_interaction_events::<_Tracker>, vec![(ray, collisions)])?;
 
-		let events = app.world().resource::<Events<InteractionEvent>>();
-		let mut cursor = events.get_cursor();
-		let events = cursor.read(events);
-
 		assert_eq!(
 			vec![&interaction.collision(Collision::Started(Entity::from_raw(46)))],
-			events.collect::<Vec<_>>()
+			get_current_update_events!(app, InteractionEvent).collect::<Vec<_>>()
 		);
 		Ok(())
 	}

@@ -142,6 +142,19 @@ macro_rules! get_children {
 }
 
 #[macro_export]
+macro_rules! get_current_update_events {
+	($app:expr, $ty:ty $(,)?) => {
+		get_current_update_events!($app, $ty, |entity| entity)
+	};
+	($app:expr, $ty:ty, $mapper:expr $(,)?) => {
+		$app.world()
+			.resource::<bevy::prelude::Events<$ty>>()
+			.iter_current_update_events()
+			.map($mapper)
+	};
+}
+
+#[macro_export]
 macro_rules! assert_count {
 	($count:literal, $iterator:expr) => {{
 		let vec = $iterator.collect::<Vec<_>>();
