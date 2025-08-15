@@ -1,0 +1,30 @@
+{
+	"token": "skill-void-beam",
+	"cast_time": {
+		"seconds": 0.2
+	},
+	"animation": "Animate",
+	"behavior": {
+		"OnAim": {
+			"shape": {
+				"Beam": {
+					"range": 20,
+					"blocked_by": "All"
+				}
+			},
+			"spawn_on": "Slot",
+			"contact": [
+				{
+					"Damage": {
+						"OverTime": 10
+					}
+				}
+			],
+			"projection": []
+		}
+	},
+	"is_usable_with": [
+		"VoidBeam"
+	],
+	"icon": "icons/beam.png"
+}

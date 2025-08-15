@@ -11,7 +11,7 @@ use common::{
 	attributes::health::Health,
 	components::{life::Life, ui_node_for::UiNodeFor},
 	traits::{
-		handles_enemies::HandlesEnemyBehaviors,
+		handles_enemies::HandlesEnemyConfig,
 		handles_graphics::UiCamera,
 		handles_player::HandlesPlayer,
 		ownership_relation::OwnershipRelation,
@@ -27,7 +27,7 @@ pub struct BarsPlugin<TDependencies>(PhantomData<TDependencies>);
 impl<TPlayers, TEnemies, TGraphics> BarsPlugin<(TPlayers, TEnemies, TGraphics)>
 where
 	TPlayers: ThreadSafe + HandlesPlayer,
-	TEnemies: ThreadSafe + HandlesEnemyBehaviors,
+	TEnemies: ThreadSafe + HandlesEnemyConfig,
 	TGraphics: ThreadSafe + UiCamera,
 {
 	pub fn from_plugins(_: &TPlayers, _: &TEnemies, _: &TGraphics) -> Self {
@@ -38,7 +38,7 @@ where
 impl<TPlayers, TEnemies, TGraphics> Plugin for BarsPlugin<(TPlayers, TEnemies, TGraphics)>
 where
 	TPlayers: ThreadSafe + HandlesPlayer,
-	TEnemies: ThreadSafe + HandlesEnemyBehaviors,
+	TEnemies: ThreadSafe + HandlesEnemyConfig,
 	TGraphics: ThreadSafe + UiCamera,
 {
 	fn build(&self, app: &mut App) {

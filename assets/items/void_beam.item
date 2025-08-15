@@ -1,0 +1,7 @@
+{
+	"token": "item-void-beam",
+	"model": "None",
+	"essence": "None",
+	"skill": "skills/void_beam.skill",
+	"item_type": "VoidBeam"
+}

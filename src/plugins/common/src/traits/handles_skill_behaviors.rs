@@ -15,6 +15,7 @@ use std::collections::HashSet;
 pub trait HandlesSkillBehaviors {
 	type TSkillContact: Component;
 	type TSkillProjection: Component;
+	type TSkillUsage: Component + HoldSkills;
 
 	/// Skills always have a contact and a projection shape.
 	///
@@ -24,6 +25,15 @@ pub trait HandlesSkillBehaviors {
 		contact: Contact,
 		projection: Projection,
 	) -> SkillEntities;
+}
+
+pub trait HoldSkills {
+	type Iter<'a>: Iterator<Item = SlotKey>
+	where
+		Self: 'a;
+
+	fn holding(&self) -> Self::Iter<'_>;
+	fn started_holding(&self) -> Self::Iter<'_>;
 }
 
 /// Describes the contact shape of a skill

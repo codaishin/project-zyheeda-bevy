@@ -1,5 +1,6 @@
-use super::{enemy_behavior::EnemyBehavior, void_beam::VoidBeamAttack};
+use super::enemy::Enemy;
 use bevy::{
+	asset::AssetPath,
 	color::{Color, LinearRgba},
 	math::{Dir3, Vec3, primitives::Torus},
 	pbr::{NotShadowCaster, StandardMaterial},
@@ -31,23 +32,24 @@ use common::{
 	traits::{
 		clamp_zero_positive::ClampZeroPositive,
 		handles_effect::HandlesEffect,
-		handles_enemies::EnemyTarget,
+		handles_enemies::{EnemySkillUsage, EnemyTarget},
 		handles_skill_behaviors::SkillSpawner,
 		load_asset::LoadAsset,
+		loadout::LoadoutConfig,
 		mapper::Mapper,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
-use macros::SavableComponent;
+use macros::{SavableComponent, item_asset};
 use serde::{Deserialize, Serialize};
-use std::{f32::consts::PI, sync::Arc, time::Duration};
+use std::{f32::consts::PI, time::Duration};
 
 #[derive(Component, SavableComponent, Default, Clone, Serialize, Deserialize)]
 #[require(
 	GroundOffset = Self::GROUND_OFFSET,
 	RigidBody = RigidBody::Dynamic,
 	GravityScale = GravityScale(0.),
-	EnemyBehavior = VoidSphere::with_attack_range(Units::new(5.))
+	Enemy = VoidSphere::with_attack_range(Units::new(5.))
 )]
 pub struct VoidSphere;
 
@@ -58,26 +60,25 @@ impl VoidSphere {
 	const TORUS_RADIUS: f32 = 0.35;
 	const TORUS_RING_RADIUS: f32 = Self::OUTER_RADIUS - Self::TORUS_RADIUS;
 
-	const SLOT_OFFSET: Vec3 = Vec3::new(0., 0., -(Self::OUTER_RADIUS + Self::TORUS_RING_RADIUS));
-	pub(crate) const SLOT_NAME: &str = "skill_slot";
+	const SLOT_OFFSET: Vec3 = Vec3::new(
+		Self::GROUND_OFFSET.x,
+		Self::GROUND_OFFSET.y,
+		Self::GROUND_OFFSET.z - (Self::OUTER_RADIUS + Self::TORUS_RING_RADIUS),
+	);
+	pub(crate) const SKILL_SPAWN: &str = "skill_spawn";
+	pub(crate) const SKILL_SPAWN_NEUTRAL: &str = "skill_spawn_neutral";
 
 	fn collider_radius() -> ColliderRadius {
 		ColliderRadius(Units::new(Self::OUTER_RADIUS))
 	}
 
-	pub(crate) fn with_attack_range(attack_range: Units) -> EnemyBehavior {
-		EnemyBehavior {
+	pub(crate) fn with_attack_range(attack_range: Units) -> Enemy {
+		Enemy {
 			speed: UnitsPerSecond::new(1.).into(),
 			movement_animation: None,
 			aggro_range: Units::new(10.).into(),
 			attack_range: attack_range.into(),
 			target: EnemyTarget::Player,
-			attack: Arc::new(VoidBeamAttack {
-				damage: 10.,
-				lifetime: Duration::from_secs(1),
-				range: attack_range,
-			}),
-			cool_down: Duration::from_secs(5),
 			collider_radius: Self::collider_radius(),
 		}
 	}
@@ -116,7 +117,11 @@ where
 			.with_child((Collider::ball(Self::OUTER_RADIUS), transform))
 			.with_child((
 				Transform::from_translation(Self::SLOT_OFFSET),
-				Name::from(Self::SLOT_NAME),
+				Name::from(Self::SKILL_SPAWN),
+			))
+			.with_child((
+				Transform::from_translation(Self::SLOT_OFFSET),
+				Name::from(Self::SKILL_SPAWN_NEUTRAL),
 			));
 
 		Ok(())
@@ -125,11 +130,40 @@ where
 
 impl Mapper<Bone<'_>, Option<SkillSpawner>> for VoidSphere {
 	fn map(&self, Bone(name): Bone) -> Option<SkillSpawner> {
-		if name != Self::SLOT_NAME {
-			return None;
+		match name {
+			name if name == Self::SKILL_SPAWN => {
+				Some(SkillSpawner::Slot(SlotKey::from(VoidSphereSlot)))
+			}
+			name if name == Self::SKILL_SPAWN_NEUTRAL => Some(SkillSpawner::Neutral),
+			_ => None,
 		}
+	}
+}
 
-		Some(SkillSpawner::Neutral)
+impl LoadoutConfig for VoidSphere {
+	fn inventory(&self) -> impl Iterator<Item = Option<AssetPath<'static>>> {
+		std::iter::empty()
+	}
+
+	fn slots(&self) -> impl Iterator<Item = (SlotKey, Option<AssetPath<'static>>)> {
+		std::iter::once((
+			SlotKey::from(VoidSphereSlot),
+			Some(AssetPath::from(item_asset!("void_beam"))),
+		))
+	}
+}
+
+impl EnemySkillUsage for VoidSphere {
+	fn hold_skill(&self) -> Duration {
+		Duration::from_secs(2)
+	}
+
+	fn cool_down(&self) -> Duration {
+		Duration::from_secs(5)
+	}
+
+	fn skill_key(&self) -> SlotKey {
+		SlotKey::from(VoidSphereSlot)
 	}
 }
 

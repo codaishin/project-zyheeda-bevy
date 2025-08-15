@@ -3,7 +3,7 @@ use common::{
 	errors::Unreachable,
 	traits::{
 		handles_custom_assets::TryLoadFrom,
-		handles_skill_behaviors::{Motion, ContactShape},
+		handles_skill_behaviors::{ContactShape, Motion},
 		load_asset::LoadAsset,
 	},
 };

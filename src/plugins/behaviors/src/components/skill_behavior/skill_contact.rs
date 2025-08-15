@@ -7,7 +7,7 @@ use common::{
 	errors::Error,
 	traits::{
 		handles_interactions::HandlesInteractions,
-		handles_skill_behaviors::{Contact, Motion, ContactShape},
+		handles_skill_behaviors::{Contact, ContactShape, Motion},
 		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
 	},

@@ -66,9 +66,9 @@ mod tests {
 	fn start_spawn_shield() -> SkillExecuter {
 		SkillExecuter::Start {
 			slot_key: SlotKey::from(PlayerSlot::Lower(Side::Left)),
-			shape: RunSkillBehavior::OnAim(SkillBehaviorConfig::from_shape(
-				SpawnSkill::Shield(SpawnShield),
-			)),
+			shape: RunSkillBehavior::OnAim(SkillBehaviorConfig::from_shape(SpawnSkill::Shield(
+				SpawnShield,
+			))),
 		}
 	}
 

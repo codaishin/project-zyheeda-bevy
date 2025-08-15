@@ -25,7 +25,7 @@ use common::{
 	states::game_state::{GameState, LoadingEssentialAssets},
 	systems::log::OnError,
 	traits::{
-		handles_enemies::{HandlesEnemies, HandlesEnemyBehaviors},
+		handles_enemies::{HandlesEnemies, HandlesEnemyConfig},
 		handles_lights::HandlesLights,
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInApp},
 		handles_map_generation::HandlesMapGeneration,
@@ -50,7 +50,7 @@ where
 	TSavegame: ThreadSafe + HandlesSaving,
 	TLights: ThreadSafe + HandlesLights,
 	TPlayer: ThreadSafe + HandlesPlayer,
-	TEnemies: ThreadSafe + HandlesEnemyBehaviors,
+	TEnemies: ThreadSafe + HandlesEnemyConfig,
 {
 	pub fn from_plugins(
 		_: &TLoading,

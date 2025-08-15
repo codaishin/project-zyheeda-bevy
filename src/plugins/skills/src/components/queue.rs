@@ -107,14 +107,16 @@ impl Flush for Queue {
 	}
 }
 
-impl IterHoldingMut<QueuedSkill> for Queue {
+impl IterHoldingMut for Queue {
+	type TItem = QueuedSkill;
+
 	fn iter_holding_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut QueuedSkill>
 	where
 		QueuedSkill: 'a,
 	{
 		self.queue
 			.iter_mut()
-			.filter(|skill| skill.skill_mode == SkillMode::Hold)
+			.filter(move |skill| skill.skill_mode == SkillMode::Hold)
 	}
 }
 
@@ -573,7 +575,7 @@ mod test_queue_collection {
 	}
 
 	#[test]
-	fn iter_holding() {
+	fn get_holding_mut() {
 		let skills = [
 			QueuedSkill {
 				key: SlotKey(11),

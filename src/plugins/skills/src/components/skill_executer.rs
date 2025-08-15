@@ -114,11 +114,14 @@ mod tests {
 		},
 		traits::{
 			handles_effect::HandlesEffect,
-			handles_skill_behaviors::{Contact, Projection, SkillEntities, SkillRoot},
+			handles_skill_behaviors::{Contact, HoldSkills, Projection, SkillEntities, SkillRoot},
 			register_persistent_entities::RegisterPersistentEntities,
 		},
 	};
-	use std::sync::{Arc, Mutex};
+	use std::{
+		array::IntoIter,
+		sync::{Arc, Mutex},
+	};
 	use testing::{SingleThreadedApp, assert_count};
 
 	struct _Commands;
@@ -147,6 +150,7 @@ mod tests {
 	impl HandlesSkillBehaviors for _HandlesSkillBehaviors {
 		type TSkillContact = _Contact;
 		type TSkillProjection = _Projection;
+		type TSkillUsage = _SkillUsage;
 
 		fn spawn_skill(commands: &mut ZyheedaCommands, _: Contact, _: Projection) -> SkillEntities {
 			SkillEntities {
@@ -165,6 +169,21 @@ mod tests {
 
 	#[derive(Component)]
 	struct _Projection;
+
+	#[derive(Component)]
+	struct _SkillUsage;
+
+	impl HoldSkills for _SkillUsage {
+		type Iter<'a> = IntoIter<SlotKey, 0>;
+
+		fn holding(&self) -> Self::Iter<'_> {
+			[].into_iter()
+		}
+
+		fn started_holding(&self) -> Self::Iter<'_> {
+			[].into_iter()
+		}
+	}
 
 	#[derive(Debug, PartialEq, Clone)]
 	struct _ShapeSlotted(OnSkillStop);

@@ -108,15 +108,23 @@ mod tests {
 	};
 	use common::{
 		components::persistent_entity::PersistentEntity,
-		traits::handles_skill_behaviors::{Contact, Projection, SkillEntities, SkillRoot},
+		tools::action_key::slot::SlotKey,
+		traits::handles_skill_behaviors::{
+			Contact,
+			HoldSkills,
+			Projection,
+			SkillEntities,
+			SkillRoot,
+		},
 	};
-	use std::{any::type_name, sync::LazyLock, time::Duration};
+	use std::{any::type_name, array::IntoIter, sync::LazyLock, time::Duration};
 
 	struct _HandlesSkillBehaviors;
 
 	impl HandlesSkillBehaviors for _HandlesSkillBehaviors {
 		type TSkillContact = _Contact;
 		type TSkillProjection = _Projection;
+		type TSkillUsage = _SkillUsage;
 
 		fn spawn_skill(_: &mut ZyheedaCommands, _: Contact, _: Projection) -> SkillEntities {
 			panic!("SHOULD NOT BE CALLED")
@@ -138,6 +146,21 @@ mod tests {
 
 	#[derive(Component, Debug, PartialEq, Clone)]
 	struct _Projection;
+
+	#[derive(Component)]
+	struct _SkillUsage;
+
+	impl HoldSkills for _SkillUsage {
+		type Iter<'a> = IntoIter<SlotKey, 0>;
+
+		fn holding(&self) -> Self::Iter<'_> {
+			[].into_iter()
+		}
+
+		fn started_holding(&self) -> Self::Iter<'_> {
+			[].into_iter()
+		}
+	}
 
 	struct _Skill {
 		lifetime: LifeTimeDefinition,
