@@ -7,7 +7,7 @@ use crate::{
 use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
 	tools::action_key::slot::{PlayerSlot, SlotKey},
-	traits::accessors::get::{GetRef, Getter, RefInto},
+	traits::accessors::get::{GetRef, RefAs, RefInto},
 };
 
 pub(crate) fn enqueue<TSlots, TQueue, TQueuedSkill>(
@@ -73,7 +73,7 @@ where
 	TQueuedSkill: ReleaseSkill + for<'a> RefInto<'a, SlotKey>,
 {
 	for skill in queue.iter_holding_mut() {
-		let Ok(key) = PlayerSlot::try_from((*skill).get::<SlotKey>()) else {
+		let Ok(key) = PlayerSlot::try_from((*skill).ref_as::<SlotKey>()) else {
 			continue;
 		};
 		if input.pressed.contains(&key) {

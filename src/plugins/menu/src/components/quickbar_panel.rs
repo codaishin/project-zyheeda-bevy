@@ -59,7 +59,7 @@ impl HasQueuedColor for QuickbarPanel {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{tools::action_key::slot::Side, traits::accessors::get::Getter};
+	use common::{tools::action_key::slot::Side, traits::accessors::get::RefAs};
 
 	#[test]
 	fn get_empty() {
@@ -67,7 +67,7 @@ mod tests {
 			key: PlayerSlot::Lower(Side::Right),
 			state: PanelState::Empty,
 		};
-		assert_eq!(PanelState::Empty, panel.get::<PanelState>());
+		assert_eq!(PanelState::Empty, panel.ref_as::<PanelState>());
 	}
 
 	#[test]
@@ -76,7 +76,7 @@ mod tests {
 			key: PlayerSlot::Lower(Side::Right),
 			state: PanelState::Filled,
 		};
-		assert_eq!(PanelState::Filled, panel.get::<PanelState>());
+		assert_eq!(PanelState::Filled, panel.ref_as::<PanelState>());
 	}
 
 	#[test]
@@ -86,7 +86,7 @@ mod tests {
 			state: PanelState::Empty,
 		};
 
-		assert_eq!(PlayerSlot::Lower(Side::Left), panel.get::<PlayerSlot>());
+		assert_eq!(PlayerSlot::Lower(Side::Left), panel.ref_as::<PlayerSlot>());
 	}
 
 	#[test]
@@ -98,7 +98,7 @@ mod tests {
 
 		assert_eq!(
 			SlotKey::from(PlayerSlot::Lower(Side::Left)),
-			panel.get::<SlotKey>()
+			panel.ref_as::<SlotKey>()
 		);
 	}
 }

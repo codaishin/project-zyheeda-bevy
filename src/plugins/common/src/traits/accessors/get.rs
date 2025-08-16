@@ -53,14 +53,37 @@ where
 }
 
 /// Getter like blanket trait for calling [`RefInto::ref_into()`]
-pub trait Getter {
-	fn get<'a, T>(&'a self) -> T
+///
+/// Allows more explicit type conversion, like:
+/// ```
+/// use common::traits::accessors::get::RefAs;
+///
+/// struct MySpaceShip;
+///
+/// #[derive(Debug, PartialEq)]
+/// enum FtlMethod {
+///   Warp,
+///   Wormhole,
+/// }
+///
+/// impl From<&MySpaceShip> for FtlMethod {
+///   fn from(_: &MySpaceShip) -> FtlMethod {
+///     FtlMethod::Wormhole
+///   }
+/// }
+///
+/// let ship = MySpaceShip;
+///
+/// assert_eq!(FtlMethod::Wormhole, ship.ref_as::<FtlMethod>());
+/// ```
+pub trait RefAs {
+	fn ref_as<'a, T>(&'a self) -> T
 	where
 		Self: RefInto<'a, T>;
 }
 
-impl<TSource> Getter for TSource {
-	fn get<'a, T>(&'a self) -> T
+impl<TSource> RefAs for TSource {
+	fn ref_as<'a, T>(&'a self) -> T
 	where
 		Self: RefInto<'a, T>,
 	{

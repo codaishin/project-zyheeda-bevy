@@ -5,7 +5,7 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	traits::{
-		accessors::get::{Getter, RefInto, TryApplyOn},
+		accessors::get::{RefAs, RefInto, TryApplyOn},
 		thread_safe::ThreadSafe,
 	},
 	zyheeda_commands::ZyheedaCommands,
@@ -54,7 +54,7 @@ fn add_bar_values<TSource, TValue, TCamera>(
 		let world_position = transform.translation() + bar.offset;
 		bar.position = camera.get_screen_position(camera_transform, world_position);
 		let mut bar_values = BarValues::default();
-		bar_values.update(display.get::<&TValue>());
+		bar_values.update(display.ref_as::<&TValue>());
 
 		commands.try_apply_on(&id, |mut e| {
 			e.try_insert(bar_values);
@@ -75,7 +75,7 @@ fn update_bar_values<TSource, TValue, TCamera>(
 	for (transform, display, mut bar, mut bar_values) in &mut agents {
 		let world_position = transform.translation() + bar.offset;
 		bar.position = camera.get_screen_position(camera_transform, world_position);
-		bar_values.update(display.get::<&TValue>());
+		bar_values.update(display.ref_as::<&TValue>());
 	}
 }
 

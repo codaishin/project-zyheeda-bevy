@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use common::{
 	tools::collider_radius::ColliderRadius,
 	traits::{
-		accessors::get::{Getter, RefInto, TryApplyOn},
+		accessors::get::{RefAs, RefInto, TryApplyOn},
 		handles_path_finding::ComputePath,
 		thread_safe::ThreadSafe,
 	},
@@ -38,7 +38,7 @@ pub(crate) trait MovementPath:
 		TGetComputer: Component + for<'a> RefInto<'a, Entity>,
 	{
 		for (entity, transform, agent, movement, get_computer) in &movements {
-			let Ok(computer) = computers.get(get_computer.get::<Entity>()) else {
+			let Ok(computer) = computers.get(get_computer.ref_as::<Entity>()) else {
 				continue;
 			};
 			let move_component = new_movement(computer, transform, movement, agent);

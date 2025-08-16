@@ -10,7 +10,7 @@ use common::{
 	errors::Error,
 	tools::{aggro_range::AggroRange, attack_range::AttackRange},
 	traits::{
-		accessors::get::{GetMut, Getter, RefInto},
+		accessors::get::{GetMut, RefAs, RefInto},
 		cast_ray::{
 			CastRay,
 			GetRayCaster,
@@ -104,7 +104,7 @@ where
 	let mut invalid_directions = vec![];
 
 	for (persistent_agent, transform, ground_offset, agent) in &agents {
-		let target = match agent.get::<EnemyTarget>() {
+		let target = match agent.ref_as::<EnemyTarget>() {
 			EnemyTarget::Player => players.single().ok(),
 			EnemyTarget::Entity(persistent_entity) => commands
 				.get_mut(&persistent_entity)
@@ -180,10 +180,10 @@ where
 	let direction = target_translation - enemy_translation;
 	let distance = direction.length();
 
-	if distance > **enemy_agent.get::<AggroRange>() {
+	if distance > **enemy_agent.ref_as::<AggroRange>() {
 		return Ok(Behavior::Idle);
 	}
-	if distance > **enemy_agent.get::<AttackRange>() {
+	if distance > **enemy_agent.ref_as::<AttackRange>() {
 		return Ok(Behavior::Chase);
 	}
 
