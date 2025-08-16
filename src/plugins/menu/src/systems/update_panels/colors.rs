@@ -5,7 +5,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	traits::accessors::get::{Getter, RefInto, TryApplyOn},
+	traits::accessors::get::{RefAs, RefInto, TryApplyOn},
 	zyheeda_commands::ZyheedaCommands,
 };
 
@@ -14,7 +14,7 @@ pub fn panel_colors<TPanel: Component + for<'a> RefInto<'a, PanelState> + HasPan
 	mut panels: Query<(Entity, &Interaction, &TPanel, Option<&UIDisabled>), Without<ColorOverride>>,
 ) {
 	for (entity, interaction, panel, disabled) in &mut panels {
-		let config = match (interaction, panel.get::<PanelState>(), disabled) {
+		let config = match (interaction, panel.ref_as::<PanelState>(), disabled) {
 			(.., Some(UIDisabled)) => &TPanel::PANEL_COLORS.disabled,
 			(Interaction::Pressed, ..) => &TPanel::PANEL_COLORS.pressed,
 			(Interaction::Hovered, ..) => &TPanel::PANEL_COLORS.hovered,

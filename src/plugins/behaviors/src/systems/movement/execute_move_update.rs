@@ -2,7 +2,7 @@ use crate::traits::{IsDone, MovementUpdate};
 use bevy::prelude::*;
 use common::{
 	tools::speed::Speed,
-	traits::accessors::get::{Getter, RefInto},
+	traits::accessors::get::{RefAs, RefInto},
 };
 use std::time::Duration;
 
@@ -24,7 +24,7 @@ pub(crate) trait ExecuteMovement {
 			let Ok(mut entity) = commands.get_entity(id) else {
 				continue;
 			};
-			let speed = config.get::<Speed>();
+			let speed = config.ref_as::<Speed>();
 			let IsDone(true) = movement.update(&mut entity, components, speed, delta) else {
 				continue;
 			};

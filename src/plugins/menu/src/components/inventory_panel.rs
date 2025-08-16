@@ -33,18 +33,18 @@ impl HasPanelColors for InventoryPanel {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::accessors::get::Getter;
+	use common::traits::accessors::get::RefAs;
 
 	#[test]
 	fn get_empty() {
 		let panel = InventoryPanel::from(PanelState::Empty);
-		assert_eq!(PanelState::Empty, panel.get::<PanelState>());
+		assert_eq!(PanelState::Empty, panel.ref_as::<PanelState>());
 	}
 
 	#[test]
 	fn get_filled() {
 		let panel = InventoryPanel::from(PanelState::Filled);
-		assert_eq!(PanelState::Filled, panel.get::<PanelState>());
+		assert_eq!(PanelState::Filled, panel.ref_as::<PanelState>());
 	}
 
 	#[test]

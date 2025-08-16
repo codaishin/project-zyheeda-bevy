@@ -4,7 +4,7 @@ use common::{
 	errors::{Error, Level},
 	tools::speed::Speed,
 	traits::{
-		accessors::get::{Getter, RefInto},
+		accessors::get::{RefAs, RefInto},
 		handles_player::KeyDirection,
 		key_mappings::Pressed,
 	},
@@ -54,7 +54,9 @@ pub(crate) trait ParseDirectionalMovement: DirectionalMovementInput {
 		};
 		let input = Self::from(
 			translation
-				+ direction * Self::min_distance(speed.get::<Speed>(), delta) * SCALE_MIN_DISTANCE,
+				+ direction
+					* Self::min_distance(speed.ref_as::<Speed>(), delta)
+					* SCALE_MIN_DISTANCE,
 		);
 
 		Ok(Some(input))

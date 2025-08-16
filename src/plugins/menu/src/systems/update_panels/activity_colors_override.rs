@@ -10,7 +10,7 @@ use common::{
 		skill_execution::SkillExecution,
 	},
 	traits::{
-		accessors::get::{Getter, RefInto},
+		accessors::get::{RefAs, RefInto},
 		handles_loadout_menu::GetItem,
 		inspect_able::{InspectAble, InspectField},
 		key_mappings::GetInput,
@@ -56,7 +56,7 @@ where
 	TMap: GetInput<PlayerSlot, TInput = UserInput>,
 	for<'a> &'a TPrimer: Into<IsPrimed> + Into<UserInput>,
 {
-	let panel_key = panel.get::<PlayerSlot>();
+	let panel_key = panel.ref_as::<PlayerSlot>();
 	let state = container
 		.get_item(panel_key)
 		.map(SkillExecution::inspect_field)

@@ -9,7 +9,7 @@ use common::{
 	},
 	tools::collider_info::ColliderInfo,
 	traits::{
-		accessors::get::{GetMut, Getter, RefInto},
+		accessors::get::{GetMut, RefAs, RefInto},
 		handles_orientation::Face,
 		intersect_at::IntersectAt,
 	},
@@ -83,7 +83,7 @@ where
 	TMouseHover: Resource + for<'a> RefInto<'a, Option<&'a ColliderInfo<Entity>>>,
 	TCursor: IntersectAt + Resource,
 {
-	let Some(collider_info) = hover.get::<Option<&ColliderInfo<Entity>>>() else {
+	let Some(collider_info) = hover.ref_as::<Option<&ColliderInfo<Entity>>>() else {
 		return cursor.intersect_at(0.).map(|t| (None, t));
 	};
 
