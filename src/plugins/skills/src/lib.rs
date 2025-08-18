@@ -21,7 +21,6 @@ use common::{
 		inventory_key::InventoryKey,
 	},
 	traits::{
-		handles_assets_for_children::HandlesAssetsForChildren,
 		handles_combo_menu::{ConfigurePlayerCombos, HandlesComboMenu},
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
 		handles_effect::HandlesAllEffects,
@@ -48,7 +47,7 @@ use components::{
 	inventory::Inventory,
 	queue::Queue,
 	skill_executer::SkillExecuter,
-	slots::{ForearmItemSlots, HandItemSlots, Slots, SubMeshEssenceSlots},
+	slots::Slots,
 	swapper::Swapper,
 };
 use item::{Item, dto::ItemDto};
@@ -69,20 +68,10 @@ use tools::combo_descriptor::ComboDescriptor;
 
 pub struct SkillsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<
-	TSaveGame,
-	TInteractions,
-	TDispatchChildrenAssets,
-	TLoading,
-	TSettings,
-	TBehaviors,
-	TPlayers,
-	TMenu,
->
+impl<TSaveGame, TInteractions, TLoading, TSettings, TBehaviors, TPlayers, TMenu>
 	SkillsPlugin<(
 		TSaveGame,
 		TInteractions,
-		TDispatchChildrenAssets,
 		TLoading,
 		TSettings,
 		TBehaviors,
@@ -92,7 +81,6 @@ impl<
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TInteractions: ThreadSafe + HandlesAllEffects,
-	TDispatchChildrenAssets: ThreadSafe + HandlesAssetsForChildren,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets,
 	TSettings: ThreadSafe + HandlesSettings,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation + SystemSetDefinition,
@@ -107,7 +95,6 @@ where
 	pub fn from_plugins(
 		_: &TSaveGame,
 		_: &TInteractions,
-		_: &TDispatchChildrenAssets,
 		_: &TLoading,
 		_: &TSettings,
 		_: &TBehaviors,
@@ -126,9 +113,6 @@ where
 	}
 
 	fn loadout(&self, app: &mut App) {
-		TDispatchChildrenAssets::register_child_asset::<Slots, HandItemSlots>(app);
-		TDispatchChildrenAssets::register_child_asset::<Slots, ForearmItemSlots>(app);
-		TDispatchChildrenAssets::register_child_asset::<Slots, SubMeshEssenceSlots>(app);
 		TSaveGame::register_savable_component::<Inventory>(app);
 		TSaveGame::register_savable_component::<Slots>(app);
 
@@ -185,20 +169,10 @@ where
 	}
 }
 
-impl<
-	TSaveGame,
-	TInteractions,
-	TDispatchChildrenAssets,
-	TLoading,
-	TSettings,
-	TBehaviors,
-	TPlayers,
-	TMenu,
-> Plugin
+impl<TSaveGame, TInteractions, TLoading, TSettings, TBehaviors, TPlayers, TMenu> Plugin
 	for SkillsPlugin<(
 		TSaveGame,
 		TInteractions,
-		TDispatchChildrenAssets,
 		TLoading,
 		TSettings,
 		TBehaviors,
@@ -208,7 +182,6 @@ impl<
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TInteractions: ThreadSafe + HandlesAllEffects,
-	TDispatchChildrenAssets: ThreadSafe + HandlesAssetsForChildren,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets,
 	TSettings: ThreadSafe + HandlesSettings,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation + SystemSetDefinition,
