@@ -11,6 +11,7 @@ use crate::components::{
 	combos_time_out::dto::CombosTimeOutDto,
 	loadout::Loadout,
 	queue::dto::QueueDto,
+	slots::visualization::SlotVisualization,
 };
 use bevy::prelude::*;
 use common::{
@@ -38,6 +39,7 @@ use common::{
 		prefab::AddPrefabObserver,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
+		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
 	},
 };
 use components::{
@@ -118,7 +120,19 @@ where
 
 		app.register_required_components::<TPlayers::TPlayer, Loadout>()
 			.add_prefab_observer::<Loadout, ()>()
-			.add_systems(Update, Swapper::system);
+			.add_systems(
+				Update,
+				(
+					Swapper::system,
+					SlotVisualization::<HandSlot>::track_slots_for::<TPlayers::TPlayer>,
+					SlotVisualization::<HandSlot>::visualize_items,
+					SlotVisualization::<ForearmSlot>::track_slots_for::<TPlayers::TPlayer>,
+					SlotVisualization::<ForearmSlot>::visualize_items,
+					SlotVisualization::<EssenceSlot>::track_slots_for::<TPlayers::TPlayer>,
+					SlotVisualization::<EssenceSlot>::visualize_items,
+				)
+					.chain(),
+			);
 	}
 
 	fn skill_execution(&self, app: &mut App) {

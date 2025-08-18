@@ -1,6 +1,7 @@
 pub(crate) mod advance_combo;
 pub(crate) mod flush;
 pub(crate) mod is_timed_out;
+pub(crate) mod item_asset;
 pub(crate) mod loadout_key;
 pub(crate) mod peek_next;
 pub(crate) mod peek_next_recursive;

@@ -1,15 +1,30 @@
+pub(crate) mod visualization;
+
 mod dto;
 
-use crate::{components::slots::dto::SlotsDto, item::Item, traits::loadout_key::LoadoutKey};
+use crate::{
+	components::slots::{dto::SlotsDto, visualization::SlotVisualization},
+	item::Item,
+	traits::loadout_key::LoadoutKey,
+};
 use bevy::{asset::Handle, prelude::*};
 use common::{
 	tools::action_key::slot::SlotKey,
-	traits::{accessors::get::GetRef, iterate::Iterate},
+	traits::{
+		accessors::get::GetRef,
+		iterate::Iterate,
+		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
+	},
 };
 use macros::SavableComponent;
 use std::{collections::HashMap, fmt::Debug};
 
 #[derive(Component, SavableComponent, PartialEq, Debug, Clone)]
+#[require(
+	SlotVisualization<HandSlot>,
+	SlotVisualization<ForearmSlot>,
+	SlotVisualization<EssenceSlot>
+)]
 #[savable_component(dto = SlotsDto)]
 pub struct Slots(pub HashMap<SlotKey, Option<Handle<Item>>>);
 
