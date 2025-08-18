@@ -21,6 +21,13 @@ pub enum PlayerSlot {
 	Lower(Side),
 }
 
+impl PlayerSlot {
+	pub const UPPER_L: Self = Self::Upper(Side::Left);
+	pub const UPPER_R: Self = Self::Upper(Side::Right);
+	pub const LOWER_L: Self = Self::Lower(Side::Left);
+	pub const LOWER_R: Self = Self::Lower(Side::Right);
+}
+
 impl Default for PlayerSlot {
 	fn default() -> Self {
 		Self::Lower(Side::Right)
@@ -137,7 +144,7 @@ pub enum Side {
 }
 
 #[cfg(test)]
-mod tests {
+mod test_player_slot {
 	use super::*;
 
 	#[test]

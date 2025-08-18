@@ -60,4 +60,5 @@ pub mod system_set_definition;
 pub mod thread_safe;
 pub mod track;
 pub mod update_cumulative;
+pub mod visible_slots;
 pub mod wrap_handle;

@@ -46,6 +46,7 @@ use common::{
 		load_asset::{LoadAsset, Path},
 		mapper::Mapper,
 		prefab::{Prefab, PrefabEntityCommands},
+		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
 	},
 };
 use macros::SavableComponent;
@@ -153,22 +154,56 @@ impl Player {
 	}
 }
 
+impl VisibleSlots for Player {
+	fn visualize_keys(&self) -> impl Iterator<Item = SlotKey> {
+		PlayerSlot::iterator().map(SlotKey::from)
+	}
+}
+
 impl<'a> Mapper<Bone<'a>, Option<SkillSpawner>> for Player {
-	fn map(&self, bone: Bone) -> Option<SkillSpawner> {
-		match &bone {
-			Bone("skill_spawn") => Some(SkillSpawner::Neutral),
-			Bone("skill_spawn_top.R") => Some(SkillSpawner::Slot(SlotKey::from(
-				PlayerSlot::Upper(Side::Right),
-			))),
-			Bone("skill_spawn_top.L") => Some(SkillSpawner::Slot(SlotKey::from(
-				PlayerSlot::Upper(Side::Left),
-			))),
-			Bone("skill_spawn_bottom.R") => Some(SkillSpawner::Slot(SlotKey::from(
-				PlayerSlot::Lower(Side::Right),
-			))),
-			Bone("skill_spawn_bottom.L") => Some(SkillSpawner::Slot(SlotKey::from(
-				PlayerSlot::Lower(Side::Left),
-			))),
+	fn map(&self, Bone(bone): Bone) -> Option<SkillSpawner> {
+		match bone {
+			"skill_spawn" => Some(SkillSpawner::Neutral),
+			"skill_spawn_top.R" => Some(SkillSpawner::Slot(PlayerSlot::UPPER_R.into())),
+			"skill_spawn_top.L" => Some(SkillSpawner::Slot(PlayerSlot::UPPER_L.into())),
+			"skill_spawn_bottom.R" => Some(SkillSpawner::Slot(PlayerSlot::LOWER_R.into())),
+			"skill_spawn_bottom.L" => Some(SkillSpawner::Slot(PlayerSlot::LOWER_L.into())),
+			_ => None,
+		}
+	}
+}
+
+impl<'a> Mapper<Bone<'a>, Option<EssenceSlot>> for Player {
+	fn map(&self, Bone(bone): Bone) -> Option<EssenceSlot> {
+		match bone {
+			"ArmTopRightData" => Some(EssenceSlot(PlayerSlot::UPPER_R.into())),
+			"ArmTopLeftData" => Some(EssenceSlot(PlayerSlot::UPPER_L.into())),
+			"ArmBottomRightData" => Some(EssenceSlot(PlayerSlot::LOWER_R.into())),
+			"ArmBottomLeftData" => Some(EssenceSlot(PlayerSlot::LOWER_L.into())),
+			_ => None,
+		}
+	}
+}
+
+impl<'a> Mapper<Bone<'a>, Option<ForearmSlot>> for Player {
+	fn map(&self, Bone(bone): Bone) -> Option<ForearmSlot> {
+		match bone {
+			"top_forearm.R" => Some(ForearmSlot(PlayerSlot::UPPER_R.into())),
+			"top_forearm.L" => Some(ForearmSlot(PlayerSlot::UPPER_L.into())),
+			"bottom_forearm.R" => Some(ForearmSlot(PlayerSlot::LOWER_R.into())),
+			"bottom_forearm.L" => Some(ForearmSlot(PlayerSlot::LOWER_L.into())),
+			_ => None,
+		}
+	}
+}
+
+impl<'a> Mapper<Bone<'a>, Option<HandSlot>> for Player {
+	fn map(&self, Bone(bone): Bone) -> Option<HandSlot> {
+		match bone {
+			"top_hand_slot.R" => Some(HandSlot(PlayerSlot::UPPER_R.into())),
+			"top_hand_slot.L" => Some(HandSlot(PlayerSlot::UPPER_L.into())),
+			"bottom_hand_slot.R" => Some(HandSlot(PlayerSlot::LOWER_R.into())),
+			"bottom_hand_slot.L" => Some(HandSlot(PlayerSlot::LOWER_L.into())),
 			_ => None,
 		}
 	}
