@@ -11,6 +11,7 @@ use crate::{
 	},
 	traits::{
 		handles_skill_behaviors::SkillSpawner,
+		loadout::LoadoutConfig,
 		mapper::Mapper,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
 	},
@@ -24,6 +25,7 @@ pub trait HandlesPlayer {
 	type TPlayer: Component
 		+ Default
 		+ VisibleSlots
+		+ LoadoutConfig
 		+ for<'a> Mapper<Bone<'a>, Option<SkillSpawner>>
 		+ for<'a> Mapper<Bone<'a>, Option<EssenceSlot>>
 		+ for<'a> Mapper<Bone<'a>, Option<HandSlot>>

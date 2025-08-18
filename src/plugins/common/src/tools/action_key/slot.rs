@@ -123,7 +123,7 @@ impl TryFrom<SlotKey> for PlayerSlot {
 
 #[derive(Debug, PartialEq)]
 pub struct NoValidSlotKey {
-	slot_key: SlotKey,
+	pub slot_key: SlotKey,
 }
 
 impl From<NoValidSlotKey> for Error {

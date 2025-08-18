@@ -4,9 +4,15 @@ use crate::{
 	tools::{
 		aggro_range::AggroRange,
 		attack_range::AttackRange,
+		bone::Bone,
 		collider_radius::ColliderRadius,
 		movement_animation::MovementAnimation,
 		speed::Speed,
+	},
+	traits::{
+		loadout::LoadoutConfig,
+		mapper::Mapper,
+		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
 	},
 };
 use bevy::prelude::*;
@@ -19,13 +25,18 @@ pub trait HandlesEnemies {
 
 pub trait HandlesEnemyBehaviors {
 	type TEnemyBehavior: Component
+		+ LoadoutConfig
+		+ VisibleSlots
 		+ EnemyAttack
 		+ for<'a> RefInto<'a, Speed>
 		+ for<'a> RefInto<'a, Option<&'a MovementAnimation>>
 		+ for<'a> RefInto<'a, EnemyTarget>
 		+ for<'a> RefInto<'a, AggroRange>
 		+ for<'a> RefInto<'a, AttackRange>
-		+ for<'a> RefInto<'a, ColliderRadius>;
+		+ for<'a> RefInto<'a, ColliderRadius>
+		+ for<'a> Mapper<Bone<'a>, Option<EssenceSlot>>
+		+ for<'a> Mapper<Bone<'a>, Option<HandSlot>>
+		+ for<'a> Mapper<Bone<'a>, Option<ForearmSlot>>;
 }
 
 pub trait EnemyAttack {

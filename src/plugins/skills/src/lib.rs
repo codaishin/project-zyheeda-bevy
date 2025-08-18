@@ -28,6 +28,7 @@ use common::{
 		handles_combo_menu::{ConfigurePlayerCombos, HandlesComboMenu},
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
 		handles_effect::HandlesAllEffects,
+		handles_enemies::HandlesEnemyBehaviors,
 		handles_load_tracking::{DependenciesProgress, HandlesLoadTracking, LoadTrackingInApp},
 		handles_loadout_menu::{ConfigureInventory, HandlesLoadoutMenu},
 		handles_orientation::HandlesOrientation,
@@ -40,7 +41,6 @@ use common::{
 		handles_saving::HandlesSaving,
 		handles_settings::HandlesSettings,
 		handles_skill_behaviors::HandlesSkillBehaviors,
-		prefab::AddPrefabObserver,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
@@ -74,7 +74,7 @@ use tools::combo_descriptor::ComboDescriptor;
 
 pub struct SkillsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSaveGame, TInteractions, TLoading, TSettings, TBehaviors, TPlayers, TMenu>
+impl<TSaveGame, TInteractions, TLoading, TSettings, TBehaviors, TPlayers, TEnemies, TMenu>
 	SkillsPlugin<(
 		TSaveGame,
 		TInteractions,
@@ -82,6 +82,7 @@ impl<TSaveGame, TInteractions, TLoading, TSettings, TBehaviors, TPlayers, TMenu>
 		TSettings,
 		TBehaviors,
 		TPlayers,
+		TEnemies,
 		TMenu,
 	)>
 where
@@ -95,6 +96,7 @@ where
 		+ HandlesPlayerCameras
 		+ HandlesPlayerMouse
 		+ ConfiguresPlayerSkillAnimations,
+	TEnemies: ThreadSafe + HandlesEnemyBehaviors,
 	TMenu: ThreadSafe + HandlesLoadoutMenu + HandlesComboMenu,
 {
 	#[allow(clippy::too_many_arguments)]
@@ -105,6 +107,7 @@ where
 		_: &TSettings,
 		_: &TBehaviors,
 		_: &TPlayers,
+		_: &TEnemies,
 		_: &TMenu,
 	) -> Self {
 		Self(PhantomData)
@@ -137,18 +140,24 @@ where
 		Self::track_loading::<HandSlot, TPlayers::TPlayer>(app);
 		Self::track_loading::<ForearmSlot, TPlayers::TPlayer>(app);
 		Self::track_loading::<EssenceSlot, TPlayers::TPlayer>(app);
+		Self::track_loading::<HandSlot, TEnemies::TEnemyBehavior>(app);
+		Self::track_loading::<ForearmSlot, TEnemies::TEnemyBehavior>(app);
+		Self::track_loading::<EssenceSlot, TEnemies::TEnemyBehavior>(app);
 
-		app.register_required_components::<TPlayers::TPlayer, Loadout>()
-			.add_prefab_observer::<Loadout, ()>()
+		app.add_observer(Loadout::<TPlayers::TPlayer>::insert)
+			.add_observer(Loadout::<TEnemies::TEnemyBehavior>::insert)
 			.add_systems(
 				Update,
 				(
 					Swapper::system,
 					SlotVisualization::<HandSlot>::track_slots_for::<TPlayers::TPlayer>,
+					SlotVisualization::<HandSlot>::track_slots_for::<TEnemies::TEnemyBehavior>,
 					SlotVisualization::<HandSlot>::visualize_items,
 					SlotVisualization::<ForearmSlot>::track_slots_for::<TPlayers::TPlayer>,
+					SlotVisualization::<ForearmSlot>::track_slots_for::<TEnemies::TEnemyBehavior>,
 					SlotVisualization::<ForearmSlot>::visualize_items,
 					SlotVisualization::<EssenceSlot>::track_slots_for::<TPlayers::TPlayer>,
+					SlotVisualization::<EssenceSlot>::track_slots_for::<TEnemies::TEnemyBehavior>,
 					SlotVisualization::<EssenceSlot>::visualize_items,
 				)
 					.chain(),
@@ -203,7 +212,7 @@ where
 	}
 }
 
-impl<TSaveGame, TInteractions, TLoading, TSettings, TBehaviors, TPlayers, TMenu> Plugin
+impl<TSaveGame, TInteractions, TLoading, TSettings, TBehaviors, TPlayers, TEnemies, TMenu> Plugin
 	for SkillsPlugin<(
 		TSaveGame,
 		TInteractions,
@@ -211,6 +220,7 @@ impl<TSaveGame, TInteractions, TLoading, TSettings, TBehaviors, TPlayers, TMenu>
 		TSettings,
 		TBehaviors,
 		TPlayers,
+		TEnemies,
 		TMenu,
 	)>
 where
@@ -224,6 +234,7 @@ where
 		+ HandlesPlayerCameras
 		+ HandlesPlayerMouse
 		+ ConfiguresPlayerSkillAnimations,
+	TEnemies: ThreadSafe + HandlesEnemyBehaviors,
 	TMenu: ThreadSafe + HandlesLoadoutMenu + HandlesComboMenu,
 {
 	fn build(&self, app: &mut App) {

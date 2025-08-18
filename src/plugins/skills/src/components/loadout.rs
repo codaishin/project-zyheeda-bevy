@@ -9,17 +9,17 @@ use crate::components::{
 };
 use bevy::prelude::*;
 use common::{
-	errors::Error,
-	tools::action_key::slot::{PlayerSlot, Side, SlotKey},
 	traits::{
+		accessors::get::TryApplyOn,
 		load_asset::LoadAsset,
-		prefab::{Prefab, PrefabEntityCommands},
+		loadout::LoadoutConfig,
+		thread_safe::ThreadSafe,
 	},
+	zyheeda_commands::ZyheedaCommands,
 };
-use macros::item_asset;
-use std::time::Duration;
+use std::{marker::PhantomData, time::Duration};
 
-#[derive(Component, Debug, Default)]
+#[derive(Component, Debug)]
 #[require(
 	Combos,
 	CombosTimeOut = CombosTimeOut::after(Duration::from_secs(2)),
@@ -27,39 +27,50 @@ use std::time::Duration;
 	SkillExecuter,
 	Swapper,
 )]
-pub(crate) struct Loadout;
+pub(crate) struct Loadout<T>(PhantomData<T>)
+where
+	T: LoadoutConfig + ThreadSafe;
 
-impl Prefab<()> for Loadout {
-	fn insert_prefab_components(
-		&self,
-		entity: &mut impl PrefabEntityCommands,
-		assets: &mut impl LoadAsset,
-	) -> Result<(), Error> {
-		entity.try_insert_if_new((
-			Inventory::from([
-				Some(assets.load_asset(item_asset!("pistol"))),
-				Some(assets.load_asset(item_asset!("pistol"))),
-				Some(assets.load_asset(item_asset!("pistol"))),
-			]),
-			Slots::from([
-				(
-					SlotKey::from(PlayerSlot::Upper(Side::Left)),
-					Some(assets.load_asset(item_asset!("pistol"))),
+impl<T> Loadout<T>
+where
+	T: LoadoutConfig + ThreadSafe,
+{
+	pub(crate) fn insert(
+		trigger: Trigger<OnInsert, T>,
+		agents: Query<&T>,
+		mut commands: ZyheedaCommands,
+		mut assets: ResMut<AssetServer>,
+	) {
+		let entity = trigger.target();
+		let Ok(agent) = agents.get(entity) else {
+			return;
+		};
+
+		commands.try_apply_on(&entity, |mut e| {
+			e.try_insert_if_new((
+				Self::default(),
+				Inventory::from(
+					agent
+						.inventory()
+						.into_iter()
+						.map(|path| path.map(|path| assets.load_asset(path))),
 				),
-				(
-					SlotKey::from(PlayerSlot::Lower(Side::Left)),
-					Some(assets.load_asset(item_asset!("pistol"))),
+				Slots::from(
+					agent
+						.slots()
+						.into_iter()
+						.map(|(key, path)| (key, path.map(|path| assets.load_asset(path)))),
 				),
-				(
-					SlotKey::from(PlayerSlot::Lower(Side::Right)),
-					Some(assets.load_asset(item_asset!("force_essence"))),
-				),
-				(
-					SlotKey::from(PlayerSlot::Upper(Side::Right)),
-					Some(assets.load_asset(item_asset!("force_essence"))),
-				),
-			]),
-		));
-		Ok(())
+			));
+		});
+	}
+}
+
+impl<T> Default for Loadout<T>
+where
+	T: LoadoutConfig + ThreadSafe,
+{
+	fn default() -> Self {
+		Self(PhantomData)
 	}
 }
