@@ -14,16 +14,14 @@ where
 	where
 		TAgent: VisibleSlots,
 	{
-		for (agent, visualization) in &agents {
-			for slot_key in agent.visible_slots() {
-				let key = TKey::from(slot_key);
-				if !visualization.slots.contains_key(&key) {
-					return Loaded(false);
-				}
-			}
-		}
+		let all_visible_slots_discovered = agents.iter().all(|(agent, visualization)| {
+			agent
+				.visible_slots()
+				.map(TKey::from)
+				.all(|key| visualization.slots.contains_key(&key))
+		});
 
-		Loaded(true)
+		Loaded(all_visible_slots_discovered)
 	}
 }
 

@@ -3,7 +3,7 @@ pub(crate) mod dto;
 use crate::{
 	components::model_render::ModelRender,
 	skills::Skill,
-	traits::item_asset::VisualizeItem,
+	traits::visualize_item::VisualizeItem,
 };
 use bevy::prelude::*;
 use common::{

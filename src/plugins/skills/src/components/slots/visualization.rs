@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use std::{collections::HashMap, hash::Hash, marker::PhantomData};
+use std::{collections::HashMap, hash::Hash};
 
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct SlotVisualization<TKey>
@@ -7,7 +7,6 @@ where
 	TKey: Eq + Hash,
 {
 	pub(crate) slots: HashMap<TKey, Entity>,
-	_p: PhantomData<TKey>,
 }
 
 impl<TKey> Default for SlotVisualization<TKey>
@@ -17,7 +16,6 @@ where
 	fn default() -> Self {
 		Self {
 			slots: HashMap::default(),
-			_p: PhantomData,
 		}
 	}
 }
@@ -31,7 +29,6 @@ where
 	fn from(value: T) -> Self {
 		Self {
 			slots: HashMap::from_iter(value),
-			_p: PhantomData,
 		}
 	}
 }

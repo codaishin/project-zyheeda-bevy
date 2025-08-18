@@ -1,7 +1,6 @@
 pub(crate) mod advance_combo;
 pub(crate) mod flush;
 pub(crate) mod is_timed_out;
-pub(crate) mod item_asset;
 pub(crate) mod loadout_key;
 pub(crate) mod peek_next;
 pub(crate) mod peek_next_recursive;
@@ -9,6 +8,7 @@ pub(crate) mod skill_builder;
 pub(crate) mod skill_state;
 pub(crate) mod spawn_skill_behavior;
 pub(crate) mod user_input;
+pub(crate) mod visualize_item;
 pub(crate) mod write_item;
 
 use crate::{

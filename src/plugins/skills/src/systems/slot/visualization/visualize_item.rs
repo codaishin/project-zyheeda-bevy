@@ -1,7 +1,7 @@
 use crate::{
 	components::slots::{Slots, visualization::SlotVisualization},
 	item::Item,
-	traits::item_asset::VisualizeItem,
+	traits::visualize_item::VisualizeItem,
 };
 use bevy::prelude::*;
 use common::{
