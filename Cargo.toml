@@ -29,7 +29,6 @@ common = { path = "src/plugins/common" }
 enemy = { path = "src/plugins/enemy" }
 frame_limiter = { path = "src/plugins/frame_limiter" }
 interactions = { path = "src/plugins/interactions" }
-children_assets_dispatch = { path = "src/plugins/children_assets_dispatch" }
 items = { path = "src/plugins/items" }
 light = { path = "src/plugins/light" }
 loading = { path = "src/plugins/loading" }
@@ -87,7 +86,6 @@ common.workspace = true
 enemy.workspace = true
 frame_limiter.workspace = true
 interactions.workspace = true
-children_assets_dispatch.workspace = true
 light.workspace = true
 loading.workspace = true
 localization.workspace = true

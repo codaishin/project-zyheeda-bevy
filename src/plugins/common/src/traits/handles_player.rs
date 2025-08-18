@@ -9,7 +9,11 @@ use crate::{
 		movement_animation::MovementAnimation,
 		speed::Speed,
 	},
-	traits::{handles_skill_behaviors::SkillSpawner, mapper::Mapper},
+	traits::{
+		handles_skill_behaviors::SkillSpawner,
+		mapper::Mapper,
+		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
+	},
 };
 use bevy::{
 	math::{InvalidDirectionError, Ray3d},
@@ -17,7 +21,13 @@ use bevy::{
 };
 
 pub trait HandlesPlayer {
-	type TPlayer: Component + Default + for<'a> Mapper<Bone<'a>, Option<SkillSpawner>>;
+	type TPlayer: Component
+		+ Default
+		+ VisibleSlots
+		+ for<'a> Mapper<Bone<'a>, Option<SkillSpawner>>
+		+ for<'a> Mapper<Bone<'a>, Option<EssenceSlot>>
+		+ for<'a> Mapper<Bone<'a>, Option<HandSlot>>
+		+ for<'a> Mapper<Bone<'a>, Option<ForearmSlot>>;
 }
 
 pub trait PlayerMainCamera {

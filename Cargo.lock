@@ -1816,17 +1816,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
-name = "children_assets_dispatch"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "common",
- "macros",
- "mockall",
- "testing",
-]
-
-[[package]]
 name = "clang-sys"
 version = "1.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4498,7 +4487,6 @@ dependencies = [
  "bevy-inspector-egui",
  "bevy_rapier3d",
  "camera_control",
- "children_assets_dispatch",
  "common",
  "enemy",
  "fluent",

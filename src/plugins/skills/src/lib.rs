@@ -11,20 +11,24 @@ use crate::components::{
 	combos_time_out::dto::CombosTimeOutDto,
 	loadout::Loadout,
 	queue::dto::QueueDto,
+	slots::visualization::SlotVisualization,
 };
 use bevy::prelude::*;
 use common::{
 	states::game_state::{GameState, LoadingGame},
 	systems::log::OnError,
 	tools::{
-		action_key::{slot::PlayerSlot, user_input::UserInput},
+		action_key::{
+			slot::{PlayerSlot, SlotKey},
+			user_input::UserInput,
+		},
 		inventory_key::InventoryKey,
 	},
 	traits::{
-		handles_assets_for_children::HandlesAssetsForChildren,
 		handles_combo_menu::{ConfigurePlayerCombos, HandlesComboMenu},
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
 		handles_effect::HandlesAllEffects,
+		handles_load_tracking::{DependenciesProgress, HandlesLoadTracking, LoadTrackingInApp},
 		handles_loadout_menu::{ConfigureInventory, HandlesLoadoutMenu},
 		handles_orientation::HandlesOrientation,
 		handles_player::{
@@ -39,6 +43,7 @@ use common::{
 		prefab::AddPrefabObserver,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
+		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
 	},
 };
 use components::{
@@ -48,12 +53,12 @@ use components::{
 	inventory::Inventory,
 	queue::Queue,
 	skill_executer::SkillExecuter,
-	slots::{ForearmItemSlots, HandItemSlots, Slots, SubMeshEssenceSlots},
+	slots::Slots,
 	swapper::Swapper,
 };
 use item::{Item, dto::ItemDto};
 use skills::{QueuedSkill, RunSkillBehavior, Skill, dto::SkillDto};
-use std::marker::PhantomData;
+use std::{hash::Hash, marker::PhantomData};
 use systems::{
 	advance_active_skill::advance_active_skill,
 	combos::{queue_update::ComboQueueUpdate, update::UpdateCombos},
@@ -69,20 +74,10 @@ use tools::combo_descriptor::ComboDescriptor;
 
 pub struct SkillsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<
-	TSaveGame,
-	TInteractions,
-	TDispatchChildrenAssets,
-	TLoading,
-	TSettings,
-	TBehaviors,
-	TPlayers,
-	TMenu,
->
+impl<TSaveGame, TInteractions, TLoading, TSettings, TBehaviors, TPlayers, TMenu>
 	SkillsPlugin<(
 		TSaveGame,
 		TInteractions,
-		TDispatchChildrenAssets,
 		TLoading,
 		TSettings,
 		TBehaviors,
@@ -92,8 +87,7 @@ impl<
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TInteractions: ThreadSafe + HandlesAllEffects,
-	TDispatchChildrenAssets: ThreadSafe + HandlesAssetsForChildren,
-	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets,
+	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
 	TSettings: ThreadSafe + HandlesSettings,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation + SystemSetDefinition,
 	TPlayers: ThreadSafe
@@ -107,7 +101,6 @@ where
 	pub fn from_plugins(
 		_: &TSaveGame,
 		_: &TInteractions,
-		_: &TDispatchChildrenAssets,
 		_: &TLoading,
 		_: &TSettings,
 		_: &TBehaviors,
@@ -125,16 +118,41 @@ where
 		TLoading::register_custom_assets::<Item, ItemDto>(app);
 	}
 
+	fn track_loading<TSlot, TAgent>(app: &mut App)
+	where
+		TSlot: Eq + Hash + ThreadSafe + From<SlotKey>,
+		TAgent: VisibleSlots,
+	{
+		let all_loaded = SlotVisualization::<TSlot>::all_slots_loaded_for::<TAgent>;
+		let track_loaded =
+			TLoading::register_load_tracking::<(TSlot, TAgent), LoadingGame, DependenciesProgress>;
+
+		track_loaded().in_app(app, all_loaded);
+	}
+
 	fn loadout(&self, app: &mut App) {
-		TDispatchChildrenAssets::register_child_asset::<Slots, HandItemSlots>(app);
-		TDispatchChildrenAssets::register_child_asset::<Slots, ForearmItemSlots>(app);
-		TDispatchChildrenAssets::register_child_asset::<Slots, SubMeshEssenceSlots>(app);
 		TSaveGame::register_savable_component::<Inventory>(app);
 		TSaveGame::register_savable_component::<Slots>(app);
 
+		Self::track_loading::<HandSlot, TPlayers::TPlayer>(app);
+		Self::track_loading::<ForearmSlot, TPlayers::TPlayer>(app);
+		Self::track_loading::<EssenceSlot, TPlayers::TPlayer>(app);
+
 		app.register_required_components::<TPlayers::TPlayer, Loadout>()
 			.add_prefab_observer::<Loadout, ()>()
-			.add_systems(Update, Swapper::system);
+			.add_systems(
+				Update,
+				(
+					Swapper::system,
+					SlotVisualization::<HandSlot>::track_slots_for::<TPlayers::TPlayer>,
+					SlotVisualization::<HandSlot>::visualize_items,
+					SlotVisualization::<ForearmSlot>::track_slots_for::<TPlayers::TPlayer>,
+					SlotVisualization::<ForearmSlot>::visualize_items,
+					SlotVisualization::<EssenceSlot>::track_slots_for::<TPlayers::TPlayer>,
+					SlotVisualization::<EssenceSlot>::visualize_items,
+				)
+					.chain(),
+			);
 	}
 
 	fn skill_execution(&self, app: &mut App) {
@@ -185,20 +203,10 @@ where
 	}
 }
 
-impl<
-	TSaveGame,
-	TInteractions,
-	TDispatchChildrenAssets,
-	TLoading,
-	TSettings,
-	TBehaviors,
-	TPlayers,
-	TMenu,
-> Plugin
+impl<TSaveGame, TInteractions, TLoading, TSettings, TBehaviors, TPlayers, TMenu> Plugin
 	for SkillsPlugin<(
 		TSaveGame,
 		TInteractions,
-		TDispatchChildrenAssets,
 		TLoading,
 		TSettings,
 		TBehaviors,
@@ -208,8 +216,7 @@ impl<
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TInteractions: ThreadSafe + HandlesAllEffects,
-	TDispatchChildrenAssets: ThreadSafe + HandlesAssetsForChildren,
-	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets,
+	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
 	TSettings: ThreadSafe + HandlesSettings,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation + SystemSetDefinition,
 	TPlayers: ThreadSafe

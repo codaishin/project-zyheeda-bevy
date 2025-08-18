@@ -4,7 +4,6 @@ use behaviors::BehaviorsPlugin;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use camera_control::CameraControlPlugin;
-use children_assets_dispatch::ChildrenAssetsDispatchPlugin;
 use common::CommonPlugin;
 use enemy::EnemyPlugin;
 use frame_limiter::FrameLimiterPlugin;
@@ -50,7 +49,6 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let savegame = SavegamePlugin::from_plugin(&settings).with_game_directory(game_dir);
 	let animations = AnimationsPlugin::from_plugin(&savegame);
 	let light = LightPlugin::from_plugin(&savegame);
-	let children_assets_dispatch = ChildrenAssetsDispatchPlugin::from_plugin(&loading);
 	let interactions = InteractionsPlugin::from_plugin(&savegame);
 	let players =
 		PlayerPlugin::from_plugins(&settings, &savegame, &animations, &interactions, &light);
@@ -72,7 +70,6 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let skills = SkillsPlugin::from_plugins(
 		&savegame,
 		&interactions,
-		&children_assets_dispatch,
 		&loading,
 		&settings,
 		&behaviors,
@@ -91,7 +88,6 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		.add_plugins(bars)
 		.add_plugins(behaviors)
 		.add_plugins(camera_control)
-		.add_plugins(children_assets_dispatch)
 		.add_plugins(enemies)
 		.add_plugins(graphics)
 		.add_plugins(interactions)
