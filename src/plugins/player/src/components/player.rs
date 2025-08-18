@@ -155,7 +155,7 @@ impl Player {
 }
 
 impl VisibleSlots for Player {
-	fn visualize_keys(&self) -> impl Iterator<Item = SlotKey> {
+	fn visible_slots(&self) -> impl Iterator<Item = SlotKey> {
 		PlayerSlot::iterator().map(SlotKey::from)
 	}
 }

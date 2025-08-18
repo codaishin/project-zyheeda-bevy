@@ -18,13 +18,17 @@ use common::{
 	states::game_state::{GameState, LoadingGame},
 	systems::log::OnError,
 	tools::{
-		action_key::{slot::PlayerSlot, user_input::UserInput},
+		action_key::{
+			slot::{PlayerSlot, SlotKey},
+			user_input::UserInput,
+		},
 		inventory_key::InventoryKey,
 	},
 	traits::{
 		handles_combo_menu::{ConfigurePlayerCombos, HandlesComboMenu},
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
 		handles_effect::HandlesAllEffects,
+		handles_load_tracking::{DependenciesProgress, HandlesLoadTracking, LoadTrackingInApp},
 		handles_loadout_menu::{ConfigureInventory, HandlesLoadoutMenu},
 		handles_orientation::HandlesOrientation,
 		handles_player::{
@@ -39,7 +43,7 @@ use common::{
 		prefab::AddPrefabObserver,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
-		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
+		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
 	},
 };
 use components::{
@@ -54,7 +58,7 @@ use components::{
 };
 use item::{Item, dto::ItemDto};
 use skills::{QueuedSkill, RunSkillBehavior, Skill, dto::SkillDto};
-use std::marker::PhantomData;
+use std::{hash::Hash, marker::PhantomData};
 use systems::{
 	advance_active_skill::advance_active_skill,
 	combos::{queue_update::ComboQueueUpdate, update::UpdateCombos},
@@ -83,7 +87,7 @@ impl<TSaveGame, TInteractions, TLoading, TSettings, TBehaviors, TPlayers, TMenu>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TInteractions: ThreadSafe + HandlesAllEffects,
-	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets,
+	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
 	TSettings: ThreadSafe + HandlesSettings,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation + SystemSetDefinition,
 	TPlayers: ThreadSafe
@@ -114,9 +118,25 @@ where
 		TLoading::register_custom_assets::<Item, ItemDto>(app);
 	}
 
+	fn track_loading<TSlot, TAgent>(app: &mut App)
+	where
+		TSlot: Eq + Hash + ThreadSafe + From<SlotKey>,
+		TAgent: VisibleSlots,
+	{
+		let all_loaded = SlotVisualization::<TSlot>::all_slots_loaded_for::<TAgent>;
+		let track_loaded =
+			TLoading::register_load_tracking::<(TSlot, TAgent), LoadingGame, DependenciesProgress>;
+
+		track_loaded().in_app(app, all_loaded);
+	}
+
 	fn loadout(&self, app: &mut App) {
 		TSaveGame::register_savable_component::<Inventory>(app);
 		TSaveGame::register_savable_component::<Slots>(app);
+
+		Self::track_loading::<HandSlot, TPlayers::TPlayer>(app);
+		Self::track_loading::<ForearmSlot, TPlayers::TPlayer>(app);
+		Self::track_loading::<EssenceSlot, TPlayers::TPlayer>(app);
 
 		app.register_required_components::<TPlayers::TPlayer, Loadout>()
 			.add_prefab_observer::<Loadout, ()>()
@@ -196,7 +216,7 @@ impl<TSaveGame, TInteractions, TLoading, TSettings, TBehaviors, TPlayers, TMenu>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TInteractions: ThreadSafe + HandlesAllEffects,
-	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets,
+	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
 	TSettings: ThreadSafe + HandlesSettings,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation + SystemSetDefinition,
 	TPlayers: ThreadSafe
