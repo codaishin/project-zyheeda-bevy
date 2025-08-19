@@ -83,12 +83,12 @@ impl From<&EnemyBehavior> for ColliderRadius {
 }
 
 impl LoadoutConfig for EnemyBehavior {
-	fn inventory(&self) -> impl IntoIterator<Item = Option<AssetPath<'static>>> {
-		[]
+	fn inventory(&self) -> impl Iterator<Item = Option<AssetPath<'static>>> {
+		std::iter::empty()
 	}
 
-	fn slots(&self) -> impl IntoIterator<Item = (SlotKey, Option<AssetPath<'static>>)> {
-		[(SlotKey::from(VoidSphereSlot), None)]
+	fn slots(&self) -> impl Iterator<Item = (SlotKey, Option<AssetPath<'static>>)> {
+		std::iter::once((SlotKey::from(VoidSphereSlot), None))
 	}
 }
 

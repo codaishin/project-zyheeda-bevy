@@ -12,6 +12,7 @@ serde.workspace = true
 # internal
 common.workspace = true
 macros.workspace = true
+zyheeda_core.workspace = true
 
 [dev-dependencies]
 # external

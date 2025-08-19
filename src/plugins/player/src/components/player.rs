@@ -53,6 +53,7 @@ use common::{
 use macros::{SavableComponent, item_asset};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use zyheeda_core::prelude::*;
 
 #[derive(Component, SavableComponent, Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[require(
@@ -341,16 +342,16 @@ where
 }
 
 impl LoadoutConfig for Player {
-	fn inventory(&self) -> impl IntoIterator<Item = Option<AssetPath<'static>>> {
-		[
+	fn inventory(&self) -> impl Iterator<Item = Option<AssetPath<'static>>> {
+		yield_eager!(
 			Some(AssetPath::from(item_asset!("pistol"))),
 			Some(AssetPath::from(item_asset!("pistol"))),
 			Some(AssetPath::from(item_asset!("pistol"))),
-		]
+		)
 	}
 
-	fn slots(&self) -> impl IntoIterator<Item = (SlotKey, Option<AssetPath<'static>>)> {
-		[
+	fn slots(&self) -> impl Iterator<Item = (SlotKey, Option<AssetPath<'static>>)> {
+		yield_eager!(
 			(
 				SlotKey::from(PlayerSlot::Upper(Side::Left)),
 				Some(AssetPath::from(item_asset!("pistol"))),
@@ -367,7 +368,7 @@ impl LoadoutConfig for Player {
 				SlotKey::from(PlayerSlot::Upper(Side::Right)),
 				Some(AssetPath::from(item_asset!("force_essence"))),
 			),
-		]
+		)
 	}
 }
 
