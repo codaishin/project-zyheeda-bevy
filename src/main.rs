@@ -74,6 +74,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		&settings,
 		&behaviors,
 		&players,
+		&enemies,
 		&menus,
 	);
 	let bars = BarsPlugin::from_plugins(&players, &enemies, &graphics);

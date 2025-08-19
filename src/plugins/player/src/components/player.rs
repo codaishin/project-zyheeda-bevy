@@ -1,5 +1,5 @@
 use super::player_movement::{Config, MovementMode, PlayerMovement};
-use bevy::prelude::*;
+use bevy::{asset::AssetPath, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::{
 	attributes::{
@@ -44,14 +44,16 @@ use common::{
 		handles_skill_behaviors::SkillSpawner,
 		iteration::{Iter, IterFinite},
 		load_asset::{LoadAsset, Path},
+		loadout::LoadoutConfig,
 		mapper::Mapper,
 		prefab::{Prefab, PrefabEntityCommands},
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
 	},
 };
-use macros::SavableComponent;
+use macros::{SavableComponent, item_asset};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use zyheeda_core::prelude::*;
 
 #[derive(Component, SavableComponent, Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[require(
@@ -336,6 +338,37 @@ where
 			));
 
 		Ok(())
+	}
+}
+
+impl LoadoutConfig for Player {
+	fn inventory(&self) -> impl Iterator<Item = Option<AssetPath<'static>>> {
+		yield_eager!(
+			Some(AssetPath::from(item_asset!("pistol"))),
+			Some(AssetPath::from(item_asset!("pistol"))),
+			Some(AssetPath::from(item_asset!("pistol"))),
+		)
+	}
+
+	fn slots(&self) -> impl Iterator<Item = (SlotKey, Option<AssetPath<'static>>)> {
+		yield_eager!(
+			(
+				SlotKey::from(PlayerSlot::Upper(Side::Left)),
+				Some(AssetPath::from(item_asset!("pistol"))),
+			),
+			(
+				SlotKey::from(PlayerSlot::Lower(Side::Left)),
+				Some(AssetPath::from(item_asset!("pistol"))),
+			),
+			(
+				SlotKey::from(PlayerSlot::Lower(Side::Right)),
+				Some(AssetPath::from(item_asset!("force_essence"))),
+			),
+			(
+				SlotKey::from(PlayerSlot::Upper(Side::Right)),
+				Some(AssetPath::from(item_asset!("force_essence"))),
+			),
+		)
 	}
 }
 

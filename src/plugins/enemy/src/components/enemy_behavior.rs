@@ -1,5 +1,8 @@
-use crate::traits::insert_attack::InsertAttack;
-use bevy::prelude::*;
+use crate::{
+	components::void_sphere::{VoidSphere, VoidSphereSlot},
+	traits::insert_attack::InsertAttack,
+};
+use bevy::{asset::AssetPath, prelude::*};
 use common::{
 	components::{
 		collider_relationship::InteractionTarget,
@@ -7,13 +10,20 @@ use common::{
 		persistent_entity::PersistentEntity,
 	},
 	tools::{
+		action_key::slot::SlotKey,
 		aggro_range::AggroRange,
 		attack_range::AttackRange,
+		bone::Bone,
 		collider_radius::ColliderRadius,
 		movement_animation::MovementAnimation,
 		speed::Speed,
 	},
-	traits::handles_enemies::{Attacker, EnemyAttack, EnemyTarget, Target},
+	traits::{
+		handles_enemies::{Attacker, EnemyAttack, EnemyTarget, Target},
+		loadout::LoadoutConfig,
+		mapper::Mapper,
+		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
+	},
 };
 use std::{sync::Arc, time::Duration};
 
@@ -69,6 +79,52 @@ impl From<&EnemyBehavior> for EnemyTarget {
 impl From<&EnemyBehavior> for ColliderRadius {
 	fn from(enemy: &EnemyBehavior) -> Self {
 		enemy.collider_radius
+	}
+}
+
+impl LoadoutConfig for EnemyBehavior {
+	fn inventory(&self) -> impl Iterator<Item = Option<AssetPath<'static>>> {
+		std::iter::empty()
+	}
+
+	fn slots(&self) -> impl Iterator<Item = (SlotKey, Option<AssetPath<'static>>)> {
+		std::iter::once((SlotKey::from(VoidSphereSlot), None))
+	}
+}
+
+impl VisibleSlots for EnemyBehavior {
+	fn visible_slots(&self) -> impl Iterator<Item = SlotKey> {
+		[SlotKey::from(VoidSphereSlot)].into_iter()
+	}
+}
+
+impl Mapper<Bone<'_>, Option<EssenceSlot>> for EnemyBehavior {
+	fn map(&self, Bone(bone): Bone<'_>) -> Option<EssenceSlot> {
+		if bone != VoidSphere::SLOT_NAME {
+			return None;
+		}
+
+		Some(EssenceSlot(SlotKey::from(VoidSphereSlot)))
+	}
+}
+
+impl Mapper<Bone<'_>, Option<HandSlot>> for EnemyBehavior {
+	fn map(&self, Bone(bone): Bone<'_>) -> Option<HandSlot> {
+		if bone != VoidSphere::SLOT_NAME {
+			return None;
+		}
+
+		Some(HandSlot(SlotKey::from(VoidSphereSlot)))
+	}
+}
+
+impl Mapper<Bone<'_>, Option<ForearmSlot>> for EnemyBehavior {
+	fn map(&self, Bone(bone): Bone<'_>) -> Option<ForearmSlot> {
+		if bone != VoidSphere::SLOT_NAME {
+			return None;
+		}
+
+		Some(ForearmSlot(SlotKey::from(VoidSphereSlot)))
 	}
 }
 
