@@ -2,6 +2,7 @@ use super::accessors::get::RefInto;
 use crate::{
 	components::persistent_entity::PersistentEntity,
 	tools::{
+		action_key::slot::SlotKey,
 		aggro_range::AggroRange,
 		attack_range::AttackRange,
 		bone::Bone,
@@ -10,6 +11,7 @@ use crate::{
 		speed::Speed,
 	},
 	traits::{
+		handles_skill_behaviors::SkillSpawner,
 		loadout::LoadoutConfig,
 		mapper::Mapper,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
@@ -23,11 +25,11 @@ pub trait HandlesEnemies {
 	type TEnemy: Component + Default;
 }
 
-pub trait HandlesEnemyBehaviors {
+pub trait HandlesEnemyConfig {
 	type TEnemyBehavior: Component
 		+ LoadoutConfig
 		+ VisibleSlots
-		+ EnemyAttack
+		+ EnemySkillUsage
 		+ for<'a> RefInto<'a, Speed>
 		+ for<'a> RefInto<'a, Option<&'a MovementAnimation>>
 		+ for<'a> RefInto<'a, EnemyTarget>
@@ -36,12 +38,14 @@ pub trait HandlesEnemyBehaviors {
 		+ for<'a> RefInto<'a, ColliderRadius>
 		+ for<'a> Mapper<Bone<'a>, Option<EssenceSlot>>
 		+ for<'a> Mapper<Bone<'a>, Option<HandSlot>>
-		+ for<'a> Mapper<Bone<'a>, Option<ForearmSlot>>;
+		+ for<'a> Mapper<Bone<'a>, Option<ForearmSlot>>
+		+ for<'a> Mapper<Bone<'a>, Option<SkillSpawner>>;
 }
 
-pub trait EnemyAttack {
-	fn insert_attack(&self, entity: &mut EntityCommands, attacker: Attacker, target: Target);
+pub trait EnemySkillUsage {
+	fn hold_skill(&self) -> Duration;
 	fn cool_down(&self) -> Duration;
+	fn skill_key(&self) -> SlotKey;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Default)]

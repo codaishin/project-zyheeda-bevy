@@ -7,7 +7,7 @@ use common::{
 	errors::Error,
 	traits::{
 		handles_interactions::HandlesInteractions,
-		handles_skill_behaviors::{Contact, Integrity, Motion, Shape},
+		handles_skill_behaviors::{Contact, ContactShape, Motion},
 		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
@@ -19,8 +19,7 @@ use macros::SavableComponent;
 #[savable_component(dto = SkillContactDto)]
 pub struct SkillContact {
 	pub(crate) created_from: CreatedFrom,
-	pub(crate) shape: Shape,
-	pub(crate) integrity: Integrity,
+	pub(crate) shape: ContactShape,
 	pub(crate) motion: Motion,
 }
 
@@ -31,17 +30,10 @@ pub(crate) enum CreatedFrom {
 }
 
 impl From<Contact> for SkillContact {
-	fn from(
-		Contact {
-			shape,
-			integrity,
-			motion,
-		}: Contact,
-	) -> Self {
+	fn from(Contact { shape, motion }: Contact) -> Self {
 		Self {
 			created_from: CreatedFrom::Contact,
 			shape,
-			integrity,
 			motion,
 		}
 	}
@@ -59,7 +51,6 @@ where
 		let created_from = self.created_from;
 
 		self.shape.prefab::<TInteractions>(entity, Vec3::ZERO)?;
-		self.motion.prefab::<TInteractions>(entity, created_from)?;
-		self.integrity.prefab::<TInteractions>(entity, ())
+		self.motion.prefab::<TInteractions>(entity, created_from)
 	}
 }

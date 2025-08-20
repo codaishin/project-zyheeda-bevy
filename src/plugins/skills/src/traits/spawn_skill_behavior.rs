@@ -1,5 +1,8 @@
 use crate::{
-	behaviors::{SkillCaster, build_skill_shape::OnSkillStop, spawn_on::SpawnOn},
+	behaviors::{
+		SkillCaster,
+		spawn_skill::{OnSkillStop, SpawnOn},
+	},
 	components::SkillTarget,
 };
 use common::{

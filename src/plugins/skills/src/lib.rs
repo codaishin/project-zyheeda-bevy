@@ -6,29 +6,29 @@ mod systems;
 mod tools;
 mod traits;
 
-use crate::components::{
-	combos::dto::CombosDto,
-	combos_time_out::dto::CombosTimeOutDto,
-	loadout::Loadout,
-	queue::dto::QueueDto,
-	slots::visualization::SlotVisualization,
+use crate::{
+	components::{
+		combos::dto::CombosDto,
+		combos_time_out::dto::CombosTimeOutDto,
+		loadout::Loadout,
+		queue::dto::QueueDto,
+		slots::visualization::SlotVisualization,
+	},
+	systems::enqueue::EnqueueSystem,
 };
 use bevy::prelude::*;
 use common::{
 	states::game_state::{GameState, LoadingGame},
 	systems::log::OnError,
 	tools::{
-		action_key::{
-			slot::{PlayerSlot, SlotKey},
-			user_input::UserInput,
-		},
+		action_key::slot::{PlayerSlot, SlotKey},
 		inventory_key::InventoryKey,
 	},
 	traits::{
 		handles_combo_menu::{ConfigurePlayerCombos, HandlesComboMenu},
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
 		handles_effect::HandlesAllEffects,
-		handles_enemies::HandlesEnemyBehaviors,
+		handles_enemies::HandlesEnemyConfig,
 		handles_load_tracking::{DependenciesProgress, HandlesLoadTracking, LoadTrackingInApp},
 		handles_loadout_menu::{ConfigureInventory, HandlesLoadoutMenu},
 		handles_orientation::HandlesOrientation,
@@ -57,16 +57,14 @@ use components::{
 	swapper::Swapper,
 };
 use item::{Item, dto::ItemDto};
-use skills::{QueuedSkill, RunSkillBehavior, Skill, dto::SkillDto};
+use skills::{RunSkillBehavior, Skill, dto::SkillDto};
 use std::{hash::Hash, marker::PhantomData};
 use systems::{
 	advance_active_skill::advance_active_skill,
 	combos::{queue_update::ComboQueueUpdate, update::UpdateCombos},
-	enqueue::enqueue,
 	execute::ExecuteSkills,
 	flush::flush,
 	flush_skill_combos::flush_skill_combos,
-	get_inputs::get_inputs,
 	loadout_descriptor::LoadoutDescriptor,
 	quickbar_descriptor::get_quickbar_descriptors_for,
 };
@@ -96,7 +94,7 @@ where
 		+ HandlesPlayerCameras
 		+ HandlesPlayerMouse
 		+ ConfiguresPlayerSkillAnimations,
-	TEnemies: ThreadSafe + HandlesEnemyBehaviors,
+	TEnemies: ThreadSafe + HandlesEnemyConfig,
 	TMenu: ThreadSafe + HandlesLoadoutMenu + HandlesComboMenu,
 {
 	#[allow(clippy::too_many_arguments)]
@@ -170,7 +168,6 @@ where
 		TSaveGame::register_savable_component::<Queue>(app);
 		TSaveGame::register_savable_component::<SkillExecuter>(app);
 
-		let get_inputs = get_inputs::<TSettings::TKeyMap<PlayerSlot>, ButtonInput<UserInput>>;
 		let execute_skill = SkillExecuter::<RunSkillBehavior>::execute_system::<
 			TInteractions,
 			TBehaviors,
@@ -180,7 +177,7 @@ where
 		app.add_systems(
 			Update,
 			(
-				get_inputs.pipe(enqueue::<Slots, Queue, QueuedSkill>),
+				TBehaviors::TSkillUsage::enqueue::<Slots, Queue>,
 				Combos::update::<Queue>,
 				flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
 				advance_active_skill::<Queue, TPlayers, TBehaviors, SkillExecuter, Virtual>
@@ -234,7 +231,7 @@ where
 		+ HandlesPlayerCameras
 		+ HandlesPlayerMouse
 		+ ConfiguresPlayerSkillAnimations,
-	TEnemies: ThreadSafe + HandlesEnemyBehaviors,
+	TEnemies: ThreadSafe + HandlesEnemyConfig,
 	TMenu: ThreadSafe + HandlesLoadoutMenu + HandlesComboMenu,
 {
 	fn build(&self, app: &mut App) {

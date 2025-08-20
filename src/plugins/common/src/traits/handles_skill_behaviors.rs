@@ -15,7 +15,11 @@ use std::collections::HashSet;
 pub trait HandlesSkillBehaviors {
 	type TSkillContact: Component;
 	type TSkillProjection: Component;
+	type TSkillUsage: Component + HoldSkills;
 
+	/// Skills always have a contact and a projection shape.
+	///
+	/// Activity of those shapes should be controlled by their attached effects.
 	fn spawn_skill(
 		commands: &mut ZyheedaCommands,
 		contact: Contact,
@@ -23,19 +27,41 @@ pub trait HandlesSkillBehaviors {
 	) -> SkillEntities;
 }
 
+pub trait HoldSkills {
+	type Iter<'a>: Iterator<Item = SlotKey>
+	where
+		Self: 'a;
+
+	fn holding(&self) -> Self::Iter<'_>;
+	fn started_holding(&self) -> Self::Iter<'_>;
+}
+
+/// Describes the contact shape of a skill
+///
+/// These should be used for physical effects like projectile bodies, barriers or beam cores.
 #[derive(Debug, Clone)]
 pub struct Contact {
-	pub shape: Shape,
-	pub integrity: Integrity,
+	pub shape: ContactShape,
 	pub motion: Motion,
 }
 
+/// Describes the projection shape of a skill
+///
+/// These should be used for AoE.
 #[derive(Debug, Clone)]
 pub struct Projection {
-	pub shape: Shape,
+	pub shape: ProjectionShape,
 	pub offset: Option<ProjectionOffset>,
 }
 
+/// The entities of a spawned skill.
+///
+/// Skill root should be used to control the lifetime of a skill and can be used to despawn the
+/// whole skill.
+///
+/// Contact components should be added to the contact entity.
+///
+/// Projection/AoE components should be added to the projection entity.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct SkillEntities {
 	pub root: SkillRoot,
@@ -50,28 +76,45 @@ pub struct SkillRoot {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Shape {
+pub enum ContactShape {
 	Sphere {
 		radius: Units,
 		hollow_collider: bool,
+		destroyed_by: HashSet<Blocker>,
+	},
+	Custom {
+		model: AssetModel,
+		collider: Collider,
+		scale: Vec3,
+		destroyed_by: HashSet<Blocker>,
+	},
+	Beam {
+		range: Units,
+		radius: Units,
+		blocked_by: HashSet<Blocker>,
+	},
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ProjectionShape {
+	Sphere {
+		radius: Units,
 	},
 	Custom {
 		model: AssetModel,
 		collider: Collider,
 		scale: Vec3,
 	},
+	Beam {
+		radius: Units,
+	},
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
-pub enum Integrity {
-	Solid,
-	Fragile { destroyed_by: HashSet<Blocker> },
-}
-
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum Motion {
 	HeldBy {
 		caster: PersistentEntity,
+		spawner: SkillSpawner,
 	},
 	Stationary {
 		caster: PersistentEntity,

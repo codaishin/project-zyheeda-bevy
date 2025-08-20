@@ -3,7 +3,7 @@ use common::{
 	errors::Unreachable,
 	traits::{
 		handles_custom_assets::TryLoadFrom,
-		handles_skill_behaviors::{Integrity, Motion, Shape},
+		handles_skill_behaviors::{ContactShape, Motion},
 		load_asset::LoadAsset,
 	},
 };
@@ -11,8 +11,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SkillContactDto {
-	shape: Shape,
-	integrity: Integrity,
+	shape: ContactShape,
 	motion: Motion,
 }
 
@@ -20,7 +19,6 @@ impl From<SkillContact> for SkillContactDto {
 	fn from(contact: SkillContact) -> Self {
 		Self {
 			shape: contact.shape,
-			integrity: contact.integrity,
 			motion: contact.motion,
 		}
 	}
@@ -38,7 +36,6 @@ impl TryLoadFrom<SkillContactDto> for SkillContact {
 	{
 		Ok(Self {
 			shape: contact.shape,
-			integrity: contact.integrity,
 			motion: contact.motion,
 			created_from: CreatedFrom::Save,
 		})

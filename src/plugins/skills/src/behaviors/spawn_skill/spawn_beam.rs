@@ -1,24 +1,21 @@
+use super::Blockers;
 use crate::{
 	behaviors::SkillCaster,
 	components::SkillTarget,
 	skills::lifetime_definition::LifeTimeDefinition,
 	traits::skill_builder::{SkillLifetime, SpawnShape},
 };
-use bevy::prelude::*;
-use bevy_rapier3d::prelude::Collider;
 use common::{
-	components::asset_model::AssetModel,
 	tools::Units,
 	traits::{
 		clamp_zero_positive::ClampZeroPositive,
 		handles_skill_behaviors::{
 			Contact,
+			ContactShape,
 			HandlesSkillBehaviors,
-			Integrity,
 			Motion,
 			Projection,
-			ProjectionOffset,
-			Shape,
+			ProjectionShape,
 			SkillEntities,
 			SkillSpawner,
 		},
@@ -28,46 +25,45 @@ use common::{
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct SpawnShield;
+pub struct SpawnBeam {
+	range: Units,
+	blocked_by: Blockers,
+}
 
-impl SpawnShape for SpawnShield {
+impl SpawnShape for SpawnBeam {
 	fn spawn_shape<TSkillBehaviors>(
 		&self,
 		commands: &mut ZyheedaCommands,
 		caster: &SkillCaster,
-		_: SkillSpawner,
+		spawner: SkillSpawner,
 		_: &SkillTarget,
 	) -> SkillEntities
 	where
 		TSkillBehaviors: HandlesSkillBehaviors + 'static,
 	{
 		let SkillCaster(caster) = *caster;
-		let radius = 1.;
-		let offset = Vec3::new(0., 0., -radius);
 
 		TSkillBehaviors::spawn_skill(
 			commands,
 			Contact {
-				shape: Shape::Custom {
-					model: AssetModel::path("models/shield.glb").flipped_on("Shield"),
-					collider: Collider::cuboid(0.5, 0.5, 0.05),
-					scale: Vec3::splat(1.),
+				shape: ContactShape::Beam {
+					range: self.range,
+					radius: Units::new(0.003),
+					blocked_by: self.blocked_by.clone().into(),
 				},
-				motion: Motion::HeldBy { caster },
-				integrity: Integrity::Solid,
+				motion: Motion::HeldBy { caster, spawner },
 			},
 			Projection {
-				shape: Shape::Sphere {
-					radius: Units::new(radius),
-					hollow_collider: false,
+				shape: ProjectionShape::Beam {
+					radius: Units::new(0.2),
 				},
-				offset: Some(ProjectionOffset(offset)),
+				offset: None,
 			},
 		)
 	}
 }
 
-impl SkillLifetime for SpawnShield {
+impl SkillLifetime for SpawnBeam {
 	fn lifetime(&self) -> LifeTimeDefinition {
 		LifeTimeDefinition::UntilStopped
 	}

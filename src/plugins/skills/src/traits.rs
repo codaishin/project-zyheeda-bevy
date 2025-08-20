@@ -7,7 +7,6 @@ pub(crate) mod peek_next_recursive;
 pub(crate) mod skill_builder;
 pub(crate) mod skill_state;
 pub(crate) mod spawn_skill_behavior;
-pub(crate) mod user_input;
 pub(crate) mod visualize_item;
 pub(crate) mod write_item;
 
@@ -18,7 +17,7 @@ use crate::{
 };
 use common::{
 	tools::{action_key::slot::SlotKey, item_type::ItemType},
-	traits::{key_mappings::TryGetAction, state_duration::UpdatedStates},
+	traits::state_duration::UpdatedStates,
 	zyheeda_commands::ZyheedaCommands,
 };
 
@@ -30,10 +29,12 @@ pub(crate) trait Flush {
 	fn flush(&mut self);
 }
 
-pub(crate) trait IterHoldingMut<TItem> {
-	fn iter_holding_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut TItem>
+pub(crate) trait IterHoldingMut {
+	type TItem;
+
+	fn iter_holding_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut Self::TItem>
 	where
-		TItem: 'a;
+		Self::TItem: 'a;
 }
 
 pub(crate) trait IterAddedMut {
@@ -92,14 +93,6 @@ pub(crate) trait GetAnimationStrategy {
 
 pub(crate) trait GetSkillBehavior {
 	fn behavior(&self) -> (SlotKey, RunSkillBehavior);
-}
-
-pub trait InputState<TMap, TOutput>
-where
-	TMap: TryGetAction<TOutput>,
-{
-	fn just_pressed_slots(&self, map: &TMap) -> Vec<TOutput>;
-	fn pressed_slots(&self, map: &TMap) -> Vec<TOutput>;
 }
 
 pub trait Schedule<TBehavior> {

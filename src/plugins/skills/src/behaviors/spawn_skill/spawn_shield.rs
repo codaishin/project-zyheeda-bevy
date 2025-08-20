@@ -4,18 +4,21 @@ use crate::{
 	skills::lifetime_definition::LifeTimeDefinition,
 	traits::skill_builder::{SkillLifetime, SpawnShape},
 };
+use bevy::prelude::*;
+use bevy_rapier3d::prelude::Collider;
 use common::{
-	components::is_blocker::Blocker,
-	tools::{Units, UnitsPerSecond},
+	components::{asset_model::AssetModel, is_blocker::Blocker},
+	tools::Units,
 	traits::{
 		clamp_zero_positive::ClampZeroPositive,
 		handles_skill_behaviors::{
 			Contact,
+			ContactShape,
 			HandlesSkillBehaviors,
-			Integrity,
 			Motion,
 			Projection,
-			Shape,
+			ProjectionOffset,
+			ProjectionShape,
 			SkillEntities,
 			SkillSpawner,
 		},
@@ -23,65 +26,51 @@ use common::{
 	zyheeda_commands::ZyheedaCommands,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct SpawnProjectile {
-	destroyed_by: DestroyedBy,
-}
+pub struct SpawnShield;
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-enum DestroyedBy {
-	All,
-	AnyOf(HashSet<Blocker>),
-}
-
-impl SpawnShape for SpawnProjectile {
+impl SpawnShape for SpawnShield {
 	fn spawn_shape<TSkillBehaviors>(
 		&self,
 		commands: &mut ZyheedaCommands,
 		caster: &SkillCaster,
-		spawner: SkillSpawner,
+		_: SkillSpawner,
 		_: &SkillTarget,
 	) -> SkillEntities
 	where
 		TSkillBehaviors: HandlesSkillBehaviors + 'static,
 	{
 		let SkillCaster(caster) = *caster;
+		let radius = 1.;
+		let offset = Vec3::new(0., 0., -radius);
 
 		TSkillBehaviors::spawn_skill(
 			commands,
 			Contact {
-				shape: Shape::Sphere {
-					radius: Units::new(0.05),
-					hollow_collider: false,
+				shape: ContactShape::Custom {
+					model: AssetModel::path("models/shield.glb").flipped_on("Shield"),
+					collider: Collider::cuboid(0.5, 0.5, 0.05),
+					scale: Vec3::splat(1.),
+					destroyed_by: Blocker::none(),
 				},
-				integrity: Integrity::Fragile {
-					destroyed_by: match &self.destroyed_by {
-						DestroyedBy::All => Blocker::all(),
-						DestroyedBy::AnyOf(blockers) => blockers.clone(),
-					},
-				},
-				motion: Motion::Projectile {
+				motion: Motion::HeldBy {
 					caster,
-					spawner,
-					speed: UnitsPerSecond::new(15.),
-					range: Units::new(20.),
+					spawner: SkillSpawner::Neutral,
 				},
 			},
 			Projection {
-				shape: Shape::Sphere {
-					radius: Units::new(0.5),
-					hollow_collider: false,
+				shape: ProjectionShape::Sphere {
+					radius: Units::new(radius),
 				},
-				offset: None,
+				offset: Some(ProjectionOffset(offset)),
 			},
 		)
 	}
 }
 
-impl SkillLifetime for SpawnProjectile {
+impl SkillLifetime for SpawnShield {
 	fn lifetime(&self) -> LifeTimeDefinition {
-		LifeTimeDefinition::Infinite
+		LifeTimeDefinition::UntilStopped
 	}
 }

@@ -5,15 +5,16 @@ use crate::{
 	traits::skill_builder::{SkillLifetime, SpawnShape},
 };
 use common::{
+	components::is_blocker::Blocker,
 	dto::duration_secs_f32::DurationSecsF32,
 	tools::Units,
 	traits::handles_skill_behaviors::{
 		Contact,
+		ContactShape,
 		HandlesSkillBehaviors,
-		Integrity,
 		Motion,
 		Projection,
-		Shape,
+		ProjectionShape,
 		SkillEntities,
 		SkillSpawner,
 	},
@@ -66,11 +67,11 @@ impl SpawnShape for SpawnGroundTargetedAoe {
 		TSkillBehaviors::spawn_skill(
 			commands,
 			Contact {
-				shape: Shape::Sphere {
+				shape: ContactShape::Sphere {
 					radius: self.radius,
 					hollow_collider: true,
+					destroyed_by: Blocker::none(),
 				},
-				integrity: Integrity::Solid,
 				motion: Motion::Stationary {
 					caster,
 					max_cast_range: self.max_range,
@@ -78,9 +79,8 @@ impl SpawnShape for SpawnGroundTargetedAoe {
 				},
 			},
 			Projection {
-				shape: Shape::Sphere {
+				shape: ProjectionShape::Sphere {
 					radius: self.radius,
-					hollow_collider: false,
 				},
 				offset: None,
 			},

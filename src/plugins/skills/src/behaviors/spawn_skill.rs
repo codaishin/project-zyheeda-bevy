@@ -1,40 +1,41 @@
+pub mod spawn_beam;
 pub mod spawn_ground_target;
 pub mod spawn_projectile;
 pub mod spawn_shield;
 
 use super::{SkillCaster, SkillTarget};
-use crate::traits::skill_builder::{SkillBuilder, SkillShape};
+use crate::{
+	behaviors::spawn_skill::spawn_beam::SpawnBeam,
+	traits::skill_builder::{SkillBuilder, SkillShape},
+};
 use common::{
-	components::persistent_entity::PersistentEntity,
+	components::{is_blocker::Blocker, persistent_entity::PersistentEntity},
 	traits::handles_skill_behaviors::{HandlesSkillBehaviors, SkillSpawner},
 	zyheeda_commands::ZyheedaCommands,
 };
+use serde::{Deserialize, Serialize};
 use spawn_ground_target::SpawnGroundTargetedAoe;
 use spawn_projectile::SpawnProjectile;
 use spawn_shield::SpawnShield;
+use std::collections::HashSet;
 
 #[cfg(test)]
 pub(crate) type SpawnSkillFn =
 	fn(&mut ZyheedaCommands, &SkillCaster, SkillSpawner, &SkillTarget) -> SkillShape;
 
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum OnSkillStop {
-	Ignore,
-	Stop(PersistentEntity),
-}
-
 #[derive(Debug, Clone)]
 #[cfg_attr(not(test), derive(PartialEq))]
-pub(crate) enum BuildSkillShape {
+pub(crate) enum SpawnSkill {
 	GroundTargetedAoe(SpawnGroundTargetedAoe),
 	Projectile(SpawnProjectile),
+	Beam(SpawnBeam),
 	Shield(SpawnShield),
 	#[cfg(test)]
 	Fn(SpawnSkillFn),
 }
 
 #[cfg(test)]
-impl Default for BuildSkillShape {
+impl Default for SpawnSkill {
 	fn default() -> Self {
 		use bevy::prelude::*;
 
@@ -51,7 +52,7 @@ impl Default for BuildSkillShape {
 }
 
 #[cfg(test)]
-impl PartialEq for BuildSkillShape {
+impl PartialEq for SpawnSkill {
 	fn eq(&self, other: &Self) -> bool {
 		match (self, other) {
 			(Self::GroundTargetedAoe(l0), Self::GroundTargetedAoe(r0)) => l0 == r0,
@@ -63,9 +64,9 @@ impl PartialEq for BuildSkillShape {
 	}
 }
 
-impl BuildSkillShape {
+impl SpawnSkill {
 	#[cfg(test)]
-	pub(crate) const NO_SHAPE: BuildSkillShape = BuildSkillShape::Fn(Self::no_shape);
+	pub(crate) const NO_SHAPE: SpawnSkill = SpawnSkill::Fn(Self::no_shape);
 
 	#[cfg(test)]
 	fn no_shape(
@@ -103,9 +104,38 @@ impl BuildSkillShape {
 				gt.build::<TSkillBehaviors>(commands, caster, spawner, target)
 			}
 			Self::Projectile(pr) => pr.build::<TSkillBehaviors>(commands, caster, spawner, target),
+			Self::Beam(bm) => bm.build::<TSkillBehaviors>(commands, caster, spawner, target),
 			Self::Shield(sh) => sh.build::<TSkillBehaviors>(commands, caster, spawner, target),
 			#[cfg(test)]
 			Self::Fn(func) => func(commands, caster, spawner, target),
+		}
+	}
+}
+
+#[derive(Default, PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum SpawnOn {
+	#[default]
+	Center,
+	Slot,
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum OnSkillStop {
+	Ignore,
+	Stop(PersistentEntity),
+}
+
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+enum Blockers {
+	All,
+	AnyOf(HashSet<Blocker>),
+}
+
+impl From<Blockers> for HashSet<Blocker> {
+	fn from(value: Blockers) -> Self {
+		match value {
+			Blockers::All => Blocker::all(),
+			Blockers::AnyOf(blockers) => blockers,
 		}
 	}
 }

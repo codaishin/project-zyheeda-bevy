@@ -13,10 +13,13 @@ inventory-item-empty = <Empty>
 
 item-force-essence = Force Essence
 item-plasma-pistol = Plasma Pistol
+item-void-beam = Void Beam
 
 skill-force-shield = Force Shield
 skill-gravity-well = Gravity Well
-skill-shoot-hand-gun = Shoot Hand Gun
+skill-pistol-projectile = Pistol Projectile
+skill-pistol-beam = Pistol Beam
+skill-void-beam = Void Beam
 
 combo-skill-menu = Combos
 combo-skill-add = Add new combo skill

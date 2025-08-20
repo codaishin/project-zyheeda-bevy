@@ -7,6 +7,7 @@ pub enum ItemType {
 	Pistol,
 	Bracer,
 	ForceEssence,
+	VoidBeam,
 }
 
 #[derive(Debug, Default, PartialEq, Eq, Clone)]

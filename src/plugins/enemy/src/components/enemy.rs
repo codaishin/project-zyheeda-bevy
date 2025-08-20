@@ -1,7 +1,4 @@
-use crate::{
-	components::void_sphere::{VoidSphere, VoidSphereSlot},
-	traits::insert_attack::InsertAttack,
-};
+use crate::components::void_sphere::{VoidSphere, VoidSphereSlot};
 use bevy::{asset::AssetPath, prelude::*};
 use common::{
 	components::{
@@ -19,13 +16,14 @@ use common::{
 		speed::Speed,
 	},
 	traits::{
-		handles_enemies::{Attacker, EnemyAttack, EnemyTarget, Target},
+		handles_enemies::{EnemySkillUsage, EnemyTarget},
+		handles_skill_behaviors::SkillSpawner,
 		loadout::LoadoutConfig,
 		mapper::Mapper,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
 	},
 };
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 
 #[derive(Component, Clone)]
 #[require(
@@ -35,72 +33,70 @@ use std::{sync::Arc, time::Duration};
 	Visibility,
 	IsBlocker = [Blocker::Character],
 )]
-pub struct EnemyBehavior {
+pub struct Enemy {
 	pub(crate) speed: Speed,
 	pub(crate) movement_animation: Option<MovementAnimation>,
 	pub(crate) aggro_range: AggroRange,
 	pub(crate) attack_range: AttackRange,
 	pub(crate) target: EnemyTarget,
-	pub(crate) attack: Arc<dyn InsertAttack + Sync + Send + 'static>,
-	pub(crate) cool_down: Duration,
 	pub(crate) collider_radius: ColliderRadius,
 }
 
-impl From<&EnemyBehavior> for Speed {
-	fn from(enemy: &EnemyBehavior) -> Self {
+impl From<&Enemy> for Speed {
+	fn from(enemy: &Enemy) -> Self {
 		enemy.speed
 	}
 }
 
-impl<'a> From<&'a EnemyBehavior> for Option<&'a MovementAnimation> {
-	fn from(enemy: &'a EnemyBehavior) -> Self {
+impl<'a> From<&'a Enemy> for Option<&'a MovementAnimation> {
+	fn from(enemy: &'a Enemy) -> Self {
 		enemy.movement_animation.as_ref()
 	}
 }
 
-impl From<&EnemyBehavior> for AggroRange {
-	fn from(enemy: &EnemyBehavior) -> Self {
+impl From<&Enemy> for AggroRange {
+	fn from(enemy: &Enemy) -> Self {
 		enemy.aggro_range
 	}
 }
 
-impl From<&EnemyBehavior> for AttackRange {
-	fn from(enemy: &EnemyBehavior) -> Self {
+impl From<&Enemy> for AttackRange {
+	fn from(enemy: &Enemy) -> Self {
 		enemy.attack_range
 	}
 }
 
-impl From<&EnemyBehavior> for EnemyTarget {
-	fn from(enemy: &EnemyBehavior) -> Self {
+impl From<&Enemy> for EnemyTarget {
+	fn from(enemy: &Enemy) -> Self {
 		enemy.target
 	}
 }
 
-impl From<&EnemyBehavior> for ColliderRadius {
-	fn from(enemy: &EnemyBehavior) -> Self {
+impl From<&Enemy> for ColliderRadius {
+	fn from(enemy: &Enemy) -> Self {
 		enemy.collider_radius
 	}
 }
 
-impl LoadoutConfig for EnemyBehavior {
+impl LoadoutConfig for Enemy {
 	fn inventory(&self) -> impl Iterator<Item = Option<AssetPath<'static>>> {
-		std::iter::empty()
+		VoidSphere.inventory()
 	}
 
 	fn slots(&self) -> impl Iterator<Item = (SlotKey, Option<AssetPath<'static>>)> {
-		std::iter::once((SlotKey::from(VoidSphereSlot), None))
+		VoidSphere.slots()
 	}
 }
 
-impl VisibleSlots for EnemyBehavior {
+impl VisibleSlots for Enemy {
 	fn visible_slots(&self) -> impl Iterator<Item = SlotKey> {
 		[SlotKey::from(VoidSphereSlot)].into_iter()
 	}
 }
 
-impl Mapper<Bone<'_>, Option<EssenceSlot>> for EnemyBehavior {
+impl Mapper<Bone<'_>, Option<EssenceSlot>> for Enemy {
 	fn map(&self, Bone(bone): Bone<'_>) -> Option<EssenceSlot> {
-		if bone != VoidSphere::SLOT_NAME {
+		if bone != VoidSphere::SKILL_SPAWN {
 			return None;
 		}
 
@@ -108,9 +104,9 @@ impl Mapper<Bone<'_>, Option<EssenceSlot>> for EnemyBehavior {
 	}
 }
 
-impl Mapper<Bone<'_>, Option<HandSlot>> for EnemyBehavior {
+impl Mapper<Bone<'_>, Option<HandSlot>> for Enemy {
 	fn map(&self, Bone(bone): Bone<'_>) -> Option<HandSlot> {
-		if bone != VoidSphere::SLOT_NAME {
+		if bone != VoidSphere::SKILL_SPAWN {
 			return None;
 		}
 
@@ -118,9 +114,9 @@ impl Mapper<Bone<'_>, Option<HandSlot>> for EnemyBehavior {
 	}
 }
 
-impl Mapper<Bone<'_>, Option<ForearmSlot>> for EnemyBehavior {
+impl Mapper<Bone<'_>, Option<ForearmSlot>> for Enemy {
 	fn map(&self, Bone(bone): Bone<'_>) -> Option<ForearmSlot> {
-		if bone != VoidSphere::SLOT_NAME {
+		if bone != VoidSphere::SKILL_SPAWN {
 			return None;
 		}
 
@@ -128,12 +124,22 @@ impl Mapper<Bone<'_>, Option<ForearmSlot>> for EnemyBehavior {
 	}
 }
 
-impl EnemyAttack for EnemyBehavior {
-	fn insert_attack(&self, entity: &mut EntityCommands, attacker: Attacker, target: Target) {
-		self.attack.insert_attack(entity, attacker, target);
+impl Mapper<Bone<'_>, Option<SkillSpawner>> for Enemy {
+	fn map(&self, bone: Bone) -> Option<SkillSpawner> {
+		VoidSphere.map(bone)
+	}
+}
+
+impl EnemySkillUsage for Enemy {
+	fn hold_skill(&self) -> Duration {
+		VoidSphere.hold_skill()
 	}
 
 	fn cool_down(&self) -> Duration {
-		self.cool_down
+		VoidSphere.cool_down()
+	}
+
+	fn skill_key(&self) -> SlotKey {
+		VoidSphere.skill_key()
 	}
 }

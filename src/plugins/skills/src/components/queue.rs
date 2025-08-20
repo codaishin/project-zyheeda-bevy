@@ -107,7 +107,9 @@ impl Flush for Queue {
 	}
 }
 
-impl IterHoldingMut<QueuedSkill> for Queue {
+impl IterHoldingMut for Queue {
+	type TItem = QueuedSkill;
+
 	fn iter_holding_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut QueuedSkill>
 	where
 		QueuedSkill: 'a,
@@ -573,7 +575,7 @@ mod test_queue_collection {
 	}
 
 	#[test]
-	fn iter_holding() {
+	fn get_holding_mut() {
 		let skills = [
 			QueuedSkill {
 				key: SlotKey(11),
@@ -607,7 +609,7 @@ mod test_queue_active_skill {
 	use crate::{
 		behaviors::{
 			SkillBehaviorConfig,
-			build_skill_shape::{BuildSkillShape, OnSkillStop},
+			spawn_skill::{OnSkillStop, SpawnSkill},
 		},
 		skills::{AnimationStrategy, RunSkillBehavior},
 		traits::skill_builder::SkillShape,
@@ -831,7 +833,7 @@ mod test_queue_active_skill {
 	#[test]
 	fn test_start_behavior_fn_on_active() {
 		let behaviors =
-			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(|commands, _, _, _| SkillShape {
+			SkillBehaviorConfig::from_shape(SpawnSkill::Fn(|commands, _, _, _| SkillShape {
 				contact: commands.spawn(()).id(),
 				projection: commands.spawn(()).id(),
 				on_skill_stop: OnSkillStop::Ignore,
@@ -858,7 +860,7 @@ mod test_queue_active_skill {
 	#[test]
 	fn test_start_behavior_fn_on_aim() {
 		let behaviors =
-			SkillBehaviorConfig::from_shape(BuildSkillShape::Fn(|commands, _, _, _| SkillShape {
+			SkillBehaviorConfig::from_shape(SpawnSkill::Fn(|commands, _, _, _| SkillShape {
 				contact: commands.spawn(()).id(),
 				projection: commands.spawn(()).id(),
 				on_skill_stop: OnSkillStop::Ignore,

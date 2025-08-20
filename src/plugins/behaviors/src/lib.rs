@@ -1,13 +1,13 @@
-pub mod components;
-pub mod input;
-pub mod traits;
-
+mod components;
+mod input;
 mod systems;
+mod traits;
 
 use crate::{
 	components::{
+		attacking::Attacking,
 		fix_points::{Anchor, FixPoints, fix_point::FixPoint},
-		on_cool_down::OnCoolDown,
+		skill_usage::SkillUsage,
 	},
 	systems::{face::execute_enemy_face::execute_enemy_face, movement::compute_path::MovementPath},
 };
@@ -18,12 +18,12 @@ use common::{
 	effects::deal_damage::DealDamage,
 	states::game_state::GameState,
 	systems::{log::OnError, track_components::TrackComponentInSelfAndChildren},
-	tools::action_key::movement::MovementKey,
+	tools::action_key::{movement::MovementKey, slot::PlayerSlot},
 	traits::{
 		animation::{HasAnimationsDispatch, RegisterAnimations},
 		delta::Delta,
 		handles_effect::HandlesEffect,
-		handles_enemies::HandlesEnemyBehaviors,
+		handles_enemies::HandlesEnemyConfig,
 		handles_interactions::HandlesInteractions,
 		handles_orientation::{Face, HandlesOrientation},
 		handles_path_finding::HandlesPathFinding,
@@ -63,7 +63,6 @@ use components::{
 use input::{pointer_input::PointerInput, wasd_input::WasdInput};
 use std::marker::PhantomData;
 use systems::{
-	attack::AttackSystem,
 	base_behavior::SelectBehavior,
 	chase::ChaseSystem,
 	face::{execute_player_face::execute_player_face, get_faces::GetFaces},
@@ -74,7 +73,7 @@ use systems::{
 		parse_directional_movement_key::ParseDirectionalMovement,
 		parse_pointer_movement::ParsePointerMovement,
 	},
-	update_cool_downs::update_cool_downs,
+	update_count_down::UpdateCountDown,
 };
 
 pub struct BehaviorsPlugin<TDependencies>(PhantomData<TDependencies>);
@@ -95,7 +94,7 @@ where
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
 	TInteractions: ThreadSafe + HandlesInteractions + HandlesEffect<DealDamage>,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
-	TEnemies: ThreadSafe + HandlesEnemyBehaviors,
+	TEnemies: ThreadSafe + HandlesEnemyConfig,
 	TPlayers: ThreadSafe
 		+ HandlesPlayer
 		+ PlayerMainCamera
@@ -133,7 +132,7 @@ where
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
 	TInteractions: ThreadSafe + HandlesInteractions + HandlesEffect<DealDamage>,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
-	TEnemies: ThreadSafe + HandlesEnemyBehaviors,
+	TEnemies: ThreadSafe + HandlesEnemyConfig,
 	TPlayers: ThreadSafe
 		+ HandlesPlayer
 		+ PlayerMainCamera
@@ -145,7 +144,7 @@ where
 		TAnimations::register_movement_direction::<Movement<VelocityBased>>(app);
 		TSaveGame::register_savable_component::<SkillContact>(app);
 		TSaveGame::register_savable_component::<SkillProjection>(app);
-		TSaveGame::register_savable_component::<OnCoolDown>(app);
+		TSaveGame::register_savable_component::<Attacking>(app);
 		TSaveGame::register_savable_component::<Movement<PathOrWasd<VelocityBased>>>(app);
 		TSaveGame::register_savable_component::<OverrideFace>(app);
 
@@ -191,6 +190,9 @@ where
 		app
 			// Required components
 			.register_required_components::<TPlayers::TPlayer, FixPoints>()
+			.register_required_components::<TPlayers::TPlayer, SkillUsage>()
+			.register_required_components::<TEnemies::TEnemyBehavior, FixPoints>()
+			.register_required_components::<TEnemies::TEnemyBehavior, SkillUsage>()
 			.register_required_components::<SkillContact, TSaveGame::TSaveEntityMarker>()
 			.register_required_components::<SkillProjection, TSaveGame::TSaveEntityMarker>()
 			// Observers
@@ -205,6 +207,7 @@ where
 						PathOrWasd::<VelocityBased>::cleanup,
 						Movement::<VelocityBased>::cleanup,
 						FixPoint::<SkillSpawner>::insert_in_children_of::<TPlayers::TPlayer>,
+						FixPoint::<SkillSpawner>::insert_in_children_of::<TEnemies::TEnemyBehavior>,
 						FixPoints::track_in_self_and_children::<FixPoint<SkillSpawner>>().system(),
 					)
 						.chain(),
@@ -216,23 +219,24 @@ where
 						Update::delta.pipe(execute_player_path),
 						Update::delta.pipe(execute_player_movement),
 						animate_player_movement,
+						SkillUsage::player::<TPlayers::TPlayer, TSettings::TKeyMap<PlayerSlot>>,
 					)
 						.chain(),
 					// Enemy behaviors
 					(
 						TEnemies::TEnemyBehavior::select_behavior::<TPlayers::TPlayer>
 							.pipe(OnError::log),
-						TEnemies::TEnemyBehavior::attack,
 						TEnemies::TEnemyBehavior::chase::<PathOrWasd<VelocityBased>>,
 						compute_enemy_path,
 						Update::delta.pipe(execute_enemy_path),
 						Update::delta.pipe(execute_enemy_movement),
 						animate_enemy_movement,
+						SkillUsage::enemy::<TEnemies::TEnemyBehavior>,
 					)
 						.chain(),
 					// Skill execution
 					(
-						update_cool_downs::<Virtual>,
+						Attacking::update::<Virtual>,
 						GroundTarget::set_position,
 						DestroyAfterDistanceTraveled::<Velocity>::system,
 						SkillContact::update_range,
@@ -263,6 +267,7 @@ where
 impl<TDependencies> HandlesSkillBehaviors for BehaviorsPlugin<TDependencies> {
 	type TSkillContact = SkillContact;
 	type TSkillProjection = SkillProjection;
+	type TSkillUsage = SkillUsage;
 
 	fn spawn_skill(
 		commands: &mut ZyheedaCommands,

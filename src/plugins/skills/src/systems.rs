@@ -4,7 +4,6 @@ pub(crate) mod enqueue;
 pub(crate) mod execute;
 pub(crate) mod flush;
 pub(crate) mod flush_skill_combos;
-pub(crate) mod get_inputs;
 pub(crate) mod insert_loadout;
 pub(crate) mod loadout_descriptor;
 pub(crate) mod quickbar_descriptor;
