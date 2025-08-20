@@ -19,7 +19,7 @@ pub trait HandlesSkillBehaviors {
 
 	/// Skills always have a contact and a projection shape.
 	///
-	/// Activity of those shapes should controlled by their attached effects.
+	/// Activity of those shapes should be controlled by their attached effects.
 	fn spawn_skill(
 		commands: &mut ZyheedaCommands,
 		contact: Contact,

@@ -116,7 +116,7 @@ impl IterHoldingMut for Queue {
 	{
 		self.queue
 			.iter_mut()
-			.filter(move |skill| skill.skill_mode == SkillMode::Hold)
+			.filter(|skill| skill.skill_mode == SkillMode::Hold)
 	}
 }
 

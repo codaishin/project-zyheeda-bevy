@@ -8,16 +8,16 @@ impl<T> UpdateCountDown for T where T: CountDown + Component<Mutability = Mutabl
 pub(crate) trait UpdateCountDown: CountDown + Component<Mutability = Mutable> {
 	fn update<TTime: Default + Send + Sync + 'static>(
 		mut commands: ZyheedaCommands,
-		mut cool_downs: Query<(Entity, &mut Self)>,
+		mut count_downs: Query<(Entity, &mut Self)>,
 		time: Res<Time<TTime>>,
 	) {
-		if cool_downs.is_empty() {
+		if count_downs.is_empty() {
 			return;
 		}
 
 		let delta = time.delta();
 
-		for (entity, mut count_down) in &mut cool_downs {
+		for (entity, mut count_down) in &mut count_downs {
 			if *count_down.remaining_mut() <= delta {
 				match get_next(count_down.as_mut(), delta) {
 					Some(next) => {
@@ -38,16 +38,12 @@ pub(crate) trait UpdateCountDown: CountDown + Component<Mutability = Mutable> {
 
 fn get_next<T>(count_down: &mut T, delta: Duration) -> Option<T>
 where
-	T: CountDown + Component,
+	T: CountDown,
 {
 	let mut next_state = count_down.next_state()?;
 	let next_remaining = next_state.remaining_mut();
 	let rest = delta - *count_down.remaining_mut();
-	if rest >= *next_remaining {
-		*next_remaining = Duration::ZERO;
-	} else {
-		*next_remaining -= rest;
-	}
+	*next_remaining = next_remaining.saturating_sub(rest);
 	Some(next_state)
 }
 
@@ -94,7 +90,7 @@ mod tests {
 	#[test]
 	fn reduce_by_delta() {
 		let mut app = setup();
-		let cool_down = app
+		let count_down = app
 			.world_mut()
 			.spawn(_CountDown::A {
 				remaining: Duration::from_millis(1000),
@@ -105,21 +101,21 @@ mod tests {
 		app.tick_time(Duration::from_millis(42));
 		app.update();
 
-		let cool_down = app.world().entity(cool_down);
+		let count_down = app.world().entity(count_down);
 
 		assert_eq!(
 			Some(&_CountDown::A {
 				remaining: Duration::from_millis(958),
 				b: Duration::default(),
 			}),
-			cool_down.get::<_CountDown>()
+			count_down.get::<_CountDown>()
 		);
 	}
 
 	#[test]
-	fn insert_next_if_remaining_cool_down_is_zero() {
+	fn insert_next_if_remaining_count_down_is_zero() {
 		let mut app = setup();
-		let cool_down = app
+		let count_down = app
 			.world_mut()
 			.spawn(_CountDown::A {
 				remaining: Duration::from_millis(42),
@@ -130,18 +126,18 @@ mod tests {
 		app.tick_time(Duration::from_millis(42));
 		app.update();
 
-		let cool_down = app.world().entity(cool_down);
+		let count_down = app.world().entity(count_down);
 
 		assert_eq!(
 			Some(&_CountDown::B(Duration::from_millis(1000))),
-			cool_down.get::<_CountDown>()
+			count_down.get::<_CountDown>()
 		);
 	}
 
 	#[test]
-	fn insert_next_if_remaining_cool_down_is_negative() {
+	fn insert_next_if_remaining_count_down_is_negative() {
 		let mut app = setup();
-		let cool_down = app
+		let count_down = app
 			.world_mut()
 			.spawn(_CountDown::A {
 				remaining: Duration::from_millis(10),
@@ -152,18 +148,18 @@ mod tests {
 		app.tick_time(Duration::from_millis(42));
 		app.update();
 
-		let cool_down = app.world().entity(cool_down);
+		let count_down = app.world().entity(count_down);
 
 		assert_eq!(
 			Some(&_CountDown::B(Duration::from_millis(968))),
-			cool_down.get::<_CountDown>()
+			count_down.get::<_CountDown>()
 		);
 	}
 
 	#[test]
 	fn insert_next_with_zero_remaining_if_it_would_have_negative_remaining() {
 		let mut app = setup();
-		let cool_down = app
+		let count_down = app
 			.world_mut()
 			.spawn(_CountDown::A {
 				remaining: Duration::from_millis(10),
@@ -174,18 +170,18 @@ mod tests {
 		app.tick_time(Duration::from_millis(42));
 		app.update();
 
-		let cool_down = app.world().entity(cool_down);
+		let count_down = app.world().entity(count_down);
 
 		assert_eq!(
 			Some(&_CountDown::B(Duration::from_millis(0))),
-			cool_down.get::<_CountDown>()
+			count_down.get::<_CountDown>()
 		);
 	}
 
 	#[test]
-	fn remove_if_remaining_cool_down_is_zero_and_next_is_none() {
+	fn remove_if_remaining_count_down_is_zero_and_next_is_none() {
 		let mut app = setup();
-		let cool_down = app
+		let count_down = app
 			.world_mut()
 			.spawn(_CountDown::B(Duration::from_millis(42)))
 			.id();
@@ -193,15 +189,15 @@ mod tests {
 		app.tick_time(Duration::from_millis(42));
 		app.update();
 
-		let cool_down = app.world().entity(cool_down);
+		let count_down = app.world().entity(count_down);
 
-		assert_eq!(None, cool_down.get::<_CountDown>());
+		assert_eq!(None, count_down.get::<_CountDown>());
 	}
 
 	#[test]
-	fn remove_if_remaining_cool_down_is_negative_and_next_is_none() {
+	fn remove_if_remaining_count_down_is_negative_and_next_is_none() {
 		let mut app = setup();
-		let cool_down = app
+		let count_down = app
 			.world_mut()
 			.spawn(_CountDown::B(Duration::from_millis(10)))
 			.id();
@@ -209,8 +205,8 @@ mod tests {
 		app.tick_time(Duration::from_millis(42));
 		app.update();
 
-		let cool_down = app.world().entity(cool_down);
+		let count_down = app.world().entity(count_down);
 
-		assert_eq!(None, cool_down.get::<_CountDown>());
+		assert_eq!(None, count_down.get::<_CountDown>());
 	}
 }

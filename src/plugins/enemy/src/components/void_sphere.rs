@@ -131,10 +131,8 @@ where
 impl Mapper<Bone<'_>, Option<SkillSpawner>> for VoidSphere {
 	fn map(&self, Bone(name): Bone) -> Option<SkillSpawner> {
 		match name {
-			name if name == Self::SKILL_SPAWN => {
-				Some(SkillSpawner::Slot(SlotKey::from(VoidSphereSlot)))
-			}
-			name if name == Self::SKILL_SPAWN_NEUTRAL => Some(SkillSpawner::Neutral),
+			Self::SKILL_SPAWN => Some(SkillSpawner::Slot(SlotKey::from(VoidSphereSlot))),
+			Self::SKILL_SPAWN_NEUTRAL => Some(SkillSpawner::Neutral),
 			_ => None,
 		}
 	}

@@ -21,6 +21,7 @@ impl SkillUsage {
 		mut new_attacks: Query<(Entity, &TEnemy, &mut SkillUsage, &Attack), Without<Attacking>>,
 		mut ongoing_attacks: Query<(&mut SkillUsage, &Attacking), With<TEnemy>>,
 		mut removed_attacks: RemovedComponents<Attack>,
+		enemies: Query<(), With<TEnemy>>,
 	) where
 		TEnemy: Component + EnemySkillUsage,
 	{
@@ -49,7 +50,7 @@ impl SkillUsage {
 			};
 		}
 
-		for entity in removed_attacks.read() {
+		for entity in removed_attacks.read().filter(|e| enemies.contains(*e)) {
 			commands.try_apply_on(&entity, |mut e| {
 				e.try_insert(SkillUsage::default());
 				e.try_remove::<Attacking>();
@@ -296,7 +297,7 @@ mod tests {
 		}
 
 		#[test]
-		fn do_clear_when_started_holing_not_empty() {
+		fn do_clear_when_started_holding_not_empty() {
 			let mut app = setup();
 			let entity = app
 				.world_mut()
@@ -328,7 +329,7 @@ mod tests {
 		}
 
 		#[test]
-		fn do_clear_when_holing_not_empty() {
+		fn do_clear_when_holding_not_empty() {
 			let mut app = setup();
 			let entity = app
 				.world_mut()
@@ -390,6 +391,33 @@ mod tests {
 		}
 
 		#[test]
+		fn do_not_remove_attacking_components_when_enemy_missing() {
+			let mut app = setup();
+			let entity = app
+				.world_mut()
+				.spawn((
+					Attack(PersistentEntity::default()),
+					Attacking::Hold {
+						remaining: Duration::from_millis(42),
+						cool_down: Duration::from_millis(11),
+					},
+				))
+				.id();
+
+			app.update();
+			app.world_mut().entity_mut(entity).remove::<Attack>();
+			app.update();
+
+			assert_eq!(
+				Some(&Attacking::Hold {
+					remaining: Duration::from_millis(42),
+					cool_down: Duration::from_millis(11),
+				}),
+				app.world().entity(entity).get::<Attacking>()
+			);
+		}
+
+		#[test]
 		fn reset_skill_usage() {
 			let mut app = setup();
 			let entity = app
@@ -418,6 +446,37 @@ mod tests {
 
 			assert_eq!(
 				Some(&SkillUsage::default()),
+				app.world().entity(entity).get::<SkillUsage>()
+			);
+		}
+
+		#[test]
+		fn do_not_reset_skill_usage_when_enemy_missing() {
+			let mut app = setup();
+			let entity = app
+				.world_mut()
+				.spawn((
+					SkillUsage {
+						started_holding: HashSet::from([SlotKey(244)]),
+						holding: HashSet::from([SlotKey(233)]),
+					},
+					Attack(PersistentEntity::default()),
+					Attacking::Hold {
+						remaining: Duration::from_millis(42),
+						cool_down: Duration::from_millis(11),
+					},
+				))
+				.id();
+
+			app.update();
+			app.world_mut().entity_mut(entity).remove::<Attack>();
+			app.update();
+
+			assert_eq!(
+				Some(&SkillUsage {
+					started_holding: HashSet::from([SlotKey(244)]),
+					holding: HashSet::from([SlotKey(233)]),
+				}),
 				app.world().entity(entity).get::<SkillUsage>()
 			);
 		}
