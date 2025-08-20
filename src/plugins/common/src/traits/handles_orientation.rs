@@ -11,7 +11,8 @@ pub trait HandlesOrientation {
 #[derive(Default, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum Face {
 	#[default]
-	Cursor,
+	/// This is dependent on the type of agent, for a player it likely means the cursor.
+	Target,
 	Entity(PersistentEntity),
 	Translation(Vec3),
 }

@@ -9,7 +9,7 @@ use crate::{
 		fix_points::{Anchor, FixPoints, fix_point::FixPoint},
 		on_cool_down::OnCoolDown,
 	},
-	systems::movement::compute_path::MovementPath,
+	systems::{face::execute_enemy_face::execute_enemy_face, movement::compute_path::MovementPath},
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
@@ -66,7 +66,7 @@ use systems::{
 	attack::AttackSystem,
 	base_behavior::SelectBehavior,
 	chase::ChaseSystem,
-	face::{execute_face::execute_face, get_faces::get_faces},
+	face::{execute_player_face::execute_player_face, get_faces::GetFaces},
 	movement::{
 		animate_movement::AnimateMovement,
 		execute_move_update::ExecuteMovement,
@@ -244,7 +244,9 @@ where
 					// Apply facing
 					(
 						Movement::<VelocityBased>::set_faces,
-						get_faces.pipe(execute_face::<TPlayers::TMouseHover, TPlayers::TCamRay>),
+						TPlayers::TPlayer::get_faces
+							.pipe(execute_player_face::<TPlayers::TMouseHover, TPlayers::TCamRay>),
+						TEnemies::TEnemyBehavior::get_faces.pipe(execute_enemy_face),
 					)
 						.chain(),
 				)
