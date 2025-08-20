@@ -1,11 +1,16 @@
 use crate::components::{OverrideFace, SetFace};
-use bevy::ecs::{entity::Entity, system::Query};
+use bevy::prelude::*;
 use common::traits::handles_orientation::Face;
 
-pub(crate) fn get_faces(
-	faces: Query<(Entity, Option<&SetFace>, Option<&OverrideFace>)>,
-) -> Vec<(Entity, Face)> {
-	faces.iter().filter_map(face_value).collect()
+impl<T> GetFaces for T where T: Component {}
+
+pub(crate) trait GetFaces: Component + Sized {
+	#[allow(clippy::type_complexity)]
+	fn get_faces(
+		faces: Query<(Entity, Option<&SetFace>, Option<&OverrideFace>), With<Self>>,
+	) -> Vec<(Entity, Face)> {
+		faces.iter().filter_map(face_value).collect()
+	}
 }
 
 fn face_value(
@@ -32,6 +37,9 @@ mod tests {
 	};
 	use testing::SingleThreadedApp;
 
+	#[derive(Component)]
+	struct _Agent;
+
 	#[derive(Component, Debug, PartialEq)]
 	struct _Face(Face);
 
@@ -43,7 +51,7 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, get_faces.pipe(track_face));
+		app.add_systems(Update, _Agent::get_faces.pipe(track_face));
 
 		app
 	}
@@ -52,7 +60,7 @@ mod tests {
 	fn get_faces_from_set_face() {
 		let mut app = setup();
 		let face = Face::Translation(Vec3::new(1., 2., 3.));
-		let agent = app.world_mut().spawn(SetFace(face)).id();
+		let agent = app.world_mut().spawn((_Agent, SetFace(face))).id();
 
 		app.update();
 
@@ -65,7 +73,7 @@ mod tests {
 	fn get_faces_from_override_face() {
 		let mut app = setup();
 		let face = Face::Translation(Vec3::new(1., 2., 3.));
-		let agent = app.world_mut().spawn(OverrideFace(face)).id();
+		let agent = app.world_mut().spawn((_Agent, OverrideFace(face))).id();
 
 		app.update();
 
@@ -80,7 +88,7 @@ mod tests {
 		let face = Face::Translation(Vec3::new(1., 2., 3.));
 		let agent = app
 			.world_mut()
-			.spawn((SetFace(Face::Target), OverrideFace(face)))
+			.spawn((_Agent, SetFace(Face::Target), OverrideFace(face)))
 			.id();
 
 		app.update();
@@ -88,5 +96,18 @@ mod tests {
 		let agent = app.world().entity(agent);
 
 		assert_eq!(Some(&_Face(face)), agent.get::<_Face>());
+	}
+
+	#[test]
+	fn ignore_when_no_agent() {
+		let mut app = setup();
+		let face = Face::Translation(Vec3::new(1., 2., 3.));
+		let agent = app.world_mut().spawn(SetFace(face)).id();
+
+		app.update();
+
+		let agent = app.world().entity(agent);
+
+		assert_eq!(None, agent.get::<_Face>());
 	}
 }

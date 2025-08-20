@@ -66,7 +66,7 @@ use systems::{
 	attack::AttackSystem,
 	base_behavior::SelectBehavior,
 	chase::ChaseSystem,
-	face::{execute_face::execute_face, get_faces::get_faces},
+	face::{execute_face::execute_face, get_faces::GetFaces},
 	movement::{
 		animate_movement::AnimateMovement,
 		execute_move_update::ExecuteMovement,
@@ -244,7 +244,8 @@ where
 					// Apply facing
 					(
 						Movement::<VelocityBased>::set_faces,
-						get_faces.pipe(execute_face::<TPlayers::TMouseHover, TPlayers::TCamRay>),
+						TPlayers::TPlayer::get_faces
+							.pipe(execute_face::<TPlayers::TMouseHover, TPlayers::TCamRay>),
 					)
 						.chain(),
 				)
