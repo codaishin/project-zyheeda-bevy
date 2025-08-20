@@ -1,10 +1,7 @@
-use std::ops::Deref;
-
 use bevy::prelude::*;
 use common::{
 	components::{
 		collider_relationship::ColliderOfInteractionTarget,
-		immobilized::Immobilized,
 		persistent_entity::PersistentEntity,
 	},
 	tools::collider_info::ColliderInfo,
@@ -15,10 +12,11 @@ use common::{
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
+use std::ops::Deref;
 
 pub(crate) fn execute_player_face<TMouseHover, TCursor>(
 	In(faces): In<Vec<(Entity, Face)>>,
-	mut transforms: Query<(Entity, &mut Transform, Option<&Immobilized>)>,
+	mut transforms: Query<&mut Transform>,
 	commands: ZyheedaCommands,
 	colliders: Query<&ColliderOfInteractionTarget>,
 	cursor: Res<TCursor>,
@@ -36,22 +34,18 @@ pub(crate) fn execute_player_face<TMouseHover, TCursor>(
 	}
 }
 
-fn apply_facing(
-	transforms: &mut Query<(Entity, &mut Transform, Option<&Immobilized>)>,
-	id: Entity,
-	target: Vec3,
-) {
-	let Ok((_, mut transform, immobilized)) = transforms.get_mut(id) else {
+fn apply_facing(transforms: &mut Query<&mut Transform>, id: Entity, target: Vec3) {
+	let Ok(mut transform) = transforms.get_mut(id) else {
 		return;
 	};
-	if immobilized.is_some() {
+	if transform.translation == target {
 		return;
 	}
 	transform.look_at(target, Vec3::Y);
 }
 
 fn get_face_targets(
-	transforms: &Query<(Entity, &mut Transform, Option<&Immobilized>)>,
+	transforms: &Query<&mut Transform>,
 	faces: Vec<(Entity, Face)>,
 	colliders: Query<&ColliderOfInteractionTarget>,
 	(target_entity, target): (Option<Entity>, Vec3),
@@ -75,7 +69,7 @@ fn get_face_targets(
 }
 
 fn get_cursor_target<TMouseHover, TCursor>(
-	transforms: &Query<(Entity, &mut Transform, Option<&Immobilized>)>,
+	transforms: &Query<&mut Transform>,
 	cursor: &TCursor,
 	hover: &TMouseHover,
 ) -> Option<(Option<Entity>, Vec3)>
@@ -92,11 +86,8 @@ where
 	get_translation(entity, transforms).map(|t| (Some(entity), t))
 }
 
-fn get_translation(
-	entity: Entity,
-	transforms: &Query<(Entity, &mut Transform, Option<&Immobilized>)>,
-) -> Option<Vec3> {
-	transforms.get(entity).ok().map(|(_, t, _)| t.translation)
+fn get_translation(entity: Entity, transforms: &Query<&mut Transform>) -> Option<Vec3> {
+	transforms.get(entity).ok().map(|t| t.translation)
 }
 
 fn get_target(
@@ -185,11 +176,9 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world().entity(agent);
-
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(1., 2., 3.), Vec3::Y)),
-			agent.get::<Transform>()
+			app.world().entity(agent).get::<Transform>()
 		);
 	}
 
@@ -203,11 +192,9 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world().entity(agent);
-
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 5., 6.)),
-			agent.get::<Transform>()
+			app.world().entity(agent).get::<Transform>()
 		);
 	}
 
@@ -249,11 +236,9 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world().entity(agent);
-
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(10., 11., 12.), Vec3::Y)),
-			agent.get::<Transform>()
+			app.world().entity(agent).get::<Transform>()
 		);
 	}
 
@@ -281,11 +266,9 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world().entity(agent);
-
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 5., 6.).looking_to(Vec3::new(1., 0., 1.), Vec3::Y)),
-			agent.get::<Transform>()
+			app.world().entity(agent).get::<Transform>()
 		);
 	}
 
@@ -310,11 +293,9 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world().entity(agent);
-
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(10., 11., 12.), Vec3::Y)),
-			agent.get::<Transform>()
+			app.world().entity(agent).get::<Transform>()
 		);
 	}
 
@@ -338,11 +319,9 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world().entity(agent);
-
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 5., 6.).looking_to(Vec3::new(1., 0., 1.), Vec3::Y)),
-			agent.get::<Transform>()
+			app.world().entity(agent).get::<Transform>()
 		);
 	}
 
@@ -369,11 +348,9 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world().entity(agent);
-
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(10., 11., 12.), Vec3::Y)),
-			agent.get::<Transform>()
+			app.world().entity(agent).get::<Transform>()
 		);
 	}
 
@@ -396,11 +373,9 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world().entity(agent);
-
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(10., 11., 12.), Vec3::Y)),
-			agent.get::<Transform>()
+			app.world().entity(agent).get::<Transform>()
 		);
 	}
 
@@ -420,16 +395,14 @@ mod tests {
 
 		app.update();
 
-		let agent = app.world().entity(agent);
-
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(10., 11., 12.), Vec3::Y)),
-			agent.get::<Transform>()
+			app.world().entity(agent).get::<Transform>()
 		);
 	}
 
 	#[test]
-	fn do_not_face_cursor_when_agent_immobilized() {
+	fn do_not_default_rotation_when_looking_at_self_via_translation() {
 		let mut app = setup(_Cursor::new().with_mock(|mock| {
 			mock.expect_intersect_at()
 				.return_const(Vec3::new(1., 2., 3.));
@@ -437,48 +410,40 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Transform::from_xyz(4., 5., 6.),
-				_Face(Face::Target),
-				Immobilized,
+				Transform::from_xyz(4., 5., 6.).looking_to(Vec3::new(1., 0., 1.), Vec3::Y),
+				_Face(Face::Translation(Vec3::new(4., 5., 6.))),
 			))
 			.id();
 
 		app.update();
 
-		let agent = app.world().entity(agent);
-
 		assert_eq!(
-			Some(&Transform::from_xyz(4., 5., 6.)),
-			agent.get::<Transform>()
+			Some(&Transform::from_xyz(4., 5., 6.).looking_to(Vec3::new(1., 0., 1.), Vec3::Y)),
+			app.world().entity(agent).get::<Transform>()
 		);
 	}
 
 	#[test]
-	fn face_hovering_collider_when_collided_immobilized() {
+	fn do_not_default_rotation_when_looking_at_self_via_entity() {
 		let mut app = setup(_Cursor::new().with_mock(|mock| {
 			mock.expect_intersect_at()
 				.return_const(Vec3::new(1., 2., 3.));
 		}));
+		let persistent_agent = PersistentEntity::default();
 		let agent = app
 			.world_mut()
-			.spawn((Transform::from_xyz(4., 5., 6.), _Face(Face::Target)))
+			.spawn((
+				persistent_agent,
+				Transform::from_xyz(4., 5., 6.).looking_to(Vec3::new(1., 0., 1.), Vec3::Y),
+				_Face(Face::Entity(persistent_agent)),
+			))
 			.id();
-		let collider = app
-			.world_mut()
-			.spawn((Transform::from_xyz(10., 11., 12.), Immobilized))
-			.id();
-		app.insert_resource(_MouseHover(Some(ColliderInfo {
-			collider,
-			root: None,
-		})));
 
 		app.update();
 
-		let agent = app.world().entity(agent);
-
 		assert_eq!(
-			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(10., 11., 12.), Vec3::Y)),
-			agent.get::<Transform>()
+			Some(&Transform::from_xyz(4., 5., 6.).looking_to(Vec3::new(1., 0., 1.), Vec3::Y)),
+			app.world().entity(agent).get::<Transform>()
 		);
 	}
 }
