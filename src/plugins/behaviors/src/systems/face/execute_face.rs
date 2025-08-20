@@ -63,7 +63,7 @@ fn get_face_targets(
 		.filter_map(|(id, face)| {
 			let target = match *face {
 				Face::Translation(translation) => Some(translation),
-				Face::Cursor => Some(target),
+				Face::Target => Some(target),
 				Face::Entity(entity) => {
 					let target = get_target(entity, &colliders, &mut commands)?;
 					get_translation(target, transforms)
@@ -180,7 +180,7 @@ mod tests {
 		}));
 		let agent = app
 			.world_mut()
-			.spawn((Transform::from_xyz(4., 5., 6.), _Face(Face::Cursor)))
+			.spawn((Transform::from_xyz(4., 5., 6.), _Face(Face::Target)))
 			.id();
 
 		app.update();
@@ -232,7 +232,7 @@ mod tests {
 		}));
 		let agent = app
 			.world_mut()
-			.spawn((Transform::from_xyz(4., 5., 6.), _Face(Face::Cursor)))
+			.spawn((Transform::from_xyz(4., 5., 6.), _Face(Face::Target)))
 			.id();
 		let root = app
 			.world_mut()
@@ -267,7 +267,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(4., 5., 6.).looking_to(Vec3::new(1., 0., 1.), Vec3::Y),
-				_Face(Face::Cursor),
+				_Face(Face::Target),
 			))
 			.id();
 		let collider = app
@@ -297,7 +297,7 @@ mod tests {
 		}));
 		let agent = app
 			.world_mut()
-			.spawn((Transform::from_xyz(4., 5., 6.), _Face(Face::Cursor)))
+			.spawn((Transform::from_xyz(4., 5., 6.), _Face(Face::Target)))
 			.id();
 		let collider = app
 			.world_mut()
@@ -328,7 +328,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(4., 5., 6.).looking_to(Vec3::new(1., 0., 1.), Vec3::Y),
-				_Face(Face::Cursor),
+				_Face(Face::Target),
 			))
 			.id();
 		app.insert_resource(_MouseHover(Some(ColliderInfo {
@@ -438,7 +438,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(4., 5., 6.),
-				_Face(Face::Cursor),
+				_Face(Face::Target),
 				Immobilized,
 			))
 			.id();
@@ -461,7 +461,7 @@ mod tests {
 		}));
 		let agent = app
 			.world_mut()
-			.spawn((Transform::from_xyz(4., 5., 6.), _Face(Face::Cursor)))
+			.spawn((Transform::from_xyz(4., 5., 6.), _Face(Face::Target)))
 			.id();
 		let collider = app
 			.world_mut()

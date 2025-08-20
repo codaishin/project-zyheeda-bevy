@@ -80,7 +80,7 @@ mod tests {
 		let face = Face::Translation(Vec3::new(1., 2., 3.));
 		let agent = app
 			.world_mut()
-			.spawn((SetFace(Face::Cursor), OverrideFace(face)))
+			.spawn((SetFace(Face::Target), OverrideFace(face)))
 			.id();
 
 		app.update();

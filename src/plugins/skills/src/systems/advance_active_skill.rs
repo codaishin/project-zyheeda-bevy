@@ -113,7 +113,7 @@ where
 	agent.remove::<SkillSideEffectsCleared>();
 
 	if states.contains(&StateMeta::Entering(SkillState::Aim)) {
-		agent.try_insert(TOrientation::temporarily(Face::Cursor));
+		agent.try_insert(TOrientation::temporarily(Face::Target));
 		if let Err(error) = animate::<TPlayerAnimations>(skill, agent) {
 			errors.push(error);
 		}
@@ -966,7 +966,7 @@ mod tests {
 
 		let agent = app.world().entity(agent);
 
-		assert_eq!(Some(&_TempFace(Face::Cursor)), agent.get::<_TempFace>());
+		assert_eq!(Some(&_TempFace(Face::Target)), agent.get::<_TempFace>());
 	}
 
 	#[test]
@@ -1022,7 +1022,7 @@ mod tests {
 		app.update();
 
 		let agent = app.world().entity(agent);
-		assert_eq!(Some(&_TempFace(Face::Cursor)), agent.get::<_TempFace>());
+		assert_eq!(Some(&_TempFace(Face::Target)), agent.get::<_TempFace>());
 	}
 
 	#[test]
@@ -1031,7 +1031,7 @@ mod tests {
 		app.world_mut().entity_mut(agent).insert((
 			_Dequeue { active: None },
 			Transform::from_xyz(-1., -2., -3.),
-			_TempFace(Face::Cursor),
+			_TempFace(Face::Target),
 		));
 
 		app.update();
