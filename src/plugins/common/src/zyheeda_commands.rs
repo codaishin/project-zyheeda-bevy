@@ -5,6 +5,7 @@ use crate::{
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
 
+#[derive(SystemParam)]
 pub struct ZyheedaCommands<'w, 's> {
 	commands: Commands<'w, 's>,
 	pub(crate) persistent_entities: Option<ResMut<'w, PersistentEntities>>,
@@ -54,92 +55,6 @@ impl GetMut<PersistentEntity> for ZyheedaCommands<'_, '_> {
 		let entity = persistent_entities.get_entity(entity)?;
 		let entity = self.commands.get_entity(entity).ok()?;
 		Some(ZyheedaEntityCommands { entity })
-	}
-}
-
-unsafe impl<'w, 's> SystemParam for ZyheedaCommands<'w, 's> {
-	type State = (
-		<Commands<'w, 's> as SystemParam>::State,
-		<Option<ResMut<'w, PersistentEntities>> as SystemParam>::State,
-	);
-	type Item<'world, 'state> = ZyheedaCommands<'world, 'state>;
-
-	fn init_state(
-		world: &mut World,
-		system_meta: &mut bevy::ecs::system::SystemMeta,
-	) -> Self::State {
-		(
-			Commands::<'w, 's>::init_state(world, system_meta),
-			Option::<ResMut<'w, PersistentEntities>>::init_state(world, system_meta),
-		)
-	}
-
-	unsafe fn get_param<'world, 'state>(
-		state: &'state mut Self::State,
-		system_meta: &bevy::ecs::system::SystemMeta,
-		world: bevy::ecs::world::unsafe_world_cell::UnsafeWorldCell<'world>,
-		change_tick: bevy::ecs::component::Tick,
-	) -> Self::Item<'world, 'state> {
-		ZyheedaCommands {
-			commands: unsafe {
-				Commands::<'w, 's>::get_param(&mut state.0, system_meta, world, change_tick)
-			},
-			persistent_entities: unsafe {
-				Option::<ResMut<'w, PersistentEntities>>::get_param(
-					&mut state.1,
-					system_meta,
-					world,
-					change_tick,
-				)
-			},
-		}
-	}
-
-	unsafe fn new_archetype(
-		state: &mut Self::State,
-		archetype: &bevy::ecs::archetype::Archetype,
-		system_meta: &mut bevy::ecs::system::SystemMeta,
-	) {
-		unsafe {
-			Commands::<'w, 's>::new_archetype(&mut state.0, archetype, system_meta);
-			Option::<ResMut<'w, PersistentEntities>>::new_archetype(
-				&mut state.1,
-				archetype,
-				system_meta,
-			);
-		};
-	}
-
-	fn apply(
-		state: &mut Self::State,
-		system_meta: &bevy::ecs::system::SystemMeta,
-		world: &mut World,
-	) {
-		Commands::<'w, 's>::apply(&mut state.0, system_meta, world);
-		Option::<ResMut<'w, PersistentEntities>>::apply(&mut state.1, system_meta, world);
-	}
-
-	fn queue(
-		state: &mut Self::State,
-		system_meta: &bevy::ecs::system::SystemMeta,
-		world: bevy::ecs::world::DeferredWorld,
-	) {
-		<Commands<'w, 's> as SystemParam>::queue(&mut state.0, system_meta, world);
-		// No queuing for resources due to:
-		// - `world` being consumed
-		// - `Option<ResMut>` has empty queue impl in bevy 0.16
-	}
-
-	unsafe fn validate_param(
-		state: &Self::State,
-		system_meta: &bevy::ecs::system::SystemMeta,
-		world: bevy::ecs::world::unsafe_world_cell::UnsafeWorldCell,
-	) -> std::result::Result<(), bevy::ecs::system::SystemParamValidationError> {
-		unsafe {
-			Commands::<'w, 's>::validate_param(&state.0, system_meta, world)?;
-			Option::<ResMut<'w, PersistentEntities>>::validate_param(&state.1, system_meta, world)?;
-		}
-		Ok(())
 	}
 }
 
