@@ -16,7 +16,7 @@ use common::{
 	zyheeda_commands::ZyheedaCommands,
 };
 
-pub(crate) fn execute_face<TMouseHover, TCursor>(
+pub(crate) fn execute_player_face<TMouseHover, TCursor>(
 	In(faces): In<Vec<(Entity, Face)>>,
 	mut transforms: Query<(Entity, &mut Transform, Option<&Immobilized>)>,
 	commands: ZyheedaCommands,
@@ -164,7 +164,7 @@ mod tests {
 		app.register_persistent_entities();
 		app.add_systems(
 			Update,
-			read_faces.pipe(execute_face::<_MouseHover, _Cursor>),
+			read_faces.pipe(execute_player_face::<_MouseHover, _Cursor>),
 		);
 		app.insert_resource(cursor);
 		app.init_resource::<_MouseHover>();
