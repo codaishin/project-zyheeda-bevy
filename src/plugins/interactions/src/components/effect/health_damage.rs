@@ -71,7 +71,7 @@ mod tests {
 
 	#[test]
 	fn deal_damage_over_time_scaled_by_delta() {
-		let mut damage = HealthDamageEffect(HealthDamage::once_per_second(42.));
+		let mut damage = HealthDamageEffect(HealthDamage::per_second(42.));
 		let mut life = Life::from(Health::new(100.));
 
 		damage.on_begin_interaction(PersistentEntity::default(), &mut life);

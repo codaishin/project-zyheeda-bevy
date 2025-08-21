@@ -6,11 +6,11 @@ use serde::{Deserialize, Serialize};
 pub struct HealthDamage(pub f32, pub EffectApplies);
 
 impl HealthDamage {
-	pub fn once(amount: f32) -> Self {
+	pub const fn once(amount: f32) -> Self {
 		HealthDamage(amount, EffectApplies::Once)
 	}
 
-	pub fn once_per_second(amount: f32) -> Self {
+	pub const fn per_second(amount: f32) -> Self {
 		HealthDamage(amount, EffectApplies::Always)
 	}
 }

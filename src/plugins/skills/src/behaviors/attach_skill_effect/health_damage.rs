@@ -23,7 +23,7 @@ impl AttachHealthDamage {
 	{
 		entity.try_insert(TInteractions::effect(match *self {
 			Self::OneTime(dmg) => HealthDamage::once(dmg),
-			Self::OverTime(dmg) => HealthDamage::once_per_second(dmg),
+			Self::OverTime(dmg) => HealthDamage::per_second(dmg),
 		}));
 	}
 }
@@ -100,7 +100,7 @@ mod tests {
 			.run_system_once(damage(start_dealing_damage))?;
 
 		assert_eq!(
-			Some(&_Effect(HealthDamage::once_per_second(42.))),
+			Some(&_Effect(HealthDamage::per_second(42.))),
 			app.world().entity(entity).get::<_Effect>(),
 		);
 		Ok(())
