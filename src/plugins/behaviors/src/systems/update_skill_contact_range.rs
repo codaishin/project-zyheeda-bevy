@@ -30,10 +30,7 @@ mod tests {
 	use common::{
 		components::persistent_entity::PersistentEntity,
 		tools::{Units, UnitsPerSecond},
-		traits::{
-			clamp_zero_positive::ClampZeroPositive,
-			handles_skill_behaviors::{ContactShape, Motion, SkillSpawner},
-		},
+		traits::handles_skill_behaviors::{ContactShape, Motion, SkillSpawner},
 	};
 	use testing::SingleThreadedApp;
 
@@ -42,14 +39,14 @@ mod tests {
 			Self {
 				created_from: CreatedFrom::Contact,
 				shape: ContactShape::Sphere {
-					radius: Units::new(1.),
+					radius: Units::from(1.),
 					hollow_collider: false,
 					destroyed_by: default(),
 				},
 				motion: Motion::Projectile {
 					caster: PersistentEntity::default(),
 					spawner: SkillSpawner::Neutral,
-					speed: UnitsPerSecond::new(1.),
+					speed: UnitsPerSecond::from(1.),
 					range,
 				},
 			}
@@ -70,9 +67,9 @@ mod tests {
 		let contact = app
 			.world_mut()
 			.spawn((
-				SkillContact::fake_projectile_motion(Units::new(100.)),
+				SkillContact::fake_projectile_motion(Units::from(100.)),
 				WhenTraveled::via::<Velocity>()
-					.distance(Units::new(42.))
+					.distance(Units::from(42.))
 					.destroy(),
 			))
 			.id();
@@ -80,7 +77,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(Units::new(42.)),
+			Some(Units::from(42.)),
 			app.world()
 				.entity(contact)
 				.get::<SkillContact>()

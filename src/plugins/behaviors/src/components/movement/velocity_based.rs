@@ -74,7 +74,7 @@ mod tests {
 		},
 	};
 	use bevy_rapier3d::dynamics::Velocity;
-	use common::{tools::UnitsPerSecond, traits::clamp_zero_positive::ClampZeroPositive};
+	use common::tools::UnitsPerSecond;
 	use testing::SingleThreadedApp;
 
 	#[derive(Component, Debug, PartialEq)]
@@ -127,7 +127,7 @@ mod tests {
 		let mut app = setup(call_update(Duration::from_millis(100)));
 		let transform = GlobalTransform::from_xyz(3., 0., 2.);
 		let target = Vec3::new(10., 0., 7.);
-		let speed = Speed(UnitsPerSecond::new(11.));
+		let speed = Speed(UnitsPerSecond::from(11.));
 		let agent = app
 			.world_mut()
 			.spawn((
@@ -151,7 +151,7 @@ mod tests {
 		let mut app = setup(call_update(Duration::from_millis(100)));
 		let transform = GlobalTransform::from_xyz(3., 0., 2.);
 		let target = Vec3::new(10., 0., 7.);
-		let speed = Speed(UnitsPerSecond::new(11.));
+		let speed = Speed(UnitsPerSecond::from(11.));
 		let agent = app
 			.world_mut()
 			.spawn((
@@ -171,7 +171,7 @@ mod tests {
 		let mut app = setup(call_update(Duration::from_millis(100)));
 		let transform = GlobalTransform::from_xyz(3., 0., 2.);
 		let target = Vec3::new(10., 0., 7.);
-		let speed = Speed(UnitsPerSecond::new(11.));
+		let speed = Speed(UnitsPerSecond::from(11.));
 		let agent = app
 			.world_mut()
 			.spawn((
@@ -193,7 +193,7 @@ mod tests {
 		let mut app = setup(call_update(Duration::from_millis(100)));
 		let transform = GlobalTransform::from_xyz(10., 0., 7.);
 		let target = Vec3::new(10., 0., 7.);
-		let speed = Speed(UnitsPerSecond::new(11.));
+		let speed = Speed(UnitsPerSecond::from(11.));
 		let agent = app
 			.world_mut()
 			.spawn((
@@ -218,7 +218,7 @@ mod tests {
 		);
 		let transform = GlobalTransform::from_xyz(10., 0., 7.);
 		let target = Vec3::new(10., 0., 7.);
-		let speed = Speed(UnitsPerSecond::new(11.));
+		let speed = Speed(UnitsPerSecond::from(11.));
 		let agent = app
 			.world_mut()
 			.spawn((
@@ -243,7 +243,7 @@ mod tests {
 		let transform = GlobalTransform::from_xyz(10., 0., 7.);
 		let target =
 			transform.translation() + Vec3::X * (VelocityBased::SENSITIVITY * speed * delta - 1.);
-		let speed = Speed(UnitsPerSecond::new(speed));
+		let speed = Speed(UnitsPerSecond::from(speed));
 		let agent = app
 			.world_mut()
 			.spawn((

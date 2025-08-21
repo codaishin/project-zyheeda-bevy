@@ -7,18 +7,15 @@ use crate::{
 };
 use common::{
 	tools::{Units, UnitsPerSecond},
-	traits::{
-		clamp_zero_positive::ClampZeroPositive,
-		handles_skill_behaviors::{
-			Contact,
-			ContactShape,
-			HandlesSkillBehaviors,
-			Motion,
-			Projection,
-			ProjectionShape,
-			SkillEntities,
-			SkillSpawner,
-		},
+	traits::handles_skill_behaviors::{
+		Contact,
+		ContactShape,
+		HandlesSkillBehaviors,
+		Motion,
+		Projection,
+		ProjectionShape,
+		SkillEntities,
+		SkillSpawner,
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -46,20 +43,20 @@ impl SpawnShape for SpawnProjectile {
 			commands,
 			Contact {
 				shape: ContactShape::Sphere {
-					radius: Units::new(0.05),
+					radius: Units::from(0.05),
 					hollow_collider: false,
 					destroyed_by: self.destroyed_by.clone().into(),
 				},
 				motion: Motion::Projectile {
 					caster,
 					spawner,
-					speed: UnitsPerSecond::new(15.),
-					range: Units::new(20.),
+					speed: UnitsPerSecond::from(15.),
+					range: Units::from(20.),
 				},
 			},
 			Projection {
 				shape: ProjectionShape::Sphere {
-					radius: Units::new(0.5),
+					radius: Units::from(0.5),
 				},
 				offset: None,
 			},

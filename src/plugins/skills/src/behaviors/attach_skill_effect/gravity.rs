@@ -36,7 +36,6 @@ mod tests {
 	};
 	use common::{
 		components::persistent_entity::PersistentEntity,
-		traits::clamp_zero_positive::ClampZeroPositive,
 		zyheeda_commands::ZyheedaCommands,
 	};
 	use std::sync::LazyLock;
@@ -80,11 +79,11 @@ mod tests {
 
 		let entity = app
 			.world_mut()
-			.run_system_once_with(gravity, UnitsPerSecond::new(42.))?;
+			.run_system_once_with(gravity, UnitsPerSecond::from(42.))?;
 
 		assert_eq!(
 			Some(&_Effect(Gravity {
-				strength: UnitsPerSecond::new(42.),
+				strength: UnitsPerSecond::from(42.),
 			})),
 			app.world().entity(entity).get::<_Effect>()
 		);

@@ -90,7 +90,6 @@ mod tests {
 	};
 	use common::traits::{
 		cast_ray::TimeOfImpact,
-		clamp_zero_positive::ClampZeroPositive,
 		register_persistent_entities::RegisterPersistentEntities,
 	};
 	use testing::{SingleThreadedApp, assert_eq_approx};
@@ -114,7 +113,7 @@ mod tests {
 				GlobalTransform::from(Transform::from_xyz(2., 2., 2.).looking_to(Dir3::X, Vec3::Y)),
 				Transform::from_xyz(1., 0., 0.).looking_to(Dir3::Z, Vec3::Y),
 				Blockable(InteractAble::Beam {
-					range: Units::new(100.),
+					range: Units::from(100.),
 					blocked_by: default(),
 				}),
 			))
@@ -143,7 +142,7 @@ mod tests {
 			.spawn((
 				Transform::from_xyz(1., 0., 0.).looking_to(Dir3::Z, Vec3::Y),
 				Blockable(InteractAble::Beam {
-					range: Units::new(100.),
+					range: Units::from(100.),
 					blocked_by: default(),
 				}),
 			))
@@ -182,7 +181,7 @@ mod tests {
 			.spawn((
 				Transform::from_xyz(1., 0., 0.).looking_to(Dir3::Z, Vec3::Y),
 				Blockable(InteractAble::Beam {
-					range: Units::new(100.),
+					range: Units::from(100.),
 					blocked_by: default(),
 				}),
 			))
@@ -221,7 +220,7 @@ mod tests {
 			.spawn((
 				Transform::from_xyz(1., 0., 0.).looking_to(Dir3::Z, Vec3::Y),
 				Blockable(InteractAble::Beam {
-					range: Units::new(100.),
+					range: Units::from(100.),
 					blocked_by: default(),
 				}),
 			))
@@ -269,7 +268,7 @@ mod tests {
 			.spawn((
 				Transform::from_xyz(1., 0., 0.).looking_to(Dir3::Z, Vec3::Y),
 				Blockable(InteractAble::Beam {
-					range: Units::new(100.),
+					range: Units::from(100.),
 					blocked_by: default(),
 				}),
 			))

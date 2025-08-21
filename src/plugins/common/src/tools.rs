@@ -21,7 +21,6 @@ pub mod swap_key;
 
 pub(crate) mod get_recursively;
 
-use crate::traits::clamp_zero_positive::ClampZeroPositive;
 use bevy::prelude::Entity;
 use macros::ClampZeroPositive;
 use serde::{Deserialize, Serialize};
@@ -64,7 +63,7 @@ impl<T: Debug + PartialEq> Deref for Last<'_, T> {
 #[derive(Debug, PartialEq, PartialOrd, Clone, Copy, ClampZeroPositive, Serialize, Deserialize)]
 pub struct UnitsPerSecond(f32);
 
-#[derive(Debug, PartialEq, Clone, Copy, ClampZeroPositive, Serialize, Deserialize, PartialOrd)]
+#[derive(Debug, PartialEq, PartialOrd, Clone, Copy, ClampZeroPositive, Serialize, Deserialize)]
 pub struct Units(f32);
 
 #[derive(Debug, PartialEq, Clone, ClampZeroPositive)]
@@ -98,11 +97,11 @@ mod test_clamp_zero_positive {
 
 	#[test]
 	fn set_value() {
-		assert_eq!(&42., _Value::new(42.).deref());
+		assert_eq!(&42., _Value::from(42.).deref());
 	}
 
 	#[test]
 	fn min_zero() {
-		assert_eq!(&0., _Value::new(-42.).deref());
+		assert_eq!(&0., _Value::from(-42.).deref());
 	}
 }

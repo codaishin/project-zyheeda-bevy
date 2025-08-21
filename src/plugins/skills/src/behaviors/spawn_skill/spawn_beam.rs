@@ -7,18 +7,15 @@ use crate::{
 };
 use common::{
 	tools::Units,
-	traits::{
-		clamp_zero_positive::ClampZeroPositive,
-		handles_skill_behaviors::{
-			Contact,
-			ContactShape,
-			HandlesSkillBehaviors,
-			Motion,
-			Projection,
-			ProjectionShape,
-			SkillEntities,
-			SkillSpawner,
-		},
+	traits::handles_skill_behaviors::{
+		Contact,
+		ContactShape,
+		HandlesSkillBehaviors,
+		Motion,
+		Projection,
+		ProjectionShape,
+		SkillEntities,
+		SkillSpawner,
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -48,14 +45,14 @@ impl SpawnShape for SpawnBeam {
 			Contact {
 				shape: ContactShape::Beam {
 					range: self.range,
-					radius: Units::new(0.003),
+					radius: Units::from(0.003),
 					blocked_by: self.blocked_by.clone().into(),
 				},
 				motion: Motion::HeldBy { caster, spawner },
 			},
 			Projection {
 				shape: ProjectionShape::Beam {
-					radius: Units::new(0.2),
+					radius: Units::from(0.2),
 				},
 				offset: None,
 			},

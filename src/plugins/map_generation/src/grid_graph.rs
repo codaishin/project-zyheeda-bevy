@@ -306,7 +306,6 @@ pub struct Obstacles {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::clamp_zero_positive::ClampZeroPositive;
 	use mockall::{mock, predicate::eq};
 	use testing::{Mock, simple_init};
 
@@ -444,7 +443,7 @@ mod tests {
 		};
 
 		let node = graph.node(Vec3::new(2., 0., 3.)).expect("NO SUCH NODE");
-		let path = graph.naive_path(Vec3::new(1., 0., 1.), &node, Units::new(0.1));
+		let path = graph.naive_path(Vec3::new(1., 0., 1.), &node, Units::from(0.1));
 
 		assert_eq!(NaivePath::Ok, path);
 	}
@@ -470,7 +469,7 @@ mod tests {
 		};
 
 		let node = graph.node(Vec3::new(2., 0., 3.)).expect("NO SUCH NODE");
-		let path = graph.naive_path(Vec3::new(1., 0., 1.), &node, Units::new(0.1));
+		let path = graph.naive_path(Vec3::new(1., 0., 1.), &node, Units::from(0.1));
 
 		assert_eq!(NaivePath::CannotCompute, path);
 	}
@@ -495,7 +494,7 @@ mod tests {
 		};
 
 		let node = graph.node(Vec3::new(2., 0., 3.)).expect("NO SUCH NODE");
-		let path = graph.naive_path(Vec3::new(1., 0., 1.), &node, Units::new(0.1));
+		let path = graph.naive_path(Vec3::new(1., 0., 1.), &node, Units::from(0.1));
 
 		assert_eq!(NaivePath::CannotCompute, path);
 	}
@@ -521,7 +520,7 @@ mod tests {
 		};
 
 		let node = graph.node(Vec3::new(1., 0., 3.)).expect("NO SUCH NODE");
-		let path = graph.naive_path(Vec3::new(1.3, 0., 1.), &node, Units::new(0.3));
+		let path = graph.naive_path(Vec3::new(1.3, 0., 1.), &node, Units::from(0.3));
 
 		assert_eq!(NaivePath::PartialUntil(Vec3::new(1., 0., 2.)), path);
 	}
@@ -546,7 +545,7 @@ mod tests {
 		};
 
 		let node = graph.node(Vec3::new(1., 0., 3.)).expect("NO SUCH NODE");
-		let path = graph.naive_path(Vec3::new(1.3, 0., 1.), &node, Units::new(0.3));
+		let path = graph.naive_path(Vec3::new(1.3, 0., 1.), &node, Units::from(0.3));
 
 		assert_eq!(NaivePath::PartialUntil(Vec3::new(1., 0., 2.)), path);
 	}
@@ -568,7 +567,7 @@ mod tests {
 		};
 
 		let node = graph.node(Vec3::new(1., 0., 3.)).expect("NO SUCH NODE");
-		let path = graph.naive_path(Vec3::new(1., 0., 1.), &node, Units::new(0.3));
+		let path = graph.naive_path(Vec3::new(1., 0., 1.), &node, Units::from(0.3));
 
 		assert_eq!(NaivePath::CannotCompute, path);
 	}
@@ -594,7 +593,7 @@ mod tests {
 		};
 
 		let node = graph.node(Vec3::new(2., 0., 3.)).expect("NO SUCH NODE");
-		let path = graph.naive_path(Vec3::new(1.7, 0., 1.), &node, Units::new(0.3));
+		let path = graph.naive_path(Vec3::new(1.7, 0., 1.), &node, Units::from(0.3));
 
 		assert_eq!(NaivePath::PartialUntil(Vec3::new(2., 0., 2.)), path);
 	}
@@ -620,7 +619,7 @@ mod tests {
 		};
 
 		let node = graph.node(Vec3::new(3., 0., 1.)).expect("NO SUCH NODE");
-		let path = graph.naive_path(Vec3::new(1., 0., 1.3), &node, Units::new(0.3));
+		let path = graph.naive_path(Vec3::new(1., 0., 1.3), &node, Units::from(0.3));
 
 		assert_eq!(NaivePath::PartialUntil(Vec3::new(2., 0., 1.)), path);
 	}
@@ -647,7 +646,7 @@ mod tests {
 		};
 
 		let node = graph.node(Vec3::new(3., 0., 2.)).expect("NO SUCH NODE");
-		let path = graph.naive_path(Vec3::new(1., 0., 1.7), &node, Units::new(0.3));
+		let path = graph.naive_path(Vec3::new(1., 0., 1.7), &node, Units::from(0.3));
 
 		assert_eq!(NaivePath::PartialUntil(Vec3::new(2., 0., 2.)), path);
 	}
@@ -673,7 +672,7 @@ mod tests {
 		};
 
 		let node = graph.node(Vec3::new(1., 0., 1.)).expect("NO SUCH NODE");
-		let path = graph.naive_path(Vec3::new(1.3, 0., 3.), &node, Units::new(0.3));
+		let path = graph.naive_path(Vec3::new(1.3, 0., 3.), &node, Units::from(0.3));
 
 		assert_eq!(NaivePath::PartialUntil(Vec3::new(1., 0., 2.)), path);
 	}
@@ -700,7 +699,7 @@ mod tests {
 		};
 
 		let node = graph.node(Vec3::new(1., 0., 1.)).expect("NO SUCH NODE");
-		let path = graph.naive_path(Vec3::new(3., 0., 1.3), &node, Units::new(0.3));
+		let path = graph.naive_path(Vec3::new(3., 0., 1.3), &node, Units::from(0.3));
 
 		assert_eq!(NaivePath::PartialUntil(Vec3::new(2., 0., 1.)), path);
 	}
@@ -726,7 +725,7 @@ mod tests {
 		};
 
 		let node = graph.node(Vec3::new(1., 0., 3.)).expect("NO SUCH NODE");
-		let path = graph.naive_path(Vec3::new(1., 0., 1.), &node, Units::new(0.3));
+		let path = graph.naive_path(Vec3::new(1., 0., 1.), &node, Units::from(0.3));
 
 		assert_eq!(NaivePath::Ok, path);
 	}
@@ -752,7 +751,7 @@ mod tests {
 		};
 
 		let node = graph.node(Vec3::new(1., 0., 3.)).expect("NO SUCH NODE");
-		let path = graph.naive_path(Vec3::new(1.4, 0., 1.), &node, Units::new(0.3));
+		let path = graph.naive_path(Vec3::new(1.4, 0., 1.), &node, Units::from(0.3));
 
 		assert_eq!(NaivePath::PartialUntil(Vec3::new(1.0, 0.0, 2.0)), path);
 	}
@@ -775,7 +774,7 @@ mod tests {
 		};
 
 		let node = graph.node(Vec3::new(1., 0., 3.)).expect("NO SUCH NODE");
-		let path = graph.naive_path(Vec3::new(1., 0., 1.), &node, Units::new(0.1));
+		let path = graph.naive_path(Vec3::new(1., 0., 1.), &node, Units::from(0.1));
 
 		assert_eq!(NaivePath::CannotCompute, path);
 	}

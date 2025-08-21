@@ -103,7 +103,7 @@ where
 #[cfg(test)]
 mod test_new_path {
 	use super::*;
-	use common::{tools::Units, traits::clamp_zero_positive::ClampZeroPositive};
+	use common::tools::Units;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::{collections::VecDeque, marker::PhantomData};
@@ -130,7 +130,7 @@ mod test_new_path {
 		fn default() -> Self {
 			let mut mock = Mock_AgentMovement::new();
 			mock.expect_ref_into()
-				.return_const(ColliderRadius(Units::new(1.)));
+				.return_const(ColliderRadius(Units::from(1.)));
 
 			Self { mock }
 		}
@@ -330,7 +330,7 @@ mod test_new_path {
 					.with(
 						eq(Vec3::new(1., 2., 3.)),
 						eq(Vec3::new(4., 5., 6.)),
-						eq(Units::new(42.)),
+						eq(Units::from(42.)),
 					)
 					.return_const(None);
 			}))
@@ -338,7 +338,7 @@ mod test_new_path {
 		app.world_mut().spawn((
 			_AgentMovement::new().with_mock(|mock| {
 				mock.expect_ref_into()
-					.return_const(ColliderRadius(Units::new(42.)));
+					.return_const(ColliderRadius(Units::from(42.)));
 			}),
 			Movement::new(Vec3::new(4., 5., 6.), PathOrWasd::<_MoveMethod>::new_path),
 			GlobalTransform::from_xyz(1., 2., 3.),

@@ -54,12 +54,12 @@ impl ActOn<GravityAffected> for GravityEffect {
 mod tests {
 	use super::*;
 	use crate::components::gravity_affected::GravityPull;
-	use common::{tools::UnitsPerSecond, traits::clamp_zero_positive::ClampZeroPositive};
+	use common::tools::UnitsPerSecond;
 
 	#[test]
 	fn add_gravity_pull() {
 		let mut gravity = GravityEffect(Gravity {
-			strength: UnitsPerSecond::new(42.),
+			strength: UnitsPerSecond::from(42.),
 		});
 		let mut gravity_pulls = GravityAffected::default();
 		let towards = PersistentEntity::default();
@@ -68,7 +68,7 @@ mod tests {
 
 		assert_eq!(
 			GravityAffected::new([GravityPull {
-				strength: UnitsPerSecond::new(42.),
+				strength: UnitsPerSecond::from(42.),
 				towards,
 			}]),
 			gravity_pulls
@@ -78,7 +78,7 @@ mod tests {
 	#[test]
 	fn no_gravity_pull_on_begin() {
 		let mut gravity = GravityEffect(Gravity {
-			strength: UnitsPerSecond::new(42.),
+			strength: UnitsPerSecond::from(42.),
 		});
 		let mut gravity_pulls = GravityAffected::default();
 

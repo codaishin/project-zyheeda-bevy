@@ -134,7 +134,7 @@ mod tests {
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
 		tools::{UnitsPerSecond, action_key::user_input::UserInput},
-		traits::{clamp_zero_positive::ClampZeroPositive, handles_player::DirectionError},
+		traits::handles_player::DirectionError,
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -247,7 +247,7 @@ mod tests {
 		app.world_mut().spawn((_Cam, GlobalTransform::default()));
 		app.world_mut().spawn((
 			GlobalTransform::default(),
-			_Agent(Speed(UnitsPerSecond::new(1.))),
+			_Agent(Speed(UnitsPerSecond::from(1.))),
 		));
 
 		let input = app.world_mut().run_system_once_with(
@@ -261,7 +261,7 @@ mod tests {
 
 	#[test]
 	fn call_min_distance_with_delta_and_agent_speed() -> Result<(), RunSystemError> {
-		let speed = Speed(UnitsPerSecond::new(42.));
+		let speed = Speed(UnitsPerSecond::from(42.));
 		let delta = Duration::from_secs(5);
 		mock_input!();
 		let event_ctx = Mock_Input::min_distance_context();
@@ -302,7 +302,7 @@ mod tests {
 		app.world_mut().spawn((_Cam, GlobalTransform::default()));
 		app.world_mut().spawn((
 			GlobalTransform::default(),
-			_Agent(Speed(UnitsPerSecond::new(42.))),
+			_Agent(Speed(UnitsPerSecond::from(42.))),
 		));
 
 		let input = app.world_mut().run_system_once_with(
@@ -332,7 +332,7 @@ mod tests {
 		app.world_mut().spawn((_Cam, GlobalTransform::default()));
 		app.world_mut().spawn((
 			GlobalTransform::from_xyz(1., 2., 3.),
-			_Agent(Speed(UnitsPerSecond::new(42.))),
+			_Agent(Speed(UnitsPerSecond::from(42.))),
 		));
 
 		let input = app.world_mut().run_system_once_with(
@@ -366,7 +366,7 @@ mod tests {
 		app.world_mut().spawn((_Cam, GlobalTransform::default()));
 		app.world_mut().spawn((
 			GlobalTransform::default(),
-			_Agent(Speed(UnitsPerSecond::new(1.))),
+			_Agent(Speed(UnitsPerSecond::from(1.))),
 		));
 
 		let input = app.world_mut().run_system_once_with(
@@ -404,7 +404,7 @@ mod tests {
 		app.world_mut().spawn((_Cam, GlobalTransform::default()));
 		app.world_mut().spawn((
 			GlobalTransform::default(),
-			_Agent(Speed(UnitsPerSecond::new(1.))),
+			_Agent(Speed(UnitsPerSecond::from(1.))),
 		));
 
 		let input = app.world_mut().run_system_once_with(
@@ -439,7 +439,7 @@ mod tests {
 		app.world_mut().spawn((_Cam, GlobalTransform::default()));
 		app.world_mut().spawn((
 			GlobalTransform::default(),
-			_Agent(Speed(UnitsPerSecond::new(1.))),
+			_Agent(Speed(UnitsPerSecond::from(1.))),
 		));
 
 		let input = app.world_mut().run_system_once_with(
@@ -470,7 +470,7 @@ mod tests {
 			.spawn((_Cam, GlobalTransform::from_xyz(1., 2., 3.)));
 		app.world_mut().spawn((
 			GlobalTransform::default(),
-			_Agent(Speed(UnitsPerSecond::new(1.))),
+			_Agent(Speed(UnitsPerSecond::from(1.))),
 		));
 
 		_ = app.world_mut().run_system_once_with(
@@ -507,7 +507,7 @@ mod tests {
 		app.world_mut().spawn((_Cam, GlobalTransform::default()));
 		app.world_mut().spawn((
 			GlobalTransform::from_xyz(1., 2., 3.),
-			_Agent(Speed(UnitsPerSecond::new(1.))),
+			_Agent(Speed(UnitsPerSecond::from(1.))),
 		));
 
 		_ = app.world_mut().run_system_once_with(
@@ -551,11 +551,11 @@ mod tests {
 		app.world_mut().spawn((_Cam, GlobalTransform::default()));
 		app.world_mut().spawn((
 			GlobalTransform::default(),
-			_Agent(Speed(UnitsPerSecond::new(1.))),
+			_Agent(Speed(UnitsPerSecond::from(1.))),
 		));
 		app.world_mut().spawn((
 			GlobalTransform::default(),
-			_Agent(Speed(UnitsPerSecond::new(1.))),
+			_Agent(Speed(UnitsPerSecond::from(1.))),
 		));
 
 		let result = app.world_mut().run_system_once_with(
@@ -582,7 +582,7 @@ mod tests {
 		}));
 		app.world_mut().spawn((
 			GlobalTransform::default(),
-			_Agent(Speed(UnitsPerSecond::new(1.))),
+			_Agent(Speed(UnitsPerSecond::from(1.))),
 		));
 
 		let result = app.world_mut().run_system_once_with(
@@ -608,7 +608,7 @@ mod tests {
 		app.world_mut().spawn((_Cam, GlobalTransform::default()));
 		app.world_mut().spawn((
 			GlobalTransform::default(),
-			_Agent(Speed(UnitsPerSecond::new(1.))),
+			_Agent(Speed(UnitsPerSecond::from(1.))),
 		));
 
 		let result = app.world_mut().run_system_once_with(
