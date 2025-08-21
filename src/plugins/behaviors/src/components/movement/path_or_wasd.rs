@@ -131,7 +131,7 @@ pub(crate) enum Mode {
 mod test_with_path {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{tools::UnitsPerSecond, traits::clamp_zero_positive::ClampZeroPositive};
+	use common::tools::UnitsPerSecond;
 	use std::sync::LazyLock;
 	use testing::SingleThreadedApp;
 
@@ -164,7 +164,7 @@ mod test_with_path {
 		App::new().single_threaded(Update)
 	}
 
-	static SPEED: LazyLock<Speed> = LazyLock::new(|| Speed(UnitsPerSecond::new(42.)));
+	static SPEED: LazyLock<Speed> = LazyLock::new(|| Speed(UnitsPerSecond::from(42.)));
 	static DELTA: LazyLock<Duration> = LazyLock::new(Duration::default);
 
 	mod path {

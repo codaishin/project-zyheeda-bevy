@@ -38,7 +38,7 @@ pub(crate) trait ExecuteMovement {
 mod tests {
 	use super::*;
 	use crate::traits::IsDone;
-	use common::{tools::UnitsPerSecond, traits::clamp_zero_positive::ClampZeroPositive};
+	use common::tools::UnitsPerSecond;
 	use testing::SingleThreadedApp;
 
 	#[derive(Component, Default)]
@@ -90,7 +90,7 @@ mod tests {
 	#[test]
 	fn apply_speed_and_delta() {
 		let mut app = setup(Duration::from_millis(100));
-		let agent = _Agent(UnitsPerSecond::new(11.).into());
+		let agent = _Agent(UnitsPerSecond::from(11.).into());
 		let movement = _Movement(false.into());
 		let agent = app.world_mut().spawn((agent, _Component, movement)).id();
 
@@ -99,7 +99,7 @@ mod tests {
 		assert_eq!(
 			Some(&_MoveParams((
 				_Component,
-				Speed(UnitsPerSecond::new(11.)),
+				Speed(UnitsPerSecond::from(11.)),
 				Duration::from_millis(100)
 			))),
 			app.world().entity(agent).get::<_MoveParams>()

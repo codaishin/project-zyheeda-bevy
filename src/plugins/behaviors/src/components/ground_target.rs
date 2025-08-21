@@ -22,12 +22,10 @@ impl GroundTarget {
 
 	#[cfg(test)]
 	fn with_caster(caster: PersistentEntity) -> Self {
-		use common::traits::clamp_zero_positive::ClampZeroPositive;
-
 		GroundTarget {
 			caster,
 			target_ray: Self::DEFAULT_TARGET_RAY,
-			max_cast_range: Units::new(f32::INFINITY),
+			max_cast_range: Units::from(f32::INFINITY),
 		}
 	}
 
@@ -97,10 +95,7 @@ impl GroundTarget {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::{
-		clamp_zero_positive::ClampZeroPositive,
-		register_persistent_entities::RegisterPersistentEntities,
-	};
+	use common::traits::register_persistent_entities::RegisterPersistentEntities;
 	use testing::{SingleThreadedApp, assert_eq_approx};
 
 	fn setup() -> App {
@@ -148,7 +143,7 @@ mod tests {
 			.spawn(
 				GroundTarget::with_caster(caster)
 					.with_target_ray(ray)
-					.with_max_range(Units::new(5.)),
+					.with_max_range(Units::from(5.)),
 			)
 			.id();
 
@@ -175,7 +170,7 @@ mod tests {
 			.spawn(
 				GroundTarget::with_caster(caster)
 					.with_target_ray(ray)
-					.with_max_range(Units::new(5.)),
+					.with_max_range(Units::from(5.)),
 			)
 			.id();
 
@@ -201,7 +196,7 @@ mod tests {
 			.spawn(
 				GroundTarget::with_caster(caster)
 					.with_target_ray(ray)
-					.with_max_range(Units::new(5.)),
+					.with_max_range(Units::from(5.)),
 			)
 			.id();
 

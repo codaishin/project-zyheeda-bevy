@@ -30,7 +30,6 @@ use common::{
 		collider_radius::ColliderRadius,
 	},
 	traits::{
-		clamp_zero_positive::ClampZeroPositive,
 		handles_effect::HandlesEffect,
 		handles_enemies::{EnemySkillUsage, EnemyTarget},
 		handles_skill_behaviors::SkillSpawner,
@@ -49,7 +48,7 @@ use std::{f32::consts::PI, time::Duration};
 	GroundOffset = Self::GROUND_OFFSET,
 	RigidBody = RigidBody::Dynamic,
 	GravityScale = GravityScale(0.),
-	Enemy = VoidSphere::with_attack_range(Units::new(5.))
+	Enemy = VoidSphere::with_attack_range(Units::from(5.))
 )]
 pub struct VoidSphere;
 
@@ -69,14 +68,14 @@ impl VoidSphere {
 	pub(crate) const SKILL_SPAWN_NEUTRAL: &str = "skill_spawn_neutral";
 
 	fn collider_radius() -> ColliderRadius {
-		ColliderRadius(Units::new(Self::OUTER_RADIUS))
+		ColliderRadius(Units::from(Self::OUTER_RADIUS))
 	}
 
 	pub(crate) fn with_attack_range(attack_range: Units) -> Enemy {
 		Enemy {
-			speed: UnitsPerSecond::new(1.).into(),
+			speed: UnitsPerSecond::from(1.).into(),
 			movement_animation: None,
-			aggro_range: Units::new(10.).into(),
+			aggro_range: Units::from(10.).into(),
 			attack_range: attack_range.into(),
 			target: EnemyTarget::Player,
 			collider_radius: Self::collider_radius(),
@@ -105,12 +104,12 @@ where
 			))
 			.with_child((VoidSpherePart::Core, VoidSphereCore, transform))
 			.with_child((
-				VoidSpherePart::RingA(UnitsPerSecond::new(PI / 50.)),
+				VoidSpherePart::RingA(UnitsPerSecond::from(PI / 50.)),
 				VoidSphereRing,
 				transform,
 			))
 			.with_child((
-				VoidSpherePart::RingB(UnitsPerSecond::new(PI / 75.)),
+				VoidSpherePart::RingB(UnitsPerSecond::from(PI / 75.)),
 				VoidSphereRing,
 				transform_2nd_ring,
 			))

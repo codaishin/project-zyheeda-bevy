@@ -221,7 +221,6 @@ mod tests {
 		tools::Units,
 		traits::{
 			cast_ray::TimeOfImpact,
-			clamp_zero_positive::ClampZeroPositive,
 			register_persistent_entities::RegisterPersistentEntities,
 		},
 	};
@@ -337,8 +336,8 @@ mod tests {
 				GlobalTransform::from_xyz(2., 0., 1.),
 				Attack(*PLAYER),
 				_Enemy {
-					attack_range: Units::new(1.).into(),
-					aggro_range: Units::new(2.).into(),
+					attack_range: Units::from(1.).into(),
+					aggro_range: Units::from(2.).into(),
 					target: EnemyTarget::Player,
 				},
 			))
@@ -369,8 +368,8 @@ mod tests {
 				Chase(*PLAYER),
 				Attack(*PLAYER),
 				_Enemy {
-					attack_range: Units::new(1.).into(),
-					aggro_range: Units::new(2.).into(),
+					attack_range: Units::from(1.).into(),
+					aggro_range: Units::from(2.).into(),
 					target: EnemyTarget::Player,
 				},
 			))
@@ -397,8 +396,8 @@ mod tests {
 				GlobalTransform::from_xyz(2., 0., 1.),
 				Attack(*TARGET),
 				_Enemy {
-					attack_range: Units::new(1.).into(),
-					aggro_range: Units::new(2.).into(),
+					attack_range: Units::from(1.).into(),
+					aggro_range: Units::from(2.).into(),
 					target: EnemyTarget::Entity(*TARGET),
 				},
 			))
@@ -429,8 +428,8 @@ mod tests {
 				Chase(*TARGET),
 				Attack(*TARGET),
 				_Enemy {
-					attack_range: Units::new(1.).into(),
-					aggro_range: Units::new(2.).into(),
+					attack_range: Units::from(1.).into(),
+					aggro_range: Units::from(2.).into(),
 					target: EnemyTarget::Entity(*TARGET),
 				},
 			))
@@ -457,8 +456,8 @@ mod tests {
 				GlobalTransform::from_xyz(1., 0., 0.5),
 				Chase(*PLAYER),
 				_Enemy {
-					attack_range: Units::new(1.).into(),
-					aggro_range: Units::new(2.).into(),
+					attack_range: Units::from(1.).into(),
+					aggro_range: Units::from(2.).into(),
 					target: EnemyTarget::Player,
 				},
 			))
@@ -497,8 +496,8 @@ mod tests {
 				GlobalTransform::from_xyz(1., 0., 0.5),
 				Chase(*PLAYER),
 				_Enemy {
-					attack_range: Units::new(1.).into(),
-					aggro_range: Units::new(2.).into(),
+					attack_range: Units::from(1.).into(),
+					aggro_range: Units::from(2.).into(),
 					target: EnemyTarget::Player,
 				},
 			))
@@ -538,8 +537,8 @@ mod tests {
 				GlobalTransform::from_xyz(1., 0., 0.5),
 				Chase(*PLAYER),
 				_Enemy {
-					attack_range: Units::new(1.).into(),
-					aggro_range: Units::new(2.).into(),
+					attack_range: Units::from(1.).into(),
+					aggro_range: Units::from(2.).into(),
 					target: EnemyTarget::Player,
 				},
 			))
@@ -579,8 +578,8 @@ mod tests {
 				GlobalTransform::from_xyz(0., 0., 1.),
 				Chase(*PLAYER),
 				_Enemy {
-					attack_range: Units::new(10.).into(),
-					aggro_range: Units::new(10.).into(),
+					attack_range: Units::from(10.).into(),
+					aggro_range: Units::from(10.).into(),
 					target: EnemyTarget::Player,
 				},
 			))
@@ -625,8 +624,8 @@ mod tests {
 				GlobalTransform::from_xyz(0., 0., 1.),
 				Chase(*PLAYER),
 				_Enemy {
-					attack_range: Units::new(10.).into(),
-					aggro_range: Units::new(10.).into(),
+					attack_range: Units::from(10.).into(),
+					aggro_range: Units::from(10.).into(),
 					target: EnemyTarget::Player,
 				},
 				GroundOffset(Vec3::new(0., 1., 0.)),
@@ -667,8 +666,8 @@ mod tests {
 			GlobalTransform::from_xyz(f32::INFINITY, 0., 0.5),
 			Chase(*PLAYER),
 			_Enemy {
-				attack_range: Units::new(1.).into(),
-				aggro_range: Units::new(2.).into(),
+				attack_range: Units::from(1.).into(),
+				aggro_range: Units::from(2.).into(),
 				target: EnemyTarget::Player,
 			},
 		));
@@ -705,8 +704,8 @@ mod tests {
 				GlobalTransform::from_xyz(1., 0., 0.5),
 				Chase(*PLAYER),
 				_Enemy {
-					attack_range: Units::new(1.).into(),
-					aggro_range: Units::new(2.).into(),
+					attack_range: Units::from(1.).into(),
+					aggro_range: Units::from(2.).into(),
 					target: EnemyTarget::Player,
 				},
 			))

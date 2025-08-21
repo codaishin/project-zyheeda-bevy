@@ -22,16 +22,6 @@ pub fn clamp_zero_positive_derive(input: TokenStream) -> TokenStream {
 	let input = parse_macro_input!(input as DeriveInput);
 	let ident = input.ident;
 	let implementation = quote! {
-		impl ClampZeroPositive for #ident {
-			fn new(value: f32) -> Self {
-				if value < 0. {
-					Self(0.)
-				} else {
-					Self(value)
-				}
-			}
-		}
-
 		impl Default for #ident {
 			fn default() -> Self {
 				Self(0.)
@@ -43,6 +33,26 @@ pub fn clamp_zero_positive_derive(input: TokenStream) -> TokenStream {
 
 			fn deref(&self) -> &Self::Target {
 				&self.0
+			}
+		}
+
+		impl From<f32> for #ident {
+			fn from(value: f32) -> Self {
+				if value > 0. {
+					Self(value)
+				} else {
+					Self(0.)
+				}
+			}
+		}
+
+		impl<'de> serde::Deserialize<'de> for #ident {
+			fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+			where
+				D: serde::Deserializer<'de>,
+			{
+				let v = f32::deserialize(deserializer)?;
+				Ok(Self::from(v))
 			}
 		}
 	};

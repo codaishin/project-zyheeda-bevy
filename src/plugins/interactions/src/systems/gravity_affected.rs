@@ -94,10 +94,7 @@ mod tests {
 	use common::{
 		components::persistent_entity::PersistentEntity,
 		tools::UnitsPerSecond,
-		traits::{
-			clamp_zero_positive::ClampZeroPositive,
-			register_persistent_entities::RegisterPersistentEntities,
-		},
+		traits::register_persistent_entities::RegisterPersistentEntities,
 	};
 	use testing::SingleThreadedApp;
 
@@ -122,7 +119,7 @@ mod tests {
 			.spawn((
 				Transform::from_xyz(1., 0., 0.),
 				GravityAffected::new([GravityPull {
-					strength: UnitsPerSecond::new(2.),
+					strength: UnitsPerSecond::from(2.),
 					towards,
 				}]),
 			))
@@ -156,7 +153,7 @@ mod tests {
 			.spawn((
 				Transform::from_xyz(1., 0., 0.),
 				GravityAffected::new([GravityPull {
-					strength: UnitsPerSecond::new(2.),
+					strength: UnitsPerSecond::from(2.),
 					towards,
 				}]),
 			))
@@ -195,11 +192,11 @@ mod tests {
 				Transform::from_xyz(1., 0., 0.),
 				GravityAffected::new([
 					GravityPull {
-						strength: UnitsPerSecond::new(2.),
+						strength: UnitsPerSecond::from(2.),
 						towards: towards_a,
 					},
 					GravityPull {
-						strength: UnitsPerSecond::new(3.),
+						strength: UnitsPerSecond::from(3.),
 						towards: towards_b,
 					},
 				]),
@@ -261,11 +258,11 @@ mod tests {
 				Transform::from_xyz(1., 0., 0.),
 				GravityAffected::new([
 					GravityPull {
-						strength: UnitsPerSecond::new(2.),
+						strength: UnitsPerSecond::from(2.),
 						towards: towards_a,
 					},
 					GravityPull {
-						strength: UnitsPerSecond::new(3.),
+						strength: UnitsPerSecond::from(3.),
 						towards: towards_b,
 					},
 				]),
@@ -318,7 +315,7 @@ mod tests {
 			.spawn((
 				Transform::from_xyz(3., 0., 0.),
 				GravityAffected::new([GravityPull {
-					strength: UnitsPerSecond::new(10.),
+					strength: UnitsPerSecond::from(10.),
 					towards,
 				}]),
 			))
@@ -354,7 +351,7 @@ mod tests {
 			.spawn((
 				Transform::from_xyz(3., 0., 0.),
 				GravityAffected::new([GravityPull {
-					strength: UnitsPerSecond::new(10.),
+					strength: UnitsPerSecond::from(10.),
 					towards,
 				}]),
 			))
@@ -387,7 +384,7 @@ mod tests {
 			.spawn((
 				Transform::from_xyz(3., 1., 0.),
 				GravityAffected::new([GravityPull {
-					strength: UnitsPerSecond::new(1.),
+					strength: UnitsPerSecond::from(1.),
 					towards,
 				}]),
 			))
@@ -420,7 +417,7 @@ mod tests {
 			.spawn((
 				Transform::from_xyz(3., 0., 0.),
 				GravityAffected::new([GravityPull {
-					strength: UnitsPerSecond::new(10.),
+					strength: UnitsPerSecond::from(10.),
 					towards,
 				}]),
 			))

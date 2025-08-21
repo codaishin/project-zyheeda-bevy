@@ -9,19 +9,16 @@ use bevy_rapier3d::prelude::Collider;
 use common::{
 	components::{asset_model::AssetModel, is_blocker::Blocker},
 	tools::Units,
-	traits::{
-		clamp_zero_positive::ClampZeroPositive,
-		handles_skill_behaviors::{
-			Contact,
-			ContactShape,
-			HandlesSkillBehaviors,
-			Motion,
-			Projection,
-			ProjectionOffset,
-			ProjectionShape,
-			SkillEntities,
-			SkillSpawner,
-		},
+	traits::handles_skill_behaviors::{
+		Contact,
+		ContactShape,
+		HandlesSkillBehaviors,
+		Motion,
+		Projection,
+		ProjectionOffset,
+		ProjectionShape,
+		SkillEntities,
+		SkillSpawner,
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -61,7 +58,7 @@ impl SpawnShape for SpawnShield {
 			},
 			Projection {
 				shape: ProjectionShape::Sphere {
-					radius: Units::new(radius),
+					radius: Units::from(radius),
 				},
 				offset: Some(ProjectionOffset(offset)),
 			},

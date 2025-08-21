@@ -30,10 +30,7 @@ mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use bevy_rapier3d::prelude::Velocity;
-	use common::traits::{
-		clamp_zero_positive::ClampZeroPositive,
-		register_persistent_entities::RegisterPersistentEntities,
-	};
+	use common::traits::register_persistent_entities::RegisterPersistentEntities;
 	use testing::{SingleThreadedApp, assert_eq_approx};
 
 	#[derive(Debug, PartialEq)]
@@ -54,7 +51,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::default().looking_to(Vec3::new(1., 2., 3.), Vec3::Y),
-				SetVelocityForward(UnitsPerSecond::new(1.)),
+				SetVelocityForward(UnitsPerSecond::from(1.)),
 			))
 			.id();
 
@@ -76,7 +73,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::default().looking_to(Vec3::new(1., 2., 3.), Vec3::Y),
-				SetVelocityForward(UnitsPerSecond::new(10.)),
+				SetVelocityForward(UnitsPerSecond::from(10.)),
 			))
 			.id();
 
@@ -96,7 +93,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(SetVelocityForward(UnitsPerSecond::new(1.)))
+			.spawn(SetVelocityForward(UnitsPerSecond::from(1.)))
 			.id();
 
 		app.world_mut()

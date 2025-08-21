@@ -241,10 +241,7 @@ where
 #[cfg(test)]
 mod test_detect_change {
 	use super::*;
-	use common::{
-		tools::{Intensity, IntensityChangePerSecond, Units},
-		traits::clamp_zero_positive::ClampZeroPositive,
-	};
+	use common::tools::{Intensity, IntensityChangePerSecond, Units};
 	use testing::SingleThreadedApp;
 
 	#[derive(Component)]
@@ -287,11 +284,11 @@ mod test_detect_change {
 		let trigger = app.world_mut().spawn(ResponsiveLightTrigger).id();
 		let responsive = ResponsiveLight {
 			light: Light::Point(PointLight::default),
-			range: Units::new(0.),
+			range: Units::from(0.),
 			light_on_material,
 			light_off_material,
-			max: Intensity::new(100.),
-			change: IntensityChangePerSecond::new(11.),
+			max: Intensity::from(100.),
+			change: IntensityChangePerSecond::from(11.),
 			marker_on: TypeId::of::<_MarkerOn>(),
 			marker_off: TypeId::of::<_MarkerOff>(),
 		};
@@ -314,11 +311,11 @@ mod test_detect_change {
 		let mut app = setup();
 		let responsive = ResponsiveLight {
 			light: Light::Point(PointLight::default),
-			range: Units::new(0.),
+			range: Units::from(0.),
 			light_on_material,
 			light_off_material,
-			max: Intensity::new(100.),
-			change: IntensityChangePerSecond::new(11.),
+			max: Intensity::from(100.),
+			change: IntensityChangePerSecond::from(11.),
 			marker_on: TypeId::of::<_MarkerOn>(),
 			marker_off: TypeId::of::<_MarkerOff>(),
 		};
@@ -340,10 +337,7 @@ mod test_detect_change {
 #[cfg(test)]
 mod test_apply_change {
 	use super::*;
-	use common::{
-		tools::{Intensity, IntensityChangePerSecond, Units},
-		traits::clamp_zero_positive::ClampZeroPositive,
-	};
+	use common::tools::{Intensity, IntensityChangePerSecond, Units};
 	use std::time::Duration;
 	use testing::{SingleThreadedApp, TickTime};
 
@@ -393,11 +387,11 @@ mod test_apply_change {
 		let mut app = setup();
 		let responsive = ResponsiveLight {
 			light: arbitrary_light(),
-			range: Units::new(0.),
+			range: Units::from(0.),
 			light_on_material,
 			light_off_material,
-			max: Intensity::new(100.),
-			change: IntensityChangePerSecond::new(11.),
+			max: Intensity::from(100.),
+			change: IntensityChangePerSecond::from(11.),
 			marker_on: TypeId::of::<_MarkerOn>(),
 			marker_off: TypeId::of::<_MarkerOff>(),
 		};
@@ -424,11 +418,11 @@ mod test_apply_change {
 		let mut app = setup();
 		let responsive = ResponsiveLight {
 			light: arbitrary_light(),
-			range: Units::new(0.),
+			range: Units::from(0.),
 			light_on_material,
 			light_off_material,
-			max: Intensity::new(100.),
-			change: IntensityChangePerSecond::new(11.),
+			max: Intensity::from(100.),
+			change: IntensityChangePerSecond::from(11.),
 			marker_on: TypeId::of::<_MarkerOn>(),
 			marker_off: TypeId::of::<_MarkerOff>(),
 		};
@@ -455,11 +449,11 @@ mod test_apply_change {
 		let mut app = setup();
 		let responsive = ResponsiveLight {
 			light: arbitrary_light(),
-			range: Units::new(0.),
+			range: Units::from(0.),
 			light_on_material,
 			light_off_material,
-			max: Intensity::new(100.),
-			change: IntensityChangePerSecond::new(200.),
+			max: Intensity::from(100.),
+			change: IntensityChangePerSecond::from(200.),
 			marker_on: TypeId::of::<_MarkerOn>(),
 			marker_off: TypeId::of::<_MarkerOff>(),
 		};
@@ -486,11 +480,11 @@ mod test_apply_change {
 		let mut app = setup();
 		let responsive = ResponsiveLight {
 			light: arbitrary_light(),
-			range: Units::new(0.),
+			range: Units::from(0.),
 			light_on_material,
 			light_off_material,
-			max: Intensity::new(100.),
-			change: IntensityChangePerSecond::new(11.),
+			max: Intensity::from(100.),
+			change: IntensityChangePerSecond::from(11.),
 			marker_on: TypeId::of::<_MarkerOn>(),
 			marker_off: TypeId::of::<_MarkerOff>(),
 		};
@@ -519,11 +513,11 @@ mod test_apply_change {
 		let mut app = setup();
 		let responsive = ResponsiveLight {
 			light: arbitrary_light(),
-			range: Units::new(0.),
+			range: Units::from(0.),
 			light_on_material,
 			light_off_material,
-			max: Intensity::new(100.),
-			change: IntensityChangePerSecond::new(11.),
+			max: Intensity::from(100.),
+			change: IntensityChangePerSecond::from(11.),
 			marker_on: TypeId::of::<_MarkerOn>(),
 			marker_off: TypeId::of::<_MarkerOff>(),
 		};
@@ -553,11 +547,11 @@ mod test_apply_change {
 		let mut app = setup();
 		let responsive = ResponsiveLight {
 			light: arbitrary_light(),
-			range: Units::new(0.),
+			range: Units::from(0.),
 			light_on_material,
 			light_off_material,
-			max: Intensity::new(100.),
-			change: IntensityChangePerSecond::new(58.),
+			max: Intensity::from(100.),
+			change: IntensityChangePerSecond::from(58.),
 			marker_on: TypeId::of::<_MarkerOn>(),
 			marker_off: TypeId::of::<_MarkerOff>(),
 		};
@@ -584,11 +578,11 @@ mod test_apply_change {
 		let mut app = setup();
 		let responsive = ResponsiveLight {
 			light: arbitrary_light(),
-			range: Units::new(0.),
+			range: Units::from(0.),
 			light_on_material,
 			light_off_material,
-			max: Intensity::new(100.),
-			change: IntensityChangePerSecond::new(57.),
+			max: Intensity::from(100.),
+			change: IntensityChangePerSecond::from(57.),
 			marker_on: TypeId::of::<_MarkerOn>(),
 			marker_off: TypeId::of::<_MarkerOff>(),
 		};
@@ -615,11 +609,11 @@ mod test_apply_change {
 		let mut app = setup();
 		let responsive = ResponsiveLight {
 			light: arbitrary_light(),
-			range: Units::new(0.),
+			range: Units::from(0.),
 			light_on_material,
 			light_off_material,
-			max: Intensity::new(100.),
-			change: IntensityChangePerSecond::new(11.),
+			max: Intensity::from(100.),
+			change: IntensityChangePerSecond::from(11.),
 			marker_on: TypeId::of::<_MarkerOn>(),
 			marker_off: TypeId::of::<_MarkerOff>(),
 		};
@@ -646,11 +640,11 @@ mod test_apply_change {
 		let mut app = setup();
 		let responsive = ResponsiveLight {
 			light: arbitrary_light(),
-			range: Units::new(0.),
+			range: Units::from(0.),
 			light_on_material,
 			light_off_material,
-			max: Intensity::new(100.),
-			change: IntensityChangePerSecond::new(11.),
+			max: Intensity::from(100.),
+			change: IntensityChangePerSecond::from(11.),
 			marker_on: TypeId::of::<_MarkerOn>(),
 			marker_off: TypeId::of::<_MarkerOff>(),
 		};
@@ -677,11 +671,11 @@ mod test_apply_change {
 		let mut app = setup();
 		let responsive = ResponsiveLight {
 			light: arbitrary_light(),
-			range: Units::new(0.),
+			range: Units::from(0.),
 			light_on_material,
 			light_off_material,
-			max: Intensity::new(100.),
-			change: IntensityChangePerSecond::new(42.),
+			max: Intensity::from(100.),
+			change: IntensityChangePerSecond::from(42.),
 			marker_on: TypeId::of::<_MarkerOn>(),
 			marker_off: TypeId::of::<_MarkerOff>(),
 		};
@@ -710,11 +704,11 @@ mod test_apply_change {
 		let mut app = setup();
 		let responsive = ResponsiveLight {
 			light: arbitrary_light(),
-			range: Units::new(0.),
+			range: Units::from(0.),
 			light_on_material,
 			light_off_material,
-			max: Intensity::new(100.),
-			change: IntensityChangePerSecond::new(41.),
+			max: Intensity::from(100.),
+			change: IntensityChangePerSecond::from(41.),
 			marker_on: TypeId::of::<_MarkerOn>(),
 			marker_off: TypeId::of::<_MarkerOff>(),
 		};
@@ -744,11 +738,11 @@ mod test_apply_change {
 		let mut app = setup();
 		let responsive = ResponsiveLight {
 			light: arbitrary_light(),
-			range: Units::new(0.),
+			range: Units::from(0.),
 			light_on_material,
 			light_off_material,
-			max: Intensity::new(100.),
-			change: IntensityChangePerSecond::new(43.),
+			max: Intensity::from(100.),
+			change: IntensityChangePerSecond::from(43.),
 			marker_on: TypeId::of::<_MarkerOn>(),
 			marker_off: TypeId::of::<_MarkerOff>(),
 		};
@@ -777,11 +771,11 @@ mod test_apply_change {
 		let mut app = setup();
 		let responsive = ResponsiveLight {
 			light: arbitrary_light(),
-			range: Units::new(0.),
+			range: Units::from(0.),
 			light_on_material,
 			light_off_material,
-			max: Intensity::new(100.),
-			change: IntensityChangePerSecond::new(43.),
+			max: Intensity::from(100.),
+			change: IntensityChangePerSecond::from(43.),
 			marker_on: TypeId::of::<_MarkerOn>(),
 			marker_off: TypeId::of::<_MarkerOff>(),
 		};
@@ -808,11 +802,11 @@ mod test_apply_change {
 		let mut app = setup();
 		let responsive = ResponsiveLight {
 			light: arbitrary_light(),
-			range: Units::new(0.),
+			range: Units::from(0.),
 			light_on_material,
 			light_off_material,
-			max: Intensity::new(100.),
-			change: IntensityChangePerSecond::new(42.),
+			max: Intensity::from(100.),
+			change: IntensityChangePerSecond::from(42.),
 			marker_on: TypeId::of::<_MarkerOn>(),
 			marker_off: TypeId::of::<_MarkerOff>(),
 		};
@@ -839,11 +833,11 @@ mod test_apply_change {
 		let mut app = setup();
 		let responsive = ResponsiveLight {
 			light: arbitrary_light(),
-			range: Units::new(0.),
+			range: Units::from(0.),
 			light_on_material,
 			light_off_material,
-			max: Intensity::new(100.),
-			change: IntensityChangePerSecond::new(41.),
+			max: Intensity::from(100.),
+			change: IntensityChangePerSecond::from(41.),
 			marker_on: TypeId::of::<_MarkerOn>(),
 			marker_off: TypeId::of::<_MarkerOff>(),
 		};
@@ -870,17 +864,16 @@ mod test_apply_change {
 mod test_light_insertion {
 	use super::*;
 	use bevy::color::palettes::css::BEIGE;
-	use common::traits::clamp_zero_positive::ClampZeroPositive;
 	use testing::SingleThreadedApp;
 
 	fn responsive(light: Light) -> ResponsiveLight {
 		ResponsiveLight {
 			light,
-			range: Units::new(0.),
+			range: Units::from(0.),
 			light_on_material: StandardMaterial::default,
 			light_off_material: StandardMaterial::default,
-			max: Intensity::new(100.),
-			change: IntensityChangePerSecond::new(1.),
+			max: Intensity::from(100.),
+			change: IntensityChangePerSecond::from(1.),
 			marker_on: TypeId::of::<()>(),
 			marker_off: TypeId::of::<()>(),
 		}

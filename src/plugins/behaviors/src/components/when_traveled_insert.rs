@@ -1,9 +1,5 @@
 use bevy::prelude::*;
-use common::{
-	tools::Units,
-	traits::{accessors::get::TryApplyOn, clamp_zero_positive::ClampZeroPositive},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::{tools::Units, traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 use std::marker::PhantomData;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -18,7 +14,7 @@ impl WhenTraveled<()> {
 		TTravel: Component,
 	{
 		WhenTraveled {
-			distance: Units::new(0.),
+			distance: Units::from(0.),
 			phantom_data: PhantomData,
 		}
 	}
@@ -85,7 +81,7 @@ where
 		let direction = transform.translation - *last;
 		let remaining = **remaining_distance - direction.length();
 
-		*remaining_distance = Units::new(remaining);
+		*remaining_distance = Units::from(remaining);
 
 		Done::when(remaining <= 0.)
 	}
@@ -110,7 +106,6 @@ impl Done {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::clamp_zero_positive::ClampZeroPositive;
 	use testing::SingleThreadedApp;
 
 	#[derive(Component, Debug, PartialEq, Default)]
@@ -131,7 +126,7 @@ mod tests {
 			.spawn((
 				Transform::from_xyz(1., 2., 3.),
 				WhenTraveled::via::<_Travel>()
-					.distance(Units::new(10.))
+					.distance(Units::from(10.))
 					.destroy(),
 				_Travel,
 			))
@@ -154,7 +149,7 @@ mod tests {
 			.spawn((
 				Transform::from_xyz(1., 2., 3.),
 				WhenTraveled::via::<_Travel>()
-					.distance(Units::new(5.))
+					.distance(Units::from(5.))
 					.destroy(),
 				_Travel,
 			))
@@ -177,7 +172,7 @@ mod tests {
 			.spawn((
 				Transform::from_xyz(1., 2., 3.),
 				WhenTraveled::via::<_Travel>()
-					.distance(Units::new(2.))
+					.distance(Units::from(2.))
 					.destroy(),
 				_Travel,
 			))
@@ -204,7 +199,7 @@ mod tests {
 			.spawn((
 				Transform::from_xyz(1., 2., 3.),
 				WhenTraveled::via::<_Travel>()
-					.distance(Units::new(10.))
+					.distance(Units::from(10.))
 					.destroy(),
 				_Travel,
 			))
@@ -227,7 +222,7 @@ mod tests {
 			.spawn((
 				Transform::from_xyz(1., 2., 3.),
 				WhenTraveled::via::<_Travel>()
-					.distance(Units::new(10.))
+					.distance(Units::from(10.))
 					.destroy(),
 			))
 			.id();

@@ -153,17 +153,14 @@ impl From<NavGridError> for Error {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::{
-		clamp_zero_positive::ClampZeroPositive,
-		handles_map_generation::{
-			GraphLineOfSight,
-			GraphNaivePath,
-			GraphNode,
-			GraphObstacle,
-			GraphSuccessors,
-			GraphTranslation,
-			NaivePath,
-		},
+	use common::traits::handles_map_generation::{
+		GraphLineOfSight,
+		GraphNaivePath,
+		GraphNode,
+		GraphObstacle,
+		GraphSuccessors,
+		GraphTranslation,
+		NaivePath,
 	};
 	use mockall::{mock, predicate::eq};
 	use testing::{Mock, simple_init};
@@ -297,7 +294,7 @@ mod tests {
 			graph: _Graph,
 		};
 
-		_ = grid.compute_path(start, end, Units::new(0.1));
+		_ = grid.compute_path(start, end, Units::from(0.1));
 	}
 
 	#[test]
@@ -314,7 +311,7 @@ mod tests {
 		let computed_path = grid.compute_path(
 			Vec3::new(1., 0., 1.),
 			Vec3::new(3., 0., 3.),
-			Units::new(0.1),
+			Units::from(0.1),
 		);
 
 		assert_eq!(
@@ -339,7 +336,7 @@ mod tests {
 		let path = grid.compute_path(
 			Vec3::new(0.8, 1., 1.3),
 			Vec3::new(1.1, 1., 0.9),
-			Units::new(0.1),
+			Units::from(0.1),
 		);
 		assert_eq!(
 			Some(vec![Vec3::new(0.8, 1., 1.3), Vec3::new(1.1, 1., 0.9)]),
@@ -379,7 +376,7 @@ mod tests {
 		let path = grid.compute_path(
 			Vec3::new(0.8, 1., 1.3),
 			Vec3::new(2.1, 2., 1.9),
-			Units::new(0.1),
+			Units::from(0.1),
 		);
 		assert_eq!(
 			Some(vec![
@@ -416,7 +413,7 @@ mod tests {
 		let path = grid.compute_path(
 			Vec3::new(0.8, 1., 1.3),
 			Vec3::new(2.1, 2., 1.9),
-			Units::new(0.1),
+			Units::from(0.1),
 		);
 		assert_eq!(
 			Some(vec![
@@ -452,7 +449,7 @@ mod tests {
 		let path = grid.compute_path(
 			Vec3::new(0.8, 1., 1.3),
 			Vec3::new(2.1, 2., 1.9),
-			Units::new(0.1),
+			Units::from(0.1),
 		);
 		assert_eq!(
 			Some(vec![
@@ -497,7 +494,7 @@ mod tests {
 		let path = grid.compute_path(
 			Vec3::new(0.8, 1., 1.3),
 			Vec3::new(2.1, 2., 1.9),
-			Units::new(0.1),
+			Units::from(0.1),
 		);
 		assert_eq!(
 			Some(vec![
@@ -539,14 +536,14 @@ mod tests {
 					.with(
 						eq(Vec3::new(0.8, 1., 1.3)),
 						eq(_Node(10, 10, 10)),
-						eq(Units::new(0.1)),
+						eq(Units::from(0.1)),
 					)
 					.return_const(NaivePath::PartialUntil(Vec3::new(5., 5., 5.)));
 				mock.expect_naive_path()
 					.with(
 						eq(Vec3::new(2.1, 2., 1.9)),
 						eq(_Node(4, 4, 4)),
-						eq(Units::new(0.1)),
+						eq(Units::from(0.1)),
 					)
 					.return_const(NaivePath::PartialUntil(Vec3::new(6., 6., 6.)));
 			}),
@@ -555,7 +552,7 @@ mod tests {
 		let path = grid.compute_path(
 			Vec3::new(0.8, 1., 1.3),
 			Vec3::new(2.1, 2., 1.9),
-			Units::new(0.1),
+			Units::from(0.1),
 		);
 		assert_eq!(
 			Some(vec![
@@ -603,7 +600,7 @@ mod tests {
 		let path = grid.compute_path(
 			Vec3::new(0.8, 1., 1.3),
 			Vec3::new(2.1, 2., 1.9),
-			Units::new(0.1),
+			Units::from(0.1),
 		);
 		assert_eq!(
 			Some(vec![
@@ -639,7 +636,7 @@ mod tests {
 		let path = grid.compute_path(
 			Vec3::new(0.8, 1., 1.3),
 			Vec3::new(2.1, 2., 1.9),
-			Units::new(0.1),
+			Units::from(0.1),
 		);
 		assert_eq!(Some(vec![Vec3::new(1., 1., 1.)]), path);
 	}
@@ -667,7 +664,7 @@ mod tests {
 		let path = grid.compute_path(
 			Vec3::new(0.8, 1., 1.3),
 			Vec3::new(2.1, 2., 1.9),
-			Units::new(0.1),
+			Units::from(0.1),
 		);
 		assert_eq!(Some(vec![Vec3::new(2., 2., 2.)]), path);
 	}

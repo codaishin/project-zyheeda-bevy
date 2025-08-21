@@ -38,7 +38,6 @@ use common::{
 			StartAnimation,
 			StopAnimation,
 		},
-		clamp_zero_positive::ClampZeroPositive,
 		handles_effect::HandlesEffect,
 		handles_lights::HandlesLights,
 		handles_skill_behaviors::SkillSpawner,
@@ -77,7 +76,7 @@ impl Player {
 	const MODEL_PATH: &'static str = "models/player.glb";
 
 	fn collider_radius() -> ColliderRadius {
-		ColliderRadius(Units::new(0.2))
+		ColliderRadius(Units::from(0.2))
 	}
 
 	fn animation_path(animation_name: &str) -> Path {
@@ -137,7 +136,7 @@ impl Player {
 			mode: MovementMode::Fast,
 			collider_radius: Self::collider_radius(),
 			fast: Config {
-				speed: UnitsPerSecond::new(1.5).into(),
+				speed: UnitsPerSecond::from(1.5).into(),
 				animation: Animation::new(
 					Self::animation_asset(AnimationKey::Run),
 					PlayMode::Repeat,
@@ -145,7 +144,7 @@ impl Player {
 				.into(),
 			},
 			slow: Config {
-				speed: UnitsPerSecond::new(0.75).into(),
+				speed: UnitsPerSecond::from(0.75).into(),
 				animation: Animation::new(
 					Self::animation_asset(AnimationKey::Walk),
 					PlayMode::Repeat,

@@ -28,7 +28,7 @@ mod tests {
 		app::{App, Update},
 		transform::components::Transform,
 	};
-	use common::{tools::UnitsPerSecond, traits::clamp_zero_positive::ClampZeroPositive};
+	use common::tools::UnitsPerSecond;
 
 	#[test]
 	fn rotate_ring_a() {
@@ -38,7 +38,7 @@ mod tests {
 		let mut transform = Transform::default();
 		let ring = app
 			.world_mut()
-			.spawn((transform, VoidSpherePart::RingA(UnitsPerSecond::new(1.))))
+			.spawn((transform, VoidSpherePart::RingA(UnitsPerSecond::from(1.))))
 			.id();
 		app.update();
 
@@ -58,7 +58,7 @@ mod tests {
 		let mut transform = Transform::default();
 		let ring = app
 			.world_mut()
-			.spawn((transform, VoidSpherePart::RingB(UnitsPerSecond::new(1.))))
+			.spawn((transform, VoidSpherePart::RingB(UnitsPerSecond::from(1.))))
 			.id();
 		app.update();
 
