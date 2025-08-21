@@ -38,10 +38,10 @@ pub fn clamp_zero_positive_derive(input: TokenStream) -> TokenStream {
 
 		impl From<f32> for #ident {
 			fn from(value: f32) -> Self {
-				if value < 0. {
-					Self(0.)
-				} else {
+				if value > 0. {
 					Self(value)
+				} else {
+					Self(0.)
 				}
 			}
 		}

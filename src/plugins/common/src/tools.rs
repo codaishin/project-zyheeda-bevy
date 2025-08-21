@@ -104,6 +104,11 @@ mod test_clamp_zero_positive {
 	}
 
 	#[test]
+	fn zero_from_nan() {
+		assert_eq!(&0., _Value::from(f32::NAN).deref());
+	}
+
+	#[test]
 	fn deserialize_value() {
 		let json = json!(42);
 
