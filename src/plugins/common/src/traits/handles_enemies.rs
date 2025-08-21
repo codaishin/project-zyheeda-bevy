@@ -18,15 +18,12 @@ use crate::{
 	},
 };
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
 pub trait HandlesEnemies {
-	/// FIXME: Impl a `TEnemy::from(EnemyKind::VoidSphere)` pattern
-	type TEnemy: Component + Default;
-}
-
-pub trait HandlesEnemyConfig {
-	type TEnemyBehavior: Component
+	type TEnemy: Component
+		+ From<EnemyType>
 		+ LoadoutConfig
 		+ VisibleSlots
 		+ EnemySkillUsage
@@ -48,7 +45,7 @@ pub trait EnemySkillUsage {
 	fn skill_key(&self) -> SlotKey;
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, Default)]
+#[derive(Debug, PartialEq, Clone, Copy, Default, Serialize, Deserialize)]
 pub enum EnemyTarget {
 	#[default]
 	Player,
@@ -60,3 +57,8 @@ pub struct Attacker(pub PersistentEntity);
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Target(pub PersistentEntity);
+
+#[derive(Debug, PartialEq, Clone, Copy, Eq, Hash)]
+pub enum EnemyType {
+	VoidSphere,
+}

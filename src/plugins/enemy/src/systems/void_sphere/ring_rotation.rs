@@ -1,4 +1,4 @@
-use crate::components::void_sphere::VoidSpherePart;
+use crate::components::enemy::void_sphere::VoidSpherePart;
 use bevy::{ecs::system::Query, transform::components::Transform};
 use std::ops::Deref;
 

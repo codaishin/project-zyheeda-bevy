@@ -23,7 +23,7 @@ use common::{
 		animation::{HasAnimationsDispatch, RegisterAnimations},
 		delta::Delta,
 		handles_effects::HandlesEffect,
-		handles_enemies::HandlesEnemyConfig,
+		handles_enemies::HandlesEnemies,
 		handles_interactions::HandlesInteractions,
 		handles_orientation::{Face, HandlesOrientation},
 		handles_path_finding::HandlesPathFinding,
@@ -94,7 +94,7 @@ where
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
 	TInteractions: ThreadSafe + HandlesInteractions + HandlesEffect<HealthDamage>,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
-	TEnemies: ThreadSafe + HandlesEnemyConfig,
+	TEnemies: ThreadSafe + HandlesEnemies,
 	TPlayers: ThreadSafe
 		+ HandlesPlayer
 		+ PlayerMainCamera
@@ -132,7 +132,7 @@ where
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
 	TInteractions: ThreadSafe + HandlesInteractions + HandlesEffect<HealthDamage>,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
-	TEnemies: ThreadSafe + HandlesEnemyConfig,
+	TEnemies: ThreadSafe + HandlesEnemies,
 	TPlayers: ThreadSafe
 		+ HandlesPlayer
 		+ PlayerMainCamera
@@ -173,16 +173,15 @@ where
 			TAnimations::TAnimationDispatch,
 		>;
 
-		let compute_enemy_path = TEnemies::TEnemyBehavior::compute_path::<
+		let compute_enemy_path = TEnemies::TEnemy::compute_path::<
 			VelocityBased,
 			TPathFinding::TComputePath,
 			TPathFinding::TComputerRef,
 		>;
 		let execute_enemy_path =
-			TEnemies::TEnemyBehavior::execute_movement::<Movement<PathOrWasd<VelocityBased>>>;
-		let execute_enemy_movement =
-			TEnemies::TEnemyBehavior::execute_movement::<Movement<VelocityBased>>;
-		let animate_enemy_movement = TEnemies::TEnemyBehavior::animate_movement::<
+			TEnemies::TEnemy::execute_movement::<Movement<PathOrWasd<VelocityBased>>>;
+		let execute_enemy_movement = TEnemies::TEnemy::execute_movement::<Movement<VelocityBased>>;
+		let animate_enemy_movement = TEnemies::TEnemy::animate_movement::<
 			Movement<VelocityBased>,
 			TAnimations::TAnimationDispatch,
 		>;
@@ -191,8 +190,8 @@ where
 			// Required components
 			.register_required_components::<TPlayers::TPlayer, FixPoints>()
 			.register_required_components::<TPlayers::TPlayer, SkillUsage>()
-			.register_required_components::<TEnemies::TEnemyBehavior, FixPoints>()
-			.register_required_components::<TEnemies::TEnemyBehavior, SkillUsage>()
+			.register_required_components::<TEnemies::TEnemy, FixPoints>()
+			.register_required_components::<TEnemies::TEnemy, SkillUsage>()
 			.register_required_components::<SkillContact, TSaveGame::TSaveEntityMarker>()
 			.register_required_components::<SkillProjection, TSaveGame::TSaveEntityMarker>()
 			// Observers
@@ -207,7 +206,7 @@ where
 						PathOrWasd::<VelocityBased>::cleanup,
 						Movement::<VelocityBased>::cleanup,
 						FixPoint::<SkillSpawner>::insert_in_children_of::<TPlayers::TPlayer>,
-						FixPoint::<SkillSpawner>::insert_in_children_of::<TEnemies::TEnemyBehavior>,
+						FixPoint::<SkillSpawner>::insert_in_children_of::<TEnemies::TEnemy>,
 						FixPoints::track_in_self_and_children::<FixPoint<SkillSpawner>>().system(),
 					)
 						.chain(),
@@ -224,14 +223,13 @@ where
 						.chain(),
 					// Enemy behaviors
 					(
-						TEnemies::TEnemyBehavior::select_behavior::<TPlayers::TPlayer>
-							.pipe(OnError::log),
-						TEnemies::TEnemyBehavior::chase::<PathOrWasd<VelocityBased>>,
+						TEnemies::TEnemy::select_behavior::<TPlayers::TPlayer>.pipe(OnError::log),
+						TEnemies::TEnemy::chase::<PathOrWasd<VelocityBased>>,
 						compute_enemy_path,
 						Update::delta.pipe(execute_enemy_path),
 						Update::delta.pipe(execute_enemy_movement),
 						animate_enemy_movement,
-						SkillUsage::enemy::<TEnemies::TEnemyBehavior>,
+						SkillUsage::enemy::<TEnemies::TEnemy>,
 					)
 						.chain(),
 					// Skill execution
@@ -250,7 +248,7 @@ where
 						Movement::<VelocityBased>::set_faces,
 						TPlayers::TPlayer::get_faces
 							.pipe(execute_player_face::<TPlayers::TMouseHover, TPlayers::TCamRay>),
-						TEnemies::TEnemyBehavior::get_faces.pipe(execute_enemy_face),
+						TEnemies::TEnemy::get_faces.pipe(execute_enemy_face),
 					)
 						.chain(),
 				)

@@ -1,7 +1,6 @@
 use crate::tools::action_key::slot::SlotKey;
-use bevy::prelude::*;
 
-pub trait VisibleSlots: Component {
+pub trait VisibleSlots {
 	fn visible_slots(&self) -> impl Iterator<Item = SlotKey>;
 }
 

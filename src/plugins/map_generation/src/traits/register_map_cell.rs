@@ -31,6 +31,7 @@ use common::{
 	states::game_state::{GameState, LoadingEssentialAssets, LoadingGame},
 	systems::log::OnError,
 	traits::{
+		handles_enemies::EnemyType,
 		handles_load_tracking::{
 			AssetsProgress,
 			DependenciesProgress,
@@ -43,28 +44,11 @@ use common::{
 };
 
 pub(crate) trait RegisterMapCell {
-	fn register_map_cell<TLoading, TSavegame, TCell>(&mut self) -> &mut App
+	fn register_map_cell<TLoading, TSavegame, TCell, TPlayer, TEnemy>(&mut self) -> &mut App
 	where
 		TLoading: ThreadSafe + HandlesLoadTracking,
 		TSavegame: ThreadSafe + HandlesSaving,
-		for<'a> TCell: TypePath
-			+ ParseMapImage<ParsedColor, TParseError = Unreachable, TLookup: Resource>
-			+ Clone
-			+ ThreadSafe
-			+ GridCellDistanceDefinition
-			+ IsWalkable
-			+ InsertCellComponents
-			+ InsertCellQuadrantComponents
-			+ ColorLookupAssetPath
-			+ MapCellsExtra<TExtra = CellGrid<HalfOffsetCell<TCell>>>
-			+ Default;
-}
-
-impl RegisterMapCell for App {
-	fn register_map_cell<TLoading, TSavegame, TCell>(&mut self) -> &mut App
-	where
-		TLoading: ThreadSafe + HandlesLoadTracking,
-		for<'a> TCell: TypePath
+		TCell: TypePath
 			+ ParseMapImage<ParsedColor, TParseError = Unreachable, TLookup: Resource>
 			+ Clone
 			+ ThreadSafe
@@ -75,6 +59,27 @@ impl RegisterMapCell for App {
 			+ ColorLookupAssetPath
 			+ MapCellsExtra<TExtra = CellGrid<HalfOffsetCell<TCell>>>
 			+ Default,
+		TPlayer: Component + Default,
+		TEnemy: Component + From<EnemyType>;
+}
+
+impl RegisterMapCell for App {
+	fn register_map_cell<TLoading, TSavegame, TCell, TPlayer, TEnemy>(&mut self) -> &mut App
+	where
+		TLoading: ThreadSafe + HandlesLoadTracking,
+		TCell: TypePath
+			+ ParseMapImage<ParsedColor, TParseError = Unreachable, TLookup: Resource>
+			+ Clone
+			+ ThreadSafe
+			+ GridCellDistanceDefinition
+			+ IsWalkable
+			+ InsertCellComponents
+			+ InsertCellQuadrantComponents
+			+ ColorLookupAssetPath
+			+ MapCellsExtra<TExtra = CellGrid<HalfOffsetCell<TCell>>>
+			+ Default,
+		TPlayer: Component + Default,
+		TEnemy: From<EnemyType> + Component,
 	{
 		let resolving_dependencies =
 			TLoading::processing_state::<LoadingGame, DependenciesProgress>();
@@ -119,7 +124,7 @@ impl RegisterMapCell for App {
 					MapImage::<TCell>::insert_map_cells.pipe(OnError::log),
 					MapImage::<Agent<TCell>>::insert_map_cells.pipe(OnError::log),
 					MapCells::<TCell>::insert_map_grid_graph,
-					MapCells::<Agent<TCell>>::spawn_map_agents,
+					MapCells::<Agent<TCell>>::spawn_map_agents::<TPlayer, TEnemy>,
 				)
 					.chain(),
 			)
