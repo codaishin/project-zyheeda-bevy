@@ -1,8 +1,8 @@
 use crate::traits::get_effect_material::GetEffectMaterial;
 use bevy::{color::palettes::css::WHITE, prelude::*};
-use common::effects::deal_damage::DealDamage;
+use common::effects::health_damage::HealthDamage;
 
-impl GetEffectMaterial for DealDamage {
+impl GetEffectMaterial for HealthDamage {
 	type TMaterial = StandardMaterial;
 
 	fn get_effect_material(_: &Handle<Image>) -> Self::TMaterial {

@@ -1,12 +1,9 @@
-pub mod components;
-
+mod components;
 mod resources;
 mod systems;
 
 use bevy::prelude::*;
 use common::{
-	attributes::{affected_by::AffectedBy, health::Health},
-	effects::{deal_damage::DealDamage, force::Force, gravity::Gravity},
 	states::game_state::GameState,
 	tools::action_key::{
 		movement::MovementKey,
@@ -14,7 +11,7 @@ use common::{
 	},
 	traits::{
 		animation::RegisterAnimations,
-		handles_effect::HandlesEffect,
+		handles_effects::HandlesAllEffects,
 		handles_lights::HandlesLights,
 		handles_player::{
 			ConfiguresPlayerMovement,
@@ -52,7 +49,7 @@ where
 	TSettings: ThreadSafe + HandlesSettings,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + RegisterAnimations,
-	TInteractions: ThreadSafe + HandlesEffect<DealDamage, TTarget = Health>,
+	TInteractions: ThreadSafe + HandlesAllEffects,
 	TLights: ThreadSafe + HandlesLights,
 {
 	pub fn from_plugins(
@@ -72,10 +69,7 @@ where
 	TSettings: ThreadSafe + HandlesSettings,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + RegisterAnimations,
-	TInteractions: ThreadSafe
-		+ HandlesEffect<DealDamage, TTarget = Health>
-		+ HandlesEffect<Gravity, TTarget = AffectedBy<Gravity>>
-		+ HandlesEffect<Force, TTarget = AffectedBy<Force>>,
+	TInteractions: ThreadSafe + HandlesAllEffects,
 	TLights: ThreadSafe + HandlesLights,
 {
 	fn build(&self, app: &mut App) {

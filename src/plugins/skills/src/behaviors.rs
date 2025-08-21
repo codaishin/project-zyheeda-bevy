@@ -10,7 +10,7 @@ use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
 	traits::{
-		handles_effect::HandlesAllEffects,
+		handles_effects::HandlesAllEffects,
 		handles_skill_behaviors::{HandlesSkillBehaviors, SkillSpawner},
 	},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},

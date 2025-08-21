@@ -8,7 +8,7 @@ use common::{
 	attributes::affected_by::AffectedBy,
 	components::persistent_entity::PersistentEntity,
 	effects::gravity::Gravity,
-	traits::handles_effect::HandlesEffect,
+	traits::handles_effects::HandlesEffect,
 };
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
@@ -18,14 +18,13 @@ use std::time::Duration;
 pub struct GravityEffect(pub(crate) Gravity);
 
 impl<TDependencies> HandlesEffect<Gravity> for InteractionsPlugin<TDependencies> {
-	type TTarget = AffectedBy<Gravity>;
 	type TEffectComponent = GravityEffect;
 
 	fn effect(effect: Gravity) -> Self::TEffectComponent {
 		GravityEffect(effect)
 	}
 
-	fn attribute(_: Self::TTarget) -> impl Bundle {
+	fn attribute(_: AffectedBy<Gravity>) -> impl Bundle {
 		GravityAffected::default()
 	}
 }

@@ -21,7 +21,7 @@ use common::{
 	traits::{
 		accessors::get::GetMut,
 		handles_custom_assets::AssetFolderPath,
-		handles_effect::HandlesAllEffects,
+		handles_effects::HandlesAllEffects,
 		handles_localization::Token,
 		handles_skill_behaviors::{HandlesSkillBehaviors, SkillSpawner},
 		inspect_able::InspectAble,
@@ -251,8 +251,9 @@ mod tests {
 		components::{outdated::Outdated, persistent_entity::PersistentEntity},
 		tools::collider_info::ColliderInfo,
 		traits::{
-			handles_effect::HandlesEffect,
+			handles_effects::{Effect, HandlesEffect},
 			handles_skill_behaviors::{Contact, HoldSkills, Projection, SkillEntities, SkillRoot},
+			thread_safe::ThreadSafe,
 		},
 		zyheeda_commands::ZyheedaEntityCommands,
 	};
@@ -290,16 +291,15 @@ mod tests {
 
 	impl<T> HandlesEffect<T> for _HandlesEffects
 	where
-		T: Sync + Send + 'static,
+		T: Effect + ThreadSafe,
 	{
-		type TTarget = ();
 		type TEffectComponent = _Effect;
 
 		fn effect(_: T) -> _Effect {
 			_Effect
 		}
 
-		fn attribute(_: Self::TTarget) -> impl Bundle {}
+		fn attribute(_: T::TTarget) -> impl Bundle {}
 	}
 
 	#[derive(Component)]

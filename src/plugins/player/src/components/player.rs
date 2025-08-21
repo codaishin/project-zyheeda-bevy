@@ -2,10 +2,7 @@ use super::player_movement::{Config, MovementMode, PlayerMovement};
 use bevy::{asset::AssetPath, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::{
-	attributes::{
-		affected_by::{Affected, AffectedBy},
-		health::Health,
-	},
+	attributes::{affected_by::Affected, health::Health},
 	components::{
 		asset_model::AssetModel,
 		collider_relationship::InteractionTarget,
@@ -14,7 +11,7 @@ use common::{
 		is_blocker::{Blocker, IsBlocker},
 		persistent_entity::PersistentEntity,
 	},
-	effects::{deal_damage::DealDamage, force::Force, gravity::Gravity},
+	effects::{force::Force, gravity::Gravity},
 	errors::Error,
 	tools::{
 		Units,
@@ -38,7 +35,7 @@ use common::{
 			StartAnimation,
 			StopAnimation,
 		},
-		handles_effect::HandlesEffect,
+		handles_effects::HandlesAllEffects,
 		handles_lights::HandlesLights,
 		handles_skill_behaviors::SkillSpawner,
 		iteration::{Iter, IterFinite},
@@ -311,9 +308,7 @@ impl ConfigureNewAnimationDispatch for Player {
 
 impl<TInteractions, TLights> Prefab<(TInteractions, TLights)> for Player
 where
-	TInteractions: HandlesEffect<DealDamage, TTarget = Health>
-		+ HandlesEffect<Gravity, TTarget = AffectedBy<Gravity>>
-		+ HandlesEffect<Force, TTarget = AffectedBy<Force>>,
+	TInteractions: HandlesAllEffects,
 	TLights: HandlesLights,
 {
 	fn insert_prefab_components(

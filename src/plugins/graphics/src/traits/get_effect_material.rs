@@ -1,6 +1,6 @@
-mod deal_damage;
 mod force;
 mod gravity;
+mod health_damage;
 
 use bevy::prelude::*;
 

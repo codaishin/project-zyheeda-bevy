@@ -15,7 +15,7 @@ use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
 		accessors::get::TryApplyOn,
-		handles_effect::HandlesAllEffects,
+		handles_effects::HandlesAllEffects,
 		handles_skill_behaviors::{HandlesSkillBehaviors, SkillSpawner},
 	},
 	zyheeda_commands::ZyheedaCommands,
@@ -113,9 +113,10 @@ mod tests {
 			collider_info::ColliderInfo,
 		},
 		traits::{
-			handles_effect::HandlesEffect,
+			handles_effects::{Effect, HandlesEffect},
 			handles_skill_behaviors::{Contact, HoldSkills, Projection, SkillEntities, SkillRoot},
 			register_persistent_entities::RegisterPersistentEntities,
+			thread_safe::ThreadSafe,
 		},
 	};
 	use std::{
@@ -130,16 +131,15 @@ mod tests {
 
 	impl<T> HandlesEffect<T> for _HandlesEffects
 	where
-		T: Sync + Send + 'static,
+		T: Effect + ThreadSafe,
 	{
-		type TTarget = ();
 		type TEffectComponent = _Effect;
 
 		fn effect(_: T) -> _Effect {
 			_Effect
 		}
 
-		fn attribute(_: Self::TTarget) -> impl Bundle {}
+		fn attribute(_: T::TTarget) -> impl Bundle {}
 	}
 
 	#[derive(Component)]

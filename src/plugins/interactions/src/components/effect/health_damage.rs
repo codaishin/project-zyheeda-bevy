@@ -6,22 +6,21 @@ use bevy::prelude::*;
 use common::{
 	attributes::health::Health,
 	components::{life::Life, persistent_entity::PersistentEntity},
-	effects::{EffectApplies, deal_damage::DealDamage},
-	traits::handles_effect::HandlesEffect,
+	effects::{EffectApplies, health_damage::HealthDamage},
+	traits::handles_effects::HandlesEffect,
 };
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct DealDamageEffect(pub(crate) DealDamage);
+pub struct HealthDamageEffect(pub(crate) HealthDamage);
 
-impl<TSaveGame> HandlesEffect<DealDamage> for InteractionsPlugin<TSaveGame> {
-	type TTarget = Health;
-	type TEffectComponent = DealDamageEffect;
+impl<TSaveGame> HandlesEffect<HealthDamage> for InteractionsPlugin<TSaveGame> {
+	type TEffectComponent = HealthDamageEffect;
 
-	fn effect(effect: DealDamage) -> DealDamageEffect {
-		DealDamageEffect(effect)
+	fn effect(effect: HealthDamage) -> HealthDamageEffect {
+		HealthDamageEffect(effect)
 	}
 
 	fn attribute(health: Health) -> impl Bundle {
@@ -29,11 +28,11 @@ impl<TSaveGame> HandlesEffect<DealDamage> for InteractionsPlugin<TSaveGame> {
 	}
 }
 
-impl UpdateBlockers for DealDamageEffect {}
+impl UpdateBlockers for HealthDamageEffect {}
 
-impl ActOn<Life> for DealDamageEffect {
+impl ActOn<Life> for HealthDamageEffect {
 	fn on_begin_interaction(&mut self, _: PersistentEntity, life: &mut Life) {
-		let Self(DealDamage(damage, EffectApplies::Once)) = *self else {
+		let Self(HealthDamage(damage, EffectApplies::Once)) = *self else {
 			return;
 		};
 
@@ -41,7 +40,7 @@ impl ActOn<Life> for DealDamageEffect {
 	}
 
 	fn on_repeated_interaction(&mut self, _: PersistentEntity, life: &mut Life, delta: Duration) {
-		let Self(DealDamage(damage, EffectApplies::Always)) = *self else {
+		let Self(HealthDamage(damage, EffectApplies::Always)) = *self else {
 			return;
 		};
 
@@ -55,7 +54,7 @@ mod tests {
 
 	#[test]
 	fn deal_damage_once() {
-		let mut damage = DealDamageEffect(DealDamage::once(42.));
+		let mut damage = HealthDamageEffect(HealthDamage::once(42.));
 		let mut life = Life::from(Health::new(100.));
 
 		damage.on_begin_interaction(PersistentEntity::default(), &mut life);
@@ -72,7 +71,7 @@ mod tests {
 
 	#[test]
 	fn deal_damage_over_time_scaled_by_delta() {
-		let mut damage = DealDamageEffect(DealDamage::once_per_second(42.));
+		let mut damage = HealthDamageEffect(HealthDamage::once_per_second(42.));
 		let mut life = Life::from(Health::new(100.));
 
 		damage.on_begin_interaction(PersistentEntity::default(), &mut life);

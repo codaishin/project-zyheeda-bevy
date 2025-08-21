@@ -14,7 +14,7 @@ pub mod get_ray;
 pub mod handles_asset_resource_loading;
 pub mod handles_combo_menu;
 pub mod handles_custom_assets;
-pub mod handles_effect;
+pub mod handles_effects;
 pub mod handles_enemies;
 pub mod handles_graphics;
 pub mod handles_interactions;

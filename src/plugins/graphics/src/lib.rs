@@ -14,11 +14,11 @@ use bevy::{
 };
 use common::{
 	components::essence::Essence,
-	effects::{deal_damage::DealDamage, force::Force, gravity::Gravity},
+	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
 	states::game_state::LoadingGame,
 	systems::{remove_components::Remove, track_components::TrackComponentInSelfAndChildren},
 	traits::{
-		handles_effect::{HandlesAllEffects, HandlesEffect},
+		handles_effects::{Effect, HandlesAllEffects, HandlesEffect},
 		handles_graphics::{FirstPassCamera, UiCamera, WorldCameras},
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInSubApp},
 		handles_saving::HandlesSaving,
@@ -72,11 +72,11 @@ where
 	fn effect_shaders(app: &mut App) {
 		register_custom_effect_shader::<TInteractions, Force>(app);
 		register_custom_effect_shader::<TInteractions, Gravity>(app);
-		register_effect_shader::<TInteractions, DealDamage>(app);
+		register_effect_shader::<TInteractions, HealthDamage>(app);
 
 		app.register_required_components::<TBehaviors::TSkillContact, EffectShadersTarget>()
 			.register_required_components::<TBehaviors::TSkillProjection, EffectShadersTarget>()
-			.register_required_components::<EffectShader<DealDamage>, DamageEffectShaders>()
+			.register_required_components::<EffectShader<HealthDamage>, DamageEffectShaders>()
 			.add_prefab_observer::<DamageEffectShaders, ()>()
 			.add_systems(
 				PostUpdate,
@@ -158,7 +158,7 @@ impl RegisterShader for App {
 fn register_custom_effect_shader<TInteractions, TEffect>(app: &mut App)
 where
 	TInteractions: HandlesEffect<TEffect> + 'static,
-	TEffect: GetEffectMaterial + Sync + Send + 'static,
+	TEffect: GetEffectMaterial + Effect + ThreadSafe,
 	TEffect::TMaterial: ShadowsAwareMaterial,
 	<TEffect::TMaterial as AsBindGroup>::Data: PartialEq + Eq + Hash + Clone,
 {
@@ -169,7 +169,7 @@ where
 fn register_effect_shader<TInteractions, TEffect>(app: &mut App)
 where
 	TInteractions: HandlesEffect<TEffect> + 'static,
-	TEffect: GetEffectMaterial + Sync + Send + 'static,
+	TEffect: GetEffectMaterial + Effect + ThreadSafe,
 {
 	app.register_required_components::<TInteractions::TEffectComponent, EffectShader<TEffect>>();
 	app.add_systems(

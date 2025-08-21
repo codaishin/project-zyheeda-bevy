@@ -1,4 +1,4 @@
-use crate::{effects::deal_damage::DealDamage, traits::handles_effect::HandlesEffect};
+use crate::{effects::health_damage::HealthDamage, traits::handles_effects::HandlesEffect};
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -18,7 +18,7 @@ impl Health {
 
 	pub fn bundle_via<TPlugin>(self) -> impl Bundle
 	where
-		TPlugin: HandlesEffect<DealDamage, TTarget = Health>,
+		TPlugin: HandlesEffect<HealthDamage>,
 	{
 		TPlugin::attribute(self)
 	}
