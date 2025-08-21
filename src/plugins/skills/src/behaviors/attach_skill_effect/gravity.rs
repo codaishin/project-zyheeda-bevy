@@ -2,7 +2,7 @@ use crate::behaviors::{SkillCaster, SkillTarget};
 use common::{
 	effects::gravity::Gravity,
 	tools::UnitsPerSecond,
-	traits::handles_effect::HandlesEffect,
+	traits::handles_effects::HandlesEffect,
 	zyheeda_commands::ZyheedaEntityCommands,
 };
 use serde::{Deserialize, Serialize};
@@ -35,6 +35,7 @@ mod tests {
 		prelude::*,
 	};
 	use common::{
+		attributes::affected_by::AffectedBy,
 		components::persistent_entity::PersistentEntity,
 		zyheeda_commands::ZyheedaCommands,
 	};
@@ -44,14 +45,13 @@ mod tests {
 	struct _HandlesEffects;
 
 	impl HandlesEffect<Gravity> for _HandlesEffects {
-		type TTarget = ();
 		type TEffectComponent = _Effect;
 
 		fn effect(effect: Gravity) -> _Effect {
 			_Effect(effect)
 		}
 
-		fn attribute(_: Self::TTarget) -> impl Bundle {}
+		fn attribute(_: AffectedBy<Gravity>) -> impl Bundle {}
 	}
 
 	#[derive(Component, Debug, PartialEq)]

@@ -15,14 +15,14 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use common::{
 	components::{child_of_persistent::ChildOfPersistent, persistent_entity::PersistentEntity},
-	effects::deal_damage::DealDamage,
+	effects::health_damage::HealthDamage,
 	states::game_state::GameState,
 	systems::{log::OnError, track_components::TrackComponentInSelfAndChildren},
 	tools::action_key::{movement::MovementKey, slot::PlayerSlot},
 	traits::{
 		animation::{HasAnimationsDispatch, RegisterAnimations},
 		delta::Delta,
-		handles_effect::HandlesEffect,
+		handles_effects::HandlesEffect,
 		handles_enemies::HandlesEnemyConfig,
 		handles_interactions::HandlesInteractions,
 		handles_orientation::{Face, HandlesOrientation},
@@ -92,7 +92,7 @@ where
 	TSettings: ThreadSafe + HandlesSettings,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
-	TInteractions: ThreadSafe + HandlesInteractions + HandlesEffect<DealDamage>,
+	TInteractions: ThreadSafe + HandlesInteractions + HandlesEffect<HealthDamage>,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
 	TEnemies: ThreadSafe + HandlesEnemyConfig,
 	TPlayers: ThreadSafe
@@ -130,7 +130,7 @@ where
 	TSettings: ThreadSafe + HandlesSettings,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
-	TInteractions: ThreadSafe + HandlesInteractions + HandlesEffect<DealDamage>,
+	TInteractions: ThreadSafe + HandlesInteractions + HandlesEffect<HealthDamage>,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
 	TEnemies: ThreadSafe + HandlesEnemyConfig,
 	TPlayers: ThreadSafe

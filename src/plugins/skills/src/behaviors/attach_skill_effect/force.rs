@@ -1,7 +1,7 @@
 use crate::behaviors::{SkillCaster, SkillTarget};
 use common::{
 	effects::force::Force,
-	traits::handles_effect::HandlesEffect,
+	traits::handles_effects::HandlesEffect,
 	zyheeda_commands::ZyheedaEntityCommands,
 };
 use serde::{Deserialize, Serialize};
@@ -29,21 +29,23 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
 	};
-	use common::components::persistent_entity::PersistentEntity;
+	use common::{
+		attributes::affected_by::AffectedBy,
+		components::persistent_entity::PersistentEntity,
+	};
 	use std::sync::LazyLock;
 	use testing::SingleThreadedApp;
 
 	struct _HandlesInteractions;
 
 	impl HandlesEffect<Force> for _HandlesInteractions {
-		type TTarget = ();
 		type TEffectComponent = _Force;
 
 		fn effect(effect: Force) -> Self::TEffectComponent {
 			_Force(effect)
 		}
 
-		fn attribute(_: Self::TTarget) -> impl Bundle {}
+		fn attribute(_: AffectedBy<Force>) -> impl Bundle {}
 	}
 
 	#[derive(Component, Debug, PartialEq)]

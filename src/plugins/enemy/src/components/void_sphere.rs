@@ -15,12 +15,9 @@ use bevy_rapier3d::{
 };
 use common::{
 	self,
-	attributes::{
-		affected_by::{Affected, AffectedBy},
-		health::Health,
-	},
+	attributes::{affected_by::Affected, health::Health},
 	components::{ground_offset::GroundOffset, insert_asset::InsertAsset},
-	effects::{deal_damage::DealDamage, gravity::Gravity},
+	effects::{gravity::Gravity, health_damage::HealthDamage},
 	errors::Error,
 	tools::{
 		Units,
@@ -30,7 +27,7 @@ use common::{
 		collider_radius::ColliderRadius,
 	},
 	traits::{
-		handles_effect::HandlesEffect,
+		handles_effects::HandlesEffect,
 		handles_enemies::{EnemySkillUsage, EnemyTarget},
 		handles_skill_behaviors::SkillSpawner,
 		load_asset::LoadAsset,
@@ -85,8 +82,7 @@ impl VoidSphere {
 
 impl<TInteractions> Prefab<TInteractions> for VoidSphere
 where
-	TInteractions: HandlesEffect<DealDamage, TTarget = Health>
-		+ HandlesEffect<Gravity, TTarget = AffectedBy<Gravity>>,
+	TInteractions: HandlesEffect<HealthDamage> + HandlesEffect<Gravity>,
 {
 	fn insert_prefab_components(
 		&self,

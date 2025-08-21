@@ -1,12 +1,12 @@
-pub mod deal_damage;
 pub mod force;
 pub mod gravity;
+pub mod health_damage;
 
 use super::{SkillCaster, SkillTarget};
-use common::{traits::handles_effect::HandlesAllEffects, zyheeda_commands::ZyheedaEntityCommands};
-use deal_damage::AttachDealingDamage;
+use common::{traits::handles_effects::HandlesAllEffects, zyheeda_commands::ZyheedaEntityCommands};
 use force::AttachForce;
 use gravity::AttachGravity;
+use health_damage::AttachHealthDamage;
 
 #[cfg(test)]
 pub type AttachEffectFn = fn(&mut ZyheedaEntityCommands, &SkillCaster, &SkillTarget);
@@ -15,7 +15,7 @@ pub type AttachEffectFn = fn(&mut ZyheedaEntityCommands, &SkillCaster, &SkillTar
 #[cfg_attr(not(test), derive(PartialEq))]
 pub enum AttachEffect {
 	Gravity(AttachGravity),
-	Damage(AttachDealingDamage),
+	Damage(AttachHealthDamage),
 	Force(AttachForce),
 	#[cfg(test)]
 	Fn(AttachEffectFn),

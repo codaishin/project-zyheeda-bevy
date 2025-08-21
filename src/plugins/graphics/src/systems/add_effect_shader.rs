@@ -4,7 +4,7 @@ use crate::{
 	traits::get_effect_material::GetEffectMaterial,
 };
 use bevy::prelude::*;
-use common::traits::handles_effect::HandlesEffect;
+use common::traits::handles_effects::{Effect, HandlesEffect};
 
 pub(crate) fn add_effect_shader<TInteractions, TEffect>(
 	mut materials: ResMut<Assets<TEffect::TMaterial>>,
@@ -12,7 +12,7 @@ pub(crate) fn add_effect_shader<TInteractions, TEffect>(
 	first_pass_image: Res<FirstPassImage>,
 ) where
 	TInteractions: HandlesEffect<TEffect>,
-	TEffect: GetEffectMaterial,
+	TEffect: GetEffectMaterial + Effect,
 {
 	for mut shaders in &mut effect_shaders {
 		let handle = materials.add(TEffect::get_effect_material(&first_pass_image.handle));
@@ -36,6 +36,10 @@ mod tests {
 
 	struct _Effect;
 
+	impl Effect for _Effect {
+		type TTarget = ();
+	}
+
 	#[derive(Component)]
 	struct _EffectComponent;
 
@@ -52,14 +56,13 @@ mod tests {
 	struct _HandlesEffects;
 
 	impl HandlesEffect<_Effect> for _HandlesEffects {
-		type TTarget = ();
 		type TEffectComponent = _EffectComponent;
 
 		fn effect(_: _Effect) -> Self::TEffectComponent {
 			_EffectComponent
 		}
 
-		fn attribute(_: Self::TTarget) -> impl Bundle {}
+		fn attribute(_: ()) -> impl Bundle {}
 	}
 
 	fn setup(first_pass: Handle<Image>) -> App {

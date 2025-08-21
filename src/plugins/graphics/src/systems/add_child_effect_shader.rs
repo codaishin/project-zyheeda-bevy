@@ -1,12 +1,11 @@
+use self::first_pass_image::FirstPassImage;
 use crate::{
 	components::effect_shaders_target::{EffectShaderHandle, EffectShadersTarget},
 	resources::first_pass_image,
 	traits::get_effect_material::GetEffectMaterial,
 };
 use bevy::prelude::*;
-use common::traits::handles_effect::HandlesEffect;
-
-use self::first_pass_image::FirstPassImage;
+use common::traits::handles_effects::{Effect, HandlesEffect};
 
 #[allow(clippy::type_complexity)]
 pub(crate) fn add_child_effect_shader<TInteractions, TEffect>(
@@ -22,7 +21,7 @@ pub(crate) fn add_child_effect_shader<TInteractions, TEffect>(
 	>,
 	children: Query<&ChildOf>,
 ) where
-	TEffect: GetEffectMaterial,
+	TEffect: GetEffectMaterial + Effect,
 	TInteractions: HandlesEffect<TEffect>,
 {
 	for entity in &effect_shaders {
@@ -58,6 +57,10 @@ mod tests {
 
 	struct _Effect;
 
+	impl Effect for _Effect {
+		type TTarget = ();
+	}
+
 	#[derive(Component)]
 	struct _EffectComponent;
 
@@ -74,14 +77,13 @@ mod tests {
 	struct _HandlesEffects;
 
 	impl HandlesEffect<_Effect> for _HandlesEffects {
-		type TTarget = ();
 		type TEffectComponent = _EffectComponent;
 
 		fn effect(_: _Effect) -> Self::TEffectComponent {
 			_EffectComponent
 		}
 
-		fn attribute(_: Self::TTarget) -> impl Bundle {}
+		fn attribute(_: ()) -> impl Bundle {}
 	}
 
 	fn setup(first_pass: Handle<Image>) -> App {

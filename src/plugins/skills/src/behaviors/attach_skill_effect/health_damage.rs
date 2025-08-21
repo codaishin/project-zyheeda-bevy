@@ -1,29 +1,29 @@
 use crate::behaviors::{SkillCaster, SkillTarget};
 use common::{
-	effects::deal_damage::DealDamage,
-	traits::handles_effect::HandlesEffect,
+	effects::health_damage::HealthDamage,
+	traits::handles_effects::HandlesEffect,
 	zyheeda_commands::ZyheedaEntityCommands,
 };
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub enum AttachDealingDamage {
+pub enum AttachHealthDamage {
 	OneTime(f32),
 	OverTime(f32),
 }
 
-impl AttachDealingDamage {
+impl AttachHealthDamage {
 	pub fn attach<TInteractions>(
 		&self,
 		entity: &mut ZyheedaEntityCommands,
 		_: &SkillCaster,
 		_: &SkillTarget,
 	) where
-		TInteractions: HandlesEffect<DealDamage>,
+		TInteractions: HandlesEffect<HealthDamage>,
 	{
 		entity.try_insert(TInteractions::effect(match *self {
-			Self::OneTime(dmg) => DealDamage::once(dmg),
-			Self::OverTime(dmg) => DealDamage::once_per_second(dmg),
+			Self::OneTime(dmg) => HealthDamage::once(dmg),
+			Self::OverTime(dmg) => HealthDamage::once_per_second(dmg),
 		}));
 	}
 }
@@ -35,31 +35,30 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
 	};
-	use common::components::persistent_entity::PersistentEntity;
+	use common::{attributes::health::Health, components::persistent_entity::PersistentEntity};
 	use std::sync::LazyLock;
 	use testing::SingleThreadedApp;
 
 	struct _HandlesDamage;
 
-	impl HandlesEffect<DealDamage> for _HandlesDamage {
-		type TTarget = ();
+	impl HandlesEffect<HealthDamage> for _HandlesDamage {
 		type TEffectComponent = _Effect;
 
-		fn effect(effect: DealDamage) -> _Effect {
+		fn effect(effect: HealthDamage) -> _Effect {
 			_Effect(effect)
 		}
 
-		fn attribute(_: Self::TTarget) -> impl Bundle {}
+		fn attribute(_: Health) -> impl Bundle {}
 	}
 
 	#[derive(Component, Debug, PartialEq)]
-	struct _Effect(DealDamage);
+	struct _Effect(HealthDamage);
 
 	struct _HandlesShading;
 
 	static CASTER: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
 
-	fn damage(damage: AttachDealingDamage) -> impl Fn(Commands) -> Entity {
+	fn damage(damage: AttachHealthDamage) -> impl Fn(Commands) -> Entity {
 		move |mut commands| {
 			let mut entity = commands.spawn(()).into();
 			damage.attach::<_HandlesDamage>(
@@ -79,13 +78,13 @@ mod tests {
 	fn insert_single_target_damage() -> Result<(), RunSystemError> {
 		let mut app = setup();
 
-		let start_dealing_damage = AttachDealingDamage::OneTime(42.);
+		let start_dealing_damage = AttachHealthDamage::OneTime(42.);
 		let entity = app
 			.world_mut()
 			.run_system_once(damage(start_dealing_damage))?;
 
 		assert_eq!(
-			Some(&_Effect(DealDamage::once(42.))),
+			Some(&_Effect(HealthDamage::once(42.))),
 			app.world().entity(entity).get::<_Effect>(),
 		);
 		Ok(())
@@ -95,13 +94,13 @@ mod tests {
 	fn insert_over_time_damage() -> Result<(), RunSystemError> {
 		let mut app = setup();
 
-		let start_dealing_damage = AttachDealingDamage::OverTime(42.);
+		let start_dealing_damage = AttachHealthDamage::OverTime(42.);
 		let entity = app
 			.world_mut()
 			.run_system_once(damage(start_dealing_damage))?;
 
 		assert_eq!(
-			Some(&_Effect(DealDamage::once_per_second(42.))),
+			Some(&_Effect(HealthDamage::once_per_second(42.))),
 			app.world().entity(entity).get::<_Effect>(),
 		);
 		Ok(())

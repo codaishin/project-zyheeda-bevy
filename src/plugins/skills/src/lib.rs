@@ -27,7 +27,7 @@ use common::{
 	traits::{
 		handles_combo_menu::{ConfigurePlayerCombos, HandlesComboMenu},
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
-		handles_effect::HandlesAllEffects,
+		handles_effects::HandlesAllEffects,
 		handles_enemies::HandlesEnemyConfig,
 		handles_load_tracking::{DependenciesProgress, HandlesLoadTracking, LoadTrackingInApp},
 		handles_loadout_menu::{ConfigureInventory, HandlesLoadoutMenu},

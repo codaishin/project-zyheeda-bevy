@@ -1,14 +1,12 @@
-pub mod components;
-
+mod components;
 mod systems;
 
 use crate::components::enemy::Enemy;
 use bevy::prelude::*;
 use common::{
-	attributes::{affected_by::AffectedBy, health::Health},
-	effects::{deal_damage::DealDamage, force::Force, gravity::Gravity},
+	effects::{gravity::Gravity, health_damage::HealthDamage},
 	traits::{
-		handles_effect::HandlesEffect,
+		handles_effects::{HandlesAllEffects, HandlesEffect},
 		handles_enemies::{HandlesEnemies, HandlesEnemyConfig},
 		handles_interactions::HandlesInteractions,
 		handles_saving::HandlesSaving,
@@ -25,10 +23,8 @@ pub struct EnemyPlugin<TDependencies>(PhantomData<TDependencies>);
 impl<TSaveGame, TInteractions> EnemyPlugin<(TSaveGame, TInteractions)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TInteractions: ThreadSafe
-		+ HandlesInteractions
-		+ HandlesEffect<DealDamage, TTarget = Health>
-		+ HandlesEffect<Gravity, TTarget = AffectedBy<Gravity>>,
+	TInteractions:
+		ThreadSafe + HandlesInteractions + HandlesEffect<HealthDamage> + HandlesEffect<Gravity>,
 {
 	pub fn from_plugins(_: &TSaveGame, _: &TInteractions) -> Self {
 		Self(PhantomData)
@@ -38,11 +34,7 @@ where
 impl<TSaveGame, TInteractions> Plugin for EnemyPlugin<(TSaveGame, TInteractions)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TInteractions: ThreadSafe
-		+ HandlesInteractions
-		+ HandlesEffect<DealDamage, TTarget = Health>
-		+ HandlesEffect<Gravity, TTarget = AffectedBy<Gravity>>
-		+ HandlesEffect<Force, TTarget = AffectedBy<Force>>,
+	TInteractions: ThreadSafe + HandlesInteractions + HandlesAllEffects,
 {
 	fn build(&self, app: &mut App) {
 		// Save config

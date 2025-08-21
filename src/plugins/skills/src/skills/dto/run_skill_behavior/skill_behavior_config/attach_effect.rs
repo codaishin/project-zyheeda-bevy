@@ -1,15 +1,15 @@
 use crate::behaviors::attach_skill_effect::{
 	AttachEffect,
-	deal_damage::AttachDealingDamage,
 	force::AttachForce,
 	gravity::AttachGravity,
+	health_damage::AttachHealthDamage,
 };
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub(crate) enum AttachEffectDto {
 	Gravity(AttachGravity),
-	Damage(AttachDealingDamage),
+	Damage(AttachHealthDamage),
 	Force(AttachForce),
 }
 

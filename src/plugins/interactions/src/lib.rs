@@ -24,7 +24,7 @@ use common::{
 };
 use components::{
 	active_beam::ActiveBeam,
-	effect::{deal_damage::DealDamageEffect, gravity::GravityEffect},
+	effect::{gravity::GravityEffect, health_damage::HealthDamageEffect},
 	gravity_affected::GravityAffected,
 	interacting_entities::InteractingEntities,
 	running_interactions::RunningInteractions,
@@ -69,9 +69,9 @@ where
 	fn build(&self, app: &mut App) {
 		app
 			// Deal health damage
-			.register_required_components::<DealDamageEffect, InteractingEntities>()
-			.add_observer(DealDamageEffect::update_blockers_observer)
-			.add_interaction::<DealDamageEffect, Life, TSaveGame>()
+			.register_required_components::<HealthDamageEffect, InteractingEntities>()
+			.add_observer(HealthDamageEffect::update_blockers_observer)
+			.add_interaction::<HealthDamageEffect, Life, TSaveGame>()
 			// Apply gravity effect
 			.register_required_components::<GravityEffect, InteractingEntities>()
 			.add_observer(GravityEffect::update_blockers_observer)

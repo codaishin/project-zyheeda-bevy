@@ -12,7 +12,7 @@ use common::{
 		persistent_entity::PersistentEntity,
 	},
 	effects::force::Force,
-	traits::handles_effect::HandlesEffect,
+	traits::handles_effects::HandlesEffect,
 };
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
@@ -22,14 +22,13 @@ use std::time::Duration;
 pub struct ForceEffect(pub(crate) Force);
 
 impl<TDependencies> HandlesEffect<Force> for InteractionsPlugin<TDependencies> {
-	type TTarget = AffectedBy<Force>;
 	type TEffectComponent = ForceEffect;
 
 	fn effect(effect: Force) -> Self::TEffectComponent {
 		ForceEffect(effect)
 	}
 
-	fn attribute(_: Self::TTarget) -> impl Bundle {
+	fn attribute(_: AffectedBy<Force>) -> impl Bundle {
 		ForceAffected
 	}
 }
