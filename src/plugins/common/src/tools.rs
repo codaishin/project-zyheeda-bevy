@@ -23,14 +23,11 @@ pub(crate) mod get_recursively;
 
 use bevy::prelude::Entity;
 use macros::ClampZeroPositive;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::{
 	fmt::Debug,
 	ops::{Deref, DerefMut},
 };
-
-///Serves as a struct to implement static traits on
-pub struct Tools;
 
 #[derive(Debug, PartialEq)]
 pub struct This<'a, T: Debug + PartialEq>(pub &'a mut T);
@@ -60,10 +57,10 @@ impl<T: Debug + PartialEq> Deref for Last<'_, T> {
 	}
 }
 
-#[derive(Debug, PartialEq, PartialOrd, Clone, Copy, ClampZeroPositive, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, PartialOrd, Clone, Copy, ClampZeroPositive, Serialize)]
 pub struct UnitsPerSecond(f32);
 
-#[derive(Debug, PartialEq, PartialOrd, Clone, Copy, ClampZeroPositive, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, PartialOrd, Clone, Copy, ClampZeroPositive, Serialize)]
 pub struct Units(f32);
 
 #[derive(Debug, PartialEq, Clone, ClampZeroPositive)]
@@ -91,8 +88,9 @@ impl From<Vec<Entity>> for Focus {
 #[cfg(test)]
 mod test_clamp_zero_positive {
 	use super::*;
+	use serde_json::json;
 
-	#[derive(ClampZeroPositive)]
+	#[derive(ClampZeroPositive, Debug, PartialEq)]
 	struct _Value(f32);
 
 	#[test]
@@ -103,5 +101,23 @@ mod test_clamp_zero_positive {
 	#[test]
 	fn min_zero() {
 		assert_eq!(&0., _Value::from(-42.).deref());
+	}
+
+	#[test]
+	fn deserialize_value() {
+		let json = json!(42);
+
+		let value = serde_json::from_value::<_Value>(json);
+
+		assert_eq!(_Value(42.), value.unwrap());
+	}
+
+	#[test]
+	fn deserialize_min_zero() {
+		let json = json!(-42);
+
+		let value = serde_json::from_value::<_Value>(json);
+
+		assert_eq!(_Value(0.), value.unwrap());
 	}
 }

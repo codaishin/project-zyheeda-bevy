@@ -45,6 +45,16 @@ pub fn clamp_zero_positive_derive(input: TokenStream) -> TokenStream {
 				}
 			}
 		}
+
+		impl<'de> serde::Deserialize<'de> for #ident {
+			fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+			where
+				D: serde::Deserializer<'de>,
+			{
+				let v = f32::deserialize(deserializer)?;
+				Ok(Self::from(v))
+			}
+		}
 	};
 
 	implementation.into()
