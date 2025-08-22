@@ -32,7 +32,7 @@ impl From<Queue> for QueueDto {
 			queue: queue.into_iter().map(QueuedSkillDto::from).collect(),
 			elapsed: elapsed.map(|SkillElapsed { active, released }| SkillElapsed {
 				active: DurationSecsF32::from(active),
-				released: DurationSecsF32::from(released),
+				released: released.map(DurationSecsF32::from),
 			}),
 			state,
 		}
@@ -63,7 +63,7 @@ impl TryLoadFrom<QueueDto> for Queue {
 				.collect(),
 			active: elapsed.map(|SkillElapsed { active, released }| SkillElapsed {
 				active: Duration::from(active),
-				released: Duration::from(released),
+				released: released.map(Duration::from),
 			}),
 			state,
 		})
