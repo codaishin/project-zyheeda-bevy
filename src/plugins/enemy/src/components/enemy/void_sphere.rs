@@ -56,12 +56,12 @@ impl VoidSphere {
 		Self::GROUND_OFFSET.y,
 		Self::GROUND_OFFSET.z - (Self::OUTER_RADIUS + Self::TORUS_RING_RADIUS),
 	);
+
+	// We use the same name for hand/forearm/essence slots.
+	pub(crate) const UNIFIED_SLOT_KEY: &str = "slot";
+
 	pub(crate) const SKILL_SPAWN: &str = "skill_spawn";
 	pub(crate) const SKILL_SPAWN_NEUTRAL: &str = "skill_spawn_neutral";
-
-	fn collider_radius() -> ColliderRadius {
-		ColliderRadius(Units::from(Self::OUTER_RADIUS))
-	}
 
 	pub(crate) fn new_enemy() -> Enemy {
 		Enemy {
@@ -73,6 +73,18 @@ impl VoidSphere {
 			collider_radius: Self::collider_radius(),
 			enemy_type: EnemyTypeInternal::VoidSphere(Self),
 		}
+	}
+
+	fn collider_radius() -> ColliderRadius {
+		ColliderRadius(Units::from(Self::OUTER_RADIUS))
+	}
+
+	fn unified_slot(bone: &str) -> Option<SlotKey> {
+		if bone != Self::UNIFIED_SLOT_KEY {
+			return None;
+		}
+
+		Some(SlotKey::from(VoidSphereSlot))
 	}
 }
 
@@ -106,26 +118,23 @@ where
 				transform_2nd_ring,
 			))
 			.with_child((Collider::ball(Self::OUTER_RADIUS), transform))
+			// One unified slot
+			.with_child((
+				Transform::from_translation(Self::SLOT_OFFSET),
+				Name::from(Self::UNIFIED_SLOT_KEY),
+			))
+			// Skill spawn directly on slot offset
 			.with_child((
 				Transform::from_translation(Self::SLOT_OFFSET),
 				Name::from(Self::SKILL_SPAWN),
 			))
+			// Neutral skill spawn directly on slot offset
 			.with_child((
 				Transform::from_translation(Self::SLOT_OFFSET),
 				Name::from(Self::SKILL_SPAWN_NEUTRAL),
 			));
 
 		Ok(())
-	}
-}
-
-impl Mapper<Bone<'_>, Option<SkillSpawner>> for VoidSphere {
-	fn map(&self, Bone(name): Bone) -> Option<SkillSpawner> {
-		match name {
-			Self::SKILL_SPAWN => Some(SkillSpawner::Slot(SlotKey::from(VoidSphereSlot))),
-			Self::SKILL_SPAWN_NEUTRAL => Some(SkillSpawner::Neutral),
-			_ => None,
-		}
 	}
 }
 
@@ -148,33 +157,31 @@ impl VisibleSlots for VoidSphere {
 	}
 }
 
+impl Mapper<Bone<'_>, Option<SkillSpawner>> for VoidSphere {
+	fn map(&self, Bone(name): Bone) -> Option<SkillSpawner> {
+		match name {
+			Self::SKILL_SPAWN => Some(SkillSpawner::Slot(SlotKey::from(VoidSphereSlot))),
+			Self::SKILL_SPAWN_NEUTRAL => Some(SkillSpawner::Neutral),
+			_ => None,
+		}
+	}
+}
+
 impl Mapper<Bone<'_>, Option<EssenceSlot>> for VoidSphere {
 	fn map(&self, Bone(bone): Bone<'_>) -> Option<EssenceSlot> {
-		if bone != Self::SKILL_SPAWN {
-			return None;
-		}
-
-		Some(EssenceSlot(SlotKey::from(VoidSphereSlot)))
+		Self::unified_slot(bone).map(EssenceSlot)
 	}
 }
 
 impl Mapper<Bone<'_>, Option<HandSlot>> for VoidSphere {
 	fn map(&self, Bone(bone): Bone<'_>) -> Option<HandSlot> {
-		if bone != Self::SKILL_SPAWN {
-			return None;
-		}
-
-		Some(HandSlot(SlotKey::from(VoidSphereSlot)))
+		Self::unified_slot(bone).map(HandSlot)
 	}
 }
 
 impl Mapper<Bone<'_>, Option<ForearmSlot>> for VoidSphere {
 	fn map(&self, Bone(bone): Bone<'_>) -> Option<ForearmSlot> {
-		if bone != Self::SKILL_SPAWN {
-			return None;
-		}
-
-		Some(ForearmSlot(SlotKey::from(VoidSphereSlot)))
+		Self::unified_slot(bone).map(ForearmSlot)
 	}
 }
 
