@@ -147,8 +147,8 @@ impl GetActiveSkill<SkillState> for Queue {
 		let skill = self.queue.front_mut()?;
 		let elapsed = self.active.get_or_insert_default();
 
-		if skill.skill_mode == SkillMode::Release && elapsed.released == Duration::MAX {
-			elapsed.released = elapsed.active;
+		if skill.skill_mode == SkillMode::Release && elapsed.released.is_none() {
+			elapsed.released = Some(elapsed.active);
 		}
 
 		Some(ActiveSkill { skill, elapsed })
@@ -162,14 +162,15 @@ impl GetActiveSkill<SkillState> for Queue {
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub(crate) struct SkillElapsed<TDuration> {
 	active: TDuration,
-	released: TDuration,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	released: Option<TDuration>,
 }
 
 impl Default for SkillElapsed<Duration> {
 	fn default() -> Self {
 		Self {
 			active: Duration::ZERO,
-			released: Duration::MAX,
+			released: None,
 		}
 	}
 }
@@ -183,7 +184,7 @@ impl StateDuration<SkillState> for ActiveSkill<'_> {
 	fn get_state_duration(&self, key: SkillState) -> Duration {
 		match (key, &self.skill.skill_mode) {
 			(SkillState::Aim, SkillMode::Hold) => Duration::MAX,
-			(SkillState::Aim, SkillMode::Release) => self.elapsed.released,
+			(SkillState::Aim, SkillMode::Release) => self.elapsed.released.unwrap_or(Duration::MAX),
 			(SkillState::Active, _) => self.skill.skill.cast_time,
 		}
 	}
@@ -653,7 +654,7 @@ mod test_queue_active_skill {
 		let mut queue = Queue {
 			active: Some(SkillElapsed {
 				active: Duration::from_millis(42),
-				released: Duration::from_millis(100),
+				released: Some(Duration::from_millis(100)),
 			}),
 			queue: VecDeque::from([
 				QueuedSkill {
@@ -738,7 +739,7 @@ mod test_queue_active_skill {
 		assert_eq!(
 			Some(SkillElapsed {
 				active: Duration::from_millis(42),
-				released: Duration::from_millis(42),
+				released: Some(Duration::from_millis(42)),
 			}),
 			queue.active
 		)
