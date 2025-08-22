@@ -1,11 +1,7 @@
 use crate::resources::agents::color_lookup::AgentsColorLookupImages;
 use bevy::prelude::*;
-use common::traits::{handles_enemies::EnemyType, load_asset::LoadAsset};
+use common::traits::{handles_enemies::EnemyType, iteration::IterFinite, load_asset::LoadAsset};
 use std::{collections::HashMap, path::PathBuf};
-
-const ROOT_PATH: &str = "maps/lookup";
-const PLAYER_FILE: &str = "player.png";
-const ENEMY_FILES: [(EnemyType, &str); 1] = [(EnemyType::VoidSphere, "enemy.png")];
 
 impl AgentsColorLookupImages {
 	pub(crate) fn lookup_images(commands: Commands, asset_server: ResMut<AssetServer>) {
@@ -17,11 +13,12 @@ fn lookup_images<TAssetServer>(mut commands: Commands, mut asset_server: ResMut<
 where
 	TAssetServer: Resource + LoadAsset,
 {
-	let root = PathBuf::from(ROOT_PATH);
-	let player = asset_server.load_asset(root.join(PLAYER_FILE));
-	let enemies = HashMap::from(
-		ENEMY_FILES
-			.map(|(enemy_type, path)| (enemy_type, asset_server.load_asset(root.join(path)))),
+	let root = PathBuf::from(AgentsColorLookupImages::ROOT_PATH);
+	let player = asset_server.load_asset(root.join(AgentsColorLookupImages::PLAYER_FILE));
+	let enemies = HashMap::from_iter(
+		EnemyType::iterator()
+			.map(|e| (e, AgentsColorLookupImages::get_enemy_file(&e)))
+			.map(|(enemy_type, file)| (enemy_type, asset_server.load_asset(root.join(file)))),
 	);
 
 	commands.insert_resource(AgentsColorLookupImages::<Image> { player, enemies });
@@ -31,6 +28,7 @@ where
 mod tests {
 	use super::*;
 	use bevy::asset::AssetPath;
+	use common::traits::{handles_enemies::EnemyType, iteration::IterFinite};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::path::PathBuf;
@@ -67,7 +65,8 @@ mod tests {
 		let mut app = setup(_Assets::new().with_mock(|mock| {
 			mock.expect_load_asset::<Image, PathBuf>()
 				.times(1)
-				.with(eq(PathBuf::from(ROOT_PATH).join(PLAYER_FILE)))
+				.with(eq(PathBuf::from(AgentsColorLookupImages::ROOT_PATH)
+					.join(AgentsColorLookupImages::PLAYER_FILE)))
 				.return_const(player.clone());
 			mock.expect_load_asset::<Image, PathBuf>()
 				.return_const(new_handle());
@@ -87,12 +86,15 @@ mod tests {
 	fn set_enemy() {
 		let mut enemy_handles = HashMap::default();
 		let mut app = setup(_Assets::new().with_mock(|mock| {
-			for (enemy_type, path) in ENEMY_FILES {
+			for enemy_type in EnemyType::iterator() {
+				let file = AgentsColorLookupImages::get_enemy_file(&enemy_type);
 				let enemy = new_handle::<Image>();
 				enemy_handles.insert(enemy_type, enemy.clone());
 				mock.expect_load_asset::<Image, PathBuf>()
 					.times(1)
-					.with(eq(PathBuf::from(ROOT_PATH).join(path)))
+					.with(eq(
+						PathBuf::from(AgentsColorLookupImages::ROOT_PATH).join(file)
+					))
 					.return_const(enemy.clone());
 			}
 			mock.expect_load_asset::<Image, PathBuf>()

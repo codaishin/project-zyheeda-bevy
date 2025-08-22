@@ -12,6 +12,7 @@ use crate::{
 	},
 	traits::{
 		handles_skill_behaviors::SkillSpawner,
+		iteration::{Iter, IterFinite},
 		loadout::LoadoutConfig,
 		mapper::Mapper,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
@@ -61,4 +62,29 @@ pub struct Target(pub PersistentEntity);
 #[derive(Debug, PartialEq, Clone, Copy, Eq, Hash)]
 pub enum EnemyType {
 	VoidSphere,
+}
+
+impl IterFinite for EnemyType {
+	fn iterator() -> Iter<Self> {
+		Iter(Some(EnemyType::VoidSphere))
+	}
+
+	fn next(Iter(current): &Iter<Self>) -> Option<Self> {
+		match current.as_ref()? {
+			EnemyType::VoidSphere => None,
+		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn iter_enemy_types_finite() {
+		assert_eq!(
+			vec![EnemyType::VoidSphere],
+			EnemyType::iterator().collect::<Vec<_>>()
+		);
+	}
 }

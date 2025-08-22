@@ -17,6 +17,18 @@ where
 	pub(crate) enemies: HashMap<EnemyType, Handle<TImage>>,
 }
 
+impl AgentsColorLookupImages {
+	pub(crate) const ROOT_PATH: &str = "maps/lookup";
+
+	pub(crate) const PLAYER_FILE: &str = "player.png";
+
+	pub(crate) fn get_enemy_file(enemy_type: &EnemyType) -> &'static str {
+		match enemy_type {
+			EnemyType::VoidSphere => "void_sphere.png",
+		}
+	}
+}
+
 #[derive(Debug, PartialEq)]
 pub(crate) struct ColorEnemyMap(Vec<(Color, EnemyType)>);
 
