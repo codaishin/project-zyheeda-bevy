@@ -12,7 +12,11 @@ pub struct DurationSecsF32 {
 
 impl From<DurationSecsF32> for Duration {
 	fn from(DurationSecsF32 { seconds }: DurationSecsF32) -> Self {
-		Duration::from_secs_f32(seconds)
+		if seconds.is_nan() || seconds.is_sign_negative() {
+			return Duration::ZERO;
+		}
+
+		Duration::try_from_secs_f32(seconds).unwrap_or(Duration::MAX)
 	}
 }
 
@@ -44,5 +48,32 @@ mod tests {
 		let data = DurationSecsF32::from(duration);
 
 		assert_eq!(DurationSecsF32 { seconds: 42.11 }, data);
+	}
+
+	#[test]
+	fn round_trip_duration_max() {
+		let duration = Duration::MAX;
+
+		let data = DurationSecsF32::from(duration);
+
+		assert_eq!(Duration::MAX, Duration::from(data));
+	}
+
+	#[test]
+	fn nan_secs_to_duration() {
+		let data = DurationSecsF32 { seconds: f32::NAN };
+
+		let duration = Duration::from(data);
+
+		assert_eq!(Duration::ZERO, duration);
+	}
+
+	#[test]
+	fn negative_secs_to_duration() {
+		let data = DurationSecsF32 { seconds: -42. };
+
+		let duration = Duration::from(data);
+
+		assert_eq!(Duration::ZERO, duration);
 	}
 }
