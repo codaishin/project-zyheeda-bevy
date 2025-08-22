@@ -4,7 +4,7 @@ use crate::{
 	skills::{QueuedSkill, Skill, SkillMode},
 };
 use common::{
-	dto::duration_secs_f32::DurationSecsF32,
+	dto::duration_in_seconds::DurationInSeconds,
 	errors::Unreachable,
 	tools::action_key::slot::SlotKey,
 	traits::{handles_custom_assets::TryLoadFrom, load_asset::LoadAsset},
@@ -16,7 +16,7 @@ use std::time::Duration;
 pub struct QueueDto {
 	queue: Vec<QueuedSkillDto>,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	elapsed: Option<SkillElapsed<DurationSecsF32>>,
+	elapsed: Option<SkillElapsed<DurationInSeconds>>,
 	state: State,
 }
 
@@ -31,8 +31,8 @@ impl From<Queue> for QueueDto {
 		Self {
 			queue: queue.into_iter().map(QueuedSkillDto::from).collect(),
 			elapsed: elapsed.map(|SkillElapsed { active, released }| SkillElapsed {
-				active: DurationSecsF32::from(active),
-				released: released.map(DurationSecsF32::from),
+				active: DurationInSeconds::from(active),
+				released: released.map(DurationInSeconds::from),
 			}),
 			state,
 		}

@@ -1,6 +1,6 @@
 use crate::components::attacking::Attacking;
 use common::{
-	dto::duration_secs_f32::DurationSecsF32,
+	dto::duration_in_seconds::DurationInSeconds,
 	errors::Unreachable,
 	traits::handles_custom_assets::TryLoadFrom,
 };
@@ -10,11 +10,11 @@ use std::time::Duration;
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum AttackingDto {
 	Hold {
-		remaining: DurationSecsF32,
-		cool_down: DurationSecsF32,
+		remaining: DurationInSeconds,
+		cool_down: DurationInSeconds,
 	},
 	CoolDown {
-		remaining: DurationSecsF32,
+		remaining: DurationInSeconds,
 	},
 }
 
@@ -25,11 +25,11 @@ impl From<Attacking> for AttackingDto {
 				remaining,
 				cool_down,
 			} => Self::Hold {
-				remaining: DurationSecsF32::from(remaining),
-				cool_down: DurationSecsF32::from(cool_down),
+				remaining: DurationInSeconds::from(remaining),
+				cool_down: DurationInSeconds::from(cool_down),
 			},
 			Attacking::CoolDown { remaining } => Self::CoolDown {
-				remaining: DurationSecsF32::from(remaining),
+				remaining: DurationInSeconds::from(remaining),
 			},
 		}
 	}
