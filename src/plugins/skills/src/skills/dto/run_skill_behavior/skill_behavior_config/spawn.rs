@@ -5,12 +5,12 @@ use crate::behaviors::spawn_skill::{
 	spawn_projectile::SpawnProjectile,
 	spawn_shield::SpawnShield,
 };
-use common::dto::duration_secs_f32::DurationSecsF32;
+use common::dto::duration_in_seconds::DurationInSeconds;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub(crate) enum SpawnSkillDto {
-	GroundTargetedAoe(SpawnGroundTargetedAoe<DurationSecsF32>),
+	GroundTargetedAoe(SpawnGroundTargetedAoe<DurationInSeconds>),
 	Projectile(SpawnProjectile),
 	Beam(SpawnBeam),
 	Shield(SpawnShield),

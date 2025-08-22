@@ -1,1 +1,1 @@
-pub mod duration_secs_f32;
+pub mod duration_in_seconds;

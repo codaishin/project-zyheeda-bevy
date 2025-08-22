@@ -1,6 +1,6 @@
 use crate::components::combos_time_out::CombosTimeOut;
 use common::{
-	dto::duration_secs_f32::DurationSecsF32,
+	dto::duration_in_seconds::DurationInSeconds,
 	errors::Unreachable,
 	traits::{handles_custom_assets::TryLoadFrom, load_asset::LoadAsset},
 };
@@ -9,8 +9,8 @@ use std::time::Duration;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct CombosTimeOutDto {
-	max_duration: DurationSecsF32,
-	duration: DurationSecsF32,
+	max_duration: DurationInSeconds,
+	duration: DurationInSeconds,
 }
 
 impl From<CombosTimeOut> for CombosTimeOutDto {
@@ -21,8 +21,8 @@ impl From<CombosTimeOut> for CombosTimeOutDto {
 		}: CombosTimeOut,
 	) -> Self {
 		Self {
-			max_duration: DurationSecsF32::from(max_duration),
-			duration: DurationSecsF32::from(duration),
+			max_duration: DurationInSeconds::from(max_duration),
+			duration: DurationInSeconds::from(duration),
 		}
 	}
 }

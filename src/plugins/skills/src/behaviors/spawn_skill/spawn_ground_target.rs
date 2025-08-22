@@ -6,7 +6,7 @@ use crate::{
 };
 use common::{
 	components::is_blocker::Blocker,
-	dto::duration_secs_f32::DurationSecsF32,
+	dto::duration_in_seconds::DurationInSeconds,
 	tools::Units,
 	traits::handles_skill_behaviors::{
 		Contact,
@@ -30,8 +30,8 @@ pub struct SpawnGroundTargetedAoe<TDuration = Duration> {
 	pub radius: Units,
 }
 
-impl From<SpawnGroundTargetedAoe<DurationSecsF32>> for SpawnGroundTargetedAoe {
-	fn from(with_lifetime_dto: SpawnGroundTargetedAoe<DurationSecsF32>) -> Self {
+impl From<SpawnGroundTargetedAoe<DurationInSeconds>> for SpawnGroundTargetedAoe {
+	fn from(with_lifetime_dto: SpawnGroundTargetedAoe<DurationInSeconds>) -> Self {
 		Self {
 			lifetime: with_lifetime_dto.lifetime.into(),
 			max_range: with_lifetime_dto.max_range,
@@ -40,7 +40,7 @@ impl From<SpawnGroundTargetedAoe<DurationSecsF32>> for SpawnGroundTargetedAoe {
 	}
 }
 
-impl From<SpawnGroundTargetedAoe> for SpawnGroundTargetedAoe<DurationSecsF32> {
+impl From<SpawnGroundTargetedAoe> for SpawnGroundTargetedAoe<DurationInSeconds> {
 	fn from(with_lifetime_duration: SpawnGroundTargetedAoe) -> Self {
 		Self {
 			lifetime: with_lifetime_duration.lifetime.into(),
