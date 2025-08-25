@@ -12,21 +12,19 @@ use crate::{
 	},
 	traits::{
 		handles_skill_behaviors::SkillSpawner,
+		iteration::{Iter, IterFinite},
 		loadout::LoadoutConfig,
 		mapper::Mapper,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
 	},
 };
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
 pub trait HandlesEnemies {
-	/// FIXME: Impl a `TEnemy::from(EnemyKind::VoidSphere)` pattern
-	type TEnemy: Component + Default;
-}
-
-pub trait HandlesEnemyConfig {
-	type TEnemyBehavior: Component
+	type TEnemy: Component
+		+ From<EnemyType>
 		+ LoadoutConfig
 		+ VisibleSlots
 		+ EnemySkillUsage
@@ -48,7 +46,7 @@ pub trait EnemySkillUsage {
 	fn skill_key(&self) -> SlotKey;
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, Default)]
+#[derive(Debug, PartialEq, Clone, Copy, Default, Serialize, Deserialize)]
 pub enum EnemyTarget {
 	#[default]
 	Player,
@@ -60,3 +58,33 @@ pub struct Attacker(pub PersistentEntity);
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Target(pub PersistentEntity);
+
+#[derive(Debug, PartialEq, Clone, Copy, Eq, Hash)]
+pub enum EnemyType {
+	VoidSphere,
+}
+
+impl IterFinite for EnemyType {
+	fn iterator() -> Iter<Self> {
+		Iter(Some(EnemyType::VoidSphere))
+	}
+
+	fn next(Iter(current): &Iter<Self>) -> Option<Self> {
+		match current.as_ref()? {
+			EnemyType::VoidSphere => None,
+		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn iter_enemy_types_finite() {
+		assert_eq!(
+			vec![EnemyType::VoidSphere],
+			EnemyType::iterator().collect::<Vec<_>>()
+		);
+	}
+}

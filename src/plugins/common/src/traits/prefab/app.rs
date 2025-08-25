@@ -5,7 +5,7 @@ use bevy::prelude::*;
 impl AddPrefabObserver for App {
 	fn add_prefab_observer<TPrefab, TDependencies>(&mut self) -> &mut Self
 	where
-		TPrefab: Prefab<TDependencies>,
+		TPrefab: Prefab<TDependencies> + Component,
 		TDependencies: 'static,
 	{
 		self.add_observer(
@@ -21,7 +21,7 @@ fn instantiate_prefab<TPrefab, TDependencies, TAssetServer>(
 	mut asset_server: ResMut<TAssetServer>,
 ) -> Result<(), Error>
 where
-	TPrefab: Prefab<TDependencies>,
+	TPrefab: Prefab<TDependencies> + Component,
 	TAssetServer: Resource + LoadAsset,
 {
 	let entity = trigger.target();

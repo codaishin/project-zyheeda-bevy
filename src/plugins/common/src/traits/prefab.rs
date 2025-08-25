@@ -4,7 +4,7 @@ mod entity_commands;
 use crate::{errors::Error, traits::load_asset::LoadAsset};
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 
-pub trait Prefab<TDependency>: Component {
+pub trait Prefab<TDependency> {
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
@@ -15,7 +15,7 @@ pub trait Prefab<TDependency>: Component {
 pub trait AddPrefabObserver {
 	fn add_prefab_observer<TPrefab, TDependencies>(&mut self) -> &mut Self
 	where
-		TPrefab: Prefab<TDependencies>,
+		TPrefab: Prefab<TDependencies> + Component,
 		TDependencies: 'static;
 }
 

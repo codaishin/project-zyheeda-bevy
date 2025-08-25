@@ -28,7 +28,7 @@ use common::{
 		handles_combo_menu::{ConfigurePlayerCombos, HandlesComboMenu},
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
 		handles_effects::HandlesAllEffects,
-		handles_enemies::HandlesEnemyConfig,
+		handles_enemies::HandlesEnemies,
 		handles_load_tracking::{DependenciesProgress, HandlesLoadTracking, LoadTrackingInApp},
 		handles_loadout_menu::{ConfigureInventory, HandlesLoadoutMenu},
 		handles_orientation::HandlesOrientation,
@@ -94,7 +94,7 @@ where
 		+ HandlesPlayerCameras
 		+ HandlesPlayerMouse
 		+ ConfiguresPlayerSkillAnimations,
-	TEnemies: ThreadSafe + HandlesEnemyConfig,
+	TEnemies: ThreadSafe + HandlesEnemies,
 	TMenu: ThreadSafe + HandlesLoadoutMenu + HandlesComboMenu,
 {
 	#[allow(clippy::too_many_arguments)]
@@ -122,7 +122,7 @@ where
 	fn track_loading<TSlot, TAgent>(app: &mut App)
 	where
 		TSlot: Eq + Hash + ThreadSafe + From<SlotKey>,
-		TAgent: VisibleSlots,
+		TAgent: VisibleSlots + Component,
 	{
 		let all_loaded = SlotVisualization::<TSlot>::all_slots_loaded_for::<TAgent>;
 		let track_loaded =
@@ -138,24 +138,24 @@ where
 		Self::track_loading::<HandSlot, TPlayers::TPlayer>(app);
 		Self::track_loading::<ForearmSlot, TPlayers::TPlayer>(app);
 		Self::track_loading::<EssenceSlot, TPlayers::TPlayer>(app);
-		Self::track_loading::<HandSlot, TEnemies::TEnemyBehavior>(app);
-		Self::track_loading::<ForearmSlot, TEnemies::TEnemyBehavior>(app);
-		Self::track_loading::<EssenceSlot, TEnemies::TEnemyBehavior>(app);
+		Self::track_loading::<HandSlot, TEnemies::TEnemy>(app);
+		Self::track_loading::<ForearmSlot, TEnemies::TEnemy>(app);
+		Self::track_loading::<EssenceSlot, TEnemies::TEnemy>(app);
 
 		app.add_observer(Loadout::<TPlayers::TPlayer>::insert)
-			.add_observer(Loadout::<TEnemies::TEnemyBehavior>::insert)
+			.add_observer(Loadout::<TEnemies::TEnemy>::insert)
 			.add_systems(
 				Update,
 				(
 					Swapper::system,
 					SlotVisualization::<HandSlot>::track_slots_for::<TPlayers::TPlayer>,
-					SlotVisualization::<HandSlot>::track_slots_for::<TEnemies::TEnemyBehavior>,
+					SlotVisualization::<HandSlot>::track_slots_for::<TEnemies::TEnemy>,
 					SlotVisualization::<HandSlot>::visualize_items,
 					SlotVisualization::<ForearmSlot>::track_slots_for::<TPlayers::TPlayer>,
-					SlotVisualization::<ForearmSlot>::track_slots_for::<TEnemies::TEnemyBehavior>,
+					SlotVisualization::<ForearmSlot>::track_slots_for::<TEnemies::TEnemy>,
 					SlotVisualization::<ForearmSlot>::visualize_items,
 					SlotVisualization::<EssenceSlot>::track_slots_for::<TPlayers::TPlayer>,
-					SlotVisualization::<EssenceSlot>::track_slots_for::<TEnemies::TEnemyBehavior>,
+					SlotVisualization::<EssenceSlot>::track_slots_for::<TEnemies::TEnemy>,
 					SlotVisualization::<EssenceSlot>::visualize_items,
 				)
 					.chain(),
@@ -231,7 +231,7 @@ where
 		+ HandlesPlayerCameras
 		+ HandlesPlayerMouse
 		+ ConfiguresPlayerSkillAnimations,
-	TEnemies: ThreadSafe + HandlesEnemyConfig,
+	TEnemies: ThreadSafe + HandlesEnemies,
 	TMenu: ThreadSafe + HandlesLoadoutMenu + HandlesComboMenu,
 {
 	fn build(&self, app: &mut App) {

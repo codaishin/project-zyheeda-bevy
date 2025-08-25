@@ -12,7 +12,7 @@ where
 {
 	pub(crate) fn all_slots_loaded_for<TAgent>(agents: Query<(&TAgent, &Self)>) -> Loaded
 	where
-		TAgent: VisibleSlots,
+		TAgent: VisibleSlots + Component,
 	{
 		let all_visible_slots_discovered = agents.iter().all(|(agent, visualization)| {
 			agent

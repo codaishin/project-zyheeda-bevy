@@ -1,4 +1,4 @@
-use super::enemy::Enemy;
+use crate::components::enemy::{Enemy, enemy_type::EnemyTypeInternal};
 use bevy::{
 	asset::AssetPath,
 	color::{Color, LinearRgba},
@@ -9,44 +9,39 @@ use bevy::{
 	transform::components::Transform,
 	utils::default,
 };
-use bevy_rapier3d::{
-	dynamics::{GravityScale, RigidBody},
-	geometry::Collider,
-};
+use bevy_rapier3d::geometry::Collider;
 use common::{
 	self,
 	attributes::{affected_by::Affected, health::Health},
 	components::{ground_offset::GroundOffset, insert_asset::InsertAsset},
-	effects::{gravity::Gravity, health_damage::HealthDamage},
+	effects::gravity::Gravity,
 	errors::Error,
 	tools::{
 		Units,
 		UnitsPerSecond,
 		action_key::slot::{NoValidSlotKey, SlotKey},
+		aggro_range::AggroRange,
+		attack_range::AttackRange,
 		bone::Bone,
 		collider_radius::ColliderRadius,
+		speed::Speed,
 	},
 	traits::{
-		handles_effects::HandlesEffect,
+		handles_effects::HandlesAllEffects,
 		handles_enemies::{EnemySkillUsage, EnemyTarget},
 		handles_skill_behaviors::SkillSpawner,
 		load_asset::LoadAsset,
 		loadout::LoadoutConfig,
 		mapper::Mapper,
 		prefab::{Prefab, PrefabEntityCommands},
+		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
 	},
 };
-use macros::{SavableComponent, item_asset};
+use macros::item_asset;
 use serde::{Deserialize, Serialize};
 use std::{f32::consts::PI, time::Duration};
 
-#[derive(Component, SavableComponent, Default, Clone, Serialize, Deserialize)]
-#[require(
-	GroundOffset = Self::GROUND_OFFSET,
-	RigidBody = RigidBody::Dynamic,
-	GravityScale = GravityScale(0.),
-	Enemy = VoidSphere::with_attack_range(Units::from(5.))
-)]
+#[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
 pub struct VoidSphere;
 
 impl VoidSphere {
@@ -61,28 +56,41 @@ impl VoidSphere {
 		Self::GROUND_OFFSET.y,
 		Self::GROUND_OFFSET.z - (Self::OUTER_RADIUS + Self::TORUS_RING_RADIUS),
 	);
+
+	// We use the same name for hand/forearm/essence slots.
+	pub(crate) const UNIFIED_SLOT_KEY: &str = "slot";
+
 	pub(crate) const SKILL_SPAWN: &str = "skill_spawn";
 	pub(crate) const SKILL_SPAWN_NEUTRAL: &str = "skill_spawn_neutral";
+
+	pub(crate) fn new_enemy() -> Enemy {
+		Enemy {
+			speed: Speed(UnitsPerSecond::from(1.)),
+			movement_animation: None,
+			aggro_range: AggroRange(Units::from(10.)),
+			attack_range: AttackRange(Units::from(5.)),
+			target: EnemyTarget::Player,
+			collider_radius: Self::collider_radius(),
+			enemy_type: EnemyTypeInternal::VoidSphere(Self),
+		}
+	}
 
 	fn collider_radius() -> ColliderRadius {
 		ColliderRadius(Units::from(Self::OUTER_RADIUS))
 	}
 
-	pub(crate) fn with_attack_range(attack_range: Units) -> Enemy {
-		Enemy {
-			speed: UnitsPerSecond::from(1.).into(),
-			movement_animation: None,
-			aggro_range: Units::from(10.).into(),
-			attack_range: attack_range.into(),
-			target: EnemyTarget::Player,
-			collider_radius: Self::collider_radius(),
+	fn unified_slot(bone: &str) -> Option<SlotKey> {
+		if bone != Self::UNIFIED_SLOT_KEY {
+			return None;
 		}
+
+		Some(SlotKey::from(VoidSphereSlot))
 	}
 }
 
 impl<TInteractions> Prefab<TInteractions> for VoidSphere
 where
-	TInteractions: HandlesEffect<HealthDamage> + HandlesEffect<Gravity>,
+	TInteractions: HandlesAllEffects,
 {
 	fn insert_prefab_components(
 		&self,
@@ -110,26 +118,23 @@ where
 				transform_2nd_ring,
 			))
 			.with_child((Collider::ball(Self::OUTER_RADIUS), transform))
+			// One unified slot
+			.with_child((
+				Transform::from_translation(Self::SLOT_OFFSET),
+				Name::from(Self::UNIFIED_SLOT_KEY),
+			))
+			// Skill spawn directly on slot offset
 			.with_child((
 				Transform::from_translation(Self::SLOT_OFFSET),
 				Name::from(Self::SKILL_SPAWN),
 			))
+			// Neutral skill spawn directly on slot offset
 			.with_child((
 				Transform::from_translation(Self::SLOT_OFFSET),
 				Name::from(Self::SKILL_SPAWN_NEUTRAL),
 			));
 
 		Ok(())
-	}
-}
-
-impl Mapper<Bone<'_>, Option<SkillSpawner>> for VoidSphere {
-	fn map(&self, Bone(name): Bone) -> Option<SkillSpawner> {
-		match name {
-			Self::SKILL_SPAWN => Some(SkillSpawner::Slot(SlotKey::from(VoidSphereSlot))),
-			Self::SKILL_SPAWN_NEUTRAL => Some(SkillSpawner::Neutral),
-			_ => None,
-		}
 	}
 }
 
@@ -143,6 +148,40 @@ impl LoadoutConfig for VoidSphere {
 			SlotKey::from(VoidSphereSlot),
 			Some(AssetPath::from(item_asset!("void_beam"))),
 		))
+	}
+}
+
+impl VisibleSlots for VoidSphere {
+	fn visible_slots(&self) -> impl Iterator<Item = SlotKey> {
+		[SlotKey::from(VoidSphereSlot)].into_iter()
+	}
+}
+
+impl Mapper<Bone<'_>, Option<SkillSpawner>> for VoidSphere {
+	fn map(&self, Bone(name): Bone) -> Option<SkillSpawner> {
+		match name {
+			Self::SKILL_SPAWN => Some(SkillSpawner::Slot(SlotKey::from(VoidSphereSlot))),
+			Self::SKILL_SPAWN_NEUTRAL => Some(SkillSpawner::Neutral),
+			_ => None,
+		}
+	}
+}
+
+impl Mapper<Bone<'_>, Option<EssenceSlot>> for VoidSphere {
+	fn map(&self, Bone(bone): Bone<'_>) -> Option<EssenceSlot> {
+		Self::unified_slot(bone).map(EssenceSlot)
+	}
+}
+
+impl Mapper<Bone<'_>, Option<HandSlot>> for VoidSphere {
+	fn map(&self, Bone(bone): Bone<'_>) -> Option<HandSlot> {
+		Self::unified_slot(bone).map(HandSlot)
+	}
+}
+
+impl Mapper<Bone<'_>, Option<ForearmSlot>> for VoidSphere {
+	fn map(&self, Bone(bone): Bone<'_>) -> Option<ForearmSlot> {
+		Self::unified_slot(bone).map(ForearmSlot)
 	}
 }
 
@@ -160,7 +199,13 @@ impl EnemySkillUsage for VoidSphere {
 	}
 }
 
-pub struct VoidSphereSlot;
+impl From<&VoidSphere> for GroundOffset {
+	fn from(_: &VoidSphere) -> Self {
+		Self::from(VoidSphere::GROUND_OFFSET)
+	}
+}
+
+struct VoidSphereSlot;
 
 impl From<VoidSphereSlot> for SlotKey {
 	fn from(_: VoidSphereSlot) -> Self {

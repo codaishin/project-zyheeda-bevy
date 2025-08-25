@@ -8,7 +8,7 @@ use crate::{
 		parse_map_image::ParseMapImage,
 	},
 };
-use common::errors::Unreachable;
+use common::{errors::Unreachable, traits::handles_enemies::EnemyType};
 use std::marker::PhantomData;
 
 #[derive(Debug, PartialEq, Default, Clone, Copy)]
@@ -16,7 +16,7 @@ pub(crate) enum Agent<TCell> {
 	#[default]
 	None,
 	Player,
-	Enemy,
+	Enemy(EnemyType),
 	_C(PhantomData<TCell>, Unreachable),
 }
 
@@ -37,7 +37,10 @@ impl<TCell> ParseMapImage<ParsedColor> for Agent<TCell> {
 	) -> Result<Self, Self::TParseError> {
 		match color.color().as_ref() {
 			Some(color) if color == &&lookup.player => Ok(Self::Player),
-			Some(color) if color == &&lookup.enemy => Ok(Self::Enemy),
+			Some(color) => match lookup.enemies.get(color) {
+				Some(enemy_type) => Ok(Self::Enemy(*enemy_type)),
+				None => Ok(Self::None),
+			},
 			_ => Ok(Self::None),
 		}
 	}

@@ -1,5 +1,5 @@
 use crate::{
-	resources::agents::color_lookup::{AgentsColorLookup, AgentsColorLookupImages},
+	resources::agents::color_lookup::{AgentsColorLookup, AgentsColorLookupImages, ColorEnemyMap},
 	systems::map_color_lookup::parse_images::ParseImageError,
 	traits::pixels::PixelBytes,
 };
@@ -27,23 +27,34 @@ where
 		return Err(vec![ParseImageError::NoLookup]);
 	};
 
-	match player_and_enemy(images, lookup) {
-		[Ok(player), Ok(enemy)] => {
-			commands.insert_resource(AgentsColorLookup { player, enemy });
-			Ok(())
+	match player_and_enemies(images, lookup) {
+		(Ok(player), enemies, errors) => {
+			commands.insert_resource(AgentsColorLookup { player, enemies });
+			if errors.is_empty() {
+				Ok(())
+			} else {
+				Err(errors)
+			}
 		}
-		result => Err(result.into_iter().filter_map(|r| r.err()).collect()),
+		(Err(error), _, mut errors) => {
+			errors.push(error);
+			Err(errors)
+		}
 	}
 }
 
-fn player_and_enemy<TImage>(
+fn player_and_enemies<TImage>(
 	images: Res<Assets<TImage>>,
 	lookup: Res<AgentsColorLookupImages<TImage>>,
-) -> [Result<Color, ParseImageError<()>>; 2]
+) -> (
+	Result<Color, ParseImageError<()>>,
+	ColorEnemyMap,
+	Vec<ParseImageError<()>>,
+)
 where
 	TImage: Asset + PixelBytes,
 {
-	[&lookup.player, &lookup.enemy].map(|handle| {
+	let handle_to_color = |handle| {
 		let Some(image) = images.get(handle) else {
 			return Err(ParseImageError::ImageNotLoaded);
 		};
@@ -52,16 +63,35 @@ where
 			Some(pixel) => Err(ParseImageError::PixelWrongFormat(pixel.to_vec())),
 			None => Err(ParseImageError::NoPixels),
 		}
-	})
+	};
+
+	let mut enemy_errors = vec![];
+	let player = handle_to_color(&lookup.player);
+	let enemies =
+		lookup
+			.enemies
+			.iter()
+			.filter_map(|(enemy_type, handle)| match handle_to_color(handle) {
+				Ok(color) => Some((color, *enemy_type)),
+				Err(err) => {
+					enemy_errors.push(err);
+					None
+				}
+			});
+
+	(player, ColorEnemyMap::from(enemies), enemy_errors)
 }
 
 #[cfg(test)]
 mod tests {
+	use std::collections::HashMap;
+
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
+	use common::traits::handles_enemies::EnemyType;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
-	use testing::{NestedMocks, SingleThreadedApp, new_handle};
+	use testing::{NestedMocks, SingleThreadedApp, assert_eq_unordered, new_handle};
 
 	#[derive(Asset, TypePath, NestedMocks)]
 	struct _Image {
@@ -109,7 +139,7 @@ mod tests {
 		let mut app = setup(
 			Some(AgentsColorLookupImages {
 				player: player_handle.clone(),
-				enemy: enemy_handle.clone(),
+				enemies: HashMap::from([(EnemyType::VoidSphere, enemy_handle.clone())]),
 			}),
 			[(player_handle, player_image), (enemy_handle, enemy_image)],
 		);
@@ -119,7 +149,10 @@ mod tests {
 		assert_eq!(
 			Some(&AgentsColorLookup {
 				player: Color::srgba_u8(123, 124, 125, 126),
-				enemy: Color::srgba_u8(113, 114, 115, 116),
+				enemies: ColorEnemyMap::from([(
+					Color::srgba_u8(113, 114, 115, 116),
+					EnemyType::VoidSphere,
+				)]),
 			}),
 			app.world().get_resource::<AgentsColorLookup>(),
 		);
@@ -147,7 +180,7 @@ mod tests {
 		let mut app = setup(
 			Some(AgentsColorLookupImages {
 				player: player_handle.clone(),
-				enemy: enemy_handle.clone(),
+				enemies: HashMap::from([(EnemyType::VoidSphere, enemy_handle.clone())]),
 			}),
 			[(player_handle, player_image), (enemy_handle, enemy_image)],
 		);
@@ -170,7 +203,7 @@ mod tests {
 		let mut app = setup(
 			Some(AgentsColorLookupImages {
 				player: new_handle(),
-				enemy: new_handle(),
+				enemies: HashMap::from([(EnemyType::VoidSphere, new_handle())]),
 			}),
 			[],
 		);
@@ -200,7 +233,7 @@ mod tests {
 		let mut app = setup(
 			Some(AgentsColorLookupImages {
 				player: player_handle.clone(),
-				enemy: enemy_handle.clone(),
+				enemies: HashMap::from([(EnemyType::VoidSphere, enemy_handle.clone())]),
 			}),
 			[(player_handle, player_image), (enemy_handle, enemy_image)],
 		);
@@ -229,19 +262,21 @@ mod tests {
 		let mut app = setup(
 			Some(AgentsColorLookupImages {
 				player: player_handle.clone(),
-				enemy: enemy_handle.clone(),
+				enemies: HashMap::from([(EnemyType::VoidSphere, enemy_handle.clone())]),
 			}),
 			[(player_handle, player_image), (enemy_handle, enemy_image)],
 		);
 
-		let result = app.world_mut().run_system_once(parse_images::<_Image>)?;
+		let Err(errors) = app.world_mut().run_system_once(parse_images::<_Image>)? else {
+			panic!("EXPECTED ERROR")
+		};
 
-		assert_eq!(
-			Err(vec![
+		assert_eq_unordered!(
+			vec![
 				ParseImageError::PixelWrongFormat(vec![123, 124]),
 				ParseImageError::PixelWrongFormat(vec![113, 114]),
-			]),
-			result
+			],
+			errors
 		);
 		Ok(())
 	}

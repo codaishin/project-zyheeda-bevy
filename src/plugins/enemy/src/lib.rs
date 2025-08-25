@@ -7,14 +7,13 @@ use common::{
 	effects::{gravity::Gravity, health_damage::HealthDamage},
 	traits::{
 		handles_effects::{HandlesAllEffects, HandlesEffect},
-		handles_enemies::{HandlesEnemies, HandlesEnemyConfig},
+		handles_enemies::HandlesEnemies,
 		handles_interactions::HandlesInteractions,
 		handles_saving::HandlesSaving,
 		prefab::AddPrefabObserver,
 		thread_safe::ThreadSafe,
 	},
 };
-use components::void_sphere::VoidSphere;
 use std::marker::PhantomData;
 use systems::void_sphere::ring_rotation::ring_rotation;
 
@@ -38,11 +37,11 @@ where
 {
 	fn build(&self, app: &mut App) {
 		// Save config
-		TSaveGame::register_savable_component::<VoidSphere>(app);
-		app.register_required_components::<VoidSphere, TSaveGame::TSaveEntityMarker>();
+		TSaveGame::register_savable_component::<Enemy>(app);
+		app.register_required_components::<Enemy, TSaveGame::TSaveEntityMarker>();
 
 		// prefabs
-		app.add_prefab_observer::<VoidSphere, TInteractions>();
+		app.add_prefab_observer::<Enemy, TInteractions>();
 
 		// behaviors
 		app.add_systems(Update, ring_rotation);
@@ -50,9 +49,5 @@ where
 }
 
 impl<TDependencies> HandlesEnemies for EnemyPlugin<TDependencies> {
-	type TEnemy = VoidSphere;
-}
-
-impl<TDependencies> HandlesEnemyConfig for EnemyPlugin<TDependencies> {
-	type TEnemyBehavior = Enemy;
+	type TEnemy = Enemy;
 }

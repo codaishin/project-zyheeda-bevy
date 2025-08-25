@@ -1,7 +1,7 @@
 use crate::{
 	components::{
 		map::{
-			agents::{AgentsLoaded, Enemy, Player},
+			agents::AgentsLoaded,
 			cells::{CellGrid, MapCells, agent::Agent},
 		},
 		map_agents::AgentOfPersistentMap,
@@ -12,7 +12,7 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
-	traits::{accessors::get::TryApplyOn, thread_safe::ThreadSafe},
+	traits::{accessors::get::TryApplyOn, handles_enemies::EnemyType, thread_safe::ThreadSafe},
 	zyheeda_commands::ZyheedaCommands,
 };
 
@@ -20,10 +20,13 @@ impl<TCell> MapCells<Agent<TCell>>
 where
 	TCell: GridCellDistanceDefinition + ThreadSafe,
 {
-	pub(crate) fn spawn_map_agents(
+	pub(crate) fn spawn_map_agents<TPlayer, TEnemy>(
 		mut commands: ZyheedaCommands,
 		cells: Query<(Entity, &PersistentEntity, &Self)>,
-	) {
+	) where
+		TPlayer: Component + Default,
+		TEnemy: Component + From<EnemyType>,
+	{
 		for (entity, persistent_entity, MapCells { definition, .. }) in &cells {
 			let context = GridContext {
 				cell_count_x: definition.size.x,
@@ -37,14 +40,14 @@ where
 				match cell {
 					Agent::Player => {
 						commands.spawn((
-							Player,
+							TPlayer::default(),
 							AgentOfPersistentMap(*persistent_entity),
 							transform::<TCell>(x, z, min),
 						));
 					}
-					Agent::Enemy => {
+					Agent::Enemy(enemy_type) => {
 						commands.spawn((
-							Enemy,
+							TEnemy::from(*enemy_type),
 							AgentOfPersistentMap(*persistent_entity),
 							transform::<TCell>(x, z, min),
 						));
@@ -81,6 +84,18 @@ mod tests {
 	#[derive(Clone, Debug, PartialEq, TypePath)]
 	struct _Cell;
 
+	#[derive(Component, Debug, PartialEq, Default)]
+	struct _Player;
+
+	#[derive(Component, Debug, PartialEq)]
+	struct _Enemy(EnemyType);
+
+	impl From<EnemyType> for _Enemy {
+		fn from(enemy_type: EnemyType) -> Self {
+			Self(enemy_type)
+		}
+	}
+
 	impl GridCellDistanceDefinition for _Cell {
 		const CELL_DISTANCE: CellDistance = new_valid!(CellDistance, 4.);
 	}
@@ -88,7 +103,10 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, MapCells::<Agent<_Cell>>::spawn_map_agents);
+		app.add_systems(
+			Update,
+			MapCells::<Agent<_Cell>>::spawn_map_agents::<_Player, _Enemy>,
+		);
 
 		app
 	}
@@ -115,7 +133,7 @@ mod tests {
 
 		app.update();
 
-		let [player] = assert_count!(1, entities_with!(Player, app));
+		let [player] = assert_count!(1, entities_with!(_Player, app));
 		assert_eq!(
 			Some(&Transform::from_xyz(0., 0., 0.)),
 			player.get::<Transform>(),
@@ -131,17 +149,20 @@ mod tests {
 					x: new_valid!(CellCount, 1),
 					z: new_valid!(CellCount, 1),
 				},
-				cells: CellGrid::from([((0, 0), Agent::<_Cell>::Enemy)]),
+				cells: CellGrid::from([((0, 0), Agent::<_Cell>::Enemy(EnemyType::VoidSphere))]),
 			},
 			..default()
 		});
 
 		app.update();
 
-		let [enemy] = assert_count!(1, entities_with!(Enemy, app));
+		let [enemy] = assert_count!(1, entities_with!(_Enemy, app));
 		assert_eq!(
-			Some(&Transform::from_xyz(0., 0., 0.)),
-			enemy.get::<Transform>(),
+			(
+				Some(&Transform::from_xyz(0., 0., 0.)),
+				Some(&_Enemy(EnemyType::VoidSphere)),
+			),
+			(enemy.get::<Transform>(), enemy.get::<_Enemy>(),)
 		);
 	}
 
@@ -155,15 +176,15 @@ mod tests {
 					z: new_valid!(CellCount, 3),
 				},
 				cells: CellGrid::from([
-					((0, 0), Agent::<_Cell>::Enemy),
-					((0, 1), Agent::<_Cell>::Enemy),
-					((0, 2), Agent::<_Cell>::Enemy),
+					((0, 0), Agent::<_Cell>::Enemy(EnemyType::VoidSphere)),
+					((0, 1), Agent::<_Cell>::Enemy(EnemyType::VoidSphere)),
+					((0, 2), Agent::<_Cell>::Enemy(EnemyType::VoidSphere)),
 					((1, 0), Agent::<_Cell>::Player),
-					((1, 1), Agent::<_Cell>::Enemy),
-					((1, 2), Agent::<_Cell>::Enemy),
-					((2, 0), Agent::<_Cell>::Enemy),
-					((2, 1), Agent::<_Cell>::Enemy),
-					((2, 2), Agent::<_Cell>::Enemy),
+					((1, 1), Agent::<_Cell>::Enemy(EnemyType::VoidSphere)),
+					((1, 2), Agent::<_Cell>::Enemy(EnemyType::VoidSphere)),
+					((2, 0), Agent::<_Cell>::Enemy(EnemyType::VoidSphere)),
+					((2, 1), Agent::<_Cell>::Enemy(EnemyType::VoidSphere)),
+					((2, 2), Agent::<_Cell>::Enemy(EnemyType::VoidSphere)),
 				]),
 			},
 			..default()
@@ -171,8 +192,8 @@ mod tests {
 
 		app.update();
 
-		let [player] = assert_count!(1, entities_with!(Player, app));
-		let enemies = assert_count!(8, entities_with!(Enemy, app));
+		let [player] = assert_count!(1, entities_with!(_Player, app));
+		let enemies = assert_count!(8, entities_with!(_Enemy, app));
 		assert_eq!(
 			Some(&Transform::from_xyz(0., 0., -4.)),
 			player.get::<Transform>(),
@@ -234,7 +255,7 @@ mod tests {
 
 		app.update();
 
-		let [player] = assert_count!(1, entities_with!(Player, app));
+		let [player] = assert_count!(1, entities_with!(_Player, app));
 		assert_eq!(
 			Some(&AgentOfPersistentMap(persistent_entity)),
 			player.get::<AgentOfPersistentMap>(),
@@ -253,7 +274,7 @@ mod tests {
 						x: new_valid!(CellCount, 1),
 						z: new_valid!(CellCount, 1),
 					},
-					cells: CellGrid::from([((0, 0), Agent::<_Cell>::Enemy)]),
+					cells: CellGrid::from([((0, 0), Agent::<_Cell>::Enemy(EnemyType::VoidSphere))]),
 				},
 				..default()
 			},
@@ -261,7 +282,7 @@ mod tests {
 
 		app.update();
 
-		let [enemy] = assert_count!(1, entities_with!(Enemy, app));
+		let [enemy] = assert_count!(1, entities_with!(_Enemy, app));
 		assert_eq!(
 			Some(&AgentOfPersistentMap(persistent_entity)),
 			enemy.get::<AgentOfPersistentMap>(),

@@ -10,12 +10,7 @@ mod traits;
 
 use crate::{
 	components::{
-		map::{
-			Map,
-			agents::{AgentsLoaded, Enemy, Player},
-			cells::corridor::Corridor,
-			demo_map::DemoMap,
-		},
+		map::{Map, agents::AgentsLoaded, cells::corridor::Corridor, demo_map::DemoMap},
 		map_agents::{AgentOfPersistentMap, GridAgentOf},
 	},
 	resources::agents::color_lookup::{AgentsColorLookup, AgentsColorLookupImages},
@@ -25,7 +20,7 @@ use common::{
 	states::game_state::{GameState, LoadingEssentialAssets},
 	systems::log::OnError,
 	traits::{
-		handles_enemies::{HandlesEnemies, HandlesEnemyConfig},
+		handles_enemies::HandlesEnemies,
 		handles_lights::HandlesLights,
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInApp},
 		handles_map_generation::HandlesMapGeneration,
@@ -50,7 +45,7 @@ where
 	TSavegame: ThreadSafe + HandlesSaving,
 	TLights: ThreadSafe + HandlesLights,
 	TPlayer: ThreadSafe + HandlesPlayer,
-	TEnemies: ThreadSafe + HandlesEnemyConfig,
+	TEnemies: ThreadSafe + HandlesEnemies,
 {
 	pub fn from_plugins(
 		_: &TLoading,
@@ -85,9 +80,8 @@ where
 		TSavegame::register_savable_component::<DemoMap>(app);
 
 		app.register_required_components::<Map, TSavegame::TSaveEntityMarker>()
-			.register_required_components::<Player, TPlayer::TPlayer>()
-			.register_required_components::<Enemy, TEnemies::TEnemy>()
-			.register_map_cell::<TLoading, TSavegame, Corridor>()
+			.register_map_cell::<TLoading, TSavegame, Corridor, TPlayer::TPlayer, TEnemies::TEnemy>(
+			)
 			.add_systems(
 				OnEnter(GameState::LoadingEssentialAssets),
 				AgentsColorLookupImages::<Image>::lookup_images,
