@@ -2,7 +2,12 @@ use bevy::prelude::*;
 use common::{
 	tools::{action_key::slot::PlayerSlot, change::Change},
 	traits::{
-		handles_combo_menu::{Combo, GetComboAblePlayerSkills, GetCombosOrdered, NextKeys},
+		handles_combo_menu::{
+			Combo,
+			GetComboAblePlayerSkills,
+			GetCombosOrdered,
+			NextConfiguredKeys,
+		},
 		handles_loadout_menu::GetItem,
 		thread_safe::ThreadSafe,
 	},
@@ -35,9 +40,9 @@ where
 	}
 }
 
-impl<T> NextKeys<PlayerSlot> for EquipmentInfo<T>
+impl<T> NextConfiguredKeys<PlayerSlot> for EquipmentInfo<T>
 where
-	T: NextKeys<PlayerSlot>,
+	T: NextConfiguredKeys<PlayerSlot>,
 {
 	fn next_keys(&self, combo_keys: &[PlayerSlot]) -> HashSet<PlayerSlot> {
 		self.0.next_keys(combo_keys)

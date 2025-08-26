@@ -43,7 +43,7 @@ use common::{
 			GetComboAblePlayerSkills,
 			GetCombosOrdered,
 			HandlesComboMenu,
-			NextKeys,
+			NextConfiguredKeys,
 		},
 		handles_graphics::UiCamera,
 		handles_load_tracking::{
@@ -460,7 +460,7 @@ where
 		TUpdateCombos: IntoSystem<In<Combo<PlayerSlot, Option<TSkill>>>, (), M2> + Copy,
 		TCombos: GetCombosOrdered<TSkill, PlayerSlot>
 			+ GetComboAblePlayerSkills<TSkill>
-			+ NextKeys<PlayerSlot>
+			+ NextConfiguredKeys<PlayerSlot>
 			+ ThreadSafe,
 	{
 		let combo_overview = GameState::IngameMenu(MenuState::ComboOverview);

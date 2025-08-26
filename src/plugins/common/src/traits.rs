@@ -20,6 +20,7 @@ pub mod handles_graphics;
 pub mod handles_interactions;
 pub mod handles_lights;
 pub mod handles_load_tracking;
+pub mod handles_loadout;
 pub mod handles_loadout_menu;
 pub mod handles_localization;
 pub mod handles_map_generation;

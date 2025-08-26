@@ -6,7 +6,7 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	tools::action_key::slot::PlayerSlot,
-	traits::{accessors::get::TryApplyOn, handles_combo_menu::NextKeys, thread_safe::ThreadSafe},
+	traits::{accessors::get::TryApplyOn, handles_combo_menu::NextConfiguredKeys, thread_safe::ThreadSafe},
 	zyheeda_commands::ZyheedaCommands,
 };
 
@@ -15,7 +15,7 @@ pub(crate) fn select_successor_key<TNextKeys>(
 	next_keys: Res<TNextKeys>,
 	dropdown_commands: Query<(Entity, &KeySelectDropdownCommand<AppendSkillCommand>)>,
 ) where
-	TNextKeys: Resource + NextKeys<PlayerSlot>,
+	TNextKeys: Resource + NextConfiguredKeys<PlayerSlot>,
 	KeySelectDropdownCommand<AppendSkillCommand>:
 		ThreadSafe + GetComponent<TInput = ExcludeKeys<PlayerSlot>>,
 {
@@ -27,7 +27,7 @@ fn internal_select_successor_key<TNextKeys, TExtra>(
 	next_keys: Res<TNextKeys>,
 	dropdown_commands: Query<(Entity, &KeySelectDropdownCommand<TExtra>)>,
 ) where
-	TNextKeys: Resource + NextKeys<PlayerSlot>,
+	TNextKeys: Resource + NextConfiguredKeys<PlayerSlot>,
 	KeySelectDropdownCommand<TExtra>: ThreadSafe + GetComponent<TInput = ExcludeKeys<PlayerSlot>>,
 {
 	for (entity, insert_command) in &dropdown_commands {
@@ -69,7 +69,7 @@ mod tests {
 	}
 
 	#[automock]
-	impl NextKeys<PlayerSlot> for _NextKeys {
+	impl NextConfiguredKeys<PlayerSlot> for _NextKeys {
 		fn next_keys(&self, combo_keys: &[PlayerSlot]) -> std::collections::HashSet<PlayerSlot> {
 			self.mock.next_keys(combo_keys)
 		}
