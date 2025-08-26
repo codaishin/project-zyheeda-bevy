@@ -8,10 +8,10 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	components::{asset_model::AssetModel, essence::Essence},
-	tools::{item_description::ItemToken, item_type::ItemType},
+	tools::item_type::ItemType,
 	traits::{
+		accessors::get::RefInto,
 		handles_localization::Token,
-		inspect_able::InspectAble,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
 	},
 };
@@ -25,8 +25,8 @@ pub struct Item {
 	pub item_type: ItemType,
 }
 
-impl InspectAble<ItemToken> for Item {
-	fn get_inspect_able_field(&self) -> &Token {
+impl<'a> RefInto<'a, &'a Token> for Item {
+	fn ref_into(&self) -> &Token {
 		&self.token
 	}
 }

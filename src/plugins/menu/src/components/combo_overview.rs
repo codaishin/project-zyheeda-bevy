@@ -19,10 +19,10 @@ use crate::{
 };
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{
-	tools::{action_key::slot::PlayerSlot, skill_description::SkillToken, skill_icon::SkillIcon},
+	tools::action_key::slot::PlayerSlot,
 	traits::{
-		handles_localization::{Localize, LocalizeToken, localized::Localized},
-		inspect_able::{InspectAble, InspectField},
+		accessors::get::{RefAs, RefInto},
+		handles_localization::{Localize, LocalizeToken, Token, localized::Localized},
 		load_asset::{LoadAsset, Path},
 		thread_safe::ThreadSafe,
 	},
@@ -297,7 +297,11 @@ where
 
 impl<TSkill> InsertUiContent for ComboOverview<TSkill>
 where
-	TSkill: InspectAble<SkillToken> + InspectAble<SkillIcon> + Clone + PartialEq + ThreadSafe,
+	TSkill: Clone
+		+ PartialEq
+		+ ThreadSafe
+		+ for<'a> RefInto<'a, &'a Token>
+		+ for<'a> RefInto<'a, &'a Option<Handle<Image>>>,
 {
 	fn insert_ui_content<TLocalization>(
 		&self,
@@ -371,7 +375,11 @@ fn add_combo_list<TSkill, TLocalization>(
 	parent: &mut RelatedSpawnerCommands<ChildOf>,
 	combo_overview: &ComboOverview<TSkill>,
 ) where
-	TSkill: InspectAble<SkillToken> + InspectAble<SkillIcon> + Clone + PartialEq + ThreadSafe,
+	TSkill: Clone
+		+ PartialEq
+		+ ThreadSafe
+		+ for<'a> RefInto<'a, &'a Token>
+		+ for<'a> RefInto<'a, &'a Option<Handle<Image>>>,
 	TLocalization: Localize + 'static,
 {
 	parent
@@ -401,7 +409,11 @@ fn add_combo<TSkill, TLocalization>(
 	local_z: i32,
 	new_skill_icon: &Handle<Image>,
 ) where
-	TSkill: InspectAble<SkillToken> + InspectAble<SkillIcon> + Clone + PartialEq + ThreadSafe,
+	TSkill: Clone
+		+ PartialEq
+		+ ThreadSafe
+		+ for<'a> RefInto<'a, &'a Token>
+		+ for<'a> RefInto<'a, &'a Option<Handle<Image>>>,
 	TLocalization: Localize + 'static,
 {
 	parent
@@ -494,7 +506,10 @@ where
 
 impl<TSkill, TLocalization> AddPanel<'_, TSkill, TLocalization>
 where
-	TSkill: InspectAble<SkillToken> + InspectAble<SkillIcon> + Clone + ThreadSafe,
+	TSkill: Clone
+		+ ThreadSafe
+		+ for<'a> RefInto<'a, &'a Token>
+		+ for<'a> RefInto<'a, &'a Option<Handle<Image>>>,
 	TLocalization: Localize,
 {
 	fn spawn_as_child(
@@ -537,11 +552,12 @@ where
 		PanelOverlay(panel_overlay): PanelOverlay<TLocalization>,
 		PanelBackground(panel_background): PanelBackground,
 	) {
-		let token = SkillToken::inspect_field(skill).clone();
+		let token = skill.ref_as::<&Token>();
+		let icon = skill.ref_as::<&Option<Handle<Image>>>();
 		let skill_bundle = (
 			ComboSkillButton::<DropdownTrigger, TSkill>::new(skill.clone(), key_path.to_vec()),
-			Tooltip::new(localize.localize(&token).or_token()),
-			ComboOverview::skill_button(SkillIcon::inspect_field(skill).clone()),
+			Tooltip::new(localize.localize(token).or_token()),
+			ComboOverview::skill_button(icon.clone()),
 			SkillSelectDropdownInsertCommand::<PlayerSlot, Vertical>::new(key_path.to_vec()),
 		);
 

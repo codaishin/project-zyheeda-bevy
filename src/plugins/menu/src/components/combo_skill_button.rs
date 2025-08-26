@@ -2,10 +2,10 @@ use super::combo_overview::ComboOverview;
 use crate::{Tooltip, traits::insert_ui_content::InsertUiContent};
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{
-	tools::{action_key::slot::PlayerSlot, skill_description::SkillToken, skill_icon::SkillIcon},
+	tools::action_key::slot::PlayerSlot,
 	traits::{
-		handles_localization::Localize,
-		inspect_able::{InspectAble, InspectField},
+		accessors::get::{RefAs, RefInto},
+		handles_localization::{Localize, Token},
 		thread_safe::ThreadSafe,
 	},
 };
@@ -44,7 +44,10 @@ impl<T, TSkill> ComboSkillButton<T, TSkill> {
 impl<T, TSkill> InsertUiContent for ComboSkillButton<T, TSkill>
 where
 	T: Clone + ThreadSafe,
-	TSkill: InspectAble<SkillToken> + InspectAble<SkillIcon> + Clone + ThreadSafe,
+	TSkill: Clone
+		+ ThreadSafe
+		+ for<'a> RefInto<'a, &'a Token>
+		+ for<'a> RefInto<'a, &'a Option<Handle<Image>>>,
 {
 	fn insert_ui_content<TLocalization>(
 		&self,
@@ -53,12 +56,13 @@ where
 	) where
 		TLocalization: Localize,
 	{
-		let token = SkillToken::inspect_field(&self.skill);
+		let token = self.skill.ref_as::<&Token>();
+		let icon = self.skill.ref_as::<&Option<Handle<Image>>>();
 		let name = localize.localize(token).or_token();
 
 		parent.spawn((
 			self.clone(),
-			ComboOverview::skill_button(SkillIcon::inspect_field(&self.skill).clone()),
+			ComboOverview::skill_button(icon.clone()),
 			Name::from(name.clone()),
 			Tooltip::new(name),
 		));

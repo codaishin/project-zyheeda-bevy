@@ -33,12 +33,10 @@ use common::{
 		action_key::{ActionKey, slot::PlayerSlot, user_input::UserInput},
 		change::Change,
 		inventory_key::InventoryKey,
-		item_description::ItemToken,
-		skill_description::SkillToken,
 		skill_execution::SkillExecution,
-		skill_icon::SkillIcon,
 	},
 	traits::{
+		accessors::get::RefInto,
 		handles_combo_menu::{
 			Combo,
 			ConfigurePlayerCombos,
@@ -58,7 +56,6 @@ use common::{
 		handles_localization::{HandlesLocalization, Localize, Token, localized::Localized},
 		handles_saving::HandlesSaving,
 		handles_settings::HandlesSettings,
-		inspect_able::InspectAble,
 		load_asset::Path,
 		prefab::AddPrefabObserver,
 		register_derived_component::RegisterDerivedComponent,
@@ -345,13 +342,14 @@ where
 		InventoryConfiguration(PhantomData::<TLocalization::TLocalizationServer>)
 	}
 
-	fn configure_quickbar_menu<TContainer, TSystemMarker>(
+	fn configure_quickbar_menu<TQuickbar, TSystemMarker>(
 		app: &mut App,
-		get_changed_quickbar: impl IntoSystem<(), Change<TContainer>, TSystemMarker>,
+		get_changed_quickbar: impl IntoSystem<(), Change<TQuickbar>, TSystemMarker>,
 	) where
-		TContainer: GetItem<PlayerSlot> + ThreadSafe,
-		TContainer::TItem:
-			InspectAble<SkillToken> + InspectAble<SkillIcon> + InspectAble<SkillExecution>,
+		TQuickbar: GetItem<PlayerSlot> + ThreadSafe,
+		TQuickbar::TItem: for<'a> RefInto<'a, &'a Token>
+			+ for<'a> RefInto<'a, &'a Option<Handle<Image>>>
+			+ for<'a> RefInto<'a, &'a SkillExecution>,
 	{
 		let play = GameState::Play;
 
@@ -359,12 +357,12 @@ where
 			Update,
 			(
 				get_changed_quickbar.pipe(EquipmentInfo::update),
-				set_quickbar_icons::<EquipmentInfo<TContainer>>,
+				set_quickbar_icons::<EquipmentInfo<TQuickbar>>,
 				panel_activity_colors_override::<
 					TSettings::TKeyMap<PlayerSlot>,
 					QuickbarPanel,
 					UiInputPrimer,
-					EquipmentInfo<TContainer>,
+					EquipmentInfo<TQuickbar>,
 				>,
 			)
 				.chain()
@@ -387,9 +385,9 @@ where
 		get_changed_slots: impl IntoSystem<(), Change<TSlots>, TSystemMarker2>,
 	) where
 		TInventory: GetItem<InventoryKey> + ThreadSafe,
-		TInventory::TItem: InspectAble<ItemToken>,
+		TInventory::TItem: for<'a> RefInto<'a, &'a Token>,
 		TSlots: GetItem<PlayerSlot> + ThreadSafe,
-		TSlots::TItem: InspectAble<ItemToken>,
+		TSlots::TItem: for<'a> RefInto<'a, &'a Token>,
 	{
 		let inventory = GameState::IngameMenu(MenuState::Inventory);
 
@@ -430,7 +428,11 @@ where
 {
 	fn combos_with_skill<TSkill>() -> impl ConfigurePlayerCombos<TSkill>
 	where
-		TSkill: InspectAble<SkillToken> + InspectAble<SkillIcon> + PartialEq + Clone + ThreadSafe,
+		TSkill: PartialEq
+			+ Clone
+			+ ThreadSafe
+			+ for<'a> RefInto<'a, &'a Token>
+			+ for<'a> RefInto<'a, &'a Option<Handle<Image>>>,
 	{
 		ComboConfiguration::<TLocalization, TGraphics>(PhantomData)
 	}
@@ -443,18 +445,22 @@ impl<TGraphics, TLocalization, TSkill> ConfigurePlayerCombos<TSkill>
 where
 	TGraphics: ThreadSafe + UiCamera,
 	TLocalization: HandlesLocalization + ThreadSafe,
-	TSkill: InspectAble<SkillToken> + InspectAble<SkillIcon> + Clone + PartialEq + ThreadSafe,
+	TSkill: PartialEq
+		+ Clone
+		+ ThreadSafe
+		+ for<'a> RefInto<'a, &'a Token>
+		+ for<'a> RefInto<'a, &'a Option<Handle<Image>>>,
 {
-	fn configure<TUpdateCombos, TEquipment, M1, M2>(
+	fn configure<TUpdateCombos, TCombos, M1, M2>(
 		&self,
 		app: &mut App,
-		get_changed_combos: impl IntoSystem<(), Change<TEquipment>, M1>,
+		get_changed_combos: impl IntoSystem<(), Change<TCombos>, M1>,
 		update_combos: TUpdateCombos,
 	) where
 		TUpdateCombos: IntoSystem<In<Combo<PlayerSlot, Option<TSkill>>>, (), M2> + Copy,
-		TEquipment: GetComboAblePlayerSkills<TSkill>
+		TCombos: GetCombosOrdered<TSkill, PlayerSlot>
+			+ GetComboAblePlayerSkills<TSkill>
 			+ NextKeys<PlayerSlot>
-			+ GetCombosOrdered<TSkill, PlayerSlot>
 			+ ThreadSafe,
 	{
 		let combo_overview = GameState::IngameMenu(MenuState::ComboOverview);
@@ -468,14 +474,14 @@ where
 			Update,
 			(
 				get_changed_combos.pipe(EquipmentInfo::update),
-				select_successor_key::<EquipmentInfo<TEquipment>>,
-				Vertical::dropdown_skill_select_insert::<TSkill, EquipmentInfo<TEquipment>>,
-				Horizontal::dropdown_skill_select_insert::<TSkill, EquipmentInfo<TEquipment>>,
+				select_successor_key::<EquipmentInfo<TCombos>>,
+				Vertical::dropdown_skill_select_insert::<TSkill, EquipmentInfo<TCombos>>,
+				Horizontal::dropdown_skill_select_insert::<TSkill, EquipmentInfo<TCombos>>,
 				Vertical::dropdown_skill_select_click::<TSkill>.pipe(update_combos),
 				Horizontal::dropdown_skill_select_click::<TSkill>.pipe(update_combos),
 				update_combos_view_delete_skill::<TSkill>.pipe(update_combos),
-				ComboOverview::<TSkill>::update_combos_overview::<TSkill, EquipmentInfo<TEquipment>>,
-				Unusable::visualize_invalid_skill::<TSkill, EquipmentInfo<TEquipment>>,
+				ComboOverview::<TSkill>::update_combos_overview::<TSkill, EquipmentInfo<TCombos>>,
+				Unusable::visualize_invalid_skill::<TSkill, EquipmentInfo<TCombos>>,
 			)
 				.chain()
 				.run_if(in_state(combo_overview)),

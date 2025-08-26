@@ -1,13 +1,13 @@
-use super::{inspect_able::InspectAble, thread_safe::ThreadSafe};
-use crate::tools::{
-	action_key::slot::PlayerSlot,
-	change::Change,
-	inventory_key::InventoryKey,
-	item_description::ItemToken,
-	skill_description::SkillToken,
-	skill_execution::SkillExecution,
-	skill_icon::SkillIcon,
-	swap_key::SwapKey,
+use super::thread_safe::ThreadSafe;
+use crate::{
+	tools::{
+		action_key::slot::PlayerSlot,
+		change::Change,
+		inventory_key::InventoryKey,
+		skill_execution::SkillExecution,
+		swap_key::SwapKey,
+	},
+	traits::{accessors::get::RefInto, handles_localization::Token},
 };
 use bevy::{ecs::component::Mutable, prelude::*};
 
@@ -21,8 +21,9 @@ pub trait HandlesLoadoutMenu {
 		get_changed_quickbar: impl IntoSystem<(), Change<TQuickbar>, TSystemMarker>,
 	) where
 		TQuickbar: GetItem<PlayerSlot> + ThreadSafe,
-		TQuickbar::TItem:
-			InspectAble<SkillToken> + InspectAble<SkillIcon> + InspectAble<SkillExecution>;
+		TQuickbar::TItem: for<'a> RefInto<'a, &'a Token>
+			+ for<'a> RefInto<'a, &'a Option<Handle<Image>>>
+			+ for<'a> RefInto<'a, &'a SkillExecution>;
 }
 
 pub trait ConfigureInventory<TSwap> {
@@ -33,9 +34,9 @@ pub trait ConfigureInventory<TSwap> {
 		get_changed_slots: impl IntoSystem<(), Change<TSlots>, TSystemMarker2>,
 	) where
 		TInventory: GetItem<InventoryKey> + ThreadSafe,
-		TInventory::TItem: InspectAble<ItemToken>,
+		TInventory::TItem: for<'a> RefInto<'a, &'a Token>,
 		TSlots: GetItem<PlayerSlot> + ThreadSafe,
-		TSlots::TItem: InspectAble<ItemToken>;
+		TSlots::TItem: for<'a> RefInto<'a, &'a Token>;
 }
 
 pub trait SwapValuesByKey {

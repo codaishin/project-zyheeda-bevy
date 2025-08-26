@@ -32,7 +32,6 @@ pub mod handles_skill_behaviors;
 pub mod has_collisions;
 pub mod init_resource;
 pub mod insert;
-pub mod inspect_able;
 pub mod intersect_at;
 pub mod iter_descendants_conditional;
 pub mod iterate;

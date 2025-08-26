@@ -1,11 +1,7 @@
 use bevy::prelude::*;
 use common::{
-	tools::{
-		skill_description::SkillToken,
-		skill_execution::SkillExecution,
-		skill_icon::SkillIcon,
-	},
-	traits::{handles_localization::Token, inspect_able::InspectAble},
+	tools::skill_execution::SkillExecution,
+	traits::{accessors::get::RefInto, handles_localization::Token},
 };
 
 #[derive(Debug, PartialEq, Default)]
@@ -15,20 +11,20 @@ pub struct QuickbarItem {
 	pub execution: SkillExecution,
 }
 
-impl InspectAble<SkillToken> for QuickbarItem {
-	fn get_inspect_able_field(&self) -> &Token {
+impl<'a> RefInto<'a, &'a Token> for QuickbarItem {
+	fn ref_into(&self) -> &Token {
 		&self.skill_token
 	}
 }
 
-impl InspectAble<SkillIcon> for QuickbarItem {
-	fn get_inspect_able_field(&self) -> &Option<Handle<Image>> {
+impl<'a> RefInto<'a, &'a Option<Handle<Image>>> for QuickbarItem {
+	fn ref_into(&'a self) -> &'a Option<Handle<Image>> {
 		&self.skill_icon
 	}
 }
 
-impl InspectAble<SkillExecution> for QuickbarItem {
-	fn get_inspect_able_field(&self) -> &SkillExecution {
+impl<'a> RefInto<'a, &'a SkillExecution> for QuickbarItem {
+	fn ref_into(&'a self) -> &'a SkillExecution {
 		&self.execution
 	}
 }

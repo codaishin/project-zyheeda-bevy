@@ -1,14 +1,10 @@
 use crate::{components::KeyedPanel, tools::PanelState};
 use bevy::{ecs::component::Mutable, prelude::*};
-use common::{
-	tools::item_description::ItemToken,
-	traits::{
-		accessors::set::Setter,
-		handles_loadout_menu::GetItem,
-		handles_localization::{Localize, Token, localized::Localized},
-		inspect_able::{InspectAble, InspectField},
-		thread_safe::ThreadSafe,
-	},
+use common::traits::{
+	accessors::{get::RefInto, set::Setter},
+	handles_loadout_menu::GetItem,
+	handles_localization::{Localize, LocalizeToken, Token, localized::Localized},
+	thread_safe::ThreadSafe,
 };
 use std::hash::Hash;
 
@@ -25,19 +21,17 @@ pub trait SetContainerPanels: Component<Mutability = Mutable> + Sized {
 		TLocalization: Localize + Resource,
 		TKey: Eq + Hash + Copy + ThreadSafe,
 		TEquipment: Resource + GetItem<TKey>,
-		TEquipment::TItem: InspectAble<ItemToken>,
+		TEquipment::TItem: for<'a> RefInto<'a, &'a Token>,
 	{
 		for (entity, KeyedPanel(key), mut panel) in &mut panels {
 			let (state, label) = match items.get_item(*key) {
 				Some(item) => (
 					PanelState::Filled,
-					localize.localize(ItemToken::inspect_field(item)).or_token(),
+					localize.localize(item.ref_into()).or_token(),
 				),
 				None => (
 					PanelState::Empty,
-					localize
-						.localize(&Token::from("inventory-item-empty"))
-						.or_token(),
+					localize.localize_token("inventory-item-empty").or_token(),
 				),
 			};
 			panel.set(state);
@@ -74,8 +68,8 @@ mod tests {
 		}
 	}
 
-	impl InspectAble<ItemToken> for _Item {
-		fn get_inspect_able_field(&self) -> &Token {
+	impl<'a> RefInto<'a, &'a Token> for _Item {
+		fn ref_into(&self) -> &Token {
 			&self.0
 		}
 	}

@@ -1,8 +1,5 @@
 use bevy::prelude::*;
-use common::{
-	tools::{item_description::ItemToken, skill_icon::SkillIcon},
-	traits::{handles_localization::Token, inspect_able::InspectAble},
-};
+use common::traits::{accessors::get::RefInto, handles_localization::Token};
 
 #[derive(Debug, PartialEq)]
 pub struct LoadoutItem {
@@ -10,14 +7,14 @@ pub struct LoadoutItem {
 	pub skill_icon: Option<Handle<Image>>,
 }
 
-impl InspectAble<ItemToken> for LoadoutItem {
-	fn get_inspect_able_field(&self) -> &Token {
+impl<'a> RefInto<'a, &'a Token> for LoadoutItem {
+	fn ref_into(&self) -> &Token {
 		&self.token
 	}
 }
 
-impl InspectAble<SkillIcon> for LoadoutItem {
-	fn get_inspect_able_field(&self) -> &Option<Handle<Image>> {
+impl<'a> RefInto<'a, &'a Option<Handle<Image>>> for LoadoutItem {
+	fn ref_into(&self) -> &Option<Handle<Image>> {
 		&self.skill_icon
 	}
 }
