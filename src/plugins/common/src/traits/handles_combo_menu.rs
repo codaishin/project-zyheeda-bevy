@@ -35,7 +35,7 @@ where
 		TUpdateCombos: IntoSystem<In<Combo<PlayerSlot, Option<TSkill>>>, (), M2> + Copy,
 		TCombos: GetCombosOrdered<TSkill, PlayerSlot>
 			+ GetComboAblePlayerSkills<TSkill>
-			+ NextKeys<PlayerSlot>
+			+ NextConfiguredKeys<PlayerSlot>
 			+ ThreadSafe;
 }
 
@@ -46,10 +46,12 @@ where
 	fn get_combo_able_player_skills(&self, key: &PlayerSlot) -> Vec<TSkill>;
 }
 
-pub trait NextKeys<TKey> {
+pub trait NextConfiguredKeys<TKey> {
 	fn next_keys(&self, combo_keys: &[TKey]) -> HashSet<TKey>;
 }
 
 pub trait GetCombosOrdered<TSkill, TKey> {
+	/// Get combos with a consistent ordering.
+	/// The specific ordering heuristic is up to the implementor.
 	fn combos_ordered(&self) -> Vec<Vec<(Vec<TKey>, TSkill)>>;
 }

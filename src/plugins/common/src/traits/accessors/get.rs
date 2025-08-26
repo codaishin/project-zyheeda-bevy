@@ -1,3 +1,5 @@
+use bevy::ecs::system::SystemParam;
+
 mod assets;
 
 pub trait Get<TKey> {
@@ -12,6 +14,17 @@ pub trait GetRef<TKey> {
 		Self: 'a;
 
 	fn get_ref(&self, key: &TKey) -> Option<Self::TValue<'_>>;
+}
+
+pub trait GetFromParam<'w, 's, TKey> {
+	type TParam: SystemParam;
+	type TValue;
+
+	fn get_from_param(
+		&self,
+		key: &TKey,
+		assets: &<Self::TParam as SystemParam>::Item<'_, '_>,
+	) -> Self::TValue;
 }
 
 pub trait GetMut<TKey> {
