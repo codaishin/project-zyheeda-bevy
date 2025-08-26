@@ -1,15 +1,21 @@
 mod dto;
 
 use crate::{
-	components::inventory::dto::InventoryDto,
-	item::Item,
+	components::{inventory::dto::InventoryDto, slots::Slots},
+	item::{Item, SkillItem},
+	resources::skill_item_assets::SkillItemAssets,
 	traits::loadout_key::LoadoutKey,
 };
-use bevy::{asset::Handle, ecs::component::Component};
+use bevy::prelude::*;
 use common::{
-	tools::inventory_key::InventoryKey,
+	tools::{
+		action_key::slot::{PlayerSlot, SlotKey},
+		inventory_key::InventoryKey,
+		skill_execution::SkillExecution,
+	},
 	traits::{
-		accessors::get::{GetMut, GetRef},
+		accessors::get::GetFromParam,
+		handles_loadout::{SwapExternal, SwapInternal},
 		iterate::Iterate,
 	},
 };
@@ -29,32 +35,61 @@ where
 	}
 }
 
-impl GetRef<InventoryKey> for Inventory {
-	type TValue<'a>
-		= &'a Handle<Item>
-	where
-		Self: 'a;
+impl<'w, 's> GetFromParam<'w, 's, InventoryKey> for Inventory {
+	type TParam = SkillItemAssets<'w>;
+	type TValue = SkillItem;
 
-	fn get_ref(&self, key: &InventoryKey) -> Option<&Handle<Item>> {
-		let item = self.0.get(key.0)?;
-		item.as_ref()
+	fn get_from_param(
+		&self,
+		InventoryKey(index): &InventoryKey,
+		SkillItemAssets { items, skills }: &SkillItemAssets,
+	) -> Self::TValue {
+		let Self(inventory) = self;
+		let item = inventory
+			.get(*index)
+			.and_then(|item| item.as_ref())
+			.and_then(|item| items.get(item));
+
+		let Some(item) = item else {
+			return SkillItem::None;
+		};
+		let skill = item.skill.as_ref().and_then(|skill| skills.get(skill));
+
+		let (skill_token, skill_icon) = match skill {
+			Some(skill) => (Some(skill.token.clone()), skill.icon.clone()),
+			None => (None, None),
+		};
+
+		SkillItem::Some {
+			item_token: item.token.clone(),
+			skill_token,
+			skill_icon,
+			execution: SkillExecution::None,
+		}
 	}
 }
 
-impl GetMut<InventoryKey> for Inventory {
-	type TValue<'a>
-		= &'a mut Option<Handle<Item>>
-	where
-		Self: 'a;
+impl SwapExternal<Slots, InventoryKey, PlayerSlot> for Inventory {
+	fn swap_external(&mut self, other: &mut Slots, InventoryKey(a): InventoryKey, b: PlayerSlot) {
+		if a >= self.0.len() {
+			fill(&mut self.0, a);
+		}
+		let a = &mut self.0[a];
+		let b = other.items.entry(SlotKey::from(b)).or_default();
+		std::mem::swap(a, b);
+	}
+}
 
-	fn get_mut(&mut self, InventoryKey(index): &InventoryKey) -> Option<&mut Option<Handle<Item>>> {
+impl SwapInternal<InventoryKey> for Inventory {
+	fn swap_internal(&mut self, InventoryKey(a): InventoryKey, InventoryKey(b): InventoryKey) {
 		let items = &mut self.0;
+		let max = a.max(b);
 
-		if index >= &items.len() {
-			fill(items, *index);
+		if max >= items.len() {
+			fill(items, max);
 		}
 
-		items.get_mut(*index)
+		items.swap(a, b);
 	}
 }
 
@@ -96,61 +131,233 @@ impl<'a> Iterator for Iter<'a> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use testing::new_handle;
+	use crate::{item::SkillItem, skills::Skill};
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
+	use common::{tools::skill_execution::SkillExecution, traits::handles_localization::Token};
+	use testing::{SingleThreadedApp, new_handle};
 
-	#[test]
-	fn get_first_item() {
-		let item = new_handle();
-		let inventory = Inventory::from([Some(item.clone())]);
+	fn setup<const I: usize, const S: usize>(
+		items: [(&Handle<Item>, Item); I],
+		skills: [(&Handle<Skill>, Skill); S],
+	) -> App {
+		let mut app = App::new().single_threaded(Update);
+		let mut item_assets = Assets::default();
+		let mut skill_assets = Assets::default();
 
-		assert_eq!(Some(&item), inventory.get_ref(&InventoryKey(0)));
+		for (id, asset) in items {
+			item_assets.insert(id, asset);
+		}
+
+		for (id, asset) in skills {
+			skill_assets.insert(id, asset);
+		}
+
+		app.insert_resource(item_assets);
+		app.insert_resource(skill_assets);
+		app
 	}
 
 	#[test]
-	fn get_none_when_empty() {
-		let inventory = Inventory::from([]);
+	fn get_none_when_empty() -> Result<(), RunSystemError> {
+		let mut app = setup([], []);
 
-		assert_eq!(None, inventory.get_ref(&InventoryKey(0)));
+		app.world_mut()
+			.run_system_once(|skill_items: SkillItemAssets| {
+				let inventory = Inventory::from([]);
+
+				assert_eq!(
+					SkillItem::None,
+					inventory.get_from_param(&InventoryKey(0), &skill_items)
+				);
+			})
 	}
 
 	#[test]
-	fn get_3rd_item() {
-		let item = new_handle();
-		let inventory = Inventory::from([None, None, Some(item.clone())]);
-
-		assert_eq!(Some(&item), inventory.get_ref(&InventoryKey(2)));
-	}
-
-	#[test]
-	fn get_item_mut() {
-		let item = new_handle();
-		let mut inventory = Inventory::from([Some(item.clone())]);
-
-		assert_eq!(Some(&mut Some(item)), inventory.get_mut(&InventoryKey(0)));
-	}
-
-	#[test]
-	fn get_item_mut_exceeding_range() {
-		let item = new_handle();
-		let mut inventory = Inventory::from([Some(item.clone())]);
-
-		let new_item = new_handle();
-		*inventory.get_mut(&InventoryKey(1)).expect("no item found") = Some(new_item.clone());
-
-		assert_eq!(Inventory::from([Some(item), Some(new_item),]), inventory);
-	}
-
-	#[test]
-	fn get_item_mut_exceeding_range_with_gaps() {
-		let item = new_handle();
-		let mut inventory = Inventory::from([Some(item.clone())]);
-
-		let new_item = new_handle();
-		*inventory.get_mut(&InventoryKey(2)).expect("no item found") = Some(new_item.clone());
-
-		assert_eq!(
-			Inventory::from([Some(item), None, Some(new_item),]),
-			inventory
+	fn get_first_item() -> Result<(), RunSystemError> {
+		let item_handle = new_handle();
+		let skill_handle = new_handle();
+		let icon_handle = new_handle();
+		let mut app = setup(
+			[(
+				&item_handle,
+				Item {
+					token: Token::from("my item"),
+					skill: Some(skill_handle.clone()),
+					..default()
+				},
+			)],
+			[(
+				&skill_handle,
+				Skill {
+					token: Token::from("my skill"),
+					icon: Some(icon_handle.clone()),
+					..default()
+				},
+			)],
 		);
+
+		app.world_mut()
+			.run_system_once(move |skill_items: SkillItemAssets| {
+				let inventory = Inventory::from([Some(item_handle.clone())]);
+
+				assert_eq!(
+					SkillItem::Some {
+						item_token: Token::from("my item"),
+						skill_token: Some(Token::from("my skill")),
+						skill_icon: Some(icon_handle.clone()),
+						execution: SkillExecution::None,
+					},
+					inventory.get_from_param(&InventoryKey(0), &skill_items)
+				);
+			})
+	}
+
+	#[test]
+	fn get_3rd_item() -> Result<(), RunSystemError> {
+		let item_handle = new_handle();
+		let skill_handle = new_handle();
+		let icon_handle = new_handle();
+		let mut app = setup(
+			[(
+				&item_handle,
+				Item {
+					token: Token::from("my item"),
+					skill: Some(skill_handle.clone()),
+					..default()
+				},
+			)],
+			[(
+				&skill_handle,
+				Skill {
+					token: Token::from("my skill"),
+					icon: Some(icon_handle.clone()),
+					..default()
+				},
+			)],
+		);
+
+		app.world_mut()
+			.run_system_once(move |skill_items: SkillItemAssets| {
+				let inventory = Inventory::from([None, None, Some(item_handle.clone())]);
+
+				assert_eq!(
+					SkillItem::Some {
+						item_token: Token::from("my item"),
+						skill_token: Some(Token::from("my skill")),
+						skill_icon: Some(icon_handle.clone()),
+						execution: SkillExecution::None,
+					},
+					inventory.get_from_param(&InventoryKey(2), &skill_items)
+				);
+			})
+	}
+
+	mod swap_internal {
+		use super::*;
+
+		#[test]
+		fn swap() {
+			let a = new_handle();
+			let b = new_handle();
+			let mut inventory = Inventory::from([Some(a.clone()), Some(b.clone())]);
+
+			inventory.swap_internal(InventoryKey(0), InventoryKey(1));
+
+			assert_eq!(Inventory::from([Some(b), Some(a)]), inventory)
+		}
+
+		#[test]
+		fn swap_out_of_bounds() {
+			let item = new_handle();
+			let mut inventory = Inventory::from([Some(item.clone())]);
+
+			inventory.swap_internal(InventoryKey(0), InventoryKey(1));
+
+			assert_eq!(Inventory::from([None, Some(item)]), inventory)
+		}
+
+		#[test]
+		fn swap_out_of_bounds_reverse() {
+			let item = new_handle();
+			let mut inventory = Inventory::from([Some(item.clone())]);
+
+			inventory.swap_internal(InventoryKey(1), InventoryKey(0));
+
+			assert_eq!(Inventory::from([None, Some(item)]), inventory)
+		}
+	}
+
+	mod swap_external {
+		use super::*;
+		use common::tools::action_key::slot::SlotKey;
+
+		#[test]
+		fn swap() {
+			let a = new_handle();
+			let b = new_handle();
+			let mut inventory = Inventory::from([Some(a.clone())]);
+			let mut slots = Slots::from([(SlotKey::from(PlayerSlot::LOWER_R), Some(b.clone()))]);
+
+			inventory.swap_external(&mut slots, InventoryKey(0), PlayerSlot::LOWER_R);
+
+			assert_eq!(
+				(
+					Inventory::from([Some(b)]),
+					Slots::from([(SlotKey::from(PlayerSlot::LOWER_R), Some(a))])
+				),
+				(inventory, slots),
+			)
+		}
+
+		#[test]
+		fn swap_inventory_out_of_bounds() {
+			let item = new_handle();
+			let mut inventory = Inventory::from([]);
+			let mut slots = Slots::from([(SlotKey::from(PlayerSlot::LOWER_R), Some(item.clone()))]);
+
+			inventory.swap_external(&mut slots, InventoryKey(4), PlayerSlot::LOWER_R);
+
+			assert_eq!(
+				(
+					Inventory::from([None, None, None, None, Some(item)]),
+					Slots::from([(SlotKey::from(PlayerSlot::LOWER_R), None)])
+				),
+				(inventory, slots),
+			)
+		}
+
+		#[test]
+		fn swap_inventory_just_out_of_bounds() {
+			let item = new_handle();
+			let mut inventory = Inventory::from([None, None, None]);
+			let mut slots = Slots::from([(SlotKey::from(PlayerSlot::LOWER_R), Some(item.clone()))]);
+
+			inventory.swap_external(&mut slots, InventoryKey(3), PlayerSlot::LOWER_R);
+
+			assert_eq!(
+				(
+					Inventory::from([None, None, None, Some(item)]),
+					Slots::from([(SlotKey::from(PlayerSlot::LOWER_R), None)])
+				),
+				(inventory, slots),
+			)
+		}
+
+		#[test]
+		fn swap_slots_out_of_bounds() {
+			let item = new_handle();
+			let mut inventory = Inventory::from([Some(item.clone())]);
+			let mut slots = Slots::from([]);
+
+			inventory.swap_external(&mut slots, InventoryKey(0), PlayerSlot::LOWER_R);
+
+			assert_eq!(
+				(
+					Inventory::from([None]),
+					Slots::from([(SlotKey::from(PlayerSlot::LOWER_R), Some(item))])
+				),
+				(inventory, slots),
+			)
+		}
 	}
 }

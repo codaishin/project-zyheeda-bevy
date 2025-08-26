@@ -115,7 +115,7 @@ mod tests {
 		slots_and_items: [(SlotKey, Option<Item>); N],
 	) -> (Slots, Assets<Item>) {
 		let mut assets = Assets::default();
-		let mut slots = HashMap::default();
+		let mut slots = HashMap::<SlotKey, Option<Handle<Item>>>::default();
 
 		for (slot_key, item) in slots_and_items {
 			let Some(item) = item else {
@@ -125,7 +125,7 @@ mod tests {
 			slots.insert(slot_key, Some(handle));
 		}
 
-		(Slots(slots), assets)
+		(Slots::from(slots), assets)
 	}
 
 	#[test]

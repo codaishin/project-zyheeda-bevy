@@ -1,6 +1,8 @@
 mod behaviors;
 mod components;
 mod item;
+mod observers;
+mod resources;
 mod skills;
 mod systems;
 mod tools;
@@ -14,6 +16,7 @@ use crate::{
 		queue::dto::QueueDto,
 		slots::visualization::SlotVisualization,
 	},
+	item::SkillItem,
 	systems::enqueue::EnqueueSystem,
 };
 use bevy::prelude::*;
@@ -30,6 +33,7 @@ use common::{
 		handles_effects::HandlesAllEffects,
 		handles_enemies::HandlesEnemies,
 		handles_load_tracking::{DependenciesProgress, HandlesLoadTracking, LoadTrackingInApp},
+		handles_loadout::HandlesLoadout,
 		handles_loadout_menu::{ConfigureInventory, HandlesLoadoutMenu},
 		handles_orientation::HandlesOrientation,
 		handles_player::{
@@ -142,7 +146,8 @@ where
 		Self::track_loading::<ForearmSlot, TEnemies::TEnemy>(app);
 		Self::track_loading::<EssenceSlot, TEnemies::TEnemy>(app);
 
-		app.add_observer(Loadout::<TPlayers::TPlayer>::insert)
+		app.add_observer(Slots::set_self_entity)
+			.add_observer(Loadout::<TPlayers::TPlayer>::insert)
 			.add_observer(Loadout::<TEnemies::TEnemy>::insert)
 			.add_systems(
 				Update,
@@ -241,4 +246,14 @@ where
 		self.skill_execution(app);
 		self.config_menus(app);
 	}
+}
+
+impl<TDependencies> HandlesLoadout for SkillsPlugin<TDependencies> {
+	type TItem = SkillItem;
+	type TSkill = Skill;
+	type TSkills = Vec<Skill>;
+
+	type TInventory = Inventory;
+	type TSlots = Slots;
+	type TCombos = Combos;
 }

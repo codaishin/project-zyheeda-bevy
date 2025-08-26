@@ -1,5 +1,7 @@
 pub(crate) mod dto;
 
+use std::collections::HashSet;
+
 use super::combo_node::ComboNode;
 use crate::{
 	CombosDto,
@@ -16,9 +18,13 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	tools::{action_key::slot::SlotKey, item_type::ItemType},
+	tools::{
+		action_key::slot::{PlayerSlot, SlotKey},
+		item_type::ItemType,
+	},
 	traits::{
-		handles_combo_menu::{Combo, GetCombosOrdered},
+		handles_combo_menu::{Combo, GetCombosOrdered, NextConfiguredKeys},
+		handles_loadout::UpdateCombos,
 		iterate::Iterate,
 	},
 };
@@ -143,6 +149,25 @@ where
 	}
 }
 
+impl<TNode> NextConfiguredKeys<PlayerSlot> for Combos<TNode>
+where
+	TNode: NextConfiguredKeys<PlayerSlot>,
+{
+	fn next_keys(&self, combo_keys: &[PlayerSlot]) -> HashSet<PlayerSlot> {
+		self.config.next_keys(combo_keys)
+	}
+}
+
+impl<TNode, TSkill> UpdateCombos<TSkill> for Combos<TNode>
+where
+	TNode: UpdateCombos<TSkill>,
+{
+	fn update_combos(&mut self, combo: Combo<PlayerSlot, Option<TSkill>>) {
+		self.current = None;
+		self.config.update_combos(combo);
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -151,10 +176,10 @@ mod tests {
 		tools::action_key::slot::{PlayerSlot, Side},
 		traits::handles_localization::Token,
 	};
-	use macros::NestedMocks;
-	use mockall::{mock, predicate::eq};
+	use macros::{NestedMocks, simple_mock};
+	use mockall::predicate::eq;
 	use std::{cell::RefCell, collections::HashMap};
-	use testing::NestedMocks;
+	use testing::{Mock, NestedMocks};
 
 	#[derive(Default)]
 	struct _Next(HashMap<(SlotKey, ItemType), Skill>);
@@ -302,7 +327,7 @@ mod tests {
 		}
 	}
 
-	mock! {
+	simple_mock! {
 		_Entry {}
 		impl Insert<Option<Skill>> for _Entry {
 			fn insert(&mut self, value: Option<Skill>);
@@ -506,5 +531,73 @@ mod tests {
 		);
 
 		assert!(combos.current.is_none());
+	}
+
+	mod next_keys {
+		use super::*;
+
+		struct _Skill;
+
+		simple_mock! {
+			_Node {}
+			impl NextConfiguredKeys<PlayerSlot> for _Node {
+				fn next_keys(&self, combo_keys: &[PlayerSlot]) -> HashSet<PlayerSlot>;
+			}
+		}
+
+		#[test]
+		fn use_config_node() {
+			let combos = Combos::new(Mock_Node::new_mock(|mock| {
+				mock.expect_next_keys()
+					.times(1)
+					.with(eq([PlayerSlot::LOWER_R, PlayerSlot::UPPER_L]))
+					.return_const(HashSet::from([PlayerSlot::LOWER_L, PlayerSlot::LOWER_R]));
+			}));
+
+			assert_eq!(
+				HashSet::from([PlayerSlot::LOWER_L, PlayerSlot::LOWER_R]),
+				combos.next_keys(&[PlayerSlot::LOWER_R, PlayerSlot::UPPER_L]),
+			);
+		}
+	}
+
+	mod update_combo {
+		use super::*;
+
+		#[derive(Debug, PartialEq)]
+		struct _Skill;
+
+		simple_mock! {
+			_Node {}
+			impl UpdateCombos<_Skill> for _Node {
+				fn update_combos(&mut self, combo: Combo<PlayerSlot, Option<_Skill>>);
+			}
+		}
+
+		#[test]
+		fn use_config_node() {
+			let mut combos = Combos::new(Mock_Node::new_mock(|mock| {
+				mock.expect_update_combos()
+					.times(1)
+					.with(eq(vec![(vec![PlayerSlot::LOWER_R], Some(_Skill))]))
+					.return_const(());
+			}));
+
+			combos.update_combos(vec![(vec![PlayerSlot::LOWER_R], Some(_Skill))]);
+		}
+
+		#[test]
+		fn reset_current() {
+			let mut combos = Combos {
+				config: Mock_Node::new_mock(|mock| {
+					mock.expect_update_combos().return_const(());
+				}),
+				current: Some(Mock_Node::new()),
+			};
+
+			combos.update_combos(vec![]);
+
+			assert!(combos.current.is_none());
+		}
 	}
 }

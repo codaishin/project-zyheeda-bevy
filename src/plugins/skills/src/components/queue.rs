@@ -63,10 +63,13 @@ impl Default for Queue {
 }
 
 #[cfg(test)]
-impl Queue {
-	pub fn new<const N: usize>(items: [QueuedSkill; N]) -> Self {
+impl<T> From<T> for Queue
+where
+	T: IntoIterator<Item = QueuedSkill>,
+{
+	fn from(skills: T) -> Self {
 		Self {
-			queue: VecDeque::from(items),
+			queue: VecDeque::from_iter(skills),
 			active: None,
 			state: State::Flushed,
 		}
@@ -218,7 +221,7 @@ mod test_queue_collection {
 
 	#[test]
 	fn enqueue_one_skill() {
-		let mut queue = Queue::new([]);
+		let mut queue = Queue::from([]);
 		queue.enqueue((
 			Skill {
 				token: Token::from("my skill"),
@@ -242,7 +245,7 @@ mod test_queue_collection {
 
 	#[test]
 	fn enqueue_two_skills() {
-		let mut queue = Queue::new([]);
+		let mut queue = Queue::from([]);
 		queue.enqueue((
 			Skill {
 				token: Token::from("skill a"),
@@ -283,7 +286,7 @@ mod test_queue_collection {
 
 	#[test]
 	fn flush_with_one_skill() {
-		let mut queue = Queue::new([QueuedSkill {
+		let mut queue = Queue::from([QueuedSkill {
 			key: SlotKey(11),
 			skill: Skill {
 				token: Token::from("my skill"),
@@ -294,12 +297,12 @@ mod test_queue_collection {
 
 		queue.flush();
 
-		assert_eq!(Queue::new([]), queue);
+		assert_eq!(Queue::from([]), queue);
 	}
 
 	#[test]
 	fn flush_with_two_skill() {
-		let mut queue = Queue::new([
+		let mut queue = Queue::from([
 			QueuedSkill {
 				key: SlotKey(42),
 				skill: Skill {
@@ -336,7 +339,7 @@ mod test_queue_collection {
 
 		assert_eq!(
 			(
-				Queue::new([QueuedSkill {
+				Queue::from([QueuedSkill {
 					key: SlotKey(11),
 					skill: Skill {
 						token: Token::from("skill b"),
@@ -344,7 +347,7 @@ mod test_queue_collection {
 					},
 					..default()
 				}]),
-				Queue::new([])
+				Queue::from([])
 			),
 			(queue_after_1_flush, queue_after_2_flushes)
 		);
@@ -352,7 +355,7 @@ mod test_queue_collection {
 
 	#[test]
 	fn iter() {
-		let queue = Queue::new([
+		let queue = Queue::from([
 			QueuedSkill {
 				key: SlotKey(42),
 				skill: Skill {
@@ -396,7 +399,7 @@ mod test_queue_collection {
 
 	#[test]
 	fn iter_recent_mut() {
-		let mut queue = Queue::new([]);
+		let mut queue = Queue::from([]);
 		queue.enqueue((
 			Skill {
 				token: Token::from("a"),
@@ -444,7 +447,7 @@ mod test_queue_collection {
 
 	#[test]
 	fn iter_recent_mut_only_new() {
-		let mut queue = Queue::new([QueuedSkill {
+		let mut queue = Queue::from([QueuedSkill {
 			key: SlotKey(11),
 			skill: Skill {
 				token: Token::from("a"),
@@ -500,7 +503,7 @@ mod test_queue_collection {
 
 	#[test]
 	fn iter_recent_mut_empty_after_flush() {
-		let mut queue = Queue::new([QueuedSkill {
+		let mut queue = Queue::from([QueuedSkill {
 			key: SlotKey(11),
 			skill: Skill {
 				token: Token::from("a"),
@@ -538,7 +541,7 @@ mod test_queue_collection {
 
 	#[test]
 	fn iter_recent_mut_empty_after_flush_with_active_duration() {
-		let mut queue = Queue::new([QueuedSkill {
+		let mut queue = Queue::from([QueuedSkill {
 			key: SlotKey(11),
 			skill: Skill {
 				token: Token::from("a"),
@@ -595,7 +598,7 @@ mod test_queue_collection {
 				skill_mode: SkillMode::Release,
 			},
 		];
-		let mut queue = Queue::new(skills.clone());
+		let mut queue = Queue::from(skills.clone());
 
 		assert_eq!(
 			vec![&skills[0]],

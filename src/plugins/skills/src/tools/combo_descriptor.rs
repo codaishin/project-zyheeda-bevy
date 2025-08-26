@@ -11,7 +11,12 @@ use common::{
 		item_type::{CompatibleItems, ItemType},
 	},
 	traits::{
-		handles_combo_menu::{Combo, GetComboAblePlayerSkills, GetCombosOrdered, NextKeys},
+		handles_combo_menu::{
+			Combo,
+			GetComboAblePlayerSkills,
+			GetCombosOrdered,
+			NextConfiguredKeys,
+		},
 		iteration::IterFinite,
 	},
 };
@@ -83,7 +88,7 @@ fn slot_layout<'a>(
 	skills: &'a Assets<Skill>,
 ) -> HashMap<PlayerSlot, (ItemType, Option<&'a Skill>)> {
 	slots
-		.0
+		.items
 		.iter()
 		.filter_map(|(key, handle)| Some((PlayerSlot::try_from(*key).ok()?, handle)))
 		.filter_map(|(player_key, handle)| {
@@ -101,7 +106,7 @@ impl GetComboAblePlayerSkills<Skill> for ComboDescriptor {
 	}
 }
 
-impl NextKeys<PlayerSlot> for ComboDescriptor {
+impl NextConfiguredKeys<PlayerSlot> for ComboDescriptor {
 	fn next_keys(&self, combo_keys: &[PlayerSlot]) -> HashSet<PlayerSlot> {
 		let mut next_keys = HashSet::default();
 		let target_len = combo_keys.len();
@@ -162,7 +167,7 @@ mod tests {
 		}
 
 		for (key, item_type) in slot_layout {
-			slots.0.insert(
+			slots.items.insert(
 				key,
 				Some(item_assets.add(Item {
 					item_type,

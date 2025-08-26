@@ -17,6 +17,7 @@ use common::{
 		accessors::get::{GetMut, RefInto},
 		handles_custom_assets::AssetFolderPath,
 		handles_effects::HandlesAllEffects,
+		handles_loadout::{SkillIcon, SkillToken},
 		handles_localization::Token,
 		handles_skill_behaviors::{HandlesSkillBehaviors, SkillSpawner},
 		load_asset::Path,
@@ -63,15 +64,15 @@ impl AssetFolderPath for Skill {
 	}
 }
 
-impl<'a> RefInto<'a, &'a Token> for Skill {
-	fn ref_into(&self) -> &Token {
-		&self.token
+impl<'a> RefInto<'a, SkillToken<'a>> for Skill {
+	fn ref_into(&'a self) -> SkillToken<'a> {
+		SkillToken(Some(&self.token))
 	}
 }
 
-impl<'a> RefInto<'a, &'a Option<Handle<Image>>> for Skill {
-	fn ref_into(&self) -> &Option<Handle<Image>> {
-		&self.icon
+impl<'a> RefInto<'a, SkillIcon<'a>> for Skill {
+	fn ref_into(&self) -> SkillIcon<'_> {
+		SkillIcon(self.icon.as_ref())
 	}
 }
 
