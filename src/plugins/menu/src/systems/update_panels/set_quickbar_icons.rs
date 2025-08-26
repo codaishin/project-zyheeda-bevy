@@ -1,11 +1,10 @@
 use crate::{components::quickbar_panel::QuickbarPanel, tools::PanelState};
 use bevy::prelude::*;
 use common::{
-	tools::{action_key::slot::PlayerSlot, skill_icon::SkillIcon},
+	tools::action_key::slot::PlayerSlot,
 	traits::{
-		accessors::get::TryApplyOn,
+		accessors::get::{RefInto, TryApplyOn},
 		handles_loadout_menu::GetItem,
-		inspect_able::{InspectAble, InspectField},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -16,11 +15,11 @@ pub(crate) fn set_quickbar_icons<TContainer>(
 	containers: Res<TContainer>,
 ) where
 	TContainer: Resource + GetItem<PlayerSlot>,
-	TContainer::TItem: InspectAble<SkillIcon>,
+	TContainer::TItem: for<'a> RefInto<'a, &'a Option<Handle<Image>>>,
 {
 	for (entity, mut panel) in &mut panels {
 		let (state, image) = match containers.get_item(panel.key) {
-			Some(item) => (PanelState::Filled, SkillIcon::inspect_field(item).clone()),
+			Some(item) => (PanelState::Filled, item.ref_into().clone()),
 			_ => (PanelState::Empty, None),
 		};
 		let (state, image) = match image {
@@ -45,8 +44,8 @@ mod tests {
 
 	struct _Item(Option<Handle<Image>>);
 
-	impl InspectAble<SkillIcon> for _Item {
-		fn get_inspect_able_field(&self) -> &'_ Option<Handle<Image>> {
+	impl<'a> RefInto<'a, &'a Option<Handle<Image>>> for _Item {
+		fn ref_into(&self) -> &'_ Option<Handle<Image>> {
 			&self.0
 		}
 	}

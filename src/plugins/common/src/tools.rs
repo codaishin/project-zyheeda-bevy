@@ -8,14 +8,11 @@ pub mod collider_info;
 pub mod collider_radius;
 pub mod handle;
 pub mod inventory_key;
-pub mod item_description;
 pub mod item_type;
 pub mod iter_helpers;
 pub mod movement_animation;
 pub mod ordered_hash_map;
-pub mod skill_description;
 pub mod skill_execution;
-pub mod skill_icon;
 pub mod speed;
 pub mod swap_key;
 

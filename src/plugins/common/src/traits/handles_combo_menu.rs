@@ -1,9 +1,7 @@
-use super::{inspect_able::InspectAble, thread_safe::ThreadSafe};
-use crate::tools::{
-	action_key::slot::PlayerSlot,
-	change::Change,
-	skill_description::SkillToken,
-	skill_icon::SkillIcon,
+use super::thread_safe::ThreadSafe;
+use crate::{
+	tools::{action_key::slot::PlayerSlot, change::Change},
+	traits::{accessors::get::RefInto, handles_localization::Token},
 };
 use bevy::prelude::*;
 use std::collections::HashSet;
@@ -13,14 +11,20 @@ pub type Combo<TKey, TSkill> = Vec<(Vec<TKey>, TSkill)>;
 pub trait HandlesComboMenu {
 	fn combos_with_skill<TSkill>() -> impl ConfigurePlayerCombos<TSkill>
 	where
-		for<'a> TSkill:
-			InspectAble<SkillToken> + InspectAble<SkillIcon> + PartialEq + Clone + ThreadSafe;
+		TSkill: PartialEq
+			+ Clone
+			+ ThreadSafe
+			+ for<'a> RefInto<'a, &'a Token>
+			+ for<'a> RefInto<'a, &'a Option<Handle<Image>>>;
 }
 
 pub trait ConfigurePlayerCombos<TSkill>
 where
-	for<'a> TSkill:
-		InspectAble<SkillToken> + InspectAble<SkillIcon> + PartialEq + Clone + ThreadSafe,
+	TSkill: PartialEq
+		+ Clone
+		+ ThreadSafe
+		+ for<'a> RefInto<'a, &'a Token>
+		+ for<'a> RefInto<'a, &'a Option<Handle<Image>>>,
 {
 	fn configure<TUpdateCombos, TCombos, M1, M2>(
 		&self,

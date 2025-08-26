@@ -12,7 +12,6 @@ use common::{
 	traits::{
 		accessors::get::{RefAs, RefInto},
 		handles_loadout_menu::GetItem,
-		inspect_able::{InspectAble, InspectField},
 		key_mappings::GetInput,
 	},
 };
@@ -25,7 +24,7 @@ pub fn panel_activity_colors_override<TMap, TPanel, TPrimer, TContainer>(
 ) where
 	TMap: Resource + GetInput<PlayerSlot, TInput = UserInput>,
 	TContainer: Resource + GetItem<PlayerSlot>,
-	TContainer::TItem: InspectAble<SkillExecution>,
+	TContainer::TItem: for<'a> RefInto<'a, &'a SkillExecution>,
 	TPanel: HasActiveColor
 		+ HasPanelColors
 		+ HasQueuedColor
@@ -52,14 +51,14 @@ fn get_color_override<TContainer, TMap, TPanel, TPrimer>(
 where
 	TPanel: HasActiveColor + HasPanelColors + HasQueuedColor + for<'a> RefInto<'a, PlayerSlot>,
 	TContainer: GetItem<PlayerSlot>,
-	TContainer::TItem: InspectAble<SkillExecution>,
+	TContainer::TItem: for<'a> RefInto<'a, &'a SkillExecution>,
 	TMap: GetInput<PlayerSlot, TInput = UserInput>,
 	for<'a> &'a TPrimer: Into<IsPrimed> + Into<UserInput>,
 {
 	let panel_key = panel.ref_as::<PlayerSlot>();
 	let state = container
 		.get_item(panel_key)
-		.map(SkillExecution::inspect_field)
+		.map(TContainer::TItem::ref_as::<&SkillExecution>)
 		.copied()
 		.unwrap_or_default();
 
@@ -208,8 +207,8 @@ mod tests {
 
 	struct _Item(SkillExecution);
 
-	impl InspectAble<SkillExecution> for _Item {
-		fn get_inspect_able_field(&self) -> &SkillExecution {
+	impl<'a> RefInto<'a, &'a SkillExecution> for _Item {
+		fn ref_into(&self) -> &SkillExecution {
 			&self.0
 		}
 	}

@@ -1,6 +1,11 @@
+use bevy::prelude::*;
 use common::{
-	tools::{action_key::slot::PlayerSlot, skill_description::SkillToken, skill_icon::SkillIcon},
-	traits::{handles_combo_menu::GetCombosOrdered, inspect_able::InspectAble},
+	tools::action_key::slot::PlayerSlot,
+	traits::{
+		accessors::get::RefInto,
+		handles_combo_menu::GetCombosOrdered,
+		handles_localization::Token,
+	},
 };
 use std::collections::HashSet;
 
@@ -34,7 +39,10 @@ pub(crate) trait BuildComboTreeLayout<TSkill> {
 impl<T, TSkill> BuildComboTreeLayout<TSkill> for T
 where
 	T: GetCombosOrdered<TSkill, PlayerSlot>,
-	TSkill: InspectAble<SkillToken> + InspectAble<SkillIcon> + Clone + PartialEq,
+	TSkill: Clone
+		+ PartialEq
+		+ for<'a> RefInto<'a, &'a Token>
+		+ for<'a> RefInto<'a, &'a Option<Handle<Image>>>,
 {
 	fn build_combo_tree_layout(&self) -> ComboTreeLayout<TSkill> {
 		let mut get_first_symbol = get_first_symbol(HasRoot::False);
@@ -148,7 +156,6 @@ fn replace_symbols_at<TSkill>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::prelude::*;
 	use common::{
 		tools::action_key::slot::Side,
 		traits::{handles_combo_menu::Combo, handles_localization::Token},
@@ -160,14 +167,14 @@ mod tests {
 
 	static TOKEN: LazyLock<Token> = LazyLock::new(|| Token::from(""));
 
-	impl InspectAble<SkillToken> for _Skill {
-		fn get_inspect_able_field(&self) -> &Token {
+	impl<'a> RefInto<'a, &'a Token> for _Skill {
+		fn ref_into(&self) -> &Token {
 			&TOKEN
 		}
 	}
 
-	impl InspectAble<SkillIcon> for _Skill {
-		fn get_inspect_able_field(&self) -> &Option<Handle<Image>> {
+	impl<'a> RefInto<'a, &'a Option<Handle<Image>>> for _Skill {
+		fn ref_into(&self) -> &Option<Handle<Image>> {
 			&self.0
 		}
 	}
