@@ -23,10 +23,10 @@ impl Swapper {
 						inventory.0.swap(a, b);
 					}
 					(SwapKey::Slot(a), SwapKey::Slot(b)) => {
-						let item_a = slots.0.remove(&a).unwrap_or_default();
-						let item_b = slots.0.remove(&b).unwrap_or_default();
-						slots.0.insert(a, item_b);
-						slots.0.insert(b, item_a);
+						let item_a = slots.items.remove(&a).unwrap_or_default();
+						let item_b = slots.items.remove(&b).unwrap_or_default();
+						slots.items.insert(a, item_b);
+						slots.items.insert(b, item_a);
 					}
 					(SwapKey::Slot(s), SwapKey::Inventory(InventoryKey(i)))
 					| (SwapKey::Inventory(InventoryKey(i)), SwapKey::Slot(s)) => {
@@ -41,7 +41,7 @@ impl Swapper {
 }
 
 fn get_or_default_mut(slots: &mut Slots, s: SlotKey) -> &mut Option<Handle<Item>> {
-	slots.0.entry(s).or_default()
+	slots.items.entry(s).or_default()
 }
 
 fn get_or_fill_mut(inventory: &mut Inventory, i: usize) -> &mut Option<Handle<Item>> {

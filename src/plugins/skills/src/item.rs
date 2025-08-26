@@ -8,9 +8,10 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	components::{asset_model::AssetModel, essence::Essence},
-	tools::item_type::ItemType,
+	tools::{item_type::ItemType, skill_execution::SkillExecution},
 	traits::{
 		accessors::get::RefInto,
+		handles_loadout::{ItemToken, SkillIcon, SkillToken},
 		handles_localization::Token,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
 	},
@@ -78,6 +79,53 @@ impl VisualizeItem for HandSlot {
 				..
 			}) => AssetModel::path(path),
 			_ => AssetModel::none(),
+		}
+	}
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum SkillItem {
+	Some {
+		item_token: Token,
+		skill_token: Option<Token>,
+		skill_icon: Option<Handle<Image>>,
+		execution: SkillExecution,
+	},
+	None,
+}
+
+impl<'a> RefInto<'a, ItemToken<'a>> for SkillItem {
+	fn ref_into(&'a self) -> ItemToken<'a> {
+		match self {
+			SkillItem::Some { item_token, .. } => ItemToken(Some(item_token)),
+			SkillItem::None => ItemToken(None),
+		}
+	}
+}
+
+impl<'a> RefInto<'a, SkillToken<'a>> for SkillItem {
+	fn ref_into(&'a self) -> SkillToken<'a> {
+		match self {
+			SkillItem::Some { skill_token, .. } => SkillToken(skill_token.as_ref()),
+			SkillItem::None => SkillToken(None),
+		}
+	}
+}
+
+impl<'a> RefInto<'a, SkillIcon<'a>> for SkillItem {
+	fn ref_into(&'a self) -> SkillIcon<'a> {
+		match self {
+			Self::Some { skill_icon, .. } => SkillIcon(skill_icon.as_ref()),
+			_ => SkillIcon(None),
+		}
+	}
+}
+
+impl<'a> RefInto<'a, &'a SkillExecution> for SkillItem {
+	fn ref_into(&'a self) -> &'a SkillExecution {
+		match self {
+			SkillItem::Some { execution, .. } => execution,
+			SkillItem::None => &SkillExecution::None,
 		}
 	}
 }

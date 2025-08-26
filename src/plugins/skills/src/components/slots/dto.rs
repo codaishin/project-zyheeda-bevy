@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 pub struct SlotsDto(Vec<(SlotKey, Option<String>)>);
 
 impl From<Slots> for SlotsDto {
-	fn from(Slots(items): Slots) -> Self {
+	fn from(Slots { items, .. }: Slots) -> Self {
 		Self(
 			items
 				.into_iter()
@@ -36,11 +36,12 @@ impl TryLoadFrom<SlotsDto> for Slots {
 	where
 		TLoadAsset: LoadAsset,
 	{
-		Ok(Self(
-			items
+		Ok(Self {
+			self_entity: None,
+			items: items
 				.into_iter()
 				.map(|(key, item)| (key, item.map(|item| asset_server.load_asset(item))))
 				.collect(),
-		))
+		})
 	}
 }
