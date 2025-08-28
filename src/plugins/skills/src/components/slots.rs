@@ -14,7 +14,7 @@ use crate::{
 		skill_item_assets_usage::SkillItemAssetsUsage,
 	},
 	skills::{QueuedSkill, Skill},
-	traits::{loadout_key::LoadoutKey, peek_next::PeekNext},
+	traits::peek_next::PeekNext,
 };
 use bevy::{asset::Handle, ecs::system::SystemParam, prelude::*};
 use common::{
@@ -207,10 +207,6 @@ impl SwapInternal<PlayerSlot> for Slots {
 		self.items.insert(a, item_b);
 		self.items.insert(b, item_a);
 	}
-}
-
-impl LoadoutKey for Slots {
-	type TKey = SlotKey;
 }
 
 impl<'a> Iterate<'a> for Slots {

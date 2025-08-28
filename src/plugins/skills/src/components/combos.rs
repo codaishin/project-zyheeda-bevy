@@ -1,20 +1,10 @@
 pub(crate) mod dto;
 
-use std::collections::HashSet;
-
 use super::combo_node::ComboNode;
 use crate::{
 	CombosDto,
 	skills::Skill,
-	traits::{
-		GetNodeMut,
-		Insert,
-		ReKey,
-		SetNextCombo,
-		peek_next::PeekNext,
-		peek_next_recursive::PeekNextRecursive,
-		write_item::WriteItem,
-	},
+	traits::{SetNextCombo, peek_next::PeekNext, peek_next_recursive::PeekNextRecursive},
 };
 use bevy::prelude::*;
 use common::{
@@ -25,10 +15,10 @@ use common::{
 	traits::{
 		handles_combo_menu::{Combo, GetCombosOrdered, NextConfiguredKeys},
 		handles_loadout::UpdateCombos,
-		iterate::Iterate,
 	},
 };
 use macros::SavableComponent;
+use std::collections::HashSet;
 
 #[derive(Component, SavableComponent, PartialEq, Debug, Clone)]
 #[savable_component(dto = CombosDto)]
@@ -117,38 +107,6 @@ where
 	}
 }
 
-impl<TNode, TKey> WriteItem<TKey, Option<Skill>> for Combos<TNode>
-where
-	for<'a> TNode: GetNodeMut<TKey, TNode<'a>: Insert<Option<Skill>>>,
-	for<'a> TKey: Iterate<'a, TItem = &'a SlotKey> + 'a,
-{
-	fn write_item(&mut self, key_path: &TKey, skill: Option<Skill>) {
-		self.current = None;
-
-		let Some(mut entry) = self.config.node_mut(key_path) else {
-			return;
-		};
-
-		entry.insert(skill);
-	}
-}
-
-impl<TNode, TKey> WriteItem<TKey, SlotKey> for Combos<TNode>
-where
-	for<'a> TNode: GetNodeMut<TKey, TNode<'a>: ReKey>,
-	for<'a> TKey: Iterate<'a, TItem = &'a SlotKey> + 'a,
-{
-	fn write_item(&mut self, key_path: &TKey, key: SlotKey) {
-		self.current = None;
-
-		let Some(mut entry) = self.config.node_mut(key_path) else {
-			return;
-		};
-
-		entry.re_key(key);
-	}
-}
-
 impl<TNode> NextConfiguredKeys<PlayerSlot> for Combos<TNode>
 where
 	TNode: NextConfiguredKeys<PlayerSlot>,
@@ -176,10 +134,10 @@ mod tests {
 		tools::action_key::slot::{PlayerSlot, Side},
 		traits::handles_localization::Token,
 	};
-	use macros::{NestedMocks, simple_mock};
+	use macros::simple_mock;
 	use mockall::predicate::eq;
-	use std::{cell::RefCell, collections::HashMap};
-	use testing::{Mock, NestedMocks};
+	use std::collections::HashMap;
+	use testing::Mock;
 
 	#[derive(Default)]
 	struct _Next(HashMap<(SlotKey, ItemType), Skill>);
@@ -310,227 +268,6 @@ mod tests {
 		let combos = Combos::new(_ComboNode(combos_vec.clone()));
 
 		assert_eq!(combos_vec, combos.combos_ordered())
-	}
-
-	#[derive(Default)]
-	struct _Node {
-		call_args: RefCell<Vec<Vec<SlotKey>>>,
-		entry: Option<_Entry>,
-	}
-
-	impl GetNodeMut<Vec<SlotKey>> for _Node {
-		type TNode<'a> = &'a mut _Entry;
-
-		fn node_mut<'a>(&'a mut self, key: &Vec<SlotKey>) -> Option<Self::TNode<'a>> {
-			self.call_args.get_mut().push(key.clone());
-			self.entry.as_mut()
-		}
-	}
-
-	simple_mock! {
-		_Entry {}
-		impl Insert<Option<Skill>> for _Entry {
-			fn insert(&mut self, value: Option<Skill>);
-		}
-		impl ReKey for _Entry {
-			fn re_key(&mut self, key: SlotKey);
-		}
-	}
-
-	#[derive(NestedMocks)]
-	struct _Entry {
-		mock: Mock_Entry,
-	}
-
-	impl Insert<Option<Skill>> for &mut _Entry {
-		fn insert(&mut self, value: Option<Skill>) {
-			self.mock.insert(value)
-		}
-	}
-
-	impl ReKey for &mut _Entry {
-		fn re_key(&mut self, key: SlotKey) {
-			self.mock.re_key(key)
-		}
-	}
-
-	#[test]
-	fn update_config_skill_use_correct_arguments() {
-		let mut combos = Combos::new(_Node {
-			entry: Some(_Entry::new().with_mock(|mock| {
-				mock.expect_insert().return_const(());
-			})),
-			..default()
-		});
-
-		combos.write_item(
-			&vec![
-				SlotKey::from(PlayerSlot::Lower(Side::Right)),
-				SlotKey::from(PlayerSlot::Lower(Side::Left)),
-			],
-			Some(Skill {
-				token: Token::from("my skill"),
-				..default()
-			}),
-		);
-
-		assert_eq!(
-			vec![vec![
-				SlotKey::from(PlayerSlot::Lower(Side::Right)),
-				SlotKey::from(PlayerSlot::Lower(Side::Left))
-			]],
-			combos.config.call_args.into_inner()
-		)
-	}
-
-	#[test]
-	fn update_config_skill_call_entry_insert() {
-		let mut combos = Combos::new(_Node {
-			entry: Some(_Entry::new().with_mock(|mock| {
-				mock.expect_insert()
-					.times(1)
-					.with(eq(Some(Skill {
-						token: Token::from("my skill"),
-						..default()
-					})))
-					.return_const(());
-			})),
-			..default()
-		});
-
-		combos.write_item(
-			&vec![SlotKey::from(PlayerSlot::Lower(Side::Right))],
-			Some(Skill {
-				token: Token::from("my skill"),
-				..default()
-			}),
-		);
-	}
-
-	#[test]
-	fn update_config_skill_clear_current() {
-		let mut combos = Combos {
-			config: _Node {
-				entry: Some(_Entry::new().with_mock(|mock| {
-					mock.expect_insert().return_const(());
-				})),
-				..default()
-			},
-			current: Some(_Node::default()),
-		};
-
-		combos.write_item(
-			&vec![SlotKey::from(PlayerSlot::Lower(Side::Right))],
-			Some(Skill {
-				token: Token::from("my skill"),
-				..default()
-			}),
-		);
-
-		assert!(combos.current.is_none());
-	}
-
-	#[test]
-	fn update_config_skill_clear_current_if_entry_is_none() {
-		let mut combos = Combos {
-			config: _Node {
-				entry: None,
-				..default()
-			},
-			current: Some(_Node::default()),
-		};
-
-		combos.write_item(
-			&vec![SlotKey::from(PlayerSlot::Lower(Side::Right))],
-			Some(Skill {
-				token: Token::from("my skill"),
-				..default()
-			}),
-		);
-
-		assert!(combos.current.is_none());
-	}
-
-	#[test]
-	fn update_config_re_key_use_correct_arguments() {
-		let mut combos = Combos::new(_Node {
-			entry: Some(_Entry::new().with_mock(|mock| {
-				mock.expect_re_key().return_const(());
-			})),
-			..default()
-		});
-
-		combos.write_item(
-			&vec![
-				SlotKey::from(PlayerSlot::Lower(Side::Right)),
-				SlotKey::from(PlayerSlot::Lower(Side::Left)),
-			],
-			SlotKey::from(PlayerSlot::Lower(Side::Left)),
-		);
-
-		assert_eq!(
-			vec![vec![
-				SlotKey::from(PlayerSlot::Lower(Side::Right)),
-				SlotKey::from(PlayerSlot::Lower(Side::Left))
-			]],
-			combos.config.call_args.into_inner()
-		)
-	}
-
-	#[test]
-	fn update_config_re_key_call_entry_re_key() {
-		let mut combos = Combos::new(_Node {
-			entry: Some(_Entry::new().with_mock(|mock| {
-				mock.expect_re_key()
-					.times(1)
-					.with(eq(SlotKey::from(PlayerSlot::Lower(Side::Left))))
-					.return_const(());
-			})),
-			..default()
-		});
-
-		combos.write_item(
-			&vec![SlotKey::from(PlayerSlot::Lower(Side::Left))],
-			SlotKey::from(PlayerSlot::Lower(Side::Left)),
-		);
-	}
-
-	#[test]
-	fn update_config_re_key_clear_current() {
-		let mut combos = Combos {
-			config: _Node {
-				entry: Some(_Entry::new().with_mock(|mock| {
-					mock.expect_re_key().return_const(());
-				})),
-				..default()
-			},
-			current: Some(_Node::default()),
-		};
-
-		combos.write_item(
-			&vec![SlotKey::from(PlayerSlot::Lower(Side::Right))],
-			SlotKey::from(PlayerSlot::Lower(Side::Left)),
-		);
-
-		assert!(combos.current.is_none());
-	}
-
-	#[test]
-	fn update_config_re_key_clear_current_if_entry_is_none() {
-		let mut combos = Combos {
-			config: _Node {
-				entry: None,
-				..default()
-			},
-			current: Some(_Node::default()),
-		};
-
-		combos.write_item(
-			&vec![SlotKey::from(PlayerSlot::Lower(Side::Right))],
-			SlotKey::from(PlayerSlot::Lower(Side::Left)),
-		);
-
-		assert!(combos.current.is_none());
 	}
 
 	mod next_keys {

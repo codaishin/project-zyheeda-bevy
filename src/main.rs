@@ -66,7 +66,6 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		&players,
 	);
 	let graphics = GraphicsPlugin::from_plugins(&loading, &savegame, &interactions, &behaviors);
-	let menus = MenuPlugin::from_plugins(&loading, &savegame, &settings, &localization, &graphics);
 	let skills = SkillsPlugin::from_plugins(
 		&savegame,
 		&interactions,
@@ -75,8 +74,8 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		&behaviors,
 		&players,
 		&enemies,
-		&menus,
 	);
+	let menus = MenuPlugin::from_plugins(&loading, &savegame, &settings, &localization, &graphics);
 	let bars = BarsPlugin::from_plugins(&players, &enemies, &graphics);
 	let camera_control =
 		CameraControlPlugin::from_plugins(&settings, &savegame, &players, &graphics);
