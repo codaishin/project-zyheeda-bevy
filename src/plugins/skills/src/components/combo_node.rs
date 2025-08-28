@@ -1,12 +1,6 @@
 pub(crate) mod dto;
-pub(crate) mod node_entry_mut;
 
-use std::{cmp::Ordering, collections::HashSet};
-
-use crate::{
-	skills::Skill,
-	traits::{GetNodeMut, peek_next_recursive::PeekNextRecursive},
-};
+use crate::{skills::Skill, traits::peek_next_recursive::PeekNextRecursive};
 use bevy::prelude::*;
 use common::{
 	tools::{
@@ -22,6 +16,7 @@ use common::{
 		iterate::Iterate,
 	},
 };
+use std::{cmp::Ordering, collections::HashSet};
 
 #[derive(Component, Clone, PartialEq, Debug)]
 pub struct ComboNode<TSkill = Skill>(OrderedHashMap<SlotKey, (TSkill, ComboNode<TSkill>)>);
@@ -169,36 +164,6 @@ fn key_count_ascending<TSkill>(
 	(keys_b, _): &(Vec<PlayerSlot>, Option<TSkill>),
 ) -> Ordering {
 	keys_a.len().cmp(&keys_b.len())
-}
-
-#[derive(Debug, PartialEq)]
-pub struct NodeEntryMut<'a, TSkill> {
-	key: SlotKey,
-	tree: &'a mut OrderedHashMap<SlotKey, (TSkill, ComboNode<TSkill>)>,
-}
-
-impl<TKey, TSkill> GetNodeMut<TKey> for ComboNode<TSkill>
-where
-	for<'a> TKey: Iterate<'a, TItem = &'a SlotKey> + 'a,
-{
-	type TNode<'a>
-		= NodeEntryMut<'a, TSkill>
-	where
-		Self: 'a;
-
-	fn node_mut<'a>(&'a mut self, slot_key_path: &TKey) -> Option<Self::TNode<'a>> {
-		let mut slot_key_path = slot_key_path.iterate();
-		let mut key = *slot_key_path.next()?;
-		let mut tree = &mut self.0;
-
-		for next_key in slot_key_path {
-			let (_, node) = tree.get_mut(&key)?;
-			key = *next_key;
-			tree = &mut node.0;
-		}
-
-		Some(NodeEntryMut { key, tree })
-	}
 }
 
 #[derive(Debug, PartialEq)]
@@ -761,136 +726,6 @@ mod tests {
 		fn from(value: ComboNode<_Out>) -> Self {
 			_Result(value)
 		}
-	}
-
-	#[test]
-	fn get_a_mutable_top_entry() {
-		let conf = [(
-			SlotKey::from(PlayerSlot::Lower(Side::Right)),
-			(
-				Skill {
-					token: Token::from("my skill"),
-					..default()
-				},
-				default(),
-			),
-		)];
-		let mut root = ComboNode::new(conf.clone());
-		let entry = root.node_mut(&[SlotKey::from(PlayerSlot::Lower(Side::Right))]);
-
-		assert_eq!(
-			Some(NodeEntryMut {
-				key: SlotKey::from(PlayerSlot::Lower(Side::Right)),
-				tree: &mut OrderedHashMap::from(conf),
-			}),
-			entry,
-		)
-	}
-
-	#[test]
-	fn get_a_mutable_child_entry() {
-		let child_conf = [(
-			SlotKey::from(PlayerSlot::Lower(Side::Left)),
-			(
-				Skill {
-					token: Token::from("my child skill"),
-					..default()
-				},
-				default(),
-			),
-		)];
-		let conf = [(
-			SlotKey::from(PlayerSlot::Lower(Side::Right)),
-			(
-				Skill {
-					token: Token::from("my skill"),
-					..default()
-				},
-				ComboNode::new(child_conf.clone()),
-			),
-		)];
-		let mut root = ComboNode::new(conf);
-		let entry = root.node_mut(&[
-			SlotKey::from(PlayerSlot::Lower(Side::Right)),
-			SlotKey::from(PlayerSlot::Lower(Side::Left)),
-		]);
-
-		assert_eq!(
-			Some(NodeEntryMut {
-				key: SlotKey::from(PlayerSlot::Lower(Side::Left)),
-				tree: &mut OrderedHashMap::from(child_conf),
-			}),
-			entry,
-		)
-	}
-
-	#[test]
-	fn get_mutable_none_when_nothing_found_with_key_path() {
-		let conf = [(
-			SlotKey::from(PlayerSlot::Lower(Side::Right)),
-			(
-				Skill {
-					token: Token::from("my skill"),
-					..default()
-				},
-				ComboNode::new([(
-					SlotKey::from(PlayerSlot::Lower(Side::Left)),
-					(
-						Skill {
-							token: Token::from("my child skill"),
-							..default()
-						},
-						default(),
-					),
-				)]),
-			),
-		)];
-		let mut root = ComboNode::new(conf);
-		let entry = root.node_mut(&[
-			SlotKey::from(PlayerSlot::Lower(Side::Right)),
-			SlotKey::from(PlayerSlot::Lower(Side::Left)),
-			SlotKey::from(PlayerSlot::Lower(Side::Right)),
-			SlotKey::from(PlayerSlot::Lower(Side::Left)),
-		]);
-
-		assert_eq!(None, entry)
-	}
-
-	#[test]
-	fn get_a_mutable_entry_when_only_last_in_key_path_not_found() {
-		let conf = [(
-			SlotKey::from(PlayerSlot::Lower(Side::Right)),
-			(
-				Skill {
-					token: Token::from("my skill"),
-					..default()
-				},
-				ComboNode::new([(
-					SlotKey::from(PlayerSlot::Lower(Side::Left)),
-					(
-						Skill {
-							token: Token::from("my child skill"),
-							..default()
-						},
-						default(),
-					),
-				)]),
-			),
-		)];
-		let mut root = ComboNode::new(conf);
-		let entry = root.node_mut(&[
-			SlotKey::from(PlayerSlot::Lower(Side::Right)),
-			SlotKey::from(PlayerSlot::Lower(Side::Left)),
-			SlotKey::from(PlayerSlot::Lower(Side::Right)),
-		]);
-
-		assert_eq!(
-			Some(NodeEntryMut {
-				key: SlotKey::from(PlayerSlot::Lower(Side::Right)),
-				tree: &mut OrderedHashMap::default(),
-			}),
-			entry,
-		)
 	}
 
 	#[test]

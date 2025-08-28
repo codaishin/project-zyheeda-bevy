@@ -4,7 +4,6 @@ use crate::{
 	components::{inventory::dto::InventoryDto, slots::Slots},
 	item::{Item, SkillItem},
 	resources::skill_item_assets::SkillItemAssets,
-	traits::loadout_key::LoadoutKey,
 };
 use bevy::prelude::*;
 use common::{
@@ -98,10 +97,6 @@ fn fill(inventory: &mut Vec<Option<Handle<Item>>>, inventory_key: usize) {
 	for _ in 0..fill_len {
 		inventory.push(None);
 	}
-}
-
-impl LoadoutKey for Inventory {
-	type TKey = InventoryKey;
 }
 
 impl<'a> Iterate<'a> for Inventory {

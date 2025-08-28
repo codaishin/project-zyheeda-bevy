@@ -5,7 +5,6 @@ mod observers;
 mod resources;
 mod skills;
 mod systems;
-mod tools;
 mod traits;
 
 use crate::{
@@ -23,18 +22,13 @@ use bevy::prelude::*;
 use common::{
 	states::game_state::{GameState, LoadingGame},
 	systems::log::OnError,
-	tools::{
-		action_key::slot::{PlayerSlot, SlotKey},
-		inventory_key::InventoryKey,
-	},
+	tools::action_key::slot::SlotKey,
 	traits::{
-		handles_combo_menu::{ConfigurePlayerCombos, HandlesComboMenu},
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
 		handles_effects::HandlesAllEffects,
 		handles_enemies::HandlesEnemies,
 		handles_load_tracking::{DependenciesProgress, HandlesLoadTracking, LoadTrackingInApp},
 		handles_loadout::HandlesLoadout,
-		handles_loadout_menu::{ConfigureInventory, HandlesLoadoutMenu},
 		handles_orientation::HandlesOrientation,
 		handles_player::{
 			ConfiguresPlayerSkillAnimations,
@@ -51,7 +45,6 @@ use common::{
 	},
 };
 use components::{
-	combo_node::ComboNode,
 	combos::Combos,
 	combos_time_out::CombosTimeOut,
 	inventory::Inventory,
@@ -65,18 +58,15 @@ use skills::{RunSkillBehavior, Skill, dto::SkillDto};
 use std::{hash::Hash, marker::PhantomData};
 use systems::{
 	advance_active_skill::advance_active_skill,
-	combos::{queue_update::ComboQueueUpdate, update::UpdateCombos},
+	combos::queue_update::ComboQueueUpdate,
 	execute::ExecuteSkills,
 	flush::flush,
 	flush_skill_combos::flush_skill_combos,
-	loadout_descriptor::LoadoutDescriptor,
-	quickbar_descriptor::get_quickbar_descriptors_for,
 };
-use tools::combo_descriptor::ComboDescriptor;
 
 pub struct SkillsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSaveGame, TInteractions, TLoading, TSettings, TBehaviors, TPlayers, TEnemies, TMenu>
+impl<TSaveGame, TInteractions, TLoading, TSettings, TBehaviors, TPlayers, TEnemies>
 	SkillsPlugin<(
 		TSaveGame,
 		TInteractions,
@@ -85,7 +75,6 @@ impl<TSaveGame, TInteractions, TLoading, TSettings, TBehaviors, TPlayers, TEnemi
 		TBehaviors,
 		TPlayers,
 		TEnemies,
-		TMenu,
 	)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
@@ -99,7 +88,6 @@ where
 		+ HandlesPlayerMouse
 		+ ConfiguresPlayerSkillAnimations,
 	TEnemies: ThreadSafe + HandlesEnemies,
-	TMenu: ThreadSafe + HandlesLoadoutMenu + HandlesComboMenu,
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn from_plugins(
@@ -110,7 +98,6 @@ where
 		_: &TBehaviors,
 		_: &TPlayers,
 		_: &TEnemies,
-		_: &TMenu,
 	) -> Self {
 		Self(PhantomData)
 	}
@@ -195,26 +182,9 @@ where
 				.run_if(in_state(GameState::Play)),
 		);
 	}
-
-	fn config_menus(&self, app: &mut App) {
-		TMenu::loadout_with_swapper::<Swapper>().configure(
-			app,
-			Inventory::describe_loadout_for::<TPlayers::TPlayer, InventoryKey>,
-			Slots::describe_loadout_for::<TPlayers::TPlayer, PlayerSlot>,
-		);
-		TMenu::configure_quickbar_menu(
-			app,
-			get_quickbar_descriptors_for::<TPlayers::TPlayer, Slots, Queue, Combos>,
-		);
-		TMenu::combos_with_skill::<Skill>().configure(
-			app,
-			ComboDescriptor::describe_combos_for::<TPlayers::TPlayer>,
-			Combos::<ComboNode>::update_for::<TPlayers::TPlayer, PlayerSlot>,
-		);
-	}
 }
 
-impl<TSaveGame, TInteractions, TLoading, TSettings, TBehaviors, TPlayers, TEnemies, TMenu> Plugin
+impl<TSaveGame, TInteractions, TLoading, TSettings, TBehaviors, TPlayers, TEnemies> Plugin
 	for SkillsPlugin<(
 		TSaveGame,
 		TInteractions,
@@ -223,7 +193,6 @@ impl<TSaveGame, TInteractions, TLoading, TSettings, TBehaviors, TPlayers, TEnemi
 		TBehaviors,
 		TPlayers,
 		TEnemies,
-		TMenu,
 	)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
@@ -237,14 +206,12 @@ where
 		+ HandlesPlayerMouse
 		+ ConfiguresPlayerSkillAnimations,
 	TEnemies: ThreadSafe + HandlesEnemies,
-	TMenu: ThreadSafe + HandlesLoadoutMenu + HandlesComboMenu,
 {
 	fn build(&self, app: &mut App) {
 		self.skill_load(app);
 		self.item_load(app);
 		self.loadout(app);
 		self.skill_execution(app);
-		self.config_menus(app);
 	}
 }
 
