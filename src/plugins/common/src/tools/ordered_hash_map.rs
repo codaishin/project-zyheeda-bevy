@@ -13,28 +13,33 @@ use std::{
 
 /// A naive wrapper around a HashMap that retains key
 /// insertion order by tracking it in a separate
-/// vector containing copies of the respective key.
+/// vector containing copies of the respective keys.
+///
+/// Removal and Insertion are `O(n)` operations.
 #[derive(Debug, PartialEq, Clone)]
 pub struct OrderedHashMap<TKey, TValue>
 where
 	TKey: Eq + Hash,
 {
 	map: HashMap<TKey, TValue>,
-	order: Vec<TKey>,
+	order: keys::Unique<TKey>,
 }
 
 impl<TKey, TValue> OrderedHashMap<TKey, TValue>
 where
 	TKey: Eq + Hash + Copy,
 {
+	/// Inserts a key-value pair into the map.
+	///
+	/// Will cause this key to be last in the insertion order, even if the
+	/// key-value pair was already contained.
 	pub fn insert(&mut self, key: TKey, value: TValue) {
-		self.order.retain(|pos| pos != &key);
-		self.order.push(key);
+		self.order.push_back_unique(key);
 		self.map.insert(key, value);
 	}
 
 	pub fn remove(&mut self, key: &TKey) -> Option<TValue> {
-		self.order.retain(|pos| pos != key);
+		self.order.remove(key);
 		self.map.remove(key)
 	}
 
@@ -56,25 +61,29 @@ where
 		}
 	}
 
-	pub fn iter(&self) -> impl Iterator<Item = (&TKey, &TValue)> {
-		self.order
-			.iter()
-			.filter_map(|key| Some((key, self.map.get(key)?)))
+	pub fn iter(&self) -> Iter<'_, TKey, TValue> {
+		Iter {
+			map: &self.map,
+			order: self.order.iter(),
+		}
 	}
 
-	pub fn iter_mut(&mut self) -> impl Iterator<Item = (&TKey, &mut TValue)> {
+	pub fn iter_mut(&mut self) -> IterMut<'_, TKey, TValue> {
 		IterMut {
 			map: &mut self.map,
 			order: self.order.iter(),
 		}
 	}
 
-	pub fn keys(&self) -> impl Iterator<Item = &TKey> {
+	pub fn keys(&self) -> std::slice::Iter<'_, TKey> {
 		self.order.iter()
 	}
 
-	pub fn values(&self) -> impl Iterator<Item = &TValue> {
-		self.order.iter().filter_map(|key| self.map.get(key))
+	pub fn values(&self) -> Values<'_, TKey, TValue> {
+		Values {
+			map: &self.map,
+			order: self.order.iter(),
+		}
 	}
 
 	pub fn is_empty(&self) -> bool {
@@ -124,19 +133,36 @@ where
 	}
 }
 
-pub struct IterMut<'a, TKey, TValue, TKeys>
-where
-	TKey: 'a + Eq + Hash,
-	TKeys: Iterator<Item = &'a TKey>,
-{
-	map: &'a mut HashMap<TKey, TValue>,
-	order: TKeys,
+pub struct Iter<'a, TKey, TValue> {
+	map: &'a HashMap<TKey, TValue>,
+	order: std::slice::Iter<'a, TKey>,
 }
 
-impl<'a, TKey, TValue, TKeys> Iterator for IterMut<'a, TKey, TValue, TKeys>
+impl<'a, TKey, TValue> Iterator for Iter<'a, TKey, TValue>
 where
 	TKey: Eq + Hash,
-	TKeys: Iterator<Item = &'a TKey>,
+{
+	type Item = (&'a TKey, &'a TValue);
+
+	fn next(&mut self) -> Option<Self::Item> {
+		let key = self.order.next()?;
+		let value = self.map.get(key)?;
+
+		Some((key, value))
+	}
+}
+
+pub struct IterMut<'a, TKey, TValue>
+where
+	TKey: 'a + Eq + Hash,
+{
+	map: &'a mut HashMap<TKey, TValue>,
+	order: std::slice::Iter<'a, TKey>,
+}
+
+impl<'a, TKey, TValue> Iterator for IterMut<'a, TKey, TValue>
+where
+	TKey: Eq + Hash,
 {
 	type Item = (&'a TKey, &'a mut TValue);
 
@@ -144,12 +170,11 @@ where
 		let key = self.order.next()?;
 		let value = self.map.get_mut(key)?;
 
-		// SAFETY: I believe this would work without `unsafe`,
-		// if the method had a generic lifetime like
-		// `fn next<'a>(&'a mut self) -> Option<Self::Item<'a>>`.
-		// However, as it stands the borrow checker doesn't seem
-		// to be able to reason about that. But `self` outlives both
-		// the `order` and the `map` field, so `unsafe` should be safe ;) here
+		// Safety: The compiler cannot reason about disjointed mutable references here.
+		// We are fine as long as `order` produces unique keys.
+		// A streaming iterator - that uses `&'a mut self` - wouldn't have this problem.
+		// It would tie each yielded value to the lifetime of the iterator not the implicit
+		// lifetime of the function call.
 		Some((key, unsafe { &mut *(value as *mut TValue) }))
 	}
 }
@@ -181,9 +206,31 @@ where
 		if self.0.order.is_empty() {
 			return None;
 		}
-		let key = self.0.order.remove(0);
+		let key = self.0.order.pop_front();
 		let value = self.0.map.remove(&key)?;
 		Some((key, value))
+	}
+}
+
+pub struct Values<'a, TKey, TValue>
+where
+	TKey: Eq + Hash,
+{
+	map: &'a HashMap<TKey, TValue>,
+	order: std::slice::Iter<'a, TKey>,
+}
+
+impl<'a, TKey, TValue> Iterator for Values<'a, TKey, TValue>
+where
+	TKey: Eq + Hash,
+{
+	type Item = &'a TValue;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		let key = self.order.next()?;
+		let value = self.map.get(key)?;
+
+		Some(value)
 	}
 }
 
@@ -192,7 +239,7 @@ where
 	TKey: Eq + Hash + Copy,
 {
 	entry: HashMapVacantEntry<'a, TKey, TValue>,
-	order: &'a mut Vec<TKey>,
+	order: &'a mut keys::Unique<TKey>,
 }
 
 impl<'a, TKey, TValue> VacantEntry<'a, TKey, TValue>
@@ -200,7 +247,7 @@ where
 	TKey: Eq + Hash + Copy,
 {
 	pub fn insert(self, value: TValue) -> &'a mut TValue {
-		self.order.push(*self.entry.key());
+		self.order.push_back_unique(*self.entry.key());
 		self.entry.insert(value)
 	}
 }
@@ -240,6 +287,53 @@ where
 	fn extend<T: IntoIterator<Item = (TKey, TValue)>>(&mut self, iter: T) {
 		for (key, value) in iter {
 			self.insert(key, value);
+		}
+	}
+}
+
+mod keys {
+
+	/// Holds unique values like a [`HashSet`](std::collections::HashSet),
+	/// but retains insertion order.
+	///
+	/// Removal and Insertion are `O(n)` operations.
+	#[derive(Debug, PartialEq, Clone)]
+	pub(super) struct Unique<TKey>(Vec<TKey>)
+	where
+		TKey: PartialEq;
+
+	impl<TKey> Unique<TKey>
+	where
+		TKey: PartialEq,
+	{
+		pub(super) fn is_empty(&self) -> bool {
+			self.0.is_empty()
+		}
+
+		pub(super) fn push_back_unique(&mut self, key: TKey) {
+			self.remove(&key);
+			self.0.push(key);
+		}
+
+		pub(super) fn remove(&mut self, key: &TKey) {
+			self.0.retain(|k| k != key);
+		}
+
+		pub(super) fn pop_front(&mut self) -> TKey {
+			self.0.remove(0)
+		}
+
+		pub(super) fn iter(&self) -> std::slice::Iter<'_, TKey> {
+			self.0.iter()
+		}
+	}
+
+	impl<TKey> Default for Unique<TKey>
+	where
+		TKey: PartialEq,
+	{
+		fn default() -> Self {
+			Self(Vec::default())
 		}
 	}
 }
@@ -507,6 +601,20 @@ mod tests {
 				(order, map),
 			)
 		})
+	}
+
+	#[test]
+	fn keys() {
+		let map = OrderedHashMap::from([(-11, "0"), (32, "1")]);
+
+		assert_eq!(vec![&-11, &32], map.keys().collect::<Vec<_>>());
+	}
+
+	#[test]
+	fn values() {
+		let map = OrderedHashMap::from([(-11, "0"), (32, "1")]);
+
+		assert_eq!(vec![&"0", &"1"], map.values().collect::<Vec<_>>());
 	}
 
 	#[test]
