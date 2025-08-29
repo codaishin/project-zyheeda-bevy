@@ -179,19 +179,17 @@ pub enum FtlError {
 	},
 }
 
-impl From<FtlError> for String {
-	fn from(error: FtlError) -> Self {
-		match error {
-			FtlError::NoBundle(ln) => format!("no `FluentBundle` for {ln}"),
-			FtlError::NoMessageFor(token) => format!("no message found for {token}"),
-			FtlError::NoPatternFor(token) => format!("no pattern found for {token}"),
-			FtlError::FluentErrors { token, errors } => format!(
-				"errors for {token}:\n\
-					 {}",
-				list_string(&errors)
-			),
+impl Display for FtlError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			FtlError::NoBundle(ln) => write!(f, "no `FluentBundle` for {ln}"),
+			FtlError::NoMessageFor(token) => write!(f, "no message found for {token}"),
+			FtlError::NoPatternFor(token) => write!(f, "no pattern found for {token}"),
+			FtlError::FluentErrors { token, errors } => {
+				write!(f, "errors for {token}:\n{}", list_string(errors))
+			}
 			FtlError::FallbackAttempt { token, fallback } => {
-				format!("fallback attempted for {token} -> {fallback}")
+				write!(f, "fallback attempted for {token} -> {fallback}")
 			}
 		}
 	}

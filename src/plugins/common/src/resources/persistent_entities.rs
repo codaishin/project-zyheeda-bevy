@@ -1,6 +1,6 @@
 use crate::components::persistent_entity::PersistentEntity;
 use bevy::prelude::*;
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 use zyheeda_core::logger::{Log, Logger};
 
 #[derive(Resource, Debug, PartialEq, Default)]
@@ -18,12 +18,21 @@ where
 {
 	pub(crate) fn get_entity(&self, persistent_entity: &PersistentEntity) -> Option<Entity> {
 		let Some(entity) = self.entities.get(persistent_entity) else {
-			self.logger
-				.log_warning(format!("{persistent_entity:?}: no matching entity found"));
+			self.logger.log_warning(NoMatch(*persistent_entity));
 			return None;
 		};
 
 		Some(*entity)
+	}
+}
+
+#[derive(Debug, PartialEq)]
+struct NoMatch(PersistentEntity);
+
+impl Display for NoMatch {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		let Self(persistent_entity) = self;
+		write!(f, "{persistent_entity:?}: no matching entity found")
 	}
 }
 
@@ -36,8 +45,8 @@ mod tests {
 	mock! {
 		_Logger {}
 		impl Log for _Logger {
-			fn log_warning<TError>(&self, value: TError) where TError: Into<String> + 'static;
-			fn log_error<TError>(&self, value: TError) where TError: Into<String> + 'static;
+			fn log_warning<TError>(&self, value: TError) where TError: 'static;
+			fn log_error<TError>(&self, value: TError) where TError: 'static;
 		}
 	}
 
@@ -49,7 +58,9 @@ mod tests {
 		let persistent_entity = PersistentEntity::default();
 		let persistent_entities = PersistentEntities {
 			entities: HashMap::from([(persistent_entity, target)]),
-			logger: Mock_Logger::new(),
+			logger: Mock_Logger::new_mock(|mock| {
+				mock.expect_log_error::<NoMatch>().never();
+			}),
 		};
 
 		let entity = persistent_entities.get_entity(&persistent_entity);
@@ -62,11 +73,9 @@ mod tests {
 		let persistent_entity = PersistentEntity::default();
 		let persistent_entities = PersistentEntities {
 			logger: Mock_Logger::new_mock(|mock| {
-				mock.expect_log_warning::<String>()
+				mock.expect_log_warning()
 					.times(1)
-					.with(eq(format!(
-						"{persistent_entity:?}: no matching entity found"
-					)))
+					.with(eq(NoMatch(persistent_entity)))
 					.return_const(());
 			}),
 			..default()
