@@ -44,7 +44,7 @@ where
 	fn spawn(
 		&self,
 		commands: &mut Commands,
-		localize: &mut TLocalization,
+		localize: &TLocalization,
 		tooltip_entity: Entity,
 		tooltip: &Tooltip<T>,
 	) where

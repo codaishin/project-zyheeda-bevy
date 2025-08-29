@@ -146,7 +146,7 @@ where
 	fn spawn(
 		&self,
 		commands: &mut Commands,
-		localize: &mut TLocalization,
+		localize: &TLocalization,
 		tooltip_entity: Entity,
 		tooltip: &Tooltip<T>,
 	) {
@@ -171,7 +171,7 @@ mod tests {
 	struct _Localize;
 
 	impl LocalizeToken for _Localize {
-		fn localize_token<TToken>(&mut self, token: TToken) -> LocalizationResult
+		fn localize_token<TToken>(&self, token: TToken) -> LocalizationResult
 		where
 			TToken: Into<Token> + 'static,
 		{
@@ -255,7 +255,7 @@ mod tests {
 	impl InsertUiContent for Tooltip<_T> {
 		fn insert_ui_content<TLocalization>(
 			&self,
-			localize: &mut TLocalization,
+			localize: &TLocalization,
 			parent: &mut RelatedSpawnerCommands<ChildOf>,
 		) where
 			TLocalization: LocalizeToken,

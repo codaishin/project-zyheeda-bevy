@@ -20,7 +20,7 @@ impl TooltipUiConfig for &'static str {
 impl InsertUiContent for Tooltip<&'static str> {
 	fn insert_ui_content<TLocalization>(
 		&self,
-		localize: &mut TLocalization,
+		localize: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
 		TLocalization: LocalizeToken,
@@ -55,7 +55,7 @@ impl TooltipUiConfig for String {
 impl InsertUiContent for Tooltip<String> {
 	fn insert_ui_content<TLocalization>(
 		&self,
-		localize: &mut TLocalization,
+		localize: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
 		TLocalization: LocalizeToken,
@@ -90,7 +90,7 @@ impl TooltipUiConfig for Localized {
 impl InsertUiContent for Tooltip<Localized> {
 	fn insert_ui_content<TLocalization>(
 		&self,
-		_: &mut TLocalization,
+		_: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) {
 		parent.spawn((

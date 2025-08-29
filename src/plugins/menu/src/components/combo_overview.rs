@@ -301,7 +301,7 @@ where
 {
 	fn insert_ui_content<TLocalization>(
 		&self,
-		localize: &mut TLocalization,
+		localize: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
 		TLocalization: LocalizeToken + 'static,
@@ -336,7 +336,7 @@ fn add_title(parent: &mut RelatedSpawnerCommands<ChildOf>, title: Localized) {
 }
 
 fn add_empty_combo<TLocalization>(
-	localize: &mut TLocalization,
+	localize: &TLocalization,
 	parent: &mut RelatedSpawnerCommands<ChildOf>,
 	icon: &Handle<Image>,
 ) where
@@ -367,7 +367,7 @@ fn add_empty_combo<TLocalization>(
 }
 
 fn add_combo_list<TSkill, TLocalization>(
-	localize: &mut TLocalization,
+	localize: &TLocalization,
 	parent: &mut RelatedSpawnerCommands<ChildOf>,
 	combo_overview: &ComboOverview<TSkill>,
 ) where
@@ -395,7 +395,7 @@ fn add_combo_list<TSkill, TLocalization>(
 }
 
 fn add_combo<TSkill, TLocalization>(
-	localize: &mut TLocalization,
+	localize: &TLocalization,
 	parent: &mut RelatedSpawnerCommands<ChildOf>,
 	combo: &[ComboTreeElement<TSkill>],
 	local_z: i32,
@@ -447,7 +447,7 @@ where
 	TLocalization: LocalizeToken + 'static,
 {
 	fn start_combo(
-		localize: &mut TLocalization,
+		localize: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 		icon: &Handle<Image>,
 		PanelOverlay(panel_overlays): PanelOverlay<TLocalization>,
@@ -470,7 +470,7 @@ where
 	}
 
 	fn empty(
-		_: &mut TLocalization,
+		_: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 		PanelBackground(panel_background): PanelBackground,
 	) {
@@ -499,7 +499,7 @@ where
 {
 	fn spawn_as_child(
 		self,
-		localize: &mut TLocalization,
+		localize: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 		icon: &Handle<Image>,
 	) {
@@ -530,7 +530,7 @@ where
 	}
 
 	fn skill(
-		localize: &mut TLocalization,
+		localize: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 		key_path: &[PlayerSlot],
 		skill: &TSkill,
@@ -602,7 +602,7 @@ where
 }
 
 type InsertFunc<TLocalization> =
-	fn(&[PlayerSlot], &mut RelatedSpawnerCommands<ChildOf>, &mut TLocalization);
+	fn(&[PlayerSlot], &mut RelatedSpawnerCommands<ChildOf>, &TLocalization);
 
 struct PanelOverlay<TLocalization>(&'static [InsertFunc<TLocalization>])
 where
@@ -637,7 +637,7 @@ fn add_background_corner(parent: &mut RelatedSpawnerCommands<ChildOf>) {
 fn add_key<TLocalization>(
 	key_path: &[PlayerSlot],
 	parent: &mut RelatedSpawnerCommands<ChildOf>,
-	_: &mut TLocalization,
+	_: &TLocalization,
 ) where
 	TLocalization: LocalizeToken,
 {
@@ -659,7 +659,7 @@ fn add_key<TLocalization>(
 fn add_append_button<TLocalization>(
 	key_path: &[PlayerSlot],
 	parent: &mut RelatedSpawnerCommands<ChildOf>,
-	localize: &mut TLocalization,
+	localize: &TLocalization,
 ) where
 	TLocalization: LocalizeToken,
 {
@@ -686,7 +686,7 @@ fn add_append_button<TLocalization>(
 fn add_delete_button<TLocalization>(
 	key_path: &[PlayerSlot],
 	parent: &mut RelatedSpawnerCommands<ChildOf>,
-	localize: &mut TLocalization,
+	localize: &TLocalization,
 ) where
 	TLocalization: LocalizeToken,
 {

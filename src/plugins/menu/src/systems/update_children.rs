@@ -5,7 +5,7 @@ use common::traits::handles_localization::LocalizeToken;
 pub(crate) fn update_children<TComponent, TLocalization>(
 	mut commands: Commands,
 	components: Query<(Entity, &TComponent), Changed<TComponent>>,
-	mut localization_server: ResMut<TLocalization>,
+	localization_server: Res<TLocalization>,
 ) where
 	TComponent: InsertUiContent + Component,
 	TLocalization: LocalizeToken + Resource,
@@ -16,7 +16,7 @@ pub(crate) fn update_children<TComponent, TLocalization>(
 		};
 		entity.despawn_related::<Children>();
 		entity.with_children(|parent| {
-			component.insert_ui_content(localization_server.as_mut(), parent)
+			component.insert_ui_content(localization_server.as_ref(), parent)
 		});
 	}
 }
@@ -46,7 +46,7 @@ mod tests {
 	impl InsertUiContent for _Component {
 		fn insert_ui_content<TLocalization>(
 			&self,
-			localize: &mut TLocalization,
+			localize: &TLocalization,
 			parent: &mut RelatedSpawnerCommands<ChildOf>,
 		) where
 			TLocalization: LocalizeToken + ThreadSafe,
@@ -61,7 +61,7 @@ mod tests {
 	struct _Localization;
 
 	impl LocalizeToken for _Localization {
-		fn localize_token<TToken>(&mut self, token: TToken) -> LocalizationResult
+		fn localize_token<TToken>(&self, token: TToken) -> LocalizationResult
 		where
 			TToken: Into<Token> + 'static,
 		{

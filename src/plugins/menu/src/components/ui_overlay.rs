@@ -30,7 +30,7 @@ impl LoadUi<AssetServer> for UIOverlay {
 impl InsertUiContent for UIOverlay {
 	fn insert_ui_content<TLocalization>(
 		&self,
-		_: &mut TLocalization,
+		_: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) {
 		add_quickbar(parent);

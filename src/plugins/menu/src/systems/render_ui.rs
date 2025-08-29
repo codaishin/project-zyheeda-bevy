@@ -7,7 +7,7 @@ impl<T> RenderUi for T where T: InsertUiContent + Component {}
 pub(crate) trait RenderUi: InsertUiContent + Component + Sized {
 	fn render_ui<TLocalization>(
 		mut commands: Commands,
-		mut localize: ResMut<TLocalization>,
+		localize: Res<TLocalization>,
 		components: Query<(Entity, &Self), Added<Self>>,
 	) where
 		TLocalization: LocalizeToken + Resource,
@@ -17,7 +17,7 @@ pub(crate) trait RenderUi: InsertUiContent + Component + Sized {
 				continue;
 			};
 			entity.with_children(|parent| {
-				component.insert_ui_content(localize.as_mut(), parent);
+				component.insert_ui_content(localize.as_ref(), parent);
 			});
 		}
 	}
@@ -41,7 +41,7 @@ mod tests {
 	impl InsertUiContent for _Component {
 		fn insert_ui_content<TLocalization>(
 			&self,
-			localization: &mut TLocalization,
+			localization: &TLocalization,
 			parent: &mut RelatedSpawnerCommands<ChildOf>,
 		) where
 			TLocalization: LocalizeToken + ThreadSafe,
@@ -57,7 +57,7 @@ mod tests {
 
 	#[automock]
 	impl LocalizeToken for _Localize {
-		fn localize_token<TToken>(&mut self, token: TToken) -> LocalizationResult
+		fn localize_token<TToken>(&self, token: TToken) -> LocalizationResult
 		where
 			TToken: Into<Token> + 'static,
 		{

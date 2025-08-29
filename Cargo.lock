@@ -3346,6 +3346,7 @@ dependencies = [
  "mockall",
  "testing",
  "unic-langid",
+ "zyheeda_core",
 ]
 
 [[package]]

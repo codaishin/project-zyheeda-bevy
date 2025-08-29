@@ -15,7 +15,7 @@ use common::{
 pub(crate) fn dropdown_spawn_focused<TLocalization, TItem>(
 	focus: In<Focus>,
 	mut commands: Commands,
-	mut localization: ResMut<TLocalization>,
+	localization: Res<TLocalization>,
 	dropdowns: Query<(Entity, &Dropdown<TItem>)>,
 ) where
 	TLocalization: LocalizeToken + Resource,
@@ -45,7 +45,7 @@ pub(crate) fn dropdown_spawn_focused<TLocalization, TItem>(
 					container_node
 						.spawn(get_node(dropdown))
 						.with_children(|dropdown_node| {
-							spawn_items(localization.as_mut(), dropdown_node, dropdown)
+							spawn_items(localization.as_ref(), dropdown_node, dropdown)
 						});
 				});
 		});
@@ -86,7 +86,7 @@ fn repetitions(count: usize, max_index: u16) -> (u16, u16) {
 }
 
 fn spawn_items<TLocalization, TItem>(
-	localization: &mut TLocalization,
+	localization: &TLocalization,
 	dropdown_node: &mut RelatedSpawnerCommands<ChildOf>,
 	dropdown: &Dropdown<TItem>,
 ) where
@@ -119,7 +119,7 @@ mod tests {
 	struct _Localization;
 
 	impl LocalizeToken for _Localization {
-		fn localize_token<TToken>(&mut self, token: TToken) -> LocalizationResult
+		fn localize_token<TToken>(&self, token: TToken) -> LocalizationResult
 		where
 			TToken: Into<Token> + 'static,
 		{
@@ -137,7 +137,7 @@ mod tests {
 			impl InsertUiContent for $item {
 				fn insert_ui_content<TLocalization>(
 					&self,
-					_: &mut TLocalization,
+					_: &TLocalization,
 					_: &mut RelatedSpawnerCommands<ChildOf>,
 				) {
 				}
@@ -213,7 +213,7 @@ mod tests {
 	impl InsertUiContent for _Item {
 		fn insert_ui_content<TLocalization>(
 			&self,
-			localization: &mut TLocalization,
+			localization: &TLocalization,
 			parent: &mut RelatedSpawnerCommands<ChildOf>,
 		) where
 			TLocalization: LocalizeToken,

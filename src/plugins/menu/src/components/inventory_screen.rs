@@ -26,7 +26,7 @@ impl LoadUi<AssetServer> for InventoryScreen {
 impl InsertUiContent for InventoryScreen {
 	fn insert_ui_content<TLocalization>(
 		&self,
-		localize: &mut TLocalization,
+		localize: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
 		TLocalization: LocalizeToken,
@@ -43,7 +43,7 @@ impl InsertUiContent for InventoryScreen {
 }
 
 fn add_inventory<TLocalization>(
-	localize: &mut TLocalization,
+	localize: &TLocalization,
 ) -> impl FnMut(&mut RelatedSpawnerCommands<ChildOf>)
 where
 	TLocalization: LocalizeToken,
@@ -74,7 +74,7 @@ where
 }
 
 fn add_equipment<TLocalization>(
-	localize: &mut TLocalization,
+	localize: &TLocalization,
 ) -> impl FnMut(&mut RelatedSpawnerCommands<ChildOf>)
 where
 	TLocalization: LocalizeToken,
@@ -130,7 +130,7 @@ fn add_grid<TKey, TLocalization>(
 	element_count_x: u32,
 	element_count_y: u32,
 	mut element_key: impl FnMut() -> TKey,
-	localize: &mut TLocalization,
+	localize: &TLocalization,
 ) where
 	TKey: ThreadSafe,
 	TLocalization: LocalizeToken,

@@ -20,7 +20,7 @@ use common::traits::{
 
 pub(crate) fn tooltip<T, TLocalization, TUI, TUIControl, TWindow>(
 	mut commands: Commands,
-	mut localize: ResMut<TLocalization>,
+	localize: Res<TLocalization>,
 	ui_control: Res<TUIControl>,
 	windows: Query<&TWindow>,
 	changed_tooltip_interactions: Query<(Entity, &Tooltip<T>, &Interaction), Changed<Interaction>>,
@@ -56,7 +56,7 @@ pub(crate) fn tooltip<T, TLocalization, TUI, TUIControl, TWindow>(
 	}
 
 	for (entity, tooltip, _) in changed_tooltip_interactions.iter().filter(is_hovering) {
-		ui_control.spawn(&mut commands, &mut localize, entity, tooltip);
+		ui_control.spawn(&mut commands, &localize, entity, tooltip);
 	}
 }
 
@@ -96,7 +96,7 @@ mod tests {
 	impl InsertUiContent for Tooltip<_T> {
 		fn insert_ui_content<TLocalization>(
 			&self,
-			_: &mut TLocalization,
+			_: &TLocalization,
 			_: &mut RelatedSpawnerCommands<ChildOf>,
 		) {
 		}
@@ -151,7 +151,7 @@ mod tests {
 		fn spawn(
 			&self,
 			commands: &mut Commands,
-			localize: &mut _Localize,
+			localize: &_Localize,
 			tooltip_entity: Entity,
 			tooltip: &Tooltip<_T>,
 		) where
@@ -165,7 +165,7 @@ mod tests {
 	struct _Localize;
 
 	impl LocalizeToken for _Localize {
-		fn localize_token<TToken>(&mut self, _: TToken) -> LocalizationResult
+		fn localize_token<TToken>(&self, _: TToken) -> LocalizationResult
 		where
 			TToken: Into<Token> + 'static,
 		{
@@ -193,7 +193,7 @@ mod tests {
 				Self: Component + Sized;
 		}
 		impl UpdateTooltipPosition<_UI> for _UIControl {
-			fn update_position<'a, 'b, 'c, 'd,'e>(
+			fn update_position<'a, 'b, 'c, 'd, 'e>(
 				&self,
 				uis: &mut Query<'a, 'b, (Entity, &'c _UI, &'d mut Node, &'e ComputedNode)>,
 				position: MouseVec2
@@ -204,7 +204,7 @@ mod tests {
 			fn spawn<'a, 'b>(
 				&self,
 				commands: &mut Commands<'a, 'b>,
-				localize: &mut _Localize,
+				localize: & _Localize,
 				entity: Entity,
 				tooltip: &Tooltip<_T>,
 			) where
