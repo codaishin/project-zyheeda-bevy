@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::traits::register_derived_component::{DerivableComponentFrom, InsertDerivedComponent};
+use common::traits::register_derived_component::{DerivableFrom, InsertDerivedComponent};
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
@@ -7,8 +7,12 @@ use serde::{Deserialize, Serialize};
 #[require(Transform, Visibility)]
 pub(crate) struct GlobalLight(pub(crate) Srgba);
 
-impl From<&GlobalLight> for DirectionalLight {
-	fn from(GlobalLight(color): &GlobalLight) -> Self {
+impl<'w, 's> DerivableFrom<'w, 's, GlobalLight> for DirectionalLight {
+	const INSERT: InsertDerivedComponent = InsertDerivedComponent::IfNew;
+
+	type TParam = ();
+
+	fn derive_from(GlobalLight(color): &GlobalLight, _: &()) -> Self {
 		DirectionalLight {
 			shadows_enabled: false,
 			illuminance: 100.,
@@ -16,8 +20,4 @@ impl From<&GlobalLight> for DirectionalLight {
 			..default()
 		}
 	}
-}
-
-impl DerivableComponentFrom<GlobalLight> for DirectionalLight {
-	const INSERT: InsertDerivedComponent = InsertDerivedComponent::IfNew;
 }

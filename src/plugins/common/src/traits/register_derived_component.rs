@@ -1,16 +1,23 @@
 mod app;
 
-use bevy::prelude::*;
+use bevy::{
+	ecs::system::{SystemParam, SystemParamItem},
+	prelude::*,
+};
 
 pub trait RegisterDerivedComponent {
 	fn register_derived_component<TComponent, TDerived>(&mut self) -> &mut Self
 	where
 		TComponent: Component,
-		for<'a> TDerived: DerivableComponentFrom<TComponent>;
+		for<'w, 's> TDerived: DerivableFrom<'w, 's, TComponent>;
 }
 
-pub trait DerivableComponentFrom<TComponent>: for<'a> From<&'a TComponent> + Component {
+pub trait DerivableFrom<'w, 's, TComponent>: Component {
 	const INSERT: InsertDerivedComponent;
+
+	type TParam: SystemParam;
+
+	fn derive_from(component: &TComponent, param: &SystemParamItem<Self::TParam>) -> Self;
 }
 
 #[derive(Debug, PartialEq, Default)]

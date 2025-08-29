@@ -29,7 +29,7 @@ use common::{
 		loadout::LoadoutConfig,
 		mapper::Mapper,
 		prefab::{Prefab, PrefabEntityCommands},
-		register_derived_component::{DerivableComponentFrom, InsertDerivedComponent},
+		register_derived_component::{DerivableFrom, InsertDerivedComponent},
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
 	},
 };
@@ -153,14 +153,14 @@ impl EnemySkillUsage for Enemy {
 	}
 }
 
-impl From<&Enemy> for GroundOffset {
-	fn from(Enemy { enemy_type, .. }: &Enemy) -> Self {
+impl<'w, 's> DerivableFrom<'w, 's, Enemy> for GroundOffset {
+	const INSERT: InsertDerivedComponent = InsertDerivedComponent::IfNew;
+
+	type TParam = ();
+
+	fn derive_from(Enemy { enemy_type, .. }: &Enemy, _: &()) -> Self {
 		Self::from(enemy_type)
 	}
-}
-
-impl DerivableComponentFrom<Enemy> for GroundOffset {
-	const INSERT: InsertDerivedComponent = InsertDerivedComponent::IfNew;
 }
 
 impl<TInteractions> Prefab<TInteractions> for Enemy
