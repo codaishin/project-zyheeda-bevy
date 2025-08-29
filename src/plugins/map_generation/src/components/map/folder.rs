@@ -1,7 +1,7 @@
 use crate::components::map::cells::agent::Agent;
 use bevy::prelude::*;
 use common::traits::{
-	register_derived_component::{DerivableComponentFrom, InsertDerivedComponent},
+	register_derived_component::{DerivableFrom, InsertDerivedComponent},
 	thread_safe::ThreadSafe,
 };
 use serde::{Deserialize, Serialize};
@@ -27,15 +27,15 @@ where
 	}
 }
 
-impl<TCell> From<&MapFolder<TCell>> for MapFolder<Agent<TCell>> {
-	fn from(MapFolder { path, .. }: &MapFolder<TCell>) -> Self {
-		Self::from(path.clone())
-	}
-}
-
-impl<TCell> DerivableComponentFrom<MapFolder<TCell>> for MapFolder<Agent<TCell>>
+impl<'w, 's, TCell> DerivableFrom<'w, 's, MapFolder<TCell>> for MapFolder<Agent<TCell>>
 where
 	TCell: ThreadSafe,
 {
 	const INSERT: InsertDerivedComponent = InsertDerivedComponent::Always;
+
+	type TParam = ();
+
+	fn derive_from(MapFolder { path, .. }: &MapFolder<TCell>, _: &()) -> Self {
+		Self::from(path.clone())
+	}
 }

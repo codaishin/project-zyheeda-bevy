@@ -6,7 +6,7 @@ use common::{
 	traits::{
 		handles_map_generation::{Graph, NaivePath},
 		handles_path_finding::ComputePath,
-		register_derived_component::{DerivableComponentFrom, InsertDerivedComponent},
+		register_derived_component::{DerivableFrom, InsertDerivedComponent},
 		thread_safe::ThreadSafe,
 	},
 };
@@ -69,25 +69,21 @@ where
 	}
 }
 
-impl<TMap, TMethod, TGraph> From<&TMap> for Navigation<TMethod, TGraph>
-where
-	for<'a> TGraph: From<&'a TMap>,
-	TMethod: Default,
-{
-	fn from(map: &TMap) -> Self {
-		Self {
-			graph: TGraph::from(map),
-			method: TMethod::default(),
-		}
-	}
-}
-
-impl<TMap, TMethod, TGraph> DerivableComponentFrom<TMap> for Navigation<TMethod, TGraph>
+impl<'w, 's, TMap, TMethod, TGraph> DerivableFrom<'w, 's, TMap> for Navigation<TMethod, TGraph>
 where
 	for<'a> TGraph: From<&'a TMap> + ThreadSafe,
 	TMethod: Default + ThreadSafe,
 {
 	const INSERT: InsertDerivedComponent = InsertDerivedComponent::IfNew;
+
+	type TParam = ();
+
+	fn derive_from(map: &TMap, _: &()) -> Self {
+		Self {
+			graph: TGraph::from(map),
+			method: TMethod::default(),
+		}
+	}
 }
 
 impl<TMethod, TGraph> ComputePath for Navigation<TMethod, TGraph>

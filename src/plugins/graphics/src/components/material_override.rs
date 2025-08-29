@@ -8,7 +8,7 @@ use bevy::{
 };
 use common::{
 	components::essence::Essence,
-	traits::register_derived_component::{DerivableComponentFrom, InsertDerivedComponent},
+	traits::register_derived_component::{DerivableFrom, InsertDerivedComponent},
 };
 
 #[derive(Component, Debug, PartialEq, Clone, Default)]
@@ -19,8 +19,12 @@ pub enum MaterialOverride {
 	Material(EssenceMaterial),
 }
 
-impl From<&Essence> for MaterialOverride {
-	fn from(essence: &Essence) -> Self {
+impl<'w, 's> DerivableFrom<'w, 's, Essence> for MaterialOverride {
+	const INSERT: InsertDerivedComponent = InsertDerivedComponent::Always;
+
+	type TParam = ();
+
+	fn derive_from(essence: &Essence, _: &()) -> Self {
 		match essence {
 			Essence::None => MaterialOverride::None,
 			Essence::Force => MaterialOverride::Material(EssenceMaterial {
@@ -31,8 +35,4 @@ impl From<&Essence> for MaterialOverride {
 			}),
 		}
 	}
-}
-
-impl DerivableComponentFrom<Essence> for MaterialOverride {
-	const INSERT: InsertDerivedComponent = InsertDerivedComponent::Always;
 }

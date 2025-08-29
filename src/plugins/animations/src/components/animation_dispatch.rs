@@ -19,7 +19,7 @@ use common::traits::{
 		StartAnimation,
 		StopAnimation,
 	},
-	register_derived_component::{DerivableComponentFrom, InsertDerivedComponent},
+	register_derived_component::{DerivableFrom, InsertDerivedComponent},
 	track::{IsTracking, Track, Untrack},
 };
 use macros::SavableComponent;
@@ -114,22 +114,19 @@ where
 	}
 }
 
-impl<TComponent> From<&TComponent> for AnimationDispatch
-where
-	TComponent: ConfigureNewAnimationDispatch,
-{
-	fn from(component: &TComponent) -> Self {
-		let mut dispatch = AnimationDispatch::default();
-		TComponent::configure_animation_dispatch(component, &mut dispatch);
-		dispatch
-	}
-}
-
-impl<TComponent> DerivableComponentFrom<TComponent> for AnimationDispatch
+impl<'w, 's, TComponent> DerivableFrom<'w, 's, TComponent> for AnimationDispatch
 where
 	TComponent: ConfigureNewAnimationDispatch,
 {
 	const INSERT: InsertDerivedComponent = InsertDerivedComponent::IfNew;
+
+	type TParam = ();
+
+	fn derive_from(component: &TComponent, _: &()) -> Self {
+		let mut dispatch = AnimationDispatch::default();
+		TComponent::configure_animation_dispatch(component, &mut dispatch);
+		dispatch
+	}
 }
 
 impl Track<AnimationPlayer> for AnimationDispatch {

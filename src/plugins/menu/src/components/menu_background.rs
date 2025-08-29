@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::traits::register_derived_component::{DerivableComponentFrom, InsertDerivedComponent};
+use common::traits::register_derived_component::{DerivableFrom, InsertDerivedComponent};
 
 #[derive(Component, Default, Debug, PartialEq)]
 #[require(BackgroundColor = BackgroundColor(Color::srgba(0.5, 0.5, 0.5, 0.5)))]
@@ -19,16 +19,16 @@ impl MenuBackground {
 	}
 }
 
-impl From<&MenuBackground> for Node {
-	fn from(menu: &MenuBackground) -> Self {
+impl<'w, 's> DerivableFrom<'w, 's, MenuBackground> for Node {
+	const INSERT: InsertDerivedComponent = InsertDerivedComponent::IfNew;
+
+	type TParam = ();
+
+	fn derive_from(menu: &MenuBackground, _: &()) -> Self {
 		let mut node = MenuBackground::full_screen();
 		menu.overrides.override_values(&mut node);
 		node
 	}
-}
-
-impl DerivableComponentFrom<MenuBackground> for Node {
-	const INSERT: InsertDerivedComponent = InsertDerivedComponent::IfNew;
 }
 
 pub(crate) trait WithOverride<T> {
@@ -88,7 +88,7 @@ mod tests {
 		MenuBackground: WithOverride<T>,
 	{
 		let background = MenuBackground::default().with(value);
-		let node = Node::from(&background);
+		let node = Node::derive_from(&background, &());
 
 		assert_eq!(value, get_item(&node));
 	}

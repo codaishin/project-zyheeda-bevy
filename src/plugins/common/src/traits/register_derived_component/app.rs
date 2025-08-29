@@ -2,19 +2,19 @@ use super::RegisterDerivedComponent;
 use crate::{
 	traits::{
 		accessors::get::TryApplyOn,
-		register_derived_component::DerivableComponentFrom,
+		register_derived_component::DerivableFrom,
 		thread_safe::ThreadSafe,
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
-use bevy::prelude::*;
+use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use std::marker::PhantomData;
 
 impl RegisterDerivedComponent for App {
 	fn register_derived_component<TComponent, TDerived>(&mut self) -> &mut Self
 	where
 		TComponent: Component,
-		for<'a> TDerived: DerivableComponentFrom<TComponent>,
+		for<'w, 's> TDerived: DerivableFrom<'w, 's, TComponent>,
 	{
 		if Observing::<TComponent, TDerived>::already_in(self) {
 			return self;
@@ -33,37 +33,39 @@ impl RegisterDerivedComponent for App {
 	}
 }
 
-fn insert_if_new<TComponent, TRequired>(
+fn insert_if_new<TComponent, TDerived>(
 	trigger: Trigger<OnInsert, TComponent>,
 	mut commands: ZyheedaCommands,
 	components: Query<&TComponent>,
+	param: StaticSystemParam<<TDerived as DerivableFrom<'_, '_, TComponent>>::TParam>,
 ) where
 	TComponent: Component,
-	for<'a> TRequired: Component + From<&'a TComponent>,
+	for<'w, 's> TDerived: DerivableFrom<'w, 's, TComponent>,
 {
 	let entity = trigger.target();
 	let Ok(component) = components.get(entity) else {
 		return;
 	};
 	commands.try_apply_on(&entity, |mut e| {
-		e.try_insert_if_new(TRequired::from(component));
+		e.try_insert_if_new(TDerived::derive_from(component, &param));
 	});
 }
 
-fn insert_always<TComponent, TRequired>(
+fn insert_always<TComponent, TDerived>(
 	trigger: Trigger<OnInsert, TComponent>,
 	mut commands: ZyheedaCommands,
 	components: Query<&TComponent>,
+	param: StaticSystemParam<<TDerived as DerivableFrom<'_, '_, TComponent>>::TParam>,
 ) where
 	TComponent: Component,
-	for<'a> TRequired: Component + From<&'a TComponent>,
+	for<'w, 's> TDerived: DerivableFrom<'w, 's, TComponent>,
 {
 	let entity = trigger.target();
 	let Ok(component) = components.get(entity) else {
 		return;
 	};
 	commands.try_apply_on(&entity, |mut e| {
-		e.try_insert(TRequired::from(component));
+		e.try_insert(TDerived::derive_from(component, &param));
 	});
 }
 
@@ -89,10 +91,8 @@ impl<TComponent, TRequired> Default for Observing<TComponent, TRequired> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::register_derived_component::{
-		DerivableComponentFrom,
-		InsertDerivedComponent,
-	};
+	use crate::traits::register_derived_component::{DerivableFrom, InsertDerivedComponent};
+	use bevy::ecs::system::SystemParamItem;
 	use testing::{SingleThreadedApp, assert_count};
 
 	#[derive(Component)]
@@ -104,14 +104,14 @@ mod tests {
 		B,
 	}
 
-	impl From<&_Component> for _NewlyDerived {
-		fn from(_: &_Component) -> Self {
+	impl<'w, 's> DerivableFrom<'w, 's, _Component> for _NewlyDerived {
+		const INSERT: InsertDerivedComponent = InsertDerivedComponent::IfNew;
+
+		type TParam = ();
+
+		fn derive_from(_: &_Component, _: &SystemParamItem<Self::TParam>) -> Self {
 			_NewlyDerived::A
 		}
-	}
-
-	impl DerivableComponentFrom<_Component> for _NewlyDerived {
-		const INSERT: InsertDerivedComponent = InsertDerivedComponent::IfNew;
 	}
 
 	#[derive(Component, Debug, PartialEq)]
@@ -120,19 +120,19 @@ mod tests {
 		B,
 	}
 
-	impl From<&_Component> for _AlwaysDerived {
-		fn from(_: &_Component) -> Self {
+	impl<'w, 's> DerivableFrom<'w, 's, _Component> for _AlwaysDerived {
+		const INSERT: InsertDerivedComponent = InsertDerivedComponent::Always;
+
+		type TParam = ();
+
+		fn derive_from(_: &_Component, _: &SystemParamItem<Self::TParam>) -> Self {
 			_AlwaysDerived::A
 		}
 	}
 
-	impl DerivableComponentFrom<_Component> for _AlwaysDerived {
-		const INSERT: InsertDerivedComponent = InsertDerivedComponent::Always;
-	}
-
 	fn setup<TRequired>() -> App
 	where
-		TRequired: DerivableComponentFrom<_Component>,
+		TRequired: for<'w, 's> DerivableFrom<'w, 's, _Component>,
 	{
 		let mut app = App::new().single_threaded(Update);
 
