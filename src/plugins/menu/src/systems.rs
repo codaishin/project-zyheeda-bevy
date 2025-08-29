@@ -8,6 +8,7 @@ pub(crate) mod dropdown;
 pub(crate) mod icon;
 pub(crate) mod image_color;
 pub(crate) mod menus_unchangeable_when_present;
+pub(crate) mod quickbar_panel;
 pub(crate) mod rebind;
 pub(crate) mod render_ui;
 pub(crate) mod set_key_bindings;

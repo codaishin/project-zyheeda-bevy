@@ -15,7 +15,7 @@ impl Icon {
 				continue;
 			};
 
-			entity.try_insert((Interaction::default(), Tooltip::new(icon.localized.clone())));
+			entity.try_insert((Interaction::default(), Tooltip::new(icon.label.clone())));
 		}
 	}
 }
@@ -44,7 +44,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(Icon {
-				localized: Localized::from("my text"),
+				label: Localized::from("my text"),
 				image: IconImage::Loaded(handle.clone()),
 			})
 			.id();
@@ -71,7 +71,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(Icon {
-				localized: Localized::from("my text"),
+				label: Localized::from("my text"),
 				image,
 			})
 			.id();
@@ -94,7 +94,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(Icon {
-				localized: Localized::from("my text"),
+				label: Localized::from("my text"),
 				image: IconImage::Loaded(handle.clone()),
 			})
 			.id();
@@ -121,7 +121,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(Icon {
-				localized: Localized::from("my text"),
+				label: Localized::from("my text"),
 				image: IconImage::Loaded(handle.clone()),
 			})
 			.id();

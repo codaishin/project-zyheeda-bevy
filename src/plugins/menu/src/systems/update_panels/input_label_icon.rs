@@ -66,7 +66,7 @@ fn insert_icon<TMap, TLanguageServer, TKey>(
 	let path = root.join(format!("{token}.png"));
 
 	entity.try_insert(Icon {
-		localized,
+		label: localized,
 		image: IconImage::Path(path),
 	});
 }
@@ -150,7 +150,7 @@ mod tests {
 		let Token(token) = Token::from(UserInput::from(KeyCode::ArrowUp));
 		assert_eq!(
 			Some(&Icon {
-				localized: Localized::from("IIIIII"),
+				label: Localized::from("IIIIII"),
 				image: IconImage::Path(
 					PathBuf::from("icon/root/path").join(format!("{token}.png"))
 				)

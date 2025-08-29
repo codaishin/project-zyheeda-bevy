@@ -14,7 +14,7 @@ impl Icon {
 				continue;
 			};
 
-			entity.try_insert(Text::from(icon.localized.clone()));
+			entity.try_insert(Text::from(icon.label.clone()));
 		}
 	}
 }
@@ -42,7 +42,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(Icon {
-				localized: Localized::from("my description"),
+				label: Localized::from("my description"),
 				image: IconImage::None,
 			})
 			.id();
@@ -66,7 +66,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(Icon {
-				localized: Localized::from("my description"),
+				label: Localized::from("my description"),
 				image,
 			})
 			.id();
@@ -88,7 +88,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(Icon {
-				localized: Localized::from("my description"),
+				label: Localized::from("my description"),
 				image: IconImage::None,
 			})
 			.id();
@@ -112,7 +112,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(Icon {
-				localized: Localized::from("my description"),
+				label: Localized::from("my description"),
 				image: IconImage::None,
 			})
 			.id();

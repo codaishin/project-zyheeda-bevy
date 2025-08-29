@@ -55,6 +55,7 @@ use common::{
 		handles_loadout::HandlesLoadout,
 		handles_loadout_menu::{ConfigureInventory, GetItem, HandlesLoadoutMenu, SwapValuesByKey},
 		handles_localization::{HandlesLocalization, LocalizeToken, Token, localized::Localized},
+		handles_player::HandlesPlayer,
 		handles_saving::HandlesSaving,
 		handles_settings::HandlesSettings,
 		load_asset::Path,
@@ -117,13 +118,14 @@ use visualization::unusable::Unusable;
 
 pub struct MenuPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics, TLoadout>
+impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics, TPlayers, TLoadout>
 	MenuPlugin<(
 		TLoading,
 		TSavegame,
 		TSettings,
 		TLocalization,
 		TGraphics,
+		TPlayers,
 		TLoadout,
 	)>
 where
@@ -132,6 +134,7 @@ where
 	TSettings: ThreadSafe + HandlesSettings,
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
+	TPlayers: ThreadSafe + HandlesPlayer,
 	TLoadout: ThreadSafe + HandlesLoadout,
 {
 	pub fn from_plugins(
@@ -140,19 +143,21 @@ where
 		_: &TSettings,
 		_: &TLocalization,
 		_: &TGraphics,
+		_: &TPlayers,
 		_: &TLoadout,
 	) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics, TLoadout>
+impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics, TPlayers, TLoadout>
 	MenuPlugin<(
 		TLoading,
 		TSavegame,
 		TSettings,
 		TLocalization,
 		TGraphics,
+		TPlayers,
 		TLoadout,
 	)>
 where
@@ -161,6 +166,7 @@ where
 	TSettings: ThreadSafe + HandlesSettings,
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
+	TPlayers: ThreadSafe + HandlesPlayer,
 	TLoadout: ThreadSafe + HandlesLoadout,
 {
 	fn resources(&self, app: &mut App) {
@@ -241,6 +247,7 @@ where
 				Update,
 				(
 					QuickbarPanel::add_quickbar_primer::<TSettings::TKeyMap<PlayerSlot>>,
+					QuickbarPanel::set_image::<TPlayers::TPlayer, TLoadout::TSlots>,
 					panel_colors::<QuickbarPanel>,
 				)
 					.run_if(in_state(play)),
@@ -318,13 +325,14 @@ where
 	}
 }
 
-impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics, TLoadout> Plugin
+impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics, TPlayers, TLoadout> Plugin
 	for MenuPlugin<(
 		TLoading,
 		TSavegame,
 		TSettings,
 		TLocalization,
 		TGraphics,
+		TPlayers,
 		TLoadout,
 	)>
 where
@@ -333,6 +341,7 @@ where
 	TSettings: ThreadSafe + HandlesSettings,
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
+	TPlayers: ThreadSafe + HandlesPlayer,
 	TLoadout: ThreadSafe + HandlesLoadout,
 {
 	fn build(&self, app: &mut App) {

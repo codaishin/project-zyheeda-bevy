@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 #[derive(Component, Debug, PartialEq, Clone)]
 pub(crate) struct Icon {
-	pub(crate) localized: Localized,
+	pub(crate) label: Localized,
 	pub(crate) image: IconImage,
 }
 
