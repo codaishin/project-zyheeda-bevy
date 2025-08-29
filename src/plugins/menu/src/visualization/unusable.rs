@@ -1,5 +1,6 @@
 use crate::{components::ImageColorCommand, traits::InsertContentOn};
-use bevy::{color::Color, ecs::system::EntityCommands, ui::BackgroundColor};
+use bevy::prelude::*;
+use common::zyheeda_commands::ZyheedaEntityCommands;
 
 pub(crate) struct Unusable;
 
@@ -9,7 +10,7 @@ impl Unusable {
 }
 
 impl InsertContentOn for Unusable {
-	fn insert_content_on(entity: &mut EntityCommands) {
+	fn insert_content_on(entity: &mut ZyheedaEntityCommands) {
 		entity.try_insert((
 			ImageColorCommand(Self::IMAGE_COLOR),
 			BackgroundColor::from(Self::BACKGROUND_COLOR),

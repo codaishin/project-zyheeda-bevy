@@ -1,4 +1,5 @@
 use crate::{
+	components::label::UILabel,
 	tools::PanelState,
 	traits::colors::{HasPanelColors, PanelColors},
 };
@@ -6,6 +7,7 @@ use bevy::prelude::*;
 use common::traits::accessors::set::Setter;
 
 #[derive(Component, Debug, PartialEq)]
+#[require(UILabel)]
 pub struct InventoryPanel(pub PanelState);
 
 impl From<PanelState> for InventoryPanel {

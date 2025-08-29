@@ -1,25 +1,18 @@
 use crate::components::{icon::Icon, input_label::InputLabel, label::UILabel};
 use bevy::prelude::*;
 use common::{
-	traits::{
-		accessors::get::TryApplyOn,
-		handles_localization::Token,
-		key_mappings::GetInput,
-		thread_safe::ThreadSafe,
-	},
+	tools::action_key::slot::PlayerSlot,
+	traits::{accessors::get::TryApplyOn, handles_localization::Token, key_mappings::GetInput},
 	zyheeda_commands::ZyheedaCommands,
 };
 use std::path::PathBuf;
 
-impl<TKey> InputLabel<TKey>
-where
-	TKey: Copy + ThreadSafe,
-{
+impl InputLabel {
 	pub fn icon<TMap>(
 		icon_root_path: impl Into<PathBuf>,
-	) -> impl Fn(ZyheedaCommands, Res<TMap>, Labels<TKey>)
+	) -> impl Fn(ZyheedaCommands, Res<TMap>, Labels)
 	where
-		TMap: Resource + GetInput<TKey>,
+		TMap: Resource + GetInput<PlayerSlot>,
 		TMap::TInput: Into<Token>,
 	{
 		let root = icon_root_path.into();
@@ -41,22 +34,18 @@ where
 	}
 }
 
-type Labels<'w, 's, 'a, TKey> =
-	Query<'w, 's, (Entity, &'a InputLabel<TKey>), Added<InputLabel<TKey>>>;
+type Labels<'w, 's, 'a> = Query<'w, 's, (Entity, &'a InputLabel), Added<InputLabel>>;
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::icon::{Icon, IconFallbackLabel};
+	use crate::components::icon::Icon;
 	use bevy::app::{App, Update};
 	use common::{tools::action_key::user_input::UserInput, traits::handles_localization::Token};
 	use macros::NestedMocks;
-	use mockall::automock;
+	use mockall::{automock, predicate::eq};
 	use std::path::PathBuf;
 	use testing::{NestedMocks, SingleThreadedApp};
-
-	#[derive(Clone, Copy)]
-	struct _Key;
 
 	#[derive(Resource, NestedMocks)]
 	struct _Map {
@@ -64,10 +53,10 @@ mod tests {
 	}
 
 	#[automock]
-	impl GetInput<_Key> for _Map {
+	impl GetInput<PlayerSlot> for _Map {
 		type TInput = UserInput;
 
-		fn get_input(&self, value: _Key) -> UserInput {
+		fn get_input(&self, value: PlayerSlot) -> UserInput {
 			self.mock.get_input(value)
 		}
 	}
@@ -75,7 +64,7 @@ mod tests {
 	fn setup(map: _Map) -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, InputLabel::<_Key>::icon::<_Map>("icon/root/path"));
+		app.add_systems(Update, InputLabel::icon::<_Map>("icon/root/path"));
 		app.insert_resource(map);
 
 		app
@@ -85,9 +74,16 @@ mod tests {
 	fn add_icon() {
 		let mut app = setup(_Map::new().with_mock(|mock| {
 			mock.expect_get_input()
+				.times(1)
+				.with(eq(PlayerSlot::UPPER_L))
 				.return_const(UserInput::from(KeyCode::ArrowUp));
 		}));
-		let id = app.world_mut().spawn(InputLabel { key: _Key }).id();
+		let id = app
+			.world_mut()
+			.spawn(InputLabel {
+				key: PlayerSlot::UPPER_L,
+			})
+			.id();
 
 		app.update();
 
@@ -106,13 +102,18 @@ mod tests {
 			mock.expect_get_input()
 				.return_const(UserInput::from(KeyCode::ArrowUp));
 		}));
-		let id = app.world_mut().spawn(InputLabel { key: _Key }).id();
+		let id = app
+			.world_mut()
+			.spawn(InputLabel {
+				key: PlayerSlot::UPPER_L,
+			})
+			.id();
 
 		app.update();
 
 		assert_eq!(
 			Some(&UILabel(Token::from(UserInput::from(KeyCode::ArrowUp)))),
-			app.world().entity(id).get::<IconFallbackLabel>(),
+			app.world().entity(id).get::<UILabel<Token>>(),
 		);
 	}
 
@@ -122,7 +123,12 @@ mod tests {
 			mock.expect_get_input()
 				.return_const(UserInput::from(KeyCode::ArrowUp));
 		}));
-		let id = app.world_mut().spawn(InputLabel { key: _Key }).id();
+		let id = app
+			.world_mut()
+			.spawn(InputLabel {
+				key: PlayerSlot::UPPER_L,
+			})
+			.id();
 
 		app.update();
 		app.world_mut().entity_mut(id).remove::<Icon>();

@@ -1,6 +1,6 @@
 use super::{
 	DeleteSkill,
-	SkillSelectDropdownInsertCommand,
+	SkillSelectDropdownCommand,
 	combo_skill_button::{ComboSkillButton, DropdownTrigger, Vertical},
 	input_label::InputLabel,
 	key_select_dropdown_command::{AppendSkillCommand, KeySelectDropdownCommand},
@@ -8,6 +8,7 @@ use super::{
 };
 use crate::{
 	Tooltip,
+	components::{icon::Icon, label::UILabel},
 	tools::{Dimensions, Pixel},
 	traits::{
 		LoadUi,
@@ -19,10 +20,11 @@ use crate::{
 };
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{
-	tools::action_key::slot::PlayerSlot,
+	tools::action_key::slot::{PlayerSlot, SlotKey},
 	traits::{
 		accessors::get::{RefAs, RefInto},
-		handles_localization::{Localize, LocalizeToken, Token, localized::Localized},
+		handles_loadout::{ContainerItem, ContainerKey, SkillIcon, SkillToken},
+		handles_localization::{Localize, LocalizeToken, localized::Localized},
 		load_asset::{LoadAsset, Path},
 		thread_safe::ThreadSafe,
 	},
@@ -38,7 +40,7 @@ where
 	TSkill: ThreadSafe,
 {
 	new_skill_icon: Handle<Image>,
-	layout: ComboTreeLayout<TSkill>,
+	layout: ComboTreeLayout<SlotKey, TSkill>,
 }
 
 impl<TSKill> Default for ComboOverview<TSKill>
@@ -94,7 +96,7 @@ impl ComboOverview<()> {
 		}
 	}
 
-	pub(crate) fn skill_button<TIcon>(icon: TIcon) -> (Button, Node, ImageNode, BackgroundColor)
+	pub(crate) fn skill_button<TIcon>(icon: TIcon) -> (Button, Node, Icon, BackgroundColor)
 	where
 		SkillButtonIcon: From<TIcon>,
 	{
@@ -108,14 +110,14 @@ impl ComboOverview<()> {
 		};
 		let (image, background_color) = match SkillButtonIcon::from(icon) {
 			SkillButtonIcon::Icon(Some(icon)) => (
-				ImageNode::new(icon),
+				Icon::Load(icon),
 				BackgroundColor(PanelColors::DEFAULT.filled.background),
 			),
 			SkillButtonIcon::Icon(None) => (
-				ImageNode::default(),
+				Icon::None,
 				BackgroundColor(PanelColors::DEFAULT.filled.background),
 			),
-			SkillButtonIcon::Transparent => (default(), BackgroundColor(Color::NONE)),
+			SkillButtonIcon::Transparent => (Icon::None, BackgroundColor(Color::NONE)),
 		};
 
 		(Button, node, image, background_color)
@@ -253,7 +255,7 @@ impl ComboOverview<()> {
 		)
 	}
 
-	pub(crate) fn skill_key_text(key: PlayerSlot) -> InputLabel<PlayerSlot> {
+	pub(crate) fn skill_key_text(key: PlayerSlot) -> InputLabel {
 		InputLabel { key }
 	}
 
@@ -274,6 +276,12 @@ pub(crate) enum SkillButtonIcon {
 	Transparent,
 }
 
+impl<'a> From<SkillIcon<'a>> for SkillButtonIcon {
+	fn from(SkillIcon(handle): SkillIcon<'a>) -> Self {
+		SkillButtonIcon::Icon(Some(handle.clone()))
+	}
+}
+
 impl From<Handle<Image>> for SkillButtonIcon {
 	fn from(icon: Handle<Image>) -> Self {
 		SkillButtonIcon::Icon(Some(icon))
@@ -286,11 +294,25 @@ impl From<Option<Handle<Image>>> for SkillButtonIcon {
 	}
 }
 
-impl<TSkill> UpdateCombosView<TSkill> for ComboOverview<TSkill>
+impl<TSkill> ContainerKey for ComboOverview<TSkill>
 where
 	TSkill: ThreadSafe,
 {
-	fn update_combos_view(&mut self, combos: ComboTreeLayout<TSkill>) {
+	type TKey = SlotKey;
+}
+
+impl<TSkill> ContainerItem for ComboOverview<TSkill>
+where
+	TSkill: ThreadSafe,
+{
+	type TItem = TSkill;
+}
+
+impl<TSkill> UpdateCombosView for ComboOverview<TSkill>
+where
+	TSkill: ThreadSafe,
+{
+	fn update_combos_view(&mut self, combos: ComboTreeLayout<Self::TKey, TSkill>) {
 		self.layout = combos
 	}
 }
@@ -300,8 +322,8 @@ where
 	TSkill: Clone
 		+ PartialEq
 		+ ThreadSafe
-		+ for<'a> RefInto<'a, &'a Token>
-		+ for<'a> RefInto<'a, &'a Option<Handle<Image>>>,
+		+ for<'a> RefInto<'a, SkillToken<'a>>
+		+ for<'a> RefInto<'a, SkillIcon<'a>>,
 {
 	fn insert_ui_content<TLocalization>(
 		&self,
@@ -378,8 +400,8 @@ fn add_combo_list<TSkill, TLocalization>(
 	TSkill: Clone
 		+ PartialEq
 		+ ThreadSafe
-		+ for<'a> RefInto<'a, &'a Token>
-		+ for<'a> RefInto<'a, &'a Option<Handle<Image>>>,
+		+ for<'a> RefInto<'a, SkillToken<'a>>
+		+ for<'a> RefInto<'a, SkillIcon<'a>>,
 	TLocalization: Localize + 'static,
 {
 	parent
@@ -405,15 +427,15 @@ fn add_combo_list<TSkill, TLocalization>(
 fn add_combo<TSkill, TLocalization>(
 	localize: &TLocalization,
 	parent: &mut RelatedSpawnerCommands<ChildOf>,
-	combo: &[ComboTreeElement<TSkill>],
+	combo: &[ComboTreeElement<SlotKey, TSkill>],
 	local_z: i32,
 	new_skill_icon: &Handle<Image>,
 ) where
 	TSkill: Clone
 		+ PartialEq
 		+ ThreadSafe
-		+ for<'a> RefInto<'a, &'a Token>
-		+ for<'a> RefInto<'a, &'a Option<Handle<Image>>>,
+		+ for<'a> RefInto<'a, SkillToken<'a>>
+		+ for<'a> RefInto<'a, SkillIcon<'a>>,
 	TLocalization: Localize + 'static,
 {
 	parent
@@ -444,7 +466,7 @@ where
 		panel_background: PanelBackground,
 	},
 	Skill {
-		key_path: &'a [PlayerSlot],
+		key_path: &'a [SlotKey],
 		skill: &'a TSkill,
 		panel_overlay: PanelOverlay<TLocalization>,
 		panel_background: PanelBackground,
@@ -508,8 +530,8 @@ impl<TSkill, TLocalization> AddPanel<'_, TSkill, TLocalization>
 where
 	TSkill: Clone
 		+ ThreadSafe
-		+ for<'a> RefInto<'a, &'a Token>
-		+ for<'a> RefInto<'a, &'a Option<Handle<Image>>>,
+		+ for<'a> RefInto<'a, SkillToken<'a>>
+		+ for<'a> RefInto<'a, SkillIcon<'a>>,
 	TLocalization: Localize,
 {
 	fn spawn_as_child(
@@ -547,18 +569,16 @@ where
 	fn skill(
 		localize: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
-		key_path: &[PlayerSlot],
+		key_path: &[SlotKey],
 		skill: &TSkill,
 		PanelOverlay(panel_overlay): PanelOverlay<TLocalization>,
 		PanelBackground(panel_background): PanelBackground,
 	) {
-		let token = skill.ref_as::<&Token>();
-		let icon = skill.ref_as::<&Option<Handle<Image>>>();
 		let skill_bundle = (
 			ComboSkillButton::<DropdownTrigger, TSkill>::new(skill.clone(), key_path.to_vec()),
-			Tooltip::new(localize.localize(token).or_token()),
-			ComboOverview::skill_button(icon.clone()),
-			SkillSelectDropdownInsertCommand::<PlayerSlot, Vertical>::new(key_path.to_vec()),
+			UILabel::from(skill.ref_as::<SkillToken>()),
+			ComboOverview::skill_button(skill.ref_as::<SkillIcon>()),
+			SkillSelectDropdownCommand::<Vertical>::new(key_path.to_vec()),
 		);
 
 		parent
@@ -581,12 +601,12 @@ where
 	}
 }
 
-impl<'a, TSkill, TLocalization> From<&'a ComboTreeElement<TSkill>>
+impl<'a, TSkill, TLocalization> From<&'a ComboTreeElement<SlotKey, TSkill>>
 	for AddPanel<'a, TSkill, TLocalization>
 where
 	TLocalization: Localize + 'static,
 {
-	fn from(element: &'a ComboTreeElement<TSkill>) -> Self {
+	fn from(element: &'a ComboTreeElement<SlotKey, TSkill>) -> Self {
 		match element {
 			ComboTreeElement::Symbol(Symbol::Empty) => AddPanel::Empty {
 				panel_background: PanelBackground(&[]),
@@ -618,7 +638,7 @@ where
 }
 
 type InsertFunc<TLocalization> =
-	fn(&[PlayerSlot], &mut RelatedSpawnerCommands<ChildOf>, &TLocalization);
+	fn(&[SlotKey], &mut RelatedSpawnerCommands<ChildOf>, &TLocalization);
 
 struct PanelOverlay<TLocalization>(&'static [InsertFunc<TLocalization>])
 where
@@ -651,13 +671,16 @@ fn add_background_corner(parent: &mut RelatedSpawnerCommands<ChildOf>) {
 }
 
 fn add_key<TLocalization>(
-	key_path: &[PlayerSlot],
+	key_path: &[SlotKey],
 	parent: &mut RelatedSpawnerCommands<ChildOf>,
 	_: &TLocalization,
 ) where
 	TLocalization: Localize,
 {
 	let Some(skill_key) = key_path.last() else {
+		return;
+	};
+	let Ok(player_slot) = PlayerSlot::try_from(*skill_key) else {
 		return;
 	};
 
@@ -667,13 +690,13 @@ fn add_key<TLocalization>(
 			parent
 				.spawn(ComboOverview::skill_key_button())
 				.with_children(|parent| {
-					parent.spawn(ComboOverview::skill_key_text(*skill_key));
+					parent.spawn(ComboOverview::skill_key_text(player_slot));
 				});
 		});
 }
 
 fn add_append_button<TLocalization>(
-	key_path: &[PlayerSlot],
+	key_path: &[SlotKey],
 	parent: &mut RelatedSpawnerCommands<ChildOf>,
 	localize: &TLocalization,
 ) where
@@ -700,7 +723,7 @@ fn add_append_button<TLocalization>(
 }
 
 fn add_delete_button<TLocalization>(
-	key_path: &[PlayerSlot],
+	key_path: &[SlotKey],
 	parent: &mut RelatedSpawnerCommands<ChildOf>,
 	localize: &TLocalization,
 ) where
@@ -730,7 +753,7 @@ mod tests {
 	use super::*;
 	use crate::traits::build_combo_tree_layout::ComboTreeElement;
 	use bevy::asset::{Asset, AssetId, AssetPath};
-	use common::tools::action_key::slot::Side;
+	use common::tools::action_key::slot::PlayerSlot;
 	use macros::simple_mock;
 	use mockall::predicate::eq;
 	use testing::Mock;
@@ -743,7 +766,7 @@ mod tests {
 	fn update_combos() {
 		let combos = vec![vec![ComboTreeElement::Leaf {
 			skill: _Skill,
-			key_path: vec![PlayerSlot::Lower(Side::Right)],
+			key_path: vec![SlotKey::from(PlayerSlot::LOWER_R)],
 		}]];
 		let mut combo_overview = ComboOverview::default();
 		combo_overview.update_combos_view(combos.clone());

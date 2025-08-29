@@ -23,7 +23,7 @@ pub(crate) mod ui_overlay;
 
 use bevy::prelude::*;
 use combo_skill_button::Horizontal;
-use common::tools::action_key::slot::PlayerSlot;
+use common::tools::action_key::slot::SlotKey;
 use std::marker::PhantomData;
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
@@ -39,13 +39,13 @@ pub struct Quickbar;
 pub struct ColorOverride;
 
 #[derive(Component, Debug, PartialEq)]
-pub(crate) struct SkillSelectDropdownInsertCommand<TKey = PlayerSlot, TLayout = Horizontal> {
+pub(crate) struct SkillSelectDropdownCommand<TLayout = Horizontal> {
 	phantom_data: PhantomData<TLayout>,
-	pub(crate) key_path: Vec<TKey>,
+	pub(crate) key_path: Vec<SlotKey>,
 }
 
-impl<TKey, TLayout> SkillSelectDropdownInsertCommand<TKey, TLayout> {
-	pub(crate) fn new(key_path: Vec<TKey>) -> Self {
+impl<TLayout> SkillSelectDropdownCommand<TLayout> {
+	pub(crate) fn new(key_path: Vec<SlotKey>) -> Self {
 		Self {
 			phantom_data: PhantomData,
 			key_path,
@@ -55,7 +55,7 @@ impl<TKey, TLayout> SkillSelectDropdownInsertCommand<TKey, TLayout> {
 
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct DeleteSkill {
-	pub(crate) key_path: Vec<PlayerSlot>,
+	pub(crate) key_path: Vec<SlotKey>,
 }
 
 #[derive(Component, Debug, PartialEq)]

@@ -2,6 +2,7 @@ pub(crate) mod run_skill_behavior;
 
 use super::{AnimationStrategy, Skill};
 use crate::skills::RunSkillBehavior;
+use bevy::asset::{AssetPath, Handle};
 use common::{
 	dto::duration_in_seconds::DurationInSeconds,
 	errors::Unreachable,
@@ -45,7 +46,10 @@ impl TryLoadFrom<SkillDto> for Skill {
 			animation: skill_data.animation,
 			behavior: RunSkillBehavior::from(skill_data.behavior),
 			compatible_items: CompatibleItems(skill_data.is_usable_with),
-			icon: skill_data.icon.map(|icon| asset_server.load_asset(icon)),
+			icon: match skill_data.icon {
+				Some(icon) => asset_server.load_asset(icon),
+				None => Handle::default(),
+			},
 		})
 	}
 }
@@ -58,9 +62,7 @@ impl From<Skill> for SkillDto {
 			animation: skill.animation,
 			behavior: RunSkillBehaviorDto::from(skill.behavior),
 			is_usable_with: skill.compatible_items.0,
-			icon: skill
-				.icon
-				.and_then(|icon| icon.path().map(|path| Path::from(path.to_string()))),
+			icon: skill.icon.path().map(AssetPath::to_string).map(Path::from),
 		}
 	}
 }

@@ -1,7 +1,11 @@
 use super::thread_safe::ThreadSafe;
 use crate::{
 	tools::{action_key::slot::PlayerSlot, change::Change},
-	traits::{accessors::get::RefInto, handles_localization::Token},
+	traits::{
+		accessors::get::RefInto,
+		handles_loadout::{ContainerItem, ContainerKey},
+		handles_localization::Token,
+	},
 };
 use bevy::prelude::*;
 use std::collections::HashSet;
@@ -33,7 +37,7 @@ where
 		update_combos: TUpdateCombos,
 	) where
 		TUpdateCombos: IntoSystem<In<Combo<PlayerSlot, Option<TSkill>>>, (), M2> + Copy,
-		TCombos: GetCombosOrdered<TSkill, PlayerSlot>
+		TCombos: GetCombosOrdered<TItem = TSkill, TKey = PlayerSlot>
 			+ GetComboAblePlayerSkills<TSkill>
 			+ NextConfiguredKeys<PlayerSlot>
 			+ ThreadSafe;
@@ -50,8 +54,8 @@ pub trait NextConfiguredKeys<TKey> {
 	fn next_keys(&self, combo_keys: &[TKey]) -> HashSet<TKey>;
 }
 
-pub trait GetCombosOrdered<TSkill, TKey> {
+pub trait GetCombosOrdered: ContainerKey + ContainerItem {
 	/// Get combos with a consistent ordering.
 	/// The specific ordering heuristic is up to the implementor.
-	fn combos_ordered(&self) -> Vec<Vec<(Vec<TKey>, TSkill)>>;
+	fn combos_ordered(&self) -> Vec<Combo<Self::TKey, Self::TItem>>;
 }

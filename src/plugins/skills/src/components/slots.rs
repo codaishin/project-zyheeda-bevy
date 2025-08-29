@@ -16,16 +16,22 @@ use crate::{
 	skills::{QueuedSkill, Skill},
 	traits::peek_next::PeekNext,
 };
-use bevy::{asset::Handle, ecs::system::SystemParam, prelude::*};
+use bevy::{asset::Handle, prelude::*};
 use common::{
 	tools::{
-		action_key::slot::{PlayerSlot, SlotKey},
+		action_key::slot::SlotKey,
 		inventory_key::InventoryKey,
 		skill_execution::SkillExecution,
 	},
 	traits::{
-		accessors::get::{GetFromParam, GetRef},
-		handles_loadout::{AvailableSkills, SwapExternal, SwapInternal},
+		accessors::get::{GetParamEntry, GetRef},
+		handles_loadout::{
+			AvailableSkills,
+			ContainerItem,
+			ContainerKey,
+			SwapExternal,
+			SwapInternal,
+		},
 		iterate::Iterate,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
 	},
@@ -54,7 +60,7 @@ impl Slots {
 
 	fn skill_item_with_execution(
 		&self,
-		key: SlotKey,
+		key: &SlotKey,
 		item: &Item,
 		skill: Option<&Skill>,
 		assets: &SkillItemAssetsUsage,
@@ -64,11 +70,11 @@ impl Slots {
 		};
 		let mut queued_skills = queue.iterate().map(Self::match_combos(item, combos));
 
-		if let Some((active, _)) = queued_skills.next().filter(|(_, k)| k == &key) {
+		if let Some((active, _)) = queued_skills.next().filter(|(_, k)| k == key) {
 			return Self::skill_item(item, Some(active), SkillExecution::Active);
 		}
 
-		if let Some((queued, _)) = queued_skills.find(|(_, k)| k == &key) {
+		if let Some((queued, _)) = queued_skills.find(|(_, k)| k == key) {
 			return Self::skill_item(item, Some(queued), SkillExecution::Queued);
 		}
 
@@ -78,7 +84,7 @@ impl Slots {
 
 	fn skill_item(item: &Item, skill: Option<&Skill>, execution: SkillExecution) -> SkillItem {
 		let (skill_token, skill_icon) = match skill {
-			Some(skill) => (Some(skill.token.clone()), skill.icon.clone()),
+			Some(skill) => (Some(skill.token.clone()), Some(skill.icon.clone())),
 			None => (None, None),
 		};
 
@@ -94,7 +100,7 @@ impl Slots {
 		item: &'a Item,
 		combos: &'a Combos,
 	) -> impl Fn(&'a QueuedSkill) -> (&'a Skill, SlotKey) {
-		|queued| match combos.peek_next(queued.key, &item.item_type) {
+		|queued| match combos.peek_next(&queued.key, &item.item_type) {
 			Some(combo_skill) => (combo_skill, queued.key),
 			None => (&queued.skill, queued.key),
 		}
@@ -119,15 +125,14 @@ impl Default for Slots {
 	}
 }
 
-impl<'w, 's> GetFromParam<'w, 's, PlayerSlot> for Slots {
+impl<'w, 's> GetParamEntry<'w, 's, SlotKey> for Slots {
 	type TParam = SkillItemAssetsUsage<'w, 's>;
-	type TValue = SkillItem;
+	type TEntry = SkillItem;
 
-	fn get_from_param(&self, key: &PlayerSlot, assets: &SkillItemAssetsUsage) -> Self::TValue {
-		let key = SlotKey::from(*key);
+	fn get_param_entry(&self, key: &SlotKey, assets: &SkillItemAssetsUsage) -> Self::TEntry {
 		let item = self
 			.items
-			.get(&key)
+			.get(key)
 			.and_then(|item| item.as_ref())
 			.and_then(|item| assets.skill_item_assets.items.get(item));
 		let Some(item) = item else {
@@ -142,17 +147,16 @@ impl<'w, 's> GetFromParam<'w, 's, PlayerSlot> for Slots {
 	}
 }
 
-impl<'w, 's> GetFromParam<'w, 's, AvailableSkills<PlayerSlot>> for Slots {
+impl<'w, 's> GetParamEntry<'w, 's, AvailableSkills<SlotKey>> for Slots {
 	type TParam = SkillItemAssets<'w>;
-	type TValue = Vec<Skill>;
+	type TEntry = Vec<Skill>;
 
-	fn get_from_param<'w2, 's2>(
+	fn get_param_entry<'w2, 's2>(
 		&self,
-		AvailableSkills(key): &AvailableSkills<PlayerSlot>,
-		SkillItemAssets { items, skills }: &<Self::TParam as SystemParam>::Item<'w2, 's2>,
+		AvailableSkills(key): &AvailableSkills<SlotKey>,
+		SkillItemAssets { items, skills }: &SkillItemAssets,
 	) -> Vec<Skill> {
-		let key = SlotKey::from(*key);
-		let Some(Some(item)) = self.items.get(&key) else {
+		let Some(Some(item)) = self.items.get(key) else {
 			return vec![];
 		};
 		let Some(item) = items.get(item) else {
@@ -180,9 +184,21 @@ impl<'w, 's> GetFromParam<'w, 's, AvailableSkills<PlayerSlot>> for Slots {
 	}
 }
 
-impl SwapExternal<Inventory, PlayerSlot, InventoryKey> for Slots {
-	fn swap_external(&mut self, inventory: &mut Inventory, a: PlayerSlot, b: InventoryKey) {
-		inventory.swap_external(self, b, a);
+impl ContainerKey for Slots {
+	type TKey = SlotKey;
+}
+
+impl ContainerItem for Slots {
+	type TItem = SkillItem;
+}
+
+impl SwapExternal<Inventory> for Slots {
+	fn swap_external<TKey, TOtherKey>(&mut self, other: &mut Inventory, a: TKey, b: TOtherKey)
+	where
+		TKey: Into<SlotKey> + 'static,
+		TOtherKey: Into<InventoryKey> + 'static,
+	{
+		other.swap_external(self, b, a);
 	}
 }
 
@@ -198,10 +214,13 @@ impl GetRef<SlotKey> for Slots {
 	}
 }
 
-impl SwapInternal<PlayerSlot> for Slots {
-	fn swap_internal(&mut self, a: PlayerSlot, b: PlayerSlot) {
-		let a = SlotKey::from(a);
-		let b = SlotKey::from(b);
+impl SwapInternal for Slots {
+	fn swap_internal<TKey>(&mut self, a: TKey, b: TKey)
+	where
+		TKey: Into<Self::TKey>,
+	{
+		let a: SlotKey = a.into();
+		let b: SlotKey = b.into();
 		let item_a = self.items.remove(&a).unwrap_or_default();
 		let item_b = self.items.remove(&b).unwrap_or_default();
 		self.items.insert(a, item_b);
@@ -237,6 +256,7 @@ impl<'a> Iterator for Iter<'a> {
 mod tests {
 	use super::*;
 	use crate::skills::Skill;
+	use common::tools::action_key::slot::PlayerSlot;
 	use testing::{SingleThreadedApp, new_handle};
 
 	mod get_handle {
@@ -305,7 +325,7 @@ mod tests {
 
 					assert_eq!(
 						SkillItem::None,
-						slots.get_from_param(&PlayerSlot::UPPER_L, &param)
+						slots.get_param_entry(&SlotKey::from(PlayerSlot::UPPER_L), &param)
 					);
 				})
 		}
@@ -322,7 +342,7 @@ mod tests {
 			};
 			let skill = Skill {
 				token: Token::from("my skill"),
-				icon: Some(icon_handle.clone()),
+				icon: icon_handle.clone(),
 				..default()
 			};
 			let mut app = setup(
@@ -344,7 +364,7 @@ mod tests {
 							skill_icon: Some(icon_handle.clone()),
 							execution: SkillExecution::None,
 						},
-						slots.get_from_param(&PlayerSlot::UPPER_L, &param)
+						slots.get_param_entry(&SlotKey::from(PlayerSlot::UPPER_L), &param)
 					);
 				})
 		}
@@ -361,7 +381,7 @@ mod tests {
 			};
 			let skill = Skill {
 				token: Token::from("my skill"),
-				icon: Some(icon_handle.clone()),
+				icon: icon_handle.clone(),
 				..default()
 			};
 			let mut app = setup(
@@ -395,7 +415,7 @@ mod tests {
 							skill_icon: Some(icon_handle.clone()),
 							execution: SkillExecution::Active,
 						},
-						slots.get_from_param(&PlayerSlot::UPPER_L, &param)
+						slots.get_param_entry(&SlotKey::from(PlayerSlot::UPPER_L), &param)
 					);
 				})
 		}
@@ -412,7 +432,7 @@ mod tests {
 			};
 			let skill = Skill {
 				token: Token::from("my skill"),
-				icon: Some(icon_handle.clone()),
+				icon: icon_handle.clone(),
 				..default()
 			};
 			let mut app = setup(
@@ -445,7 +465,7 @@ mod tests {
 							skill_icon: Some(icon_handle.clone()),
 							execution: SkillExecution::None,
 						},
-						slots.get_from_param(&PlayerSlot::UPPER_L, &param)
+						slots.get_param_entry(&SlotKey::from(PlayerSlot::UPPER_L), &param)
 					);
 				})
 		}
@@ -462,7 +482,7 @@ mod tests {
 			};
 			let skill = Skill {
 				token: Token::from("my skill"),
-				icon: Some(icon_handle.clone()),
+				icon: icon_handle.clone(),
 				..default()
 			};
 			let mut app = setup(
@@ -502,7 +522,7 @@ mod tests {
 							skill_icon: Some(icon_handle.clone()),
 							execution: SkillExecution::Queued,
 						},
-						slots.get_from_param(&PlayerSlot::UPPER_L, &param)
+						slots.get_param_entry(&SlotKey::from(PlayerSlot::UPPER_L), &param)
 					);
 				})
 		}
@@ -521,13 +541,13 @@ mod tests {
 			let skill = Skill {
 				token: Token::from("my skill"),
 				compatible_items: CompatibleItems::from([ItemType::ForceEssence]),
-				icon: Some(icon_handle.clone()),
+				icon: icon_handle.clone(),
 				..default()
 			};
 			let combo_skill = Skill {
 				token: Token::from("my combo skill"),
 				compatible_items: CompatibleItems::from([ItemType::ForceEssence]),
-				icon: Some(icon_handle.clone()),
+				icon: icon_handle.clone(),
 				..default()
 			};
 			let mut app = setup(
@@ -560,7 +580,7 @@ mod tests {
 							skill_icon: Some(icon_handle.clone()),
 							execution: SkillExecution::None,
 						},
-						slots.get_from_param(&PlayerSlot::UPPER_L, &param)
+						slots.get_param_entry(&SlotKey::from(PlayerSlot::UPPER_L), &param)
 					);
 				})
 		}
@@ -579,13 +599,13 @@ mod tests {
 			let skill = Skill {
 				token: Token::from("my skill"),
 				compatible_items: CompatibleItems::from([ItemType::ForceEssence]),
-				icon: Some(icon_handle.clone()),
+				icon: icon_handle.clone(),
 				..default()
 			};
 			let combo_skill = Skill {
 				token: Token::from("my combo skill"),
 				compatible_items: CompatibleItems::from([ItemType::ForceEssence]),
-				icon: Some(icon_handle.clone()),
+				icon: icon_handle.clone(),
 				..default()
 			};
 			let mut app = setup(
@@ -622,7 +642,7 @@ mod tests {
 							skill_icon: Some(icon_handle.clone()),
 							execution: SkillExecution::Active,
 						},
-						slots.get_from_param(&PlayerSlot::UPPER_L, &param)
+						slots.get_param_entry(&SlotKey::from(PlayerSlot::UPPER_L), &param)
 					);
 				})
 		}
@@ -641,13 +661,13 @@ mod tests {
 			let skill = Skill {
 				token: Token::from("my skill"),
 				compatible_items: CompatibleItems::from([ItemType::ForceEssence]),
-				icon: Some(icon_handle.clone()),
+				icon: icon_handle.clone(),
 				..default()
 			};
 			let combo_skill = Skill {
 				token: Token::from("my combo skill"),
 				compatible_items: CompatibleItems::from([ItemType::ForceEssence]),
-				icon: Some(icon_handle.clone()),
+				icon: icon_handle.clone(),
 				..default()
 			};
 			let mut app = setup(
@@ -690,7 +710,7 @@ mod tests {
 							skill_icon: Some(icon_handle.clone()),
 							execution: SkillExecution::Queued,
 						},
-						slots.get_from_param(&PlayerSlot::UPPER_L, &param)
+						slots.get_param_entry(&SlotKey::from(PlayerSlot::UPPER_L), &param)
 					);
 				})
 		}
@@ -812,8 +832,10 @@ mod tests {
 						Some(item_handle.clone()),
 					)]);
 
-					let available =
-						slots.get_from_param(&AvailableSkills(PlayerSlot::UPPER_L), &param);
+					let available = slots.get_param_entry(
+						&AvailableSkills(SlotKey::from(PlayerSlot::UPPER_L)),
+						&param,
+					);
 
 					assert_eq_unordered!(
 						vec![

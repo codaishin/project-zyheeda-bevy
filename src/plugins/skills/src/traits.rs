@@ -63,7 +63,7 @@ pub(crate) trait GetActiveSkill<TSkillState> {
 }
 
 pub(crate) trait AdvanceCombo {
-	fn advance_combo(&mut self, trigger: SlotKey, item_type: &ItemType) -> Option<Skill>;
+	fn advance_combo(&mut self, trigger: &SlotKey, item_type: &ItemType) -> Option<Skill>;
 }
 
 pub(crate) trait SetNextCombo<TCombo> {

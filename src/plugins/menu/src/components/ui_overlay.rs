@@ -1,8 +1,5 @@
 use super::{Quickbar, input_label::InputLabel, quickbar_panel::QuickbarPanel};
-use crate::{
-	tools::PanelState,
-	traits::{LoadUi, colors::PanelColors, insert_ui_content::InsertUiContent},
-};
+use crate::traits::{LoadUi, colors::PanelColors, insert_ui_content::InsertUiContent};
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{tools::action_key::slot::PlayerSlot, traits::iteration::IterFinite};
 
@@ -91,7 +88,7 @@ fn add_slot(quickbar: &mut RelatedSpawnerCommands<ChildOf>, key: PlayerSlot) {
 								..default()
 							},
 							TextColor(PanelColors::DEFAULT.filled.text),
-							InputLabel::<PlayerSlot> { key },
+							InputLabel { key },
 						));
 				});
 		});
@@ -99,10 +96,7 @@ fn add_slot(quickbar: &mut RelatedSpawnerCommands<ChildOf>, key: PlayerSlot) {
 
 fn get_quickbar_panel(key: PlayerSlot) -> (QuickbarPanel, Button, Node) {
 	(
-		QuickbarPanel {
-			key,
-			state: PanelState::Empty,
-		},
+		QuickbarPanel::from(key),
 		Button,
 		Node {
 			width: Val::Percent(100.),

@@ -42,7 +42,7 @@ fn update_skill_with_advanced_combo<TCombos>(
 	let Some(item) = items.get(item_handle.id()) else {
 		return;
 	};
-	let Some(advanced) = combos.advance_combo(*key, &item.item_type) else {
+	let Some(advanced) = combos.advance_combo(key, &item.item_type) else {
 		return;
 	};
 
@@ -74,12 +74,12 @@ mod tests {
 	mock! {
 		_Combos {}
 		impl AdvanceCombo for _Combos {
-			fn advance_combo(&mut self, trigger: SlotKey, item_type: &ItemType) -> Option<Skill> {}
+			fn advance_combo(&mut self, trigger: &SlotKey, item_type: &ItemType) -> Option<Skill> {}
 		}
 	}
 
 	impl AdvanceCombo for _Combos {
-		fn advance_combo(&mut self, trigger: SlotKey, item_type: &ItemType) -> Option<Skill> {
+		fn advance_combo(&mut self, trigger: &SlotKey, item_type: &ItemType) -> Option<Skill> {
 			self.mock.advance_combo(trigger, item_type)
 		}
 	}

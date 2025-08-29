@@ -1,64 +1,91 @@
 use crate::{
 	tools::{
-		action_key::slot::PlayerSlot,
+		action_key::slot::SlotKey,
 		inventory_key::InventoryKey,
 		skill_execution::SkillExecution,
 	},
 	traits::{
-		accessors::get::{GetFromParam, RefInto},
+		accessors::get::{GetParamEntry, RefInto},
 		handles_combo_menu::{Combo, GetCombosOrdered, NextConfiguredKeys},
 		handles_localization::Token,
+		thread_safe::ThreadSafe,
 	},
 };
 use bevy::{ecs::component::Mutable, prelude::*};
 
 pub trait HandlesLoadout {
-	type TItem: for<'a> RefInto<'a, ItemToken<'a>>
-		+ for<'a> RefInto<'a, SkillToken<'a>>
-		+ for<'a> RefInto<'a, SkillIcon<'a>>
-		+ for<'a> RefInto<'a, &'a SkillExecution>;
+	type TItemEntry: for<'a> RefInto<'a, Option<ItemToken<'a>>>
+		+ for<'a> RefInto<'a, Option<SkillToken<'a>>>
+		+ for<'a> RefInto<'a, Option<SkillIcon<'a>>>
+		+ for<'a> RefInto<'a, Option<&'a SkillExecution>>;
 	type TSkill: PartialEq
 		+ Clone
+		+ ThreadSafe
 		+ for<'a> RefInto<'a, SkillToken<'a>>
 		+ for<'a> RefInto<'a, SkillIcon<'a>>;
 	type TSkills: IntoIterator<Item = Self::TSkill>;
 
 	type TInventory: Component<Mutability = Mutable>
-		+ SwapInternal<InventoryKey>
-		+ SwapExternal<Self::TSlots, InventoryKey, PlayerSlot>
-		+ for<'w, 's> GetFromParam<'w, 's, InventoryKey, TValue = Self::TItem>;
+		+ ContainerKey<TKey = InventoryKey>
+		+ ContainerItem<TItem = Self::TItemEntry>
+		+ SwapInternal
+		+ SwapExternal<Self::TSlots>
+		+ for<'w, 's> GetParamEntry<'w, 's, InventoryKey, TEntry = Self::TItemEntry>;
 	type TSlots: Component<Mutability = Mutable>
-		+ SwapInternal<PlayerSlot>
-		+ SwapExternal<Self::TInventory, PlayerSlot, InventoryKey>
-		+ for<'w, 's> GetFromParam<'w, 's, PlayerSlot, TValue = Self::TItem>
-		+ for<'w, 's> GetFromParam<'w, 's, AvailableSkills<PlayerSlot>, TValue = Self::TSkills>;
+		+ ContainerKey<TKey = SlotKey>
+		+ ContainerItem<TItem = Self::TItemEntry>
+		+ SwapInternal
+		+ SwapExternal<Self::TInventory>
+		+ for<'w, 's> GetParamEntry<'w, 's, SlotKey, TEntry = Self::TItemEntry>
+		+ for<'w, 's> GetParamEntry<'w, 's, AvailableSkills<SlotKey>, TEntry = Self::TSkills>;
 	type TCombos: Component<Mutability = Mutable>
-		+ for<'a> GetCombosOrdered<Self::TSkill, PlayerSlot>
-		+ for<'a> UpdateCombos<Self::TSkill>
-		+ NextConfiguredKeys<PlayerSlot>;
+		+ ContainerKey<TKey = SlotKey>
+		+ ContainerItem<TItem = Self::TSkill>
+		+ for<'a> GetCombosOrdered
+		+ for<'a> UpdateCombos
+		+ NextConfiguredKeys<SlotKey>;
 }
 
-pub trait SwapInternal<TKey> {
-	fn swap_internal(&mut self, a: TKey, b: TKey);
+pub trait ContainerKey {
+	type TKey: Copy + ThreadSafe;
 }
 
-pub trait SwapExternal<TOther, TKey, TKeyOther> {
-	fn swap_external(&mut self, other: &mut TOther, a: TKey, b: TKeyOther);
+pub trait ContainerItem {
+	type TItem;
+}
+
+pub trait SwapInternal: ContainerKey {
+	fn swap_internal<TKey>(&mut self, a: TKey, b: TKey)
+	where
+		TKey: Into<Self::TKey> + 'static;
+}
+
+pub trait SwapExternal<TOther>: ContainerKey
+where
+	TOther: ContainerKey,
+{
+	fn swap_external<TKey, TOtherKey>(&mut self, other: &mut TOther, a: TKey, b: TOtherKey)
+	where
+		TKey: Into<Self::TKey> + 'static,
+		TOtherKey: Into<TOther::TKey> + 'static;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct AvailableSkills<T>(pub T);
 
-pub trait UpdateCombos<TSkill> {
+pub trait UpdateCombos: ContainerKey + ContainerItem {
 	// FIXME: return indication of success?
-	fn update_combos(&mut self, combos: Combo<PlayerSlot, Option<TSkill>>);
+	fn update_combos(&mut self, combos: Combo<Self::TKey, Option<Self::TItem>>);
 }
 
-pub struct ItemToken<'a>(pub Option<&'a Token>);
+#[derive(Debug, PartialEq, Clone)]
+pub struct ItemToken<'a>(pub &'a Token);
 
-pub struct SkillToken<'a>(pub Option<&'a Token>);
+#[derive(Debug, PartialEq, Clone)]
+pub struct SkillToken<'a>(pub &'a Token);
 
-pub struct SkillIcon<'a>(pub Option<&'a Handle<Image>>);
+#[derive(Debug, PartialEq, Clone)]
+pub struct SkillIcon<'a>(pub &'a Handle<Image>);
 
 /// Prove of concept of using generic system parameters
 // FIXME: REMOVE IN FINAL PR

@@ -1,27 +1,24 @@
-use std::{collections::HashSet, hash::Hash};
-
 use crate::{AppendSkill, Dropdown, KeySelect, traits::GetComponent};
 use bevy::prelude::*;
 use common::{
-	tools::action_key::slot::PlayerSlot,
-	traits::{iteration::IterFinite, thread_safe::ThreadSafe},
+	tools::action_key::slot::{PlayerSlot, SlotKey},
+	traits::iteration::IterFinite,
 };
+use std::{collections::HashSet, hash::Hash};
 
 #[derive(Component, Debug, PartialEq)]
-pub(crate) struct KeySelectDropdownCommand<TExtra, TKey = PlayerSlot> {
+pub(crate) struct KeySelectDropdownCommand<TExtra> {
 	pub(crate) extra: TExtra,
-	pub(crate) key_path: Vec<TKey>,
+	pub(crate) key_path: Vec<SlotKey>,
 }
 
-impl<TKey> GetComponent for KeySelectDropdownCommand<AppendSkillCommand, TKey>
-where
-	TKey: ThreadSafe + IterFinite + PartialEq + Eq + Hash,
-{
-	type TComponent = Dropdown<KeySelect<AppendSkill<TKey>, TKey>>;
-	type TInput = ExcludeKeys<TKey>;
+impl GetComponent for KeySelectDropdownCommand<AppendSkillCommand> {
+	type TComponent = Dropdown<KeySelect<AppendSkill>>;
+	type TInput = ExcludeKeys<SlotKey>;
 
 	fn component(&self, ExcludeKeys(excluded): Self::TInput) -> Option<Self::TComponent> {
-		let items = TKey::iterator()
+		let items = PlayerSlot::iterator()
+			.map(SlotKey::from)
 			.filter(|key| !excluded.contains(key))
 			.map(|on| KeySelect {
 				extra: AppendSkill { on },
@@ -47,37 +44,16 @@ where
 
 #[cfg(test)]
 mod tests {
+	use testing::assert_eq_unordered;
+
 	use super::*;
-	use common::traits::iteration::Iter;
-
-	#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-	enum _Key {
-		A,
-		B,
-		C,
-	}
-
-	impl IterFinite for _Key {
-		fn iterator() -> Iter<Self> {
-			Iter(Some(_Key::A))
-		}
-
-		fn next(Iter(current): &Iter<Self>) -> Option<Self> {
-			let current = *current;
-			match current? {
-				_Key::A => Some(_Key::B),
-				_Key::B => Some(_Key::C),
-				_Key::C => None,
-			}
-		}
-	}
 
 	#[test]
 	fn get_no_dropdown_when_all_keys_excluded() {
-		let keys = _Key::iterator().collect();
+		let keys = PlayerSlot::iterator().map(SlotKey::from).collect();
 		let command = KeySelectDropdownCommand {
 			extra: AppendSkillCommand,
-			key_path: vec![_Key::A],
+			key_path: vec![SlotKey::from(PlayerSlot::LOWER_L)],
 		};
 
 		assert_eq!(None, command.component(ExcludeKeys(keys)));
@@ -85,26 +61,31 @@ mod tests {
 
 	#[test]
 	fn get_dropdown_dropdown_with_remaining_keys() {
-		let keys = HashSet::from([_Key::B]);
+		let exclude = PlayerSlot::iterator()
+			.filter(|k| k != &PlayerSlot::UPPER_R && k != &PlayerSlot::UPPER_L)
+			.map(SlotKey::from)
+			.collect();
 		let command = KeySelectDropdownCommand {
 			extra: AppendSkillCommand,
-			key_path: vec![_Key::A],
+			key_path: vec![SlotKey::from(PlayerSlot::UPPER_R)],
 		};
 
-		assert_eq!(
-			Some(Dropdown {
-				items: vec![
-					KeySelect {
-						extra: AppendSkill { on: _Key::A },
-						key_path: vec![_Key::A]
+		assert_eq_unordered!(
+			Some(vec![
+				KeySelect {
+					extra: AppendSkill {
+						on: SlotKey::from(PlayerSlot::UPPER_R)
 					},
-					KeySelect {
-						extra: AppendSkill { on: _Key::C },
-						key_path: vec![_Key::A]
-					}
-				]
-			}),
-			command.component(ExcludeKeys(keys))
+					key_path: vec![SlotKey::from(PlayerSlot::UPPER_R)]
+				},
+				KeySelect {
+					extra: AppendSkill {
+						on: SlotKey::from(PlayerSlot::UPPER_L)
+					},
+					key_path: vec![SlotKey::from(PlayerSlot::UPPER_R)]
+				}
+			]),
+			command.component(ExcludeKeys(exclude)).map(|d| d.items)
 		);
 	}
 }

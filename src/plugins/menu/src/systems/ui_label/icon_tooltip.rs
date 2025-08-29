@@ -5,10 +5,10 @@ use crate::{
 use bevy::prelude::*;
 use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
-impl Icon {
-	pub(crate) fn insert_image_tooltip(
+impl UILabel {
+	pub(crate) fn icon_tooltip(
 		mut commands: ZyheedaCommands,
-		icons: Query<(Entity, &Self, &UILabel), Changed<Self>>,
+		icons: Query<(Entity, &Icon, &UILabel), Changed<Icon>>,
 	) {
 		for (entity, icon, UILabel(label)) in &icons {
 			if !matches!(icon, Icon::Loaded(_)) {
@@ -16,7 +16,7 @@ impl Icon {
 			}
 
 			commands.try_apply_on(&entity, |mut e| {
-				e.try_insert((Interaction::default(), Tooltip::new(label.clone())));
+				e.try_insert(Tooltip::new(label.clone()));
 			});
 		}
 	}
@@ -33,7 +33,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, Icon::insert_image_tooltip);
+		app.add_systems(Update, UILabel::icon_tooltip);
 
 		app
 	}
@@ -65,7 +65,7 @@ mod tests {
 	}
 
 	#[test_case(Icon::ImagePath(PathBuf::from("")); "is path")]
-	#[test_case(Icon::Loading(new_handle()); "is loading")]
+	#[test_case(Icon::Load(new_handle()); "is loading")]
 	#[test_case(Icon::None; "is none")]
 	fn do_not_insert_tooltip_icon_when_image(icon: Icon) {
 		let mut app = setup();

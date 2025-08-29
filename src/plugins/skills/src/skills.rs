@@ -46,7 +46,7 @@ pub struct Skill {
 	pub animation: AnimationStrategy,
 	pub behavior: RunSkillBehavior,
 	pub compatible_items: CompatibleItems,
-	pub icon: Option<Handle<Image>>,
+	pub icon: Handle<Image>,
 }
 
 impl Display for Skill {
@@ -64,21 +64,15 @@ impl AssetFolderPath for Skill {
 	}
 }
 
-impl<'a> RefInto<'a, SkillToken<'a>> for Skill {
-	fn ref_into(&'a self) -> SkillToken<'a> {
-		SkillToken(Some(&self.token))
+impl<'a> From<&'a Skill> for SkillToken<'a> {
+	fn from(Skill { token, .. }: &'a Skill) -> Self {
+		SkillToken(token)
 	}
 }
 
-impl<'a> RefInto<'a, SkillIcon<'a>> for Skill {
-	fn ref_into(&self) -> SkillIcon<'_> {
-		SkillIcon(self.icon.as_ref())
-	}
-}
-
-impl<'a> From<&'a Skill> for Option<&'a Handle<Image>> {
+impl<'a> From<&'a Skill> for SkillIcon<'a> {
 	fn from(Skill { icon, .. }: &'a Skill) -> Self {
-		icon.as_ref()
+		Self(icon)
 	}
 }
 
@@ -126,12 +120,6 @@ impl From<&QueuedSkill> for SlotKey {
 impl<'a> RefInto<'a, &'a Token> for QueuedSkill {
 	fn ref_into(&self) -> &Token {
 		&self.skill.token
-	}
-}
-
-impl<'a> RefInto<'a, &'a Option<Handle<Image>>> for QueuedSkill {
-	fn ref_into(&self) -> &Option<Handle<Image>> {
-		&self.skill.icon
 	}
 }
 

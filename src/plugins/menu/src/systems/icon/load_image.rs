@@ -23,7 +23,7 @@ where
 				let server = server.as_mut();
 				set_loading_or_none(&mut icon, server, path);
 			}
-			Icon::Loading(handle) => {
+			Icon::Load(handle) => {
 				let server = server.as_ref();
 				let handle = handle.clone();
 				set_loaded_or_none(&mut icon, server, handle);
@@ -39,7 +39,7 @@ where
 	TAssetServer: TryLoadAsset,
 {
 	*icon = match server.try_load_asset(path_buf) {
-		Ok(handle) => Icon::Loading(handle),
+		Ok(handle) => Icon::Load(handle),
 		Err(AssetNotFound) => Icon::None,
 	};
 }
@@ -133,7 +133,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&Icon::Loading(handle)),
+			Some(&Icon::Load(handle)),
 			app.world().entity(entity).get::<Icon>(),
 		);
 	}
@@ -150,7 +150,7 @@ mod tests {
 				.times(1)
 				.return_const(LoadState::Loaded);
 		}));
-		let entity = app.world_mut().spawn(Icon::Loading(handle.clone())).id();
+		let entity = app.world_mut().spawn(Icon::Load(handle.clone())).id();
 
 		app.update();
 
@@ -174,7 +174,7 @@ mod tests {
 					AssetLoadError::AssetReaderError(AssetReaderError::NotFound(PathBuf::from(""))),
 				)));
 		}));
-		let entity = app.world_mut().spawn(Icon::Loading(handle)).id();
+		let entity = app.world_mut().spawn(Icon::Load(handle)).id();
 
 		app.update();
 

@@ -16,15 +16,20 @@ pub trait GetRef<TKey> {
 	fn get_ref(&self, key: &TKey) -> Option<Self::TValue<'_>>;
 }
 
-pub trait GetFromParam<'w, 's, TKey> {
-	type TParam: SystemParam;
-	type TValue;
+pub type ParamEntry<'w, 's, T, TKey> = <T as GetParamEntry<'w, 's, TKey>>::TEntry;
+pub type Param<'w, 's, T, TKey> = <T as GetParamEntry<'w, 's, TKey>>::TParam;
+pub type ParamItem<'w, 's, 'w2, 's2, T, TKey> =
+	<Param<'w, 's, T, TKey> as SystemParam>::Item<'w2, 's2>;
 
-	fn get_from_param(
+pub trait GetParamEntry<'w, 's, TKey> {
+	type TParam: SystemParam;
+	type TEntry;
+
+	fn get_param_entry(
 		&self,
 		key: &TKey,
 		assets: &<Self::TParam as SystemParam>::Item<'_, '_>,
-	) -> Self::TValue;
+	) -> Self::TEntry;
 }
 
 pub trait GetMut<TKey> {

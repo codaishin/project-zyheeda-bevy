@@ -94,38 +94,47 @@ pub enum SkillItem {
 	None,
 }
 
-impl<'a> RefInto<'a, ItemToken<'a>> for SkillItem {
-	fn ref_into(&'a self) -> ItemToken<'a> {
-		match self {
-			SkillItem::Some { item_token, .. } => ItemToken(Some(item_token)),
-			SkillItem::None => ItemToken(None),
+impl<'a> From<&'a SkillItem> for Option<ItemToken<'a>> {
+	fn from(item: &'a SkillItem) -> Self {
+		match item {
+			SkillItem::Some { item_token, .. } => Some(ItemToken(item_token)),
+			SkillItem::None => None,
 		}
 	}
 }
 
-impl<'a> RefInto<'a, SkillToken<'a>> for SkillItem {
-	fn ref_into(&'a self) -> SkillToken<'a> {
-		match self {
-			SkillItem::Some { skill_token, .. } => SkillToken(skill_token.as_ref()),
-			SkillItem::None => SkillToken(None),
+impl<'a> From<&'a SkillItem> for Option<SkillToken<'a>> {
+	fn from(item: &'a SkillItem) -> Self {
+		match item {
+			SkillItem::Some {
+				skill_token: Some(skill_token),
+				..
+			} => Some(SkillToken(skill_token)),
+			SkillItem::Some {
+				skill_token: None, ..
+			} => None,
+			SkillItem::None => None,
 		}
 	}
 }
 
-impl<'a> RefInto<'a, SkillIcon<'a>> for SkillItem {
-	fn ref_into(&'a self) -> SkillIcon<'a> {
-		match self {
-			Self::Some { skill_icon, .. } => SkillIcon(skill_icon.as_ref()),
-			_ => SkillIcon(None),
+impl<'a> From<&'a SkillItem> for Option<SkillIcon<'a>> {
+	fn from(item: &'a SkillItem) -> Self {
+		match item {
+			SkillItem::Some {
+				skill_icon: Some(icon),
+				..
+			} => Some(SkillIcon(icon)),
+			_ => None,
 		}
 	}
 }
 
-impl<'a> RefInto<'a, &'a SkillExecution> for SkillItem {
-	fn ref_into(&'a self) -> &'a SkillExecution {
-		match self {
-			SkillItem::Some { execution, .. } => execution,
-			SkillItem::None => &SkillExecution::None,
+impl<'a> From<&'a SkillItem> for Option<&'a SkillExecution> {
+	fn from(item: &'a SkillItem) -> Self {
+		match item {
+			SkillItem::Some { execution, .. } => Some(execution),
+			SkillItem::None => None,
 		}
 	}
 }

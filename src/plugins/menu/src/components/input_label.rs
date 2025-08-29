@@ -1,12 +1,13 @@
 use bevy::prelude::*;
+use common::tools::action_key::slot::PlayerSlot;
 
 #[derive(Component, Debug, PartialEq)]
 #[require(Node = Self::node(), TextFont = Self::text_font())]
-pub struct InputLabel<TKey> {
-	pub key: TKey,
+pub struct InputLabel {
+	pub key: PlayerSlot,
 }
 
-impl<TKey> InputLabel<TKey> {
+impl InputLabel {
 	pub(crate) const FONT_SIZE: f32 = 15.;
 
 	fn node() -> Node {

@@ -8,13 +8,13 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	tools::{
-		action_key::slot::{PlayerSlot, SlotKey},
+		action_key::slot::SlotKey,
 		inventory_key::InventoryKey,
 		skill_execution::SkillExecution,
 	},
 	traits::{
-		accessors::get::GetFromParam,
-		handles_loadout::{SwapExternal, SwapInternal},
+		accessors::get::GetParamEntry,
+		handles_loadout::{ContainerItem, ContainerKey, SwapExternal, SwapInternal},
 		iterate::Iterate,
 	},
 };
@@ -34,15 +34,15 @@ where
 	}
 }
 
-impl<'w, 's> GetFromParam<'w, 's, InventoryKey> for Inventory {
+impl<'w, 's> GetParamEntry<'w, 's, InventoryKey> for Inventory {
 	type TParam = SkillItemAssets<'w>;
-	type TValue = SkillItem;
+	type TEntry = SkillItem;
 
-	fn get_from_param(
+	fn get_param_entry(
 		&self,
 		InventoryKey(index): &InventoryKey,
 		SkillItemAssets { items, skills }: &SkillItemAssets,
-	) -> Self::TValue {
+	) -> Self::TEntry {
 		let Self(inventory) = self;
 		let item = inventory
 			.get(*index)
@@ -55,7 +55,7 @@ impl<'w, 's> GetFromParam<'w, 's, InventoryKey> for Inventory {
 		let skill = item.skill.as_ref().and_then(|skill| skills.get(skill));
 
 		let (skill_token, skill_icon) = match skill {
-			Some(skill) => (Some(skill.token.clone()), skill.icon.clone()),
+			Some(skill) => (Some(skill.token.clone()), Some(skill.icon.clone())),
 			None => (None, None),
 		};
 
@@ -68,19 +68,37 @@ impl<'w, 's> GetFromParam<'w, 's, InventoryKey> for Inventory {
 	}
 }
 
-impl SwapExternal<Slots, InventoryKey, PlayerSlot> for Inventory {
-	fn swap_external(&mut self, other: &mut Slots, InventoryKey(a): InventoryKey, b: PlayerSlot) {
+impl ContainerKey for Inventory {
+	type TKey = InventoryKey;
+}
+
+impl ContainerItem for Inventory {
+	type TItem = SkillItem;
+}
+
+impl SwapExternal<Slots> for Inventory {
+	fn swap_external<TKey, TOtherKey>(&mut self, other: &mut Slots, a: TKey, b: TOtherKey)
+	where
+		TKey: Into<InventoryKey>,
+		TOtherKey: Into<SlotKey>,
+	{
+		let InventoryKey(a) = a.into();
 		if a >= self.0.len() {
 			fill(&mut self.0, a);
 		}
 		let a = &mut self.0[a];
-		let b = other.items.entry(SlotKey::from(b)).or_default();
+		let b = other.items.entry(b.into()).or_default();
 		std::mem::swap(a, b);
 	}
 }
 
-impl SwapInternal<InventoryKey> for Inventory {
-	fn swap_internal(&mut self, InventoryKey(a): InventoryKey, InventoryKey(b): InventoryKey) {
+impl SwapInternal for Inventory {
+	fn swap_internal<TKey>(&mut self, a: TKey, b: TKey)
+	where
+		TKey: Into<InventoryKey>,
+	{
+		let InventoryKey(a) = a.into();
+		let InventoryKey(b) = b.into();
 		let items = &mut self.0;
 		let max = a.max(b);
 
@@ -162,7 +180,7 @@ mod tests {
 
 				assert_eq!(
 					SkillItem::None,
-					inventory.get_from_param(&InventoryKey(0), &skill_items)
+					inventory.get_param_entry(&InventoryKey(0), &skill_items)
 				);
 			})
 	}
@@ -185,7 +203,7 @@ mod tests {
 				&skill_handle,
 				Skill {
 					token: Token::from("my skill"),
-					icon: Some(icon_handle.clone()),
+					icon: icon_handle.clone(),
 					..default()
 				},
 			)],
@@ -202,7 +220,7 @@ mod tests {
 						skill_icon: Some(icon_handle.clone()),
 						execution: SkillExecution::None,
 					},
-					inventory.get_from_param(&InventoryKey(0), &skill_items)
+					inventory.get_param_entry(&InventoryKey(0), &skill_items)
 				);
 			})
 	}
@@ -225,7 +243,7 @@ mod tests {
 				&skill_handle,
 				Skill {
 					token: Token::from("my skill"),
-					icon: Some(icon_handle.clone()),
+					icon: icon_handle.clone(),
 					..default()
 				},
 			)],
@@ -242,7 +260,7 @@ mod tests {
 						skill_icon: Some(icon_handle.clone()),
 						execution: SkillExecution::None,
 					},
-					inventory.get_from_param(&InventoryKey(2), &skill_items)
+					inventory.get_param_entry(&InventoryKey(2), &skill_items)
 				);
 			})
 	}
@@ -284,7 +302,7 @@ mod tests {
 
 	mod swap_external {
 		use super::*;
-		use common::tools::action_key::slot::SlotKey;
+		use common::tools::action_key::slot::{PlayerSlot, SlotKey};
 
 		#[test]
 		fn swap() {

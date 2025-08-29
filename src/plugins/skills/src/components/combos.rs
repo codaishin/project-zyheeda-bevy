@@ -8,13 +8,10 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	tools::{
-		action_key::slot::{PlayerSlot, SlotKey},
-		item_type::ItemType,
-	},
+	tools::{action_key::slot::SlotKey, item_type::ItemType},
 	traits::{
 		handles_combo_menu::{Combo, GetCombosOrdered, NextConfiguredKeys},
-		handles_loadout::UpdateCombos,
+		handles_loadout::{ContainerItem, ContainerKey, UpdateCombos},
 	},
 };
 use macros::SavableComponent;
@@ -73,7 +70,7 @@ where
 
 	fn peek_next_recursive<'a>(
 		&'a self,
-		trigger: SlotKey,
+		trigger: &SlotKey,
 		item_type: &ItemType,
 	) -> Option<(Self::TNext<'a>, Self::TRecursiveNode<'a>)> {
 		let Combos { config, current } = self;
@@ -92,35 +89,43 @@ where
 {
 	type TNext = Skill;
 
-	fn peek_next(&'a self, trigger: SlotKey, item_type: &ItemType) -> Option<&'a Skill> {
+	fn peek_next(&'a self, trigger: &SlotKey, item_type: &ItemType) -> Option<&'a Skill> {
 		self.peek_next_recursive(trigger, item_type)
 			.map(|(skill, _)| skill)
 	}
 }
 
-impl<TNode, TKey> GetCombosOrdered<Skill, TKey> for Combos<TNode>
+impl<TNode> ContainerKey for Combos<TNode> {
+	type TKey = SlotKey;
+}
+
+impl<TNode> ContainerItem for Combos<TNode> {
+	type TItem = Skill;
+}
+
+impl<TNode> GetCombosOrdered for Combos<TNode>
 where
-	TNode: GetCombosOrdered<Skill, TKey>,
+	TNode: GetCombosOrdered<TKey = SlotKey, TItem = Skill>,
 {
-	fn combos_ordered(&self) -> Vec<Combo<TKey, Skill>> {
+	fn combos_ordered(&self) -> Vec<Combo<SlotKey, Skill>> {
 		self.config.combos_ordered()
 	}
 }
 
-impl<TNode> NextConfiguredKeys<PlayerSlot> for Combos<TNode>
+impl<TNode> NextConfiguredKeys<SlotKey> for Combos<TNode>
 where
-	TNode: NextConfiguredKeys<PlayerSlot>,
+	TNode: NextConfiguredKeys<SlotKey>,
 {
-	fn next_keys(&self, combo_keys: &[PlayerSlot]) -> HashSet<PlayerSlot> {
+	fn next_keys(&self, combo_keys: &[SlotKey]) -> HashSet<SlotKey> {
 		self.config.next_keys(combo_keys)
 	}
 }
 
-impl<TNode, TSkill> UpdateCombos<TSkill> for Combos<TNode>
+impl<TNode> UpdateCombos for Combos<TNode>
 where
-	TNode: UpdateCombos<TSkill>,
+	TNode: UpdateCombos<TKey = SlotKey, TItem = Skill>,
 {
-	fn update_combos(&mut self, combo: Combo<PlayerSlot, Option<TSkill>>) {
+	fn update_combos(&mut self, combo: Combo<SlotKey, Option<Skill>>) {
 		self.current = None;
 		self.config.update_combos(combo);
 	}
@@ -130,10 +135,7 @@ where
 mod tests {
 	use super::*;
 	use bevy::utils::default;
-	use common::{
-		tools::action_key::slot::{PlayerSlot, Side},
-		traits::handles_localization::Token,
-	};
+	use common::{tools::action_key::slot::PlayerSlot, traits::handles_localization::Token};
 	use macros::simple_mock;
 	use mockall::predicate::eq;
 	use std::collections::HashMap;
@@ -154,10 +156,10 @@ mod tests {
 
 		fn peek_next_recursive<'a>(
 			&'a self,
-			trigger: SlotKey,
+			trigger: &SlotKey,
 			item_type: &ItemType,
 		) -> Option<(&'a Skill, &'a Self)> {
-			let skill = self.0.get(&(trigger, *item_type))?;
+			let skill = self.0.get(&(*trigger, *item_type))?;
 
 			Some((skill, self))
 		}
@@ -165,7 +167,7 @@ mod tests {
 
 	#[test]
 	fn return_skill() {
-		let trigger = SlotKey::from(PlayerSlot::Lower(Side::Left));
+		let trigger = SlotKey::from(PlayerSlot::LOWER_L);
 		let item_type = ItemType::ForceEssence;
 		let combos = Combos::new(_Next(HashMap::from([(
 			(trigger, item_type),
@@ -176,7 +178,7 @@ mod tests {
 		)])));
 
 		let skill = combos
-			.peek_next_recursive(trigger, &item_type)
+			.peek_next_recursive(&trigger, &item_type)
 			.map(|(skill, _)| skill);
 
 		assert_eq!(
@@ -190,7 +192,7 @@ mod tests {
 
 	#[test]
 	fn use_combo_used_in_set_next_combo() {
-		let trigger = SlotKey::from(PlayerSlot::Lower(Side::Left));
+		let trigger = SlotKey::from(PlayerSlot::LOWER_L);
 		let item_type = ItemType::ForceEssence;
 		let first = _Next::default();
 		let next = _Next(HashMap::from([(
@@ -204,7 +206,7 @@ mod tests {
 		combos.set_next_combo(Some(next));
 
 		let skill = combos
-			.peek_next_recursive(trigger, &item_type)
+			.peek_next_recursive(&trigger, &item_type)
 			.map(|(skill, _)| skill);
 
 		assert_eq!(
@@ -218,7 +220,7 @@ mod tests {
 
 	#[test]
 	fn use_original_when_next_combo_returns_none() {
-		let trigger = SlotKey::from(PlayerSlot::Lower(Side::Left));
+		let trigger = SlotKey::from(PlayerSlot::LOWER_L);
 		let item_type = ItemType::ForceEssence;
 		let first = _Next(HashMap::from([(
 			(trigger, item_type),
@@ -232,7 +234,7 @@ mod tests {
 		combos.set_next_combo(Some(next));
 
 		let skill = combos
-			.peek_next_recursive(trigger, &item_type)
+			.peek_next_recursive(&trigger, &item_type)
 			.map(|(skill, _)| skill);
 
 		assert_eq!(
@@ -244,10 +246,18 @@ mod tests {
 		);
 	}
 
-	struct _ComboNode(Vec<Combo<PlayerSlot, Skill>>);
+	struct _ComboNode(Vec<Combo<SlotKey, Skill>>);
 
-	impl GetCombosOrdered<Skill, PlayerSlot> for _ComboNode {
-		fn combos_ordered(&self) -> Vec<Combo<PlayerSlot, Skill>> {
+	impl ContainerKey for _ComboNode {
+		type TKey = SlotKey;
+	}
+
+	impl ContainerItem for _ComboNode {
+		type TItem = Skill;
+	}
+
+	impl GetCombosOrdered for _ComboNode {
+		fn combos_ordered(&self) -> Vec<Combo<SlotKey, Skill>> {
 			self.0.clone()
 		}
 	}
@@ -260,8 +270,8 @@ mod tests {
 		};
 		let combos_vec = vec![vec![(
 			vec![
-				PlayerSlot::Lower(Side::Left),
-				PlayerSlot::Lower(Side::Right),
+				SlotKey::from(PlayerSlot::LOWER_L),
+				SlotKey::from(PlayerSlot::LOWER_R),
 			],
 			skill,
 		)]];
@@ -277,8 +287,8 @@ mod tests {
 
 		simple_mock! {
 			_Node {}
-			impl NextConfiguredKeys<PlayerSlot> for _Node {
-				fn next_keys(&self, combo_keys: &[PlayerSlot]) -> HashSet<PlayerSlot>;
+			impl NextConfiguredKeys<SlotKey> for _Node {
+				fn next_keys(&self, combo_keys: &[SlotKey]) -> HashSet<SlotKey>;
 			}
 		}
 
@@ -287,13 +297,25 @@ mod tests {
 			let combos = Combos::new(Mock_Node::new_mock(|mock| {
 				mock.expect_next_keys()
 					.times(1)
-					.with(eq([PlayerSlot::LOWER_R, PlayerSlot::UPPER_L]))
-					.return_const(HashSet::from([PlayerSlot::LOWER_L, PlayerSlot::LOWER_R]));
+					.with(eq([
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::UPPER_L),
+					]))
+					.return_const(HashSet::from([
+						SlotKey::from(PlayerSlot::LOWER_L),
+						SlotKey::from(PlayerSlot::LOWER_R),
+					]));
 			}));
 
 			assert_eq!(
-				HashSet::from([PlayerSlot::LOWER_L, PlayerSlot::LOWER_R]),
-				combos.next_keys(&[PlayerSlot::LOWER_R, PlayerSlot::UPPER_L]),
+				HashSet::from([
+					SlotKey::from(PlayerSlot::LOWER_L),
+					SlotKey::from(PlayerSlot::LOWER_R)
+				]),
+				combos.next_keys(&[
+					SlotKey::from(PlayerSlot::LOWER_R),
+					SlotKey::from(PlayerSlot::UPPER_L)
+				]),
 			);
 		}
 	}
@@ -301,13 +323,16 @@ mod tests {
 	mod update_combo {
 		use super::*;
 
-		#[derive(Debug, PartialEq)]
-		struct _Skill;
-
 		simple_mock! {
 			_Node {}
-			impl UpdateCombos<_Skill> for _Node {
-				fn update_combos(&mut self, combo: Combo<PlayerSlot, Option<_Skill>>);
+			impl ContainerKey for _Node {
+				type TKey = SlotKey;
+			}
+			impl ContainerItem for _Node {
+				type TItem = Skill;
+			}
+			impl UpdateCombos for _Node {
+				fn update_combos(&mut self, combo: Combo<SlotKey, Option<Skill>>);
 			}
 		}
 
@@ -316,11 +341,23 @@ mod tests {
 			let mut combos = Combos::new(Mock_Node::new_mock(|mock| {
 				mock.expect_update_combos()
 					.times(1)
-					.with(eq(vec![(vec![PlayerSlot::LOWER_R], Some(_Skill))]))
+					.with(eq(vec![(
+						vec![SlotKey::from(PlayerSlot::LOWER_R)],
+						Some(Skill {
+							token: Token::from("my skill"),
+							..default()
+						}),
+					)]))
 					.return_const(());
 			}));
 
-			combos.update_combos(vec![(vec![PlayerSlot::LOWER_R], Some(_Skill))]);
+			combos.update_combos(vec![(
+				vec![SlotKey::from(PlayerSlot::LOWER_R)],
+				Some(Skill {
+					token: Token::from("my skill"),
+					..default()
+				}),
+			)]);
 		}
 
 		#[test]

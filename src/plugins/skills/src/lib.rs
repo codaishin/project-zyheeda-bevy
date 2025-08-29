@@ -216,7 +216,7 @@ where
 }
 
 impl<TDependencies> HandlesLoadout for SkillsPlugin<TDependencies> {
-	type TItem = SkillItem;
+	type TItemEntry = SkillItem;
 	type TSkill = Skill;
 	type TSkills = Vec<Skill>;
 
