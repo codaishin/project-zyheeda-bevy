@@ -8,7 +8,7 @@ use bevy::{ecs::system::SystemParam, prelude::*};
 #[derive(SystemParam)]
 pub struct ZyheedaCommands<'w, 's> {
 	commands: Commands<'w, 's>,
-	pub(crate) persistent_entities: Option<ResMut<'w, PersistentEntities>>,
+	pub(crate) persistent_entities: Option<Res<'w, PersistentEntities>>,
 }
 
 impl<'w, 's> ZyheedaCommands<'w, 's> {

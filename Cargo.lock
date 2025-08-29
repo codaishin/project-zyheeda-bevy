@@ -1877,6 +1877,7 @@ dependencies = [
  "tracing",
  "unic-langid",
  "uuid",
+ "zyheeda_core",
 ]
 
 [[package]]
