@@ -1877,6 +1877,7 @@ dependencies = [
  "tracing",
  "unic-langid",
  "uuid",
+ "zyheeda_core",
 ]
 
 [[package]]
@@ -3345,6 +3346,7 @@ dependencies = [
  "mockall",
  "testing",
  "unic-langid",
+ "zyheeda_core",
 ]
 
 [[package]]
@@ -6946,4 +6948,5 @@ version = "0.1.0"
 dependencies = [
  "macros",
  "test-case",
+ "tracing",
 ]

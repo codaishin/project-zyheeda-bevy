@@ -1,4 +1,4 @@
-use crate::{resources::persistent_entities::PersistentEntities, systems::log::OnError};
+use crate::resources::persistent_entities::PersistentEntities;
 use bevy::prelude::*;
 
 pub trait RegisterPersistentEntities {
@@ -10,9 +10,5 @@ impl RegisterPersistentEntities for App {
 		self.init_resource::<PersistentEntities>()
 			.add_observer(PersistentEntities::insert_entity)
 			.add_observer(PersistentEntities::remove_entity)
-			.add_systems(
-				Update,
-				PersistentEntities::drain_lookup_errors.pipe(OnError::log),
-			)
 	}
 }

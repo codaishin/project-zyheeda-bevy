@@ -1,20 +1,24 @@
-use crate::{
-	components::persistent_entity::PersistentEntity,
-	errors::{Error, Level},
-};
+use crate::components::persistent_entity::PersistentEntity;
 use bevy::prelude::*;
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
+use zyheeda_core::logger::{Log, Logger};
 
 #[derive(Resource, Debug, PartialEq, Default)]
-pub struct PersistentEntities {
+pub struct PersistentEntities<TLogger = Logger>
+where
+	TLogger: Log,
+{
 	pub(crate) entities: HashMap<PersistentEntity, Entity>,
-	pub(crate) errors: Vec<LookupError>,
+	pub(crate) logger: TLogger,
 }
 
-impl PersistentEntities {
-	pub(crate) fn get_entity(&mut self, persistent_entity: &PersistentEntity) -> Option<Entity> {
+impl<TLogger> PersistentEntities<TLogger>
+where
+	TLogger: Log,
+{
+	pub(crate) fn get_entity(&self, persistent_entity: &PersistentEntity) -> Option<Entity> {
 		let Some(entity) = self.entities.get(persistent_entity) else {
-			self.errors.push(LookupError(*persistent_entity));
+			self.logger.log_warning(NoMatch(*persistent_entity));
 			return None;
 		};
 
@@ -22,37 +26,42 @@ impl PersistentEntities {
 	}
 }
 
-#[cfg(test)]
-impl<const N: usize> From<[(PersistentEntity, Entity); N]> for PersistentEntities {
-	fn from(entities: [(PersistentEntity, Entity); N]) -> Self {
-		Self {
-			entities: HashMap::from(entities),
-			errors: vec![],
-		}
-	}
-}
+#[derive(Debug, PartialEq)]
+struct NoMatch(PersistentEntity);
 
-#[derive(Debug, PartialEq, Default, Clone, Copy)]
-pub(crate) struct LookupError(pub(crate) PersistentEntity);
-
-impl From<LookupError> for Error {
-	fn from(LookupError(persistent_entity): LookupError) -> Self {
-		Self::Single {
-			msg: format!("{persistent_entity:?}: no matching entity found"),
-			lvl: Level::Warning,
-		}
+impl Display for NoMatch {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		let Self(persistent_entity) = self;
+		write!(f, "{persistent_entity:?}: no matching entity found")
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use mockall::{mock, predicate::eq};
+	use testing::{Mock, simple_init};
+
+	mock! {
+		_Logger {}
+		impl Log for _Logger {
+			fn log_warning<TError>(&self, value: TError) where TError: 'static;
+			fn log_error<TError>(&self, value: TError) where TError: 'static;
+		}
+	}
+
+	simple_init!(Mock_Logger);
 
 	#[test]
 	fn get_entity() {
 		let target = Entity::from_raw(42);
 		let persistent_entity = PersistentEntity::default();
-		let mut persistent_entities = PersistentEntities::from([(persistent_entity, target)]);
+		let persistent_entities = PersistentEntities {
+			entities: HashMap::from([(persistent_entity, target)]),
+			logger: Mock_Logger::new_mock(|mock| {
+				mock.expect_log_error::<NoMatch>().never();
+			}),
+		};
 
 		let entity = persistent_entities.get_entity(&persistent_entity);
 
@@ -60,15 +69,18 @@ mod tests {
 	}
 
 	#[test]
-	fn collect_lookup_miss() {
+	fn log_misses() {
 		let persistent_entity = PersistentEntity::default();
-		let mut persistent_entities = PersistentEntities::from([]);
+		let persistent_entities = PersistentEntities {
+			logger: Mock_Logger::new_mock(|mock| {
+				mock.expect_log_warning()
+					.times(1)
+					.with(eq(NoMatch(persistent_entity)))
+					.return_const(());
+			}),
+			..default()
+		};
 
 		persistent_entities.get_entity(&persistent_entity);
-
-		assert_eq!(
-			vec![LookupError(persistent_entity)],
-			persistent_entities.errors
-		);
 	}
 }

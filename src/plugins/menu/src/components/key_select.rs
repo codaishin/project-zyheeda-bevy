@@ -32,7 +32,7 @@ where
 {
 	fn insert_ui_content<TLocalization>(
 		&self,
-		_: &mut TLocalization,
+		_: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) {
 		let Some(component) = self.component(()) else {

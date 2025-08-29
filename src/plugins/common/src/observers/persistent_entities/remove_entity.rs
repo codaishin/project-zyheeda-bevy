@@ -1,18 +1,17 @@
 use crate::{
 	components::persistent_entity::PersistentEntity,
 	resources::persistent_entities::PersistentEntities,
-	zyheeda_commands::ZyheedaCommands,
 };
 use bevy::prelude::*;
 
 impl PersistentEntities {
 	pub(crate) fn remove_entity(
 		trigger: Trigger<OnRemove, PersistentEntity>,
-		commands: ZyheedaCommands,
+		persistent_entities: Option<ResMut<Self>>,
 		entities: Query<&PersistentEntity>,
 	) {
 		let entity = trigger.target();
-		let Some(mut persistent_entities) = commands.persistent_entities else {
+		let Some(mut persistent_entities) = persistent_entities else {
 			return;
 		};
 		let Ok(persistent_entity) = entities.get(entity) else {

@@ -39,7 +39,7 @@ pub(crate) struct SettingsScreen {
 impl SettingsScreen {
 	fn add_title(
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
-		localize: &mut (impl LocalizeToken + ThreadSafe),
+		localize: &(impl LocalizeToken + ThreadSafe),
 		title: (impl Into<Token> + 'static),
 	) {
 		parent.spawn((
@@ -53,7 +53,7 @@ impl SettingsScreen {
 
 	fn add_section_title(
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
-		localize: &mut (impl LocalizeToken + ThreadSafe),
+		localize: &(impl LocalizeToken + ThreadSafe),
 		title: (impl Into<Token> + 'static),
 	) {
 		parent
@@ -73,7 +73,7 @@ impl SettingsScreen {
 	fn add_section<T>(
 		&self,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
-		localize: &mut (impl LocalizeToken + ThreadSafe),
+		localize: &(impl LocalizeToken + ThreadSafe),
 		title: (impl Into<Token> + 'static),
 	) where
 		T: IterFinite,
@@ -143,7 +143,7 @@ impl LoadUi<AssetServer> for SettingsScreen {
 impl InsertUiContent for SettingsScreen {
 	fn insert_ui_content<TLocalization>(
 		&self,
-		localize: &mut TLocalization,
+		localize: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
 		TLocalization: LocalizeToken + ThreadSafe,

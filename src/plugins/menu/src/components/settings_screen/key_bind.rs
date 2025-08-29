@@ -42,7 +42,7 @@ where
 {
 	fn insert_ui_content<TLocalization>(
 		&self,
-		localization: &mut TLocalization,
+		localization: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
 		TLocalization: LocalizeToken + ThreadSafe,

@@ -48,7 +48,7 @@ where
 {
 	fn insert_ui_content<TLocalization>(
 		&self,
-		localize: &mut TLocalization,
+		localize: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
 		TLocalization: LocalizeToken,

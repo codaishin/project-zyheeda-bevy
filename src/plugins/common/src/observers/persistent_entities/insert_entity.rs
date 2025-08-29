@@ -1,14 +1,13 @@
 use crate::{
 	components::persistent_entity::PersistentEntity,
 	resources::persistent_entities::PersistentEntities,
-	zyheeda_commands::ZyheedaCommands,
 };
 use bevy::prelude::*;
 
 impl PersistentEntities {
 	pub(crate) fn insert_entity(
 		trigger: Trigger<OnInsert, PersistentEntity>,
-		commands: ZyheedaCommands,
+		persistent_entities: Option<ResMut<Self>>,
 		entities: Query<&PersistentEntity>,
 	) {
 		let entity = trigger.target();
@@ -16,7 +15,7 @@ impl PersistentEntities {
 			return;
 		};
 
-		let Some(mut persistent_entities) = commands.persistent_entities else {
+		let Some(mut persistent_entities) = persistent_entities else {
 			return;
 		};
 

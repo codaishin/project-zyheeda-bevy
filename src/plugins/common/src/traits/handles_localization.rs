@@ -17,7 +17,7 @@ pub trait SetLocalization {
 }
 
 pub trait LocalizeToken {
-	fn localize_token<TToken>(&mut self, token: TToken) -> LocalizationResult
+	fn localize_token<TToken>(&self, token: TToken) -> LocalizationResult
 	where
 		TToken: Into<Token> + 'static;
 }

@@ -24,7 +24,7 @@ where
 	) -> impl Fn(
 		ZyheedaCommands,
 		Res<TMap>,
-		ResMut<TLanguageServer>,
+		Res<TLanguageServer>,
 		Query<(Entity, &InputLabel<TKey>), Added<InputLabel<TKey>>>,
 	)
 	where
@@ -34,14 +34,14 @@ where
 	{
 		let root = icon_root_path.into();
 
-		move |mut commands, key_map, mut language_server, mut labels| {
+		move |mut commands, key_map, language_server, mut labels| {
 			let key_map = key_map.as_ref();
 
 			for (entity, label) in &mut labels {
 				let Some(entity) = commands.get_mut(&entity) else {
 					continue;
 				};
-				insert_icon(&root, entity, key_map, language_server.as_mut(), label);
+				insert_icon(&root, entity, key_map, language_server.as_ref(), label);
 			}
 		}
 	}
@@ -51,7 +51,7 @@ fn insert_icon<TMap, TLanguageServer, TKey>(
 	root: &Path,
 	mut entity: ZyheedaEntityCommands,
 	key_map: &TMap,
-	language_server: &mut TLanguageServer,
+	language_server: &TLanguageServer,
 	label: &InputLabel<TKey>,
 ) where
 	TMap: GetInput<TKey>,
@@ -109,7 +109,7 @@ mod tests {
 
 	#[automock]
 	impl LocalizeToken for _LanguageServer {
-		fn localize_token<TToken>(&mut self, token: TToken) -> LocalizationResult
+		fn localize_token<TToken>(&self, token: TToken) -> LocalizationResult
 		where
 			TToken: Into<Token> + 'static,
 		{

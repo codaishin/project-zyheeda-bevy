@@ -32,7 +32,7 @@ impl LoadUi<AssetServer> for StartMenu {
 impl InsertUiContent for StartMenu {
 	fn insert_ui_content<TLocalization>(
 		&self,
-		localization: &mut TLocalization,
+		localization: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
 		TLocalization: LocalizeToken,

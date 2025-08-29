@@ -8,7 +8,7 @@ use bevy::{ecs::system::SystemParam, prelude::*};
 #[derive(SystemParam)]
 pub struct ZyheedaCommands<'w, 's> {
 	commands: Commands<'w, 's>,
-	pub(crate) persistent_entities: Option<ResMut<'w, PersistentEntities>>,
+	pub(crate) persistent_entities: Option<Res<'w, PersistentEntities>>,
 }
 
 impl<'w, 's> ZyheedaCommands<'w, 's> {
@@ -51,7 +51,7 @@ impl GetMut<PersistentEntity> for ZyheedaCommands<'_, '_> {
 	///
 	/// Failures are logged automatically.
 	fn get_mut(&mut self, entity: &PersistentEntity) -> Option<Self::TValue<'_>> {
-		let persistent_entities = self.persistent_entities.as_mut()?;
+		let persistent_entities = self.persistent_entities.as_ref()?;
 		let entity = persistent_entities.get_entity(entity)?;
 		let entity = self.commands.get_entity(entity).ok()?;
 		Some(ZyheedaEntityCommands { entity })

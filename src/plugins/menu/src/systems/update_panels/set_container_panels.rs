@@ -17,7 +17,7 @@ impl<T> SetContainerPanels for T where T: Component<Mutability = Mutable> {}
 pub trait SetContainerPanels: Component<Mutability = Mutable> + Sized {
 	fn set_container_panels<TLocalization, TKey, TEquipment>(
 		items: Res<TEquipment>,
-		mut localize: ResMut<TLocalization>,
+		localize: Res<TLocalization>,
 		mut texts: Query<(&ChildOf, &mut Text)>,
 		mut panels: Query<(Entity, &KeyedPanel<TKey>, &mut Self)>,
 	) where
@@ -110,7 +110,7 @@ mod tests {
 
 	#[automock]
 	impl LocalizeToken for _Localize {
-		fn localize_token<TToken>(&mut self, token: TToken) -> LocalizationResult
+		fn localize_token<TToken>(&self, token: TToken) -> LocalizationResult
 		where
 			TToken: Into<Token> + 'static,
 		{

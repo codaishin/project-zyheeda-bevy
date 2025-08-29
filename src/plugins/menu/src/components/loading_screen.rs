@@ -60,7 +60,7 @@ where
 impl InsertUiContent for LoadingScreen<AssetsProgress> {
 	fn insert_ui_content<TLocalization>(
 		&self,
-		localize: &mut TLocalization,
+		localize: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
 		TLocalization: LocalizeToken,
@@ -80,7 +80,7 @@ impl InsertUiContent for LoadingScreen<AssetsProgress> {
 impl InsertUiContent for LoadingScreen<DependenciesProgress> {
 	fn insert_ui_content<TLocalization>(
 		&self,
-		localize: &mut TLocalization,
+		localize: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
 		TLocalization: LocalizeToken,

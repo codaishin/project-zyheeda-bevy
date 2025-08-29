@@ -59,7 +59,7 @@ where
 {
 	fn insert_ui_content<TLocalization>(
 		&self,
-		_: &mut TLocalization,
+		_: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) {
 		let state = self.1.map(|s| format!("{s:?}")).unwrap_or("???".into());
@@ -155,7 +155,7 @@ impl TooltipUiConfig for ButtonTooltip {
 impl InsertUiContent for Tooltip<ButtonTooltip> {
 	fn insert_ui_content<TLocalization>(
 		&self,
-		_: &mut TLocalization,
+		_: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) {
 		parent.spawn((Text::new(&self.value().0), DropdownButton::text_style()));
@@ -207,7 +207,7 @@ where
 {
 	fn insert_ui_content<TLocalization>(
 		&self,
-		_: &mut TLocalization,
+		_: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) {
 		let option = (
@@ -226,7 +226,7 @@ impl<TLayout: ThreadSafe, TSubLayout: ThreadSafe> InsertUiContent
 {
 	fn insert_ui_content<TLocalization>(
 		&self,
-		_: &mut TLocalization,
+		_: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) {
 		let option = (
