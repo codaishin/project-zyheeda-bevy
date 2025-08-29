@@ -19,7 +19,7 @@ where
 	pub(crate) fn get_entity(&self, persistent_entity: &PersistentEntity) -> Option<Entity> {
 		let Some(entity) = self.entities.get(persistent_entity) else {
 			self.logger
-				.log_waring(format!("{persistent_entity:?}: no matching entity found"));
+				.log_warning(format!("{persistent_entity:?}: no matching entity found"));
 			return None;
 		};
 
@@ -36,7 +36,7 @@ mod tests {
 	mock! {
 		_Logger {}
 		impl Log for _Logger {
-			fn log_waring<TError>(&self, value: TError) where TError: Into<String> + 'static;
+			fn log_warning<TError>(&self, value: TError) where TError: Into<String> + 'static;
 			fn log_error<TError>(&self, value: TError) where TError: Into<String> + 'static;
 		}
 	}
@@ -62,7 +62,7 @@ mod tests {
 		let persistent_entity = PersistentEntity::default();
 		let persistent_entities = PersistentEntities {
 			logger: Mock_Logger::new_mock(|mock| {
-				mock.expect_log_waring::<String>()
+				mock.expect_log_warning::<String>()
 					.times(1)
 					.with(eq(format!(
 						"{persistent_entity:?}: no matching entity found"

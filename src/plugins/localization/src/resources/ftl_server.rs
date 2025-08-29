@@ -99,7 +99,7 @@ where
 		let Token(str) = token.into();
 		let localize = |locale: &&Locale| {
 			if locale.ln != current.ln {
-				self.logger.log_waring(FtlError::FallbackAttempt {
+				self.logger.log_warning(FtlError::FallbackAttempt {
 					token: current.ln_token(&str),
 					fallback: locale.ln.clone(),
 				});
@@ -135,7 +135,7 @@ where
 			Some(String::from(localized))
 		};
 
-		match locales.iter().filter_map(localize).next() {
+		match locales.iter().find_map(localize) {
 			Some(localized) => LocalizationResult::Ok(Localized(localized)),
 			None => LocalizationResult::Error(Token(str).failed()),
 		}
@@ -221,7 +221,7 @@ mod tests {
 	mock! {
 		_Logger {}
 		impl Log for _Logger {
-			fn log_waring<TError>(&self, value: TError) where TError: 'static;
+			fn log_warning<TError>(&self, value: TError) where TError: 'static;
 			fn log_error<TError>(&self, value: TError) where TError: 'static;
 		}
 	}
@@ -535,7 +535,7 @@ mod tests {
 			current: None,
 			logger: Mock_Logger::new_mock(|mock| {
 				mock.expect_log_error::<FtlError>().never();
-				mock.expect_log_waring::<FtlError>().never();
+				mock.expect_log_warning::<FtlError>().never();
 			}),
 			update: false,
 		};
@@ -569,7 +569,7 @@ mod tests {
 			}),
 			logger: Mock_Logger::new_mock(|mock| {
 				mock.expect_log_error::<FtlError>().never();
-				mock.expect_log_waring::<FtlError>().never();
+				mock.expect_log_warning::<FtlError>().never();
 			}),
 			update: false,
 		};
@@ -595,7 +595,7 @@ mod tests {
 					.times(1)
 					.with(eq(FtlError::NoBundle(langid!("en"))))
 					.return_const(());
-				mock.expect_log_waring::<FtlError>().never();
+				mock.expect_log_warning::<FtlError>().never();
 			}),
 			update: false,
 		};
@@ -630,7 +630,7 @@ mod tests {
 						language: langid!("en"),
 					})))
 					.return_const(());
-				mock.expect_log_waring::<FtlError>().never();
+				mock.expect_log_warning::<FtlError>().never();
 			}),
 			update: false,
 		};
@@ -665,7 +665,7 @@ mod tests {
 						language: langid!("en"),
 					})))
 					.return_const(());
-				mock.expect_log_waring::<FtlError>().never();
+				mock.expect_log_warning::<FtlError>().never();
 			}),
 			update: false,
 		};
@@ -707,7 +707,7 @@ mod tests {
 						))],
 					}))
 					.return_const(());
-				mock.expect_log_waring::<FtlError>().never();
+				mock.expect_log_warning::<FtlError>().never();
 			}),
 			update: false,
 		};
@@ -744,7 +744,7 @@ mod tests {
 					.times(1)
 					.with(eq(FtlError::NoBundle(langid!("jp"))))
 					.return_const(());
-				mock.expect_log_waring::<FtlError>()
+				mock.expect_log_warning::<FtlError>()
 					.times(1)
 					.with(eq(FtlError::FallbackAttempt {
 						token: LnToken {
@@ -799,7 +799,7 @@ mod tests {
 						language: langid!("jp"),
 					})))
 					.return_const(());
-				mock.expect_log_waring::<FtlError>()
+				mock.expect_log_warning::<FtlError>()
 					.times(1)
 					.with(eq(FtlError::FallbackAttempt {
 						token: LnToken {
@@ -854,7 +854,7 @@ mod tests {
 						language: langid!("jp"),
 					})))
 					.return_const(());
-				mock.expect_log_waring::<FtlError>()
+				mock.expect_log_warning::<FtlError>()
 					.times(1)
 					.with(eq(FtlError::FallbackAttempt {
 						token: LnToken {
@@ -916,7 +916,7 @@ mod tests {
 						))],
 					}))
 					.return_const(());
-				mock.expect_log_waring::<FtlError>().never();
+				mock.expect_log_warning::<FtlError>().never();
 			}),
 			update: false,
 		};

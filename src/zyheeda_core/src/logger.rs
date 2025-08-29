@@ -4,7 +4,7 @@ use tracing::{error, warn};
 pub struct Logger;
 
 impl Log for Logger {
-	fn log_waring<TError>(&self, value: TError)
+	fn log_warning<TError>(&self, value: TError)
 	where
 		TError: Into<String>,
 	{
@@ -20,7 +20,7 @@ impl Log for Logger {
 }
 
 pub trait Log {
-	fn log_waring<TError>(&self, value: TError)
+	fn log_warning<TError>(&self, value: TError)
 	where
 		TError: Into<String> + 'static;
 	fn log_error<TError>(&self, value: TError)
