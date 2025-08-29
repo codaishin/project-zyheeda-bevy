@@ -52,6 +52,7 @@ use common::{
 			HandlesLoadTracking,
 			LoadGroup,
 		},
+		handles_loadout::HandlesLoadout,
 		handles_loadout_menu::{ConfigureInventory, GetItem, HandlesLoadoutMenu, SwapValuesByKey},
 		handles_localization::{HandlesLocalization, Localize, Token, localized::Localized},
 		handles_saving::HandlesSaving,
@@ -116,14 +117,22 @@ use visualization::unusable::Unusable;
 
 pub struct MenuPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics>
-	MenuPlugin<(TLoading, TSavegame, TSettings, TLocalization, TGraphics)>
+impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics, TLoadout>
+	MenuPlugin<(
+		TLoading,
+		TSavegame,
+		TSettings,
+		TLocalization,
+		TGraphics,
+		TLoadout,
+	)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TSettings: ThreadSafe + HandlesSettings,
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
+	TLoadout: ThreadSafe + HandlesLoadout,
 {
 	pub fn from_plugins(
 		_: &TLoading,
@@ -131,19 +140,28 @@ where
 		_: &TSettings,
 		_: &TLocalization,
 		_: &TGraphics,
+		_: &TLoadout,
 	) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics>
-	MenuPlugin<(TLoading, TSavegame, TSettings, TLocalization, TGraphics)>
+impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics, TLoadout>
+	MenuPlugin<(
+		TLoading,
+		TSavegame,
+		TSettings,
+		TLocalization,
+		TGraphics,
+		TLoadout,
+	)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TSettings: ThreadSafe + HandlesSettings,
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
+	TLoadout: ThreadSafe + HandlesLoadout,
 {
 	fn resources(&self, app: &mut App) {
 		app.init_resource::<Shared<Path, Handle<Image>>>()
@@ -297,14 +315,22 @@ where
 	}
 }
 
-impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics> Plugin
-	for MenuPlugin<(TLoading, TSavegame, TSettings, TLocalization, TGraphics)>
+impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics, TLoadout> Plugin
+	for MenuPlugin<(
+		TLoading,
+		TSavegame,
+		TSettings,
+		TLocalization,
+		TGraphics,
+		TLoadout,
+	)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TSettings: ThreadSafe + HandlesSettings,
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
+	TLoadout: ThreadSafe + HandlesLoadout,
 {
 	fn build(&self, app: &mut App) {
 		self.resources(app);
