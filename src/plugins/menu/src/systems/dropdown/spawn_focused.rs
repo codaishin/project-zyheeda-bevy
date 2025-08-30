@@ -123,7 +123,7 @@ mod tests {
 		where
 			TToken: Into<Token> + 'static,
 		{
-			let Token(token) = token.into();
+			let token = &*token.into();
 
 			LocalizationResult::Ok(Localized::from(format!("Token: {token}")))
 		}

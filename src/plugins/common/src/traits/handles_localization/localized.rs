@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use std::{ops::Deref, sync::Arc};
 
 #[derive(Debug, PartialEq, Default, Clone)]
-pub struct Localized(pub Arc<str>);
+pub struct Localized(pub(super) Arc<str>);
 
 impl Deref for Localized {
 	type Target = str;

@@ -23,7 +23,7 @@ pub trait LocalizeToken {
 }
 
 #[derive(Debug, PartialEq, Default, Clone)]
-pub struct Token(pub Arc<str>);
+pub struct Token(Arc<str>);
 
 impl Token {
 	pub fn failed(self) -> FailedToken {
@@ -58,7 +58,7 @@ impl Deref for Token {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct FailedToken(pub Arc<str>);
+pub struct FailedToken(Arc<str>);
 
 impl Deref for FailedToken {
 	type Target = str;

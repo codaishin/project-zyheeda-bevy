@@ -96,11 +96,11 @@ where
 			Some(current) => (current, vec![current, &self.fallback]),
 			None => (&self.fallback, vec![&self.fallback]),
 		};
-		let Token(str) = token.into();
+		let str = &*token.into();
 		let localize = |locale: &&Locale| {
 			if locale.ln != current.ln {
 				self.logger.log_warning(FtlError::FallbackAttempt {
-					token: current.ln_token(&str),
+					token: current.ln_token(str),
 					fallback: locale.ln.clone(),
 				});
 			}
@@ -110,15 +110,15 @@ where
 				return None;
 			};
 
-			let Some(msg) = bundle.get_message(&str) else {
+			let Some(msg) = bundle.get_message(str) else {
 				self.logger
-					.log_error(FtlError::NoMessageFor(locale.ln_token(&str)));
+					.log_error(FtlError::NoMessageFor(locale.ln_token(str)));
 				return None;
 			};
 
 			let Some(pattern) = msg.value() else {
 				self.logger
-					.log_error(FtlError::NoPatternFor(locale.ln_token(&str)));
+					.log_error(FtlError::NoPatternFor(locale.ln_token(str)));
 				return None;
 			};
 
@@ -127,7 +127,7 @@ where
 
 			if !fluent_errors.is_empty() {
 				self.logger.log_error(FtlError::FluentErrors {
-					token: locale.ln_token(&str),
+					token: locale.ln_token(str),
 					errors: fluent_errors,
 				});
 			}
@@ -137,7 +137,7 @@ where
 
 		match locales.iter().find_map(localize) {
 			Some(localized) => LocalizationResult::Ok(Localized::from(localized)),
-			None => LocalizationResult::Error(Token(str).failed()),
+			None => LocalizationResult::Error(Token::from(str).failed()),
 		}
 	}
 }

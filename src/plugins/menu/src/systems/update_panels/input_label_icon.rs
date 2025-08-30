@@ -62,7 +62,7 @@ fn insert_icon<TMap, TLanguageServer, TKey>(
 	let key = key_map.get_input(label.key);
 	let token = key.into();
 	let localized = language_server.localize_token(token.clone()).or_token();
-	let Token(token) = token;
+	let token = &*token;
 	let path = root.join(format!("{token}.png"));
 
 	entity.try_insert(Icon {
@@ -147,7 +147,7 @@ mod tests {
 
 		app.update();
 
-		let Token(token) = Token::from(UserInput::from(KeyCode::ArrowUp));
+		let token = &*Token::from(UserInput::from(KeyCode::ArrowUp));
 		assert_eq!(
 			Some(&Icon {
 				localized: Localized::from("IIIIII"),
