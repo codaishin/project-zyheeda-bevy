@@ -9,7 +9,7 @@ use crate::{
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{
 	tools::Focus,
-	traits::{handles_localization::LocalizeToken, thread_safe::ThreadSafe},
+	traits::{handles_localization::Localize, thread_safe::ThreadSafe},
 };
 
 pub(crate) fn dropdown_spawn_focused<TLocalization, TItem>(
@@ -18,7 +18,7 @@ pub(crate) fn dropdown_spawn_focused<TLocalization, TItem>(
 	localization: Res<TLocalization>,
 	dropdowns: Query<(Entity, &Dropdown<TItem>)>,
 ) where
-	TLocalization: LocalizeToken + Resource,
+	TLocalization: Localize + Resource,
 	TItem: InsertUiContent + Sync + Send + 'static,
 	Dropdown<TItem>: GetRootNode + GetLayout,
 {
@@ -91,7 +91,7 @@ fn spawn_items<TLocalization, TItem>(
 	dropdown: &Dropdown<TItem>,
 ) where
 	TItem: InsertUiContent,
-	TLocalization: LocalizeToken + ThreadSafe,
+	TLocalization: Localize + ThreadSafe,
 {
 	for item in &dropdown.items {
 		dropdown_node
@@ -118,12 +118,9 @@ mod tests {
 	#[derive(Resource, Default, Debug, PartialEq, Clone, Copy)]
 	struct _Localization;
 
-	impl LocalizeToken for _Localization {
-		fn localize_token<TToken>(&self, token: TToken) -> LocalizationResult
-		where
-			TToken: Into<Token> + 'static,
-		{
-			let token = &*token.into();
+	impl Localize for _Localization {
+		fn localize(&self, token: &Token) -> LocalizationResult {
+			let token = &**token;
 
 			LocalizationResult::Ok(Localized::from(format!("Token: {token}")))
 		}
@@ -216,10 +213,12 @@ mod tests {
 			localization: &TLocalization,
 			parent: &mut RelatedSpawnerCommands<ChildOf>,
 		) where
-			TLocalization: LocalizeToken,
+			TLocalization: Localize,
 		{
 			parent.spawn(_ItemContent(
-				localization.localize_token("Content").or_string(|| "???"),
+				localization
+					.localize(&Token::from("Content"))
+					.or_string(|| "???"),
 			));
 		}
 	}

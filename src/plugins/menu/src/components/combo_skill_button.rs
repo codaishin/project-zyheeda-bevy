@@ -4,7 +4,7 @@ use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{
 	tools::{action_key::slot::PlayerSlot, skill_description::SkillToken, skill_icon::SkillIcon},
 	traits::{
-		handles_localization::LocalizeToken,
+		handles_localization::Localize,
 		inspect_able::{InspectAble, InspectField},
 		thread_safe::ThreadSafe,
 	},
@@ -51,10 +51,10 @@ where
 		localize: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
-		TLocalization: LocalizeToken,
+		TLocalization: Localize,
 	{
 		let token = SkillToken::inspect_field(&self.skill);
-		let name = localize.localize_token(token.clone()).or_token();
+		let name = localize.localize(token).or_token();
 
 		parent.spawn((
 			self.clone(),

@@ -9,24 +9,40 @@ use std::{fmt::Display, ops::Deref, sync::Arc};
 use unic_langid::LanguageIdentifier;
 
 pub trait HandlesLocalization {
-	type TLocalizationServer: Resource + SetLocalization + LocalizeToken;
+	type TLocalizationServer: Resource + SetLocalization + Localize;
 }
 
 pub trait SetLocalization {
 	fn set_localization(&mut self, language: LanguageIdentifier);
 }
 
+pub trait Localize {
+	fn localize(&self, token: &Token) -> LocalizationResult;
+}
+
 pub trait LocalizeToken {
 	fn localize_token<TToken>(&self, token: TToken) -> LocalizationResult
 	where
-		TToken: Into<Token> + 'static;
+		TToken: Into<Token>;
+}
+
+impl<T> LocalizeToken for T
+where
+	T: Localize,
+{
+	fn localize_token<TToken>(&self, token: TToken) -> LocalizationResult
+	where
+		TToken: Into<Token>,
+	{
+		self.localize(&token.into())
+	}
 }
 
 #[derive(Debug, PartialEq, Default, Clone)]
 pub struct Token(Arc<str>);
 
 impl Token {
-	pub fn failed(self) -> FailedToken {
+	pub fn failed(&self) -> FailedToken {
 		FailedToken(self.0.clone())
 	}
 }

@@ -1,5 +1,5 @@
 use crate::{
-	components::tooltip::Tooltip,
+	components::tooltip::{Tooltip, TooltipUiConfig},
 	traits::{
 		insert_ui_content::InsertUiContent,
 		tooltip_ui_control::{
@@ -13,7 +13,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::traits::{
-	handles_localization::LocalizeToken,
+	handles_localization::Localize,
 	mouse_position::MousePosition,
 	thread_safe::ThreadSafe,
 };
@@ -27,9 +27,9 @@ pub(crate) fn tooltip<T, TLocalization, TUI, TUIControl, TWindow>(
 	mut tooltip_uis: Query<(Entity, &TUI, &mut Node, &ComputedNode)>,
 	removed_tooltips: RemovedComponents<Tooltip<T>>,
 ) where
-	T: ThreadSafe,
-	TLocalization: LocalizeToken + Resource,
+	T: TooltipUiConfig + ThreadSafe,
 	Tooltip<T>: InsertUiContent,
+	TLocalization: Localize + Resource,
 	TUI: Component,
 	TUIControl: Resource
 		+ DespawnAllTooltips<TUI>
@@ -60,7 +60,11 @@ pub(crate) fn tooltip<T, TLocalization, TUI, TUIControl, TWindow>(
 	}
 }
 
-fn is_hovering<T>((.., interaction): &(Entity, &Tooltip<T>, &Interaction)) -> bool {
+fn is_hovering<T>((.., interaction): &(Entity, &Tooltip<T>, &Interaction)) -> bool
+where
+	T: TooltipUiConfig + ThreadSafe,
+	Tooltip<T>: InsertUiContent,
+{
 	interaction == &&Interaction::Hovered
 }
 
@@ -69,7 +73,7 @@ mod tests {
 	use super::*;
 	use crate::{components::tooltip::TooltipUiConfig, traits::insert_ui_content::InsertUiContent};
 	use bevy::ecs::relationship::RelatedSpawnerCommands;
-	use common::traits::handles_localization::{LocalizationResult, LocalizeToken, Token};
+	use common::traits::handles_localization::{LocalizationResult, Localize, Token};
 	use macros::NestedMocks;
 	use mockall::mock;
 	use testing::{NestedMocks, SingleThreadedApp};
@@ -164,11 +168,8 @@ mod tests {
 	#[derive(Resource, Default, Debug, PartialEq, Clone, Copy)]
 	struct _Localize;
 
-	impl LocalizeToken for _Localize {
-		fn localize_token<TToken>(&self, _: TToken) -> LocalizationResult
-		where
-			TToken: Into<Token> + 'static,
-		{
+	impl Localize for _Localize {
+		fn localize(&self, _: &Token) -> LocalizationResult {
 			panic!("NOT USED")
 		}
 	}

@@ -8,7 +8,7 @@ use common::traits::{
 	handles_load_tracking::Loaded,
 	handles_localization::{
 		LocalizationResult,
-		LocalizeToken,
+		Localize,
 		SetLocalization,
 		Token,
 		localized::Localized,
@@ -84,19 +84,16 @@ impl SetLocalization for FtlServer {
 	}
 }
 
-impl<TLogger> LocalizeToken for FtlServer<TLogger>
+impl<TLogger> Localize for FtlServer<TLogger>
 where
 	TLogger: Log,
 {
-	fn localize_token<TToken>(&self, token: TToken) -> LocalizationResult
-	where
-		TToken: Into<Token>,
-	{
+	fn localize(&self, token: &Token) -> LocalizationResult {
 		let (current, locales) = match self.current.as_ref() {
 			Some(current) => (current, vec![current, &self.fallback]),
 			None => (&self.fallback, vec![&self.fallback]),
 		};
-		let str = &*token.into();
+		let str = &**token;
 		let localize = |locale: &&Locale| {
 			if locale.ln != current.ln {
 				self.logger.log_warning(FtlError::FallbackAttempt {
@@ -540,7 +537,7 @@ mod tests {
 
 		assert_eq!(
 			LocalizationResult::Ok(Localized::from("A!")),
-			server.localize_token("a")
+			server.localize(&Token::from("a"))
 		);
 	}
 
@@ -574,7 +571,7 @@ mod tests {
 
 		assert_eq!(
 			LocalizationResult::Ok(Localized::from("A!")),
-			server.localize_token("a")
+			server.localize(&Token::from("a"))
 		);
 	}
 
@@ -600,7 +597,7 @@ mod tests {
 
 		assert_eq!(
 			LocalizationResult::Error(Token::from("a").failed()),
-			server.localize_token("a")
+			server.localize(&Token::from("a"))
 		);
 	}
 
@@ -635,7 +632,7 @@ mod tests {
 
 		assert_eq!(
 			LocalizationResult::Error(Token::from("b").failed()),
-			server.localize_token("b")
+			server.localize(&Token::from("b"))
 		);
 	}
 
@@ -670,7 +667,7 @@ mod tests {
 
 		assert_eq!(
 			LocalizationResult::Error(Token::from("a").failed()),
-			server.localize_token("a"),
+			server.localize(&Token::from("a")),
 		);
 	}
 
@@ -712,7 +709,7 @@ mod tests {
 
 		assert_eq!(
 			LocalizationResult::Ok(Localized::from("{$a}")),
-			server.localize_token("a"),
+			server.localize(&Token::from("a")),
 		);
 	}
 
@@ -758,7 +755,7 @@ mod tests {
 
 		assert_eq!(
 			LocalizationResult::Ok(Localized::from("A!")),
-			server.localize_token("a"),
+			server.localize(&Token::from("a")),
 		);
 	}
 
@@ -813,7 +810,7 @@ mod tests {
 
 		assert_eq!(
 			LocalizationResult::Ok(Localized::from("A!")),
-			server.localize_token("a"),
+			server.localize(&Token::from("a")),
 		);
 	}
 
@@ -868,7 +865,7 @@ mod tests {
 
 		assert_eq!(
 			LocalizationResult::Ok(Localized::from("A!")),
-			server.localize_token("a"),
+			server.localize(&Token::from("a")),
 		);
 	}
 
@@ -921,7 +918,7 @@ mod tests {
 
 		assert_eq!(
 			LocalizationResult::Ok(Localized::from("{$a}")),
-			server.localize_token("a"),
+			server.localize(&Token::from("a")),
 		);
 	}
 }

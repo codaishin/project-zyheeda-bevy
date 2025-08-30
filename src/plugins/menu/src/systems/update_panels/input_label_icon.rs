@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use common::{
 	traits::{
 		accessors::get::GetMut,
-		handles_localization::{LocalizeToken, Token},
+		handles_localization::{Localize, Token},
 		key_mappings::GetInput,
 		thread_safe::ThreadSafe,
 	},
@@ -30,7 +30,7 @@ where
 	where
 		TMap: Resource + GetInput<TKey>,
 		TMap::TInput: Into<Token>,
-		TLanguageServer: Resource + LocalizeToken,
+		TLanguageServer: Resource + Localize,
 	{
 		let root = icon_root_path.into();
 
@@ -56,12 +56,12 @@ fn insert_icon<TMap, TLanguageServer, TKey>(
 ) where
 	TMap: GetInput<TKey>,
 	TMap::TInput: Into<Token>,
-	TLanguageServer: LocalizeToken,
+	TLanguageServer: Localize,
 	TKey: Copy,
 {
 	let key = key_map.get_input(label.key);
 	let token = key.into();
-	let localized = language_server.localize_token(token.clone()).or_token();
+	let localized = language_server.localize(&token).or_token();
 	let token = &*token;
 	let path = root.join(format!("{token}.png"));
 
@@ -108,12 +108,9 @@ mod tests {
 	}
 
 	#[automock]
-	impl LocalizeToken for _LanguageServer {
-		fn localize_token<TToken>(&self, token: TToken) -> LocalizationResult
-		where
-			TToken: Into<Token> + 'static,
-		{
-			self.mock.localize_token(token)
+	impl Localize for _LanguageServer {
+		fn localize(&self, token: &Token) -> LocalizationResult {
+			self.mock.localize(token)
 		}
 	}
 
@@ -138,7 +135,7 @@ mod tests {
 					.return_const(UserInput::from(KeyCode::ArrowUp));
 			}),
 			_LanguageServer::new().with_mock(|mock| {
-				mock.expect_localize_token()
+				mock.expect_localize()
 					.with(eq(Token::from(UserInput::from(KeyCode::ArrowUp))))
 					.return_const(LocalizationResult::Ok(Localized::from("IIIIII")));
 			}),
@@ -167,7 +164,7 @@ mod tests {
 					.return_const(UserInput::from(KeyCode::ArrowUp));
 			}),
 			_LanguageServer::new().with_mock(|mock| {
-				mock.expect_localize_token()
+				mock.expect_localize()
 					.with(eq(Token::from(UserInput::from(KeyCode::ArrowUp))))
 					.return_const(LocalizationResult::Ok(Localized::from("IIIIII")));
 			}),

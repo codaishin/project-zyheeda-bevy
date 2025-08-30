@@ -1,13 +1,13 @@
 use super::{LoadUi, insert_ui_content::InsertUiContent};
 use crate::systems::{despawn::despawn, spawn::spawn, update_children::update_children};
 use bevy::prelude::*;
-use common::traits::{handles_graphics::StaticRenderLayers, handles_localization::LocalizeToken};
+use common::traits::{handles_graphics::StaticRenderLayers, handles_localization::Localize};
 
 pub(crate) trait AddUI<TState> {
 	fn add_ui<TComponent, TLocalizationServer, TGraphics>(&mut self, on_state: TState) -> &mut Self
 	where
 		TComponent: Component + LoadUi<AssetServer> + InsertUiContent,
-		TLocalizationServer: Resource + LocalizeToken,
+		TLocalizationServer: Resource + Localize,
 		TGraphics: StaticRenderLayers + 'static;
 }
 
@@ -18,7 +18,7 @@ where
 	fn add_ui<TComponent, TLocalizationServer, TGraphics>(&mut self, on_state: TState) -> &mut Self
 	where
 		TComponent: Component + LoadUi<AssetServer> + InsertUiContent,
-		TLocalizationServer: Resource + LocalizeToken,
+		TLocalizationServer: Resource + Localize,
 		TGraphics: StaticRenderLayers + 'static,
 	{
 		self.add_systems(

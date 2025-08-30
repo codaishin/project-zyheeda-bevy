@@ -16,7 +16,7 @@ use common::{
 	tools::Index,
 	traits::{
 		handles_graphics::StaticRenderLayers,
-		handles_localization::LocalizeToken,
+		handles_localization::Localize,
 		iteration::IterFinite,
 		thread_safe::ThreadSafe,
 	},
@@ -93,7 +93,7 @@ fn update_state_time<TState>(
 
 pub fn setup_run_time_display<TLocalization, TGraphics>(app: &mut App)
 where
-	TLocalization: LocalizeToken + Resource,
+	TLocalization: Localize + Resource,
 	TGraphics: StaticRenderLayers + 'static,
 {
 	for state in GameState::iterator() {
@@ -326,7 +326,7 @@ fn get_button_options<TLayout: ThreadSafe, TExtra: ThreadSafe + Default>(
 
 pub fn setup_dropdown_test<TLocalization>(app: &mut App)
 where
-	TLocalization: LocalizeToken + Resource,
+	TLocalization: Localize + Resource,
 {
 	app.add_tooltip::<TLocalization, ButtonTooltip>()
 		.add_dropdown::<TLocalization, ButtonOption<SingleRow>>()

@@ -10,12 +10,12 @@ use crate::{
 	},
 };
 use bevy::prelude::*;
-use common::traits::handles_localization::LocalizeToken;
+use common::traits::handles_localization::Localize;
 
 pub(crate) trait AddDropdown {
 	fn add_dropdown<TLocalization, TItem>(&mut self) -> &mut Self
 	where
-		TLocalization: LocalizeToken + Resource,
+		TLocalization: Localize + Resource,
 		TItem: InsertUiContent + Sync + Send + 'static,
 		Dropdown<TItem>: GetRootNode + GetLayout;
 }
@@ -23,7 +23,7 @@ pub(crate) trait AddDropdown {
 impl AddDropdown for App {
 	fn add_dropdown<TLocalization, TItem>(&mut self) -> &mut Self
 	where
-		TLocalization: LocalizeToken + Resource,
+		TLocalization: Localize + Resource,
 		TItem: InsertUiContent + Sync + Send + 'static,
 		Dropdown<TItem>: GetRootNode + GetLayout,
 	{

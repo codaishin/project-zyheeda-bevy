@@ -1,6 +1,6 @@
 use crate::traits::insert_ui_content::InsertUiContent;
 use bevy::prelude::*;
-use common::traits::handles_localization::LocalizeToken;
+use common::traits::handles_localization::Localize;
 
 impl<T> RenderUi for T where T: InsertUiContent + Component {}
 
@@ -10,7 +10,7 @@ pub(crate) trait RenderUi: InsertUiContent + Component + Sized {
 		localize: Res<TLocalization>,
 		components: Query<(Entity, &Self), Added<Self>>,
 	) where
-		TLocalization: LocalizeToken + Resource,
+		TLocalization: Localize + Resource,
 	{
 		for (entity, component) in &components {
 			let Ok(mut entity) = commands.get_entity(entity) else {
@@ -44,9 +44,11 @@ mod tests {
 			localization: &TLocalization,
 			parent: &mut RelatedSpawnerCommands<ChildOf>,
 		) where
-			TLocalization: LocalizeToken + ThreadSafe,
+			TLocalization: Localize + ThreadSafe,
 		{
-			parent.spawn(Text::from(localization.localize_token("a").or_token()));
+			parent.spawn(Text::from(
+				localization.localize(&Token::from("a")).or_token(),
+			));
 		}
 	}
 
@@ -56,12 +58,9 @@ mod tests {
 	}
 
 	#[automock]
-	impl LocalizeToken for _Localize {
-		fn localize_token<TToken>(&self, token: TToken) -> LocalizationResult
-		where
-			TToken: Into<Token> + 'static,
-		{
-			self.mock.localize_token(token)
+	impl Localize for _Localize {
+		fn localize(&self, token: &Token) -> LocalizationResult {
+			self.mock.localize(token)
 		}
 	}
 
@@ -77,9 +76,9 @@ mod tests {
 	#[test]
 	fn spawn_content() {
 		let localize = _Localize::new().with_mock(|mock| {
-			mock.expect_localize_token::<&str>()
+			mock.expect_localize()
 				.times(1)
-				.with(eq("a"))
+				.with(eq(Token::from("a")))
 				.return_const(LocalizationResult::Ok(Localized::from("a localized")));
 		});
 		let mut app = setup(localize);
@@ -97,7 +96,7 @@ mod tests {
 	#[test]
 	fn spawn_content_only_once() {
 		let localize = _Localize::new().with_mock(|mock| {
-			mock.expect_localize_token::<&str>()
+			mock.expect_localize()
 				.times(1)
 				.return_const(LocalizationResult::Ok(Localized::from("")));
 		});
