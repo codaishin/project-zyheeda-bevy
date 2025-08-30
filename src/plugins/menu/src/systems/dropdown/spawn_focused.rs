@@ -125,7 +125,7 @@ mod tests {
 		{
 			let Token(token) = token.into();
 
-			LocalizationResult::Ok(Localized(format!("Token: {token}")))
+			LocalizationResult::Ok(Localized::from(format!("Token: {token}")))
 		}
 	}
 

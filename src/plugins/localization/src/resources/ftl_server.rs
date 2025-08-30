@@ -136,7 +136,7 @@ where
 		};
 
 		match locales.iter().find_map(localize) {
-			Some(localized) => LocalizationResult::Ok(Localized(localized)),
+			Some(localized) => LocalizationResult::Ok(Localized::from(localized)),
 			None => LocalizationResult::Error(Token(str).failed()),
 		}
 	}

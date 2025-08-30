@@ -68,7 +68,7 @@ impl InsertUiContent for LoadingScreen<AssetsProgress> {
 		let label = localize.localize_token("loading-assets").or_token();
 
 		parent.spawn((
-			Text::new(label),
+			Text::from(label),
 			TextFont {
 				font_size: 32.,
 				..default()
@@ -88,7 +88,7 @@ impl InsertUiContent for LoadingScreen<DependenciesProgress> {
 		let label = localize.localize_token("resolving-dependencies").or_token();
 
 		parent.spawn((
-			Text::new(label),
+			Text::from(label),
 			TextFont {
 				font_size: 32.,
 				..default()

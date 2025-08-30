@@ -325,7 +325,7 @@ fn add_title(parent: &mut RelatedSpawnerCommands<ChildOf>, title: Localized) {
 		})
 		.with_children(|parent| {
 			parent.spawn((
-				Text::new(title),
+				Text::from(title),
 				TextFont {
 					font_size: 40.,
 					..default()

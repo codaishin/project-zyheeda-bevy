@@ -54,7 +54,7 @@ impl InsertUiContent for StartMenu {
 			})
 			.with_children(|parent| {
 				parent.spawn((
-					Text::new(title),
+					Text::from(title),
 					TextFont {
 						font_size: 64.0,
 						..default()

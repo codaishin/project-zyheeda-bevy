@@ -5,7 +5,7 @@ mod mouse_button;
 
 use bevy::prelude::*;
 use localized::Localized;
-use std::{fmt::Display, ops::Deref};
+use std::{fmt::Display, ops::Deref, sync::Arc};
 use unic_langid::LanguageIdentifier;
 
 pub trait HandlesLocalization {
@@ -23,11 +23,11 @@ pub trait LocalizeToken {
 }
 
 #[derive(Debug, PartialEq, Default, Clone)]
-pub struct Token(pub String);
+pub struct Token(pub Arc<str>);
 
 impl Token {
 	pub fn failed(self) -> FailedToken {
-		FailedToken(self)
+		FailedToken(self.0.clone())
 	}
 }
 
@@ -39,24 +39,32 @@ impl Display for Token {
 
 impl From<&str> for Token {
 	fn from(value: &str) -> Self {
-		Token(value.to_owned())
+		Token(Arc::from(value))
 	}
 }
 
 impl From<String> for Token {
 	fn from(value: String) -> Self {
-		Token(value)
+		Token(Arc::from(value))
+	}
+}
+
+impl Deref for Token {
+	type Target = str;
+
+	fn deref(&self) -> &Self::Target {
+		self.0.as_ref()
 	}
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct FailedToken(pub Token);
+pub struct FailedToken(pub Arc<str>);
 
 impl Deref for FailedToken {
-	type Target = String;
+	type Target = str;
 
 	fn deref(&self) -> &Self::Target {
-		&self.0.0
+		&self.0
 	}
 }
 
@@ -74,14 +82,14 @@ impl LocalizationResult {
 	{
 		match self {
 			Self::Ok(string) => string,
-			Self::Error(failed_token) => Localized::from_string(fallback(failed_token)),
+			Self::Error(failed_token) => Localized::from(fallback(failed_token).into()),
 		}
 	}
 
 	pub fn or_token(self) -> Localized {
 		match self {
 			Self::Ok(string) => string,
-			Self::Error(FailedToken(Token(t))) => Localized::from_string(t),
+			Self::Error(FailedToken(t)) => Localized(t),
 		}
 	}
 
@@ -92,7 +100,7 @@ impl LocalizationResult {
 	{
 		match self {
 			Self::Ok(string) => string,
-			Self::Error(_) => Localized::from_string(string_fn()),
+			Self::Error(_) => Localized::from(string_fn()),
 		}
 	}
 }
@@ -107,17 +115,17 @@ mod tests {
 
 		assert_eq!(
 			Localized::from("my string"),
-			result.or(|failed_token| format!("FAILED: {}", *failed_token))
+			result.or(|failed_token| format!("FAILED: {}", &*failed_token))
 		)
 	}
 
 	#[test]
 	fn localize_result_or_err() {
-		let result = LocalizationResult::Error(FailedToken(Token::from("my token")));
+		let result = LocalizationResult::Error(FailedToken(Arc::from("my token")));
 
 		assert_eq!(
 			Localized::from("FAILED: my token"),
-			result.or(|failed_token| format!("FAILED: {}", *failed_token))
+			result.or(|failed_token| format!("FAILED: {}", &*failed_token))
 		)
 	}
 
@@ -130,7 +138,7 @@ mod tests {
 
 	#[test]
 	fn localize_result_or_token_err() {
-		let result = LocalizationResult::Error(FailedToken(Token::from("my token")));
+		let result = LocalizationResult::Error(FailedToken(Arc::from("my token")));
 
 		assert_eq!(Localized::from("my token"), result.or_token())
 	}
@@ -147,7 +155,7 @@ mod tests {
 
 	#[test]
 	fn localize_result_or_string_err() {
-		let result = LocalizationResult::Error(FailedToken(Token::from("my token")));
+		let result = LocalizationResult::Error(FailedToken(Arc::from("my token")));
 
 		assert_eq!(
 			Localized::from("my fallback"),

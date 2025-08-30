@@ -80,9 +80,7 @@ mod tests {
 			mock.expect_localize_token::<&str>()
 				.times(1)
 				.with(eq("a"))
-				.return_const(LocalizationResult::Ok(Localized::from_string(
-					"a localized",
-				)));
+				.return_const(LocalizationResult::Ok(Localized::from("a localized")));
 		});
 		let mut app = setup(localize);
 		let entity = app.world_mut().spawn(_Component).id();
@@ -101,7 +99,7 @@ mod tests {
 		let localize = _Localize::new().with_mock(|mock| {
 			mock.expect_localize_token::<&str>()
 				.times(1)
-				.return_const(LocalizationResult::Ok(Localized::from_string("")));
+				.return_const(LocalizationResult::Ok(Localized::from("")));
 		});
 		let mut app = setup(localize);
 		app.world_mut().spawn(_Component);

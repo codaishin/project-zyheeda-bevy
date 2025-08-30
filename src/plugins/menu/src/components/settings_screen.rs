@@ -43,7 +43,7 @@ impl SettingsScreen {
 		title: (impl Into<Token> + 'static),
 	) {
 		parent.spawn((
-			Text::new(localize.localize_token(title).or_token()),
+			Text::from(localize.localize_token(title).or_token()),
 			TextFont {
 				font_size: 40.0,
 				..default()
@@ -62,7 +62,7 @@ impl SettingsScreen {
 				..default()
 			})
 			.with_child((
-				Text::new(localize.localize_token(title).or_token()),
+				Text::from(localize.localize_token(title).or_token()),
 				TextFont {
 					font_size: 20.0,
 					..default()

@@ -41,7 +41,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(Icon {
-				localized: Localized(String::default()),
+				localized: Localized::from(String::default()),
 				image: IconImage::Loaded(handle.clone()),
 			})
 			.id();
@@ -64,7 +64,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(Icon {
-				localized: Localized(String::default()),
+				localized: Localized::from(String::default()),
 				image: IconImage::Loaded(handle),
 			})
 			.id();
@@ -89,7 +89,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(Icon {
-				localized: Localized(String::default()),
+				localized: Localized::from(String::default()),
 				image: IconImage::Loaded(handle.clone()),
 			})
 			.id();

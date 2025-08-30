@@ -114,7 +114,7 @@ fn add_title(parent: &mut RelatedSpawnerCommands<ChildOf>, title: Localized) {
 		})
 		.with_children(|parent| {
 			parent.spawn((
-				Text::new(title),
+				Text::from(title),
 				TextFont {
 					font_size: 40.0,
 					..default()
@@ -147,7 +147,7 @@ fn add_grid<TKey, TLocalization>(
 			})
 			.with_children(|parent| {
 				parent.spawn((
-					Text::new(label.clone()),
+					Text::from(label),
 					TextFont {
 						font_size: 20.0,
 						..default()
@@ -171,7 +171,7 @@ fn add_grid<TKey, TLocalization>(
 						))
 						.with_children(|parent| {
 							parent.spawn((
-								Text::new(empty.clone()),
+								Text::from(empty),
 								TextFont {
 									font_size: 15.0,
 									..default()

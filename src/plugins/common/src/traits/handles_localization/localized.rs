@@ -1,43 +1,46 @@
 use bevy::prelude::*;
+use std::{ops::Deref, sync::Arc};
 
 #[derive(Debug, PartialEq, Default, Clone)]
-pub struct Localized(pub String);
+pub struct Localized(pub Arc<str>);
 
-impl Localized {
-	pub fn from_string<T>(value: T) -> Self
-	where
-		T: Into<String>,
-	{
-		Self(value.into())
+impl Deref for Localized {
+	type Target = str;
+
+	fn deref(&self) -> &Self::Target {
+		self.0.as_ref()
 	}
 }
 
-impl From<&str> for Localized {
-	fn from(value: &str) -> Self {
-		Self::from_string(value)
-	}
-}
-
-impl From<String> for Localized {
-	fn from(value: String) -> Self {
-		Self::from_string(value)
-	}
-}
-
-impl From<Localized> for String {
-	fn from(Localized(string): Localized) -> Self {
-		string
+impl<T> From<T> for Localized
+where
+	T: Into<String>,
+{
+	fn from(value: T) -> Self {
+		Self(Arc::from(value.into()))
 	}
 }
 
 impl From<Localized> for Text {
 	fn from(Localized(string): Localized) -> Self {
-		Text(string)
+		Text((*string).to_owned())
+	}
+}
+
+impl From<&Localized> for Text {
+	fn from(Localized(string): &Localized) -> Self {
+		Text((**string).to_owned())
 	}
 }
 
 impl From<Localized> for Name {
 	fn from(Localized(string): Localized) -> Self {
-		Name::from(string)
+		Name::from(&*string)
+	}
+}
+
+impl From<&Localized> for Name {
+	fn from(Localized(string): &Localized) -> Self {
+		Name::from(&**string)
 	}
 }
