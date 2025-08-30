@@ -61,7 +61,7 @@ impl Prefab<()> for StartMenuButton {
 		_: &mut impl LoadAsset,
 	) -> Result<(), Error> {
 		entity.with_child((
-			Text::new(self.label.clone()),
+			Text::from(&self.label),
 			TextFont {
 				font_size: 32.0,
 				..default()

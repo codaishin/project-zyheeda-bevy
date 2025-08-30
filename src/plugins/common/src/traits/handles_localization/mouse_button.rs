@@ -9,7 +9,7 @@ impl From<MouseButton> for Token {
 			MouseButton::Middle => Self::from("mouse-button-middle"),
 			MouseButton::Back => Self::from("mouse-button-back"),
 			MouseButton::Forward => Self::from("mouse-button-forward"),
-			MouseButton::Other(index) => Self(format!("mouse-button-other-{index}")),
+			MouseButton::Other(index) => Self::from(format!("mouse-button-other-{index}")),
 		}
 	}
 }

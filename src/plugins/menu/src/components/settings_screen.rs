@@ -21,7 +21,7 @@ use common::{
 		user_input::UserInput,
 	},
 	traits::{
-		handles_localization::{LocalizeToken, Token},
+		handles_localization::{Localize, LocalizeToken, Token},
 		iterate::Iterate,
 		iteration::IterFinite,
 		thread_safe::ThreadSafe,
@@ -39,11 +39,11 @@ pub(crate) struct SettingsScreen {
 impl SettingsScreen {
 	fn add_title(
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
-		localize: &(impl LocalizeToken + ThreadSafe),
-		title: (impl Into<Token> + 'static),
+		localize: &(impl Localize + ThreadSafe),
+		title: impl Into<Token>,
 	) {
 		parent.spawn((
-			Text::new(localize.localize_token(title).or_token()),
+			Text::from(localize.localize_token(title).or_token()),
 			TextFont {
 				font_size: 40.0,
 				..default()
@@ -53,8 +53,8 @@ impl SettingsScreen {
 
 	fn add_section_title(
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
-		localize: &(impl LocalizeToken + ThreadSafe),
-		title: (impl Into<Token> + 'static),
+		localize: &(impl Localize + ThreadSafe),
+		title: impl Into<Token>,
 	) {
 		parent
 			.spawn(Node {
@@ -62,7 +62,7 @@ impl SettingsScreen {
 				..default()
 			})
 			.with_child((
-				Text::new(localize.localize_token(title).or_token()),
+				Text::from(localize.localize_token(title).or_token()),
 				TextFont {
 					font_size: 20.0,
 					..default()
@@ -73,8 +73,8 @@ impl SettingsScreen {
 	fn add_section<T>(
 		&self,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
-		localize: &(impl LocalizeToken + ThreadSafe),
-		title: (impl Into<Token> + 'static),
+		localize: &(impl Localize + ThreadSafe),
+		title: impl Into<Token>,
 	) where
 		T: IterFinite,
 		ActionKey: From<T>,
@@ -146,7 +146,7 @@ impl InsertUiContent for SettingsScreen {
 		localize: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
-		TLocalization: LocalizeToken + ThreadSafe,
+		TLocalization: Localize + ThreadSafe,
 	{
 		parent
 			.spawn(Node {

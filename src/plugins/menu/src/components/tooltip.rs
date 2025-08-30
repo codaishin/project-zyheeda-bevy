@@ -1,4 +1,4 @@
-pub(crate) mod string;
+pub(crate) mod token;
 
 use super::GlobalZIndexTop;
 use crate::traits::{
@@ -12,12 +12,15 @@ use crate::traits::{
 	},
 };
 use bevy::prelude::*;
-use common::traits::{handles_localization::LocalizeToken, thread_safe::ThreadSafe};
+use common::traits::{handles_localization::Localize, thread_safe::ThreadSafe};
 use std::{marker::PhantomData, time::Duration};
 
 #[derive(Component, Debug, PartialEq, Clone)]
 #[require(Node, Interaction)]
-pub(crate) struct Tooltip<T>(T);
+pub(crate) struct Tooltip<T>(T)
+where
+	T: TooltipUiConfig,
+	Self: InsertUiContent;
 
 pub(crate) trait TooltipUiConfig {
 	fn node() -> Node {
@@ -99,6 +102,7 @@ where
 impl<T> DespawnOutdatedTooltips<TooltipContent<T>, T> for TooltipUIControl
 where
 	T: TooltipUiConfig + ThreadSafe,
+	Tooltip<T>: InsertUiContent,
 {
 	fn despawn_outdated(
 		&self,
@@ -141,7 +145,7 @@ impl<T, TLocalization> SpawnTooltips<T, TLocalization> for TooltipUIControl
 where
 	T: TooltipUiConfig + ThreadSafe,
 	Tooltip<T>: InsertUiContent,
-	TLocalization: LocalizeToken + ThreadSafe,
+	TLocalization: Localize + ThreadSafe,
 {
 	fn spawn(
 		&self,
@@ -162,7 +166,12 @@ where
 mod tests {
 	use super::*;
 	use bevy::ecs::relationship::RelatedSpawnerCommands;
-	use common::traits::handles_localization::{LocalizationResult, Token, localized::Localized};
+	use common::traits::handles_localization::{
+		LocalizationResult,
+		LocalizeToken,
+		Token,
+		localized::Localized,
+	};
 	use testing::{SingleThreadedApp, assert_count, get_children};
 
 	impl TooltipUiConfig for () {}
@@ -170,13 +179,10 @@ mod tests {
 	#[derive(Resource, Default)]
 	struct _Localize;
 
-	impl LocalizeToken for _Localize {
-		fn localize_token<TToken>(&self, token: TToken) -> LocalizationResult
-		where
-			TToken: Into<Token> + 'static,
-		{
-			let Token(token) = token.into();
-			LocalizationResult::Ok(Localized(format!("Token: {token}")))
+	impl Localize for _Localize {
+		fn localize(&self, token: &Token) -> LocalizationResult {
+			let token = &**token;
+			LocalizationResult::Ok(Localized::from(format!("Token: {token}")))
 		}
 	}
 
@@ -212,6 +218,7 @@ mod tests {
 	fn setup_despawn_outdated<T>() -> App
 	where
 		T: TooltipUiConfig + Clone + ThreadSafe,
+		Tooltip<T>: InsertUiContent,
 	{
 		let mut app = new_app();
 		app.add_systems(
@@ -258,7 +265,7 @@ mod tests {
 			localize: &TLocalization,
 			parent: &mut RelatedSpawnerCommands<ChildOf>,
 		) where
-			TLocalization: LocalizeToken,
+			TLocalization: Localize,
 		{
 			let label = localize
 				.localize_token(self.0.content)
@@ -338,14 +345,14 @@ mod tests {
 
 	#[test]
 	fn despawn_outdated() {
-		let mut app = setup_despawn_outdated::<&'static str>();
+		let mut app = setup_despawn_outdated::<Token>();
 		let tooltips = [
-			app.world_mut().spawn(Tooltip("1")).id(),
-			app.world_mut().spawn(Tooltip("2")).id(),
+			app.world_mut().spawn(Tooltip(Token::from("1"))).id(),
+			app.world_mut().spawn(Tooltip(Token::from("2"))).id(),
 		];
 		for entity in tooltips {
 			app.world_mut().spawn((
-				TooltipContent::<&'static str>::new(entity, default()),
+				TooltipContent::<Token>::new(entity, default()),
 				Node::default(),
 			));
 		}
@@ -361,22 +368,22 @@ mod tests {
 		let tooltip_uis = app
 			.world()
 			.iter_entities()
-			.filter(|e| e.contains::<TooltipContent<&'static str>>());
+			.filter(|e| e.contains::<TooltipContent<Token>>());
 
 		assert_eq!(0, tooltip_uis.count());
 	}
 
 	#[test]
 	fn despawn_outdated_recursively() {
-		let mut app = setup_despawn_outdated::<&'static str>();
+		let mut app = setup_despawn_outdated::<Token>();
 		let tooltips = [
-			app.world_mut().spawn(Tooltip("1")).id(),
-			app.world_mut().spawn(Tooltip("2")).id(),
+			app.world_mut().spawn(Tooltip(Token::from("1"))).id(),
+			app.world_mut().spawn(Tooltip(Token::from("2"))).id(),
 		];
 		for entity in tooltips {
 			app.world_mut()
 				.spawn((
-					TooltipContent::<&'static str>::new(entity, default()),
+					TooltipContent::<Token>::new(entity, default()),
 					Node::default(),
 				))
 				.with_children(|parent| {
@@ -402,14 +409,14 @@ mod tests {
 
 	#[test]
 	fn do_not_despawn_when_not_outdated() {
-		let mut app = setup_despawn_outdated::<&'static str>();
+		let mut app = setup_despawn_outdated::<Token>();
 		let tooltips = [
-			app.world_mut().spawn(Tooltip("1")).id(),
-			app.world_mut().spawn(Tooltip("2")).id(),
+			app.world_mut().spawn(Tooltip(Token::from("1"))).id(),
+			app.world_mut().spawn(Tooltip(Token::from("2"))).id(),
 		];
 		for entity in tooltips {
 			app.world_mut().spawn((
-				TooltipContent::<&'static str>::new(entity, default()),
+				TooltipContent::<Token>::new(entity, default()),
 				Node::default(),
 			));
 		}
@@ -419,23 +426,23 @@ mod tests {
 		let tooltip_uis = app
 			.world()
 			.iter_entities()
-			.filter(|e| e.contains::<TooltipContent<&'static str>>());
+			.filter(|e| e.contains::<TooltipContent<Token>>());
 
 		assert_eq!(2, tooltip_uis.count());
 	}
 
 	#[test]
 	fn update_position() {
-		let mut app = setup_update_position::<&'static str>(MouseVec2(Vec2 { x: 42., y: 11. }));
+		let mut app = setup_update_position::<Token>(MouseVec2(Vec2 { x: 42., y: 11. }));
 		let uis = app
 			.world_mut()
 			.spawn_batch([
 				(
-					TooltipContent::<&'static str>::new(Entity::from_raw(100), default()),
+					TooltipContent::<Token>::new(Entity::from_raw(100), default()),
 					Node::default(),
 				),
 				(
-					TooltipContent::<&'static str>::new(Entity::from_raw(200), default()),
+					TooltipContent::<Token>::new(Entity::from_raw(200), default()),
 					Node::default(),
 				),
 			])

@@ -3,7 +3,7 @@ use crate::traits::{LoadUi, colors::PanelColors, insert_ui_content::InsertUiCont
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{
 	states::{game_state::GameState, save_state::SaveState},
-	traits::handles_localization::LocalizeToken,
+	traits::handles_localization::{Localize, LocalizeToken},
 };
 
 #[derive(Component)]
@@ -35,7 +35,7 @@ impl InsertUiContent for StartMenu {
 		localization: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
-		TLocalization: LocalizeToken,
+		TLocalization: Localize,
 	{
 		let title = localization
 			.localize_token("project-zyheeda")
@@ -54,7 +54,7 @@ impl InsertUiContent for StartMenu {
 			})
 			.with_children(|parent| {
 				parent.spawn((
-					Text::new(title),
+					Text::from(title),
 					TextFont {
 						font_size: 64.0,
 						..default()

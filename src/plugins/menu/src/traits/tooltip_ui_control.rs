@@ -1,7 +1,7 @@
 use super::insert_ui_content::InsertUiContent;
-use crate::components::tooltip::Tooltip;
+use crate::components::tooltip::{Tooltip, TooltipUiConfig};
 use bevy::prelude::*;
-use common::traits::{handles_localization::LocalizeToken, thread_safe::ThreadSafe};
+use common::traits::{handles_localization::Localize, thread_safe::ThreadSafe};
 
 pub(crate) trait DespawnAllTooltips<TUI> {
 	fn despawn_all(
@@ -14,7 +14,8 @@ pub(crate) trait DespawnAllTooltips<TUI> {
 
 pub(crate) trait DespawnOutdatedTooltips<TUI, T>
 where
-	T: ThreadSafe,
+	T: TooltipUiConfig + ThreadSafe,
+	Tooltip<T>: InsertUiContent,
 {
 	fn despawn_outdated(
 		&self,
@@ -39,7 +40,9 @@ pub(crate) struct MouseVec2(pub(crate) Vec2);
 
 pub(crate) trait SpawnTooltips<T, TLocalization>
 where
-	TLocalization: LocalizeToken + ThreadSafe,
+	T: TooltipUiConfig + ThreadSafe,
+	Tooltip<T>: InsertUiContent,
+	TLocalization: Localize + ThreadSafe,
 {
 	fn spawn(
 		&self,

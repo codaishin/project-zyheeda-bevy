@@ -21,7 +21,7 @@ use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{
 	tools::{action_key::slot::PlayerSlot, skill_description::SkillToken, skill_icon::SkillIcon},
 	traits::{
-		handles_localization::{LocalizeToken, localized::Localized},
+		handles_localization::{Localize, LocalizeToken, localized::Localized},
 		inspect_able::{InspectAble, InspectField},
 		load_asset::{LoadAsset, Path},
 		thread_safe::ThreadSafe,
@@ -304,7 +304,7 @@ where
 		localize: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
-		TLocalization: LocalizeToken + 'static,
+		TLocalization: Localize + 'static,
 	{
 		let title = localize.localize_token("combo-skill-menu").or_token();
 
@@ -325,7 +325,7 @@ fn add_title(parent: &mut RelatedSpawnerCommands<ChildOf>, title: Localized) {
 		})
 		.with_children(|parent| {
 			parent.spawn((
-				Text::new(title),
+				Text::from(title),
 				TextFont {
 					font_size: 40.,
 					..default()
@@ -340,7 +340,7 @@ fn add_empty_combo<TLocalization>(
 	parent: &mut RelatedSpawnerCommands<ChildOf>,
 	icon: &Handle<Image>,
 ) where
-	TLocalization: LocalizeToken + 'static,
+	TLocalization: Localize + 'static,
 {
 	parent
 		.spawn(Node {
@@ -372,7 +372,7 @@ fn add_combo_list<TSkill, TLocalization>(
 	combo_overview: &ComboOverview<TSkill>,
 ) where
 	TSkill: InspectAble<SkillToken> + InspectAble<SkillIcon> + Clone + PartialEq + ThreadSafe,
-	TLocalization: LocalizeToken + 'static,
+	TLocalization: Localize + 'static,
 {
 	parent
 		.spawn(Node {
@@ -402,7 +402,7 @@ fn add_combo<TSkill, TLocalization>(
 	new_skill_icon: &Handle<Image>,
 ) where
 	TSkill: InspectAble<SkillToken> + InspectAble<SkillIcon> + Clone + PartialEq + ThreadSafe,
-	TLocalization: LocalizeToken + 'static,
+	TLocalization: Localize + 'static,
 {
 	parent
 		.spawn((
@@ -425,7 +425,7 @@ fn add_combo<TSkill, TLocalization>(
 
 enum AddPanel<'a, TSkill, TLocalization>
 where
-	TLocalization: LocalizeToken + 'static,
+	TLocalization: Localize + 'static,
 {
 	StartCombo {
 		panel_overlay: PanelOverlay<TLocalization>,
@@ -444,7 +444,7 @@ where
 
 impl<TLocalization> AddPanel<'_, (), TLocalization>
 where
-	TLocalization: LocalizeToken + 'static,
+	TLocalization: Localize + 'static,
 {
 	fn start_combo(
 		localize: &TLocalization,
@@ -495,7 +495,7 @@ where
 impl<TSkill, TLocalization> AddPanel<'_, TSkill, TLocalization>
 where
 	TSkill: InspectAble<SkillToken> + InspectAble<SkillIcon> + Clone + ThreadSafe,
-	TLocalization: LocalizeToken,
+	TLocalization: Localize,
 {
 	fn spawn_as_child(
 		self,
@@ -540,7 +540,7 @@ where
 		let token = SkillToken::inspect_field(skill).clone();
 		let skill_bundle = (
 			ComboSkillButton::<DropdownTrigger, TSkill>::new(skill.clone(), key_path.to_vec()),
-			Tooltip::new(localize.localize_token(token).or_token()),
+			Tooltip::new(localize.localize(&token).or_token()),
 			ComboOverview::skill_button(SkillIcon::inspect_field(skill).clone()),
 			SkillSelectDropdownInsertCommand::<PlayerSlot, Vertical>::new(key_path.to_vec()),
 		);
@@ -568,7 +568,7 @@ where
 impl<'a, TSkill, TLocalization> From<&'a ComboTreeElement<TSkill>>
 	for AddPanel<'a, TSkill, TLocalization>
 where
-	TLocalization: LocalizeToken + 'static,
+	TLocalization: Localize + 'static,
 {
 	fn from(element: &'a ComboTreeElement<TSkill>) -> Self {
 		match element {
@@ -639,7 +639,7 @@ fn add_key<TLocalization>(
 	parent: &mut RelatedSpawnerCommands<ChildOf>,
 	_: &TLocalization,
 ) where
-	TLocalization: LocalizeToken,
+	TLocalization: Localize,
 {
 	let Some(skill_key) = key_path.last() else {
 		return;
@@ -661,7 +661,7 @@ fn add_append_button<TLocalization>(
 	parent: &mut RelatedSpawnerCommands<ChildOf>,
 	localize: &TLocalization,
 ) where
-	TLocalization: LocalizeToken,
+	TLocalization: Localize,
 {
 	let label = localize.localize_token("combo-skill-add").or_token();
 
@@ -688,7 +688,7 @@ fn add_delete_button<TLocalization>(
 	parent: &mut RelatedSpawnerCommands<ChildOf>,
 	localize: &TLocalization,
 ) where
-	TLocalization: LocalizeToken,
+	TLocalization: Localize,
 {
 	let label = localize.localize_token("combo-skill-delete").or_token();
 

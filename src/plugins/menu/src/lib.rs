@@ -55,7 +55,7 @@ use common::{
 			LoadGroup,
 		},
 		handles_loadout_menu::{ConfigureInventory, GetItem, HandlesLoadoutMenu, SwapValuesByKey},
-		handles_localization::{HandlesLocalization, LocalizeToken, localized::Localized},
+		handles_localization::{HandlesLocalization, Localize, Token, localized::Localized},
 		handles_saving::HandlesSaving,
 		handles_settings::HandlesSettings,
 		inspect_able::InspectAble,
@@ -278,8 +278,7 @@ where
 		>;
 
 		app.register_derived_component::<MenuBackground, Node>()
-			.add_tooltip::<TLocalization::TLocalizationServer, &'static str>()
-			.add_tooltip::<TLocalization::TLocalizationServer, String>()
+			.add_tooltip::<TLocalization::TLocalizationServer, Token>()
 			.add_tooltip::<TLocalization::TLocalizationServer, Localized>()
 			.add_systems(
 				Update,
@@ -381,7 +380,7 @@ struct InventoryConfiguration<TLocalization>(PhantomData<TLocalization>);
 impl<TSwap, TLocalization> ConfigureInventory<TSwap> for InventoryConfiguration<TLocalization>
 where
 	TSwap: Component<Mutability = Mutable> + SwapValuesByKey,
-	TLocalization: LocalizeToken + Resource,
+	TLocalization: Localize + Resource,
 {
 	fn configure<TInventory, TSlots, TSystemMarker1, TSystemMarker2>(
 		&self,
