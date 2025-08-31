@@ -31,9 +31,7 @@ pub trait SetContainerPanels: Component<Mutability = Mutable> + Sized {
 			let (state, label) = match items.get_item(*key) {
 				Some(item) => (
 					PanelState::Filled,
-					localize
-						.localize(&ItemToken::inspect_field(item).clone())
-						.or_token(),
+					localize.localize(ItemToken::inspect_field(item)).or_token(),
 				),
 				None => (
 					PanelState::Empty,
