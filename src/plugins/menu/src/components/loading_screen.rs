@@ -2,7 +2,7 @@ use crate::traits::{LoadUi, insert_ui_content::InsertUiContent};
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::traits::{
 	handles_load_tracking::{AssetsProgress, DependenciesProgress, Progress},
-	handles_localization::LocalizeToken,
+	handles_localization::{Localize, LocalizeToken},
 };
 use std::marker::PhantomData;
 
@@ -63,12 +63,12 @@ impl InsertUiContent for LoadingScreen<AssetsProgress> {
 		localize: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
-		TLocalization: LocalizeToken,
+		TLocalization: Localize,
 	{
 		let label = localize.localize_token("loading-assets").or_token();
 
 		parent.spawn((
-			Text::new(label),
+			Text::from(label),
 			TextFont {
 				font_size: 32.,
 				..default()
@@ -83,12 +83,12 @@ impl InsertUiContent for LoadingScreen<DependenciesProgress> {
 		localize: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
-		TLocalization: LocalizeToken,
+		TLocalization: Localize,
 	{
 		let label = localize.localize_token("resolving-dependencies").or_token();
 
 		parent.spawn((
-			Text::new(label),
+			Text::from(label),
 			TextFont {
 				font_size: 32.,
 				..default()

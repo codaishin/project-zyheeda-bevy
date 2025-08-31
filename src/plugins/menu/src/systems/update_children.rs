@@ -1,6 +1,6 @@
 use crate::traits::insert_ui_content::InsertUiContent;
 use bevy::prelude::*;
-use common::traits::handles_localization::LocalizeToken;
+use common::traits::handles_localization::Localize;
 
 pub(crate) fn update_children<TComponent, TLocalization>(
 	mut commands: Commands,
@@ -8,7 +8,7 @@ pub(crate) fn update_children<TComponent, TLocalization>(
 	localization_server: Res<TLocalization>,
 ) where
 	TComponent: InsertUiContent + Component,
-	TLocalization: LocalizeToken + Resource,
+	TLocalization: Localize + Resource,
 {
 	for (entity, component) in &components {
 		let Ok(mut entity) = commands.get_entity(entity) else {
@@ -49,27 +49,30 @@ mod tests {
 			localize: &TLocalization,
 			parent: &mut RelatedSpawnerCommands<ChildOf>,
 		) where
-			TLocalization: LocalizeToken + ThreadSafe,
+			TLocalization: Localize + ThreadSafe,
 		{
-			parent.spawn(_Child(localize.localize_token("A").or_string(|| "??")));
-			parent.spawn(_Child(localize.localize_token("B").or_string(|| "??")));
-			parent.spawn(_Child(localize.localize_token("C").or_string(|| "??")));
+			parent.spawn(_Child(
+				localize.localize(&Token::from("A")).or_string(|| "??"),
+			));
+			parent.spawn(_Child(
+				localize.localize(&Token::from("B")).or_string(|| "??"),
+			));
+			parent.spawn(_Child(
+				localize.localize(&Token::from("C")).or_string(|| "??"),
+			));
 		}
 	}
 
 	#[derive(Resource, Debug, PartialEq, Default)]
 	struct _Localization;
 
-	impl LocalizeToken for _Localization {
-		fn localize_token<TToken>(&self, token: TToken) -> LocalizationResult
-		where
-			TToken: Into<Token> + 'static,
-		{
-			match token.into() {
-				t if t == Token::from("A") => LocalizationResult::Ok(Localized::from("Token A")),
-				t if t == Token::from("B") => LocalizationResult::Ok(Localized::from("Token B")),
-				t if t == Token::from("C") => LocalizationResult::Ok(Localized::from("Token C")),
-				t => LocalizationResult::Error(t.failed()),
+	impl Localize for _Localization {
+		fn localize(&self, token: &Token) -> LocalizationResult {
+			match &**token {
+				"A" => LocalizationResult::Ok(Localized::from("Token A")),
+				"B" => LocalizationResult::Ok(Localized::from("Token B")),
+				"C" => LocalizationResult::Ok(Localized::from("Token C")),
+				_ => LocalizationResult::Error(token.failed()),
 			}
 		}
 	}

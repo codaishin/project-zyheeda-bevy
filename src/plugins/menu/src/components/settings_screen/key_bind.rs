@@ -9,7 +9,7 @@ use crate::traits::{
 };
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::traits::{
-	handles_localization::{LocalizeToken, Token},
+	handles_localization::{Localize, LocalizeToken, Token},
 	thread_safe::ThreadSafe,
 };
 
@@ -45,7 +45,7 @@ where
 		localization: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
-		TLocalization: LocalizeToken + ThreadSafe,
+		TLocalization: Localize + ThreadSafe,
 	{
 		parent.spawn((
 			Text::from(localization.localize_token(self.0).or_token()),

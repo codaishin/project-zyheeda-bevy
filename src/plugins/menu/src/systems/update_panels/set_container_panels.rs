@@ -5,7 +5,7 @@ use common::{
 	traits::{
 		accessors::set::Setter,
 		handles_loadout_menu::GetItem,
-		handles_localization::{LocalizeToken, localized::Localized},
+		handles_localization::{Localize, Token, localized::Localized},
 		inspect_able::{InspectAble, InspectField},
 		thread_safe::ThreadSafe,
 	},
@@ -22,7 +22,7 @@ pub trait SetContainerPanels: Component<Mutability = Mutable> + Sized {
 		mut panels: Query<(Entity, &KeyedPanel<TKey>, &mut Self)>,
 	) where
 		Self: Setter<PanelState>,
-		TLocalization: LocalizeToken + Resource,
+		TLocalization: Localize + Resource,
 		TKey: Eq + Hash + Copy + ThreadSafe,
 		TEquipment: Resource + GetItem<TKey>,
 		TEquipment::TItem: InspectAble<ItemToken>,
@@ -31,13 +31,13 @@ pub trait SetContainerPanels: Component<Mutability = Mutable> + Sized {
 			let (state, label) = match items.get_item(*key) {
 				Some(item) => (
 					PanelState::Filled,
-					localize
-						.localize_token(ItemToken::inspect_field(item).clone())
-						.or_token(),
+					localize.localize(ItemToken::inspect_field(item)).or_token(),
 				),
 				None => (
 					PanelState::Empty,
-					localize.localize_token("inventory-item-empty").or_token(),
+					localize
+						.localize(&Token::from("inventory-item-empty"))
+						.or_token(),
 				),
 			};
 			panel.set(state);
@@ -109,12 +109,9 @@ mod tests {
 	}
 
 	#[automock]
-	impl LocalizeToken for _Localize {
-		fn localize_token<TToken>(&self, token: TToken) -> LocalizationResult
-		where
-			TToken: Into<Token> + 'static,
-		{
-			self.mock.localize_token(token)
+	impl Localize for _Localize {
+		fn localize(&self, token: &Token) -> LocalizationResult {
+			self.mock.localize(token)
 		}
 	}
 
@@ -133,11 +130,11 @@ mod tests {
 	#[test]
 	fn set_empty() {
 		let localize = _Localize::new().with_mock(|mock| {
-			mock.expect_localize_token::<Token>()
-				.return_const(LocalizationResult::Error(Token::from("??").failed()));
-			mock.expect_localize_token::<&str>()
-				.with(eq("inventory-item-empty"))
+			mock.expect_localize()
+				.with(eq(Token::from("inventory-item-empty")))
 				.return_const(LocalizationResult::Ok(Localized::from("EMPTY")));
+			mock.expect_localize()
+				.return_const(LocalizationResult::Error(Token::from("??").failed()));
 		});
 		let mut app = setup(HashMap::default(), localize);
 		let panel = app
@@ -172,12 +169,12 @@ mod tests {
 	#[test]
 	fn set_filled() {
 		let localize = _Localize::new().with_mock(|mock| {
-			mock.expect_localize_token::<Token>()
+			mock.expect_localize()
 				.with(eq(Token::from("my item")))
 				.return_const(LocalizationResult::Ok(Localized::from(
 					"Localized: my item",
 				)));
-			mock.expect_localize_token::<&str>()
+			mock.expect_localize()
 				.return_const(LocalizationResult::Error(Token::from("??").failed()));
 		});
 		let mut app = setup(
@@ -216,10 +213,10 @@ mod tests {
 	#[test]
 	fn still_set_state_when_no_children() {
 		let localize = _Localize::new().with_mock(|mock| {
-			mock.expect_localize_token::<Token>()
+			mock.expect_localize()
 				.with(eq(Token::from("my item")))
 				.return_const(LocalizationResult::Error(Token::from("??").failed()));
-			mock.expect_localize_token::<&str>()
+			mock.expect_localize()
 				.return_const(LocalizationResult::Error(Token::from("??").failed()));
 		});
 		let mut app = setup(HashMap::default(), localize);
@@ -236,12 +233,12 @@ mod tests {
 	#[test]
 	fn set_when_text_not_first_child() {
 		let localize = _Localize::new().with_mock(|mock| {
-			mock.expect_localize_token::<Token>()
+			mock.expect_localize()
 				.with(eq(Token::from("my item")))
 				.return_const(LocalizationResult::Ok(Localized::from(
 					"Localized: my item",
 				)));
-			mock.expect_localize_token::<&str>()
+			mock.expect_localize()
 				.return_const(LocalizationResult::Error(Token::from("??").failed()));
 		});
 		let mut app = setup(

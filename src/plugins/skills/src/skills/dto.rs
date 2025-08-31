@@ -40,7 +40,7 @@ impl TryLoadFrom<SkillDto> for Skill {
 		asset_server: &mut TLoadAsset,
 	) -> Result<Self, Self::TInstantiationError> {
 		Ok(Self {
-			token: Token(skill_data.token),
+			token: Token::from(skill_data.token),
 			cast_time: Duration::from(skill_data.cast_time),
 			animation: skill_data.animation,
 			behavior: RunSkillBehavior::from(skill_data.behavior),
@@ -53,7 +53,7 @@ impl TryLoadFrom<SkillDto> for Skill {
 impl From<Skill> for SkillDto {
 	fn from(skill: Skill) -> Self {
 		Self {
-			token: skill.token.0,
+			token: (*skill.token).to_owned(),
 			cast_time: DurationInSeconds::from(skill.cast_time),
 			animation: skill.animation,
 			behavior: RunSkillBehaviorDto::from(skill.behavior),

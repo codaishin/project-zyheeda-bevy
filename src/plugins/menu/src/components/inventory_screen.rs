@@ -7,7 +7,7 @@ use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{
 	tools::{action_key::slot::PlayerSlot, inventory_key::InventoryKey},
 	traits::{
-		handles_localization::{LocalizeToken, localized::Localized},
+		handles_localization::{Localize, LocalizeToken, localized::Localized},
 		iteration::{IterFinite, IterInfinite},
 		thread_safe::ThreadSafe,
 	},
@@ -29,7 +29,7 @@ impl InsertUiContent for InventoryScreen {
 		localize: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
-		TLocalization: LocalizeToken,
+		TLocalization: Localize,
 	{
 		parent
 			.spawn(Node {
@@ -46,7 +46,7 @@ fn add_inventory<TLocalization>(
 	localize: &TLocalization,
 ) -> impl FnMut(&mut RelatedSpawnerCommands<ChildOf>)
 where
-	TLocalization: LocalizeToken,
+	TLocalization: Localize,
 {
 	move |parent| {
 		let mut keys = InventoryKey::iterator_infinite();
@@ -77,7 +77,7 @@ fn add_equipment<TLocalization>(
 	localize: &TLocalization,
 ) -> impl FnMut(&mut RelatedSpawnerCommands<ChildOf>)
 where
-	TLocalization: LocalizeToken,
+	TLocalization: Localize,
 {
 	move |parent| {
 		let equipment = localize.localize_token("equipment").or(|_| "Equipment");
@@ -114,7 +114,7 @@ fn add_title(parent: &mut RelatedSpawnerCommands<ChildOf>, title: Localized) {
 		})
 		.with_children(|parent| {
 			parent.spawn((
-				Text::new(title),
+				Text::from(title),
 				TextFont {
 					font_size: 40.0,
 					..default()
@@ -133,7 +133,7 @@ fn add_grid<TKey, TLocalization>(
 	localize: &TLocalization,
 ) where
 	TKey: ThreadSafe,
-	TLocalization: LocalizeToken,
+	TLocalization: Localize,
 {
 	let label = &grid_label;
 	let empty = &localize.localize_token("inventory-item-empty").or_token();
@@ -147,7 +147,7 @@ fn add_grid<TKey, TLocalization>(
 			})
 			.with_children(|parent| {
 				parent.spawn((
-					Text::new(label.clone()),
+					Text::from(label),
 					TextFont {
 						font_size: 20.0,
 						..default()
@@ -171,7 +171,7 @@ fn add_grid<TKey, TLocalization>(
 						))
 						.with_children(|parent| {
 							parent.spawn((
-								Text::new(empty.clone()),
+								Text::from(empty),
 								TextFont {
 									font_size: 15.0,
 									..default()

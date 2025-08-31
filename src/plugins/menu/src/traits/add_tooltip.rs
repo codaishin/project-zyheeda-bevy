@@ -6,14 +6,14 @@ use crate::{
 	systems::{tooltip::tooltip, tooltip_visibility::tooltip_visibility},
 };
 use bevy::prelude::*;
-use common::traits::{handles_localization::LocalizeToken, thread_safe::ThreadSafe};
+use common::traits::{handles_localization::Localize, thread_safe::ThreadSafe};
 
 pub(crate) trait AddTooltip {
 	fn add_tooltip<TLocalization, T>(&mut self) -> &mut Self
 	where
 		T: TooltipUiConfig + ThreadSafe,
 		Tooltip<T>: InsertUiContent,
-		TLocalization: LocalizeToken + Resource;
+		TLocalization: Localize + Resource;
 }
 
 impl AddTooltip for App {
@@ -21,7 +21,7 @@ impl AddTooltip for App {
 	where
 		T: TooltipUiConfig + ThreadSafe,
 		Tooltip<T>: InsertUiContent,
-		TLocalization: LocalizeToken + Resource,
+		TLocalization: Localize + Resource,
 	{
 		self.add_systems(
 			Update,

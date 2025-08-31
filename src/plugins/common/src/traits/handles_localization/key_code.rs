@@ -4,12 +4,14 @@ use bevy::prelude::*;
 impl From<KeyCode> for Token {
 	fn from(value: KeyCode) -> Self {
 		let key = format!("{value:?}");
-		Token(format!("key-code-{}", camel_case_to_kebab(key)))
+		Token::from(format!("key-code-{}", camel_case_to_kebab(&key)))
 	}
 }
 
-fn camel_case_to_kebab(str: String) -> String {
-	let mut result = vec![];
+const MOST_EXPECTED_HYPHENS: usize = 2;
+
+fn camel_case_to_kebab(str: &str) -> String {
+	let mut result = String::with_capacity(str.len() + MOST_EXPECTED_HYPHENS);
 	let mut chars = str.chars();
 	let mut last_was_digit = false;
 
@@ -29,7 +31,7 @@ fn camel_case_to_kebab(str: String) -> String {
 		last_was_digit = is_digit;
 	}
 
-	result.into_iter().collect()
+	result
 }
 
 #[cfg(test)]
