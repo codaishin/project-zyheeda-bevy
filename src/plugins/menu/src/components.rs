@@ -9,6 +9,7 @@ pub(crate) mod inventory_panel;
 pub(crate) mod inventory_screen;
 pub(crate) mod key_select;
 pub(crate) mod key_select_dropdown_command;
+pub(crate) mod label;
 pub(crate) mod loading_screen;
 pub(crate) mod menu_background;
 pub(crate) mod prevent_menu_change;
