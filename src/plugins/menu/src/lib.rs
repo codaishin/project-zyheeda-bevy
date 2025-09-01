@@ -272,10 +272,7 @@ where
 
 	fn general_systems(&self, app: &mut App) {
 		let ui_ready = not(in_state(GameState::LoadingEssentialAssets));
-		let input_label_icons = InputLabel::<PlayerSlot>::icon::<
-			TSettings::TKeyMap<PlayerSlot>,
-			TLocalization::TLocalizationServer,
-		>;
+		let input_label_icons = InputLabel::<PlayerSlot>::icon::<TSettings::TKeyMap<PlayerSlot>>;
 
 		app.register_derived_component::<MenuBackground, Node>()
 			.add_observer(UILabel::localize::<TLocalization::TLocalizationServer>)
@@ -293,7 +290,7 @@ where
 						Icon::load_image,
 						Icon::insert_image,
 						Icon::insert_image_tooltip,
-						Icon::insert_text,
+						Icon::insert_fallback_text,
 					)
 						.chain(),
 				)

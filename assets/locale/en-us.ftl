@@ -110,3 +110,5 @@ mouse-button-right = Right Mouse Button
 mouse-button-middle = Middle Mouse Button
 
 rebind-text-prompt = Press key to rebind
+
+no-icon-image = No icon image
