@@ -1,4 +1,4 @@
-use crate::components::icon::{Icon, IconImage};
+use crate::components::icon::Icon;
 use bevy::{asset::LoadState, prelude::*};
 use common::traits::{
 	get_asset_load_state::GetAssetLoadState,
@@ -7,7 +7,7 @@ use common::traits::{
 use std::path::PathBuf;
 
 impl Icon {
-	pub(crate) fn load_image(server: ResMut<AssetServer>, icons: Query<&mut Icon>) {
+	pub(crate) fn load_image(server: ResMut<AssetServer>, icons: Query<&mut Self>) {
 		load_icon_image(server, icons);
 	}
 }
@@ -17,19 +17,19 @@ where
 	TAssetServer: TryLoadAsset + GetAssetLoadState + Resource,
 {
 	for mut icon in &mut icons {
-		match &icon.image {
-			IconImage::Path(path) => {
+		match icon.as_ref() {
+			Icon::ImagePath(path) => {
 				let path = path.clone();
 				let server = server.as_mut();
 				set_loading_or_none(&mut icon, server, path);
 			}
-			IconImage::Loading(handle) => {
+			Icon::Loading(handle) => {
 				let server = server.as_ref();
 				let handle = handle.clone();
 				set_loaded_or_none(&mut icon, server, handle);
 			}
-			IconImage::Loaded(_) => {}
-			IconImage::None => {}
+			Icon::Loaded(_) => {}
+			Icon::None => {}
 		}
 	}
 }
@@ -38,9 +38,9 @@ fn set_loading_or_none<TAssetServer>(icon: &mut Icon, server: &mut TAssetServer,
 where
 	TAssetServer: TryLoadAsset,
 {
-	icon.image = match server.try_load_asset(path_buf) {
-		Ok(handle) => IconImage::Loading(handle),
-		Err(AssetNotFound) => IconImage::None,
+	*icon = match server.try_load_asset(path_buf) {
+		Ok(handle) => Icon::Loading(handle),
+		Err(AssetNotFound) => Icon::None,
 	};
 }
 
@@ -49,8 +49,8 @@ where
 	TAssetServer: GetAssetLoadState,
 {
 	match server.get_asset_load_state(handle.id().untyped()) {
-		Some(LoadState::Loaded) => icon.image = IconImage::Loaded(handle),
-		Some(LoadState::Failed(_)) => icon.image = IconImage::None,
+		Some(LoadState::Loaded) => *icon = Icon::Loaded(handle),
+		Some(LoadState::Failed(_)) => *icon = Icon::None,
 		_ => {}
 	}
 }
@@ -58,9 +58,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::icon::IconImage;
 	use bevy::asset::{AssetLoadError, AssetPath, LoadState, UntypedAssetId, io::AssetReaderError};
-	use common::traits::handles_localization::localized::Localized;
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
 	use std::{path::PathBuf, sync::Arc};
@@ -129,20 +127,14 @@ mod tests {
 		}));
 		let entity = app
 			.world_mut()
-			.spawn(Icon {
-				localized: Localized::from(""),
-				image: IconImage::Path(PathBuf::from("my/path")),
-			})
+			.spawn(Icon::ImagePath(PathBuf::from("my/path")))
 			.id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&IconImage::Loading(handle)),
-			app.world()
-				.entity(entity)
-				.get::<Icon>()
-				.map(|icon| &icon.image)
+			Some(&Icon::Loading(handle)),
+			app.world().entity(entity).get::<Icon>(),
 		);
 	}
 
@@ -158,22 +150,13 @@ mod tests {
 				.times(1)
 				.return_const(LoadState::Loaded);
 		}));
-		let entity = app
-			.world_mut()
-			.spawn(Icon {
-				localized: Localized::from(""),
-				image: IconImage::Loading(handle.clone()),
-			})
-			.id();
+		let entity = app.world_mut().spawn(Icon::Loading(handle.clone())).id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&IconImage::Loaded(handle)),
-			app.world()
-				.entity(entity)
-				.get::<Icon>()
-				.map(|icon| &icon.image)
+			Some(&Icon::Loaded(handle)),
+			app.world().entity(entity).get::<Icon>(),
 		);
 	}
 
@@ -191,23 +174,11 @@ mod tests {
 					AssetLoadError::AssetReaderError(AssetReaderError::NotFound(PathBuf::from(""))),
 				)));
 		}));
-		let entity = app
-			.world_mut()
-			.spawn(Icon {
-				localized: Localized::from(""),
-				image: IconImage::Loading(handle),
-			})
-			.id();
+		let entity = app.world_mut().spawn(Icon::Loading(handle)).id();
 
 		app.update();
 
-		assert_eq!(
-			Some(&IconImage::None),
-			app.world()
-				.entity(entity)
-				.get::<Icon>()
-				.map(|icon| &icon.image)
-		);
+		assert_eq!(Some(&Icon::None), app.world().entity(entity).get::<Icon>());
 	}
 
 	#[test]
@@ -223,20 +194,11 @@ mod tests {
 		}));
 		let entity = app
 			.world_mut()
-			.spawn(Icon {
-				localized: Localized::from(""),
-				image: IconImage::Path(PathBuf::from("my/path")),
-			})
+			.spawn(Icon::ImagePath(PathBuf::from("my/path")))
 			.id();
 
 		app.update();
 
-		assert_eq!(
-			Some(&IconImage::None),
-			app.world()
-				.entity(entity)
-				.get::<Icon>()
-				.map(|icon| &icon.image)
-		);
+		assert_eq!(Some(&Icon::None), app.world().entity(entity).get::<Icon>());
 	}
 }

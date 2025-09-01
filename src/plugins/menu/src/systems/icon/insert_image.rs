@@ -1,13 +1,13 @@
-use crate::{Icon, components::icon::IconImage};
+use crate::components::icon::Icon;
 use bevy::prelude::*;
 
 impl Icon {
 	pub(crate) fn insert_image(
 		mut commands: Commands,
-		icons: Query<(Entity, &Icon), Changed<Icon>>,
+		icons: Query<(Entity, &Self), Changed<Self>>,
 	) {
 		for (entity, icon) in &icons {
-			let IconImage::Loaded(handle) = &icon.image else {
+			let Self::Loaded(handle) = &icon else {
 				continue;
 			};
 			let Ok(mut entity) = commands.get_entity(entity) else {
@@ -22,8 +22,6 @@ impl Icon {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::icon::IconImage;
-	use common::traits::handles_localization::localized::Localized;
 	use testing::{SingleThreadedApp, new_handle};
 
 	fn setup() -> App {
@@ -38,13 +36,7 @@ mod tests {
 	fn insert_image() {
 		let handle = new_handle();
 		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn(Icon {
-				localized: Localized::from(String::default()),
-				image: IconImage::Loaded(handle.clone()),
-			})
-			.id();
+		let entity = app.world_mut().spawn(Icon::Loaded(handle.clone())).id();
 
 		app.update();
 
@@ -61,13 +53,7 @@ mod tests {
 	fn do_not_insert_image_twice() {
 		let handle = new_handle();
 		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn(Icon {
-				localized: Localized::from(String::default()),
-				image: IconImage::Loaded(handle),
-			})
-			.id();
+		let entity = app.world_mut().spawn(Icon::Loaded(handle)).id();
 
 		app.update();
 		app.world_mut().entity_mut(entity).remove::<ImageNode>();
@@ -86,13 +72,7 @@ mod tests {
 	fn insert_image_again_if_icon_changed() {
 		let handle = new_handle();
 		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn(Icon {
-				localized: Localized::from(String::default()),
-				image: IconImage::Loaded(handle.clone()),
-			})
-			.id();
+		let entity = app.world_mut().spawn(Icon::Loaded(handle.clone())).id();
 
 		app.update();
 		app.world_mut().entity_mut(entity).remove::<ImageNode>();

@@ -121,6 +121,18 @@ impl LocalizationResult {
 	}
 }
 
+impl From<Localized> for LocalizationResult {
+	fn from(localized: Localized) -> Self {
+		Self::Ok(localized)
+	}
+}
+
+impl From<FailedToken> for LocalizationResult {
+	fn from(token: FailedToken) -> Self {
+		Self::Error(token)
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;

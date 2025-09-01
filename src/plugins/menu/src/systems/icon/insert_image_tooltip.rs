@@ -1,21 +1,23 @@
-use crate::{Icon, Tooltip, components::icon::IconImage};
+use crate::{
+	Tooltip,
+	components::{icon::Icon, label::UILabel},
+};
 use bevy::prelude::*;
+use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
 impl Icon {
 	pub(crate) fn insert_image_tooltip(
-		mut commands: Commands,
-		icons: Query<(Entity, &Icon), Changed<Icon>>,
+		mut commands: ZyheedaCommands,
+		icons: Query<(Entity, &Self, &UILabel), Changed<Self>>,
 	) {
-		for (entity, icon) in &icons {
-			if !matches!(icon.image, IconImage::Loaded(_)) {
+		for (entity, icon, UILabel(label)) in &icons {
+			if !matches!(icon, Icon::Loaded(_)) {
 				continue;
 			}
 
-			let Ok(mut entity) = commands.get_entity(entity) else {
-				continue;
-			};
-
-			entity.try_insert((Interaction::default(), Tooltip::new(icon.localized.clone())));
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_insert((Interaction::default(), Tooltip::new(label.clone())));
+			});
 		}
 	}
 }
@@ -23,7 +25,6 @@ impl Icon {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{Tooltip, components::icon::IconImage};
 	use common::traits::handles_localization::localized::Localized;
 	use std::path::PathBuf;
 	use test_case::test_case;
@@ -43,10 +44,10 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Icon {
-				localized: Localized::from("my text"),
-				image: IconImage::Loaded(handle.clone()),
-			})
+			.spawn((
+				UILabel(Localized::from("my text")),
+				Icon::Loaded(handle.clone()),
+			))
 			.id();
 
 		app.update();
@@ -63,17 +64,14 @@ mod tests {
 		);
 	}
 
-	#[test_case(IconImage::Path(PathBuf::from("")); "is path")]
-	#[test_case(IconImage::Loading(new_handle()); "is loading")]
-	#[test_case(IconImage::None; "is none")]
-	fn do_not_insert_tooltip_when_image(image: IconImage) {
+	#[test_case(Icon::ImagePath(PathBuf::from("")); "is path")]
+	#[test_case(Icon::Loading(new_handle()); "is loading")]
+	#[test_case(Icon::None; "is none")]
+	fn do_not_insert_tooltip_icon_when_image(icon: Icon) {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Icon {
-				localized: Localized::from("my text"),
-				image,
-			})
+			.spawn((UILabel(Localized::from("my text")), icon))
 			.id();
 
 		app.update();
@@ -93,10 +91,10 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Icon {
-				localized: Localized::from("my text"),
-				image: IconImage::Loaded(handle.clone()),
-			})
+			.spawn((
+				UILabel(Localized::from("my text")),
+				Icon::Loaded(handle.clone()),
+			))
 			.id();
 
 		app.update();
@@ -120,10 +118,10 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Icon {
-				localized: Localized::from("my text"),
-				image: IconImage::Loaded(handle.clone()),
-			})
+			.spawn((
+				UILabel(Localized::from("my text")),
+				Icon::Loaded(handle.clone()),
+			))
 			.id();
 
 		app.update();

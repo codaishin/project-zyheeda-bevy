@@ -1,18 +1,18 @@
-pub mod traits;
-
 mod components;
 mod events;
+mod observers;
 mod resources;
 mod states;
 mod systems;
 mod tools;
+mod traits;
 mod visualization;
 
 #[cfg(debug_assertions)]
 mod debug;
 
 use crate::{
-	components::{dispatch_text_color::DispatchTextColor, ui_disabled::UIDisabled},
+	components::{dispatch_text_color::DispatchTextColor, label::UILabel, ui_disabled::UIDisabled},
 	systems::{
 		combos::visualize_invalid_skill::VisualizeInvalidSkill,
 		dropdown::dropdown_skill_select_insert::DropdownSkillSelectInsert,
@@ -272,12 +272,10 @@ where
 
 	fn general_systems(&self, app: &mut App) {
 		let ui_ready = not(in_state(GameState::LoadingEssentialAssets));
-		let input_label_icons = InputLabel::<PlayerSlot>::icon::<
-			TSettings::TKeyMap<PlayerSlot>,
-			TLocalization::TLocalizationServer,
-		>;
+		let input_label_icons = InputLabel::<PlayerSlot>::icon::<TSettings::TKeyMap<PlayerSlot>>;
 
 		app.register_derived_component::<MenuBackground, Node>()
+			.add_observer(UILabel::localize::<TLocalization::TLocalizationServer>)
 			.add_tooltip::<TLocalization::TLocalizationServer, Token>()
 			.add_tooltip::<TLocalization::TLocalizationServer, Localized>()
 			.add_systems(
@@ -292,7 +290,7 @@ where
 						Icon::load_image,
 						Icon::insert_image,
 						Icon::insert_image_tooltip,
-						Icon::insert_text,
+						Icon::insert_fallback_text,
 					)
 						.chain(),
 				)
