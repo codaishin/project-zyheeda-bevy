@@ -129,12 +129,12 @@ where
 				});
 			}
 
-			Some(String::from(localized))
+			Some(Localized::from(localized))
 		};
 
 		match locales.iter().find_map(localize) {
-			Some(localized) => LocalizationResult::Ok(Localized::from(localized)),
-			None => LocalizationResult::Error(Token::from(str).failed()),
+			Some(localized) => LocalizationResult::from(localized),
+			None => LocalizationResult::from(token.failed()),
 		}
 	}
 }
