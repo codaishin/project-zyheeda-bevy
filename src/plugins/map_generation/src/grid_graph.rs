@@ -306,17 +306,16 @@ pub struct Obstacles {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use mockall::{mock, predicate::eq};
-	use testing::{Mock, simple_init};
+	use macros::simple_mock;
+	use mockall::predicate::eq;
+	use testing::Mock;
 
-	mock! {
+	simple_mock! {
 		_Mapper {}
 		impl KeyMapper for _Mapper {
 			fn key_for(&self, translation: Vec3) -> Option<(u32, u32)>;
 		}
 	}
-
-	simple_init!(Mock_Mapper);
 
 	#[test]
 	fn gat_matching_node() {

@@ -64,12 +64,12 @@ where
 mod tests {
 	use super::*;
 	use common::{tools::action_key::slot::PlayerSlot, traits::handles_localization::Token};
-	use macros::NestedMocks;
-	use mockall::{automock, mock, predicate::eq};
+	use macros::{NestedMocks, simple_mock};
+	use mockall::{automock, predicate::eq};
 	use std::{collections::HashMap, iter::Cloned, slice::Iter};
-	use testing::{Mock, NestedMocks, SingleThreadedApp, new_handle, simple_init};
+	use testing::{Mock, NestedMocks, SingleThreadedApp, new_handle};
 
-	mock! {
+	simple_mock! {
 		_SkillQueued {}
 		impl ReleaseSkill for _SkillQueued {
 			fn release_skill(&mut self) {}
@@ -78,8 +78,6 @@ mod tests {
 			fn ref_into(&self) -> SlotKey {}
 		}
 	}
-
-	simple_init!(Mock_SkillQueued);
 
 	#[derive(Component, Default)]
 	struct _Skills(HashMap<SlotKey, Handle<Item>>);

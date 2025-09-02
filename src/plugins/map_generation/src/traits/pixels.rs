@@ -88,17 +88,16 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use mockall::{mock, predicate::eq};
-	use testing::{Mock, simple_init};
+	use macros::simple_mock;
+	use mockall::predicate::eq;
+	use testing::Mock;
 
-	mock! {
+	simple_mock! {
 		_Image {}
 		impl PixelBytes for _Image {
 			fn pixel_bytes<'a>(&'a self, coords: UVec3) -> Option<&'a [u8]>;
 		}
 	}
-
-	simple_init!(Mock_Image);
 
 	#[test]
 	fn get_0_0() {

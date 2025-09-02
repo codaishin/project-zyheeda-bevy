@@ -18,17 +18,16 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use mockall::{mock, predicate::eq};
-	use testing::{Mock, simple_init};
+	use macros::simple_mock;
+	use mockall::predicate::eq;
+	use testing::Mock;
 
-	mock! {
+	simple_mock! {
 		_T {}
 		impl Set<(), u32> for _T {
 			fn set(&mut self, key: (), value: u32);
 		}
 	}
-
-	simple_init!(Mock_T);
 
 	fn as_setter(v: Mock_T) -> impl Setter<u32> {
 		v

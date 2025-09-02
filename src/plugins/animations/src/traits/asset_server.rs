@@ -89,11 +89,12 @@ mod tests {
 	use super::*;
 	use bevy::asset::AssetPath;
 	use common::traits::load_asset::Path;
+	use macros::simple_mock;
 	use mockall::{mock, predicate::eq};
-	use testing::{Mock, new_handle, new_handle_from, simple_init};
+	use testing::{Mock, new_handle, new_handle_from};
 	use uuid::{Uuid, uuid};
 
-	mock! {
+	simple_mock! {
 		_AssetServer {}
 		impl LoadAsset for _AssetServer {
 			fn load_asset<TAsset, TPath>(&mut self, path: TPath) -> Handle<TAsset>
@@ -102,8 +103,6 @@ mod tests {
 				TPath: Into<AssetPath<'static>> + 'static;
 		}
 	}
-
-	simple_init!(Mock_AssetServer);
 
 	macro_rules! setup_graph {
 		($setup:expr) => {

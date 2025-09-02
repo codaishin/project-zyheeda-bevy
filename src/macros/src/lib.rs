@@ -1,5 +1,5 @@
 use proc_macro::TokenStream;
-use quote::quote;
+use quote::{format_ident, quote};
 use syn::{
 	Data,
 	DeriveInput,
@@ -8,10 +8,12 @@ use syn::{
 	Field,
 	Fields,
 	Ident,
+	ItemImpl,
 	Lit,
 	Path,
 	Token,
 	Type,
+	braced,
 	parse::{Parse, ParseStream},
 	parse_macro_input,
 	spanned::Spanned,
@@ -516,4 +518,78 @@ fn crate_root(name: &str) -> Result<Path, TokenStream> {
 		Ok(name) => Ok(name),
 		Err(error) => Err(TokenStream::from(error.to_compile_error())),
 	}
+}
+
+struct MockInput {
+	ident: Ident,
+	_brace: syn::token::Brace,
+	implementations: Vec<ItemImpl>,
+}
+
+impl Parse for MockInput {
+	fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+		let ident: Ident = input.parse()?;
+		let content;
+		let _brace = braced!(content in input);
+
+		if !content.is_empty() {
+			return Err(content.error("expected empty {} after type name"));
+		}
+
+		let mut implementations = Vec::new();
+		while !input.is_empty() {
+			implementations.push(input.parse()?);
+		}
+
+		Ok(MockInput {
+			ident,
+			_brace,
+			implementations,
+		})
+	}
+}
+
+/// Wrapper around `mockall::mock` that adds initialization logic
+///
+/// # Example
+/// ```ignore
+/// simple_mock! {
+///   _T {}
+///   impl SomeTrait for _T {
+///     fn some_func(&self);
+///   }
+/// }
+///
+/// let t = Mock_T::new_mock(|mock| {
+///   mock
+///     .expect_some_func()
+///     .times(1)
+///     .return_const(());
+/// });
+///
+/// t.some_func();
+/// ```
+#[proc_macro]
+pub fn simple_mock(tokens: TokenStream) -> TokenStream {
+	let MockInput {
+		ident,
+		implementations,
+		..
+	} = parse_macro_input!(tokens as MockInput);
+	let mock_ident = format_ident!("Mock{ident}");
+
+	TokenStream::from(quote! {
+		mockall::mock! {
+			#ident {}
+			#(#implementations)*
+		}
+
+		impl testing::Mock for #mock_ident {
+			fn new_mock(mut configure: impl FnMut(&mut Self)) -> Self {
+				let mut mock = Self::default();
+				configure(&mut mock);
+				mock
+			}
+		}
+	})
 }

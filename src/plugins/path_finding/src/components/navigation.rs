@@ -158,10 +158,11 @@ mod tests {
 		GraphTranslation,
 		NaivePath,
 	};
-	use mockall::{mock, predicate::eq};
-	use testing::{Mock, simple_init};
+	use macros::simple_mock;
+	use mockall::predicate::eq;
+	use testing::Mock;
 
-	mock! {
+	simple_mock! {
 		_Method {}
 		impl ComputePathLazy<_Graph> for _Method {
 			fn compute_path(
@@ -173,9 +174,7 @@ mod tests {
 		}
 	}
 
-	simple_init!(Mock_Method);
-
-	mock! {
+	simple_mock! {
 		_Method2 {}
 		impl ComputePathLazy<Mock_Graph> for _Method2 {
 			fn compute_path(
@@ -186,8 +185,6 @@ mod tests {
 			) -> impl Iterator<Item = _Node>;
 		}
 	}
-
-	simple_init!(Mock_Method2);
 
 	#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 	struct _Node(u8, u8, u8);
@@ -242,7 +239,7 @@ mod tests {
 		}
 	}
 
-	mock! {
+	simple_mock! {
 		_Graph {}
 		impl GraphNode for _Graph {
 			type TNNode = _Node;
@@ -273,8 +270,6 @@ mod tests {
 	impl Graph for Mock_Graph {
 		type TNode = _Node;
 	}
-
-	simple_init!(Mock_Graph);
 
 	#[test]
 	fn call_compute_path_with_start_and_end() {

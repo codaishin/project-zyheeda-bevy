@@ -53,22 +53,20 @@ mod tests {
 	use super::*;
 	use crate::{context::ComponentString, errors::IOErrors};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use mockall::mock;
+	use macros::simple_mock;
 	use std::collections::HashMap;
-	use testing::{Mock, SingleThreadedApp, simple_init};
+	use testing::{Mock, SingleThreadedApp};
 
 	#[derive(Debug, PartialEq, Clone)]
 	struct _Error;
 
-	mock! {
+	simple_mock! {
 		_Reader {}
 		impl ReadFile for _Reader {
 			type TReadError = _Error;
 			fn read(&self) -> Result<String, _Error>;
 		}
 	}
-
-	simple_init!(Mock_Reader);
 
 	fn setup() -> App {
 		App::new().single_threaded(Update)

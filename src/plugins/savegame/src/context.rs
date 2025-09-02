@@ -129,19 +129,17 @@ pub(crate) struct ComponentString {
 #[cfg(test)]
 mod test_write_buffer {
 	use super::*;
-	use mockall::mock;
+	use macros::simple_mock;
 	use serde_json::from_str;
 	use std::path::PathBuf;
-	use testing::{Mock, SingleThreadedApp, simple_init};
+	use testing::{Mock, SingleThreadedApp};
 
-	mock! {
+	simple_mock! {
 		_Handler {}
 		impl BufferEntityComponent for _Handler {
 			fn buffer_component<'a>(&self, buffer: &mut SaveBuffer, entity: EntityRef<'a>) -> Result<(), serde_json::Error>;
 		}
 	}
-
-	simple_init!(Mock_Handler);
 
 	fn setup() -> App {
 		App::new().single_threaded(Update)

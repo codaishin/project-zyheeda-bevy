@@ -715,8 +715,9 @@ mod tests {
 	use crate::traits::build_combo_tree_layout::ComboTreeElement;
 	use bevy::asset::{Asset, AssetId, AssetPath};
 	use common::tools::action_key::slot::Side;
-	use mockall::{mock, predicate::eq};
-	use testing::{Mock, simple_init};
+	use macros::simple_mock;
+	use mockall::predicate::eq;
+	use testing::Mock;
 	use uuid::Uuid;
 
 	#[derive(Debug, PartialEq, Default, Clone)]
@@ -734,7 +735,7 @@ mod tests {
 		assert_eq!(combos, combo_overview.layout)
 	}
 
-	mock! {
+	simple_mock! {
 		_Server {}
 		impl LoadAsset for _Server {
 			fn load_asset<TAsset, TPath>(&mut self, path: TPath) -> Handle<TAsset>
@@ -743,8 +744,6 @@ mod tests {
 				TPath: Into<AssetPath<'static>> + 'static;
 		}
 	}
-
-	simple_init!(Mock_Server);
 
 	#[test]
 	fn load_ui_with_asset_handle() {
