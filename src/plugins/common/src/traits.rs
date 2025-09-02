@@ -34,6 +34,7 @@ pub mod init_resource;
 pub mod insert;
 pub mod inspect_able;
 pub mod intersect_at;
+pub mod iter_descendants_conditional;
 pub mod iterate;
 pub mod iteration;
 pub mod key_mappings;
