@@ -39,18 +39,17 @@ impl Display for NoMatch {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use mockall::{mock, predicate::eq};
-	use testing::{Mock, simple_init};
+	use macros::simple_mock;
+	use mockall::predicate::eq;
+	use testing::Mock;
 
-	mock! {
+	simple_mock! {
 		_Logger {}
 		impl Log for _Logger {
 			fn log_warning<TError>(&self, value: TError) where TError: 'static;
 			fn log_error<TError>(&self, value: TError) where TError: 'static;
 		}
 	}
-
-	simple_init!(Mock_Logger);
 
 	#[test]
 	fn get_entity() {

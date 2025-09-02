@@ -203,10 +203,10 @@ mod tests {
 		errors::Error,
 		tools::action_key::slot::{PlayerSlot, Side},
 	};
-	use macros::NestedMocks;
+	use macros::{NestedMocks, simple_mock};
 	use mockall::{mock, predicate::eq};
 	use std::{collections::HashSet, ops::DerefMut};
-	use testing::{IsChanged, Mock, NestedMocks, SingleThreadedApp, TickTime, simple_init};
+	use testing::{IsChanged, Mock, NestedMocks, SingleThreadedApp, TickTime};
 
 	#[derive(Component, Default)]
 	struct _Dequeue {
@@ -228,7 +228,7 @@ mod tests {
 		}
 	}
 
-	mock! {
+	simple_mock! {
 		_Skill {}
 		impl UpdatedStates<SkillState> for _Skill {
 			fn updated_states(&mut self, delta: Duration) -> HashSet<StateMeta<SkillState>>;
@@ -240,8 +240,6 @@ mod tests {
 			fn animation_strategy(&self) -> AnimationStrategy;
 		}
 	}
-
-	simple_init!(Mock_Skill);
 
 	struct _Player;
 

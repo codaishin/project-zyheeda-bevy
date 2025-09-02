@@ -47,17 +47,15 @@ mod test_save {
 	use super::*;
 	use crate::errors::{EntitySerializationErrors, SerdeJsonError};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use mockall::mock;
-	use testing::{Mock, SingleThreadedApp, simple_init};
+	use macros::simple_mock;
+	use testing::{Mock, SingleThreadedApp};
 
-	mock! {
+	simple_mock! {
 		_SaveContext {}
 		impl WriteBuffer for _SaveContext {
 			fn write_buffer<'a>(&mut self, entity: EntityRef<'a>) -> Result<(), EntitySerializationErrors>;
 		}
 	}
-
-	simple_init!(Mock_SaveContext);
 
 	fn setup() -> App {
 		App::new().single_threaded(Update)

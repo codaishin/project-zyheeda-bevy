@@ -90,10 +90,10 @@ fn untrack_in_self_and_children<TTracker, TTarget, TRemoveEvents>(
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use macros::NestedMocks;
+	use macros::{NestedMocks, simple_mock};
 	use mockall::{mock, predicate::eq};
 	use std::collections::VecDeque;
-	use testing::{Mock, NestedMocks, SingleThreadedApp, simple_init};
+	use testing::{Mock, NestedMocks, SingleThreadedApp};
 
 	#[derive(Component, Debug, Default, NestedMocks)]
 	struct _Tracker {
@@ -155,7 +155,7 @@ mod tests {
 		}
 	}
 
-	mock! {
+	simple_mock! {
 		_Removed {}
 		impl Clear for _Removed {
 			fn clear(&mut self);
@@ -166,8 +166,6 @@ mod tests {
 			fn read(&'a mut self) -> _Read;
 		}
 	}
-
-	simple_init!(Mock_Removed);
 
 	impl Clear for In<Mock_Removed> {
 		fn clear(&mut self) {

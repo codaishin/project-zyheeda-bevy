@@ -24,18 +24,16 @@ mod tests {
 	use super::*;
 	use crate::context::SaveContext;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use mockall::mock;
+	use macros::simple_mock;
 	use std::sync::{Arc, Mutex};
-	use testing::{Mock, SingleThreadedApp, simple_init};
+	use testing::{Mock, SingleThreadedApp};
 
-	mock! {
+	simple_mock! {
 		_IO {}
 		impl FileExists for _IO {
 			fn file_exists(&self) -> bool;
 		}
 	}
-
-	simple_init!(Mock_IO);
 
 	fn setup(quick_save: SaveContext<Mock_IO>) -> App {
 		let mut app = App::new().single_threaded(Update);

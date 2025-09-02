@@ -61,10 +61,11 @@ mod tests {
 	use super::*;
 	use crate::item::Item;
 	use bevy::asset::AssetPath;
-	use mockall::{mock, predicate::eq};
-	use testing::{Mock, new_handle, simple_init};
+	use macros::simple_mock;
+	use mockall::predicate::eq;
+	use testing::{Mock, new_handle};
 
-	mock! {
+	simple_mock! {
 		_LoadAsset {}
 		impl LoadAsset for _LoadAsset {
 			fn load_asset<TAsset, TPath>(&mut self, path: TPath) -> Handle<TAsset>
@@ -73,8 +74,6 @@ mod tests {
 				TPath: Into<AssetPath<'static>> + 'static;
 		}
 	}
-
-	simple_init!(Mock_LoadAsset);
 
 	#[test]
 	fn deserialize_empty() {

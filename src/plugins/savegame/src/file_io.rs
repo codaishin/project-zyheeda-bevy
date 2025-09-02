@@ -200,10 +200,11 @@ impl WithExtensionPrefix for PathBuf {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use mockall::{Sequence, mock};
-	use testing::{Mock, simple_init};
+	use macros::simple_mock;
+	use mockall::Sequence;
+	use testing::Mock;
 
-	mock! {
+	simple_mock! {
 		_IO {}
 		impl IOWrite for _IO {
 			type TWriteError = _Error;
@@ -219,8 +220,6 @@ mod tests {
 			fn read_to_string(&self ,path: &Path) -> Result<String, _Error>;
 		}
 	}
-
-	simple_init!(Mock_IO);
 
 	#[derive(Debug, PartialEq)]
 	struct _Error;

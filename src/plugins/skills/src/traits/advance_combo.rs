@@ -26,9 +26,9 @@ mod tests {
 	use super::*;
 	use bevy::utils::default;
 	use common::{tools::action_key::slot::SlotKey, traits::handles_localization::Token};
-	use mockall::{automock, predicate::eq};
+	use macros::simple_mock;
+	use mockall::predicate::eq;
 	use std::collections::HashMap;
-	use testing::simple_init;
 
 	struct _Combos {
 		lookup: HashMap<(SlotKey, ItemType), Skill>,
@@ -68,14 +68,18 @@ mod tests {
 		}
 	}
 
-	#[automock]
 	impl SetNextCombo<Option<ComboNode>> for _Combos {
 		fn set_next_combo(&mut self, value: Option<ComboNode>) {
 			self.mock.set_next_combo(value);
 		}
 	}
 
-	simple_init!(Mock_Combos);
+	simple_mock! {
+		_Combos {}
+		impl SetNextCombo<Option<ComboNode>> for _Combos {
+			fn set_next_combo(&mut self, value: Option<ComboNode>);
+		}
+	}
 
 	fn node() -> ComboNode {
 		ComboNode::new([(

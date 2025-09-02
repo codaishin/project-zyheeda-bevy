@@ -64,22 +64,21 @@ mod tests {
 	use super::*;
 	use crate::context::ComponentString;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use mockall::{mock, predicate::eq};
+	use macros::simple_mock;
+	use mockall::predicate::eq;
 	use std::collections::HashSet;
-	use testing::{Mock, SingleThreadedApp, simple_init};
+	use testing::{Mock, SingleThreadedApp};
 
 	#[derive(Debug, PartialEq, Clone)]
 	struct _Error;
 
-	mock! {
+	simple_mock! {
 	  _Writer {}
 		impl WriteFile for _Writer {
 			type TWriteError = _Error;
 			fn write(&self, string: &str) -> Result<(), _Error>;
 		}
 	}
-
-	simple_init!(Mock_Writer);
 
 	fn setup() -> App {
 		App::new().single_threaded(Update)

@@ -218,10 +218,10 @@ impl From<Direction> for Dir3 {
 mod test_parsing {
 	use super::*;
 	use crate::traits::pixels::{Bytes, Layer};
-	use macros::new_valid;
-	use mockall::{mock, predicate::eq};
+	use macros::{new_valid, simple_mock};
+	use mockall::predicate::eq;
 	use std::vec::IntoIter;
-	use testing::{Mock, simple_init};
+	use testing::Mock;
 
 	struct _Lookup;
 
@@ -258,7 +258,7 @@ mod test_parsing {
 		}
 	}
 
-	mock! {
+	simple_mock! {
 		_Image {}
 		impl PixelBytesIterator for _Image {
 			type TIter<'a>
@@ -269,8 +269,6 @@ mod test_parsing {
 			fn iter_pixel_bytes<'a>(&'a self, layer: Layer) -> IntoIter<(UVec3, Bytes<'a>)>;
 		}
 	}
-
-	simple_init!(Mock_Image);
 
 	#[test]
 	fn empty() {
