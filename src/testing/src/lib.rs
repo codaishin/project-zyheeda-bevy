@@ -413,22 +413,26 @@ pub trait Mock {
 
 #[macro_export]
 macro_rules! set_input {
-	($app:expr, just_pressed($btn:expr)) => {
+	($app:expr, just_pressed($btn:expr)) => {{
 		let mut input = $app.world_mut().resource_mut::<ButtonInput<UserInput>>();
 		input.press($btn);
-	};
+		input.clear_just_released($btn);
+	}};
 	($app:expr, pressed($btn:expr)) => {{
 		let mut input = $app.world_mut().resource_mut::<ButtonInput<UserInput>>();
 		input.press($btn);
 		input.clear_just_pressed($btn);
+		input.clear_just_released($btn);
 	}};
 	($app:expr, just_released($btn:expr)) => {{
 		let mut input = $app.world_mut().resource_mut::<ButtonInput<UserInput>>();
 		input.release($btn);
+		input.clear_just_pressed($btn);
 	}};
 	($app:expr, released($btn:expr)) => {{
 		let mut input = $app.world_mut().resource_mut::<ButtonInput<UserInput>>();
 		input.release($btn);
+		input.clear_just_pressed($btn);
 		input.clear_just_released($btn);
 	}};
 	($app:expr, reset_all) => {{
