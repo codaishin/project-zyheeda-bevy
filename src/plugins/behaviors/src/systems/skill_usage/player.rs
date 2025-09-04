@@ -50,7 +50,7 @@ mod tests {
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::collections::HashSet;
-	use testing::{NestedMocks, SingleThreadedApp};
+	use testing::{NestedMocks, SingleThreadedApp, set_input};
 
 	#[derive(Resource, NestedMocks)]
 	struct _Map {
@@ -69,22 +69,6 @@ mod tests {
 	#[derive(Component)]
 	#[require(SkillUsage)]
 	struct _Player;
-
-	macro_rules! set_input {
-		($app:expr, just_pressed($btn:expr)) => {
-			let mut input = $app.world_mut().resource_mut::<ButtonInput<UserInput>>();
-			input.press($btn);
-		};
-		($app:expr, pressed($btn:expr)) => {{
-			let mut input = $app.world_mut().resource_mut::<ButtonInput<UserInput>>();
-			input.press($btn);
-			input.clear_just_pressed($btn);
-		}};
-		($app:expr, reset_all) => {{
-			let mut input = $app.world_mut().resource_mut::<ButtonInput<UserInput>>();
-			input.reset_all();
-		}};
-	}
 
 	fn setup(map: _Map) -> App {
 		let mut app = App::new().single_threaded(Update);
