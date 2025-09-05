@@ -1,6 +1,6 @@
 use crate::{
 	tools::PanelState,
-	traits::colors::{ColorConfig, HasActiveColor, HasPanelColors, HasQueuedColor, PanelColors},
+	traits::colors::{ColorConfig, HasPanelColors, PanelColors},
 };
 use bevy::{color::Color, ecs::component::Component};
 use common::tools::action_key::slot::{PlayerSlot, SlotKey};
@@ -61,14 +61,6 @@ impl From<&QuickbarPanel> for SlotKey {
 
 impl HasPanelColors for QuickbarPanel {
 	const PANEL_COLORS: PanelColors = Self::PANEL_COLORS;
-}
-
-impl HasActiveColor for QuickbarPanel {
-	const ACTIVE_COLORS: ColorConfig = Self::ACTIVE_COLORS;
-}
-
-impl HasQueuedColor for QuickbarPanel {
-	const QUEUED_COLORS: ColorConfig = Self::QUEUED_COLORS;
 }
 
 #[cfg(test)]

@@ -40,10 +40,7 @@ mod tests {
 	use super::*;
 	use common::{
 		tools::action_key::slot::{PlayerSlot, SlotKey},
-		traits::{
-			handles_combo_menu::Combo,
-			handles_loadout::{ContainerItem, ContainerKey},
-		},
+		traits::handles_loadout::{Combo, ContainerItem, ContainerKey},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};

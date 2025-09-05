@@ -10,8 +10,14 @@ use common::{
 	},
 	traits::{
 		accessors::get::{GetMut, GetRef},
-		handles_combo_menu::{Combo, GetCombosOrdered, NextConfiguredKeys},
-		handles_loadout::{ContainerItem, ContainerKey, UpdateCombos},
+		handles_loadout::{
+			Combo,
+			ContainerItem,
+			ContainerKey,
+			GetCombosOrdered,
+			NextConfiguredKeys,
+			UpdateCombos,
+		},
 		insert::TryInsert,
 		iterate::Iterate,
 	},
@@ -235,9 +241,6 @@ impl PeekNextRecursive for ComboNode {
 }
 
 impl GetCombosOrdered for ComboNode {
-	/// Retrieve configured combos for the given `TKey`
-	///
-	/// Any slot that does not match `TKey` is dropped in the results.
 	fn combos_ordered(&self) -> Vec<Combo<SlotKey, Skill>> {
 		combos(self, vec![])
 	}

@@ -51,7 +51,6 @@ use components::{
 	queue::Queue,
 	skill_executer::SkillExecuter,
 	slots::Slots,
-	swapper::Swapper,
 };
 use item::{Item, dto::ItemDto};
 use skills::{RunSkillBehavior, Skill, dto::SkillDto};
@@ -139,7 +138,6 @@ where
 			.add_systems(
 				Update,
 				(
-					Swapper::system,
 					SlotVisualization::<HandSlot>::track_slots_for::<TPlayers::TPlayer>,
 					SlotVisualization::<HandSlot>::track_slots_for::<TEnemies::TEnemy>,
 					SlotVisualization::<HandSlot>::visualize_items,

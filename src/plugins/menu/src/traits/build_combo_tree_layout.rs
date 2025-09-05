@@ -1,8 +1,5 @@
 use bevy::prelude::*;
-use common::traits::{
-	handles_combo_menu::GetCombosOrdered,
-	handles_loadout::{ContainerItem, ContainerKey},
-};
+use common::traits::handles_loadout::{ContainerItem, ContainerKey, GetCombosOrdered};
 use std::{collections::HashSet, hash::Hash};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -151,7 +148,7 @@ mod tests {
 	use super::*;
 	use common::{
 		tools::action_key::slot::{PlayerSlot, SlotKey},
-		traits::handles_combo_menu::Combo,
+		traits::handles_loadout::Combo,
 	};
 
 	#[derive(Debug, PartialEq, Default, Clone)]

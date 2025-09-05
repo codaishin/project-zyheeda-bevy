@@ -7,7 +7,6 @@ pub(crate) mod model_render;
 pub(crate) mod queue;
 pub(crate) mod skill_executer;
 pub(crate) mod slots;
-pub(crate) mod swapper;
 
 use bevy::prelude::*;
 use common::{components::outdated::Outdated, tools::collider_info::ColliderInfo};

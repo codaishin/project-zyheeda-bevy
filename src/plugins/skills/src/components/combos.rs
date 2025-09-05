@@ -9,9 +9,13 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	tools::{action_key::slot::SlotKey, item_type::ItemType},
-	traits::{
-		handles_combo_menu::{Combo, GetCombosOrdered, NextConfiguredKeys},
-		handles_loadout::{ContainerItem, ContainerKey, UpdateCombos},
+	traits::handles_loadout::{
+		Combo,
+		ContainerItem,
+		ContainerKey,
+		GetCombosOrdered,
+		NextConfiguredKeys,
+		UpdateCombos,
 	},
 };
 use macros::SavableComponent;

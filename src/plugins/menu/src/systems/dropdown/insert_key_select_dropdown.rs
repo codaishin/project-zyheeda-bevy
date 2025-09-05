@@ -8,7 +8,7 @@ use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
 		accessors::get::TryApplyOn,
-		handles_combo_menu::NextConfiguredKeys,
+		handles_loadout::NextConfiguredKeys,
 		thread_safe::ThreadSafe,
 	},
 	zyheeda_commands::ZyheedaCommands,

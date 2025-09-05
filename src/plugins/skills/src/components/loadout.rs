@@ -3,7 +3,6 @@ use crate::components::{
 	combos_time_out::CombosTimeOut,
 	queue::Queue,
 	skill_executer::SkillExecuter,
-	swapper::Swapper,
 };
 use bevy::prelude::*;
 use common::traits::{loadout::LoadoutConfig, thread_safe::ThreadSafe};
@@ -15,7 +14,6 @@ use std::{marker::PhantomData, time::Duration};
 	CombosTimeOut = CombosTimeOut::after(Duration::from_secs(2)),
 	Queue,
 	SkillExecuter,
-	Swapper,
 )]
 pub(crate) struct Loadout<T>(PhantomData<T>)
 where

@@ -6,12 +6,12 @@ use crate::{
 	},
 	traits::{
 		accessors::get::{GetParamEntry, RefInto},
-		handles_combo_menu::{Combo, GetCombosOrdered, NextConfiguredKeys},
 		handles_localization::Token,
 		thread_safe::ThreadSafe,
 	},
 };
 use bevy::{ecs::component::Mutable, prelude::*};
+use std::collections::HashSet;
 
 pub trait HandlesLoadout {
 	type TItemEntry: for<'a> RefInto<'a, Option<ItemToken<'a>>>
@@ -44,6 +44,18 @@ pub trait HandlesLoadout {
 		+ for<'a> GetCombosOrdered
 		+ for<'a> UpdateCombos
 		+ NextConfiguredKeys<SlotKey>;
+}
+
+pub type Combo<TKey, TSkill> = Vec<(Vec<TKey>, TSkill)>;
+
+pub trait NextConfiguredKeys<TKey> {
+	fn next_keys(&self, combo_keys: &[TKey]) -> HashSet<TKey>;
+}
+
+pub trait GetCombosOrdered: ContainerKey + ContainerItem {
+	/// Get combos with a consistent ordering.
+	/// The specific ordering heuristic is up to the implementor.
+	fn combos_ordered(&self) -> Vec<Combo<Self::TKey, Self::TItem>>;
 }
 
 pub trait ContainerKey {

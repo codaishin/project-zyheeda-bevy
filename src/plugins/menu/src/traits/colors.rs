@@ -43,23 +43,7 @@ pub(crate) trait HasPanelColors {
 	const PANEL_COLORS: PanelColors;
 }
 
-pub(crate) trait HasActiveColor {
-	const ACTIVE_COLORS: ColorConfig;
-}
-
-pub(crate) trait HasQueuedColor {
-	const QUEUED_COLORS: ColorConfig;
-}
-
 pub(crate) struct ColorConfig {
 	pub(crate) background: Color,
 	pub(crate) text: Color,
-}
-
-#[cfg(test)]
-impl ColorConfig {
-	pub(crate) const NO_COLORS: ColorConfig = ColorConfig {
-		background: Color::NONE,
-		text: Color::NONE,
-	};
 }
