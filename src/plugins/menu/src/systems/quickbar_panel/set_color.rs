@@ -43,7 +43,7 @@ impl QuickbarPanel {
 
 fn set_color<TAgent, TMap, TPrimer, TSlots>(
 	mut commands: Commands,
-	mut buttons: Query<(Entity, &QuickbarPanel, &TPrimer)>,
+	buttons: Query<(Entity, &QuickbarPanel, &TPrimer)>,
 	map: Res<TMap>,
 	slots: Query<&TSlots, With<TAgent>>,
 	param: StaticSystemParam<AsParam<TSlots, SlotKey>>,
@@ -56,7 +56,7 @@ fn set_color<TAgent, TMap, TPrimer, TSlots>(
 		RefInto<'a, Result<&'a SkillExecution, NoSkill>>,
 {
 	for slots in &slots {
-		for (entity, panel, primer) in &mut buttons {
+		for (entity, panel, primer) in &buttons {
 			let Ok(entity) = commands.get_entity(entity) else {
 				continue;
 			};

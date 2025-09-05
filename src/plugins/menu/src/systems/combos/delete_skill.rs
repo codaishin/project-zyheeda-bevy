@@ -140,7 +140,7 @@ mod tests {
 	}
 
 	#[test]
-	fn do_nothing_of_no_agent() {
+	fn do_nothing_if_no_agent() {
 		let mut app = setup();
 		app.world_mut().spawn(_Combos::new().with_mock(|mock| {
 			mock.expect_update_combos().never();

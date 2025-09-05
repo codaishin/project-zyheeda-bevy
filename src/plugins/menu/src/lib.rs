@@ -245,7 +245,7 @@ where
 
 	fn combo_overview(&self, app: &mut App) {
 		type VerticalItem<TSkill> = ComboSkillButton<DropdownItem<Vertical>, TSkill>;
-		type HorizontalITem<TSkill> = ComboSkillButton<DropdownItem<Horizontal>, TSkill>;
+		type HorizontalItem<TSkill> = ComboSkillButton<DropdownItem<Horizontal>, TSkill>;
 		type Trigger<TSkill> = ComboSkillButton<DropdownTrigger, TSkill>;
 
 		let combo_overview = GameState::IngameMenu(MenuState::ComboOverview);
@@ -254,7 +254,7 @@ where
 			.add_ui::<ComboOverview<TLoadout::TSkill>, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(combo_overview);
 		app.add_dropdown::<TLocalization::TLocalizationServer, KeySelect<AppendSkill>>();
 		app.add_dropdown::<TLocalization::TLocalizationServer, VerticalItem<TLoadout::TSkill>>();
-		app.add_dropdown::<TLocalization::TLocalizationServer, HorizontalITem<TLoadout::TSkill>>();
+		app.add_dropdown::<TLocalization::TLocalizationServer, HorizontalItem<TLoadout::TSkill>>();
 		app.add_systems(
 			Update,
 			(
@@ -274,7 +274,7 @@ where
 					TLoadout::TSkills,
 				>,
 				VerticalItem::<TLoadout::TSkill>::update::<TPlayers::TPlayer, TLoadout::TCombos>,
-				HorizontalITem::<TLoadout::TSkill>::update::<TPlayers::TPlayer, TLoadout::TCombos>,
+				HorizontalItem::<TLoadout::TSkill>::update::<TPlayers::TPlayer, TLoadout::TCombos>,
 				DeleteSkill::from_combos::<TPlayers::TPlayer, TLoadout::TCombos>,
 				Trigger::<TLoadout::TSkill>::visualize_invalid::<
 					Unusable,

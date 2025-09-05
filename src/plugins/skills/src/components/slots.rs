@@ -215,10 +215,13 @@ impl SwapInternal for Slots {
 	{
 		let a: SlotKey = a.into();
 		let b: SlotKey = b.into();
+		if a == b {
+			return;
+		}
 		let item_a = self.items.remove(&a).unwrap_or_default();
 		let item_b = self.items.remove(&b).unwrap_or_default();
-		self.items.insert(a, item_b);
 		self.items.insert(b, item_a);
+		self.items.insert(a, item_b);
 	}
 }
 
@@ -762,6 +765,19 @@ mod tests {
 				slots,
 			);
 		}
+	}
+
+	#[test]
+	fn swap_same_key() {
+		let a = new_handle();
+		let mut slots = Slots::from([(SlotKey::from(PlayerSlot::LOWER_R), Some(a.clone()))]);
+
+		slots.swap_internal(PlayerSlot::LOWER_R, PlayerSlot::LOWER_R);
+
+		assert_eq!(
+			Slots::from([(SlotKey::from(PlayerSlot::LOWER_R), Some(a))]),
+			slots,
+		);
 	}
 
 	mod available_skills {

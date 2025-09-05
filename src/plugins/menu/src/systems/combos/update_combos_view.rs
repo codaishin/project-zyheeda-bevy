@@ -16,7 +16,7 @@ pub(crate) trait UpdateComboOverview:
 		for combo in &combos {
 			for mut combo_overview in &mut combo_overviews {
 				if !combo.is_changed() && !combo_overview.is_added() {
-					return;
+					continue;
 				}
 
 				combo_overview.update_combos_view(combo.build_combo_tree_layout());

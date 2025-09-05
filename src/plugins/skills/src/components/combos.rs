@@ -8,7 +8,6 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	self,
 	tools::{action_key::slot::SlotKey, item_type::ItemType},
 	traits::handles_loadout::{
 		combos_component::{Combo, GetCombosOrdered, NextConfiguredKeys, UpdateCombos},
@@ -283,8 +282,6 @@ mod tests {
 
 	mod next_keys {
 		use super::*;
-
-		struct _Skill;
 
 		simple_mock! {
 			_Node {}

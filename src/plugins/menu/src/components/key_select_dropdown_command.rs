@@ -44,9 +44,8 @@ where
 
 #[cfg(test)]
 mod tests {
-	use testing::assert_eq_unordered;
-
 	use super::*;
+	use testing::assert_eq_unordered;
 
 	#[test]
 	fn get_no_dropdown_when_all_keys_excluded() {
@@ -60,7 +59,7 @@ mod tests {
 	}
 
 	#[test]
-	fn get_dropdown_dropdown_with_remaining_keys() {
+	fn get_dropdown_with_remaining_keys() {
 		let exclude = PlayerSlot::iterator()
 			.filter(|k| k != &PlayerSlot::UPPER_R && k != &PlayerSlot::UPPER_L)
 			.map(SlotKey::from)

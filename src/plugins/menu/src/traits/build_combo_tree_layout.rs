@@ -112,7 +112,7 @@ fn layout_element<TKey, TSkill>(
 	encountered: &mut HashSet<Vec<TKey>>,
 ) -> ComboTreeElement<TKey, TSkill>
 where
-	TKey: Eq + Hash + Copy,
+	TKey: Eq + Hash + Clone,
 {
 	if encountered.contains(&key_path) {
 		return ComboTreeElement::Symbol(Symbol::Corner);
@@ -120,10 +120,7 @@ where
 
 	encountered.insert(key_path.clone());
 
-	ComboTreeElement::Node {
-		key_path: key_path.clone(),
-		skill,
-	}
+	ComboTreeElement::Node { key_path, skill }
 }
 
 fn replace_symbols_at<TKey, TSkill>(

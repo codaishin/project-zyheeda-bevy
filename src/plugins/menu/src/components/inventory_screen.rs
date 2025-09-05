@@ -65,9 +65,7 @@ where
 			})
 			.with_children(|parent| {
 				add_title(parent, inventory);
-				add_grid(parent, GridLabel::localized(""), 5, 5, || {
-					keys.next_infinite()
-				});
+				add_grid(parent, None, 5, 5, || keys.next_infinite());
 			});
 	}
 }
@@ -91,7 +89,7 @@ where
 			.with_children(|parent| {
 				add_title(parent, equipment);
 				for key in PlayerSlot::iterator() {
-					add_grid(parent, GridLabel::token(key), 1, 1, || SlotKey::from(key));
+					add_grid(parent, Some(Token::from(key)), 1, 1, || SlotKey::from(key));
 				}
 			});
 	}
@@ -118,7 +116,7 @@ fn add_title(parent: &mut RelatedSpawnerCommands<ChildOf>, title: Localized) {
 
 fn add_grid<TKey>(
 	parent: &mut RelatedSpawnerCommands<ChildOf>,
-	grid_label: GridLabel,
+	grid_label: Option<Token>,
 	element_count_x: u32,
 	element_count_y: u32,
 	mut element_key: impl FnMut() -> TKey,
@@ -133,17 +131,17 @@ fn add_grid<TKey>(
 				..default()
 			})
 			.with_children(|parent| {
-				let mut entity = parent.spawn((
-					TextFont {
-						font_size: 20.0,
-						..default()
-					},
-					TextColor(InventoryPanel::PANEL_COLORS.filled.text),
-				));
-				match grid_label.clone() {
-					GridLabel::Token(token) => entity.insert(UILabel(token)),
-					GridLabel::Localized(localized) => entity.insert(UILabel(localized)),
-				};
+				if let Some(token) = &grid_label {
+					parent.spawn((
+						TextFont {
+							font_size: 20.0,
+							..default()
+						},
+						TextColor(InventoryPanel::PANEL_COLORS.filled.text),
+						UILabel(token.clone()),
+					));
+				}
+
 				for _ in 0..element_count_x {
 					parent
 						.spawn((
@@ -170,21 +168,5 @@ fn add_grid<TKey>(
 						});
 				}
 			});
-	}
-}
-
-#[derive(Clone)]
-enum GridLabel {
-	Token(Token),
-	Localized(Localized),
-}
-
-impl GridLabel {
-	fn token(token: impl Into<Token>) -> Self {
-		Self::Token(token.into())
-	}
-
-	fn localized(localized: impl Into<Localized>) -> Self {
-		Self::Localized(localized.into())
 	}
 }
