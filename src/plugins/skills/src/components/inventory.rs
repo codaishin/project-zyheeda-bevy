@@ -2,7 +2,7 @@ mod dto;
 
 use crate::{
 	components::{inventory::dto::InventoryDto, slots::Slots},
-	item::{Item, SkillItem},
+	item::{Item, ItemSkill, SkillItem},
 	resources::skill_item_assets::SkillItemAssets,
 };
 use bevy::prelude::*;
@@ -14,7 +14,7 @@ use common::{
 	},
 	traits::{
 		accessors::get::GetParamEntry,
-		handles_loadout::{ContainerItem, ContainerKey, SwapExternal, SwapInternal},
+		handles_loadout::loadout::{LoadoutItem, LoadoutKey, SwapExternal, SwapInternal},
 		iterate::Iterate,
 	},
 };
@@ -54,25 +54,22 @@ impl<'w, 's> GetParamEntry<'w, 's, InventoryKey> for Inventory {
 		};
 		let skill = item.skill.as_ref().and_then(|skill| skills.get(skill));
 
-		let (skill_token, skill_icon) = match skill {
-			Some(skill) => (Some(skill.token.clone()), Some(skill.icon.clone())),
-			None => (None, None),
-		};
-
 		SkillItem::Some {
-			item_token: item.token.clone(),
-			skill_token,
-			skill_icon,
-			execution: SkillExecution::None,
+			token: item.token.clone(),
+			skill: skill.map(|skill| ItemSkill {
+				token: skill.token.clone(),
+				icon: skill.icon.clone(),
+				execution: SkillExecution::None,
+			}),
 		}
 	}
 }
 
-impl ContainerKey for Inventory {
+impl LoadoutKey for Inventory {
 	type TKey = InventoryKey;
 }
 
-impl ContainerItem for Inventory {
+impl LoadoutItem for Inventory {
 	type TItem = SkillItem;
 }
 
@@ -215,10 +212,12 @@ mod tests {
 
 				assert_eq!(
 					SkillItem::Some {
-						item_token: Token::from("my item"),
-						skill_token: Some(Token::from("my skill")),
-						skill_icon: Some(icon_handle.clone()),
-						execution: SkillExecution::None,
+						token: Token::from("my item"),
+						skill: Some(ItemSkill {
+							token: Token::from("my skill"),
+							icon: icon_handle.clone(),
+							execution: SkillExecution::None
+						})
 					},
 					inventory.get_param_entry(&InventoryKey(0), &skill_items)
 				);
@@ -255,10 +254,12 @@ mod tests {
 
 				assert_eq!(
 					SkillItem::Some {
-						item_token: Token::from("my item"),
-						skill_token: Some(Token::from("my skill")),
-						skill_icon: Some(icon_handle.clone()),
-						execution: SkillExecution::None,
+						token: Token::from("my item"),
+						skill: Some(ItemSkill {
+							token: Token::from("my skill"),
+							icon: icon_handle.clone(),
+							execution: SkillExecution::None
+						})
 					},
 					inventory.get_param_entry(&InventoryKey(2), &skill_items)
 				);

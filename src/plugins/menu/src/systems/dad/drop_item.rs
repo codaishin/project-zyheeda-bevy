@@ -2,7 +2,7 @@ use crate::components::{Dad, KeyedPanel};
 use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
 	tools::action_key::user_input::UserInput,
-	traits::{accessors::get::TryApplyOn, handles_loadout::SwapInternal},
+	traits::{accessors::get::TryApplyOn, handles_loadout::loadout::SwapInternal},
 	zyheeda_commands::ZyheedaCommands,
 };
 
@@ -45,7 +45,7 @@ mod tests {
 	};
 	use common::{
 		tools::action_key::slot::{PlayerSlot, Side},
-		traits::handles_loadout::ContainerKey,
+		traits::handles_loadout::loadout::LoadoutKey,
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -65,11 +65,11 @@ mod tests {
 		}
 	}
 
-	impl ContainerKey for _Container {
+	impl LoadoutKey for _Container {
 		type TKey = usize;
 	}
 
-	impl ContainerKey for Mock_Container {
+	impl LoadoutKey for Mock_Container {
 		type TKey = usize;
 	}
 

@@ -8,14 +8,11 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
+	self,
 	tools::{action_key::slot::SlotKey, item_type::ItemType},
 	traits::handles_loadout::{
-		Combo,
-		ContainerItem,
-		ContainerKey,
-		GetCombosOrdered,
-		NextConfiguredKeys,
-		UpdateCombos,
+		combos_component::{Combo, GetCombosOrdered, NextConfiguredKeys, UpdateCombos},
+		loadout::{LoadoutItem, LoadoutKey},
 	},
 };
 use macros::SavableComponent;
@@ -99,11 +96,11 @@ where
 	}
 }
 
-impl<TNode> ContainerKey for Combos<TNode> {
+impl<TNode> LoadoutKey for Combos<TNode> {
 	type TKey = SlotKey;
 }
 
-impl<TNode> ContainerItem for Combos<TNode> {
+impl<TNode> LoadoutItem for Combos<TNode> {
 	type TItem = Skill;
 }
 
@@ -252,11 +249,11 @@ mod tests {
 
 	struct _ComboNode(Vec<Combo<SlotKey, Skill>>);
 
-	impl ContainerKey for _ComboNode {
+	impl LoadoutKey for _ComboNode {
 		type TKey = SlotKey;
 	}
 
-	impl ContainerItem for _ComboNode {
+	impl LoadoutItem for _ComboNode {
 		type TItem = Skill;
 	}
 
@@ -329,10 +326,10 @@ mod tests {
 
 		simple_mock! {
 			_Node {}
-			impl ContainerKey for _Node {
+			impl LoadoutKey for _Node {
 				type TKey = SlotKey;
 			}
-			impl ContainerItem for _Node {
+			impl LoadoutItem for _Node {
 				type TItem = Skill;
 			}
 			impl UpdateCombos for _Node {

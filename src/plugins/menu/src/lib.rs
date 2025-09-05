@@ -244,32 +244,47 @@ where
 	}
 
 	fn combo_overview(&self, app: &mut App) {
-		type InVerticalDropdown<TSkill> = ComboSkillButton<DropdownItem<Vertical>, TSkill>;
-		type InHorizontalDropdown<TSkill> = ComboSkillButton<DropdownItem<Horizontal>, TSkill>;
-		type DropdownButton<TSkill> = ComboSkillButton<DropdownTrigger, TSkill>;
+		type VerticalItem<TSkill> = ComboSkillButton<DropdownItem<Vertical>, TSkill>;
+		type HorizontalITem<TSkill> = ComboSkillButton<DropdownItem<Horizontal>, TSkill>;
+		type Trigger<TSkill> = ComboSkillButton<DropdownTrigger, TSkill>;
 
 		let combo_overview = GameState::IngameMenu(MenuState::ComboOverview);
 
 		app
-			.add_ui::<ComboOverview<TLoadout::TSkill>, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(combo_overview)
-			.add_dropdown::<TLocalization::TLocalizationServer, KeySelect<AppendSkill>>()
-			.add_dropdown::<TLocalization::TLocalizationServer, InVerticalDropdown<TLoadout::TSkill>>()
-			.add_dropdown::<TLocalization::TLocalizationServer, InHorizontalDropdown<TLoadout::TSkill>>()
-			.add_systems(
-				Update,
-				(
-					ComboOverview::<TLoadout::TSkill>::update_from::<TPlayers::TPlayer, TLoadout::TCombos>,
-					KeySelectDropdownCommand::insert_dropdown::<TPlayers::TPlayer, TLoadout::TCombos>,
-					SkillSelectDropdownCommand::<Vertical>::insert_dropdown::<TPlayers::TPlayer, TLoadout::TSlots, TLoadout::TSkills>,
-					SkillSelectDropdownCommand::<Horizontal>::insert_dropdown::<TPlayers::TPlayer, TLoadout::TSlots, TLoadout::TSkills>,
-					InVerticalDropdown::<TLoadout::TSkill>::update::<TPlayers::TPlayer, TLoadout::TCombos>,
-					InHorizontalDropdown::<TLoadout::TSkill>::update::<TPlayers::TPlayer, TLoadout::TCombos>,
-					DeleteSkill::from_combos::<TPlayers::TPlayer, TLoadout::TCombos>,
-					DropdownButton::<TLoadout::TSkill>::visualize_invalid::<Unusable, TPlayers::TPlayer, TLoadout::TSlots>,
-				)
-					.chain()
-					.run_if(in_state(combo_overview)),
-			);
+			.add_ui::<ComboOverview<TLoadout::TSkill>, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(combo_overview);
+		app.add_dropdown::<TLocalization::TLocalizationServer, KeySelect<AppendSkill>>();
+		app.add_dropdown::<TLocalization::TLocalizationServer, VerticalItem<TLoadout::TSkill>>();
+		app.add_dropdown::<TLocalization::TLocalizationServer, HorizontalITem<TLoadout::TSkill>>();
+		app.add_systems(
+			Update,
+			(
+				ComboOverview::<TLoadout::TSkill>::update_from::<
+					TPlayers::TPlayer,
+					TLoadout::TCombos,
+				>,
+				KeySelectDropdownCommand::insert_dropdown::<TPlayers::TPlayer, TLoadout::TCombos>,
+				SkillSelectDropdownCommand::<Vertical>::insert_dropdown::<
+					TPlayers::TPlayer,
+					TLoadout::TSlots,
+					TLoadout::TSkills,
+				>,
+				SkillSelectDropdownCommand::<Horizontal>::insert_dropdown::<
+					TPlayers::TPlayer,
+					TLoadout::TSlots,
+					TLoadout::TSkills,
+				>,
+				VerticalItem::<TLoadout::TSkill>::update::<TPlayers::TPlayer, TLoadout::TCombos>,
+				HorizontalITem::<TLoadout::TSkill>::update::<TPlayers::TPlayer, TLoadout::TCombos>,
+				DeleteSkill::from_combos::<TPlayers::TPlayer, TLoadout::TCombos>,
+				Trigger::<TLoadout::TSkill>::visualize_invalid::<
+					Unusable,
+					TPlayers::TPlayer,
+					TLoadout::TSlots,
+				>,
+			)
+				.chain()
+				.run_if(in_state(combo_overview)),
+		);
 	}
 
 	fn inventory_screen(&self, app: &mut App) {

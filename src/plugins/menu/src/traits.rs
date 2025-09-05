@@ -15,13 +15,13 @@ use bevy::prelude::*;
 use build_combo_tree_layout::ComboTreeLayout;
 use common::{
 	traits::{
-		handles_loadout::{ContainerItem, ContainerKey},
+		handles_loadout::loadout::{LoadoutItem, LoadoutKey},
 		load_asset::LoadAsset,
 	},
 	zyheeda_commands::ZyheedaEntityCommands,
 };
 
-pub(crate) trait UpdateCombosView: ContainerKey + ContainerItem {
+pub(crate) trait UpdateCombosView: LoadoutKey + LoadoutItem {
 	fn update_combos_view(&mut self, combos: ComboTreeLayout<Self::TKey, Self::TItem>);
 }
 

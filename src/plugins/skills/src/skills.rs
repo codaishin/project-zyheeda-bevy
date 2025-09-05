@@ -17,7 +17,7 @@ use common::{
 		accessors::get::{GetMut, RefInto},
 		handles_custom_assets::AssetFolderPath,
 		handles_effects::HandlesAllEffects,
-		handles_loadout::{SkillIcon, SkillToken},
+		handles_loadout::loadout::{SkillIcon, SkillToken},
 		handles_localization::Token,
 		handles_skill_behaviors::{HandlesSkillBehaviors, SkillSpawner},
 		load_asset::Path,

@@ -1,5 +1,8 @@
 use bevy::prelude::*;
-use common::traits::handles_loadout::{ContainerItem, ContainerKey, GetCombosOrdered};
+use common::traits::handles_loadout::{
+	combos_component::GetCombosOrdered,
+	loadout::{LoadoutItem, LoadoutKey},
+};
 use std::{collections::HashSet, hash::Hash};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -19,7 +22,7 @@ pub(crate) enum ComboTreeElement<TKey, TSkill> {
 
 pub type ComboTreeLayout<TKey, TSkill> = Vec<Vec<ComboTreeElement<TKey, TSkill>>>;
 
-pub(crate) trait BuildComboTreeLayout: ContainerItem + ContainerKey {
+pub(crate) trait BuildComboTreeLayout: LoadoutItem + LoadoutKey {
 	fn build_combo_tree_layout(&self) -> ComboTreeLayout<Self::TKey, Self::TItem>;
 }
 
@@ -148,7 +151,7 @@ mod tests {
 	use super::*;
 	use common::{
 		tools::action_key::slot::{PlayerSlot, SlotKey},
-		traits::handles_loadout::Combo,
+		traits::handles_loadout::combos_component::Combo,
 	};
 
 	#[derive(Debug, PartialEq, Default, Clone)]
@@ -156,11 +159,11 @@ mod tests {
 
 	struct _Combos(Vec<Combo<SlotKey, _Skill>>);
 
-	impl ContainerKey for _Combos {
+	impl LoadoutKey for _Combos {
 		type TKey = SlotKey;
 	}
 
-	impl ContainerItem for _Combos {
+	impl LoadoutItem for _Combos {
 		type TItem = _Skill;
 	}
 

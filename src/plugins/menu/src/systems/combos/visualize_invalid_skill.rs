@@ -6,8 +6,8 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::{GetParamEntry, Param, ParamEntry, TryApplyOn},
-		handles_loadout::AvailableSkills,
+		accessors::get::{AsParam, AsParamEntry, GetParamEntry, TryApplyOn},
+		handles_loadout::slot_component::AvailableSkills,
 		thread_safe::ThreadSafe,
 	},
 	zyheeda_commands::ZyheedaCommands,
@@ -21,12 +21,12 @@ where
 		mut commands: ZyheedaCommands,
 		buttons: Query<(Entity, &Self), Added<Self>>,
 		slots: Query<&TSlots, With<TAgent>>,
-		param: StaticSystemParam<Param<TSlots, AvailableSkills<SlotKey>>>,
+		param: StaticSystemParam<AsParam<TSlots, AvailableSkills<SlotKey>>>,
 	) where
 		TVisualize: InsertContentOn,
 		TAgent: Component,
 		for<'w, 's> TSlots: Component + GetParamEntry<'w, 's, AvailableSkills<SlotKey>>,
-		for<'w, 's> ParamEntry<'w, 's, TSlots, AvailableSkills<SlotKey>>:
+		for<'w, 's> AsParamEntry<'w, 's, TSlots, AvailableSkills<SlotKey>>:
 			IntoIterator<Item = TSkill>,
 		TSkill: PartialEq,
 	{

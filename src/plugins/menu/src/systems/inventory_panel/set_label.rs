@@ -5,8 +5,8 @@ use crate::{
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	traits::{
-		accessors::get::{GetParamEntry, Param, ParamEntry, RefAs, RefInto, TryApplyOn},
-		handles_loadout::{ContainerKey, ItemToken},
+		accessors::get::{AsParam, AsParamEntry, GetParamEntry, RefAs, RefInto, TryApplyOn},
+		handles_loadout::loadout::{ItemToken, LoadoutKey, NoItem},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -16,24 +16,24 @@ impl InventoryPanel {
 		mut commands: ZyheedaCommands,
 		containers: Query<&TContainer, With<TAgent>>,
 		mut panels: Query<(Entity, &mut Self, &KeyedPanel<TContainer::TKey>)>,
-		param: StaticSystemParam<Param<TContainer, TContainer::TKey>>,
+		param: StaticSystemParam<AsParam<TContainer, TContainer::TKey>>,
 	) where
 		TAgent: Component,
-		for<'w, 's> TContainer: Component + ContainerKey + GetParamEntry<'w, 's, TContainer::TKey>,
-		for<'w, 's, 'a> ParamEntry<'w, 's, TContainer, TContainer::TKey>:
-			RefInto<'a, Option<ItemToken<'a>>>,
+		for<'w, 's> TContainer: Component + LoadoutKey + GetParamEntry<'w, 's, TContainer::TKey>,
+		for<'w, 's, 'a> AsParamEntry<'w, 's, TContainer, TContainer::TKey>:
+			RefInto<'a, Result<ItemToken<'a>, NoItem>>,
 	{
 		for container in &containers {
 			for (entity, mut panel, KeyedPanel(key)) in &mut panels {
 				let item = container.get_param_entry(key, &param);
-				let panel_state = match item.ref_as::<Option<ItemToken>>() {
-					None => {
+				let panel_state = match item.ref_as::<Result<ItemToken, NoItem>>() {
+					Err(NoItem) => {
 						commands.try_apply_on(&entity, |mut e| {
 							e.try_insert(UILabel::empty());
 						});
 						PanelState::Empty
 					}
-					Some(ItemToken(token)) => {
+					Ok(ItemToken(token)) => {
 						commands.try_apply_on(&entity, |mut e| {
 							e.try_insert(UILabel(token.clone()));
 						});
@@ -66,16 +66,19 @@ mod tests {
 	#[derive(Clone)]
 	struct _Entry(Option<ItemToken<'static>>);
 
-	impl<'a> From<&'a _Entry> for Option<ItemToken<'a>> {
+	impl<'a> From<&'a _Entry> for Result<ItemToken<'a>, NoItem> {
 		fn from(_Entry(token): &'a _Entry) -> Self {
-			token.clone()
+			match token {
+				Some(t) => Ok(t.clone()),
+				None => Err(NoItem),
+			}
 		}
 	}
 
 	#[derive(Component)]
 	struct _Container(_Entry);
 
-	impl ContainerKey for _Container {
+	impl LoadoutKey for _Container {
 		type TKey = _Key;
 	}
 

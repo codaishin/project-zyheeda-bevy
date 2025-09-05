@@ -5,7 +5,7 @@ use bevy::{
 	ui::Interaction,
 };
 use common::{
-	traits::{accessors::get::TryApplyOn, handles_loadout::ContainerKey},
+	traits::{accessors::get::TryApplyOn, handles_loadout::loadout::LoadoutKey},
 	zyheeda_commands::ZyheedaCommands,
 };
 
@@ -15,7 +15,7 @@ pub fn drag_item<TAgent, TContainer>(
 	panels: Query<(&Interaction, &KeyedPanel<TContainer::TKey>)>,
 ) where
 	TAgent: Component,
-	TContainer: ContainerKey,
+	TContainer: LoadoutKey,
 {
 	let Some((.., panel)) = panels.iter().find(is_pressed) else {
 		return;
@@ -44,7 +44,7 @@ mod tests {
 
 	struct _Container;
 
-	impl ContainerKey for _Container {
+	impl LoadoutKey for _Container {
 		type TKey = u32;
 	}
 

@@ -23,7 +23,7 @@ use common::{
 	tools::action_key::slot::{PlayerSlot, SlotKey},
 	traits::{
 		accessors::get::{RefAs, RefInto},
-		handles_loadout::{ContainerItem, ContainerKey, SkillIcon, SkillToken},
+		handles_loadout::loadout::{LoadoutItem, LoadoutKey, SkillIcon, SkillToken},
 		handles_localization::{Localize, LocalizeToken, localized::Localized},
 		load_asset::{LoadAsset, Path},
 		thread_safe::ThreadSafe,
@@ -294,14 +294,14 @@ impl From<Option<Handle<Image>>> for SkillButtonIcon {
 	}
 }
 
-impl<TSkill> ContainerKey for ComboOverview<TSkill>
+impl<TSkill> LoadoutKey for ComboOverview<TSkill>
 where
 	TSkill: ThreadSafe,
 {
 	type TKey = SlotKey;
 }
 
-impl<TSkill> ContainerItem for ComboOverview<TSkill>
+impl<TSkill> LoadoutItem for ComboOverview<TSkill>
 where
 	TSkill: ThreadSafe,
 {

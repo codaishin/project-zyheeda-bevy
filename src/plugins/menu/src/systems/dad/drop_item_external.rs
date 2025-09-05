@@ -4,7 +4,7 @@ use common::{
 	tools::action_key::user_input::UserInput,
 	traits::{
 		accessors::get::TryApplyOn,
-		handles_loadout::{ContainerKey, SwapExternal},
+		handles_loadout::loadout::{LoadoutKey, SwapExternal},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -21,7 +21,7 @@ pub fn drop_item_external<TContainerA, TContainerB>(
 	mouse: Res<ButtonInput<UserInput>>,
 ) where
 	TContainerA: Component<Mutability = Mutable> + SwapExternal<TContainerB>,
-	TContainerB: Component<Mutability = Mutable> + ContainerKey,
+	TContainerB: Component<Mutability = Mutable> + LoadoutKey,
 {
 	if !mouse.just_released(UserInput::from(MouseButton::Left)) {
 		return;
@@ -52,10 +52,7 @@ mod tests {
 		app::{App, Update},
 		ui::Interaction,
 	};
-	use common::{
-		tools::action_key::slot::{PlayerSlot, Side},
-		traits::handles_loadout::ContainerKey,
-	};
+	use common::tools::action_key::slot::{PlayerSlot, Side};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use testing::{NestedMocks, SingleThreadedApp, set_input};
@@ -74,11 +71,11 @@ mod tests {
 		}
 	}
 
-	impl ContainerKey for _ContainerA {
+	impl LoadoutKey for _ContainerA {
 		type TKey = usize;
 	}
 
-	impl ContainerKey for Mock_ContainerA {
+	impl LoadoutKey for Mock_ContainerA {
 		type TKey = usize;
 	}
 
@@ -96,7 +93,7 @@ mod tests {
 	#[derive(Component, Debug, PartialEq)]
 	struct _ContainerB;
 
-	impl ContainerKey for _ContainerB {
+	impl LoadoutKey for _ContainerB {
 		type TKey = f32;
 	}
 

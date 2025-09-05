@@ -5,7 +5,7 @@ use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
 		accessors::get::{RefAs, RefInto},
-		handles_loadout::{SkillIcon, SkillToken},
+		handles_loadout::loadout::{SkillIcon, SkillToken},
 		handles_localization::Localize,
 		thread_safe::ThreadSafe,
 	},

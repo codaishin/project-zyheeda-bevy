@@ -17,7 +17,8 @@ use common::{
 		skill_execution::SkillExecution,
 	},
 	traits::{
-		accessors::get::{GetParamEntry, Param, ParamEntry, ParamItem, RefAs, RefInto},
+		accessors::get::{AsParam, AsParamEntry, AsParamItem, GetParamEntry, RefAs, RefInto},
+		handles_loadout::loadout::NoSkill,
 		key_mappings::GetInput,
 	},
 };
@@ -28,13 +29,13 @@ impl QuickbarPanel {
 		buttons: Query<(Entity, &Self, &UiInputPrimer)>,
 		map: Res<TMap>,
 		slots: Query<&TSlots, With<TAgent>>,
-		param: StaticSystemParam<Param<TSlots, SlotKey>>,
+		param: StaticSystemParam<AsParam<TSlots, SlotKey>>,
 	) where
 		TAgent: Component,
 		TMap: Resource + GetInput<PlayerSlot, TInput = UserInput>,
 		for<'w, 's> TSlots: Component + GetParamEntry<'w, 's, SlotKey>,
-		for<'w, 's, 'a> ParamEntry<'w, 's, TSlots, SlotKey>:
-			RefInto<'a, Option<&'a SkillExecution>>,
+		for<'w, 's, 'a> AsParamEntry<'w, 's, TSlots, SlotKey>:
+			RefInto<'a, Result<&'a SkillExecution, NoSkill>>,
 	{
 		set_color(commands, buttons, map, slots, param)
 	}
@@ -45,13 +46,14 @@ fn set_color<TAgent, TMap, TPrimer, TSlots>(
 	mut buttons: Query<(Entity, &QuickbarPanel, &TPrimer)>,
 	map: Res<TMap>,
 	slots: Query<&TSlots, With<TAgent>>,
-	param: StaticSystemParam<Param<TSlots, SlotKey>>,
+	param: StaticSystemParam<AsParam<TSlots, SlotKey>>,
 ) where
 	TAgent: Component,
 	TMap: Resource + GetInput<PlayerSlot, TInput = UserInput>,
 	for<'a> TPrimer: Component + RefInto<'a, UserInput> + RefInto<'a, IsPrimed>,
 	for<'w, 's> TSlots: Component + GetParamEntry<'w, 's, SlotKey>,
-	for<'w, 's, 'a> ParamEntry<'w, 's, TSlots, SlotKey>: RefInto<'a, Option<&'a SkillExecution>>,
+	for<'w, 's, 'a> AsParamEntry<'w, 's, TSlots, SlotKey>:
+		RefInto<'a, Result<&'a SkillExecution, NoSkill>>,
 {
 	for slots in &slots {
 		for (entity, panel, primer) in &mut buttons {
@@ -69,22 +71,23 @@ fn get_color_override<TSlots, TMap, TPrimer>(
 	QuickbarPanel { key, .. }: &QuickbarPanel,
 	primer: &TPrimer,
 	slots: &TSlots,
-	param: &ParamItem<TSlots, SlotKey>,
+	param: &AsParamItem<TSlots, SlotKey>,
 ) -> Option<ColorConfig>
 where
 	TMap: GetInput<PlayerSlot, TInput = UserInput>,
 	for<'a> TPrimer: Component + RefInto<'a, UserInput> + RefInto<'a, IsPrimed>,
 	for<'w, 's> TSlots: Component + GetParamEntry<'w, 's, SlotKey>,
-	for<'w, 's, 'a> ParamEntry<'w, 's, TSlots, SlotKey>: RefInto<'a, Option<&'a SkillExecution>>,
+	for<'w, 's, 'a> AsParamEntry<'w, 's, TSlots, SlotKey>:
+		RefInto<'a, Result<&'a SkillExecution, NoSkill>>,
 {
 	let item = slots.get_param_entry(&SlotKey::from(*key), param);
-	let state = item.ref_as::<Option<&SkillExecution>>();
+	let state = item.ref_as::<Result<&SkillExecution, NoSkill>>();
 
-	if state == Some(&SkillExecution::Active) {
+	if state == Ok(&SkillExecution::Active) {
 		return Some(QuickbarPanel::ACTIVE_COLORS);
 	}
 
-	if state == Some(&SkillExecution::Queued) {
+	if state == Ok(&SkillExecution::Queued) {
 		return Some(QuickbarPanel::QUEUED_COLORS);
 	}
 
@@ -197,9 +200,12 @@ mod tests {
 	#[derive(Clone)]
 	struct _Item(Option<SkillExecution>);
 
-	impl<'a> From<&'a _Item> for Option<&'a SkillExecution> {
+	impl<'a> From<&'a _Item> for Result<&'a SkillExecution, NoSkill> {
 		fn from(_Item(execution): &'a _Item) -> Self {
-			execution.as_ref()
+			match execution {
+				Some(e) => Ok(e),
+				None => Err(NoSkill),
+			}
 		}
 	}
 

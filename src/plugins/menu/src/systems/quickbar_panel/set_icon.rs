@@ -3,8 +3,8 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::{GetParamEntry, Param, ParamEntry, RefInto, TryApplyOn},
-		handles_loadout::{SkillIcon, SkillToken},
+		accessors::get::{AsParam, AsParamEntry, GetParamEntry, RefInto, TryApplyOn},
+		handles_loadout::loadout::{NoSkill, SkillIcon, SkillToken},
 		handles_localization::Token,
 	},
 	zyheeda_commands::ZyheedaCommands,
@@ -13,22 +13,22 @@ use common::{
 impl QuickbarPanel {
 	pub(crate) fn set_icon<TAgent, TSlots>(
 		mut commands: ZyheedaCommands,
-		param: StaticSystemParam<Param<TSlots, SlotKey>>,
+		param: StaticSystemParam<AsParam<TSlots, SlotKey>>,
 		panels: Query<PanelComponents>,
 		slots: Query<&TSlots, With<TAgent>>,
 	) where
 		TAgent: Component,
 		for<'w, 's> TSlots: Component + GetParamEntry<'w, 's, SlotKey>,
-		for<'w, 's, 'a> ParamEntry<'w, 's, TSlots, SlotKey>:
-			RefInto<'a, Option<SkillIcon<'a>>> + RefInto<'a, Option<SkillToken<'a>>>,
+		for<'w, 's, 'a> AsParamEntry<'w, 's, TSlots, SlotKey>: RefInto<'a, Result<SkillIcon<'a>, NoSkill>>
+			+ RefInto<'a, Result<SkillToken<'a>, NoSkill>>,
 	{
 		for slots in &slots {
 			for (entity, Self { key, .. }, current_icon, current_label) in &panels {
 				let item = slots.get_param_entry(&SlotKey::from(*key), &param);
-				let Some(SkillToken(token)) = item.ref_into() else {
+				let Ok(SkillToken(token)) = item.ref_into() else {
 					continue;
 				};
-				let Some(SkillIcon(image)) = item.ref_into() else {
+				let Ok(SkillIcon(image)) = item.ref_into() else {
 					continue;
 				};
 
@@ -103,15 +103,21 @@ mod tests {
 		token: Option<Token>,
 	}
 
-	impl<'a> From<&'a _Item> for Option<SkillIcon<'a>> {
+	impl<'a> From<&'a _Item> for Result<SkillIcon<'a>, NoSkill> {
 		fn from(_Item { icon, .. }: &'a _Item) -> Self {
-			Some(SkillIcon(icon.as_ref()?))
+			match icon {
+				Some(i) => Ok(SkillIcon(i)),
+				None => Err(NoSkill),
+			}
 		}
 	}
 
-	impl<'a> From<&'a _Item> for Option<SkillToken<'a>> {
+	impl<'a> From<&'a _Item> for Result<SkillToken<'a>, NoSkill> {
 		fn from(_Item { token, .. }: &'a _Item) -> Self {
-			Some(SkillToken(token.as_ref()?))
+			match token {
+				Some(t) => Ok(SkillToken(t)),
+				None => Err(NoSkill),
+			}
 		}
 	}
 

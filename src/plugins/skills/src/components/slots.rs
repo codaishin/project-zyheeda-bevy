@@ -8,7 +8,7 @@ use crate::{
 		inventory::Inventory,
 		slots::{dto::SlotsDto, visualization::SlotVisualization},
 	},
-	item::{Item, SkillItem},
+	item::{Item, ItemSkill, SkillItem},
 	resources::{
 		skill_item_assets::SkillItemAssets,
 		skill_item_assets_usage::SkillItemAssetsUsage,
@@ -26,11 +26,8 @@ use common::{
 	traits::{
 		accessors::get::{GetParamEntry, GetRef},
 		handles_loadout::{
-			AvailableSkills,
-			ContainerItem,
-			ContainerKey,
-			SwapExternal,
-			SwapInternal,
+			loadout::{LoadoutItem, LoadoutKey, SwapExternal, SwapInternal},
+			slot_component::AvailableSkills,
 		},
 		iterate::Iterate,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
@@ -83,16 +80,13 @@ impl Slots {
 	}
 
 	fn skill_item(item: &Item, skill: Option<&Skill>, execution: SkillExecution) -> SkillItem {
-		let (skill_token, skill_icon) = match skill {
-			Some(skill) => (Some(skill.token.clone()), Some(skill.icon.clone())),
-			None => (None, None),
-		};
-
 		SkillItem::Some {
-			item_token: item.token.clone(),
-			skill_token,
-			skill_icon,
-			execution,
+			token: item.token.clone(),
+			skill: skill.map(|skill| ItemSkill {
+				token: skill.token.clone(),
+				icon: skill.icon.clone(),
+				execution,
+			}),
 		}
 	}
 
@@ -184,21 +178,21 @@ impl<'w, 's> GetParamEntry<'w, 's, AvailableSkills<SlotKey>> for Slots {
 	}
 }
 
-impl ContainerKey for Slots {
+impl LoadoutKey for Slots {
 	type TKey = SlotKey;
 }
 
-impl ContainerItem for Slots {
+impl LoadoutItem for Slots {
 	type TItem = SkillItem;
 }
 
 impl SwapExternal<Inventory> for Slots {
-	fn swap_external<TKey, TOtherKey>(&mut self, other: &mut Inventory, a: TKey, b: TOtherKey)
+	fn swap_external<TKey, TOtherKey>(&mut self, inventory: &mut Inventory, a: TKey, b: TOtherKey)
 	where
 		TKey: Into<SlotKey> + 'static,
 		TOtherKey: Into<InventoryKey> + 'static,
 	{
-		other.swap_external(self, b, a);
+		inventory.swap_external(self, b, a);
 	}
 }
 
@@ -359,10 +353,12 @@ mod tests {
 
 					assert_eq!(
 						SkillItem::Some {
-							item_token: Token::from("my item"),
-							skill_token: Some(Token::from("my skill")),
-							skill_icon: Some(icon_handle.clone()),
-							execution: SkillExecution::None,
+							token: Token::from("my item"),
+							skill: Some(ItemSkill {
+								token: Token::from("my skill"),
+								icon: icon_handle.clone(),
+								execution: SkillExecution::None
+							})
 						},
 						slots.get_param_entry(&SlotKey::from(PlayerSlot::UPPER_L), &param)
 					);
@@ -410,10 +406,12 @@ mod tests {
 
 					assert_eq!(
 						SkillItem::Some {
-							item_token: Token::from("my item"),
-							skill_token: Some(Token::from("my skill")),
-							skill_icon: Some(icon_handle.clone()),
-							execution: SkillExecution::Active,
+							token: Token::from("my item"),
+							skill: Some(ItemSkill {
+								token: Token::from("my skill"),
+								icon: icon_handle.clone(),
+								execution: SkillExecution::Active
+							})
 						},
 						slots.get_param_entry(&SlotKey::from(PlayerSlot::UPPER_L), &param)
 					);
@@ -460,10 +458,12 @@ mod tests {
 
 					assert_eq!(
 						SkillItem::Some {
-							item_token: Token::from("my item"),
-							skill_token: Some(Token::from("my skill")),
-							skill_icon: Some(icon_handle.clone()),
-							execution: SkillExecution::None,
+							token: Token::from("my item"),
+							skill: Some(ItemSkill {
+								token: Token::from("my skill"),
+								icon: icon_handle.clone(),
+								execution: SkillExecution::None
+							})
 						},
 						slots.get_param_entry(&SlotKey::from(PlayerSlot::UPPER_L), &param)
 					);
@@ -517,10 +517,12 @@ mod tests {
 
 					assert_eq!(
 						SkillItem::Some {
-							item_token: Token::from("my item"),
-							skill_token: Some(Token::from("my skill")),
-							skill_icon: Some(icon_handle.clone()),
-							execution: SkillExecution::Queued,
+							token: Token::from("my item"),
+							skill: Some(ItemSkill {
+								token: Token::from("my skill"),
+								icon: icon_handle.clone(),
+								execution: SkillExecution::Queued
+							})
 						},
 						slots.get_param_entry(&SlotKey::from(PlayerSlot::UPPER_L), &param)
 					);
@@ -575,10 +577,12 @@ mod tests {
 
 					assert_eq!(
 						SkillItem::Some {
-							item_token: Token::from("my item"),
-							skill_token: Some(Token::from("my combo skill")),
-							skill_icon: Some(icon_handle.clone()),
-							execution: SkillExecution::None,
+							token: Token::from("my item"),
+							skill: Some(ItemSkill {
+								token: Token::from("my combo skill"),
+								icon: icon_handle.clone(),
+								execution: SkillExecution::None
+							})
 						},
 						slots.get_param_entry(&SlotKey::from(PlayerSlot::UPPER_L), &param)
 					);
@@ -637,10 +641,12 @@ mod tests {
 
 					assert_eq!(
 						SkillItem::Some {
-							item_token: Token::from("my item"),
-							skill_token: Some(Token::from("my combo skill")),
-							skill_icon: Some(icon_handle.clone()),
-							execution: SkillExecution::Active,
+							token: Token::from("my item"),
+							skill: Some(ItemSkill {
+								token: Token::from("my combo skill"),
+								icon: icon_handle.clone(),
+								execution: SkillExecution::Active
+							})
 						},
 						slots.get_param_entry(&SlotKey::from(PlayerSlot::UPPER_L), &param)
 					);
@@ -705,10 +711,12 @@ mod tests {
 
 					assert_eq!(
 						SkillItem::Some {
-							item_token: Token::from("my item"),
-							skill_token: Some(Token::from("my combo skill")),
-							skill_icon: Some(icon_handle.clone()),
-							execution: SkillExecution::Queued,
+							token: Token::from("my item"),
+							skill: Some(ItemSkill {
+								token: Token::from("my combo skill"),
+								icon: icon_handle.clone(),
+								execution: SkillExecution::Queued
+							})
 						},
 						slots.get_param_entry(&SlotKey::from(PlayerSlot::UPPER_L), &param)
 					);

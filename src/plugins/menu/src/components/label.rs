@@ -1,7 +1,7 @@
 use crate::components::icon::Icon;
 use bevy::prelude::*;
 use common::traits::{
-	handles_loadout::SkillToken,
+	handles_loadout::loadout::SkillToken,
 	handles_localization::{Token, localized::Localized},
 };
 use std::sync::LazyLock;

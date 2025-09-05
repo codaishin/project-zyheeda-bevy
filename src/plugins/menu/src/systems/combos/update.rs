@@ -2,7 +2,7 @@ use crate::components::combo_skill_button::{ComboSkillButton, DropdownItem};
 use bevy::{ecs::component::Mutable, prelude::*, ui::Interaction};
 use common::{
 	tools::action_key::slot::SlotKey,
-	traits::{handles_loadout::UpdateCombos, thread_safe::ThreadSafe},
+	traits::{handles_loadout::combos_component::UpdateCombos, thread_safe::ThreadSafe},
 };
 
 impl<TLayout, TSkill> ComboSkillButton<DropdownItem<TLayout>, TSkill>
@@ -40,7 +40,10 @@ mod tests {
 	use super::*;
 	use common::{
 		tools::action_key::slot::{PlayerSlot, SlotKey},
-		traits::handles_loadout::{Combo, ContainerItem, ContainerKey},
+		traits::handles_loadout::{
+			combos_component::Combo,
+			loadout::{LoadoutItem, LoadoutKey},
+		},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -54,19 +57,19 @@ mod tests {
 		mock: Mock_Combos,
 	}
 
-	impl ContainerKey for _Combos {
+	impl LoadoutKey for _Combos {
 		type TKey = SlotKey;
 	}
 
-	impl ContainerKey for Mock_Combos {
+	impl LoadoutKey for Mock_Combos {
 		type TKey = SlotKey;
 	}
 
-	impl ContainerItem for _Combos {
+	impl LoadoutItem for _Combos {
 		type TItem = _Skill;
 	}
 
-	impl ContainerItem for Mock_Combos {
+	impl LoadoutItem for Mock_Combos {
 		type TItem = _Skill;
 	}
 

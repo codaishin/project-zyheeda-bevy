@@ -29,7 +29,7 @@ pub(crate) trait UpdateComboOverview:
 mod tests {
 	use super::*;
 	use crate::traits::build_combo_tree_layout::{ComboTreeElement, ComboTreeLayout, Symbol};
-	use common::traits::handles_loadout::{ContainerItem, ContainerKey};
+	use common::traits::handles_loadout::loadout::{LoadoutItem, LoadoutKey};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use testing::{NestedMocks, SingleThreadedApp};
@@ -48,19 +48,19 @@ mod tests {
 		mock: Mock_ComboOverview,
 	}
 
-	impl ContainerKey for _ComboOverview {
+	impl LoadoutKey for _ComboOverview {
 		type TKey = _Key;
 	}
 
-	impl ContainerItem for _ComboOverview {
+	impl LoadoutItem for _ComboOverview {
 		type TItem = _Skill;
 	}
 
-	impl ContainerKey for Mock_ComboOverview {
+	impl LoadoutKey for Mock_ComboOverview {
 		type TKey = _Key;
 	}
 
-	impl ContainerItem for Mock_ComboOverview {
+	impl LoadoutItem for Mock_ComboOverview {
 		type TItem = _Skill;
 	}
 
@@ -74,11 +74,11 @@ mod tests {
 	#[derive(Component, Clone)]
 	struct _Combos(ComboTreeLayout<_Key, _Skill>);
 
-	impl ContainerKey for _Combos {
+	impl LoadoutKey for _Combos {
 		type TKey = _Key;
 	}
 
-	impl ContainerItem for _Combos {
+	impl LoadoutItem for _Combos {
 		type TItem = _Skill;
 	}
 

@@ -11,12 +11,8 @@ use common::{
 	traits::{
 		accessors::get::{GetMut, GetRef},
 		handles_loadout::{
-			Combo,
-			ContainerItem,
-			ContainerKey,
-			GetCombosOrdered,
-			NextConfiguredKeys,
-			UpdateCombos,
+			combos_component::{Combo, GetCombosOrdered, NextConfiguredKeys, UpdateCombos},
+			loadout::{LoadoutItem, LoadoutKey},
 		},
 		insert::TryInsert,
 		iterate::Iterate,
@@ -132,11 +128,11 @@ impl<TSkill> NextConfiguredKeys<SlotKey> for ComboNode<TSkill> {
 	}
 }
 
-impl<TSKill> ContainerKey for ComboNode<TSKill> {
+impl<TSKill> LoadoutKey for ComboNode<TSKill> {
 	type TKey = SlotKey;
 }
 
-impl<TSkill> ContainerItem for ComboNode<TSkill> {
+impl<TSkill> LoadoutItem for ComboNode<TSkill> {
 	type TItem = TSkill;
 }
 

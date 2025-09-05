@@ -11,7 +11,7 @@ use common::{
 	tools::{item_type::ItemType, skill_execution::SkillExecution},
 	traits::{
 		accessors::get::RefInto,
-		handles_loadout::{ItemToken, SkillIcon, SkillToken},
+		handles_loadout::loadout::{ItemToken, NoItem, NoSkill, SkillIcon, SkillToken},
 		handles_localization::Token,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
 	},
@@ -86,55 +86,62 @@ impl VisualizeItem for HandSlot {
 #[derive(Debug, PartialEq, Clone)]
 pub enum SkillItem {
 	Some {
-		item_token: Token,
-		skill_token: Option<Token>,
-		skill_icon: Option<Handle<Image>>,
-		execution: SkillExecution,
+		token: Token,
+		skill: Option<ItemSkill>,
 	},
 	None,
 }
 
-impl<'a> From<&'a SkillItem> for Option<ItemToken<'a>> {
+#[derive(Debug, PartialEq, Clone)]
+pub struct ItemSkill {
+	pub(crate) token: Token,
+	pub(crate) icon: Handle<Image>,
+	pub(crate) execution: SkillExecution,
+}
+
+impl<'a> From<&'a SkillItem> for Result<ItemToken<'a>, NoItem> {
 	fn from(item: &'a SkillItem) -> Self {
 		match item {
-			SkillItem::Some { item_token, .. } => Some(ItemToken(item_token)),
-			SkillItem::None => None,
+			SkillItem::Some {
+				token: item_token, ..
+			} => Ok(ItemToken(item_token)),
+			SkillItem::None => Err(NoItem),
 		}
 	}
 }
 
-impl<'a> From<&'a SkillItem> for Option<SkillToken<'a>> {
+impl<'a> From<&'a SkillItem> for Result<SkillToken<'a>, NoSkill> {
 	fn from(item: &'a SkillItem) -> Self {
 		match item {
 			SkillItem::Some {
-				skill_token: Some(skill_token),
+				skill: Some(ItemSkill { token, .. }),
 				..
-			} => Some(SkillToken(skill_token)),
-			SkillItem::Some {
-				skill_token: None, ..
-			} => None,
-			SkillItem::None => None,
+			} => Ok(SkillToken(token)),
+			_ => Err(NoSkill),
 		}
 	}
 }
 
-impl<'a> From<&'a SkillItem> for Option<SkillIcon<'a>> {
+impl<'a> From<&'a SkillItem> for Result<SkillIcon<'a>, NoSkill> {
 	fn from(item: &'a SkillItem) -> Self {
 		match item {
 			SkillItem::Some {
-				skill_icon: Some(icon),
+				skill: Some(ItemSkill { icon, .. }),
 				..
-			} => Some(SkillIcon(icon)),
-			_ => None,
+			} => Ok(SkillIcon(icon)),
+			_ => Err(NoSkill),
 		}
 	}
 }
 
-impl<'a> From<&'a SkillItem> for Option<&'a SkillExecution> {
+impl<'a> From<&'a SkillItem> for Result<&'a SkillExecution, NoSkill> {
 	fn from(item: &'a SkillItem) -> Self {
 		match item {
-			SkillItem::Some { execution, .. } => Some(execution),
-			SkillItem::None => None,
+			SkillItem::Some {
+				skill: Some(ItemSkill { execution, .. }),
+				..
+			} => Ok(execution),
+			_ => Err(NoSkill),
 		}
 	}
 }

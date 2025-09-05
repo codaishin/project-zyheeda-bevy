@@ -7,8 +7,8 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::{GetParamEntry, Param, TryApplyOn},
-		handles_loadout::AvailableSkills,
+		accessors::get::{AsParam, GetParamEntry, TryApplyOn},
+		handles_loadout::slot_component::AvailableSkills,
 		thread_safe::ThreadSafe,
 	},
 	zyheeda_commands::ZyheedaCommands,
@@ -19,7 +19,7 @@ impl<TLayout> SkillSelectDropdownCommand<TLayout> {
 		mut commands: ZyheedaCommands,
 		dropdown_commands: Query<(Entity, &Self)>,
 		slots: Query<&TSlots, With<TAgent>>,
-		param: StaticSystemParam<Param<TSlots, AvailableSkills<SlotKey>>>,
+		param: StaticSystemParam<AsParam<TSlots, AvailableSkills<SlotKey>>>,
 	) where
 		TLayout: ThreadSafe + Sized,
 		TAgent: Component,
