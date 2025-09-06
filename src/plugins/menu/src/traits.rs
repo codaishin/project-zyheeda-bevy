@@ -11,12 +11,18 @@ pub(crate) mod ui_traits;
 pub(crate) mod update_key_bindings;
 
 use crate::tools::Layout;
-use bevy::{ecs::system::EntityCommands, prelude::*};
+use bevy::prelude::*;
 use build_combo_tree_layout::ComboTreeLayout;
-use common::traits::load_asset::LoadAsset;
+use common::{
+	traits::{
+		handles_loadout::loadout::{LoadoutItem, LoadoutKey},
+		load_asset::LoadAsset,
+	},
+	zyheeda_commands::ZyheedaEntityCommands,
+};
 
-pub(crate) trait UpdateCombosView<TSkill> {
-	fn update_combos_view(&mut self, combos: ComboTreeLayout<TSkill>);
+pub(crate) trait UpdateCombosView: LoadoutKey + LoadoutItem {
+	fn update_combos_view(&mut self, combos: ComboTreeLayout<Self::TKey, Self::TItem>);
 }
 
 pub(crate) trait LoadUi<TAssetServer: LoadAsset> {
@@ -32,7 +38,7 @@ pub(crate) trait GetLayout {
 }
 
 pub(crate) trait InsertContentOn {
-	fn insert_content_on(entity: &mut EntityCommands);
+	fn insert_content_on(entity: &mut ZyheedaEntityCommands);
 }
 
 pub(crate) trait GetKey<TKey> {

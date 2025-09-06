@@ -42,7 +42,7 @@ fn update_skill_with_advanced_combo<TCombos>(
 	let Some(item) = items.get(item_handle.id()) else {
 		return;
 	};
-	let Some(advanced) = combos.advance_combo(*key, &item.item_type) else {
+	let Some(advanced) = combos.advance_combo(key, &item.item_type) else {
 		return;
 	};
 
@@ -74,12 +74,12 @@ mod tests {
 	mock! {
 		_Combos {}
 		impl AdvanceCombo for _Combos {
-			fn advance_combo(&mut self, trigger: SlotKey, item_type: &ItemType) -> Option<Skill> {}
+			fn advance_combo(&mut self, trigger: &SlotKey, item_type: &ItemType) -> Option<Skill> {}
 		}
 	}
 
 	impl AdvanceCombo for _Combos {
-		fn advance_combo(&mut self, trigger: SlotKey, item_type: &ItemType) -> Option<Skill> {
+		fn advance_combo(&mut self, trigger: &SlotKey, item_type: &ItemType) -> Option<Skill> {
 			self.mock.advance_combo(trigger, item_type)
 		}
 	}
@@ -115,7 +115,7 @@ mod tests {
 		slots_and_items: [(SlotKey, Option<Item>); N],
 	) -> (Slots, Assets<Item>) {
 		let mut assets = Assets::default();
-		let mut slots = HashMap::default();
+		let mut slots = HashMap::<SlotKey, Option<Handle<Item>>>::default();
 
 		for (slot_key, item) in slots_and_items {
 			let Some(item) = item else {
@@ -125,7 +125,7 @@ mod tests {
 			slots.insert(slot_key, Some(handle));
 		}
 
-		(Slots(slots), assets)
+		(Slots::from(slots), assets)
 	}
 
 	#[test]

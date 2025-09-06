@@ -9,7 +9,6 @@ start-menu-continue-game = Continue
 equipment = Equipment
 
 inventory = Inventory
-inventory-item-empty = <Empty>
 
 item-force-essence = Force Essence
 item-plasma-pistol = Plasma Pistol
@@ -111,4 +110,3 @@ mouse-button-middle = Middle Mouse Button
 
 rebind-text-prompt = Press key to rebind
 
-no-icon-image = No icon image

@@ -1,8 +1,9 @@
-use common::{
-	tools::{action_key::slot::PlayerSlot, skill_description::SkillToken, skill_icon::SkillIcon},
-	traits::{handles_combo_menu::GetCombosOrdered, inspect_able::InspectAble},
+use bevy::prelude::*;
+use common::traits::handles_loadout::{
+	combos_component::GetCombosOrdered,
+	loadout::{LoadoutItem, LoadoutKey},
 };
-use std::collections::HashSet;
+use std::{collections::HashSet, hash::Hash};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) enum Symbol {
@@ -13,30 +14,25 @@ pub(crate) enum Symbol {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub(crate) enum ComboTreeElement<TSkill> {
-	Node {
-		key_path: Vec<PlayerSlot>,
-		skill: TSkill,
-	},
-	Leaf {
-		key_path: Vec<PlayerSlot>,
-		skill: TSkill,
-	},
+pub(crate) enum ComboTreeElement<TKey, TSkill> {
+	Node { key_path: Vec<TKey>, skill: TSkill },
+	Leaf { key_path: Vec<TKey>, skill: TSkill },
 	Symbol(Symbol),
 }
 
-pub type ComboTreeLayout<TSkill> = Vec<Vec<ComboTreeElement<TSkill>>>;
+pub type ComboTreeLayout<TKey, TSkill> = Vec<Vec<ComboTreeElement<TKey, TSkill>>>;
 
-pub(crate) trait BuildComboTreeLayout<TSkill> {
-	fn build_combo_tree_layout(&self) -> ComboTreeLayout<TSkill>;
+pub(crate) trait BuildComboTreeLayout: LoadoutItem + LoadoutKey {
+	fn build_combo_tree_layout(&self) -> ComboTreeLayout<Self::TKey, Self::TItem>;
 }
 
-impl<T, TSkill> BuildComboTreeLayout<TSkill> for T
+impl<T> BuildComboTreeLayout for T
 where
-	T: GetCombosOrdered<TSkill, PlayerSlot>,
-	TSkill: InspectAble<SkillToken> + InspectAble<SkillIcon> + Clone + PartialEq,
+	T: GetCombosOrdered,
+	T::TKey: Eq + Hash + Copy,
+	T::TItem: Clone + PartialEq,
 {
-	fn build_combo_tree_layout(&self) -> ComboTreeLayout<TSkill> {
+	fn build_combo_tree_layout(&self) -> ComboTreeLayout<Self::TKey, Self::TItem> {
 		let mut get_first_symbol = get_first_symbol(HasRoot::False);
 		let mut encountered = HashSet::new();
 		let mut layouts = Vec::new();
@@ -65,7 +61,7 @@ where
 	}
 }
 
-fn drain<TSkill>(combo: &mut Vec<(Vec<PlayerSlot>, TSkill)>) -> ComboTreeElement<TSkill> {
+fn drain<TKey, TSkill>(combo: &mut Vec<(Vec<TKey>, TSkill)>) -> ComboTreeElement<TKey, TSkill> {
 	let leaf = combo.remove(combo.len() - 1);
 	ComboTreeElement::Leaf {
 		key_path: leaf.0,
@@ -90,11 +86,12 @@ fn get_first_symbol(mut has_root: HasRoot) -> impl FnMut() -> Symbol {
 	}
 }
 
-fn adjust_connections<TSkill>(
-	layouts: &mut [Vec<ComboTreeElement<TSkill>>],
-	current_layout: &mut [ComboTreeElement<TSkill>],
-	element: &ComboTreeElement<TSkill>,
+fn adjust_connections<TKey, TSkill>(
+	layouts: &mut [Vec<ComboTreeElement<TKey, TSkill>>],
+	current_layout: &mut [ComboTreeElement<TKey, TSkill>],
+	element: &ComboTreeElement<TKey, TSkill>,
 ) where
+	TKey: PartialEq,
 	TSkill: PartialEq,
 {
 	if element != &ComboTreeElement::Symbol(Symbol::Corner) {
@@ -109,29 +106,30 @@ fn adjust_connections<TSkill>(
 	replace_symbols_at(layouts, current_layout.len(), Symbol::Empty, Symbol::Line);
 }
 
-fn layout_element<TSkill>(
-	key_path: Vec<PlayerSlot>,
+fn layout_element<TKey, TSkill>(
+	key_path: Vec<TKey>,
 	skill: TSkill,
-	encountered: &mut HashSet<Vec<PlayerSlot>>,
-) -> ComboTreeElement<TSkill> {
+	encountered: &mut HashSet<Vec<TKey>>,
+) -> ComboTreeElement<TKey, TSkill>
+where
+	TKey: Eq + Hash + Clone,
+{
 	if encountered.contains(&key_path) {
 		return ComboTreeElement::Symbol(Symbol::Corner);
 	}
 
 	encountered.insert(key_path.clone());
 
-	ComboTreeElement::Node {
-		key_path: key_path.clone(),
-		skill,
-	}
+	ComboTreeElement::Node { key_path, skill }
 }
 
-fn replace_symbols_at<TSkill>(
-	layouts: &mut [Vec<ComboTreeElement<TSkill>>],
+fn replace_symbols_at<TKey, TSkill>(
+	layouts: &mut [Vec<ComboTreeElement<TKey, TSkill>>],
 	index: usize,
 	old: Symbol,
 	new: Symbol,
 ) where
+	TKey: PartialEq,
 	TSkill: PartialEq,
 {
 	let elements = layouts
@@ -148,34 +146,26 @@ fn replace_symbols_at<TSkill>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::prelude::*;
 	use common::{
-		tools::action_key::slot::Side,
-		traits::{handles_combo_menu::Combo, handles_localization::Token},
+		tools::action_key::slot::{PlayerSlot, SlotKey},
+		traits::handles_loadout::combos_component::Combo,
 	};
-	use std::sync::LazyLock;
 
 	#[derive(Debug, PartialEq, Default, Clone)]
-	struct _Skill(Option<Handle<Image>>);
+	struct _Skill;
 
-	static TOKEN: LazyLock<Token> = LazyLock::new(|| Token::from(""));
+	struct _Combos(Vec<Combo<SlotKey, _Skill>>);
 
-	impl InspectAble<SkillToken> for _Skill {
-		fn get_inspect_able_field(&self) -> &Token {
-			&TOKEN
-		}
+	impl LoadoutKey for _Combos {
+		type TKey = SlotKey;
 	}
 
-	impl InspectAble<SkillIcon> for _Skill {
-		fn get_inspect_able_field(&self) -> &Option<Handle<Image>> {
-			&self.0
-		}
+	impl LoadoutItem for _Combos {
+		type TItem = _Skill;
 	}
 
-	struct _Combos(Vec<Combo<PlayerSlot, _Skill>>);
-
-	impl GetCombosOrdered<_Skill, PlayerSlot> for _Combos {
-		fn combos_ordered(&self) -> Vec<Combo<PlayerSlot, _Skill>> {
+	impl GetCombosOrdered for _Combos {
+		fn combos_ordered(&self) -> Vec<Combo<SlotKey, _Skill>> {
 			self.0.clone()
 		}
 	}
@@ -187,16 +177,16 @@ mod tests {
 	/// ```
 	fn get_tree_leaf() {
 		let combos = _Combos(vec![vec![(
-			vec![PlayerSlot::Lower(Side::Right)],
-			_Skill(None),
+			vec![SlotKey::from(PlayerSlot::LOWER_R)],
+			_Skill,
 		)]]);
 
 		assert_eq!(
 			vec![vec![
 				ComboTreeElement::Symbol(Symbol::Root),
 				ComboTreeElement::Leaf {
-					key_path: vec![PlayerSlot::Lower(Side::Right)],
-					skill: _Skill(None)
+					key_path: vec![SlotKey::from(PlayerSlot::LOWER_R)],
+					skill: _Skill
 				}
 			]],
 			combos.build_combo_tree_layout()
@@ -210,13 +200,13 @@ mod tests {
 	/// ```
 	fn get_tree_node_and_leaf() {
 		let combos = _Combos(vec![vec![
-			(vec![PlayerSlot::Lower(Side::Right)], _Skill(None)),
+			(vec![SlotKey::from(PlayerSlot::LOWER_R)], _Skill),
 			(
 				vec![
-					PlayerSlot::Lower(Side::Right),
-					PlayerSlot::Lower(Side::Right),
+					SlotKey::from(PlayerSlot::LOWER_R),
+					SlotKey::from(PlayerSlot::LOWER_R),
 				],
-				_Skill(None),
+				_Skill,
 			),
 		]]);
 
@@ -224,15 +214,15 @@ mod tests {
 			vec![vec![
 				ComboTreeElement::Symbol(Symbol::Root),
 				ComboTreeElement::Node {
-					key_path: vec![PlayerSlot::Lower(Side::Right)],
-					skill: _Skill(None)
+					key_path: vec![SlotKey::from(PlayerSlot::LOWER_R)],
+					skill: _Skill
 				},
 				ComboTreeElement::Leaf {
 					key_path: vec![
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Right)
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_R)
 					],
-					skill: _Skill(None)
+					skill: _Skill
 				}
 			]],
 			combos.build_combo_tree_layout()
@@ -247,8 +237,8 @@ mod tests {
 	/// ```
 	fn layout_two_combos_with_one_skill() {
 		let combos = _Combos(vec![
-			vec![(vec![PlayerSlot::Lower(Side::Right)], _Skill(None))],
-			vec![(vec![PlayerSlot::Lower(Side::Left)], _Skill(None))],
+			vec![(vec![SlotKey::from(PlayerSlot::LOWER_R)], _Skill)],
+			vec![(vec![SlotKey::from(PlayerSlot::LOWER_L)], _Skill)],
 		]);
 
 		assert_eq!(
@@ -256,15 +246,15 @@ mod tests {
 				vec![
 					ComboTreeElement::Symbol(Symbol::Root),
 					ComboTreeElement::Leaf {
-						key_path: vec![PlayerSlot::Lower(Side::Right)],
-						skill: _Skill(None)
+						key_path: vec![SlotKey::from(PlayerSlot::LOWER_R)],
+						skill: _Skill
 					}
 				],
 				vec![
 					ComboTreeElement::Symbol(Symbol::Corner),
 					ComboTreeElement::Leaf {
-						key_path: vec![PlayerSlot::Lower(Side::Left)],
-						skill: _Skill(None)
+						key_path: vec![SlotKey::from(PlayerSlot::LOWER_L)],
+						skill: _Skill
 					}
 				]
 			],
@@ -281,23 +271,23 @@ mod tests {
 	fn layout_two_combos_with_two_skills_where_one_matches() {
 		let combos = _Combos(vec![
 			vec![
-				(vec![PlayerSlot::Lower(Side::Right)], _Skill(None)),
+				(vec![SlotKey::from(PlayerSlot::LOWER_R)], _Skill),
 				(
 					vec![
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Right),
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_R),
 					],
-					_Skill(None),
+					_Skill,
 				),
 			],
 			vec![
-				(vec![PlayerSlot::Lower(Side::Right)], _Skill(None)),
+				(vec![SlotKey::from(PlayerSlot::LOWER_R)], _Skill),
 				(
 					vec![
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Left),
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_L),
 					],
-					_Skill(None),
+					_Skill,
 				),
 			],
 		]);
@@ -307,15 +297,15 @@ mod tests {
 				vec![
 					ComboTreeElement::Symbol(Symbol::Root),
 					ComboTreeElement::Node {
-						key_path: vec![PlayerSlot::Lower(Side::Right)],
-						skill: _Skill(None)
+						key_path: vec![SlotKey::from(PlayerSlot::LOWER_R)],
+						skill: _Skill
 					},
 					ComboTreeElement::Leaf {
 						key_path: vec![
-							PlayerSlot::Lower(Side::Right),
-							PlayerSlot::Lower(Side::Right)
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_R)
 						],
-						skill: _Skill(None)
+						skill: _Skill
 					},
 				],
 				vec![
@@ -323,10 +313,10 @@ mod tests {
 					ComboTreeElement::Symbol(Symbol::Corner),
 					ComboTreeElement::Leaf {
 						key_path: vec![
-							PlayerSlot::Lower(Side::Right),
-							PlayerSlot::Lower(Side::Left)
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_L)
 						],
-						skill: _Skill(None)
+						skill: _Skill
 					},
 				]
 			],
@@ -344,26 +334,26 @@ mod tests {
 	fn layout_three_combos_with_complex_setup() {
 		let combos = _Combos(vec![
 			vec![
-				(vec![PlayerSlot::Lower(Side::Right)], _Skill(None)),
+				(vec![SlotKey::from(PlayerSlot::LOWER_R)], _Skill),
 				(
 					vec![
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Right),
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_R),
 					],
-					_Skill(None),
+					_Skill,
 				),
 			],
 			vec![
-				(vec![PlayerSlot::Lower(Side::Right)], _Skill(None)),
+				(vec![SlotKey::from(PlayerSlot::LOWER_R)], _Skill),
 				(
 					vec![
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Left),
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_L),
 					],
-					_Skill(None),
+					_Skill,
 				),
 			],
-			vec![(vec![PlayerSlot::Lower(Side::Left)], _Skill(None))],
+			vec![(vec![SlotKey::from(PlayerSlot::LOWER_L)], _Skill)],
 		]);
 
 		assert_eq!(
@@ -371,15 +361,15 @@ mod tests {
 				vec![
 					ComboTreeElement::Symbol(Symbol::Root),
 					ComboTreeElement::Node {
-						key_path: vec![PlayerSlot::Lower(Side::Right)],
-						skill: _Skill(None)
+						key_path: vec![SlotKey::from(PlayerSlot::LOWER_R)],
+						skill: _Skill
 					},
 					ComboTreeElement::Leaf {
 						key_path: vec![
-							PlayerSlot::Lower(Side::Right),
-							PlayerSlot::Lower(Side::Right),
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_R),
 						],
-						skill: _Skill(None)
+						skill: _Skill
 					},
 				],
 				vec![
@@ -387,17 +377,17 @@ mod tests {
 					ComboTreeElement::Symbol(Symbol::Corner),
 					ComboTreeElement::Leaf {
 						key_path: vec![
-							PlayerSlot::Lower(Side::Right),
-							PlayerSlot::Lower(Side::Left)
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_L)
 						],
-						skill: _Skill(None)
+						skill: _Skill
 					},
 				],
 				vec![
 					ComboTreeElement::Symbol(Symbol::Corner),
 					ComboTreeElement::Leaf {
-						key_path: vec![PlayerSlot::Lower(Side::Left)],
-						skill: _Skill(None)
+						key_path: vec![SlotKey::from(PlayerSlot::LOWER_L)],
+						skill: _Skill
 					},
 				],
 			],
@@ -416,52 +406,52 @@ mod tests {
 	fn layout_three_combos_with_complex_setup_2() {
 		let combos = _Combos(vec![
 			vec![
-				(vec![PlayerSlot::Lower(Side::Right)], _Skill(None)),
+				(vec![SlotKey::from(PlayerSlot::LOWER_R)], _Skill),
 				(
 					vec![
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Right),
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_R),
 					],
-					_Skill(None),
+					_Skill,
 				),
 				(
 					vec![
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Right),
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_R),
 					],
-					_Skill(None),
-				),
-			],
-			vec![
-				(vec![PlayerSlot::Lower(Side::Right)], _Skill(None)),
-				(
-					vec![
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Right),
-					],
-					_Skill(None),
-				),
-				(
-					vec![
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Left),
-					],
-					_Skill(None),
+					_Skill,
 				),
 			],
 			vec![
-				(vec![PlayerSlot::Lower(Side::Right)], _Skill(None)),
+				(vec![SlotKey::from(PlayerSlot::LOWER_R)], _Skill),
 				(
 					vec![
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Left),
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_R),
 					],
-					_Skill(None),
+					_Skill,
+				),
+				(
+					vec![
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_L),
+					],
+					_Skill,
 				),
 			],
-			vec![(vec![PlayerSlot::Lower(Side::Left)], _Skill(None))],
+			vec![
+				(vec![SlotKey::from(PlayerSlot::LOWER_R)], _Skill),
+				(
+					vec![
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_L),
+					],
+					_Skill,
+				),
+			],
+			vec![(vec![SlotKey::from(PlayerSlot::LOWER_L)], _Skill)],
 		]);
 
 		assert_eq!(
@@ -469,23 +459,23 @@ mod tests {
 				vec![
 					ComboTreeElement::Symbol(Symbol::Root),
 					ComboTreeElement::Node {
-						key_path: vec![PlayerSlot::Lower(Side::Right)],
-						skill: _Skill(None)
+						key_path: vec![SlotKey::from(PlayerSlot::LOWER_R)],
+						skill: _Skill
 					},
 					ComboTreeElement::Node {
 						key_path: vec![
-							PlayerSlot::Lower(Side::Right),
-							PlayerSlot::Lower(Side::Right)
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_R)
 						],
-						skill: _Skill(None)
+						skill: _Skill
 					},
 					ComboTreeElement::Leaf {
 						key_path: vec![
-							PlayerSlot::Lower(Side::Right),
-							PlayerSlot::Lower(Side::Right),
-							PlayerSlot::Lower(Side::Right)
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_R)
 						],
-						skill: _Skill(None)
+						skill: _Skill
 					},
 				],
 				vec![
@@ -494,11 +484,11 @@ mod tests {
 					ComboTreeElement::Symbol(Symbol::Corner),
 					ComboTreeElement::Leaf {
 						key_path: vec![
-							PlayerSlot::Lower(Side::Right),
-							PlayerSlot::Lower(Side::Right),
-							PlayerSlot::Lower(Side::Left)
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_L)
 						],
-						skill: _Skill(None)
+						skill: _Skill
 					},
 				],
 				vec![
@@ -506,17 +496,17 @@ mod tests {
 					ComboTreeElement::Symbol(Symbol::Corner),
 					ComboTreeElement::Leaf {
 						key_path: vec![
-							PlayerSlot::Lower(Side::Right),
-							PlayerSlot::Lower(Side::Left)
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_L)
 						],
-						skill: _Skill(None)
+						skill: _Skill
 					},
 				],
 				vec![
 					ComboTreeElement::Symbol(Symbol::Corner),
 					ComboTreeElement::Leaf {
-						key_path: vec![PlayerSlot::Lower(Side::Left)],
-						skill: _Skill(None)
+						key_path: vec![SlotKey::from(PlayerSlot::LOWER_L)],
+						skill: _Skill
 					},
 				],
 			],
@@ -534,49 +524,49 @@ mod tests {
 	fn layout_three_combos_with_complex_setup_3() {
 		let combos = _Combos(vec![
 			vec![
-				(vec![PlayerSlot::Lower(Side::Right)], _Skill(None)),
+				(vec![SlotKey::from(PlayerSlot::LOWER_R)], _Skill),
 				(
 					vec![
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Right),
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_R),
 					],
-					_Skill(None),
+					_Skill,
 				),
 				(
 					vec![
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Right),
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_R),
 					],
-					_Skill(None),
-				),
-			],
-			vec![
-				(vec![PlayerSlot::Lower(Side::Right)], _Skill(None)),
-				(
-					vec![
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Right),
-					],
-					_Skill(None),
-				),
-				(
-					vec![
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Left),
-					],
-					_Skill(None),
+					_Skill,
 				),
 			],
 			vec![
-				(vec![PlayerSlot::Lower(Side::Right)], _Skill(None)),
+				(vec![SlotKey::from(PlayerSlot::LOWER_R)], _Skill),
 				(
 					vec![
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Left),
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_R),
 					],
-					_Skill(None),
+					_Skill,
+				),
+				(
+					vec![
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_L),
+					],
+					_Skill,
+				),
+			],
+			vec![
+				(vec![SlotKey::from(PlayerSlot::LOWER_R)], _Skill),
+				(
+					vec![
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_L),
+					],
+					_Skill,
 				),
 			],
 		]);
@@ -586,23 +576,23 @@ mod tests {
 				vec![
 					ComboTreeElement::Symbol(Symbol::Root),
 					ComboTreeElement::Node {
-						key_path: vec![PlayerSlot::Lower(Side::Right)],
-						skill: _Skill(None)
+						key_path: vec![SlotKey::from(PlayerSlot::LOWER_R)],
+						skill: _Skill
 					},
 					ComboTreeElement::Node {
 						key_path: vec![
-							PlayerSlot::Lower(Side::Right),
-							PlayerSlot::Lower(Side::Right)
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_R)
 						],
-						skill: _Skill(None)
+						skill: _Skill
 					},
 					ComboTreeElement::Leaf {
 						key_path: vec![
-							PlayerSlot::Lower(Side::Right),
-							PlayerSlot::Lower(Side::Right),
-							PlayerSlot::Lower(Side::Right)
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_R)
 						],
-						skill: _Skill(None)
+						skill: _Skill
 					},
 				],
 				vec![
@@ -611,11 +601,11 @@ mod tests {
 					ComboTreeElement::Symbol(Symbol::Corner),
 					ComboTreeElement::Leaf {
 						key_path: vec![
-							PlayerSlot::Lower(Side::Right),
-							PlayerSlot::Lower(Side::Right),
-							PlayerSlot::Lower(Side::Left)
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_L)
 						],
-						skill: _Skill(None)
+						skill: _Skill
 					},
 				],
 				vec![
@@ -623,10 +613,10 @@ mod tests {
 					ComboTreeElement::Symbol(Symbol::Corner),
 					ComboTreeElement::Leaf {
 						key_path: vec![
-							PlayerSlot::Lower(Side::Right),
-							PlayerSlot::Lower(Side::Left)
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_L)
 						],
-						skill: _Skill(None)
+						skill: _Skill
 					},
 				],
 			],
@@ -645,94 +635,94 @@ mod tests {
 	fn layout_three_combos_with_complex_setup_4() {
 		let combos = _Combos(vec![
 			vec![
-				(vec![PlayerSlot::Lower(Side::Right)], _Skill(None)),
+				(vec![SlotKey::from(PlayerSlot::LOWER_R)], _Skill),
 				(
 					vec![
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Right),
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_R),
 					],
-					_Skill(None),
+					_Skill,
 				),
 				(
 					vec![
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Right),
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_R),
 					],
-					_Skill(None),
+					_Skill,
 				),
 				(
 					vec![
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Right),
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_R),
 					],
-					_Skill(None),
-				),
-			],
-			vec![
-				(vec![PlayerSlot::Lower(Side::Right)], _Skill(None)),
-				(
-					vec![
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Right),
-					],
-					_Skill(None),
-				),
-				(
-					vec![
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Left),
-					],
-					_Skill(None),
-				),
-				(
-					vec![
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Left),
-						PlayerSlot::Lower(Side::Right),
-					],
-					_Skill(None),
+					_Skill,
 				),
 			],
 			vec![
-				(vec![PlayerSlot::Lower(Side::Right)], _Skill(None)),
+				(vec![SlotKey::from(PlayerSlot::LOWER_R)], _Skill),
 				(
 					vec![
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Right),
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_R),
 					],
-					_Skill(None),
+					_Skill,
 				),
 				(
 					vec![
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Left),
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_L),
 					],
-					_Skill(None),
+					_Skill,
 				),
 				(
 					vec![
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Left),
-						PlayerSlot::Lower(Side::Left),
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_L),
+						SlotKey::from(PlayerSlot::LOWER_R),
 					],
-					_Skill(None),
+					_Skill,
 				),
 			],
 			vec![
-				(vec![PlayerSlot::Lower(Side::Right)], _Skill(None)),
+				(vec![SlotKey::from(PlayerSlot::LOWER_R)], _Skill),
 				(
 					vec![
-						PlayerSlot::Lower(Side::Right),
-						PlayerSlot::Lower(Side::Left),
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_R),
 					],
-					_Skill(None),
+					_Skill,
+				),
+				(
+					vec![
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_L),
+					],
+					_Skill,
+				),
+				(
+					vec![
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_L),
+						SlotKey::from(PlayerSlot::LOWER_L),
+					],
+					_Skill,
+				),
+			],
+			vec![
+				(vec![SlotKey::from(PlayerSlot::LOWER_R)], _Skill),
+				(
+					vec![
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_L),
+					],
+					_Skill,
 				),
 			],
 		]);
@@ -742,32 +732,32 @@ mod tests {
 				vec![
 					ComboTreeElement::Symbol(Symbol::Root),
 					ComboTreeElement::Node {
-						key_path: vec![PlayerSlot::Lower(Side::Right)],
-						skill: _Skill(None)
+						key_path: vec![SlotKey::from(PlayerSlot::LOWER_R)],
+						skill: _Skill
 					},
 					ComboTreeElement::Node {
 						key_path: vec![
-							PlayerSlot::Lower(Side::Right),
-							PlayerSlot::Lower(Side::Right)
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_R)
 						],
-						skill: _Skill(None)
+						skill: _Skill
 					},
 					ComboTreeElement::Node {
 						key_path: vec![
-							PlayerSlot::Lower(Side::Right),
-							PlayerSlot::Lower(Side::Right),
-							PlayerSlot::Lower(Side::Right),
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_R),
 						],
-						skill: _Skill(None)
+						skill: _Skill
 					},
 					ComboTreeElement::Leaf {
 						key_path: vec![
-							PlayerSlot::Lower(Side::Right),
-							PlayerSlot::Lower(Side::Right),
-							PlayerSlot::Lower(Side::Right),
-							PlayerSlot::Lower(Side::Right),
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_R),
 						],
-						skill: _Skill(None)
+						skill: _Skill
 					},
 				],
 				vec![
@@ -776,20 +766,20 @@ mod tests {
 					ComboTreeElement::Symbol(Symbol::Corner),
 					ComboTreeElement::Node {
 						key_path: vec![
-							PlayerSlot::Lower(Side::Right),
-							PlayerSlot::Lower(Side::Right),
-							PlayerSlot::Lower(Side::Left),
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_L),
 						],
-						skill: _Skill(None)
+						skill: _Skill
 					},
 					ComboTreeElement::Leaf {
 						key_path: vec![
-							PlayerSlot::Lower(Side::Right),
-							PlayerSlot::Lower(Side::Right),
-							PlayerSlot::Lower(Side::Left),
-							PlayerSlot::Lower(Side::Right),
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_L),
+							SlotKey::from(PlayerSlot::LOWER_R),
 						],
-						skill: _Skill(None)
+						skill: _Skill
 					},
 				],
 				vec![
@@ -799,12 +789,12 @@ mod tests {
 					ComboTreeElement::Symbol(Symbol::Corner),
 					ComboTreeElement::Leaf {
 						key_path: vec![
-							PlayerSlot::Lower(Side::Right),
-							PlayerSlot::Lower(Side::Right),
-							PlayerSlot::Lower(Side::Left),
-							PlayerSlot::Lower(Side::Left),
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_L),
+							SlotKey::from(PlayerSlot::LOWER_L),
 						],
-						skill: _Skill(None)
+						skill: _Skill
 					},
 				],
 				vec![
@@ -812,10 +802,10 @@ mod tests {
 					ComboTreeElement::Symbol(Symbol::Corner),
 					ComboTreeElement::Leaf {
 						key_path: vec![
-							PlayerSlot::Lower(Side::Right),
-							PlayerSlot::Lower(Side::Left),
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_L),
 						],
-						skill: _Skill(None)
+						skill: _Skill
 					},
 				]
 			],
@@ -834,20 +824,20 @@ mod tests {
 	fn layout_combos_with_no_broken_lines() {
 		let combos = _Combos(vec![
 			vec![
-				(vec![PlayerSlot::Lower(Side::Left)], _Skill(None)),
-				(vec![PlayerSlot::Lower(Side::Left)], _Skill(None)),
+				(vec![SlotKey::from(PlayerSlot::LOWER_L)], _Skill),
+				(vec![SlotKey::from(PlayerSlot::LOWER_L)], _Skill),
 			],
 			vec![
-				(vec![PlayerSlot::Lower(Side::Left)], _Skill(None)),
-				(vec![PlayerSlot::Lower(Side::Right)], _Skill(None)),
+				(vec![SlotKey::from(PlayerSlot::LOWER_L)], _Skill),
+				(vec![SlotKey::from(PlayerSlot::LOWER_R)], _Skill),
 			],
 			vec![
-				(vec![PlayerSlot::Lower(Side::Right)], _Skill(None)),
-				(vec![PlayerSlot::Lower(Side::Right)], _Skill(None)),
+				(vec![SlotKey::from(PlayerSlot::LOWER_R)], _Skill),
+				(vec![SlotKey::from(PlayerSlot::LOWER_R)], _Skill),
 			],
 			vec![
-				(vec![PlayerSlot::Lower(Side::Right)], _Skill(None)),
-				(vec![PlayerSlot::Lower(Side::Left)], _Skill(None)),
+				(vec![SlotKey::from(PlayerSlot::LOWER_R)], _Skill),
+				(vec![SlotKey::from(PlayerSlot::LOWER_L)], _Skill),
 			],
 		]);
 
@@ -856,39 +846,39 @@ mod tests {
 				vec![
 					ComboTreeElement::Symbol(Symbol::Root),
 					ComboTreeElement::Node {
-						key_path: vec![PlayerSlot::Lower(Side::Left)],
-						skill: _Skill(None)
+						key_path: vec![SlotKey::from(PlayerSlot::LOWER_L)],
+						skill: _Skill
 					},
 					ComboTreeElement::Leaf {
-						key_path: vec![PlayerSlot::Lower(Side::Left)],
-						skill: _Skill(None)
+						key_path: vec![SlotKey::from(PlayerSlot::LOWER_L)],
+						skill: _Skill
 					},
 				],
 				vec![
 					ComboTreeElement::Symbol(Symbol::Line),
 					ComboTreeElement::Symbol(Symbol::Corner),
 					ComboTreeElement::Leaf {
-						key_path: vec![PlayerSlot::Lower(Side::Right)],
-						skill: _Skill(None)
+						key_path: vec![SlotKey::from(PlayerSlot::LOWER_R)],
+						skill: _Skill
 					},
 				],
 				vec![
 					ComboTreeElement::Symbol(Symbol::Corner),
 					ComboTreeElement::Node {
-						key_path: vec![PlayerSlot::Lower(Side::Right)],
-						skill: _Skill(None)
+						key_path: vec![SlotKey::from(PlayerSlot::LOWER_R)],
+						skill: _Skill
 					},
 					ComboTreeElement::Leaf {
-						key_path: vec![PlayerSlot::Lower(Side::Right)],
-						skill: _Skill(None)
+						key_path: vec![SlotKey::from(PlayerSlot::LOWER_R)],
+						skill: _Skill
 					},
 				],
 				vec![
 					ComboTreeElement::Symbol(Symbol::Empty),
 					ComboTreeElement::Symbol(Symbol::Corner),
 					ComboTreeElement::Leaf {
-						key_path: vec![PlayerSlot::Lower(Side::Left)],
-						skill: _Skill(None)
+						key_path: vec![SlotKey::from(PlayerSlot::LOWER_L)],
+						skill: _Skill
 					},
 				],
 			],

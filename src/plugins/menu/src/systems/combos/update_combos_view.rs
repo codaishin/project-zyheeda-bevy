@@ -1,27 +1,27 @@
 use crate::traits::{UpdateCombosView, build_combo_tree_layout::BuildComboTreeLayout};
 use bevy::{ecs::component::Mutable, prelude::*};
-use common::traits::thread_safe::ThreadSafe;
 
-impl<T> UpdateComboOverview for T where T: Component<Mutability = Mutable> {}
+impl<T> UpdateComboOverview for T where T: Component<Mutability = Mutable> + UpdateCombosView {}
 
-pub(crate) trait UpdateComboOverview: Component<Mutability = Mutable> + Sized {
-	fn update_combos_overview<TSkill, TLayoutBuilder>(
-		layout_builder: Res<TLayoutBuilder>,
+pub(crate) trait UpdateComboOverview:
+	Component<Mutability = Mutable> + UpdateCombosView + Sized
+{
+	fn update_from<TAgent, TCombos>(
 		mut combo_overviews: Query<&mut Self>,
+		combos: Query<Ref<TCombos>, With<TAgent>>,
 	) where
-		Self: UpdateCombosView<TSkill>,
-		TSkill: ThreadSafe,
-		TLayoutBuilder: Resource + BuildComboTreeLayout<TSkill>,
+		TAgent: Component,
+		TCombos: Component + BuildComboTreeLayout<TKey = Self::TKey, TItem = Self::TItem>,
 	{
-		let Ok(mut combo_overview) = combo_overviews.single_mut() else {
-			return;
-		};
+		for combo in &combos {
+			for mut combo_overview in &mut combo_overviews {
+				if !combo.is_changed() && !combo_overview.is_added() {
+					continue;
+				}
 
-		if !layout_builder.is_changed() && !combo_overview.is_added() {
-			return;
+				combo_overview.update_combos_view(combo.build_combo_tree_layout());
+			}
 		}
-
-		combo_overview.update_combos_view(layout_builder.build_combo_tree_layout());
 	}
 }
 
@@ -29,52 +29,83 @@ pub(crate) trait UpdateComboOverview: Component<Mutability = Mutable> + Sized {
 mod tests {
 	use super::*;
 	use crate::traits::build_combo_tree_layout::{ComboTreeElement, ComboTreeLayout, Symbol};
+	use common::traits::handles_loadout::loadout::{LoadoutItem, LoadoutKey};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
-	use std::ops::DerefMut;
 	use testing::{NestedMocks, SingleThreadedApp};
 
+	#[derive(Component)]
+	struct _Agent;
+
+	#[derive(Debug, PartialEq, Clone, Copy)]
+	pub struct _Key;
+
 	#[derive(Debug, PartialEq, Clone)]
-	struct _Skill;
+	pub struct _Skill;
 
 	#[derive(Component, NestedMocks, Debug)]
 	struct _ComboOverview {
 		mock: Mock_ComboOverview,
 	}
 
+	impl LoadoutKey for _ComboOverview {
+		type TKey = _Key;
+	}
+
+	impl LoadoutItem for _ComboOverview {
+		type TItem = _Skill;
+	}
+
+	impl LoadoutKey for Mock_ComboOverview {
+		type TKey = _Key;
+	}
+
+	impl LoadoutItem for Mock_ComboOverview {
+		type TItem = _Skill;
+	}
+
 	#[automock]
-	impl UpdateCombosView<_Skill> for _ComboOverview {
-		fn update_combos_view(&mut self, combos: ComboTreeLayout<_Skill>) {
+	impl UpdateCombosView for _ComboOverview {
+		fn update_combos_view(&mut self, combos: ComboTreeLayout<_Key, _Skill>) {
 			self.mock.update_combos_view(combos)
 		}
 	}
 
-	#[derive(Resource, Clone)]
-	struct _Combos(ComboTreeLayout<_Skill>);
+	#[derive(Component, Clone)]
+	struct _Combos(ComboTreeLayout<_Key, _Skill>);
 
-	impl BuildComboTreeLayout<_Skill> for _Combos {
-		fn build_combo_tree_layout(&self) -> ComboTreeLayout<_Skill> {
+	impl LoadoutKey for _Combos {
+		type TKey = _Key;
+	}
+
+	impl LoadoutItem for _Combos {
+		type TItem = _Skill;
+	}
+
+	impl BuildComboTreeLayout for _Combos {
+		fn build_combo_tree_layout(&self) -> ComboTreeLayout<_Key, _Skill> {
 			self.0.clone()
 		}
 	}
 
-	fn setup(combos: _Combos) -> App {
+	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.insert_resource(combos);
-		app.add_systems(
-			Update,
-			_ComboOverview::update_combos_overview::<_Skill, _Combos>,
-		);
+
+		app.add_systems(Update, _ComboOverview::update_from::<_Agent, _Combos>);
 
 		app
 	}
 
 	#[test]
 	fn update_combos() {
-		let mut app = setup(_Combos(vec![vec![
-			ComboTreeElement::Symbol(Symbol::Root),
-			ComboTreeElement::Symbol(Symbol::Line),
-		]]));
+		let mut app = setup();
+		app.world_mut().spawn((
+			_Agent,
+			_Combos(vec![vec![
+				ComboTreeElement::Symbol(Symbol::Root),
+				ComboTreeElement::Symbol(Symbol::Line),
+			]]),
+		));
 		app.world_mut()
 			.spawn(_ComboOverview::new().with_mock(|mock| {
 				mock.expect_update_combos_view()
@@ -91,10 +122,8 @@ mod tests {
 
 	#[test]
 	fn do_nothing_if_combos_was_not_added() {
-		let mut app = setup(_Combos(vec![vec![
-			ComboTreeElement::Symbol(Symbol::Root),
-			ComboTreeElement::Symbol(Symbol::Line),
-		]]));
+		let mut app = setup();
+		app.world_mut().spawn((_Agent, _Combos(vec![])));
 		app.world_mut()
 			.spawn(_ComboOverview::new().with_mock(|mock| {
 				mock.expect_update_combos_view().times(1).return_const(());
@@ -106,32 +135,43 @@ mod tests {
 
 	#[test]
 	fn update_combos_again_after_combos_mut_deref() {
-		let mut app = setup(_Combos(vec![vec![
-			ComboTreeElement::Symbol(Symbol::Root),
-			ComboTreeElement::Symbol(Symbol::Line),
-		]]));
+		let mut app = setup();
+		let agent = app.world_mut().spawn((_Agent, _Combos(vec![]))).id();
 		app.world_mut()
 			.spawn(_ComboOverview::new().with_mock(|mock| {
 				mock.expect_update_combos_view().times(2).return_const(());
 			}));
 
 		app.update();
-		app.world_mut().resource_mut::<_Combos>().deref_mut();
+		app.world_mut()
+			.entity_mut(agent)
+			.get_mut::<_Combos>()
+			.as_deref_mut();
 		app.update();
 	}
 
 	#[test]
 	fn update_combos_after_combos_overview_added() {
-		let mut app = setup(_Combos(vec![vec![
-			ComboTreeElement::Symbol(Symbol::Root),
-			ComboTreeElement::Symbol(Symbol::Line),
-		]]));
+		let mut app = setup();
+		app.world_mut().spawn((_Agent, _Combos(vec![])));
 
 		app.update();
 		app.world_mut()
 			.spawn(_ComboOverview::new().with_mock(|mock| {
 				mock.expect_update_combos_view().times(1).return_const(());
 			}));
+		app.update();
+	}
+
+	#[test]
+	fn do_nothing_if_agent_missing() {
+		let mut app = setup();
+		app.world_mut().spawn(_Combos(vec![]));
+		app.world_mut()
+			.spawn(_ComboOverview::new().with_mock(|mock| {
+				mock.expect_update_combos_view().never();
+			}));
+
 		app.update();
 	}
 }

@@ -1,7 +1,6 @@
 mod components;
 mod events;
 mod observers;
-mod resources;
 mod states;
 mod systems;
 mod tools;
@@ -12,41 +11,38 @@ mod visualization;
 mod debug;
 
 use crate::{
-	components::{dispatch_text_color::DispatchTextColor, label::UILabel, ui_disabled::UIDisabled},
-	systems::{
-		combos::visualize_invalid_skill::VisualizeInvalidSkill,
-		dropdown::dropdown_skill_select_insert::DropdownSkillSelectInsert,
-		start_menu_button::set_activity::Activity,
-		update_panels::set_container_panels::SetContainerPanels,
+	components::{
+		DeleteSkill,
+		SkillSelectDropdownCommand,
+		combo_skill_button::{
+			ComboSkillButton,
+			DropdownItem,
+			DropdownTrigger,
+			Horizontal,
+			Vertical,
+		},
+		dispatch_text_color::DispatchTextColor,
+		key_select_dropdown_command::KeySelectDropdownCommand,
+		label::UILabel,
+		ui_disabled::UIDisabled,
 	},
+	systems::{
+		combos::update_combos_view::UpdateComboOverview,
+		dad::drop_item_external::drop_item_external,
+		start_menu_button::set_activity::Activity,
+	},
+	visualization::unusable::Unusable,
 };
-use bevy::{ecs::component::Mutable, prelude::*};
+use bevy::prelude::*;
 use common::{
-	components::ui_input_primer::UiInputPrimer,
 	resources::Shared,
 	states::{
 		game_state::{GameState, LoadingEssentialAssets, LoadingGame},
 		menu_state::MenuState,
 		save_state::SaveState,
 	},
-	tools::{
-		action_key::{ActionKey, slot::PlayerSlot, user_input::UserInput},
-		change::Change,
-		inventory_key::InventoryKey,
-		item_description::ItemToken,
-		skill_description::SkillToken,
-		skill_execution::SkillExecution,
-		skill_icon::SkillIcon,
-	},
+	tools::action_key::{ActionKey, slot::PlayerSlot, user_input::UserInput},
 	traits::{
-		handles_combo_menu::{
-			Combo,
-			ConfigurePlayerCombos,
-			GetComboAblePlayerSkills,
-			GetCombosOrdered,
-			HandlesComboMenu,
-			NextKeys,
-		},
 		handles_graphics::UiCamera,
 		handles_load_tracking::{
 			AssetsProgress,
@@ -54,11 +50,11 @@ use common::{
 			HandlesLoadTracking,
 			LoadGroup,
 		},
-		handles_loadout_menu::{ConfigureInventory, GetItem, HandlesLoadoutMenu, SwapValuesByKey},
-		handles_localization::{HandlesLocalization, Localize, Token, localized::Localized},
+		handles_loadout::HandlesLoadout,
+		handles_localization::{HandlesLocalization, Token, localized::Localized},
+		handles_player::HandlesPlayer,
 		handles_saving::HandlesSaving,
 		handles_settings::HandlesSettings,
-		inspect_able::InspectAble,
 		load_asset::Path,
 		prefab::AddPrefabObserver,
 		register_derived_component::RegisterDerivedComponent,
@@ -68,7 +64,6 @@ use common::{
 use components::{
 	button_interaction::ButtonInteraction,
 	combo_overview::ComboOverview,
-	combo_skill_button::{ComboSkillButton, DropdownItem, Horizontal, Vertical},
 	dropdown::Dropdown,
 	icon::Icon,
 	input_label::InputLabel,
@@ -90,43 +85,41 @@ use components::{
 	ui_overlay::UIOverlay,
 };
 use events::DropdownEvent;
-use resources::equipment_info::EquipmentInfo;
 use states::menus_change_able::MenusChangeable;
 use std::{marker::PhantomData, time::Duration};
 use systems::{
 	adjust_global_z_index::adjust_global_z_index,
-	combos::{
-		dropdown_skill_select_click::DropdownSkillSelectClick,
-		update_combos_view::UpdateComboOverview,
-		update_combos_view_delete_skill::update_combos_view_delete_skill,
-	},
-	dad::{drag::drag, drop::drop},
-	dropdown::select_successor_key::select_successor_key,
+	dad::{drag_item::drag_item, drop_item::drop_item},
 	image_color::image_color,
 	menus_unchangeable_when_present::MenusUnchangeableWhenPresent,
 	render_ui::RenderUi,
 	set_key_bindings::SetKeyBindings,
 	set_state_from_input::set_state_from_input,
 	trigger_on_release::TriggerOnRelease,
-	update_panels::{
-		activity_colors_override::panel_activity_colors_override,
-		colors::panel_colors,
-		set_quickbar_icons::set_quickbar_icons,
-	},
+	update_panels::colors::panel_colors,
 };
 use traits::{LoadUi, add_dropdown::AddDropdown, add_tooltip::AddTooltip, add_ui::AddUI};
-use visualization::unusable::Unusable;
 
 pub struct MenuPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics>
-	MenuPlugin<(TLoading, TSavegame, TSettings, TLocalization, TGraphics)>
+impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics, TPlayers, TLoadout>
+	MenuPlugin<(
+		TLoading,
+		TSavegame,
+		TSettings,
+		TLocalization,
+		TGraphics,
+		TPlayers,
+		TLoadout,
+	)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TSettings: ThreadSafe + HandlesSettings,
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
+	TPlayers: ThreadSafe + HandlesPlayer,
+	TLoadout: ThreadSafe + HandlesLoadout,
 {
 	pub fn from_plugins(
 		_: &TLoading,
@@ -134,19 +127,31 @@ where
 		_: &TSettings,
 		_: &TLocalization,
 		_: &TGraphics,
+		_: &TPlayers,
+		_: &TLoadout,
 	) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics>
-	MenuPlugin<(TLoading, TSavegame, TSettings, TLocalization, TGraphics)>
+impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics, TPlayers, TLoadout>
+	MenuPlugin<(
+		TLoading,
+		TSavegame,
+		TSettings,
+		TLocalization,
+		TGraphics,
+		TPlayers,
+		TLoadout,
+	)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TSettings: ThreadSafe + HandlesSettings,
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
+	TPlayers: ThreadSafe + HandlesPlayer,
+	TLoadout: ThreadSafe + HandlesLoadout,
 {
 	fn resources(&self, app: &mut App) {
 		app.init_resource::<Shared<Path, Handle<Image>>>()
@@ -222,10 +227,16 @@ where
 		let play = GameState::Play;
 
 		app.add_ui::<UIOverlay, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(play)
+			.add_observer(QuickbarPanel::add_quickbar_primer::<TSettings::TKeyMap<PlayerSlot>>)
 			.add_systems(
 				Update,
 				(
-					QuickbarPanel::add_quickbar_primer::<TSettings::TKeyMap<PlayerSlot>>,
+					QuickbarPanel::set_icon::<TPlayers::TPlayer, TLoadout::TSlots>,
+					QuickbarPanel::set_color::<
+						TPlayers::TPlayer,
+						TSettings::TKeyMap<PlayerSlot>,
+						TLoadout::TSlots,
+					>,
 					panel_colors::<QuickbarPanel>,
 				)
 					.run_if(in_state(play)),
@@ -233,7 +244,47 @@ where
 	}
 
 	fn combo_overview(&self, app: &mut App) {
+		type VerticalItem<TSkill> = ComboSkillButton<DropdownItem<Vertical>, TSkill>;
+		type HorizontalItem<TSkill> = ComboSkillButton<DropdownItem<Horizontal>, TSkill>;
+		type Trigger<TSkill> = ComboSkillButton<DropdownTrigger, TSkill>;
+
+		let combo_overview = GameState::IngameMenu(MenuState::ComboOverview);
+
+		app
+			.add_ui::<ComboOverview<TLoadout::TSkill>, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(combo_overview);
 		app.add_dropdown::<TLocalization::TLocalizationServer, KeySelect<AppendSkill>>();
+		app.add_dropdown::<TLocalization::TLocalizationServer, VerticalItem<TLoadout::TSkill>>();
+		app.add_dropdown::<TLocalization::TLocalizationServer, HorizontalItem<TLoadout::TSkill>>();
+		app.add_systems(
+			Update,
+			(
+				ComboOverview::<TLoadout::TSkill>::update_from::<
+					TPlayers::TPlayer,
+					TLoadout::TCombos,
+				>,
+				KeySelectDropdownCommand::insert_dropdown::<TPlayers::TPlayer, TLoadout::TCombos>,
+				SkillSelectDropdownCommand::<Vertical>::insert_dropdown::<
+					TPlayers::TPlayer,
+					TLoadout::TSlots,
+					TLoadout::TSkills,
+				>,
+				SkillSelectDropdownCommand::<Horizontal>::insert_dropdown::<
+					TPlayers::TPlayer,
+					TLoadout::TSlots,
+					TLoadout::TSkills,
+				>,
+				VerticalItem::<TLoadout::TSkill>::update::<TPlayers::TPlayer, TLoadout::TCombos>,
+				HorizontalItem::<TLoadout::TSkill>::update::<TPlayers::TPlayer, TLoadout::TCombos>,
+				DeleteSkill::from_combos::<TPlayers::TPlayer, TLoadout::TCombos>,
+				Trigger::<TLoadout::TSkill>::visualize_invalid::<
+					Unusable,
+					TPlayers::TPlayer,
+					TLoadout::TSlots,
+				>,
+			)
+				.chain()
+				.run_if(in_state(combo_overview)),
+		);
 	}
 
 	fn inventory_screen(&self, app: &mut App) {
@@ -241,6 +292,22 @@ where
 
 		app.add_ui::<InventoryScreen, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
 			inventory,
+		)
+		.add_systems(
+			Update,
+			(
+				InventoryPanel::set_label::<TPlayers::TPlayer, TLoadout::TInventory>,
+				InventoryPanel::set_label::<TPlayers::TPlayer, TLoadout::TSlots>,
+				panel_colors::<InventoryPanel>,
+				drag_item::<TPlayers::TPlayer, TLoadout::TInventory>,
+				drag_item::<TPlayers::TPlayer, TLoadout::TSlots>,
+				drop_item::<TLoadout::TInventory>,
+				drop_item::<TLoadout::TSlots>,
+				drop_item_external::<TLoadout::TInventory, TLoadout::TSlots>,
+				drop_item_external::<TLoadout::TSlots, TLoadout::TInventory>,
+			)
+				.chain()
+				.run_if(in_state(inventory)),
 		);
 	}
 
@@ -272,7 +339,7 @@ where
 
 	fn general_systems(&self, app: &mut App) {
 		let ui_ready = not(in_state(GameState::LoadingEssentialAssets));
-		let input_label_icons = InputLabel::<PlayerSlot>::icon::<TSettings::TKeyMap<PlayerSlot>>;
+		let input_label_icons = InputLabel::icon::<TSettings::TKeyMap<PlayerSlot>>;
 
 		app.register_derived_component::<MenuBackground, Node>()
 			.add_observer(UILabel::localize::<TLocalization::TLocalizationServer>)
@@ -289,8 +356,8 @@ where
 						input_label_icons("icons/keys"),
 						Icon::load_image,
 						Icon::insert_image,
-						Icon::insert_image_tooltip,
-						Icon::insert_fallback_text,
+						UILabel::icon_tooltip,
+						UILabel::text,
 					)
 						.chain(),
 				)
@@ -300,14 +367,24 @@ where
 	}
 }
 
-impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics> Plugin
-	for MenuPlugin<(TLoading, TSavegame, TSettings, TLocalization, TGraphics)>
+impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics, TPlayers, TLoadout> Plugin
+	for MenuPlugin<(
+		TLoading,
+		TSavegame,
+		TSettings,
+		TLocalization,
+		TGraphics,
+		TPlayers,
+		TLoadout,
+	)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TSettings: ThreadSafe + HandlesSettings,
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
+	TPlayers: ThreadSafe + HandlesPlayer,
+	TLoadout: ThreadSafe + HandlesLoadout,
 {
 	fn build(&self, app: &mut App) {
 		self.resources(app);
@@ -329,156 +406,5 @@ where
 			);
 			debug::setup_dropdown_test::<TLocalization::TLocalizationServer>(app);
 		}
-	}
-}
-
-impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics> HandlesLoadoutMenu
-	for MenuPlugin<(TLoading, TSavegame, TSettings, TLocalization, TGraphics)>
-where
-	TSettings: HandlesSettings,
-	TLocalization: HandlesLocalization,
-{
-	fn loadout_with_swapper<TSwap>() -> impl ConfigureInventory<TSwap>
-	where
-		TSwap: Component<Mutability = Mutable> + SwapValuesByKey,
-	{
-		InventoryConfiguration(PhantomData::<TLocalization::TLocalizationServer>)
-	}
-
-	fn configure_quickbar_menu<TContainer, TSystemMarker>(
-		app: &mut App,
-		get_changed_quickbar: impl IntoSystem<(), Change<TContainer>, TSystemMarker>,
-	) where
-		TContainer: GetItem<PlayerSlot> + ThreadSafe,
-		TContainer::TItem:
-			InspectAble<SkillToken> + InspectAble<SkillIcon> + InspectAble<SkillExecution>,
-	{
-		let play = GameState::Play;
-
-		app.add_systems(
-			Update,
-			(
-				get_changed_quickbar.pipe(EquipmentInfo::update),
-				set_quickbar_icons::<EquipmentInfo<TContainer>>,
-				panel_activity_colors_override::<
-					TSettings::TKeyMap<PlayerSlot>,
-					QuickbarPanel,
-					UiInputPrimer,
-					EquipmentInfo<TContainer>,
-				>,
-			)
-				.chain()
-				.run_if(in_state(play)),
-		);
-	}
-}
-
-struct InventoryConfiguration<TLocalization>(PhantomData<TLocalization>);
-
-impl<TSwap, TLocalization> ConfigureInventory<TSwap> for InventoryConfiguration<TLocalization>
-where
-	TSwap: Component<Mutability = Mutable> + SwapValuesByKey,
-	TLocalization: Localize + Resource,
-{
-	fn configure<TInventory, TSlots, TSystemMarker1, TSystemMarker2>(
-		&self,
-		app: &mut App,
-		get_changed_inventory: impl IntoSystem<(), Change<TInventory>, TSystemMarker1>,
-		get_changed_slots: impl IntoSystem<(), Change<TSlots>, TSystemMarker2>,
-	) where
-		TInventory: GetItem<InventoryKey> + ThreadSafe,
-		TInventory::TItem: InspectAble<ItemToken>,
-		TSlots: GetItem<PlayerSlot> + ThreadSafe,
-		TSlots::TItem: InspectAble<ItemToken>,
-	{
-		let inventory = GameState::IngameMenu(MenuState::Inventory);
-
-		app.add_systems(
-			Update,
-			(
-				get_changed_inventory.pipe(EquipmentInfo::update),
-				get_changed_slots.pipe(EquipmentInfo::update),
-				InventoryPanel::set_container_panels::<
-					TLocalization,
-					InventoryKey,
-					EquipmentInfo<TInventory>,
-				>,
-				InventoryPanel::set_container_panels::<
-					TLocalization,
-					PlayerSlot,
-					EquipmentInfo<TSlots>,
-				>,
-				panel_colors::<InventoryPanel>,
-				drag::<TSwap, InventoryKey>,
-				drag::<TSwap, PlayerSlot>,
-				drop::<TSwap, InventoryKey, InventoryKey>,
-				drop::<TSwap, InventoryKey, PlayerSlot>,
-				drop::<TSwap, PlayerSlot, PlayerSlot>,
-				drop::<TSwap, PlayerSlot, InventoryKey>,
-			)
-				.chain()
-				.run_if(in_state(inventory)),
-		);
-	}
-}
-
-impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics> HandlesComboMenu
-	for MenuPlugin<(TLoading, TSavegame, TSettings, TLocalization, TGraphics)>
-where
-	TLocalization: HandlesLocalization + ThreadSafe,
-	TGraphics: ThreadSafe + UiCamera,
-{
-	fn combos_with_skill<TSkill>() -> impl ConfigurePlayerCombos<TSkill>
-	where
-		TSkill: InspectAble<SkillToken> + InspectAble<SkillIcon> + PartialEq + Clone + ThreadSafe,
-	{
-		ComboConfiguration::<TLocalization, TGraphics>(PhantomData)
-	}
-}
-
-struct ComboConfiguration<TLocalization, TGraphics>(PhantomData<(TLocalization, TGraphics)>);
-
-impl<TGraphics, TLocalization, TSkill> ConfigurePlayerCombos<TSkill>
-	for ComboConfiguration<TLocalization, TGraphics>
-where
-	TGraphics: ThreadSafe + UiCamera,
-	TLocalization: HandlesLocalization + ThreadSafe,
-	TSkill: InspectAble<SkillToken> + InspectAble<SkillIcon> + Clone + PartialEq + ThreadSafe,
-{
-	fn configure<TUpdateCombos, TEquipment, M1, M2>(
-		&self,
-		app: &mut App,
-		get_changed_combos: impl IntoSystem<(), Change<TEquipment>, M1>,
-		update_combos: TUpdateCombos,
-	) where
-		TUpdateCombos: IntoSystem<In<Combo<PlayerSlot, Option<TSkill>>>, (), M2> + Copy,
-		TEquipment: GetComboAblePlayerSkills<TSkill>
-			+ NextKeys<PlayerSlot>
-			+ GetCombosOrdered<TSkill, PlayerSlot>
-			+ ThreadSafe,
-	{
-		let combo_overview = GameState::IngameMenu(MenuState::ComboOverview);
-
-		app.add_ui::<ComboOverview<TSkill>,TLocalization::TLocalizationServer, TGraphics::TUiCamera>(GameState::IngameMenu(
-			MenuState::ComboOverview,
-		))
-		.add_dropdown::<TLocalization::TLocalizationServer, ComboSkillButton<DropdownItem<Vertical>, TSkill>>()
-		.add_dropdown::<TLocalization::TLocalizationServer, ComboSkillButton<DropdownItem<Horizontal>, TSkill>>()
-		.add_systems(
-			Update,
-			(
-				get_changed_combos.pipe(EquipmentInfo::update),
-				select_successor_key::<EquipmentInfo<TEquipment>>,
-				Vertical::dropdown_skill_select_insert::<TSkill, EquipmentInfo<TEquipment>>,
-				Horizontal::dropdown_skill_select_insert::<TSkill, EquipmentInfo<TEquipment>>,
-				Vertical::dropdown_skill_select_click::<TSkill>.pipe(update_combos),
-				Horizontal::dropdown_skill_select_click::<TSkill>.pipe(update_combos),
-				update_combos_view_delete_skill::<TSkill>.pipe(update_combos),
-				ComboOverview::<TSkill>::update_combos_overview::<TSkill, EquipmentInfo<TEquipment>>,
-				Unusable::visualize_invalid_skill::<TSkill, EquipmentInfo<TEquipment>>,
-			)
-				.chain()
-				.run_if(in_state(combo_overview)),
-		);
 	}
 }

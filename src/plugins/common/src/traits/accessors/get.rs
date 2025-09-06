@@ -1,3 +1,5 @@
+use bevy::ecs::system::SystemParam;
+
 mod assets;
 
 pub trait Get<TKey> {
@@ -12,6 +14,22 @@ pub trait GetRef<TKey> {
 		Self: 'a;
 
 	fn get_ref(&self, key: &TKey) -> Option<Self::TValue<'_>>;
+}
+
+pub type AsParamEntry<'w, 's, T, TKey> = <T as GetParamEntry<'w, 's, TKey>>::TEntry;
+pub type AsParam<'w, 's, T, TKey> = <T as GetParamEntry<'w, 's, TKey>>::TParam;
+pub type AsParamItem<'w, 's, 'w2, 's2, T, TKey> =
+	<AsParam<'w, 's, T, TKey> as SystemParam>::Item<'w2, 's2>;
+
+pub trait GetParamEntry<'w, 's, TKey> {
+	type TParam: SystemParam;
+	type TEntry;
+
+	fn get_param_entry(
+		&self,
+		key: &TKey,
+		assets: &<Self::TParam as SystemParam>::Item<'_, '_>,
+	) -> Self::TEntry;
 }
 
 pub trait GetMut<TKey> {

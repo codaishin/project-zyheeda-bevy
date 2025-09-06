@@ -8,10 +8,11 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	components::{asset_model::AssetModel, essence::Essence},
-	tools::{item_description::ItemToken, item_type::ItemType},
+	tools::{item_type::ItemType, skill_execution::SkillExecution},
 	traits::{
+		accessors::get::RefInto,
+		handles_loadout::loadout::{ItemToken, NoItem, NoSkill, SkillIcon, SkillToken},
 		handles_localization::Token,
-		inspect_able::InspectAble,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
 	},
 };
@@ -25,8 +26,8 @@ pub struct Item {
 	pub item_type: ItemType,
 }
 
-impl InspectAble<ItemToken> for Item {
-	fn get_inspect_able_field(&self) -> &Token {
+impl<'a> RefInto<'a, &'a Token> for Item {
+	fn ref_into(&self) -> &Token {
 		&self.token
 	}
 }
@@ -78,6 +79,69 @@ impl VisualizeItem for HandSlot {
 				..
 			}) => AssetModel::path(path),
 			_ => AssetModel::none(),
+		}
+	}
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum SkillItem {
+	Some {
+		token: Token,
+		skill: Option<ItemSkill>,
+	},
+	None,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct ItemSkill {
+	pub(crate) token: Token,
+	pub(crate) icon: Handle<Image>,
+	pub(crate) execution: SkillExecution,
+}
+
+impl<'a> From<&'a SkillItem> for Result<ItemToken<'a>, NoItem> {
+	fn from(item: &'a SkillItem) -> Self {
+		match item {
+			SkillItem::Some {
+				token: item_token, ..
+			} => Ok(ItemToken(item_token)),
+			SkillItem::None => Err(NoItem),
+		}
+	}
+}
+
+impl<'a> From<&'a SkillItem> for Result<SkillToken<'a>, NoSkill> {
+	fn from(item: &'a SkillItem) -> Self {
+		match item {
+			SkillItem::Some {
+				skill: Some(ItemSkill { token, .. }),
+				..
+			} => Ok(SkillToken(token)),
+			_ => Err(NoSkill),
+		}
+	}
+}
+
+impl<'a> From<&'a SkillItem> for Result<SkillIcon<'a>, NoSkill> {
+	fn from(item: &'a SkillItem) -> Self {
+		match item {
+			SkillItem::Some {
+				skill: Some(ItemSkill { icon, .. }),
+				..
+			} => Ok(SkillIcon(icon)),
+			_ => Err(NoSkill),
+		}
+	}
+}
+
+impl<'a> From<&'a SkillItem> for Result<&'a SkillExecution, NoSkill> {
+	fn from(item: &'a SkillItem) -> Self {
+		match item {
+			SkillItem::Some {
+				skill: Some(ItemSkill { execution, .. }),
+				..
+			} => Ok(execution),
+			_ => Err(NoSkill),
 		}
 	}
 }

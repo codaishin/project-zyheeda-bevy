@@ -1,13 +1,17 @@
 use super::{KeyedPanel, inventory_panel::InventoryPanel, menu_background::MenuBackground};
 use crate::{
+	components::label::{UILabel, UILabelText},
 	tools::PanelState,
 	traits::{LoadUi, colors::HasPanelColors, insert_ui_content::InsertUiContent},
 };
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{
-	tools::{action_key::slot::PlayerSlot, inventory_key::InventoryKey},
+	tools::{
+		action_key::slot::{PlayerSlot, SlotKey},
+		inventory_key::InventoryKey,
+	},
 	traits::{
-		handles_localization::{Localize, LocalizeToken, localized::Localized},
+		handles_localization::{Localize, LocalizeToken, Token, localized::Localized},
 		iteration::{IterFinite, IterInfinite},
 		thread_safe::ThreadSafe,
 	},
@@ -61,14 +65,7 @@ where
 			})
 			.with_children(|parent| {
 				add_title(parent, inventory);
-				add_grid(
-					parent,
-					Localized::from(""),
-					5,
-					5,
-					|| keys.next_infinite(),
-					localize,
-				);
+				add_grid(parent, None, 5, 5, || keys.next_infinite());
 			});
 	}
 }
@@ -92,14 +89,7 @@ where
 			.with_children(|parent| {
 				add_title(parent, equipment);
 				for key in PlayerSlot::iterator() {
-					add_grid(
-						parent,
-						localize.localize_token(key).or_token(),
-						1,
-						1,
-						|| key,
-						localize,
-					);
+					add_grid(parent, Some(Token::from(key)), 1, 1, || SlotKey::from(key));
 				}
 			});
 	}
@@ -124,20 +114,15 @@ fn add_title(parent: &mut RelatedSpawnerCommands<ChildOf>, title: Localized) {
 		});
 }
 
-fn add_grid<TKey, TLocalization>(
+fn add_grid<TKey>(
 	parent: &mut RelatedSpawnerCommands<ChildOf>,
-	grid_label: Localized,
+	grid_label: Option<Token>,
 	element_count_x: u32,
 	element_count_y: u32,
 	mut element_key: impl FnMut() -> TKey,
-	localize: &TLocalization,
 ) where
 	TKey: ThreadSafe,
-	TLocalization: Localize,
 {
-	let label = &grid_label;
-	let empty = &localize.localize_token("inventory-item-empty").or_token();
-
 	for _ in 0..element_count_y {
 		parent
 			.spawn(Node {
@@ -146,14 +131,17 @@ fn add_grid<TKey, TLocalization>(
 				..default()
 			})
 			.with_children(|parent| {
-				parent.spawn((
-					Text::from(label),
-					TextFont {
-						font_size: 20.0,
-						..default()
-					},
-					TextColor(InventoryPanel::PANEL_COLORS.filled.text),
-				));
+				if let Some(token) = &grid_label {
+					parent.spawn((
+						TextFont {
+							font_size: 20.0,
+							..default()
+						},
+						TextColor(InventoryPanel::PANEL_COLORS.filled.text),
+						UILabel(token.clone()),
+					));
+				}
+
 				for _ in 0..element_count_x {
 					parent
 						.spawn((
@@ -171,7 +159,7 @@ fn add_grid<TKey, TLocalization>(
 						))
 						.with_children(|parent| {
 							parent.spawn((
-								Text::from(empty),
+								UILabelText,
 								TextFont {
 									font_size: 15.0,
 									..default()

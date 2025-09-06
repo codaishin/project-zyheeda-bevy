@@ -8,7 +8,7 @@ where
 		+ SetNextCombo<Option<ComboNode>>
 		+ 'a,
 {
-	fn advance_combo(&mut self, trigger: SlotKey, item_type: &ItemType) -> Option<Skill> {
+	fn advance_combo(&mut self, trigger: &SlotKey, item_type: &ItemType) -> Option<Skill> {
 		let Some((skill, next_combo)) = self.peek_next_recursive(trigger, item_type) else {
 			self.set_next_combo(None);
 			return None;
@@ -59,10 +59,10 @@ mod tests {
 
 		fn peek_next_recursive<'a>(
 			&'a self,
-			trigger: SlotKey,
+			trigger: &SlotKey,
 			item_type: &ItemType,
 		) -> Option<(&'a Skill, &'a ComboNode)> {
-			let skill = self.lookup.get(&(trigger, *item_type))?;
+			let skill = self.lookup.get(&(*trigger, *item_type))?;
 
 			Some((skill, &self.node))
 		}
@@ -107,7 +107,7 @@ mod tests {
 			},
 		);
 
-		combos.advance_combo(SlotKey(11), &ItemType::Pistol);
+		combos.advance_combo(&SlotKey(11), &ItemType::Pistol);
 	}
 
 	#[test]
@@ -126,7 +126,7 @@ mod tests {
 			},
 		);
 
-		let skill = combos.advance_combo(SlotKey(0), &ItemType::default());
+		let skill = combos.advance_combo(&SlotKey(0), &ItemType::default());
 
 		assert_eq!(
 			Some(Skill {
@@ -146,7 +146,7 @@ mod tests {
 				.return_const(());
 		});
 
-		combos.advance_combo(SlotKey(0), &ItemType::default());
+		combos.advance_combo(&SlotKey(0), &ItemType::default());
 	}
 
 	#[test]
@@ -155,7 +155,7 @@ mod tests {
 			mock.expect_set_next_combo().return_const(());
 		});
 
-		let skill = combos.advance_combo(SlotKey(0), &ItemType::default());
+		let skill = combos.advance_combo(&SlotKey(0), &ItemType::default());
 
 		assert_eq!(None, skill);
 	}

@@ -12,19 +12,14 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	tools::{
-		action_key::slot::SlotKey,
-		item_type::CompatibleItems,
-		skill_description::SkillToken,
-		skill_icon::SkillIcon,
-	},
+	tools::{action_key::slot::SlotKey, item_type::CompatibleItems},
 	traits::{
-		accessors::get::GetMut,
+		accessors::get::{GetMut, RefInto},
 		handles_custom_assets::AssetFolderPath,
 		handles_effects::HandlesAllEffects,
+		handles_loadout::loadout::{SkillIcon, SkillToken},
 		handles_localization::Token,
 		handles_skill_behaviors::{HandlesSkillBehaviors, SkillSpawner},
-		inspect_able::InspectAble,
 		load_asset::Path,
 	},
 	zyheeda_commands::ZyheedaCommands,
@@ -51,7 +46,7 @@ pub struct Skill {
 	pub animation: AnimationStrategy,
 	pub behavior: RunSkillBehavior,
 	pub compatible_items: CompatibleItems,
-	pub icon: Option<Handle<Image>>,
+	pub icon: Handle<Image>,
 }
 
 impl Display for Skill {
@@ -69,21 +64,15 @@ impl AssetFolderPath for Skill {
 	}
 }
 
-impl InspectAble<SkillToken> for Skill {
-	fn get_inspect_able_field(&self) -> &Token {
-		&self.token
+impl<'a> From<&'a Skill> for SkillToken<'a> {
+	fn from(Skill { token, .. }: &'a Skill) -> Self {
+		SkillToken(token)
 	}
 }
 
-impl InspectAble<SkillIcon> for Skill {
-	fn get_inspect_able_field(&self) -> &Option<Handle<Image>> {
-		&self.icon
-	}
-}
-
-impl<'a> From<&'a Skill> for Option<&'a Handle<Image>> {
+impl<'a> From<&'a Skill> for SkillIcon<'a> {
 	fn from(Skill { icon, .. }: &'a Skill) -> Self {
-		icon.as_ref()
+		Self(icon)
 	}
 }
 
@@ -128,15 +117,9 @@ impl From<&QueuedSkill> for SlotKey {
 	}
 }
 
-impl InspectAble<SkillToken> for QueuedSkill {
-	fn get_inspect_able_field(&self) -> &Token {
+impl<'a> RefInto<'a, &'a Token> for QueuedSkill {
+	fn ref_into(&self) -> &Token {
 		&self.skill.token
-	}
-}
-
-impl InspectAble<SkillIcon> for QueuedSkill {
-	fn get_inspect_able_field(&self) -> &Option<Handle<Image>> {
-		&self.skill.icon
 	}
 }
 

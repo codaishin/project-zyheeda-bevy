@@ -1,14 +1,12 @@
 pub(crate) mod advance_combo;
 pub(crate) mod flush;
 pub(crate) mod is_timed_out;
-pub(crate) mod loadout_key;
 pub(crate) mod peek_next;
 pub(crate) mod peek_next_recursive;
 pub(crate) mod skill_builder;
 pub(crate) mod skill_state;
 pub(crate) mod spawn_skill_behavior;
 pub(crate) mod visualize_item;
-pub(crate) mod write_item;
 
 use crate::{
 	behaviors::SkillCaster,
@@ -65,26 +63,11 @@ pub(crate) trait GetActiveSkill<TSkillState> {
 }
 
 pub(crate) trait AdvanceCombo {
-	fn advance_combo(&mut self, trigger: SlotKey, item_type: &ItemType) -> Option<Skill>;
+	fn advance_combo(&mut self, trigger: &SlotKey, item_type: &ItemType) -> Option<Skill>;
 }
 
 pub(crate) trait SetNextCombo<TCombo> {
 	fn set_next_combo(&mut self, value: TCombo);
-}
-
-pub trait GetNodeMut<TKey> {
-	type TNode<'a>
-	where
-		Self: 'a;
-	fn node_mut<'a>(&'a mut self, key: &TKey) -> Option<Self::TNode<'a>>;
-}
-
-pub trait Insert<T> {
-	fn insert(&mut self, value: T);
-}
-
-pub trait ReKey {
-	fn re_key(&mut self, key: SlotKey);
 }
 
 pub(crate) trait GetAnimationStrategy {

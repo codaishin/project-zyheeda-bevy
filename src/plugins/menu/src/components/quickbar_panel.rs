@@ -1,6 +1,6 @@
 use crate::{
 	tools::PanelState,
-	traits::colors::{ColorConfig, HasActiveColor, HasPanelColors, HasQueuedColor, PanelColors},
+	traits::colors::{ColorConfig, HasPanelColors, PanelColors},
 };
 use bevy::{color::Color, ecs::component::Component};
 use common::tools::action_key::slot::{PlayerSlot, SlotKey};
@@ -9,6 +9,36 @@ use common::tools::action_key::slot::{PlayerSlot, SlotKey};
 pub struct QuickbarPanel {
 	pub key: PlayerSlot,
 	pub state: PanelState,
+}
+
+impl QuickbarPanel {
+	pub(crate) const PANEL_COLORS: PanelColors = PanelColors {
+		disabled: PanelColors::DEFAULT.disabled,
+		pressed: ColorConfig {
+			background: Color::srgb(1., 0.27, 0.1),
+			text: Color::srgb(0.9, 0.9, 0.9),
+		},
+		hovered: PanelColors::DEFAULT.filled,
+		empty: PanelColors::DEFAULT.empty,
+		filled: PanelColors::DEFAULT.filled,
+	};
+	pub(crate) const ACTIVE_COLORS: ColorConfig = ColorConfig {
+		background: Color::srgb(0., 1., 0.),
+		text: Color::srgb(0.9, 0.9, 0.9),
+	};
+	pub(crate) const QUEUED_COLORS: ColorConfig = ColorConfig {
+		background: Color::srgb(0., 1., 1.),
+		text: Color::srgb(0.9, 0.9, 0.9),
+	};
+}
+
+impl From<PlayerSlot> for QuickbarPanel {
+	fn from(key: PlayerSlot) -> Self {
+		Self {
+			key,
+			state: PanelState::Empty,
+		}
+	}
 }
 
 impl From<&QuickbarPanel> for PanelState {
@@ -30,30 +60,7 @@ impl From<&QuickbarPanel> for SlotKey {
 }
 
 impl HasPanelColors for QuickbarPanel {
-	const PANEL_COLORS: PanelColors = PanelColors {
-		disabled: PanelColors::DEFAULT.disabled,
-		pressed: ColorConfig {
-			background: Color::srgb(1., 0.27, 0.1),
-			text: Color::srgb(0.9, 0.9, 0.9),
-		},
-		hovered: PanelColors::DEFAULT.filled,
-		empty: PanelColors::DEFAULT.empty,
-		filled: PanelColors::DEFAULT.filled,
-	};
-}
-
-impl HasActiveColor for QuickbarPanel {
-	const ACTIVE_COLORS: ColorConfig = ColorConfig {
-		background: Color::srgb(0., 1., 0.),
-		text: Color::srgb(0.9, 0.9, 0.9),
-	};
-}
-
-impl HasQueuedColor for QuickbarPanel {
-	const QUEUED_COLORS: ColorConfig = ColorConfig {
-		background: Color::srgb(0., 1., 1.),
-		text: Color::srgb(0.9, 0.9, 0.9),
-	};
+	const PANEL_COLORS: PanelColors = Self::PANEL_COLORS;
 }
 
 #[cfg(test)]

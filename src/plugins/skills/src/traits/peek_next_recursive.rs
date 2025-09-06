@@ -10,7 +10,7 @@ pub(crate) trait PeekNextRecursive {
 
 	fn peek_next_recursive<'a>(
 		&'a self,
-		trigger: SlotKey,
+		trigger: &SlotKey,
 		item_type: &ItemType,
 	) -> Option<(Self::TNext<'a>, Self::TRecursiveNode<'a>)>;
 }

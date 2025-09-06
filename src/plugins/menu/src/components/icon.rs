@@ -1,17 +1,13 @@
-use crate::components::label::UILabel;
 use bevy::prelude::*;
-use common::traits::handles_localization::Token;
 use std::path::PathBuf;
 
-pub(crate) type IconFallbackLabel = UILabel<Token>;
-
-#[derive(Component, Debug, PartialEq, Clone)]
-#[require(IconFallbackLabel = UILabel(Token::from("no-icon-image")))]
+#[derive(Component, Debug, PartialEq, Clone, Default)]
 pub(crate) enum Icon {
-	ImagePath(PathBuf),
-	Loading(Handle<Image>),
-	Loaded(Handle<Image>),
+	#[default]
 	None,
+	ImagePath(PathBuf),
+	Load(Handle<Image>),
+	Loaded(Handle<Image>),
 }
 
 impl Icon {
