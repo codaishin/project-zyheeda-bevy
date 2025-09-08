@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use common::{
 	errors::Error,
 	traits::{
-		handles_physics::HandlesPhysics,
+		handles_physics::HandlesPhysicalObjects,
 		handles_skill_behaviors::{Contact, ContactShape, Motion},
 		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
@@ -41,7 +41,7 @@ impl From<Contact> for SkillContact {
 
 impl<TPhysics> Prefab<TPhysics> for SkillContact
 where
-	TPhysics: HandlesPhysics,
+	TPhysics: HandlesPhysicalObjects,
 {
 	fn insert_prefab_components(
 		&self,

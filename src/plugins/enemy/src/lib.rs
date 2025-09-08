@@ -5,7 +5,7 @@ use crate::components::enemy::Enemy;
 use bevy::prelude::*;
 use common::traits::{
 	handles_enemies::HandlesEnemies,
-	handles_physics::{HandlesAllPhysicalEffects, HandlesPhysics},
+	handles_physics::{HandlesAllPhysicalEffects, HandlesPhysicalObjects},
 	handles_saving::HandlesSaving,
 	prefab::AddPrefabObserver,
 	thread_safe::ThreadSafe,
@@ -18,7 +18,7 @@ pub struct EnemyPlugin<TDependencies>(PhantomData<TDependencies>);
 impl<TSaveGame, TPhysics> EnemyPlugin<(TSaveGame, TPhysics)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesPhysics + HandlesAllPhysicalEffects,
+	TPhysics: ThreadSafe + HandlesPhysicalObjects + HandlesAllPhysicalEffects,
 {
 	pub fn from_plugins(_: &TSaveGame, _: &TPhysics) -> Self {
 		Self(PhantomData)
@@ -28,7 +28,7 @@ where
 impl<TSaveGame, TPhysics> Plugin for EnemyPlugin<(TSaveGame, TPhysics)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesPhysics + HandlesAllPhysicalEffects,
+	TPhysics: ThreadSafe + HandlesPhysicalObjects + HandlesAllPhysicalEffects,
 {
 	fn build(&self, app: &mut App) {
 		// Save config

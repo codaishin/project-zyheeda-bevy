@@ -23,7 +23,7 @@ use common::{
 	},
 	errors::{Error, Level},
 	traits::{
-		handles_physics::{HandlesPhysics, PhysicalObject},
+		handles_physics::{HandlesPhysicalObjects, PhysicalObject},
 		handles_skill_behaviors::{ContactShape, Motion, ProjectionShape},
 		prefab::PrefabEntityCommands,
 	},
@@ -39,7 +39,7 @@ trait SimplePrefab {
 		extra: Self::TExtra,
 	) -> Result<(), Error>
 	where
-		TPhysics: HandlesPhysics;
+		TPhysics: HandlesPhysicalObjects;
 }
 
 const SPHERE_MODEL: &str = "models/sphere.glb";
@@ -64,7 +64,7 @@ impl SimplePrefab for ContactShape {
 		offset: Vec3,
 	) -> Result<(), Error>
 	where
-		TPhysics: HandlesPhysics,
+		TPhysics: HandlesPhysicalObjects,
 	{
 		let (interaction, (model, model_transform), (collider, collider_transform)) = match self {
 			Self::Sphere {
@@ -155,7 +155,7 @@ impl SimplePrefab for ProjectionShape {
 		offset: Vec3,
 	) -> Result<(), Error>
 	where
-		TPhysics: HandlesPhysics,
+		TPhysics: HandlesPhysicalObjects,
 	{
 		let ((model, model_transform), (collider, collider_transform)) = match self {
 			Self::Sphere { radius } => (
@@ -230,7 +230,7 @@ impl SimplePrefab for Motion {
 		created_from: CreatedFrom,
 	) -> Result<(), Error>
 	where
-		TPhysics: HandlesPhysics,
+		TPhysics: HandlesPhysicalObjects,
 	{
 		match self.clone() {
 			Motion::HeldBy { caster, spawner } => {

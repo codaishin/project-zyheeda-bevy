@@ -24,7 +24,7 @@ use common::{
 		handles_enemies::HandlesEnemies,
 		handles_orientation::{Face, HandlesOrientation},
 		handles_path_finding::HandlesPathFinding,
-		handles_physics::{HandlesAllPhysicalEffects, HandlesPhysics},
+		handles_physics::{HandlesAllPhysicalEffects, HandlesPhysicalObjects},
 		handles_player::{
 			ConfiguresPlayerMovement,
 			HandlesPlayer,
@@ -90,7 +90,7 @@ where
 	TSettings: ThreadSafe + HandlesSettings,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
-	TPhysics: ThreadSafe + HandlesPhysics + HandlesAllPhysicalEffects,
+	TPhysics: ThreadSafe + HandlesPhysicalObjects + HandlesAllPhysicalEffects,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
 	TEnemies: ThreadSafe + HandlesEnemies,
 	TPlayers: ThreadSafe
@@ -128,7 +128,7 @@ where
 	TSettings: ThreadSafe + HandlesSettings,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
-	TPhysics: ThreadSafe + HandlesPhysics + HandlesAllPhysicalEffects,
+	TPhysics: ThreadSafe + HandlesPhysicalObjects + HandlesAllPhysicalEffects,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
 	TEnemies: ThreadSafe + HandlesEnemies,
 	TPlayers: ThreadSafe
