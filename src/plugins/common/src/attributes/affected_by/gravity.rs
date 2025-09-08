@@ -1,12 +1,12 @@
 use super::AffectedBy;
-use crate::{effects::gravity::Gravity, traits::handles_effects::HandlesEffect};
+use crate::{effects::gravity::Gravity, traits::handles_physics::HandlesPhysicalEffect};
 use bevy::prelude::*;
 
 impl AffectedBy<Gravity> {
-	pub fn bundle_via<TPlugin>(self) -> impl Bundle
+	pub fn component<TPlugin>(self) -> impl Bundle
 	where
-		TPlugin: HandlesEffect<Gravity>,
+		TPlugin: HandlesPhysicalEffect<Gravity>,
 	{
-		TPlugin::attribute(self)
+		TPlugin::into_affected_component(self)
 	}
 }

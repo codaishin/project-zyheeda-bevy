@@ -1,7 +1,7 @@
 use crate::behaviors::{SkillCaster, SkillTarget};
 use common::{
 	effects::force::Force,
-	traits::handles_effects::HandlesEffect,
+	traits::handles_physics::HandlesPhysicalEffect,
 	zyheeda_commands::ZyheedaEntityCommands,
 };
 use serde::{Deserialize, Serialize};
@@ -10,15 +10,15 @@ use serde::{Deserialize, Serialize};
 pub struct AttachForce;
 
 impl AttachForce {
-	pub fn attach<TInteractions>(
+	pub fn attach<TPhysics>(
 		&self,
 		entity: &mut ZyheedaEntityCommands,
 		_: &SkillCaster,
 		_: &SkillTarget,
 	) where
-		TInteractions: HandlesEffect<Force>,
+		TPhysics: HandlesPhysicalEffect<Force>,
 	{
-		entity.try_insert(TInteractions::effect(Force));
+		entity.try_insert(TPhysics::into_effect_component(Force));
 	}
 }
 
@@ -38,18 +38,24 @@ mod tests {
 
 	struct _HandlesInteractions;
 
-	impl HandlesEffect<Force> for _HandlesInteractions {
+	impl HandlesPhysicalEffect<Force> for _HandlesInteractions {
 		type TEffectComponent = _Force;
+		type TAffectedComponent = _Affected;
 
-		fn effect(effect: Force) -> Self::TEffectComponent {
+		fn into_effect_component(effect: Force) -> _Force {
 			_Force(effect)
 		}
 
-		fn attribute(_: AffectedBy<Force>) -> impl Bundle {}
+		fn into_affected_component(_: AffectedBy<Force>) -> _Affected {
+			_Affected
+		}
 	}
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Force(Force);
+
+	#[derive(Component)]
+	struct _Affected;
 
 	static CASTER: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
 

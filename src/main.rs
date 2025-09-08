@@ -8,13 +8,13 @@ use common::CommonPlugin;
 use enemy::EnemyPlugin;
 use frame_limiter::FrameLimiterPlugin;
 use graphics::GraphicsPlugin;
-use interactions::InteractionsPlugin;
 use light::LightPlugin;
 use loading::LoadingPlugin;
 use localization::LocalizationPlugin;
 use map_generation::MapGenerationPlugin;
 use menu::MenuPlugin;
 use path_finding::PathFindingPlugin;
+use physics::PhysicsPlugin;
 use player::PlayerPlugin;
 use savegame::SavegamePlugin;
 use settings::SettingsPlugin;
@@ -49,10 +49,9 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let savegame = SavegamePlugin::from_plugin(&settings).with_game_directory(game_dir);
 	let animations = AnimationsPlugin::from_plugin(&savegame);
 	let light = LightPlugin::from_plugin(&savegame);
-	let interactions = InteractionsPlugin::from_plugin(&savegame);
-	let players =
-		PlayerPlugin::from_plugins(&settings, &savegame, &animations, &interactions, &light);
-	let enemies = EnemyPlugin::from_plugins(&savegame, &interactions);
+	let physics = PhysicsPlugin::from_plugin(&savegame);
+	let players = PlayerPlugin::from_plugins(&settings, &savegame, &animations, &physics, &light);
+	let enemies = EnemyPlugin::from_plugins(&savegame, &physics);
 	let map_generation =
 		MapGenerationPlugin::from_plugins(&loading, &savegame, &light, &players, &enemies);
 	let path_finding = PathFindingPlugin::from_plugin(&map_generation);
@@ -60,20 +59,14 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		&settings,
 		&savegame,
 		&animations,
-		&interactions,
+		&physics,
 		&path_finding,
 		&enemies,
 		&players,
 	);
-	let graphics = GraphicsPlugin::from_plugins(&loading, &savegame, &interactions, &behaviors);
+	let graphics = GraphicsPlugin::from_plugins(&loading, &savegame, &physics, &behaviors);
 	let skills = SkillsPlugin::from_plugins(
-		&savegame,
-		&interactions,
-		&loading,
-		&settings,
-		&behaviors,
-		&players,
-		&enemies,
+		&savegame, &physics, &loading, &settings, &behaviors, &players, &enemies,
 	);
 	let menus = MenuPlugin::from_plugins(
 		&loading,
@@ -98,7 +91,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		.add_plugins(camera_control)
 		.add_plugins(enemies)
 		.add_plugins(graphics)
-		.add_plugins(interactions)
+		.add_plugins(physics)
 		.add_plugins(light)
 		.add_plugins(loading)
 		.add_plugins(localization)
@@ -161,7 +154,7 @@ pub mod debug_utils {
 	use super::*;
 	use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
 	use common::tools::action_key::user_input::UserInput;
-	use interactions::events::{InteractionEvent, Ray};
+	use physics::events::{InteractionEvent, Ray};
 	use std::ops::Not;
 
 	const FORWARD_GIZMO_COLOR: Color = Color::srgb(0., 0., 1.);

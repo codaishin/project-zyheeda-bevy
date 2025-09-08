@@ -27,8 +27,8 @@ use common::{
 		speed::Speed,
 	},
 	traits::{
-		handles_effects::HandlesAllEffects,
 		handles_enemies::{EnemySkillUsage, EnemyTarget},
+		handles_physics::HandlesAllPhysicalEffects,
 		handles_skill_behaviors::SkillSpawner,
 		load_asset::LoadAsset,
 		loadout::LoadoutConfig,
@@ -88,9 +88,9 @@ impl VoidSphere {
 	}
 }
 
-impl<TInteractions> Prefab<TInteractions> for VoidSphere
+impl<TPhysics> Prefab<TPhysics> for VoidSphere
 where
-	TInteractions: HandlesAllEffects,
+	TPhysics: HandlesAllPhysicalEffects,
 {
 	fn insert_prefab_components(
 		&self,
@@ -103,8 +103,8 @@ where
 
 		entity
 			.try_insert_if_new((
-				Health::new(5.).bundle_via::<TInteractions>(),
-				Affected::by::<Gravity>().bundle_via::<TInteractions>(),
+				Health::new(5.).component::<TPhysics>(),
+				Affected::by::<Gravity>().component::<TPhysics>(),
 			))
 			.with_child((VoidSpherePart::Core, VoidSphereCore, transform))
 			.with_child((

@@ -3,7 +3,10 @@ pub mod gravity;
 pub mod health_damage;
 
 use super::{SkillCaster, SkillTarget};
-use common::{traits::handles_effects::HandlesAllEffects, zyheeda_commands::ZyheedaEntityCommands};
+use common::{
+	traits::handles_physics::HandlesAllPhysicalEffects,
+	zyheeda_commands::ZyheedaEntityCommands,
+};
 use force::AttachForce;
 use gravity::AttachGravity;
 use health_damage::AttachHealthDamage;
@@ -28,7 +31,7 @@ impl AttachEffect {
 		caster: &SkillCaster,
 		target: &SkillTarget,
 	) where
-		TEffects: HandlesAllEffects,
+		TEffects: HandlesAllPhysicalEffects,
 	{
 		match self {
 			AttachEffect::Gravity(gr) => gr.attach::<TEffects>(entity, caster, target),

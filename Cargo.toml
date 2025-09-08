@@ -20,29 +20,8 @@ unic-langid = { version = "0.9.6", features = ["macros"] }
 uuid = "1.16.0"
 test-case = "3.3.1"
 
-# internal plugin crates
-animations = { path = "src/plugins/animations" }
-bars = { path = "src/plugins/bars" }
-behaviors = { path = "src/plugins/behaviors" }
-camera_control = { path = "src/plugins/camera_control" }
+# internal
 common = { path = "src/plugins/common" }
-enemy = { path = "src/plugins/enemy" }
-frame_limiter = { path = "src/plugins/frame_limiter" }
-interactions = { path = "src/plugins/interactions" }
-items = { path = "src/plugins/items" }
-light = { path = "src/plugins/light" }
-loading = { path = "src/plugins/loading" }
-localization = { path = "src/plugins/localization" }
-map_generation = { path = "src/plugins/map_generation" }
-menu = { path = "src/plugins/menu" }
-path_finding = { path = "src/plugins/path_finding" }
-player = { path = "src/plugins/player" }
-graphics = { path = "src/plugins/graphics" }
-savegame = { path = "src/plugins/savegame" }
-settings = { path = "src/plugins/settings" }
-skills = { path = "src/plugins/skills" }
-
-# internal crates
 macros = { path = "src/macros" }
 testing = { path = "src/testing" }
 zyheeda_core = { path = "src/zyheeda_core" }
@@ -78,25 +57,25 @@ unic-langid.workspace = true
 uuid.workspace = true
 
 # internal plugin crates
-animations.workspace = true
-bars.workspace = true
-behaviors.workspace = true
-camera_control.workspace = true
+animations = { path = "src/plugins/animations" }
+bars = { path = "src/plugins/bars" }
+behaviors = { path = "src/plugins/behaviors" }
+camera_control = { path = "src/plugins/camera_control" }
 common.workspace = true
-enemy.workspace = true
-frame_limiter.workspace = true
-interactions.workspace = true
-light.workspace = true
-loading.workspace = true
-localization.workspace = true
-map_generation.workspace = true
-menu.workspace = true
-path_finding.workspace = true
-player.workspace = true
-graphics.workspace = true
-savegame.workspace = true
-settings.workspace = true
-skills.workspace = true
+enemy = { path = "src/plugins/enemy" }
+frame_limiter = { path = "src/plugins/frame_limiter" }
+light = { path = "src/plugins/light" }
+loading = { path = "src/plugins/loading" }
+localization = { path = "src/plugins/localization" }
+map_generation = { path = "src/plugins/map_generation" }
+menu = { path = "src/plugins/menu" }
+path_finding = { path = "src/plugins/path_finding" }
+physics = { path = "src/plugins/physics" }
+player = { path = "src/plugins/player" }
+graphics = { path = "src/plugins/graphics" }
+savegame = { path = "src/plugins/savegame" }
+settings = { path = "src/plugins/settings" }
+skills = { path = "src/plugins/skills" }
 
 # internal crates
 macros.workspace = true

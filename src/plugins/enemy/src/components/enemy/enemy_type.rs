@@ -5,8 +5,8 @@ use common::{
 	errors::Error,
 	tools::{action_key::slot::SlotKey, bone::Bone},
 	traits::{
-		handles_effects::HandlesAllEffects,
 		handles_enemies::{EnemySkillUsage, EnemyType},
+		handles_physics::HandlesAllPhysicalEffects,
 		handles_skill_behaviors::SkillSpawner,
 		load_asset::LoadAsset,
 		loadout::LoadoutConfig,
@@ -99,16 +99,16 @@ impl From<&EnemyTypeInternal> for GroundOffset {
 	}
 }
 
-impl<TInteractions> Prefab<TInteractions> for EnemyTypeInternal
+impl<TPhysics> Prefab<TPhysics> for EnemyTypeInternal
 where
-	TInteractions: HandlesAllEffects,
+	TPhysics: HandlesAllPhysicalEffects,
 {
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		assets: &mut impl LoadAsset,
 	) -> Result<(), Error> {
-		use_matched!(self, |e| Prefab::<TInteractions>::insert_prefab_components(
+		use_matched!(self, |e| Prefab::<TPhysics>::insert_prefab_components(
 			e, entity, assets
 		))
 	}

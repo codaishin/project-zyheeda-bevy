@@ -5,11 +5,7 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	tools::Units,
-	traits::{
-		accessors::get::TryApplyOn,
-		cast_ray::TimeOfImpact,
-		handles_interactions::InteractAble,
-	},
+	traits::{accessors::get::TryApplyOn, cast_ray::TimeOfImpact, handles_physics::PhysicalObject},
 	zyheeda_commands::ZyheedaCommands,
 };
 
@@ -28,7 +24,7 @@ impl ActiveBeam {
 		mut beams: Query<BeamComponents>,
 	) {
 		for (entity, Blockable(beam), global_transform, ..) in &beams {
-			let InteractAble::Beam { range, .. } = beam else {
+			let PhysicalObject::Beam { range, .. } = beam else {
 				continue;
 			};
 
@@ -112,7 +108,7 @@ mod tests {
 			.spawn((
 				GlobalTransform::from(Transform::from_xyz(2., 2., 2.).looking_to(Dir3::X, Vec3::Y)),
 				Transform::from_xyz(1., 0., 0.).looking_to(Dir3::Z, Vec3::Y),
-				Blockable(InteractAble::Beam {
+				Blockable(PhysicalObject::Beam {
 					range: Units::from(100.),
 					blocked_by: default(),
 				}),
@@ -141,7 +137,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 0., 0.).looking_to(Dir3::Z, Vec3::Y),
-				Blockable(InteractAble::Beam {
+				Blockable(PhysicalObject::Beam {
 					range: Units::from(100.),
 					blocked_by: default(),
 				}),
@@ -180,7 +176,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 0., 0.).looking_to(Dir3::Z, Vec3::Y),
-				Blockable(InteractAble::Beam {
+				Blockable(PhysicalObject::Beam {
 					range: Units::from(100.),
 					blocked_by: default(),
 				}),
@@ -219,7 +215,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 0., 0.).looking_to(Dir3::Z, Vec3::Y),
-				Blockable(InteractAble::Beam {
+				Blockable(PhysicalObject::Beam {
 					range: Units::from(100.),
 					blocked_by: default(),
 				}),
@@ -267,7 +263,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 0., 0.).looking_to(Dir3::Z, Vec3::Y),
-				Blockable(InteractAble::Beam {
+				Blockable(PhysicalObject::Beam {
 					range: Units::from(100.),
 					blocked_by: default(),
 				}),

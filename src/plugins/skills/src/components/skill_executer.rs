@@ -15,7 +15,7 @@ use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
 		accessors::get::TryApplyOn,
-		handles_effects::HandlesAllEffects,
+		handles_physics::HandlesAllPhysicalEffects,
 		handles_skill_behaviors::{HandlesSkillBehaviors, SkillSpawner},
 	},
 	zyheeda_commands::ZyheedaCommands,
@@ -63,7 +63,7 @@ impl<TBehavior, TEffects, TSkillBehavior> Execute<TEffects, TSkillBehavior>
 	for SkillExecuter<TBehavior>
 where
 	TBehavior: SpawnSkillBehavior,
-	TEffects: HandlesAllEffects + 'static,
+	TEffects: HandlesAllPhysicalEffects + 'static,
 	TSkillBehavior: HandlesSkillBehaviors + 'static,
 {
 	fn execute(
@@ -113,7 +113,7 @@ mod tests {
 			collider_info::ColliderInfo,
 		},
 		traits::{
-			handles_effects::{Effect, HandlesEffect},
+			handles_physics::{Effect, HandlesPhysicalEffect},
 			handles_skill_behaviors::{Contact, HoldSkills, Projection, SkillEntities, SkillRoot},
 			register_persistent_entities::RegisterPersistentEntities,
 			thread_safe::ThreadSafe,
@@ -129,21 +129,27 @@ mod tests {
 
 	struct _HandlesEffects;
 
-	impl<T> HandlesEffect<T> for _HandlesEffects
+	impl<T> HandlesPhysicalEffect<T> for _HandlesEffects
 	where
 		T: Effect + ThreadSafe,
 	{
 		type TEffectComponent = _Effect;
+		type TAffectedComponent = _Affected;
 
-		fn effect(_: T) -> _Effect {
+		fn into_effect_component(_: T) -> _Effect {
 			_Effect
 		}
 
-		fn attribute(_: T::TTarget) -> impl Bundle {}
+		fn into_affected_component(_: T::TAffected) -> _Affected {
+			_Affected
+		}
 	}
 
 	#[derive(Component)]
 	struct _Effect;
+
+	#[derive(Component)]
+	struct _Affected;
 
 	struct _HandlesSkillBehaviors;
 
@@ -201,7 +207,7 @@ mod tests {
 			_: &SkillTarget,
 		) -> OnSkillStop
 		where
-			TEffects: HandlesAllEffects + 'static,
+			TEffects: HandlesAllPhysicalEffects + 'static,
 			TSkillBehaviors: HandlesSkillBehaviors + 'static,
 		{
 			self.0
@@ -229,7 +235,7 @@ mod tests {
 			target: &SkillTarget,
 		) -> OnSkillStop
 		where
-			TEffects: HandlesAllEffects + 'static,
+			TEffects: HandlesAllPhysicalEffects + 'static,
 			TSkillBehaviors: HandlesSkillBehaviors + 'static,
 		{
 			commands.spawn(_SpawnedBehavior {

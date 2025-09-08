@@ -10,7 +10,7 @@ use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
 	traits::{
-		handles_effects::HandlesAllEffects,
+		handles_physics::HandlesAllPhysicalEffects,
 		handles_skill_behaviors::{HandlesSkillBehaviors, SkillSpawner},
 	},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
@@ -95,7 +95,7 @@ impl SkillBehaviorConfig {
 		caster: &SkillCaster,
 		target: &SkillTarget,
 	) where
-		TEffects: HandlesAllEffects,
+		TEffects: HandlesAllPhysicalEffects,
 	{
 		for start in &self.contact {
 			start.attach::<TEffects>(entity, caster, target);
@@ -108,7 +108,7 @@ impl SkillBehaviorConfig {
 		caster: &SkillCaster,
 		target: &SkillTarget,
 	) where
-		TEffects: HandlesAllEffects,
+		TEffects: HandlesAllPhysicalEffects,
 	{
 		for start in &self.projection {
 			start.attach::<TEffects>(entity, caster, target);

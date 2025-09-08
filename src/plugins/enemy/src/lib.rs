@@ -3,37 +3,32 @@ mod systems;
 
 use crate::components::enemy::Enemy;
 use bevy::prelude::*;
-use common::{
-	effects::{gravity::Gravity, health_damage::HealthDamage},
-	traits::{
-		handles_effects::{HandlesAllEffects, HandlesEffect},
-		handles_enemies::HandlesEnemies,
-		handles_interactions::HandlesInteractions,
-		handles_saving::HandlesSaving,
-		prefab::AddPrefabObserver,
-		thread_safe::ThreadSafe,
-	},
+use common::traits::{
+	handles_enemies::HandlesEnemies,
+	handles_physics::{HandlesAllPhysicalEffects, HandlesPhysics},
+	handles_saving::HandlesSaving,
+	prefab::AddPrefabObserver,
+	thread_safe::ThreadSafe,
 };
 use std::marker::PhantomData;
 use systems::void_sphere::ring_rotation::ring_rotation;
 
 pub struct EnemyPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSaveGame, TInteractions> EnemyPlugin<(TSaveGame, TInteractions)>
+impl<TSaveGame, TPhysics> EnemyPlugin<(TSaveGame, TPhysics)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TInteractions:
-		ThreadSafe + HandlesInteractions + HandlesEffect<HealthDamage> + HandlesEffect<Gravity>,
+	TPhysics: ThreadSafe + HandlesPhysics + HandlesAllPhysicalEffects,
 {
-	pub fn from_plugins(_: &TSaveGame, _: &TInteractions) -> Self {
+	pub fn from_plugins(_: &TSaveGame, _: &TPhysics) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TSaveGame, TInteractions> Plugin for EnemyPlugin<(TSaveGame, TInteractions)>
+impl<TSaveGame, TPhysics> Plugin for EnemyPlugin<(TSaveGame, TPhysics)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TInteractions: ThreadSafe + HandlesInteractions + HandlesAllEffects,
+	TPhysics: ThreadSafe + HandlesPhysics + HandlesAllPhysicalEffects,
 {
 	fn build(&self, app: &mut App) {
 		// Save config
@@ -41,7 +36,7 @@ where
 		app.register_required_components::<Enemy, TSaveGame::TSaveEntityMarker>();
 
 		// prefabs
-		app.add_prefab_observer::<Enemy, TInteractions>();
+		app.add_prefab_observer::<Enemy, TPhysics>();
 
 		// behaviors
 		app.add_systems(Update, ring_rotation);

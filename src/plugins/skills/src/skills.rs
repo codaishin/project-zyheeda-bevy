@@ -16,9 +16,9 @@ use common::{
 	traits::{
 		accessors::get::{GetMut, RefInto},
 		handles_custom_assets::AssetFolderPath,
-		handles_effects::HandlesAllEffects,
 		handles_loadout::loadout::{SkillIcon, SkillToken},
 		handles_localization::Token,
+		handles_physics::HandlesAllPhysicalEffects,
 		handles_skill_behaviors::{HandlesSkillBehaviors, SkillSpawner},
 		load_asset::Path,
 	},
@@ -183,7 +183,7 @@ impl SpawnSkillBehavior for RunSkillBehavior {
 		target: &SkillTarget,
 	) -> OnSkillStop
 	where
-		TEffects: HandlesAllEffects + 'static,
+		TEffects: HandlesAllPhysicalEffects + 'static,
 		TSkillBehaviors: HandlesSkillBehaviors + 'static,
 	{
 		match self {
@@ -205,7 +205,7 @@ fn spawn<TEffects, TSkillBehaviors>(
 	target: &SkillTarget,
 ) -> OnSkillStop
 where
-	TEffects: HandlesAllEffects + 'static,
+	TEffects: HandlesAllPhysicalEffects + 'static,
 	TSkillBehaviors: HandlesSkillBehaviors + 'static,
 {
 	let shape = behavior.spawn_shape::<TSkillBehaviors>(commands, caster, spawner, target);
@@ -233,7 +233,7 @@ mod tests {
 		components::{outdated::Outdated, persistent_entity::PersistentEntity},
 		tools::collider_info::ColliderInfo,
 		traits::{
-			handles_effects::{Effect, HandlesEffect},
+			handles_physics::{Effect, HandlesPhysicalEffect},
 			handles_skill_behaviors::{Contact, HoldSkills, Projection, SkillEntities, SkillRoot},
 			thread_safe::ThreadSafe,
 		},
@@ -271,21 +271,27 @@ mod tests {
 
 	struct _HandlesEffects;
 
-	impl<T> HandlesEffect<T> for _HandlesEffects
+	impl<T> HandlesPhysicalEffect<T> for _HandlesEffects
 	where
 		T: Effect + ThreadSafe,
 	{
 		type TEffectComponent = _Effect;
+		type TAffectedComponent = _Affected;
 
-		fn effect(_: T) -> _Effect {
+		fn into_effect_component(_: T) -> _Effect {
 			_Effect
 		}
 
-		fn attribute(_: T::TTarget) -> impl Bundle {}
+		fn into_affected_component(_: T::TAffected) -> _Affected {
+			_Affected
+		}
 	}
 
 	#[derive(Component)]
 	struct _Effect;
+
+	#[derive(Component)]
+	struct _Affected;
 
 	struct _HandlesSkillBehaviors;
 

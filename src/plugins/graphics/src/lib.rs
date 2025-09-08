@@ -18,9 +18,9 @@ use common::{
 	states::game_state::LoadingGame,
 	systems::{remove_components::Remove, track_components::TrackComponentInSelfAndChildren},
 	traits::{
-		handles_effects::{Effect, HandlesAllEffects, HandlesEffect},
 		handles_graphics::{FirstPassCamera, UiCamera, WorldCameras},
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInSubApp},
+		handles_physics::{Effect, HandlesAllPhysicalEffects, HandlesPhysicalEffect},
 		handles_saving::HandlesSaving,
 		handles_skill_behaviors::HandlesSkillBehaviors,
 		prefab::AddPrefabObserver,
@@ -52,15 +52,15 @@ use traits::{
 
 pub struct GraphicsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TSavegame, TInteractions, TBehaviors>
-	GraphicsPlugin<(TLoading, TSavegame, TInteractions, TBehaviors)>
+impl<TLoading, TSavegame, TPhysics, TBehaviors>
+	GraphicsPlugin<(TLoading, TSavegame, TPhysics, TBehaviors)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
-	TInteractions: ThreadSafe + HandlesAllEffects,
+	TPhysics: ThreadSafe + HandlesAllPhysicalEffects,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors,
 {
-	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TInteractions, _: &TBehaviors) -> Self {
+	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TPhysics, _: &TBehaviors) -> Self {
 		Self(PhantomData)
 	}
 
@@ -70,9 +70,9 @@ where
 	}
 
 	fn effect_shaders(app: &mut App) {
-		register_custom_effect_shader::<TInteractions, Force>(app);
-		register_custom_effect_shader::<TInteractions, Gravity>(app);
-		register_effect_shader::<TInteractions, HealthDamage>(app);
+		register_custom_effect_shader::<TPhysics, Force>(app);
+		register_custom_effect_shader::<TPhysics, Gravity>(app);
+		register_effect_shader::<TPhysics, HealthDamage>(app);
 
 		app.register_required_components::<TBehaviors::TSkillContact, EffectShadersTarget>()
 			.register_required_components::<TBehaviors::TSkillProjection, EffectShadersTarget>()
@@ -115,12 +115,12 @@ where
 	}
 }
 
-impl<TLoading, TSavegame, TInteractions, TBehaviors> Plugin
-	for GraphicsPlugin<(TLoading, TSavegame, TInteractions, TBehaviors)>
+impl<TLoading, TSavegame, TPhysics, TBehaviors> Plugin
+	for GraphicsPlugin<(TLoading, TSavegame, TPhysics, TBehaviors)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
-	TInteractions: ThreadSafe + HandlesAllEffects,
+	TPhysics: ThreadSafe + HandlesAllPhysicalEffects,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors,
 {
 	fn build(&self, app: &mut App) {
@@ -155,28 +155,28 @@ impl RegisterShader for App {
 	}
 }
 
-fn register_custom_effect_shader<TInteractions, TEffect>(app: &mut App)
+fn register_custom_effect_shader<TPhysics, TEffect>(app: &mut App)
 where
-	TInteractions: HandlesEffect<TEffect> + 'static,
+	TPhysics: HandlesPhysicalEffect<TEffect> + 'static,
 	TEffect: GetEffectMaterial + Effect + ThreadSafe,
 	TEffect::TMaterial: ShadowsAwareMaterial,
 	<TEffect::TMaterial as AsBindGroup>::Data: PartialEq + Eq + Hash + Clone,
 {
 	app.register_shader::<TEffect::TMaterial>();
-	register_effect_shader::<TInteractions, TEffect>(app);
+	register_effect_shader::<TPhysics, TEffect>(app);
 }
 
-fn register_effect_shader<TInteractions, TEffect>(app: &mut App)
+fn register_effect_shader<TPhysics, TEffect>(app: &mut App)
 where
-	TInteractions: HandlesEffect<TEffect> + 'static,
+	TPhysics: HandlesPhysicalEffect<TEffect> + 'static,
 	TEffect: GetEffectMaterial + Effect + ThreadSafe,
 {
-	app.register_required_components::<TInteractions::TEffectComponent, EffectShader<TEffect>>();
+	app.register_required_components::<TPhysics::TEffectComponent, EffectShader<TEffect>>();
 	app.add_systems(
 		Update,
 		(
-			add_effect_shader::<TInteractions, TEffect>,
-			add_child_effect_shader::<TInteractions, TEffect>,
+			add_effect_shader::<TPhysics, TEffect>,
+			add_child_effect_shader::<TPhysics, TEffect>,
 		),
 	);
 }

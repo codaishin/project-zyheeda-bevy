@@ -23,7 +23,7 @@ use common::{
 	},
 	errors::{Error, Level},
 	traits::{
-		handles_interactions::{HandlesInteractions, InteractAble},
+		handles_physics::{HandlesPhysics, PhysicalObject},
 		handles_skill_behaviors::{ContactShape, Motion, ProjectionShape},
 		prefab::PrefabEntityCommands,
 	},
@@ -33,13 +33,13 @@ use std::f32::consts::PI;
 trait SimplePrefab {
 	type TExtra;
 
-	fn prefab<TInteractions>(
+	fn prefab<TPhysics>(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		extra: Self::TExtra,
 	) -> Result<(), Error>
 	where
-		TInteractions: HandlesInteractions;
+		TPhysics: HandlesPhysics;
 }
 
 const SPHERE_MODEL: &str = "models/sphere.glb";
@@ -58,13 +58,13 @@ const HALF_FORWARD: Transform = Transform::from_translation(Vec3 {
 impl SimplePrefab for ContactShape {
 	type TExtra = Vec3;
 
-	fn prefab<TInteractions>(
+	fn prefab<TPhysics>(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		offset: Vec3,
 	) -> Result<(), Error>
 	where
-		TInteractions: HandlesInteractions,
+		TPhysics: HandlesPhysics,
 	{
 		let (interaction, (model, model_transform), (collider, collider_transform)) = match self {
 			Self::Sphere {
@@ -72,7 +72,7 @@ impl SimplePrefab for ContactShape {
 				hollow_collider,
 				destroyed_by,
 			} => (
-				TInteractions::TInteraction::from(InteractAble::Fragile {
+				TPhysics::TPhysicalObjectComponent::from(PhysicalObject::Fragile {
 					destroyed_by: destroyed_by.clone(),
 				}),
 				(
@@ -90,7 +90,7 @@ impl SimplePrefab for ContactShape {
 				scale,
 				destroyed_by,
 			} => (
-				TInteractions::TInteraction::from(InteractAble::Fragile {
+				TPhysics::TPhysicalObjectComponent::from(PhysicalObject::Fragile {
 					destroyed_by: destroyed_by.clone(),
 				}),
 				(Model::Asset(model.clone()), Transform::from_scale(*scale)),
@@ -101,7 +101,7 @@ impl SimplePrefab for ContactShape {
 				blocked_by,
 				radius,
 			} => (
-				TInteractions::TInteraction::from(InteractAble::Beam {
+				TPhysics::TPhysicalObjectComponent::from(PhysicalObject::Beam {
 					range: *range,
 					blocked_by: blocked_by.clone(),
 				}),
@@ -149,13 +149,13 @@ impl SimplePrefab for ContactShape {
 impl SimplePrefab for ProjectionShape {
 	type TExtra = Vec3;
 
-	fn prefab<TInteractions>(
+	fn prefab<TPhysics>(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		offset: Vec3,
 	) -> Result<(), Error>
 	where
-		TInteractions: HandlesInteractions,
+		TPhysics: HandlesPhysics,
 	{
 		let ((model, model_transform), (collider, collider_transform)) = match self {
 			Self::Sphere { radius } => (
@@ -224,13 +224,13 @@ enum Model {
 impl SimplePrefab for Motion {
 	type TExtra = CreatedFrom;
 
-	fn prefab<TInteractions>(
+	fn prefab<TPhysics>(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		created_from: CreatedFrom,
 	) -> Result<(), Error>
 	where
-		TInteractions: HandlesInteractions,
+		TPhysics: HandlesPhysics,
 	{
 		match self.clone() {
 			Motion::HeldBy { caster, spawner } => {

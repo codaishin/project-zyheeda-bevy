@@ -1,4 +1,4 @@
-use crate::{effects::health_damage::HealthDamage, traits::handles_effects::HandlesEffect};
+use crate::{effects::health_damage::HealthDamage, traits::handles_physics::HandlesPhysicalEffect};
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -16,10 +16,10 @@ impl Health {
 		}
 	}
 
-	pub fn bundle_via<TPlugin>(self) -> impl Bundle
+	pub fn component<TPhysics>(self) -> impl Bundle
 	where
-		TPlugin: HandlesEffect<HealthDamage>,
+		TPhysics: HandlesPhysicalEffect<HealthDamage>,
 	{
-		TPlugin::attribute(self)
+		TPhysics::into_affected_component(self)
 	}
 }
