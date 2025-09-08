@@ -1,28 +1,40 @@
 use super::{Movement, OnMovementRemoved};
 use crate::traits::{IsDone, MovementUpdate, change_per_frame::MinDistance};
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::Velocity;
 use common::{
 	components::immobilized::Immobilized,
 	tools::speed::Speed,
-	traits::animation::GetMovementDirection,
+	traits::{animation::GetMovementDirection, handles_physics::Linear, thread_safe::ThreadSafe},
 };
-use std::time::Duration;
+use std::{cmp::Ordering, marker::PhantomData, time::Duration};
 
-#[derive(PartialEq, Debug, Default)]
-pub struct VelocityBased;
+#[derive(PartialEq, Debug)]
+pub struct Physical<TMotion>(PhantomData<TMotion>)
+where
+	TMotion: ThreadSafe;
 
-impl VelocityBased {
-	const SENSITIVITY: f32 = 2.;
-}
-
-impl MinDistance for VelocityBased {
-	fn min_distance(speed: Speed, delta: Duration) -> f32 {
-		delta.as_secs_f32() * *speed * Self::SENSITIVITY
+impl<TMotion> Default for Physical<TMotion>
+where
+	TMotion: ThreadSafe,
+{
+	fn default() -> Self {
+		Self(PhantomData)
 	}
 }
 
-impl MovementUpdate for Movement<VelocityBased> {
+impl<TMotion> MinDistance for Physical<TMotion>
+where
+	TMotion: ThreadSafe,
+{
+	fn min_distance(speed: Speed, delta: Duration) -> f32 {
+		delta.as_secs_f32() * *speed
+	}
+}
+
+impl<TMotion> MovementUpdate for Movement<Physical<TMotion>>
+where
+	TMotion: ThreadSafe + From<Linear> + Component,
+{
 	type TComponents<'a> = &'a GlobalTransform;
 	type TConstraint = Without<Immobilized>;
 
@@ -33,30 +45,37 @@ impl MovementUpdate for Movement<VelocityBased> {
 		speed: Speed,
 		delta: Duration,
 	) -> IsDone {
-		if self.target == transform.translation() {
-			return IsDone(true);
-		}
-
 		let direction = self.target - transform.translation();
+		let min_distance = Physical::<TMotion>::min_distance(speed, delta);
 
-		if direction.length() < VelocityBased::min_distance(speed, delta) {
-			return IsDone(true);
+		match direction.length().partial_cmp(&min_distance) {
+			Some(Ordering::Less | Ordering::Equal) | None => {
+				agent.try_insert(TMotion::from(Linear::ZERO));
+				IsDone(true)
+			}
+			_ => {
+				agent.try_insert(TMotion::from(Linear(direction.normalize() * *speed)));
+				IsDone(false)
+			}
 		}
-
-		agent.try_insert(Velocity::linear(direction.normalize() * *speed));
-		IsDone(false)
 	}
 }
 
-impl OnMovementRemoved for Movement<VelocityBased> {
+impl<TMotion> OnMovementRemoved for Movement<Physical<TMotion>>
+where
+	TMotion: Component + From<Linear>,
+{
 	type TConstraint = Without<Immobilized>;
 
 	fn on_movement_removed(entity: &mut EntityCommands) {
-		entity.try_insert(Velocity::zero());
+		entity.try_insert(TMotion::from(Linear::ZERO));
 	}
 }
 
-impl GetMovementDirection for Movement<VelocityBased> {
+impl<TMotion> GetMovementDirection for Movement<Physical<TMotion>>
+where
+	TMotion: ThreadSafe,
+{
 	fn movement_direction(&self, transform: &GlobalTransform) -> Option<Dir3> {
 		Dir3::try_from(self.target - transform.translation()).ok()
 	}
@@ -73,7 +92,6 @@ mod tests {
 			system::{Commands, Query, ScheduleSystem},
 		},
 	};
-	use bevy_rapier3d::dynamics::Velocity;
 	use common::tools::UnitsPerSecond;
 	use testing::SingleThreadedApp;
 
@@ -83,14 +101,23 @@ mod tests {
 	#[derive(Component)]
 	struct _UpdateParams((GlobalTransform, Speed));
 
+	#[derive(Component, Debug, PartialEq, Default)]
+	struct _Motion(Linear);
+
+	impl From<Linear> for _Motion {
+		fn from(linear: Linear) -> Self {
+			Self(linear)
+		}
+	}
+
 	#[allow(clippy::type_complexity)]
 	fn call_update(
 		delta: Duration,
 	) -> impl Fn(
 		Commands,
 		Query<
-			(Entity, &Movement<VelocityBased>, &_UpdateParams),
-			<Movement<VelocityBased> as MovementUpdate>::TConstraint,
+			(Entity, &Movement<Physical<_Motion>>, &_UpdateParams),
+			<Movement<Physical<_Motion>> as MovementUpdate>::TConstraint,
 		>,
 	) {
 		move |mut commands, agents| {
@@ -107,11 +134,11 @@ mod tests {
 
 	fn call_on_remove(
 		mut commands: Commands,
-		entities: Query<Entity, <Movement<VelocityBased> as OnMovementRemoved>::TConstraint>,
+		entities: Query<Entity, <Movement<Physical<_Motion>> as OnMovementRemoved>::TConstraint>,
 	) {
 		for entity in &entities {
 			let entity = &mut commands.entity(entity);
-			Movement::<VelocityBased>::on_movement_removed(entity);
+			Movement::<Physical<_Motion>>::on_movement_removed(entity);
 		}
 	}
 
@@ -131,7 +158,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Movement::<VelocityBased>::to(target),
+				Movement::<Physical<_Motion>>::to(target),
 				_UpdateParams((transform, speed)),
 			))
 			.id();
@@ -139,10 +166,10 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&Velocity::linear(
+			Some(&_Motion(Linear(
 				(target - transform.translation()).normalize() * *speed
-			)),
-			app.world().entity(agent).get::<Velocity>()
+			))),
+			app.world().entity(agent).get::<_Motion>()
 		);
 	}
 
@@ -155,7 +182,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Movement::<VelocityBased>::to(target),
+				Movement::<Physical<_Motion>>::to(target),
 				_UpdateParams((transform, speed)),
 				Immobilized,
 			))
@@ -163,7 +190,7 @@ mod tests {
 
 		app.update();
 
-		assert_eq!(None, app.world().entity(agent).get::<Velocity>());
+		assert_eq!(None, app.world().entity(agent).get::<_Motion>());
 	}
 
 	#[test]
@@ -175,7 +202,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Movement::<VelocityBased>::to(target),
+				Movement::<Physical<_Motion>>::to(target),
 				_UpdateParams((transform, speed)),
 			))
 			.id();
@@ -189,7 +216,7 @@ mod tests {
 	}
 
 	#[test]
-	fn update_removes_velocity_when_direction_length_zero() {
+	fn update_zeros_motion_when_direction_length_zero() {
 		let mut app = setup(call_update(Duration::from_millis(100)));
 		let transform = GlobalTransform::from_xyz(10., 0., 7.);
 		let target = Vec3::new(10., 0., 7.);
@@ -197,17 +224,40 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Movement::<VelocityBased>::to(target),
+				Movement::<Physical<_Motion>>::to(target),
 				_UpdateParams((transform, speed)),
-				Velocity::default(),
+				_Motion(Linear(Vec3::new(1., 2., 3.))),
 			))
 			.id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&Velocity::default()),
-			app.world().entity(agent).get::<Velocity>()
+			Some(&_Motion(Linear::ZERO)),
+			app.world().entity(agent).get::<_Motion>()
+		);
+	}
+
+	#[test]
+	fn update_zeros_motion_when_direction_length_not_computable() {
+		let mut app = setup(call_update(Duration::from_millis(100)));
+		let transform = GlobalTransform::from_xyz(10., 0., 7.);
+		let target = Vec3::new(f32::NAN, 0., 7.);
+		let speed = Speed(UnitsPerSecond::from(11.));
+		let agent = app
+			.world_mut()
+			.spawn((
+				Movement::<Physical<_Motion>>::to(target),
+				_UpdateParams((transform, speed)),
+				_Motion(Linear(Vec3::new(1., 2., 3.))),
+			))
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&_Motion(Linear::ZERO)),
+			app.world().entity(agent).get::<_Motion>()
 		);
 	}
 
@@ -222,7 +272,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Movement::<VelocityBased>::to(target),
+				Movement::<Physical<_Motion>>::to(target),
 				_UpdateParams((transform, speed)),
 			))
 			.id();
@@ -241,15 +291,14 @@ mod tests {
 		let speed = 11.;
 		let mut app = setup(call_update(Duration::from_secs(delta as u64)));
 		let transform = GlobalTransform::from_xyz(10., 0., 7.);
-		let target =
-			transform.translation() + Vec3::X * (VelocityBased::SENSITIVITY * speed * delta - 1.);
+		let target = transform.translation() + Vec3::X * (speed * delta - 1.);
 		let speed = Speed(UnitsPerSecond::from(speed));
 		let agent = app
 			.world_mut()
 			.spawn((
-				Movement::<VelocityBased>::to(target),
+				Movement::<Physical<_Motion>>::to(target),
 				_UpdateParams((transform, speed)),
-				Velocity::default(),
+				_Motion::default(),
 			))
 			.id();
 
@@ -257,8 +306,8 @@ mod tests {
 
 		let agent = app.world().entity(agent);
 		assert_eq!(
-			(Some(&Velocity::default()), Some(&_Result(IsDone(true)))),
-			(agent.get::<Velocity>(), agent.get::<_Result>())
+			(Some(&_Motion::default()), Some(&_Result(IsDone(true)))),
+			(agent.get::<_Motion>(), agent.get::<_Result>())
 		);
 	}
 
@@ -270,8 +319,8 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&Velocity::zero()),
-			app.world().entity(entity).get::<Velocity>()
+			Some(&_Motion(Linear::ZERO)),
+			app.world().entity(entity).get::<_Motion>()
 		);
 	}
 
@@ -282,14 +331,14 @@ mod tests {
 
 		app.update();
 
-		assert_eq!(None, app.world().entity(entity).get::<Velocity>());
+		assert_eq!(None, app.world().entity(entity).get::<_Motion>());
 	}
 
 	#[test]
 	fn get_movement_direction() {
 		let target = Vec3::new(1., 2., 3.);
 		let position = Vec3::new(4., 7., -1.);
-		let movement = Movement::<VelocityBased>::to(target);
+		let movement = Movement::<Physical<_Motion>>::to(target);
 
 		let direction = movement.movement_direction(&GlobalTransform::from_translation(position));
 
@@ -300,7 +349,7 @@ mod tests {
 	fn get_no_movement_direction_when_target_is_position() {
 		let target = Vec3::new(1., 2., 3.);
 		let position = target;
-		let movement = Movement::<VelocityBased>::to(target);
+		let movement = Movement::<Physical<_Motion>>::to(target);
 
 		let direction = movement.movement_direction(&GlobalTransform::from_translation(position));
 

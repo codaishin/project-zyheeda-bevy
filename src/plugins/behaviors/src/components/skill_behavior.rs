@@ -6,11 +6,11 @@ use super::{
 	Once,
 	fix_points::Anchor,
 	ground_target::GroundTarget,
-	set_to_move_forward::SetVelocityForward,
 	when_traveled_insert::WhenTraveled,
 };
 use crate::components::{
 	fix_points::fix_point::FixPoint,
+	set_motion_forward::SetMotionForward,
 	skill_behavior::skill_contact::CreatedFrom,
 };
 use bevy::prelude::*;
@@ -265,7 +265,7 @@ impl SimplePrefab for Motion {
 					RigidBody::Dynamic,
 					GravityScale(0.),
 					Ccd::enabled(),
-					WhenTraveled::via::<Velocity>().distance(range).destroy(),
+					WhenTraveled::distance(range).destroy(),
 				));
 
 				if created_from == CreatedFrom::Save {
@@ -276,7 +276,7 @@ impl SimplePrefab for Motion {
 					Anchor::<Once>::to_target(caster)
 						.on_fix_point(FixPoint(spawner))
 						.with_target_rotation(),
-					SetVelocityForward(speed),
+					SetMotionForward(speed),
 				));
 			}
 		}

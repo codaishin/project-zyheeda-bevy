@@ -1,25 +1,35 @@
 use crate::{
 	Movement,
 	PathOrWasd,
-	components::movement::velocity_based::VelocityBased,
 	systems::movement::{
 		insert_process_component::InputProcessComponent,
 		parse_pointer_movement::PointMovementInput,
 	},
 };
 use bevy::prelude::*;
+use common::traits::thread_safe::ThreadSafe;
+use std::marker::PhantomData;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub(crate) struct PointerInput(pub(crate) Vec3);
+pub(crate) struct PointerInput<TMethod> {
+	pub(crate) target: Vec3,
+	_m: PhantomData<TMethod>,
+}
 
-impl From<Vec3> for PointerInput {
+impl<TMethod> From<Vec3> for PointerInput<TMethod> {
 	fn from(translation: Vec3) -> Self {
-		Self(translation)
+		Self {
+			target: translation,
+			_m: PhantomData,
+		}
 	}
 }
 
-impl InputProcessComponent for PointerInput {
-	type TComponent = Movement<PathOrWasd<VelocityBased>>;
+impl<TMethod> InputProcessComponent for PointerInput<TMethod>
+where
+	TMethod: ThreadSafe,
+{
+	type TComponent = Movement<PathOrWasd<TMethod>>;
 }
 
-impl PointMovementInput for PointerInput {}
+impl<TMethod> PointMovementInput for PointerInput<TMethod> {}

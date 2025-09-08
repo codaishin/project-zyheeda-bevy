@@ -17,8 +17,12 @@ pub trait HandlesMotion {
 	type TMotion: Component + From<Linear>;
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub struct Linear(pub Vec3);
+
+impl Linear {
+	pub const ZERO: Self = Self(Vec3::ZERO);
+}
 
 pub trait HandlesAllPhysicalEffects:
 	HandlesPhysicalEffect<HealthDamage> + HandlesPhysicalEffect<Gravity> + HandlesPhysicalEffect<Force>

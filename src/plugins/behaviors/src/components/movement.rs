@@ -1,5 +1,5 @@
 pub(crate) mod path_or_wasd;
-pub(crate) mod velocity_based;
+pub(crate) mod physical;
 
 mod dto;
 
