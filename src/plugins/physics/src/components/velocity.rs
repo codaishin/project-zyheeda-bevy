@@ -4,14 +4,17 @@ use common::traits::{
 	handles_physics::Linear,
 	register_derived_component::{DerivableFrom, InsertDerivedComponent},
 };
+use macros::SavableComponent;
+use serde::{Deserialize, Serialize};
 
-#[derive(Component, Debug, PartialEq)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[component(immutable)]
 pub enum Motion {
-	Linear(Linear),
+	Linear(Vec3),
 }
 
 impl From<Linear> for Motion {
-	fn from(velocity: Linear) -> Self {
+	fn from(Linear(velocity): Linear) -> Self {
 		Self::Linear(velocity)
 	}
 }
@@ -22,7 +25,7 @@ impl DerivableFrom<'_, '_, Motion> for Velocity {
 
 	fn derive_from(physical_velocity: &Motion, _: &()) -> Self {
 		match physical_velocity {
-			Motion::Linear(Linear(velocity)) => Velocity::linear(*velocity),
+			Motion::Linear(velocity) => Velocity::linear(*velocity),
 		}
 	}
 }

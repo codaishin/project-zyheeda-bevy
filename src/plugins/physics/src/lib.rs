@@ -73,6 +73,8 @@ where
 	TSaveGame: ThreadSafe + HandlesSaving,
 {
 	fn build(&self, app: &mut App) {
+		TSaveGame::register_savable_component::<Motion>(app);
+
 		app
 			// Deal health damage
 			.register_required_components::<HealthDamageEffect, InteractingEntities>()
