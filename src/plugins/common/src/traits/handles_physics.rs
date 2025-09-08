@@ -6,11 +6,22 @@ use crate::{
 use bevy::prelude::*;
 use std::collections::HashSet;
 
-pub trait HandlesPhysics {
+pub trait HandlesPhysicalObjects {
 	type TSystems: SystemSet;
 	type TPhysicalObjectComponent: Component + From<PhysicalObject>;
 
 	const SYSTEMS: Self::TSystems;
+}
+
+pub trait HandlesMotion {
+	type TMotion: Component + From<Linear>;
+}
+
+#[derive(Debug, PartialEq, Default)]
+pub struct Linear(pub Vec3);
+
+impl Linear {
+	pub const ZERO: Self = Self(Vec3::ZERO);
 }
 
 pub trait HandlesAllPhysicalEffects:

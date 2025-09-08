@@ -1,64 +1,38 @@
 use bevy::prelude::*;
 use common::{tools::Units, traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
-use std::marker::PhantomData;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub(crate) struct WhenTraveled<TTravel> {
+pub(crate) struct WhenTraveled {
 	distance: Units,
-	phantom_data: PhantomData<TTravel>,
 }
 
-impl WhenTraveled<()> {
-	pub(crate) fn via<TTravel>() -> WhenTraveled<TTravel>
-	where
-		TTravel: Component,
-	{
-		WhenTraveled {
-			distance: Units::from(0.),
-			phantom_data: PhantomData,
-		}
-	}
-}
-
-impl<TTravel> WhenTraveled<TTravel>
-where
-	TTravel: Component,
-{
-	pub(crate) fn distance(mut self, distance: Units) -> Self {
-		self.distance = distance;
-		self
+impl WhenTraveled {
+	pub(crate) fn distance(distance: Units) -> Self {
+		Self { distance }
 	}
 
-	pub(crate) fn destroy(self) -> DestroyAfterDistanceTraveled<TTravel> {
+	pub(crate) fn destroy(self) -> DestroyAfterDistanceTraveled {
 		DestroyAfterDistanceTraveled {
 			remaining_distance: self.distance,
-			phantom_data: PhantomData,
 		}
 	}
 }
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
-pub(crate) struct DestroyAfterDistanceTraveled<TTravel> {
+pub(crate) struct DestroyAfterDistanceTraveled {
 	remaining_distance: Units,
-	phantom_data: PhantomData<TTravel>,
 }
 
-impl<TTravel> DestroyAfterDistanceTraveled<TTravel> {
+impl DestroyAfterDistanceTraveled {
 	pub(crate) fn remaining_distance(&self) -> Units {
 		self.remaining_distance
 	}
 }
 
-impl<TTravel> DestroyAfterDistanceTraveled<TTravel>
-where
-	TTravel: Component,
-{
+impl DestroyAfterDistanceTraveled {
 	pub(crate) fn system(
 		mut commands: ZyheedaCommands,
-		mut transforms: Query<
-			(Entity, &mut Self, &Transform, Option<&LastTranslation>),
-			With<TTravel>,
-		>,
+		mut transforms: Query<(Entity, &mut Self, &Transform, Option<&LastTranslation>)>,
 	) {
 		for (entity, mut travel, transform, last_translation) in &mut transforms {
 			match last_translation {
@@ -108,12 +82,9 @@ mod tests {
 	use super::*;
 	use testing::SingleThreadedApp;
 
-	#[derive(Component, Debug, PartialEq, Default)]
-	struct _Travel;
-
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, DestroyAfterDistanceTraveled::<_Travel>::system);
+		app.add_systems(Update, DestroyAfterDistanceTraveled::system);
 
 		app
 	}
@@ -125,10 +96,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 2., 3.),
-				WhenTraveled::via::<_Travel>()
-					.distance(Units::from(10.))
-					.destroy(),
-				_Travel,
+				WhenTraveled::distance(Units::from(10.)).destroy(),
 			))
 			.id();
 
@@ -148,10 +116,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 2., 3.),
-				WhenTraveled::via::<_Travel>()
-					.distance(Units::from(5.))
-					.destroy(),
-				_Travel,
+				WhenTraveled::distance(Units::from(5.)).destroy(),
 			))
 			.id();
 
@@ -171,10 +136,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 2., 3.),
-				WhenTraveled::via::<_Travel>()
-					.distance(Units::from(2.))
-					.destroy(),
-				_Travel,
+				WhenTraveled::distance(Units::from(2.)).destroy(),
 			))
 			.id();
 
@@ -198,10 +160,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 2., 3.),
-				WhenTraveled::via::<_Travel>()
-					.distance(Units::from(10.))
-					.destroy(),
-				_Travel,
+				WhenTraveled::distance(Units::from(10.)).destroy(),
 			))
 			.id();
 
@@ -212,27 +171,5 @@ mod tests {
 		app.update();
 
 		assert!(app.world().get_entity(entity).is_err());
-	}
-
-	#[test]
-	fn only_destroy_travel_component_present() {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				Transform::from_xyz(1., 2., 3.),
-				WhenTraveled::via::<_Travel>()
-					.distance(Units::from(10.))
-					.destroy(),
-			))
-			.id();
-
-		app.update();
-		app.world_mut()
-			.entity_mut(entity)
-			.insert(Transform::from_xyz(1., 12.1, 3.));
-		app.update();
-
-		assert!(app.world().get_entity(entity).is_ok());
 	}
 }

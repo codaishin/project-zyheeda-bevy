@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use common::{
 	errors::Error,
 	traits::{
-		handles_physics::HandlesPhysics,
+		handles_physics::HandlesPhysicalObjects,
 		handles_skill_behaviors::{Projection, ProjectionOffset, ProjectionShape},
 		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
@@ -27,7 +27,7 @@ impl From<Projection> for SkillProjection {
 
 impl<TPhysics> Prefab<TPhysics> for SkillProjection
 where
-	TPhysics: HandlesPhysics,
+	TPhysics: HandlesPhysicalObjects,
 {
 	fn insert_prefab_components(
 		&self,

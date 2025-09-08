@@ -3,13 +3,10 @@ use crate::{
 	components::skill_behavior::skill_contact::SkillContact,
 };
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::Velocity;
 use common::traits::handles_skill_behaviors::Motion;
 
 impl SkillContact {
-	pub(crate) fn update_range(
-		mut contacts: Query<(&mut Self, &DestroyAfterDistanceTraveled<Velocity>)>,
-	) {
+	pub(crate) fn update_range(mut contacts: Query<(&mut Self, &DestroyAfterDistanceTraveled)>) {
 		for (mut contact, range_limiter) in &mut contacts {
 			let Motion::Projectile { range, .. } = &mut contact.motion else {
 				continue;
@@ -26,7 +23,6 @@ mod tests {
 		skill_behavior::skill_contact::CreatedFrom,
 		when_traveled_insert::WhenTraveled,
 	};
-	use bevy_rapier3d::prelude::Velocity;
 	use common::{
 		components::persistent_entity::PersistentEntity,
 		tools::{Units, UnitsPerSecond},
@@ -68,9 +64,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				SkillContact::fake_projectile_motion(Units::from(100.)),
-				WhenTraveled::via::<Velocity>()
-					.distance(Units::from(42.))
-					.destroy(),
+				WhenTraveled::distance(Units::from(42.)).destroy(),
 			))
 			.id();
 

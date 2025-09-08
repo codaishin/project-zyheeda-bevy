@@ -6,11 +6,11 @@ use super::{
 	Once,
 	fix_points::Anchor,
 	ground_target::GroundTarget,
-	set_to_move_forward::SetVelocityForward,
 	when_traveled_insert::WhenTraveled,
 };
 use crate::components::{
 	fix_points::fix_point::FixPoint,
+	set_motion_forward::SetMotionForward,
 	skill_behavior::skill_contact::CreatedFrom,
 };
 use bevy::prelude::*;
@@ -23,7 +23,7 @@ use common::{
 	},
 	errors::{Error, Level},
 	traits::{
-		handles_physics::{HandlesPhysics, PhysicalObject},
+		handles_physics::{HandlesPhysicalObjects, PhysicalObject},
 		handles_skill_behaviors::{ContactShape, Motion, ProjectionShape},
 		prefab::PrefabEntityCommands,
 	},
@@ -39,7 +39,7 @@ trait SimplePrefab {
 		extra: Self::TExtra,
 	) -> Result<(), Error>
 	where
-		TPhysics: HandlesPhysics;
+		TPhysics: HandlesPhysicalObjects;
 }
 
 const SPHERE_MODEL: &str = "models/sphere.glb";
@@ -64,7 +64,7 @@ impl SimplePrefab for ContactShape {
 		offset: Vec3,
 	) -> Result<(), Error>
 	where
-		TPhysics: HandlesPhysics,
+		TPhysics: HandlesPhysicalObjects,
 	{
 		let (interaction, (model, model_transform), (collider, collider_transform)) = match self {
 			Self::Sphere {
@@ -155,7 +155,7 @@ impl SimplePrefab for ProjectionShape {
 		offset: Vec3,
 	) -> Result<(), Error>
 	where
-		TPhysics: HandlesPhysics,
+		TPhysics: HandlesPhysicalObjects,
 	{
 		let ((model, model_transform), (collider, collider_transform)) = match self {
 			Self::Sphere { radius } => (
@@ -230,7 +230,7 @@ impl SimplePrefab for Motion {
 		created_from: CreatedFrom,
 	) -> Result<(), Error>
 	where
-		TPhysics: HandlesPhysics,
+		TPhysics: HandlesPhysicalObjects,
 	{
 		match self.clone() {
 			Motion::HeldBy { caster, spawner } => {
@@ -265,7 +265,7 @@ impl SimplePrefab for Motion {
 					RigidBody::Dynamic,
 					GravityScale(0.),
 					Ccd::enabled(),
-					WhenTraveled::via::<Velocity>().distance(range).destroy(),
+					WhenTraveled::distance(range).destroy(),
 				));
 
 				if created_from == CreatedFrom::Save {
@@ -276,7 +276,7 @@ impl SimplePrefab for Motion {
 					Anchor::<Once>::to_target(caster)
 						.on_fix_point(FixPoint(spawner))
 						.with_target_rotation(),
-					SetVelocityForward(speed),
+					SetMotionForward(speed),
 				));
 			}
 		}

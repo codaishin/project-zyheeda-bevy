@@ -12,7 +12,6 @@ use crate::{
 	systems::{trigger_state::TriggerState, write_buffer::WriteBufferSystem},
 };
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::*;
 use common::{
 	components::{
 		child_of_persistent::ChildOfPersistent,
@@ -96,7 +95,6 @@ where
 
 		Self::register_savable_component::<Name>(app);
 		Self::register_savable_component::<Transform>(app);
-		Self::register_savable_component::<Velocity>(app);
 		Self::register_savable_component::<PersistentEntity>(app);
 		Self::register_savable_component::<ChildOfPersistent>(app);
 		Self::register_savable_component::<Lifetime>(app);

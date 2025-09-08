@@ -12,7 +12,6 @@ use crate::{
 	systems::{face::execute_enemy_face::execute_enemy_face, movement::compute_path::MovementPath},
 };
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::Velocity;
 use common::{
 	components::{child_of_persistent::ChildOfPersistent, persistent_entity::PersistentEntity},
 	states::game_state::GameState,
@@ -24,7 +23,7 @@ use common::{
 		handles_enemies::HandlesEnemies,
 		handles_orientation::{Face, HandlesOrientation},
 		handles_path_finding::HandlesPathFinding,
-		handles_physics::{HandlesAllPhysicalEffects, HandlesPhysics},
+		handles_physics::{HandlesAllPhysicalEffects, HandlesMotion, HandlesPhysicalObjects},
 		handles_player::{
 			ConfiguresPlayerMovement,
 			HandlesPlayer,
@@ -53,8 +52,8 @@ use components::{
 	Once,
 	OverrideFace,
 	ground_target::GroundTarget,
-	movement::{Movement, path_or_wasd::PathOrWasd, velocity_based::VelocityBased},
-	set_to_move_forward::SetVelocityForward,
+	movement::{Movement, path_or_wasd::PathOrWasd, physical::Physical},
+	set_motion_forward::SetMotionForward,
 	skill_behavior::{skill_contact::SkillContact, skill_projection::SkillProjection},
 	when_traveled_insert::DestroyAfterDistanceTraveled,
 };
@@ -90,7 +89,7 @@ where
 	TSettings: ThreadSafe + HandlesSettings,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
-	TPhysics: ThreadSafe + HandlesPhysics + HandlesAllPhysicalEffects,
+	TPhysics: ThreadSafe + HandlesPhysicalObjects + HandlesAllPhysicalEffects,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
 	TEnemies: ThreadSafe + HandlesEnemies,
 	TPlayers: ThreadSafe
@@ -128,7 +127,7 @@ where
 	TSettings: ThreadSafe + HandlesSettings,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
-	TPhysics: ThreadSafe + HandlesPhysics + HandlesAllPhysicalEffects,
+	TPhysics: ThreadSafe + HandlesPhysicalObjects + HandlesMotion + HandlesAllPhysicalEffects,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
 	TEnemies: ThreadSafe + HandlesEnemies,
 	TPlayers: ThreadSafe
@@ -139,15 +138,21 @@ where
 		+ ConfiguresPlayerMovement,
 {
 	fn build(&self, app: &mut App) {
-		TAnimations::register_movement_direction::<Movement<VelocityBased>>(app);
+		TAnimations::register_movement_direction::<Movement<Physical<TPhysics::TMotion>>>(app);
+
 		TSaveGame::register_savable_component::<SkillContact>(app);
 		TSaveGame::register_savable_component::<SkillProjection>(app);
 		TSaveGame::register_savable_component::<Attacking>(app);
-		TSaveGame::register_savable_component::<Movement<PathOrWasd<VelocityBased>>>(app);
 		TSaveGame::register_savable_component::<OverrideFace>(app);
+		TSaveGame::register_savable_component::<Movement<PathOrWasd<Physical<TPhysics::TMotion>>>>(
+			app,
+		);
 
-		let point_input = PointerInput::parse::<TPlayers::TCamRay, TSettings::TKeyMap<MovementKey>>;
-		let wasd_input = WasdInput::<VelocityBased>::parse::<
+		let point_input = PointerInput::<Physical<TPhysics::TMotion>>::parse::<
+			TPlayers::TCamRay,
+			TSettings::TKeyMap<MovementKey>,
+		>;
+		let wasd_input = WasdInput::<Physical<TPhysics::TMotion>>::parse::<
 			TPlayers::TPlayerMainCamera,
 			TPlayers::TPlayerMovement,
 			TSettings::TKeyMap<MovementKey>,
@@ -158,29 +163,31 @@ where
 			.pipe(OnError::log_and_return(|| None));
 
 		let compute_player_path = TPlayers::TPlayerMovement::compute_path::<
-			VelocityBased,
+			Physical<TPhysics::TMotion>,
 			TPathFinding::TComputePath,
 			TPathFinding::TComputerRef,
 		>;
-		let execute_player_path =
-			TPlayers::TPlayerMovement::execute_movement::<Movement<PathOrWasd<VelocityBased>>>;
+		let execute_player_path = TPlayers::TPlayerMovement::execute_movement::<
+			Movement<PathOrWasd<Physical<TPhysics::TMotion>>>,
+		>;
 		let execute_player_movement =
-			TPlayers::TPlayerMovement::execute_movement::<Movement<VelocityBased>>;
+			TPlayers::TPlayerMovement::execute_movement::<Movement<Physical<TPhysics::TMotion>>>;
 		let animate_player_movement = TPlayers::TPlayerMovement::animate_movement::<
-			Movement<VelocityBased>,
+			Movement<Physical<TPhysics::TMotion>>,
 			TAnimations::TAnimationDispatch,
 		>;
 
 		let compute_enemy_path = TEnemies::TEnemy::compute_path::<
-			VelocityBased,
+			Physical<TPhysics::TMotion>,
 			TPathFinding::TComputePath,
 			TPathFinding::TComputerRef,
 		>;
 		let execute_enemy_path =
-			TEnemies::TEnemy::execute_movement::<Movement<PathOrWasd<VelocityBased>>>;
-		let execute_enemy_movement = TEnemies::TEnemy::execute_movement::<Movement<VelocityBased>>;
+			TEnemies::TEnemy::execute_movement::<Movement<PathOrWasd<Physical<TPhysics::TMotion>>>>;
+		let execute_enemy_movement =
+			TEnemies::TEnemy::execute_movement::<Movement<Physical<TPhysics::TMotion>>>;
 		let animate_enemy_movement = TEnemies::TEnemy::animate_movement::<
-			Movement<VelocityBased>,
+			Movement<Physical<TPhysics::TMotion>>,
 			TAnimations::TAnimationDispatch,
 		>;
 
@@ -201,8 +208,8 @@ where
 				(
 					// Prep systems
 					(
-						PathOrWasd::<VelocityBased>::cleanup,
-						Movement::<VelocityBased>::cleanup,
+						PathOrWasd::<Physical<TPhysics::TMotion>>::cleanup,
+						Movement::<Physical<TPhysics::TMotion>>::cleanup,
 						FixPoint::<SkillSpawner>::insert_in_children_of::<TPlayers::TPlayer>,
 						FixPoint::<SkillSpawner>::insert_in_children_of::<TEnemies::TEnemy>,
 						FixPoints::track_in_self_and_children::<FixPoint<SkillSpawner>>().system(),
@@ -222,7 +229,7 @@ where
 					// Enemy behaviors
 					(
 						TEnemies::TEnemy::select_behavior::<TPlayers::TPlayer>.pipe(OnError::log),
-						TEnemies::TEnemy::chase::<PathOrWasd<VelocityBased>>,
+						TEnemies::TEnemy::chase::<PathOrWasd<Physical<TPhysics::TMotion>>>,
 						compute_enemy_path,
 						Update::delta.pipe(execute_enemy_path),
 						Update::delta.pipe(execute_enemy_movement),
@@ -234,16 +241,16 @@ where
 					(
 						Attacking::update::<Virtual>,
 						GroundTarget::set_position,
-						DestroyAfterDistanceTraveled::<Velocity>::system,
+						DestroyAfterDistanceTraveled::system,
 						SkillContact::update_range,
 						Anchor::<Once>::system.pipe(OnError::log),
 						Anchor::<Always>::system.pipe(OnError::log),
-						SetVelocityForward::system,
+						SetMotionForward::system::<TPhysics::TMotion>,
 					)
 						.chain(),
 					// Apply facing
 					(
-						Movement::<VelocityBased>::set_faces,
+						Movement::<Physical<TPhysics::TMotion>>::set_faces,
 						TPlayers::TPlayer::get_faces
 							.pipe(execute_player_face::<TPlayers::TMouseHover, TPlayers::TCamRay>),
 						TEnemies::TEnemy::get_faces.pipe(execute_enemy_face),

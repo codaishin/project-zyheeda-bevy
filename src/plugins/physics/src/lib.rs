@@ -12,17 +12,20 @@ use crate::{
 		effect::force::ForceEffect,
 		force_affected::ForceAffected,
 		gravity_affected::GravityAffected,
+		velocity::Motion,
 	},
 	observers::update_blockers::UpdateBlockersObserver,
 	systems::interactions::act_on::ActOnSystem,
 };
 use bevy::{ecs::component::Mutable, prelude::*};
+use bevy_rapier3d::prelude::Velocity;
 use common::{
 	components::life::Life,
 	traits::{
 		delta::Delta,
-		handles_physics::HandlesPhysics,
+		handles_physics::{HandlesMotion, HandlesPhysicalObjects},
 		handles_saving::{HandlesSaving, SavableComponent},
+		register_derived_component::RegisterDerivedComponent,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -70,6 +73,8 @@ where
 	TSaveGame: ThreadSafe + HandlesSaving,
 {
 	fn build(&self, app: &mut App) {
+		TSaveGame::register_savable_component::<Motion>(app);
+
 		app
 			// Deal health damage
 			.register_required_components::<HealthDamageEffect, InteractingEntities>()
@@ -130,6 +135,7 @@ impl AddPhysics for App {
 		TSaveGame::register_savable_component::<RunningInteractions<TActor, TTarget>>(self);
 
 		self.register_required_components::<TActor, RunningInteractions<TActor, TTarget>>()
+			.register_derived_component::<Motion, Velocity>()
 			.add_systems(
 				Update,
 				(
@@ -146,9 +152,13 @@ impl AddPhysics for App {
 #[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone)]
 pub struct InteractionSystems;
 
-impl<TDependencies> HandlesPhysics for PhysicsPlugin<TDependencies> {
+impl<TDependencies> HandlesPhysicalObjects for PhysicsPlugin<TDependencies> {
 	type TSystems = InteractionSystems;
 	type TPhysicalObjectComponent = Blockable;
 
 	const SYSTEMS: Self::TSystems = InteractionSystems;
+}
+
+impl<TDependencies> HandlesMotion for PhysicsPlugin<TDependencies> {
+	type TMotion = Motion;
 }

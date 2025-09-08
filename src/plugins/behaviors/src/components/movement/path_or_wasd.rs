@@ -13,12 +13,12 @@ use common::{
 use std::{collections::VecDeque, marker::PhantomData, time::Duration};
 
 #[derive(Component, Debug, PartialEq)]
-pub(crate) struct PathOrWasd<TMoveMethod> {
+pub(crate) struct PathOrWasd<TMethod> {
 	pub(crate) mode: Mode,
-	pub(crate) _m: PhantomData<TMoveMethod>,
+	pub(crate) _m: PhantomData<TMethod>,
 }
 
-impl<TMoveMethod> PathOrWasd<TMoveMethod> {
+impl<TMethod> PathOrWasd<TMethod> {
 	pub(crate) fn new_path() -> Self {
 		Self {
 			_m: PhantomData,
@@ -34,9 +34,9 @@ impl<TMoveMethod> PathOrWasd<TMoveMethod> {
 	}
 }
 
-impl<TMoveMethod> Default for PathOrWasd<TMoveMethod>
+impl<TMethod> Default for PathOrWasd<TMethod>
 where
-	TMoveMethod: ThreadSafe,
+	TMethod: ThreadSafe,
 {
 	fn default() -> Self {
 		Self {
@@ -46,11 +46,11 @@ where
 	}
 }
 
-impl<TMoveMethod> From<PointerInput> for Movement<PathOrWasd<TMoveMethod>>
+impl<TMethod> From<PointerInput<TMethod>> for Movement<PathOrWasd<TMethod>>
 where
-	TMoveMethod: ThreadSafe,
+	TMethod: ThreadSafe,
 {
-	fn from(PointerInput(target): PointerInput) -> Self {
+	fn from(PointerInput { target, .. }: PointerInput<TMethod>) -> Self {
 		Self {
 			target,
 			method_cstr: PathOrWasd::new_path,
@@ -58,11 +58,11 @@ where
 	}
 }
 
-impl<TMoveMethod> From<WasdInput<TMoveMethod>> for Movement<PathOrWasd<TMoveMethod>>
+impl<TMethod> From<WasdInput<TMethod>> for Movement<PathOrWasd<TMethod>>
 where
-	TMoveMethod: ThreadSafe,
+	TMethod: ThreadSafe,
 {
-	fn from(WasdInput { target, .. }: WasdInput<TMoveMethod>) -> Self {
+	fn from(WasdInput { target, .. }: WasdInput<TMethod>) -> Self {
 		Self {
 			target,
 			method_cstr: PathOrWasd::new_wasd,
@@ -70,9 +70,9 @@ where
 	}
 }
 
-impl<TMoveMethod> PathOrWasd<TMoveMethod>
+impl<TMethod> PathOrWasd<TMethod>
 where
-	TMoveMethod: ThreadSafe + Default,
+	TMethod: ThreadSafe + Default,
 {
 	pub(crate) fn cleanup(
 		mut commands: ZyheedaCommands,
@@ -80,40 +80,40 @@ where
 	) {
 		for entity in removed_paths.read() {
 			commands.try_apply_on(&entity, |mut e| {
-				e.try_remove::<Movement<TMoveMethod>>();
+				e.try_remove::<Movement<TMethod>>();
 			});
 		}
 	}
 }
 
-impl<TMoveMethod> MovementUpdate for Movement<PathOrWasd<TMoveMethod>>
+impl<TMethod> MovementUpdate for Movement<PathOrWasd<TMethod>>
 where
-	TMoveMethod: ThreadSafe + Default,
+	TMethod: ThreadSafe + Default,
 {
-	type TComponents<'a> = &'a mut PathOrWasd<TMoveMethod>;
-	type TConstraint = Without<Movement<TMoveMethod>>;
+	type TComponents<'a> = &'a mut PathOrWasd<TMethod>;
+	type TConstraint = Without<Movement<TMethod>>;
 
 	fn update(
 		&self,
 		agent: &mut EntityCommands,
-		mut path_or_wasd: Mut<PathOrWasd<TMoveMethod>>,
+		mut path_or_wasd: Mut<PathOrWasd<TMethod>>,
 		_: Speed,
 		_: Duration,
 	) -> IsDone {
 		let Some(wp) = next_waypoint(&mut path_or_wasd) else {
-			agent.remove::<PathOrWasd<TMoveMethod>>();
+			agent.remove::<PathOrWasd<TMethod>>();
 			return IsDone(true);
 		};
 
-		agent.try_insert(Movement::<TMoveMethod>::to(wp));
+		agent.try_insert(Movement::<TMethod>::to(wp));
 
 		IsDone(false)
 	}
 }
 
-fn next_waypoint<TMoveMethod>(path_or_wasd: &mut PathOrWasd<TMoveMethod>) -> Option<Vec3>
+fn next_waypoint<TMethod>(path_or_wasd: &mut PathOrWasd<TMethod>) -> Option<Vec3>
 where
-	TMoveMethod: ThreadSafe,
+	TMethod: ThreadSafe,
 {
 	match &mut path_or_wasd.mode {
 		Mode::Wasd(target) => target.take(),
