@@ -22,8 +22,8 @@ use common::{
 		speed::Speed,
 	},
 	traits::{
-		handles_effects::HandlesAllEffects,
 		handles_enemies::{EnemySkillUsage, EnemyTarget, EnemyType},
+		handles_physics::HandlesAllPhysicalEffects,
 		handles_skill_behaviors::SkillSpawner,
 		load_asset::LoadAsset,
 		loadout::LoadoutConfig,
@@ -163,15 +163,15 @@ impl<'w, 's> DerivableFrom<'w, 's, Enemy> for GroundOffset {
 	}
 }
 
-impl<TInteractions> Prefab<TInteractions> for Enemy
+impl<TPhysics> Prefab<TPhysics> for Enemy
 where
-	TInteractions: HandlesAllEffects,
+	TPhysics: HandlesAllPhysicalEffects,
 {
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		assets: &mut impl LoadAsset,
 	) -> Result<(), Error> {
-		Prefab::<TInteractions>::insert_prefab_components(&self.enemy_type, entity, assets)
+		Prefab::<TPhysics>::insert_prefab_components(&self.enemy_type, entity, assets)
 	}
 }

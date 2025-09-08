@@ -3058,20 +3058,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "interactions"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "bevy_rapier3d",
- "common",
- "macros",
- "mockall",
- "serde",
- "testing",
- "tracing",
-]
-
-[[package]]
 name = "interpolate_name"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4276,6 +4262,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "physics"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_rapier3d",
+ "common",
+ "macros",
+ "mockall",
+ "serde",
+ "testing",
+ "tracing",
+]
+
+[[package]]
 name = "pin-project"
 version = "1.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4496,7 +4496,6 @@ dependencies = [
  "fluent-syntax",
  "frame_limiter",
  "graphics",
- "interactions",
  "light",
  "loading",
  "localization",
@@ -4505,6 +4504,7 @@ dependencies = [
  "menu",
  "mockall",
  "path_finding",
+ "physics",
  "player",
  "savegame",
  "serde",

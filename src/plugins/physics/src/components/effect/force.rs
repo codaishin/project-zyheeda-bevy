@@ -1,6 +1,6 @@
 use crate::{
 	ActOn,
-	InteractionsPlugin,
+	PhysicsPlugin,
 	components::force_affected::ForceAffected,
 	traits::update_blockers::UpdateBlockers,
 };
@@ -12,7 +12,7 @@ use common::{
 		persistent_entity::PersistentEntity,
 	},
 	effects::force::Force,
-	traits::handles_effects::HandlesEffect,
+	traits::handles_physics::HandlesPhysicalEffect,
 };
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
@@ -21,20 +21,21 @@ use std::time::Duration;
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct ForceEffect(pub(crate) Force);
 
-impl<TDependencies> HandlesEffect<Force> for InteractionsPlugin<TDependencies> {
+impl<TDependencies> HandlesPhysicalEffect<Force> for PhysicsPlugin<TDependencies> {
 	type TEffectComponent = ForceEffect;
+	type TAffectedComponent = ForceAffected;
 
-	fn effect(effect: Force) -> Self::TEffectComponent {
+	fn into_effect_component(effect: Force) -> ForceEffect {
 		ForceEffect(effect)
 	}
 
-	fn attribute(_: AffectedBy<Force>) -> impl Bundle {
+	fn into_affected_component(_: AffectedBy<Force>) -> ForceAffected {
 		ForceAffected
 	}
 }
 
 impl UpdateBlockers for ForceEffect {
-	fn update_blockers(&self, IsBlocker(blockers): &mut IsBlocker) {
+	fn update(&self, IsBlocker(blockers): &mut IsBlocker) {
 		blockers.insert(Blocker::Force);
 	}
 }

@@ -6,7 +6,7 @@ use common::{
 		collider_relationship::ColliderOfInteractionTarget,
 		is_blocker::{Blocker, IsBlocker},
 	},
-	traits::{cast_ray::TimeOfImpact, handles_interactions::InteractAble},
+	traits::{cast_ray::TimeOfImpact, handles_physics::PhysicalObject},
 };
 use std::collections::{HashMap, HashSet};
 
@@ -17,7 +17,7 @@ pub(crate) fn apply_interruptable_ray_blocks(
 	colliders: Query<&ColliderOfInteractionTarget>,
 ) -> HashMap<Entity, RayCastResult> {
 	for (entity, Blockable(beam)) in &mut interruptable_rays {
-		let InteractAble::Beam { blocked_by, .. } = beam else {
+		let PhysicalObject::Beam { blocked_by, .. } = beam else {
 			continue;
 		};
 
@@ -96,7 +96,7 @@ mod tests {
 		let far = app.world_mut().spawn_empty().id();
 		let interruptable = app
 			.world_mut()
-			.spawn(Blockable(InteractAble::Beam {
+			.spawn(Blockable(PhysicalObject::Beam {
 				range: default(),
 				blocked_by: [Blocker::Physical].into(),
 			}))
@@ -152,7 +152,7 @@ mod tests {
 		let far = app.world_mut().spawn_empty().id();
 		let interruptable = app
 			.world_mut()
-			.spawn(Blockable(InteractAble::Beam {
+			.spawn(Blockable(PhysicalObject::Beam {
 				range: default(),
 				blocked_by: [Blocker::Physical].into(),
 			}))
@@ -203,7 +203,7 @@ mod tests {
 		let far = app.world_mut().spawn_empty().id();
 		let interruptable = app
 			.world_mut()
-			.spawn(Blockable(InteractAble::Beam {
+			.spawn(Blockable(PhysicalObject::Beam {
 				range: default(),
 				blocked_by: default(),
 			}))
@@ -258,7 +258,7 @@ mod tests {
 		let far = app.world_mut().spawn_empty().id();
 		let interruptable = app
 			.world_mut()
-			.spawn(Blockable(InteractAble::Beam {
+			.spawn(Blockable(PhysicalObject::Beam {
 				range: default(),
 				blocked_by: [Blocker::Force].into(),
 			}))
@@ -313,7 +313,7 @@ mod tests {
 		let far = app.world_mut().spawn_empty().id();
 		let interruptable = app
 			.world_mut()
-			.spawn(Blockable(InteractAble::Fragile {
+			.spawn(Blockable(PhysicalObject::Fragile {
 				destroyed_by: [Blocker::Physical].into(),
 			}))
 			.id();

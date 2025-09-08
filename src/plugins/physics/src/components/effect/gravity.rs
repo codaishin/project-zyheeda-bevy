@@ -1,5 +1,5 @@
 use crate::{
-	InteractionsPlugin,
+	PhysicsPlugin,
 	components::gravity_affected::{GravityAffected, GravityPull},
 	traits::{act_on::ActOn, update_blockers::UpdateBlockers},
 };
@@ -8,7 +8,7 @@ use common::{
 	attributes::affected_by::AffectedBy,
 	components::persistent_entity::PersistentEntity,
 	effects::gravity::Gravity,
-	traits::handles_effects::HandlesEffect,
+	traits::handles_physics::HandlesPhysicalEffect,
 };
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
@@ -17,14 +17,15 @@ use std::time::Duration;
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct GravityEffect(pub(crate) Gravity);
 
-impl<TDependencies> HandlesEffect<Gravity> for InteractionsPlugin<TDependencies> {
+impl<TDependencies> HandlesPhysicalEffect<Gravity> for PhysicsPlugin<TDependencies> {
 	type TEffectComponent = GravityEffect;
+	type TAffectedComponent = GravityAffected;
 
-	fn effect(effect: Gravity) -> Self::TEffectComponent {
+	fn into_effect_component(effect: Gravity) -> GravityEffect {
 		GravityEffect(effect)
 	}
 
-	fn attribute(_: AffectedBy<Gravity>) -> impl Bundle {
+	fn into_affected_component(_: AffectedBy<Gravity>) -> GravityAffected {
 		GravityAffected::default()
 	}
 }

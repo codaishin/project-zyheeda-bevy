@@ -5,7 +5,7 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	components::is_blocker::IsBlocker,
-	traits::{accessors::get::TryApplyOn, handles_interactions::InteractAble::Fragile},
+	traits::{accessors::get::TryApplyOn, handles_physics::PhysicalObject::Fragile},
 	zyheeda_commands::ZyheedaCommands,
 };
 
@@ -51,10 +51,7 @@ fn fragile_blocked_entity(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{
-		components::is_blocker::Blocker,
-		traits::handles_interactions::InteractAble::Beam,
-	};
+	use common::{components::is_blocker::Blocker, traits::handles_physics::PhysicalObject::Beam};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {

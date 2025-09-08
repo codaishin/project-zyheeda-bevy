@@ -25,11 +25,11 @@ use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
-		handles_effects::HandlesAllEffects,
 		handles_enemies::HandlesEnemies,
 		handles_load_tracking::{DependenciesProgress, HandlesLoadTracking, LoadTrackingInApp},
 		handles_loadout::HandlesLoadout,
 		handles_orientation::HandlesOrientation,
+		handles_physics::HandlesAllPhysicalEffects,
 		handles_player::{
 			ConfiguresPlayerSkillAnimations,
 			HandlesPlayer,
@@ -65,10 +65,10 @@ use systems::{
 
 pub struct SkillsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSaveGame, TInteractions, TLoading, TSettings, TBehaviors, TPlayers, TEnemies>
+impl<TSaveGame, TPhysics, TLoading, TSettings, TBehaviors, TPlayers, TEnemies>
 	SkillsPlugin<(
 		TSaveGame,
-		TInteractions,
+		TPhysics,
 		TLoading,
 		TSettings,
 		TBehaviors,
@@ -77,7 +77,7 @@ impl<TSaveGame, TInteractions, TLoading, TSettings, TBehaviors, TPlayers, TEnemi
 	)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TInteractions: ThreadSafe + HandlesAllEffects,
+	TPhysics: ThreadSafe + HandlesAllPhysicalEffects,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
 	TSettings: ThreadSafe + HandlesSettings,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation + SystemSetDefinition,
@@ -91,7 +91,7 @@ where
 	#[allow(clippy::too_many_arguments)]
 	pub fn from_plugins(
 		_: &TSaveGame,
-		_: &TInteractions,
+		_: &TPhysics,
 		_: &TLoading,
 		_: &TSettings,
 		_: &TBehaviors,
@@ -158,11 +158,8 @@ where
 		TSaveGame::register_savable_component::<Queue>(app);
 		TSaveGame::register_savable_component::<SkillExecuter>(app);
 
-		let execute_skill = SkillExecuter::<RunSkillBehavior>::execute_system::<
-			TInteractions,
-			TBehaviors,
-			TPlayers,
-		>;
+		let execute_skill =
+			SkillExecuter::<RunSkillBehavior>::execute_system::<TPhysics, TBehaviors, TPlayers>;
 
 		app.add_systems(
 			Update,
@@ -182,10 +179,10 @@ where
 	}
 }
 
-impl<TSaveGame, TInteractions, TLoading, TSettings, TBehaviors, TPlayers, TEnemies> Plugin
+impl<TSaveGame, TPhysics, TLoading, TSettings, TBehaviors, TPlayers, TEnemies> Plugin
 	for SkillsPlugin<(
 		TSaveGame,
-		TInteractions,
+		TPhysics,
 		TLoading,
 		TSettings,
 		TBehaviors,
@@ -194,7 +191,7 @@ impl<TSaveGame, TInteractions, TLoading, TSettings, TBehaviors, TPlayers, TEnemi
 	)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TInteractions: ThreadSafe + HandlesAllEffects,
+	TPhysics: ThreadSafe + HandlesAllPhysicalEffects,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
 	TSettings: ThreadSafe + HandlesSettings,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation + SystemSetDefinition,

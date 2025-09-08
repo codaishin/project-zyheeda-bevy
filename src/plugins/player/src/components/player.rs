@@ -35,8 +35,8 @@ use common::{
 			StartAnimation,
 			StopAnimation,
 		},
-		handles_effects::HandlesAllEffects,
 		handles_lights::HandlesLights,
+		handles_physics::HandlesAllPhysicalEffects,
 		handles_skill_behaviors::SkillSpawner,
 		iteration::{Iter, IterFinite},
 		load_asset::{LoadAsset, Path},
@@ -306,9 +306,9 @@ impl ConfigureNewAnimationDispatch for Player {
 	}
 }
 
-impl<TInteractions, TLights> Prefab<(TInteractions, TLights)> for Player
+impl<TPhysics, TLights> Prefab<(TPhysics, TLights)> for Player
 where
-	TInteractions: HandlesAllEffects,
+	TPhysics: HandlesAllPhysicalEffects,
 	TLights: HandlesLights,
 {
 	fn insert_prefab_components(
@@ -318,9 +318,9 @@ where
 	) -> Result<(), Error> {
 		entity
 			.try_insert_if_new((
-				Health::new(100.).bundle_via::<TInteractions>(),
-				Affected::by::<Gravity>().bundle_via::<TInteractions>(),
-				Affected::by::<Force>().bundle_via::<TInteractions>(),
+				Health::new(100.).component::<TPhysics>(),
+				Affected::by::<Gravity>().component::<TPhysics>(),
+				Affected::by::<Force>().component::<TPhysics>(),
 			))
 			.with_child((
 				TLights::responsive_light_trigger(),

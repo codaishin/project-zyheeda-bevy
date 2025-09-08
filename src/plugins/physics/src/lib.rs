@@ -7,17 +7,21 @@ mod resources;
 mod systems;
 
 use crate::{
-	components::{blockable::Blockable, effect::force::ForceEffect, force_affected::ForceAffected},
+	components::{
+		blockable::Blockable,
+		effect::force::ForceEffect,
+		force_affected::ForceAffected,
+		gravity_affected::GravityAffected,
+	},
 	observers::update_blockers::UpdateBlockersObserver,
 	systems::interactions::act_on::ActOnSystem,
 };
 use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
-	self,
 	components::life::Life,
 	traits::{
 		delta::Delta,
-		handles_interactions::HandlesInteractions,
+		handles_physics::HandlesPhysics,
 		handles_saving::{HandlesSaving, SavableComponent},
 		thread_safe::ThreadSafe,
 	},
@@ -25,7 +29,6 @@ use common::{
 use components::{
 	active_beam::ActiveBeam,
 	effect::{gravity::GravityEffect, health_damage::HealthDamageEffect},
-	gravity_affected::GravityAffected,
 	interacting_entities::InteractingEntities,
 	running_interactions::RunningInteractions,
 };
@@ -51,9 +54,9 @@ use systems::{
 };
 use traits::act_on::ActOn;
 
-pub struct InteractionsPlugin<TDependencies>(PhantomData<TDependencies>);
+pub struct PhysicsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSaveGame> InteractionsPlugin<TSaveGame>
+impl<TSaveGame> PhysicsPlugin<TSaveGame>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
 {
@@ -62,7 +65,7 @@ where
 	}
 }
 
-impl<TSaveGame> Plugin for InteractionsPlugin<TSaveGame>
+impl<TSaveGame> Plugin for PhysicsPlugin<TSaveGame>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
 {
@@ -70,17 +73,17 @@ where
 		app
 			// Deal health damage
 			.register_required_components::<HealthDamageEffect, InteractingEntities>()
-			.add_observer(HealthDamageEffect::update_blockers_observer)
-			.add_interaction::<HealthDamageEffect, Life, TSaveGame>()
+			.add_observer(HealthDamageEffect::update_blockers)
+			.add_physics::<HealthDamageEffect, Life, TSaveGame>()
 			// Apply gravity effect
 			.register_required_components::<GravityEffect, InteractingEntities>()
-			.add_observer(GravityEffect::update_blockers_observer)
-			.add_interaction::<GravityEffect, GravityAffected, TSaveGame>()
+			.add_observer(GravityEffect::update_blockers)
+			.add_physics::<GravityEffect, GravityAffected, TSaveGame>()
 			.add_systems(Update, Update::delta.pipe(apply_gravity_pull))
 			// Apply force effect
 			.register_required_components::<ForceEffect, InteractingEntities>()
-			.add_observer(ForceEffect::update_blockers_observer)
-			.add_interaction::<ForceEffect, ForceAffected, TSaveGame>()
+			.add_observer(ForceEffect::update_blockers)
+			.add_physics::<ForceEffect, ForceAffected, TSaveGame>()
 			// Apply interactions
 			.add_event::<InteractionEvent>()
 			.add_event::<InteractionEvent<Ray>>()
@@ -107,16 +110,16 @@ where
 #[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 struct CollisionSystems;
 
-trait AddInteraction {
-	fn add_interaction<TActor, TTarget, TSaveGame>(&mut self) -> &mut Self
+trait AddPhysics {
+	fn add_physics<TActor, TTarget, TSaveGame>(&mut self) -> &mut Self
 	where
 		TActor: ActOn<TTarget> + Component<Mutability = Mutable> + SavableComponent,
 		TTarget: Component<Mutability = Mutable> + SavableComponent,
 		TSaveGame: HandlesSaving;
 }
 
-impl AddInteraction for App {
-	fn add_interaction<TActor, TTarget, TSaveGame>(&mut self) -> &mut Self
+impl AddPhysics for App {
+	fn add_physics<TActor, TTarget, TSaveGame>(&mut self) -> &mut Self
 	where
 		TActor: ActOn<TTarget> + Component<Mutability = Mutable> + SavableComponent,
 		TTarget: Component<Mutability = Mutable> + SavableComponent,
@@ -143,9 +146,9 @@ impl AddInteraction for App {
 #[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone)]
 pub struct InteractionSystems;
 
-impl<TDependencies> HandlesInteractions for InteractionsPlugin<TDependencies> {
+impl<TDependencies> HandlesPhysics for PhysicsPlugin<TDependencies> {
 	type TSystems = InteractionSystems;
-	type TInteraction = Blockable;
+	type TPhysicalObjectComponent = Blockable;
 
 	const SYSTEMS: Self::TSystems = InteractionSystems;
 }

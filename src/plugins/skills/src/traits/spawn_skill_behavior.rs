@@ -7,7 +7,7 @@ use crate::{
 };
 use common::{
 	traits::{
-		handles_effects::HandlesAllEffects,
+		handles_physics::HandlesAllPhysicalEffects,
 		handles_skill_behaviors::{HandlesSkillBehaviors, SkillSpawner},
 	},
 	zyheeda_commands::ZyheedaCommands,
@@ -23,6 +23,6 @@ pub(crate) trait SpawnSkillBehavior {
 		target: &SkillTarget,
 	) -> OnSkillStop
 	where
-		TEffects: HandlesAllEffects + 'static,
+		TEffects: HandlesAllPhysicalEffects + 'static,
 		TSkillBehaviors: HandlesSkillBehaviors + 'static;
 }

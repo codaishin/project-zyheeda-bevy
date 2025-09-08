@@ -15,18 +15,16 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use common::{
 	components::{child_of_persistent::ChildOfPersistent, persistent_entity::PersistentEntity},
-	effects::health_damage::HealthDamage,
 	states::game_state::GameState,
 	systems::{log::OnError, track_components::TrackComponentInSelfAndChildren},
 	tools::action_key::{movement::MovementKey, slot::PlayerSlot},
 	traits::{
 		animation::{HasAnimationsDispatch, RegisterAnimations},
 		delta::Delta,
-		handles_effects::HandlesEffect,
 		handles_enemies::HandlesEnemies,
-		handles_interactions::HandlesInteractions,
 		handles_orientation::{Face, HandlesOrientation},
 		handles_path_finding::HandlesPathFinding,
+		handles_physics::{HandlesAllPhysicalEffects, HandlesPhysics},
 		handles_player::{
 			ConfiguresPlayerMovement,
 			HandlesPlayer,
@@ -78,12 +76,12 @@ use systems::{
 
 pub struct BehaviorsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSettings, TSaveGame, TAnimations, TInteractions, TPathFinding, TEnemies, TPlayers>
+impl<TSettings, TSaveGame, TAnimations, TPhysics, TPathFinding, TEnemies, TPlayers>
 	BehaviorsPlugin<(
 		TSettings,
 		TSaveGame,
 		TAnimations,
-		TInteractions,
+		TPhysics,
 		TPathFinding,
 		TEnemies,
 		TPlayers,
@@ -92,7 +90,7 @@ where
 	TSettings: ThreadSafe + HandlesSettings,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
-	TInteractions: ThreadSafe + HandlesInteractions + HandlesEffect<HealthDamage>,
+	TPhysics: ThreadSafe + HandlesPhysics + HandlesAllPhysicalEffects,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
 	TEnemies: ThreadSafe + HandlesEnemies,
 	TPlayers: ThreadSafe
@@ -107,7 +105,7 @@ where
 		_: &TSettings,
 		_: &TSaveGame,
 		_: &TAnimations,
-		_: &TInteractions,
+		_: &TPhysics,
 		_: &TPathFinding,
 		_: &TEnemies,
 		_: &TPlayers,
@@ -116,12 +114,12 @@ where
 	}
 }
 
-impl<TSettings, TSaveGame, TAnimations, TInteractions, TPathFinding, TEnemies, TPlayers> Plugin
+impl<TSettings, TSaveGame, TAnimations, TPhysics, TPathFinding, TEnemies, TPlayers> Plugin
 	for BehaviorsPlugin<(
 		TSettings,
 		TSaveGame,
 		TAnimations,
-		TInteractions,
+		TPhysics,
 		TPathFinding,
 		TEnemies,
 		TPlayers,
@@ -130,7 +128,7 @@ where
 	TSettings: ThreadSafe + HandlesSettings,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
-	TInteractions: ThreadSafe + HandlesInteractions + HandlesEffect<HealthDamage>,
+	TPhysics: ThreadSafe + HandlesPhysics + HandlesAllPhysicalEffects,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
 	TEnemies: ThreadSafe + HandlesEnemies,
 	TPlayers: ThreadSafe
@@ -195,8 +193,8 @@ where
 			.register_required_components::<SkillContact, TSaveGame::TSaveEntityMarker>()
 			.register_required_components::<SkillProjection, TSaveGame::TSaveEntityMarker>()
 			// Observers
-			.add_prefab_observer::<SkillContact, TInteractions>()
-			.add_prefab_observer::<SkillProjection, TInteractions>()
+			.add_prefab_observer::<SkillContact, TPhysics>()
+			.add_prefab_observer::<SkillProjection, TPhysics>()
 			// Systems
 			.add_systems(
 				Update,
@@ -256,7 +254,7 @@ where
 					.in_set(BehaviorSystems)
 					.after(TAnimations::SYSTEMS)
 					.after(TPathFinding::SYSTEMS)
-					.after(TInteractions::SYSTEMS)
+					.after(TPhysics::SYSTEMS)
 					.run_if(in_state(GameState::Play)),
 			);
 	}

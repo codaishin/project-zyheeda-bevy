@@ -1,7 +1,7 @@
 use crate::behaviors::{SkillCaster, SkillTarget};
 use common::{
 	effects::health_damage::HealthDamage,
-	traits::handles_effects::HandlesEffect,
+	traits::handles_physics::HandlesPhysicalEffect,
 	zyheeda_commands::ZyheedaEntityCommands,
 };
 use serde::{Deserialize, Serialize};
@@ -13,15 +13,15 @@ pub enum AttachHealthDamage {
 }
 
 impl AttachHealthDamage {
-	pub fn attach<TInteractions>(
+	pub fn attach<TPhysics>(
 		&self,
 		entity: &mut ZyheedaEntityCommands,
 		_: &SkillCaster,
 		_: &SkillTarget,
 	) where
-		TInteractions: HandlesEffect<HealthDamage>,
+		TPhysics: HandlesPhysicalEffect<HealthDamage>,
 	{
-		entity.try_insert(TInteractions::effect(match *self {
+		entity.try_insert(TPhysics::into_effect_component(match *self {
 			Self::OneTime(dmg) => HealthDamage::once(dmg),
 			Self::OverTime(dmg) => HealthDamage::per_second(dmg),
 		}));
@@ -41,18 +41,24 @@ mod tests {
 
 	struct _HandlesDamage;
 
-	impl HandlesEffect<HealthDamage> for _HandlesDamage {
+	impl HandlesPhysicalEffect<HealthDamage> for _HandlesDamage {
 		type TEffectComponent = _Effect;
+		type TAffectedComponent = _Affected;
 
-		fn effect(effect: HealthDamage) -> _Effect {
+		fn into_effect_component(effect: HealthDamage) -> _Effect {
 			_Effect(effect)
 		}
 
-		fn attribute(_: Health) -> impl Bundle {}
+		fn into_affected_component(_: Health) -> _Affected {
+			_Affected
+		}
 	}
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Effect(HealthDamage);
+
+	#[derive(Component)]
+	struct _Affected;
 
 	struct _HandlesShading;
 

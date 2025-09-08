@@ -9,7 +9,7 @@ use common::{
 impl<T> UpdateBlockersObserver for T where T: Component + UpdateBlockers {}
 
 pub(crate) trait UpdateBlockersObserver: Component + Sized + UpdateBlockers {
-	fn update_blockers_observer(
+	fn update_blockers(
 		trigger: Trigger<OnInsert, Self>,
 		mut commands: ZyheedaCommands,
 		mut effects: Query<(&Self, Option<&mut IsBlocker>)>,
@@ -21,11 +21,11 @@ pub(crate) trait UpdateBlockersObserver: Component + Sized + UpdateBlockers {
 
 		match blockers {
 			Some(mut blockers) => {
-				effect.update_blockers(&mut blockers);
+				effect.update(&mut blockers);
 			}
 			None => {
 				let mut blockers = IsBlocker::from([]);
-				effect.update_blockers(&mut blockers);
+				effect.update(&mut blockers);
 				commands.try_apply_on(&entity, |mut e| {
 					e.try_insert(blockers);
 				});
@@ -43,7 +43,7 @@ mod tests {
 	struct _Effect(Blocker);
 
 	impl UpdateBlockers for _Effect {
-		fn update_blockers(&self, IsBlocker(blockers): &mut IsBlocker) {
+		fn update(&self, IsBlocker(blockers): &mut IsBlocker) {
 			blockers.insert(self.0);
 		}
 	}
@@ -51,7 +51,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new();
 
-		app.add_observer(_Effect::update_blockers_observer);
+		app.add_observer(_Effect::update_blockers);
 
 		app
 	}

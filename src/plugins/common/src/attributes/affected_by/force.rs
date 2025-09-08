@@ -1,12 +1,12 @@
 use super::AffectedBy;
-use crate::{effects::force::Force, traits::handles_effects::HandlesEffect};
+use crate::{effects::force::Force, traits::handles_physics::HandlesPhysicalEffect};
 use bevy::prelude::*;
 
 impl AffectedBy<Force> {
-	pub fn bundle_via<TPlugin>(self) -> impl Bundle
+	pub fn component<TPlugin>(self) -> impl Bundle
 	where
-		TPlugin: HandlesEffect<Force>,
+		TPlugin: HandlesPhysicalEffect<Force>,
 	{
-		TPlugin::attribute(self)
+		TPlugin::into_affected_component(self)
 	}
 }

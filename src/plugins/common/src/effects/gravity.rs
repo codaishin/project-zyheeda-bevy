@@ -1,7 +1,7 @@
 use crate::{
 	attributes::affected_by::AffectedBy,
 	tools::UnitsPerSecond,
-	traits::handles_effects::Effect,
+	traits::handles_physics::Effect,
 };
 use serde::{Deserialize, Serialize};
 
@@ -11,5 +11,5 @@ pub struct Gravity {
 }
 
 impl Effect for Gravity {
-	type TTarget = AffectedBy<Gravity>;
+	type TAffected = AffectedBy<Gravity>;
 }

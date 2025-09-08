@@ -1,5 +1,5 @@
 use crate::{
-	InteractionsPlugin,
+	PhysicsPlugin,
 	traits::{act_on::ActOn, update_blockers::UpdateBlockers},
 };
 use bevy::prelude::*;
@@ -7,7 +7,7 @@ use common::{
 	attributes::health::Health,
 	components::{life::Life, persistent_entity::PersistentEntity},
 	effects::{EffectApplies, health_damage::HealthDamage},
-	traits::handles_effects::HandlesEffect,
+	traits::handles_physics::HandlesPhysicalEffect,
 };
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
@@ -16,14 +16,15 @@ use std::time::Duration;
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct HealthDamageEffect(pub(crate) HealthDamage);
 
-impl<TSaveGame> HandlesEffect<HealthDamage> for InteractionsPlugin<TSaveGame> {
+impl<TSaveGame> HandlesPhysicalEffect<HealthDamage> for PhysicsPlugin<TSaveGame> {
 	type TEffectComponent = HealthDamageEffect;
+	type TAffectedComponent = Life;
 
-	fn effect(effect: HealthDamage) -> HealthDamageEffect {
+	fn into_effect_component(effect: HealthDamage) -> HealthDamageEffect {
 		HealthDamageEffect(effect)
 	}
 
-	fn attribute(health: Health) -> impl Bundle {
+	fn into_affected_component(health: Health) -> Life {
 		Life::from(health)
 	}
 }

@@ -4,14 +4,14 @@ use crate::{
 	traits::get_effect_material::GetEffectMaterial,
 };
 use bevy::prelude::*;
-use common::traits::handles_effects::{Effect, HandlesEffect};
+use common::traits::handles_physics::{Effect, HandlesPhysicalEffect};
 
-pub(crate) fn add_effect_shader<TInteractions, TEffect>(
+pub(crate) fn add_effect_shader<TPhysics, TEffect>(
 	mut materials: ResMut<Assets<TEffect::TMaterial>>,
-	mut effect_shaders: Query<&mut EffectShadersTarget, Added<TInteractions::TEffectComponent>>,
+	mut effect_shaders: Query<&mut EffectShadersTarget, Added<TPhysics::TEffectComponent>>,
 	first_pass_image: Res<FirstPassImage>,
 ) where
-	TInteractions: HandlesEffect<TEffect>,
+	TPhysics: HandlesPhysicalEffect<TEffect>,
 	TEffect: GetEffectMaterial + Effect,
 {
 	for mut shaders in &mut effect_shaders {
@@ -37,7 +37,7 @@ mod tests {
 	struct _Effect;
 
 	impl Effect for _Effect {
-		type TTarget = ();
+		type TAffected = ();
 	}
 
 	#[derive(Component)]
@@ -55,14 +55,20 @@ mod tests {
 
 	struct _HandlesEffects;
 
-	impl HandlesEffect<_Effect> for _HandlesEffects {
-		type TEffectComponent = _EffectComponent;
+	#[derive(Component)]
+	struct _AffectedComponent;
 
-		fn effect(_: _Effect) -> Self::TEffectComponent {
+	impl HandlesPhysicalEffect<_Effect> for _HandlesEffects {
+		type TEffectComponent = _EffectComponent;
+		type TAffectedComponent = _AffectedComponent;
+
+		fn into_effect_component(_: _Effect) -> _EffectComponent {
 			_EffectComponent
 		}
 
-		fn attribute(_: ()) -> impl Bundle {}
+		fn into_affected_component(_: ()) -> _AffectedComponent {
+			_AffectedComponent
+		}
 	}
 
 	fn setup(first_pass: Handle<Image>) -> App {
