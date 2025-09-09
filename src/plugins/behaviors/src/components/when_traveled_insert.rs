@@ -1,5 +1,9 @@
 use bevy::prelude::*;
-use common::{tools::Units, traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
+use common::{
+	tools::{Done, Units},
+	traits::accessors::get::TryApplyOn,
+	zyheeda_commands::ZyheedaCommands,
+};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) struct WhenTraveled {
@@ -36,7 +40,7 @@ impl DestroyAfterDistanceTraveled {
 	) {
 		for (entity, mut travel, transform, last_translation) in &mut transforms {
 			match last_translation {
-				Some(last_translation) if travel.update(transform, last_translation).done() => {
+				Some(last_translation) if travel.update(transform, last_translation).is_done() => {
 					commands.try_apply_on(&entity, |e| e.try_despawn());
 				}
 				_ => {
@@ -63,19 +67,6 @@ impl DestroyAfterDistanceTraveled {
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
 pub(crate) struct LastTranslation(Vec3);
-
-pub(crate) struct Done(bool);
-
-impl Done {
-	fn when(done: bool) -> Self {
-		Self(done)
-	}
-
-	fn done(self) -> bool {
-		let Done(max_reached) = self;
-		max_reached
-	}
-}
 
 #[cfg(test)]
 mod tests {

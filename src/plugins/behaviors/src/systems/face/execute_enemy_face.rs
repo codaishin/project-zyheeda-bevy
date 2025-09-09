@@ -41,6 +41,13 @@ pub(crate) fn execute_enemy_face(
 				};
 				(transform, target)
 			}
+			Face::Direction(direction) => {
+				let Ok(transform) = transforms.get_mut(entity) else {
+					continue;
+				};
+				let target = transform.translation + *direction;
+				(transform, target)
+			}
 		};
 
 		if transform.translation == target {
@@ -222,6 +229,27 @@ mod tests {
 
 			assert_eq!(
 				Some(&Transform::from_xyz(1., 4., 11.).looking_to(Vec3::X, Vec3::Y)),
+				app.world().entity(agent).get::<Transform>()
+			);
+			Ok(())
+		}
+	}
+
+	mod direction {
+		use super::*;
+
+		#[test]
+		fn face() -> Result<(), RunSystemError> {
+			let mut app = setup();
+			let agent = app.world_mut().spawn(Transform::from_xyz(4., 5., 6.)).id();
+
+			app.world_mut().run_system_once_with(
+				execute_enemy_face,
+				vec![(agent, Face::Direction(Dir3::X))],
+			)?;
+
+			assert_eq!(
+				Some(&Transform::from_xyz(4., 5., 6.).looking_to(Dir3::X, Vec3::Y)),
 				app.world().entity(agent).get::<Transform>()
 			);
 			Ok(())

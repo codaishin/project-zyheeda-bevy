@@ -4,6 +4,8 @@ use common::{
 	traits::{intersect_at::IntersectAt, key_mappings::Pressed},
 };
 
+use crate::systems::movement::insert_process_component::ProcessInput;
+
 impl<T> ParsePointerMovement for T where T: PointMovementInput {}
 
 pub(crate) trait ParsePointerMovement: PointMovementInput {
@@ -11,16 +13,20 @@ pub(crate) trait ParsePointerMovement: PointMovementInput {
 		input: Res<ButtonInput<TMap::TInput>>,
 		map: Res<TMap>,
 		cam_ray: Res<TRay>,
-	) -> Option<Self>
+	) -> ProcessInput<Self>
 	where
 		TRay: IntersectAt + Resource,
 		TMap: Pressed<MovementKey> + Resource,
 	{
 		if !map.pressed(&input).any(|key| key == MovementKey::Pointer) {
-			return None;
+			return ProcessInput::None;
 		}
-		let intersection = cam_ray.intersect_at(0.)?;
-		Some(Self::from(intersection))
+
+		let Some(intersection) = cam_ray.intersect_at(0.) else {
+			return ProcessInput::None;
+		};
+
+		ProcessInput::New(Self::from(intersection))
 	}
 }
 
@@ -106,7 +112,7 @@ mod tests {
 			.world_mut()
 			.run_system_once(_Input::parse::<_Ray, _Map>)?;
 
-		assert_eq!(Some(_Input(Vec3::new(1., 2., 3.))), input);
+		assert_eq!(ProcessInput::New(_Input(Vec3::new(1., 2., 3.))), input);
 		Ok(())
 	}
 
@@ -127,7 +133,7 @@ mod tests {
 			.world_mut()
 			.run_system_once(_Input::parse::<_Ray, _Map>)?;
 
-		assert_eq!(None, input);
+		assert_eq!(ProcessInput::None, input);
 		Ok(())
 	}
 
@@ -147,7 +153,7 @@ mod tests {
 			.world_mut()
 			.run_system_once(_Input::parse::<_Ray, _Map>)?;
 
-		assert_eq!(None, input);
+		assert_eq!(ProcessInput::None, input);
 		Ok(())
 	}
 

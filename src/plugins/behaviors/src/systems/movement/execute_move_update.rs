@@ -1,35 +1,33 @@
-use crate::traits::{IsDone, MovementUpdate};
+use crate::traits::MovementUpdate;
 use bevy::prelude::*;
 use common::{
 	tools::speed::Speed,
-	traits::accessors::get::{RefAs, RefInto},
+	traits::accessors::get::{RefAs, RefInto, TryApplyOn},
+	zyheeda_commands::ZyheedaCommands,
 };
-use std::time::Duration;
 
-impl<T> ExecuteMovement for T {}
+impl<T> ExecuteMovement for T where T: Component + Sized + for<'a> RefInto<'a, Speed> {}
 
-pub(crate) trait ExecuteMovement {
+pub(crate) trait ExecuteMovement: Component + Sized + for<'a> RefInto<'a, Speed> {
 	fn execute_movement<TMovement>(
-		In(delta): In<Duration>,
-		mut commands: Commands,
+		mut commands: ZyheedaCommands,
 		mut agents: Query<
 			(Entity, TMovement::TComponents<'_>, &Self, &TMovement),
 			TMovement::TConstraint,
 		>,
 	) where
-		Self: Component + Sized + for<'a> RefInto<'a, Speed>,
 		TMovement: Component + MovementUpdate,
 	{
-		for (id, components, config, movement) in &mut agents {
-			let Ok(mut entity) = commands.get_entity(id) else {
-				continue;
-			};
-			let speed = config.ref_as::<Speed>();
-			let IsDone(true) = movement.update(&mut entity, components, speed, delta) else {
-				continue;
-			};
+		for (entity, components, config, movement) in &mut agents {
+			commands.try_apply_on(&entity, |mut e| {
+				let speed = config.ref_as::<Speed>();
 
-			entity.remove::<TMovement>();
+				if !movement.update(&mut e, components, speed).is_done() {
+					return;
+				};
+
+				e.try_remove::<TMovement>();
+			});
 		}
 	}
 }
@@ -37,8 +35,10 @@ pub(crate) trait ExecuteMovement {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::IsDone;
-	use common::tools::UnitsPerSecond;
+	use common::{
+		tools::{Done, UnitsPerSecond},
+		zyheeda_commands::ZyheedaEntityCommands,
+	};
 	use testing::SingleThreadedApp;
 
 	#[derive(Component, Default)]
@@ -53,10 +53,10 @@ mod tests {
 	struct _Component;
 
 	#[derive(Component, PartialEq, Debug)]
-	struct _MoveParams((_Component, Speed, Duration));
+	struct _MoveParams((_Component, Speed));
 
 	#[derive(Component, Default, Debug, PartialEq)]
-	struct _Movement(IsDone);
+	struct _Movement(Done);
 
 	impl MovementUpdate for _Movement {
 		type TComponents<'a> = &'a _Component;
@@ -64,12 +64,11 @@ mod tests {
 
 		fn update(
 			&self,
-			agent: &mut EntityCommands,
+			agent: &mut ZyheedaEntityCommands,
 			component: &_Component,
 			speed: Speed,
-			delta: Duration,
-		) -> IsDone {
-			agent.insert(_MoveParams((*component, speed, delta)));
+		) -> Done {
+			agent.try_insert(_MoveParams((*component, speed)));
 			self.0
 		}
 	}
@@ -77,19 +76,16 @@ mod tests {
 	#[derive(Component)]
 	struct _DoNotMove;
 
-	fn setup(delta: Duration) -> App {
+	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(
-			Update,
-			(move || delta).pipe(_Agent::execute_movement::<_Movement>),
-		);
+		app.add_systems(Update, _Agent::execute_movement::<_Movement>);
 
 		app
 	}
 
 	#[test]
-	fn apply_speed_and_delta() {
-		let mut app = setup(Duration::from_millis(100));
+	fn apply_speed() {
+		let mut app = setup();
 		let agent = _Agent(UnitsPerSecond::from(11.).into());
 		let movement = _Movement(false.into());
 		let agent = app.world_mut().spawn((agent, _Component, movement)).id();
@@ -97,20 +93,18 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_MoveParams((
-				_Component,
-				Speed(UnitsPerSecond::from(11.)),
-				Duration::from_millis(100)
-			))),
+			Some(&_MoveParams(
+				(_Component, Speed(UnitsPerSecond::from(11.)),)
+			)),
 			app.world().entity(agent).get::<_MoveParams>()
 		);
 	}
 
 	#[test]
 	fn remove_movement_when_done() {
-		let mut app = setup(Duration::default());
+		let mut app = setup();
 		let agent = _Agent::default();
-		let movement = _Movement(IsDone(true));
+		let movement = _Movement(Done::from(true));
 		let agent = app.world_mut().spawn((agent, _Component, movement)).id();
 
 		app.update();
@@ -119,29 +113,29 @@ mod tests {
 	}
 
 	#[test]
-	fn do_not_return_entity_for_cleanup_when_not_done() {
-		let mut app = setup(Duration::default());
+	fn keep_movement_when_not_done() {
+		let mut app = setup();
 		let agent = _Agent::default();
-		let movement = _Movement(IsDone(false));
+		let movement = _Movement(Done::from(false));
 		let agent = app.world_mut().spawn((agent, _Component, movement)).id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&_Movement(IsDone(false))),
+			Some(&_Movement(Done::from(false))),
 			app.world().entity(agent).get::<_Movement>()
 		);
 	}
 
 	#[test]
 	fn no_movement_when_constraint_violated() {
-		let mut app = setup(Duration::default());
+		let mut app = setup();
 		let agent = app
 			.world_mut()
 			.spawn((
 				_Agent::default(),
 				_Component,
-				_Movement(IsDone(false)),
+				_Movement(Done::from(false)),
 				_DoNotMove,
 			))
 			.id();

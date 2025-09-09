@@ -79,6 +79,12 @@ where
 			// Motion
 			.register_derived_component::<Motion, Velocity>()
 			.add_observer(Motion::zero_velocity_on_remove)
+			.add_systems(
+				FixedUpdate,
+				FixedUpdate::delta
+					.pipe(Motion::set_done)
+					.in_set(PhysicsSystems),
+			)
 			// Deal health damage
 			.register_required_components::<HealthDamageEffect, InteractingEntities>()
 			.add_observer(HealthDamageEffect::update_blockers)
@@ -145,20 +151,20 @@ impl AddPhysics for App {
 					RunningInteractions::<TActor, TTarget>::untrack_non_interacting_targets,
 				)
 					.chain()
-					.in_set(InteractionSystems)
+					.in_set(PhysicsSystems)
 					.after(CollisionSystems),
 			)
 	}
 }
 
 #[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone)]
-pub struct InteractionSystems;
+pub struct PhysicsSystems;
 
 impl<TDependencies> HandlesPhysicalObjects for PhysicsPlugin<TDependencies> {
-	type TSystems = InteractionSystems;
+	type TSystems = PhysicsSystems;
 	type TPhysicalObjectComponent = Blockable;
 
-	const SYSTEMS: Self::TSystems = InteractionSystems;
+	const SYSTEMS: Self::TSystems = PhysicsSystems;
 }
 
 impl<TDependencies> HandlesMotion for PhysicsPlugin<TDependencies> {

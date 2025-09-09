@@ -3,59 +3,59 @@ pub(crate) mod physical;
 
 mod dto;
 
+use std::marker::PhantomData;
+
 use super::SetFace;
-use crate::components::movement::dto::MovementDto;
-use bevy::{ecs::query::QueryFilter, prelude::*};
+use crate::{
+	components::movement::dto::MovementDto,
+	systems::movement::insert_process_component::StopMovement,
+};
+use bevy::prelude::*;
 use common::{
 	traits::{accessors::get::TryApplyOn, handles_orientation::Face, thread_safe::ThreadSafe},
 	zyheeda_commands::ZyheedaCommands,
 };
 use macros::SavableComponent;
+use serde::{Deserialize, Serialize};
 
 #[derive(Component, SavableComponent, Debug)]
 #[require(GlobalTransform)]
 #[savable_component(dto = MovementDto<TMovement>)]
 pub(crate) struct Movement<TMovement>
 where
-	TMovement: ThreadSafe + Default,
+	TMovement: ThreadSafe,
 {
-	pub(crate) target: Vec3,
-	method_cstr: fn() -> TMovement,
+	pub(crate) target: Option<MotionTarget>,
+	_m: PhantomData<TMovement>,
 }
 
 impl<TMovement> Movement<TMovement>
 where
-	TMovement: ThreadSafe + Default,
+	TMovement: ThreadSafe,
 {
 	#[cfg(test)]
-	pub(crate) fn new(target: Vec3, method_cstr: fn() -> TMovement) -> Self {
+	pub(crate) fn to_none() -> Self {
 		Self {
-			target,
-			method_cstr,
+			target: None,
+			_m: PhantomData,
 		}
 	}
 
-	pub(crate) fn to(target: Vec3) -> Self
+	pub(crate) fn to<T>(target: T) -> Self
 	where
-		TMovement: ThreadSafe + Default,
+		T: Into<MotionTarget>,
 	{
 		Self {
-			target,
-			method_cstr: TMovement::default,
+			target: Some(target.into()),
+			_m: PhantomData,
 		}
-	}
-
-	pub(crate) fn new_movement(&self) -> TMovement {
-		(self.method_cstr)()
 	}
 
 	pub(crate) fn set_faces(
 		mut commands: ZyheedaCommands,
 		mut removed: RemovedComponents<Self>,
 		changed: Query<(Entity, &Self), Changed<Self>>,
-	) where
-		TMovement: Sync + Send + 'static,
-	{
+	) {
 		for entity in removed.read() {
 			commands.try_apply_on(&entity, |mut e| {
 				e.try_remove::<SetFace>();
@@ -63,68 +63,68 @@ where
 		}
 
 		for (entity, movement) in &changed {
+			let set_face = match &movement.target {
+				Some(MotionTarget::Vec(vec3)) => SetFace(Face::Translation(*vec3)),
+				Some(MotionTarget::Dir(dir3)) => SetFace(Face::Direction(*dir3)),
+				_ => continue,
+			};
+
 			commands.try_apply_on(&entity, |mut e| {
-				e.try_insert(SetFace(Face::Translation(movement.target)));
+				e.try_insert(set_face);
 			});
 		}
 	}
+}
 
-	pub(crate) fn cleanup(
-		mut commands: Commands,
-		mut removed: RemovedComponents<Self>,
-		valid_entities: Query<(), <Movement<TMovement> as OnMovementRemoved>::TConstraint>,
-	) where
-		Movement<TMovement>: OnMovementRemoved + Sync + Send + 'static,
-	{
-		let matches_constraint = |entity: &Entity| valid_entities.contains(*entity);
-
-		for entity in removed.read().filter(matches_constraint) {
-			let Ok(mut entity) = commands.get_entity(entity) else {
-				continue;
-			};
-
-			Movement::<TMovement>::on_movement_removed(&mut entity);
+impl<TMovement> StopMovement for Movement<TMovement>
+where
+	TMovement: ThreadSafe,
+{
+	fn stop() -> Self {
+		Self {
+			target: None,
+			_m: PhantomData,
 		}
 	}
 }
 
 impl<TMovement> PartialEq for Movement<TMovement>
 where
-	TMovement: ThreadSafe + Default,
+	TMovement: ThreadSafe,
 {
 	fn eq(&self, other: &Self) -> bool {
-		self.target == other.target && std::ptr::fn_addr_eq(self.method_cstr, other.method_cstr)
-	}
-}
-
-impl<TMovement> Default for Movement<TMovement>
-where
-	TMovement: ThreadSafe + Default,
-{
-	fn default() -> Self {
-		Self {
-			target: Vec3::default(),
-			method_cstr: TMovement::default,
-		}
+		self.target == other.target
 	}
 }
 
 impl<TMovement> Clone for Movement<TMovement>
 where
-	TMovement: ThreadSafe + Default,
+	TMovement: ThreadSafe,
 {
 	fn clone(&self) -> Self {
 		Self {
 			target: self.target,
-			method_cstr: self.method_cstr,
+			_m: PhantomData,
 		}
 	}
 }
 
-pub(crate) trait OnMovementRemoved {
-	type TConstraint: QueryFilter;
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+pub(crate) enum MotionTarget {
+	Vec(Vec3),
+	Dir(Dir3),
+}
 
-	fn on_movement_removed(entity: &mut EntityCommands);
+impl From<Vec3> for MotionTarget {
+	fn from(value: Vec3) -> Self {
+		Self::Vec(value)
+	}
+}
+
+impl From<Dir3> for MotionTarget {
+	fn from(value: Dir3) -> Self {
+		Self::Dir(value)
+	}
 }
 
 #[cfg(test)]
@@ -133,9 +133,19 @@ mod tests {
 	use bevy::ecs::system::ScheduleSystem;
 	use testing::{ApproxEqual, SingleThreadedApp};
 
+	impl ApproxEqual<f32> for MotionTarget {
+		fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
+			match (self, other) {
+				(MotionTarget::Vec(a), MotionTarget::Vec(b)) => a.approx_equal(b, tolerance),
+				(MotionTarget::Dir(a), MotionTarget::Dir(b)) => a.approx_equal(b, tolerance),
+				_ => false,
+			}
+		}
+	}
+
 	impl<TMovement> ApproxEqual<f32> for Movement<TMovement>
 	where
-		TMovement: ThreadSafe + Default,
+		TMovement: ThreadSafe,
 	{
 		fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
 			self.target.approx_equal(&other.target, tolerance)
@@ -194,7 +204,7 @@ mod tests {
 		app.update();
 		let mut movement = app.world_mut().entity_mut(entity);
 		let mut movement = movement.get_mut::<Movement<_T>>().unwrap();
-		movement.target = Vec3::new(3., 4., 5.);
+		movement.target = Some(Vec3::new(3., 4., 5.).into());
 		app.update();
 
 		assert_eq!(
@@ -204,11 +214,28 @@ mod tests {
 	}
 
 	#[test]
+	fn set_to_face_direction_on_update_when_changed() {
+		let mut app = setup(Movement::<_T>::set_faces);
+		let entity = app.world_mut().spawn(Movement::<_T>::to(Dir3::NEG_X)).id();
+
+		app.update();
+		let mut movement = app.world_mut().entity_mut(entity);
+		let mut movement = movement.get_mut::<Movement<_T>>().unwrap();
+		movement.target = Some(Dir3::NEG_Z.into());
+		app.update();
+
+		assert_eq!(
+			Some(&SetFace(Face::Direction(Dir3::NEG_Z))),
+			app.world().entity(entity).get::<SetFace>()
+		);
+	}
+
+	#[test]
 	fn remove_set_face_on_update_when_removed() {
 		let mut app = setup(Movement::<_T>::set_faces);
 		let entity = app
 			.world_mut()
-			.spawn((Movement::<_T>::default(), SetFace(Face::Target)))
+			.spawn((Movement::<_T>::to(Dir3::NEG_X), SetFace(Face::Target)))
 			.id();
 
 		app.update();
@@ -223,69 +250,19 @@ mod tests {
 		let mut app = setup(Movement::<_T>::set_faces);
 		let entity = app
 			.world_mut()
-			.spawn((Movement::<_T>::default(), SetFace(Face::Target)))
+			.spawn((Movement::<_T>::to(Dir3::NEG_X), SetFace(Face::Target)))
 			.id();
 
 		app.update();
 		app.world_mut()
 			.entity_mut(entity)
 			.remove::<Movement<_T>>()
-			.insert(Movement::<_T>::default());
+			.insert(Movement::<_T>::to(Dir3::NEG_X));
 		app.update();
 
 		assert_eq!(
-			Some(&SetFace(Face::Translation(Vec3::default()))),
+			Some(&SetFace(Face::Direction(Dir3::NEG_X))),
 			app.world().entity(entity).get::<SetFace>()
 		);
-	}
-
-	impl OnMovementRemoved for Movement<_T> {
-		type TConstraint = Without<_DoNotCallOnRemove>;
-
-		fn on_movement_removed(entity: &mut EntityCommands) {
-			entity.insert(_OnRemoveCalled);
-		}
-	}
-
-	#[derive(Component, Debug, PartialEq)]
-	struct _OnRemoveCalled;
-
-	#[derive(Component)]
-	struct _DoNotCallOnRemove;
-
-	#[test]
-	fn cleanup_calls_on_remove() {
-		let mut app = setup(Movement::<_T>::cleanup);
-		let entity = app
-			.world_mut()
-			.spawn(Movement {
-				target: default(),
-				method_cstr: || _T,
-			})
-			.id();
-
-		app.update();
-		app.world_mut().entity_mut(entity).remove::<Movement<_T>>();
-		app.update();
-
-		assert_eq!(
-			Some(&_OnRemoveCalled),
-			app.world().entity(entity).get::<_OnRemoveCalled>()
-		);
-	}
-
-	#[test]
-	fn cleanup_does_not_call_on_remove_when_filter_not_satisfied() {
-		let mut app = setup(Movement::<_T>::cleanup);
-		let entity = app
-			.world_mut()
-			.spawn((Movement::<_T>::default(), _DoNotCallOnRemove))
-			.id();
-
-		app.update();
-		app.world_mut().entity_mut(entity).remove::<Movement<_T>>();
-		app.update();
-
-		assert_eq!(None, app.world().entity(entity).get::<_OnRemoveCalled>());
 	}
 }

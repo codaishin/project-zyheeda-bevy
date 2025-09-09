@@ -1,30 +1,32 @@
-use crate::traits::change_per_frame::MinDistance;
+use crate::systems::movement::insert_process_component::{InputProcessComponent, ProcessInput};
 use bevy::{ecs::query::QuerySingleError, prelude::*};
 use common::{
 	errors::{Error, Level},
-	tools::speed::Speed,
-	traits::{
-		accessors::get::{RefAs, RefInto},
-		handles_player::KeyDirection,
-		key_mappings::Pressed,
-	},
+	traits::{handles_player::KeyDirection, key_mappings::Pressed},
 };
-use std::{any::type_name, marker::PhantomData, time::Duration};
+use std::{any::type_name, marker::PhantomData};
 
-impl<T> ParseDirectionalMovement for T where T: DirectionalMovementInput {}
+impl<T> ParseDirectionalMovement for T
+where
+	T: From<Dir3> + InputProcessComponent,
+	Self::TInputProcessComponent: UsesDirection,
+{
+}
 
-pub(crate) trait ParseDirectionalMovement: DirectionalMovementInput {
-	fn parse<TCamera, TAgent, TMap, TKey>(
-		In(delta): In<Duration>,
+pub(crate) trait ParseDirectionalMovement: From<Dir3> + InputProcessComponent
+where
+	Self::TInputProcessComponent: UsesDirection,
+{
+	fn parse<TCamera, TMap, TPlayer>(
 		map: Res<TMap>,
 		input: Res<ButtonInput<TMap::TInput>>,
-		agents: Query<(&GlobalTransform, &TAgent)>,
 		cameras: Query<&GlobalTransform, With<TCamera>>,
-	) -> Result<Option<Self>, TriggerMovementError<TCamera, TAgent>>
+		players: Query<&Self::TInputProcessComponent, With<TPlayer>>,
+	) -> Result<ProcessInput<Self>, TriggerMovementError<TCamera>>
 	where
-		TCamera: KeyDirection<TKey> + Component,
-		TAgent: for<'a> RefInto<'a, Speed> + Component,
-		TMap: Pressed<TKey> + Resource,
+		TCamera: KeyDirection + Component,
+		TMap: Pressed<TCamera::TKey> + Resource,
+		TPlayer: Component,
 	{
 		let cam_transform = match cameras.single() {
 			Err(QuerySingleError::NoEntities(_)) => {
@@ -35,55 +37,45 @@ pub(crate) trait ParseDirectionalMovement: DirectionalMovementInput {
 			}
 			Ok(cam) => cam,
 		};
-		let (transform, speed) = match agents.single() {
-			Err(QuerySingleError::NoEntities(_)) => {
-				return Err(TriggerMovementError::from(QueryError::NoAgent));
-			}
-			Err(QuerySingleError::MultipleEntities(_)) => {
-				return Err(TriggerMovementError::from(QueryError::MultipleAgents));
-			}
-			Ok(agent) => agent,
-		};
-		let translation = transform.translation();
-		let direction = map
+		let direction: Vec3 = map
 			.pressed(&input)
 			.filter_map(|key| TCamera::key_direction(cam_transform, &key).ok())
-			.fold(Vec3::ZERO, |a, b| a + *b);
-		let Some(direction) = direction.try_normalize() else {
-			return Ok(None);
-		};
-		let input = Self::from(
-			translation
-				+ direction
-					* Self::min_distance(speed.ref_as::<Speed>(), delta)
-					* SCALE_MIN_DISTANCE,
-		);
+			.map(|d| *d)
+			.sum();
 
-		Ok(Some(input))
+		match Dir3::try_from(direction) {
+			Ok(direction) => Ok(ProcessInput::New(Self::from(direction))),
+			Err(_) => Ok(stop_or_none(players)),
+		}
 	}
 }
 
-pub(crate) trait DirectionalMovementInput: From<Vec3> + MinDistance {}
+fn stop_or_none<T, TComponent, TPlayer>(
+	players: Query<&TComponent, With<TPlayer>>,
+) -> ProcessInput<T>
+where
+	TComponent: Component + UsesDirection,
+	TPlayer: Component,
+{
+	match players.single() {
+		Ok(player) if player.uses_direction() => ProcessInput::Stop,
+		_ => ProcessInput::None,
+	}
+}
 
-/// Used to compensate fluctuations in update deltas by overestimating the minimal distance
-/// that can be traveled per frame with the current speed.
-/// A value of 1.5 provides a 50% buffer to ensure smooth movement even with frame rate variations.
-/// Lower values may cause stuttering, while higher values may make movement feel less responsive.
-const SCALE_MIN_DISTANCE: f32 = 1.5;
+pub(crate) trait UsesDirection {
+	fn uses_direction(&self) -> bool;
+}
 
 #[derive(Debug, PartialEq)]
-pub(crate) struct TriggerMovementError<TCam, TAgent>
-where
-	TAgent: Component,
-{
-	_a: PhantomData<(TCam, TAgent)>,
+pub(crate) struct TriggerMovementError<TCam> {
+	_a: PhantomData<TCam>,
 	value: QueryError,
 }
 
-impl<TCam, TAgent> From<QueryError> for TriggerMovementError<TCam, TAgent>
+impl<TCam> From<QueryError> for TriggerMovementError<TCam>
 where
 	TCam: Component,
-	TAgent: Component,
 {
 	fn from(value: QueryError) -> Self {
 		Self {
@@ -93,21 +85,12 @@ where
 	}
 }
 
-impl<TCam, TAgent> From<TriggerMovementError<TCam, TAgent>> for Error
+impl<TCam> From<TriggerMovementError<TCam>> for Error
 where
 	TCam: Component,
-	TAgent: Component,
 {
-	fn from(error: TriggerMovementError<TCam, TAgent>) -> Self {
+	fn from(error: TriggerMovementError<TCam>) -> Self {
 		match error.value {
-			QueryError::NoAgent => Error::Single {
-				msg: format!("Found no agent of type {}", type_name::<TAgent>()),
-				lvl: Level::Error,
-			},
-			QueryError::MultipleAgents => Error::Single {
-				msg: format!("Found multiple agents of type {}", type_name::<TAgent>()),
-				lvl: Level::Error,
-			},
 			QueryError::NoCam => Error::Single {
 				msg: format!("Found no camera of type {}", type_name::<TCam>()),
 				lvl: Level::Error,
@@ -122,8 +105,6 @@ where
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum QueryError {
-	NoAgent,
-	MultipleAgents,
 	NoCam,
 	MultipleCams,
 }
@@ -133,13 +114,16 @@ mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
-		tools::{UnitsPerSecond, action_key::user_input::UserInput},
+		tools::action_key::user_input::UserInput,
 		traits::handles_player::DirectionError,
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::collections::HashSet;
 	use testing::{NestedMocks, SingleThreadedApp};
+
+	#[derive(Component)]
+	struct _Player;
 
 	#[derive(Resource, NestedMocks)]
 	struct _Map {
@@ -162,20 +146,13 @@ mod tests {
 		C,
 	}
 
-	#[derive(Component, Debug, PartialEq)]
-	struct _Agent(Speed);
-
-	impl RefInto<'_, Speed> for _Agent {
-		fn ref_into(&self) -> Speed {
-			self.0
-		}
-	}
-
 	#[derive(Component)]
 	struct _Cam;
 
 	#[automock]
-	impl KeyDirection<_Key> for _Cam {
+	impl KeyDirection for _Cam {
+		type TKey = _Key;
+
 		fn key_direction(
 			self_transform: &GlobalTransform,
 			movement_key: &_Key,
@@ -184,26 +161,29 @@ mod tests {
 		}
 	}
 
-	macro_rules! mock_input {
-		() => {
-			#[derive(Debug, PartialEq, Clone, Copy)]
-			struct _Input(Vec3);
+	#[derive(Component)]
+	enum _Component {
+		Directional,
+		NotDirectional,
+	}
 
-			#[automock]
-			impl MinDistance for _Input {
-				fn min_distance(speed: Speed, delta: Duration) -> f32 {
-					Mock_Input::min_distance(speed, delta)
-				}
-			}
+	impl UsesDirection for _Component {
+		fn uses_direction(&self) -> bool {
+			matches!(self, _Component::Directional)
+		}
+	}
 
-			impl From<Vec3> for _Input {
-				fn from(translation: Vec3) -> Self {
-					Self(translation)
-				}
-			}
+	#[derive(Debug, PartialEq, Clone, Copy)]
+	struct _Input(Dir3);
 
-			impl DirectionalMovementInput for _Input {}
-		};
+	impl InputProcessComponent for _Input {
+		type TInputProcessComponent = _Component;
+	}
+
+	impl From<Dir3> for _Input {
+		fn from(direction: Dir3) -> Self {
+			Self(direction)
+		}
 	}
 
 	macro_rules! mock_cam {
@@ -212,7 +192,9 @@ mod tests {
 			struct _Cam;
 
 			#[automock]
-			impl KeyDirection<_Key> for _Cam {
+			impl KeyDirection for _Cam {
+				type TKey = _Key;
+
 				fn key_direction(
 					self_transform: &GlobalTransform,
 					movement_key: &_Key,
@@ -234,9 +216,6 @@ mod tests {
 
 	#[test]
 	fn trigger_single_direction_from_center() -> Result<(), RunSystemError> {
-		mock_input!();
-		let event_ctx = Mock_Input::min_distance_context();
-		event_ctx.expect().return_const(1. / SCALE_MIN_DISTANCE);
 		mock_cam!();
 		let cam_ctx = Mock_Cam::key_direction_context();
 		cam_ctx.expect().returning(|_, _| Ok(Dir3::Z));
@@ -245,110 +224,17 @@ mod tests {
 				.returning(|_| Box::new(std::iter::once(_Key::A)));
 		}));
 		app.world_mut().spawn((_Cam, GlobalTransform::default()));
-		app.world_mut().spawn((
-			GlobalTransform::default(),
-			_Agent(Speed(UnitsPerSecond::from(1.))),
-		));
 
-		let input = app.world_mut().run_system_once_with(
-			_Input::parse::<_Cam, _Agent, _Map, _Key>,
-			Duration::from_secs(1),
-		)?;
-
-		assert_eq!(Ok(Some(_Input(Vec3::Z))), input);
-		Ok(())
-	}
-
-	#[test]
-	fn call_min_distance_with_delta_and_agent_speed() -> Result<(), RunSystemError> {
-		let speed = Speed(UnitsPerSecond::from(42.));
-		let delta = Duration::from_secs(5);
-		mock_input!();
-		let event_ctx = Mock_Input::min_distance_context();
-		event_ctx
-			.expect()
-			.with(eq(speed), eq(delta))
-			.return_const(1. / SCALE_MIN_DISTANCE);
-		mock_cam!();
-		let cam_ctx = Mock_Cam::key_direction_context();
-		cam_ctx.expect().returning(|_, _| Ok(Dir3::Z));
-		let mut app = setup(_Map::new().with_mock(|mock| {
-			mock.expect_pressed()
-				.returning(|_| Box::new(std::iter::once(_Key::A)));
-		}));
-		app.world_mut().spawn((_Cam, GlobalTransform::default()));
-		app.world_mut()
-			.spawn((GlobalTransform::default(), _Agent(speed)));
-
-		_ = app
+		let input = app
 			.world_mut()
-			.run_system_once_with(_Input::parse::<_Cam, _Agent, _Map, _Key>, delta)?;
-		Ok(())
-	}
+			.run_system_once(_Input::parse::<_Cam, _Map, _Player>)?;
 
-	#[test]
-	fn scale_direction_with_min_distance_and_scale() -> Result<(), RunSystemError> {
-		mock_input!();
-		let min_distance = 4.;
-		let event_ctx = Mock_Input::min_distance_context();
-		event_ctx.expect().return_const(min_distance);
-		mock_cam!();
-		let cam_ctx = Mock_Cam::key_direction_context();
-		cam_ctx.expect().returning(|_, _| Ok(Dir3::Z));
-		let mut app = setup(_Map::new().with_mock(|mock| {
-			mock.expect_pressed()
-				.returning(|_| Box::new(std::iter::once(_Key::A)));
-		}));
-		app.world_mut().spawn((_Cam, GlobalTransform::default()));
-		app.world_mut().spawn((
-			GlobalTransform::default(),
-			_Agent(Speed(UnitsPerSecond::from(42.))),
-		));
-
-		let input = app.world_mut().run_system_once_with(
-			_Input::parse::<_Cam, _Agent, _Map, _Key>,
-			Duration::from_secs(1),
-		)?;
-
-		assert_eq!(
-			Ok(Some(_Input(Vec3::Z * min_distance * SCALE_MIN_DISTANCE))),
-			input
-		);
-		Ok(())
-	}
-
-	#[test]
-	fn trigger_single_direction_from_offset() -> Result<(), RunSystemError> {
-		mock_input!();
-		let event_ctx = Mock_Input::min_distance_context();
-		event_ctx.expect().return_const(1. / SCALE_MIN_DISTANCE);
-		mock_cam!();
-		let cam_ctx = Mock_Cam::key_direction_context();
-		cam_ctx.expect().returning(|_, _| Ok(Dir3::Z));
-		let mut app = setup(_Map::new().with_mock(|mock| {
-			mock.expect_pressed()
-				.returning(|_| Box::new(std::iter::once(_Key::A)));
-		}));
-		app.world_mut().spawn((_Cam, GlobalTransform::default()));
-		app.world_mut().spawn((
-			GlobalTransform::from_xyz(1., 2., 3.),
-			_Agent(Speed(UnitsPerSecond::from(42.))),
-		));
-
-		let input = app.world_mut().run_system_once_with(
-			_Input::parse::<_Cam, _Agent, _Map, _Key>,
-			Duration::from_secs(1),
-		)?;
-
-		assert_eq!(Ok(Some(_Input(Vec3::new(1., 2., 3.) + Vec3::Z))), input);
+		assert_eq!(Ok(ProcessInput::New(_Input(Dir3::Z))), input);
 		Ok(())
 	}
 
 	#[test]
 	fn trigger_accumulated_2_direction_from_center() -> Result<(), RunSystemError> {
-		mock_input!();
-		let event_ctx = Mock_Input::min_distance_context();
-		event_ctx.expect().return_const(1. / SCALE_MIN_DISTANCE);
 		mock_cam!();
 		let cam_ctx = Mock_Cam::key_direction_context();
 		cam_ctx
@@ -364,25 +250,22 @@ mod tests {
 				.returning(|_| Box::new([_Key::A, _Key::B].into_iter()));
 		}));
 		app.world_mut().spawn((_Cam, GlobalTransform::default()));
-		app.world_mut().spawn((
-			GlobalTransform::default(),
-			_Agent(Speed(UnitsPerSecond::from(1.))),
-		));
 
-		let input = app.world_mut().run_system_once_with(
-			_Input::parse::<_Cam, _Agent, _Map, _Key>,
-			Duration::from_secs(1),
-		)?;
+		let input = app
+			.world_mut()
+			.run_system_once(_Input::parse::<_Cam, _Map, _Player>)?;
 
-		assert_eq!(Ok(Some(_Input((Vec3::Z + Vec3::X).normalize()))), input);
+		assert_eq!(
+			Ok(ProcessInput::New(_Input(
+				Dir3::try_from(Vec3::Z + Vec3::X).unwrap()
+			))),
+			input
+		);
 		Ok(())
 	}
 
 	#[test]
 	fn trigger_accumulated_3_direction_from_center() -> Result<(), RunSystemError> {
-		mock_input!();
-		let event_ctx = Mock_Input::min_distance_context();
-		event_ctx.expect().return_const(1. / SCALE_MIN_DISTANCE);
 		mock_cam!();
 		let cam_ctx = Mock_Cam::key_direction_context();
 		cam_ctx
@@ -402,27 +285,44 @@ mod tests {
 				.returning(|_| Box::new([_Key::A, _Key::B, _Key::C].into_iter()));
 		}));
 		app.world_mut().spawn((_Cam, GlobalTransform::default()));
-		app.world_mut().spawn((
-			GlobalTransform::default(),
-			_Agent(Speed(UnitsPerSecond::from(1.))),
-		));
 
-		let input = app.world_mut().run_system_once_with(
-			_Input::parse::<_Cam, _Agent, _Map, _Key>,
-			Duration::from_secs(1),
-		)?;
+		let input = app
+			.world_mut()
+			.run_system_once(_Input::parse::<_Cam, _Map, _Player>)?;
 
-		assert_eq!(Ok(Some(_Input(Vec3::X))), input);
+		assert_eq!(Ok(ProcessInput::New(_Input(Dir3::X))), input);
 		Ok(())
 	}
 
 	#[test]
-	fn no_trigger_when_accumulated_2_directions_are_zero_from_center() -> Result<(), RunSystemError>
-	{
-		mock_input!();
+	fn none_when_no_directions() -> Result<(), RunSystemError> {
 		mock_cam!();
-		let event_ctx = Mock_Input::min_distance_context();
-		event_ctx.expect().return_const(1. / SCALE_MIN_DISTANCE);
+		let cam_ctx = Mock_Cam::key_direction_context();
+		cam_ctx
+			.expect()
+			.with(eq(GlobalTransform::default()), eq(_Key::A))
+			.returning(|_, _| Ok(Dir3::Z));
+		cam_ctx
+			.expect()
+			.with(eq(GlobalTransform::default()), eq(_Key::B))
+			.returning(|_, _| Ok(Dir3::NEG_Z));
+		let mut app = setup(_Map::new().with_mock(|mock| {
+			mock.expect_pressed()
+				.returning(|_| Box::new([].into_iter()));
+		}));
+		app.world_mut().spawn((_Cam, GlobalTransform::default()));
+
+		let input = app
+			.world_mut()
+			.run_system_once(_Input::parse::<_Cam, _Map, _Player>)?;
+
+		assert_eq!(Ok(ProcessInput::None), input);
+		Ok(())
+	}
+
+	#[test]
+	fn none_when_accumulated_2_directions_are_zero_from_center() -> Result<(), RunSystemError> {
+		mock_cam!();
 		let cam_ctx = Mock_Cam::key_direction_context();
 		cam_ctx
 			.expect()
@@ -437,25 +337,101 @@ mod tests {
 				.returning(|_| Box::new([_Key::A, _Key::B].into_iter()));
 		}));
 		app.world_mut().spawn((_Cam, GlobalTransform::default()));
-		app.world_mut().spawn((
-			GlobalTransform::default(),
-			_Agent(Speed(UnitsPerSecond::from(1.))),
-		));
 
-		let input = app.world_mut().run_system_once_with(
-			_Input::parse::<_Cam, _Agent, _Map, _Key>,
-			Duration::from_secs(1),
-		)?;
+		let input = app
+			.world_mut()
+			.run_system_once(_Input::parse::<_Cam, _Map, _Player>)?;
 
-		assert_eq!(Ok(None), input);
+		assert_eq!(Ok(ProcessInput::None), input);
+		Ok(())
+	}
+
+	#[test]
+	fn stop_when_no_directions_and_player_process_component_is_directional()
+	-> Result<(), RunSystemError> {
+		mock_cam!();
+		let cam_ctx = Mock_Cam::key_direction_context();
+		cam_ctx
+			.expect()
+			.with(eq(GlobalTransform::default()), eq(_Key::A))
+			.returning(|_, _| Ok(Dir3::Z));
+		cam_ctx
+			.expect()
+			.with(eq(GlobalTransform::default()), eq(_Key::B))
+			.returning(|_, _| Ok(Dir3::NEG_Z));
+		let mut app = setup(_Map::new().with_mock(|mock| {
+			mock.expect_pressed()
+				.returning(|_| Box::new([].into_iter()));
+		}));
+		app.world_mut().spawn((_Cam, GlobalTransform::default()));
+		app.world_mut().spawn((_Player, _Component::Directional));
+
+		let input = app
+			.world_mut()
+			.run_system_once(_Input::parse::<_Cam, _Map, _Player>)?;
+
+		assert_eq!(Ok(ProcessInput::Stop), input);
+		Ok(())
+	}
+
+	#[test]
+	fn none_when_no_directions_and_non_player_process_component_is_directional()
+	-> Result<(), RunSystemError> {
+		mock_cam!();
+		let cam_ctx = Mock_Cam::key_direction_context();
+		cam_ctx
+			.expect()
+			.with(eq(GlobalTransform::default()), eq(_Key::A))
+			.returning(|_, _| Ok(Dir3::Z));
+		cam_ctx
+			.expect()
+			.with(eq(GlobalTransform::default()), eq(_Key::B))
+			.returning(|_, _| Ok(Dir3::NEG_Z));
+		let mut app = setup(_Map::new().with_mock(|mock| {
+			mock.expect_pressed()
+				.returning(|_| Box::new([].into_iter()));
+		}));
+		app.world_mut().spawn((_Cam, GlobalTransform::default()));
+		app.world_mut().spawn(_Component::Directional);
+
+		let input = app
+			.world_mut()
+			.run_system_once(_Input::parse::<_Cam, _Map, _Player>)?;
+
+		assert_eq!(Ok(ProcessInput::None), input);
+		Ok(())
+	}
+
+	#[test]
+	fn none_when_no_directions_and_player_process_component_is_not_directional()
+	-> Result<(), RunSystemError> {
+		mock_cam!();
+		let cam_ctx = Mock_Cam::key_direction_context();
+		cam_ctx
+			.expect()
+			.with(eq(GlobalTransform::default()), eq(_Key::A))
+			.returning(|_, _| Ok(Dir3::Z));
+		cam_ctx
+			.expect()
+			.with(eq(GlobalTransform::default()), eq(_Key::B))
+			.returning(|_, _| Ok(Dir3::NEG_Z));
+		let mut app = setup(_Map::new().with_mock(|mock| {
+			mock.expect_pressed()
+				.returning(|_| Box::new([].into_iter()));
+		}));
+		app.world_mut().spawn((_Cam, GlobalTransform::default()));
+		app.world_mut().spawn((_Player, _Component::NotDirectional));
+
+		let input = app
+			.world_mut()
+			.run_system_once(_Input::parse::<_Cam, _Map, _Player>)?;
+
+		assert_eq!(Ok(ProcessInput::None), input);
 		Ok(())
 	}
 
 	#[test]
 	fn use_camera_transform() -> Result<(), RunSystemError> {
-		mock_input!();
-		let event_ctx = Mock_Input::min_distance_context();
-		event_ctx.expect().return_const(1. / SCALE_MIN_DISTANCE);
 		mock_cam!();
 		let cam_ctx = Mock_Cam::key_direction_context();
 		cam_ctx
@@ -468,23 +444,15 @@ mod tests {
 		}));
 		app.world_mut()
 			.spawn((_Cam, GlobalTransform::from_xyz(1., 2., 3.)));
-		app.world_mut().spawn((
-			GlobalTransform::default(),
-			_Agent(Speed(UnitsPerSecond::from(1.))),
-		));
 
-		_ = app.world_mut().run_system_once_with(
-			_Input::parse::<_Cam, _Agent, _Map, _Key>,
-			Duration::from_secs(1),
-		)?;
+		_ = app
+			.world_mut()
+			.run_system_once(_Input::parse::<_Cam, _Map, _Player>)?;
 		Ok(())
 	}
 
 	#[test]
 	fn use_button_input() -> Result<(), RunSystemError> {
-		mock_input!();
-		let event_ctx = Mock_Input::min_distance_context();
-		event_ctx.expect().return_const(1. / SCALE_MIN_DISTANCE);
 		mock_cam!();
 		let cam_ctx = Mock_Cam::key_direction_context();
 		cam_ctx.expect().returning(|_, _| Ok(Dir3::Z));
@@ -505,90 +473,24 @@ mod tests {
 		input.press(UserInput::from(KeyCode::Katakana));
 		app.insert_resource(input);
 		app.world_mut().spawn((_Cam, GlobalTransform::default()));
-		app.world_mut().spawn((
-			GlobalTransform::from_xyz(1., 2., 3.),
-			_Agent(Speed(UnitsPerSecond::from(1.))),
-		));
 
-		_ = app.world_mut().run_system_once_with(
-			_Input::parse::<_Cam, _Agent, _Map, _Key>,
-			Duration::from_secs(1),
-		)?;
-		Ok(())
-	}
-
-	#[test]
-	fn return_no_agent_error() -> Result<(), RunSystemError> {
-		mock_input!();
-		let event_ctx = Mock_Input::min_distance_context();
-		event_ctx.expect().return_const(1. / SCALE_MIN_DISTANCE);
-		mock_cam!();
-		let mut app = setup(_Map::new().with_mock(|mock| {
-			mock.expect_pressed()
-				.returning(|_| Box::new(std::iter::empty()));
-		}));
-		app.world_mut().spawn((_Cam, GlobalTransform::default()));
-
-		let result = app.world_mut().run_system_once_with(
-			_Input::parse::<_Cam, _Agent, _Map, _Key>,
-			Duration::from_secs(1),
-		)?;
-
-		assert_eq!(Err(TriggerMovementError::from(QueryError::NoAgent)), result);
-		Ok(())
-	}
-
-	#[test]
-	fn return_multiple_agents_error() -> Result<(), RunSystemError> {
-		mock_input!();
-		let event_ctx = Mock_Input::min_distance_context();
-		event_ctx.expect().return_const(1. / SCALE_MIN_DISTANCE);
-		mock_cam!();
-		let mut app = setup(_Map::new().with_mock(|mock| {
-			mock.expect_pressed()
-				.returning(|_| Box::new(std::iter::empty()));
-		}));
-		app.world_mut().spawn((_Cam, GlobalTransform::default()));
-		app.world_mut().spawn((
-			GlobalTransform::default(),
-			_Agent(Speed(UnitsPerSecond::from(1.))),
-		));
-		app.world_mut().spawn((
-			GlobalTransform::default(),
-			_Agent(Speed(UnitsPerSecond::from(1.))),
-		));
-
-		let result = app.world_mut().run_system_once_with(
-			_Input::parse::<_Cam, _Agent, _Map, _Key>,
-			Duration::from_secs(1),
-		)?;
-
-		assert_eq!(
-			Err(TriggerMovementError::from(QueryError::MultipleAgents)),
-			result
-		);
+		_ = app
+			.world_mut()
+			.run_system_once(_Input::parse::<_Cam, _Map, _Player>)?;
 		Ok(())
 	}
 
 	#[test]
 	fn return_no_cam_error() -> Result<(), RunSystemError> {
-		mock_input!();
-		let event_ctx = Mock_Input::min_distance_context();
-		event_ctx.expect().return_const(1. / SCALE_MIN_DISTANCE);
 		mock_cam!();
 		let mut app = setup(_Map::new().with_mock(|mock| {
 			mock.expect_pressed()
 				.returning(|_| Box::new(std::iter::empty()));
 		}));
-		app.world_mut().spawn((
-			GlobalTransform::default(),
-			_Agent(Speed(UnitsPerSecond::from(1.))),
-		));
 
-		let result = app.world_mut().run_system_once_with(
-			_Input::parse::<_Cam, _Agent, _Map, _Key>,
-			Duration::from_secs(1),
-		)?;
+		let result = app
+			.world_mut()
+			.run_system_once(_Input::parse::<_Cam, _Map, _Player>)?;
 
 		assert_eq!(Err(TriggerMovementError::from(QueryError::NoCam)), result);
 		Ok(())
@@ -596,9 +498,6 @@ mod tests {
 
 	#[test]
 	fn return_multiple_cams_error() -> Result<(), RunSystemError> {
-		mock_input!();
-		let event_ctx = Mock_Input::min_distance_context();
-		event_ctx.expect().return_const(1. / SCALE_MIN_DISTANCE);
 		mock_cam!();
 		let mut app = setup(_Map::new().with_mock(|mock| {
 			mock.expect_pressed()
@@ -606,15 +505,10 @@ mod tests {
 		}));
 		app.world_mut().spawn((_Cam, GlobalTransform::default()));
 		app.world_mut().spawn((_Cam, GlobalTransform::default()));
-		app.world_mut().spawn((
-			GlobalTransform::default(),
-			_Agent(Speed(UnitsPerSecond::from(1.))),
-		));
 
-		let result = app.world_mut().run_system_once_with(
-			_Input::parse::<_Cam, _Agent, _Map, _Key>,
-			Duration::from_secs(1),
-		)?;
+		let result = app
+			.world_mut()
+			.run_system_once(_Input::parse::<_Cam, _Map, _Player>)?;
 
 		assert_eq!(
 			Err(TriggerMovementError::from(QueryError::MultipleCams)),
