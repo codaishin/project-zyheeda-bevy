@@ -4,7 +4,11 @@ use bevy::prelude::*;
 use common::{
 	components::immobilized::Immobilized,
 	tools::speed::Speed,
-	traits::{animation::GetMovementDirection, handles_physics::Linear, thread_safe::ThreadSafe},
+	traits::{
+		animation::GetMovementDirection,
+		handles_physics::LinearMotion,
+		thread_safe::ThreadSafe,
+	},
 };
 use std::{cmp::Ordering, marker::PhantomData, time::Duration};
 
@@ -33,7 +37,7 @@ where
 
 impl<TMotion> MovementUpdate for Movement<Physical<TMotion>>
 where
-	TMotion: ThreadSafe + From<Linear> + Component,
+	TMotion: ThreadSafe + From<LinearMotion> + Component,
 {
 	type TComponents<'a> = &'a GlobalTransform;
 	type TConstraint = Without<Immobilized>;
@@ -50,11 +54,11 @@ where
 
 		match direction.length().partial_cmp(&min_distance) {
 			Some(Ordering::Less | Ordering::Equal) | None => {
-				agent.try_insert(TMotion::from(Linear::ZERO));
+				agent.try_insert(TMotion::from(LinearMotion::ZERO));
 				IsDone(true)
 			}
 			_ => {
-				agent.try_insert(TMotion::from(Linear(direction.normalize() * *speed)));
+				agent.try_insert(TMotion::from(LinearMotion(direction.normalize() * *speed)));
 				IsDone(false)
 			}
 		}
@@ -63,12 +67,12 @@ where
 
 impl<TMotion> OnMovementRemoved for Movement<Physical<TMotion>>
 where
-	TMotion: Component + From<Linear>,
+	TMotion: Component + From<LinearMotion>,
 {
 	type TConstraint = Without<Immobilized>;
 
 	fn on_movement_removed(entity: &mut EntityCommands) {
-		entity.try_insert(TMotion::from(Linear::ZERO));
+		entity.try_insert(TMotion::from(LinearMotion::ZERO));
 	}
 }
 
@@ -102,10 +106,10 @@ mod tests {
 	struct _UpdateParams((GlobalTransform, Speed));
 
 	#[derive(Component, Debug, PartialEq, Default)]
-	struct _Motion(Linear);
+	struct _Motion(LinearMotion);
 
-	impl From<Linear> for _Motion {
-		fn from(linear: Linear) -> Self {
+	impl From<LinearMotion> for _Motion {
+		fn from(linear: LinearMotion) -> Self {
 			Self(linear)
 		}
 	}
@@ -166,7 +170,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Motion(Linear(
+			Some(&_Motion(LinearMotion(
 				(target - transform.translation()).normalize() * *speed
 			))),
 			app.world().entity(agent).get::<_Motion>()
@@ -226,14 +230,14 @@ mod tests {
 			.spawn((
 				Movement::<Physical<_Motion>>::to(target),
 				_UpdateParams((transform, speed)),
-				_Motion(Linear(Vec3::new(1., 2., 3.))),
+				_Motion(LinearMotion(Vec3::new(1., 2., 3.))),
 			))
 			.id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&_Motion(Linear::ZERO)),
+			Some(&_Motion(LinearMotion::ZERO)),
 			app.world().entity(agent).get::<_Motion>()
 		);
 	}
@@ -249,14 +253,14 @@ mod tests {
 			.spawn((
 				Movement::<Physical<_Motion>>::to(target),
 				_UpdateParams((transform, speed)),
-				_Motion(Linear(Vec3::new(1., 2., 3.))),
+				_Motion(LinearMotion(Vec3::new(1., 2., 3.))),
 			))
 			.id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&_Motion(Linear::ZERO)),
+			Some(&_Motion(LinearMotion::ZERO)),
 			app.world().entity(agent).get::<_Motion>()
 		);
 	}
@@ -319,7 +323,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Motion(Linear::ZERO)),
+			Some(&_Motion(LinearMotion::ZERO)),
 			app.world().entity(entity).get::<_Motion>()
 		);
 	}
