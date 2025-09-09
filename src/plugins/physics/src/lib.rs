@@ -12,7 +12,7 @@ use crate::{
 		effect::force::ForceEffect,
 		force_affected::ForceAffected,
 		gravity_affected::GravityAffected,
-		velocity::Motion,
+		motion::Motion,
 	},
 	observers::update_blockers::UpdateBlockersObserver,
 	systems::interactions::act_on::ActOnSystem,
@@ -76,6 +76,9 @@ where
 		TSaveGame::register_savable_component::<Motion>(app);
 
 		app
+			// Motion
+			.register_derived_component::<Motion, Velocity>()
+			.add_observer(Motion::zero_velocity_on_remove)
 			// Deal health damage
 			.register_required_components::<HealthDamageEffect, InteractingEntities>()
 			.add_observer(HealthDamageEffect::update_blockers)
@@ -135,7 +138,6 @@ impl AddPhysics for App {
 		TSaveGame::register_savable_component::<RunningInteractions<TActor, TTarget>>(self);
 
 		self.register_required_components::<TActor, RunningInteractions<TActor, TTarget>>()
-			.register_derived_component::<Motion, Velocity>()
 			.add_systems(
 				Update,
 				(

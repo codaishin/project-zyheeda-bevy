@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use common::{
-	tools::UnitsPerSecond,
+	tools::{UnitsPerSecond, speed::Speed},
 	traits::{accessors::get::TryApplyOn, handles_physics::LinearMotion},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -17,9 +17,11 @@ impl SetMotionForward {
 		TMotion: From<LinearMotion> + Component,
 	{
 		for (entity, SetMotionForward(speed), transform) in &set_velocities {
-			let movement = transform.forward() * **speed;
 			commands.try_apply_on(&entity, |mut e| {
-				e.try_insert(TMotion::from(LinearMotion(movement)));
+				e.try_insert(TMotion::from(LinearMotion::Direction {
+					speed: Speed(*speed),
+					direction: transform.forward(),
+				}));
 				e.try_remove::<SetMotionForward>();
 			});
 		}
@@ -43,9 +45,36 @@ mod tests {
 	struct _Motion(LinearMotion);
 
 	impl ApproxEqual<f32> for _Motion {
-		fn approx_equal(&self, Self(LinearMotion(other)): &Self, tolerance: &f32) -> bool {
-			let Self(LinearMotion(this)) = self;
-			this.approx_equal(other, tolerance)
+		fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
+			match (self.0, other.0) {
+				(
+					LinearMotion::Direction {
+						speed: speed_a,
+						direction: dir_a,
+					},
+					LinearMotion::Direction {
+						speed: speed_b,
+						direction: dir_b,
+					},
+				) => {
+					speed_a.approx_equal(&*speed_b, tolerance)
+						&& dir_a.approx_equal(&dir_b, tolerance)
+				}
+				(
+					LinearMotion::ToTarget {
+						speed: speed_a,
+						target: tgt_a,
+					},
+					LinearMotion::ToTarget {
+						speed: speed_b,
+						target: tgt_b,
+					},
+				) => {
+					speed_a.approx_equal(&*speed_b, tolerance)
+						&& tgt_a.approx_equal(&tgt_b, tolerance)
+				}
+				_ => false,
+			}
 		}
 	}
 
@@ -78,7 +107,10 @@ mod tests {
 			.run_system_once(SetMotionForward::system::<_Motion>)?;
 
 		assert_eq_approx!(
-			Some(&_Motion(LinearMotion(Vec3::new(1., 2., 3.).normalize()))),
+			Some(&_Motion(LinearMotion::Direction {
+				speed: Speed(UnitsPerSecond::from(1.)),
+				direction: Dir3::try_from(Vec3::new(1., 2., 3.).normalize()).unwrap()
+			})),
 			app.world().entity(entity).get::<_Motion>(),
 			0.00001
 		);
@@ -100,9 +132,10 @@ mod tests {
 			.run_system_once(SetMotionForward::system::<_Motion>)?;
 
 		assert_eq_approx!(
-			Some(&_Motion(LinearMotion(
-				Vec3::new(1., 2., 3.).normalize() * 10.
-			))),
+			Some(&_Motion(LinearMotion::Direction {
+				speed: Speed(UnitsPerSecond::from(10.)),
+				direction: Dir3::try_from(Vec3::new(1., 2., 3.)).unwrap()
+			})),
 			app.world().entity(entity).get::<_Motion>(),
 			0.00001
 		);
