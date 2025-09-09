@@ -47,7 +47,7 @@ fn insert_if_new<TComponent, TDerived>(
 		return;
 	};
 	commands.try_apply_on(&entity, |mut e| {
-		e.try_insert_if_new(TDerived::derive_from(component, &param));
+		e.try_insert_if_new(TDerived::derive_from(entity, component, &param));
 	});
 }
 
@@ -65,7 +65,7 @@ fn insert_always<TComponent, TDerived>(
 		return;
 	};
 	commands.try_apply_on(&entity, |mut e| {
-		e.try_insert(TDerived::derive_from(component, &param));
+		e.try_insert(TDerived::derive_from(entity, component, &param));
 	});
 }
 
@@ -100,7 +100,7 @@ mod tests {
 
 	#[derive(Component, Debug, PartialEq)]
 	enum _NewlyDerived {
-		A,
+		A(Entity),
 		B,
 	}
 
@@ -109,14 +109,14 @@ mod tests {
 
 		type TParam = ();
 
-		fn derive_from(_: &_Component, _: &SystemParamItem<Self::TParam>) -> Self {
-			_NewlyDerived::A
+		fn derive_from(entity: Entity, _: &_Component, _: &SystemParamItem<Self::TParam>) -> Self {
+			_NewlyDerived::A(entity)
 		}
 	}
 
 	#[derive(Component, Debug, PartialEq)]
 	enum _AlwaysDerived {
-		A,
+		A(Entity),
 		B,
 	}
 
@@ -125,8 +125,8 @@ mod tests {
 
 		type TParam = ();
 
-		fn derive_from(_: &_Component, _: &SystemParamItem<Self::TParam>) -> Self {
-			_AlwaysDerived::A
+		fn derive_from(entity: Entity, _: &_Component, _: &SystemParamItem<Self::TParam>) -> Self {
+			_AlwaysDerived::A(entity)
 		}
 	}
 
@@ -150,7 +150,10 @@ mod tests {
 
 			let entity = app.world_mut().spawn(_Component);
 
-			assert_eq!(Some(&_NewlyDerived::A), entity.get::<_NewlyDerived>());
+			assert_eq!(
+				Some(&_NewlyDerived::A(entity.id())),
+				entity.get::<_NewlyDerived>(),
+			);
 		}
 
 		#[test]
@@ -170,7 +173,10 @@ mod tests {
 			entity.remove::<_NewlyDerived>();
 			entity.insert(_Component);
 
-			assert_eq!(Some(&_NewlyDerived::A), entity.get::<_NewlyDerived>());
+			assert_eq!(
+				Some(&_NewlyDerived::A(entity.id())),
+				entity.get::<_NewlyDerived>(),
+			);
 		}
 
 		#[test]
@@ -192,7 +198,10 @@ mod tests {
 
 			let entity = app.world_mut().spawn(_Component);
 
-			assert_eq!(Some(&_AlwaysDerived::A), entity.get::<_AlwaysDerived>());
+			assert_eq!(
+				Some(&_AlwaysDerived::A(entity.id())),
+				entity.get::<_AlwaysDerived>(),
+			);
 		}
 
 		#[test]
@@ -201,7 +210,10 @@ mod tests {
 
 			let entity = app.world_mut().spawn((_Component, _AlwaysDerived::B));
 
-			assert_eq!(Some(&_AlwaysDerived::A), entity.get::<_AlwaysDerived>());
+			assert_eq!(
+				Some(&_AlwaysDerived::A(entity.id())),
+				entity.get::<_AlwaysDerived>(),
+			);
 		}
 
 		#[test]
@@ -212,7 +224,10 @@ mod tests {
 			entity.remove::<_AlwaysDerived>();
 			entity.insert(_Component);
 
-			assert_eq!(Some(&_AlwaysDerived::A), entity.get::<_AlwaysDerived>());
+			assert_eq!(
+				Some(&_AlwaysDerived::A(entity.id())),
+				entity.get::<_AlwaysDerived>(),
+			);
 		}
 
 		#[test]

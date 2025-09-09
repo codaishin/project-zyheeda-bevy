@@ -24,7 +24,7 @@ impl<'w, 's> DerivableFrom<'w, 's, Essence> for MaterialOverride {
 
 	type TParam = ();
 
-	fn derive_from(essence: &Essence, _: &()) -> Self {
+	fn derive_from(_: Entity, essence: &Essence, _: &()) -> Self {
 		match essence {
 			Essence::None => MaterialOverride::None,
 			Essence::Force => MaterialOverride::Material(EssenceMaterial {

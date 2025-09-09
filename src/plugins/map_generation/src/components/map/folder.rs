@@ -35,7 +35,7 @@ where
 
 	type TParam = ();
 
-	fn derive_from(MapFolder { path, .. }: &MapFolder<TCell>, _: &()) -> Self {
+	fn derive_from(_: Entity, MapFolder { path, .. }: &MapFolder<TCell>, _: &()) -> Self {
 		Self::from(path.clone())
 	}
 }

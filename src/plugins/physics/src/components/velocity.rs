@@ -23,7 +23,7 @@ impl DerivableFrom<'_, '_, Motion> for Velocity {
 	const INSERT: InsertDerivedComponent = InsertDerivedComponent::Always;
 	type TParam = ();
 
-	fn derive_from(physical_velocity: &Motion, _: &()) -> Self {
+	fn derive_from(_: Entity, physical_velocity: &Motion, _: &()) -> Self {
 		match physical_velocity {
 			Motion::Linear(velocity) => Velocity::linear(*velocity),
 		}
