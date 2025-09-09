@@ -1,7 +1,7 @@
 use crate::{
 	components::is_blocker::Blocker,
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
-	tools::Units,
+	tools::{Units, speed::Speed},
 };
 use bevy::prelude::*;
 use std::collections::HashSet;
@@ -14,14 +14,13 @@ pub trait HandlesPhysicalObjects {
 }
 
 pub trait HandlesMotion {
-	type TMotion: Component + From<Linear>;
+	type TMotion: Component + From<LinearMotion>;
 }
 
 #[derive(Debug, PartialEq, Default)]
-pub struct Linear(pub Vec3);
-
-impl Linear {
-	pub const ZERO: Self = Self(Vec3::ZERO);
+pub struct LinearMotion {
+	pub target: Vec3,
+	pub speed: Speed,
 }
 
 pub trait HandlesAllPhysicalEffects:
