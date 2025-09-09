@@ -4,6 +4,7 @@ use crate::{
 	tools::{Units, speed::Speed},
 };
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
 pub trait HandlesPhysicalObjects {
@@ -14,13 +15,17 @@ pub trait HandlesPhysicalObjects {
 }
 
 pub trait HandlesMotion {
+	/// The component controlling physical motion and related physical and collider computations.
+	///
+	/// Implementors must make sure this works on top level entities. No guarantees are made for
+	/// entities that are a child of other entities.
 	type TMotion: Component + From<LinearMotion>;
 }
 
-#[derive(Debug, PartialEq, Default)]
-pub struct LinearMotion {
-	pub target: Vec3,
-	pub speed: Speed,
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+pub enum LinearMotion {
+	Direction { speed: Speed, direction: Dir3 },
+	ToTarget { speed: Speed, target: Vec3 },
 }
 
 pub trait HandlesAllPhysicalEffects:

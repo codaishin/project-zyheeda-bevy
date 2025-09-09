@@ -53,12 +53,12 @@ where
 		let min_distance = Physical::<TMotion>::min_distance(speed, delta);
 
 		match direction.length().partial_cmp(&min_distance) {
-			Some(Ordering::Less | Ordering::Equal) | None => {
-				agent.try_insert(TMotion::from(LinearMotion::ZERO));
-				IsDone(true)
-			}
+			Some(Ordering::Less | Ordering::Equal) | None => IsDone(true),
 			_ => {
-				agent.try_insert(TMotion::from(LinearMotion(direction.normalize() * *speed)));
+				agent.try_insert(TMotion::from(LinearMotion::ToTarget {
+					speed,
+					target: self.target,
+				}));
 				IsDone(false)
 			}
 		}
@@ -72,7 +72,7 @@ where
 	type TConstraint = Without<Immobilized>;
 
 	fn on_movement_removed(entity: &mut EntityCommands) {
-		entity.try_insert(TMotion::from(LinearMotion::ZERO));
+		entity.try_remove::<TMotion>();
 	}
 }
 
@@ -105,7 +105,7 @@ mod tests {
 	#[derive(Component)]
 	struct _UpdateParams((GlobalTransform, Speed));
 
-	#[derive(Component, Debug, PartialEq, Default)]
+	#[derive(Component, Debug, PartialEq)]
 	struct _Motion(LinearMotion);
 
 	impl From<LinearMotion> for _Motion {
@@ -170,9 +170,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Motion(LinearMotion(
-				(target - transform.translation()).normalize() * *speed
-			))),
+			Some(&_Motion(LinearMotion::ToTarget { speed, target })),
 			app.world().entity(agent).get::<_Motion>()
 		);
 	}
@@ -220,52 +218,6 @@ mod tests {
 	}
 
 	#[test]
-	fn update_zeros_motion_when_direction_length_zero() {
-		let mut app = setup(call_update(Duration::from_millis(100)));
-		let transform = GlobalTransform::from_xyz(10., 0., 7.);
-		let target = Vec3::new(10., 0., 7.);
-		let speed = Speed(UnitsPerSecond::from(11.));
-		let agent = app
-			.world_mut()
-			.spawn((
-				Movement::<Physical<_Motion>>::to(target),
-				_UpdateParams((transform, speed)),
-				_Motion(LinearMotion(Vec3::new(1., 2., 3.))),
-			))
-			.id();
-
-		app.update();
-
-		assert_eq!(
-			Some(&_Motion(LinearMotion::ZERO)),
-			app.world().entity(agent).get::<_Motion>()
-		);
-	}
-
-	#[test]
-	fn update_zeros_motion_when_direction_length_not_computable() {
-		let mut app = setup(call_update(Duration::from_millis(100)));
-		let transform = GlobalTransform::from_xyz(10., 0., 7.);
-		let target = Vec3::new(f32::NAN, 0., 7.);
-		let speed = Speed(UnitsPerSecond::from(11.));
-		let agent = app
-			.world_mut()
-			.spawn((
-				Movement::<Physical<_Motion>>::to(target),
-				_UpdateParams((transform, speed)),
-				_Motion(LinearMotion(Vec3::new(1., 2., 3.))),
-			))
-			.id();
-
-		app.update();
-
-		assert_eq!(
-			Some(&_Motion(LinearMotion::ZERO)),
-			app.world().entity(agent).get::<_Motion>()
-		);
-	}
-
-	#[test]
 	fn update_returns_done_when_direction_length_zero() {
 		let mut app = setup(
 			call_update(Duration::from_millis(0)), // causes min_distance to become zero
@@ -302,30 +254,23 @@ mod tests {
 			.spawn((
 				Movement::<Physical<_Motion>>::to(target),
 				_UpdateParams((transform, speed)),
-				_Motion::default(),
 			))
 			.id();
 
 		app.update();
 
 		let agent = app.world().entity(agent);
-		assert_eq!(
-			(Some(&_Motion::default()), Some(&_Result(IsDone(true)))),
-			(agent.get::<_Motion>(), agent.get::<_Result>())
-		);
+		assert_eq!(Some(&_Result(IsDone(true))), agent.get::<_Result>());
 	}
 
 	#[test]
-	fn set_velocity_zero_when_calling_on_remove() {
+	fn remove_motion_when_calling_on_remove() {
 		let mut app = setup(call_on_remove);
 		let entity = app.world_mut().spawn_empty().id();
 
 		app.update();
 
-		assert_eq!(
-			Some(&_Motion(LinearMotion::ZERO)),
-			app.world().entity(entity).get::<_Motion>()
-		);
+		assert_eq!(None, app.world().entity(entity).get::<_Motion>());
 	}
 
 	#[test]
