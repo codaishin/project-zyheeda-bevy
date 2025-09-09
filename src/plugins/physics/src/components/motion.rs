@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
-	tools::speed::Speed,
+	tools::{Done, speed::Speed},
 	traits::{
 		handles_physics::LinearMotion,
 		register_derived_component::{DerivableFrom, InsertDerivedComponent},
@@ -14,12 +14,27 @@ use serde::{Deserialize, Serialize};
 #[component(immutable)]
 pub enum Motion {
 	Ongoing(LinearMotion),
-	Done,
+	Done(LinearMotion),
 }
 
 impl From<LinearMotion> for Motion {
 	fn from(linear_motion: LinearMotion) -> Self {
 		Self::Ongoing(linear_motion)
+	}
+}
+
+impl From<&Motion> for LinearMotion {
+	fn from(motion: &Motion) -> Self {
+		match motion {
+			Motion::Ongoing(linear_motion) => *linear_motion,
+			Motion::Done(linear_motion) => *linear_motion,
+		}
+	}
+}
+
+impl From<&Motion> for Done {
+	fn from(motion: &Motion) -> Self {
+		Done::when(matches!(motion, Motion::Done(..)))
 	}
 }
 
@@ -36,7 +51,7 @@ impl<'w, 's> DerivableFrom<'w, 's, Motion> for Velocity {
 			Motion::Ongoing(LinearMotion::ToTarget { speed, target }) => {
 				velocity_to_target(*target, *speed, transforms.get(entity).ok())
 			}
-			Motion::Done => Velocity::zero(),
+			Motion::Ongoing(LinearMotion::Stop) | Motion::Done(..) => Velocity::zero(),
 		}
 	}
 }
@@ -207,15 +222,41 @@ mod tests {
 		}
 	}
 
+	mod stop {
+		use super::*;
+
+		#[test]
+		fn insert_velocity_zero() {
+			let mut app = setup();
+			let entity = app
+				.world_mut()
+				.spawn(Motion::Ongoing(LinearMotion::Stop))
+				.id();
+
+			app.update();
+
+			assert_eq!(
+				Some(&Velocity::zero()),
+				app.world().entity(entity).get::<Velocity>(),
+			);
+		}
+	}
+
 	mod done {
 		use super::*;
 
 		#[test]
-		fn insert_velocity_with_speed() {
+		fn insert_velocity_zero() {
 			let mut app = setup();
 			let entity = app
 				.world_mut()
-				.spawn((Transform::from_xyz(1., 2., 3.), Motion::Done))
+				.spawn((
+					Transform::from_xyz(1., 2., 3.),
+					Motion::Done(LinearMotion::ToTarget {
+						speed: Speed::default(),
+						target: Vec3::default(),
+					}),
+				))
 				.id();
 
 			app.update();

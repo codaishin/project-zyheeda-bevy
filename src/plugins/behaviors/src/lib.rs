@@ -9,7 +9,10 @@ use crate::{
 		fix_points::{Anchor, FixPoints, fix_point::FixPoint},
 		skill_usage::SkillUsage,
 	},
-	systems::{face::execute_enemy_face::execute_enemy_face, movement::compute_path::MovementPath},
+	systems::{
+		face::execute_enemy_face::execute_enemy_face,
+		movement::{compute_path::MovementPath, insert_process_component::ProcessInput},
+	},
 };
 use bevy::prelude::*;
 use common::{
@@ -19,7 +22,6 @@ use common::{
 	tools::action_key::{movement::MovementKey, slot::PlayerSlot},
 	traits::{
 		animation::{HasAnimationsDispatch, RegisterAnimations},
-		delta::Delta,
 		handles_enemies::HandlesEnemies,
 		handles_orientation::{Face, HandlesOrientation},
 		handles_path_finding::HandlesPathFinding,
@@ -154,13 +156,10 @@ where
 		>;
 		let wasd_input = WasdInput::<Physical<TPhysics::TMotion>>::parse::<
 			TPlayers::TPlayerMainCamera,
-			TPlayers::TPlayerMovement,
 			TSettings::TKeyMap<MovementKey>,
-			MovementKey,
+			TPlayers::TPlayer,
 		>;
-		let wasd_input = Update::delta
-			.pipe(wasd_input)
-			.pipe(OnError::log_and_return(|| None));
+		let wasd_input = wasd_input.pipe(OnError::log_and_return(|| ProcessInput::None));
 
 		let compute_player_path = TPlayers::TPlayerMovement::compute_path::<
 			Physical<TPhysics::TMotion>,
@@ -208,8 +207,6 @@ where
 				(
 					// Prep systems
 					(
-						PathOrWasd::<Physical<TPhysics::TMotion>>::cleanup,
-						Movement::<Physical<TPhysics::TMotion>>::cleanup,
 						FixPoint::<SkillSpawner>::insert_in_children_of::<TPlayers::TPlayer>,
 						FixPoint::<SkillSpawner>::insert_in_children_of::<TEnemies::TEnemy>,
 						FixPoints::track_in_self_and_children::<FixPoint<SkillSpawner>>().system(),
@@ -217,11 +214,11 @@ where
 						.chain(),
 					// Player behaviors
 					(
-						point_input.pipe(TPlayers::TPlayerMovement::insert_process_component),
-						wasd_input.pipe(TPlayers::TPlayerMovement::insert_process_component),
+						point_input.pipe(TPlayers::TPlayer::insert_process_component),
+						wasd_input.pipe(TPlayers::TPlayer::insert_process_component),
 						compute_player_path,
-						Update::delta.pipe(execute_player_path),
-						Update::delta.pipe(execute_player_movement),
+						execute_player_path,
+						execute_player_movement,
 						animate_player_movement,
 						SkillUsage::player::<TPlayers::TPlayer, TSettings::TKeyMap<PlayerSlot>>,
 					)
@@ -231,8 +228,8 @@ where
 						TEnemies::TEnemy::select_behavior::<TPlayers::TPlayer>.pipe(OnError::log),
 						TEnemies::TEnemy::chase::<PathOrWasd<Physical<TPhysics::TMotion>>>,
 						compute_enemy_path,
-						Update::delta.pipe(execute_enemy_path),
-						Update::delta.pipe(execute_enemy_movement),
+						execute_enemy_path,
+						execute_enemy_movement,
 						animate_enemy_movement,
 						SkillUsage::enemy::<TEnemies::TEnemy>,
 					)

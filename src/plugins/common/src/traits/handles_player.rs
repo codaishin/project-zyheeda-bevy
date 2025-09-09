@@ -33,7 +33,7 @@ pub trait HandlesPlayer {
 }
 
 pub trait PlayerMainCamera {
-	type TPlayerMainCamera: Component + Default + KeyDirection<MovementKey>;
+	type TPlayerMainCamera: Component + Default + KeyDirection<TKey = MovementKey>;
 }
 
 pub trait HandlesPlayerCameras {
@@ -59,11 +59,13 @@ pub trait ConfiguresPlayerSkillAnimations {
 	fn stop_skill_animation() -> Self::TAnimationMarker;
 }
 
-pub trait KeyDirection<TKey> {
+pub trait KeyDirection {
+	type TKey;
+
 	fn key_direction(
 		self_transform: &GlobalTransform,
-		movement_key: &TKey,
-	) -> Result<Dir3, DirectionError<TKey>>;
+		movement_key: &Self::TKey,
+	) -> Result<Dir3, DirectionError<Self::TKey>>;
 }
 
 #[derive(Debug, PartialEq)]

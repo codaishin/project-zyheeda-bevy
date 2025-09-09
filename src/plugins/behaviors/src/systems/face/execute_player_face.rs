@@ -62,6 +62,10 @@ fn get_face_targets(
 					let target = get_target(entity, &colliders, &mut commands)?;
 					get_translation(target, transforms)
 				}
+				Face::Direction(direction) => {
+					let translation = get_translation(*id, transforms)?;
+					Some(translation + *direction)
+				}
 			};
 			Some((*id, target?))
 		})
@@ -397,6 +401,28 @@ mod tests {
 
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(10., 11., 12.), Vec3::Y)),
+			app.world().entity(agent).get::<Transform>()
+		);
+	}
+
+	#[test]
+	fn face_direction() {
+		let mut app = setup(_Cursor::new().with_mock(|mock| {
+			mock.expect_intersect_at()
+				.return_const(Vec3::new(1., 2., 3.));
+		}));
+		let agent = app
+			.world_mut()
+			.spawn((
+				Transform::from_xyz(4., 5., 6.),
+				_Face(Face::Direction(Dir3::NEG_X)),
+			))
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&Transform::from_xyz(4., 5., 6.).looking_to(Dir3::NEG_X, Vec3::Y)),
 			app.world().entity(agent).get::<Transform>()
 		);
 	}

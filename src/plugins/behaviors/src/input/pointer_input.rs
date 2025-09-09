@@ -29,7 +29,7 @@ impl<TMethod> InputProcessComponent for PointerInput<TMethod>
 where
 	TMethod: ThreadSafe,
 {
-	type TComponent = Movement<PathOrWasd<TMethod>>;
+	type TInputProcessComponent = Movement<PathOrWasd<TMethod>>;
 }
 
 impl<TMethod> PointMovementInput for PointerInput<TMethod> {}

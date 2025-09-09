@@ -1,22 +1,11 @@
-pub(crate) mod change_per_frame;
 pub(crate) mod count_down;
 pub(crate) mod has_filter;
 
-use bevy::ecs::{
-	query::{QueryData, QueryFilter, QueryItem},
-	system::EntityCommands,
+use bevy::ecs::query::{QueryData, QueryFilter, QueryItem};
+use common::{
+	tools::{Done, speed::Speed},
+	zyheeda_commands::ZyheedaEntityCommands,
 };
-use common::tools::speed::Speed;
-use std::time::Duration;
-
-#[derive(Debug, PartialEq, Default, Clone, Copy)]
-pub(crate) struct IsDone(pub(crate) bool);
-
-impl From<bool> for IsDone {
-	fn from(value: bool) -> Self {
-		Self(value)
-	}
-}
 
 pub(crate) trait MovementUpdate {
 	type TComponents<'a>: QueryData;
@@ -24,9 +13,8 @@ pub(crate) trait MovementUpdate {
 
 	fn update(
 		&self,
-		agent: &mut EntityCommands,
+		agent: &mut ZyheedaEntityCommands,
 		components: QueryItem<Self::TComponents<'_>>,
 		speed: Speed,
-		delta: Duration,
-	) -> IsDone;
+	) -> Done;
 }

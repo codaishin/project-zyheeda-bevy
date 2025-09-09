@@ -1,7 +1,8 @@
 use crate::{
 	components::is_blocker::Blocker,
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
-	tools::{Units, speed::Speed},
+	tools::{Done, Units, speed::Speed},
+	traits::accessors::get::RefInto,
 };
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -19,13 +20,17 @@ pub trait HandlesMotion {
 	///
 	/// Implementors must make sure this works on top level entities. No guarantees are made for
 	/// entities that are a child of other entities.
-	type TMotion: Component + From<LinearMotion>;
+	type TMotion: Component
+		+ From<LinearMotion>
+		+ for<'a> RefInto<'a, Done>
+		+ for<'a> RefInto<'a, LinearMotion>;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum LinearMotion {
 	Direction { speed: Speed, direction: Dir3 },
 	ToTarget { speed: Speed, target: Vec3 },
+	Stop,
 }
 
 pub trait HandlesAllPhysicalEffects:
