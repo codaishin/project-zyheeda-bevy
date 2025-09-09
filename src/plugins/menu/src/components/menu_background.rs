@@ -24,7 +24,7 @@ impl<'w, 's> DerivableFrom<'w, 's, MenuBackground> for Node {
 
 	type TParam = ();
 
-	fn derive_from(menu: &MenuBackground, _: &()) -> Self {
+	fn derive_from(_: Entity, menu: &MenuBackground, _: &()) -> Self {
 		let mut node = MenuBackground::full_screen();
 		menu.overrides.override_values(&mut node);
 		node
@@ -88,7 +88,7 @@ mod tests {
 		MenuBackground: WithOverride<T>,
 	{
 		let background = MenuBackground::default().with(value);
-		let node = Node::derive_from(&background, &());
+		let node = Node::derive_from(Entity::from_raw(42), &background, &());
 
 		assert_eq!(value, get_item(&node));
 	}

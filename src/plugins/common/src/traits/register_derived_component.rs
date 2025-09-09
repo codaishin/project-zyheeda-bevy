@@ -17,7 +17,11 @@ pub trait DerivableFrom<'w, 's, TComponent>: Component {
 
 	type TParam: SystemParam;
 
-	fn derive_from(component: &TComponent, param: &SystemParamItem<Self::TParam>) -> Self;
+	fn derive_from(
+		entity: Entity,
+		component: &TComponent,
+		param: &SystemParamItem<Self::TParam>,
+	) -> Self;
 }
 
 #[derive(Debug, PartialEq, Default)]
