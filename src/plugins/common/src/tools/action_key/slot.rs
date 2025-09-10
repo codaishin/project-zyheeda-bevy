@@ -1,8 +1,8 @@
 use std::any::type_name;
 
-use super::{ActionKey, IsNot, user_input::UserInput};
+use super::{ActionKey, user_input::UserInput};
 use crate::{
-	errors::{Error, Level},
+	errors::{Error, IsNot, Level},
 	traits::{
 		handles_localization::Token,
 		handles_settings::InvalidInput,
@@ -57,7 +57,7 @@ impl TryFrom<ActionKey> for PlayerSlot {
 	fn try_from(key: ActionKey) -> Result<Self, Self::Error> {
 		match key {
 			ActionKey::Slot(key) => Ok(key),
-			_ => Err(IsNot::key()),
+			_ => Err(IsNot::target_type()),
 		}
 	}
 }

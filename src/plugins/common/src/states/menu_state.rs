@@ -1,6 +1,7 @@
 use super::game_state::GameState;
 use crate::{
-	tools::action_key::{ActionKey, IsNot, user_input::UserInput},
+	errors::IsNot,
+	tools::action_key::{ActionKey, user_input::UserInput},
 	traits::{
 		handles_localization::Token,
 		handles_settings::InvalidInput,
@@ -56,7 +57,7 @@ impl TryFrom<GameState> for MenuState {
 	fn try_from(game_state: GameState) -> Result<Self, Self::Error> {
 		match game_state {
 			GameState::IngameMenu(menu_state) => Ok(menu_state),
-			_ => Err(IsNot::key()),
+			_ => Err(IsNot::target_type()),
 		}
 	}
 }
@@ -67,7 +68,7 @@ impl TryFrom<ActionKey> for MenuState {
 	fn try_from(key: ActionKey) -> Result<Self, Self::Error> {
 		match key {
 			ActionKey::Menu(menu_state) => Ok(menu_state),
-			_ => Err(IsNot::key()),
+			_ => Err(IsNot::target_type()),
 		}
 	}
 }

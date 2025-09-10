@@ -1,5 +1,6 @@
 use crate::{
-	tools::action_key::{ActionKey, IsNot, user_input::UserInput},
+	errors::IsNot,
+	tools::action_key::{ActionKey, user_input::UserInput},
 	traits::{
 		handles_localization::Token,
 		handles_settings::InvalidInput,
@@ -45,7 +46,7 @@ impl TryFrom<ActionKey> for SaveKey {
 	fn try_from(action_key: ActionKey) -> Result<Self, Self::Error> {
 		match action_key {
 			ActionKey::Save(save_key) => Ok(save_key),
-			_ => Err(IsNot::key()),
+			_ => Err(IsNot::target_type()),
 		}
 	}
 }
