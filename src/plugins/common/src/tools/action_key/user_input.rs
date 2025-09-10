@@ -1,5 +1,4 @@
-use super::IsNot;
-use crate::traits::handles_localization::Token;
+use crate::{errors::IsNot, traits::handles_localization::Token};
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -36,7 +35,7 @@ impl TryFrom<UserInput> for KeyCode {
 
 	fn try_from(user_input: UserInput) -> Result<Self, Self::Error> {
 		let UserInput::KeyCode(key_code) = user_input else {
-			return Err(IsNot::key());
+			return Err(IsNot::target_type());
 		};
 
 		Ok(key_code)
@@ -54,7 +53,7 @@ impl TryFrom<UserInput> for MouseButton {
 
 	fn try_from(user_input: UserInput) -> Result<Self, Self::Error> {
 		let UserInput::MouseButton(mouse_button) = user_input else {
-			return Err(IsNot::key());
+			return Err(IsNot::target_type());
 		};
 
 		Ok(mouse_button)

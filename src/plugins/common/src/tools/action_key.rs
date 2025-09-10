@@ -21,7 +21,6 @@ use camera_key::CameraKey;
 use movement::MovementKey;
 use serde::{Deserialize, Serialize};
 use slot::PlayerSlot;
-use std::marker::PhantomData;
 use user_input::UserInput;
 
 #[derive(TypePath, Clone, Copy, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
@@ -90,15 +89,6 @@ impl InvalidInput for ActionKey {
 			ActionKey::Camera(key) => key.invalid_input(),
 			ActionKey::Save(key) => key.invalid_input(),
 		}
-	}
-}
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct IsNot<TKey>(PhantomData<TKey>);
-
-impl<TKey> IsNot<TKey> {
-	pub fn key() -> Self {
-		Self(PhantomData)
 	}
 }
 

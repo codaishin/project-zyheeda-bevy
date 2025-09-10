@@ -1,8 +1,11 @@
-use super::{ActionKey, IsNot, user_input::UserInput};
-use crate::traits::{
-	handles_localization::Token,
-	handles_settings::InvalidInput,
-	iteration::{Iter, IterFinite},
+use super::{ActionKey, user_input::UserInput};
+use crate::{
+	errors::IsNot,
+	traits::{
+		handles_localization::Token,
+		handles_settings::InvalidInput,
+		iteration::{Iter, IterFinite},
+	},
 };
 use bevy::input::mouse::MouseButton;
 use serde::{Deserialize, Serialize};
@@ -40,7 +43,7 @@ impl TryFrom<ActionKey> for CameraKey {
 	fn try_from(value: ActionKey) -> Result<Self, Self::Error> {
 		match value {
 			ActionKey::Camera(camera_key) => Ok(camera_key),
-			_ => Err(IsNot::key()),
+			_ => Err(IsNot::target_type()),
 		}
 	}
 }
