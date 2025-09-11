@@ -12,7 +12,12 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	traits::{accessors::get::TryApplyOn, handles_orientation::Face, thread_safe::ThreadSafe},
+	traits::{
+		accessors::get::TryApplyOn,
+		animation::GetMovementDirection,
+		handles_orientation::Face,
+		thread_safe::ThreadSafe,
+	},
 	zyheeda_commands::ZyheedaCommands,
 };
 use macros::SavableComponent;
@@ -20,18 +25,18 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Component, SavableComponent, Debug)]
 #[require(GlobalTransform)]
-#[savable_component(dto = MovementDto<TMovement>)]
-pub(crate) struct Movement<TMovement>
+#[savable_component(dto = MovementDto<TMotion>)]
+pub(crate) struct Movement<TMotion>
 where
-	TMovement: ThreadSafe,
+	TMotion: ThreadSafe,
 {
 	pub(crate) target: Option<MotionTarget>,
-	_m: PhantomData<TMovement>,
+	_m: PhantomData<TMotion>,
 }
 
-impl<TMovement> Movement<TMovement>
+impl<TMotion> Movement<TMotion>
 where
-	TMovement: ThreadSafe,
+	TMotion: ThreadSafe,
 {
 	#[cfg(test)]
 	pub(crate) fn to_none() -> Self {
@@ -76,9 +81,9 @@ where
 	}
 }
 
-impl<TMovement> StopMovement for Movement<TMovement>
+impl<TMotion> StopMovement for Movement<TMotion>
 where
-	TMovement: ThreadSafe,
+	TMotion: ThreadSafe,
 {
 	fn stop() -> Self {
 		Self {
@@ -88,23 +93,35 @@ where
 	}
 }
 
-impl<TMovement> PartialEq for Movement<TMovement>
+impl<TMotion> PartialEq for Movement<TMotion>
 where
-	TMovement: ThreadSafe,
+	TMotion: ThreadSafe,
 {
 	fn eq(&self, other: &Self) -> bool {
 		self.target == other.target
 	}
 }
 
-impl<TMovement> Clone for Movement<TMovement>
+impl<TMotion> Clone for Movement<TMotion>
 where
-	TMovement: ThreadSafe,
+	TMotion: ThreadSafe,
 {
 	fn clone(&self) -> Self {
 		Self {
 			target: self.target,
 			_m: PhantomData,
+		}
+	}
+}
+
+impl<TMotion> GetMovementDirection for Movement<TMotion>
+where
+	TMotion: ThreadSafe,
+{
+	fn movement_direction(&self, transform: &GlobalTransform) -> Option<Dir3> {
+		match self.target? {
+			MotionTarget::Vec(vec3) => (vec3 - transform.translation()).try_into().ok(),
+			MotionTarget::Dir(dir3) => Some(dir3),
 		}
 	}
 }
@@ -143,9 +160,9 @@ mod tests {
 		}
 	}
 
-	impl<TMovement> ApproxEqual<f32> for Movement<TMovement>
+	impl<TMotion> ApproxEqual<f32> for Movement<TMotion>
 	where
-		TMovement: ThreadSafe,
+		TMotion: ThreadSafe,
 	{
 		fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
 			self.target.approx_equal(&other.target, tolerance)
@@ -153,7 +170,7 @@ mod tests {
 	}
 
 	#[derive(Default)]
-	struct _T;
+	struct _Motion;
 
 	fn setup<TMarker>(system: impl IntoScheduleConfigs<ScheduleSystem, TMarker>) -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -164,10 +181,10 @@ mod tests {
 
 	#[test]
 	fn set_to_face_translation_on_update() {
-		let mut app = setup(Movement::<_T>::set_faces);
+		let mut app = setup(Movement::<_Motion>::set_faces);
 		let entity = app
 			.world_mut()
-			.spawn(Movement::<_T>::to(Vec3::new(1., 2., 3.)))
+			.spawn(Movement::<_Motion>::to(Vec3::new(1., 2., 3.)))
 			.id();
 
 		app.update();
@@ -180,10 +197,10 @@ mod tests {
 
 	#[test]
 	fn do_not_set_to_face_translation_on_update_when_not_added() {
-		let mut app = setup(Movement::<_T>::set_faces);
+		let mut app = setup(Movement::<_Motion>::set_faces);
 		let entity = app
 			.world_mut()
-			.spawn(Movement::<_T>::to(Vec3::new(1., 2., 3.)))
+			.spawn(Movement::<_Motion>::to(Vec3::new(1., 2., 3.)))
 			.id();
 
 		app.update();
@@ -195,15 +212,15 @@ mod tests {
 
 	#[test]
 	fn set_to_face_translation_on_update_when_changed() {
-		let mut app = setup(Movement::<_T>::set_faces);
+		let mut app = setup(Movement::<_Motion>::set_faces);
 		let entity = app
 			.world_mut()
-			.spawn(Movement::<_T>::to(Vec3::new(1., 2., 3.)))
+			.spawn(Movement::<_Motion>::to(Vec3::new(1., 2., 3.)))
 			.id();
 
 		app.update();
 		let mut movement = app.world_mut().entity_mut(entity);
-		let mut movement = movement.get_mut::<Movement<_T>>().unwrap();
+		let mut movement = movement.get_mut::<Movement<_Motion>>().unwrap();
 		movement.target = Some(Vec3::new(3., 4., 5.).into());
 		app.update();
 
@@ -215,12 +232,15 @@ mod tests {
 
 	#[test]
 	fn set_to_face_direction_on_update_when_changed() {
-		let mut app = setup(Movement::<_T>::set_faces);
-		let entity = app.world_mut().spawn(Movement::<_T>::to(Dir3::NEG_X)).id();
+		let mut app = setup(Movement::<_Motion>::set_faces);
+		let entity = app
+			.world_mut()
+			.spawn(Movement::<_Motion>::to(Dir3::NEG_X))
+			.id();
 
 		app.update();
 		let mut movement = app.world_mut().entity_mut(entity);
-		let mut movement = movement.get_mut::<Movement<_T>>().unwrap();
+		let mut movement = movement.get_mut::<Movement<_Motion>>().unwrap();
 		movement.target = Some(Dir3::NEG_Z.into());
 		app.update();
 
@@ -232,14 +252,16 @@ mod tests {
 
 	#[test]
 	fn remove_set_face_on_update_when_removed() {
-		let mut app = setup(Movement::<_T>::set_faces);
+		let mut app = setup(Movement::<_Motion>::set_faces);
 		let entity = app
 			.world_mut()
-			.spawn((Movement::<_T>::to(Dir3::NEG_X), SetFace(Face::Target)))
+			.spawn((Movement::<_Motion>::to(Dir3::NEG_X), SetFace(Face::Target)))
 			.id();
 
 		app.update();
-		app.world_mut().entity_mut(entity).remove::<Movement<_T>>();
+		app.world_mut()
+			.entity_mut(entity)
+			.remove::<Movement<_Motion>>();
 		app.update();
 
 		assert_eq!(None, app.world().entity(entity).get::<SetFace>());
@@ -247,22 +269,55 @@ mod tests {
 
 	#[test]
 	fn when_movement_inserted_after_removal_in_same_frame_add_face() {
-		let mut app = setup(Movement::<_T>::set_faces);
+		let mut app = setup(Movement::<_Motion>::set_faces);
 		let entity = app
 			.world_mut()
-			.spawn((Movement::<_T>::to(Dir3::NEG_X), SetFace(Face::Target)))
+			.spawn((Movement::<_Motion>::to(Dir3::NEG_X), SetFace(Face::Target)))
 			.id();
 
 		app.update();
 		app.world_mut()
 			.entity_mut(entity)
-			.remove::<Movement<_T>>()
-			.insert(Movement::<_T>::to(Dir3::NEG_X));
+			.remove::<Movement<_Motion>>()
+			.insert(Movement::<_Motion>::to(Dir3::NEG_X));
 		app.update();
 
 		assert_eq!(
 			Some(&SetFace(Face::Direction(Dir3::NEG_X))),
 			app.world().entity(entity).get::<SetFace>()
 		);
+	}
+
+	#[test]
+	fn get_movement_from_translation() {
+		let target = Vec3::new(1., 2., 3.);
+		let position = Vec3::new(4., 7., -1.);
+		let movement = Movement::<_Motion>::to(target);
+
+		let direction = movement.movement_direction(&GlobalTransform::from_translation(position));
+
+		assert_eq!(Some(Dir3::try_from(target - position).unwrap()), direction);
+	}
+
+	#[test]
+	fn get_no_movement_direction_when_target_is_position() {
+		let target = Vec3::new(1., 2., 3.);
+		let position = target;
+		let movement = Movement::<_Motion>::to(target);
+
+		let direction = movement.movement_direction(&GlobalTransform::from_translation(position));
+
+		assert_eq!(None, direction);
+	}
+
+	#[test]
+	fn get_movement_from_direction() {
+		let target = Dir3::NEG_Z;
+		let movement = Movement::<_Motion>::to(target);
+
+		let direction =
+			movement.movement_direction(&GlobalTransform::from_translation(Vec3::new(4., 7., -1.)));
+
+		assert_eq!(Some(Dir3::NEG_Z), direction);
 	}
 }

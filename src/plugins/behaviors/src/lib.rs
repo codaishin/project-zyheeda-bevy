@@ -140,7 +140,7 @@ where
 		+ ConfiguresPlayerMovement,
 {
 	fn build(&self, app: &mut App) {
-		TAnimations::register_movement_direction::<Movement<Physical<TPhysics::TMotion>>>(app);
+		TAnimations::register_movement_direction::<Movement<TPhysics::TMotion>>(app);
 
 		TSaveGame::register_savable_component::<SkillContact>(app);
 		TSaveGame::register_savable_component::<SkillProjection>(app);
