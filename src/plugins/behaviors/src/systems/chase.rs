@@ -11,18 +11,18 @@ use common::{
 impl<T> ChaseSystem for T {}
 
 pub(crate) trait ChaseSystem {
-	fn chase<TMovementMethod>(
+	fn chase<TMotion>(
 		mut commands: ZyheedaCommands,
 		mut removed_chasers: RemovedComponents<Chase>,
 		chasers: Query<(Entity, &Chase), With<Self>>,
 		transforms: Query<&GlobalTransform>,
 	) where
 		Self: Component + Sized,
-		TMovementMethod: ThreadSafe,
+		TMotion: ThreadSafe,
 	{
 		for entity in removed_chasers.read() {
 			commands.try_apply_on(&entity, |mut e| {
-				e.try_remove::<Movement<TMovementMethod>>();
+				e.try_remove::<Movement<TMotion>>();
 			});
 		}
 
@@ -34,7 +34,7 @@ pub(crate) trait ChaseSystem {
 				continue;
 			};
 			commands.try_apply_on(&entity, |mut e| {
-				e.try_insert(Movement::<TMovementMethod>::to(target.translation()));
+				e.try_insert(Movement::<TMotion>::to(target.translation()));
 			});
 		}
 	}

@@ -18,14 +18,14 @@ use common::{
 use std::{collections::VecDeque, marker::PhantomData};
 
 #[derive(Component, Debug, PartialEq)]
-pub(crate) struct PathOrWasd<TMethod> {
+pub(crate) struct PathOrWasd<TMotion> {
 	pub(crate) mode: Mode,
-	pub(crate) _m: PhantomData<TMethod>,
+	pub(crate) _m: PhantomData<TMotion>,
 }
 
-impl<TMethod> From<Option<MotionTarget>> for PathOrWasd<TMethod>
+impl<TMotion> From<Option<MotionTarget>> for PathOrWasd<TMotion>
 where
-	TMethod: ThreadSafe,
+	TMotion: ThreadSafe,
 {
 	fn from(target: Option<MotionTarget>) -> Self {
 		match target {
@@ -45,59 +45,59 @@ where
 	}
 }
 
-impl<TMethod> From<PointerInput<TMethod>> for Movement<PathOrWasd<TMethod>>
+impl<TMotion> From<PointerInput<TMotion>> for Movement<PathOrWasd<TMotion>>
 where
-	TMethod: ThreadSafe,
+	TMotion: ThreadSafe,
 {
-	fn from(PointerInput { target, .. }: PointerInput<TMethod>) -> Self {
+	fn from(PointerInput { target, .. }: PointerInput<TMotion>) -> Self {
 		Self::to(target)
 	}
 }
 
-impl<TMethod> From<WasdInput<TMethod>> for Movement<PathOrWasd<TMethod>>
+impl<TMotion> From<WasdInput<TMotion>> for Movement<PathOrWasd<TMotion>>
 where
-	TMethod: ThreadSafe,
+	TMotion: ThreadSafe,
 {
-	fn from(WasdInput { direction, .. }: WasdInput<TMethod>) -> Self {
+	fn from(WasdInput { direction, .. }: WasdInput<TMotion>) -> Self {
 		Self::to(direction)
 	}
 }
 
-impl<TMethod> UsesDirection for Movement<PathOrWasd<TMethod>>
+impl<TMotion> UsesDirection for Movement<PathOrWasd<TMotion>>
 where
-	TMethod: ThreadSafe,
+	TMotion: ThreadSafe,
 {
 	fn uses_direction(&self) -> bool {
 		matches!(self.target, Some(MotionTarget::Dir(..)))
 	}
 }
 
-impl<TMethod> MovementUpdate for Movement<PathOrWasd<TMethod>>
+impl<TMotion> MovementUpdate for Movement<PathOrWasd<TMotion>>
 where
-	TMethod: ThreadSafe,
+	TMotion: ThreadSafe,
 {
-	type TComponents<'a> = &'a mut PathOrWasd<TMethod>;
-	type TConstraint = Without<Movement<TMethod>>;
+	type TComponents<'a> = &'a mut PathOrWasd<TMotion>;
+	type TConstraint = Without<Movement<TMotion>>;
 
 	fn update(
 		&self,
 		agent: &mut ZyheedaEntityCommands,
-		mut path_or_wasd: Mut<PathOrWasd<TMethod>>,
+		mut path_or_wasd: Mut<PathOrWasd<TMotion>>,
 		_: Speed,
 	) -> Done {
 		let Some(wp) = next_waypoint(&mut path_or_wasd) else {
-			agent.try_remove::<PathOrWasd<TMethod>>();
-			agent.try_insert(Movement::<TMethod>::stop());
+			agent.try_remove::<PathOrWasd<TMotion>>();
+			agent.try_insert(Movement::<TMotion>::stop());
 			return Done::from(true);
 		};
 
-		agent.try_insert(Movement::<TMethod>::to(wp));
+		agent.try_insert(Movement::<TMotion>::to(wp));
 
 		Done::from(false)
 	}
 }
 
-fn next_waypoint<TMethod>(path_or_wasd: &mut PathOrWasd<TMethod>) -> Option<MotionTarget> {
+fn next_waypoint<TMotion>(path_or_wasd: &mut PathOrWasd<TMotion>) -> Option<MotionTarget> {
 	match &mut path_or_wasd.mode {
 		Mode::Wasd(target) => target.take().map(MotionTarget::Dir),
 		Mode::Path(path) => path.pop_front().map(MotionTarget::Vec),
