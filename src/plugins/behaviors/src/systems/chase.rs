@@ -18,7 +18,7 @@ pub(crate) trait ChaseSystem {
 		transforms: Query<&GlobalTransform>,
 	) where
 		Self: Component + Sized,
-		TMovementMethod: ThreadSafe + Default,
+		TMovementMethod: ThreadSafe,
 	{
 		for entity in removed_chasers.read() {
 			commands.try_apply_on(&entity, |mut e| {

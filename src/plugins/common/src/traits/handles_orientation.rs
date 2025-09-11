@@ -15,4 +15,5 @@ pub enum Face {
 	Target,
 	Entity(PersistentEntity),
 	Translation(Vec3),
+	Direction(Dir3),
 }

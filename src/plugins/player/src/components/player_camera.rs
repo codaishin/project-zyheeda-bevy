@@ -21,7 +21,9 @@ use serde::{Deserialize, Serialize};
 )]
 pub struct PlayerCamera;
 
-impl KeyDirection<MovementKey> for PlayerCamera {
+impl KeyDirection for PlayerCamera {
+	type TKey = MovementKey;
+
 	fn key_direction(
 		cam_transform: &GlobalTransform,
 		movement_key: &MovementKey,

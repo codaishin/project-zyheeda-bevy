@@ -82,6 +82,25 @@ impl From<Vec<Entity>> for Focus {
 	}
 }
 
+#[derive(Debug, PartialEq, Default, Clone, Copy)]
+pub struct Done(pub bool);
+
+impl Done {
+	pub fn when(done: bool) -> Self {
+		Self(done)
+	}
+
+	pub fn is_done(self) -> bool {
+		self.0
+	}
+}
+
+impl From<bool> for Done {
+	fn from(done: bool) -> Self {
+		Self(done)
+	}
+}
+
 #[cfg(test)]
 mod test_clamp_zero_positive {
 	use super::*;

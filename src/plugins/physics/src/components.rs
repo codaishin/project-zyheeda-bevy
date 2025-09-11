@@ -4,8 +4,8 @@ pub(crate) mod effect;
 pub(crate) mod force_affected;
 pub(crate) mod gravity_affected;
 pub(crate) mod interacting_entities;
+pub(crate) mod motion;
 pub(crate) mod running_interactions;
-pub(crate) mod velocity;
 
 use bevy::{
 	ecs::{component::Component, entity::Entity},

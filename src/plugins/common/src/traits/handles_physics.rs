@@ -1,9 +1,11 @@
 use crate::{
 	components::is_blocker::Blocker,
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
-	tools::Units,
+	tools::{Done, Units, speed::Speed},
+	traits::accessors::get::RefInto,
 };
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
 pub trait HandlesPhysicalObjects {
@@ -14,14 +16,21 @@ pub trait HandlesPhysicalObjects {
 }
 
 pub trait HandlesMotion {
-	type TMotion: Component + From<Linear>;
+	/// The component controlling physical motion and related physical and collider computations.
+	///
+	/// Implementors must make sure this works on top level entities. No guarantees are made for
+	/// entities that are a child of other entities.
+	type TMotion: Component
+		+ From<LinearMotion>
+		+ for<'a> RefInto<'a, Done>
+		+ for<'a> RefInto<'a, LinearMotion>;
 }
 
-#[derive(Debug, PartialEq, Default)]
-pub struct Linear(pub Vec3);
-
-impl Linear {
-	pub const ZERO: Self = Self(Vec3::ZERO);
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+pub enum LinearMotion {
+	Direction { speed: Speed, direction: Dir3 },
+	ToTarget { speed: Speed, target: Vec3 },
+	Stop,
 }
 
 pub trait HandlesAllPhysicalEffects:

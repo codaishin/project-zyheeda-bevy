@@ -1,74 +1,56 @@
-use super::{Movement, OnMovementRemoved};
-use crate::traits::{IsDone, MovementUpdate, change_per_frame::MinDistance};
+use super::Movement;
+use crate::{components::movement::MotionTarget, traits::MovementUpdate};
 use bevy::prelude::*;
 use common::{
 	components::immobilized::Immobilized,
-	tools::speed::Speed,
-	traits::{animation::GetMovementDirection, handles_physics::Linear, thread_safe::ThreadSafe},
+	tools::{Done, speed::Speed},
+	traits::{
+		accessors::get::{RefAs, RefInto},
+		animation::GetMovementDirection,
+		handles_physics::LinearMotion,
+		thread_safe::ThreadSafe,
+	},
+	zyheeda_commands::ZyheedaEntityCommands,
 };
-use std::{cmp::Ordering, marker::PhantomData, time::Duration};
+use std::marker::PhantomData;
 
 #[derive(PartialEq, Debug)]
 pub struct Physical<TMotion>(PhantomData<TMotion>)
 where
 	TMotion: ThreadSafe;
 
-impl<TMotion> Default for Physical<TMotion>
-where
-	TMotion: ThreadSafe,
-{
-	fn default() -> Self {
-		Self(PhantomData)
-	}
-}
-
-impl<TMotion> MinDistance for Physical<TMotion>
-where
-	TMotion: ThreadSafe,
-{
-	fn min_distance(speed: Speed, delta: Duration) -> f32 {
-		delta.as_secs_f32() * *speed
-	}
-}
-
 impl<TMotion> MovementUpdate for Movement<Physical<TMotion>>
 where
-	TMotion: ThreadSafe + From<Linear> + Component,
+	TMotion: ThreadSafe
+		+ From<LinearMotion>
+		+ for<'a> RefInto<'a, Done>
+		+ for<'a> RefInto<'a, LinearMotion>
+		+ Component,
 {
-	type TComponents<'a> = &'a GlobalTransform;
+	type TComponents<'a> = Option<&'a TMotion>;
 	type TConstraint = Without<Immobilized>;
 
 	fn update(
 		&self,
-		agent: &mut EntityCommands,
-		transform: &GlobalTransform,
+		agent: &mut ZyheedaEntityCommands,
+		motion: Option<&TMotion>,
 		speed: Speed,
-		delta: Duration,
-	) -> IsDone {
-		let direction = self.target - transform.translation();
-		let min_distance = Physical::<TMotion>::min_distance(speed, delta);
+	) -> Done {
+		let new_motion = match self.target {
+			Some(MotionTarget::Vec(target)) => LinearMotion::ToTarget { target, speed },
+			Some(MotionTarget::Dir(direction)) => LinearMotion::Direction { direction, speed },
+			None => LinearMotion::Stop,
+		};
 
-		match direction.length().partial_cmp(&min_distance) {
-			Some(Ordering::Less | Ordering::Equal) | None => {
-				agent.try_insert(TMotion::from(Linear::ZERO));
-				IsDone(true)
+		match motion {
+			Some(motion) if motion.ref_as::<LinearMotion>() == new_motion => {
+				motion.ref_as::<Done>()
 			}
 			_ => {
-				agent.try_insert(TMotion::from(Linear(direction.normalize() * *speed)));
-				IsDone(false)
+				agent.try_insert(TMotion::from(new_motion));
+				Done::from(false)
 			}
 		}
-	}
-}
-
-impl<TMotion> OnMovementRemoved for Movement<Physical<TMotion>>
-where
-	TMotion: Component + From<Linear>,
-{
-	type TConstraint = Without<Immobilized>;
-
-	fn on_movement_removed(entity: &mut EntityCommands) {
-		entity.try_insert(TMotion::from(Linear::ZERO));
 	}
 }
 
@@ -77,7 +59,10 @@ where
 	TMotion: ThreadSafe,
 {
 	fn movement_direction(&self, transform: &GlobalTransform) -> Option<Dir3> {
-		Dir3::try_from(self.target - transform.translation()).ok()
+		match self.target? {
+			MotionTarget::Vec(vec3) => (vec3 - transform.translation()).try_into().ok(),
+			MotionTarget::Dir(dir3) => Some(dir3),
+		}
 	}
 }
 
@@ -89,101 +74,195 @@ mod tests {
 		ecs::{
 			component::Component,
 			entity::Entity,
-			system::{Commands, Query, ScheduleSystem},
+			system::{Query, ScheduleSystem},
 		},
 	};
-	use common::tools::UnitsPerSecond;
+	use common::{
+		tools::UnitsPerSecond,
+		traits::accessors::get::TryApplyOn,
+		zyheeda_commands::ZyheedaCommands,
+	};
 	use testing::SingleThreadedApp;
 
 	#[derive(Component, Debug, PartialEq)]
-	struct _Result(IsDone);
+	struct _Result(Done);
 
 	#[derive(Component)]
-	struct _UpdateParams((GlobalTransform, Speed));
+	struct _UpdateParams((Option<_Motion>, Speed));
 
-	#[derive(Component, Debug, PartialEq, Default)]
-	struct _Motion(Linear);
+	#[derive(Component, Debug, PartialEq, Clone, Copy)]
+	enum _Motion {
+		NotDone(LinearMotion),
+		Done(LinearMotion),
+	}
 
-	impl From<Linear> for _Motion {
-		fn from(linear: Linear) -> Self {
-			Self(linear)
+	impl From<&_Motion> for Done {
+		fn from(motion: &_Motion) -> Self {
+			Done::when(matches!(motion, _Motion::Done(..)))
+		}
+	}
+
+	impl From<LinearMotion> for _Motion {
+		fn from(linear: LinearMotion) -> Self {
+			Self::NotDone(linear)
+		}
+	}
+
+	impl From<&_Motion> for LinearMotion {
+		fn from(motion: &_Motion) -> Self {
+			match motion {
+				_Motion::NotDone(linear_motion) => *linear_motion,
+				_Motion::Done(linear_motion) => *linear_motion,
+			}
 		}
 	}
 
 	#[allow(clippy::type_complexity)]
 	fn call_update(
-		delta: Duration,
-	) -> impl Fn(
-		Commands,
-		Query<
+		mut commands: ZyheedaCommands,
+		agents: Query<
 			(Entity, &Movement<Physical<_Motion>>, &_UpdateParams),
 			<Movement<Physical<_Motion>> as MovementUpdate>::TConstraint,
 		>,
 	) {
-		move |mut commands, agents| {
-			for (entity, movement, params) in &agents {
-				let entity = &mut commands.entity(entity);
-				let _UpdateParams((position, speed)) = *params;
-				let result = movement.update(entity, &position, speed, delta);
-				entity.insert(_Result(result));
-			}
-		}
-	}
-
-	struct _OnRemoveCalled;
-
-	fn call_on_remove(
-		mut commands: Commands,
-		entities: Query<Entity, <Movement<Physical<_Motion>> as OnMovementRemoved>::TConstraint>,
-	) {
-		for entity in &entities {
-			let entity = &mut commands.entity(entity);
-			Movement::<Physical<_Motion>>::on_movement_removed(entity);
+		for (entity, movement, params) in &agents {
+			commands.try_apply_on(&entity, |mut e| {
+				let _UpdateParams((motion, speed)) = *params;
+				let result = movement.update(&mut e, motion.as_ref(), speed);
+				e.try_insert(_Result(result));
+			});
 		}
 	}
 
 	fn setup<TMarker>(system: impl IntoScheduleConfigs<ScheduleSystem, TMarker>) -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, system);
+
+		app.add_systems(Update, system.chain());
 
 		app
 	}
 
 	#[test]
-	fn update_applies_velocity() {
-		let mut app = setup(call_update(Duration::from_millis(100)));
-		let transform = GlobalTransform::from_xyz(3., 0., 2.);
+	fn update_applies_target_motion() {
+		let mut app = setup(call_update);
 		let target = Vec3::new(10., 0., 7.);
 		let speed = Speed(UnitsPerSecond::from(11.));
 		let agent = app
 			.world_mut()
 			.spawn((
 				Movement::<Physical<_Motion>>::to(target),
-				_UpdateParams((transform, speed)),
+				_UpdateParams((None, speed)),
 			))
 			.id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&_Motion(Linear(
-				(target - transform.translation()).normalize() * *speed
-			))),
+			Some(&_Motion::from(LinearMotion::ToTarget { speed, target })),
+			app.world().entity(agent).get::<_Motion>()
+		);
+	}
+	#[test]
+	fn update_applies_directional_motion() {
+		let mut app = setup(call_update);
+		let direction = Dir3::NEG_X;
+		let speed = Speed(UnitsPerSecond::from(11.));
+		let agent = app
+			.world_mut()
+			.spawn((
+				Movement::<Physical<_Motion>>::to(direction),
+				_UpdateParams((None, speed)),
+			))
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&_Motion::from(LinearMotion::Direction { speed, direction })),
 			app.world().entity(agent).get::<_Motion>()
 		);
 	}
 
 	#[test]
-	fn movement_constraint_excludes_immobilized() {
-		let mut app = setup(call_update(Duration::from_millis(100)));
-		let transform = GlobalTransform::from_xyz(3., 0., 2.);
+	fn update_applies_stop_motion() {
+		let mut app = setup(call_update);
+		let agent = app
+			.world_mut()
+			.spawn((
+				Movement::<Physical<_Motion>> {
+					target: None,
+					_m: PhantomData,
+				},
+				_UpdateParams((None, Speed(UnitsPerSecond::from(11.)))),
+			))
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&_Motion::from(LinearMotion::Stop)),
+			app.world().entity(agent).get::<_Motion>()
+		);
+	}
+
+	#[test]
+	fn update_applies_motion_when_different_motion_present() {
+		let mut app = setup(call_update);
 		let target = Vec3::new(10., 0., 7.);
 		let speed = Speed(UnitsPerSecond::from(11.));
 		let agent = app
 			.world_mut()
 			.spawn((
 				Movement::<Physical<_Motion>>::to(target),
-				_UpdateParams((transform, speed)),
+				_UpdateParams((
+					Some(_Motion::NotDone(LinearMotion::ToTarget {
+						speed: Speed(UnitsPerSecond::from(42.)),
+						target: Vec3::new(1., 2., 3.),
+					})),
+					speed,
+				)),
+			))
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&_Motion::from(LinearMotion::ToTarget { speed, target })),
+			app.world().entity(agent).get::<_Motion>()
+		);
+	}
+
+	#[test]
+	fn update_applies_no_motion_when_same_motion_present() {
+		let mut app = setup(call_update);
+		let target = Vec3::new(10., 0., 7.);
+		let speed = Speed(UnitsPerSecond::from(11.));
+		let agent = app
+			.world_mut()
+			.spawn((
+				Movement::<Physical<_Motion>>::to(target),
+				_UpdateParams((
+					Some(_Motion::Done(LinearMotion::ToTarget { speed, target })),
+					speed,
+				)),
+			))
+			.id();
+
+		app.update();
+
+		assert_eq!(None, app.world().entity(agent).get::<_Motion>());
+	}
+
+	#[test]
+	fn movement_constraint_excludes_immobilized() {
+		let mut app = setup(call_update);
+		let target = Vec3::new(10., 0., 7.);
+		let speed = Speed(UnitsPerSecond::from(11.));
+		let agent = app
+			.world_mut()
+			.spawn((
+				Movement::<Physical<_Motion>>::to(target),
+				_UpdateParams((None, speed)),
 				Immobilized,
 			))
 			.id();
@@ -194,148 +273,133 @@ mod tests {
 	}
 
 	#[test]
-	fn update_returns_not_done() {
-		let mut app = setup(call_update(Duration::from_millis(100)));
-		let transform = GlobalTransform::from_xyz(3., 0., 2.);
+	fn update_returns_not_done_when_target_motion_present() {
+		let mut app = setup(call_update);
 		let target = Vec3::new(10., 0., 7.);
 		let speed = Speed(UnitsPerSecond::from(11.));
 		let agent = app
 			.world_mut()
 			.spawn((
 				Movement::<Physical<_Motion>>::to(target),
-				_UpdateParams((transform, speed)),
+				_UpdateParams((
+					Some(_Motion::from(LinearMotion::ToTarget {
+						speed: Speed::default(),
+						target: Vec3::default(),
+					})),
+					speed,
+				)),
 			))
 			.id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&_Result(IsDone(false))),
+			Some(&_Result(Done::from(false))),
 			app.world().entity(agent).get::<_Result>()
 		);
 	}
 
 	#[test]
-	fn update_zeros_motion_when_direction_length_zero() {
-		let mut app = setup(call_update(Duration::from_millis(100)));
-		let transform = GlobalTransform::from_xyz(10., 0., 7.);
+	fn update_returns_not_done_when_directional_motion_present() {
+		let mut app = setup(call_update);
 		let target = Vec3::new(10., 0., 7.);
 		let speed = Speed(UnitsPerSecond::from(11.));
 		let agent = app
 			.world_mut()
 			.spawn((
 				Movement::<Physical<_Motion>>::to(target),
-				_UpdateParams((transform, speed)),
-				_Motion(Linear(Vec3::new(1., 2., 3.))),
+				_UpdateParams((
+					Some(_Motion::from(LinearMotion::Direction {
+						speed: Speed::default(),
+						direction: Dir3::NEG_X,
+					})),
+					speed,
+				)),
 			))
 			.id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&_Motion(Linear::ZERO)),
-			app.world().entity(agent).get::<_Motion>()
-		);
-	}
-
-	#[test]
-	fn update_zeros_motion_when_direction_length_not_computable() {
-		let mut app = setup(call_update(Duration::from_millis(100)));
-		let transform = GlobalTransform::from_xyz(10., 0., 7.);
-		let target = Vec3::new(f32::NAN, 0., 7.);
-		let speed = Speed(UnitsPerSecond::from(11.));
-		let agent = app
-			.world_mut()
-			.spawn((
-				Movement::<Physical<_Motion>>::to(target),
-				_UpdateParams((transform, speed)),
-				_Motion(Linear(Vec3::new(1., 2., 3.))),
-			))
-			.id();
-
-		app.update();
-
-		assert_eq!(
-			Some(&_Motion(Linear::ZERO)),
-			app.world().entity(agent).get::<_Motion>()
-		);
-	}
-
-	#[test]
-	fn update_returns_done_when_direction_length_zero() {
-		let mut app = setup(
-			call_update(Duration::from_millis(0)), // causes min_distance to become zero
-		);
-		let transform = GlobalTransform::from_xyz(10., 0., 7.);
-		let target = Vec3::new(10., 0., 7.);
-		let speed = Speed(UnitsPerSecond::from(11.));
-		let agent = app
-			.world_mut()
-			.spawn((
-				Movement::<Physical<_Motion>>::to(target),
-				_UpdateParams((transform, speed)),
-			))
-			.id();
-
-		app.update();
-
-		assert_eq!(
-			Some(&_Result(IsDone(true))),
+			Some(&_Result(Done::from(false))),
 			app.world().entity(agent).get::<_Result>()
 		);
 	}
 
 	#[test]
-	fn update_returns_done_when_direction_lower_than_min_distance() {
-		let delta = 4.;
-		let speed = 11.;
-		let mut app = setup(call_update(Duration::from_secs(delta as u64)));
-		let transform = GlobalTransform::from_xyz(10., 0., 7.);
-		let target = transform.translation() + Vec3::X * (speed * delta - 1.);
-		let speed = Speed(UnitsPerSecond::from(speed));
+	fn update_returns_not_done_when_no_motion_present() {
+		let mut app = setup(call_update);
+		let target = Vec3::new(10., 0., 7.);
+		let speed = Speed(UnitsPerSecond::from(11.));
 		let agent = app
 			.world_mut()
 			.spawn((
 				Movement::<Physical<_Motion>>::to(target),
-				_UpdateParams((transform, speed)),
-				_Motion::default(),
+				_UpdateParams((None, speed)),
 			))
 			.id();
 
 		app.update();
 
-		let agent = app.world().entity(agent);
 		assert_eq!(
-			(Some(&_Motion::default()), Some(&_Result(IsDone(true)))),
-			(agent.get::<_Motion>(), agent.get::<_Result>())
+			Some(&_Result(Done::from(false))),
+			app.world().entity(agent).get::<_Result>()
 		);
 	}
 
 	#[test]
-	fn set_velocity_zero_when_calling_on_remove() {
-		let mut app = setup(call_on_remove);
-		let entity = app.world_mut().spawn_empty().id();
+	fn update_returns_done_when_motion_done() {
+		let mut app = setup(call_update);
+		let target = Vec3::new(10., 0., 7.);
+		let speed = Speed(UnitsPerSecond::from(11.));
+		let agent = app
+			.world_mut()
+			.spawn((
+				Movement::<Physical<_Motion>>::to(target),
+				_UpdateParams((
+					Some(_Motion::Done(LinearMotion::ToTarget { speed, target })),
+					speed,
+				)),
+			))
+			.id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&_Motion(Linear::ZERO)),
-			app.world().entity(entity).get::<_Motion>()
+			Some(&_Result(Done::from(true))),
+			app.world().entity(agent).get::<_Result>()
 		);
 	}
 
 	#[test]
-	fn do_not_set_velocity_zero_when_calling_on_remove_and_immobilized() {
-		let mut app = setup(call_on_remove);
-		let entity = app.world_mut().spawn(Immobilized).id();
+	fn update_returns_not_done_when_inserting_new_motion_done() {
+		let mut app = setup(call_update);
+		let target = Vec3::new(10., 0., 7.);
+		let speed = Speed(UnitsPerSecond::from(11.));
+		let agent = app
+			.world_mut()
+			.spawn((
+				Movement::<Physical<_Motion>>::to(target),
+				_UpdateParams((
+					Some(_Motion::Done(LinearMotion::ToTarget {
+						speed: Speed(UnitsPerSecond::from(42.)),
+						target: Vec3::new(11., 1., 8.),
+					})),
+					speed,
+				)),
+			))
+			.id();
 
 		app.update();
 
-		assert_eq!(None, app.world().entity(entity).get::<_Motion>());
+		assert_eq!(
+			Some(&_Result(Done::from(false))),
+			app.world().entity(agent).get::<_Result>()
+		);
 	}
 
 	#[test]
-	fn get_movement_direction() {
+	fn get_movement_from_translation() {
 		let target = Vec3::new(1., 2., 3.);
 		let position = Vec3::new(4., 7., -1.);
 		let movement = Movement::<Physical<_Motion>>::to(target);
@@ -354,5 +418,16 @@ mod tests {
 		let direction = movement.movement_direction(&GlobalTransform::from_translation(position));
 
 		assert_eq!(None, direction);
+	}
+
+	#[test]
+	fn get_movement_from_direction() {
+		let target = Dir3::NEG_Z;
+		let movement = Movement::<Physical<_Motion>>::to(target);
+
+		let direction =
+			movement.movement_direction(&GlobalTransform::from_translation(Vec3::new(4., 7., -1.)));
+
+		assert_eq!(Some(Dir3::NEG_Z), direction);
 	}
 }
