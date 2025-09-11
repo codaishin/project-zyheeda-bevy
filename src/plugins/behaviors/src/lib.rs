@@ -244,7 +244,7 @@ where
 						.chain(),
 					// Apply facing
 					(
-						Movement::<Physical<TPhysics::TMotion>>::set_faces,
+						Movement::<TPhysics::TMotion>::set_faces,
 						TPlayers::TPlayer::get_faces
 							.pipe(execute_player_face::<TPlayers::TMouseHover, TPlayers::TCamRay>),
 						TEnemies::TEnemy::get_faces.pipe(execute_enemy_face),
