@@ -1,5 +1,4 @@
 pub(crate) mod path_or_wasd;
-pub(crate) mod physical;
 
 mod dto;
 
