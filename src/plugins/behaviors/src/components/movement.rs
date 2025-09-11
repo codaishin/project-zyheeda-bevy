@@ -3,25 +3,28 @@ pub(crate) mod physical;
 
 mod dto;
 
-use std::marker::PhantomData;
-
 use super::SetFace;
 use crate::{
 	components::movement::dto::MovementDto,
 	systems::movement::insert_process_component::StopMovement,
+	traits::MovementUpdate,
 };
 use bevy::prelude::*;
 use common::{
+	components::immobilized::Immobilized,
+	tools::{Done, speed::Speed},
 	traits::{
-		accessors::get::TryApplyOn,
+		accessors::get::{RefAs, RefInto, TryApplyOn},
 		animation::GetMovementDirection,
 		handles_orientation::Face,
+		handles_physics::LinearMotion,
 		thread_safe::ThreadSafe,
 	},
-	zyheeda_commands::ZyheedaCommands,
+	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
+use std::marker::PhantomData;
 
 #[derive(Component, SavableComponent, Debug)]
 #[require(GlobalTransform)]
@@ -114,6 +117,41 @@ where
 	}
 }
 
+impl<TMotion> MovementUpdate for Movement<TMotion>
+where
+	TMotion: ThreadSafe
+		+ From<LinearMotion>
+		+ for<'a> RefInto<'a, Done>
+		+ for<'a> RefInto<'a, LinearMotion>
+		+ Component,
+{
+	type TComponents<'a> = Option<&'a TMotion>;
+	type TConstraint = Without<Immobilized>;
+
+	fn update(
+		&self,
+		agent: &mut ZyheedaEntityCommands,
+		motion: Option<&TMotion>,
+		speed: Speed,
+	) -> Done {
+		let new_motion = match self.target {
+			Some(MotionTarget::Vec(target)) => LinearMotion::ToTarget { target, speed },
+			Some(MotionTarget::Dir(direction)) => LinearMotion::Direction { direction, speed },
+			None => LinearMotion::Stop,
+		};
+
+		match motion {
+			Some(motion) if motion.ref_as::<LinearMotion>() == new_motion => {
+				motion.ref_as::<Done>()
+			}
+			_ => {
+				agent.try_insert(TMotion::from(new_motion));
+				Done::from(false)
+			}
+		}
+	}
+}
+
 impl<TMotion> GetMovementDirection for Movement<TMotion>
 where
 	TMotion: ThreadSafe,
@@ -148,176 +186,504 @@ impl From<Dir3> for MotionTarget {
 mod tests {
 	use super::*;
 	use bevy::ecs::system::ScheduleSystem;
-	use testing::{ApproxEqual, SingleThreadedApp};
+	use testing::SingleThreadedApp;
 
-	impl ApproxEqual<f32> for MotionTarget {
-		fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
-			match (self, other) {
-				(MotionTarget::Vec(a), MotionTarget::Vec(b)) => a.approx_equal(b, tolerance),
-				(MotionTarget::Dir(a), MotionTarget::Dir(b)) => a.approx_equal(b, tolerance),
-				_ => false,
+	#[derive(Component, Debug, PartialEq, Clone, Copy)]
+	enum _Motion {
+		NotDone(LinearMotion),
+		Done(LinearMotion),
+	}
+
+	impl From<&_Motion> for Done {
+		fn from(motion: &_Motion) -> Self {
+			Done::when(matches!(motion, _Motion::Done(..)))
+		}
+	}
+
+	impl From<LinearMotion> for _Motion {
+		fn from(linear: LinearMotion) -> Self {
+			Self::NotDone(linear)
+		}
+	}
+
+	impl From<&_Motion> for LinearMotion {
+		fn from(motion: &_Motion) -> Self {
+			match motion {
+				_Motion::NotDone(linear_motion) => *linear_motion,
+				_Motion::Done(linear_motion) => *linear_motion,
 			}
 		}
 	}
 
-	impl<TMotion> ApproxEqual<f32> for Movement<TMotion>
-	where
-		TMotion: ThreadSafe,
-	{
-		fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
-			self.target.approx_equal(&other.target, tolerance)
+	mod set_face {
+		use super::*;
+		use testing::ApproxEqual;
+
+		impl ApproxEqual<f32> for MotionTarget {
+			fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
+				match (self, other) {
+					(MotionTarget::Vec(a), MotionTarget::Vec(b)) => a.approx_equal(b, tolerance),
+					(MotionTarget::Dir(a), MotionTarget::Dir(b)) => a.approx_equal(b, tolerance),
+					_ => false,
+				}
+			}
+		}
+
+		impl<TMotion> ApproxEqual<f32> for Movement<TMotion>
+		where
+			TMotion: ThreadSafe,
+		{
+			fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
+				self.target.approx_equal(&other.target, tolerance)
+			}
+		}
+
+		fn setup<TMarker>(system: impl IntoScheduleConfigs<ScheduleSystem, TMarker>) -> App {
+			let mut app = App::new().single_threaded(Update);
+
+			app.add_systems(Update, system);
+
+			app
+		}
+
+		#[test]
+		fn set_to_face_translation_on_update() {
+			let mut app = setup(Movement::<_Motion>::set_faces);
+			let entity = app
+				.world_mut()
+				.spawn(Movement::<_Motion>::to(Vec3::new(1., 2., 3.)))
+				.id();
+
+			app.update();
+
+			assert_eq!(
+				Some(&SetFace(Face::Translation(Vec3::new(1., 2., 3.)))),
+				app.world().entity(entity).get::<SetFace>()
+			);
+		}
+
+		#[test]
+		fn do_not_set_to_face_translation_on_update_when_not_added() {
+			let mut app = setup(Movement::<_Motion>::set_faces);
+			let entity = app
+				.world_mut()
+				.spawn(Movement::<_Motion>::to(Vec3::new(1., 2., 3.)))
+				.id();
+
+			app.update();
+			app.world_mut().entity_mut(entity).remove::<SetFace>();
+			app.update();
+
+			assert_eq!(None, app.world().entity(entity).get::<SetFace>());
+		}
+
+		#[test]
+		fn set_to_face_translation_on_update_when_changed() {
+			let mut app = setup(Movement::<_Motion>::set_faces);
+			let entity = app
+				.world_mut()
+				.spawn(Movement::<_Motion>::to(Vec3::new(1., 2., 3.)))
+				.id();
+
+			app.update();
+			let mut movement = app.world_mut().entity_mut(entity);
+			let mut movement = movement.get_mut::<Movement<_Motion>>().unwrap();
+			movement.target = Some(Vec3::new(3., 4., 5.).into());
+			app.update();
+
+			assert_eq!(
+				Some(&SetFace(Face::Translation(Vec3::new(3., 4., 5.)))),
+				app.world().entity(entity).get::<SetFace>()
+			);
+		}
+
+		#[test]
+		fn set_to_face_direction_on_update_when_changed() {
+			let mut app = setup(Movement::<_Motion>::set_faces);
+			let entity = app
+				.world_mut()
+				.spawn(Movement::<_Motion>::to(Dir3::NEG_X))
+				.id();
+
+			app.update();
+			let mut movement = app.world_mut().entity_mut(entity);
+			let mut movement = movement.get_mut::<Movement<_Motion>>().unwrap();
+			movement.target = Some(Dir3::NEG_Z.into());
+			app.update();
+
+			assert_eq!(
+				Some(&SetFace(Face::Direction(Dir3::NEG_Z))),
+				app.world().entity(entity).get::<SetFace>()
+			);
+		}
+
+		#[test]
+		fn remove_set_face_on_update_when_removed() {
+			let mut app = setup(Movement::<_Motion>::set_faces);
+			let entity = app
+				.world_mut()
+				.spawn((Movement::<_Motion>::to(Dir3::NEG_X), SetFace(Face::Target)))
+				.id();
+
+			app.update();
+			app.world_mut()
+				.entity_mut(entity)
+				.remove::<Movement<_Motion>>();
+			app.update();
+
+			assert_eq!(None, app.world().entity(entity).get::<SetFace>());
+		}
+
+		#[test]
+		fn when_movement_inserted_after_removal_in_same_frame_add_face() {
+			let mut app = setup(Movement::<_Motion>::set_faces);
+			let entity = app
+				.world_mut()
+				.spawn((Movement::<_Motion>::to(Dir3::NEG_X), SetFace(Face::Target)))
+				.id();
+
+			app.update();
+			app.world_mut()
+				.entity_mut(entity)
+				.remove::<Movement<_Motion>>()
+				.insert(Movement::<_Motion>::to(Dir3::NEG_X));
+			app.update();
+
+			assert_eq!(
+				Some(&SetFace(Face::Direction(Dir3::NEG_X))),
+				app.world().entity(entity).get::<SetFace>()
+			);
 		}
 	}
 
-	#[derive(Default)]
-	struct _Motion;
+	mod get_direction {
+		use super::*;
 
-	fn setup<TMarker>(system: impl IntoScheduleConfigs<ScheduleSystem, TMarker>) -> App {
-		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, system);
+		#[test]
+		fn get_movement_from_translation() {
+			let target = Vec3::new(1., 2., 3.);
+			let position = Vec3::new(4., 7., -1.);
+			let movement = Movement::<_Motion>::to(target);
 
-		app
+			let direction =
+				movement.movement_direction(&GlobalTransform::from_translation(position));
+
+			assert_eq!(Some(Dir3::try_from(target - position).unwrap()), direction);
+		}
+
+		#[test]
+		fn get_no_movement_direction_when_target_is_position() {
+			let target = Vec3::new(1., 2., 3.);
+			let position = target;
+			let movement = Movement::<_Motion>::to(target);
+
+			let direction =
+				movement.movement_direction(&GlobalTransform::from_translation(position));
+
+			assert_eq!(None, direction);
+		}
+
+		#[test]
+		fn get_movement_from_direction() {
+			let target = Dir3::NEG_Z;
+			let movement = Movement::<_Motion>::to(target);
+
+			let direction = movement
+				.movement_direction(&GlobalTransform::from_translation(Vec3::new(4., 7., -1.)));
+
+			assert_eq!(Some(Dir3::NEG_Z), direction);
+		}
 	}
 
-	#[test]
-	fn set_to_face_translation_on_update() {
-		let mut app = setup(Movement::<_Motion>::set_faces);
-		let entity = app
-			.world_mut()
-			.spawn(Movement::<_Motion>::to(Vec3::new(1., 2., 3.)))
-			.id();
+	mod movement_update {
+		use super::*;
+		use common::tools::UnitsPerSecond;
 
-		app.update();
+		#[derive(Component, Debug, PartialEq)]
+		struct _Result(Done);
 
-		assert_eq!(
-			Some(&SetFace(Face::Translation(Vec3::new(1., 2., 3.)))),
-			app.world().entity(entity).get::<SetFace>()
-		);
-	}
+		#[derive(Component)]
+		struct _UpdateParams((Option<_Motion>, Speed));
 
-	#[test]
-	fn do_not_set_to_face_translation_on_update_when_not_added() {
-		let mut app = setup(Movement::<_Motion>::set_faces);
-		let entity = app
-			.world_mut()
-			.spawn(Movement::<_Motion>::to(Vec3::new(1., 2., 3.)))
-			.id();
+		#[allow(clippy::type_complexity)]
+		fn call_update(
+			mut commands: ZyheedaCommands,
+			agents: Query<
+				(Entity, &Movement<_Motion>, &_UpdateParams),
+				<Movement<_Motion> as MovementUpdate>::TConstraint,
+			>,
+		) {
+			for (entity, movement, params) in &agents {
+				commands.try_apply_on(&entity, |mut e| {
+					let _UpdateParams((motion, speed)) = *params;
+					let result = movement.update(&mut e, motion.as_ref(), speed);
+					e.try_insert(_Result(result));
+				});
+			}
+		}
 
-		app.update();
-		app.world_mut().entity_mut(entity).remove::<SetFace>();
-		app.update();
+		fn setup<TMarker>(system: impl IntoScheduleConfigs<ScheduleSystem, TMarker>) -> App {
+			let mut app = App::new().single_threaded(Update);
 
-		assert_eq!(None, app.world().entity(entity).get::<SetFace>());
-	}
+			app.add_systems(Update, system.chain());
 
-	#[test]
-	fn set_to_face_translation_on_update_when_changed() {
-		let mut app = setup(Movement::<_Motion>::set_faces);
-		let entity = app
-			.world_mut()
-			.spawn(Movement::<_Motion>::to(Vec3::new(1., 2., 3.)))
-			.id();
+			app
+		}
 
-		app.update();
-		let mut movement = app.world_mut().entity_mut(entity);
-		let mut movement = movement.get_mut::<Movement<_Motion>>().unwrap();
-		movement.target = Some(Vec3::new(3., 4., 5.).into());
-		app.update();
+		#[test]
+		fn update_applies_target_motion() {
+			let mut app = setup(call_update);
+			let target = Vec3::new(10., 0., 7.);
+			let speed = Speed(UnitsPerSecond::from(11.));
+			let agent = app
+				.world_mut()
+				.spawn((
+					Movement::<_Motion>::to(target),
+					_UpdateParams((None, speed)),
+				))
+				.id();
 
-		assert_eq!(
-			Some(&SetFace(Face::Translation(Vec3::new(3., 4., 5.)))),
-			app.world().entity(entity).get::<SetFace>()
-		);
-	}
+			app.update();
 
-	#[test]
-	fn set_to_face_direction_on_update_when_changed() {
-		let mut app = setup(Movement::<_Motion>::set_faces);
-		let entity = app
-			.world_mut()
-			.spawn(Movement::<_Motion>::to(Dir3::NEG_X))
-			.id();
+			assert_eq!(
+				Some(&_Motion::from(LinearMotion::ToTarget { speed, target })),
+				app.world().entity(agent).get::<_Motion>()
+			);
+		}
+		#[test]
+		fn update_applies_directional_motion() {
+			let mut app = setup(call_update);
+			let direction = Dir3::NEG_X;
+			let speed = Speed(UnitsPerSecond::from(11.));
+			let agent = app
+				.world_mut()
+				.spawn((
+					Movement::<_Motion>::to(direction),
+					_UpdateParams((None, speed)),
+				))
+				.id();
 
-		app.update();
-		let mut movement = app.world_mut().entity_mut(entity);
-		let mut movement = movement.get_mut::<Movement<_Motion>>().unwrap();
-		movement.target = Some(Dir3::NEG_Z.into());
-		app.update();
+			app.update();
 
-		assert_eq!(
-			Some(&SetFace(Face::Direction(Dir3::NEG_Z))),
-			app.world().entity(entity).get::<SetFace>()
-		);
-	}
+			assert_eq!(
+				Some(&_Motion::from(LinearMotion::Direction { speed, direction })),
+				app.world().entity(agent).get::<_Motion>()
+			);
+		}
 
-	#[test]
-	fn remove_set_face_on_update_when_removed() {
-		let mut app = setup(Movement::<_Motion>::set_faces);
-		let entity = app
-			.world_mut()
-			.spawn((Movement::<_Motion>::to(Dir3::NEG_X), SetFace(Face::Target)))
-			.id();
+		#[test]
+		fn update_applies_stop_motion() {
+			let mut app = setup(call_update);
+			let agent = app
+				.world_mut()
+				.spawn((
+					Movement::<_Motion> {
+						target: None,
+						_m: PhantomData,
+					},
+					_UpdateParams((None, Speed(UnitsPerSecond::from(11.)))),
+				))
+				.id();
 
-		app.update();
-		app.world_mut()
-			.entity_mut(entity)
-			.remove::<Movement<_Motion>>();
-		app.update();
+			app.update();
 
-		assert_eq!(None, app.world().entity(entity).get::<SetFace>());
-	}
+			assert_eq!(
+				Some(&_Motion::from(LinearMotion::Stop)),
+				app.world().entity(agent).get::<_Motion>()
+			);
+		}
 
-	#[test]
-	fn when_movement_inserted_after_removal_in_same_frame_add_face() {
-		let mut app = setup(Movement::<_Motion>::set_faces);
-		let entity = app
-			.world_mut()
-			.spawn((Movement::<_Motion>::to(Dir3::NEG_X), SetFace(Face::Target)))
-			.id();
+		#[test]
+		fn update_applies_motion_when_different_motion_present() {
+			let mut app = setup(call_update);
+			let target = Vec3::new(10., 0., 7.);
+			let speed = Speed(UnitsPerSecond::from(11.));
+			let agent = app
+				.world_mut()
+				.spawn((
+					Movement::<_Motion>::to(target),
+					_UpdateParams((
+						Some(_Motion::NotDone(LinearMotion::ToTarget {
+							speed: Speed(UnitsPerSecond::from(42.)),
+							target: Vec3::new(1., 2., 3.),
+						})),
+						speed,
+					)),
+				))
+				.id();
 
-		app.update();
-		app.world_mut()
-			.entity_mut(entity)
-			.remove::<Movement<_Motion>>()
-			.insert(Movement::<_Motion>::to(Dir3::NEG_X));
-		app.update();
+			app.update();
 
-		assert_eq!(
-			Some(&SetFace(Face::Direction(Dir3::NEG_X))),
-			app.world().entity(entity).get::<SetFace>()
-		);
-	}
+			assert_eq!(
+				Some(&_Motion::from(LinearMotion::ToTarget { speed, target })),
+				app.world().entity(agent).get::<_Motion>()
+			);
+		}
 
-	#[test]
-	fn get_movement_from_translation() {
-		let target = Vec3::new(1., 2., 3.);
-		let position = Vec3::new(4., 7., -1.);
-		let movement = Movement::<_Motion>::to(target);
+		#[test]
+		fn update_applies_no_motion_when_same_motion_present() {
+			let mut app = setup(call_update);
+			let target = Vec3::new(10., 0., 7.);
+			let speed = Speed(UnitsPerSecond::from(11.));
+			let agent = app
+				.world_mut()
+				.spawn((
+					Movement::<_Motion>::to(target),
+					_UpdateParams((
+						Some(_Motion::Done(LinearMotion::ToTarget { speed, target })),
+						speed,
+					)),
+				))
+				.id();
 
-		let direction = movement.movement_direction(&GlobalTransform::from_translation(position));
+			app.update();
 
-		assert_eq!(Some(Dir3::try_from(target - position).unwrap()), direction);
-	}
+			assert_eq!(None, app.world().entity(agent).get::<_Motion>());
+		}
 
-	#[test]
-	fn get_no_movement_direction_when_target_is_position() {
-		let target = Vec3::new(1., 2., 3.);
-		let position = target;
-		let movement = Movement::<_Motion>::to(target);
+		#[test]
+		fn movement_constraint_excludes_immobilized() {
+			let mut app = setup(call_update);
+			let target = Vec3::new(10., 0., 7.);
+			let speed = Speed(UnitsPerSecond::from(11.));
+			let agent = app
+				.world_mut()
+				.spawn((
+					Movement::<_Motion>::to(target),
+					_UpdateParams((None, speed)),
+					Immobilized,
+				))
+				.id();
 
-		let direction = movement.movement_direction(&GlobalTransform::from_translation(position));
+			app.update();
 
-		assert_eq!(None, direction);
-	}
+			assert_eq!(None, app.world().entity(agent).get::<_Motion>());
+		}
 
-	#[test]
-	fn get_movement_from_direction() {
-		let target = Dir3::NEG_Z;
-		let movement = Movement::<_Motion>::to(target);
+		#[test]
+		fn update_returns_not_done_when_target_motion_present() {
+			let mut app = setup(call_update);
+			let target = Vec3::new(10., 0., 7.);
+			let speed = Speed(UnitsPerSecond::from(11.));
+			let agent = app
+				.world_mut()
+				.spawn((
+					Movement::<_Motion>::to(target),
+					_UpdateParams((
+						Some(_Motion::from(LinearMotion::ToTarget {
+							speed: Speed::default(),
+							target: Vec3::default(),
+						})),
+						speed,
+					)),
+				))
+				.id();
 
-		let direction =
-			movement.movement_direction(&GlobalTransform::from_translation(Vec3::new(4., 7., -1.)));
+			app.update();
 
-		assert_eq!(Some(Dir3::NEG_Z), direction);
+			assert_eq!(
+				Some(&_Result(Done::from(false))),
+				app.world().entity(agent).get::<_Result>()
+			);
+		}
+
+		#[test]
+		fn update_returns_not_done_when_directional_motion_present() {
+			let mut app = setup(call_update);
+			let target = Vec3::new(10., 0., 7.);
+			let speed = Speed(UnitsPerSecond::from(11.));
+			let agent = app
+				.world_mut()
+				.spawn((
+					Movement::<_Motion>::to(target),
+					_UpdateParams((
+						Some(_Motion::from(LinearMotion::Direction {
+							speed: Speed::default(),
+							direction: Dir3::NEG_X,
+						})),
+						speed,
+					)),
+				))
+				.id();
+
+			app.update();
+
+			assert_eq!(
+				Some(&_Result(Done::from(false))),
+				app.world().entity(agent).get::<_Result>()
+			);
+		}
+
+		#[test]
+		fn update_returns_not_done_when_no_motion_present() {
+			let mut app = setup(call_update);
+			let target = Vec3::new(10., 0., 7.);
+			let speed = Speed(UnitsPerSecond::from(11.));
+			let agent = app
+				.world_mut()
+				.spawn((
+					Movement::<_Motion>::to(target),
+					_UpdateParams((None, speed)),
+				))
+				.id();
+
+			app.update();
+
+			assert_eq!(
+				Some(&_Result(Done::from(false))),
+				app.world().entity(agent).get::<_Result>()
+			);
+		}
+
+		#[test]
+		fn update_returns_done_when_motion_done() {
+			let mut app = setup(call_update);
+			let target = Vec3::new(10., 0., 7.);
+			let speed = Speed(UnitsPerSecond::from(11.));
+			let agent = app
+				.world_mut()
+				.spawn((
+					Movement::<_Motion>::to(target),
+					_UpdateParams((
+						Some(_Motion::Done(LinearMotion::ToTarget { speed, target })),
+						speed,
+					)),
+				))
+				.id();
+
+			app.update();
+
+			assert_eq!(
+				Some(&_Result(Done::from(true))),
+				app.world().entity(agent).get::<_Result>()
+			);
+		}
+
+		#[test]
+		fn update_returns_not_done_when_inserting_new_motion_done() {
+			let mut app = setup(call_update);
+			let target = Vec3::new(10., 0., 7.);
+			let speed = Speed(UnitsPerSecond::from(11.));
+			let agent = app
+				.world_mut()
+				.spawn((
+					Movement::<_Motion>::to(target),
+					_UpdateParams((
+						Some(_Motion::Done(LinearMotion::ToTarget {
+							speed: Speed(UnitsPerSecond::from(42.)),
+							target: Vec3::new(11., 1., 8.),
+						})),
+						speed,
+					)),
+				))
+				.id();
+
+			app.update();
+
+			assert_eq!(
+				Some(&_Result(Done::from(false))),
+				app.world().entity(agent).get::<_Result>()
+			);
+		}
 	}
 }

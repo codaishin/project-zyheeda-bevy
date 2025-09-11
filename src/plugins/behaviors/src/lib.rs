@@ -167,7 +167,7 @@ where
 		let execute_player_path =
 			TPlayers::TPlayerMovement::execute_movement::<Movement<PathOrWasd<TPhysics::TMotion>>>;
 		let execute_player_movement =
-			TPlayers::TPlayerMovement::execute_movement::<Movement<Physical<TPhysics::TMotion>>>;
+			TPlayers::TPlayerMovement::execute_movement::<Movement<TPhysics::TMotion>>;
 		let animate_player_movement = TPlayers::TPlayerMovement::animate_movement::<
 			Movement<Physical<TPhysics::TMotion>>,
 			TAnimations::TAnimationDispatch,
@@ -181,7 +181,7 @@ where
 		let execute_enemy_path =
 			TEnemies::TEnemy::execute_movement::<Movement<PathOrWasd<TPhysics::TMotion>>>;
 		let execute_enemy_movement =
-			TEnemies::TEnemy::execute_movement::<Movement<Physical<TPhysics::TMotion>>>;
+			TEnemies::TEnemy::execute_movement::<Movement<TPhysics::TMotion>>;
 		let animate_enemy_movement = TEnemies::TEnemy::animate_movement::<
 			Movement<Physical<TPhysics::TMotion>>,
 			TAnimations::TAnimationDispatch,
