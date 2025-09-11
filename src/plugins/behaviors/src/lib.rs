@@ -164,9 +164,8 @@ where
 			TPathFinding::TComputePath,
 			TPathFinding::TComputerRef,
 		>;
-		let execute_player_path = TPlayers::TPlayerMovement::execute_movement::<
-			Movement<PathOrWasd<Physical<TPhysics::TMotion>>>,
-		>;
+		let execute_player_path =
+			TPlayers::TPlayerMovement::execute_movement::<Movement<PathOrWasd<TPhysics::TMotion>>>;
 		let execute_player_movement =
 			TPlayers::TPlayerMovement::execute_movement::<Movement<Physical<TPhysics::TMotion>>>;
 		let animate_player_movement = TPlayers::TPlayerMovement::animate_movement::<
@@ -180,7 +179,7 @@ where
 			TPathFinding::TComputerRef,
 		>;
 		let execute_enemy_path =
-			TEnemies::TEnemy::execute_movement::<Movement<PathOrWasd<Physical<TPhysics::TMotion>>>>;
+			TEnemies::TEnemy::execute_movement::<Movement<PathOrWasd<TPhysics::TMotion>>>;
 		let execute_enemy_movement =
 			TEnemies::TEnemy::execute_movement::<Movement<Physical<TPhysics::TMotion>>>;
 		let animate_enemy_movement = TEnemies::TEnemy::animate_movement::<
