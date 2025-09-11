@@ -160,7 +160,7 @@ where
 		let wasd_input = wasd_input.pipe(OnError::log_and_return(|| ProcessInput::None));
 
 		let compute_player_path = TPlayers::TPlayerMovement::compute_path::<
-			Physical<TPhysics::TMotion>,
+			TPhysics::TMotion,
 			TPathFinding::TComputePath,
 			TPathFinding::TComputerRef,
 		>;
@@ -175,7 +175,7 @@ where
 		>;
 
 		let compute_enemy_path = TEnemies::TEnemy::compute_path::<
-			Physical<TPhysics::TMotion>,
+			TPhysics::TMotion,
 			TPathFinding::TComputePath,
 			TPathFinding::TComputerRef,
 		>;
