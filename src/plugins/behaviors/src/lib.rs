@@ -54,7 +54,7 @@ use components::{
 	Once,
 	OverrideFace,
 	ground_target::GroundTarget,
-	movement::{Movement, path_or_wasd::PathOrWasd, physical::Physical},
+	movement::{Movement, path_or_wasd::PathOrWasd},
 	set_motion_forward::SetMotionForward,
 	skill_behavior::{skill_contact::SkillContact, skill_projection::SkillProjection},
 	when_traveled_insert::DestroyAfterDistanceTraveled,
@@ -223,7 +223,7 @@ where
 					// Enemy behaviors
 					(
 						TEnemies::TEnemy::select_behavior::<TPlayers::TPlayer>.pipe(OnError::log),
-						TEnemies::TEnemy::chase::<PathOrWasd<Physical<TPhysics::TMotion>>>,
+						TEnemies::TEnemy::chase::<PathOrWasd<TPhysics::TMotion>>,
 						compute_enemy_path,
 						execute_enemy_path,
 						execute_enemy_movement,
