@@ -8,12 +8,12 @@ use common::traits::thread_safe::ThreadSafe;
 use std::marker::PhantomData;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub(crate) struct WasdInput<TMethod> {
+pub(crate) struct WasdInput<TMotion> {
 	pub(crate) direction: Dir3,
-	_m: PhantomData<TMethod>,
+	_m: PhantomData<TMotion>,
 }
 
-impl<TMethod> From<Dir3> for WasdInput<TMethod> {
+impl<TMotion> From<Dir3> for WasdInput<TMotion> {
 	fn from(direction: Dir3) -> Self {
 		Self {
 			direction,
@@ -22,9 +22,9 @@ impl<TMethod> From<Dir3> for WasdInput<TMethod> {
 	}
 }
 
-impl<TMethod> InputProcessComponent for WasdInput<TMethod>
+impl<TMotion> InputProcessComponent for WasdInput<TMotion>
 where
-	TMethod: ThreadSafe,
+	TMotion: ThreadSafe,
 {
-	type TInputProcessComponent = Movement<PathOrWasd<TMethod>>;
+	type TInputProcessComponent = Movement<PathOrWasd<TMotion>>;
 }

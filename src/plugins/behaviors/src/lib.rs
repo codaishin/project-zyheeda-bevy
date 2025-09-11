@@ -148,11 +148,11 @@ where
 		TSaveGame::register_savable_component::<OverrideFace>(app);
 		TSaveGame::register_savable_component::<Movement<PathOrWasd<TPhysics::TMotion>>>(app);
 
-		let point_input = PointerInput::<Physical<TPhysics::TMotion>>::parse::<
+		let point_input = PointerInput::<TPhysics::TMotion>::parse::<
 			TPlayers::TCamRay,
 			TSettings::TKeyMap<MovementKey>,
 		>;
-		let wasd_input = WasdInput::<Physical<TPhysics::TMotion>>::parse::<
+		let wasd_input = WasdInput::<TPhysics::TMotion>::parse::<
 			TPlayers::TPlayerMainCamera,
 			TSettings::TKeyMap<MovementKey>,
 			TPlayers::TPlayer,
