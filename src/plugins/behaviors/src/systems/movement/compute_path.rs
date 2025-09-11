@@ -11,29 +11,26 @@ use common::{
 };
 use std::collections::VecDeque;
 
-type MoveComponents<TAgent, TMoveMethod, TGetComputer> = (
+type MoveComponents<TAgent, TMotion, TGetComputer> = (
 	Entity,
 	&'static GlobalTransform,
 	&'static TAgent,
-	&'static Movement<PathOrWasd<TMoveMethod>>,
+	&'static Movement<PathOrWasd<TMotion>>,
 	&'static TGetComputer,
 );
-type ChangedMovement<TMoveMethod> = Changed<Movement<PathOrWasd<TMoveMethod>>>;
+type ChangedMovement<TMotion> = Changed<Movement<PathOrWasd<TMotion>>>;
 
 impl<T> MovementPath for T where T: Component + for<'a> RefInto<'a, ColliderRadius> + Sized {}
 
 pub(crate) trait MovementPath:
 	Component + for<'a> RefInto<'a, ColliderRadius> + Sized
 {
-	fn compute_path<TMoveMethod, TComputer, TGetComputer>(
+	fn compute_path<TMotion, TComputer, TGetComputer>(
 		mut commands: ZyheedaCommands,
-		movements: Query<
-			MoveComponents<Self, TMoveMethod, TGetComputer>,
-			ChangedMovement<TMoveMethod>,
-		>,
+		movements: Query<MoveComponents<Self, TMotion, TGetComputer>, ChangedMovement<TMotion>>,
 		computers: Query<&TComputer>,
 	) where
-		TMoveMethod: ThreadSafe,
+		TMotion: ThreadSafe,
 		TComputer: Component + ComputePath,
 		TGetComputer: Component + for<'a> RefInto<'a, Entity>,
 	{
@@ -44,24 +41,24 @@ pub(crate) trait MovementPath:
 			let path_or_wasd = new_movement(computer, transform, movement, agent);
 			commands.try_apply_on(&entity, |mut e| {
 				e.try_insert(path_or_wasd);
-				e.try_remove::<Movement<TMoveMethod>>();
+				e.try_remove::<Movement<TMotion>>();
 			});
 		}
 	}
 }
 
-fn new_movement<TAgent, TMoveMethod, TComputer>(
+fn new_movement<TAgent, TMotion, TComputer>(
 	computer: &TComputer,
 	transform: &GlobalTransform,
-	movement: &Movement<PathOrWasd<TMoveMethod>>,
+	movement: &Movement<PathOrWasd<TMotion>>,
 	agent: &TAgent,
-) -> PathOrWasd<TMoveMethod>
+) -> PathOrWasd<TMotion>
 where
 	TAgent: for<'a> RefInto<'a, ColliderRadius>,
 	TComputer: ComputePath,
-	TMoveMethod: ThreadSafe,
+	TMotion: ThreadSafe,
 {
-	let mut new_movement = PathOrWasd::<TMoveMethod>::from(movement.target);
+	let mut new_movement = PathOrWasd::<TMotion>::from(movement.target);
 
 	let Mode::Path(move_path) = &mut new_movement.mode else {
 		return new_movement;

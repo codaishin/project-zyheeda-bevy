@@ -1,4 +1,7 @@
-use crate::components::{Chase, movement::Movement};
+use crate::{
+	components::{Chase, movement::Movement},
+	systems::movement::insert_process_component::StopMovement,
+};
 use bevy::prelude::*;
 use common::{
 	traits::{
@@ -8,21 +11,20 @@ use common::{
 	zyheeda_commands::ZyheedaCommands,
 };
 
-impl<T> ChaseSystem for T {}
+impl<T> ChaseSystem for T where T: Component {}
 
-pub(crate) trait ChaseSystem {
-	fn chase<TMovementMethod>(
+pub(crate) trait ChaseSystem: Component + Sized {
+	fn chase<TMotion>(
 		mut commands: ZyheedaCommands,
 		mut removed_chasers: RemovedComponents<Chase>,
 		chasers: Query<(Entity, &Chase), With<Self>>,
 		transforms: Query<&GlobalTransform>,
 	) where
-		Self: Component + Sized,
-		TMovementMethod: ThreadSafe,
+		TMotion: ThreadSafe,
 	{
 		for entity in removed_chasers.read() {
 			commands.try_apply_on(&entity, |mut e| {
-				e.try_remove::<Movement<TMovementMethod>>();
+				e.try_insert(Movement::<TMotion>::stop());
 			});
 		}
 
@@ -34,7 +36,7 @@ pub(crate) trait ChaseSystem {
 				continue;
 			};
 			commands.try_apply_on(&entity, |mut e| {
-				e.try_insert(Movement::<TMovementMethod>::to(target.translation()));
+				e.try_insert(Movement::<TMotion>::to(target.translation()));
 			});
 		}
 	}
@@ -90,7 +92,7 @@ mod tests {
 	}
 
 	#[test]
-	fn remove_movement_when_not_chasing() {
+	fn stop_movement_when_stopped_chasing() {
 		let (mut app, target) = setup(Vec3::new(1., 2., 3.));
 		let chaser = app
 			.world_mut()
@@ -102,7 +104,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			None,
+			Some(&Movement::stop()),
 			app.world()
 				.entity(chaser)
 				.get::<Movement<_MovementMethod>>()

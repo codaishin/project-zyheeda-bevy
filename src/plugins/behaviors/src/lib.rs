@@ -54,7 +54,7 @@ use components::{
 	Once,
 	OverrideFace,
 	ground_target::GroundTarget,
-	movement::{Movement, path_or_wasd::PathOrWasd, physical::Physical},
+	movement::{Movement, path_or_wasd::PathOrWasd},
 	set_motion_forward::SetMotionForward,
 	skill_behavior::{skill_contact::SkillContact, skill_projection::SkillProjection},
 	when_traveled_insert::DestroyAfterDistanceTraveled,
@@ -140,21 +140,19 @@ where
 		+ ConfiguresPlayerMovement,
 {
 	fn build(&self, app: &mut App) {
-		TAnimations::register_movement_direction::<Movement<Physical<TPhysics::TMotion>>>(app);
+		TAnimations::register_movement_direction::<Movement<TPhysics::TMotion>>(app);
 
 		TSaveGame::register_savable_component::<SkillContact>(app);
 		TSaveGame::register_savable_component::<SkillProjection>(app);
 		TSaveGame::register_savable_component::<Attacking>(app);
 		TSaveGame::register_savable_component::<OverrideFace>(app);
-		TSaveGame::register_savable_component::<Movement<PathOrWasd<Physical<TPhysics::TMotion>>>>(
-			app,
-		);
+		TSaveGame::register_savable_component::<Movement<PathOrWasd<TPhysics::TMotion>>>(app);
 
-		let point_input = PointerInput::<Physical<TPhysics::TMotion>>::parse::<
+		let point_input = PointerInput::<TPhysics::TMotion>::parse::<
 			TPlayers::TCamRay,
 			TSettings::TKeyMap<MovementKey>,
 		>;
-		let wasd_input = WasdInput::<Physical<TPhysics::TMotion>>::parse::<
+		let wasd_input = WasdInput::<TPhysics::TMotion>::parse::<
 			TPlayers::TPlayerMainCamera,
 			TSettings::TKeyMap<MovementKey>,
 			TPlayers::TPlayer,
@@ -162,31 +160,30 @@ where
 		let wasd_input = wasd_input.pipe(OnError::log_and_return(|| ProcessInput::None));
 
 		let compute_player_path = TPlayers::TPlayerMovement::compute_path::<
-			Physical<TPhysics::TMotion>,
+			TPhysics::TMotion,
 			TPathFinding::TComputePath,
 			TPathFinding::TComputerRef,
 		>;
-		let execute_player_path = TPlayers::TPlayerMovement::execute_movement::<
-			Movement<PathOrWasd<Physical<TPhysics::TMotion>>>,
-		>;
+		let execute_player_path =
+			TPlayers::TPlayerMovement::execute_movement::<Movement<PathOrWasd<TPhysics::TMotion>>>;
 		let execute_player_movement =
-			TPlayers::TPlayerMovement::execute_movement::<Movement<Physical<TPhysics::TMotion>>>;
+			TPlayers::TPlayerMovement::execute_movement::<Movement<TPhysics::TMotion>>;
 		let animate_player_movement = TPlayers::TPlayerMovement::animate_movement::<
-			Movement<Physical<TPhysics::TMotion>>,
+			Movement<TPhysics::TMotion>,
 			TAnimations::TAnimationDispatch,
 		>;
 
 		let compute_enemy_path = TEnemies::TEnemy::compute_path::<
-			Physical<TPhysics::TMotion>,
+			TPhysics::TMotion,
 			TPathFinding::TComputePath,
 			TPathFinding::TComputerRef,
 		>;
 		let execute_enemy_path =
-			TEnemies::TEnemy::execute_movement::<Movement<PathOrWasd<Physical<TPhysics::TMotion>>>>;
+			TEnemies::TEnemy::execute_movement::<Movement<PathOrWasd<TPhysics::TMotion>>>;
 		let execute_enemy_movement =
-			TEnemies::TEnemy::execute_movement::<Movement<Physical<TPhysics::TMotion>>>;
+			TEnemies::TEnemy::execute_movement::<Movement<TPhysics::TMotion>>;
 		let animate_enemy_movement = TEnemies::TEnemy::animate_movement::<
-			Movement<Physical<TPhysics::TMotion>>,
+			Movement<TPhysics::TMotion>,
 			TAnimations::TAnimationDispatch,
 		>;
 
@@ -226,7 +223,7 @@ where
 					// Enemy behaviors
 					(
 						TEnemies::TEnemy::select_behavior::<TPlayers::TPlayer>.pipe(OnError::log),
-						TEnemies::TEnemy::chase::<PathOrWasd<Physical<TPhysics::TMotion>>>,
+						TEnemies::TEnemy::chase::<PathOrWasd<TPhysics::TMotion>>,
 						compute_enemy_path,
 						execute_enemy_path,
 						execute_enemy_movement,
@@ -247,7 +244,7 @@ where
 						.chain(),
 					// Apply facing
 					(
-						Movement::<Physical<TPhysics::TMotion>>::set_faces,
+						Movement::<TPhysics::TMotion>::set_faces,
 						TPlayers::TPlayer::get_faces
 							.pipe(execute_player_face::<TPlayers::TMouseHover, TPlayers::TCamRay>),
 						TEnemies::TEnemy::get_faces.pipe(execute_enemy_face),

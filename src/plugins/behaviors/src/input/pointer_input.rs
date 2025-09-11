@@ -11,12 +11,12 @@ use common::traits::thread_safe::ThreadSafe;
 use std::marker::PhantomData;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub(crate) struct PointerInput<TMethod> {
+pub(crate) struct PointerInput<TMotion> {
 	pub(crate) target: Vec3,
-	_m: PhantomData<TMethod>,
+	_m: PhantomData<TMotion>,
 }
 
-impl<TMethod> From<Vec3> for PointerInput<TMethod> {
+impl<TMotion> From<Vec3> for PointerInput<TMotion> {
 	fn from(translation: Vec3) -> Self {
 		Self {
 			target: translation,
@@ -25,11 +25,11 @@ impl<TMethod> From<Vec3> for PointerInput<TMethod> {
 	}
 }
 
-impl<TMethod> InputProcessComponent for PointerInput<TMethod>
+impl<TMotion> InputProcessComponent for PointerInput<TMotion>
 where
-	TMethod: ThreadSafe,
+	TMotion: ThreadSafe,
 {
-	type TInputProcessComponent = Movement<PathOrWasd<TMethod>>;
+	type TInputProcessComponent = Movement<PathOrWasd<TMotion>>;
 }
 
-impl<TMethod> PointMovementInput for PointerInput<TMethod> {}
+impl<TMotion> PointMovementInput for PointerInput<TMotion> {}
