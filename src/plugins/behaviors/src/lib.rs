@@ -169,7 +169,7 @@ where
 		let execute_player_movement =
 			TPlayers::TPlayerMovement::execute_movement::<Movement<TPhysics::TMotion>>;
 		let animate_player_movement = TPlayers::TPlayerMovement::animate_movement::<
-			Movement<Physical<TPhysics::TMotion>>,
+			Movement<TPhysics::TMotion>,
 			TAnimations::TAnimationDispatch,
 		>;
 
@@ -183,7 +183,7 @@ where
 		let execute_enemy_movement =
 			TEnemies::TEnemy::execute_movement::<Movement<TPhysics::TMotion>>;
 		let animate_enemy_movement = TEnemies::TEnemy::animate_movement::<
-			Movement<Physical<TPhysics::TMotion>>,
+			Movement<TPhysics::TMotion>,
 			TAnimations::TAnimationDispatch,
 		>;
 
