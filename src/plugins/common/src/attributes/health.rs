@@ -1,5 +1,3 @@
-use crate::{effects::health_damage::HealthDamage, traits::handles_physics::HandlesPhysicalEffect};
-use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
@@ -14,12 +12,5 @@ impl Health {
 			current: value,
 			max: value,
 		}
-	}
-
-	pub fn component<TPhysics>(self) -> impl Bundle
-	where
-		TPhysics: HandlesPhysicalEffect<HealthDamage>,
-	{
-		TPhysics::into_affected_component(self)
 	}
 }

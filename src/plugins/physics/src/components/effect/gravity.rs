@@ -5,7 +5,6 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	attributes::effect_target::EffectTarget,
 	components::persistent_entity::PersistentEntity,
 	effects::gravity::Gravity,
 	traits::handles_physics::HandlesPhysicalEffect,
@@ -23,13 +22,6 @@ impl<TDependencies> HandlesPhysicalEffect<Gravity> for PhysicsPlugin<TDependenci
 
 	fn into_effect_component(effect: Gravity) -> GravityEffect {
 		GravityEffect(effect)
-	}
-
-	fn into_affected_component(effect_target: EffectTarget<Gravity>) -> GravityAffected {
-		match effect_target {
-			EffectTarget::Affected => GravityAffected::AffectedBy { pulls: vec![] },
-			EffectTarget::Immune => GravityAffected::Immune,
-		}
 	}
 }
 

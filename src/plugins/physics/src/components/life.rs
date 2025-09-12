@@ -11,7 +11,7 @@ use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
-pub struct Life(pub(crate) Health);
+pub struct Life(Health);
 
 impl Life {
 	pub(crate) fn change_by(&mut self, health: f32) {
@@ -19,6 +19,16 @@ impl Life {
 
 		*current += health;
 		*current = current.min(*max);
+	}
+
+	pub(crate) fn current_hp(&self) -> f32 {
+		self.0.current
+	}
+}
+
+impl From<Health> for Life {
+	fn from(health: Health) -> Self {
+		Self(health)
 	}
 }
 

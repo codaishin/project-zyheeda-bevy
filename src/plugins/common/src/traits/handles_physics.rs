@@ -52,7 +52,6 @@ where
 	type TAffectedComponent: Component;
 
 	fn into_effect_component(effect: TEffect) -> Self::TEffectComponent;
-	fn into_affected_component(affected: TEffect::TTarget) -> Self::TAffectedComponent;
 }
 
 pub trait HandlesLife:

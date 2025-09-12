@@ -86,10 +86,6 @@ mod tests {
 		fn into_effect_component(_: _Effect) -> Self::TEffectComponent {
 			_EffectComponent
 		}
-
-		fn into_affected_component(_: ()) -> _AffectedComponent {
-			_AffectedComponent
-		}
 	}
 
 	fn setup(first_pass: Handle<Image>) -> App {

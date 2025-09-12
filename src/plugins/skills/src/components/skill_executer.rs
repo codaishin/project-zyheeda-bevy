@@ -140,10 +140,6 @@ mod tests {
 		fn into_effect_component(_: T) -> _Effect {
 			_Effect
 		}
-
-		fn into_affected_component(_: T::TTarget) -> _Affected {
-			_Affected
-		}
 	}
 
 	#[derive(Component)]

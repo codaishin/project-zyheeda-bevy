@@ -10,8 +10,8 @@ impl Life {
 	}
 }
 
-fn dead((entity, Life(health)): (Entity, &Life)) -> Option<Entity> {
-	if health.current <= 0. {
+fn dead((entity, life): (Entity, &Life)) -> Option<Entity> {
+	if life.current_hp() <= 0. {
 		Some(entity)
 	} else {
 		None
@@ -35,7 +35,7 @@ mod tests {
 		let mut app = setup();
 		let health = app
 			.world_mut()
-			.spawn(Life(Health {
+			.spawn(Life::from(Health {
 				current: 0.,
 				max: 100.,
 			}))
@@ -51,7 +51,7 @@ mod tests {
 		let mut app = setup();
 		let health = app
 			.world_mut()
-			.spawn(Life(Health {
+			.spawn(Life::from(Health {
 				current: 1.,
 				max: 100.,
 			}))
@@ -67,7 +67,7 @@ mod tests {
 		let mut app = setup();
 		let health = app
 			.world_mut()
-			.spawn(Life(Health {
+			.spawn(Life::from(Health {
 				current: -1.,
 				max: 100.,
 			}))
