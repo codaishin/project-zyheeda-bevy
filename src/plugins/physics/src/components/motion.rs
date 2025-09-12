@@ -43,8 +43,12 @@ impl<'w, 's> DerivableFrom<'w, 's, Motion> for Velocity {
 
 	type TParam = Query<'w, 's, &'static Transform>;
 
-	fn derive_from(entity: Entity, motion: &Motion, transforms: &Query<&Transform>) -> Self {
-		match motion {
+	fn derive_from(
+		entity: Entity,
+		motion: &Motion,
+		transforms: &Query<&Transform>,
+	) -> Option<Self> {
+		Some(match motion {
 			Motion::Ongoing(LinearMotion::Direction { speed, direction }) => {
 				velocity_with_direction(*direction, *speed)
 			}
@@ -52,7 +56,7 @@ impl<'w, 's> DerivableFrom<'w, 's, Motion> for Velocity {
 				velocity_to_target(*target, *speed, transforms.get(entity).ok())
 			}
 			Motion::Ongoing(LinearMotion::Stop) | Motion::Done(..) => Velocity::zero(),
-		}
+		})
 	}
 }
 

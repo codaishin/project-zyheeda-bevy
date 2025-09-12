@@ -158,8 +158,8 @@ impl<'w, 's> DerivableFrom<'w, 's, Enemy> for GroundOffset {
 
 	type TParam = ();
 
-	fn derive_from(_: Entity, Enemy { enemy_type, .. }: &Enemy, _: &()) -> Self {
-		Self::from(enemy_type)
+	fn derive_from(_: Entity, Enemy { enemy_type, .. }: &Enemy, _: &()) -> Option<Self> {
+		Some(Self::from(enemy_type))
 	}
 }
 
