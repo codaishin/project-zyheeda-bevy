@@ -22,6 +22,7 @@ use bevy::{ecs::component::Mutable, prelude::*};
 use bevy_rapier3d::prelude::Velocity;
 use common::traits::{
 	delta::Delta,
+	handles_enemies::HandlesEnemies,
 	handles_physics::{HandlesMotion, HandlesPhysicalObjects},
 	handles_player::HandlesPlayer,
 	handles_saving::{HandlesSaving, SavableComponent},
@@ -58,20 +59,22 @@ use traits::act_on::ActOn;
 
 pub struct PhysicsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSaveGame, TPlayers> PhysicsPlugin<(TSaveGame, TPlayers)>
+impl<TSaveGame, TPlayers, TEnemies> PhysicsPlugin<(TSaveGame, TPlayers, TEnemies)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPlayers: ThreadSafe + HandlesPlayer,
+	TEnemies: ThreadSafe + HandlesEnemies,
 {
-	pub fn from_plugin(_: &TSaveGame, _: &TPlayers) -> Self {
+	pub fn from_plugin(_: &TSaveGame, _: &TPlayers, _: &TEnemies) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TSaveGame, TPlayers> Plugin for PhysicsPlugin<(TSaveGame, TPlayers)>
+impl<TSaveGame, TPlayers, TEnemies> Plugin for PhysicsPlugin<(TSaveGame, TPlayers, TEnemies)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPlayers: ThreadSafe + HandlesPlayer,
+	TEnemies: ThreadSafe + HandlesEnemies,
 {
 	fn build(&self, app: &mut App) {
 		TSaveGame::register_savable_component::<Motion>(app);
@@ -89,18 +92,21 @@ where
 			// Deal health damage
 			.register_required_components::<HealthDamageEffect, InteractingEntities>()
 			.register_derived_component::<TPlayers::TPlayer, Life>()
-			.register_derived_component::<TPlayers::TPlayer, GravityAffected>()
-			.register_derived_component::<TPlayers::TPlayer, ForceAffected>()
+			.register_derived_component::<TEnemies::TEnemy, Life>()
 			.add_observer(HealthDamageEffect::update_blockers)
 			.add_physics::<HealthDamageEffect, Life, TSaveGame>()
 			.add_systems(Update, Life::despawn_dead)
 			// Apply gravity effect
 			.register_required_components::<GravityEffect, InteractingEntities>()
+			.register_derived_component::<TPlayers::TPlayer, GravityAffected>()
+			.register_derived_component::<TEnemies::TEnemy, GravityAffected>()
 			.add_observer(GravityEffect::update_blockers)
 			.add_physics::<GravityEffect, GravityAffected, TSaveGame>()
 			.add_systems(Update, Update::delta.pipe(apply_gravity_pull))
 			// Apply force effect
 			.register_required_components::<ForceEffect, InteractingEntities>()
+			.register_derived_component::<TPlayers::TPlayer, ForceAffected>()
+			.register_derived_component::<TEnemies::TEnemy, ForceAffected>()
 			.add_observer(ForceEffect::update_blockers)
 			.add_physics::<ForceEffect, ForceAffected, TSaveGame>()
 			// Apply interactions
