@@ -15,7 +15,7 @@ use common::{
 #[component(immutable)]
 pub enum MaterialOverride {
 	#[default]
-	None,
+	Reset,
 	Material(EssenceMaterial),
 }
 
@@ -24,15 +24,15 @@ impl<'w, 's> DerivableFrom<'w, 's, Essence> for MaterialOverride {
 
 	type TParam = ();
 
-	fn derive_from(_: Entity, essence: &Essence, _: &()) -> Self {
-		match essence {
-			Essence::None => MaterialOverride::None,
+	fn derive_from(_: Entity, essence: &Essence, _: &()) -> Option<Self> {
+		Some(match essence {
+			Essence::None => MaterialOverride::Reset,
 			Essence::Force => MaterialOverride::Material(EssenceMaterial {
 				texture_color: CYAN_100.into(),
 				fill_color: CYAN_200.into(),
 				fresnel_color: (LIGHT_CYAN * 1.5).into(),
 				..default()
 			}),
-		}
+		})
 	}
 }

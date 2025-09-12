@@ -12,12 +12,12 @@ impl<'w, 's> DerivableFrom<'w, 's, GlobalLight> for DirectionalLight {
 
 	type TParam = ();
 
-	fn derive_from(_: Entity, GlobalLight(color): &GlobalLight, _: &()) -> Self {
-		DirectionalLight {
+	fn derive_from(_: Entity, GlobalLight(color): &GlobalLight, _: &()) -> Option<Self> {
+		Some(DirectionalLight {
 			shadows_enabled: false,
 			illuminance: 100.,
 			color: Color::from(*color),
 			..default()
-		}
+		})
 	}
 }

@@ -44,7 +44,7 @@ impl MaterialOverride {
 		};
 
 		match material_override {
-			MaterialOverride::None => {
+			MaterialOverride::Reset => {
 				set_standard_material(commands, with_inactive_standard_material, entity);
 			}
 			MaterialOverride::Material(essence_material) => {
@@ -186,7 +186,7 @@ mod tests {
 
 		let entity = app.world_mut().spawn((
 			MeshMaterial3d(new_handle::<EssenceMaterial>()),
-			MaterialOverride::None,
+			MaterialOverride::Reset,
 		));
 
 		assert_eq!(None, entity.get::<MeshMaterial3d<EssenceMaterial>>());
@@ -203,7 +203,7 @@ mod tests {
 			MaterialOverride::Material(EssenceMaterial::default()),
 		));
 
-		entity.insert(MaterialOverride::None);
+		entity.insert(MaterialOverride::Reset);
 
 		assert_eq!(
 			Some(&original_material),
