@@ -2,7 +2,10 @@ use super::player_movement::{Config, MovementMode, PlayerMovement};
 use bevy::{asset::AssetPath, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::{
-	attributes::{affected_by::Affected, health::Health},
+	attributes::{
+		affected_by::{Affected, AffectedBy},
+		health::Health,
+	},
 	components::{
 		asset_model::AssetModel,
 		collider_relationship::InteractionTarget,
@@ -18,6 +21,7 @@ use common::{
 		UnitsPerSecond,
 		action_key::slot::{PlayerSlot, Side, SlotKey},
 		animation_key::AnimationKey,
+		attribute::AttributeOnSpawn,
 		bone::Bone,
 		collider_radius::ColliderRadius,
 		iter_helpers::{first, next},
@@ -204,6 +208,24 @@ impl<'a> Mapper<Bone<'a>, Option<HandSlot>> for Player {
 			"bottom_hand_slot.L" => Some(HandSlot(PlayerSlot::LOWER_L.into())),
 			_ => None,
 		}
+	}
+}
+
+impl From<&Player> for AttributeOnSpawn<Health> {
+	fn from(_: &Player) -> Self {
+		Self(Some(Health::new(100.)))
+	}
+}
+
+impl From<&Player> for AttributeOnSpawn<AffectedBy<Gravity>> {
+	fn from(_: &Player) -> Self {
+		Self(Some(Affected::by::<Gravity>()))
+	}
+}
+
+impl From<&Player> for AttributeOnSpawn<AffectedBy<Force>> {
+	fn from(_: &Player) -> Self {
+		Self(Some(Affected::by::<Force>()))
 	}
 }
 

@@ -5,17 +5,23 @@ use crate::components::enemy::enemy_type::EnemyTypeInternal;
 use bevy::{asset::AssetPath, prelude::*};
 use bevy_rapier3d::prelude::{GravityScale, RigidBody};
 use common::{
+	attributes::{
+		affected_by::{Affected, AffectedBy},
+		health::Health,
+	},
 	components::{
 		collider_relationship::InteractionTarget,
 		ground_offset::GroundOffset,
 		is_blocker::{Blocker, IsBlocker},
 		persistent_entity::PersistentEntity,
 	},
+	effects::{force::Force, gravity::Gravity},
 	errors::Error,
 	tools::{
 		action_key::slot::SlotKey,
 		aggro_range::AggroRange,
 		attack_range::AttackRange,
+		attribute::AttributeOnSpawn,
 		bone::Bone,
 		collider_radius::ColliderRadius,
 		movement_animation::MovementAnimation,
@@ -136,6 +142,30 @@ impl Mapper<Bone<'_>, Option<ForearmSlot>> for Enemy {
 impl Mapper<Bone<'_>, Option<SkillSpawner>> for Enemy {
 	fn map(&self, bone: Bone) -> Option<SkillSpawner> {
 		self.enemy_type.map(bone)
+	}
+}
+
+impl From<&Enemy> for AttributeOnSpawn<Health> {
+	fn from(enemy: &Enemy) -> Self {
+		match enemy.enemy_type {
+			EnemyTypeInternal::VoidSphere(_) => Self(Some(Health::new(5.))),
+		}
+	}
+}
+
+impl From<&Enemy> for AttributeOnSpawn<AffectedBy<Gravity>> {
+	fn from(enemy: &Enemy) -> Self {
+		match enemy.enemy_type {
+			EnemyTypeInternal::VoidSphere(_) => Self(Some(Affected::by::<Gravity>())),
+		}
+	}
+}
+
+impl From<&Enemy> for AttributeOnSpawn<AffectedBy<Force>> {
+	fn from(enemy: &Enemy) -> Self {
+		match enemy.enemy_type {
+			EnemyTypeInternal::VoidSphere(_) => Self(Some(Affected::by::<Force>())),
+		}
 	}
 }
 
