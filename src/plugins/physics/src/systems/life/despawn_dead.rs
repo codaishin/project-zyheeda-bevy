@@ -1,9 +1,6 @@
-use crate::{
-	components::life::Life,
-	traits::accessors::get::TryApplyOn,
-	zyheeda_commands::ZyheedaCommands,
-};
+use crate::components::life::Life;
 use bevy::prelude::*;
+use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
 impl Life {
 	pub(crate) fn despawn_dead(mut commands: ZyheedaCommands, agents: Query<(Entity, &Self)>) {
@@ -24,7 +21,7 @@ fn dead((entity, Life(health)): (Entity, &Life)) -> Option<Entity> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::attributes::health::Health;
+	use common::attributes::health::Health;
 
 	fn setup() -> App {
 		let mut app = App::new();
@@ -38,7 +35,7 @@ mod tests {
 		let mut app = setup();
 		let health = app
 			.world_mut()
-			.spawn(Life::from(Health {
+			.spawn(Life(Health {
 				current: 0.,
 				max: 100.,
 			}))
@@ -54,7 +51,7 @@ mod tests {
 		let mut app = setup();
 		let health = app
 			.world_mut()
-			.spawn(Life::from(Health {
+			.spawn(Life(Health {
 				current: 1.,
 				max: 100.,
 			}))
@@ -70,7 +67,7 @@ mod tests {
 		let mut app = setup();
 		let health = app
 			.world_mut()
-			.spawn(Life::from(Health {
+			.spawn(Life(Health {
 				current: -1.,
 				max: 100.,
 			}))

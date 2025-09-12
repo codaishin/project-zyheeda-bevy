@@ -1,11 +1,12 @@
 use crate::{
 	PhysicsPlugin,
+	components::life::Life,
 	traits::{act_on::ActOn, update_blockers::UpdateBlockers},
 };
 use bevy::prelude::*;
 use common::{
 	attributes::health::Health,
-	components::{life::Life, persistent_entity::PersistentEntity},
+	components::persistent_entity::PersistentEntity,
 	effects::{EffectApplies, health_damage::HealthDamage},
 	traits::handles_physics::HandlesPhysicalEffect,
 };
@@ -25,7 +26,7 @@ impl<TSaveGame> HandlesPhysicalEffect<HealthDamage> for PhysicsPlugin<TSaveGame>
 	}
 
 	fn into_affected_component(health: Health) -> Life {
-		Life::from(health)
+		Life(health)
 	}
 }
 
@@ -56,7 +57,7 @@ mod tests {
 	#[test]
 	fn deal_damage_once() {
 		let mut damage = HealthDamageEffect(HealthDamage::once(42.));
-		let mut life = Life::from(Health::new(100.));
+		let mut life = Life(Health::new(100.));
 
 		damage.on_begin_interaction(PersistentEntity::default(), &mut life);
 		damage.on_repeated_interaction(
@@ -65,7 +66,7 @@ mod tests {
 			Duration::from_secs(1),
 		);
 
-		let mut expected = Life::from(Health::new(100.));
+		let mut expected = Life(Health::new(100.));
 		expected.change_by(-42.);
 		assert_eq!(expected, life);
 	}
@@ -73,7 +74,7 @@ mod tests {
 	#[test]
 	fn deal_damage_over_time_scaled_by_delta() {
 		let mut damage = HealthDamageEffect(HealthDamage::per_second(42.));
-		let mut life = Life::from(Health::new(100.));
+		let mut life = Life(Health::new(100.));
 
 		damage.on_begin_interaction(PersistentEntity::default(), &mut life);
 		damage.on_repeated_interaction(
@@ -82,7 +83,7 @@ mod tests {
 			Duration::from_millis(100),
 		);
 
-		let mut expected = Life::from(Health::new(100.));
+		let mut expected = Life(Health::new(100.));
 		expected.change_by(-42. * 0.1);
 		assert_eq!(expected, life);
 	}

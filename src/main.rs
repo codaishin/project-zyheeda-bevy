@@ -77,7 +77,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		&players,
 		&skills,
 	);
-	let bars = BarsPlugin::from_plugins(&players, &enemies, &graphics);
+	let bars = BarsPlugin::from_plugins(&players, &enemies, &physics, &graphics);
 	let camera_control =
 		CameraControlPlugin::from_plugins(&settings, &savegame, &players, &graphics);
 

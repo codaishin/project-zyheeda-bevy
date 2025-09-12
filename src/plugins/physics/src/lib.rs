@@ -12,6 +12,7 @@ use crate::{
 		effect::force::ForceEffect,
 		force_affected::ForceAffected,
 		gravity_affected::GravityAffected,
+		life::Life,
 		motion::Motion,
 	},
 	observers::update_blockers::UpdateBlockersObserver,
@@ -89,6 +90,7 @@ where
 			.register_required_components::<HealthDamageEffect, InteractingEntities>()
 			.add_observer(HealthDamageEffect::update_blockers)
 			.add_physics::<HealthDamageEffect, Life, TSaveGame>()
+			.add_systems(Update, Life::despawn_dead)
 			// Apply gravity effect
 			.register_required_components::<GravityEffect, InteractingEntities>()
 			.add_observer(GravityEffect::update_blockers)

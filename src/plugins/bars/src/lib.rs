@@ -9,10 +9,11 @@ use bevy::{
 };
 use common::{
 	attributes::health::Health,
-	components::{life::Life, ui_node_for::UiNodeFor},
+	components::ui_node_for::UiNodeFor,
 	traits::{
 		handles_enemies::HandlesEnemies,
 		handles_graphics::UiCamera,
+		handles_physics::HandlesLife,
 		handles_player::HandlesPlayer,
 		ownership_relation::OwnershipRelation,
 		thread_safe::ThreadSafe,
@@ -24,25 +25,29 @@ use systems::{bar::bar, render_bar::render_bar};
 
 pub struct BarsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TPlayers, TEnemies, TGraphics> BarsPlugin<(TPlayers, TEnemies, TGraphics)>
+impl<TPlayers, TEnemies, TPhysics, TGraphics> BarsPlugin<(TPlayers, TEnemies, TPhysics, TGraphics)>
 where
 	TPlayers: ThreadSafe + HandlesPlayer,
 	TEnemies: ThreadSafe + HandlesEnemies,
+	TPhysics: ThreadSafe + HandlesLife,
 	TGraphics: ThreadSafe + UiCamera,
 {
-	pub fn from_plugins(_: &TPlayers, _: &TEnemies, _: &TGraphics) -> Self {
+	pub fn from_plugins(_: &TPlayers, _: &TEnemies, _: &TPhysics, _: &TGraphics) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TPlayers, TEnemies, TGraphics> Plugin for BarsPlugin<(TPlayers, TEnemies, TGraphics)>
+impl<TPlayers, TEnemies, TPhysics, TGraphics> Plugin
+	for BarsPlugin<(TPlayers, TEnemies, TPhysics, TGraphics)>
 where
 	TPlayers: ThreadSafe + HandlesPlayer,
 	TEnemies: ThreadSafe + HandlesEnemies,
+	TPhysics: ThreadSafe + HandlesLife,
 	TGraphics: ThreadSafe + UiCamera,
 {
 	fn build(&self, app: &mut App) {
-		let update_life_bars = bar::<Life, Health, Camera, TGraphics::TUiCamera>;
+		let update_life_bars =
+			bar::<TPhysics::TAffectedComponent, Health, Camera, TGraphics::TUiCamera>;
 		let render_life_bars = render_bar::<Health>;
 		let render_layer = UiNodeFor::<Bar>::render_layer::<TGraphics::TUiCamera>;
 

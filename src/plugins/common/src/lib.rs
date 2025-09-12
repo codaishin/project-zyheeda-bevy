@@ -12,7 +12,7 @@ pub mod traits;
 pub mod zyheeda_commands;
 
 use crate::{
-	components::{child_of_persistent::ChildOfPersistent, life::Life, lifetime::Lifetime},
+	components::{child_of_persistent::ChildOfPersistent, lifetime::Lifetime},
 	states::game_state::GameState,
 	traits::{
 		register_controlled_state::RegisterControlledState,
@@ -67,7 +67,6 @@ fn asset_loading(app: &mut App) {
 
 fn life_cycles(app: &mut App) {
 	app.add_systems(Update, Lifetime::update::<Virtual>);
-	app.add_systems(Update, Life::despawn_dead);
 }
 
 fn user_input(app: &mut App) {

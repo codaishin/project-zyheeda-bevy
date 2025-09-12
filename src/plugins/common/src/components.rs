@@ -7,7 +7,6 @@ pub mod ground_offset;
 pub mod immobilized;
 pub mod insert_asset;
 pub mod is_blocker;
-pub mod life;
 pub mod lifetime;
 pub mod no_target;
 pub mod outdated;

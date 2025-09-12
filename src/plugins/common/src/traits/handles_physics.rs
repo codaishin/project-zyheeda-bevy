@@ -1,4 +1,5 @@
 use crate::{
+	attributes::health::Health,
 	components::is_blocker::Blocker,
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
 	tools::{Done, Units, speed::Speed},
@@ -34,14 +35,12 @@ pub enum LinearMotion {
 }
 
 pub trait HandlesAllPhysicalEffects:
-	HandlesPhysicalEffect<HealthDamage> + HandlesPhysicalEffect<Gravity> + HandlesPhysicalEffect<Force>
+	HandlesLife + HandlesPhysicalEffect<Gravity> + HandlesPhysicalEffect<Force>
 {
 }
 
 impl<T> HandlesAllPhysicalEffects for T where
-	T: HandlesPhysicalEffect<HealthDamage>
-		+ HandlesPhysicalEffect<Gravity>
-		+ HandlesPhysicalEffect<Force>
+	T: HandlesLife + HandlesPhysicalEffect<Gravity> + HandlesPhysicalEffect<Force>
 {
 }
 
@@ -54,6 +53,16 @@ where
 
 	fn into_effect_component(effect: TEffect) -> Self::TEffectComponent;
 	fn into_affected_component(affected: TEffect::TAffected) -> Self::TAffectedComponent;
+}
+
+pub trait HandlesLife:
+	HandlesPhysicalEffect<HealthDamage, TAffectedComponent: for<'a> RefInto<'a, Health>>
+{
+}
+
+impl<T> HandlesLife for T where
+	T: HandlesPhysicalEffect<HealthDamage, TAffectedComponent: for<'a> RefInto<'a, Health>>
+{
 }
 
 pub trait Effect {

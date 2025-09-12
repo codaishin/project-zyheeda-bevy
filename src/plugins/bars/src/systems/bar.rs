@@ -28,7 +28,7 @@ pub(crate) fn bar<TSource, TValue, TCamera, TMainCameraLabel>(
 ) where
 	TValue: ThreadSafe,
 	BarValues<TValue>: UIBarUpdate<TValue>,
-	TSource: Component + for<'a> RefInto<'a, &'a TValue>,
+	TSource: Component + for<'a> RefInto<'a, TValue>,
 	TCamera: Component + GetScreenPosition,
 	TMainCameraLabel: Component,
 {
@@ -46,7 +46,7 @@ fn add_bar_values<TSource, TValue, TCamera>(
 	camera_transform: &GlobalTransform,
 ) where
 	TValue: ThreadSafe,
-	TSource: Component + for<'a> RefInto<'a, &'a TValue>,
+	TSource: Component + for<'a> RefInto<'a, TValue>,
 	TCamera: Component + GetScreenPosition,
 	BarValues<TValue>: UIBarUpdate<TValue>,
 {
@@ -54,7 +54,7 @@ fn add_bar_values<TSource, TValue, TCamera>(
 		let world_position = transform.translation() + bar.offset;
 		bar.position = camera.get_screen_position(camera_transform, world_position);
 		let mut bar_values = BarValues::default();
-		bar_values.update(display.ref_as::<&TValue>());
+		bar_values.update(&display.ref_as::<TValue>());
 
 		commands.try_apply_on(&id, |mut e| {
 			e.try_insert(bar_values);
@@ -68,14 +68,14 @@ fn update_bar_values<TSource, TValue, TCamera>(
 	camera_transform: &GlobalTransform,
 ) where
 	TValue: ThreadSafe,
-	TSource: Component + for<'a> RefInto<'a, &'a TValue>,
+	TSource: Component + for<'a> RefInto<'a, TValue>,
 	TCamera: Component + GetScreenPosition,
 	BarValues<TValue>: UIBarUpdate<TValue>,
 {
 	for (transform, display, mut bar, mut bar_values) in &mut agents {
 		let world_position = transform.translation() + bar.offset;
 		bar.position = camera.get_screen_position(camera_transform, world_position);
-		bar_values.update(display.ref_as::<&TValue>());
+		bar_values.update(&display.ref_as::<TValue>());
 	}
 }
 
@@ -112,13 +112,13 @@ mod tests {
 	#[derive(Component, Default)]
 	struct _Source(_Value);
 
-	impl<'a> From<&'a _Source> for &'a _Value {
+	impl<'a> From<&'a _Source> for _Value {
 		fn from(_Source(value): &'a _Source) -> Self {
-			value
+			*value
 		}
 	}
 
-	#[derive(Default)]
+	#[derive(Default, Clone, Copy)]
 	struct _Value {
 		current: u8,
 		max: u8,

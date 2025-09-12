@@ -107,6 +107,7 @@ mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
+		attributes::health::Health,
 		components::{outdated::Outdated, persistent_entity::PersistentEntity},
 		tools::{
 			action_key::slot::{PlayerSlot, Side},
@@ -150,6 +151,12 @@ mod tests {
 
 	#[derive(Component)]
 	struct _Affected;
+
+	impl From<&_Affected> for Health {
+		fn from(_: &_Affected) -> Self {
+			panic!("NOT USED")
+		}
+	}
 
 	struct _HandlesSkillBehaviors;
 

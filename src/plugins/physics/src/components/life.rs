@@ -1,5 +1,5 @@
-use crate::attributes::health::Health;
 use bevy::prelude::*;
+use common::attributes::health::Health;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
@@ -12,18 +12,6 @@ impl Life {
 
 		*current += health;
 		*current = current.min(*max);
-	}
-}
-
-impl From<Health> for Life {
-	fn from(health: Health) -> Self {
-		Life(health)
-	}
-}
-
-impl<'a> From<&'a Life> for &'a Health {
-	fn from(Life(health): &'a Life) -> Self {
-		health
 	}
 }
 
