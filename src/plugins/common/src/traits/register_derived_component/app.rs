@@ -46,12 +46,8 @@ fn insert_if_new<TComponent, TDerived>(
 	let Ok(component) = components.get(entity) else {
 		return;
 	};
-	let Some(derived) = TDerived::derive_from(entity, component, &param) else {
-		return;
-	};
-
 	commands.try_apply_on(&entity, |mut e| {
-		e.try_insert_if_new(derived);
+		e.try_insert_if_new(TDerived::derive_from(entity, component, &param));
 	});
 }
 
@@ -68,12 +64,8 @@ fn insert_always<TComponent, TDerived>(
 	let Ok(component) = components.get(entity) else {
 		return;
 	};
-	let Some(derived) = TDerived::derive_from(entity, component, &param) else {
-		return;
-	};
-
 	commands.try_apply_on(&entity, |mut e| {
-		e.try_insert(derived);
+		e.try_insert(TDerived::derive_from(entity, component, &param));
 	});
 }
 
@@ -100,6 +92,7 @@ impl<TComponent, TRequired> Default for Observing<TComponent, TRequired> {
 mod tests {
 	use super::*;
 	use crate::traits::register_derived_component::{DerivableFrom, InsertDerivedComponent};
+	use bevy::ecs::system::SystemParamItem;
 	use testing::{SingleThreadedApp, assert_count};
 
 	#[derive(Component)]
@@ -116,8 +109,8 @@ mod tests {
 
 		type TParam = ();
 
-		fn derive_from(entity: Entity, _: &_Component, _: &()) -> Option<Self> {
-			Some(_NewlyDerived::A(entity))
+		fn derive_from(entity: Entity, _: &_Component, _: &SystemParamItem<Self::TParam>) -> Self {
+			_NewlyDerived::A(entity)
 		}
 	}
 
@@ -132,8 +125,8 @@ mod tests {
 
 		type TParam = ();
 
-		fn derive_from(entity: Entity, _: &_Component, _: &()) -> Option<Self> {
-			Some(_AlwaysDerived::A(entity))
+		fn derive_from(entity: Entity, _: &_Component, _: &SystemParamItem<Self::TParam>) -> Self {
+			_AlwaysDerived::A(entity)
 		}
 	}
 
