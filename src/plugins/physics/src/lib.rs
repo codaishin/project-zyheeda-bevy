@@ -94,13 +94,18 @@ where
 			.register_derived_component::<TEnemies::TEnemy, Life>()
 			.add_physics::<HealthDamageEffect, Life, TSaveGame>()
 			.add_observer(HealthDamageEffect::update_blockers)
-			.add_systems(Update, Life::despawn_dead)
+			.add_systems(Update, Life::despawn_dead.in_set(PhysicsSystems))
 			// Apply gravity effect
 			.register_derived_component::<TPlayers::TPlayer, GravityAffected>()
 			.register_derived_component::<TEnemies::TEnemy, GravityAffected>()
 			.add_physics::<GravityEffect, GravityAffected, TSaveGame>()
 			.add_observer(GravityEffect::update_blockers)
-			.add_systems(Update, Update::delta.pipe(apply_gravity_pull))
+			.add_systems(
+				Update,
+				Update::delta
+					.pipe(apply_gravity_pull)
+					.in_set(PhysicsSystems),
+			)
 			// Apply force effect
 			.register_derived_component::<TPlayers::TPlayer, ForceAffected>()
 			.register_derived_component::<TEnemies::TEnemy, ForceAffected>()
