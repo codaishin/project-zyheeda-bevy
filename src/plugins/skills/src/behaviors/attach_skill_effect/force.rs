@@ -29,10 +29,7 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
 	};
-	use common::{
-		attributes::affected_by::AffectedBy,
-		components::persistent_entity::PersistentEntity,
-	};
+	use common::components::persistent_entity::PersistentEntity;
 	use std::sync::LazyLock;
 	use testing::SingleThreadedApp;
 
@@ -44,10 +41,6 @@ mod tests {
 
 		fn into_effect_component(effect: Force) -> _Force {
 			_Force(effect)
-		}
-
-		fn into_affected_component(_: AffectedBy<Force>) -> _Affected {
-			_Affected
 		}
 	}
 

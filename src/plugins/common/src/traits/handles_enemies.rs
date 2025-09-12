@@ -1,10 +1,13 @@
 use super::accessors::get::RefInto;
 use crate::{
+	attributes::{effect_target::EffectTarget, health::Health},
 	components::persistent_entity::PersistentEntity,
+	effects::{force::Force, gravity::Gravity},
 	tools::{
 		action_key::slot::SlotKey,
 		aggro_range::AggroRange,
 		attack_range::AttackRange,
+		attribute::AttributeOnSpawn,
 		bone::Bone,
 		collider_radius::ColliderRadius,
 		movement_animation::MovementAnimation,
@@ -34,6 +37,9 @@ pub trait HandlesEnemies {
 		+ for<'a> RefInto<'a, AggroRange>
 		+ for<'a> RefInto<'a, AttackRange>
 		+ for<'a> RefInto<'a, ColliderRadius>
+		+ for<'a> RefInto<'a, AttributeOnSpawn<Health>>
+		+ for<'a> RefInto<'a, AttributeOnSpawn<EffectTarget<Gravity>>>
+		+ for<'a> RefInto<'a, AttributeOnSpawn<EffectTarget<Force>>>
 		+ for<'a> Mapper<Bone<'a>, Option<EssenceSlot>>
 		+ for<'a> Mapper<Bone<'a>, Option<HandSlot>>
 		+ for<'a> Mapper<Bone<'a>, Option<ForearmSlot>>

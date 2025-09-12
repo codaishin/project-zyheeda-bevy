@@ -1,2 +1,2 @@
-pub mod affected_by;
+pub mod effect_target;
 pub mod health;

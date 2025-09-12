@@ -5,7 +5,6 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	attributes::affected_by::AffectedBy,
 	components::persistent_entity::PersistentEntity,
 	effects::gravity::Gravity,
 	traits::handles_physics::HandlesPhysicalEffect,
@@ -23,10 +22,6 @@ impl<TDependencies> HandlesPhysicalEffect<Gravity> for PhysicsPlugin<TDependenci
 
 	fn into_effect_component(effect: Gravity) -> GravityEffect {
 		GravityEffect(effect)
-	}
-
-	fn into_affected_component(_: AffectedBy<Gravity>) -> GravityAffected {
-		GravityAffected::default()
 	}
 }
 
@@ -61,13 +56,13 @@ mod tests {
 		let mut gravity = GravityEffect(Gravity {
 			strength: UnitsPerSecond::from(42.),
 		});
-		let mut gravity_pulls = GravityAffected::default();
+		let mut gravity_pulls = GravityAffected::affected([]);
 		let towards = PersistentEntity::default();
 
 		gravity.on_repeated_interaction(towards, &mut gravity_pulls, Duration::ZERO);
 
 		assert_eq!(
-			GravityAffected::new([GravityPull {
+			GravityAffected::affected([GravityPull {
 				strength: UnitsPerSecond::from(42.),
 				towards,
 			}]),
@@ -80,10 +75,10 @@ mod tests {
 		let mut gravity = GravityEffect(Gravity {
 			strength: UnitsPerSecond::from(42.),
 		});
-		let mut gravity_pulls = GravityAffected::default();
+		let mut gravity_pulls = GravityAffected::affected([]);
 
 		gravity.on_begin_interaction(PersistentEntity::default(), &mut gravity_pulls);
 
-		assert_eq!(GravityAffected::new([]), gravity_pulls);
+		assert_eq!(GravityAffected::affected([]), gravity_pulls);
 	}
 }

@@ -230,6 +230,7 @@ mod tests {
 	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
+		attributes::health::Health,
 		components::{outdated::Outdated, persistent_entity::PersistentEntity},
 		tools::collider_info::ColliderInfo,
 		traits::{
@@ -281,10 +282,6 @@ mod tests {
 		fn into_effect_component(_: T) -> _Effect {
 			_Effect
 		}
-
-		fn into_affected_component(_: T::TAffected) -> _Affected {
-			_Affected
-		}
 	}
 
 	#[derive(Component)]
@@ -292,6 +289,12 @@ mod tests {
 
 	#[derive(Component)]
 	struct _Affected;
+
+	impl From<&_Affected> for Health {
+		fn from(_: &_Affected) -> Self {
+			panic!("NOT USED")
+		}
+	}
 
 	struct _HandlesSkillBehaviors;
 

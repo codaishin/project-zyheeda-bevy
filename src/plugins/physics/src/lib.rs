@@ -12,22 +12,22 @@ use crate::{
 		effect::force::ForceEffect,
 		force_affected::ForceAffected,
 		gravity_affected::GravityAffected,
+		life::Life,
 		motion::Motion,
 	},
 	observers::update_blockers::UpdateBlockersObserver,
-	systems::interactions::act_on::ActOnSystem,
+	systems::{apply_pull::ApplyPull, interactions::act_on::ActOnSystem},
 };
 use bevy::{ecs::component::Mutable, prelude::*};
 use bevy_rapier3d::prelude::Velocity;
-use common::{
-	components::life::Life,
-	traits::{
-		delta::Delta,
-		handles_physics::{HandlesMotion, HandlesPhysicalObjects},
-		handles_saving::{HandlesSaving, SavableComponent},
-		register_derived_component::RegisterDerivedComponent,
-		thread_safe::ThreadSafe,
-	},
+use common::traits::{
+	delta::Delta,
+	handles_enemies::HandlesEnemies,
+	handles_physics::{HandlesMotion, HandlesPhysicalObjects},
+	handles_player::HandlesPlayer,
+	handles_saving::{HandlesSaving, SavableComponent},
+	register_derived_component::RegisterDerivedComponent,
+	thread_safe::ThreadSafe,
 };
 use components::{
 	active_beam::ActiveBeam,
@@ -42,7 +42,6 @@ use resources::{
 };
 use std::marker::PhantomData;
 use systems::{
-	gravity_affected::apply_gravity_pull,
 	interactions::{
 		apply_fragile_blocks::apply_fragile_blocks,
 		map_collision_events::map_collision_events_to,
@@ -59,18 +58,22 @@ use traits::act_on::ActOn;
 
 pub struct PhysicsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSaveGame> PhysicsPlugin<TSaveGame>
+impl<TSaveGame, TPlayers, TEnemies> PhysicsPlugin<(TSaveGame, TPlayers, TEnemies)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
+	TPlayers: ThreadSafe + HandlesPlayer,
+	TEnemies: ThreadSafe + HandlesEnemies,
 {
-	pub fn from_plugin(_: &TSaveGame) -> Self {
+	pub fn from_plugin(_: &TSaveGame, _: &TPlayers, _: &TEnemies) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TSaveGame> Plugin for PhysicsPlugin<TSaveGame>
+impl<TSaveGame, TPlayers, TEnemies> Plugin for PhysicsPlugin<(TSaveGame, TPlayers, TEnemies)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
+	TPlayers: ThreadSafe + HandlesPlayer,
+	TEnemies: ThreadSafe + HandlesEnemies,
 {
 	fn build(&self, app: &mut App) {
 		TSaveGame::register_savable_component::<Motion>(app);
@@ -86,18 +89,27 @@ where
 					.in_set(PhysicsSystems),
 			)
 			// Deal health damage
-			.register_required_components::<HealthDamageEffect, InteractingEntities>()
-			.add_observer(HealthDamageEffect::update_blockers)
+			.register_derived_component::<TPlayers::TPlayer, Life>()
+			.register_derived_component::<TEnemies::TEnemy, Life>()
 			.add_physics::<HealthDamageEffect, Life, TSaveGame>()
+			.add_observer(HealthDamageEffect::update_blockers)
+			.add_systems(Update, Life::despawn_dead.in_set(PhysicsSystems))
 			// Apply gravity effect
-			.register_required_components::<GravityEffect, InteractingEntities>()
-			.add_observer(GravityEffect::update_blockers)
+			.register_derived_component::<TPlayers::TPlayer, GravityAffected>()
+			.register_derived_component::<TEnemies::TEnemy, GravityAffected>()
 			.add_physics::<GravityEffect, GravityAffected, TSaveGame>()
-			.add_systems(Update, Update::delta.pipe(apply_gravity_pull))
+			.add_observer(GravityEffect::update_blockers)
+			.add_systems(
+				Update,
+				Update::delta
+					.pipe(GravityAffected::apply_pull)
+					.in_set(PhysicsSystems),
+			)
 			// Apply force effect
-			.register_required_components::<ForceEffect, InteractingEntities>()
-			.add_observer(ForceEffect::update_blockers)
+			.register_derived_component::<TPlayers::TPlayer, ForceAffected>()
+			.register_derived_component::<TEnemies::TEnemy, ForceAffected>()
 			.add_physics::<ForceEffect, ForceAffected, TSaveGame>()
+			.add_observer(ForceEffect::update_blockers)
 			// Apply interactions
 			.add_event::<InteractionEvent>()
 			.add_event::<InteractionEvent<Ray>>()
@@ -143,17 +155,18 @@ impl AddPhysics for App {
 		TSaveGame::register_savable_component::<TTarget>(self);
 		TSaveGame::register_savable_component::<RunningInteractions<TActor, TTarget>>(self);
 
-		self.register_required_components::<TActor, RunningInteractions<TActor, TTarget>>()
-			.add_systems(
-				Update,
-				(
-					Update::delta.pipe(TActor::act_on::<TTarget>),
-					RunningInteractions::<TActor, TTarget>::untrack_non_interacting_targets,
-				)
-					.chain()
-					.in_set(PhysicsSystems)
-					.after(CollisionSystems),
+		self.register_required_components::<TActor, InteractingEntities>();
+		self.register_required_components::<TActor, RunningInteractions<TActor, TTarget>>();
+		self.add_systems(
+			Update,
+			(
+				Update::delta.pipe(TActor::act_on::<TTarget>),
+				RunningInteractions::<TActor, TTarget>::untrack_non_interacting_targets,
 			)
+				.chain()
+				.in_set(PhysicsSystems)
+				.after(CollisionSystems),
+		)
 	}
 }
 

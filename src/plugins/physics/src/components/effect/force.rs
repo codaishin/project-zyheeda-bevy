@@ -6,7 +6,6 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	attributes::affected_by::AffectedBy,
 	components::{
 		is_blocker::{Blocker, IsBlocker},
 		persistent_entity::PersistentEntity,
@@ -27,10 +26,6 @@ impl<TDependencies> HandlesPhysicalEffect<Force> for PhysicsPlugin<TDependencies
 
 	fn into_effect_component(effect: Force) -> ForceEffect {
 		ForceEffect(effect)
-	}
-
-	fn into_affected_component(_: AffectedBy<Force>) -> ForceAffected {
-		ForceAffected
 	}
 }
 

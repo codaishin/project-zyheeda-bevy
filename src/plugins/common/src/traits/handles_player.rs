@@ -1,8 +1,11 @@
 use super::{accessors::get::RefInto, intersect_at::IntersectAt};
 use crate::{
+	attributes::{effect_target::EffectTarget, health::Health},
+	effects::{force::Force, gravity::Gravity},
 	errors::Error,
 	tools::{
 		action_key::{movement::MovementKey, slot::SlotKey},
+		attribute::AttributeOnSpawn,
 		bone::Bone,
 		collider_info::ColliderInfo,
 		collider_radius::ColliderRadius,
@@ -29,7 +32,10 @@ pub trait HandlesPlayer {
 		+ for<'a> Mapper<Bone<'a>, Option<SkillSpawner>>
 		+ for<'a> Mapper<Bone<'a>, Option<EssenceSlot>>
 		+ for<'a> Mapper<Bone<'a>, Option<HandSlot>>
-		+ for<'a> Mapper<Bone<'a>, Option<ForearmSlot>>;
+		+ for<'a> Mapper<Bone<'a>, Option<ForearmSlot>>
+		+ for<'a> RefInto<'a, AttributeOnSpawn<Health>>
+		+ for<'a> RefInto<'a, AttributeOnSpawn<EffectTarget<Gravity>>>
+		+ for<'a> RefInto<'a, AttributeOnSpawn<EffectTarget<Force>>>;
 }
 
 pub trait PlayerMainCamera {

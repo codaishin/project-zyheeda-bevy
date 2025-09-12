@@ -35,7 +35,6 @@ mod tests {
 		prelude::*,
 	};
 	use common::{
-		attributes::affected_by::AffectedBy,
 		components::persistent_entity::PersistentEntity,
 		zyheeda_commands::ZyheedaCommands,
 	};
@@ -50,10 +49,6 @@ mod tests {
 
 		fn into_effect_component(effect: Gravity) -> _Effect {
 			_Effect(effect)
-		}
-
-		fn into_affected_component(_: AffectedBy<Gravity>) -> _Affected {
-			_Affected
 		}
 	}
 

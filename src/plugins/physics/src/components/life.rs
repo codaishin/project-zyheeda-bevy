@@ -1,35 +1,54 @@
-use crate::attributes::health::Health;
 use bevy::prelude::*;
+use common::{
+	attributes::health::Health,
+	tools::attribute::AttributeOnSpawn,
+	traits::{
+		accessors::get::RefInto,
+		register_derived_component::{DerivableFrom, InsertDerivedComponent},
+	},
+};
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
-pub struct Life(pub(crate) Health);
+pub struct Life(Health);
 
 impl Life {
-	pub fn change_by(&mut self, health: f32) {
+	pub(crate) fn change_by(&mut self, health: f32) {
 		let Life(Health { current, max }) = self;
 
 		*current += health;
 		*current = current.min(*max);
 	}
+
+	pub(crate) fn current_hp(&self) -> f32 {
+		self.0.current
+	}
 }
 
 impl From<Health> for Life {
 	fn from(health: Health) -> Self {
-		Life(health)
-	}
-}
-
-impl<'a> From<&'a Life> for &'a Health {
-	fn from(Life(health): &'a Life) -> Self {
-		health
+		Self(health)
 	}
 }
 
 impl From<&Life> for Health {
 	fn from(Life(health): &Life) -> Self {
 		*health
+	}
+}
+
+impl<T> DerivableFrom<'_, '_, T> for Life
+where
+	T: for<'a> RefInto<'a, AttributeOnSpawn<Health>>,
+{
+	const INSERT: InsertDerivedComponent = InsertDerivedComponent::IfNew;
+
+	type TParam = ();
+
+	fn derive_from(_: Entity, component: &T, _: &()) -> Self {
+		let AttributeOnSpawn(health) = component.ref_into();
+		Life(health)
 	}
 }
 

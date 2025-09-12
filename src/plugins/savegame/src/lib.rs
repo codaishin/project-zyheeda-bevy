@@ -15,7 +15,6 @@ use bevy::prelude::*;
 use common::{
 	components::{
 		child_of_persistent::ChildOfPersistent,
-		life::Life,
 		lifetime::Lifetime,
 		persistent_entity::PersistentEntity,
 	},
@@ -98,7 +97,6 @@ where
 		Self::register_savable_component::<PersistentEntity>(app);
 		Self::register_savable_component::<ChildOfPersistent>(app);
 		Self::register_savable_component::<Lifetime>(app);
-		Self::register_savable_component::<Life>(app);
 
 		app.init_resource::<Register>()
 			.insert_resource(Inspector {

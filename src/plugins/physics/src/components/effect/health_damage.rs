@@ -1,11 +1,11 @@
 use crate::{
 	PhysicsPlugin,
+	components::life::Life,
 	traits::{act_on::ActOn, update_blockers::UpdateBlockers},
 };
 use bevy::prelude::*;
 use common::{
-	attributes::health::Health,
-	components::{life::Life, persistent_entity::PersistentEntity},
+	components::persistent_entity::PersistentEntity,
 	effects::{EffectApplies, health_damage::HealthDamage},
 	traits::handles_physics::HandlesPhysicalEffect,
 };
@@ -22,10 +22,6 @@ impl<TSaveGame> HandlesPhysicalEffect<HealthDamage> for PhysicsPlugin<TSaveGame>
 
 	fn into_effect_component(effect: HealthDamage) -> HealthDamageEffect {
 		HealthDamageEffect(effect)
-	}
-
-	fn into_affected_component(health: Health) -> Life {
-		Life::from(health)
 	}
 }
 
@@ -52,6 +48,7 @@ impl ActOn<Life> for HealthDamageEffect {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use common::attributes::health::Health;
 
 	#[test]
 	fn deal_damage_once() {

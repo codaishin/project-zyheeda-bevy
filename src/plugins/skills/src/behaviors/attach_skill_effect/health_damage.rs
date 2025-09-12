@@ -35,7 +35,7 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
 	};
-	use common::{attributes::health::Health, components::persistent_entity::PersistentEntity};
+	use common::components::persistent_entity::PersistentEntity;
 	use std::sync::LazyLock;
 	use testing::SingleThreadedApp;
 
@@ -47,10 +47,6 @@ mod tests {
 
 		fn into_effect_component(effect: HealthDamage) -> _Effect {
 			_Effect(effect)
-		}
-
-		fn into_affected_component(_: Health) -> _Affected {
-			_Affected
 		}
 	}
 

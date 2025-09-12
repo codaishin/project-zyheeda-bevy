@@ -5,17 +5,20 @@ use crate::components::enemy::enemy_type::EnemyTypeInternal;
 use bevy::{asset::AssetPath, prelude::*};
 use bevy_rapier3d::prelude::{GravityScale, RigidBody};
 use common::{
+	attributes::{effect_target::EffectTarget, health::Health},
 	components::{
 		collider_relationship::InteractionTarget,
 		ground_offset::GroundOffset,
 		is_blocker::{Blocker, IsBlocker},
 		persistent_entity::PersistentEntity,
 	},
+	effects::{force::Force, gravity::Gravity},
 	errors::Error,
 	tools::{
 		action_key::slot::SlotKey,
 		aggro_range::AggroRange,
 		attack_range::AttackRange,
+		attribute::AttributeOnSpawn,
 		bone::Bone,
 		collider_radius::ColliderRadius,
 		movement_animation::MovementAnimation,
@@ -23,7 +26,6 @@ use common::{
 	},
 	traits::{
 		handles_enemies::{EnemySkillUsage, EnemyTarget, EnemyType},
-		handles_physics::HandlesAllPhysicalEffects,
 		handles_skill_behaviors::SkillSpawner,
 		load_asset::LoadAsset,
 		loadout::LoadoutConfig,
@@ -139,6 +141,30 @@ impl Mapper<Bone<'_>, Option<SkillSpawner>> for Enemy {
 	}
 }
 
+impl From<&Enemy> for AttributeOnSpawn<Health> {
+	fn from(enemy: &Enemy) -> Self {
+		match enemy.enemy_type {
+			EnemyTypeInternal::VoidSphere(_) => Self(Health::new(5.)),
+		}
+	}
+}
+
+impl From<&Enemy> for AttributeOnSpawn<EffectTarget<Gravity>> {
+	fn from(enemy: &Enemy) -> Self {
+		match enemy.enemy_type {
+			EnemyTypeInternal::VoidSphere(_) => Self(EffectTarget::Affected),
+		}
+	}
+}
+
+impl From<&Enemy> for AttributeOnSpawn<EffectTarget<Force>> {
+	fn from(enemy: &Enemy) -> Self {
+		match enemy.enemy_type {
+			EnemyTypeInternal::VoidSphere(_) => Self(EffectTarget::Affected),
+		}
+	}
+}
+
 impl EnemySkillUsage for Enemy {
 	fn hold_skill(&self) -> Duration {
 		self.enemy_type.hold_skill()
@@ -163,15 +189,12 @@ impl<'w, 's> DerivableFrom<'w, 's, Enemy> for GroundOffset {
 	}
 }
 
-impl<TPhysics> Prefab<TPhysics> for Enemy
-where
-	TPhysics: HandlesAllPhysicalEffects,
-{
+impl Prefab<()> for Enemy {
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		assets: &mut impl LoadAsset,
 	) -> Result<(), Error> {
-		Prefab::<TPhysics>::insert_prefab_components(&self.enemy_type, entity, assets)
+		Prefab::<()>::insert_prefab_components(&self.enemy_type, entity, assets)
 	}
 }

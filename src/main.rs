@@ -49,9 +49,9 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let savegame = SavegamePlugin::from_plugin(&settings).with_game_directory(game_dir);
 	let animations = AnimationsPlugin::from_plugin(&savegame);
 	let light = LightPlugin::from_plugin(&savegame);
-	let physics = PhysicsPlugin::from_plugin(&savegame);
-	let players = PlayerPlugin::from_plugins(&settings, &savegame, &animations, &physics, &light);
-	let enemies = EnemyPlugin::from_plugins(&savegame, &physics);
+	let players = PlayerPlugin::from_plugins(&settings, &savegame, &animations, &light);
+	let enemies = EnemyPlugin::from_plugins(&savegame);
+	let physics = PhysicsPlugin::from_plugin(&savegame, &players, &enemies);
 	let map_generation =
 		MapGenerationPlugin::from_plugins(&loading, &savegame, &light, &players, &enemies);
 	let path_finding = PathFindingPlugin::from_plugin(&map_generation);
@@ -77,7 +77,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		&players,
 		&skills,
 	);
-	let bars = BarsPlugin::from_plugins(&players, &enemies, &graphics);
+	let bars = BarsPlugin::from_plugins(&players, &enemies, &physics, &graphics);
 	let camera_control =
 		CameraControlPlugin::from_plugins(&settings, &savegame, &players, &graphics);
 

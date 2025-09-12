@@ -12,9 +12,7 @@ use bevy::{
 use bevy_rapier3d::geometry::Collider;
 use common::{
 	self,
-	attributes::{affected_by::Affected, health::Health},
 	components::{ground_offset::GroundOffset, insert_asset::InsertAsset},
-	effects::gravity::Gravity,
 	errors::Error,
 	tools::{
 		Units,
@@ -28,7 +26,6 @@ use common::{
 	},
 	traits::{
 		handles_enemies::{EnemySkillUsage, EnemyTarget},
-		handles_physics::HandlesAllPhysicalEffects,
 		handles_skill_behaviors::SkillSpawner,
 		load_asset::LoadAsset,
 		loadout::LoadoutConfig,
@@ -88,10 +85,7 @@ impl VoidSphere {
 	}
 }
 
-impl<TPhysics> Prefab<TPhysics> for VoidSphere
-where
-	TPhysics: HandlesAllPhysicalEffects,
-{
+impl Prefab<()> for VoidSphere {
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
@@ -102,10 +96,6 @@ where
 		transform_2nd_ring.rotate_axis(Dir3::Z, PI / 2.);
 
 		entity
-			.try_insert_if_new((
-				Health::new(5.).component::<TPhysics>(),
-				Affected::by::<Gravity>().component::<TPhysics>(),
-			))
 			.with_child((VoidSpherePart::Core, VoidSphereCore, transform))
 			.with_child((
 				VoidSpherePart::RingA(UnitsPerSecond::from(PI / 50.)),

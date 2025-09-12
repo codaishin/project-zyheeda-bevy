@@ -1,9 +1,6 @@
-use crate::{
-	components::life::Life,
-	traits::accessors::get::TryApplyOn,
-	zyheeda_commands::ZyheedaCommands,
-};
+use crate::components::life::Life;
 use bevy::prelude::*;
+use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
 impl Life {
 	pub(crate) fn despawn_dead(mut commands: ZyheedaCommands, agents: Query<(Entity, &Self)>) {
@@ -13,8 +10,8 @@ impl Life {
 	}
 }
 
-fn dead((entity, Life(health)): (Entity, &Life)) -> Option<Entity> {
-	if health.current <= 0. {
+fn dead((entity, life): (Entity, &Life)) -> Option<Entity> {
+	if life.current_hp() <= 0. {
 		Some(entity)
 	} else {
 		None
@@ -24,7 +21,7 @@ fn dead((entity, Life(health)): (Entity, &Life)) -> Option<Entity> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::attributes::health::Health;
+	use common::attributes::health::Health;
 
 	fn setup() -> App {
 		let mut app = App::new();

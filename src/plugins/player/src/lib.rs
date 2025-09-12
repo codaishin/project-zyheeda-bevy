@@ -12,7 +12,6 @@ use common::{
 	traits::{
 		animation::RegisterAnimations,
 		handles_lights::HandlesLights,
-		handles_physics::HandlesAllPhysicalEffects,
 		handles_player::{
 			ConfiguresPlayerMovement,
 			ConfiguresPlayerSkillAnimations,
@@ -43,33 +42,25 @@ use systems::{
 
 pub struct PlayerPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSettings, TSaveGame, TAnimations, TPhysics, TLights>
-	PlayerPlugin<(TSettings, TSaveGame, TAnimations, TPhysics, TLights)>
+impl<TSettings, TSaveGame, TAnimations, TLights>
+	PlayerPlugin<(TSettings, TSaveGame, TAnimations, TLights)>
 where
 	TSettings: ThreadSafe + HandlesSettings,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + RegisterAnimations,
-	TPhysics: ThreadSafe + HandlesAllPhysicalEffects,
 	TLights: ThreadSafe + HandlesLights,
 {
-	pub fn from_plugins(
-		_: &TSettings,
-		_: &TSaveGame,
-		_: &TAnimations,
-		_: &TPhysics,
-		_: &TLights,
-	) -> Self {
+	pub fn from_plugins(_: &TSettings, _: &TSaveGame, _: &TAnimations, _: &TLights) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TSettings, TSaveGame, TAnimations, TPhysics, TLights> Plugin
-	for PlayerPlugin<(TSettings, TSaveGame, TAnimations, TPhysics, TLights)>
+impl<TSettings, TSaveGame, TAnimations, TLights> Plugin
+	for PlayerPlugin<(TSettings, TSaveGame, TAnimations, TLights)>
 where
 	TSettings: ThreadSafe + HandlesSettings,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + RegisterAnimations,
-	TPhysics: ThreadSafe + HandlesAllPhysicalEffects,
 	TLights: ThreadSafe + HandlesLights,
 {
 	fn build(&self, app: &mut App) {
@@ -82,7 +73,7 @@ where
 		TSaveGame::register_savable_component::<PlayerMovement>(app);
 
 		app.init_resource::<CamRay>()
-			.add_prefab_observer::<Player, (TPhysics, TLights)>()
+			.add_prefab_observer::<Player, TLights>()
 			.add_systems(
 				First,
 				(set_cam_ray::<Camera, PlayerCamera>, set_mouse_hover).chain(),
