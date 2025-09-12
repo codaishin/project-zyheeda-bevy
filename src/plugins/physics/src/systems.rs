@@ -1,5 +1,5 @@
 pub(crate) mod active_beam;
-pub(crate) mod gravity_affected;
+pub(crate) mod apply_pull;
 pub(crate) mod interactions;
 pub(crate) mod life;
 pub(crate) mod motion;

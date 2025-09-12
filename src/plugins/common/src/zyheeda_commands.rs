@@ -1,7 +1,7 @@
 use crate::{
 	components::persistent_entity::PersistentEntity,
 	resources::persistent_entities::PersistentEntities,
-	traits::accessors::get::GetMut,
+	traits::accessors::get::{Get, GetMut},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
 
@@ -55,6 +55,20 @@ impl GetMut<PersistentEntity> for ZyheedaCommands<'_, '_> {
 		let entity = persistent_entities.get_entity(entity)?;
 		let entity = self.commands.get_entity(entity).ok()?;
 		Some(ZyheedaEntityCommands { entity })
+	}
+}
+
+impl Get<PersistentEntity> for ZyheedaCommands<'_, '_> {
+	type TValue = Entity;
+
+	/// Attempt to retrieve an [`Entity`] instance for the given [`PersistentEntity`].
+	///
+	/// Requires [`crate::CommonPlugin`].
+	///
+	/// Failures are logged automatically.
+	fn get(&self, entity: &PersistentEntity) -> Option<Self::TValue> {
+		let persistent_entities = self.persistent_entities.as_ref()?;
+		persistent_entities.get_entity(entity)
 	}
 }
 
@@ -322,7 +336,7 @@ mod test {
 		}
 
 		#[test]
-		fn get_persistent() -> Result<(), RunSystemError> {
+		fn get_mut_persistent() -> Result<(), RunSystemError> {
 			let mut app = setup();
 			let entity = PersistentEntity::default();
 			let expected = app.world_mut().spawn(entity).id();
@@ -337,6 +351,22 @@ mod test {
 					unsafe {
 						GOT = Some(entity_cmds.id());
 					}
+				})?;
+
+			assert_eq!(Some(expected), unsafe { GOT });
+			Ok(())
+		}
+
+		#[test]
+		fn get_persistent() -> Result<(), RunSystemError> {
+			let mut app = setup();
+			let entity = PersistentEntity::default();
+			let expected = app.world_mut().spawn(entity).id();
+			static mut GOT: Option<Entity> = None;
+
+			app.world_mut()
+				.run_system_once(move |commands: ZyheedaCommands| unsafe {
+					GOT = commands.get(&entity);
 				})?;
 
 			assert_eq!(Some(expected), unsafe { GOT });

@@ -16,7 +16,7 @@ use crate::{
 		motion::Motion,
 	},
 	observers::update_blockers::UpdateBlockersObserver,
-	systems::interactions::act_on::ActOnSystem,
+	systems::{apply_pull::ApplyPull, interactions::act_on::ActOnSystem},
 };
 use bevy::{ecs::component::Mutable, prelude::*};
 use bevy_rapier3d::prelude::Velocity;
@@ -42,7 +42,6 @@ use resources::{
 };
 use std::marker::PhantomData;
 use systems::{
-	gravity_affected::apply_gravity_pull,
 	interactions::{
 		apply_fragile_blocks::apply_fragile_blocks,
 		map_collision_events::map_collision_events_to,
@@ -103,7 +102,7 @@ where
 			.add_systems(
 				Update,
 				Update::delta
-					.pipe(apply_gravity_pull)
+					.pipe(GravityAffected::apply_pull)
 					.in_set(PhysicsSystems),
 			)
 			// Apply force effect
