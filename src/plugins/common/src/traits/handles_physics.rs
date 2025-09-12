@@ -52,7 +52,7 @@ where
 	type TAffectedComponent: Component;
 
 	fn into_effect_component(effect: TEffect) -> Self::TEffectComponent;
-	fn into_affected_component(affected: TEffect::TAffected) -> Self::TAffectedComponent;
+	fn into_affected_component(affected: TEffect::TTarget) -> Self::TAffectedComponent;
 }
 
 pub trait HandlesLife:
@@ -66,7 +66,7 @@ impl<T> HandlesLife for T where
 }
 
 pub trait Effect {
-	type TAffected;
+	type TTarget;
 }
 
 #[derive(Debug, PartialEq, Clone)]

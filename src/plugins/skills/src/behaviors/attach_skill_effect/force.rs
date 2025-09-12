@@ -30,7 +30,7 @@ mod tests {
 		prelude::*,
 	};
 	use common::{
-		attributes::affected_by::AffectedBy,
+		attributes::effect_target::EffectTarget,
 		components::persistent_entity::PersistentEntity,
 	};
 	use std::sync::LazyLock;
@@ -46,7 +46,7 @@ mod tests {
 			_Force(effect)
 		}
 
-		fn into_affected_component(_: AffectedBy<Force>) -> _Affected {
+		fn into_affected_component(_: EffectTarget<Force>) -> _Affected {
 			_Affected
 		}
 	}

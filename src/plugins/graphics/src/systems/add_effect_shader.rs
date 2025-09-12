@@ -37,7 +37,7 @@ mod tests {
 	struct _Effect;
 
 	impl Effect for _Effect {
-		type TAffected = ();
+		type TTarget = ();
 	}
 
 	#[derive(Component)]

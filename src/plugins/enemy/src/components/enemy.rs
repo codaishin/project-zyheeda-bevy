@@ -5,10 +5,7 @@ use crate::components::enemy::enemy_type::EnemyTypeInternal;
 use bevy::{asset::AssetPath, prelude::*};
 use bevy_rapier3d::prelude::{GravityScale, RigidBody};
 use common::{
-	attributes::{
-		affected_by::{Affected, AffectedBy},
-		health::Health,
-	},
+	attributes::{effect_target::EffectTarget, health::Health},
 	components::{
 		collider_relationship::InteractionTarget,
 		ground_offset::GroundOffset,
@@ -148,23 +145,23 @@ impl Mapper<Bone<'_>, Option<SkillSpawner>> for Enemy {
 impl From<&Enemy> for AttributeOnSpawn<Health> {
 	fn from(enemy: &Enemy) -> Self {
 		match enemy.enemy_type {
-			EnemyTypeInternal::VoidSphere(_) => Self(Some(Health::new(5.))),
+			EnemyTypeInternal::VoidSphere(_) => Self(Health::new(5.)),
 		}
 	}
 }
 
-impl From<&Enemy> for AttributeOnSpawn<AffectedBy<Gravity>> {
+impl From<&Enemy> for AttributeOnSpawn<EffectTarget<Gravity>> {
 	fn from(enemy: &Enemy) -> Self {
 		match enemy.enemy_type {
-			EnemyTypeInternal::VoidSphere(_) => Self(Some(Affected::by::<Gravity>())),
+			EnemyTypeInternal::VoidSphere(_) => Self(EffectTarget::Affected),
 		}
 	}
 }
 
-impl From<&Enemy> for AttributeOnSpawn<AffectedBy<Force>> {
+impl From<&Enemy> for AttributeOnSpawn<EffectTarget<Force>> {
 	fn from(enemy: &Enemy) -> Self {
 		match enemy.enemy_type {
-			EnemyTypeInternal::VoidSphere(_) => Self(Some(Affected::by::<Force>())),
+			EnemyTypeInternal::VoidSphere(_) => Self(EffectTarget::Affected),
 		}
 	}
 }

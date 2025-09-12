@@ -20,15 +20,13 @@ use crate::{
 };
 use bevy::{ecs::component::Mutable, prelude::*};
 use bevy_rapier3d::prelude::Velocity;
-use common::{
-	components::life::Life,
-	traits::{
-		delta::Delta,
-		handles_physics::{HandlesMotion, HandlesPhysicalObjects},
-		handles_saving::{HandlesSaving, SavableComponent},
-		register_derived_component::RegisterDerivedComponent,
-		thread_safe::ThreadSafe,
-	},
+use common::traits::{
+	delta::Delta,
+	handles_physics::{HandlesMotion, HandlesPhysicalObjects},
+	handles_player::HandlesPlayer,
+	handles_saving::{HandlesSaving, SavableComponent},
+	register_derived_component::RegisterDerivedComponent,
+	thread_safe::ThreadSafe,
 };
 use components::{
 	active_beam::ActiveBeam,
@@ -60,18 +58,20 @@ use traits::act_on::ActOn;
 
 pub struct PhysicsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSaveGame> PhysicsPlugin<TSaveGame>
+impl<TSaveGame, TPlayers> PhysicsPlugin<(TSaveGame, TPlayers)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
+	TPlayers: ThreadSafe + HandlesPlayer,
 {
-	pub fn from_plugin(_: &TSaveGame) -> Self {
+	pub fn from_plugin(_: &TSaveGame, _: &TPlayers) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TSaveGame> Plugin for PhysicsPlugin<TSaveGame>
+impl<TSaveGame, TPlayers> Plugin for PhysicsPlugin<(TSaveGame, TPlayers)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
+	TPlayers: ThreadSafe + HandlesPlayer,
 {
 	fn build(&self, app: &mut App) {
 		TSaveGame::register_savable_component::<Motion>(app);
@@ -88,6 +88,9 @@ where
 			)
 			// Deal health damage
 			.register_required_components::<HealthDamageEffect, InteractingEntities>()
+			.register_derived_component::<TPlayers::TPlayer, Life>()
+			.register_derived_component::<TPlayers::TPlayer, GravityAffected>()
+			.register_derived_component::<TPlayers::TPlayer, ForceAffected>()
 			.add_observer(HealthDamageEffect::update_blockers)
 			.add_physics::<HealthDamageEffect, Life, TSaveGame>()
 			.add_systems(Update, Life::despawn_dead)

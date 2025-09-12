@@ -283,7 +283,7 @@ mod tests {
 			_Effect
 		}
 
-		fn into_affected_component(_: T::TAffected) -> _Affected {
+		fn into_affected_component(_: T::TTarget) -> _Affected {
 			_Affected
 		}
 	}

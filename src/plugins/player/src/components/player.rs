@@ -2,10 +2,7 @@ use super::player_movement::{Config, MovementMode, PlayerMovement};
 use bevy::{asset::AssetPath, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::{
-	attributes::{
-		affected_by::{Affected, AffectedBy},
-		health::Health,
-	},
+	attributes::{effect_target::EffectTarget, health::Health},
 	components::{
 		asset_model::AssetModel,
 		collider_relationship::InteractionTarget,
@@ -40,7 +37,6 @@ use common::{
 			StopAnimation,
 		},
 		handles_lights::HandlesLights,
-		handles_physics::HandlesAllPhysicalEffects,
 		handles_skill_behaviors::SkillSpawner,
 		iteration::{Iter, IterFinite},
 		load_asset::{LoadAsset, Path},
@@ -213,19 +209,19 @@ impl<'a> Mapper<Bone<'a>, Option<HandSlot>> for Player {
 
 impl From<&Player> for AttributeOnSpawn<Health> {
 	fn from(_: &Player) -> Self {
-		Self(Some(Health::new(100.)))
+		Self(Health::new(100.))
 	}
 }
 
-impl From<&Player> for AttributeOnSpawn<AffectedBy<Gravity>> {
+impl From<&Player> for AttributeOnSpawn<EffectTarget<Gravity>> {
 	fn from(_: &Player) -> Self {
-		Self(Some(Affected::by::<Gravity>()))
+		Self(EffectTarget::Affected)
 	}
 }
 
-impl From<&Player> for AttributeOnSpawn<AffectedBy<Force>> {
+impl From<&Player> for AttributeOnSpawn<EffectTarget<Force>> {
 	fn from(_: &Player) -> Self {
-		Self(Some(Affected::by::<Force>()))
+		Self(EffectTarget::Affected)
 	}
 }
 
@@ -328,9 +324,8 @@ impl ConfigureNewAnimationDispatch for Player {
 	}
 }
 
-impl<TPhysics, TLights> Prefab<(TPhysics, TLights)> for Player
+impl<TLights> Prefab<TLights> for Player
 where
-	TPhysics: HandlesAllPhysicalEffects,
 	TLights: HandlesLights,
 {
 	fn insert_prefab_components(
@@ -338,20 +333,14 @@ where
 		entity: &mut impl PrefabEntityCommands,
 		_: &mut impl LoadAsset,
 	) -> Result<(), Error> {
-		entity
-			.try_insert_if_new((
-				Health::new(100.).component::<TPhysics>(),
-				Affected::by::<Gravity>().component::<TPhysics>(),
-				Affected::by::<Force>().component::<TPhysics>(),
-			))
-			.with_child((
-				TLights::responsive_light_trigger(),
-				Collider::capsule(
-					Vec3::new(0.0, 0.2, -0.05),
-					Vec3::new(0.0, 1.4, -0.05),
-					**Self::collider_radius(),
-				),
-			));
+		entity.with_child((
+			TLights::responsive_light_trigger(),
+			Collider::capsule(
+				Vec3::new(0.0, 0.2, -0.05),
+				Vec3::new(0.0, 1.4, -0.05),
+				**Self::collider_radius(),
+			),
+		));
 
 		Ok(())
 	}

@@ -12,7 +12,7 @@ use bevy::{
 use bevy_rapier3d::geometry::Collider;
 use common::{
 	self,
-	attributes::{affected_by::Affected, health::Health},
+	attributes::{effect_target::EffectTarget, health::Health},
 	components::{ground_offset::GroundOffset, insert_asset::InsertAsset},
 	effects::gravity::Gravity,
 	errors::Error,
@@ -104,7 +104,7 @@ where
 		entity
 			.try_insert_if_new((
 				Health::new(5.).component::<TPhysics>(),
-				Affected::by::<Gravity>().component::<TPhysics>(),
+				EffectTarget::<Gravity>::Affected.component::<TPhysics>(),
 			))
 			.with_child((VoidSpherePart::Core, VoidSphereCore, transform))
 			.with_child((

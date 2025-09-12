@@ -1,6 +1,6 @@
 use super::accessors::get::RefInto;
 use crate::{
-	attributes::{affected_by::AffectedBy, health::Health},
+	attributes::{effect_target::EffectTarget, health::Health},
 	components::persistent_entity::PersistentEntity,
 	effects::{force::Force, gravity::Gravity},
 	tools::{
@@ -38,8 +38,8 @@ pub trait HandlesEnemies {
 		+ for<'a> RefInto<'a, AttackRange>
 		+ for<'a> RefInto<'a, ColliderRadius>
 		+ for<'a> RefInto<'a, AttributeOnSpawn<Health>>
-		+ for<'a> RefInto<'a, AttributeOnSpawn<AffectedBy<Gravity>>>
-		+ for<'a> RefInto<'a, AttributeOnSpawn<AffectedBy<Force>>>
+		+ for<'a> RefInto<'a, AttributeOnSpawn<EffectTarget<Gravity>>>
+		+ for<'a> RefInto<'a, AttributeOnSpawn<EffectTarget<Force>>>
 		+ for<'a> Mapper<Bone<'a>, Option<EssenceSlot>>
 		+ for<'a> Mapper<Bone<'a>, Option<HandSlot>>
 		+ for<'a> Mapper<Bone<'a>, Option<ForearmSlot>>

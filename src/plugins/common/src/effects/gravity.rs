@@ -1,5 +1,5 @@
 use crate::{
-	attributes::affected_by::AffectedBy,
+	attributes::effect_target::EffectTarget,
 	tools::UnitsPerSecond,
 	traits::handles_physics::Effect,
 };
@@ -11,5 +11,5 @@ pub struct Gravity {
 }
 
 impl Effect for Gravity {
-	type TAffected = AffectedBy<Gravity>;
+	type TTarget = EffectTarget<Gravity>;
 }

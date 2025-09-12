@@ -1,6 +1,6 @@
 use super::{accessors::get::RefInto, intersect_at::IntersectAt};
 use crate::{
-	attributes::{affected_by::AffectedBy, health::Health},
+	attributes::{effect_target::EffectTarget, health::Health},
 	effects::{force::Force, gravity::Gravity},
 	errors::Error,
 	tools::{
@@ -34,8 +34,8 @@ pub trait HandlesPlayer {
 		+ for<'a> Mapper<Bone<'a>, Option<HandSlot>>
 		+ for<'a> Mapper<Bone<'a>, Option<ForearmSlot>>
 		+ for<'a> RefInto<'a, AttributeOnSpawn<Health>>
-		+ for<'a> RefInto<'a, AttributeOnSpawn<AffectedBy<Gravity>>>
-		+ for<'a> RefInto<'a, AttributeOnSpawn<AffectedBy<Force>>>;
+		+ for<'a> RefInto<'a, AttributeOnSpawn<EffectTarget<Gravity>>>
+		+ for<'a> RefInto<'a, AttributeOnSpawn<EffectTarget<Force>>>;
 }
 
 pub trait PlayerMainCamera {

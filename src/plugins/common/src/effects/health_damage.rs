@@ -16,5 +16,5 @@ impl HealthDamage {
 }
 
 impl Effect for HealthDamage {
-	type TAffected = Health;
+	type TTarget = Health;
 }

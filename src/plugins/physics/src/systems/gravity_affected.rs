@@ -118,7 +118,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 0., 0.),
-				GravityAffected::new([GravityPull {
+				GravityAffected::affected([GravityPull {
 					strength: UnitsPerSecond::from(2.),
 					towards,
 				}]),
@@ -152,7 +152,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 0., 0.),
-				GravityAffected::new([GravityPull {
+				GravityAffected::affected([GravityPull {
 					strength: UnitsPerSecond::from(2.),
 					towards,
 				}]),
@@ -190,7 +190,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 0., 0.),
-				GravityAffected::new([
+				GravityAffected::affected([
 					GravityPull {
 						strength: UnitsPerSecond::from(2.),
 						towards: towards_a,
@@ -225,7 +225,10 @@ mod tests {
 		let mut app = setup();
 		let agent = app
 			.world_mut()
-			.spawn((Transform::from_xyz(1., 0., 0.), GravityAffected::default()))
+			.spawn((
+				Transform::from_xyz(1., 0., 0.),
+				GravityAffected::affected([]),
+			))
 			.id();
 
 		app.world_mut()
@@ -256,7 +259,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 0., 0.),
-				GravityAffected::new([
+				GravityAffected::affected([
 					GravityPull {
 						strength: UnitsPerSecond::from(2.),
 						towards: towards_a,
@@ -274,7 +277,7 @@ mod tests {
 
 		let agent = app.world().entity(agent);
 		assert_eq!(
-			Some(&GravityAffected::default()),
+			Some(&GravityAffected::affected([])),
 			agent.get::<GravityAffected>()
 		);
 		Ok(())
@@ -288,7 +291,7 @@ mod tests {
 			.spawn((
 				Transform::from_xyz(1., 0., 0.),
 				Immobilized,
-				GravityAffected::default(),
+				GravityAffected::affected([]),
 			))
 			.id();
 
@@ -314,7 +317,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(3., 0., 0.),
-				GravityAffected::new([GravityPull {
+				GravityAffected::affected([GravityPull {
 					strength: UnitsPerSecond::from(10.),
 					towards,
 				}]),
@@ -350,7 +353,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(3., 0., 0.),
-				GravityAffected::new([GravityPull {
+				GravityAffected::affected([GravityPull {
 					strength: UnitsPerSecond::from(10.),
 					towards,
 				}]),
@@ -383,7 +386,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(3., 1., 0.),
-				GravityAffected::new([GravityPull {
+				GravityAffected::affected([GravityPull {
 					strength: UnitsPerSecond::from(1.),
 					towards,
 				}]),
@@ -416,7 +419,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(3., 0., 0.),
-				GravityAffected::new([GravityPull {
+				GravityAffected::affected([GravityPull {
 					strength: UnitsPerSecond::from(10.),
 					towards,
 				}]),
