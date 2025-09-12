@@ -78,11 +78,11 @@ where
 
 	type TParam = ();
 
-	fn derive_from(_: Entity, map: &TMap, _: &()) -> Option<Self> {
-		Some(Self {
+	fn derive_from(_: Entity, map: &TMap, _: &()) -> Self {
+		Self {
 			graph: TGraph::from(map),
 			method: TMethod::default(),
-		})
+		}
 	}
 }
 

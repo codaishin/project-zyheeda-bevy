@@ -12,7 +12,7 @@ pub trait RegisterDerivedComponent {
 		for<'w, 's> TDerived: DerivableFrom<'w, 's, TComponent>;
 }
 
-pub trait DerivableFrom<'w, 's, TComponent>: Component + Sized {
+pub trait DerivableFrom<'w, 's, TComponent>: Component {
 	const INSERT: InsertDerivedComponent;
 
 	type TParam: SystemParam;
@@ -21,7 +21,7 @@ pub trait DerivableFrom<'w, 's, TComponent>: Component + Sized {
 		entity: Entity,
 		component: &TComponent,
 		param: &SystemParamItem<Self::TParam>,
-	) -> Option<Self>;
+	) -> Self;
 }
 
 #[derive(Debug, PartialEq, Default)]

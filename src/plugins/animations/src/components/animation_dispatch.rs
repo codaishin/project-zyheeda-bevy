@@ -122,10 +122,10 @@ where
 
 	type TParam = ();
 
-	fn derive_from(_: Entity, component: &TComponent, _: &()) -> Option<Self> {
+	fn derive_from(_: Entity, component: &TComponent, _: &()) -> Self {
 		let mut dispatch = AnimationDispatch::default();
 		TComponent::configure_animation_dispatch(component, &mut dispatch);
-		Some(dispatch)
+		dispatch
 	}
 }
 
