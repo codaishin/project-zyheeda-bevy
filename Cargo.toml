@@ -71,7 +71,6 @@ map_generation = { path = "src/plugins/map_generation" }
 menu = { path = "src/plugins/menu" }
 path_finding = { path = "src/plugins/path_finding" }
 physics = { path = "src/plugins/physics" }
-player = { path = "src/plugins/player" }
 graphics = { path = "src/plugins/graphics" }
 savegame = { path = "src/plugins/savegame" }
 settings = { path = "src/plugins/settings" }

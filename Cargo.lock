@@ -95,8 +95,11 @@ dependencies = [
  "bevy_rapier3d",
  "common",
  "macros",
+ "mockall",
  "serde",
+ "test-case",
  "testing",
+ "zyheeda_core",
 ]
 
 [[package]]
@@ -4321,21 +4324,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
 
 [[package]]
-name = "player"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "bevy_rapier3d",
- "common",
- "macros",
- "mockall",
- "serde",
- "test-case",
- "testing",
- "zyheeda_core",
-]
-
-[[package]]
 name = "png"
 version = "0.17.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4507,7 +4495,6 @@ dependencies = [
  "mockall",
  "path_finding",
  "physics",
- "player",
  "savegame",
  "serde",
  "serde_json",

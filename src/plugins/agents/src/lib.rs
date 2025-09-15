@@ -1,45 +1,147 @@
 mod components;
+mod resources;
 mod systems;
 
-use crate::components::enemy::Enemy;
+use crate::{
+	components::{
+		enemy::Enemy,
+		player::Player,
+		player_camera::PlayerCamera,
+		player_movement::PlayerMovement,
+		skill_animation::SkillAnimation,
+	},
+	resources::{cam_ray::CamRay, mouse_hover::MouseHover},
+	systems::{
+		set_cam_ray::set_cam_ray,
+		set_mouse_hover::set_mouse_hover,
+		toggle_walk_run::player_toggle_walk_run,
+	},
+};
 use bevy::prelude::*;
-use common::traits::{
-	handles_enemies::HandlesEnemies,
-	handles_saving::HandlesSaving,
-	prefab::AddPrefabObserver,
-	thread_safe::ThreadSafe,
+use common::{
+	states::game_state::GameState,
+	tools::action_key::{
+		movement::MovementKey,
+		slot::{NoValidSlotKey, PlayerSlot, SlotKey},
+	},
+	traits::{
+		animation::RegisterAnimations,
+		handles_enemies::HandlesEnemies,
+		handles_lights::HandlesLights,
+		handles_player::{
+			ConfiguresPlayerMovement,
+			ConfiguresPlayerSkillAnimations,
+			HandlesPlayer,
+			HandlesPlayerCameras,
+			HandlesPlayerMouse,
+			PlayerMainCamera,
+		},
+		handles_saving::HandlesSaving,
+		handles_settings::HandlesSettings,
+		prefab::AddPrefabObserver,
+		thread_safe::ThreadSafe,
+	},
 };
 use std::marker::PhantomData;
 use systems::void_sphere::ring_rotation::ring_rotation;
 
 pub struct AgentsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSaveGame> AgentsPlugin<TSaveGame>
+impl<TSettings, TSaveGame, TAnimations, TLights>
+	AgentsPlugin<(TSettings, TSaveGame, TAnimations, TLights)>
 where
+	TSettings: ThreadSafe + HandlesSettings,
 	TSaveGame: ThreadSafe + HandlesSaving,
+	TAnimations: ThreadSafe + RegisterAnimations,
+	TLights: ThreadSafe + HandlesLights,
 {
-	pub fn from_plugins(_: &TSaveGame) -> Self {
+	pub fn from_plugins(_: &TSettings, _: &TSaveGame, _: &TAnimations, _: &TLights) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TSaveGame> Plugin for AgentsPlugin<TSaveGame>
+impl<TSettings, TSaveGame, TAnimations, TLights> Plugin
+	for AgentsPlugin<(TSettings, TSaveGame, TAnimations, TLights)>
 where
+	TSettings: ThreadSafe + HandlesSettings,
 	TSaveGame: ThreadSafe + HandlesSaving,
+	TAnimations: ThreadSafe + RegisterAnimations,
+	TLights: ThreadSafe + HandlesLights,
 {
 	fn build(&self, app: &mut App) {
-		// Save config
+		// Animations
+		TAnimations::register_animations::<Player>(app);
+		app.add_systems(
+			Update,
+			(
+				ring_rotation,
+				SkillAnimation::system::<TAnimations::TAnimationDispatch>,
+			)
+				.run_if(in_state(GameState::Play)),
+		);
+
+		// Savedata
+		TSaveGame::register_savable_component::<Player>(app);
+		TSaveGame::register_savable_component::<PlayerCamera>(app);
+		TSaveGame::register_savable_component::<PlayerMovement>(app);
 		TSaveGame::register_savable_component::<Enemy>(app);
+		app.register_required_components::<Player, TSaveGame::TSaveEntityMarker>();
 		app.register_required_components::<Enemy, TSaveGame::TSaveEntityMarker>();
 
-		// prefabs
+		// Prefabs
+		app.add_prefab_observer::<Player, TLights>();
 		app.add_prefab_observer::<Enemy, ()>();
 
-		// behaviors
-		app.add_systems(Update, ring_rotation);
+		// Behaviors
+		app.init_resource::<CamRay>()
+			.init_resource::<MouseHover>()
+			.add_systems(
+				First,
+				(set_cam_ray::<Camera, PlayerCamera>, set_mouse_hover)
+					.chain()
+					.run_if(in_state(GameState::Play)),
+			)
+			.add_systems(
+				Update,
+				player_toggle_walk_run::<TSettings::TKeyMap<MovementKey>>
+					.run_if(in_state(GameState::Play)),
+			);
 	}
 }
 
 impl<TDependencies> HandlesEnemies for AgentsPlugin<TDependencies> {
 	type TEnemy = Enemy;
+}
+
+impl<TDependencies> HandlesPlayer for AgentsPlugin<TDependencies> {
+	type TPlayer = Player;
+}
+
+impl<TDependencies> HandlesPlayerCameras for AgentsPlugin<TDependencies> {
+	type TCamRay = CamRay;
+}
+
+impl<TDependencies> HandlesPlayerMouse for AgentsPlugin<TDependencies> {
+	type TMouseHover = MouseHover;
+}
+
+impl<TDependencies> ConfiguresPlayerMovement for AgentsPlugin<TDependencies> {
+	type TPlayerMovement = PlayerMovement;
+}
+
+impl<TDependencies> ConfiguresPlayerSkillAnimations for AgentsPlugin<TDependencies> {
+	type TAnimationMarker = SkillAnimation;
+	type TError = NoValidSlotKey;
+
+	fn start_skill_animation(slot_key: SlotKey) -> Result<Self::TAnimationMarker, Self::TError> {
+		Ok(SkillAnimation::Start(PlayerSlot::try_from(slot_key)?))
+	}
+
+	fn stop_skill_animation() -> Self::TAnimationMarker {
+		SkillAnimation::Stop
+	}
+}
+
+impl<TDependencies> PlayerMainCamera for AgentsPlugin<TDependencies> {
+	type TPlayerMainCamera = PlayerCamera;
 }
