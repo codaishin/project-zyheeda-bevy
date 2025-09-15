@@ -4,6 +4,7 @@ mod systems;
 
 use crate::{
 	components::{
+		agent::Agent,
 		enemy::Enemy,
 		player::Player,
 		player_camera::PlayerCamera,
@@ -26,6 +27,7 @@ use common::{
 	},
 	traits::{
 		animation::RegisterAnimations,
+		handles_agents::HandlesAgents,
 		handles_enemies::HandlesEnemies,
 		handles_lights::HandlesLights,
 		handles_player::{
@@ -144,4 +146,8 @@ impl<TDependencies> ConfiguresPlayerSkillAnimations for AgentsPlugin<TDependenci
 
 impl<TDependencies> PlayerMainCamera for AgentsPlugin<TDependencies> {
 	type TPlayerMainCamera = PlayerCamera;
+}
+
+impl<TDependencies> HandlesAgents for AgentsPlugin<TDependencies> {
+	type TAgent = Agent;
 }
