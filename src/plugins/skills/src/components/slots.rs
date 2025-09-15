@@ -748,7 +748,8 @@ mod tests {
 		#[test]
 		fn swap_when_one_slot_missing() {
 			let item = new_handle();
-			let mut slots = Slots::from([(SlotKey::from(PlayerSlot::LOWER_R), Some(item.clone()))]);
+			let mut slots =
+				Slots::from([(SlotKey::from(PlayerSlot::LOWER_R), Some(item.clone()))]);
 
 			slots.swap_internal(PlayerSlot::LOWER_R, PlayerSlot::UPPER_R);
 

@@ -36,9 +36,9 @@ use common::{
 };
 use macros::item_asset;
 use serde::{Deserialize, Serialize};
-use std::{f32::consts::PI, time::Duration};
+use std::{f32::consts::PI, sync::LazyLock, time::Duration};
 
-#[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+#[derive(Component, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
 pub struct VoidSphere;
 
 impl VoidSphere {
@@ -81,7 +81,7 @@ impl VoidSphere {
 			return None;
 		}
 
-		Some(SlotKey::from(VoidSphereSlot))
+		Some(VoidSphereSlot::SLOT_KEY)
 	}
 }
 
@@ -128,29 +128,33 @@ impl Prefab<()> for VoidSphere {
 	}
 }
 
+static SLOTS: LazyLock<Vec<(SlotKey, Option<AssetPath<'static>>)>> = LazyLock::new(|| {
+	vec![(
+		VoidSphereSlot::SLOT_KEY,
+		Some(AssetPath::from(item_asset!("void_beam"))),
+	)]
+});
+
 impl LoadoutConfig for VoidSphere {
 	fn inventory(&self) -> impl Iterator<Item = Option<AssetPath<'static>>> {
 		std::iter::empty()
 	}
 
 	fn slots(&self) -> impl Iterator<Item = (SlotKey, Option<AssetPath<'static>>)> {
-		std::iter::once((
-			SlotKey::from(VoidSphereSlot),
-			Some(AssetPath::from(item_asset!("void_beam"))),
-		))
+		SLOTS.iter().cloned()
 	}
 }
 
 impl VisibleSlots for VoidSphere {
 	fn visible_slots(&self) -> impl Iterator<Item = SlotKey> {
-		[SlotKey::from(VoidSphereSlot)].into_iter()
+		[VoidSphereSlot::SLOT_KEY].into_iter()
 	}
 }
 
 impl Mapper<Bone<'_>, Option<SkillSpawner>> for VoidSphere {
 	fn map(&self, Bone(name): Bone) -> Option<SkillSpawner> {
 		match name {
-			Self::SKILL_SPAWN => Some(SkillSpawner::Slot(SlotKey::from(VoidSphereSlot))),
+			Self::SKILL_SPAWN => Some(SkillSpawner::Slot(VoidSphereSlot::SLOT_KEY)),
 			Self::SKILL_SPAWN_NEUTRAL => Some(SkillSpawner::Neutral),
 			_ => None,
 		}
@@ -185,7 +189,7 @@ impl EnemySkillUsage for VoidSphere {
 	}
 
 	fn skill_key(&self) -> SlotKey {
-		SlotKey::from(VoidSphereSlot)
+		VoidSphereSlot::SLOT_KEY
 	}
 }
 
@@ -195,24 +199,27 @@ impl From<&VoidSphere> for GroundOffset {
 	}
 }
 
-struct VoidSphereSlot;
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+pub(crate) struct VoidSphereSlot;
 
-impl From<VoidSphereSlot> for SlotKey {
-	fn from(_: VoidSphereSlot) -> Self {
-		Self(0)
-	}
+impl VoidSphereSlot {
+	const SLOT_KEY: SlotKey = SlotKey(0);
 }
 
 impl TryFrom<SlotKey> for VoidSphereSlot {
 	type Error = NoValidSlotKey;
 
-	fn try_from(SlotKey(key): SlotKey) -> Result<Self, Self::Error> {
-		match key {
-			0 => Ok(Self),
-			_ => Err(NoValidSlotKey {
-				slot_key: SlotKey(key),
-			}),
+	fn try_from(slot_key: SlotKey) -> Result<Self, Self::Error> {
+		match slot_key {
+			VoidSphereSlot::SLOT_KEY => Ok(Self),
+			_ => Err(NoValidSlotKey { slot_key }),
 		}
+	}
+}
+
+impl From<VoidSphereSlot> for SlotKey {
+	fn from(_: VoidSphereSlot) -> Self {
+		VoidSphereSlot::SLOT_KEY
 	}
 }
 

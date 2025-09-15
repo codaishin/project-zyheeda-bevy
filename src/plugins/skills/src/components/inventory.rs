@@ -306,7 +306,8 @@ mod tests {
 			let a = new_handle();
 			let b = new_handle();
 			let mut inventory = Inventory::from([Some(a.clone())]);
-			let mut slots = Slots::from([(SlotKey::from(PlayerSlot::LOWER_R), Some(b.clone()))]);
+			let mut slots =
+				Slots::from([(SlotKey::from(PlayerSlot::LOWER_R), Some(b.clone()))]);
 
 			inventory.swap_external(&mut slots, InventoryKey(0), PlayerSlot::LOWER_R);
 
@@ -323,7 +324,8 @@ mod tests {
 		fn swap_inventory_out_of_bounds() {
 			let item = new_handle();
 			let mut inventory = Inventory::from([]);
-			let mut slots = Slots::from([(SlotKey::from(PlayerSlot::LOWER_R), Some(item.clone()))]);
+			let mut slots =
+				Slots::from([(SlotKey::from(PlayerSlot::LOWER_R), Some(item.clone()))]);
 
 			inventory.swap_external(&mut slots, InventoryKey(4), PlayerSlot::LOWER_R);
 
@@ -340,7 +342,8 @@ mod tests {
 		fn swap_inventory_just_out_of_bounds() {
 			let item = new_handle();
 			let mut inventory = Inventory::from([None, None, None]);
-			let mut slots = Slots::from([(SlotKey::from(PlayerSlot::LOWER_R), Some(item.clone()))]);
+			let mut slots =
+				Slots::from([(SlotKey::from(PlayerSlot::LOWER_R), Some(item.clone()))]);
 
 			inventory.swap_external(&mut slots, InventoryKey(3), PlayerSlot::LOWER_R);
 

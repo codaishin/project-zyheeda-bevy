@@ -1,11 +1,13 @@
+mod assets;
 mod components;
 mod resources;
 mod systems;
 
 use crate::{
+	assets::agent::AgentAsset,
 	components::{
 		agent::Agent,
-		enemy::Enemy,
+		enemy::{Enemy, void_sphere::VoidSphere},
 		player::Player,
 		player_camera::PlayerCamera,
 		player_movement::PlayerMovement,
@@ -28,6 +30,7 @@ use common::{
 	traits::{
 		animation::RegisterAnimations,
 		handles_agents::HandlesAgents,
+		handles_custom_assets::HandlesCustomAssets,
 		handles_enemies::HandlesEnemies,
 		handles_lights::HandlesLights,
 		handles_player::{
@@ -49,28 +52,40 @@ use systems::void_sphere::ring_rotation::ring_rotation;
 
 pub struct AgentsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSettings, TSaveGame, TAnimations, TLights>
-	AgentsPlugin<(TSettings, TSaveGame, TAnimations, TLights)>
+impl<TLoading, TSettings, TSaveGame, TAnimations, TLights>
+	AgentsPlugin<(TLoading, TSettings, TSaveGame, TAnimations, TLights)>
 where
+	TLoading: ThreadSafe + HandlesCustomAssets,
 	TSettings: ThreadSafe + HandlesSettings,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + RegisterAnimations,
 	TLights: ThreadSafe + HandlesLights,
 {
-	pub fn from_plugins(_: &TSettings, _: &TSaveGame, _: &TAnimations, _: &TLights) -> Self {
+	pub fn from_plugins(
+		_: &TLoading,
+		_: &TSettings,
+		_: &TSaveGame,
+		_: &TAnimations,
+		_: &TLights,
+	) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TSettings, TSaveGame, TAnimations, TLights> Plugin
-	for AgentsPlugin<(TSettings, TSaveGame, TAnimations, TLights)>
+impl<TLoading, TSettings, TSaveGame, TAnimations, TLights> Plugin
+	for AgentsPlugin<(TLoading, TSettings, TSaveGame, TAnimations, TLights)>
 where
+	TLoading: ThreadSafe + HandlesCustomAssets,
 	TSettings: ThreadSafe + HandlesSettings,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + RegisterAnimations,
 	TLights: ThreadSafe + HandlesLights,
 {
 	fn build(&self, app: &mut App) {
+		// Agent assets
+		app.init_asset::<AgentAsset>();
+		TLoading::register_custom_assets::<AgentAsset, AgentAsset>(app);
+
 		// Animations
 		TAnimations::register_animations::<Player>(app);
 		app.add_systems(
@@ -92,6 +107,7 @@ where
 
 		// Prefabs
 		app.add_prefab_observer::<Player, TLights>();
+		app.add_prefab_observer::<VoidSphere, ()>();
 		app.add_prefab_observer::<Enemy, ()>();
 
 		// Behaviors
@@ -149,5 +165,6 @@ impl<TDependencies> PlayerMainCamera for AgentsPlugin<TDependencies> {
 }
 
 impl<TDependencies> HandlesAgents for AgentsPlugin<TDependencies> {
+	type TAgentAsset = AgentAsset;
 	type TAgent = Agent;
 }

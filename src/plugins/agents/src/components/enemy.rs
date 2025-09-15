@@ -1,7 +1,7 @@
 pub(crate) mod enemy_type;
 pub(crate) mod void_sphere;
 
-use crate::components::{agent::Agent, enemy::enemy_type::EnemyTypeInternal};
+use crate::components::enemy::enemy_type::EnemyTypeInternal;
 use bevy::{asset::AssetPath, prelude::*};
 use bevy_rapier3d::prelude::{GravityScale, RigidBody};
 use common::{
@@ -45,7 +45,6 @@ use std::time::Duration;
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[require(
-	Agent,
 	InteractionTarget,
 	PersistentEntity,
 	Transform,
