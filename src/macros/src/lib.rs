@@ -181,6 +181,28 @@ pub fn item_asset(input: TokenStream) -> TokenStream {
 	})
 }
 
+#[proc_macro]
+pub fn agent_asset(input: TokenStream) -> TokenStream {
+	let Ok(syn::Lit::Str(literal)) = syn::parse::<syn::Lit>(input.clone()) else {
+		return TokenStream::from(quote! {
+			compile_error!("Only string literals are accepted")
+		});
+	};
+
+	let asset_path = format!("agents/{}.agent", literal.value());
+	let path = format!("assets/{asset_path}");
+
+	if !std::path::Path::new(&path).exists() {
+		return TokenStream::from(quote! {
+			compile_error!("No agent with that name found in `assets/agents/`")
+		});
+	}
+
+	TokenStream::from(quote! {
+		#asset_path
+	})
+}
+
 struct MinArgs {
 	ty: Type,
 	lit: Lit,

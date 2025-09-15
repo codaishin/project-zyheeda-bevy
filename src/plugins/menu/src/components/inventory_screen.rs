@@ -89,7 +89,9 @@ where
 			.with_children(|parent| {
 				add_title(parent, equipment);
 				for key in PlayerSlot::iterator() {
-					add_grid(parent, Some(Token::from(key)), 1, 1, || SlotKey::from(key));
+					add_grid(parent, Some(Token::from(key)), 1, 1, || {
+						SlotKey::from(key)
+					});
 				}
 			});
 	}

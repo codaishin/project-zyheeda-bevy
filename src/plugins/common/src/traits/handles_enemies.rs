@@ -65,7 +65,7 @@ pub struct Attacker(pub PersistentEntity);
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Target(pub PersistentEntity);
 
-#[derive(Debug, PartialEq, Clone, Copy, Eq, Hash)]
+#[derive(Debug, PartialEq, Clone, Copy, Eq, Hash, Serialize, Deserialize)]
 pub enum EnemyType {
 	VoidSphere,
 }

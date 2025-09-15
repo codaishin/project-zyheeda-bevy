@@ -48,7 +48,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let savegame = SavegamePlugin::from_plugin(&settings).with_game_directory(game_dir);
 	let animations = AnimationsPlugin::from_plugin(&savegame);
 	let light = LightPlugin::from_plugin(&savegame);
-	let agents = AgentsPlugin::from_plugins(&settings, &savegame, &animations, &light);
+	let agents = AgentsPlugin::from_plugins(&loading, &settings, &savegame, &animations, &light);
 	let physics = PhysicsPlugin::from_plugin(&savegame, &agents);
 	let map_generation = MapGenerationPlugin::from_plugins(&loading, &savegame, &light, &agents);
 	let path_finding = PathFindingPlugin::from_plugin(&map_generation);
