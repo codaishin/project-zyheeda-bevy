@@ -1,5 +1,5 @@
 [package]
-name = "enemy"
+name = "agents"
 version.workspace = true
 edition.workspace = true
 

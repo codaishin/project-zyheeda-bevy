@@ -57,12 +57,12 @@ unic-langid.workspace = true
 uuid.workspace = true
 
 # internal plugin crates
+agents = { path = "src/plugins/agents" }
 animations = { path = "src/plugins/animations" }
 bars = { path = "src/plugins/bars" }
 behaviors = { path = "src/plugins/behaviors" }
 camera_control = { path = "src/plugins/camera_control" }
 common.workspace = true
-enemy = { path = "src/plugins/enemy" }
 frame_limiter = { path = "src/plugins/frame_limiter" }
 light = { path = "src/plugins/light" }
 loading = { path = "src/plugins/loading" }

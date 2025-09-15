@@ -88,6 +88,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "512761e0bb2578dd7380c6baaa0f4ce03e84f95e960231d1dec8bf4d7d6e2627"
 
 [[package]]
+name = "agents"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_rapier3d",
+ "common",
+ "macros",
+ "serde",
+ "testing",
+]
+
+[[package]]
 name = "ahash"
 version = "0.8.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2332,18 +2344,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "enemy"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "bevy_rapier3d",
- "common",
- "macros",
- "serde",
- "testing",
-]
-
-[[package]]
 name = "enumn"
 version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4485,6 +4485,7 @@ dependencies = [
 name = "project-zyheeda"
 version = "0.1.0"
 dependencies = [
+ "agents",
  "animations",
  "bars",
  "behaviors",
@@ -4493,7 +4494,6 @@ dependencies = [
  "bevy_rapier3d",
  "camera_control",
  "common",
- "enemy",
  "fluent",
  "fluent-syntax",
  "frame_limiter",

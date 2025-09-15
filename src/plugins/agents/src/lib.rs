@@ -12,9 +12,9 @@ use common::traits::{
 use std::marker::PhantomData;
 use systems::void_sphere::ring_rotation::ring_rotation;
 
-pub struct EnemyPlugin<TDependencies>(PhantomData<TDependencies>);
+pub struct AgentsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSaveGame> EnemyPlugin<TSaveGame>
+impl<TSaveGame> AgentsPlugin<TSaveGame>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
 {
@@ -23,7 +23,7 @@ where
 	}
 }
 
-impl<TSaveGame> Plugin for EnemyPlugin<TSaveGame>
+impl<TSaveGame> Plugin for AgentsPlugin<TSaveGame>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
 {
@@ -40,6 +40,6 @@ where
 	}
 }
 
-impl<TDependencies> HandlesEnemies for EnemyPlugin<TDependencies> {
+impl<TDependencies> HandlesEnemies for AgentsPlugin<TDependencies> {
 	type TEnemy = Enemy;
 }

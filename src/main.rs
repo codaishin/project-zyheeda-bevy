@@ -1,3 +1,4 @@
+use agents::AgentsPlugin;
 use animations::AnimationsPlugin;
 use bars::BarsPlugin;
 use behaviors::BehaviorsPlugin;
@@ -5,7 +6,6 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use camera_control::CameraControlPlugin;
 use common::CommonPlugin;
-use enemy::EnemyPlugin;
 use frame_limiter::FrameLimiterPlugin;
 use graphics::GraphicsPlugin;
 use light::LightPlugin;
@@ -50,7 +50,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let animations = AnimationsPlugin::from_plugin(&savegame);
 	let light = LightPlugin::from_plugin(&savegame);
 	let players = PlayerPlugin::from_plugins(&settings, &savegame, &animations, &light);
-	let enemies = EnemyPlugin::from_plugins(&savegame);
+	let enemies = AgentsPlugin::from_plugins(&savegame);
 	let physics = PhysicsPlugin::from_plugin(&savegame, &players, &enemies);
 	let map_generation =
 		MapGenerationPlugin::from_plugins(&loading, &savegame, &light, &players, &enemies);
