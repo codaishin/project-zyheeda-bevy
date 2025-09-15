@@ -25,23 +25,20 @@ use systems::{bar::bar, render_bar::render_bar};
 
 pub struct BarsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TPlayers, TEnemies, TPhysics, TGraphics> BarsPlugin<(TPlayers, TEnemies, TPhysics, TGraphics)>
+impl<TAgents, TPhysics, TGraphics> BarsPlugin<(TAgents, TPhysics, TGraphics)>
 where
-	TPlayers: ThreadSafe + HandlesPlayer,
-	TEnemies: ThreadSafe + HandlesEnemies,
+	TAgents: ThreadSafe + HandlesPlayer + HandlesEnemies,
 	TPhysics: ThreadSafe + HandlesLife,
 	TGraphics: ThreadSafe + UiCamera,
 {
-	pub fn from_plugins(_: &TPlayers, _: &TEnemies, _: &TPhysics, _: &TGraphics) -> Self {
+	pub fn from_plugins(_: &TAgents, _: &TPhysics, _: &TGraphics) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TPlayers, TEnemies, TPhysics, TGraphics> Plugin
-	for BarsPlugin<(TPlayers, TEnemies, TPhysics, TGraphics)>
+impl<TAgents, TPhysics, TGraphics> Plugin for BarsPlugin<(TAgents, TPhysics, TGraphics)>
 where
-	TPlayers: ThreadSafe + HandlesPlayer,
-	TEnemies: ThreadSafe + HandlesEnemies,
+	TAgents: ThreadSafe + HandlesPlayer + HandlesEnemies,
 	TPhysics: ThreadSafe + HandlesLife,
 	TGraphics: ThreadSafe + UiCamera,
 {
@@ -51,8 +48,8 @@ where
 		let render_life_bars = render_bar::<Health>;
 		let render_layer = UiNodeFor::<Bar>::render_layer::<TGraphics::TUiCamera>;
 
-		app.register_required_components::<TPlayers::TPlayer, Bar>()
-			.register_required_components::<TEnemies::TEnemy, Bar>()
+		app.register_required_components::<TAgents::TPlayer, Bar>()
+			.register_required_components::<TAgents::TEnemy, Bar>()
 			.register_required_components_with::<UiNodeFor<Bar>, RenderLayers>(render_layer);
 		app.manage_ownership::<Bar>(Update)
 			.add_systems(Update, (update_life_bars, render_life_bars).chain());

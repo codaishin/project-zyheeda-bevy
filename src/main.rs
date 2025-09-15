@@ -1,3 +1,4 @@
+use agents::AgentsPlugin;
 use animations::AnimationsPlugin;
 use bars::BarsPlugin;
 use behaviors::BehaviorsPlugin;
@@ -5,7 +6,6 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use camera_control::CameraControlPlugin;
 use common::CommonPlugin;
-use enemy::EnemyPlugin;
 use frame_limiter::FrameLimiterPlugin;
 use graphics::GraphicsPlugin;
 use light::LightPlugin;
@@ -15,7 +15,6 @@ use map_generation::MapGenerationPlugin;
 use menu::MenuPlugin;
 use path_finding::PathFindingPlugin;
 use physics::PhysicsPlugin;
-use player::PlayerPlugin;
 use savegame::SavegamePlugin;
 use settings::SettingsPlugin;
 use skills::SkillsPlugin;
@@ -49,11 +48,9 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let savegame = SavegamePlugin::from_plugin(&settings).with_game_directory(game_dir);
 	let animations = AnimationsPlugin::from_plugin(&savegame);
 	let light = LightPlugin::from_plugin(&savegame);
-	let players = PlayerPlugin::from_plugins(&settings, &savegame, &animations, &light);
-	let enemies = EnemyPlugin::from_plugins(&savegame);
-	let physics = PhysicsPlugin::from_plugin(&savegame, &players, &enemies);
-	let map_generation =
-		MapGenerationPlugin::from_plugins(&loading, &savegame, &light, &players, &enemies);
+	let agents = AgentsPlugin::from_plugins(&settings, &savegame, &animations, &light);
+	let physics = PhysicsPlugin::from_plugin(&savegame, &agents);
+	let map_generation = MapGenerationPlugin::from_plugins(&loading, &savegame, &light, &agents);
 	let path_finding = PathFindingPlugin::from_plugin(&map_generation);
 	let behaviors = BehaviorsPlugin::from_plugins(
 		&settings,
@@ -61,12 +58,11 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		&animations,
 		&physics,
 		&path_finding,
-		&enemies,
-		&players,
+		&agents,
 	);
 	let graphics = GraphicsPlugin::from_plugins(&loading, &savegame, &physics, &behaviors);
 	let skills = SkillsPlugin::from_plugins(
-		&savegame, &physics, &loading, &settings, &behaviors, &players, &enemies,
+		&savegame, &physics, &loading, &settings, &behaviors, &agents,
 	);
 	let menus = MenuPlugin::from_plugins(
 		&loading,
@@ -74,22 +70,22 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		&settings,
 		&localization,
 		&graphics,
-		&players,
+		&agents,
 		&skills,
 	);
-	let bars = BarsPlugin::from_plugins(&players, &enemies, &physics, &graphics);
+	let bars = BarsPlugin::from_plugins(&agents, &physics, &graphics);
 	let camera_control =
-		CameraControlPlugin::from_plugins(&settings, &savegame, &players, &graphics);
+		CameraControlPlugin::from_plugins(&settings, &savegame, &agents, &graphics);
 
 	app.add_plugins(DefaultPlugins)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
 		.add_plugins(CommonPlugin)
 		.add_plugins(FrameLimiterPlugin { target_fps: 60 })
+		.add_plugins(agents)
 		.add_plugins(animations)
 		.add_plugins(bars)
 		.add_plugins(behaviors)
 		.add_plugins(camera_control)
-		.add_plugins(enemies)
 		.add_plugins(graphics)
 		.add_plugins(physics)
 		.add_plugins(light)
@@ -98,7 +94,6 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		.add_plugins(map_generation)
 		.add_plugins(menus)
 		.add_plugins(path_finding)
-		.add_plugins(players)
 		.add_plugins(savegame)
 		.add_plugins(settings)
 		.add_plugins(skills)

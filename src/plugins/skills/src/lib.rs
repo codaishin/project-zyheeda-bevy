@@ -65,7 +65,7 @@ use systems::{
 
 pub struct SkillsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSaveGame, TPhysics, TLoading, TSettings, TBehaviors, TPlayers, TEnemies>
+impl<TSaveGame, TPhysics, TLoading, TSettings, TBehaviors, TPlayers>
 	SkillsPlugin<(
 		TSaveGame,
 		TPhysics,
@@ -73,7 +73,6 @@ impl<TSaveGame, TPhysics, TLoading, TSettings, TBehaviors, TPlayers, TEnemies>
 		TSettings,
 		TBehaviors,
 		TPlayers,
-		TEnemies,
 	)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
@@ -85,8 +84,8 @@ where
 		+ HandlesPlayer
 		+ HandlesPlayerCameras
 		+ HandlesPlayerMouse
-		+ ConfiguresPlayerSkillAnimations,
-	TEnemies: ThreadSafe + HandlesEnemies,
+		+ ConfiguresPlayerSkillAnimations
+		+ HandlesEnemies,
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn from_plugins(
@@ -96,7 +95,6 @@ where
 		_: &TSettings,
 		_: &TBehaviors,
 		_: &TPlayers,
-		_: &TEnemies,
 	) -> Self {
 		Self(PhantomData)
 	}
@@ -128,24 +126,24 @@ where
 		Self::track_loading::<HandSlot, TPlayers::TPlayer>(app);
 		Self::track_loading::<ForearmSlot, TPlayers::TPlayer>(app);
 		Self::track_loading::<EssenceSlot, TPlayers::TPlayer>(app);
-		Self::track_loading::<HandSlot, TEnemies::TEnemy>(app);
-		Self::track_loading::<ForearmSlot, TEnemies::TEnemy>(app);
-		Self::track_loading::<EssenceSlot, TEnemies::TEnemy>(app);
+		Self::track_loading::<HandSlot, TPlayers::TEnemy>(app);
+		Self::track_loading::<ForearmSlot, TPlayers::TEnemy>(app);
+		Self::track_loading::<EssenceSlot, TPlayers::TEnemy>(app);
 
 		app.add_observer(Slots::set_self_entity)
 			.add_observer(Loadout::<TPlayers::TPlayer>::insert)
-			.add_observer(Loadout::<TEnemies::TEnemy>::insert)
+			.add_observer(Loadout::<TPlayers::TEnemy>::insert)
 			.add_systems(
 				Update,
 				(
 					SlotVisualization::<HandSlot>::track_slots_for::<TPlayers::TPlayer>,
-					SlotVisualization::<HandSlot>::track_slots_for::<TEnemies::TEnemy>,
+					SlotVisualization::<HandSlot>::track_slots_for::<TPlayers::TEnemy>,
 					SlotVisualization::<HandSlot>::visualize_items,
 					SlotVisualization::<ForearmSlot>::track_slots_for::<TPlayers::TPlayer>,
-					SlotVisualization::<ForearmSlot>::track_slots_for::<TEnemies::TEnemy>,
+					SlotVisualization::<ForearmSlot>::track_slots_for::<TPlayers::TEnemy>,
 					SlotVisualization::<ForearmSlot>::visualize_items,
 					SlotVisualization::<EssenceSlot>::track_slots_for::<TPlayers::TPlayer>,
-					SlotVisualization::<EssenceSlot>::track_slots_for::<TEnemies::TEnemy>,
+					SlotVisualization::<EssenceSlot>::track_slots_for::<TPlayers::TEnemy>,
 					SlotVisualization::<EssenceSlot>::visualize_items,
 				)
 					.chain(),
@@ -179,7 +177,7 @@ where
 	}
 }
 
-impl<TSaveGame, TPhysics, TLoading, TSettings, TBehaviors, TPlayers, TEnemies> Plugin
+impl<TSaveGame, TPhysics, TLoading, TSettings, TBehaviors, TPlayers> Plugin
 	for SkillsPlugin<(
 		TSaveGame,
 		TPhysics,
@@ -187,7 +185,6 @@ impl<TSaveGame, TPhysics, TLoading, TSettings, TBehaviors, TPlayers, TEnemies> P
 		TSettings,
 		TBehaviors,
 		TPlayers,
-		TEnemies,
 	)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
@@ -199,8 +196,8 @@ where
 		+ HandlesPlayer
 		+ HandlesPlayerCameras
 		+ HandlesPlayerMouse
-		+ ConfiguresPlayerSkillAnimations,
-	TEnemies: ThreadSafe + HandlesEnemies,
+		+ ConfiguresPlayerSkillAnimations
+		+ HandlesEnemies,
 {
 	fn build(&self, app: &mut App) {
 		self.skill_load(app);

@@ -77,15 +77,14 @@ use systems::{
 
 pub struct BehaviorsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSettings, TSaveGame, TAnimations, TPhysics, TPathFinding, TEnemies, TPlayers>
+impl<TSettings, TSaveGame, TAnimations, TPhysics, TPathFinding, TAgents>
 	BehaviorsPlugin<(
 		TSettings,
 		TSaveGame,
 		TAnimations,
 		TPhysics,
 		TPathFinding,
-		TEnemies,
-		TPlayers,
+		TAgents,
 	)>
 where
 	TSettings: ThreadSafe + HandlesSettings,
@@ -93,13 +92,13 @@ where
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
 	TPhysics: ThreadSafe + HandlesPhysicalObjects + HandlesAllPhysicalEffects,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
-	TEnemies: ThreadSafe + HandlesEnemies,
-	TPlayers: ThreadSafe
+	TAgents: ThreadSafe
 		+ HandlesPlayer
 		+ PlayerMainCamera
 		+ HandlesPlayerCameras
 		+ HandlesPlayerMouse
-		+ ConfiguresPlayerMovement,
+		+ ConfiguresPlayerMovement
+		+ HandlesEnemies,
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn from_plugins(
@@ -108,22 +107,20 @@ where
 		_: &TAnimations,
 		_: &TPhysics,
 		_: &TPathFinding,
-		_: &TEnemies,
-		_: &TPlayers,
+		_: &TAgents,
 	) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TSettings, TSaveGame, TAnimations, TPhysics, TPathFinding, TEnemies, TPlayers> Plugin
+impl<TSettings, TSaveGame, TAnimations, TPhysics, TPathFinding, TAgents> Plugin
 	for BehaviorsPlugin<(
 		TSettings,
 		TSaveGame,
 		TAnimations,
 		TPhysics,
 		TPathFinding,
-		TEnemies,
-		TPlayers,
+		TAgents,
 	)>
 where
 	TSettings: ThreadSafe + HandlesSettings,
@@ -131,13 +128,13 @@ where
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
 	TPhysics: ThreadSafe + HandlesPhysicalObjects + HandlesMotion + HandlesAllPhysicalEffects,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
-	TEnemies: ThreadSafe + HandlesEnemies,
-	TPlayers: ThreadSafe
+	TAgents: ThreadSafe
 		+ HandlesPlayer
 		+ PlayerMainCamera
 		+ HandlesPlayerCameras
 		+ HandlesPlayerMouse
-		+ ConfiguresPlayerMovement,
+		+ ConfiguresPlayerMovement
+		+ HandlesEnemies,
 {
 	fn build(&self, app: &mut App) {
 		TAnimations::register_movement_direction::<Movement<TPhysics::TMotion>>(app);
@@ -149,50 +146,50 @@ where
 		TSaveGame::register_savable_component::<Movement<PathOrWasd<TPhysics::TMotion>>>(app);
 
 		let point_input = PointerInput::<TPhysics::TMotion>::parse::<
-			TPlayers::TCamRay,
+			TAgents::TCamRay,
 			TSettings::TKeyMap<MovementKey>,
 		>;
 		let wasd_input = WasdInput::<TPhysics::TMotion>::parse::<
-			TPlayers::TPlayerMainCamera,
+			TAgents::TPlayerMainCamera,
 			TSettings::TKeyMap<MovementKey>,
-			TPlayers::TPlayer,
+			TAgents::TPlayer,
 		>;
 		let wasd_input = wasd_input.pipe(OnError::log_and_return(|| ProcessInput::None));
 
-		let compute_player_path = TPlayers::TPlayerMovement::compute_path::<
+		let compute_player_path = TAgents::TPlayerMovement::compute_path::<
 			TPhysics::TMotion,
 			TPathFinding::TComputePath,
 			TPathFinding::TComputerRef,
 		>;
 		let execute_player_path =
-			TPlayers::TPlayerMovement::execute_movement::<Movement<PathOrWasd<TPhysics::TMotion>>>;
+			TAgents::TPlayerMovement::execute_movement::<Movement<PathOrWasd<TPhysics::TMotion>>>;
 		let execute_player_movement =
-			TPlayers::TPlayerMovement::execute_movement::<Movement<TPhysics::TMotion>>;
-		let animate_player_movement = TPlayers::TPlayerMovement::animate_movement::<
+			TAgents::TPlayerMovement::execute_movement::<Movement<TPhysics::TMotion>>;
+		let animate_player_movement = TAgents::TPlayerMovement::animate_movement::<
 			Movement<TPhysics::TMotion>,
 			TAnimations::TAnimationDispatch,
 		>;
 
-		let compute_enemy_path = TEnemies::TEnemy::compute_path::<
+		let compute_enemy_path = TAgents::TEnemy::compute_path::<
 			TPhysics::TMotion,
 			TPathFinding::TComputePath,
 			TPathFinding::TComputerRef,
 		>;
 		let execute_enemy_path =
-			TEnemies::TEnemy::execute_movement::<Movement<PathOrWasd<TPhysics::TMotion>>>;
+			TAgents::TEnemy::execute_movement::<Movement<PathOrWasd<TPhysics::TMotion>>>;
 		let execute_enemy_movement =
-			TEnemies::TEnemy::execute_movement::<Movement<TPhysics::TMotion>>;
-		let animate_enemy_movement = TEnemies::TEnemy::animate_movement::<
+			TAgents::TEnemy::execute_movement::<Movement<TPhysics::TMotion>>;
+		let animate_enemy_movement = TAgents::TEnemy::animate_movement::<
 			Movement<TPhysics::TMotion>,
 			TAnimations::TAnimationDispatch,
 		>;
 
 		app
 			// Required components
-			.register_required_components::<TPlayers::TPlayer, FixPoints>()
-			.register_required_components::<TPlayers::TPlayer, SkillUsage>()
-			.register_required_components::<TEnemies::TEnemy, FixPoints>()
-			.register_required_components::<TEnemies::TEnemy, SkillUsage>()
+			.register_required_components::<TAgents::TPlayer, FixPoints>()
+			.register_required_components::<TAgents::TPlayer, SkillUsage>()
+			.register_required_components::<TAgents::TEnemy, FixPoints>()
+			.register_required_components::<TAgents::TEnemy, SkillUsage>()
 			.register_required_components::<SkillContact, TSaveGame::TSaveEntityMarker>()
 			.register_required_components::<SkillProjection, TSaveGame::TSaveEntityMarker>()
 			// Observers
@@ -204,31 +201,31 @@ where
 				(
 					// Prep systems
 					(
-						FixPoint::<SkillSpawner>::insert_in_children_of::<TPlayers::TPlayer>,
-						FixPoint::<SkillSpawner>::insert_in_children_of::<TEnemies::TEnemy>,
+						FixPoint::<SkillSpawner>::insert_in_children_of::<TAgents::TPlayer>,
+						FixPoint::<SkillSpawner>::insert_in_children_of::<TAgents::TEnemy>,
 						FixPoints::track_in_self_and_children::<FixPoint<SkillSpawner>>().system(),
 					)
 						.chain(),
 					// Player behaviors
 					(
-						point_input.pipe(TPlayers::TPlayer::insert_process_component),
-						wasd_input.pipe(TPlayers::TPlayer::insert_process_component),
+						point_input.pipe(TAgents::TPlayer::insert_process_component),
+						wasd_input.pipe(TAgents::TPlayer::insert_process_component),
 						compute_player_path,
 						execute_player_path,
 						execute_player_movement,
 						animate_player_movement,
-						SkillUsage::player::<TPlayers::TPlayer, TSettings::TKeyMap<PlayerSlot>>,
+						SkillUsage::player::<TAgents::TPlayer, TSettings::TKeyMap<PlayerSlot>>,
 					)
 						.chain(),
 					// Enemy behaviors
 					(
-						TEnemies::TEnemy::select_behavior::<TPlayers::TPlayer>.pipe(OnError::log),
-						TEnemies::TEnemy::chase::<PathOrWasd<TPhysics::TMotion>>,
+						TAgents::TEnemy::select_behavior::<TAgents::TPlayer>.pipe(OnError::log),
+						TAgents::TEnemy::chase::<PathOrWasd<TPhysics::TMotion>>,
 						compute_enemy_path,
 						execute_enemy_path,
 						execute_enemy_movement,
 						animate_enemy_movement,
-						SkillUsage::enemy::<TEnemies::TEnemy>,
+						SkillUsage::enemy::<TAgents::TEnemy>,
 					)
 						.chain(),
 					// Skill execution
@@ -245,9 +242,9 @@ where
 					// Apply facing
 					(
 						Movement::<TPhysics::TMotion>::set_faces,
-						TPlayers::TPlayer::get_faces
-							.pipe(execute_player_face::<TPlayers::TMouseHover, TPlayers::TCamRay>),
-						TEnemies::TEnemy::get_faces.pipe(execute_enemy_face),
+						TAgents::TPlayer::get_faces
+							.pipe(execute_player_face::<TAgents::TMouseHover, TAgents::TCamRay>),
+						TAgents::TEnemy::get_faces.pipe(execute_enemy_face),
 					)
 						.chain(),
 				)
