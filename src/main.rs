@@ -49,9 +49,8 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let animations = AnimationsPlugin::from_plugin(&savegame);
 	let light = LightPlugin::from_plugin(&savegame);
 	let agents = AgentsPlugin::from_plugins(&settings, &savegame, &animations, &light);
-	let physics = PhysicsPlugin::from_plugin(&savegame, &agents, &agents);
-	let map_generation =
-		MapGenerationPlugin::from_plugins(&loading, &savegame, &light, &agents, &agents);
+	let physics = PhysicsPlugin::from_plugin(&savegame, &agents);
+	let map_generation = MapGenerationPlugin::from_plugins(&loading, &savegame, &light, &agents);
 	let path_finding = PathFindingPlugin::from_plugin(&map_generation);
 	let behaviors = BehaviorsPlugin::from_plugins(
 		&settings,
@@ -60,11 +59,10 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		&physics,
 		&path_finding,
 		&agents,
-		&agents,
 	);
 	let graphics = GraphicsPlugin::from_plugins(&loading, &savegame, &physics, &behaviors);
 	let skills = SkillsPlugin::from_plugins(
-		&savegame, &physics, &loading, &settings, &behaviors, &agents, &agents,
+		&savegame, &physics, &loading, &settings, &behaviors, &agents,
 	);
 	let menus = MenuPlugin::from_plugins(
 		&loading,
@@ -75,7 +73,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		&agents,
 		&skills,
 	);
-	let bars = BarsPlugin::from_plugins(&agents, &agents, &physics, &graphics);
+	let bars = BarsPlugin::from_plugins(&agents, &physics, &graphics);
 	let camera_control =
 		CameraControlPlugin::from_plugins(&settings, &savegame, &agents, &graphics);
 

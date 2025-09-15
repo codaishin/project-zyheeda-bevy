@@ -38,34 +38,26 @@ use traits::register_map_cell::RegisterMapCell;
 
 pub struct MapGenerationPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TSavegame, TLights, TPlayer, TEnemies>
-	MapGenerationPlugin<(TLoading, TSavegame, TLights, TPlayer, TEnemies)>
+impl<TLoading, TSavegame, TLights, TAgents>
+	MapGenerationPlugin<(TLoading, TSavegame, TLights, TAgents)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TLights: ThreadSafe + HandlesLights,
-	TPlayer: ThreadSafe + HandlesPlayer,
-	TEnemies: ThreadSafe + HandlesEnemies,
+	TAgents: ThreadSafe + HandlesPlayer + HandlesEnemies,
 {
-	pub fn from_plugins(
-		_: &TLoading,
-		_: &TSavegame,
-		_: &TLights,
-		_: &TPlayer,
-		_: &TEnemies,
-	) -> Self {
+	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TLights, _: &TAgents) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLoading, TSavegame, TLights, TPlayer, TEnemies> Plugin
-	for MapGenerationPlugin<(TLoading, TSavegame, TLights, TPlayer, TEnemies)>
+impl<TLoading, TSavegame, TLights, TAgents> Plugin
+	for MapGenerationPlugin<(TLoading, TSavegame, TLights, TAgents)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TLights: ThreadSafe + HandlesLights,
-	TPlayer: ThreadSafe + HandlesPlayer,
-	TEnemies: ThreadSafe + HandlesEnemies,
+	TAgents: ThreadSafe + HandlesPlayer + HandlesEnemies,
 {
 	fn build(&self, app: &mut App) {
 		let register_agents_lookup_load_tracking = TLoading::register_load_tracking::<
@@ -80,8 +72,7 @@ where
 		TSavegame::register_savable_component::<DemoMap>(app);
 
 		app.register_required_components::<Map, TSavegame::TSaveEntityMarker>()
-			.register_map_cell::<TLoading, TSavegame, Corridor, TPlayer::TPlayer, TEnemies::TEnemy>(
-			)
+			.register_map_cell::<TLoading, TSavegame, Corridor, TAgents::TPlayer, TAgents::TEnemy>()
 			.add_systems(
 				OnEnter(GameState::LoadingEssentialAssets),
 				AgentsColorLookupImages::<Image>::lookup_images,

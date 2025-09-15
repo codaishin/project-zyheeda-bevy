@@ -58,22 +58,20 @@ use traits::act_on::ActOn;
 
 pub struct PhysicsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSaveGame, TPlayers, TEnemies> PhysicsPlugin<(TSaveGame, TPlayers, TEnemies)>
+impl<TSaveGame, TAgents> PhysicsPlugin<(TSaveGame, TAgents)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TPlayers: ThreadSafe + HandlesPlayer,
-	TEnemies: ThreadSafe + HandlesEnemies,
+	TAgents: ThreadSafe + HandlesPlayer + HandlesEnemies,
 {
-	pub fn from_plugin(_: &TSaveGame, _: &TPlayers, _: &TEnemies) -> Self {
+	pub fn from_plugin(_: &TSaveGame, _: &TAgents) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TSaveGame, TPlayers, TEnemies> Plugin for PhysicsPlugin<(TSaveGame, TPlayers, TEnemies)>
+impl<TSaveGame, TAgents> Plugin for PhysicsPlugin<(TSaveGame, TAgents)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TPlayers: ThreadSafe + HandlesPlayer,
-	TEnemies: ThreadSafe + HandlesEnemies,
+	TAgents: ThreadSafe + HandlesPlayer + HandlesEnemies,
 {
 	fn build(&self, app: &mut App) {
 		TSaveGame::register_savable_component::<Motion>(app);
@@ -89,14 +87,14 @@ where
 					.in_set(PhysicsSystems),
 			)
 			// Deal health damage
-			.register_derived_component::<TPlayers::TPlayer, Life>()
-			.register_derived_component::<TEnemies::TEnemy, Life>()
+			.register_derived_component::<TAgents::TPlayer, Life>()
+			.register_derived_component::<TAgents::TEnemy, Life>()
 			.add_physics::<HealthDamageEffect, Life, TSaveGame>()
 			.add_observer(HealthDamageEffect::update_blockers)
 			.add_systems(Update, Life::despawn_dead.in_set(PhysicsSystems))
 			// Apply gravity effect
-			.register_derived_component::<TPlayers::TPlayer, GravityAffected>()
-			.register_derived_component::<TEnemies::TEnemy, GravityAffected>()
+			.register_derived_component::<TAgents::TPlayer, GravityAffected>()
+			.register_derived_component::<TAgents::TEnemy, GravityAffected>()
 			.add_physics::<GravityEffect, GravityAffected, TSaveGame>()
 			.add_observer(GravityEffect::update_blockers)
 			.add_systems(
@@ -106,8 +104,8 @@ where
 					.in_set(PhysicsSystems),
 			)
 			// Apply force effect
-			.register_derived_component::<TPlayers::TPlayer, ForceAffected>()
-			.register_derived_component::<TEnemies::TEnemy, ForceAffected>()
+			.register_derived_component::<TAgents::TPlayer, ForceAffected>()
+			.register_derived_component::<TAgents::TEnemy, ForceAffected>()
 			.add_physics::<ForceEffect, ForceAffected, TSaveGame>()
 			.add_observer(ForceEffect::update_blockers)
 			// Apply interactions
