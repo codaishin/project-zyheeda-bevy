@@ -33,10 +33,6 @@ impl GravityAffected {
 		}
 	}
 
-	pub(crate) fn immune() -> Self {
-		Self::Immune
-	}
-
 	pub(crate) fn push(&mut self, pull: GravityPull) {
 		match self {
 			GravityAffected::AffectedBy { pulls } => pulls.push(pull),
@@ -90,7 +86,7 @@ where
 	fn derive_from(_: Entity, component: &T, _: &()) -> Self {
 		match component.ref_into() {
 			AttributeOnSpawn(EffectTarget::Affected) => Self::affected([]),
-			AttributeOnSpawn(EffectTarget::Immune) => Self::immune(),
+			AttributeOnSpawn(EffectTarget::Immune) => Self::Immune,
 		}
 	}
 }
@@ -108,7 +104,7 @@ mod tests {
 
 	#[test_case(GravityAffected::affected([GravityPull::default()]), true; "true when affected")]
 	#[test_case(GravityAffected::affected([]), false; "false when affected and empty")]
-	#[test_case(GravityAffected::immune(), false; "false when immune")]
+	#[test_case(GravityAffected::Immune, false; "false when immune")]
 	fn is_pulled(affected: GravityAffected, expected: bool) {
 		assert_eq!(expected, affected.is_pulled());
 	}
@@ -148,9 +144,9 @@ mod tests {
 
 	#[test]
 	fn drain_immune() {
-		let mut immune = GravityAffected::immune();
+		let mut immune = GravityAffected::Immune;
 
 		let drained = immune.drain_pulls().collect::<Vec<_>>();
-		assert_eq!((GravityAffected::immune(), vec![]), (immune, drained))
+		assert_eq!((GravityAffected::Immune, vec![]), (immune, drained))
 	}
 }
