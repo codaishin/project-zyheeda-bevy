@@ -1,4 +1,5 @@
 use super::player_movement::{Config, MovementMode, PlayerMovement};
+use crate::components::agent::Agent;
 use bevy::{asset::AssetPath, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::{
@@ -54,6 +55,7 @@ use zyheeda_core::prelude::*;
 
 #[derive(Component, SavableComponent, Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[require(
+	Agent,
 	PlayerMovement = Player::movement(),
 	Transform,
 	Visibility,
