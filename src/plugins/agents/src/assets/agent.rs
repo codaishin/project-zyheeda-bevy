@@ -1,4 +1,10 @@
-use crate::components::enemy::void_sphere::VoidSphereSlot;
+use crate::{
+	components::{
+		enemy::void_sphere::{VoidSphere, VoidSphereSlot},
+		player::Player,
+	},
+	systems::load_agent::InsertSpecializedAgent,
+};
 use bevy::{
 	asset::{Asset, AssetPath},
 	reflect::TypePath,
@@ -12,19 +18,22 @@ use common::{
 		bone::Bone,
 	},
 	traits::{
+		handles_agents::AgentType,
 		handles_custom_assets::AssetFileExtensions,
+		handles_enemies::EnemyType,
 		handles_skill_behaviors::SkillSpawner,
 		loadout::LoadoutConfig,
 		mapper::Mapper,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
 	},
+	zyheeda_commands::ZyheedaEntityCommands,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Asset, TypePath, Debug, PartialEq, Clone, Serialize, Deserialize)]
-#[cfg_attr(test, derive(Default))]
 pub struct AgentAsset {
+	pub(crate) agent_type: AgentType,
 	pub(crate) loadout: Loadout,
 	pub(crate) bones: Bones,
 	pub(crate) attributes: Attributes,
@@ -121,7 +130,16 @@ impl From<&AgentAsset> for AttributeOnSpawn<EffectTarget<Force>> {
 	}
 }
 
-#[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+impl InsertSpecializedAgent for AgentAsset {
+	fn insert_specialized_agent(&self, entity: &mut ZyheedaEntityCommands) {
+		match self.agent_type {
+			AgentType::Player => entity.try_insert(Player),
+			AgentType::Enemy(EnemyType::VoidSphere) => entity.try_insert(VoidSphere),
+		};
+	}
+}
+
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub(crate) struct Loadout {
 	visible_slots: Vec<AgentSlotKey>,
 	inventory: Vec<Option<AssetPath<'static>>>,
@@ -143,7 +161,7 @@ impl From<AgentSlotKey> for SlotKey {
 	}
 }
 
-#[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub(crate) struct Bones {
 	spawners: HashMap<String, SkillSpawnerDto>,
 	hand_slots: HashMap<String, AgentSlotKey>,
@@ -172,15 +190,4 @@ pub(crate) struct Attributes {
 	health: Health,
 	gravity_interaction: EffectTarget<Gravity>,
 	force_interaction: EffectTarget<Force>,
-}
-
-#[cfg(test)]
-impl Default for Attributes {
-	fn default() -> Self {
-		Self {
-			health: Health::new(100.),
-			gravity_interaction: EffectTarget::Affected,
-			force_interaction: EffectTarget::Affected,
-		}
-	}
 }
