@@ -1,22 +1,12 @@
 use super::{accessors::get::RefInto, intersect_at::IntersectAt};
 use crate::{
-	attributes::{effect_target::EffectTarget, health::Health},
-	effects::{force::Force, gravity::Gravity},
 	errors::Error,
 	tools::{
 		action_key::{movement::MovementKey, slot::SlotKey},
-		attribute::AttributeOnSpawn,
-		bone::Bone,
 		collider_info::ColliderInfo,
 		collider_radius::ColliderRadius,
 		movement_animation::MovementAnimation,
 		speed::Speed,
-	},
-	traits::{
-		handles_skill_behaviors::SkillSpawner,
-		loadout::LoadoutConfig,
-		mapper::Mapper,
-		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
 	},
 };
 use bevy::{
@@ -25,17 +15,7 @@ use bevy::{
 };
 
 pub trait HandlesPlayer {
-	type TPlayer: Component
-		+ Default
-		+ VisibleSlots
-		+ LoadoutConfig
-		+ for<'a> Mapper<Bone<'a>, Option<SkillSpawner>>
-		+ for<'a> Mapper<Bone<'a>, Option<EssenceSlot>>
-		+ for<'a> Mapper<Bone<'a>, Option<HandSlot>>
-		+ for<'a> Mapper<Bone<'a>, Option<ForearmSlot>>
-		+ for<'a> RefInto<'a, AttributeOnSpawn<Health>>
-		+ for<'a> RefInto<'a, AttributeOnSpawn<EffectTarget<Gravity>>>
-		+ for<'a> RefInto<'a, AttributeOnSpawn<EffectTarget<Force>>>;
+	type TPlayer: Component;
 }
 
 pub trait PlayerMainCamera {

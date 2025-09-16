@@ -1,4 +1,4 @@
-use crate::components::gravity_affected::GravityPull;
+use crate::components::affected::gravity_affected::GravityPull;
 use bevy::{ecs::component::Mutable, prelude::*};
 use bevy_rapier3d::prelude::Velocity;
 use common::{
@@ -88,7 +88,6 @@ fn predict(direction: Vec3, pull_strength: f32, delta_secs: f32) -> Predict {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::gravity_affected::GravityPull;
 	use bevy::{
 		app::App,
 		ecs::system::{RunSystemError, RunSystemOnce},

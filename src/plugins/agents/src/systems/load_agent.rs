@@ -29,8 +29,8 @@ fn load_agent_internal<TAssetServer, TAsset>(
 	TAsset: Asset + InsertSpecializedAgent,
 {
 	for (entity, mut agent) in &mut agents {
-		transition_to_loading(&mut agent, &mut asset_server);
-		transition_to_loaded(&mut agent, &mut commands, &entity, &agent_assets);
+		set_handle(&mut agent, &mut asset_server);
+		insert_specialized_agent(&mut agent, &mut commands, &entity, &agent_assets);
 	}
 }
 
@@ -38,7 +38,7 @@ pub trait InsertSpecializedAgent {
 	fn insert_specialized_agent(&self, entity: &mut ZyheedaEntityCommands);
 }
 
-fn transition_to_loading<TAssetServer, TAsset>(
+fn set_handle<TAssetServer, TAsset>(
 	agent: &mut Mut<Agent<TAsset>>,
 	server: &mut ResMut<TAssetServer>,
 ) where
@@ -49,10 +49,10 @@ fn transition_to_loading<TAssetServer, TAsset>(
 		return;
 	};
 
-	**agent = Agent::Loading(server.load_asset(path.clone()));
+	**agent = Agent::Handle(server.load_asset(path.clone()));
 }
 
-fn transition_to_loaded<TAsset>(
+fn insert_specialized_agent<TAsset>(
 	agent: &mut Mut<Agent<TAsset>>,
 	commands: &mut ZyheedaCommands,
 	entity: &Entity,
@@ -60,7 +60,7 @@ fn transition_to_loaded<TAsset>(
 ) where
 	TAsset: Asset + InsertSpecializedAgent,
 {
-	let Agent::Loading(handle) = agent.as_ref() else {
+	let Agent::Handle(handle) = agent.as_ref() else {
 		return;
 	};
 
@@ -68,7 +68,6 @@ fn transition_to_loaded<TAsset>(
 		return;
 	};
 
-	**agent = Agent::Loaded(handle.clone());
 	commands.try_apply_on(entity, |mut e| {
 		asset.insert_specialized_agent(&mut e);
 	});
@@ -144,7 +143,7 @@ mod tests {
 	}
 
 	#[test]
-	fn set_agent_loading() {
+	fn set_agent_handle() {
 		let path = AssetPath::from("my/path.agent");
 		let handle = new_handle();
 		let server = _AssetServer::new().with_mock(|mock| {
@@ -157,38 +156,8 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&Agent::Loading(handle)),
+			Some(&Agent::Handle(handle)),
 			app.world().entity(entity).get::<Agent<_Asset>>(),
-		);
-	}
-
-	#[test]
-	fn set_agent_loaded() {
-		let handle = new_handle();
-		let server = _AssetServer::new();
-		let mut app = setup(server, [&handle]);
-		let entity = app.world_mut().spawn(Agent::Loading(handle.clone())).id();
-
-		app.update();
-
-		assert_eq!(
-			Some(&Agent::Loaded(handle)),
-			app.world().entity(entity).get::<Agent<_Asset>>(),
-		);
-	}
-
-	#[test]
-	fn do_not_set_agent_loaded_when_asset_missing() {
-		let handle = new_handle();
-		let server = _AssetServer::new();
-		let mut app = setup(server, []);
-		let entity = app.world_mut().spawn(Agent::Loading(handle.clone())).id();
-
-		app.update();
-
-		assert_eq!(
-			Some(&Agent::Loading(handle)),
-			app.world().entity(entity).get::<Agent>(),
 		);
 	}
 
@@ -197,7 +166,7 @@ mod tests {
 		let handle = new_handle();
 		let server = _AssetServer::new();
 		let mut app = setup(server, [&handle]);
-		let entity = app.world_mut().spawn(Agent::Loading(handle.clone())).id();
+		let entity = app.world_mut().spawn(Agent::Handle(handle.clone())).id();
 
 		app.update();
 

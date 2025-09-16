@@ -2,7 +2,17 @@ use crate::components::fix_points::AnchorFixPointKey;
 use bevy::prelude::*;
 use common::{
 	tools::{Index, bone::Bone},
-	traits::{accessors::get::TryApplyOn, mapper::Mapper, thread_safe::ThreadSafe},
+	traits::{
+		accessors::get::{
+			AssociatedItem,
+			AssociatedStaticSystemParam,
+			AssociatedSystemParam,
+			GetFromSystemParam,
+			TryApplyOn,
+		},
+		mapper::Mapper,
+		thread_safe::ThreadSafe,
+	},
 	zyheeda_commands::ZyheedaCommands,
 };
 
@@ -15,18 +25,20 @@ where
 {
 	pub(crate) fn insert_in_children_of<TAgent>(
 		mut commands: ZyheedaCommands,
-		names: Query<(Entity, &Name), Changed<Name>>,
+		bones: Query<(Entity, &Name), Changed<Name>>,
 		agents: Query<&TAgent>,
 		parents: Query<&ChildOf>,
+		param: AssociatedStaticSystemParam<TAgent, ()>,
 	) where
-		TAgent: Component + for<'a> Mapper<Bone<'a>, Option<T>>,
+		for<'w, 's> TAgent: Component + GetFromSystemParam<'w, 's, ()>,
+		for<'w, 's, 'i> AssociatedItem<'w, 's, 'i, TAgent, ()>: Mapper<Bone<'i>, Option<T>>,
 	{
-		for (entity, name) in &names {
-			let Some(agent) = get_agent(&agents, &parents, entity) else {
+		for (entity, name) in &bones {
+			let Some(agent_asset) = get_agent_data(&agents, &parents, &param, entity) else {
 				continue;
 			};
 
-			match agent.map(Bone(name.as_str())) {
+			match agent_asset.map(Bone(name.as_str())) {
 				Some(fix_point) => {
 					commands.try_apply_on(&entity, |mut e| {
 						e.try_insert(FixPoint(fix_point));
@@ -42,17 +54,19 @@ where
 	}
 }
 
-fn get_agent<'a, TAgent>(
+fn get_agent_data<'w, 's, 'a, TAgent>(
 	agents: &'a Query<&TAgent>,
 	parents: &Query<&ChildOf>,
+	param: &'a AssociatedSystemParam<'_, '_, 'w, 's, TAgent, ()>,
 	entity: Entity,
-) -> Option<&'a TAgent>
+) -> Option<TAgent::TItem<'a>>
 where
-	TAgent: Component,
+	TAgent: Component + GetFromSystemParam<'w, 's, ()>,
 {
 	parents
 		.iter_ancestors(entity)
 		.find_map(|e| agents.get(e).ok())
+		.and_then(|a| a.get_from_param(&(), param))
 }
 
 impl<T> From<FixPoint<T>> for AnchorFixPointKey
@@ -68,6 +82,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use bevy::ecs::system::SystemParam;
 	use common::traits::iteration::{Iter, IterFinite};
 	use std::any::TypeId;
 	use test_case::test_case;
@@ -76,7 +91,22 @@ mod tests {
 	#[derive(Component)]
 	struct _Agent;
 
-	impl<'a> Mapper<Bone<'a>, Option<_T>> for _Agent {
+	#[derive(SystemParam)]
+	struct _Param;
+
+	impl GetFromSystemParam<'_, '_, ()> for _Agent {
+		type TParam = _Param;
+		type TItem<'i> = _AgentData;
+
+		fn get_from_param(&self, _: &(), _: &_Param) -> Option<Self::TItem<'_>> {
+			Some(_AgentData)
+		}
+	}
+
+	#[derive(Asset, TypePath)]
+	struct _AgentData;
+
+	impl<'a> Mapper<Bone<'a>, Option<_T>> for _AgentData {
 		fn map(&self, value: Bone) -> Option<_T> {
 			match value {
 				Bone("a") => Some(_T::A),

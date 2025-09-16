@@ -1,4 +1,4 @@
-use crate::components::life::Life;
+use crate::components::affected::life::Life;
 use bevy::prelude::*;
 use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
@@ -35,7 +35,7 @@ mod tests {
 		let mut app = setup();
 		let health = app
 			.world_mut()
-			.spawn(Life::from(Health {
+			.spawn(Life(Health {
 				current: 0.,
 				max: 100.,
 			}))
@@ -51,7 +51,7 @@ mod tests {
 		let mut app = setup();
 		let health = app
 			.world_mut()
-			.spawn(Life::from(Health {
+			.spawn(Life(Health {
 				current: 1.,
 				max: 100.,
 			}))
@@ -67,7 +67,7 @@ mod tests {
 		let mut app = setup();
 		let health = app
 			.world_mut()
-			.spawn(Life::from(Health {
+			.spawn(Life(Health {
 				current: -1.,
 				max: 100.,
 			}))

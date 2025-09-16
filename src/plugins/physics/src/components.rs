@@ -1,10 +1,8 @@
 pub(crate) mod active_beam;
+pub(crate) mod affected;
 pub(crate) mod blockable;
 pub(crate) mod effect;
-pub(crate) mod force_affected;
-pub(crate) mod gravity_affected;
 pub(crate) mod interacting_entities;
-pub(crate) mod life;
 pub(crate) mod motion;
 pub(crate) mod running_interactions;
 

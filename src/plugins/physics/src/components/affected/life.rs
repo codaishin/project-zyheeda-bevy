@@ -1,17 +1,12 @@
 use bevy::prelude::*;
-use common::{
-	attributes::health::Health,
-	tools::attribute::AttributeOnSpawn,
-	traits::{
-		accessors::get::RefInto,
-		register_derived_component::{DerivableFrom, InsertDerivedComponent},
-	},
-};
+use common::{self, attributes::health::Health, tools::attribute::AttributeOnSpawn};
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
+use crate::systems::insert_affected::AffectedComponent;
+
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
-pub struct Life(Health);
+pub struct Life(pub(crate) Health);
 
 impl Life {
 	pub(crate) fn change_by(&mut self, health: f32) {
@@ -26,30 +21,14 @@ impl Life {
 	}
 }
 
-impl From<Health> for Life {
-	fn from(health: Health) -> Self {
-		Self(health)
-	}
-}
-
-impl From<&Life> for Health {
-	fn from(Life(health): &Life) -> Self {
-		*health
-	}
-}
-
-impl<T> DerivableFrom<'_, '_, T> for Life
-where
-	T: for<'a> RefInto<'a, AttributeOnSpawn<Health>>,
-{
-	const INSERT: InsertDerivedComponent = InsertDerivedComponent::IfNew;
-
-	type TParam = ();
-
-	fn derive_from(_: Entity, component: &T, _: &()) -> Self {
-		let AttributeOnSpawn(health) = component.ref_into();
+impl From<AttributeOnSpawn<Health>> for Life {
+	fn from(AttributeOnSpawn(health): AttributeOnSpawn<Health>) -> Self {
 		Life(health)
 	}
+}
+
+impl AffectedComponent for Life {
+	type TAttribute = Health;
 }
 
 #[cfg(test)]

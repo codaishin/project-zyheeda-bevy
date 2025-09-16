@@ -1,7 +1,7 @@
 use crate::{
 	ActOn,
 	PhysicsPlugin,
-	components::force_affected::ForceAffected,
+	components::affected::force_affected::ForceAffected,
 	traits::update_blockers::UpdateBlockers,
 };
 use bevy::prelude::*;

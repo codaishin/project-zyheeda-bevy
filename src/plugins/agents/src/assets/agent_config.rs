@@ -32,22 +32,43 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Asset, TypePath, Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct AgentAsset {
+pub struct AgentConfigAsset {
 	pub(crate) agent_type: AgentType,
 	pub(crate) loadout: Loadout,
 	pub(crate) bones: Bones,
 	pub(crate) attributes: Attributes,
 }
 
-impl AssetFileExtensions for AgentAsset {
+impl InsertSpecializedAgent for AgentConfigAsset {
+	fn insert_specialized_agent(&self, entity: &mut ZyheedaEntityCommands) {
+		match self.agent_type {
+			AgentType::Player => entity.try_insert(Player),
+			AgentType::Enemy(EnemyType::VoidSphere) => entity.try_insert(VoidSphere),
+		};
+	}
+}
+
+#[derive(Debug, PartialEq)]
+pub struct AgentConfig<'a, TAsset = AgentConfigAsset> {
+	asset: &'a TAsset,
+}
+
+impl<'a, TAsset> From<&'a TAsset> for AgentConfig<'a, TAsset> {
+	fn from(asset: &'a TAsset) -> Self {
+		Self { asset }
+	}
+}
+
+impl AssetFileExtensions for AgentConfigAsset {
 	fn asset_file_extensions() -> &'static [&'static str] {
 		&["agent"]
 	}
 }
 
-impl VisibleSlots for AgentAsset {
+impl VisibleSlots for AgentConfig<'_> {
 	fn visible_slots(&self) -> impl Iterator<Item = SlotKey> {
-		self.loadout
+		self.asset
+			.loadout
 			.visible_slots
 			.iter()
 			.copied()
@@ -55,13 +76,14 @@ impl VisibleSlots for AgentAsset {
 	}
 }
 
-impl LoadoutConfig for AgentAsset {
+impl LoadoutConfig for AgentConfig<'_> {
 	fn inventory(&self) -> impl Iterator<Item = Option<AssetPath<'static>>> {
-		self.loadout.inventory.iter().cloned()
+		self.asset.loadout.inventory.iter().cloned()
 	}
 
 	fn slots(&self) -> impl Iterator<Item = (SlotKey, Option<AssetPath<'static>>)> {
-		self.loadout
+		self.asset
+			.loadout
 			.slots
 			.iter()
 			.cloned()
@@ -69,9 +91,10 @@ impl LoadoutConfig for AgentAsset {
 	}
 }
 
-impl Mapper<Bone<'_>, Option<SkillSpawner>> for AgentAsset {
+impl Mapper<Bone<'_>, Option<SkillSpawner>> for AgentConfig<'_> {
 	fn map(&self, Bone(bone): Bone<'_>) -> Option<SkillSpawner> {
-		self.bones
+		self.asset
+			.bones
 			.spawners
 			.get(bone)
 			.copied()
@@ -79,9 +102,10 @@ impl Mapper<Bone<'_>, Option<SkillSpawner>> for AgentAsset {
 	}
 }
 
-impl Mapper<Bone<'_>, Option<EssenceSlot>> for AgentAsset {
+impl Mapper<Bone<'_>, Option<EssenceSlot>> for AgentConfig<'_> {
 	fn map(&self, Bone(bone): Bone<'_>) -> Option<EssenceSlot> {
-		self.bones
+		self.asset
+			.bones
 			.essence_slots
 			.get(bone)
 			.copied()
@@ -90,9 +114,10 @@ impl Mapper<Bone<'_>, Option<EssenceSlot>> for AgentAsset {
 	}
 }
 
-impl Mapper<Bone<'_>, Option<HandSlot>> for AgentAsset {
+impl Mapper<Bone<'_>, Option<HandSlot>> for AgentConfig<'_> {
 	fn map(&self, Bone(bone): Bone<'_>) -> Option<HandSlot> {
-		self.bones
+		self.asset
+			.bones
 			.hand_slots
 			.get(bone)
 			.copied()
@@ -101,9 +126,10 @@ impl Mapper<Bone<'_>, Option<HandSlot>> for AgentAsset {
 	}
 }
 
-impl Mapper<Bone<'_>, Option<ForearmSlot>> for AgentAsset {
+impl Mapper<Bone<'_>, Option<ForearmSlot>> for AgentConfig<'_> {
 	fn map(&self, Bone(bone): Bone<'_>) -> Option<ForearmSlot> {
-		self.bones
+		self.asset
+			.bones
 			.forearm_slots
 			.get(bone)
 			.copied()
@@ -112,30 +138,21 @@ impl Mapper<Bone<'_>, Option<ForearmSlot>> for AgentAsset {
 	}
 }
 
-impl From<&AgentAsset> for AttributeOnSpawn<Health> {
-	fn from(agent: &AgentAsset) -> Self {
-		Self(agent.attributes.health)
+impl From<&AgentConfig<'_>> for AttributeOnSpawn<Health> {
+	fn from(AgentConfig { asset }: &AgentConfig<'_>) -> Self {
+		Self(asset.attributes.health)
 	}
 }
 
-impl From<&AgentAsset> for AttributeOnSpawn<EffectTarget<Gravity>> {
-	fn from(agent: &AgentAsset) -> Self {
-		Self(agent.attributes.gravity_interaction)
+impl From<&AgentConfig<'_>> for AttributeOnSpawn<EffectTarget<Gravity>> {
+	fn from(AgentConfig { asset }: &AgentConfig<'_>) -> Self {
+		Self(asset.attributes.gravity_interaction)
 	}
 }
 
-impl From<&AgentAsset> for AttributeOnSpawn<EffectTarget<Force>> {
-	fn from(agent: &AgentAsset) -> Self {
-		Self(agent.attributes.force_interaction)
-	}
-}
-
-impl InsertSpecializedAgent for AgentAsset {
-	fn insert_specialized_agent(&self, entity: &mut ZyheedaEntityCommands) {
-		match self.agent_type {
-			AgentType::Player => entity.try_insert(Player),
-			AgentType::Enemy(EnemyType::VoidSphere) => entity.try_insert(VoidSphere),
-		};
+impl From<&AgentConfig<'_>> for AttributeOnSpawn<EffectTarget<Force>> {
+	fn from(AgentConfig { asset }: &AgentConfig<'_>) -> Self {
+		Self(asset.attributes.force_interaction)
 	}
 }
 

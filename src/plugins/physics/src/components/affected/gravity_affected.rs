@@ -1,14 +1,11 @@
-use crate::systems::apply_pull::PullAbleByGravity;
+use crate::systems::{apply_pull::PullAbleByGravity, insert_affected::AffectedComponent};
 use bevy::prelude::*;
 use common::{
+	self,
 	attributes::effect_target::EffectTarget,
 	components::persistent_entity::PersistentEntity,
 	effects::gravity::Gravity,
 	tools::{UnitsPerSecond, attribute::AttributeOnSpawn},
-	traits::{
-		accessors::get::RefInto,
-		register_derived_component::{DerivableFrom, InsertDerivedComponent},
-	},
 };
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
@@ -75,20 +72,17 @@ impl<'a> Iterator for DrainPulls<'a> {
 	}
 }
 
-impl<T> DerivableFrom<'_, '_, T> for GravityAffected
-where
-	T: for<'a> RefInto<'a, AttributeOnSpawn<EffectTarget<Gravity>>>,
-{
-	const INSERT: InsertDerivedComponent = InsertDerivedComponent::IfNew;
-
-	type TParam = ();
-
-	fn derive_from(_: Entity, component: &T, _: &()) -> Self {
-		match component.ref_into() {
-			AttributeOnSpawn(EffectTarget::Affected) => Self::affected([]),
-			AttributeOnSpawn(EffectTarget::Immune) => Self::Immune,
+impl From<AttributeOnSpawn<EffectTarget<Gravity>>> for GravityAffected {
+	fn from(AttributeOnSpawn(target): AttributeOnSpawn<EffectTarget<Gravity>>) -> Self {
+		match target {
+			EffectTarget::Affected => Self::affected([]),
+			EffectTarget::Immune => Self::Immune,
 		}
 	}
+}
+
+impl AffectedComponent for GravityAffected {
+	type TAttribute = EffectTarget<Gravity>;
 }
 
 #[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]

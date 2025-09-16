@@ -2,38 +2,23 @@ pub(crate) mod enemy_type;
 pub(crate) mod void_sphere;
 
 use crate::components::enemy::enemy_type::EnemyTypeInternal;
-use bevy::{asset::AssetPath, prelude::*};
+use bevy::prelude::*;
 use bevy_rapier3d::prelude::{GravityScale, RigidBody};
 use common::{
-	attributes::{effect_target::EffectTarget, health::Health},
 	components::{
 		collider_relationship::InteractionTarget,
-		ground_offset::GroundOffset,
 		is_blocker::{Blocker, IsBlocker},
 		persistent_entity::PersistentEntity,
 	},
-	effects::{force::Force, gravity::Gravity},
-	errors::Error,
 	tools::{
 		action_key::slot::SlotKey,
 		aggro_range::AggroRange,
 		attack_range::AttackRange,
-		attribute::AttributeOnSpawn,
-		bone::Bone,
 		collider_radius::ColliderRadius,
 		movement_animation::MovementAnimation,
 		speed::Speed,
 	},
-	traits::{
-		handles_enemies::{EnemySkillUsage, EnemyTarget, EnemyType},
-		handles_skill_behaviors::SkillSpawner,
-		load_asset::LoadAsset,
-		loadout::LoadoutConfig,
-		mapper::Mapper,
-		prefab::{Prefab, PrefabEntityCommands},
-		register_derived_component::{DerivableFrom, InsertDerivedComponent},
-		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
-	},
+	traits::handles_enemies::{EnemySkillUsage, EnemyTarget, EnemyType},
 };
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
@@ -101,70 +86,6 @@ impl From<&Enemy> for ColliderRadius {
 	}
 }
 
-impl LoadoutConfig for Enemy {
-	fn inventory(&self) -> impl Iterator<Item = Option<AssetPath<'static>>> {
-		self.enemy_type.inventory()
-	}
-
-	fn slots(&self) -> impl Iterator<Item = (SlotKey, Option<AssetPath<'static>>)> {
-		self.enemy_type.slots()
-	}
-}
-
-impl VisibleSlots for Enemy {
-	fn visible_slots(&self) -> impl Iterator<Item = SlotKey> {
-		self.enemy_type.visible_slots()
-	}
-}
-
-impl Mapper<Bone<'_>, Option<EssenceSlot>> for Enemy {
-	fn map(&self, bone: Bone<'_>) -> Option<EssenceSlot> {
-		self.enemy_type.map(bone)
-	}
-}
-
-impl Mapper<Bone<'_>, Option<HandSlot>> for Enemy {
-	fn map(&self, bone: Bone<'_>) -> Option<HandSlot> {
-		self.enemy_type.map(bone)
-	}
-}
-
-impl Mapper<Bone<'_>, Option<ForearmSlot>> for Enemy {
-	fn map(&self, bone: Bone<'_>) -> Option<ForearmSlot> {
-		self.enemy_type.map(bone)
-	}
-}
-
-impl Mapper<Bone<'_>, Option<SkillSpawner>> for Enemy {
-	fn map(&self, bone: Bone) -> Option<SkillSpawner> {
-		self.enemy_type.map(bone)
-	}
-}
-
-impl From<&Enemy> for AttributeOnSpawn<Health> {
-	fn from(enemy: &Enemy) -> Self {
-		match enemy.enemy_type {
-			EnemyTypeInternal::VoidSphere(_) => Self(Health::new(5.)),
-		}
-	}
-}
-
-impl From<&Enemy> for AttributeOnSpawn<EffectTarget<Gravity>> {
-	fn from(enemy: &Enemy) -> Self {
-		match enemy.enemy_type {
-			EnemyTypeInternal::VoidSphere(_) => Self(EffectTarget::Affected),
-		}
-	}
-}
-
-impl From<&Enemy> for AttributeOnSpawn<EffectTarget<Force>> {
-	fn from(enemy: &Enemy) -> Self {
-		match enemy.enemy_type {
-			EnemyTypeInternal::VoidSphere(_) => Self(EffectTarget::Affected),
-		}
-	}
-}
-
 impl EnemySkillUsage for Enemy {
 	fn hold_skill(&self) -> Duration {
 		self.enemy_type.hold_skill()
@@ -176,25 +97,5 @@ impl EnemySkillUsage for Enemy {
 
 	fn skill_key(&self) -> SlotKey {
 		self.enemy_type.skill_key()
-	}
-}
-
-impl<'w, 's> DerivableFrom<'w, 's, Enemy> for GroundOffset {
-	const INSERT: InsertDerivedComponent = InsertDerivedComponent::IfNew;
-
-	type TParam = ();
-
-	fn derive_from(_: Entity, Enemy { enemy_type, .. }: &Enemy, _: &()) -> Self {
-		Self::from(enemy_type)
-	}
-}
-
-impl Prefab<()> for Enemy {
-	fn insert_prefab_components(
-		&self,
-		entity: &mut impl PrefabEntityCommands,
-		assets: &mut impl LoadAsset,
-	) -> Result<(), Error> {
-		Prefab::<()>::insert_prefab_components(&self.enemy_type, entity, assets)
 	}
 }
