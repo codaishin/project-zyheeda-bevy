@@ -23,10 +23,11 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Asset, TypePath, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[cfg_attr(test, derive(Default))]
 pub struct AgentAsset {
-	loadout: Loadout,
-	bones: Bones,
-	attributes: Attributes,
+	pub(crate) loadout: Loadout,
+	pub(crate) bones: Bones,
+	pub(crate) attributes: Attributes,
 }
 
 impl AssetFileExtensions for AgentAsset {
@@ -120,8 +121,8 @@ impl From<&AgentAsset> for AttributeOnSpawn<EffectTarget<Force>> {
 	}
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-struct Loadout {
+#[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+pub(crate) struct Loadout {
 	visible_slots: Vec<AgentSlotKey>,
 	inventory: Vec<Option<AssetPath<'static>>>,
 	slots: Vec<(AgentSlotKey, Option<AssetPath<'static>>)>,
@@ -142,8 +143,8 @@ impl From<AgentSlotKey> for SlotKey {
 	}
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-struct Bones {
+#[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+pub(crate) struct Bones {
 	spawners: HashMap<String, SkillSpawnerDto>,
 	hand_slots: HashMap<String, AgentSlotKey>,
 	forearm_slots: HashMap<String, AgentSlotKey>,
@@ -166,8 +167,20 @@ impl From<SkillSpawnerDto> for SkillSpawner {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
-struct Attributes {
+
+pub(crate) struct Attributes {
 	health: Health,
 	gravity_interaction: EffectTarget<Gravity>,
 	force_interaction: EffectTarget<Force>,
+}
+
+#[cfg(test)]
+impl Default for Attributes {
+	fn default() -> Self {
+		Self {
+			health: Health::new(100.),
+			gravity_interaction: EffectTarget::Affected,
+			force_interaction: EffectTarget::Affected,
+		}
+	}
 }
