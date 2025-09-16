@@ -4,7 +4,7 @@ mod resources;
 mod systems;
 
 use crate::{
-	assets::agent::AgentAsset,
+	assets::agent_config::{AgentConfig, AgentConfigAsset},
 	components::{
 		agent::Agent,
 		enemy::{Enemy, void_sphere::VoidSphere},
@@ -83,9 +83,9 @@ where
 {
 	fn build(&self, app: &mut App) {
 		// Agent assets
-		TLoading::register_custom_assets::<AgentAsset, AgentAsset>(app);
-		app.init_asset::<AgentAsset>();
-		app.add_systems(Update, Agent::<AgentAsset>::load);
+		TLoading::register_custom_assets::<AgentConfigAsset, AgentConfigAsset>(app);
+		app.init_asset::<AgentConfigAsset>();
+		app.add_systems(Update, Agent::<AgentConfigAsset>::load);
 
 		// Animations
 		TAnimations::register_animations::<Player>(app);
@@ -109,7 +109,6 @@ where
 		// Prefabs
 		app.add_prefab_observer::<Player, TLights>();
 		app.add_prefab_observer::<VoidSphere, ()>();
-		app.add_prefab_observer::<Enemy, ()>();
 
 		// Behaviors
 		app.init_resource::<CamRay>();
@@ -166,6 +165,6 @@ impl<TDependencies> PlayerMainCamera for AgentsPlugin<TDependencies> {
 }
 
 impl<TDependencies> HandlesAgents for AgentsPlugin<TDependencies> {
-	type TAgentAsset = AgentAsset;
+	type TAgentData<'a> = AgentConfig<'a>;
 	type TAgent = Agent;
 }

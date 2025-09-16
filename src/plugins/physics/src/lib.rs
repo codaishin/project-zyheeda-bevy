@@ -8,23 +8,24 @@ mod systems;
 
 use crate::{
 	components::{
+		affected::{force_affected::ForceAffected, gravity_affected::GravityAffected, life::Life},
 		blockable::Blockable,
 		effect::force::ForceEffect,
-		force_affected::ForceAffected,
-		gravity_affected::GravityAffected,
-		life::Life,
 		motion::Motion,
 	},
 	observers::update_blockers::UpdateBlockersObserver,
-	systems::{apply_pull::ApplyPull, interactions::act_on::ActOnSystem},
+	systems::{
+		apply_pull::ApplyPull,
+		insert_affected::InsertAffected,
+		interactions::act_on::ActOnSystem,
+	},
 };
 use bevy::{ecs::component::Mutable, prelude::*};
 use bevy_rapier3d::prelude::Velocity;
 use common::traits::{
 	delta::Delta,
-	handles_enemies::HandlesEnemies,
+	handles_agents::HandlesAgents,
 	handles_physics::{HandlesMotion, HandlesPhysicalObjects},
-	handles_player::HandlesPlayer,
 	handles_saving::{HandlesSaving, SavableComponent},
 	register_derived_component::RegisterDerivedComponent,
 	thread_safe::ThreadSafe,
@@ -61,7 +62,7 @@ pub struct PhysicsPlugin<TDependencies>(PhantomData<TDependencies>);
 impl<TSaveGame, TAgents> PhysicsPlugin<(TSaveGame, TAgents)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TAgents: ThreadSafe + HandlesPlayer + HandlesEnemies,
+	TAgents: ThreadSafe + HandlesAgents,
 {
 	pub fn from_plugin(_: &TSaveGame, _: &TAgents) -> Self {
 		Self(PhantomData)
@@ -71,7 +72,7 @@ where
 impl<TSaveGame, TAgents> Plugin for PhysicsPlugin<(TSaveGame, TAgents)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TAgents: ThreadSafe + HandlesPlayer + HandlesEnemies,
+	TAgents: ThreadSafe + HandlesAgents,
 {
 	fn build(&self, app: &mut App) {
 		TSaveGame::register_savable_component::<Motion>(app);
@@ -87,27 +88,33 @@ where
 					.in_set(PhysicsSystems),
 			)
 			// Deal health damage
-			.register_derived_component::<TAgents::TPlayer, Life>()
-			.register_derived_component::<TAgents::TEnemy, Life>()
 			.add_physics::<HealthDamageEffect, Life, TSaveGame>()
 			.add_observer(HealthDamageEffect::update_blockers)
-			.add_systems(Update, Life::despawn_dead.in_set(PhysicsSystems))
+			.add_systems(
+				Update,
+				(Life::insert_on::<TAgents::TAgent>, Life::despawn_dead)
+					.chain()
+					.in_set(PhysicsSystems),
+			)
 			// Apply gravity effect
-			.register_derived_component::<TAgents::TPlayer, GravityAffected>()
-			.register_derived_component::<TAgents::TEnemy, GravityAffected>()
 			.add_physics::<GravityEffect, GravityAffected, TSaveGame>()
 			.add_observer(GravityEffect::update_blockers)
 			.add_systems(
 				Update,
-				Update::delta
-					.pipe(GravityAffected::apply_pull)
+				(
+					GravityAffected::insert_on::<TAgents::TAgent>,
+					Update::delta.pipe(GravityAffected::apply_pull),
+				)
+					.chain()
 					.in_set(PhysicsSystems),
 			)
 			// Apply force effect
-			.register_derived_component::<TAgents::TPlayer, ForceAffected>()
-			.register_derived_component::<TAgents::TEnemy, ForceAffected>()
 			.add_physics::<ForceEffect, ForceAffected, TSaveGame>()
 			.add_observer(ForceEffect::update_blockers)
+			.add_systems(
+				Update,
+				ForceAffected::insert_on::<TAgents::TAgent>.in_set(PhysicsSystems),
+			)
 			// Apply interactions
 			.add_event::<InteractionEvent>()
 			.add_event::<InteractionEvent<Ray>>()

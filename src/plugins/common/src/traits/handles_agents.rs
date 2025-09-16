@@ -3,7 +3,7 @@ use crate::{
 	effects::{force::Force, gravity::Gravity},
 	tools::{attribute::AttributeOnSpawn, bone::Bone},
 	traits::{
-		accessors::get::RefInto,
+		accessors::get::{GetFromSystemParam, GetProperty},
 		handles_enemies::EnemyType,
 		handles_skill_behaviors::SkillSpawner,
 		loadout::LoadoutConfig,
@@ -11,26 +11,22 @@ use crate::{
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
 	},
 };
-use bevy::{
-	asset::{Asset, Handle},
-	ecs::component::Component,
-};
+use bevy::ecs::component::Component;
 use serde::{Deserialize, Serialize};
 
 pub trait HandlesAgents {
-	type TAgentAsset: Asset
-		+ VisibleSlots
+	type TAgentData<'a>: VisibleSlots
 		+ LoadoutConfig
-		+ for<'a> Mapper<Bone<'a>, Option<SkillSpawner>>
-		+ for<'a> Mapper<Bone<'a>, Option<EssenceSlot>>
-		+ for<'a> Mapper<Bone<'a>, Option<HandSlot>>
-		+ for<'a> Mapper<Bone<'a>, Option<ForearmSlot>>
-		+ for<'a> RefInto<'a, AttributeOnSpawn<Health>>
-		+ for<'a> RefInto<'a, AttributeOnSpawn<EffectTarget<Gravity>>>
-		+ for<'a> RefInto<'a, AttributeOnSpawn<EffectTarget<Force>>>;
+		+ Mapper<Bone<'a>, Option<SkillSpawner>>
+		+ Mapper<Bone<'a>, Option<EssenceSlot>>
+		+ Mapper<Bone<'a>, Option<HandSlot>>
+		+ Mapper<Bone<'a>, Option<ForearmSlot>>
+		+ GetProperty<AttributeOnSpawn<Health>>
+		+ GetProperty<AttributeOnSpawn<EffectTarget<Gravity>>>
+		+ GetProperty<AttributeOnSpawn<EffectTarget<Force>>>;
 	type TAgent: Component
 		+ From<AgentType>
-		+ for<'a> RefInto<'a, Result<&'a Handle<Self::TAgentAsset>, AgentNotLoaded>>;
+		+ for<'i> GetFromSystemParam<(), TItem<'i> = Self::TAgentData<'i>>;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
@@ -40,4 +36,4 @@ pub enum AgentType {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub struct AgentNotLoaded;
+pub struct AgentAssetNotLoaded;

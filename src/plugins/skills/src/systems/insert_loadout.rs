@@ -2,61 +2,68 @@ use crate::components::{inventory::Inventory, loadout::Loadout, slots::Slots};
 use bevy::prelude::*;
 use common::{
 	traits::{
-		accessors::get::TryApplyOn,
+		accessors::get::{AssociatedSystemParam, GetFromSystemParam, TryApplyOn},
 		load_asset::LoadAsset,
 		loadout::LoadoutConfig,
-		thread_safe::ThreadSafe,
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
 
-impl<T> Loadout<T>
+impl<TAgent> Loadout<TAgent>
 where
-	T: LoadoutConfig + Component + ThreadSafe,
+	TAgent: Component + GetFromSystemParam<()>,
+	for<'i> TAgent::TItem<'i>: LoadoutConfig,
 {
+	#[allow(clippy::type_complexity)]
 	pub(crate) fn insert(
-		trigger: Trigger<OnInsert, T>,
-		agents: Query<(&T, Option<&Inventory>, Option<&Slots>)>,
+		agents: Query<
+			(Entity, &TAgent, Option<&Inventory>, Option<&Slots>),
+			Without<Loadout<TAgent>>,
+		>,
 		commands: ZyheedaCommands,
-		assets: ResMut<AssetServer>,
+		server: ResMut<AssetServer>,
+		param: AssociatedSystemParam<TAgent, ()>,
 	) {
-		insert_internal(trigger, agents, commands, assets);
+		insert_internal(agents, commands, server, param);
 	}
 }
 
-fn insert_internal<T, TAssets>(
-	trigger: Trigger<OnInsert, T>,
-	agents: Query<(&T, Option<&Inventory>, Option<&Slots>)>,
+#[allow(clippy::type_complexity)]
+fn insert_internal<TAgent, TAssetServer>(
+	agents: Query<(Entity, &TAgent, Option<&Inventory>, Option<&Slots>), Without<Loadout<TAgent>>>,
 	mut commands: ZyheedaCommands,
-	mut assets: ResMut<TAssets>,
+	mut server: ResMut<TAssetServer>,
+	param: AssociatedSystemParam<TAgent, ()>,
 ) where
-	T: LoadoutConfig + Component + ThreadSafe,
-	TAssets: Resource + LoadAsset,
+	TAgent: Component + GetFromSystemParam<()>,
+	TAssetServer: Resource + LoadAsset,
+	for<'i> TAgent::TItem<'i>: LoadoutConfig,
 {
-	let entity = trigger.target();
-	let Ok((agent, inventory, slots)) = agents.get(entity) else {
-		return;
-	};
+	for (entity, agent, inventory, slots) in &agents {
+		let Some(config) = agent.get_from_param(&(), &param) else {
+			continue;
+		};
 
-	commands.try_apply_on(&entity, |mut e| {
-		e.try_insert(Loadout::<T>::default());
+		commands.try_apply_on(&entity, |mut e| {
+			e.try_insert(Loadout::<TAgent>::default());
 
-		if inventory.is_none() {
-			e.try_insert(Inventory::from(
-				agent
-					.inventory()
-					.map(|path| path.map(|path| assets.load_asset(path))),
-			));
-		}
+			if inventory.is_none() {
+				e.try_insert(Inventory::from(
+					config
+						.inventory()
+						.map(|path| path.map(|path| server.load_asset(path))),
+				));
+			}
 
-		if slots.is_none() {
-			e.try_insert(Slots::from(
-				agent
-					.slots()
-					.map(|(key, path)| (key, path.map(|path| assets.load_asset(path)))),
-			));
-		}
-	});
+			if slots.is_none() {
+				e.try_insert(Slots::from(
+					config
+						.slots()
+						.map(|(key, path)| (key, path.map(|path| server.load_asset(path)))),
+				));
+			}
+		});
+	}
 }
 
 #[cfg(test)]
@@ -86,12 +93,24 @@ mod tests {
 	}
 
 	#[derive(Component, Debug, PartialEq)]
-	struct _Agent {
+	struct _Agent(_Config);
+
+	impl GetFromSystemParam<()> for _Agent {
+		type TParam<'w, 's> = ();
+		type TItem<'i> = _Config;
+
+		fn get_from_param<'a>(&self, _: &(), _: &()) -> Option<_Config> {
+			Some(self.0.clone())
+		}
+	}
+
+	#[derive(Debug, PartialEq, Clone)]
+	struct _Config {
 		inventory: Vec<Option<AssetPath<'static>>>,
 		slots: Vec<(SlotKey, Option<AssetPath<'static>>)>,
 	}
 
-	impl LoadoutConfig for _Agent {
+	impl LoadoutConfig for _Config {
 		fn inventory(&self) -> impl Iterator<Item = Option<AssetPath<'static>>> {
 			self.inventory.iter().cloned()
 		}
@@ -105,7 +124,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.insert_resource(assets);
-		app.add_observer(insert_internal::<_Agent, _Assets>);
+		app.add_systems(Update, insert_internal::<_Agent, _Assets>);
 
 		app
 	}
@@ -122,12 +141,17 @@ mod tests {
 				.with(eq(AssetPath::from("slot item")))
 				.return_const(slot_item.clone());
 		}));
+		let entity = app
+			.world_mut()
+			.spawn(_Agent(_Config {
+				inventory: vec![Some(AssetPath::from("inventory item"))],
+				slots: vec![(SlotKey(42), Some(AssetPath::from("slot item")))],
+			}))
+			.id();
 
-		let entity = app.world_mut().spawn(_Agent {
-			inventory: vec![Some(AssetPath::from("inventory item"))],
-			slots: vec![(SlotKey(42), Some(AssetPath::from("slot item")))],
-		});
+		app.update();
 
+		let entity = app.world().entity(entity);
 		assert_eq!(
 			(
 				Some(&Loadout::<_Agent>::default()),
@@ -152,14 +176,15 @@ mod tests {
 				.with(eq(AssetPath::from("slot item")))
 				.return_const(new_handle());
 		}));
-
 		app.world_mut().spawn((
-			_Agent {
+			_Agent(_Config {
 				inventory: vec![Some(AssetPath::from("inventory item"))],
 				slots: vec![(SlotKey(42), Some(AssetPath::from("slot item")))],
-			},
+			}),
 			Inventory::from([]),
 		));
+
+		app.update();
 	}
 
 	#[test]
@@ -173,15 +198,20 @@ mod tests {
 				.with(eq(AssetPath::from("slot item")))
 				.return_const(slot_item.clone());
 		}));
+		let entity = app
+			.world_mut()
+			.spawn((
+				_Agent(_Config {
+					inventory: vec![Some(AssetPath::from("inventory item"))],
+					slots: vec![(SlotKey(42), Some(AssetPath::from("slot item")))],
+				}),
+				Inventory::from([]),
+			))
+			.id();
 
-		let entity = app.world_mut().spawn((
-			_Agent {
-				inventory: vec![Some(AssetPath::from("inventory item"))],
-				slots: vec![(SlotKey(42), Some(AssetPath::from("slot item")))],
-			},
-			Inventory::from([]),
-		));
+		app.update();
 
+		let entity = app.world().entity(entity);
 		assert_eq!(
 			(
 				Some(&Loadout::<_Agent>::default()),
@@ -206,14 +236,15 @@ mod tests {
 				.with(eq(AssetPath::from("slot item")))
 				.never();
 		}));
-
 		app.world_mut().spawn((
-			_Agent {
+			_Agent(_Config {
 				inventory: vec![Some(AssetPath::from("inventory item"))],
 				slots: vec![(SlotKey(42), Some(AssetPath::from("slot item")))],
-			},
+			}),
 			Slots::from([]),
 		));
+
+		app.update();
 	}
 
 	#[test]
@@ -227,15 +258,20 @@ mod tests {
 				.with(eq(AssetPath::from("slot item")))
 				.return_const(new_handle());
 		}));
+		let entity = app
+			.world_mut()
+			.spawn((
+				_Agent(_Config {
+					inventory: vec![Some(AssetPath::from("inventory item"))],
+					slots: vec![(SlotKey(42), Some(AssetPath::from("slot item")))],
+				}),
+				Slots::from([]),
+			))
+			.id();
 
-		let entity = app.world_mut().spawn((
-			_Agent {
-				inventory: vec![Some(AssetPath::from("inventory item"))],
-				slots: vec![(SlotKey(42), Some(AssetPath::from("slot item")))],
-			},
-			Slots::from([]),
-		));
+		app.update();
 
+		let entity = app.world().entity(entity);
 		assert_eq!(
 			(
 				Some(&Loadout::<_Agent>::default()),
@@ -260,16 +296,21 @@ mod tests {
 				.with(eq(AssetPath::from("slot item")))
 				.return_const(new_handle());
 		}));
+		let entity = app
+			.world_mut()
+			.spawn((
+				_Agent(_Config {
+					inventory: vec![Some(AssetPath::from("inventory item"))],
+					slots: vec![(SlotKey(42), Some(AssetPath::from("slot item")))],
+				}),
+				Inventory::from([]),
+				Slots::from([]),
+			))
+			.id();
 
-		let entity = app.world_mut().spawn((
-			_Agent {
-				inventory: vec![Some(AssetPath::from("inventory item"))],
-				slots: vec![(SlotKey(42), Some(AssetPath::from("slot item")))],
-			},
-			Inventory::from([]),
-			Slots::from([]),
-		));
+		app.update();
 
+		let entity = app.world().entity(entity);
 		assert_eq!(
 			(
 				Some(&Loadout::<_Agent>::default()),
@@ -282,5 +323,22 @@ mod tests {
 				entity.get::<Slots>(),
 			)
 		);
+	}
+
+	#[test]
+	fn do_nothing_if_loadout_marker_present() {
+		let mut app = setup(_Assets::new().with_mock(|mock| {
+			mock.expect_load_asset::<Item, AssetPath<'static>>().never();
+			mock.expect_load_asset::<Item, AssetPath<'static>>().never();
+		}));
+		app.world_mut().spawn((
+			Loadout::<_Agent>::default(),
+			_Agent(_Config {
+				inventory: vec![Some(AssetPath::from("inventory item"))],
+				slots: vec![(SlotKey(42), Some(AssetPath::from("slot item")))],
+			}),
+		));
+
+		app.update();
 	}
 }

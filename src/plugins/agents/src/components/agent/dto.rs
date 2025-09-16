@@ -18,10 +18,7 @@ impl From<Agent> for AgentDto {
 			Agent::Path(asset_path) => Self {
 				asset_path: Some(asset_path.to_string()),
 			},
-			Agent::Loading(handle) => Self {
-				asset_path: handle.path().map(AssetPath::to_string),
-			},
-			Agent::Loaded(handle) => Self {
+			Agent::Handle(handle) => Self {
 				asset_path: handle.path().map(AssetPath::to_string),
 			},
 		}
@@ -39,8 +36,8 @@ impl TryLoadFrom<AgentDto> for Agent {
 		TLoadAsset: LoadAsset,
 	{
 		Ok(match asset_path {
-			Some(path) => Self::Loading(asset_server.load_asset(path)),
-			None => Self::Loading(Handle::default()), // FIXME: do we need a default asset model, just in case?
+			Some(path) => Self::Handle(asset_server.load_asset(path)),
+			None => Self::Handle(Handle::default()), // FIXME: do we need a default asset model, just in case?
 		})
 	}
 }

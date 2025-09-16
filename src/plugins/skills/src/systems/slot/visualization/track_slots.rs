@@ -2,7 +2,11 @@ use crate::components::slots::visualization::SlotVisualization;
 use bevy::prelude::*;
 use common::{
 	tools::bone::Bone,
-	traits::{mapper::Mapper, thread_safe::ThreadSafe},
+	traits::{
+		accessors::get::{AssociatedSystemParam, GetFromSystemParam},
+		mapper::Mapper,
+		thread_safe::ThreadSafe,
+	},
 };
 use std::hash::Hash;
 
@@ -14,8 +18,10 @@ where
 		mut agents: Query<(&TAgent, &mut Self)>,
 		names: Query<(Entity, &Name), Added<Name>>,
 		parents: Query<&ChildOf>,
+		param: AssociatedSystemParam<TAgent, ()>,
 	) where
-		TAgent: Component + for<'a> Mapper<Bone<'a>, Option<TKey>>,
+		TAgent: Component + GetFromSystemParam<()>,
+		for<'i> TAgent::TItem<'i>: Mapper<Bone<'i>, Option<TKey>>,
 	{
 		for (entity, name) in names {
 			let Some(parent) = parents.iter_ancestors(entity).find(|p| agents.contains(*p)) else {
@@ -24,7 +30,10 @@ where
 			let Ok((agent, mut slots)) = agents.get_mut(parent) else {
 				continue;
 			};
-			let Some(key) = agent.map(Bone(name.as_str())) else {
+			let Some(mapper) = agent.get_from_param(&(), &param) else {
+				continue;
+			};
+			let Some(key) = mapper.map(Bone(name.as_str())) else {
 				continue;
 			};
 			slots.slots.insert(key, entity);
@@ -44,7 +53,18 @@ mod tests {
 	#[require(SlotVisualization<_Key>)]
 	struct _Agent;
 
-	impl Mapper<Bone<'_>, Option<_Key>> for _Agent {
+	impl GetFromSystemParam<()> for _Agent {
+		type TParam<'w, 's> = ();
+		type TItem<'i> = _Config;
+
+		fn get_from_param(&self, _: &(), _: &()) -> Option<_Config> {
+			Some(_Config)
+		}
+	}
+
+	struct _Config;
+
+	impl Mapper<Bone<'_>, Option<_Key>> for _Config {
 		fn map(&self, Bone(bone): Bone<'_>) -> Option<_Key> {
 			match bone {
 				"key" => Some(_Key),

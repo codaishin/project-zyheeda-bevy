@@ -1,23 +1,18 @@
 use super::player_movement::{Config, MovementMode, PlayerMovement};
-use bevy::{asset::AssetPath, prelude::*};
+use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
-	attributes::{effect_target::EffectTarget, health::Health},
 	components::{asset_model::AssetModel, flip::FlipHorizontally, ground_offset::GroundOffset},
-	effects::{force::Force, gravity::Gravity},
 	errors::Error,
 	tools::{
 		Units,
 		UnitsPerSecond,
-		action_key::slot::{PlayerSlot, Side, SlotKey},
+		action_key::slot::{PlayerSlot, Side},
 		animation_key::AnimationKey,
-		attribute::AttributeOnSpawn,
-		bone::Bone,
 		collider_radius::ColliderRadius,
 		iter_helpers::{first, next},
 	},
 	traits::{
-		accessors::get::GetProperty,
 		animation::{
 			Animation,
 			AnimationAsset,
@@ -31,18 +26,13 @@ use common::{
 			StopAnimation,
 		},
 		handles_lights::HandlesLights,
-		handles_skill_behaviors::SkillSpawner,
 		iteration::{Iter, IterFinite},
 		load_asset::{LoadAsset, Path},
-		loadout::LoadoutConfig,
-		mapper::Mapper,
 		prefab::{Prefab, PrefabEntityCommands},
-		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
 	},
 };
-use macros::item_asset;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, sync::LazyLock};
+use std::collections::HashMap;
 
 #[derive(Component, Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[require(
@@ -135,82 +125,6 @@ impl Player {
 				.into(),
 			},
 		}
-	}
-}
-
-static VISIBLE_SLOTS: LazyLock<Vec<SlotKey>> =
-	LazyLock::new(|| PlayerSlot::iterator().map(SlotKey::from).collect());
-
-impl VisibleSlots for Player {
-	fn visible_slots(&self) -> impl Iterator<Item = SlotKey> {
-		VISIBLE_SLOTS.iter().copied()
-	}
-}
-
-impl<'a> Mapper<Bone<'a>, Option<SkillSpawner>> for Player {
-	fn map(&self, Bone(bone): Bone) -> Option<SkillSpawner> {
-		match bone {
-			"skill_spawn" => Some(SkillSpawner::Neutral),
-			"skill_spawn_top.R" => Some(SkillSpawner::Slot(SlotKey::from(PlayerSlot::UPPER_R))),
-			"skill_spawn_top.L" => Some(SkillSpawner::Slot(SlotKey::from(PlayerSlot::UPPER_L))),
-			"skill_spawn_bottom.R" => Some(SkillSpawner::Slot(SlotKey::from(PlayerSlot::LOWER_R))),
-			"skill_spawn_bottom.L" => Some(SkillSpawner::Slot(SlotKey::from(PlayerSlot::LOWER_L))),
-			_ => None,
-		}
-	}
-}
-
-impl<'a> Mapper<Bone<'a>, Option<EssenceSlot>> for Player {
-	fn map(&self, Bone(bone): Bone) -> Option<EssenceSlot> {
-		match bone {
-			"ArmTopRightData" => Some(EssenceSlot(SlotKey::from(PlayerSlot::UPPER_R))),
-			"ArmTopLeftData" => Some(EssenceSlot(SlotKey::from(PlayerSlot::UPPER_L))),
-			"ArmBottomRightData" => Some(EssenceSlot(SlotKey::from(PlayerSlot::LOWER_R))),
-			"ArmBottomLeftData" => Some(EssenceSlot(SlotKey::from(PlayerSlot::LOWER_L))),
-			_ => None,
-		}
-	}
-}
-
-impl<'a> Mapper<Bone<'a>, Option<ForearmSlot>> for Player {
-	fn map(&self, Bone(bone): Bone) -> Option<ForearmSlot> {
-		match bone {
-			"top_forearm.R" => Some(ForearmSlot(SlotKey::from(PlayerSlot::UPPER_R))),
-			"top_forearm.L" => Some(ForearmSlot(SlotKey::from(PlayerSlot::UPPER_L))),
-			"bottom_forearm.R" => Some(ForearmSlot(SlotKey::from(PlayerSlot::LOWER_R))),
-			"bottom_forearm.L" => Some(ForearmSlot(SlotKey::from(PlayerSlot::LOWER_L))),
-			_ => None,
-		}
-	}
-}
-
-impl<'a> Mapper<Bone<'a>, Option<HandSlot>> for Player {
-	fn map(&self, Bone(bone): Bone) -> Option<HandSlot> {
-		match bone {
-			"top_hand_slot.R" => Some(HandSlot(SlotKey::from(PlayerSlot::UPPER_R))),
-			"top_hand_slot.L" => Some(HandSlot(SlotKey::from(PlayerSlot::UPPER_L))),
-			"bottom_hand_slot.R" => Some(HandSlot(SlotKey::from(PlayerSlot::LOWER_R))),
-			"bottom_hand_slot.L" => Some(HandSlot(SlotKey::from(PlayerSlot::LOWER_L))),
-			_ => None,
-		}
-	}
-}
-
-impl GetProperty<AttributeOnSpawn<Health>> for Player {
-	fn get_property(&self) -> Health {
-		Health::new(100.)
-	}
-}
-
-impl GetProperty<AttributeOnSpawn<EffectTarget<Gravity>>> for Player {
-	fn get_property(&self) -> EffectTarget<Gravity> {
-		EffectTarget::Affected
-	}
-}
-
-impl GetProperty<AttributeOnSpawn<EffectTarget<Force>>> for Player {
-	fn get_property(&self) -> EffectTarget<Force> {
-		EffectTarget::Affected
 	}
 }
 
@@ -332,45 +246,6 @@ where
 		));
 
 		Ok(())
-	}
-}
-
-static INVENTORY: LazyLock<Vec<Option<AssetPath<'static>>>> = LazyLock::new(|| {
-	vec![
-		Some(AssetPath::from(item_asset!("pistol"))),
-		Some(AssetPath::from(item_asset!("pistol"))),
-		Some(AssetPath::from(item_asset!("pistol"))),
-	]
-});
-
-static SLOTS: LazyLock<Vec<(SlotKey, Option<AssetPath<'static>>)>> = LazyLock::new(|| {
-	vec![
-		(
-			SlotKey::from(PlayerSlot::Upper(Side::Left)),
-			Some(AssetPath::from(item_asset!("pistol"))),
-		),
-		(
-			SlotKey::from(PlayerSlot::Lower(Side::Left)),
-			Some(AssetPath::from(item_asset!("pistol"))),
-		),
-		(
-			SlotKey::from(PlayerSlot::Lower(Side::Right)),
-			Some(AssetPath::from(item_asset!("force_essence"))),
-		),
-		(
-			SlotKey::from(PlayerSlot::Upper(Side::Right)),
-			Some(AssetPath::from(item_asset!("force_essence"))),
-		),
-	]
-});
-
-impl LoadoutConfig for Player {
-	fn inventory(&self) -> impl Iterator<Item = Option<AssetPath<'static>>> {
-		INVENTORY.iter().cloned()
-	}
-
-	fn slots(&self) -> impl Iterator<Item = (SlotKey, Option<AssetPath<'static>>)> {
-		SLOTS.iter().cloned()
 	}
 }
 

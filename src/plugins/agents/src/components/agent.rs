@@ -1,6 +1,9 @@
 mod dto;
 
-use crate::{assets::agent::AgentAsset, components::agent::dto::AgentDto};
+use crate::{
+	assets::agent_config::{AgentConfig, AgentConfigAsset},
+	components::agent::dto::AgentDto,
+};
 use bevy::{asset::AssetPath, prelude::*};
 use bevy_rapier3d::prelude::{GravityScale, RigidBody};
 use common::{
@@ -10,7 +13,8 @@ use common::{
 		persistent_entity::PersistentEntity,
 	},
 	traits::{
-		handles_agents::{AgentNotLoaded, AgentType},
+		accessors::get::GetFromSystemParam,
+		handles_agents::AgentType,
 		handles_enemies::EnemyType,
 	},
 };
@@ -27,13 +31,12 @@ use macros::{SavableComponent, agent_asset};
 	GravityScale = GravityScale(0.),
 	IsBlocker = [Blocker::Character],
 )]
-pub enum Agent<TAsset = AgentAsset>
+pub enum Agent<TAsset = AgentConfigAsset>
 where
 	TAsset: Asset,
 {
 	Path(AssetPath<'static>),
-	Loading(Handle<TAsset>),
-	Loaded(Handle<TAsset>),
+	Handle(Handle<TAsset>),
 }
 
 impl From<AgentType> for Agent {
@@ -45,11 +48,21 @@ impl From<AgentType> for Agent {
 	}
 }
 
-impl<'a> From<&'a Agent> for Result<&'a Handle<AgentAsset>, AgentNotLoaded> {
-	fn from(value: &'a Agent) -> Self {
-		match value {
-			Agent::Loaded(handle) => Ok(handle),
-			_ => Err(AgentNotLoaded),
+impl<TAsset> GetFromSystemParam<()> for Agent<TAsset>
+where
+	TAsset: Asset + Clone,
+{
+	type TParam<'w, 's> = Res<'w, Assets<TAsset>>;
+	type TItem<'i> = AgentConfig<'i, TAsset>;
+
+	fn get_from_param<'a>(
+		&'a self,
+		_: &(),
+		assets: &'a Res<Assets<TAsset>>,
+	) -> Option<Self::TItem<'a>> {
+		match self {
+			Agent::Path(..) => None,
+			Agent::Handle(handle) => assets.get(handle).map(AgentConfig::from),
 		}
 	}
 }
@@ -57,18 +70,30 @@ impl<'a> From<&'a Agent> for Result<&'a Handle<AgentAsset>, AgentNotLoaded> {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use std::sync::LazyLock;
 	use test_case::test_case;
+	use testing::SingleThreadedApp;
 
-	static HANDLE: LazyLock<Handle<AgentAsset>> = LazyLock::new(Handle::default);
+	static HANDLE: LazyLock<Handle<_Asset>> = LazyLock::new(Handle::default);
 
-	#[test_case(Agent::Path(AssetPath::from("my/path.agent")), Err(AgentNotLoaded); "none for path")]
-	#[test_case(Agent::Loading(HANDLE.clone()), Err(AgentNotLoaded); "none when loading")]
-	#[test_case(Agent::Loaded(HANDLE.clone()), Ok(HANDLE.clone()); "some when loaded")]
-	fn get_handle(agent: Agent, expected: Result<Handle<AgentAsset>, AgentNotLoaded>) {
-		assert_eq!(
-			expected,
-			Result::<&Handle<AgentAsset>, AgentNotLoaded>::from(&agent).cloned()
-		);
+	#[derive(Asset, TypePath, Debug, PartialEq, Clone)]
+	struct _Asset;
+
+	#[test_case(Agent::Path(AssetPath::from("my/path.agent")), None; "none for path")]
+	#[test_case(Agent::Handle(HANDLE.clone()), Some(AgentConfig::from(&_Asset)); "some when loaded")]
+	fn get_handle(
+		agent: Agent<_Asset>,
+		expected: Option<AgentConfig<'static, _Asset>>,
+	) -> Result<(), RunSystemError> {
+		let mut app = App::new().single_threaded(Update);
+		let mut assets = Assets::default();
+		assets.insert(&*HANDLE, _Asset);
+		app.insert_resource(assets);
+
+		app.world_mut()
+			.run_system_once(move |assets: Res<Assets<_Asset>>| {
+				assert_eq!(expected, agent.get_from_param(&(), &assets));
+			})
 	}
 }
