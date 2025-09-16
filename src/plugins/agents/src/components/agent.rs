@@ -1,4 +1,6 @@
-use crate::assets::agent::AgentAsset;
+mod dto;
+
+use crate::{assets::agent::AgentAsset, components::agent::dto::AgentDto};
 use bevy::{asset::AssetPath, prelude::*};
 use bevy_rapier3d::prelude::{GravityScale, RigidBody};
 use common::{
@@ -12,9 +14,10 @@ use common::{
 		handles_enemies::EnemyType,
 	},
 };
-use macros::agent_asset;
+use macros::{SavableComponent, agent_asset};
 
-#[derive(Component, Debug, PartialEq)]
+#[derive(Component, SavableComponent, Clone, Debug, PartialEq)]
+#[savable_component(dto = AgentDto)]
 #[require(
 	InteractionTarget,
 	PersistentEntity,
@@ -24,10 +27,13 @@ use macros::agent_asset;
 	GravityScale = GravityScale(0.),
 	IsBlocker = [Blocker::Character],
 )]
-pub enum Agent {
+pub enum Agent<TAsset = AgentAsset>
+where
+	TAsset: Asset,
+{
 	Path(AssetPath<'static>),
-	Loading(Handle<AgentAsset>),
-	Loaded(Handle<AgentAsset>),
+	Loading(Handle<TAsset>),
+	Loaded(Handle<TAsset>),
 }
 
 impl From<AgentType> for Agent {

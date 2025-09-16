@@ -40,11 +40,11 @@ use common::{
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
 	},
 };
-use macros::{SavableComponent, item_asset};
+use macros::item_asset;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::LazyLock};
 
-#[derive(Component, SavableComponent, Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Component, Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[require(
 	PlayerMovement = Player::movement(),
 	Name = "Player",

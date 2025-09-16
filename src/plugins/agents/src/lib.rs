@@ -85,7 +85,7 @@ where
 		// Agent assets
 		TLoading::register_custom_assets::<AgentAsset, AgentAsset>(app);
 		app.init_asset::<AgentAsset>();
-		app.add_systems(Update, Agent::load);
+		app.add_systems(Update, Agent::<AgentAsset>::load);
 
 		// Animations
 		TAnimations::register_animations::<Player>(app);
@@ -99,11 +99,11 @@ where
 		);
 
 		// Savedata
-		TSaveGame::register_savable_component::<Player>(app);
+		TSaveGame::register_savable_component::<Agent>(app);
+		TSaveGame::register_savable_component::<Enemy>(app);
 		TSaveGame::register_savable_component::<PlayerCamera>(app);
 		TSaveGame::register_savable_component::<PlayerMovement>(app);
-		TSaveGame::register_savable_component::<Enemy>(app);
-		app.register_required_components::<Player, TSaveGame::TSaveEntityMarker>();
+		app.register_required_components::<Agent, TSaveGame::TSaveEntityMarker>();
 		app.register_required_components::<Enemy, TSaveGame::TSaveEntityMarker>();
 
 		// Prefabs
