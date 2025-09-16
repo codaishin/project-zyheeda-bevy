@@ -83,8 +83,9 @@ where
 {
 	fn build(&self, app: &mut App) {
 		// Agent assets
-		app.init_asset::<AgentAsset>();
 		TLoading::register_custom_assets::<AgentAsset, AgentAsset>(app);
+		app.init_asset::<AgentAsset>();
+		app.add_systems(Update, Agent::load);
 
 		// Animations
 		TAnimations::register_animations::<Player>(app);
@@ -111,19 +112,19 @@ where
 		app.add_prefab_observer::<Enemy, ()>();
 
 		// Behaviors
-		app.init_resource::<CamRay>()
-			.init_resource::<MouseHover>()
-			.add_systems(
-				First,
-				(set_cam_ray::<Camera, PlayerCamera>, set_mouse_hover)
-					.chain()
-					.run_if(in_state(GameState::Play)),
-			)
-			.add_systems(
-				Update,
-				player_toggle_walk_run::<TSettings::TKeyMap<MovementKey>>
-					.run_if(in_state(GameState::Play)),
-			);
+		app.init_resource::<CamRay>();
+		app.init_resource::<MouseHover>();
+		app.add_systems(
+			First,
+			(set_cam_ray::<Camera, PlayerCamera>, set_mouse_hover)
+				.chain()
+				.run_if(in_state(GameState::Play)),
+		);
+		app.add_systems(
+			Update,
+			player_toggle_walk_run::<TSettings::TKeyMap<MovementKey>>
+				.run_if(in_state(GameState::Play)),
+		);
 	}
 }
 

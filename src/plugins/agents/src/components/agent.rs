@@ -7,7 +7,10 @@ use common::{
 		is_blocker::{Blocker, IsBlocker},
 		persistent_entity::PersistentEntity,
 	},
-	traits::{handles_agents::AgentType, handles_enemies::EnemyType},
+	traits::{
+		handles_agents::{AgentNotLoaded, AgentType},
+		handles_enemies::EnemyType,
+	},
 };
 use macros::agent_asset;
 
@@ -23,7 +26,8 @@ use macros::agent_asset;
 )]
 pub enum Agent {
 	Path(AssetPath<'static>),
-	HAndle(Handle<AgentAsset>),
+	Loading(Handle<AgentAsset>),
+	Loaded(Handle<AgentAsset>),
 }
 
 impl From<AgentType> for Agent {
@@ -35,11 +39,30 @@ impl From<AgentType> for Agent {
 	}
 }
 
-impl<'a> From<&'a Agent> for Option<&'a Handle<AgentAsset>> {
+impl<'a> From<&'a Agent> for Result<&'a Handle<AgentAsset>, AgentNotLoaded> {
 	fn from(value: &'a Agent) -> Self {
 		match value {
-			Agent::Path(..) => None,
-			Agent::HAndle(handle) => Some(handle),
+			Agent::Loaded(handle) => Ok(handle),
+			_ => Err(AgentNotLoaded),
 		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use std::sync::LazyLock;
+	use test_case::test_case;
+
+	static HANDLE: LazyLock<Handle<AgentAsset>> = LazyLock::new(Handle::default);
+
+	#[test_case(Agent::Path(AssetPath::from("my/path.agent")), Err(AgentNotLoaded); "none for path")]
+	#[test_case(Agent::Loading(HANDLE.clone()), Err(AgentNotLoaded); "none when loading")]
+	#[test_case(Agent::Loaded(HANDLE.clone()), Ok(HANDLE.clone()); "some when loaded")]
+	fn get_handle(agent: Agent, expected: Result<Handle<AgentAsset>, AgentNotLoaded>) {
+		assert_eq!(
+			expected,
+			Result::<&Handle<AgentAsset>, AgentNotLoaded>::from(&agent).cloned()
+		);
 	}
 }

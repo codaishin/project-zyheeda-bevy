@@ -30,7 +30,7 @@ pub trait HandlesAgents {
 		+ for<'a> RefInto<'a, AttributeOnSpawn<EffectTarget<Force>>>;
 	type TAgent: Component
 		+ From<AgentType>
-		+ for<'a> RefInto<'a, Option<&'a Handle<Self::TAgentAsset>>>;
+		+ for<'a> RefInto<'a, Result<&'a Handle<Self::TAgentAsset>, AgentNotLoaded>>;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
@@ -38,3 +38,6 @@ pub enum AgentType {
 	Player,
 	Enemy(EnemyType),
 }
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct AgentNotLoaded;
