@@ -13,7 +13,7 @@ use common::{
 		skill_execution::SkillExecution,
 	},
 	traits::{
-		accessors::get::GetParamEntry,
+		accessors::get::GetFromSystemParam,
 		handles_loadout::loadout::{LoadoutItem, LoadoutKey, SwapExternal, SwapInternal},
 		iterate::Iterate,
 	},
@@ -34,11 +34,11 @@ where
 	}
 }
 
-impl<'w, 's> GetParamEntry<'w, 's, InventoryKey> for Inventory {
+impl<'w, 's> GetFromSystemParam<'w, 's, InventoryKey> for Inventory {
 	type TParam = SkillItemAssets<'w>;
 	type TItem = SkillItem;
 
-	fn get_param_entry(
+	fn get_from_param(
 		&self,
 		InventoryKey(index): &InventoryKey,
 		SkillItemAssets { items, skills }: &SkillItemAssets,
@@ -173,7 +173,7 @@ mod tests {
 
 				assert_eq!(
 					None,
-					inventory.get_param_entry(&InventoryKey(0), &skill_items)
+					inventory.get_from_param(&InventoryKey(0), &skill_items)
 				);
 			})
 	}
@@ -215,7 +215,7 @@ mod tests {
 							execution: SkillExecution::None
 						})
 					}),
-					inventory.get_param_entry(&InventoryKey(0), &skill_items)
+					inventory.get_from_param(&InventoryKey(0), &skill_items)
 				);
 			})
 	}
@@ -257,7 +257,7 @@ mod tests {
 							execution: SkillExecution::None
 						})
 					}),
-					inventory.get_param_entry(&InventoryKey(2), &skill_items)
+					inventory.get_from_param(&InventoryKey(2), &skill_items)
 				);
 			})
 	}

@@ -4,9 +4,9 @@ use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
 		accessors::get::{
-			AssociatedParam,
-			AssociatedParamEntry,
-			GetParamEntry,
+			AssociatedItem,
+			AssociatedSystemParam,
+			GetFromSystemParam,
 			RefInto,
 			TryApplyOn,
 		},
@@ -19,18 +19,18 @@ use common::{
 impl QuickbarPanel {
 	pub(crate) fn set_icon<TAgent, TSlots>(
 		mut commands: ZyheedaCommands,
-		param: StaticSystemParam<AssociatedParam<TSlots, SlotKey>>,
+		param: StaticSystemParam<AssociatedSystemParam<TSlots, SlotKey>>,
 		panels: Query<PanelComponents>,
 		slots: Query<&TSlots, With<TAgent>>,
 	) where
 		TAgent: Component,
-		for<'w, 's> TSlots: Component + GetParamEntry<'w, 's, SlotKey>,
-		for<'w, 's, 'a> AssociatedParamEntry<'w, 's, TSlots, SlotKey>: RefInto<'a, Result<SkillIcon<'a>, NoSkill>>
+		for<'w, 's> TSlots: Component + GetFromSystemParam<'w, 's, SlotKey>,
+		for<'w, 's, 'a> AssociatedItem<'w, 's, TSlots, SlotKey>: RefInto<'a, Result<SkillIcon<'a>, NoSkill>>
 			+ RefInto<'a, Result<SkillToken<'a>, NoSkill>>,
 	{
 		for slots in &slots {
 			for (entity, Self { key, .. }, current_icon, current_label) in &panels {
-				let Some(item) = slots.get_param_entry(&SlotKey::from(*key), &param) else {
+				let Some(item) = slots.get_from_param(&SlotKey::from(*key), &param) else {
 					continue;
 				};
 				let Ok(SkillToken(token)) = item.ref_into() else {
@@ -87,11 +87,11 @@ mod tests {
 	#[derive(Component)]
 	struct _Slots(HashMap<SlotKey, _Item>);
 
-	impl<'w, 's> GetParamEntry<'w, 's, SlotKey> for _Slots {
+	impl<'w, 's> GetFromSystemParam<'w, 's, SlotKey> for _Slots {
 		type TParam = _Param;
 		type TItem = _Item;
 
-		fn get_param_entry(&self, key: &SlotKey, _: &_Param) -> Option<Self::TItem> {
+		fn get_from_param(&self, key: &SlotKey, _: &_Param) -> Option<Self::TItem> {
 			self.0.get(key).cloned()
 		}
 	}

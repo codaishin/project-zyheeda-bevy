@@ -1,7 +1,7 @@
 use crate::{
 	tools::inventory_key::InventoryKey,
 	traits::{
-		accessors::get::GetParamEntry,
+		accessors::get::GetFromSystemParam,
 		handles_loadout::loadout::{LoadoutItem, LoadoutKey, SwapInternal},
 	},
 };
@@ -12,7 +12,7 @@ pub trait InventoryComponent<TItem>:
 	+ LoadoutKey<TKey = InventoryKey>
 	+ LoadoutItem<TItem = TItem>
 	+ SwapInternal
-	+ for<'w, 's> GetParamEntry<'w, 's, InventoryKey, TItem = TItem>
+	+ for<'w, 's> GetFromSystemParam<'w, 's, InventoryKey, TItem = TItem>
 {
 }
 
@@ -21,6 +21,6 @@ impl<T, TItem> InventoryComponent<TItem> for T where
 		+ LoadoutKey<TKey = InventoryKey>
 		+ LoadoutItem<TItem = TItem>
 		+ SwapInternal
-		+ for<'w, 's> GetParamEntry<'w, 's, InventoryKey, TItem = TItem>
+		+ for<'w, 's> GetFromSystemParam<'w, 's, InventoryKey, TItem = TItem>
 {
 }

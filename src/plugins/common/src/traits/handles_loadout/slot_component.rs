@@ -1,7 +1,7 @@
 use crate::{
 	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::GetParamEntry,
+		accessors::get::GetFromSystemParam,
 		handles_loadout::loadout::{LoadoutItem, LoadoutKey, SwapInternal},
 	},
 };
@@ -12,8 +12,8 @@ pub trait SlotComponent<TItem, TSkills>:
 	+ LoadoutKey<TKey = SlotKey>
 	+ LoadoutItem<TItem = TItem>
 	+ SwapInternal
-	+ for<'w, 's> GetParamEntry<'w, 's, SlotKey, TItem = TItem>
-	+ for<'w, 's> GetParamEntry<'w, 's, AvailableSkills<SlotKey>, TItem = TSkills>
+	+ for<'w, 's> GetFromSystemParam<'w, 's, SlotKey, TItem = TItem>
+	+ for<'w, 's> GetFromSystemParam<'w, 's, AvailableSkills<SlotKey>, TItem = TSkills>
 {
 }
 
@@ -22,8 +22,8 @@ impl<T, TItem, TSkills> SlotComponent<TItem, TSkills> for T where
 		+ LoadoutKey<TKey = SlotKey>
 		+ LoadoutItem<TItem = TItem>
 		+ SwapInternal
-		+ for<'w, 's> GetParamEntry<'w, 's, SlotKey, TItem = TItem>
-		+ for<'w, 's> GetParamEntry<'w, 's, AvailableSkills<SlotKey>, TItem = TSkills>
+		+ for<'w, 's> GetFromSystemParam<'w, 's, SlotKey, TItem = TItem>
+		+ for<'w, 's> GetFromSystemParam<'w, 's, AvailableSkills<SlotKey>, TItem = TSkills>
 {
 }
 

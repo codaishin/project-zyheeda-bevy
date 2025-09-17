@@ -6,9 +6,9 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	traits::{
 		accessors::get::{
-			AssociatedParam,
-			AssociatedParamEntry,
-			GetParamEntry,
+			AssociatedItem,
+			AssociatedSystemParam,
+			GetFromSystemParam,
 			RefInto,
 			TryApplyOn,
 		},
@@ -22,16 +22,17 @@ impl InventoryPanel {
 		mut commands: ZyheedaCommands,
 		containers: Query<&TContainer, With<TAgent>>,
 		mut panels: Query<(Entity, &mut Self, &KeyedPanel<TContainer::TKey>)>,
-		param: StaticSystemParam<AssociatedParam<TContainer, TContainer::TKey>>,
+		param: StaticSystemParam<AssociatedSystemParam<TContainer, TContainer::TKey>>,
 	) where
 		TAgent: Component,
-		for<'w, 's> TContainer: Component + LoadoutKey + GetParamEntry<'w, 's, TContainer::TKey>,
-		for<'w, 's, 'a> AssociatedParamEntry<'w, 's, TContainer, TContainer::TKey>:
+		for<'w, 's> TContainer:
+			Component + LoadoutKey + GetFromSystemParam<'w, 's, TContainer::TKey>,
+		for<'w, 's, 'a> AssociatedItem<'w, 's, TContainer, TContainer::TKey>:
 			RefInto<'a, ItemToken<'a>>,
 	{
 		for container in &containers {
 			for (entity, mut panel, KeyedPanel(key)) in &mut panels {
-				let panel_state = match container.get_param_entry(key, &param) {
+				let panel_state = match container.get_from_param(key, &param) {
 					None => {
 						commands.try_apply_on(&entity, |mut e| {
 							e.try_insert(UILabel::empty());
@@ -85,11 +86,11 @@ mod tests {
 		type TKey = _Key;
 	}
 
-	impl GetParamEntry<'_, '_, _Key> for _Container {
+	impl GetFromSystemParam<'_, '_, _Key> for _Container {
 		type TParam = ();
 		type TItem = _Item;
 
-		fn get_param_entry(&self, _: &_Key, _: &()) -> Option<Self::TItem> {
+		fn get_from_param(&self, _: &_Key, _: &()) -> Option<Self::TItem> {
 			self.0.clone()
 		}
 	}

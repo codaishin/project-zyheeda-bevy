@@ -7,7 +7,7 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::{AssociatedParam, GetParamEntry, TryApplyOn},
+		accessors::get::{AssociatedSystemParam, GetFromSystemParam, TryApplyOn},
 		handles_loadout::slot_component::AvailableSkills,
 		thread_safe::ThreadSafe,
 	},
@@ -19,21 +19,21 @@ impl<TLayout> SkillSelectDropdownCommand<TLayout> {
 		mut commands: ZyheedaCommands,
 		dropdown_commands: Query<(Entity, &Self)>,
 		slots: Query<&TSlots, With<TAgent>>,
-		param: StaticSystemParam<AssociatedParam<TSlots, AvailableSkills<SlotKey>>>,
+		param: StaticSystemParam<AssociatedSystemParam<TSlots, AvailableSkills<SlotKey>>>,
 	) where
 		TLayout: ThreadSafe + Sized,
 		TAgent: Component,
 		TSkills: IntoIterator,
 		TSkills::Item: Clone + ThreadSafe,
 		for<'w, 's> TSlots:
-			Component + GetParamEntry<'w, 's, AvailableSkills<SlotKey>, TItem = TSkills>,
+			Component + GetFromSystemParam<'w, 's, AvailableSkills<SlotKey>, TItem = TSkills>,
 	{
 		for slots in &slots {
 			for (entity, command) in &dropdown_commands {
 				let Some(key) = command.key_path.last() else {
 					continue;
 				};
-				let Some(items) = slots.get_param_entry(&AvailableSkills(*key), &param) else {
+				let Some(items) = slots.get_from_param(&AvailableSkills(*key), &param) else {
 					continue;
 				};
 				let items = items
@@ -75,11 +75,11 @@ mod tests {
 	#[derive(Component)]
 	struct _Slots(HashMap<SlotKey, Vec<_Skill>>);
 
-	impl<'w, 's> GetParamEntry<'w, 's, AvailableSkills<SlotKey>> for _Slots {
+	impl<'w, 's> GetFromSystemParam<'w, 's, AvailableSkills<SlotKey>> for _Slots {
 		type TParam = ();
 		type TItem = Vec<_Skill>;
 
-		fn get_param_entry(
+		fn get_from_param(
 			&self,
 			AvailableSkills(key): &AvailableSkills<SlotKey>,
 			_: &(),

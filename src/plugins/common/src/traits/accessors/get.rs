@@ -16,19 +16,19 @@ pub trait GetRef<TKey> {
 	fn get_ref(&self, key: &TKey) -> Option<Self::TValue<'_>>;
 }
 
-pub type AssociatedParamEntry<'w, 's, T, TKey> = <T as GetParamEntry<'w, 's, TKey>>::TItem;
-pub type AssociatedParam<'w, 's, T, TKey> = <T as GetParamEntry<'w, 's, TKey>>::TParam;
-pub type AssociatedParamItem<'w, 's, 'w2, 's2, T, TKey> =
-	<AssociatedParam<'w, 's, T, TKey> as SystemParam>::Item<'w2, 's2>;
+pub type AssociatedItem<'w, 's, T, TKey> = <T as GetFromSystemParam<'w, 's, TKey>>::TItem;
+pub type AssociatedSystemParam<'w, 's, T, TKey> = <T as GetFromSystemParam<'w, 's, TKey>>::TParam;
+pub type AssociatedSystemParamItem<'w, 's, 'w2, 's2, T, TKey> =
+	<AssociatedSystemParam<'w, 's, T, TKey> as SystemParam>::Item<'w2, 's2>;
 
-pub trait GetParamEntry<'w, 's, TKey> {
+pub trait GetFromSystemParam<'w, 's, TKey> {
 	type TParam: SystemParam;
 	type TItem;
 
-	fn get_param_entry(
+	fn get_from_param(
 		&self,
 		key: &TKey,
-		assets: &<Self::TParam as SystemParam>::Item<'_, '_>,
+		param: &AssociatedSystemParamItem<'w, 's, '_, '_, Self, TKey>,
 	) -> Option<Self::TItem>;
 }
 

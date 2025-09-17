@@ -24,7 +24,7 @@ use common::{
 		skill_execution::SkillExecution,
 	},
 	traits::{
-		accessors::get::{GetParamEntry, GetRef},
+		accessors::get::{GetFromSystemParam, GetRef},
 		handles_loadout::{
 			loadout::{LoadoutItem, LoadoutKey, SwapExternal, SwapInternal},
 			slot_component::AvailableSkills,
@@ -119,11 +119,11 @@ impl Default for Slots {
 	}
 }
 
-impl<'w, 's> GetParamEntry<'w, 's, SlotKey> for Slots {
+impl<'w, 's> GetFromSystemParam<'w, 's, SlotKey> for Slots {
 	type TParam = SkillItemAssetsUsage<'w, 's>;
 	type TItem = SkillItem;
 
-	fn get_param_entry(&self, key: &SlotKey, assets: &SkillItemAssetsUsage) -> Option<Self::TItem> {
+	fn get_from_param(&self, key: &SlotKey, assets: &SkillItemAssetsUsage) -> Option<Self::TItem> {
 		let item = self
 			.items
 			.get(key)
@@ -138,11 +138,11 @@ impl<'w, 's> GetParamEntry<'w, 's, SlotKey> for Slots {
 	}
 }
 
-impl<'w, 's> GetParamEntry<'w, 's, AvailableSkills<SlotKey>> for Slots {
+impl<'w, 's> GetFromSystemParam<'w, 's, AvailableSkills<SlotKey>> for Slots {
 	type TParam = SkillItemAssets<'w>;
 	type TItem = Vec<Skill>;
 
-	fn get_param_entry<'w2, 's2>(
+	fn get_from_param<'w2, 's2>(
 		&self,
 		AvailableSkills(key): &AvailableSkills<SlotKey>,
 		SkillItemAssets { items, skills }: &SkillItemAssets,
@@ -317,7 +317,7 @@ mod tests {
 
 					assert_eq!(
 						None,
-						slots.get_param_entry(&SlotKey::from(PlayerSlot::UPPER_L), &param)
+						slots.get_from_param(&SlotKey::from(PlayerSlot::UPPER_L), &param)
 					);
 				})
 		}
@@ -358,7 +358,7 @@ mod tests {
 								execution: SkillExecution::None
 							})
 						}),
-						slots.get_param_entry(&SlotKey::from(PlayerSlot::UPPER_L), &param)
+						slots.get_from_param(&SlotKey::from(PlayerSlot::UPPER_L), &param)
 					);
 				})
 		}
@@ -411,7 +411,7 @@ mod tests {
 								execution: SkillExecution::Active
 							})
 						}),
-						slots.get_param_entry(&SlotKey::from(PlayerSlot::UPPER_L), &param)
+						slots.get_from_param(&SlotKey::from(PlayerSlot::UPPER_L), &param)
 					);
 				})
 		}
@@ -463,7 +463,7 @@ mod tests {
 								execution: SkillExecution::None
 							})
 						}),
-						slots.get_param_entry(&SlotKey::from(PlayerSlot::UPPER_L), &param)
+						slots.get_from_param(&SlotKey::from(PlayerSlot::UPPER_L), &param)
 					);
 				})
 		}
@@ -522,7 +522,7 @@ mod tests {
 								execution: SkillExecution::Queued
 							})
 						}),
-						slots.get_param_entry(&SlotKey::from(PlayerSlot::UPPER_L), &param)
+						slots.get_from_param(&SlotKey::from(PlayerSlot::UPPER_L), &param)
 					);
 				})
 		}
@@ -582,7 +582,7 @@ mod tests {
 								execution: SkillExecution::None
 							})
 						}),
-						slots.get_param_entry(&SlotKey::from(PlayerSlot::UPPER_L), &param)
+						slots.get_from_param(&SlotKey::from(PlayerSlot::UPPER_L), &param)
 					);
 				})
 		}
@@ -646,7 +646,7 @@ mod tests {
 								execution: SkillExecution::Active
 							})
 						}),
-						slots.get_param_entry(&SlotKey::from(PlayerSlot::UPPER_L), &param)
+						slots.get_from_param(&SlotKey::from(PlayerSlot::UPPER_L), &param)
 					);
 				})
 		}
@@ -716,7 +716,7 @@ mod tests {
 								execution: SkillExecution::Queued
 							})
 						}),
-						slots.get_param_entry(&SlotKey::from(PlayerSlot::UPPER_L), &param)
+						slots.get_from_param(&SlotKey::from(PlayerSlot::UPPER_L), &param)
 					);
 				})
 		}
@@ -851,7 +851,7 @@ mod tests {
 						Some(item_handle.clone()),
 					)]);
 
-					let available = slots.get_param_entry(
+					let available = slots.get_from_param(
 						&AvailableSkills(SlotKey::from(PlayerSlot::UPPER_L)),
 						&param,
 					);
@@ -930,7 +930,7 @@ mod tests {
 						Some(item_handle.clone()),
 					)]);
 
-					let available = slots.get_param_entry(
+					let available = slots.get_from_param(
 						&AvailableSkills(SlotKey::from(PlayerSlot::UPPER_L)),
 						&param,
 					);

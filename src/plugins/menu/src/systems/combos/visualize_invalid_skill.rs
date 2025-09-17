@@ -6,7 +6,7 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::{AssociatedParam, AssociatedParamEntry, GetParamEntry, TryApplyOn},
+		accessors::get::{AssociatedItem, AssociatedSystemParam, GetFromSystemParam, TryApplyOn},
 		handles_loadout::slot_component::AvailableSkills,
 		thread_safe::ThreadSafe,
 	},
@@ -21,12 +21,12 @@ where
 		mut commands: ZyheedaCommands,
 		buttons: Query<(Entity, &Self), Added<Self>>,
 		slots: Query<&TSlots, With<TAgent>>,
-		param: StaticSystemParam<AssociatedParam<TSlots, AvailableSkills<SlotKey>>>,
+		param: StaticSystemParam<AssociatedSystemParam<TSlots, AvailableSkills<SlotKey>>>,
 	) where
 		TVisualize: InsertContentOn,
 		TAgent: Component,
-		for<'w, 's> TSlots: Component + GetParamEntry<'w, 's, AvailableSkills<SlotKey>>,
-		for<'w, 's> AssociatedParamEntry<'w, 's, TSlots, AvailableSkills<SlotKey>>:
+		for<'w, 's> TSlots: Component + GetFromSystemParam<'w, 's, AvailableSkills<SlotKey>>,
+		for<'w, 's> AssociatedItem<'w, 's, TSlots, AvailableSkills<SlotKey>>:
 			IntoIterator<Item = TSkill>,
 		TSkill: PartialEq,
 	{
@@ -35,7 +35,7 @@ where
 				let Some(key) = button.key_path.last() else {
 					continue;
 				};
-				let Some(items) = slots.get_param_entry(&AvailableSkills(*key), &param) else {
+				let Some(items) = slots.get_from_param(&AvailableSkills(*key), &param) else {
 					continue;
 				};
 				if items.into_iter().any(|skill| skill == button.skill) {
@@ -69,11 +69,11 @@ mod tests {
 	#[derive(Component)]
 	struct _Slots(HashMap<SlotKey, Vec<_Skill>>);
 
-	impl<'w, 's> GetParamEntry<'w, 's, AvailableSkills<SlotKey>> for _Slots {
+	impl<'w, 's> GetFromSystemParam<'w, 's, AvailableSkills<SlotKey>> for _Slots {
 		type TParam = ();
 		type TItem = Vec<_Skill>;
 
-		fn get_param_entry(
+		fn get_from_param(
 			&self,
 			AvailableSkills(key): &AvailableSkills<SlotKey>,
 			_: &(),
