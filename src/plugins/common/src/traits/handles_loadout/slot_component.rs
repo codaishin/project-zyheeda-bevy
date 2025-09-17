@@ -12,8 +12,8 @@ pub trait SlotComponent<TItem, TSkills>:
 	+ LoadoutKey<TKey = SlotKey>
 	+ LoadoutItem<TItem = TItem>
 	+ SwapInternal
-	+ for<'w, 's> GetFromSystemParam<'w, 's, SlotKey, TItem = TItem>
-	+ for<'w, 's> GetFromSystemParam<'w, 's, AvailableSkills<SlotKey>, TItem = TSkills>
+	+ for<'w, 's, 'a> GetFromSystemParam<'w, 's, SlotKey, TItem<'a> = TItem>
+	+ for<'w, 's, 'a> GetFromSystemParam<'w, 's, AvailableSkills<SlotKey>, TItem<'a> = TSkills>
 {
 }
 
@@ -22,8 +22,8 @@ impl<T, TItem, TSkills> SlotComponent<TItem, TSkills> for T where
 		+ LoadoutKey<TKey = SlotKey>
 		+ LoadoutItem<TItem = TItem>
 		+ SwapInternal
-		+ for<'w, 's> GetFromSystemParam<'w, 's, SlotKey, TItem = TItem>
-		+ for<'w, 's> GetFromSystemParam<'w, 's, AvailableSkills<SlotKey>, TItem = TSkills>
+		+ for<'w, 's, 'a> GetFromSystemParam<'w, 's, SlotKey, TItem<'a> = TItem>
+		+ for<'w, 's, 'a> GetFromSystemParam<'w, 's, AvailableSkills<SlotKey>, TItem<'a> = TSkills>
 {
 }
 

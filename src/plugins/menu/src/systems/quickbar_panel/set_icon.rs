@@ -25,7 +25,7 @@ impl QuickbarPanel {
 	) where
 		TAgent: Component,
 		for<'w, 's> TSlots: Component + GetFromSystemParam<'w, 's, SlotKey>,
-		for<'w, 's, 'a> AssociatedItem<'w, 's, TSlots, SlotKey>: RefInto<'a, Result<SkillIcon<'a>, NoSkill>>
+		for<'w, 's, 'i, 'a> AssociatedItem<'w, 's, 'i, TSlots, SlotKey>: RefInto<'a, Result<SkillIcon<'a>, NoSkill>>
 			+ RefInto<'a, Result<SkillToken<'a>, NoSkill>>,
 	{
 		for slots in &slots {
@@ -89,9 +89,9 @@ mod tests {
 
 	impl<'w, 's> GetFromSystemParam<'w, 's, SlotKey> for _Slots {
 		type TParam = _Param;
-		type TItem = _Item;
+		type TItem<'i> = _Item;
 
-		fn get_from_param(&self, key: &SlotKey, _: &_Param) -> Option<Self::TItem> {
+		fn get_from_param(&self, key: &SlotKey, _: &_Param) -> Option<Self::TItem<'_>> {
 			self.0.get(key).cloned()
 		}
 	}

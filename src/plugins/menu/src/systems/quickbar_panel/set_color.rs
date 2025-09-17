@@ -41,7 +41,7 @@ impl QuickbarPanel {
 		TAgent: Component,
 		TMap: Resource + GetInput<PlayerSlot, TInput = UserInput>,
 		for<'w, 's> TSlots: Component + GetFromSystemParam<'w, 's, SlotKey>,
-		for<'w, 's, 'a> AssociatedItem<'w, 's, TSlots, SlotKey>:
+		for<'w, 's, 'i, 'a> AssociatedItem<'w, 's, 'i, TSlots, SlotKey>:
 			RefInto<'a, Result<&'a SkillExecution, NoSkill>>,
 	{
 		set_color(commands, buttons, map, slots, param)
@@ -59,7 +59,7 @@ fn set_color<TAgent, TMap, TPrimer, TSlots>(
 	TMap: Resource + GetInput<PlayerSlot, TInput = UserInput>,
 	for<'a> TPrimer: Component + RefInto<'a, UserInput> + RefInto<'a, IsPrimed>,
 	for<'w, 's> TSlots: Component + GetFromSystemParam<'w, 's, SlotKey>,
-	for<'w, 's, 'a> AssociatedItem<'w, 's, TSlots, SlotKey>:
+	for<'w, 's, 'i, 'a> AssociatedItem<'w, 's, 'i, TSlots, SlotKey>:
 		RefInto<'a, Result<&'a SkillExecution, NoSkill>>,
 {
 	for slots in &slots {
@@ -84,7 +84,7 @@ where
 	TMap: GetInput<PlayerSlot, TInput = UserInput>,
 	for<'a> TPrimer: Component + RefInto<'a, UserInput> + RefInto<'a, IsPrimed>,
 	for<'w, 's> TSlots: Component + GetFromSystemParam<'w, 's, SlotKey>,
-	for<'w, 's, 'a> AssociatedItem<'w, 's, TSlots, SlotKey>:
+	for<'w, 's, 'i, 'a> AssociatedItem<'w, 's, 'i, TSlots, SlotKey>:
 		RefInto<'a, Result<&'a SkillExecution, NoSkill>>,
 {
 	let item = slots.get_from_param(&SlotKey::from(*key), param)?;
@@ -191,9 +191,9 @@ mod tests {
 
 	impl<'w, 's> GetFromSystemParam<'w, 's, SlotKey> for _Slots {
 		type TParam = _Param;
-		type TItem = _Item;
+		type TItem<'i> = _Item;
 
-		fn get_from_param(&self, key: &SlotKey, _: &_Param) -> Option<Self::TItem> {
+		fn get_from_param(&self, key: &SlotKey, _: &_Param) -> Option<Self::TItem<'_>> {
 			self.0.get(key).cloned()
 		}
 	}

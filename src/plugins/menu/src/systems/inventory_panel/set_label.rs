@@ -27,7 +27,7 @@ impl InventoryPanel {
 		TAgent: Component,
 		for<'w, 's> TContainer:
 			Component + LoadoutKey + GetFromSystemParam<'w, 's, TContainer::TKey>,
-		for<'w, 's, 'a> AssociatedItem<'w, 's, TContainer, TContainer::TKey>:
+		for<'w, 's, 'i, 'a> AssociatedItem<'w, 's, 'i, TContainer, TContainer::TKey>:
 			RefInto<'a, ItemToken<'a>>,
 	{
 		for container in &containers {
@@ -88,9 +88,9 @@ mod tests {
 
 	impl GetFromSystemParam<'_, '_, _Key> for _Container {
 		type TParam = ();
-		type TItem = _Item;
+		type TItem<'a> = _Item;
 
-		fn get_from_param(&self, _: &_Key, _: &()) -> Option<Self::TItem> {
+		fn get_from_param(&self, _: &_Key, _: &()) -> Option<Self::TItem<'_>> {
 			self.0.clone()
 		}
 	}
