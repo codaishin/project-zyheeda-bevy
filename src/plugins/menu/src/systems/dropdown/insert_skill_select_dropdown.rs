@@ -7,7 +7,7 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::{AsParam, GetParamEntry, TryApplyOn},
+		accessors::get::{AssociatedSystemParam, GetFromSystemParam, TryApplyOn},
 		handles_loadout::slot_component::AvailableSkills,
 		thread_safe::ThreadSafe,
 	},
@@ -19,22 +19,24 @@ impl<TLayout> SkillSelectDropdownCommand<TLayout> {
 		mut commands: ZyheedaCommands,
 		dropdown_commands: Query<(Entity, &Self)>,
 		slots: Query<&TSlots, With<TAgent>>,
-		param: StaticSystemParam<AsParam<TSlots, AvailableSkills<SlotKey>>>,
+		param: StaticSystemParam<AssociatedSystemParam<TSlots, AvailableSkills<SlotKey>>>,
 	) where
 		TLayout: ThreadSafe + Sized,
 		TAgent: Component,
 		TSkills: IntoIterator,
 		TSkills::Item: Clone + ThreadSafe,
 		for<'w, 's> TSlots:
-			Component + GetParamEntry<'w, 's, AvailableSkills<SlotKey>, TEntry = TSkills>,
+			Component + GetFromSystemParam<'w, 's, AvailableSkills<SlotKey>, TItem = TSkills>,
 	{
 		for slots in &slots {
 			for (entity, command) in &dropdown_commands {
 				let Some(key) = command.key_path.last() else {
 					continue;
 				};
-				let items = slots
-					.get_param_entry(&AvailableSkills(*key), &param)
+				let Some(items) = slots.get_from_param(&AvailableSkills(*key), &param) else {
+					continue;
+				};
+				let items = items
 					.into_iter()
 					.map(|skill| {
 						ComboSkillButton::<DropdownItem<TLayout>, TSkills::Item>::new(
@@ -73,16 +75,16 @@ mod tests {
 	#[derive(Component)]
 	struct _Slots(HashMap<SlotKey, Vec<_Skill>>);
 
-	impl<'w, 's> GetParamEntry<'w, 's, AvailableSkills<SlotKey>> for _Slots {
+	impl<'w, 's> GetFromSystemParam<'w, 's, AvailableSkills<SlotKey>> for _Slots {
 		type TParam = ();
-		type TEntry = Vec<_Skill>;
+		type TItem = Vec<_Skill>;
 
-		fn get_param_entry(
+		fn get_from_param(
 			&self,
 			AvailableSkills(key): &AvailableSkills<SlotKey>,
 			_: &(),
-		) -> Vec<_Skill> {
-			self.0.get(key).cloned().unwrap_or_default()
+		) -> Option<Vec<_Skill>> {
+			self.0.get(key).cloned()
 		}
 	}
 

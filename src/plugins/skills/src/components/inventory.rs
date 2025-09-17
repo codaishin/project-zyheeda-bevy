@@ -13,7 +13,7 @@ use common::{
 		skill_execution::SkillExecution,
 	},
 	traits::{
-		accessors::get::GetParamEntry,
+		accessors::get::GetFromSystemParam,
 		handles_loadout::loadout::{LoadoutItem, LoadoutKey, SwapExternal, SwapInternal},
 		iterate::Iterate,
 	},
@@ -34,34 +34,30 @@ where
 	}
 }
 
-impl<'w, 's> GetParamEntry<'w, 's, InventoryKey> for Inventory {
+impl<'w, 's> GetFromSystemParam<'w, 's, InventoryKey> for Inventory {
 	type TParam = SkillItemAssets<'w>;
-	type TEntry = SkillItem;
+	type TItem = SkillItem;
 
-	fn get_param_entry(
+	fn get_from_param(
 		&self,
 		InventoryKey(index): &InventoryKey,
 		SkillItemAssets { items, skills }: &SkillItemAssets,
-	) -> Self::TEntry {
+	) -> Option<Self::TItem> {
 		let Self(inventory) = self;
 		let item = inventory
 			.get(*index)
 			.and_then(|item| item.as_ref())
-			.and_then(|item| items.get(item));
-
-		let Some(item) = item else {
-			return SkillItem::None;
-		};
+			.and_then(|item| items.get(item))?;
 		let skill = item.skill.as_ref().and_then(|skill| skills.get(skill));
 
-		SkillItem::Some {
+		Some(SkillItem {
 			token: item.token.clone(),
 			skill: skill.map(|skill| ItemSkill {
 				token: skill.token.clone(),
 				icon: skill.icon.clone(),
 				execution: SkillExecution::None,
 			}),
-		}
+		})
 	}
 }
 
@@ -176,8 +172,8 @@ mod tests {
 				let inventory = Inventory::from([]);
 
 				assert_eq!(
-					SkillItem::None,
-					inventory.get_param_entry(&InventoryKey(0), &skill_items)
+					None,
+					inventory.get_from_param(&InventoryKey(0), &skill_items)
 				);
 			})
 	}
@@ -211,15 +207,15 @@ mod tests {
 				let inventory = Inventory::from([Some(item_handle.clone())]);
 
 				assert_eq!(
-					SkillItem::Some {
+					Some(SkillItem {
 						token: Token::from("my item"),
 						skill: Some(ItemSkill {
 							token: Token::from("my skill"),
 							icon: icon_handle.clone(),
 							execution: SkillExecution::None
 						})
-					},
-					inventory.get_param_entry(&InventoryKey(0), &skill_items)
+					}),
+					inventory.get_from_param(&InventoryKey(0), &skill_items)
 				);
 			})
 	}
@@ -253,15 +249,15 @@ mod tests {
 				let inventory = Inventory::from([None, None, Some(item_handle.clone())]);
 
 				assert_eq!(
-					SkillItem::Some {
+					Some(SkillItem {
 						token: Token::from("my item"),
 						skill: Some(ItemSkill {
 							token: Token::from("my skill"),
 							icon: icon_handle.clone(),
 							execution: SkillExecution::None
 						})
-					},
-					inventory.get_param_entry(&InventoryKey(2), &skill_items)
+					}),
+					inventory.get_from_param(&InventoryKey(2), &skill_items)
 				);
 			})
 	}

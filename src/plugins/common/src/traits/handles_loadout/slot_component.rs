@@ -1,29 +1,29 @@
 use crate::{
 	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::GetParamEntry,
+		accessors::get::GetFromSystemParam,
 		handles_loadout::loadout::{LoadoutItem, LoadoutKey, SwapInternal},
 	},
 };
 use bevy::{ecs::component::Mutable, prelude::*};
 
-pub trait SlotComponent<TItemEntry, TSkills>:
+pub trait SlotComponent<TItem, TSkills>:
 	Component<Mutability = Mutable>
 	+ LoadoutKey<TKey = SlotKey>
-	+ LoadoutItem<TItem = TItemEntry>
+	+ LoadoutItem<TItem = TItem>
 	+ SwapInternal
-	+ for<'w, 's> GetParamEntry<'w, 's, SlotKey, TEntry = TItemEntry>
-	+ for<'w, 's> GetParamEntry<'w, 's, AvailableSkills<SlotKey>, TEntry = TSkills>
+	+ for<'w, 's> GetFromSystemParam<'w, 's, SlotKey, TItem = TItem>
+	+ for<'w, 's> GetFromSystemParam<'w, 's, AvailableSkills<SlotKey>, TItem = TSkills>
 {
 }
 
-impl<T, TItemEntry, TSkills> SlotComponent<TItemEntry, TSkills> for T where
+impl<T, TItem, TSkills> SlotComponent<TItem, TSkills> for T where
 	T: Component<Mutability = Mutable>
 		+ LoadoutKey<TKey = SlotKey>
-		+ LoadoutItem<TItem = TItemEntry>
+		+ LoadoutItem<TItem = TItem>
 		+ SwapInternal
-		+ for<'w, 's> GetParamEntry<'w, 's, SlotKey, TEntry = TItemEntry>
-		+ for<'w, 's> GetParamEntry<'w, 's, AvailableSkills<SlotKey>, TEntry = TSkills>
+		+ for<'w, 's> GetFromSystemParam<'w, 's, SlotKey, TItem = TItem>
+		+ for<'w, 's> GetFromSystemParam<'w, 's, AvailableSkills<SlotKey>, TItem = TSkills>
 {
 }
 

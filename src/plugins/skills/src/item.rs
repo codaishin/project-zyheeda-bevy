@@ -11,7 +11,7 @@ use common::{
 	tools::{item_type::ItemType, skill_execution::SkillExecution},
 	traits::{
 		accessors::get::RefInto,
-		handles_loadout::loadout::{ItemToken, NoItem, NoSkill, SkillIcon, SkillToken},
+		handles_loadout::loadout::{ItemToken, NoSkill, SkillIcon, SkillToken},
 		handles_localization::Token,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
 	},
@@ -84,12 +84,9 @@ impl VisualizeItem for HandSlot {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum SkillItem {
-	Some {
-		token: Token,
-		skill: Option<ItemSkill>,
-	},
-	None,
+pub struct SkillItem {
+	pub(crate) token: Token,
+	pub(crate) skill: Option<ItemSkill>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -99,24 +96,16 @@ pub struct ItemSkill {
 	pub(crate) execution: SkillExecution,
 }
 
-impl<'a> From<&'a SkillItem> for Result<ItemToken<'a>, NoItem> {
+impl<'a> From<&'a SkillItem> for ItemToken<'a> {
 	fn from(item: &'a SkillItem) -> Self {
-		match item {
-			SkillItem::Some {
-				token: item_token, ..
-			} => Ok(ItemToken(item_token)),
-			SkillItem::None => Err(NoItem),
-		}
+		ItemToken(&item.token)
 	}
 }
 
 impl<'a> From<&'a SkillItem> for Result<SkillToken<'a>, NoSkill> {
 	fn from(item: &'a SkillItem) -> Self {
-		match item {
-			SkillItem::Some {
-				skill: Some(ItemSkill { token, .. }),
-				..
-			} => Ok(SkillToken(token)),
+		match &item.skill {
+			Some(ItemSkill { token, .. }) => Ok(SkillToken(token)),
 			_ => Err(NoSkill),
 		}
 	}
@@ -124,11 +113,8 @@ impl<'a> From<&'a SkillItem> for Result<SkillToken<'a>, NoSkill> {
 
 impl<'a> From<&'a SkillItem> for Result<SkillIcon<'a>, NoSkill> {
 	fn from(item: &'a SkillItem) -> Self {
-		match item {
-			SkillItem::Some {
-				skill: Some(ItemSkill { icon, .. }),
-				..
-			} => Ok(SkillIcon(icon)),
+		match &item.skill {
+			Some(ItemSkill { icon, .. }) => Ok(SkillIcon(icon)),
 			_ => Err(NoSkill),
 		}
 	}
@@ -136,11 +122,8 @@ impl<'a> From<&'a SkillItem> for Result<SkillIcon<'a>, NoSkill> {
 
 impl<'a> From<&'a SkillItem> for Result<&'a SkillExecution, NoSkill> {
 	fn from(item: &'a SkillItem) -> Self {
-		match item {
-			SkillItem::Some {
-				skill: Some(ItemSkill { execution, .. }),
-				..
-			} => Ok(execution),
+		match &item.skill {
+			Some(ItemSkill { execution, .. }) => Ok(execution),
 			_ => Err(NoSkill),
 		}
 	}

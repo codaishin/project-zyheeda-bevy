@@ -16,20 +16,20 @@ pub trait GetRef<TKey> {
 	fn get_ref(&self, key: &TKey) -> Option<Self::TValue<'_>>;
 }
 
-pub type AsParamEntry<'w, 's, T, TKey> = <T as GetParamEntry<'w, 's, TKey>>::TEntry;
-pub type AsParam<'w, 's, T, TKey> = <T as GetParamEntry<'w, 's, TKey>>::TParam;
-pub type AsParamItem<'w, 's, 'w2, 's2, T, TKey> =
-	<AsParam<'w, 's, T, TKey> as SystemParam>::Item<'w2, 's2>;
+pub type AssociatedItem<'w, 's, T, TKey> = <T as GetFromSystemParam<'w, 's, TKey>>::TItem;
+pub type AssociatedSystemParam<'w, 's, T, TKey> = <T as GetFromSystemParam<'w, 's, TKey>>::TParam;
+pub type AssociatedSystemParamItem<'w, 's, 'w2, 's2, T, TKey> =
+	<AssociatedSystemParam<'w, 's, T, TKey> as SystemParam>::Item<'w2, 's2>;
 
-pub trait GetParamEntry<'w, 's, TKey> {
+pub trait GetFromSystemParam<'w, 's, TKey> {
 	type TParam: SystemParam;
-	type TEntry;
+	type TItem;
 
-	fn get_param_entry(
+	fn get_from_param(
 		&self,
 		key: &TKey,
-		assets: &<Self::TParam as SystemParam>::Item<'_, '_>,
-	) -> Self::TEntry;
+		param: &AssociatedSystemParamItem<'w, 's, '_, '_, Self, TKey>,
+	) -> Option<Self::TItem>;
 }
 
 pub trait GetMut<TKey> {
