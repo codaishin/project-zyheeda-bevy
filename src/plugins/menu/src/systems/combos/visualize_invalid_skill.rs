@@ -6,7 +6,7 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::{AsParam, AsParamEntry, GetParamEntry, TryApplyOn},
+		accessors::get::{AssociatedParam, AssociatedParamEntry, GetParamEntry, TryApplyOn},
 		handles_loadout::slot_component::AvailableSkills,
 		thread_safe::ThreadSafe,
 	},
@@ -21,12 +21,12 @@ where
 		mut commands: ZyheedaCommands,
 		buttons: Query<(Entity, &Self), Added<Self>>,
 		slots: Query<&TSlots, With<TAgent>>,
-		param: StaticSystemParam<AsParam<TSlots, AvailableSkills<SlotKey>>>,
+		param: StaticSystemParam<AssociatedParam<TSlots, AvailableSkills<SlotKey>>>,
 	) where
 		TVisualize: InsertContentOn,
 		TAgent: Component,
 		for<'w, 's> TSlots: Component + GetParamEntry<'w, 's, AvailableSkills<SlotKey>>,
-		for<'w, 's> AsParamEntry<'w, 's, TSlots, AvailableSkills<SlotKey>>:
+		for<'w, 's> AssociatedParamEntry<'w, 's, TSlots, AvailableSkills<SlotKey>>:
 			IntoIterator<Item = TSkill>,
 		TSkill: PartialEq,
 	{
@@ -35,11 +35,10 @@ where
 				let Some(key) = button.key_path.last() else {
 					continue;
 				};
-				let is_compatible = slots
-					.get_param_entry(&AvailableSkills(*key), &param)
-					.into_iter()
-					.any(|skill| skill == button.skill);
-				if is_compatible {
+				let Some(items) = slots.get_param_entry(&AvailableSkills(*key), &param) else {
+					continue;
+				};
+				if items.into_iter().any(|skill| skill == button.skill) {
 					continue;
 				}
 
@@ -72,14 +71,14 @@ mod tests {
 
 	impl<'w, 's> GetParamEntry<'w, 's, AvailableSkills<SlotKey>> for _Slots {
 		type TParam = ();
-		type TEntry = Vec<_Skill>;
+		type TItem = Vec<_Skill>;
 
 		fn get_param_entry(
 			&self,
 			AvailableSkills(key): &AvailableSkills<SlotKey>,
 			_: &(),
-		) -> Self::TEntry {
-			self.0.get(key).cloned().unwrap_or_default()
+		) -> Option<Self::TItem> {
+			self.0.get(key).cloned()
 		}
 	}
 

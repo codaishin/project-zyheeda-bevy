@@ -28,16 +28,16 @@ where
 		TOtherKey: Into<TOther::TKey> + 'static;
 }
 
-pub trait LoadoutItemEntry:
-	for<'a> RefInto<'a, Result<ItemToken<'a>, NoItem>>
+pub trait LoadoutSkillItem:
+	for<'a> RefInto<'a, ItemToken<'a>>
 	+ for<'a> RefInto<'a, Result<SkillToken<'a>, NoSkill>>
 	+ for<'a> RefInto<'a, Result<SkillIcon<'a>, NoSkill>>
 	+ for<'a> RefInto<'a, Result<&'a SkillExecution, NoSkill>>
 {
 }
 
-impl<T> LoadoutItemEntry for T where
-	T: for<'a> RefInto<'a, Result<ItemToken<'a>, NoItem>>
+impl<T> LoadoutSkillItem for T where
+	T: for<'a> RefInto<'a, ItemToken<'a>>
 		+ for<'a> RefInto<'a, Result<SkillToken<'a>, NoSkill>>
 		+ for<'a> RefInto<'a, Result<SkillIcon<'a>, NoSkill>>
 		+ for<'a> RefInto<'a, Result<&'a SkillExecution, NoSkill>>
@@ -70,9 +70,6 @@ pub struct SkillToken<'a>(pub &'a Token);
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct SkillIcon<'a>(pub &'a Handle<Image>);
-
-#[derive(Debug, PartialEq)]
-pub struct NoItem;
 
 #[derive(Debug, PartialEq)]
 pub struct NoSkill;

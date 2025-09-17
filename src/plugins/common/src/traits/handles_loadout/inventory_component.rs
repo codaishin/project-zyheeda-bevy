@@ -7,20 +7,20 @@ use crate::{
 };
 use bevy::{ecs::component::Mutable, prelude::*};
 
-pub trait InventoryComponent<TItemEntry>:
+pub trait InventoryComponent<TItem>:
 	Component<Mutability = Mutable>
 	+ LoadoutKey<TKey = InventoryKey>
-	+ LoadoutItem<TItem = TItemEntry>
+	+ LoadoutItem<TItem = TItem>
 	+ SwapInternal
-	+ for<'w, 's> GetParamEntry<'w, 's, InventoryKey, TEntry = TItemEntry>
+	+ for<'w, 's> GetParamEntry<'w, 's, InventoryKey, TItem = TItem>
 {
 }
 
-impl<T, TItemEntry> InventoryComponent<TItemEntry> for T where
+impl<T, TItem> InventoryComponent<TItem> for T where
 	T: Component<Mutability = Mutable>
 		+ LoadoutKey<TKey = InventoryKey>
-		+ LoadoutItem<TItem = TItemEntry>
+		+ LoadoutItem<TItem = TItem>
 		+ SwapInternal
-		+ for<'w, 's> GetParamEntry<'w, 's, InventoryKey, TEntry = TItemEntry>
+		+ for<'w, 's> GetParamEntry<'w, 's, InventoryKey, TItem = TItem>
 {
 }

@@ -3,7 +3,13 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::{AsParam, AsParamEntry, GetParamEntry, RefInto, TryApplyOn},
+		accessors::get::{
+			AssociatedParam,
+			AssociatedParamEntry,
+			GetParamEntry,
+			RefInto,
+			TryApplyOn,
+		},
 		handles_loadout::loadout::{NoSkill, SkillIcon, SkillToken},
 		handles_localization::Token,
 	},
@@ -13,18 +19,20 @@ use common::{
 impl QuickbarPanel {
 	pub(crate) fn set_icon<TAgent, TSlots>(
 		mut commands: ZyheedaCommands,
-		param: StaticSystemParam<AsParam<TSlots, SlotKey>>,
+		param: StaticSystemParam<AssociatedParam<TSlots, SlotKey>>,
 		panels: Query<PanelComponents>,
 		slots: Query<&TSlots, With<TAgent>>,
 	) where
 		TAgent: Component,
 		for<'w, 's> TSlots: Component + GetParamEntry<'w, 's, SlotKey>,
-		for<'w, 's, 'a> AsParamEntry<'w, 's, TSlots, SlotKey>: RefInto<'a, Result<SkillIcon<'a>, NoSkill>>
+		for<'w, 's, 'a> AssociatedParamEntry<'w, 's, TSlots, SlotKey>: RefInto<'a, Result<SkillIcon<'a>, NoSkill>>
 			+ RefInto<'a, Result<SkillToken<'a>, NoSkill>>,
 	{
 		for slots in &slots {
 			for (entity, Self { key, .. }, current_icon, current_label) in &panels {
-				let item = slots.get_param_entry(&SlotKey::from(*key), &param);
+				let Some(item) = slots.get_param_entry(&SlotKey::from(*key), &param) else {
+					continue;
+				};
 				let Ok(SkillToken(token)) = item.ref_into() else {
 					continue;
 				};
@@ -81,16 +89,10 @@ mod tests {
 
 	impl<'w, 's> GetParamEntry<'w, 's, SlotKey> for _Slots {
 		type TParam = _Param;
-		type TEntry = _Item;
+		type TItem = _Item;
 
-		fn get_param_entry(&self, key: &SlotKey, _: &_Param) -> Self::TEntry {
-			match self.0.get(key) {
-				Some(item) => item.clone(),
-				None => _Item {
-					token: None,
-					icon: None,
-				},
-			}
+		fn get_param_entry(&self, key: &SlotKey, _: &_Param) -> Option<Self::TItem> {
+			self.0.get(key).cloned()
 		}
 	}
 

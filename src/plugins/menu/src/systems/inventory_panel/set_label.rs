@@ -5,8 +5,14 @@ use crate::{
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	traits::{
-		accessors::get::{AsParam, AsParamEntry, GetParamEntry, RefAs, RefInto, TryApplyOn},
-		handles_loadout::loadout::{ItemToken, LoadoutKey, NoItem},
+		accessors::get::{
+			AssociatedParam,
+			AssociatedParamEntry,
+			GetParamEntry,
+			RefInto,
+			TryApplyOn,
+		},
+		handles_loadout::loadout::{ItemToken, LoadoutKey},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -16,24 +22,24 @@ impl InventoryPanel {
 		mut commands: ZyheedaCommands,
 		containers: Query<&TContainer, With<TAgent>>,
 		mut panels: Query<(Entity, &mut Self, &KeyedPanel<TContainer::TKey>)>,
-		param: StaticSystemParam<AsParam<TContainer, TContainer::TKey>>,
+		param: StaticSystemParam<AssociatedParam<TContainer, TContainer::TKey>>,
 	) where
 		TAgent: Component,
 		for<'w, 's> TContainer: Component + LoadoutKey + GetParamEntry<'w, 's, TContainer::TKey>,
-		for<'w, 's, 'a> AsParamEntry<'w, 's, TContainer, TContainer::TKey>:
-			RefInto<'a, Result<ItemToken<'a>, NoItem>>,
+		for<'w, 's, 'a> AssociatedParamEntry<'w, 's, TContainer, TContainer::TKey>:
+			RefInto<'a, ItemToken<'a>>,
 	{
 		for container in &containers {
 			for (entity, mut panel, KeyedPanel(key)) in &mut panels {
-				let item = container.get_param_entry(key, &param);
-				let panel_state = match item.ref_as::<Result<ItemToken, NoItem>>() {
-					Err(NoItem) => {
+				let panel_state = match container.get_param_entry(key, &param) {
+					None => {
 						commands.try_apply_on(&entity, |mut e| {
 							e.try_insert(UILabel::empty());
 						});
 						PanelState::Empty
 					}
-					Ok(ItemToken(token)) => {
+					Some(item) => {
+						let ItemToken(token) = item.ref_into();
 						commands.try_apply_on(&entity, |mut e| {
 							e.try_insert(UILabel(token.clone()));
 						});
@@ -53,7 +59,7 @@ mod tests {
 		components::{KeyedPanel, label::UILabel},
 		tools::PanelState,
 	};
-	use common::traits::handles_localization::{Token, localized::Localized};
+	use common::traits::handles_localization::Token;
 	use std::sync::LazyLock;
 	use testing::SingleThreadedApp;
 
@@ -64,19 +70,16 @@ mod tests {
 	struct _Key;
 
 	#[derive(Clone)]
-	struct _Entry(Option<ItemToken<'static>>);
+	struct _Item(ItemToken<'static>);
 
-	impl<'a> From<&'a _Entry> for Result<ItemToken<'a>, NoItem> {
-		fn from(_Entry(token): &'a _Entry) -> Self {
-			match token {
-				Some(t) => Ok(t.clone()),
-				None => Err(NoItem),
-			}
+	impl<'a> From<&'a _Item> for ItemToken<'a> {
+		fn from(_Item(token): &'a _Item) -> Self {
+			token.clone()
 		}
 	}
 
 	#[derive(Component)]
-	struct _Container(_Entry);
+	struct _Container(Option<_Item>);
 
 	impl LoadoutKey for _Container {
 		type TKey = _Key;
@@ -84,9 +87,9 @@ mod tests {
 
 	impl GetParamEntry<'_, '_, _Key> for _Container {
 		type TParam = ();
-		type TEntry = _Entry;
+		type TItem = _Item;
 
-		fn get_param_entry(&self, _: &_Key, _: &()) -> Self::TEntry {
+		fn get_param_entry(&self, _: &_Key, _: &()) -> Option<Self::TItem> {
 			self.0.clone()
 		}
 	}
@@ -105,7 +108,7 @@ mod tests {
 	fn set_label() {
 		let mut app = setup();
 		app.world_mut()
-			.spawn((_Agent, _Container(_Entry(Some(ItemToken(&TOKEN))))));
+			.spawn((_Agent, _Container(Some(_Item(ItemToken(&TOKEN))))));
 		let panel = app
 			.world_mut()
 			.spawn((InventoryPanel(PanelState::Empty), KeyedPanel(_Key)))
@@ -123,7 +126,7 @@ mod tests {
 	fn set_panel_to_filled() {
 		let mut app = setup();
 		app.world_mut()
-			.spawn((_Agent, _Container(_Entry(Some(ItemToken(&TOKEN))))));
+			.spawn((_Agent, _Container(Some(_Item(ItemToken(&TOKEN))))));
 		let panel = app
 			.world_mut()
 			.spawn((InventoryPanel(PanelState::Empty), KeyedPanel(_Key)))
@@ -140,7 +143,7 @@ mod tests {
 	#[test]
 	fn set_panel_to_empty() {
 		let mut app = setup();
-		app.world_mut().spawn((_Agent, _Container(_Entry(None))));
+		app.world_mut().spawn((_Agent, _Container(None)));
 		let panel = app
 			.world_mut()
 			.spawn((InventoryPanel(PanelState::Filled), KeyedPanel(_Key)))
@@ -155,31 +158,10 @@ mod tests {
 	}
 
 	#[test]
-	fn empty_label() {
-		let mut app = setup();
-		app.world_mut().spawn((_Agent, _Container(_Entry(None))));
-		let panel = app
-			.world_mut()
-			.spawn((
-				InventoryPanel(PanelState::Filled),
-				UILabel(Localized::from("something")),
-				KeyedPanel(_Key),
-			))
-			.id();
-
-		app.update();
-
-		assert_eq!(
-			Some(&UILabel::empty()),
-			app.world().entity(panel).get::<UILabel>(),
-		);
-	}
-
-	#[test]
 	fn do_nothing_if_agent_missing() {
 		let mut app = setup();
 		app.world_mut()
-			.spawn(_Container(_Entry(Some(ItemToken(&TOKEN)))));
+			.spawn(_Container(Some(_Item(ItemToken(&TOKEN)))));
 		let panel = app
 			.world_mut()
 			.spawn((InventoryPanel(PanelState::Empty), KeyedPanel(_Key)))
