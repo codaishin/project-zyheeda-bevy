@@ -26,7 +26,7 @@ where
 		TVisualize: InsertContentOn,
 		TAgent: Component,
 		for<'w, 's> TSlots: Component + GetFromSystemParam<'w, 's, AvailableSkills<SlotKey>>,
-		for<'w, 's> AssociatedItem<'w, 's, TSlots, AvailableSkills<SlotKey>>:
+		for<'w, 's, 'i> AssociatedItem<'w, 's, 'i, TSlots, AvailableSkills<SlotKey>>:
 			IntoIterator<Item = TSkill>,
 		TSkill: PartialEq,
 	{
@@ -71,13 +71,13 @@ mod tests {
 
 	impl<'w, 's> GetFromSystemParam<'w, 's, AvailableSkills<SlotKey>> for _Slots {
 		type TParam = ();
-		type TItem = Vec<_Skill>;
+		type TItem<'i> = Vec<_Skill>;
 
 		fn get_from_param(
 			&self,
 			AvailableSkills(key): &AvailableSkills<SlotKey>,
 			_: &(),
-		) -> Option<Self::TItem> {
+		) -> Option<Self::TItem<'_>> {
 			self.0.get(key).cloned()
 		}
 	}

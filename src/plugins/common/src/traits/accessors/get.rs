@@ -16,20 +16,24 @@ pub trait GetRef<TKey> {
 	fn get_ref(&self, key: &TKey) -> Option<Self::TValue<'_>>;
 }
 
-pub type AssociatedItem<'w, 's, T, TKey> = <T as GetFromSystemParam<'w, 's, TKey>>::TItem;
-pub type AssociatedSystemParam<'w, 's, T, TKey> = <T as GetFromSystemParam<'w, 's, TKey>>::TParam;
-pub type AssociatedSystemParamItem<'w, 's, 'w2, 's2, T, TKey> =
-	<AssociatedSystemParam<'w, 's, T, TKey> as SystemParam>::Item<'w2, 's2>;
+pub type AssociatedItem<'world, 'state, 'item, T, TKey> =
+	<T as GetFromSystemParam<'world, 'state, TKey>>::TItem<'item>;
+pub type AssociatedSystemParam<'world, 'state, T, TKey> =
+	<T as GetFromSystemParam<'world, 'state, TKey>>::TParam;
+pub type AssociatedSystemParamItem<'world, 'state, 'world_self, 'state_self, T, TKey> =
+	<AssociatedSystemParam<'world, 'state, T, TKey> as SystemParam>::Item<'world_self, 'state_self>;
 
-pub trait GetFromSystemParam<'w, 's, TKey> {
+pub trait GetFromSystemParam<'world, 'state, TKey> {
 	type TParam: SystemParam;
-	type TItem;
+	type TItem<'item>
+	where
+		Self: 'item;
 
-	fn get_from_param(
-		&self,
+	fn get_from_param<'a>(
+		&'a self,
 		key: &TKey,
-		param: &AssociatedSystemParamItem<'w, 's, '_, '_, Self, TKey>,
-	) -> Option<Self::TItem>;
+		param: &'a AssociatedSystemParamItem<'world, 'state, '_, '_, Self, TKey>,
+	) -> Option<Self::TItem<'a>>;
 }
 
 pub trait GetMut<TKey> {

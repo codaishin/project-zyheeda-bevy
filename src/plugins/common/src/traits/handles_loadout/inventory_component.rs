@@ -12,7 +12,7 @@ pub trait InventoryComponent<TItem>:
 	+ LoadoutKey<TKey = InventoryKey>
 	+ LoadoutItem<TItem = TItem>
 	+ SwapInternal
-	+ for<'w, 's> GetFromSystemParam<'w, 's, InventoryKey, TItem = TItem>
+	+ for<'w, 's, 'a> GetFromSystemParam<'w, 's, InventoryKey, TItem<'a> = TItem>
 {
 }
 
@@ -21,6 +21,6 @@ impl<T, TItem> InventoryComponent<TItem> for T where
 		+ LoadoutKey<TKey = InventoryKey>
 		+ LoadoutItem<TItem = TItem>
 		+ SwapInternal
-		+ for<'w, 's> GetFromSystemParam<'w, 's, InventoryKey, TItem = TItem>
+		+ for<'w, 's, 'a> GetFromSystemParam<'w, 's, InventoryKey, TItem<'a> = TItem>
 {
 }

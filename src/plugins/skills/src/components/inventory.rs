@@ -36,13 +36,13 @@ where
 
 impl<'w, 's> GetFromSystemParam<'w, 's, InventoryKey> for Inventory {
 	type TParam = SkillItemAssets<'w>;
-	type TItem = SkillItem;
+	type TItem<'i> = SkillItem;
 
 	fn get_from_param(
 		&self,
 		InventoryKey(index): &InventoryKey,
 		SkillItemAssets { items, skills }: &SkillItemAssets,
-	) -> Option<Self::TItem> {
+	) -> Option<Self::TItem<'_>> {
 		let Self(inventory) = self;
 		let item = inventory
 			.get(*index)
