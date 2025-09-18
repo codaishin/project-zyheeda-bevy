@@ -1,4 +1,6 @@
-use bevy::ecs::system::SystemParam;
+use std::ops::Deref;
+
+use bevy::ecs::system::{StaticSystemParam, SystemParam};
 
 mod assets;
 
@@ -18,11 +20,87 @@ pub trait GetRef<TKey> {
 
 pub type AssociatedItem<'world, 'state, 'item, T, TKey> =
 	<T as GetFromSystemParam<'world, 'state, TKey>>::TItem<'item>;
-pub type AssociatedSystemParam<'world, 'state, T, TKey> =
-	<T as GetFromSystemParam<'world, 'state, TKey>>::TParam;
-pub type AssociatedSystemParamItem<'world, 'state, 'world_self, 'state_self, T, TKey> =
-	<AssociatedSystemParam<'world, 'state, T, TKey> as SystemParam>::Item<'world_self, 'state_self>;
+pub type AssociatedStaticSystemParam<'world_self, 'state_self, 'world, 'state, T, TKey> =
+	StaticSystemParam<
+		'world_self,
+		'state_self,
+		<T as GetFromSystemParam<'world, 'state, TKey>>::TParam,
+	>;
+pub type AssociatedSystemParam<'world_self, 'state_self, 'world, 'state, T, TKey> =
+	<AssociatedStaticSystemParam<'world_self, 'state_self, 'world, 'state, T, TKey> as Deref>::Target;
 
+/// Allows to retrieve data from a source, which only holds a part of or a reference to some data.
+///
+/// We can inject the required parameter in a system as a generic type to retrieve the full data.
+/// Helper types exist due to the involved life time complexities and the required
+/// [`StaticSystemParam`] for generic system parameters.
+///
+/// Note that the below example would also work without using [`StaticSystemParam`], due to rust
+/// being able to immediately name the actual type of the required system parameter. However, this
+/// does not work for injecting types across generic plugin borders.
+///
+/// # Example
+/// ```
+/// use common::traits::accessors::get::{
+///   AssociatedItem,
+///   AssociatedStaticSystemParam,
+///   GetFromSystemParam,
+/// };
+/// use bevy::{ecs::system::RunSystemOnce, prelude::*};
+/// use std::fmt::Display;
+///
+/// #[derive(Resource)]
+/// struct Displays {
+///   short: Vec<String>,
+///   long: Vec<String>,
+/// }
+///
+/// enum Length {
+///   Short,
+///   Long,
+/// }
+///
+/// #[derive(Component)]
+/// struct Index(usize);
+///
+/// impl<'w> GetFromSystemParam<'w, '_, Length> for Index {
+///   type TParam = Res<'w, Displays>;
+///   type TItem<'i> = &'i str;
+///
+///   fn get_from_param<'a>(
+///     &self,
+///     length: &Length,
+///     displays: &'a Res<Displays>,
+///   ) -> Option<&'a str> {
+///     let displays = match length {
+///       Length::Short => &displays.short,
+///       Length::Long => &displays.long,
+///     };
+///
+///     displays.get(self.0).map(String::as_str)
+///   }
+/// }
+///
+/// fn my_system<TSource>(q: Query<&TSource>, p: AssociatedStaticSystemParam<TSource, Length>)
+/// where
+///   for<'w, 's> TSource: Component + GetFromSystemParam<'w, 's, Length>,
+///   for<'w, 's, 'i> AssociatedItem<'w, 's, 'i, TSource, Length>: Display,
+/// {
+///   for source in &q {
+///     let display = source.get_from_param(&Length::Short, &p).unwrap();
+///     assert_eq!("my short display", display.to_string());
+///   }
+/// }
+///
+/// let mut app = App::new();
+/// app.insert_resource(Displays {
+///   short: vec!["my short display".to_string()],
+///   long: vec!["my long display".to_string()],
+/// });
+/// app.world_mut().spawn(Index(0));
+///
+/// assert!(app.world_mut().run_system_once(my_system::<Index>).is_ok());
+/// ```
 pub trait GetFromSystemParam<'world, 'state, TKey> {
 	type TParam: SystemParam;
 	type TItem<'item>
@@ -32,7 +110,7 @@ pub trait GetFromSystemParam<'world, 'state, TKey> {
 	fn get_from_param<'a>(
 		&'a self,
 		key: &TKey,
-		param: &'a AssociatedSystemParamItem<'world, 'state, '_, '_, Self, TKey>,
+		param: &'a AssociatedSystemParam<'_, '_, 'world, 'state, Self, TKey>,
 	) -> Option<Self::TItem<'a>>;
 }
 
