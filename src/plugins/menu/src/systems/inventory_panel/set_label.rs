@@ -2,12 +2,12 @@ use crate::{
 	components::{KeyedPanel, inventory_panel::InventoryPanel, label::UILabel},
 	tools::PanelState,
 };
-use bevy::{ecs::system::StaticSystemParam, prelude::*};
+use bevy::prelude::*;
 use common::{
 	traits::{
 		accessors::get::{
 			AssociatedItem,
-			AssociatedSystemParam,
+			AssociatedStaticSystemParam,
 			GetFromSystemParam,
 			RefInto,
 			TryApplyOn,
@@ -22,7 +22,7 @@ impl InventoryPanel {
 		mut commands: ZyheedaCommands,
 		containers: Query<&TContainer, With<TAgent>>,
 		mut panels: Query<(Entity, &mut Self, &KeyedPanel<TContainer::TKey>)>,
-		param: StaticSystemParam<AssociatedSystemParam<TContainer, TContainer::TKey>>,
+		param: AssociatedStaticSystemParam<TContainer, TContainer::TKey>,
 	) where
 		TAgent: Component,
 		for<'w, 's> TContainer:

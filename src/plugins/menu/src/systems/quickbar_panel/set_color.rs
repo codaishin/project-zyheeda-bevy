@@ -6,7 +6,7 @@ use crate::{
 	},
 	traits::colors::ColorConfig,
 };
-use bevy::{ecs::system::StaticSystemParam, prelude::*};
+use bevy::prelude::*;
 use common::{
 	components::ui_input_primer::{IsPrimed, UiInputPrimer},
 	tools::{
@@ -19,8 +19,8 @@ use common::{
 	traits::{
 		accessors::get::{
 			AssociatedItem,
+			AssociatedStaticSystemParam,
 			AssociatedSystemParam,
-			AssociatedSystemParamItem,
 			GetFromSystemParam,
 			RefAs,
 			RefInto,
@@ -36,7 +36,7 @@ impl QuickbarPanel {
 		buttons: Query<(Entity, &Self, &UiInputPrimer)>,
 		map: Res<TMap>,
 		slots: Query<&TSlots, With<TAgent>>,
-		param: StaticSystemParam<AssociatedSystemParam<TSlots, SlotKey>>,
+		param: AssociatedStaticSystemParam<TSlots, SlotKey>,
 	) where
 		TAgent: Component,
 		TMap: Resource + GetInput<PlayerSlot, TInput = UserInput>,
@@ -53,7 +53,7 @@ fn set_color<TAgent, TMap, TPrimer, TSlots>(
 	buttons: Query<(Entity, &QuickbarPanel, &TPrimer)>,
 	map: Res<TMap>,
 	slots: Query<&TSlots, With<TAgent>>,
-	param: StaticSystemParam<AssociatedSystemParam<TSlots, SlotKey>>,
+	param: AssociatedStaticSystemParam<TSlots, SlotKey>,
 ) where
 	TAgent: Component,
 	TMap: Resource + GetInput<PlayerSlot, TInput = UserInput>,
@@ -78,7 +78,7 @@ fn get_color_override<TSlots, TMap, TPrimer>(
 	QuickbarPanel { key, .. }: &QuickbarPanel,
 	primer: &TPrimer,
 	slots: &TSlots,
-	param: &AssociatedSystemParamItem<TSlots, SlotKey>,
+	param: &AssociatedSystemParam<TSlots, SlotKey>,
 ) -> Option<ColorConfig>
 where
 	TMap: GetInput<PlayerSlot, TInput = UserInput>,

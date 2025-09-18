@@ -3,11 +3,11 @@ use crate::components::{
 	combo_skill_button::{ComboSkillButton, DropdownItem},
 	dropdown::Dropdown,
 };
-use bevy::{ecs::system::StaticSystemParam, prelude::*};
+use bevy::prelude::*;
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::{AssociatedSystemParam, GetFromSystemParam, TryApplyOn},
+		accessors::get::{AssociatedStaticSystemParam, GetFromSystemParam, TryApplyOn},
 		handles_loadout::slot_component::AvailableSkills,
 		thread_safe::ThreadSafe,
 	},
@@ -19,7 +19,7 @@ impl<TLayout> SkillSelectDropdownCommand<TLayout> {
 		mut commands: ZyheedaCommands,
 		dropdown_commands: Query<(Entity, &Self)>,
 		slots: Query<&TSlots, With<TAgent>>,
-		param: StaticSystemParam<AssociatedSystemParam<TSlots, AvailableSkills<SlotKey>>>,
+		param: AssociatedStaticSystemParam<TSlots, AvailableSkills<SlotKey>>,
 	) where
 		TLayout: ThreadSafe + Sized,
 		TAgent: Component,

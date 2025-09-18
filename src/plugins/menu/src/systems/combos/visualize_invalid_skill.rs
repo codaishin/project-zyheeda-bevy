@@ -2,11 +2,16 @@ use crate::{
 	components::combo_skill_button::{ComboSkillButton, DropdownTrigger},
 	traits::InsertContentOn,
 };
-use bevy::{ecs::system::StaticSystemParam, prelude::*};
+use bevy::prelude::*;
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::{AssociatedItem, AssociatedSystemParam, GetFromSystemParam, TryApplyOn},
+		accessors::get::{
+			AssociatedItem,
+			AssociatedStaticSystemParam,
+			GetFromSystemParam,
+			TryApplyOn,
+		},
 		handles_loadout::slot_component::AvailableSkills,
 		thread_safe::ThreadSafe,
 	},
@@ -21,7 +26,7 @@ where
 		mut commands: ZyheedaCommands,
 		buttons: Query<(Entity, &Self), Added<Self>>,
 		slots: Query<&TSlots, With<TAgent>>,
-		param: StaticSystemParam<AssociatedSystemParam<TSlots, AvailableSkills<SlotKey>>>,
+		param: AssociatedStaticSystemParam<TSlots, AvailableSkills<SlotKey>>,
 	) where
 		TVisualize: InsertContentOn,
 		TAgent: Component,

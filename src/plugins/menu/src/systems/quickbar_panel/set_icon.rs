@@ -1,11 +1,11 @@
 use crate::components::{icon::Icon, label::UILabel, quickbar_panel::QuickbarPanel};
-use bevy::{ecs::system::StaticSystemParam, prelude::*};
+use bevy::prelude::*;
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
 		accessors::get::{
 			AssociatedItem,
-			AssociatedSystemParam,
+			AssociatedStaticSystemParam,
 			GetFromSystemParam,
 			RefInto,
 			TryApplyOn,
@@ -19,7 +19,7 @@ use common::{
 impl QuickbarPanel {
 	pub(crate) fn set_icon<TAgent, TSlots>(
 		mut commands: ZyheedaCommands,
-		param: StaticSystemParam<AssociatedSystemParam<TSlots, SlotKey>>,
+		param: AssociatedStaticSystemParam<TSlots, SlotKey>,
 		panels: Query<PanelComponents>,
 		slots: Query<&TSlots, With<TAgent>>,
 	) where
