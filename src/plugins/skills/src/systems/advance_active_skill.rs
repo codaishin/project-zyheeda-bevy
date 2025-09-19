@@ -95,7 +95,7 @@ where
 }
 
 fn advance<TPlayerAnimations, TOrientation, TSkillExecutor>(
-	mut skill: (impl GetSkillBehavior + GetAnimationStrategy + UpdatedStates<SkillState>),
+	mut skill: impl GetSkillBehavior + GetAnimationStrategy + UpdatedStates<SkillState>,
 	mut agent: EntityCommands,
 	mut skill_executer: Mut<TSkillExecutor>,
 	delta: Duration,
