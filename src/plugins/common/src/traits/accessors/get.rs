@@ -1,8 +1,9 @@
-use std::ops::Deref;
+mod assets;
+mod option;
+mod result;
 
 use bevy::ecs::system::{StaticSystemParam, SystemParam};
-
-mod assets;
+use std::ops::Deref;
 
 pub trait Get<TKey> {
 	type TValue;
