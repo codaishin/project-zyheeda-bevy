@@ -10,7 +10,7 @@ use common::{
 	components::{asset_model::AssetModel, essence::Essence},
 	tools::{item_type::ItemType, skill_execution::SkillExecution},
 	traits::{
-		accessors::get::RefInto,
+		accessors::get::GetProperty,
 		handles_loadout::loadout::{ItemToken, NoSkill, SkillIcon, SkillToken},
 		handles_localization::Token,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
@@ -26,21 +26,15 @@ pub struct Item {
 	pub item_type: ItemType,
 }
 
-impl<'a> RefInto<'a, &'a Token> for Item {
-	fn ref_into(&self) -> &Token {
-		&self.token
+impl GetProperty<ItemType> for Item {
+	fn get_property(&self) -> ItemType {
+		self.item_type
 	}
 }
 
-impl From<&Item> for ItemType {
-	fn from(Item { item_type, .. }: &Item) -> Self {
-		*item_type
-	}
-}
-
-impl<'a> From<&'a Item> for Option<&'a Handle<Skill>> {
-	fn from(Item { skill, .. }: &'a Item) -> Self {
-		skill.as_ref()
+impl GetProperty<Option<Handle<Skill>>> for Item {
+	fn get_property(&self) -> Option<&'_ Handle<Skill>> {
+		self.skill.as_ref()
 	}
 }
 
@@ -89,42 +83,41 @@ pub struct SkillItem {
 	pub(crate) skill: Option<ItemSkill>,
 }
 
+impl GetProperty<ItemToken<'_>> for SkillItem {
+	fn get_property(&self) -> &'_ Token {
+		&self.token
+	}
+}
+impl GetProperty<Result<SkillToken<'_>, NoSkill>> for SkillItem {
+	fn get_property(&self) -> Result<&'_ Token, NoSkill> {
+		match &self.skill {
+			Some(ItemSkill { token, .. }) => Ok(token),
+			_ => Err(NoSkill),
+		}
+	}
+}
+
+impl GetProperty<Result<SkillIcon<'_>, NoSkill>> for SkillItem {
+	fn get_property(&self) -> Result<&'_ Handle<Image>, NoSkill> {
+		match &self.skill {
+			Some(ItemSkill { icon, .. }) => Ok(icon),
+			_ => Err(NoSkill),
+		}
+	}
+}
+
+impl GetProperty<Result<SkillExecution, NoSkill>> for SkillItem {
+	fn get_property(&self) -> Result<SkillExecution, NoSkill> {
+		match &self.skill {
+			Some(ItemSkill { execution, .. }) => Ok(*execution),
+			_ => Err(NoSkill),
+		}
+	}
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct ItemSkill {
 	pub(crate) token: Token,
 	pub(crate) icon: Handle<Image>,
 	pub(crate) execution: SkillExecution,
-}
-
-impl<'a> From<&'a SkillItem> for ItemToken<'a> {
-	fn from(item: &'a SkillItem) -> Self {
-		ItemToken(&item.token)
-	}
-}
-
-impl<'a> From<&'a SkillItem> for Result<SkillToken<'a>, NoSkill> {
-	fn from(item: &'a SkillItem) -> Self {
-		match &item.skill {
-			Some(ItemSkill { token, .. }) => Ok(SkillToken(token)),
-			_ => Err(NoSkill),
-		}
-	}
-}
-
-impl<'a> From<&'a SkillItem> for Result<SkillIcon<'a>, NoSkill> {
-	fn from(item: &'a SkillItem) -> Self {
-		match &item.skill {
-			Some(ItemSkill { icon, .. }) => Ok(SkillIcon(icon)),
-			_ => Err(NoSkill),
-		}
-	}
-}
-
-impl<'a> From<&'a SkillItem> for Result<&'a SkillExecution, NoSkill> {
-	fn from(item: &'a SkillItem) -> Self {
-		match &item.skill {
-			Some(ItemSkill { execution, .. }) => Ok(execution),
-			_ => Err(NoSkill),
-		}
-	}
 }

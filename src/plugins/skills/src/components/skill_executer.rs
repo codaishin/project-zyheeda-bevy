@@ -114,6 +114,7 @@ mod tests {
 			collider_info::ColliderInfo,
 		},
 		traits::{
+			accessors::get::GetProperty,
 			handles_physics::{Effect, HandlesPhysicalEffect},
 			handles_skill_behaviors::{Contact, HoldSkills, Projection, SkillEntities, SkillRoot},
 			register_persistent_entities::RegisterPersistentEntities,
@@ -148,8 +149,8 @@ mod tests {
 	#[derive(Component)]
 	struct _Affected;
 
-	impl From<&_Affected> for Health {
-		fn from(_: &_Affected) -> Self {
+	impl GetProperty<Health> for _Affected {
+		fn get_property(&self) -> Health {
 			panic!("NOT USED")
 		}
 	}

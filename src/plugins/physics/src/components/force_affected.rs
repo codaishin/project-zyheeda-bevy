@@ -4,7 +4,7 @@ use common::{
 	effects::force::Force,
 	tools::attribute::AttributeOnSpawn,
 	traits::{
-		accessors::get::RefInto,
+		accessors::get::GetProperty,
 		register_derived_component::{DerivableFrom, InsertDerivedComponent},
 	},
 };
@@ -16,14 +16,13 @@ pub struct ForceAffected(pub(crate) EffectTarget<Force>);
 
 impl<T> DerivableFrom<'_, '_, T> for ForceAffected
 where
-	T: for<'a> RefInto<'a, AttributeOnSpawn<EffectTarget<Force>>>,
+	T: GetProperty<AttributeOnSpawn<EffectTarget<Force>>>,
 {
 	const INSERT: InsertDerivedComponent = InsertDerivedComponent::IfNew;
 
 	type TParam = ();
 
 	fn derive_from(_: Entity, component: &T, _: &()) -> Self {
-		let AttributeOnSpawn(attr) = component.ref_into();
-		Self(attr)
+		Self(component.get_property())
 	}
 }

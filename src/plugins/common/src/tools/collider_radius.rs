@@ -1,3 +1,5 @@
+use crate::traits::accessors::get::Property;
+
 use super::Units;
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
@@ -18,4 +20,8 @@ impl Deref for ColliderRadius {
 		let ColliderRadius(radius) = self;
 		radius
 	}
+}
+
+impl Property for ColliderRadius {
+	type TValue<'a> = Units;
 }

@@ -10,6 +10,7 @@ use common::{
 	errors::Error,
 	states::game_state::GameState,
 	traits::{
+		accessors::get::GetProperty,
 		handles_localization::localized::Localized,
 		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
@@ -36,8 +37,8 @@ impl StartMenuButton {
 	}
 }
 
-impl From<&StartMenuButton> for PanelState {
-	fn from(_: &StartMenuButton) -> Self {
+impl GetProperty<PanelState> for StartMenuButton {
+	fn get_property(&self) -> PanelState {
 		PanelState::Filled
 	}
 }

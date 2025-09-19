@@ -9,7 +9,7 @@ use common::{
 			AssociatedItem,
 			AssociatedStaticSystemParam,
 			GetFromSystemParam,
-			RefInto,
+			GetProperty,
 			TryApplyOn,
 		},
 		handles_loadout::loadout::{ItemToken, LoadoutKey},
@@ -28,7 +28,7 @@ impl InventoryPanel {
 		for<'w, 's> TContainer:
 			Component + LoadoutKey + GetFromSystemParam<'w, 's, TContainer::TKey>,
 		for<'w, 's, 'i, 'a> AssociatedItem<'w, 's, 'i, TContainer, TContainer::TKey>:
-			RefInto<'a, ItemToken<'a>>,
+			GetProperty<ItemToken<'a>>,
 	{
 		for container in &containers {
 			for (entity, mut panel, KeyedPanel(key)) in &mut panels {
@@ -40,9 +40,8 @@ impl InventoryPanel {
 						PanelState::Empty
 					}
 					Some(item) => {
-						let ItemToken(token) = item.ref_into();
 						commands.try_apply_on(&entity, |mut e| {
-							e.try_insert(UILabel(token.clone()));
+							e.try_insert(UILabel(item.get_property().clone()));
 						});
 						PanelState::Filled
 					}
@@ -73,9 +72,9 @@ mod tests {
 	#[derive(Clone)]
 	struct _Item(ItemToken<'static>);
 
-	impl<'a> From<&'a _Item> for ItemToken<'a> {
-		fn from(_Item(token): &'a _Item) -> Self {
-			token.clone()
+	impl GetProperty<ItemToken<'_>> for _Item {
+		fn get_property(&self) -> &'_ Token {
+			self.0.0
 		}
 	}
 

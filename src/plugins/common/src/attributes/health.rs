@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::traits::accessors::get::Property;
+
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub struct Health {
 	pub current: f32,
@@ -13,4 +15,8 @@ impl Health {
 			max: value,
 		}
 	}
+}
+
+impl Property for Health {
+	type TValue<'a> = Self;
 }

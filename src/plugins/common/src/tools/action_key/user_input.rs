@@ -1,4 +1,7 @@
-use crate::{errors::IsNot, traits::handles_localization::Token};
+use crate::{
+	errors::IsNot,
+	traits::{accessors::get::Property, handles_localization::Token},
+};
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -58,4 +61,8 @@ impl TryFrom<UserInput> for MouseButton {
 
 		Ok(mouse_button)
 	}
+}
+
+impl Property for UserInput {
+	type TValue<'a> = Self;
 }

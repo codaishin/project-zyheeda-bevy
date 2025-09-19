@@ -4,6 +4,7 @@ use super::{ActionKey, user_input::UserInput};
 use crate::{
 	errors::{Error, IsNot, Level},
 	traits::{
+		accessors::get::Property,
 		handles_localization::Token,
 		handles_settings::InvalidInput,
 		iteration::{Iter, IterFinite},
@@ -14,6 +15,10 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Default, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
 pub struct SlotKey(pub u8);
+
+impl Property for SlotKey {
+	type TValue<'a> = Self;
+}
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
 pub enum PlayerSlot {
@@ -119,6 +124,10 @@ impl TryFrom<SlotKey> for PlayerSlot {
 			slot_key => Err(NoValidSlotKey { slot_key }),
 		}
 	}
+}
+
+impl Property for PlayerSlot {
+	type TValue<'a> = Self;
 }
 
 #[derive(Debug, PartialEq)]

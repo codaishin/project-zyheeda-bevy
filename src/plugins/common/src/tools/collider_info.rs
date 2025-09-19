@@ -1,4 +1,4 @@
-use crate::components::outdated::Outdated;
+use crate::{components::outdated::Outdated, traits::accessors::get::Property};
 use bevy::prelude::*;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -25,4 +25,11 @@ impl ColliderInfo<Entity> {
 			}),
 		})
 	}
+}
+
+impl<T> Property for ColliderInfo<T>
+where
+	T: Property,
+{
+	type TValue<'a> = ColliderInfo<T::TValue<'a>>;
 }

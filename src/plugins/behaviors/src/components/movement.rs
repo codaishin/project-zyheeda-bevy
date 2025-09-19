@@ -13,7 +13,7 @@ use common::{
 	components::immobilized::Immobilized,
 	tools::{Done, speed::Speed},
 	traits::{
-		accessors::get::{RefAs, RefInto, TryApplyOn},
+		accessors::get::{DynProperty, GetProperty, TryApplyOn},
 		animation::GetMovementDirection,
 		handles_orientation::Face,
 		handles_physics::LinearMotion,
@@ -118,11 +118,8 @@ where
 
 impl<TMotion> MovementUpdate for Movement<TMotion>
 where
-	TMotion: ThreadSafe
-		+ From<LinearMotion>
-		+ for<'a> RefInto<'a, Done>
-		+ for<'a> RefInto<'a, LinearMotion>
-		+ Component,
+	TMotion:
+		ThreadSafe + From<LinearMotion> + GetProperty<Done> + GetProperty<LinearMotion> + Component,
 {
 	type TComponents<'a> = Option<&'a TMotion>;
 	type TConstraint = Without<Immobilized>;
@@ -140,12 +137,12 @@ where
 		};
 
 		match motion {
-			Some(motion) if motion.ref_as::<LinearMotion>() == new_motion => {
-				motion.ref_as::<Done>()
+			Some(motion) if motion.dyn_property::<LinearMotion>() == new_motion => {
+				Done::when(motion.dyn_property::<Done>())
 			}
 			_ => {
 				agent.try_insert(TMotion::from(new_motion));
-				Done::from(false)
+				Done(false)
 			}
 		}
 	}
@@ -193,21 +190,21 @@ mod tests {
 		Done(LinearMotion),
 	}
 
-	impl From<&_Motion> for Done {
-		fn from(motion: &_Motion) -> Self {
-			Done::when(matches!(motion, _Motion::Done(..)))
-		}
-	}
-
 	impl From<LinearMotion> for _Motion {
 		fn from(linear: LinearMotion) -> Self {
 			Self::NotDone(linear)
 		}
 	}
 
-	impl From<&_Motion> for LinearMotion {
-		fn from(motion: &_Motion) -> Self {
-			match motion {
+	impl GetProperty<Done> for _Motion {
+		fn get_property(&self) -> bool {
+			matches!(self, _Motion::Done(..))
+		}
+	}
+
+	impl GetProperty<LinearMotion> for _Motion {
+		fn get_property(&self) -> LinearMotion {
+			match self {
 				_Motion::NotDone(linear_motion) => *linear_motion,
 				_Motion::Done(linear_motion) => *linear_motion,
 			}

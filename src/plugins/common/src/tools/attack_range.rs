@@ -1,3 +1,5 @@
+use crate::traits::accessors::get::Property;
+
 use super::Units;
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
@@ -17,4 +19,8 @@ impl Deref for AttackRange {
 	fn deref(&self) -> &Self::Target {
 		&self.0
 	}
+}
+
+impl Property for AttackRange {
+	type TValue<'a> = Units;
 }

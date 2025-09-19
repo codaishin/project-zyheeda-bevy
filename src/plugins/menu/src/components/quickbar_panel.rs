@@ -3,7 +3,10 @@ use crate::{
 	traits::colors::{ColorConfig, HasPanelColors, PanelColors},
 };
 use bevy::{color::Color, ecs::component::Component};
-use common::tools::action_key::slot::{PlayerSlot, SlotKey};
+use common::{
+	tools::action_key::slot::{PlayerSlot, SlotKey},
+	traits::accessors::get::GetProperty,
+};
 
 #[derive(Component)]
 pub struct QuickbarPanel {
@@ -41,21 +44,21 @@ impl From<PlayerSlot> for QuickbarPanel {
 	}
 }
 
-impl From<&QuickbarPanel> for PanelState {
-	fn from(QuickbarPanel { state, .. }: &QuickbarPanel) -> Self {
-		*state
+impl GetProperty<PanelState> for QuickbarPanel {
+	fn get_property(&self) -> PanelState {
+		self.state
 	}
 }
 
-impl From<&QuickbarPanel> for PlayerSlot {
-	fn from(QuickbarPanel { key, .. }: &QuickbarPanel) -> Self {
-		*key
+impl GetProperty<PlayerSlot> for QuickbarPanel {
+	fn get_property(&self) -> PlayerSlot {
+		self.key
 	}
 }
 
-impl From<&QuickbarPanel> for SlotKey {
-	fn from(QuickbarPanel { key, .. }: &QuickbarPanel) -> Self {
-		Self::from(*key)
+impl GetProperty<SlotKey> for QuickbarPanel {
+	fn get_property(&self) -> SlotKey {
+		SlotKey::from(self.key)
 	}
 }
 
@@ -66,7 +69,7 @@ impl HasPanelColors for QuickbarPanel {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{tools::action_key::slot::Side, traits::accessors::get::RefAs};
+	use common::{tools::action_key::slot::Side, traits::accessors::get::DynProperty};
 
 	#[test]
 	fn get_empty() {
@@ -74,7 +77,7 @@ mod tests {
 			key: PlayerSlot::Lower(Side::Right),
 			state: PanelState::Empty,
 		};
-		assert_eq!(PanelState::Empty, panel.ref_as::<PanelState>());
+		assert_eq!(PanelState::Empty, panel.dyn_property::<PanelState>());
 	}
 
 	#[test]
@@ -83,7 +86,7 @@ mod tests {
 			key: PlayerSlot::Lower(Side::Right),
 			state: PanelState::Filled,
 		};
-		assert_eq!(PanelState::Filled, panel.ref_as::<PanelState>());
+		assert_eq!(PanelState::Filled, panel.dyn_property::<PanelState>());
 	}
 
 	#[test]
@@ -93,7 +96,10 @@ mod tests {
 			state: PanelState::Empty,
 		};
 
-		assert_eq!(PlayerSlot::Lower(Side::Left), panel.ref_as::<PlayerSlot>());
+		assert_eq!(
+			PlayerSlot::Lower(Side::Left),
+			panel.dyn_property::<PlayerSlot>()
+		);
 	}
 
 	#[test]
@@ -105,7 +111,7 @@ mod tests {
 
 		assert_eq!(
 			SlotKey::from(PlayerSlot::Lower(Side::Left)),
-			panel.ref_as::<SlotKey>()
+			panel.dyn_property::<SlotKey>(),
 		);
 	}
 }

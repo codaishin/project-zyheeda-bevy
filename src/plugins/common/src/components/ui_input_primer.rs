@@ -1,4 +1,7 @@
-use crate::tools::action_key::user_input::UserInput;
+use crate::{
+	tools::action_key::user_input::UserInput,
+	traits::accessors::get::{GetProperty, Property},
+};
 use bevy::prelude::*;
 
 /// Alters user input behavior for the associated UI button.
@@ -32,9 +35,9 @@ impl From<UserInput> for UiInputPrimer {
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct IsPrimed(pub bool);
 
-impl From<&UiInputPrimer> for IsPrimed {
-	fn from(UiInputPrimer { state, .. }: &UiInputPrimer) -> Self {
-		if state == &UiInputState::Primed {
+impl From<UiInputPrimer> for IsPrimed {
+	fn from(UiInputPrimer { state, .. }: UiInputPrimer) -> Self {
+		if state == UiInputState::Primed {
 			return Self(true);
 		}
 
@@ -42,32 +45,30 @@ impl From<&UiInputPrimer> for IsPrimed {
 	}
 }
 
-impl From<UiInputPrimer> for IsPrimed {
-	fn from(value: UiInputPrimer) -> Self {
-		Self::from(&value)
+impl GetProperty<IsPrimed> for UiInputPrimer {
+	fn get_property(&self) -> bool {
+		matches!(self.state, UiInputState::Primed)
 	}
 }
 
-impl From<&UiInputPrimer> for UserInput {
-	fn from(UiInputPrimer { key, .. }: &UiInputPrimer) -> Self {
-		*key
+impl GetProperty<UserInput> for UiInputPrimer {
+	fn get_property(&self) -> UserInput {
+		self.key
 	}
 }
 
-impl From<UiInputPrimer> for UserInput {
-	fn from(value: UiInputPrimer) -> Self {
-		Self::from(&value)
-	}
-}
-
-impl From<&UiInputPrimer> for JustChangedInput {
-	fn from(primer: &UiInputPrimer) -> Self {
-		match primer.state {
-			UiInputState::JustPressed => JustChangedInput::JustPressed(primer.key),
-			UiInputState::JustReleased => JustChangedInput::JustReleased(primer.key),
+impl GetProperty<JustChangedInput> for UiInputPrimer {
+	fn get_property(&self) -> JustChangedInput {
+		match self.state {
+			UiInputState::JustPressed => JustChangedInput::JustPressed(self.key),
+			UiInputState::JustReleased => JustChangedInput::JustReleased(self.key),
 			_ => JustChangedInput::None,
 		}
 	}
+}
+
+impl Property for IsPrimed {
+	type TValue<'a> = bool;
 }
 
 #[derive(Debug, PartialEq, Default, Clone, Copy)]
@@ -100,6 +101,10 @@ pub(crate) enum JustChangedInput {
 	None,
 	JustPressed(UserInput),
 	JustReleased(UserInput),
+}
+
+impl Property for JustChangedInput {
+	type TValue<'a> = Self;
 }
 
 pub(crate) trait UiInputStateTransition: Sized {
@@ -151,6 +156,8 @@ impl KeyPrimed for UiInputPrimer {
 
 #[cfg(test)]
 mod tests {
+	use crate::traits::accessors::get::DynProperty;
+
 	use super::*;
 	use test_case::test_case;
 
@@ -184,7 +191,10 @@ mod tests {
 			state: UiInputState::Primed,
 		};
 
-		assert_eq!(UserInput::from(KeyCode::ArrowLeft), UserInput::from(input))
+		assert_eq!(
+			UserInput::from(KeyCode::ArrowLeft),
+			input.dyn_property::<UserInput>(),
+		)
 	}
 
 	#[test]
@@ -194,7 +204,10 @@ mod tests {
 			state: UiInputState::None,
 		};
 
-		assert_eq!(JustChangedInput::None, JustChangedInput::from(&input));
+		assert_eq!(
+			JustChangedInput::None,
+			input.dyn_property::<JustChangedInput>(),
+		);
 	}
 
 	#[test]
@@ -206,7 +219,7 @@ mod tests {
 
 		assert_eq!(
 			JustChangedInput::JustPressed(UserInput::from(KeyCode::ArrowLeft)),
-			JustChangedInput::from(&input),
+			input.dyn_property::<JustChangedInput>(),
 		);
 	}
 
@@ -219,7 +232,7 @@ mod tests {
 
 		assert_eq!(
 			JustChangedInput::JustReleased(UserInput::from(KeyCode::ArrowLeft)),
-			JustChangedInput::from(&input),
+			input.dyn_property::<JustChangedInput>(),
 		);
 	}
 

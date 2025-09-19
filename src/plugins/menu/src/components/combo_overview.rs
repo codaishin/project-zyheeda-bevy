@@ -22,7 +22,7 @@ use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{
 	tools::action_key::slot::{PlayerSlot, SlotKey},
 	traits::{
-		accessors::get::{RefAs, RefInto},
+		accessors::get::{DynProperty, GetProperty},
 		handles_loadout::loadout::{LoadoutItem, LoadoutKey, SkillIcon, SkillToken},
 		handles_localization::{Localize, LocalizeToken, localized::Localized},
 		load_asset::{LoadAsset, Path},
@@ -322,8 +322,8 @@ where
 	TSkill: Clone
 		+ PartialEq
 		+ ThreadSafe
-		+ for<'a> RefInto<'a, SkillToken<'a>>
-		+ for<'a> RefInto<'a, SkillIcon<'a>>,
+		+ for<'a> GetProperty<SkillToken<'a>>
+		+ for<'a> GetProperty<SkillIcon<'a>>,
 {
 	fn insert_ui_content<TLocalization>(
 		&self,
@@ -400,8 +400,8 @@ fn add_combo_list<TSkill, TLocalization>(
 	TSkill: Clone
 		+ PartialEq
 		+ ThreadSafe
-		+ for<'a> RefInto<'a, SkillToken<'a>>
-		+ for<'a> RefInto<'a, SkillIcon<'a>>,
+		+ for<'a> GetProperty<SkillToken<'a>>
+		+ for<'a> GetProperty<SkillIcon<'a>>,
 	TLocalization: Localize + 'static,
 {
 	parent
@@ -434,8 +434,8 @@ fn add_combo<TSkill, TLocalization>(
 	TSkill: Clone
 		+ PartialEq
 		+ ThreadSafe
-		+ for<'a> RefInto<'a, SkillToken<'a>>
-		+ for<'a> RefInto<'a, SkillIcon<'a>>,
+		+ for<'a> GetProperty<SkillToken<'a>>
+		+ for<'a> GetProperty<SkillIcon<'a>>,
 	TLocalization: Localize + 'static,
 {
 	parent
@@ -530,8 +530,8 @@ impl<TSkill, TLocalization> AddPanel<'_, TSkill, TLocalization>
 where
 	TSkill: Clone
 		+ ThreadSafe
-		+ for<'a> RefInto<'a, SkillToken<'a>>
-		+ for<'a> RefInto<'a, SkillIcon<'a>>,
+		+ for<'a> GetProperty<SkillToken<'a>>
+		+ for<'a> GetProperty<SkillIcon<'a>>,
 	TLocalization: Localize,
 {
 	fn spawn_as_child(
@@ -576,8 +576,8 @@ where
 	) {
 		let skill_bundle = (
 			ComboSkillButton::<DropdownTrigger, TSkill>::new(skill.clone(), key_path.to_vec()),
-			UILabel::from(skill.ref_as::<SkillToken>()),
-			ComboOverview::skill_button(skill.ref_as::<SkillIcon>()),
+			UILabel(skill.dyn_property::<SkillToken>().clone()),
+			ComboOverview::skill_button(skill.dyn_property::<SkillIcon>().clone()),
 			SkillSelectDropdownCommand::<Vertical>::new(key_path.to_vec()),
 		);
 

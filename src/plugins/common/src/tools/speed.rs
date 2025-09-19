@@ -1,3 +1,5 @@
+use crate::traits::accessors::get::Property;
+
 use super::UnitsPerSecond;
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
@@ -17,4 +19,8 @@ impl Deref for Speed {
 	fn deref(&self) -> &Self::Target {
 		&self.0
 	}
+}
+
+impl Property for Speed {
+	type TValue<'a> = UnitsPerSecond;
 }

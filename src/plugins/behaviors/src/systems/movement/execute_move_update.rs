@@ -2,13 +2,13 @@ use crate::traits::MovementUpdate;
 use bevy::prelude::*;
 use common::{
 	tools::speed::Speed,
-	traits::accessors::get::{RefAs, RefInto, TryApplyOn},
+	traits::accessors::get::{GetProperty, TryApplyOn},
 	zyheeda_commands::ZyheedaCommands,
 };
 
-impl<T> ExecuteMovement for T where T: Component + Sized + for<'a> RefInto<'a, Speed> {}
+impl<T> ExecuteMovement for T where T: Component + Sized + GetProperty<Speed> {}
 
-pub(crate) trait ExecuteMovement: Component + Sized + for<'a> RefInto<'a, Speed> {
+pub(crate) trait ExecuteMovement: Component + Sized + GetProperty<Speed> {
 	fn execute_movement<TMovement>(
 		mut commands: ZyheedaCommands,
 		mut agents: Query<
@@ -20,7 +20,7 @@ pub(crate) trait ExecuteMovement: Component + Sized + for<'a> RefInto<'a, Speed>
 	{
 		for (entity, components, config, movement) in &mut agents {
 			commands.try_apply_on(&entity, |mut e| {
-				let speed = config.ref_as::<Speed>();
+				let speed = Speed(config.get_property());
 
 				if !movement.update(&mut e, components, speed).is_done() {
 					return;
@@ -44,11 +44,12 @@ mod tests {
 	#[derive(Component, Default)]
 	struct _Agent(Speed);
 
-	impl RefInto<'_, Speed> for _Agent {
-		fn ref_into(&self) -> Speed {
-			self.0
+	impl GetProperty<Speed> for _Agent {
+		fn get_property(&self) -> UnitsPerSecond {
+			self.0.0
 		}
 	}
+
 	#[derive(Component, PartialEq, Debug, Clone, Copy)]
 	struct _Component;
 

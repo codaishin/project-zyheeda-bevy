@@ -3,7 +3,7 @@ use common::{
 	attributes::health::Health,
 	tools::attribute::AttributeOnSpawn,
 	traits::{
-		accessors::get::RefInto,
+		accessors::get::GetProperty,
 		register_derived_component::{DerivableFrom, InsertDerivedComponent},
 	},
 };
@@ -32,23 +32,22 @@ impl From<Health> for Life {
 	}
 }
 
-impl From<&Life> for Health {
-	fn from(Life(health): &Life) -> Self {
-		*health
+impl GetProperty<Health> for Life {
+	fn get_property(&self) -> Health {
+		self.0
 	}
 }
 
 impl<T> DerivableFrom<'_, '_, T> for Life
 where
-	T: for<'a> RefInto<'a, AttributeOnSpawn<Health>>,
+	T: GetProperty<AttributeOnSpawn<Health>>,
 {
 	const INSERT: InsertDerivedComponent = InsertDerivedComponent::IfNew;
 
 	type TParam = ();
 
 	fn derive_from(_: Entity, component: &T, _: &()) -> Self {
-		let AttributeOnSpawn(health) = component.ref_into();
-		Life(health)
+		Life(component.get_property())
 	}
 }
 

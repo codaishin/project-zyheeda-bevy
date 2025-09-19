@@ -1,4 +1,4 @@
-use super::{accessors::get::RefInto, intersect_at::IntersectAt};
+use super::intersect_at::IntersectAt;
 use crate::{
 	attributes::{effect_target::EffectTarget, health::Health},
 	effects::{force::Force, gravity::Gravity},
@@ -13,6 +13,7 @@ use crate::{
 		speed::Speed,
 	},
 	traits::{
+		accessors::get::GetProperty,
 		handles_skill_behaviors::SkillSpawner,
 		loadout::LoadoutConfig,
 		mapper::Mapper,
@@ -33,9 +34,9 @@ pub trait HandlesPlayer {
 		+ for<'a> Mapper<Bone<'a>, Option<EssenceSlot>>
 		+ for<'a> Mapper<Bone<'a>, Option<HandSlot>>
 		+ for<'a> Mapper<Bone<'a>, Option<ForearmSlot>>
-		+ for<'a> RefInto<'a, AttributeOnSpawn<Health>>
-		+ for<'a> RefInto<'a, AttributeOnSpawn<EffectTarget<Gravity>>>
-		+ for<'a> RefInto<'a, AttributeOnSpawn<EffectTarget<Force>>>;
+		+ GetProperty<AttributeOnSpawn<Health>>
+		+ GetProperty<AttributeOnSpawn<EffectTarget<Gravity>>>
+		+ GetProperty<AttributeOnSpawn<EffectTarget<Force>>>;
 }
 
 pub trait PlayerMainCamera {
@@ -43,18 +44,18 @@ pub trait PlayerMainCamera {
 }
 
 pub trait HandlesPlayerCameras {
-	type TCamRay: Resource + for<'a> RefInto<'a, Option<&'a Ray3d>> + IntersectAt;
+	type TCamRay: Resource + GetProperty<Option<Ray3d>> + IntersectAt;
 }
 
 pub trait HandlesPlayerMouse {
-	type TMouseHover: Resource + for<'a> RefInto<'a, Option<&'a ColliderInfo<Entity>>>;
+	type TMouseHover: Resource + GetProperty<Option<ColliderInfo<Entity>>>;
 }
 
 pub trait ConfiguresPlayerMovement {
 	type TPlayerMovement: Component
-		+ for<'a> RefInto<'a, Speed>
-		+ for<'a> RefInto<'a, ColliderRadius>
-		+ for<'a> RefInto<'a, Option<&'a MovementAnimation>>;
+		+ GetProperty<Speed>
+		+ GetProperty<ColliderRadius>
+		+ GetProperty<Option<MovementAnimation>>;
 }
 
 pub trait ConfiguresPlayerSkillAnimations {

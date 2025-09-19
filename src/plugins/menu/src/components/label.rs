@@ -1,9 +1,6 @@
 use crate::components::icon::Icon;
 use bevy::prelude::*;
-use common::traits::{
-	handles_loadout::loadout::SkillToken,
-	handles_localization::{Token, localized::Localized},
-};
+use common::traits::handles_localization::localized::Localized;
 use std::sync::LazyLock;
 
 /// Display the localized text:
@@ -28,12 +25,6 @@ impl UILabel {
 impl Default for UILabel {
 	fn default() -> Self {
 		Self::empty()
-	}
-}
-
-impl<'a> From<SkillToken<'a>> for UILabel<Token> {
-	fn from(SkillToken(token): SkillToken<'a>) -> Self {
-		Self(token.clone())
 	}
 }
 

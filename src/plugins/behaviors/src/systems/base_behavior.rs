@@ -10,7 +10,7 @@ use common::{
 	errors::Error,
 	tools::{aggro_range::AggroRange, attack_range::AttackRange},
 	traits::{
-		accessors::get::{GetMut, RefAs, RefInto},
+		accessors::get::{DynProperty, GetMut, GetProperty},
 		cast_ray::{
 			CastRay,
 			GetRayCaster,
@@ -38,11 +38,11 @@ pub(crate) trait SelectBehavior {
 		colliders: Query<&ColliderOfInteractionTarget>,
 	) -> Result<(), BehaviorError>
 	where
-		for<'a> Self: Component
+		Self: Component
 			+ Sized
-			+ RefInto<'a, AggroRange>
-			+ RefInto<'a, AttackRange>
-			+ RefInto<'a, EnemyTarget>,
+			+ GetProperty<AggroRange>
+			+ GetProperty<AttackRange>
+			+ GetProperty<EnemyTarget>,
 		TPlayer: Component,
 	{
 		select_behavior(rapier, commands, agents, players, all, colliders)
@@ -89,11 +89,11 @@ fn select_behavior<TAgent, TPlayer, TGetRayCaster>(
 	colliders: Query<&ColliderOfInteractionTarget>,
 ) -> Result<(), BehaviorError<TGetRayCaster::TError>>
 where
-	for<'a> TAgent: Component
+	TAgent: Component
 		+ Sized
-		+ RefInto<'a, AggroRange>
-		+ RefInto<'a, AttackRange>
-		+ RefInto<'a, EnemyTarget>,
+		+ GetProperty<AggroRange>
+		+ GetProperty<AttackRange>
+		+ GetProperty<EnemyTarget>,
 	TPlayer: Component,
 	TGetRayCaster: GetRayCaster<(Ray3d, NoSensors, ExcludeRigidBody)>,
 {
@@ -104,7 +104,7 @@ where
 	let mut invalid_directions = vec![];
 
 	for (persistent_agent, transform, ground_offset, agent) in &agents {
-		let target = match agent.ref_as::<EnemyTarget>() {
+		let target = match agent.dyn_property::<EnemyTarget>() {
 			EnemyTarget::Player => players.single().ok(),
 			EnemyTarget::Entity(persistent_entity) => commands
 				.get_mut(&persistent_entity)
@@ -174,16 +174,16 @@ fn get_strategy<TAgent, TCaster>(
 	colliders: &Query<&ColliderOfInteractionTarget>,
 ) -> Result<Behavior, InvalidDirectionError>
 where
-	for<'a> TAgent: RefInto<'a, AggroRange> + RefInto<'a, AttackRange>,
+	TAgent: GetProperty<AggroRange> + GetProperty<AttackRange>,
 	TCaster: CastRay<(Ray3d, NoSensors, ExcludeRigidBody)>,
 {
 	let direction = target_translation - enemy_translation;
 	let distance = direction.length();
 
-	if distance > **enemy_agent.ref_as::<AggroRange>() {
+	if distance > *enemy_agent.dyn_property::<AggroRange>() {
 		return Ok(Behavior::Idle);
 	}
-	if distance > **enemy_agent.ref_as::<AttackRange>() {
+	if distance > *enemy_agent.dyn_property::<AttackRange>() {
 		return Ok(Behavior::Chase);
 	}
 
@@ -239,20 +239,20 @@ mod tests {
 		target: EnemyTarget,
 	}
 
-	impl RefInto<'_, AggroRange> for _Enemy {
-		fn ref_into(&self) -> AggroRange {
-			self.aggro_range
+	impl GetProperty<AggroRange> for _Enemy {
+		fn get_property(&self) -> Units {
+			self.aggro_range.0
 		}
 	}
 
-	impl RefInto<'_, AttackRange> for _Enemy {
-		fn ref_into(&self) -> AttackRange {
-			self.attack_range
+	impl GetProperty<AttackRange> for _Enemy {
+		fn get_property(&self) -> Units {
+			self.attack_range.0
 		}
 	}
 
-	impl RefInto<'_, EnemyTarget> for _Enemy {
-		fn ref_into(&self) -> EnemyTarget {
+	impl GetProperty<EnemyTarget> for _Enemy {
+		fn get_property(&self) -> EnemyTarget {
 			self.target
 		}
 	}

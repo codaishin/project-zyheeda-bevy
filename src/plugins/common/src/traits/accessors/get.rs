@@ -1,8 +1,12 @@
-use std::ops::Deref;
+mod assets;
+mod entity;
+mod handle;
+mod option;
+mod ray;
+mod result;
 
 use bevy::ecs::system::{StaticSystemParam, SystemParam};
-
-mod assets;
+use std::ops::Deref;
 
 pub trait Get<TKey> {
 	type TValue;
@@ -134,60 +138,130 @@ pub trait TryApplyOn<'a, TKey>: GetMut<TKey> + 'a {
 
 impl<'a, T, TEntity> TryApplyOn<'a, TEntity> for T where T: GetMut<TEntity> + 'a {}
 
-/// A getter style conversion ("into" from a reference)
+/// A type-level descriptor for use with [`GetProperty`].
 ///
-/// A blanket implementation exists for types that implement `From<&SomeType>`, which - similar
-/// to `Into` vs. `From` - should be preferably implemented.
-pub trait RefInto<'a, TValue> {
-	fn ref_into(&'a self) -> TValue;
-}
-
-impl<'a, TFrom, TInto> RefInto<'a, TInto> for TFrom
-where
-	TFrom: 'a,
-	TInto: From<&'a TFrom> + 'a,
-{
-	fn ref_into(&'a self) -> TInto {
-		TInto::from(self)
-	}
-}
-
-/// Getter like blanket trait for calling [`RefInto::ref_into()`]
+/// Implementors of this trait define how a value should be accessed through [`GetProperty`].
+/// The associated type [`TValue<'a>`](Property::TValue) determines whether the value is retrieved
+/// by reference (useful for computation-heavy or non-`Clone` types) or by value.
 ///
-/// Allows more explicit type conversion, like:
+/// This can also be used for declarative wrapper types to expose their inner value in a
+/// specific way.
+/// # Example
 /// ```
-/// use common::traits::accessors::get::RefAs;
+/// use common::traits::accessors::get::{Property};
 ///
-/// struct MySpaceShip;
-///
-/// #[derive(Debug, PartialEq)]
-/// enum FtlMethod {
-///   Warp,
-///   Wormhole,
+/// // Small types can be returned by value.
+/// #[derive(Clone, Copy)]
+/// enum TinyEnum {
+///   A,
+///   B,
 /// }
 ///
-/// impl From<&MySpaceShip> for FtlMethod {
-///   fn from(_: &MySpaceShip) -> FtlMethod {
-///     FtlMethod::Wormhole
+/// impl Property for TinyEnum {
+///   type TValue<'a> = Self;
+/// }
+///
+/// // Large or expensive-to-clone types are better returned by reference.
+/// struct GiantArray([String; 100_000]);
+///
+/// impl Property for GiantArray {
+///   type TValue<'a> = &'a Self;
+/// }
+///
+/// // Wrapper types can choose to expose their inner value directly,
+/// // independent of how the value itself is stored.
+/// struct NumberOfLimbs(u8);
+///
+/// impl Property for NumberOfLimbs {
+///   type TValue<'a> = u8;
+/// }
+/// ```
+pub trait Property {
+	type TValue<'a>;
+}
+
+/// A generic getter trait over a [`Property`].
+///
+/// The property specifies how the value is exposed (by reference, by value, or via a transformed
+/// inner type). This allows consumers to request a value in a uniform way, while letting the
+/// property control the retrieval strategy.
+///
+/// # Example
+/// ```
+/// use common::traits::accessors::get::{Property, GetProperty};
+///
+/// #[derive(Debug, PartialEq)]
+/// struct MyProperty;
+///
+/// impl Property for MyProperty {
+///   type TValue<'a> = Self;
+/// }
+///
+/// struct Obj;
+///
+/// impl GetProperty<MyProperty> for Obj {
+///   fn get_property(&self) -> MyProperty {
+///     MyProperty
 ///   }
 /// }
 ///
-/// let ship = MySpaceShip;
+/// let obj = Obj;
 ///
-/// assert_eq!(FtlMethod::Wormhole, ship.ref_as::<FtlMethod>());
+/// assert_eq!(MyProperty, obj.get_property());
 /// ```
-pub trait RefAs {
-	fn ref_as<'a, T>(&'a self) -> T
-	where
-		Self: RefInto<'a, T>;
+pub trait GetProperty<TProperty>
+where
+	TProperty: Property,
+{
+	fn get_property(&self) -> TProperty::TValue<'_>;
 }
 
-impl<TSource> RefAs for TSource {
-	fn ref_as<'a, T>(&'a self) -> T
+/// A convenience trait to access any [`Property`] dynamically.
+///
+/// Useful when you want to name the retrieved property directly on the call.
+///
+/// ```
+/// use common::traits::accessors::get::{Property, GetProperty, DynProperty};
+///
+/// #[derive(Debug, PartialEq)]
+/// struct MyProperty;
+///
+/// impl Property for MyProperty {
+///   type TValue<'a> = Self;
+/// }
+///
+/// struct Obj;
+///
+/// impl GetProperty<MyProperty> for Obj {
+///   fn get_property(&self) -> MyProperty {
+///     MyProperty
+///   }
+/// }
+///
+/// let obj = Obj;
+///
+/// // when rust cannot determine which `GetProperty` impl of many to use:
+/// let a: MyProperty = obj.get_property();
+///
+/// // same issue as above, but using `DynProperty`:
+/// let b = obj.dyn_property::<MyProperty>();
+///
+/// assert_eq!(a, b);
+/// ```
+pub trait DynProperty {
+	fn dyn_property<TProperty>(&self) -> TProperty::TValue<'_>
 	where
-		Self: RefInto<'a, T>,
+		TProperty: Property,
+		Self: GetProperty<TProperty>;
+}
+
+impl<T> DynProperty for T {
+	fn dyn_property<TProperty>(&self) -> TProperty::TValue<'_>
+	where
+		TProperty: Property,
+		Self: GetProperty<TProperty>,
 	{
-		self.ref_into()
+		GetProperty::<TProperty>::get_property(self)
 	}
 }
 

@@ -3,7 +3,7 @@ use crate::{
 	components::is_blocker::Blocker,
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
 	tools::{Done, Units, speed::Speed},
-	traits::accessors::get::RefInto,
+	traits::accessors::get::{GetProperty, Property},
 };
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -21,10 +21,7 @@ pub trait HandlesMotion {
 	///
 	/// Implementors must make sure this works on top level entities. No guarantees are made for
 	/// entities that are a child of other entities.
-	type TMotion: Component
-		+ From<LinearMotion>
-		+ for<'a> RefInto<'a, Done>
-		+ for<'a> RefInto<'a, LinearMotion>;
+	type TMotion: Component + From<LinearMotion> + GetProperty<Done> + GetProperty<LinearMotion>;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
@@ -32,6 +29,10 @@ pub enum LinearMotion {
 	Direction { speed: Speed, direction: Dir3 },
 	ToTarget { speed: Speed, target: Vec3 },
 	Stop,
+}
+
+impl Property for LinearMotion {
+	type TValue<'a> = Self;
 }
 
 pub trait HandlesAllPhysicalEffects:
@@ -55,12 +56,12 @@ where
 }
 
 pub trait HandlesLife:
-	HandlesPhysicalEffect<HealthDamage, TAffectedComponent: for<'a> RefInto<'a, Health>>
+	HandlesPhysicalEffect<HealthDamage, TAffectedComponent: GetProperty<Health>>
 {
 }
 
 impl<T> HandlesLife for T where
-	T: HandlesPhysicalEffect<HealthDamage, TAffectedComponent: for<'a> RefInto<'a, Health>>
+	T: HandlesPhysicalEffect<HealthDamage, TAffectedComponent: GetProperty<Health>>
 {
 }
 

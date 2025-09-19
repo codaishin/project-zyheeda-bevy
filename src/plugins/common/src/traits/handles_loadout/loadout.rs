@@ -1,6 +1,10 @@
 use crate::{
 	tools::skill_execution::SkillExecution,
-	traits::{accessors::get::RefInto, handles_localization::Token, thread_safe::ThreadSafe},
+	traits::{
+		accessors::get::{GetProperty, Property},
+		handles_localization::Token,
+		thread_safe::ThreadSafe,
+	},
 };
 use bevy::prelude::*;
 
@@ -29,18 +33,18 @@ where
 }
 
 pub trait LoadoutSkillItem:
-	for<'a> RefInto<'a, ItemToken<'a>>
-	+ for<'a> RefInto<'a, Result<SkillToken<'a>, NoSkill>>
-	+ for<'a> RefInto<'a, Result<SkillIcon<'a>, NoSkill>>
-	+ for<'a> RefInto<'a, Result<&'a SkillExecution, NoSkill>>
+	for<'a> GetProperty<ItemToken<'a>>
+	+ for<'a> GetProperty<Result<SkillToken<'a>, NoSkill>>
+	+ for<'a> GetProperty<Result<SkillIcon<'a>, NoSkill>>
+	+ GetProperty<Result<SkillExecution, NoSkill>>
 {
 }
 
 impl<T> LoadoutSkillItem for T where
-	T: for<'a> RefInto<'a, ItemToken<'a>>
-		+ for<'a> RefInto<'a, Result<SkillToken<'a>, NoSkill>>
-		+ for<'a> RefInto<'a, Result<SkillIcon<'a>, NoSkill>>
-		+ for<'a> RefInto<'a, Result<&'a SkillExecution, NoSkill>>
+	T: for<'a> GetProperty<ItemToken<'a>>
+		+ for<'a> GetProperty<Result<SkillToken<'a>, NoSkill>>
+		+ for<'a> GetProperty<Result<SkillIcon<'a>, NoSkill>>
+		+ GetProperty<Result<SkillExecution, NoSkill>>
 {
 }
 
@@ -48,8 +52,8 @@ pub trait LoadoutSkill:
 	PartialEq
 	+ Clone
 	+ ThreadSafe
-	+ for<'a> RefInto<'a, SkillToken<'a>>
-	+ for<'a> RefInto<'a, SkillIcon<'a>>
+	+ for<'a> GetProperty<SkillToken<'a>>
+	+ for<'a> GetProperty<SkillIcon<'a>>
 {
 }
 
@@ -57,19 +61,31 @@ impl<T> LoadoutSkill for T where
 	T: PartialEq
 		+ Clone
 		+ ThreadSafe
-		+ for<'a> RefInto<'a, SkillToken<'a>>
-		+ for<'a> RefInto<'a, SkillIcon<'a>>
+		+ for<'a> GetProperty<SkillToken<'a>>
+		+ for<'a> GetProperty<SkillIcon<'a>>
 {
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct ItemToken<'a>(pub &'a Token);
 
+impl Property for ItemToken<'_> {
+	type TValue<'a> = &'a Token;
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct SkillToken<'a>(pub &'a Token);
 
+impl Property for SkillToken<'_> {
+	type TValue<'a> = &'a Token;
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct SkillIcon<'a>(pub &'a Handle<Image>);
+
+impl Property for SkillIcon<'_> {
+	type TValue<'a> = &'a Handle<Image>;
+}
 
 #[derive(Debug, PartialEq)]
 pub struct NoSkill;

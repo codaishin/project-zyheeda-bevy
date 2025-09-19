@@ -6,7 +6,7 @@ use common::{
 	effects::gravity::Gravity,
 	tools::{UnitsPerSecond, attribute::AttributeOnSpawn},
 	traits::{
-		accessors::get::RefInto,
+		accessors::get::GetProperty,
 		register_derived_component::{DerivableFrom, InsertDerivedComponent},
 	},
 };
@@ -77,16 +77,16 @@ impl<'a> Iterator for DrainPulls<'a> {
 
 impl<T> DerivableFrom<'_, '_, T> for GravityAffected
 where
-	T: for<'a> RefInto<'a, AttributeOnSpawn<EffectTarget<Gravity>>>,
+	T: GetProperty<AttributeOnSpawn<EffectTarget<Gravity>>>,
 {
 	const INSERT: InsertDerivedComponent = InsertDerivedComponent::IfNew;
 
 	type TParam = ();
 
 	fn derive_from(_: Entity, component: &T, _: &()) -> Self {
-		match component.ref_into() {
-			AttributeOnSpawn(EffectTarget::Affected) => Self::affected([]),
-			AttributeOnSpawn(EffectTarget::Immune) => Self::Immune,
+		match component.get_property() {
+			EffectTarget::Affected => Self::affected([]),
+			EffectTarget::Immune => Self::Immune,
 		}
 	}
 }
