@@ -12,9 +12,12 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	tools::{action_key::slot::SlotKey, item_type::CompatibleItems},
+	tools::{
+		action_key::slot::SlotKey,
+		item_type::{CompatibleItems, ItemType},
+	},
 	traits::{
-		accessors::get::{GetMut, RefInto},
+		accessors::get::{GetMut, GetProperty},
 		handles_custom_assets::AssetFolderPath,
 		handles_loadout::loadout::{SkillIcon, SkillToken},
 		handles_localization::Token,
@@ -26,6 +29,7 @@ use common::{
 };
 use serde::{Deserialize, Serialize};
 use std::{
+	collections::HashSet,
 	fmt::{Display, Formatter, Result as FmtResult},
 	time::Duration,
 };
@@ -64,25 +68,21 @@ impl AssetFolderPath for Skill {
 	}
 }
 
-impl<'a> From<&'a Skill> for SkillToken<'a> {
-	fn from(Skill { token, .. }: &'a Skill) -> Self {
-		SkillToken(token)
+impl GetProperty<SkillToken<'_>> for Skill {
+	fn get_property(&self) -> &'_ Token {
+		&self.token
 	}
 }
 
-impl<'a> From<&'a Skill> for SkillIcon<'a> {
-	fn from(Skill { icon, .. }: &'a Skill) -> Self {
-		Self(icon)
+impl GetProperty<SkillIcon<'_>> for Skill {
+	fn get_property(&self) -> &'_ Handle<Image> {
+		&self.icon
 	}
 }
 
-impl<'a> From<&'a Skill> for &'a CompatibleItems {
-	fn from(
-		Skill {
-			compatible_items, ..
-		}: &'a Skill,
-	) -> Self {
-		compatible_items
+impl GetProperty<CompatibleItems> for Skill {
+	fn get_property(&self) -> &'_ HashSet<ItemType> {
+		&self.compatible_items.0
 	}
 }
 
@@ -111,14 +111,14 @@ impl QueuedSkill {
 	}
 }
 
-impl From<&QueuedSkill> for SlotKey {
-	fn from(QueuedSkill { key, .. }: &QueuedSkill) -> Self {
-		*key
+impl GetProperty<SlotKey> for QueuedSkill {
+	fn get_property(&self) -> SlotKey {
+		self.key
 	}
 }
 
-impl<'a> RefInto<'a, &'a Token> for QueuedSkill {
-	fn ref_into(&self) -> &Token {
+impl GetProperty<Token> for QueuedSkill {
+	fn get_property(&self) -> &'_ Token {
 		&self.skill.token
 	}
 }
@@ -290,8 +290,8 @@ mod tests {
 	#[derive(Component)]
 	struct _Affected;
 
-	impl From<&_Affected> for Health {
-		fn from(_: &_Affected) -> Self {
+	impl GetProperty<Health> for _Affected {
+		fn get_property(&self) -> Health {
 			panic!("NOT USED")
 		}
 	}

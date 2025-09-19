@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use common::{
 	tools::collider_radius::ColliderRadius,
 	traits::{
-		accessors::get::{RefAs, RefInto, TryApplyOn},
+		accessors::get::{GetProperty, TryApplyOn},
 		handles_path_finding::ComputePath,
 		thread_safe::ThreadSafe,
 	},
@@ -20,11 +20,9 @@ type MoveComponents<TAgent, TMotion, TGetComputer> = (
 );
 type ChangedMovement<TMotion> = Changed<Movement<PathOrWasd<TMotion>>>;
 
-impl<T> MovementPath for T where T: Component + for<'a> RefInto<'a, ColliderRadius> + Sized {}
+impl<T> MovementPath for T where T: Component + GetProperty<ColliderRadius> + Sized {}
 
-pub(crate) trait MovementPath:
-	Component + for<'a> RefInto<'a, ColliderRadius> + Sized
-{
+pub(crate) trait MovementPath: Component + GetProperty<ColliderRadius> + Sized {
 	fn compute_path<TMotion, TComputer, TGetComputer>(
 		mut commands: ZyheedaCommands,
 		movements: Query<MoveComponents<Self, TMotion, TGetComputer>, ChangedMovement<TMotion>>,
@@ -32,10 +30,10 @@ pub(crate) trait MovementPath:
 	) where
 		TMotion: ThreadSafe,
 		TComputer: Component + ComputePath,
-		TGetComputer: Component + for<'a> RefInto<'a, Entity>,
+		TGetComputer: Component + GetProperty<Entity>,
 	{
 		for (entity, transform, agent, movement, get_computer) in &movements {
-			let Ok(computer) = computers.get(get_computer.ref_as::<Entity>()) else {
+			let Ok(computer) = computers.get(get_computer.get_property()) else {
 				continue;
 			};
 			let path_or_wasd = new_movement(computer, transform, movement, agent);
@@ -54,7 +52,7 @@ fn new_movement<TAgent, TMotion, TComputer>(
 	agent: &TAgent,
 ) -> PathOrWasd<TMotion>
 where
-	TAgent: for<'a> RefInto<'a, ColliderRadius>,
+	TAgent: GetProperty<ColliderRadius>,
 	TComputer: ComputePath,
 	TMotion: ThreadSafe,
 {
@@ -80,11 +78,11 @@ fn compute_path<TAgent, TComputer>(
 	agent: &TAgent,
 ) -> VecDeque<Vec3>
 where
-	TAgent: for<'a> RefInto<'a, ColliderRadius>,
+	TAgent: GetProperty<ColliderRadius>,
 	TComputer: ComputePath,
 {
 	let start = transform.translation();
-	let ColliderRadius(radius) = agent.ref_into();
+	let radius = agent.get_property();
 	let Some(path) = computer.compute_path(start, end, radius) else {
 		return VecDeque::from([]);
 	};
@@ -111,8 +109,8 @@ mod test_new_path {
 	#[derive(Component)]
 	struct _GetComputer(Entity);
 
-	impl RefInto<'_, Entity> for _GetComputer {
-		fn ref_into(&self) -> Entity {
+	impl GetProperty<Entity> for _GetComputer {
+		fn get_property(&self) -> Entity {
 			self.0
 		}
 	}
@@ -125,17 +123,16 @@ mod test_new_path {
 	impl Default for _MovementCollider {
 		fn default() -> Self {
 			let mut mock = Mock_MovementCollider::new();
-			mock.expect_ref_into()
-				.return_const(ColliderRadius(Units::from(1.)));
+			mock.expect_get_property().return_const(Units::from(1.));
 
 			Self { mock }
 		}
 	}
 
 	#[automock]
-	impl RefInto<'_, ColliderRadius> for _MovementCollider {
-		fn ref_into(&self) -> ColliderRadius {
-			self.mock.ref_into()
+	impl GetProperty<ColliderRadius> for _MovementCollider {
+		fn get_property(&self) -> Units {
+			self.mock.get_property()
 		}
 	}
 
@@ -336,8 +333,7 @@ mod test_new_path {
 				.id();
 			app.world_mut().spawn((
 				_MovementCollider::new().with_mock(|mock| {
-					mock.expect_ref_into()
-						.return_const(ColliderRadius(Units::from(42.)));
+					mock.expect_get_property().return_const(Units::from(42.));
 				}),
 				Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::new(4., 5., 6.)),
 				GlobalTransform::from_xyz(1., 2., 3.),

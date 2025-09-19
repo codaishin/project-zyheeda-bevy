@@ -1,4 +1,4 @@
-use crate::tools::action_key::slot::SlotKey;
+use crate::{tools::action_key::slot::SlotKey, traits::accessors::get::GetProperty};
 
 pub trait VisibleSlots {
 	fn visible_slots(&self) -> impl Iterator<Item = SlotKey>;
@@ -13,9 +13,9 @@ impl From<SlotKey> for EssenceSlot {
 	}
 }
 
-impl From<&EssenceSlot> for SlotKey {
-	fn from(EssenceSlot(slot_key): &EssenceSlot) -> Self {
-		*slot_key
+impl GetProperty<SlotKey> for EssenceSlot {
+	fn get_property(&self) -> SlotKey {
+		self.0
 	}
 }
 
@@ -28,9 +28,9 @@ impl From<SlotKey> for HandSlot {
 	}
 }
 
-impl From<&HandSlot> for SlotKey {
-	fn from(HandSlot(slot_key): &HandSlot) -> Self {
-		*slot_key
+impl GetProperty<SlotKey> for HandSlot {
+	fn get_property(&self) -> SlotKey {
+		self.0
 	}
 }
 
@@ -43,8 +43,8 @@ impl From<SlotKey> for ForearmSlot {
 	}
 }
 
-impl From<&ForearmSlot> for SlotKey {
-	fn from(ForearmSlot(slot_key): &ForearmSlot) -> Self {
-		*slot_key
+impl GetProperty<SlotKey> for ForearmSlot {
+	fn get_property(&self) -> SlotKey {
+		self.0
 	}
 }

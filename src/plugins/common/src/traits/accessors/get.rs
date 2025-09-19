@@ -1,5 +1,8 @@
 mod assets;
+mod entity;
+mod handle;
 mod option;
+mod ray;
 mod result;
 
 use bevy::ecs::system::{StaticSystemParam, SystemParam};
@@ -259,63 +262,6 @@ impl<T> DynProperty for T {
 		Self: GetProperty<TProperty>,
 	{
 		GetProperty::<TProperty>::get_property(self)
-	}
-}
-
-/// A getter style conversion ("into" from a reference)
-///
-/// A blanket implementation exists for types that implement `From<&SomeType>`, which - similar
-/// to `Into` vs. `From` - should be preferably implemented.
-pub trait RefInto<'a, TValue> {
-	fn ref_into(&'a self) -> TValue;
-}
-
-impl<'a, TFrom, TInto> RefInto<'a, TInto> for TFrom
-where
-	TFrom: 'a,
-	TInto: From<&'a TFrom> + 'a,
-{
-	fn ref_into(&'a self) -> TInto {
-		TInto::from(self)
-	}
-}
-
-/// Getter like blanket trait for calling [`RefInto::ref_into()`]
-///
-/// Allows more explicit type conversion, like:
-/// ```
-/// use common::traits::accessors::get::RefAs;
-///
-/// struct MySpaceShip;
-///
-/// #[derive(Debug, PartialEq)]
-/// enum FtlMethod {
-///   Warp,
-///   Wormhole,
-/// }
-///
-/// impl From<&MySpaceShip> for FtlMethod {
-///   fn from(_: &MySpaceShip) -> FtlMethod {
-///     FtlMethod::Wormhole
-///   }
-/// }
-///
-/// let ship = MySpaceShip;
-///
-/// assert_eq!(FtlMethod::Wormhole, ship.ref_as::<FtlMethod>());
-/// ```
-pub trait RefAs {
-	fn ref_as<'a, T>(&'a self) -> T
-	where
-		Self: RefInto<'a, T>;
-}
-
-impl<TSource> RefAs for TSource {
-	fn ref_as<'a, T>(&'a self) -> T
-	where
-		Self: RefInto<'a, T>,
-	{
-		self.ref_into()
 	}
 }
 

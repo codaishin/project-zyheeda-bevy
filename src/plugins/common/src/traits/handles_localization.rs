@@ -8,6 +8,8 @@ use localized::Localized;
 use std::{fmt::Display, ops::Deref, sync::Arc};
 use unic_langid::LanguageIdentifier;
 
+use crate::traits::accessors::get::Property;
+
 pub trait HandlesLocalization {
 	type TLocalizationServer: Resource + SetLocalization + Localize;
 }
@@ -71,6 +73,10 @@ impl Deref for Token {
 	fn deref(&self) -> &Self::Target {
 		self.0.as_ref()
 	}
+}
+
+impl Property for Token {
+	type TValue<'a> = &'a Self;
 }
 
 #[derive(Debug, PartialEq, Clone)]

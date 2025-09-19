@@ -4,7 +4,7 @@ use common::{
 	components::persistent_entity::PersistentEntity,
 	tools::collider_info::ColliderInfo,
 	traits::{
-		accessors::get::RefInto,
+		accessors::get::GetProperty,
 		handles_player::{HandlesPlayerCameras, HandlesPlayerMouse},
 	},
 	zyheeda_commands::ZyheedaCommands,
@@ -38,15 +38,15 @@ fn get_target<TCamRay, TMouseHover>(
 	transforms: &Query<&GlobalTransform>,
 ) -> Option<SkillTarget>
 where
-	TCamRay: Resource + for<'a> RefInto<'a, Option<&'a Ray3d>>,
-	TMouseHover: Resource + for<'a> RefInto<'a, Option<&'a ColliderInfo<Entity>>>,
+	TCamRay: Resource + GetProperty<Option<Ray3d>>,
+	TMouseHover: Resource + GetProperty<Option<ColliderInfo<Entity>>>,
 {
 	let get_transform = |entity| transforms.get(entity).ok().cloned();
 
 	Some(SkillTarget {
-		ray: cam_ray.ref_into().cloned()?,
+		ray: cam_ray.get_property()?,
 		collision_info: hover
-			.ref_into()
+			.get_property()
 			.and_then(|collider_info| collider_info.with_component(get_transform)),
 	})
 }
@@ -75,9 +75,9 @@ mod tests {
 	#[derive(Resource, Default)]
 	pub struct _CamRay(Option<Ray3d>);
 
-	impl<'a> From<&'a _CamRay> for Option<&'a Ray3d> {
-		fn from(_CamRay(ray): &'a _CamRay) -> Self {
-			ray.as_ref()
+	impl GetProperty<Option<Ray3d>> for _CamRay {
+		fn get_property(&self) -> Option<Ray3d> {
+			self.0
 		}
 	}
 
@@ -90,9 +90,9 @@ mod tests {
 	#[derive(Resource, Default)]
 	pub struct _MouseHover(Option<ColliderInfo<Entity>>);
 
-	impl<'a> From<&'a _MouseHover> for Option<&'a ColliderInfo<Entity>> {
-		fn from(_MouseHover(info): &'a _MouseHover) -> Self {
-			info.as_ref()
+	impl GetProperty<Option<ColliderInfo<Entity>>> for _MouseHover {
+		fn get_property(&self) -> Option<ColliderInfo<Entity>> {
+			self.0
 		}
 	}
 

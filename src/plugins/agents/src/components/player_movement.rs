@@ -1,12 +1,16 @@
 use bevy::prelude::Component;
 use common::{
 	tools::{
+		Units,
 		UnitsPerSecond,
 		collider_radius::ColliderRadius,
 		movement_animation::MovementAnimation,
 		speed::Speed,
 	},
-	traits::animation::{Animation, AnimationAsset, PlayMode},
+	traits::{
+		accessors::get::GetProperty,
+		animation::{Animation, AnimationAsset, PlayMode},
+	},
 };
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
@@ -41,38 +45,26 @@ impl Default for Config {
 	}
 }
 
-impl From<&PlayerMovement> for Speed {
-	fn from(
-		PlayerMovement {
-			mode, fast, slow, ..
-		}: &PlayerMovement,
-	) -> Self {
-		match mode {
-			MovementMode::Fast => fast.speed,
-			MovementMode::Slow => slow.speed,
+impl GetProperty<Speed> for PlayerMovement {
+	fn get_property(&self) -> UnitsPerSecond {
+		match self.mode {
+			MovementMode::Fast => self.fast.speed.0,
+			MovementMode::Slow => self.slow.speed.0,
 		}
 	}
 }
 
-impl From<&PlayerMovement> for ColliderRadius {
-	fn from(
-		PlayerMovement {
-			collider_radius, ..
-		}: &PlayerMovement,
-	) -> Self {
-		*collider_radius
+impl GetProperty<ColliderRadius> for PlayerMovement {
+	fn get_property(&self) -> Units {
+		self.collider_radius.0
 	}
 }
 
-impl<'a> From<&'a PlayerMovement> for Option<&'a MovementAnimation> {
-	fn from(
-		PlayerMovement {
-			mode, fast, slow, ..
-		}: &'a PlayerMovement,
-	) -> Self {
-		match mode {
-			MovementMode::Fast => Some(&fast.animation),
-			MovementMode::Slow => Some(&slow.animation),
+impl GetProperty<Option<MovementAnimation>> for PlayerMovement {
+	fn get_property(&self) -> Option<&Animation> {
+		match self.mode {
+			MovementMode::Fast => Some(&self.fast.animation.0),
+			MovementMode::Slow => Some(&self.slow.animation.0),
 		}
 	}
 }

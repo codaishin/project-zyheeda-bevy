@@ -1,11 +1,15 @@
 use bevy::ui::{UiRect, Val};
-use common::tools::Index;
+use common::{tools::Index, traits::accessors::get::Property};
 use std::ops::{Add, Div, Mul, Sub};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum PanelState {
 	Empty,
 	Filled,
+}
+
+impl Property for PanelState {
+	type TValue<'a> = Self;
 }
 
 pub enum Layout {

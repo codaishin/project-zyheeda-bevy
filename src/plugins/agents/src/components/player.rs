@@ -24,6 +24,7 @@ use common::{
 		iter_helpers::{first, next},
 	},
 	traits::{
+		accessors::get::GetProperty,
 		animation::{
 			Animation,
 			AnimationAsset,
@@ -207,21 +208,21 @@ impl<'a> Mapper<Bone<'a>, Option<HandSlot>> for Player {
 	}
 }
 
-impl From<&Player> for AttributeOnSpawn<Health> {
-	fn from(_: &Player) -> Self {
-		Self(Health::new(100.))
+impl GetProperty<AttributeOnSpawn<Health>> for Player {
+	fn get_property(&self) -> Health {
+		Health::new(100.)
 	}
 }
 
-impl From<&Player> for AttributeOnSpawn<EffectTarget<Gravity>> {
-	fn from(_: &Player) -> Self {
-		Self(EffectTarget::Affected)
+impl GetProperty<AttributeOnSpawn<EffectTarget<Gravity>>> for Player {
+	fn get_property(&self) -> EffectTarget<Gravity> {
+		EffectTarget::Affected
 	}
 }
 
-impl From<&Player> for AttributeOnSpawn<EffectTarget<Force>> {
-	fn from(_: &Player) -> Self {
-		Self(EffectTarget::Affected)
+impl GetProperty<AttributeOnSpawn<EffectTarget<Force>>> for Player {
+	fn get_property(&self) -> EffectTarget<Force> {
+		EffectTarget::Affected
 	}
 }
 

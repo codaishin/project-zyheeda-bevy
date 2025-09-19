@@ -27,6 +27,8 @@ use std::{
 	ops::{Deref, DerefMut},
 };
 
+use crate::traits::accessors::get::Property;
+
 #[derive(Debug, PartialEq)]
 pub struct This<'a, T: Debug + PartialEq>(pub &'a mut T);
 
@@ -100,6 +102,10 @@ impl From<bool> for Done {
 	fn from(done: bool) -> Self {
 		Self(done)
 	}
+}
+
+impl Property for Done {
+	type TValue<'a> = bool;
 }
 
 #[cfg(test)]

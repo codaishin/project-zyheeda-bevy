@@ -3,6 +3,7 @@ use bevy_rapier3d::prelude::*;
 use common::{
 	tools::{Done, speed::Speed},
 	traits::{
+		accessors::get::GetProperty,
 		handles_physics::LinearMotion,
 		register_derived_component::{DerivableFrom, InsertDerivedComponent},
 	},
@@ -23,18 +24,18 @@ impl From<LinearMotion> for Motion {
 	}
 }
 
-impl From<&Motion> for LinearMotion {
-	fn from(motion: &Motion) -> Self {
-		match motion {
+impl GetProperty<LinearMotion> for Motion {
+	fn get_property(&self) -> LinearMotion {
+		match self {
 			Motion::Ongoing(linear_motion) => *linear_motion,
 			Motion::Done(linear_motion) => *linear_motion,
 		}
 	}
 }
 
-impl From<&Motion> for Done {
-	fn from(motion: &Motion) -> Self {
-		Done::when(matches!(motion, Motion::Done(..)))
+impl GetProperty<Done> for Motion {
+	fn get_property(&self) -> bool {
+		matches!(self, Motion::Done(..))
 	}
 }
 

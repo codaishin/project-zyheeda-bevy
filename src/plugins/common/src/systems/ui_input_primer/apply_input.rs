@@ -1,26 +1,19 @@
 use crate::{
 	components::ui_input_primer::JustChangedInput,
 	tools::action_key::user_input::UserInput,
+	traits::accessors::get::GetProperty,
 };
 use bevy::prelude::*;
 
-impl<T> ApplyInput for T
-where
-	T: Component,
-	for<'a> JustChangedInput: From<&'a Self>,
-{
-}
+impl<T> ApplyInput for T where T: Component + GetProperty<JustChangedInput> {}
 
-pub(crate) trait ApplyInput: Component + Sized
-where
-	for<'a> JustChangedInput: From<&'a Self>,
-{
+pub(crate) trait ApplyInput: Component + Sized + GetProperty<JustChangedInput> {
 	fn apply_input(
 		mut input: ResMut<ButtonInput<UserInput>>,
 		primers: Query<&Self, Changed<Self>>,
 	) {
 		for primer in &primers {
-			match JustChangedInput::from(primer) {
+			match primer.get_property() {
 				JustChangedInput::JustPressed(user_input) => {
 					input.press(user_input);
 				}
@@ -42,9 +35,9 @@ mod tests {
 	#[derive(Component)]
 	struct _Input(JustChangedInput);
 
-	impl From<&_Input> for JustChangedInput {
-		fn from(_Input(input): &_Input) -> Self {
-			*input
+	impl GetProperty<JustChangedInput> for _Input {
+		fn get_property(&self) -> JustChangedInput {
+			self.0
 		}
 	}
 

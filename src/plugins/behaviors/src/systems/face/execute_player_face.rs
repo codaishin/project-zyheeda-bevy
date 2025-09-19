@@ -6,7 +6,7 @@ use common::{
 	},
 	tools::collider_info::ColliderInfo,
 	traits::{
-		accessors::get::{GetMut, RefAs, RefInto},
+		accessors::get::{GetMut, GetProperty},
 		handles_orientation::Face,
 		intersect_at::IntersectAt,
 	},
@@ -22,7 +22,7 @@ pub(crate) fn execute_player_face<TMouseHover, TCursor>(
 	cursor: Res<TCursor>,
 	hover: Res<TMouseHover>,
 ) where
-	TMouseHover: Resource + for<'a> RefInto<'a, Option<&'a ColliderInfo<Entity>>>,
+	TMouseHover: Resource + GetProperty<Option<ColliderInfo<Entity>>>,
 	TCursor: IntersectAt + Resource,
 {
 	let Some(target) = get_cursor_target(&transforms, cursor.deref(), hover.deref()) else {
@@ -78,10 +78,10 @@ fn get_cursor_target<TMouseHover, TCursor>(
 	hover: &TMouseHover,
 ) -> Option<(Option<Entity>, Vec3)>
 where
-	TMouseHover: Resource + for<'a> RefInto<'a, Option<&'a ColliderInfo<Entity>>>,
+	TMouseHover: Resource + GetProperty<Option<ColliderInfo<Entity>>>,
 	TCursor: IntersectAt + Resource,
 {
-	let Some(collider_info) = hover.ref_as::<Option<&ColliderInfo<Entity>>>() else {
+	let Some(collider_info) = hover.get_property() else {
 		return cursor.intersect_at(0.).map(|t| (None, t));
 	};
 
@@ -140,9 +140,9 @@ mod tests {
 	#[derive(Resource, Default)]
 	struct _MouseHover(Option<ColliderInfo<Entity>>);
 
-	impl<'a> RefInto<'a, Option<&'a ColliderInfo<Entity>>> for _MouseHover {
-		fn ref_into(&self) -> Option<&ColliderInfo<Entity>> {
-			self.0.as_ref()
+	impl GetProperty<Option<ColliderInfo<Entity>>> for _MouseHover {
+		fn get_property(&self) -> Option<ColliderInfo<Entity>> {
+			self.0
 		}
 	}
 

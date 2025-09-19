@@ -1,5 +1,5 @@
 use super::thread_safe::ThreadSafe;
-use crate::{tools::Units, traits::accessors::get::RefInto};
+use crate::{tools::Units, traits::accessors::get::GetProperty};
 use bevy::prelude::*;
 use std::{fmt::Debug, hash::Hash};
 
@@ -7,7 +7,7 @@ pub trait HandlesMapGeneration {
 	type TMap: Component;
 	type TGraph: Graph + for<'a> From<&'a Self::TMap> + ThreadSafe;
 	type TSystemSet: SystemSet;
-	type TMapRef: Component + for<'a> RefInto<'a, Entity>;
+	type TMapRef: Component + GetProperty<Entity>;
 
 	const SYSTEMS: Self::TSystemSet;
 }

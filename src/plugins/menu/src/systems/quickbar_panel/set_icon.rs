@@ -6,8 +6,9 @@ use common::{
 		accessors::get::{
 			AssociatedItem,
 			AssociatedStaticSystemParam,
+			DynProperty,
 			GetFromSystemParam,
-			RefInto,
+			GetProperty,
 			TryApplyOn,
 		},
 		handles_loadout::loadout::{NoSkill, SkillIcon, SkillToken},
@@ -25,18 +26,18 @@ impl QuickbarPanel {
 	) where
 		TAgent: Component,
 		for<'w, 's> TSlots: Component + GetFromSystemParam<'w, 's, SlotKey>,
-		for<'w, 's, 'i, 'a> AssociatedItem<'w, 's, 'i, TSlots, SlotKey>: RefInto<'a, Result<SkillIcon<'a>, NoSkill>>
-			+ RefInto<'a, Result<SkillToken<'a>, NoSkill>>,
+		for<'w, 's, 'i, 'a> AssociatedItem<'w, 's, 'i, TSlots, SlotKey>: GetProperty<Result<SkillIcon<'a>, NoSkill>>
+			+ GetProperty<Result<SkillToken<'a>, NoSkill>>,
 	{
 		for slots in &slots {
 			for (entity, Self { key, .. }, current_icon, current_label) in &panels {
 				let Some(item) = slots.get_from_param(&SlotKey::from(*key), &param) else {
 					continue;
 				};
-				let Ok(SkillToken(token)) = item.ref_into() else {
+				let Ok(token) = item.dyn_property::<Result<SkillToken, NoSkill>>() else {
 					continue;
 				};
-				let Ok(SkillIcon(image)) = item.ref_into() else {
+				let Ok(image) = item.dyn_property::<Result<SkillIcon, NoSkill>>() else {
 					continue;
 				};
 
@@ -105,19 +106,19 @@ mod tests {
 		token: Option<Token>,
 	}
 
-	impl<'a> From<&'a _Item> for Result<SkillIcon<'a>, NoSkill> {
-		fn from(_Item { icon, .. }: &'a _Item) -> Self {
-			match icon {
-				Some(i) => Ok(SkillIcon(i)),
+	impl GetProperty<Result<SkillIcon<'_>, NoSkill>> for _Item {
+		fn get_property(&self) -> Result<&'_ Handle<Image>, NoSkill> {
+			match self.icon.as_ref() {
+				Some(icon) => Ok(icon),
 				None => Err(NoSkill),
 			}
 		}
 	}
 
-	impl<'a> From<&'a _Item> for Result<SkillToken<'a>, NoSkill> {
-		fn from(_Item { token, .. }: &'a _Item) -> Self {
-			match token {
-				Some(t) => Ok(SkillToken(t)),
+	impl GetProperty<Result<SkillToken<'_>, NoSkill>> for _Item {
+		fn get_property(&self) -> Result<&'_ Token, NoSkill> {
+			match self.token.as_ref() {
+				Some(token) => Ok(token),
 				None => Err(NoSkill),
 			}
 		}

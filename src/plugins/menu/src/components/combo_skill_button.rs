@@ -4,7 +4,7 @@ use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::{RefAs, RefInto},
+		accessors::get::{DynProperty, GetProperty},
 		handles_loadout::loadout::{SkillIcon, SkillToken},
 		handles_localization::Localize,
 		thread_safe::ThreadSafe,
@@ -47,8 +47,8 @@ where
 	T: Clone + ThreadSafe,
 	TSkill: Clone
 		+ ThreadSafe
-		+ for<'a> RefInto<'a, SkillToken<'a>>
-		+ for<'a> RefInto<'a, SkillIcon<'a>>,
+		+ for<'a> GetProperty<SkillToken<'a>>
+		+ for<'a> GetProperty<SkillIcon<'a>>,
 {
 	fn insert_ui_content<TLocalization>(
 		&self,
@@ -59,8 +59,8 @@ where
 	{
 		parent.spawn((
 			self.clone(),
-			ComboOverview::skill_button(self.skill.ref_as::<SkillIcon>()),
-			UILabel::from(self.skill.ref_as::<SkillToken>()),
+			ComboOverview::skill_button(self.skill.dyn_property::<SkillIcon>().clone()),
+			UILabel(self.skill.dyn_property::<SkillToken>().clone()),
 		));
 	}
 }

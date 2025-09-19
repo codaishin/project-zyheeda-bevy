@@ -15,6 +15,8 @@ use common::{
 	effects::{force::Force, gravity::Gravity},
 	errors::Error,
 	tools::{
+		Units,
+		UnitsPerSecond,
 		action_key::slot::SlotKey,
 		aggro_range::AggroRange,
 		attack_range::AttackRange,
@@ -25,6 +27,8 @@ use common::{
 		speed::Speed,
 	},
 	traits::{
+		accessors::get::GetProperty,
+		animation::Animation,
 		handles_enemies::{EnemySkillUsage, EnemyTarget, EnemyType},
 		handles_skill_behaviors::SkillSpawner,
 		load_asset::LoadAsset,
@@ -65,39 +69,65 @@ impl From<EnemyType> for Enemy {
 	}
 }
 
-impl From<&Enemy> for Speed {
-	fn from(enemy: &Enemy) -> Self {
-		enemy.speed
+impl GetProperty<Speed> for Enemy {
+	fn get_property(&self) -> UnitsPerSecond {
+		self.speed.0
 	}
 }
 
-impl<'a> From<&'a Enemy> for Option<&'a MovementAnimation> {
-	fn from(enemy: &'a Enemy) -> Self {
-		enemy.movement_animation.as_ref()
+impl GetProperty<Option<MovementAnimation>> for Enemy {
+	fn get_property(&self) -> Option<&'_ Animation> {
+		self.movement_animation
+			.as_ref()
+			.map(|MovementAnimation(animation)| animation)
 	}
 }
 
-impl From<&Enemy> for AggroRange {
-	fn from(enemy: &Enemy) -> Self {
-		enemy.aggro_range
+impl GetProperty<AggroRange> for Enemy {
+	fn get_property(&self) -> Units {
+		self.aggro_range.0
 	}
 }
 
-impl From<&Enemy> for AttackRange {
-	fn from(enemy: &Enemy) -> Self {
-		enemy.attack_range
+impl GetProperty<AttackRange> for Enemy {
+	fn get_property(&self) -> Units {
+		self.attack_range.0
 	}
 }
 
-impl From<&Enemy> for EnemyTarget {
-	fn from(enemy: &Enemy) -> Self {
-		enemy.target
+impl GetProperty<EnemyTarget> for Enemy {
+	fn get_property(&self) -> EnemyTarget {
+		self.target
 	}
 }
 
-impl From<&Enemy> for ColliderRadius {
-	fn from(enemy: &Enemy) -> Self {
-		enemy.collider_radius
+impl GetProperty<ColliderRadius> for Enemy {
+	fn get_property(&self) -> Units {
+		self.collider_radius.0
+	}
+}
+
+impl GetProperty<AttributeOnSpawn<Health>> for Enemy {
+	fn get_property(&self) -> Health {
+		match self.enemy_type {
+			EnemyTypeInternal::VoidSphere(_) => Health::new(5.),
+		}
+	}
+}
+
+impl GetProperty<AttributeOnSpawn<EffectTarget<Gravity>>> for Enemy {
+	fn get_property(&self) -> EffectTarget<Gravity> {
+		match self.enemy_type {
+			EnemyTypeInternal::VoidSphere(_) => EffectTarget::Affected,
+		}
+	}
+}
+
+impl GetProperty<AttributeOnSpawn<EffectTarget<Force>>> for Enemy {
+	fn get_property(&self) -> EffectTarget<Force> {
+		match self.enemy_type {
+			EnemyTypeInternal::VoidSphere(_) => EffectTarget::Affected,
+		}
 	}
 }
 
@@ -138,30 +168,6 @@ impl Mapper<Bone<'_>, Option<ForearmSlot>> for Enemy {
 impl Mapper<Bone<'_>, Option<SkillSpawner>> for Enemy {
 	fn map(&self, bone: Bone) -> Option<SkillSpawner> {
 		self.enemy_type.map(bone)
-	}
-}
-
-impl From<&Enemy> for AttributeOnSpawn<Health> {
-	fn from(enemy: &Enemy) -> Self {
-		match enemy.enemy_type {
-			EnemyTypeInternal::VoidSphere(_) => Self(Health::new(5.)),
-		}
-	}
-}
-
-impl From<&Enemy> for AttributeOnSpawn<EffectTarget<Gravity>> {
-	fn from(enemy: &Enemy) -> Self {
-		match enemy.enemy_type {
-			EnemyTypeInternal::VoidSphere(_) => Self(EffectTarget::Affected),
-		}
-	}
-}
-
-impl From<&Enemy> for AttributeOnSpawn<EffectTarget<Force>> {
-	fn from(enemy: &Enemy) -> Self {
-		match enemy.enemy_type {
-			EnemyTypeInternal::VoidSphere(_) => Self(EffectTarget::Affected),
-		}
 	}
 }
 

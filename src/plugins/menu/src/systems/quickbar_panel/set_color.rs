@@ -21,9 +21,9 @@ use common::{
 			AssociatedItem,
 			AssociatedStaticSystemParam,
 			AssociatedSystemParam,
+			DynProperty,
 			GetFromSystemParam,
-			RefAs,
-			RefInto,
+			GetProperty,
 		},
 		handles_loadout::loadout::NoSkill,
 		key_mappings::GetInput,
@@ -42,7 +42,7 @@ impl QuickbarPanel {
 		TMap: Resource + GetInput<PlayerSlot, TInput = UserInput>,
 		for<'w, 's> TSlots: Component + GetFromSystemParam<'w, 's, SlotKey>,
 		for<'w, 's, 'i, 'a> AssociatedItem<'w, 's, 'i, TSlots, SlotKey>:
-			RefInto<'a, Result<&'a SkillExecution, NoSkill>>,
+			GetProperty<Result<SkillExecution, NoSkill>>,
 	{
 		set_color(commands, buttons, map, slots, param)
 	}
@@ -57,10 +57,10 @@ fn set_color<TAgent, TMap, TPrimer, TSlots>(
 ) where
 	TAgent: Component,
 	TMap: Resource + GetInput<PlayerSlot, TInput = UserInput>,
-	for<'a> TPrimer: Component + RefInto<'a, UserInput> + RefInto<'a, IsPrimed>,
+	TPrimer: Component + GetProperty<UserInput> + GetProperty<IsPrimed>,
 	for<'w, 's> TSlots: Component + GetFromSystemParam<'w, 's, SlotKey>,
 	for<'w, 's, 'i, 'a> AssociatedItem<'w, 's, 'i, TSlots, SlotKey>:
-		RefInto<'a, Result<&'a SkillExecution, NoSkill>>,
+		GetProperty<Result<SkillExecution, NoSkill>>,
 {
 	for slots in &slots {
 		for (entity, panel, primer) in &buttons {
@@ -82,24 +82,24 @@ fn get_color_override<TSlots, TMap, TPrimer>(
 ) -> Option<ColorConfig>
 where
 	TMap: GetInput<PlayerSlot, TInput = UserInput>,
-	for<'a> TPrimer: Component + RefInto<'a, UserInput> + RefInto<'a, IsPrimed>,
+	for<'a> TPrimer: Component + GetProperty<UserInput> + GetProperty<IsPrimed>,
 	for<'w, 's> TSlots: Component + GetFromSystemParam<'w, 's, SlotKey>,
 	for<'w, 's, 'i, 'a> AssociatedItem<'w, 's, 'i, TSlots, SlotKey>:
-		RefInto<'a, Result<&'a SkillExecution, NoSkill>>,
+		GetProperty<Result<SkillExecution, NoSkill>>,
 {
 	let item = slots.get_from_param(&SlotKey::from(*key), param)?;
-	let state = item.ref_as::<Result<&SkillExecution, NoSkill>>();
+	let state = item.dyn_property::<Result<SkillExecution, NoSkill>>();
 
-	if state == Ok(&SkillExecution::Active) {
+	if state == Ok(SkillExecution::Active) {
 		return Some(QuickbarPanel::ACTIVE_COLORS);
 	}
 
-	if state == Ok(&SkillExecution::Queued) {
+	if state == Ok(SkillExecution::Queued) {
 		return Some(QuickbarPanel::QUEUED_COLORS);
 	}
 
-	let IsPrimed(primer_is_primed) = primer.ref_into();
-	let primer_key: TMap::TInput = primer.ref_into();
+	let primer_is_primed = primer.dyn_property::<IsPrimed>();
+	let primer_key = primer.dyn_property::<UserInput>();
 	if primer_is_primed && map.get_input(*key) == primer_key {
 		return Some(QuickbarPanel::PANEL_COLORS.pressed);
 	}
@@ -139,15 +139,15 @@ mod tests {
 		is_primed: IsPrimed,
 	}
 
-	impl From<&_Primer> for UserInput {
-		fn from(_Primer { key, .. }: &_Primer) -> Self {
-			*key
+	impl GetProperty<UserInput> for _Primer {
+		fn get_property(&self) -> UserInput {
+			self.key
 		}
 	}
 
-	impl From<&_Primer> for IsPrimed {
-		fn from(_Primer { is_primed, .. }: &_Primer) -> Self {
-			*is_primed
+	impl GetProperty<IsPrimed> for _Primer {
+		fn get_property(&self) -> bool {
+			self.is_primed.0
 		}
 	}
 
@@ -204,9 +204,9 @@ mod tests {
 	#[derive(Clone)]
 	struct _Item(Option<SkillExecution>);
 
-	impl<'a> From<&'a _Item> for Result<&'a SkillExecution, NoSkill> {
-		fn from(_Item(execution): &'a _Item) -> Self {
-			match execution {
+	impl GetProperty<Result<SkillExecution, NoSkill>> for _Item {
+		fn get_property(&self) -> Result<SkillExecution, NoSkill> {
+			match self.0 {
 				Some(e) => Ok(e),
 				None => Err(NoSkill),
 			}
