@@ -128,7 +128,7 @@ impl<TSkill> NextConfiguredKeys<SlotKey> for ComboNode<TSkill> {
 	}
 }
 
-impl<TSKill> LoadoutKey for ComboNode<TSKill> {
+impl<TSkill> LoadoutKey for ComboNode<TSkill> {
 	type TKey = SlotKey;
 }
 

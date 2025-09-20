@@ -45,10 +45,7 @@ impl<T, TSkill> ComboSkillButton<T, TSkill> {
 impl<T, TSkill> InsertUiContent for ComboSkillButton<T, TSkill>
 where
 	T: Clone + ThreadSafe,
-	TSkill: Clone
-		+ ThreadSafe
-		+ for<'a> GetProperty<SkillToken<'a>>
-		+ for<'a> GetProperty<SkillIcon<'a>>,
+	TSkill: Clone + ThreadSafe + GetProperty<SkillToken> + GetProperty<SkillIcon>,
 {
 	fn insert_ui_content<TLocalization>(
 		&self,

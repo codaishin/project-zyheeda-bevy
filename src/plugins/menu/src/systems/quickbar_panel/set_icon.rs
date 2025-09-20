@@ -25,9 +25,9 @@ impl QuickbarPanel {
 		slots: Query<&TSlots, With<TAgent>>,
 	) where
 		TAgent: Component,
-		for<'w, 's> TSlots: Component + GetFromSystemParam<'w, 's, SlotKey>,
-		for<'w, 's, 'i, 'a> AssociatedItem<'w, 's, 'i, TSlots, SlotKey>: GetProperty<Result<SkillIcon<'a>, NoSkill>>
-			+ GetProperty<Result<SkillToken<'a>, NoSkill>>,
+		TSlots: Component + for<'w, 's> GetFromSystemParam<'w, 's, SlotKey>,
+		for<'w, 's, 'i> AssociatedItem<'w, 's, 'i, TSlots, SlotKey>:
+			GetProperty<Result<SkillIcon, NoSkill>> + GetProperty<Result<SkillToken, NoSkill>>,
 	{
 		for slots in &slots {
 			for (entity, Self { key, .. }, current_icon, current_label) in &panels {
@@ -106,7 +106,7 @@ mod tests {
 		token: Option<Token>,
 	}
 
-	impl GetProperty<Result<SkillIcon<'_>, NoSkill>> for _Item {
+	impl GetProperty<Result<SkillIcon, NoSkill>> for _Item {
 		fn get_property(&self) -> Result<&'_ Handle<Image>, NoSkill> {
 			match self.icon.as_ref() {
 				Some(icon) => Ok(icon),
@@ -115,7 +115,7 @@ mod tests {
 		}
 	}
 
-	impl GetProperty<Result<SkillToken<'_>, NoSkill>> for _Item {
+	impl GetProperty<Result<SkillToken, NoSkill>> for _Item {
 		fn get_property(&self) -> Result<&'_ Token, NoSkill> {
 			match self.token.as_ref() {
 				Some(token) => Ok(token),
