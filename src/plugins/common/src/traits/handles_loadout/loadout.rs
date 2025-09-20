@@ -33,57 +33,46 @@ where
 }
 
 pub trait LoadoutSkillItem:
-	for<'a> GetProperty<ItemToken<'a>>
-	+ for<'a> GetProperty<Result<SkillToken<'a>, NoSkill>>
-	+ for<'a> GetProperty<Result<SkillIcon<'a>, NoSkill>>
+	GetProperty<ItemToken>
+	+ GetProperty<Result<SkillToken, NoSkill>>
+	+ GetProperty<Result<SkillIcon, NoSkill>>
 	+ GetProperty<Result<SkillExecution, NoSkill>>
 {
 }
 
 impl<T> LoadoutSkillItem for T where
-	T: for<'a> GetProperty<ItemToken<'a>>
-		+ for<'a> GetProperty<Result<SkillToken<'a>, NoSkill>>
-		+ for<'a> GetProperty<Result<SkillIcon<'a>, NoSkill>>
+	T: GetProperty<ItemToken>
+		+ GetProperty<Result<SkillToken, NoSkill>>
+		+ GetProperty<Result<SkillIcon, NoSkill>>
 		+ GetProperty<Result<SkillExecution, NoSkill>>
 {
 }
 
 pub trait LoadoutSkill:
-	PartialEq
-	+ Clone
-	+ ThreadSafe
-	+ for<'a> GetProperty<SkillToken<'a>>
-	+ for<'a> GetProperty<SkillIcon<'a>>
+	PartialEq + Clone + ThreadSafe + GetProperty<SkillToken> + GetProperty<SkillIcon>
 {
 }
 
 impl<T> LoadoutSkill for T where
-	T: PartialEq
-		+ Clone
-		+ ThreadSafe
-		+ for<'a> GetProperty<SkillToken<'a>>
-		+ for<'a> GetProperty<SkillIcon<'a>>
+	T: PartialEq + Clone + ThreadSafe + GetProperty<SkillToken> + GetProperty<SkillIcon>
 {
 }
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct ItemToken<'a>(pub &'a Token);
+pub struct ItemToken;
 
-impl Property for ItemToken<'_> {
+impl Property for ItemToken {
 	type TValue<'a> = &'a Token;
 }
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct SkillToken<'a>(pub &'a Token);
+pub struct SkillToken;
 
-impl Property for SkillToken<'_> {
+impl Property for SkillToken {
 	type TValue<'a> = &'a Token;
 }
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct SkillIcon<'a>(pub &'a Handle<Image>);
+pub struct SkillIcon;
 
-impl Property for SkillIcon<'_> {
+impl Property for SkillIcon {
 	type TValue<'a> = &'a Handle<Image>;
 }
 

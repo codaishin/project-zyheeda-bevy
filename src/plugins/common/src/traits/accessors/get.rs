@@ -144,8 +144,7 @@ impl<'a, T, TEntity> TryApplyOn<'a, TEntity> for T where T: GetMut<TEntity> + 'a
 /// The associated type [`TValue<'a>`](Property::TValue) determines whether the value is retrieved
 /// by reference (useful for computation-heavy or non-`Clone` types) or by value.
 ///
-/// This can also be used for declarative wrapper types to expose their inner value in a
-/// specific way.
+/// This can also be used for wrappers or markers to expose a different type.
 /// # Example
 /// ```
 /// use common::traits::accessors::get::{Property};
@@ -173,6 +172,13 @@ impl<'a, T, TEntity> TryApplyOn<'a, TEntity> for T where T: GetMut<TEntity> + 'a
 /// struct NumberOfLimbs(u8);
 ///
 /// impl Property for NumberOfLimbs {
+///   type TValue<'a> = u8;
+/// }
+///
+/// // Markers, that don't hold data, can be used to name a property
+/// struct NumberOfDoors;
+///
+/// impl Property for NumberOfDoors {
 ///   type TValue<'a> = u8;
 /// }
 /// ```

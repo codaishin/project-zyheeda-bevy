@@ -68,20 +68,20 @@ impl AssetFolderPath for Skill {
 	}
 }
 
-impl GetProperty<SkillToken<'_>> for Skill {
-	fn get_property(&self) -> &'_ Token {
+impl GetProperty<SkillToken> for Skill {
+	fn get_property(&self) -> &Token {
 		&self.token
 	}
 }
 
-impl GetProperty<SkillIcon<'_>> for Skill {
-	fn get_property(&self) -> &'_ Handle<Image> {
+impl GetProperty<SkillIcon> for Skill {
+	fn get_property(&self) -> &Handle<Image> {
 		&self.icon
 	}
 }
 
 impl GetProperty<CompatibleItems> for Skill {
-	fn get_property(&self) -> &'_ HashSet<ItemType> {
+	fn get_property(&self) -> &HashSet<ItemType> {
 		&self.compatible_items.0
 	}
 }
@@ -118,7 +118,7 @@ impl GetProperty<SlotKey> for QueuedSkill {
 }
 
 impl GetProperty<Token> for QueuedSkill {
-	fn get_property(&self) -> &'_ Token {
+	fn get_property(&self) -> &Token {
 		&self.skill.token
 	}
 }

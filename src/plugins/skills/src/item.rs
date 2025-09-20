@@ -83,12 +83,12 @@ pub struct SkillItem {
 	pub(crate) skill: Option<ItemSkill>,
 }
 
-impl GetProperty<ItemToken<'_>> for SkillItem {
-	fn get_property(&self) -> &'_ Token {
+impl GetProperty<ItemToken> for SkillItem {
+	fn get_property(&self) -> &Token {
 		&self.token
 	}
 }
-impl GetProperty<Result<SkillToken<'_>, NoSkill>> for SkillItem {
+impl GetProperty<Result<SkillToken, NoSkill>> for SkillItem {
 	fn get_property(&self) -> Result<&'_ Token, NoSkill> {
 		match &self.skill {
 			Some(ItemSkill { token, .. }) => Ok(token),
@@ -97,7 +97,7 @@ impl GetProperty<Result<SkillToken<'_>, NoSkill>> for SkillItem {
 	}
 }
 
-impl GetProperty<Result<SkillIcon<'_>, NoSkill>> for SkillItem {
+impl GetProperty<Result<SkillIcon, NoSkill>> for SkillItem {
 	fn get_property(&self) -> Result<&'_ Handle<Image>, NoSkill> {
 		match &self.skill {
 			Some(ItemSkill { icon, .. }) => Ok(icon),

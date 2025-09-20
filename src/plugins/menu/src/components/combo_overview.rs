@@ -43,9 +43,9 @@ where
 	layout: ComboTreeLayout<SlotKey, TSkill>,
 }
 
-impl<TSKill> Default for ComboOverview<TSKill>
+impl<TSkill> Default for ComboOverview<TSkill>
 where
-	TSKill: ThreadSafe,
+	TSkill: ThreadSafe,
 {
 	fn default() -> Self {
 		Self {
@@ -55,10 +55,10 @@ where
 	}
 }
 
-impl<TAssetServer, TSKill> LoadUi<TAssetServer> for ComboOverview<TSKill>
+impl<TAssetServer, TSkill> LoadUi<TAssetServer> for ComboOverview<TSkill>
 where
 	TAssetServer: LoadAsset,
-	TSKill: ThreadSafe,
+	TSkill: ThreadSafe,
 {
 	fn load_ui(images: &mut TAssetServer) -> Self {
 		ComboOverview {
@@ -276,15 +276,9 @@ pub(crate) enum SkillButtonIcon {
 	Transparent,
 }
 
-impl<'a> From<SkillIcon<'a>> for SkillButtonIcon {
-	fn from(SkillIcon(handle): SkillIcon<'a>) -> Self {
-		SkillButtonIcon::Icon(Some(handle.clone()))
-	}
-}
-
 impl From<Handle<Image>> for SkillButtonIcon {
-	fn from(icon: Handle<Image>) -> Self {
-		SkillButtonIcon::Icon(Some(icon))
+	fn from(handle: Handle<Image>) -> Self {
+		SkillButtonIcon::Icon(Some(handle))
 	}
 }
 
@@ -319,11 +313,7 @@ where
 
 impl<TSkill> InsertUiContent for ComboOverview<TSkill>
 where
-	TSkill: Clone
-		+ PartialEq
-		+ ThreadSafe
-		+ for<'a> GetProperty<SkillToken<'a>>
-		+ for<'a> GetProperty<SkillIcon<'a>>,
+	TSkill: Clone + PartialEq + ThreadSafe + GetProperty<SkillToken> + GetProperty<SkillIcon>,
 {
 	fn insert_ui_content<TLocalization>(
 		&self,
@@ -397,11 +387,7 @@ fn add_combo_list<TSkill, TLocalization>(
 	parent: &mut RelatedSpawnerCommands<ChildOf>,
 	combo_overview: &ComboOverview<TSkill>,
 ) where
-	TSkill: Clone
-		+ PartialEq
-		+ ThreadSafe
-		+ for<'a> GetProperty<SkillToken<'a>>
-		+ for<'a> GetProperty<SkillIcon<'a>>,
+	TSkill: Clone + PartialEq + ThreadSafe + GetProperty<SkillToken> + GetProperty<SkillIcon>,
 	TLocalization: Localize + 'static,
 {
 	parent
@@ -431,11 +417,7 @@ fn add_combo<TSkill, TLocalization>(
 	local_z: i32,
 	new_skill_icon: &Handle<Image>,
 ) where
-	TSkill: Clone
-		+ PartialEq
-		+ ThreadSafe
-		+ for<'a> GetProperty<SkillToken<'a>>
-		+ for<'a> GetProperty<SkillIcon<'a>>,
+	TSkill: Clone + PartialEq + ThreadSafe + GetProperty<SkillToken> + GetProperty<SkillIcon>,
 	TLocalization: Localize + 'static,
 {
 	parent
@@ -528,10 +510,7 @@ where
 
 impl<TSkill, TLocalization> AddPanel<'_, TSkill, TLocalization>
 where
-	TSkill: Clone
-		+ ThreadSafe
-		+ for<'a> GetProperty<SkillToken<'a>>
-		+ for<'a> GetProperty<SkillIcon<'a>>,
+	TSkill: Clone + ThreadSafe + GetProperty<SkillToken> + GetProperty<SkillIcon>,
 	TLocalization: Localize,
 {
 	fn spawn_as_child(

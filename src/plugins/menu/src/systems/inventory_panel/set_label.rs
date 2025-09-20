@@ -25,10 +25,10 @@ impl InventoryPanel {
 		param: AssociatedStaticSystemParam<TContainer, TContainer::TKey>,
 	) where
 		TAgent: Component,
-		for<'w, 's> TContainer:
-			Component + LoadoutKey + GetFromSystemParam<'w, 's, TContainer::TKey>,
-		for<'w, 's, 'i, 'a> AssociatedItem<'w, 's, 'i, TContainer, TContainer::TKey>:
-			GetProperty<ItemToken<'a>>,
+		TContainer:
+			Component + LoadoutKey + for<'w, 's> GetFromSystemParam<'w, 's, TContainer::TKey>,
+		for<'w, 's, 'i> AssociatedItem<'w, 's, 'i, TContainer, TContainer::TKey>:
+			GetProperty<ItemToken>,
 	{
 		for container in &containers {
 			for (entity, mut panel, KeyedPanel(key)) in &mut panels {
@@ -70,11 +70,11 @@ mod tests {
 	struct _Key;
 
 	#[derive(Clone)]
-	struct _Item(ItemToken<'static>);
+	struct _Item(Token);
 
-	impl GetProperty<ItemToken<'_>> for _Item {
-		fn get_property(&self) -> &'_ Token {
-			self.0.0
+	impl GetProperty<ItemToken> for _Item {
+		fn get_property(&self) -> &Token {
+			&self.0
 		}
 	}
 
@@ -108,7 +108,7 @@ mod tests {
 	fn set_label() {
 		let mut app = setup();
 		app.world_mut()
-			.spawn((_Agent, _Container(Some(_Item(ItemToken(&TOKEN))))));
+			.spawn((_Agent, _Container(Some(_Item(TOKEN.clone())))));
 		let panel = app
 			.world_mut()
 			.spawn((InventoryPanel(PanelState::Empty), KeyedPanel(_Key)))
@@ -126,7 +126,7 @@ mod tests {
 	fn set_panel_to_filled() {
 		let mut app = setup();
 		app.world_mut()
-			.spawn((_Agent, _Container(Some(_Item(ItemToken(&TOKEN))))));
+			.spawn((_Agent, _Container(Some(_Item(TOKEN.clone())))));
 		let panel = app
 			.world_mut()
 			.spawn((InventoryPanel(PanelState::Empty), KeyedPanel(_Key)))
@@ -161,7 +161,7 @@ mod tests {
 	fn do_nothing_if_agent_missing() {
 		let mut app = setup();
 		app.world_mut()
-			.spawn(_Container(Some(_Item(ItemToken(&TOKEN)))));
+			.spawn(_Container(Some(_Item(TOKEN.clone()))));
 		let panel = app
 			.world_mut()
 			.spawn((InventoryPanel(PanelState::Empty), KeyedPanel(_Key)))
