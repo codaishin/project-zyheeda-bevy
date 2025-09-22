@@ -5,12 +5,7 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	traits::{
-		accessors::get::{
-			AssociatedStaticSystemParam,
-			GetFromSystemParam,
-			GetProperty,
-			TryApplyOn,
-		},
+		accessors::get::{AssociatedSystemParam, GetFromSystemParam, GetProperty, TryApplyOn},
 		handles_loadout::loadout::{ItemToken, LoadoutKey},
 	},
 	zyheeda_commands::ZyheedaCommands,
@@ -21,7 +16,7 @@ impl InventoryPanel {
 		mut commands: ZyheedaCommands,
 		containers: Query<&TContainer, With<TAgent>>,
 		mut panels: Query<(Entity, &mut Self, &KeyedPanel<TContainer::TKey>)>,
-		param: AssociatedStaticSystemParam<TContainer, TContainer::TKey>,
+		param: AssociatedSystemParam<TContainer, TContainer::TKey>,
 	) where
 		TAgent: Component,
 		TContainer: Component + LoadoutKey + GetFromSystemParam<TContainer::TKey>,

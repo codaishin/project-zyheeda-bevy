@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::{AssociatedStaticSystemParam, GetFromSystemParam, TryApplyOn},
+		accessors::get::{AssociatedSystemParam, GetFromSystemParam, TryApplyOn},
 		handles_loadout::slot_component::AvailableSkills,
 		thread_safe::ThreadSafe,
 	},
@@ -21,7 +21,7 @@ where
 		mut commands: ZyheedaCommands,
 		buttons: Query<(Entity, &Self), Added<Self>>,
 		slots: Query<&TSlots, With<TAgent>>,
-		param: AssociatedStaticSystemParam<TSlots, AvailableSkills<SlotKey>>,
+		param: AssociatedSystemParam<TSlots, AvailableSkills<SlotKey>>,
 	) where
 		TVisualize: InsertContentOn,
 		TAgent: Component,

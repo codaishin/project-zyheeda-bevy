@@ -4,7 +4,7 @@ use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
 		accessors::get::{
-			AssociatedStaticSystemParam,
+			AssociatedSystemParam,
 			DynProperty,
 			GetFromSystemParam,
 			GetProperty,
@@ -19,7 +19,7 @@ use common::{
 impl QuickbarPanel {
 	pub(crate) fn set_icon<TAgent, TSlots>(
 		mut commands: ZyheedaCommands,
-		param: AssociatedStaticSystemParam<TSlots, SlotKey>,
+		param: AssociatedSystemParam<TSlots, SlotKey>,
 		panels: Query<PanelComponents>,
 		slots: Query<&TSlots, With<TAgent>>,
 	) where

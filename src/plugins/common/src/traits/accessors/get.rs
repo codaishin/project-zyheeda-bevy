@@ -22,14 +22,14 @@ pub trait GetRef<TKey> {
 	fn get_ref(&self, key: &TKey) -> Option<Self::TValue<'_>>;
 }
 
-pub type AssociatedStaticSystemParam<'world_self, 'state_self, 'world, 'state, T, TKey> =
+pub type AssociatedSystemParam<'world_self, 'state_self, 'world, 'state, T, TKey> =
 	StaticSystemParam<
 		'world_self,
 		'state_self,
 		<T as GetFromSystemParam<TKey>>::TParam<'world, 'state>,
 	>;
-pub type AssociatedSystemParam<'world_self, 'state_self, 'world, 'state, T, TKey> =
-	<AssociatedStaticSystemParam<'world_self, 'state_self, 'world, 'state, T, TKey> as Deref>::Target;
+pub type AssociatedSystemParamRef<'world_self, 'state_self, 'world, 'state, T, TKey> =
+	<AssociatedSystemParam<'world_self, 'state_self, 'world, 'state, T, TKey> as Deref>::Target;
 
 /// Allows to retrieve data from a source, which only holds a part of or a reference to some data.
 ///
@@ -43,7 +43,7 @@ pub type AssociatedSystemParam<'world_self, 'state_self, 'world, 'state, T, TKey
 ///
 /// # Example
 /// ```
-/// use common::traits::accessors::get::{AssociatedStaticSystemParam, GetFromSystemParam};
+/// use common::traits::accessors::get::{AssociatedSystemParam, GetFromSystemParam};
 /// use bevy::{ecs::system::RunSystemOnce, prelude::*};
 /// use std::fmt::Display;
 ///
@@ -79,7 +79,7 @@ pub type AssociatedSystemParam<'world_self, 'state_self, 'world, 'state, T, TKey
 ///   }
 /// }
 ///
-/// fn my_system<TSource>(q: Query<&TSource>, p: AssociatedStaticSystemParam<TSource, Length>)
+/// fn my_system<TSource>(q: Query<&TSource>, p: AssociatedSystemParam<TSource, Length>)
 /// where
 ///   TSource: Component + GetFromSystemParam<Length>,
 ///   for <'i> TSource::TItem<'i>: Display,
@@ -108,7 +108,7 @@ pub trait GetFromSystemParam<TKey> {
 	fn get_from_param<'a>(
 		&'a self,
 		key: &TKey,
-		param: &'a AssociatedSystemParam<'_, '_, '_, '_, Self, TKey>,
+		param: &'a AssociatedSystemParamRef<'_, '_, '_, '_, Self, TKey>,
 	) -> Option<Self::TItem<'a>>;
 }
 

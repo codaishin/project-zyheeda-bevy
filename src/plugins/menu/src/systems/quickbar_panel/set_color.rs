@@ -18,8 +18,8 @@ use common::{
 	},
 	traits::{
 		accessors::get::{
-			AssociatedStaticSystemParam,
 			AssociatedSystemParam,
+			AssociatedSystemParamRef,
 			DynProperty,
 			GetFromSystemParam,
 			GetProperty,
@@ -35,7 +35,7 @@ impl QuickbarPanel {
 		buttons: Query<(Entity, &Self, &UiInputPrimer)>,
 		map: Res<TMap>,
 		slots: Query<&TSlots, With<TAgent>>,
-		param: AssociatedStaticSystemParam<TSlots, SlotKey>,
+		param: AssociatedSystemParam<TSlots, SlotKey>,
 	) where
 		TAgent: Component,
 		TMap: Resource + GetInput<PlayerSlot, TInput = UserInput>,
@@ -51,7 +51,7 @@ fn set_color<TAgent, TMap, TPrimer, TSlots>(
 	buttons: Query<(Entity, &QuickbarPanel, &TPrimer)>,
 	map: Res<TMap>,
 	slots: Query<&TSlots, With<TAgent>>,
-	param: AssociatedStaticSystemParam<TSlots, SlotKey>,
+	param: AssociatedSystemParam<TSlots, SlotKey>,
 ) where
 	TAgent: Component,
 	TMap: Resource + GetInput<PlayerSlot, TInput = UserInput>,
@@ -75,7 +75,7 @@ fn get_color_override<TSlots, TMap, TPrimer>(
 	QuickbarPanel { key, .. }: &QuickbarPanel,
 	primer: &TPrimer,
 	slots: &TSlots,
-	param: &AssociatedSystemParam<TSlots, SlotKey>,
+	param: &AssociatedSystemParamRef<TSlots, SlotKey>,
 ) -> Option<ColorConfig>
 where
 	TMap: GetInput<PlayerSlot, TInput = UserInput>,
