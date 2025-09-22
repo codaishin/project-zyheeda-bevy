@@ -1,7 +1,7 @@
 mod dto;
 
 use crate::{
-	assets::agent_config::{AgentConfig, AgentConfigAsset},
+	assets::agent_config::{AgentConfigAsset, AgentConfigRef},
 	components::agent::dto::AgentDto,
 };
 use bevy::{asset::AssetPath, prelude::*};
@@ -14,7 +14,7 @@ use common::{
 	},
 	traits::{
 		accessors::get::GetFromSystemParam,
-		handles_agents::AgentType,
+		handles_agents::{AgentConfig, AgentType},
 		handles_enemies::EnemyType,
 	},
 };
@@ -48,21 +48,21 @@ impl From<AgentType> for Agent {
 	}
 }
 
-impl<TAsset> GetFromSystemParam<()> for Agent<TAsset>
+impl<TAsset> GetFromSystemParam<AgentConfig> for Agent<TAsset>
 where
 	TAsset: Asset + Clone,
 {
 	type TParam<'w, 's> = Res<'w, Assets<TAsset>>;
-	type TItem<'i> = AgentConfig<'i, TAsset>;
+	type TItem<'i> = AgentConfigRef<'i, TAsset>;
 
 	fn get_from_param<'a>(
 		&'a self,
-		_: &(),
+		_: &AgentConfig,
 		assets: &'a Res<Assets<TAsset>>,
 	) -> Option<Self::TItem<'a>> {
 		match self {
 			Agent::Path(..) => None,
-			Agent::Handle(handle) => assets.get(handle).map(AgentConfig::from),
+			Agent::Handle(handle) => assets.get(handle).map(AgentConfigRef::from),
 		}
 	}
 }
@@ -81,10 +81,10 @@ mod tests {
 	struct _Asset;
 
 	#[test_case(Agent::Path(AssetPath::from("my/path.agent")), None; "none for path")]
-	#[test_case(Agent::Handle(HANDLE.clone()), Some(AgentConfig::from(&_Asset)); "some when loaded")]
+	#[test_case(Agent::Handle(HANDLE.clone()), Some(AgentConfigRef::from(&_Asset)); "some when loaded")]
 	fn get_handle(
 		agent: Agent<_Asset>,
-		expected: Option<AgentConfig<'static, _Asset>>,
+		expected: Option<AgentConfigRef<'static, _Asset>>,
 	) -> Result<(), RunSystemError> {
 		let mut app = App::new().single_threaded(Update);
 		let mut assets = Assets::default();
@@ -93,7 +93,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once(move |assets: Res<Assets<_Asset>>| {
-				assert_eq!(expected, agent.get_from_param(&(), &assets));
+				assert_eq!(expected, agent.get_from_param(&AgentConfig, &assets));
 			})
 	}
 }

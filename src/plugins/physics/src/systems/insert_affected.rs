@@ -2,7 +2,10 @@ use bevy::prelude::*;
 use common::{
 	self,
 	tools::attribute::AttributeOnSpawn,
-	traits::accessors::get::{AssociatedSystemParam, GetFromSystemParam, GetProperty, TryApplyOn},
+	traits::{
+		accessors::get::{AssociatedSystemParam, GetFromSystemParam, GetProperty, TryApplyOn},
+		handles_agents::AgentConfig,
+	},
 	zyheeda_commands::ZyheedaCommands,
 };
 
@@ -12,18 +15,18 @@ pub(crate) trait InsertAffected: AffectedComponent {
 	fn insert_on<TSource>(
 		mut commands: ZyheedaCommands,
 		sources: Query<(Entity, &TSource), Without<Self>>,
-		param: AssociatedSystemParam<TSource, ()>,
+		param: AssociatedSystemParam<TSource, AgentConfig>,
 	) where
-		TSource: Component + GetFromSystemParam<()>,
+		TSource: Component + GetFromSystemParam<AgentConfig>,
 		for<'i> TSource::TItem<'i>: GetProperty<AttributeOnSpawn<Self::TAttribute>>,
 	{
 		for (entity, source) in &sources {
-			let Some(data) = source.get_from_param(&(), &param) else {
+			let Some(config) = source.get_from_param(&AgentConfig, &param) else {
 				continue;
 			};
 
 			commands.try_apply_on(&entity, |mut e| {
-				let attribute = data.get_property();
+				let attribute = config.get_property();
 				e.try_insert(Self::from(attribute));
 			});
 		}
@@ -58,11 +61,11 @@ mod tests {
 	#[derive(Component)]
 	struct _Agent(_OnSpawn);
 
-	impl GetFromSystemParam<()> for _Agent {
+	impl GetFromSystemParam<AgentConfig> for _Agent {
 		type TParam<'w, 's> = ();
 		type TItem<'i> = _OnSpawn;
 
-		fn get_from_param(&self, _: &(), _: &()) -> Option<_OnSpawn> {
+		fn get_from_param(&self, _: &AgentConfig, _: &()) -> Option<_OnSpawn> {
 			Some(self.0)
 		}
 	}

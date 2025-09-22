@@ -25,7 +25,7 @@ use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
 		accessors::get::GetFromSystemParam,
-		handles_agents::HandlesAgents,
+		handles_agents::{AgentConfig, HandlesAgents},
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets, OnLoadError},
 		handles_enemies::HandlesEnemies,
 		handles_load_tracking::{DependenciesProgress, HandlesLoadTracking, LoadTrackingInApp},
@@ -116,7 +116,7 @@ where
 	fn track_loading<TSlot, TAgent>(app: &mut App)
 	where
 		TSlot: Eq + Hash + ThreadSafe + From<SlotKey>,
-		TAgent: Component + GetFromSystemParam<()>,
+		TAgent: Component + GetFromSystemParam<AgentConfig>,
 		for<'i> TAgent::TItem<'i>: VisibleSlots,
 	{
 		let all_loaded = SlotVisualization::<TSlot>::all_slots_loaded_for::<TAgent>;

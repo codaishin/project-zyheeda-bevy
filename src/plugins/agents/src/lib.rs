@@ -4,7 +4,7 @@ mod resources;
 mod systems;
 
 use crate::{
-	assets::agent_config::{AgentConfig, AgentConfigAsset},
+	assets::agent_config::{AgentConfigRef, AgentConfigAsset},
 	components::{
 		agent::Agent,
 		enemy::{Enemy, void_sphere::VoidSphere},
@@ -165,6 +165,6 @@ impl<TDependencies> PlayerMainCamera for AgentsPlugin<TDependencies> {
 }
 
 impl<TDependencies> HandlesAgents for AgentsPlugin<TDependencies> {
-	type TAgentData<'a> = AgentConfig<'a>;
+	type TAgentConfig<'a> = AgentConfigRef<'a>;
 	type TAgent = Agent;
 }

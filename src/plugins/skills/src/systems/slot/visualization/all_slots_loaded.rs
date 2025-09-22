@@ -4,6 +4,7 @@ use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
 		accessors::get::{AssociatedSystemParam, GetFromSystemParam},
+		handles_agents::AgentConfig,
 		handles_load_tracking::Loaded,
 		thread_safe::ThreadSafe,
 		visible_slots::VisibleSlots,
@@ -17,21 +18,21 @@ where
 {
 	pub(crate) fn all_slots_loaded_for<TAgent>(
 		agents: Query<(&TAgent, &Self)>,
-		param: AssociatedSystemParam<TAgent, ()>,
+		param: AssociatedSystemParam<TAgent, AgentConfig>,
 	) -> Loaded
 	where
-		TAgent: Component + GetFromSystemParam<()>,
+		TAgent: Component + GetFromSystemParam<AgentConfig>,
 		for<'i> TAgent::TItem<'i>: VisibleSlots,
 	{
 		let all_visible_slots_discovered = agents
 			.iter()
 			.filter_map(|(agent, visualization)| {
 				agent
-					.get_from_param(&(), &param)
-					.map(|slots| (slots, visualization))
+					.get_from_param(&AgentConfig, &param)
+					.map(|config| (config, visualization))
 			})
-			.all(|(slots, visualization)| {
-				slots
+			.all(|(config, visualization)| {
+				config
 					.visible_slots()
 					.map(TKey::from)
 					.all(|key| visualization.slots.contains_key(&key))
@@ -60,11 +61,11 @@ mod tests {
 	#[derive(Component)]
 	struct _Agent;
 
-	impl GetFromSystemParam<()> for _Agent {
+	impl GetFromSystemParam<AgentConfig> for _Agent {
 		type TParam<'w, 's> = ();
 		type TItem<'i> = _VisibleSlots;
 
-		fn get_from_param(&self, _: &(), _: &()) -> Option<_VisibleSlots> {
+		fn get_from_param(&self, _: &AgentConfig, _: &()) -> Option<_VisibleSlots> {
 			Some(_VisibleSlots)
 		}
 	}

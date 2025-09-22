@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use common::{
 	traits::{
 		accessors::get::{AssociatedSystemParam, GetFromSystemParam, TryApplyOn},
+		handles_agents::AgentConfig,
 		load_asset::LoadAsset,
 		loadout::LoadoutConfig,
 	},
@@ -11,7 +12,7 @@ use common::{
 
 impl<TAgent> Loadout<TAgent>
 where
-	TAgent: Component + GetFromSystemParam<()>,
+	TAgent: Component + GetFromSystemParam<AgentConfig>,
 	for<'i> TAgent::TItem<'i>: LoadoutConfig,
 {
 	#[allow(clippy::type_complexity)]
@@ -22,7 +23,7 @@ where
 		>,
 		commands: ZyheedaCommands,
 		server: ResMut<AssetServer>,
-		param: AssociatedSystemParam<TAgent, ()>,
+		param: AssociatedSystemParam<TAgent, AgentConfig>,
 	) {
 		insert_internal(agents, commands, server, param);
 	}
@@ -33,14 +34,14 @@ fn insert_internal<TAgent, TAssetServer>(
 	agents: Query<(Entity, &TAgent, Option<&Inventory>, Option<&Slots>), Without<Loadout<TAgent>>>,
 	mut commands: ZyheedaCommands,
 	mut server: ResMut<TAssetServer>,
-	param: AssociatedSystemParam<TAgent, ()>,
+	param: AssociatedSystemParam<TAgent, AgentConfig>,
 ) where
-	TAgent: Component + GetFromSystemParam<()>,
+	TAgent: Component + GetFromSystemParam<AgentConfig>,
 	TAssetServer: Resource + LoadAsset,
 	for<'i> TAgent::TItem<'i>: LoadoutConfig,
 {
 	for (entity, agent, inventory, slots) in &agents {
-		let Some(config) = agent.get_from_param(&(), &param) else {
+		let Some(config) = agent.get_from_param(&AgentConfig, &param) else {
 			continue;
 		};
 
@@ -95,11 +96,11 @@ mod tests {
 	#[derive(Component, Debug, PartialEq)]
 	struct _Agent(_Config);
 
-	impl GetFromSystemParam<()> for _Agent {
+	impl GetFromSystemParam<AgentConfig> for _Agent {
 		type TParam<'w, 's> = ();
 		type TItem<'i> = _Config;
 
-		fn get_from_param<'a>(&self, _: &(), _: &()) -> Option<_Config> {
+		fn get_from_param<'a>(&self, _: &AgentConfig, _: &()) -> Option<_Config> {
 			Some(self.0.clone())
 		}
 	}

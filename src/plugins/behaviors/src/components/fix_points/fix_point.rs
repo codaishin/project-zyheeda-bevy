@@ -9,6 +9,7 @@ use common::{
 			GetFromSystemParam,
 			TryApplyOn,
 		},
+		handles_agents::AgentConfig,
 		mapper::Mapper,
 		thread_safe::ThreadSafe,
 	},
@@ -27,17 +28,17 @@ where
 		bones: Query<(Entity, &Name), Changed<Name>>,
 		agents: Query<&TAgent>,
 		parents: Query<&ChildOf>,
-		param: AssociatedSystemParam<TAgent, ()>,
+		param: AssociatedSystemParam<TAgent, AgentConfig>,
 	) where
-		TAgent: Component + GetFromSystemParam<()>,
+		TAgent: Component + GetFromSystemParam<AgentConfig>,
 		for<'i> TAgent::TItem<'i>: Mapper<Bone<'i>, Option<T>>,
 	{
 		for (entity, name) in &bones {
-			let Some(agent_asset) = get_agent_data(&agents, &parents, &param, entity) else {
+			let Some(config) = get_agent_config(&agents, &parents, &param, entity) else {
 				continue;
 			};
 
-			match agent_asset.map(Bone(name.as_str())) {
+			match config.map(Bone(name.as_str())) {
 				Some(fix_point) => {
 					commands.try_apply_on(&entity, |mut e| {
 						e.try_insert(FixPoint(fix_point));
@@ -53,19 +54,19 @@ where
 	}
 }
 
-fn get_agent_data<'a, TAgent>(
+fn get_agent_config<'a, TAgent>(
 	agents: &'a Query<&TAgent>,
 	parents: &Query<&ChildOf>,
-	param: &'a AssociatedSystemParamRef<TAgent, ()>,
+	param: &'a AssociatedSystemParamRef<TAgent, AgentConfig>,
 	entity: Entity,
 ) -> Option<TAgent::TItem<'a>>
 where
-	TAgent: Component + GetFromSystemParam<()>,
+	TAgent: Component + GetFromSystemParam<AgentConfig>,
 {
 	parents
 		.iter_ancestors(entity)
-		.find_map(|e| agents.get(e).ok())
-		.and_then(|a| a.get_from_param(&(), param))
+		.find_map(|ancestor| agents.get(ancestor).ok())
+		.and_then(|agent| agent.get_from_param(&AgentConfig, param))
 }
 
 impl<T> From<FixPoint<T>> for AnchorFixPointKey
@@ -93,11 +94,11 @@ mod tests {
 	#[derive(SystemParam)]
 	struct _Param;
 
-	impl GetFromSystemParam<()> for _Agent {
+	impl GetFromSystemParam<AgentConfig> for _Agent {
 		type TParam<'w, 's> = _Param;
 		type TItem<'i> = _AgentData;
 
-		fn get_from_param(&self, _: &(), _: &_Param) -> Option<Self::TItem<'_>> {
+		fn get_from_param(&self, _: &AgentConfig, _: &_Param) -> Option<Self::TItem<'_>> {
 			Some(_AgentData)
 		}
 	}

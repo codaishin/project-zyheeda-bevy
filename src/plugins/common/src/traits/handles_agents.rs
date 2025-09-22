@@ -15,7 +15,7 @@ use bevy::ecs::component::Component;
 use serde::{Deserialize, Serialize};
 
 pub trait HandlesAgents {
-	type TAgentData<'a>: VisibleSlots
+	type TAgentConfig<'a>: VisibleSlots
 		+ LoadoutConfig
 		+ Mapper<Bone<'a>, Option<SkillSpawner>>
 		+ Mapper<Bone<'a>, Option<EssenceSlot>>
@@ -26,14 +26,13 @@ pub trait HandlesAgents {
 		+ GetProperty<AttributeOnSpawn<EffectTarget<Force>>>;
 	type TAgent: Component
 		+ From<AgentType>
-		+ for<'i> GetFromSystemParam<(), TItem<'i> = Self::TAgentData<'i>>;
+		+ for<'i> GetFromSystemParam<AgentConfig, TItem<'i> = Self::TAgentConfig<'i>>;
 }
+
+pub struct AgentConfig;
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum AgentType {
 	Player,
 	Enemy(EnemyType),
 }
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct AgentAssetNotLoaded;

@@ -4,6 +4,7 @@ use common::{
 	tools::bone::Bone,
 	traits::{
 		accessors::get::{AssociatedSystemParam, GetFromSystemParam},
+		handles_agents::AgentConfig,
 		mapper::Mapper,
 		thread_safe::ThreadSafe,
 	},
@@ -18,9 +19,9 @@ where
 		mut agents: Query<(&TAgent, &mut Self)>,
 		names: Query<(Entity, &Name), Added<Name>>,
 		parents: Query<&ChildOf>,
-		param: AssociatedSystemParam<TAgent, ()>,
+		param: AssociatedSystemParam<TAgent, AgentConfig>,
 	) where
-		TAgent: Component + GetFromSystemParam<()>,
+		TAgent: Component + GetFromSystemParam<AgentConfig>,
 		for<'i> TAgent::TItem<'i>: Mapper<Bone<'i>, Option<TKey>>,
 	{
 		for (entity, name) in names {
@@ -30,10 +31,10 @@ where
 			let Ok((agent, mut slots)) = agents.get_mut(parent) else {
 				continue;
 			};
-			let Some(mapper) = agent.get_from_param(&(), &param) else {
+			let Some(config) = agent.get_from_param(&AgentConfig, &param) else {
 				continue;
 			};
-			let Some(key) = mapper.map(Bone(name.as_str())) else {
+			let Some(key) = config.map(Bone(name.as_str())) else {
 				continue;
 			};
 			slots.slots.insert(key, entity);
@@ -53,11 +54,11 @@ mod tests {
 	#[require(SlotVisualization<_Key>)]
 	struct _Agent;
 
-	impl GetFromSystemParam<()> for _Agent {
+	impl GetFromSystemParam<AgentConfig> for _Agent {
 		type TParam<'w, 's> = ();
 		type TItem<'i> = _Config;
 
-		fn get_from_param(&self, _: &(), _: &()) -> Option<_Config> {
+		fn get_from_param(&self, _: &AgentConfig, _: &()) -> Option<_Config> {
 			Some(_Config)
 		}
 	}

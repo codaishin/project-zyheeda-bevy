@@ -50,11 +50,11 @@ impl InsertSpecializedAgent for AgentConfigAsset {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct AgentConfig<'a, TAsset = AgentConfigAsset> {
+pub struct AgentConfigRef<'a, TAsset = AgentConfigAsset> {
 	asset: &'a TAsset,
 }
 
-impl<'a, TAsset> From<&'a TAsset> for AgentConfig<'a, TAsset> {
+impl<'a, TAsset> From<&'a TAsset> for AgentConfigRef<'a, TAsset> {
 	fn from(asset: &'a TAsset) -> Self {
 		Self { asset }
 	}
@@ -66,7 +66,7 @@ impl AssetFileExtensions for AgentConfigAsset {
 	}
 }
 
-impl VisibleSlots for AgentConfig<'_> {
+impl VisibleSlots for AgentConfigRef<'_> {
 	fn visible_slots(&self) -> impl Iterator<Item = SlotKey> {
 		self.asset
 			.loadout
@@ -77,7 +77,7 @@ impl VisibleSlots for AgentConfig<'_> {
 	}
 }
 
-impl LoadoutConfig for AgentConfig<'_> {
+impl LoadoutConfig for AgentConfigRef<'_> {
 	fn inventory(&self) -> impl Iterator<Item = Option<AssetPath<'static>>> {
 		self.asset.loadout.inventory.iter().cloned()
 	}
@@ -92,7 +92,7 @@ impl LoadoutConfig for AgentConfig<'_> {
 	}
 }
 
-impl Mapper<Bone<'_>, Option<SkillSpawner>> for AgentConfig<'_> {
+impl Mapper<Bone<'_>, Option<SkillSpawner>> for AgentConfigRef<'_> {
 	fn map(&self, Bone(bone): Bone<'_>) -> Option<SkillSpawner> {
 		self.asset
 			.bones
@@ -103,7 +103,7 @@ impl Mapper<Bone<'_>, Option<SkillSpawner>> for AgentConfig<'_> {
 	}
 }
 
-impl Mapper<Bone<'_>, Option<EssenceSlot>> for AgentConfig<'_> {
+impl Mapper<Bone<'_>, Option<EssenceSlot>> for AgentConfigRef<'_> {
 	fn map(&self, Bone(bone): Bone<'_>) -> Option<EssenceSlot> {
 		self.asset
 			.bones
@@ -115,7 +115,7 @@ impl Mapper<Bone<'_>, Option<EssenceSlot>> for AgentConfig<'_> {
 	}
 }
 
-impl Mapper<Bone<'_>, Option<HandSlot>> for AgentConfig<'_> {
+impl Mapper<Bone<'_>, Option<HandSlot>> for AgentConfigRef<'_> {
 	fn map(&self, Bone(bone): Bone<'_>) -> Option<HandSlot> {
 		self.asset
 			.bones
@@ -127,7 +127,7 @@ impl Mapper<Bone<'_>, Option<HandSlot>> for AgentConfig<'_> {
 	}
 }
 
-impl Mapper<Bone<'_>, Option<ForearmSlot>> for AgentConfig<'_> {
+impl Mapper<Bone<'_>, Option<ForearmSlot>> for AgentConfigRef<'_> {
 	fn map(&self, Bone(bone): Bone<'_>) -> Option<ForearmSlot> {
 		self.asset
 			.bones
@@ -139,19 +139,19 @@ impl Mapper<Bone<'_>, Option<ForearmSlot>> for AgentConfig<'_> {
 	}
 }
 
-impl GetProperty<AttributeOnSpawn<Health>> for AgentConfig<'_> {
+impl GetProperty<AttributeOnSpawn<Health>> for AgentConfigRef<'_> {
 	fn get_property(&self) -> Health {
 		self.asset.attributes.health
 	}
 }
 
-impl GetProperty<AttributeOnSpawn<EffectTarget<Gravity>>> for AgentConfig<'_> {
+impl GetProperty<AttributeOnSpawn<EffectTarget<Gravity>>> for AgentConfigRef<'_> {
 	fn get_property(&self) -> EffectTarget<Gravity> {
 		self.asset.attributes.gravity_interaction
 	}
 }
 
-impl GetProperty<AttributeOnSpawn<EffectTarget<Force>>> for AgentConfig<'_> {
+impl GetProperty<AttributeOnSpawn<EffectTarget<Force>>> for AgentConfigRef<'_> {
 	fn get_property(&self) -> EffectTarget<Force> {
 		self.asset.attributes.force_interaction
 	}
