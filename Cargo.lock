@@ -3321,6 +3321,7 @@ dependencies = [
  "serde",
  "serde_json",
  "testing",
+ "tracing",
  "uuid",
 ]
 

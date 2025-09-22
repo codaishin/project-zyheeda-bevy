@@ -17,12 +17,19 @@ pub trait HandlesLoadTracking {
 		TLoadGroup: LoadGroup + ThreadSafe;
 
 	#[must_use]
+	/// Run a system after loading is done, but not if the load plugin has been reset.
 	fn register_after_load_system<TLoadGroup>() -> impl RunAfterLoadedInApp
 	where
 		TLoadGroup: ThreadSafe;
 
 	#[must_use]
-	/// Run a system after loading is done, but not if the load plugin has been reset.
+	/// Register a check system to determine whether some dependencies have been loaded
+	///
+	/// - `T`: Uniqueness marker.
+	/// - `TLoadGroup`: To which loading process (loading savegame, loading essentials on startup,
+	///   ...) the check should be applied to
+	/// - `TProgress`: To which loading step (loading assets, resolving dependencies, ...) the check
+	///   should be applied to
 	fn register_load_tracking<T, TLoadGroup, TProgress>()
 	-> impl LoadTrackingInApp + LoadTrackingInSubApp
 	where

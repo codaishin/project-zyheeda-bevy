@@ -7,7 +7,7 @@ mod folder_asset_loader;
 mod states;
 
 use crate::{
-	resources::group_loaded::GroupLoaded,
+	resources::{group_loaded::GroupLoaded, uniques::Uniques},
 	states::load_state::Load,
 	systems::{
 		begin_loading_resource::BeginLoadingResource,
@@ -52,7 +52,7 @@ use folder_asset_loader::{FolderAssetLoader, LoadError, LoadResult};
 use resources::{alive_assets::AliveAssets, track::Track};
 use serde::Deserialize;
 use states::load_state::State;
-use std::{error::Error, fmt::Debug, marker::PhantomData};
+use std::{any::type_name, error::Error, fmt::Debug, marker::PhantomData};
 use systems::{
 	begin_loading_folder_assets::begin_loading_folder_assets,
 	is_loaded::is_loaded,
@@ -172,6 +172,19 @@ where
 	) where
 		TLoaded: Into<Loaded> + 'static,
 	{
+		let mut uniques = Uniques::mut_from(app);
+		let is_unique = uniques.register::<(TLoadGroup, TProgress, T)>().is_unique();
+
+		if !is_unique {
+			tracing::error!(
+				"Failed to register tracker for '{}': It is already tracked for '{}' in '{}'",
+				type_name::<T>(),
+				type_name::<TProgress>(),
+				type_name::<TLoadGroup>(),
+			);
+			return;
+		}
+
 		app.add_systems(
 			Update,
 			all_loaded
@@ -195,6 +208,19 @@ where
 		schedule: impl ScheduleLabel,
 		all_loaded: impl IntoSystem<(), Loaded, TMarker>,
 	) {
+		let mut uniques = Uniques::mut_from(app);
+		let is_unique = uniques.register::<(TLoadGroup, TProgress, T)>().is_unique();
+
+		if !is_unique {
+			tracing::error!(
+				"Failed to register tracker for '{}': It is already tracked for '{}' in '{}'",
+				type_name::<T>(),
+				type_name::<TProgress>(),
+				type_name::<TLoadGroup>(),
+			);
+			return;
+		}
+
 		app.sub_app_mut(app_label).add_systems(
 			schedule,
 			all_loaded
