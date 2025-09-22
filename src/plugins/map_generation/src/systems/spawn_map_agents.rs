@@ -12,7 +12,7 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
-	traits::{accessors::get::TryApplyOn, handles_agents::AgentType, thread_safe::ThreadSafe},
+	traits::{accessors::get::TryApplyOn, handles_agents::Spawn, thread_safe::ThreadSafe},
 	zyheeda_commands::ZyheedaCommands,
 };
 
@@ -24,7 +24,7 @@ where
 		mut commands: ZyheedaCommands,
 		cells: Query<(Entity, &PersistentEntity, &Self)>,
 	) where
-		TAgent: Component + From<AgentType>,
+		TAgent: Component + Spawn,
 	{
 		for (entity, persistent_entity, MapCells { definition, .. }) in &cells {
 			let context = GridContext {
@@ -39,8 +39,8 @@ where
 				let Agent::Some(agent_type) = cell else {
 					continue;
 				};
-				commands.spawn((
-					TAgent::from(*agent_type),
+
+				TAgent::spawn(&mut commands, *agent_type).insert((
 					AgentOfPersistentMap(*persistent_entity),
 					transform::<TCell>(x, z, min),
 				));
@@ -68,7 +68,7 @@ mod tests {
 		grid_graph::grid_context::{CellCount, CellDistance},
 		traits::map_cells_extra::CellGridDefinition,
 	};
-	use common::traits::handles_enemies::EnemyType;
+	use common::traits::{handles_agents::AgentType, handles_enemies::EnemyType};
 	use macros::new_valid;
 	use testing::{SingleThreadedApp, assert_count, assert_eq_unordered};
 
@@ -78,9 +78,9 @@ mod tests {
 	#[derive(Component, Debug, PartialEq)]
 	struct _Agent(AgentType);
 
-	impl From<AgentType> for _Agent {
-		fn from(agent_type: AgentType) -> Self {
-			Self(agent_type)
+	impl Spawn for _Agent {
+		fn spawn<'a>(entity: &'a mut ZyheedaCommands, agent_type: AgentType) -> EntityCommands<'a> {
+			entity.spawn(Self(agent_type))
 		}
 	}
 

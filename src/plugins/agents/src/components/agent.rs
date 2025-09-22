@@ -1,10 +1,10 @@
-mod dto;
+pub(crate) mod tag;
 
 use crate::{
-	assets::agent_config::{AgentConfigAsset, AgentConfigRef},
-	components::agent::dto::AgentDto,
+	assets::agent_config::{AgentConfigAsset, AgentConfigData},
+	components::agent::tag::AgentTag,
 };
-use bevy::{asset::AssetPath, prelude::*};
+use bevy::prelude::*;
 use bevy_rapier3d::prelude::{GravityScale, RigidBody};
 use common::{
 	components::{
@@ -14,14 +14,12 @@ use common::{
 	},
 	traits::{
 		accessors::get::GetFromSystemParam,
-		handles_agents::{AgentConfig, AgentType},
-		handles_enemies::EnemyType,
+		handles_agents::{AgentConfig, AgentType, Spawn},
 	},
+	zyheeda_commands::ZyheedaCommands,
 };
-use macros::{SavableComponent, agent_asset};
 
-#[derive(Component, SavableComponent, Clone, Debug, PartialEq)]
-#[savable_component(dto = AgentDto)]
+#[derive(Component, Clone, Debug, PartialEq)]
 #[require(
 	InteractionTarget,
 	PersistentEntity,
@@ -31,20 +29,17 @@ use macros::{SavableComponent, agent_asset};
 	GravityScale = GravityScale(0.),
 	IsBlocker = [Blocker::Character],
 )]
-pub enum Agent<TAsset = AgentConfigAsset>
+pub struct Agent<TAsset = AgentConfigAsset>
 where
 	TAsset: Asset,
 {
-	Path(AssetPath<'static>),
-	Handle(Handle<TAsset>),
+	pub(crate) agent_type: AgentType,
+	pub(crate) config_handle: Handle<TAsset>,
 }
 
-impl From<AgentType> for Agent {
-	fn from(agent_type: AgentType) -> Self {
-		Self::Path(match agent_type {
-			AgentType::Player => AssetPath::from(agent_asset!("player")),
-			AgentType::Enemy(EnemyType::VoidSphere) => AssetPath::from(agent_asset!("void_sphere")),
-		})
+impl Spawn for Agent {
+	fn spawn<'a>(commands: &'a mut ZyheedaCommands, agent_type: AgentType) -> EntityCommands<'a> {
+		commands.spawn(AgentTag(agent_type))
 	}
 }
 
@@ -53,22 +48,26 @@ where
 	TAsset: Asset + Clone,
 {
 	type TParam<'w, 's> = Res<'w, Assets<TAsset>>;
-	type TItem<'i> = AgentConfigRef<'i, TAsset>;
+	type TItem<'i> = AgentConfigData<'i, TAsset>;
 
 	fn get_from_param<'a>(
 		&'a self,
 		_: &AgentConfig,
 		assets: &'a Res<Assets<TAsset>>,
 	) -> Option<Self::TItem<'a>> {
-		match self {
-			Agent::Path(..) => None,
-			Agent::Handle(handle) => assets.get(handle).map(AgentConfigRef::from),
-		}
+		assets
+			.get(&self.config_handle)
+			.map(|asset| AgentConfigData {
+				agent_type: self.agent_type,
+				asset,
+			})
 	}
 }
 
 #[cfg(test)]
 mod tests {
+	use crate::components::{enemy::void_sphere::VoidSphere, player::Player};
+
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use std::sync::LazyLock;
@@ -80,20 +79,34 @@ mod tests {
 	#[derive(Asset, TypePath, Debug, PartialEq, Clone)]
 	struct _Asset;
 
-	#[test_case(Agent::Path(AssetPath::from("my/path.agent")), None; "none for path")]
-	#[test_case(Agent::Handle(HANDLE.clone()), Some(AgentConfigRef::from(&_Asset)); "some when loaded")]
-	fn get_handle(
-		agent: Agent<_Asset>,
-		expected: Option<AgentConfigRef<'static, _Asset>>,
-	) -> Result<(), RunSystemError> {
+	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 		let mut assets = Assets::default();
+
 		assets.insert(&*HANDLE, _Asset);
 		app.insert_resource(assets);
 
+		app
+	}
+
+	#[test_case(AgentType::from(Player))]
+	#[test_case(AgentType::from(VoidSphere))]
+	fn get_some_data_when_handle_set(agent_type: AgentType) -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let agent = Agent {
+			agent_type,
+			config_handle: HANDLE.clone(),
+		};
+
 		app.world_mut()
 			.run_system_once(move |assets: Res<Assets<_Asset>>| {
-				assert_eq!(expected, agent.get_from_param(&AgentConfig, &assets));
+				assert_eq!(
+					Some(AgentConfigData {
+						agent_type,
+						asset: &_Asset,
+					}),
+					agent.get_from_param(&AgentConfig, &assets)
+				);
 			})
 	}
 }

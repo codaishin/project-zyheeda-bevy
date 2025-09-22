@@ -23,7 +23,7 @@ use common::{
 	traits::{
 		accessors::get::GetProperty,
 		animation::Animation,
-		handles_enemies::{EnemySkillUsage, EnemyTarget, EnemyType},
+		handles_enemies::{EnemySkillUsage, EnemyTarget},
 	},
 };
 use macros::SavableComponent;
@@ -48,12 +48,6 @@ pub struct Enemy {
 	pub(crate) target: EnemyTarget,
 	pub(crate) collider_radius: ColliderRadius,
 	pub(crate) enemy_type: EnemyTypeInternal,
-}
-
-impl From<EnemyType> for Enemy {
-	fn from(enemy_type: EnemyType) -> Self {
-		EnemyTypeInternal::new_enemy(enemy_type)
-	}
 }
 
 impl GetProperty<Speed> for Enemy {

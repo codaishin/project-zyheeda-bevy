@@ -25,16 +25,16 @@ use common::{
 			StartAnimation,
 			StopAnimation,
 		},
+		handles_agents::AgentType,
 		handles_lights::HandlesLights,
 		iteration::{Iter, IterFinite},
 		load_asset::{LoadAsset, Path},
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Component, Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Component, Default, Debug, PartialEq, Clone)]
 #[require(
 	PlayerMovement = Player::movement(),
 	Name = "Player",
@@ -125,6 +125,12 @@ impl Player {
 				.into(),
 			},
 		}
+	}
+}
+
+impl From<Player> for AgentType {
+	fn from(_: Player) -> Self {
+		Self::Player
 	}
 }
 

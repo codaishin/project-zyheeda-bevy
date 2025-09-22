@@ -1,11 +1,11 @@
 use crate::components::{inventory::Inventory, loadout::Loadout, slots::Slots};
-use bevy::prelude::*;
+use bevy::{asset::AssetPath, prelude::*};
 use common::{
 	traits::{
 		accessors::get::{AssociatedSystemParam, GetFromSystemParam, TryApplyOn},
 		handles_agents::AgentConfig,
 		load_asset::LoadAsset,
-		loadout::LoadoutConfig,
+		loadout::{ItemName, LoadoutConfig},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -52,6 +52,7 @@ fn insert_internal<TAgent, TAssetServer>(
 				e.try_insert(Inventory::from(
 					config
 						.inventory()
+						.map(|name| name.map(asset_path))
 						.map(|path| path.map(|path| server.load_asset(path))),
 				));
 			}
@@ -60,11 +61,16 @@ fn insert_internal<TAgent, TAssetServer>(
 				e.try_insert(Slots::from(
 					config
 						.slots()
-						.map(|(key, path)| (key, path.map(|path| server.load_asset(path)))),
+						.map(|(key, name)| (key, name.map(asset_path)))
+						.map(|(key, path)| (key, path.map(|p| server.load_asset(p)))),
 				));
 			}
 		});
 	}
+}
+
+fn asset_path(ItemName(name): ItemName) -> AssetPath<'static> {
+	AssetPath::from(format!("items/{name}.item"))
 }
 
 #[cfg(test)]
@@ -107,16 +113,16 @@ mod tests {
 
 	#[derive(Debug, PartialEq, Clone)]
 	struct _Config {
-		inventory: Vec<Option<AssetPath<'static>>>,
-		slots: Vec<(SlotKey, Option<AssetPath<'static>>)>,
+		inventory: Vec<Option<ItemName>>,
+		slots: Vec<(SlotKey, Option<ItemName>)>,
 	}
 
 	impl LoadoutConfig for _Config {
-		fn inventory(&self) -> impl Iterator<Item = Option<AssetPath<'static>>> {
+		fn inventory(&self) -> impl Iterator<Item = Option<ItemName>> {
 			self.inventory.iter().cloned()
 		}
 
-		fn slots(&self) -> impl Iterator<Item = (SlotKey, Option<AssetPath<'static>>)> {
+		fn slots(&self) -> impl Iterator<Item = (SlotKey, Option<ItemName>)> {
 			self.slots.iter().cloned()
 		}
 	}
@@ -136,17 +142,17 @@ mod tests {
 		let slot_item = new_handle();
 		let mut app = setup(_Assets::new().with_mock(|mock| {
 			mock.expect_load_asset::<Item, AssetPath<'static>>()
-				.with(eq(AssetPath::from("inventory item")))
+				.with(eq(AssetPath::from("items/inventory item.item")))
 				.return_const(inventory_item.clone());
 			mock.expect_load_asset::<Item, AssetPath<'static>>()
-				.with(eq(AssetPath::from("slot item")))
+				.with(eq(AssetPath::from("items/slot item.item")))
 				.return_const(slot_item.clone());
 		}));
 		let entity = app
 			.world_mut()
 			.spawn(_Agent(_Config {
-				inventory: vec![Some(AssetPath::from("inventory item"))],
-				slots: vec![(SlotKey(42), Some(AssetPath::from("slot item")))],
+				inventory: vec![Some(ItemName::from("inventory item"))],
+				slots: vec![(SlotKey(42), Some(ItemName::from("slot item")))],
 			}))
 			.id();
 
@@ -171,16 +177,16 @@ mod tests {
 	fn no_inventory_mapping_if_inventory_already_present() {
 		let mut app = setup(_Assets::new().with_mock(|mock| {
 			mock.expect_load_asset::<Item, AssetPath<'static>>()
-				.with(eq(AssetPath::from("inventory item")))
+				.with(eq(AssetPath::from("items/inventory item.item")))
 				.never();
 			mock.expect_load_asset::<Item, AssetPath<'static>>()
-				.with(eq(AssetPath::from("slot item")))
+				.with(eq(AssetPath::from("items/slot item.item")))
 				.return_const(new_handle());
 		}));
 		app.world_mut().spawn((
 			_Agent(_Config {
-				inventory: vec![Some(AssetPath::from("inventory item"))],
-				slots: vec![(SlotKey(42), Some(AssetPath::from("slot item")))],
+				inventory: vec![Some(ItemName::from("inventory item"))],
+				slots: vec![(SlotKey(42), Some(ItemName::from("slot item")))],
 			}),
 			Inventory::from([]),
 		));
@@ -193,18 +199,18 @@ mod tests {
 		let slot_item = new_handle();
 		let mut app = setup(_Assets::new().with_mock(|mock| {
 			mock.expect_load_asset::<Item, AssetPath<'static>>()
-				.with(eq(AssetPath::from("inventory item")))
+				.with(eq(AssetPath::from("items/inventory item.item")))
 				.return_const(new_handle());
 			mock.expect_load_asset::<Item, AssetPath<'static>>()
-				.with(eq(AssetPath::from("slot item")))
+				.with(eq(AssetPath::from("items/slot item.item")))
 				.return_const(slot_item.clone());
 		}));
 		let entity = app
 			.world_mut()
 			.spawn((
 				_Agent(_Config {
-					inventory: vec![Some(AssetPath::from("inventory item"))],
-					slots: vec![(SlotKey(42), Some(AssetPath::from("slot item")))],
+					inventory: vec![Some(ItemName::from("inventory item"))],
+					slots: vec![(SlotKey(42), Some(ItemName::from("slot item")))],
 				}),
 				Inventory::from([]),
 			))
@@ -231,16 +237,16 @@ mod tests {
 	fn no_slot_mapping_if_slots_already_present() {
 		let mut app = setup(_Assets::new().with_mock(|mock| {
 			mock.expect_load_asset::<Item, AssetPath<'static>>()
-				.with(eq(AssetPath::from("inventory item")))
+				.with(eq(AssetPath::from("items/inventory item.item")))
 				.return_const(new_handle());
 			mock.expect_load_asset::<Item, AssetPath<'static>>()
-				.with(eq(AssetPath::from("slot item")))
+				.with(eq(AssetPath::from("items/slot item.item")))
 				.never();
 		}));
 		app.world_mut().spawn((
 			_Agent(_Config {
-				inventory: vec![Some(AssetPath::from("inventory item"))],
-				slots: vec![(SlotKey(42), Some(AssetPath::from("slot item")))],
+				inventory: vec![Some(ItemName::from("inventory item"))],
+				slots: vec![(SlotKey(42), Some(ItemName::from("slot item")))],
 			}),
 			Slots::from([]),
 		));
@@ -253,18 +259,18 @@ mod tests {
 		let inventory_item = new_handle();
 		let mut app = setup(_Assets::new().with_mock(|mock| {
 			mock.expect_load_asset::<Item, AssetPath<'static>>()
-				.with(eq(AssetPath::from("inventory item")))
+				.with(eq(AssetPath::from("items/inventory item.item")))
 				.return_const(inventory_item.clone());
 			mock.expect_load_asset::<Item, AssetPath<'static>>()
-				.with(eq(AssetPath::from("slot item")))
+				.with(eq(AssetPath::from("items/slot item.item")))
 				.return_const(new_handle());
 		}));
 		let entity = app
 			.world_mut()
 			.spawn((
 				_Agent(_Config {
-					inventory: vec![Some(AssetPath::from("inventory item"))],
-					slots: vec![(SlotKey(42), Some(AssetPath::from("slot item")))],
+					inventory: vec![Some(ItemName::from("inventory item"))],
+					slots: vec![(SlotKey(42), Some(ItemName::from("slot item")))],
 				}),
 				Slots::from([]),
 			))
@@ -291,18 +297,18 @@ mod tests {
 	fn insert_loadout_if_slots_and_inventory_already_present() {
 		let mut app = setup(_Assets::new().with_mock(|mock| {
 			mock.expect_load_asset::<Item, AssetPath<'static>>()
-				.with(eq(AssetPath::from("inventory item")))
+				.with(eq(AssetPath::from("items/inventory item.item")))
 				.return_const(new_handle());
 			mock.expect_load_asset::<Item, AssetPath<'static>>()
-				.with(eq(AssetPath::from("slot item")))
+				.with(eq(AssetPath::from("items/slot item.item")))
 				.return_const(new_handle());
 		}));
 		let entity = app
 			.world_mut()
 			.spawn((
 				_Agent(_Config {
-					inventory: vec![Some(AssetPath::from("inventory item"))],
-					slots: vec![(SlotKey(42), Some(AssetPath::from("slot item")))],
+					inventory: vec![Some(ItemName::from("inventory item"))],
+					slots: vec![(SlotKey(42), Some(ItemName::from("slot item")))],
 				}),
 				Inventory::from([]),
 				Slots::from([]),
@@ -335,8 +341,8 @@ mod tests {
 		app.world_mut().spawn((
 			Loadout::<_Agent>::default(),
 			_Agent(_Config {
-				inventory: vec![Some(AssetPath::from("inventory item"))],
-				slots: vec![(SlotKey(42), Some(AssetPath::from("slot item")))],
+				inventory: vec![Some(ItemName::from("inventory item"))],
+				slots: vec![(SlotKey(42), Some(ItemName::from("slot item")))],
 			}),
 		));
 

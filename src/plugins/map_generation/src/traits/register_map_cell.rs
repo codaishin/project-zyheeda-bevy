@@ -31,7 +31,7 @@ use common::{
 	states::game_state::{GameState, LoadingEssentialAssets, LoadingGame},
 	systems::log::OnError,
 	traits::{
-		handles_agents::AgentType,
+		handles_agents::Spawn,
 		handles_load_tracking::{
 			AssetsProgress,
 			DependenciesProgress,
@@ -59,7 +59,7 @@ pub(crate) trait RegisterMapCell {
 			+ ColorLookupAssetPath
 			+ MapCellsExtra<TExtra = CellGrid<HalfOffsetCell<TCell>>>
 			+ Default,
-		TAgent: Component + From<AgentType>;
+		TAgent: Component + Spawn;
 }
 
 impl RegisterMapCell for App {
@@ -77,7 +77,7 @@ impl RegisterMapCell for App {
 			+ ColorLookupAssetPath
 			+ MapCellsExtra<TExtra = CellGrid<HalfOffsetCell<TCell>>>
 			+ Default,
-		TAgent: Component + From<AgentType>,
+		TAgent: Component + Spawn,
 	{
 		let resolving_dependencies =
 			TLoading::processing_state::<LoadingGame, DependenciesProgress>();

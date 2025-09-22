@@ -1,1 +1,51 @@
-{}
+{
+	"loadout": {
+		"visible_slots": [
+			{
+				"VoidSphere": null
+			}
+		],
+		"inventory": [],
+		"slots": [
+			[
+				{
+					"VoidSphere": null
+				},
+				"void_beam"
+			]
+		]
+	},
+	"bones": {
+		"spawners": {
+			"skill_spawn_neutral": "Neutral",
+			"skill_spawn": {
+				"Slot": {
+					"VoidSphere": null
+				}
+			}
+		},
+		"hand_slots": {
+			"slot": {
+				"VoidSphere": null
+			}
+		},
+		"forearm_slots": {
+			"slot": {
+				"VoidSphere": null
+			}
+		},
+		"essence_slots": {
+			"slot": {
+				"VoidSphere": null
+			}
+		}
+	},
+	"attributes": {
+		"health": {
+			"current": 5,
+			"max": 5
+		},
+		"gravity_interaction": "Affected",
+		"force_interaction": "Affected"
+	}
+}

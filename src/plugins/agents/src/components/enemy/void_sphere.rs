@@ -1,6 +1,5 @@
 use crate::components::enemy::{Enemy, enemy_type::EnemyTypeInternal};
 use bevy::{
-	asset::AssetPath,
 	color::{Color, LinearRgba},
 	math::{Dir3, Vec3, primitives::Torus},
 	pbr::{NotShadowCaster, StandardMaterial},
@@ -20,25 +19,21 @@ use common::{
 		action_key::slot::{NoValidSlotKey, SlotKey},
 		aggro_range::AggroRange,
 		attack_range::AttackRange,
-		bone::Bone,
 		collider_radius::ColliderRadius,
 		speed::Speed,
 	},
 	traits::{
-		handles_enemies::{EnemySkillUsage, EnemyTarget},
-		handles_skill_behaviors::SkillSpawner,
+		handles_agents::AgentType,
+		handles_enemies::{EnemySkillUsage, EnemyTarget, EnemyType},
 		load_asset::LoadAsset,
-		loadout::LoadoutConfig,
-		mapper::Mapper,
 		prefab::{Prefab, PrefabEntityCommands},
-		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
 	},
 };
-use macros::item_asset;
 use serde::{Deserialize, Serialize};
-use std::{f32::consts::PI, sync::LazyLock, time::Duration};
+use std::{f32::consts::PI, time::Duration};
 
 #[derive(Component, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+#[require(Enemy = VoidSphere::enemy())]
 pub struct VoidSphere;
 
 impl VoidSphere {
@@ -60,7 +55,7 @@ impl VoidSphere {
 	pub(crate) const SKILL_SPAWN: &str = "skill_spawn";
 	pub(crate) const SKILL_SPAWN_NEUTRAL: &str = "skill_spawn_neutral";
 
-	pub(crate) fn new_enemy() -> Enemy {
+	pub(crate) fn enemy() -> Enemy {
 		Enemy {
 			speed: Speed(UnitsPerSecond::from(1.)),
 			movement_animation: None,
@@ -75,13 +70,11 @@ impl VoidSphere {
 	fn collider_radius() -> ColliderRadius {
 		ColliderRadius(Units::from(Self::OUTER_RADIUS))
 	}
+}
 
-	fn unified_slot(bone: &str) -> Option<SlotKey> {
-		if bone != Self::UNIFIED_SLOT_KEY {
-			return None;
-		}
-
-		Some(VoidSphereSlot::SLOT_KEY)
+impl From<VoidSphere> for AgentType {
+	fn from(_: VoidSphere) -> Self {
+		Self::Enemy(EnemyType::VoidSphere)
 	}
 }
 
@@ -125,57 +118,6 @@ impl Prefab<()> for VoidSphere {
 			));
 
 		Ok(())
-	}
-}
-
-static SLOTS: LazyLock<Vec<(SlotKey, Option<AssetPath<'static>>)>> = LazyLock::new(|| {
-	vec![(
-		VoidSphereSlot::SLOT_KEY,
-		Some(AssetPath::from(item_asset!("void_beam"))),
-	)]
-});
-
-impl LoadoutConfig for VoidSphere {
-	fn inventory(&self) -> impl Iterator<Item = Option<AssetPath<'static>>> {
-		std::iter::empty()
-	}
-
-	fn slots(&self) -> impl Iterator<Item = (SlotKey, Option<AssetPath<'static>>)> {
-		SLOTS.iter().cloned()
-	}
-}
-
-impl VisibleSlots for VoidSphere {
-	fn visible_slots(&self) -> impl Iterator<Item = SlotKey> {
-		[VoidSphereSlot::SLOT_KEY].into_iter()
-	}
-}
-
-impl Mapper<Bone<'_>, Option<SkillSpawner>> for VoidSphere {
-	fn map(&self, Bone(name): Bone) -> Option<SkillSpawner> {
-		match name {
-			Self::SKILL_SPAWN => Some(SkillSpawner::Slot(VoidSphereSlot::SLOT_KEY)),
-			Self::SKILL_SPAWN_NEUTRAL => Some(SkillSpawner::Neutral),
-			_ => None,
-		}
-	}
-}
-
-impl Mapper<Bone<'_>, Option<EssenceSlot>> for VoidSphere {
-	fn map(&self, Bone(bone): Bone<'_>) -> Option<EssenceSlot> {
-		Self::unified_slot(bone).map(EssenceSlot)
-	}
-}
-
-impl Mapper<Bone<'_>, Option<HandSlot>> for VoidSphere {
-	fn map(&self, Bone(bone): Bone<'_>) -> Option<HandSlot> {
-		Self::unified_slot(bone).map(HandSlot)
-	}
-}
-
-impl Mapper<Bone<'_>, Option<ForearmSlot>> for VoidSphere {
-	fn map(&self, Bone(bone): Bone<'_>) -> Option<ForearmSlot> {
-		Self::unified_slot(bone).map(ForearmSlot)
 	}
 }
 

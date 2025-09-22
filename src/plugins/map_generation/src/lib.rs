@@ -21,11 +21,9 @@ use common::{
 	systems::log::OnError,
 	traits::{
 		handles_agents::HandlesAgents,
-		handles_enemies::HandlesEnemies,
 		handles_lights::HandlesLights,
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInApp},
 		handles_map_generation::HandlesMapGeneration,
-		handles_player::HandlesPlayer,
 		handles_saving::HandlesSaving,
 		spawn::Spawn,
 		thread_safe::ThreadSafe,
@@ -45,7 +43,7 @@ where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TLights: ThreadSafe + HandlesLights,
-	TAgents: ThreadSafe + HandlesPlayer + HandlesEnemies,
+	TAgents: ThreadSafe + HandlesAgents,
 {
 	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TLights, _: &TAgents) -> Self {
 		Self(PhantomData)

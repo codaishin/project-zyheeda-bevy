@@ -1,1 +1,173 @@
-{}
+{
+	"loadout": {
+		"visible_slots": [
+			{
+				"Player": {
+					"Upper": "Left"
+				}
+			},
+			{
+				"Player": {
+					"Upper": "Right"
+				}
+			},
+			{
+				"Player": {
+					"Lower": "Left"
+				}
+			},
+			{
+				"Player": {
+					"Lower": "Right"
+				}
+			}
+		],
+		"inventory": [
+			"pistol",
+			"pistol",
+			"pistol",
+			"pistol"
+		],
+		"slots": [
+			[
+				{
+					"Player": {
+						"Upper": "Left"
+					}
+				},
+				"pistol"
+			],
+			[
+				{
+					"Player": {
+						"Upper": "Right"
+					}
+				},
+				"force_essence"
+			],
+			[
+				{
+					"Player": {
+						"Lower": "Left"
+					}
+				},
+				"pistol"
+			],
+			[
+				{
+					"Player": {
+						"Lower": "Right"
+					}
+				},
+				"force_essence"
+			]
+		]
+	},
+	"bones": {
+		"spawners": {
+			"skill_spawn": "Neutral",
+			"skill_spawn_top.L": {
+				"Slot": {
+					"Player": {
+						"Upper": "Left"
+					}
+				}
+			},
+			"skill_spawn_top.R": {
+				"Slot": {
+					"Player": {
+						"Upper": "Right"
+					}
+				}
+			},
+			"skill_spawn_bottom.L": {
+				"Slot": {
+					"Player": {
+						"Lower": "Left"
+					}
+				}
+			},
+			"skill_spawn_bottom.R": {
+				"Slot": {
+					"Player": {
+						"Lower": "Right"
+					}
+				}
+			}
+		},
+		"hand_slots": {
+			"top_hand_slot.L": {
+				"Player": {
+					"Upper": "Left"
+				}
+			},
+			"top_hand_slot.R": {
+				"Player": {
+					"Upper": "Right"
+				}
+			},
+			"bottom_hand_slot.L": {
+				"Player": {
+					"Lower": "Left"
+				}
+			},
+			"bottom_hand_slot.R": {
+				"Player": {
+					"Lower": "Right"
+				}
+			}
+		},
+		"forearm_slots": {
+			"top_forearm.L": {
+				"Player": {
+					"Upper": "Left"
+				}
+			},
+			"top_forearm.R": {
+				"Player": {
+					"Upper": "Right"
+				}
+			},
+			"bottom_forearm.L": {
+				"Player": {
+					"Lower": "Left"
+				}
+			},
+			"bottom_forearm.R": {
+				"Player": {
+					"Lower": "Right"
+				}
+			}
+		},
+		"essence_slots": {
+			"ArmTopLeftData": {
+				"Player": {
+					"Upper": "Left"
+				}
+			},
+			"ArmTopRightData": {
+				"Player": {
+					"Upper": "Right"
+				}
+			},
+			"ArmBottomLeftData": {
+				"Player": {
+					"Lower": "Left"
+				}
+			},
+			"ArmBottomRightData": {
+				"Player": {
+					"Lower": "Right"
+				}
+			}
+		}
+	},
+	"attributes": {
+		"health": {
+			"current": 100,
+			"max": 100
+		},
+		"gravity_interaction": "Affected",
+		"force_interaction": "Affected"
+	}
+}

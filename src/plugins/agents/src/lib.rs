@@ -1,12 +1,13 @@
 mod assets;
 mod components;
+mod observers;
 mod resources;
 mod systems;
 
 use crate::{
-	assets::agent_config::{AgentConfigRef, AgentConfigAsset},
+	assets::agent_config::{AgentConfigAsset, AgentConfigData},
 	components::{
-		agent::Agent,
+		agent::{Agent, tag::AgentTag},
 		enemy::{Enemy, void_sphere::VoidSphere},
 		player::Player,
 		player_camera::PlayerCamera,
@@ -22,7 +23,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	states::game_state::GameState,
+	states::game_state::{GameState, LoadingEssentialAssets},
 	tools::action_key::{
 		movement::MovementKey,
 		slot::{NoValidSlotKey, PlayerSlot, SlotKey},
@@ -30,7 +31,7 @@ use common::{
 	traits::{
 		animation::RegisterAnimations,
 		handles_agents::HandlesAgents,
-		handles_custom_assets::HandlesCustomAssets,
+		handles_custom_assets::{HandlesCustomFolderAssets, OnLoadError},
 		handles_enemies::HandlesEnemies,
 		handles_lights::HandlesLights,
 		handles_player::{
@@ -55,7 +56,7 @@ pub struct AgentsPlugin<TDependencies>(PhantomData<TDependencies>);
 impl<TLoading, TSettings, TSaveGame, TAnimations, TLights>
 	AgentsPlugin<(TLoading, TSettings, TSaveGame, TAnimations, TLights)>
 where
-	TLoading: ThreadSafe + HandlesCustomAssets,
+	TLoading: ThreadSafe + HandlesCustomFolderAssets,
 	TSettings: ThreadSafe + HandlesSettings,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + RegisterAnimations,
@@ -75,17 +76,21 @@ where
 impl<TLoading, TSettings, TSaveGame, TAnimations, TLights> Plugin
 	for AgentsPlugin<(TLoading, TSettings, TSaveGame, TAnimations, TLights)>
 where
-	TLoading: ThreadSafe + HandlesCustomAssets,
+	TLoading: ThreadSafe + HandlesCustomFolderAssets,
 	TSettings: ThreadSafe + HandlesSettings,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + RegisterAnimations,
 	TLights: ThreadSafe + HandlesLights,
 {
 	fn build(&self, app: &mut App) {
-		// Agent assets
-		TLoading::register_custom_assets::<AgentConfigAsset, AgentConfigAsset>(app);
+		// Load Agent
+		TLoading::register_custom_folder_assets::<
+			AgentConfigAsset,
+			AgentConfigAsset,
+			LoadingEssentialAssets,
+		>(app, OnLoadError::Panic);
 		app.init_asset::<AgentConfigAsset>();
-		app.add_systems(Update, Agent::<AgentConfigAsset>::load);
+		app.add_observer(Agent::insert_from::<AgentTag>);
 
 		// Animations
 		TAnimations::register_animations::<Player>(app);
@@ -99,12 +104,11 @@ where
 		);
 
 		// Savedata
-		TSaveGame::register_savable_component::<Agent>(app);
+		TSaveGame::register_savable_component::<AgentTag>(app);
 		TSaveGame::register_savable_component::<Enemy>(app);
 		TSaveGame::register_savable_component::<PlayerCamera>(app);
 		TSaveGame::register_savable_component::<PlayerMovement>(app);
-		app.register_required_components::<Agent, TSaveGame::TSaveEntityMarker>();
-		app.register_required_components::<Enemy, TSaveGame::TSaveEntityMarker>();
+		app.register_required_components::<AgentTag, TSaveGame::TSaveEntityMarker>();
 
 		// Prefabs
 		app.add_prefab_observer::<Player, TLights>();
@@ -165,6 +169,6 @@ impl<TDependencies> PlayerMainCamera for AgentsPlugin<TDependencies> {
 }
 
 impl<TDependencies> HandlesAgents for AgentsPlugin<TDependencies> {
-	type TAgentConfig<'a> = AgentConfigRef<'a>;
+	type TAgentConfig<'a> = AgentConfigData<'a>;
 	type TAgent = Agent;
 }

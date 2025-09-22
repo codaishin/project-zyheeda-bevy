@@ -27,14 +27,12 @@ use common::{
 		accessors::get::GetFromSystemParam,
 		handles_agents::{AgentConfig, HandlesAgents},
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets, OnLoadError},
-		handles_enemies::HandlesEnemies,
 		handles_load_tracking::{DependenciesProgress, HandlesLoadTracking, LoadTrackingInApp},
 		handles_loadout::HandlesLoadout,
 		handles_orientation::HandlesOrientation,
 		handles_physics::HandlesAllPhysicalEffects,
 		handles_player::{
 			ConfiguresPlayerSkillAnimations,
-			HandlesPlayer,
 			HandlesPlayerCameras,
 			HandlesPlayerMouse,
 		},
@@ -83,11 +81,9 @@ where
 	TSettings: ThreadSafe + HandlesSettings,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation + SystemSetDefinition,
 	TAgents: ThreadSafe
-		+ HandlesPlayer
 		+ HandlesPlayerCameras
 		+ HandlesPlayerMouse
 		+ ConfiguresPlayerSkillAnimations
-		+ HandlesEnemies
 		+ HandlesAgents,
 {
 	#[allow(clippy::too_many_arguments)]
@@ -192,11 +188,9 @@ where
 	TSettings: ThreadSafe + HandlesSettings,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation + SystemSetDefinition,
 	TAgents: ThreadSafe
-		+ HandlesPlayer
 		+ HandlesPlayerCameras
 		+ HandlesPlayerMouse
 		+ ConfiguresPlayerSkillAnimations
-		+ HandlesEnemies
 		+ HandlesAgents,
 {
 	fn build(&self, app: &mut App) {

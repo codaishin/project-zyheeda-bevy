@@ -10,8 +10,9 @@ use crate::{
 		mapper::Mapper,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
 	},
+	zyheeda_commands::ZyheedaCommands,
 };
-use bevy::ecs::component::Component;
+use bevy::ecs::{component::Component, system::EntityCommands};
 use serde::{Deserialize, Serialize};
 
 pub trait HandlesAgents {
@@ -25,8 +26,12 @@ pub trait HandlesAgents {
 		+ GetProperty<AttributeOnSpawn<EffectTarget<Gravity>>>
 		+ GetProperty<AttributeOnSpawn<EffectTarget<Force>>>;
 	type TAgent: Component
-		+ From<AgentType>
+		+ Spawn
 		+ for<'i> GetFromSystemParam<AgentConfig, TItem<'i> = Self::TAgentConfig<'i>>;
+}
+
+pub trait Spawn {
+	fn spawn<'a>(commands: &'a mut ZyheedaCommands, agent_type: AgentType) -> EntityCommands<'a>;
 }
 
 pub struct AgentConfig;

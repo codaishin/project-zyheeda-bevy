@@ -1,12 +1,5 @@
-use crate::components::enemy::{Enemy, void_sphere::VoidSphere};
-use bevy::asset::AssetPath;
-use common::{
-	tools::action_key::slot::SlotKey,
-	traits::{
-		handles_enemies::{EnemySkillUsage, EnemyType},
-		loadout::LoadoutConfig,
-	},
-};
+use crate::components::enemy::void_sphere::VoidSphere;
+use common::{tools::action_key::slot::SlotKey, traits::handles_enemies::EnemySkillUsage};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -21,24 +14,6 @@ macro_rules! use_matched {
 			EnemyTypeInternal::VoidSphere(e) => $f(e),
 		}
 	};
-}
-
-impl EnemyTypeInternal {
-	pub(crate) fn new_enemy(enemy_type: EnemyType) -> Enemy {
-		match enemy_type {
-			EnemyType::VoidSphere => VoidSphere::new_enemy(),
-		}
-	}
-}
-
-impl LoadoutConfig for EnemyTypeInternal {
-	fn inventory(&self) -> impl Iterator<Item = Option<AssetPath<'static>>> {
-		use_matched!(self, LoadoutConfig::inventory)
-	}
-
-	fn slots(&self) -> impl Iterator<Item = (SlotKey, Option<AssetPath<'static>>)> {
-		use_matched!(self, LoadoutConfig::slots)
-	}
 }
 
 impl EnemySkillUsage for EnemyTypeInternal {

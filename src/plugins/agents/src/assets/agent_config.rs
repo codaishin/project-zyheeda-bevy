@@ -1,14 +1,5 @@
-use crate::{
-	components::{
-		enemy::void_sphere::{VoidSphere, VoidSphereSlot},
-		player::Player,
-	},
-	systems::load_agent::InsertSpecializedAgent,
-};
-use bevy::{
-	asset::{Asset, AssetPath},
-	reflect::TypePath,
-};
+use crate::components::enemy::void_sphere::VoidSphereSlot;
+use bevy::{asset::Asset, reflect::TypePath};
 use common::{
 	attributes::{effect_target::EffectTarget, health::Health},
 	effects::{force::Force, gravity::Gravity},
@@ -20,44 +11,34 @@ use common::{
 	traits::{
 		accessors::get::GetProperty,
 		handles_agents::AgentType,
-		handles_custom_assets::AssetFileExtensions,
-		handles_enemies::EnemyType,
+		handles_custom_assets::{AssetFileExtensions, AssetFolderPath},
 		handles_skill_behaviors::SkillSpawner,
-		loadout::LoadoutConfig,
+		load_asset::Path,
+		loadout::{ItemName, LoadoutConfig},
 		mapper::Mapper,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
 	},
-	zyheeda_commands::ZyheedaEntityCommands,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Asset, TypePath, Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct AgentConfigAsset {
-	pub(crate) agent_type: AgentType,
 	pub(crate) loadout: Loadout,
 	pub(crate) bones: Bones,
 	pub(crate) attributes: Attributes,
 }
 
-impl InsertSpecializedAgent for AgentConfigAsset {
-	fn insert_specialized_agent(&self, entity: &mut ZyheedaEntityCommands) {
-		match self.agent_type {
-			AgentType::Player => entity.try_insert(Player),
-			AgentType::Enemy(EnemyType::VoidSphere) => entity.try_insert(VoidSphere),
-		};
+impl AssetFolderPath for AgentConfigAsset {
+	fn asset_folder_path() -> Path {
+		Path::from("agents")
 	}
 }
 
 #[derive(Debug, PartialEq)]
-pub struct AgentConfigRef<'a, TAsset = AgentConfigAsset> {
-	asset: &'a TAsset,
-}
-
-impl<'a, TAsset> From<&'a TAsset> for AgentConfigRef<'a, TAsset> {
-	fn from(asset: &'a TAsset) -> Self {
-		Self { asset }
-	}
+pub struct AgentConfigData<'a, TAsset = AgentConfigAsset> {
+	pub(crate) agent_type: AgentType,
+	pub(crate) asset: &'a TAsset,
 }
 
 impl AssetFileExtensions for AgentConfigAsset {
@@ -66,7 +47,7 @@ impl AssetFileExtensions for AgentConfigAsset {
 	}
 }
 
-impl VisibleSlots for AgentConfigRef<'_> {
+impl VisibleSlots for AgentConfigData<'_> {
 	fn visible_slots(&self) -> impl Iterator<Item = SlotKey> {
 		self.asset
 			.loadout
@@ -77,12 +58,12 @@ impl VisibleSlots for AgentConfigRef<'_> {
 	}
 }
 
-impl LoadoutConfig for AgentConfigRef<'_> {
-	fn inventory(&self) -> impl Iterator<Item = Option<AssetPath<'static>>> {
+impl LoadoutConfig for AgentConfigData<'_> {
+	fn inventory(&self) -> impl Iterator<Item = Option<ItemName>> {
 		self.asset.loadout.inventory.iter().cloned()
 	}
 
-	fn slots(&self) -> impl Iterator<Item = (SlotKey, Option<AssetPath<'static>>)> {
+	fn slots(&self) -> impl Iterator<Item = (SlotKey, Option<ItemName>)> {
 		self.asset
 			.loadout
 			.slots
@@ -92,7 +73,7 @@ impl LoadoutConfig for AgentConfigRef<'_> {
 	}
 }
 
-impl Mapper<Bone<'_>, Option<SkillSpawner>> for AgentConfigRef<'_> {
+impl Mapper<Bone<'_>, Option<SkillSpawner>> for AgentConfigData<'_> {
 	fn map(&self, Bone(bone): Bone<'_>) -> Option<SkillSpawner> {
 		self.asset
 			.bones
@@ -103,7 +84,7 @@ impl Mapper<Bone<'_>, Option<SkillSpawner>> for AgentConfigRef<'_> {
 	}
 }
 
-impl Mapper<Bone<'_>, Option<EssenceSlot>> for AgentConfigRef<'_> {
+impl Mapper<Bone<'_>, Option<EssenceSlot>> for AgentConfigData<'_> {
 	fn map(&self, Bone(bone): Bone<'_>) -> Option<EssenceSlot> {
 		self.asset
 			.bones
@@ -115,7 +96,7 @@ impl Mapper<Bone<'_>, Option<EssenceSlot>> for AgentConfigRef<'_> {
 	}
 }
 
-impl Mapper<Bone<'_>, Option<HandSlot>> for AgentConfigRef<'_> {
+impl Mapper<Bone<'_>, Option<HandSlot>> for AgentConfigData<'_> {
 	fn map(&self, Bone(bone): Bone<'_>) -> Option<HandSlot> {
 		self.asset
 			.bones
@@ -127,7 +108,7 @@ impl Mapper<Bone<'_>, Option<HandSlot>> for AgentConfigRef<'_> {
 	}
 }
 
-impl Mapper<Bone<'_>, Option<ForearmSlot>> for AgentConfigRef<'_> {
+impl Mapper<Bone<'_>, Option<ForearmSlot>> for AgentConfigData<'_> {
 	fn map(&self, Bone(bone): Bone<'_>) -> Option<ForearmSlot> {
 		self.asset
 			.bones
@@ -139,19 +120,19 @@ impl Mapper<Bone<'_>, Option<ForearmSlot>> for AgentConfigRef<'_> {
 	}
 }
 
-impl GetProperty<AttributeOnSpawn<Health>> for AgentConfigRef<'_> {
+impl GetProperty<AttributeOnSpawn<Health>> for AgentConfigData<'_> {
 	fn get_property(&self) -> Health {
 		self.asset.attributes.health
 	}
 }
 
-impl GetProperty<AttributeOnSpawn<EffectTarget<Gravity>>> for AgentConfigRef<'_> {
+impl GetProperty<AttributeOnSpawn<EffectTarget<Gravity>>> for AgentConfigData<'_> {
 	fn get_property(&self) -> EffectTarget<Gravity> {
 		self.asset.attributes.gravity_interaction
 	}
 }
 
-impl GetProperty<AttributeOnSpawn<EffectTarget<Force>>> for AgentConfigRef<'_> {
+impl GetProperty<AttributeOnSpawn<EffectTarget<Force>>> for AgentConfigData<'_> {
 	fn get_property(&self) -> EffectTarget<Force> {
 		self.asset.attributes.force_interaction
 	}
@@ -160,8 +141,8 @@ impl GetProperty<AttributeOnSpawn<EffectTarget<Force>>> for AgentConfigRef<'_> {
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub(crate) struct Loadout {
 	visible_slots: Vec<AgentSlotKey>,
-	inventory: Vec<Option<AssetPath<'static>>>,
-	slots: Vec<(AgentSlotKey, Option<AssetPath<'static>>)>,
+	inventory: Vec<Option<ItemName>>,
+	slots: Vec<(AgentSlotKey, Option<ItemName>)>,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]

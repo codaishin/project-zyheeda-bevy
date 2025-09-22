@@ -14,7 +14,7 @@ use std::vec::Drain;
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum GravityAffected {
 	AffectedBy {
-		#[serde(skip_serializing_if = "Vec::is_empty")]
+		#[serde(default, skip_serializing_if = "Vec::is_empty")]
 		pulls: Vec<GravityPull>,
 	},
 	Immune,
