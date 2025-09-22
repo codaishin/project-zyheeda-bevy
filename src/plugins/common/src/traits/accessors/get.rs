@@ -39,7 +39,7 @@ pub type AssociatedSystemParamRef<'world_self, 'state_self, 'world, 'state, T, T
 ///
 /// Note that the below example would also work without using [`StaticSystemParam`], due to rust
 /// being able to immediately name the actual type of the required system parameter. However, this
-/// does not work for injecting types across generic plugin borders.
+/// does not work for injecting types across generic plugin boundaries.
 ///
 /// # Example
 /// ```
