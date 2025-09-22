@@ -34,8 +34,8 @@ where
 	}
 }
 
-impl<'w, 's> GetFromSystemParam<'w, 's, InventoryKey> for Inventory {
-	type TParam = SkillItemAssets<'w>;
+impl GetFromSystemParam<InventoryKey> for Inventory {
+	type TParam<'w, 's> = SkillItemAssets<'w>;
 	type TItem<'i> = SkillItem;
 
 	fn get_from_param(

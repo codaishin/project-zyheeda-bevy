@@ -22,13 +22,11 @@ pub trait GetRef<TKey> {
 	fn get_ref(&self, key: &TKey) -> Option<Self::TValue<'_>>;
 }
 
-pub type AssociatedItem<'world, 'state, 'item, T, TKey> =
-	<T as GetFromSystemParam<'world, 'state, TKey>>::TItem<'item>;
 pub type AssociatedStaticSystemParam<'world_self, 'state_self, 'world, 'state, T, TKey> =
 	StaticSystemParam<
 		'world_self,
 		'state_self,
-		<T as GetFromSystemParam<'world, 'state, TKey>>::TParam,
+		<T as GetFromSystemParam<TKey>>::TParam<'world, 'state>,
 	>;
 pub type AssociatedSystemParam<'world_self, 'state_self, 'world, 'state, T, TKey> =
 	<AssociatedStaticSystemParam<'world_self, 'state_self, 'world, 'state, T, TKey> as Deref>::Target;
@@ -45,11 +43,7 @@ pub type AssociatedSystemParam<'world_self, 'state_self, 'world, 'state, T, TKey
 ///
 /// # Example
 /// ```
-/// use common::traits::accessors::get::{
-///   AssociatedItem,
-///   AssociatedStaticSystemParam,
-///   GetFromSystemParam,
-/// };
+/// use common::traits::accessors::get::{AssociatedStaticSystemParam, GetFromSystemParam};
 /// use bevy::{ecs::system::RunSystemOnce, prelude::*};
 /// use std::fmt::Display;
 ///
@@ -67,8 +61,8 @@ pub type AssociatedSystemParam<'world_self, 'state_self, 'world, 'state, T, TKey
 /// #[derive(Component)]
 /// struct Index(usize);
 ///
-/// impl<'w> GetFromSystemParam<'w, '_, Length> for Index {
-///   type TParam = Res<'w, Displays>;
+/// impl GetFromSystemParam<Length> for Index {
+///   type TParam<'w, 's> = Res<'w, Displays>;
 ///   type TItem<'i> = &'i str;
 ///
 ///   fn get_from_param<'a>(
@@ -87,8 +81,8 @@ pub type AssociatedSystemParam<'world_self, 'state_self, 'world, 'state, T, TKey
 ///
 /// fn my_system<TSource>(q: Query<&TSource>, p: AssociatedStaticSystemParam<TSource, Length>)
 /// where
-///   for<'w, 's> TSource: Component + GetFromSystemParam<'w, 's, Length>,
-///   for<'w, 's, 'i> AssociatedItem<'w, 's, 'i, TSource, Length>: Display,
+///   TSource: Component + GetFromSystemParam<Length>,
+///   for <'i> TSource::TItem<'i>: Display,
 /// {
 ///   for source in &q {
 ///     let display = source.get_from_param(&Length::Short, &p).unwrap();
@@ -105,8 +99,8 @@ pub type AssociatedSystemParam<'world_self, 'state_self, 'world, 'state, T, TKey
 ///
 /// assert!(app.world_mut().run_system_once(my_system::<Index>).is_ok());
 /// ```
-pub trait GetFromSystemParam<'world, 'state, TKey> {
-	type TParam: SystemParam;
+pub trait GetFromSystemParam<TKey> {
+	type TParam<'world, 'state>: SystemParam;
 	type TItem<'item>
 	where
 		Self: 'item;
@@ -114,7 +108,7 @@ pub trait GetFromSystemParam<'world, 'state, TKey> {
 	fn get_from_param<'a>(
 		&'a self,
 		key: &TKey,
-		param: &'a AssociatedSystemParam<'_, '_, 'world, 'state, Self, TKey>,
+		param: &'a AssociatedSystemParam<'_, '_, '_, '_, Self, TKey>,
 	) -> Option<Self::TItem<'a>>;
 }
 

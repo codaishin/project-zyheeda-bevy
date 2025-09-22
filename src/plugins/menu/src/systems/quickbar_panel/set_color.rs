@@ -18,7 +18,6 @@ use common::{
 	},
 	traits::{
 		accessors::get::{
-			AssociatedItem,
 			AssociatedStaticSystemParam,
 			AssociatedSystemParam,
 			DynProperty,
@@ -40,9 +39,8 @@ impl QuickbarPanel {
 	) where
 		TAgent: Component,
 		TMap: Resource + GetInput<PlayerSlot, TInput = UserInput>,
-		for<'w, 's> TSlots: Component + GetFromSystemParam<'w, 's, SlotKey>,
-		for<'w, 's, 'i, 'a> AssociatedItem<'w, 's, 'i, TSlots, SlotKey>:
-			GetProperty<Result<SkillExecution, NoSkill>>,
+		TSlots: Component + GetFromSystemParam<SlotKey>,
+		for<'i> TSlots::TItem<'i>: GetProperty<Result<SkillExecution, NoSkill>>,
 	{
 		set_color(commands, buttons, map, slots, param)
 	}
@@ -58,9 +56,8 @@ fn set_color<TAgent, TMap, TPrimer, TSlots>(
 	TAgent: Component,
 	TMap: Resource + GetInput<PlayerSlot, TInput = UserInput>,
 	TPrimer: Component + GetProperty<UserInput> + GetProperty<IsPrimed>,
-	for<'w, 's> TSlots: Component + GetFromSystemParam<'w, 's, SlotKey>,
-	for<'w, 's, 'i, 'a> AssociatedItem<'w, 's, 'i, TSlots, SlotKey>:
-		GetProperty<Result<SkillExecution, NoSkill>>,
+	TSlots: Component + GetFromSystemParam<SlotKey>,
+	for<'i> TSlots::TItem<'i>: GetProperty<Result<SkillExecution, NoSkill>>,
 {
 	for slots in &slots {
 		for (entity, panel, primer) in &buttons {
@@ -82,10 +79,9 @@ fn get_color_override<TSlots, TMap, TPrimer>(
 ) -> Option<ColorConfig>
 where
 	TMap: GetInput<PlayerSlot, TInput = UserInput>,
-	for<'a> TPrimer: Component + GetProperty<UserInput> + GetProperty<IsPrimed>,
-	for<'w, 's> TSlots: Component + GetFromSystemParam<'w, 's, SlotKey>,
-	for<'w, 's, 'i, 'a> AssociatedItem<'w, 's, 'i, TSlots, SlotKey>:
-		GetProperty<Result<SkillExecution, NoSkill>>,
+	TPrimer: Component + GetProperty<UserInput> + GetProperty<IsPrimed>,
+	TSlots: Component + GetFromSystemParam<SlotKey>,
+	for<'i> TSlots::TItem<'i>: GetProperty<Result<SkillExecution, NoSkill>>,
 {
 	let item = slots.get_from_param(&SlotKey::from(*key), param)?;
 	let state = item.dyn_property::<Result<SkillExecution, NoSkill>>();
@@ -189,8 +185,8 @@ mod tests {
 		}
 	}
 
-	impl<'w, 's> GetFromSystemParam<'w, 's, SlotKey> for _Slots {
-		type TParam = _Param;
+	impl GetFromSystemParam<SlotKey> for _Slots {
+		type TParam<'w, 's> = _Param;
 		type TItem<'i> = _Item;
 
 		fn get_from_param(&self, key: &SlotKey, _: &_Param) -> Option<Self::TItem<'_>> {

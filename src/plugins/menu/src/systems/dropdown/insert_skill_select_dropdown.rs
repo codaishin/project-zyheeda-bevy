@@ -25,8 +25,8 @@ impl<TLayout> SkillSelectDropdownCommand<TLayout> {
 		TAgent: Component,
 		TSkills: IntoIterator,
 		TSkills::Item: Clone + ThreadSafe,
-		for<'w, 's, 'a> TSlots:
-			Component + GetFromSystemParam<'w, 's, AvailableSkills<SlotKey>, TItem<'a> = TSkills>,
+		for<'i> TSlots:
+			Component + GetFromSystemParam<AvailableSkills<SlotKey>, TItem<'i> = TSkills>,
 	{
 		for slots in &slots {
 			for (entity, command) in &dropdown_commands {
@@ -75,8 +75,8 @@ mod tests {
 	#[derive(Component)]
 	struct _Slots(HashMap<SlotKey, Vec<_Skill>>);
 
-	impl<'w, 's> GetFromSystemParam<'w, 's, AvailableSkills<SlotKey>> for _Slots {
-		type TParam = ();
+	impl GetFromSystemParam<AvailableSkills<SlotKey>> for _Slots {
+		type TParam<'w, 's> = ();
 		type TItem<'a> = Vec<_Skill>;
 
 		fn get_from_param(
