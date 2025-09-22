@@ -5,13 +5,7 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	traits::{
-		accessors::get::{
-			AssociatedItem,
-			AssociatedStaticSystemParam,
-			GetFromSystemParam,
-			GetProperty,
-			TryApplyOn,
-		},
+		accessors::get::{AssociatedSystemParam, GetFromSystemParam, GetProperty, TryApplyOn},
 		handles_loadout::loadout::{ItemToken, LoadoutKey},
 	},
 	zyheeda_commands::ZyheedaCommands,
@@ -22,13 +16,11 @@ impl InventoryPanel {
 		mut commands: ZyheedaCommands,
 		containers: Query<&TContainer, With<TAgent>>,
 		mut panels: Query<(Entity, &mut Self, &KeyedPanel<TContainer::TKey>)>,
-		param: AssociatedStaticSystemParam<TContainer, TContainer::TKey>,
+		param: AssociatedSystemParam<TContainer, TContainer::TKey>,
 	) where
 		TAgent: Component,
-		TContainer:
-			Component + LoadoutKey + for<'w, 's> GetFromSystemParam<'w, 's, TContainer::TKey>,
-		for<'w, 's, 'i> AssociatedItem<'w, 's, 'i, TContainer, TContainer::TKey>:
-			GetProperty<ItemToken>,
+		TContainer: Component + LoadoutKey + GetFromSystemParam<TContainer::TKey>,
+		for<'i> TContainer::TItem<'i>: GetProperty<ItemToken>,
 	{
 		for container in &containers {
 			for (entity, mut panel, KeyedPanel(key)) in &mut panels {
@@ -85,8 +77,8 @@ mod tests {
 		type TKey = _Key;
 	}
 
-	impl GetFromSystemParam<'_, '_, _Key> for _Container {
-		type TParam = ();
+	impl GetFromSystemParam<_Key> for _Container {
+		type TParam<'w, 's> = ();
 		type TItem<'a> = _Item;
 
 		fn get_from_param(&self, _: &_Key, _: &()) -> Option<Self::TItem<'_>> {

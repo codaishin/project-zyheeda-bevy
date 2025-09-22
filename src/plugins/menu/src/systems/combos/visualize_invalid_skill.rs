@@ -6,12 +6,7 @@ use bevy::prelude::*;
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::{
-			AssociatedItem,
-			AssociatedStaticSystemParam,
-			GetFromSystemParam,
-			TryApplyOn,
-		},
+		accessors::get::{AssociatedSystemParam, GetFromSystemParam, TryApplyOn},
 		handles_loadout::slot_component::AvailableSkills,
 		thread_safe::ThreadSafe,
 	},
@@ -20,20 +15,18 @@ use common::{
 
 impl<TSkill> ComboSkillButton<DropdownTrigger, TSkill>
 where
-	TSkill: ThreadSafe,
+	TSkill: ThreadSafe + PartialEq,
 {
 	pub(crate) fn visualize_invalid<TVisualize, TAgent, TSlots>(
 		mut commands: ZyheedaCommands,
 		buttons: Query<(Entity, &Self), Added<Self>>,
 		slots: Query<&TSlots, With<TAgent>>,
-		param: AssociatedStaticSystemParam<TSlots, AvailableSkills<SlotKey>>,
+		param: AssociatedSystemParam<TSlots, AvailableSkills<SlotKey>>,
 	) where
 		TVisualize: InsertContentOn,
 		TAgent: Component,
-		for<'w, 's> TSlots: Component + GetFromSystemParam<'w, 's, AvailableSkills<SlotKey>>,
-		for<'w, 's, 'i> AssociatedItem<'w, 's, 'i, TSlots, AvailableSkills<SlotKey>>:
-			IntoIterator<Item = TSkill>,
-		TSkill: PartialEq,
+		TSlots: Component + GetFromSystemParam<AvailableSkills<SlotKey>>,
+		for<'i> TSlots::TItem<'i>: IntoIterator<Item = TSkill>,
 	{
 		for slots in &slots {
 			for (entity, button) in &buttons {
@@ -74,8 +67,8 @@ mod tests {
 	#[derive(Component)]
 	struct _Slots(HashMap<SlotKey, Vec<_Skill>>);
 
-	impl<'w, 's> GetFromSystemParam<'w, 's, AvailableSkills<SlotKey>> for _Slots {
-		type TParam = ();
+	impl GetFromSystemParam<AvailableSkills<SlotKey>> for _Slots {
+		type TParam<'w, 's> = ();
 		type TItem<'i> = Vec<_Skill>;
 
 		fn get_from_param(

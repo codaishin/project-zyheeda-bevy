@@ -18,9 +18,8 @@ use common::{
 	},
 	traits::{
 		accessors::get::{
-			AssociatedItem,
-			AssociatedStaticSystemParam,
 			AssociatedSystemParam,
+			AssociatedSystemParamRef,
 			DynProperty,
 			GetFromSystemParam,
 			GetProperty,
@@ -36,13 +35,12 @@ impl QuickbarPanel {
 		buttons: Query<(Entity, &Self, &UiInputPrimer)>,
 		map: Res<TMap>,
 		slots: Query<&TSlots, With<TAgent>>,
-		param: AssociatedStaticSystemParam<TSlots, SlotKey>,
+		param: AssociatedSystemParam<TSlots, SlotKey>,
 	) where
 		TAgent: Component,
 		TMap: Resource + GetInput<PlayerSlot, TInput = UserInput>,
-		for<'w, 's> TSlots: Component + GetFromSystemParam<'w, 's, SlotKey>,
-		for<'w, 's, 'i, 'a> AssociatedItem<'w, 's, 'i, TSlots, SlotKey>:
-			GetProperty<Result<SkillExecution, NoSkill>>,
+		TSlots: Component + GetFromSystemParam<SlotKey>,
+		for<'i> TSlots::TItem<'i>: GetProperty<Result<SkillExecution, NoSkill>>,
 	{
 		set_color(commands, buttons, map, slots, param)
 	}
@@ -53,14 +51,13 @@ fn set_color<TAgent, TMap, TPrimer, TSlots>(
 	buttons: Query<(Entity, &QuickbarPanel, &TPrimer)>,
 	map: Res<TMap>,
 	slots: Query<&TSlots, With<TAgent>>,
-	param: AssociatedStaticSystemParam<TSlots, SlotKey>,
+	param: AssociatedSystemParam<TSlots, SlotKey>,
 ) where
 	TAgent: Component,
 	TMap: Resource + GetInput<PlayerSlot, TInput = UserInput>,
 	TPrimer: Component + GetProperty<UserInput> + GetProperty<IsPrimed>,
-	for<'w, 's> TSlots: Component + GetFromSystemParam<'w, 's, SlotKey>,
-	for<'w, 's, 'i, 'a> AssociatedItem<'w, 's, 'i, TSlots, SlotKey>:
-		GetProperty<Result<SkillExecution, NoSkill>>,
+	TSlots: Component + GetFromSystemParam<SlotKey>,
+	for<'i> TSlots::TItem<'i>: GetProperty<Result<SkillExecution, NoSkill>>,
 {
 	for slots in &slots {
 		for (entity, panel, primer) in &buttons {
@@ -78,14 +75,13 @@ fn get_color_override<TSlots, TMap, TPrimer>(
 	QuickbarPanel { key, .. }: &QuickbarPanel,
 	primer: &TPrimer,
 	slots: &TSlots,
-	param: &AssociatedSystemParam<TSlots, SlotKey>,
+	param: &AssociatedSystemParamRef<TSlots, SlotKey>,
 ) -> Option<ColorConfig>
 where
 	TMap: GetInput<PlayerSlot, TInput = UserInput>,
-	for<'a> TPrimer: Component + GetProperty<UserInput> + GetProperty<IsPrimed>,
-	for<'w, 's> TSlots: Component + GetFromSystemParam<'w, 's, SlotKey>,
-	for<'w, 's, 'i, 'a> AssociatedItem<'w, 's, 'i, TSlots, SlotKey>:
-		GetProperty<Result<SkillExecution, NoSkill>>,
+	TPrimer: Component + GetProperty<UserInput> + GetProperty<IsPrimed>,
+	TSlots: Component + GetFromSystemParam<SlotKey>,
+	for<'i> TSlots::TItem<'i>: GetProperty<Result<SkillExecution, NoSkill>>,
 {
 	let item = slots.get_from_param(&SlotKey::from(*key), param)?;
 	let state = item.dyn_property::<Result<SkillExecution, NoSkill>>();
@@ -189,8 +185,8 @@ mod tests {
 		}
 	}
 
-	impl<'w, 's> GetFromSystemParam<'w, 's, SlotKey> for _Slots {
-		type TParam = _Param;
+	impl GetFromSystemParam<SlotKey> for _Slots {
+		type TParam<'w, 's> = _Param;
 		type TItem<'i> = _Item;
 
 		fn get_from_param(&self, key: &SlotKey, _: &_Param) -> Option<Self::TItem<'_>> {

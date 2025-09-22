@@ -4,8 +4,7 @@ use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
 		accessors::get::{
-			AssociatedItem,
-			AssociatedStaticSystemParam,
+			AssociatedSystemParam,
 			DynProperty,
 			GetFromSystemParam,
 			GetProperty,
@@ -20,13 +19,13 @@ use common::{
 impl QuickbarPanel {
 	pub(crate) fn set_icon<TAgent, TSlots>(
 		mut commands: ZyheedaCommands,
-		param: AssociatedStaticSystemParam<TSlots, SlotKey>,
+		param: AssociatedSystemParam<TSlots, SlotKey>,
 		panels: Query<PanelComponents>,
 		slots: Query<&TSlots, With<TAgent>>,
 	) where
 		TAgent: Component,
-		TSlots: Component + for<'w, 's> GetFromSystemParam<'w, 's, SlotKey>,
-		for<'w, 's, 'i> AssociatedItem<'w, 's, 'i, TSlots, SlotKey>:
+		TSlots: Component + GetFromSystemParam<SlotKey>,
+		for<'i> TSlots::TItem<'i>:
 			GetProperty<Result<SkillIcon, NoSkill>> + GetProperty<Result<SkillToken, NoSkill>>,
 	{
 		for slots in &slots {
@@ -88,8 +87,8 @@ mod tests {
 	#[derive(Component)]
 	struct _Slots(HashMap<SlotKey, _Item>);
 
-	impl<'w, 's> GetFromSystemParam<'w, 's, SlotKey> for _Slots {
-		type TParam = _Param;
+	impl GetFromSystemParam<SlotKey> for _Slots {
+		type TParam<'w, 's> = _Param;
 		type TItem<'i> = _Item;
 
 		fn get_from_param(&self, key: &SlotKey, _: &_Param) -> Option<Self::TItem<'_>> {

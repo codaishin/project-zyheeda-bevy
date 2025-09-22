@@ -119,8 +119,8 @@ impl Default for Slots {
 	}
 }
 
-impl<'w, 's> GetFromSystemParam<'w, 's, SlotKey> for Slots {
-	type TParam = SkillItemAssetsUsage<'w, 's>;
+impl GetFromSystemParam<SlotKey> for Slots {
+	type TParam<'w, 's> = SkillItemAssetsUsage<'w, 's>;
 	type TItem<'i> = SkillItem;
 
 	fn get_from_param(&self, key: &SlotKey, assets: &SkillItemAssetsUsage) -> Option<SkillItem> {
@@ -138,11 +138,11 @@ impl<'w, 's> GetFromSystemParam<'w, 's, SlotKey> for Slots {
 	}
 }
 
-impl<'w, 's> GetFromSystemParam<'w, 's, AvailableSkills<SlotKey>> for Slots {
-	type TParam = SkillItemAssets<'w>;
+impl GetFromSystemParam<AvailableSkills<SlotKey>> for Slots {
+	type TParam<'w, 's> = SkillItemAssets<'w>;
 	type TItem<'i> = Vec<Skill>;
 
-	fn get_from_param<'w2, 's2>(
+	fn get_from_param(
 		&self,
 		AvailableSkills(key): &AvailableSkills<SlotKey>,
 		SkillItemAssets { items, skills }: &SkillItemAssets,
