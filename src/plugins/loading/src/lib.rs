@@ -29,6 +29,7 @@ use common::{
 			AssetFolderPath,
 			HandlesCustomAssets,
 			HandlesCustomFolderAssets,
+			OnLoadError,
 			TryLoadFrom,
 		},
 		handles_load_tracking::{
@@ -242,8 +243,10 @@ impl HandlesCustomAssets for LoadingPlugin {
 }
 
 impl HandlesCustomFolderAssets for LoadingPlugin {
-	fn register_custom_folder_assets<TAsset, TDto, TLoadGroup>(app: &mut App)
-	where
+	fn register_custom_folder_assets<TAsset, TDto, TLoadGroup>(
+		app: &mut App,
+		on_load_error: OnLoadError,
+	) where
 		TAsset: Asset + AssetFolderPath + TryLoadFrom<TDto> + Clone + std::fmt::Debug,
 		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + ThreadSafe,
 		TLoadGroup: ThreadSafe,

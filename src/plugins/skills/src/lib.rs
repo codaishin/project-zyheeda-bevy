@@ -24,7 +24,7 @@ use common::{
 	systems::log::OnError,
 	tools::action_key::slot::SlotKey,
 	traits::{
-		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
+		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets, OnLoadError},
 		handles_enemies::HandlesEnemies,
 		handles_load_tracking::{DependenciesProgress, HandlesLoadTracking, LoadTrackingInApp},
 		handles_loadout::HandlesLoadout,
@@ -100,7 +100,10 @@ where
 	}
 
 	fn skill_load(&self, app: &mut App) {
-		TLoading::register_custom_folder_assets::<Skill, SkillDto, LoadingGame>(app);
+		TLoading::register_custom_folder_assets::<Skill, SkillDto, LoadingGame>(
+			app,
+			OnLoadError::SkipAsset,
+		);
 	}
 
 	fn item_load(&self, app: &mut App) {

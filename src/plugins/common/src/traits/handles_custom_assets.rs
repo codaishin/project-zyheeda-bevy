@@ -15,11 +15,18 @@ pub trait HandlesCustomAssets {
 }
 
 pub trait HandlesCustomFolderAssets {
-	fn register_custom_folder_assets<TAsset, TDto, TLoadGroup>(app: &mut App)
-	where
+	fn register_custom_folder_assets<TAsset, TDto, TLoadGroup>(
+		app: &mut App,
+		on_load_error: OnLoadError,
+	) where
 		TAsset: Asset + AssetFolderPath + TryLoadFrom<TDto> + Clone + Debug,
 		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + ThreadSafe,
 		TLoadGroup: ThreadSafe;
+}
+
+pub enum OnLoadError {
+	SkipAsset,
+	Panic,
 }
 
 pub trait AssetFolderPath {
