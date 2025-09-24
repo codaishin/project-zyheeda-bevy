@@ -145,9 +145,9 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Component(ExcludeKeys(HashSet::from([
-				SlotKey::from(PlayerSlot::UPPER_L)
-			])))),
+			Some(&_Component(ExcludeKeys(HashSet::from([SlotKey::from(
+				PlayerSlot::UPPER_L
+			)])))),
 			app.world().entity(entity).get::<_Component>()
 		)
 	}

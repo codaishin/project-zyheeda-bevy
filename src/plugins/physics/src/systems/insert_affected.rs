@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use common::{
-	self,
 	tools::attribute::AttributeOnSpawn,
 	traits::{
 		accessors::get::{AssociatedSystemParam, GetFromSystemParam, GetProperty, TryApplyOn},

@@ -10,7 +10,6 @@ use bevy::{
 };
 use bevy_rapier3d::geometry::Collider;
 use common::{
-	self,
 	components::{ground_offset::GroundOffset, insert_asset::InsertAsset},
 	errors::Error,
 	tools::{

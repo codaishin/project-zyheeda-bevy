@@ -1,7 +1,6 @@
 use crate::systems::{apply_pull::PullAbleByGravity, insert_affected::AffectedComponent};
 use bevy::prelude::*;
 use common::{
-	self,
 	attributes::effect_target::EffectTarget,
 	components::persistent_entity::PersistentEntity,
 	effects::gravity::Gravity,

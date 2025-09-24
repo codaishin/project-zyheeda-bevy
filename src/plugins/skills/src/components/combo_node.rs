@@ -316,8 +316,7 @@ mod tests {
 			),
 		)]));
 
-		let next =
-			node.peek_next_recursive(&SlotKey::from(PlayerSlot::LOWER_R), &ItemType::Pistol);
+		let next = node.peek_next_recursive(&SlotKey::from(PlayerSlot::LOWER_R), &ItemType::Pistol);
 
 		assert_eq!(
 			Some((
@@ -364,8 +363,7 @@ mod tests {
 			),
 		)]));
 
-		let next =
-			node.peek_next_recursive(&SlotKey::from(PlayerSlot::LOWER_R), &ItemType::Pistol);
+		let next = node.peek_next_recursive(&SlotKey::from(PlayerSlot::LOWER_R), &ItemType::Pistol);
 
 		assert_eq!(None as Option<(&Skill, &ComboNode)>, next)
 	}
@@ -1182,14 +1180,8 @@ mod tests {
 			let mut node = ComboNode::new([]);
 
 			node.update_combos(vec![
-				(
-					vec![SlotKey::from(PlayerSlot::LOWER_R)],
-					Some(_Skill("a")),
-				),
-				(
-					vec![SlotKey::from(PlayerSlot::LOWER_L)],
-					Some(_Skill("b")),
-				),
+				(vec![SlotKey::from(PlayerSlot::LOWER_R)], Some(_Skill("a"))),
+				(vec![SlotKey::from(PlayerSlot::LOWER_L)], Some(_Skill("b"))),
 			]);
 
 			assert_eq!(
@@ -1212,10 +1204,7 @@ mod tests {
 			let mut node = ComboNode::new([]);
 
 			node.update_combos(vec![
-				(
-					vec![SlotKey::from(PlayerSlot::LOWER_R)],
-					Some(_Skill("a")),
-				),
+				(vec![SlotKey::from(PlayerSlot::LOWER_R)], Some(_Skill("a"))),
 				(
 					vec![
 						SlotKey::from(PlayerSlot::LOWER_R),
@@ -1252,10 +1241,7 @@ mod tests {
 					],
 					Some(_Skill("b")),
 				),
-				(
-					vec![SlotKey::from(PlayerSlot::LOWER_R)],
-					Some(_Skill("a")),
-				),
+				(vec![SlotKey::from(PlayerSlot::LOWER_R)], Some(_Skill("a"))),
 			]);
 
 			assert_eq!(

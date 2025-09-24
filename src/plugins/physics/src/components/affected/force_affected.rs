@@ -1,6 +1,6 @@
 use crate::systems::insert_affected::AffectedComponent;
 use bevy::prelude::*;
-use common::{self, attributes::effect_target::EffectTarget, effects::force::Force};
+use common::{attributes::effect_target::EffectTarget, effects::force::Force};
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
