@@ -29,6 +29,7 @@ use common::{
 			AssetFolderPath,
 			HandlesCustomAssets,
 			HandlesCustomFolderAssets,
+			OnLoadError,
 			TryLoadFrom,
 		},
 		handles_load_tracking::{
@@ -242,8 +243,10 @@ impl HandlesCustomAssets for LoadingPlugin {
 }
 
 impl HandlesCustomFolderAssets for LoadingPlugin {
-	fn register_custom_folder_assets<TAsset, TDto, TLoadGroup>(app: &mut App)
-	where
+	fn register_custom_folder_assets<TAsset, TDto, TLoadGroup>(
+		app: &mut App,
+		on_load_error: OnLoadError,
+	) where
 		TAsset: Asset + AssetFolderPath + TryLoadFrom<TDto> + Clone + std::fmt::Debug,
 		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + ThreadSafe,
 		TLoadGroup: ThreadSafe,
@@ -260,13 +263,28 @@ impl HandlesCustomFolderAssets for LoadingPlugin {
 			.add_systems(
 				OnEnter(load_assets),
 				begin_loading_folder_assets::<TAsset, AssetServer>,
-			)
-			.add_systems(
-				Update,
-				map_load_results::<TAsset, LoadError<TAsset::TInstantiationError>, AssetServer>
-					.pipe(OnError::log)
-					.run_if(in_state(load_assets)),
 			);
+
+		match on_load_error {
+			OnLoadError::SkipAsset => {
+				app.add_systems(
+					Update,
+					map_load_results::<TAsset, LoadError<TAsset::TInstantiationError>, AssetServer>
+						.pipe(OnError::log)
+						.run_if(in_state(load_assets)),
+				);
+			}
+			OnLoadError::Panic => {
+				app.add_systems(
+					Update,
+					map_load_results::<TAsset, LoadError<TAsset::TInstantiationError>, AssetServer>
+						.pipe(OnError::log_and_return(|| {
+							panic!("Abort execution: Could not load essential folder asset");
+						}))
+						.run_if(in_state(load_assets)),
+				);
+			}
+		}
 	}
 }
 
