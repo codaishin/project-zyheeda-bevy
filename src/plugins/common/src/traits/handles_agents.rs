@@ -8,7 +8,7 @@ use crate::{
 		handles_skill_behaviors::SkillSpawner,
 		loadout::LoadoutConfig,
 		mapper::Mapper,
-		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
+		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -16,8 +16,7 @@ use bevy::ecs::{component::Component, system::EntityCommands};
 use serde::{Deserialize, Serialize};
 
 pub trait HandlesAgents {
-	type TAgentConfig<'a>: VisibleSlots
-		+ LoadoutConfig
+	type TAgentConfig<'a>: LoadoutConfig
 		+ Mapper<Bone<'a>, Option<SkillSpawner>>
 		+ Mapper<Bone<'a>, Option<EssenceSlot>>
 		+ Mapper<Bone<'a>, Option<HandSlot>>

@@ -1,27 +1,5 @@
 {
 	"loadout": {
-		"visible_slots": [
-			{
-				"Player": {
-					"Upper": "Left"
-				}
-			},
-			{
-				"Player": {
-					"Upper": "Right"
-				}
-			},
-			{
-				"Player": {
-					"Lower": "Left"
-				}
-			},
-			{
-				"Player": {
-					"Lower": "Right"
-				}
-			}
-		],
 		"inventory": [
 			"pistol",
 			"pistol",

@@ -22,12 +22,10 @@ use bevy::prelude::*;
 use common::{
 	states::game_state::{GameState, LoadingGame},
 	systems::log::OnError,
-	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::GetFromSystemParam,
-		handles_agents::{AgentConfig, HandlesAgents},
+		handles_agents::HandlesAgents,
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets, OnLoadError},
-		handles_load_tracking::{DependenciesProgress, HandlesLoadTracking, LoadTrackingInApp},
+		handles_load_tracking::HandlesLoadTracking,
 		handles_loadout::HandlesLoadout,
 		handles_orientation::HandlesOrientation,
 		handles_physics::HandlesAllPhysicalEffects,
@@ -41,7 +39,7 @@ use common::{
 		handles_skill_behaviors::HandlesSkillBehaviors,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
-		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
+		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
 	},
 };
 use components::{
@@ -54,7 +52,7 @@ use components::{
 };
 use item::{Item, dto::ItemDto};
 use skills::{RunSkillBehavior, Skill, dto::SkillDto};
-use std::{hash::Hash, marker::PhantomData};
+use std::marker::PhantomData;
 use systems::{
 	advance_active_skill::advance_active_skill,
 	combos::queue_update::ComboQueueUpdate,
@@ -109,26 +107,9 @@ where
 		TLoading::register_custom_assets::<Item, ItemDto>(app);
 	}
 
-	fn track_loading<TSlot, TAgent>(app: &mut App)
-	where
-		TSlot: Eq + Hash + ThreadSafe + From<SlotKey>,
-		TAgent: Component + GetFromSystemParam<AgentConfig>,
-		for<'i> TAgent::TItem<'i>: VisibleSlots,
-	{
-		let all_loaded = SlotVisualization::<TSlot>::all_slots_loaded_for::<TAgent>;
-		let track_loaded =
-			TLoading::register_load_tracking::<(TSlot, TAgent), LoadingGame, DependenciesProgress>;
-
-		track_loaded().in_app(app, all_loaded);
-	}
-
 	fn loadout(&self, app: &mut App) {
 		TSaveGame::register_savable_component::<Inventory>(app);
 		TSaveGame::register_savable_component::<Slots>(app);
-
-		Self::track_loading::<HandSlot, TAgents::TAgent>(app);
-		Self::track_loading::<ForearmSlot, TAgents::TAgent>(app);
-		Self::track_loading::<EssenceSlot, TAgents::TAgent>(app);
 
 		app.add_observer(Slots::set_self_entity).add_systems(
 			Update,

@@ -1,9 +1,5 @@
 use crate::{tools::action_key::slot::SlotKey, traits::accessors::get::GetProperty};
 
-pub trait VisibleSlots {
-	fn visible_slots(&self) -> impl Iterator<Item = SlotKey>;
-}
-
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct EssenceSlot(pub SlotKey);
 

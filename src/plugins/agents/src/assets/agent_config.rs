@@ -16,7 +16,7 @@ use common::{
 		load_asset::Path,
 		loadout::{ItemName, LoadoutConfig},
 		mapper::Mapper,
-		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
+		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
 	},
 };
 use serde::{Deserialize, Serialize};
@@ -44,17 +44,6 @@ pub struct AgentConfigData<'a, TAsset = AgentConfigAsset> {
 impl AssetFileExtensions for AgentConfigAsset {
 	fn asset_file_extensions() -> &'static [&'static str] {
 		&["agent"]
-	}
-}
-
-impl VisibleSlots for AgentConfigData<'_> {
-	fn visible_slots(&self) -> impl Iterator<Item = SlotKey> {
-		self.asset
-			.loadout
-			.visible_slots
-			.iter()
-			.copied()
-			.map(SlotKey::from)
 	}
 }
 
@@ -140,7 +129,6 @@ impl GetProperty<AttributeOnSpawn<EffectTarget<Force>>> for AgentConfigData<'_> 
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub(crate) struct Loadout {
-	visible_slots: Vec<AgentSlotKey>,
 	inventory: Vec<Option<ItemName>>,
 	slots: Vec<(AgentSlotKey, Option<ItemName>)>,
 }
