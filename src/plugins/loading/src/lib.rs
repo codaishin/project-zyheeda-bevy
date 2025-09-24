@@ -263,13 +263,28 @@ impl HandlesCustomFolderAssets for LoadingPlugin {
 			.add_systems(
 				OnEnter(load_assets),
 				begin_loading_folder_assets::<TAsset, AssetServer>,
-			)
-			.add_systems(
-				Update,
-				map_load_results::<TAsset, LoadError<TAsset::TInstantiationError>, AssetServer>
-					.pipe(OnError::log)
-					.run_if(in_state(load_assets)),
 			);
+
+		match on_load_error {
+			OnLoadError::SkipAsset => {
+				app.add_systems(
+					Update,
+					map_load_results::<TAsset, LoadError<TAsset::TInstantiationError>, AssetServer>
+						.pipe(OnError::log)
+						.run_if(in_state(load_assets)),
+				);
+			}
+			OnLoadError::Panic => {
+				app.add_systems(
+					Update,
+					map_load_results::<TAsset, LoadError<TAsset::TInstantiationError>, AssetServer>
+						.pipe(OnError::log_and_return(|| {
+							panic!("Abort execution: Could not load essential folder asset");
+						}))
+						.run_if(in_state(load_assets)),
+				);
+			}
+		}
 	}
 }
 
