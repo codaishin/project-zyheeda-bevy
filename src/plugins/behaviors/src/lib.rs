@@ -22,6 +22,7 @@ use common::{
 	tools::action_key::{movement::MovementKey, slot::PlayerSlot},
 	traits::{
 		animation::{HasAnimationsDispatch, RegisterAnimations},
+		handles_agents::HandlesAgents,
 		handles_enemies::HandlesEnemies,
 		handles_orientation::{Face, HandlesOrientation},
 		handles_path_finding::HandlesPathFinding,
@@ -134,7 +135,8 @@ where
 		+ HandlesPlayerCameras
 		+ HandlesPlayerMouse
 		+ ConfiguresPlayerMovement
-		+ HandlesEnemies,
+		+ HandlesEnemies
+		+ HandlesAgents,
 {
 	fn build(&self, app: &mut App) {
 		TAnimations::register_movement_direction::<Movement<TPhysics::TMotion>>(app);
@@ -201,8 +203,7 @@ where
 				(
 					// Prep systems
 					(
-						FixPoint::<SkillSpawner>::insert_in_children_of::<TAgents::TPlayer>,
-						FixPoint::<SkillSpawner>::insert_in_children_of::<TAgents::TEnemy>,
+						FixPoint::<SkillSpawner>::insert_in_children_of::<TAgents::TAgent>,
 						FixPoints::track_in_self_and_children::<FixPoint<SkillSpawner>>().system(),
 					)
 						.chain(),

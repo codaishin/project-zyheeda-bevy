@@ -1,30 +1,18 @@
 use super::player_movement::{Config, MovementMode, PlayerMovement};
-use bevy::{asset::AssetPath, prelude::*};
+use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
-	attributes::{effect_target::EffectTarget, health::Health},
-	components::{
-		asset_model::AssetModel,
-		collider_relationship::InteractionTarget,
-		flip::FlipHorizontally,
-		ground_offset::GroundOffset,
-		is_blocker::{Blocker, IsBlocker},
-		persistent_entity::PersistentEntity,
-	},
-	effects::{force::Force, gravity::Gravity},
+	components::{asset_model::AssetModel, flip::FlipHorizontally, ground_offset::GroundOffset},
 	errors::Error,
 	tools::{
 		Units,
 		UnitsPerSecond,
-		action_key::slot::{PlayerSlot, Side, SlotKey},
+		action_key::slot::{PlayerSlot, Side},
 		animation_key::AnimationKey,
-		attribute::AttributeOnSpawn,
-		bone::Bone,
 		collider_radius::ColliderRadius,
 		iter_helpers::{first, next},
 	},
 	traits::{
-		accessors::get::GetProperty,
 		animation::{
 			Animation,
 			AnimationAsset,
@@ -37,36 +25,23 @@ use common::{
 			StartAnimation,
 			StopAnimation,
 		},
+		handles_agents::AgentType,
 		handles_lights::HandlesLights,
-		handles_skill_behaviors::SkillSpawner,
 		iteration::{Iter, IterFinite},
 		load_asset::{LoadAsset, Path},
-		loadout::LoadoutConfig,
-		mapper::Mapper,
 		prefab::{Prefab, PrefabEntityCommands},
-		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
 	},
 };
-use macros::{SavableComponent, item_asset};
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use zyheeda_core::prelude::*;
 
-#[derive(Component, SavableComponent, Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Component, Default, Debug, PartialEq, Clone)]
 #[require(
 	PlayerMovement = Player::movement(),
-	Transform,
-	Visibility,
 	Name = "Player",
 	AssetModel = Self::MODEL_PATH,
 	FlipHorizontally = FlipHorizontally::on("metarig"),
 	GroundOffset = Vec3::Y,
-	IsBlocker = [Blocker::Character],
-	RigidBody = RigidBody::Dynamic,
-	InteractionTarget,
 	LockedAxes = LockedAxes::ROTATION_LOCKED | LockedAxes::TRANSLATION_LOCKED_Y,
-	GravityScale = GravityScale(0.),
-	PersistentEntity,
 )]
 pub struct Player;
 
@@ -153,76 +128,9 @@ impl Player {
 	}
 }
 
-impl VisibleSlots for Player {
-	fn visible_slots(&self) -> impl Iterator<Item = SlotKey> {
-		PlayerSlot::iterator().map(SlotKey::from)
-	}
-}
-
-impl<'a> Mapper<Bone<'a>, Option<SkillSpawner>> for Player {
-	fn map(&self, Bone(bone): Bone) -> Option<SkillSpawner> {
-		match bone {
-			"skill_spawn" => Some(SkillSpawner::Neutral),
-			"skill_spawn_top.R" => Some(SkillSpawner::Slot(PlayerSlot::UPPER_R.into())),
-			"skill_spawn_top.L" => Some(SkillSpawner::Slot(PlayerSlot::UPPER_L.into())),
-			"skill_spawn_bottom.R" => Some(SkillSpawner::Slot(PlayerSlot::LOWER_R.into())),
-			"skill_spawn_bottom.L" => Some(SkillSpawner::Slot(PlayerSlot::LOWER_L.into())),
-			_ => None,
-		}
-	}
-}
-
-impl<'a> Mapper<Bone<'a>, Option<EssenceSlot>> for Player {
-	fn map(&self, Bone(bone): Bone) -> Option<EssenceSlot> {
-		match bone {
-			"ArmTopRightData" => Some(EssenceSlot(PlayerSlot::UPPER_R.into())),
-			"ArmTopLeftData" => Some(EssenceSlot(PlayerSlot::UPPER_L.into())),
-			"ArmBottomRightData" => Some(EssenceSlot(PlayerSlot::LOWER_R.into())),
-			"ArmBottomLeftData" => Some(EssenceSlot(PlayerSlot::LOWER_L.into())),
-			_ => None,
-		}
-	}
-}
-
-impl<'a> Mapper<Bone<'a>, Option<ForearmSlot>> for Player {
-	fn map(&self, Bone(bone): Bone) -> Option<ForearmSlot> {
-		match bone {
-			"top_forearm.R" => Some(ForearmSlot(PlayerSlot::UPPER_R.into())),
-			"top_forearm.L" => Some(ForearmSlot(PlayerSlot::UPPER_L.into())),
-			"bottom_forearm.R" => Some(ForearmSlot(PlayerSlot::LOWER_R.into())),
-			"bottom_forearm.L" => Some(ForearmSlot(PlayerSlot::LOWER_L.into())),
-			_ => None,
-		}
-	}
-}
-
-impl<'a> Mapper<Bone<'a>, Option<HandSlot>> for Player {
-	fn map(&self, Bone(bone): Bone) -> Option<HandSlot> {
-		match bone {
-			"top_hand_slot.R" => Some(HandSlot(PlayerSlot::UPPER_R.into())),
-			"top_hand_slot.L" => Some(HandSlot(PlayerSlot::UPPER_L.into())),
-			"bottom_hand_slot.R" => Some(HandSlot(PlayerSlot::LOWER_R.into())),
-			"bottom_hand_slot.L" => Some(HandSlot(PlayerSlot::LOWER_L.into())),
-			_ => None,
-		}
-	}
-}
-
-impl GetProperty<AttributeOnSpawn<Health>> for Player {
-	fn get_property(&self) -> Health {
-		Health::new(100.)
-	}
-}
-
-impl GetProperty<AttributeOnSpawn<EffectTarget<Gravity>>> for Player {
-	fn get_property(&self) -> EffectTarget<Gravity> {
-		EffectTarget::Affected
-	}
-}
-
-impl GetProperty<AttributeOnSpawn<EffectTarget<Force>>> for Player {
-	fn get_property(&self) -> EffectTarget<Force> {
-		EffectTarget::Affected
+impl From<Player> for AgentType {
+	fn from(_: Player) -> Self {
+		Self::Player
 	}
 }
 
@@ -344,37 +252,6 @@ where
 		));
 
 		Ok(())
-	}
-}
-
-impl LoadoutConfig for Player {
-	fn inventory(&self) -> impl Iterator<Item = Option<AssetPath<'static>>> {
-		yield_eager!(
-			Some(AssetPath::from(item_asset!("pistol"))),
-			Some(AssetPath::from(item_asset!("pistol"))),
-			Some(AssetPath::from(item_asset!("pistol"))),
-		)
-	}
-
-	fn slots(&self) -> impl Iterator<Item = (SlotKey, Option<AssetPath<'static>>)> {
-		yield_eager!(
-			(
-				SlotKey::from(PlayerSlot::Upper(Side::Left)),
-				Some(AssetPath::from(item_asset!("pistol"))),
-			),
-			(
-				SlotKey::from(PlayerSlot::Lower(Side::Left)),
-				Some(AssetPath::from(item_asset!("pistol"))),
-			),
-			(
-				SlotKey::from(PlayerSlot::Lower(Side::Right)),
-				Some(AssetPath::from(item_asset!("force_essence"))),
-			),
-			(
-				SlotKey::from(PlayerSlot::Upper(Side::Right)),
-				Some(AssetPath::from(item_asset!("force_essence"))),
-			),
-		)
 	}
 }
 

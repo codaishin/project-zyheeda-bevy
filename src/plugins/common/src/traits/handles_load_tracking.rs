@@ -89,6 +89,12 @@ pub trait LoadTrackingInSubApp {
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Loaded(pub bool);
 
+impl Loaded {
+	pub fn when(loaded: bool) -> Self {
+		Self(loaded)
+	}
+}
+
 impl From<bool> for Loaded {
 	fn from(loaded: bool) -> Self {
 		Loaded(loaded)

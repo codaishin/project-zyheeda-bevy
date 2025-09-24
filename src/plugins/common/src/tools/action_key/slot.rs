@@ -102,8 +102,8 @@ impl InvalidInput for PlayerSlot {
 }
 
 impl From<PlayerSlot> for SlotKey {
-	fn from(value: PlayerSlot) -> Self {
-		SlotKey(match value {
+	fn from(slot: PlayerSlot) -> Self {
+		Self(match slot {
 			PlayerSlot::Upper(Side::Left) => 0,
 			PlayerSlot::Lower(Side::Left) => 1,
 			PlayerSlot::Lower(Side::Right) => 2,

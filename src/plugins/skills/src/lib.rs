@@ -22,17 +22,15 @@ use bevy::prelude::*;
 use common::{
 	states::game_state::{GameState, LoadingGame},
 	systems::log::OnError,
-	tools::action_key::slot::SlotKey,
 	traits::{
+		handles_agents::HandlesAgents,
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets, OnLoadError},
-		handles_enemies::HandlesEnemies,
-		handles_load_tracking::{DependenciesProgress, HandlesLoadTracking, LoadTrackingInApp},
+		handles_load_tracking::HandlesLoadTracking,
 		handles_loadout::HandlesLoadout,
 		handles_orientation::HandlesOrientation,
 		handles_physics::HandlesAllPhysicalEffects,
 		handles_player::{
 			ConfiguresPlayerSkillAnimations,
-			HandlesPlayer,
 			HandlesPlayerCameras,
 			HandlesPlayerMouse,
 		},
@@ -41,7 +39,7 @@ use common::{
 		handles_skill_behaviors::HandlesSkillBehaviors,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
-		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
+		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
 	},
 };
 use components::{
@@ -54,7 +52,7 @@ use components::{
 };
 use item::{Item, dto::ItemDto};
 use skills::{RunSkillBehavior, Skill, dto::SkillDto};
-use std::{hash::Hash, marker::PhantomData};
+use std::marker::PhantomData;
 use systems::{
 	advance_active_skill::advance_active_skill,
 	combos::queue_update::ComboQueueUpdate,
@@ -65,14 +63,14 @@ use systems::{
 
 pub struct SkillsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSaveGame, TPhysics, TLoading, TSettings, TBehaviors, TPlayers>
+impl<TSaveGame, TPhysics, TLoading, TSettings, TBehaviors, TAgents>
 	SkillsPlugin<(
 		TSaveGame,
 		TPhysics,
 		TLoading,
 		TSettings,
 		TBehaviors,
-		TPlayers,
+		TAgents,
 	)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
@@ -80,12 +78,11 @@ where
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
 	TSettings: ThreadSafe + HandlesSettings,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation + SystemSetDefinition,
-	TPlayers: ThreadSafe
-		+ HandlesPlayer
+	TAgents: ThreadSafe
 		+ HandlesPlayerCameras
 		+ HandlesPlayerMouse
 		+ ConfiguresPlayerSkillAnimations
-		+ HandlesEnemies,
+		+ HandlesAgents,
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn from_plugins(
@@ -94,7 +91,7 @@ where
 		_: &TLoading,
 		_: &TSettings,
 		_: &TBehaviors,
-		_: &TPlayers,
+		_: &TAgents,
 	) -> Self {
 		Self(PhantomData)
 	}
@@ -110,47 +107,23 @@ where
 		TLoading::register_custom_assets::<Item, ItemDto>(app);
 	}
 
-	fn track_loading<TSlot, TAgent>(app: &mut App)
-	where
-		TSlot: Eq + Hash + ThreadSafe + From<SlotKey>,
-		TAgent: VisibleSlots + Component,
-	{
-		let all_loaded = SlotVisualization::<TSlot>::all_slots_loaded_for::<TAgent>;
-		let track_loaded =
-			TLoading::register_load_tracking::<(TSlot, TAgent), LoadingGame, DependenciesProgress>;
-
-		track_loaded().in_app(app, all_loaded);
-	}
-
 	fn loadout(&self, app: &mut App) {
 		TSaveGame::register_savable_component::<Inventory>(app);
 		TSaveGame::register_savable_component::<Slots>(app);
 
-		Self::track_loading::<HandSlot, TPlayers::TPlayer>(app);
-		Self::track_loading::<ForearmSlot, TPlayers::TPlayer>(app);
-		Self::track_loading::<EssenceSlot, TPlayers::TPlayer>(app);
-		Self::track_loading::<HandSlot, TPlayers::TEnemy>(app);
-		Self::track_loading::<ForearmSlot, TPlayers::TEnemy>(app);
-		Self::track_loading::<EssenceSlot, TPlayers::TEnemy>(app);
-
-		app.add_observer(Slots::set_self_entity)
-			.add_observer(Loadout::<TPlayers::TPlayer>::insert)
-			.add_observer(Loadout::<TPlayers::TEnemy>::insert)
-			.add_systems(
-				Update,
-				(
-					SlotVisualization::<HandSlot>::track_slots_for::<TPlayers::TPlayer>,
-					SlotVisualization::<HandSlot>::track_slots_for::<TPlayers::TEnemy>,
-					SlotVisualization::<HandSlot>::visualize_items,
-					SlotVisualization::<ForearmSlot>::track_slots_for::<TPlayers::TPlayer>,
-					SlotVisualization::<ForearmSlot>::track_slots_for::<TPlayers::TEnemy>,
-					SlotVisualization::<ForearmSlot>::visualize_items,
-					SlotVisualization::<EssenceSlot>::track_slots_for::<TPlayers::TPlayer>,
-					SlotVisualization::<EssenceSlot>::track_slots_for::<TPlayers::TEnemy>,
-					SlotVisualization::<EssenceSlot>::visualize_items,
-				)
-					.chain(),
-			);
+		app.add_observer(Slots::set_self_entity).add_systems(
+			Update,
+			(
+				Loadout::<TAgents::TAgent>::insert,
+				SlotVisualization::<HandSlot>::track_slots_for::<TAgents::TAgent>,
+				SlotVisualization::<HandSlot>::visualize_items,
+				SlotVisualization::<ForearmSlot>::track_slots_for::<TAgents::TAgent>,
+				SlotVisualization::<ForearmSlot>::visualize_items,
+				SlotVisualization::<EssenceSlot>::track_slots_for::<TAgents::TAgent>,
+				SlotVisualization::<EssenceSlot>::visualize_items,
+			)
+				.chain(),
+		);
 	}
 
 	fn skill_execution(&self, app: &mut App) {
@@ -160,7 +133,7 @@ where
 		TSaveGame::register_savable_component::<SkillExecuter>(app);
 
 		let execute_skill =
-			SkillExecuter::<RunSkillBehavior>::execute_system::<TPhysics, TBehaviors, TPlayers>;
+			SkillExecuter::<RunSkillBehavior>::execute_system::<TPhysics, TBehaviors, TAgents>;
 
 		app.add_systems(
 			Update,
@@ -168,7 +141,7 @@ where
 				TBehaviors::TSkillUsage::enqueue::<Slots, Queue>,
 				Combos::update::<Queue>,
 				flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
-				advance_active_skill::<Queue, TPlayers, TBehaviors, SkillExecuter, Virtual>
+				advance_active_skill::<Queue, TAgents, TBehaviors, SkillExecuter, Virtual>
 					.pipe(OnError::log),
 				execute_skill,
 				flush::<Queue>,
@@ -180,14 +153,14 @@ where
 	}
 }
 
-impl<TSaveGame, TPhysics, TLoading, TSettings, TBehaviors, TPlayers> Plugin
+impl<TSaveGame, TPhysics, TLoading, TSettings, TBehaviors, TAgents> Plugin
 	for SkillsPlugin<(
 		TSaveGame,
 		TPhysics,
 		TLoading,
 		TSettings,
 		TBehaviors,
-		TPlayers,
+		TAgents,
 	)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
@@ -195,12 +168,11 @@ where
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
 	TSettings: ThreadSafe + HandlesSettings,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation + SystemSetDefinition,
-	TPlayers: ThreadSafe
-		+ HandlesPlayer
+	TAgents: ThreadSafe
 		+ HandlesPlayerCameras
 		+ HandlesPlayerMouse
 		+ ConfiguresPlayerSkillAnimations
-		+ HandlesEnemies,
+		+ HandlesAgents,
 {
 	fn build(&self, app: &mut App) {
 		self.skill_load(app);

@@ -26,6 +26,7 @@
 		"*.skill": "json",
 		"*.item": "json",
 		"*.keys": "json",
+		"*.agent": "json",
 	},
 	"editor.semanticTokenColorCustomizations": {
 		"rules": {

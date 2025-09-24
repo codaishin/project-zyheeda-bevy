@@ -1,6 +1,6 @@
 use crate::{
 	PhysicsPlugin,
-	components::gravity_affected::{GravityAffected, GravityPull},
+	components::affected::gravity_affected::{GravityAffected, GravityPull},
 	traits::{act_on::ActOn, update_blockers::UpdateBlockers},
 };
 use bevy::prelude::*;
@@ -48,7 +48,6 @@ impl ActOn<GravityAffected> for GravityEffect {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::gravity_affected::GravityPull;
 	use common::tools::UnitsPerSecond;
 
 	#[test]

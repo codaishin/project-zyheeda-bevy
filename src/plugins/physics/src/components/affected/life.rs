@@ -1,17 +1,11 @@
+use crate::systems::insert_affected::AffectedComponent;
 use bevy::prelude::*;
-use common::{
-	attributes::health::Health,
-	tools::attribute::AttributeOnSpawn,
-	traits::{
-		accessors::get::GetProperty,
-		register_derived_component::{DerivableFrom, InsertDerivedComponent},
-	},
-};
+use common::{attributes::health::Health, traits::accessors::get::GetProperty};
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
-pub struct Life(Health);
+pub struct Life(pub(crate) Health);
 
 impl Life {
 	pub(crate) fn change_by(&mut self, health: f32) {
@@ -38,17 +32,8 @@ impl GetProperty<Health> for Life {
 	}
 }
 
-impl<T> DerivableFrom<'_, '_, T> for Life
-where
-	T: GetProperty<AttributeOnSpawn<Health>>,
-{
-	const INSERT: InsertDerivedComponent = InsertDerivedComponent::IfNew;
-
-	type TParam = ();
-
-	fn derive_from(_: Entity, component: &T, _: &()) -> Self {
-		Life(component.get_property())
-	}
+impl AffectedComponent for Life {
+	type TAttribute = Health;
 }
 
 #[cfg(test)]

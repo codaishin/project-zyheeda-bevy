@@ -1,24 +1,16 @@
 use crate::{
-	attributes::{effect_target::EffectTarget, health::Health},
 	components::persistent_entity::PersistentEntity,
-	effects::{force::Force, gravity::Gravity},
 	tools::{
 		action_key::slot::SlotKey,
 		aggro_range::AggroRange,
 		attack_range::AttackRange,
-		attribute::AttributeOnSpawn,
-		bone::Bone,
 		collider_radius::ColliderRadius,
 		movement_animation::MovementAnimation,
 		speed::Speed,
 	},
 	traits::{
 		accessors::get::{GetProperty, Property},
-		handles_skill_behaviors::SkillSpawner,
 		iteration::{Iter, IterFinite},
-		loadout::LoadoutConfig,
-		mapper::Mapper,
-		visible_slots::{EssenceSlot, ForearmSlot, HandSlot, VisibleSlots},
 	},
 };
 use bevy::prelude::*;
@@ -27,23 +19,13 @@ use std::time::Duration;
 
 pub trait HandlesEnemies {
 	type TEnemy: Component
-		+ From<EnemyType>
-		+ LoadoutConfig
-		+ VisibleSlots
 		+ EnemySkillUsage
 		+ GetProperty<Speed>
 		+ GetProperty<Option<MovementAnimation>>
 		+ GetProperty<EnemyTarget>
 		+ GetProperty<AggroRange>
 		+ GetProperty<AttackRange>
-		+ GetProperty<ColliderRadius>
-		+ GetProperty<AttributeOnSpawn<Health>>
-		+ GetProperty<AttributeOnSpawn<EffectTarget<Gravity>>>
-		+ GetProperty<AttributeOnSpawn<EffectTarget<Force>>>
-		+ for<'a> Mapper<Bone<'a>, Option<EssenceSlot>>
-		+ for<'a> Mapper<Bone<'a>, Option<HandSlot>>
-		+ for<'a> Mapper<Bone<'a>, Option<ForearmSlot>>
-		+ for<'a> Mapper<Bone<'a>, Option<SkillSpawner>>;
+		+ GetProperty<ColliderRadius>;
 }
 
 pub trait EnemySkillUsage {
@@ -69,7 +51,7 @@ pub struct Attacker(pub PersistentEntity);
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Target(pub PersistentEntity);
 
-#[derive(Debug, PartialEq, Clone, Copy, Eq, Hash)]
+#[derive(Debug, PartialEq, Clone, Copy, Eq, Hash, Serialize, Deserialize)]
 pub enum EnemyType {
 	VoidSphere,
 }

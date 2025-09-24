@@ -20,11 +20,10 @@ use common::{
 	states::game_state::{GameState, LoadingEssentialAssets},
 	systems::log::OnError,
 	traits::{
-		handles_enemies::HandlesEnemies,
+		handles_agents::HandlesAgents,
 		handles_lights::HandlesLights,
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInApp},
 		handles_map_generation::HandlesMapGeneration,
-		handles_player::HandlesPlayer,
 		handles_saving::HandlesSaving,
 		spawn::Spawn,
 		thread_safe::ThreadSafe,
@@ -44,7 +43,7 @@ where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TLights: ThreadSafe + HandlesLights,
-	TAgents: ThreadSafe + HandlesPlayer + HandlesEnemies,
+	TAgents: ThreadSafe + HandlesAgents,
 {
 	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TLights, _: &TAgents) -> Self {
 		Self(PhantomData)
@@ -57,7 +56,7 @@ where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TLights: ThreadSafe + HandlesLights,
-	TAgents: ThreadSafe + HandlesPlayer + HandlesEnemies,
+	TAgents: ThreadSafe + HandlesAgents,
 {
 	fn build(&self, app: &mut App) {
 		let register_agents_lookup_load_tracking = TLoading::register_load_tracking::<
@@ -72,7 +71,7 @@ where
 		TSavegame::register_savable_component::<DemoMap>(app);
 
 		app.register_required_components::<Map, TSavegame::TSaveEntityMarker>()
-			.register_map_cell::<TLoading, TSavegame, Corridor, TAgents::TPlayer, TAgents::TEnemy>()
+			.register_map_cell::<TLoading, TSavegame, Corridor, TAgents::TAgent>()
 			.add_systems(
 				OnEnter(GameState::LoadingEssentialAssets),
 				AgentsColorLookupImages::<Image>::lookup_images,
