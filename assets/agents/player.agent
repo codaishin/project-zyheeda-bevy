@@ -8,134 +8,59 @@
 		],
 		"slots": [
 			[
-				{
-					"Player": {
-						"Upper": "Left"
-					}
-				},
+				0,
 				"pistol"
 			],
 			[
-				{
-					"Player": {
-						"Upper": "Right"
-					}
-				},
+				1,
+				"pistol"
+			],
+			[
+				2,
 				"force_essence"
 			],
 			[
-				{
-					"Player": {
-						"Lower": "Left"
-					}
-				},
-				"pistol"
-			],
-			[
-				{
-					"Player": {
-						"Lower": "Right"
-					}
-				},
+				3,
 				"force_essence"
 			]
 		]
 	},
-	"bones": {
-		"spawners": {
-			"skill_spawn": "Neutral",
-			"skill_spawn_top.L": {
-				"Slot": {
-					"Player": {
-						"Upper": "Left"
+	"model": {
+		"Asset": {
+			"model_path": "models/player.glb",
+			"bones": {
+				"spawners": {
+					"skill_spawn": "Neutral",
+					"skill_spawn_top.L": {
+						"Slot": 0
+					},
+					"skill_spawn_bottom.L": {
+						"Slot": 1
+					},
+					"skill_spawn_bottom.R": {
+						"Slot": 2
+					},
+					"skill_spawn_top.R": {
+						"Slot": 3
 					}
-				}
-			},
-			"skill_spawn_top.R": {
-				"Slot": {
-					"Player": {
-						"Upper": "Right"
-					}
-				}
-			},
-			"skill_spawn_bottom.L": {
-				"Slot": {
-					"Player": {
-						"Lower": "Left"
-					}
-				}
-			},
-			"skill_spawn_bottom.R": {
-				"Slot": {
-					"Player": {
-						"Lower": "Right"
-					}
-				}
-			}
-		},
-		"hand_slots": {
-			"top_hand_slot.L": {
-				"Player": {
-					"Upper": "Left"
-				}
-			},
-			"top_hand_slot.R": {
-				"Player": {
-					"Upper": "Right"
-				}
-			},
-			"bottom_hand_slot.L": {
-				"Player": {
-					"Lower": "Left"
-				}
-			},
-			"bottom_hand_slot.R": {
-				"Player": {
-					"Lower": "Right"
-				}
-			}
-		},
-		"forearm_slots": {
-			"top_forearm.L": {
-				"Player": {
-					"Upper": "Left"
-				}
-			},
-			"top_forearm.R": {
-				"Player": {
-					"Upper": "Right"
-				}
-			},
-			"bottom_forearm.L": {
-				"Player": {
-					"Lower": "Left"
-				}
-			},
-			"bottom_forearm.R": {
-				"Player": {
-					"Lower": "Right"
-				}
-			}
-		},
-		"essence_slots": {
-			"ArmTopLeftData": {
-				"Player": {
-					"Upper": "Left"
-				}
-			},
-			"ArmTopRightData": {
-				"Player": {
-					"Upper": "Right"
-				}
-			},
-			"ArmBottomLeftData": {
-				"Player": {
-					"Lower": "Left"
-				}
-			},
-			"ArmBottomRightData": {
-				"Player": {
-					"Lower": "Right"
+				},
+				"hand_slots": {
+					"top_hand_slot.L": 0,
+					"bottom_hand_slot.L": 1,
+					"bottom_hand_slot.R": 2,
+					"top_hand_slot.R": 3
+				},
+				"forearm_slots": {
+					"top_forearm.L": 0,
+					"bottom_forearm.L": 1,
+					"bottom_forearm.R": 2,
+					"top_forearm.R": 3
+				},
+				"essence_slots": {
+					"ArmTopLeftData": 0,
+					"ArmBottomLeftData": 1,
+					"ArmBottomRightData": 2,
+					"ArmTopRightData": 3
 				}
 			}
 		}

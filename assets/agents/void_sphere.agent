@@ -3,37 +3,13 @@
 		"inventory": [],
 		"slots": [
 			[
-				{
-					"VoidSphere": null
-				},
+				0,
 				"void_beam"
 			]
 		]
 	},
-	"bones": {
-		"spawners": {
-			"skill_spawn_neutral": "Neutral",
-			"skill_spawn": {
-				"Slot": {
-					"VoidSphere": null
-				}
-			}
-		},
-		"hand_slots": {
-			"slot": {
-				"VoidSphere": null
-			}
-		},
-		"forearm_slots": {
-			"slot": {
-				"VoidSphere": null
-			}
-		},
-		"essence_slots": {
-			"slot": {
-				"VoidSphere": null
-			}
-		}
+	"model": {
+		"Procedural": "VoidSphere"
 	},
 	"attributes": {
 		"health": {

@@ -6,7 +6,7 @@ use common::{
 };
 
 impl Agent {
-	pub(crate) fn insert_from<TSource>(
+	pub(crate) fn insert_self_from<TSource>(
 		trigger: Trigger<OnInsert, TSource>,
 		asset_server: ResMut<AssetServer>,
 		commands: ZyheedaCommands,
