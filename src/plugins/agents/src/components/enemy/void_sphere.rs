@@ -1,4 +1,7 @@
-use crate::components::enemy::{Enemy, enemy_type::EnemyTypeInternal};
+use crate::{
+	assets::agent_config::{Bones, dto::BonesConfig},
+	components::enemy::{Enemy, enemy_type::EnemyTypeInternal},
+};
 use bevy::{
 	color::{Color, LinearRgba},
 	math::{Dir3, Vec3, primitives::Torus},
@@ -15,7 +18,7 @@ use common::{
 	tools::{
 		Units,
 		UnitsPerSecond,
-		action_key::slot::{NoValidSlotKey, SlotKey},
+		action_key::slot::SlotKey,
 		aggro_range::AggroRange,
 		attack_range::AttackRange,
 		collider_radius::ColliderRadius,
@@ -24,18 +27,21 @@ use common::{
 	traits::{
 		handles_agents::AgentType,
 		handles_enemies::{EnemySkillUsage, EnemyTarget, EnemyType},
+		handles_skill_behaviors::SkillSpawner,
 		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
 use serde::{Deserialize, Serialize};
-use std::{f32::consts::PI, time::Duration};
+use std::{collections::HashMap, f32::consts::PI, time::Duration};
 
 #[derive(Component, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
 #[require(Enemy = VoidSphere::enemy())]
 pub struct VoidSphere;
 
 impl VoidSphere {
+	const SLOT_KEY: SlotKey = SlotKey(0);
+
 	const GROUND_OFFSET: Vec3 = Vec3::new(0., 1.2, 0.);
 	const INNER_RADIUS: f32 = 0.3;
 	const OUTER_RADIUS: f32 = 0.4;
@@ -48,8 +54,8 @@ impl VoidSphere {
 		Self::GROUND_OFFSET.z - (Self::OUTER_RADIUS + Self::TORUS_RING_RADIUS),
 	);
 
-	// We use the same name for hand/forearm/essence slots.
-	pub(crate) const UNIFIED_SLOT_KEY: &str = "slot";
+	/// We use the same name for hand/forearm/essence slots.
+	pub(crate) const ALL_PURPOSE_SLOT_BONE: &str = "slot";
 
 	pub(crate) const SKILL_SPAWN: &str = "skill_spawn";
 	pub(crate) const SKILL_SPAWN_NEUTRAL: &str = "skill_spawn_neutral";
@@ -100,10 +106,10 @@ impl Prefab<()> for VoidSphere {
 				transform_2nd_ring,
 			))
 			.with_child((Collider::ball(Self::OUTER_RADIUS), transform))
-			// One unified slot
+			// One unified slot bone
 			.with_child((
 				Transform::from_translation(Self::SLOT_OFFSET),
-				Name::from(Self::UNIFIED_SLOT_KEY),
+				Name::from(Self::ALL_PURPOSE_SLOT_BONE),
 			))
 			// Skill spawn directly on slot offset
 			.with_child((
@@ -120,6 +126,35 @@ impl Prefab<()> for VoidSphere {
 	}
 }
 
+impl BonesConfig for VoidSphere {
+	fn bones() -> Bones {
+		Bones {
+			spawners: HashMap::from([
+				(
+					VoidSphere::SKILL_SPAWN_NEUTRAL.to_owned(),
+					SkillSpawner::Neutral,
+				),
+				(
+					VoidSphere::SKILL_SPAWN.to_owned(),
+					SkillSpawner::Slot(VoidSphere::SLOT_KEY),
+				),
+			]),
+			hand_slots: HashMap::from([(
+				VoidSphere::ALL_PURPOSE_SLOT_BONE.to_owned(),
+				VoidSphere::SLOT_KEY,
+			)]),
+			forearm_slots: HashMap::from([(
+				VoidSphere::ALL_PURPOSE_SLOT_BONE.to_owned(),
+				VoidSphere::SLOT_KEY,
+			)]),
+			essence_slots: HashMap::from([(
+				VoidSphere::ALL_PURPOSE_SLOT_BONE.to_owned(),
+				VoidSphere::SLOT_KEY,
+			)]),
+		}
+	}
+}
+
 impl EnemySkillUsage for VoidSphere {
 	fn hold_skill(&self) -> Duration {
 		Duration::from_secs(2)
@@ -130,37 +165,13 @@ impl EnemySkillUsage for VoidSphere {
 	}
 
 	fn skill_key(&self) -> SlotKey {
-		VoidSphereSlot::SLOT_KEY
+		VoidSphere::SLOT_KEY
 	}
 }
 
 impl From<&VoidSphere> for GroundOffset {
 	fn from(_: &VoidSphere) -> Self {
 		Self::from(VoidSphere::GROUND_OFFSET)
-	}
-}
-
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
-pub(crate) struct VoidSphereSlot;
-
-impl VoidSphereSlot {
-	const SLOT_KEY: SlotKey = SlotKey(0);
-}
-
-impl TryFrom<SlotKey> for VoidSphereSlot {
-	type Error = NoValidSlotKey;
-
-	fn try_from(slot_key: SlotKey) -> Result<Self, Self::Error> {
-		match slot_key {
-			VoidSphereSlot::SLOT_KEY => Ok(Self),
-			_ => Err(NoValidSlotKey { slot_key }),
-		}
-	}
-}
-
-impl From<VoidSphereSlot> for SlotKey {
-	fn from(_: VoidSphereSlot) -> Self {
-		VoidSphereSlot::SLOT_KEY
 	}
 }
 

@@ -5,7 +5,7 @@ mod resources;
 mod systems;
 
 use crate::{
-	assets::agent_config::{AgentConfigAsset, AgentConfigData},
+	assets::agent_config::{AgentConfigAsset, AgentConfigData, dto::AgentConfigAssetDto},
 	components::{
 		agent::{Agent, tag::AgentTag},
 		enemy::{Enemy, void_sphere::VoidSphere},
@@ -86,7 +86,7 @@ where
 		// Load Agent
 		TLoading::register_custom_folder_assets::<
 			AgentConfigAsset,
-			AgentConfigAsset,
+			AgentConfigAssetDto,
 			LoadingEssentialAssets,
 		>(app);
 		app.init_asset::<AgentConfigAsset>();

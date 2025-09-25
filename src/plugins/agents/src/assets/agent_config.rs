@@ -1,17 +1,14 @@
-use crate::components::enemy::void_sphere::VoidSphereSlot;
+pub(crate) mod dto;
+
 use bevy::{asset::Asset, reflect::TypePath};
 use common::{
 	attributes::{effect_target::EffectTarget, health::Health},
 	effects::{force::Force, gravity::Gravity},
-	tools::{
-		action_key::slot::{PlayerSlot, SlotKey},
-		attribute::AttributeOnSpawn,
-		bone::Bone,
-	},
+	tools::{action_key::slot::SlotKey, attribute::AttributeOnSpawn, bone::Bone},
 	traits::{
 		accessors::get::GetProperty,
 		handles_agents::AgentType,
-		handles_custom_assets::{AssetFileExtensions, AssetFolderPath},
+		handles_custom_assets::AssetFolderPath,
 		handles_skill_behaviors::SkillSpawner,
 		load_asset::Path,
 		loadout::{ItemName, LoadoutConfig},
@@ -22,7 +19,7 @@ use common::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Asset, TypePath, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Asset, TypePath, Debug, PartialEq, Clone)]
 pub struct AgentConfigAsset {
 	pub(crate) loadout: Loadout,
 	pub(crate) bones: Bones,
@@ -41,35 +38,19 @@ pub struct AgentConfigData<'a, TAsset = AgentConfigAsset> {
 	pub(crate) asset: &'a TAsset,
 }
 
-impl AssetFileExtensions for AgentConfigAsset {
-	fn asset_file_extensions() -> &'static [&'static str] {
-		&["agent"]
-	}
-}
-
 impl LoadoutConfig for AgentConfigData<'_> {
 	fn inventory(&self) -> impl Iterator<Item = Option<ItemName>> {
 		self.asset.loadout.inventory.iter().cloned()
 	}
 
 	fn slots(&self) -> impl Iterator<Item = (SlotKey, Option<ItemName>)> {
-		self.asset
-			.loadout
-			.slots
-			.iter()
-			.cloned()
-			.map(|(key, item)| (SlotKey::from(key), item))
+		self.asset.loadout.slots.iter().cloned()
 	}
 }
 
 impl Mapper<Bone<'_>, Option<SkillSpawner>> for AgentConfigData<'_> {
 	fn map(&self, Bone(bone): Bone<'_>) -> Option<SkillSpawner> {
-		self.asset
-			.bones
-			.spawners
-			.get(bone)
-			.copied()
-			.map(SkillSpawner::from)
+		self.asset.bones.spawners.get(bone).copied()
 	}
 }
 
@@ -80,7 +61,6 @@ impl Mapper<Bone<'_>, Option<EssenceSlot>> for AgentConfigData<'_> {
 			.essence_slots
 			.get(bone)
 			.copied()
-			.map(SlotKey::from)
 			.map(EssenceSlot::from)
 	}
 }
@@ -92,7 +72,6 @@ impl Mapper<Bone<'_>, Option<HandSlot>> for AgentConfigData<'_> {
 			.hand_slots
 			.get(bone)
 			.copied()
-			.map(SlotKey::from)
 			.map(HandSlot::from)
 	}
 }
@@ -104,7 +83,6 @@ impl Mapper<Bone<'_>, Option<ForearmSlot>> for AgentConfigData<'_> {
 			.forearm_slots
 			.get(bone)
 			.copied()
-			.map(SlotKey::from)
 			.map(ForearmSlot::from)
 	}
 }
@@ -130,45 +108,15 @@ impl GetProperty<AttributeOnSpawn<EffectTarget<Force>>> for AgentConfigData<'_> 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub(crate) struct Loadout {
 	inventory: Vec<Option<ItemName>>,
-	slots: Vec<(AgentSlotKey, Option<ItemName>)>,
-}
-
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
-enum AgentSlotKey {
-	Player(PlayerSlot),
-	VoidSphere(VoidSphereSlot),
-}
-
-impl From<AgentSlotKey> for SlotKey {
-	fn from(key: AgentSlotKey) -> Self {
-		match key {
-			AgentSlotKey::Player(key) => Self::from(key),
-			AgentSlotKey::VoidSphere(key) => Self::from(key),
-		}
-	}
+	slots: Vec<(SlotKey, Option<ItemName>)>,
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub(crate) struct Bones {
-	spawners: HashMap<String, SkillSpawnerDto>,
-	hand_slots: HashMap<String, AgentSlotKey>,
-	forearm_slots: HashMap<String, AgentSlotKey>,
-	essence_slots: HashMap<String, AgentSlotKey>,
-}
-
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
-enum SkillSpawnerDto {
-	Neutral,
-	Slot(AgentSlotKey),
-}
-
-impl From<SkillSpawnerDto> for SkillSpawner {
-	fn from(value: SkillSpawnerDto) -> Self {
-		match value {
-			SkillSpawnerDto::Neutral => Self::Neutral,
-			SkillSpawnerDto::Slot(key) => Self::Slot(SlotKey::from(key)),
-		}
-	}
+	pub(crate) spawners: HashMap<String, SkillSpawner>,
+	pub(crate) hand_slots: HashMap<String, SlotKey>,
+	pub(crate) forearm_slots: HashMap<String, SlotKey>,
+	pub(crate) essence_slots: HashMap<String, SlotKey>,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
