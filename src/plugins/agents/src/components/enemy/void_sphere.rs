@@ -36,7 +36,6 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, f32::consts::PI, time::Duration};
 
 #[derive(Component, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
-#[require(Enemy = VoidSphere::enemy())]
 pub struct VoidSphere;
 
 impl VoidSphere {

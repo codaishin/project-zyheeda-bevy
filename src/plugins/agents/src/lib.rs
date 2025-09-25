@@ -16,6 +16,7 @@ use crate::{
 	},
 	resources::{cam_ray::CamRay, mouse_hover::MouseHover},
 	systems::{
+		agent::insert_model::InsertModelObserver,
 		set_cam_ray::set_cam_ray,
 		set_mouse_hover::set_mouse_hover,
 		toggle_walk_run::player_toggle_walk_run,
@@ -90,7 +91,8 @@ where
 			LoadingEssentialAssets,
 		>(app);
 		app.init_asset::<AgentConfigAsset>();
-		app.add_observer(Agent::insert_from::<AgentTag>);
+		app.add_observer(Agent::insert_self_from::<AgentTag>);
+		app.add_systems(Update, Agent::insert_model);
 
 		// Animations
 		TAnimations::register_animations::<Player>(app);

@@ -1,5 +1,5 @@
 use crate::{
-	assets::agent_config::{AgentConfigAsset, Attributes, Bones, Loadout},
+	assets::agent_config::{AgentConfigAsset, AgentModel, Attributes, Bones, Loadout},
 	components::enemy::void_sphere::VoidSphere,
 };
 use common::{
@@ -16,9 +16,28 @@ pub struct AgentConfigAssetDto {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[allow(clippy::large_enum_variant)]
 pub(crate) enum Model {
-	Bones(Bones),
+	Asset { model_path: String, bones: Bones },
 	Procedural(ProceduralModel),
+}
+
+impl Model {
+	fn definition(self) -> (AgentModel, Bones) {
+		let procedural = match self {
+			Model::Asset { model_path, bones } => return (AgentModel::Asset(model_path), bones),
+			Model::Procedural(proc) => proc,
+		};
+
+		match procedural {
+			ProceduralModel::VoidSphere => (
+				AgentModel::Procedural(|e| {
+					e.try_insert(VoidSphere);
+				}),
+				VoidSphere::bones(),
+			),
+		}
+	}
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -30,18 +49,20 @@ impl TryLoadFrom<AgentConfigAssetDto> for AgentConfigAsset {
 	type TInstantiationError = Unreachable;
 
 	fn try_load_from<TLoadAsset>(
-		from: AgentConfigAssetDto,
+		AgentConfigAssetDto {
+			model,
+			loadout,
+			attributes,
+		}: AgentConfigAssetDto,
 		_: &mut TLoadAsset,
 	) -> Result<Self, Self::TInstantiationError> {
+		let (agent_model, bones) = model.definition();
+
 		Ok(AgentConfigAsset {
-			loadout: from.loadout,
-			bones: match from.model {
-				Model::Bones(bones) => bones,
-				Model::Procedural(agent_prefab) => match agent_prefab {
-					ProceduralModel::VoidSphere => VoidSphere::bones(),
-				},
-			},
-			attributes: from.attributes,
+			loadout,
+			bones,
+			agent_model,
+			attributes,
 		})
 	}
 }

@@ -1,8 +1,10 @@
 pub(crate) mod dto;
 
+use crate::systems::agent::insert_model::InsertModel;
 use bevy::{asset::Asset, reflect::TypePath};
 use common::{
 	attributes::{effect_target::EffectTarget, health::Health},
+	components::asset_model::AssetModel,
 	effects::{force::Force, gravity::Gravity},
 	tools::{action_key::slot::SlotKey, attribute::AttributeOnSpawn, bone::Bone},
 	traits::{
@@ -15,6 +17,7 @@ use common::{
 		mapper::Mapper,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
 	},
+	zyheeda_commands::ZyheedaEntityCommands,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -23,6 +26,7 @@ use std::collections::HashMap;
 pub struct AgentConfigAsset {
 	pub(crate) loadout: Loadout,
 	pub(crate) bones: Bones,
+	pub(crate) agent_model: AgentModel,
 	pub(crate) attributes: Attributes,
 }
 
@@ -105,6 +109,17 @@ impl GetProperty<AttributeOnSpawn<EffectTarget<Force>>> for AgentConfigData<'_> 
 	}
 }
 
+impl InsertModel for AgentConfigData<'_> {
+	fn insert_model(&self, entity: &mut ZyheedaEntityCommands) {
+		match &self.asset.agent_model {
+			AgentModel::Asset(path) => {
+				entity.try_insert(AssetModel::from(path));
+			}
+			AgentModel::Procedural(insert_procedural_on) => insert_procedural_on(entity),
+		}
+	}
+}
+
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub(crate) struct Loadout {
 	inventory: Vec<Option<ItemName>>,
@@ -117,6 +132,22 @@ pub(crate) struct Bones {
 	pub(crate) hand_slots: HashMap<String, SlotKey>,
 	pub(crate) forearm_slots: HashMap<String, SlotKey>,
 	pub(crate) essence_slots: HashMap<String, SlotKey>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) enum AgentModel {
+	Asset(String),
+	Procedural(fn(&mut ZyheedaEntityCommands)),
+}
+
+impl PartialEq for AgentModel {
+	fn eq(&self, other: &Self) -> bool {
+		match (self, other) {
+			(Self::Asset(l0), Self::Asset(r0)) => l0 == r0,
+			(Self::Procedural(l0), Self::Procedural(r0)) => std::ptr::fn_addr_eq(*l0, *r0),
+			_ => false,
+		}
+	}
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]

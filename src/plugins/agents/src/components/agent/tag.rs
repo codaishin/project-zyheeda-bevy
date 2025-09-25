@@ -1,6 +1,6 @@
 use crate::{
 	components::{enemy::void_sphere::VoidSphere, player::Player},
-	observers::agent::insert::InsertConcreteAgent,
+	observers::agent::insert_from::InsertConcreteAgent,
 };
 use bevy::{asset::AssetPath, prelude::*};
 use common::{
@@ -33,7 +33,7 @@ impl InsertConcreteAgent for AgentTag {
 	fn insert_concrete_agent(&self, entity: &mut ZyheedaEntityCommands) {
 		match self.0 {
 			AgentType::Player => entity.try_insert(Player),
-			AgentType::Enemy(EnemyType::VoidSphere) => entity.try_insert(VoidSphere),
+			AgentType::Enemy(EnemyType::VoidSphere) => entity.try_insert(VoidSphere::enemy()),
 		};
 	}
 }

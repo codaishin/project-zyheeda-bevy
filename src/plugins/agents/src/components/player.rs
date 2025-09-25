@@ -2,7 +2,7 @@ use super::player_movement::{Config, MovementMode, PlayerMovement};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::{asset_model::AssetModel, flip::FlipHorizontally, ground_offset::GroundOffset},
+	components::{flip::FlipHorizontally, ground_offset::GroundOffset},
 	errors::Error,
 	tools::{
 		Units,
@@ -38,7 +38,6 @@ use std::collections::HashMap;
 #[require(
 	PlayerMovement = Player::movement(),
 	Name = "Player",
-	AssetModel = Self::MODEL_PATH,
 	FlipHorizontally = FlipHorizontally::on("metarig"),
 	GroundOffset = Vec3::Y,
 	LockedAxes = LockedAxes::ROTATION_LOCKED | LockedAxes::TRANSLATION_LOCKED_Y,

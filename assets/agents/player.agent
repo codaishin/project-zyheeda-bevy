@@ -26,39 +26,42 @@
 		]
 	},
 	"model": {
-		"Bones": {
-			"spawners": {
-				"skill_spawn": "Neutral",
-				"skill_spawn_top.L": {
-					"Slot": 0
+		"Asset": {
+			"model_path": "models/player.glb",
+			"bones": {
+				"spawners": {
+					"skill_spawn": "Neutral",
+					"skill_spawn_top.L": {
+						"Slot": 0
+					},
+					"skill_spawn_bottom.L": {
+						"Slot": 1
+					},
+					"skill_spawn_bottom.R": {
+						"Slot": 2
+					},
+					"skill_spawn_top.R": {
+						"Slot": 3
+					}
 				},
-				"skill_spawn_bottom.L": {
-					"Slot": 1
+				"hand_slots": {
+					"top_hand_slot.L": 0,
+					"bottom_hand_slot.L": 1,
+					"bottom_hand_slot.R": 2,
+					"top_hand_slot.R": 3
 				},
-				"skill_spawn_bottom.R": {
-					"Slot": 2
+				"forearm_slots": {
+					"top_forearm.L": 0,
+					"bottom_forearm.L": 1,
+					"bottom_forearm.R": 2,
+					"top_forearm.R": 3
 				},
-				"skill_spawn_top.R": {
-					"Slot": 3
+				"essence_slots": {
+					"ArmTopLeftData": 0,
+					"ArmBottomLeftData": 1,
+					"ArmBottomRightData": 2,
+					"ArmTopRightData": 3
 				}
-			},
-			"hand_slots": {
-				"top_hand_slot.L": 0,
-				"bottom_hand_slot.L": 1,
-				"bottom_hand_slot.R": 2,
-				"top_hand_slot.R": 3
-			},
-			"forearm_slots": {
-				"top_forearm.L": 0,
-				"bottom_forearm.L": 1,
-				"bottom_forearm.R": 2,
-				"top_forearm.R": 3
-			},
-			"essence_slots": {
-				"ArmTopLeftData": 0,
-				"ArmBottomLeftData": 1,
-				"ArmBottomRightData": 2,
-				"ArmTopRightData": 3
 			}
 		}
 	},
