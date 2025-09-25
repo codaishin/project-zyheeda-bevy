@@ -24,7 +24,7 @@ use common::{
 	systems::log::OnError,
 	traits::{
 		handles_agents::HandlesAgents,
-		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets, OnLoadError},
+		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
 		handles_load_tracking::HandlesLoadTracking,
 		handles_loadout::HandlesLoadout,
 		handles_orientation::HandlesOrientation,
@@ -97,10 +97,7 @@ where
 	}
 
 	fn skill_load(&self, app: &mut App) {
-		TLoading::register_custom_folder_assets::<Skill, SkillDto, LoadingGame>(
-			app,
-			OnLoadError::SkipAsset,
-		);
+		TLoading::register_custom_folder_assets::<Skill, SkillDto, LoadingGame>(app);
 	}
 
 	fn item_load(&self, app: &mut App) {

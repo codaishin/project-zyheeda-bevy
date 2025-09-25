@@ -1,4 +1,3 @@
-use crate::folder_asset_loader::{LoadError, ReadError};
 use bevy::{
 	asset::{Asset, AssetLoader, LoadContext, io::Reader},
 	reflect::TypePath,
@@ -8,7 +7,14 @@ use common::traits::{
 	thread_safe::ThreadSafe,
 };
 use serde::Deserialize;
-use std::{error::Error, marker::PhantomData, str::from_utf8};
+use serde_json::error::Error as SerdeJsonError;
+use std::{
+	error::Error,
+	fmt::{Debug, Display, Formatter, Result as FmtResult},
+	io::Error as IOError,
+	marker::PhantomData,
+	str::{Utf8Error, from_utf8},
+};
 
 pub(crate) struct CustomAssetLoader<TAsset, TDto> {
 	phantom_data: PhantomData<(TAsset, TDto)>,
@@ -70,4 +76,50 @@ where
 			Err(err) => Err(LoadError::Instantiation(err)),
 		}
 	}
+}
+
+#[derive(Debug, TypePath)]
+pub(crate) enum LoadError<TInstantiationError> {
+	IO(IOError),
+	ParseChars(Utf8Error),
+	ParseObject(SerdeJsonError),
+	Instantiation(TInstantiationError),
+}
+
+impl<TInstantiationError> Display for LoadError<TInstantiationError>
+where
+	TInstantiationError: Display,
+{
+	fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+		match self {
+			LoadError::IO(err) => write!(f, "Failed to read asset file: {err}"),
+			LoadError::ParseChars(err) => {
+				write!(f, "Invalid character encoding in asset file: {err}")
+			}
+			LoadError::ParseObject(err) => write!(f, "Failed to parse asset data: {err}"),
+			LoadError::Instantiation(err) => {
+				write!(f, "Failed to instantiate object: {err}")
+			}
+		}
+	}
+}
+
+impl<TInstantiationError> Error for LoadError<TInstantiationError>
+where
+	TInstantiationError: Error + 'static,
+{
+	fn source(&self) -> Option<&(dyn Error + 'static)> {
+		match self {
+			LoadError::IO(err) => Some(err),
+			LoadError::ParseChars(err) => Some(err),
+			LoadError::ParseObject(err) => Some(err),
+			LoadError::Instantiation(err) => Some(err),
+		}
+	}
+}
+
+#[derive(Debug, TypePath)]
+pub(crate) enum ReadError {
+	IO(IOError),
+	ParseChars(Utf8Error),
 }

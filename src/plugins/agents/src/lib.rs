@@ -31,7 +31,7 @@ use common::{
 	traits::{
 		animation::RegisterAnimations,
 		handles_agents::HandlesAgents,
-		handles_custom_assets::{HandlesCustomFolderAssets, OnLoadError},
+		handles_custom_assets::HandlesCustomFolderAssets,
 		handles_enemies::HandlesEnemies,
 		handles_lights::HandlesLights,
 		handles_player::{
@@ -88,7 +88,7 @@ where
 			AgentConfigAsset,
 			AgentConfigAsset,
 			LoadingEssentialAssets,
-		>(app, OnLoadError::Panic);
+		>(app);
 		app.init_asset::<AgentConfigAsset>();
 		app.add_observer(Agent::insert_from::<AgentTag>);
 
