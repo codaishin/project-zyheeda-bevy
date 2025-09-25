@@ -3,7 +3,6 @@ pub mod systems;
 pub mod traits;
 
 mod asset_loader;
-mod folder_asset_loader;
 mod states;
 
 use crate::{
@@ -21,7 +20,6 @@ use common::{
 		game_state::{LoadingEssentialAssets, LoadingGame},
 		transition_to_state,
 	},
-	systems::log::OnError,
 	traits::{
 		handles_asset_resource_loading::HandlesAssetResourceLoading,
 		handles_custom_assets::{
@@ -29,7 +27,6 @@ use common::{
 			AssetFolderPath,
 			HandlesCustomAssets,
 			HandlesCustomFolderAssets,
-			OnLoadError,
 			TryLoadFrom,
 		},
 		handles_load_tracking::{
@@ -49,16 +46,11 @@ use common::{
 		thread_safe::ThreadSafe,
 	},
 };
-use folder_asset_loader::{FolderAssetLoader, LoadError, LoadResult};
-use resources::{alive_assets::AliveAssets, track::Track};
+use resources::track::Track;
 use serde::Deserialize;
 use states::load_state::State;
 use std::{any::type_name, error::Error, fmt::Debug, marker::PhantomData};
-use systems::{
-	begin_loading_folder_assets::begin_loading_folder_assets,
-	is_loaded::is_loaded,
-	map_load_results::map_load_results,
-};
+use systems::{begin_loading_folder_assets::begin_loading_folder_assets, is_loaded::is_loaded};
 
 pub struct LoadingPlugin;
 
@@ -243,50 +235,26 @@ impl HandlesCustomAssets for LoadingPlugin {
 }
 
 impl HandlesCustomFolderAssets for LoadingPlugin {
-	fn register_custom_folder_assets<TAsset, TDto, TLoadGroup>(
-		app: &mut App,
-		on_load_error: OnLoadError,
-	) where
+	fn register_custom_folder_assets<TAsset, TDto, TLoadGroup>(app: &mut App)
+	where
 		TAsset: Asset + AssetFolderPath + TryLoadFrom<TDto> + Clone + std::fmt::Debug,
 		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + ThreadSafe,
 		TLoadGroup: ThreadSafe,
 	{
 		LoadingPlugin::register_custom_assets::<TAsset, TDto>(app);
-		LoadingPlugin::register_load_tracking::<AliveAssets<TAsset>, TLoadGroup, AssetsProgress>()
+		LoadingPlugin::register_load_tracking::<FolderLoadingOf<TAsset>, TLoadGroup, AssetsProgress>()
 			.in_app(app, is_loaded::<TAsset>);
 
 		let load_assets = Load::<TLoadGroup>::new(State::LoadAssets);
 
-		app.init_asset::<LoadResult<TAsset, LoadError<TAsset::TInstantiationError>>>()
-			.init_resource::<AliveAssets<TAsset>>()
-			.register_asset_loader(FolderAssetLoader::<TAsset, TDto>::default())
-			.add_systems(
-				OnEnter(load_assets),
-				begin_loading_folder_assets::<TAsset, AssetServer>,
-			);
-
-		match on_load_error {
-			OnLoadError::SkipAsset => {
-				app.add_systems(
-					Update,
-					map_load_results::<TAsset, LoadError<TAsset::TInstantiationError>, AssetServer>
-						.pipe(OnError::log)
-						.run_if(in_state(load_assets)),
-				);
-			}
-			OnLoadError::Panic => {
-				app.add_systems(
-					Update,
-					map_load_results::<TAsset, LoadError<TAsset::TInstantiationError>, AssetServer>
-						.pipe(OnError::log_and_return(|| {
-							panic!("Abort execution: Could not load essential folder asset");
-						}))
-						.run_if(in_state(load_assets)),
-				);
-			}
-		}
+		app.add_systems(
+			OnEnter(load_assets),
+			begin_loading_folder_assets::<TAsset, AssetServer>,
+		);
 	}
 }
+
+struct FolderLoadingOf<TAsset>(PhantomData<TAsset>);
 
 impl HandlesAssetResourceLoading for LoadingPlugin {
 	fn register_custom_resource_loading<TResource, TDto, TLoadGroup>(app: &mut App, path: Path)

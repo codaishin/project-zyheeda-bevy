@@ -149,23 +149,10 @@ impl GetFromSystemParam<AvailableSkills<SlotKey>> for Slots {
 	) -> Option<Vec<Skill>> {
 		let item = self.items.get(key)?.as_ref()?;
 		let item = items.get(item)?;
-		let mut seen = vec![];
 
 		let skills = skills
 			.iter()
-			.filter(|(_, skill)| {
-				if !skill.compatible_items.0.contains(&item.item_type) {
-					return false;
-				}
-
-				if seen.contains(skill) {
-					return false;
-				}
-
-				seen.push(*skill);
-
-				true
-			})
+			.filter(|(_, skill)| skill.compatible_items.0.contains(&item.item_type))
 			.map(|(_, skill)| skill.clone())
 			.collect();
 
@@ -814,85 +801,6 @@ mod tests {
 				..default()
 			};
 			let skills = [
-				(
-					new_handle(),
-					Skill {
-						token: Token::from("essence"),
-						compatible_items: CompatibleItems::from([ItemType::ForceEssence]),
-						..default()
-					},
-				),
-				(
-					new_handle(),
-					Skill {
-						token: Token::from("pistol"),
-						compatible_items: CompatibleItems::from([ItemType::Pistol]),
-						..default()
-					},
-				),
-				(
-					new_handle(),
-					Skill {
-						token: Token::from("essence and pistol"),
-						compatible_items: CompatibleItems::from([
-							ItemType::ForceEssence,
-							ItemType::Pistol,
-						]),
-						..default()
-					},
-				),
-			];
-			let mut app = setup([(item_handle.clone(), item)], skills.clone());
-
-			app.world_mut()
-				.run_system_once(move |param: SkillItemAssets| {
-					let slots = Slots::from([(
-						SlotKey::from(PlayerSlot::UPPER_L),
-						Some(item_handle.clone()),
-					)]);
-
-					let available = slots.get_from_param(
-						&AvailableSkills(SlotKey::from(PlayerSlot::UPPER_L)),
-						&param,
-					);
-
-					assert_eq_unordered!(
-						Some(vec![
-							Skill {
-								token: Token::from("essence"),
-								compatible_items: CompatibleItems::from([ItemType::ForceEssence]),
-								..default()
-							},
-							Skill {
-								token: Token::from("essence and pistol"),
-								compatible_items: CompatibleItems::from([
-									ItemType::ForceEssence,
-									ItemType::Pistol,
-								]),
-								..default()
-							}
-						]),
-						available
-					);
-				})
-		}
-
-		#[test]
-		fn prevent_duplicates() -> Result<(), RunSystemError> {
-			let item_handle = new_handle();
-			let item = Item {
-				item_type: ItemType::ForceEssence,
-				..default()
-			};
-			let skills = [
-				(
-					new_handle(),
-					Skill {
-						token: Token::from("essence"),
-						compatible_items: CompatibleItems::from([ItemType::ForceEssence]),
-						..default()
-					},
-				),
 				(
 					new_handle(),
 					Skill {
