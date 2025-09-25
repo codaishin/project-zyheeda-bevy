@@ -1,7 +1,6 @@
 mod asset_server;
 
 use bevy::prelude::*;
-use std::ops::Deref;
 
 pub trait IsFullyLoaded {
 	fn is_fully_loaded<TAsset>(&self, id: AssetId<TAsset>) -> bool
@@ -9,22 +8,22 @@ pub trait IsFullyLoaded {
 		TAsset: Asset;
 }
 
-impl<T> IsFullyLoaded for Res<'_, T>
+impl<TResource> IsFullyLoaded for Res<'_, TResource>
 where
-	T: Resource + IsFullyLoaded,
+	TResource: Resource + IsFullyLoaded,
 {
 	fn is_fully_loaded<TAsset>(&self, id: AssetId<TAsset>) -> bool
 	where
 		TAsset: Asset,
 	{
-		self.deref().is_fully_loaded(id)
+		TResource::is_fully_loaded(self, id)
 	}
 }
 
 #[cfg(test)]
-impl<T> IsFullyLoaded for In<T>
+impl<TInner> IsFullyLoaded for In<TInner>
 where
-	T: IsFullyLoaded,
+	TInner: IsFullyLoaded,
 {
 	fn is_fully_loaded<TAsset>(&self, id: AssetId<TAsset>) -> bool
 	where
