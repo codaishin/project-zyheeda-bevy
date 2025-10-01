@@ -1,6 +1,6 @@
 use super::game_state::GameState;
 use crate::{
-	errors::IsNot,
+	tools::is_not::IsNot,
 	tools::action_key::{ActionKey, user_input::UserInput},
 	traits::{
 		handles_localization::Token,

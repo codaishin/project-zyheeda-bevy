@@ -1,8 +1,7 @@
-use std::any::type_name;
-
 use super::{ActionKey, user_input::UserInput};
 use crate::{
-	errors::{Error, IsNot, Level},
+	errors::{Error, Level},
+	tools::is_not::IsNot,
 	traits::{
 		accessors::get::Property,
 		handles_localization::Token,
@@ -12,6 +11,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::any::type_name;
 
 #[derive(Clone, Copy, Default, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
 pub struct SlotKey(pub u8);
