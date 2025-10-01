@@ -21,23 +21,24 @@ use common::{
 		collider_relationship::InteractionTarget,
 		insert_asset::InsertAsset,
 	},
-	errors::{Error, Level},
+	errors::{ErrorData, Level, Unreachable},
 	traits::{
 		handles_physics::{HandlesPhysicalObjects, PhysicalObject},
 		handles_skill_behaviors::{ContactShape, Motion, ProjectionShape},
 		prefab::PrefabEntityCommands,
 	},
 };
-use std::f32::consts::PI;
+use std::{f32::consts::PI, fmt::Display};
 
 trait SimplePrefab {
 	type TExtra;
+	type TError;
 
 	fn prefab<TPhysics>(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		extra: Self::TExtra,
-	) -> Result<(), Error>
+	) -> Result<(), Self::TError>
 	where
 		TPhysics: HandlesPhysicalObjects;
 }
@@ -57,12 +58,13 @@ const HALF_FORWARD: Transform = Transform::from_translation(Vec3 {
 
 impl SimplePrefab for ContactShape {
 	type TExtra = Vec3;
+	type TError = FaultyColliderShape;
 
 	fn prefab<TPhysics>(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		offset: Vec3,
-	) -> Result<(), Error>
+	) -> Result<(), FaultyColliderShape>
 	where
 		TPhysics: HandlesPhysicalObjects,
 	{
@@ -148,12 +150,13 @@ impl SimplePrefab for ContactShape {
 
 impl SimplePrefab for ProjectionShape {
 	type TExtra = Vec3;
+	type TError = FaultyColliderShape;
 
 	fn prefab<TPhysics>(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		offset: Vec3,
-	) -> Result<(), Error>
+	) -> Result<(), FaultyColliderShape>
 	where
 		TPhysics: HandlesPhysicalObjects,
 	{
@@ -223,12 +226,13 @@ enum Model {
 
 impl SimplePrefab for Motion {
 	type TExtra = CreatedFrom;
+	type TError = Unreachable;
 
 	fn prefab<TPhysics>(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		created_from: CreatedFrom,
-	) -> Result<(), Error>
+	) -> Result<(), Unreachable>
 	where
 		TPhysics: HandlesPhysicalObjects,
 	{
@@ -288,20 +292,15 @@ fn sphere_collider(radius: f32) -> (Collider, Transform) {
 	(Collider::ball(radius), Transform::default())
 }
 
-fn ring_collider(radius: f32) -> Result<(Collider, Transform), Error> {
+fn ring_collider(radius: f32) -> Result<(Collider, Transform), FaultyColliderShape> {
 	let transform = Transform::default().with_rotation(Quat::from_axis_angle(Vec3::X, PI / 2.));
 	let ring = Annulus::new(radius * 0.9, radius);
 	let torus = Mesh::from(Extrusion::new(ring, radius * 2.));
-	let collider = Collider::from_bevy_mesh(
-		&torus,
-		&ComputedColliderShape::TriMesh(TriMeshFlags::MERGE_DUPLICATE_VERTICES),
-	);
+	let shape = ComputedColliderShape::TriMesh(TriMeshFlags::MERGE_DUPLICATE_VERTICES);
+	let collider = Collider::from_bevy_mesh(&torus, &shape);
 
 	let Some(collider) = collider else {
-		return Err(Error::Single {
-			msg: "Cannot create spherical contact collider".to_owned(),
-			lvl: Level::Error,
-		});
+		return Err(FaultyColliderShape { shape });
 	};
 
 	Ok((collider, transform))
@@ -309,4 +308,30 @@ fn ring_collider(radius: f32) -> Result<(Collider, Transform), Error> {
 
 fn custom_collider(collider: &Collider, scale: Vec3) -> (Collider, Transform) {
 	(collider.clone(), Transform::from_scale(scale))
+}
+
+pub struct FaultyColliderShape {
+	shape: ComputedColliderShape,
+}
+
+impl Display for FaultyColliderShape {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "Faulty collider shape ({:?})", self.shape)
+	}
+}
+
+impl ErrorData for FaultyColliderShape {
+	type TContext = Self;
+
+	fn level(&self) -> Level {
+		Level::Error
+	}
+
+	fn label() -> String {
+		"Construction error".to_owned()
+	}
+
+	fn context(&self) -> &Self::TContext {
+		self
+	}
 }

@@ -1,6 +1,6 @@
-use crate::errors::{Error, Level};
+use crate::errors::{ErrorData, Level};
 use bevy::ecs::system::In;
-use tracing::{error, warn};
+use tracing::{error, field::display, warn};
 
 pub struct OnError;
 
@@ -31,7 +31,7 @@ pub trait OnErrorLogAndReturn {
 
 impl<TValue, TError> OnErrorLogAndReturn for Result<TValue, TError>
 where
-	TError: Into<Error>,
+	TError: ErrorData,
 {
 	type TOut = TValue;
 	type TValue = TValue;
@@ -49,7 +49,7 @@ where
 
 impl<TValue, TError> OnErrorLogAndReturn for Vec<Result<TValue, TError>>
 where
-	TError: Into<Error>,
+	TError: ErrorData,
 {
 	type TOut = Vec<TValue>;
 	type TValue = TValue;
@@ -61,32 +61,19 @@ where
 	}
 }
 
-impl<TError> From<Vec<TError>> for Error
-where
-	TError: Into<Error>,
-{
-	fn from(errors: Vec<TError>) -> Self {
-		Self::Multiple(errors.into_iter().map(TError::into).collect())
-	}
-}
-
 fn output<TError>(error: TError)
 where
-	TError: Into<Error>,
+	TError: ErrorData,
 {
-	match error.into() {
-		Error::Single {
-			msg,
-			lvl: Level::Error,
-		} => error!(msg),
-		Error::Single {
-			msg,
-			lvl: Level::Warning,
-		} => warn!(msg),
-		Error::Multiple(errors) => {
-			for error in errors {
-				output(error);
-			}
+	let label = TError::label();
+	let context = display(error.context());
+
+	match error.level() {
+		Level::Error => {
+			error!(context, "{label}");
+		}
+		Level::Warning => {
+			warn!(context, "{label}");
 		}
 	}
 }

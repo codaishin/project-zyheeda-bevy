@@ -1,7 +1,6 @@
 use crate::traits::compute_path_lazy::ComputePathLazy;
 use bevy::prelude::*;
 use common::{
-	errors::{Error, Level},
 	tools::Units,
 	traits::{
 		handles_map_generation::{Graph, NaivePath},
@@ -122,27 +121,6 @@ where
 			.collect::<Vec<_>>();
 
 		Some(path)
-	}
-}
-
-#[derive(Debug, PartialEq)]
-pub enum NavGridError {
-	Empty,
-	CellDistanceZero,
-}
-
-impl From<NavGridError> for Error {
-	fn from(error: NavGridError) -> Self {
-		match error {
-			NavGridError::Empty => Error::Single {
-				msg: "Source map is empty".to_owned(),
-				lvl: Level::Error,
-			},
-			NavGridError::CellDistanceZero => Error::Single {
-				msg: "`NavMap` cell distance is zero".to_owned(),
-				lvl: Level::Error,
-			},
-		}
 	}
 }
 

@@ -5,10 +5,10 @@ use crate::{components::fix_points::fix_point::FixPoint, traits::has_filter::Has
 use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
-	errors::{Error, Level},
+	errors::{ErrorData, Level},
 	tools::Index,
 	traits::{
-		accessors::get::GetMut,
+		accessors::get::Get,
 		or_ok::OrOk,
 		track::{IsTracking, Track, Untrack},
 	},
@@ -17,6 +17,7 @@ use common::{
 use std::{
 	any::{TypeId, type_name},
 	collections::HashMap,
+	fmt::Display,
 	marker::PhantomData,
 };
 
@@ -53,7 +54,7 @@ where
 	}
 
 	pub(crate) fn system(
-		mut commands: ZyheedaCommands,
+		commands: ZyheedaCommands,
 		mut agents: Query<(&Self, &mut Transform), <Self as HasFilter>::TFilter>,
 		fix_points: Query<(&FixPoints, &GlobalTransform)>,
 		transforms: Query<&GlobalTransform>,
@@ -61,7 +62,7 @@ where
 		agents
 			.iter_mut()
 			.filter_map(|(anchor, mut anchor_transform)| {
-				let target = commands.get_mut(&anchor.target)?.id();
+				let target = commands.get(&anchor.target)?;
 				let Ok((FixPoints(fix_points), transform)) = fix_points.get(target) else {
 					return Some(AnchorError::FixPointsMissingOn(anchor.target));
 				};
@@ -176,28 +177,37 @@ pub enum AnchorError {
 	GlobalTransformMissingOn(Entity),
 }
 
-impl From<AnchorError> for Error {
-	fn from(error: AnchorError) -> Self {
-		match error {
+impl Display for AnchorError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
 			AnchorError::FixPointsMissingOn(entity) => {
 				let type_name = type_name::<FixPoints>();
-				Self::Single {
-					msg: format!("{entity:?}: {type_name} missing"),
-					lvl: Level::Error,
-				}
+				write!(f, "{entity:?}: {type_name} missing")
 			}
 			AnchorError::GlobalTransformMissingOn(entity) => {
 				let type_name = type_name::<GlobalTransform>();
-				Self::Single {
-					msg: format!("{entity}: {type_name} missing"),
-					lvl: Level::Error,
-				}
+				write!(f, "{entity}: {type_name} missing")
 			}
-			AnchorError::NoFixPointEntityFor(anchor_fix_point_key) => Self::Single {
-				msg: format!("{anchor_fix_point_key:?} missing"),
-				lvl: Level::Error,
-			},
+			AnchorError::NoFixPointEntityFor(entity) => {
+				write!(f, "{entity:?} missing")
+			}
 		}
+	}
+}
+
+impl ErrorData for AnchorError {
+	type TContext = Self;
+
+	fn level(&self) -> Level {
+		Level::Error
+	}
+
+	fn label() -> String {
+		"Anchor error".to_owned()
+	}
+
+	fn context(&self) -> &Self::TContext {
+		self
 	}
 }
 

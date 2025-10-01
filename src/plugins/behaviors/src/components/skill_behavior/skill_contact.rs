@@ -1,16 +1,13 @@
 pub(crate) mod dto;
 
 use super::SimplePrefab;
-use crate::components::skill_behavior::skill_contact::dto::SkillContactDto;
+use crate::components::skill_behavior::{FaultyColliderShape, skill_contact::dto::SkillContactDto};
 use bevy::prelude::*;
-use common::{
-	errors::Error,
-	traits::{
-		handles_physics::HandlesPhysicalObjects,
-		handles_skill_behaviors::{Contact, ContactShape, Motion},
-		load_asset::LoadAsset,
-		prefab::{Prefab, PrefabEntityCommands},
-	},
+use common::traits::{
+	handles_physics::HandlesPhysicalObjects,
+	handles_skill_behaviors::{Contact, ContactShape, Motion},
+	load_asset::LoadAsset,
+	prefab::{Prefab, PrefabEntityCommands},
 };
 use macros::SavableComponent;
 
@@ -43,14 +40,15 @@ impl<TPhysics> Prefab<TPhysics> for SkillContact
 where
 	TPhysics: HandlesPhysicalObjects,
 {
+	type TError = FaultyColliderShape;
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		_: &mut impl LoadAsset,
-	) -> Result<(), Error> {
+	) -> Result<(), FaultyColliderShape> {
 		let created_from = self.created_from;
 
-		self.shape.prefab::<TPhysics>(entity, Vec3::ZERO)?;
-		self.motion.prefab::<TPhysics>(entity, created_from)
+		let Ok(()) = self.motion.prefab::<TPhysics>(entity, created_from);
+		self.shape.prefab::<TPhysics>(entity, Vec3::ZERO)
 	}
 }

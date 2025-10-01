@@ -7,6 +7,7 @@ use std::{
 	io::Error as IoError,
 	marker::PhantomData,
 };
+use zyheeda_core::write_iter;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Level {
@@ -14,52 +15,67 @@ pub enum Level {
 	Error,
 }
 
-#[derive(Debug, PartialEq, Clone)]
-pub enum Error {
-	Single { msg: String, lvl: Level },
-	Multiple(Vec<Self>),
-}
+impl ErrorData for InvalidDirectionError {
+	type TContext = Self;
 
-impl From<InvalidDirectionError> for Error {
-	fn from(value: InvalidDirectionError) -> Self {
-		match value {
-			InvalidDirectionError::Zero => Self::Single {
-				msg: "Encountered zero length direction".to_owned(),
-				lvl: Level::Error,
-			},
-			InvalidDirectionError::Infinite => Self::Single {
-				msg: "Encountered infinite length direction".to_owned(),
-				lvl: Level::Error,
-			},
-			InvalidDirectionError::NaN => Self::Single {
-				msg: "Encountered NaN length direction".to_owned(),
-				lvl: Level::Error,
-			},
-		}
+	fn level(&self) -> Level {
+		Level::Error
+	}
+
+	fn label() -> String {
+		"Faulty direction".to_owned()
+	}
+
+	fn context(&self) -> &Self::TContext {
+		todo!()
 	}
 }
 
-impl From<IoError> for Error {
-	fn from(value: IoError) -> Self {
-		Self::Single {
-			msg: value.to_string(),
-			lvl: Level::Error,
-		}
+impl ErrorData for IoError {
+	type TContext = Self;
+
+	fn level(&self) -> Level {
+		Level::Error
+	}
+
+	fn label() -> String {
+		"Io error".to_owned()
+	}
+
+	fn context(&self) -> &Self::TContext {
+		self
 	}
 }
 
-impl From<BevyError> for Error {
-	fn from(value: BevyError) -> Self {
-		Self::Single {
-			msg: value.to_string(),
-			lvl: Level::Error,
-		}
+impl ErrorData for BevyError {
+	type TContext = Self;
+
+	fn level(&self) -> Level {
+		Level::Error
+	}
+
+	fn label() -> String {
+		"Bevy error".to_owned()
+	}
+
+	fn context(&self) -> &Self::TContext {
+		self
 	}
 }
 
-impl From<Infallible> for Error {
-	fn from(_: Infallible) -> Self {
-		unreachable!("If you managed to get here, I am seriously impressed (not in a good way...)")
+impl ErrorData for Infallible {
+	type TContext = Self;
+
+	fn level(&self) -> Level {
+		match *self {}
+	}
+
+	fn label() -> String {
+		"Infallible".to_owned()
+	}
+
+	fn context(&self) -> &Self::TContext {
+		match *self {}
 	}
 }
 
@@ -74,9 +90,41 @@ impl Display for Unreachable {
 
 impl StdError for Unreachable {}
 
+impl ErrorData for Unreachable {
+	type TContext = Self;
+
+	fn level(&self) -> Level {
+		match *self {}
+	}
+
+	fn label() -> String {
+		"Unreachable".to_owned()
+	}
+
+	fn context(&self) -> &Self::TContext {
+		match *self {}
+	}
+}
+
 pub struct UniqueViolation<T> {
 	_p: PhantomData<T>,
 	found: Found,
+}
+
+impl<T> UniqueViolation<T> {
+	pub fn none() -> Self {
+		Self {
+			found: Found::None,
+			_p: PhantomData,
+		}
+	}
+
+	pub fn multiple() -> Self {
+		Self {
+			found: Found::Multiple,
+			_p: PhantomData,
+		}
+	}
 }
 
 impl<T> Debug for UniqueViolation<T> {
@@ -88,25 +136,21 @@ impl<T> Debug for UniqueViolation<T> {
 	}
 }
 
-impl<T> PartialEq for UniqueViolation<T> {
-	fn eq(&self, other: &Self) -> bool {
-		self.found == other.found
+impl<T> Display for UniqueViolation<T> {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		let found = match self.found {
+			Found::None => "none",
+			Found::Multiple => "multiple",
+		};
+		let type_name = type_name::<T>();
+
+		write!(f, "Found {found} {type_name}")
 	}
 }
 
-impl UniqueViolation<()> {
-	pub fn none_of<T>() -> UniqueViolation<T> {
-		UniqueViolation {
-			_p: PhantomData,
-			found: Found::None,
-		}
-	}
-
-	pub fn multiple_of<T>() -> UniqueViolation<T> {
-		UniqueViolation {
-			_p: PhantomData,
-			found: Found::Multiple,
-		}
+impl<T> PartialEq for UniqueViolation<T> {
+	fn eq(&self, other: &Self) -> bool {
+		self.found == other.found
 	}
 }
 
@@ -116,19 +160,60 @@ enum Found {
 	Multiple,
 }
 
-impl<T> From<UniqueViolation<T>> for Error {
-	fn from(UniqueViolation { found, .. }: UniqueViolation<T>) -> Self {
-		let found = match found {
-			Found::None => "none",
-			Found::Multiple => "multiple",
-		};
-		Self::Single {
-			msg: format!(
-				"Found {} {}, when needing one unique",
-				found,
-				type_name::<T>()
-			),
-			lvl: Level::Error,
+impl<T> ErrorData for UniqueViolation<T> {
+	type TContext = Self;
+
+	fn level(&self) -> Level {
+		Level::Error
+	}
+
+	fn label() -> String {
+		"Uniqueness violated".to_owned()
+	}
+
+	fn context(&self) -> &Self::TContext {
+		self
+	}
+}
+
+pub trait ErrorData {
+	type TContext: Display;
+
+	fn level(&self) -> Level;
+	fn label() -> String;
+	fn context(&self) -> &Self::TContext;
+}
+
+impl<T> ErrorData for Vec<T>
+where
+	T: ErrorData,
+{
+	type TContext = ErrorCollection<T::TContext>;
+
+	fn level(&self) -> Level {
+		if self.iter().any(|e| e.level() == Level::Error) {
+			return Level::Error;
 		}
+
+		Level::Warning
+	}
+
+	fn label() -> String {
+		format!("Multiple errors: {}", T::label())
+	}
+
+	fn context(&self) -> &Self::TContext {
+		todo!()
+	}
+}
+
+pub struct ErrorCollection<T>(Vec<T>);
+
+impl<T> Display for ErrorCollection<T>
+where
+	T: Display,
+{
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write_iter!(f, self.0)
 	}
 }

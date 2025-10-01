@@ -1,6 +1,6 @@
 use super::{ActionKey, user_input::UserInput};
 use crate::{
-	errors::{Error, Level},
+	errors::{ErrorData, Level},
 	tools::is_not::IsNot,
 	traits::{
 		accessors::get::Property,
@@ -11,7 +11,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::any::type_name;
+use std::{any::type_name, fmt::Display, marker::PhantomData};
 
 #[derive(Clone, Copy, Default, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
 pub struct SlotKey(pub u8);
@@ -113,7 +113,7 @@ impl From<PlayerSlot> for SlotKey {
 }
 
 impl TryFrom<SlotKey> for PlayerSlot {
-	type Error = NoValidSlotKey;
+	type Error = NoValidAgentKey<PlayerSlot>;
 
 	fn try_from(slot_key: SlotKey) -> Result<Self, Self::Error> {
 		match slot_key {
@@ -121,7 +121,7 @@ impl TryFrom<SlotKey> for PlayerSlot {
 			SlotKey(1) => Ok(PlayerSlot::Lower(Side::Left)),
 			SlotKey(2) => Ok(PlayerSlot::Lower(Side::Right)),
 			SlotKey(3) => Ok(PlayerSlot::Upper(Side::Right)),
-			slot_key => Err(NoValidSlotKey { slot_key }),
+			slot_key => Err(NoValidAgentKey::for_key(slot_key)),
 		}
 	}
 }
@@ -131,18 +131,41 @@ impl Property for PlayerSlot {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct NoValidSlotKey {
-	pub slot_key: SlotKey,
+pub struct NoValidAgentKey<TAgentKey> {
+	slot_key: SlotKey,
+	_p: PhantomData<TAgentKey>,
 }
 
-impl From<NoValidSlotKey> for Error {
-	fn from(NoValidSlotKey { slot_key: raw }: NoValidSlotKey) -> Self {
-		let key_name = type_name::<PlayerSlot>();
-
-		Self::Single {
-			msg: format!("the index {raw:?} is no valid {key_name}"),
-			lvl: Level::Error,
+impl<TAgentKey> NoValidAgentKey<TAgentKey> {
+	fn for_key(slot_key: SlotKey) -> Self {
+		Self {
+			slot_key,
+			_p: PhantomData,
 		}
+	}
+}
+
+impl<T> Display for NoValidAgentKey<T> {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		let key_name = type_name::<T>();
+		let slot_key = self.slot_key;
+		write!(f, "The index {slot_key:?} is no valid {key_name}")
+	}
+}
+
+impl<T> ErrorData for NoValidAgentKey<T> {
+	type TContext = Self;
+
+	fn level(&self) -> Level {
+		Level::Error
+	}
+
+	fn label() -> String {
+		"No valid slot key".to_owned()
+	}
+
+	fn context(&self) -> &Self::TContext {
+		self
 	}
 }
 
@@ -187,9 +210,7 @@ mod test_player_slot {
 				Ok(PlayerSlot::Lower(Side::Left)),
 				Ok(PlayerSlot::Lower(Side::Right)),
 				Ok(PlayerSlot::Upper(Side::Right)),
-				Err(NoValidSlotKey {
-					slot_key: SlotKey(4)
-				}),
+				Err(NoValidAgentKey::for_key(SlotKey(4))),
 			],
 			[SlotKey(0), SlotKey(1), SlotKey(2), SlotKey(3), SlotKey(4)]
 				.into_iter()

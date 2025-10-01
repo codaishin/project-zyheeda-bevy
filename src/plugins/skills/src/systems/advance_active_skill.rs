@@ -200,12 +200,12 @@ mod tests {
 		traits::skill_builder::SkillShape,
 	};
 	use common::{
-		errors::Error,
+		errors::{ErrorData, Level},
 		tools::action_key::slot::{PlayerSlot, Side},
 	};
 	use macros::{NestedMocks, simple_mock};
 	use mockall::{mock, predicate::eq};
-	use std::{collections::HashSet, ops::DerefMut};
+	use std::{collections::HashSet, fmt::Display, ops::DerefMut};
 	use testing::{IsChanged, Mock, NestedMocks, SingleThreadedApp, TickTime};
 
 	#[derive(Component, Default)]
@@ -276,9 +276,25 @@ mod tests {
 	#[derive(Debug, PartialEq)]
 	struct _AnimationError;
 
-	impl From<_AnimationError> for Error {
-		fn from(_: _AnimationError) -> Self {
-			panic!("not used")
+	impl Display for _AnimationError {
+		fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+			write!(f, "Animation error")
+		}
+	}
+
+	impl ErrorData for _AnimationError {
+		type TContext = Self;
+
+		fn level(&self) -> Level {
+			Level::Error
+		}
+
+		fn label() -> String {
+			"Buh, that was a bad animation attempt".to_owned()
+		}
+
+		fn context(&self) -> &Self::TContext {
+			self
 		}
 	}
 

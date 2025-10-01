@@ -1,5 +1,8 @@
+use std::fmt::Display;
+
+use common::errors::{ErrorData, Level};
+
 use crate::grid_graph::grid_context::{DividedToZero, MultipliedTooHigh};
-use common::errors::Error;
 
 pub trait ToSubdivided: Sized {
 	fn to_subdivided(&self, subdivisions: u8) -> Result<Self, SubdivisionError>;
@@ -11,11 +14,27 @@ pub enum SubdivisionError {
 	CellCountMaxedOut(MultipliedTooHigh),
 }
 
-impl From<SubdivisionError> for Error {
-	fn from(error: SubdivisionError) -> Self {
-		match error {
-			SubdivisionError::CellDistanceZero(error) => Error::from(error),
-			SubdivisionError::CellCountMaxedOut(error) => Error::from(error),
+impl Display for SubdivisionError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			SubdivisionError::CellDistanceZero(error) => write!(f, "{error}"),
+			SubdivisionError::CellCountMaxedOut(error) => write!(f, "{error}"),
 		}
+	}
+}
+
+impl ErrorData for SubdivisionError {
+	type TContext = Self;
+
+	fn level(&self) -> Level {
+		Level::Error
+	}
+
+	fn label() -> String {
+		"Failed to subdivide".to_owned()
+	}
+
+	fn context(&self) -> &Self::TContext {
+		self
 	}
 }

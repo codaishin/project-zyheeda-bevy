@@ -1,4 +1,5 @@
-use common::errors::{Error, Level};
+use common::errors::{ErrorData, Level};
+use std::fmt::Display;
 
 #[derive(Debug, PartialEq, Clone)]
 pub(crate) enum GridError {
@@ -7,23 +8,24 @@ pub(crate) enum GridError {
 	GridIndicesWithNoCell(Vec<(u32, u32)>),
 }
 
-impl From<GridError> for Error {
-	fn from(error: GridError) -> Self {
-		Self::Single {
-			msg: format!("Faulty grid encountered: {error:?}"),
-			lvl: Level::Error,
-		}
+impl Display for GridError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "Faulty grid encountered: {self:?}")
 	}
 }
 
-#[derive(Debug, PartialEq)]
-pub(crate) struct NoGridGraphSet;
+impl ErrorData for GridError {
+	type TContext = Self;
 
-impl From<NoGridGraphSet> for Error {
-	fn from(_: NoGridGraphSet) -> Self {
-		Self::Single {
-			msg: "Grid graph was not set".to_owned(),
-			lvl: Level::Error,
-		}
+	fn level(&self) -> Level {
+		Level::Error
+	}
+
+	fn label() -> String {
+		"Grid error".to_owned()
+	}
+
+	fn context(&self) -> &Self::TContext {
+		self
 	}
 }

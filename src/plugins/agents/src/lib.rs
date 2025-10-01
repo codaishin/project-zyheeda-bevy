@@ -27,7 +27,7 @@ use common::{
 	states::game_state::{GameState, LoadingEssentialAssets},
 	tools::action_key::{
 		movement::MovementKey,
-		slot::{NoValidSlotKey, PlayerSlot, SlotKey},
+		slot::{NoValidAgentKey, PlayerSlot, SlotKey},
 	},
 	traits::{
 		animation::RegisterAnimations,
@@ -155,7 +155,7 @@ impl<TDependencies> ConfiguresPlayerMovement for AgentsPlugin<TDependencies> {
 
 impl<TDependencies> ConfiguresPlayerSkillAnimations for AgentsPlugin<TDependencies> {
 	type TAnimationMarker = SkillAnimation;
-	type TError = NoValidSlotKey;
+	type TError = NoValidAgentKey<PlayerSlot>;
 
 	fn start_skill_animation(slot_key: SlotKey) -> Result<Self::TAnimationMarker, Self::TError> {
 		Ok(SkillAnimation::Start(PlayerSlot::try_from(slot_key)?))

@@ -468,6 +468,7 @@ dependencies = [
  "test-case",
  "testing",
  "tracing",
+ "zyheeda_core",
 ]
 
 [[package]]
@@ -4942,6 +4943,7 @@ dependencies = [
  "test-case",
  "testing",
  "uuid",
+ "zyheeda_core",
 ]
 
 [[package]]
@@ -5043,6 +5045,7 @@ dependencies = [
  "serde_json",
  "test-case",
  "testing",
+ "zyheeda_core",
 ]
 
 [[package]]

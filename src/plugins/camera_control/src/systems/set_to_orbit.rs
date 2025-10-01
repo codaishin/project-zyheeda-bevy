@@ -30,10 +30,10 @@ pub(crate) trait SetCameraToOrbit {
 		let player = match players.single() {
 			Ok(player) => player,
 			Err(QuerySingleError::NoEntities(_)) => {
-				return Err(UniqueViolation::none_of::<(TPlayer, PersistentEntity)>());
+				return Err(UniqueViolation::none());
 			}
 			Err(QuerySingleError::MultipleEntities(_)) => {
-				return Err(UniqueViolation::multiple_of::<(TPlayer, PersistentEntity)>());
+				return Err(UniqueViolation::multiple());
 			}
 		};
 
@@ -136,10 +136,7 @@ mod tests {
 			.world_mut()
 			.run_system_once(_Cam::set_to_orbit::<_Player>)?;
 
-		assert_eq!(
-			Err(UniqueViolation::none_of::<(_Player, PersistentEntity)>()),
-			result
-		);
+		assert_eq!(Err(UniqueViolation::none()), result);
 		Ok(())
 	}
 
@@ -154,10 +151,7 @@ mod tests {
 			.world_mut()
 			.run_system_once(_Cam::set_to_orbit::<_Player>)?;
 
-		assert_eq!(
-			Err(UniqueViolation::multiple_of::<(_Player, PersistentEntity)>()),
-			result
-		);
+		assert_eq!(Err(UniqueViolation::multiple()), result);
 		Ok(())
 	}
 

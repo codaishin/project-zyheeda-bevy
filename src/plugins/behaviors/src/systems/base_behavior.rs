@@ -7,7 +7,7 @@ use common::{
 		ground_offset::GroundOffset,
 		persistent_entity::PersistentEntity,
 	},
-	errors::Error,
+	errors::{ErrorData, Level},
 	tools::{aggro_range::AggroRange, attack_range::AttackRange},
 	traits::{
 		accessors::get::{DynProperty, GetMut, GetProperty},
@@ -20,6 +20,8 @@ use common::{
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
+use std::fmt::Display;
+use zyheeda_core::prelude::*;
 
 impl<T> SelectBehavior for T {}
 
@@ -55,17 +57,28 @@ pub(crate) enum BehaviorError<TNoRayCaster = BevyError> {
 	InvalidDirectionErrors(Vec<InvalidDirectionError>),
 }
 
-impl From<BehaviorError> for Error {
-	fn from(value: BehaviorError) -> Self {
-		match value {
-			BehaviorError::NoRayCaster(bevy_error) => Error::from(bevy_error),
-			BehaviorError::InvalidDirectionErrors(invalid_direction_errors) => Error::Multiple(
-				invalid_direction_errors
-					.into_iter()
-					.map(Error::from)
-					.collect(),
-			),
+impl Display for BehaviorError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			BehaviorError::NoRayCaster(error) => write!(f, "{error}"),
+			BehaviorError::InvalidDirectionErrors(errors) => write_iter!(f, errors),
 		}
+	}
+}
+
+impl ErrorData for BehaviorError {
+	type TContext = Self;
+
+	fn level(&self) -> Level {
+		Level::Error
+	}
+
+	fn label() -> String {
+		"Behavior error".to_owned()
+	}
+
+	fn context(&self) -> &Self::TContext {
+		self
 	}
 }
 

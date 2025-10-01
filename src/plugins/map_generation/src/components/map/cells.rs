@@ -18,7 +18,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	errors::{Error, Level, Unreachable},
+	errors::{ErrorData, Level, Unreachable},
 	traits::thread_safe::ThreadSafe,
 };
 use std::{collections::HashMap, fmt::Display};
@@ -148,21 +148,19 @@ impl Display for MapSizeError {
 	}
 }
 
-impl From<MapSizeError> for Error {
-	fn from(error: MapSizeError) -> Self {
-		match error {
-			MapSizeError::Empty => Self::Single {
-				msg: String::from("map is empty"),
-				lvl: Level::Error,
-			},
-			MapSizeError::Indices { x, z } => Self::Single {
-				msg: format!(
-					"indices too large x={x} and z={z} (max allowed {})",
-					u32::MAX - 1
-				),
-				lvl: Level::Error,
-			},
-		}
+impl ErrorData for MapSizeError {
+	type TContext = Self;
+
+	fn level(&self) -> Level {
+		Level::Error
+	}
+
+	fn label() -> String {
+		"Faulty map size".to_owned()
+	}
+
+	fn context(&self) -> &Self::TContext {
+		self
 	}
 }
 
