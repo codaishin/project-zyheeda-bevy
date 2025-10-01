@@ -154,17 +154,15 @@ impl<T> Display for NoValidAgentKey<T> {
 }
 
 impl<T> ErrorData for NoValidAgentKey<T> {
-	type TDetails = Self;
-
 	fn level(&self) -> Level {
 		Level::Error
 	}
 
-	fn label() -> String {
-		"No valid slot key".to_owned()
+	fn label() -> impl Display {
+		"No valid agent key"
 	}
 
-	fn into_details(self) -> Self::TDetails {
+	fn into_details(self) -> impl Display {
 		self
 	}
 }

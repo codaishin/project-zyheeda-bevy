@@ -196,17 +196,15 @@ impl Display for AnchorError {
 }
 
 impl ErrorData for AnchorError {
-	type TDetails = Self;
-
 	fn level(&self) -> Level {
 		Level::Error
 	}
 
-	fn label() -> String {
-		"Anchor error".to_owned()
+	fn label() -> impl Display {
+		"Anchor error"
 	}
 
-	fn into_details(self) -> Self::TDetails {
+	fn into_details(self) -> impl Display {
 		self
 	}
 }

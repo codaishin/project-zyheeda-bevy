@@ -56,17 +56,15 @@ impl<TError> ErrorData for ContextIOError<TError>
 where
 	TError: Display,
 {
-	type TDetails = Self;
-
 	fn level(&self) -> Level {
 		Level::Error
 	}
 
-	fn label() -> String {
-		"IO error".to_owned()
+	fn label() -> impl Display {
+		"IO error"
 	}
 
-	fn into_details(self) -> Self::TDetails {
+	fn into_details(self) -> impl Display {
 		self
 	}
 }
@@ -91,17 +89,15 @@ impl Display for SerializationOrLockError {
 }
 
 impl ErrorData for SerializationOrLockError {
-	type TDetails = Self;
-
 	fn level(&self) -> Level {
 		Level::Error
 	}
 
-	fn label() -> String {
-		"Serialization failed".to_owned()
+	fn label() -> impl Display {
+		"Serialization failed"
 	}
 
-	fn into_details(self) -> Self::TDetails {
+	fn into_details(self) -> impl Display {
 		self
 	}
 }
@@ -131,17 +127,15 @@ impl<TNoInsert> ErrorData for DeserializationOrLockError<TNoInsert>
 where
 	TNoInsert: Display,
 {
-	type TDetails = Self;
-
 	fn level(&self) -> Level {
 		Level::Error
 	}
 
-	fn label() -> String {
-		"Deserialization failed".to_owned()
+	fn label() -> impl Display {
+		"Deserialization failed"
 	}
 
-	fn into_details(self) -> Self::TDetails {
+	fn into_details(self) -> impl Display {
 		self
 	}
 }
@@ -177,17 +171,15 @@ impl Display for LockPoisonedError {
 }
 
 impl ErrorData for LockPoisonedError {
-	type TDetails = Self;
-
 	fn level(&self) -> Level {
 		Level::Error
 	}
 
-	fn label() -> String {
-		"Lock was poisoned".to_owned()
+	fn label() -> impl Display {
+		"Lock was poisoned"
 	}
 
-	fn into_details(self) -> Self::TDetails {
+	fn into_details(self) -> impl Display {
 		self
 	}
 }

@@ -82,17 +82,15 @@ impl<TCell> Display for ParseImageError<TCell> {
 }
 
 impl<TCell> ErrorData for ParseImageError<TCell> {
-	type TDetails = Self;
-
 	fn level(&self) -> Level {
 		Level::Error
 	}
 
-	fn label() -> String {
-		"Failed to parse image".to_owned()
+	fn label() -> impl Display {
+		"Failed to parse image"
 	}
 
-	fn into_details(self) -> Self::TDetails {
+	fn into_details(self) -> impl Display {
 		self
 	}
 }

@@ -24,17 +24,15 @@ impl Display for SubdivisionError {
 }
 
 impl ErrorData for SubdivisionError {
-	type TDetails = Self;
-
 	fn level(&self) -> Level {
 		Level::Error
 	}
 
-	fn label() -> String {
-		"Failed to subdivide".to_owned()
+	fn label() -> impl Display {
+		"Failed to subdivide"
 	}
 
-	fn into_details(self) -> Self::TDetails {
+	fn into_details(self) -> impl Display {
 		self
 	}
 }

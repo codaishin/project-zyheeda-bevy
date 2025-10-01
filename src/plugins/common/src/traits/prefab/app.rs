@@ -109,17 +109,15 @@ mod tests {
 	}
 
 	impl ErrorData for _Error {
-		type TDetails = Self;
-
 		fn level(&self) -> Level {
 			Level::Error
 		}
 
-		fn label() -> String {
-			"_ERROR".to_owned()
+		fn label() -> impl Display {
+			"_ERROR"
 		}
 
-		fn into_details(self) -> Self::TDetails {
+		fn into_details(self) -> impl Display {
 			self
 		}
 	}

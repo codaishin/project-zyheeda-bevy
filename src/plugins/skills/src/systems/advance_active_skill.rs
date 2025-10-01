@@ -283,17 +283,15 @@ mod tests {
 	}
 
 	impl ErrorData for _AnimationError {
-		type TDetails = Self;
-
 		fn level(&self) -> Level {
 			Level::Error
 		}
 
-		fn label() -> String {
-			"Buh, that was a bad animation attempt".to_owned()
+		fn label() -> impl Display {
+			"Buh, that was a bad animation attempt"
 		}
 
-		fn into_details(self) -> Self::TDetails {
+		fn into_details(self) -> impl Display {
 			self
 		}
 	}

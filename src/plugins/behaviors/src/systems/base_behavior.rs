@@ -67,17 +67,15 @@ impl Display for BehaviorError {
 }
 
 impl ErrorData for BehaviorError {
-	type TDetails = Self;
-
 	fn level(&self) -> Level {
 		Level::Error
 	}
 
-	fn label() -> String {
-		"Behavior error".to_owned()
+	fn label() -> impl Display {
+		"Behavior error"
 	}
 
-	fn into_details(self) -> Self::TDetails {
+	fn into_details(self) -> impl Display {
 		self
 	}
 }

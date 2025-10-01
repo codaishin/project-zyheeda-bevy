@@ -284,17 +284,15 @@ where
 	TAction: InvalidInput<TInput = TInput> + Debug + Eq + Hash,
 	TInput: Debug + Eq + Hash,
 {
-	type TDetails = Self;
-
 	fn level(&self) -> Level {
 		Level::Warning
 	}
 
-	fn label() -> String {
-		"Tried to set invalid input".to_owned()
+	fn label() -> impl Display {
+		"Tried to set invalid input"
 	}
 
-	fn into_details(self) -> Self::TDetails {
+	fn into_details(self) -> impl Display {
 		self
 	}
 }

@@ -152,8 +152,8 @@ impl Display for SetBundleError {
 				write!(f, "{}: no language file found", self.ln)
 			}
 			SetBundleErrorKind::FluentError(parse_errors, fluent_errors) => {
-				write!(f, "{}:", self.ln)?;
-				write_iter!(f, ", parse errors: ", parse_errors)?;
+				write!(f, "{}: ", self.ln)?;
+				write_iter!(f, "parse errors: ", parse_errors)?;
 				write_iter!(f, ", fluent errors: ", fluent_errors)
 			}
 		}
@@ -161,17 +161,15 @@ impl Display for SetBundleError {
 }
 
 impl ErrorData for SetBundleError {
-	type TDetails = Self;
-
 	fn level(&self) -> Level {
 		Level::Error
 	}
 
-	fn label() -> String {
-		"Failed to set bundle".to_owned()
+	fn label() -> impl Display {
+		"Failed to set bundle"
 	}
 
-	fn into_details(self) -> Self::TDetails {
+	fn into_details(self) -> impl Display {
 		self
 	}
 }

@@ -137,17 +137,15 @@ impl<TError, TComponent> ErrorData for SpawnCellError<TError, TComponent>
 where
 	TError: Display,
 {
-	type TDetails = Self;
-
 	fn level(&self) -> ErrorLevel {
 		ErrorLevel::Error
 	}
 
-	fn label() -> String {
-		"Failed to spawn cell".to_owned()
+	fn label() -> impl Display {
+		"Failed to spawn cell"
 	}
 
-	fn into_details(self) -> Self::TDetails {
+	fn into_details(self) -> impl Display {
 		self
 	}
 }

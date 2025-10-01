@@ -78,17 +78,15 @@ impl Display for WriteError {
 }
 
 impl ErrorData for WriteError {
-	type TDetails = Self;
-
 	fn level(&self) -> Level {
 		Level::Error
 	}
 
-	fn label() -> String {
-		"Write operation failed".to_owned()
+	fn label() -> impl Display {
+		"Write operation failed"
 	}
 
-	fn into_details(self) -> Self::TDetails {
+	fn into_details(self) -> impl Display {
 		self
 	}
 }

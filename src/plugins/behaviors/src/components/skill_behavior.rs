@@ -321,17 +321,15 @@ impl Display for FaultyColliderShape {
 }
 
 impl ErrorData for FaultyColliderShape {
-	type TDetails = Self;
-
 	fn level(&self) -> Level {
 		Level::Error
 	}
 
-	fn label() -> String {
-		"Construction error".to_owned()
+	fn label() -> impl Display {
+		"Construction error"
 	}
 
-	fn into_details(self) -> Self::TDetails {
+	fn into_details(self) -> impl Display {
 		self
 	}
 }

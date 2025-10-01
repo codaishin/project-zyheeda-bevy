@@ -16,65 +16,57 @@ pub enum Level {
 }
 
 impl ErrorData for InvalidDirectionError {
-	type TDetails = Self;
-
 	fn level(&self) -> Level {
 		Level::Error
 	}
 
-	fn label() -> String {
-		"Faulty direction".to_owned()
+	fn label() -> impl Display {
+		"Faulty direction"
 	}
 
-	fn into_details(self) -> Self::TDetails {
-		todo!()
+	fn into_details(self) -> impl Display {
+		self
 	}
 }
 
 impl ErrorData for IoError {
-	type TDetails = Self;
-
 	fn level(&self) -> Level {
 		Level::Error
 	}
 
-	fn label() -> String {
-		"Io error".to_owned()
+	fn label() -> impl Display {
+		"Io error"
 	}
 
-	fn into_details(self) -> Self::TDetails {
+	fn into_details(self) -> impl Display {
 		self
 	}
 }
 
 impl ErrorData for BevyError {
-	type TDetails = Self;
-
 	fn level(&self) -> Level {
 		Level::Error
 	}
 
-	fn label() -> String {
-		"Bevy error".to_owned()
+	fn label() -> impl Display {
+		"Bevy error"
 	}
 
-	fn into_details(self) -> Self::TDetails {
+	fn into_details(self) -> impl Display {
 		self
 	}
 }
 
 impl ErrorData for Infallible {
-	type TDetails = Self;
-
 	fn level(&self) -> Level {
 		match *self {}
 	}
 
-	fn label() -> String {
-		"Infallible".to_owned()
+	fn label() -> impl Display {
+		"Infallible"
 	}
 
-	fn into_details(self) -> Self::TDetails {
+	fn into_details(self) -> impl Display {
 		match self {}
 	}
 }
@@ -91,17 +83,15 @@ impl Display for Unreachable {
 impl StdError for Unreachable {}
 
 impl ErrorData for Unreachable {
-	type TDetails = Self;
-
 	fn level(&self) -> Level {
 		match *self {}
 	}
 
-	fn label() -> String {
-		"Unreachable".to_owned()
+	fn label() -> impl Display {
+		"Unreachable"
 	}
 
-	fn into_details(self) -> Self::TDetails {
+	fn into_details(self) -> impl Display {
 		match self {}
 	}
 }
@@ -161,35 +151,29 @@ enum Found {
 }
 
 impl<T> ErrorData for UniqueViolation<T> {
-	type TDetails = Self;
-
 	fn level(&self) -> Level {
 		Level::Error
 	}
 
-	fn label() -> String {
-		"Uniqueness violated".to_owned()
+	fn label() -> impl Display {
+		"Uniqueness violated"
 	}
 
-	fn into_details(self) -> Self::TDetails {
+	fn into_details(self) -> impl Display {
 		self
 	}
 }
 
 pub trait ErrorData {
-	type TDetails: Display;
-
 	fn level(&self) -> Level;
-	fn label() -> String;
-	fn into_details(self) -> Self::TDetails;
+	fn label() -> impl Display;
+	fn into_details(self) -> impl Display;
 }
 
 impl<T> ErrorData for Vec<T>
 where
 	T: ErrorData,
 {
-	type TDetails = VecErrorDetails<T::TDetails>;
-
 	fn level(&self) -> Level {
 		if self.iter().any(|e| e.level() == Level::Error) {
 			return Level::Error;
@@ -198,11 +182,11 @@ where
 		Level::Warning
 	}
 
-	fn label() -> String {
+	fn label() -> impl Display {
 		format!("Multiple errors: {}", T::label())
 	}
 
-	fn into_details(self) -> Self::TDetails {
+	fn into_details(self) -> impl Display {
 		VecErrorDetails(self.into_iter().map(|e| e.into_details()).collect())
 	}
 }

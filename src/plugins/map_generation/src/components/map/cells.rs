@@ -149,17 +149,15 @@ impl Display for MapSizeError {
 }
 
 impl ErrorData for MapSizeError {
-	type TDetails = Self;
-
 	fn level(&self) -> Level {
 		Level::Error
 	}
 
-	fn label() -> String {
-		"Faulty map size".to_owned()
+	fn label() -> impl Display {
+		"Faulty map size"
 	}
 
-	fn into_details(self) -> Self::TDetails {
+	fn into_details(self) -> impl Display {
 		self
 	}
 }

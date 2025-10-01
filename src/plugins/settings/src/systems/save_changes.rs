@@ -88,8 +88,6 @@ impl Display for SaveError {
 }
 
 impl ErrorData for SaveError {
-	type TDetails = Self;
-
 	fn level(&self) -> Level {
 		match self {
 			SaveError::Writer(error) => error.level(),
@@ -97,11 +95,11 @@ impl ErrorData for SaveError {
 		}
 	}
 
-	fn label() -> String {
-		"Save error".to_owned()
+	fn label() -> impl Display {
+		"Save error"
 	}
 
-	fn into_details(self) -> Self::TDetails {
+	fn into_details(self) -> impl Display {
 		self
 	}
 }
