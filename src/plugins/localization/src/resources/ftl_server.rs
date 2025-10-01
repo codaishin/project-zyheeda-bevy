@@ -84,6 +84,8 @@ impl SetLocalization for FtlServer {
 	}
 }
 
+const LOCALIZATION_ERROR: &str = "Localization error";
+
 impl<TLogger> Localize for FtlServer<TLogger>
 where
 	TLogger: Log,
@@ -96,26 +98,34 @@ where
 		let str = &**token;
 		let localize = |locale: &&Locale| {
 			if locale.ln != current.ln {
-				self.logger.log_warning(FtlError::FallbackAttempt {
-					token: current.ln_token(str),
-					fallback: locale.ln.clone(),
-				});
+				self.logger.log_warning(
+					LOCALIZATION_ERROR,
+					FtlError::FallbackAttempt {
+						token: current.ln_token(str),
+						fallback: locale.ln.clone(),
+					},
+				);
 			}
 
 			let Some(bundle) = locale.bundle.as_ref() else {
-				self.logger.log_error(FtlError::NoBundle(locale.ln.clone()));
+				self.logger
+					.log_error(LOCALIZATION_ERROR, FtlError::NoBundle(locale.ln.clone()));
 				return None;
 			};
 
 			let Some(msg) = bundle.get_message(str) else {
-				self.logger
-					.log_error(FtlError::NoMessageFor(locale.ln_token(str)));
+				self.logger.log_error(
+					LOCALIZATION_ERROR,
+					FtlError::NoMessageFor(locale.ln_token(str)),
+				);
 				return None;
 			};
 
 			let Some(pattern) = msg.value() else {
-				self.logger
-					.log_error(FtlError::NoPatternFor(locale.ln_token(str)));
+				self.logger.log_error(
+					LOCALIZATION_ERROR,
+					FtlError::NoPatternFor(locale.ln_token(str)),
+				);
 				return None;
 			};
 
@@ -123,10 +133,13 @@ where
 			let localized = bundle.format_pattern(pattern, None, &mut fluent_errors);
 
 			if !fluent_errors.is_empty() {
-				self.logger.log_error(FtlError::FluentErrors {
-					token: locale.ln_token(str),
-					errors: fluent_errors,
-				});
+				self.logger.log_error(
+					LOCALIZATION_ERROR,
+					FtlError::FluentErrors {
+						token: locale.ln_token(str),
+						errors: fluent_errors,
+					},
+				);
 			}
 
 			Some(Localized::from(localized))
@@ -217,8 +230,8 @@ mod tests {
 	simple_mock! {
 		_Logger {}
 		impl Log for _Logger {
-			fn log_warning<TError>(&self, value: TError) where TError: 'static;
-			fn log_error<TError>(&self, value: TError) where TError: 'static;
+			fn log_warning<TDetails>(&self, label: &str, details: TDetails) where TDetails: 'static;
+			fn log_error<TDetails>(&self, label: &str, details: TDetails) where TDetails: 'static;
 		}
 	}
 
@@ -587,7 +600,10 @@ mod tests {
 			logger: Mock_Logger::new_mock(|mock| {
 				mock.expect_log_error::<FtlError>()
 					.times(1)
-					.with(eq(FtlError::NoBundle(langid!("en"))))
+					.with(
+						eq(LOCALIZATION_ERROR),
+						eq(FtlError::NoBundle(langid!("en"))),
+					)
 					.return_const(());
 				mock.expect_log_warning::<FtlError>().never();
 			}),
@@ -619,10 +635,13 @@ mod tests {
 			logger: Mock_Logger::new_mock(|mock| {
 				mock.expect_log_error::<FtlError>()
 					.times(1)
-					.with(eq(FtlError::NoMessageFor(LnToken {
-						value: String::from("b"),
-						language: langid!("en"),
-					})))
+					.with(
+						eq(LOCALIZATION_ERROR),
+						eq(FtlError::NoMessageFor(LnToken {
+							value: String::from("b"),
+							language: langid!("en"),
+						})),
+					)
 					.return_const(());
 				mock.expect_log_warning::<FtlError>().never();
 			}),
@@ -654,10 +673,13 @@ mod tests {
 			logger: Mock_Logger::new_mock(|mock| {
 				mock.expect_log_error::<FtlError>()
 					.times(1)
-					.with(eq(FtlError::NoPatternFor(LnToken {
-						value: String::from("a"),
-						language: langid!("en"),
-					})))
+					.with(
+						eq(LOCALIZATION_ERROR),
+						eq(FtlError::NoPatternFor(LnToken {
+							value: String::from("a"),
+							language: langid!("en"),
+						})),
+					)
 					.return_const(());
 				mock.expect_log_warning::<FtlError>().never();
 			}),
@@ -689,17 +711,20 @@ mod tests {
 			logger: Mock_Logger::new_mock(|mock| {
 				mock.expect_log_error::<FtlError>()
 					.times(1)
-					.with(eq(FtlError::FluentErrors {
-						token: LnToken {
-							value: String::from("a"),
-							language: langid!("en"),
-						},
-						errors: vec![FluentError::ResolverError(ResolverError::Reference(
-							ReferenceKind::Variable {
-								id: String::from("a"),
+					.with(
+						eq(LOCALIZATION_ERROR),
+						eq(FtlError::FluentErrors {
+							token: LnToken {
+								value: String::from("a"),
+								language: langid!("en"),
 							},
-						))],
-					}))
+							errors: vec![FluentError::ResolverError(ResolverError::Reference(
+								ReferenceKind::Variable {
+									id: String::from("a"),
+								},
+							))],
+						}),
+					)
 					.return_const(());
 				mock.expect_log_warning::<FtlError>().never();
 			}),
@@ -736,17 +761,23 @@ mod tests {
 			logger: Mock_Logger::new_mock(|mock| {
 				mock.expect_log_error::<FtlError>()
 					.times(1)
-					.with(eq(FtlError::NoBundle(langid!("jp"))))
+					.with(
+						eq(LOCALIZATION_ERROR),
+						eq(FtlError::NoBundle(langid!("jp"))),
+					)
 					.return_const(());
 				mock.expect_log_warning::<FtlError>()
 					.times(1)
-					.with(eq(FtlError::FallbackAttempt {
-						token: LnToken {
-							value: String::from("a"),
-							language: langid!("jp"),
-						},
-						fallback: langid!("en"),
-					}))
+					.with(
+						eq(LOCALIZATION_ERROR),
+						eq(FtlError::FallbackAttempt {
+							token: LnToken {
+								value: String::from("a"),
+								language: langid!("jp"),
+							},
+							fallback: langid!("en"),
+						}),
+					)
 					.return_const(());
 			}),
 			update: false,
@@ -788,20 +819,26 @@ mod tests {
 			logger: Mock_Logger::new_mock(|mock| {
 				mock.expect_log_error::<FtlError>()
 					.times(1)
-					.with(eq(FtlError::NoMessageFor(LnToken {
-						value: String::from("a"),
-						language: langid!("jp"),
-					})))
+					.with(
+						eq(LOCALIZATION_ERROR),
+						eq(FtlError::NoMessageFor(LnToken {
+							value: String::from("a"),
+							language: langid!("jp"),
+						})),
+					)
 					.return_const(());
 				mock.expect_log_warning::<FtlError>()
 					.times(1)
-					.with(eq(FtlError::FallbackAttempt {
-						token: LnToken {
-							value: String::from("a"),
-							language: langid!("jp"),
-						},
-						fallback: langid!("en"),
-					}))
+					.with(
+						eq(LOCALIZATION_ERROR),
+						eq(FtlError::FallbackAttempt {
+							token: LnToken {
+								value: String::from("a"),
+								language: langid!("jp"),
+							},
+							fallback: langid!("en"),
+						}),
+					)
 					.return_const(());
 			}),
 			update: false,
@@ -843,20 +880,26 @@ mod tests {
 			logger: Mock_Logger::new_mock(|mock| {
 				mock.expect_log_error::<FtlError>()
 					.times(1)
-					.with(eq(FtlError::NoPatternFor(LnToken {
-						value: String::from("a"),
-						language: langid!("jp"),
-					})))
+					.with(
+						eq(LOCALIZATION_ERROR),
+						eq(FtlError::NoPatternFor(LnToken {
+							value: String::from("a"),
+							language: langid!("jp"),
+						})),
+					)
 					.return_const(());
 				mock.expect_log_warning::<FtlError>()
 					.times(1)
-					.with(eq(FtlError::FallbackAttempt {
-						token: LnToken {
-							value: String::from("a"),
-							language: langid!("jp"),
-						},
-						fallback: langid!("en"),
-					}))
+					.with(
+						eq(LOCALIZATION_ERROR),
+						eq(FtlError::FallbackAttempt {
+							token: LnToken {
+								value: String::from("a"),
+								language: langid!("jp"),
+							},
+							fallback: langid!("en"),
+						}),
+					)
 					.return_const(());
 			}),
 			update: false,
@@ -898,17 +941,20 @@ mod tests {
 			logger: Mock_Logger::new_mock(|mock| {
 				mock.expect_log_error::<FtlError>()
 					.times(1)
-					.with(eq(FtlError::FluentErrors {
-						token: LnToken {
-							value: String::from("a"),
-							language: langid!("jp"),
-						},
-						errors: vec![FluentError::ResolverError(ResolverError::Reference(
-							ReferenceKind::Variable {
-								id: String::from("a"),
+					.with(
+						eq(LOCALIZATION_ERROR),
+						eq(FtlError::FluentErrors {
+							token: LnToken {
+								value: String::from("a"),
+								language: langid!("jp"),
 							},
-						))],
-					}))
+							errors: vec![FluentError::ResolverError(ResolverError::Reference(
+								ReferenceKind::Variable {
+									id: String::from("a"),
+								},
+							))],
+						}),
+					)
 					.return_const(());
 				mock.expect_log_warning::<FtlError>().never();
 			}),

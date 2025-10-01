@@ -7,7 +7,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	errors::Error,
+	errors::Unreachable,
 	states::game_state::GameState,
 	traits::{
 		accessors::get::GetProperty,
@@ -56,11 +56,13 @@ impl TriggerState for StartMenuButton {
 }
 
 impl Prefab<()> for StartMenuButton {
+	type TError = Unreachable;
+
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		_: &mut impl LoadAsset,
-	) -> Result<(), Error> {
+	) -> Result<(), Unreachable> {
 		entity.with_child((
 			Text::from(&self.label),
 			TextFont {

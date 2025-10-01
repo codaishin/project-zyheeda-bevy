@@ -1,5 +1,5 @@
 use super::{AddPrefabObserver, Prefab};
-use crate::{errors::Error, systems::log::OnError, traits::load_asset::LoadAsset};
+use crate::{systems::log::OnError, traits::load_asset::LoadAsset};
 use bevy::prelude::*;
 
 impl AddPrefabObserver for App {
@@ -19,7 +19,7 @@ fn instantiate_prefab<TPrefab, TDependencies, TAssetServer>(
 	components: Query<&TPrefab>,
 	mut commands: Commands,
 	mut asset_server: ResMut<TAssetServer>,
-) -> Result<(), Error>
+) -> Result<(), TPrefab::TError>
 where
 	TPrefab: Prefab<TDependencies> + Component,
 	TAssetServer: Resource + LoadAsset,
@@ -37,9 +37,11 @@ where
 
 #[cfg(test)]
 mod tests {
+	use std::fmt::Display;
+
 	use super::*;
 	use crate::{
-		errors::{Error, Level},
+		errors::{ErrorData, Level},
 		traits::prefab::PrefabEntityCommands,
 	};
 	use bevy::asset::AssetPath;
@@ -52,7 +54,7 @@ mod tests {
 
 	#[derive(Component)]
 	struct _Component {
-		prefab: Result<_Prefab<&'static str>, Error>,
+		prefab: Result<_Prefab<&'static str>, _Error>,
 	}
 
 	#[derive(Component, Debug, PartialEq, Clone)]
@@ -77,15 +79,17 @@ mod tests {
 	}
 
 	impl Prefab<_Dependency> for _Component {
+		type TError = _Error;
+
 		fn insert_prefab_components(
 			&self,
 			entity: &mut impl PrefabEntityCommands,
 			asset_server: &mut impl LoadAsset,
-		) -> Result<(), Error> {
+		) -> Result<(), _Error> {
 			match &self.prefab {
 				Ok(_Prefab(path)) => entity
 					.try_insert_if_new(_Prefab::<Handle<_Asset>>(asset_server.load_asset(*path))),
-				Err(error) => return Err(error.clone()),
+				Err(error) => return Err(*error),
 			};
 
 			Ok(())
@@ -93,9 +97,32 @@ mod tests {
 	}
 
 	#[derive(Resource, Debug, PartialEq)]
-	struct _Result(Result<(), Error>);
+	struct _Result(Result<(), _Error>);
 
-	fn save_result(In(result): In<Result<(), Error>>, mut commands: Commands) {
+	#[derive(Debug, PartialEq, Clone, Copy)]
+	struct _Error;
+
+	impl Display for _Error {
+		fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+			write!(f, "_ERROR")
+		}
+	}
+
+	impl ErrorData for _Error {
+		fn level(&self) -> Level {
+			Level::Error
+		}
+
+		fn label() -> impl Display {
+			"_ERROR"
+		}
+
+		fn into_details(self) -> impl Display {
+			self
+		}
+	}
+
+	fn save_result(In(result): In<Result<(), _Error>>, mut commands: Commands) {
 		commands.insert_resource(_Result(result));
 	}
 
@@ -138,16 +165,15 @@ mod tests {
 					.return_const(new_handle());
 			}),
 		);
-		let error = Error::Single {
-			msg: "my error".to_owned(),
-			lvl: Level::Error,
-		};
 
 		let entity = app.world_mut().spawn(_Component {
-			prefab: Err(error.clone()),
+			prefab: Err(_Error),
 		});
 
-		assert_eq!(Some(&_Result(Err(error))), entity.get_resource::<_Result>());
+		assert_eq!(
+			Some(&_Result(Err(_Error))),
+			entity.get_resource::<_Result>(),
+		);
 	}
 
 	#[test]

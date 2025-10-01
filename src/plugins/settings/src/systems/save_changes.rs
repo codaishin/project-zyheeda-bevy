@@ -1,15 +1,21 @@
 use crate::{
-	resources::asset_writer::{AssetWriter, WriteAsset, WriteError},
+	resources::{
+		asset_writer::{AssetWriter, WriteAsset, WriteError},
+		key_map::InvalidInputWarning,
+	},
 	traits::drain_invalid_inputs::DrainInvalidInputs,
 };
 use bevy::prelude::*;
 use common::{
-	errors::{Error, Level},
+	errors::{ErrorData, Level},
 	tools::action_key::{ActionKey, user_input::UserInput},
-	traits::{handles_settings::InvalidInput, load_asset::Path},
+	traits::load_asset::Path,
 };
 use serde::Serialize;
-use std::collections::{HashMap, HashSet};
+use std::{
+	collections::{HashMap, HashSet},
+	fmt::Display,
+};
 
 impl<T> SaveChanges for T where
 	T: Resource + Clone + DrainInvalidInputs<TInvalidInput = (ActionKey, HashSet<UserInput>)>
@@ -60,7 +66,7 @@ where
 {
 	let errors = resource.drain_invalid_inputs().collect::<HashMap<_, _>>();
 	if !errors.is_empty() {
-		return Err(SaveError::InvalidInput(errors));
+		return Err(SaveError::InvalidInput(InvalidInputWarning(errors)));
 	}
 
 	Ok(())
@@ -69,33 +75,32 @@ where
 #[derive(Debug, PartialEq)]
 pub(crate) enum SaveError<TWriteError = WriteError> {
 	Writer(TWriteError),
-	InvalidInput(HashMap<ActionKey, HashSet<UserInput>>),
+	InvalidInput(InvalidInputWarning<ActionKey, UserInput>),
 }
 
-impl<TWriteError> From<SaveError<TWriteError>> for Error
-where
-	TWriteError: Into<Error>,
-{
-	fn from(error: SaveError<TWriteError>) -> Self {
-		match error {
-			SaveError::Writer(error) => error.into(),
-			SaveError::InvalidInput(invalid_inputs) => {
-				let invalid_inputs = invalid_inputs
-					.iter()
-					.map(|(action, inputs)| {
-						format!(
-							" - Tried to set {action:?} to {inputs:?} which intersects with invalid inputs for this action: {:?}",
-							action.invalid_input().to_vec()
-						)
-					})
-					.collect::<Vec<_>>()
-					.join("\n");
-				Error::Single {
-					msg: format!("Some input settings failed:\n{invalid_inputs}"),
-					lvl: Level::Warning,
-				}
-			}
+impl Display for SaveError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			SaveError::Writer(error) => write!(f, "{error}"),
+			SaveError::InvalidInput(warning) => write!(f, "{warning}"),
 		}
+	}
+}
+
+impl ErrorData for SaveError {
+	fn level(&self) -> Level {
+		match self {
+			SaveError::Writer(error) => error.level(),
+			SaveError::InvalidInput(warning) => warning.level(),
+		}
+	}
+
+	fn label() -> impl Display {
+		"Save error"
+	}
+
+	fn into_details(self) -> impl Display {
+		self
 	}
 }
 
@@ -245,7 +250,7 @@ mod tests {
 		update_with_change(&mut app);
 
 		assert_eq!(
-			&_Result(Err(SaveError::InvalidInput(HashMap::from([(
+			&_Result(Err(SaveError::InvalidInput(InvalidInputWarning::from([(
 				ActionKey::Menu(MenuState::Inventory),
 				HashSet::from([UserInput::from(MouseButton::Left)]),
 			)])))),
@@ -272,7 +277,7 @@ mod tests {
 		update_without_change(&mut app);
 
 		assert_eq!(
-			&_Result(Err(SaveError::InvalidInput(HashMap::from([(
+			&_Result(Err(SaveError::InvalidInput(InvalidInputWarning::from([(
 				ActionKey::Menu(MenuState::Inventory),
 				HashSet::from([UserInput::from(MouseButton::Left)]),
 			)])))),

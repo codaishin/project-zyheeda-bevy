@@ -1,9 +1,10 @@
-use bevy::ecs::entity::Entity;
-use common::errors::{Error, Level};
+use bevy::prelude::*;
+use common::errors::{ErrorData, Level};
 use std::{
 	collections::{HashMap, HashSet},
 	fmt::Display,
 };
+use zyheeda_core::prelude::*;
 
 #[derive(Debug)]
 pub(crate) struct SerdeJsonError(pub(crate) serde_json::Error);
@@ -38,16 +39,33 @@ pub(crate) enum ContextIOError<TIOError> {
 	LockPoisoned(LockPoisonedError),
 }
 
-impl<TError> From<ContextIOError<TError>> for Error
+impl<TError> Display for ContextIOError<TError>
 where
-	TError: Into<Error>,
+	TError: Display,
 {
-	fn from(value: ContextIOError<TError>) -> Self {
-		match value {
-			ContextIOError::FileError(error) => error.into(),
-			ContextIOError::SerdeErrors(error) => Self::from(error),
-			ContextIOError::LockPoisoned(error) => Self::from(error),
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			ContextIOError::FileError(error) => write!(f, "{error}"),
+			ContextIOError::SerdeErrors(errors) => write!(f, "{errors}"),
+			ContextIOError::LockPoisoned(error) => write!(f, "{error}"),
 		}
+	}
+}
+
+impl<TError> ErrorData for ContextIOError<TError>
+where
+	TError: Display,
+{
+	fn level(&self) -> Level {
+		Level::Error
+	}
+
+	fn label() -> impl Display {
+		"IO error"
+	}
+
+	fn into_details(self) -> impl Display {
+		self
 	}
 }
 
@@ -57,12 +75,30 @@ pub(crate) enum SerializationOrLockError {
 	LockPoisoned(LockPoisonedError),
 }
 
-impl From<SerializationOrLockError> for Error {
-	fn from(value: SerializationOrLockError) -> Self {
-		match value {
-			SerializationOrLockError::SerializationErrors(error) => Self::from(error),
-			SerializationOrLockError::LockPoisoned(error) => Self::from(error),
+impl Display for SerializationOrLockError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			SerializationOrLockError::SerializationErrors(errors) => {
+				write!(f, "{errors}")
+			}
+			SerializationOrLockError::LockPoisoned(error) => {
+				write!(f, "{error}")
+			}
 		}
+	}
+}
+
+impl ErrorData for SerializationOrLockError {
+	fn level(&self) -> Level {
+		Level::Error
+	}
+
+	fn label() -> impl Display {
+		"Serialization failed"
+	}
+
+	fn into_details(self) -> impl Display {
+		self
 	}
 }
 
@@ -73,15 +109,34 @@ pub(crate) enum DeserializationOrLockError<TNoInsert> {
 	LockPoisoned(LockPoisonedError),
 }
 
-impl<TNoInsert> From<DeserializationOrLockError<TNoInsert>> for Error
+impl<TNoInsert> Display for DeserializationOrLockError<TNoInsert>
 where
 	TNoInsert: Display,
 {
-	fn from(value: DeserializationOrLockError<TNoInsert>) -> Self {
-		match value {
-			DeserializationOrLockError::DeserializationErrors(error) => Self::from(error),
-			DeserializationOrLockError::LockPoisoned(error) => Self::from(error),
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			DeserializationOrLockError::DeserializationErrors(errors) => write!(f, "{errors}"),
+			DeserializationOrLockError::LockPoisoned(error) => {
+				write!(f, "{error}")
+			}
 		}
+	}
+}
+
+impl<TNoInsert> ErrorData for DeserializationOrLockError<TNoInsert>
+where
+	TNoInsert: Display,
+{
+	fn level(&self) -> Level {
+		Level::Error
+	}
+
+	fn label() -> impl Display {
+		"Deserialization failed"
+	}
+
+	fn into_details(self) -> impl Display {
+		self
 	}
 }
 
@@ -98,12 +153,10 @@ where
 {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			InsertionError::CouldNotInsert(e) => write!(f, "Failed Insertion: {e}"),
-			InsertionError::UnknownComponents(c) => write!(
-				f,
-				"UnknownComponents: [{}]",
-				c.iter().map(String::as_str).collect::<Vec<_>>().join(", ")
-			),
+			InsertionError::CouldNotInsert(error) => write!(f, "Failed Insertion: {error}"),
+			InsertionError::UnknownComponents(components) => {
+				write_iter!(f, "UnknownComponents: ", components)
+			}
 		}
 	}
 }
@@ -111,36 +164,62 @@ where
 #[derive(Debug, PartialEq, Clone)]
 pub struct LockPoisonedError;
 
-impl From<LockPoisonedError> for Error {
-	fn from(_: LockPoisonedError) -> Self {
-		Self::Single {
-			msg: "lock poisoned".to_owned(),
-			lvl: Level::Error,
-		}
+impl Display for LockPoisonedError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "lock poisoned")
+	}
+}
+
+impl ErrorData for LockPoisonedError {
+	fn level(&self) -> Level {
+		Level::Error
+	}
+
+	fn label() -> impl Display {
+		"Lock was poisoned"
+	}
+
+	fn into_details(self) -> impl Display {
+		self
 	}
 }
 
 #[derive(Debug)]
 pub struct SerializationErrors(pub(crate) HashMap<Entity, EntitySerializationErrors>);
 
-impl From<SerializationErrors> for Error {
-	fn from(SerializationErrors(map): SerializationErrors) -> Self {
-		let msg = map
+impl SerializationErrors {
+	fn iter(&self) -> impl Iterator<Item = SerializationErrorsItem<'_>> {
+		self.0
 			.iter()
-			.flat_map(|(entity, EntitySerializationErrors(errors))| {
-				errors.iter().map(move |error| format!("{entity}: {error}"))
-			})
-			.collect::<String>();
+			.map(|(entity, errors)| SerializationErrorsItem { entity, errors })
+	}
+}
 
-		Self::Single {
-			msg,
-			lvl: Level::Error,
-		}
+impl Display for SerializationErrors {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write_iter!(f, self)
+	}
+}
+
+struct SerializationErrorsItem<'a> {
+	entity: &'a Entity,
+	errors: &'a EntitySerializationErrors,
+}
+
+impl Display for SerializationErrorsItem<'_> {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "({}: {})", self.entity, self.errors)
 	}
 }
 
 #[derive(Debug)]
 pub(crate) struct EntitySerializationErrors(pub(crate) Vec<SerdeJsonError>);
+
+impl Display for EntitySerializationErrors {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write_iter!(f, self.0)
+	}
+}
 
 #[derive(Debug, PartialEq)]
 pub(crate) struct IOErrors<T, TPhase> {
@@ -160,21 +239,14 @@ where
 	}
 }
 
-impl<T, TPhase> From<IOErrors<T, TPhase>> for Error
+impl<T, TPhase> Display for IOErrors<T, TPhase>
 where
 	T: Display,
 	TPhase: Display,
 {
-	fn from(IOErrors { items, phase }: IOErrors<T, TPhase>) -> Self {
-		let errors = items
-			.iter()
-			.map(T::to_string)
-			.collect::<Vec<_>>()
-			.join(", ");
-		Self::Single {
-			msg: format!("IO Operation ({phase}) failed: [{errors}]"),
-			lvl: Level::Error,
-		}
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "IO Operation ({}) failed: ", self.phase)?;
+		write_iter!(f, self.items)
 	}
 }
 

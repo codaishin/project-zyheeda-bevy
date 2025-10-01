@@ -1,13 +1,11 @@
 use super::SimplePrefab;
+use crate::components::skill_behavior::FaultyColliderShape;
 use bevy::prelude::*;
-use common::{
-	errors::Error,
-	traits::{
-		handles_physics::HandlesPhysicalObjects,
-		handles_skill_behaviors::{Projection, ProjectionOffset, ProjectionShape},
-		load_asset::LoadAsset,
-		prefab::{Prefab, PrefabEntityCommands},
-	},
+use common::traits::{
+	handles_physics::HandlesPhysicalObjects,
+	handles_skill_behaviors::{Projection, ProjectionOffset, ProjectionShape},
+	load_asset::LoadAsset,
+	prefab::{Prefab, PrefabEntityCommands},
 };
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
@@ -29,11 +27,13 @@ impl<TPhysics> Prefab<TPhysics> for SkillProjection
 where
 	TPhysics: HandlesPhysicalObjects,
 {
+	type TError = FaultyColliderShape;
+
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		_: &mut impl LoadAsset,
-	) -> Result<(), Error> {
+	) -> Result<(), FaultyColliderShape> {
 		let offset = match self.offset {
 			Some(ProjectionOffset(offset)) => offset,
 			_ => Vec3::ZERO,

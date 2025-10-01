@@ -1,6 +1,6 @@
 use super::{ActionKey, user_input::UserInput};
 use crate::{
-	errors::IsNot,
+	tools::is_not::IsNot,
 	traits::{
 		handles_localization::Token,
 		handles_settings::InvalidInput,

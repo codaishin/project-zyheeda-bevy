@@ -1,30 +1,32 @@
 use std::fmt::Display;
-use tracing::{error, warn};
+use tracing::{error, field::display, warn};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Default)]
 pub struct Logger;
 
 impl Log for Logger {
-	fn log_warning<TError>(&self, value: TError)
+	fn log_warning<TDetails>(&self, label: &str, details: TDetails)
 	where
-		TError: Display,
+		TDetails: Display,
 	{
-		warn!("{value}");
+		let details = display(details);
+		warn!(details, "{label}");
 	}
 
-	fn log_error<TError>(&self, value: TError)
+	fn log_error<TDetails>(&self, label: &str, details: TDetails)
 	where
-		TError: Display,
+		TDetails: Display,
 	{
-		error!("{value}");
+		let details = display(details);
+		error!(details, "{label}");
 	}
 }
 
 pub trait Log {
-	fn log_warning<TError>(&self, value: TError)
+	fn log_warning<TDetails>(&self, label: &str, details: TDetails)
 	where
-		TError: Display + 'static;
-	fn log_error<TError>(&self, value: TError)
+		TDetails: Display + 'static;
+	fn log_error<TDetails>(&self, label: &str, details: TDetails)
 	where
-		TError: Display + 'static;
+		TDetails: Display + 'static;
 }

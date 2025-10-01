@@ -7,7 +7,7 @@ use bevy::{ecs::system::EntityCommands, prelude::*};
 use bevy_rapier3d::prelude::{ActiveEvents, Collider, CollidingEntities, Sensor};
 use common::{
 	components::insert_asset::InsertAsset,
-	errors::Error,
+	errors::Unreachable,
 	tools::{Intensity, IntensityChangePerSecond, Units},
 	traits::{
 		accessors::get::TryApplyOn,
@@ -116,11 +116,13 @@ impl PartialEq for ResponsiveLight {
 }
 
 impl Prefab<()> for ResponsiveLight {
+	type TError = Unreachable;
+
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		_: &mut impl LoadAsset,
-	) -> Result<(), Error> {
+	) -> Result<(), Unreachable> {
 		entity.try_insert_if_new(Collider::ball(*self.range.deref()));
 
 		Ok(())

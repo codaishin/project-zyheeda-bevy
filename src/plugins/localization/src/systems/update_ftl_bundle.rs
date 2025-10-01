@@ -1,17 +1,18 @@
 use crate::{
 	assets::ftl::Ftl,
 	resources::ftl_server::Locale,
-	tools::list_string,
 	traits::current_locale::CurrentLocaleMut,
 };
 use bevy::{asset::LoadedFolder, prelude::*};
 use common::{
-	errors::{Error, Level},
+	errors::{ErrorData, Level},
 	traits::or_ok::OrOk,
 };
 use fluent::{FluentError, FluentResource, concurrent::FluentBundle};
 use fluent_syntax::parser::ParserError;
+use std::fmt::Display;
 use unic_langid::LanguageIdentifier;
+use zyheeda_core::write_iter;
 
 impl<T> UpdateFtlBundle for T where T: Resource + CurrentLocaleMut {}
 
@@ -144,34 +145,32 @@ pub(crate) enum SetBundleErrorKind {
 	FluentError(Vec<ParserError>, Vec<FluentError>),
 }
 
-impl From<SetBundleError> for Error {
-	fn from(SetBundleError { ln, kind }: SetBundleError) -> Self {
-		match kind {
-			SetBundleErrorKind::NoFtlFile => Error::Single {
-				msg: format!("no file found for {ln}"),
-				lvl: Level::Error,
-			},
-			SetBundleErrorKind::FluentError(parse_errors, fluent_errors) => Error::Single {
-				msg: format!(
-					"Fluent errors for language {ln}:\n\
-					 Parse errors:\n\
-					 {}\n\
-					 Fluent errors:\n\
-					 {}",
-					if parse_errors.is_empty() {
-						String::from("  - None")
-					} else {
-						list_string(&parse_errors)
-					},
-					if fluent_errors.is_empty() {
-						String::from("  - None")
-					} else {
-						list_string(&fluent_errors)
-					}
-				),
-				lvl: Level::Error,
-			},
+impl Display for SetBundleError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match &self.kind {
+			SetBundleErrorKind::NoFtlFile => {
+				write!(f, "{}: no language file found", self.ln)
+			}
+			SetBundleErrorKind::FluentError(parse_errors, fluent_errors) => {
+				write!(f, "{}: ", self.ln)?;
+				write_iter!(f, "parse errors: ", parse_errors)?;
+				write_iter!(f, ", fluent errors: ", fluent_errors)
+			}
 		}
+	}
+}
+
+impl ErrorData for SetBundleError {
+	fn level(&self) -> Level {
+		Level::Error
+	}
+
+	fn label() -> impl Display {
+		"Failed to set bundle"
+	}
+
+	fn into_details(self) -> impl Display {
+		self
 	}
 }
 

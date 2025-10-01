@@ -3,6 +3,8 @@ use bevy::prelude::*;
 use std::{collections::HashMap, fmt::Display};
 use zyheeda_core::logger::{Log, Logger};
 
+const ENTITY_ERROR: &str = "Entity not found";
+
 #[derive(Resource, Debug, PartialEq, Default)]
 pub struct PersistentEntities<TLogger = Logger>
 where
@@ -18,7 +20,8 @@ where
 {
 	pub(crate) fn get_entity(&self, persistent_entity: &PersistentEntity) -> Option<Entity> {
 		let Some(entity) = self.entities.get(persistent_entity) else {
-			self.logger.log_warning(NoMatch(*persistent_entity));
+			self.logger
+				.log_warning(ENTITY_ERROR, NoMatch(*persistent_entity));
 			return None;
 		};
 
@@ -46,8 +49,8 @@ mod tests {
 	simple_mock! {
 		_Logger {}
 		impl Log for _Logger {
-			fn log_warning<TError>(&self, value: TError) where TError: 'static;
-			fn log_error<TError>(&self, value: TError) where TError: 'static;
+			fn log_warning<TDetails>(&self, label: &str, details: TDetails) where TDetails: 'static;
+			fn log_error<TDetails>(&self, label: &str, details: TDetails) where TDetails: 'static;
 		}
 	}
 
@@ -74,7 +77,7 @@ mod tests {
 			logger: Mock_Logger::new_mock(|mock| {
 				mock.expect_log_warning()
 					.times(1)
-					.with(eq(NoMatch(persistent_entity)))
+					.with(eq(ENTITY_ERROR), eq(NoMatch(persistent_entity)))
 					.return_const(());
 			}),
 			..default()

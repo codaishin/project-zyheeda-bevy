@@ -1,11 +1,12 @@
 use bevy::prelude::*;
 use common::{
-	errors::{Error, Level},
+	errors::{ErrorData, Level},
 	traits::load_asset::Path,
 };
 use serde::Serialize;
 use serde_json::{Error as JsonError, to_string_pretty};
 use std::{
+	fmt::Display,
 	fs::File,
 	io::{Error as IoError, Write},
 	path::PathBuf,
@@ -67,17 +68,25 @@ pub(crate) enum WriteError {
 	Io(IoError),
 }
 
-impl From<WriteError> for Error {
-	fn from(value: WriteError) -> Self {
-		match value {
-			WriteError::Serde(error) => Error::Single {
-				msg: format!("failed to serialize asset: {error}"),
-				lvl: Level::Error,
-			},
-			WriteError::Io(error) => Error::Single {
-				msg: format!("failed to save asset: {error}"),
-				lvl: Level::Error,
-			},
+impl Display for WriteError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			WriteError::Serde(error) => write!(f, "failed to serialize asset: {error}"),
+			WriteError::Io(error) => write!(f, "failed to save asset: {error}"),
 		}
+	}
+}
+
+impl ErrorData for WriteError {
+	fn level(&self) -> Level {
+		Level::Error
+	}
+
+	fn label() -> impl Display {
+		"Write operation failed"
+	}
+
+	fn into_details(self) -> impl Display {
+		self
 	}
 }

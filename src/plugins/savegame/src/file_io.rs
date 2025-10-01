@@ -1,7 +1,8 @@
 use crate::traits::{file_exists::FileExists, read_file::ReadFile, write_file::WriteFile};
-use common::errors::{Error, Level};
+use common::errors::{ErrorData, Level};
 use std::{
 	ffi::OsStr,
+	fmt::Display,
 	fs,
 	io::Error as IOError,
 	path::{Path, PathBuf},
@@ -117,15 +118,26 @@ pub(crate) enum FileError<TError = IOError> {
 	DoesNotExist(String),
 }
 
-impl From<FileError> for Error {
-	fn from(error: FileError) -> Self {
-		match error {
-			FileError::IO(error) => Self::from(error),
-			FileError::DoesNotExist(save_game) => Error::Single {
-				msg: format!("`{save_game}`: not found",),
-				lvl: Level::Warning,
-			},
+impl Display for FileError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			FileError::IO(error) => write!(f, "{error}"),
+			FileError::DoesNotExist(save_game) => write!(f, "`{save_game}`: not found"),
 		}
+	}
+}
+
+impl ErrorData for FileError {
+	fn level(&self) -> Level {
+		Level::Error
+	}
+
+	fn label() -> impl Display {
+		"File error"
+	}
+
+	fn into_details(self) -> impl Display {
+		self
 	}
 }
 

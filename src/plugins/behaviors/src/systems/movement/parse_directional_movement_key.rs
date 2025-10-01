@@ -1,10 +1,9 @@
 use crate::systems::movement::insert_process_component::{InputProcessComponent, ProcessInput};
 use bevy::{ecs::query::QuerySingleError, prelude::*};
 use common::{
-	errors::{Error, Level},
+	errors::UniqueViolation,
 	traits::{handles_player::KeyDirection, key_mappings::Pressed},
 };
-use std::{any::type_name, marker::PhantomData};
 
 impl<T> ParseDirectionalMovement for T
 where
@@ -22,7 +21,7 @@ where
 		input: Res<ButtonInput<TMap::TInput>>,
 		cameras: Query<&GlobalTransform, With<TCamera>>,
 		players: Query<&Self::TInputProcessComponent, With<TPlayer>>,
-	) -> Result<ProcessInput<Self>, TriggerMovementError<TCamera>>
+	) -> Result<ProcessInput<Self>, UniqueViolation<TCamera>>
 	where
 		TCamera: KeyDirection + Component,
 		TMap: Pressed<TCamera::TKey> + Resource,
@@ -30,10 +29,10 @@ where
 	{
 		let cam_transform = match cameras.single() {
 			Err(QuerySingleError::NoEntities(_)) => {
-				return Err(TriggerMovementError::from(QueryError::NoCam));
+				return Err(UniqueViolation::none());
 			}
 			Err(QuerySingleError::MultipleEntities(_)) => {
-				return Err(TriggerMovementError::from(QueryError::MultipleCams));
+				return Err(UniqueViolation::multiple());
 			}
 			Ok(cam) => cam,
 		};
@@ -65,48 +64,6 @@ where
 
 pub(crate) trait UsesDirection {
 	fn uses_direction(&self) -> bool;
-}
-
-#[derive(Debug, PartialEq)]
-pub(crate) struct TriggerMovementError<TCam> {
-	_a: PhantomData<TCam>,
-	value: QueryError,
-}
-
-impl<TCam> From<QueryError> for TriggerMovementError<TCam>
-where
-	TCam: Component,
-{
-	fn from(value: QueryError) -> Self {
-		Self {
-			_a: PhantomData,
-			value,
-		}
-	}
-}
-
-impl<TCam> From<TriggerMovementError<TCam>> for Error
-where
-	TCam: Component,
-{
-	fn from(error: TriggerMovementError<TCam>) -> Self {
-		match error.value {
-			QueryError::NoCam => Error::Single {
-				msg: format!("Found no camera of type {}", type_name::<TCam>()),
-				lvl: Level::Error,
-			},
-			QueryError::MultipleCams => Error::Single {
-				msg: format!("Found multiple cameras of type {}", type_name::<TCam>()),
-				lvl: Level::Error,
-			},
-		}
-	}
-}
-
-#[derive(Debug, PartialEq)]
-pub(crate) enum QueryError {
-	NoCam,
-	MultipleCams,
 }
 
 #[cfg(test)]
@@ -492,7 +449,7 @@ mod tests {
 			.world_mut()
 			.run_system_once(_Input::parse::<_Cam, _Map, _Player>)?;
 
-		assert_eq!(Err(TriggerMovementError::from(QueryError::NoCam)), result);
+		assert_eq!(Err(UniqueViolation::none()), result);
 		Ok(())
 	}
 
@@ -510,10 +467,7 @@ mod tests {
 			.world_mut()
 			.run_system_once(_Input::parse::<_Cam, _Map, _Player>)?;
 
-		assert_eq!(
-			Err(TriggerMovementError::from(QueryError::MultipleCams)),
-			result
-		);
+		assert_eq!(Err(UniqueViolation::multiple()), result);
 		Ok(())
 	}
 }

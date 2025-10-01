@@ -1,6 +1,6 @@
 use super::intersect_at::IntersectAt;
 use crate::{
-	errors::Error,
+	errors::ErrorData,
 	tools::{
 		action_key::{movement::MovementKey, slot::SlotKey},
 		collider_info::ColliderInfo,
@@ -40,7 +40,7 @@ pub trait ConfiguresPlayerMovement {
 
 pub trait ConfiguresPlayerSkillAnimations {
 	type TAnimationMarker: Component;
-	type TError: Into<Error>;
+	type TError: ErrorData;
 
 	fn start_skill_animation(slot_key: SlotKey) -> Result<Self::TAnimationMarker, Self::TError>;
 	fn stop_skill_animation() -> Self::TAnimationMarker;

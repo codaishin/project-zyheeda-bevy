@@ -4,10 +4,10 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	errors::{Error, Level, Unreachable},
+	errors::{ErrorData, Level, Unreachable},
 	traits::thread_safe::ThreadSafe,
 };
-use std::{any::type_name, marker::PhantomData};
+use std::{any::type_name, fmt::Display, marker::PhantomData};
 
 impl<TCell> MapColorLookup<TCell>
 where
@@ -59,29 +59,39 @@ pub(crate) enum ParseImageError<TCell> {
 	_P(PhantomData<TCell>, Unreachable),
 }
 
-impl<TCell> From<ParseImageError<TCell>> for Error {
-	fn from(value: ParseImageError<TCell>) -> Self {
+impl<TCell> Display for ParseImageError<TCell> {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		let cell_name = type_name::<TCell>();
-		match value {
-			ParseImageError::NoLookup => Self::Single {
-				msg: format!("no `ColorLookupImage` loaded for cell type: {cell_name}"),
-				lvl: Level::Warning,
-			},
-			ParseImageError::ImageNotLoaded => Self::Single {
-				msg: format!("no floor lookup image loaded for cell type: {cell_name}"),
-				lvl: Level::Warning,
-			},
-			ParseImageError::NoPixels => Self::Single {
-				msg: format!("floor lookup image empty for cell type: {cell_name}"),
-				lvl: Level::Error,
-			},
-			ParseImageError::PixelWrongFormat(items) => Self::Single {
-				msg: format!(
-					"{items:?}: pixel format misaligned for floor lookup image with cell type: {cell_name}"
-				),
-				lvl: Level::Error,
-			},
+		match self {
+			ParseImageError::NoLookup => {
+				write!(f, "no `ColorLookupImage` loaded for cell type: {cell_name}",)
+			}
+			ParseImageError::ImageNotLoaded => {
+				write!(f, "no floor lookup image loaded for cell type: {cell_name}",)
+			}
+			ParseImageError::NoPixels => {
+				write!(f, "floor lookup image empty for cell type: {cell_name}",)
+			}
+			ParseImageError::PixelWrongFormat(items) => write!(
+				f,
+				"{items:?}: pixel format misaligned for floor lookup image with cell type: {cell_name}"
+			),
+			ParseImageError::_P(..) => unreachable!(),
 		}
+	}
+}
+
+impl<TCell> ErrorData for ParseImageError<TCell> {
+	fn level(&self) -> Level {
+		Level::Error
+	}
+
+	fn label() -> impl Display {
+		"Failed to parse image"
+	}
+
+	fn into_details(self) -> impl Display {
+		self
 	}
 }
 

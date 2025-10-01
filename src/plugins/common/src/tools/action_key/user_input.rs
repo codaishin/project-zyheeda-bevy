@@ -1,5 +1,5 @@
 use crate::{
-	errors::IsNot,
+	tools::is_not::IsNot,
 	traits::{accessors::get::Property, handles_localization::Token},
 };
 use bevy::prelude::*;

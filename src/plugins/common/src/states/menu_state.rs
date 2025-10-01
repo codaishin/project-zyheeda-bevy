@@ -1,7 +1,9 @@
 use super::game_state::GameState;
 use crate::{
-	errors::IsNot,
-	tools::action_key::{ActionKey, user_input::UserInput},
+	tools::{
+		action_key::{ActionKey, user_input::UserInput},
+		is_not::IsNot,
+	},
 	traits::{
 		handles_localization::Token,
 		handles_settings::InvalidInput,

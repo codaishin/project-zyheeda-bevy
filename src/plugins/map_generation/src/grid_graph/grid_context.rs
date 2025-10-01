@@ -1,6 +1,7 @@
+use std::fmt::Display;
+
 use crate::traits::{grid_min::GridMin, key_mapper::KeyMapper};
 use bevy::prelude::*;
-use common::errors::{Error, Level};
 use macros::{InRange, new_valid};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -89,12 +90,13 @@ pub struct DividedToZero {
 	pub(crate) divisor: u8,
 }
 
-impl From<DividedToZero> for Error {
-	fn from(DividedToZero { from, divisor }: DividedToZero) -> Self {
-		Error::Single {
-			msg: format!("dividing cell distance {from} by {divisor} resulted in 0.",),
-			lvl: Level::Error,
-		}
+impl Display for DividedToZero {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(
+			f,
+			"dividing cell distance {} by {} resulted in 0.",
+			self.from, self.divisor
+		)
 	}
 }
 
@@ -104,12 +106,13 @@ pub struct MultipliedTooHigh {
 	pub(crate) factor: u8,
 }
 
-impl From<MultipliedTooHigh> for Error {
-	fn from(MultipliedTooHigh { from, factor }: MultipliedTooHigh) -> Self {
-		Error::Single {
-			msg: format!("multiplying cell count {from} by {factor} was invalid",),
-			lvl: Level::Error,
-		}
+impl Display for MultipliedTooHigh {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(
+			f,
+			"multiplying cell count {} by {} was invalid",
+			self.from, self.factor
+		)
 	}
 }
 

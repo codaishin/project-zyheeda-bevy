@@ -10,11 +10,11 @@ use crate::{
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::{
-	errors::{Error, Level as ErrorLevel, Unreachable},
+	errors::{ErrorData, Level as ErrorLevel, Unreachable},
 	traits::{accessors::get::TryApplyOn, thread_safe::ThreadSafe},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
-use std::{any::type_name, marker::PhantomData};
+use std::{any::type_name, fmt::Display, marker::PhantomData};
 
 #[derive(Component, Debug, PartialEq)]
 #[require(Name = Self::name(), Transform, Visibility, Sensor)]
@@ -116,21 +116,37 @@ pub(crate) enum SpawnCellError<TError, TComponent> {
 	_P((PhantomData<TComponent>, Unreachable)),
 }
 
-impl<TError, TComponent> From<SpawnCellError<TError, TComponent>> for Error
+impl<TError, TComponent> Display for SpawnCellError<TError, TComponent>
 where
-	Error: From<TError>,
+	TError: Display,
 {
-	fn from(value: SpawnCellError<TError, TComponent>) -> Self {
-		match value {
-			SpawnCellError::Error(error) => Error::from(error),
-			SpawnCellError::NoGridEntity => Error::Single {
-				msg: format!(
-					"Failed to retrieve `{}` entity commands",
-					type_name::<TComponent>()
-				),
-				lvl: ErrorLevel::Error,
-			},
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			SpawnCellError::Error(error) => write!(f, "{error}"),
+			SpawnCellError::NoGridEntity => write!(
+				f,
+				"Failed to retrieve `{}` entity commands",
+				type_name::<TComponent>()
+			),
+			SpawnCellError::_P(_) => unreachable!(),
 		}
+	}
+}
+
+impl<TError, TComponent> ErrorData for SpawnCellError<TError, TComponent>
+where
+	TError: Display,
+{
+	fn level(&self) -> ErrorLevel {
+		ErrorLevel::Error
+	}
+
+	fn label() -> impl Display {
+		"Failed to spawn cell"
+	}
+
+	fn into_details(self) -> impl Display {
+		self
 	}
 }
 

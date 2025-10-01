@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
 	components::{flip::FlipHorizontally, ground_offset::GroundOffset},
-	errors::Error,
+	errors::Unreachable,
 	tools::{
 		Units,
 		UnitsPerSecond,
@@ -236,11 +236,13 @@ impl<TLights> Prefab<TLights> for Player
 where
 	TLights: HandlesLights,
 {
+	type TError = Unreachable;
+
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		_: &mut impl LoadAsset,
-	) -> Result<(), Error> {
+	) -> Result<(), Unreachable> {
 		entity.with_child((
 			TLights::responsive_light_trigger(),
 			Collider::capsule(

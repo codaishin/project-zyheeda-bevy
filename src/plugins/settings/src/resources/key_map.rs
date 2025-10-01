@@ -3,7 +3,7 @@ pub(crate) mod dto;
 use crate::traits::drain_invalid_inputs::DrainInvalidInputs;
 use bevy::prelude::*;
 use common::{
-	errors::{Error, Level},
+	errors::{ErrorData, Level},
 	tools::action_key::{ActionKey, user_input::UserInput},
 	traits::{
 		handles_custom_assets::TryLoadFrom,
@@ -26,6 +26,7 @@ use std::{
 	fmt::{Debug, Display},
 	hash::Hash,
 };
+use zyheeda_core::prelude::*;
 
 #[derive(Resource, Asset, TypePath, Debug, PartialEq, Clone)]
 pub struct KeyMap(KeyMapInternal);
@@ -240,34 +241,80 @@ where
 }
 
 #[derive(TypePath, Debug, PartialEq, Clone)]
-pub struct InvalidInputWarning<TAction, TInput>(HashMap<TAction, HashSet<TInput>>)
+pub struct InvalidInputWarning<TAction, TInput>(pub(crate) HashMap<TAction, HashSet<TInput>>)
 where
 	TAction: Eq + Hash,
 	TInput: Eq + Hash;
 
-impl<TAction, TInput> From<InvalidInputWarning<TAction, TInput>> for Error
+impl<TAction, TInput> InvalidInputWarning<TAction, TInput>
 where
 	TAction: InvalidInput<TInput = TInput> + Debug + Eq + Hash,
 	TInput: Debug + Eq + Hash,
 {
-	fn from(InvalidInputWarning(warnings): InvalidInputWarning<TAction, TInput>) -> Self {
-		let warnings = warnings
+	fn iter(&self) -> impl Iterator<Item = InvalidInputWarningItem<'_, TAction, TInput>> {
+		self.0
 			.iter()
-			.map(|(action, inputs)| {
-				format!(
-					"  - {:?} tried to set to: {:?} (invalid inputs: {:?})",
-					action,
-					inputs,
-					action.invalid_input()
-				)
-			})
-			.collect::<Vec<_>>()
-			.join("\n");
+			.map(|(action, inputs)| InvalidInputWarningItem { action, inputs })
+	}
+}
 
-		Error::Single {
-			msg: format!("Attempted to set invalid inputs:\n{warnings}"),
-			lvl: Level::Warning,
-		}
+impl<T, TAction, TInput> From<T> for InvalidInputWarning<TAction, TInput>
+where
+	T: IntoIterator<Item = (TAction, HashSet<TInput>)>,
+	TAction: Debug + Eq + Hash,
+	TInput: Debug + Eq + Hash,
+{
+	fn from(value: T) -> Self {
+		Self(HashMap::from_iter(value))
+	}
+}
+
+impl<TAction, TInput> Display for InvalidInputWarning<TAction, TInput>
+where
+	TAction: InvalidInput<TInput = TInput> + Debug + Eq + Hash,
+	TInput: Debug + Eq + Hash,
+{
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write_iter!(f, "Attempted to set invalid inputs: ", self)
+	}
+}
+
+impl<TAction, TInput> ErrorData for InvalidInputWarning<TAction, TInput>
+where
+	TAction: InvalidInput<TInput = TInput> + Debug + Eq + Hash,
+	TInput: Debug + Eq + Hash,
+{
+	fn level(&self) -> Level {
+		Level::Warning
+	}
+
+	fn label() -> impl Display {
+		"Tried to set invalid input"
+	}
+
+	fn into_details(self) -> impl Display {
+		self
+	}
+}
+
+struct InvalidInputWarningItem<'a, TAction, TInput> {
+	action: &'a TAction,
+	inputs: &'a HashSet<TInput>,
+}
+
+impl<TAction, TInput> Display for InvalidInputWarningItem<'_, TAction, TInput>
+where
+	TAction: InvalidInput<TInput = TInput> + Debug + Eq + Hash,
+	TInput: Debug + Eq + Hash,
+{
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(
+			f,
+			"Tried to set {:?} to: {:?} (invalid inputs: {:?})",
+			self.action,
+			self.inputs,
+			self.action.invalid_input()
+		)
 	}
 }
 

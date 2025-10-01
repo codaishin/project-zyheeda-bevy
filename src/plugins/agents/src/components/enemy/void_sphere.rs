@@ -14,7 +14,7 @@ use bevy::{
 use bevy_rapier3d::geometry::Collider;
 use common::{
 	components::{ground_offset::GroundOffset, insert_asset::InsertAsset},
-	errors::Error,
+	errors::Unreachable,
 	tools::{
 		Units,
 		UnitsPerSecond,
@@ -83,11 +83,13 @@ impl From<VoidSphere> for AgentType {
 }
 
 impl Prefab<()> for VoidSphere {
+	type TError = Unreachable;
+
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		_: &mut impl LoadAsset,
-	) -> Result<(), Error> {
+	) -> Result<(), Unreachable> {
 		let transform = Transform::from_translation(Self::GROUND_OFFSET);
 		let mut transform_2nd_ring = transform;
 		transform_2nd_ring.rotate_axis(Dir3::Z, PI / 2.);
