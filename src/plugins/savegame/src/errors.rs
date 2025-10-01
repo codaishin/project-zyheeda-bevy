@@ -56,7 +56,7 @@ impl<TError> ErrorData for ContextIOError<TError>
 where
 	TError: Display,
 {
-	type TContext = Self;
+	type TDetails = Self;
 
 	fn level(&self) -> Level {
 		Level::Error
@@ -66,7 +66,7 @@ where
 		"IO error".to_owned()
 	}
 
-	fn context(&self) -> &Self::TContext {
+	fn into_details(self) -> Self::TDetails {
 		self
 	}
 }
@@ -91,7 +91,7 @@ impl Display for SerializationOrLockError {
 }
 
 impl ErrorData for SerializationOrLockError {
-	type TContext = Self;
+	type TDetails = Self;
 
 	fn level(&self) -> Level {
 		Level::Error
@@ -101,7 +101,7 @@ impl ErrorData for SerializationOrLockError {
 		"Serialization failed".to_owned()
 	}
 
-	fn context(&self) -> &Self::TContext {
+	fn into_details(self) -> Self::TDetails {
 		self
 	}
 }
@@ -131,7 +131,7 @@ impl<TNoInsert> ErrorData for DeserializationOrLockError<TNoInsert>
 where
 	TNoInsert: Display,
 {
-	type TContext = Self;
+	type TDetails = Self;
 
 	fn level(&self) -> Level {
 		Level::Error
@@ -141,7 +141,7 @@ where
 		"Deserialization failed".to_owned()
 	}
 
-	fn context(&self) -> &Self::TContext {
+	fn into_details(self) -> Self::TDetails {
 		self
 	}
 }
@@ -177,7 +177,7 @@ impl Display for LockPoisonedError {
 }
 
 impl ErrorData for LockPoisonedError {
-	type TContext = Self;
+	type TDetails = Self;
 
 	fn level(&self) -> Level {
 		Level::Error
@@ -187,7 +187,7 @@ impl ErrorData for LockPoisonedError {
 		"Lock was poisoned".to_owned()
 	}
 
-	fn context(&self) -> &Self::TContext {
+	fn into_details(self) -> Self::TDetails {
 		self
 	}
 }

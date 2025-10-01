@@ -154,7 +154,7 @@ impl<T> Display for NoValidAgentKey<T> {
 }
 
 impl<T> ErrorData for NoValidAgentKey<T> {
-	type TContext = Self;
+	type TDetails = Self;
 
 	fn level(&self) -> Level {
 		Level::Error
@@ -164,7 +164,7 @@ impl<T> ErrorData for NoValidAgentKey<T> {
 		"No valid slot key".to_owned()
 	}
 
-	fn context(&self) -> &Self::TContext {
+	fn into_details(self) -> Self::TDetails {
 		self
 	}
 }

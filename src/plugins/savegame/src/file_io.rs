@@ -128,7 +128,7 @@ impl Display for FileError {
 }
 
 impl ErrorData for FileError {
-	type TContext = Self;
+	type TDetails = Self;
 
 	fn level(&self) -> Level {
 		Level::Error
@@ -138,7 +138,7 @@ impl ErrorData for FileError {
 		"File error".to_owned()
 	}
 
-	fn context(&self) -> &Self::TContext {
+	fn into_details(self) -> Self::TDetails {
 		self
 	}
 }

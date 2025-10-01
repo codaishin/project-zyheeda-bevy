@@ -109,7 +109,7 @@ mod tests {
 	}
 
 	impl ErrorData for _Error {
-		type TContext = Self;
+		type TDetails = Self;
 
 		fn level(&self) -> Level {
 			Level::Error
@@ -119,7 +119,7 @@ mod tests {
 			"_ERROR".to_owned()
 		}
 
-		fn context(&self) -> &Self::TContext {
+		fn into_details(self) -> Self::TDetails {
 			self
 		}
 	}

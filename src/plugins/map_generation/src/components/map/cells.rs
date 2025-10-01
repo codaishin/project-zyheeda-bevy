@@ -149,7 +149,7 @@ impl Display for MapSizeError {
 }
 
 impl ErrorData for MapSizeError {
-	type TContext = Self;
+	type TDetails = Self;
 
 	fn level(&self) -> Level {
 		Level::Error
@@ -159,7 +159,7 @@ impl ErrorData for MapSizeError {
 		"Faulty map size".to_owned()
 	}
 
-	fn context(&self) -> &Self::TContext {
+	fn into_details(self) -> Self::TDetails {
 		self
 	}
 }

@@ -82,7 +82,7 @@ impl<TCell> Display for ParseImageError<TCell> {
 }
 
 impl<TCell> ErrorData for ParseImageError<TCell> {
-	type TContext = Self;
+	type TDetails = Self;
 
 	fn level(&self) -> Level {
 		Level::Error
@@ -92,7 +92,7 @@ impl<TCell> ErrorData for ParseImageError<TCell> {
 		"Failed to parse image".to_owned()
 	}
 
-	fn context(&self) -> &Self::TContext {
+	fn into_details(self) -> Self::TDetails {
 		self
 	}
 }

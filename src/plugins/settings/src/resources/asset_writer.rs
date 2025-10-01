@@ -78,7 +78,7 @@ impl Display for WriteError {
 }
 
 impl ErrorData for WriteError {
-	type TContext = Self;
+	type TDetails = Self;
 
 	fn level(&self) -> Level {
 		Level::Error
@@ -88,7 +88,7 @@ impl ErrorData for WriteError {
 		"Write operation failed".to_owned()
 	}
 
-	fn context(&self) -> &Self::TContext {
+	fn into_details(self) -> Self::TDetails {
 		self
 	}
 }

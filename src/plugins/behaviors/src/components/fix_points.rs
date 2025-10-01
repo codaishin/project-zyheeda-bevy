@@ -196,7 +196,7 @@ impl Display for AnchorError {
 }
 
 impl ErrorData for AnchorError {
-	type TContext = Self;
+	type TDetails = Self;
 
 	fn level(&self) -> Level {
 		Level::Error
@@ -206,7 +206,7 @@ impl ErrorData for AnchorError {
 		"Anchor error".to_owned()
 	}
 
-	fn context(&self) -> &Self::TContext {
+	fn into_details(self) -> Self::TDetails {
 		self
 	}
 }

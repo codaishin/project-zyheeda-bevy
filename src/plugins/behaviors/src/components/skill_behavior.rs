@@ -321,7 +321,7 @@ impl Display for FaultyColliderShape {
 }
 
 impl ErrorData for FaultyColliderShape {
-	type TContext = Self;
+	type TDetails = Self;
 
 	fn level(&self) -> Level {
 		Level::Error
@@ -331,7 +331,7 @@ impl ErrorData for FaultyColliderShape {
 		"Construction error".to_owned()
 	}
 
-	fn context(&self) -> &Self::TContext {
+	fn into_details(self) -> Self::TDetails {
 		self
 	}
 }

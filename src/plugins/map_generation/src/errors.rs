@@ -15,7 +15,7 @@ impl Display for GridError {
 }
 
 impl ErrorData for GridError {
-	type TContext = Self;
+	type TDetails = Self;
 
 	fn level(&self) -> Level {
 		Level::Error
@@ -25,7 +25,7 @@ impl ErrorData for GridError {
 		"Grid error".to_owned()
 	}
 
-	fn context(&self) -> &Self::TContext {
+	fn into_details(self) -> Self::TDetails {
 		self
 	}
 }

@@ -5,28 +5,28 @@ use tracing::{error, field::display, warn};
 pub struct Logger;
 
 impl Log for Logger {
-	fn log_warning<TContext>(&self, label: &str, context: TContext)
+	fn log_warning<TDetails>(&self, label: &str, details: TDetails)
 	where
-		TContext: Display,
+		TDetails: Display,
 	{
-		let context = display(context);
-		warn!(context, "{label}");
+		let details = display(details);
+		warn!(details, "{label}");
 	}
 
-	fn log_error<TContext>(&self, label: &str, context: TContext)
+	fn log_error<TDetails>(&self, label: &str, details: TDetails)
 	where
-		TContext: Display,
+		TDetails: Display,
 	{
-		let context = display(context);
-		error!(context, "{label}");
+		let details = display(details);
+		error!(details, "{label}");
 	}
 }
 
 pub trait Log {
-	fn log_warning<TContext>(&self, label: &str, context: TContext)
+	fn log_warning<TDetails>(&self, label: &str, details: TDetails)
 	where
-		TContext: Display + 'static;
-	fn log_error<TContext>(&self, label: &str, context: TContext)
+		TDetails: Display + 'static;
+	fn log_error<TDetails>(&self, label: &str, details: TDetails)
 	where
-		TContext: Display + 'static;
+		TDetails: Display + 'static;
 }

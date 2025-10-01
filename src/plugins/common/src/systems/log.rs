@@ -65,15 +65,16 @@ fn output<TError>(error: TError)
 where
 	TError: ErrorData,
 {
+	let level = error.level();
 	let label = TError::label();
-	let context = display(error.context());
+	let details = display(error.into_details());
 
-	match error.level() {
+	match level {
 		Level::Error => {
-			error!(context, "{label}");
+			error!(details, "{label}");
 		}
 		Level::Warning => {
-			warn!(context, "{label}");
+			warn!(details, "{label}");
 		}
 	}
 }

@@ -161,7 +161,7 @@ impl Display for SetBundleError {
 }
 
 impl ErrorData for SetBundleError {
-	type TContext = Self;
+	type TDetails = Self;
 
 	fn level(&self) -> Level {
 		Level::Error
@@ -171,7 +171,7 @@ impl ErrorData for SetBundleError {
 		"Failed to set bundle".to_owned()
 	}
 
-	fn context(&self) -> &Self::TContext {
+	fn into_details(self) -> Self::TDetails {
 		self
 	}
 }

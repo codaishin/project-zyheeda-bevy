@@ -88,7 +88,7 @@ impl Display for SaveError {
 }
 
 impl ErrorData for SaveError {
-	type TContext = Self;
+	type TDetails = Self;
 
 	fn level(&self) -> Level {
 		match self {
@@ -101,7 +101,7 @@ impl ErrorData for SaveError {
 		"Save error".to_owned()
 	}
 
-	fn context(&self) -> &Self::TContext {
+	fn into_details(self) -> Self::TDetails {
 		self
 	}
 }

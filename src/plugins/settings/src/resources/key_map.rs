@@ -284,7 +284,7 @@ where
 	TAction: InvalidInput<TInput = TInput> + Debug + Eq + Hash,
 	TInput: Debug + Eq + Hash,
 {
-	type TContext = Self;
+	type TDetails = Self;
 
 	fn level(&self) -> Level {
 		Level::Warning
@@ -294,7 +294,7 @@ where
 		"Tried to set invalid input".to_owned()
 	}
 
-	fn context(&self) -> &Self::TContext {
+	fn into_details(self) -> Self::TDetails {
 		self
 	}
 }

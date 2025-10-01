@@ -67,7 +67,7 @@ impl Display for BehaviorError {
 }
 
 impl ErrorData for BehaviorError {
-	type TContext = Self;
+	type TDetails = Self;
 
 	fn level(&self) -> Level {
 		Level::Error
@@ -77,7 +77,7 @@ impl ErrorData for BehaviorError {
 		"Behavior error".to_owned()
 	}
 
-	fn context(&self) -> &Self::TContext {
+	fn into_details(self) -> Self::TDetails {
 		self
 	}
 }

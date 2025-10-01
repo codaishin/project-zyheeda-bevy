@@ -283,7 +283,7 @@ mod tests {
 	}
 
 	impl ErrorData for _AnimationError {
-		type TContext = Self;
+		type TDetails = Self;
 
 		fn level(&self) -> Level {
 			Level::Error
@@ -293,7 +293,7 @@ mod tests {
 			"Buh, that was a bad animation attempt".to_owned()
 		}
 
-		fn context(&self) -> &Self::TContext {
+		fn into_details(self) -> Self::TDetails {
 			self
 		}
 	}

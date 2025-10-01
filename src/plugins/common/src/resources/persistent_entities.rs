@@ -49,8 +49,8 @@ mod tests {
 	simple_mock! {
 		_Logger {}
 		impl Log for _Logger {
-			fn log_warning<TContext>(&self, label: &str, context: TContext) where TContext: 'static;
-			fn log_error<TContext>(&self, label: &str, context: TContext) where TContext: 'static;
+			fn log_warning<TDetails>(&self, label: &str, details: TDetails) where TDetails: 'static;
+			fn log_error<TDetails>(&self, label: &str, details: TDetails) where TDetails: 'static;
 		}
 	}
 
