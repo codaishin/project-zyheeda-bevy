@@ -24,6 +24,10 @@ pub fn clamp_zero_positive_derive(input: TokenStream) -> TokenStream {
 	let input = parse_macro_input!(input as DeriveInput);
 	let ident = input.ident;
 	let implementation = quote! {
+		impl #ident {
+			pub const ZERO: Self = Self(0.);
+		}
+
 		impl Default for #ident {
 			fn default() -> Self {
 				Self(0.)

@@ -4,10 +4,11 @@ use crate::{
 	attributes::{effect_target::EffectTarget, health::Health},
 	components::is_blocker::Blocker,
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
-	tools::{Done, Units, speed::Speed},
+	tools::{Done, Units},
 	traits::{
 		accessors::get::{GetProperty, Property},
 		cast_ray::TimeOfImpact,
+		handles_movement_behavior::MotionSpec,
 	},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
@@ -51,18 +52,17 @@ pub trait HandlesMotion {
 	///
 	/// Implementors must make sure this works on top level entities. No guarantees are made for
 	/// entities that are a child of other entities.
-	type TMotion: Component + From<LinearMotion> + GetProperty<Done> + GetProperty<LinearMotion>;
+	type TMotion: Component
+		+ From<LinearMotionSpec>
+		+ GetProperty<Done>
+		+ GetProperty<LinearMotionSpec>;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
-pub enum LinearMotion {
-	Direction { speed: Speed, direction: Dir3 },
-	ToTarget { speed: Speed, target: Vec3 },
-	Stop,
-}
+pub struct LinearMotionSpec(pub MotionSpec);
 
-impl Property for LinearMotion {
-	type TValue<'a> = Self;
+impl Property for LinearMotionSpec {
+	type TValue<'a> = MotionSpec;
 }
 
 pub trait HandlesAllPhysicalEffects:

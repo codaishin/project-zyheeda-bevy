@@ -9,10 +9,7 @@ use crate::{
 		fix_points::{Anchor, FixPoints, fix_point::FixPoint},
 		skill_usage::SkillUsage,
 	},
-	systems::{
-		face::execute_enemy_face::execute_enemy_face,
-		movement::{compute_path::MovementPath, insert_process_component::ProcessInput},
-	},
+	systems::face::execute_enemy_face::execute_enemy_face,
 };
 use bevy::prelude::*;
 use common::{
@@ -24,6 +21,7 @@ use common::{
 		handles_agents::HandlesAgents,
 		handles_enemies::HandlesEnemies,
 		handles_input::{HandlesInput, InputSystemParam},
+		handles_movement_behavior::HandlesMovementBehavior,
 		handles_orientation::{Face, HandlesOrientation},
 		handles_path_finding::HandlesPathFinding,
 		handles_physics::{HandlesAllPhysicalEffects, HandlesMotion, HandlesPhysicalObjects},
@@ -59,19 +57,12 @@ use components::{
 	skill_behavior::{skill_contact::SkillContact, skill_projection::SkillProjection},
 	when_traveled_insert::DestroyAfterDistanceTraveled,
 };
-use input::{pointer_input::PointerInput, wasd_input::WasdInput};
 use std::marker::PhantomData;
 use systems::{
 	base_behavior::SelectBehavior,
 	chase::ChaseSystem,
 	face::{execute_player_face::execute_player_face, get_faces::GetFaces},
-	movement::{
-		animate_movement::AnimateMovement,
-		execute_move_update::ExecuteMovement,
-		insert_process_component::InsertProcessComponent,
-		parse_directional_movement_key::ParseDirectionalMovement,
-		parse_pointer_movement::ParsePointerMovement,
-	},
+	movement::{animate_movement::AnimateMovement, execute_move_update::ExecuteMovement},
 	update_count_down::UpdateCountDown,
 };
 
@@ -146,39 +137,13 @@ where
 		TSaveGame::register_savable_component::<OverrideFace>(app);
 		TSaveGame::register_savable_component::<Movement<PathOrWasd<TPhysics::TMotion>>>(app);
 
-		let point_input =
-			PointerInput::<TPhysics::TMotion>::parse::<TAgents::TCamRay, InputSystemParam<TInput>>;
-		let wasd_input = WasdInput::<TPhysics::TMotion>::parse::<
-			TAgents::TPlayerMainCamera,
-			InputSystemParam<TInput>,
-			TAgents::TPlayer,
-		>;
-		let wasd_input = wasd_input.pipe(OnError::log_and_return(|| ProcessInput::None));
-
-		let compute_player_path = TAgents::TPlayerMovement::compute_path::<
-			TPhysics::TMotion,
+		let compute_path = Movement::<PathOrWasd<TPhysics::TMotion>>::compute_path::<
 			TPathFinding::TComputePath,
 			TPathFinding::TComputerRef,
 		>;
-		let execute_player_path =
-			TAgents::TPlayerMovement::execute_movement::<Movement<PathOrWasd<TPhysics::TMotion>>>;
-		let execute_player_movement =
-			TAgents::TPlayerMovement::execute_movement::<Movement<TPhysics::TMotion>>;
+		let execute_path = Movement::<PathOrWasd<TPhysics::TMotion>>::execute_movement;
+		let execute_movement = Movement::<TPhysics::TMotion>::execute_movement;
 		let animate_player_movement = TAgents::TPlayerMovement::animate_movement::<
-			Movement<TPhysics::TMotion>,
-			TAnimations::TAnimationDispatch,
-		>;
-
-		let compute_enemy_path = TAgents::TEnemy::compute_path::<
-			TPhysics::TMotion,
-			TPathFinding::TComputePath,
-			TPathFinding::TComputerRef,
-		>;
-		let execute_enemy_path =
-			TAgents::TEnemy::execute_movement::<Movement<PathOrWasd<TPhysics::TMotion>>>;
-		let execute_enemy_movement =
-			TAgents::TEnemy::execute_movement::<Movement<TPhysics::TMotion>>;
-		let animate_enemy_movement = TAgents::TEnemy::animate_movement::<
 			Movement<TPhysics::TMotion>,
 			TAnimations::TAnimationDispatch,
 		>;
@@ -206,11 +171,9 @@ where
 						.chain(),
 					// Player behaviors
 					(
-						point_input.pipe(TAgents::TPlayer::insert_process_component),
-						wasd_input.pipe(TAgents::TPlayer::insert_process_component),
-						compute_player_path,
-						execute_player_path,
-						execute_player_movement,
+						compute_path,
+						execute_path,
+						execute_movement,
 						animate_player_movement,
 						SkillUsage::player::<TAgents::TPlayer, InputSystemParam<TInput>>,
 					)
@@ -219,10 +182,6 @@ where
 					(
 						TAgents::TEnemy::select_behavior::<TAgents::TPlayer>.pipe(OnError::log),
 						TAgents::TEnemy::chase::<PathOrWasd<TPhysics::TMotion>>,
-						compute_enemy_path,
-						execute_enemy_path,
-						execute_enemy_movement,
-						animate_enemy_movement,
 						SkillUsage::enemy::<TAgents::TEnemy>,
 					)
 						.chain(),
@@ -255,6 +214,15 @@ where
 					.run_if(in_state(GameState::Play)),
 			);
 	}
+}
+
+#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub struct BehaviorSystems;
+
+impl<TDependencies> SystemSetDefinition for BehaviorsPlugin<TDependencies> {
+	type TSystemSet = BehaviorSystems;
+
+	const SYSTEMS: Self::TSystemSet = BehaviorSystems;
 }
 
 impl<TDependencies> HandlesSkillBehaviors for BehaviorsPlugin<TDependencies> {
@@ -297,11 +265,17 @@ impl<TDependencies> HandlesOrientation for BehaviorsPlugin<TDependencies> {
 	}
 }
 
-#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub struct BehaviorSystems;
-
-impl<TDependencies> SystemSetDefinition for BehaviorsPlugin<TDependencies> {
-	type TSystemSet = BehaviorSystems;
-
-	const SYSTEMS: Self::TSystemSet = BehaviorSystems;
+impl<TSettings, TSaveGame, TAnimations, TPhysics, TPathFinding, TAgents> HandlesMovementBehavior
+	for BehaviorsPlugin<(
+		TSettings,
+		TSaveGame,
+		TAnimations,
+		TPhysics,
+		TPathFinding,
+		TAgents,
+	)>
+where
+	TPhysics: HandlesMotion,
+{
+	type TMovement = Movement<PathOrWasd<TPhysics::TMotion>>;
 }

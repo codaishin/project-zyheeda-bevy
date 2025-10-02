@@ -18,7 +18,10 @@ impl Motion {
 mod tests {
 	use super::*;
 	use bevy_rapier3d::prelude::Velocity;
-	use common::{tools::speed::Speed, traits::handles_physics::LinearMotion};
+	use common::{
+		tools::speed::Speed,
+		traits::{handles_movement_behavior::MotionSpec, handles_physics::LinearMotionSpec},
+	};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -33,10 +36,10 @@ mod tests {
 	fn set_velocity_to_zero_on_remove() {
 		let mut app = setup();
 		let mut entity = app.world_mut().spawn((
-			Motion::Done(LinearMotion::ToTarget {
+			Motion::Done(LinearMotionSpec(MotionSpec::ToTarget {
 				speed: Speed::default(),
 				target: Vec3::default(),
-			}),
+			})),
 			Velocity::linear(Vec3::new(1., 2., 3.)),
 		));
 

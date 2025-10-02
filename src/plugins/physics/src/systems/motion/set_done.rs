@@ -1,7 +1,11 @@
 use crate::components::motion::Motion;
 use bevy::prelude::*;
 use common::{
-	traits::{accessors::get::TryApplyOn, handles_physics::LinearMotion},
+	traits::{
+		accessors::get::TryApplyOn,
+		handles_movement_behavior::MotionSpec,
+		handles_physics::LinearMotionSpec,
+	},
 	zyheeda_commands::ZyheedaCommands,
 };
 use std::time::Duration;
@@ -28,11 +32,11 @@ impl Motion {
 	}
 }
 
-fn is_done(linear_motion: &LinearMotion, transform: &Transform, delta: Duration) -> bool {
+fn is_done(linear_motion: &LinearMotionSpec, transform: &Transform, delta: Duration) -> bool {
 	let (speed, target) = match linear_motion {
-		LinearMotion::Direction { .. } => return false,
-		LinearMotion::Stop => return true,
-		LinearMotion::ToTarget { speed, target } => (speed, target),
+		LinearMotionSpec(MotionSpec::Direction { .. }) => return false,
+		LinearMotionSpec(MotionSpec::Stop) => return true,
+		LinearMotionSpec(MotionSpec::ToTarget { speed, target }) => (speed, target),
 	};
 
 	if target == &transform.translation {
@@ -48,10 +52,7 @@ fn is_done(linear_motion: &LinearMotion, transform: &Transform, delta: Duration)
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{
-		tools::{UnitsPerSecond, speed::Speed},
-		traits::handles_physics::LinearMotion,
-	};
+	use common::tools::{UnitsPerSecond, speed::Speed};
 	use testing::SingleThreadedApp;
 
 	fn setup(delta: Duration) -> App {
@@ -67,13 +68,16 @@ mod tests {
 		let mut app = setup(Duration::default());
 		let entity = app
 			.world_mut()
-			.spawn((Transform::default(), Motion::Ongoing(LinearMotion::Stop)))
+			.spawn((
+				Transform::default(),
+				Motion::Ongoing(LinearMotionSpec(MotionSpec::Stop)),
+			))
 			.id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&Motion::Done(LinearMotion::Stop)),
+			Some(&Motion::Done(LinearMotionSpec(MotionSpec::Stop))),
 			app.world().entity(entity).get::<Motion>(),
 		);
 	}
@@ -85,20 +89,20 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 2., 3.),
-				Motion::Ongoing(LinearMotion::ToTarget {
+				Motion::Ongoing(LinearMotionSpec(MotionSpec::ToTarget {
 					speed: Speed(UnitsPerSecond::from(1.)),
 					target: Vec3::new(1., 2., 3.),
-				}),
+				})),
 			))
 			.id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&Motion::Done(LinearMotion::ToTarget {
+			Some(&Motion::Done(LinearMotionSpec(MotionSpec::ToTarget {
 				speed: Speed(UnitsPerSecond::from(1.)),
 				target: Vec3::new(1., 2., 3.),
-			})),
+			}))),
 			app.world().entity(entity).get::<Motion>(),
 		);
 	}
@@ -110,20 +114,20 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 2., 3.),
-				Motion::Ongoing(LinearMotion::ToTarget {
+				Motion::Ongoing(LinearMotionSpec(MotionSpec::ToTarget {
 					speed: Speed(UnitsPerSecond::from(1.)),
 					target: Vec3::new(10., 2., 3.),
-				}),
+				})),
 			))
 			.id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&Motion::Ongoing(LinearMotion::ToTarget {
+			Some(&Motion::Ongoing(LinearMotionSpec(MotionSpec::ToTarget {
 				speed: Speed(UnitsPerSecond::from(1.)),
 				target: Vec3::new(10., 2., 3.),
-			})),
+			}))),
 			app.world().entity(entity).get::<Motion>(),
 		);
 	}
@@ -135,20 +139,20 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 2., 3.),
-				Motion::Ongoing(LinearMotion::ToTarget {
+				Motion::Ongoing(LinearMotionSpec(MotionSpec::ToTarget {
 					speed: Speed(UnitsPerSecond::from(1.)),
 					target: Vec3::new(1.099, 2., 3.),
-				}),
+				})),
 			))
 			.id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&Motion::Done(LinearMotion::ToTarget {
+			Some(&Motion::Done(LinearMotionSpec(MotionSpec::ToTarget {
 				speed: Speed(UnitsPerSecond::from(1.)),
 				target: Vec3::new(1.099, 2., 3.),
-			})),
+			}))),
 			app.world().entity(entity).get::<Motion>(),
 		);
 	}
@@ -160,20 +164,20 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 2., 3.),
-				Motion::Ongoing(LinearMotion::ToTarget {
+				Motion::Ongoing(LinearMotionSpec(MotionSpec::ToTarget {
 					speed: Speed(UnitsPerSecond::from(2.)),
 					target: Vec3::new(1.199, 2., 3.),
-				}),
+				})),
 			))
 			.id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&Motion::Done(LinearMotion::ToTarget {
+			Some(&Motion::Done(LinearMotionSpec(MotionSpec::ToTarget {
 				speed: Speed(UnitsPerSecond::from(2.)),
 				target: Vec3::new(1.199, 2., 3.),
-			})),
+			}))),
 			app.world().entity(entity).get::<Motion>(),
 		);
 	}
