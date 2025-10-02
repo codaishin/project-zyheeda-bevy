@@ -4,7 +4,8 @@ use common::{
 	tools::{Done, speed::Speed},
 	traits::{
 		accessors::get::GetProperty,
-		handles_physics::LinearMotion,
+		handles_movement_behavior::MotionSpec,
+		handles_physics::LinearMotionSpec,
 		register_derived_component::{DerivableFrom, InsertDerivedComponent},
 	},
 };
@@ -14,21 +15,21 @@ use serde::{Deserialize, Serialize};
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 #[component(immutable)]
 pub enum Motion {
-	Ongoing(LinearMotion),
-	Done(LinearMotion),
+	Ongoing(LinearMotionSpec),
+	Done(LinearMotionSpec),
 }
 
-impl From<LinearMotion> for Motion {
-	fn from(linear_motion: LinearMotion) -> Self {
+impl From<LinearMotionSpec> for Motion {
+	fn from(linear_motion: LinearMotionSpec) -> Self {
 		Self::Ongoing(linear_motion)
 	}
 }
 
-impl GetProperty<LinearMotion> for Motion {
-	fn get_property(&self) -> LinearMotion {
+impl GetProperty<LinearMotionSpec> for Motion {
+	fn get_property(&self) -> MotionSpec {
 		match self {
-			Motion::Ongoing(linear_motion) => *linear_motion,
-			Motion::Done(linear_motion) => *linear_motion,
+			Motion::Ongoing(LinearMotionSpec(target)) => *target,
+			Motion::Done(LinearMotionSpec(target)) => *target,
 		}
 	}
 }
@@ -46,13 +47,15 @@ impl<'w, 's> DerivableFrom<'w, 's, Motion> for Velocity {
 
 	fn derive_from(entity: Entity, motion: &Motion, transforms: &Query<&Transform>) -> Self {
 		match motion {
-			Motion::Ongoing(LinearMotion::Direction { speed, direction }) => {
+			Motion::Ongoing(LinearMotionSpec(MotionSpec::Direction { speed, direction })) => {
 				velocity_with_direction(*direction, *speed)
 			}
-			Motion::Ongoing(LinearMotion::ToTarget { speed, target }) => {
+			Motion::Ongoing(LinearMotionSpec(MotionSpec::ToTarget { speed, target })) => {
 				velocity_to_target(*target, *speed, transforms.get(entity).ok())
 			}
-			Motion::Ongoing(LinearMotion::Stop) | Motion::Done(..) => Velocity::zero(),
+			Motion::Ongoing(LinearMotionSpec(MotionSpec::Stop)) | Motion::Done(..) => {
+				Velocity::zero()
+			}
 		}
 	}
 }
@@ -99,10 +102,10 @@ mod tests {
 				.world_mut()
 				.spawn((
 					Transform::from_xyz(1., 2., 3.),
-					Motion::Ongoing(LinearMotion::ToTarget {
+					Motion::Ongoing(LinearMotionSpec(MotionSpec::ToTarget {
 						speed: Speed(UnitsPerSecond::from(1.)),
 						target: Vec3::new(3., -1., 11.),
-					}),
+					})),
 				))
 				.id();
 
@@ -121,10 +124,10 @@ mod tests {
 				.world_mut()
 				.spawn((
 					Transform::from_xyz(1., 2., 3.),
-					Motion::Ongoing(LinearMotion::ToTarget {
+					Motion::Ongoing(LinearMotionSpec(MotionSpec::ToTarget {
 						speed: Speed(UnitsPerSecond::from(2.)),
 						target: Vec3::new(3., -1., 11.),
-					}),
+					})),
 				))
 				.id();
 
@@ -141,10 +144,10 @@ mod tests {
 			let mut app = setup();
 			let entity = app
 				.world_mut()
-				.spawn((Motion::Ongoing(LinearMotion::ToTarget {
+				.spawn(Motion::Ongoing(LinearMotionSpec(MotionSpec::ToTarget {
 					speed: Speed(UnitsPerSecond::from(2.)),
 					target: Vec3::new(3., -1., 11.),
-				}),))
+				})))
 				.id();
 
 			app.update();
@@ -162,10 +165,10 @@ mod tests {
 				.world_mut()
 				.spawn((
 					Transform::from_xyz(1., 2., 3.),
-					Motion::Ongoing(LinearMotion::ToTarget {
+					Motion::Ongoing(LinearMotionSpec(MotionSpec::ToTarget {
 						speed: Speed(UnitsPerSecond::from(1.)),
 						target: Vec3::new(1., 2., 3.),
-					}),
+					})),
 				))
 				.id();
 
@@ -186,10 +189,10 @@ mod tests {
 			let mut app = setup();
 			let entity = app
 				.world_mut()
-				.spawn(Motion::Ongoing(LinearMotion::Direction {
+				.spawn(Motion::Ongoing(LinearMotionSpec(MotionSpec::Direction {
 					speed: Speed(UnitsPerSecond::from(1.)),
 					direction: Dir3::NEG_Y,
-				}))
+				})))
 				.id();
 
 			app.update();
@@ -207,10 +210,10 @@ mod tests {
 				.world_mut()
 				.spawn((
 					Transform::from_xyz(1., 2., 3.),
-					Motion::Ongoing(LinearMotion::Direction {
+					Motion::Ongoing(LinearMotionSpec(MotionSpec::Direction {
 						speed: Speed(UnitsPerSecond::from(2.)),
 						direction: Dir3::NEG_Y,
-					}),
+					})),
 				))
 				.id();
 
@@ -231,7 +234,7 @@ mod tests {
 			let mut app = setup();
 			let entity = app
 				.world_mut()
-				.spawn(Motion::Ongoing(LinearMotion::Stop))
+				.spawn(Motion::Ongoing(LinearMotionSpec(MotionSpec::Stop)))
 				.id();
 
 			app.update();
@@ -253,10 +256,10 @@ mod tests {
 				.world_mut()
 				.spawn((
 					Transform::from_xyz(1., 2., 3.),
-					Motion::Done(LinearMotion::ToTarget {
+					Motion::Done(LinearMotionSpec(MotionSpec::ToTarget {
 						speed: Speed::default(),
 						target: Vec3::default(),
-					}),
+					})),
 				))
 				.id();
 

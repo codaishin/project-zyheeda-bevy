@@ -1,7 +1,7 @@
 use crate::{Movement, PathOrWasd, components::movement::path_or_wasd::Mode};
 use bevy::prelude::*;
 use common::{
-	tools::collider_radius::ColliderRadius,
+	tools::Units,
 	traits::{
 		accessors::get::{GetProperty, TryApplyOn},
 		handles_path_finding::ComputePath,
@@ -11,32 +11,32 @@ use common::{
 };
 use std::collections::VecDeque;
 
-type MoveComponents<TAgent, TMotion, TGetComputer> = (
+type MoveComponents<TMotion, TGetComputer> = (
 	Entity,
 	&'static GlobalTransform,
-	&'static TAgent,
 	&'static Movement<PathOrWasd<TMotion>>,
 	&'static TGetComputer,
 );
 type ChangedMovement<TMotion> = Changed<Movement<PathOrWasd<TMotion>>>;
 
-impl<T> MovementPath for T where T: Component + GetProperty<ColliderRadius> + Sized {}
-
-pub(crate) trait MovementPath: Component + GetProperty<ColliderRadius> + Sized {
-	fn compute_path<TMotion, TComputer, TGetComputer>(
+impl<TMotion> Movement<PathOrWasd<TMotion>>
+where
+	TMotion: ThreadSafe,
+{
+	pub(crate) fn compute_path<TComputer, TGetComputer>(
 		mut commands: ZyheedaCommands,
-		movements: Query<MoveComponents<Self, TMotion, TGetComputer>, ChangedMovement<TMotion>>,
+		movements: Query<MoveComponents<TMotion, TGetComputer>, ChangedMovement<TMotion>>,
 		computers: Query<&TComputer>,
 	) where
 		TMotion: ThreadSafe,
 		TComputer: Component + ComputePath,
 		TGetComputer: Component + GetProperty<Entity>,
 	{
-		for (entity, transform, agent, movement, get_computer) in &movements {
+		for (entity, transform, movement, get_computer) in &movements {
 			let Ok(computer) = computers.get(get_computer.get_property()) else {
 				continue;
 			};
-			let path_or_wasd = new_movement(computer, transform, movement, agent);
+			let path_or_wasd = new_movement(computer, transform, movement);
 			commands.try_apply_on(&entity, |mut e| {
 				e.try_insert(path_or_wasd);
 				e.try_remove::<Movement<TMotion>>();
@@ -45,18 +45,16 @@ pub(crate) trait MovementPath: Component + GetProperty<ColliderRadius> + Sized {
 	}
 }
 
-fn new_movement<TAgent, TMotion, TComputer>(
+fn new_movement<TMotion, TComputer>(
 	computer: &TComputer,
 	transform: &GlobalTransform,
 	movement: &Movement<PathOrWasd<TMotion>>,
-	agent: &TAgent,
 ) -> PathOrWasd<TMotion>
 where
-	TAgent: GetProperty<ColliderRadius>,
 	TComputer: ComputePath,
 	TMotion: ThreadSafe,
 {
-	let mut new_movement = PathOrWasd::<TMotion>::from(movement.target);
+	let mut new_movement = PathOrWasd::<TMotion>::from(movement.spec);
 
 	let Mode::Path(move_path) = &mut new_movement.mode else {
 		return new_movement;
@@ -66,24 +64,22 @@ where
 		return new_movement;
 	};
 
-	*move_path = compute_path(computer, transform, *end, agent);
+	*move_path = compute_path(computer, transform, *end, movement.spec.clearance_radius);
 
 	new_movement
 }
 
-fn compute_path<TAgent, TComputer>(
+fn compute_path<TComputer>(
 	computer: &TComputer,
 	transform: &GlobalTransform,
 	end: Vec3,
-	agent: &TAgent,
+	clearance_radius: Units,
 ) -> VecDeque<Vec3>
 where
-	TAgent: GetProperty<ColliderRadius>,
 	TComputer: ComputePath,
 {
 	let start = transform.translation();
-	let radius = agent.get_property();
-	let Some(path) = computer.compute_path(start, end, radius) else {
+	let Some(path) = computer.compute_path(start, end, clearance_radius) else {
 		return VecDeque::from([]);
 	};
 	let path = match path.as_slice() {
@@ -97,7 +93,10 @@ where
 #[cfg(test)]
 mod test_new_path {
 	use super::*;
-	use common::tools::Units;
+	use common::{
+		tools::{Units, speed::Speed},
+		traits::handles_movement_behavior::{MotionSpec, PathMotionSpec},
+	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::{collections::VecDeque, marker::PhantomData};
@@ -112,27 +111,6 @@ mod test_new_path {
 	impl GetProperty<Entity> for _GetComputer {
 		fn get_property(&self) -> Entity {
 			self.0
-		}
-	}
-
-	#[derive(Component, NestedMocks)]
-	struct _MovementCollider {
-		mock: Mock_MovementCollider,
-	}
-
-	impl Default for _MovementCollider {
-		fn default() -> Self {
-			let mut mock = Mock_MovementCollider::new();
-			mock.expect_get_property().return_const(Units::from(1.));
-
-			Self { mock }
-		}
-	}
-
-	#[automock]
-	impl GetProperty<ColliderRadius> for _MovementCollider {
-		fn get_property(&self) -> Units {
-			self.mock.get_property()
 		}
 	}
 
@@ -153,7 +131,7 @@ mod test_new_path {
 
 		app.add_systems(
 			Update,
-			_MovementCollider::compute_path::<_MoveMethod, _ComputePath, _GetComputer>,
+			Movement::<PathOrWasd<_MoveMethod>>::compute_path::<_ComputePath, _GetComputer>,
 		);
 
 		app
@@ -178,8 +156,7 @@ mod test_new_path {
 			let entity = app
 				.world_mut()
 				.spawn((
-					_MovementCollider::default(),
-					Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::default()),
+					Movement::<PathOrWasd<_MoveMethod>>::default(),
 					GlobalTransform::default(),
 					_GetComputer(computer),
 				))
@@ -212,8 +189,7 @@ mod test_new_path {
 			let entity = app
 				.world_mut()
 				.spawn((
-					_MovementCollider::default(),
-					Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::default()),
+					Movement::<PathOrWasd<_MoveMethod>>::default(),
 					GlobalTransform::default(),
 					_GetComputer(computer),
 				))
@@ -246,8 +222,7 @@ mod test_new_path {
 			let entity = app
 				.world_mut()
 				.spawn((
-					_MovementCollider::default(),
-					Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::default()),
+					Movement::<PathOrWasd<_MoveMethod>>::default(),
 					GlobalTransform::from_translation(Vec3::splat(1.)),
 					_GetComputer(computer),
 				))
@@ -274,8 +249,7 @@ mod test_new_path {
 				}))
 				.id();
 			app.world_mut().spawn((
-				_MovementCollider::default(),
-				Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::default()),
+				Movement::<PathOrWasd<_MoveMethod>>::default(),
 				GlobalTransform::default(),
 				_GetComputer(computer),
 			));
@@ -299,10 +273,9 @@ mod test_new_path {
 			let entity = app
 				.world_mut()
 				.spawn((
-					_MovementCollider::default(),
-					Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::default()),
+					Movement::<PathOrWasd<_MoveMethod>>::default(),
 					GlobalTransform::default(),
-					Movement::<_MoveMethod>::to(Vec3::default()),
+					Movement::<_MoveMethod>::default(),
 					_GetComputer(computer),
 				))
 				.id();
@@ -316,8 +289,15 @@ mod test_new_path {
 		}
 
 		#[test]
-		fn compute_path_correctly() {
+		fn call_compute_with_correct_arguments() {
 			let mut app = setup();
+			let spec = PathMotionSpec {
+				motion: MotionSpec::ToTarget {
+					speed: Speed::ZERO,
+					target: Vec3::new(4., 5., 6.),
+				},
+				clearance_radius: Units::from(42.),
+			};
 			let computer = app
 				.world_mut()
 				.spawn(_ComputePath::new().with_mock(|mock| {
@@ -332,10 +312,7 @@ mod test_new_path {
 				}))
 				.id();
 			app.world_mut().spawn((
-				_MovementCollider::new().with_mock(|mock| {
-					mock.expect_get_property().return_const(Units::from(42.));
-				}),
-				Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::new(4., 5., 6.)),
+				Movement::<PathOrWasd<_MoveMethod>>::from(spec),
 				GlobalTransform::from_xyz(1., 2., 3.),
 				_GetComputer(computer),
 			));
@@ -347,8 +324,15 @@ mod test_new_path {
 		use super::*;
 
 		#[test]
-		fn set_target_when_wasd() {
+		fn set_target_for_wasd() {
 			let mut app = setup();
+			let spec = PathMotionSpec {
+				motion: MotionSpec::Direction {
+					speed: Speed::ZERO,
+					direction: Dir3::NEG_Z,
+				},
+				..default()
+			};
 			let computer = app
 				.world_mut()
 				.spawn(_ComputePath::new().with_mock(|mock| {
@@ -358,8 +342,7 @@ mod test_new_path {
 			let entity = app
 				.world_mut()
 				.spawn((
-					_MovementCollider::default(),
-					Movement::<PathOrWasd<_MoveMethod>>::to(Dir3::NEG_Z),
+					Movement::<PathOrWasd<_MoveMethod>>::from(spec),
 					GlobalTransform::default(),
 					_GetComputer(computer),
 				))
@@ -383,6 +366,13 @@ mod test_new_path {
 		#[test]
 		fn act_only_once() {
 			let mut app = setup();
+			let spec = PathMotionSpec {
+				motion: MotionSpec::ToTarget {
+					speed: Speed::ZERO,
+					target: Vec3::new(4., 5., 6.),
+				},
+				..default()
+			};
 			let computer = app
 				.world_mut()
 				.spawn(_ComputePath::new().with_mock(|mock| {
@@ -390,8 +380,7 @@ mod test_new_path {
 				}))
 				.id();
 			app.world_mut().spawn((
-				_MovementCollider::default(),
-				Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::default()),
+				Movement::<PathOrWasd<_MoveMethod>>::from(spec),
 				GlobalTransform::default(),
 				_GetComputer(computer),
 			));
@@ -403,6 +392,13 @@ mod test_new_path {
 		#[test]
 		fn act_again_if_movement_changed() {
 			let mut app = setup();
+			let spec = PathMotionSpec {
+				motion: MotionSpec::ToTarget {
+					speed: Speed::ZERO,
+					target: Vec3::new(4., 5., 6.),
+				},
+				..default()
+			};
 			let computer = app
 				.world_mut()
 				.spawn(_ComputePath::new().with_mock(|mock| {
@@ -412,8 +408,7 @@ mod test_new_path {
 			let entity = app
 				.world_mut()
 				.spawn((
-					_MovementCollider::default(),
-					Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::default()),
+					Movement::<PathOrWasd<_MoveMethod>>::from(spec),
 					GlobalTransform::default(),
 					_GetComputer(computer),
 				))
