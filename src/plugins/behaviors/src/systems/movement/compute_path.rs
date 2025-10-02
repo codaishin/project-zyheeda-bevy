@@ -56,7 +56,7 @@ where
 	TComputer: ComputePath,
 	TMotion: ThreadSafe,
 {
-	let mut new_movement = PathOrWasd::<TMotion>::from(movement.target);
+	let mut new_movement = PathOrWasd::<TMotion>::from(movement.spec);
 
 	let Mode::Path(move_path) = &mut new_movement.mode else {
 		return new_movement;

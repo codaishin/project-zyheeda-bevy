@@ -3,18 +3,22 @@ use crate::{
 	traits::accessors::get::{GetProperty, Property},
 };
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
 
 pub trait HandlesMovementBehavior {
-	type TMovement: Component + From<MovementPath> + GetProperty<MovementPath>;
+	type TMovement: Component + From<PathMotionSpec> + GetProperty<PathMotionSpec>;
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum MovementPath {
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+pub struct PathMotionSpec(pub MotionSpec);
+
+impl Property for PathMotionSpec {
+	type TValue<'a> = MotionSpec;
+}
+
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+pub enum MotionSpec {
 	Direction { speed: Speed, direction: Dir3 },
 	ToTarget { speed: Speed, target: Vec3 },
 	Stop,
-}
-
-impl Property for MovementPath {
-	type TValue<'a> = Self;
 }

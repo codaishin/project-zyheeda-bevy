@@ -1,18 +1,13 @@
 use super::Movement;
 use crate::{
-	PointerInput,
-	WasdInput,
-	components::movement::MotionTarget,
-	systems::movement::{
-		insert_process_component::StopMovement,
-		parse_directional_movement_key::UsesDirection,
-	},
+	components::movement::MotionSpec,
+	systems::movement::parse_directional_movement_key::UsesDirection,
 	traits::MovementUpdate,
 };
 use bevy::prelude::*;
 use common::{
 	tools::{Done, speed::Speed},
-	traits::thread_safe::ThreadSafe,
+	traits::{handles_movement_behavior::PathMotionSpec, thread_safe::ThreadSafe},
 	zyheeda_commands::ZyheedaEntityCommands,
 };
 use std::{collections::VecDeque, marker::PhantomData};
@@ -23,43 +18,25 @@ pub(crate) struct PathOrWasd<TMotion> {
 	pub(crate) _m: PhantomData<TMotion>,
 }
 
-impl<TMotion> From<Option<MotionTarget>> for PathOrWasd<TMotion>
+impl<TMotion> From<PathMotionSpec> for PathOrWasd<TMotion>
 where
 	TMotion: ThreadSafe,
 {
-	fn from(target: Option<MotionTarget>) -> Self {
-		match target {
-			Some(MotionTarget::Vec(translation)) => Self {
-				mode: Mode::Path(VecDeque::from([translation])),
+	fn from(spec: PathMotionSpec) -> Self {
+		match spec {
+			PathMotionSpec(MotionSpec::ToTarget { target, .. }) => Self {
+				mode: Mode::Path(VecDeque::from([target])),
 				_m: PhantomData,
 			},
-			Some(MotionTarget::Dir(direction)) => Self {
+			PathMotionSpec(MotionSpec::Direction { direction, .. }) => Self {
 				mode: Mode::Wasd(Some(direction)),
 				_m: PhantomData,
 			},
-			None => Self {
+			PathMotionSpec(MotionSpec::Stop) => Self {
 				mode: Mode::Wasd(None),
 				_m: PhantomData,
 			},
 		}
-	}
-}
-
-impl<TMotion> From<PointerInput<TMotion>> for Movement<PathOrWasd<TMotion>>
-where
-	TMotion: ThreadSafe,
-{
-	fn from(PointerInput { target, .. }: PointerInput<TMotion>) -> Self {
-		Self::to(target)
-	}
-}
-
-impl<TMotion> From<WasdInput<TMotion>> for Movement<PathOrWasd<TMotion>>
-where
-	TMotion: ThreadSafe,
-{
-	fn from(WasdInput { direction, .. }: WasdInput<TMotion>) -> Self {
-		Self::to(direction)
 	}
 }
 
@@ -68,7 +45,7 @@ where
 	TMotion: ThreadSafe,
 {
 	fn uses_direction(&self) -> bool {
-		matches!(self.target, Some(MotionTarget::Dir(..)))
+		matches!(self.spec, PathMotionSpec(MotionSpec::Direction { .. }))
 	}
 }
 
@@ -83,24 +60,39 @@ where
 		&self,
 		agent: &mut ZyheedaEntityCommands,
 		mut path_or_wasd: Mut<PathOrWasd<TMotion>>,
-		_: Speed,
 	) -> Done {
-		let Some(wp) = next_waypoint(&mut path_or_wasd) else {
+		let Some(wp) = next_waypoint(&mut path_or_wasd, self.spec) else {
 			agent.try_remove::<PathOrWasd<TMotion>>();
-			agent.try_insert(Movement::<TMotion>::stop());
+			agent.try_insert(Movement::<TMotion>::from(PathMotionSpec(MotionSpec::Stop)));
 			return Done::from(true);
 		};
 
-		agent.try_insert(Movement::<TMotion>::to(wp));
+		agent.try_insert(Movement::<TMotion>::from(PathMotionSpec(wp)));
 
 		Done::from(false)
 	}
 }
 
-fn next_waypoint<TMotion>(path_or_wasd: &mut PathOrWasd<TMotion>) -> Option<MotionTarget> {
+fn next_waypoint<TMotion>(
+	path_or_wasd: &mut PathOrWasd<TMotion>,
+	spec: PathMotionSpec,
+) -> Option<MotionSpec>
+where
+	TMotion: ThreadSafe,
+{
+	let speed = match spec {
+		PathMotionSpec(MotionSpec::ToTarget { speed, .. }) => speed,
+		PathMotionSpec(MotionSpec::Direction { speed, .. }) => speed,
+		PathMotionSpec(MotionSpec::Stop) => Speed::ZERO,
+	};
+
 	match &mut path_or_wasd.mode {
-		Mode::Wasd(target) => target.take().map(MotionTarget::Dir),
-		Mode::Path(path) => path.pop_front().map(MotionTarget::Vec),
+		Mode::Wasd(direction) => direction
+			.take()
+			.map(|direction| MotionSpec::Direction { speed, direction }),
+		Mode::Path(path) => path
+			.pop_front()
+			.map(|target| MotionSpec::ToTarget { speed, target }),
 	}
 }
 
@@ -119,7 +111,6 @@ mod test_with_path {
 		traits::accessors::get::TryApplyOn,
 		zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 	};
-	use std::sync::LazyLock;
 	use testing::SingleThreadedApp;
 
 	#[derive(Debug, PartialEq, Default)]
@@ -143,31 +134,32 @@ mod test_with_path {
 		App::new().single_threaded(Update)
 	}
 
-	static SPEED: LazyLock<Speed> = LazyLock::new(|| Speed(UnitsPerSecond::from(42.)));
-
 	mod path {
 		use super::*;
 
 		#[test]
 		fn insert_movement_from_path() -> Result<(), RunSystemError> {
 			let mut app = setup();
-			let wp = Vec3::new(1., 2., 3.);
+			let wp = PathMotionSpec(MotionSpec::ToTarget {
+				speed: Speed(UnitsPerSecond::from(42.)),
+				target: Vec3::new(1., 2., 3.),
+			});
 			let entity = app
 				.world_mut()
 				.spawn(PathOrWasd::<_MoveMethod> {
-					mode: Mode::Path(VecDeque::from([wp, Vec3::default()])),
+					mode: Mode::Path(VecDeque::from([Vec3::new(1., 2., 3.), Vec3::default()])),
 					_m: PhantomData,
 				})
 				.id();
 
 			app.world_mut()
 				.run_system_once(system(move |entity, components| {
-					let movement = Movement::<PathOrWasd<_MoveMethod>>::to_none();
-					movement.update(entity, components, *SPEED)
+					let movement = Movement::<PathOrWasd<_MoveMethod>>::stop();
+					movement.update(entity, components)
 				}))?;
 
 			assert_eq!(
-				Some(&Movement::<_MoveMethod>::to(wp)),
+				Some(&Movement::<_MoveMethod>::from(wp)),
 				app.world().entity(entity).get::<Movement<_MoveMethod>>()
 			);
 			Ok(())
@@ -187,8 +179,8 @@ mod test_with_path {
 
 			app.world_mut()
 				.run_system_once(system(move |entity, components| {
-					let movement = Movement::<PathOrWasd<_MoveMethod>>::to_none();
-					movement.update(entity, components, *SPEED)
+					let movement = Movement::<PathOrWasd<_MoveMethod>>::stop();
+					movement.update(entity, components)
 				}))?;
 
 			assert_eq!(
@@ -213,8 +205,8 @@ mod test_with_path {
 			let is_done = app
 				.world_mut()
 				.run_system_once(system(|entity, components| {
-					let movement = Movement::<PathOrWasd<_MoveMethod>>::to_none();
-					movement.update(entity, components, *SPEED)
+					let movement = Movement::<PathOrWasd<_MoveMethod>>::stop();
+					movement.update(entity, components)
 				}))?;
 
 			assert_eq!(Done::from(false), is_done);
@@ -232,8 +224,8 @@ mod test_with_path {
 			let is_done = app
 				.world_mut()
 				.run_system_once(system(|entity, components| {
-					let movement = Movement::<PathOrWasd<_MoveMethod>>::to_none();
-					movement.update(entity, components, *SPEED)
+					let movement = Movement::<PathOrWasd<_MoveMethod>>::stop();
+					movement.update(entity, components)
 				}))?;
 
 			assert_eq!(Done::from(true), is_done);
@@ -253,8 +245,8 @@ mod test_with_path {
 
 			app.world_mut()
 				.run_system_once(system(|entity, components| {
-					let movement = Movement::<PathOrWasd<_MoveMethod>>::to_none();
-					movement.update(entity, components, *SPEED)
+					let movement = Movement::<PathOrWasd<_MoveMethod>>::stop();
+					movement.update(entity, components)
 				}))?;
 
 			assert_eq!(
@@ -277,8 +269,8 @@ mod test_with_path {
 
 			app.world_mut()
 				.run_system_once(system(|entity, components| {
-					let movement = Movement::<PathOrWasd<_MoveMethod>>::to_none();
-					movement.update(entity, components, *SPEED)
+					let movement = Movement::<PathOrWasd<_MoveMethod>>::stop();
+					movement.update(entity, components)
 				}))?;
 
 			assert_eq!(
@@ -295,23 +287,26 @@ mod test_with_path {
 		#[test]
 		fn insert_movement_from_wasd() -> Result<(), RunSystemError> {
 			let mut app = setup();
-			let wp = Dir3::NEG_Z;
+			let wp = PathMotionSpec(MotionSpec::Direction {
+				speed: Speed(UnitsPerSecond::from(42.)),
+				direction: Dir3::NEG_Z,
+			});
 			let entity = app
 				.world_mut()
 				.spawn(PathOrWasd::<_MoveMethod> {
-					mode: Mode::Wasd(Some(wp)),
+					mode: Mode::Wasd(Some(Dir3::NEG_Z)),
 					_m: PhantomData,
 				})
 				.id();
 
 			app.world_mut()
 				.run_system_once(system(move |entity, components| {
-					let movement = Movement::<PathOrWasd<_MoveMethod>>::to_none();
-					movement.update(entity, components, *SPEED)
+					let movement = Movement::<PathOrWasd<_MoveMethod>>::stop();
+					movement.update(entity, components)
 				}))?;
 
 			assert_eq!(
-				Some(&Movement::<_MoveMethod>::to(wp)),
+				Some(&Movement::<_MoveMethod>::from(wp)),
 				app.world().entity(entity).get::<Movement<_MoveMethod>>()
 			);
 			Ok(())
@@ -330,8 +325,8 @@ mod test_with_path {
 
 			app.world_mut()
 				.run_system_once(system(move |entity, components| {
-					let movement = Movement::<PathOrWasd<_MoveMethod>>::to_none();
-					movement.update(entity, components, *SPEED)
+					let movement = Movement::<PathOrWasd<_MoveMethod>>::stop();
+					movement.update(entity, components)
 				}))?;
 
 			assert_eq!(
@@ -356,8 +351,8 @@ mod test_with_path {
 			let is_done = app
 				.world_mut()
 				.run_system_once(system(|entity, components| {
-					let movement = Movement::<PathOrWasd<_MoveMethod>>::to_none();
-					movement.update(entity, components, *SPEED)
+					let movement = Movement::<PathOrWasd<_MoveMethod>>::stop();
+					movement.update(entity, components)
 				}))?;
 
 			assert_eq!(Done::from(false), is_done);
@@ -375,8 +370,8 @@ mod test_with_path {
 			let is_done = app
 				.world_mut()
 				.run_system_once(system(|entity, components| {
-					let movement = Movement::<PathOrWasd<_MoveMethod>>::to_none();
-					movement.update(entity, components, *SPEED)
+					let movement = Movement::<PathOrWasd<_MoveMethod>>::stop();
+					movement.update(entity, components)
 				}))?;
 
 			assert_eq!(Done::from(true), is_done);
@@ -396,8 +391,8 @@ mod test_with_path {
 
 			app.world_mut()
 				.run_system_once(system(|entity, components| {
-					let movement = Movement::<PathOrWasd<_MoveMethod>>::to_none();
-					movement.update(entity, components, *SPEED)
+					let movement = Movement::<PathOrWasd<_MoveMethod>>::stop();
+					movement.update(entity, components)
 				}))?;
 
 			assert_eq!(

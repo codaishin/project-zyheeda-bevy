@@ -24,6 +24,7 @@ use common::{
 		animation::{HasAnimationsDispatch, RegisterAnimations},
 		handles_agents::HandlesAgents,
 		handles_enemies::HandlesEnemies,
+		handles_movement_behavior::HandlesMovementBehavior,
 		handles_orientation::{Face, HandlesOrientation},
 		handles_path_finding::HandlesPathFinding,
 		handles_physics::{HandlesAllPhysicalEffects, HandlesMotion, HandlesPhysicalObjects},
@@ -259,6 +260,15 @@ where
 	}
 }
 
+#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub struct BehaviorSystems;
+
+impl<TDependencies> SystemSetDefinition for BehaviorsPlugin<TDependencies> {
+	type TSystemSet = BehaviorSystems;
+
+	const SYSTEMS: Self::TSystemSet = BehaviorSystems;
+}
+
 impl<TDependencies> HandlesSkillBehaviors for BehaviorsPlugin<TDependencies> {
 	type TSkillContact = SkillContact;
 	type TSkillProjection = SkillProjection;
@@ -299,11 +309,17 @@ impl<TDependencies> HandlesOrientation for BehaviorsPlugin<TDependencies> {
 	}
 }
 
-#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub struct BehaviorSystems;
-
-impl<TDependencies> SystemSetDefinition for BehaviorsPlugin<TDependencies> {
-	type TSystemSet = BehaviorSystems;
-
-	const SYSTEMS: Self::TSystemSet = BehaviorSystems;
+impl<TSettings, TSaveGame, TAnimations, TPhysics, TPathFinding, TAgents> HandlesMovementBehavior
+	for BehaviorsPlugin<(
+		TSettings,
+		TSaveGame,
+		TAnimations,
+		TPhysics,
+		TPathFinding,
+		TAgents,
+	)>
+where
+	TPhysics: HandlesMotion,
+{
+	type TMovement = Movement<PathOrWasd<TPhysics::TMotion>>;
 }

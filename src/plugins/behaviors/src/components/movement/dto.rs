@@ -1,8 +1,12 @@
-use crate::components::movement::{MotionTarget, Movement};
+use crate::components::movement::Movement;
 use bevy::prelude::*;
 use common::{
 	errors::Unreachable,
-	traits::{handles_custom_assets::TryLoadFrom, thread_safe::ThreadSafe},
+	traits::{
+		handles_custom_assets::TryLoadFrom,
+		handles_movement_behavior::PathMotionSpec,
+		thread_safe::ThreadSafe,
+	},
 };
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
@@ -12,8 +16,7 @@ pub struct MovementDto<TMovement>
 where
 	TMovement: ThreadSafe,
 {
-	#[serde(skip_serializing_if = "Option::is_none")]
-	target: Option<MotionTarget>,
+	target: PathMotionSpec,
 	#[serde(skip)]
 	_m: PhantomData<TMovement>,
 }
@@ -22,7 +25,7 @@ impl<TMovement> From<Movement<TMovement>> for MovementDto<TMovement>
 where
 	TMovement: ThreadSafe,
 {
-	fn from(Movement { target, .. }: Movement<TMovement>) -> Self {
+	fn from(Movement { spec: target, .. }: Movement<TMovement>) -> Self {
 		Self {
 			target,
 			_m: PhantomData,
@@ -41,43 +44,8 @@ where
 		_: &mut TLoadAsset,
 	) -> Result<Self, Self::TInstantiationError> {
 		Ok(Self {
-			target,
+			spec: target,
 			_m: PhantomData,
 		})
-	}
-}
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-	use std::marker::PhantomData;
-
-	#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-	struct _Method;
-
-	#[test]
-	fn round_trip_empty_target() {
-		let obj = MovementDto::<_Method> {
-			target: None,
-			_m: PhantomData,
-		};
-
-		let json = serde_json::to_string(&obj).unwrap();
-		let deserialized = serde_json::from_str::<MovementDto<_Method>>(&json).unwrap();
-
-		assert_eq!(obj, deserialized);
-	}
-
-	#[test]
-	fn round_trip_with_target() {
-		let obj = MovementDto::<_Method> {
-			target: Some(MotionTarget::Dir(Dir3::NEG_X)),
-			_m: PhantomData,
-		};
-
-		let json = serde_json::to_string(&obj).unwrap();
-		let deserialized = serde_json::from_str::<MovementDto<_Method>>(&json).unwrap();
-
-		assert_eq!(obj, deserialized);
 	}
 }
