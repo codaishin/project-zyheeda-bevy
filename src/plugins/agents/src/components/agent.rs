@@ -134,6 +134,7 @@ mod tests {
 
 	mod action {
 		use super::*;
+		use common::tools::action_key::slot::SlotKey;
 		use test_case::test_case;
 
 		fn setup() -> App {
@@ -141,7 +142,7 @@ mod tests {
 		}
 
 		#[test_case(CurrentAction::Movement, AgentActionTarget::Direction(Dir3::Z); "movement")]
-		#[test_case(CurrentAction::UseSkill, AgentActionTarget::Point(Vec3::new(1., 2.,3.)); "skill")]
+		#[test_case(CurrentAction::UseSkill(SlotKey(42)), AgentActionTarget::Point(Vec3::new(1., 2.,3.)); "skill")]
 		fn get_current(
 			key: CurrentAction,
 			target: AgentActionTarget,
