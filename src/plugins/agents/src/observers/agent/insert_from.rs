@@ -40,6 +40,7 @@ impl Agent {
 			e.try_insert(Self {
 				agent_type,
 				config_handle,
+				entity,
 			});
 			source.insert_concrete_agent(&mut e);
 		});
@@ -136,10 +137,10 @@ mod tests {
 	#[test_case(AgentType::from(Player); "player")]
 	#[test_case(AgentType::from(VoidSphere); "void sphere")]
 	fn insert_agent_of_type(agent_type: AgentType) {
-		let handle = new_handle();
+		let config_handle = new_handle();
 		let server = _AssetServer::new().with_mock(|mock| {
 			mock.expect_load_asset::<AgentConfigAsset, AssetPath>()
-				.return_const(handle.clone());
+				.return_const(config_handle.clone());
 		});
 		let mut app = setup(server);
 
@@ -151,7 +152,8 @@ mod tests {
 		assert_eq!(
 			Some(&Agent {
 				agent_type,
-				config_handle: handle
+				config_handle,
+				entity: entity.id(),
 			}),
 			entity.get::<Agent>()
 		);

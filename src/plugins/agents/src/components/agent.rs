@@ -2,7 +2,7 @@ pub(crate) mod tag;
 
 use crate::{
 	assets::agent_config::{AgentConfigAsset, AgentConfigData},
-	components::agent::tag::AgentTag,
+	components::{actions::Actions, agent::tag::AgentTag},
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{GravityScale, RigidBody};
@@ -14,7 +14,7 @@ use common::{
 	},
 	traits::{
 		accessors::get::GetFromSystemParam,
-		handles_agents::{AgentConfig, AgentType, Spawn},
+		handles_agents::{AgentActionTarget, AgentConfig, AgentType, CurrentAction, Spawn},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -35,6 +35,7 @@ where
 {
 	pub(crate) agent_type: AgentType,
 	pub(crate) config_handle: Handle<TAsset>,
+	pub(crate) entity: Entity,
 }
 
 impl Spawn for Agent {
@@ -64,14 +65,29 @@ where
 	}
 }
 
+impl<TAsset> GetFromSystemParam<CurrentAction> for Agent<TAsset>
+where
+	TAsset: Asset,
+{
+	type TParam<'world, 'state> = Query<'world, 'state, &'static Actions>;
+	type TItem<'item> = AgentActionTarget;
+
+	fn get_from_param(
+		&self,
+		key: &CurrentAction,
+		actions: &Query<&Actions>,
+	) -> Option<AgentActionTarget> {
+		let Actions(actions) = actions.get(self.entity).ok()?;
+		actions.get(key).copied()
+	}
+}
+
 #[cfg(test)]
 mod tests {
-	use crate::components::{enemy::void_sphere::VoidSphere, player::Player};
-
 	use super::*;
+	use crate::components::{enemy::void_sphere::VoidSphere, player::Player};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use std::sync::LazyLock;
-	use test_case::test_case;
+	use std::{collections::HashMap, sync::LazyLock};
 	use testing::SingleThreadedApp;
 
 	static HANDLE: LazyLock<Handle<_Asset>> = LazyLock::new(Handle::default);
@@ -79,34 +95,72 @@ mod tests {
 	#[derive(Asset, TypePath, Debug, PartialEq, Clone)]
 	struct _Asset;
 
-	fn setup() -> App {
-		let mut app = App::new().single_threaded(Update);
-		let mut assets = Assets::default();
+	mod config {
+		use super::*;
+		use test_case::test_case;
 
-		assets.insert(&*HANDLE, _Asset);
-		app.insert_resource(assets);
+		fn setup() -> App {
+			let mut app = App::new().single_threaded(Update);
+			let mut assets = Assets::default();
 
-		app
+			assets.insert(&*HANDLE, _Asset);
+			app.insert_resource(assets);
+
+			app
+		}
+
+		#[test_case(AgentType::from(Player))]
+		#[test_case(AgentType::from(VoidSphere))]
+		fn get_some_data_when_handle_set(agent_type: AgentType) -> Result<(), RunSystemError> {
+			let mut app = setup();
+			let agent = Agent {
+				agent_type,
+				config_handle: HANDLE.clone(),
+				entity: Entity::from_raw(123),
+			};
+
+			app.world_mut()
+				.run_system_once(move |assets: Res<Assets<_Asset>>| {
+					assert_eq!(
+						Some(AgentConfigData {
+							agent_type,
+							asset: &_Asset,
+						}),
+						agent.get_from_param(&AgentConfig, &assets)
+					);
+				})
+		}
 	}
 
-	#[test_case(AgentType::from(Player))]
-	#[test_case(AgentType::from(VoidSphere))]
-	fn get_some_data_when_handle_set(agent_type: AgentType) -> Result<(), RunSystemError> {
-		let mut app = setup();
-		let agent = Agent {
-			agent_type,
-			config_handle: HANDLE.clone(),
-		};
+	mod action {
+		use super::*;
+		use test_case::test_case;
 
-		app.world_mut()
-			.run_system_once(move |assets: Res<Assets<_Asset>>| {
-				assert_eq!(
-					Some(AgentConfigData {
-						agent_type,
-						asset: &_Asset,
-					}),
-					agent.get_from_param(&AgentConfig, &assets)
-				);
-			})
+		fn setup() -> App {
+			App::new().single_threaded(Update)
+		}
+
+		#[test_case(CurrentAction::Movement, AgentActionTarget::Direction(Dir3::Z); "movement")]
+		#[test_case(CurrentAction::UseSkill, AgentActionTarget::Point(Vec3::new(1., 2.,3.)); "skill")]
+		fn get_current(
+			key: CurrentAction,
+			target: AgentActionTarget,
+		) -> Result<(), RunSystemError> {
+			let mut app = setup();
+			let entity = app
+				.world_mut()
+				.spawn(Actions(HashMap::from([(key, target)])))
+				.id();
+			let agent = Agent {
+				agent_type: AgentType::Player,
+				config_handle: HANDLE.clone(),
+				entity,
+			};
+
+			app.world_mut()
+				.run_system_once(move |actions: Query<&'static Actions>| {
+					assert_eq!(Some(target), agent.get_from_param(&key, &actions));
+				})
+		}
 	}
 }
