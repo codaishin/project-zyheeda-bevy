@@ -47,6 +47,7 @@ use common::{
 		handles_saving::HandlesSaving,
 		handles_settings::HandlesSettings,
 		prefab::AddPrefabObserver,
+		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -144,17 +145,27 @@ where
 		app.init_resource::<CamRay>();
 		app.init_resource::<MouseHover>();
 		app.add_systems(
-			First,
-			(set_cam_ray::<Camera, PlayerCamera>, set_mouse_hover)
-				.chain()
-				.run_if(in_state(GameState::Play)),
-		);
-		app.add_systems(
 			Update,
-			player_toggle_walk_run::<TSettings::TKeyMap<MovementKey>>
+			(
+				set_cam_ray::<Camera, PlayerCamera>,
+				set_mouse_hover,
+				player_toggle_walk_run::<TSettings::TKeyMap<MovementKey>>,
+				Player::update_actions,
+			)
+				.chain()
+				.in_set(AgentSystems)
 				.run_if(in_state(GameState::Play)),
 		);
 	}
+}
+
+#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone)]
+pub struct AgentSystems;
+
+impl<TDependencies> SystemSetDefinition for AgentsPlugin<TDependencies> {
+	type TSystemSet = AgentSystems;
+
+	const SYSTEMS: AgentSystems = AgentSystems;
 }
 
 impl<TDependencies> HandlesEnemies for AgentsPlugin<TDependencies> {
