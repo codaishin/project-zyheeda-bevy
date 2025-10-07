@@ -1,31 +1,22 @@
 use bevy::prelude::*;
 use common::{
 	tools::attribute::AttributeOnSpawn,
-	traits::{
-		accessors::get::{AssociatedSystemParam, GetFromSystemParam, GetProperty, TryApplyOn},
-		handles_agents::AgentConfig,
-	},
+	traits::accessors::get::{GetProperty, TryApplyOn},
 	zyheeda_commands::ZyheedaCommands,
 };
 
 impl<T> InsertAffected for T where T: AffectedComponent {}
 
 pub(crate) trait InsertAffected: AffectedComponent {
-	fn insert_on<TSource>(
+	fn insert_from<TDefaultAttributes>(
 		mut commands: ZyheedaCommands,
-		sources: Query<(Entity, &TSource), Without<Self>>,
-		param: AssociatedSystemParam<TSource, AgentConfig>,
+		default_attributes: Query<(Entity, &TDefaultAttributes), Without<Self>>,
 	) where
-		TSource: Component + GetFromSystemParam<AgentConfig>,
-		for<'i> TSource::TItem<'i>: GetProperty<AttributeOnSpawn<Self::TAttribute>>,
+		TDefaultAttributes: Component + GetProperty<AttributeOnSpawn<Self::TAttribute>>,
 	{
-		for (entity, source) in &sources {
-			let Some(config) = source.get_from_param(&AgentConfig, &param) else {
-				continue;
-			};
-
+		for (entity, default_attribute) in &default_attributes {
 			commands.try_apply_on(&entity, |mut e| {
-				let attribute = config.get_property();
+				let attribute = default_attribute.get_property();
 				e.try_insert(Self::from(attribute));
 			});
 		}
@@ -58,21 +49,9 @@ mod tests {
 	struct _Attribute(&'static str);
 
 	#[derive(Component)]
-	struct _Agent(_OnSpawn);
+	struct _DefaultAttribute(_Attribute);
 
-	impl GetFromSystemParam<AgentConfig> for _Agent {
-		type TParam<'w, 's> = ();
-		type TItem<'i> = _OnSpawn;
-
-		fn get_from_param(&self, _: &AgentConfig, _: &()) -> Option<_OnSpawn> {
-			Some(self.0)
-		}
-	}
-
-	#[derive(Asset, TypePath, Debug, PartialEq, Clone, Copy)]
-	struct _OnSpawn(_Attribute);
-
-	impl GetProperty<AttributeOnSpawn<_Attribute>> for _OnSpawn {
+	impl GetProperty<AttributeOnSpawn<_Attribute>> for _DefaultAttribute {
 		fn get_property(&self) -> _Attribute {
 			self.0
 		}
@@ -81,7 +60,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, _Affected::insert_on::<_Agent>);
+		app.add_systems(Update, _Affected::insert_from::<_DefaultAttribute>);
 
 		app
 	}
@@ -91,7 +70,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(_Agent(_OnSpawn(_Attribute("my attribute"))))
+			.spawn(_DefaultAttribute(_Attribute("my attribute")))
 			.id();
 
 		app.update();
@@ -108,7 +87,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				_Agent(_OnSpawn(_Attribute("new attribute"))),
+				_DefaultAttribute(_Attribute("new attribute")),
 				_Affected(_Attribute("old attribute")),
 			))
 			.id();

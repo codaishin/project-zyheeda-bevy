@@ -1,10 +1,13 @@
 use crate::{
-	assets::agent_config::{AgentConfigAsset, AgentModel, Attributes, Bones, Loadout},
+	assets::agent_config::{AgentConfigAsset, AgentModel, Bones, Loadout},
 	components::enemy::void_sphere::VoidSphere,
 };
 use common::{
 	errors::Unreachable,
-	traits::handles_custom_assets::{AssetFileExtensions, TryLoadFrom},
+	traits::{
+		handles_custom_assets::{AssetFileExtensions, TryLoadFrom},
+		handles_physics::PhysicalDefaultAttributes,
+	},
 };
 use serde::{Deserialize, Serialize};
 
@@ -12,7 +15,7 @@ use serde::{Deserialize, Serialize};
 pub struct AgentConfigAssetDto {
 	pub(crate) model: Model,
 	pub(crate) loadout: Loadout,
-	pub(crate) attributes: Attributes,
+	pub(crate) attributes: PhysicalDefaultAttributes,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
