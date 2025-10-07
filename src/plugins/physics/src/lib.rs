@@ -25,7 +25,6 @@ use bevy::{ecs::component::Mutable, prelude::*};
 use bevy_rapier3d::prelude::Velocity;
 use common::traits::{
 	delta::Delta,
-	handles_agents::HandlesAgents,
 	handles_physics::{HandlesMotion, HandlesPhysicalAttributes, HandlesPhysicalObjects},
 	handles_saving::{HandlesSaving, SavableComponent},
 	register_derived_component::RegisterDerivedComponent,
@@ -60,20 +59,18 @@ use traits::act_on::ActOn;
 
 pub struct PhysicsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSaveGame, TAgents> PhysicsPlugin<(TSaveGame, TAgents)>
+impl<TSaveGame> PhysicsPlugin<TSaveGame>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TAgents: ThreadSafe + HandlesAgents,
 {
-	pub fn from_plugin(_: &TSaveGame, _: &TAgents) -> Self {
+	pub fn from_plugin(_: &TSaveGame) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TSaveGame, TAgents> Plugin for PhysicsPlugin<(TSaveGame, TAgents)>
+impl<TSaveGame> Plugin for PhysicsPlugin<TSaveGame>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TAgents: ThreadSafe + HandlesAgents,
 {
 	fn build(&self, app: &mut App) {
 		TSaveGame::register_savable_component::<Motion>(app);
