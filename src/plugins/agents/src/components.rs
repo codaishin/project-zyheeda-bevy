@@ -1,3 +1,4 @@
+pub(crate) mod actions;
 pub(crate) mod agent;
 pub(crate) mod enemy;
 pub(crate) mod player;
