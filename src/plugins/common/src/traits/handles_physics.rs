@@ -1,5 +1,5 @@
 use crate::{
-	attributes::health::Health,
+	attributes::{effect_target::EffectTarget, health::Health},
 	components::is_blocker::Blocker,
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
 	tools::{Done, Units, speed::Speed},
@@ -8,6 +8,10 @@ use crate::{
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+
+pub trait HandlesPhysicalAttributes {
+	type TDefaultAttributes: Component + From<DefaultPhysicalAttributes>;
+}
 
 pub trait HandlesPhysicalObjects {
 	type TSystems: SystemSet;
@@ -67,6 +71,13 @@ impl<T> HandlesLife for T where
 
 pub trait Effect {
 	type TTarget;
+}
+
+#[derive(Debug, PartialEq)]
+pub struct DefaultPhysicalAttributes {
+	pub health: Health,
+	pub force_interaction: EffectTarget<Force>,
+	pub gravity_interaction: EffectTarget<Gravity>,
 }
 
 #[derive(Debug, PartialEq, Clone)]

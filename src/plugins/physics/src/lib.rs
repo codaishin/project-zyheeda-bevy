@@ -10,6 +10,7 @@ use crate::{
 	components::{
 		affected::{force_affected::ForceAffected, gravity_affected::GravityAffected, life::Life},
 		blockable::Blockable,
+		default_attributes::DefaultAttributes,
 		effect::force::ForceEffect,
 		motion::Motion,
 	},
@@ -25,7 +26,7 @@ use bevy_rapier3d::prelude::Velocity;
 use common::traits::{
 	delta::Delta,
 	handles_agents::HandlesAgents,
-	handles_physics::{HandlesMotion, HandlesPhysicalObjects},
+	handles_physics::{HandlesMotion, HandlesPhysicalAttributes, HandlesPhysicalObjects},
 	handles_saving::{HandlesSaving, SavableComponent},
 	register_derived_component::RegisterDerivedComponent,
 	thread_safe::ThreadSafe,
@@ -92,7 +93,7 @@ where
 			.add_observer(HealthDamageEffect::update_blockers)
 			.add_systems(
 				Update,
-				(Life::insert_on::<TAgents::TAgent>, Life::despawn_dead)
+				(Life::insert_from::<DefaultAttributes>, Life::despawn_dead)
 					.chain()
 					.in_set(PhysicsSystems),
 			)
@@ -102,7 +103,7 @@ where
 			.add_systems(
 				Update,
 				(
-					GravityAffected::insert_on::<TAgents::TAgent>,
+					GravityAffected::insert_from::<DefaultAttributes>,
 					Update::delta.pipe(GravityAffected::apply_pull),
 				)
 					.chain()
@@ -113,7 +114,7 @@ where
 			.add_observer(ForceEffect::update_blockers)
 			.add_systems(
 				Update,
-				ForceAffected::insert_on::<TAgents::TAgent>.in_set(PhysicsSystems),
+				ForceAffected::insert_from::<DefaultAttributes>.in_set(PhysicsSystems),
 			)
 			// Apply interactions
 			.add_event::<InteractionEvent>()
@@ -177,6 +178,10 @@ impl AddPhysics for App {
 
 #[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone)]
 pub struct PhysicsSystems;
+
+impl<TDependencies> HandlesPhysicalAttributes for PhysicsPlugin<TDependencies> {
+	type TDefaultAttributes = DefaultAttributes;
+}
 
 impl<TDependencies> HandlesPhysicalObjects for PhysicsPlugin<TDependencies> {
 	type TSystems = PhysicsSystems;

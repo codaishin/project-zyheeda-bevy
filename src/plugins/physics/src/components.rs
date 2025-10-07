@@ -1,6 +1,7 @@
 pub(crate) mod active_beam;
 pub(crate) mod affected;
 pub(crate) mod blockable;
+pub(crate) mod default_attributes;
 pub(crate) mod effect;
 pub(crate) mod interacting_entities;
 pub(crate) mod motion;
