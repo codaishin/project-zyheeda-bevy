@@ -3,10 +3,8 @@ pub(crate) mod dto;
 use crate::systems::agent::insert_model::InsertModel;
 use bevy::{asset::Asset, reflect::TypePath};
 use common::{
-	attributes::{effect_target::EffectTarget, health::Health},
 	components::asset_model::AssetModel,
-	effects::{force::Force, gravity::Gravity},
-	tools::{action_key::slot::SlotKey, attribute::AttributeOnSpawn, bone::Bone},
+	tools::{action_key::slot::SlotKey, bone::Bone},
 	traits::{
 		accessors::get::GetProperty,
 		handles_agents::AgentType,
@@ -95,24 +93,6 @@ impl Mapper<Bone<'_>, Option<ForearmSlot>> for AgentConfigData<'_> {
 			.get(bone)
 			.copied()
 			.map(ForearmSlot::from)
-	}
-}
-
-impl GetProperty<AttributeOnSpawn<Health>> for AgentConfigData<'_> {
-	fn get_property(&self) -> Health {
-		self.asset.attributes.health
-	}
-}
-
-impl GetProperty<AttributeOnSpawn<EffectTarget<Gravity>>> for AgentConfigData<'_> {
-	fn get_property(&self) -> EffectTarget<Gravity> {
-		self.asset.attributes.gravity_interaction
-	}
-}
-
-impl GetProperty<AttributeOnSpawn<EffectTarget<Force>>> for AgentConfigData<'_> {
-	fn get_property(&self) -> EffectTarget<Force> {
-		self.asset.attributes.force_interaction
 	}
 }
 

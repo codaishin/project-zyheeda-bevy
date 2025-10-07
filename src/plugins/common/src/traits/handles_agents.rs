@@ -1,9 +1,7 @@
 use crate::{
-	attributes::{effect_target::EffectTarget, health::Health},
-	effects::{force::Force, gravity::Gravity},
-	tools::{attribute::AttributeOnSpawn, bone::Bone},
+	tools::bone::Bone,
 	traits::{
-		accessors::get::{GetFromSystemParam, GetProperty},
+		accessors::get::GetFromSystemParam,
 		handles_enemies::EnemyType,
 		handles_skill_behaviors::SkillSpawner,
 		loadout::LoadoutConfig,
@@ -20,10 +18,7 @@ pub trait HandlesAgents {
 		+ Mapper<Bone<'a>, Option<SkillSpawner>>
 		+ Mapper<Bone<'a>, Option<EssenceSlot>>
 		+ Mapper<Bone<'a>, Option<HandSlot>>
-		+ Mapper<Bone<'a>, Option<ForearmSlot>>
-		+ GetProperty<AttributeOnSpawn<Health>>
-		+ GetProperty<AttributeOnSpawn<EffectTarget<Gravity>>>
-		+ GetProperty<AttributeOnSpawn<EffectTarget<Force>>>;
+		+ Mapper<Bone<'a>, Option<ForearmSlot>>;
 	type TAgent: Component
 		+ Spawn
 		+ for<'i> GetFromSystemParam<AgentConfig, TItem<'i> = Self::TAgentConfig<'i>>;
