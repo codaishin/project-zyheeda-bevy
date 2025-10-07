@@ -10,7 +10,7 @@ use crate::{
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
-use bevy::ecs::{component::Component, system::EntityCommands};
+use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 pub trait HandlesAgents {
@@ -21,6 +21,7 @@ pub trait HandlesAgents {
 		+ Mapper<Bone<'a>, Option<ForearmSlot>>;
 	type TAgent: Component
 		+ Spawn
+		+ for<'i> GetFromSystemParam<CurrentAction, TItem<'i> = AgentActionTarget>
 		+ for<'i> GetFromSystemParam<AgentConfig, TItem<'i> = Self::TAgentConfig<'i>>;
 }
 
@@ -34,4 +35,17 @@ pub struct AgentConfig;
 pub enum AgentType {
 	Player,
 	Enemy(EnemyType),
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub enum CurrentAction {
+	Movement,
+	UseSkill,
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum AgentActionTarget {
+	Point(Vec3),
+	Direction(Dir3),
+	Entity(Entity),
 }

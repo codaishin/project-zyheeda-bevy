@@ -82,13 +82,12 @@ mod tests {
 			gravity_interaction: EffectTarget::Affected,
 		};
 		let mut app = setup([(&config_handle, _Config(attributes))]);
-		let entity = app
-			.world_mut()
-			.spawn(Agent {
-				agent_type: AgentType::Player,
-				config_handle,
-			})
-			.id();
+		let entity = app.world_mut().spawn_empty().id();
+		app.world_mut().entity_mut(entity).insert(Agent {
+			agent_type: AgentType::Player,
+			config_handle,
+			entity,
+		});
 
 		app.update();
 
@@ -107,13 +106,12 @@ mod tests {
 			gravity_interaction: EffectTarget::Affected,
 		};
 		let mut app = setup([(&config_handle, _Config(attributes))]);
-		let entity = app
-			.world_mut()
-			.spawn(Agent {
-				agent_type: AgentType::Player,
-				config_handle: config_handle.clone(),
-			})
-			.id();
+		let entity = app.world_mut().spawn_empty().id();
+		app.world_mut().entity_mut(entity).insert(Agent {
+			agent_type: AgentType::Player,
+			config_handle: config_handle.clone(),
+			entity,
+		});
 
 		app.update();
 		let mut configs = app.world_mut().resource_mut::<Assets<_Config>>();
@@ -136,13 +134,12 @@ mod tests {
 			gravity_interaction: EffectTarget::Affected,
 		};
 		let mut app = setup([(&config_handle, _Config(attributes))]);
-		let entity = app
-			.world_mut()
-			.spawn(Agent {
-				agent_type: AgentType::Player,
-				config_handle: config_handle.clone(),
-			})
-			.id();
+		let entity = app.world_mut().spawn_empty().id();
+		app.world_mut().entity_mut(entity).insert(Agent {
+			agent_type: AgentType::Player,
+			config_handle: config_handle.clone(),
+			entity,
+		});
 
 		app.update();
 		app.world_mut().entity_mut(entity).remove::<_Component>();
