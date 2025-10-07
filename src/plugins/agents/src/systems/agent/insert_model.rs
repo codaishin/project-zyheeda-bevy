@@ -7,12 +7,12 @@ use common::{
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
 
-impl<T> InsertModelObserver for T where
+impl<T> InsertModelSystem for T where
 	T: Component + for<'a> GetFromSystemParam<AgentConfig, TItem<'a>: InsertModel>
 {
 }
 
-pub(crate) trait InsertModelObserver:
+pub(crate) trait InsertModelSystem:
 	Component + for<'a> GetFromSystemParam<AgentConfig, TItem<'a>: InsertModel> + Sized
 {
 	fn insert_model(

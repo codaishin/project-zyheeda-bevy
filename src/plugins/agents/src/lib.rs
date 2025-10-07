@@ -16,7 +16,7 @@ use crate::{
 	},
 	resources::{cam_ray::CamRay, mouse_hover::MouseHover},
 	systems::{
-		agent::insert_model::InsertModelObserver,
+		agent::insert_model::InsertModelSystem,
 		set_cam_ray::set_cam_ray,
 		set_mouse_hover::set_mouse_hover,
 		toggle_walk_run::player_toggle_walk_run,
@@ -35,6 +35,7 @@ use common::{
 		handles_custom_assets::HandlesCustomFolderAssets,
 		handles_enemies::HandlesEnemies,
 		handles_lights::HandlesLights,
+		handles_physics::HandlesPhysicalAttributes,
 		handles_player::{
 			ConfiguresPlayerMovement,
 			ConfiguresPlayerSkillAnimations,
@@ -54,12 +55,20 @@ use systems::void_sphere::ring_rotation::ring_rotation;
 
 pub struct AgentsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TSettings, TSaveGame, TAnimations, TLights>
-	AgentsPlugin<(TLoading, TSettings, TSaveGame, TAnimations, TLights)>
+impl<TLoading, TSettings, TSaveGame, TPhysics, TAnimations, TLights>
+	AgentsPlugin<(
+		TLoading,
+		TSettings,
+		TSaveGame,
+		TPhysics,
+		TAnimations,
+		TLights,
+	)>
 where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
 	TSettings: ThreadSafe + HandlesSettings,
 	TSaveGame: ThreadSafe + HandlesSaving,
+	TPhysics: ThreadSafe + HandlesPhysicalAttributes,
 	TAnimations: ThreadSafe + RegisterAnimations,
 	TLights: ThreadSafe + HandlesLights,
 {
@@ -67,6 +76,7 @@ where
 		_: &TLoading,
 		_: &TSettings,
 		_: &TSaveGame,
+		_: &TPhysics,
 		_: &TAnimations,
 		_: &TLights,
 	) -> Self {
@@ -74,12 +84,20 @@ where
 	}
 }
 
-impl<TLoading, TSettings, TSaveGame, TAnimations, TLights> Plugin
-	for AgentsPlugin<(TLoading, TSettings, TSaveGame, TAnimations, TLights)>
+impl<TLoading, TSettings, TSaveGame, TPhysics, TAnimations, TLights> Plugin
+	for AgentsPlugin<(
+		TLoading,
+		TSettings,
+		TSaveGame,
+		TPhysics,
+		TAnimations,
+		TLights,
+	)>
 where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
 	TSettings: ThreadSafe + HandlesSettings,
 	TSaveGame: ThreadSafe + HandlesSaving,
+	TPhysics: ThreadSafe + HandlesPhysicalAttributes,
 	TAnimations: ThreadSafe + RegisterAnimations,
 	TLights: ThreadSafe + HandlesLights,
 {
@@ -92,7 +110,13 @@ where
 		>(app);
 		app.init_asset::<AgentConfigAsset>();
 		app.add_observer(Agent::insert_self_from::<AgentTag>);
-		app.add_systems(Update, Agent::insert_model);
+		app.add_systems(
+			Update,
+			(
+				Agent::insert_model,
+				Agent::<AgentConfigAsset>::insert_attributes::<TPhysics::TDefaultAttributes>,
+			),
+		);
 
 		// Animations
 		TAnimations::register_animations::<Player>(app);

@@ -3,14 +3,14 @@ use common::{
 	attributes::{effect_target::EffectTarget, health::Health},
 	effects::{force::Force, gravity::Gravity},
 	tools::attribute::AttributeOnSpawn,
-	traits::{accessors::get::GetProperty, handles_physics::DefaultPhysicalAttributes},
+	traits::{accessors::get::GetProperty, handles_physics::PhysicalDefaultAttributes},
 };
 
 #[derive(Component, Debug, PartialEq)]
-pub struct DefaultAttributes(DefaultPhysicalAttributes);
+pub struct DefaultAttributes(PhysicalDefaultAttributes);
 
-impl From<DefaultPhysicalAttributes> for DefaultAttributes {
-	fn from(attributes: DefaultPhysicalAttributes) -> Self {
+impl From<PhysicalDefaultAttributes> for DefaultAttributes {
+	fn from(attributes: PhysicalDefaultAttributes) -> Self {
 		Self(attributes)
 	}
 }

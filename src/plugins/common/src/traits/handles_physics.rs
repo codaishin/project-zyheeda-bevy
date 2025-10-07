@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
 pub trait HandlesPhysicalAttributes {
-	type TDefaultAttributes: Component + From<DefaultPhysicalAttributes>;
+	type TDefaultAttributes: Component + From<PhysicalDefaultAttributes>;
 }
 
 pub trait HandlesPhysicalObjects {
@@ -73,11 +73,15 @@ pub trait Effect {
 	type TTarget;
 }
 
-#[derive(Debug, PartialEq)]
-pub struct DefaultPhysicalAttributes {
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+pub struct PhysicalDefaultAttributes {
 	pub health: Health,
 	pub force_interaction: EffectTarget<Force>,
 	pub gravity_interaction: EffectTarget<Gravity>,
+}
+
+impl Property for PhysicalDefaultAttributes {
+	type TValue<'a> = Self;
 }
 
 #[derive(Debug, PartialEq, Clone)]

@@ -11,6 +11,7 @@ use common::{
 		accessors::get::GetProperty,
 		handles_agents::AgentType,
 		handles_custom_assets::AssetFolderPath,
+		handles_physics::PhysicalDefaultAttributes,
 		handles_skill_behaviors::SkillSpawner,
 		load_asset::Path,
 		loadout::{ItemName, LoadoutConfig},
@@ -27,12 +28,18 @@ pub struct AgentConfigAsset {
 	pub(crate) loadout: Loadout,
 	pub(crate) bones: Bones,
 	pub(crate) agent_model: AgentModel,
-	pub(crate) attributes: Attributes,
+	pub(crate) attributes: PhysicalDefaultAttributes,
 }
 
 impl AssetFolderPath for AgentConfigAsset {
 	fn asset_folder_path() -> Path {
 		Path::from("agents")
+	}
+}
+
+impl GetProperty<PhysicalDefaultAttributes> for AgentConfigAsset {
+	fn get_property(&self) -> PhysicalDefaultAttributes {
+		self.attributes
 	}
 }
 
@@ -148,12 +155,4 @@ impl PartialEq for AgentModel {
 			_ => false,
 		}
 	}
-}
-
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
-
-pub(crate) struct Attributes {
-	health: Health,
-	gravity_interaction: EffectTarget<Gravity>,
-	force_interaction: EffectTarget<Force>,
 }
