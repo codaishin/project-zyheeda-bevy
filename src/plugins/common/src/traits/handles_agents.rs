@@ -1,5 +1,5 @@
 use crate::{
-	tools::bone::Bone,
+	tools::{action_key::slot::SlotKey, bone::Bone},
 	traits::{
 		accessors::get::GetFromSystemParam,
 		handles_enemies::EnemyType,
@@ -40,7 +40,7 @@ pub enum AgentType {
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum CurrentAction {
 	Movement,
-	UseSkill,
+	UseSkill(SlotKey),
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -48,4 +48,22 @@ pub enum AgentActionTarget {
 	Point(Vec3),
 	Direction(Dir3),
 	Entity(Entity),
+}
+
+impl From<Vec3> for AgentActionTarget {
+	fn from(point: Vec3) -> Self {
+		Self::Point(point)
+	}
+}
+
+impl From<Dir3> for AgentActionTarget {
+	fn from(direction: Dir3) -> Self {
+		Self::Direction(direction)
+	}
+}
+
+impl From<Entity> for AgentActionTarget {
+	fn from(entity: Entity) -> Self {
+		Self::Entity(entity)
+	}
 }

@@ -33,7 +33,7 @@ use common::{
 		handles_enemies::HandlesEnemies,
 		handles_input::{HandlesInput, InputSystemParam},
 		handles_lights::HandlesLights,
-		handles_physics::HandlesPhysicalAttributes,
+		handles_physics::{HandlesPhysicalAttributes, HandlesRaycast, RaycastSystemParam},
 		handles_player::{
 			ConfiguresPlayerMovement,
 			ConfiguresPlayerSkillAnimations,
@@ -59,7 +59,7 @@ where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesPhysicalAttributes,
+	TPhysics: ThreadSafe + HandlesPhysicalAttributes + HandlesRaycast,
 	TAnimations: ThreadSafe + RegisterAnimations,
 	TLights: ThreadSafe + HandlesLights,
 {
@@ -81,7 +81,7 @@ where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesPhysicalAttributes,
+	TPhysics: ThreadSafe + HandlesPhysicalAttributes + HandlesRaycast,
 	TAnimations: ThreadSafe + RegisterAnimations,
 	TLights: ThreadSafe + HandlesLights,
 {
@@ -128,18 +128,30 @@ where
 		app.init_resource::<CamRay>();
 		app.init_resource::<MouseHover>();
 		app.add_systems(
-			First,
-			(set_cam_ray::<Camera, PlayerCamera>, set_mouse_hover)
-				.chain()
-				.run_if(in_state(GameState::Play)),
-		);
-		app.add_systems(
 			Update,
-			player_toggle_walk_run::<InputSystemParam<TInput>>
+			(
+				set_cam_ray::<Camera, PlayerCamera>,
+				set_mouse_hover,
+				player_toggle_walk_run::<InputSystemParam<TInput>>,
+				Player::update_movement_actions::<
+					InputSystemParam<TInput>,
+					RaycastSystemParam<TPhysics>,
+				>,
+			)
 				.run_if(in_state(GameState::Play))
+				.in_set(AgentSystems)
 				.after(TInput::SYSTEMS),
 		);
 	}
+}
+
+#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone)]
+pub struct AgentSystems;
+
+impl<TDependencies> SystemSetDefinition for AgentsPlugin<TDependencies> {
+	type TSystemSet = AgentSystems;
+
+	const SYSTEMS: AgentSystems = AgentSystems;
 }
 
 impl<TDependencies> HandlesEnemies for AgentsPlugin<TDependencies> {
