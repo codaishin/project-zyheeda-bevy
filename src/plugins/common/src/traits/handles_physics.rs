@@ -3,14 +3,17 @@ use crate::{
 	components::is_blocker::Blocker,
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
 	tools::{Done, Units, speed::Speed},
-	traits::accessors::get::{GetProperty, Property},
+	traits::{
+		accessors::get::{GetProperty, Property},
+		cast_ray::TimeOfImpact,
+	},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
 pub trait HandlesColliders {
-	type TRayCast<'world, 'state>: SystemParam + Raycast<SolidObjects>;
+	type TRayCast<'world, 'state>: SystemParam + Raycast<SolidObjects> + Raycast<Ground>;
 }
 
 pub trait Raycast<TConstraints>
@@ -108,6 +111,13 @@ pub enum PhysicalObject {
 	Fragile {
 		destroyed_by: HashSet<Blocker>,
 	},
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Ground;
+
+impl RaycastConstraint for Ground {
+	type TResult = Option<TimeOfImpact>;
 }
 
 #[derive(Debug, PartialEq, Default)]
