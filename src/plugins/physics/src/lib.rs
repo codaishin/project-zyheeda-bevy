@@ -20,12 +20,18 @@ use crate::{
 		insert_affected::InsertAffected,
 		interactions::act_on::ActOnSystem,
 	},
+	traits::ray_cast::RayCaster,
 };
 use bevy::{ecs::component::Mutable, prelude::*};
 use bevy_rapier3d::prelude::Velocity;
 use common::traits::{
 	delta::Delta,
-	handles_physics::{HandlesMotion, HandlesPhysicalAttributes, HandlesPhysicalObjects},
+	handles_physics::{
+		HandlesColliders,
+		HandlesMotion,
+		HandlesPhysicalAttributes,
+		HandlesPhysicalObjects,
+	},
 	handles_saving::{HandlesSaving, SavableComponent},
 	register_derived_component::RegisterDerivedComponent,
 	thread_safe::ThreadSafe,
@@ -175,6 +181,10 @@ impl AddPhysics for App {
 
 #[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone)]
 pub struct PhysicsSystems;
+
+impl<TDependencies> HandlesColliders for PhysicsPlugin<TDependencies> {
+	type TRayCast<'world, 'state> = RayCaster<'world, 'state>;
+}
 
 impl<TDependencies> HandlesPhysicalAttributes for PhysicsPlugin<TDependencies> {
 	type TDefaultAttributes = DefaultAttributes;

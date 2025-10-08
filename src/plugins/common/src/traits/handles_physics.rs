@@ -5,9 +5,24 @@ use crate::{
 	tools::{Done, Units, speed::Speed},
 	traits::accessors::get::{GetProperty, Property},
 };
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemParam, prelude::*};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+
+pub trait HandlesColliders {
+	type TRayCast<'world, 'state>: SystemParam + Raycast<SolidObjects>;
+}
+
+pub trait Raycast<TConstraints>
+where
+	TConstraints: RaycastConstraint,
+{
+	fn raycast(&self, ray: Ray3d, constraints: TConstraints) -> TConstraints::TResult;
+}
+
+pub trait RaycastConstraint {
+	type TResult;
+}
 
 pub trait HandlesPhysicalAttributes {
 	type TDefaultAttributes: Component + From<PhysicalDefaultAttributes>;
@@ -93,4 +108,19 @@ pub enum PhysicalObject {
 	Fragile {
 		destroyed_by: HashSet<Blocker>,
 	},
+}
+
+#[derive(Debug, PartialEq, Default)]
+pub struct SolidObjects {
+	pub exclude: Vec<Entity>,
+}
+
+impl RaycastConstraint for SolidObjects {
+	type TResult = Option<RaycastHit>;
+}
+
+#[derive(Debug, PartialEq)]
+pub struct RaycastHit {
+	pub entity: Entity,
+	pub time_of_impact: f32,
 }
