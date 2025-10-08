@@ -1,5 +1,6 @@
 pub(crate) mod act_on;
 pub(crate) mod rapier_context;
+pub(crate) mod ray_cast;
 pub(crate) mod update_blockers;
 
 use bevy::prelude::Entity;
