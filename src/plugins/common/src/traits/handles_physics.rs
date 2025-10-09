@@ -8,22 +8,28 @@ use crate::{
 		cast_ray::TimeOfImpact,
 	},
 };
-use bevy::{ecs::system::SystemParam, prelude::*};
+use bevy::{
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
-pub trait HandlesColliders {
-	type TRayCast<'world, 'state>: SystemParam + Raycast<SolidObjects> + Raycast<Ground>;
+pub trait HandlesRaycast {
+	type TRaycast<'world, 'state>: SystemParam + Raycast<SolidObjects> + Raycast<Ground>;
 }
 
-pub trait Raycast<TConstraints>
+pub type RaycastSystemParam<'world, 'state, 'world_self, 'state_self, T> =
+	StaticSystemParam<'world, 'state, <T as HandlesRaycast>::TRaycast<'world_self, 'state_self>>;
+
+pub trait Raycast<TExtra>
 where
-	TConstraints: RaycastConstraint,
+	TExtra: RaycastExtra,
 {
-	fn raycast(&self, ray: Ray3d, constraints: TConstraints) -> TConstraints::TResult;
+	fn raycast(&self, ray: Ray3d, constraints: TExtra) -> TExtra::TResult;
 }
 
-pub trait RaycastConstraint {
+pub trait RaycastExtra {
 	type TResult;
 }
 
@@ -116,7 +122,7 @@ pub enum PhysicalObject {
 #[derive(Debug, PartialEq)]
 pub struct Ground;
 
-impl RaycastConstraint for Ground {
+impl RaycastExtra for Ground {
 	type TResult = Option<TimeOfImpact>;
 }
 
@@ -125,7 +131,7 @@ pub struct SolidObjects {
 	pub exclude: Vec<Entity>,
 }
 
-impl RaycastConstraint for SolidObjects {
+impl RaycastExtra for SolidObjects {
 	type TResult = Option<RaycastHit>;
 }
 

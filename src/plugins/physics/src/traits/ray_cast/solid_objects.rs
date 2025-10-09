@@ -25,11 +25,13 @@ impl Raycast<SolidObjects> for RayCaster<'_, '_> {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::PhysicsPlugin;
 	use bevy::{
 		ecs::system::{RunSystemError, RunSystemOnce},
 		render::mesh::MeshPlugin,
 		scene::ScenePlugin,
 	};
+	use common::traits::handles_physics::RaycastSystemParam;
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -55,9 +57,11 @@ mod tests {
 			.id();
 		app.update();
 
-		let hit = app.world_mut().run_system_once(|ray_caster: RayCaster| {
-			ray_caster.raycast(Ray3d::new(Vec3::Y, Dir3::NEG_Y), SolidObjects::default())
-		})?;
+		let hit = app.world_mut().run_system_once(
+			|ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
+				ray_caster.raycast(Ray3d::new(Vec3::Y, Dir3::NEG_Y), SolidObjects::default())
+			},
+		)?;
 
 		assert_eq!(
 			Some(RaycastHit {
@@ -80,9 +84,11 @@ mod tests {
 		));
 		app.update();
 
-		let hit = app.world_mut().run_system_once(|ray_caster: RayCaster| {
-			ray_caster.raycast(Ray3d::new(Vec3::Y, Dir3::NEG_Y), SolidObjects::default())
-		})?;
+		let hit = app.world_mut().run_system_once(
+			|ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
+				ray_caster.raycast(Ray3d::new(Vec3::Y, Dir3::NEG_Y), SolidObjects::default())
+			},
+		)?;
 
 		assert_eq!(None, hit);
 		Ok(())
@@ -101,16 +107,16 @@ mod tests {
 			.id();
 		app.update();
 
-		let hit = app
-			.world_mut()
-			.run_system_once(move |ray_caster: RayCaster| {
+		let hit = app.world_mut().run_system_once(
+			move |ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
 				ray_caster.raycast(
 					Ray3d::new(Vec3::Y, Dir3::NEG_Y),
 					SolidObjects {
 						exclude: vec![entity],
 					},
 				)
-			})?;
+			},
+		)?;
 
 		assert_eq!(None, hit);
 		Ok(())

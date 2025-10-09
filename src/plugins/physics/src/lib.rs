@@ -27,10 +27,10 @@ use bevy_rapier3d::prelude::Velocity;
 use common::traits::{
 	delta::Delta,
 	handles_physics::{
-		HandlesColliders,
 		HandlesMotion,
 		HandlesPhysicalAttributes,
 		HandlesPhysicalObjects,
+		HandlesRaycast,
 	},
 	handles_saving::{HandlesSaving, SavableComponent},
 	register_derived_component::RegisterDerivedComponent,
@@ -182,8 +182,8 @@ impl AddPhysics for App {
 #[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone)]
 pub struct PhysicsSystems;
 
-impl<TDependencies> HandlesColliders for PhysicsPlugin<TDependencies> {
-	type TRayCast<'world, 'state> = RayCaster<'world, 'state>;
+impl<TDependencies> HandlesRaycast for PhysicsPlugin<TDependencies> {
+	type TRaycast<'world, 'state> = RayCaster<'world, 'state>;
 }
 
 impl<TDependencies> HandlesPhysicalAttributes for PhysicsPlugin<TDependencies> {
