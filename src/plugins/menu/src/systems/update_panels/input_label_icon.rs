@@ -13,7 +13,6 @@ impl InputLabel {
 	) -> impl Fn(ZyheedaCommands, Res<TMap>, Labels)
 	where
 		TMap: Resource + GetInput<PlayerSlot>,
-		TMap::TInput: Into<Token>,
 	{
 		let root = icon_root_path.into();
 
@@ -23,7 +22,7 @@ impl InputLabel {
 			for (entity, label) in &labels {
 				commands.try_apply_on(&entity, |mut e| {
 					let key = key_map.get_input(label.key);
-					let token = key.into();
+					let token = Token::from(key);
 					let image_name = &*token;
 					let path = root.join(format!("{image_name}.png"));
 
@@ -54,8 +53,6 @@ mod tests {
 
 	#[automock]
 	impl GetInput<PlayerSlot> for _Map {
-		type TInput = UserInput;
-
 		fn get_input(&self, value: PlayerSlot) -> UserInput {
 			self.mock.get_input(value)
 		}

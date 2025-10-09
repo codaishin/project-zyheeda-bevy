@@ -4,15 +4,15 @@ use crate::traits::{
 	ui_traits::{GetBackgroundColor, GetNode},
 };
 use bevy::prelude::*;
-use common::traits::handles_localization::Token;
+use common::{tools::action_key::user_input::UserInput, traits::handles_localization::Token};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub(crate) struct Input<TAction, TInput> {
+pub(crate) struct Input<TAction> {
 	pub(crate) action: TAction,
-	pub(crate) input: TInput,
+	pub(crate) input: UserInput,
 }
 
-impl<TAction, TInput> GetNode for KeyBind<Input<TAction, TInput>> {
+impl<TAction> GetNode for KeyBind<Input<TAction>> {
 	fn node() -> Node {
 		let mut node = Self::node_base();
 		node.justify_content = JustifyContent::Center;
@@ -20,17 +20,14 @@ impl<TAction, TInput> GetNode for KeyBind<Input<TAction, TInput>> {
 	}
 }
 
-impl<TAction, TInput> GetBackgroundColor for KeyBind<Input<TAction, TInput>> {
+impl<TAction> GetBackgroundColor for KeyBind<Input<TAction>> {
 	fn background_color() -> Color {
 		PanelColors::DEFAULT.filled.background
 	}
 }
 
-impl<TAction, TInput> From<Input<TAction, TInput>> for Token
-where
-	TInput: Into<Token>,
-{
-	fn from(Input { input, .. }: Input<TAction, TInput>) -> Self {
+impl<TAction> From<Input<TAction>> for Token {
+	fn from(Input { input, .. }: Input<TAction>) -> Self {
 		input.into()
 	}
 }

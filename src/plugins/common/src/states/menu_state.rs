@@ -6,7 +6,7 @@ use crate::{
 	},
 	traits::{
 		handles_localization::Token,
-		handles_settings::InvalidInput,
+		handles_settings::InvalidUserInput,
 		iteration::{Iter, IterFinite},
 	},
 };
@@ -89,9 +89,7 @@ impl IterFinite for MenuState {
 	}
 }
 
-impl InvalidInput for MenuState {
-	type TInput = UserInput;
-
+impl InvalidUserInput for MenuState {
 	fn invalid_input(&self) -> &[UserInput] {
 		const { &[UserInput::MouseButton(MouseButton::Left)] }
 	}

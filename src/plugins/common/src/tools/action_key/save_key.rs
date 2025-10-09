@@ -5,7 +5,7 @@ use crate::{
 	},
 	traits::{
 		handles_localization::Token,
-		handles_settings::InvalidInput,
+		handles_settings::InvalidUserInput,
 		iteration::{Iter, IterFinite},
 	},
 };
@@ -66,9 +66,7 @@ impl IterFinite for SaveKey {
 	}
 }
 
-impl InvalidInput for SaveKey {
-	type TInput = UserInput;
-
+impl InvalidUserInput for SaveKey {
 	fn invalid_input(&self) -> &[UserInput] {
 		const { &[] }
 	}

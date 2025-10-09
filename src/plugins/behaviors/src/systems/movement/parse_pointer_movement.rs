@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use common::{
-	tools::action_key::movement::MovementKey,
+	tools::action_key::{movement::MovementKey, user_input::UserInput},
 	traits::{intersect_at::IntersectAt, key_mappings::Pressed},
 };
 
@@ -10,7 +10,7 @@ impl<T> ParsePointerMovement for T where T: PointMovementInput {}
 
 pub(crate) trait ParsePointerMovement: PointMovementInput {
 	fn parse<TRay, TMap>(
-		input: Res<ButtonInput<TMap::TInput>>,
+		input: Res<ButtonInput<UserInput>>,
 		map: Res<TMap>,
 		cam_ray: Res<TRay>,
 	) -> ProcessInput<Self>
@@ -78,8 +78,6 @@ mod tests {
 
 	#[automock]
 	impl Pressed<MovementKey> for _Map {
-		type TInput = UserInput;
-
 		fn pressed(&self, input: &ButtonInput<UserInput>) -> impl Iterator<Item = MovementKey> {
 			self.mock.pressed(input)
 		}

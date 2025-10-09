@@ -10,7 +10,7 @@ use common::{
 	tools::action_key::{ActionKey, user_input::UserInput},
 	traits::{
 		handles_asset_resource_loading::HandlesAssetResourceLoading,
-		handles_settings::{HandlesSettings, InvalidInput},
+		handles_settings::{HandlesSettings, InvalidUserInput},
 		load_asset::Path,
 		thread_safe::ThreadSafe,
 	},
@@ -22,7 +22,7 @@ use resources::{
 use std::marker::PhantomData;
 use systems::save_changes::SaveChanges;
 
-type KeyMapDto = KeyMapDtoGeneric<ActionKey, UserInput>;
+type KeyMapDto = KeyMapDtoGeneric<ActionKey>;
 
 #[derive(Debug, PartialEq)]
 pub struct SettingsPlugin<TDependencies>(PhantomData<TDependencies>);
@@ -60,9 +60,5 @@ impl<TDependencies> HandlesSettings for SettingsPlugin<TDependencies> {
 	type TKeyMap<TAction>
 		= KeyMap
 	where
-		TAction: Copy
-			+ InvalidInput<TInput = UserInput>
-			+ TryFrom<ActionKey>
-			+ Into<ActionKey>
-			+ Into<UserInput>;
+		TAction: Copy + InvalidUserInput + TryFrom<ActionKey> + Into<ActionKey> + Into<UserInput>;
 }

@@ -1,22 +1,20 @@
 use crate::{Input, KeyBind, Rebinding};
 use bevy::prelude::*;
-use common::traits::{
-	handles_settings::UpdateKey,
-	key_mappings::HashCopySafe,
-	thread_safe::ThreadSafe,
+use common::{
+	tools::action_key::user_input::UserInput,
+	traits::{handles_settings::UpdateKey, thread_safe::ThreadSafe},
 };
 
-impl<TAction, TInput> KeyBind<Rebinding<TAction, TInput>>
+impl<TAction> KeyBind<Rebinding<TAction>>
 where
 	TAction: Copy + ThreadSafe,
-	TInput: HashCopySafe,
 {
 	pub(crate) fn rebind_apply<TMap>(
 		mut map: ResMut<TMap>,
-		input: Res<ButtonInput<TInput>>,
+		input: Res<ButtonInput<UserInput>>,
 		rebinds: Query<&Self>,
 	) where
-		TMap: UpdateKey<TAction, TInput = TInput> + Resource,
+		TMap: UpdateKey<TAction> + Resource,
 	{
 		for input in input.get_just_pressed() {
 			for KeyBind(Rebinding(Input { action, .. })) in &rebinds {
@@ -36,12 +34,6 @@ mod tests {
 	#[derive(Debug, PartialEq, Clone, Copy)]
 	struct _Action;
 
-	#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-	enum _Input {
-		A,
-		B,
-	}
-
 	#[derive(Resource, NestedMocks)]
 	struct _Map {
 		mock: Mock_Map,
@@ -49,9 +41,7 @@ mod tests {
 
 	#[automock]
 	impl UpdateKey<_Action> for _Map {
-		type TInput = _Input;
-
-		fn update_key(&mut self, key: _Action, user_input: _Input) {
+		fn update_key(&mut self, key: _Action, user_input: UserInput) {
 			self.mock.update_key(key, user_input)
 		}
 	}
@@ -59,12 +49,9 @@ mod tests {
 	fn setup(map: _Map) -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.init_resource::<ButtonInput<_Input>>();
+		app.init_resource::<ButtonInput<UserInput>>();
 		app.insert_resource(map);
-		app.add_systems(
-			Update,
-			KeyBind::<Rebinding<_Action, _Input>>::rebind_apply::<_Map>,
-		);
+		app.add_systems(Update, KeyBind::<Rebinding<_Action>>::rebind_apply::<_Map>);
 
 		app
 	}
@@ -73,17 +60,17 @@ mod tests {
 	fn apply_rebind() {
 		let mut app = setup(_Map::new().with_mock(|mock| {
 			mock.expect_update_key()
-				.with(eq(_Action), eq(_Input::B))
+				.with(eq(_Action), eq(UserInput::KeyCode(KeyCode::KeyB)))
 				.times(1)
 				.return_const(());
 		}));
 		app.world_mut().spawn(KeyBind(Rebinding(Input {
 			action: _Action,
-			input: _Input::A,
+			input: UserInput::KeyCode(KeyCode::KeyA),
 		})));
 		app.world_mut()
-			.resource_mut::<ButtonInput<_Input>>()
-			.press(_Input::B);
+			.resource_mut::<ButtonInput<UserInput>>()
+			.press(UserInput::KeyCode(KeyCode::KeyB));
 
 		app.update();
 	}
@@ -95,11 +82,11 @@ mod tests {
 		}));
 		app.world_mut().spawn(KeyBind(Rebinding(Input {
 			action: _Action,
-			input: _Input::A,
+			input: UserInput::KeyCode(KeyCode::KeyA),
 		})));
-		let mut input = app.world_mut().resource_mut::<ButtonInput<_Input>>();
-		input.press(_Input::B);
-		input.clear_just_pressed(_Input::B);
+		let mut input = app.world_mut().resource_mut::<ButtonInput<UserInput>>();
+		input.press(UserInput::KeyCode(KeyCode::KeyB));
+		input.clear_just_pressed(UserInput::KeyCode(KeyCode::KeyB));
 
 		app.update();
 	}

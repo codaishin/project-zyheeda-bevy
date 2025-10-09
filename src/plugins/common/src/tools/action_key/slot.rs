@@ -5,7 +5,7 @@ use crate::{
 	traits::{
 		accessors::get::Property,
 		handles_localization::Token,
-		handles_settings::InvalidInput,
+		handles_settings::InvalidUserInput,
 		iteration::{Iter, IterFinite},
 	},
 };
@@ -93,9 +93,7 @@ impl IterFinite for PlayerSlot {
 	}
 }
 
-impl InvalidInput for PlayerSlot {
-	type TInput = UserInput;
-
+impl InvalidUserInput for PlayerSlot {
 	fn invalid_input(&self) -> &[UserInput] {
 		&[]
 	}

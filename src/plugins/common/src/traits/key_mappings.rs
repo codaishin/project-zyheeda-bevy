@@ -1,32 +1,24 @@
-use crate::traits::thread_safe::ThreadSafe;
+use crate::{tools::action_key::user_input::UserInput, traits::thread_safe::ThreadSafe};
 use bevy::prelude::*;
 use std::hash::Hash;
 
 pub trait GetInput<TAction> {
-	type TInput;
-
-	fn get_input(&self, value: TAction) -> Self::TInput;
+	fn get_input(&self, value: TAction) -> UserInput;
 }
 
 pub trait TryGetAction<TAction> {
-	type TInput;
-
-	fn try_get_action(&self, value: Self::TInput) -> Option<TAction>;
+	fn try_get_action(&self, value: UserInput) -> Option<TAction>;
 }
 
 pub trait Pressed<TAction> {
-	type TInput: HashCopySafe;
-
-	fn pressed(&self, input: &ButtonInput<Self::TInput>) -> impl Iterator<Item = TAction>;
+	fn pressed(&self, input: &ButtonInput<UserInput>) -> impl Iterator<Item = TAction>;
 }
 
 impl<T, TAction> Pressed<TAction> for T
 where
-	T: TryGetAction<TAction, TInput: HashCopySafe>,
+	T: TryGetAction<TAction>,
 {
-	type TInput = <T as TryGetAction<TAction>>::TInput;
-
-	fn pressed(&self, input: &ButtonInput<Self::TInput>) -> impl Iterator<Item = TAction> {
+	fn pressed(&self, input: &ButtonInput<UserInput>) -> impl Iterator<Item = TAction> {
 		input
 			.get_pressed()
 			.filter_map(|key| self.try_get_action(*key))
@@ -34,18 +26,14 @@ where
 }
 
 pub trait JustPressed<TAction> {
-	type TInput: HashCopySafe;
-
-	fn just_pressed(&self, input: &ButtonInput<Self::TInput>) -> impl Iterator<Item = TAction>;
+	fn just_pressed(&self, input: &ButtonInput<UserInput>) -> impl Iterator<Item = TAction>;
 }
 
 impl<T, TAction> JustPressed<TAction> for T
 where
-	T: TryGetAction<TAction, TInput: HashCopySafe>,
+	T: TryGetAction<TAction>,
 {
-	type TInput = <T as TryGetAction<TAction>>::TInput;
-
-	fn just_pressed(&self, input: &ButtonInput<T::TInput>) -> impl Iterator<Item = TAction> {
+	fn just_pressed(&self, input: &ButtonInput<UserInput>) -> impl Iterator<Item = TAction> {
 		input
 			.get_just_pressed()
 			.filter_map(|key| self.try_get_action(*key))
@@ -53,18 +41,14 @@ where
 }
 
 pub trait JustReleased<TAction> {
-	type TInput: HashCopySafe;
-
-	fn just_released(&self, input: &ButtonInput<Self::TInput>) -> impl Iterator<Item = TAction>;
+	fn just_released(&self, input: &ButtonInput<UserInput>) -> impl Iterator<Item = TAction>;
 }
 
 impl<T, TAction> JustReleased<TAction> for T
 where
-	T: TryGetAction<TAction, TInput: HashCopySafe>,
+	T: TryGetAction<TAction>,
 {
-	type TInput = <T as TryGetAction<TAction>>::TInput;
-
-	fn just_released(&self, input: &ButtonInput<Self::TInput>) -> impl Iterator<Item = TAction> {
+	fn just_released(&self, input: &ButtonInput<UserInput>) -> impl Iterator<Item = TAction> {
 		input
 			.get_just_released()
 			.filter_map(|key| self.try_get_action(*key))
@@ -90,8 +74,6 @@ mod tests {
 	struct _Map;
 
 	impl TryGetAction<_Key> for _Map {
-		type TInput = UserInput;
-
 		fn try_get_action(&self, value: UserInput) -> Option<_Key> {
 			match value {
 				UserInput::KeyCode(KeyCode::KeyA) => Some(_Key::A),

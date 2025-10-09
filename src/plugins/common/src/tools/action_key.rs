@@ -12,7 +12,7 @@ use crate::{
 	},
 	traits::{
 		handles_localization::Token,
-		handles_settings::InvalidInput,
+		handles_settings::InvalidUserInput,
 		iteration::{Iter, IterFinite},
 	},
 };
@@ -78,9 +78,7 @@ impl IterFinite for ActionKey {
 	}
 }
 
-impl InvalidInput for ActionKey {
-	type TInput = UserInput;
-
+impl InvalidUserInput for ActionKey {
 	fn invalid_input(&self) -> &[UserInput] {
 		match self {
 			ActionKey::Movement(key) => key.invalid_input(),
@@ -132,7 +130,7 @@ mod tests {
 	fn map_invalid_input() {
 		fn pair_with_invalid_input<TKey>(key: TKey) -> (ActionKey, Vec<UserInput>)
 		where
-			TKey: Into<ActionKey> + InvalidInput<TInput = UserInput> + Copy,
+			TKey: Into<ActionKey> + InvalidUserInput + Copy,
 		{
 			(key.into(), key.invalid_input().to_vec())
 		}

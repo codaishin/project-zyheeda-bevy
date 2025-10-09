@@ -41,7 +41,7 @@ use common::{
 		menu_state::MenuState,
 		save_state::SaveState,
 	},
-	tools::action_key::{ActionKey, slot::PlayerSlot, user_input::UserInput},
+	tools::action_key::{ActionKey, slot::PlayerSlot},
 	traits::{
 		handles_graphics::UiCamera,
 		handles_load_tracking::{
@@ -313,8 +313,8 @@ where
 
 	fn settings_screen(&self, app: &mut App) {
 		type KeyBindAction = KeyBind<Action<ActionKey>>;
-		type KeyBindInput = KeyBind<Input<ActionKey, UserInput>>;
-		type KeyRebindInput = KeyBind<Rebinding<ActionKey, UserInput>>;
+		type KeyBindInput = KeyBind<Input<ActionKey>>;
+		type KeyRebindInput = KeyBind<Rebinding<ActionKey>>;
 
 		let settings = GameState::IngameMenu(MenuState::Settings);
 

@@ -5,10 +5,9 @@ use common::{
 	zyheeda_commands::ZyheedaCommands,
 };
 
-impl<TAction, TInput> KeyBind<Input<TAction, TInput>>
+impl<TAction> KeyBind<Input<TAction>>
 where
 	TAction: Copy + ThreadSafe,
-	TInput: Copy + ThreadSafe,
 {
 	pub(crate) fn rebind_on_click(
 		mut commands: ZyheedaCommands,
@@ -39,13 +38,11 @@ where
 mod tests {
 	use super::*;
 	use crate::Rebinding;
+	use common::tools::action_key::user_input::UserInput;
 	use testing::{SingleThreadedApp, assert_count};
 
 	#[derive(Debug, PartialEq, Clone, Copy)]
 	struct _Action;
-
-	#[derive(Debug, PartialEq, Clone, Copy)]
-	struct _Input;
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Child;
@@ -61,7 +58,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, KeyBind::<Input<_Action, _Input>>::rebind_on_click);
+		app.add_systems(Update, KeyBind::<Input<_Action>>::rebind_on_click);
 
 		app
 	}
@@ -75,7 +72,7 @@ mod tests {
 			.spawn((
 				KeyBind(Input {
 					action: _Action,
-					input: _Input,
+					input: UserInput::MouseButton(MouseButton::Left),
 				}),
 				Interaction::Pressed,
 			))
@@ -87,11 +84,11 @@ mod tests {
 		assert_eq!(
 			Some(&KeyBind(Rebinding(Input {
 				action: _Action,
-				input: _Input
+				input: UserInput::MouseButton(MouseButton::Left)
 			}))),
 			app.world()
 				.entity(entity)
-				.get::<KeyBind<Rebinding<_Action, _Input>>>(),
+				.get::<KeyBind<Rebinding<_Action>>>(),
 		);
 	}
 
@@ -103,7 +100,7 @@ mod tests {
 			.spawn((
 				KeyBind(Input {
 					action: _Action,
-					input: _Input,
+					input: UserInput::MouseButton(MouseButton::Left),
 				}),
 				Interaction::Pressed,
 			))
@@ -113,9 +110,7 @@ mod tests {
 
 		assert_eq!(
 			None,
-			app.world()
-				.entity(entity)
-				.get::<KeyBind<Input<_Action, _Input>>>(),
+			app.world().entity(entity).get::<KeyBind<Input<_Action>>>(),
 		);
 	}
 
@@ -126,7 +121,7 @@ mod tests {
 			.spawn((
 				KeyBind(Input {
 					action: _Action,
-					input: _Input,
+					input: UserInput::MouseButton(MouseButton::Left),
 				}),
 				Interaction::Pressed,
 			))
@@ -150,7 +145,7 @@ mod tests {
 				.spawn((
 					KeyBind(Input {
 						action: _Action,
-						input: _Input,
+						input: UserInput::MouseButton(MouseButton::Left),
 					}),
 					Interaction::None,
 				))
@@ -160,7 +155,7 @@ mod tests {
 				.spawn((
 					KeyBind(Input {
 						action: _Action,
-						input: _Input,
+						input: UserInput::MouseButton(MouseButton::Left),
 					}),
 					Interaction::Hovered,
 				))
@@ -175,10 +170,10 @@ mod tests {
 			(
 				app.world()
 					.entity(entities)
-					.map(|e| e.contains::<KeyBind<Input<_Action, _Input>>>()),
+					.map(|e| e.contains::<KeyBind<Input<_Action>>>()),
 				app.world()
 					.entity(entities)
-					.map(|e| e.contains::<KeyBind<Rebinding<_Action, _Input>>>()),
+					.map(|e| e.contains::<KeyBind<Rebinding<_Action>>>()),
 				app.world()
 					.iter_entities()
 					.filter(|e| e.contains::<_Child>())

@@ -7,34 +7,31 @@ use serde::{Deserialize, Serialize};
 use std::hash::Hash;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub(crate) struct KeyMapDto<TAllKeys, TKeyCode>
+pub(crate) struct KeyMapDto<TAllKeys>
 where
 	TAllKeys: Eq + Hash,
-	TKeyCode: PartialEq,
 {
-	pub(crate) actions: Vec<(TAllKeys, TKeyCode)>,
+	pub(crate) actions: Vec<(TAllKeys, UserInput)>,
 }
 
-impl<TAllActions, TInput, const N: usize> From<[(TAllActions, TInput); N]>
-	for KeyMapDto<TAllActions, TInput>
+impl<TAllActions, const N: usize> From<[(TAllActions, UserInput); N]> for KeyMapDto<TAllActions>
 where
 	TAllActions: Eq + Hash,
-	TInput: PartialEq,
 {
-	fn from(data: [(TAllActions, TInput); N]) -> Self {
+	fn from(data: [(TAllActions, UserInput); N]) -> Self {
 		Self {
 			actions: Vec::from(data),
 		}
 	}
 }
 
-impl AssetFileExtensions for KeyMapDto<ActionKey, UserInput> {
+impl AssetFileExtensions for KeyMapDto<ActionKey> {
 	fn asset_file_extensions() -> &'static [&'static str] {
 		&[".keys"]
 	}
 }
 
-impl From<KeyMap> for KeyMapDto<ActionKey, UserInput> {
+impl From<KeyMap> for KeyMapDto<ActionKey> {
 	fn from(KeyMap(map): KeyMap) -> Self {
 		Self {
 			actions: ActionKey::iterator()

@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use crate::components::skill_usage::SkillUsage;
 use bevy::prelude::*;
 use common::{
@@ -9,6 +7,7 @@ use common::{
 	},
 	traits::key_mappings::TryGetAction,
 };
+use std::collections::HashSet;
 
 impl SkillUsage {
 	pub(crate) fn player<TPlayer, TMap>(
@@ -17,7 +16,7 @@ impl SkillUsage {
 		mut players: Query<&mut SkillUsage, With<TPlayer>>,
 	) where
 		TPlayer: Component,
-		TMap: Resource + TryGetAction<PlayerSlot, TInput = UserInput>,
+		TMap: Resource + TryGetAction<PlayerSlot>,
 	{
 		if players.is_empty() {
 			return;
@@ -59,8 +58,6 @@ mod tests {
 
 	#[automock]
 	impl TryGetAction<PlayerSlot> for _Map {
-		type TInput = UserInput;
-
 		fn try_get_action(&self, input: UserInput) -> Option<PlayerSlot> {
 			self.mock.try_get_action(input)
 		}

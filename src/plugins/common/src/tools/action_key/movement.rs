@@ -3,7 +3,7 @@ use crate::{
 	tools::is_not::IsNot,
 	traits::{
 		handles_localization::Token,
-		handles_settings::InvalidInput,
+		handles_settings::InvalidUserInput,
 		iteration::{Iter, IterFinite},
 	},
 };
@@ -81,9 +81,7 @@ impl IterFinite for MovementKey {
 	}
 }
 
-impl InvalidInput for MovementKey {
-	type TInput = UserInput;
-
+impl InvalidUserInput for MovementKey {
 	fn invalid_input(&self) -> &[UserInput] {
 		const { &[] }
 	}

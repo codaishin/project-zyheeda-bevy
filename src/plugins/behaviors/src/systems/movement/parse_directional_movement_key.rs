@@ -2,6 +2,7 @@ use crate::systems::movement::insert_process_component::{InputProcessComponent, 
 use bevy::{ecs::query::QuerySingleError, prelude::*};
 use common::{
 	errors::UniqueViolation,
+	tools::action_key::user_input::UserInput,
 	traits::{handles_player::KeyDirection, key_mappings::Pressed},
 };
 
@@ -18,7 +19,7 @@ where
 {
 	fn parse<TCamera, TMap, TPlayer>(
 		map: Res<TMap>,
-		input: Res<ButtonInput<TMap::TInput>>,
+		input: Res<ButtonInput<UserInput>>,
 		cameras: Query<&GlobalTransform, With<TCamera>>,
 		players: Query<&Self::TInputProcessComponent, With<TPlayer>>,
 	) -> Result<ProcessInput<Self>, UniqueViolation<TCamera>>
@@ -89,8 +90,6 @@ mod tests {
 
 	#[automock]
 	impl Pressed<_Key> for _Map {
-		type TInput = UserInput;
-
 		fn pressed(&self, input: &ButtonInput<UserInput>) -> impl Iterator<Item = _Key> {
 			self.mock.pressed(input)
 		}

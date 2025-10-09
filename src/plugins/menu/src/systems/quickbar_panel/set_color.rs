@@ -38,7 +38,7 @@ impl QuickbarPanel {
 		param: AssociatedSystemParam<TSlots, SlotKey>,
 	) where
 		TAgent: Component,
-		TMap: Resource + GetInput<PlayerSlot, TInput = UserInput>,
+		TMap: Resource + GetInput<PlayerSlot>,
 		TSlots: Component + GetFromSystemParam<SlotKey>,
 		for<'i> TSlots::TItem<'i>: GetProperty<Result<SkillExecution, NoSkill>>,
 	{
@@ -54,7 +54,7 @@ fn set_color<TAgent, TMap, TPrimer, TSlots>(
 	param: AssociatedSystemParam<TSlots, SlotKey>,
 ) where
 	TAgent: Component,
-	TMap: Resource + GetInput<PlayerSlot, TInput = UserInput>,
+	TMap: Resource + GetInput<PlayerSlot>,
 	TPrimer: Component + GetProperty<UserInput> + GetProperty<IsPrimed>,
 	TSlots: Component + GetFromSystemParam<SlotKey>,
 	for<'i> TSlots::TItem<'i>: GetProperty<Result<SkillExecution, NoSkill>>,
@@ -78,7 +78,7 @@ fn get_color_override<TSlots, TMap, TPrimer>(
 	param: &AssociatedSystemParamRef<TSlots, SlotKey>,
 ) -> Option<ColorConfig>
 where
-	TMap: GetInput<PlayerSlot, TInput = UserInput>,
+	TMap: GetInput<PlayerSlot>,
 	TPrimer: Component + GetProperty<UserInput> + GetProperty<IsPrimed>,
 	TSlots: Component + GetFromSystemParam<SlotKey>,
 	for<'i> TSlots::TItem<'i>: GetProperty<Result<SkillExecution, NoSkill>>,
@@ -163,8 +163,6 @@ mod tests {
 
 	#[automock]
 	impl GetInput<PlayerSlot> for _Map {
-		type TInput = UserInput;
-
 		fn get_input(&self, value: PlayerSlot) -> UserInput {
 			self.mock.get_input(value)
 		}
