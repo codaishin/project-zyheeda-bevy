@@ -17,7 +17,9 @@ impl Raycast<Ground> for RayCaster<'_, '_> {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::PhysicsPlugin;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
+	use common::traits::handles_physics::RaycastSystemParam;
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -28,15 +30,17 @@ mod tests {
 	fn intersect_origin() -> Result<(), RunSystemError> {
 		let mut app = setup();
 
-		let hit = app.world_mut().run_system_once(|ray_caster: RayCaster| {
-			ray_caster.raycast(
-				Ray3d {
-					origin: Vec3::Y,
-					direction: Dir3::NEG_Y,
-				},
-				Ground,
-			)
-		})?;
+		let hit = app.world_mut().run_system_once(
+			|ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
+				ray_caster.raycast(
+					Ray3d {
+						origin: Vec3::Y,
+						direction: Dir3::NEG_Y,
+					},
+					Ground,
+				)
+			},
+		)?;
 		assert_eq!(Some(TimeOfImpact(1.)), hit);
 		Ok(())
 	}
@@ -45,15 +49,17 @@ mod tests {
 	fn intersect_off() -> Result<(), RunSystemError> {
 		let mut app = setup();
 
-		let hit = app.world_mut().run_system_once(|ray_caster: RayCaster| {
-			ray_caster.raycast(
-				Ray3d {
-					origin: Vec3::new(10., 8., 22.),
-					direction: Dir3::try_from(Vec3::new(-3., -4., 0.)).unwrap(),
-				},
-				Ground,
-			)
-		})?;
+		let hit = app.world_mut().run_system_once(
+			|ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
+				ray_caster.raycast(
+					Ray3d {
+						origin: Vec3::new(10., 8., 22.),
+						direction: Dir3::try_from(Vec3::new(-3., -4., 0.)).unwrap(),
+					},
+					Ground,
+				)
+			},
+		)?;
 		assert_eq!(Some(TimeOfImpact(10.)), hit);
 		Ok(())
 	}
