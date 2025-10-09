@@ -3,7 +3,7 @@ use crate::{
 	tools::is_not::IsNot,
 	traits::{
 		handles_localization::Token,
-		handles_settings::InvalidInput,
+		handles_settings::InvalidUserInput,
 		iteration::{Iter, IterFinite},
 	},
 };
@@ -60,9 +60,7 @@ impl IterFinite for CameraKey {
 	}
 }
 
-impl InvalidInput for CameraKey {
-	type TInput = UserInput;
-
+impl InvalidUserInput for CameraKey {
 	fn invalid_input(&self) -> &[UserInput] {
 		const { &[] }
 	}

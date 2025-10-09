@@ -81,11 +81,11 @@ where
 		let quick_save = Arc::new(Mutex::new(SaveContext::from(FileIO::with_file(
 			quick_save_file,
 		))));
-		let trigger_quick_save = TSettings::TKeyMap::<ActionKey>::trigger(
+		let trigger_quick_save = TSettings::TKeyMap::trigger(
 			ActionKey::Save(SaveKey::QuickSave),
 			GameState::Save(SaveState::Save),
 		);
-		let trigger_quick_load_attempt = TSettings::TKeyMap::<ActionKey>::trigger(
+		let trigger_quick_load_attempt = TSettings::TKeyMap::trigger(
 			ActionKey::Save(SaveKey::QuickLoad),
 			GameState::Save(SaveState::AttemptLoad),
 		);

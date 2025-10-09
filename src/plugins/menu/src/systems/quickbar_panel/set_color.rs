@@ -10,10 +10,7 @@ use bevy::prelude::*;
 use common::{
 	components::ui_input_primer::{IsPrimed, UiInputPrimer},
 	tools::{
-		action_key::{
-			slot::{PlayerSlot, SlotKey},
-			user_input::UserInput,
-		},
+		action_key::{slot::SlotKey, user_input::UserInput},
 		skill_execution::SkillExecution,
 	},
 	traits::{
@@ -38,7 +35,7 @@ impl QuickbarPanel {
 		param: AssociatedSystemParam<TSlots, SlotKey>,
 	) where
 		TAgent: Component,
-		TMap: Resource + GetInput<PlayerSlot, TInput = UserInput>,
+		TMap: Resource + GetInput,
 		TSlots: Component + GetFromSystemParam<SlotKey>,
 		for<'i> TSlots::TItem<'i>: GetProperty<Result<SkillExecution, NoSkill>>,
 	{
@@ -54,7 +51,7 @@ fn set_color<TAgent, TMap, TPrimer, TSlots>(
 	param: AssociatedSystemParam<TSlots, SlotKey>,
 ) where
 	TAgent: Component,
-	TMap: Resource + GetInput<PlayerSlot, TInput = UserInput>,
+	TMap: Resource + GetInput,
 	TPrimer: Component + GetProperty<UserInput> + GetProperty<IsPrimed>,
 	TSlots: Component + GetFromSystemParam<SlotKey>,
 	for<'i> TSlots::TItem<'i>: GetProperty<Result<SkillExecution, NoSkill>>,
@@ -78,7 +75,7 @@ fn get_color_override<TSlots, TMap, TPrimer>(
 	param: &AssociatedSystemParamRef<TSlots, SlotKey>,
 ) -> Option<ColorConfig>
 where
-	TMap: GetInput<PlayerSlot, TInput = UserInput>,
+	TMap: GetInput,
 	TPrimer: Component + GetProperty<UserInput> + GetProperty<IsPrimed>,
 	TSlots: Component + GetFromSystemParam<SlotKey>,
 	for<'i> TSlots::TItem<'i>: GetProperty<Result<SkillExecution, NoSkill>>,
@@ -123,7 +120,10 @@ mod tests {
 	use super::*;
 	use crate::components::{ColorOverride, dispatch_text_color::DispatchTextColor};
 	use bevy::{ecs::system::SystemParam, state::app::StatesPlugin};
-	use common::{components::ui_input_primer::IsPrimed, tools::action_key::user_input::UserInput};
+	use common::{
+		components::ui_input_primer::IsPrimed,
+		tools::action_key::{ActionKey, slot::PlayerSlot, user_input::UserInput},
+	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::collections::HashMap;
@@ -155,17 +155,18 @@ mod tests {
 	impl Default for _Map {
 		fn default() -> Self {
 			Self::new().with_mock(|mock| {
-				mock.expect_get_input()
+				mock.expect_get_input::<PlayerSlot>()
 					.return_const(UserInput::from(KeyCode::KeyA));
 			})
 		}
 	}
 
 	#[automock]
-	impl GetInput<PlayerSlot> for _Map {
-		type TInput = UserInput;
-
-		fn get_input(&self, value: PlayerSlot) -> UserInput {
+	impl GetInput for _Map {
+		fn get_input<TAction>(&self, value: TAction) -> UserInput
+		where
+			TAction: Copy + Into<ActionKey> + Into<UserInput> + 'static,
+		{
 			self.mock.get_input(value)
 		}
 	}

@@ -6,27 +6,19 @@ use crate::tools::action_key::{ActionKey, user_input::UserInput};
 use bevy::prelude::*;
 
 pub trait HandlesSettings {
-	type TKeyMap<TAction>: Resource
-		+ GetInput<TAction, TInput = UserInput>
-		+ TryGetAction<TAction, TInput = UserInput>
-		+ UpdateKey<TAction, TInput = UserInput>
-		+ for<'a> Iterate<'a, TItem = (&'a ActionKey, &'a UserInput)>
+	type TKeyMap: Resource
+		+ GetInput
+		+ TryGetAction
+		+ UpdateKey
+		+ for<'a> Iterate<'a, TItem = (&'a ActionKey, &'a UserInput)>;
+}
+
+pub trait UpdateKey {
+	fn update_key<TAction>(&mut self, action: TAction, input: UserInput)
 	where
-		TAction: Copy
-			+ InvalidInput<TInput = UserInput>
-			+ TryFrom<ActionKey>
-			+ Into<ActionKey>
-			+ Into<UserInput>;
+		TAction: Copy + Into<ActionKey> + Into<UserInput> + 'static;
 }
 
-pub trait UpdateKey<TAction> {
-	type TInput;
-
-	fn update_key(&mut self, action: TAction, input: Self::TInput);
-}
-
-pub trait InvalidInput {
-	type TInput;
-
-	fn invalid_input(&self) -> &[Self::TInput];
+pub trait InvalidUserInput {
+	fn invalid_input(&self) -> &[UserInput];
 }

@@ -19,7 +19,6 @@ use common::{
 	components::{child_of_persistent::ChildOfPersistent, persistent_entity::PersistentEntity},
 	states::game_state::GameState,
 	systems::{log::OnError, track_components::TrackComponentInSelfAndChildren},
-	tools::action_key::{movement::MovementKey, slot::PlayerSlot},
 	traits::{
 		animation::{HasAnimationsDispatch, RegisterAnimations},
 		handles_agents::HandlesAgents,
@@ -147,13 +146,11 @@ where
 		TSaveGame::register_savable_component::<OverrideFace>(app);
 		TSaveGame::register_savable_component::<Movement<PathOrWasd<TPhysics::TMotion>>>(app);
 
-		let point_input = PointerInput::<TPhysics::TMotion>::parse::<
-			TAgents::TCamRay,
-			TSettings::TKeyMap<MovementKey>,
-		>;
+		let point_input =
+			PointerInput::<TPhysics::TMotion>::parse::<TAgents::TCamRay, TSettings::TKeyMap>;
 		let wasd_input = WasdInput::<TPhysics::TMotion>::parse::<
 			TAgents::TPlayerMainCamera,
-			TSettings::TKeyMap<MovementKey>,
+			TSettings::TKeyMap,
 			TAgents::TPlayer,
 		>;
 		let wasd_input = wasd_input.pipe(OnError::log_and_return(|| ProcessInput::None));
@@ -215,7 +212,7 @@ where
 						execute_player_path,
 						execute_player_movement,
 						animate_player_movement,
-						SkillUsage::player::<TAgents::TPlayer, TSettings::TKeyMap<PlayerSlot>>,
+						SkillUsage::player::<TAgents::TPlayer, TSettings::TKeyMap>,
 					)
 						.chain(),
 					// Enemy behaviors

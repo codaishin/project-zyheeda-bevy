@@ -1,5 +1,5 @@
 use bevy::{prelude::*, state::state::FreelyMutableState};
-use common::traits::key_mappings::JustPressed;
+use common::{tools::action_key::user_input::UserInput, traits::key_mappings::JustPressed};
 
 impl<T, TActionKey> TriggerState<TActionKey> for T
 where
@@ -16,7 +16,7 @@ where
 	fn trigger<TState>(
 		action: TActionKey,
 		state: TState,
-	) -> impl Fn(Res<Self>, Res<ButtonInput<Self::TInput>>, ResMut<NextState<TState>>)
+	) -> impl Fn(Res<Self>, Res<ButtonInput<UserInput>>, ResMut<NextState<TState>>)
 	where
 		TState: FreelyMutableState + Copy,
 	{
@@ -67,8 +67,6 @@ mod tests {
 
 	#[automock]
 	impl JustPressed<_Action> for _Map {
-		type TInput = UserInput;
-
 		fn just_pressed(&self, input: &ButtonInput<UserInput>) -> impl Iterator<Item = _Action> {
 			self.mock.just_pressed(input)
 		}

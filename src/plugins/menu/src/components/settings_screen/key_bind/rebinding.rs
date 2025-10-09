@@ -7,22 +7,22 @@ use bevy::prelude::*;
 use common::traits::handles_localization::Token;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub(crate) struct Rebinding<TAction, TInput>(pub(crate) Input<TAction, TInput>);
+pub(crate) struct Rebinding<TAction>(pub(crate) Input<TAction>);
 
-impl<TAction, TInput> GetNode for KeyBind<Rebinding<TAction, TInput>> {
+impl<TAction> GetNode for KeyBind<Rebinding<TAction>> {
 	fn node() -> Node {
-		KeyBind::<Input<TAction, TInput>>::node()
+		KeyBind::<Input<TAction>>::node()
 	}
 }
 
-impl<TAction, TInput> GetBackgroundColor for KeyBind<Rebinding<TAction, TInput>> {
+impl<TAction> GetBackgroundColor for KeyBind<Rebinding<TAction>> {
 	fn background_color() -> Color {
-		KeyBind::<Input<TAction, TInput>>::background_color()
+		KeyBind::<Input<TAction>>::background_color()
 	}
 }
 
-impl<TAction, TInput> From<Rebinding<TAction, TInput>> for Token {
-	fn from(_: Rebinding<TAction, TInput>) -> Self {
+impl<TAction> From<Rebinding<TAction>> for Token {
+	fn from(_: Rebinding<TAction>) -> Self {
 		Self::from("rebind-text-prompt")
 	}
 }

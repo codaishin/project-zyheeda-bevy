@@ -25,10 +25,7 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	states::game_state::{GameState, LoadingEssentialAssets},
-	tools::action_key::{
-		movement::MovementKey,
-		slot::{NoValidAgentKey, PlayerSlot, SlotKey},
-	},
+	tools::action_key::slot::{NoValidAgentKey, PlayerSlot, SlotKey},
 	traits::{
 		animation::RegisterAnimations,
 		handles_agents::HandlesAgents,
@@ -151,8 +148,7 @@ where
 		);
 		app.add_systems(
 			Update,
-			player_toggle_walk_run::<TSettings::TKeyMap<MovementKey>>
-				.run_if(in_state(GameState::Play)),
+			player_toggle_walk_run::<TSettings::TKeyMap>.run_if(in_state(GameState::Play)),
 		);
 	}
 }

@@ -75,7 +75,7 @@ where
 #[derive(Debug, PartialEq)]
 pub(crate) enum SaveError<TWriteError = WriteError> {
 	Writer(TWriteError),
-	InvalidInput(InvalidInputWarning<ActionKey, UserInput>),
+	InvalidInput(InvalidInputWarning<ActionKey>),
 }
 
 impl Display for SaveError {
