@@ -1,7 +1,6 @@
 use crate::components::{icon::Icon, input_label::InputLabel, label::UILabel};
 use bevy::prelude::*;
 use common::{
-	tools::action_key::slot::PlayerSlot,
 	traits::{accessors::get::TryApplyOn, handles_localization::Token, key_mappings::GetInput},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -12,7 +11,7 @@ impl InputLabel {
 		icon_root_path: impl Into<PathBuf>,
 	) -> impl Fn(ZyheedaCommands, Res<TMap>, Labels)
 	where
-		TMap: Resource + GetInput<PlayerSlot>,
+		TMap: Resource + GetInput,
 	{
 		let root = icon_root_path.into();
 
@@ -40,7 +39,10 @@ mod tests {
 	use super::*;
 	use crate::components::icon::Icon;
 	use bevy::app::{App, Update};
-	use common::{tools::action_key::user_input::UserInput, traits::handles_localization::Token};
+	use common::{
+		tools::action_key::{ActionKey, slot::PlayerSlot, user_input::UserInput},
+		traits::handles_localization::Token,
+	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::path::PathBuf;
@@ -52,8 +54,11 @@ mod tests {
 	}
 
 	#[automock]
-	impl GetInput<PlayerSlot> for _Map {
-		fn get_input(&self, value: PlayerSlot) -> UserInput {
+	impl GetInput for _Map {
+		fn get_input<TAction>(&self, value: TAction) -> UserInput
+		where
+			TAction: Copy + Into<ActionKey> + Into<UserInput> + 'static,
+		{
 			self.mock.get_input(value)
 		}
 	}
@@ -96,7 +101,7 @@ mod tests {
 	#[test]
 	fn add_icon_fallback_label() {
 		let mut app = setup(_Map::new().with_mock(|mock| {
-			mock.expect_get_input()
+			mock.expect_get_input::<PlayerSlot>()
 				.return_const(UserInput::from(KeyCode::ArrowUp));
 		}));
 		let id = app
@@ -117,7 +122,7 @@ mod tests {
 	#[test]
 	fn do_not_add_icon_if_not_added() {
 		let mut app = setup(_Map::new().with_mock(|mock| {
-			mock.expect_get_input()
+			mock.expect_get_input::<PlayerSlot>()
 				.return_const(UserInput::from(KeyCode::ArrowUp));
 		}));
 		let id = app

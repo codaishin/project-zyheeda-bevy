@@ -2,7 +2,6 @@ use crate::components::quickbar_panel::QuickbarPanel;
 use bevy::prelude::*;
 use common::{
 	components::ui_input_primer::UiInputPrimer,
-	tools::action_key::slot::PlayerSlot,
 	traits::{accessors::get::TryApplyOn, key_mappings::GetInput},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -14,7 +13,7 @@ impl QuickbarPanel {
 		map: Res<TMap>,
 		panels: Query<&Self>,
 	) where
-		TMap: GetInput<PlayerSlot> + Resource,
+		TMap: GetInput + Resource,
 	{
 		let entity = trigger.target();
 		let Ok(Self { key, .. }) = panels.get(entity) else {
@@ -33,7 +32,11 @@ mod tests {
 	use crate::tools::PanelState;
 	use common::{
 		components::ui_input_primer::UiInputPrimer,
-		tools::action_key::{slot::Side, user_input::UserInput},
+		tools::action_key::{
+			ActionKey,
+			slot::{PlayerSlot, Side},
+			user_input::UserInput,
+		},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -45,8 +48,11 @@ mod tests {
 	}
 
 	#[automock]
-	impl GetInput<PlayerSlot> for _Map {
-		fn get_input(&self, value: PlayerSlot) -> UserInput {
+	impl GetInput for _Map {
+		fn get_input<TAction>(&self, value: TAction) -> UserInput
+		where
+			TAction: Copy + Into<ActionKey> + Into<UserInput> + 'static,
+		{
 			self.mock.get_input(value)
 		}
 	}

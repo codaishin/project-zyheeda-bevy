@@ -16,7 +16,7 @@ impl SkillUsage {
 		mut players: Query<&mut SkillUsage, With<TPlayer>>,
 	) where
 		TPlayer: Component,
-		TMap: Resource + TryGetAction<PlayerSlot>,
+		TMap: Resource + TryGetAction,
 	{
 		if players.is_empty() {
 			return;
@@ -25,13 +25,13 @@ impl SkillUsage {
 		let just_pressed = || {
 			input
 				.get_just_pressed()
-				.filter_map(|key| map.try_get_action(*key))
+				.filter_map(|key| map.try_get_action::<PlayerSlot>(*key))
 				.map(SlotKey::from)
 		};
 		let pressed = || {
 			input
 				.get_pressed()
-				.filter_map(|key| map.try_get_action(*key))
+				.filter_map(|key| map.try_get_action::<PlayerSlot>(*key))
 				.map(SlotKey::from)
 		};
 
@@ -45,7 +45,7 @@ impl SkillUsage {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::tools::action_key::slot::SlotKey;
+	use common::tools::action_key::{ActionKey, slot::SlotKey};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::collections::HashSet;
@@ -57,9 +57,12 @@ mod tests {
 	}
 
 	#[automock]
-	impl TryGetAction<PlayerSlot> for _Map {
-		fn try_get_action(&self, input: UserInput) -> Option<PlayerSlot> {
-			self.mock.try_get_action(input)
+	impl TryGetAction for _Map {
+		fn try_get_action<TAction>(&self, input: UserInput) -> Option<TAction>
+		where
+			TAction: Copy + TryFrom<ActionKey> + 'static,
+		{
+			self.mock.try_get_action::<TAction>(input)
 		}
 	}
 
@@ -81,7 +84,7 @@ mod tests {
 	fn set_just_held() {
 		let key_a = UserInput::KeyCode(KeyCode::KeyA);
 		let mut app = setup(_Map::new().with_mock(|mock| {
-			mock.expect_try_get_action()
+			mock.expect_try_get_action::<PlayerSlot>()
 				.with(eq(key_a))
 				.return_const(Some(PlayerSlot::LOWER_R));
 		}));
@@ -104,10 +107,10 @@ mod tests {
 		let key_a = UserInput::KeyCode(KeyCode::KeyA);
 		let key_b = UserInput::KeyCode(KeyCode::KeyB);
 		let mut app = setup(_Map::new().with_mock(|mock| {
-			mock.expect_try_get_action()
+			mock.expect_try_get_action::<PlayerSlot>()
 				.with(eq(key_a))
 				.return_const(Some(PlayerSlot::LOWER_R));
-			mock.expect_try_get_action()
+			mock.expect_try_get_action::<PlayerSlot>()
 				.with(eq(key_b))
 				.return_const(Some(PlayerSlot::LOWER_L));
 		}));
@@ -136,16 +139,16 @@ mod tests {
 		let key_c = UserInput::KeyCode(KeyCode::KeyC);
 		let key_d = UserInput::KeyCode(KeyCode::KeyD);
 		let mut app = setup(_Map::new().with_mock(|mock| {
-			mock.expect_try_get_action()
+			mock.expect_try_get_action::<PlayerSlot>()
 				.with(eq(key_a))
 				.return_const(Some(PlayerSlot::LOWER_R));
-			mock.expect_try_get_action()
+			mock.expect_try_get_action::<PlayerSlot>()
 				.with(eq(key_b))
 				.return_const(Some(PlayerSlot::LOWER_L));
-			mock.expect_try_get_action()
+			mock.expect_try_get_action::<PlayerSlot>()
 				.with(eq(key_c))
 				.return_const(Some(PlayerSlot::UPPER_R));
-			mock.expect_try_get_action()
+			mock.expect_try_get_action::<PlayerSlot>()
 				.with(eq(key_d))
 				.return_const(Some(PlayerSlot::UPPER_L));
 		}));
@@ -175,7 +178,7 @@ mod tests {
 	fn ignore_when_player_missing() {
 		let key_a = UserInput::KeyCode(KeyCode::KeyA);
 		let mut app = setup(_Map::new().with_mock(|mock| {
-			mock.expect_try_get_action()
+			mock.expect_try_get_action::<PlayerSlot>()
 				.with(eq(key_a))
 				.return_const(Some(PlayerSlot::LOWER_R));
 		}));

@@ -30,29 +30,29 @@ use zyheeda_core::prelude::*;
 #[derive(Resource, Asset, TypePath, Debug, PartialEq, Clone)]
 pub struct KeyMap(KeyMapInternal);
 
-impl<TAction> GetInput<TAction> for KeyMap
-where
-	TAction: Copy + Into<ActionKey> + Into<UserInput>,
-{
-	fn get_input(&self, action: TAction) -> UserInput {
+impl GetInput for KeyMap {
+	fn get_input<TAction>(&self, action: TAction) -> UserInput
+	where
+		TAction: Copy + Into<ActionKey> + Into<UserInput>,
+	{
 		self.0.get_input(action)
 	}
 }
 
-impl<TAction> TryGetAction<TAction> for KeyMap
-where
-	TAction: Copy + TryFrom<ActionKey> + Into<UserInput>,
-{
-	fn try_get_action(&self, input: UserInput) -> Option<TAction> {
+impl TryGetAction for KeyMap {
+	fn try_get_action<TAction>(&self, input: UserInput) -> Option<TAction>
+	where
+		TAction: Copy + TryFrom<ActionKey>,
+	{
 		self.0.try_get_action(input)
 	}
 }
 
-impl<TAction> UpdateKey<TAction> for KeyMap
-where
-	TAction: Copy + InvalidUserInput + Into<ActionKey> + Into<UserInput>,
-{
-	fn update_key(&mut self, action: TAction, input: UserInput) {
+impl UpdateKey for KeyMap {
+	fn update_key<TAction>(&mut self, action: TAction, input: UserInput)
+	where
+		TAction: Copy + Into<ActionKey> + Into<UserInput>,
+	{
 		self.0.update_key(action, input);
 	}
 }
@@ -112,58 +112,14 @@ where
 	invalid_inputs: InvalidInputs<TAllActions, UserInput>,
 }
 
-impl<TAction> Default for KeyMapInternal<TAction>
+impl<TAllActions> KeyMapInternal<TAllActions>
 where
-	TAction: Copy + Hash + Eq + IterFinite + InvalidUserInput + Into<UserInput>,
+	TAllActions: Hash + Eq + Copy + InvalidUserInput,
 {
-	fn default() -> Self {
-		let mut map = Self {
-			action_to_input: HashMap::default(),
-			input_to_action: HashMap::default(),
-			invalid_inputs: InvalidInputs(HashMap::default()),
-		};
-
-		for key in TAction::iterator() {
-			map.update_key(key, key.into());
-		}
-
-		map
-	}
-}
-
-impl<TAllActions, TAction> GetInput<TAction> for KeyMapInternal<TAllActions>
-where
-	TAllActions: Hash + Eq,
-	TAction: Copy + Into<TAllActions> + Into<UserInput>,
-{
-	fn get_input(&self, action: TAction) -> UserInput {
-		let as_all_actions: TAllActions = action.into();
-		let Some(input) = self.action_to_input.get(&as_all_actions) else {
-			let as_input: UserInput = action.into();
-			return as_input;
-		};
-
-		*input
-	}
-}
-
-impl<TAllActions, TAction> TryGetAction<TAction> for KeyMapInternal<TAllActions>
-where
-	TAllActions: Copy + Hash + Eq,
-	TAction: TryFrom<TAllActions>,
-{
-	fn try_get_action(&self, input: UserInput) -> Option<TAction> {
-		let action = self.input_to_action.get(&input)?;
-		TAction::try_from(*action).ok()
-	}
-}
-
-impl<TAllActions, TAction> UpdateKey<TAction> for KeyMapInternal<TAllActions>
-where
-	TAllActions: InvalidUserInput + Hash + Eq + Copy,
-	TAction: Copy + Into<UserInput> + Into<TAllActions>,
-{
-	fn update_key(&mut self, action: TAction, input: UserInput) {
+	fn update_key<TAction>(&mut self, action: TAction, input: UserInput)
+	where
+		TAction: Copy + Into<TAllActions> + Into<UserInput>,
+	{
 		let old_input = self.get_input(action);
 		let action: TAllActions = action.into();
 
@@ -192,6 +148,46 @@ where
 
 		self.action_to_input.insert(action, input);
 		self.input_to_action.insert(input, action);
+	}
+
+	fn try_get_action<TAction>(&self, input: UserInput) -> Option<TAction>
+	where
+		TAction: TryFrom<TAllActions>,
+	{
+		let action = self.input_to_action.get(&input)?;
+		TAction::try_from(*action).ok()
+	}
+
+	fn get_input<TAction>(&self, action: TAction) -> UserInput
+	where
+		TAction: Copy + Into<TAllActions> + Into<UserInput>,
+	{
+		let as_all_actions: TAllActions = action.into();
+		let Some(input) = self.action_to_input.get(&as_all_actions) else {
+			let as_input: UserInput = action.into();
+			return as_input;
+		};
+
+		*input
+	}
+}
+
+impl<TAction> Default for KeyMapInternal<TAction>
+where
+	TAction: Copy + Hash + Eq + IterFinite + InvalidUserInput + Into<UserInput>,
+{
+	fn default() -> Self {
+		let mut map = Self {
+			action_to_input: HashMap::default(),
+			input_to_action: HashMap::default(),
+			invalid_inputs: InvalidInputs(HashMap::default()),
+		};
+
+		for key in TAction::iterator() {
+			map.update_key(key, key.into());
+		}
+
+		map
 	}
 }
 

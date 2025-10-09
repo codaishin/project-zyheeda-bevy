@@ -7,10 +7,10 @@ use bevy::prelude::*;
 use common::{
 	states::game_state::LoadingEssentialAssets,
 	systems::log::OnError,
-	tools::action_key::{ActionKey, user_input::UserInput},
+	tools::action_key::ActionKey,
 	traits::{
 		handles_asset_resource_loading::HandlesAssetResourceLoading,
-		handles_settings::{HandlesSettings, InvalidUserInput},
+		handles_settings::HandlesSettings,
 		load_asset::Path,
 		thread_safe::ThreadSafe,
 	},
@@ -57,8 +57,5 @@ where
 }
 
 impl<TDependencies> HandlesSettings for SettingsPlugin<TDependencies> {
-	type TKeyMap<TAction>
-		= KeyMap
-	where
-		TAction: Copy + InvalidUserInput + TryFrom<ActionKey> + Into<ActionKey> + Into<UserInput>;
+	type TKeyMap = KeyMap;
 }

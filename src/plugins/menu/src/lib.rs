@@ -41,7 +41,7 @@ use common::{
 		menu_state::MenuState,
 		save_state::SaveState,
 	},
-	tools::action_key::{ActionKey, slot::PlayerSlot},
+	tools::action_key::ActionKey,
 	traits::{
 		handles_graphics::UiCamera,
 		handles_load_tracking::{
@@ -174,7 +174,7 @@ where
 			Update,
 			(
 				PreventMenuChange::menus_unchangeable_when_present,
-				set_state_from_input::<GameState, MenuState, TSettings::TKeyMap<MenuState>>
+				set_state_from_input::<GameState, MenuState, TSettings::TKeyMap>
 					.run_if(changeable_and_not_loading),
 			)
 				.chain(),
@@ -227,14 +227,14 @@ where
 		let play = GameState::Play;
 
 		app.add_ui::<UIOverlay, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(play)
-			.add_observer(QuickbarPanel::add_quickbar_primer::<TSettings::TKeyMap<PlayerSlot>>)
+			.add_observer(QuickbarPanel::add_quickbar_primer::<TSettings::TKeyMap>)
 			.add_systems(
 				Update,
 				(
 					QuickbarPanel::set_icon::<TPlayers::TPlayer, TLoadout::TSlots>,
 					QuickbarPanel::set_color::<
 						TPlayers::TPlayer,
-						TSettings::TKeyMap<PlayerSlot>,
+						TSettings::TKeyMap,
 						TLoadout::TSlots,
 					>,
 					panel_colors::<QuickbarPanel>,
@@ -326,12 +326,12 @@ where
 			.add_systems(
 				Update,
 				(
-					SettingsScreen::set_key_bindings_from::<TSettings::TKeyMap<ActionKey>>,
+					SettingsScreen::set_key_bindings_from::<TSettings::TKeyMap>,
 					KeyBindAction::render_ui::<TLocalization::TLocalizationServer>,
 					KeyBindInput::render_ui::<TLocalization::TLocalizationServer>,
 					KeyBindInput::rebind_on_click,
 					KeyRebindInput::render_ui::<TLocalization::TLocalizationServer>,
-					KeyRebindInput::rebind_apply::<TSettings::TKeyMap<ActionKey>>,
+					KeyRebindInput::rebind_apply::<TSettings::TKeyMap>,
 				)
 					.run_if(in_state(settings)),
 			);
@@ -339,7 +339,7 @@ where
 
 	fn general_systems(&self, app: &mut App) {
 		let ui_ready = not(in_state(GameState::LoadingEssentialAssets));
-		let input_label_icons = InputLabel::icon::<TSettings::TKeyMap<PlayerSlot>>;
+		let input_label_icons = InputLabel::icon::<TSettings::TKeyMap>;
 
 		app.register_derived_component::<MenuBackground, Node>()
 			.add_observer(UILabel::localize::<TLocalization::TLocalizationServer>)

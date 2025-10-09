@@ -6,7 +6,6 @@ use bevy::prelude::*;
 use common::{
 	states::game_state::GameState,
 	systems::log::OnError,
-	tools::action_key::camera_key::CameraKey,
 	traits::{
 		handles_graphics::{FirstPassCamera, WorldCameras},
 		handles_player::{HandlesPlayer, PlayerMainCamera},
@@ -54,7 +53,7 @@ where
 			Update,
 			(
 				TGraphics::TWorldCameras::set_to_orbit::<TPlayers::TPlayer>.pipe(OnError::log),
-				move_on_orbit::<OrbitPlayer, TSettings::TKeyMap<CameraKey>>,
+				move_on_orbit::<OrbitPlayer, TSettings::TKeyMap>,
 				move_with_target::<OrbitPlayer>,
 			)
 				.chain()

@@ -1,20 +1,20 @@
 use crate::{Input, KeyBind, Rebinding};
 use bevy::prelude::*;
 use common::{
-	tools::action_key::user_input::UserInput,
+	tools::action_key::{ActionKey, user_input::UserInput},
 	traits::{handles_settings::UpdateKey, thread_safe::ThreadSafe},
 };
 
 impl<TAction> KeyBind<Rebinding<TAction>>
 where
-	TAction: Copy + ThreadSafe,
+	TAction: Copy + ThreadSafe + Into<ActionKey> + Into<UserInput>,
 {
 	pub(crate) fn rebind_apply<TMap>(
 		mut map: ResMut<TMap>,
 		input: Res<ButtonInput<UserInput>>,
 		rebinds: Query<&Self>,
 	) where
-		TMap: UpdateKey<TAction> + Resource,
+		TMap: UpdateKey + Resource,
 	{
 		for input in input.get_just_pressed() {
 			for KeyBind(Rebinding(Input { action, .. })) in &rebinds {
@@ -34,14 +34,29 @@ mod tests {
 	#[derive(Debug, PartialEq, Clone, Copy)]
 	struct _Action;
 
+	impl From<_Action> for UserInput {
+		fn from(_: _Action) -> Self {
+			panic!("NOT USED")
+		}
+	}
+
+	impl From<_Action> for ActionKey {
+		fn from(_: _Action) -> Self {
+			panic!("NOT USED")
+		}
+	}
+
 	#[derive(Resource, NestedMocks)]
 	struct _Map {
 		mock: Mock_Map,
 	}
 
 	#[automock]
-	impl UpdateKey<_Action> for _Map {
-		fn update_key(&mut self, key: _Action, user_input: UserInput) {
+	impl UpdateKey for _Map {
+		fn update_key<TAction>(&mut self, key: TAction, user_input: UserInput)
+		where
+			TAction: Copy + Into<ActionKey> + Into<UserInput> + 'static,
+		{
 			self.mock.update_key(key, user_input)
 		}
 	}
@@ -78,7 +93,7 @@ mod tests {
 	#[test]
 	fn do_not_apply_rebind_if_not_just_pressed() {
 		let mut app = setup(_Map::new().with_mock(|mock| {
-			mock.expect_update_key().never().return_const(());
+			mock.expect_update_key::<_Action>().never().return_const(());
 		}));
 		app.world_mut().spawn(KeyBind(Rebinding(Input {
 			action: _Action,
