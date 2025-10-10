@@ -55,7 +55,7 @@ mod tests {
 	impl UpdateKey for _Map {
 		fn update_key<TAction>(&mut self, key: TAction, user_input: UserInput)
 		where
-			TAction: Copy + Into<ActionKey> + Into<UserInput> + 'static,
+			TAction: Copy + Into<ActionKey> + 'static,
 		{
 			self.mock.update_key(key, user_input)
 		}

@@ -11,7 +11,7 @@ use common::{
 	tools::action_key::ActionKey,
 	traits::{
 		handles_asset_resource_loading::HandlesAssetResourceLoading,
-		handles_input::HandlesInput,
+		handles_input::{HandlesInput, HandlesInputMut},
 		load_asset::Path,
 		thread_safe::ThreadSafe,
 	},
@@ -60,5 +60,8 @@ where
 impl<TDependencies> HandlesInput for InputPlugin<TDependencies> {
 	type TKeyMap = KeyMap;
 	type TInput<'world, 'state> = Input<'world>;
+}
+
+impl<TDependencies> HandlesInputMut for InputPlugin<TDependencies> {
 	type TInputMut<'world, 'state> = InputMut<'world>;
 }

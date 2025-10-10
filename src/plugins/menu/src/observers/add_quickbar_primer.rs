@@ -51,7 +51,7 @@ mod tests {
 	impl GetInput for _Map {
 		fn get_input<TAction>(&self, value: TAction) -> UserInput
 		where
-			TAction: Copy + Into<ActionKey> + Into<UserInput> + 'static,
+			TAction: Into<ActionKey> + 'static,
 		{
 			self.mock.get_input(value)
 		}
