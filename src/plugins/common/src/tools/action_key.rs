@@ -11,8 +11,8 @@ use crate::{
 		iter_helpers::{first, next},
 	},
 	traits::{
+		handles_input::InvalidUserInput,
 		handles_localization::Token,
-		handles_settings::InvalidUserInput,
 		iteration::{Iter, IterFinite},
 	},
 };

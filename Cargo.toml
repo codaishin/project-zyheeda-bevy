@@ -69,11 +69,11 @@ loading = { path = "src/plugins/loading" }
 localization = { path = "src/plugins/localization" }
 map_generation = { path = "src/plugins/map_generation" }
 menu = { path = "src/plugins/menu" }
+graphics = { path = "src/plugins/graphics" }
+input = { path = "src/plugins/input" }
 path_finding = { path = "src/plugins/path_finding" }
 physics = { path = "src/plugins/physics" }
-graphics = { path = "src/plugins/graphics" }
 savegame = { path = "src/plugins/savegame" }
-settings = { path = "src/plugins/settings" }
 skills = { path = "src/plugins/skills" }
 
 # internal crates

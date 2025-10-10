@@ -7,7 +7,7 @@ use common::{
 	tools::action_key::{ActionKey, user_input::UserInput},
 	traits::{
 		handles_custom_assets::TryLoadFrom,
-		handles_settings::{InvalidUserInput, UpdateKey},
+		handles_input::{InvalidUserInput, UpdateKey},
 		iterate::Iterate,
 		iteration::IterFinite,
 		key_mappings::{GetInput, HashCopySafe, TryGetAction},

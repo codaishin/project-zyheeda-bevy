@@ -2,7 +2,7 @@ use crate::{Input, KeyBind, Rebinding};
 use bevy::prelude::*;
 use common::{
 	tools::action_key::{ActionKey, user_input::UserInput},
-	traits::{handles_settings::UpdateKey, thread_safe::ThreadSafe},
+	traits::{handles_input::UpdateKey, thread_safe::ThreadSafe},
 };
 
 impl<TAction> KeyBind<Rebinding<TAction>>

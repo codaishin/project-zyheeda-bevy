@@ -46,7 +46,7 @@ mod tests {
 	use super::*;
 	use crate::resources::key_map::KeyMapInternal;
 	use bevy::input::keyboard::KeyCode;
-	use common::{tools::action_key::camera_key::CameraKey, traits::handles_settings::UpdateKey};
+	use common::{tools::action_key::camera_key::CameraKey, traits::handles_input::UpdateKey};
 	use testing::repeat_scope;
 
 	#[test]

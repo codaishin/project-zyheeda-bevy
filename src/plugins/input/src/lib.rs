@@ -10,7 +10,7 @@ use common::{
 	tools::action_key::ActionKey,
 	traits::{
 		handles_asset_resource_loading::HandlesAssetResourceLoading,
-		handles_settings::HandlesSettings,
+		handles_input::HandlesInput,
 		load_asset::Path,
 		thread_safe::ThreadSafe,
 	},
@@ -25,9 +25,9 @@ use systems::save_changes::SaveChanges;
 type KeyMapDto = KeyMapDtoGeneric<ActionKey>;
 
 #[derive(Debug, PartialEq)]
-pub struct SettingsPlugin<TDependencies>(PhantomData<TDependencies>);
+pub struct InputPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading> SettingsPlugin<TLoading>
+impl<TLoading> InputPlugin<TLoading>
 where
 	TLoading: ThreadSafe + HandlesAssetResourceLoading,
 {
@@ -36,7 +36,7 @@ where
 	}
 }
 
-impl<TLoading> Plugin for SettingsPlugin<TLoading>
+impl<TLoading> Plugin for InputPlugin<TLoading>
 where
 	TLoading: ThreadSafe + HandlesAssetResourceLoading,
 {
@@ -56,6 +56,6 @@ where
 	}
 }
 
-impl<TDependencies> HandlesSettings for SettingsPlugin<TDependencies> {
+impl<TDependencies> HandlesInput for InputPlugin<TDependencies> {
 	type TKeyMap = KeyMap;
 }

@@ -23,6 +23,7 @@ use common::{
 		animation::{HasAnimationsDispatch, RegisterAnimations},
 		handles_agents::HandlesAgents,
 		handles_enemies::HandlesEnemies,
+		handles_input::HandlesInput,
 		handles_orientation::{Face, HandlesOrientation},
 		handles_path_finding::HandlesPathFinding,
 		handles_physics::{HandlesAllPhysicalEffects, HandlesMotion, HandlesPhysicalObjects},
@@ -34,7 +35,6 @@ use common::{
 			PlayerMainCamera,
 		},
 		handles_saving::HandlesSaving,
-		handles_settings::HandlesSettings,
 		handles_skill_behaviors::{
 			Contact,
 			HandlesSkillBehaviors,
@@ -87,7 +87,7 @@ impl<TSettings, TSaveGame, TAnimations, TPhysics, TPathFinding, TAgents>
 		TAgents,
 	)>
 where
-	TSettings: ThreadSafe + HandlesSettings,
+	TSettings: ThreadSafe + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
 	TPhysics: ThreadSafe + HandlesPhysicalObjects + HandlesAllPhysicalEffects,
@@ -123,7 +123,7 @@ impl<TSettings, TSaveGame, TAnimations, TPhysics, TPathFinding, TAgents> Plugin
 		TAgents,
 	)>
 where
-	TSettings: ThreadSafe + HandlesSettings,
+	TSettings: ThreadSafe + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
 	TPhysics: ThreadSafe + HandlesPhysicalObjects + HandlesMotion + HandlesAllPhysicalEffects,
