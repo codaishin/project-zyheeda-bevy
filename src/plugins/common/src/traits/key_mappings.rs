@@ -8,7 +8,7 @@ use std::hash::Hash;
 pub trait GetInput {
 	fn get_input<TAction>(&self, value: TAction) -> UserInput
 	where
-		TAction: Copy + Into<ActionKey> + Into<UserInput> + 'static;
+		TAction: Into<ActionKey> + 'static;
 }
 
 pub trait TryGetAction {

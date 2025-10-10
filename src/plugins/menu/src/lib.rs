@@ -44,7 +44,7 @@ use common::{
 	tools::action_key::ActionKey,
 	traits::{
 		handles_graphics::UiCamera,
-		handles_input::HandlesInput,
+		handles_input::{HandlesInput, HandlesInputMut},
 		handles_load_tracking::{
 			AssetsProgress,
 			DependenciesProgress,
@@ -115,7 +115,7 @@ impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics, TPlayers, TLoadou
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
-	TSettings: ThreadSafe + HandlesInput,
+	TSettings: ThreadSafe + HandlesInput + HandlesInputMut,
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
 	TPlayers: ThreadSafe + HandlesPlayer,
@@ -147,7 +147,7 @@ impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics, TPlayers, TLoadou
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
-	TSettings: ThreadSafe + HandlesInput,
+	TSettings: ThreadSafe + HandlesInput + HandlesInputMut,
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
 	TPlayers: ThreadSafe + HandlesPlayer,
@@ -380,7 +380,7 @@ impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics, TPlayers, TLoadou
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
-	TSettings: ThreadSafe + HandlesInput,
+	TSettings: ThreadSafe + HandlesInput + HandlesInputMut,
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
 	TPlayers: ThreadSafe + HandlesPlayer,
