@@ -44,7 +44,7 @@ use common::{
 	tools::action_key::ActionKey,
 	traits::{
 		handles_graphics::UiCamera,
-		handles_input::{HandlesInput, HandlesInputMut},
+		handles_input::{HandlesInput, HandlesInputMut, InputMutSystemParam, InputSystemParam},
 		handles_load_tracking::{
 			AssetsProgress,
 			DependenciesProgress,
@@ -102,11 +102,11 @@ use traits::{LoadUi, add_dropdown::AddDropdown, add_tooltip::AddTooltip, add_ui:
 
 pub struct MenuPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics, TPlayers, TLoadout>
+impl<TLoading, TSavegame, TInput, TLocalization, TGraphics, TPlayers, TLoadout>
 	MenuPlugin<(
 		TLoading,
 		TSavegame,
-		TSettings,
+		TInput,
 		TLocalization,
 		TGraphics,
 		TPlayers,
@@ -115,7 +115,7 @@ impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics, TPlayers, TLoadou
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
-	TSettings: ThreadSafe + HandlesInput + HandlesInputMut,
+	TInput: ThreadSafe + HandlesInput + HandlesInputMut,
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
 	TPlayers: ThreadSafe + HandlesPlayer,
@@ -124,7 +124,7 @@ where
 	pub fn from_plugins(
 		_: &TLoading,
 		_: &TSavegame,
-		_: &TSettings,
+		_: &TInput,
 		_: &TLocalization,
 		_: &TGraphics,
 		_: &TPlayers,
@@ -134,11 +134,11 @@ where
 	}
 }
 
-impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics, TPlayers, TLoadout>
+impl<TLoading, TSavegame, TInput, TLocalization, TGraphics, TPlayers, TLoadout>
 	MenuPlugin<(
 		TLoading,
 		TSavegame,
-		TSettings,
+		TInput,
 		TLocalization,
 		TGraphics,
 		TPlayers,
@@ -147,7 +147,7 @@ impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics, TPlayers, TLoadou
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
-	TSettings: ThreadSafe + HandlesInput + HandlesInputMut,
+	TInput: ThreadSafe + HandlesInput + HandlesInputMut,
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
 	TPlayers: ThreadSafe + HandlesPlayer,
@@ -174,7 +174,7 @@ where
 			Update,
 			(
 				PreventMenuChange::menus_unchangeable_when_present,
-				set_state_from_input::<GameState, MenuState, TSettings::TKeyMap>
+				set_state_from_input::<MenuState, InputSystemParam<TInput>>
 					.run_if(changeable_and_not_loading),
 			)
 				.chain(),
@@ -227,14 +227,14 @@ where
 		let play = GameState::Play;
 
 		app.add_ui::<UIOverlay, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(play)
-			.add_observer(QuickbarPanel::add_quickbar_primer::<TSettings::TKeyMap>)
+			.add_observer(QuickbarPanel::add_quickbar_primer::<InputSystemParam<TInput>>)
 			.add_systems(
 				Update,
 				(
 					QuickbarPanel::set_icon::<TPlayers::TPlayer, TLoadout::TSlots>,
 					QuickbarPanel::set_color::<
 						TPlayers::TPlayer,
-						TSettings::TKeyMap,
+						InputSystemParam<TInput>,
 						TLoadout::TSlots,
 					>,
 					panel_colors::<QuickbarPanel>,
@@ -326,12 +326,12 @@ where
 			.add_systems(
 				Update,
 				(
-					SettingsScreen::set_key_bindings_from::<TSettings::TKeyMap>,
+					SettingsScreen::set_key_bindings_from::<InputSystemParam<TInput>>,
 					KeyBindAction::render_ui::<TLocalization::TLocalizationServer>,
 					KeyBindInput::render_ui::<TLocalization::TLocalizationServer>,
 					KeyBindInput::rebind_on_click,
 					KeyRebindInput::render_ui::<TLocalization::TLocalizationServer>,
-					KeyRebindInput::rebind_apply::<TSettings::TKeyMap>,
+					KeyRebindInput::rebind_apply::<InputMutSystemParam<TInput>>,
 				)
 					.run_if(in_state(settings)),
 			);
@@ -339,7 +339,6 @@ where
 
 	fn general_systems(&self, app: &mut App) {
 		let ui_ready = not(in_state(GameState::LoadingEssentialAssets));
-		let input_label_icons = InputLabel::icon::<TSettings::TKeyMap>;
 
 		app.register_derived_component::<MenuBackground, Node>()
 			.add_observer(UILabel::localize::<TLocalization::TLocalizationServer>)
@@ -353,7 +352,7 @@ where
 					DispatchTextColor::apply,
 					UIDisabled::apply,
 					(
-						input_label_icons("icons/keys"),
+						InputLabel::icon::<InputSystemParam<TInput>>("icons/keys"),
 						Icon::load_image,
 						Icon::insert_image,
 						UILabel::icon_tooltip,
@@ -367,11 +366,11 @@ where
 	}
 }
 
-impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics, TPlayers, TLoadout> Plugin
+impl<TLoading, TSavegame, TInput, TLocalization, TGraphics, TPlayers, TLoadout> Plugin
 	for MenuPlugin<(
 		TLoading,
 		TSavegame,
-		TSettings,
+		TInput,
 		TLocalization,
 		TGraphics,
 		TPlayers,
@@ -380,7 +379,7 @@ impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics, TPlayers, TLoadou
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
-	TSettings: ThreadSafe + HandlesInput + HandlesInputMut,
+	TInput: ThreadSafe + HandlesInput + HandlesInputMut,
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
 	TPlayers: ThreadSafe + HandlesPlayer,

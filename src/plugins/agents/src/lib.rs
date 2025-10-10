@@ -31,7 +31,7 @@ use common::{
 		handles_agents::HandlesAgents,
 		handles_custom_assets::HandlesCustomFolderAssets,
 		handles_enemies::HandlesEnemies,
-		handles_input::HandlesInput,
+		handles_input::{HandlesInput, InputSystemParam},
 		handles_lights::HandlesLights,
 		handles_physics::HandlesPhysicalAttributes,
 		handles_player::{
@@ -52,18 +52,11 @@ use systems::void_sphere::ring_rotation::ring_rotation;
 
 pub struct AgentsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TSettings, TSaveGame, TPhysics, TAnimations, TLights>
-	AgentsPlugin<(
-		TLoading,
-		TSettings,
-		TSaveGame,
-		TPhysics,
-		TAnimations,
-		TLights,
-	)>
+impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights>
+	AgentsPlugin<(TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights)>
 where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
-	TSettings: ThreadSafe + HandlesInput,
+	TInput: ThreadSafe + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesPhysicalAttributes,
 	TAnimations: ThreadSafe + RegisterAnimations,
@@ -71,7 +64,7 @@ where
 {
 	pub fn from_plugins(
 		_: &TLoading,
-		_: &TSettings,
+		_: &TInput,
 		_: &TSaveGame,
 		_: &TPhysics,
 		_: &TAnimations,
@@ -81,18 +74,11 @@ where
 	}
 }
 
-impl<TLoading, TSettings, TSaveGame, TPhysics, TAnimations, TLights> Plugin
-	for AgentsPlugin<(
-		TLoading,
-		TSettings,
-		TSaveGame,
-		TPhysics,
-		TAnimations,
-		TLights,
-	)>
+impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights> Plugin
+	for AgentsPlugin<(TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights)>
 where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
-	TSettings: ThreadSafe + HandlesInput,
+	TInput: ThreadSafe + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesPhysicalAttributes,
 	TAnimations: ThreadSafe + RegisterAnimations,
@@ -148,7 +134,7 @@ where
 		);
 		app.add_systems(
 			Update,
-			player_toggle_walk_run::<TSettings::TKeyMap>.run_if(in_state(GameState::Play)),
+			player_toggle_walk_run::<InputSystemParam<TInput>>.run_if(in_state(GameState::Play)),
 		);
 	}
 }

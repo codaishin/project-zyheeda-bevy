@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use crate::{
 	components::{
 		ColorOverride,
@@ -6,7 +8,10 @@ use crate::{
 	},
 	traits::colors::ColorConfig,
 };
-use bevy::prelude::*;
+use bevy::{
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
+};
 use common::{
 	components::ui_input_primer::{IsPrimed, UiInputPrimer},
 	tools::{
@@ -27,55 +32,55 @@ use common::{
 };
 
 impl QuickbarPanel {
-	pub(crate) fn set_color<TAgent, TMap, TSlots>(
+	pub(crate) fn set_color<TAgent, TInput, TSlots>(
 		commands: Commands,
 		buttons: Query<(Entity, &Self, &UiInputPrimer)>,
-		map: Res<TMap>,
+		input: StaticSystemParam<TInput>,
 		slots: Query<&TSlots, With<TAgent>>,
 		param: AssociatedSystemParam<TSlots, SlotKey>,
 	) where
 		TAgent: Component,
-		TMap: Resource + GetInput,
 		TSlots: Component + GetFromSystemParam<SlotKey>,
 		for<'i> TSlots::TItem<'i>: GetProperty<Result<SkillExecution, NoSkill>>,
+		for<'w, 's> TInput: SystemParam<Item<'w, 's>: GetInput>,
 	{
-		set_color(commands, buttons, map, slots, param)
+		set_color(commands, buttons, input, slots, param)
 	}
 }
 
-fn set_color<TAgent, TMap, TPrimer, TSlots>(
+fn set_color<TAgent, TInput, TPrimer, TSlots>(
 	mut commands: Commands,
 	buttons: Query<(Entity, &QuickbarPanel, &TPrimer)>,
-	map: Res<TMap>,
+	map: StaticSystemParam<TInput>,
 	slots: Query<&TSlots, With<TAgent>>,
 	param: AssociatedSystemParam<TSlots, SlotKey>,
 ) where
 	TAgent: Component,
-	TMap: Resource + GetInput,
 	TPrimer: Component + GetProperty<UserInput> + GetProperty<IsPrimed>,
 	TSlots: Component + GetFromSystemParam<SlotKey>,
 	for<'i> TSlots::TItem<'i>: GetProperty<Result<SkillExecution, NoSkill>>,
+	for<'w, 's> TInput: SystemParam<Item<'w, 's>: GetInput>,
 {
 	for slots in &slots {
 		for (entity, panel, primer) in &buttons {
 			let Ok(entity) = commands.get_entity(entity) else {
 				continue;
 			};
-			let color = get_color_override(map.as_ref(), panel, primer, slots, &param);
+			let color = get_color_override(map.deref(), panel, primer, slots, &param);
 			update_color_override(color, entity);
 		}
 	}
 }
 
-fn get_color_override<TSlots, TMap, TPrimer>(
-	map: &TMap,
+fn get_color_override<TSlots, TInput, TPrimer>(
+	input: &TInput,
 	QuickbarPanel { key, .. }: &QuickbarPanel,
 	primer: &TPrimer,
 	slots: &TSlots,
 	param: &AssociatedSystemParamRef<TSlots, SlotKey>,
 ) -> Option<ColorConfig>
 where
-	TMap: GetInput,
+	TInput: GetInput,
 	TPrimer: Component + GetProperty<UserInput> + GetProperty<IsPrimed>,
 	TSlots: Component + GetFromSystemParam<SlotKey>,
 	for<'i> TSlots::TItem<'i>: GetProperty<Result<SkillExecution, NoSkill>>,
@@ -93,7 +98,7 @@ where
 
 	let primer_is_primed = primer.dyn_property::<IsPrimed>();
 	let primer_key = primer.dyn_property::<UserInput>();
-	if primer_is_primed && map.get_input(*key) == primer_key {
+	if primer_is_primed && input.get_input(*key) == primer_key {
 		return Some(QuickbarPanel::PANEL_COLORS.pressed);
 	}
 
@@ -148,11 +153,11 @@ mod tests {
 	}
 
 	#[derive(Resource, NestedMocks)]
-	struct _Map {
-		mock: Mock_Map,
+	struct _Input {
+		mock: Mock_Input,
 	}
 
-	impl Default for _Map {
+	impl Default for _Input {
 		fn default() -> Self {
 			Self::new().with_mock(|mock| {
 				mock.expect_get_input::<PlayerSlot>()
@@ -162,7 +167,7 @@ mod tests {
 	}
 
 	#[automock]
-	impl GetInput for _Map {
+	impl GetInput for _Input {
 		fn get_input<TAction>(&self, value: TAction) -> UserInput
 		where
 			TAction: Into<ActionKey> + 'static,
@@ -210,10 +215,10 @@ mod tests {
 		}
 	}
 
-	fn setup(key_map: _Map) -> App {
+	fn setup(key_map: _Input) -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, set_color::<_Agent, _Map, _Primer, _Slots>);
+		app.add_systems(Update, set_color::<_Agent, Res<_Input>, _Primer, _Slots>);
 		app.add_plugins(StatesPlugin);
 		app.insert_resource(key_map);
 
@@ -222,7 +227,7 @@ mod tests {
 
 	#[test]
 	fn set_to_active_when_matching_skill_active() {
-		let mut app = setup(_Map::default());
+		let mut app = setup(_Input::default());
 		app.world_mut().spawn((
 			_Agent,
 			_Slots::from([(
@@ -259,7 +264,7 @@ mod tests {
 
 	#[test]
 	fn no_override_when_no_matching_skill_active() {
-		let mut app = setup(_Map::default());
+		let mut app = setup(_Input::default());
 		app.world_mut().spawn((_Agent, _Slots::from([])));
 		let panel = app
 			.world_mut()
@@ -285,7 +290,7 @@ mod tests {
 
 	#[test]
 	fn no_override_when_no_skill_not_active() {
-		let mut app = setup(_Map::default());
+		let mut app = setup(_Input::default());
 		app.world_mut().spawn((
 			_Agent,
 			_Slots::from([(
@@ -317,7 +322,7 @@ mod tests {
 
 	#[test]
 	fn set_to_pressed_when_matching_key_primed() {
-		let mut app = setup(_Map::new().with_mock(|mock| {
+		let mut app = setup(_Input::new().with_mock(|mock| {
 			mock.expect_get_input()
 				.times(1)
 				.with(eq(PlayerSlot::LOWER_L))
@@ -361,7 +366,7 @@ mod tests {
 
 	#[test]
 	fn set_to_queued_when_matching_with_queued_skill() {
-		let mut app = setup(_Map::default());
+		let mut app = setup(_Input::default());
 		app.world_mut().spawn((
 			_Agent,
 			_Slots::from([(
@@ -398,7 +403,7 @@ mod tests {
 
 	#[test]
 	fn do_nothing_if_slots_has_no_agent() {
-		let mut app = setup(_Map::default());
+		let mut app = setup(_Input::default());
 		app.world_mut().spawn(_Slots::from([(
 			SlotKey::from(PlayerSlot::LOWER_L),
 			_Item(Some(SkillExecution::Active)),

@@ -8,7 +8,7 @@ use common::{
 	systems::log::OnError,
 	traits::{
 		handles_graphics::{FirstPassCamera, WorldCameras},
-		handles_input::HandlesInput,
+		handles_input::{HandlesInput, InputSystemParam},
 		handles_player::{HandlesPlayer, PlayerMainCamera},
 		handles_saving::HandlesSaving,
 		thread_safe::ThreadSafe,
@@ -37,10 +37,10 @@ where
 	}
 }
 
-impl<TSettings, TSavegame, TPlayers, TGraphics> Plugin
-	for CameraControlPlugin<(TSettings, TSavegame, TPlayers, TGraphics)>
+impl<TInput, TSavegame, TPlayers, TGraphics> Plugin
+	for CameraControlPlugin<(TInput, TSavegame, TPlayers, TGraphics)>
 where
-	TSettings: ThreadSafe + HandlesInput,
+	TInput: ThreadSafe + HandlesInput,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TPlayers: ThreadSafe + HandlesPlayer + PlayerMainCamera,
 	TGraphics: ThreadSafe + WorldCameras + FirstPassCamera,
@@ -53,7 +53,7 @@ where
 			Update,
 			(
 				TGraphics::TWorldCameras::set_to_orbit::<TPlayers::TPlayer>.pipe(OnError::log),
-				move_on_orbit::<OrbitPlayer, TSettings::TKeyMap>,
+				move_on_orbit::<OrbitPlayer, InputSystemParam<TInput>>,
 				move_with_target::<OrbitPlayer>,
 			)
 				.chain()

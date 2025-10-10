@@ -1,35 +1,31 @@
-use super::{iterate::Iterate, key_mappings::TryGetAction};
+mod bevy_impls;
+
 use crate::{
 	tools::action_key::{ActionKey, user_input::UserInput},
 	traits::iteration::{Iter, IterFinite},
 };
-use bevy::{ecs::system::SystemParam, prelude::*};
+use bevy::ecs::system::SystemParam;
 
 pub trait HandlesInput {
-	type TKeyMap: Resource
-		+ GetInput
-		+ TryGetAction
-		+ UpdateKey
-		+ for<'a> Iterate<'a, TItem = (&'a ActionKey, &'a UserInput)>;
 	type TInput<'world, 'state>: SystemParam
-		+ for<'w, 's> SystemParam<Item<'w, 's>: GetInput>
+		+ for<'w, 's> SystemParam<Item<'w, 's>: GetInput + InputSetupChanged>
 		+ for<'w, 's> SystemParam<Item<'w, 's>: GetInputState>;
 }
 
 pub trait HandlesInputMut {
 	type TInputMut<'world, 'state>: SystemParam
-		+ for<'w, 's> SystemParam<Item<'w, 's>: GetInput>
+		+ for<'w, 's> SystemParam<Item<'w, 's>: GetInput + InputSetupChanged>
 		+ for<'w, 's> SystemParam<Item<'w, 's>: GetInputState>
 		+ for<'w, 's> SystemParam<Item<'w, 's>: UpdateKey>;
 }
 
-/// Helper type to designate [`HandlesInput::TInput`] as a [`SystemParam`] constraint for a
-/// given generic system
-pub type InputSystemParam<T> = <T as HandlesInput>::TInput<'static, 'static>;
+/// Helper type to designate [`HandlesInput::TInput`] as a [`SystemParam`] implementation for a
+/// given generic system constraint
+pub type InputSystemParam<'w, 's, T> = <T as HandlesInput>::TInput<'w, 's>;
 
-/// Helper type to designate [`HandlesInputMut::TInputMut`] as a [`SystemParam`] constraint for a
-/// given generic system
-pub type InputMutSystemParam<T> = <T as HandlesInputMut>::TInputMut<'static, 'static>;
+/// Helper type to designate [`HandlesInputMut::TInputMut`] as a [`SystemParam`] implementation for a
+/// given generic system constraint
+pub type InputMutSystemParam<'w, 's, T> = <T as HandlesInputMut>::TInputMut<'w, 's>;
 
 pub trait UpdateKey {
 	fn update_key<TAction>(&mut self, action: TAction, input: UserInput)
@@ -41,10 +37,50 @@ pub trait InvalidUserInput {
 	fn invalid_input(&self) -> &[UserInput];
 }
 
+pub trait InputSetupChanged {
+	fn input_setup_changed(&self) -> bool;
+}
+
 pub trait GetInput {
 	fn get_input<TAction>(&self, action: TAction) -> UserInput
 	where
 		TAction: Into<ActionKey> + 'static;
+}
+
+pub trait GetAllInputs {
+	fn get_all_inputs(&self) -> impl Iterator<Item = (ActionKey, UserInput)>;
+}
+
+impl<T> GetAllInputs for T
+where
+	T: GetInput,
+{
+	fn get_all_inputs(&self) -> impl Iterator<Item = (ActionKey, UserInput)> {
+		IterInputs {
+			input: self,
+			actions: ActionKey::iterator(),
+		}
+	}
+}
+
+pub struct IterInputs<'a, T>
+where
+	T: GetInput,
+{
+	input: &'a T,
+	actions: Iter<ActionKey>,
+}
+
+impl<'a, T> Iterator for IterInputs<'a, T>
+where
+	T: GetInput + 'a,
+{
+	type Item = (ActionKey, UserInput);
+
+	fn next(&mut self) -> Option<Self::Item> {
+		let action_key = self.actions.next()?;
+		Some((action_key, self.input.get_input(action_key)))
+	}
 }
 
 pub trait GetInputState {
@@ -53,34 +89,42 @@ pub trait GetInputState {
 		TAction: Into<ActionKey> + 'static;
 }
 
-impl<'a, T> Iterate<'a> for T
-where
-	T: GetInputState + 'a,
-{
-	type TItem = (ActionKey, InputState);
-	type TIter = IterInputStates<'a, Self>;
+pub trait GetAllInputStates {
+	fn get_all_input_states<TAction>(&self) -> impl Iterator<Item = (TAction, InputState)>
+	where
+		TAction: Into<ActionKey> + IterFinite + 'static;
+}
 
-	fn iterate(&'a self) -> Self::TIter {
+impl<T> GetAllInputStates for T
+where
+	T: GetInputState,
+{
+	fn get_all_input_states<TAction>(&self) -> impl Iterator<Item = (TAction, InputState)>
+	where
+		TAction: Into<ActionKey> + IterFinite + 'static,
+	{
 		IterInputStates {
 			input: self,
-			actions: ActionKey::iterator(),
+			actions: TAction::iterator(),
 		}
 	}
 }
 
-pub struct IterInputStates<'a, T>
+pub struct IterInputStates<'a, TInput, TAction>
 where
-	T: GetInputState,
+	TInput: GetInputState,
+	TAction: Into<ActionKey> + IterFinite + 'static,
 {
-	input: &'a T,
-	actions: Iter<ActionKey>,
+	input: &'a TInput,
+	actions: Iter<TAction>,
 }
 
-impl<'a, T> Iterator for IterInputStates<'a, T>
+impl<'a, TInput, TAction> Iterator for IterInputStates<'a, TInput, TAction>
 where
-	T: GetInputState + 'a,
+	TInput: GetInputState + 'a,
+	TAction: Into<ActionKey> + IterFinite + 'static,
 {
-	type Item = (ActionKey, InputState);
+	type Item = (TAction, InputState);
 
 	fn next(&mut self) -> Option<Self::Item> {
 		let action_key = self.actions.next()?;
@@ -94,6 +138,24 @@ pub enum InputState {
 	Released { just_now: bool },
 }
 
+impl InputState {
+	pub const fn pressed() -> Self {
+		Self::Pressed { just_now: false }
+	}
+
+	pub const fn just_pressed() -> Self {
+		Self::Pressed { just_now: true }
+	}
+
+	pub const fn released() -> Self {
+		Self::Released { just_now: false }
+	}
+
+	pub const fn just_released() -> Self {
+		Self::Released { just_now: true }
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -103,50 +165,108 @@ mod tests {
 	};
 	use std::collections::HashMap;
 
-	struct _Input(HashMap<ActionKey, InputState>);
+	mod get_all_inputs {
+		use bevy::input::keyboard::KeyCode;
 
-	impl GetInputState for _Input {
-		fn get_input_state<TAction>(&self, action: TAction) -> InputState
-		where
-			TAction: Into<ActionKey> + 'static,
-		{
-			match self.0.get(&action.into()) {
-				Some(input_state) => *input_state,
-				None => InputState::Released { just_now: false },
+		use super::*;
+
+		struct _Input(HashMap<ActionKey, UserInput>);
+
+		impl GetInput for _Input {
+			fn get_input<TAction>(&self, action: TAction) -> UserInput
+			where
+				TAction: Into<ActionKey> + 'static,
+			{
+				let action = action.into();
+				self.0
+					.get(&action)
+					.copied()
+					.unwrap_or(UserInput::from(action))
 			}
+		}
+
+		#[test]
+		fn all_input_states() {
+			let input = _Input(HashMap::from([
+				(
+					ActionKey::from(PlayerSlot::LOWER_R),
+					UserInput::KeyCode(KeyCode::KeyA),
+				),
+				(
+					ActionKey::from(MenuState::Inventory),
+					UserInput::KeyCode(KeyCode::KeyB),
+				),
+				(
+					ActionKey::from(MovementKey::Left),
+					UserInput::KeyCode(KeyCode::KeyC),
+				),
+			]));
+
+			assert_eq!(
+				ActionKey::iterator()
+					.map(|a| match a {
+						ActionKey::Slot(PlayerSlot::LOWER_R) =>
+							(a, UserInput::KeyCode(KeyCode::KeyA)),
+						ActionKey::Menu(MenuState::Inventory) =>
+							(a, UserInput::KeyCode(KeyCode::KeyB)),
+						ActionKey::Movement(MovementKey::Left) =>
+							(a, UserInput::KeyCode(KeyCode::KeyC)),
+						_ => (a, UserInput::from(a)),
+					})
+					.collect::<Vec<_>>(),
+				input.get_all_inputs().collect::<Vec<_>>()
+			);
 		}
 	}
 
-	#[test]
-	fn all_input_states() {
-		let input = _Input(HashMap::from([
-			(
-				ActionKey::from(PlayerSlot::LOWER_R),
-				InputState::Pressed { just_now: true },
-			),
-			(
-				ActionKey::from(MenuState::Inventory),
-				InputState::Pressed { just_now: false },
-			),
-			(
-				ActionKey::from(MovementKey::Left),
-				InputState::Released { just_now: true },
-			),
-		]));
+	mod get_all_input_states {
+		use super::*;
 
-		assert_eq!(
-			ActionKey::iterator()
-				.map(|a| match a {
-					ActionKey::Slot(PlayerSlot::LOWER_R) =>
-						(a, InputState::Pressed { just_now: true }),
-					ActionKey::Menu(MenuState::Inventory) =>
-						(a, InputState::Pressed { just_now: false }),
-					ActionKey::Movement(MovementKey::Left) =>
-						(a, InputState::Released { just_now: true }),
-					_ => (a, InputState::Released { just_now: false }),
-				})
-				.collect::<Vec<_>>(),
-			input.iterate().collect::<Vec<_>>()
-		);
+		struct _Input(HashMap<ActionKey, InputState>);
+
+		impl GetInputState for _Input {
+			fn get_input_state<TAction>(&self, action: TAction) -> InputState
+			where
+				TAction: Into<ActionKey> + 'static,
+			{
+				match self.0.get(&action.into()) {
+					Some(input_state) => *input_state,
+					None => InputState::Released { just_now: false },
+				}
+			}
+		}
+
+		#[test]
+		fn all_input_states() {
+			let input = _Input(HashMap::from([
+				(
+					ActionKey::from(PlayerSlot::LOWER_R),
+					InputState::Pressed { just_now: true },
+				),
+				(
+					ActionKey::from(MenuState::Inventory),
+					InputState::Pressed { just_now: false },
+				),
+				(
+					ActionKey::from(MovementKey::Left),
+					InputState::Released { just_now: true },
+				),
+			]));
+
+			assert_eq!(
+				ActionKey::iterator()
+					.map(|a| match a {
+						ActionKey::Slot(PlayerSlot::LOWER_R) =>
+							(a, InputState::Pressed { just_now: true }),
+						ActionKey::Menu(MenuState::Inventory) =>
+							(a, InputState::Pressed { just_now: false }),
+						ActionKey::Movement(MovementKey::Left) =>
+							(a, InputState::Released { just_now: true }),
+						_ => (a, InputState::Released { just_now: false }),
+					})
+					.collect::<Vec<_>>(),
+				input.get_all_input_states().collect::<Vec<_>>()
+			);
+		}
 	}
 }

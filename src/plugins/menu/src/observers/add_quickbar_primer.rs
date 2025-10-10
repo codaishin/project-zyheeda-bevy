@@ -1,5 +1,8 @@
 use crate::components::quickbar_panel::QuickbarPanel;
-use bevy::prelude::*;
+use bevy::{
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
+};
 use common::{
 	components::ui_input_primer::UiInputPrimer,
 	traits::{accessors::get::TryApplyOn, handles_input::GetInput},
@@ -7,13 +10,13 @@ use common::{
 };
 
 impl QuickbarPanel {
-	pub(crate) fn add_quickbar_primer<TMap>(
+	pub(crate) fn add_quickbar_primer<TInput>(
 		trigger: Trigger<OnAdd, Self>,
 		mut commands: ZyheedaCommands,
-		map: Res<TMap>,
+		input: StaticSystemParam<TInput>,
 		panels: Query<&Self>,
 	) where
-		TMap: GetInput + Resource,
+		for<'w, 's> TInput: SystemParam<Item<'w, 's>: GetInput>,
 	{
 		let entity = trigger.target();
 		let Ok(Self { key, .. }) = panels.get(entity) else {
@@ -21,7 +24,7 @@ impl QuickbarPanel {
 		};
 
 		commands.try_apply_on(&entity, |mut e| {
-			e.try_insert(UiInputPrimer::from(map.get_input(*key)));
+			e.try_insert(UiInputPrimer::from(input.get_input(*key)));
 		});
 	}
 }
@@ -43,12 +46,12 @@ mod tests {
 	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Resource, NestedMocks)]
-	struct _Map {
-		mock: Mock_Map,
+	struct _Input {
+		mock: Mock_Input,
 	}
 
 	#[automock]
-	impl GetInput for _Map {
+	impl GetInput for _Input {
 		fn get_input<TAction>(&self, value: TAction) -> UserInput
 		where
 			TAction: Into<ActionKey> + 'static,
@@ -57,18 +60,18 @@ mod tests {
 		}
 	}
 
-	fn setup(map: _Map) -> App {
+	fn setup(input: _Input) -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.insert_resource(map);
-		app.add_observer(QuickbarPanel::add_quickbar_primer::<_Map>);
+		app.insert_resource(input);
+		app.add_observer(QuickbarPanel::add_quickbar_primer::<Res<_Input>>);
 
 		app
 	}
 
 	#[test]
 	fn add_ui_input_primer() {
-		let mut app = setup(_Map::new().with_mock(|mock| {
+		let mut app = setup(_Input::new().with_mock(|mock| {
 			mock.expect_get_input()
 				.times(1)
 				.with(eq(PlayerSlot::Upper(Side::Left)))

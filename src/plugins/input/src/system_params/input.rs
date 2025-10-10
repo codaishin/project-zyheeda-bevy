@@ -2,7 +2,7 @@ use crate::{resources::key_map::KeyMap, traits::get_user_input_state::GetUserInp
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::{
 	tools::action_key::{ActionKey, user_input::UserInput},
-	traits::handles_input::{GetInput, GetInputState, InputState, UpdateKey},
+	traits::handles_input::{GetInput, GetInputState, InputSetupChanged, InputState, UpdateKey},
 };
 
 #[derive(SystemParam)]
@@ -13,6 +13,12 @@ where
 {
 	pub(crate) key_map: Res<'w, TKeyMap>,
 	pub(crate) input: Res<'w, TButtonInput>,
+}
+
+impl InputSetupChanged for Input<'_> {
+	fn input_setup_changed(&self) -> bool {
+		self.key_map.is_changed()
+	}
 }
 
 impl<TKeyMap> GetInput for Input<'_, TKeyMap>
@@ -49,6 +55,12 @@ where
 {
 	key_map: ResMut<'w, TKeyMap>,
 	pub(crate) input: Res<'w, TButtonInput>,
+}
+
+impl InputSetupChanged for InputMut<'_> {
+	fn input_setup_changed(&self) -> bool {
+		self.key_map.is_changed()
+	}
 }
 
 impl<TKeyMap> UpdateKey for InputMut<'_, TKeyMap>

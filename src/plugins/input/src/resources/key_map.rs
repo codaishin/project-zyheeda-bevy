@@ -10,8 +10,8 @@ use common::{
 		handles_input::{GetInput, InvalidUserInput, UpdateKey},
 		iterate::Iterate,
 		iteration::IterFinite,
-		key_mappings::{HashCopySafe, TryGetAction},
 		load_asset::LoadAsset,
+		thread_safe::ThreadSafe,
 	},
 };
 use dto::KeyMapDto;
@@ -36,15 +36,6 @@ impl GetInput for KeyMap {
 		TAction: Into<ActionKey>,
 	{
 		self.0.get_input(action)
-	}
-}
-
-impl TryGetAction for KeyMap {
-	fn try_get_action<TAction>(&self, input: UserInput) -> Option<TAction>
-	where
-		TAction: Copy + TryFrom<ActionKey>,
-	{
-		self.0.try_get_action(input)
 	}
 }
 
@@ -108,7 +99,6 @@ where
 	TAllActions: Hash + Eq,
 {
 	action_to_input: HashMap<TAllActions, UserInput>,
-	input_to_action: HashMap<UserInput, TAllActions>,
 	invalid_inputs: InvalidInputs<TAllActions, UserInput>,
 }
 
@@ -121,9 +111,8 @@ where
 		TAction: Copy + Into<TAllActions>,
 	{
 		let action: TAllActions = action.into();
-		let old_input = self.get_input(action);
 
-		if self.input_to_action.get(&input) == Some(&action) {
+		if self.action_to_input.get(&action) == Some(&input) {
 			return;
 		}
 
@@ -132,30 +121,40 @@ where
 			return;
 		}
 
-		match self.input_to_action.get(&input).copied() {
-			Some(old_action) => {
-				if old_action.invalid_input().contains(&old_input) {
-					self.invalid_inputs.push(old_action, old_input);
-					return;
-				}
-				self.action_to_input.insert(old_action, old_input);
-				self.input_to_action.insert(old_input, old_action);
+		match self.get_swap_pair(input, action) {
+			Ok(Some((swap_input, swap_action))) => {
+				self.action_to_input.insert(swap_action, swap_input);
+				self.action_to_input.insert(action, input);
 			}
-			None => {
-				self.input_to_action.remove(&old_input);
+			Ok(None) => {
+				self.action_to_input.insert(action, input);
 			}
+			Err(InvalidSwap) => {}
 		}
-
-		self.action_to_input.insert(action, input);
-		self.input_to_action.insert(input, action);
 	}
 
-	fn try_get_action<TAction>(&self, input: UserInput) -> Option<TAction>
-	where
-		TAction: TryFrom<TAllActions>,
-	{
-		let action = self.input_to_action.get(&input)?;
-		TAction::try_from(*action).ok()
+	fn get_swap_pair(
+		&mut self,
+		input: UserInput,
+		action: TAllActions,
+	) -> Result<Option<(UserInput, TAllActions)>, InvalidSwap> {
+		let swap_input = self.get_input(action);
+		let Some(swap_action) = self.get_action(&input) else {
+			return Ok(None);
+		};
+
+		if swap_action.invalid_input().contains(&swap_input) {
+			self.invalid_inputs.push(swap_action, swap_input);
+			return Err(InvalidSwap);
+		}
+
+		Ok(Some((swap_input, swap_action)))
+	}
+
+	fn get_action(&self, input: &UserInput) -> Option<TAllActions> {
+		self.action_to_input
+			.iter()
+			.find_map(|(a, i)| if i == input { Some(*a) } else { None })
 	}
 
 	fn get_input<TAction>(&self, action: TAction) -> UserInput
@@ -179,7 +178,6 @@ where
 	fn default() -> Self {
 		let mut map = Self {
 			action_to_input: HashMap::default(),
-			input_to_action: HashMap::default(),
 			invalid_inputs: InvalidInputs(HashMap::default()),
 		};
 
@@ -193,7 +191,15 @@ where
 
 impl<TAction> TryLoadFrom<KeyMapDto<TAction>> for KeyMapInternal<TAction>
 where
-	TAction: Debug + HashCopySafe + InvalidUserInput + IterFinite + TypePath + Into<UserInput>,
+	TAction: Debug
+		+ Eq
+		+ Hash
+		+ Copy
+		+ ThreadSafe
+		+ InvalidUserInput
+		+ IterFinite
+		+ TypePath
+		+ Into<UserInput>,
 {
 	type TInstantiationError = LoadError<TAction>;
 
@@ -288,6 +294,8 @@ where
 		)
 	}
 }
+
+struct InvalidSwap;
 
 #[derive(TypePath, Debug, PartialEq)]
 pub enum LoadError<TAllActions>
@@ -496,22 +504,6 @@ mod tests {
 
 			assert_eq!(UserInput::KeyCode(KeyCode::KeyB), mapped);
 		}
-
-		#[test]
-		fn to_key_a() {
-			let mapper = KeyMapInternal::<_AllActions>::default();
-			let mapped = mapper.try_get_action(UserInput::KeyCode(KeyCode::KeyA));
-
-			assert_eq!(Some(_ActionA), mapped);
-		}
-
-		#[test]
-		fn to_key_b() {
-			let mapper = KeyMapInternal::<_AllActions>::default();
-			let mapped = mapper.try_get_action(UserInput::KeyCode(KeyCode::KeyB));
-
-			assert_eq!(Some(_ActionB), mapped);
-		}
 	}
 
 	mod update {
@@ -524,10 +516,7 @@ mod tests {
 			let mut mapper = KeyMapInternal::<_AllActions>::default();
 			mapper.update_key(action, input);
 
-			assert_eq!(
-				(input, Some(action)),
-				(mapper.get_input(action), mapper.try_get_action(input))
-			);
+			assert_eq!(input, mapper.get_input(action));
 		}
 
 		#[test]
@@ -539,14 +528,7 @@ mod tests {
 			mapper.update_key(action, input_b);
 			mapper.update_key(action, input_c);
 
-			assert_eq!(
-				(input_c, Some(action), None as Option<UserInput>),
-				(
-					mapper.get_input(action),
-					mapper.try_get_action(input_c),
-					mapper.try_get_action(input_b)
-				)
-			);
+			assert_eq!(input_c, mapper.get_input(action));
 		}
 
 		#[test]
@@ -560,13 +542,8 @@ mod tests {
 			mapper.update_key(action_b, input_a);
 
 			assert_eq!(
-				(input_b, Some(action_b), input_a, Some(input_a),),
-				(
-					mapper.get_input(action_a),
-					mapper.try_get_action(input_a),
-					mapper.get_input(action_b),
-					mapper.try_get_action(input_b),
-				)
+				(input_b, input_a,),
+				(mapper.get_input(action_a), mapper.get_input(action_b),)
 			);
 		}
 
@@ -578,17 +555,12 @@ mod tests {
 			assert_eq!(
 				(
 					UserInput::from(_AllActions::B),
-					None as Option<_ActionA>,
 					HashMap::from([(
 						_AllActions::B,
 						HashSet::from([UserInput::KeyCode(KeyCode::KeyC)])
 					)])
 				),
-				(
-					mapper.get_input(_ActionB),
-					mapper.try_get_action(UserInput::KeyCode(KeyCode::KeyC)),
-					mapper.invalid_inputs.0
-				)
+				(mapper.get_input(_ActionB), mapper.invalid_inputs.0)
 			);
 		}
 
@@ -602,9 +574,7 @@ mod tests {
 			assert_eq!(
 				(
 					UserInput::KeyCode(KeyCode::KeyC),
-					Some(_ActionA),
 					UserInput::KeyCode(KeyCode::KeyB),
-					Some(_ActionB),
 					HashMap::from([(
 						_AllActions::B,
 						HashSet::from([UserInput::KeyCode(KeyCode::KeyC)])
@@ -612,9 +582,7 @@ mod tests {
 				),
 				(
 					mapper.get_input(_ActionA),
-					mapper.try_get_action(UserInput::KeyCode(KeyCode::KeyC)),
 					mapper.get_input(_ActionB),
-					mapper.try_get_action(UserInput::KeyCode(KeyCode::KeyB)),
 					mapper.invalid_inputs.0
 				)
 			);
@@ -644,16 +612,9 @@ mod tests {
 			assert_eq!(
 				(
 					UserInput::KeyCode(KeyCode::KeyC),
-					Some(_ActionA),
 					UserInput::KeyCode(KeyCode::KeyB),
-					Some(_ActionB)
 				),
-				(
-					mapper.get_input(_ActionA),
-					mapper.try_get_action(UserInput::KeyCode(KeyCode::KeyC)),
-					mapper.get_input(_ActionB),
-					mapper.try_get_action(UserInput::KeyCode(KeyCode::KeyB)),
-				)
+				(mapper.get_input(_ActionA), mapper.get_input(_ActionB),)
 			);
 			Ok(())
 		}

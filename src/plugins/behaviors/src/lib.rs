@@ -23,7 +23,7 @@ use common::{
 		animation::{HasAnimationsDispatch, RegisterAnimations},
 		handles_agents::HandlesAgents,
 		handles_enemies::HandlesEnemies,
-		handles_input::HandlesInput,
+		handles_input::{HandlesInput, InputSystemParam},
 		handles_orientation::{Face, HandlesOrientation},
 		handles_path_finding::HandlesPathFinding,
 		handles_physics::{HandlesAllPhysicalEffects, HandlesMotion, HandlesPhysicalObjects},
@@ -77,9 +77,9 @@ use systems::{
 
 pub struct BehaviorsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSettings, TSaveGame, TAnimations, TPhysics, TPathFinding, TAgents>
+impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding, TAgents>
 	BehaviorsPlugin<(
-		TSettings,
+		TInput,
 		TSaveGame,
 		TAnimations,
 		TPhysics,
@@ -87,7 +87,7 @@ impl<TSettings, TSaveGame, TAnimations, TPhysics, TPathFinding, TAgents>
 		TAgents,
 	)>
 where
-	TSettings: ThreadSafe + HandlesInput,
+	TInput: ThreadSafe + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
 	TPhysics: ThreadSafe + HandlesPhysicalObjects + HandlesAllPhysicalEffects,
@@ -102,7 +102,7 @@ where
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn from_plugins(
-		_: &TSettings,
+		_: &TInput,
 		_: &TSaveGame,
 		_: &TAnimations,
 		_: &TPhysics,
@@ -113,9 +113,9 @@ where
 	}
 }
 
-impl<TSettings, TSaveGame, TAnimations, TPhysics, TPathFinding, TAgents> Plugin
+impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding, TAgents> Plugin
 	for BehaviorsPlugin<(
-		TSettings,
+		TInput,
 		TSaveGame,
 		TAnimations,
 		TPhysics,
@@ -123,7 +123,7 @@ impl<TSettings, TSaveGame, TAnimations, TPhysics, TPathFinding, TAgents> Plugin
 		TAgents,
 	)>
 where
-	TSettings: ThreadSafe + HandlesInput,
+	TInput: ThreadSafe + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
 	TPhysics: ThreadSafe + HandlesPhysicalObjects + HandlesMotion + HandlesAllPhysicalEffects,
@@ -147,10 +147,10 @@ where
 		TSaveGame::register_savable_component::<Movement<PathOrWasd<TPhysics::TMotion>>>(app);
 
 		let point_input =
-			PointerInput::<TPhysics::TMotion>::parse::<TAgents::TCamRay, TSettings::TKeyMap>;
+			PointerInput::<TPhysics::TMotion>::parse::<TAgents::TCamRay, InputSystemParam<TInput>>;
 		let wasd_input = WasdInput::<TPhysics::TMotion>::parse::<
 			TAgents::TPlayerMainCamera,
-			TSettings::TKeyMap,
+			InputSystemParam<TInput>,
 			TAgents::TPlayer,
 		>;
 		let wasd_input = wasd_input.pipe(OnError::log_and_return(|| ProcessInput::None));
@@ -212,7 +212,7 @@ where
 						execute_player_path,
 						execute_player_movement,
 						animate_player_movement,
-						SkillUsage::player::<TAgents::TPlayer, TSettings::TKeyMap>,
+						SkillUsage::player::<TAgents::TPlayer, InputSystemParam<TInput>>,
 					)
 						.chain(),
 					// Enemy behaviors

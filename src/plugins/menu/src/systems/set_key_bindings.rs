@@ -1,25 +1,31 @@
 use crate::traits::update_key_bindings::UpdateKeyBindings;
-use bevy::{ecs::component::Mutable, prelude::*};
-use common::traits::iterate::Iterate;
+use bevy::{
+	ecs::{
+		component::Mutable,
+		system::{StaticSystemParam, SystemParam},
+	},
+	prelude::*,
+};
+use common::traits::handles_input::{GetAllInputs, InputSetupChanged};
+use std::ops::Deref;
 
-impl<T, TKey, TKeyCode> SetKeyBindings<TKey, TKeyCode> for T where
-	T: UpdateKeyBindings<TKey, TKeyCode> + Component<Mutability = Mutable>
-{
-}
+impl<T> SetKeyBindings for T where T: UpdateKeyBindings + Component<Mutability = Mutable> {}
 
-pub(crate) trait SetKeyBindings<TKey, TKeyCode>:
-	UpdateKeyBindings<TKey, TKeyCode> + Component<Mutability = Mutable> + Sized
+pub(crate) trait SetKeyBindings:
+	UpdateKeyBindings + Component<Mutability = Mutable> + Sized
 {
-	fn set_key_bindings_from<TKeyMap>(map: Res<TKeyMap>, mut components: Query<&mut Self>)
-	where
-		TKeyMap: for<'a> Iterate<'a, TItem = (&'a TKey, &'a TKeyCode)> + Resource,
+	fn set_key_bindings_from<TInput>(
+		input: StaticSystemParam<TInput>,
+		mut components: Query<&mut Self>,
+	) where
+		for<'w, 's> TInput: SystemParam<Item<'w, 's>: GetAllInputs + InputSetupChanged>,
 	{
 		for mut component in &mut components {
-			if !map.is_changed() && !component.is_added() {
+			if !input.input_setup_changed() && !component.is_added() {
 				continue;
 			}
 
-			component.update_key_bindings(map.as_ref());
+			component.update_key_bindings(input.deref());
 		}
 	}
 }
@@ -27,7 +33,8 @@ pub(crate) trait SetKeyBindings<TKey, TKeyCode>:
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use std::collections::{HashMap, hash_map::Iter};
+	use common::tools::action_key::{ActionKey, user_input::UserInput};
+	use std::{any::type_name, fmt::Debug};
 	use testing::SingleThreadedApp;
 
 	#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
@@ -36,118 +43,90 @@ mod tests {
 	#[derive(Debug, PartialEq, Clone, Copy)]
 	struct _KeyCode;
 
-	#[derive(Component, Debug, PartialEq)]
-	struct _Component(Vec<(_Key, _KeyCode)>);
+	#[derive(Component, Debug, PartialEq, Default)]
+	struct _Component {
+		called_with: Vec<&'static str>,
+	}
 
-	impl<const N: usize> From<[(_Key, _KeyCode); N]> for _Component {
-		fn from(keys: [(_Key, _KeyCode); N]) -> Self {
-			Self(Vec::from(keys))
+	impl UpdateKeyBindings for _Component {
+		fn update_key_bindings<TInput>(&mut self, _: &TInput) {
+			self.called_with.push(type_name::<TInput>());
 		}
 	}
 
-	impl UpdateKeyBindings<_Key, _KeyCode> for _Component {
-		fn update_key_bindings<TKeyMap>(&mut self, map: &TKeyMap)
-		where
-			for<'a> TKeyMap: Iterate<'a, TItem = (&'a _Key, &'a _KeyCode)>,
-		{
-			self.0 = map
-				.iterate()
-				.map(|(key, key_code)| (*key, *key_code))
-				.collect()
+	#[derive(SystemParam)]
+	struct _Input<'w> {
+		changed: Res<'w, _InputChanged>,
+	}
+
+	impl<'w> GetAllInputs for _Input<'w> {
+		fn get_all_inputs(&self) -> impl Iterator<Item = (ActionKey, UserInput)> {
+			std::iter::empty()
 		}
 	}
 
-	#[derive(Resource)]
-	struct _Map(HashMap<_Key, _KeyCode>);
-
-	impl<const N: usize> From<[(_Key, _KeyCode); N]> for _Map {
-		fn from(keys: [(_Key, _KeyCode); N]) -> Self {
-			Self(HashMap::from(keys))
+	impl<'w> InputSetupChanged for _Input<'w> {
+		fn input_setup_changed(&self) -> bool {
+			self.changed.0
 		}
 	}
 
-	impl<'a> Iterate<'a> for _Map {
-		type TItem = (&'a _Key, &'a _KeyCode);
-		type TIter = Iter<'a, _Key, _KeyCode>;
+	#[derive(Resource, Debug, PartialEq)]
+	struct _InputChanged(bool);
 
-		fn iterate(&'a self) -> Self::TIter {
-			self.0.iter()
-		}
-	}
-
-	fn setup(map: _Map) -> App {
+	fn setup(input_changed: _InputChanged) -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.insert_resource(map);
-		app.add_systems(Update, _Component::set_key_bindings_from::<_Map>);
+		app.insert_resource(input_changed);
+		app.add_systems(Update, _Component::set_key_bindings_from::<_Input>);
 
 		app
 	}
 
 	#[test]
-	fn set_key_bindings() {
-		let keys = [(_Key, _KeyCode)];
-		let map = _Map::from(keys);
-		let mut app = setup(map);
-		let entity = app.world_mut().spawn(_Component::from([])).id();
+	fn call_component_update() {
+		let mut app = setup(_InputChanged(true));
+		let entity = app.world_mut().spawn(_Component::default()).id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&_Component::from(keys)),
+			Some(&_Component {
+				called_with: vec![type_name::<_Input>()]
+			}),
 			app.world().entity(entity).get::<_Component>()
 		);
 	}
 
 	#[test]
-	fn set_key_bindings_only_once() {
-		let keys = [(_Key, _KeyCode)];
-		let map = _Map::from(keys);
-		let mut app = setup(map);
-		let entity = app.world_mut().spawn(_Component::from([])).id();
+	fn do_not_call_component_update_when_component_not_added() {
+		let mut app = setup(_InputChanged(true));
+		let entity = app.world_mut().spawn(_Component::default()).id();
 
 		app.update();
-		let mut entity_mut = app.world_mut().entity_mut(entity);
-		let mut component = entity_mut.get_mut::<_Component>().unwrap();
-		*component = _Component::from([]);
+		app.insert_resource(_InputChanged(false));
 		app.update();
 
 		assert_eq!(
-			Some(&_Component::from([])),
+			Some(&_Component {
+				called_with: vec![type_name::<_Input>()]
+			}),
 			app.world().entity(entity).get::<_Component>()
 		);
 	}
 
 	#[test]
-	fn set_key_bindings_again_when_resource_changed() {
-		let keys = [(_Key, _KeyCode)];
-		let map = _Map::from([]);
-		let mut app = setup(map);
-		let entity = app.world_mut().spawn(_Component::from([])).id();
+	fn call_component_update_again_when_input_changed() {
+		let mut app = setup(_InputChanged(true));
+		let entity = app.world_mut().spawn(_Component::default()).id();
 
 		app.update();
-		let mut map = app.world_mut().resource_mut::<_Map>();
-		*map = _Map::from(keys);
 		app.update();
 
 		assert_eq!(
-			Some(&_Component::from(keys)),
-			app.world().entity(entity).get::<_Component>()
-		);
-	}
-
-	#[test]
-	fn set_key_bindings_again_when_component_added_and_resource_unchanged() {
-		let keys = [(_Key, _KeyCode)];
-		let map = _Map::from(keys);
-		let mut app = setup(map);
-
-		app.update();
-		let entity = app.world_mut().spawn(_Component::from([])).id();
-		app.update();
-
-		assert_eq!(
-			Some(&_Component::from(keys)),
+			Some(&_Component {
+				called_with: vec![type_name::<_Input>(), type_name::<_Input>()]
+			}),
 			app.world().entity(entity).get::<_Component>()
 		);
 	}

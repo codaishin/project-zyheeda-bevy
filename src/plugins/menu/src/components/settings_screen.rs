@@ -21,8 +21,8 @@ use common::{
 		user_input::UserInput,
 	},
 	traits::{
+		handles_input::GetAllInputs,
 		handles_localization::{Localize, LocalizeToken, Token},
-		iterate::Iterate,
 		iteration::IterFinite,
 		thread_safe::ThreadSafe,
 	},
@@ -165,14 +165,11 @@ impl InsertUiContent for SettingsScreen {
 	}
 }
 
-impl UpdateKeyBindings<ActionKey, UserInput> for SettingsScreen {
-	fn update_key_bindings<TKeyMap>(&mut self, map: &TKeyMap)
+impl UpdateKeyBindings for SettingsScreen {
+	fn update_key_bindings<TInput>(&mut self, input: &TInput)
 	where
-		for<'a> TKeyMap: Iterate<'a, TItem = (&'a ActionKey, &'a UserInput)>,
+		TInput: GetAllInputs,
 	{
-		self.key_bindings = map
-			.iterate()
-			.map(|(key, key_code)| (*key, *key_code))
-			.collect()
+		self.key_bindings = input.get_all_inputs().collect()
 	}
 }

@@ -1,5 +1,8 @@
 use crate::{Input, KeyBind, Rebinding};
-use bevy::prelude::*;
+use bevy::{
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
+};
 use common::{
 	tools::action_key::{ActionKey, user_input::UserInput},
 	traits::{handles_input::UpdateKey, thread_safe::ThreadSafe},
@@ -9,16 +12,16 @@ impl<TAction> KeyBind<Rebinding<TAction>>
 where
 	TAction: Copy + ThreadSafe + Into<ActionKey> + Into<UserInput>,
 {
-	pub(crate) fn rebind_apply<TMap>(
-		mut map: ResMut<TMap>,
-		input: Res<ButtonInput<UserInput>>,
+	pub(crate) fn rebind_apply<TInputMut>(
+		mut input: StaticSystemParam<TInputMut>, // FIXME: need smth like `GetRawInputState` so we don't use `ButtonInput` directly
+		user_input: Res<ButtonInput<UserInput>>,
 		rebinds: Query<&Self>,
 	) where
-		TMap: UpdateKey + Resource,
+		for<'w, 's> TInputMut: SystemParam<Item<'w, 's>: UpdateKey>,
 	{
-		for input in input.get_just_pressed() {
+		for user_input in user_input.get_just_pressed() {
 			for KeyBind(Rebinding(Input { action, .. })) in &rebinds {
-				map.update_key(*action, *input);
+				input.update_key(*action, *user_input);
 			}
 		}
 	}
@@ -47,12 +50,12 @@ mod tests {
 	}
 
 	#[derive(Resource, NestedMocks)]
-	struct _Map {
-		mock: Mock_Map,
+	struct _Input {
+		mock: Mock_Input,
 	}
 
 	#[automock]
-	impl UpdateKey for _Map {
+	impl UpdateKey for _Input {
 		fn update_key<TAction>(&mut self, key: TAction, user_input: UserInput)
 		where
 			TAction: Copy + Into<ActionKey> + 'static,
@@ -61,19 +64,22 @@ mod tests {
 		}
 	}
 
-	fn setup(map: _Map) -> App {
+	fn setup(map: _Input) -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.init_resource::<ButtonInput<UserInput>>();
 		app.insert_resource(map);
-		app.add_systems(Update, KeyBind::<Rebinding<_Action>>::rebind_apply::<_Map>);
+		app.add_systems(
+			Update,
+			KeyBind::<Rebinding<_Action>>::rebind_apply::<ResMut<_Input>>,
+		);
 
 		app
 	}
 
 	#[test]
 	fn apply_rebind() {
-		let mut app = setup(_Map::new().with_mock(|mock| {
+		let mut app = setup(_Input::new().with_mock(|mock| {
 			mock.expect_update_key()
 				.with(eq(_Action), eq(UserInput::KeyCode(KeyCode::KeyB)))
 				.times(1)
@@ -92,7 +98,7 @@ mod tests {
 
 	#[test]
 	fn do_not_apply_rebind_if_not_just_pressed() {
-		let mut app = setup(_Map::new().with_mock(|mock| {
+		let mut app = setup(_Input::new().with_mock(|mock| {
 			mock.expect_update_key::<_Action>().never().return_const(());
 		}));
 		app.world_mut().spawn(KeyBind(Rebinding(Input {

@@ -1,7 +1,7 @@
-use common::traits::iterate::Iterate;
+use common::traits::handles_input::GetAllInputs;
 
-pub(crate) trait UpdateKeyBindings<TKey, TKeyCode> {
-	fn update_key_bindings<TKeyMap>(&mut self, map: &TKeyMap)
+pub(crate) trait UpdateKeyBindings {
+	fn update_key_bindings<TInput>(&mut self, input: &TInput)
 	where
-		for<'a> TKeyMap: Iterate<'a, TItem = (&'a TKey, &'a TKeyCode)>;
+		TInput: GetAllInputs;
 }

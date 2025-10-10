@@ -1,27 +1,27 @@
-use bevy::{prelude::*, state::state::FreelyMutableState};
-use common::{tools::action_key::user_input::UserInput, traits::key_mappings::JustPressed};
+use bevy::{
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
+	state::state::FreelyMutableState,
+};
+use common::{
+	tools::action_key::ActionKey,
+	traits::handles_input::{GetInputState, InputState},
+};
 
-impl<T, TActionKey> TriggerState<TActionKey> for T
-where
-	T: Resource + JustPressed<TActionKey>,
-	TActionKey: PartialEq + Copy,
-{
-}
+impl<T> TriggerState for T where T: for<'w, 's> SystemParam<Item<'w, 's>: GetInputState> {}
 
-pub(crate) trait TriggerState<TActionKey>: Resource + JustPressed<TActionKey>
-where
-	TActionKey: PartialEq + Copy,
-{
+pub(crate) trait TriggerState: for<'w, 's> SystemParam<Item<'w, 's>: GetInputState> {
 	#[allow(clippy::type_complexity)]
-	fn trigger<TState>(
+	fn trigger<TActionKey, TState>(
 		action: TActionKey,
 		state: TState,
-	) -> impl Fn(Res<Self>, Res<ButtonInput<UserInput>>, ResMut<NextState<TState>>)
+	) -> impl Fn(StaticSystemParam<Self>, ResMut<NextState<TState>>)
 	where
+		TActionKey: Into<ActionKey> + Copy + 'static,
 		TState: FreelyMutableState + Copy,
 	{
-		move |key_map, input, mut game_state| {
-			if !key_map.just_pressed(&input).any(is(action)) {
+		move |input, mut game_state| {
+			if input.get_input_state(action) != InputState::just_pressed() {
 				return;
 			}
 
@@ -30,20 +30,12 @@ where
 	}
 }
 
-fn is<TActionKey>(action: TActionKey) -> impl Fn(TActionKey) -> bool
-where
-	TActionKey: PartialEq,
-{
-	move |pressed| pressed == action
-}
-
 #[cfg(test)]
 mod tests {
 	use super::*;
 	use bevy::state::app::StatesPlugin;
-	use common::tools::action_key::user_input::UserInput;
 	use macros::NestedMocks;
-	use mockall::automock;
+	use mockall::{automock, predicate::eq};
 	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(States, Debug, PartialEq, Eq, Hash, Clone, Copy, Default)]
@@ -60,37 +52,46 @@ mod tests {
 		B,
 	}
 
-	#[derive(Resource, NestedMocks)]
-	struct _Map {
-		mock: Mock_Map,
-	}
-
-	#[automock]
-	impl JustPressed<_Action> for _Map {
-		fn just_pressed(&self, input: &ButtonInput<UserInput>) -> impl Iterator<Item = _Action> {
-			self.mock.just_pressed(input)
+	impl From<_Action> for ActionKey {
+		fn from(_: _Action) -> Self {
+			panic!("NOT USED")
 		}
 	}
 
-	fn setup(map: _Map, input: ButtonInput<UserInput>, action: _Action, state: _State) -> App {
+	#[derive(Resource, NestedMocks)]
+	struct _Input {
+		mock: Mock_Input,
+	}
+
+	#[automock]
+	impl GetInputState for _Input {
+		fn get_input_state<TAction>(&self, action: TAction) -> InputState
+		where
+			TAction: Into<ActionKey> + 'static,
+		{
+			self.mock.get_input_state(action)
+		}
+	}
+
+	fn setup(input: _Input, action: _Action, state: _State) -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.add_plugins(StatesPlugin);
 		app.init_state::<_State>();
 		app.insert_resource(input);
-		app.insert_resource(map);
-		app.add_systems(Update, _Map::trigger(action, state));
+		app.add_systems(Update, Res::<_Input>::trigger(action, state));
 
 		app
 	}
 
 	#[test]
 	fn trigger_a() {
-		let map = _Map::new().with_mock(|mock| {
-			mock.expect_just_pressed()
-				.returning(|_| Box::new(std::iter::once(_Action::A)));
+		let input = _Input::new().with_mock(|mock| {
+			mock.expect_get_input_state()
+				.with(eq(_Action::A))
+				.return_const(InputState::just_pressed());
 		});
-		let mut app = setup(map, ButtonInput::default(), _Action::A, _State::A);
+		let mut app = setup(input, _Action::A, _State::A);
 
 		app.update();
 
@@ -102,11 +103,12 @@ mod tests {
 
 	#[test]
 	fn trigger_b() {
-		let map = _Map::new().with_mock(|mock| {
-			mock.expect_just_pressed()
-				.returning(|_| Box::new(std::iter::once(_Action::B)));
+		let input = _Input::new().with_mock(|mock| {
+			mock.expect_get_input_state()
+				.with(eq(_Action::B))
+				.return_const(InputState::just_pressed());
 		});
-		let mut app = setup(map, ButtonInput::default(), _Action::B, _State::B);
+		let mut app = setup(input, _Action::B, _State::B);
 
 		app.update();
 
@@ -114,20 +116,5 @@ mod tests {
 			app.world().get_resource::<NextState<_State>>(),
 			Some(NextState::Pending(_State::B))
 		));
-	}
-
-	#[test]
-	fn call_key_map_with_correct_arguments() {
-		let map = _Map::new().with_mock(|mock| {
-			mock.expect_just_pressed().times(1).returning(|input| {
-				assert!(input.just_pressed(UserInput::MouseButton(MouseButton::Forward)));
-				Box::new(std::iter::empty())
-			});
-		});
-		let mut input = ButtonInput::default();
-		input.press(UserInput::MouseButton(MouseButton::Forward));
-		let mut app = setup(map, input, _Action::A, _State::A);
-
-		app.update();
 	}
 }

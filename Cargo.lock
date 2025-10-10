@@ -1779,6 +1779,7 @@ dependencies = [
  "macros",
  "mockall",
  "serde",
+ "test-case",
  "testing",
  "tracing",
  "uuid",

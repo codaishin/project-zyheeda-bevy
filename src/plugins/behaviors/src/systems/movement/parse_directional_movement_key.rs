@@ -1,9 +1,19 @@
 use crate::systems::movement::insert_process_component::{InputProcessComponent, ProcessInput};
-use bevy::{ecs::query::QuerySingleError, prelude::*};
+use bevy::{
+	ecs::{
+		query::QuerySingleError,
+		system::{StaticSystemParam, SystemParam},
+	},
+	prelude::*,
+};
 use common::{
 	errors::UniqueViolation,
-	tools::action_key::user_input::UserInput,
-	traits::{handles_player::KeyDirection, key_mappings::Pressed},
+	tools::action_key::ActionKey,
+	traits::{
+		handles_input::{GetAllInputStates, InputState},
+		handles_player::KeyDirection,
+		iteration::IterFinite,
+	},
 };
 
 impl<T> ParseDirectionalMovement for T
@@ -17,15 +27,15 @@ pub(crate) trait ParseDirectionalMovement: From<Dir3> + InputProcessComponent
 where
 	Self::TInputProcessComponent: UsesDirection,
 {
-	fn parse<TCamera, TMap, TPlayer>(
-		map: Res<TMap>,
-		input: Res<ButtonInput<UserInput>>,
+	fn parse<TCamera, TInput, TPlayer>(
+		input: StaticSystemParam<TInput>,
 		cameras: Query<&GlobalTransform, With<TCamera>>,
 		players: Query<&Self::TInputProcessComponent, With<TPlayer>>,
 	) -> Result<ProcessInput<Self>, UniqueViolation<TCamera>>
 	where
 		TCamera: KeyDirection + Component,
-		TMap: Pressed<TCamera::TKey> + Resource,
+		TCamera::TKey: IterFinite + Into<ActionKey> + 'static,
+		for<'w, 's> TInput: SystemParam<Item<'w, 's>: GetAllInputStates>,
 		TPlayer: Component,
 	{
 		let cam_transform = match cameras.single() {
@@ -37,8 +47,12 @@ where
 			}
 			Ok(cam) => cam,
 		};
-		let direction: Vec3 = map
-			.pressed(&input)
+		let direction: Vec3 = input
+			.get_all_input_states::<TCamera::TKey>()
+			.filter_map(|(movement, state)| match state {
+				InputState::Pressed { .. } => Some(movement),
+				_ => None,
+			})
 			.filter_map(|key| TCamera::key_direction(cam_transform, &key).ok())
 			.map(|d| *d)
 			.sum();
@@ -73,33 +87,65 @@ mod tests {
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
 		tools::action_key::user_input::UserInput,
-		traits::handles_player::DirectionError,
+		traits::{handles_player::DirectionError, iteration::Iter},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
-	use std::collections::HashSet;
 	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Component)]
 	struct _Player;
 
-	#[derive(Resource, NestedMocks)]
-	struct _Map {
-		mock: Mock_Map,
+	#[derive(SystemParam)]
+	struct _InputParam<'w> {
+		input: Res<'w, _Input>,
 	}
 
-	#[automock]
-	impl Pressed<_Key> for _Map {
-		fn pressed(&self, input: &ButtonInput<UserInput>) -> impl Iterator<Item = _Key> {
-			self.mock.pressed(input)
+	impl GetAllInputStates for _InputParam<'_> {
+		fn get_all_input_states<TAction>(&self) -> impl Iterator<Item = (TAction, InputState)>
+		where
+			TAction: Into<ActionKey> + IterFinite + 'static,
+		{
+			self.input.get_all_input_states()
 		}
 	}
 
-	#[derive(Debug, PartialEq)]
+	#[derive(Resource, NestedMocks)]
+	struct _Input {
+		mock: Mock_Input,
+	}
+
+	#[automock]
+	impl GetAllInputStates for _Input {
+		fn get_all_input_states<TAction>(&self) -> impl Iterator<Item = (TAction, InputState)>
+		where
+			TAction: Into<ActionKey> + IterFinite + 'static,
+		{
+			self.mock.get_all_input_states()
+		}
+	}
+
+	#[derive(Debug, PartialEq, Clone, Copy)]
 	pub enum _Key {
 		A,
 		B,
 		C,
+	}
+
+	impl From<_Key> for ActionKey {
+		fn from(_: _Key) -> Self {
+			panic!("NOT USED")
+		}
+	}
+
+	impl IterFinite for _Key {
+		fn iterator() -> Iter<Self> {
+			panic!("NOT USED")
+		}
+
+		fn next(_: &Iter<Self>) -> Option<Self> {
+			panic!("NOT USED")
+		}
 	}
 
 	#[derive(Component)]
@@ -130,13 +176,13 @@ mod tests {
 	}
 
 	#[derive(Debug, PartialEq, Clone, Copy)]
-	struct _Input(Dir3);
+	struct _Result(Dir3);
 
-	impl InputProcessComponent for _Input {
+	impl InputProcessComponent for _Result {
 		type TInputProcessComponent = _Component;
 	}
 
-	impl From<Dir3> for _Input {
+	impl From<Dir3> for _Result {
 		fn from(direction: Dir3) -> Self {
 			Self(direction)
 		}
@@ -161,7 +207,7 @@ mod tests {
 		};
 	}
 
-	fn setup(map: _Map) -> App {
+	fn setup(map: _Input) -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.insert_resource(map);
@@ -171,21 +217,66 @@ mod tests {
 	}
 
 	#[test]
-	fn trigger_single_direction_from_center() -> Result<(), RunSystemError> {
+	fn trigger_single_direction_from_center_pressed() -> Result<(), RunSystemError> {
 		mock_cam!();
 		let cam_ctx = Mock_Cam::key_direction_context();
 		cam_ctx.expect().returning(|_, _| Ok(Dir3::Z));
-		let mut app = setup(_Map::new().with_mock(|mock| {
-			mock.expect_pressed()
-				.returning(|_| Box::new(std::iter::once(_Key::A)));
+		let mut app = setup(_Input::new().with_mock(|mock| {
+			mock.expect_get_all_input_states()
+				.returning(|| Box::new(std::iter::once((_Key::A, InputState::pressed()))));
 		}));
 		app.world_mut().spawn((_Cam, GlobalTransform::default()));
 
 		let input = app
 			.world_mut()
-			.run_system_once(_Input::parse::<_Cam, _Map, _Player>)?;
+			.run_system_once(_Result::parse::<_Cam, _InputParam, _Player>)?;
 
-		assert_eq!(Ok(ProcessInput::New(_Input(Dir3::Z))), input);
+		assert_eq!(Ok(ProcessInput::New(_Result(Dir3::Z))), input);
+		Ok(())
+	}
+
+	#[test]
+	fn trigger_single_direction_from_center_just_pressed() -> Result<(), RunSystemError> {
+		mock_cam!();
+		let cam_ctx = Mock_Cam::key_direction_context();
+		cam_ctx.expect().returning(|_, _| Ok(Dir3::Z));
+		let mut app = setup(_Input::new().with_mock(|mock| {
+			mock.expect_get_all_input_states()
+				.returning(|| Box::new(std::iter::once((_Key::A, InputState::just_pressed()))));
+		}));
+		app.world_mut().spawn((_Cam, GlobalTransform::default()));
+
+		let input = app
+			.world_mut()
+			.run_system_once(_Result::parse::<_Cam, _InputParam, _Player>)?;
+
+		assert_eq!(Ok(ProcessInput::New(_Result(Dir3::Z))), input);
+		Ok(())
+	}
+
+	#[test]
+	fn trigger_nothing_when_released() -> Result<(), RunSystemError> {
+		mock_cam!();
+		let cam_ctx = Mock_Cam::key_direction_context();
+		cam_ctx.expect().returning(|_, _| Ok(Dir3::Z));
+		let mut app = setup(_Input::new().with_mock(|mock| {
+			mock.expect_get_all_input_states().returning(|| {
+				Box::new(
+					[
+						(_Key::A, InputState::released()),
+						(_Key::B, InputState::just_released()),
+					]
+					.into_iter(),
+				)
+			});
+		}));
+		app.world_mut().spawn((_Cam, GlobalTransform::default()));
+
+		let input = app
+			.world_mut()
+			.run_system_once(_Result::parse::<_Cam, _InputParam, _Player>)?;
+
+		assert_eq!(Ok(ProcessInput::None), input);
 		Ok(())
 	}
 
@@ -201,18 +292,25 @@ mod tests {
 			.expect()
 			.with(eq(GlobalTransform::default()), eq(_Key::B))
 			.returning(|_, _| Ok(Dir3::X));
-		let mut app = setup(_Map::new().with_mock(|mock| {
-			mock.expect_pressed()
-				.returning(|_| Box::new([_Key::A, _Key::B].into_iter()));
+		let mut app = setup(_Input::new().with_mock(|mock| {
+			mock.expect_get_all_input_states().returning(|| {
+				Box::new(
+					[
+						(_Key::A, InputState::pressed()),
+						(_Key::B, InputState::pressed()),
+					]
+					.into_iter(),
+				)
+			});
 		}));
 		app.world_mut().spawn((_Cam, GlobalTransform::default()));
 
 		let input = app
 			.world_mut()
-			.run_system_once(_Input::parse::<_Cam, _Map, _Player>)?;
+			.run_system_once(_Result::parse::<_Cam, _InputParam, _Player>)?;
 
 		assert_eq!(
-			Ok(ProcessInput::New(_Input(
+			Ok(ProcessInput::New(_Result(
 				Dir3::try_from(Vec3::Z + Vec3::X).unwrap()
 			))),
 			input
@@ -236,17 +334,25 @@ mod tests {
 			.expect()
 			.with(eq(GlobalTransform::default()), eq(_Key::C))
 			.returning(|_, _| Ok(Dir3::NEG_Z));
-		let mut app = setup(_Map::new().with_mock(|mock| {
-			mock.expect_pressed()
-				.returning(|_| Box::new([_Key::A, _Key::B, _Key::C].into_iter()));
+		let mut app = setup(_Input::new().with_mock(|mock| {
+			mock.expect_get_all_input_states().returning(|| {
+				Box::new(
+					[
+						(_Key::A, InputState::pressed()),
+						(_Key::B, InputState::pressed()),
+						(_Key::C, InputState::pressed()),
+					]
+					.into_iter(),
+				)
+			});
 		}));
 		app.world_mut().spawn((_Cam, GlobalTransform::default()));
 
 		let input = app
 			.world_mut()
-			.run_system_once(_Input::parse::<_Cam, _Map, _Player>)?;
+			.run_system_once(_Result::parse::<_Cam, _InputParam, _Player>)?;
 
-		assert_eq!(Ok(ProcessInput::New(_Input(Dir3::X))), input);
+		assert_eq!(Ok(ProcessInput::New(_Result(Dir3::X))), input);
 		Ok(())
 	}
 
@@ -262,15 +368,15 @@ mod tests {
 			.expect()
 			.with(eq(GlobalTransform::default()), eq(_Key::B))
 			.returning(|_, _| Ok(Dir3::NEG_Z));
-		let mut app = setup(_Map::new().with_mock(|mock| {
-			mock.expect_pressed()
-				.returning(|_| Box::new([].into_iter()));
+		let mut app = setup(_Input::new().with_mock(|mock| {
+			mock.expect_get_all_input_states::<_Key>()
+				.returning(|| Box::new(std::iter::empty()));
 		}));
 		app.world_mut().spawn((_Cam, GlobalTransform::default()));
 
 		let input = app
 			.world_mut()
-			.run_system_once(_Input::parse::<_Cam, _Map, _Player>)?;
+			.run_system_once(_Result::parse::<_Cam, _InputParam, _Player>)?;
 
 		assert_eq!(Ok(ProcessInput::None), input);
 		Ok(())
@@ -288,15 +394,22 @@ mod tests {
 			.expect()
 			.with(eq(GlobalTransform::default()), eq(_Key::B))
 			.returning(|_, _| Ok(Dir3::NEG_Z));
-		let mut app = setup(_Map::new().with_mock(|mock| {
-			mock.expect_pressed()
-				.returning(|_| Box::new([_Key::A, _Key::B].into_iter()));
+		let mut app = setup(_Input::new().with_mock(|mock| {
+			mock.expect_get_all_input_states().returning(|| {
+				Box::new(
+					[
+						(_Key::A, InputState::pressed()),
+						(_Key::B, InputState::pressed()),
+					]
+					.into_iter(),
+				)
+			});
 		}));
 		app.world_mut().spawn((_Cam, GlobalTransform::default()));
 
 		let input = app
 			.world_mut()
-			.run_system_once(_Input::parse::<_Cam, _Map, _Player>)?;
+			.run_system_once(_Result::parse::<_Cam, _InputParam, _Player>)?;
 
 		assert_eq!(Ok(ProcessInput::None), input);
 		Ok(())
@@ -315,16 +428,16 @@ mod tests {
 			.expect()
 			.with(eq(GlobalTransform::default()), eq(_Key::B))
 			.returning(|_, _| Ok(Dir3::NEG_Z));
-		let mut app = setup(_Map::new().with_mock(|mock| {
-			mock.expect_pressed()
-				.returning(|_| Box::new([].into_iter()));
+		let mut app = setup(_Input::new().with_mock(|mock| {
+			mock.expect_get_all_input_states::<_Key>()
+				.returning(|| Box::new(std::iter::empty()));
 		}));
 		app.world_mut().spawn((_Cam, GlobalTransform::default()));
 		app.world_mut().spawn((_Player, _Component::Directional));
 
 		let input = app
 			.world_mut()
-			.run_system_once(_Input::parse::<_Cam, _Map, _Player>)?;
+			.run_system_once(_Result::parse::<_Cam, _InputParam, _Player>)?;
 
 		assert_eq!(Ok(ProcessInput::Stop), input);
 		Ok(())
@@ -343,16 +456,16 @@ mod tests {
 			.expect()
 			.with(eq(GlobalTransform::default()), eq(_Key::B))
 			.returning(|_, _| Ok(Dir3::NEG_Z));
-		let mut app = setup(_Map::new().with_mock(|mock| {
-			mock.expect_pressed()
-				.returning(|_| Box::new([].into_iter()));
+		let mut app = setup(_Input::new().with_mock(|mock| {
+			mock.expect_get_all_input_states::<_Key>()
+				.returning(|| Box::new(std::iter::empty()));
 		}));
 		app.world_mut().spawn((_Cam, GlobalTransform::default()));
 		app.world_mut().spawn(_Component::Directional);
 
 		let input = app
 			.world_mut()
-			.run_system_once(_Input::parse::<_Cam, _Map, _Player>)?;
+			.run_system_once(_Result::parse::<_Cam, _InputParam, _Player>)?;
 
 		assert_eq!(Ok(ProcessInput::None), input);
 		Ok(())
@@ -371,16 +484,16 @@ mod tests {
 			.expect()
 			.with(eq(GlobalTransform::default()), eq(_Key::B))
 			.returning(|_, _| Ok(Dir3::NEG_Z));
-		let mut app = setup(_Map::new().with_mock(|mock| {
-			mock.expect_pressed()
-				.returning(|_| Box::new([].into_iter()));
+		let mut app = setup(_Input::new().with_mock(|mock| {
+			mock.expect_get_all_input_states::<_Key>()
+				.returning(|| Box::new(std::iter::empty()));
 		}));
 		app.world_mut().spawn((_Cam, GlobalTransform::default()));
 		app.world_mut().spawn((_Player, _Component::NotDirectional));
 
 		let input = app
 			.world_mut()
-			.run_system_once(_Input::parse::<_Cam, _Map, _Player>)?;
+			.run_system_once(_Result::parse::<_Cam, _InputParam, _Player>)?;
 
 		assert_eq!(Ok(ProcessInput::None), input);
 		Ok(())
@@ -394,59 +507,30 @@ mod tests {
 			.expect()
 			.with(eq(GlobalTransform::from_xyz(1., 2., 3.)), eq(_Key::A))
 			.returning(|_, _| Ok(Dir3::Z));
-		let mut app = setup(_Map::new().with_mock(|mock| {
-			mock.expect_pressed()
-				.returning(move |_| Box::new(std::iter::once(_Key::A)));
+		let mut app = setup(_Input::new().with_mock(|mock| {
+			mock.expect_get_all_input_states::<_Key>()
+				.returning(|| Box::new(std::iter::once((_Key::A, InputState::pressed()))));
 		}));
 		app.world_mut()
 			.spawn((_Cam, GlobalTransform::from_xyz(1., 2., 3.)));
 
 		_ = app
 			.world_mut()
-			.run_system_once(_Input::parse::<_Cam, _Map, _Player>)?;
-		Ok(())
-	}
-
-	#[test]
-	fn use_button_input() -> Result<(), RunSystemError> {
-		mock_cam!();
-		let cam_ctx = Mock_Cam::key_direction_context();
-		cam_ctx.expect().returning(|_, _| Ok(Dir3::Z));
-		let mut app = setup(_Map::new().with_mock(|mock| {
-			mock.expect_pressed().returning(move |input| {
-				assert_eq!(
-					HashSet::from([
-						UserInput::from(KeyCode::Katakana),
-						UserInput::from(KeyCode::Hiragana)
-					]),
-					input.get_just_pressed().copied().collect::<HashSet<_>>()
-				);
-				Box::new(std::iter::empty())
-			});
-		}));
-		let mut input = ButtonInput::default();
-		input.press(UserInput::from(KeyCode::Hiragana));
-		input.press(UserInput::from(KeyCode::Katakana));
-		app.insert_resource(input);
-		app.world_mut().spawn((_Cam, GlobalTransform::default()));
-
-		_ = app
-			.world_mut()
-			.run_system_once(_Input::parse::<_Cam, _Map, _Player>)?;
+			.run_system_once(_Result::parse::<_Cam, _InputParam, _Player>)?;
 		Ok(())
 	}
 
 	#[test]
 	fn return_no_cam_error() -> Result<(), RunSystemError> {
 		mock_cam!();
-		let mut app = setup(_Map::new().with_mock(|mock| {
-			mock.expect_pressed()
-				.returning(|_| Box::new(std::iter::empty()));
+		let mut app = setup(_Input::new().with_mock(|mock| {
+			mock.expect_get_all_input_states::<_Key>()
+				.returning(|| Box::new(std::iter::empty()));
 		}));
 
 		let result = app
 			.world_mut()
-			.run_system_once(_Input::parse::<_Cam, _Map, _Player>)?;
+			.run_system_once(_Result::parse::<_Cam, _InputParam, _Player>)?;
 
 		assert_eq!(Err(UniqueViolation::none()), result);
 		Ok(())
@@ -455,16 +539,16 @@ mod tests {
 	#[test]
 	fn return_multiple_cams_error() -> Result<(), RunSystemError> {
 		mock_cam!();
-		let mut app = setup(_Map::new().with_mock(|mock| {
-			mock.expect_pressed()
-				.returning(|_| Box::new(std::iter::empty()));
+		let mut app = setup(_Input::new().with_mock(|mock| {
+			mock.expect_get_all_input_states::<_Key>()
+				.returning(|| Box::new(std::iter::empty()));
 		}));
 		app.world_mut().spawn((_Cam, GlobalTransform::default()));
 		app.world_mut().spawn((_Cam, GlobalTransform::default()));
 
 		let result = app
 			.world_mut()
-			.run_system_once(_Input::parse::<_Cam, _Map, _Player>)?;
+			.run_system_once(_Result::parse::<_Cam, _InputParam, _Player>)?;
 
 		assert_eq!(Err(UniqueViolation::multiple()), result);
 		Ok(())
