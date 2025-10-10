@@ -58,7 +58,6 @@ where
 }
 
 impl<TDependencies> HandlesInput for InputPlugin<TDependencies> {
-	type TKeyMap = KeyMap;
 	type TInput<'world, 'state> = Input<'world>;
 }
 

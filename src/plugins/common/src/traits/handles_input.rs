@@ -1,16 +1,11 @@
-use super::{iterate::Iterate, key_mappings::TryGetAction};
+use super::iterate::Iterate;
 use crate::{
 	tools::action_key::{ActionKey, user_input::UserInput},
 	traits::iteration::{Iter, IterFinite},
 };
-use bevy::{ecs::system::SystemParam, prelude::*};
+use bevy::ecs::system::SystemParam;
 
 pub trait HandlesInput {
-	type TKeyMap: Resource
-		+ GetInput
-		+ TryGetAction
-		+ UpdateKey
-		+ for<'a> Iterate<'a, TItem = (&'a ActionKey, &'a UserInput)>;
 	type TInput<'world, 'state>: SystemParam
 		+ for<'w, 's> SystemParam<Item<'w, 's>: GetInput>
 		+ for<'w, 's> SystemParam<Item<'w, 's>: GetInputState>;

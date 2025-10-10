@@ -1,22 +1,34 @@
-use bevy::{prelude::*, state::state::FreelyMutableState};
+use bevy::{
+	ecs::system::{StaticSystemParam, SystemParam, SystemParamItem},
+	prelude::*,
+	state::state::FreelyMutableState,
+};
 use common::{
-	tools::action_key::user_input::UserInput,
-	traits::{key_mappings::JustPressed, states::PlayState},
+	tools::action_key::ActionKey,
+	traits::{
+		handles_input::{GetInputState, InputState},
+		iteration::IterFinite,
+		states::PlayState,
+	},
 };
 
-pub(crate) fn set_state_from_input<TState, TMenuState, TKeyMap>(
-	keys: Res<ButtonInput<UserInput>>,
-	key_map: Res<TKeyMap>,
+pub(crate) fn set_state_from_input<TState, TMenuState, TInput>(
+	input: StaticSystemParam<TInput>,
 	current_state: Res<State<TState>>,
 	mut next_state: ResMut<NextState<TState>>,
 ) where
 	TState: States + FreelyMutableState + PlayState + From<TMenuState>,
-	TKeyMap: JustPressed<TMenuState> + Resource,
+	TMenuState: Copy + IterFinite + Into<ActionKey> + 'static,
+	TInput: SystemParam,
+	for<'w, 's> SystemParamItem<'w, 's, TInput>: GetInputState,
 {
 	let current = current_state.get();
 
-	for just_pressed in key_map.just_pressed(&keys) {
-		let target_state = match TState::from(just_pressed) {
+	for state in TMenuState::iterator() {
+		let InputState::Pressed { just_now: true } = input.get_input_state(state) else {
+			continue;
+		};
+		let target_state = match TState::from(state) {
 			just_pressed if &just_pressed == current => TState::play_state(),
 			just_pressed => just_pressed,
 		};
@@ -31,6 +43,7 @@ mod tests {
 		app::{App, Update},
 		state::app::{AppExtStates, StatesPlugin},
 	};
+	use common::tools::action_key::user_input::UserInput;
 	use macros::NestedMocks;
 	use mockall::automock;
 	use testing::{NestedMocks, SingleThreadedApp};
@@ -58,33 +71,50 @@ mod tests {
 		}
 	}
 
-	#[derive(Resource, NestedMocks)]
-	struct _Map {
-		mock: Mock_Map,
+	#[derive(SystemParam)]
+	struct _InputParam<'w> {
+		input: Res<'w, _Input>,
 	}
 
-	#[automock]
-	impl JustPressed<_Menu> for _Map {
-		fn just_pressed(&self, input: &ButtonInput<UserInput>) -> impl Iterator<Item = _Menu> {
-			self.mock.just_pressed(input)
+	impl GetInputState for _InputParam<'_> {
+		fn get_input_state<TAction>(&self, action: TAction) -> InputState
+		where
+			TAction: Into<ActionKey> + 'static,
+		{
+			self.input.get_input_state(action)
 		}
 	}
 
-	fn setup(map: _Map) -> App {
+	#[derive(Resource, NestedMocks)]
+	struct _Input {
+		mock: Mock_Input,
+	}
+
+	#[automock]
+	impl GetInputState for _Input {
+		fn get_input_state<TAction>(&self, action: TAction) -> InputState
+		where
+			TAction: Into<ActionKey> + 'static,
+		{
+			self.mock.get_input_state(action)
+		}
+	}
+
+	fn setup(map: _Input) -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.add_plugins(StatesPlugin);
 		app.init_state::<_State>();
 		app.insert_resource(map);
 		app.init_resource::<ButtonInput<UserInput>>();
-		app.add_systems(Update, set_state_from_input::<_State, _Menu, _Map>);
+		app.add_systems(Update, set_state_from_input::<_State, _Menu, _InputParam>);
 
 		app
 	}
 
 	#[test]
 	fn set_a_on_just_pressed() {
-		let mut app = setup(_Map::new().with_mock(|mock| {
+		let mut app = setup(_InputParam::new().with_mock(|mock| {
 			mock.expect_just_pressed()
 				.returning(|_| Box::new(std::iter::once(_Menu)));
 		}));
@@ -98,7 +128,7 @@ mod tests {
 
 	#[test]
 	fn do_not_set_when_not_just_pressed() {
-		let mut app = setup(_Map::new().with_mock(|mock| {
+		let mut app = setup(_InputParam::new().with_mock(|mock| {
 			mock.expect_just_pressed()
 				.returning(|_| Box::new(std::iter::empty()));
 		}));
@@ -112,7 +142,7 @@ mod tests {
 
 	#[test]
 	fn set_to_play_on_a_if_already_a() {
-		let mut app = setup(_Map::new().with_mock(|mock| {
+		let mut app = setup(_InputParam::new().with_mock(|mock| {
 			mock.expect_just_pressed()
 				.returning(|_| Box::new(std::iter::once(_Menu)));
 		}));
@@ -127,7 +157,7 @@ mod tests {
 
 	#[test]
 	fn call_map_with_correct_input() {
-		let mut app = setup(_Map::new().with_mock(|mock| {
+		let mut app = setup(_InputParam::new().with_mock(|mock| {
 			mock.expect_just_pressed().times(1).returning(|input| {
 				assert_eq!(
 					vec![&UserInput::from(KeyCode::ArrowUp)],
