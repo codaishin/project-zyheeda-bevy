@@ -1,8 +1,9 @@
-pub mod resources;
-
+mod resources;
+mod system_params;
 mod systems;
 mod traits;
 
+use crate::system_params::input::{Input, InputMut};
 use bevy::prelude::*;
 use common::{
 	states::game_state::LoadingEssentialAssets,
@@ -58,4 +59,6 @@ where
 
 impl<TDependencies> HandlesInput for InputPlugin<TDependencies> {
 	type TKeyMap = KeyMap;
+	type TInput<'world, 'state> = Input<'world>;
+	type TInputMut<'world, 'state> = InputMut<'world>;
 }
