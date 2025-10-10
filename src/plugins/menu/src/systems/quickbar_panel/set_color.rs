@@ -21,8 +21,8 @@ use common::{
 			GetFromSystemParam,
 			GetProperty,
 		},
+		handles_input::GetInput,
 		handles_loadout::loadout::NoSkill,
-		key_mappings::GetInput,
 	},
 };
 

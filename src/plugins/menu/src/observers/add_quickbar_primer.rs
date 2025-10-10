@@ -2,7 +2,7 @@ use crate::components::quickbar_panel::QuickbarPanel;
 use bevy::prelude::*;
 use common::{
 	components::ui_input_primer::UiInputPrimer,
-	traits::{accessors::get::TryApplyOn, key_mappings::GetInput},
+	traits::{accessors::get::TryApplyOn, handles_input::GetInput},
 	zyheeda_commands::ZyheedaCommands,
 };
 
