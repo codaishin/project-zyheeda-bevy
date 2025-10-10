@@ -2,10 +2,7 @@ use crate::{resources::key_map::KeyMap, traits::get_user_input_state::GetUserInp
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::{
 	tools::action_key::{ActionKey, user_input::UserInput},
-	traits::{
-		handles_input::{GetActionInputState, InputState, UpdateKey},
-		key_mappings::GetInput,
-	},
+	traits::handles_input::{GetInput, GetInputState, InputState, UpdateKey},
 };
 
 #[derive(SystemParam)]
@@ -18,12 +15,24 @@ where
 	pub(crate) input: Res<'w, TButtonInput>,
 }
 
-impl<TKeyMap, TButtonInput> GetActionInputState for Input<'_, TKeyMap, TButtonInput>
+impl<TKeyMap> GetInput for Input<'_, TKeyMap>
+where
+	TKeyMap: Resource + GetInput,
+{
+	fn get_input<TAction>(&self, action: TAction) -> UserInput
+	where
+		TAction: Into<ActionKey> + 'static,
+	{
+		self.key_map.get_input(action)
+	}
+}
+
+impl<TKeyMap, TButtonInput> GetInputState for Input<'_, TKeyMap, TButtonInput>
 where
 	TKeyMap: Resource + GetInput,
 	TButtonInput: Resource + GetUserInputState,
 {
-	fn get_action_input_state<TAction>(&self, action: TAction) -> InputState
+	fn get_input_state<TAction>(&self, action: TAction) -> InputState
 	where
 		TAction: Into<ActionKey> + 'static,
 	{
@@ -54,12 +63,24 @@ where
 	}
 }
 
-impl<TKeyMap, TButtonInput> GetActionInputState for InputMut<'_, TKeyMap, TButtonInput>
+impl<TKeyMap> GetInput for InputMut<'_, TKeyMap>
+where
+	TKeyMap: Resource + GetInput,
+{
+	fn get_input<TAction>(&self, action: TAction) -> UserInput
+	where
+		TAction: Into<ActionKey> + 'static,
+	{
+		self.key_map.get_input(action)
+	}
+}
+
+impl<TKeyMap, TButtonInput> GetInputState for InputMut<'_, TKeyMap, TButtonInput>
 where
 	TKeyMap: Resource + GetInput,
 	TButtonInput: Resource + GetUserInputState,
 {
-	fn get_action_input_state<TAction>(&self, action: TAction) -> InputState
+	fn get_input_state<TAction>(&self, action: TAction) -> InputState
 	where
 		TAction: Into<ActionKey> + 'static,
 	{
@@ -76,55 +97,6 @@ mod tests {
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use testing::{NestedMocks, SingleThreadedApp};
-
-	mod update_key {
-		use super::*;
-
-		#[derive(Resource, NestedMocks)]
-		struct _Map {
-			mock: Mock_Map,
-		}
-
-		fn setup(map: _Map) -> App {
-			let mut app = App::new().single_threaded(Update);
-
-			app.init_resource::<ButtonInput<UserInput>>();
-			app.insert_resource(map);
-
-			app
-		}
-
-		#[automock]
-		impl UpdateKey for _Map {
-			fn update_key<TAction>(&mut self, action: TAction, input: UserInput)
-			where
-				TAction: Copy + Into<ActionKey> + 'static,
-			{
-				self.mock.update_key(action, input);
-			}
-		}
-
-		#[test]
-		fn call_update_key() -> Result<(), RunSystemError> {
-			let mut app = setup(_Map::new().with_mock(|mock| {
-				mock.expect_update_key()
-					.times(1)
-					.with(
-						eq(PlayerSlot::LOWER_L),
-						eq(UserInput::MouseButton(MouseButton::Left)),
-					)
-					.return_const(());
-			}));
-
-			app.world_mut()
-				.run_system_once(|mut input: InputMut<_Map>| {
-					input.update_key(
-						PlayerSlot::LOWER_L,
-						UserInput::MouseButton(MouseButton::Left),
-					);
-				})
-		}
-	}
 
 	mod get_input_state {
 		use super::*;
@@ -184,7 +156,7 @@ mod tests {
 				let state = app
 					.world_mut()
 					.run_system_once(|input: Input<_Map, _UserInput>| {
-						input.get_action_input_state(PlayerSlot::UPPER_R)
+						input.get_input_state(PlayerSlot::UPPER_R)
 					})?;
 
 				assert_eq!(InputState::Pressed { just_now: false }, state);
@@ -208,7 +180,7 @@ mod tests {
 
 				app.world_mut()
 					.run_system_once(|input: Input<_Map, _UserInput>| {
-						input.get_action_input_state(PlayerSlot::UPPER_R);
+						input.get_input_state(PlayerSlot::UPPER_R);
 					})
 			}
 		}
@@ -232,7 +204,7 @@ mod tests {
 				let state =
 					app.world_mut()
 						.run_system_once(|input: InputMut<_Map, _UserInput>| {
-							input.get_action_input_state(PlayerSlot::UPPER_R)
+							input.get_input_state(PlayerSlot::UPPER_R)
 						})?;
 
 				assert_eq!(InputState::Pressed { just_now: false }, state);
@@ -256,7 +228,7 @@ mod tests {
 
 				app.world_mut()
 					.run_system_once(|input: InputMut<_Map, _UserInput>| {
-						input.get_action_input_state(PlayerSlot::UPPER_R);
+						input.get_input_state(PlayerSlot::UPPER_R);
 					})
 			}
 		}

@@ -5,12 +5,6 @@ use crate::{
 use bevy::prelude::*;
 use std::hash::Hash;
 
-pub trait GetInput {
-	fn get_input<TAction>(&self, value: TAction) -> UserInput
-	where
-		TAction: Into<ActionKey> + 'static;
-}
-
 pub trait TryGetAction {
 	fn try_get_action<TAction>(&self, value: UserInput) -> Option<TAction>
 	where

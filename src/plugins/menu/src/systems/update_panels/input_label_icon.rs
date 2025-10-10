@@ -1,7 +1,7 @@
 use crate::components::{icon::Icon, input_label::InputLabel, label::UILabel};
 use bevy::prelude::*;
 use common::{
-	traits::{accessors::get::TryApplyOn, handles_localization::Token, key_mappings::GetInput},
+	traits::{accessors::get::TryApplyOn, handles_input::GetInput, handles_localization::Token},
 	zyheeda_commands::ZyheedaCommands,
 };
 use std::path::PathBuf;
