@@ -31,6 +31,7 @@ use common::{
 		handles_agents::HandlesAgents,
 		handles_custom_assets::HandlesCustomFolderAssets,
 		handles_enemies::HandlesEnemies,
+		handles_input::HandlesInput,
 		handles_lights::HandlesLights,
 		handles_physics::HandlesPhysicalAttributes,
 		handles_player::{
@@ -42,7 +43,6 @@ use common::{
 			PlayerMainCamera,
 		},
 		handles_saving::HandlesSaving,
-		handles_settings::HandlesSettings,
 		prefab::AddPrefabObserver,
 		thread_safe::ThreadSafe,
 	},
@@ -63,7 +63,7 @@ impl<TLoading, TSettings, TSaveGame, TPhysics, TAnimations, TLights>
 	)>
 where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
-	TSettings: ThreadSafe + HandlesSettings,
+	TSettings: ThreadSafe + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesPhysicalAttributes,
 	TAnimations: ThreadSafe + RegisterAnimations,
@@ -92,7 +92,7 @@ impl<TLoading, TSettings, TSaveGame, TPhysics, TAnimations, TLights> Plugin
 	)>
 where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
-	TSettings: ThreadSafe + HandlesSettings,
+	TSettings: ThreadSafe + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesPhysicalAttributes,
 	TAnimations: ThreadSafe + RegisterAnimations,

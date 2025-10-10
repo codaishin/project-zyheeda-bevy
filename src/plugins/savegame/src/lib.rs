@@ -27,8 +27,8 @@ use common::{
 	systems::log::OnError,
 	tools::action_key::{ActionKey, save_key::SaveKey},
 	traits::{
+		handles_input::HandlesInput,
 		handles_saving::{HandlesSaving, SavableComponent},
-		handles_settings::HandlesSettings,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -49,7 +49,7 @@ pub struct SavegamePlugin<TDependencies> {
 
 impl<TSettings> SavegamePlugin<TSettings>
 where
-	TSettings: ThreadSafe + HandlesSettings,
+	TSettings: ThreadSafe + HandlesInput,
 {
 	pub fn from_plugin(_: &TSettings) -> SavegamePluginBuilder<TSettings> {
 		SavegamePluginBuilder(PhantomData)
@@ -69,7 +69,7 @@ impl<TDependencies> SavegamePluginBuilder<TDependencies> {
 
 impl<TSettings> Plugin for SavegamePlugin<TSettings>
 where
-	TSettings: ThreadSafe + HandlesSettings,
+	TSettings: ThreadSafe + HandlesInput,
 {
 	fn build(&self, app: &mut App) {
 		let quick_save_file = self

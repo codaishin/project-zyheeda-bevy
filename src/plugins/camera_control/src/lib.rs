@@ -8,9 +8,9 @@ use common::{
 	systems::log::OnError,
 	traits::{
 		handles_graphics::{FirstPassCamera, WorldCameras},
+		handles_input::HandlesInput,
 		handles_player::{HandlesPlayer, PlayerMainCamera},
 		handles_saving::HandlesSaving,
-		handles_settings::HandlesSettings,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -27,7 +27,7 @@ pub struct CameraControlPlugin<TDependencies>(PhantomData<TDependencies>);
 impl<TSettings, TSavegame, TPlayers, TGraphics>
 	CameraControlPlugin<(TSettings, TSavegame, TPlayers, TGraphics)>
 where
-	TSettings: ThreadSafe + HandlesSettings,
+	TSettings: ThreadSafe + HandlesInput,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TPlayers: ThreadSafe + HandlesPlayer + PlayerMainCamera,
 	TGraphics: ThreadSafe + WorldCameras + FirstPassCamera,
@@ -40,7 +40,7 @@ where
 impl<TSettings, TSavegame, TPlayers, TGraphics> Plugin
 	for CameraControlPlugin<(TSettings, TSavegame, TPlayers, TGraphics)>
 where
-	TSettings: ThreadSafe + HandlesSettings,
+	TSettings: ThreadSafe + HandlesInput,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TPlayers: ThreadSafe + HandlesPlayer + PlayerMainCamera,
 	TGraphics: ThreadSafe + WorldCameras + FirstPassCamera,

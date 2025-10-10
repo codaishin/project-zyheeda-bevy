@@ -8,6 +8,7 @@ use camera_control::CameraControlPlugin;
 use common::CommonPlugin;
 use frame_limiter::FrameLimiterPlugin;
 use graphics::GraphicsPlugin;
+use input::InputPlugin;
 use light::LightPlugin;
 use loading::LoadingPlugin;
 use localization::LocalizationPlugin;
@@ -16,7 +17,6 @@ use menu::MenuPlugin;
 use path_finding::PathFindingPlugin;
 use physics::PhysicsPlugin;
 use savegame::SavegamePlugin;
-use settings::SettingsPlugin;
 use skills::SkillsPlugin;
 use std::{
 	env::home_dir,
@@ -43,7 +43,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let game_dir = home.join("Games").join("Project Zyheeda");
 
 	let loading = LoadingPlugin;
-	let settings = SettingsPlugin::from_plugin(&loading);
+	let settings = InputPlugin::from_plugin(&loading);
 	let localization = LocalizationPlugin::from_plugin(&loading);
 	let savegame = SavegamePlugin::from_plugin(&settings).with_game_directory(game_dir);
 	let physics = PhysicsPlugin::from_plugin(&savegame);

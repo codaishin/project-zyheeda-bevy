@@ -25,6 +25,7 @@ use common::{
 	traits::{
 		handles_agents::HandlesAgents,
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
+		handles_input::HandlesInput,
 		handles_load_tracking::HandlesLoadTracking,
 		handles_loadout::HandlesLoadout,
 		handles_orientation::HandlesOrientation,
@@ -35,7 +36,6 @@ use common::{
 			HandlesPlayerMouse,
 		},
 		handles_saving::HandlesSaving,
-		handles_settings::HandlesSettings,
 		handles_skill_behaviors::HandlesSkillBehaviors,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
@@ -76,7 +76,7 @@ where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesAllPhysicalEffects,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
-	TSettings: ThreadSafe + HandlesSettings,
+	TSettings: ThreadSafe + HandlesInput,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation + SystemSetDefinition,
 	TAgents: ThreadSafe
 		+ HandlesPlayerCameras
@@ -163,7 +163,7 @@ where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesAllPhysicalEffects,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
-	TSettings: ThreadSafe + HandlesSettings,
+	TSettings: ThreadSafe + HandlesInput,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation + SystemSetDefinition,
 	TAgents: ThreadSafe
 		+ HandlesPlayerCameras

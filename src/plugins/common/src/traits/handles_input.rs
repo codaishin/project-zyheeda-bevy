@@ -5,7 +5,7 @@ use super::{
 use crate::tools::action_key::{ActionKey, user_input::UserInput};
 use bevy::prelude::*;
 
-pub trait HandlesSettings {
+pub trait HandlesInput {
 	type TKeyMap: Resource
 		+ GetInput
 		+ TryGetAction

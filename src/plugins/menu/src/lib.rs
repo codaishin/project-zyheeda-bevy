@@ -44,6 +44,7 @@ use common::{
 	tools::action_key::ActionKey,
 	traits::{
 		handles_graphics::UiCamera,
+		handles_input::HandlesInput,
 		handles_load_tracking::{
 			AssetsProgress,
 			DependenciesProgress,
@@ -54,7 +55,6 @@ use common::{
 		handles_localization::{HandlesLocalization, Token, localized::Localized},
 		handles_player::HandlesPlayer,
 		handles_saving::HandlesSaving,
-		handles_settings::HandlesSettings,
 		load_asset::Path,
 		prefab::AddPrefabObserver,
 		register_derived_component::RegisterDerivedComponent,
@@ -115,7 +115,7 @@ impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics, TPlayers, TLoadou
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
-	TSettings: ThreadSafe + HandlesSettings,
+	TSettings: ThreadSafe + HandlesInput,
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
 	TPlayers: ThreadSafe + HandlesPlayer,
@@ -147,7 +147,7 @@ impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics, TPlayers, TLoadou
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
-	TSettings: ThreadSafe + HandlesSettings,
+	TSettings: ThreadSafe + HandlesInput,
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
 	TPlayers: ThreadSafe + HandlesPlayer,
@@ -380,7 +380,7 @@ impl<TLoading, TSavegame, TSettings, TLocalization, TGraphics, TPlayers, TLoadou
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
-	TSettings: ThreadSafe + HandlesSettings,
+	TSettings: ThreadSafe + HandlesInput,
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
 	TPlayers: ThreadSafe + HandlesPlayer,

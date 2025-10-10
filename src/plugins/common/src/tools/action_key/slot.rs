@@ -4,8 +4,8 @@ use crate::{
 	tools::is_not::IsNot,
 	traits::{
 		accessors::get::Property,
+		handles_input::InvalidUserInput,
 		handles_localization::Token,
-		handles_settings::InvalidUserInput,
 		iteration::{Iter, IterFinite},
 	},
 };
