@@ -5,17 +5,18 @@ use crate::{
 	traits::iteration::{Iter, IterFinite},
 };
 use bevy::ecs::system::SystemParam;
+use std::hash::Hash;
 
 pub trait HandlesInput {
 	type TInput<'world, 'state>: SystemParam
 		+ for<'w, 's> SystemParam<Item<'w, 's>: GetInput + InputSetupChanged>
-		+ for<'w, 's> SystemParam<Item<'w, 's>: GetInputState>;
+		+ for<'w, 's> SystemParam<Item<'w, 's>: GetRawUserInput + GetInputState>;
 }
 
 pub trait HandlesInputMut {
 	type TInputMut<'world, 'state>: SystemParam
 		+ for<'w, 's> SystemParam<Item<'w, 's>: GetInput + InputSetupChanged>
-		+ for<'w, 's> SystemParam<Item<'w, 's>: GetInputState>
+		+ for<'w, 's> SystemParam<Item<'w, 's>: GetRawUserInput + GetInputState>
 		+ for<'w, 's> SystemParam<Item<'w, 's>: UpdateKey>;
 }
 
@@ -81,6 +82,16 @@ where
 		let action_key = self.actions.next()?;
 		Some((action_key, self.input.get_input(action_key)))
 	}
+}
+
+pub trait GetRawUserInput {
+	fn get_raw_user_input(&self, state: RawInputState) -> impl Iterator<Item = UserInput>;
+}
+
+pub enum RawInputState {
+	JustPressed,
+	Held,
+	JustReleased,
 }
 
 pub trait GetInputState {

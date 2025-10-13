@@ -1,9 +1,7 @@
 //! Implementations for common bevy system parameters to simplify test setups
 
-use crate::{
-	tools::action_key::{ActionKey, user_input::UserInput},
-	traits::handles_input::{GetInput, GetInputState, UpdateKey},
-};
+use super::{GetInput, GetInputState, GetRawUserInput, RawInputState, UpdateKey};
+use crate::tools::action_key::{ActionKey, user_input::UserInput};
 use bevy::prelude::*;
 use std::ops::{Deref, DerefMut};
 
@@ -28,6 +26,24 @@ where
 		TAction: Into<ActionKey> + 'static,
 	{
 		self.deref().get_input(action)
+	}
+}
+
+impl<T> GetRawUserInput for Res<'_, T>
+where
+	T: GetRawUserInput + Resource,
+{
+	fn get_raw_user_input(&self, state: RawInputState) -> impl Iterator<Item = UserInput> {
+		self.deref().get_raw_user_input(state)
+	}
+}
+
+impl<T> GetRawUserInput for ResMut<'_, T>
+where
+	T: GetRawUserInput + Resource,
+{
+	fn get_raw_user_input(&self, state: RawInputState) -> impl Iterator<Item = UserInput> {
+		self.deref().get_raw_user_input(state)
 	}
 }
 

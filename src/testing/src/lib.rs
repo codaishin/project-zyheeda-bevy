@@ -450,41 +450,41 @@ where
 /// Arguments:
 /// - `target`: one of:
 ///   - [`App`]
-///   - [`ButtonInput<UserInput>`]
+///   - [`ButtonInput<T>`]
 /// - `set_to`: one of:
-///   - `just_pressed(UserInput)`
-///   - `pressed(UserInput)`
-///   - `just_released(UserInput)`
-///   - `released(UserInput)`
+///   - `just_pressed(T)`
+///   - `pressed(T)`
+///   - `just_released(T)`
+///   - `released(T)`
 ///   - `reset_all`
 #[macro_export]
 macro_rules! set_input {
 	($target:expr, just_pressed($btn:expr)) => {{
-		let mut input = $crate::GetButtonInput::<UserInput>::get_button_input(&mut $target);
+		let mut input = $crate::GetButtonInput::get_button_input(&mut $target);
 		input.press($btn);
 		input.clear_just_released($btn);
 	}};
 	($target:expr, pressed($btn:expr)) => {{
-		let mut input = $crate::GetButtonInput::<UserInput>::get_button_input(&mut $target);
+		let mut input = $crate::GetButtonInput::get_button_input(&mut $target);
 		input.press($btn);
 		input.clear_just_pressed($btn);
 		input.clear_just_released($btn);
 	}};
 	($target:expr, just_released($btn:expr)) => {{
-		let mut input = $crate::GetButtonInput::<UserInput>::get_button_input(&mut $target);
+		let mut input = $crate::GetButtonInput::get_button_input(&mut $target);
 		input.press($btn);
 		input.release($btn);
 		input.clear_just_pressed($btn);
 	}};
 	($target:expr, released($btn:expr)) => {{
-		let mut input = $crate::GetButtonInput::<UserInput>::get_button_input(&mut $target);
+		let mut input = $crate::GetButtonInput::get_button_input(&mut $target);
 		input.press($btn);
 		input.release($btn);
 		input.clear_just_pressed($btn);
 		input.clear_just_released($btn);
 	}};
 	($target:expr, reset_all) => {{
-		let mut input = $crate::GetButtonInput::<UserInput>::get_button_input(&mut $target);
+		let mut input = $crate::GetButtonInput::get_button_input(&mut $target);
 		input.reset_all();
 	}};
 }

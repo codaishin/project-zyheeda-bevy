@@ -3,7 +3,7 @@ mod system_params;
 mod systems;
 mod traits;
 
-use crate::system_params::input::{Input, InputMut};
+use crate::system_params::input::Input;
 use bevy::prelude::*;
 use common::{
 	states::game_state::LoadingEssentialAssets,
@@ -58,9 +58,9 @@ where
 }
 
 impl<TDependencies> HandlesInput for InputPlugin<TDependencies> {
-	type TInput<'world, 'state> = Input<'world>;
+	type TInput<'world, 'state> = Input<'world, 'state, Res<'static, KeyMap>>;
 }
 
 impl<TDependencies> HandlesInputMut for InputPlugin<TDependencies> {
-	type TInputMut<'world, 'state> = InputMut<'world>;
+	type TInputMut<'world, 'state> = Input<'world, 'state, ResMut<'static, KeyMap>>;
 }
