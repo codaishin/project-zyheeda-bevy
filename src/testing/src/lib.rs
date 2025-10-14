@@ -254,8 +254,9 @@ where
 pub fn equal_unordered<TEq: EqualUnordered>(left: &TEq, right: &TEq) -> bool {
 	match (left.items(), right.items()) {
 		(None, None) => true,
-		(Some(mut left_items), Some(_)) => {
+		(Some(mut left_items), Some(mut right_items)) => {
 			left_items.all(|item| right.item_count(item) == left.item_count(item))
+				&& right_items.all(|item| right.item_count(item) == left.item_count(item))
 		}
 		_ => false,
 	}
@@ -439,4 +440,24 @@ macro_rules! set_input {
 		let mut input = $app.world_mut().resource_mut::<ButtonInput<UserInput>>();
 		input.reset_all();
 	}};
+}
+
+#[cfg(test)]
+mod regression_tests {
+	use super::*;
+
+	mod assert_eq_unordered {
+		use super::*;
+
+		#[test]
+		#[should_panic]
+		fn no_false_positive_when_left_smaller_than_right() {
+			assert_eq_unordered!(vec![1, 1, 2, 2], vec![1, 2, 3, 2, 1]);
+		}
+
+		#[test]
+		fn passes_when_left_and_right_item_count_matches() {
+			assert_eq_unordered!(vec![1, 1, 2, 2, 3], vec![1, 2, 3, 2, 1]);
+		}
+	}
 }
