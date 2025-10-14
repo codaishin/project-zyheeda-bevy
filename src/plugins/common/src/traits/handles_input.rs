@@ -88,6 +88,7 @@ pub trait GetRawUserInput {
 	fn get_raw_user_input(&self, state: RawInputState) -> impl Iterator<Item = UserInput>;
 }
 
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum RawInputState {
 	JustPressed,
 	Held,

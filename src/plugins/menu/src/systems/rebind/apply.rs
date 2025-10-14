@@ -4,24 +4,30 @@ use bevy::{
 	prelude::*,
 };
 use common::{
-	tools::action_key::{ActionKey, user_input::UserInput},
-	traits::{handles_input::UpdateKey, thread_safe::ThreadSafe},
+	tools::action_key::ActionKey,
+	traits::{
+		handles_input::{GetRawUserInput, RawInputState, UpdateKey},
+		thread_safe::ThreadSafe,
+	},
 };
 
 impl<TAction> KeyBind<Rebinding<TAction>>
 where
-	TAction: Copy + ThreadSafe + Into<ActionKey> + Into<UserInput>,
+	TAction: Copy + ThreadSafe + Into<ActionKey>,
 {
 	pub(crate) fn rebind_apply<TInputMut>(
-		mut input: StaticSystemParam<TInputMut>, // FIXME: need smth like `GetRawInputState` so we don't use `ButtonInput` directly
-		user_input: Res<ButtonInput<UserInput>>,
+		mut input: StaticSystemParam<TInputMut>,
 		rebinds: Query<&Self>,
 	) where
-		for<'w, 's> TInputMut: SystemParam<Item<'w, 's>: UpdateKey>,
+		for<'w, 's> TInputMut: SystemParam<Item<'w, 's>: GetRawUserInput + UpdateKey>,
 	{
-		for user_input in user_input.get_just_pressed() {
+		let inputs = input
+			.get_raw_user_input(RawInputState::JustPressed)
+			.collect::<Vec<_>>();
+
+		for user_input in inputs {
 			for KeyBind(Rebinding(Input { action, .. })) in &rebinds {
-				input.update_key(*action, *user_input);
+				input.update_key(*action, user_input);
 			}
 		}
 	}
@@ -30,18 +36,12 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use macros::NestedMocks;
-	use mockall::{automock, predicate::eq};
-	use testing::{NestedMocks, SingleThreadedApp};
+	use common::tools::action_key::user_input::UserInput;
+	use std::{any::type_name, collections::HashMap};
+	use testing::SingleThreadedApp;
 
 	#[derive(Debug, PartialEq, Clone, Copy)]
 	struct _Action;
-
-	impl From<_Action> for UserInput {
-		fn from(_: _Action) -> Self {
-			panic!("NOT USED")
-		}
-	}
 
 	impl From<_Action> for ActionKey {
 		fn from(_: _Action) -> Self {
@@ -49,25 +49,34 @@ mod tests {
 		}
 	}
 
-	#[derive(Resource, NestedMocks)]
+	#[derive(Resource, Default)]
 	struct _Input {
-		mock: Mock_Input,
+		updated: Vec<(&'static str, UserInput)>,
+		raw_input: HashMap<RawInputState, Vec<UserInput>>,
 	}
 
-	#[automock]
 	impl UpdateKey for _Input {
-		fn update_key<TAction>(&mut self, key: TAction, user_input: UserInput)
+		fn update_key<TAction>(&mut self, _: TAction, user_input: UserInput)
 		where
 			TAction: Copy + Into<ActionKey> + 'static,
 		{
-			self.mock.update_key(key, user_input)
+			self.updated.push((type_name::<TAction>(), user_input));
+		}
+	}
+
+	impl GetRawUserInput for _Input {
+		fn get_raw_user_input(&self, state: RawInputState) -> impl Iterator<Item = UserInput> {
+			self.raw_input
+				.get(&state)
+				.cloned()
+				.unwrap_or(vec![])
+				.into_iter()
 		}
 	}
 
 	fn setup(map: _Input) -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.init_resource::<ButtonInput<UserInput>>();
 		app.insert_resource(map);
 		app.add_systems(
 			Update,
@@ -79,36 +88,39 @@ mod tests {
 
 	#[test]
 	fn apply_rebind() {
-		let mut app = setup(_Input::new().with_mock(|mock| {
-			mock.expect_update_key()
-				.with(eq(_Action), eq(UserInput::KeyCode(KeyCode::KeyB)))
-				.times(1)
-				.return_const(());
-		}));
+		let mut app = setup(_Input {
+			raw_input: HashMap::from([(
+				RawInputState::JustPressed,
+				vec![UserInput::KeyCode(KeyCode::KeyB)],
+			)]),
+			..default()
+		});
 		app.world_mut().spawn(KeyBind(Rebinding(Input {
 			action: _Action,
 			input: UserInput::KeyCode(KeyCode::KeyA),
 		})));
-		app.world_mut()
-			.resource_mut::<ButtonInput<UserInput>>()
-			.press(UserInput::KeyCode(KeyCode::KeyB));
 
 		app.update();
+
+		assert_eq!(
+			vec![(type_name::<_Action>(), UserInput::KeyCode(KeyCode::KeyB))],
+			app.world().resource::<_Input>().updated,
+		);
 	}
 
 	#[test]
 	fn do_not_apply_rebind_if_not_just_pressed() {
-		let mut app = setup(_Input::new().with_mock(|mock| {
-			mock.expect_update_key::<_Action>().never().return_const(());
-		}));
+		let mut app = setup(_Input {
+			raw_input: HashMap::from([(RawInputState::JustPressed, vec![])]),
+			..default()
+		});
 		app.world_mut().spawn(KeyBind(Rebinding(Input {
 			action: _Action,
 			input: UserInput::KeyCode(KeyCode::KeyA),
 		})));
-		let mut input = app.world_mut().resource_mut::<ButtonInput<UserInput>>();
-		input.press(UserInput::KeyCode(KeyCode::KeyB));
-		input.clear_just_pressed(UserInput::KeyCode(KeyCode::KeyB));
 
 		app.update();
+
+		assert!(app.world().resource::<_Input>().updated.is_empty());
 	}
 }
