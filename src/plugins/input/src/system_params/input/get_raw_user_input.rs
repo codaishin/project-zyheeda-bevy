@@ -73,6 +73,8 @@ impl<TKeys: Iterator<Item = KeyCode>, TMouse: Iterator<Item = MouseButton>> Iter
 
 #[cfg(test)]
 mod tests {
+	use crate::resources::mouse_override::MouseOverride;
+
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use testing::{SingleThreadedApp, assert_eq_unordered, set_input};
@@ -86,6 +88,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.insert_resource(_Map);
+		app.init_resource::<MouseOverride>();
 		app.init_resource::<ButtonInput<KeyCode>>();
 		app.init_resource::<ButtonInput<MouseButton>>();
 

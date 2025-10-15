@@ -22,6 +22,8 @@ where
 
 #[cfg(test)]
 mod tests {
+	use crate::resources::mouse_override::MouseOverride;
+
 	use super::*;
 	use testing::SingleThreadedApp;
 
@@ -36,6 +38,7 @@ mod tests {
 
 		app.init_resource::<_Changed>();
 		app.insert_resource(_Map);
+		app.init_resource::<MouseOverride>();
 		app.init_resource::<ButtonInput<KeyCode>>();
 		app.init_resource::<ButtonInput<MouseButton>>();
 

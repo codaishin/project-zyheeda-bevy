@@ -19,6 +19,8 @@ where
 
 #[cfg(test)]
 mod tests {
+	use crate::resources::mouse_override::MouseOverride;
+
 	use super::*;
 	use bevy::{
 		ecs::system::{RunSystemError, RunSystemOnce},
@@ -58,6 +60,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.insert_resource(map);
+		app.init_resource::<MouseOverride>();
 		app.init_resource::<ButtonInput<KeyCode>>();
 		app.init_resource::<ButtonInput<MouseButton>>();
 

@@ -2,10 +2,27 @@ mod bevy_impls;
 
 use crate::{
 	tools::action_key::{ActionKey, user_input::UserInput},
-	traits::iteration::{Iter, IterFinite},
+	traits::{
+		accessors::get::{GetProperty, Property},
+		iteration::{Iter, IterFinite},
+	},
 };
-use bevy::ecs::system::SystemParam;
+use bevy::{ecs::system::SystemParam, prelude::*};
 use std::hash::Hash;
+
+pub trait HandlesActionKeyButton {
+	/// Controls triggering of actions through mouse left clicking the associated
+	/// button.
+	type TActionKeyButton: Component + From<ActionKey> + GetProperty<LeftMouseOverridden>;
+}
+
+/// Indicate wether left mouse behavior is overridden for an associated instance that
+/// implements [`GetInputState`].
+pub struct LeftMouseOverridden;
+
+impl Property for LeftMouseOverridden {
+	type TValue<'a> = bool;
+}
 
 pub trait HandlesInput {
 	type TInput<'world, 'state>: SystemParam

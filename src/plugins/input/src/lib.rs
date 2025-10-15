@@ -1,9 +1,14 @@
+mod components;
 mod resources;
 mod system_params;
 mod systems;
 mod traits;
 
-use crate::system_params::input::Input;
+use crate::{
+	components::action_key_interaction::ActionKeyInteraction,
+	resources::mouse_override::MouseOverride,
+	system_params::input::Input,
+};
 use bevy::prelude::*;
 use common::{
 	states::game_state::LoadingEssentialAssets,
@@ -11,8 +16,9 @@ use common::{
 	tools::action_key::ActionKey,
 	traits::{
 		handles_asset_resource_loading::HandlesAssetResourceLoading,
-		handles_input::{HandlesInput, HandlesInputMut},
+		handles_input::{HandlesActionKeyButton, HandlesInput, HandlesInputMut},
 		load_asset::Path,
+		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -48,13 +54,34 @@ where
 			path.clone(),
 		);
 
-		app.init_resource::<AssetWriter>().add_systems(
-			Update,
-			KeyMap::save_changes::<KeyMapDto>(path)
-				.pipe(OnError::log)
-				.run_if(resource_exists::<KeyMap>),
-		);
+		app.init_resource::<AssetWriter>()
+			.init_resource::<MouseOverride>()
+			.add_systems(
+				Update,
+				(
+					KeyMap::save_changes::<KeyMapDto>(path)
+						.pipe(OnError::log)
+						.run_if(resource_exists::<KeyMap>),
+					ActionKeyInteraction::set_mouse_override_from_ui,
+					ActionKeyInteraction::set_mouse_override_from_mouse,
+					ActionKeyInteraction::set_override_status,
+				)
+					.in_set(InputSystems),
+			);
 	}
+}
+
+#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone)]
+pub struct InputSystems;
+
+impl<TDependencies> SystemSetDefinition for InputPlugin<TDependencies> {
+	type TSystemSet = InputSystems;
+
+	const SYSTEMS: Self::TSystemSet = InputSystems;
+}
+
+impl<TDependencies> HandlesActionKeyButton for InputPlugin<TDependencies> {
+	type TActionKeyButton = ActionKeyInteraction;
 }
 
 impl<TDependencies> HandlesInput for InputPlugin<TDependencies> {
