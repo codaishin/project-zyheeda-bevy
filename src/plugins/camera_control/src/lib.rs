@@ -11,6 +11,7 @@ use common::{
 		handles_input::{HandlesInput, InputSystemParam},
 		handles_player::{HandlesPlayer, PlayerMainCamera},
 		handles_saving::HandlesSaving,
+		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -24,15 +25,15 @@ use systems::{
 
 pub struct CameraControlPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSettings, TSavegame, TPlayers, TGraphics>
-	CameraControlPlugin<(TSettings, TSavegame, TPlayers, TGraphics)>
+impl<TInput, TSavegame, TPlayers, TGraphics>
+	CameraControlPlugin<(TInput, TSavegame, TPlayers, TGraphics)>
 where
-	TSettings: ThreadSafe + HandlesInput,
+	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TPlayers: ThreadSafe + HandlesPlayer + PlayerMainCamera,
 	TGraphics: ThreadSafe + WorldCameras + FirstPassCamera,
 {
-	pub fn from_plugins(_: &TSettings, _: &TSavegame, _: &TPlayers, _: &TGraphics) -> Self {
+	pub fn from_plugins(_: &TInput, _: &TSavegame, _: &TPlayers, _: &TGraphics) -> Self {
 		Self(PhantomData)
 	}
 }
@@ -40,7 +41,7 @@ where
 impl<TInput, TSavegame, TPlayers, TGraphics> Plugin
 	for CameraControlPlugin<(TInput, TSavegame, TPlayers, TGraphics)>
 where
-	TInput: ThreadSafe + HandlesInput,
+	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TPlayers: ThreadSafe + HandlesPlayer + PlayerMainCamera,
 	TGraphics: ThreadSafe + WorldCameras + FirstPassCamera,
@@ -57,6 +58,7 @@ where
 				move_with_target::<OrbitPlayer>,
 			)
 				.chain()
+				.after(TInput::SYSTEMS)
 				.run_if(in_state(GameState::Play)),
 		);
 	}

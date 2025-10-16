@@ -25,7 +25,6 @@ use common::{
 	traits::{
 		handles_agents::HandlesAgents,
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
-		handles_input::HandlesInput,
 		handles_load_tracking::HandlesLoadTracking,
 		handles_loadout::HandlesLoadout,
 		handles_orientation::HandlesOrientation,
@@ -63,20 +62,12 @@ use systems::{
 
 pub struct SkillsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSaveGame, TPhysics, TLoading, TSettings, TBehaviors, TAgents>
-	SkillsPlugin<(
-		TSaveGame,
-		TPhysics,
-		TLoading,
-		TSettings,
-		TBehaviors,
-		TAgents,
-	)>
+impl<TSaveGame, TPhysics, TLoading, TBehaviors, TAgents>
+	SkillsPlugin<(TSaveGame, TPhysics, TLoading, TBehaviors, TAgents)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesAllPhysicalEffects,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
-	TSettings: ThreadSafe + HandlesInput,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation + SystemSetDefinition,
 	TAgents: ThreadSafe
 		+ HandlesPlayerCameras
@@ -89,7 +80,6 @@ where
 		_: &TSaveGame,
 		_: &TPhysics,
 		_: &TLoading,
-		_: &TSettings,
 		_: &TBehaviors,
 		_: &TAgents,
 	) -> Self {
@@ -150,20 +140,12 @@ where
 	}
 }
 
-impl<TSaveGame, TPhysics, TLoading, TSettings, TBehaviors, TAgents> Plugin
-	for SkillsPlugin<(
-		TSaveGame,
-		TPhysics,
-		TLoading,
-		TSettings,
-		TBehaviors,
-		TAgents,
-	)>
+impl<TSaveGame, TPhysics, TLoading, TBehaviors, TAgents> Plugin
+	for SkillsPlugin<(TSaveGame, TPhysics, TLoading, TBehaviors, TAgents)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesAllPhysicalEffects,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
-	TSettings: ThreadSafe + HandlesInput,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation + SystemSetDefinition,
 	TAgents: ThreadSafe
 		+ HandlesPlayerCameras

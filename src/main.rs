@@ -43,24 +43,18 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let game_dir = home.join("Games").join("Project Zyheeda");
 
 	let loading = LoadingPlugin;
-	let settings = InputPlugin::from_plugin(&loading);
+	let input = InputPlugin::from_plugin(&loading);
 	let localization = LocalizationPlugin::from_plugin(&loading);
-	let savegame = SavegamePlugin::from_plugin(&settings).with_game_directory(game_dir);
+	let savegame = SavegamePlugin::from_plugin(&input).with_game_directory(game_dir);
 	let physics = PhysicsPlugin::from_plugin(&savegame);
 	let animations = AnimationsPlugin::from_plugin(&savegame);
 	let light = LightPlugin::from_plugin(&savegame);
-	let agents = AgentsPlugin::from_plugins(
-		&loading,
-		&settings,
-		&savegame,
-		&physics,
-		&animations,
-		&light,
-	);
+	let agents =
+		AgentsPlugin::from_plugins(&loading, &input, &savegame, &physics, &animations, &light);
 	let map_generation = MapGenerationPlugin::from_plugins(&loading, &savegame, &light, &agents);
 	let path_finding = PathFindingPlugin::from_plugin(&map_generation);
 	let behaviors = BehaviorsPlugin::from_plugins(
-		&settings,
+		&input,
 		&savegame,
 		&animations,
 		&physics,
@@ -68,21 +62,18 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		&agents,
 	);
 	let graphics = GraphicsPlugin::from_plugins(&loading, &savegame, &physics, &behaviors);
-	let skills = SkillsPlugin::from_plugins(
-		&savegame, &physics, &loading, &settings, &behaviors, &agents,
-	);
+	let skills = SkillsPlugin::from_plugins(&savegame, &physics, &loading, &behaviors, &agents);
 	let menus = MenuPlugin::from_plugins(
 		&loading,
 		&savegame,
-		&settings,
+		&input,
 		&localization,
 		&graphics,
 		&agents,
 		&skills,
 	);
 	let bars = BarsPlugin::from_plugins(&agents, &physics, &graphics);
-	let camera_control =
-		CameraControlPlugin::from_plugins(&settings, &savegame, &agents, &graphics);
+	let camera_control = CameraControlPlugin::from_plugins(&input, &savegame, &agents, &graphics);
 
 	app.add_plugins(DefaultPlugins)
 		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
@@ -102,7 +93,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		.add_plugins(menus)
 		.add_plugins(path_finding)
 		.add_plugins(savegame)
-		.add_plugins(settings)
+		.add_plugins(input)
 		.add_plugins(skills)
 		.insert_resource(ClearColor(Color::BLACK));
 

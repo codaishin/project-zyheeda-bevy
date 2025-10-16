@@ -29,6 +29,7 @@ use common::{
 	traits::{
 		handles_input::{HandlesInput, InputSystemParam},
 		handles_saving::{HandlesSaving, SavableComponent},
+		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -49,7 +50,7 @@ pub struct SavegamePlugin<TDependencies> {
 
 impl<TInput> SavegamePlugin<TInput>
 where
-	TInput: ThreadSafe + HandlesInput,
+	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 {
 	pub fn from_plugin(_: &TInput) -> SavegamePluginBuilder<TInput> {
 		SavegamePluginBuilder(PhantomData)
@@ -69,7 +70,7 @@ impl<TDependencies> SavegamePluginBuilder<TDependencies> {
 
 impl<TInput> Plugin for SavegamePlugin<TInput>
 where
-	TInput: ThreadSafe + HandlesInput,
+	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 {
 	fn build(&self, app: &mut App) {
 		let quick_save_file = self
@@ -112,7 +113,8 @@ where
 					trigger_quick_save,
 					trigger_quick_load_attempt.run_if(Self::can_quick_load()),
 				)
-					.run_if(in_state(GameState::Play)),
+					.run_if(in_state(GameState::Play))
+					.after(TInput::SYSTEMS),
 			)
 			.add_systems(
 				OnEnter(GameState::Save(SaveState::Save)),

@@ -87,7 +87,7 @@ impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding, TAgents>
 		TAgents,
 	)>
 where
-	TInput: ThreadSafe + HandlesInput,
+	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
 	TPhysics: ThreadSafe + HandlesPhysicalObjects + HandlesAllPhysicalEffects,
@@ -123,7 +123,7 @@ impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding, TAgents> Plugin
 		TAgents,
 	)>
 where
-	TInput: ThreadSafe + HandlesInput,
+	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
 	TPhysics: ThreadSafe + HandlesPhysicalObjects + HandlesMotion + HandlesAllPhysicalEffects,
@@ -248,6 +248,7 @@ where
 				)
 					.chain()
 					.in_set(BehaviorSystems)
+					.after(TInput::SYSTEMS)
 					.after(TAnimations::SYSTEMS)
 					.after(TPathFinding::SYSTEMS)
 					.after(TPhysics::SYSTEMS)

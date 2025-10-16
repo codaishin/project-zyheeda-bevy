@@ -44,6 +44,7 @@ use common::{
 		},
 		handles_saving::HandlesSaving,
 		prefab::AddPrefabObserver,
+		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -56,7 +57,7 @@ impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights>
 	AgentsPlugin<(TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights)>
 where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
-	TInput: ThreadSafe + HandlesInput,
+	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesPhysicalAttributes,
 	TAnimations: ThreadSafe + RegisterAnimations,
@@ -78,7 +79,7 @@ impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights> Plugin
 	for AgentsPlugin<(TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights)>
 where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
-	TInput: ThreadSafe + HandlesInput,
+	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesPhysicalAttributes,
 	TAnimations: ThreadSafe + RegisterAnimations,
@@ -134,7 +135,9 @@ where
 		);
 		app.add_systems(
 			Update,
-			player_toggle_walk_run::<InputSystemParam<TInput>>.run_if(in_state(GameState::Play)),
+			player_toggle_walk_run::<InputSystemParam<TInput>>
+				.run_if(in_state(GameState::Play))
+				.after(TInput::SYSTEMS),
 		);
 	}
 }
