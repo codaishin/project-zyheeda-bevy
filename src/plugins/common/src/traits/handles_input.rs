@@ -16,7 +16,7 @@ pub trait HandlesActionKeyButton {
 	type TActionKeyButton: Component + From<ActionKey> + GetProperty<MouseOverride>;
 }
 
-/// Indicate wether left mouse behavior is overridden for an associated instance that
+/// Indicate whether left mouse behavior is overridden for an associated instance that
 /// implements [`GetInputState`].
 pub struct MouseOverride;
 
