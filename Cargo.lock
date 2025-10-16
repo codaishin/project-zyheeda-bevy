@@ -1779,6 +1779,7 @@ dependencies = [
  "macros",
  "mockall",
  "serde",
+ "test-case",
  "testing",
  "tracing",
  "uuid",
@@ -3060,6 +3061,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e05c02b5e89bff3b946cedeca278abc628fe811e604f027c45a8aa3cf793d0eb"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "input"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "common",
+ "macros",
+ "mockall",
+ "serde",
+ "serde_json",
+ "test-case",
+ "testing",
+ "zyheeda_core",
 ]
 
 [[package]]
@@ -4488,6 +4504,7 @@ dependencies = [
  "fluent-syntax",
  "frame_limiter",
  "graphics",
+ "input",
  "light",
  "loading",
  "localization",
@@ -4500,7 +4517,6 @@ dependencies = [
  "savegame",
  "serde",
  "serde_json",
- "settings",
  "skills",
  "test-case",
  "testing",
@@ -5031,21 +5047,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "87607cb1398ed59d48732e575a4c28a7a8ebf2454b964fe3f224f2afc07909e1"
 dependencies = [
  "serde",
-]
-
-[[package]]
-name = "settings"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "common",
- "macros",
- "mockall",
- "serde",
- "serde_json",
- "test-case",
- "testing",
- "zyheeda_core",
 ]
 
 [[package]]

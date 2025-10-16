@@ -1,43 +1,49 @@
 use crate::components::skill_usage::SkillUsage;
-use bevy::prelude::*;
+use bevy::{
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
+};
 use common::{
-	tools::action_key::{
-		slot::{PlayerSlot, SlotKey},
-		user_input::UserInput,
-	},
-	traits::key_mappings::TryGetAction,
+	tools::action_key::slot::{PlayerSlot, SlotKey},
+	traits::handles_input::{GetAllInputStates, InputState},
 };
 use std::collections::HashSet;
 
 impl SkillUsage {
-	pub(crate) fn player<TPlayer, TMap>(
-		input: Res<ButtonInput<UserInput>>,
-		map: Res<TMap>,
+	pub(crate) fn player<TPlayer, TInput>(
+		input: StaticSystemParam<TInput>,
 		mut players: Query<&mut SkillUsage, With<TPlayer>>,
 	) where
 		TPlayer: Component,
-		TMap: Resource + TryGetAction,
+		for<'w, 's> TInput: SystemParam<Item<'w, 's>: GetAllInputStates>,
 	{
 		if players.is_empty() {
 			return;
 		}
 
-		let just_pressed = || {
-			input
-				.get_just_pressed()
-				.filter_map(|key| map.try_get_action::<PlayerSlot>(*key))
-				.map(SlotKey::from)
-		};
-		let pressed = || {
-			input
-				.get_pressed()
-				.filter_map(|key| map.try_get_action::<PlayerSlot>(*key))
-				.map(SlotKey::from)
+		let write = |mut skill_usage: Mut<SkillUsage>| {
+			let mut started_holding = HashSet::default();
+			let mut holding = HashSet::default();
+
+			for (slot, state) in input.get_all_input_states::<PlayerSlot>() {
+				match state {
+					InputState::Pressed { just_now: true } => {
+						started_holding.insert(SlotKey::from(slot));
+						holding.insert(SlotKey::from(slot));
+					}
+					InputState::Pressed { just_now: false } => {
+						holding.insert(SlotKey::from(slot));
+					}
+					_ => {}
+				}
+			}
+
+			skill_usage.started_holding = started_holding;
+			skill_usage.holding = holding;
 		};
 
-		for mut skill_usage in &mut players {
-			skill_usage.started_holding = HashSet::from_iter(just_pressed());
-			skill_usage.holding = HashSet::from_iter(pressed());
+		for skill_usage in &mut players {
+			write(skill_usage);
 		}
 	}
 }
@@ -45,24 +51,41 @@ impl SkillUsage {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::tools::action_key::{ActionKey, slot::SlotKey};
+	use common::{
+		tools::action_key::{ActionKey, slot::SlotKey},
+		traits::iteration::IterFinite,
+	};
 	use macros::NestedMocks;
-	use mockall::{automock, predicate::eq};
+	use mockall::automock;
 	use std::collections::HashSet;
-	use testing::{NestedMocks, SingleThreadedApp, set_input};
+	use testing::{NestedMocks, SingleThreadedApp};
+
+	#[derive(SystemParam)]
+	struct _InputParam<'w> {
+		input: Res<'w, _Input>,
+	}
+
+	impl GetAllInputStates for _InputParam<'_> {
+		fn get_all_input_states<TAction>(&self) -> impl Iterator<Item = (TAction, InputState)>
+		where
+			TAction: Into<ActionKey> + IterFinite + 'static,
+		{
+			self.input.get_all_input_states()
+		}
+	}
 
 	#[derive(Resource, NestedMocks)]
-	struct _Map {
-		mock: Mock_Map,
+	struct _Input {
+		mock: Mock_Input,
 	}
 
 	#[automock]
-	impl TryGetAction for _Map {
-		fn try_get_action<TAction>(&self, input: UserInput) -> Option<TAction>
+	impl GetAllInputStates for _Input {
+		fn get_all_input_states<TAction>(&self) -> impl Iterator<Item = (TAction, InputState)>
 		where
-			TAction: Copy + TryFrom<ActionKey> + 'static,
+			TAction: Into<ActionKey> + IterFinite + 'static,
 		{
-			self.mock.try_get_action::<TAction>(input)
+			self.mock.get_all_input_states()
 		}
 	}
 
@@ -70,27 +93,27 @@ mod tests {
 	#[require(SkillUsage)]
 	struct _Player;
 
-	fn setup(map: _Map) -> App {
+	fn setup(input: _Input) -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.insert_resource(map);
-		app.init_resource::<ButtonInput<UserInput>>();
-		app.add_systems(Update, SkillUsage::player::<_Player, _Map>);
+		app.insert_resource(input);
+		app.add_systems(Update, SkillUsage::player::<_Player, _InputParam>);
 
 		app
 	}
 
 	#[test]
-	fn set_just_held() {
-		let key_a = UserInput::KeyCode(KeyCode::KeyA);
-		let mut app = setup(_Map::new().with_mock(|mock| {
-			mock.expect_try_get_action::<PlayerSlot>()
-				.with(eq(key_a))
-				.return_const(Some(PlayerSlot::LOWER_R));
+	fn set_just_pressed() {
+		let mut app = setup(_Input::new().with_mock(|mock| {
+			mock.expect_get_all_input_states().returning(|| {
+				Box::new(std::iter::once((
+					PlayerSlot::LOWER_R,
+					InputState::just_pressed(),
+				)))
+			});
 		}));
 		let entity = app.world_mut().spawn(_Player).id();
 
-		set_input!(app, just_pressed(key_a));
 		app.update();
 
 		assert_eq!(
@@ -103,21 +126,20 @@ mod tests {
 	}
 
 	#[test]
-	fn just_held_vs_held() {
-		let key_a = UserInput::KeyCode(KeyCode::KeyA);
-		let key_b = UserInput::KeyCode(KeyCode::KeyB);
-		let mut app = setup(_Map::new().with_mock(|mock| {
-			mock.expect_try_get_action::<PlayerSlot>()
-				.with(eq(key_a))
-				.return_const(Some(PlayerSlot::LOWER_R));
-			mock.expect_try_get_action::<PlayerSlot>()
-				.with(eq(key_b))
-				.return_const(Some(PlayerSlot::LOWER_L));
+	fn set_pressed() {
+		let mut app = setup(_Input::new().with_mock(|mock| {
+			mock.expect_get_all_input_states().returning(|| {
+				Box::new(
+					[
+						(PlayerSlot::LOWER_R, InputState::pressed()),
+						(PlayerSlot::LOWER_L, InputState::just_pressed()),
+					]
+					.into_iter(),
+				)
+			});
 		}));
 		let entity = app.world_mut().spawn(_Player).id();
 
-		set_input!(app, pressed(key_a));
-		set_input!(app, just_pressed(key_b));
 		app.update();
 
 		assert_eq!(
@@ -134,32 +156,32 @@ mod tests {
 
 	#[test]
 	fn override_previous_values() {
-		let key_a = UserInput::KeyCode(KeyCode::KeyA);
-		let key_b = UserInput::KeyCode(KeyCode::KeyB);
-		let key_c = UserInput::KeyCode(KeyCode::KeyC);
-		let key_d = UserInput::KeyCode(KeyCode::KeyD);
-		let mut app = setup(_Map::new().with_mock(|mock| {
-			mock.expect_try_get_action::<PlayerSlot>()
-				.with(eq(key_a))
-				.return_const(Some(PlayerSlot::LOWER_R));
-			mock.expect_try_get_action::<PlayerSlot>()
-				.with(eq(key_b))
-				.return_const(Some(PlayerSlot::LOWER_L));
-			mock.expect_try_get_action::<PlayerSlot>()
-				.with(eq(key_c))
-				.return_const(Some(PlayerSlot::UPPER_R));
-			mock.expect_try_get_action::<PlayerSlot>()
-				.with(eq(key_d))
-				.return_const(Some(PlayerSlot::UPPER_L));
+		let mut app = setup(_Input::new().with_mock(|mock| {
+			mock.expect_get_all_input_states().returning(|| {
+				Box::new(
+					[
+						(PlayerSlot::LOWER_R, InputState::pressed()),
+						(PlayerSlot::LOWER_L, InputState::just_pressed()),
+					]
+					.into_iter(),
+				)
+			});
 		}));
 		let entity = app.world_mut().spawn(_Player).id();
 
-		set_input!(app, pressed(key_a));
-		set_input!(app, just_pressed(key_b));
 		app.update();
-		set_input!(app, reset_all);
-		set_input!(app, pressed(key_c));
-		set_input!(app, just_pressed(key_d));
+		app.world_mut()
+			.insert_resource(_Input::new().with_mock(|mock| {
+				mock.expect_get_all_input_states().returning(|| {
+					Box::new(
+						[
+							(PlayerSlot::UPPER_R, InputState::pressed()),
+							(PlayerSlot::UPPER_L, InputState::just_pressed()),
+						]
+						.into_iter(),
+					)
+				});
+			}));
 		app.update();
 
 		assert_eq!(
@@ -176,15 +198,16 @@ mod tests {
 
 	#[test]
 	fn ignore_when_player_missing() {
-		let key_a = UserInput::KeyCode(KeyCode::KeyA);
-		let mut app = setup(_Map::new().with_mock(|mock| {
-			mock.expect_try_get_action::<PlayerSlot>()
-				.with(eq(key_a))
-				.return_const(Some(PlayerSlot::LOWER_R));
+		let mut app = setup(_Input::new().with_mock(|mock| {
+			mock.expect_get_all_input_states().returning(|| {
+				Box::new(std::iter::once((
+					PlayerSlot::LOWER_R,
+					InputState::just_pressed(),
+				)))
+			});
 		}));
 		let entity = app.world_mut().spawn(SkillUsage::default()).id();
 
-		set_input!(app, just_pressed(key_a));
 		app.update();
 
 		assert_eq!(

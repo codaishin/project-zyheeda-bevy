@@ -7,11 +7,11 @@ use common::{
 	tools::action_key::{ActionKey, user_input::UserInput},
 	traits::{
 		handles_custom_assets::TryLoadFrom,
-		handles_settings::{InvalidUserInput, UpdateKey},
+		handles_input::{GetInput, InvalidUserInput, UpdateKey},
 		iterate::Iterate,
 		iteration::IterFinite,
-		key_mappings::{GetInput, HashCopySafe, TryGetAction},
 		load_asset::LoadAsset,
+		thread_safe::ThreadSafe,
 	},
 };
 use dto::KeyMapDto;
@@ -33,25 +33,16 @@ pub struct KeyMap(KeyMapInternal);
 impl GetInput for KeyMap {
 	fn get_input<TAction>(&self, action: TAction) -> UserInput
 	where
-		TAction: Copy + Into<ActionKey> + Into<UserInput>,
+		TAction: Into<ActionKey>,
 	{
 		self.0.get_input(action)
-	}
-}
-
-impl TryGetAction for KeyMap {
-	fn try_get_action<TAction>(&self, input: UserInput) -> Option<TAction>
-	where
-		TAction: Copy + TryFrom<ActionKey>,
-	{
-		self.0.try_get_action(input)
 	}
 }
 
 impl UpdateKey for KeyMap {
 	fn update_key<TAction>(&mut self, action: TAction, input: UserInput)
 	where
-		TAction: Copy + Into<ActionKey> + Into<UserInput>,
+		TAction: Copy + Into<ActionKey>,
 	{
 		self.0.update_key(action, input);
 	}
@@ -108,22 +99,20 @@ where
 	TAllActions: Hash + Eq,
 {
 	action_to_input: HashMap<TAllActions, UserInput>,
-	input_to_action: HashMap<UserInput, TAllActions>,
 	invalid_inputs: InvalidInputs<TAllActions, UserInput>,
 }
 
 impl<TAllActions> KeyMapInternal<TAllActions>
 where
-	TAllActions: Hash + Eq + Copy + InvalidUserInput,
+	TAllActions: Hash + Eq + Copy + InvalidUserInput + Into<UserInput>,
 {
 	fn update_key<TAction>(&mut self, action: TAction, input: UserInput)
 	where
-		TAction: Copy + Into<TAllActions> + Into<UserInput>,
+		TAction: Copy + Into<TAllActions>,
 	{
-		let old_input = self.get_input(action);
 		let action: TAllActions = action.into();
 
-		if self.input_to_action.get(&input) == Some(&action) {
+		if self.action_to_input.get(&action) == Some(&input) {
 			return;
 		}
 
@@ -132,38 +121,48 @@ where
 			return;
 		}
 
-		match self.input_to_action.get(&input).copied() {
-			Some(old_action) => {
-				if old_action.invalid_input().contains(&old_input) {
-					self.invalid_inputs.push(old_action, old_input);
-					return;
-				}
-				self.action_to_input.insert(old_action, old_input);
-				self.input_to_action.insert(old_input, old_action);
+		match self.get_swap_pair(input, action) {
+			Ok(Some((swap_input, swap_action))) => {
+				self.action_to_input.insert(swap_action, swap_input);
+				self.action_to_input.insert(action, input);
 			}
-			None => {
-				self.input_to_action.remove(&old_input);
+			Ok(None) => {
+				self.action_to_input.insert(action, input);
 			}
+			Err(InvalidSwap) => {}
 		}
-
-		self.action_to_input.insert(action, input);
-		self.input_to_action.insert(input, action);
 	}
 
-	fn try_get_action<TAction>(&self, input: UserInput) -> Option<TAction>
-	where
-		TAction: TryFrom<TAllActions>,
-	{
-		let action = self.input_to_action.get(&input)?;
-		TAction::try_from(*action).ok()
+	fn get_swap_pair(
+		&mut self,
+		input: UserInput,
+		action: TAllActions,
+	) -> Result<Option<(UserInput, TAllActions)>, InvalidSwap> {
+		let swap_input = self.get_input(action);
+		let Some(swap_action) = self.get_action(&input) else {
+			return Ok(None);
+		};
+
+		if swap_action.invalid_input().contains(&swap_input) {
+			self.invalid_inputs.push(swap_action, swap_input);
+			return Err(InvalidSwap);
+		}
+
+		Ok(Some((swap_input, swap_action)))
+	}
+
+	fn get_action(&self, input: &UserInput) -> Option<TAllActions> {
+		self.action_to_input
+			.iter()
+			.find_map(|(a, i)| if i == input { Some(*a) } else { None })
 	}
 
 	fn get_input<TAction>(&self, action: TAction) -> UserInput
 	where
-		TAction: Copy + Into<TAllActions> + Into<UserInput>,
+		TAction: Into<TAllActions>,
 	{
-		let as_all_actions: TAllActions = action.into();
-		let Some(input) = self.action_to_input.get(&as_all_actions) else {
+		let action: TAllActions = action.into();
+		let Some(input) = self.action_to_input.get(&action) else {
 			let as_input: UserInput = action.into();
 			return as_input;
 		};
@@ -179,7 +178,6 @@ where
 	fn default() -> Self {
 		let mut map = Self {
 			action_to_input: HashMap::default(),
-			input_to_action: HashMap::default(),
 			invalid_inputs: InvalidInputs(HashMap::default()),
 		};
 
@@ -193,7 +191,15 @@ where
 
 impl<TAction> TryLoadFrom<KeyMapDto<TAction>> for KeyMapInternal<TAction>
 where
-	TAction: Debug + HashCopySafe + InvalidUserInput + IterFinite + TypePath + Into<UserInput>,
+	TAction: Debug
+		+ Eq
+		+ Hash
+		+ Copy
+		+ ThreadSafe
+		+ InvalidUserInput
+		+ IterFinite
+		+ TypePath
+		+ Into<UserInput>,
 {
 	type TInstantiationError = LoadError<TAction>;
 
@@ -288,6 +294,8 @@ where
 		)
 	}
 }
+
+struct InvalidSwap;
 
 #[derive(TypePath, Debug, PartialEq)]
 pub enum LoadError<TAllActions>
@@ -399,28 +407,28 @@ mod tests {
 
 	#[derive(TypePath, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 	enum _AllActions {
-		A(_ActionA),
-		B(_ActionB),
+		A,
+		B,
 	}
 
 	impl From<_AllActions> for UserInput {
 		fn from(action: _AllActions) -> Self {
 			match action {
-				_AllActions::A(key) => Self::from(key),
-				_AllActions::B(key) => Self::from(key),
+				_AllActions::A => UserInput::KeyCode(KeyCode::KeyA),
+				_AllActions::B => UserInput::KeyCode(KeyCode::KeyB),
 			}
 		}
 	}
 
 	impl IterFinite for _AllActions {
 		fn iterator() -> Iter<Self> {
-			Iter(Some(_AllActions::A(_ActionA)))
+			Iter(Some(_AllActions::A))
 		}
 
 		fn next(current: &Iter<Self>) -> Option<Self> {
 			match current.0? {
-				_AllActions::A(_ActionA) => Some(_AllActions::B(_ActionB)),
-				_AllActions::B(_ActionB) => None,
+				_AllActions::A => Some(_AllActions::B),
+				_AllActions::B => None,
 			}
 		}
 	}
@@ -428,8 +436,8 @@ mod tests {
 	impl InvalidUserInput for _AllActions {
 		fn invalid_input(&self) -> &[UserInput] {
 			match self {
-				_AllActions::A(action) => action.invalid_input(),
-				_AllActions::B(action) => action.invalid_input(),
+				_AllActions::A => _ActionA.invalid_input(),
+				_AllActions::B => _ActionB.invalid_input(),
 			}
 		}
 	}
@@ -438,8 +446,8 @@ mod tests {
 	struct _ActionA;
 
 	impl From<_ActionA> for _AllActions {
-		fn from(action: _ActionA) -> Self {
-			Self::A(action)
+		fn from(_: _ActionA) -> Self {
+			Self::A
 		}
 	}
 
@@ -448,15 +456,9 @@ mod tests {
 
 		fn try_from(action: _AllActions) -> Result<Self, Self::Error> {
 			match action {
-				_AllActions::A(action) => Ok(action),
+				_AllActions::A => Ok(_ActionA),
 				_ => Err(()),
 			}
-		}
-	}
-
-	impl From<_ActionA> for UserInput {
-		fn from(_: _ActionA) -> Self {
-			Self::KeyCode(KeyCode::KeyA)
 		}
 	}
 
@@ -470,8 +472,8 @@ mod tests {
 	struct _ActionB;
 
 	impl From<_ActionB> for _AllActions {
-		fn from(action: _ActionB) -> Self {
-			Self::B(action)
+		fn from(_: _ActionB) -> Self {
+			Self::B
 		}
 	}
 
@@ -480,15 +482,9 @@ mod tests {
 
 		fn try_from(action: _AllActions) -> Result<Self, Self::Error> {
 			match action {
-				_AllActions::B(action) => Ok(action),
+				_AllActions::B => Ok(_ActionB),
 				_ => Err(()),
 			}
-		}
-	}
-
-	impl From<_ActionB> for UserInput {
-		fn from(_: _ActionB) -> Self {
-			Self::KeyCode(KeyCode::KeyB)
 		}
 	}
 
@@ -508,22 +504,6 @@ mod tests {
 
 			assert_eq!(UserInput::KeyCode(KeyCode::KeyB), mapped);
 		}
-
-		#[test]
-		fn to_key_a() {
-			let mapper = KeyMapInternal::<_AllActions>::default();
-			let mapped = mapper.try_get_action(UserInput::KeyCode(KeyCode::KeyA));
-
-			assert_eq!(Some(_ActionA), mapped);
-		}
-
-		#[test]
-		fn to_key_b() {
-			let mapper = KeyMapInternal::<_AllActions>::default();
-			let mapped = mapper.try_get_action(UserInput::KeyCode(KeyCode::KeyB));
-
-			assert_eq!(Some(_ActionB), mapped);
-		}
 	}
 
 	mod update {
@@ -536,10 +516,7 @@ mod tests {
 			let mut mapper = KeyMapInternal::<_AllActions>::default();
 			mapper.update_key(action, input);
 
-			assert_eq!(
-				(input, Some(action)),
-				(mapper.get_input(action), mapper.try_get_action(input))
-			);
+			assert_eq!(input, mapper.get_input(action));
 		}
 
 		#[test]
@@ -551,14 +528,7 @@ mod tests {
 			mapper.update_key(action, input_b);
 			mapper.update_key(action, input_c);
 
-			assert_eq!(
-				(input_c, Some(action), None as Option<UserInput>),
-				(
-					mapper.get_input(action),
-					mapper.try_get_action(input_c),
-					mapper.try_get_action(input_b)
-				)
-			);
+			assert_eq!(input_c, mapper.get_input(action));
 		}
 
 		#[test]
@@ -572,13 +542,8 @@ mod tests {
 			mapper.update_key(action_b, input_a);
 
 			assert_eq!(
-				(input_b, Some(action_b), input_a, Some(input_a),),
-				(
-					mapper.get_input(action_a),
-					mapper.try_get_action(input_a),
-					mapper.get_input(action_b),
-					mapper.try_get_action(input_b),
-				)
+				(input_b, input_a,),
+				(mapper.get_input(action_a), mapper.get_input(action_b),)
 			);
 		}
 
@@ -589,18 +554,13 @@ mod tests {
 
 			assert_eq!(
 				(
-					UserInput::from(_ActionB),
-					None as Option<_ActionA>,
+					UserInput::from(_AllActions::B),
 					HashMap::from([(
-						_AllActions::B(_ActionB),
+						_AllActions::B,
 						HashSet::from([UserInput::KeyCode(KeyCode::KeyC)])
 					)])
 				),
-				(
-					mapper.get_input(_ActionB),
-					mapper.try_get_action(UserInput::KeyCode(KeyCode::KeyC)),
-					mapper.invalid_inputs.0
-				)
+				(mapper.get_input(_ActionB), mapper.invalid_inputs.0)
 			);
 		}
 
@@ -614,19 +574,15 @@ mod tests {
 			assert_eq!(
 				(
 					UserInput::KeyCode(KeyCode::KeyC),
-					Some(_ActionA),
 					UserInput::KeyCode(KeyCode::KeyB),
-					Some(_ActionB),
 					HashMap::from([(
-						_AllActions::B(_ActionB),
+						_AllActions::B,
 						HashSet::from([UserInput::KeyCode(KeyCode::KeyC)])
 					)])
 				),
 				(
 					mapper.get_input(_ActionA),
-					mapper.try_get_action(UserInput::KeyCode(KeyCode::KeyC)),
 					mapper.get_input(_ActionB),
-					mapper.try_get_action(UserInput::KeyCode(KeyCode::KeyB)),
 					mapper.invalid_inputs.0
 				)
 			);
@@ -649,24 +605,16 @@ mod tests {
 
 		#[test]
 		fn from_dto() -> Result<(), LoadError<_AllActions>> {
-			let dto =
-				KeyMapDto::from([(_AllActions::A(_ActionA), UserInput::KeyCode(KeyCode::KeyC))]);
+			let dto = KeyMapDto::from([(_AllActions::A, UserInput::KeyCode(KeyCode::KeyC))]);
 
 			let mapper = KeyMapInternal::try_load_from(dto, &mut _Server)?;
 
 			assert_eq!(
 				(
 					UserInput::KeyCode(KeyCode::KeyC),
-					Some(_ActionA),
 					UserInput::KeyCode(KeyCode::KeyB),
-					Some(_ActionB)
 				),
-				(
-					mapper.get_input(_ActionA),
-					mapper.try_get_action(UserInput::KeyCode(KeyCode::KeyC)),
-					mapper.get_input(_ActionB),
-					mapper.try_get_action(UserInput::KeyCode(KeyCode::KeyB)),
-				)
+				(mapper.get_input(_ActionA), mapper.get_input(_ActionB),)
 			);
 			Ok(())
 		}
@@ -792,11 +740,11 @@ mod tests {
 			let repeated = LoadError::RepeatedInputs(HashMap::from([
 				(
 					UserInput::KeyCode(KeyCode::KeyC),
-					HashSet::from([_AllActions::A(_ActionA), _AllActions::B(_ActionB)]),
+					HashSet::from([_AllActions::A, _AllActions::B]),
 				),
 				(
 					UserInput::KeyCode(KeyCode::KeyA),
-					HashSet::from([_AllActions::A(_ActionA), _AllActions::B(_ActionB)]),
+					HashSet::from([_AllActions::A, _AllActions::B]),
 				),
 			]));
 
@@ -805,29 +753,27 @@ mod tests {
 			let [header, items @ ..] = assert_count!(3, output.lines());
 			assert_eq!("Multiple actions assigned to the same input(s):", header);
 			assert!(either_or!(
-				items.contains(&"  - KeyCode(KeyA) is assigned to: {A(_ActionA), B(_ActionB)}"),
-				items.contains(&"  - KeyCode(KeyA) is assigned to: {B(_ActionB), A(_ActionA)}"),
+				items.contains(&"  - KeyCode(KeyA) is assigned to: {A, B}"),
+				items.contains(&"  - KeyCode(KeyA) is assigned to: {B, A}"),
 			));
 			assert!(either_or!(
-				items.contains(&"  - KeyCode(KeyC) is assigned to: {A(_ActionA), B(_ActionB)}"),
-				items.contains(&"  - KeyCode(KeyC) is assigned to: {B(_ActionB), A(_ActionA)}"),
+				items.contains(&"  - KeyCode(KeyC) is assigned to: {A, B}"),
+				items.contains(&"  - KeyCode(KeyC) is assigned to: {B, A}"),
 			));
 		}
 
 		#[test]
 		fn display_missing_inputs() {
-			let repeated = LoadError::MissingInputs(HashSet::from([
-				_AllActions::A(_ActionA),
-				_AllActions::B(_ActionB),
-			]));
+			let repeated =
+				LoadError::MissingInputs(HashSet::from([_AllActions::A, _AllActions::B]));
 
 			let output = repeated.to_string();
 
 			let [header, items @ ..] = assert_count!(3, output.lines());
 			assert_eq!("Some actions have no input:", header);
-			assert!(items.contains(&"  - A(_ActionA) has no input"),);
+			assert!(items.contains(&"  - A has no input"),);
 			assert!(items.contains(
-				&"  - B(_ActionB) has no input. Either missing or part of invalid inputs for this action: [KeyCode(KeyC)]"
+				&"  - B has no input. Either missing or part of invalid inputs for this action: [KeyCode(KeyC)]"
 			),);
 		}
 	}

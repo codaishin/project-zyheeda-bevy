@@ -11,8 +11,8 @@ use crate::{
 		iter_helpers::{first, next},
 	},
 	traits::{
+		handles_input::InvalidUserInput,
 		handles_localization::Token,
-		handles_settings::InvalidUserInput,
 		iteration::{Iter, IterFinite},
 	},
 };
@@ -92,9 +92,11 @@ impl InvalidUserInput for ActionKey {
 
 #[cfg(test)]
 mod tests {
+	use testing::assert_eq_unordered;
+
 	use super::*;
 	use crate::traits::iteration::IterFinite;
-	use std::collections::{HashMap, HashSet};
+	use std::collections::HashMap;
 
 	#[test]
 	fn iter_all_keys() {
@@ -112,17 +114,17 @@ mod tests {
 
 	#[test]
 	fn map_keys_to_user_input() {
-		assert_eq!(
+		assert_eq_unordered!(
 			std::iter::empty()
 				.chain(MovementKey::iterator().map(UserInput::from))
 				.chain(PlayerSlot::iterator().map(UserInput::from))
 				.chain(MenuState::iterator().map(UserInput::from))
 				.chain(CameraKey::iterator().map(UserInput::from))
 				.chain(SaveKey::iterator().map(UserInput::from))
-				.collect::<HashSet<_>>(),
+				.collect::<Vec<_>>(),
 			ActionKey::iterator()
 				.map(UserInput::from)
-				.collect::<HashSet<_>>(),
+				.collect::<Vec<_>>(),
 		);
 	}
 

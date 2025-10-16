@@ -1,7 +1,6 @@
 use crate::components::{Dad, KeyedPanel};
 use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
-	tools::action_key::user_input::UserInput,
 	traits::{accessors::get::TryApplyOn, handles_loadout::loadout::SwapInternal},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -10,11 +9,11 @@ pub fn drop_item<TContainer>(
 	mut commands: ZyheedaCommands,
 	mut agents: Query<(Entity, &mut TContainer, &Dad<TContainer::TKey>)>,
 	panels: Query<(&Interaction, &KeyedPanel<TContainer::TKey>)>,
-	mouse: Res<ButtonInput<UserInput>>,
+	mouse: Res<ButtonInput<MouseButton>>,
 ) where
 	TContainer: Component<Mutability = Mutable> + SwapInternal,
 {
-	if !mouse.just_released(UserInput::from(MouseButton::Left)) {
+	if !mouse.just_released(MouseButton::Left) {
 		return;
 	}
 
@@ -83,11 +82,11 @@ mod tests {
 		}
 	}
 
-	const MOUSE_LEFT: UserInput = UserInput::MouseButton(MouseButton::Left);
+	const MOUSE_LEFT: MouseButton = MouseButton::Left;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.insert_resource(ButtonInput::<UserInput>::default());
+		app.insert_resource(ButtonInput::<MouseButton>::default());
 		app.add_systems(Update, drop_item::<_Container>);
 
 		app

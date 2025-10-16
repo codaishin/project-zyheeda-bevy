@@ -12,5 +12,4 @@ pub mod no_target;
 pub mod outdated;
 pub mod persistent_entity;
 pub mod protected;
-pub mod ui_input_primer;
 pub mod ui_node_for;

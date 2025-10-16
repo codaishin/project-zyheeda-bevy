@@ -27,8 +27,9 @@ use common::{
 	systems::log::OnError,
 	tools::action_key::{ActionKey, save_key::SaveKey},
 	traits::{
+		handles_input::{HandlesInput, InputSystemParam},
 		handles_saving::{HandlesSaving, SavableComponent},
-		handles_settings::HandlesSettings,
+		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -47,11 +48,11 @@ pub struct SavegamePlugin<TDependencies> {
 	_p: PhantomData<TDependencies>,
 }
 
-impl<TSettings> SavegamePlugin<TSettings>
+impl<TInput> SavegamePlugin<TInput>
 where
-	TSettings: ThreadSafe + HandlesSettings,
+	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 {
-	pub fn from_plugin(_: &TSettings) -> SavegamePluginBuilder<TSettings> {
+	pub fn from_plugin(_: &TInput) -> SavegamePluginBuilder<TInput> {
 		SavegamePluginBuilder(PhantomData)
 	}
 }
@@ -67,9 +68,9 @@ impl<TDependencies> SavegamePluginBuilder<TDependencies> {
 	}
 }
 
-impl<TSettings> Plugin for SavegamePlugin<TSettings>
+impl<TInput> Plugin for SavegamePlugin<TInput>
 where
-	TSettings: ThreadSafe + HandlesSettings,
+	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 {
 	fn build(&self, app: &mut App) {
 		let quick_save_file = self
@@ -81,11 +82,11 @@ where
 		let quick_save = Arc::new(Mutex::new(SaveContext::from(FileIO::with_file(
 			quick_save_file,
 		))));
-		let trigger_quick_save = TSettings::TKeyMap::trigger(
+		let trigger_quick_save = InputSystemParam::<TInput>::trigger(
 			ActionKey::Save(SaveKey::QuickSave),
 			GameState::Save(SaveState::Save),
 		);
-		let trigger_quick_load_attempt = TSettings::TKeyMap::trigger(
+		let trigger_quick_load_attempt = InputSystemParam::<TInput>::trigger(
 			ActionKey::Save(SaveKey::QuickLoad),
 			GameState::Save(SaveState::AttemptLoad),
 		);
@@ -112,7 +113,8 @@ where
 					trigger_quick_save,
 					trigger_quick_load_attempt.run_if(Self::can_quick_load()),
 				)
-					.run_if(in_state(GameState::Play)),
+					.run_if(in_state(GameState::Play))
+					.after(TInput::SYSTEMS),
 			)
 			.add_systems(
 				OnEnter(GameState::Save(SaveState::Save)),
@@ -183,8 +185,6 @@ mod tests {
 	fn setup() -> App {
 		App::new().single_threaded(Update)
 	}
-
-	struct _Settings;
 
 	#[test]
 	fn register_component() {

@@ -1,22 +1,25 @@
 use crate::components::{icon::Icon, input_label::InputLabel, label::UILabel};
-use bevy::prelude::*;
+use bevy::{
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
+};
 use common::{
-	traits::{accessors::get::TryApplyOn, handles_localization::Token, key_mappings::GetInput},
+	traits::{accessors::get::TryApplyOn, handles_input::GetInput, handles_localization::Token},
 	zyheeda_commands::ZyheedaCommands,
 };
-use std::path::PathBuf;
+use std::{ops::Deref, path::PathBuf};
 
 impl InputLabel {
-	pub fn icon<TMap>(
+	pub fn icon<TInput>(
 		icon_root_path: impl Into<PathBuf>,
-	) -> impl Fn(ZyheedaCommands, Res<TMap>, Labels)
+	) -> impl Fn(ZyheedaCommands, StaticSystemParam<TInput>, Labels)
 	where
-		TMap: Resource + GetInput,
+		for<'w, 's> TInput: SystemParam<Item<'w, 's>: GetInput>,
 	{
 		let root = icon_root_path.into();
 
 		move |mut commands, key_map, labels| {
-			let key_map = key_map.as_ref();
+			let key_map = key_map.deref();
 
 			for (entity, label) in &labels {
 				commands.try_apply_on(&entity, |mut e| {
@@ -49,32 +52,32 @@ mod tests {
 	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Resource, NestedMocks)]
-	struct _Map {
-		mock: Mock_Map,
+	struct _Input {
+		mock: Mock_Input,
 	}
 
 	#[automock]
-	impl GetInput for _Map {
+	impl GetInput for _Input {
 		fn get_input<TAction>(&self, value: TAction) -> UserInput
 		where
-			TAction: Copy + Into<ActionKey> + Into<UserInput> + 'static,
+			TAction: Into<ActionKey> + 'static,
 		{
 			self.mock.get_input(value)
 		}
 	}
 
-	fn setup(map: _Map) -> App {
+	fn setup(input: _Input) -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, InputLabel::icon::<_Map>("icon/root/path"));
-		app.insert_resource(map);
+		app.add_systems(Update, InputLabel::icon::<Res<_Input>>("icon/root/path"));
+		app.insert_resource(input);
 
 		app
 	}
 
 	#[test]
 	fn add_icon() {
-		let mut app = setup(_Map::new().with_mock(|mock| {
+		let mut app = setup(_Input::new().with_mock(|mock| {
 			mock.expect_get_input()
 				.times(1)
 				.with(eq(PlayerSlot::UPPER_L))
@@ -100,7 +103,7 @@ mod tests {
 
 	#[test]
 	fn add_icon_fallback_label() {
-		let mut app = setup(_Map::new().with_mock(|mock| {
+		let mut app = setup(_Input::new().with_mock(|mock| {
 			mock.expect_get_input::<PlayerSlot>()
 				.return_const(UserInput::from(KeyCode::ArrowUp));
 		}));
@@ -121,7 +124,7 @@ mod tests {
 
 	#[test]
 	fn do_not_add_icon_if_not_added() {
-		let mut app = setup(_Map::new().with_mock(|mock| {
+		let mut app = setup(_Input::new().with_mock(|mock| {
 			mock.expect_get_input::<PlayerSlot>()
 				.return_const(UserInput::from(KeyCode::ArrowUp));
 		}));

@@ -6,6 +6,7 @@ use bevy_rapier3d::prelude::Velocity;
 use std::{
 	any::{Any, TypeId, type_name},
 	fmt::Debug,
+	hash::Hash,
 	marker::PhantomData,
 	time::Duration,
 };
@@ -412,32 +413,78 @@ pub trait Mock {
 	fn new_mock(configure: impl FnMut(&mut Self)) -> Self;
 }
 
+pub trait GetButtonInput<T>
+where
+	T: Copy + Eq + Hash + Send + Sync + 'static,
+{
+	type TResult<'a>
+	where
+		Self: 'a;
+
+	fn get_button_input(&mut self) -> Self::TResult<'_>;
+}
+
+impl<T> GetButtonInput<T> for App
+where
+	T: Copy + Eq + Hash + Send + Sync + 'static,
+{
+	type TResult<'a> = Mut<'a, ButtonInput<T>>;
+	fn get_button_input(&mut self) -> Mut<'_, ButtonInput<T>> {
+		self.world_mut().resource_mut::<ButtonInput<T>>()
+	}
+}
+
+impl<T> GetButtonInput<T> for ButtonInput<T>
+where
+	T: Copy + Eq + Hash + Send + Sync + 'static,
+{
+	type TResult<'a> = &'a mut Self;
+
+	fn get_button_input(&mut self) -> &mut Self {
+		self
+	}
+}
+
+/// Set input on a target.
+///
+/// Arguments:
+/// - `target`: one of:
+///   - [`App`]
+///   - [`ButtonInput<T>`]
+/// - `set_to`: one of:
+///   - `just_pressed(T)`
+///   - `pressed(T)`
+///   - `just_released(T)`
+///   - `released(T)`
+///   - `reset_all`
 #[macro_export]
 macro_rules! set_input {
-	($app:expr, just_pressed($btn:expr)) => {{
-		let mut input = $app.world_mut().resource_mut::<ButtonInput<UserInput>>();
+	($target:expr, just_pressed($btn:expr)) => {{
+		let mut input = $crate::GetButtonInput::get_button_input(&mut $target);
 		input.press($btn);
 		input.clear_just_released($btn);
 	}};
-	($app:expr, pressed($btn:expr)) => {{
-		let mut input = $app.world_mut().resource_mut::<ButtonInput<UserInput>>();
+	($target:expr, pressed($btn:expr)) => {{
+		let mut input = $crate::GetButtonInput::get_button_input(&mut $target);
 		input.press($btn);
 		input.clear_just_pressed($btn);
 		input.clear_just_released($btn);
 	}};
-	($app:expr, just_released($btn:expr)) => {{
-		let mut input = $app.world_mut().resource_mut::<ButtonInput<UserInput>>();
+	($target:expr, just_released($btn:expr)) => {{
+		let mut input = $crate::GetButtonInput::get_button_input(&mut $target);
+		input.press($btn);
 		input.release($btn);
 		input.clear_just_pressed($btn);
 	}};
-	($app:expr, released($btn:expr)) => {{
-		let mut input = $app.world_mut().resource_mut::<ButtonInput<UserInput>>();
+	($target:expr, released($btn:expr)) => {{
+		let mut input = $crate::GetButtonInput::get_button_input(&mut $target);
+		input.press($btn);
 		input.release($btn);
 		input.clear_just_pressed($btn);
 		input.clear_just_released($btn);
 	}};
-	($app:expr, reset_all) => {{
-		let mut input = $app.world_mut().resource_mut::<ButtonInput<UserInput>>();
+	($target:expr, reset_all) => {{
+		let mut input = $crate::GetButtonInput::get_button_input(&mut $target);
 		input.reset_all();
 	}};
 }

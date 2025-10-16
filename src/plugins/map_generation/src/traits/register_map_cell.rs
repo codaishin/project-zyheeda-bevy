@@ -95,7 +95,7 @@ impl RegisterMapCell for App {
 			AssetsProgress,
 		>();
 
-		// Track wether assets have been loaded
+		// Track whether assets have been loaded
 		register_map_lookup_load_tracking.in_app(self, resource_exists::<MapColorLookup<TCell>>);
 		register_map_images_load_tracking.in_app(self, MapImage::<TCell>::all_loaded);
 		register_agent_images_load_tracking.in_app(self, MapImage::<Agent<TCell>>::all_loaded);
