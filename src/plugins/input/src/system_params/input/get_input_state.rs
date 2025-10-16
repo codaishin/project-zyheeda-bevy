@@ -30,8 +30,8 @@ where
 		}
 
 		match input {
-			UserInput::KeyCode(key_code) => get_input_state(&self.keys, key_code),
-			UserInput::MouseButton(mouse_button) => get_input_state(&self.mouse, mouse_button),
+			UserInput::KeyCode(key_code) => get_bevy_input_state(&self.keys, key_code),
+			UserInput::MouseButton(mouse_button) => get_bevy_input_state(&self.mouse, mouse_button),
 		}
 	}
 }
@@ -45,7 +45,7 @@ where
 	}
 
 	fn matching_mouse_override(&self, action_key: ActionKey) -> Option<InputState> {
-		let MouseOverride::World {
+		let MouseOverride::Active {
 			action,
 			input_state,
 			..
@@ -58,13 +58,13 @@ where
 			return None;
 		}
 
-		Some(*input_state)
+		input_state.as_ref().copied()
 	}
 }
 
 const LEFT_MOUSE: UserInput = UserInput::MouseButton(MouseButton::Left);
 
-fn get_input_state<T>(input: &Res<ButtonInput<T>>, button: T) -> InputState
+fn get_bevy_input_state<T>(input: &Res<ButtonInput<T>>, button: T) -> InputState
 where
 	T: Copy + Eq + Hash + ThreadSafe,
 {
@@ -210,7 +210,7 @@ mod tests {
 		Ok(())
 	}
 
-	mod mouse_primer {
+	mod mouse_override {
 		use super::*;
 		use common::tools::action_key::slot::PlayerSlot;
 		use test_case::test_case;
@@ -218,35 +218,15 @@ mod tests {
 		const LEFT_MOUSE: MouseButton = MouseButton::Left;
 
 		#[test]
-		fn ignore_left_mouse_button_when_mouse_overridden_for_ui() -> Result<(), RunSystemError> {
+		fn ignore_left_mouse_button_when_mouse_override_active() -> Result<(), RunSystemError> {
 			let mut app = setup(_Map::new().with_mock(|mock| {
 				mock.expect_get_input::<ActionKey>()
 					.return_const(LEFT_MOUSE);
 			}));
-			app.insert_resource(MouseOverride::Ui {
-				panel: Entity::from_raw(42),
-			});
-			set_input!(app, pressed(LEFT_MOUSE));
-
-			let state = app
-				.world_mut()
-				.run_system_once(|input: _Input| input.get_input_state(_Action::default()))?;
-
-			assert_eq!(InputState::released(), state);
-			Ok(())
-		}
-
-		#[test]
-		fn ignore_left_mouse_button_when_mouse_overridden_for_world() -> Result<(), RunSystemError>
-		{
-			let mut app = setup(_Map::new().with_mock(|mock| {
-				mock.expect_get_input::<ActionKey>()
-					.return_const(LEFT_MOUSE);
-			}));
-			app.insert_resource(MouseOverride::World {
+			app.insert_resource(MouseOverride::Active {
 				panel: Entity::from_raw(42),
 				action: ActionKey::from(PlayerSlot::LOWER_L),
-				input_state: InputState::just_pressed(),
+				input_state: None,
 			});
 			set_input!(app, pressed(LEFT_MOUSE));
 
@@ -283,10 +263,10 @@ mod tests {
 			let mut app = setup(_Map::new().with_mock(|mock| {
 				mock.expect_get_input::<ActionKey>().never();
 			}));
-			app.insert_resource(MouseOverride::World {
+			app.insert_resource(MouseOverride::Active {
 				panel: Entity::from_raw(123),
 				action,
-				input_state,
+				input_state: Some(input_state),
 			});
 
 			let state = app

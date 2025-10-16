@@ -218,7 +218,7 @@ mod tests {
 		}
 
 		#[test]
-		fn all_input_states() {
+		fn map_inputs_from_get_input_or_from_action_key_otherwise() {
 			let input = _Input(HashMap::from([
 				(
 					ActionKey::from(PlayerSlot::LOWER_R),

@@ -1,4 +1,5 @@
-//! Implementations for common bevy system parameters to simplify test setups
+//! Implementations for common bevy system parameters to forward traits
+//! from the inner to the outer type.
 
 use super::{GetInput, GetInputState, GetRawUserInput, RawInputState, UpdateKey};
 use crate::tools::action_key::{ActionKey, user_input::UserInput};

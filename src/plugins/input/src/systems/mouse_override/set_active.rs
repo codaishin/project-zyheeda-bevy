@@ -4,22 +4,26 @@ use crate::{
 };
 use bevy::prelude::*;
 
-impl ActionKeyInteraction {
+impl MouseOverride {
 	#[allow(clippy::type_complexity)]
-	pub(crate) fn set_mouse_override_from_ui(
-		interactions: Query<(Entity, &Interaction), (With<Self>, Changed<Interaction>)>,
-		mut mouse_override: ResMut<MouseOverride>,
+	pub(crate) fn set_active(
+		interactions: Query<(Entity, &ActionKeyInteraction, &Interaction), Changed<Interaction>>,
+		mut mouse_override: ResMut<Self>,
 	) {
-		if matches!(*mouse_override, MouseOverride::World { .. }) {
+		if matches!(*mouse_override, Self::Active { input_state, .. } if input_state.is_some()) {
 			return;
 		}
 
-		for (panel, interaction) in &interactions {
+		for (panel, ActionKeyInteraction { action_key, .. }, interaction) in &interactions {
 			if interaction != &Interaction::Pressed {
 				continue;
 			}
 
-			*mouse_override = MouseOverride::Ui { panel };
+			*mouse_override = Self::Active {
+				panel,
+				action: *action_key,
+				input_state: None,
+			};
 		}
 	}
 }
@@ -28,7 +32,10 @@ impl ActionKeyInteraction {
 mod tests {
 	use super::*;
 	use crate::resources::mouse_override::MouseOverride;
-	use common::{tools::action_key::ActionKey, traits::handles_input::InputState};
+	use common::{
+		tools::action_key::{ActionKey, slot::PlayerSlot},
+		traits::handles_input::InputState,
+	};
 	use test_case::test_case;
 	use testing::SingleThreadedApp;
 
@@ -42,7 +49,7 @@ mod tests {
 		app.add_systems(
 			Update,
 			(
-				ActionKeyInteraction::set_mouse_override_from_ui,
+				MouseOverride::set_active,
 				|o: Res<MouseOverride>, mut commands: Commands| {
 					commands.insert_resource(_OverrideChanged(o.is_changed()));
 				},
@@ -61,7 +68,7 @@ mod tests {
 			.spawn((
 				Interaction::Pressed,
 				ActionKeyInteraction {
-					action_key: ActionKey::default(),
+					action_key: ActionKey::from(PlayerSlot::UPPER_L),
 					override_active: false,
 				},
 			))
@@ -70,7 +77,11 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			&MouseOverride::Ui { panel: entity },
+			&MouseOverride::Active {
+				panel: entity,
+				action: ActionKey::from(PlayerSlot::UPPER_L),
+				input_state: None
+			},
 			app.world().resource::<MouseOverride>()
 		);
 	}
@@ -96,11 +107,41 @@ mod tests {
 	}
 
 	#[test]
-	fn do_nothing_when_mouse_override_set_to_world() {
-		let mut app = setup(MouseOverride::World {
+	fn set_when_mouse_override_set_to_other_panel() {
+		let mut app = setup(MouseOverride::Active {
+			panel: Entity::from_raw(42),
+			action: ActionKey::from(PlayerSlot::LOWER_R),
+			input_state: None,
+		});
+		let entity = app
+			.world_mut()
+			.spawn((
+				Interaction::Pressed,
+				ActionKeyInteraction {
+					action_key: ActionKey::from(PlayerSlot::UPPER_L),
+					override_active: false,
+				},
+			))
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			&MouseOverride::Active {
+				panel: entity,
+				action: ActionKey::from(PlayerSlot::UPPER_L),
+				input_state: None
+			},
+			app.world().resource::<MouseOverride>()
+		);
+	}
+
+	#[test]
+	fn do_nothing_when_mouse_override_set_to_active_and_has_input() {
+		let mut app = setup(MouseOverride::Active {
 			panel: Entity::from_raw(123),
 			action: ActionKey::default(),
-			input_state: InputState::just_pressed(),
+			input_state: Some(InputState::just_pressed()),
 		});
 		app.world_mut().spawn((
 			Interaction::Pressed,
@@ -113,35 +154,11 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			&MouseOverride::World {
+			&MouseOverride::Active {
 				panel: Entity::from_raw(123),
 				action: ActionKey::default(),
-				input_state: InputState::just_pressed(),
+				input_state: Some(InputState::just_pressed()),
 			},
-			app.world().resource::<MouseOverride>()
-		);
-	}
-
-	#[test]
-	fn set_when_mouse_override_set_to_other_ui_panel() {
-		let mut app = setup(MouseOverride::Ui {
-			panel: Entity::from_raw(42),
-		});
-		let entity = app
-			.world_mut()
-			.spawn((
-				Interaction::Pressed,
-				ActionKeyInteraction {
-					action_key: ActionKey::default(),
-					override_active: false,
-				},
-			))
-			.id();
-
-		app.update();
-
-		assert_eq!(
-			&MouseOverride::Ui { panel: entity },
 			app.world().resource::<MouseOverride>()
 		);
 	}

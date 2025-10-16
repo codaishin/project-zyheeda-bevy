@@ -5,12 +5,9 @@ use common::{tools::action_key::ActionKey, traits::handles_input::InputState};
 pub(crate) enum MouseOverride {
 	#[default]
 	Idle,
-	Ui {
-		panel: Entity,
-	},
-	World {
+	Active {
 		panel: Entity,
 		action: ActionKey,
-		input_state: InputState,
+		input_state: Option<InputState>,
 	},
 }

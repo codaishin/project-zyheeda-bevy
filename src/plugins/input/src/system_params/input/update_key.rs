@@ -66,7 +66,7 @@ mod tests {
 	}
 
 	#[test]
-	fn get_input() -> Result<(), RunSystemError> {
+	fn call_update_input() -> Result<(), RunSystemError> {
 		let mut app = setup(_Map::new().with_mock(|mock| {
 			mock.expect_update_key()
 				.times(1)

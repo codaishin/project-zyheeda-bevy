@@ -62,9 +62,12 @@ where
 					KeyMap::save_changes::<KeyMapDto>(path)
 						.pipe(OnError::log)
 						.run_if(resource_exists::<KeyMap>),
-					ActionKeyInteraction::set_mouse_override_from_ui,
-					ActionKeyInteraction::set_mouse_override_from_mouse,
-					ActionKeyInteraction::set_override_status,
+					(
+						MouseOverride::set_active,
+						MouseOverride::set_input,
+						MouseOverride::update_action_key_interaction,
+					)
+						.chain(),
 				)
 					.in_set(InputSystems),
 			);
