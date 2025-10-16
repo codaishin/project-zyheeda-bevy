@@ -44,7 +44,13 @@ use common::{
 	tools::action_key::ActionKey,
 	traits::{
 		handles_graphics::UiCamera,
-		handles_input::{HandlesInput, HandlesInputMut, InputMutSystemParam, InputSystemParam},
+		handles_input::{
+			HandlesActionKeyButton,
+			HandlesInput,
+			HandlesInputMut,
+			InputMutSystemParam,
+			InputSystemParam,
+		},
 		handles_load_tracking::{
 			AssetsProgress,
 			DependenciesProgress,
@@ -115,7 +121,7 @@ impl<TLoading, TSavegame, TInput, TLocalization, TGraphics, TPlayers, TLoadout>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
-	TInput: ThreadSafe + HandlesInput + HandlesInputMut,
+	TInput: ThreadSafe + HandlesActionKeyButton + HandlesInput + HandlesInputMut,
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
 	TPlayers: ThreadSafe + HandlesPlayer,
@@ -147,7 +153,7 @@ impl<TLoading, TSavegame, TInput, TLocalization, TGraphics, TPlayers, TLoadout>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
-	TInput: ThreadSafe + HandlesInput + HandlesInputMut,
+	TInput: ThreadSafe + HandlesActionKeyButton + HandlesInput + HandlesInputMut,
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
 	TPlayers: ThreadSafe + HandlesPlayer,
@@ -227,14 +233,14 @@ where
 		let play = GameState::Play;
 
 		app.add_ui::<UIOverlay, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(play)
-			.add_observer(QuickbarPanel::add_quickbar_primer::<InputSystemParam<TInput>>)
+			.add_observer(QuickbarPanel::add_input_control::<TInput::TActionKeyButton>)
 			.add_systems(
 				Update,
 				(
 					QuickbarPanel::set_icon::<TPlayers::TPlayer, TLoadout::TSlots>,
 					QuickbarPanel::set_color::<
 						TPlayers::TPlayer,
-						InputSystemParam<TInput>,
+						TInput::TActionKeyButton,
 						TLoadout::TSlots,
 					>,
 					panel_colors::<QuickbarPanel>,
@@ -379,7 +385,7 @@ impl<TLoading, TSavegame, TInput, TLocalization, TGraphics, TPlayers, TLoadout> 
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
-	TInput: ThreadSafe + HandlesInput + HandlesInputMut,
+	TInput: ThreadSafe + HandlesActionKeyButton + HandlesInput + HandlesInputMut,
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
 	TPlayers: ThreadSafe + HandlesPlayer,

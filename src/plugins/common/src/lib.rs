@@ -27,11 +27,6 @@ use components::{
 	insert_asset::InsertAsset,
 };
 
-use systems::{
-	collect_user_input::collect_user_input_systems::CollectUserInputSystems,
-	ui_input_primer::{apply_input::ApplyInput, set_input_state::SetInputState},
-};
-
 pub struct CommonPlugin;
 
 impl Plugin for CommonPlugin {
@@ -41,7 +36,6 @@ impl Plugin for CommonPlugin {
 		asset_loading(app);
 		colliders(app);
 		life_cycles(app);
-		user_input(app);
 	}
 }
 
@@ -67,8 +61,4 @@ fn asset_loading(app: &mut App) {
 
 fn life_cycles(app: &mut App) {
 	app.add_systems(Update, Lifetime::update::<Virtual>);
-}
-
-fn user_input(app: &mut App) {
-	app.collect_user_input();
 }

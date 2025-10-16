@@ -85,10 +85,7 @@ pub(crate) trait UsesDirection {
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{
-		tools::action_key::user_input::UserInput,
-		traits::{handles_player::DirectionError, iteration::Iter},
-	};
+	use common::traits::{handles_player::DirectionError, iteration::Iter};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use testing::{NestedMocks, SingleThreadedApp};
@@ -211,7 +208,6 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.insert_resource(map);
-		app.init_resource::<ButtonInput<UserInput>>();
 
 		app
 	}

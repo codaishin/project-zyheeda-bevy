@@ -1,7 +1,6 @@
 use crate::components::{Dad, KeyedPanel};
 use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
-	tools::action_key::user_input::UserInput,
 	traits::{
 		accessors::get::TryApplyOn,
 		handles_loadout::loadout::{LoadoutKey, SwapExternal},
@@ -18,12 +17,12 @@ pub fn drop_item_external<TContainerA, TContainerB>(
 		&Dad<TContainerA::TKey>,
 	)>,
 	panels: Query<(&Interaction, &KeyedPanel<TContainerB::TKey>)>,
-	mouse: Res<ButtonInput<UserInput>>,
+	mouse: Res<ButtonInput<MouseButton>>,
 ) where
 	TContainerA: Component<Mutability = Mutable> + SwapExternal<TContainerB>,
 	TContainerB: Component<Mutability = Mutable> + LoadoutKey,
 {
-	if !mouse.just_released(UserInput::from(MouseButton::Left)) {
+	if !mouse.just_released(MouseButton::Left) {
 		return;
 	}
 
@@ -97,11 +96,11 @@ mod tests {
 		type TKey = f32;
 	}
 
-	const MOUSE_LEFT: UserInput = UserInput::MouseButton(MouseButton::Left);
+	const MOUSE_LEFT: MouseButton = MouseButton::Left;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.insert_resource(ButtonInput::<UserInput>::default());
+		app.insert_resource(ButtonInput::<MouseButton>::default());
 		app.add_systems(Update, drop_item_external::<_ContainerA, _ContainerB>);
 
 		app

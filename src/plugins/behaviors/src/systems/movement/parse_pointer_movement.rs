@@ -46,7 +46,7 @@ mod tests {
 		math::Vec3,
 	};
 	use common::{
-		tools::action_key::{ActionKey, user_input::UserInput},
+		tools::action_key::ActionKey,
 		traits::{handles_input::GetInputState, intersect_at::IntersectAt},
 	};
 	use macros::NestedMocks;
@@ -97,7 +97,6 @@ mod tests {
 
 		app.insert_resource(ray);
 		app.insert_resource(input);
-		app.init_resource::<ButtonInput<UserInput>>();
 
 		app
 	}

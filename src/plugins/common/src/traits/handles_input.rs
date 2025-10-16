@@ -13,14 +13,14 @@ use std::hash::Hash;
 pub trait HandlesActionKeyButton {
 	/// Controls triggering of actions through mouse left clicking the associated
 	/// button.
-	type TActionKeyButton: Component + From<ActionKey> + GetProperty<LeftMouseOverridden>;
+	type TActionKeyButton: Component + From<ActionKey> + GetProperty<MouseOverride>;
 }
 
 /// Indicate wether left mouse behavior is overridden for an associated instance that
 /// implements [`GetInputState`].
-pub struct LeftMouseOverridden;
+pub struct MouseOverride;
 
-impl Property for LeftMouseOverridden {
+impl Property for MouseOverride {
 	type TValue<'a> = bool;
 }
 
@@ -101,6 +101,10 @@ where
 	}
 }
 
+/// Allows alternative access to bevy input
+///
+/// Use to avoid conflicts when accessing [`ButtonInput`] in systems is not possible,
+/// due to it being already used by the implementing type.
 pub trait GetRawUserInput {
 	fn get_raw_user_input(&self, state: RawInputState) -> impl Iterator<Item = UserInput>;
 }
@@ -195,9 +199,8 @@ mod tests {
 	use std::collections::HashMap;
 
 	mod get_all_inputs {
-		use bevy::input::keyboard::KeyCode;
-
 		use super::*;
+		use bevy::input::keyboard::KeyCode;
 
 		struct _Input(HashMap<ActionKey, UserInput>);
 

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use common::{
 	tools::action_key::ActionKey,
-	traits::{accessors::get::GetProperty, handles_input::LeftMouseOverridden},
+	traits::{accessors::get::GetProperty, handles_input::MouseOverride},
 };
 
 #[derive(Component, Debug, PartialEq)]
@@ -20,7 +20,7 @@ impl From<ActionKey> for ActionKeyInteraction {
 	}
 }
 
-impl GetProperty<LeftMouseOverridden> for ActionKeyInteraction {
+impl GetProperty<MouseOverride> for ActionKeyInteraction {
 	fn get_property(&self) -> bool {
 		self.override_active
 	}

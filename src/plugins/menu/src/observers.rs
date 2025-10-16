@@ -1,2 +1,2 @@
-pub(crate) mod add_quickbar_primer;
+pub(crate) mod add_input_control;
 pub(crate) mod localize;

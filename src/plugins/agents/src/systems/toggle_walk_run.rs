@@ -36,7 +36,7 @@ fn toggle_movement(PlayerMovement { mode, .. }: &mut PlayerMovement) {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::tools::action_key::{ActionKey, user_input::UserInput};
+	use common::tools::action_key::ActionKey;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use testing::{NestedMocks, SingleThreadedApp};
@@ -60,7 +60,6 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.insert_resource(map);
-		app.init_resource::<ButtonInput<UserInput>>();
 		app.add_systems(Update, player_toggle_walk_run::<Res<_Input>>);
 
 		app
