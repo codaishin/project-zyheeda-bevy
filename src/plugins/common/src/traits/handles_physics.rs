@@ -8,19 +8,19 @@ use crate::{
 		cast_ray::TimeOfImpact,
 	},
 };
-use bevy::{
-	ecs::system::{StaticSystemParam, SystemParam},
-	prelude::*,
-};
+use bevy::{ecs::system::SystemParam, prelude::*};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
 pub trait HandlesRaycast {
-	type TRaycast<'world, 'state>: SystemParam + Raycast<SolidObjects> + Raycast<Ground>;
+	type TRaycast<'world, 'state>: SystemParam
+		+ for<'w, 's> SystemParam<Item<'w, 's>: Raycast<SolidObjects>>
+		+ for<'w, 's> SystemParam<Item<'w, 's>: Raycast<Ground>>;
 }
 
-pub type RaycastSystemParam<'world, 'state, 'world_self, 'state_self, T> =
-	StaticSystemParam<'world, 'state, <T as HandlesRaycast>::TRaycast<'world_self, 'state_self>>;
+/// Helper type to designate [`HandlesRaycast::TRaycast`] as a [`SystemParam`] implementation for a
+/// given generic system constraint
+pub type RaycastSystemParam<'w, 's, T> = <T as HandlesRaycast>::TRaycast<'w, 's>;
 
 pub trait Raycast<TExtra>
 where
