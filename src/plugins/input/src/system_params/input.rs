@@ -1,3 +1,5 @@
+mod get_all_input_states;
+mod get_all_inputs;
 mod get_input;
 mod get_input_state;
 mod get_raw_user_input;

@@ -60,20 +60,6 @@ mod tests {
 	use std::collections::HashSet;
 	use testing::{NestedMocks, SingleThreadedApp};
 
-	#[derive(SystemParam)]
-	struct _InputParam<'w> {
-		input: Res<'w, _Input>,
-	}
-
-	impl GetAllInputStates for _InputParam<'_> {
-		fn get_all_input_states<TAction>(&self) -> impl Iterator<Item = (TAction, InputState)>
-		where
-			TAction: Into<ActionKey> + IterFinite + 'static,
-		{
-			self.input.get_all_input_states()
-		}
-	}
-
 	#[derive(Resource, NestedMocks)]
 	struct _Input {
 		mock: Mock_Input,
@@ -97,7 +83,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.insert_resource(input);
-		app.add_systems(Update, SkillUsage::player::<_Player, _InputParam>);
+		app.add_systems(Update, SkillUsage::player::<_Player, Res<_Input>>);
 
 		app
 	}

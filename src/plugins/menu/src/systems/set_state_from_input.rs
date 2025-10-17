@@ -116,20 +116,6 @@ mod tests {
 		}
 	}
 
-	#[derive(SystemParam)]
-	struct _InputParam<'w> {
-		input: Res<'w, _Input>,
-	}
-
-	impl GetAllInputStates for _InputParam<'_> {
-		fn get_all_input_states<TAction>(&self) -> impl Iterator<Item = (TAction, InputState)>
-		where
-			TAction: Into<ActionKey> + IterFinite + 'static,
-		{
-			self.input.get_all_input_states()
-		}
-	}
-
 	#[derive(Resource, NestedMocks)]
 	struct _Input {
 		mock: Mock_Input,
@@ -153,7 +139,7 @@ mod tests {
 		app.insert_resource(input);
 		app.add_systems(
 			Update,
-			internal_set_state_from_input::<_Wrapper, _Variant, _InputParam>,
+			internal_set_state_from_input::<_Wrapper, _Variant, Res<_Input>>,
 		);
 
 		app
