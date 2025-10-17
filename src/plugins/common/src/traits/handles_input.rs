@@ -4,7 +4,7 @@ use crate::{
 	tools::action_key::{ActionKey, user_input::UserInput},
 	traits::{
 		accessors::get::{GetProperty, Property},
-		iteration::{Iter, IterFinite},
+		iteration::IterFinite,
 	},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
@@ -26,14 +26,14 @@ impl Property for MouseOverride {
 
 pub trait HandlesInput {
 	type TInput<'world, 'state>: SystemParam
-		+ for<'w, 's> SystemParam<Item<'w, 's>: GetInput + InputSetupChanged>
+		+ for<'w, 's> SystemParam<Item<'w, 's>: GetInput + GetAllInputs + InputSetupChanged>
 		+ for<'w, 's> SystemParam<Item<'w, 's>: GetInputState + GetAllInputStates>
 		+ for<'w, 's> SystemParam<Item<'w, 's>: GetRawUserInput>;
 }
 
 pub trait HandlesInputMut {
 	type TInputMut<'world, 'state>: SystemParam
-		+ for<'w, 's> SystemParam<Item<'w, 's>: GetInput + InputSetupChanged>
+		+ for<'w, 's> SystemParam<Item<'w, 's>: GetInput + GetAllInputs + InputSetupChanged>
 		+ for<'w, 's> SystemParam<Item<'w, 's>: GetInputState + GetAllInputStates>
 		+ for<'w, 's> SystemParam<Item<'w, 's>: GetRawUserInput>
 		+ for<'w, 's> SystemParam<Item<'w, 's>: UpdateKey>;
@@ -69,38 +69,6 @@ pub trait GetInput {
 
 pub trait GetAllInputs {
 	fn get_all_inputs(&self) -> impl Iterator<Item = (ActionKey, UserInput)>;
-}
-
-impl<T> GetAllInputs for T
-where
-	T: GetInput,
-{
-	fn get_all_inputs(&self) -> impl Iterator<Item = (ActionKey, UserInput)> {
-		IterInputs {
-			input: self,
-			actions: ActionKey::iterator(),
-		}
-	}
-}
-
-pub struct IterInputs<'a, T>
-where
-	T: GetInput,
-{
-	input: &'a T,
-	actions: Iter<ActionKey>,
-}
-
-impl<'a, T> Iterator for IterInputs<'a, T>
-where
-	T: GetInput + 'a,
-{
-	type Item = (ActionKey, UserInput);
-
-	fn next(&mut self) -> Option<Self::Item> {
-		let action_key = self.actions.next()?;
-		Some((action_key, self.input.get_input(action_key)))
-	}
 }
 
 /// Allows alternative access to bevy input
@@ -151,68 +119,5 @@ impl InputState {
 
 	pub const fn just_released() -> Self {
 		Self::Released { just_now: true }
-	}
-}
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-	use crate::{
-		states::menu_state::MenuState,
-		tools::action_key::{movement::MovementKey, slot::PlayerSlot},
-	};
-	use std::collections::HashMap;
-
-	mod get_all_inputs {
-		use super::*;
-		use bevy::input::keyboard::KeyCode;
-
-		struct _Input(HashMap<ActionKey, UserInput>);
-
-		impl GetInput for _Input {
-			fn get_input<TAction>(&self, action: TAction) -> UserInput
-			where
-				TAction: Into<ActionKey> + 'static,
-			{
-				let action = action.into();
-				self.0
-					.get(&action)
-					.copied()
-					.unwrap_or(UserInput::from(action))
-			}
-		}
-
-		#[test]
-		fn map_inputs_from_get_input_or_from_action_key_otherwise() {
-			let input = _Input(HashMap::from([
-				(
-					ActionKey::from(PlayerSlot::LOWER_R),
-					UserInput::KeyCode(KeyCode::KeyA),
-				),
-				(
-					ActionKey::from(MenuState::Inventory),
-					UserInput::KeyCode(KeyCode::KeyB),
-				),
-				(
-					ActionKey::from(MovementKey::Left),
-					UserInput::KeyCode(KeyCode::KeyC),
-				),
-			]));
-
-			assert_eq!(
-				ActionKey::iterator()
-					.map(|a| match a {
-						ActionKey::Slot(PlayerSlot::LOWER_R) =>
-							(a, UserInput::KeyCode(KeyCode::KeyA)),
-						ActionKey::Menu(MenuState::Inventory) =>
-							(a, UserInput::KeyCode(KeyCode::KeyB)),
-						ActionKey::Movement(MovementKey::Left) =>
-							(a, UserInput::KeyCode(KeyCode::KeyC)),
-						_ => (a, UserInput::from(a)),
-					})
-					.collect::<Vec<_>>(),
-				input.get_all_inputs().collect::<Vec<_>>()
-			);
-		}
 	}
 }
