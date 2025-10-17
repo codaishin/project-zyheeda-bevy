@@ -93,20 +93,6 @@ mod tests {
 	#[derive(Component)]
 	struct _Player;
 
-	#[derive(SystemParam)]
-	struct _InputParam<'w> {
-		input: Res<'w, _Input>,
-	}
-
-	impl GetAllInputStates for _InputParam<'_> {
-		fn get_all_input_states<TAction>(&self) -> impl Iterator<Item = (TAction, InputState)>
-		where
-			TAction: Into<ActionKey> + IterFinite + 'static,
-		{
-			self.input.get_all_input_states()
-		}
-	}
-
 	#[derive(Resource, NestedMocks)]
 	struct _Input {
 		mock: Mock_Input,
@@ -225,7 +211,7 @@ mod tests {
 
 		let input = app
 			.world_mut()
-			.run_system_once(_Result::parse::<_Cam, _InputParam, _Player>)?;
+			.run_system_once(_Result::parse::<_Cam, Res<_Input>, _Player>)?;
 
 		assert_eq!(Ok(ProcessInput::New(_Result(Dir3::Z))), input);
 		Ok(())
@@ -244,7 +230,7 @@ mod tests {
 
 		let input = app
 			.world_mut()
-			.run_system_once(_Result::parse::<_Cam, _InputParam, _Player>)?;
+			.run_system_once(_Result::parse::<_Cam, Res<_Input>, _Player>)?;
 
 		assert_eq!(Ok(ProcessInput::New(_Result(Dir3::Z))), input);
 		Ok(())
@@ -270,7 +256,7 @@ mod tests {
 
 		let input = app
 			.world_mut()
-			.run_system_once(_Result::parse::<_Cam, _InputParam, _Player>)?;
+			.run_system_once(_Result::parse::<_Cam, Res<_Input>, _Player>)?;
 
 		assert_eq!(Ok(ProcessInput::None), input);
 		Ok(())
@@ -303,7 +289,7 @@ mod tests {
 
 		let input = app
 			.world_mut()
-			.run_system_once(_Result::parse::<_Cam, _InputParam, _Player>)?;
+			.run_system_once(_Result::parse::<_Cam, Res<_Input>, _Player>)?;
 
 		assert_eq!(
 			Ok(ProcessInput::New(_Result(
@@ -346,7 +332,7 @@ mod tests {
 
 		let input = app
 			.world_mut()
-			.run_system_once(_Result::parse::<_Cam, _InputParam, _Player>)?;
+			.run_system_once(_Result::parse::<_Cam, Res<_Input>, _Player>)?;
 
 		assert_eq!(Ok(ProcessInput::New(_Result(Dir3::X))), input);
 		Ok(())
@@ -372,7 +358,7 @@ mod tests {
 
 		let input = app
 			.world_mut()
-			.run_system_once(_Result::parse::<_Cam, _InputParam, _Player>)?;
+			.run_system_once(_Result::parse::<_Cam, Res<_Input>, _Player>)?;
 
 		assert_eq!(Ok(ProcessInput::None), input);
 		Ok(())
@@ -405,7 +391,7 @@ mod tests {
 
 		let input = app
 			.world_mut()
-			.run_system_once(_Result::parse::<_Cam, _InputParam, _Player>)?;
+			.run_system_once(_Result::parse::<_Cam, Res<_Input>, _Player>)?;
 
 		assert_eq!(Ok(ProcessInput::None), input);
 		Ok(())
@@ -433,7 +419,7 @@ mod tests {
 
 		let input = app
 			.world_mut()
-			.run_system_once(_Result::parse::<_Cam, _InputParam, _Player>)?;
+			.run_system_once(_Result::parse::<_Cam, Res<_Input>, _Player>)?;
 
 		assert_eq!(Ok(ProcessInput::Stop), input);
 		Ok(())
@@ -461,7 +447,7 @@ mod tests {
 
 		let input = app
 			.world_mut()
-			.run_system_once(_Result::parse::<_Cam, _InputParam, _Player>)?;
+			.run_system_once(_Result::parse::<_Cam, Res<_Input>, _Player>)?;
 
 		assert_eq!(Ok(ProcessInput::None), input);
 		Ok(())
@@ -489,7 +475,7 @@ mod tests {
 
 		let input = app
 			.world_mut()
-			.run_system_once(_Result::parse::<_Cam, _InputParam, _Player>)?;
+			.run_system_once(_Result::parse::<_Cam, Res<_Input>, _Player>)?;
 
 		assert_eq!(Ok(ProcessInput::None), input);
 		Ok(())
@@ -512,7 +498,7 @@ mod tests {
 
 		_ = app
 			.world_mut()
-			.run_system_once(_Result::parse::<_Cam, _InputParam, _Player>)?;
+			.run_system_once(_Result::parse::<_Cam, Res<_Input>, _Player>)?;
 		Ok(())
 	}
 
@@ -526,7 +512,7 @@ mod tests {
 
 		let result = app
 			.world_mut()
-			.run_system_once(_Result::parse::<_Cam, _InputParam, _Player>)?;
+			.run_system_once(_Result::parse::<_Cam, Res<_Input>, _Player>)?;
 
 		assert_eq!(Err(UniqueViolation::none()), result);
 		Ok(())
@@ -544,7 +530,7 @@ mod tests {
 
 		let result = app
 			.world_mut()
-			.run_system_once(_Result::parse::<_Cam, _InputParam, _Player>)?;
+			.run_system_once(_Result::parse::<_Cam, Res<_Input>, _Player>)?;
 
 		assert_eq!(Err(UniqueViolation::multiple()), result);
 		Ok(())

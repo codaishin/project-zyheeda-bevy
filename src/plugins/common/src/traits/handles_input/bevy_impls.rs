@@ -2,7 +2,10 @@
 //! from the inner to the outer type.
 
 use super::{GetInput, GetInputState, GetRawUserInput, RawInputState, UpdateKey};
-use crate::tools::action_key::{ActionKey, user_input::UserInput};
+use crate::{
+	tools::action_key::{ActionKey, user_input::UserInput},
+	traits::{handles_input::GetAllInputStates, iteration::IterFinite},
+};
 use bevy::prelude::*;
 use std::ops::{Deref, DerefMut};
 
@@ -69,6 +72,30 @@ where
 		TAction: Into<ActionKey> + 'static,
 	{
 		self.deref().get_input_state(action)
+	}
+}
+
+impl<T> GetAllInputStates for Res<'_, T>
+where
+	T: GetAllInputStates + Resource,
+{
+	fn get_all_input_states<TAction>(&self) -> impl Iterator<Item = (TAction, super::InputState)>
+	where
+		TAction: Into<ActionKey> + IterFinite + 'static,
+	{
+		self.deref().get_all_input_states()
+	}
+}
+
+impl<T> GetAllInputStates for ResMut<'_, T>
+where
+	T: GetAllInputStates + Resource,
+{
+	fn get_all_input_states<TAction>(&self) -> impl Iterator<Item = (TAction, super::InputState)>
+	where
+		TAction: Into<ActionKey> + IterFinite + 'static,
+	{
+		self.deref().get_all_input_states()
 	}
 }
 
