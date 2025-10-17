@@ -1,3 +1,5 @@
+mod bevy_impls;
+
 use crate::{
 	attributes::{effect_target::EffectTarget, health::Health},
 	components::is_blocker::Blocker,
