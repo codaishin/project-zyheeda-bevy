@@ -114,7 +114,7 @@ macro_rules! assert_eq_approx {
 			(left_val, right_val, tolerance_val) => {
 				assert!(
 					$crate::approx_equal(left_val, right_val, tolerance_val),
-					"approx equal failed:\n    left: {}\n    right: {}\ntolerance: {}\n",
+					"approx equal failed:\n     left: {}\n    right: {}\ntolerance: {}\n",
 					format!("\x1b[31m{:?}\x1b[0m", left_val),
 					format!("\x1b[31m{:?}\x1b[0m", right_val),
 					format!("\x1b[33m{:?}\x1b[0m", tolerance_val),
