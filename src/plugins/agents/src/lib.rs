@@ -137,6 +137,10 @@ where
 					InputSystemParam<TInput>,
 					RaycastSystemParam<TPhysics>,
 				>,
+				Player::update_skill_actions::<
+					InputSystemParam<TInput>,
+					RaycastSystemParam<TPhysics>,
+				>,
 			)
 				.run_if(in_state(GameState::Play))
 				.in_set(AgentSystems)
