@@ -1,0 +1,125 @@
+use crate::{components::combos::Combos, system_parameters::loadout::LoadoutReader};
+use bevy::prelude::*;
+use common::{
+	tools::action_key::slot::SlotKey,
+	traits::{
+		accessors::get::EntityContext,
+		handles_loadout::{
+			Combos as CombosMarker,
+			combos_component::{Combo, GetCombosOrdered, NextConfiguredKeys},
+			loadout::{LoadoutItem, LoadoutKey},
+		},
+	},
+};
+use std::collections::HashSet;
+
+impl EntityContext<CombosMarker> for LoadoutReader<'_, '_> {
+	type TContext<'ctx> = CombosView<'ctx>;
+
+	fn get_entity_context<'ctx>(
+		param: &'ctx LoadoutReader,
+		entity: Entity,
+		_: CombosMarker,
+	) -> Option<Self::TContext<'ctx>> {
+		let (_, _, combos, _) = param.agents.get(entity).ok()?;
+
+		Some(CombosView { combos })
+	}
+}
+
+#[derive(Debug, PartialEq)]
+pub struct CombosView<'a> {
+	combos: &'a Combos,
+}
+
+impl LoadoutKey for CombosView<'_> {
+	type TKey = <Combos as LoadoutKey>::TKey;
+}
+
+impl LoadoutItem for CombosView<'_> {
+	type TItem = <Combos as LoadoutItem>::TItem;
+}
+
+impl GetCombosOrdered for CombosView<'_> {
+	fn combos_ordered(&self) -> Vec<Combo<Self::TKey, Self::TItem>> {
+		self.combos.combos_ordered()
+	}
+}
+
+impl NextConfiguredKeys<SlotKey> for CombosView<'_> {
+	fn next_keys(&self, combo_keys: &[SlotKey]) -> HashSet<SlotKey> {
+		self.combos.next_keys(combo_keys)
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::{
+		components::{
+			combo_node::ComboNode,
+			combos::Combos,
+			inventory::Inventory,
+			queue::Queue,
+			slots::Slots,
+		},
+		item::Item,
+		skills::Skill,
+	};
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
+	use common::{tools::action_key::slot::SlotKey, traits::handles_localization::Token};
+	use testing::SingleThreadedApp;
+
+	fn setup() -> App {
+		let mut app = App::new().single_threaded(Update);
+
+		app.init_resource::<Assets<Item>>();
+		app.init_resource::<Assets<Skill>>();
+
+		app
+	}
+
+	#[test]
+	fn slot_item() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let entity = app
+			.world_mut()
+			.spawn((
+				Slots::default(),
+				Inventory::default(),
+				Combos::from(ComboNode::new([(
+					SlotKey(42),
+					(
+						Skill {
+							token: Token::from("my skill"),
+							..default()
+						},
+						ComboNode::default(),
+					),
+				)])),
+				Queue::default(),
+			))
+			.id();
+
+		app.world_mut()
+			.run_system_once(move |loadout: LoadoutReader| {
+				let ctx = LoadoutReader::get_entity_context(&loadout, entity, CombosMarker);
+
+				assert_eq!(
+					Some(CombosView {
+						combos: &Combos::from(ComboNode::new([(
+							SlotKey(42),
+							(
+								Skill {
+									token: Token::from("my skill"),
+									..default()
+								},
+								ComboNode::default(),
+							),
+						)]))
+					}),
+					ctx
+				);
+			})
+	}
+}
