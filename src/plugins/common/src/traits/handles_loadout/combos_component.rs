@@ -3,7 +3,7 @@ use crate::{
 	traits::handles_loadout::loadout::{LoadoutItem, LoadoutKey},
 };
 use bevy::{ecs::component::Mutable, prelude::*};
-use std::collections::HashSet;
+use std::{collections::HashSet, ops::Deref};
 
 pub trait CombosComponent<TSkill>:
 	Component<Mutability = Mutable>
@@ -29,10 +29,32 @@ pub trait NextConfiguredKeys<TKey> {
 	fn next_keys(&self, combo_keys: &[TKey]) -> HashSet<TKey>;
 }
 
-pub trait GetCombosOrdered: LoadoutKey + LoadoutItem {
+impl<T, TKey> NextConfiguredKeys<TKey> for T
+where
+	T: Deref<Target: NextConfiguredKeys<TKey>>,
+{
+	fn next_keys(&self, combo_keys: &[TKey]) -> HashSet<TKey> {
+		self.deref().next_keys(combo_keys)
+	}
+}
+
+pub trait GetCombosOrdered {
+	type TSkill;
+
 	/// Get combos with a consistent ordering.
 	/// The specific ordering heuristic is up to the implementor.
-	fn combos_ordered(&self) -> Vec<Combo<Self::TKey, Self::TItem>>;
+	fn combos_ordered(&self) -> Vec<Combo<SlotKey, Self::TSkill>>;
+}
+
+impl<T> GetCombosOrdered for T
+where
+	T: Deref<Target: GetCombosOrdered>,
+{
+	type TSkill = <<T as Deref>::Target as GetCombosOrdered>::TSkill;
+
+	fn combos_ordered(&self) -> Vec<Combo<SlotKey, Self::TSkill>> {
+		self.deref().combos_ordered()
+	}
 }
 
 pub trait UpdateCombos: LoadoutKey + LoadoutItem {

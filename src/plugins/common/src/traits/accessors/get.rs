@@ -5,7 +5,13 @@ mod option;
 mod ray;
 mod result;
 
-use bevy::ecs::system::{StaticSystemParam, SystemParam};
+use bevy::{
+	ecs::{
+		component::Mutable,
+		system::{StaticSystemParam, SystemParam, SystemParamItem},
+	},
+	prelude::*,
+};
 use std::ops::Deref;
 
 pub trait Get<TKey> {
@@ -112,12 +118,96 @@ pub trait GetFromSystemParam<TKey> {
 	) -> Option<Self::TItem<'a>>;
 }
 
+pub trait ContextChanged {
+	fn context_changed(&self) -> bool;
+}
+
+impl<T> ContextChanged for Ref<'_, T>
+where
+	T: Component,
+{
+	fn context_changed(&self) -> bool {
+		self.is_changed()
+	}
+}
+
+/// Retrieve a context for data inspection.
+///
+/// It is up to the implementor, what kind of system parameters are involved.
+pub trait EntityContext<TMarker>: SystemParam {
+	type TContext<'ctx>: ContextChanged;
+
+	fn get_entity_context<'ctx>(
+		param: &'ctx SystemParamItem<Self>,
+		entity: Entity,
+		marker: TMarker,
+	) -> Option<Self::TContext<'ctx>>;
+}
+
+impl<T, TMarker> EntityContext<TMarker> for Query<'_, '_, Ref<'static, T>>
+where
+	T: Component,
+{
+	type TContext<'ctx> = Ref<'ctx, T>;
+
+	fn get_entity_context<'ctx>(
+		query: &'ctx Query<Ref<T>>,
+		entity: Entity,
+		_: TMarker,
+	) -> Option<Self::TContext<'ctx>> {
+		query.get(entity).ok()
+	}
+}
+
 pub trait GetMut<TKey> {
 	type TValue<'a>
 	where
 		Self: 'a;
 
 	fn get_mut(&mut self, key: &TKey) -> Option<Self::TValue<'_>>;
+}
+
+/// Retrieve a context for data mutation.
+///
+/// It is up to the implementor, what kind of system parameters are involved.
+pub trait EntityContextMut<TMarker>: SystemParam {
+	type TContext<'ctx>;
+
+	fn get_entity_context_mut<'ctx>(
+		param: &'ctx mut SystemParamItem<Self>,
+		entity: Entity,
+		marker: TMarker,
+	) -> Option<Self::TContext<'ctx>>;
+}
+
+impl<T, TMarker> EntityContextMut<TMarker> for Query<'_, '_, Mut<'static, T>>
+where
+	T: Component<Mutability = Mutable>,
+{
+	type TContext<'ctx> = Mut<'ctx, T>;
+
+	fn get_entity_context_mut<'ctx>(
+		query: &'ctx mut Query<Mut<T>>,
+		entity: Entity,
+		_: TMarker,
+	) -> Option<Self::TContext<'ctx>> {
+		query.get_mut(entity).ok()
+	}
+}
+
+impl<T, TMarker> EntityContextMut<TMarker> for Query<'_, '_, &'static mut T>
+where
+	T: Component<Mutability = Mutable>,
+{
+	type TContext<'ctx> = Mut<'ctx, T>;
+
+	fn get_entity_context_mut<'ctx>(
+		query: &'ctx mut Query<&mut T>,
+		entity: Entity,
+		_: TMarker,
+	) -> Option<Self::TContext<'ctx>> {
+		query.get_mut(entity).ok()
+	}
 }
 
 pub trait TryApplyOn<'a, TKey>: GetMut<TKey> + 'a {
@@ -268,7 +358,7 @@ impl<T> DynProperty for T {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use std::collections::HashMap;
+	use std::{collections::HashMap, fmt::Debug};
 
 	#[derive(Debug, PartialEq)]
 	struct _Container(HashMap<&'static str, i32>);
