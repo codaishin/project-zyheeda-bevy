@@ -4,6 +4,7 @@ mod item;
 mod observers;
 mod resources;
 mod skills;
+mod system_parameters;
 mod systems;
 mod traits;
 
@@ -16,6 +17,8 @@ use crate::{
 		slots::visualization::SlotVisualization,
 	},
 	item::SkillItem,
+	skills::SkillId,
+	system_parameters::loadout::{LoadoutReader, LoadoutWriter},
 	systems::enqueue::EnqueueSystem,
 };
 use bevy::prelude::*;
@@ -26,7 +29,7 @@ use common::{
 		handles_agents::HandlesAgents,
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
 		handles_load_tracking::HandlesLoadTracking,
-		handles_loadout::HandlesLoadout,
+		handles_loadout::{HandlesLoadout, HandlesLoadout2},
 		handles_orientation::HandlesOrientation,
 		handles_physics::HandlesAllPhysicalEffects,
 		handles_player::{
@@ -169,4 +172,10 @@ impl<TDependencies> HandlesLoadout for SkillsPlugin<TDependencies> {
 	type TInventory = Inventory;
 	type TSlots = Slots;
 	type TCombos = Combos;
+}
+
+impl<TDependencies> HandlesLoadout2 for SkillsPlugin<TDependencies> {
+	type TSkillID = SkillId;
+	type TLoadoutRead<'w, 's> = LoadoutReader<'w, 's>;
+	type TLoadoutMut<'w, 's> = LoadoutWriter<'w, 's>;
 }

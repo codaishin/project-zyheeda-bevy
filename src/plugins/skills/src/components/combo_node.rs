@@ -237,6 +237,8 @@ impl PeekNextRecursive for ComboNode {
 }
 
 impl GetCombosOrdered for ComboNode {
+	type TSkill = Skill;
+
 	fn combos_ordered(&self) -> Vec<Combo<SlotKey, Skill>> {
 		combos(self, vec![])
 	}

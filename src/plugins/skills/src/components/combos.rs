@@ -105,9 +105,11 @@ impl<TNode> LoadoutItem for Combos<TNode> {
 
 impl<TNode> GetCombosOrdered for Combos<TNode>
 where
-	TNode: GetCombosOrdered<TKey = SlotKey, TItem = Skill>,
+	TNode: GetCombosOrdered,
 {
-	fn combos_ordered(&self) -> Vec<Combo<SlotKey, Skill>> {
+	type TSkill = TNode::TSkill;
+
+	fn combos_ordered(&self) -> Vec<Combo<SlotKey, Self::TSkill>> {
 		self.config.combos_ordered()
 	}
 }
@@ -248,15 +250,9 @@ mod tests {
 
 	struct _ComboNode(Vec<Combo<SlotKey, Skill>>);
 
-	impl LoadoutKey for _ComboNode {
-		type TKey = SlotKey;
-	}
-
-	impl LoadoutItem for _ComboNode {
-		type TItem = Skill;
-	}
-
 	impl GetCombosOrdered for _ComboNode {
+		type TSkill = Skill;
+
 		fn combos_ordered(&self) -> Vec<Combo<SlotKey, Skill>> {
 			self.0.clone()
 		}

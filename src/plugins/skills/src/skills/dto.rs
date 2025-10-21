@@ -1,7 +1,7 @@
 pub(crate) mod run_skill_behavior;
 
 use super::{AnimationStrategy, Skill};
-use crate::skills::RunSkillBehavior;
+use crate::skills::{RunSkillBehavior, SkillId};
 use bevy::asset::{AssetPath, Handle};
 use common::{
 	dto::duration_in_seconds::DurationInSeconds,
@@ -16,9 +16,11 @@ use common::{
 use run_skill_behavior::RunSkillBehaviorDto;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, time::Duration};
+use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub(crate) struct SkillDto {
+	id: Uuid,
 	token: String,
 	cast_time: DurationInSeconds,
 	animation: AnimationStrategy,
@@ -41,6 +43,7 @@ impl TryLoadFrom<SkillDto> for Skill {
 		asset_server: &mut TLoadAsset,
 	) -> Result<Self, Self::TInstantiationError> {
 		Ok(Self {
+			id: SkillId(skill_data.id),
 			token: Token::from(skill_data.token),
 			cast_time: Duration::from(skill_data.cast_time),
 			animation: skill_data.animation,
@@ -57,6 +60,7 @@ impl TryLoadFrom<SkillDto> for Skill {
 impl From<Skill> for SkillDto {
 	fn from(skill: Skill) -> Self {
 		Self {
+			id: skill.id.0,
 			token: (*skill.token).to_owned(),
 			cast_time: DurationInSeconds::from(skill.cast_time),
 			animation: skill.animation,
