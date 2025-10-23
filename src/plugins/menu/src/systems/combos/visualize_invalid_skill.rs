@@ -2,41 +2,43 @@ use crate::{
 	components::combo_skill_button::{ComboSkillButton, DropdownTrigger},
 	traits::InsertContentOn,
 };
-use bevy::prelude::*;
+use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
-	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::{AssociatedSystemParam, GetFromSystemParam, TryApplyOn},
-		handles_loadout::slot_component::AvailableSkills,
+		accessors::get::{EntityContext, TryApplyOn},
+		handles_loadout::{AvailableSkills, GetSkillId, ReadAvailableSkills},
 		thread_safe::ThreadSafe,
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
+use std::fmt::Debug;
 
-impl<TSkill> ComboSkillButton<DropdownTrigger, TSkill>
+impl<TId> ComboSkillButton<DropdownTrigger, TId>
 where
-	TSkill: ThreadSafe + PartialEq,
+	TId: Debug + PartialEq + Clone + ThreadSafe,
 {
-	pub(crate) fn visualize_invalid<TVisualize, TAgent, TSlots>(
+	pub(crate) fn visualize_invalid<TVisualize, TAgent, TLoadout>(
 		mut commands: ZyheedaCommands,
 		buttons: Query<(Entity, &Self), Added<Self>>,
-		slots: Query<&TSlots, With<TAgent>>,
-		param: AssociatedSystemParam<TSlots, AvailableSkills<SlotKey>>,
+		agents: Query<Entity, With<TAgent>>,
+		param: StaticSystemParam<TLoadout>,
 	) where
 		TVisualize: InsertContentOn,
 		TAgent: Component,
-		TSlots: Component + GetFromSystemParam<AvailableSkills<SlotKey>>,
-		for<'i> TSlots::TItem<'i>: IntoIterator<Item = TSkill>,
+		TLoadout: for<'c> EntityContext<AvailableSkills, TContext<'c>: ReadAvailableSkills<TId>>,
 	{
-		for slots in &slots {
+		for agent in &agents {
+			let Some(ctx) = TLoadout::get_entity_context(&param, agent, AvailableSkills) else {
+				continue;
+			};
+
 			for (entity, button) in &buttons {
 				let Some(key) = button.key_path.last() else {
 					continue;
 				};
-				let Some(items) = slots.get_from_param(&AvailableSkills(*key), &param) else {
-					continue;
-				};
-				if items.into_iter().any(|skill| skill == button.skill) {
+				let mut skills = ctx.get_available_skills(*key);
+
+				if skills.any(|skill| skill.get_skill_id() == button.skill.id) {
 					continue;
 				}
 
@@ -51,32 +53,63 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::components::combo_overview::ComboSkill;
 	use common::{
 		tools::action_key::slot::{PlayerSlot, SlotKey},
+		traits::{
+			accessors::get::GetProperty,
+			handles_loadout::loadout::{SkillIcon, SkillToken},
+			handles_localization::Token,
+		},
 		zyheeda_commands::ZyheedaEntityCommands,
 	};
-	use std::collections::HashMap;
+	use std::{collections::HashMap, sync::LazyLock};
 	use testing::SingleThreadedApp;
 
 	#[derive(Component)]
 	struct _Agent;
 
+	#[derive(Component, Clone)]
+	struct _Slots(HashMap<SlotKey, Vec<_Skill>>);
+
+	impl ReadAvailableSkills<&'static str> for _Slots {
+		type TSkill<'a>
+			= _Skill
+		where
+			Self: 'a;
+
+		fn get_available_skills(&self, key: SlotKey) -> impl Iterator<Item = Self::TSkill<'_>> {
+			match self.0.get(&key) {
+				Some(skills) => skills.clone().into_iter(),
+				None => vec![].into_iter(),
+			}
+		}
+	}
+
 	#[derive(Debug, PartialEq, Default, Clone)]
 	struct _Skill(&'static str);
 
-	#[derive(Component)]
-	struct _Slots(HashMap<SlotKey, Vec<_Skill>>);
+	impl GetSkillId<&'static str> for _Skill {
+		fn get_skill_id(&self) -> &'static str {
+			self.0
+		}
+	}
 
-	impl GetFromSystemParam<AvailableSkills<SlotKey>> for _Slots {
-		type TParam<'w, 's> = ();
-		type TItem<'i> = Vec<_Skill>;
+	const IMAGE: Handle<Image> = Handle::Weak(AssetId::Uuid {
+		uuid: AssetId::<Image>::DEFAULT_UUID,
+	});
 
-		fn get_from_param(
-			&self,
-			AvailableSkills(key): &AvailableSkills<SlotKey>,
-			_: &(),
-		) -> Option<Self::TItem<'_>> {
-			self.0.get(key).cloned()
+	impl GetProperty<SkillIcon> for _Skill {
+		fn get_property(&self) -> &'_ Handle<Image> {
+			&IMAGE
+		}
+	}
+
+	static TOKEN: LazyLock<Token> = LazyLock::new(|| Token::from("my skill token"));
+
+	impl GetProperty<SkillToken> for _Skill {
+		fn get_property(&self) -> &Token {
+			&TOKEN
 		}
 	}
 
@@ -89,14 +122,22 @@ mod tests {
 		}
 	}
 
+	fn combo_skill(id: &'static str) -> ComboSkill<&'static str> {
+		ComboSkill {
+			id,
+			token: Token::from("my combo skill"),
+			icon: Handle::default(),
+		}
+	}
+
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
-			ComboSkillButton::<DropdownTrigger, _Skill>::visualize_invalid::<
+			ComboSkillButton::<DropdownTrigger, &'static str>::visualize_invalid::<
 				_Visualization,
 				_Agent,
-				_Slots,
+				Query<Ref<_Slots>>,
 			>,
 		);
 
@@ -115,8 +156,8 @@ mod tests {
 		));
 		let skill = app
 			.world_mut()
-			.spawn(ComboSkillButton::<DropdownTrigger, _Skill>::new(
-				_Skill("incompatible"),
+			.spawn(ComboSkillButton::<DropdownTrigger, &'static str>::new(
+				combo_skill("incompatible"),
 				vec![
 					SlotKey::from(PlayerSlot::LOWER_L),
 					SlotKey::from(PlayerSlot::LOWER_R),
@@ -144,8 +185,8 @@ mod tests {
 		));
 		let skill = app
 			.world_mut()
-			.spawn(ComboSkillButton::<DropdownTrigger, _Skill>::new(
-				_Skill("compatible"),
+			.spawn(ComboSkillButton::<DropdownTrigger, &'static str>::new(
+				combo_skill("compatible"),
 				vec![
 					SlotKey::from(PlayerSlot::LOWER_L),
 					SlotKey::from(PlayerSlot::LOWER_R),
@@ -170,8 +211,8 @@ mod tests {
 		));
 		let skill = app
 			.world_mut()
-			.spawn(ComboSkillButton::<DropdownTrigger, _Skill>::new(
-				_Skill("incompatible"),
+			.spawn(ComboSkillButton::<DropdownTrigger, &'static str>::new(
+				combo_skill("incompatible"),
 				vec![
 					SlotKey::from(PlayerSlot::LOWER_L),
 					SlotKey::from(PlayerSlot::LOWER_R),
@@ -195,8 +236,8 @@ mod tests {
 		)])));
 		let skill = app
 			.world_mut()
-			.spawn(ComboSkillButton::<DropdownTrigger, _Skill>::new(
-				_Skill("incompatible"),
+			.spawn(ComboSkillButton::<DropdownTrigger, &'static str>::new(
+				combo_skill("incompatible"),
 				vec![
 					SlotKey::from(PlayerSlot::LOWER_L),
 					SlotKey::from(PlayerSlot::LOWER_R),

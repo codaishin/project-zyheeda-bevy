@@ -4,18 +4,14 @@ use bevy::{
 	prelude::Entity,
 	ui::Interaction,
 };
-use common::{
-	traits::{accessors::get::TryApplyOn, handles_loadout::loadout::LoadoutKey},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
-pub fn drag_item<TAgent, TContainer>(
+pub fn drag_item<TAgent>(
 	mut commands: ZyheedaCommands,
 	agents: Query<Entity, With<TAgent>>,
-	panels: Query<(&Interaction, &KeyedPanel<TContainer::TKey>)>,
+	panels: Query<(&Interaction, &KeyedPanel)>,
 ) where
 	TAgent: Component,
-	TContainer: LoadoutKey,
 {
 	let Some((.., panel)) = panels.iter().find(is_pressed) else {
 		return;
@@ -28,7 +24,7 @@ pub fn drag_item<TAgent, TContainer>(
 	}
 }
 
-fn is_pressed<TKeyedPanel>((interaction, _): &(&Interaction, &KeyedPanel<TKeyedPanel>)) -> bool {
+fn is_pressed((interaction, _): &(&Interaction, &KeyedPanel)) -> bool {
 	Interaction::Pressed == **interaction
 }
 
@@ -37,21 +33,16 @@ mod tests {
 	use super::*;
 	use crate::components::Dad;
 	use bevy::app::{App, Update};
+	use common::tools::action_key::slot::SlotKey;
 	use testing::SingleThreadedApp;
 
 	#[derive(Component)]
 	struct _Agent;
 
-	struct _Container;
-
-	impl LoadoutKey for _Container {
-		type TKey = u32;
-	}
-
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, drag_item::<_Agent, _Container>);
+		app.add_systems(Update, drag_item::<_Agent>);
 
 		app
 	}
@@ -61,11 +52,14 @@ mod tests {
 		let mut app = setup();
 		let agent = app.world_mut().spawn(_Agent).id();
 		app.world_mut()
-			.spawn((Interaction::Pressed, KeyedPanel(42_u32)));
+			.spawn((Interaction::Pressed, KeyedPanel::from(SlotKey(42))));
 
 		app.update();
 
-		assert_eq!(Some(&Dad(42)), app.world().entity(agent).get::<Dad<u32>>());
+		assert_eq!(
+			Some(&Dad::from(SlotKey(42))),
+			app.world().entity(agent).get::<Dad>()
+		);
 	}
 
 	#[test]
@@ -73,13 +67,16 @@ mod tests {
 		let mut app = setup();
 		let agent = app.world_mut().spawn(_Agent).id();
 		app.world_mut()
-			.spawn((Interaction::Pressed, KeyedPanel(42_u32)));
+			.spawn((Interaction::Pressed, KeyedPanel::from(SlotKey(42))));
 		app.world_mut()
-			.spawn((Interaction::None, KeyedPanel(0_u32)));
+			.spawn((Interaction::None, KeyedPanel::from(SlotKey(0))));
 
 		app.update();
 
-		assert_eq!(Some(&Dad(42)), app.world().entity(agent).get::<Dad<u32>>());
+		assert_eq!(
+			Some(&Dad::from(SlotKey(42))),
+			app.world().entity(agent).get::<Dad>()
+		);
 	}
 
 	#[test]
@@ -87,10 +84,10 @@ mod tests {
 		let mut app = setup();
 		let agent = app.world_mut().spawn(_Agent).id();
 		app.world_mut()
-			.spawn((Interaction::Hovered, KeyedPanel(42_u32)));
+			.spawn((Interaction::Hovered, KeyedPanel::from(SlotKey(42))));
 
 		app.update();
 
-		assert_eq!(None, app.world().entity(agent).get::<Dad<u32>>());
+		assert_eq!(None, app.world().entity(agent).get::<Dad>());
 	}
 }

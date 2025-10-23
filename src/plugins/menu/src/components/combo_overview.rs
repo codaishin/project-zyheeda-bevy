@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use super::{
 	DeleteSkill,
 	SkillSelectDropdownCommand,
@@ -23,8 +25,11 @@ use common::{
 	tools::action_key::slot::{PlayerSlot, SlotKey},
 	traits::{
 		accessors::get::{DynProperty, GetProperty},
-		handles_loadout::loadout::{LoadoutItem, LoadoutKey, SkillIcon, SkillToken},
-		handles_localization::{Localize, LocalizeToken, localized::Localized},
+		handles_loadout::{
+			GetSkillId,
+			loadout::{LoadoutItem, LoadoutKey, SkillIcon, SkillToken},
+		},
+		handles_localization::{Localize, LocalizeToken, Token, localized::Localized},
 		load_asset::{LoadAsset, Path},
 		thread_safe::ThreadSafe,
 	},
@@ -35,17 +40,17 @@ use common::{
 	MenuBackground = MenuBackground::default().with(FlexDirection::Column),
 	Name = "Combo Overview",
 )]
-pub(crate) struct ComboOverview<TSkill>
+pub(crate) struct ComboOverview<TId>
 where
-	TSkill: ThreadSafe,
+	TId: Debug + PartialEq + Clone,
 {
 	new_skill_icon: Handle<Image>,
-	layout: ComboTreeLayout<SlotKey, TSkill>,
+	layout: ComboTreeLayout<SlotKey, ComboSkill<TId>>,
 }
 
-impl<TSkill> Default for ComboOverview<TSkill>
+impl<TId> Default for ComboOverview<TId>
 where
-	TSkill: ThreadSafe,
+	TId: Debug + PartialEq + Clone,
 {
 	fn default() -> Self {
 		Self {
@@ -55,10 +60,10 @@ where
 	}
 }
 
-impl<TAssetServer, TSkill> LoadUi<TAssetServer> for ComboOverview<TSkill>
+impl<TId, TAssetServer> LoadUi<TAssetServer> for ComboOverview<TId>
 where
+	TId: Debug + PartialEq + Clone,
 	TAssetServer: LoadAsset,
-	TSkill: ThreadSafe,
 {
 	fn load_ui(images: &mut TAssetServer) -> Self {
 		ComboOverview {
@@ -271,6 +276,30 @@ impl ComboOverview<()> {
 	}
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub(crate) struct ComboSkill<TId>
+where
+	TId: Debug + PartialEq + Clone,
+{
+	pub(crate) id: TId,
+	pub(crate) token: Token,
+	pub(crate) icon: Handle<Image>,
+}
+
+impl<TSkill, TId> From<TSkill> for ComboSkill<TId>
+where
+	TSkill: GetSkillId<TId> + GetProperty<SkillToken> + GetProperty<SkillIcon>,
+	TId: Debug + PartialEq + Clone,
+{
+	fn from(skill: TSkill) -> Self {
+		Self {
+			id: skill.get_skill_id(),
+			token: skill.dyn_property::<SkillToken>().clone(),
+			icon: skill.dyn_property::<SkillIcon>().clone(),
+		}
+	}
+}
+
 pub(crate) enum SkillButtonIcon {
 	Icon(Option<Handle<Image>>),
 	Transparent,
@@ -288,32 +317,32 @@ impl From<Option<Handle<Image>>> for SkillButtonIcon {
 	}
 }
 
-impl<TSkill> LoadoutKey for ComboOverview<TSkill>
+impl<TId> LoadoutKey for ComboOverview<TId>
 where
-	TSkill: ThreadSafe,
+	TId: Debug + PartialEq + Clone,
 {
 	type TKey = SlotKey;
 }
 
-impl<TSkill> LoadoutItem for ComboOverview<TSkill>
+impl<TId> LoadoutItem for ComboOverview<TId>
 where
-	TSkill: ThreadSafe,
+	TId: Debug + PartialEq + Clone,
 {
-	type TItem = TSkill;
+	type TItem = ComboSkill<TId>;
 }
 
-impl<TSkill> UpdateCombosView for ComboOverview<TSkill>
+impl<TId> UpdateCombosView<TId> for ComboOverview<TId>
 where
-	TSkill: ThreadSafe,
+	TId: Debug + PartialEq + Clone,
 {
-	fn update_combos_view(&mut self, combos: ComboTreeLayout<Self::TKey, TSkill>) {
+	fn update_combos_view(&mut self, combos: ComboTreeLayout<SlotKey, ComboSkill<TId>>) {
 		self.layout = combos
 	}
 }
 
-impl<TSkill> InsertUiContent for ComboOverview<TSkill>
+impl<TId> InsertUiContent for ComboOverview<TId>
 where
-	TSkill: Clone + PartialEq + ThreadSafe + GetProperty<SkillToken> + GetProperty<SkillIcon>,
+	TId: Debug + PartialEq + Clone + ThreadSafe,
 {
 	fn insert_ui_content<TLocalization>(
 		&self,
@@ -382,13 +411,13 @@ fn add_empty_combo<TLocalization>(
 		});
 }
 
-fn add_combo_list<TSkill, TLocalization>(
+fn add_combo_list<TLocalization, TId>(
 	localize: &TLocalization,
 	parent: &mut RelatedSpawnerCommands<ChildOf>,
-	combo_overview: &ComboOverview<TSkill>,
+	combo_overview: &ComboOverview<TId>,
 ) where
-	TSkill: Clone + PartialEq + ThreadSafe + GetProperty<SkillToken> + GetProperty<SkillIcon>,
 	TLocalization: Localize + 'static,
+	TId: Debug + PartialEq + Clone + ThreadSafe,
 {
 	parent
 		.spawn(Node {
@@ -410,15 +439,15 @@ fn add_combo_list<TSkill, TLocalization>(
 		});
 }
 
-fn add_combo<TSkill, TLocalization>(
+fn add_combo<TLocalization, TId>(
 	localize: &TLocalization,
 	parent: &mut RelatedSpawnerCommands<ChildOf>,
-	combo: &[ComboTreeElement<SlotKey, TSkill>],
+	combo: &[ComboTreeElement<SlotKey, ComboSkill<TId>>],
 	local_z: i32,
 	new_skill_icon: &Handle<Image>,
 ) where
-	TSkill: Clone + PartialEq + ThreadSafe + GetProperty<SkillToken> + GetProperty<SkillIcon>,
 	TLocalization: Localize + 'static,
+	TId: Debug + PartialEq + Clone + ThreadSafe,
 {
 	parent
 		.spawn((
@@ -433,15 +462,16 @@ fn add_combo<TSkill, TLocalization>(
 		))
 		.with_children(|parent| {
 			for element in combo {
-				let panel = AddPanel::<TSkill, TLocalization>::from(element);
+				let panel = AddPanel::<TLocalization, TId>::from(element);
 				panel.spawn_as_child(localize, parent, new_skill_icon);
 			}
 		});
 }
 
-enum AddPanel<'a, TSkill, TLocalization>
+enum AddPanel<'a, TLocalization, TId>
 where
 	TLocalization: Localize + 'static,
+	TId: Debug + PartialEq + Clone,
 {
 	StartCombo {
 		panel_overlay: PanelOverlay<TLocalization>,
@@ -449,7 +479,7 @@ where
 	},
 	Skill {
 		key_path: &'a [SlotKey],
-		skill: &'a TSkill,
+		skill: &'a ComboSkill<TId>,
 		panel_overlay: PanelOverlay<TLocalization>,
 		panel_background: PanelBackground,
 	},
@@ -458,7 +488,7 @@ where
 	},
 }
 
-impl<TLocalization> AddPanel<'_, (), TLocalization>
+impl<TLocalization> AddPanel<'_, TLocalization, ()>
 where
 	TLocalization: Localize + 'static,
 {
@@ -508,10 +538,10 @@ where
 	}
 }
 
-impl<TSkill, TLocalization> AddPanel<'_, TSkill, TLocalization>
+impl<TLocalization, TId> AddPanel<'_, TLocalization, TId>
 where
-	TSkill: Clone + ThreadSafe + GetProperty<SkillToken> + GetProperty<SkillIcon>,
 	TLocalization: Localize,
+	TId: Debug + PartialEq + Clone + ThreadSafe,
 {
 	fn spawn_as_child(
 		self,
@@ -521,7 +551,7 @@ where
 	) {
 		match self {
 			AddPanel::Empty { panel_background } => {
-				AddPanel::empty(localize, parent, panel_background)
+				AddPanel::empty(localize, parent, panel_background);
 			}
 			AddPanel::StartCombo {
 				panel_overlay,
@@ -534,14 +564,16 @@ where
 				skill,
 				panel_overlay,
 				panel_background,
-			} => AddPanel::skill(
-				localize,
-				parent,
-				key_path,
-				skill,
-				panel_overlay,
-				panel_background,
-			),
+			} => {
+				AddPanel::skill(
+					localize,
+					parent,
+					key_path,
+					skill,
+					panel_overlay,
+					panel_background,
+				);
+			}
 		}
 	}
 
@@ -549,14 +581,14 @@ where
 		localize: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 		key_path: &[SlotKey],
-		skill: &TSkill,
+		skill: &ComboSkill<TId>,
 		PanelOverlay(panel_overlay): PanelOverlay<TLocalization>,
 		PanelBackground(panel_background): PanelBackground,
 	) {
 		let skill_bundle = (
-			ComboSkillButton::<DropdownTrigger, TSkill>::new(skill.clone(), key_path.to_vec()),
-			UILabel(skill.dyn_property::<SkillToken>().clone()),
-			ComboOverview::skill_button(skill.dyn_property::<SkillIcon>().clone()),
+			ComboSkillButton::<DropdownTrigger, TId>::new(skill.clone(), key_path.to_vec()),
+			UILabel(skill.token.clone()),
+			ComboOverview::skill_button(skill.icon.clone()),
 			SkillSelectDropdownCommand::<Vertical>::new(key_path.to_vec()),
 		);
 
@@ -580,12 +612,13 @@ where
 	}
 }
 
-impl<'a, TSkill, TLocalization> From<&'a ComboTreeElement<SlotKey, TSkill>>
-	for AddPanel<'a, TSkill, TLocalization>
+impl<'a, TLocalization, TId> From<&'a ComboTreeElement<SlotKey, ComboSkill<TId>>>
+	for AddPanel<'a, TLocalization, TId>
 where
 	TLocalization: Localize + 'static,
+	TId: Debug + PartialEq + Clone,
 {
-	fn from(element: &'a ComboTreeElement<SlotKey, TSkill>) -> Self {
+	fn from(element: &'a ComboTreeElement<SlotKey, ComboSkill<TId>>) -> Self {
 		match element {
 			ComboTreeElement::Symbol(Symbol::Empty) => AddPanel::Empty {
 				panel_background: PanelBackground(&[]),
@@ -735,22 +768,35 @@ mod tests {
 	use common::tools::action_key::slot::PlayerSlot;
 	use macros::simple_mock;
 	use mockall::predicate::eq;
-	use testing::Mock;
+	use testing::{Mock, new_handle};
 	use uuid::Uuid;
-
-	#[derive(Debug, PartialEq, Default, Clone)]
-	struct _Skill;
 
 	#[test]
 	fn update_combos() {
+		let icon = new_handle();
 		let combos = vec![vec![ComboTreeElement::Leaf {
-			skill: _Skill,
+			skill: ComboSkill {
+				id: (),
+				token: Token::from("my skill"),
+				icon: icon.clone(),
+			},
 			key_path: vec![SlotKey::from(PlayerSlot::LOWER_R)],
 		}]];
 		let mut combo_overview = ComboOverview::default();
-		combo_overview.update_combos_view(combos.clone());
 
-		assert_eq!(combos, combo_overview.layout)
+		combo_overview.update_combos_view(combos);
+
+		assert_eq!(
+			vec![vec![ComboTreeElement::Leaf {
+				skill: ComboSkill {
+					id: (),
+					token: Token::from("my skill"),
+					icon,
+				},
+				key_path: vec![SlotKey::from(PlayerSlot::LOWER_R)],
+			}]],
+			combo_overview.layout,
+		);
 	}
 
 	simple_mock! {
@@ -772,7 +818,8 @@ mod tests {
 			mock.expect_load_asset::<Image, Path>()
 				.return_const(handle.clone());
 		});
-		let combos = ComboOverview::<_Skill>::load_ui(&mut server);
+
+		let combos = ComboOverview::<()>::load_ui(&mut server);
 
 		assert_eq!(
 			ComboOverview {
@@ -791,6 +838,7 @@ mod tests {
 				.with(eq(Path::from("icons/empty.png")))
 				.return_const(Handle::default());
 		});
-		_ = ComboOverview::<_Skill>::load_ui(&mut server);
+
+		_ = ComboOverview::<()>::load_ui(&mut server);
 	}
 }

@@ -1,37 +1,42 @@
 use crate::components::{Dad, KeyedPanel};
-use bevy::{ecs::component::Mutable, prelude::*};
+use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
-	traits::{accessors::get::TryApplyOn, handles_loadout::loadout::SwapInternal},
+	traits::{
+		accessors::get::{EntityContextMut, TryApplyOn},
+		handles_loadout::{Items, SwapItems},
+	},
 	zyheeda_commands::ZyheedaCommands,
 };
 
-pub fn drop_item<TContainer>(
+pub fn drop_item<TAgent, TLoadout>(
 	mut commands: ZyheedaCommands,
-	mut agents: Query<(Entity, &mut TContainer, &Dad<TContainer::TKey>)>,
-	panels: Query<(&Interaction, &KeyedPanel<TContainer::TKey>)>,
+	agents: Query<(Entity, &Dad), With<TAgent>>,
+	panels: Query<(&Interaction, &KeyedPanel)>,
 	mouse: Res<ButtonInput<MouseButton>>,
+	mut param: StaticSystemParam<TLoadout>,
 ) where
-	TContainer: Component<Mutability = Mutable> + SwapInternal,
+	TAgent: Component,
+	TLoadout: for<'c> EntityContextMut<Items, TContext<'c>: SwapItems>,
 {
 	if !mouse.just_released(MouseButton::Left) {
 		return;
 	}
 
-	let Ok((entity, mut agent, dad)) = agents.single_mut() else {
-		return;
-	};
+	for (agent, dad) in &agents {
+		let Some(mut ctx) = TLoadout::get_entity_context_mut(&mut param, agent, Items) else {
+			return;
+		};
 
-	let Some((.., keyed_panel)) = panels.iter().find(is_hovered) else {
-		return;
-	};
-
-	agent.swap_internal(dad.0, keyed_panel.0);
-	commands.try_apply_on(&entity, |mut e| {
-		e.try_remove::<Dad<TContainer::TKey>>();
-	});
+		for (.., keyed_panel) in panels.iter().filter(is_hovered) {
+			ctx.swap_items(dad.0, keyed_panel.0);
+			commands.try_apply_on(&agent, |mut e| {
+				e.try_remove::<Dad>();
+			});
+		}
+	}
 }
 
-fn is_hovered<TDadPanel>((interaction, ..): &(&Interaction, &KeyedPanel<TDadPanel>)) -> bool {
+fn is_hovered((interaction, ..): &(&Interaction, &KeyedPanel)) -> bool {
 	&&Interaction::Hovered == interaction
 }
 
@@ -42,43 +47,24 @@ mod tests {
 		app::{App, Update},
 		ui::Interaction,
 	};
-	use common::{
-		tools::action_key::slot::{PlayerSlot, Side},
-		traits::handles_loadout::loadout::LoadoutKey,
-	};
-	use macros::NestedMocks;
-	use mockall::{automock, predicate::eq};
-	use testing::{NestedMocks, SingleThreadedApp, set_input};
+	use common::{tools::action_key::slot::SlotKey, traits::handles_loadout::LoadoutKey};
+	use testing::{SingleThreadedApp, set_input};
 
-	#[derive(Component, NestedMocks)]
+	#[derive(Component)]
+	struct _Agent;
+
+	#[derive(Component, Debug, PartialEq, Default)]
 	struct _Container {
-		mock: Mock_Container,
+		swaps: Vec<(LoadoutKey, LoadoutKey)>,
 	}
 
-	impl Default for _Container {
-		fn default() -> Self {
-			let mut mock = Mock_Container::default();
-			mock.expect_swap_internal::<usize>().return_const(());
-
-			Self { mock }
-		}
-	}
-
-	impl LoadoutKey for _Container {
-		type TKey = usize;
-	}
-
-	impl LoadoutKey for Mock_Container {
-		type TKey = usize;
-	}
-
-	#[automock]
-	impl SwapInternal for _Container {
-		fn swap_internal<TKey>(&mut self, a: TKey, b: TKey)
+	impl SwapItems for _Container {
+		fn swap_items<TA, TB>(&mut self, a: TA, b: TB)
 		where
-			TKey: Into<usize> + 'static,
+			TA: Into<LoadoutKey>,
+			TB: Into<LoadoutKey>,
 		{
-			self.mock.swap_internal(a, b);
+			self.swaps.push((a.into(), b.into()));
 		}
 	}
 
@@ -87,7 +73,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.insert_resource(ButtonInput::<MouseButton>::default());
-		app.add_systems(Update, drop_item::<_Container>);
+		app.add_systems(Update, drop_item::<_Agent, Query<&mut _Container>>);
 
 		app
 	}
@@ -95,70 +81,79 @@ mod tests {
 	#[test]
 	fn call_swap() {
 		let mut app = setup();
-		app.world_mut().spawn((
-			_Container::new().with_mock(|mock| {
-				mock.expect_swap_internal::<usize>()
-					.with(eq(42), eq(11))
-					.times(1)
-					.return_const(());
-			}),
-			Dad(42_usize),
-		));
+		let entity = app
+			.world_mut()
+			.spawn((_Agent, _Container::default(), Dad::from(SlotKey(42))))
+			.id();
 		app.world_mut()
-			.spawn((Interaction::Hovered, KeyedPanel(11_usize)));
-		set_input!(app, pressed(MOUSE_LEFT));
-		set_input!(app, just_released(MOUSE_LEFT));
+			.spawn((Interaction::Hovered, KeyedPanel::from(SlotKey(11))));
 
+		set_input!(app, just_released(MOUSE_LEFT));
 		app.update();
+
+		assert_eq!(
+			Some(&_Container {
+				swaps: vec![(LoadoutKey::from(SlotKey(42)), LoadoutKey::from(SlotKey(11)))]
+			}),
+			app.world().entity(entity).get::<_Container>(),
+		);
 	}
 
 	#[test]
-	fn no_panic_when_agent_has_no_dad() {
+	fn do_nothing_when_agent_missing() {
 		let mut app = setup();
-		app.world_mut().spawn(_Container::default());
-		app.world_mut().spawn((
-			Interaction::Hovered,
-			KeyedPanel(PlayerSlot::Upper(Side::Left)),
-		));
+		let entity = app
+			.world_mut()
+			.spawn((_Container::default(), Dad::from(SlotKey(42))))
+			.id();
 		app.world_mut()
-			.spawn((Interaction::None, KeyedPanel(11_usize)));
-		set_input!(app, pressed(MOUSE_LEFT));
-		set_input!(app, just_released(MOUSE_LEFT));
+			.spawn((Interaction::Hovered, KeyedPanel::from(SlotKey(11))));
 
+		set_input!(app, just_released(MOUSE_LEFT));
 		app.update();
+
+		assert_eq!(
+			Some(&_Container { swaps: vec![] }),
+			app.world().entity(entity).get::<_Container>(),
+		);
 	}
 
 	#[test]
 	fn do_not_call_swap_when_interaction_not_hover() {
 		let mut app = setup();
-		app.world_mut().spawn((
-			_Container::new().with_mock(|mock| {
-				mock.expect_swap_internal::<usize>().never();
-			}),
-			Dad(42_usize),
-		));
+		let entity = app
+			.world_mut()
+			.spawn((_Agent, _Container::default(), Dad::from(SlotKey(42))))
+			.id();
 		app.world_mut()
-			.spawn((Interaction::None, KeyedPanel(11_usize)));
-		set_input!(app, pressed(MOUSE_LEFT));
-		set_input!(app, just_released(MOUSE_LEFT));
+			.spawn((Interaction::None, KeyedPanel::from(SlotKey(11))));
 
+		set_input!(app, just_released(MOUSE_LEFT));
 		app.update();
+
+		assert_eq!(
+			Some(&_Container { swaps: vec![] }),
+			app.world().entity(entity).get::<_Container>(),
+		);
 	}
 
 	#[test]
-	fn do_not_call_swap_when_not_mouse_left_release() {
+	fn do_not_call_swap_when_mouse_left_not_just_released() {
 		let mut app = setup();
-		app.world_mut().spawn((
-			_Container::new().with_mock(|mock| {
-				mock.expect_swap_internal::<usize>().never();
-			}),
-			Dad(42_usize),
-		));
+		let entity = app
+			.world_mut()
+			.spawn((_Agent, _Container::default(), Dad::from(SlotKey(42))))
+			.id();
 		app.world_mut()
-			.spawn((Interaction::None, KeyedPanel(11_usize)));
-		set_input!(app, pressed(MOUSE_LEFT));
+			.spawn((Interaction::Hovered, KeyedPanel::from(SlotKey(11))));
 
+		set_input!(app, released(MOUSE_LEFT));
 		app.update();
+
+		assert_eq!(
+			Some(&_Container { swaps: vec![] }),
+			app.world().entity(entity).get::<_Container>(),
+		);
 	}
 
 	#[test]
@@ -166,15 +161,14 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((_Container::default(), Dad(42_usize)))
+			.spawn((_Agent, _Container::default(), Dad::from(SlotKey(42))))
 			.id();
 		app.world_mut()
-			.spawn((Interaction::Hovered, KeyedPanel(11_usize)));
-		set_input!(app, pressed(MOUSE_LEFT));
-		set_input!(app, just_released(MOUSE_LEFT));
+			.spawn((Interaction::Hovered, KeyedPanel::from(SlotKey(11))));
 
+		set_input!(app, just_released(MOUSE_LEFT));
 		app.update();
 
-		assert!(!app.world().entity(entity).contains::<Dad<usize>>());
+		assert_eq!(None, app.world().entity(entity).get::<Dad>());
 	}
 }

@@ -1,19 +1,23 @@
 use crate::components::DeleteSkill;
-use bevy::{ecs::component::Mutable, prelude::*, ui::Interaction};
-use common::{
-	tools::action_key::slot::SlotKey,
-	traits::handles_loadout::combos_component::UpdateCombos,
+use bevy::{ecs::system::StaticSystemParam, prelude::*};
+use common::traits::{
+	accessors::get::EntityContextMut,
+	handles_loadout::{Combos, UpdateCombos2},
 };
 
 impl DeleteSkill {
-	pub(crate) fn from_combos<TAgent, TCombos>(
+	pub(crate) fn from_combos<TAgent, TLoadout, TId>(
 		deletes: Query<(&DeleteSkill, &Interaction)>,
-		mut combos: Query<&mut TCombos, With<TAgent>>,
+		agents: Query<Entity, With<TAgent>>,
+		mut param: StaticSystemParam<TLoadout>,
 	) where
 		TAgent: Component,
-		TCombos: Component<Mutability = Mutable> + UpdateCombos<TKey = SlotKey>,
+		TLoadout: for<'c> EntityContextMut<Combos, TContext<'c>: UpdateCombos2<TId>>,
 	{
-		for mut combos in &mut combos {
+		for agent in &agents {
+			let Some(mut ctx) = TLoadout::get_entity_context_mut(&mut param, agent, Combos) else {
+				continue;
+			};
 			let deletes = deletes
 				.iter()
 				.filter(pressed)
@@ -22,7 +26,7 @@ impl DeleteSkill {
 			if deletes.is_empty() {
 				continue;
 			}
-			combos.update_combos(deletes);
+			ctx.update_combos(deletes);
 		}
 	}
 }
@@ -35,11 +39,8 @@ fn pressed((.., interaction): &(&DeleteSkill, &Interaction)) -> bool {
 mod tests {
 	use super::*;
 	use common::{
-		tools::action_key::slot::PlayerSlot,
-		traits::handles_loadout::{
-			combos_component::Combo,
-			loadout::{LoadoutItem, LoadoutKey},
-		},
+		tools::action_key::slot::{PlayerSlot, SlotKey},
+		traits::handles_loadout::combos_component::Combo,
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -53,35 +54,22 @@ mod tests {
 		mock: Mock_Combos,
 	}
 
-	impl LoadoutKey for _Combos {
-		type TKey = SlotKey;
-	}
-
-	impl LoadoutItem for _Combos {
-		type TItem = _Skill;
-	}
-
-	impl LoadoutKey for Mock_Combos {
-		type TKey = SlotKey;
-	}
-
-	impl LoadoutItem for Mock_Combos {
-		type TItem = _Skill;
-	}
-
 	#[automock]
-	impl UpdateCombos for _Combos {
-		fn update_combos(&mut self, combos: Combo<SlotKey, Option<_Skill>>) {
+	impl UpdateCombos2<_Id> for _Combos {
+		fn update_combos(&mut self, combos: Combo<SlotKey, Option<_Id>>) {
 			self.mock.update_combos(combos);
 		}
 	}
 
 	#[derive(Debug, PartialEq)]
-	pub struct _Skill;
+	pub struct _Id;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, DeleteSkill::from_combos::<_Agent, _Combos>);
+		app.add_systems(
+			Update,
+			DeleteSkill::from_combos::<_Agent, Query<&mut _Combos>, _Id>,
+		);
 
 		app
 	}
