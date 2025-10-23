@@ -1,9 +1,17 @@
+use crate::components::combo_overview::ComboSkill;
 use bevy::prelude::*;
-use common::traits::handles_loadout::{
-	combos_component::GetCombosOrdered,
-	loadout::{LoadoutItem, LoadoutKey},
+use common::{
+	tools::action_key::slot::SlotKey,
+	traits::{
+		accessors::get::{DynProperty, GetProperty},
+		handles_loadout::{
+			GetSkillId,
+			combos_component::GetCombosOrdered,
+			loadout::{SkillIcon, SkillToken},
+		},
+	},
 };
-use std::{collections::HashSet, hash::Hash};
+use std::{collections::HashSet, fmt::Debug};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) enum Symbol {
@@ -20,34 +28,37 @@ pub(crate) enum ComboTreeElement<TKey, TSkill> {
 	Symbol(Symbol),
 }
 
-pub type ComboTreeLayout<TKey, TSkill> = Vec<Vec<ComboTreeElement<TKey, TSkill>>>;
+pub(crate) type ComboTreeLayout<TKey, TSkill> = Vec<Vec<ComboTreeElement<TKey, TSkill>>>;
 
-pub(crate) trait BuildComboTreeLayout: LoadoutItem + LoadoutKey {
-	fn build_combo_tree_layout(&self) -> ComboTreeLayout<Self::TKey, Self::TItem>;
+pub(crate) trait BuildComboTreeLayout<TId>
+where
+	TId: Debug + PartialEq + Clone,
+{
+	fn build_combo_tree_layout(&self) -> ComboTreeLayout<SlotKey, ComboSkill<TId>>;
 }
 
-impl<T> BuildComboTreeLayout for T
+impl<T, TId> BuildComboTreeLayout<TId> for T
 where
-	T: GetCombosOrdered,
-	T::TKey: Eq + Hash + Copy,
-	T::TItem: Clone + PartialEq,
+	TId: Debug + PartialEq + Clone,
+	T: GetCombosOrdered<TKey = SlotKey>,
+	T::TItem: GetProperty<SkillToken> + GetProperty<SkillIcon> + GetSkillId<TId>,
 {
-	fn build_combo_tree_layout(&self) -> ComboTreeLayout<Self::TKey, Self::TItem> {
+	fn build_combo_tree_layout(&self) -> ComboTreeLayout<SlotKey, ComboSkill<TId>> {
 		let mut get_first_symbol = get_first_symbol(HasRoot::False);
 		let mut encountered = HashSet::new();
 		let mut layouts = Vec::new();
-		let combos = self.combos_ordered();
+		let mut combos = self.combos_ordered();
 
-		for mut combo in combos.iter().filter(|combo| !combo.is_empty()).cloned() {
+		for combo in combos.iter_mut().filter(|combo| !combo.is_empty()) {
 			let first = ComboTreeElement::Symbol(get_first_symbol());
-			let last = drain(&mut combo);
+			let last = drain_last(combo);
 			let mut layout = Vec::new();
 
 			adjust_connections(&mut layouts, &mut layout, &first);
 			layout.push(first);
 
-			for (key_path, skill) in combo.into_iter() {
-				let element = layout_element(key_path, skill.clone(), &mut encountered);
+			for (key_path, skill) in combo.drain(..) {
+				let element = layout_element(key_path, skill, &mut encountered);
 				adjust_connections(&mut layouts, &mut layout, &element);
 				layout.push(element);
 			}
@@ -61,11 +72,21 @@ where
 	}
 }
 
-fn drain<TKey, TSkill>(combo: &mut Vec<(Vec<TKey>, TSkill)>) -> ComboTreeElement<TKey, TSkill> {
-	let leaf = combo.remove(combo.len() - 1);
+fn drain_last<TSkill, TId>(
+	combo: &mut Vec<(Vec<SlotKey>, TSkill)>,
+) -> ComboTreeElement<SlotKey, ComboSkill<TId>>
+where
+	TId: Debug + PartialEq + Clone,
+	TSkill: GetProperty<SkillToken> + GetProperty<SkillIcon> + GetSkillId<TId>,
+{
+	let (key_path, skill) = combo.remove(combo.len() - 1);
 	ComboTreeElement::Leaf {
-		key_path: leaf.0,
-		skill: leaf.1,
+		key_path,
+		skill: ComboSkill {
+			id: skill.get_skill_id(),
+			token: skill.dyn_property::<SkillToken>().clone(),
+			icon: skill.dyn_property::<SkillIcon>().clone(),
+		},
 	}
 }
 
@@ -106,13 +127,14 @@ fn adjust_connections<TKey, TSkill>(
 	replace_symbols_at(layouts, current_layout.len(), Symbol::Empty, Symbol::Line);
 }
 
-fn layout_element<TKey, TSkill>(
-	key_path: Vec<TKey>,
+fn layout_element<TSkill, TId>(
+	key_path: Vec<SlotKey>,
 	skill: TSkill,
-	encountered: &mut HashSet<Vec<TKey>>,
-) -> ComboTreeElement<TKey, TSkill>
+	encountered: &mut HashSet<Vec<SlotKey>>,
+) -> ComboTreeElement<SlotKey, ComboSkill<TId>>
 where
-	TKey: Eq + Hash + Clone,
+	TSkill: GetSkillId<TId> + GetProperty<SkillToken> + GetProperty<SkillIcon>,
+	TId: Debug + PartialEq + Clone,
 {
 	if encountered.contains(&key_path) {
 		return ComboTreeElement::Symbol(Symbol::Corner);
@@ -120,7 +142,14 @@ where
 
 	encountered.insert(key_path.clone());
 
-	ComboTreeElement::Node { key_path, skill }
+	ComboTreeElement::Node {
+		key_path,
+		skill: ComboSkill {
+			id: skill.get_skill_id(),
+			token: skill.dyn_property::<SkillToken>().clone(),
+			icon: skill.dyn_property::<SkillIcon>().clone(),
+		},
+	}
 }
 
 fn replace_symbols_at<TKey, TSkill>(

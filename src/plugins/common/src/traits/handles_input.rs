@@ -13,14 +13,14 @@ use std::hash::Hash;
 pub trait HandlesActionKeyButton {
 	/// Controls triggering of actions through mouse left clicking the associated
 	/// button.
-	type TActionKeyButton: Component + From<ActionKey> + GetProperty<MouseOverride>;
+	type TActionKeyButton: Component + From<ActionKey> + GetProperty<MouseOverrideActive>;
 }
 
-/// Indicate whether left mouse behavior is overridden for an associated instance that
-/// implements [`GetInputState`].
-pub struct MouseOverride;
+/// Indicates whether left mouse behavior is overridden when querying input from an associated
+/// instance that implements [`GetInputState`].
+pub struct MouseOverrideActive;
 
-impl Property for MouseOverride {
+impl Property for MouseOverrideActive {
 	type TValue<'a> = bool;
 }
 

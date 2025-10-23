@@ -57,7 +57,7 @@ use common::{
 			HandlesLoadTracking,
 			LoadGroup,
 		},
-		handles_loadout::HandlesLoadout,
+		handles_loadout::{HandlesLoadout2, LoadoutMutParam, LoadoutReadParam},
 		handles_localization::{HandlesLocalization, Token, localized::Localized},
 		handles_player::HandlesPlayer,
 		handles_saving::HandlesSaving,
@@ -125,7 +125,7 @@ where
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
 	TPlayers: ThreadSafe + HandlesPlayer,
-	TLoadout: ThreadSafe + HandlesLoadout,
+	TLoadout: ThreadSafe + HandlesLoadout2,
 {
 	pub fn from_plugins(
 		_: &TLoading,
@@ -157,7 +157,7 @@ where
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
 	TPlayers: ThreadSafe + HandlesPlayer,
-	TLoadout: ThreadSafe + HandlesLoadout,
+	TLoadout: ThreadSafe + HandlesLoadout2,
 {
 	fn resources(&self, app: &mut App) {
 		app.init_resource::<Shared<Path, Handle<Image>>>()
@@ -237,11 +237,11 @@ where
 			.add_systems(
 				Update,
 				(
-					QuickbarPanel::set_icon::<TPlayers::TPlayer, TLoadout::TSlots>,
+					QuickbarPanel::set_icon::<TPlayers::TPlayer, LoadoutReadParam<TLoadout>>,
 					QuickbarPanel::set_color::<
 						TPlayers::TPlayer,
 						TInput::TActionKeyButton,
-						TLoadout::TSlots,
+						LoadoutReadParam<TLoadout>,
 					>,
 					panel_colors::<QuickbarPanel>,
 				)
@@ -250,37 +250,46 @@ where
 	}
 
 	fn combo_overview(&self, app: &mut App) {
-		type VerticalItem<TSkill> = ComboSkillButton<DropdownItem<Vertical>, TSkill>;
-		type HorizontalItem<TSkill> = ComboSkillButton<DropdownItem<Horizontal>, TSkill>;
-		type Trigger<TSkill> = ComboSkillButton<DropdownTrigger, TSkill>;
+		type VerticalItem<TId> = ComboSkillButton<DropdownItem<Vertical>, TId>;
+		type HorizontalItem<TId> = ComboSkillButton<DropdownItem<Horizontal>, TId>;
+		type Trigger<TId> = ComboSkillButton<DropdownTrigger, TId>;
 
 		let combo_overview = GameState::IngameMenu(MenuState::ComboOverview);
 
-		app
-			.add_ui::<ComboOverview<TLoadout::TSkill>, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(combo_overview);
+		app.add_ui::<ComboOverview<TLoadout::TSkillID>, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
+			combo_overview,
+		);
 		app.add_dropdown::<TLocalization::TLocalizationServer, KeySelect<AppendSkill>>();
-		app.add_dropdown::<TLocalization::TLocalizationServer, VerticalItem<TLoadout::TSkill>>();
-		app.add_dropdown::<TLocalization::TLocalizationServer, HorizontalItem<TLoadout::TSkill>>();
+		app.add_dropdown::<TLocalization::TLocalizationServer, VerticalItem<TLoadout::TSkillID>>();
+		app.add_dropdown::<TLocalization::TLocalizationServer, HorizontalItem<TLoadout::TSkillID>>(
+		);
 		app.add_systems(
 			Update,
 			(
-				ComboOverview::<TLoadout::TSkill>::update_from::<
+				ComboOverview::update_from::<
 					TPlayers::TPlayer,
-					TLoadout::TCombos,
+					LoadoutReadParam<TLoadout>,
+					TLoadout::TSkillID,
 				>,
 				KeySelectDropdownCommand::insert_dropdown::<TPlayers::TPlayer, TLoadout::TCombos>,
 				SkillSelectDropdownCommand::<Vertical>::insert_dropdown::<
 					TPlayers::TPlayer,
-					TLoadout::TSlots,
-					TLoadout::TSkills,
+					LoadoutReadParam<TLoadout>,
+					TLoadout::TSkillID,
 				>,
 				SkillSelectDropdownCommand::<Horizontal>::insert_dropdown::<
 					TPlayers::TPlayer,
-					TLoadout::TSlots,
-					TLoadout::TSkills,
+					LoadoutReadParam<TLoadout>,
+					TLoadout::TSkillID,
 				>,
-				VerticalItem::<TLoadout::TSkill>::update::<TPlayers::TPlayer, TLoadout::TCombos>,
-				HorizontalItem::<TLoadout::TSkill>::update::<TPlayers::TPlayer, TLoadout::TCombos>,
+				VerticalItem::<TLoadout::TSkillID>::update::<
+					TPlayers::TPlayer,
+					LoadoutMutParam<TLoadout>,
+				>,
+				HorizontalItem::<TLoadout::TSkillID>::update::<
+					TPlayers::TPlayer,
+					LoadoutMutParam<TLoadout>,
+				>,
 				DeleteSkill::from_combos::<TPlayers::TPlayer, TLoadout::TCombos>,
 				Trigger::<TLoadout::TSkill>::visualize_invalid::<
 					Unusable,
@@ -389,7 +398,7 @@ where
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
 	TPlayers: ThreadSafe + HandlesPlayer,
-	TLoadout: ThreadSafe + HandlesLoadout,
+	TLoadout: ThreadSafe + HandlesLoadout2,
 {
 	fn build(&self, app: &mut App) {
 		self.resources(app);

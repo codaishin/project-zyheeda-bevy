@@ -1,44 +1,38 @@
 use crate::components::{icon::Icon, label::UILabel, quickbar_panel::QuickbarPanel};
-use bevy::prelude::*;
+use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
-	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::{
-			AssociatedSystemParam,
-			DynProperty,
-			GetFromSystemParam,
-			GetProperty,
-			TryApplyOn,
+		accessors::get::{DynProperty, EntityContext, TryApplyOn},
+		handles_loadout::{
+			ReadSkills,
+			Skills,
+			loadout::{SkillIcon, SkillToken},
 		},
-		handles_loadout::loadout::{NoSkill, SkillIcon, SkillToken},
 		handles_localization::Token,
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
 
 impl QuickbarPanel {
-	pub(crate) fn set_icon<TAgent, TSlots>(
+	pub(crate) fn set_icon<TAgent, TLoadout>(
 		mut commands: ZyheedaCommands,
-		param: AssociatedSystemParam<TSlots, SlotKey>,
+		param: StaticSystemParam<TLoadout>,
 		panels: Query<PanelComponents>,
-		slots: Query<&TSlots, With<TAgent>>,
+		agents: Query<Entity, With<TAgent>>,
 	) where
 		TAgent: Component,
-		TSlots: Component + GetFromSystemParam<SlotKey>,
-		for<'i> TSlots::TItem<'i>:
-			GetProperty<Result<SkillIcon, NoSkill>> + GetProperty<Result<SkillToken, NoSkill>>,
+		TLoadout: for<'c> EntityContext<Skills, TContext<'c>: ReadSkills>,
 	{
-		for slots in &slots {
+		for agent in &agents {
 			for (entity, Self { key, .. }, current_icon, current_label) in &panels {
-				let Some(item) = slots.get_from_param(&SlotKey::from(*key), &param) else {
+				let Some(skills) = TLoadout::get_entity_context(&param, agent, Skills) else {
 					continue;
 				};
-				let Ok(token) = item.dyn_property::<Result<SkillToken, NoSkill>>() else {
+				let Some(skill) = skills.get_skill(*key) else {
 					continue;
 				};
-				let Ok(image) = item.dyn_property::<Result<SkillIcon, NoSkill>>() else {
-					continue;
-				};
+				let token = skill.dyn_property::<SkillToken>();
+				let image = skill.dyn_property::<SkillIcon>();
 
 				commands.try_apply_on(&entity, |mut e| {
 					if !loaded(current_icon, image) {
@@ -77,49 +71,73 @@ mod tests {
 		tools::PanelState,
 	};
 	use bevy::ecs::system::SystemParam;
-	use common::{tools::action_key::slot::PlayerSlot, traits::handles_localization::Token};
+	use common::{
+		tools::{action_key::slot::PlayerSlot, skill_execution::SkillExecution},
+		traits::{
+			accessors::get::GetProperty,
+			handles_loadout::LoadoutKey,
+			handles_localization::Token,
+		},
+	};
 	use std::collections::HashMap;
 	use testing::{IsChanged, SingleThreadedApp, new_handle};
 
 	#[derive(Component)]
 	struct _Agent;
 
-	#[derive(Component)]
-	struct _Slots(HashMap<SlotKey, _Item>);
-
-	impl GetFromSystemParam<SlotKey> for _Slots {
-		type TParam<'w, 's> = _Param;
-		type TItem<'i> = _Item;
-
-		fn get_from_param(&self, key: &SlotKey, _: &_Param) -> Option<Self::TItem<'_>> {
-			self.0.get(key).cloned()
-		}
-	}
-
 	#[derive(SystemParam)]
-	struct _Param;
+	struct _Param<'w, 's>(Query<'w, 's, &'static _Skills>);
 
-	#[derive(Clone)]
-	struct _Item {
-		icon: Option<Handle<Image>>,
-		token: Option<Token>,
-	}
+	impl EntityContext<Skills> for _Param<'_, '_> {
+		type TContext<'ctx> = _Skills;
 
-	impl GetProperty<Result<SkillIcon, NoSkill>> for _Item {
-		fn get_property(&self) -> Result<&'_ Handle<Image>, NoSkill> {
-			match self.icon.as_ref() {
-				Some(icon) => Ok(icon),
-				None => Err(NoSkill),
-			}
+		fn get_entity_context<'ctx>(
+			param: &'ctx _Param,
+			entity: Entity,
+			_: Skills,
+		) -> Option<Self::TContext<'ctx>> {
+			param.0.get(entity).ok().cloned()
 		}
 	}
 
-	impl GetProperty<Result<SkillToken, NoSkill>> for _Item {
-		fn get_property(&self) -> Result<&'_ Token, NoSkill> {
-			match self.token.as_ref() {
-				Some(token) => Ok(token),
-				None => Err(NoSkill),
-			}
+	#[derive(Component, Clone)]
+	struct _Skills(HashMap<LoadoutKey, _Skill>);
+
+	impl ReadSkills for _Skills {
+		type TSkill<'a>
+			= _Skill
+		where
+			Self: 'a;
+
+		fn get_skill<TKey>(&self, key: TKey) -> Option<Self::TSkill<'_>>
+		where
+			TKey: Into<LoadoutKey>,
+		{
+			self.0.get(&key.into()).cloned()
+		}
+	}
+
+	#[derive(Debug, PartialEq, Clone)]
+	struct _Skill {
+		icon: Handle<Image>,
+		token: Token,
+	}
+
+	impl GetProperty<SkillIcon> for _Skill {
+		fn get_property(&self) -> &'_ Handle<Image> {
+			&self.icon
+		}
+	}
+
+	impl GetProperty<SkillToken> for _Skill {
+		fn get_property(&self) -> &'_ Token {
+			&self.token
+		}
+	}
+
+	impl GetProperty<SkillExecution> for _Skill {
+		fn get_property(&self) -> SkillExecution {
+			SkillExecution::None
 		}
 	}
 
@@ -129,7 +147,7 @@ mod tests {
 		app.add_systems(
 			Update,
 			(
-				QuickbarPanel::set_icon::<_Agent, _Slots>,
+				QuickbarPanel::set_icon::<_Agent, _Param>,
 				IsChanged::<UILabel<Token>>::detect,
 			)
 				.chain(),
@@ -141,15 +159,15 @@ mod tests {
 	#[test]
 	fn insert_icon() {
 		let image = new_handle();
-		let item = _Item {
-			token: Some(Token::from("my item")),
-			icon: Some(image.clone()),
+		let item = _Skill {
+			token: Token::from("my item"),
+			icon: image.clone(),
 		};
 		let mut app = setup();
 		app.world_mut().spawn((
 			_Agent,
-			_Slots(HashMap::from([(
-				SlotKey::from(PlayerSlot::LOWER_R),
+			_Skills(HashMap::from([(
+				LoadoutKey::from(PlayerSlot::LOWER_R),
 				item.clone(),
 			)])),
 		));
@@ -172,15 +190,15 @@ mod tests {
 	#[test]
 	fn do_not_insert_icon_when_already_loaded() {
 		let image = new_handle();
-		let item = _Item {
-			token: Some(Token::from("my item")),
-			icon: Some(image.clone()),
+		let item = _Skill {
+			token: Token::from("my item"),
+			icon: image.clone(),
 		};
 		let mut app = setup();
 		app.world_mut().spawn((
 			_Agent,
-			_Slots(HashMap::from([(
-				SlotKey::from(PlayerSlot::LOWER_R),
+			_Skills(HashMap::from([(
+				LoadoutKey::from(PlayerSlot::LOWER_R),
 				item.clone(),
 			)])),
 		));
@@ -206,15 +224,15 @@ mod tests {
 	#[test]
 	fn insert_label() {
 		let image = new_handle();
-		let item = _Item {
-			token: Some(Token::from("my item")),
-			icon: Some(image.clone()),
+		let item = _Skill {
+			token: Token::from("my item"),
+			icon: image.clone(),
 		};
 		let mut app = setup();
 		app.world_mut().spawn((
 			_Agent,
-			_Slots(HashMap::from([(
-				SlotKey::from(PlayerSlot::LOWER_R),
+			_Skills(HashMap::from([(
+				LoadoutKey::from(PlayerSlot::LOWER_R),
 				item.clone(),
 			)])),
 		));
@@ -237,15 +255,15 @@ mod tests {
 	#[test]
 	fn do_not_insert_label_when_already_present() {
 		let image = new_handle();
-		let item = _Item {
-			token: Some(Token::from("my item")),
-			icon: Some(image.clone()),
+		let item = _Skill {
+			token: Token::from("my item"),
+			icon: image.clone(),
 		};
 		let mut app = setup();
 		app.world_mut().spawn((
 			_Agent,
-			_Slots(HashMap::from([(
-				SlotKey::from(PlayerSlot::LOWER_R),
+			_Skills(HashMap::from([(
+				LoadoutKey::from(PlayerSlot::LOWER_R),
 				item.clone(),
 			)])),
 		));
@@ -269,15 +287,15 @@ mod tests {
 	#[test]
 	fn insert_icon_when_not_already_loaded_but_label_is_already_present() {
 		let image = new_handle();
-		let item = _Item {
-			token: Some(Token::from("my item")),
-			icon: Some(image.clone()),
+		let item = _Skill {
+			token: Token::from("my item"),
+			icon: image.clone(),
 		};
 		let mut app = setup();
 		app.world_mut().spawn((
 			_Agent,
-			_Slots(HashMap::from([(
-				SlotKey::from(PlayerSlot::LOWER_R),
+			_Skills(HashMap::from([(
+				LoadoutKey::from(PlayerSlot::LOWER_R),
 				item.clone(),
 			)])),
 		));
@@ -302,13 +320,13 @@ mod tests {
 	#[test]
 	fn do_nothing_when_slots_lack_agent() {
 		let image = new_handle();
-		let item = _Item {
-			token: Some(Token::from("my item")),
-			icon: Some(image.clone()),
+		let item = _Skill {
+			token: Token::from("my item"),
+			icon: image.clone(),
 		};
 		let mut app = setup();
-		app.world_mut().spawn(_Slots(HashMap::from([(
-			SlotKey::from(PlayerSlot::LOWER_R),
+		app.world_mut().spawn(_Skills(HashMap::from([(
+			LoadoutKey::from(PlayerSlot::LOWER_R),
 			item.clone(),
 		)])));
 		let panel = app

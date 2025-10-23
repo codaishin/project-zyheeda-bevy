@@ -1,27 +1,34 @@
+use std::fmt::Debug;
+
 use crate::traits::{UpdateCombosView, build_combo_tree_layout::BuildComboTreeLayout};
 use bevy::{ecs::component::Mutable, prelude::*};
+use common::{
+	tools::action_key::slot::SlotKey,
+	traits::{accessors::get::EntityContext, handles_loadout::Combos},
+};
 
 impl<T> UpdateComboOverview for T where T: Component<Mutability = Mutable> + UpdateCombosView {}
 
 pub(crate) trait UpdateComboOverview:
 	Component<Mutability = Mutable> + UpdateCombosView + Sized
 {
-	fn update_from<TAgent, TCombos>(
+	fn update_from<TAgent, TLoadout, TId>(
 		mut combo_overviews: Query<&mut Self>,
-		combos: Query<Ref<TCombos>, With<TAgent>>,
+		combos: Query<Entity, With<TAgent>>,
 	) where
 		TAgent: Component,
-		TCombos: Component + BuildComboTreeLayout<TKey = Self::TKey, TItem = Self::TItem>,
+		TLoadout: for<'c> EntityContext<Combos, TContext<'c>: BuildComboTreeLayout<TId>>,
+		TId: Debug + PartialEq + Clone,
 	{
-		for combo in &combos {
-			for mut combo_overview in &mut combo_overviews {
-				if !combo.is_changed() && !combo_overview.is_added() {
-					continue;
-				}
+		// for combo in &combos {
+		// 	for mut combo_overview in &mut combo_overviews {
+		// 		if !combo.is_changed() && !combo_overview.is_added() {
+		// 			continue;
+		// 		}
 
-				combo_overview.update_combos_view(combo.build_combo_tree_layout());
-			}
-		}
+		// 		combo_overview.update_combos_view(combo.build_combo_tree_layout());
+		// 	}
+		// }
 	}
 }
 
