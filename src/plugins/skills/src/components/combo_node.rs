@@ -1,6 +1,9 @@
 pub(crate) mod dto;
 
-use crate::{skills::Skill, traits::peek_next_recursive::PeekNextRecursive};
+use crate::{
+	skills::Skill,
+	traits::{combos::UpdateComboSkills, peek_next_recursive::PeekNextRecursive},
+};
 use bevy::prelude::*;
 use common::{
 	tools::{
@@ -10,10 +13,7 @@ use common::{
 	},
 	traits::{
 		accessors::get::{GetMut, GetRef},
-		handles_loadout::{
-			combos_component::{Combo, GetCombosOrdered, NextConfiguredKeys, UpdateCombos},
-			loadout::{LoadoutItem, LoadoutKey},
-		},
+		handles_loadout::combos::{Combo, GetCombosOrdered, NextConfiguredKeys},
 		insert::TryInsert,
 		iterate::Iterate,
 	},
@@ -128,19 +128,16 @@ impl<TSkill> NextConfiguredKeys<SlotKey> for ComboNode<TSkill> {
 	}
 }
 
-impl<TSkill> LoadoutKey for ComboNode<TSkill> {
-	type TKey = SlotKey;
-}
-
-impl<TSkill> LoadoutItem for ComboNode<TSkill> {
-	type TItem = TSkill;
-}
-
-impl<TSkill> UpdateCombos for ComboNode<TSkill>
+impl<TSkill> UpdateComboSkills<TSkill> for ComboNode<TSkill>
 where
-	TSkill: PartialEq,
+	TSkill: PartialEq + Clone,
 {
-	fn update_combos(&mut self, mut combos: Combo<SlotKey, Option<TSkill>>) {
+	fn update_combo_skills<'a, TComboIter>(&'a mut self, combos: TComboIter)
+	where
+		TSkill: 'a,
+		TComboIter: Iterator<Item = (Vec<SlotKey>, Option<&'a TSkill>)>,
+	{
+		let mut combos = combos.collect::<Vec<_>>();
 		combos.sort_by(key_count_ascending);
 
 		for (keys, skill) in combos {
@@ -153,8 +150,8 @@ where
 			};
 
 			match skill {
-				Some(skill) if !matches!(children.get(last), Some((s, _)) if s == &skill) => {
-					children.insert(*last, (skill, Self::default()));
+				Some(skill) if !matches!(children.get(last), Some((s, _)) if s == skill) => {
+					children.insert(*last, (skill.clone(), Self::default()));
 				}
 				None => {
 					children.remove(last);
@@ -237,6 +234,8 @@ impl PeekNextRecursive for ComboNode {
 }
 
 impl GetCombosOrdered for ComboNode {
+	type TSkill = Skill;
+
 	fn combos_ordered(&self) -> Vec<Combo<SlotKey, Skill>> {
 		combos(self, vec![])
 	}
@@ -1172,17 +1171,20 @@ mod tests {
 	mod update_combo {
 		use super::*;
 
-		#[derive(Debug, PartialEq)]
+		#[derive(Debug, PartialEq, Clone)]
 		struct _Skill(&'static str);
 
 		#[test]
 		fn set_flat_combos() {
 			let mut node = ComboNode::new([]);
 
-			node.update_combos(vec![
-				(vec![SlotKey::from(PlayerSlot::LOWER_R)], Some(_Skill("a"))),
-				(vec![SlotKey::from(PlayerSlot::LOWER_L)], Some(_Skill("b"))),
-			]);
+			node.update_combo_skills(
+				[
+					(vec![SlotKey::from(PlayerSlot::LOWER_R)], Some(&_Skill("a"))),
+					(vec![SlotKey::from(PlayerSlot::LOWER_L)], Some(&_Skill("b"))),
+				]
+				.into_iter(),
+			);
 
 			assert_eq!(
 				ComboNode::new([
@@ -1203,16 +1205,19 @@ mod tests {
 		fn set_chained_combo() {
 			let mut node = ComboNode::new([]);
 
-			node.update_combos(vec![
-				(vec![SlotKey::from(PlayerSlot::LOWER_R)], Some(_Skill("a"))),
-				(
-					vec![
-						SlotKey::from(PlayerSlot::LOWER_R),
-						SlotKey::from(PlayerSlot::LOWER_L),
-					],
-					Some(_Skill("b")),
-				),
-			]);
+			node.update_combo_skills(
+				[
+					(vec![SlotKey::from(PlayerSlot::LOWER_R)], Some(&_Skill("a"))),
+					(
+						vec![
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_L),
+						],
+						Some(&_Skill("b")),
+					),
+				]
+				.into_iter(),
+			);
 
 			assert_eq!(
 				ComboNode::new([(
@@ -1233,16 +1238,19 @@ mod tests {
 		fn set_chained_combo_out_of_order() {
 			let mut node = ComboNode::new([]);
 
-			node.update_combos(vec![
-				(
-					vec![
-						SlotKey::from(PlayerSlot::LOWER_R),
-						SlotKey::from(PlayerSlot::LOWER_L),
-					],
-					Some(_Skill("b")),
-				),
-				(vec![SlotKey::from(PlayerSlot::LOWER_R)], Some(_Skill("a"))),
-			]);
+			node.update_combo_skills(
+				[
+					(
+						vec![
+							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(PlayerSlot::LOWER_L),
+						],
+						Some(&_Skill("b")),
+					),
+					(vec![SlotKey::from(PlayerSlot::LOWER_R)], Some(&_Skill("a"))),
+				]
+				.into_iter(),
+			);
 
 			assert_eq!(
 				ComboNode::new([(
@@ -1278,13 +1286,16 @@ mod tests {
 				),
 			)]);
 
-			node.update_combos(vec![(
-				vec![
-					SlotKey::from(PlayerSlot::LOWER_R),
-					SlotKey::from(PlayerSlot::LOWER_L),
-				],
-				None,
-			)]);
+			node.update_combo_skills(
+				[(
+					vec![
+						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(PlayerSlot::LOWER_L),
+					],
+					None,
+				)]
+				.into_iter(),
+			);
 
 			assert_eq!(
 				ComboNode::new([(
@@ -1314,10 +1325,9 @@ mod tests {
 				),
 			]);
 
-			node.update_combos(vec![(
-				vec![SlotKey::from(PlayerSlot::LOWER_R)],
-				Some(_Skill("a")),
-			)]);
+			node.update_combo_skills(
+				[(vec![SlotKey::from(PlayerSlot::LOWER_R)], Some(&_Skill("a")))].into_iter(),
+			);
 
 			assert_eq!(
 				ComboNode::new([

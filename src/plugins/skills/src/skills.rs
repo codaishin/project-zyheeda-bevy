@@ -19,7 +19,7 @@ use common::{
 	traits::{
 		accessors::get::{GetMut, GetProperty},
 		handles_custom_assets::AssetFolderPath,
-		handles_loadout::loadout::{SkillIcon, SkillToken},
+		handles_loadout::skills::{GetSkillId, SkillIcon, SkillToken},
 		handles_localization::Token,
 		handles_physics::HandlesAllPhysicalEffects,
 		handles_skill_behaviors::{HandlesSkillBehaviors, SkillSpawner},
@@ -33,6 +33,9 @@ use std::{
 	fmt::{Display, Formatter, Result as FmtResult},
 	time::Duration,
 };
+use uuid::Uuid;
+#[cfg(test)]
+use uuid::uuid;
 
 #[derive(PartialEq, Debug, Default, Clone, Copy, Serialize, Deserialize)]
 pub enum AnimationStrategy {
@@ -45,12 +48,13 @@ pub enum AnimationStrategy {
 #[derive(PartialEq, Debug, Clone, TypePath, Asset)]
 #[cfg_attr(test, derive(Default))]
 pub struct Skill {
-	pub token: Token,
-	pub cast_time: Duration,
-	pub animation: AnimationStrategy,
-	pub behavior: RunSkillBehavior,
-	pub compatible_items: CompatibleItems,
-	pub icon: Handle<Image>,
+	pub(crate) id: SkillId,
+	pub(crate) token: Token,
+	pub(crate) cast_time: Duration,
+	pub(crate) animation: AnimationStrategy,
+	pub(crate) behavior: RunSkillBehavior,
+	pub(crate) compatible_items: CompatibleItems,
+	pub(crate) icon: Handle<Image>,
 }
 
 impl Display for Skill {
@@ -83,6 +87,27 @@ impl GetProperty<SkillIcon> for Skill {
 impl GetProperty<CompatibleItems> for Skill {
 	fn get_property(&self) -> &HashSet<ItemType> {
 		&self.compatible_items.0
+	}
+}
+
+impl GetSkillId<SkillId> for Skill {
+	fn get_skill_id(&self) -> SkillId {
+		self.id
+	}
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct SkillId(pub(crate) Uuid);
+
+#[cfg(test)]
+impl SkillId {
+	const DEFAULT_ID: SkillId = SkillId(uuid!("9443883c-3972-43da-a2d7-0a013f16d564"));
+}
+
+#[cfg(test)]
+impl Default for SkillId {
+	fn default() -> Self {
+		Self::DEFAULT_ID
 	}
 }
 

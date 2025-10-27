@@ -2,29 +2,32 @@ use crate::{
 	components::{KeyedPanel, inventory_panel::InventoryPanel, label::UILabel},
 	tools::PanelState,
 };
-use bevy::prelude::*;
+use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	traits::{
-		accessors::get::{AssociatedSystemParam, GetFromSystemParam, GetProperty, TryApplyOn},
-		handles_loadout::loadout::{ItemToken, LoadoutKey},
+		accessors::get::{EntityContext, GetProperty, TryApplyOn},
+		handles_loadout::items::{Items, ReadItems},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
 
 impl InventoryPanel {
-	pub(crate) fn set_label<TAgent, TContainer>(
+	pub(crate) fn set_label<TAgent, TLoadout>(
 		mut commands: ZyheedaCommands,
-		containers: Query<&TContainer, With<TAgent>>,
-		mut panels: Query<(Entity, &mut Self, &KeyedPanel<TContainer::TKey>)>,
-		param: AssociatedSystemParam<TContainer, TContainer::TKey>,
+		agents: Query<Entity, With<TAgent>>,
+		mut panels: Query<(Entity, &mut Self, &KeyedPanel)>,
+		param: StaticSystemParam<TLoadout>,
 	) where
 		TAgent: Component,
-		TContainer: Component + LoadoutKey + GetFromSystemParam<TContainer::TKey>,
-		for<'i> TContainer::TItem<'i>: GetProperty<ItemToken>,
+		TLoadout: for<'c> EntityContext<Items, TContext<'c>: ReadItems>,
 	{
-		for container in &containers {
+		for agent in &agents {
+			let Some(ctx) = TLoadout::get_entity_context(&param, agent, Items) else {
+				continue;
+			};
+
 			for (entity, mut panel, KeyedPanel(key)) in &mut panels {
-				let panel_state = match container.get_from_param(key, &param) {
+				let panel_state = match ctx.get_item(*key) {
 					None => {
 						commands.try_apply_on(&entity, |mut e| {
 							e.try_insert(UILabel::empty());
@@ -51,15 +54,18 @@ mod tests {
 		components::{KeyedPanel, label::UILabel},
 		tools::PanelState,
 	};
-	use common::traits::handles_localization::Token;
-	use std::sync::LazyLock;
+	use common::{
+		tools::action_key::slot::PlayerSlot,
+		traits::{
+			handles_loadout::{LoadoutKey, items::ItemToken},
+			handles_localization::Token,
+		},
+	};
+	use std::{collections::HashMap, sync::LazyLock};
 	use testing::SingleThreadedApp;
 
 	#[derive(Component)]
 	struct _Agent;
-
-	#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-	struct _Key;
 
 	#[derive(Clone)]
 	struct _Item(Token);
@@ -70,26 +76,42 @@ mod tests {
 		}
 	}
 
-	#[derive(Component)]
-	struct _Container(Option<_Item>);
+	#[derive(Component, Default)]
+	struct _Container(HashMap<LoadoutKey, _Item>);
 
-	impl LoadoutKey for _Container {
-		type TKey = _Key;
+	impl<T, TKey> From<T> for _Container
+	where
+		T: IntoIterator<Item = (TKey, _Item)>,
+		TKey: Into<LoadoutKey>,
+	{
+		fn from(value: T) -> Self {
+			Self(HashMap::from_iter(
+				value.into_iter().map(|(k, i)| (k.into(), i)),
+			))
+		}
 	}
 
-	impl GetFromSystemParam<_Key> for _Container {
-		type TParam<'w, 's> = ();
-		type TItem<'a> = _Item;
+	impl ReadItems for _Container {
+		type TItem<'a>
+			= _Item
+		where
+			Self: 'a;
 
-		fn get_from_param(&self, _: &_Key, _: &()) -> Option<Self::TItem<'_>> {
-			self.0.clone()
+		fn get_item<TKey>(&self, key: TKey) -> Option<Self::TItem<'_>>
+		where
+			TKey: Into<LoadoutKey>,
+		{
+			self.0.get(&key.into()).cloned()
 		}
 	}
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, InventoryPanel::set_label::<_Agent, _Container>);
+		app.add_systems(
+			Update,
+			InventoryPanel::set_label::<_Agent, Query<Ref<_Container>>>,
+		);
 
 		app
 	}
@@ -99,11 +121,16 @@ mod tests {
 	#[test]
 	fn set_label() {
 		let mut app = setup();
-		app.world_mut()
-			.spawn((_Agent, _Container(Some(_Item(TOKEN.clone())))));
+		app.world_mut().spawn((
+			_Agent,
+			_Container::from([(PlayerSlot::UPPER_L, _Item(TOKEN.clone()))]),
+		));
 		let panel = app
 			.world_mut()
-			.spawn((InventoryPanel(PanelState::Empty), KeyedPanel(_Key)))
+			.spawn((
+				InventoryPanel(PanelState::Empty),
+				KeyedPanel::from(PlayerSlot::UPPER_L),
+			))
 			.id();
 
 		app.update();
@@ -117,11 +144,16 @@ mod tests {
 	#[test]
 	fn set_panel_to_filled() {
 		let mut app = setup();
-		app.world_mut()
-			.spawn((_Agent, _Container(Some(_Item(TOKEN.clone())))));
+		app.world_mut().spawn((
+			_Agent,
+			_Container::from([(PlayerSlot::UPPER_L, _Item(TOKEN.clone()))]),
+		));
 		let panel = app
 			.world_mut()
-			.spawn((InventoryPanel(PanelState::Empty), KeyedPanel(_Key)))
+			.spawn((
+				InventoryPanel(PanelState::Empty),
+				KeyedPanel::from(PlayerSlot::UPPER_L),
+			))
 			.id();
 
 		app.update();
@@ -135,10 +167,13 @@ mod tests {
 	#[test]
 	fn set_panel_to_empty() {
 		let mut app = setup();
-		app.world_mut().spawn((_Agent, _Container(None)));
+		app.world_mut().spawn((_Agent, _Container::default()));
 		let panel = app
 			.world_mut()
-			.spawn((InventoryPanel(PanelState::Filled), KeyedPanel(_Key)))
+			.spawn((
+				InventoryPanel(PanelState::Filled),
+				KeyedPanel::from(PlayerSlot::UPPER_L),
+			))
 			.id();
 
 		app.update();
@@ -152,11 +187,16 @@ mod tests {
 	#[test]
 	fn do_nothing_if_agent_missing() {
 		let mut app = setup();
-		app.world_mut()
-			.spawn(_Container(Some(_Item(TOKEN.clone()))));
+		app.world_mut().spawn(_Container::from([(
+			PlayerSlot::UPPER_L,
+			_Item(TOKEN.clone()),
+		)]));
 		let panel = app
 			.world_mut()
-			.spawn((InventoryPanel(PanelState::Empty), KeyedPanel(_Key)))
+			.spawn((
+				InventoryPanel(PanelState::Empty),
+				KeyedPanel::from(PlayerSlot::UPPER_L),
+			))
 			.id();
 
 		app.update();

@@ -1,25 +1,38 @@
 use crate::traits::{UpdateCombosView, build_combo_tree_layout::BuildComboTreeLayout};
-use bevy::{ecs::component::Mutable, prelude::*};
+use bevy::{
+	ecs::{component::Mutable, system::StaticSystemParam},
+	prelude::*,
+};
+use common::traits::{
+	accessors::get::{ContextChanged, EntityContext},
+	handles_loadout::combos::Combos,
+};
+use std::fmt::Debug;
 
-impl<T> UpdateComboOverview for T where T: Component<Mutability = Mutable> + UpdateCombosView {}
+impl<T> UpdateComboOverview for T where T: Component<Mutability = Mutable> {}
 
-pub(crate) trait UpdateComboOverview:
-	Component<Mutability = Mutable> + UpdateCombosView + Sized
-{
-	fn update_from<TAgent, TCombos>(
+pub(crate) trait UpdateComboOverview: Component<Mutability = Mutable> + Sized {
+	fn update_from<TAgent, TLoadout, TId>(
 		mut combo_overviews: Query<&mut Self>,
-		combos: Query<Ref<TCombos>, With<TAgent>>,
+		agents: Query<Entity, With<TAgent>>,
+		param: StaticSystemParam<TLoadout>,
 	) where
+		Self: UpdateCombosView<TId>,
 		TAgent: Component,
-		TCombos: Component + BuildComboTreeLayout<TKey = Self::TKey, TItem = Self::TItem>,
+		TLoadout: for<'c> EntityContext<Combos, TContext<'c>: BuildComboTreeLayout<TId>>,
+		TId: Debug + PartialEq + Clone,
 	{
-		for combo in &combos {
+		for agent in &agents {
+			let Some(ctx) = TLoadout::get_entity_context(&param, agent, Combos) else {
+				continue;
+			};
+
 			for mut combo_overview in &mut combo_overviews {
-				if !combo.is_changed() && !combo_overview.is_added() {
+				if !ctx.context_changed() && !combo_overview.is_added() {
 					continue;
 				}
 
-				combo_overview.update_combos_view(combo.build_combo_tree_layout());
+				combo_overview.update_combos_view(ctx.build_combo_tree_layout());
 			}
 		}
 	}
@@ -28,8 +41,12 @@ pub(crate) trait UpdateComboOverview:
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::build_combo_tree_layout::{ComboTreeElement, ComboTreeLayout, Symbol};
-	use common::traits::handles_loadout::loadout::{LoadoutItem, LoadoutKey};
+	use crate::{
+		components::combo_overview::ComboSkill,
+		traits::build_combo_tree_layout::{ComboTreeElement, ComboTreeLayout, Symbol},
+	};
+	use bevy::ecs::system::SystemParam;
+	use common::tools::action_key::slot::SlotKey;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use testing::{NestedMocks, SingleThreadedApp};
@@ -37,61 +54,57 @@ mod tests {
 	#[derive(Component)]
 	struct _Agent;
 
-	#[derive(Debug, PartialEq, Clone, Copy)]
-	pub struct _Key;
-
-	#[derive(Debug, PartialEq, Clone)]
-	pub struct _Skill;
-
 	#[derive(Component, NestedMocks, Debug)]
 	struct _ComboOverview {
 		mock: Mock_ComboOverview,
 	}
 
-	impl LoadoutKey for _ComboOverview {
-		type TKey = _Key;
-	}
-
-	impl LoadoutItem for _ComboOverview {
-		type TItem = _Skill;
-	}
-
-	impl LoadoutKey for Mock_ComboOverview {
-		type TKey = _Key;
-	}
-
-	impl LoadoutItem for Mock_ComboOverview {
-		type TItem = _Skill;
-	}
-
 	#[automock]
-	impl UpdateCombosView for _ComboOverview {
-		fn update_combos_view(&mut self, combos: ComboTreeLayout<_Key, _Skill>) {
+	impl UpdateCombosView<_Id> for _ComboOverview {
+		fn update_combos_view(&mut self, combos: ComboTreeLayout<SlotKey, ComboSkill<_Id>>) {
 			self.mock.update_combos_view(combos)
 		}
 	}
 
+	#[derive(SystemParam)]
+	struct _Param<'w, 's>(Query<'w, 's, Ref<'static, _Combos>>);
+
+	impl EntityContext<Combos> for _Param<'_, '_> {
+		type TContext<'ctx> = _CombosContext<'ctx>;
+
+		fn get_entity_context<'ctx>(
+			param: &'ctx _Param,
+			entity: Entity,
+			_: Combos,
+		) -> Option<Self::TContext<'ctx>> {
+			param.0.get(entity).ok().map(_CombosContext)
+		}
+	}
+
+	#[derive(Debug, PartialEq, Clone)]
+	struct _Id;
+
 	#[derive(Component, Clone)]
-	struct _Combos(ComboTreeLayout<_Key, _Skill>);
+	struct _Combos(ComboTreeLayout<SlotKey, ComboSkill<_Id>>);
 
-	impl LoadoutKey for _Combos {
-		type TKey = _Key;
+	struct _CombosContext<'ctx>(Ref<'ctx, _Combos>);
+
+	impl BuildComboTreeLayout<_Id> for _CombosContext<'_> {
+		fn build_combo_tree_layout(&self) -> ComboTreeLayout<SlotKey, ComboSkill<_Id>> {
+			self.0.0.clone()
+		}
 	}
 
-	impl LoadoutItem for _Combos {
-		type TItem = _Skill;
-	}
-
-	impl BuildComboTreeLayout for _Combos {
-		fn build_combo_tree_layout(&self) -> ComboTreeLayout<_Key, _Skill> {
-			self.0.clone()
+	impl ContextChanged for _CombosContext<'_> {
+		fn context_changed(&self) -> bool {
+			self.0.is_changed()
 		}
 	}
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, _ComboOverview::update_from::<_Agent, _Combos>);
+		app.add_systems(Update, _ComboOverview::update_from::<_Agent, _Param, _Id>);
 
 		app
 	}

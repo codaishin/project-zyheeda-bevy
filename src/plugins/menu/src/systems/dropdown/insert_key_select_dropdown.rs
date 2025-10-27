@@ -3,42 +3,48 @@ use crate::{
 	components::key_select_dropdown_command::{ExcludeKeys, KeySelectDropdownCommand},
 	traits::GetComponent,
 };
-use bevy::prelude::*;
+use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::TryApplyOn,
-		handles_loadout::combos_component::NextConfiguredKeys,
+		accessors::get::{EntityContext, TryApplyOn},
+		handles_loadout::combos::{Combos, NextConfiguredKeys},
 		thread_safe::ThreadSafe,
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
 
 impl KeySelectDropdownCommand<AppendSkillCommand> {
-	pub(crate) fn insert_dropdown<TAgent, TCombos>(
+	pub(crate) fn insert_dropdown<TAgent, TLoadout>(
 		commands: ZyheedaCommands,
 		dropdown_commands: Query<(Entity, &Self)>,
-		combos: Query<&TCombos, With<TAgent>>,
+		agents: Query<Entity, With<TAgent>>,
+		param: StaticSystemParam<TLoadout>,
 	) where
 		TAgent: Component,
-		TCombos: Component + NextConfiguredKeys<SlotKey>,
+		TLoadout: for<'c> EntityContext<Combos, TContext<'c>: NextConfiguredKeys<SlotKey>>,
 	{
-		insert_key_select_dropdown(commands, dropdown_commands, combos);
+		insert_key_select_dropdown(commands, dropdown_commands, agents, param);
 	}
 }
 
-fn insert_key_select_dropdown<TAgent, TCombos, TExtra>(
+fn insert_key_select_dropdown<TAgent, TLoadout, TExtra>(
 	mut commands: ZyheedaCommands,
 	dropdown_commands: Query<(Entity, &KeySelectDropdownCommand<TExtra>)>,
-	combos: Query<&TCombos, With<TAgent>>,
+	agents: Query<Entity, With<TAgent>>,
+	param: StaticSystemParam<TLoadout>,
 ) where
 	TAgent: Component,
-	TCombos: Component + NextConfiguredKeys<SlotKey>,
+	TLoadout: for<'c> EntityContext<Combos, TContext<'c>: NextConfiguredKeys<SlotKey>>,
 	KeySelectDropdownCommand<TExtra>: ThreadSafe + GetComponent<TInput = ExcludeKeys<SlotKey>>,
 {
-	for combos in &combos {
+	for agent in &agents {
+		let Some(ctx) = TLoadout::get_entity_context(&param, agent, Combos) else {
+			continue;
+		};
+
 		for (entity, insert_command) in &dropdown_commands {
-			let next_keys = combos.next_keys(&insert_command.key_path);
+			let next_keys = ctx.next_keys(&insert_command.key_path);
 			let Some(component) = insert_command.component(ExcludeKeys(next_keys)) else {
 				commands.try_apply_on(&entity, |e| e.try_despawn());
 				continue;
@@ -112,7 +118,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			insert_key_select_dropdown::<_Agent, _Combos, _Extra>,
+			insert_key_select_dropdown::<_Agent, Query<Ref<_Combos>>, _Extra>,
 		);
 
 		app

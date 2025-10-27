@@ -2,8 +2,8 @@ mod behaviors;
 mod components;
 mod item;
 mod observers;
-mod resources;
 mod skills;
+mod system_parameters;
 mod systems;
 mod traits;
 
@@ -15,7 +15,8 @@ use crate::{
 		queue::dto::QueueDto,
 		slots::visualization::SlotVisualization,
 	},
-	item::SkillItem,
+	skills::SkillId,
+	system_parameters::loadout::{LoadoutReader, LoadoutWriter},
 	systems::enqueue::EnqueueSystem,
 };
 use bevy::prelude::*;
@@ -162,11 +163,7 @@ where
 }
 
 impl<TDependencies> HandlesLoadout for SkillsPlugin<TDependencies> {
-	type TItem = SkillItem;
-	type TSkill = Skill;
-	type TSkills = Vec<Skill>;
-
-	type TInventory = Inventory;
-	type TSlots = Slots;
-	type TCombos = Combos;
+	type TSkillID = SkillId;
+	type TLoadoutRead<'w, 's> = LoadoutReader<'w, 's>;
+	type TLoadoutMut<'w, 's> = LoadoutWriter<'w, 's>;
 }

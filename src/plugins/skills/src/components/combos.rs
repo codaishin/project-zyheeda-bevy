@@ -4,15 +4,17 @@ use super::combo_node::ComboNode;
 use crate::{
 	CombosDto,
 	skills::Skill,
-	traits::{SetNextCombo, peek_next::PeekNext, peek_next_recursive::PeekNextRecursive},
+	traits::{
+		SetNextCombo,
+		combos::UpdateComboSkills,
+		peek_next::PeekNext,
+		peek_next_recursive::PeekNextRecursive,
+	},
 };
 use bevy::prelude::*;
 use common::{
 	tools::{action_key::slot::SlotKey, item_type::ItemType},
-	traits::handles_loadout::{
-		combos_component::{Combo, GetCombosOrdered, NextConfiguredKeys, UpdateCombos},
-		loadout::{LoadoutItem, LoadoutKey},
-	},
+	traits::handles_loadout::combos::{Combo, GetCombosOrdered, NextConfiguredKeys},
 };
 use macros::SavableComponent;
 use std::collections::HashSet;
@@ -95,19 +97,13 @@ where
 	}
 }
 
-impl<TNode> LoadoutKey for Combos<TNode> {
-	type TKey = SlotKey;
-}
-
-impl<TNode> LoadoutItem for Combos<TNode> {
-	type TItem = Skill;
-}
-
 impl<TNode> GetCombosOrdered for Combos<TNode>
 where
-	TNode: GetCombosOrdered<TKey = SlotKey, TItem = Skill>,
+	TNode: GetCombosOrdered,
 {
-	fn combos_ordered(&self) -> Vec<Combo<SlotKey, Skill>> {
+	type TSkill = TNode::TSkill;
+
+	fn combos_ordered(&self) -> Vec<Combo<SlotKey, Self::TSkill>> {
 		self.config.combos_ordered()
 	}
 }
@@ -121,13 +117,16 @@ where
 	}
 }
 
-impl<TNode> UpdateCombos for Combos<TNode>
+impl<TNode> UpdateComboSkills<Skill> for Combos<TNode>
 where
-	TNode: UpdateCombos<TKey = SlotKey, TItem = Skill>,
+	TNode: UpdateComboSkills<Skill>,
 {
-	fn update_combos(&mut self, combo: Combo<SlotKey, Option<Skill>>) {
+	fn update_combo_skills<'a, TComboIter>(&'a mut self, combos: TComboIter)
+	where
+		TComboIter: Iterator<Item = (Vec<SlotKey>, Option<&'a Skill>)>,
+	{
 		self.current = None;
-		self.config.update_combos(combo);
+		self.config.update_combo_skills(combos);
 	}
 }
 
@@ -248,15 +247,9 @@ mod tests {
 
 	struct _ComboNode(Vec<Combo<SlotKey, Skill>>);
 
-	impl LoadoutKey for _ComboNode {
-		type TKey = SlotKey;
-	}
-
-	impl LoadoutItem for _ComboNode {
-		type TItem = Skill;
-	}
-
 	impl GetCombosOrdered for _ComboNode {
+		type TSkill = Skill;
+
 		fn combos_ordered(&self) -> Vec<Combo<SlotKey, Skill>> {
 			self.0.clone()
 		}
@@ -321,53 +314,55 @@ mod tests {
 	mod update_combo {
 		use super::*;
 
-		simple_mock! {
-			_Node {}
-			impl LoadoutKey for _Node {
-				type TKey = SlotKey;
-			}
-			impl LoadoutItem for _Node {
-				type TItem = Skill;
-			}
-			impl UpdateCombos for _Node {
-				fn update_combos(&mut self, combo: Combo<SlotKey, Option<Skill>>);
+		#[derive(Default)]
+		struct _Node {
+			combos: Combo<SlotKey, Option<Skill>>,
+		}
+
+		impl UpdateComboSkills<Skill> for _Node {
+			fn update_combo_skills<'a, TCombos>(&'a mut self, combos: TCombos)
+			where
+				TCombos: Iterator<Item = (Vec<SlotKey>, Option<&'a Skill>)>,
+			{
+				self.combos.extend(combos.map(|(k, s)| (k, s.cloned())));
 			}
 		}
 
 		#[test]
 		fn use_config_node() {
-			let mut combos = Combos::new(Mock_Node::new_mock(|mock| {
-				mock.expect_update_combos()
-					.times(1)
-					.with(eq(vec![(
-						vec![SlotKey::from(PlayerSlot::LOWER_R)],
-						Some(Skill {
-							token: Token::from("my skill"),
-							..default()
-						}),
-					)]))
-					.return_const(());
-			}));
+			let mut combos = Combos::new(_Node::default());
 
-			combos.update_combos(vec![(
-				vec![SlotKey::from(PlayerSlot::LOWER_R)],
-				Some(Skill {
-					token: Token::from("my skill"),
-					..default()
-				}),
-			)]);
+			combos.update_combo_skills(
+				[(
+					vec![SlotKey::from(PlayerSlot::LOWER_R)],
+					Some(&Skill {
+						token: Token::from("my skill"),
+						..default()
+					}),
+				)]
+				.into_iter(),
+			);
+
+			assert_eq!(
+				vec![(
+					vec![SlotKey::from(PlayerSlot::LOWER_R)],
+					Some(Skill {
+						token: Token::from("my skill"),
+						..default()
+					}),
+				)],
+				combos.config.combos,
+			);
 		}
 
 		#[test]
 		fn reset_current() {
 			let mut combos = Combos {
-				config: Mock_Node::new_mock(|mock| {
-					mock.expect_update_combos().return_const(());
-				}),
-				current: Some(Mock_Node::new()),
+				config: _Node::default(),
+				current: Some(_Node::default()),
 			};
 
-			combos.update_combos(vec![]);
+			combos.update_combo_skills([].into_iter());
 
 			assert!(combos.current.is_none());
 		}

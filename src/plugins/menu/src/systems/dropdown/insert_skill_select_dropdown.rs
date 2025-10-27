@@ -1,46 +1,52 @@
 use crate::components::{
 	SkillSelectDropdownCommand,
+	combo_overview::ComboSkill,
 	combo_skill_button::{ComboSkillButton, DropdownItem},
 	dropdown::Dropdown,
 };
-use bevy::prelude::*;
+use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
-	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::{AssociatedSystemParam, GetFromSystemParam, TryApplyOn},
-		handles_loadout::slot_component::AvailableSkills,
+		accessors::get::{DynProperty, EntityContext, TryApplyOn},
+		handles_loadout::{
+			available_skills::{AvailableSkills, ReadAvailableSkills},
+			skills::{GetSkillId, SkillIcon, SkillToken},
+		},
 		thread_safe::ThreadSafe,
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
+use std::fmt::Debug;
 
 impl<TLayout> SkillSelectDropdownCommand<TLayout> {
-	pub(crate) fn insert_dropdown<TAgent, TSlots, TSkills>(
+	pub(crate) fn insert_dropdown<TAgent, TLoadout, TId>(
 		mut commands: ZyheedaCommands,
 		dropdown_commands: Query<(Entity, &Self)>,
-		slots: Query<&TSlots, With<TAgent>>,
-		param: AssociatedSystemParam<TSlots, AvailableSkills<SlotKey>>,
+		agents: Query<Entity, With<TAgent>>,
+		param: StaticSystemParam<TLoadout>,
 	) where
 		TLayout: ThreadSafe + Sized,
 		TAgent: Component,
-		TSkills: IntoIterator,
-		TSkills::Item: Clone + ThreadSafe,
-		for<'i> TSlots:
-			Component + GetFromSystemParam<AvailableSkills<SlotKey>, TItem<'i> = TSkills>,
+		TId: Debug + PartialEq + Clone + ThreadSafe,
+		TLoadout: for<'c> EntityContext<AvailableSkills, TContext<'c>: ReadAvailableSkills<TId>>,
 	{
-		for slots in &slots {
+		for agent in &agents {
 			for (entity, command) in &dropdown_commands {
 				let Some(key) = command.key_path.last() else {
 					continue;
 				};
-				let Some(items) = slots.get_from_param(&AvailableSkills(*key), &param) else {
+				let Some(ctx) = TLoadout::get_entity_context(&param, agent, AvailableSkills) else {
 					continue;
 				};
-				let items = items
-					.into_iter()
+				let items = ctx
+					.get_available_skills(*key)
 					.map(|skill| {
-						ComboSkillButton::<DropdownItem<TLayout>, TSkills::Item>::new(
-							skill.clone(),
+						ComboSkillButton::<DropdownItem<TLayout>, TId>::new(
+							ComboSkill {
+								id: skill.get_skill_id(),
+								token: skill.dyn_property::<SkillToken>().clone(),
+								icon: skill.dyn_property::<SkillIcon>().clone(),
+							},
 							command.key_path.clone(),
 						)
 					})
@@ -59,32 +65,58 @@ impl<TLayout> SkillSelectDropdownCommand<TLayout> {
 mod tests {
 	use super::*;
 	use crate::components::dropdown::Dropdown;
-	use common::tools::action_key::slot::{PlayerSlot, Side};
+	use common::{
+		tools::action_key::slot::{PlayerSlot, Side, SlotKey},
+		traits::{accessors::get::GetProperty, handles_localization::Token},
+	};
 	use std::collections::HashMap;
-	use testing::SingleThreadedApp;
+	use testing::{SingleThreadedApp, new_handle};
 
 	#[derive(Component)]
 	struct _Agent;
 
-	#[derive(Debug, PartialEq, Default, Clone)]
-	struct _Skill(&'static str);
-
 	#[derive(Debug, PartialEq)]
 	struct _Layout;
 
-	#[derive(Component)]
+	#[derive(Component, Clone)]
 	struct _Slots(HashMap<SlotKey, Vec<_Skill>>);
 
-	impl GetFromSystemParam<AvailableSkills<SlotKey>> for _Slots {
-		type TParam<'w, 's> = ();
-		type TItem<'a> = Vec<_Skill>;
+	impl ReadAvailableSkills<&'static str> for _Slots {
+		type TSkill<'a>
+			= _Skill
+		where
+			Self: 'a;
 
-		fn get_from_param(
-			&self,
-			AvailableSkills(key): &AvailableSkills<SlotKey>,
-			_: &(),
-		) -> Option<Vec<_Skill>> {
-			self.0.get(key).cloned()
+		fn get_available_skills(&self, key: SlotKey) -> impl Iterator<Item = Self::TSkill<'_>> {
+			match self.0.get(&key) {
+				Some(skills) => skills.clone().into_iter(),
+				None => vec![].into_iter(),
+			}
+		}
+	}
+
+	#[derive(Debug, PartialEq, Default, Clone)]
+	struct _Skill {
+		id: &'static str,
+		token: Token,
+		icon: Handle<Image>,
+	}
+
+	impl GetSkillId<&'static str> for _Skill {
+		fn get_skill_id(&self) -> &'static str {
+			self.id
+		}
+	}
+
+	impl GetProperty<SkillToken> for _Skill {
+		fn get_property(&self) -> &Token {
+			&self.token
+		}
+	}
+
+	impl GetProperty<SkillIcon> for _Skill {
+		fn get_property(&self) -> &'_ Handle<Image> {
+			&self.icon
 		}
 	}
 
@@ -99,7 +131,11 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			SkillSelectDropdownCommand::<_Layout>::insert_dropdown::<_Agent, _Slots, Vec<_Skill>>,
+			SkillSelectDropdownCommand::<_Layout>::insert_dropdown::<
+				_Agent,
+				Query<Ref<_Slots>>,
+				&'static str,
+			>,
 		);
 
 		app
@@ -107,6 +143,7 @@ mod tests {
 
 	#[test]
 	fn list_compatible_skills() {
+		let icon = new_handle();
 		let mut app = setup();
 		let dropdown = app
 			.world_mut()
@@ -118,7 +155,11 @@ mod tests {
 			_Agent,
 			_Slots(HashMap::from([(
 				SlotKey::from(PlayerSlot::LOWER_R),
-				vec![_Skill("my skill")],
+				vec![_Skill {
+					id: "my skill id",
+					token: Token::from("my skill"),
+					icon: icon.clone(),
+				}],
 			)])),
 		));
 
@@ -126,14 +167,20 @@ mod tests {
 
 		assert_eq!(
 			Some(&Dropdown {
-				items: vec![ComboSkillButton::<DropdownItem<_Layout>, _Skill>::new(
-					_Skill("my skill"),
-					vec![SlotKey::from(PlayerSlot::Lower(Side::Right))],
-				)]
+				items: vec![
+					ComboSkillButton::<DropdownItem<_Layout>, &'static str>::new(
+						ComboSkill {
+							id: "my skill id",
+							token: Token::from("my skill"),
+							icon
+						},
+						vec![SlotKey::from(PlayerSlot::Lower(Side::Right))],
+					)
+				]
 			}),
 			app.world()
 				.entity(dropdown)
-				.get::<Dropdown<ComboSkillButton<DropdownItem<_Layout>, _Skill>>>()
+				.get::<Dropdown<ComboSkillButton<DropdownItem<_Layout>, &'static str>>>()
 		);
 	}
 
@@ -148,7 +195,11 @@ mod tests {
 			.id();
 		app.world_mut().spawn(_Slots(HashMap::from([(
 			SlotKey::from(PlayerSlot::LOWER_R),
-			vec![_Skill("my skill")],
+			vec![_Skill {
+				id: "my skill id",
+				token: Token::from("my skill"),
+				icon: new_handle(),
+			}],
 		)])));
 
 		app.update();

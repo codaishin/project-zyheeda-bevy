@@ -23,14 +23,32 @@ pub(crate) mod ui_overlay;
 
 use bevy::prelude::*;
 use combo_skill_button::Horizontal;
-use common::tools::action_key::slot::SlotKey;
+use common::{tools::action_key::slot::SlotKey, traits::handles_loadout::LoadoutKey};
 use std::marker::PhantomData;
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
-pub struct Dad<T>(pub T);
+pub struct Dad(pub LoadoutKey);
+
+impl<TKey> From<TKey> for Dad
+where
+	TKey: Into<LoadoutKey>,
+{
+	fn from(key: TKey) -> Self {
+		Self(key.into())
+	}
+}
 
 #[derive(Component, Debug, Clone, Copy)]
-pub struct KeyedPanel<TKey>(pub TKey);
+pub struct KeyedPanel(pub LoadoutKey);
+
+impl<TKey> From<TKey> for KeyedPanel
+where
+	TKey: Into<LoadoutKey>,
+{
+	fn from(key: TKey) -> Self {
+		Self(key.into())
+	}
+}
 
 #[derive(Component)]
 pub struct Quickbar;

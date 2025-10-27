@@ -1,4 +1,5 @@
 pub(crate) mod advance_combo;
+pub(crate) mod combos;
 pub(crate) mod flush;
 pub(crate) mod is_timed_out;
 pub(crate) mod peek_next;

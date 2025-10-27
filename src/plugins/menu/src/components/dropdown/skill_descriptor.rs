@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use super::Dropdown;
 use crate::{
 	components::{
@@ -8,8 +10,12 @@ use crate::{
 	traits::{GetLayout, GetRootNode},
 };
 use bevy::prelude::*;
+use common::traits::thread_safe::ThreadSafe;
 
-impl<TSkill> GetRootNode for Dropdown<ComboSkillButton<DropdownItem<Vertical>, TSkill>> {
+impl<TId> GetRootNode for Dropdown<ComboSkillButton<DropdownItem<Vertical>, TId>>
+where
+	TId: Debug + PartialEq + ThreadSafe + Clone,
+{
 	fn root_node(&self) -> Node {
 		Node {
 			position_type: PositionType::Absolute,
@@ -20,13 +26,19 @@ impl<TSkill> GetRootNode for Dropdown<ComboSkillButton<DropdownItem<Vertical>, T
 	}
 }
 
-impl<TSkill> GetLayout for Dropdown<ComboSkillButton<DropdownItem<Vertical>, TSkill>> {
+impl<TId> GetLayout for Dropdown<ComboSkillButton<DropdownItem<Vertical>, TId>>
+where
+	TId: Debug + PartialEq + ThreadSafe + Clone,
+{
 	fn layout(&self) -> Layout {
 		Layout::SINGLE_COLUMN
 	}
 }
 
-impl<TSkill> GetRootNode for Dropdown<ComboSkillButton<DropdownItem<Horizontal>, TSkill>> {
+impl<TId> GetRootNode for Dropdown<ComboSkillButton<DropdownItem<Horizontal>, TId>>
+where
+	TId: Debug + PartialEq + ThreadSafe + Clone,
+{
 	fn root_node(&self) -> Node {
 		Node {
 			position_type: PositionType::Absolute,
@@ -37,7 +49,10 @@ impl<TSkill> GetRootNode for Dropdown<ComboSkillButton<DropdownItem<Horizontal>,
 	}
 }
 
-impl<TSkill> GetLayout for Dropdown<ComboSkillButton<DropdownItem<Horizontal>, TSkill>> {
+impl<TId> GetLayout for Dropdown<ComboSkillButton<DropdownItem<Horizontal>, TId>>
+where
+	TId: Debug + PartialEq + ThreadSafe + Clone,
+{
 	fn layout(&self) -> Layout {
 		Layout::SINGLE_ROW
 	}

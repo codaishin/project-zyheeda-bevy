@@ -6,14 +6,11 @@ use crate::{
 };
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{
-	tools::{
-		action_key::slot::{PlayerSlot, SlotKey},
-		inventory_key::InventoryKey,
-	},
+	tools::{action_key::slot::PlayerSlot, inventory_key::InventoryKey},
 	traits::{
+		handles_loadout::LoadoutKey,
 		handles_localization::{Localize, LocalizeToken, Token, localized::Localized},
 		iteration::{IterFinite, IterInfinite},
-		thread_safe::ThreadSafe,
 	},
 };
 
@@ -89,7 +86,7 @@ where
 			.with_children(|parent| {
 				add_title(parent, equipment);
 				for key in PlayerSlot::iterator() {
-					add_grid(parent, Some(Token::from(key)), 1, 1, || SlotKey::from(key));
+					add_grid(parent, Some(Token::from(key)), 1, 1, || key);
 				}
 			});
 	}
@@ -121,7 +118,7 @@ fn add_grid<TKey>(
 	element_count_y: u32,
 	mut element_key: impl FnMut() -> TKey,
 ) where
-	TKey: ThreadSafe,
+	TKey: Into<LoadoutKey>,
 {
 	for _ in 0..element_count_y {
 		parent
@@ -146,7 +143,7 @@ fn add_grid<TKey>(
 					parent
 						.spawn((
 							Button,
-							KeyedPanel(element_key()),
+							KeyedPanel::from(element_key()),
 							InventoryPanel::from(PanelState::Empty),
 							Node {
 								width: Val::Px(65.0),

@@ -10,19 +10,22 @@ pub(crate) mod trigger_game_state;
 pub(crate) mod ui_traits;
 pub(crate) mod update_key_bindings;
 
-use crate::tools::Layout;
+use std::fmt::Debug;
+
+use crate::{components::combo_overview::ComboSkill, tools::Layout};
 use bevy::prelude::*;
 use build_combo_tree_layout::ComboTreeLayout;
 use common::{
-	traits::{
-		handles_loadout::loadout::{LoadoutItem, LoadoutKey},
-		load_asset::LoadAsset,
-	},
+	tools::action_key::slot::SlotKey,
+	traits::load_asset::LoadAsset,
 	zyheeda_commands::ZyheedaEntityCommands,
 };
 
-pub(crate) trait UpdateCombosView: LoadoutKey + LoadoutItem {
-	fn update_combos_view(&mut self, combos: ComboTreeLayout<Self::TKey, Self::TItem>);
+pub(crate) trait UpdateCombosView<TId>
+where
+	TId: Debug + PartialEq + Clone,
+{
+	fn update_combos_view(&mut self, combos: ComboTreeLayout<SlotKey, ComboSkill<TId>>);
 }
 
 pub(crate) trait LoadUi<TAssetServer: LoadAsset> {

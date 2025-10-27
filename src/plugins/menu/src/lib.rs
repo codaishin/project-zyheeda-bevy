@@ -28,7 +28,6 @@ use crate::{
 	},
 	systems::{
 		combos::update_combos_view::UpdateComboOverview,
-		dad::drop_item_external::drop_item_external,
 		start_menu_button::set_activity::Activity,
 	},
 	visualization::unusable::Unusable,
@@ -57,7 +56,7 @@ use common::{
 			HandlesLoadTracking,
 			LoadGroup,
 		},
-		handles_loadout::HandlesLoadout,
+		handles_loadout::{HandlesLoadout, LoadoutMutParam, LoadoutReadParam},
 		handles_localization::{HandlesLocalization, Token, localized::Localized},
 		handles_player::HandlesPlayer,
 		handles_saving::HandlesSaving,
@@ -237,11 +236,11 @@ where
 			.add_systems(
 				Update,
 				(
-					QuickbarPanel::set_icon::<TPlayers::TPlayer, TLoadout::TSlots>,
+					QuickbarPanel::set_icon::<TPlayers::TPlayer, LoadoutReadParam<TLoadout>>,
 					QuickbarPanel::set_color::<
 						TPlayers::TPlayer,
 						TInput::TActionKeyButton,
-						TLoadout::TSlots,
+						LoadoutReadParam<TLoadout>,
 					>,
 					panel_colors::<QuickbarPanel>,
 				)
@@ -250,42 +249,58 @@ where
 	}
 
 	fn combo_overview(&self, app: &mut App) {
-		type VerticalItem<TSkill> = ComboSkillButton<DropdownItem<Vertical>, TSkill>;
-		type HorizontalItem<TSkill> = ComboSkillButton<DropdownItem<Horizontal>, TSkill>;
-		type Trigger<TSkill> = ComboSkillButton<DropdownTrigger, TSkill>;
+		type VerticalItem<TId> = ComboSkillButton<DropdownItem<Vertical>, TId>;
+		type HorizontalItem<TId> = ComboSkillButton<DropdownItem<Horizontal>, TId>;
+		type Trigger<TId> = ComboSkillButton<DropdownTrigger, TId>;
 
 		let combo_overview = GameState::IngameMenu(MenuState::ComboOverview);
 
-		app
-			.add_ui::<ComboOverview<TLoadout::TSkill>, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(combo_overview);
+		app.add_ui::<ComboOverview<TLoadout::TSkillID>, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
+			combo_overview,
+		);
 		app.add_dropdown::<TLocalization::TLocalizationServer, KeySelect<AppendSkill>>();
-		app.add_dropdown::<TLocalization::TLocalizationServer, VerticalItem<TLoadout::TSkill>>();
-		app.add_dropdown::<TLocalization::TLocalizationServer, HorizontalItem<TLoadout::TSkill>>();
+		app.add_dropdown::<TLocalization::TLocalizationServer, VerticalItem<TLoadout::TSkillID>>();
+		app.add_dropdown::<TLocalization::TLocalizationServer, HorizontalItem<TLoadout::TSkillID>>(
+		);
 		app.add_systems(
 			Update,
 			(
-				ComboOverview::<TLoadout::TSkill>::update_from::<
+				ComboOverview::update_from::<
 					TPlayers::TPlayer,
-					TLoadout::TCombos,
+					LoadoutReadParam<TLoadout>,
+					TLoadout::TSkillID,
 				>,
-				KeySelectDropdownCommand::insert_dropdown::<TPlayers::TPlayer, TLoadout::TCombos>,
+				KeySelectDropdownCommand::insert_dropdown::<
+					TPlayers::TPlayer,
+					LoadoutReadParam<TLoadout>,
+				>,
 				SkillSelectDropdownCommand::<Vertical>::insert_dropdown::<
 					TPlayers::TPlayer,
-					TLoadout::TSlots,
-					TLoadout::TSkills,
+					LoadoutReadParam<TLoadout>,
+					TLoadout::TSkillID,
 				>,
 				SkillSelectDropdownCommand::<Horizontal>::insert_dropdown::<
 					TPlayers::TPlayer,
-					TLoadout::TSlots,
-					TLoadout::TSkills,
+					LoadoutReadParam<TLoadout>,
+					TLoadout::TSkillID,
 				>,
-				VerticalItem::<TLoadout::TSkill>::update::<TPlayers::TPlayer, TLoadout::TCombos>,
-				HorizontalItem::<TLoadout::TSkill>::update::<TPlayers::TPlayer, TLoadout::TCombos>,
-				DeleteSkill::from_combos::<TPlayers::TPlayer, TLoadout::TCombos>,
-				Trigger::<TLoadout::TSkill>::visualize_invalid::<
+				VerticalItem::<TLoadout::TSkillID>::update::<
+					TPlayers::TPlayer,
+					LoadoutMutParam<TLoadout>,
+				>,
+				HorizontalItem::<TLoadout::TSkillID>::update::<
+					TPlayers::TPlayer,
+					LoadoutMutParam<TLoadout>,
+				>,
+				DeleteSkill::from_combos::<
+					TPlayers::TPlayer,
+					LoadoutMutParam<TLoadout>,
+					TLoadout::TSkillID,
+				>,
+				Trigger::<TLoadout::TSkillID>::visualize_invalid::<
 					Unusable,
 					TPlayers::TPlayer,
-					TLoadout::TSlots,
+					LoadoutReadParam<TLoadout>,
 				>,
 			)
 				.chain()
@@ -302,15 +317,10 @@ where
 		.add_systems(
 			Update,
 			(
-				InventoryPanel::set_label::<TPlayers::TPlayer, TLoadout::TInventory>,
-				InventoryPanel::set_label::<TPlayers::TPlayer, TLoadout::TSlots>,
+				InventoryPanel::set_label::<TPlayers::TPlayer, LoadoutReadParam<TLoadout>>,
 				panel_colors::<InventoryPanel>,
-				drag_item::<TPlayers::TPlayer, TLoadout::TInventory>,
-				drag_item::<TPlayers::TPlayer, TLoadout::TSlots>,
-				drop_item::<TLoadout::TInventory>,
-				drop_item::<TLoadout::TSlots>,
-				drop_item_external::<TLoadout::TInventory, TLoadout::TSlots>,
-				drop_item_external::<TLoadout::TSlots, TLoadout::TInventory>,
+				drag_item::<TPlayers::TPlayer>,
+				drop_item::<TPlayers::TPlayer, LoadoutMutParam<TLoadout>>,
 			)
 				.chain()
 				.run_if(in_state(inventory)),

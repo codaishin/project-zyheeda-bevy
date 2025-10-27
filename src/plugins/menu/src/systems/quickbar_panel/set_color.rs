@@ -6,87 +6,76 @@ use crate::{
 	},
 	traits::colors::ColorConfig,
 };
-use bevy::prelude::*;
+use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
-	tools::{action_key::slot::SlotKey, skill_execution::SkillExecution},
+	tools::skill_execution::SkillExecution,
 	traits::{
-		accessors::get::{
-			AssociatedSystemParam,
-			AssociatedSystemParamRef,
-			DynProperty,
-			GetFromSystemParam,
-			GetProperty,
-		},
-		handles_input::MouseOverride,
-		handles_loadout::loadout::NoSkill,
+		accessors::get::{DynProperty, EntityContext, GetProperty},
+		handles_input::MouseOverrideActive,
+		handles_loadout::skills::{ReadSkills, Skills},
 	},
 };
 
 impl QuickbarPanel {
-	pub(crate) fn set_color<TAgent, TActionKeyButton, TSlots>(
+	pub(crate) fn set_color<TAgent, TActionKeyButton, TLoadout>(
 		commands: Commands,
 		buttons: Query<(Entity, &Self, &TActionKeyButton)>,
-		slots: Query<&TSlots, With<TAgent>>,
-		param: AssociatedSystemParam<TSlots, SlotKey>,
+		agents: Query<Entity, With<TAgent>>,
+		param: StaticSystemParam<TLoadout>,
 	) where
 		TAgent: Component,
-		TActionKeyButton: Component + GetProperty<MouseOverride>,
-		TSlots: Component + GetFromSystemParam<SlotKey>,
-		for<'i> TSlots::TItem<'i>: GetProperty<Result<SkillExecution, NoSkill>>,
+		TActionKeyButton: Component + GetProperty<MouseOverrideActive>,
+		TLoadout: for<'c> EntityContext<Skills, TContext<'c>: ReadSkills>,
 	{
-		set_color(commands, buttons, slots, param)
+		set_color(commands, buttons, agents, param)
 	}
 }
 
-fn set_color<TAgent, TActionKeyButton, TSlots>(
+fn set_color<TAgent, TActionKeyButton, TLoadout>(
 	mut commands: Commands,
 	buttons: Query<(Entity, &QuickbarPanel, &TActionKeyButton)>,
-	slots: Query<&TSlots, With<TAgent>>,
-	param: AssociatedSystemParam<TSlots, SlotKey>,
+	agents: Query<Entity, With<TAgent>>,
+	param: StaticSystemParam<TLoadout>,
 ) where
 	TAgent: Component,
-	TActionKeyButton: Component + GetProperty<MouseOverride>,
-	TSlots: Component + GetFromSystemParam<SlotKey>,
-	for<'i> TSlots::TItem<'i>: GetProperty<Result<SkillExecution, NoSkill>>,
+	TActionKeyButton: Component + GetProperty<MouseOverrideActive>,
+	TLoadout: for<'c> EntityContext<Skills, TContext<'c>: ReadSkills>,
 {
-	for slots in &slots {
-		for (entity, panel, primer) in &buttons {
+	for agent in &agents {
+		let Some(ctx) = TLoadout::get_entity_context(&param, agent, Skills) else {
+			continue;
+		};
+
+		for (entity, panel, action_button) in &buttons {
 			let Ok(entity) = commands.get_entity(entity) else {
 				continue;
 			};
-			let color = get_color_override(panel, primer, slots, &param);
+			let color = get_color_override(panel, action_button, &ctx);
 			update_color_override(color, entity);
 		}
 	}
 }
 
-fn get_color_override<TSlots, TActionKeyButton>(
+fn get_color_override<TActionKeyButton, TContext>(
 	QuickbarPanel { key, .. }: &QuickbarPanel,
-	primer: &TActionKeyButton,
-	slots: &TSlots,
-	param: &AssociatedSystemParamRef<TSlots, SlotKey>,
+	action_button: &TActionKeyButton,
+	ctx: &TContext,
 ) -> Option<ColorConfig>
 where
-	TActionKeyButton: Component + GetProperty<MouseOverride>,
-	TSlots: Component + GetFromSystemParam<SlotKey>,
-	for<'i> TSlots::TItem<'i>: GetProperty<Result<SkillExecution, NoSkill>>,
+	TActionKeyButton: Component + GetProperty<MouseOverrideActive>,
+	TContext: ReadSkills,
 {
-	let item = slots.get_from_param(&SlotKey::from(*key), param)?;
-	let state = item.dyn_property::<Result<SkillExecution, NoSkill>>();
+	let skill = ctx.get_skill(*key)?;
+	let activate_on_mouse_left = || action_button.dyn_property::<MouseOverrideActive>();
 
-	if state == Ok(SkillExecution::Active) {
-		return Some(QuickbarPanel::ACTIVE_COLORS);
+	match skill.dyn_property::<SkillExecution>() {
+		SkillExecution::Active => Some(QuickbarPanel::ACTIVE_COLORS),
+		SkillExecution::Queued => Some(QuickbarPanel::QUEUED_COLORS),
+		SkillExecution::None if activate_on_mouse_left() => {
+			Some(QuickbarPanel::PANEL_COLORS.pressed)
+		}
+		SkillExecution::None => None,
 	}
-
-	if state == Ok(SkillExecution::Queued) {
-		return Some(QuickbarPanel::QUEUED_COLORS);
-	}
-
-	if primer.dyn_property::<MouseOverride>() {
-		return Some(QuickbarPanel::PANEL_COLORS.pressed);
-	}
-
-	None
 }
 
 fn update_color_override(color: Option<ColorConfig>, mut entity: EntityCommands) {
@@ -108,9 +97,18 @@ fn update_color_override(color: Option<ColorConfig>, mut entity: EntityCommands)
 mod tests {
 	use super::*;
 	use crate::components::{ColorOverride, dispatch_text_color::DispatchTextColor};
-	use bevy::{ecs::system::SystemParam, state::app::StatesPlugin};
-	use common::tools::action_key::slot::PlayerSlot;
-	use std::collections::HashMap;
+	use bevy::state::app::StatesPlugin;
+	use common::{
+		tools::action_key::slot::PlayerSlot,
+		traits::{
+			handles_loadout::{
+				LoadoutKey,
+				skills::{SkillIcon, SkillToken},
+			},
+			handles_localization::Token,
+		},
+	};
+	use std::{collections::HashMap, sync::LazyLock};
 	use testing::SingleThreadedApp;
 
 	#[derive(Component)]
@@ -118,7 +116,7 @@ mod tests {
 		mouse_overridden: bool,
 	}
 
-	impl GetProperty<MouseOverride> for _ActionKeyButton {
+	impl GetProperty<MouseOverrideActive> for _ActionKeyButton {
 		fn get_property(&self) -> bool {
 			self.mouse_overridden
 		}
@@ -127,46 +125,57 @@ mod tests {
 	#[derive(Component)]
 	struct _Agent;
 
-	#[derive(Component)]
-	struct _Slots(HashMap<SlotKey, _Item>);
+	#[derive(Component, Clone)]
+	struct _Skills(HashMap<LoadoutKey, _Skill>);
 
-	impl<T> From<T> for _Slots
-	where
-		T: IntoIterator<Item = (SlotKey, _Item)>,
-	{
-		fn from(items: T) -> Self {
-			Self(HashMap::from_iter(items))
+	impl ReadSkills for _Skills {
+		type TSkill<'a>
+			= _Skill
+		where
+			Self: 'a;
+
+		fn get_skill<TKey>(&self, key: TKey) -> Option<Self::TSkill<'_>>
+		where
+			TKey: Into<LoadoutKey>,
+		{
+			self.0.get(&key.into()).cloned()
 		}
 	}
 
-	impl GetFromSystemParam<SlotKey> for _Slots {
-		type TParam<'w, 's> = _Param;
-		type TItem<'i> = _Item;
+	#[derive(Debug, PartialEq, Clone)]
+	struct _Skill(SkillExecution);
 
-		fn get_from_param(&self, key: &SlotKey, _: &_Param) -> Option<Self::TItem<'_>> {
-			self.0.get(key).cloned()
+	const IMAGE: Handle<Image> = Handle::Weak(AssetId::Uuid {
+		uuid: AssetId::<Image>::DEFAULT_UUID,
+	});
+
+	impl GetProperty<SkillIcon> for _Skill {
+		fn get_property(&self) -> &'_ Handle<Image> {
+			&IMAGE
 		}
 	}
 
-	#[derive(SystemParam)]
-	struct _Param;
+	static TOKEN: LazyLock<Token> = LazyLock::new(|| Token::from("my skill"));
 
-	#[derive(Clone)]
-	struct _Item(Option<SkillExecution>);
+	impl GetProperty<SkillToken> for _Skill {
+		fn get_property(&self) -> &'_ Token {
+			&TOKEN
+		}
+	}
 
-	impl GetProperty<Result<SkillExecution, NoSkill>> for _Item {
-		fn get_property(&self) -> Result<SkillExecution, NoSkill> {
-			match self.0 {
-				Some(e) => Ok(e),
-				None => Err(NoSkill),
-			}
+	impl GetProperty<SkillExecution> for _Skill {
+		fn get_property(&self) -> SkillExecution {
+			self.0
 		}
 	}
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, set_color::<_Agent, _ActionKeyButton, _Slots>);
+		app.add_systems(
+			Update,
+			set_color::<_Agent, _ActionKeyButton, Query<Ref<_Skills>>>,
+		);
 		app.add_plugins(StatesPlugin);
 
 		app
@@ -177,10 +186,10 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((
 			_Agent,
-			_Slots::from([(
-				SlotKey::from(PlayerSlot::LOWER_L),
-				_Item(Some(SkillExecution::Active)),
-			)]),
+			_Skills(HashMap::from([(
+				LoadoutKey::from(PlayerSlot::LOWER_L),
+				_Skill(SkillExecution::Active),
+			)])),
 		));
 		let panel = app
 			.world_mut()
@@ -211,7 +220,7 @@ mod tests {
 	#[test]
 	fn no_override_when_no_matching_skill_active() {
 		let mut app = setup();
-		app.world_mut().spawn((_Agent, _Slots::from([])));
+		app.world_mut().spawn((_Agent, _Skills(HashMap::from([]))));
 		let panel = app
 			.world_mut()
 			.spawn((
@@ -238,10 +247,10 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((
 			_Agent,
-			_Slots::from([(
-				SlotKey::from(PlayerSlot::LOWER_L),
-				_Item(Some(SkillExecution::None)),
-			)]),
+			_Skills(HashMap::from([(
+				LoadoutKey::from(PlayerSlot::LOWER_L),
+				_Skill(SkillExecution::None),
+			)])),
 		));
 		let panel = app
 			.world_mut()
@@ -269,10 +278,10 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((
 			_Agent,
-			_Slots::from([(
-				SlotKey::from(PlayerSlot::LOWER_L),
-				_Item(Some(SkillExecution::None)),
-			)]),
+			_Skills(HashMap::from([(
+				LoadoutKey::from(PlayerSlot::LOWER_L),
+				_Skill(SkillExecution::None),
+			)])),
 		));
 		let panel = app
 			.world_mut()
@@ -307,10 +316,10 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((
 			_Agent,
-			_Slots::from([(
-				SlotKey::from(PlayerSlot::LOWER_L),
-				_Item(Some(SkillExecution::Queued)),
-			)]),
+			_Skills(HashMap::from([(
+				LoadoutKey::from(PlayerSlot::LOWER_L),
+				_Skill(SkillExecution::Queued),
+			)])),
 		));
 		let panel = app
 			.world_mut()
@@ -341,10 +350,10 @@ mod tests {
 	#[test]
 	fn do_nothing_if_slots_has_no_agent() {
 		let mut app = setup();
-		app.world_mut().spawn(_Slots::from([(
-			SlotKey::from(PlayerSlot::LOWER_L),
-			_Item(Some(SkillExecution::Active)),
-		)]));
+		app.world_mut().spawn(_Skills(HashMap::from([(
+			LoadoutKey::from(PlayerSlot::LOWER_L),
+			_Skill(SkillExecution::Active),
+		)])));
 		let panel = app
 			.world_mut()
 			.spawn((
