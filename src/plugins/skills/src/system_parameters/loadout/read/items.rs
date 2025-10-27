@@ -8,7 +8,10 @@ use common::{
 	tools::inventory_key::InventoryKey,
 	traits::{
 		accessors::get::{ContextChanged, EntityContext, GetProperty},
-		handles_loadout::{Items, LoadoutKey, ReadItems, loadout::ItemToken},
+		handles_loadout::{
+			LoadoutKey,
+			items::{ItemToken, Items, ReadItems},
+		},
 		handles_localization::Token,
 	},
 };

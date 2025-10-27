@@ -7,7 +7,10 @@ use common::{
 	tools::inventory_key::InventoryKey,
 	traits::{
 		accessors::get::EntityContextMut,
-		handles_loadout::{Items, LoadoutKey, SwapItems},
+		handles_loadout::{
+			LoadoutKey,
+			items::{Items, SwapItems},
+		},
 	},
 };
 

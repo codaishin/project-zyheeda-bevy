@@ -2,7 +2,7 @@ use crate::components::combo_skill_button::{ComboSkillButton, DropdownItem};
 use bevy::{ecs::system::StaticSystemParam, prelude::*, ui::Interaction};
 use common::traits::{
 	accessors::get::EntityContextMut,
-	handles_loadout::{Combos, UpdateCombos2},
+	handles_loadout::combos::{Combos, UpdateCombos},
 	thread_safe::ThreadSafe,
 };
 use std::fmt::Debug;
@@ -18,7 +18,7 @@ where
 		mut param: StaticSystemParam<TLoadout>,
 	) where
 		TAgent: Component,
-		TLoadout: for<'c> EntityContextMut<Combos, TContext<'c>: UpdateCombos2<TId>>,
+		TLoadout: for<'c> EntityContextMut<Combos, TContext<'c>: UpdateCombos<TId>>,
 	{
 		for agent in &agents {
 			let new_combos = skill_buttons
@@ -49,7 +49,7 @@ mod tests {
 	use bevy::ecs::system::SystemParam;
 	use common::{
 		tools::action_key::slot::{PlayerSlot, SlotKey},
-		traits::{handles_loadout::combos_component::Combo, handles_localization::Token},
+		traits::{handles_loadout::combos::Combo, handles_localization::Token},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -83,7 +83,7 @@ mod tests {
 	struct _Id;
 
 	#[automock]
-	impl UpdateCombos2<_Id> for _Combos {
+	impl UpdateCombos<_Id> for _Combos {
 		fn update_combos(&mut self, combos: Combo<SlotKey, Option<_Id>>) {
 			self.mock.update_combos(combos);
 		}

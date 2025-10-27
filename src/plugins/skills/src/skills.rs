@@ -19,10 +19,7 @@ use common::{
 	traits::{
 		accessors::get::{GetMut, GetProperty},
 		handles_custom_assets::AssetFolderPath,
-		handles_loadout::{
-			GetSkillId,
-			loadout::{SkillIcon, SkillToken},
-		},
+		handles_loadout::skills::{GetSkillId, SkillIcon, SkillToken},
 		handles_localization::Token,
 		handles_physics::HandlesAllPhysicalEffects,
 		handles_skill_behaviors::{HandlesSkillBehaviors, SkillSpawner},

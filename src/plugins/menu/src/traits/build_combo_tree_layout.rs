@@ -5,9 +5,8 @@ use common::{
 	traits::{
 		accessors::get::GetProperty,
 		handles_loadout::{
-			GetSkillId,
-			combos_component::GetCombosOrdered,
-			loadout::{SkillIcon, SkillToken},
+			combos::GetCombosOrdered,
+			skills::{GetSkillId, SkillIcon, SkillToken},
 		},
 	},
 };
@@ -168,7 +167,7 @@ mod tests {
 	use super::*;
 	use common::{
 		tools::action_key::slot::{PlayerSlot, SlotKey},
-		traits::{handles_loadout::combos_component::Combo, handles_localization::Token},
+		traits::{handles_loadout::combos::Combo, handles_localization::Token},
 	};
 	use testing::new_handle;
 	use uuid::Uuid;

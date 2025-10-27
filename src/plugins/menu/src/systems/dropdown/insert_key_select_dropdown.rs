@@ -8,7 +8,7 @@ use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
 		accessors::get::{EntityContext, TryApplyOn},
-		handles_loadout::{Combos, combos_component::NextConfiguredKeys},
+		handles_loadout::combos::{Combos, NextConfiguredKeys},
 		thread_safe::ThreadSafe,
 	},
 	zyheeda_commands::ZyheedaCommands,

@@ -12,9 +12,7 @@ use common::{
 		accessors::get::{ContextChanged, EntityContext, GetProperty},
 		handles_loadout::{
 			LoadoutKey,
-			ReadSkills,
-			Skills,
-			loadout::{SkillIcon, SkillToken},
+			skills::{ReadSkills, SkillIcon, SkillToken, Skills},
 		},
 		handles_localization::Token,
 		iterate::Iterate,

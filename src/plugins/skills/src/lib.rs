@@ -2,7 +2,6 @@ mod behaviors;
 mod components;
 mod item;
 mod observers;
-mod resources;
 mod skills;
 mod system_parameters;
 mod systems;
@@ -16,7 +15,6 @@ use crate::{
 		queue::dto::QueueDto,
 		slots::visualization::SlotVisualization,
 	},
-	item::SkillItem,
 	skills::SkillId,
 	system_parameters::loadout::{LoadoutReader, LoadoutWriter},
 	systems::enqueue::EnqueueSystem,
@@ -29,7 +27,7 @@ use common::{
 		handles_agents::HandlesAgents,
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
 		handles_load_tracking::HandlesLoadTracking,
-		handles_loadout::{HandlesLoadout, HandlesLoadout2},
+		handles_loadout::HandlesLoadout,
 		handles_orientation::HandlesOrientation,
 		handles_physics::HandlesAllPhysicalEffects,
 		handles_player::{
@@ -165,16 +163,6 @@ where
 }
 
 impl<TDependencies> HandlesLoadout for SkillsPlugin<TDependencies> {
-	type TItem = SkillItem;
-	type TSkill = Skill;
-	type TSkills = Vec<Skill>;
-
-	type TInventory = Inventory;
-	type TSlots = Slots;
-	type TCombos = Combos;
-}
-
-impl<TDependencies> HandlesLoadout2 for SkillsPlugin<TDependencies> {
 	type TSkillID = SkillId;
 	type TLoadoutRead<'w, 's> = LoadoutReader<'w, 's>;
 	type TLoadoutMut<'w, 's> = LoadoutWriter<'w, 's>;

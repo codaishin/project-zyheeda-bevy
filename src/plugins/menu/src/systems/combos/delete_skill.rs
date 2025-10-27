@@ -2,7 +2,7 @@ use crate::components::DeleteSkill;
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
 	accessors::get::EntityContextMut,
-	handles_loadout::{Combos, UpdateCombos2},
+	handles_loadout::combos::{Combos, UpdateCombos},
 };
 
 impl DeleteSkill {
@@ -12,7 +12,7 @@ impl DeleteSkill {
 		mut param: StaticSystemParam<TLoadout>,
 	) where
 		TAgent: Component,
-		TLoadout: for<'c> EntityContextMut<Combos, TContext<'c>: UpdateCombos2<TId>>,
+		TLoadout: for<'c> EntityContextMut<Combos, TContext<'c>: UpdateCombos<TId>>,
 	{
 		for agent in &agents {
 			let Some(mut ctx) = TLoadout::get_entity_context_mut(&mut param, agent, Combos) else {
@@ -40,7 +40,7 @@ mod tests {
 	use super::*;
 	use common::{
 		tools::action_key::slot::{PlayerSlot, SlotKey},
-		traits::handles_loadout::combos_component::Combo,
+		traits::handles_loadout::combos::Combo,
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -55,7 +55,7 @@ mod tests {
 	}
 
 	#[automock]
-	impl UpdateCombos2<_Id> for _Combos {
+	impl UpdateCombos<_Id> for _Combos {
 		fn update_combos(&mut self, combos: Combo<SlotKey, Option<_Id>>) {
 			self.mock.update_combos(combos);
 		}

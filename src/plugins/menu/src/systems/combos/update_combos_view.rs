@@ -5,7 +5,7 @@ use bevy::{
 };
 use common::traits::{
 	accessors::get::{ContextChanged, EntityContext},
-	handles_loadout::Combos,
+	handles_loadout::combos::Combos,
 };
 use std::fmt::Debug;
 

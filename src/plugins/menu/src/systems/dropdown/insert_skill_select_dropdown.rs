@@ -9,10 +9,8 @@ use common::{
 	traits::{
 		accessors::get::{DynProperty, EntityContext, TryApplyOn},
 		handles_loadout::{
-			AvailableSkills,
-			GetSkillId,
-			ReadAvailableSkills,
-			loadout::{SkillIcon, SkillToken},
+			available_skills::{AvailableSkills, ReadAvailableSkills},
+			skills::{GetSkillId, SkillIcon, SkillToken},
 		},
 		thread_safe::ThreadSafe,
 	},

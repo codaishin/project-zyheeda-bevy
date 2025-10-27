@@ -6,7 +6,7 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	traits::{
 		accessors::get::{EntityContext, GetProperty, TryApplyOn},
-		handles_loadout::{Items, ReadItems},
+		handles_loadout::items::{Items, ReadItems},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -57,7 +57,7 @@ mod tests {
 	use common::{
 		tools::action_key::slot::PlayerSlot,
 		traits::{
-			handles_loadout::{LoadoutKey, loadout::ItemToken},
+			handles_loadout::{LoadoutKey, items::ItemToken},
 			handles_localization::Token,
 		},
 	};

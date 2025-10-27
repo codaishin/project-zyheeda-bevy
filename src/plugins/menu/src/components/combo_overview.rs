@@ -25,10 +25,7 @@ use common::{
 	tools::action_key::slot::{PlayerSlot, SlotKey},
 	traits::{
 		accessors::get::{DynProperty, GetProperty},
-		handles_loadout::{
-			GetSkillId,
-			loadout::{LoadoutItem, LoadoutKey, SkillIcon, SkillToken},
-		},
+		handles_loadout::skills::{GetSkillId, SkillIcon, SkillToken},
 		handles_localization::{Localize, LocalizeToken, Token, localized::Localized},
 		load_asset::{LoadAsset, Path},
 		thread_safe::ThreadSafe,
@@ -315,20 +312,6 @@ impl From<Option<Handle<Image>>> for SkillButtonIcon {
 	fn from(icon: Option<Handle<Image>>) -> Self {
 		SkillButtonIcon::Icon(icon)
 	}
-}
-
-impl<TId> LoadoutKey for ComboOverview<TId>
-where
-	TId: Debug + PartialEq + Clone,
-{
-	type TKey = SlotKey;
-}
-
-impl<TId> LoadoutItem for ComboOverview<TId>
-where
-	TId: Debug + PartialEq + Clone,
-{
-	type TItem = ComboSkill<TId>;
 }
 
 impl<TId> UpdateCombosView<TId> for ComboOverview<TId>

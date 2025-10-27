@@ -8,10 +8,9 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	components::{asset_model::AssetModel, essence::Essence},
-	tools::{item_type::ItemType, skill_execution::SkillExecution},
+	tools::item_type::ItemType,
 	traits::{
 		accessors::get::GetProperty,
-		handles_loadout::loadout::{ItemToken, NoSkill, SkillIcon, SkillToken},
 		handles_localization::Token,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
 	},
@@ -75,49 +74,4 @@ impl VisualizeItem for HandSlot {
 			_ => AssetModel::none(),
 		}
 	}
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct SkillItem {
-	pub(crate) token: Token,
-	pub(crate) skill: Option<ItemSkill>,
-}
-
-impl GetProperty<ItemToken> for SkillItem {
-	fn get_property(&self) -> &Token {
-		&self.token
-	}
-}
-impl GetProperty<Result<SkillToken, NoSkill>> for SkillItem {
-	fn get_property(&self) -> Result<&'_ Token, NoSkill> {
-		match &self.skill {
-			Some(ItemSkill { token, .. }) => Ok(token),
-			_ => Err(NoSkill),
-		}
-	}
-}
-
-impl GetProperty<Result<SkillIcon, NoSkill>> for SkillItem {
-	fn get_property(&self) -> Result<&'_ Handle<Image>, NoSkill> {
-		match &self.skill {
-			Some(ItemSkill { icon, .. }) => Ok(icon),
-			_ => Err(NoSkill),
-		}
-	}
-}
-
-impl GetProperty<Result<SkillExecution, NoSkill>> for SkillItem {
-	fn get_property(&self) -> Result<SkillExecution, NoSkill> {
-		match &self.skill {
-			Some(ItemSkill { execution, .. }) => Ok(*execution),
-			_ => Err(NoSkill),
-		}
-	}
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct ItemSkill {
-	pub(crate) token: Token,
-	pub(crate) icon: Handle<Image>,
-	pub(crate) execution: SkillExecution,
 }

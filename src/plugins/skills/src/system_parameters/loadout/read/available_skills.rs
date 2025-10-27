@@ -10,10 +10,8 @@ use common::{
 	traits::{
 		accessors::get::{ContextChanged, EntityContext, GetProperty},
 		handles_loadout::{
-			AvailableSkills,
-			GetSkillId,
-			ReadAvailableSkills,
-			loadout::{SkillIcon, SkillToken},
+			available_skills::{AvailableSkills, ReadAvailableSkills},
+			skills::{GetSkillId, SkillIcon, SkillToken},
 		},
 		handles_localization::Token,
 	},

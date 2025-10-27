@@ -3,7 +3,7 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	traits::{
 		accessors::get::{EntityContextMut, TryApplyOn},
-		handles_loadout::{Items, SwapItems},
+		handles_loadout::items::{Items, SwapItems},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };

@@ -6,7 +6,10 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	traits::{
 		accessors::get::{EntityContext, TryApplyOn},
-		handles_loadout::{AvailableSkills, GetSkillId, ReadAvailableSkills},
+		handles_loadout::{
+			available_skills::{AvailableSkills, ReadAvailableSkills},
+			skills::GetSkillId,
+		},
 		thread_safe::ThreadSafe,
 	},
 	zyheeda_commands::ZyheedaCommands,
@@ -58,7 +61,7 @@ mod tests {
 		tools::action_key::slot::{PlayerSlot, SlotKey},
 		traits::{
 			accessors::get::GetProperty,
-			handles_loadout::loadout::{SkillIcon, SkillToken},
+			handles_loadout::skills::{SkillIcon, SkillToken},
 			handles_localization::Token,
 		},
 		zyheeda_commands::ZyheedaEntityCommands,

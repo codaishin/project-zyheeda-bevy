@@ -3,11 +3,7 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	traits::{
 		accessors::get::{DynProperty, EntityContext, TryApplyOn},
-		handles_loadout::{
-			ReadSkills,
-			Skills,
-			loadout::{SkillIcon, SkillToken},
-		},
+		handles_loadout::skills::{ReadSkills, SkillIcon, SkillToken, Skills},
 		handles_localization::Token,
 	},
 	zyheeda_commands::ZyheedaCommands,

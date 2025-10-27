@@ -56,7 +56,7 @@ use common::{
 			HandlesLoadTracking,
 			LoadGroup,
 		},
-		handles_loadout::{HandlesLoadout2, LoadoutMutParam, LoadoutReadParam},
+		handles_loadout::{HandlesLoadout, LoadoutMutParam, LoadoutReadParam},
 		handles_localization::{HandlesLocalization, Token, localized::Localized},
 		handles_player::HandlesPlayer,
 		handles_saving::HandlesSaving,
@@ -124,7 +124,7 @@ where
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
 	TPlayers: ThreadSafe + HandlesPlayer,
-	TLoadout: ThreadSafe + HandlesLoadout2,
+	TLoadout: ThreadSafe + HandlesLoadout,
 {
 	pub fn from_plugins(
 		_: &TLoading,
@@ -156,7 +156,7 @@ where
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
 	TPlayers: ThreadSafe + HandlesPlayer,
-	TLoadout: ThreadSafe + HandlesLoadout2,
+	TLoadout: ThreadSafe + HandlesLoadout,
 {
 	fn resources(&self, app: &mut App) {
 		app.init_resource::<Shared<Path, Handle<Image>>>()
@@ -399,7 +399,7 @@ where
 	TLocalization: ThreadSafe + HandlesLocalization,
 	TGraphics: ThreadSafe + UiCamera,
 	TPlayers: ThreadSafe + HandlesPlayer,
-	TLoadout: ThreadSafe + HandlesLoadout2,
+	TLoadout: ThreadSafe + HandlesLoadout,
 {
 	fn build(&self, app: &mut App) {
 		self.resources(app);

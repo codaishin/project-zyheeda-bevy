@@ -12,7 +12,7 @@ use common::{
 	traits::{
 		accessors::get::{DynProperty, EntityContext, GetProperty},
 		handles_input::MouseOverrideActive,
-		handles_loadout::{ReadSkills, Skills},
+		handles_loadout::skills::{ReadSkills, Skills},
 	},
 };
 
@@ -103,7 +103,7 @@ mod tests {
 		traits::{
 			handles_loadout::{
 				LoadoutKey,
-				loadout::{SkillIcon, SkillToken},
+				skills::{SkillIcon, SkillToken},
 			},
 			handles_localization::Token,
 		},

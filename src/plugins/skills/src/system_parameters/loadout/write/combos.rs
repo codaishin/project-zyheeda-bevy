@@ -2,17 +2,14 @@ use crate::{
 	components::combos::Combos,
 	skills::{Skill, SkillId},
 	system_parameters::loadout::LoadoutWriter,
+	traits::combos::UpdateComboSkills,
 };
 use bevy::prelude::*;
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
 		accessors::get::EntityContextMut,
-		handles_loadout::{
-			Combos as CombosMarker,
-			UpdateCombos2,
-			combos_component::{Combo, UpdateCombos},
-		},
+		handles_loadout::combos::{Combo, Combos as CombosMarker, UpdateCombos},
 	},
 };
 
@@ -38,21 +35,20 @@ pub struct CombosMut<'ctx> {
 	skills: &'ctx Assets<Skill>,
 }
 
-impl UpdateCombos2<SkillId> for CombosMut<'_> {
+impl UpdateCombos<SkillId> for CombosMut<'_> {
 	fn update_combos(&mut self, combos: Combo<SlotKey, Option<SkillId>>) {
 		let combos = combos
 			.into_iter()
-			.map(|(key, id)| (key, id.and_then(find_skill(self.skills))))
-			.collect::<Vec<_>>();
+			.map(|(key, id)| (key, id.and_then(find_skill(self.skills))));
 
-		self.combos.update_combos(combos);
+		self.combos.update_combo_skills(combos);
 	}
 }
 
-fn find_skill(skills: &Assets<Skill>) -> impl Fn(SkillId) -> Option<Skill> {
+fn find_skill<'a>(skills: &'a Assets<Skill>) -> impl Fn(SkillId) -> Option<&'a Skill> {
 	move |id| {
 		let (_, skill) = skills.iter().find(|(_, skill)| skill.id == id)?;
 
-		Some(skill.clone())
+		Some(skill)
 	}
 }

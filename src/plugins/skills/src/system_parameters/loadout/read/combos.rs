@@ -4,10 +4,11 @@ use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
 		accessors::get::{ContextChanged, EntityContext},
-		handles_loadout::{
+		handles_loadout::combos::{
+			Combo,
 			Combos as CombosMarker,
-			combos_component::{Combo, GetCombosOrdered, NextConfiguredKeys},
-			loadout::{LoadoutItem, LoadoutKey},
+			GetCombosOrdered,
+			NextConfiguredKeys,
 		},
 	},
 };
@@ -36,14 +37,6 @@ impl PartialEq for CombosView<'_> {
 	fn eq(&self, other: &Self) -> bool {
 		self.combos.deref() == other.combos.deref()
 	}
-}
-
-impl LoadoutKey for CombosView<'_> {
-	type TKey = <Combos as LoadoutKey>::TKey;
-}
-
-impl LoadoutItem for CombosView<'_> {
-	type TItem = <Combos as LoadoutItem>::TItem;
 }
 
 impl GetCombosOrdered for CombosView<'_> {
