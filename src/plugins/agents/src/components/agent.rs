@@ -2,7 +2,8 @@ pub(crate) mod tag;
 
 use crate::{
 	assets::agent_config::{AgentConfigAsset, AgentConfigData},
-	components::agent::tag::AgentTag,
+	components::{enemy::void_sphere::VoidSphere, player::Player},
+	observers::agent::{insert_concrete_agent::InsertEnemyOrPlayer, insert_from::AgentHandle},
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{GravityScale, RigidBody};
@@ -14,12 +15,14 @@ use common::{
 	},
 	traits::{
 		accessors::get::GetFromSystemParam,
-		handles_agents::{AgentConfig, AgentType, Spawn},
+		handles_agents::{AgentConfig, AgentType},
+		handles_enemies::EnemyType,
 	},
-	zyheeda_commands::ZyheedaCommands,
+	zyheeda_commands::ZyheedaEntityCommands,
 };
+use macros::{SavableComponent, agent_asset};
 
-#[derive(Component, Clone, Debug, PartialEq)]
+#[derive(Component, SavableComponent, Clone, Debug, PartialEq)]
 #[require(
 	InteractionTarget,
 	PersistentEntity,
@@ -37,9 +40,32 @@ where
 	pub(crate) config_handle: Handle<TAsset>,
 }
 
-impl Spawn for Agent {
-	fn spawn<'a>(commands: &'a mut ZyheedaCommands, agent_type: AgentType) -> EntityCommands<'a> {
-		commands.spawn(AgentTag(agent_type))
+impl From<(AgentType, Handle<AgentConfigAsset>)> for Agent {
+	fn from((agent_type, config_handle): (AgentType, Handle<AgentConfigAsset>)) -> Self {
+		Self {
+			agent_type,
+			config_handle,
+		}
+	}
+}
+
+impl AgentHandle<AssetServer> for Agent {
+	fn agent_handle(agent_type: AgentType, assets: &mut AssetServer) -> Handle<AgentConfigAsset> {
+		let path = match agent_type {
+			AgentType::Player => agent_asset!("player"),
+			AgentType::Enemy(EnemyType::VoidSphere) => agent_asset!("void_sphere"),
+		};
+
+		assets.load(path)
+	}
+}
+
+impl InsertEnemyOrPlayer for Agent {
+	fn insert_enemy_or_player(&self, mut entity: ZyheedaEntityCommands) {
+		match self.agent_type {
+			AgentType::Player => entity.try_insert(Player),
+			AgentType::Enemy(EnemyType::VoidSphere) => entity.try_insert(VoidSphere::enemy()),
+		};
 	}
 }
 
@@ -66,9 +92,8 @@ where
 
 #[cfg(test)]
 mod tests {
-	use crate::components::{enemy::void_sphere::VoidSphere, player::Player};
-
 	use super::*;
+	use crate::components::{enemy::void_sphere::VoidSphere, player::Player};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use std::sync::LazyLock;
 	use test_case::test_case;

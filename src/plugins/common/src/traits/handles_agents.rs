@@ -20,7 +20,6 @@ pub trait HandlesAgents {
 		+ Mapper<Bone<'a>, Option<HandSlot>>
 		+ Mapper<Bone<'a>, Option<ForearmSlot>>;
 	type TAgent: Component
-		+ Spawn
 		+ for<'i> GetFromSystemParam<AgentConfig, TItem<'i> = Self::TAgentConfig<'i>>;
 }
 

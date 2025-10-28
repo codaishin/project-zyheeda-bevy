@@ -12,6 +12,7 @@ use crate::{
 	components::{
 		map::{Map, agents::AgentsLoaded, cells::corridor::Corridor, demo_map::DemoMap},
 		map_agents::{AgentOfPersistentMap, GridAgentOf},
+		world_agent::WorldAgent,
 	},
 	resources::agents::color_lookup::{AgentsColorLookup, AgentsColorLookupImages},
 };
@@ -100,6 +101,7 @@ impl<TDependencies> HandlesMapGeneration for MapGenerationPlugin<TDependencies> 
 	type TMap = Grid<1>;
 	type TGraph = GridGraph;
 	type TSystemSet = MapSystems;
+	type TNewWorldAgent = WorldAgent;
 
 	const SYSTEMS: Self::TSystemSet = MapSystems;
 

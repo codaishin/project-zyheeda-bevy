@@ -1,5 +1,8 @@
 use super::thread_safe::ThreadSafe;
-use crate::{tools::Units, traits::accessors::get::GetProperty};
+use crate::{
+	tools::Units,
+	traits::{accessors::get::GetProperty, handles_agents::AgentType},
+};
 use bevy::prelude::*;
 use std::{fmt::Debug, hash::Hash};
 
@@ -8,6 +11,7 @@ pub trait HandlesMapGeneration {
 	type TGraph: Graph + for<'a> From<&'a Self::TMap> + ThreadSafe;
 	type TSystemSet: SystemSet;
 	type TMapRef: Component + GetProperty<Entity>;
+	type TNewWorldAgent: Component + GetProperty<AgentType>;
 
 	const SYSTEMS: Self::TSystemSet;
 }
