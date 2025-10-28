@@ -1,5 +1,6 @@
 mod components;
 mod input;
+mod system_params;
 mod systems;
 mod traits;
 
@@ -9,6 +10,7 @@ use crate::{
 		fix_points::{Anchor, FixPoints, fix_point::FixPoint},
 		skill_usage::SkillUsage,
 	},
+	system_params::movement::{ReadMovement, WriteMovement},
 	systems::face::execute_enemy_face::execute_enemy_face,
 };
 use bevy::prelude::*;
@@ -277,5 +279,6 @@ impl<TSettings, TSaveGame, TAnimations, TPhysics, TPathFinding, TAgents> Handles
 where
 	TPhysics: HandlesMotion,
 {
-	type TMovement = Movement<PathOrWasd<TPhysics::TMotion>>;
+	type TReadMovement<'w, 's> = ReadMovement<'w, 's, TPhysics::TMotion>;
+	type TWriteMovement<'w, 's> = WriteMovement<'w, 's, TPhysics::TMotion>;
 }

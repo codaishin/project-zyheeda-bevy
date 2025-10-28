@@ -216,9 +216,13 @@ pub trait Property {
 
 /// A generic getter trait over a [`Property`].
 ///
-/// The property specifies how the value is exposed (by reference, by value, or via a transformed
-/// inner type). This allows consumers to request a value in a uniform way, while letting the
-/// property control the retrieval strategy.
+/// The property specifies how the value is exposed (by reference, by value, via a transformed
+/// inner type or using a completely different type). This streamlines property access across the
+/// codebase.
+///
+/// A blanket implementation exists for instances that can be dereferenced to types that implement
+/// this trait. This qualifies bevy wrappers like [`Ref`] and [`Res`] around such types for
+/// corresponding generic type constraints.
 ///
 /// # Example
 /// ```
@@ -248,6 +252,16 @@ where
 	TProperty: Property,
 {
 	fn get_property(&self) -> TProperty::TValue<'_>;
+}
+
+impl<T, TMarker> GetProperty<TMarker> for T
+where
+	T: Deref<Target: GetProperty<TMarker>>,
+	TMarker: Property,
+{
+	fn get_property(&self) -> <TMarker as Property>::TValue<'_> {
+		self.deref().get_property()
+	}
 }
 
 /// A convenience trait to access any [`Property`] dynamically.
