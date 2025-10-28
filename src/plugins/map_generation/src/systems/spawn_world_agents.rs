@@ -5,6 +5,7 @@ use crate::{
 			cells::{CellGrid, MapCells, agent::Agent},
 		},
 		map_agents::AgentOfPersistentMap,
+		world_agent::WorldAgent,
 	},
 	grid_graph::grid_context::GridContext,
 	traits::{GridCellDistanceDefinition, grid_min::GridMin},
@@ -12,7 +13,7 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
-	traits::{accessors::get::TryApplyOn, handles_agents::Spawn, thread_safe::ThreadSafe},
+	traits::{accessors::get::TryApplyOn, thread_safe::ThreadSafe},
 	zyheeda_commands::ZyheedaCommands,
 };
 
@@ -20,12 +21,10 @@ impl<TCell> MapCells<Agent<TCell>>
 where
 	TCell: GridCellDistanceDefinition + ThreadSafe,
 {
-	pub(crate) fn spawn_map_agents<TAgent>(
+	pub(crate) fn spawn_world_agents(
 		mut commands: ZyheedaCommands,
 		cells: Query<(Entity, &PersistentEntity, &Self)>,
-	) where
-		TAgent: Component + Spawn,
-	{
+	) {
 		for (entity, persistent_entity, MapCells { definition, .. }) in &cells {
 			let context = GridContext {
 				cell_count_x: definition.size.x,
@@ -40,7 +39,8 @@ where
 					continue;
 				};
 
-				TAgent::spawn(&mut commands, *agent_type).insert((
+				commands.spawn((
+					WorldAgent(*agent_type),
 					AgentOfPersistentMap(*persistent_entity),
 					transform::<TCell>(x, z, min),
 				));
@@ -75,15 +75,6 @@ mod tests {
 	#[derive(Clone, Debug, PartialEq, TypePath)]
 	struct _Cell;
 
-	#[derive(Component, Debug, PartialEq)]
-	struct _Agent(AgentType);
-
-	impl Spawn for _Agent {
-		fn spawn<'a>(entity: &'a mut ZyheedaCommands, agent_type: AgentType) -> EntityCommands<'a> {
-			entity.spawn(Self(agent_type))
-		}
-	}
-
 	impl GridCellDistanceDefinition for _Cell {
 		const CELL_DISTANCE: CellDistance = new_valid!(CellDistance, 4.);
 	}
@@ -91,7 +82,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, MapCells::<Agent<_Cell>>::spawn_map_agents::<_Agent>);
+		app.add_systems(Update, MapCells::<Agent<_Cell>>::spawn_world_agents);
 
 		app
 	}
@@ -118,7 +109,7 @@ mod tests {
 
 		app.update();
 
-		let [agent] = assert_count!(1, entities_with!(_Agent, app));
+		let [agent] = assert_count!(1, entities_with!(WorldAgent, app));
 		assert_eq!(
 			Some(&Transform::from_xyz(0., 0., 0.)),
 			agent.get::<Transform>(),
@@ -144,13 +135,13 @@ mod tests {
 
 		app.update();
 
-		let [agent] = assert_count!(1, entities_with!(_Agent, app));
+		let [agent] = assert_count!(1, entities_with!(WorldAgent, app));
 		assert_eq!(
 			(
 				Some(&Transform::from_xyz(0., 0., 0.)),
-				Some(&_Agent(AgentType::Enemy(EnemyType::VoidSphere))),
+				Some(&WorldAgent(AgentType::Enemy(EnemyType::VoidSphere))),
 			),
-			(agent.get::<Transform>(), agent.get::<_Agent>(),)
+			(agent.get::<Transform>(), agent.get::<WorldAgent>(),)
 		);
 	}
 
@@ -204,7 +195,7 @@ mod tests {
 
 		app.update();
 
-		let agents = assert_count!(9, entities_with!(_Agent, app));
+		let agents = assert_count!(9, entities_with!(WorldAgent, app));
 		assert_eq_unordered!(
 			[
 				Some(&Transform::from_xyz(-4., 0., -4.)),
@@ -263,7 +254,7 @@ mod tests {
 
 		app.update();
 
-		let [agent] = assert_count!(1, entities_with!(_Agent, app));
+		let [agent] = assert_count!(1, entities_with!(WorldAgent, app));
 		assert_eq!(
 			Some(&AgentOfPersistentMap(persistent_entity)),
 			agent.get::<AgentOfPersistentMap>(),
@@ -293,7 +284,7 @@ mod tests {
 
 		app.update();
 
-		let [agent] = assert_count!(1, entities_with!(_Agent, app));
+		let [agent] = assert_count!(1, entities_with!(WorldAgent, app));
 		assert_eq!(
 			Some(&AgentOfPersistentMap(persistent_entity)),
 			agent.get::<AgentOfPersistentMap>(),

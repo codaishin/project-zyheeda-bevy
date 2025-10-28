@@ -14,6 +14,7 @@ use crate::{
 		player_movement::PlayerMovement,
 		skill_animation::SkillAnimation,
 	},
+	observers::agent::{insert_concrete_agent::InsertConcreteAgent, insert_from::InsertFrom},
 	resources::{cam_ray::CamRay, mouse_hover::MouseHover},
 	systems::{
 		agent::insert_model::InsertModelSystem,
@@ -33,6 +34,7 @@ use common::{
 		handles_enemies::HandlesEnemies,
 		handles_input::{HandlesInput, InputSystemParam},
 		handles_lights::HandlesLights,
+		handles_map_generation::HandlesMapGeneration,
 		handles_physics::HandlesPhysicalAttributes,
 		handles_player::{
 			ConfiguresPlayerMovement,
@@ -53,8 +55,16 @@ use systems::void_sphere::ring_rotation::ring_rotation;
 
 pub struct AgentsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights>
-	AgentsPlugin<(TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights)>
+impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights, TMaps>
+	AgentsPlugin<(
+		TLoading,
+		TInput,
+		TSaveGame,
+		TPhysics,
+		TAnimations,
+		TLights,
+		TMaps,
+	)>
 where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
@@ -62,6 +72,7 @@ where
 	TPhysics: ThreadSafe + HandlesPhysicalAttributes,
 	TAnimations: ThreadSafe + RegisterAnimations,
 	TLights: ThreadSafe + HandlesLights,
+	TMaps: ThreadSafe + HandlesMapGeneration,
 {
 	pub fn from_plugins(
 		_: &TLoading,
@@ -70,13 +81,22 @@ where
 		_: &TPhysics,
 		_: &TAnimations,
 		_: &TLights,
+		_: &TMaps,
 	) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights> Plugin
-	for AgentsPlugin<(TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights)>
+impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights, TMaps> Plugin
+	for AgentsPlugin<(
+		TLoading,
+		TInput,
+		TSaveGame,
+		TPhysics,
+		TAnimations,
+		TLights,
+		TMaps,
+	)>
 where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
@@ -84,16 +104,22 @@ where
 	TPhysics: ThreadSafe + HandlesPhysicalAttributes,
 	TAnimations: ThreadSafe + RegisterAnimations,
 	TLights: ThreadSafe + HandlesLights,
+	TMaps: ThreadSafe + HandlesMapGeneration,
 {
 	fn build(&self, app: &mut App) {
-		// Load Agent
+		// # Load Agent
 		TLoading::register_custom_folder_assets::<
 			AgentConfigAsset,
 			AgentConfigAssetDto,
 			LoadingEssentialAssets,
 		>(app);
 		app.init_asset::<AgentConfigAsset>();
-		app.add_observer(Agent::insert_self_from::<AgentTag>);
+
+		// Using `AgentTag` to buffer the map agent type, in case `TNewWorldAgent` is not
+		// persistent across game sessions
+		app.add_observer(AgentTag::insert_from::<TMaps::TNewWorldAgent>);
+		app.add_observer(Agent::insert_from::<AgentTag>);
+		app.add_observer(Agent::insert_concrete_agent);
 		app.add_systems(
 			Update,
 			(
@@ -102,7 +128,7 @@ where
 			),
 		);
 
-		// Animations
+		// # Animations
 		TAnimations::register_animations::<Player>(app);
 		app.add_systems(
 			Update,
@@ -113,18 +139,18 @@ where
 				.run_if(in_state(GameState::Play)),
 		);
 
-		// Savedata
+		// # Savedata
 		TSaveGame::register_savable_component::<AgentTag>(app);
 		TSaveGame::register_savable_component::<Enemy>(app);
 		TSaveGame::register_savable_component::<PlayerCamera>(app);
 		TSaveGame::register_savable_component::<PlayerMovement>(app);
-		app.register_required_components::<AgentTag, TSaveGame::TSaveEntityMarker>();
+		app.register_required_components::<Agent, TSaveGame::TSaveEntityMarker>();
 
-		// Prefabs
+		// # Prefabs
 		app.add_prefab_observer::<Player, TLights>();
 		app.add_prefab_observer::<VoidSphere, ()>();
 
-		// Behaviors
+		// # Behaviors
 		app.init_resource::<CamRay>();
 		app.init_resource::<MouseHover>();
 		app.add_systems(

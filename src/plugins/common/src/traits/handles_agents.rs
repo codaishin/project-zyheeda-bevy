@@ -1,7 +1,7 @@
 use crate::{
 	tools::bone::Bone,
 	traits::{
-		accessors::get::GetFromSystemParam,
+		accessors::get::{GetFromSystemParam, Property},
 		handles_enemies::EnemyType,
 		handles_skill_behaviors::SkillSpawner,
 		loadout::LoadoutConfig,
@@ -20,7 +20,6 @@ pub trait HandlesAgents {
 		+ Mapper<Bone<'a>, Option<HandSlot>>
 		+ Mapper<Bone<'a>, Option<ForearmSlot>>;
 	type TAgent: Component
-		+ Spawn
 		+ for<'i> GetFromSystemParam<AgentConfig, TItem<'i> = Self::TAgentConfig<'i>>;
 }
 
@@ -34,4 +33,8 @@ pub struct AgentConfig;
 pub enum AgentType {
 	Player,
 	Enemy(EnemyType),
+}
+
+impl Property for AgentType {
+	type TValue<'a> = Self;
 }
