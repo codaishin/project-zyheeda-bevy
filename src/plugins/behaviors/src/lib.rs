@@ -6,12 +6,13 @@ mod traits;
 use crate::{
 	components::{
 		attacking::Attacking,
+		collider_definition::ColliderDefinition,
 		fix_points::{Anchor, FixPoints, fix_point::FixPoint},
 		skill_usage::SkillUsage,
 	},
 	systems::{
 		face::execute_enemy_face::execute_enemy_face,
-		movement::{compute_path::MovementPath, insert_process_component::ProcessInput},
+		movement::insert_process_component::ProcessInput,
 	},
 };
 use bevy::prelude::*;
@@ -44,6 +45,7 @@ use common::{
 			SkillSpawner,
 		},
 		prefab::AddPrefabObserver,
+		register_derived_component::RegisterDerivedComponent,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 	},
@@ -146,6 +148,9 @@ where
 		TSaveGame::register_savable_component::<OverrideFace>(app);
 		TSaveGame::register_savable_component::<Movement<PathOrWasd<TPhysics::TMotion>>>(app);
 
+		app.register_derived_component::<TAgents::TPlayerMovement, ColliderDefinition>();
+		app.register_derived_component::<TAgents::TEnemy, ColliderDefinition>();
+
 		let point_input =
 			PointerInput::<TPhysics::TMotion>::parse::<TAgents::TCamRay, InputSystemParam<TInput>>;
 		let wasd_input = WasdInput::<TPhysics::TMotion>::parse::<
@@ -155,11 +160,12 @@ where
 		>;
 		let wasd_input = wasd_input.pipe(OnError::log_and_return(|| ProcessInput::None));
 
-		let compute_player_path = TAgents::TPlayerMovement::compute_path::<
+		let compute_path = ColliderDefinition::compute_path::<
 			TPhysics::TMotion,
 			TPathFinding::TComputePath,
 			TPathFinding::TComputerRef,
 		>;
+
 		let execute_player_path =
 			TAgents::TPlayerMovement::execute_movement::<Movement<PathOrWasd<TPhysics::TMotion>>>;
 		let execute_player_movement =
@@ -169,11 +175,6 @@ where
 			TAnimations::TAnimationDispatch,
 		>;
 
-		let compute_enemy_path = TAgents::TEnemy::compute_path::<
-			TPhysics::TMotion,
-			TPathFinding::TComputePath,
-			TPathFinding::TComputerRef,
-		>;
 		let execute_enemy_path =
 			TAgents::TEnemy::execute_movement::<Movement<PathOrWasd<TPhysics::TMotion>>>;
 		let execute_enemy_movement =
@@ -208,7 +209,7 @@ where
 					(
 						point_input.pipe(TAgents::TPlayer::insert_process_component),
 						wasd_input.pipe(TAgents::TPlayer::insert_process_component),
-						compute_player_path,
+						compute_path,
 						execute_player_path,
 						execute_player_movement,
 						animate_player_movement,
@@ -219,7 +220,6 @@ where
 					(
 						TAgents::TEnemy::select_behavior::<TAgents::TPlayer>.pipe(OnError::log),
 						TAgents::TEnemy::chase::<PathOrWasd<TPhysics::TMotion>>,
-						compute_enemy_path,
 						execute_enemy_path,
 						execute_enemy_movement,
 						animate_enemy_movement,

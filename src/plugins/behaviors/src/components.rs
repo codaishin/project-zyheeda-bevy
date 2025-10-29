@@ -1,4 +1,5 @@
 pub(crate) mod attacking;
+pub(crate) mod collider_definition;
 pub(crate) mod fix_points;
 pub(crate) mod ground_target;
 pub(crate) mod movement;
