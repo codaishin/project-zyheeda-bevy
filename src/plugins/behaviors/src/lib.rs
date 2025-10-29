@@ -67,7 +67,6 @@ use systems::{
 	chase::ChaseSystem,
 	face::{execute_player_face::execute_player_face, get_faces::GetFaces},
 	movement::{
-		animate_movement::AnimateMovement,
 		insert_process_component::InsertProcessComponent,
 		parse_directional_movement_key::ParseDirectionalMovement,
 		parse_pointer_movement::ParsePointerMovement,
@@ -163,12 +162,7 @@ where
 		let execute_path =
 			MovementDefinition::execute_movement::<Movement<PathOrWasd<TPhysics::TMotion>>>;
 		let execute_movement = MovementDefinition::execute_movement::<Movement<TPhysics::TMotion>>;
-
-		let animate_player_movement = TAgents::TPlayerMovement::animate_movement::<
-			Movement<TPhysics::TMotion>,
-			TAnimations::TAnimationDispatch,
-		>;
-		let animate_enemy_movement = TAgents::TEnemy::animate_movement::<
+		let animate_movement = MovementDefinition::animate_movement::<
 			Movement<TPhysics::TMotion>,
 			TAnimations::TAnimationDispatch,
 		>;
@@ -203,7 +197,7 @@ where
 						compute_path,
 						execute_path,
 						execute_movement,
-						animate_player_movement,
+						animate_movement,
 						SkillUsage::player::<TAgents::TPlayer, InputSystemParam<TInput>>,
 					)
 						.chain(),
@@ -211,7 +205,6 @@ where
 					(
 						TAgents::TEnemy::select_behavior::<TAgents::TPlayer>.pipe(OnError::log),
 						TAgents::TEnemy::chase::<PathOrWasd<TPhysics::TMotion>>,
-						animate_enemy_movement,
 						SkillUsage::enemy::<TAgents::TEnemy>,
 					)
 						.chain(),

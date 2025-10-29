@@ -1,7 +1,16 @@
 use bevy::prelude::*;
 use common::{
-	tools::{Units, UnitsPerSecond, collider_radius::ColliderRadius, speed::Speed},
-	traits::accessors::get::{DynProperty, GetProperty, TryApplyOn},
+	tools::{
+		Units,
+		UnitsPerSecond,
+		collider_radius::ColliderRadius,
+		movement_animation::MovementAnimation,
+		speed::Speed,
+	},
+	traits::{
+		accessors::get::{DynProperty, GetProperty, TryApplyOn},
+		animation::Animation,
+	},
 	zyheeda_commands::ZyheedaCommands,
 };
 
@@ -9,6 +18,7 @@ use common::{
 pub struct MovementDefinition {
 	pub(crate) radius: Units,
 	pub(crate) speed: UnitsPerSecond,
+	pub(crate) animation: Option<Animation>,
 }
 
 impl MovementDefinition {
@@ -21,13 +31,17 @@ impl MovementDefinition {
 		mut commands: ZyheedaCommands,
 		agents: Query<(Entity, &TAgent), Changed<TAgent>>,
 	) where
-		TAgent: Component + GetProperty<ColliderRadius> + GetProperty<Speed>,
+		TAgent: Component
+			+ GetProperty<ColliderRadius>
+			+ GetProperty<Speed>
+			+ GetProperty<Option<MovementAnimation>>,
 	{
 		for (entity, agent) in &agents {
 			commands.try_apply_on(&entity, |mut e| {
 				e.try_insert(Self {
 					radius: agent.dyn_property::<ColliderRadius>(),
 					speed: agent.dyn_property::<Speed>(),
+					animation: agent.dyn_property::<Option<MovementAnimation>>().cloned(),
 				});
 			});
 		}
