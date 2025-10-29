@@ -10,7 +10,7 @@ use bevy::{
 };
 use common::traits::get_ray::GetCamRay;
 
-pub(crate) fn set_cam_ray<TCamera: GetCamRay + Component, TLabel: Component>(
+pub(crate) fn set_cam_ray<TCamera: GetCamRay<Window> + Component, TLabel: Component>(
 	mut commands: Commands,
 	camera: Query<(&TCamera, &GlobalTransform), With<TLabel>>,
 	window: Query<&Window>,
@@ -46,7 +46,7 @@ mod tests {
 	struct _Label;
 
 	#[automock]
-	impl GetCamRay for _Camera {
+	impl GetCamRay<Window> for _Camera {
 		fn get_ray(&self, camera_transform: &GlobalTransform, window: &Window) -> Option<Ray3d> {
 			self.mock.get_ray(camera_transform, window)
 		}

@@ -1,12 +1,7 @@
 use super::GetCamRay;
-use bevy::{
-	math::Ray3d,
-	render::camera::Camera,
-	transform::components::GlobalTransform,
-	window::Window,
-};
+use bevy::prelude::*;
 
-impl GetCamRay for Camera {
+impl GetCamRay<Window> for Camera {
 	fn get_ray(&self, camera_transform: &GlobalTransform, window: &Window) -> Option<Ray3d> {
 		window
 			.cursor_position()

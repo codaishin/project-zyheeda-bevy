@@ -1,10 +1,9 @@
 use crate::traits::ray_cast::RayCaster;
-use bevy::prelude::*;
 use bevy_rapier3d::prelude::{Real, *};
 use common::traits::handles_physics::{Raycast, RaycastHit, SolidObjects};
 
 impl Raycast<SolidObjects> for RayCaster<'_, '_> {
-	fn raycast(&self, ray: Ray3d, SolidObjects { exclude }: SolidObjects) -> Option<RaycastHit> {
+	fn raycast(&mut self, SolidObjects { ray, exclude }: SolidObjects) -> Option<RaycastHit> {
 		let ray_caster = self.context.single().ok()?;
 		let mut filter = QueryFilter::default().exclude_sensors();
 
@@ -15,8 +14,15 @@ impl Raycast<SolidObjects> for RayCaster<'_, '_> {
 		let (entity, time_of_impact) =
 			ray_caster.cast_ray(ray.origin, *ray.direction, Real::MAX, true, filter)?;
 
+		let Ok(sub_collider) = self.interaction_colliders.get(entity) else {
+			return Some(RaycastHit {
+				entity,
+				time_of_impact,
+			});
+		};
+
 		Some(RaycastHit {
-			entity,
+			entity: sub_collider.target(),
 			time_of_impact,
 		})
 	}
@@ -28,10 +34,14 @@ mod tests {
 	use crate::PhysicsPlugin;
 	use bevy::{
 		ecs::system::{RunSystemError, RunSystemOnce},
+		prelude::*,
 		render::mesh::MeshPlugin,
 		scene::ScenePlugin,
 	};
-	use common::traits::handles_physics::RaycastSystemParam;
+	use common::{
+		components::collider_relationship::ColliderOfInteractionTarget,
+		traits::handles_physics::RaycastSystemParam,
+	};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -58,8 +68,11 @@ mod tests {
 		app.update();
 
 		let hit = app.world_mut().run_system_once(
-			|ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
-				ray_caster.raycast(Ray3d::new(Vec3::Y, Dir3::NEG_Y), SolidObjects::default())
+			|mut ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
+				ray_caster.raycast(SolidObjects {
+					ray: Ray3d::new(Vec3::Y, Dir3::NEG_Y),
+					exclude: vec![],
+				})
 			},
 		)?;
 
@@ -67,6 +80,37 @@ mod tests {
 			Some(RaycastHit {
 				entity,
 				time_of_impact: 0.5
+			}),
+			hit,
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn hit_object_root() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let root = app.world_mut().spawn_empty().id();
+		app.world_mut().spawn((
+			RigidBody::Fixed,
+			Transform::default(),
+			Collider::ball(0.5),
+			ColliderOfInteractionTarget::from_raw(root),
+		));
+		app.update();
+
+		let hit = app.world_mut().run_system_once(
+			|mut ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
+				ray_caster.raycast(SolidObjects {
+					ray: Ray3d::new(Vec3::Y, Dir3::NEG_Y),
+					exclude: vec![],
+				})
+			},
+		)?;
+
+		assert_eq!(
+			Some(RaycastHit {
+				entity: root,
+				time_of_impact: 0.5,
 			}),
 			hit,
 		);
@@ -85,8 +129,11 @@ mod tests {
 		app.update();
 
 		let hit = app.world_mut().run_system_once(
-			|ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
-				ray_caster.raycast(Ray3d::new(Vec3::Y, Dir3::NEG_Y), SolidObjects::default())
+			|mut ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
+				ray_caster.raycast(SolidObjects {
+					ray: Ray3d::new(Vec3::Y, Dir3::NEG_Y),
+					exclude: vec![],
+				})
 			},
 		)?;
 
@@ -108,13 +155,11 @@ mod tests {
 		app.update();
 
 		let hit = app.world_mut().run_system_once(
-			move |ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
-				ray_caster.raycast(
-					Ray3d::new(Vec3::Y, Dir3::NEG_Y),
-					SolidObjects {
-						exclude: vec![entity],
-					},
-				)
+			move |mut ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
+				ray_caster.raycast(SolidObjects {
+					ray: Ray3d::new(Vec3::Y, Dir3::NEG_Y),
+					exclude: vec![entity],
+				})
 			},
 		)?;
 

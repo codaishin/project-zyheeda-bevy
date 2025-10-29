@@ -1,7 +1,7 @@
 pub mod get_camera_ray;
 
-use bevy::{math::Ray3d, transform::components::GlobalTransform, window::Window};
+use bevy::prelude::*;
 
-pub trait GetCamRay {
-	fn get_ray(&self, camera_transform: &GlobalTransform, window: &Window) -> Option<Ray3d>;
+pub trait GetCamRay<TWindow> {
+	fn get_ray(&self, camera_transform: &GlobalTransform, window: &TWindow) -> Option<Ray3d>;
 }

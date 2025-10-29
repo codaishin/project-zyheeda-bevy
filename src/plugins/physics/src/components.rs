@@ -6,6 +6,7 @@ pub(crate) mod effect;
 pub(crate) mod interacting_entities;
 pub(crate) mod motion;
 pub(crate) mod running_interactions;
+pub(crate) mod world_camera;
 
 use bevy::{
 	ecs::{component::Component, entity::Entity},

@@ -3,14 +3,14 @@
 
 use crate::traits::handles_physics::{Raycast, RaycastExtra};
 use bevy::prelude::*;
-use std::ops::Deref;
+use std::ops::DerefMut;
 
-impl<T, TExtra> Raycast<TExtra> for Res<'_, T>
+impl<T, TArgs> Raycast<TArgs> for ResMut<'_, T>
 where
-	T: Resource + Raycast<TExtra>,
-	TExtra: RaycastExtra,
+	T: Resource + Raycast<TArgs>,
+	TArgs: RaycastExtra,
 {
-	fn raycast(&self, ray: Ray3d, constraints: TExtra) -> TExtra::TResult {
-		self.deref().raycast(ray, constraints)
+	fn raycast(&mut self, args: TArgs) -> TArgs::TResult {
+		self.deref_mut().raycast(args)
 	}
 }

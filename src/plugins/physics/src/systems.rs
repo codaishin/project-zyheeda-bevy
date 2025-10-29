@@ -5,3 +5,4 @@ pub(crate) mod interactions;
 pub(crate) mod life;
 pub(crate) mod motion;
 pub(crate) mod ray_cast;
+pub(crate) mod world_camera;
