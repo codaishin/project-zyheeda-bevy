@@ -1,8 +1,8 @@
 pub(crate) mod attacking;
-pub(crate) mod collider_definition;
 pub(crate) mod fix_points;
 pub(crate) mod ground_target;
 pub(crate) mod movement;
+pub(crate) mod movement_definition;
 pub(crate) mod set_motion_forward;
 pub(crate) mod skill_behavior;
 pub(crate) mod skill_usage;

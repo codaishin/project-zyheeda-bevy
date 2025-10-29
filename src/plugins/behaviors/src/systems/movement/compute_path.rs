@@ -1,7 +1,7 @@
 use crate::{
 	Movement,
 	PathOrWasd,
-	components::{collider_definition::ColliderDefinition, movement::path_or_wasd::Mode},
+	components::{movement::path_or_wasd::Mode, movement_definition::MovementDefinition},
 };
 use bevy::prelude::*;
 use common::{
@@ -16,14 +16,14 @@ use std::collections::VecDeque;
 
 type MoveComponents<TMotion, TGetComputer> = (
 	Entity,
-	&'static ColliderDefinition,
+	&'static MovementDefinition,
 	&'static GlobalTransform,
 	&'static Movement<PathOrWasd<TMotion>>,
 	&'static TGetComputer,
 );
 type ChangedMovement<TMotion> = Changed<Movement<PathOrWasd<TMotion>>>;
 
-impl ColliderDefinition {
+impl MovementDefinition {
 	pub(crate) fn compute_path<TMotion, TComputer, TGetComputer>(
 		mut commands: ZyheedaCommands,
 		movements: Query<MoveComponents<TMotion, TGetComputer>, ChangedMovement<TMotion>>,
@@ -33,11 +33,11 @@ impl ColliderDefinition {
 		TComputer: Component + ComputePath,
 		TGetComputer: Component + GetProperty<Entity>,
 	{
-		for (entity, collider, transform, movement, get_computer) in &movements {
+		for (entity, definition, transform, movement, get_computer) in &movements {
 			let Ok(computer) = computers.get(get_computer.get_property()) else {
 				continue;
 			};
-			let path_or_wasd = collider.new_movement(computer, transform, movement);
+			let path_or_wasd = definition.new_movement(computer, transform, movement);
 			commands.try_apply_on(&entity, |mut e| {
 				e.try_insert(path_or_wasd);
 				e.try_remove::<Movement<TMotion>>();
@@ -130,7 +130,7 @@ mod test_new_path {
 
 		app.add_systems(
 			Update,
-			ColliderDefinition::compute_path::<_MoveMethod, _ComputePath, _GetComputer>,
+			MovementDefinition::compute_path::<_MoveMethod, _ComputePath, _GetComputer>,
 		);
 
 		app
@@ -155,8 +155,9 @@ mod test_new_path {
 			let entity = app
 				.world_mut()
 				.spawn((
-					ColliderDefinition {
+					MovementDefinition {
 						radius: Units::from(1.),
+						..default()
 					},
 					Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::default()),
 					GlobalTransform::default(),
@@ -191,8 +192,9 @@ mod test_new_path {
 			let entity = app
 				.world_mut()
 				.spawn((
-					ColliderDefinition {
+					MovementDefinition {
 						radius: Units::from(1.),
+						..default()
 					},
 					Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::default()),
 					GlobalTransform::default(),
@@ -227,8 +229,9 @@ mod test_new_path {
 			let entity = app
 				.world_mut()
 				.spawn((
-					ColliderDefinition {
+					MovementDefinition {
 						radius: Units::from(1.),
+						..default()
 					},
 					Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::default()),
 					GlobalTransform::from_translation(Vec3::splat(1.)),
@@ -257,8 +260,9 @@ mod test_new_path {
 				}))
 				.id();
 			app.world_mut().spawn((
-				ColliderDefinition {
+				MovementDefinition {
 					radius: Units::from(1.),
+					..default()
 				},
 				Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::default()),
 				GlobalTransform::default(),
@@ -284,8 +288,9 @@ mod test_new_path {
 			let entity = app
 				.world_mut()
 				.spawn((
-					ColliderDefinition {
+					MovementDefinition {
 						radius: Units::from(1.),
+						..default()
 					},
 					Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::default()),
 					GlobalTransform::default(),
@@ -319,8 +324,9 @@ mod test_new_path {
 				}))
 				.id();
 			app.world_mut().spawn((
-				ColliderDefinition {
+				MovementDefinition {
 					radius: Units::from(42.),
+					..default()
 				},
 				Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::new(4., 5., 6.)),
 				GlobalTransform::from_xyz(1., 2., 3.),
@@ -345,8 +351,9 @@ mod test_new_path {
 			let entity = app
 				.world_mut()
 				.spawn((
-					ColliderDefinition {
+					MovementDefinition {
 						radius: Units::from(1.),
+						..default()
 					},
 					Movement::<PathOrWasd<_MoveMethod>>::to(Dir3::NEG_Z),
 					GlobalTransform::default(),
@@ -379,8 +386,9 @@ mod test_new_path {
 				}))
 				.id();
 			app.world_mut().spawn((
-				ColliderDefinition {
+				MovementDefinition {
 					radius: Units::from(1.),
+					..default()
 				},
 				Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::default()),
 				GlobalTransform::default(),
@@ -403,8 +411,9 @@ mod test_new_path {
 			let entity = app
 				.world_mut()
 				.spawn((
-					ColliderDefinition {
+					MovementDefinition {
 						radius: Units::from(1.),
+						..default()
 					},
 					Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::default()),
 					GlobalTransform::default(),
