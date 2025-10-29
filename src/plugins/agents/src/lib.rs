@@ -35,7 +35,7 @@ use common::{
 		handles_input::{HandlesInput, InputSystemParam},
 		handles_lights::HandlesLights,
 		handles_map_generation::HandlesMapGeneration,
-		handles_physics::HandlesPhysicalAttributes,
+		handles_physics::{HandlesPhysicalAttributes, HandlesRaycast},
 		handles_player::{
 			ConfiguresPlayerMovement,
 			ConfiguresPlayerSkillAnimations,
@@ -69,7 +69,7 @@ where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesPhysicalAttributes,
+	TPhysics: ThreadSafe + HandlesPhysicalAttributes + HandlesRaycast,
 	TAnimations: ThreadSafe + RegisterAnimations,
 	TLights: ThreadSafe + HandlesLights,
 	TMaps: ThreadSafe + HandlesMapGeneration,
@@ -101,7 +101,7 @@ where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesPhysicalAttributes,
+	TPhysics: ThreadSafe + HandlesPhysicalAttributes + HandlesRaycast,
 	TAnimations: ThreadSafe + RegisterAnimations,
 	TLights: ThreadSafe + HandlesLights,
 	TMaps: ThreadSafe + HandlesMapGeneration,
@@ -153,6 +153,7 @@ where
 		// # Behaviors
 		app.init_resource::<CamRay>();
 		app.init_resource::<MouseHover>();
+		app.register_required_components::<PlayerCamera, TPhysics::TWorldCamera>();
 		app.add_systems(
 			First,
 			(set_cam_ray::<Camera, PlayerCamera>, set_mouse_hover)
