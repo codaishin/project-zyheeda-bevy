@@ -27,7 +27,13 @@ use common::{
 		handles_input::{HandlesInput, InputSystemParam},
 		handles_orientation::{Face, HandlesOrientation},
 		handles_path_finding::HandlesPathFinding,
-		handles_physics::{HandlesAllPhysicalEffects, HandlesMotion, HandlesPhysicalObjects},
+		handles_physics::{
+			HandlesAllPhysicalEffects,
+			HandlesMotion,
+			HandlesPhysicalObjects,
+			HandlesRaycast,
+			RaycastSystemParam,
+		},
 		handles_player::{
 			ConfiguresPlayerMovement,
 			HandlesPlayer,
@@ -89,7 +95,11 @@ where
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
-	TPhysics: ThreadSafe + HandlesPhysicalObjects + HandlesAllPhysicalEffects,
+	TPhysics: ThreadSafe
+		+ HandlesPhysicalObjects
+		+ HandlesMotion
+		+ HandlesAllPhysicalEffects
+		+ HandlesRaycast,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
 	TAgents: ThreadSafe
 		+ HandlesPlayer
@@ -125,7 +135,11 @@ where
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
-	TPhysics: ThreadSafe + HandlesPhysicalObjects + HandlesMotion + HandlesAllPhysicalEffects,
+	TPhysics: ThreadSafe
+		+ HandlesPhysicalObjects
+		+ HandlesMotion
+		+ HandlesAllPhysicalEffects
+		+ HandlesRaycast,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
 	TAgents: ThreadSafe
 		+ HandlesPlayer
@@ -223,7 +237,7 @@ where
 					(
 						Movement::<TPhysics::TMotion>::set_faces,
 						TAgents::TPlayer::get_faces
-							.pipe(execute_player_face::<TAgents::TMouseHover, TAgents::TCamRay>),
+							.pipe(execute_player_face::<RaycastSystemParam<TPhysics>>),
 						TAgents::TEnemy::get_faces.pipe(execute_enemy_face),
 					)
 						.chain(),
