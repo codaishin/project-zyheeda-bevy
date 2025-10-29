@@ -7,11 +7,12 @@ use crate::{
 	components::{
 		attacking::Attacking,
 		fix_points::{Anchor, FixPoints, fix_point::FixPoint},
+		movement_definition::MovementDefinition,
 		skill_usage::SkillUsage,
 	},
 	systems::{
 		face::execute_enemy_face::execute_enemy_face,
-		movement::{compute_path::MovementPath, insert_process_component::ProcessInput},
+		movement::insert_process_component::ProcessInput,
 	},
 };
 use bevy::prelude::*;
@@ -66,8 +67,6 @@ use systems::{
 	chase::ChaseSystem,
 	face::{execute_player_face::execute_player_face, get_faces::GetFaces},
 	movement::{
-		animate_movement::AnimateMovement,
-		execute_move_update::ExecuteMovement,
 		insert_process_component::InsertProcessComponent,
 		parse_directional_movement_key::ParseDirectionalMovement,
 		parse_pointer_movement::ParsePointerMovement,
@@ -155,30 +154,15 @@ where
 		>;
 		let wasd_input = wasd_input.pipe(OnError::log_and_return(|| ProcessInput::None));
 
-		let compute_player_path = TAgents::TPlayerMovement::compute_path::<
+		let compute_path = MovementDefinition::compute_path::<
 			TPhysics::TMotion,
 			TPathFinding::TComputePath,
 			TPathFinding::TComputerRef,
 		>;
-		let execute_player_path =
-			TAgents::TPlayerMovement::execute_movement::<Movement<PathOrWasd<TPhysics::TMotion>>>;
-		let execute_player_movement =
-			TAgents::TPlayerMovement::execute_movement::<Movement<TPhysics::TMotion>>;
-		let animate_player_movement = TAgents::TPlayerMovement::animate_movement::<
-			Movement<TPhysics::TMotion>,
-			TAnimations::TAnimationDispatch,
-		>;
-
-		let compute_enemy_path = TAgents::TEnemy::compute_path::<
-			TPhysics::TMotion,
-			TPathFinding::TComputePath,
-			TPathFinding::TComputerRef,
-		>;
-		let execute_enemy_path =
-			TAgents::TEnemy::execute_movement::<Movement<PathOrWasd<TPhysics::TMotion>>>;
-		let execute_enemy_movement =
-			TAgents::TEnemy::execute_movement::<Movement<TPhysics::TMotion>>;
-		let animate_enemy_movement = TAgents::TEnemy::animate_movement::<
+		let execute_path =
+			MovementDefinition::execute_movement::<Movement<PathOrWasd<TPhysics::TMotion>>>;
+		let execute_movement = MovementDefinition::execute_movement::<Movement<TPhysics::TMotion>>;
+		let animate_movement = MovementDefinition::animate_movement::<
 			Movement<TPhysics::TMotion>,
 			TAnimations::TAnimationDispatch,
 		>;
@@ -208,10 +192,12 @@ where
 					(
 						point_input.pipe(TAgents::TPlayer::insert_process_component),
 						wasd_input.pipe(TAgents::TPlayer::insert_process_component),
-						compute_player_path,
-						execute_player_path,
-						execute_player_movement,
-						animate_player_movement,
+						MovementDefinition::insert_from::<TAgents::TPlayerMovement>,
+						MovementDefinition::insert_from::<TAgents::TEnemy>,
+						compute_path,
+						execute_path,
+						execute_movement,
+						animate_movement,
 						SkillUsage::player::<TAgents::TPlayer, InputSystemParam<TInput>>,
 					)
 						.chain(),
@@ -219,10 +205,6 @@ where
 					(
 						TAgents::TEnemy::select_behavior::<TAgents::TPlayer>.pipe(OnError::log),
 						TAgents::TEnemy::chase::<PathOrWasd<TPhysics::TMotion>>,
-						compute_enemy_path,
-						execute_enemy_path,
-						execute_enemy_movement,
-						animate_enemy_movement,
 						SkillUsage::enemy::<TAgents::TEnemy>,
 					)
 						.chain(),

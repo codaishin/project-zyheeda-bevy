@@ -1,15 +1,13 @@
-use crate::traits::MovementUpdate;
+use crate::{components::movement_definition::MovementDefinition, traits::MovementUpdate};
 use bevy::prelude::*;
 use common::{
 	tools::speed::Speed,
-	traits::accessors::get::{GetProperty, TryApplyOn},
+	traits::accessors::get::TryApplyOn,
 	zyheeda_commands::ZyheedaCommands,
 };
 
-impl<T> ExecuteMovement for T where T: Component + Sized + GetProperty<Speed> {}
-
-pub(crate) trait ExecuteMovement: Component + Sized + GetProperty<Speed> {
-	fn execute_movement<TMovement>(
+impl MovementDefinition {
+	pub(crate) fn execute_movement<TMovement>(
 		mut commands: ZyheedaCommands,
 		mut agents: Query<
 			(Entity, TMovement::TComponents<'_>, &Self, &TMovement),
@@ -18,9 +16,9 @@ pub(crate) trait ExecuteMovement: Component + Sized + GetProperty<Speed> {
 	) where
 		TMovement: Component + MovementUpdate,
 	{
-		for (entity, components, config, movement) in &mut agents {
+		for (entity, components, definition, movement) in &mut agents {
 			commands.try_apply_on(&entity, |mut e| {
-				let speed = Speed(config.get_property());
+				let speed = Speed(definition.speed);
 
 				if !movement.update(&mut e, components, speed).is_done() {
 					return;
@@ -40,15 +38,6 @@ mod tests {
 		zyheeda_commands::ZyheedaEntityCommands,
 	};
 	use testing::SingleThreadedApp;
-
-	#[derive(Component, Default)]
-	struct _Agent(Speed);
-
-	impl GetProperty<Speed> for _Agent {
-		fn get_property(&self) -> UnitsPerSecond {
-			self.0.0
-		}
-	}
 
 	#[derive(Component, PartialEq, Debug, Clone, Copy)]
 	struct _Component;
@@ -79,7 +68,7 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, _Agent::execute_movement::<_Movement>);
+		app.add_systems(Update, MovementDefinition::execute_movement::<_Movement>);
 
 		app
 	}
@@ -87,7 +76,10 @@ mod tests {
 	#[test]
 	fn apply_speed() {
 		let mut app = setup();
-		let agent = _Agent(UnitsPerSecond::from(11.).into());
+		let agent = MovementDefinition {
+			speed: UnitsPerSecond::from(11.),
+			..default()
+		};
 		let movement = _Movement(false.into());
 		let agent = app.world_mut().spawn((agent, _Component, movement)).id();
 
@@ -104,7 +96,7 @@ mod tests {
 	#[test]
 	fn remove_movement_when_done() {
 		let mut app = setup();
-		let agent = _Agent::default();
+		let agent = MovementDefinition::default();
 		let movement = _Movement(Done::from(true));
 		let agent = app.world_mut().spawn((agent, _Component, movement)).id();
 
@@ -116,7 +108,7 @@ mod tests {
 	#[test]
 	fn keep_movement_when_not_done() {
 		let mut app = setup();
-		let agent = _Agent::default();
+		let agent = MovementDefinition::default();
 		let movement = _Movement(Done::from(false));
 		let agent = app.world_mut().spawn((agent, _Component, movement)).id();
 
@@ -134,7 +126,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				_Agent::default(),
+				MovementDefinition::default(),
 				_Component,
 				_Movement(Done::from(false)),
 				_DoNotMove,

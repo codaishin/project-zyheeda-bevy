@@ -1,7 +1,10 @@
-use crate::{Movement, PathOrWasd, components::movement::path_or_wasd::Mode};
+use crate::{
+	Movement,
+	PathOrWasd,
+	components::{movement::path_or_wasd::Mode, movement_definition::MovementDefinition},
+};
 use bevy::prelude::*;
 use common::{
-	tools::collider_radius::ColliderRadius,
 	traits::{
 		accessors::get::{GetProperty, TryApplyOn},
 		handles_path_finding::ComputePath,
@@ -11,87 +14,82 @@ use common::{
 };
 use std::collections::VecDeque;
 
-type MoveComponents<TAgent, TMotion, TGetComputer> = (
+type MoveComponents<TMotion, TGetComputer> = (
 	Entity,
+	&'static MovementDefinition,
 	&'static GlobalTransform,
-	&'static TAgent,
 	&'static Movement<PathOrWasd<TMotion>>,
 	&'static TGetComputer,
 );
 type ChangedMovement<TMotion> = Changed<Movement<PathOrWasd<TMotion>>>;
 
-impl<T> MovementPath for T where T: Component + GetProperty<ColliderRadius> + Sized {}
-
-pub(crate) trait MovementPath: Component + GetProperty<ColliderRadius> + Sized {
-	fn compute_path<TMotion, TComputer, TGetComputer>(
+impl MovementDefinition {
+	pub(crate) fn compute_path<TMotion, TComputer, TGetComputer>(
 		mut commands: ZyheedaCommands,
-		movements: Query<MoveComponents<Self, TMotion, TGetComputer>, ChangedMovement<TMotion>>,
+		movements: Query<MoveComponents<TMotion, TGetComputer>, ChangedMovement<TMotion>>,
 		computers: Query<&TComputer>,
 	) where
 		TMotion: ThreadSafe,
 		TComputer: Component + ComputePath,
 		TGetComputer: Component + GetProperty<Entity>,
 	{
-		for (entity, transform, agent, movement, get_computer) in &movements {
+		for (entity, definition, transform, movement, get_computer) in &movements {
 			let Ok(computer) = computers.get(get_computer.get_property()) else {
 				continue;
 			};
-			let path_or_wasd = new_movement(computer, transform, movement, agent);
+			let path_or_wasd = definition.new_movement(computer, transform, movement);
 			commands.try_apply_on(&entity, |mut e| {
 				e.try_insert(path_or_wasd);
 				e.try_remove::<Movement<TMotion>>();
 			});
 		}
 	}
-}
 
-fn new_movement<TAgent, TMotion, TComputer>(
-	computer: &TComputer,
-	transform: &GlobalTransform,
-	movement: &Movement<PathOrWasd<TMotion>>,
-	agent: &TAgent,
-) -> PathOrWasd<TMotion>
-where
-	TAgent: GetProperty<ColliderRadius>,
-	TComputer: ComputePath,
-	TMotion: ThreadSafe,
-{
-	let mut new_movement = PathOrWasd::<TMotion>::from(movement.target);
+	fn new_movement<TMotion, TComputer>(
+		&self,
+		computer: &TComputer,
+		transform: &GlobalTransform,
+		movement: &Movement<PathOrWasd<TMotion>>,
+	) -> PathOrWasd<TMotion>
+	where
+		TComputer: ComputePath,
+		TMotion: ThreadSafe,
+	{
+		let mut new_movement = PathOrWasd::<TMotion>::from(movement.target);
 
-	let Mode::Path(move_path) = &mut new_movement.mode else {
-		return new_movement;
-	};
+		let Mode::Path(move_path) = &mut new_movement.mode else {
+			return new_movement;
+		};
 
-	let ([end], []) = move_path.as_slices() else {
-		return new_movement;
-	};
+		let ([end], []) = move_path.as_slices() else {
+			return new_movement;
+		};
 
-	*move_path = compute_path(computer, transform, *end, agent);
+		*move_path = self.compute_path_internal(computer, transform, *end);
 
-	new_movement
-}
+		new_movement
+	}
 
-fn compute_path<TAgent, TComputer>(
-	computer: &TComputer,
-	transform: &GlobalTransform,
-	end: Vec3,
-	agent: &TAgent,
-) -> VecDeque<Vec3>
-where
-	TAgent: GetProperty<ColliderRadius>,
-	TComputer: ComputePath,
-{
-	let start = transform.translation();
-	let radius = agent.get_property();
-	let Some(path) = computer.compute_path(start, end, radius) else {
-		return VecDeque::from([]);
-	};
-	let path = match path.as_slice() {
-		[first, rest @ ..] if first == &start => rest,
-		path => path,
-	};
+	fn compute_path_internal<TComputer>(
+		&self,
+		computer: &TComputer,
+		transform: &GlobalTransform,
+		end: Vec3,
+	) -> VecDeque<Vec3>
+	where
+		TComputer: ComputePath,
+	{
+		let start = transform.translation();
+		let Some(path) = computer.compute_path(start, end, self.radius) else {
+			return VecDeque::from([]);
+		};
+		let path = match path.as_slice() {
+			[first, rest @ ..] if first == &start => rest,
+			path => path,
+		};
 
-	VecDeque::from_iter(path.iter().copied())
+		VecDeque::from_iter(path.iter().copied())
+	}
 }
 
 #[cfg(test)]
@@ -116,27 +114,6 @@ mod test_new_path {
 	}
 
 	#[derive(Component, NestedMocks)]
-	struct _MovementCollider {
-		mock: Mock_MovementCollider,
-	}
-
-	impl Default for _MovementCollider {
-		fn default() -> Self {
-			let mut mock = Mock_MovementCollider::new();
-			mock.expect_get_property().return_const(Units::from(1.));
-
-			Self { mock }
-		}
-	}
-
-	#[automock]
-	impl GetProperty<ColliderRadius> for _MovementCollider {
-		fn get_property(&self) -> Units {
-			self.mock.get_property()
-		}
-	}
-
-	#[derive(Component, NestedMocks)]
 	struct _ComputePath {
 		mock: Mock_ComputePath,
 	}
@@ -153,7 +130,7 @@ mod test_new_path {
 
 		app.add_systems(
 			Update,
-			_MovementCollider::compute_path::<_MoveMethod, _ComputePath, _GetComputer>,
+			MovementDefinition::compute_path::<_MoveMethod, _ComputePath, _GetComputer>,
 		);
 
 		app
@@ -178,7 +155,10 @@ mod test_new_path {
 			let entity = app
 				.world_mut()
 				.spawn((
-					_MovementCollider::default(),
+					MovementDefinition {
+						radius: Units::from(1.),
+						..default()
+					},
 					Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::default()),
 					GlobalTransform::default(),
 					_GetComputer(computer),
@@ -212,7 +192,10 @@ mod test_new_path {
 			let entity = app
 				.world_mut()
 				.spawn((
-					_MovementCollider::default(),
+					MovementDefinition {
+						radius: Units::from(1.),
+						..default()
+					},
 					Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::default()),
 					GlobalTransform::default(),
 					_GetComputer(computer),
@@ -246,7 +229,10 @@ mod test_new_path {
 			let entity = app
 				.world_mut()
 				.spawn((
-					_MovementCollider::default(),
+					MovementDefinition {
+						radius: Units::from(1.),
+						..default()
+					},
 					Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::default()),
 					GlobalTransform::from_translation(Vec3::splat(1.)),
 					_GetComputer(computer),
@@ -274,7 +260,10 @@ mod test_new_path {
 				}))
 				.id();
 			app.world_mut().spawn((
-				_MovementCollider::default(),
+				MovementDefinition {
+					radius: Units::from(1.),
+					..default()
+				},
 				Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::default()),
 				GlobalTransform::default(),
 				_GetComputer(computer),
@@ -299,7 +288,10 @@ mod test_new_path {
 			let entity = app
 				.world_mut()
 				.spawn((
-					_MovementCollider::default(),
+					MovementDefinition {
+						radius: Units::from(1.),
+						..default()
+					},
 					Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::default()),
 					GlobalTransform::default(),
 					Movement::<_MoveMethod>::to(Vec3::default()),
@@ -332,9 +324,10 @@ mod test_new_path {
 				}))
 				.id();
 			app.world_mut().spawn((
-				_MovementCollider::new().with_mock(|mock| {
-					mock.expect_get_property().return_const(Units::from(42.));
-				}),
+				MovementDefinition {
+					radius: Units::from(42.),
+					..default()
+				},
 				Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::new(4., 5., 6.)),
 				GlobalTransform::from_xyz(1., 2., 3.),
 				_GetComputer(computer),
@@ -358,7 +351,10 @@ mod test_new_path {
 			let entity = app
 				.world_mut()
 				.spawn((
-					_MovementCollider::default(),
+					MovementDefinition {
+						radius: Units::from(1.),
+						..default()
+					},
 					Movement::<PathOrWasd<_MoveMethod>>::to(Dir3::NEG_Z),
 					GlobalTransform::default(),
 					_GetComputer(computer),
@@ -390,7 +386,10 @@ mod test_new_path {
 				}))
 				.id();
 			app.world_mut().spawn((
-				_MovementCollider::default(),
+				MovementDefinition {
+					radius: Units::from(1.),
+					..default()
+				},
 				Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::default()),
 				GlobalTransform::default(),
 				_GetComputer(computer),
@@ -412,7 +411,10 @@ mod test_new_path {
 			let entity = app
 				.world_mut()
 				.spawn((
-					_MovementCollider::default(),
+					MovementDefinition {
+						radius: Units::from(1.),
+						..default()
+					},
 					Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::default()),
 					GlobalTransform::default(),
 					_GetComputer(computer),
