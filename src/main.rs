@@ -153,7 +153,6 @@ impl From<ZyheedaAppError> for ExitCode {
 pub mod debug_utils {
 	use super::*;
 	use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
-	use common::tools::action_key::user_input::UserInput;
 	use physics::events::{InteractionEvent, Ray};
 	use std::ops::Not;
 
@@ -209,8 +208,8 @@ pub mod debug_utils {
 		}
 	}
 
-	fn toggle_gizmos(mut show_gizmos: ResMut<ShowGizmos>, keys: Res<ButtonInput<UserInput>>) {
-		if keys.just_pressed(UserInput::from(KeyCode::F11)) {
+	fn toggle_gizmos(mut show_gizmos: ResMut<ShowGizmos>, keys: Res<ButtonInput<KeyCode>>) {
+		if keys.just_pressed(KeyCode::F11) {
 			*show_gizmos = !*show_gizmos;
 		}
 	}
