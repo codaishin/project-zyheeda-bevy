@@ -21,7 +21,7 @@ use std::collections::HashSet;
 
 #[cfg(test)]
 pub(crate) type SpawnSkillFn =
-	fn(&mut ZyheedaCommands, &SkillCaster, SkillSpawner, &SkillTarget) -> SkillShape;
+	fn(&mut ZyheedaCommands, SkillCaster, SkillSpawner, SkillTarget) -> SkillShape;
 
 #[derive(Debug, Clone)]
 #[cfg_attr(not(test), derive(PartialEq))]
@@ -71,9 +71,9 @@ impl SpawnSkill {
 	#[cfg(test)]
 	fn no_shape(
 		commands: &mut ZyheedaCommands,
-		_: &SkillCaster,
+		_: SkillCaster,
 		_: SkillSpawner,
-		_: &SkillTarget,
+		_: SkillTarget,
 	) -> SkillShape {
 		use bevy::prelude::*;
 
@@ -92,9 +92,9 @@ impl SpawnSkill {
 	pub(crate) fn build<TSkillBehaviors>(
 		&self,
 		commands: &mut ZyheedaCommands,
-		caster: &SkillCaster,
+		caster: SkillCaster,
 		spawner: SkillSpawner,
-		target: &SkillTarget,
+		target: SkillTarget,
 	) -> SkillShape
 	where
 		TSkillBehaviors: HandlesSkillBehaviors + 'static,

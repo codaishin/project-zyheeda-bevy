@@ -12,7 +12,7 @@ use gravity::AttachGravity;
 use health_damage::AttachHealthDamage;
 
 #[cfg(test)]
-pub type AttachEffectFn = fn(&mut ZyheedaEntityCommands, &SkillCaster, &SkillTarget);
+pub type AttachEffectFn = fn(&mut ZyheedaEntityCommands, SkillCaster, SkillTarget);
 
 #[derive(Debug, Clone)]
 #[cfg_attr(not(test), derive(PartialEq))]
@@ -28,8 +28,8 @@ impl AttachEffect {
 	pub fn attach<TEffects>(
 		&self,
 		entity: &mut ZyheedaEntityCommands,
-		caster: &SkillCaster,
-		target: &SkillTarget,
+		caster: SkillCaster,
+		target: SkillTarget,
 	) where
 		TEffects: HandlesAllPhysicalEffects,
 	{

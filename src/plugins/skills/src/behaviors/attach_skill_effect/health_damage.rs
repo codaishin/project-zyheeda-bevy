@@ -16,8 +16,8 @@ impl AttachHealthDamage {
 	pub fn attach<TPhysics>(
 		&self,
 		entity: &mut ZyheedaEntityCommands,
-		_: &SkillCaster,
-		_: &SkillTarget,
+		_: SkillCaster,
+		_: SkillTarget,
 	) where
 		TPhysics: HandlesPhysicalEffect<HealthDamage>,
 	{
@@ -65,8 +65,8 @@ mod tests {
 			let mut entity = commands.spawn(()).into();
 			damage.attach::<_HandlesDamage>(
 				&mut entity,
-				&SkillCaster::from(*CASTER),
-				&SkillTarget::default(),
+				SkillCaster(*CASTER),
+				SkillTarget::default(),
 			);
 			entity.id()
 		}

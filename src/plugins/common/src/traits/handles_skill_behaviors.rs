@@ -10,7 +10,7 @@ use crate::{
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::{collections::HashSet, ops::Deref};
 
 pub trait HandlesSkillBehaviors {
 	type TSkillContact: Component;
@@ -113,20 +113,55 @@ pub enum ProjectionShape {
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum Motion {
 	HeldBy {
-		caster: PersistentEntity,
+		caster: SkillCaster,
 		spawner: SkillSpawner,
 	},
 	Stationary {
-		caster: PersistentEntity,
+		caster: SkillCaster,
 		max_cast_range: Units,
-		target_ray: Ray3d,
+		target: SkillTarget,
 	},
 	Projectile {
-		caster: PersistentEntity,
+		caster: SkillCaster,
 		spawner: SkillSpawner,
 		speed: UnitsPerSecond,
 		range: Units,
 	},
+}
+
+#[derive(Debug, PartialEq, Clone, Copy, Default, Serialize, Deserialize)]
+pub struct SkillCaster(pub PersistentEntity);
+
+impl Deref for SkillCaster {
+	type Target = PersistentEntity;
+
+	fn deref(&self) -> &Self::Target {
+		&self.0
+	}
+}
+
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+pub enum SkillTarget {
+	Ground(Vec3),
+	Entity(PersistentEntity),
+}
+
+impl Default for SkillTarget {
+	fn default() -> Self {
+		Self::Ground(Vec3::default())
+	}
+}
+
+impl From<Vec3> for SkillTarget {
+	fn from(ground: Vec3) -> Self {
+		Self::Ground(ground)
+	}
+}
+
+impl From<PersistentEntity> for SkillTarget {
+	fn from(entity: PersistentEntity) -> Self {
+		Self::Entity(entity)
+	}
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Default, Serialize, Deserialize)]

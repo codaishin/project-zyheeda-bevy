@@ -1,3 +1,4 @@
+use crate::systems::movement::insert_process_component::ProcessInput;
 use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
@@ -6,28 +7,26 @@ use common::{
 	tools::action_key::movement::MovementKey,
 	traits::{
 		handles_input::{GetInputState, InputState},
-		intersect_at::IntersectAt,
+		handles_physics::{MouseGroundHover, MouseGroundPoint, Raycast},
 	},
 };
-
-use crate::systems::movement::insert_process_component::ProcessInput;
 
 impl<T> ParsePointerMovement for T where T: PointMovementInput {}
 
 pub(crate) trait ParsePointerMovement: PointMovementInput {
-	fn parse<TRay, TInput>(
+	fn parse<TInput, TRaycast>(
 		input: StaticSystemParam<TInput>,
-		cam_ray: Res<TRay>,
+		mut cam_ray: StaticSystemParam<TRaycast>,
 	) -> ProcessInput<Self>
 	where
-		TRay: IntersectAt + Resource,
-		for<'w, 's> TInput: SystemParam<Item<'w, 's>: GetInputState>,
+		TInput: for<'w, 's> SystemParam<Item<'w, 's>: GetInputState>,
+		TRaycast: for<'w, 's> SystemParam<Item<'w, 's>: Raycast<MouseGroundHover>>,
 	{
 		let InputState::Pressed { .. } = input.get_input_state(MovementKey::Pointer) else {
 			return ProcessInput::None;
 		};
 
-		let Some(intersection) = cam_ray.intersect_at(0.) else {
+		let Some(MouseGroundPoint(intersection)) = cam_ray.raycast(MouseGroundHover) else {
 			return ProcessInput::None;
 		};
 
@@ -45,10 +44,7 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		math::Vec3,
 	};
-	use common::{
-		tools::action_key::ActionKey,
-		traits::{handles_input::GetInputState, intersect_at::IntersectAt},
-	};
+	use common::{tools::action_key::ActionKey, traits::handles_input::GetInputState};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use test_case::test_case;
@@ -66,14 +62,14 @@ mod tests {
 	impl PointMovementInput for _Result {}
 
 	#[derive(Resource, NestedMocks)]
-	struct _Ray {
-		mock: Mock_Ray,
+	struct _RayCaster {
+		mock: Mock_RayCaster,
 	}
 
 	#[automock]
-	impl IntersectAt for _Ray {
-		fn intersect_at(&self, height: f32) -> Option<Vec3> {
-			self.mock.intersect_at(height)
+	impl Raycast<MouseGroundHover> for _RayCaster {
+		fn raycast(&mut self, args: MouseGroundHover) -> Option<MouseGroundPoint> {
+			self.mock.raycast(args)
 		}
 	}
 
@@ -92,7 +88,7 @@ mod tests {
 		}
 	}
 
-	fn setup(ray: _Ray, input: _Input) -> App {
+	fn setup(ray: _RayCaster, input: _Input) -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.insert_resource(ray);
@@ -105,9 +101,9 @@ mod tests {
 	#[test_case(InputState::just_pressed(); "on just press")]
 	fn trigger(state: InputState) -> Result<(), RunSystemError> {
 		let mut app = setup(
-			_Ray::new().with_mock(|mock| {
-				mock.expect_intersect_at()
-					.return_const(Vec3::new(1., 2., 3.));
+			_RayCaster::new().with_mock(|mock| {
+				mock.expect_raycast()
+					.return_const(MouseGroundPoint(Vec3::new(1., 2., 3.)));
 			}),
 			_Input::new().with_mock(|mock| {
 				mock.expect_get_input_state()
@@ -118,7 +114,7 @@ mod tests {
 
 		let input = app
 			.world_mut()
-			.run_system_once(_Result::parse::<_Ray, Res<_Input>>)?;
+			.run_system_once(_Result::parse::<Res<_Input>, ResMut<_RayCaster>>)?;
 
 		assert_eq!(ProcessInput::New(_Result(Vec3::new(1., 2., 3.))), input);
 		Ok(())
@@ -128,8 +124,9 @@ mod tests {
 	#[test_case(InputState::just_released(); "just released")]
 	fn no_trigger_when_not_pressed(state: InputState) -> Result<(), RunSystemError> {
 		let mut app = setup(
-			_Ray::new().with_mock(|mock| {
-				mock.expect_intersect_at().return_const(Vec3::default());
+			_RayCaster::new().with_mock(|mock| {
+				mock.expect_raycast()
+					.return_const(MouseGroundPoint::default());
 			}),
 			_Input::new().with_mock(|mock| {
 				mock.expect_get_input_state()
@@ -140,7 +137,7 @@ mod tests {
 
 		let input = app
 			.world_mut()
-			.run_system_once(_Result::parse::<_Ray, Res<_Input>>)?;
+			.run_system_once(_Result::parse::<Res<_Input>, ResMut<_RayCaster>>)?;
 
 		assert_eq!(ProcessInput::None, input);
 		Ok(())
@@ -149,8 +146,8 @@ mod tests {
 	#[test]
 	fn no_event_when_no_intersection() -> Result<(), RunSystemError> {
 		let mut app = setup(
-			_Ray::new().with_mock(|mock| {
-				mock.expect_intersect_at().return_const(None);
+			_RayCaster::new().with_mock(|mock| {
+				mock.expect_raycast().return_const(None);
 			}),
 			_Input::new().with_mock(|mock| {
 				mock.expect_get_input_state()
@@ -161,31 +158,9 @@ mod tests {
 
 		let input = app
 			.world_mut()
-			.run_system_once(_Result::parse::<_Ray, Res<_Input>>)?;
+			.run_system_once(_Result::parse::<Res<_Input>, ResMut<_RayCaster>>)?;
 
 		assert_eq!(ProcessInput::None, input);
-		Ok(())
-	}
-
-	#[test]
-	fn call_intersect_with_height_zero() -> Result<(), RunSystemError> {
-		let mut app = setup(
-			_Ray::new().with_mock(|mock| {
-				mock.expect_intersect_at()
-					.with(eq(0.))
-					.times(1)
-					.return_const(None);
-			}),
-			_Input::new().with_mock(|mock| {
-				mock.expect_get_input_state()
-					.with(eq(MovementKey::Pointer))
-					.return_const(InputState::just_pressed());
-			}),
-		);
-
-		_ = app
-			.world_mut()
-			.run_system_once(_Result::parse::<_Ray, Res<_Input>>)?;
 		Ok(())
 	}
 }

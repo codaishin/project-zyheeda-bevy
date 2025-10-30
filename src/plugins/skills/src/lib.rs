@@ -29,12 +29,8 @@ use common::{
 		handles_load_tracking::HandlesLoadTracking,
 		handles_loadout::HandlesLoadout,
 		handles_orientation::HandlesOrientation,
-		handles_physics::HandlesAllPhysicalEffects,
-		handles_player::{
-			ConfiguresPlayerSkillAnimations,
-			HandlesPlayerCameras,
-			HandlesPlayerMouse,
-		},
+		handles_physics::{HandlesAllPhysicalEffects, HandlesRaycast, RaycastSystemParam},
+		handles_player::ConfiguresPlayerSkillAnimations,
 		handles_saving::HandlesSaving,
 		handles_skill_behaviors::HandlesSkillBehaviors,
 		system_set_definition::SystemSetDefinition,
@@ -67,14 +63,10 @@ impl<TSaveGame, TPhysics, TLoading, TBehaviors, TAgents>
 	SkillsPlugin<(TSaveGame, TPhysics, TLoading, TBehaviors, TAgents)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesAllPhysicalEffects,
+	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesRaycast,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation + SystemSetDefinition,
-	TAgents: ThreadSafe
-		+ HandlesPlayerCameras
-		+ HandlesPlayerMouse
-		+ ConfiguresPlayerSkillAnimations
-		+ HandlesAgents,
+	TAgents: ThreadSafe + ConfiguresPlayerSkillAnimations + HandlesAgents,
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn from_plugins(
@@ -120,8 +112,11 @@ where
 		TSaveGame::register_savable_component::<Queue>(app);
 		TSaveGame::register_savable_component::<SkillExecuter>(app);
 
-		let execute_skill =
-			SkillExecuter::<RunSkillBehavior>::execute_system::<TPhysics, TBehaviors, TAgents>;
+		let execute_skill = SkillExecuter::<RunSkillBehavior>::execute_system::<
+			TPhysics,
+			TBehaviors,
+			RaycastSystemParam<TPhysics>,
+		>;
 
 		app.add_systems(
 			Update,
@@ -145,14 +140,10 @@ impl<TSaveGame, TPhysics, TLoading, TBehaviors, TAgents> Plugin
 	for SkillsPlugin<(TSaveGame, TPhysics, TLoading, TBehaviors, TAgents)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesAllPhysicalEffects,
+	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesRaycast,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation + SystemSetDefinition,
-	TAgents: ThreadSafe
-		+ HandlesPlayerCameras
-		+ HandlesPlayerMouse
-		+ ConfiguresPlayerSkillAnimations
-		+ HandlesAgents,
+	TAgents: ThreadSafe + ConfiguresPlayerSkillAnimations + HandlesAgents,
 {
 	fn build(&self, app: &mut App) {
 		self.skill_load(app);

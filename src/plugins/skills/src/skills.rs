@@ -4,10 +4,8 @@ pub(crate) mod lifetime_definition;
 use crate::{
 	behaviors::{
 		SkillBehaviorConfig,
-		SkillCaster,
 		spawn_skill::{OnSkillStop, SpawnOn},
 	},
-	components::SkillTarget,
 	traits::{ReleaseSkill, spawn_skill_behavior::SpawnSkillBehavior},
 };
 use bevy::prelude::*;
@@ -22,7 +20,7 @@ use common::{
 		handles_loadout::skills::{GetSkillId, SkillIcon, SkillToken},
 		handles_localization::Token,
 		handles_physics::HandlesAllPhysicalEffects,
-		handles_skill_behaviors::{HandlesSkillBehaviors, SkillSpawner},
+		handles_skill_behaviors::{HandlesSkillBehaviors, SkillCaster, SkillSpawner, SkillTarget},
 		load_asset::Path,
 	},
 	zyheeda_commands::ZyheedaCommands,
@@ -203,9 +201,9 @@ impl SpawnSkillBehavior for RunSkillBehavior {
 	fn spawn<TEffects, TSkillBehaviors>(
 		&self,
 		commands: &mut ZyheedaCommands,
-		caster: &SkillCaster,
+		caster: SkillCaster,
 		spawner: SkillSpawner,
-		target: &SkillTarget,
+		target: SkillTarget,
 	) -> OnSkillStop
 	where
 		TEffects: HandlesAllPhysicalEffects + 'static,
@@ -225,9 +223,9 @@ impl SpawnSkillBehavior for RunSkillBehavior {
 fn spawn<TEffects, TSkillBehaviors>(
 	behavior: &SkillBehaviorConfig,
 	commands: &mut ZyheedaCommands,
-	caster: &SkillCaster,
+	caster: SkillCaster,
 	spawner: SkillSpawner,
-	target: &SkillTarget,
+	target: SkillTarget,
 ) -> OnSkillStop
 where
 	TEffects: HandlesAllPhysicalEffects + 'static,
@@ -256,8 +254,7 @@ mod tests {
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
 		attributes::health::Health,
-		components::{outdated::Outdated, persistent_entity::PersistentEntity},
-		tools::collider_info::ColliderInfo,
+		components::persistent_entity::PersistentEntity,
 		traits::{
 			handles_physics::{Effect, HandlesPhysicalEffect},
 			handles_skill_behaviors::{Contact, HoldSkills, Projection, SkillEntities, SkillRoot},
@@ -340,30 +337,8 @@ mod tests {
 		}
 	}
 
-	fn effect_fn(e: &mut ZyheedaEntityCommands, c: &SkillCaster, t: &SkillTarget) {
-		e.try_insert(_Args {
-			caster: *c,
-			target: *t,
-		});
-	}
-
-	fn get_target() -> SkillTarget {
-		SkillTarget {
-			ray: Ray3d::new(
-				Vec3::new(1., 2., 3.),
-				Dir3::new_unchecked(Vec3::new(4., 5., 6.).normalize()),
-			),
-			collision_info: Some(ColliderInfo {
-				collider: Outdated {
-					entity: Entity::from_raw(11),
-					component: GlobalTransform::from_xyz(10., 10., 10.),
-				},
-				root: Some(Outdated {
-					entity: Entity::from_raw(1),
-					component: GlobalTransform::from_xyz(11., 11., 11.),
-				}),
-			}),
-		}
+	fn effect_fn(e: &mut ZyheedaEntityCommands, caster: SkillCaster, target: SkillTarget) {
+		e.try_insert(_Args { caster, target });
 	}
 
 	fn execute_callback<TCallback>(In(mut callback): In<TCallback>, mut cmd: ZyheedaCommands)
@@ -398,12 +373,7 @@ mod tests {
 		let mut app = setup();
 		let behavior = RunSkillBehavior::OnActive(
 			SkillBehaviorConfig::from_shape(SpawnSkill::Fn(|cmd, caster, _, target| SkillShape {
-				contact: cmd
-					.spawn(_Args {
-						caster: *caster,
-						target: *target,
-					})
-					.id(),
+				contact: cmd.spawn(_Args { caster, target }).id(),
 				projection: cmd.spawn(()).id(),
 				on_skill_stop: OnSkillStop::Ignore,
 			}))
@@ -411,13 +381,12 @@ mod tests {
 		);
 		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = SkillSpawner::Neutral;
-		let target = get_target();
+		let target = SkillTarget::Ground(Vec3::new(1., 2., 3.));
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
-				behavior.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(
-					cmd, &caster, spawner, &target,
-				);
+				behavior
+					.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(cmd, caster, spawner, target);
 			})?;
 
 		assert_eq!(
@@ -432,12 +401,7 @@ mod tests {
 		let mut app = setup();
 		let behavior = RunSkillBehavior::OnActive(
 			SkillBehaviorConfig::from_shape(SpawnSkill::Fn(|cmd, caster, _, target| SkillShape {
-				contact: cmd
-					.spawn(_Args {
-						caster: *caster,
-						target: *target,
-					})
-					.id(),
+				contact: cmd.spawn(_Args { caster, target }).id(),
 				projection: cmd.spawn(()).id(),
 				on_skill_stop: OnSkillStop::Ignore,
 			}))
@@ -445,13 +409,12 @@ mod tests {
 		);
 		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = SkillSpawner::Neutral;
-		let target = get_target();
+		let target = SkillTarget::Ground(Vec3::new(1., 2., 3.));
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
-				behavior.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(
-					cmd, &caster, spawner, &target,
-				);
+				behavior
+					.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(cmd, caster, spawner, target);
 			})?;
 
 		assert_eq!(
@@ -465,9 +428,9 @@ mod tests {
 	fn apply_contact_behavior_on_active() -> Result<(), RunSystemError> {
 		fn shape(
 			cmd: &mut ZyheedaCommands,
-			_: &SkillCaster,
+			_: SkillCaster,
 			_: SkillSpawner,
-			_: &SkillTarget,
+			_: SkillTarget,
 		) -> SkillShape {
 			SkillShape {
 				contact: cmd.spawn(_Contact).id(),
@@ -483,13 +446,12 @@ mod tests {
 		);
 		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = SkillSpawner::Neutral;
-		let target = get_target();
+		let target = SkillTarget::Ground(Vec3::new(1., 2., 3.));
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
-				behavior.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(
-					cmd, &caster, spawner, &target,
-				);
+				behavior
+					.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(cmd, caster, spawner, target);
 			})?;
 
 		assert_eq!(
@@ -504,25 +466,19 @@ mod tests {
 		let mut app = setup();
 		let behavior = RunSkillBehavior::OnActive(SkillBehaviorConfig::from_shape(SpawnSkill::Fn(
 			|cmd, caster, _, target| SkillShape {
-				contact: cmd
-					.spawn(_Args {
-						caster: *caster,
-						target: *target,
-					})
-					.id(),
+				contact: cmd.spawn(_Args { caster, target }).id(),
 				projection: cmd.spawn(()).id(),
 				on_skill_stop: OnSkillStop::Ignore,
 			},
 		)));
 		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = SkillSpawner::Neutral;
-		let target = get_target();
+		let target = SkillTarget::Ground(Vec3::new(1., 2., 3.));
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
-				behavior.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(
-					cmd, &caster, spawner, &target,
-				);
+				behavior
+					.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(cmd, caster, spawner, target);
 			})?;
 
 		assert_eq!(
@@ -536,9 +492,9 @@ mod tests {
 	fn apply_projection_behavior_on_active() -> Result<(), RunSystemError> {
 		fn shape(
 			cmd: &mut ZyheedaCommands,
-			_: &SkillCaster,
+			_: SkillCaster,
 			_: SkillSpawner,
-			_: &SkillTarget,
+			_: SkillTarget,
 		) -> SkillShape {
 			SkillShape {
 				contact: cmd.spawn(()).id(),
@@ -554,13 +510,12 @@ mod tests {
 		);
 		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = SkillSpawner::Neutral;
-		let target = get_target();
+		let target = SkillTarget::Ground(Vec3::new(1., 2., 3.));
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
-				behavior.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(
-					cmd, &caster, spawner, &target,
-				);
+				behavior
+					.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(cmd, caster, spawner, target);
 			})?;
 
 		let spawn_args = app
@@ -579,12 +534,7 @@ mod tests {
 		let mut app = setup();
 		let behavior = RunSkillBehavior::OnAim(
 			SkillBehaviorConfig::from_shape(SpawnSkill::Fn(|cmd, caster, _, target| SkillShape {
-				contact: cmd
-					.spawn(_Args {
-						caster: *caster,
-						target: *target,
-					})
-					.id(),
+				contact: cmd.spawn(_Args { caster, target }).id(),
 				projection: cmd.spawn(()).id(),
 				on_skill_stop: OnSkillStop::Ignore,
 			}))
@@ -592,13 +542,12 @@ mod tests {
 		);
 		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = SkillSpawner::Neutral;
-		let target = get_target();
+		let target = SkillTarget::Ground(Vec3::new(1., 2., 3.));
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
-				behavior.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(
-					cmd, &caster, spawner, &target,
-				);
+				behavior
+					.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(cmd, caster, spawner, target);
 			})?;
 
 		assert_eq!(
@@ -613,12 +562,7 @@ mod tests {
 		let mut app = setup();
 		let behavior = RunSkillBehavior::OnAim(
 			SkillBehaviorConfig::from_shape(SpawnSkill::Fn(|cmd, caster, _, target| SkillShape {
-				contact: cmd
-					.spawn(_Args {
-						caster: *caster,
-						target: *target,
-					})
-					.id(),
+				contact: cmd.spawn(_Args { caster, target }).id(),
 				projection: cmd.spawn(()).id(),
 				on_skill_stop: OnSkillStop::Ignore,
 			}))
@@ -626,13 +570,12 @@ mod tests {
 		);
 		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = SkillSpawner::Neutral;
-		let target = get_target();
+		let target = SkillTarget::Ground(Vec3::new(1., 2., 3.));
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
-				behavior.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(
-					cmd, &caster, spawner, &target,
-				);
+				behavior
+					.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(cmd, caster, spawner, target);
 			})?;
 
 		assert_eq!(
@@ -649,9 +592,9 @@ mod tests {
 
 		fn shape(
 			cmd: &mut ZyheedaCommands,
-			_: &SkillCaster,
+			_: SkillCaster,
 			_: SkillSpawner,
-			_: &SkillTarget,
+			_: SkillTarget,
 		) -> SkillShape {
 			SkillShape {
 				contact: cmd.spawn(_Contact).id(),
@@ -667,13 +610,12 @@ mod tests {
 		);
 		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = SkillSpawner::Neutral;
-		let target = get_target();
+		let target = SkillTarget::Ground(Vec3::new(1., 2., 3.));
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
-				behavior.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(
-					cmd, &caster, spawner, &target,
-				);
+				behavior
+					.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(cmd, caster, spawner, target);
 			})?;
 
 		let spawn_args = app
@@ -692,25 +634,19 @@ mod tests {
 		let mut app = setup();
 		let behavior = RunSkillBehavior::OnAim(SkillBehaviorConfig::from_shape(SpawnSkill::Fn(
 			|cmd, caster, _, target| SkillShape {
-				contact: cmd
-					.spawn(_Args {
-						caster: *caster,
-						target: *target,
-					})
-					.id(),
+				contact: cmd.spawn(_Args { caster, target }).id(),
 				projection: cmd.spawn(()).id(),
 				on_skill_stop: OnSkillStop::Ignore,
 			},
 		)));
 		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = SkillSpawner::Neutral;
-		let target = get_target();
+		let target = SkillTarget::Ground(Vec3::new(1., 2., 3.));
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
-				behavior.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(
-					cmd, &caster, spawner, &target,
-				);
+				behavior
+					.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(cmd, caster, spawner, target);
 			})?;
 
 		assert_eq!(
@@ -727,9 +663,9 @@ mod tests {
 
 		fn shape(
 			cmd: &mut ZyheedaCommands,
-			_: &SkillCaster,
+			_: SkillCaster,
 			_: SkillSpawner,
-			_: &SkillTarget,
+			_: SkillTarget,
 		) -> SkillShape {
 			SkillShape {
 				contact: cmd.spawn(()).id(),
@@ -745,13 +681,12 @@ mod tests {
 		);
 		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = SkillSpawner::Neutral;
-		let target = get_target();
+		let target = SkillTarget::Ground(Vec3::new(1., 2., 3.));
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
-				behavior.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(
-					cmd, &caster, spawner, &target,
-				);
+				behavior
+					.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(cmd, caster, spawner, target);
 			})?;
 
 		let spawn_args = app

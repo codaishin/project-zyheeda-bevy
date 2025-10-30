@@ -24,9 +24,8 @@ mod tests {
 		when_traveled_insert::WhenTraveled,
 	};
 	use common::{
-		components::persistent_entity::PersistentEntity,
 		tools::{Units, UnitsPerSecond},
-		traits::handles_skill_behaviors::{ContactShape, Motion, SkillSpawner},
+		traits::handles_skill_behaviors::{ContactShape, Motion, SkillCaster, SkillSpawner},
 	};
 	use testing::SingleThreadedApp;
 
@@ -40,7 +39,7 @@ mod tests {
 					destroyed_by: default(),
 				},
 				motion: Motion::Projectile {
-					caster: PersistentEntity::default(),
+					caster: SkillCaster::default(),
 					spawner: SkillSpawner::Neutral,
 					speed: UnitsPerSecond::from(1.),
 					range,

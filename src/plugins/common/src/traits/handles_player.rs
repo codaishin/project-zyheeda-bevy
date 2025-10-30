@@ -1,19 +1,14 @@
-use super::intersect_at::IntersectAt;
 use crate::{
 	errors::ErrorData,
 	tools::{
 		action_key::{movement::MovementKey, slot::SlotKey},
-		collider_info::ColliderInfo,
 		collider_radius::ColliderRadius,
 		movement_animation::MovementAnimation,
 		speed::Speed,
 	},
 	traits::accessors::get::GetProperty,
 };
-use bevy::{
-	math::{InvalidDirectionError, Ray3d},
-	prelude::*,
-};
+use bevy::{math::InvalidDirectionError, prelude::*};
 
 pub trait HandlesPlayer {
 	type TPlayer: Component;
@@ -21,14 +16,6 @@ pub trait HandlesPlayer {
 
 pub trait PlayerMainCamera {
 	type TPlayerMainCamera: Component + Default + KeyDirection<TKey = MovementKey>;
-}
-
-pub trait HandlesPlayerCameras {
-	type TCamRay: Resource + GetProperty<Option<Ray3d>> + IntersectAt;
-}
-
-pub trait HandlesPlayerMouse {
-	type TMouseHover: Resource + GetProperty<Option<ColliderInfo<Entity>>>;
 }
 
 pub trait ConfiguresPlayerMovement {

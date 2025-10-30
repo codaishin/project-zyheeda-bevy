@@ -39,6 +39,7 @@ fn apply_facing(transforms: &mut Query<&mut Transform>, id: Entity, target: Vec3
 	let Ok(mut transform) = transforms.get_mut(id) else {
 		return;
 	};
+	let target = target.with_y(transform.translation.y);
 	if transform.translation == target {
 		return;
 	}
@@ -120,7 +121,7 @@ mod tests {
 		let mut app = setup();
 		let agent = app
 			.world_mut()
-			.spawn((Transform::from_xyz(4., 5., 6.), _Face(Face::Target)))
+			.spawn((Transform::from_xyz(4., 2., 6.), _Face(Face::Target)))
 			.id();
 		app.insert_resource(_RayCast::new().with_mock(|mock| {
 			mock.expect_raycast()
@@ -135,7 +136,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(1., 2., 3.), Vec3::Y)),
+			Some(&Transform::from_xyz(4., 2., 6.).looking_at(Vec3::new(1., 2., 3.), Vec3::Y)),
 			app.world().entity(agent).get::<Transform>()
 		);
 	}
@@ -143,7 +144,7 @@ mod tests {
 	#[test]
 	fn do_face_entity() {
 		let mut app = setup();
-		let entity = app.world_mut().spawn(Transform::from_xyz(6., 7., 20.)).id();
+		let entity = app.world_mut().spawn(Transform::from_xyz(6., 5., 20.)).id();
 		let agent = app
 			.world_mut()
 			.spawn((Transform::from_xyz(4., 5., 6.), _Face(Face::Target)))
@@ -155,14 +156,14 @@ mod tests {
 				}))
 				.return_const(MouseHoversOver::Object {
 					entity,
-					point: Vec3::new(4., 3., 7.),
+					point: Vec3::new(4., 5., 7.),
 				});
 		}));
 
 		app.update();
 
 		assert_eq!(
-			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(6., 7., 20.), Vec3::Y)),
+			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(6., 5., 20.), Vec3::Y)),
 			app.world().entity(agent).get::<Transform>()
 		);
 	}
@@ -184,13 +185,32 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(10., 11., 12.), Vec3::Y)),
+			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(10., 5., 12.), Vec3::Y)),
 			app.world().entity(agent).get::<Transform>()
 		);
 	}
 
 	#[test]
 	fn face_translation() {
+		let mut app = setup();
+		let agent = app
+			.world_mut()
+			.spawn((
+				Transform::from_xyz(4., 5., 6.),
+				_Face(Face::Translation(Vec3::new(10., 5., 12.))),
+			))
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(10., 5., 12.), Vec3::Y)),
+			app.world().entity(agent).get::<Transform>()
+		);
+	}
+
+	#[test]
+	fn face_translation_ignoring_height_difference() {
 		let mut app = setup();
 		let agent = app
 			.world_mut()
@@ -203,7 +223,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(10., 11., 12.), Vec3::Y)),
+			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(10., 5., 12.), Vec3::Y)),
 			app.world().entity(agent).get::<Transform>()
 		);
 	}

@@ -167,6 +167,10 @@ pub struct MouseHover {
 	pub exclude: Vec<Entity>,
 }
 
+impl MouseHover {
+	pub const NO_EXCLUDES: Self = Self { exclude: vec![] };
+}
+
 impl RaycastResult for MouseHover {
 	type TResult = Option<MouseHoversOver>;
 }

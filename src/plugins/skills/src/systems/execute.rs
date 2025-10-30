@@ -1,11 +1,16 @@
-use crate::{behaviors::SkillCaster, components::SkillTarget, traits::Execute};
-use bevy::{ecs::component::Mutable, prelude::*};
+use crate::traits::Execute;
+use bevy::{
+	ecs::{
+		component::Mutable,
+		system::{StaticSystemParam, SystemParam},
+	},
+	prelude::*,
+};
 use common::{
 	components::persistent_entity::PersistentEntity,
-	tools::collider_info::ColliderInfo,
 	traits::{
-		accessors::get::GetProperty,
-		handles_player::{HandlesPlayerCameras, HandlesPlayerMouse},
+		handles_physics::{MouseHover, MouseHoversOver, Raycast},
+		handles_skill_behaviors::{SkillCaster, SkillTarget},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -13,86 +18,69 @@ use common::{
 impl<T> ExecuteSkills for T where T: Component<Mutability = Mutable> + Sized {}
 
 pub(crate) trait ExecuteSkills: Component<Mutability = Mutable> + Sized {
-	fn execute_system<TEffects, TSkillBehaviors, TPlayers>(
-		cam_ray: Res<TPlayers::TCamRay>,
-		hover: Res<TPlayers::TMouseHover>,
+	fn execute_system<TEffects, TSkillBehaviors, TRaycast>(
+		mut ray_cast: StaticSystemParam<TRaycast>,
 		mut commands: ZyheedaCommands,
-		mut agents: Query<(&PersistentEntity, &mut Self), Changed<Self>>,
-		transforms: Query<&GlobalTransform>,
+		mut agents: Query<(Entity, &mut Self), Changed<Self>>,
+		persistent_entities: Query<&PersistentEntity>,
 	) where
-		for<'w, 's> Self: Execute<TEffects, TSkillBehaviors>,
-		TPlayers: HandlesPlayerCameras + HandlesPlayerMouse,
+		Self: Execute<TEffects, TSkillBehaviors>,
+		TRaycast: for<'w, 's> SystemParam<Item<'w, 's>: Raycast<MouseHover>>,
 	{
 		for (entity, mut skill_executer) in &mut agents {
-			let Some(target) = get_target(cam_ray.as_ref(), hover.as_ref(), &transforms) else {
+			let Some(target) = get_target(&mut ray_cast, &persistent_entities) else {
 				continue;
 			};
-			skill_executer.execute(&mut commands, &SkillCaster(*entity), &target);
+			let Ok(entity) = persistent_entities.get(entity) else {
+				continue;
+			};
+			skill_executer.execute(&mut commands, SkillCaster(*entity), target);
 		}
 	}
 }
 
-fn get_target<TCamRay, TMouseHover>(
-	cam_ray: &TCamRay,
-	hover: &TMouseHover,
-	transforms: &Query<&GlobalTransform>,
+fn get_target<TRaycast>(
+	ray_cast: &mut StaticSystemParam<TRaycast>,
+	persistent_entities: &Query<&PersistentEntity>,
 ) -> Option<SkillTarget>
 where
-	TCamRay: Resource + GetProperty<Option<Ray3d>>,
-	TMouseHover: Resource + GetProperty<Option<ColliderInfo<Entity>>>,
+	TRaycast: for<'w, 's> SystemParam<Item<'w, 's>: Raycast<MouseHover>>,
 {
-	let get_transform = |entity| transforms.get(entity).ok().cloned();
-
-	Some(SkillTarget {
-		ray: cam_ray.get_property()?,
-		collision_info: hover
-			.get_property()
-			.and_then(|collider_info| collider_info.with_component(get_transform)),
-	})
+	match ray_cast.raycast(MouseHover::NO_EXCLUDES) {
+		Some(MouseHoversOver::Ground { point }) => Some(SkillTarget::from(point)),
+		Some(MouseHoversOver::Object { entity, .. }) => persistent_entities
+			.get(entity)
+			.ok()
+			.map(|e| SkillTarget::from(*e)),
+		None => None,
+	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{
-		components::outdated::Outdated,
-		tools::collider_info::ColliderInfo,
-		traits::intersect_at::IntersectAt,
-	};
+	use macros::NestedMocks;
+	use mockall::{automock, predicate::eq};
 	use std::ops::DerefMut;
-	use testing::SingleThreadedApp;
+	use testing::{NestedMocks, SingleThreadedApp};
 
-	struct _Players;
-
-	impl HandlesPlayerCameras for _Players {
-		type TCamRay = _CamRay;
+	#[derive(Resource, NestedMocks)]
+	struct _RayCaster {
+		mock: Mock_RayCaster,
 	}
 
-	impl HandlesPlayerMouse for _Players {
-		type TMouseHover = _MouseHover;
-	}
-
-	#[derive(Resource, Default)]
-	pub struct _CamRay(Option<Ray3d>);
-
-	impl GetProperty<Option<Ray3d>> for _CamRay {
-		fn get_property(&self) -> Option<Ray3d> {
-			self.0
+	impl _RayCaster {
+		fn returning(hover: MouseHoversOver) -> Self {
+			Self::new().with_mock(|mock| {
+				mock.expect_raycast().return_const(hover);
+			})
 		}
 	}
 
-	impl IntersectAt for _CamRay {
-		fn intersect_at(&self, _: f32) -> Option<Vec3> {
-			panic!("should not be called")
-		}
-	}
-
-	#[derive(Resource, Default)]
-	pub struct _MouseHover(Option<ColliderInfo<Entity>>);
-
-	impl GetProperty<Option<ColliderInfo<Entity>>> for _MouseHover {
-		fn get_property(&self) -> Option<ColliderInfo<Entity>> {
-			self.0
+	#[automock]
+	impl Raycast<MouseHover> for _RayCaster {
+		fn raycast(&mut self, args: MouseHover) -> Option<MouseHoversOver> {
+			self.mock.raycast(args)
 		}
 	}
 
@@ -106,51 +94,19 @@ mod tests {
 	struct _HandlesSkillBehaviors;
 
 	impl Execute<_HandlesEffects, _HandlesSkillBehaviors> for _Executor {
-		fn execute(&mut self, _: &mut ZyheedaCommands, caster: &SkillCaster, target: &SkillTarget) {
-			self.called_with.push((*caster, *target));
+		fn execute(&mut self, _: &mut ZyheedaCommands, caster: SkillCaster, target: SkillTarget) {
+			self.called_with.push((caster, target));
 		}
 	}
 
-	fn set_target(app: &mut App) -> SkillTarget {
-		let cam_ray = Ray3d::new(
-			Vec3::new(1., 2., 3.),
-			Dir3::new_unchecked(Vec3::new(4., 5., 6.).normalize()),
-		);
-		app.world_mut().resource_mut::<_CamRay>().0 = Some(cam_ray);
-
-		let collider_transform = GlobalTransform::from_xyz(10., 10., 10.);
-		let collider = app.world_mut().spawn(collider_transform).id();
-		let root_transform = GlobalTransform::from_xyz(11., 11., 11.);
-		let root = app.world_mut().spawn(root_transform).id();
-
-		app.world_mut().resource_mut::<_MouseHover>().0 = Some(ColliderInfo {
-			collider,
-			root: Some(root),
-		});
-
-		SkillTarget {
-			ray: cam_ray,
-			collision_info: Some(ColliderInfo {
-				collider: Outdated {
-					entity: collider,
-					component: collider_transform,
-				},
-				root: Some(Outdated {
-					entity: root,
-					component: root_transform,
-				}),
-			}),
-		}
-	}
-
-	fn setup() -> App {
-		let execute_system =
-			_Executor::execute_system::<_HandlesEffects, _HandlesSkillBehaviors, _Players>;
-
+	fn setup(ray_caster: _RayCaster) -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.init_resource::<_CamRay>();
-		app.init_resource::<_MouseHover>();
-		app.add_systems(Update, execute_system);
+
+		app.insert_resource(ray_caster);
+		app.add_systems(
+			Update,
+			_Executor::execute_system::<_HandlesEffects, _HandlesSkillBehaviors, ResMut<_RayCaster>>,
+		);
 
 		app
 	}
@@ -162,9 +118,17 @@ mod tests {
 	}
 
 	#[test]
-	fn execute_skill() {
-		let mut app = setup();
-		let target = set_target(&mut app);
+	fn execute_skill_ground_targeted() {
+		let hover = MouseHoversOver::Ground {
+			point: Vec3::new(1., 2., 3.),
+		};
+		let target = SkillTarget::from(Vec3::new(1., 2., 3.));
+		let mut app = setup(_RayCaster::new().with_mock(|mock| {
+			mock.expect_raycast()
+				.times(1)
+				.with(eq(MouseHover::NO_EXCLUDES))
+				.return_const(hover);
+		}));
 		let persistent_entity = PersistentEntity::default();
 		let entity = app
 			.world_mut()
@@ -187,9 +151,49 @@ mod tests {
 	}
 
 	#[test]
+	fn execute_skill_entity_targeted() {
+		let mut app = setup(_RayCaster::new());
+		let persistent_entity = PersistentEntity::default();
+		let entity = app
+			.world_mut()
+			.spawn((
+				persistent_entity,
+				_Executor {
+					called_with: vec![],
+				},
+			))
+			.id();
+		let persistent_target = PersistentEntity::default();
+		let target = app.world_mut().spawn(persistent_target).id();
+		let hover = MouseHoversOver::Object {
+			entity: target,
+			point: Vec3::default(),
+		};
+		let target = SkillTarget::Entity(persistent_target);
+		app.insert_resource(_RayCaster::new().with_mock(|mock| {
+			mock.expect_raycast()
+				.times(1)
+				.with(eq(MouseHover::NO_EXCLUDES))
+				.return_const(hover);
+		}));
+
+		app.update();
+
+		assert_eq!(
+			Some(&_Executor {
+				called_with: vec![(SkillCaster(persistent_entity), target)]
+			}),
+			app.world().entity(entity).get::<_Executor>()
+		);
+	}
+
+	#[test]
 	fn execute_skill_only_once() {
-		let mut app = setup();
-		let target = set_target(&mut app);
+		let hover = MouseHoversOver::Ground {
+			point: Vec3::new(1., 2., 3.),
+		};
+		let target = SkillTarget::from(Vec3::new(1., 2., 3.));
+		let mut app = setup(_RayCaster::returning(hover));
 		let persistent_entity = PersistentEntity::default();
 		let entity = app
 			.world_mut()
@@ -214,8 +218,11 @@ mod tests {
 
 	#[test]
 	fn execute_again_after_mutable_deref() {
-		let mut app = setup();
-		let target = set_target(&mut app);
+		let hover = MouseHoversOver::Ground {
+			point: Vec3::new(1., 2., 3.),
+		};
+		let target = SkillTarget::from(Vec3::new(1., 2., 3.));
+		let mut app = setup(_RayCaster::returning(hover));
 		let persistent_entity = PersistentEntity::default();
 		let entity = app
 			.world_mut()

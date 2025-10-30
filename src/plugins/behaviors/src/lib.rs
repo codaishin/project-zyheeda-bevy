@@ -34,13 +34,7 @@ use common::{
 			HandlesRaycast,
 			RaycastSystemParam,
 		},
-		handles_player::{
-			ConfiguresPlayerMovement,
-			HandlesPlayer,
-			HandlesPlayerCameras,
-			HandlesPlayerMouse,
-			PlayerMainCamera,
-		},
+		handles_player::{ConfiguresPlayerMovement, HandlesPlayer, PlayerMainCamera},
 		handles_saving::HandlesSaving,
 		handles_skill_behaviors::{
 			Contact,
@@ -101,13 +95,8 @@ where
 		+ HandlesAllPhysicalEffects
 		+ HandlesRaycast,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
-	TAgents: ThreadSafe
-		+ HandlesPlayer
-		+ PlayerMainCamera
-		+ HandlesPlayerCameras
-		+ HandlesPlayerMouse
-		+ ConfiguresPlayerMovement
-		+ HandlesEnemies,
+	TAgents:
+		ThreadSafe + HandlesPlayer + PlayerMainCamera + ConfiguresPlayerMovement + HandlesEnemies,
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn from_plugins(
@@ -144,8 +133,6 @@ where
 	TAgents: ThreadSafe
 		+ HandlesPlayer
 		+ PlayerMainCamera
-		+ HandlesPlayerCameras
-		+ HandlesPlayerMouse
 		+ ConfiguresPlayerMovement
 		+ HandlesEnemies
 		+ HandlesAgents,
@@ -159,8 +146,10 @@ where
 		TSaveGame::register_savable_component::<OverrideFace>(app);
 		TSaveGame::register_savable_component::<Movement<PathOrWasd<TPhysics::TMotion>>>(app);
 
-		let point_input =
-			PointerInput::<TPhysics::TMotion>::parse::<TAgents::TCamRay, InputSystemParam<TInput>>;
+		let point_input = PointerInput::<TPhysics::TMotion>::parse::<
+			InputSystemParam<TInput>,
+			RaycastSystemParam<TPhysics>,
+		>;
 		let wasd_input = WasdInput::<TPhysics::TMotion>::parse::<
 			TAgents::TPlayerMainCamera,
 			InputSystemParam<TInput>,

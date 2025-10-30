@@ -16,8 +16,8 @@ impl AttachGravity {
 	pub fn attach<TPhysics>(
 		&self,
 		entity: &mut ZyheedaEntityCommands,
-		_: &SkillCaster,
-		_: &SkillTarget,
+		_: SkillCaster,
+		_: SkillTarget,
 	) where
 		TPhysics: HandlesPhysicalEffect<Gravity>,
 	{
@@ -64,8 +64,8 @@ mod tests {
 		let mut entity = commands.spawn(()).into();
 		AttachGravity { strength: pull }.attach::<_HandlesEffects>(
 			&mut entity,
-			&SkillCaster::from(*CASTER),
-			&SkillTarget::default(),
+			SkillCaster(*CASTER),
+			SkillTarget::default(),
 		);
 		entity.id()
 	}
