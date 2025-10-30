@@ -9,14 +9,13 @@ pub(crate) mod skill_state;
 pub(crate) mod spawn_skill_behavior;
 pub(crate) mod visualize_item;
 
-use crate::{
-	behaviors::SkillCaster,
-	components::SkillTarget,
-	skills::{AnimationStrategy, RunSkillBehavior, Skill},
-};
+use crate::skills::{AnimationStrategy, RunSkillBehavior, Skill};
 use common::{
 	tools::{action_key::slot::SlotKey, item_type::ItemType},
-	traits::state_duration::UpdatedStates,
+	traits::{
+		handles_skill_behaviors::{SkillCaster, SkillTarget},
+		state_duration::UpdatedStates,
+	},
 	zyheeda_commands::ZyheedaCommands,
 };
 
@@ -84,10 +83,5 @@ pub trait Schedule<TBehavior> {
 }
 
 pub(crate) trait Execute<TEffects, TSkillBehavior> {
-	fn execute(
-		&mut self,
-		commands: &mut ZyheedaCommands,
-		caster: &SkillCaster,
-		target: &SkillTarget,
-	);
+	fn execute(&mut self, commands: &mut ZyheedaCommands, caster: SkillCaster, target: SkillTarget);
 }

@@ -1,7 +1,6 @@
 mod assets;
 mod components;
 mod observers;
-mod resources;
 mod systems;
 
 use crate::{
@@ -15,13 +14,7 @@ use crate::{
 		skill_animation::SkillAnimation,
 	},
 	observers::agent::{insert_concrete_agent::InsertConcreteAgent, insert_from::InsertFrom},
-	resources::{cam_ray::CamRay, mouse_hover::MouseHover},
-	systems::{
-		agent::insert_model::InsertModelSystem,
-		set_cam_ray::set_cam_ray,
-		set_mouse_hover::set_mouse_hover,
-		toggle_walk_run::player_toggle_walk_run,
-	},
+	systems::{agent::insert_model::InsertModelSystem, toggle_walk_run::player_toggle_walk_run},
 };
 use bevy::prelude::*;
 use common::{
@@ -35,13 +28,11 @@ use common::{
 		handles_input::{HandlesInput, InputSystemParam},
 		handles_lights::HandlesLights,
 		handles_map_generation::HandlesMapGeneration,
-		handles_physics::HandlesPhysicalAttributes,
+		handles_physics::{HandlesPhysicalAttributes, HandlesRaycast},
 		handles_player::{
 			ConfiguresPlayerMovement,
 			ConfiguresPlayerSkillAnimations,
 			HandlesPlayer,
-			HandlesPlayerCameras,
-			HandlesPlayerMouse,
 			PlayerMainCamera,
 		},
 		handles_saving::HandlesSaving,
@@ -69,7 +60,7 @@ where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesPhysicalAttributes,
+	TPhysics: ThreadSafe + HandlesPhysicalAttributes + HandlesRaycast,
 	TAnimations: ThreadSafe + RegisterAnimations,
 	TLights: ThreadSafe + HandlesLights,
 	TMaps: ThreadSafe + HandlesMapGeneration,
@@ -101,7 +92,7 @@ where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesPhysicalAttributes,
+	TPhysics: ThreadSafe + HandlesPhysicalAttributes + HandlesRaycast,
 	TAnimations: ThreadSafe + RegisterAnimations,
 	TLights: ThreadSafe + HandlesLights,
 	TMaps: ThreadSafe + HandlesMapGeneration,
@@ -151,14 +142,7 @@ where
 		app.add_prefab_observer::<VoidSphere, ()>();
 
 		// # Behaviors
-		app.init_resource::<CamRay>();
-		app.init_resource::<MouseHover>();
-		app.add_systems(
-			First,
-			(set_cam_ray::<Camera, PlayerCamera>, set_mouse_hover)
-				.chain()
-				.run_if(in_state(GameState::Play)),
-		);
+		app.register_required_components::<PlayerCamera, TPhysics::TWorldCamera>();
 		app.add_systems(
 			Update,
 			player_toggle_walk_run::<InputSystemParam<TInput>>
@@ -174,14 +158,6 @@ impl<TDependencies> HandlesEnemies for AgentsPlugin<TDependencies> {
 
 impl<TDependencies> HandlesPlayer for AgentsPlugin<TDependencies> {
 	type TPlayer = Player;
-}
-
-impl<TDependencies> HandlesPlayerCameras for AgentsPlugin<TDependencies> {
-	type TCamRay = CamRay;
-}
-
-impl<TDependencies> HandlesPlayerMouse for AgentsPlugin<TDependencies> {
-	type TMouseHover = MouseHover;
 }
 
 impl<TDependencies> ConfiguresPlayerMovement for AgentsPlugin<TDependencies> {

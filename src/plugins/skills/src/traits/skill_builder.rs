@@ -1,14 +1,16 @@
-use crate::{
-	behaviors::{SkillCaster, spawn_skill::OnSkillStop},
-	components::SkillTarget,
-	skills::lifetime_definition::LifeTimeDefinition,
-};
+use crate::{behaviors::spawn_skill::OnSkillStop, skills::lifetime_definition::LifeTimeDefinition};
 use bevy::prelude::*;
 use common::{
 	components::{lifetime::Lifetime, persistent_entity::PersistentEntity},
 	traits::{
 		accessors::get::TryApplyOn,
-		handles_skill_behaviors::{HandlesSkillBehaviors, SkillEntities, SkillSpawner},
+		handles_skill_behaviors::{
+			HandlesSkillBehaviors,
+			SkillCaster,
+			SkillEntities,
+			SkillSpawner,
+			SkillTarget,
+		},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -17,9 +19,9 @@ pub(crate) trait SkillBuilder {
 	fn build<TSkillBehaviors>(
 		&self,
 		commands: &mut ZyheedaCommands,
-		caster: &SkillCaster,
+		caster: SkillCaster,
 		spawner: SkillSpawner,
-		target: &SkillTarget,
+		target: SkillTarget,
 	) -> SkillShape
 	where
 		TSkillBehaviors: HandlesSkillBehaviors + 'static;
@@ -32,9 +34,9 @@ where
 	fn build<TSkillBehaviors>(
 		&self,
 		commands: &mut ZyheedaCommands,
-		caster: &SkillCaster,
+		caster: SkillCaster,
 		spawner: SkillSpawner,
-		target: &SkillTarget,
+		target: SkillTarget,
 	) -> SkillShape
 	where
 		TSkillBehaviors: HandlesSkillBehaviors + 'static,
@@ -79,9 +81,9 @@ pub(crate) trait SpawnShape {
 	fn spawn_shape<TSkillBehaviors>(
 		&self,
 		commands: &mut ZyheedaCommands,
-		caster: &SkillCaster,
+		caster: SkillCaster,
 		spawner: SkillSpawner,
-		target: &SkillTarget,
+		target: SkillTarget,
 	) -> SkillEntities
 	where
 		TSkillBehaviors: HandlesSkillBehaviors + 'static;
@@ -100,12 +102,7 @@ pub(crate) struct SkillShape {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{
-		app::App,
-		ecs::system::{RunSystemError, RunSystemOnce},
-		math::{Ray3d, Vec3},
-		utils::default,
-	};
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
 		components::persistent_entity::PersistentEntity,
 		tools::action_key::slot::SlotKey,
@@ -176,18 +173,18 @@ mod tests {
 		fn spawn_shape<TSkillBehaviors>(
 			&self,
 			commands: &mut ZyheedaCommands,
-			caster: &SkillCaster,
+			caster: SkillCaster,
 			spawner: SkillSpawner,
-			target: &SkillTarget,
+			target: SkillTarget,
 		) -> SkillEntities
 		where
 			TSkillBehaviors: HandlesSkillBehaviors + 'static,
 		{
 			let root = commands
 				.spawn((_Root {
-					caster: *caster,
+					caster,
 					spawner,
-					target: *target,
+					target,
 				},))
 				.id();
 			let contact = commands.spawn(_Contact).id();
@@ -209,7 +206,7 @@ mod tests {
 		mut commands: ZyheedaCommands,
 	) -> SkillShape {
 		let In((skill, caster, spawner, target)) = args;
-		skill.build::<_HandlesSkillBehaviors>(&mut commands, &caster, spawner, &target)
+		skill.build::<_HandlesSkillBehaviors>(&mut commands, caster, spawner, target)
 	}
 
 	macro_rules! find_entity_with {
@@ -232,10 +229,7 @@ mod tests {
 		let mut app = setup();
 		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = SkillSpawner::Neutral;
-		let target = SkillTarget {
-			ray: Ray3d::new(Vec3::X, Dir3::Z),
-			..default()
-		};
+		let target = SkillTarget::Entity(PersistentEntity::default());
 		let skill = _Skill {
 			lifetime: LifeTimeDefinition::UntilStopped,
 		};
@@ -256,10 +250,7 @@ mod tests {
 		let mut app = setup();
 		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = SkillSpawner::Neutral;
-		let target = SkillTarget {
-			ray: Ray3d::new(Vec3::X, Dir3::Z),
-			..default()
-		};
+		let target = SkillTarget::Entity(PersistentEntity::default());
 		let skill = _Skill {
 			lifetime: LifeTimeDefinition::UntilStopped,
 		};
@@ -280,10 +271,7 @@ mod tests {
 		let mut app = setup();
 		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = SkillSpawner::Neutral;
-		let target = SkillTarget {
-			ray: Ray3d::new(Vec3::X, Dir3::Z),
-			..default()
-		};
+		let target = SkillTarget::Entity(PersistentEntity::default());
 		let skill = _Skill {
 			lifetime: LifeTimeDefinition::UntilStopped,
 		};
@@ -307,10 +295,7 @@ mod tests {
 		let mut app = setup();
 		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = SkillSpawner::Neutral;
-		let target = SkillTarget {
-			ray: Ray3d::new(Vec3::X, Dir3::Z),
-			..default()
-		};
+		let target = SkillTarget::Entity(PersistentEntity::default());
 		let skill = _Skill {
 			lifetime: LifeTimeDefinition::UntilStopped,
 		};
@@ -328,10 +313,7 @@ mod tests {
 		let mut app = setup();
 		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = SkillSpawner::Neutral;
-		let target = SkillTarget {
-			ray: Ray3d::new(Vec3::X, Dir3::Z),
-			..default()
-		};
+		let target = SkillTarget::Entity(PersistentEntity::default());
 		let skill = _Skill {
 			lifetime: LifeTimeDefinition::UntilOutlived(Duration::from_nanos(42)),
 		};
@@ -349,10 +331,7 @@ mod tests {
 		let mut app = setup();
 		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = SkillSpawner::Neutral;
-		let target = SkillTarget {
-			ray: Ray3d::new(Vec3::X, Dir3::Z),
-			..default()
-		};
+		let target = SkillTarget::Entity(PersistentEntity::default());
 		let skill = _Skill {
 			lifetime: LifeTimeDefinition::UntilOutlived(Duration::from_nanos(42)),
 		};
@@ -373,10 +352,7 @@ mod tests {
 		let mut app = setup();
 		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = SkillSpawner::Neutral;
-		let target = SkillTarget {
-			ray: Ray3d::new(Vec3::X, Dir3::Z),
-			..default()
-		};
+		let target = SkillTarget::Entity(PersistentEntity::default());
 		let skill = _Skill {
 			lifetime: LifeTimeDefinition::Infinite,
 		};

@@ -1,14 +1,8 @@
-use crate::{
-	behaviors::{
-		SkillCaster,
-		spawn_skill::{OnSkillStop, SpawnOn},
-	},
-	components::SkillTarget,
-};
+use crate::behaviors::spawn_skill::{OnSkillStop, SpawnOn};
 use common::{
 	traits::{
 		handles_physics::HandlesAllPhysicalEffects,
-		handles_skill_behaviors::{HandlesSkillBehaviors, SkillSpawner},
+		handles_skill_behaviors::{HandlesSkillBehaviors, SkillCaster, SkillSpawner, SkillTarget},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -18,9 +12,9 @@ pub(crate) trait SpawnSkillBehavior {
 	fn spawn<TEffects, TSkillBehaviors>(
 		&self,
 		commands: &mut ZyheedaCommands,
-		caster: &SkillCaster,
+		caster: SkillCaster,
 		spawner: SkillSpawner,
-		target: &SkillTarget,
+		target: SkillTarget,
 	) -> OnSkillStop
 	where
 		TEffects: HandlesAllPhysicalEffects + 'static,

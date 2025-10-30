@@ -9,7 +9,6 @@ pub mod insert_asset;
 pub mod is_blocker;
 pub mod lifetime;
 pub mod no_target;
-pub mod outdated;
 pub mod persistent_entity;
 pub mod protected;
 pub mod ui_node_for;

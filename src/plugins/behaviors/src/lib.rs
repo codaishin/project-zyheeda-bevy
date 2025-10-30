@@ -27,14 +27,14 @@ use common::{
 		handles_input::{HandlesInput, InputSystemParam},
 		handles_orientation::{Face, HandlesOrientation},
 		handles_path_finding::HandlesPathFinding,
-		handles_physics::{HandlesAllPhysicalEffects, HandlesMotion, HandlesPhysicalObjects},
-		handles_player::{
-			ConfiguresPlayerMovement,
-			HandlesPlayer,
-			HandlesPlayerCameras,
-			HandlesPlayerMouse,
-			PlayerMainCamera,
+		handles_physics::{
+			HandlesAllPhysicalEffects,
+			HandlesMotion,
+			HandlesPhysicalObjects,
+			HandlesRaycast,
+			RaycastSystemParam,
 		},
+		handles_player::{ConfiguresPlayerMovement, HandlesPlayer, PlayerMainCamera},
 		handles_saving::HandlesSaving,
 		handles_skill_behaviors::{
 			Contact,
@@ -89,15 +89,14 @@ where
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
-	TPhysics: ThreadSafe + HandlesPhysicalObjects + HandlesAllPhysicalEffects,
+	TPhysics: ThreadSafe
+		+ HandlesPhysicalObjects
+		+ HandlesMotion
+		+ HandlesAllPhysicalEffects
+		+ HandlesRaycast,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
-	TAgents: ThreadSafe
-		+ HandlesPlayer
-		+ PlayerMainCamera
-		+ HandlesPlayerCameras
-		+ HandlesPlayerMouse
-		+ ConfiguresPlayerMovement
-		+ HandlesEnemies,
+	TAgents:
+		ThreadSafe + HandlesPlayer + PlayerMainCamera + ConfiguresPlayerMovement + HandlesEnemies,
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn from_plugins(
@@ -125,13 +124,15 @@ where
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
-	TPhysics: ThreadSafe + HandlesPhysicalObjects + HandlesMotion + HandlesAllPhysicalEffects,
+	TPhysics: ThreadSafe
+		+ HandlesPhysicalObjects
+		+ HandlesMotion
+		+ HandlesAllPhysicalEffects
+		+ HandlesRaycast,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
 	TAgents: ThreadSafe
 		+ HandlesPlayer
 		+ PlayerMainCamera
-		+ HandlesPlayerCameras
-		+ HandlesPlayerMouse
 		+ ConfiguresPlayerMovement
 		+ HandlesEnemies
 		+ HandlesAgents,
@@ -145,8 +146,10 @@ where
 		TSaveGame::register_savable_component::<OverrideFace>(app);
 		TSaveGame::register_savable_component::<Movement<PathOrWasd<TPhysics::TMotion>>>(app);
 
-		let point_input =
-			PointerInput::<TPhysics::TMotion>::parse::<TAgents::TCamRay, InputSystemParam<TInput>>;
+		let point_input = PointerInput::<TPhysics::TMotion>::parse::<
+			InputSystemParam<TInput>,
+			RaycastSystemParam<TPhysics>,
+		>;
 		let wasd_input = WasdInput::<TPhysics::TMotion>::parse::<
 			TAgents::TPlayerMainCamera,
 			InputSystemParam<TInput>,
@@ -223,7 +226,7 @@ where
 					(
 						Movement::<TPhysics::TMotion>::set_faces,
 						TAgents::TPlayer::get_faces
-							.pipe(execute_player_face::<TAgents::TMouseHover, TAgents::TCamRay>),
+							.pipe(execute_player_face::<RaycastSystemParam<TPhysics>>),
 						TAgents::TEnemy::get_faces.pipe(execute_enemy_face),
 					)
 						.chain(),

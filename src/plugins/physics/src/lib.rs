@@ -13,6 +13,8 @@ use crate::{
 		default_attributes::DefaultAttributes,
 		effect::force::ForceEffect,
 		motion::Motion,
+		no_hover::NoMouseHover,
+		world_camera::WorldCamera,
 	},
 	observers::update_blockers::UpdateBlockersObserver,
 	systems::{
@@ -24,17 +26,20 @@ use crate::{
 };
 use bevy::{ecs::component::Mutable, prelude::*};
 use bevy_rapier3d::prelude::Velocity;
-use common::traits::{
-	delta::Delta,
-	handles_physics::{
-		HandlesMotion,
-		HandlesPhysicalAttributes,
-		HandlesPhysicalObjects,
-		HandlesRaycast,
+use common::{
+	systems::log::OnError,
+	traits::{
+		delta::Delta,
+		handles_physics::{
+			HandlesMotion,
+			HandlesPhysicalAttributes,
+			HandlesPhysicalObjects,
+			HandlesRaycast,
+		},
+		handles_saving::{HandlesSaving, SavableComponent},
+		register_derived_component::RegisterDerivedComponent,
+		thread_safe::ThreadSafe,
 	},
-	handles_saving::{HandlesSaving, SavableComponent},
-	register_derived_component::RegisterDerivedComponent,
-	thread_safe::ThreadSafe,
 };
 use components::{
 	active_beam::ActiveBeam,
@@ -82,6 +87,17 @@ where
 		TSaveGame::register_savable_component::<Motion>(app);
 
 		app
+			// World camera
+			.add_observer(WorldCamera::remove_old_cameras)
+			.add_systems(
+				Update,
+				(
+					WorldCamera::reset_camera,
+					WorldCamera::update_ray.pipe(OnError::log),
+				)
+					.chain()
+					.in_set(PhysicsSystems),
+			)
 			// Motion
 			.register_derived_component::<Motion, Velocity>()
 			.add_observer(Motion::zero_velocity_on_remove)
@@ -183,6 +199,8 @@ impl AddPhysics for App {
 pub struct PhysicsSystems;
 
 impl<TDependencies> HandlesRaycast for PhysicsPlugin<TDependencies> {
+	type TWorldCamera = WorldCamera;
+	type TNoMouseHover = NoMouseHover;
 	type TRaycast<'world, 'state> = RayCaster<'world, 'state>;
 }
 

@@ -13,8 +13,8 @@ impl AttachForce {
 	pub fn attach<TPhysics>(
 		&self,
 		entity: &mut ZyheedaEntityCommands,
-		_: &SkillCaster,
-		_: &SkillTarget,
+		_: SkillCaster,
+		_: SkillTarget,
 	) where
 		TPhysics: HandlesPhysicalEffect<Force>,
 	{
@@ -56,8 +56,8 @@ mod tests {
 		let mut entity = commands.spawn(()).into();
 		AttachForce.attach::<_HandlesInteractions>(
 			&mut entity,
-			&SkillCaster::from(*CASTER),
-			&SkillTarget::default(),
+			SkillCaster(*CASTER),
+			SkillTarget::default(),
 		);
 		entity.id()
 	}

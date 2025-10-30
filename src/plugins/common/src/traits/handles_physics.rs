@@ -1,5 +1,3 @@
-mod bevy_impls;
-
 use crate::{
 	attributes::{effect_target::EffectTarget, health::Health},
 	components::is_blocker::Blocker,
@@ -12,26 +10,47 @@ use crate::{
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::{collections::HashSet, ops::DerefMut};
 
 pub trait HandlesRaycast {
+	/// Marks the world camera used in [`MouseHover`] raycasting. Only one instance may exist in
+	/// the world.
+	type TWorldCamera: Component + Default;
+
+	/// Colliders with this component are ignored when determining mouse hover targets
+	type TNoMouseHover: Component + Default;
+
+	/// Raycast system parameter. [`MouseHover`] raycast requires that `Self::TWorldCamera` is being
+	/// attached to the actual camera.
 	type TRaycast<'world, 'state>: SystemParam
 		+ for<'w, 's> SystemParam<Item<'w, 's>: Raycast<SolidObjects>>
-		+ for<'w, 's> SystemParam<Item<'w, 's>: Raycast<Ground>>;
+		+ for<'w, 's> SystemParam<Item<'w, 's>: Raycast<Ground>>
+		+ for<'w, 's> SystemParam<Item<'w, 's>: Raycast<MouseGroundHover>>
+		+ for<'w, 's> SystemParam<Item<'w, 's>: Raycast<MouseHover>>;
 }
 
 /// Helper type to designate [`HandlesRaycast::TRaycast`] as a [`SystemParam`] implementation for a
 /// given generic system constraint
 pub type RaycastSystemParam<'w, 's, T> = <T as HandlesRaycast>::TRaycast<'w, 's>;
 
-pub trait Raycast<TExtra>
+pub trait Raycast<TArgs>
 where
-	TExtra: RaycastExtra,
+	TArgs: RaycastResult,
 {
-	fn raycast(&self, ray: Ray3d, constraints: TExtra) -> TExtra::TResult;
+	fn raycast(&mut self, args: TArgs) -> TArgs::TResult;
 }
 
-pub trait RaycastExtra {
+impl<T, TArgs> Raycast<TArgs> for T
+where
+	T: DerefMut<Target: Raycast<TArgs>>,
+	TArgs: RaycastResult,
+{
+	fn raycast(&mut self, args: TArgs) -> <TArgs as RaycastResult>::TResult {
+		self.deref_mut().raycast(args)
+	}
+}
+
+pub trait RaycastResult {
 	type TResult;
 }
 
@@ -122,23 +141,58 @@ pub enum PhysicalObject {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Ground;
+pub struct Ground {
+	pub ray: Ray3d,
+}
 
-impl RaycastExtra for Ground {
+impl RaycastResult for Ground {
 	type TResult = Option<TimeOfImpact>;
 }
 
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq)]
 pub struct SolidObjects {
+	pub ray: Ray3d,
 	pub exclude: Vec<Entity>,
+	pub only_hoverable: bool,
 }
 
-impl RaycastExtra for SolidObjects {
+impl RaycastResult for SolidObjects {
 	type TResult = Option<RaycastHit>;
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct RaycastHit {
 	pub entity: Entity,
 	pub time_of_impact: f32,
 }
+
+#[derive(Debug, PartialEq)]
+pub struct MouseHover {
+	pub exclude: Vec<Entity>,
+}
+
+impl MouseHover {
+	pub const NO_EXCLUDES: Self = Self { exclude: vec![] };
+}
+
+impl RaycastResult for MouseHover {
+	type TResult = Option<MouseHoversOver>;
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum MouseHoversOver {
+	/// Hovering over ground on the given point
+	Ground { point: Vec3 },
+	/// Hovering an entity on the given point (which may not be the entities translation)
+	Object { entity: Entity, point: Vec3 },
+}
+
+#[derive(Debug, PartialEq)]
+pub struct MouseGroundHover;
+
+impl RaycastResult for MouseGroundHover {
+	type TResult = Option<MouseGroundPoint>;
+}
+
+#[derive(Debug, PartialEq, Clone, Copy, Default)]
+pub struct MouseGroundPoint(pub Vec3);

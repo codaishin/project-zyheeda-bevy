@@ -5,7 +5,6 @@ pub mod attack_range;
 pub mod attribute;
 pub mod bone;
 pub mod change;
-pub mod collider_info;
 pub mod collider_radius;
 pub mod handle;
 pub mod inventory_key;

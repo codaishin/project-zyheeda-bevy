@@ -240,7 +240,7 @@ impl SimplePrefab for Motion {
 			Motion::HeldBy { caster, spawner } => {
 				entity.try_insert_if_new((
 					RigidBody::Fixed,
-					Anchor::<Always>::to_target(caster)
+					Anchor::<Always>::to_target(caster.0)
 						.on_fix_point(FixPoint(spawner))
 						.with_target_rotation(),
 				));
@@ -248,14 +248,14 @@ impl SimplePrefab for Motion {
 			Motion::Stationary {
 				caster,
 				max_cast_range,
-				target_ray,
+				target,
 			} => {
 				entity.try_insert_if_new((
 					RigidBody::Fixed,
 					GroundTarget {
 						caster,
 						max_cast_range,
-						target_ray,
+						target,
 					},
 				));
 			}
@@ -277,7 +277,7 @@ impl SimplePrefab for Motion {
 				}
 
 				entity.try_insert_if_new((
-					Anchor::<Once>::to_target(caster)
+					Anchor::<Once>::to_target(caster.0)
 						.on_fix_point(FixPoint(spawner))
 						.with_target_rotation(),
 					SetMotionForward(speed),

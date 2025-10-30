@@ -1,7 +1,6 @@
 use super::Blockers;
 use crate::{
 	behaviors::SkillCaster,
-	components::SkillTarget,
 	skills::lifetime_definition::LifeTimeDefinition,
 	traits::skill_builder::{SkillLifetime, SpawnShape},
 };
@@ -16,6 +15,7 @@ use common::{
 		ProjectionShape,
 		SkillEntities,
 		SkillSpawner,
+		SkillTarget,
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -31,15 +31,13 @@ impl SpawnShape for SpawnBeam {
 	fn spawn_shape<TSkillBehaviors>(
 		&self,
 		commands: &mut ZyheedaCommands,
-		caster: &SkillCaster,
+		caster: SkillCaster,
 		spawner: SkillSpawner,
-		_: &SkillTarget,
+		_: SkillTarget,
 	) -> SkillEntities
 	where
 		TSkillBehaviors: HandlesSkillBehaviors + 'static,
 	{
-		let SkillCaster(caster) = *caster;
-
 		TSkillBehaviors::spawn_skill(
 			commands,
 			Contact {

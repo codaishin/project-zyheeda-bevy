@@ -1,37 +1,33 @@
 use bevy::prelude::*;
 use common::{
-	components::persistent_entity::PersistentEntity,
 	tools::Units,
-	traits::accessors::get::{GetMut, TryApplyOn},
+	traits::{
+		accessors::get::{Get, GetMut, TryApplyOn},
+		handles_skill_behaviors::{SkillCaster, SkillTarget},
+	},
 	zyheeda_commands::ZyheedaCommands,
 };
 
 #[derive(Component, Debug, PartialEq, Clone)]
 pub(crate) struct GroundTarget {
-	pub caster: PersistentEntity,
-	pub target_ray: Ray3d,
+	pub caster: SkillCaster,
+	pub target: SkillTarget,
 	pub max_cast_range: Units,
 }
 
 impl GroundTarget {
 	#[cfg(test)]
-	pub const DEFAULT_TARGET_RAY: Ray3d = Ray3d {
-		origin: Vec3::Y,
-		direction: Dir3::NEG_Y,
-	};
-
-	#[cfg(test)]
-	fn with_caster(caster: PersistentEntity) -> Self {
+	fn with_caster(caster: SkillCaster) -> Self {
 		GroundTarget {
 			caster,
-			target_ray: Self::DEFAULT_TARGET_RAY,
+			target: SkillTarget::default(),
 			max_cast_range: Units::from(f32::INFINITY),
 		}
 	}
 
 	#[cfg(test)]
-	fn with_target_ray(mut self, ray: Ray3d) -> Self {
-		self.target_ray = ray;
+	fn with_target(mut self, target: impl Into<SkillTarget>) -> Self {
+		self.target = target.into();
 		self
 	}
 
@@ -43,12 +39,18 @@ impl GroundTarget {
 }
 
 impl GroundTarget {
-	fn ground_contact(&self) -> Option<Vec3> {
-		let toi = self
-			.target_ray
-			.intersect_plane(Vec3::ZERO, InfinitePlane3d::new(Vec3::Y))?;
-
-		Some(self.target_ray.origin + self.target_ray.direction * toi)
+	fn transform(
+		&self,
+		commands: &ZyheedaCommands,
+		transforms: Query<&Transform>,
+	) -> Option<Transform> {
+		match self.target {
+			SkillTarget::Ground(point) => Some(Transform::from_translation(point)),
+			SkillTarget::Entity(persistent_entity) => commands
+				.get(&persistent_entity)
+				.and_then(|e| transforms.get(e).ok())
+				.map(|t| Transform::from_translation(t.translation)),
+		}
 	}
 
 	fn correct_for_max_range(&self, contact: &mut Transform, caster: &Transform) {
@@ -72,13 +74,12 @@ impl GroundTarget {
 		ground_targets: Query<(Entity, &GroundTarget), Added<GroundTarget>>,
 	) {
 		for (entity, ground_target) in &ground_targets {
-			let Some(contact) = ground_target.ground_contact() else {
+			let Some(mut transform) = ground_target.transform(&commands, transforms) else {
 				continue;
 			};
-			let Some(caster) = commands.get_mut(&ground_target.caster) else {
+			let Some(caster) = commands.get_mut(&ground_target.caster.0) else {
 				continue;
 			};
-			let mut transform = Transform::from_translation(contact);
 
 			if let Ok(caster) = transforms.get(caster.id()) {
 				ground_target.correct_for_max_range(&mut transform, caster);
@@ -95,7 +96,10 @@ impl GroundTarget {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::register_persistent_entities::RegisterPersistentEntities;
+	use common::{
+		components::persistent_entity::PersistentEntity,
+		traits::register_persistent_entities::RegisterPersistentEntities,
+	};
 	use testing::{SingleThreadedApp, assert_eq_approx};
 
 	fn setup() -> App {
@@ -108,23 +112,63 @@ mod tests {
 	}
 
 	#[test]
-	fn set_to_intersection_of_target_ray_and_ground_level() {
+	fn set_to_ground_target() {
 		let mut app = setup();
-		let caster = PersistentEntity::default();
-		app.world_mut().spawn((Transform::default(), caster));
-		let ray = Ray3d {
-			origin: Vec3::new(2., 5., 1.),
-			direction: Dir3::new_unchecked(Vec3::new(0., -5., 5.).normalize()),
-		};
+		let caster = SkillCaster::default();
+		app.world_mut().spawn((Transform::default(), *caster));
 		let entity = app
 			.world_mut()
-			.spawn(GroundTarget::with_caster(caster).with_target_ray(ray))
+			.spawn(GroundTarget::with_caster(caster).with_target(Vec3::new(1., 2., 3.)))
 			.id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&Transform::from_xyz(2., 0., 6.)),
+			Some(&Transform::from_xyz(1., 2., 3.)),
+			app.world().entity(entity).get::<Transform>(),
+		)
+	}
+
+	#[test]
+	fn set_to_entity_transform() {
+		let mut app = setup();
+		let caster = SkillCaster::default();
+		let target = PersistentEntity::default();
+		app.world_mut().spawn((Transform::default(), *caster));
+		app.world_mut()
+			.spawn((Transform::from_xyz(3., 7., -1.), target));
+		let entity = app
+			.world_mut()
+			.spawn(GroundTarget::with_caster(caster).with_target(target))
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&Transform::from_xyz(3., 7., -1.)),
+			app.world().entity(entity).get::<Transform>(),
+		)
+	}
+
+	#[test]
+	fn set_to_entity_transform_with_scale_zero() {
+		let mut app = setup();
+		let caster = SkillCaster::default();
+		let target = PersistentEntity::default();
+		app.world_mut().spawn((Transform::default(), *caster));
+		app.world_mut().spawn((
+			Transform::from_xyz(3., 7., -1.).with_scale(Vec3::splat(42.)),
+			target,
+		));
+		let entity = app
+			.world_mut()
+			.spawn(GroundTarget::with_caster(caster).with_target(target))
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&Transform::from_xyz(3., 7., -1.).with_scale(Vec3::splat(1.))),
 			app.world().entity(entity).get::<Transform>(),
 		)
 	}
@@ -132,17 +176,13 @@ mod tests {
 	#[test]
 	fn limit_by_max_range() {
 		let mut app = setup();
-		let caster = PersistentEntity::default();
-		app.world_mut().spawn((Transform::default(), caster));
-		let ray = Ray3d {
-			origin: Vec3::new(6., 1., 8.),
-			direction: Dir3::new_unchecked(Vec3::new(0., -1., 0.)),
-		};
+		let caster = SkillCaster::default();
+		app.world_mut().spawn((Transform::default(), *caster));
 		let entity = app
 			.world_mut()
 			.spawn(
 				GroundTarget::with_caster(caster)
-					.with_target_ray(ray)
+					.with_target(Vec3::new(6., 0., 8.))
 					.with_max_range(Units::from(5.)),
 			)
 			.id();
@@ -158,18 +198,14 @@ mod tests {
 	#[test]
 	fn limit_by_max_range_when_caster_offset_from_zero() {
 		let mut app = setup();
-		let caster = PersistentEntity::default();
+		let caster = SkillCaster::default();
 		app.world_mut()
-			.spawn((Transform::from_xyz(1., 0., 0.), caster));
-		let ray = Ray3d {
-			origin: Vec3::new(7., 1., 8.),
-			direction: Dir3::new_unchecked(Vec3::new(0., -1., 0.)),
-		};
+			.spawn((Transform::from_xyz(1., 0., 0.), *caster));
 		let entity = app
 			.world_mut()
 			.spawn(
 				GroundTarget::with_caster(caster)
-					.with_target_ray(ray)
+					.with_target(Vec3::new(7., 0., 8.))
 					.with_max_range(Units::from(5.)),
 			)
 			.id();
@@ -185,17 +221,13 @@ mod tests {
 	#[test]
 	fn do_not_limit_by_max_range_when_caster_has_no_transform() {
 		let mut app = setup();
-		let caster = PersistentEntity::default();
-		app.world_mut().spawn(caster);
-		let ray = Ray3d {
-			origin: Vec3::new(6., 1., 8.),
-			direction: Dir3::new_unchecked(Vec3::new(0., -1., 0.)),
-		};
+		let caster = SkillCaster::default();
+		app.world_mut().spawn(*caster);
 		let entity = app
 			.world_mut()
 			.spawn(
 				GroundTarget::with_caster(caster)
-					.with_target_ray(ray)
+					.with_target(Vec3::new(6., 0., 8.))
 					.with_max_range(Units::from(5.)),
 			)
 			.id();
@@ -211,18 +243,14 @@ mod tests {
 	#[test]
 	fn set_forward_to_caster_forward() {
 		let mut app = setup();
-		let caster = PersistentEntity::default();
+		let caster = SkillCaster::default();
 		app.world_mut().spawn((
 			Transform::default().looking_to(Vec3::new(3., 0., 4.), Vec3::Y),
-			caster,
+			*caster,
 		));
-		let ray = Ray3d {
-			origin: Vec3::new(1., 1., 1.),
-			direction: Dir3::new_unchecked(Vec3::new(0., -1., 0.).normalize()),
-		};
 		let entity = app
 			.world_mut()
-			.spawn(GroundTarget::with_caster(caster).with_target_ray(ray))
+			.spawn(GroundTarget::with_caster(caster).with_target(Vec3::new(1., 0., 1.)))
 			.id();
 
 		app.update();
@@ -237,15 +265,11 @@ mod tests {
 	#[test]
 	fn only_set_transform_when_added() {
 		let mut app = setup();
-		let caster = PersistentEntity::default();
-		app.world_mut().spawn((Transform::default(), caster));
-		let ray = Ray3d {
-			origin: Vec3::new(1., 1., 1.),
-			direction: Dir3::new_unchecked(Vec3::new(0., -1., 0.).normalize()),
-		};
+		let caster = SkillCaster::default();
+		app.world_mut().spawn((Transform::default(), *caster));
 		let entity = app
 			.world_mut()
-			.spawn(GroundTarget::with_caster(caster).with_target_ray(ray))
+			.spawn(GroundTarget::with_caster(caster).with_target(Vec3::new(1., 0., 1.)))
 			.id();
 
 		app.update();

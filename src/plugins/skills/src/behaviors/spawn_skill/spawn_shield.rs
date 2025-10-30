@@ -1,6 +1,5 @@
 use crate::{
 	behaviors::SkillCaster,
-	components::SkillTarget,
 	skills::lifetime_definition::LifeTimeDefinition,
 	traits::skill_builder::{SkillLifetime, SpawnShape},
 };
@@ -19,6 +18,7 @@ use common::{
 		ProjectionShape,
 		SkillEntities,
 		SkillSpawner,
+		SkillTarget,
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -31,14 +31,13 @@ impl SpawnShape for SpawnShield {
 	fn spawn_shape<TSkillBehaviors>(
 		&self,
 		commands: &mut ZyheedaCommands,
-		caster: &SkillCaster,
+		caster: SkillCaster,
 		_: SkillSpawner,
-		_: &SkillTarget,
+		_: SkillTarget,
 	) -> SkillEntities
 	where
 		TSkillBehaviors: HandlesSkillBehaviors + 'static,
 	{
-		let SkillCaster(caster) = *caster;
 		let radius = 1.;
 		let offset = Vec3::new(0., 0., -radius);
 

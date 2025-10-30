@@ -3,28 +3,17 @@ pub mod spawn_skill;
 
 use crate::{
 	behaviors::{attach_skill_effect::AttachEffect, spawn_skill::SpawnOn},
-	components::SkillTarget,
 	traits::skill_builder::SkillShape,
 };
 use bevy::prelude::*;
 use common::{
-	components::persistent_entity::PersistentEntity,
 	traits::{
 		handles_physics::HandlesAllPhysicalEffects,
-		handles_skill_behaviors::{HandlesSkillBehaviors, SkillSpawner},
+		handles_skill_behaviors::{HandlesSkillBehaviors, SkillCaster, SkillSpawner, SkillTarget},
 	},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
 use spawn_skill::SpawnSkill;
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct SkillCaster(pub PersistentEntity);
-
-impl From<PersistentEntity> for SkillCaster {
-	fn from(persistent: PersistentEntity) -> Self {
-		Self(persistent)
-	}
-}
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct SkillBehaviorConfig {
@@ -78,9 +67,9 @@ impl SkillBehaviorConfig {
 	pub(crate) fn spawn_shape<TSkillBehaviors>(
 		&self,
 		commands: &mut ZyheedaCommands,
-		caster: &SkillCaster,
+		caster: SkillCaster,
 		spawner: SkillSpawner,
-		target: &SkillTarget,
+		target: SkillTarget,
 	) -> SkillShape
 	where
 		TSkillBehaviors: HandlesSkillBehaviors + 'static,
@@ -92,8 +81,8 @@ impl SkillBehaviorConfig {
 	pub(crate) fn start_contact_behavior<TEffects>(
 		&self,
 		entity: &mut ZyheedaEntityCommands,
-		caster: &SkillCaster,
-		target: &SkillTarget,
+		caster: SkillCaster,
+		target: SkillTarget,
 	) where
 		TEffects: HandlesAllPhysicalEffects,
 	{
@@ -105,8 +94,8 @@ impl SkillBehaviorConfig {
 	pub(crate) fn start_projection_behavior<TEffects>(
 		&self,
 		entity: &mut ZyheedaEntityCommands,
-		caster: &SkillCaster,
-		target: &SkillTarget,
+		caster: SkillCaster,
+		target: SkillTarget,
 	) where
 		TEffects: HandlesAllPhysicalEffects,
 	{

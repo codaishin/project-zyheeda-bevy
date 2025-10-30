@@ -1,11 +1,7 @@
 mod dto;
 
-use super::SkillTarget;
 use crate::{
-	behaviors::{
-		SkillCaster,
-		spawn_skill::{OnSkillStop, SpawnOn},
-	},
+	behaviors::spawn_skill::{OnSkillStop, SpawnOn},
 	skills::{RunSkillBehavior, dto::run_skill_behavior::RunSkillBehaviorDto},
 	traits::{Execute, Flush, Schedule, spawn_skill_behavior::SpawnSkillBehavior},
 };
@@ -16,7 +12,7 @@ use common::{
 	traits::{
 		accessors::get::TryApplyOn,
 		handles_physics::HandlesAllPhysicalEffects,
-		handles_skill_behaviors::{HandlesSkillBehaviors, SkillSpawner},
+		handles_skill_behaviors::{HandlesSkillBehaviors, SkillCaster, SkillSpawner, SkillTarget},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -69,8 +65,8 @@ where
 	fn execute(
 		&mut self,
 		commands: &mut ZyheedaCommands,
-		caster: &SkillCaster,
-		target: &SkillTarget,
+		caster: SkillCaster,
+		target: SkillTarget,
 	) {
 		match self {
 			SkillExecuter::Start { shape, slot_key } => {
@@ -108,11 +104,8 @@ mod tests {
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
 		attributes::health::Health,
-		components::{outdated::Outdated, persistent_entity::PersistentEntity},
-		tools::{
-			action_key::slot::{PlayerSlot, Side},
-			collider_info::ColliderInfo,
-		},
+		components::persistent_entity::PersistentEntity,
+		tools::action_key::slot::{PlayerSlot, Side},
 		traits::{
 			accessors::get::GetProperty,
 			handles_physics::{Effect, HandlesPhysicalEffect},
@@ -206,9 +199,9 @@ mod tests {
 		fn spawn<TEffects, TSkillBehaviors>(
 			&self,
 			_: &mut ZyheedaCommands,
-			_: &SkillCaster,
+			_: SkillCaster,
 			_: SkillSpawner,
-			_: &SkillTarget,
+			_: SkillTarget,
 		) -> OnSkillStop
 		where
 			TEffects: HandlesAllPhysicalEffects + 'static,
@@ -234,18 +227,18 @@ mod tests {
 		fn spawn<TEffects, TSkillBehaviors>(
 			&self,
 			commands: &mut ZyheedaCommands,
-			caster: &SkillCaster,
+			caster: SkillCaster,
 			spawner: SkillSpawner,
-			target: &SkillTarget,
+			target: SkillTarget,
 		) -> OnSkillStop
 		where
 			TEffects: HandlesAllPhysicalEffects + 'static,
 			TSkillBehaviors: HandlesSkillBehaviors + 'static,
 		{
 			commands.spawn(_SpawnedBehavior {
-				caster: *caster,
+				caster,
 				spawner,
-				target: *target,
+				target,
 			});
 			self.on_skill_stop
 		}
@@ -256,25 +249,6 @@ mod tests {
 		caster: SkillCaster,
 		spawner: SkillSpawner,
 		target: SkillTarget,
-	}
-
-	fn get_target() -> SkillTarget {
-		SkillTarget {
-			ray: Ray3d::new(
-				Vec3::new(1., 2., 3.),
-				Dir3::new_unchecked(Vec3::new(4., 5., 6.).normalize()),
-			),
-			collision_info: Some(ColliderInfo {
-				collider: Outdated {
-					entity: Entity::from_raw(11),
-					component: GlobalTransform::from_xyz(10., 10., 10.),
-				},
-				root: Some(Outdated {
-					entity: Entity::from_raw(1),
-					component: GlobalTransform::from_xyz(11., 11., 11.),
-				}),
-			}),
-		}
 	}
 
 	fn as_executer(
@@ -311,7 +285,7 @@ mod tests {
 		let mut app = setup();
 		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = SkillSpawner::Slot(SlotKey::from(PlayerSlot::Lower(Side::Right)));
-		let target = get_target();
+		let target = SkillTarget::Entity(PersistentEntity::default());
 		let mut executer = SkillExecuter::Start {
 			slot_key: SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			shape: _Behavior {
@@ -322,7 +296,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once(move |mut commands: ZyheedaCommands| {
-				as_executer(&mut executer).execute(&mut commands, &caster, &target);
+				as_executer(&mut executer).execute(&mut commands, caster, target);
 			})?;
 
 		let [behavior] = assert_count!(1, spawned_behavior(&app));
@@ -342,7 +316,7 @@ mod tests {
 		let mut app = setup();
 		let caster = SkillCaster(PersistentEntity::default());
 		let spawner = SkillSpawner::Neutral;
-		let target = get_target();
+		let target = SkillTarget::Entity(PersistentEntity::default());
 		let mut executer: SkillExecuter<_Behavior> = SkillExecuter::Start {
 			slot_key: SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			shape: _Behavior {
@@ -353,7 +327,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once(move |mut commands: ZyheedaCommands| {
-				as_executer(&mut executer).execute(&mut commands, &caster, &target);
+				as_executer(&mut executer).execute(&mut commands, caster, target);
 			})?;
 
 		let [behavior] = assert_count!(1, spawned_behavior(&app));
@@ -372,7 +346,7 @@ mod tests {
 	fn set_to_idle_when_ignore_on_skill_stop() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let caster = SkillCaster(PersistentEntity::default());
-		let target = get_target();
+		let target = SkillTarget::Entity(PersistentEntity::default());
 		let executer = Arc::new(Mutex::new(SkillExecuter::Start {
 			slot_key: SlotKey::from(PlayerSlot::Lower(Side::Right)),
 			shape: _Behavior {
@@ -387,7 +361,7 @@ mod tests {
 				let Ok(mut lock) = mutex.lock() else {
 					return;
 				};
-				as_executer(&mut lock).execute(&mut commands, &caster, &target);
+				as_executer(&mut lock).execute(&mut commands, caster, target);
 			})?;
 
 		assert_eq!(SkillExecuter::Idle, *executer.lock().unwrap());
@@ -398,7 +372,7 @@ mod tests {
 	fn set_to_stoppable_when_stop_on_skill_stop() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let caster = SkillCaster(PersistentEntity::default());
-		let target = get_target();
+		let target = SkillTarget::Entity(PersistentEntity::default());
 		let entity = PersistentEntity::default();
 		let executer = Arc::new(Mutex::new(SkillExecuter::Start {
 			slot_key: SlotKey::from(PlayerSlot::Lower(Side::Right)),
@@ -414,7 +388,7 @@ mod tests {
 				let Ok(mut lock) = mutex.lock() else {
 					return;
 				};
-				as_executer(&mut lock).execute(&mut commands, &caster, &target);
+				as_executer(&mut lock).execute(&mut commands, caster, target);
 			})?;
 
 		assert_eq!(
@@ -451,13 +425,13 @@ mod tests {
 		let mut app = setup();
 		let skill = PersistentEntity::default();
 		let caster = SkillCaster(PersistentEntity::default());
-		let target = get_target();
+		let target = SkillTarget::Entity(PersistentEntity::default());
 		let mut executer = SkillExecuter::<_Behavior>::Stop(skill);
 		let entity = app.world_mut().spawn(skill).id();
 
 		app.world_mut()
 			.run_system_once(move |mut commands: ZyheedaCommands| {
-				as_executer(&mut executer).execute(&mut commands, &caster, &target);
+				as_executer(&mut executer).execute(&mut commands, caster, target);
 			})?;
 
 		assert!(app.world().get_entity(entity).is_err());
@@ -468,7 +442,7 @@ mod tests {
 	fn set_to_idle_on_stop_execution() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let caster = SkillCaster(PersistentEntity::default());
-		let target = get_target();
+		let target = SkillTarget::Entity(PersistentEntity::default());
 		let entity = PersistentEntity::default();
 		let executer = Arc::new(Mutex::new(SkillExecuter::Stop(entity)));
 		let mutex = executer.clone();
@@ -478,7 +452,7 @@ mod tests {
 				let Ok(mut lock) = mutex.lock() else {
 					return;
 				};
-				as_executer(&mut lock).execute(&mut commands, &caster, &target);
+				as_executer(&mut lock).execute(&mut commands, caster, target);
 			})?;
 
 		assert_eq!(SkillExecuter::Idle, *executer.lock().unwrap());

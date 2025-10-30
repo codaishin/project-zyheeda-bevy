@@ -8,7 +8,7 @@ use common::traits::{
 const HORIZONTAL_PLANE: InfinitePlane3d = InfinitePlane3d { normal: Dir3::Y };
 
 impl Raycast<Ground> for RayCaster<'_, '_> {
-	fn raycast(&self, ray: Ray3d, _: Ground) -> Option<TimeOfImpact> {
+	fn raycast(&mut self, Ground { ray }: Ground) -> Option<TimeOfImpact> {
 		ray.intersect_plane(Vec3::ZERO, HORIZONTAL_PLANE)
 			.map(TimeOfImpact)
 	}
@@ -31,14 +31,13 @@ mod tests {
 		let mut app = setup();
 
 		let hit = app.world_mut().run_system_once(
-			|ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
-				ray_caster.raycast(
-					Ray3d {
+			|mut ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
+				ray_caster.raycast(Ground {
+					ray: Ray3d {
 						origin: Vec3::Y,
 						direction: Dir3::NEG_Y,
 					},
-					Ground,
-				)
+				})
 			},
 		)?;
 		assert_eq!(Some(TimeOfImpact(1.)), hit);
@@ -50,14 +49,13 @@ mod tests {
 		let mut app = setup();
 
 		let hit = app.world_mut().run_system_once(
-			|ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
-				ray_caster.raycast(
-					Ray3d {
+			|mut ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
+				ray_caster.raycast(Ground {
+					ray: Ray3d {
 						origin: Vec3::new(10., 8., 22.),
 						direction: Dir3::try_from(Vec3::new(-3., -4., 0.)).unwrap(),
 					},
-					Ground,
-				)
+				})
 			},
 		)?;
 		assert_eq!(Some(TimeOfImpact(10.)), hit);
