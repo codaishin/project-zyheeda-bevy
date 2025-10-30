@@ -5,6 +5,7 @@ pub(crate) mod default_attributes;
 pub(crate) mod effect;
 pub(crate) mod interacting_entities;
 pub(crate) mod motion;
+pub(crate) mod no_hover;
 pub(crate) mod running_interactions;
 pub(crate) mod world_camera;
 

@@ -12,6 +12,7 @@ use crate::{
 	components::{
 		map::{Map, agents::AgentsLoaded, cells::corridor::Corridor, demo_map::DemoMap},
 		map_agents::{AgentOfPersistentMap, GridAgentOf},
+		wall_cell::WallCell,
 		world_agent::WorldAgent,
 	},
 	resources::agents::color_lookup::{AgentsColorLookup, AgentsColorLookupImages},
@@ -24,6 +25,7 @@ use common::{
 		handles_lights::HandlesLights,
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInApp},
 		handles_map_generation::HandlesMapGeneration,
+		handles_physics::HandlesRaycast,
 		handles_saving::HandlesSaving,
 		spawn::Spawn,
 		thread_safe::ThreadSafe,
@@ -37,21 +39,25 @@ use traits::register_map_cell::RegisterMapCell;
 
 pub struct MapGenerationPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TSavegame, TLights> MapGenerationPlugin<(TLoading, TSavegame, TLights)>
+impl<TLoading, TSavegame, TLights, TPhysics>
+	MapGenerationPlugin<(TLoading, TSavegame, TLights, TPhysics)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
+	TPhysics: ThreadSafe + HandlesRaycast,
 	TLights: ThreadSafe + HandlesLights,
 {
-	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TLights) -> Self {
+	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TPhysics, _: &TLights) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLoading, TSavegame, TLights> Plugin for MapGenerationPlugin<(TLoading, TSavegame, TLights)>
+impl<TLoading, TSavegame, TLights, TPhysics> Plugin
+	for MapGenerationPlugin<(TLoading, TSavegame, TLights, TPhysics)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
+	TPhysics: ThreadSafe + HandlesRaycast,
 	TLights: ThreadSafe + HandlesLights,
 {
 	fn build(&self, app: &mut App) {
@@ -67,6 +73,7 @@ where
 		TSavegame::register_savable_component::<DemoMap>(app);
 
 		app.register_required_components::<Map, TSavegame::TSaveEntityMarker>()
+			.register_required_components::<WallCell, TPhysics::TNoMouseHover>()
 			.register_map_cell::<TLoading, TSavegame, Corridor>()
 			.add_systems(
 				OnEnter(GameState::LoadingEssentialAssets),

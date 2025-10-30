@@ -3,7 +3,7 @@ mod mouse_ground_hover;
 mod mouse_hover;
 mod solid_objects;
 
-use crate::components::world_camera::WorldCamera;
+use crate::components::{no_hover::NoMouseHover, world_camera::WorldCamera};
 use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
@@ -18,5 +18,6 @@ where
 {
 	context: StaticSystemParam<'w, 's, T>,
 	interaction_colliders: Query<'w, 's, &'static ColliderOfInteractionTarget>,
+	no_mouse_hovers: Query<'w, 's, (), With<NoMouseHover>>,
 	world_cams: Query<'w, 's, &'static mut WorldCamera>,
 }

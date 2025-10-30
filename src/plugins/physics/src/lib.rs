@@ -13,6 +13,7 @@ use crate::{
 		default_attributes::DefaultAttributes,
 		effect::force::ForceEffect,
 		motion::Motion,
+		no_hover::NoMouseHover,
 		world_camera::WorldCamera,
 	},
 	observers::update_blockers::UpdateBlockersObserver,
@@ -199,6 +200,7 @@ pub struct PhysicsSystems;
 
 impl<TDependencies> HandlesRaycast for PhysicsPlugin<TDependencies> {
 	type TWorldCamera = WorldCamera;
+	type TNoMouseHover = NoMouseHover;
 	type TRaycast<'world, 'state> = RayCaster<'world, 'state>;
 }
 

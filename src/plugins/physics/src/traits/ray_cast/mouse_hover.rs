@@ -24,6 +24,7 @@ where
 		let object_hit = self.raycast(SolidObjects {
 			ray,
 			exclude: exclude.clone(),
+			only_hoverable: true,
 		});
 		let ground_hit = self.raycast(Ground { ray });
 		let hover = match (object_hit, ground_hit) {
@@ -143,6 +144,7 @@ mod tests {
 					.with(eq(SolidObjects {
 						ray,
 						exclude: vec![exclude],
+						only_hoverable: true,
 					}))
 					.return_const(RaycastHit {
 						entity: Entity::from_raw(123),
@@ -186,6 +188,7 @@ mod tests {
 					.with(eq(SolidObjects {
 						ray,
 						exclude: vec![exclude],
+						only_hoverable: true,
 					}))
 					.return_const(None);
 			}),
@@ -225,6 +228,7 @@ mod tests {
 					.with(eq(SolidObjects {
 						ray,
 						exclude: vec![exclude],
+						only_hoverable: true,
 					}))
 					.return_const(RaycastHit {
 						entity: Entity::from_raw(123),
@@ -309,6 +313,7 @@ mod tests {
 					.with(eq(SolidObjects {
 						ray,
 						exclude: vec![exclude],
+						only_hoverable: true,
 					}))
 					.return_const(RaycastHit {
 						entity: Entity::from_raw(123),

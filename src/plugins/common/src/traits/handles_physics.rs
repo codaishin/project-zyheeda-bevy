@@ -17,6 +17,9 @@ pub trait HandlesRaycast {
 	/// the world.
 	type TWorldCamera: Component + Default;
 
+	/// Colliders with this component are ignored when determining mouse hover targets
+	type TNoMouseHover: Component + Default;
+
 	/// Raycast system parameter. [`MouseHover`] raycast requires that `Self::TWorldCamera` is being
 	/// attached to the actual camera.
 	type TRaycast<'world, 'state>: SystemParam
@@ -150,6 +153,7 @@ impl RaycastResult for Ground {
 pub struct SolidObjects {
 	pub ray: Ray3d,
 	pub exclude: Vec<Entity>,
+	pub only_hoverable: bool,
 }
 
 impl RaycastResult for SolidObjects {
