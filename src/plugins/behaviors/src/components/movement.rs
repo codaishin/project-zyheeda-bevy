@@ -3,11 +3,7 @@ pub(crate) mod path_or_wasd;
 mod dto;
 
 use super::SetFace;
-use crate::{
-	components::movement::dto::MovementDto,
-	systems::movement::insert_process_component::StopMovement,
-	traits::MovementUpdate,
-};
+use crate::{components::movement::dto::MovementDto, traits::MovementUpdate};
 use bevy::prelude::*;
 use common::{
 	components::immobilized::Immobilized,
@@ -40,8 +36,7 @@ impl<TMotion> Movement<TMotion>
 where
 	TMotion: ThreadSafe,
 {
-	#[cfg(test)]
-	pub(crate) fn to_none() -> Self {
+	pub(crate) fn stop() -> Self {
 		Self {
 			target: None,
 			_m: PhantomData,
@@ -79,18 +74,6 @@ where
 			commands.try_apply_on(&entity, |mut e| {
 				e.try_insert(set_face);
 			});
-		}
-	}
-}
-
-impl<TMotion> StopMovement for Movement<TMotion>
-where
-	TMotion: ThreadSafe,
-{
-	fn stop() -> Self {
-		Self {
-			target: None,
-			_m: PhantomData,
 		}
 	}
 }
