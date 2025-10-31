@@ -1,5 +1,6 @@
 mod components;
 mod input;
+mod system_param;
 mod systems;
 mod traits;
 
@@ -10,6 +11,7 @@ use crate::{
 		movement_definition::MovementDefinition,
 		skill_usage::SkillUsage,
 	},
+	system_param::movement_param::MovementParamMut,
 	systems::{
 		face::execute_enemy_face::execute_enemy_face,
 		movement::insert_process_component::ProcessInput,
@@ -25,6 +27,7 @@ use common::{
 		handles_agents::HandlesAgents,
 		handles_enemies::HandlesEnemies,
 		handles_input::{HandlesInput, InputSystemParam},
+		handles_movement::HandlesMovement,
 		handles_orientation::{Face, HandlesOrientation},
 		handles_path_finding::HandlesPathFinding,
 		handles_physics::{
@@ -195,8 +198,6 @@ where
 					(
 						point_input.pipe(TAgents::TPlayer::insert_process_component),
 						wasd_input.pipe(TAgents::TPlayer::insert_process_component),
-						MovementDefinition::insert_from::<TAgents::TPlayerMovement>,
-						MovementDefinition::insert_from::<TAgents::TEnemy>,
 						compute_path,
 						execute_path,
 						execute_movement,
@@ -289,4 +290,8 @@ impl<TDependencies> SystemSetDefinition for BehaviorsPlugin<TDependencies> {
 	type TSystemSet = BehaviorSystems;
 
 	const SYSTEMS: Self::TSystemSet = BehaviorSystems;
+}
+
+impl<TDependencies> HandlesMovement for BehaviorsPlugin<TDependencies> {
+	type TMovementMut<'w, 's> = MovementParamMut<'w, 's>;
 }
