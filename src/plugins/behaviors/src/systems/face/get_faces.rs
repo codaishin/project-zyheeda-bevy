@@ -1,28 +1,30 @@
-use crate::components::{OverrideFace, SetFace};
+use crate::components::{CanFace, SetFace, SetFaceOverride};
 use bevy::prelude::*;
 use common::traits::handles_orientation::Face;
 
 impl SetFace {
+	#[allow(clippy::type_complexity)]
 	pub(crate) fn get_faces(
-		faces: Query<(Entity, &Self, Option<&OverrideFace>)>,
+		faces: Query<(Entity, Option<&Self>, Option<&SetFaceOverride>), With<CanFace>>,
 	) -> Vec<(Entity, Face)> {
 		faces.iter().filter_map(face_value).collect()
 	}
 }
 
 fn face_value(
-	(id, SetFace(set_face), override_face): (Entity, &SetFace, Option<&OverrideFace>),
+	(id, set_face, override_face): (Entity, Option<&SetFace>, Option<&SetFaceOverride>),
 ) -> Option<(Entity, Face)> {
-	match override_face {
-		Some(OverrideFace(override_face)) => Some((id, *override_face)),
-		None => Some((id, *set_face)),
+	match (set_face, override_face) {
+		(Some(SetFace(face)), None) => Some((id, *face)),
+		(_, Some(SetFaceOverride(face))) => Some((id, *face)),
+		_ => None,
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::SetFace;
+	use crate::components::{CanFace, SetFace};
 	use bevy::{
 		app::{App, Update},
 		ecs::{
@@ -31,7 +33,6 @@ mod tests {
 		},
 		math::Vec3,
 	};
-	use common::traits::register_derived_component::RegisterDerivedComponent;
 	use testing::SingleThreadedApp;
 
 	#[derive(Component, Debug, PartialEq)]
@@ -46,7 +47,6 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.register_derived_component::<OverrideFace, SetFace>();
 		app.add_systems(Update, SetFace::get_faces.pipe(track_face));
 
 		app
@@ -69,7 +69,7 @@ mod tests {
 	fn get_faces_from_override_face() {
 		let mut app = setup();
 		let face = Face::Translation(Vec3::new(1., 2., 3.));
-		let agent = app.world_mut().spawn(OverrideFace(face)).id();
+		let agent = app.world_mut().spawn(SetFaceOverride(face)).id();
 
 		app.update();
 
@@ -79,12 +79,12 @@ mod tests {
 	}
 
 	#[test]
-	fn get_faces_from_override_face_even_when_set_face_set() {
+	fn prefer_faces_from_override_face() {
 		let mut app = setup();
 		let face = Face::Translation(Vec3::new(1., 2., 3.));
 		let agent = app
 			.world_mut()
-			.spawn((SetFace(Face::Target), OverrideFace(face)))
+			.spawn((SetFace(Face::Target), SetFaceOverride(face)))
 			.id();
 
 		app.update();
@@ -92,5 +92,21 @@ mod tests {
 		let agent = app.world().entity(agent);
 
 		assert_eq!(Some(&_Face(face)), agent.get::<_Face>());
+	}
+
+	#[test]
+	fn ignore_when_can_face_component_missing() {
+		let mut app = setup();
+		let agent = app
+			.world_mut()
+			.spawn(SetFace(Face::Target))
+			.remove::<CanFace>()
+			.id();
+
+		app.update();
+
+		let agent = app.world().entity(agent);
+
+		assert_eq!(None, agent.get::<_Face>());
 	}
 }

@@ -65,14 +65,18 @@ where
 		}
 
 		for (entity, movement) in &changed {
-			let set_face = match &movement.target {
-				Some(MotionTarget::Vec(vec3)) => SetFace(Face::Translation(*vec3)),
-				Some(MotionTarget::Dir(dir3)) => SetFace(Face::Direction(*dir3)),
-				_ => continue,
-			};
-
 			commands.try_apply_on(&entity, |mut e| {
-				e.try_insert(set_face);
+				match &movement.target {
+					Some(MotionTarget::Vec(vec3)) => {
+						e.try_insert(SetFace(Face::Translation(*vec3)));
+					}
+					Some(MotionTarget::Dir(dir3)) => {
+						e.try_insert(SetFace(Face::Direction(*dir3)));
+					}
+					None => {
+						e.try_remove::<SetFace>();
+					}
+				};
 			});
 		}
 	}
@@ -308,6 +312,20 @@ mod tests {
 			app.world_mut()
 				.entity_mut(entity)
 				.remove::<Movement<_Motion>>();
+			app.update();
+
+			assert_eq!(None, app.world().entity(entity).get::<SetFace>());
+		}
+
+		#[test]
+		fn remove_set_face_on_update_when_set_to_stop() {
+			let mut app = setup(Movement::<_Motion>::set_faces);
+			let entity = app.world_mut().spawn(SetFace(Face::Target)).id();
+
+			app.update();
+			app.world_mut()
+				.entity_mut(entity)
+				.insert(Movement::<_Motion>::stop());
 			app.update();
 
 			assert_eq!(None, app.world().entity(entity).get::<SetFace>());
