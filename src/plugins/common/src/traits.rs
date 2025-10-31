@@ -29,6 +29,7 @@ pub mod handles_physics;
 pub mod handles_player;
 pub mod handles_saving;
 pub mod handles_skill_behaviors;
+pub mod handles_skills_control;
 pub mod has_collisions;
 pub mod init_resource;
 pub mod insert;
