@@ -1,14 +1,5 @@
 use super::Movement;
-use crate::{
-	PointerInput,
-	WasdInput,
-	components::movement::MotionTarget,
-	systems::movement::{
-		insert_process_component::StopMovement,
-		parse_directional_movement_key::UsesDirection,
-	},
-	traits::MovementUpdate,
-};
+use crate::{components::movement::MotionTarget, traits::MovementUpdate};
 use bevy::prelude::*;
 use common::{
 	tools::{Done, speed::Speed},
@@ -42,33 +33,6 @@ where
 				_m: PhantomData,
 			},
 		}
-	}
-}
-
-impl<TMotion> From<PointerInput<TMotion>> for Movement<PathOrWasd<TMotion>>
-where
-	TMotion: ThreadSafe,
-{
-	fn from(PointerInput { target, .. }: PointerInput<TMotion>) -> Self {
-		Self::to(target)
-	}
-}
-
-impl<TMotion> From<WasdInput<TMotion>> for Movement<PathOrWasd<TMotion>>
-where
-	TMotion: ThreadSafe,
-{
-	fn from(WasdInput { direction, .. }: WasdInput<TMotion>) -> Self {
-		Self::to(direction)
-	}
-}
-
-impl<TMotion> UsesDirection for Movement<PathOrWasd<TMotion>>
-where
-	TMotion: ThreadSafe,
-{
-	fn uses_direction(&self) -> bool {
-		matches!(self.target, Some(MotionTarget::Dir(..)))
 	}
 }
 
@@ -162,7 +126,7 @@ mod test_with_path {
 
 			app.world_mut()
 				.run_system_once(system(move |entity, components| {
-					let movement = Movement::<PathOrWasd<_MoveMethod>>::to_none();
+					let movement = Movement::<PathOrWasd<_MoveMethod>>::stop();
 					movement.update(entity, components, *SPEED)
 				}))?;
 
@@ -187,7 +151,7 @@ mod test_with_path {
 
 			app.world_mut()
 				.run_system_once(system(move |entity, components| {
-					let movement = Movement::<PathOrWasd<_MoveMethod>>::to_none();
+					let movement = Movement::<PathOrWasd<_MoveMethod>>::stop();
 					movement.update(entity, components, *SPEED)
 				}))?;
 
@@ -213,7 +177,7 @@ mod test_with_path {
 			let is_done = app
 				.world_mut()
 				.run_system_once(system(|entity, components| {
-					let movement = Movement::<PathOrWasd<_MoveMethod>>::to_none();
+					let movement = Movement::<PathOrWasd<_MoveMethod>>::stop();
 					movement.update(entity, components, *SPEED)
 				}))?;
 
@@ -232,7 +196,7 @@ mod test_with_path {
 			let is_done = app
 				.world_mut()
 				.run_system_once(system(|entity, components| {
-					let movement = Movement::<PathOrWasd<_MoveMethod>>::to_none();
+					let movement = Movement::<PathOrWasd<_MoveMethod>>::stop();
 					movement.update(entity, components, *SPEED)
 				}))?;
 
@@ -253,7 +217,7 @@ mod test_with_path {
 
 			app.world_mut()
 				.run_system_once(system(|entity, components| {
-					let movement = Movement::<PathOrWasd<_MoveMethod>>::to_none();
+					let movement = Movement::<PathOrWasd<_MoveMethod>>::stop();
 					movement.update(entity, components, *SPEED)
 				}))?;
 
@@ -277,7 +241,7 @@ mod test_with_path {
 
 			app.world_mut()
 				.run_system_once(system(|entity, components| {
-					let movement = Movement::<PathOrWasd<_MoveMethod>>::to_none();
+					let movement = Movement::<PathOrWasd<_MoveMethod>>::stop();
 					movement.update(entity, components, *SPEED)
 				}))?;
 
@@ -306,7 +270,7 @@ mod test_with_path {
 
 			app.world_mut()
 				.run_system_once(system(move |entity, components| {
-					let movement = Movement::<PathOrWasd<_MoveMethod>>::to_none();
+					let movement = Movement::<PathOrWasd<_MoveMethod>>::stop();
 					movement.update(entity, components, *SPEED)
 				}))?;
 
@@ -330,7 +294,7 @@ mod test_with_path {
 
 			app.world_mut()
 				.run_system_once(system(move |entity, components| {
-					let movement = Movement::<PathOrWasd<_MoveMethod>>::to_none();
+					let movement = Movement::<PathOrWasd<_MoveMethod>>::stop();
 					movement.update(entity, components, *SPEED)
 				}))?;
 
@@ -356,7 +320,7 @@ mod test_with_path {
 			let is_done = app
 				.world_mut()
 				.run_system_once(system(|entity, components| {
-					let movement = Movement::<PathOrWasd<_MoveMethod>>::to_none();
+					let movement = Movement::<PathOrWasd<_MoveMethod>>::stop();
 					movement.update(entity, components, *SPEED)
 				}))?;
 
@@ -375,7 +339,7 @@ mod test_with_path {
 			let is_done = app
 				.world_mut()
 				.run_system_once(system(|entity, components| {
-					let movement = Movement::<PathOrWasd<_MoveMethod>>::to_none();
+					let movement = Movement::<PathOrWasd<_MoveMethod>>::stop();
 					movement.update(entity, components, *SPEED)
 				}))?;
 
@@ -396,7 +360,7 @@ mod test_with_path {
 
 			app.world_mut()
 				.run_system_once(system(|entity, components| {
-					let movement = Movement::<PathOrWasd<_MoveMethod>>::to_none();
+					let movement = Movement::<PathOrWasd<_MoveMethod>>::stop();
 					movement.update(entity, components, *SPEED)
 				}))?;
 

@@ -13,7 +13,7 @@ use common::{
 };
 use std::ops::DerefMut;
 
-pub(crate) fn execute_player_face<TMouseHover>(
+pub(crate) fn execute_face<TMouseHover>(
 	In(faces): In<Vec<(Entity, Face)>>,
 	mut transforms: Query<&mut Transform>,
 	commands: ZyheedaCommands,
@@ -105,10 +105,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.register_persistent_entities();
-		app.add_systems(
-			Update,
-			read_faces.pipe(execute_player_face::<ResMut<_RayCast>>),
-		);
+		app.add_systems(Update, read_faces.pipe(execute_face::<ResMut<_RayCast>>));
 		app.insert_resource(_RayCast::new().with_mock(|mock| {
 			mock.expect_raycast().never();
 		}));

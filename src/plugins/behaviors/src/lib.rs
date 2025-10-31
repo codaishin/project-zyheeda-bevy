@@ -1,21 +1,17 @@
 mod components;
-mod input;
 mod system_param;
 mod systems;
 mod traits;
 
 use crate::{
 	components::{
+		SetFace,
 		attacking::Attacking,
-		fix_points::{Anchor, FixPoints, fix_point::FixPointSpawner},
+		fix_points::{Anchor, fix_point::FixPointSpawner},
 		movement_definition::MovementDefinition,
 		skill_usage::SkillUsage,
 	},
 	system_param::{movement_param::MovementParamMut, skill_param::SkillParamMut},
-	systems::{
-		face::execute_enemy_face::execute_enemy_face,
-		movement::insert_process_component::ProcessInput,
-	},
 };
 use bevy::prelude::*;
 use common::{
@@ -24,9 +20,7 @@ use common::{
 	systems::log::OnError,
 	traits::{
 		animation::{HasAnimationsDispatch, RegisterAnimations},
-		handles_agents::HandlesAgents,
-		handles_enemies::HandlesEnemies,
-		handles_input::{HandlesInput, InputSystemParam},
+		handles_input::HandlesInput,
 		handles_movement::HandlesMovement,
 		handles_orientation::{Face, HandlesOrientation},
 		handles_path_finding::HandlesPathFinding,
@@ -37,7 +31,6 @@ use common::{
 			HandlesRaycast,
 			RaycastSystemParam,
 		},
-		handles_player::{ConfiguresPlayerMovement, HandlesPlayer, PlayerMainCamera},
 		handles_saving::HandlesSaving,
 		handles_skill_behaviors::{
 			Contact,
@@ -48,6 +41,7 @@ use common::{
 		},
 		handles_skills_control::HandlesSKillControl,
 		prefab::AddPrefabObserver,
+		register_derived_component::RegisterDerivedComponent,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 	},
@@ -63,31 +57,13 @@ use components::{
 	skill_behavior::{skill_contact::SkillContact, skill_projection::SkillProjection},
 	when_traveled_insert::DestroyAfterDistanceTraveled,
 };
-use input::{pointer_input::PointerInput, wasd_input::WasdInput};
 use std::marker::PhantomData;
-use systems::{
-	base_behavior::SelectBehavior,
-	chase::ChaseSystem,
-	face::{execute_player_face::execute_player_face, get_faces::GetFaces},
-	movement::{
-		insert_process_component::InsertProcessComponent,
-		parse_directional_movement_key::ParseDirectionalMovement,
-		parse_pointer_movement::ParsePointerMovement,
-	},
-	update_count_down::UpdateCountDown,
-};
+use systems::{face::execute_face::execute_face, update_count_down::UpdateCountDown};
 
 pub struct BehaviorsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding, TAgents>
-	BehaviorsPlugin<(
-		TInput,
-		TSaveGame,
-		TAnimations,
-		TPhysics,
-		TPathFinding,
-		TAgents,
-	)>
+impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding>
+	BehaviorsPlugin<(TInput, TSaveGame, TAnimations, TPhysics, TPathFinding)>
 where
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
@@ -98,8 +74,6 @@ where
 		+ HandlesAllPhysicalEffects
 		+ HandlesRaycast,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
-	TAgents:
-		ThreadSafe + HandlesPlayer + PlayerMainCamera + ConfiguresPlayerMovement + HandlesEnemies,
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn from_plugins(
@@ -108,21 +82,13 @@ where
 		_: &TAnimations,
 		_: &TPhysics,
 		_: &TPathFinding,
-		_: &TAgents,
 	) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding, TAgents> Plugin
-	for BehaviorsPlugin<(
-		TInput,
-		TSaveGame,
-		TAnimations,
-		TPhysics,
-		TPathFinding,
-		TAgents,
-	)>
+impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding> Plugin
+	for BehaviorsPlugin<(TInput, TSaveGame, TAnimations, TPhysics, TPathFinding)>
 where
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
@@ -133,12 +99,6 @@ where
 		+ HandlesAllPhysicalEffects
 		+ HandlesRaycast,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
-	TAgents: ThreadSafe
-		+ HandlesPlayer
-		+ PlayerMainCamera
-		+ ConfiguresPlayerMovement
-		+ HandlesEnemies
-		+ HandlesAgents,
 {
 	fn build(&self, app: &mut App) {
 		TAnimations::register_movement_direction::<Movement<TPhysics::TMotion>>(app);
@@ -148,17 +108,6 @@ where
 		TSaveGame::register_savable_component::<Attacking>(app);
 		TSaveGame::register_savable_component::<OverrideFace>(app);
 		TSaveGame::register_savable_component::<Movement<PathOrWasd<TPhysics::TMotion>>>(app);
-
-		let point_input = PointerInput::<TPhysics::TMotion>::parse::<
-			InputSystemParam<TInput>,
-			RaycastSystemParam<TPhysics>,
-		>;
-		let wasd_input = WasdInput::<TPhysics::TMotion>::parse::<
-			TAgents::TPlayerMainCamera,
-			InputSystemParam<TInput>,
-			TAgents::TPlayer,
-		>;
-		let wasd_input = wasd_input.pipe(OnError::log_and_return(|| ProcessInput::None));
 
 		let compute_path = MovementDefinition::compute_path::<
 			TPhysics::TMotion,
@@ -173,10 +122,10 @@ where
 			TAnimations::TAnimationDispatch,
 		>;
 
+		app.register_derived_component::<OverrideFace, SetFace>();
+
 		app
 			// Required components
-			.register_required_components::<TAgents::TPlayer, FixPoints>()
-			.register_required_components::<TAgents::TEnemy, FixPoints>()
 			.register_required_components::<SkillContact, TSaveGame::TSaveEntityMarker>()
 			.register_required_components::<SkillProjection, TSaveGame::TSaveEntityMarker>()
 			// Observers
@@ -188,20 +137,12 @@ where
 				(
 					// Prep systems
 					(FixPointSpawner::insert, SkillUsage::clear_not_refreshed).chain(),
-					// Player behaviors
+					// Movement
 					(
-						point_input.pipe(TAgents::TPlayer::insert_process_component),
-						wasd_input.pipe(TAgents::TPlayer::insert_process_component),
 						compute_path,
 						execute_path,
 						execute_movement,
 						animate_movement,
-					)
-						.chain(),
-					// Enemy behaviors
-					(
-						TAgents::TEnemy::select_behavior::<TAgents::TPlayer>.pipe(OnError::log),
-						TAgents::TEnemy::chase::<PathOrWasd<TPhysics::TMotion>>,
 					)
 						.chain(),
 					// Skill execution
@@ -218,9 +159,7 @@ where
 					// Apply facing
 					(
 						Movement::<TPhysics::TMotion>::set_faces,
-						TAgents::TPlayer::get_faces
-							.pipe(execute_player_face::<RaycastSystemParam<TPhysics>>),
-						TAgents::TEnemy::get_faces.pipe(execute_enemy_face),
+						SetFace::get_faces.pipe(execute_face::<RaycastSystemParam<TPhysics>>),
 					)
 						.chain(),
 				)

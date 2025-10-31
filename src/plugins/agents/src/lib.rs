@@ -28,6 +28,7 @@ use common::{
 		handles_input::{HandlesInput, InputSystemParam},
 		handles_lights::HandlesLights,
 		handles_map_generation::HandlesMapGeneration,
+		handles_movement::HandlesMovement,
 		handles_physics::{HandlesPhysicalAttributes, HandlesRaycast},
 		handles_player::{
 			ConfiguresPlayerMovement,
@@ -36,6 +37,7 @@ use common::{
 			PlayerMainCamera,
 		},
 		handles_saving::HandlesSaving,
+		handles_skills_control::HandlesSKillControl,
 		prefab::AddPrefabObserver,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
@@ -46,7 +48,7 @@ use systems::void_sphere::ring_rotation::ring_rotation;
 
 pub struct AgentsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights, TMaps>
+impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights, TMaps, TBehaviors>
 	AgentsPlugin<(
 		TLoading,
 		TInput,
@@ -55,6 +57,7 @@ impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights, TMaps>
 		TAnimations,
 		TLights,
 		TMaps,
+		TBehaviors,
 	)>
 where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
@@ -64,7 +67,9 @@ where
 	TAnimations: ThreadSafe + RegisterAnimations,
 	TLights: ThreadSafe + HandlesLights,
 	TMaps: ThreadSafe + HandlesMapGeneration,
+	TBehaviors: ThreadSafe + HandlesMovement + HandlesSKillControl,
 {
+	#[allow(clippy::too_many_arguments)]
 	pub fn from_plugins(
 		_: &TLoading,
 		_: &TInput,
@@ -73,12 +78,13 @@ where
 		_: &TAnimations,
 		_: &TLights,
 		_: &TMaps,
+		_: &TBehaviors,
 	) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights, TMaps> Plugin
+impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights, TMaps, TBehaviors> Plugin
 	for AgentsPlugin<(
 		TLoading,
 		TInput,
@@ -87,6 +93,7 @@ impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights, TMaps> Plugin
 		TAnimations,
 		TLights,
 		TMaps,
+		TBehaviors,
 	)>
 where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
@@ -96,6 +103,7 @@ where
 	TAnimations: ThreadSafe + RegisterAnimations,
 	TLights: ThreadSafe + HandlesLights,
 	TMaps: ThreadSafe + HandlesMapGeneration,
+	TBehaviors: ThreadSafe + HandlesMovement + HandlesSKillControl,
 {
 	fn build(&self, app: &mut App) {
 		// # Load Agent

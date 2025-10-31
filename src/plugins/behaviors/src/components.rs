@@ -9,7 +9,10 @@ pub(crate) mod skill_usage;
 pub(crate) mod when_traveled_insert;
 
 use bevy::prelude::*;
-use common::{components::persistent_entity::PersistentEntity, traits::handles_orientation::Face};
+use common::traits::{
+	handles_orientation::Face,
+	register_derived_component::{DerivableFrom, InsertDerivedComponent},
+};
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
@@ -25,8 +28,12 @@ pub struct OverrideFace(pub Face);
 #[derive(Component, Debug, PartialEq)]
 pub struct SetFace(pub Face);
 
-#[derive(Component, Debug, PartialEq)]
-pub struct Chase(pub PersistentEntity);
+impl DerivableFrom<'_, '_, OverrideFace> for SetFace {
+	const INSERT: InsertDerivedComponent = InsertDerivedComponent::IfNew;
 
-#[derive(Component, Debug, PartialEq)]
-pub struct Attack(pub PersistentEntity);
+	type TParam = ();
+
+	fn derive_from(_: Entity, OverrideFace(face): &OverrideFace, _: &()) -> Self {
+		Self(*face)
+	}
+}
