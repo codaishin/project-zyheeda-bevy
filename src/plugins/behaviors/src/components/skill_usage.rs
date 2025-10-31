@@ -9,6 +9,7 @@ use std::{
 pub struct SkillUsage {
 	pub(crate) holding: HashSet<SlotKey>,
 	pub(crate) started_holding: HashSet<SlotKey>,
+	pub(crate) refreshed: HashSet<SlotKey>,
 }
 
 impl HoldSkills for SkillUsage {

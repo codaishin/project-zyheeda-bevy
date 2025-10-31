@@ -9,7 +9,6 @@ use super::{
 	when_traveled_insert::WhenTraveled,
 };
 use crate::components::{
-	fix_points::fix_point::FixPoint,
 	set_motion_forward::SetMotionForward,
 	skill_behavior::skill_contact::CreatedFrom,
 };
@@ -241,7 +240,7 @@ impl SimplePrefab for Motion {
 				entity.try_insert_if_new((
 					RigidBody::Fixed,
 					Anchor::<Always>::to_target(caster.0)
-						.on_fix_point(FixPoint(spawner))
+						.on_spawner(spawner)
 						.with_target_rotation(),
 				));
 			}
@@ -278,7 +277,7 @@ impl SimplePrefab for Motion {
 
 				entity.try_insert_if_new((
 					Anchor::<Once>::to_target(caster.0)
-						.on_fix_point(FixPoint(spawner))
+						.on_spawner(spawner)
 						.with_target_rotation(),
 					SetMotionForward(speed),
 				));

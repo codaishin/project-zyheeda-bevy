@@ -7,11 +7,11 @@ mod traits;
 use crate::{
 	components::{
 		attacking::Attacking,
-		fix_points::{Anchor, FixPoints, fix_point::FixPoint},
+		fix_points::{Anchor, FixPoints, fix_point::FixPointSpawner},
 		movement_definition::MovementDefinition,
 		skill_usage::SkillUsage,
 	},
-	system_param::movement_param::MovementParamMut,
+	system_param::{movement_param::MovementParamMut, skill_param::SkillParamMut},
 	systems::{
 		face::execute_enemy_face::execute_enemy_face,
 		movement::insert_process_component::ProcessInput,
@@ -21,7 +21,7 @@ use bevy::prelude::*;
 use common::{
 	components::{child_of_persistent::ChildOfPersistent, persistent_entity::PersistentEntity},
 	states::game_state::GameState,
-	systems::{log::OnError, track_components::TrackComponentInSelfAndChildren},
+	systems::log::OnError,
 	traits::{
 		animation::{HasAnimationsDispatch, RegisterAnimations},
 		handles_agents::HandlesAgents,
@@ -45,8 +45,8 @@ use common::{
 			Projection,
 			SkillEntities,
 			SkillRoot,
-			SkillSpawner,
 		},
+		handles_skills_control::HandlesSKillControl,
 		prefab::AddPrefabObserver,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
@@ -176,9 +176,7 @@ where
 		app
 			// Required components
 			.register_required_components::<TAgents::TPlayer, FixPoints>()
-			.register_required_components::<TAgents::TPlayer, SkillUsage>()
 			.register_required_components::<TAgents::TEnemy, FixPoints>()
-			.register_required_components::<TAgents::TEnemy, SkillUsage>()
 			.register_required_components::<SkillContact, TSaveGame::TSaveEntityMarker>()
 			.register_required_components::<SkillProjection, TSaveGame::TSaveEntityMarker>()
 			// Observers
@@ -189,11 +187,7 @@ where
 				Update,
 				(
 					// Prep systems
-					(
-						FixPoint::<SkillSpawner>::insert_in_children_of::<TAgents::TAgent>,
-						FixPoints::track_in_self_and_children::<FixPoint<SkillSpawner>>().system(),
-					)
-						.chain(),
+					(FixPointSpawner::insert, SkillUsage::clear_not_refreshed).chain(),
 					// Player behaviors
 					(
 						point_input.pipe(TAgents::TPlayer::insert_process_component),
@@ -202,14 +196,12 @@ where
 						execute_path,
 						execute_movement,
 						animate_movement,
-						SkillUsage::player::<TAgents::TPlayer, InputSystemParam<TInput>>,
 					)
 						.chain(),
 					// Enemy behaviors
 					(
 						TAgents::TEnemy::select_behavior::<TAgents::TPlayer>.pipe(OnError::log),
 						TAgents::TEnemy::chase::<PathOrWasd<TPhysics::TMotion>>,
-						SkillUsage::enemy::<TAgents::TEnemy>,
 					)
 						.chain(),
 					// Skill execution
@@ -294,4 +286,8 @@ impl<TDependencies> SystemSetDefinition for BehaviorsPlugin<TDependencies> {
 
 impl<TDependencies> HandlesMovement for BehaviorsPlugin<TDependencies> {
 	type TMovementMut<'w, 's> = MovementParamMut<'w, 's>;
+}
+
+impl<TDependencies> HandlesSKillControl for BehaviorsPlugin<TDependencies> {
+	type TSkillControlMut<'w, 's> = SkillParamMut<'w, 's>;
 }
