@@ -28,7 +28,7 @@ use common::{
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
 		handles_load_tracking::HandlesLoadTracking,
 		handles_loadout::HandlesLoadout,
-		handles_orientation::HandlesOrientation,
+		handles_orientation::{FacingSystemParam, HandlesOrientation},
 		handles_physics::{HandlesAllPhysicalEffects, HandlesRaycast, RaycastSystemParam},
 		handles_player::ConfiguresPlayerSkillAnimations,
 		handles_saving::HandlesSaving,
@@ -124,7 +124,13 @@ where
 				TBehaviors::TSkillUsage::enqueue::<Slots, Queue>,
 				Combos::update::<Queue>,
 				flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
-				advance_active_skill::<Queue, TAgents, TBehaviors, SkillExecuter, Virtual>
+				advance_active_skill::<
+					Queue,
+					TAgents,
+					FacingSystemParam<TBehaviors>,
+					SkillExecuter,
+					Virtual,
+				>
 					.pipe(OnError::log),
 				execute_skill,
 				flush::<Queue>,

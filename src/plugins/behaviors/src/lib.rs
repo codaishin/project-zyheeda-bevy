@@ -11,7 +11,11 @@ use crate::{
 		movement_definition::MovementDefinition,
 		skill_usage::SkillUsage,
 	},
-	system_param::{movement_param::MovementParamMut, skill_param::SkillParamMut},
+	system_param::{
+		face_param::FaceParamMut,
+		movement_param::MovementParamMut,
+		skill_param::SkillParamMut,
+	},
 };
 use bevy::prelude::*;
 use common::{
@@ -22,7 +26,7 @@ use common::{
 		animation::{HasAnimationsDispatch, RegisterAnimations},
 		handles_input::HandlesInput,
 		handles_movement::HandlesMovement,
-		handles_orientation::{Face, HandlesOrientation},
+		handles_orientation::HandlesOrientation,
 		handles_path_finding::HandlesPathFinding,
 		handles_physics::{
 			HandlesAllPhysicalEffects,
@@ -41,7 +45,6 @@ use common::{
 		},
 		handles_skills_control::HandlesSKillControl,
 		prefab::AddPrefabObserver,
-		register_derived_component::RegisterDerivedComponent,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 	},
@@ -50,7 +53,7 @@ use common::{
 use components::{
 	Always,
 	Once,
-	OverrideFace,
+	SetFaceOverride,
 	ground_target::GroundTarget,
 	movement::{Movement, path_or_wasd::PathOrWasd},
 	set_motion_forward::SetMotionForward,
@@ -106,7 +109,8 @@ where
 		TSaveGame::register_savable_component::<SkillContact>(app);
 		TSaveGame::register_savable_component::<SkillProjection>(app);
 		TSaveGame::register_savable_component::<Attacking>(app);
-		TSaveGame::register_savable_component::<OverrideFace>(app);
+		TSaveGame::register_savable_component::<SetFace>(app);
+		TSaveGame::register_savable_component::<SetFaceOverride>(app);
 		TSaveGame::register_savable_component::<Movement<PathOrWasd<TPhysics::TMotion>>>(app);
 
 		let compute_path = MovementDefinition::compute_path::<
@@ -121,8 +125,6 @@ where
 			Movement<TPhysics::TMotion>,
 			TAnimations::TAnimationDispatch,
 		>;
-
-		app.register_derived_component::<OverrideFace, SetFace>();
 
 		app
 			// Required components
@@ -207,11 +209,7 @@ impl<TDependencies> HandlesSkillBehaviors for BehaviorsPlugin<TDependencies> {
 }
 
 impl<TDependencies> HandlesOrientation for BehaviorsPlugin<TDependencies> {
-	type TFaceTemporarily = OverrideFace;
-
-	fn temporarily(face: Face) -> Self::TFaceTemporarily {
-		OverrideFace(face)
-	}
+	type TFaceSystemParam<'w, 's> = FaceParamMut<'w, 's>;
 }
 
 #[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]

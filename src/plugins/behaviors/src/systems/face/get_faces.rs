@@ -1,20 +1,20 @@
-use crate::components::{OverrideFace, SetFace};
+use crate::components::{SetFaceOverride, SetFace};
 use bevy::prelude::*;
 use common::traits::handles_orientation::Face;
 
 impl SetFace {
 	pub(crate) fn get_faces(
-		faces: Query<(Entity, &Self, Option<&OverrideFace>)>,
+		faces: Query<(Entity, &Self, Option<&SetFaceOverride>)>,
 	) -> Vec<(Entity, Face)> {
 		faces.iter().filter_map(face_value).collect()
 	}
 }
 
 fn face_value(
-	(id, SetFace(set_face), override_face): (Entity, &SetFace, Option<&OverrideFace>),
+	(id, SetFace(set_face), override_face): (Entity, &SetFace, Option<&SetFaceOverride>),
 ) -> Option<(Entity, Face)> {
 	match override_face {
-		Some(OverrideFace(override_face)) => Some((id, *override_face)),
+		Some(SetFaceOverride(override_face)) => Some((id, *override_face)),
 		None => Some((id, *set_face)),
 	}
 }
@@ -31,7 +31,6 @@ mod tests {
 		},
 		math::Vec3,
 	};
-	use common::traits::register_derived_component::RegisterDerivedComponent;
 	use testing::SingleThreadedApp;
 
 	#[derive(Component, Debug, PartialEq)]
@@ -46,7 +45,6 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.register_derived_component::<OverrideFace, SetFace>();
 		app.add_systems(Update, SetFace::get_faces.pipe(track_face));
 
 		app
@@ -69,22 +67,9 @@ mod tests {
 	fn get_faces_from_override_face() {
 		let mut app = setup();
 		let face = Face::Translation(Vec3::new(1., 2., 3.));
-		let agent = app.world_mut().spawn(OverrideFace(face)).id();
-
-		app.update();
-
-		let agent = app.world().entity(agent);
-
-		assert_eq!(Some(&_Face(face)), agent.get::<_Face>());
-	}
-
-	#[test]
-	fn get_faces_from_override_face_even_when_set_face_set() {
-		let mut app = setup();
-		let face = Face::Translation(Vec3::new(1., 2., 3.));
 		let agent = app
 			.world_mut()
-			.spawn((SetFace(Face::Target), OverrideFace(face)))
+			.spawn((SetFace(Face::Target), SetFaceOverride(face)))
 			.id();
 
 		app.update();

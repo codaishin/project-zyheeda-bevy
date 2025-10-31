@@ -6,16 +6,19 @@ use common::{
 	self,
 	traits::{
 		accessors::get::Get,
-		handles_orientation::Face,
+		handles_orientation::{Face, FaceTargetIs},
 		handles_physics::{MouseHover, MouseHoversOver, Raycast},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
 use std::ops::DerefMut;
 
+use crate::components::face_target::FaceTarget;
+
 pub(crate) fn execute_face<TMouseHover>(
 	In(faces): In<Vec<(Entity, Face)>>,
 	mut transforms: Query<&mut Transform>,
+	face_targets: Query<&FaceTarget>,
 	commands: ZyheedaCommands,
 	mut hover: StaticSystemParam<TMouseHover>,
 ) where
@@ -24,7 +27,7 @@ pub(crate) fn execute_face<TMouseHover>(
 	for (entity, face) in faces {
 		let target = match face {
 			Face::Translation(translation) => Some(translation),
-			Face::Target => get_cursor_target(hover.deref_mut(), vec![entity], &transforms),
+			Face::Target => get_target(entity, hover.deref_mut(), &transforms, &face_targets),
 			Face::Entity(entity) => get_translation(commands.get(&entity), &transforms),
 			Face::Direction(dir) => get_translation(Some(entity), &transforms).map(|tr| tr + *dir),
 		};
@@ -46,15 +49,24 @@ fn apply_facing(transforms: &mut Query<&mut Transform>, id: Entity, target: Vec3
 	transform.look_at(target, Vec3::Y);
 }
 
-fn get_cursor_target<TMouseHover>(
+fn get_target<TMouseHover>(
+	entity: Entity,
 	hover: &mut TMouseHover,
-	exclude: Vec<Entity>,
 	transforms: &Query<&mut Transform>,
+	face_targets: &Query<&FaceTarget>,
 ) -> Option<Vec3>
 where
 	TMouseHover: Raycast<MouseHover>,
 {
-	match hover.raycast(MouseHover { exclude })? {
+	if let Ok(FaceTargetIs::Entity(target)) = face_targets.get(entity).map(|t| t.0) {
+		return transforms.get(target).ok().map(|tr| tr.translation);
+	}
+
+	let hover = hover.raycast(MouseHover {
+		exclude: vec![entity],
+	})?;
+
+	match hover {
 		MouseHoversOver::Ground { point } => Some(point),
 		MouseHoversOver::Object { entity, .. } => {
 			transforms.get(entity).ok().map(|tr| tr.translation)
@@ -76,7 +88,10 @@ mod tests {
 	};
 	use common::{
 		components::persistent_entity::PersistentEntity,
-		traits::register_persistent_entities::RegisterPersistentEntities,
+		traits::{
+			handles_orientation::FaceTargetIs,
+			register_persistent_entities::RegisterPersistentEntities,
+		},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -139,7 +154,7 @@ mod tests {
 	}
 
 	#[test]
-	fn do_face_entity() {
+	fn face_target_hover_entity() {
 		let mut app = setup();
 		let entity = app.world_mut().spawn(Transform::from_xyz(6., 5., 20.)).id();
 		let agent = app
@@ -161,6 +176,63 @@ mod tests {
 
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(6., 5., 20.), Vec3::Y)),
+			app.world().entity(agent).get::<Transform>()
+		);
+	}
+
+	#[test]
+	fn face_target_hover_ground() {
+		let mut app = setup();
+		let agent = app
+			.world_mut()
+			.spawn((Transform::from_xyz(4., 5., 6.), _Face(Face::Target)))
+			.id();
+		app.insert_resource(_RayCast::new().with_mock(|mock| {
+			mock.expect_raycast()
+				.with(eq(MouseHover {
+					exclude: vec![agent],
+				}))
+				.return_const(MouseHoversOver::Ground {
+					point: Vec3::new(6., 3., 7.),
+				});
+		}));
+
+		app.update();
+
+		assert_eq!(
+			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(6., 5., 7.), Vec3::Y)),
+			app.world().entity(agent).get::<Transform>()
+		);
+	}
+
+	#[test]
+	fn face_target_entity_from_target_definition() {
+		let mut app = setup();
+		let entity = app.world_mut().spawn(Transform::from_xyz(6., 5., 20.)).id();
+		let target_definition = app.world_mut().spawn(Transform::from_xyz(11., 1., 2.)).id();
+		let agent = app
+			.world_mut()
+			.spawn((
+				Transform::from_xyz(4., 5., 6.),
+				_Face(Face::Target),
+				FaceTarget(FaceTargetIs::Entity(target_definition)),
+			))
+			.id();
+		app.insert_resource(_RayCast::new().with_mock(|mock| {
+			mock.expect_raycast()
+				.with(eq(MouseHover {
+					exclude: vec![agent],
+				}))
+				.return_const(MouseHoversOver::Object {
+					entity,
+					point: Vec3::new(4., 5., 7.),
+				});
+		}));
+
+		app.update();
+
+		assert_eq!(
+			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(11., 5., 2.), Vec3::Y)),
 			app.world().entity(agent).get::<Transform>()
 		);
 	}

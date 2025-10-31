@@ -1,4 +1,5 @@
 pub(crate) mod attacking;
+pub(crate) mod face_target;
 pub(crate) mod fix_points;
 pub(crate) mod ground_target;
 pub(crate) mod movement;
@@ -9,10 +10,7 @@ pub(crate) mod skill_usage;
 pub(crate) mod when_traveled_insert;
 
 use bevy::prelude::*;
-use common::traits::{
-	handles_orientation::Face,
-	register_derived_component::{DerivableFrom, InsertDerivedComponent},
-};
+use common::traits::handles_orientation::Face;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
@@ -23,17 +21,7 @@ pub(crate) struct Always;
 pub(crate) struct Once;
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct OverrideFace(pub Face);
+pub struct SetFaceOverride(pub Face);
 
-#[derive(Component, Debug, PartialEq)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct SetFace(pub Face);
-
-impl DerivableFrom<'_, '_, OverrideFace> for SetFace {
-	const INSERT: InsertDerivedComponent = InsertDerivedComponent::IfNew;
-
-	type TParam = ();
-
-	fn derive_from(_: Entity, OverrideFace(face): &OverrideFace, _: &()) -> Self {
-		Self(*face)
-	}
-}

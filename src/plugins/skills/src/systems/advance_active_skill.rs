@@ -3,13 +3,17 @@ use crate::{
 	traits::{Flush, GetActiveSkill, GetAnimationStrategy, GetSkillBehavior, Schedule},
 };
 use bevy::{
-	ecs::{component::Mutable, system::EntityCommands},
+	ecs::{
+		component::Mutable,
+		system::{EntityCommands, StaticSystemParam},
+	},
 	prelude::*,
 };
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
-		handles_orientation::{Face, HandlesOrientation},
+		accessors::get::EntityContextMut,
+		handles_orientation::{Face, Facing, OverrideFace},
 		handles_player::ConfiguresPlayerSkillAnimations,
 		state_duration::{StateMeta, UpdatedStates},
 	},
@@ -32,17 +36,19 @@ type Components<'a, TGetSkill, TSkillExecutor> = (
 	Option<&'a SkillSideEffectsCleared>,
 );
 
-pub(crate) fn advance_active_skill<
-	TGetSkill: GetActiveSkill<SkillState> + Component<Mutability = Mutable>,
-	TPlayerAnimations: ConfiguresPlayerSkillAnimations,
-	TOrientation: HandlesOrientation,
-	TSkillExecutor: Component<Mutability = Mutable> + Schedule<RunSkillBehavior> + Flush,
-	TTime: Send + Sync + Default + 'static,
->(
+pub(crate) fn advance_active_skill<TGetSkill, TPlayerAnimations, TFacing, TSkillExecutor, TTime>(
 	time: Res<Time<TTime>>,
 	mut commands: Commands,
 	mut agents: Query<Components<TGetSkill, TSkillExecutor>>,
-) -> Result<(), Vec<TPlayerAnimations::TError>> {
+	mut facing: StaticSystemParam<TFacing>,
+) -> Result<(), Vec<TPlayerAnimations::TError>>
+where
+	TGetSkill: GetActiveSkill<SkillState> + Component<Mutability = Mutable>,
+	TPlayerAnimations: ConfiguresPlayerSkillAnimations,
+	TFacing: for<'c> EntityContextMut<Facing, TContext<'c>: OverrideFace>,
+	TSkillExecutor: Component<Mutability = Mutable> + Schedule<RunSkillBehavior> + Flush,
+	TTime: Send + Sync + Default + 'static,
+{
 	let delta = time.delta();
 	let mut errors = vec![];
 
@@ -50,15 +56,21 @@ pub(crate) fn advance_active_skill<
 		let Ok(agent) = commands.get_entity(entity) else {
 			continue;
 		};
+		let Some(mut ctx) = TFacing::get_entity_context_mut(&mut facing, entity, Facing) else {
+			continue;
+		};
 		let advancement = match dequeue.get_active() {
-			Some(skill) => advance::<TPlayerAnimations, TOrientation, TSkillExecutor>(
+			Some(skill) => advance::<TPlayerAnimations, TFacing::TContext<'_>, TSkillExecutor>(
 				skill,
 				agent,
 				skill_executer,
 				delta,
+				&mut ctx,
 				&mut errors,
 			),
-			None if is_not(cleared) => clear_side_effects::<TPlayerAnimations, TOrientation>(agent),
+			None if is_not(cleared) => {
+				clear_side_effects::<TPlayerAnimations, TFacing::TContext<'_>>(agent, &mut ctx)
+			}
 			_ => Advancement::InProcess,
 		};
 
@@ -80,12 +92,15 @@ fn is_not(cleared: Option<&SkillSideEffectsCleared>) -> bool {
 	cleared.is_none()
 }
 
-fn clear_side_effects<TPlayerAnimations, TOrientation>(mut agent: EntityCommands) -> Advancement
+fn clear_side_effects<TPlayerAnimations, TFacing>(
+	mut agent: EntityCommands,
+	facing: &mut TFacing,
+) -> Advancement
 where
 	TPlayerAnimations: ConfiguresPlayerSkillAnimations,
-	TOrientation: HandlesOrientation,
+	TFacing: OverrideFace,
 {
-	agent.remove::<TOrientation::TFaceTemporarily>();
+	facing.stop_override_face();
 	agent.try_insert((
 		SkillSideEffectsCleared,
 		TPlayerAnimations::stop_skill_animation(),
@@ -94,16 +109,17 @@ where
 	Advancement::InProcess
 }
 
-fn advance<TPlayerAnimations, TOrientation, TSkillExecutor>(
+fn advance<TPlayerAnimations, TFacing, TSkillExecutor>(
 	mut skill: impl GetSkillBehavior + GetAnimationStrategy + UpdatedStates<SkillState>,
 	mut agent: EntityCommands,
 	mut skill_executer: Mut<TSkillExecutor>,
 	delta: Duration,
+	facing: &mut TFacing,
 	errors: &mut Vec<TPlayerAnimations::TError>,
 ) -> Advancement
 where
 	TPlayerAnimations: ConfiguresPlayerSkillAnimations,
-	TOrientation: HandlesOrientation,
+	TFacing: OverrideFace,
 	TSkillExecutor: Component + Schedule<RunSkillBehavior> + Flush,
 {
 	let skill = &mut skill;
@@ -113,7 +129,7 @@ where
 	agent.remove::<SkillSideEffectsCleared>();
 
 	if states.contains(&StateMeta::Entering(SkillState::Aim)) {
-		agent.try_insert(TOrientation::temporarily(Face::Target));
+		facing.override_face(Face::Target);
 		if let Err(error) = animate::<TPlayerAnimations>(skill, agent) {
 			errors.push(error);
 		}
@@ -204,7 +220,7 @@ mod tests {
 		tools::action_key::slot::{PlayerSlot, Side},
 	};
 	use macros::{NestedMocks, simple_mock};
-	use mockall::{mock, predicate::eq};
+	use mockall::{automock, mock, predicate::eq};
 	use std::{collections::HashSet, fmt::Display, ops::DerefMut};
 	use testing::{IsChanged, Mock, NestedMocks, SingleThreadedApp, TickTime};
 
@@ -302,18 +318,30 @@ mod tests {
 		Stop,
 	}
 
-	struct _HandlesOrientation;
+	#[derive(Component, NestedMocks)]
+	struct _Facing {
+		mock: Mock_Facing,
+	}
 
-	impl HandlesOrientation for _HandlesOrientation {
-		type TFaceTemporarily = _TempFace;
-
-		fn temporarily(face: Face) -> Self::TFaceTemporarily {
-			_TempFace(face)
+	impl Default for _Facing {
+		fn default() -> Self {
+			Self::new().with_mock(|mock| {
+				mock.expect_override_face().return_const(());
+				mock.expect_stop_override_face().return_const(());
+			})
 		}
 	}
 
-	#[derive(Component, Debug, PartialEq, Clone)]
-	struct _TempFace(Face);
+	#[automock]
+	impl OverrideFace for _Facing {
+		fn override_face(&mut self, face: Face) {
+			self.mock.override_face(face);
+		}
+
+		fn stop_override_face(&mut self) {
+			self.mock.stop_override_face();
+		}
+	}
 
 	#[derive(Component, NestedMocks)]
 	struct _Executor {
@@ -375,7 +403,7 @@ mod tests {
 		app.update();
 		app.add_systems(
 			Update,
-			advance_active_skill::<_Dequeue, TPlayer, _HandlesOrientation, _Executor, Real>.pipe(
+			advance_active_skill::<_Dequeue, TPlayer, Query<Mut<_Facing>>, _Executor, Real>.pipe(
 				|In(r), mut commands: Commands| {
 					commands.insert_resource(_Result(r));
 				},
@@ -404,6 +432,7 @@ mod tests {
 				})),
 			},
 			Transform::default(),
+			_Facing::default(),
 		));
 
 		app.tick_time(Duration::from_millis(100));
@@ -433,6 +462,7 @@ mod tests {
 					})),
 				},
 				Transform::default(),
+				_Facing::default(),
 			))
 			.id();
 
@@ -464,6 +494,7 @@ mod tests {
 				})),
 			},
 			Transform::default(),
+			_Facing::default(),
 		));
 
 		app.update();
@@ -497,6 +528,7 @@ mod tests {
 				})),
 			},
 			Transform::default(),
+			_Facing::default(),
 		));
 
 		app.update();
@@ -525,6 +557,7 @@ mod tests {
 					})),
 				},
 				Transform::default(),
+				_Facing::default(),
 			))
 			.id();
 
@@ -564,6 +597,7 @@ mod tests {
 					})),
 				},
 				Transform::default(),
+				_Facing::default(),
 			))
 			.id();
 
@@ -595,6 +629,7 @@ mod tests {
 					})),
 				},
 				Transform::default(),
+				_Facing::default(),
 			))
 			.id();
 
@@ -609,7 +644,11 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.entity_mut(agent)
-			.insert((_Dequeue { active: None }, Transform::default()))
+			.insert((
+				_Dequeue { active: None },
+				Transform::default(),
+				_Facing::default(),
+			))
 			.id();
 
 		app.update();
@@ -640,6 +679,7 @@ mod tests {
 					})),
 				},
 				Transform::default(),
+				_Facing::default(),
 			))
 			.id();
 
@@ -654,7 +694,11 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.entity_mut(agent)
-			.insert((_Dequeue { active: None }, Transform::default()))
+			.insert((
+				_Dequeue { active: None },
+				Transform::default(),
+				_Facing::default(),
+			))
 			.id();
 
 		app.update();
@@ -672,7 +716,11 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.entity_mut(agent)
-			.insert((_Dequeue { active: None }, Transform::default()))
+			.insert((
+				_Dequeue { active: None },
+				Transform::default(),
+				_Facing::default(),
+			))
 			.id();
 
 		app.update();
@@ -695,7 +743,11 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.entity_mut(agent)
-			.insert((_Dequeue { active: None }, Transform::default()))
+			.insert((
+				_Dequeue { active: None },
+				Transform::default(),
+				_Facing::default(),
+			))
 			.id();
 
 		app.update();
@@ -744,6 +796,7 @@ mod tests {
 				})),
 			},
 			Transform::default(),
+			_Facing::default(),
 		));
 
 		app.update();
@@ -773,6 +826,7 @@ mod tests {
 				})),
 			},
 			Transform::default(),
+			_Facing::default(),
 		));
 
 		app.update();
@@ -821,6 +875,7 @@ mod tests {
 					})
 				})),
 			},
+			_Facing::default(),
 		));
 
 		app.update();
@@ -865,6 +920,7 @@ mod tests {
 					})
 				})),
 			},
+			_Facing::default(),
 		));
 
 		app.update();
@@ -891,6 +947,7 @@ mod tests {
 				})),
 			},
 			Transform::default(),
+			_Facing::default(),
 		));
 
 		app.update();
@@ -918,6 +975,7 @@ mod tests {
 				})),
 			},
 			Transform::default(),
+			_Facing::default(),
 		));
 
 		app.update();
@@ -947,6 +1005,7 @@ mod tests {
 				})),
 			},
 			Transform::default(),
+			_Facing::default(),
 		));
 
 		app.update();
@@ -972,13 +1031,16 @@ mod tests {
 				})),
 			},
 			Transform::default(),
+			_Facing::new().with_mock(|mock| {
+				mock.expect_override_face()
+					.times(1)
+					.with(eq(Face::Target))
+					.return_const(());
+				mock.expect_stop_override_face().never();
+			}),
 		));
 
 		app.update();
-
-		let agent = app.world().entity(agent);
-
-		assert_eq!(Some(&_TempFace(Face::Target)), agent.get::<_TempFace>());
 	}
 
 	#[test]
@@ -1001,12 +1063,13 @@ mod tests {
 				})),
 			},
 			Transform::default(),
+			_Facing::new().with_mock(|mock| {
+				mock.expect_override_face().never();
+				mock.expect_stop_override_face().never();
+			}),
 		));
 
 		app.update();
-
-		let agent = app.world().entity(agent);
-		assert_eq!(None, agent.get::<_TempFace>());
 	}
 
 	#[test]
@@ -1029,27 +1092,31 @@ mod tests {
 				})),
 			},
 			Transform::from_xyz(-1., -2., -3.),
+			_Facing::new().with_mock(|mock| {
+				mock.expect_override_face()
+					.times(1)
+					.with(eq(Face::Target))
+					.return_const(());
+				mock.expect_stop_override_face().never();
+			}),
 		));
 
 		app.update();
-
-		let agent = app.world().entity(agent);
-		assert_eq!(Some(&_TempFace(Face::Target)), agent.get::<_TempFace>());
 	}
 
 	#[test]
-	fn no_facing_override_when_no_skill() {
+	fn stop_facing_override_when_no_skills_active() {
 		let (mut app, agent) = setup::<_FaultyPlayer>();
 		app.world_mut().entity_mut(agent).insert((
 			_Dequeue { active: None },
 			Transform::from_xyz(-1., -2., -3.),
-			_TempFace(Face::Target),
+			_Facing::new().with_mock(|mock| {
+				mock.expect_override_face().never();
+				mock.expect_stop_override_face().times(1).return_const(());
+			}),
 		));
 
 		app.update();
-
-		let agent = app.world().entity(agent);
-		assert_eq!(None, agent.get::<_TempFace>());
 	}
 
 	#[test]
