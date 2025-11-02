@@ -55,7 +55,7 @@ use components::{
 	Once,
 	SetFaceOverride,
 	ground_target::GroundTarget,
-	movement::{Movement, path_or_wasd::PathOrWasd},
+	movement::{Movement, path_or_direction::PathOrDirection},
 	set_motion_forward::SetMotionForward,
 	skill_behavior::{skill_contact::SkillContact, skill_projection::SkillProjection},
 	when_traveled_insert::DestroyAfterDistanceTraveled,
@@ -111,7 +111,7 @@ where
 		TSaveGame::register_savable_component::<Attacking>(app);
 		TSaveGame::register_savable_component::<SetFace>(app);
 		TSaveGame::register_savable_component::<SetFaceOverride>(app);
-		TSaveGame::register_savable_component::<Movement<PathOrWasd<TPhysics::TMotion>>>(app);
+		TSaveGame::register_savable_component::<Movement<PathOrDirection<TPhysics::TMotion>>>(app);
 
 		let compute_path = MovementDefinition::compute_path::<
 			TPhysics::TMotion,
@@ -119,7 +119,7 @@ where
 			TPathFinding::TComputerRef,
 		>;
 		let execute_path =
-			MovementDefinition::execute_movement::<Movement<PathOrWasd<TPhysics::TMotion>>>;
+			MovementDefinition::execute_movement::<Movement<PathOrDirection<TPhysics::TMotion>>>;
 		let execute_movement = MovementDefinition::execute_movement::<Movement<TPhysics::TMotion>>;
 		let animate_movement = MovementDefinition::animate_movement::<
 			Movement<TPhysics::TMotion>,
@@ -221,8 +221,12 @@ impl<TDependencies> SystemSetDefinition for BehaviorsPlugin<TDependencies> {
 	const SYSTEMS: Self::TSystemSet = BehaviorSystems;
 }
 
-impl<TDependencies> HandlesMovement for BehaviorsPlugin<TDependencies> {
-	type TMovementMut<'w, 's> = MovementParamMut<'w, 's>;
+impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding> HandlesMovement
+	for BehaviorsPlugin<(TInput, TSaveGame, TAnimations, TPhysics, TPathFinding)>
+where
+	TPhysics: HandlesMotion,
+{
+	type TMovementMut<'w, 's> = MovementParamMut<'w, 's, TPhysics::TMotion>;
 }
 
 impl<TDependencies> HandlesSKillControl for BehaviorsPlugin<TDependencies> {

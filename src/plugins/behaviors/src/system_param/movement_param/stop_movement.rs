@@ -1,12 +1,16 @@
 use crate::{
-	components::movement_definition::MovementDefinition,
+	components::movement::{Movement, path_or_direction::PathOrDirection},
 	system_param::movement_param::MovementContextMut,
 };
-use common::traits::handles_movement::StopMovement;
+use common::traits::{handles_movement::StopMovement, thread_safe::ThreadSafe};
 
-impl StopMovement for MovementContextMut<'_> {
+impl<TMotion> StopMovement for MovementContextMut<'_, TMotion>
+where
+	TMotion: ThreadSafe,
+{
 	fn stop(&mut self) {
-		self.entity.try_remove::<MovementDefinition>();
+		self.entity
+			.try_insert(Movement::<PathOrDirection<TMotion>>::stop());
 	}
 }
 
@@ -14,50 +18,50 @@ impl StopMovement for MovementContextMut<'_> {
 mod tests {
 	use super::*;
 	use crate::{
-		components::movement_definition::MovementDefinition,
+		components::movement::{Movement, path_or_direction::PathOrDirection},
 		system_param::movement_param::MovementParamMut,
 	};
 	use bevy::{
-		app::{App, Update},
 		ecs::system::{RunSystemError, RunSystemOnce},
+		prelude::*,
 	};
-	use common::{
-		tools::{Units, UnitsPerSecond},
-		traits::{
-			accessors::get::EntityContextMut,
-			animation::{Animation, AnimationAsset, PlayMode},
-			handles_movement::Movement,
-		},
+	use common::traits::{
+		accessors::get::EntityContextMut,
+		handles_movement::Movement as MovementMarker,
 	};
 	use testing::SingleThreadedApp;
+
+	#[derive(Debug, PartialEq)]
+	struct _Motion;
 
 	fn setup() -> App {
 		App::new().single_threaded(Update)
 	}
 
 	#[test]
-	fn insert_movement_definition() -> Result<(), RunSystemError> {
+	fn insert_stop() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(MovementDefinition {
-				radius: Units::from(42.),
-				speed: UnitsPerSecond::from(11.),
-				animation: Some(Animation {
-					asset: AnimationAsset::from("my/animation/path"),
-					play_mode: PlayMode::Repeat,
-				}),
-			})
+			.spawn(Movement::<PathOrDirection<_Motion>>::to(Vec3::new(
+				1., 2., 3.,
+			)))
 			.id();
 
 		app.world_mut()
-			.run_system_once(move |mut p: MovementParamMut| {
+			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
 				let mut ctx =
-					MovementParamMut::get_entity_context_mut(&mut p, entity, Movement).unwrap();
+					MovementParamMut::get_entity_context_mut(&mut p, entity, MovementMarker)
+						.unwrap();
 				ctx.stop();
 			})?;
 
-		assert_eq!(None, app.world().entity(entity).get::<MovementDefinition>());
+		assert_eq!(
+			Some(&Movement::<PathOrDirection<_Motion>>::stop()),
+			app.world()
+				.entity(entity)
+				.get::<Movement<PathOrDirection<_Motion>>>()
+		);
 		Ok(())
 	}
 }

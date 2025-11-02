@@ -1,8 +1,12 @@
-use crate::components::movement::{MotionTarget, Movement};
+use crate::components::movement::Movement;
 use bevy::prelude::*;
 use common::{
 	errors::Unreachable,
-	traits::{handles_custom_assets::TryLoadFrom, thread_safe::ThreadSafe},
+	traits::{
+		handles_custom_assets::TryLoadFrom,
+		handles_movement::MovementTarget,
+		thread_safe::ThreadSafe,
+	},
 };
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
@@ -13,7 +17,7 @@ where
 	TMovement: ThreadSafe,
 {
 	#[serde(skip_serializing_if = "Option::is_none")]
-	target: Option<MotionTarget>,
+	target: Option<MovementTarget>,
 	#[serde(skip)]
 	_m: PhantomData<TMovement>,
 }
@@ -71,7 +75,7 @@ mod tests {
 	#[test]
 	fn round_trip_with_target() {
 		let obj = MovementDto::<_Method> {
-			target: Some(MotionTarget::Dir(Dir3::NEG_X)),
+			target: Some(MovementTarget::Dir(Dir3::NEG_X)),
 			_m: PhantomData,
 		};
 

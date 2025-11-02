@@ -4,7 +4,7 @@ use common::{
 	traits::{animation::Animation, handles_movement::UpdateMovement},
 };
 
-impl UpdateMovement for MovementContextMut<'_> {
+impl<TMotion> UpdateMovement for MovementContextMut<'_, TMotion> {
 	fn update(&mut self, speed: UnitsPerSecond, animation: Option<Animation>) {
 		let Some(movement_definition) = self.movement_definition.as_deref_mut() else {
 			return;
@@ -36,6 +36,8 @@ mod tests {
 	};
 	use testing::SingleThreadedApp;
 
+	struct _Motion;
+
 	fn setup() -> App {
 		App::new().single_threaded(Update)
 	}
@@ -56,7 +58,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once(move |mut p: MovementParamMut| {
+			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
 				let mut ctx =
 					MovementParamMut::get_entity_context_mut(&mut p, entity, Movement).unwrap();
 				ctx.update(
