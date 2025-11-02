@@ -8,13 +8,13 @@ use crate::{
 	components::{
 		agent::{Agent, tag::AgentTag},
 		enemy::{Enemy, void_sphere::VoidSphere},
+		movement_config::MovementConfig,
 		player::Player,
 		player_camera::PlayerCamera,
-		player_movement::PlayerMovement,
 		skill_animation::SkillAnimation,
 	},
 	observers::agent::{insert_concrete_agent::InsertConcreteAgent, insert_from::InsertFrom},
-	systems::{agent::insert_model::InsertModelSystem, toggle_walk_run::player_toggle_walk_run},
+	systems::agent::insert_model::InsertModelSystem,
 };
 use bevy::prelude::*;
 use common::{
@@ -28,14 +28,9 @@ use common::{
 		handles_input::{HandlesInput, InputSystemParam},
 		handles_lights::HandlesLights,
 		handles_map_generation::HandlesMapGeneration,
-		handles_movement::HandlesMovement,
-		handles_physics::{HandlesPhysicalAttributes, HandlesRaycast},
-		handles_player::{
-			ConfiguresPlayerMovement,
-			ConfiguresPlayerSkillAnimations,
-			HandlesPlayer,
-			PlayerMainCamera,
-		},
+		handles_movement::{HandlesMovement, MovementSystemParamMut},
+		handles_physics::{HandlesPhysicalAttributes, HandlesRaycast, RaycastSystemParam},
+		handles_player::{ConfiguresPlayerSkillAnimations, HandlesPlayer, PlayerMainCamera},
 		handles_saving::HandlesSaving,
 		handles_skills_control::HandlesSKillControl,
 		prefab::AddPrefabObserver,
@@ -142,7 +137,7 @@ where
 		TSaveGame::register_savable_component::<AgentTag>(app);
 		TSaveGame::register_savable_component::<Enemy>(app);
 		TSaveGame::register_savable_component::<PlayerCamera>(app);
-		TSaveGame::register_savable_component::<PlayerMovement>(app);
+		TSaveGame::register_savable_component::<MovementConfig>(app);
 		app.register_required_components::<Agent, TSaveGame::TSaveEntityMarker>();
 
 		// # Prefabs
@@ -153,7 +148,11 @@ where
 		app.register_required_components::<PlayerCamera, TPhysics::TWorldCamera>();
 		app.add_systems(
 			Update,
-			player_toggle_walk_run::<InputSystemParam<TInput>>
+			Player::movement::<
+				InputSystemParam<TInput>,
+				RaycastSystemParam<TPhysics>,
+				MovementSystemParamMut<TBehaviors>,
+			>
 				.run_if(in_state(GameState::Play))
 				.after(TInput::SYSTEMS),
 		);
@@ -166,10 +165,6 @@ impl<TDependencies> HandlesEnemies for AgentsPlugin<TDependencies> {
 
 impl<TDependencies> HandlesPlayer for AgentsPlugin<TDependencies> {
 	type TPlayer = Player;
-}
-
-impl<TDependencies> ConfiguresPlayerMovement for AgentsPlugin<TDependencies> {
-	type TPlayerMovement = PlayerMovement;
 }
 
 impl<TDependencies> ConfiguresPlayerSkillAnimations for AgentsPlugin<TDependencies> {

@@ -1,12 +1,6 @@
 use crate::{
 	errors::ErrorData,
-	tools::{
-		action_key::{movement::MovementKey, slot::SlotKey},
-		collider_radius::ColliderRadius,
-		movement_animation::MovementAnimation,
-		speed::Speed,
-	},
-	traits::accessors::get::GetProperty,
+	tools::action_key::{movement::MovementKey, slot::SlotKey},
 };
 use bevy::{math::InvalidDirectionError, prelude::*};
 
@@ -16,13 +10,6 @@ pub trait HandlesPlayer {
 
 pub trait PlayerMainCamera {
 	type TPlayerMainCamera: Component + Default + KeyDirection<TKey = MovementKey>;
-}
-
-pub trait ConfiguresPlayerMovement {
-	type TPlayerMovement: Component
-		+ GetProperty<Speed>
-		+ GetProperty<ColliderRadius>
-		+ GetProperty<Option<MovementAnimation>>;
 }
 
 pub trait ConfiguresPlayerSkillAnimations {

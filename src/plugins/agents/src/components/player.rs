@@ -1,4 +1,4 @@
-use super::player_movement::{Config, MovementMode, PlayerMovement};
+use super::movement_config::MovementConfig;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
@@ -32,17 +32,35 @@ use common::{
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::LazyLock};
 
 #[derive(Component, Default, Debug, PartialEq, Clone)]
 #[require(
-	PlayerMovement = Player::movement(),
+	MovementConfig = PLAYER_RUN.clone(),
 	Name = "Player",
 	FlipHorizontally = FlipHorizontally::on("metarig"),
 	GroundOffset = Vec3::Y,
 	LockedAxes = LockedAxes::ROTATION_LOCKED | LockedAxes::TRANSLATION_LOCKED_Y,
 )]
 pub struct Player;
+
+static PLAYER_COLLIDER_RADIUS: LazyLock<Units> = LazyLock::new(|| Units::from(0.2));
+static PLAYER_RUN: LazyLock<MovementConfig> = LazyLock::new(|| MovementConfig {
+	collider_radius: *PLAYER_COLLIDER_RADIUS,
+	speed: UnitsPerSecond::from(1.5),
+	animation: Some(Animation::new(
+		Player::animation_asset(AnimationKey::Run),
+		PlayMode::Repeat,
+	)),
+});
+static PLAYER_WALK: LazyLock<MovementConfig> = LazyLock::new(|| MovementConfig {
+	collider_radius: *PLAYER_COLLIDER_RADIUS,
+	speed: UnitsPerSecond::from(0.75),
+	animation: Some(Animation::new(
+		Player::animation_asset(AnimationKey::Walk),
+		PlayMode::Repeat,
+	)),
+});
 
 impl Player {
 	const MODEL_PATH: &'static str = "models/player.glb";
@@ -101,29 +119,6 @@ impl Player {
 				AnimationKey::Other(slot) => AnimationMask::from(PlayerAnimationMask::Slot(slot)),
 			},
 		)
-	}
-
-	fn movement() -> PlayerMovement {
-		PlayerMovement {
-			mode: MovementMode::Fast,
-			collider_radius: Self::collider_radius(),
-			fast: Config {
-				speed: UnitsPerSecond::from(1.5).into(),
-				animation: Animation::new(
-					Self::animation_asset(AnimationKey::Run),
-					PlayMode::Repeat,
-				)
-				.into(),
-			},
-			slow: Config {
-				speed: UnitsPerSecond::from(0.75).into(),
-				animation: Animation::new(
-					Self::animation_asset(AnimationKey::Walk),
-					PlayMode::Repeat,
-				)
-				.into(),
-			},
-		}
 	}
 }
 
