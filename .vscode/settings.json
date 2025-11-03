@@ -52,6 +52,7 @@
 		"Bresenham",
 		"Collidable",
 		"consts",
+		"cooldown",
 		"Deque",
 		"despawn",
 		"despawned",

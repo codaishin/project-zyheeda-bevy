@@ -6,7 +6,6 @@ mod traits;
 use crate::{
 	components::{
 		SetFace,
-		attacking::Attacking,
 		fix_points::{Anchor, fix_point::FixPointSpawner},
 		movement_definition::MovementDefinition,
 		skill_usage::SkillUsage,
@@ -61,7 +60,7 @@ use components::{
 	when_traveled_insert::DestroyAfterDistanceTraveled,
 };
 use std::marker::PhantomData;
-use systems::{face::execute_face::execute_face, update_count_down::UpdateCountDown};
+use systems::face::execute_face::execute_face;
 
 pub struct BehaviorsPlugin<TDependencies>(PhantomData<TDependencies>);
 
@@ -108,7 +107,6 @@ where
 
 		TSaveGame::register_savable_component::<SkillContact>(app);
 		TSaveGame::register_savable_component::<SkillProjection>(app);
-		TSaveGame::register_savable_component::<Attacking>(app);
 		TSaveGame::register_savable_component::<SetFace>(app);
 		TSaveGame::register_savable_component::<SetFaceOverride>(app);
 		TSaveGame::register_savable_component::<Movement<PathOrDirection<TPhysics::TMotion>>>(app);
@@ -149,7 +147,6 @@ where
 						.chain(),
 					// Skill execution
 					(
-						Attacking::update::<Virtual>,
 						GroundTarget::set_position,
 						DestroyAfterDistanceTraveled::system,
 						SkillContact::update_range,

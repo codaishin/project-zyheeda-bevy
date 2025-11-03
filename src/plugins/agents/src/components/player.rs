@@ -2,7 +2,11 @@ use super::movement_config::MovementConfig;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::{flip::FlipHorizontally, ground_offset::GroundOffset},
+	components::{
+		collider_relationship::InteractionTarget,
+		flip::FlipHorizontally,
+		ground_offset::GroundOffset,
+	},
 	errors::Unreachable,
 	tools::{
 		Units,
@@ -36,6 +40,7 @@ use std::{collections::HashMap, sync::LazyLock};
 
 #[derive(Component, Default, Debug, PartialEq, Clone)]
 #[require(
+	InteractionTarget,
 	MovementConfig = PLAYER_RUN.clone(),
 	Name = "Player",
 	FlipHorizontally = FlipHorizontally::on("metarig"),

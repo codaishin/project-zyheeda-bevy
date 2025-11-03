@@ -1,6 +1,10 @@
+pub(crate) mod attack_config;
+pub(crate) mod attack_phase;
+pub(crate) mod attacking;
+pub(crate) mod chasing;
 pub(crate) mod void_sphere;
 
-use crate::components::movement_config::MovementConfig;
+use crate::components::{enemy::attack_config::EnemyAttackConfig, movement_config::MovementConfig};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{GravityScale, RigidBody};
 use common::{
@@ -14,7 +18,7 @@ use common::{
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
-#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
 #[require(
 	InteractionTarget,
 	PersistentEntity,
@@ -24,6 +28,7 @@ use serde::{Deserialize, Serialize};
 	GravityScale = GravityScale(0.),
 	IsBlocker = [Blocker::Character],
 	MovementConfig,
+	EnemyAttackConfig,
 )]
 pub struct Enemy {
 	pub(crate) aggro_range: Units,

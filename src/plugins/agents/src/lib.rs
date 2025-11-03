@@ -7,7 +7,7 @@ use crate::{
 	assets::agent_config::{AgentConfigAsset, AgentConfigData, dto::AgentConfigAssetDto},
 	components::{
 		agent::{Agent, tag::AgentTag},
-		enemy::{Enemy, void_sphere::VoidSphere},
+		enemy::{Enemy, attack_phase::EnemyAttackPhase, void_sphere::VoidSphere},
 		movement_config::MovementConfig,
 		player::Player,
 		player_camera::PlayerCamera,
@@ -22,6 +22,7 @@ use common::{
 	tools::action_key::slot::{NoValidAgentKey, PlayerSlot, SlotKey},
 	traits::{
 		animation::RegisterAnimations,
+		delta::Delta,
 		handles_agents::HandlesAgents,
 		handles_custom_assets::HandlesCustomFolderAssets,
 		handles_enemies::HandlesEnemies,
@@ -139,6 +140,7 @@ where
 		TSaveGame::register_savable_component::<Enemy>(app);
 		TSaveGame::register_savable_component::<PlayerCamera>(app);
 		TSaveGame::register_savable_component::<MovementConfig>(app);
+		TSaveGame::register_savable_component::<EnemyAttackPhase>(app);
 		app.register_required_components::<Agent, TSaveGame::TSaveEntityMarker>();
 
 		// # Prefabs
@@ -160,7 +162,15 @@ where
 				>,
 				Player::toggle_speed::<InputSystemParam<TInput>, MovementSystemParamMut<TBehaviors>>,
 				Player::use_skills::<InputSystemParam<TInput>, SKillControlParamMut<TBehaviors>>,
-				Enemy::chase_player::<MovementSystemParamMut<TBehaviors>>,
+				(
+					Enemy::attack_decision::<RaycastSystemParam<TPhysics>>,
+					Enemy::chase_decision,
+					Enemy::chase_player::<MovementSystemParamMut<TBehaviors>>,
+					Enemy::begin_attack,
+					Enemy::hold_attack::<SKillControlParamMut<TBehaviors>>,
+					Update::delta.pipe(Enemy::advance_attack_phase),
+				)
+					.chain(),
 			)
 				.run_if(in_state(GameState::Play))
 				.after(TInput::SYSTEMS),

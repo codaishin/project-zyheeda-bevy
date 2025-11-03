@@ -1,6 +1,9 @@
 use crate::{
 	assets::agent_config::{Bones, dto::BonesConfig},
-	components::{enemy::Enemy, movement_config::MovementConfig},
+	components::{
+		enemy::{Enemy, attack_config::EnemyAttackConfig},
+		movement_config::MovementConfig,
+	},
 };
 use bevy::{
 	color::{Color, LinearRgba},
@@ -25,10 +28,15 @@ use common::{
 	},
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, f32::consts::PI};
+use std::{collections::HashMap, f32::consts::PI, time::Duration};
 
 #[derive(Component, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
-#[require(Enemy = Self::enemy(), MovementConfig = Self::movement_config())]
+#[require(
+	Enemy = Self::enemy(),
+	EnemyAttackConfig = Self::attack_config(),
+	MovementConfig = Self::movement_config(),
+	GroundOffset = GroundOffset(Self::GROUND_OFFSET),
+)]
 pub struct VoidSphere;
 
 impl VoidSphere {
@@ -51,6 +59,14 @@ impl VoidSphere {
 
 	pub(crate) const SKILL_SPAWN: &str = "skill_spawn";
 	pub(crate) const SKILL_SPAWN_NEUTRAL: &str = "skill_spawn_neutral";
+
+	fn attack_config() -> EnemyAttackConfig {
+		EnemyAttackConfig {
+			key: Self::SLOT_KEY,
+			hold: Duration::from_secs(1),
+			cooldown: Duration::from_secs(2),
+		}
+	}
 
 	fn enemy() -> Enemy {
 		Enemy {
@@ -146,12 +162,6 @@ impl BonesConfig for VoidSphere {
 				VoidSphere::SLOT_KEY,
 			)]),
 		}
-	}
-}
-
-impl From<&VoidSphere> for GroundOffset {
-	fn from(_: &VoidSphere) -> Self {
-		Self::from(VoidSphere::GROUND_OFFSET)
 	}
 }
 
