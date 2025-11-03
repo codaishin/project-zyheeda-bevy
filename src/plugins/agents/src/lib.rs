@@ -32,7 +32,7 @@ use common::{
 		handles_physics::{HandlesPhysicalAttributes, HandlesRaycast, RaycastSystemParam},
 		handles_player::{ConfiguresPlayerSkillAnimations, HandlesPlayer, PlayerMainCamera},
 		handles_saving::HandlesSaving,
-		handles_skills_control::HandlesSKillControl,
+		handles_skills_control::{HandlesSKillControl, SKillControlParamMut},
 		prefab::AddPrefabObserver,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
@@ -155,6 +155,7 @@ where
 					MovementSystemParamMut<TBehaviors>,
 				>,
 				Player::toggle_speed::<InputSystemParam<TInput>, MovementSystemParamMut<TBehaviors>>,
+				Player::use_skills::<InputSystemParam<TInput>, SKillControlParamMut<TBehaviors>>,
 			)
 				.run_if(in_state(GameState::Play))
 				.after(TInput::SYSTEMS),
