@@ -1,7 +1,6 @@
 use crate::components::fix_points::{FixPoints, FixPointsDefinition};
 use bevy::prelude::*;
 use common::{
-	tools::bone::Bone,
 	traits::{accessors::get::TryApplyOn, handles_skill_behaviors::SkillSpawner},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -25,7 +24,7 @@ impl FixPointSpawner {
 				continue;
 			};
 
-			match config.0.get(&Bone(name.as_str())) {
+			match config.0.get(name.as_str()) {
 				Some(spawner) => {
 					commands.try_apply_on(&entity, |mut e| {
 						e.try_insert((FixPointOf(root), FixPointSpawner(*spawner)));
@@ -77,7 +76,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn(FixPointsDefinition(HashMap::from([(
-				Bone("a"),
+				String::from("a"),
 				SkillSpawner::Neutral,
 			)])))
 			.id();
@@ -107,7 +106,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn(FixPointsDefinition(HashMap::from([(
-				Bone("a"),
+				String::from("a"),
 				SkillSpawner::Neutral,
 			)])))
 			.id();
@@ -139,7 +138,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn(FixPointsDefinition(HashMap::from([(
-				Bone("a"),
+				String::from("a"),
 				SkillSpawner::Neutral,
 			)])))
 			.id();
@@ -176,7 +175,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn(FixPointsDefinition(HashMap::from([(
-				Bone("a"),
+				String::from("a"),
 				SkillSpawner::Neutral,
 			)])))
 			.id();

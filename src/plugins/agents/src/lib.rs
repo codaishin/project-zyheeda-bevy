@@ -146,6 +146,7 @@ where
 
 		// # Behaviors
 		app.register_required_components::<PlayerCamera, TPhysics::TWorldCamera>();
+		app.add_observer(Agent::register_skill_spawn_points::<SKillControlParamMut<TBehaviors>>);
 		app.add_systems(
 			Update,
 			(

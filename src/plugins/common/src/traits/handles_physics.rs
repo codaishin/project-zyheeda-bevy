@@ -125,6 +125,16 @@ pub struct PhysicalDefaultAttributes {
 	pub gravity_interaction: EffectTarget<Gravity>,
 }
 
+impl Default for PhysicalDefaultAttributes {
+	fn default() -> Self {
+		Self {
+			health: Health::new(10.),
+			force_interaction: EffectTarget::Affected,
+			gravity_interaction: EffectTarget::Affected,
+		}
+	}
+}
+
 impl Property for PhysicalDefaultAttributes {
 	type TValue<'a> = Self;
 }

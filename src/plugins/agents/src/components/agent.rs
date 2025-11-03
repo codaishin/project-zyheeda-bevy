@@ -23,6 +23,7 @@ use common::{
 use macros::{SavableComponent, agent_asset};
 
 #[derive(Component, SavableComponent, Clone, Debug, PartialEq)]
+#[component(immutable)]
 #[require(
 	InteractionTarget,
 	PersistentEntity,

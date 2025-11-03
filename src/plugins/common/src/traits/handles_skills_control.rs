@@ -1,5 +1,5 @@
 use crate::{
-	tools::{action_key::slot::SlotKey, bone::Bone},
+	tools::action_key::slot::SlotKey,
 	traits::{accessors::get::EntityContextMut, handles_skill_behaviors::SkillSpawner},
 };
 use bevy::ecs::system::SystemParam;
@@ -37,5 +37,14 @@ where
 pub struct SkillSpawnPoints;
 
 pub trait SpawnPointsDefinition {
-	fn insert_spawn_point_definition(&mut self, definition: HashMap<Bone<'static>, SkillSpawner>);
+	fn insert_spawn_point_definition(&mut self, definition: HashMap<String, SkillSpawner>);
+}
+
+impl<T> SpawnPointsDefinition for T
+where
+	T: DerefMut<Target: SpawnPointsDefinition>,
+{
+	fn insert_spawn_point_definition(&mut self, definition: HashMap<String, SkillSpawner>) {
+		self.deref_mut().insert_spawn_point_definition(definition);
+	}
 }
