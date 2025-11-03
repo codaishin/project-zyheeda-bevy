@@ -65,7 +65,7 @@ impl InsertEnemyOrPlayer for Agent {
 	fn insert_enemy_or_player(&self, mut entity: ZyheedaEntityCommands) {
 		match self.agent_type {
 			AgentType::Player => entity.try_insert(Player),
-			AgentType::Enemy(EnemyType::VoidSphere) => entity.try_insert(VoidSphere::enemy()),
+			AgentType::Enemy(EnemyType::VoidSphere) => entity.try_insert(VoidSphere),
 		};
 	}
 }

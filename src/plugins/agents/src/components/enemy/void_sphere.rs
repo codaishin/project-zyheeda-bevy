@@ -1,6 +1,6 @@
 use crate::{
 	assets::agent_config::{Bones, dto::BonesConfig},
-	components::enemy::{Enemy, enemy_type::EnemyTypeInternal},
+	components::{enemy::Enemy, movement_config::MovementConfig},
 };
 use bevy::{
 	color::{Color, LinearRgba},
@@ -15,27 +15,20 @@ use bevy_rapier3d::geometry::Collider;
 use common::{
 	components::{ground_offset::GroundOffset, insert_asset::InsertAsset},
 	errors::Unreachable,
-	tools::{
-		Units,
-		UnitsPerSecond,
-		action_key::slot::SlotKey,
-		aggro_range::AggroRange,
-		attack_range::AttackRange,
-		collider_radius::ColliderRadius,
-		speed::Speed,
-	},
+	tools::{Units, UnitsPerSecond, action_key::slot::SlotKey},
 	traits::{
 		handles_agents::AgentType,
-		handles_enemies::{EnemySkillUsage, EnemyTarget, EnemyType},
+		handles_enemies::EnemyType,
 		handles_skill_behaviors::SkillSpawner,
 		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, f32::consts::PI, time::Duration};
+use std::{collections::HashMap, f32::consts::PI};
 
 #[derive(Component, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+#[require(Enemy = Self::enemy(), MovementConfig = Self::movement_config())]
 pub struct VoidSphere;
 
 impl VoidSphere {
@@ -59,20 +52,20 @@ impl VoidSphere {
 	pub(crate) const SKILL_SPAWN: &str = "skill_spawn";
 	pub(crate) const SKILL_SPAWN_NEUTRAL: &str = "skill_spawn_neutral";
 
-	pub(crate) fn enemy() -> Enemy {
+	fn enemy() -> Enemy {
 		Enemy {
-			speed: Speed(UnitsPerSecond::from(1.)),
-			movement_animation: None,
-			aggro_range: AggroRange(Units::from(10.)),
-			attack_range: AttackRange(Units::from(5.)),
-			target: EnemyTarget::Player,
-			collider_radius: Self::collider_radius(),
-			enemy_type: EnemyTypeInternal::VoidSphere(Self),
+			aggro_range: Units::from(10.),
+			attack_range: Units::from(5.),
+			min_target_distance: Some(Units::from(2.)),
 		}
 	}
 
-	fn collider_radius() -> ColliderRadius {
-		ColliderRadius(Units::from(Self::OUTER_RADIUS))
+	fn movement_config() -> MovementConfig {
+		MovementConfig {
+			collider_radius: Units::from(Self::OUTER_RADIUS),
+			speed: UnitsPerSecond::from(1.),
+			..default()
+		}
 	}
 }
 
@@ -153,20 +146,6 @@ impl BonesConfig for VoidSphere {
 				VoidSphere::SLOT_KEY,
 			)]),
 		}
-	}
-}
-
-impl EnemySkillUsage for VoidSphere {
-	fn hold_skill(&self) -> Duration {
-		Duration::from_secs(2)
-	}
-
-	fn cool_down(&self) -> Duration {
-		Duration::from_secs(5)
-	}
-
-	fn skill_key(&self) -> SlotKey {
-		VoidSphere::SLOT_KEY
 	}
 }
 

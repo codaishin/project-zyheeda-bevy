@@ -1,55 +1,13 @@
-use crate::{
-	components::persistent_entity::PersistentEntity,
-	tools::{
-		action_key::slot::SlotKey,
-		aggro_range::AggroRange,
-		attack_range::AttackRange,
-		collider_radius::ColliderRadius,
-		movement_animation::MovementAnimation,
-		speed::Speed,
-	},
-	traits::{
-		accessors::get::{GetProperty, Property},
-		iteration::{Iter, IterFinite},
-	},
+use crate::traits::{
+	accessors::get::Property,
+	iteration::{Iter, IterFinite},
 };
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
 
 pub trait HandlesEnemies {
-	type TEnemy: Component
-		+ EnemySkillUsage
-		+ GetProperty<Speed>
-		+ GetProperty<Option<MovementAnimation>>
-		+ GetProperty<EnemyTarget>
-		+ GetProperty<AggroRange>
-		+ GetProperty<AttackRange>
-		+ GetProperty<ColliderRadius>;
+	type TEnemy: Component;
 }
-
-pub trait EnemySkillUsage {
-	fn hold_skill(&self) -> Duration;
-	fn cool_down(&self) -> Duration;
-	fn skill_key(&self) -> SlotKey;
-}
-
-#[derive(Debug, PartialEq, Clone, Copy, Default, Serialize, Deserialize)]
-pub enum EnemyTarget {
-	#[default]
-	Player,
-	Entity(PersistentEntity),
-}
-
-impl Property for EnemyTarget {
-	type TValue<'a> = Self;
-}
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct Attacker(pub PersistentEntity);
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct Target(pub PersistentEntity);
 
 #[derive(Debug, PartialEq, Clone, Copy, Eq, Hash, Serialize, Deserialize)]
 pub enum EnemyType {

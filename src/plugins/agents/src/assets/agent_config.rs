@@ -57,12 +57,6 @@ impl LoadoutConfig for AgentConfigData<'_> {
 	}
 }
 
-impl Mapper<Bone<'_>, Option<SkillSpawner>> for AgentConfigData<'_> {
-	fn map(&self, Bone(bone): Bone<'_>) -> Option<SkillSpawner> {
-		self.asset.bones.spawners.get(bone).copied()
-	}
-}
-
 impl Mapper<Bone<'_>, Option<EssenceSlot>> for AgentConfigData<'_> {
 	fn map(&self, Bone(bone): Bone<'_>) -> Option<EssenceSlot> {
 		self.asset
