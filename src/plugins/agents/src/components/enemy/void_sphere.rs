@@ -54,9 +54,9 @@ impl VoidSphere {
 
 	fn enemy() -> Enemy {
 		Enemy {
-			aggro_range: Units::from(10.),
-			attack_range: Units::from(5.),
-			min_target_distance: Some(Units::from(2.)),
+			aggro_range: Units::from(8.),
+			attack_range: Units::from(6.),
+			min_target_distance: Some(Units::from(3.)),
 		}
 	}
 

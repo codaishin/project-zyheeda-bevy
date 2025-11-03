@@ -61,6 +61,10 @@ pub struct UnitsPerSecond(f32);
 #[derive(Debug, PartialEq, PartialOrd, Clone, Copy, ClampZeroPositive, Serialize)]
 pub struct Units(f32);
 
+impl Units {
+	pub const ZERO: Self = Self(0.);
+}
+
 #[derive(Debug, PartialEq, Clone, ClampZeroPositive)]
 pub struct Intensity(f32);
 

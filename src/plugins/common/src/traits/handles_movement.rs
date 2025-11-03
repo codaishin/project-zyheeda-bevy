@@ -1,11 +1,10 @@
-use std::ops::DerefMut;
-
 use crate::{
 	tools::{Units, UnitsPerSecond},
 	traits::{accessors::get::EntityContextMut, animation::Animation},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
 use serde::{Deserialize, Serialize};
+use std::ops::{Deref, DerefMut};
 
 pub trait HandlesMovement {
 	type TMovementMut<'w, 's>: SystemParam
@@ -14,9 +13,12 @@ pub trait HandlesMovement {
 
 pub type MovementSystemParamMut<'w, 's, T> = <T as HandlesMovement>::TMovementMut<'w, 's>;
 
-pub trait ControlMovement: StartMovement + UpdateMovement + StopMovement {}
+pub trait ControlMovement: StartMovement + UpdateMovement + StopMovement + CurrentMovement {}
 
-impl<T> ControlMovement for T where T: StartMovement + UpdateMovement + StopMovement {}
+impl<T> ControlMovement for T where
+	T: StartMovement + UpdateMovement + StopMovement + CurrentMovement
+{
+}
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum MovementTarget {
@@ -87,6 +89,19 @@ where
 {
 	fn stop(&mut self) {
 		self.deref_mut().stop();
+	}
+}
+
+pub trait CurrentMovement {
+	fn current_movement(&self) -> Option<MovementTarget>;
+}
+
+impl<T> CurrentMovement for T
+where
+	T: Deref<Target: CurrentMovement>,
+{
+	fn current_movement(&self) -> Option<MovementTarget> {
+		self.deref().current_movement()
 	}
 }
 

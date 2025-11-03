@@ -1,10 +1,13 @@
 use crate::system_param::movement_param::MovementContextMut;
 use common::{
 	tools::UnitsPerSecond,
-	traits::{animation::Animation, handles_movement::UpdateMovement},
+	traits::{animation::Animation, handles_movement::UpdateMovement, thread_safe::ThreadSafe},
 };
 
-impl<TMotion> UpdateMovement for MovementContextMut<'_, TMotion> {
+impl<TMotion> UpdateMovement for MovementContextMut<'_, TMotion>
+where
+	TMotion: ThreadSafe,
+{
 	fn update(&mut self, speed: UnitsPerSecond, animation: Option<Animation>) {
 		let Some(movement_definition) = self.movement_definition.as_deref_mut() else {
 			return;

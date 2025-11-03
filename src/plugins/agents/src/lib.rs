@@ -157,6 +157,7 @@ where
 				>,
 				Player::toggle_speed::<InputSystemParam<TInput>, MovementSystemParamMut<TBehaviors>>,
 				Player::use_skills::<InputSystemParam<TInput>, SKillControlParamMut<TBehaviors>>,
+				Enemy::chase_player::<MovementSystemParamMut<TBehaviors>>,
 			)
 				.run_if(in_state(GameState::Play))
 				.after(TInput::SYSTEMS),
