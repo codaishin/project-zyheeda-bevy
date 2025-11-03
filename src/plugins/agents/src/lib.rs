@@ -148,11 +148,14 @@ where
 		app.register_required_components::<PlayerCamera, TPhysics::TWorldCamera>();
 		app.add_systems(
 			Update,
-			Player::movement::<
-				InputSystemParam<TInput>,
-				RaycastSystemParam<TPhysics>,
-				MovementSystemParamMut<TBehaviors>,
-			>
+			(
+				Player::movement::<
+					InputSystemParam<TInput>,
+					RaycastSystemParam<TPhysics>,
+					MovementSystemParamMut<TBehaviors>,
+				>,
+				Player::toggle_speed::<InputSystemParam<TInput>, MovementSystemParamMut<TBehaviors>>,
+			)
 				.run_if(in_state(GameState::Play))
 				.after(TInput::SYSTEMS),
 		);

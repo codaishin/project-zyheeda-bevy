@@ -45,7 +45,7 @@ use std::{collections::HashMap, sync::LazyLock};
 pub struct Player;
 
 static PLAYER_COLLIDER_RADIUS: LazyLock<Units> = LazyLock::new(|| Units::from(0.2));
-static PLAYER_RUN: LazyLock<MovementConfig> = LazyLock::new(|| MovementConfig {
+pub(crate) static PLAYER_RUN: LazyLock<MovementConfig> = LazyLock::new(|| MovementConfig {
 	collider_radius: *PLAYER_COLLIDER_RADIUS,
 	speed: UnitsPerSecond::from(1.5),
 	animation: Some(Animation::new(
@@ -53,7 +53,7 @@ static PLAYER_RUN: LazyLock<MovementConfig> = LazyLock::new(|| MovementConfig {
 		PlayMode::Repeat,
 	)),
 });
-static PLAYER_WALK: LazyLock<MovementConfig> = LazyLock::new(|| MovementConfig {
+pub(crate) static PLAYER_WALK: LazyLock<MovementConfig> = LazyLock::new(|| MovementConfig {
 	collider_radius: *PLAYER_COLLIDER_RADIUS,
 	speed: UnitsPerSecond::from(0.75),
 	animation: Some(Animation::new(
