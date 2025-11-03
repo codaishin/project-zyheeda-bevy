@@ -29,6 +29,7 @@ use common::{
 		handles_lights::HandlesLights,
 		handles_map_generation::HandlesMapGeneration,
 		handles_movement::{HandlesMovement, MovementSystemParamMut},
+		handles_orientation::{FacingSystemParamMut, HandlesOrientation},
 		handles_physics::{HandlesPhysicalAttributes, HandlesRaycast, RaycastSystemParam},
 		handles_player::{ConfiguresPlayerSkillAnimations, HandlesPlayer, PlayerMainCamera},
 		handles_saving::HandlesSaving,
@@ -62,7 +63,7 @@ where
 	TAnimations: ThreadSafe + RegisterAnimations,
 	TLights: ThreadSafe + HandlesLights,
 	TMaps: ThreadSafe + HandlesMapGeneration,
-	TBehaviors: ThreadSafe + HandlesMovement + HandlesSKillControl,
+	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation + HandlesSKillControl,
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn from_plugins(
@@ -98,7 +99,7 @@ where
 	TAnimations: ThreadSafe + RegisterAnimations,
 	TLights: ThreadSafe + HandlesLights,
 	TMaps: ThreadSafe + HandlesMapGeneration,
-	TBehaviors: ThreadSafe + HandlesMovement + HandlesSKillControl,
+	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation + HandlesSKillControl,
 {
 	fn build(&self, app: &mut App) {
 		// # Load Agent
@@ -147,6 +148,8 @@ where
 		// # Behaviors
 		app.register_required_components::<PlayerCamera, TPhysics::TWorldCamera>();
 		app.add_observer(Agent::register_skill_spawn_points::<SKillControlParamMut<TBehaviors>>);
+		app.add_observer(Player::register_target_definition::<FacingSystemParamMut<TBehaviors>>);
+		app.add_observer(Enemy::register_target_definition::<FacingSystemParamMut<TBehaviors>>);
 		app.add_systems(
 			Update,
 			(

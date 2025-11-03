@@ -28,7 +28,7 @@ use common::{
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
 		handles_load_tracking::HandlesLoadTracking,
 		handles_loadout::HandlesLoadout,
-		handles_orientation::{FacingSystemParam, HandlesOrientation},
+		handles_orientation::{FacingSystemParamMut, HandlesOrientation},
 		handles_physics::{HandlesAllPhysicalEffects, HandlesRaycast, RaycastSystemParam},
 		handles_player::ConfiguresPlayerSkillAnimations,
 		handles_saving::HandlesSaving,
@@ -127,7 +127,7 @@ where
 				advance_active_skill::<
 					Queue,
 					TAgents,
-					FacingSystemParam<TBehaviors>,
+					FacingSystemParamMut<TBehaviors>,
 					SkillExecuter,
 					Virtual,
 				>

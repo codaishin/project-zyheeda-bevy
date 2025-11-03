@@ -11,7 +11,7 @@ pub trait HandlesOrientation {
 		+ for<'c> EntityContextMut<Facing, TContext<'c>: OverrideFace + RegisterFaceTargetDefinition>;
 }
 
-pub type FacingSystemParam<'w, 's, T> = <T as HandlesOrientation>::TFaceSystemParam<'w, 's>;
+pub type FacingSystemParamMut<'w, 's, T> = <T as HandlesOrientation>::TFaceSystemParam<'w, 's>;
 
 pub struct Facing;
 
@@ -35,6 +35,15 @@ where
 
 pub trait RegisterFaceTargetDefinition {
 	fn register(&mut self, face_target_is: FaceTargetIs);
+}
+
+impl<T> RegisterFaceTargetDefinition for T
+where
+	T: DerefMut<Target: RegisterFaceTargetDefinition>,
+{
+	fn register(&mut self, face_target_is: FaceTargetIs) {
+		self.deref_mut().register(face_target_is);
+	}
 }
 
 #[derive(Default, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
