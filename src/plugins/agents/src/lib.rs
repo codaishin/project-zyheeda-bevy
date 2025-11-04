@@ -34,7 +34,7 @@ use common::{
 		handles_physics::{HandlesPhysicalAttributes, HandlesRaycast, RaycastSystemParam},
 		handles_player::{ConfiguresPlayerSkillAnimations, HandlesPlayer, PlayerMainCamera},
 		handles_saving::HandlesSaving,
-		handles_skills_control::{HandlesSKillControl, SKillControlParamMut},
+		handles_skills_control::{HandlesSkillControl, SkillControlParamMut},
 		prefab::AddPrefabObserver,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
@@ -64,7 +64,7 @@ where
 	TAnimations: ThreadSafe + RegisterAnimations,
 	TLights: ThreadSafe + HandlesLights,
 	TMaps: ThreadSafe + HandlesMapGeneration,
-	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation + HandlesSKillControl,
+	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation + HandlesSkillControl,
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn from_plugins(
@@ -100,7 +100,7 @@ where
 	TAnimations: ThreadSafe + RegisterAnimations,
 	TLights: ThreadSafe + HandlesLights,
 	TMaps: ThreadSafe + HandlesMapGeneration,
-	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation + HandlesSKillControl,
+	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation + HandlesSkillControl,
 {
 	fn build(&self, app: &mut App) {
 		// # Load Agent
@@ -149,7 +149,7 @@ where
 
 		// # Behaviors
 		app.register_required_components::<PlayerCamera, TPhysics::TWorldCamera>();
-		app.add_observer(Agent::register_skill_spawn_points::<SKillControlParamMut<TBehaviors>>);
+		app.add_observer(Agent::register_skill_spawn_points::<SkillControlParamMut<TBehaviors>>);
 		app.add_observer(Player::register_target_definition::<FacingSystemParamMut<TBehaviors>>);
 		app.add_observer(Enemy::register_target_definition::<FacingSystemParamMut<TBehaviors>>);
 		app.add_systems(
@@ -161,13 +161,13 @@ where
 					MovementSystemParamMut<TBehaviors>,
 				>,
 				Player::toggle_speed::<InputSystemParam<TInput>, MovementSystemParamMut<TBehaviors>>,
-				Player::use_skills::<InputSystemParam<TInput>, SKillControlParamMut<TBehaviors>>,
+				Player::use_skills::<InputSystemParam<TInput>, SkillControlParamMut<TBehaviors>>,
 				(
 					Enemy::attack_decision::<RaycastSystemParam<TPhysics>>,
 					Enemy::chase_decision,
 					Enemy::chase_player::<MovementSystemParamMut<TBehaviors>>,
 					Enemy::begin_attack,
-					Enemy::hold_attack::<SKillControlParamMut<TBehaviors>>,
+					Enemy::hold_attack::<SkillControlParamMut<TBehaviors>>,
 					Update::delta.pipe(Enemy::advance_attack_phase),
 				)
 					.chain(),

@@ -5,13 +5,13 @@ use crate::{
 use bevy::ecs::system::SystemParam;
 use std::{collections::HashMap, ops::DerefMut};
 
-pub trait HandlesSKillControl {
+pub trait HandlesSkillControl {
 	type TSkillControlMut<'w, 's>: SystemParam
 		+ for<'c> EntityContextMut<SkillControl, TContext<'c>: HoldSkill>
 		+ for<'c> EntityContextMut<SkillSpawnPoints, TContext<'c>: SpawnPointsDefinition>;
 }
 
-pub type SKillControlParamMut<'w, 's, T> = <T as HandlesSKillControl>::TSkillControlMut<'w, 's>;
+pub type SkillControlParamMut<'w, 's, T> = <T as HandlesSkillControl>::TSkillControlMut<'w, 's>;
 
 pub struct SkillControl;
 

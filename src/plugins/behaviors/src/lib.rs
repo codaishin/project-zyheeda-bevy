@@ -42,7 +42,7 @@ use common::{
 			SkillEntities,
 			SkillRoot,
 		},
-		handles_skills_control::HandlesSKillControl,
+		handles_skills_control::HandlesSkillControl,
 		prefab::AddPrefabObserver,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
@@ -226,6 +226,6 @@ where
 	type TMovementMut<'w, 's> = MovementParamMut<'w, 's, TPhysics::TMotion>;
 }
 
-impl<TDependencies> HandlesSKillControl for BehaviorsPlugin<TDependencies> {
+impl<TDependencies> HandlesSkillControl for BehaviorsPlugin<TDependencies> {
 	type TSkillControlMut<'w, 's> = SkillParamMut<'w, 's>;
 }
