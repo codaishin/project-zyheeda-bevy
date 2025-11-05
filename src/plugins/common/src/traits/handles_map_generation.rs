@@ -1,9 +1,13 @@
 use super::thread_safe::ThreadSafe;
 use crate::{
 	tools::Units,
-	traits::{accessors::get::GetProperty, handles_agents::AgentType},
+	traits::{
+		accessors::get::{GetProperty, Property},
+		handles_enemies::EnemyType,
+	},
 };
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::{fmt::Debug, hash::Hash};
 
 pub trait HandlesMapGeneration {
@@ -73,4 +77,14 @@ pub enum NaivePath {
 	Ok,
 	CannotCompute,
 	PartialUntil(Vec3),
+}
+
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+pub enum AgentType {
+	Player,
+	Enemy(EnemyType),
+}
+
+impl Property for AgentType {
+	type TValue<'a> = Self;
 }

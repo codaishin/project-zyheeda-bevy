@@ -1,16 +1,13 @@
 use crate::{
 	tools::bone::Bone,
 	traits::{
-		accessors::get::{GetFromSystemParam, Property},
-		handles_enemies::EnemyType,
+		accessors::get::GetFromSystemParam,
 		loadout::LoadoutConfig,
 		mapper::Mapper,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
 	},
-	zyheeda_commands::ZyheedaCommands,
 };
-use bevy::ecs::{component::Component, system::EntityCommands};
-use serde::{Deserialize, Serialize};
+use bevy::ecs::component::Component;
 
 pub trait HandlesAgents {
 	type TAgentConfig<'a>: LoadoutConfig
@@ -21,18 +18,4 @@ pub trait HandlesAgents {
 		+ for<'i> GetFromSystemParam<AgentConfig, TItem<'i> = Self::TAgentConfig<'i>>;
 }
 
-pub trait Spawn {
-	fn spawn<'a>(commands: &'a mut ZyheedaCommands, agent_type: AgentType) -> EntityCommands<'a>;
-}
-
 pub struct AgentConfig;
-
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
-pub enum AgentType {
-	Player,
-	Enemy(EnemyType),
-}
-
-impl Property for AgentType {
-	type TValue<'a> = Self;
-}

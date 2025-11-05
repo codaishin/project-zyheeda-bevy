@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::traits::{accessors::get::GetProperty, handles_agents::AgentType};
+use common::traits::{accessors::get::GetProperty, handles_map_generation::AgentType};
 
 #[derive(Component, Debug, PartialEq)]
 pub struct WorldAgent(pub(crate) AgentType);

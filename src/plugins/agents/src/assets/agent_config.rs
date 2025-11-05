@@ -7,8 +7,8 @@ use common::{
 	tools::{action_key::slot::SlotKey, bone::Bone},
 	traits::{
 		accessors::get::GetProperty,
-		handles_agents::AgentType,
 		handles_custom_assets::AssetFolderPath,
+		handles_map_generation::AgentType,
 		handles_physics::PhysicalDefaultAttributes,
 		handles_skill_behaviors::SkillSpawner,
 		load_asset::Path,

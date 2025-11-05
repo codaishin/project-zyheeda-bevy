@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use common::{
 	traits::{
 		accessors::get::{GetProperty, TryApplyOn},
-		handles_agents::AgentType,
+		handles_map_generation::AgentType,
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
