@@ -1,7 +1,7 @@
 use crate::{
 	Movement,
-	PathOrWasd,
-	components::{movement::path_or_wasd::Mode, movement_definition::MovementDefinition},
+	PathOrDirection,
+	components::{movement::path_or_direction::Mode, movement_definition::MovementDefinition},
 };
 use bevy::prelude::*;
 use common::{
@@ -18,10 +18,10 @@ type MoveComponents<TMotion, TGetComputer> = (
 	Entity,
 	&'static MovementDefinition,
 	&'static GlobalTransform,
-	&'static Movement<PathOrWasd<TMotion>>,
+	&'static Movement<PathOrDirection<TMotion>>,
 	&'static TGetComputer,
 );
-type ChangedMovement<TMotion> = Changed<Movement<PathOrWasd<TMotion>>>;
+type ChangedMovement<TMotion> = Changed<Movement<PathOrDirection<TMotion>>>;
 
 impl MovementDefinition {
 	pub(crate) fn compute_path<TMotion, TComputer, TGetComputer>(
@@ -37,9 +37,9 @@ impl MovementDefinition {
 			let Ok(computer) = computers.get(get_computer.get_property()) else {
 				continue;
 			};
-			let path_or_wasd = definition.new_movement(computer, transform, movement);
+			let path_or_direction = definition.new_movement(computer, transform, movement);
 			commands.try_apply_on(&entity, |mut e| {
-				e.try_insert(path_or_wasd);
+				e.try_insert(path_or_direction);
 				e.try_remove::<Movement<TMotion>>();
 			});
 		}
@@ -49,13 +49,13 @@ impl MovementDefinition {
 		&self,
 		computer: &TComputer,
 		transform: &GlobalTransform,
-		movement: &Movement<PathOrWasd<TMotion>>,
-	) -> PathOrWasd<TMotion>
+		movement: &Movement<PathOrDirection<TMotion>>,
+	) -> PathOrDirection<TMotion>
 	where
 		TComputer: ComputePath,
 		TMotion: ThreadSafe,
 	{
-		let mut new_movement = PathOrWasd::<TMotion>::from(movement.target);
+		let mut new_movement = PathOrDirection::<TMotion>::from(movement.target);
 
 		let Mode::Path(move_path) = &mut new_movement.mode else {
 			return new_movement;
@@ -159,7 +159,7 @@ mod test_new_path {
 						radius: Units::from(1.),
 						..default()
 					},
-					Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::default()),
+					Movement::<PathOrDirection<_MoveMethod>>::to(Vec3::default()),
 					GlobalTransform::default(),
 					_GetComputer(computer),
 				))
@@ -168,7 +168,7 @@ mod test_new_path {
 			app.update();
 
 			assert_eq!(
-				Some(&PathOrWasd::<_MoveMethod> {
+				Some(&PathOrDirection::<_MoveMethod> {
 					mode: Mode::Path(VecDeque::from([
 						Vec3::splat(1.),
 						Vec3::splat(2.),
@@ -176,7 +176,9 @@ mod test_new_path {
 					])),
 					_m: PhantomData,
 				}),
-				app.world().entity(entity).get::<PathOrWasd<_MoveMethod>>()
+				app.world()
+					.entity(entity)
+					.get::<PathOrDirection<_MoveMethod>>()
 			);
 		}
 
@@ -196,7 +198,7 @@ mod test_new_path {
 						radius: Units::from(1.),
 						..default()
 					},
-					Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::default()),
+					Movement::<PathOrDirection<_MoveMethod>>::to(Vec3::default()),
 					GlobalTransform::default(),
 					_GetComputer(computer),
 				))
@@ -205,11 +207,13 @@ mod test_new_path {
 			app.update();
 
 			assert_eq!(
-				Some(&PathOrWasd::<_MoveMethod> {
+				Some(&PathOrDirection::<_MoveMethod> {
 					mode: Mode::Path(VecDeque::from([])),
 					_m: PhantomData,
 				}),
-				app.world().entity(entity).get::<PathOrWasd<_MoveMethod>>()
+				app.world()
+					.entity(entity)
+					.get::<PathOrDirection<_MoveMethod>>()
 			);
 		}
 
@@ -233,7 +237,7 @@ mod test_new_path {
 						radius: Units::from(1.),
 						..default()
 					},
-					Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::default()),
+					Movement::<PathOrDirection<_MoveMethod>>::to(Vec3::default()),
 					GlobalTransform::from_translation(Vec3::splat(1.)),
 					_GetComputer(computer),
 				))
@@ -242,11 +246,13 @@ mod test_new_path {
 			app.update();
 
 			assert_eq!(
-				Some(&PathOrWasd::<_MoveMethod> {
+				Some(&PathOrDirection::<_MoveMethod> {
 					mode: Mode::Path(VecDeque::from([Vec3::splat(2.), Vec3::splat(3.)])),
 					_m: PhantomData,
 				}),
-				app.world().entity(entity).get::<PathOrWasd<_MoveMethod>>()
+				app.world()
+					.entity(entity)
+					.get::<PathOrDirection<_MoveMethod>>()
 			);
 		}
 
@@ -264,7 +270,7 @@ mod test_new_path {
 					radius: Units::from(1.),
 					..default()
 				},
-				Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::default()),
+				Movement::<PathOrDirection<_MoveMethod>>::to(Vec3::default()),
 				GlobalTransform::default(),
 				_GetComputer(computer),
 			));
@@ -292,7 +298,7 @@ mod test_new_path {
 						radius: Units::from(1.),
 						..default()
 					},
-					Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::default()),
+					Movement::<PathOrDirection<_MoveMethod>>::to(Vec3::default()),
 					GlobalTransform::default(),
 					Movement::<_MoveMethod>::to(Vec3::default()),
 					_GetComputer(computer),
@@ -328,7 +334,7 @@ mod test_new_path {
 					radius: Units::from(42.),
 					..default()
 				},
-				Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::new(4., 5., 6.)),
+				Movement::<PathOrDirection<_MoveMethod>>::to(Vec3::new(4., 5., 6.)),
 				GlobalTransform::from_xyz(1., 2., 3.),
 				_GetComputer(computer),
 			));
@@ -355,7 +361,7 @@ mod test_new_path {
 						radius: Units::from(1.),
 						..default()
 					},
-					Movement::<PathOrWasd<_MoveMethod>>::to(Dir3::NEG_Z),
+					Movement::<PathOrDirection<_MoveMethod>>::to(Dir3::NEG_Z),
 					GlobalTransform::default(),
 					_GetComputer(computer),
 				))
@@ -364,11 +370,13 @@ mod test_new_path {
 			app.update();
 
 			assert_eq!(
-				Some(&PathOrWasd::<_MoveMethod> {
-					mode: Mode::Wasd(Some(Dir3::NEG_Z)),
+				Some(&PathOrDirection::<_MoveMethod> {
+					mode: Mode::Direction(Some(Dir3::NEG_Z)),
 					_m: PhantomData,
 				}),
-				app.world().entity(entity).get::<PathOrWasd<_MoveMethod>>()
+				app.world()
+					.entity(entity)
+					.get::<PathOrDirection<_MoveMethod>>()
 			);
 		}
 	}
@@ -390,7 +398,7 @@ mod test_new_path {
 					radius: Units::from(1.),
 					..default()
 				},
-				Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::default()),
+				Movement::<PathOrDirection<_MoveMethod>>::to(Vec3::default()),
 				GlobalTransform::default(),
 				_GetComputer(computer),
 			));
@@ -415,7 +423,7 @@ mod test_new_path {
 						radius: Units::from(1.),
 						..default()
 					},
-					Movement::<PathOrWasd<_MoveMethod>>::to(Vec3::default()),
+					Movement::<PathOrDirection<_MoveMethod>>::to(Vec3::default()),
 					GlobalTransform::default(),
 					_GetComputer(computer),
 				))
@@ -424,7 +432,7 @@ mod test_new_path {
 			app.update();
 			app.world_mut()
 				.entity_mut(entity)
-				.get_mut::<Movement<PathOrWasd<_MoveMethod>>>()
+				.get_mut::<Movement<PathOrDirection<_MoveMethod>>>()
 				.as_deref_mut();
 			app.update();
 		}

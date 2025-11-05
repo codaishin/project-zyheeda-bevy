@@ -1,7 +1,5 @@
 pub mod action_key;
-pub mod aggro_range;
 pub mod animation_key;
-pub mod attack_range;
 pub mod attribute;
 pub mod bone;
 pub mod change;
@@ -62,6 +60,10 @@ pub struct UnitsPerSecond(f32);
 
 #[derive(Debug, PartialEq, PartialOrd, Clone, Copy, ClampZeroPositive, Serialize)]
 pub struct Units(f32);
+
+impl Units {
+	pub const ZERO: Self = Self(0.);
+}
 
 #[derive(Debug, PartialEq, Clone, ClampZeroPositive)]
 pub struct Intensity(f32);

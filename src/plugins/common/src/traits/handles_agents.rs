@@ -3,7 +3,6 @@ use crate::{
 	traits::{
 		accessors::get::{GetFromSystemParam, Property},
 		handles_enemies::EnemyType,
-		handles_skill_behaviors::SkillSpawner,
 		loadout::LoadoutConfig,
 		mapper::Mapper,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
@@ -15,7 +14,6 @@ use serde::{Deserialize, Serialize};
 
 pub trait HandlesAgents {
 	type TAgentConfig<'a>: LoadoutConfig
-		+ Mapper<Bone<'a>, Option<SkillSpawner>>
 		+ Mapper<Bone<'a>, Option<EssenceSlot>>
 		+ Mapper<Bone<'a>, Option<HandSlot>>
 		+ Mapper<Bone<'a>, Option<ForearmSlot>>;

@@ -7,14 +7,14 @@ use crate::{
 	assets::agent_config::{AgentConfigAsset, AgentConfigData, dto::AgentConfigAssetDto},
 	components::{
 		agent::{Agent, tag::AgentTag},
-		enemy::{Enemy, void_sphere::VoidSphere},
+		enemy::{Enemy, attack_phase::EnemyAttackPhase, void_sphere::VoidSphere},
+		movement_config::MovementConfig,
 		player::Player,
 		player_camera::PlayerCamera,
-		player_movement::PlayerMovement,
 		skill_animation::SkillAnimation,
 	},
 	observers::agent::{insert_concrete_agent::InsertConcreteAgent, insert_from::InsertFrom},
-	systems::{agent::insert_model::InsertModelSystem, toggle_walk_run::player_toggle_walk_run},
+	systems::agent::insert_model::InsertModelSystem,
 };
 use bevy::prelude::*;
 use common::{
@@ -22,20 +22,19 @@ use common::{
 	tools::action_key::slot::{NoValidAgentKey, PlayerSlot, SlotKey},
 	traits::{
 		animation::RegisterAnimations,
+		delta::Delta,
 		handles_agents::HandlesAgents,
 		handles_custom_assets::HandlesCustomFolderAssets,
 		handles_enemies::HandlesEnemies,
 		handles_input::{HandlesInput, InputSystemParam},
 		handles_lights::HandlesLights,
 		handles_map_generation::HandlesMapGeneration,
-		handles_physics::{HandlesPhysicalAttributes, HandlesRaycast},
-		handles_player::{
-			ConfiguresPlayerMovement,
-			ConfiguresPlayerSkillAnimations,
-			HandlesPlayer,
-			PlayerMainCamera,
-		},
+		handles_movement::{HandlesMovement, MovementSystemParamMut},
+		handles_orientation::{FacingSystemParamMut, HandlesOrientation},
+		handles_physics::{HandlesPhysicalAttributes, HandlesRaycast, RaycastSystemParam},
+		handles_player::{ConfiguresPlayerSkillAnimations, HandlesPlayer, PlayerMainCamera},
 		handles_saving::HandlesSaving,
+		handles_skills_control::{HandlesSkillControl, SkillControlParamMut},
 		prefab::AddPrefabObserver,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
@@ -46,7 +45,7 @@ use systems::void_sphere::ring_rotation::ring_rotation;
 
 pub struct AgentsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights, TMaps>
+impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights, TMaps, TBehaviors>
 	AgentsPlugin<(
 		TLoading,
 		TInput,
@@ -55,6 +54,7 @@ impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights, TMaps>
 		TAnimations,
 		TLights,
 		TMaps,
+		TBehaviors,
 	)>
 where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
@@ -64,7 +64,9 @@ where
 	TAnimations: ThreadSafe + RegisterAnimations,
 	TLights: ThreadSafe + HandlesLights,
 	TMaps: ThreadSafe + HandlesMapGeneration,
+	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation + HandlesSkillControl,
 {
+	#[allow(clippy::too_many_arguments)]
 	pub fn from_plugins(
 		_: &TLoading,
 		_: &TInput,
@@ -73,12 +75,13 @@ where
 		_: &TAnimations,
 		_: &TLights,
 		_: &TMaps,
+		_: &TBehaviors,
 	) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights, TMaps> Plugin
+impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights, TMaps, TBehaviors> Plugin
 	for AgentsPlugin<(
 		TLoading,
 		TInput,
@@ -87,6 +90,7 @@ impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights, TMaps> Plugin
 		TAnimations,
 		TLights,
 		TMaps,
+		TBehaviors,
 	)>
 where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
@@ -96,6 +100,7 @@ where
 	TAnimations: ThreadSafe + RegisterAnimations,
 	TLights: ThreadSafe + HandlesLights,
 	TMaps: ThreadSafe + HandlesMapGeneration,
+	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation + HandlesSkillControl,
 {
 	fn build(&self, app: &mut App) {
 		// # Load Agent
@@ -134,7 +139,8 @@ where
 		TSaveGame::register_savable_component::<AgentTag>(app);
 		TSaveGame::register_savable_component::<Enemy>(app);
 		TSaveGame::register_savable_component::<PlayerCamera>(app);
-		TSaveGame::register_savable_component::<PlayerMovement>(app);
+		TSaveGame::register_savable_component::<MovementConfig>(app);
+		TSaveGame::register_savable_component::<EnemyAttackPhase>(app);
 		app.register_required_components::<Agent, TSaveGame::TSaveEntityMarker>();
 
 		// # Prefabs
@@ -143,9 +149,29 @@ where
 
 		// # Behaviors
 		app.register_required_components::<PlayerCamera, TPhysics::TWorldCamera>();
+		app.add_observer(Agent::register_skill_spawn_points::<SkillControlParamMut<TBehaviors>>);
+		app.add_observer(Player::register_target_definition::<FacingSystemParamMut<TBehaviors>>);
+		app.add_observer(Enemy::register_target_definition::<FacingSystemParamMut<TBehaviors>>);
 		app.add_systems(
 			Update,
-			player_toggle_walk_run::<InputSystemParam<TInput>>
+			(
+				Player::movement::<
+					InputSystemParam<TInput>,
+					RaycastSystemParam<TPhysics>,
+					MovementSystemParamMut<TBehaviors>,
+				>,
+				Player::toggle_speed::<InputSystemParam<TInput>, MovementSystemParamMut<TBehaviors>>,
+				Player::use_skills::<InputSystemParam<TInput>, SkillControlParamMut<TBehaviors>>,
+				(
+					Enemy::attack_decision::<RaycastSystemParam<TPhysics>>,
+					Enemy::chase_decision,
+					Enemy::chase_player::<MovementSystemParamMut<TBehaviors>>,
+					Enemy::begin_attack,
+					Enemy::hold_attack::<SkillControlParamMut<TBehaviors>>,
+					Update::delta.pipe(Enemy::advance_attack_phase),
+				)
+					.chain(),
+			)
 				.run_if(in_state(GameState::Play))
 				.after(TInput::SYSTEMS),
 		);
@@ -158,10 +184,6 @@ impl<TDependencies> HandlesEnemies for AgentsPlugin<TDependencies> {
 
 impl<TDependencies> HandlesPlayer for AgentsPlugin<TDependencies> {
 	type TPlayer = Player;
-}
-
-impl<TDependencies> ConfiguresPlayerMovement for AgentsPlugin<TDependencies> {
-	type TPlayerMovement = PlayerMovement;
 }
 
 impl<TDependencies> ConfiguresPlayerSkillAnimations for AgentsPlugin<TDependencies> {

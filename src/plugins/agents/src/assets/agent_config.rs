@@ -1,7 +1,7 @@
 pub(crate) mod dto;
 
 use crate::systems::agent::insert_model::InsertModel;
-use bevy::{asset::Asset, reflect::TypePath};
+use bevy::prelude::*;
 use common::{
 	components::asset_model::AssetModel,
 	tools::{action_key::slot::SlotKey, bone::Bone},
@@ -21,7 +21,7 @@ use common::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Asset, TypePath, Debug, PartialEq, Clone)]
+#[derive(Asset, TypePath, Debug, PartialEq, Default, Clone)]
 pub struct AgentConfigAsset {
 	pub(crate) loadout: Loadout,
 	pub(crate) bones: Bones,
@@ -54,12 +54,6 @@ impl LoadoutConfig for AgentConfigData<'_> {
 
 	fn slots(&self) -> impl Iterator<Item = (SlotKey, Option<ItemName>)> {
 		self.asset.loadout.slots.iter().cloned()
-	}
-}
-
-impl Mapper<Bone<'_>, Option<SkillSpawner>> for AgentConfigData<'_> {
-	fn map(&self, Bone(bone): Bone<'_>) -> Option<SkillSpawner> {
-		self.asset.bones.spawners.get(bone).copied()
 	}
 }
 
@@ -107,13 +101,13 @@ impl InsertModel for AgentConfigData<'_> {
 	}
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
 pub(crate) struct Loadout {
 	inventory: Vec<Option<ItemName>>,
 	slots: Vec<(SlotKey, Option<ItemName>)>,
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
 pub(crate) struct Bones {
 	pub(crate) spawners: HashMap<String, SkillSpawner>,
 	pub(crate) hand_slots: HashMap<String, SlotKey>,
@@ -125,6 +119,12 @@ pub(crate) struct Bones {
 pub(crate) enum AgentModel {
 	Asset(String),
 	Procedural(fn(&mut ZyheedaEntityCommands)),
+}
+
+impl Default for AgentModel {
+	fn default() -> Self {
+		Self::Procedural(|_| {})
+	}
 }
 
 impl PartialEq for AgentModel {

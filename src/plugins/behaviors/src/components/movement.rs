@@ -1,13 +1,9 @@
-pub(crate) mod path_or_wasd;
+pub(crate) mod path_or_direction;
 
 mod dto;
 
 use super::SetFace;
-use crate::{
-	components::movement::dto::MovementDto,
-	systems::movement::insert_process_component::StopMovement,
-	traits::MovementUpdate,
-};
+use crate::{components::movement::dto::MovementDto, traits::MovementUpdate};
 use bevy::prelude::*;
 use common::{
 	components::immobilized::Immobilized,
@@ -15,6 +11,7 @@ use common::{
 	traits::{
 		accessors::get::{DynProperty, GetProperty, TryApplyOn},
 		animation::GetMovementDirection,
+		handles_movement::MovementTarget,
 		handles_orientation::Face,
 		handles_physics::LinearMotion,
 		thread_safe::ThreadSafe,
@@ -22,7 +19,6 @@ use common::{
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
 use macros::SavableComponent;
-use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 
 #[derive(Component, SavableComponent, Debug)]
@@ -32,7 +28,7 @@ pub(crate) struct Movement<TMotion>
 where
 	TMotion: ThreadSafe,
 {
-	pub(crate) target: Option<MotionTarget>,
+	pub(crate) target: Option<MovementTarget>,
 	_m: PhantomData<TMotion>,
 }
 
@@ -40,8 +36,7 @@ impl<TMotion> Movement<TMotion>
 where
 	TMotion: ThreadSafe,
 {
-	#[cfg(test)]
-	pub(crate) fn to_none() -> Self {
+	pub(crate) fn stop() -> Self {
 		Self {
 			target: None,
 			_m: PhantomData,
@@ -50,7 +45,7 @@ where
 
 	pub(crate) fn to<T>(target: T) -> Self
 	where
-		T: Into<MotionTarget>,
+		T: Into<MovementTarget>,
 	{
 		Self {
 			target: Some(target.into()),
@@ -70,27 +65,19 @@ where
 		}
 
 		for (entity, movement) in &changed {
-			let set_face = match &movement.target {
-				Some(MotionTarget::Vec(vec3)) => SetFace(Face::Translation(*vec3)),
-				Some(MotionTarget::Dir(dir3)) => SetFace(Face::Direction(*dir3)),
-				_ => continue,
-			};
-
 			commands.try_apply_on(&entity, |mut e| {
-				e.try_insert(set_face);
+				match &movement.target {
+					Some(MovementTarget::Point(vec3)) => {
+						e.try_insert(SetFace(Face::Translation(*vec3)));
+					}
+					Some(MovementTarget::Dir(dir3)) => {
+						e.try_insert(SetFace(Face::Direction(*dir3)));
+					}
+					None => {
+						e.try_remove::<SetFace>();
+					}
+				};
 			});
-		}
-	}
-}
-
-impl<TMotion> StopMovement for Movement<TMotion>
-where
-	TMotion: ThreadSafe,
-{
-	fn stop() -> Self {
-		Self {
-			target: None,
-			_m: PhantomData,
 		}
 	}
 }
@@ -131,8 +118,8 @@ where
 		speed: Speed,
 	) -> Done {
 		let new_motion = match self.target {
-			Some(MotionTarget::Vec(target)) => LinearMotion::ToTarget { target, speed },
-			Some(MotionTarget::Dir(direction)) => LinearMotion::Direction { direction, speed },
+			Some(MovementTarget::Point(target)) => LinearMotion::ToTarget { target, speed },
+			Some(MovementTarget::Dir(direction)) => LinearMotion::Direction { direction, speed },
 			None => LinearMotion::Stop,
 		};
 
@@ -154,27 +141,9 @@ where
 {
 	fn movement_direction(&self, transform: &GlobalTransform) -> Option<Dir3> {
 		match self.target? {
-			MotionTarget::Vec(vec3) => (vec3 - transform.translation()).try_into().ok(),
-			MotionTarget::Dir(dir3) => Some(dir3),
+			MovementTarget::Point(vec3) => (vec3 - transform.translation()).try_into().ok(),
+			MovementTarget::Dir(dir3) => Some(dir3),
 		}
-	}
-}
-
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
-pub(crate) enum MotionTarget {
-	Vec(Vec3),
-	Dir(Dir3),
-}
-
-impl From<Vec3> for MotionTarget {
-	fn from(value: Vec3) -> Self {
-		Self::Vec(value)
-	}
-}
-
-impl From<Dir3> for MotionTarget {
-	fn from(value: Dir3) -> Self {
-		Self::Dir(value)
 	}
 }
 
@@ -215,22 +184,26 @@ mod tests {
 		use super::*;
 		use testing::ApproxEqual;
 
-		impl ApproxEqual<f32> for MotionTarget {
-			fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
-				match (self, other) {
-					(MotionTarget::Vec(a), MotionTarget::Vec(b)) => a.approx_equal(b, tolerance),
-					(MotionTarget::Dir(a), MotionTarget::Dir(b)) => a.approx_equal(b, tolerance),
-					_ => false,
-				}
-			}
-		}
-
 		impl<TMotion> ApproxEqual<f32> for Movement<TMotion>
 		where
 			TMotion: ThreadSafe,
 		{
 			fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
-				self.target.approx_equal(&other.target, tolerance)
+				let (a, b) = match (self.target, other.target) {
+					(Some(a), Some(b)) => (a, b),
+					(None, None) => return true,
+					_ => return false,
+				};
+
+				match (a, b) {
+					(MovementTarget::Point(a), MovementTarget::Point(b)) => {
+						a.approx_equal(&b, tolerance)
+					}
+					(MovementTarget::Dir(a), MovementTarget::Dir(b)) => {
+						a.approx_equal(&b, tolerance)
+					}
+					_ => false,
+				}
 			}
 		}
 
@@ -325,6 +298,20 @@ mod tests {
 			app.world_mut()
 				.entity_mut(entity)
 				.remove::<Movement<_Motion>>();
+			app.update();
+
+			assert_eq!(None, app.world().entity(entity).get::<SetFace>());
+		}
+
+		#[test]
+		fn remove_set_face_on_update_when_set_to_stop() {
+			let mut app = setup(Movement::<_Motion>::set_faces);
+			let entity = app.world_mut().spawn(SetFace(Face::Target)).id();
+
+			app.update();
+			app.world_mut()
+				.entity_mut(entity)
+				.insert(Movement::<_Motion>::stop());
 			app.update();
 
 			assert_eq!(None, app.world().entity(entity).get::<SetFace>());

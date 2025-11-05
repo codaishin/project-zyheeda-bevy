@@ -1,31 +1,31 @@
 mod components;
-mod input;
+mod system_param;
 mod systems;
 mod traits;
 
 use crate::{
 	components::{
-		attacking::Attacking,
-		fix_points::{Anchor, FixPoints, fix_point::FixPoint},
+		SetFace,
+		fix_points::{Anchor, fix_point::FixPointSpawner},
 		movement_definition::MovementDefinition,
 		skill_usage::SkillUsage,
 	},
-	systems::{
-		face::execute_enemy_face::execute_enemy_face,
-		movement::insert_process_component::ProcessInput,
+	system_param::{
+		face_param::FaceParamMut,
+		movement_param::MovementParamMut,
+		skill_param::SkillParamMut,
 	},
 };
 use bevy::prelude::*;
 use common::{
 	components::{child_of_persistent::ChildOfPersistent, persistent_entity::PersistentEntity},
 	states::game_state::GameState,
-	systems::{log::OnError, track_components::TrackComponentInSelfAndChildren},
+	systems::log::OnError,
 	traits::{
 		animation::{HasAnimationsDispatch, RegisterAnimations},
-		handles_agents::HandlesAgents,
-		handles_enemies::HandlesEnemies,
-		handles_input::{HandlesInput, InputSystemParam},
-		handles_orientation::{Face, HandlesOrientation},
+		handles_input::HandlesInput,
+		handles_movement::HandlesMovement,
+		handles_orientation::HandlesOrientation,
 		handles_path_finding::HandlesPathFinding,
 		handles_physics::{
 			HandlesAllPhysicalEffects,
@@ -34,7 +34,6 @@ use common::{
 			HandlesRaycast,
 			RaycastSystemParam,
 		},
-		handles_player::{ConfiguresPlayerMovement, HandlesPlayer, PlayerMainCamera},
 		handles_saving::HandlesSaving,
 		handles_skill_behaviors::{
 			Contact,
@@ -42,8 +41,8 @@ use common::{
 			Projection,
 			SkillEntities,
 			SkillRoot,
-			SkillSpawner,
 		},
+		handles_skills_control::HandlesSkillControl,
 		prefab::AddPrefabObserver,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
@@ -53,38 +52,20 @@ use common::{
 use components::{
 	Always,
 	Once,
-	OverrideFace,
+	SetFaceOverride,
 	ground_target::GroundTarget,
-	movement::{Movement, path_or_wasd::PathOrWasd},
+	movement::{Movement, path_or_direction::PathOrDirection},
 	set_motion_forward::SetMotionForward,
 	skill_behavior::{skill_contact::SkillContact, skill_projection::SkillProjection},
 	when_traveled_insert::DestroyAfterDistanceTraveled,
 };
-use input::{pointer_input::PointerInput, wasd_input::WasdInput};
 use std::marker::PhantomData;
-use systems::{
-	base_behavior::SelectBehavior,
-	chase::ChaseSystem,
-	face::{execute_player_face::execute_player_face, get_faces::GetFaces},
-	movement::{
-		insert_process_component::InsertProcessComponent,
-		parse_directional_movement_key::ParseDirectionalMovement,
-		parse_pointer_movement::ParsePointerMovement,
-	},
-	update_count_down::UpdateCountDown,
-};
+use systems::face::execute_face::execute_face;
 
 pub struct BehaviorsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding, TAgents>
-	BehaviorsPlugin<(
-		TInput,
-		TSaveGame,
-		TAnimations,
-		TPhysics,
-		TPathFinding,
-		TAgents,
-	)>
+impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding>
+	BehaviorsPlugin<(TInput, TSaveGame, TAnimations, TPhysics, TPathFinding)>
 where
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
@@ -95,8 +76,6 @@ where
 		+ HandlesAllPhysicalEffects
 		+ HandlesRaycast,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
-	TAgents:
-		ThreadSafe + HandlesPlayer + PlayerMainCamera + ConfiguresPlayerMovement + HandlesEnemies,
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn from_plugins(
@@ -105,21 +84,13 @@ where
 		_: &TAnimations,
 		_: &TPhysics,
 		_: &TPathFinding,
-		_: &TAgents,
 	) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding, TAgents> Plugin
-	for BehaviorsPlugin<(
-		TInput,
-		TSaveGame,
-		TAnimations,
-		TPhysics,
-		TPathFinding,
-		TAgents,
-	)>
+impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding> Plugin
+	for BehaviorsPlugin<(TInput, TSaveGame, TAnimations, TPhysics, TPathFinding)>
 where
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
@@ -130,32 +101,15 @@ where
 		+ HandlesAllPhysicalEffects
 		+ HandlesRaycast,
 	TPathFinding: ThreadSafe + HandlesPathFinding,
-	TAgents: ThreadSafe
-		+ HandlesPlayer
-		+ PlayerMainCamera
-		+ ConfiguresPlayerMovement
-		+ HandlesEnemies
-		+ HandlesAgents,
 {
 	fn build(&self, app: &mut App) {
 		TAnimations::register_movement_direction::<Movement<TPhysics::TMotion>>(app);
 
 		TSaveGame::register_savable_component::<SkillContact>(app);
 		TSaveGame::register_savable_component::<SkillProjection>(app);
-		TSaveGame::register_savable_component::<Attacking>(app);
-		TSaveGame::register_savable_component::<OverrideFace>(app);
-		TSaveGame::register_savable_component::<Movement<PathOrWasd<TPhysics::TMotion>>>(app);
-
-		let point_input = PointerInput::<TPhysics::TMotion>::parse::<
-			InputSystemParam<TInput>,
-			RaycastSystemParam<TPhysics>,
-		>;
-		let wasd_input = WasdInput::<TPhysics::TMotion>::parse::<
-			TAgents::TPlayerMainCamera,
-			InputSystemParam<TInput>,
-			TAgents::TPlayer,
-		>;
-		let wasd_input = wasd_input.pipe(OnError::log_and_return(|| ProcessInput::None));
+		TSaveGame::register_savable_component::<SetFace>(app);
+		TSaveGame::register_savable_component::<SetFaceOverride>(app);
+		TSaveGame::register_savable_component::<Movement<PathOrDirection<TPhysics::TMotion>>>(app);
 
 		let compute_path = MovementDefinition::compute_path::<
 			TPhysics::TMotion,
@@ -163,7 +117,7 @@ where
 			TPathFinding::TComputerRef,
 		>;
 		let execute_path =
-			MovementDefinition::execute_movement::<Movement<PathOrWasd<TPhysics::TMotion>>>;
+			MovementDefinition::execute_movement::<Movement<PathOrDirection<TPhysics::TMotion>>>;
 		let execute_movement = MovementDefinition::execute_movement::<Movement<TPhysics::TMotion>>;
 		let animate_movement = MovementDefinition::animate_movement::<
 			Movement<TPhysics::TMotion>,
@@ -172,10 +126,6 @@ where
 
 		app
 			// Required components
-			.register_required_components::<TAgents::TPlayer, FixPoints>()
-			.register_required_components::<TAgents::TPlayer, SkillUsage>()
-			.register_required_components::<TAgents::TEnemy, FixPoints>()
-			.register_required_components::<TAgents::TEnemy, SkillUsage>()
 			.register_required_components::<SkillContact, TSaveGame::TSaveEntityMarker>()
 			.register_required_components::<SkillProjection, TSaveGame::TSaveEntityMarker>()
 			// Observers
@@ -186,34 +136,17 @@ where
 				Update,
 				(
 					// Prep systems
+					(FixPointSpawner::insert, SkillUsage::clear_not_refreshed).chain(),
+					// Movement
 					(
-						FixPoint::<SkillSpawner>::insert_in_children_of::<TAgents::TAgent>,
-						FixPoints::track_in_self_and_children::<FixPoint<SkillSpawner>>().system(),
-					)
-						.chain(),
-					// Player behaviors
-					(
-						point_input.pipe(TAgents::TPlayer::insert_process_component),
-						wasd_input.pipe(TAgents::TPlayer::insert_process_component),
-						MovementDefinition::insert_from::<TAgents::TPlayerMovement>,
-						MovementDefinition::insert_from::<TAgents::TEnemy>,
 						compute_path,
 						execute_path,
 						execute_movement,
 						animate_movement,
-						SkillUsage::player::<TAgents::TPlayer, InputSystemParam<TInput>>,
-					)
-						.chain(),
-					// Enemy behaviors
-					(
-						TAgents::TEnemy::select_behavior::<TAgents::TPlayer>.pipe(OnError::log),
-						TAgents::TEnemy::chase::<PathOrWasd<TPhysics::TMotion>>,
-						SkillUsage::enemy::<TAgents::TEnemy>,
 					)
 						.chain(),
 					// Skill execution
 					(
-						Attacking::update::<Virtual>,
 						GroundTarget::set_position,
 						DestroyAfterDistanceTraveled::system,
 						SkillContact::update_range,
@@ -225,9 +158,7 @@ where
 					// Apply facing
 					(
 						Movement::<TPhysics::TMotion>::set_faces,
-						TAgents::TPlayer::get_faces
-							.pipe(execute_player_face::<RaycastSystemParam<TPhysics>>),
-						TAgents::TEnemy::get_faces.pipe(execute_enemy_face),
+						SetFace::get_faces.pipe(execute_face::<RaycastSystemParam<TPhysics>>),
 					)
 						.chain(),
 				)
@@ -275,11 +206,7 @@ impl<TDependencies> HandlesSkillBehaviors for BehaviorsPlugin<TDependencies> {
 }
 
 impl<TDependencies> HandlesOrientation for BehaviorsPlugin<TDependencies> {
-	type TFaceTemporarily = OverrideFace;
-
-	fn temporarily(face: Face) -> Self::TFaceTemporarily {
-		OverrideFace(face)
-	}
+	type TFaceSystemParam<'w, 's> = FaceParamMut<'w, 's>;
 }
 
 #[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
@@ -289,4 +216,16 @@ impl<TDependencies> SystemSetDefinition for BehaviorsPlugin<TDependencies> {
 	type TSystemSet = BehaviorSystems;
 
 	const SYSTEMS: Self::TSystemSet = BehaviorSystems;
+}
+
+impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding> HandlesMovement
+	for BehaviorsPlugin<(TInput, TSaveGame, TAnimations, TPhysics, TPathFinding)>
+where
+	TPhysics: HandlesMotion,
+{
+	type TMovementMut<'w, 's> = MovementParamMut<'w, 's, TPhysics::TMotion>;
+}
+
+impl<TDependencies> HandlesSkillControl for BehaviorsPlugin<TDependencies> {
+	type TSkillControlMut<'w, 's> = SkillParamMut<'w, 's>;
 }

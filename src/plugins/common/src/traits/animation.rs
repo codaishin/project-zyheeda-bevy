@@ -113,7 +113,7 @@ pub struct Animation {
 }
 
 impl Animation {
-	pub fn new(asset: AnimationAsset, play_mode: PlayMode) -> Self {
+	pub const fn new(asset: AnimationAsset, play_mode: PlayMode) -> Self {
 		Self { asset, play_mode }
 	}
 }
