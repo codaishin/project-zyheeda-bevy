@@ -29,22 +29,11 @@ impl Enemy {
 				(None, Some(_)) => {
 					ctx.stop();
 				}
-				(Some(Chasing { player }), None) => {
+				(Some(Chasing { player }), current_movement) => {
 					let Ok(player) = transforms.get(*player) else {
 						continue;
 					};
-					ctx.start(
-						player.translation,
-						config.collider_radius,
-						config.speed,
-						config.animation.clone(),
-					);
-				}
-				(Some(Chasing { player }), Some(MovementTarget::Point(point))) => {
-					let Ok(player) = transforms.get(*player) else {
-						continue;
-					};
-					if point == player.translation {
+					if current_movement == Some(MovementTarget::Point(player.translation)) {
 						continue;
 					}
 					ctx.start(
@@ -135,8 +124,9 @@ mod tests {
 	}
 
 	#[test_case(Some(MovementTarget::Point(Vec3::new(4., 5., 6.))); "and current movement is different")]
+	#[test_case(Some(MovementTarget::Dir(Dir3::NEG_Z)); "and current movement is directional")]
 	#[test_case(None; "and no current movement")]
-	fn move_to_chasing_player(current_movement: Option<MovementTarget>) {
+	fn move_to_chase_player(current_movement: Option<MovementTarget>) {
 		let speed = UnitsPerSecond::from(42.);
 		let collider_radius = Units::from(11.);
 		let animation = Some(Animation::new(
