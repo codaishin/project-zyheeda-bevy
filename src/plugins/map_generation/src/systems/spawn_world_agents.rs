@@ -68,7 +68,7 @@ mod tests {
 		grid_graph::grid_context::{CellCount, CellDistance},
 		traits::map_cells_extra::CellGridDefinition,
 	};
-	use common::traits::{handles_agents::AgentType, handles_enemies::EnemyType};
+	use common::traits::{handles_enemies::EnemyType, handles_map_generation::AgentType};
 	use macros::new_valid;
 	use testing::{SingleThreadedApp, assert_count, assert_eq_unordered};
 

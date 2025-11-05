@@ -20,8 +20,8 @@ use common::{
 	errors::Unreachable,
 	tools::{Units, UnitsPerSecond, action_key::slot::SlotKey},
 	traits::{
-		handles_agents::AgentType,
 		handles_enemies::EnemyType,
+		handles_map_generation::AgentType,
 		handles_skill_behaviors::SkillSpawner,
 		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},

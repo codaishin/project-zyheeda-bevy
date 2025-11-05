@@ -37,7 +37,7 @@ mod tests {
 	use super::*;
 	use common::{
 		attributes::{effect_target::EffectTarget, health::Health},
-		traits::handles_agents::AgentType,
+		traits::handles_map_generation::AgentType,
 	};
 	use testing::{SingleThreadedApp, new_handle};
 

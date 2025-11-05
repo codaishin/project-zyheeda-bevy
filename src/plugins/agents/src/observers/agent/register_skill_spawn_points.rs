@@ -36,7 +36,7 @@ mod tests {
 	use crate::assets::agent_config::{AgentConfigAsset, Bones};
 	use common::{
 		tools::action_key::slot::SlotKey,
-		traits::{handles_agents::AgentType, handles_skill_behaviors::SkillSpawner},
+		traits::{handles_map_generation::AgentType, handles_skill_behaviors::SkillSpawner},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};

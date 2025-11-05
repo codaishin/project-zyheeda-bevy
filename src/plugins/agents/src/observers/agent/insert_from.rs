@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use common::{
 	traits::{
 		accessors::get::{GetProperty, TryApplyOn},
-		handles_agents::AgentType,
+		handles_map_generation::AgentType,
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -59,7 +59,6 @@ mod tests {
 		assets::agent_config::AgentConfigAsset,
 		components::{enemy::void_sphere::VoidSphere, player::Player},
 	};
-	use common::traits::handles_agents::AgentType;
 	use std::sync::LazyLock;
 	use test_case::test_case;
 	use testing::{SingleThreadedApp, new_handle};

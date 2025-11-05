@@ -8,7 +8,7 @@ use crate::{
 		parse_map_image::ParseMapImage,
 	},
 };
-use common::{errors::Unreachable, traits::handles_agents::AgentType};
+use common::{errors::Unreachable, traits::handles_map_generation::AgentType};
 use std::marker::PhantomData;
 
 #[derive(Debug, PartialEq, Default, Clone, Copy)]

@@ -15,8 +15,9 @@ use common::{
 	},
 	traits::{
 		accessors::get::GetFromSystemParam,
-		handles_agents::{AgentConfig, AgentType},
+		handles_agents::AgentConfig,
 		handles_enemies::EnemyType,
+		handles_map_generation::AgentType,
 	},
 	zyheeda_commands::ZyheedaEntityCommands,
 };
