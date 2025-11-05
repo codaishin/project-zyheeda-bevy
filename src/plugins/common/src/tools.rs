@@ -1,7 +1,6 @@
 pub mod action_key;
 pub mod animation_key;
 pub mod attribute;
-pub mod bone;
 pub mod change;
 pub mod collider_radius;
 pub mod handle;

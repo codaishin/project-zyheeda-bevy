@@ -4,16 +4,16 @@ use crate::systems::agent::insert_model::InsertModel;
 use bevy::prelude::*;
 use common::{
 	components::asset_model::AssetModel,
-	tools::{action_key::slot::SlotKey, bone::Bone},
+	tools::action_key::slot::SlotKey,
 	traits::{
 		accessors::get::GetProperty,
+		bone_key::BoneKey,
 		handles_custom_assets::AssetFolderPath,
 		handles_map_generation::AgentType,
 		handles_physics::PhysicalDefaultAttributes,
 		handles_skill_behaviors::SkillSpawner,
 		load_asset::Path,
 		loadout::{ItemName, LoadoutConfig},
-		mapper::Mapper,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
 	},
 	zyheeda_commands::ZyheedaEntityCommands,
@@ -57,34 +57,34 @@ impl LoadoutConfig for AgentConfigData<'_> {
 	}
 }
 
-impl Mapper<Bone<'_>, Option<EssenceSlot>> for AgentConfigData<'_> {
-	fn map(&self, Bone(bone): Bone<'_>) -> Option<EssenceSlot> {
+impl BoneKey<EssenceSlot> for AgentConfigData<'_> {
+	fn bone_key(&self, bone_name: &str) -> Option<EssenceSlot> {
 		self.asset
 			.bones
 			.essence_slots
-			.get(bone)
+			.get(bone_name)
 			.copied()
 			.map(EssenceSlot::from)
 	}
 }
 
-impl Mapper<Bone<'_>, Option<HandSlot>> for AgentConfigData<'_> {
-	fn map(&self, Bone(bone): Bone<'_>) -> Option<HandSlot> {
+impl BoneKey<HandSlot> for AgentConfigData<'_> {
+	fn bone_key(&self, bone_name: &str) -> Option<HandSlot> {
 		self.asset
 			.bones
 			.hand_slots
-			.get(bone)
+			.get(bone_name)
 			.copied()
 			.map(HandSlot::from)
 	}
 }
 
-impl Mapper<Bone<'_>, Option<ForearmSlot>> for AgentConfigData<'_> {
-	fn map(&self, Bone(bone): Bone<'_>) -> Option<ForearmSlot> {
+impl BoneKey<ForearmSlot> for AgentConfigData<'_> {
+	fn bone_key(&self, bone_name: &str) -> Option<ForearmSlot> {
 		self.asset
 			.bones
 			.forearm_slots
-			.get(bone)
+			.get(bone_name)
 			.copied()
 			.map(ForearmSlot::from)
 	}

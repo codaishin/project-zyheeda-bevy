@@ -1,13 +1,10 @@
 use crate::components::slots::visualization::SlotVisualization;
 use bevy::prelude::*;
-use common::{
-	tools::bone::Bone,
-	traits::{
-		accessors::get::{AssociatedSystemParam, GetFromSystemParam},
-		handles_agents::AgentConfig,
-		mapper::Mapper,
-		thread_safe::ThreadSafe,
-	},
+use common::traits::{
+	accessors::get::{AssociatedSystemParam, GetFromSystemParam},
+	bone_key::BoneKey,
+	handles_agents::AgentConfig,
+	thread_safe::ThreadSafe,
 };
 use std::hash::Hash;
 
@@ -22,7 +19,7 @@ where
 		param: AssociatedSystemParam<TAgent, AgentConfig>,
 	) where
 		TAgent: Component + GetFromSystemParam<AgentConfig>,
-		for<'i> TAgent::TItem<'i>: Mapper<Bone<'i>, Option<TKey>>,
+		for<'i> TAgent::TItem<'i>: BoneKey<TKey>,
 	{
 		for (entity, name) in names {
 			let Some(parent) = parents.iter_ancestors(entity).find(|p| agents.contains(*p)) else {
@@ -34,7 +31,7 @@ where
 			let Some(config) = agent.get_from_param(&AgentConfig, &param) else {
 				continue;
 			};
-			let Some(key) = config.map(Bone(name.as_str())) else {
+			let Some(key) = config.bone_key(name.as_str()) else {
 				continue;
 			};
 			slots.slots.insert(key, entity);
@@ -65,9 +62,9 @@ mod tests {
 
 	struct _Config;
 
-	impl Mapper<Bone<'_>, Option<_Key>> for _Config {
-		fn map(&self, Bone(bone): Bone<'_>) -> Option<_Key> {
-			match bone {
+	impl BoneKey<_Key> for _Config {
+		fn bone_key(&self, bone_name: &str) -> Option<_Key> {
+			match bone_name {
 				"key" => Some(_Key),
 				_ => None,
 			}
