@@ -1,11 +1,6 @@
 use crate::components::slots::visualization::SlotVisualization;
 use bevy::prelude::*;
-use common::traits::{
-	accessors::get::{AssociatedSystemParam, GetFromSystemParam},
-	bone_key::BoneKey,
-	handles_agents::AgentConfig,
-	thread_safe::ThreadSafe,
-};
+use common::traits::{bone_key::BoneKey, thread_safe::ThreadSafe};
 use std::hash::Hash;
 
 impl<TKey> SlotVisualization<TKey>
@@ -16,10 +11,8 @@ where
 		mut agents: Query<(&TAgent, &mut Self)>,
 		names: Query<(Entity, &Name), Added<Name>>,
 		parents: Query<&ChildOf>,
-		param: AssociatedSystemParam<TAgent, AgentConfig>,
 	) where
-		TAgent: Component + GetFromSystemParam<AgentConfig>,
-		for<'i> TAgent::TItem<'i>: BoneKey<TKey>,
+		TAgent: Component + BoneKey<TKey>,
 	{
 		for (entity, name) in names {
 			let Some(parent) = parents.iter_ancestors(entity).find(|p| agents.contains(*p)) else {
@@ -28,10 +21,7 @@ where
 			let Ok((agent, mut slots)) = agents.get_mut(parent) else {
 				continue;
 			};
-			let Some(config) = agent.get_from_param(&AgentConfig, &param) else {
-				continue;
-			};
-			let Some(key) = config.bone_key(name.as_str()) else {
+			let Some(key) = agent.bone_key(name.as_str()) else {
 				continue;
 			};
 			slots.slots.insert(key, entity);
@@ -51,18 +41,7 @@ mod tests {
 	#[require(SlotVisualization<_Key>)]
 	struct _Agent;
 
-	impl GetFromSystemParam<AgentConfig> for _Agent {
-		type TParam<'w, 's> = ();
-		type TItem<'i> = _Config;
-
-		fn get_from_param(&self, _: &AgentConfig, _: &()) -> Option<_Config> {
-			Some(_Config)
-		}
-	}
-
-	struct _Config;
-
-	impl BoneKey<_Key> for _Config {
+	impl BoneKey<_Key> for _Agent {
 		fn bone_key(&self, bone_name: &str) -> Option<_Key> {
 			match bone_name {
 				"key" => Some(_Key),

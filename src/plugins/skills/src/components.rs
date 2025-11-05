@@ -1,4 +1,4 @@
-pub(crate) mod agent;
+pub(crate) mod bone_definition;
 pub(crate) mod combo_node;
 pub(crate) mod combos;
 pub(crate) mod combos_time_out;

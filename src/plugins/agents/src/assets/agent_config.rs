@@ -7,7 +7,7 @@ use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
 		accessors::get::GetProperty,
-		bone_key::BoneKey,
+		bone_key::{BoneKey, ConfiguredBones},
 		handles_custom_assets::AssetFolderPath,
 		handles_map_generation::AgentType,
 		handles_physics::PhysicalDefaultAttributes,
@@ -68,6 +68,12 @@ impl BoneKey<EssenceSlot> for AgentConfigData<'_> {
 	}
 }
 
+impl ConfiguredBones<EssenceSlot> for AgentConfigData<'_> {
+	fn bone_names(&self) -> impl Iterator<Item = &str> {
+		self.asset.bones.essence_slots.keys().map(|e| e.as_str())
+	}
+}
+
 impl BoneKey<HandSlot> for AgentConfigData<'_> {
 	fn bone_key(&self, bone_name: &str) -> Option<HandSlot> {
 		self.asset
@@ -79,6 +85,12 @@ impl BoneKey<HandSlot> for AgentConfigData<'_> {
 	}
 }
 
+impl ConfiguredBones<HandSlot> for AgentConfigData<'_> {
+	fn bone_names(&self) -> impl Iterator<Item = &str> {
+		self.asset.bones.hand_slots.keys().map(|e| e.as_str())
+	}
+}
+
 impl BoneKey<ForearmSlot> for AgentConfigData<'_> {
 	fn bone_key(&self, bone_name: &str) -> Option<ForearmSlot> {
 		self.asset
@@ -87,6 +99,12 @@ impl BoneKey<ForearmSlot> for AgentConfigData<'_> {
 			.get(bone_name)
 			.copied()
 			.map(ForearmSlot::from)
+	}
+}
+
+impl ConfiguredBones<ForearmSlot> for AgentConfigData<'_> {
+	fn bone_names(&self) -> impl Iterator<Item = &str> {
+		self.asset.bones.forearm_slots.keys().map(|e| e.as_str())
 	}
 }
 

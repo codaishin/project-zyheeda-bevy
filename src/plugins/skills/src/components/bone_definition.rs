@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use common::{
 	traits::{
 		accessors::get::{AssociatedSystemParam, GetFromSystemParam, TryApplyOn},
-		bone_key::BoneKey,
+		bone_key::{BoneKey, ConfiguredBones},
 		handles_agents::AgentConfig,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
 	},
@@ -11,31 +11,31 @@ use common::{
 use std::collections::HashMap;
 
 #[derive(Component, Debug, PartialEq, Default)]
-pub(crate) struct SlotsDefinition {
+pub(crate) struct BoneDefinition {
 	pub(crate) forearms: HashMap<String, ForearmSlot>,
 	pub(crate) hands: HashMap<String, HandSlot>,
 	pub(crate) essences: HashMap<String, EssenceSlot>,
 }
 
-impl BoneKey<ForearmSlot> for SlotsDefinition {
+impl BoneKey<ForearmSlot> for BoneDefinition {
 	fn bone_key(&self, value: &str) -> Option<ForearmSlot> {
 		self.forearms.get(value).copied()
 	}
 }
 
-impl BoneKey<HandSlot> for SlotsDefinition {
+impl BoneKey<HandSlot> for BoneDefinition {
 	fn bone_key(&self, value: &str) -> Option<HandSlot> {
 		self.hands.get(value).copied()
 	}
 }
 
-impl BoneKey<EssenceSlot> for SlotsDefinition {
+impl BoneKey<EssenceSlot> for BoneDefinition {
 	fn bone_key(&self, value: &str) -> Option<EssenceSlot> {
 		self.essences.get(value).copied()
 	}
 }
 
-impl SlotsDefinition {
+impl BoneDefinition {
 	// FIXME: Remove when exposing interface to insert
 	//        from outside this plugin
 	/// Temporary observer to insert definitions from agent
@@ -46,18 +46,33 @@ impl SlotsDefinition {
 		p: AssociatedSystemParam<TAgent, AgentConfig>,
 	) where
 		TAgent: Component + GetFromSystemParam<AgentConfig>,
-		for<'i> TAgent::TItem<'i>: BoneKey<ForearmSlot>,
-		for<'i> TAgent::TItem<'i>: BoneKey<HandSlot>,
-		for<'i> TAgent::TItem<'i>: BoneKey<EssenceSlot>,
+		for<'i> TAgent::TItem<'i>: ConfiguredBones<ForearmSlot>,
+		for<'i> TAgent::TItem<'i>: ConfiguredBones<HandSlot>,
+		for<'i> TAgent::TItem<'i>: ConfiguredBones<EssenceSlot>,
 	{
 		let entity = trigger.target();
 		let Ok(agent) = agents.get(entity) else {
 			return;
 		};
-		let Some(item) = agent.get_from_param(&AgentConfig, &p) else {
+		let Some(conf) = agent.get_from_param(&AgentConfig, &p) else {
 			return;
 		};
 
-		commands.try_apply_on(&entity, |mut e| {});
+		commands.try_apply_on(&entity, |mut e| {
+			e.try_insert(Self {
+				forearms: get_bones(&conf),
+				hands: get_bones(&conf),
+				essences: get_bones(&conf),
+			});
+		});
 	}
+}
+
+fn get_bones<TKey>(conf: &impl ConfiguredBones<TKey>) -> HashMap<String, TKey> {
+	conf.bone_names()
+		.filter_map(|bone| {
+			let key = conf.bone_key(bone)?;
+			Some((bone.to_owned(), key))
+		})
+		.collect()
 }
