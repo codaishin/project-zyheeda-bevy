@@ -18,7 +18,7 @@ mod tests {
 		app::{App, Update},
 		ecs::system::{RunSystemError, RunSystemOnce},
 	};
-	use common::traits::{accessors::get::EntityContextMut, handles_orientation::Facing};
+	use common::traits::{accessors::get::GetContextMut, handles_orientation::Facing};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -32,7 +32,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once(move |mut p: FaceParamMut| {
-				let mut ctx = FaceParamMut::get_entity_context_mut(&mut p, entity, Facing).unwrap();
+				let mut ctx = FaceParamMut::get_context_mut(&mut p, Facing { entity }).unwrap();
 				ctx.override_face(Face::Target);
 			})?;
 
@@ -50,7 +50,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once(move |mut p: FaceParamMut| {
-				let mut ctx = FaceParamMut::get_entity_context_mut(&mut p, entity, Facing).unwrap();
+				let mut ctx = FaceParamMut::get_context_mut(&mut p, Facing { entity }).unwrap();
 				ctx.stop_override_face();
 			})?;
 

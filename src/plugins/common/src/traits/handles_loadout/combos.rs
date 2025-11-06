@@ -13,7 +13,15 @@ use std::{
 
 pub type Combo<TKey, TSkill> = Vec<(Vec<TKey>, TSkill)>;
 
-pub struct Combos;
+pub struct Combos {
+	pub entity: Entity,
+}
+
+impl From<Combos> for Entity {
+	fn from(Combos { entity }: Combos) -> Self {
+		entity
+	}
+}
 
 pub trait NextConfiguredKeys<TKey> {
 	fn next_keys(&self, combo_keys: &[TKey]) -> HashSet<TKey>;

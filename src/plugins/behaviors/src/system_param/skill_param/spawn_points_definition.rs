@@ -27,7 +27,7 @@ mod tests {
 	};
 	use common::{
 		tools::action_key::slot::SlotKey,
-		traits::{accessors::get::EntityContextMut, handles_skills_control::SkillSpawnPoints},
+		traits::{accessors::get::GetContextMut, handles_skills_control::SkillSpawnPoints},
 	};
 	use testing::SingleThreadedApp;
 
@@ -48,8 +48,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut p: SkillParamMut| {
 				let mut ctx =
-					SkillParamMut::get_entity_context_mut(&mut p, entity, SkillSpawnPoints)
-						.unwrap();
+					SkillParamMut::get_context_mut(&mut p, SkillSpawnPoints { entity }).unwrap();
 
 				ctx.insert_spawn_point_definition(map_clone.clone());
 			})?;

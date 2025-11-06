@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::{ContextChanged, EntityContext},
+		accessors::get::{ContextChanged, GetContext},
 		handles_loadout::combos::{
 			Combo,
 			Combos as CombosMarker,
@@ -14,13 +14,12 @@ use common::{
 };
 use std::{collections::HashSet, ops::Deref};
 
-impl EntityContext<CombosMarker> for LoadoutReader<'_, '_> {
+impl GetContext<CombosMarker> for LoadoutReader<'_, '_> {
 	type TContext<'ctx> = CombosView<'ctx>;
 
-	fn get_entity_context<'ctx>(
+	fn get_context<'ctx>(
 		param: &'ctx LoadoutReader,
-		entity: Entity,
-		_: CombosMarker,
+		CombosMarker { entity }: CombosMarker,
 	) -> Option<Self::TContext<'ctx>> {
 		let (_, _, combos, _) = param.agents.get(entity).ok()?;
 
@@ -110,7 +109,7 @@ mod tests {
 
 		app.world_mut().run_system_once(
 			move |loadout: LoadoutReader, combos: Query<Ref<Combos>>| {
-				let ctx = LoadoutReader::get_entity_context(&loadout, entity, CombosMarker);
+				let ctx = LoadoutReader::get_context(&loadout, CombosMarker { entity });
 				let combos = combos.get(entity).unwrap();
 
 				assert_eq!(Some(CombosView { combos }), ctx);

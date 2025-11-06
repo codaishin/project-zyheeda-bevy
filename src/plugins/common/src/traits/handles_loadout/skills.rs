@@ -9,7 +9,15 @@ use crate::{
 use bevy::prelude::*;
 use std::ops::Deref;
 
-pub struct Skills;
+pub struct Skills {
+	pub entity: Entity,
+}
+
+impl From<Skills> for Entity {
+	fn from(Skills { entity }: Skills) -> Self {
+		entity
+	}
+}
 
 pub struct SkillToken;
 

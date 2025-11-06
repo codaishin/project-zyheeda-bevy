@@ -1,7 +1,7 @@
 use crate::components::DeleteSkill;
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
-	accessors::get::EntityContextMut,
+	accessors::get::GetContextMut,
 	handles_loadout::combos::{Combos, UpdateCombos},
 };
 
@@ -12,10 +12,10 @@ impl DeleteSkill {
 		mut param: StaticSystemParam<TLoadout>,
 	) where
 		TAgent: Component,
-		TLoadout: for<'c> EntityContextMut<Combos, TContext<'c>: UpdateCombos<TId>>,
+		TLoadout: for<'c> GetContextMut<Combos, TContext<'c>: UpdateCombos<TId>>,
 	{
-		for agent in &agents {
-			let Some(mut ctx) = TLoadout::get_entity_context_mut(&mut param, agent, Combos) else {
+		for entity in &agents {
+			let Some(mut ctx) = TLoadout::get_context_mut(&mut param, Combos { entity }) else {
 				continue;
 			};
 			let deletes = deletes

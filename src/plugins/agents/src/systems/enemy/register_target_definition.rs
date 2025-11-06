@@ -1,7 +1,7 @@
 use crate::components::{enemy::Enemy, player::Player};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
-	accessors::get::EntityContextMut,
+	accessors::get::GetContextMut,
 	handles_orientation::{FaceTargetIs, Facing, RegisterFaceTargetDefinition},
 };
 
@@ -11,13 +11,13 @@ impl Enemy {
 		players: Query<Entity, With<Player>>,
 		mut facing: StaticSystemParam<TFacing>,
 	) where
-		TFacing: for<'c> EntityContextMut<Facing, TContext<'c>: RegisterFaceTargetDefinition>,
+		TFacing: for<'c> GetContextMut<Facing, TContext<'c>: RegisterFaceTargetDefinition>,
 	{
 		let entity = trigger.target();
 		let Ok(player) = players.single() else {
 			return;
 		};
-		let ctx = TFacing::get_entity_context_mut(&mut facing, entity, Facing);
+		let ctx = TFacing::get_context_mut(&mut facing, Facing { entity });
 		let Some(mut ctx) = ctx else {
 			return;
 		};

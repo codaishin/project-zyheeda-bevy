@@ -1,7 +1,7 @@
 use crate::components::combo_skill_button::{ComboSkillButton, DropdownItem};
 use bevy::{ecs::system::StaticSystemParam, prelude::*, ui::Interaction};
 use common::traits::{
-	accessors::get::EntityContextMut,
+	accessors::get::GetContextMut,
 	handles_loadout::combos::{Combos, UpdateCombos},
 	thread_safe::ThreadSafe,
 };
@@ -18,9 +18,9 @@ where
 		mut param: StaticSystemParam<TLoadout>,
 	) where
 		TAgent: Component,
-		TLoadout: for<'c> EntityContextMut<Combos, TContext<'c>: UpdateCombos<TId>>,
+		TLoadout: for<'c> GetContextMut<Combos, TContext<'c>: UpdateCombos<TId>>,
 	{
-		for agent in &agents {
+		for entity in &agents {
 			let new_combos = skill_buttons
 				.iter()
 				.filter(pressed)
@@ -29,7 +29,7 @@ where
 			if new_combos.is_empty() {
 				continue;
 			}
-			let Some(mut ctx) = TLoadout::get_entity_context_mut(&mut param, agent, Combos) else {
+			let Some(mut ctx) = TLoadout::get_context_mut(&mut param, Combos { entity }) else {
 				continue;
 			};
 
@@ -46,7 +46,6 @@ fn pressed<T>((.., interaction): &(&T, &Interaction)) -> bool {
 mod tests {
 	use super::*;
 	use crate::components::combo_overview::ComboSkill;
-	use bevy::ecs::system::SystemParam;
 	use common::{
 		tools::action_key::slot::{PlayerSlot, SlotKey},
 		traits::{handles_loadout::combos::Combo, handles_localization::Token},
@@ -58,21 +57,6 @@ mod tests {
 
 	#[derive(Component)]
 	struct _Agent;
-
-	#[derive(SystemParam)]
-	struct _Param<'w, 's>(Query<'w, 's, &'static mut _Combos>);
-
-	impl EntityContextMut<Combos> for _Param<'_, '_> {
-		type TContext<'ctx> = Mut<'ctx, _Combos>;
-
-		fn get_entity_context_mut<'ctx>(
-			param: &'ctx mut _Param,
-			entity: Entity,
-			_: Combos,
-		) -> Option<Self::TContext<'ctx>> {
-			param.0.get_mut(entity).ok()
-		}
-	}
 
 	#[derive(Component, NestedMocks)]
 	struct _Combos {
@@ -101,7 +85,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
-			ComboSkillButton::<DropdownItem<_Layout>, _Id>::update::<_Agent, _Param>,
+			ComboSkillButton::<DropdownItem<_Layout>, _Id>::update::<_Agent, Query<&mut _Combos>>,
 		);
 
 		app

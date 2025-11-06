@@ -1,19 +1,27 @@
 use crate::{
 	tools::action_key::slot::SlotKey,
-	traits::{accessors::get::EntityContextMut, handles_skill_behaviors::SkillSpawner},
+	traits::{accessors::get::GetContextMut, handles_skill_behaviors::SkillSpawner},
 };
-use bevy::ecs::system::SystemParam;
+use bevy::ecs::{entity::Entity, system::SystemParam};
 use std::{collections::HashMap, ops::DerefMut};
 
 pub trait HandlesSkillControl {
 	type TSkillControlMut<'w, 's>: SystemParam
-		+ for<'c> EntityContextMut<SkillControl, TContext<'c>: HoldSkill>
-		+ for<'c> EntityContextMut<SkillSpawnPoints, TContext<'c>: SpawnPointsDefinition>;
+		+ for<'c> GetContextMut<SkillControl, TContext<'c>: HoldSkill>
+		+ for<'c> GetContextMut<SkillSpawnPoints, TContext<'c>: SpawnPointsDefinition>;
 }
 
 pub type SkillControlParamMut<'w, 's, T> = <T as HandlesSkillControl>::TSkillControlMut<'w, 's>;
 
-pub struct SkillControl;
+pub struct SkillControl {
+	pub entity: Entity,
+}
+
+impl From<SkillControl> for Entity {
+	fn from(SkillControl { entity }: SkillControl) -> Self {
+		entity
+	}
+}
 
 pub trait HoldSkill {
 	/// Set this each frame
@@ -34,7 +42,15 @@ where
 	}
 }
 
-pub struct SkillSpawnPoints;
+pub struct SkillSpawnPoints {
+	pub entity: Entity,
+}
+
+impl From<SkillSpawnPoints> for Entity {
+	fn from(SkillSpawnPoints { entity }: SkillSpawnPoints) -> Self {
+		entity
+	}
+}
 
 pub trait SpawnPointsDefinition {
 	fn insert_spawn_point_definition(&mut self, definition: HashMap<String, SkillSpawner>);

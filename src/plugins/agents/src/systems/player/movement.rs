@@ -11,7 +11,7 @@ use bevy::{
 use common::{
 	tools::action_key::movement::MovementKey,
 	traits::{
-		accessors::get::EntityContextMut,
+		accessors::get::GetContextMut,
 		handles_input::{GetAllInputStates, InputState},
 		handles_movement::{Movement, StartMovement, StopMovement},
 		handles_physics::{MouseGroundHover, MouseGroundPoint, Raycast},
@@ -28,7 +28,7 @@ impl Player {
 	) where
 		for<'w, 's> TInput: SystemParam<Item<'w, 's>: GetAllInputStates>,
 		for<'w, 's> TRaycast: SystemParam<Item<'w, 's>: Raycast<MouseGroundHover>>,
-		for<'c> TMovement: EntityContextMut<Movement, TContext<'c>: StartMovement + StopMovement>,
+		for<'c> TMovement: GetContextMut<Movement, TContext<'c>: StartMovement + StopMovement>,
 	{
 		let Some(cam_transform) = cameras.iter().next() else {
 			return;
@@ -36,7 +36,7 @@ impl Player {
 		let inputs = || input.get_all_input_states::<MovementKey>();
 
 		for (entity, config) in &players {
-			let Some(mut ctx) = TMovement::get_entity_context_mut(&mut m, entity, Movement) else {
+			let Some(mut ctx) = TMovement::get_context_mut(&mut m, Movement { entity }) else {
 				continue;
 			};
 

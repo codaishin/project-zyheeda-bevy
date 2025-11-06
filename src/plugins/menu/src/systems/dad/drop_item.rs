@@ -2,7 +2,7 @@ use crate::components::{Dad, KeyedPanel};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	traits::{
-		accessors::get::{EntityContextMut, TryApplyOn},
+		accessors::get::{GetContextMut, TryApplyOn},
 		handles_loadout::items::{Items, SwapItems},
 	},
 	zyheeda_commands::ZyheedaCommands,
@@ -16,20 +16,20 @@ pub fn drop_item<TAgent, TLoadout>(
 	mut param: StaticSystemParam<TLoadout>,
 ) where
 	TAgent: Component,
-	TLoadout: for<'c> EntityContextMut<Items, TContext<'c>: SwapItems>,
+	TLoadout: for<'c> GetContextMut<Items, TContext<'c>: SwapItems>,
 {
 	if !mouse.just_released(MouseButton::Left) {
 		return;
 	}
 
-	for (agent, dad) in &agents {
-		let Some(mut ctx) = TLoadout::get_entity_context_mut(&mut param, agent, Items) else {
+	for (entity, dad) in &agents {
+		let Some(mut ctx) = TLoadout::get_context_mut(&mut param, Items { entity }) else {
 			return;
 		};
 
 		for (.., keyed_panel) in panels.iter().filter(is_hovered) {
 			ctx.swap_items(dad.0, keyed_panel.0);
-			commands.try_apply_on(&agent, |mut e| {
+			commands.try_apply_on(&entity, |mut e| {
 				e.try_remove::<Dad>();
 			});
 		}

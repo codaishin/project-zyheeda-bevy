@@ -1,7 +1,7 @@
 use crate::{assets::agent_config::AgentConfigAsset, components::agent::Agent};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
-	accessors::get::EntityContextMut,
+	accessors::get::GetContextMut,
 	handles_skills_control::{SkillSpawnPoints, SpawnPointsDefinition},
 };
 
@@ -12,10 +12,10 @@ impl Agent {
 		agents: Query<&Agent>,
 		configs: Res<Assets<AgentConfigAsset>>,
 	) where
-		TSkills: for<'c> EntityContextMut<SkillSpawnPoints, TContext<'c>: SpawnPointsDefinition>,
+		TSkills: for<'c> GetContextMut<SkillSpawnPoints, TContext<'c>: SpawnPointsDefinition>,
 	{
 		let entity = trigger.target();
-		let ctx = TSkills::get_entity_context_mut(&mut skills, entity, SkillSpawnPoints);
+		let ctx = TSkills::get_context_mut(&mut skills, SkillSpawnPoints { entity });
 		let Some(mut ctx) = ctx else {
 			return;
 		};

@@ -7,7 +7,7 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::{EntityContext, TryApplyOn},
+		accessors::get::{GetContext, TryApplyOn},
 		handles_loadout::combos::{Combos, NextConfiguredKeys},
 		thread_safe::ThreadSafe,
 	},
@@ -22,7 +22,7 @@ impl KeySelectDropdownCommand<AppendSkillCommand> {
 		param: StaticSystemParam<TLoadout>,
 	) where
 		TAgent: Component,
-		TLoadout: for<'c> EntityContext<Combos, TContext<'c>: NextConfiguredKeys<SlotKey>>,
+		TLoadout: for<'c> GetContext<Combos, TContext<'c>: NextConfiguredKeys<SlotKey>>,
 	{
 		insert_key_select_dropdown(commands, dropdown_commands, agents, param);
 	}
@@ -35,11 +35,11 @@ fn insert_key_select_dropdown<TAgent, TLoadout, TExtra>(
 	param: StaticSystemParam<TLoadout>,
 ) where
 	TAgent: Component,
-	TLoadout: for<'c> EntityContext<Combos, TContext<'c>: NextConfiguredKeys<SlotKey>>,
+	TLoadout: for<'c> GetContext<Combos, TContext<'c>: NextConfiguredKeys<SlotKey>>,
 	KeySelectDropdownCommand<TExtra>: ThreadSafe + GetComponent<TInput = ExcludeKeys<SlotKey>>,
 {
-	for agent in &agents {
-		let Some(ctx) = TLoadout::get_entity_context(&param, agent, Combos) else {
+	for entity in &agents {
+		let Some(ctx) = TLoadout::get_context(&param, Combos { entity }) else {
 			continue;
 		};
 

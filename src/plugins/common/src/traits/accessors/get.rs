@@ -6,10 +6,7 @@ mod option;
 mod ray;
 mod result;
 
-use bevy::{
-	ecs::system::{StaticSystemParam, SystemParam, SystemParamItem},
-	prelude::*,
-};
+use bevy::ecs::system::{StaticSystemParam, SystemParam, SystemParamItem};
 use std::ops::Deref;
 
 pub trait Get<TKey> {
@@ -123,13 +120,12 @@ pub trait ContextChanged {
 /// Retrieve a context for data inspection.
 ///
 /// It is up to the implementor, what kind of system parameters are involved.
-pub trait EntityContext<TMarker>: SystemParam {
+pub trait GetContext<TKey>: SystemParam {
 	type TContext<'ctx>: ContextChanged;
 
-	fn get_entity_context<'ctx>(
+	fn get_context<'ctx>(
 		param: &'ctx SystemParamItem<Self>,
-		entity: Entity,
-		marker: TMarker,
+		key: TKey,
 	) -> Option<Self::TContext<'ctx>>;
 }
 
@@ -144,13 +140,12 @@ pub trait GetMut<TKey> {
 /// Retrieve a context for data mutation.
 ///
 /// It is up to the implementor, what kind of system parameters are involved.
-pub trait EntityContextMut<TMarker>: SystemParam {
+pub trait GetContextMut<TKey>: SystemParam {
 	type TContext<'ctx>;
 
-	fn get_entity_context_mut<'ctx>(
+	fn get_context_mut<'ctx>(
 		param: &'ctx mut SystemParamItem<Self>,
-		entity: Entity,
-		marker: TMarker,
+		key: TKey,
 	) -> Option<Self::TContext<'ctx>>;
 }
 

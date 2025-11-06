@@ -3,9 +3,18 @@ use crate::traits::{
 	handles_loadout::LoadoutKey,
 	handles_localization::Token,
 };
+use bevy::prelude::*;
 use std::ops::{Deref, DerefMut};
 
-pub struct Items;
+pub struct Items {
+	pub entity: Entity,
+}
+
+impl From<Items> for Entity {
+	fn from(Items { entity }: Items) -> Self {
+		entity
+	}
+}
 
 pub struct ItemToken;
 

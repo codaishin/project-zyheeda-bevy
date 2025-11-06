@@ -10,7 +10,7 @@ use crate::components::{
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::{
 	traits::{
-		accessors::get::{EntityContextMut, GetMut},
+		accessors::get::{GetContextMut, GetMut},
 		handles_movement::Movement as MovementMarker,
 		thread_safe::ThreadSafe,
 	},
@@ -27,16 +27,15 @@ where
 	movements: Query<'w, 's, &'static Movement<PathOrDirection<TMotion>>>,
 }
 
-impl<TMotion> EntityContextMut<MovementMarker> for MovementParamMut<'_, '_, TMotion>
+impl<TMotion> GetContextMut<MovementMarker> for MovementParamMut<'_, '_, TMotion>
 where
 	TMotion: ThreadSafe,
 {
 	type TContext<'ctx> = MovementContextMut<'ctx, TMotion>;
 
-	fn get_entity_context_mut<'ctx>(
+	fn get_context_mut<'ctx>(
 		param: &'ctx mut MovementParamMut<TMotion>,
-		entity: Entity,
-		_: MovementMarker,
+		MovementMarker { entity }: MovementMarker,
 	) -> Option<Self::TContext<'ctx>> {
 		let movement_definition = param.movement_definitions.get_mut(entity).ok();
 		let movement = param.movements.get(entity).ok();

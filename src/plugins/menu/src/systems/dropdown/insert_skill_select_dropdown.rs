@@ -7,7 +7,7 @@ use crate::components::{
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	traits::{
-		accessors::get::{DynProperty, EntityContext, TryApplyOn},
+		accessors::get::{DynProperty, GetContext, TryApplyOn},
 		handles_loadout::{
 			available_skills::{AvailableSkills, ReadAvailableSkills},
 			skills::{GetSkillId, SkillIcon, SkillToken},
@@ -28,14 +28,14 @@ impl<TLayout> SkillSelectDropdownCommand<TLayout> {
 		TLayout: ThreadSafe + Sized,
 		TAgent: Component,
 		TId: Debug + PartialEq + Clone + ThreadSafe,
-		TLoadout: for<'c> EntityContext<AvailableSkills, TContext<'c>: ReadAvailableSkills<TId>>,
+		TLoadout: for<'c> GetContext<AvailableSkills, TContext<'c>: ReadAvailableSkills<TId>>,
 	{
-		for agent in &agents {
-			for (entity, command) in &dropdown_commands {
+		for entity in &agents {
+			for (dropdown_entity, command) in &dropdown_commands {
 				let Some(key) = command.key_path.last() else {
 					continue;
 				};
-				let Some(ctx) = TLoadout::get_entity_context(&param, agent, AvailableSkills) else {
+				let Some(ctx) = TLoadout::get_context(&param, AvailableSkills { entity }) else {
 					continue;
 				};
 				let items = ctx
@@ -52,7 +52,7 @@ impl<TLayout> SkillSelectDropdownCommand<TLayout> {
 					})
 					.collect::<Vec<_>>();
 
-				commands.try_apply_on(&entity, |mut e| {
+				commands.try_apply_on(&dropdown_entity, |mut e| {
 					e.try_insert(Dropdown { items });
 					e.try_remove::<Self>();
 				});

@@ -10,7 +10,7 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	tools::skill_execution::SkillExecution,
 	traits::{
-		accessors::get::{DynProperty, EntityContext, GetProperty},
+		accessors::get::{DynProperty, GetContext, GetProperty},
 		handles_input::MouseOverrideActive,
 		handles_loadout::skills::{ReadSkills, Skills},
 	},
@@ -25,7 +25,7 @@ impl QuickbarPanel {
 	) where
 		TAgent: Component,
 		TActionKeyButton: Component + GetProperty<MouseOverrideActive>,
-		TLoadout: for<'c> EntityContext<Skills, TContext<'c>: ReadSkills>,
+		TLoadout: for<'c> GetContext<Skills, TContext<'c>: ReadSkills>,
 	{
 		set_color(commands, buttons, agents, param)
 	}
@@ -39,15 +39,15 @@ fn set_color<TAgent, TActionKeyButton, TLoadout>(
 ) where
 	TAgent: Component,
 	TActionKeyButton: Component + GetProperty<MouseOverrideActive>,
-	TLoadout: for<'c> EntityContext<Skills, TContext<'c>: ReadSkills>,
+	TLoadout: for<'c> GetContext<Skills, TContext<'c>: ReadSkills>,
 {
-	for agent in &agents {
-		let Some(ctx) = TLoadout::get_entity_context(&param, agent, Skills) else {
+	for entity in &agents {
+		let Some(ctx) = TLoadout::get_context(&param, Skills { entity }) else {
 			continue;
 		};
 
-		for (entity, panel, action_button) in &buttons {
-			let Ok(entity) = commands.get_entity(entity) else {
+		for (btn_entity, panel, action_button) in &buttons {
+			let Ok(entity) = commands.get_entity(btn_entity) else {
 				continue;
 			};
 			let color = get_color_override(panel, action_button, &ctx);

@@ -5,7 +5,7 @@ use crate::{
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	traits::{
-		accessors::get::{EntityContext, GetProperty, TryApplyOn},
+		accessors::get::{GetContext, GetProperty, TryApplyOn},
 		handles_loadout::items::{Items, ReadItems},
 	},
 	zyheeda_commands::ZyheedaCommands,
@@ -19,23 +19,23 @@ impl InventoryPanel {
 		param: StaticSystemParam<TLoadout>,
 	) where
 		TAgent: Component,
-		TLoadout: for<'c> EntityContext<Items, TContext<'c>: ReadItems>,
+		TLoadout: for<'c> GetContext<Items, TContext<'c>: ReadItems>,
 	{
-		for agent in &agents {
-			let Some(ctx) = TLoadout::get_entity_context(&param, agent, Items) else {
+		for entity in &agents {
+			let Some(ctx) = TLoadout::get_context(&param, Items { entity }) else {
 				continue;
 			};
 
-			for (entity, mut panel, KeyedPanel(key)) in &mut panels {
+			for (panel_entity, mut panel, KeyedPanel(key)) in &mut panels {
 				let panel_state = match ctx.get_item(*key) {
 					None => {
-						commands.try_apply_on(&entity, |mut e| {
+						commands.try_apply_on(&panel_entity, |mut e| {
 							e.try_insert(UILabel::empty());
 						});
 						PanelState::Empty
 					}
 					Some(item) => {
-						commands.try_apply_on(&entity, |mut e| {
+						commands.try_apply_on(&panel_entity, |mut e| {
 							e.try_insert(UILabel(item.get_property().clone()));
 						});
 						PanelState::Filled

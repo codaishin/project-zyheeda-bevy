@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use common::{
 	tools::inventory_key::InventoryKey,
 	traits::{
-		accessors::get::EntityContextMut,
+		accessors::get::GetContextMut,
 		handles_loadout::{
 			LoadoutKey,
 			items::{Items, SwapItems},
@@ -14,13 +14,12 @@ use common::{
 	},
 };
 
-impl EntityContextMut<Items> for LoadoutWriter<'_, '_> {
+impl GetContextMut<Items> for LoadoutWriter<'_, '_> {
 	type TContext<'ctx> = ItemsMut<'ctx>;
 
-	fn get_entity_context_mut<'ctx>(
+	fn get_context_mut<'ctx>(
 		param: &'ctx mut LoadoutWriter,
-		entity: Entity,
-		_: Items,
+		Items { entity }: Items,
 	) -> Option<Self::TContext<'ctx>> {
 		let (slots, inventory, ..) = param.agents.get_mut(entity).ok()?;
 
@@ -134,7 +133,7 @@ mod tests {
 			app.world_mut()
 				.run_system_once(move |mut loadout: LoadoutWriter| {
 					let ctx =
-						LoadoutWriter::get_entity_context_mut(&mut loadout, entity, Items).unwrap();
+						LoadoutWriter::get_context_mut(&mut loadout, Items { entity }).unwrap();
 
 					assert_eq!(
 						(
@@ -168,8 +167,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |mut p: LoadoutWriter| {
-					let mut ctx =
-						LoadoutWriter::get_entity_context_mut(&mut p, entity, Items).unwrap();
+					let mut ctx = LoadoutWriter::get_context_mut(&mut p, Items { entity }).unwrap();
 					ctx.swap_items(InventoryKey(0), InventoryKey(1));
 				})?;
 
@@ -200,8 +198,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |mut p: LoadoutWriter| {
-					let mut ctx =
-						LoadoutWriter::get_entity_context_mut(&mut p, entity, Items).unwrap();
+					let mut ctx = LoadoutWriter::get_context_mut(&mut p, Items { entity }).unwrap();
 					ctx.swap_items(key_a, key_b);
 				})?;
 
@@ -232,8 +229,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |mut p: LoadoutWriter| {
-					let mut ctx =
-						LoadoutWriter::get_entity_context_mut(&mut p, entity, Items).unwrap();
+					let mut ctx = LoadoutWriter::get_context_mut(&mut p, Items { entity }).unwrap();
 					ctx.swap_items(key_a, key_b);
 				})?;
 
@@ -264,8 +260,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |mut p: LoadoutWriter| {
-					let mut ctx =
-						LoadoutWriter::get_entity_context_mut(&mut p, entity, Items).unwrap();
+					let mut ctx = LoadoutWriter::get_context_mut(&mut p, Items { entity }).unwrap();
 					ctx.swap_items(key_a, key_b);
 				})?;
 
@@ -295,8 +290,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |mut p: LoadoutWriter| {
-					let mut ctx =
-						LoadoutWriter::get_entity_context_mut(&mut p, entity, Items).unwrap();
+					let mut ctx = LoadoutWriter::get_context_mut(&mut p, Items { entity }).unwrap();
 					ctx.swap_items(SlotKey(11), SlotKey(42));
 				})?;
 
@@ -326,8 +320,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |mut p: LoadoutWriter| {
-					let mut ctx =
-						LoadoutWriter::get_entity_context_mut(&mut p, entity, Items).unwrap();
+					let mut ctx = LoadoutWriter::get_context_mut(&mut p, Items { entity }).unwrap();
 					ctx.swap_items(key_a, key_b);
 				})?;
 
@@ -361,8 +354,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |mut p: LoadoutWriter| {
-					let mut ctx =
-						LoadoutWriter::get_entity_context_mut(&mut p, entity, Items).unwrap();
+					let mut ctx = LoadoutWriter::get_context_mut(&mut p, Items { entity }).unwrap();
 					ctx.swap_items(key_a, key_b);
 				})?;
 
@@ -398,8 +390,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |mut p: LoadoutWriter| {
-					let mut ctx =
-						LoadoutWriter::get_entity_context_mut(&mut p, entity, Items).unwrap();
+					let mut ctx = LoadoutWriter::get_context_mut(&mut p, Items { entity }).unwrap();
 					ctx.swap_items(key_a, key_b);
 				})?;
 
@@ -435,8 +426,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |mut p: LoadoutWriter| {
-					let mut ctx =
-						LoadoutWriter::get_entity_context_mut(&mut p, entity, Items).unwrap();
+					let mut ctx = LoadoutWriter::get_context_mut(&mut p, Items { entity }).unwrap();
 					ctx.swap_items(key_a, key_b);
 				})?;
 
@@ -472,8 +462,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |mut p: LoadoutWriter| {
-					let mut ctx =
-						LoadoutWriter::get_entity_context_mut(&mut p, entity, Items).unwrap();
+					let mut ctx = LoadoutWriter::get_context_mut(&mut p, Items { entity }).unwrap();
 					ctx.swap_items(key_a, key_b);
 				})?;
 
@@ -509,8 +498,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |mut p: LoadoutWriter| {
-					let mut ctx =
-						LoadoutWriter::get_entity_context_mut(&mut p, entity, Items).unwrap();
+					let mut ctx = LoadoutWriter::get_context_mut(&mut p, Items { entity }).unwrap();
 					ctx.swap_items(key_a, key_b);
 				})?;
 
@@ -545,8 +533,7 @@ mod tests {
 			app.add_systems(
 				Update,
 				(move |mut p: LoadoutWriter| {
-					let mut ctx =
-						LoadoutWriter::get_entity_context_mut(&mut p, entity, Items).unwrap();
+					let mut ctx = LoadoutWriter::get_context_mut(&mut p, Items { entity }).unwrap();
 					ctx.swap_items(key_a, key_b);
 				})
 				.before(_ChangeDetection),
