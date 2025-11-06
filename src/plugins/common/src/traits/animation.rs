@@ -1,15 +1,36 @@
-use crate::tools::path::Path;
-
 use super::iteration::IterFinite;
-use bevy::{ecs::component::Mutable, prelude::*};
+use crate::{
+	tools::{action_key::slot::SlotKey, path::Path},
+	traits::accessors::get::GetContextMut,
+};
+use bevy::{
+	ecs::{component::Mutable, system::SystemParam},
+	prelude::*,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub enum AnimationPriority {
-	High,
-	Medium,
-	Low,
+pub trait HandlesAnimations {
+	type TAnimationsMut<'w, 's>: SystemParam
+		+ for<'c> GetContextMut<Animations, TContext<'c>: RegisterAnimations2>
+		+ for<'c> GetContextMut<Animations, TContext<'c>: OverrideAnimations>;
+}
+
+pub struct Animations {
+	pub entity: Entity,
+}
+
+pub type AnimationsParamMut<'w, 's, T> = <T as HandlesAnimations>::TAnimationsMut<'w, 's>;
+
+pub trait RegisterAnimations2 {
+	fn register_animations(&mut self, animations: HashMap<AnimationKey, Animation2>);
+}
+
+pub trait OverrideAnimations {
+	fn override_animations<TLayer, TAnimations>(&mut self, layer: TLayer, animations: TAnimations)
+	where
+		TLayer: Into<AnimationPriority> + 'static,
+		TAnimations: IntoIterator<Item = AnimationKey> + 'static;
 }
 
 pub trait StartAnimation {
@@ -34,33 +55,33 @@ pub trait StopAnimation {
 pub trait GetAnimationDefinitions
 where
 	for<'a> AnimationMask: From<&'a Self::TAnimationMask>,
-	for<'a> AnimationMaskDefinition: From<&'a Self::TAnimationMask>,
+	for<'a> AffectedAnimationBones: From<&'a Self::TAnimationMask>,
 {
 	type TAnimationMask: IterFinite;
 
-	fn animations() -> HashMap<AnimationAsset, AnimationMask>;
+	fn animations() -> HashMap<AnimationPath, AnimationMask>;
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum AnimationMaskDefinition {
-	Mask {
-		from_root: Name,
-		exclude_roots: Vec<Name>,
+pub enum AffectedAnimationBones {
+	SubTree {
+		root: Name,
+		until_exclusive: Vec<Name>,
 	},
 	Leaf {
-		from_root: Name,
+		root: Name,
 	},
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
-pub enum AnimationAsset {
-	Path(Path),
+pub enum AnimationPath {
+	Single(Path),
 	Directional(Directional),
 }
 
-impl From<&'static str> for AnimationAsset {
+impl From<&'static str> for AnimationPath {
 	fn from(path: &'static str) -> Self {
-		Self::Path(Path::from(path))
+		Self::Single(Path::from(path))
 	}
 }
 
@@ -95,11 +116,18 @@ pub trait RegisterAnimations: HasAnimationsDispatch {
 	where
 		TAgent: Component + GetAnimationDefinitions + ConfigureNewAnimationDispatch,
 		for<'a> AnimationMask: From<&'a TAgent::TAnimationMask>,
-		for<'a> AnimationMaskDefinition: From<&'a TAgent::TAnimationMask>;
+		for<'a> AffectedAnimationBones: From<&'a TAgent::TAnimationMask>;
 
 	fn register_movement_direction<TMovementDirection>(app: &mut App)
 	where
 		TMovementDirection: Component + GetMovementDirection;
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub enum AnimationPriority {
+	High,
+	Medium,
+	Low,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
@@ -110,12 +138,36 @@ pub enum PlayMode {
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
 pub struct Animation {
-	pub asset: AnimationAsset,
+	pub path: AnimationPath,
 	pub play_mode: PlayMode,
 }
 
 impl Animation {
-	pub const fn new(asset: AnimationAsset, play_mode: PlayMode) -> Self {
-		Self { asset, play_mode }
+	pub const fn new(path: AnimationPath, play_mode: PlayMode) -> Self {
+		Self { path, play_mode }
 	}
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Animation2 {
+	pub path: AnimationPath,
+	pub play_mode: PlayMode,
+	pub mask: AnimationMask,
+	pub bones: AffectedAnimationBones2,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct AffectedAnimationBones2 {
+	from_root: BoneName,
+	until_exclusive: Vec<BoneName>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct BoneName(pub String);
+
+pub enum AnimationKey {
+	Idle,
+	Walk,
+	Run,
+	Skill(SlotKey),
 }

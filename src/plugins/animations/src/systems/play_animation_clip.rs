@@ -115,7 +115,7 @@ where
 		let blocked_by_higher_priority = higher_priority_mask;
 
 		for active_animation in dispatcher.get_active_animations(priority) {
-			let Some((ids, mask)) = lookup.animations.get(&active_animation.asset) else {
+			let Some((ids, mask)) = lookup.animations.get(&active_animation.path) else {
 				continue;
 			};
 
@@ -168,7 +168,7 @@ fn add(dst: &mut AnimationMask, src: AnimationMask) {
 mod tests {
 	use super::*;
 	use crate::test_tools::leak_iterator;
-	use common::traits::animation::AnimationAsset;
+	use common::traits::animation::AnimationPath;
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
 	use std::{
@@ -431,7 +431,7 @@ mod tests {
 		];
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
-				AnimationAsset::from("my/path"),
+				AnimationPath::from("my/path"),
 				(_Animations::from(&indices), 0),
 			)]),
 		};
@@ -447,7 +447,7 @@ mod tests {
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![Animation::new(
-						AnimationAsset::from("my/path"),
+						AnimationPath::from("my/path"),
 						PlayMode::Repeat,
 					)]));
 				mock.expect_get_active_animations::<AnimationPriority>()
@@ -484,7 +484,7 @@ mod tests {
 		];
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
-				AnimationAsset::from("my/path"),
+				AnimationPath::from("my/path"),
 				(_Animations::from(&indices), 0),
 			)]),
 		};
@@ -500,7 +500,7 @@ mod tests {
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![Animation::new(
-						AnimationAsset::from("my/path"),
+						AnimationPath::from("my/path"),
 						PlayMode::Replay,
 					)]));
 				mock.expect_get_active_animations::<AnimationPriority>()
@@ -547,27 +547,27 @@ mod tests {
 		let lookup = AnimationLookup {
 			animations: HashMap::from([
 				(
-					AnimationAsset::from("my/path/high/1"),
+					AnimationPath::from("my/path/high/1"),
 					(_Animations::from(&indices[0..=1]), 0),
 				),
 				(
-					AnimationAsset::from("my/path/high/2"),
+					AnimationPath::from("my/path/high/2"),
 					(_Animations::from(&indices[2..=3]), 0),
 				),
 				(
-					AnimationAsset::from("my/path/medium/1"),
+					AnimationPath::from("my/path/medium/1"),
 					(_Animations::from(&indices[4..=5]), 0),
 				),
 				(
-					AnimationAsset::from("my/path/medium/2"),
+					AnimationPath::from("my/path/medium/2"),
 					(_Animations::from(&indices[6..=7]), 0),
 				),
 				(
-					AnimationAsset::from("my/path/low/1"),
+					AnimationPath::from("my/path/low/1"),
 					(_Animations::from(&indices[8..=9]), 0),
 				),
 				(
-					AnimationAsset::from("my/path/low/2"),
+					AnimationPath::from("my/path/low/2"),
 					(_Animations::from(&indices[10..=11]), 0),
 				),
 			]),
@@ -584,20 +584,20 @@ mod tests {
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![
-						Animation::new(AnimationAsset::from("my/path/high/1"), PlayMode::Repeat),
-						Animation::new(AnimationAsset::from("my/path/high/2"), PlayMode::Repeat),
+						Animation::new(AnimationPath::from("my/path/high/1"), PlayMode::Repeat),
+						Animation::new(AnimationPath::from("my/path/high/2"), PlayMode::Repeat),
 					]));
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::Medium))
 					.return_const(leak_iterator(vec![
-						Animation::new(AnimationAsset::from("my/path/medium/1"), PlayMode::Repeat),
-						Animation::new(AnimationAsset::from("my/path/medium/2"), PlayMode::Repeat),
+						Animation::new(AnimationPath::from("my/path/medium/1"), PlayMode::Repeat),
+						Animation::new(AnimationPath::from("my/path/medium/2"), PlayMode::Repeat),
 					]));
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::Low))
 					.return_const(leak_iterator(vec![
-						Animation::new(AnimationAsset::from("my/path/low/1"), PlayMode::Repeat),
-						Animation::new(AnimationAsset::from("my/path/low/2"), PlayMode::Repeat),
+						Animation::new(AnimationPath::from("my/path/low/1"), PlayMode::Repeat),
+						Animation::new(AnimationPath::from("my/path/low/2"), PlayMode::Repeat),
 					]));
 			}),
 			lookup,
@@ -631,7 +631,7 @@ mod tests {
 		];
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
-				AnimationAsset::from("my/path"),
+				AnimationPath::from("my/path"),
 				(_Animations::from(&indices), 0),
 			)]),
 		};
@@ -648,7 +648,7 @@ mod tests {
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![Animation::new(
-						AnimationAsset::from("my/path"),
+						AnimationPath::from("my/path"),
 						PlayMode::Repeat,
 					)]));
 				mock.expect_get_active_animations::<AnimationPriority>()
@@ -687,7 +687,7 @@ mod tests {
 		];
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
-				AnimationAsset::from("my/path"),
+				AnimationPath::from("my/path"),
 				(_Animations::from(&indices), 0),
 			)]),
 		};
@@ -730,7 +730,7 @@ mod tests {
 		let handle = new_handle();
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
-				AnimationAsset::from("my/path"),
+				AnimationPath::from("my/path"),
 				(_Animations::from(&vec![AnimationNodeIndex::new(1)]), 0),
 			)]),
 		};
@@ -746,7 +746,7 @@ mod tests {
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![Animation::new(
-						AnimationAsset::from("my/path"),
+						AnimationPath::from("my/path"),
 						PlayMode::Repeat,
 					)]));
 				mock.expect_get_active_animations::<AnimationPriority>()
@@ -772,7 +772,7 @@ mod tests {
 		let handle = new_handle();
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
-				AnimationAsset::from("my/path"),
+				AnimationPath::from("my/path"),
 				(_Animations::from(&vec![AnimationNodeIndex::new(1)]), 0),
 			)]),
 		};
@@ -790,7 +790,7 @@ mod tests {
 					mock.expect_get_active_animations()
 						.with(eq(AnimationPriority::High))
 						.return_const(leak_iterator(vec![Animation::new(
-							AnimationAsset::from("my/path"),
+							AnimationPath::from("my/path"),
 							PlayMode::Repeat,
 						)]));
 					mock.expect_get_active_animations::<AnimationPriority>()
@@ -837,27 +837,27 @@ mod tests {
 		let lookup = AnimationLookup {
 			animations: HashMap::from([
 				(
-					AnimationAsset::from("my/path/high/1"),
+					AnimationPath::from("my/path/high/1"),
 					(_Animations::from(&indices[0..=1]), 0b000001),
 				),
 				(
-					AnimationAsset::from("my/path/high/2"),
+					AnimationPath::from("my/path/high/2"),
 					(_Animations::from(&indices[2..=3]), 0b000010),
 				),
 				(
-					AnimationAsset::from("my/path/medium/1"),
+					AnimationPath::from("my/path/medium/1"),
 					(_Animations::from(&indices[4..=5]), 0b000100),
 				),
 				(
-					AnimationAsset::from("my/path/medium/2"),
+					AnimationPath::from("my/path/medium/2"),
 					(_Animations::from(&indices[6..=7]), 0b001000),
 				),
 				(
-					AnimationAsset::from("my/path/low/1"),
+					AnimationPath::from("my/path/low/1"),
 					(_Animations::from(&indices[8..=9]), 0b010000),
 				),
 				(
-					AnimationAsset::from("my/path/low/2"),
+					AnimationPath::from("my/path/low/2"),
 					(_Animations::from(&indices[10..=11]), 0b100000),
 				),
 			]),
@@ -871,20 +871,20 @@ mod tests {
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![
-						Animation::new(AnimationAsset::from("my/path/high/1"), PlayMode::Repeat),
-						Animation::new(AnimationAsset::from("my/path/high/2"), PlayMode::Repeat),
+						Animation::new(AnimationPath::from("my/path/high/1"), PlayMode::Repeat),
+						Animation::new(AnimationPath::from("my/path/high/2"), PlayMode::Repeat),
 					]));
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::Medium))
 					.return_const(leak_iterator(vec![
-						Animation::new(AnimationAsset::from("my/path/medium/1"), PlayMode::Repeat),
-						Animation::new(AnimationAsset::from("my/path/medium/2"), PlayMode::Repeat),
+						Animation::new(AnimationPath::from("my/path/medium/1"), PlayMode::Repeat),
+						Animation::new(AnimationPath::from("my/path/medium/2"), PlayMode::Repeat),
 					]));
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::Low))
 					.return_const(leak_iterator(vec![
-						Animation::new(AnimationAsset::from("my/path/low/1"), PlayMode::Repeat),
-						Animation::new(AnimationAsset::from("my/path/low/2"), PlayMode::Repeat),
+						Animation::new(AnimationPath::from("my/path/low/1"), PlayMode::Repeat),
+						Animation::new(AnimationPath::from("my/path/low/2"), PlayMode::Repeat),
 					]));
 			}),
 			lookup,
@@ -937,27 +937,27 @@ mod tests {
 		let lookup = AnimationLookup {
 			animations: HashMap::from([
 				(
-					AnimationAsset::from("my/path/high/1"),
+					AnimationPath::from("my/path/high/1"),
 					(_Animations::from(&indices[0..=1]), 0b000001),
 				),
 				(
-					AnimationAsset::from("my/path/high/2"),
+					AnimationPath::from("my/path/high/2"),
 					(_Animations::from(&indices[2..=3]), 0b000010),
 				),
 				(
-					AnimationAsset::from("my/path/medium/1"),
+					AnimationPath::from("my/path/medium/1"),
 					(_Animations::from(&indices[4..=5]), 0b000100),
 				),
 				(
-					AnimationAsset::from("my/path/medium/2"),
+					AnimationPath::from("my/path/medium/2"),
 					(_Animations::from(&indices[6..=7]), 0b001000),
 				),
 				(
-					AnimationAsset::from("my/path/low/1"),
+					AnimationPath::from("my/path/low/1"),
 					(_Animations::from(&indices[8..=9]), 0b010000),
 				),
 				(
-					AnimationAsset::from("my/path/low/2"),
+					AnimationPath::from("my/path/low/2"),
 					(_Animations::from(&indices[10..=11]), 0b100000),
 				),
 			]),
@@ -972,20 +972,20 @@ mod tests {
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![
-						Animation::new(AnimationAsset::from("my/path/high/1"), PlayMode::Repeat),
-						Animation::new(AnimationAsset::from("my/path/high/2"), PlayMode::Repeat),
+						Animation::new(AnimationPath::from("my/path/high/1"), PlayMode::Repeat),
+						Animation::new(AnimationPath::from("my/path/high/2"), PlayMode::Repeat),
 					]));
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::Medium))
 					.return_const(leak_iterator(vec![
-						Animation::new(AnimationAsset::from("my/path/medium/1"), PlayMode::Repeat),
-						Animation::new(AnimationAsset::from("my/path/medium/2"), PlayMode::Repeat),
+						Animation::new(AnimationPath::from("my/path/medium/1"), PlayMode::Repeat),
+						Animation::new(AnimationPath::from("my/path/medium/2"), PlayMode::Repeat),
 					]));
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::Low))
 					.return_const(leak_iterator(vec![
-						Animation::new(AnimationAsset::from("my/path/low/1"), PlayMode::Repeat),
-						Animation::new(AnimationAsset::from("my/path/low/2"), PlayMode::Repeat),
+						Animation::new(AnimationPath::from("my/path/low/1"), PlayMode::Repeat),
+						Animation::new(AnimationPath::from("my/path/low/2"), PlayMode::Repeat),
 					]));
 			}),
 			lookup,
@@ -1033,11 +1033,11 @@ mod tests {
 		let lookup = AnimationLookup {
 			animations: HashMap::from([
 				(
-					AnimationAsset::from("my/path/hig"),
+					AnimationPath::from("my/path/hig"),
 					(_Animations::from(&indices[0..=1]), 0b000001),
 				),
 				(
-					AnimationAsset::from("my/path/med"),
+					AnimationPath::from("my/path/med"),
 					(_Animations::from(&indices[2..=3]), 0b000111),
 				), // wants to play on high masks (..11)
 			]),
@@ -1066,13 +1066,13 @@ mod tests {
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![Animation::new(
-						AnimationAsset::from("my/path/hig"),
+						AnimationPath::from("my/path/hig"),
 						PlayMode::Repeat,
 					)]));
 				mock.expect_get_active_animations()
 					.with(eq(AnimationPriority::Medium))
 					.return_const(leak_iterator(vec![Animation::new(
-						AnimationAsset::from("my/path/med"),
+						AnimationPath::from("my/path/med"),
 						PlayMode::Repeat,
 					)]));
 				mock.expect_get_active_animations()
@@ -1114,7 +1114,7 @@ mod tests {
 		let indices = vec![AnimationNodeIndex::new(1), AnimationNodeIndex::new(2)];
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
-				AnimationAsset::from("my/path"),
+				AnimationPath::from("my/path"),
 				(_Animations::from(&indices), 0),
 			)]),
 		};

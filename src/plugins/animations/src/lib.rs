@@ -17,7 +17,7 @@ use common::{
 	systems::track_components::TrackComponentInSelfAndChildren,
 	traits::{
 		animation::{
-			AnimationMaskDefinition,
+			AffectedAnimationBones,
 			ConfigureNewAnimationDispatch,
 			GetAnimationDefinitions,
 			GetMovementDirection,
@@ -53,7 +53,7 @@ impl<TDependencies> RegisterAnimations for AnimationsPlugin<TDependencies> {
 	where
 		TAgent: Component + GetAnimationDefinitions + ConfigureNewAnimationDispatch,
 		for<'a> AnimationMask: From<&'a TAgent::TAnimationMask>,
-		for<'a> AnimationMaskDefinition: From<&'a TAgent::TAnimationMask>,
+		for<'a> AffectedAnimationBones: From<&'a TAgent::TAnimationMask>,
 	{
 		app.register_derived_component::<TAgent, AnimationDispatch>()
 			.add_systems(

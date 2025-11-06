@@ -1,10 +1,10 @@
 use bevy::prelude::*;
-use common::traits::{animation::AnimationAsset, iterate::Iterate};
+use common::traits::{animation::AnimationPath, iterate::Iterate};
 use std::collections::HashMap;
 
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct AnimationLookup<TAnimations = Animations> {
-	pub(crate) animations: HashMap<AnimationAsset, (TAnimations, AnimationMask)>,
+	pub(crate) animations: HashMap<AnimationPath, (TAnimations, AnimationMask)>,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]

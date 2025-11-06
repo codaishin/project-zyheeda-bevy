@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use common::{
 	tools::path::Path,
 	traits::{
-		animation::{AnimationAsset, Directional},
+		animation::{AnimationPath, Directional},
 		load_asset::LoadAsset,
 	},
 };
@@ -19,8 +19,8 @@ where
 {
 	fn load_animation_assets(
 		&mut self,
-		animations: Vec<AnimationAsset>,
-	) -> (TGraph, HashMap<AnimationAsset, Animations>) {
+		animations: Vec<AnimationPath>,
+	) -> (TGraph, HashMap<AnimationPath, Animations>) {
 		let mut graph = TGraph::default();
 		let blend_node = graph.add_additive_blend(1., graph.root());
 		let load_clip = load_clip(self, &mut graph, blend_node);
@@ -34,19 +34,19 @@ fn load_clip<'a, TServer, TGraph>(
 	server: &'a mut TServer,
 	graph: &'a mut TGraph,
 	blend_node: AnimationNodeIndex,
-) -> impl FnMut(AnimationAsset) -> (AnimationAsset, Animations) + 'a
+) -> impl FnMut(AnimationPath) -> (AnimationPath, Animations) + 'a
 where
 	TServer: LoadAsset,
 	TGraph: AnimationGraphTrait,
 {
 	move |animation| {
 		let animations = match &animation {
-			AnimationAsset::Path(path) => {
+			AnimationPath::Single(path) => {
 				let clip = server.load_asset(path);
 				let index = graph.add_clip(clip, 1., blend_node);
 				Animations::Single(index)
 			}
-			AnimationAsset::Directional(direction_paths) => {
+			AnimationPath::Directional(direction_paths) => {
 				let blend_node = graph.add_blend(1., blend_node);
 				let mut animations = DirectionalIndices::default();
 
@@ -96,7 +96,7 @@ mod tests {
 
 	macro_rules! setup_graph {
 		($setup:expr) => {
-			type _AnimAssets = (_Graph, HashMap<AnimationAsset, Animations>);
+			type _AnimAssets = (_Graph, HashMap<AnimationPath, Animations>);
 
 			struct _Graph {
 				mock: Mock_Graph,
@@ -184,7 +184,7 @@ mod tests {
 				.path(path)
 				.returns(new_handle::<AnimationClip>());
 
-			let _: _AnimAssets = server.load_animation_assets(vec![AnimationAsset::from(path)]);
+			let _: _AnimAssets = server.load_animation_assets(vec![AnimationPath::from(path)]);
 
 			assert_eq!(1, server.calls(path))
 		}
@@ -202,7 +202,7 @@ mod tests {
 			});
 			let mut server = MockAssetServer::default().path("a").returns(HANDLE.clone());
 
-			let _: _AnimAssets = server.load_animation_assets(vec![AnimationAsset::from("a")]);
+			let _: _AnimAssets = server.load_animation_assets(vec![AnimationPath::from("a")]);
 		}
 
 		#[test]
@@ -214,11 +214,11 @@ mod tests {
 			let mut server = MockAssetServer::default();
 
 			let (_, map): _AnimAssets =
-				server.load_animation_assets(vec![AnimationAsset::from("a")]);
+				server.load_animation_assets(vec![AnimationPath::from("a")]);
 
 			assert_eq!(
 				HashMap::from([(
-					AnimationAsset::from("a"),
+					AnimationPath::from("a"),
 					Animations::Single(AnimationNodeIndex::new(111))
 				)]),
 				map
@@ -240,7 +240,7 @@ mod tests {
 			let mut server = MockAssetServer::default();
 
 			let _: _AnimAssets =
-				server.load_animation_assets(vec![AnimationAsset::Directional(Directional {
+				server.load_animation_assets(vec![AnimationPath::Directional(Directional {
 					forward: Path::from(forward),
 					backward: Path::from(backward),
 					left: Path::from(left),
@@ -311,7 +311,7 @@ mod tests {
 				.returns(RIGHT.clone());
 
 			let _: _AnimAssets =
-				server.load_animation_assets(vec![AnimationAsset::Directional(Directional {
+				server.load_animation_assets(vec![AnimationPath::Directional(Directional {
 					forward: Path::from(forward),
 					backward: Path::from(backward),
 					left: Path::from(left),
@@ -360,7 +360,7 @@ mod tests {
 				.returns(LEFT.clone())
 				.path(right)
 				.returns(RIGHT.clone());
-			let asset = AnimationAsset::Directional(Directional {
+			let asset = AnimationPath::Directional(Directional {
 				forward: Path::from(forward),
 				backward: Path::from(backward),
 				left: Path::from(left),

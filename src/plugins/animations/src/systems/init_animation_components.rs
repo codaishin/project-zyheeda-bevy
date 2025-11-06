@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use common::{
 	traits::{
 		accessors::get::TryApplyOn,
-		animation::{AnimationMaskDefinition, GetAnimationDefinitions},
+		animation::{AffectedAnimationBones, GetAnimationDefinitions},
 		thread_safe::ThreadSafe,
 		wrap_handle::WrapHandle,
 	},
@@ -18,7 +18,7 @@ impl<TAgent> InitAnimationComponents for TAgent
 where
 	TAgent: Component + GetAnimationDefinitions + Sized + ThreadSafe,
 	for<'a> AnimationMask: From<&'a Self::TAnimationMask>,
-	for<'a> AnimationMaskDefinition: From<&'a Self::TAnimationMask>,
+	for<'a> AffectedAnimationBones: From<&'a Self::TAnimationMask>,
 {
 }
 
@@ -26,7 +26,7 @@ pub(crate) trait InitAnimationComponents:
 	Component + GetAnimationDefinitions + Sized + ThreadSafe
 where
 	for<'a> AnimationMask: From<&'a Self::TAnimationMask>,
-	for<'a> AnimationMaskDefinition: From<&'a Self::TAnimationMask>,
+	for<'a> AffectedAnimationBones: From<&'a Self::TAnimationMask>,
 {
 	fn init_animation_components<TGraph, TServer>(
 		mut commands: ZyheedaCommands,
@@ -38,15 +38,15 @@ where
 		TServer: Resource + LoadAnimationAssets<TGraph, Animations>,
 	{
 		for entity in &agents {
-			let animations = Self::animations();
-			let assets = animations.keys().cloned().collect::<Vec<_>>();
-			let (graph, new_clips) = server.load_animation_assets(assets);
+			let animation_masks = Self::animations();
+			let animation_paths = animation_masks.keys().cloned().collect::<Vec<_>>();
+			let (graph, new_clips) = server.load_animation_assets(animation_paths);
 			let graph = graphs.add(graph);
 			let lookup = AnimationLookup {
 				animations: HashMap::from_iter(new_clips.into_iter().filter_map(
-					|(asset, clip)| {
-						let mask = animations.get(&asset)?;
-						Some((asset, (clip, *mask)))
+					|(definition, clip)| {
+						let mask = animation_masks.get(&definition)?;
+						Some((definition, (clip, *mask)))
 					},
 				)),
 			};
@@ -62,7 +62,7 @@ where
 mod tests {
 	use super::*;
 	use common::traits::{
-		animation::{AnimationAsset, AnimationMaskDefinition},
+		animation::{AffectedAnimationBones, AnimationPath},
 		iteration::{Iter, IterFinite},
 		thread_safe::ThreadSafe,
 		wrap_handle::UnwrapHandle,
@@ -118,7 +118,7 @@ mod tests {
 		}
 	}
 
-	impl From<&_Mask> for AnimationMaskDefinition {
+	impl From<&_Mask> for AffectedAnimationBones {
 		fn from(_: &_Mask) -> Self {
 			panic!("SHOULD NOT BE USED HERE")
 		}
@@ -128,8 +128,8 @@ mod tests {
 	impl LoadAnimationAssets<_Graph, Animations> for _Server {
 		fn load_animation_assets(
 			&mut self,
-			animations: Vec<AnimationAsset>,
-		) -> (_Graph, HashMap<AnimationAsset, Animations>) {
+			animations: Vec<AnimationPath>,
+		) -> (_Graph, HashMap<AnimationPath, Animations>) {
 			self.mock.load_animation_assets(animations)
 		}
 	}
@@ -138,7 +138,7 @@ mod tests {
 	where
 		TAgent: Component + GetAnimationDefinitions + ThreadSafe,
 		for<'a> AnimationMask: From<&'a TAgent::TAnimationMask>,
-		for<'a> AnimationMaskDefinition: From<&'a TAgent::TAnimationMask>,
+		for<'a> AffectedAnimationBones: From<&'a TAgent::TAnimationMask>,
 	{
 		let mut app = App::new().single_threaded(Update);
 
@@ -157,7 +157,7 @@ mod tests {
 		impl GetAnimationDefinitions for _Agent {
 			type TAnimationMask = _Mask;
 
-			fn animations() -> HashMap<AnimationAsset, AnimationMask> {
+			fn animations() -> HashMap<AnimationPath, AnimationMask> {
 				HashMap::default()
 			}
 		}
@@ -181,11 +181,11 @@ mod tests {
 		impl GetAnimationDefinitions for _Agent {
 			type TAnimationMask = _Mask;
 
-			fn animations() -> HashMap<AnimationAsset, AnimationMask> {
+			fn animations() -> HashMap<AnimationPath, AnimationMask> {
 				HashMap::from([
-					(AnimationAsset::from("path/a"), 1),
-					(AnimationAsset::from("path/b"), 2),
-					(AnimationAsset::from("path/c"), 4),
+					(AnimationPath::from("path/a"), 1),
+					(AnimationPath::from("path/b"), 2),
+					(AnimationPath::from("path/c"), 4),
 				])
 			}
 		}
@@ -195,9 +195,9 @@ mod tests {
 				.withf(|paths| {
 					assert_eq!(
 						HashSet::from([
-							&AnimationAsset::from("path/a"),
-							&AnimationAsset::from("path/b"),
-							&AnimationAsset::from("path/c"),
+							&AnimationPath::from("path/a"),
+							&AnimationPath::from("path/b"),
+							&AnimationPath::from("path/c"),
 						]),
 						HashSet::from_iter(paths)
 					);
@@ -207,15 +207,15 @@ mod tests {
 					_Graph,
 					HashMap::from([
 						(
-							AnimationAsset::from("path/a"),
+							AnimationPath::from("path/a"),
 							Animations::Single(AnimationNodeIndex::new(1)),
 						),
 						(
-							AnimationAsset::from("path/b"),
+							AnimationPath::from("path/b"),
 							Animations::Single(AnimationNodeIndex::new(2)),
 						),
 						(
-							AnimationAsset::from("path/c"),
+							AnimationPath::from("path/c"),
 							Animations::Single(AnimationNodeIndex::new(3)),
 						),
 					]),
@@ -229,15 +229,15 @@ mod tests {
 			Some(&AnimationLookup {
 				animations: HashMap::from([
 					(
-						AnimationAsset::from("path/a"),
+						AnimationPath::from("path/a"),
 						(Animations::Single(AnimationNodeIndex::new(1)), 1)
 					),
 					(
-						AnimationAsset::from("path/b"),
+						AnimationPath::from("path/b"),
 						(Animations::Single(AnimationNodeIndex::new(2)), 2)
 					),
 					(
-						AnimationAsset::from("path/c"),
+						AnimationPath::from("path/c"),
 						(Animations::Single(AnimationNodeIndex::new(3)), 4)
 					),
 				])
@@ -254,7 +254,7 @@ mod tests {
 		impl GetAnimationDefinitions for _Agent {
 			type TAnimationMask = _Mask;
 
-			fn animations() -> HashMap<AnimationAsset, AnimationMask> {
+			fn animations() -> HashMap<AnimationPath, AnimationMask> {
 				HashMap::default()
 			}
 		}

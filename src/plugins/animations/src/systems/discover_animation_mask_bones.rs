@@ -4,7 +4,7 @@ use bevy::{
 	prelude::*,
 };
 use common::traits::{
-	animation::{AnimationMaskDefinition, GetAnimationDefinitions},
+	animation::{AffectedAnimationBones, GetAnimationDefinitions},
 	iteration::IterFinite,
 };
 use std::iter;
@@ -13,14 +13,14 @@ impl<TAgent> DiscoverMaskChains for TAgent
 where
 	TAgent: GetAnimationDefinitions + Component,
 	for<'a> AnimationMask: From<&'a TAgent::TAnimationMask>,
-	for<'a> AnimationMaskDefinition: From<&'a TAgent::TAnimationMask>,
+	for<'a> AffectedAnimationBones: From<&'a TAgent::TAnimationMask>,
 {
 }
 
 pub(crate) trait DiscoverMaskChains: GetAnimationDefinitions + Component + Sized
 where
 	for<'a> AnimationMask: From<&'a Self::TAnimationMask>,
-	for<'a> AnimationMaskDefinition: From<&'a Self::TAnimationMask>,
+	for<'a> AffectedAnimationBones: From<&'a Self::TAnimationMask>,
 {
 	fn set_animation_mask_bones(
 		mut graphs: ResMut<Assets<AnimationGraph>>,
@@ -55,7 +55,7 @@ fn get_mask_bones<TAnimationMask>(
 ) -> Vec<(AnimationTargetId, AnimationMask)>
 where
 	for<'a> AnimationMask: From<&'a TAnimationMask>,
-	for<'a> AnimationMaskDefinition: From<&'a TAnimationMask>,
+	for<'a> AffectedAnimationBones: From<&'a TAnimationMask>,
 {
 	let mut r_bones = vec![];
 	let get_bone = |child| {
@@ -67,14 +67,14 @@ where
 	};
 
 	for mask in animation_masks {
-		let bones = match AnimationMaskDefinition::from(mask) {
-			AnimationMaskDefinition::Leaf { from_root } => {
+		let bones = match AffectedAnimationBones::from(mask) {
+			AffectedAnimationBones::Leaf { root: from_root } => {
 				mask_bones(player, &from_root, children, &get_bone)
 					.map(|bones| bones.collect::<Vec<_>>())
 			}
-			AnimationMaskDefinition::Mask {
-				from_root,
-				exclude_roots,
+			AffectedAnimationBones::SubTree {
+				root: from_root,
+				until_exclusive: exclude_roots,
 			} => mask_bones_with_exclusions(player, from_root, exclude_roots, children, &get_bone),
 		};
 
@@ -155,7 +155,7 @@ mod tests {
 	use crate::components::animation_dispatch::AnimationDispatch;
 	use bevy::{animation::AnimationTargetId, platform::collections::HashMap};
 	use common::traits::{
-		animation::{AnimationAsset, AnimationMaskDefinition},
+		animation::{AffectedAnimationBones, AnimationPath},
 		iteration::{Iter, IterFinite},
 	};
 	use testing::{SingleThreadedApp, new_handle};
@@ -165,7 +165,7 @@ mod tests {
 			#[derive(Debug, Clone, Copy)]
 			struct _Mask {
 				id: AnimationMask,
-				def: fn() -> AnimationMaskDefinition,
+				def: fn() -> AffectedAnimationBones,
 			}
 
 			impl PartialEq for _Mask {
@@ -180,7 +180,7 @@ mod tests {
 				}
 			}
 
-			impl From<&_Mask> for AnimationMaskDefinition {
+			impl From<&_Mask> for AffectedAnimationBones {
 				fn from(_Mask { def, .. }: &_Mask) -> Self {
 					def()
 				}
@@ -210,7 +210,7 @@ mod tests {
 			impl GetAnimationDefinitions for _Agent {
 				type TAnimationMask = _Mask;
 
-				fn animations() -> std::collections::HashMap<AnimationAsset, AnimationMask> {
+				fn animations() -> std::collections::HashMap<AnimationPath, AnimationMask> {
 					panic!("SHOULD NOT BE USED HERE")
 				}
 			}
@@ -239,7 +239,7 @@ mod tests {
 	where
 		TAgent: Component + GetAnimationDefinitions,
 		for<'a> AnimationMask: From<&'a TAgent::TAnimationMask>,
-		for<'a> AnimationMaskDefinition: From<&'a TAgent::TAnimationMask>,
+		for<'a> AffectedAnimationBones: From<&'a TAgent::TAnimationMask>,
 	{
 		let mut app = App::new().single_threaded(Update);
 		let mut assets = Assets::default();
@@ -255,8 +255,8 @@ mod tests {
 	fn set_when_root() {
 		agent_animation_definitions!(&[_Mask {
 			id: 1,
-			def: || AnimationMaskDefinition::Leaf {
-				from_root: Name::from("root")
+			def: || AffectedAnimationBones::Leaf {
+				root: Name::from("root")
 			},
 		}]);
 		let handle = new_handle();
@@ -288,14 +288,14 @@ mod tests {
 		agent_animation_definitions!(&[
 			_Mask {
 				id: 1,
-				def: || AnimationMaskDefinition::Leaf {
-					from_root: Name::from("root")
+				def: || AffectedAnimationBones::Leaf {
+					root: Name::from("root")
 				},
 			},
 			_Mask {
 				id: 2,
-				def: || AnimationMaskDefinition::Leaf {
-					from_root: Name::from("root")
+				def: || AffectedAnimationBones::Leaf {
+					root: Name::from("root")
 				},
 			}
 		]);
@@ -327,8 +327,8 @@ mod tests {
 	fn set_chain() {
 		agent_animation_definitions!(&[_Mask {
 			id: 1,
-			def: || AnimationMaskDefinition::Leaf {
-				from_root: Name::from("mask root")
+			def: || AffectedAnimationBones::Leaf {
+				root: Name::from("mask root")
 			},
 		}]);
 		let handle = new_handle();
@@ -365,8 +365,8 @@ mod tests {
 	fn ignore_path_not_containing_mask_root() {
 		agent_animation_definitions!(&[_Mask {
 			id: 1,
-			def: || AnimationMaskDefinition::Leaf {
-				from_root: Name::from("mask root")
+			def: || AffectedAnimationBones::Leaf {
+				root: Name::from("mask root")
 			},
 		}]);
 		let handle = new_handle();
@@ -406,8 +406,8 @@ mod tests {
 	fn add_multiple_names_below_mask_root_when_single_chain() {
 		agent_animation_definitions!(&[_Mask {
 			id: 1,
-			def: || AnimationMaskDefinition::Leaf {
-				from_root: Name::from("mask root")
+			def: || AffectedAnimationBones::Leaf {
+				root: Name::from("mask root")
 			},
 		}]);
 		let handle = new_handle();
@@ -484,8 +484,8 @@ mod tests {
 	fn add_names_below_mask_root_when_not_single_chain() {
 		agent_animation_definitions!(&[_Mask {
 			id: 1,
-			def: || AnimationMaskDefinition::Leaf {
-				from_root: Name::from("mask root")
+			def: || AffectedAnimationBones::Leaf {
+				root: Name::from("mask root")
 			},
 		}]);
 		let handle = new_handle();
@@ -556,8 +556,8 @@ mod tests {
 	fn ignore_targets_not_belonging_to_root() {
 		agent_animation_definitions!(&[_Mask {
 			id: 1,
-			def: || AnimationMaskDefinition::Leaf {
-				from_root: Name::from("mask root")
+			def: || AffectedAnimationBones::Leaf {
+				root: Name::from("mask root")
 			},
 		}]);
 		let handle = new_handle();
@@ -599,9 +599,9 @@ mod tests {
 	fn set_exclusion_mask() {
 		agent_animation_definitions!(&[_Mask {
 			id: 1,
-			def: || AnimationMaskDefinition::Mask {
-				from_root: Name::from("root"),
-				exclude_roots: vec![Name::from("a"), Name::from("b"),]
+			def: || AffectedAnimationBones::SubTree {
+				root: Name::from("root"),
+				until_exclusive: vec![Name::from("a"), Name::from("b"),]
 			},
 		}]);
 		let handle = new_handle();
@@ -668,8 +668,8 @@ mod tests {
 	fn act_only_once() {
 		agent_animation_definitions!(&[_Mask {
 			id: 1,
-			def: || AnimationMaskDefinition::Leaf {
-				from_root: Name::from("root")
+			def: || AffectedAnimationBones::Leaf {
+				root: Name::from("root")
 			},
 		}]);
 		let handle = new_handle();
@@ -707,8 +707,8 @@ mod tests {
 	fn do_not_act_when_agent_missing_on_dispatch() {
 		agent_animation_definitions!(&[_Mask {
 			id: 1,
-			def: || AnimationMaskDefinition::Leaf {
-				from_root: Name::from("root")
+			def: || AffectedAnimationBones::Leaf {
+				root: Name::from("root")
 			},
 		}]);
 		let handle = new_handle();

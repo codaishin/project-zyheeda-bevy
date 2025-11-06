@@ -19,9 +19,9 @@ use common::{
 	},
 	traits::{
 		animation::{
+			AffectedAnimationBones,
 			Animation,
-			AnimationAsset,
-			AnimationMaskDefinition,
+			AnimationPath,
 			AnimationPriority,
 			ConfigureNewAnimationDispatch,
 			Directional,
@@ -79,7 +79,7 @@ impl Player {
 		Path::from(Self::MODEL_PATH.to_owned() + "#" + animation_name)
 	}
 
-	fn skill_animation_mask_roots(slot: PlayerSlot) -> Name {
+	fn skill_animation_mask_bone(slot: PlayerSlot) -> Name {
 		match slot {
 			PlayerSlot::Upper(Side::Left) => Name::from("top_shoulder.L"),
 			PlayerSlot::Upper(Side::Right) => Name::from("top_shoulder.R"),
@@ -88,33 +88,33 @@ impl Player {
 		}
 	}
 
-	pub fn animation_asset(animation: AnimationKey<PlayerSlot>) -> AnimationAsset {
+	pub fn animation_asset(animation: AnimationKey<PlayerSlot>) -> AnimationPath {
 		match animation {
-			AnimationKey::T => AnimationAsset::Path(Player::animation_path("Animation0")),
-			AnimationKey::Idle => AnimationAsset::Path(Player::animation_path("Animation1")),
-			AnimationKey::Walk => AnimationAsset::Path(Player::animation_path("Animation2")),
-			AnimationKey::Run => AnimationAsset::Directional(Directional {
+			AnimationKey::T => AnimationPath::Single(Player::animation_path("Animation0")),
+			AnimationKey::Idle => AnimationPath::Single(Player::animation_path("Animation1")),
+			AnimationKey::Walk => AnimationPath::Single(Player::animation_path("Animation2")),
+			AnimationKey::Run => AnimationPath::Directional(Directional {
 				forward: Player::animation_path("Animation3"),
 				backward: Player::animation_path("Animation4"),
 				right: Player::animation_path("Animation5"),
 				left: Player::animation_path("Animation6"),
 			}),
 			AnimationKey::Other(PlayerSlot::Lower(Side::Left)) => {
-				AnimationAsset::Path(Player::animation_path("Animation7"))
+				AnimationPath::Single(Player::animation_path("Animation7"))
 			}
 			AnimationKey::Other(PlayerSlot::Lower(Side::Right)) => {
-				AnimationAsset::Path(Player::animation_path("Animation8"))
+				AnimationPath::Single(Player::animation_path("Animation8"))
 			}
 			AnimationKey::Other(PlayerSlot::Upper(Side::Left)) => {
-				AnimationAsset::Path(Player::animation_path("Animation9"))
+				AnimationPath::Single(Player::animation_path("Animation9"))
 			}
 			AnimationKey::Other(PlayerSlot::Upper(Side::Right)) => {
-				AnimationAsset::Path(Player::animation_path("Animation10"))
+				AnimationPath::Single(Player::animation_path("Animation10"))
 			}
 		}
 	}
 
-	fn play_animations(animation_key: AnimationKey<PlayerSlot>) -> (AnimationAsset, AnimationMask) {
+	fn play_animations(animation_key: AnimationKey<PlayerSlot>) -> (AnimationPath, AnimationMask) {
 		(
 			Player::animation_asset(animation_key),
 			match animation_key {
@@ -180,23 +180,23 @@ impl From<PlayerAnimationMask> for AnimationMask {
 	}
 }
 
-impl From<&PlayerAnimationMask> for AnimationMaskDefinition {
+impl From<&PlayerAnimationMask> for AffectedAnimationBones {
 	fn from(mask: &PlayerAnimationMask) -> Self {
 		match mask {
-			PlayerAnimationMask::Body => AnimationMaskDefinition::Mask {
-				from_root: Name::from("metarig"),
-				exclude_roots: PlayerSlot::iterator()
-					.map(Player::skill_animation_mask_roots)
+			PlayerAnimationMask::Body => AffectedAnimationBones::SubTree {
+				root: Name::from("metarig"),
+				until_exclusive: PlayerSlot::iterator()
+					.map(Player::skill_animation_mask_bone)
 					.collect(),
 			},
-			PlayerAnimationMask::Slot(slot) => AnimationMaskDefinition::Leaf {
-				from_root: Player::skill_animation_mask_roots(*slot),
+			PlayerAnimationMask::Slot(slot) => AffectedAnimationBones::Leaf {
+				root: Player::skill_animation_mask_bone(*slot),
 			},
 		}
 	}
 }
 
-impl From<PlayerAnimationMask> for AnimationMaskDefinition {
+impl From<PlayerAnimationMask> for AffectedAnimationBones {
 	fn from(mask: PlayerAnimationMask) -> Self {
 		Self::from(&mask)
 	}
@@ -205,7 +205,7 @@ impl From<PlayerAnimationMask> for AnimationMaskDefinition {
 impl GetAnimationDefinitions for Player {
 	type TAnimationMask = PlayerAnimationMask;
 
-	fn animations() -> HashMap<AnimationAsset, AnimationMask> {
+	fn animations() -> HashMap<AnimationPath, AnimationMask> {
 		HashMap::from_iter(AnimationKey::<PlayerSlot>::iterator().map(Player::play_animations))
 	}
 }

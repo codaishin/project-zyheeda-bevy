@@ -69,7 +69,7 @@ impl From<Move> for AnimationPriority {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::animation::{Animation, AnimationAsset, PlayMode};
+	use common::traits::animation::{Animation, AnimationPath, PlayMode};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
 	use std::ops::DerefMut;
@@ -132,7 +132,7 @@ mod tests {
 		app.world_mut().spawn((
 			MovementDefinition {
 				animation: Some(Animation::new(
-					AnimationAsset::from("fast"),
+					AnimationPath::from("fast"),
 					PlayMode::Repeat,
 				)),
 				..default()
@@ -143,7 +143,7 @@ mod tests {
 					.with(
 						eq(Move),
 						eq([Animation::new(
-							AnimationAsset::from("fast"),
+							AnimationPath::from("fast"),
 							PlayMode::Repeat,
 						)]),
 					)
@@ -160,7 +160,7 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((
 			MovementDefinition {
-				animation: Some(Animation::new(AnimationAsset::from(""), PlayMode::Repeat)),
+				animation: Some(Animation::new(AnimationPath::from(""), PlayMode::Repeat)),
 				..default()
 			},
 			_AnimationDispatch::new().with_mock(|mock| {
@@ -180,7 +180,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				MovementDefinition {
-					animation: Some(Animation::new(AnimationAsset::from(""), PlayMode::Repeat)),
+					animation: Some(Animation::new(AnimationPath::from(""), PlayMode::Repeat)),
 					..default()
 				},
 				_AnimationDispatch::new().with_mock(|mock| {
@@ -206,7 +206,7 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((
 			MovementDefinition {
-				animation: Some(Animation::new(AnimationAsset::from(""), PlayMode::Repeat)),
+				animation: Some(Animation::new(AnimationPath::from(""), PlayMode::Repeat)),
 				..default()
 			},
 			_AnimationDispatch::new().with_mock(|mock| {
@@ -228,7 +228,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				MovementDefinition {
-					animation: Some(Animation::new(AnimationAsset::from(""), PlayMode::Repeat)),
+					animation: Some(Animation::new(AnimationPath::from(""), PlayMode::Repeat)),
 					..default()
 				},
 				_AnimationDispatch::new().with_mock(|mock| {
@@ -258,7 +258,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				MovementDefinition {
-					animation: Some(Animation::new(AnimationAsset::from(""), PlayMode::Repeat)),
+					animation: Some(Animation::new(AnimationPath::from(""), PlayMode::Repeat)),
 					..default()
 				},
 				_AnimationDispatch::new().with_mock(|mock| {
@@ -285,7 +285,7 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((
 			MovementDefinition {
-				animation: Some(Animation::new(AnimationAsset::from(""), PlayMode::Repeat)),
+				animation: Some(Animation::new(AnimationPath::from(""), PlayMode::Repeat)),
 				..default()
 			},
 			_AnimationDispatch::new().with_mock(|mock| {

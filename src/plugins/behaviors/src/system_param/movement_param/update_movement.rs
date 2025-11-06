@@ -33,7 +33,7 @@ mod tests {
 		tools::Units,
 		traits::{
 			accessors::get::GetContextMut,
-			animation::{AnimationAsset, PlayMode},
+			animation::{AnimationPath, PlayMode},
 			handles_movement::Movement,
 		},
 	};
@@ -54,7 +54,7 @@ mod tests {
 				radius: Units::from(42.),
 				speed: UnitsPerSecond::from(11.),
 				animation: Some(Animation {
-					asset: AnimationAsset::from("my/animation/path"),
+					path: AnimationPath::from("my/animation/path"),
 					play_mode: PlayMode::Repeat,
 				}),
 			})
@@ -67,7 +67,7 @@ mod tests {
 				ctx.update(
 					UnitsPerSecond::from(110.),
 					Some(Animation {
-						asset: AnimationAsset::from("my/other/animation/path"),
+						path: AnimationPath::from("my/other/animation/path"),
 						play_mode: PlayMode::Repeat,
 					}),
 				);
@@ -78,7 +78,7 @@ mod tests {
 				radius: Units::from(42.),
 				speed: UnitsPerSecond::from(110.),
 				animation: Some(Animation {
-					asset: AnimationAsset::from("my/other/animation/path"),
+					path: AnimationPath::from("my/other/animation/path"),
 					play_mode: PlayMode::Repeat,
 				}),
 			}),

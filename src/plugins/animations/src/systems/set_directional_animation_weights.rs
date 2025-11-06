@@ -65,7 +65,7 @@ fn set_directional_animation_weights<TDispatch, TGraph, TMovementDirection>(
 			};
 
 			for animation in dispatch.get_all_active_animations() {
-				let Some((animation, ..)) = lookup.animations.get(&animation.asset) else {
+				let Some((animation, ..)) = lookup.animations.get(&animation.path) else {
 					continue;
 				};
 				let &Animations::Directional(directions) = animation else {
@@ -109,7 +109,7 @@ mod tests {
 	use super::*;
 	use crate::components::animation_lookup::{AnimationLookup, Animations, DirectionalIndices};
 	use common::traits::{
-		animation::{AnimationAsset, PlayMode},
+		animation::{AnimationPath, PlayMode},
 		iterate::Iterate,
 		wrap_handle::{UnwrapHandle, WrapHandle},
 	};
@@ -238,7 +238,7 @@ mod tests {
 		let handle = new_handle();
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
-				AnimationAsset::from("my/path"),
+				AnimationPath::from("my/path"),
 				(
 					Animations::Directional(DirectionalIndices {
 						forward: AnimationNodeIndex::new(0),
@@ -258,7 +258,7 @@ mod tests {
 			_Dispatch {
 				players: vec![player],
 				animations: vec![Animation::new(
-					AnimationAsset::from("my/path"),
+					AnimationPath::from("my/path"),
 					PlayMode::Repeat,
 				)],
 			},
@@ -293,7 +293,7 @@ mod tests {
 		let handle = new_handle();
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
-				AnimationAsset::from("my/path"),
+				AnimationPath::from("my/path"),
 				(
 					Animations::Directional(DirectionalIndices {
 						forward: AnimationNodeIndex::new(0),
@@ -312,7 +312,7 @@ mod tests {
 			_Dispatch {
 				players: vec![player],
 				animations: vec![Animation::new(
-					AnimationAsset::from("my/path"),
+					AnimationPath::from("my/path"),
 					PlayMode::Repeat,
 				)],
 			},
@@ -350,7 +350,7 @@ mod tests {
 		let handle = new_handle();
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
-				AnimationAsset::from("my/path"),
+				AnimationPath::from("my/path"),
 				(
 					Animations::Directional(DirectionalIndices {
 						forward: AnimationNodeIndex::new(0),
@@ -372,7 +372,7 @@ mod tests {
 			_Dispatch {
 				players: vec![player],
 				animations: vec![Animation::new(
-					AnimationAsset::from("my/path"),
+					AnimationPath::from("my/path"),
 					PlayMode::Repeat,
 				)],
 			},
@@ -406,7 +406,7 @@ mod tests {
 			GlobalTransform::from(Transform::from_xyz(1., 2., 3.).looking_to(Dir3::X, Vec3::Y));
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
-				AnimationAsset::from("my/path"),
+				AnimationPath::from("my/path"),
 				(
 					Animations::Directional(DirectionalIndices {
 						forward: AnimationNodeIndex::new(0),
@@ -425,7 +425,7 @@ mod tests {
 			_Dispatch {
 				players: vec![player],
 				animations: vec![Animation::new(
-					AnimationAsset::from("my/path"),
+					AnimationPath::from("my/path"),
 					PlayMode::Repeat,
 				)],
 			},
@@ -450,7 +450,7 @@ mod tests {
 		let handle = new_handle();
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
-				AnimationAsset::from("my/path"),
+				AnimationPath::from("my/path"),
 				(
 					Animations::Directional(DirectionalIndices {
 						forward: AnimationNodeIndex::new(0),
@@ -473,7 +473,7 @@ mod tests {
 			_Dispatch {
 				players: vec![player],
 				animations: vec![Animation::new(
-					AnimationAsset::from("my/path"),
+					AnimationPath::from("my/path"),
 					PlayMode::Repeat,
 				)],
 			},

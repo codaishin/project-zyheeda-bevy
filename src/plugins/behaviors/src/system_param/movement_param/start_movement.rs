@@ -55,7 +55,7 @@ mod tests {
 	};
 	use common::traits::{
 		accessors::get::GetContextMut,
-		animation::{AnimationAsset, PlayMode},
+		animation::{AnimationPath, PlayMode},
 		handles_movement::Movement as MovementMarker,
 		thread_safe::ThreadSafe,
 	};
@@ -83,7 +83,7 @@ mod tests {
 					Units::from(42.),
 					UnitsPerSecond::from(11.),
 					Some(Animation {
-						asset: AnimationAsset::from("my/animation/path"),
+						path: AnimationPath::from("my/animation/path"),
 						play_mode: PlayMode::Repeat,
 					}),
 				);
@@ -94,7 +94,7 @@ mod tests {
 				radius: Units::from(42.),
 				speed: UnitsPerSecond::from(11.),
 				animation: Some(Animation {
-					asset: AnimationAsset::from("my/animation/path"),
+					path: AnimationPath::from("my/animation/path"),
 					play_mode: PlayMode::Repeat,
 				}),
 			}),
@@ -120,7 +120,7 @@ mod tests {
 					Units::from(42.),
 					UnitsPerSecond::from(11.),
 					Some(Animation {
-						asset: AnimationAsset::from("my/animation/path"),
+						path: AnimationPath::from("my/animation/path"),
 						play_mode: PlayMode::Repeat,
 					}),
 				);
