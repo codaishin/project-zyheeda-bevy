@@ -9,7 +9,7 @@ use crate::{
 		inventory_key::InventoryKey,
 	},
 	traits::{
-		accessors::get::{EntityContext, EntityContextMut},
+		accessors::get::{GetContext, GetContextMut},
 		handles_loadout::{
 			available_skills::{AvailableSkills, ReadAvailableSkills},
 			combos::{Combos, ReadCombos, UpdateCombos},
@@ -26,14 +26,14 @@ pub trait HandlesLoadout {
 	type TSkillID: Debug + PartialEq + Copy + ThreadSafe;
 
 	type TLoadoutRead<'w, 's>: SystemParam
-		+ for<'c> EntityContext<Items, TContext<'c>: ReadItems>
-		+ for<'c> EntityContext<Skills, TContext<'c>: ReadSkills>
-		+ for<'c> EntityContext<Combos, TContext<'c>: ReadCombos<Self::TSkillID>>
-		+ for<'c> EntityContext<AvailableSkills, TContext<'c>: ReadAvailableSkills<Self::TSkillID>>;
+		+ for<'c> GetContext<Items, TContext<'c>: ReadItems>
+		+ for<'c> GetContext<Skills, TContext<'c>: ReadSkills>
+		+ for<'c> GetContext<Combos, TContext<'c>: ReadCombos<Self::TSkillID>>
+		+ for<'c> GetContext<AvailableSkills, TContext<'c>: ReadAvailableSkills<Self::TSkillID>>;
 
 	type TLoadoutMut<'w, 's>: SystemParam
-		+ for<'c> EntityContextMut<Items, TContext<'c>: SwapItems>
-		+ for<'c> EntityContextMut<Combos, TContext<'c>: UpdateCombos<Self::TSkillID>>;
+		+ for<'c> GetContextMut<Items, TContext<'c>: SwapItems>
+		+ for<'c> GetContextMut<Combos, TContext<'c>: UpdateCombos<Self::TSkillID>>;
 }
 
 pub type LoadoutReadParam<'w, 's, T> = <T as HandlesLoadout>::TLoadoutRead<'w, 's>;

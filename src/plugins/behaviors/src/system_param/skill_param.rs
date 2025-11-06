@@ -5,7 +5,7 @@ use crate::components::skill_usage::SkillUsage;
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::{
 	traits::{
-		accessors::get::{EntityContextMut, GetMut},
+		accessors::get::{GetContextMut, GetMut},
 		handles_skills_control::{SkillControl, SkillSpawnPoints},
 	},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
@@ -17,13 +17,12 @@ pub struct SkillParamMut<'w, 's> {
 	skill_usages: Query<'w, 's, Mut<'static, SkillUsage>>,
 }
 
-impl EntityContextMut<SkillControl> for SkillParamMut<'_, '_> {
+impl GetContextMut<SkillControl> for SkillParamMut<'_, '_> {
 	type TContext<'ctx> = SkillContextMut<'ctx>;
 
-	fn get_entity_context_mut<'ctx>(
+	fn get_context_mut<'ctx>(
 		param: &'ctx mut SkillParamMut,
-		entity: Entity,
-		_: SkillControl,
+		SkillControl { entity }: SkillControl,
 	) -> Option<Self::TContext<'ctx>> {
 		if let Ok(skill_usage) = param.skill_usages.get_mut(entity) {
 			return Some(SkillContextMut::Mut(skill_usage));
@@ -37,13 +36,12 @@ impl EntityContextMut<SkillControl> for SkillParamMut<'_, '_> {
 	}
 }
 
-impl EntityContextMut<SkillSpawnPoints> for SkillParamMut<'_, '_> {
+impl GetContextMut<SkillSpawnPoints> for SkillParamMut<'_, '_> {
 	type TContext<'ctx> = SpawnPointContextMut<'ctx>;
 
-	fn get_entity_context_mut<'ctx>(
+	fn get_context_mut<'ctx>(
 		param: &'ctx mut SkillParamMut,
-		entity: Entity,
-		_: SkillSpawnPoints,
+		SkillSpawnPoints { entity }: SkillSpawnPoints,
 	) -> Option<Self::TContext<'ctx>> {
 		let entity = param.commands.get_mut(&entity)?;
 

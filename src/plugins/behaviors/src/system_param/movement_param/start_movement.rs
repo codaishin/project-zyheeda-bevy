@@ -54,7 +54,7 @@ mod tests {
 		prelude::*,
 	};
 	use common::traits::{
-		accessors::get::EntityContextMut,
+		accessors::get::GetContextMut,
 		animation::{AnimationAsset, PlayMode},
 		handles_movement::Movement as MovementMarker,
 		thread_safe::ThreadSafe,
@@ -77,8 +77,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
 				let mut ctx =
-					MovementParamMut::get_entity_context_mut(&mut p, entity, MovementMarker)
-						.unwrap();
+					MovementParamMut::get_context_mut(&mut p, MovementMarker { entity }).unwrap();
 				ctx.start(
 					Vec3::new(1., 2., 3.),
 					Units::from(42.),
@@ -115,8 +114,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
 				let mut ctx =
-					MovementParamMut::get_entity_context_mut(&mut p, entity, MovementMarker)
-						.unwrap();
+					MovementParamMut::get_context_mut(&mut p, MovementMarker { entity }).unwrap();
 				ctx.start(
 					target,
 					Units::from(42.),

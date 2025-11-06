@@ -12,7 +12,7 @@ use bevy::{
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::EntityContextMut,
+		accessors::get::GetContextMut,
 		handles_orientation::{Face, Facing, OverrideFace},
 		handles_player::ConfiguresPlayerSkillAnimations,
 		state_duration::{StateMeta, UpdatedStates},
@@ -45,7 +45,7 @@ pub(crate) fn advance_active_skill<TGetSkill, TPlayerAnimations, TFacing, TSkill
 where
 	TGetSkill: GetActiveSkill<SkillState> + Component<Mutability = Mutable>,
 	TPlayerAnimations: ConfiguresPlayerSkillAnimations,
-	TFacing: for<'c> EntityContextMut<Facing, TContext<'c>: OverrideFace>,
+	TFacing: for<'c> GetContextMut<Facing, TContext<'c>: OverrideFace>,
 	TSkillExecutor: Component<Mutability = Mutable> + Schedule<RunSkillBehavior> + Flush,
 	TTime: Send + Sync + Default + 'static,
 {
@@ -56,7 +56,7 @@ where
 		let Ok(agent) = commands.get_entity(entity) else {
 			continue;
 		};
-		let Some(mut ctx) = TFacing::get_entity_context_mut(&mut facing, entity, Facing) else {
+		let Some(mut ctx) = TFacing::get_context_mut(&mut facing, Facing { entity }) else {
 			continue;
 		};
 		let advancement = match dequeue.get_active() {

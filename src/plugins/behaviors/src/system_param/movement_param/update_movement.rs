@@ -32,7 +32,7 @@ mod tests {
 	use common::{
 		tools::Units,
 		traits::{
-			accessors::get::EntityContextMut,
+			accessors::get::GetContextMut,
 			animation::{AnimationAsset, PlayMode},
 			handles_movement::Movement,
 		},
@@ -63,7 +63,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
 				let mut ctx =
-					MovementParamMut::get_entity_context_mut(&mut p, entity, Movement).unwrap();
+					MovementParamMut::get_context_mut(&mut p, Movement { entity }).unwrap();
 				ctx.update(
 					UnitsPerSecond::from(110.),
 					Some(Animation {

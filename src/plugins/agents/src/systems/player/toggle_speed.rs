@@ -9,7 +9,7 @@ use bevy::{
 use common::{
 	tools::action_key::movement::MovementKey,
 	traits::{
-		accessors::get::{EntityContextMut, TryApplyOn},
+		accessors::get::{GetContextMut, TryApplyOn},
 		handles_input::{GetAllInputStates, InputState},
 		handles_movement::{Movement, UpdateMovement},
 	},
@@ -24,7 +24,7 @@ impl Player {
 		players: Query<(Entity, &MovementConfig), With<Self>>,
 	) where
 		for<'w, 's> TInput: SystemParam<Item<'w, 's>: GetAllInputStates>,
-		for<'c> TMovement: EntityContextMut<Movement, TContext<'c>: UpdateMovement>,
+		for<'c> TMovement: GetContextMut<Movement, TContext<'c>: UpdateMovement>,
 	{
 		let just_toggled = input
 			.get_all_input_states::<MovementKey>()
@@ -35,7 +35,7 @@ impl Player {
 		}
 
 		for (entity, config) in &players {
-			let ctx = TMovement::get_entity_context_mut(&mut movement, entity, Movement);
+			let ctx = TMovement::get_context_mut(&mut movement, Movement { entity });
 			let Some(mut ctx) = ctx else {
 				continue;
 			};

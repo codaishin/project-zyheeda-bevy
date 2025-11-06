@@ -5,7 +5,7 @@ use crate::{
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	traits::{
-		accessors::get::{EntityContext, TryApplyOn},
+		accessors::get::{GetContext, TryApplyOn},
 		handles_loadout::{
 			available_skills::{AvailableSkills, ReadAvailableSkills},
 			skills::GetSkillId,
@@ -28,10 +28,10 @@ where
 	) where
 		TVisualize: InsertContentOn,
 		TAgent: Component,
-		TLoadout: for<'c> EntityContext<AvailableSkills, TContext<'c>: ReadAvailableSkills<TId>>,
+		TLoadout: for<'c> GetContext<AvailableSkills, TContext<'c>: ReadAvailableSkills<TId>>,
 	{
-		for agent in &agents {
-			let Some(ctx) = TLoadout::get_entity_context(&param, agent, AvailableSkills) else {
+		for entity in &agents {
+			let Some(ctx) = TLoadout::get_context(&param, AvailableSkills { entity }) else {
 				continue;
 			};
 

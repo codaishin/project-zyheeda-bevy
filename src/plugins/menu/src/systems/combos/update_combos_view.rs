@@ -4,7 +4,7 @@ use bevy::{
 	prelude::*,
 };
 use common::traits::{
-	accessors::get::{ContextChanged, EntityContext},
+	accessors::get::{ContextChanged, GetContext},
 	handles_loadout::combos::Combos,
 };
 use std::fmt::Debug;
@@ -19,11 +19,11 @@ pub(crate) trait UpdateComboOverview: Component<Mutability = Mutable> + Sized {
 	) where
 		Self: UpdateCombosView<TId>,
 		TAgent: Component,
-		TLoadout: for<'c> EntityContext<Combos, TContext<'c>: BuildComboTreeLayout<TId>>,
+		TLoadout: for<'c> GetContext<Combos, TContext<'c>: BuildComboTreeLayout<TId>>,
 		TId: Debug + PartialEq + Clone,
 	{
-		for agent in &agents {
-			let Some(ctx) = TLoadout::get_entity_context(&param, agent, Combos) else {
+		for entity in &agents {
+			let Some(ctx) = TLoadout::get_context(&param, Combos { entity }) else {
 				continue;
 			};
 
@@ -69,13 +69,12 @@ mod tests {
 	#[derive(SystemParam)]
 	struct _Param<'w, 's>(Query<'w, 's, Ref<'static, _Combos>>);
 
-	impl EntityContext<Combos> for _Param<'_, '_> {
+	impl GetContext<Combos> for _Param<'_, '_> {
 		type TContext<'ctx> = _CombosContext<'ctx>;
 
-		fn get_entity_context<'ctx>(
+		fn get_context<'ctx>(
 			param: &'ctx _Param,
-			entity: Entity,
-			_: Combos,
+			Combos { entity }: Combos,
 		) -> Option<Self::TContext<'ctx>> {
 			param.0.get(entity).ok().map(_CombosContext)
 		}

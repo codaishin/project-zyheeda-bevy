@@ -26,7 +26,7 @@ mod tests {
 		math::Vec3,
 	};
 	use common::traits::{
-		accessors::get::EntityContextMut,
+		accessors::get::GetContextMut,
 		handles_movement::Movement as MovementMarker,
 	};
 	use testing::SingleThreadedApp;
@@ -48,8 +48,8 @@ mod tests {
 			.id();
 		app.world_mut()
 			.run_system_once(move |mut m: MovementParamMut<_Motion>| {
-				let ctx = MovementParamMut::get_entity_context_mut(&mut m, entity, MovementMarker)
-					.unwrap();
+				let ctx =
+					MovementParamMut::get_context_mut(&mut m, MovementMarker { entity }).unwrap();
 
 				assert_eq!(
 					Some(MovementTarget::Point(Vec3::new(1., 2., 3.))),

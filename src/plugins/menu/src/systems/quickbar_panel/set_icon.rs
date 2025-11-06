@@ -2,7 +2,7 @@ use crate::components::{icon::Icon, label::UILabel, quickbar_panel::QuickbarPane
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	traits::{
-		accessors::get::{DynProperty, EntityContext, TryApplyOn},
+		accessors::get::{DynProperty, GetContext, TryApplyOn},
 		handles_loadout::skills::{ReadSkills, SkillIcon, SkillToken, Skills},
 		handles_localization::Token,
 	},
@@ -17,21 +17,21 @@ impl QuickbarPanel {
 		agents: Query<Entity, With<TAgent>>,
 	) where
 		TAgent: Component,
-		TLoadout: for<'c> EntityContext<Skills, TContext<'c>: ReadSkills>,
+		TLoadout: for<'c> GetContext<Skills, TContext<'c>: ReadSkills>,
 	{
-		for agent in &agents {
-			let Some(ctx) = TLoadout::get_entity_context(&param, agent, Skills) else {
+		for entity in &agents {
+			let Some(ctx) = TLoadout::get_context(&param, Skills { entity }) else {
 				continue;
 			};
 
-			for (entity, Self { key, .. }, current_icon, current_label) in &panels {
+			for (panel_entity, Self { key, .. }, current_icon, current_label) in &panels {
 				let Some(skill) = ctx.get_skill(*key) else {
 					continue;
 				};
 				let token = skill.dyn_property::<SkillToken>();
 				let image = skill.dyn_property::<SkillIcon>();
 
-				commands.try_apply_on(&entity, |mut e| {
+				commands.try_apply_on(&panel_entity, |mut e| {
 					if !loaded(current_icon, image) {
 						e.try_insert(Icon::Load(image.clone()));
 					}

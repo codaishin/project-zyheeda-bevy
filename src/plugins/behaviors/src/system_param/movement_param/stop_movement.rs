@@ -26,7 +26,7 @@ mod tests {
 		prelude::*,
 	};
 	use common::traits::{
-		accessors::get::EntityContextMut,
+		accessors::get::GetContextMut,
 		handles_movement::Movement as MovementMarker,
 	};
 	use testing::SingleThreadedApp;
@@ -51,8 +51,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
 				let mut ctx =
-					MovementParamMut::get_entity_context_mut(&mut p, entity, MovementMarker)
-						.unwrap();
+					MovementParamMut::get_context_mut(&mut p, MovementMarker { entity }).unwrap();
 				ctx.stop();
 			})?;
 

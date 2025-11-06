@@ -1,6 +1,6 @@
 use crate::{
 	components::persistent_entity::PersistentEntity,
-	traits::accessors::get::EntityContextMut,
+	traits::accessors::get::GetContextMut,
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
 use serde::{Deserialize, Serialize};
@@ -8,12 +8,20 @@ use std::ops::DerefMut;
 
 pub trait HandlesOrientation {
 	type TFaceSystemParam<'w, 's>: SystemParam
-		+ for<'c> EntityContextMut<Facing, TContext<'c>: OverrideFace + RegisterFaceTargetDefinition>;
+		+ for<'c> GetContextMut<Facing, TContext<'c>: OverrideFace + RegisterFaceTargetDefinition>;
 }
 
 pub type FacingSystemParamMut<'w, 's, T> = <T as HandlesOrientation>::TFaceSystemParam<'w, 's>;
 
-pub struct Facing;
+pub struct Facing {
+	pub entity: Entity,
+}
+
+impl From<Facing> for Entity {
+	fn from(Facing { entity }: Facing) -> Self {
+		entity
+	}
+}
 
 pub trait OverrideFace {
 	fn override_face(&mut self, face: Face);

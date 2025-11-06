@@ -1,6 +1,6 @@
 use crate::{
 	tools::{Units, UnitsPerSecond},
-	traits::{accessors::get::EntityContextMut, animation::Animation},
+	traits::{accessors::get::GetContextMut, animation::Animation},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
 use serde::{Deserialize, Serialize};
@@ -8,7 +8,7 @@ use std::ops::{Deref, DerefMut};
 
 pub trait HandlesMovement {
 	type TMovementMut<'w, 's>: SystemParam
-		+ for<'c> EntityContextMut<Movement, TContext<'c>: ControlMovement>;
+		+ for<'c> GetContextMut<Movement, TContext<'c>: ControlMovement>;
 }
 
 pub type MovementSystemParamMut<'w, 's, T> = <T as HandlesMovement>::TMovementMut<'w, 's>;
@@ -105,4 +105,12 @@ where
 	}
 }
 
-pub struct Movement;
+pub struct Movement {
+	pub entity: Entity,
+}
+
+impl From<Movement> for Entity {
+	fn from(Movement { entity }: Movement) -> Self {
+		entity
+	}
+}

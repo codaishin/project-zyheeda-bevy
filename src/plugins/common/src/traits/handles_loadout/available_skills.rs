@@ -5,9 +5,18 @@ use crate::{
 		handles_loadout::skills::{GetSkillId, SkillIcon, SkillToken},
 	},
 };
+use bevy::prelude::*;
 use std::ops::Deref;
 
-pub struct AvailableSkills;
+pub struct AvailableSkills {
+	pub entity: Entity,
+}
+
+impl From<AvailableSkills> for Entity {
+	fn from(AvailableSkills { entity }: AvailableSkills) -> Self {
+		entity
+	}
+}
 
 pub trait ReadAvailableSkills<TSkillID> {
 	type TSkill<'a>: GetProperty<SkillToken> + GetProperty<SkillIcon> + GetSkillId<TSkillID>

@@ -1,7 +1,7 @@
 use crate::components::enemy::{Enemy, attack_phase::EnemyAttackPhase};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
-	accessors::get::EntityContextMut,
+	accessors::get::GetContextMut,
 	handles_skills_control::{HoldSkill, SkillControl},
 };
 
@@ -10,14 +10,14 @@ impl Enemy {
 		mut skills: StaticSystemParam<TSkills>,
 		enemies: Query<(Entity, &EnemyAttackPhase)>,
 	) where
-		TSkills: for<'c> EntityContextMut<SkillControl, TContext<'c>: HoldSkill>,
+		TSkills: for<'c> GetContextMut<SkillControl, TContext<'c>: HoldSkill>,
 	{
 		for (entity, phase) in &enemies {
 			let EnemyAttackPhase::HoldSkill { key, .. } = phase else {
 				continue;
 			};
 
-			let ctx = TSkills::get_entity_context_mut(&mut skills, entity, SkillControl);
+			let ctx = TSkills::get_context_mut(&mut skills, SkillControl { entity });
 			let Some(mut ctx) = ctx else {
 				continue;
 			};

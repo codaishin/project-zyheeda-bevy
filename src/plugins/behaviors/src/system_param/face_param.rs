@@ -4,7 +4,7 @@ mod register_face_target_definition;
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::{
 	traits::{
-		accessors::get::{EntityContextMut, GetMut},
+		accessors::get::{GetContextMut, GetMut},
 		handles_orientation::Facing,
 	},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
@@ -15,13 +15,12 @@ pub struct FaceParamMut<'w, 's> {
 	commands: ZyheedaCommands<'w, 's>,
 }
 
-impl EntityContextMut<Facing> for FaceParamMut<'_, '_> {
+impl GetContextMut<Facing> for FaceParamMut<'_, '_> {
 	type TContext<'ctx> = FaceContextMut<'ctx>;
 
-	fn get_entity_context_mut<'ctx>(
+	fn get_context_mut<'ctx>(
 		param: &'ctx mut FaceParamMut,
-		entity: Entity,
-		_: Facing,
+		Facing { entity }: Facing,
 	) -> Option<Self::TContext<'ctx>> {
 		let entity = param.commands.get_mut(&entity)?;
 

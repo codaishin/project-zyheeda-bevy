@@ -6,7 +6,7 @@ use bevy::{
 use common::{
 	tools::action_key::slot::PlayerSlot,
 	traits::{
-		accessors::get::EntityContextMut,
+		accessors::get::GetContextMut,
 		handles_input::{GetAllInputStates, InputState},
 		handles_skills_control::{HoldSkill, SkillControl},
 	},
@@ -19,7 +19,7 @@ impl Player {
 		players: Query<Entity, With<Self>>,
 	) where
 		TInput: for<'w, 's> SystemParam<Item<'w, 's>: GetAllInputStates>,
-		TSkills: for<'c> EntityContextMut<SkillControl, TContext<'c>: HoldSkill>,
+		TSkills: for<'c> GetContextMut<SkillControl, TContext<'c>: HoldSkill>,
 	{
 		let held = || {
 			input
@@ -31,7 +31,7 @@ impl Player {
 		};
 
 		for entity in &players {
-			let ctx = TSkills::get_entity_context_mut(&mut skills, entity, SkillControl);
+			let ctx = TSkills::get_context_mut(&mut skills, SkillControl { entity });
 			let Some(mut ctx) = ctx else {
 				continue;
 			};

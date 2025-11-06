@@ -34,7 +34,7 @@ mod tests {
 		app::{App, Update},
 		ecs::system::{RunSystemError, RunSystemOnce},
 	};
-	use common::traits::{accessors::get::EntityContextMut, handles_skills_control::SkillControl};
+	use common::traits::{accessors::get::GetContextMut, handles_skills_control::SkillControl};
 	use std::collections::HashSet;
 	use testing::SingleThreadedApp;
 
@@ -50,7 +50,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut p: SkillParamMut| {
 				let mut ctx =
-					SkillParamMut::get_entity_context_mut(&mut p, entity, SkillControl).unwrap();
+					SkillParamMut::get_context_mut(&mut p, SkillControl { entity }).unwrap();
 				ctx.holding(SlotKey(42));
 			})?;
 
@@ -73,7 +73,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut p: SkillParamMut| {
 				let mut ctx =
-					SkillParamMut::get_entity_context_mut(&mut p, entity, SkillControl).unwrap();
+					SkillParamMut::get_context_mut(&mut p, SkillControl { entity }).unwrap();
 				ctx.holding(SlotKey(42));
 			})?;
 
@@ -103,7 +103,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut p: SkillParamMut| {
 				let mut ctx =
-					SkillParamMut::get_entity_context_mut(&mut p, entity, SkillControl).unwrap();
+					SkillParamMut::get_context_mut(&mut p, SkillControl { entity }).unwrap();
 				ctx.holding(SlotKey(42));
 			})?;
 
@@ -133,7 +133,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut p: SkillParamMut| {
 				let mut ctx =
-					SkillParamMut::get_entity_context_mut(&mut p, entity, SkillControl).unwrap();
+					SkillParamMut::get_context_mut(&mut p, SkillControl { entity }).unwrap();
 				ctx.holding(SlotKey(42));
 			})?;
 
@@ -163,7 +163,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut p: SkillParamMut| {
 				let mut ctx =
-					SkillParamMut::get_entity_context_mut(&mut p, entity, SkillControl).unwrap();
+					SkillParamMut::get_context_mut(&mut p, SkillControl { entity }).unwrap();
 				ctx.holding(SlotKey(42));
 			})?;
 
