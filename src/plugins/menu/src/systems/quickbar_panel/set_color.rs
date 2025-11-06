@@ -10,15 +10,16 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	tools::skill_execution::SkillExecution,
 	traits::{
-		accessors::get::{DynProperty, GetContext, GetProperty},
+		accessors::get::{DynProperty, GetContext, GetProperty, TryApplyOn},
 		handles_input::MouseOverrideActive,
 		handles_loadout::skills::{ReadSkills, Skills},
 	},
+	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
 
 impl QuickbarPanel {
 	pub(crate) fn set_color<TAgent, TActionKeyButton, TLoadout>(
-		commands: Commands,
+		commands: ZyheedaCommands,
 		buttons: Query<(Entity, &Self, &TActionKeyButton)>,
 		agents: Query<Entity, With<TAgent>>,
 		param: StaticSystemParam<TLoadout>,
@@ -32,7 +33,7 @@ impl QuickbarPanel {
 }
 
 fn set_color<TAgent, TActionKeyButton, TLoadout>(
-	mut commands: Commands,
+	mut commands: ZyheedaCommands,
 	buttons: Query<(Entity, &QuickbarPanel, &TActionKeyButton)>,
 	agents: Query<Entity, With<TAgent>>,
 	param: StaticSystemParam<TLoadout>,
@@ -47,11 +48,10 @@ fn set_color<TAgent, TActionKeyButton, TLoadout>(
 		};
 
 		for (btn_entity, panel, action_button) in &buttons {
-			let Ok(entity) = commands.get_entity(btn_entity) else {
-				continue;
-			};
-			let color = get_color_override(panel, action_button, &ctx);
-			update_color_override(color, entity);
+			commands.try_apply_on(&btn_entity, |e| {
+				let color = get_color_override(panel, action_button, &ctx);
+				update_color_override(color, e);
+			});
 		}
 	}
 }
@@ -78,7 +78,7 @@ where
 	}
 }
 
-fn update_color_override(color: Option<ColorConfig>, mut entity: EntityCommands) {
+fn update_color_override(color: Option<ColorConfig>, mut entity: ZyheedaEntityCommands) {
 	match color {
 		Some(ColorConfig { background, text }) => {
 			entity.try_insert((
@@ -88,7 +88,7 @@ fn update_color_override(color: Option<ColorConfig>, mut entity: EntityCommands)
 			));
 		}
 		None => {
-			entity.remove::<ColorOverride>();
+			entity.try_remove::<ColorOverride>();
 		}
 	}
 }
