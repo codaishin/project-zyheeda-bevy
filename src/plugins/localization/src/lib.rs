@@ -5,6 +5,7 @@ mod systems;
 mod tools;
 mod traits;
 
+use crate::systems::remove_empty_folder_handle::RemoveEmptyFolderHandle;
 use assets::ftl::{Ftl, loader::FtlLoader};
 use bevy::prelude::*;
 use common::{
@@ -56,6 +57,7 @@ where
 					FtlServer::load_requested_asset_file(Path::from("locale")),
 					FtlServer::load_requested_asset_folder(Path::from("locale")),
 					FtlServer::remove_failed_asset_handles,
+					FtlServer::remove_empty_folder_handle,
 					FtlServer::update_ftl_bundle.pipe(OnError::log),
 				),
 			);
