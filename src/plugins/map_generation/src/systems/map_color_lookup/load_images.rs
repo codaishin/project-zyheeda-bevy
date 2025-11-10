@@ -33,28 +33,8 @@ fn lookup_images<TCell, TAssetServer>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::asset::AssetPath;
-	use common::traits::load_asset::LoadAsset;
-	use macros::NestedMocks;
-	use mockall::{automock, predicate::eq};
-	use std::path::PathBuf;
-	use testing::{NestedMocks, SingleThreadedApp, new_handle};
-
-	#[derive(Resource, NestedMocks)]
-	struct _Server {
-		mock: Mock_Server,
-	}
-
-	#[automock]
-	impl LoadAsset for _Server {
-		fn load_asset<TAsset, TPath>(&mut self, path: TPath) -> Handle<TAsset>
-		where
-			TAsset: Asset,
-			TPath: Into<AssetPath<'static>> + 'static,
-		{
-			self.mock.load_asset(path)
-		}
-	}
+	use common::traits::load_asset::mock::MockAssetServer;
+	use testing::{SingleThreadedApp, new_handle};
 
 	#[derive(Debug, PartialEq)]
 	struct _Cell;
@@ -63,11 +43,11 @@ mod tests {
 		const LOOKUP_ROOT: &str = "my/root/path";
 	}
 
-	fn setup(server: _Server) -> App {
+	fn setup(server: MockAssetServer) -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.insert_resource(server);
-		app.add_systems(Update, lookup_images::<_Cell, _Server>);
+		app.add_systems(Update, lookup_images::<_Cell, MockAssetServer>);
 
 		app
 	}
@@ -75,11 +55,11 @@ mod tests {
 	#[test]
 	fn set_floor() {
 		let floor = new_handle();
-		let floor_clone = floor.clone();
-		let mut app = setup(_Server::new().with_mock(move |mock| {
-			mock.expect_load_asset::<Image, PathBuf>()
-				.return_const(floor_clone.clone());
-		}));
+		let mut app = setup(
+			MockAssetServer::default()
+				.path(format!("{}/floor.png", _Cell::LOOKUP_ROOT))
+				.returns(floor.clone()),
+		);
 
 		app.update();
 
@@ -87,16 +67,5 @@ mod tests {
 			Some(&MapColorLookupImage::new(floor)),
 			app.world().get_resource::<MapColorLookupImage<_Cell>>(),
 		);
-	}
-
-	#[test]
-	fn load_correct_floor_asset() {
-		let mut app = setup(_Server::new().with_mock(move |mock| {
-			mock.expect_load_asset::<Image, PathBuf>()
-				.with(eq(PathBuf::from("my/root/path/floor.png")))
-				.return_const(new_handle());
-		}));
-
-		app.update();
 	}
 }

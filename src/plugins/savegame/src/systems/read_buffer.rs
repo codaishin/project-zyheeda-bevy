@@ -160,12 +160,12 @@ mod tests {
 	struct _LoadAsset;
 
 	impl LoadAsset for _LoadAsset {
-		fn load_asset<TAsset, TPath>(&mut self, _: TPath) -> Handle<TAsset>
+		fn load_asset<'a, TAsset, TPath>(&mut self, _: TPath) -> Handle<TAsset>
 		where
 			TAsset: Asset,
-			TPath: Into<AssetPath<'static>> + 'static,
+			TPath: Into<AssetPath<'a>>,
 		{
-			panic!("SHOULD NOT BE CALLED");
+			panic!("NOT USED");
 		}
 	}
 

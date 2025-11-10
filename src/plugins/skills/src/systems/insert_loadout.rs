@@ -67,28 +67,8 @@ fn asset_path(ItemName(name): ItemName) -> AssetPath<'static> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::item::Item;
-	use bevy::asset::AssetPath;
-	use common::tools::action_key::slot::SlotKey;
-	use macros::NestedMocks;
-	use mockall::{automock, predicate::eq};
-	use testing::{NestedMocks, SingleThreadedApp, new_handle};
-
-	#[derive(Resource, NestedMocks)]
-	struct _Assets {
-		mock: Mock_Assets,
-	}
-
-	#[automock]
-	impl LoadAsset for _Assets {
-		fn load_asset<TAsset, TPath>(&mut self, path: TPath) -> Handle<TAsset>
-		where
-			TAsset: Asset,
-			TPath: Into<AssetPath<'static>> + 'static,
-		{
-			self.mock.load_asset(path)
-		}
-	}
+	use common::{tools::action_key::slot::SlotKey, traits::load_asset::mock::MockAssetServer};
+	use testing::{SingleThreadedApp, new_handle};
 
 	#[derive(Component, Debug, PartialEq, Clone)]
 	struct _Agent {
@@ -106,11 +86,11 @@ mod tests {
 		}
 	}
 
-	fn setup(assets: _Assets) -> App {
+	fn setup(assets: MockAssetServer) -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.insert_resource(assets);
-		app.add_systems(Update, insert_internal::<_Agent, _Assets>);
+		app.add_systems(Update, insert_internal::<_Agent, MockAssetServer>);
 
 		app
 	}
@@ -119,14 +99,13 @@ mod tests {
 	fn insert_loadout_components() {
 		let inventory_item = new_handle();
 		let slot_item = new_handle();
-		let mut app = setup(_Assets::new().with_mock(|mock| {
-			mock.expect_load_asset::<Item, AssetPath<'static>>()
-				.with(eq(AssetPath::from("items/inventory item.item")))
-				.return_const(inventory_item.clone());
-			mock.expect_load_asset::<Item, AssetPath<'static>>()
-				.with(eq(AssetPath::from("items/slot item.item")))
-				.return_const(slot_item.clone());
-		}));
+		let mut app = setup(
+			MockAssetServer::default()
+				.path("items/inventory item.item")
+				.returns(inventory_item.clone())
+				.path("items/slot item.item")
+				.returns(slot_item.clone()),
+		);
 		let entity = app
 			.world_mut()
 			.spawn(_Agent {
@@ -154,14 +133,7 @@ mod tests {
 
 	#[test]
 	fn no_inventory_mapping_if_inventory_already_present() {
-		let mut app = setup(_Assets::new().with_mock(|mock| {
-			mock.expect_load_asset::<Item, AssetPath<'static>>()
-				.with(eq(AssetPath::from("items/inventory item.item")))
-				.never();
-			mock.expect_load_asset::<Item, AssetPath<'static>>()
-				.with(eq(AssetPath::from("items/slot item.item")))
-				.return_const(new_handle());
-		}));
+		let mut app = setup(MockAssetServer::default());
 		app.world_mut().spawn((
 			_Agent {
 				inventory: vec![Some(ItemName::from("inventory item"))],
@@ -171,19 +143,23 @@ mod tests {
 		));
 
 		app.update();
+
+		assert_eq!(
+			0,
+			app.world()
+				.resource::<MockAssetServer>()
+				.calls("items/inventory item.item"),
+		);
 	}
 
 	#[test]
 	fn insert_loadout_if_inventory_already_present() {
 		let slot_item = new_handle();
-		let mut app = setup(_Assets::new().with_mock(|mock| {
-			mock.expect_load_asset::<Item, AssetPath<'static>>()
-				.with(eq(AssetPath::from("items/inventory item.item")))
-				.return_const(new_handle());
-			mock.expect_load_asset::<Item, AssetPath<'static>>()
-				.with(eq(AssetPath::from("items/slot item.item")))
-				.return_const(slot_item.clone());
-		}));
+		let mut app = setup(
+			MockAssetServer::default()
+				.path("items/slot item.item")
+				.returns(slot_item.clone()),
+		);
 		let entity = app
 			.world_mut()
 			.spawn((
@@ -214,14 +190,7 @@ mod tests {
 
 	#[test]
 	fn no_slot_mapping_if_slots_already_present() {
-		let mut app = setup(_Assets::new().with_mock(|mock| {
-			mock.expect_load_asset::<Item, AssetPath<'static>>()
-				.with(eq(AssetPath::from("items/inventory item.item")))
-				.return_const(new_handle());
-			mock.expect_load_asset::<Item, AssetPath<'static>>()
-				.with(eq(AssetPath::from("items/slot item.item")))
-				.never();
-		}));
+		let mut app = setup(MockAssetServer::default());
 		app.world_mut().spawn((
 			_Agent {
 				inventory: vec![Some(ItemName::from("inventory item"))],
@@ -231,19 +200,23 @@ mod tests {
 		));
 
 		app.update();
+
+		assert_eq!(
+			0,
+			app.world()
+				.resource::<MockAssetServer>()
+				.calls("items/slot item.item"),
+		);
 	}
 
 	#[test]
 	fn insert_loadout_if_slots_already_present() {
 		let inventory_item = new_handle();
-		let mut app = setup(_Assets::new().with_mock(|mock| {
-			mock.expect_load_asset::<Item, AssetPath<'static>>()
-				.with(eq(AssetPath::from("items/inventory item.item")))
-				.return_const(inventory_item.clone());
-			mock.expect_load_asset::<Item, AssetPath<'static>>()
-				.with(eq(AssetPath::from("items/slot item.item")))
-				.return_const(new_handle());
-		}));
+		let mut app = setup(
+			MockAssetServer::default()
+				.path("items/inventory item.item")
+				.returns(inventory_item.clone()),
+		);
 		let entity = app
 			.world_mut()
 			.spawn((
@@ -274,14 +247,7 @@ mod tests {
 
 	#[test]
 	fn insert_loadout_if_slots_and_inventory_already_present() {
-		let mut app = setup(_Assets::new().with_mock(|mock| {
-			mock.expect_load_asset::<Item, AssetPath<'static>>()
-				.with(eq(AssetPath::from("items/inventory item.item")))
-				.return_const(new_handle());
-			mock.expect_load_asset::<Item, AssetPath<'static>>()
-				.with(eq(AssetPath::from("items/slot item.item")))
-				.return_const(new_handle());
-		}));
+		let mut app = setup(MockAssetServer::default());
 		let entity = app
 			.world_mut()
 			.spawn((
@@ -313,10 +279,7 @@ mod tests {
 
 	#[test]
 	fn do_nothing_if_loadout_marker_present() {
-		let mut app = setup(_Assets::new().with_mock(|mock| {
-			mock.expect_load_asset::<Item, AssetPath<'static>>().never();
-			mock.expect_load_asset::<Item, AssetPath<'static>>().never();
-		}));
+		let mut app = setup(MockAssetServer::default());
 		app.world_mut().spawn((
 			Loadout::<_Agent>::default(),
 			_Agent {
@@ -326,5 +289,14 @@ mod tests {
 		));
 
 		app.update();
+
+		let server = app.world().resource::<MockAssetServer>();
+		assert_eq!(
+			(0, 0),
+			(
+				server.calls("items/inventory item.item"),
+				server.calls("items/slot item.item"),
+			),
+		);
 	}
 }

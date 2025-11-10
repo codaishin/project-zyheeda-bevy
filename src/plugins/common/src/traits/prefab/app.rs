@@ -37,17 +37,13 @@ where
 
 #[cfg(test)]
 mod tests {
-	use std::fmt::Display;
-
 	use super::*;
 	use crate::{
 		errors::{ErrorData, Level},
-		traits::prefab::PrefabEntityCommands,
+		traits::{load_asset::mock::MockAssetServer, prefab::PrefabEntityCommands},
 	};
-	use bevy::asset::AssetPath;
-	use macros::NestedMocks;
-	use mockall::{automock, predicate::eq};
-	use testing::{NestedMocks, SingleThreadedApp, new_handle};
+	use std::fmt::Display;
+	use testing::{SingleThreadedApp, new_handle};
 
 	#[derive(Asset, TypePath, Debug, PartialEq)]
 	struct _Asset;
@@ -61,22 +57,6 @@ mod tests {
 	struct _Prefab<TAsset>(TAsset);
 
 	struct _Dependency;
-
-	#[derive(Resource, NestedMocks)]
-	struct _AssetServer {
-		mock: Mock_AssetServer,
-	}
-
-	#[automock]
-	impl LoadAsset for _AssetServer {
-		fn load_asset<TAsset, TPath>(&mut self, path: TPath) -> Handle<TAsset>
-		where
-			TAsset: Asset,
-			TPath: Into<AssetPath<'static>> + 'static,
-		{
-			self.mock.load_asset(path)
-		}
-	}
 
 	impl Prefab<_Dependency> for _Component {
 		type TError = _Error;
@@ -126,12 +106,12 @@ mod tests {
 		commands.insert_resource(_Result(result));
 	}
 
-	fn setup(asset_server: _AssetServer) -> App {
+	fn setup(asset_server: MockAssetServer) -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.insert_resource(asset_server);
 		app.add_observer(
-			instantiate_prefab::<_Component, _Dependency, _AssetServer>.pipe(save_result),
+			instantiate_prefab::<_Component, _Dependency, MockAssetServer>.pipe(save_result),
 		);
 
 		app
@@ -140,12 +120,11 @@ mod tests {
 	#[test]
 	fn call_prefab_instantiation_method() {
 		let handle = new_handle();
-		let mut app = setup(_AssetServer::new().with_mock(|mock| {
-			mock.expect_load_asset::<_Asset, &str>()
-				.times(1)
-				.with(eq("my/path"))
-				.return_const(handle.clone());
-		}));
+		let mut app = setup(
+			MockAssetServer::default()
+				.path("my/path")
+				.returns(handle.clone()),
+		);
 
 		let entity = app.world_mut().spawn(_Component {
 			prefab: Ok(_Prefab("my/path")),
@@ -159,12 +138,7 @@ mod tests {
 
 	#[test]
 	fn return_error() {
-		let mut app = setup(
-			_AssetServer::new().with_mock(|mock: &mut Mock_AssetServer| {
-				mock.expect_load_asset::<_Asset, &str>()
-					.return_const(new_handle());
-			}),
-		);
+		let mut app = setup(MockAssetServer::default());
 
 		let entity = app.world_mut().spawn(_Component {
 			prefab: Err(_Error),
@@ -178,19 +152,20 @@ mod tests {
 
 	#[test]
 	fn act_only_once() {
-		let mut app = setup(
-			_AssetServer::new().with_mock(|mock: &mut Mock_AssetServer| {
-				mock.expect_load_asset::<_Asset, &str>()
-					.times(1)
-					.return_const(new_handle());
-			}),
-		);
+		let mut app = setup(MockAssetServer::default());
 
-		let mut entity = app.world_mut().spawn(_Component {
-			prefab: Ok(_Prefab("my/path/a")),
-		});
-		entity.insert(_Component {
-			prefab: Ok(_Prefab("my/path/b")),
-		});
+		app.world_mut()
+			.spawn(_Component {
+				prefab: Ok(_Prefab("my/path/a")),
+			})
+			.insert(_Component {
+				prefab: Ok(_Prefab("my/path/b")),
+			});
+
+		let server = app.world().resource::<MockAssetServer>();
+		assert_eq!(
+			(1, 0),
+			(server.calls("my/path/a"), server.calls("my/path/b")),
+		);
 	}
 }

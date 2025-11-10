@@ -22,12 +22,12 @@ mod tests {
 	struct _Server;
 
 	impl LoadAsset for _Server {
-		fn load_asset<TAsset, TPath>(&mut self, _: TPath) -> Handle<TAsset>
+		fn load_asset<'a, TAsset, TPath>(&mut self, _: TPath) -> Handle<TAsset>
 		where
 			TAsset: Asset,
-			TPath: Into<AssetPath<'static>> + 'static,
+			TPath: Into<AssetPath<'a>>,
 		{
-			Handle::default()
+			panic!("NOT USED")
 		}
 	}
 

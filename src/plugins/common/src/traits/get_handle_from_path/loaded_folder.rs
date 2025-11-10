@@ -14,7 +14,7 @@ impl<T: Asset> GetHandelFromPath<T> for LoadedFolder {
 fn asset_path_ends_with<T: Asset>(path: &Path) -> impl FnMut(&Handle<T>) -> bool + '_ {
 	move |handle| match handle.path() {
 		None => false,
-		Some(asset_path) => asset_path.path().ends_with(path.as_string()),
+		Some(asset_path) => asset_path.path().ends_with(path.path()),
 	}
 }
 

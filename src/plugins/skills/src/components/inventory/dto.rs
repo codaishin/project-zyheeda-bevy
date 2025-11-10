@@ -59,31 +59,13 @@ impl TryLoadFrom<InventoryDto> for Inventory {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::item::Item;
-	use bevy::asset::AssetPath;
-	use macros::simple_mock;
-	use mockall::predicate::eq;
-	use testing::{Mock, new_handle};
-
-	simple_mock! {
-		_LoadAsset {}
-		impl LoadAsset for _LoadAsset {
-			fn load_asset<TAsset, TPath>(&mut self, path: TPath) -> Handle<TAsset>
-			where
-				TAsset: Asset,
-				TPath: Into<AssetPath<'static>> + 'static;
-		}
-	}
+	use common::traits::load_asset::mock::MockAssetServer;
+	use testing::new_handle;
 
 	#[test]
 	fn deserialize_empty() {
-		let handle = new_handle();
 		let dto = InventoryDto(vec![]);
-		let mut server = Mock_LoadAsset::new_mock(|mock| {
-			mock.expect_load_asset::<Item, String>()
-				.never()
-				.return_const(handle.clone());
-		});
+		let mut server = MockAssetServer::default();
 
 		let Ok(item) = Inventory::try_load_from(dto, &mut server);
 
@@ -98,16 +80,11 @@ mod tests {
 			(2, "asset/path/2".to_owned()),
 			(5, "asset/path/5".to_owned()),
 		]);
-		let mut server = Mock_LoadAsset::new_mock(|mock| {
-			mock.expect_load_asset::<Item, String>()
-				.times(1)
-				.with(eq("asset/path/2".to_owned()))
-				.return_const(handle_2.clone());
-			mock.expect_load_asset::<Item, String>()
-				.times(1)
-				.with(eq("asset/path/5".to_owned()))
-				.return_const(handle_5.clone());
-		});
+		let mut server = MockAssetServer::default()
+			.path("asset/path/2")
+			.returns(handle_2.clone())
+			.path("asset/path/5")
+			.returns(handle_5.clone());
 
 		let Ok(item) = Inventory::try_load_from(dto, &mut server);
 

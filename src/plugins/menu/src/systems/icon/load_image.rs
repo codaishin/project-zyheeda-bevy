@@ -52,22 +52,25 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::asset::{AssetLoadError, AssetPath, LoadState, UntypedAssetId, io::AssetReaderError};
-	use macros::NestedMocks;
-	use mockall::{mock, predicate::eq};
+	use bevy::{
+		asset::{AssetLoadError, AssetPath, LoadState, UntypedAssetId, io::AssetReaderError},
+		platform::collections::HashMap,
+	};
+	use common::traits::load_asset::mock::MockAssetServer;
 	use std::{path::PathBuf, sync::Arc};
-	use testing::{NestedMocks, SingleThreadedApp, new_handle};
+	use testing::{SingleThreadedApp, new_handle};
 
-	#[derive(Resource, NestedMocks)]
+	#[derive(Resource, Default)]
 	struct _AssetServer {
-		mock: Mock_AssetServer,
+		mock: MockAssetServer,
+		load_states: HashMap<UntypedAssetId, LoadState>,
 	}
 
 	impl LoadAsset for _AssetServer {
-		fn load_asset<TAsset, TPath>(&mut self, path: TPath) -> Handle<TAsset>
+		fn load_asset<'a, TAsset, TPath>(&mut self, path: TPath) -> Handle<TAsset>
 		where
 			TAsset: Asset,
-			TPath: Into<AssetPath<'static>> + 'static,
+			TPath: Into<AssetPath<'a>>,
 		{
 			self.mock.load_asset(path)
 		}
@@ -75,23 +78,7 @@ mod tests {
 
 	impl GetAssetLoadState for _AssetServer {
 		fn get_asset_load_state(&self, id: UntypedAssetId) -> Option<LoadState> {
-			self.mock.get_asset_load_state(id)
-		}
-	}
-
-	mock! {
-		_AssetServer {}
-		impl LoadAsset for _AssetServer {
-			fn load_asset<TAsset, TPath>(
-				&mut self,
-				path: TPath
-			) -> Handle<TAsset>
-			where
-				TAsset: Asset,
-				TPath: Into<AssetPath<'static>> + 'static,;
-		}
-		impl GetAssetLoadState for _AssetServer {
-			fn get_asset_load_state(&self, id: UntypedAssetId) -> Option<LoadState>;
+			self.load_states.get(&id).cloned()
 		}
 	}
 
@@ -107,15 +94,12 @@ mod tests {
 	#[test]
 	fn set_to_loading() {
 		let handle = new_handle();
-		let mut app = setup(_AssetServer::new().with_mock(|mock| {
-			mock.expect_load_asset::<Image, PathBuf>()
-				.with(eq(PathBuf::from("my/path")))
-				.times(1)
-				.return_const(handle.clone());
-			mock.expect_get_asset_load_state()
-				.never()
-				.return_const(LoadState::Loaded);
-		}));
+		let mut app = setup(_AssetServer {
+			mock: MockAssetServer::default()
+				.path("my/path")
+				.returns(handle.clone()),
+			..default()
+		});
 		let entity = app
 			.world_mut()
 			.spawn(Icon::ImagePath(PathBuf::from("my/path")))
@@ -132,15 +116,10 @@ mod tests {
 	#[test]
 	fn set_image_to_loaded() {
 		let handle = new_handle();
-		let mut app = setup(_AssetServer::new().with_mock(|mock| {
-			mock.expect_load_asset::<Image, PathBuf>()
-				.never()
-				.return_const(handle.clone());
-			mock.expect_get_asset_load_state()
-				.with(eq(handle.id().untyped()))
-				.times(1)
-				.return_const(LoadState::Loaded);
-		}));
+		let mut app = setup(_AssetServer {
+			load_states: HashMap::from([(handle.id().untyped(), LoadState::Loaded)]),
+			..default()
+		});
 		let entity = app.world_mut().spawn(Icon::Load(handle.clone())).id();
 
 		app.update();
@@ -154,17 +133,15 @@ mod tests {
 	#[test]
 	fn set_image_to_none() {
 		let handle = new_handle();
-		let mut app = setup(_AssetServer::new().with_mock(|mock| {
-			mock.expect_load_asset::<Image, PathBuf>()
-				.never()
-				.return_const(handle.clone());
-			mock.expect_get_asset_load_state()
-				.with(eq(handle.id().untyped()))
-				.times(1)
-				.return_const(LoadState::Failed(Arc::new(
-					AssetLoadError::AssetReaderError(AssetReaderError::NotFound(PathBuf::from(""))),
-				)));
-		}));
+		let mut app = setup(_AssetServer {
+			load_states: HashMap::from([(
+				handle.id().untyped(),
+				LoadState::Failed(Arc::new(AssetLoadError::AssetReaderError(
+					AssetReaderError::NotFound(PathBuf::from("")),
+				))),
+			)]),
+			..default()
+		});
 		let entity = app.world_mut().spawn(Icon::Load(handle)).id();
 
 		app.update();

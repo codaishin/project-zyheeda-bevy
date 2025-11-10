@@ -19,7 +19,7 @@ pub(crate) struct AssetWriter {
 
 impl AssetWriter {
 	fn open_for_override(&self, path: Path) -> Result<File, IoError> {
-		let path = self.asset_path.join(path.as_string());
+		let path = self.asset_path.join(path.path());
 		File::create(path)
 	}
 }

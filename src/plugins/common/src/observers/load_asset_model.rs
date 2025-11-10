@@ -55,31 +55,14 @@ fn load_asset_model<TServer>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::asset::AssetPath;
-	use macros::NestedMocks;
-	use mockall::{automock, predicate::eq};
-	use testing::{NestedMocks, new_handle};
+	use crate::traits::load_asset::mock::MockAssetServer;
+	use testing::new_handle;
 
-	#[derive(Resource, NestedMocks)]
-	struct _AssetServer {
-		mock: Mock_AssetServer,
-	}
-
-	#[automock]
-	impl LoadAsset for _AssetServer {
-		fn load_asset<TAsset: Asset, TPath: Into<AssetPath<'static>> + 'static>(
-			&mut self,
-			path: TPath,
-		) -> Handle<TAsset> {
-			self.mock.load_asset(path)
-		}
-	}
-
-	fn setup(asset_server: _AssetServer) -> App {
+	fn setup(asset_server: MockAssetServer) -> App {
 		let mut app = App::new();
 
 		app.insert_resource(asset_server);
-		app.add_observer(load_asset_model::<_AssetServer>);
+		app.add_observer(load_asset_model::<MockAssetServer>);
 
 		app
 	}
@@ -87,14 +70,14 @@ mod tests {
 	#[test]
 	fn load_asset() {
 		let handle = new_handle();
+		let path = "my/model.glb";
 		let mut app = setup(
-			_AssetServer::new().with_mock(|mock: &mut Mock_AssetServer| {
-				mock.expect_load_asset::<Scene, AssetPath<'static>>()
-					.return_const(handle.clone());
-			}),
+			MockAssetServer::default()
+				.path(GltfAssetLabel::Scene(0).from_asset(path))
+				.returns(handle.clone()),
 		);
 
-		let model = app.world_mut().spawn(AssetModel::path("my/model.glb")).id();
+		let model = app.world_mut().spawn(AssetModel::path(path)).id();
 
 		assert_eq!(
 			Some(&SceneRoot(handle)),
@@ -104,12 +87,7 @@ mod tests {
 
 	#[test]
 	fn load_default_asset_when_set_to_none() {
-		let mut app = setup(
-			_AssetServer::new().with_mock(|mock: &mut Mock_AssetServer| {
-				mock.expect_load_asset::<Scene, AssetPath<'static>>()
-					.return_const(new_handle());
-			}),
-		);
+		let mut app = setup(MockAssetServer::default());
 
 		let model = app.world_mut().spawn(AssetModel::none()).id();
 
@@ -120,27 +98,8 @@ mod tests {
 	}
 
 	#[test]
-	fn load_asset_with_correct_path() {
-		let mut app = setup(_AssetServer::new().with_mock(assert_correct_path));
-
-		app.world_mut().spawn(AssetModel::path("my/model.glb"));
-
-		fn assert_correct_path(mock: &mut Mock_AssetServer) {
-			mock.expect_load_asset::<Scene, AssetPath<'static>>()
-				.times(1)
-				.with(eq(GltfAssetLabel::Scene(0).from_asset("my/model.glb")))
-				.return_const(new_handle());
-		}
-	}
-
-	#[test]
 	fn remove_asset_model_component() {
-		let mut app = setup(
-			_AssetServer::new().with_mock(|mock: &mut Mock_AssetServer| {
-				mock.expect_load_asset::<Scene, AssetPath<'static>>()
-					.return_const(new_handle());
-			}),
-		);
+		let mut app = setup(MockAssetServer::default());
 
 		let model = app.world_mut().spawn(AssetModel::path("my/model.glb")).id();
 
@@ -149,13 +108,7 @@ mod tests {
 
 	#[test]
 	fn insert_flip() {
-		let handle = new_handle();
-		let mut app = setup(
-			_AssetServer::new().with_mock(|mock: &mut Mock_AssetServer| {
-				mock.expect_load_asset::<Scene, AssetPath<'static>>()
-					.return_const(handle.clone());
-			}),
-		);
+		let mut app = setup(MockAssetServer::default());
 
 		let model = app
 			.world_mut()

@@ -39,7 +39,7 @@ where
 	move |animation| {
 		let animations = match &animation {
 			AnimationAsset::Path(path) => {
-				let clip = server.load_asset(path.clone());
+				let clip = server.load_asset(path);
 				let index = graph.add_clip(clip, 1., blend_node);
 				Animations::Single(index)
 			}
@@ -48,7 +48,7 @@ where
 				let mut animations = DirectionalIndices::default();
 
 				for (animation, path) in iter_parallel(&mut animations, direction_paths) {
-					let clip = server.load_asset(path.clone());
+					let clip = server.load_asset(path);
 					*animation = graph.add_clip(clip, 0., blend_node);
 				}
 
@@ -87,22 +87,9 @@ trait AnimationGraphTrait {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::asset::AssetPath;
-	use common::traits::load_asset::Path;
-	use macros::simple_mock;
+	use common::traits::load_asset::{Path, mock::MockAssetServer};
 	use mockall::{mock, predicate::eq};
-	use testing::{Mock, new_handle, new_handle_from};
-	use uuid::{Uuid, uuid};
-
-	simple_mock! {
-		_AssetServer {}
-		impl LoadAsset for _AssetServer {
-			fn load_asset<TAsset, TPath>(&mut self, path: TPath) -> Handle<TAsset>
-			where
-				TAsset: Asset,
-				TPath: Into<AssetPath<'static>> + 'static;
-		}
-	}
+	use testing::new_handle;
 
 	macro_rules! setup_graph {
 		($setup:expr) => {
@@ -177,50 +164,40 @@ mod tests {
 				.with(eq(1.), eq(AnimationNodeIndex::new(42)))
 				.return_const(AnimationNodeIndex::default());
 		});
-		let mut server = Mock_AssetServer::new_mock(|mock| {
-			mock.expect_load_asset::<AnimationClip, Path>()
-				.return_const(new_handle());
-		});
+		let mut server = MockAssetServer::default();
 
 		let _: _AnimAssets = server.load_animation_assets(vec![]);
 	}
 
 	mod single_animation_asset {
 		use super::*;
+		use std::sync::LazyLock;
 
 		#[test]
 		fn load_asset() {
 			setup_graph!(|_| {});
-			let path = Path::from("a");
-			let mut server = Mock_AssetServer::new_mock(|mock| {
-				mock.expect_load_asset::<AnimationClip, Path>()
-					.times(1)
-					.with(eq(path.clone()))
-					.return_const(new_handle());
-			});
+			let path = "a";
+			let mut server = MockAssetServer::default()
+				.path(path)
+				.returns(new_handle::<AnimationClip>());
 
-			let _: _AnimAssets = server.load_animation_assets(vec![AnimationAsset::Path(path)]);
+			let _: _AnimAssets = server.load_animation_assets(vec![AnimationAsset::from(path)]);
+
+			assert_eq!(1, server.calls(path))
 		}
 
 		#[test]
 		fn add_loaded_clip_to_graph() {
-			const ASSET_ID: Uuid = uuid!("37f757ff-7e4a-4ac0-8ec3-4f18b5e446ec");
+			static HANDLE: LazyLock<Handle<AnimationClip>> = LazyLock::new(new_handle);
 			setup_graph!(|mock| {
 				mock.expect_add_additive_blend()
 					.return_const(AnimationNodeIndex::new(11));
 				mock.expect_add_clip()
 					.times(1)
-					.with(
-						eq(new_handle_from(ASSET_ID)),
-						eq(1.),
-						eq(AnimationNodeIndex::new(11)),
-					)
+					.with(eq(HANDLE.clone()), eq(1.), eq(AnimationNodeIndex::new(11)))
 					.return_const(AnimationNodeIndex::default());
 			});
-			let mut server = Mock_AssetServer::new_mock(|mock| {
-				mock.expect_load_asset::<AnimationClip, Path>()
-					.return_const(new_handle_from(ASSET_ID));
-			});
+			let mut server = MockAssetServer::default().path("a").returns(HANDLE.clone());
 
 			let _: _AnimAssets = server.load_animation_assets(vec![AnimationAsset::from("a")]);
 		}
@@ -231,10 +208,7 @@ mod tests {
 				mock.expect_add_clip()
 					.return_const(AnimationNodeIndex::new(111));
 			});
-			let mut server = Mock_AssetServer::new_mock(|mock| {
-				mock.expect_load_asset::<AnimationClip, Path>()
-					.return_const(new_handle());
-			});
+			let mut server = MockAssetServer::default();
 
 			let (_, map): _AnimAssets =
 				server.load_animation_assets(vec![AnimationAsset::from("a")]);
@@ -251,48 +225,42 @@ mod tests {
 
 	mod directional_animation_asset {
 		use super::*;
+		use std::sync::LazyLock;
 
 		#[test]
 		fn load_assets() {
 			setup_graph!(|_| {});
-			let forward = Path::from("forward");
-			let backward = Path::from("backward");
-			let left = Path::from("left");
-			let right = Path::from("right");
-			let mut server = Mock_AssetServer::new_mock(|mock| {
-				mock.expect_load_asset::<AnimationClip, Path>()
-					.times(1)
-					.with(eq(forward.clone()))
-					.return_const(new_handle());
-				mock.expect_load_asset::<AnimationClip, Path>()
-					.times(1)
-					.with(eq(backward.clone()))
-					.return_const(new_handle());
-				mock.expect_load_asset::<AnimationClip, Path>()
-					.times(1)
-					.with(eq(left.clone()))
-					.return_const(new_handle());
-				mock.expect_load_asset::<AnimationClip, Path>()
-					.times(1)
-					.with(eq(right.clone()))
-					.return_const(new_handle());
-			});
+			let forward = "forward";
+			let backward = "backward";
+			let left = "left";
+			let right = "right";
+			let mut server = MockAssetServer::default();
 
 			let _: _AnimAssets =
 				server.load_animation_assets(vec![AnimationAsset::Directional(Directional {
-					forward,
-					backward,
-					left,
-					right,
+					forward: Path::from(forward),
+					backward: Path::from(backward),
+					left: Path::from(left),
+					right: Path::from(right),
 				})]);
+
+			assert_eq!(
+				(1, 1, 1, 1),
+				(
+					server.calls(forward),
+					server.calls(backward),
+					server.calls(left),
+					server.calls(right)
+				)
+			)
 		}
 
 		#[test]
 		fn add_loaded_clips_to_graph() {
-			const FORWARD_ID: Uuid = uuid!("3786ced0-3930-472c-aa84-8b0338cce8c8");
-			const BACKWARD_ID: Uuid = uuid!("c4d79d59-49b2-45aa-bc35-36ddad029f28");
-			const LEFT_ID: Uuid = uuid!("f6b9a572-6a8a-4846-b88e-5e936f4492d5");
-			const RIGHT_ID: Uuid = uuid!("80176d8a-23c4-4dc0-a6c7-2b6cf5e23621");
+			static FORWARD: LazyLock<Handle<AnimationClip>> = LazyLock::new(new_handle);
+			static BACKWARD: LazyLock<Handle<AnimationClip>> = LazyLock::new(new_handle);
+			static LEFT: LazyLock<Handle<AnimationClip>> = LazyLock::new(new_handle);
+			static RIGHT: LazyLock<Handle<AnimationClip>> = LazyLock::new(new_handle);
 			setup_graph!(|mock| {
 				mock.expect_add_additive_blend()
 					.return_const(AnimationNodeIndex::new(11));
@@ -303,7 +271,7 @@ mod tests {
 				mock.expect_add_clip()
 					.times(1)
 					.with(
-						eq(new_handle_from(FORWARD_ID)),
+						eq(FORWARD.clone()),
 						eq(0.),
 						eq(AnimationNodeIndex::new(4242)),
 					)
@@ -311,115 +279,89 @@ mod tests {
 				mock.expect_add_clip()
 					.times(1)
 					.with(
-						eq(new_handle_from(BACKWARD_ID)),
+						eq(BACKWARD.clone()),
 						eq(0.),
 						eq(AnimationNodeIndex::new(4242)),
 					)
 					.return_const(AnimationNodeIndex::default());
 				mock.expect_add_clip()
 					.times(1)
-					.with(
-						eq(new_handle_from(LEFT_ID)),
-						eq(0.),
-						eq(AnimationNodeIndex::new(4242)),
-					)
+					.with(eq(LEFT.clone()), eq(0.), eq(AnimationNodeIndex::new(4242)))
 					.return_const(AnimationNodeIndex::default());
 				mock.expect_add_clip()
 					.times(1)
-					.with(
-						eq(new_handle_from(RIGHT_ID)),
-						eq(0.),
-						eq(AnimationNodeIndex::new(4242)),
-					)
+					.with(eq(RIGHT.clone()), eq(0.), eq(AnimationNodeIndex::new(4242)))
 					.return_const(AnimationNodeIndex::default());
 			});
-			let forward = Path::from("forward");
-			let backward = Path::from("backward");
-			let left = Path::from("left");
-			let right = Path::from("right");
-			let mut server = Mock_AssetServer::new_mock(|mock| {
-				mock.expect_load_asset::<AnimationClip, Path>()
-					.with(eq(forward.clone()))
-					.return_const(new_handle_from(FORWARD_ID));
-				mock.expect_load_asset::<AnimationClip, Path>()
-					.with(eq(backward.clone()))
-					.return_const(new_handle_from(BACKWARD_ID));
-				mock.expect_load_asset::<AnimationClip, Path>()
-					.with(eq(left.clone()))
-					.return_const(new_handle_from(LEFT_ID));
-				mock.expect_load_asset::<AnimationClip, Path>()
-					.with(eq(right.clone()))
-					.return_const(new_handle_from(RIGHT_ID));
-			});
+			let forward = "forward";
+			let backward = "backward";
+			let left = "left";
+			let right = "right";
+			let mut server = MockAssetServer::default()
+				.path(forward)
+				.returns(FORWARD.clone())
+				.path(backward)
+				.returns(BACKWARD.clone())
+				.path(left)
+				.returns(LEFT.clone())
+				.path(right)
+				.returns(RIGHT.clone());
 
 			let _: _AnimAssets =
 				server.load_animation_assets(vec![AnimationAsset::Directional(Directional {
-					forward,
-					backward,
-					left,
-					right,
+					forward: Path::from(forward),
+					backward: Path::from(backward),
+					left: Path::from(left),
+					right: Path::from(right),
 				})]);
 		}
 
 		#[test]
 		fn return_animation_node_indices() {
-			const FORWARD_ID: Uuid = uuid!("3786ced0-3930-472c-aa84-8b0338cce8c8");
-			const BACKWARD_ID: Uuid = uuid!("c4d79d59-49b2-45aa-bc35-36ddad029f28");
-			const LEFT_ID: Uuid = uuid!("f6b9a572-6a8a-4846-b88e-5e936f4492d5");
-			const RIGHT_ID: Uuid = uuid!("80176d8a-23c4-4dc0-a6c7-2b6cf5e23621");
+			static FORWARD: LazyLock<Handle<AnimationClip>> = LazyLock::new(new_handle);
+			static BACKWARD: LazyLock<Handle<AnimationClip>> = LazyLock::new(new_handle);
+			static LEFT: LazyLock<Handle<AnimationClip>> = LazyLock::new(new_handle);
+			static RIGHT: LazyLock<Handle<AnimationClip>> = LazyLock::new(new_handle);
 			setup_graph!(|mock| {
 				mock.expect_add_clip()
 					.with(
-						eq(new_handle_from(FORWARD_ID)),
+						eq(FORWARD.clone()),
 						eq(0.),
 						eq(AnimationNodeIndex::default()),
 					)
 					.return_const(AnimationNodeIndex::new(1));
 				mock.expect_add_clip()
 					.with(
-						eq(new_handle_from(BACKWARD_ID)),
+						eq(BACKWARD.clone()),
 						eq(0.),
 						eq(AnimationNodeIndex::default()),
 					)
 					.return_const(AnimationNodeIndex::new(2));
 				mock.expect_add_clip()
-					.with(
-						eq(new_handle_from(LEFT_ID)),
-						eq(0.),
-						eq(AnimationNodeIndex::default()),
-					)
+					.with(eq(LEFT.clone()), eq(0.), eq(AnimationNodeIndex::default()))
 					.return_const(AnimationNodeIndex::new(3));
 				mock.expect_add_clip()
-					.with(
-						eq(new_handle_from(RIGHT_ID)),
-						eq(0.),
-						eq(AnimationNodeIndex::default()),
-					)
+					.with(eq(RIGHT.clone()), eq(0.), eq(AnimationNodeIndex::default()))
 					.return_const(AnimationNodeIndex::new(4));
 			});
-			let forward = Path::from("forward");
-			let backward = Path::from("backward");
-			let left = Path::from("left");
-			let right = Path::from("right");
-			let mut server = Mock_AssetServer::new_mock(|mock| {
-				mock.expect_load_asset::<AnimationClip, Path>()
-					.with(eq(forward.clone()))
-					.return_const(new_handle_from(FORWARD_ID));
-				mock.expect_load_asset::<AnimationClip, Path>()
-					.with(eq(backward.clone()))
-					.return_const(new_handle_from(BACKWARD_ID));
-				mock.expect_load_asset::<AnimationClip, Path>()
-					.with(eq(left.clone()))
-					.return_const(new_handle_from(LEFT_ID));
-				mock.expect_load_asset::<AnimationClip, Path>()
-					.with(eq(right.clone()))
-					.return_const(new_handle_from(RIGHT_ID));
-			});
+			let forward = "forward";
+			let backward = "backward";
+			let left = "left";
+			let right = "right";
+			let mut server = MockAssetServer::default()
+				.path(forward)
+				.returns(FORWARD.clone())
+				.path(backward)
+				.returns(BACKWARD.clone())
+				.path(left)
+				.returns(LEFT.clone())
+				.path(right)
+				.returns(RIGHT.clone());
 			let asset = AnimationAsset::Directional(Directional {
-				forward,
-				backward,
-				left,
-				right,
+				forward: Path::from(forward),
+				backward: Path::from(backward),
+				left: Path::from(left),
+				right: Path::from(right),
 			});
 
 			let (_, map): _AnimAssets = server.load_animation_assets(vec![asset.clone()]);

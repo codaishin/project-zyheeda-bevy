@@ -49,7 +49,7 @@ impl TryLoadFrom<SkillDto> for Skill {
 			animation: skill_data.animation,
 			behavior: RunSkillBehavior::from(skill_data.behavior),
 			compatible_items: CompatibleItems(skill_data.is_usable_with),
-			icon: match skill_data.icon {
+			icon: match &skill_data.icon {
 				Some(icon) => asset_server.load_asset(icon),
 				None => Handle::default(),
 			},

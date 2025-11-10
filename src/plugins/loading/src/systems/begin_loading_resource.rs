@@ -15,7 +15,7 @@ where
 	TServer: LoadAsset + Resource,
 {
 	move |mut commands, mut server| {
-		let handle = server.load_asset::<TAsset, Path>(path.clone());
+		let handle: Handle<TAsset> = server.load_asset(&path);
 		commands.insert_resource(AssetResourceHandle(handle));
 	}
 }
@@ -28,59 +28,40 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::asset::AssetPath;
-	use macros::NestedMocks;
-	use mockall::{automock, predicate::eq};
-	use testing::{NestedMocks, SingleThreadedApp, new_handle};
+	use common::traits::load_asset::mock::MockAssetServer;
+	use testing::{SingleThreadedApp, new_handle};
 
 	#[derive(Asset, TypePath, Debug, PartialEq)]
 	struct _Asset;
 
-	#[derive(Resource, NestedMocks)]
-	struct _Server {
-		mock: Mock_Server,
-	}
-
-	#[automock]
-	impl LoadAsset for _Server {
-		fn load_asset<TAsset, TPath>(&mut self, path: TPath) -> Handle<TAsset>
-		where
-			TAsset: Asset,
-			TPath: Into<AssetPath<'static>> + 'static,
-		{
-			self.mock.load_asset(path)
-		}
-	}
-
-	fn setup(path: Path, server: _Server) -> App {
+	fn setup(path: Path, server: MockAssetServer) -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.insert_resource(server);
-		app.add_systems(Update, begin_loading::<_Asset, _Server>(path));
+		app.add_systems(Update, begin_loading::<_Asset, MockAssetServer>(path));
 
 		app
 	}
 
 	#[test]
 	fn call_asset_server_load() {
-		let server = _Server::new().with_mock(|mock| {
-			mock.expect_load_asset()
-				.times(1)
-				.with(eq(Path::from("my/path")))
-				.return_const(new_handle::<_Asset>());
-		});
+		let server = MockAssetServer::default();
 		let mut app = setup(Path::from("my/path"), server);
 
 		app.update();
+
+		assert_eq!(
+			1,
+			app.world().resource::<MockAssetServer>().calls("my/path"),
+		)
 	}
 
 	#[test]
 	fn store_asset_handle() {
 		let handle = new_handle();
-		let server = _Server::new().with_mock(|mock| {
-			mock.expect_load_asset::<_Asset, Path>()
-				.return_const(handle.clone());
-		});
+		let server = MockAssetServer::default()
+			.path("my/path")
+			.returns(handle.clone());
 		let mut app = setup(Path::from("my/path"), server);
 
 		app.update();
