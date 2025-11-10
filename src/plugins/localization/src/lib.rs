@@ -21,8 +21,9 @@ use resources::ftl_server::FtlServer;
 use std::marker::PhantomData;
 use systems::{
 	init_ftl_server::InitFtlServer,
+	load_requested_asset_file::LoadRequestedAssetFile,
+	load_requested_asset_folder::LoadRequestedAssetFolder,
 	remove_failed_asset_handles::RemoveFailedAssetHandles,
-	set_requested_language::LoadRequestedAssets,
 	update_ftl_bundle::UpdateFtlBundle,
 };
 use unic_langid::langid;
@@ -52,7 +53,8 @@ where
 			.add_systems(
 				Update,
 				(
-					FtlServer::load_requested_assets(Path::from("locale")),
+					FtlServer::load_requested_asset_file(Path::from("locale")),
+					FtlServer::load_requested_asset_folder(Path::from("locale")),
 					FtlServer::remove_failed_asset_handles,
 					FtlServer::update_ftl_bundle.pipe(OnError::log),
 				),

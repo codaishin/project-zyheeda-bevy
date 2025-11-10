@@ -3352,6 +3352,7 @@ dependencies = [
  "fluent-syntax",
  "macros",
  "mockall",
+ "test-case",
  "testing",
  "unic-langid",
  "zyheeda_core",

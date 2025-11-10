@@ -1,2 +1,2 @@
 pub(crate) mod current_locale;
-pub(crate) mod requested_language;
+pub(crate) mod update_current_locale;
