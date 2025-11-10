@@ -1,7 +1,10 @@
 use crate::{
 	assets::ftl::Ftl,
 	tools::list_string,
-	traits::{current_locale::CurrentLocaleMut, requested_language::UpdateCurrentLocaleMut},
+	traits::{
+		current_locale::CurrentLocaleMut,
+		update_current_locale::{UpdateCurrentLocaleFromFile, UpdateCurrentLocaleFromFolder},
+	},
 };
 use bevy::{asset::LoadedFolder, prelude::*};
 use common::traits::{
@@ -26,7 +29,8 @@ where
 {
 	fallback: Locale,
 	current: Option<Locale>,
-	update: bool,
+	update_file: bool,
+	update_folder: bool,
 	logger: TLogger,
 }
 
@@ -51,7 +55,8 @@ impl From<LanguageIdentifier> for FtlServer {
 			},
 			current: None,
 			logger: Logger,
-			update: true,
+			update_file: true,
+			update_folder: true,
 		}
 	}
 }
@@ -66,7 +71,8 @@ impl SetLocalization for FtlServer {
 	fn set_localization(&mut self, language: LanguageIdentifier) {
 		if language == self.fallback.ln {
 			self.current = None;
-			self.update = false;
+			self.update_file = false;
+			self.update_folder = false;
 			return;
 		}
 
@@ -80,7 +86,8 @@ impl SetLocalization for FtlServer {
 			folder: None,
 			bundle: None,
 		});
-		self.update = true;
+		self.update_file = true;
+		self.update_folder = true;
 	}
 }
 
@@ -152,9 +159,15 @@ where
 	}
 }
 
-impl UpdateCurrentLocaleMut for FtlServer {
-	fn update_current_locale(&mut self) -> &mut bool {
-		&mut self.update
+impl UpdateCurrentLocaleFromFile for FtlServer {
+	fn update_current_locale_from_file(&mut self) -> &mut bool {
+		&mut self.update_file
+	}
+}
+
+impl UpdateCurrentLocaleFromFolder for FtlServer {
+	fn update_current_locale_from_folder(&mut self) -> &mut bool {
+		&mut self.update_folder
 	}
 }
 
@@ -246,7 +259,8 @@ mod tests {
 			},
 			current: None,
 			logger: Logger,
-			update: false,
+			update_file: false,
+			update_folder: false,
 		};
 
 		let current = server.current_locale_mut();
@@ -270,7 +284,8 @@ mod tests {
 				bundle: None,
 			}),
 			logger: Logger,
-			update: false,
+			update_file: false,
+			update_folder: false,
 		};
 
 		let current = server.current_locale_mut();
@@ -289,7 +304,8 @@ mod tests {
 			},
 			current: None,
 			logger: Logger,
-			update: false,
+			update_file: false,
+			update_folder: false,
 		};
 
 		server.set_localization(langid!("jp"));
@@ -297,7 +313,7 @@ mod tests {
 		assert_eq!(
 			(true, &langid!("jp")),
 			(
-				*server.update_current_locale(),
+				*server.update_current_locale_from_folder(),
 				&server.current_locale_mut().ln
 			)
 		);
@@ -319,7 +335,8 @@ mod tests {
 				bundle: None,
 			}),
 			logger: Logger,
-			update: false,
+			update_file: false,
+			update_folder: false,
 		};
 
 		server.set_localization(langid!("en"));
@@ -327,7 +344,7 @@ mod tests {
 		assert_eq!(
 			(false, &langid!("en")),
 			(
-				*server.update_current_locale(),
+				*server.update_current_locale_from_folder(),
 				&server.current_locale_mut().ln
 			)
 		);
@@ -351,12 +368,13 @@ mod tests {
 				bundle: Some(FluentBundle::new_concurrent(vec![langid!("jp")])),
 			}),
 			logger: Logger,
-			update: false,
+			update_file: false,
+			update_folder: false,
 		};
 
 		server.set_localization(langid!("jp"));
 
-		let update = *server.update_current_locale();
+		let update = *server.update_current_locale_from_folder();
 		let locale = &server.current_locale_mut();
 		assert_eq!(
 			(false, &langid!("jp"), &Some(file), &Some(folder), true),
@@ -386,12 +404,13 @@ mod tests {
 				bundle: Some(FluentBundle::new_concurrent(vec![langid!("jp")])),
 			}),
 			logger: Logger,
-			update: false,
+			update_file: false,
+			update_folder: false,
 		};
 
 		server.set_localization(langid!("jp"));
 
-		let update = *server.update_current_locale();
+		let update = *server.update_current_locale_from_folder();
 		let locale = &server.current_locale_mut();
 		assert_eq!(
 			(true, &langid!("jp"), &None, &None, false),
@@ -424,7 +443,8 @@ mod tests {
 			},
 			current: None,
 			logger: Logger,
-			update: false,
+			update_file: false,
+			update_folder: false,
 		});
 
 		let Loaded(loaded) = app
@@ -446,7 +466,8 @@ mod tests {
 			},
 			current: None,
 			logger: Logger,
-			update: false,
+			update_file: false,
+			update_folder: false,
 		});
 
 		let Loaded(loaded) = app
@@ -469,7 +490,8 @@ mod tests {
 			},
 			current: None,
 			logger: Logger,
-			update: false,
+			update_file: false,
+			update_folder: false,
 		});
 
 		let Loaded(loaded) = app
@@ -491,7 +513,8 @@ mod tests {
 			},
 			current: None,
 			logger: Logger,
-			update: false,
+			update_file: false,
+			update_folder: false,
 		});
 
 		let Loaded(loaded) = app
@@ -513,7 +536,8 @@ mod tests {
 			},
 			current: None,
 			logger: Logger,
-			update: false,
+			update_file: false,
+			update_folder: false,
 		});
 
 		let Loaded(loaded) = app
@@ -544,7 +568,8 @@ mod tests {
 				mock.expect_log_error::<FtlError>().never();
 				mock.expect_log_warning::<FtlError>().never();
 			}),
-			update: false,
+			update_file: false,
+			update_folder: false,
 		};
 
 		assert_eq!(
@@ -578,7 +603,8 @@ mod tests {
 				mock.expect_log_error::<FtlError>().never();
 				mock.expect_log_warning::<FtlError>().never();
 			}),
-			update: false,
+			update_file: false,
+			update_folder: false,
 		};
 
 		assert_eq!(
@@ -607,7 +633,8 @@ mod tests {
 					.return_const(());
 				mock.expect_log_warning::<FtlError>().never();
 			}),
-			update: false,
+			update_file: false,
+			update_folder: false,
 		};
 
 		assert_eq!(
@@ -645,7 +672,8 @@ mod tests {
 					.return_const(());
 				mock.expect_log_warning::<FtlError>().never();
 			}),
-			update: false,
+			update_file: false,
+			update_folder: false,
 		};
 
 		assert_eq!(
@@ -683,7 +711,8 @@ mod tests {
 					.return_const(());
 				mock.expect_log_warning::<FtlError>().never();
 			}),
-			update: false,
+			update_file: false,
+			update_folder: false,
 		};
 
 		assert_eq!(
@@ -728,7 +757,8 @@ mod tests {
 					.return_const(());
 				mock.expect_log_warning::<FtlError>().never();
 			}),
-			update: false,
+			update_file: false,
+			update_folder: false,
 		};
 
 		assert_eq!(
@@ -780,7 +810,8 @@ mod tests {
 					)
 					.return_const(());
 			}),
-			update: false,
+			update_file: false,
+			update_folder: false,
 		};
 
 		assert_eq!(
@@ -841,7 +872,8 @@ mod tests {
 					)
 					.return_const(());
 			}),
-			update: false,
+			update_file: false,
+			update_folder: false,
 		};
 
 		assert_eq!(
@@ -902,7 +934,8 @@ mod tests {
 					)
 					.return_const(());
 			}),
-			update: false,
+			update_file: false,
+			update_folder: false,
 		};
 
 		assert_eq!(
@@ -958,7 +991,8 @@ mod tests {
 					.return_const(());
 				mock.expect_log_warning::<FtlError>().never();
 			}),
-			update: false,
+			update_file: false,
+			update_folder: false,
 		};
 
 		assert_eq!(

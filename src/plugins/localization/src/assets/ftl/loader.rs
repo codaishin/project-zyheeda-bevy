@@ -28,7 +28,7 @@ impl AssetLoader for FtlLoader {
 	type Error = ReadError;
 
 	fn extensions(&self) -> &[&str] {
-		&[".ftl"]
+		&["ftl"]
 	}
 
 	async fn load(
