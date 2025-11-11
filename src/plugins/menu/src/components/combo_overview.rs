@@ -27,7 +27,7 @@ use common::{
 		accessors::get::{DynProperty, GetProperty},
 		handles_loadout::skills::{GetSkillId, SkillIcon, SkillToken},
 		handles_localization::{Localize, LocalizeToken, Token, localized::Localized},
-		load_asset::{LoadAsset, Path},
+		load_asset::LoadAsset,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -64,7 +64,7 @@ where
 {
 	fn load_ui(images: &mut TAssetServer) -> Self {
 		ComboOverview {
-			new_skill_icon: images.load_asset(Path::from("icons/empty.png")),
+			new_skill_icon: images.load_asset("icons/empty.png"),
 			..default()
 		}
 	}
@@ -747,12 +747,8 @@ fn add_delete_button<TLocalization>(
 mod tests {
 	use super::*;
 	use crate::traits::build_combo_tree_layout::ComboTreeElement;
-	use bevy::asset::{Asset, AssetId, AssetPath};
-	use common::tools::action_key::slot::PlayerSlot;
-	use macros::simple_mock;
-	use mockall::predicate::eq;
-	use testing::{Mock, new_handle};
-	use uuid::Uuid;
+	use common::{tools::action_key::slot::PlayerSlot, traits::load_asset::mock::MockAssetServer};
+	use testing::new_handle;
 
 	#[test]
 	fn update_combos() {
@@ -782,46 +778,21 @@ mod tests {
 		);
 	}
 
-	simple_mock! {
-		_Server {}
-		impl LoadAsset for _Server {
-			fn load_asset<TAsset, TPath>(&mut self, path: TPath) -> Handle<TAsset>
-			where
-				TAsset: Asset,
-				TPath: Into<AssetPath<'static>> + 'static;
-		}
-	}
-
 	#[test]
 	fn load_ui_with_asset_handle() {
-		let handle = Handle::<Image>::Weak(AssetId::Uuid {
-			uuid: Uuid::new_v4(),
-		});
-		let mut server = Mock_Server::new_mock(|mock| {
-			mock.expect_load_asset::<Image, Path>()
-				.return_const(handle.clone());
-		});
+		let new_skill_icon = new_handle();
+		let mut server = MockAssetServer::default()
+			.path("icons/empty.png")
+			.returns(new_skill_icon.clone());
 
 		let combos = ComboOverview::<()>::load_ui(&mut server);
 
 		assert_eq!(
 			ComboOverview {
-				new_skill_icon: handle,
+				new_skill_icon,
 				..default()
 			},
 			combos
 		);
-	}
-
-	#[test]
-	fn load_ui_with_asset_of_correct_path() {
-		let mut server = Mock_Server::new_mock(|mock| {
-			mock.expect_load_asset::<Image, Path>()
-				.times(1)
-				.with(eq(Path::from("icons/empty.png")))
-				.return_const(Handle::default());
-		});
-
-		_ = ComboOverview::<()>::load_ui(&mut server);
 	}
 }

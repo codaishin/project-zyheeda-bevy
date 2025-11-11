@@ -1,7 +1,8 @@
+use crate::tools::path::Path;
+
 use super::{
 	handles_custom_assets::{AssetFileExtensions, TryLoadFrom},
 	handles_load_tracking::LoadGroup,
-	load_asset::Path,
 	thread_safe::ThreadSafe,
 };
 use bevy::prelude::*;

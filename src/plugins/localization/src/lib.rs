@@ -11,10 +11,10 @@ use bevy::prelude::*;
 use common::{
 	states::game_state::LoadingEssentialAssets,
 	systems::log::OnError,
+	tools::path::Path,
 	traits::{
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInApp},
 		handles_localization::HandlesLocalization,
-		load_asset::Path,
 		thread_safe::ThreadSafe,
 	},
 };

@@ -1,8 +1,5 @@
-use super::{
-	load_asset::{LoadAsset, Path},
-	thread_safe::ThreadSafe,
-};
-use crate::errors::Unreachable;
+use super::{load_asset::LoadAsset, thread_safe::ThreadSafe};
+use crate::{errors::Unreachable, tools::path::Path};
 use bevy::{app::App, asset::Asset, reflect::TypePath};
 use serde::Deserialize;
 use std::{error::Error, fmt::Debug};

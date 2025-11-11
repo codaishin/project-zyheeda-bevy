@@ -6,11 +6,14 @@ use bevy::asset::{AssetPath, Handle};
 use common::{
 	dto::duration_in_seconds::DurationInSeconds,
 	errors::Unreachable,
-	tools::item_type::{CompatibleItems, ItemType},
+	tools::{
+		item_type::{CompatibleItems, ItemType},
+		path::Path,
+	},
 	traits::{
 		handles_custom_assets::{AssetFileExtensions, TryLoadFrom},
 		handles_localization::Token,
-		load_asset::{LoadAsset, Path},
+		load_asset::LoadAsset,
 	},
 };
 use run_skill_behavior::RunSkillBehaviorDto;
@@ -49,7 +52,7 @@ impl TryLoadFrom<SkillDto> for Skill {
 			animation: skill_data.animation,
 			behavior: RunSkillBehavior::from(skill_data.behavior),
 			compatible_items: CompatibleItems(skill_data.is_usable_with),
-			icon: match skill_data.icon {
+			icon: match &skill_data.icon {
 				Some(icon) => asset_server.load_asset(icon),
 				None => Handle::default(),
 			},

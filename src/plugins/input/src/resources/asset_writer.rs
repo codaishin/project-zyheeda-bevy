@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use common::{
 	errors::{ErrorData, Level},
-	traits::load_asset::Path,
+	tools::path::Path,
 };
 use serde::Serialize;
 use serde_json::{Error as JsonError, to_string_pretty};
@@ -19,7 +19,7 @@ pub(crate) struct AssetWriter {
 
 impl AssetWriter {
 	fn open_for_override(&self, path: Path) -> Result<File, IoError> {
-		let path = self.asset_path.join(path.as_string());
+		let path = self.asset_path.join(path.path());
 		File::create(path)
 	}
 }

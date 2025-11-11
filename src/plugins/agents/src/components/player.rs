@@ -15,6 +15,7 @@ use common::{
 		animation_key::AnimationKey,
 		collider_radius::ColliderRadius,
 		iter_helpers::{first, next},
+		path::Path,
 	},
 	traits::{
 		animation::{
@@ -32,7 +33,7 @@ use common::{
 		handles_lights::HandlesLights,
 		handles_map_generation::AgentType,
 		iteration::{Iter, IterFinite},
-		load_asset::{LoadAsset, Path},
+		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };

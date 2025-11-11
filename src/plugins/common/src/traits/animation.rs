@@ -1,4 +1,6 @@
-use super::{iteration::IterFinite, load_asset::Path};
+use crate::tools::path::Path;
+
+use super::iteration::IterFinite;
 use bevy::{ecs::component::Mutable, prelude::*};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

@@ -125,12 +125,24 @@ mod tests {
 		errors::Unreachable,
 		traits::{handles_custom_assets::TryLoadFrom, load_asset::LoadAsset},
 	};
-	use macros::{NestedMocks, SavableComponent};
-	use mockall::automock;
+	use macros::SavableComponent;
 	use serde::{Deserialize, Serialize};
 	use serde_json::{from_str, to_string};
 	use std::{any::type_name, collections::HashMap};
 	use testing::SingleThreadedApp;
+
+	#[derive(Resource)]
+	struct _LoadAsset;
+
+	impl LoadAsset for _LoadAsset {
+		fn load_asset<'a, TAsset, TPath>(&mut self, _: TPath) -> Handle<TAsset>
+		where
+			TAsset: Asset,
+			TPath: Into<AssetPath<'a>>,
+		{
+			panic!("NOT USED");
+		}
+	}
 
 	struct _Writer;
 
@@ -138,7 +150,7 @@ mod tests {
 		type TWriteError = ();
 
 		fn write(&self, _: &str) -> Result<(), Self::TWriteError> {
-			panic!("SHOULD NOT BE CALLED");
+			panic!("NOT USED");
 		}
 	}
 
@@ -197,22 +209,6 @@ mod tests {
 			D: serde::Deserializer<'de>,
 		{
 			Err(serde::de::Error::custom("Fool! I refuse deserialization"))
-		}
-	}
-
-	#[derive(Resource, NestedMocks)]
-	struct _LoadAsset {
-		mock: Mock_LoadAsset,
-	}
-
-	#[automock]
-	impl LoadAsset for _LoadAsset {
-		fn load_asset<TAsset, TPath>(&mut self, path: TPath) -> Handle<TAsset>
-		where
-			TAsset: Asset,
-			TPath: Into<AssetPath<'static>> + 'static,
-		{
-			self.mock.load_asset(path)
 		}
 	}
 
@@ -331,19 +327,6 @@ mod tests {
 		#[derive(Component, SavableComponent, Serialize, Deserialize, Clone, PartialEq, Debug)]
 		struct _C {
 			v: i32,
-		}
-
-		#[derive(Resource)]
-		struct _LoadAsset;
-
-		impl LoadAsset for _LoadAsset {
-			fn load_asset<TAsset, TPath>(&mut self, _: TPath) -> Handle<TAsset>
-			where
-				TAsset: Asset,
-				TPath: Into<AssetPath<'static>> + 'static,
-			{
-				panic!("SHOULD NOT BE CALLED");
-			}
 		}
 
 		fn setup() -> App {

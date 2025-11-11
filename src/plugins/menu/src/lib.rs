@@ -40,7 +40,7 @@ use common::{
 		menu_state::MenuState,
 		save_state::SaveState,
 	},
-	tools::action_key::ActionKey,
+	tools::{action_key::ActionKey, path::Path},
 	traits::{
 		handles_graphics::UiCamera,
 		handles_input::{
@@ -60,7 +60,6 @@ use common::{
 		handles_localization::{HandlesLocalization, Token, localized::Localized},
 		handles_player::HandlesPlayer,
 		handles_saving::HandlesSaving,
-		load_asset::Path,
 		prefab::AddPrefabObserver,
 		register_derived_component::RegisterDerivedComponent,
 		thread_safe::ThreadSafe,

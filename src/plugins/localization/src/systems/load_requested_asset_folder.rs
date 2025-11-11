@@ -3,7 +3,7 @@ use crate::traits::{
 	update_current_locale::UpdateCurrentLocaleFromFolder,
 };
 use bevy::prelude::*;
-use common::traits::{load_asset::Path, load_folder_assets::LoadFolderAssets};
+use common::{tools::path::Path, traits::load_folder_assets::LoadFolderAssets};
 use std::path::PathBuf;
 
 impl<T> LoadRequestedAssetFolder for T where
@@ -45,28 +45,10 @@ where
 mod test {
 	use super::*;
 	use crate::resources::ftl_server::Locale;
-	use bevy::asset::{AssetPath, LoadedFolder};
-	use macros::NestedMocks;
-	use mockall::{automock, predicate::eq};
-	use std::path::PathBuf;
+	use common::traits::load_folder_assets::mock::MockFolderAssetServer;
 	use test_case::test_case;
-	use testing::{NestedMocks, SingleThreadedApp, new_handle};
+	use testing::{SingleThreadedApp, new_handle};
 	use unic_langid::{LanguageIdentifier, langid};
-
-	#[derive(Resource, NestedMocks)]
-	struct _AssetServer {
-		mock: Mock_AssetServer,
-	}
-
-	#[automock]
-	impl LoadFolderAssets for _AssetServer {
-		fn load_folder_assets<TPath>(&self, path: TPath) -> Handle<LoadedFolder>
-		where
-			TPath: Into<AssetPath<'static>> + 'static,
-		{
-			self.mock.load_folder_assets(path)
-		}
-	}
 
 	#[derive(Resource)]
 	struct _FtlServer {
@@ -86,11 +68,11 @@ mod test {
 		}
 	}
 
-	fn setup(root_path: Path, asset_server: _AssetServer) -> App {
+	fn setup(root_path: Path, asset_server: MockFolderAssetServer) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
-			load_requested_asset_folder::<_FtlServer, _AssetServer>(root_path),
+			load_requested_asset_folder::<_FtlServer, MockFolderAssetServer>(root_path),
 		);
 		app.insert_resource(asset_server);
 
@@ -100,14 +82,12 @@ mod test {
 	#[test]
 	fn set_asset_folder() {
 		let folder = new_handle();
-		let folder_clone = folder.clone();
-		let server = _AssetServer::new().with_mock(move |mock| {
-			mock.expect_load_folder_assets::<PathBuf>()
-				.times(1)
-				.with(eq(PathBuf::from("my/path/jp")))
-				.return_const(folder_clone.clone());
-		});
-		let mut app = setup(Path::from("my/path"), server);
+		let mut app = setup(
+			Path::from("my/path"),
+			MockFolderAssetServer::default()
+				.path("my/path/jp")
+				.returns(folder.clone()),
+		);
 		app.insert_resource(_FtlServer {
 			update: true,
 			locale: Locale {
@@ -131,14 +111,8 @@ mod test {
 	#[test_case(langid!("zh-Hant"); "stript")]
 	#[test_case(langid!("ja-Jpan-JP"); "complex")]
 	fn use_language(ln: LanguageIdentifier) {
-		let file = ln.to_string().to_lowercase();
-		let server = _AssetServer::new().with_mock(move |mock| {
-			mock.expect_load_folder_assets::<PathBuf>()
-				.times(1)
-				.with(eq(PathBuf::from(format!("my/path/{file}"))))
-				.return_const(new_handle());
-		});
-		let mut app = setup(Path::from("my/path"), server);
+		let folder = ln.to_string().to_lowercase();
+		let mut app = setup(Path::from("my/path"), MockFolderAssetServer::default());
 		app.insert_resource(_FtlServer {
 			update: true,
 			locale: Locale {
@@ -150,16 +124,14 @@ mod test {
 		});
 
 		app.update();
+
+		let server = app.world().resource::<MockFolderAssetServer>();
+		assert_eq!(1, server.calls(format!("my/path/{folder}")));
 	}
 
 	#[test]
 	fn do_nothing_when_not_set_for_update() {
-		let server = _AssetServer::new().with_mock(move |mock| {
-			mock.expect_load_folder_assets::<PathBuf>()
-				.never()
-				.return_const(new_handle());
-		});
-		let mut app = setup(Path::from("my/path"), server);
+		let mut app = setup(Path::from("my/path"), MockFolderAssetServer::default());
 		app.insert_resource(_FtlServer {
 			update: false,
 			locale: Locale {

@@ -27,34 +27,18 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::asset::AssetPath;
-	use common::traits::{handles_enemies::EnemyType, iteration::IterFinite};
-	use macros::NestedMocks;
-	use mockall::{automock, predicate::eq};
-	use std::path::PathBuf;
-	use testing::{NestedMocks, SingleThreadedApp, new_handle};
+	use common::traits::{
+		handles_enemies::EnemyType,
+		iteration::IterFinite,
+		load_asset::mock::MockAssetServer,
+	};
+	use testing::{SingleThreadedApp, new_handle};
 
-	#[derive(Resource, NestedMocks)]
-	struct _Assets {
-		mock: Mock_Assets,
-	}
-
-	#[automock]
-	impl LoadAsset for _Assets {
-		fn load_asset<TAsset, TPath>(&mut self, path: TPath) -> Handle<TAsset>
-		where
-			TAsset: Asset,
-			TPath: Into<AssetPath<'static>> + 'static,
-		{
-			self.mock.load_asset(path)
-		}
-	}
-
-	fn setup(assets: _Assets) -> App {
+	fn setup(assets: MockAssetServer) -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.insert_resource(assets);
-		app.add_systems(Update, lookup_images::<_Assets>);
+		app.add_systems(Update, lookup_images::<MockAssetServer>);
 
 		app
 	}
@@ -62,15 +46,15 @@ mod tests {
 	#[test]
 	fn set_player() {
 		let player = new_handle::<Image>();
-		let mut app = setup(_Assets::new().with_mock(|mock| {
-			mock.expect_load_asset::<Image, PathBuf>()
-				.times(1)
-				.with(eq(PathBuf::from(AgentsColorLookupImages::ROOT_PATH)
-					.join(AgentsColorLookupImages::PLAYER_FILE)))
-				.return_const(player.clone());
-			mock.expect_load_asset::<Image, PathBuf>()
-				.return_const(new_handle());
-		}));
+		let mut app = setup(
+			MockAssetServer::default()
+				.path(format!(
+					"{}/{}",
+					AgentsColorLookupImages::ROOT_PATH,
+					AgentsColorLookupImages::PLAYER_FILE
+				))
+				.returns(player.clone()),
+		);
 
 		app.update();
 
@@ -85,21 +69,16 @@ mod tests {
 	#[test]
 	fn set_enemy() {
 		let mut enemy_handles = HashMap::default();
-		let mut app = setup(_Assets::new().with_mock(|mock| {
-			for enemy_type in EnemyType::iterator() {
-				let file = AgentsColorLookupImages::get_enemy_file(&enemy_type);
-				let enemy = new_handle::<Image>();
-				enemy_handles.insert(enemy_type, enemy.clone());
-				mock.expect_load_asset::<Image, PathBuf>()
-					.times(1)
-					.with(eq(
-						PathBuf::from(AgentsColorLookupImages::ROOT_PATH).join(file)
-					))
-					.return_const(enemy.clone());
-			}
-			mock.expect_load_asset::<Image, PathBuf>()
-				.return_const(new_handle());
-		}));
+		let mut server = MockAssetServer::default();
+		for enemy_type in EnemyType::iterator() {
+			let file = AgentsColorLookupImages::get_enemy_file(&enemy_type);
+			let enemy = new_handle::<Image>();
+			enemy_handles.insert(enemy_type, enemy.clone());
+			server = server
+				.path(format!("{}/{}", AgentsColorLookupImages::ROOT_PATH, file))
+				.returns(enemy);
+		}
+		let mut app = setup(server);
 
 		app.update();
 

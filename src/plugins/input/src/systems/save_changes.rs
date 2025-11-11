@@ -8,8 +8,10 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	errors::{ErrorData, Level},
-	tools::action_key::{ActionKey, user_input::UserInput},
-	traits::load_asset::Path,
+	tools::{
+		action_key::{ActionKey, user_input::UserInput},
+		path::Path,
+	},
 };
 use serde::Serialize;
 use std::{
