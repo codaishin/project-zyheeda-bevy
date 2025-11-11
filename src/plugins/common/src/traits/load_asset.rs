@@ -2,43 +2,7 @@ pub mod asset_server;
 pub mod load_context;
 
 use bevy::{asset::AssetPath, prelude::*};
-use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, ops::Deref, sync::Arc};
-
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
-pub struct Path(Arc<str>);
-
-impl Path {
-	pub fn path(&self) -> &str {
-		&self.0
-	}
-}
-
-impl Deref for Path {
-	type Target = str;
-
-	fn deref(&self) -> &Self::Target {
-		&self.0
-	}
-}
-
-impl From<String> for Path {
-	fn from(value: String) -> Self {
-		Self(Arc::from(value))
-	}
-}
-
-impl<'a> From<&'a str> for Path {
-	fn from(value: &'a str) -> Self {
-		Self(Arc::from(value))
-	}
-}
-
-impl<'a> From<&'a Path> for AssetPath<'a> {
-	fn from(value: &'a Path) -> Self {
-		AssetPath::from(value.path())
-	}
-}
+use std::collections::HashMap;
 
 pub trait LoadAsset {
 	fn load_asset<'a, TAsset, TPath>(&mut self, path: TPath) -> Handle<TAsset>

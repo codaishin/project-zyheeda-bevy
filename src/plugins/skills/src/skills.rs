@@ -13,6 +13,7 @@ use common::{
 	tools::{
 		action_key::slot::SlotKey,
 		item_type::{CompatibleItems, ItemType},
+		path::Path,
 	},
 	traits::{
 		accessors::get::{GetMut, GetProperty},
@@ -21,7 +22,6 @@ use common::{
 		handles_localization::Token,
 		handles_physics::HandlesAllPhysicalEffects,
 		handles_skill_behaviors::{HandlesSkillBehaviors, SkillCaster, SkillSpawner, SkillTarget},
-		load_asset::Path,
 	},
 	zyheeda_commands::ZyheedaCommands,
 };

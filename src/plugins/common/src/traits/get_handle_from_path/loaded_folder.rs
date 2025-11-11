@@ -1,5 +1,6 @@
+use crate::tools::path::Path;
+
 use super::GetHandelFromPath;
-use crate::traits::load_asset::Path;
 use bevy::asset::{Asset, Handle, LoadedFolder, UntypedHandle};
 
 impl<T: Asset> GetHandelFromPath<T> for LoadedFolder {

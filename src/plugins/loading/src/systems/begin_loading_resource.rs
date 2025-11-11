@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::traits::load_asset::{LoadAsset, Path};
+use common::{tools::path::Path, traits::load_asset::LoadAsset};
 
 impl<T> BeginLoadingResource for T where T: Asset {}
 

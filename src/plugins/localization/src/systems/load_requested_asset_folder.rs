@@ -3,7 +3,7 @@ use crate::traits::{
 	update_current_locale::UpdateCurrentLocaleFromFolder,
 };
 use bevy::prelude::*;
-use common::traits::{load_asset::Path, load_folder_assets::LoadFolderAssets};
+use common::{tools::path::Path, traits::load_folder_assets::LoadFolderAssets};
 use std::path::PathBuf;
 
 impl<T> LoadRequestedAssetFolder for T where

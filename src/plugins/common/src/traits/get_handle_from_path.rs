@@ -1,6 +1,6 @@
 pub mod loaded_folder;
 
-use super::load_asset::Path;
+use crate::tools::path::Path;
 use bevy::asset::{Asset, Handle};
 
 pub trait GetHandelFromPath<T: Asset> {

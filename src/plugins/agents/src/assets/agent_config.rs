@@ -4,7 +4,7 @@ use crate::systems::agent::insert_model::InsertModel;
 use bevy::prelude::*;
 use common::{
 	components::asset_model::AssetModel,
-	tools::action_key::slot::SlotKey,
+	tools::{action_key::slot::SlotKey, path::Path},
 	traits::{
 		accessors::get::GetProperty,
 		bone_key::{BoneKey, ConfiguredBones},
@@ -12,7 +12,6 @@ use common::{
 		handles_map_generation::AgentType,
 		handles_physics::PhysicalDefaultAttributes,
 		handles_skill_behaviors::SkillSpawner,
-		load_asset::Path,
 		loadout::{ItemName, LoadoutConfig},
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
 	},

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use common::{
 	errors::{ErrorData, Level},
-	traits::load_asset::Path,
+	tools::path::Path,
 };
 use serde::Serialize;
 use serde_json::{Error as JsonError, to_string_pretty};

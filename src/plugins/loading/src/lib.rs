@@ -20,6 +20,7 @@ use common::{
 		game_state::{LoadingEssentialAssets, LoadingGame},
 		transition_to_state,
 	},
+	tools::path::Path,
 	traits::{
 		handles_asset_resource_loading::HandlesAssetResourceLoading,
 		handles_custom_assets::{
@@ -41,7 +42,6 @@ use common::{
 			RunAfterLoadedInApp,
 		},
 		init_resource::InitResource,
-		load_asset::Path,
 		remove_resource::RemoveResource,
 		thread_safe::ThreadSafe,
 	},

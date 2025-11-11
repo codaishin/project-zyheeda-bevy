@@ -3,7 +3,7 @@ use crate::traits::{
 	update_current_locale::UpdateCurrentLocaleFromFile,
 };
 use bevy::prelude::*;
-use common::traits::load_asset::{LoadAsset, Path};
+use common::{tools::path::Path, traits::load_asset::LoadAsset};
 use std::path::PathBuf;
 
 impl<T> LoadRequestedAssetFile for T where

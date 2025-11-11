@@ -23,7 +23,7 @@ mod tests {
 		app::{App, Update},
 		reflect::TypePath,
 	};
-	use common::traits::{load_asset::Path, load_folder_assets::mock::MockFolderAssetServer};
+	use common::{tools::path::Path, traits::load_folder_assets::mock::MockFolderAssetServer};
 	use testing::{SingleThreadedApp, new_handle};
 
 	#[derive(Asset, TypePath, Debug, PartialEq)]

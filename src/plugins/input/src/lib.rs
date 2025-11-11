@@ -13,11 +13,10 @@ use bevy::prelude::*;
 use common::{
 	states::game_state::LoadingEssentialAssets,
 	systems::log::OnError,
-	tools::action_key::ActionKey,
+	tools::{action_key::ActionKey, path::Path},
 	traits::{
 		handles_asset_resource_loading::HandlesAssetResourceLoading,
 		handles_input::{HandlesActionKeyButton, HandlesInput, HandlesInputMut},
-		load_asset::Path,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 	},

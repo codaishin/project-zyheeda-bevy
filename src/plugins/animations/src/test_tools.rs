@@ -1,6 +1,6 @@
-use common::traits::{
-	animation::{Animation, AnimationAsset},
-	load_asset::Path,
+use common::{
+	tools::path::Path,
+	traits::animation::{Animation, AnimationAsset},
 };
 use std::slice::Iter;
 use uuid::Uuid;

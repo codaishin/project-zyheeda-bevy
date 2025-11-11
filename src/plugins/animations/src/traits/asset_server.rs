@@ -3,9 +3,12 @@ pub(crate) mod animation_graph;
 use super::LoadAnimationAssets;
 use crate::components::animation_lookup::{Animations, DirectionalIndices};
 use bevy::prelude::*;
-use common::traits::{
-	animation::{AnimationAsset, Directional},
-	load_asset::{LoadAsset, Path},
+use common::{
+	tools::path::Path,
+	traits::{
+		animation::{AnimationAsset, Directional},
+		load_asset::LoadAsset,
+	},
 };
 use std::collections::HashMap;
 
@@ -87,7 +90,7 @@ trait AnimationGraphTrait {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::load_asset::{Path, mock::MockAssetServer};
+	use common::traits::load_asset::mock::MockAssetServer;
 	use mockall::{mock, predicate::eq};
 	use testing::new_handle;
 

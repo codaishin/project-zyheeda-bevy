@@ -6,11 +6,14 @@ use bevy::asset::{AssetPath, Handle};
 use common::{
 	dto::duration_in_seconds::DurationInSeconds,
 	errors::Unreachable,
-	tools::item_type::{CompatibleItems, ItemType},
+	tools::{
+		item_type::{CompatibleItems, ItemType},
+		path::Path,
+	},
 	traits::{
 		handles_custom_assets::{AssetFileExtensions, TryLoadFrom},
 		handles_localization::Token,
-		load_asset::{LoadAsset, Path},
+		load_asset::LoadAsset,
 	},
 };
 use run_skill_behavior::RunSkillBehaviorDto;
