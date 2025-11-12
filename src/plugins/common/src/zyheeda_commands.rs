@@ -115,6 +115,13 @@ impl ZyheedaEntityCommands<'_> {
 	pub fn try_despawn(mut self) {
 		self.entity.try_despawn();
 	}
+
+	pub fn trigger_observers_for<TEvent>(&mut self, event: TEvent)
+	where
+		TEvent: Event,
+	{
+		self.entity.commands_mut().trigger(event);
+	}
 }
 
 impl<'a> From<EntityCommands<'a>> for ZyheedaEntityCommands<'a> {
@@ -382,6 +389,8 @@ mod test {
 	}
 
 	mod trigger_observers {
+		use crate::traits::accessors::get::TryApplyOn;
+
 		use super::*;
 
 		#[derive(Event)]
@@ -404,13 +413,31 @@ mod test {
 		}
 
 		#[test]
-		fn trigger_event() -> Result<(), RunSystemError> {
+		fn trigger_event_from_commands() -> Result<(), RunSystemError> {
 			let mut app = setup();
 			let entity = app.world_mut().spawn_empty().id();
 
 			app.world_mut()
 				.run_system_once(move |mut commands: ZyheedaCommands| {
 					commands.trigger_observers_for(_Event { entity });
+				})?;
+
+			assert_eq!(
+				Some(&_Triggered),
+				app.world().entity(entity).get::<_Triggered>(),
+			);
+			Ok(())
+		}
+
+		#[test]
+		fn trigger_event_from_entity() -> Result<(), RunSystemError> {
+			let mut app = setup();
+			let entity = app.world_mut().spawn_empty().id();
+
+			app.world_mut()
+				.run_system_once(move |mut commands: ZyheedaCommands| {
+					commands
+						.try_apply_on(&entity, |mut e| e.trigger_observers_for(_Event { entity }));
 				})?;
 
 			assert_eq!(
