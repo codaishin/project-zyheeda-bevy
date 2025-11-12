@@ -1,11 +1,8 @@
-use common::{
-	tools::path::Path,
-	traits::animation::{Animation, AnimationPath},
-};
+use common::{tools::path::Path, traits::animation::AnimationPath};
 use std::slice::Iter;
 use uuid::Uuid;
 
-pub(crate) fn leak_iterator(animations: Vec<Animation>) -> Iter<'static, Animation> {
+pub(crate) fn leak_iterator<T>(animations: Vec<T>) -> Iter<'static, T> {
 	Box::new(animations).leak().iter()
 }
 

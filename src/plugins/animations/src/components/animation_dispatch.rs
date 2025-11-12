@@ -131,43 +131,64 @@ where
 	}
 }
 
-impl Track<AnimationPlayer> for AnimationDispatch {
+impl<TAnimation> Track<AnimationPlayer> for AnimationDispatch<TAnimation>
+where
+	TAnimation: Eq + Hash,
+{
 	fn track(&mut self, entity: Entity, _: &AnimationPlayer) {
 		self.animation_players.insert(entity);
 	}
 }
 
-impl IsTracking<AnimationPlayer> for AnimationDispatch {
+impl<TAnimation> IsTracking<AnimationPlayer> for AnimationDispatch<TAnimation>
+where
+	TAnimation: Eq + Hash,
+{
 	fn is_tracking(&self, entity: &Entity) -> bool {
 		self.animation_players.contains(entity)
 	}
 }
 
-impl Untrack<AnimationPlayer> for AnimationDispatch {
+impl<TAnimation> Untrack<AnimationPlayer> for AnimationDispatch<TAnimation>
+where
+	TAnimation: Eq + Hash,
+{
 	fn untrack(&mut self, entity: &Entity) {
 		self.animation_players.remove(entity);
 	}
 }
 
-impl Track<AnimationGraphHandle> for AnimationDispatch {
+impl<TAnimation> Track<AnimationGraphHandle> for AnimationDispatch<TAnimation>
+where
+	TAnimation: Eq + Hash,
+{
 	fn track(&mut self, entity: Entity, _: &AnimationGraphHandle) {
 		self.animation_handles.insert(entity);
 	}
 }
 
-impl IsTracking<AnimationGraphHandle> for AnimationDispatch {
+impl<TAnimation> IsTracking<AnimationGraphHandle> for AnimationDispatch<TAnimation>
+where
+	TAnimation: Eq + Hash,
+{
 	fn is_tracking(&self, entity: &Entity) -> bool {
 		self.animation_handles.contains(entity)
 	}
 }
 
-impl Untrack<AnimationGraphHandle> for AnimationDispatch {
+impl<TAnimation> Untrack<AnimationGraphHandle> for AnimationDispatch<TAnimation>
+where
+	TAnimation: Eq + Hash,
+{
 	fn untrack(&mut self, entity: &Entity) {
 		self.animation_handles.remove(entity);
 	}
 }
 
-impl AnimationPlayers for AnimationDispatch {
+impl<TAnimation> AnimationPlayers for AnimationDispatch<TAnimation>
+where
+	TAnimation: Eq + Hash,
+{
 	type TIter = IntoIter<Entity>;
 
 	fn animation_players(&self) -> Self::TIter {
@@ -175,7 +196,10 @@ impl AnimationPlayers for AnimationDispatch {
 	}
 }
 
-impl AnimationPlayersWithoutGraph for AnimationDispatch {
+impl<TAnimation> AnimationPlayersWithoutGraph for AnimationDispatch<TAnimation>
+where
+	TAnimation: Eq + Hash,
+{
 	type TIter = std::vec::IntoIter<Entity>;
 
 	fn animation_players_without_graph(&self) -> Self::TIter {
@@ -515,7 +539,7 @@ mod tests {
 
 	#[test]
 	fn track_animation_player() {
-		let dispatch = &mut AnimationDispatch::default();
+		let dispatch = &mut AnimationDispatch::<_Animation>::default();
 		as_track::<AnimationPlayer>(dispatch)
 			.track(Entity::from_raw(1), &AnimationPlayer::default());
 		as_track::<AnimationPlayer>(dispatch)
@@ -529,7 +553,7 @@ mod tests {
 
 	#[test]
 	fn untrack_animation_player() {
-		let dispatch = &mut AnimationDispatch {
+		let dispatch = &mut AnimationDispatch::<_Animation> {
 			animation_players: HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
 			..default()
 		};
@@ -543,7 +567,7 @@ mod tests {
 
 	#[test]
 	fn is_tracking_animation_player() {
-		let dispatch = &mut AnimationDispatch {
+		let dispatch = &mut AnimationDispatch::<_Animation> {
 			animation_players: HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
 			..default()
 		};
@@ -559,7 +583,7 @@ mod tests {
 
 	#[test]
 	fn track_animation_graph() {
-		let dispatch = &mut AnimationDispatch::default();
+		let dispatch = &mut AnimationDispatch::<_Animation>::default();
 		as_track::<AnimationGraphHandle>(dispatch)
 			.track(Entity::from_raw(1), &AnimationGraphHandle::default());
 		as_track::<AnimationGraphHandle>(dispatch)
@@ -573,7 +597,7 @@ mod tests {
 
 	#[test]
 	fn untrack_animation_graph() {
-		let dispatch = &mut AnimationDispatch {
+		let dispatch = &mut AnimationDispatch::<_Animation> {
 			animation_handles: HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
 			..default()
 		};
@@ -587,7 +611,7 @@ mod tests {
 
 	#[test]
 	fn is_tracking_animation_graph() {
-		let dispatch = &mut AnimationDispatch {
+		let dispatch = &mut AnimationDispatch::<_Animation> {
 			animation_handles: HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
 			..default()
 		};
@@ -603,7 +627,7 @@ mod tests {
 
 	#[test]
 	fn iterate_animation_players() {
-		let dispatch = AnimationDispatch {
+		let dispatch = AnimationDispatch::<_Animation> {
 			animation_players: HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
 			..default()
 		};
@@ -616,7 +640,7 @@ mod tests {
 
 	#[test]
 	fn iterate_animation_players_without_transitions() {
-		let dispatch = AnimationDispatch {
+		let dispatch = AnimationDispatch::<_Animation> {
 			animation_players: HashSet::from([
 				Entity::from_raw(1),
 				Entity::from_raw(2),
