@@ -25,6 +25,13 @@ impl<'w, 's> ZyheedaCommands<'w, 's> {
 	{
 		self.commands.insert_resource(resource);
 	}
+
+	pub fn trigger_observers_for<TEvent>(&mut self, event: TEvent)
+	where
+		TEvent: Event,
+	{
+		self.commands.trigger(event);
+	}
 }
 
 impl GetMut<Entity> for ZyheedaCommands<'_, '_> {
@@ -370,6 +377,46 @@ mod test {
 				})?;
 
 			assert_eq!(Some(expected), unsafe { GOT });
+			Ok(())
+		}
+	}
+
+	mod trigger_observers {
+		use super::*;
+
+		#[derive(Event)]
+		struct _Event {
+			entity: Entity,
+		}
+
+		#[derive(Component, Debug, PartialEq)]
+		struct _Triggered;
+
+		fn setup() -> App {
+			let mut app = App::new().single_threaded(Update);
+
+			app.add_observer(|trigger: Trigger<_Event>, mut commands: Commands| {
+				let event = trigger.event();
+				commands.entity(event.entity).insert(_Triggered);
+			});
+
+			app
+		}
+
+		#[test]
+		fn trigger_event() -> Result<(), RunSystemError> {
+			let mut app = setup();
+			let entity = app.world_mut().spawn_empty().id();
+
+			app.world_mut()
+				.run_system_once(move |mut commands: ZyheedaCommands| {
+					commands.trigger_observers_for(_Event { entity });
+				})?;
+
+			assert_eq!(
+				Some(&_Triggered),
+				app.world().entity(entity).get::<_Triggered>(),
+			);
 			Ok(())
 		}
 	}
