@@ -1,5 +1,5 @@
 use crate::{
-	components::animation_lookup::{AnimationLookup, Animations},
+	components::animation_lookup::{AnimationClips, AnimationLookup},
 	traits::LoadAnimationAssets,
 };
 use bevy::prelude::*;
@@ -35,7 +35,7 @@ where
 		agents: Query<Entity, Added<Self>>,
 	) where
 		TGraph: Asset + WrapHandle + Sync + Send + 'static,
-		TServer: Resource + LoadAnimationAssets<TGraph, Animations>,
+		TServer: Resource + LoadAnimationAssets<TGraph, AnimationClips>,
 	{
 		for entity in &agents {
 			let animation_masks = Self::animations();
@@ -125,11 +125,11 @@ mod tests {
 	}
 
 	#[automock]
-	impl LoadAnimationAssets<_Graph, Animations> for _Server {
+	impl LoadAnimationAssets<_Graph, AnimationClips> for _Server {
 		fn load_animation_assets(
 			&mut self,
 			animations: Vec<AnimationPath>,
-		) -> (_Graph, HashMap<AnimationPath, Animations>) {
+		) -> (_Graph, HashMap<AnimationPath, AnimationClips>) {
 			self.mock.load_animation_assets(animations)
 		}
 	}
@@ -208,15 +208,15 @@ mod tests {
 					HashMap::from([
 						(
 							AnimationPath::from("path/a"),
-							Animations::Single(AnimationNodeIndex::new(1)),
+							AnimationClips::Single(AnimationNodeIndex::new(1)),
 						),
 						(
 							AnimationPath::from("path/b"),
-							Animations::Single(AnimationNodeIndex::new(2)),
+							AnimationClips::Single(AnimationNodeIndex::new(2)),
 						),
 						(
 							AnimationPath::from("path/c"),
-							Animations::Single(AnimationNodeIndex::new(3)),
+							AnimationClips::Single(AnimationNodeIndex::new(3)),
 						),
 					]),
 				));
@@ -230,15 +230,15 @@ mod tests {
 				animations: HashMap::from([
 					(
 						AnimationPath::from("path/a"),
-						(Animations::Single(AnimationNodeIndex::new(1)), 1)
+						(AnimationClips::Single(AnimationNodeIndex::new(1)), 1)
 					),
 					(
 						AnimationPath::from("path/b"),
-						(Animations::Single(AnimationNodeIndex::new(2)), 2)
+						(AnimationClips::Single(AnimationNodeIndex::new(2)), 2)
 					),
 					(
 						AnimationPath::from("path/c"),
-						(Animations::Single(AnimationNodeIndex::new(3)), 4)
+						(AnimationClips::Single(AnimationNodeIndex::new(3)), 4)
 					),
 				])
 			}),

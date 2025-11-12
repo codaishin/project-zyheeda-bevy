@@ -1,16 +1,20 @@
-pub mod components;
-pub mod systems;
-pub mod traits;
+mod components;
+mod system_params;
+mod systems;
+mod traits;
 
 #[cfg(test)]
 pub(crate) mod test_tools;
 
-use crate::systems::{
-	discover_animation_mask_bones::DiscoverMaskChains,
-	init_animation_components::InitAnimationComponents,
-	mask_animation_nodes::MaskAnimationNodes,
-	remove_unused_animation_targets::RemoveUnusedAnimationTargets,
-	set_directional_animation_weights::SetDirectionalAnimationWeights,
+use crate::{
+	system_params::animations::{AnimationsParamMut, override_animations::AnimationOverrideEvent},
+	systems::{
+		discover_animation_mask_bones::DiscoverMaskChains,
+		init_animation_components::InitAnimationComponents,
+		mask_animation_nodes::MaskAnimationNodes,
+		remove_unused_animation_targets::RemoveUnusedAnimationTargets,
+		set_directional_animation_weights::SetDirectionalAnimationWeights,
+	},
 };
 use bevy::prelude::*;
 use common::{
@@ -18,9 +22,11 @@ use common::{
 	traits::{
 		animation::{
 			AffectedAnimationBones,
+			AnimationKey,
 			ConfigureNewAnimationDispatch,
 			GetAnimationDefinitions,
 			GetMovementDirection,
+			HandlesAnimations,
 			HasAnimationsDispatch,
 			RegisterAnimations,
 		},
@@ -91,7 +97,9 @@ where
 {
 	fn build(&self, app: &mut App) {
 		TSavegame::register_savable_component::<AnimationDispatch>(app);
+		TSavegame::register_savable_component::<AnimationDispatch<AnimationKey>>(app);
 
+		app.add_observer(AnimationOverrideEvent::observe);
 		app.add_systems(
 			Update,
 			(
@@ -112,4 +120,8 @@ impl<TDependencies> SystemSetDefinition for AnimationsPlugin<TDependencies> {
 	type TSystemSet = AnimationSystems;
 
 	const SYSTEMS: Self::TSystemSet = AnimationSystems;
+}
+
+impl<TDependencies> HandlesAnimations for AnimationsPlugin<TDependencies> {
+	type TAnimationsMut<'w, 's> = AnimationsParamMut<'w, 's>;
 }

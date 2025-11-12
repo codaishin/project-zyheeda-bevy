@@ -1,7 +1,7 @@
 pub(crate) mod animation_graph;
 
 use super::LoadAnimationAssets;
-use crate::components::animation_lookup::{Animations, DirectionalIndices};
+use crate::components::animation_lookup::{AnimationClips, DirectionalIndices};
 use bevy::prelude::*;
 use common::{
 	tools::path::Path,
@@ -12,7 +12,7 @@ use common::{
 };
 use std::collections::HashMap;
 
-impl<T, TGraph> LoadAnimationAssets<TGraph, Animations> for T
+impl<T, TGraph> LoadAnimationAssets<TGraph, AnimationClips> for T
 where
 	T: LoadAsset,
 	TGraph: AnimationGraphTrait + Default,
@@ -20,7 +20,7 @@ where
 	fn load_animation_assets(
 		&mut self,
 		animations: Vec<AnimationPath>,
-	) -> (TGraph, HashMap<AnimationPath, Animations>) {
+	) -> (TGraph, HashMap<AnimationPath, AnimationClips>) {
 		let mut graph = TGraph::default();
 		let blend_node = graph.add_additive_blend(1., graph.root());
 		let load_clip = load_clip(self, &mut graph, blend_node);
@@ -34,7 +34,7 @@ fn load_clip<'a, TServer, TGraph>(
 	server: &'a mut TServer,
 	graph: &'a mut TGraph,
 	blend_node: AnimationNodeIndex,
-) -> impl FnMut(AnimationPath) -> (AnimationPath, Animations) + 'a
+) -> impl FnMut(AnimationPath) -> (AnimationPath, AnimationClips) + 'a
 where
 	TServer: LoadAsset,
 	TGraph: AnimationGraphTrait,
@@ -44,7 +44,7 @@ where
 			AnimationPath::Single(path) => {
 				let clip = server.load_asset(path);
 				let index = graph.add_clip(clip, 1., blend_node);
-				Animations::Single(index)
+				AnimationClips::Single(index)
 			}
 			AnimationPath::Directional(direction_paths) => {
 				let blend_node = graph.add_blend(1., blend_node);
@@ -55,7 +55,7 @@ where
 					*animation = graph.add_clip(clip, 0., blend_node);
 				}
 
-				Animations::Directional(animations)
+				AnimationClips::Directional(animations)
 			}
 		};
 		(animation, animations)
@@ -96,7 +96,7 @@ mod tests {
 
 	macro_rules! setup_graph {
 		($setup:expr) => {
-			type _AnimAssets = (_Graph, HashMap<AnimationPath, Animations>);
+			type _AnimAssets = (_Graph, HashMap<AnimationPath, AnimationClips>);
 
 			struct _Graph {
 				mock: Mock_Graph,
@@ -219,7 +219,7 @@ mod tests {
 			assert_eq!(
 				HashMap::from([(
 					AnimationPath::from("a"),
-					Animations::Single(AnimationNodeIndex::new(111))
+					AnimationClips::Single(AnimationNodeIndex::new(111))
 				)]),
 				map
 			);
@@ -372,7 +372,7 @@ mod tests {
 			assert_eq!(
 				HashMap::from([(
 					asset,
-					Animations::Directional(DirectionalIndices {
+					AnimationClips::Directional(DirectionalIndices {
 						forward: AnimationNodeIndex::new(1),
 						backward: AnimationNodeIndex::new(2),
 						left: AnimationNodeIndex::new(3),

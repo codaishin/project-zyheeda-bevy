@@ -1,5 +1,5 @@
 use crate::{
-	components::animation_lookup::{AnimationLookup, Animations},
+	components::animation_lookup::{AnimationLookup, AnimationClips},
 	traits::{AnimationPlayers, GetAllActiveAnimations, asset_server::animation_graph::GetNodeMut},
 };
 use bevy::prelude::*;
@@ -68,7 +68,7 @@ fn set_directional_animation_weights<TDispatch, TGraph, TMovementDirection>(
 				let Some((animation, ..)) = lookup.animations.get(&animation.path) else {
 					continue;
 				};
-				let &Animations::Directional(directions) = animation else {
+				let &AnimationClips::Directional(directions) = animation else {
 					continue;
 				};
 
@@ -107,7 +107,7 @@ fn weight(body_direction: Dir3, move_direction: Dir3) -> f32 {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::animation_lookup::{AnimationLookup, Animations, DirectionalIndices};
+	use crate::components::animation_lookup::{AnimationLookup, AnimationClips, DirectionalIndices};
 	use common::traits::{
 		animation::{AnimationPath, PlayMode},
 		iterate::Iterate,
@@ -240,7 +240,7 @@ mod tests {
 			animations: HashMap::from([(
 				AnimationPath::from("my/path"),
 				(
-					Animations::Directional(DirectionalIndices {
+					AnimationClips::Directional(DirectionalIndices {
 						forward: AnimationNodeIndex::new(0),
 						backward: AnimationNodeIndex::new(1),
 						left: AnimationNodeIndex::new(2),
@@ -295,7 +295,7 @@ mod tests {
 			animations: HashMap::from([(
 				AnimationPath::from("my/path"),
 				(
-					Animations::Directional(DirectionalIndices {
+					AnimationClips::Directional(DirectionalIndices {
 						forward: AnimationNodeIndex::new(0),
 						backward: AnimationNodeIndex::new(1),
 						left: AnimationNodeIndex::new(2),
@@ -352,7 +352,7 @@ mod tests {
 			animations: HashMap::from([(
 				AnimationPath::from("my/path"),
 				(
-					Animations::Directional(DirectionalIndices {
+					AnimationClips::Directional(DirectionalIndices {
 						forward: AnimationNodeIndex::new(0),
 						backward: AnimationNodeIndex::new(1),
 						left: AnimationNodeIndex::new(2),
@@ -408,7 +408,7 @@ mod tests {
 			animations: HashMap::from([(
 				AnimationPath::from("my/path"),
 				(
-					Animations::Directional(DirectionalIndices {
+					AnimationClips::Directional(DirectionalIndices {
 						forward: AnimationNodeIndex::new(0),
 						backward: AnimationNodeIndex::new(1),
 						left: AnimationNodeIndex::new(2),
@@ -452,7 +452,7 @@ mod tests {
 			animations: HashMap::from([(
 				AnimationPath::from("my/path"),
 				(
-					Animations::Directional(DirectionalIndices {
+					AnimationClips::Directional(DirectionalIndices {
 						forward: AnimationNodeIndex::new(0),
 						backward: AnimationNodeIndex::new(1),
 						left: AnimationNodeIndex::new(2),

@@ -13,7 +13,8 @@ use std::collections::HashMap;
 pub trait HandlesAnimations {
 	type TAnimationsMut<'w, 's>: SystemParam
 		+ for<'c> GetContextMut<Animations, TContext<'c>: RegisterAnimations2>
-		+ for<'c> GetContextMut<Animations, TContext<'c>: OverrideAnimations>;
+		+ for<'c> GetContextMut<Animations, TContext<'c>: OverrideAnimations>
+		+ for<'c> GetContextMut<Animations, TContext<'c>: SetMovementDirection>;
 }
 
 pub struct Animations {
@@ -31,6 +32,10 @@ pub trait OverrideAnimations {
 	where
 		TLayer: Into<AnimationPriority> + 'static,
 		TAnimations: IntoIterator<Item = AnimationKey> + 'static;
+}
+
+pub trait SetMovementDirection {
+	fn set_movement_direction(&mut self, direction: Dir3);
 }
 
 pub trait StartAnimation {
@@ -158,16 +163,40 @@ pub struct Animation2 {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct AffectedAnimationBones2 {
-	from_root: BoneName,
-	until_exclusive: Vec<BoneName>,
+	pub from_root: BoneName,
+	pub until_exclusive: Vec<BoneName>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct BoneName(pub String);
 
+impl From<&str> for BoneName {
+	fn from(value: &str) -> Self {
+		Self(String::from(value))
+	}
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
 pub enum AnimationKey {
 	Idle,
 	Walk,
 	Run,
 	Skill(SlotKey),
+}
+
+pub enum MovementDirection {
+	ToPoint(Vec3),
+	Direction(Dir3),
+}
+
+impl From<Vec3> for MovementDirection {
+	fn from(value: Vec3) -> Self {
+		Self::ToPoint(value)
+	}
+}
+
+impl From<Dir3> for MovementDirection {
+	fn from(value: Dir3) -> Self {
+		Self::Direction(value)
+	}
 }
