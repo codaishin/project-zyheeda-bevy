@@ -7,7 +7,7 @@ use common::traits::{
 	animation::BoneName,
 	iter_descendants_conditional::IterDescendantsConditional,
 };
-use std::iter;
+use std::{collections::HashSet, iter};
 
 impl AnimationLookup2 {
 	pub(crate) fn init_animation_bone_groups(
@@ -73,7 +73,7 @@ fn update_graph(graph: &mut AnimationGraph, mask_bones: Vec<(AnimationTargetId, 
 fn animation_bone_chains<'a>(
 	player: Entity,
 	mask_root: &BoneName,
-	until_excluded: &[BoneName],
+	until_excluded: &HashSet<BoneName>,
 	children: &Query<'_, '_, &Children>,
 	get_bone: &'a impl Fn(Entity) -> Option<(Entity, &'a Name, &'a AnimationTarget)>,
 ) -> Option<impl Iterator<Item = AnimationTargetId>> {
@@ -557,7 +557,10 @@ mod tests {
 							mask: 1,
 							bones: AffectedAnimationBones2 {
 								from_root: BoneName::from("root"),
-								until_exclusive: vec![BoneName::from("a"), BoneName::from("b")],
+								until_exclusive: HashSet::from([
+									BoneName::from("a"),
+									BoneName::from("b"),
+								]),
 							},
 							..default()
 						},

@@ -244,7 +244,7 @@ mod tests {
 
 	}
 
-	#[derive(Clone)]
+	#[derive(Clone, Default)]
 	struct _Animations(Vec<AnimationNodeIndex>);
 
 	impl<'a> Iterate<'a> for _Animations {
@@ -454,11 +454,7 @@ mod tests {
 				AnimationLookupData {
 					animation_clips: _Animations::from(&indices),
 					play_mode: PlayMode::Repeat,
-					mask: 0,
-					bones: AffectedAnimationBones2 {
-						from_root: BoneName::from(""),
-						until_exclusive: vec![],
-					},
+					..default()
 				},
 			)]),
 		};
@@ -512,11 +508,7 @@ mod tests {
 				AnimationLookupData {
 					animation_clips: _Animations::from(&indices),
 					play_mode: PlayMode::Replay,
-					mask: 0,
-					bones: AffectedAnimationBones2 {
-						from_root: BoneName::from(""),
-						until_exclusive: vec![],
-					},
+					..default()
 				},
 			)]),
 		};
@@ -583,7 +575,7 @@ mod tests {
 						mask: 0,
 						bones: AffectedAnimationBones2 {
 							from_root: BoneName::from(""),
-							until_exclusive: vec![],
+							..default()
 						},
 					},
 				),
@@ -595,7 +587,7 @@ mod tests {
 						mask: 0,
 						bones: AffectedAnimationBones2 {
 							from_root: BoneName::from(""),
-							until_exclusive: vec![],
+							..default()
 						},
 					},
 				),
@@ -607,7 +599,7 @@ mod tests {
 						mask: 0,
 						bones: AffectedAnimationBones2 {
 							from_root: BoneName::from(""),
-							until_exclusive: vec![],
+							..default()
 						},
 					},
 				),
@@ -619,7 +611,7 @@ mod tests {
 						mask: 0,
 						bones: AffectedAnimationBones2 {
 							from_root: BoneName::from(""),
-							until_exclusive: vec![],
+							..default()
 						},
 					},
 				),
@@ -631,7 +623,7 @@ mod tests {
 						mask: 0,
 						bones: AffectedAnimationBones2 {
 							from_root: BoneName::from(""),
-							until_exclusive: vec![],
+							..default()
 						},
 					},
 				),
@@ -643,7 +635,7 @@ mod tests {
 						mask: 0,
 						bones: AffectedAnimationBones2 {
 							from_root: BoneName::from(""),
-							until_exclusive: vec![],
+							..default()
 						},
 					},
 				),
@@ -712,11 +704,7 @@ mod tests {
 				AnimationLookupData {
 					animation_clips: _Animations::from(&indices),
 					play_mode: PlayMode::Repeat,
-					mask: 0,
-					bones: AffectedAnimationBones2 {
-						from_root: BoneName::from(""),
-						until_exclusive: vec![],
-					},
+					..default()
 				},
 			)]),
 		};
@@ -773,11 +761,7 @@ mod tests {
 				AnimationLookupData {
 					animation_clips: _Animations::from(&indices),
 					play_mode: PlayMode::Repeat,
-					mask: 0,
-					bones: AffectedAnimationBones2 {
-						from_root: BoneName::from(""),
-						until_exclusive: vec![],
-					},
+					..default()
 				},
 			)]),
 		};
@@ -824,11 +808,7 @@ mod tests {
 				AnimationLookupData {
 					animation_clips: _Animations::from(&vec![AnimationNodeIndex::new(1)]),
 					play_mode: PlayMode::Repeat,
-					mask: 0,
-					bones: AffectedAnimationBones2 {
-						from_root: BoneName::from(""),
-						until_exclusive: vec![],
-					},
+					..default()
 				},
 			)]),
 		};
@@ -871,11 +851,7 @@ mod tests {
 				AnimationLookupData {
 					animation_clips: _Animations::from(&vec![AnimationNodeIndex::new(1)]),
 					play_mode: PlayMode::Repeat,
-					mask: 0,
-					bones: AffectedAnimationBones2 {
-						from_root: BoneName::from(""),
-						until_exclusive: vec![],
-					},
+					..default()
 				},
 			)]),
 		};
@@ -944,7 +920,7 @@ mod tests {
 						mask: 1 << 0,
 						bones: AffectedAnimationBones2 {
 							from_root: BoneName::from(""),
-							until_exclusive: vec![],
+							..default()
 						},
 					},
 				),
@@ -956,7 +932,7 @@ mod tests {
 						mask: 1 << 1,
 						bones: AffectedAnimationBones2 {
 							from_root: BoneName::from(""),
-							until_exclusive: vec![],
+							..default()
 						},
 					},
 				),
@@ -968,7 +944,7 @@ mod tests {
 						mask: 1 << 2,
 						bones: AffectedAnimationBones2 {
 							from_root: BoneName::from(""),
-							until_exclusive: vec![],
+							..default()
 						},
 					},
 				),
@@ -980,7 +956,7 @@ mod tests {
 						mask: 1 << 3,
 						bones: AffectedAnimationBones2 {
 							from_root: BoneName::from(""),
-							until_exclusive: vec![],
+							..default()
 						},
 					},
 				),
@@ -992,7 +968,7 @@ mod tests {
 						mask: 1 << 4,
 						bones: AffectedAnimationBones2 {
 							from_root: BoneName::from(""),
-							until_exclusive: vec![],
+							..default()
 						},
 					},
 				),
@@ -1004,7 +980,7 @@ mod tests {
 						mask: 1 << 5,
 						bones: AffectedAnimationBones2 {
 							from_root: BoneName::from(""),
-							until_exclusive: vec![],
+							..default()
 						},
 					},
 				),
@@ -1092,7 +1068,7 @@ mod tests {
 						mask: 1 << 0,
 						bones: AffectedAnimationBones2 {
 							from_root: BoneName::from(""),
-							until_exclusive: vec![],
+							..default()
 						},
 					},
 				),
@@ -1104,7 +1080,7 @@ mod tests {
 						mask: 1 << 1,
 						bones: AffectedAnimationBones2 {
 							from_root: BoneName::from(""),
-							until_exclusive: vec![],
+							..default()
 						},
 					},
 				),
@@ -1116,7 +1092,7 @@ mod tests {
 						mask: 1 << 2,
 						bones: AffectedAnimationBones2 {
 							from_root: BoneName::from(""),
-							until_exclusive: vec![],
+							..default()
 						},
 					},
 				),
@@ -1128,7 +1104,7 @@ mod tests {
 						mask: 1 << 3,
 						bones: AffectedAnimationBones2 {
 							from_root: BoneName::from(""),
-							until_exclusive: vec![],
+							..default()
 						},
 					},
 				),
@@ -1140,7 +1116,7 @@ mod tests {
 						mask: 1 << 4,
 						bones: AffectedAnimationBones2 {
 							from_root: BoneName::from(""),
-							until_exclusive: vec![],
+							..default()
 						},
 					},
 				),
@@ -1152,7 +1128,7 @@ mod tests {
 						mask: 1 << 5,
 						bones: AffectedAnimationBones2 {
 							from_root: BoneName::from(""),
-							until_exclusive: vec![],
+							..default()
 						},
 					},
 				),
@@ -1236,7 +1212,7 @@ mod tests {
 						mask: 0b000001,
 						bones: AffectedAnimationBones2 {
 							from_root: BoneName::from(""),
-							until_exclusive: vec![],
+							..default()
 						},
 					},
 				),
@@ -1248,7 +1224,7 @@ mod tests {
 						mask: 0b000111, // wants to play on high masks (..11)
 						bones: AffectedAnimationBones2 {
 							from_root: BoneName::from(""),
-							until_exclusive: vec![],
+							..default()
 						},
 					},
 				),
@@ -1324,11 +1300,7 @@ mod tests {
 				AnimationLookupData {
 					animation_clips: _Animations::from(&indices),
 					play_mode: PlayMode::Repeat,
-					mask: 0,
-					bones: AffectedAnimationBones2 {
-						from_root: BoneName::from(""),
-						until_exclusive: vec![],
-					},
+					..default()
 				},
 			)]),
 		};

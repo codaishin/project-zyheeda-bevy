@@ -8,7 +8,10 @@ use bevy::{
 	prelude::*,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{
+	collections::{HashMap, HashSet},
+	sync::Arc,
+};
 
 pub trait HandlesAnimations {
 	type TAnimationsMut<'w, 's>: SystemParam
@@ -165,33 +168,33 @@ pub struct Animation2 {
 #[derive(Debug, PartialEq, Default, Clone)]
 pub struct AffectedAnimationBones2 {
 	pub from_root: BoneName,
-	pub until_exclusive: Vec<BoneName>,
+	pub until_exclusive: HashSet<BoneName>,
 }
 
-#[derive(Debug, PartialEq, Default, Clone)]
-pub struct BoneName(pub String);
+#[derive(Debug, PartialEq, Eq, Hash, Default, Clone)]
+pub struct BoneName(Arc<str>);
 
 impl From<&str> for BoneName {
 	fn from(value: &str) -> Self {
-		Self(String::from(value))
+		Self(Arc::from(value))
 	}
 }
 
 impl From<&Name> for BoneName {
 	fn from(value: &Name) -> Self {
-		Self(value.to_string())
+		Self(Arc::from(value.as_str()))
 	}
 }
 
 impl PartialEq<Name> for BoneName {
 	fn eq(&self, other: &Name) -> bool {
-		self.0.as_str() == other.as_str()
+		&*self.0 == other.as_str()
 	}
 }
 
 impl PartialEq<BoneName> for Name {
 	fn eq(&self, other: &BoneName) -> bool {
-		self.as_str() == other.0.as_str()
+		self.as_str() == &*other.0
 	}
 }
 

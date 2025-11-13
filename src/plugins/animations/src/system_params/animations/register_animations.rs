@@ -209,7 +209,7 @@ mod tests {
 					mask: 1,
 					bones: AffectedAnimationBones2 {
 						from_root: BoneName::from("root a"),
-						until_exclusive: vec![],
+						..default()
 					},
 				};
 				let b = Animation2 {
@@ -218,7 +218,7 @@ mod tests {
 					mask: 2,
 					bones: AffectedAnimationBones2 {
 						from_root: BoneName::from("root b"),
-						until_exclusive: vec![],
+						..default()
 					},
 				};
 				let c = Animation2 {
@@ -227,7 +227,7 @@ mod tests {
 					mask: 4,
 					bones: AffectedAnimationBones2 {
 						from_root: BoneName::from("root c"),
-						until_exclusive: vec![],
+						..default()
 					},
 				};
 
@@ -249,7 +249,7 @@ mod tests {
 							mask: 1,
 							bones: AffectedAnimationBones2 {
 								from_root: BoneName::from("root a"),
-								until_exclusive: vec![],
+								..default()
 							}
 						},
 					),
@@ -261,7 +261,7 @@ mod tests {
 							mask: 2,
 							bones: AffectedAnimationBones2 {
 								from_root: BoneName::from("root b"),
-								until_exclusive: vec![],
+								..default()
 							}
 						},
 					),
@@ -273,7 +273,7 @@ mod tests {
 							mask: 4,
 							bones: AffectedAnimationBones2 {
 								from_root: BoneName::from("root c"),
-								until_exclusive: vec![],
+								..default()
 							}
 						},
 					),
