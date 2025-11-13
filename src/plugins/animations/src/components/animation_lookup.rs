@@ -15,7 +15,7 @@ pub(crate) struct AnimationLookup2<TAnimationClips = AnimationClips> {
 	pub(crate) animations: HashMap<AnimationKey, AnimationLookupData<TAnimationClips>>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub(crate) struct AnimationLookupData<TAnimations = AnimationClips> {
 	pub(crate) animation_clips: TAnimations,
 	pub(crate) play_mode: PlayMode,
@@ -27,6 +27,12 @@ pub(crate) struct AnimationLookupData<TAnimations = AnimationClips> {
 pub(crate) enum AnimationClips {
 	Single(AnimationNodeIndex),
 	Directional(DirectionalIndices),
+}
+
+impl Default for AnimationClips {
+	fn default() -> Self {
+		Self::Single(AnimationNodeIndex::default())
+	}
 }
 
 impl<'a> Iterate<'a> for AnimationClips {

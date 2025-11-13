@@ -2,12 +2,15 @@ use crate::traits::AnimationPlayersWithoutGraph;
 use bevy::prelude::*;
 use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
-impl<T> InitPlayerComponents for T where for<'a> T: Component + AnimationPlayersWithoutGraph + Sized {}
+impl<T> DispatchPlayerComponents for T where
+	for<'a> T: Component + AnimationPlayersWithoutGraph + Sized
+{
+}
 
-pub(crate) trait InitPlayerComponents:
+pub(crate) trait DispatchPlayerComponents:
 	Component + AnimationPlayersWithoutGraph + Sized
 {
-	fn init_player_components<TGraphComponent>(
+	fn distribute_player_components<TGraphComponent>(
 		mut commands: ZyheedaCommands,
 		agents: Query<(&Self, &TGraphComponent), Changed<Self>>,
 	) where
@@ -48,7 +51,10 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, _Dispatch::init_player_components::<_GraphComponent>);
+		app.add_systems(
+			Update,
+			_Dispatch::distribute_player_components::<_GraphComponent>,
+		);
 
 		app
 	}

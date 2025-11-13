@@ -135,8 +135,9 @@ pub enum AnimationPriority {
 	Low,
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Copy, Serialize, Deserialize)]
 pub enum PlayMode {
+	#[default]
 	Replay,
 	Repeat,
 }
@@ -161,13 +162,13 @@ pub struct Animation2 {
 	pub bones: AffectedAnimationBones2,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Default, Clone)]
 pub struct AffectedAnimationBones2 {
 	pub from_root: BoneName,
 	pub until_exclusive: Vec<BoneName>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Default, Clone)]
 pub struct BoneName(pub String);
 
 impl From<&str> for BoneName {
