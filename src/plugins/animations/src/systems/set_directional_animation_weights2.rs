@@ -1,56 +1,53 @@
 use crate::{
-	components::animation_lookup::{AnimationClips, AnimationLookup},
+	components::{
+		animation_lookup::{AnimationClips, AnimationLookup2},
+		movement_direction::MovementDirection,
+	},
 	traits::{AnimationPlayers, GetAllActiveAnimations, asset_server::animation_graph::GetNodeMut},
 };
 use bevy::prelude::*;
 use common::traits::{
-	animation::{Animation, GetMovementDirection},
+	animation::AnimationKey,
 	wrap_handle::{UnwrapHandle, WrapHandle},
 };
 use std::f32::consts::FRAC_PI_2;
 
-impl<T> SetDirectionalAnimationWeights for T where
-	T: Component + AnimationPlayers + GetAllActiveAnimations<Animation>
+impl<T> SetDirectionalAnimationWeights2 for T where
+	T: Component + AnimationPlayers + GetAllActiveAnimations<AnimationKey>
 {
 }
 
-pub(crate) trait SetDirectionalAnimationWeights:
-	Component + AnimationPlayers + GetAllActiveAnimations<Animation> + Sized
+pub(crate) trait SetDirectionalAnimationWeights2:
+	Component + AnimationPlayers + GetAllActiveAnimations<AnimationKey> + Sized
 {
-	fn set_directional_animation_weights<TMovementDirection>(
+	fn set_directional_animation_weights2(
 		graphs: ResMut<Assets<AnimationGraph>>,
 		agents: Query<(
 			&Self,
-			&TMovementDirection,
+			&MovementDirection,
 			&GlobalTransform,
-			&AnimationLookup,
+			&AnimationLookup2,
 		)>,
 		players: Query<&AnimationGraphHandle>,
-	) where
-		TMovementDirection: Component + GetMovementDirection,
-	{
+	) {
 		set_directional_animation_weights(graphs, agents, players)
 	}
 }
 
-fn set_directional_animation_weights<TDispatch, TGraph, TMovementDirection>(
+fn set_directional_animation_weights<TDispatch, TGraph>(
 	mut graphs: ResMut<Assets<TGraph>>,
 	agents: Query<(
 		&TDispatch,
-		&TMovementDirection,
+		&MovementDirection,
 		&GlobalTransform,
-		&AnimationLookup,
+		&AnimationLookup2,
 	)>,
 	players: Query<&TGraph::TComponent>,
 ) where
-	TDispatch: Component + AnimationPlayers + GetAllActiveAnimations<Animation>,
+	TDispatch: Component + AnimationPlayers + GetAllActiveAnimations<AnimationKey>,
 	TGraph: Asset + GetNodeMut + WrapHandle,
-	TMovementDirection: Component + GetMovementDirection,
 {
-	for (dispatch, direction, transform, lookup) in &agents {
-		let Some(direction) = direction.movement_direction(transform) else {
-			continue;
-		};
+	for (dispatch, MovementDirection(direction), transform, lookup) in &agents {
 		let forward = transform.forward();
 		let backward = transform.back();
 		let left = transform.left();
@@ -65,24 +62,24 @@ fn set_directional_animation_weights<TDispatch, TGraph, TMovementDirection>(
 			};
 
 			for animation in dispatch.get_all_active_animations() {
-				let Some((animation, ..)) = lookup.animations.get(&animation.path) else {
+				let Some(data) = lookup.animations.get(animation) else {
 					continue;
 				};
-				let &AnimationClips::Directional(directions) = animation else {
+				let AnimationClips::Directional(directions) = &data.animation_clips else {
 					continue;
 				};
 
 				if let Some(animation) = graph.get_node_mut(directions.forward) {
-					animation.weight = weight(forward, direction);
+					animation.weight = weight(forward, *direction);
 				}
 				if let Some(animation) = graph.get_node_mut(directions.backward) {
-					animation.weight = weight(backward, direction);
+					animation.weight = weight(backward, *direction);
 				}
 				if let Some(animation) = graph.get_node_mut(directions.left) {
-					animation.weight = weight(left, direction);
+					animation.weight = weight(left, *direction);
 				}
 				if let Some(animation) = graph.get_node_mut(directions.right) {
-					animation.weight = weight(right, direction);
+					animation.weight = weight(right, *direction);
 				}
 			}
 		}
@@ -109,24 +106,21 @@ mod tests {
 	use super::*;
 	use crate::components::animation_lookup::{
 		AnimationClips,
-		AnimationLookup,
+		AnimationLookupData,
 		DirectionalIndices,
 	};
 	use common::traits::{
-		animation::{AnimationPath, PlayMode},
 		iterate::Iterate,
 		wrap_handle::{UnwrapHandle, WrapHandle},
 	};
-	use macros::NestedMocks;
-	use mockall::{automock, predicate::eq};
 	use std::{collections::HashMap, slice::Iter, vec::IntoIter};
 	use test_case::test_case;
-	use testing::{NestedMocks, SingleThreadedApp, assert_eq_approx, new_handle};
+	use testing::{SingleThreadedApp, assert_eq_approx, new_handle};
 
 	#[derive(Component)]
 	struct _Dispatch {
 		players: Vec<Entity>,
-		animations: Vec<Animation>,
+		animations: Vec<AnimationKey>,
 	}
 
 	impl AnimationPlayers for _Dispatch {
@@ -137,12 +131,12 @@ mod tests {
 		}
 	}
 
-	impl GetAllActiveAnimations<Animation> for _Dispatch {
+	impl GetAllActiveAnimations<AnimationKey> for _Dispatch {
 		type TIter<'a>
-			= Iter<'a, Animation>
+			= Iter<'a, AnimationKey>
 		where
 			Self: 'a,
-			Animation: 'a;
+			AnimationKey: 'a;
 
 		fn get_all_active_animations(&self) -> Self::TIter<'_> {
 			self.animations.iter()
@@ -182,20 +176,8 @@ mod tests {
 		}
 	}
 
-	#[derive(Component, NestedMocks)]
-	struct _Direction {
-		mock: Mock_Direction,
-	}
-
-	#[automock]
-	impl GetMovementDirection for _Direction {
-		fn movement_direction(&self, transform: &GlobalTransform) -> Option<Dir3> {
-			self.mock.movement_direction(transform)
-		}
-	}
-
 	fn setup(
-		lookup: &AnimationLookup,
+		lookup: &AnimationLookup2,
 		weights: HashMap<usize, f32>,
 		graph_handle: &Handle<_Graph>,
 	) -> App {
@@ -203,8 +185,8 @@ mod tests {
 		let mut graphs = Assets::default();
 		let mut graph = _Graph::default();
 
-		for (animations, _) in lookup.animations.values() {
-			for animation in animations.iterate() {
+		for data in lookup.animations.values() {
+			for animation in data.animation_clips.iterate() {
 				graph.nodes.insert(
 					animation.index(),
 					AnimationGraphNode {
@@ -219,7 +201,7 @@ mod tests {
 		app.insert_resource(graphs);
 		app.add_systems(
 			Update,
-			set_directional_animation_weights::<_Dispatch, _Graph, _Direction>,
+			set_directional_animation_weights::<_Dispatch, _Graph>,
 		);
 
 		app
@@ -240,18 +222,18 @@ mod tests {
 				.enumerate()
 		};
 		let handle = new_handle();
-		let lookup = AnimationLookup {
+		let lookup = AnimationLookup2 {
 			animations: HashMap::from([(
-				AnimationPath::from("my/path"),
-				(
-					AnimationClips::Directional(DirectionalIndices {
+				AnimationKey::Walk,
+				AnimationLookupData {
+					animation_clips: AnimationClips::Directional(DirectionalIndices {
 						forward: AnimationNodeIndex::new(0),
 						backward: AnimationNodeIndex::new(1),
 						left: AnimationNodeIndex::new(2),
 						right: AnimationNodeIndex::new(3),
 					}),
-					0,
-				),
+					..default()
+				},
 			)]),
 		};
 		let weights = HashMap::from_iter(initial_weights());
@@ -261,15 +243,9 @@ mod tests {
 			GlobalTransform::default(),
 			_Dispatch {
 				players: vec![player],
-				animations: vec![Animation::new(
-					AnimationPath::from("my/path"),
-					PlayMode::Repeat,
-				)],
+				animations: vec![AnimationKey::Walk],
 			},
-			_Direction::new().with_mock(|mock| {
-				mock.expect_movement_direction()
-					.return_const(Some(direction));
-			}),
+			MovementDirection(direction),
 			lookup,
 		));
 
@@ -295,18 +271,18 @@ mod tests {
 	#[test_case(Dir3::Z, [0., 0., 0., 1.]; "right")]
 	fn looking_right_apply_weights_for_direction(direction: Dir3, expected_weights: [f32; 4]) {
 		let handle = new_handle();
-		let lookup = AnimationLookup {
+		let lookup = AnimationLookup2 {
 			animations: HashMap::from([(
-				AnimationPath::from("my/path"),
-				(
-					AnimationClips::Directional(DirectionalIndices {
+				AnimationKey::Walk,
+				AnimationLookupData {
+					animation_clips: AnimationClips::Directional(DirectionalIndices {
 						forward: AnimationNodeIndex::new(0),
 						backward: AnimationNodeIndex::new(1),
 						left: AnimationNodeIndex::new(2),
 						right: AnimationNodeIndex::new(3),
 					}),
-					0,
-				),
+					..default()
+				},
 			)]),
 		};
 		let mut app = setup(&lookup, HashMap::from([]), &handle);
@@ -315,15 +291,9 @@ mod tests {
 			GlobalTransform::from(Transform::default().looking_to(Dir3::X, Vec3::Y)),
 			_Dispatch {
 				players: vec![player],
-				animations: vec![Animation::new(
-					AnimationPath::from("my/path"),
-					PlayMode::Repeat,
-				)],
+				animations: vec![AnimationKey::Walk],
 			},
-			_Direction::new().with_mock(|mock| {
-				mock.expect_movement_direction()
-					.return_const(Some(direction));
-			}),
+			MovementDirection(direction),
 			lookup,
 		));
 
@@ -352,18 +322,18 @@ mod tests {
 		expected_weights: [f32; 4],
 	) {
 		let handle = new_handle();
-		let lookup = AnimationLookup {
+		let lookup = AnimationLookup2 {
 			animations: HashMap::from([(
-				AnimationPath::from("my/path"),
-				(
-					AnimationClips::Directional(DirectionalIndices {
+				AnimationKey::Walk,
+				AnimationLookupData {
+					animation_clips: AnimationClips::Directional(DirectionalIndices {
 						forward: AnimationNodeIndex::new(0),
 						backward: AnimationNodeIndex::new(1),
 						left: AnimationNodeIndex::new(2),
 						right: AnimationNodeIndex::new(3),
 					}),
-					0,
-				),
+					..default()
+				},
 			)]),
 		};
 		let mut app = setup(&lookup, HashMap::from([]), &handle);
@@ -375,15 +345,9 @@ mod tests {
 			),
 			_Dispatch {
 				players: vec![player],
-				animations: vec![Animation::new(
-					AnimationPath::from("my/path"),
-					PlayMode::Repeat,
-				)],
+				animations: vec![AnimationKey::Walk],
 			},
-			_Direction::new().with_mock(|mock| {
-				mock.expect_movement_direction()
-					.return_const(Some(direction));
-			}),
+			MovementDirection(direction),
 			lookup,
 		));
 
@@ -404,66 +368,20 @@ mod tests {
 	}
 
 	#[test]
-	fn use_correct_transform_to_determine_direction() {
-		let handle = new_handle();
-		let transform =
-			GlobalTransform::from(Transform::from_xyz(1., 2., 3.).looking_to(Dir3::X, Vec3::Y));
-		let lookup = AnimationLookup {
-			animations: HashMap::from([(
-				AnimationPath::from("my/path"),
-				(
-					AnimationClips::Directional(DirectionalIndices {
-						forward: AnimationNodeIndex::new(0),
-						backward: AnimationNodeIndex::new(1),
-						left: AnimationNodeIndex::new(2),
-						right: AnimationNodeIndex::new(3),
-					}),
-					0,
-				),
-			)]),
-		};
-		let mut app = setup(&lookup, HashMap::default(), &handle);
-		let player = app.world_mut().spawn(_GraphComponent(handle.clone())).id();
-		app.world_mut().spawn((
-			transform,
-			_Dispatch {
-				players: vec![player],
-				animations: vec![Animation::new(
-					AnimationPath::from("my/path"),
-					PlayMode::Repeat,
-				)],
-			},
-			_Direction::new().with_mock(assert_being_called_with(transform)),
-			lookup,
-		));
-
-		app.update();
-
-		fn assert_being_called_with(transform: GlobalTransform) -> impl Fn(&mut Mock_Direction) {
-			move |mock| {
-				mock.expect_movement_direction()
-					.times(1)
-					.with(eq(transform))
-					.return_const(None);
-			}
-		}
-	}
-
-	#[test]
 	fn prevent_weight_nan_for_close_directions_round_error() {
 		let handle = new_handle();
-		let lookup = AnimationLookup {
+		let lookup = AnimationLookup2 {
 			animations: HashMap::from([(
-				AnimationPath::from("my/path"),
-				(
-					AnimationClips::Directional(DirectionalIndices {
+				AnimationKey::Walk,
+				AnimationLookupData {
+					animation_clips: AnimationClips::Directional(DirectionalIndices {
 						forward: AnimationNodeIndex::new(0),
 						backward: AnimationNodeIndex::new(1),
 						left: AnimationNodeIndex::new(2),
 						right: AnimationNodeIndex::new(3),
 					}),
-					0,
-				),
+					..default()
+				},
 			)]),
 		};
 		let mut app = setup(&lookup, HashMap::from([]), &handle);
@@ -476,17 +394,9 @@ mod tests {
 			)),
 			_Dispatch {
 				players: vec![player],
-				animations: vec![Animation::new(
-					AnimationPath::from("my/path"),
-					PlayMode::Repeat,
-				)],
+				animations: vec![AnimationKey::Walk],
 			},
-			_Direction::new().with_mock(|mock| {
-				mock.expect_movement_direction().return_const(Some(
-					// taken from production, when causing a NaN weight
-					Dir3::new(Vec3::new(-0.039663114, 0.0, -0.9992131)).unwrap(),
-				));
-			}),
+			MovementDirection(Dir3::new(Vec3::new(-0.039663114, 0.0, -0.9992131)).unwrap()),
 			lookup,
 		));
 

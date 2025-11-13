@@ -9,3 +9,4 @@ pub(crate) mod play_animation_clip2;
 pub(crate) mod remove_unused_animation_targets;
 pub(crate) mod remove_unused_animation_targets2;
 pub(crate) mod set_directional_animation_weights;
+pub(crate) mod set_directional_animation_weights2;

@@ -19,6 +19,7 @@ use crate::{
 		remove_unused_animation_targets::RemoveUnusedAnimationTargets,
 		remove_unused_animation_targets2::RemoveUnusedAnimationTargets2,
 		set_directional_animation_weights::SetDirectionalAnimationWeights,
+		set_directional_animation_weights2::SetDirectionalAnimationWeights2,
 	},
 };
 use bevy::prelude::*;
@@ -115,6 +116,7 @@ where
 				DispatchNew::track_in_self_and_children::<AnimationGraphHandle>().system(),
 				DispatchNew::distribute_player_components::<AnimationGraphHandle>,
 				DispatchNew::play_animation_clip_via2::<&mut AnimationPlayer>,
+				DispatchNew::set_directional_animation_weights2,
 			)
 				.chain()
 				.in_set(AnimationSystems),
