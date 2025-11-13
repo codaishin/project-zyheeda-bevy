@@ -216,20 +216,3 @@ pub enum AnimationKey {
 	Run,
 	Skill(SlotKey),
 }
-
-pub enum MovementDirection {
-	ToPoint(Vec3),
-	Direction(Dir3),
-}
-
-impl From<Vec3> for MovementDirection {
-	fn from(value: Vec3) -> Self {
-		Self::ToPoint(value)
-	}
-}
-
-impl From<Dir3> for MovementDirection {
-	fn from(value: Dir3) -> Self {
-		Self::Direction(value)
-	}
-}
