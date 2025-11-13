@@ -124,6 +124,18 @@ impl TryFrom<SlotKey> for PlayerSlot {
 	}
 }
 
+impl PartialEq<PlayerSlot> for SlotKey {
+	fn eq(&self, other: &PlayerSlot) -> bool {
+		self == &SlotKey::from(*other)
+	}
+}
+
+impl PartialEq<SlotKey> for PlayerSlot {
+	fn eq(&self, other: &SlotKey) -> bool {
+		&SlotKey::from(*self) == other
+	}
+}
+
 impl Property for PlayerSlot {
 	type TValue<'a> = Self;
 }

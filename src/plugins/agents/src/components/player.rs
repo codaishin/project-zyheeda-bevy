@@ -12,7 +12,6 @@ use common::{
 		Units,
 		UnitsPerSecond,
 		action_key::slot::{PlayerSlot, Side},
-		animation_key::AnimationKey,
 		collider_radius::ColliderRadius,
 		iter_helpers::{first, next},
 		path::Path,
@@ -55,7 +54,7 @@ pub(crate) static PLAYER_RUN: LazyLock<MovementConfig> = LazyLock::new(|| Moveme
 	collider_radius: *PLAYER_COLLIDER_RADIUS,
 	speed: UnitsPerSecond::from(1.5),
 	animation: Some(Animation::new(
-		Player::animation_asset(AnimationKey::Run),
+		Player::animation_asset(PlayerAnimationKey::Run),
 		PlayMode::Repeat,
 	)),
 });
@@ -63,7 +62,7 @@ pub(crate) static PLAYER_WALK: LazyLock<MovementConfig> = LazyLock::new(|| Movem
 	collider_radius: *PLAYER_COLLIDER_RADIUS,
 	speed: UnitsPerSecond::from(0.75),
 	animation: Some(Animation::new(
-		Player::animation_asset(AnimationKey::Walk),
+		Player::animation_asset(PlayerAnimationKey::Walk),
 		PlayMode::Repeat,
 	)),
 });
@@ -88,41 +87,41 @@ impl Player {
 		}
 	}
 
-	pub fn animation_asset(animation: AnimationKey<PlayerSlot>) -> AnimationPath {
+	pub(crate) fn animation_asset(animation: PlayerAnimationKey) -> AnimationPath {
 		match animation {
-			AnimationKey::T => AnimationPath::Single(Player::animation_path("Animation0")),
-			AnimationKey::Idle => AnimationPath::Single(Player::animation_path("Animation1")),
-			AnimationKey::Walk => AnimationPath::Single(Player::animation_path("Animation2")),
-			AnimationKey::Run => AnimationPath::Directional(Directional {
+			PlayerAnimationKey::Idle => AnimationPath::Single(Player::animation_path("Animation1")),
+			PlayerAnimationKey::Walk => AnimationPath::Single(Player::animation_path("Animation2")),
+			PlayerAnimationKey::Run => AnimationPath::Directional(Directional {
 				forward: Player::animation_path("Animation3"),
 				backward: Player::animation_path("Animation4"),
 				right: Player::animation_path("Animation5"),
 				left: Player::animation_path("Animation6"),
 			}),
-			AnimationKey::Other(PlayerSlot::Lower(Side::Left)) => {
+			PlayerAnimationKey::Skill(PlayerSlot::Lower(Side::Left)) => {
 				AnimationPath::Single(Player::animation_path("Animation7"))
 			}
-			AnimationKey::Other(PlayerSlot::Lower(Side::Right)) => {
+			PlayerAnimationKey::Skill(PlayerSlot::Lower(Side::Right)) => {
 				AnimationPath::Single(Player::animation_path("Animation8"))
 			}
-			AnimationKey::Other(PlayerSlot::Upper(Side::Left)) => {
+			PlayerAnimationKey::Skill(PlayerSlot::Upper(Side::Left)) => {
 				AnimationPath::Single(Player::animation_path("Animation9"))
 			}
-			AnimationKey::Other(PlayerSlot::Upper(Side::Right)) => {
+			PlayerAnimationKey::Skill(PlayerSlot::Upper(Side::Right)) => {
 				AnimationPath::Single(Player::animation_path("Animation10"))
 			}
 		}
 	}
 
-	fn play_animations(animation_key: AnimationKey<PlayerSlot>) -> (AnimationPath, AnimationMask) {
+	fn play_animations(animation_key: PlayerAnimationKey) -> (AnimationPath, AnimationMask) {
 		(
 			Player::animation_asset(animation_key),
 			match animation_key {
-				AnimationKey::T => PlayerAnimationMask::all_masks(),
-				AnimationKey::Idle => PlayerAnimationMask::all_masks(),
-				AnimationKey::Walk => PlayerAnimationMask::all_masks(),
-				AnimationKey::Run => PlayerAnimationMask::all_masks(),
-				AnimationKey::Other(slot) => AnimationMask::from(PlayerAnimationMask::Slot(slot)),
+				PlayerAnimationKey::Idle => PlayerAnimationMask::all_masks(),
+				PlayerAnimationKey::Walk => PlayerAnimationMask::all_masks(),
+				PlayerAnimationKey::Run => PlayerAnimationMask::all_masks(),
+				PlayerAnimationKey::Skill(slot) => {
+					AnimationMask::from(PlayerAnimationMask::Slot(slot))
+				}
 			},
 		)
 	}
@@ -206,7 +205,7 @@ impl GetAnimationDefinitions for Player {
 	type TAnimationMask = PlayerAnimationMask;
 
 	fn animations() -> HashMap<AnimationPath, AnimationMask> {
-		HashMap::from_iter(AnimationKey::<PlayerSlot>::iterator().map(Player::play_animations))
+		HashMap::from_iter(PlayerAnimationKey::iterator().map(Player::play_animations))
 	}
 }
 
@@ -226,7 +225,7 @@ impl ConfigureNewAnimationDispatch for Player {
 		new_animation_dispatch.start_animation(
 			Idle,
 			Animation::new(
-				Player::animation_asset(AnimationKey::Idle),
+				Player::animation_asset(PlayerAnimationKey::Idle),
 				PlayMode::Repeat,
 			),
 		);
@@ -257,6 +256,29 @@ where
 	}
 }
 
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub(crate) enum PlayerAnimationKey {
+	Idle,
+	Walk,
+	Run,
+	Skill(PlayerSlot),
+}
+
+impl IterFinite for PlayerAnimationKey {
+	fn iterator() -> Iter<Self> {
+		Iter(Some(Self::Idle))
+	}
+
+	fn next(current: &Iter<Self>) -> Option<Self> {
+		match &current.0? {
+			Self::Idle => Some(Self::Walk),
+			Self::Walk => Some(Self::Run),
+			Self::Run => first(Self::Skill),
+			Self::Skill(slot) => next(Self::Skill, *slot),
+		}
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -271,6 +293,21 @@ mod tests {
 			PlayerAnimationMask::iterator()
 				.take(10) // prevent infinite loop when broken
 				.collect::<Vec<_>>()
+		)
+	}
+
+	#[test]
+	fn iterate_animation_keys() {
+		assert_eq!(
+			[
+				PlayerAnimationKey::Idle,
+				PlayerAnimationKey::Walk,
+				PlayerAnimationKey::Run,
+			]
+			.into_iter()
+			.chain(PlayerSlot::iterator().map(PlayerAnimationKey::Skill))
+			.collect::<Vec<_>>(),
+			PlayerAnimationKey::iterator().take(10).collect::<Vec<_>>()
 		)
 	}
 }
