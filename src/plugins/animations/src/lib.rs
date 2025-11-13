@@ -104,11 +104,12 @@ where
 		app.add_systems(
 			Update,
 			(
-				DispatchNew::play_animation_clip_via2::<&mut AnimationPlayer>,
+				DispatchNew::init_player_components::<AnimationGraphHandle>,
 				DispatchNew::track_in_self_and_children::<AnimationPlayer>().system(),
 				DispatchNew::track_in_self_and_children::<AnimationGraphHandle>().system(),
-				DispatchNew::init_player_components::<AnimationGraphHandle>,
+				DispatchNew::play_animation_clip_via2::<&mut AnimationPlayer>,
 			)
+				.chain()
 				.in_set(AnimationSystems),
 		);
 
