@@ -84,7 +84,7 @@ fn animation_bone_chains<'a>(
 ) -> Option<impl Iterator<Item = AnimationTargetId>> {
 	let not_excluded = |e| {
 		let Some((_, name, _)) = get_bone(e) else {
-			return false;
+			return true;
 		};
 		!until_excluded.contains(&BoneName::from(name))
 	};
@@ -617,6 +617,101 @@ mod tests {
 					),
 					1
 				),
+			]),
+			app.world()
+				.resource::<Assets<AnimationGraph>>()
+				.get(&handle)
+				.unwrap()
+				.mask_groups
+		);
+	}
+
+	#[test]
+	fn add_root_when_preceded_by_entities_with_missing_bone_components() {
+		let handle = new_handle();
+		let mut app = setup(&handle);
+		let root = app
+			.world_mut()
+			.spawn((
+				AnimationLookup2 {
+					animations: HashMap::from([(
+						AnimationKey::Run,
+						AnimationLookupData::<AnimationClips> {
+							mask: 1,
+							bones: AffectedAnimationBones2 {
+								from_root: BoneName::from("root"),
+								..default()
+							},
+							..default()
+						},
+					)]),
+				},
+				AnimationGraphHandle(handle.clone()),
+			))
+			.id();
+		let preceded = app.world_mut().spawn(ChildOf(root)).id();
+		app.world_mut()
+			.entity_mut(preceded)
+			.insert(bone_components(["root"], root));
+
+		app.update();
+
+		assert_eq!(
+			BevyHashMap::from([(
+				AnimationTargetId::from_names([Name::from("root")].iter()),
+				1
+			)]),
+			app.world()
+				.resource::<Assets<AnimationGraph>>()
+				.get(&handle)
+				.unwrap()
+				.mask_groups
+		);
+	}
+
+	#[test]
+	fn do_not_stop_at_intermediate_entity_with_missing_bone_components() {
+		let handle = new_handle();
+		let mut app = setup(&handle);
+		let root = app
+			.world_mut()
+			.spawn((
+				AnimationLookup2 {
+					animations: HashMap::from([(
+						AnimationKey::Run,
+						AnimationLookupData::<AnimationClips> {
+							mask: 1,
+							bones: AffectedAnimationBones2 {
+								from_root: BoneName::from("root"),
+								..default()
+							},
+							..default()
+						},
+					)]),
+				},
+				AnimationGraphHandle(handle.clone()),
+			))
+			.id();
+		app.world_mut()
+			.entity_mut(root)
+			.insert(bone_components(["root"], root));
+		let intermediate = app.world_mut().spawn(ChildOf(root)).id();
+		app.world_mut()
+			.spawn(bone_components(["root", "child"], root))
+			.insert(ChildOf(intermediate));
+
+		app.update();
+
+		assert_eq!(
+			BevyHashMap::from([
+				(
+					AnimationTargetId::from_names([Name::from("root")].iter()),
+					1
+				),
+				(
+					AnimationTargetId::from_names([Name::from("root"), Name::from("child")].iter()),
+					1
+				)
 			]),
 			app.world()
 				.resource::<Assets<AnimationGraph>>()
