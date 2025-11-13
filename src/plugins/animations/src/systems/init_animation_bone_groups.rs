@@ -17,7 +17,7 @@ pub(crate) trait InitAnimationBoneGroups:
 {
 	fn init_animation_bone_groups(
 		mut graphs: ResMut<Assets<AnimationGraph>>,
-		lookups: Query<(Entity, &AnimationLookup2, &Self)>,
+		lookups: Query<(Entity, &AnimationLookup2, &Self), Added<Self>>,
 		bones: Query<(&Name, &AnimationTarget)>,
 		children: Query<&Children>,
 	) {
@@ -639,7 +639,7 @@ mod tests {
 						AnimationLookupData::<AnimationClips> {
 							mask: 1,
 							bones: AffectedAnimationBones2 {
-								from_root: BoneName::from(" root"),
+								from_root: BoneName::from("root"),
 								..default()
 							},
 							..default()
