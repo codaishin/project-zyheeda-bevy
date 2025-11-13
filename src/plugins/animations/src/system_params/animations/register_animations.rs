@@ -1,5 +1,8 @@
 use crate::{
-	components::animation_lookup::{AnimationClips, AnimationLookup2, AnimationLookupData},
+	components::{
+		animation_dispatch::AnimationDispatch,
+		animation_lookup::{AnimationClips, AnimationLookup2, AnimationLookupData},
+	},
 	system_params::animations::AnimationsContextMut,
 	traits::LoadAnimationAssets,
 };
@@ -37,15 +40,21 @@ where
 			})
 			.collect();
 
-		self.entity
-			.try_insert((AnimationLookup2 { animations }, TGraph::wrap(graph)));
+		self.entity.try_insert((
+			AnimationDispatch::<AnimationKey>::default(),
+			AnimationLookup2 { animations },
+			TGraph::wrap(graph),
+		));
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::system_params::animations::AnimationsParamMut;
+	use crate::{
+		components::animation_dispatch::AnimationDispatch,
+		system_params::animations::AnimationsParamMut,
+	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
 		tools::action_key::slot::SlotKey,
@@ -128,6 +137,30 @@ mod tests {
 			})?;
 
 		assert!(app.world().entity(entity).contains::<_GraphComponent>());
+		Ok(())
+	}
+
+	#[test]
+	fn add_animation_dispatch() -> Result<(), RunSystemError> {
+		let mut app = setup(_Server::new().with_mock(|mock| {
+			mock.expect_load_animation_assets()
+				.return_const((_Graph, HashMap::default()));
+		}));
+		let entity = app.world_mut().spawn_empty().id();
+
+		app.world_mut()
+			.run_system_once(move |mut p: AnimationsParamMut<_Server, _Graph>| {
+				let key = AnimationsKey { entity };
+				let mut ctx = AnimationsParamMut::get_context_mut(&mut p, key).unwrap();
+				ctx.register_animations(HashMap::default());
+			})?;
+
+		assert_eq!(
+			Some(&AnimationDispatch::<AnimationKey>::default()),
+			app.world()
+				.entity(entity)
+				.get::<AnimationDispatch<AnimationKey>>()
+		);
 		Ok(())
 	}
 
