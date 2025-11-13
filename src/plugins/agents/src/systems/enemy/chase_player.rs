@@ -56,7 +56,7 @@ mod tests {
 	use common::{
 		tools::{Units, UnitsPerSecond},
 		traits::{
-			animation::{Animation, AnimationAsset, PlayMode},
+			animation::{Animation, AnimationPath, PlayMode},
 			handles_movement::MovementTarget,
 		},
 	};
@@ -130,7 +130,7 @@ mod tests {
 		let speed = UnitsPerSecond::from(42.);
 		let collider_radius = Units::from(11.);
 		let animation = Some(Animation::new(
-			AnimationAsset::from("my/asset"),
+			AnimationPath::from("my/asset"),
 			PlayMode::Replay,
 		));
 		let mut app = setup();
@@ -170,7 +170,7 @@ mod tests {
 		let speed = UnitsPerSecond::from(42.);
 		let collider_radius = Units::from(11.);
 		let animation = Some(Animation::new(
-			AnimationAsset::from("my/asset"),
+			AnimationPath::from("my/asset"),
 			PlayMode::Replay,
 		));
 		let mut app = setup();
@@ -203,7 +203,7 @@ mod tests {
 		let speed = UnitsPerSecond::from(42.);
 		let collider_radius = Units::from(11.);
 		let animation = Some(Animation::new(
-			AnimationAsset::from("my/asset"),
+			AnimationPath::from("my/asset"),
 			PlayMode::Replay,
 		));
 		let mut app = setup();
@@ -238,7 +238,7 @@ mod tests {
 		let speed = UnitsPerSecond::from(42.);
 		let collider_radius = Units::from(11.);
 		let animation = Some(Animation::new(
-			AnimationAsset::from("my/asset"),
+			AnimationPath::from("my/asset"),
 			PlayMode::Replay,
 		));
 		let mut app = setup();

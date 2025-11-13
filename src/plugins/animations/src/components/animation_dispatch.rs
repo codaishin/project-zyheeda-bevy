@@ -13,8 +13,10 @@ use bevy::prelude::*;
 use common::traits::{
 	animation::{
 		Animation,
+		AnimationKey,
 		AnimationPriority,
 		ConfigureNewAnimationDispatch,
+		OverrideAnimations,
 		SetAnimations,
 		StartAnimation,
 		StopAnimation,
@@ -33,14 +35,14 @@ use std::{
 };
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
-#[savable_component(dto = AnimationDispatchDto)]
+#[savable_component(dto = AnimationDispatchDto<TAnimation>)]
 pub struct AnimationDispatch<TAnimation = Animation>
 where
 	TAnimation: Eq + Hash,
 {
 	pub(crate) animation_players: HashSet<Entity>,
 	animation_handles: HashSet<Entity>,
-	stack: (
+	priorities: (
 		HashSet<TAnimation>,
 		HashSet<TAnimation>,
 		HashSet<TAnimation>,
@@ -68,9 +70,9 @@ where
 		TLayer: Into<AnimationPriority>,
 	{
 		match layer.into() {
-			AnimationPriority::High => &mut self.stack.0,
-			AnimationPriority::Medium => &mut self.stack.1,
-			AnimationPriority::Low => &mut self.stack.2,
+			AnimationPriority::High => &mut self.priorities.0,
+			AnimationPriority::Medium => &mut self.priorities.1,
+			AnimationPriority::Low => &mut self.priorities.2,
 		}
 	}
 
@@ -79,9 +81,9 @@ where
 		TLayer: Into<AnimationPriority>,
 	{
 		match layer.into() {
-			AnimationPriority::High => &self.stack.0,
-			AnimationPriority::Medium => &self.stack.1,
-			AnimationPriority::Low => &self.stack.2,
+			AnimationPriority::High => &self.priorities.0,
+			AnimationPriority::Medium => &self.priorities.1,
+			AnimationPriority::Low => &self.priorities.2,
 		}
 	}
 
@@ -109,7 +111,7 @@ where
 		Self {
 			animation_players: default(),
 			animation_handles: default(),
-			stack: default(),
+			priorities: default(),
 		}
 	}
 }
@@ -129,43 +131,64 @@ where
 	}
 }
 
-impl Track<AnimationPlayer> for AnimationDispatch {
+impl<TAnimation> Track<AnimationPlayer> for AnimationDispatch<TAnimation>
+where
+	TAnimation: Eq + Hash,
+{
 	fn track(&mut self, entity: Entity, _: &AnimationPlayer) {
 		self.animation_players.insert(entity);
 	}
 }
 
-impl IsTracking<AnimationPlayer> for AnimationDispatch {
+impl<TAnimation> IsTracking<AnimationPlayer> for AnimationDispatch<TAnimation>
+where
+	TAnimation: Eq + Hash,
+{
 	fn is_tracking(&self, entity: &Entity) -> bool {
 		self.animation_players.contains(entity)
 	}
 }
 
-impl Untrack<AnimationPlayer> for AnimationDispatch {
+impl<TAnimation> Untrack<AnimationPlayer> for AnimationDispatch<TAnimation>
+where
+	TAnimation: Eq + Hash,
+{
 	fn untrack(&mut self, entity: &Entity) {
 		self.animation_players.remove(entity);
 	}
 }
 
-impl Track<AnimationGraphHandle> for AnimationDispatch {
+impl<TAnimation> Track<AnimationGraphHandle> for AnimationDispatch<TAnimation>
+where
+	TAnimation: Eq + Hash,
+{
 	fn track(&mut self, entity: Entity, _: &AnimationGraphHandle) {
 		self.animation_handles.insert(entity);
 	}
 }
 
-impl IsTracking<AnimationGraphHandle> for AnimationDispatch {
+impl<TAnimation> IsTracking<AnimationGraphHandle> for AnimationDispatch<TAnimation>
+where
+	TAnimation: Eq + Hash,
+{
 	fn is_tracking(&self, entity: &Entity) -> bool {
 		self.animation_handles.contains(entity)
 	}
 }
 
-impl Untrack<AnimationGraphHandle> for AnimationDispatch {
+impl<TAnimation> Untrack<AnimationGraphHandle> for AnimationDispatch<TAnimation>
+where
+	TAnimation: Eq + Hash,
+{
 	fn untrack(&mut self, entity: &Entity) {
 		self.animation_handles.remove(entity);
 	}
 }
 
-impl AnimationPlayers for AnimationDispatch {
+impl<TAnimation> AnimationPlayers for AnimationDispatch<TAnimation>
+where
+	TAnimation: Eq + Hash,
+{
 	type TIter = IntoIter<Entity>;
 
 	fn animation_players(&self) -> Self::TIter {
@@ -173,7 +196,10 @@ impl AnimationPlayers for AnimationDispatch {
 	}
 }
 
-impl AnimationPlayersWithoutGraph for AnimationDispatch {
+impl<TAnimation> AnimationPlayersWithoutGraph for AnimationDispatch<TAnimation>
+where
+	TAnimation: Eq + Hash,
+{
 	type TIter = std::vec::IntoIter<Entity>;
 
 	fn animation_players_without_graph(&self) -> Self::TIter {
@@ -217,9 +243,9 @@ where
 
 	fn get_all_active_animations(&self) -> Self::TIter<'_> {
 		IterAll(
-			self.stack.0.iter(),
-			self.stack.1.iter(),
-			self.stack.2.iter(),
+			self.priorities.0.iter(),
+			self.priorities.1.iter(),
+			self.priorities.2.iter(),
 		)
 	}
 }
@@ -279,10 +305,22 @@ where
 	}
 }
 
+impl OverrideAnimations for AnimationDispatch<AnimationKey> {
+	fn override_animations<TLayer, TAnimations>(&mut self, layer: TLayer, animations: TAnimations)
+	where
+		TLayer: Into<AnimationPriority> + 'static,
+		TAnimations: IntoIterator<Item = AnimationKey> + 'static,
+	{
+		*self.slot_mut(layer) = HashSet::from_iter(animations);
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
 	use bevy::prelude::default;
+	use common::tools::action_key::slot::SlotKey;
+	use test_case::test_case;
 
 	#[derive(Default, Debug, PartialEq, Eq, Hash, Clone)]
 	struct _Animation {
@@ -501,7 +539,7 @@ mod tests {
 
 	#[test]
 	fn track_animation_player() {
-		let dispatch = &mut AnimationDispatch::default();
+		let dispatch = &mut AnimationDispatch::<_Animation>::default();
 		as_track::<AnimationPlayer>(dispatch)
 			.track(Entity::from_raw(1), &AnimationPlayer::default());
 		as_track::<AnimationPlayer>(dispatch)
@@ -515,7 +553,7 @@ mod tests {
 
 	#[test]
 	fn untrack_animation_player() {
-		let dispatch = &mut AnimationDispatch {
+		let dispatch = &mut AnimationDispatch::<_Animation> {
 			animation_players: HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
 			..default()
 		};
@@ -529,7 +567,7 @@ mod tests {
 
 	#[test]
 	fn is_tracking_animation_player() {
-		let dispatch = &mut AnimationDispatch {
+		let dispatch = &mut AnimationDispatch::<_Animation> {
 			animation_players: HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
 			..default()
 		};
@@ -545,7 +583,7 @@ mod tests {
 
 	#[test]
 	fn track_animation_graph() {
-		let dispatch = &mut AnimationDispatch::default();
+		let dispatch = &mut AnimationDispatch::<_Animation>::default();
 		as_track::<AnimationGraphHandle>(dispatch)
 			.track(Entity::from_raw(1), &AnimationGraphHandle::default());
 		as_track::<AnimationGraphHandle>(dispatch)
@@ -559,7 +597,7 @@ mod tests {
 
 	#[test]
 	fn untrack_animation_graph() {
-		let dispatch = &mut AnimationDispatch {
+		let dispatch = &mut AnimationDispatch::<_Animation> {
 			animation_handles: HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
 			..default()
 		};
@@ -573,7 +611,7 @@ mod tests {
 
 	#[test]
 	fn is_tracking_animation_graph() {
-		let dispatch = &mut AnimationDispatch {
+		let dispatch = &mut AnimationDispatch::<_Animation> {
 			animation_handles: HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
 			..default()
 		};
@@ -589,7 +627,7 @@ mod tests {
 
 	#[test]
 	fn iterate_animation_players() {
-		let dispatch = AnimationDispatch {
+		let dispatch = AnimationDispatch::<_Animation> {
 			animation_players: HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
 			..default()
 		};
@@ -602,7 +640,7 @@ mod tests {
 
 	#[test]
 	fn iterate_animation_players_without_transitions() {
-		let dispatch = AnimationDispatch {
+		let dispatch = AnimationDispatch::<_Animation> {
 			animation_players: HashSet::from([
 				Entity::from_raw(1),
 				Entity::from_raw(2),
@@ -625,7 +663,7 @@ mod tests {
 		let dispatch = AnimationDispatch {
 			animation_players: default(),
 			animation_handles: default(),
-			stack: (
+			priorities: (
 				HashSet::from([1, 2, 3]),
 				HashSet::from([4, 5, 6]),
 				HashSet::from([7, 8, 9]),
@@ -639,5 +677,74 @@ mod tests {
 				.copied()
 				.collect::<HashSet<_>>()
 		)
+	}
+
+	#[test_case([AnimationKey::Walk]; "single")]
+	#[test_case([AnimationKey::Walk, AnimationKey::Skill(SlotKey(11))]; "multiple")]
+	fn override_high_priority<const N: usize>(keys: [AnimationKey; N]) {
+		let mut dispatch = AnimationDispatch {
+			priorities: (
+				HashSet::from([AnimationKey::Run]),
+				HashSet::from([]),
+				HashSet::from([]),
+			),
+			..default()
+		};
+
+		dispatch.override_animations(_Hi, keys);
+
+		assert_eq!(
+			AnimationDispatch {
+				priorities: (HashSet::from(keys), HashSet::from([]), HashSet::from([])),
+				..default()
+			},
+			dispatch
+		);
+	}
+
+	#[test_case([AnimationKey::Walk]; "single")]
+	#[test_case([AnimationKey::Walk, AnimationKey::Skill(SlotKey(11))]; "multiple")]
+	fn override_medium_priority<const N: usize>(keys: [AnimationKey; N]) {
+		let mut dispatch = AnimationDispatch {
+			priorities: (
+				HashSet::from([]),
+				HashSet::from([AnimationKey::Run]),
+				HashSet::from([]),
+			),
+			..default()
+		};
+
+		dispatch.override_animations(_Me, keys);
+
+		assert_eq!(
+			AnimationDispatch {
+				priorities: (HashSet::from([]), HashSet::from(keys), HashSet::from([])),
+				..default()
+			},
+			dispatch
+		);
+	}
+
+	#[test_case([AnimationKey::Walk]; "single")]
+	#[test_case([AnimationKey::Walk, AnimationKey::Skill(SlotKey(11))]; "multiple")]
+	fn override_low_priority<const N: usize>(keys: [AnimationKey; N]) {
+		let mut dispatch = AnimationDispatch {
+			priorities: (
+				HashSet::from([]),
+				HashSet::from([]),
+				HashSet::from([AnimationKey::Run]),
+			),
+			..default()
+		};
+
+		dispatch.override_animations(_Lo, keys);
+
+		assert_eq!(
+			AnimationDispatch {
+				priorities: (HashSet::from([]), HashSet::from([]), HashSet::from(keys)),
+				..default()
+			},
+			dispatch
+		);
 	}
 }

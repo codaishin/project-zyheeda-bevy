@@ -119,7 +119,7 @@ mod tests {
 			action_key::{ActionKey, movement::MovementKey},
 		},
 		traits::{
-			animation::{Animation, AnimationAsset, PlayMode},
+			animation::{Animation, AnimationPath, PlayMode},
 			handles_input::InputState,
 			handles_movement::MovementTarget,
 			iteration::IterFinite,
@@ -218,7 +218,7 @@ mod tests {
 		let collider_radius = Units::from(42.);
 		let speed = UnitsPerSecond::from(11.);
 		let animation = Some(Animation::new(
-			AnimationAsset::from("my/asset"),
+			AnimationPath::from("my/asset"),
 			PlayMode::Repeat,
 		));
 		let mut app = setup(
@@ -274,7 +274,7 @@ mod tests {
 		let collider_radius = Units::from(42.);
 		let speed = UnitsPerSecond::from(11.);
 		let animation = Some(Animation::new(
-			AnimationAsset::from("my/asset"),
+			AnimationPath::from("my/asset"),
 			PlayMode::Repeat,
 		));
 		let mut app = setup(
@@ -318,7 +318,7 @@ mod tests {
 		let collider_radius = Units::from(42.);
 		let speed = UnitsPerSecond::from(11.);
 		let animation = Some(Animation::new(
-			AnimationAsset::from("my/asset"),
+			AnimationPath::from("my/asset"),
 			PlayMode::Repeat,
 		));
 		let mut app = setup(
@@ -363,7 +363,7 @@ mod tests {
 		let collider_radius = Units::from(42.);
 		let speed = UnitsPerSecond::from(11.);
 		let animation = Some(Animation::new(
-			AnimationAsset::from("my/asset"),
+			AnimationPath::from("my/asset"),
 			PlayMode::Repeat,
 		));
 		let mut app = setup(
@@ -410,7 +410,7 @@ mod tests {
 		let collider_radius = Units::from(42.);
 		let speed = UnitsPerSecond::from(11.);
 		let animation = Some(Animation::new(
-			AnimationAsset::from("my/asset"),
+			AnimationPath::from("my/asset"),
 			PlayMode::Repeat,
 		));
 		let mut app = setup(
@@ -451,7 +451,7 @@ mod tests {
 		let collider_radius = Units::from(42.);
 		let speed = UnitsPerSecond::from(11.);
 		let animation = Some(Animation::new(
-			AnimationAsset::from("my/asset"),
+			AnimationPath::from("my/asset"),
 			PlayMode::Repeat,
 		));
 		let mut app = setup(
@@ -494,7 +494,7 @@ mod tests {
 		let collider_radius = Units::from(42.);
 		let speed = UnitsPerSecond::from(11.);
 		let animation = Some(Animation::new(
-			AnimationAsset::from("my/asset"),
+			AnimationPath::from("my/asset"),
 			PlayMode::Repeat,
 		));
 		let mut app = setup(
@@ -542,7 +542,7 @@ mod tests {
 		let collider_radius = Units::from(42.);
 		let speed = UnitsPerSecond::from(11.);
 		let animation = Some(Animation::new(
-			AnimationAsset::from("my/asset"),
+			AnimationPath::from("my/asset"),
 			PlayMode::Repeat,
 		));
 		let mut app = setup(
@@ -580,7 +580,7 @@ mod tests {
 		let collider_radius = Units::from(42.);
 		let speed = UnitsPerSecond::from(11.);
 		let animation = Some(Animation::new(
-			AnimationAsset::from("my/asset"),
+			AnimationPath::from("my/asset"),
 			PlayMode::Repeat,
 		));
 		let mut app = setup(
@@ -622,7 +622,7 @@ mod tests {
 		let collider_radius = Units::from(42.);
 		let speed = UnitsPerSecond::from(11.);
 		let animation = Some(Animation::new(
-			AnimationAsset::from("my/asset"),
+			AnimationPath::from("my/asset"),
 			PlayMode::Repeat,
 		));
 		let mut app = setup(
@@ -659,7 +659,7 @@ mod tests {
 		let collider_radius = Units::from(42.);
 		let speed = UnitsPerSecond::from(11.);
 		let animation = Some(Animation::new(
-			AnimationAsset::from("my/asset"),
+			AnimationPath::from("my/asset"),
 			PlayMode::Repeat,
 		));
 		let mut app = setup(

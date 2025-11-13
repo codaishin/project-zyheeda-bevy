@@ -1,7 +1,9 @@
+use crate::components::player::PlayerAnimationKey;
+
 use super::player::Player;
 use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
-	tools::{action_key::slot::PlayerSlot, animation_key::AnimationKey},
+	tools::action_key::slot::PlayerSlot,
 	traits::{
 		accessors::get::TryApplyOn,
 		animation::{Animation, AnimationPriority, PlayMode, StartAnimation, StopAnimation},
@@ -30,7 +32,7 @@ impl SkillAnimation {
 				SkillAnimation::Start(slot) => dispatch.start_animation(
 					Skill,
 					Animation::new(
-						Player::animation_asset(AnimationKey::Other(*slot)),
+						Player::animation_asset(PlayerAnimationKey::Skill(*slot)),
 						PlayMode::Repeat,
 					),
 				),
@@ -125,7 +127,7 @@ mod tests {
 					.with(
 						eq(Skill),
 						eq(Animation::new(
-							Player::animation_asset(AnimationKey::Other(slot)),
+							Player::animation_asset(PlayerAnimationKey::Skill(slot)),
 							PlayMode::Repeat,
 						)),
 					)

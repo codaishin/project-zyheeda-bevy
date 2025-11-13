@@ -1,15 +1,49 @@
-use crate::tools::path::Path;
+mod priority_order;
 
 use super::iteration::IterFinite;
-use bevy::{ecs::component::Mutable, prelude::*};
+use crate::{
+	tools::{action_key::slot::SlotKey, path::Path},
+	traits::{
+		accessors::get::GetContextMut,
+		animation::priority_order::DescendingAnimationPriorities,
+	},
+};
+use bevy::{
+	ecs::{component::Mutable, system::SystemParam},
+	prelude::*,
+};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{
+	collections::{HashMap, HashSet},
+	sync::Arc,
+};
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub enum AnimationPriority {
-	High,
-	Medium,
-	Low,
+pub trait HandlesAnimations {
+	type TAnimationsMut<'w, 's>: SystemParam
+		+ for<'c> GetContextMut<Animations, TContext<'c>: RegisterAnimations2>
+		+ for<'c> GetContextMut<Animations, TContext<'c>: OverrideAnimations>
+		+ for<'c> GetContextMut<Animations, TContext<'c>: SetMovementDirection>;
+}
+
+pub struct Animations {
+	pub entity: Entity,
+}
+
+pub type AnimationsParamMut<'w, 's, T> = <T as HandlesAnimations>::TAnimationsMut<'w, 's>;
+
+pub trait RegisterAnimations2 {
+	fn register_animations(&mut self, animations: HashMap<AnimationKey, Animation2>);
+}
+
+pub trait OverrideAnimations {
+	fn override_animations<TLayer, TAnimations>(&mut self, layer: TLayer, animations: TAnimations)
+	where
+		TLayer: Into<AnimationPriority> + 'static,
+		TAnimations: IntoIterator<Item = AnimationKey> + 'static;
+}
+
+pub trait SetMovementDirection {
+	fn set_movement_direction(&mut self, direction: Dir3);
 }
 
 pub trait StartAnimation {
@@ -34,33 +68,33 @@ pub trait StopAnimation {
 pub trait GetAnimationDefinitions
 where
 	for<'a> AnimationMask: From<&'a Self::TAnimationMask>,
-	for<'a> AnimationMaskDefinition: From<&'a Self::TAnimationMask>,
+	for<'a> AffectedAnimationBones: From<&'a Self::TAnimationMask>,
 {
 	type TAnimationMask: IterFinite;
 
-	fn animations() -> HashMap<AnimationAsset, AnimationMask>;
+	fn animations() -> HashMap<AnimationPath, AnimationMask>;
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum AnimationMaskDefinition {
-	Mask {
-		from_root: Name,
-		exclude_roots: Vec<Name>,
+pub enum AffectedAnimationBones {
+	SubTree {
+		root: Name,
+		until_exclusive: Vec<Name>,
 	},
 	Leaf {
-		from_root: Name,
+		root: Name,
 	},
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
-pub enum AnimationAsset {
-	Path(Path),
+pub enum AnimationPath {
+	Single(Path),
 	Directional(Directional),
 }
 
-impl From<&'static str> for AnimationAsset {
+impl From<&'static str> for AnimationPath {
 	fn from(path: &'static str) -> Self {
-		Self::Path(Path::from(path))
+		Self::Single(Path::from(path))
 	}
 }
 
@@ -95,27 +129,90 @@ pub trait RegisterAnimations: HasAnimationsDispatch {
 	where
 		TAgent: Component + GetAnimationDefinitions + ConfigureNewAnimationDispatch,
 		for<'a> AnimationMask: From<&'a TAgent::TAnimationMask>,
-		for<'a> AnimationMaskDefinition: From<&'a TAgent::TAnimationMask>;
+		for<'a> AffectedAnimationBones: From<&'a TAgent::TAnimationMask>;
 
 	fn register_movement_direction<TMovementDirection>(app: &mut App)
 	where
 		TMovementDirection: Component + GetMovementDirection;
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub enum AnimationPriority {
+	High,
+	Medium,
+	Low,
+}
+
+impl AnimationPriority {
+	pub fn ordered_descending() -> DescendingAnimationPriorities {
+		DescendingAnimationPriorities::default()
+	}
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Copy, Serialize, Deserialize)]
 pub enum PlayMode {
+	#[default]
 	Replay,
 	Repeat,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
 pub struct Animation {
-	pub asset: AnimationAsset,
+	pub path: AnimationPath,
 	pub play_mode: PlayMode,
 }
 
 impl Animation {
-	pub const fn new(asset: AnimationAsset, play_mode: PlayMode) -> Self {
-		Self { asset, play_mode }
+	pub const fn new(path: AnimationPath, play_mode: PlayMode) -> Self {
+		Self { path, play_mode }
 	}
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Animation2 {
+	pub path: AnimationPath,
+	pub play_mode: PlayMode,
+	pub mask: AnimationMask,
+	pub bones: AffectedAnimationBones2,
+}
+
+#[derive(Debug, PartialEq, Default, Clone)]
+pub struct AffectedAnimationBones2 {
+	pub from_root: BoneName,
+	pub until_exclusive: HashSet<BoneName>,
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Default, Clone)]
+pub struct BoneName(Arc<str>);
+
+impl From<&str> for BoneName {
+	fn from(value: &str) -> Self {
+		Self(Arc::from(value))
+	}
+}
+
+impl From<&Name> for BoneName {
+	fn from(value: &Name) -> Self {
+		Self(Arc::from(value.as_str()))
+	}
+}
+
+impl PartialEq<Name> for BoneName {
+	fn eq(&self, other: &Name) -> bool {
+		&*self.0 == other.as_str()
+	}
+}
+
+impl PartialEq<BoneName> for Name {
+	fn eq(&self, other: &BoneName) -> bool {
+		self.as_str() == &*other.0
+	}
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
+pub enum AnimationKey {
+	Idle,
+	Walk,
+	Run,
+	Skill(SlotKey),
 }
