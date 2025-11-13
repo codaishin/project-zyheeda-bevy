@@ -1,7 +1,12 @@
+mod priority_order;
+
 use super::iteration::IterFinite;
 use crate::{
 	tools::{action_key::slot::SlotKey, path::Path},
-	traits::accessors::get::GetContextMut,
+	traits::{
+		accessors::get::GetContextMut,
+		animation::priority_order::DescendingAnimationPriorities,
+	},
 };
 use bevy::{
 	ecs::{component::Mutable, system::SystemParam},
@@ -136,6 +141,12 @@ pub enum AnimationPriority {
 	High,
 	Medium,
 	Low,
+}
+
+impl AnimationPriority {
+	pub fn ordered_descending() -> DescendingAnimationPriorities {
+		DescendingAnimationPriorities::default()
+	}
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Copy, Serialize, Deserialize)]

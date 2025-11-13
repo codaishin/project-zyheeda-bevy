@@ -19,12 +19,6 @@ use common::traits::{
 };
 use std::collections::HashSet;
 
-const ANIMATION_PRIORITY_ORDER: [AnimationPriority; 3] = [
-	AnimationPriority::High,
-	AnimationPriority::Medium,
-	AnimationPriority::Low,
-];
-
 impl<TDispatch> PlayAnimationClip for TDispatch {}
 
 pub(crate) trait PlayAnimationClip
@@ -111,7 +105,7 @@ where
 	let mut higher_priority_mask = 0;
 	let mut active_animations = HashSet::default();
 
-	for priority in ANIMATION_PRIORITY_ORDER {
+	for priority in AnimationPriority::ordered_descending() {
 		let blocked_by_higher_priority = higher_priority_mask;
 
 		for active_animation in dispatcher.get_active_animations(priority) {
