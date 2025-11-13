@@ -6,18 +6,23 @@ use bevy::{
 use common::traits::{
 	animation::BoneName,
 	iter_descendants_conditional::IterDescendantsConditional,
+	wrap_handle::UnwrapHandle,
 };
 use std::{collections::HashSet, iter};
 
-impl AnimationLookup2 {
-	pub(crate) fn init_animation_bone_groups(
+impl<T> InitAnimationBoneGroups for T where T: Component + UnwrapHandle<TAsset = AnimationGraph> {}
+
+pub(crate) trait InitAnimationBoneGroups:
+	Component + UnwrapHandle<TAsset = AnimationGraph> + Sized
+{
+	fn init_animation_bone_groups(
 		mut graphs: ResMut<Assets<AnimationGraph>>,
-		lookups: Query<(Entity, &Self, &AnimationGraphHandle)>,
+		lookups: Query<(Entity, &AnimationLookup2, &Self)>,
 		bones: Query<(&Name, &AnimationTarget)>,
 		children: Query<&Children>,
 	) {
-		for (entity, lookup, AnimationGraphHandle(handle)) in &lookups {
-			let Some(graph) = graphs.get_mut(handle) else {
+		for (entity, lookup, handle_component) in &lookups {
+			let Some(graph) = graphs.get_mut(handle_component.unwrap()) else {
 				continue;
 			};
 			let chains =
@@ -140,7 +145,7 @@ mod tests {
 
 		assets.insert(handle, AnimationGraph::new());
 		app.insert_resource(assets);
-		app.add_systems(Update, AnimationLookup2::init_animation_bone_groups);
+		app.add_systems(Update, AnimationGraphHandle::init_animation_bone_groups);
 
 		app
 	}

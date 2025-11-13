@@ -7,15 +7,17 @@ mod traits;
 pub(crate) mod test_tools;
 
 use crate::{
-	components::animation_lookup::{AnimationClips, AnimationLookup2},
+	components::animation_lookup::AnimationClips,
 	system_params::animations::{AnimationsParamMut, override_animations::AnimationOverrideEvent},
 	systems::{
 		discover_animation_mask_bones::DiscoverMaskChains,
+		init_animation_bone_groups::InitAnimationBoneGroups,
 		init_animation_components::InitAnimationComponents,
 		init_animation_mask::MaskAllBits,
 		mask_animation_nodes::MaskAnimationNodes,
 		play_animation_clip2::PlayAnimationClip2,
 		remove_unused_animation_targets::RemoveUnusedAnimationTargets,
+		remove_unused_animation_targets2::RemoveUnusedAnimationTargets2,
 		set_directional_animation_weights::SetDirectionalAnimationWeights,
 	},
 };
@@ -107,7 +109,8 @@ where
 			Update,
 			(
 				AnimationGraphHandle::init_animation_mask::<AnimationClips>,
-				AnimationLookup2::init_animation_bone_groups,
+				AnimationGraphHandle::init_animation_bone_groups,
+				AnimationGraphHandle::remove_unused_animation_targets2,
 				DispatchNew::track_in_self_and_children::<AnimationPlayer>().system(),
 				DispatchNew::track_in_self_and_children::<AnimationGraphHandle>().system(),
 				DispatchNew::distribute_player_components::<AnimationGraphHandle>,
