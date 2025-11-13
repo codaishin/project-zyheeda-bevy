@@ -8,7 +8,7 @@ use common::traits::{iterate::Iterate, thread_safe::ThreadSafe, wrap_handle::Unw
 impl<T> MaskAllBits for T where T: Component + UnwrapHandle<TAsset: GetNodeMut> {}
 
 pub(crate) trait MaskAllBits: Component + UnwrapHandle<TAsset: GetNodeMut> + Sized {
-	fn on_add_mask_all_bits_for<TAnimations>(
+	fn init_animation_mask<TAnimations>(
 		graphs: Query<(&Self, &AnimationLookup2<TAnimations>), Added<Self>>,
 		mut assets: ResMut<Assets<Self::TAsset>>,
 	) where
@@ -85,7 +85,7 @@ mod tests {
 		}
 
 		app.insert_resource(asset_resource);
-		app.add_systems(Update, _Component::on_add_mask_all_bits_for::<_Animations>);
+		app.add_systems(Update, _Component::init_animation_mask::<_Animations>);
 
 		app
 	}

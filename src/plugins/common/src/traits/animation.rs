@@ -177,6 +177,24 @@ impl From<&str> for BoneName {
 	}
 }
 
+impl From<&Name> for BoneName {
+	fn from(value: &Name) -> Self {
+		Self(value.to_string())
+	}
+}
+
+impl PartialEq<Name> for BoneName {
+	fn eq(&self, other: &Name) -> bool {
+		self.0.as_str() == other.as_str()
+	}
+}
+
+impl PartialEq<BoneName> for Name {
+	fn eq(&self, other: &BoneName) -> bool {
+		self.as_str() == other.0.as_str()
+	}
+}
+
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
 pub enum AnimationKey {
 	Idle,
