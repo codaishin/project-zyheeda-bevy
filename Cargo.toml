@@ -13,7 +13,7 @@ bevy_rapier3d = { version = "0.30.0", features = ["serde-serialize"] }
 fluent = "0.16.1"
 fluent-syntax = "0.11.1"
 mockall = "=0.13.1"
-serde = "1.0.219"
+serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 tracing = "0.1.41"
 unic-langid = { version = "0.9.6", features = ["macros"] }
