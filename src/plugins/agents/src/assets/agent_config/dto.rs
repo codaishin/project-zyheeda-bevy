@@ -5,17 +5,22 @@ use crate::{
 use common::{
 	errors::Unreachable,
 	traits::{
+		animation::{Animation2, AnimationKey},
 		handles_custom_assets::{AssetFileExtensions, TryLoadFrom},
 		handles_physics::PhysicalDefaultAttributes,
 	},
 };
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use zyheeda_core::serialization::as_vec;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct AgentConfigAssetDto {
 	pub(crate) model: Model,
 	pub(crate) loadout: Loadout,
 	pub(crate) attributes: PhysicalDefaultAttributes,
+	#[serde(with = "as_vec")]
+	pub(crate) animations: HashMap<AnimationKey, Animation2>,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -56,6 +61,7 @@ impl TryLoadFrom<AgentConfigAssetDto> for AgentConfigAsset {
 			model,
 			loadout,
 			attributes,
+			animations,
 		}: AgentConfigAssetDto,
 		_: &mut TLoadAsset,
 	) -> Result<Self, Self::TInstantiationError> {
@@ -66,6 +72,7 @@ impl TryLoadFrom<AgentConfigAssetDto> for AgentConfigAsset {
 			bones,
 			agent_model,
 			attributes,
+			animations,
 		})
 	}
 }

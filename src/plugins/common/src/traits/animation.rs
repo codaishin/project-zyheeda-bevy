@@ -180,6 +180,7 @@ pub struct Animation2 {
 #[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
 pub struct AffectedAnimationBones2 {
 	pub from_root: BoneName,
+	#[serde(default)]
 	pub until_exclusive: HashSet<BoneName>,
 }
 
