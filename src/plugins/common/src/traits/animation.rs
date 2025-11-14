@@ -12,7 +12,7 @@ use bevy::{
 	ecs::{component::Mutable, system::SystemParam},
 	prelude::*,
 };
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Error};
 use std::{
 	collections::{HashMap, HashSet},
 	sync::Arc,
@@ -168,21 +168,22 @@ impl Animation {
 	}
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Animation2 {
 	pub path: AnimationPath,
 	pub play_mode: PlayMode,
+	#[serde(deserialize_with = "bits_to_mask", serialize_with = "mask_to_bits")]
 	pub mask: AnimationMask,
 	pub bones: AffectedAnimationBones2,
 }
 
-#[derive(Debug, PartialEq, Default, Clone)]
+#[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
 pub struct AffectedAnimationBones2 {
 	pub from_root: BoneName,
 	pub until_exclusive: HashSet<BoneName>,
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Default, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Serialize, Deserialize)]
 pub struct BoneName(Arc<str>);
 
 impl From<&str> for BoneName {
@@ -215,4 +216,140 @@ pub enum AnimationKey {
 	Walk,
 	Run,
 	Skill(SlotKey),
+}
+
+const DESERIALIZE_ERROR_PREFIX: &str = "Failed to parse animation mask";
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum U64OrString {
+	U64(u64),
+	String(String),
+}
+
+pub(crate) fn bits_to_mask<'a, D>(deserializer: D) -> Result<AnimationMask, D::Error>
+where
+	D: Deserializer<'a>,
+{
+	match U64OrString::deserialize(deserializer)? {
+		U64OrString::U64(mask) => Ok(mask),
+		U64OrString::String(bits) if bits.is_empty() => Ok(0),
+		U64OrString::String(bits) => AnimationMask::from_str_radix(&bits, 2)
+			.map_err(|error| Error::custom(format!("{DESERIALIZE_ERROR_PREFIX}: {error}"))),
+	}
+}
+
+pub(crate) fn mask_to_bits<S>(mask: &AnimationMask, serializer: S) -> Result<S::Ok, S::Error>
+where
+	S: Serializer,
+{
+	match mask {
+		0 => "".serialize(serializer),
+		mask => format!("{mask:b}").serialize(serializer),
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use serde_json::json;
+
+	#[derive(Debug, PartialEq, Serialize, Deserialize)]
+	struct _Wrapper {
+		#[serde(deserialize_with = "bits_to_mask", serialize_with = "mask_to_bits")]
+		mask: AnimationMask,
+	}
+
+	mod bits_to_mask {
+		use super::*;
+		use test_case::test_case;
+
+		#[test_case("0"; "0")]
+		#[test_case(""; "empty")]
+		fn deserialize_zero(v: &str) {
+			let value = json! ({
+				"mask": v
+			});
+
+			let mask = serde_json::from_value::<_Wrapper>(value).expect("DESERIALIZE FAILED");
+
+			assert_eq!(_Wrapper { mask: 0 }, mask);
+		}
+
+		#[test_case("101", 5; "5")]
+		#[test_case("111", 7; "7")]
+		#[test_case("10111", 23; "23")]
+		fn deserialize_bits(v: &str, mask: AnimationMask) {
+			let value = json! ({
+				"mask": v
+			});
+
+			let wrapper = serde_json::from_value::<_Wrapper>(value).expect("DESERIALIZE FAILED");
+
+			assert_eq!(_Wrapper { mask }, wrapper);
+		}
+
+		#[test_case(5; "5")]
+		#[test_case(7; "7")]
+		fn deserialize_raw_number(mask: AnimationMask) {
+			let value = json! ({
+				"mask": mask
+			});
+
+			let wrapper = serde_json::from_value::<_Wrapper>(value).expect("DESERIALIZE FAILED");
+
+			assert_eq!(_Wrapper { mask }, wrapper);
+		}
+
+		#[test]
+		fn parse_error() {
+			let value = json! ({
+				"mask": "123"
+			});
+
+			let Err(error) = serde_json::from_value::<_Wrapper>(value) else {
+				panic!("EXPECTED ERROR");
+			};
+
+			assert_eq!(
+				format!("{DESERIALIZE_ERROR_PREFIX}: invalid digit found in string"),
+				error.to_string(),
+			)
+		}
+	}
+
+	mod mask_to_bits {
+		use super::*;
+		use test_case::test_case;
+
+		#[test]
+		fn serialize_zero() {
+			let wrapper = _Wrapper { mask: 0 };
+
+			let value = serde_json::to_value(wrapper).expect("SERIALIZE FAILED");
+
+			assert_eq!(
+				json! ({
+					"mask": ""
+				}),
+				value
+			);
+		}
+
+		#[test_case(5,"101"; "5")]
+		#[test_case(7,"111"; "7")]
+		#[test_case(23,"10111"; "23")]
+		fn serialize_bits(mask: AnimationMask, v: &str) {
+			let wrapper = _Wrapper { mask };
+
+			let value = serde_json::to_value(wrapper).expect("SERIALIZE FAILED");
+
+			assert_eq!(
+				json! ({
+					"mask": v
+				}),
+				value
+			);
+		}
+	}
 }
