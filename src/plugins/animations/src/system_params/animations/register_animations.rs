@@ -18,7 +18,7 @@ where
 	TGraph: Asset + WrapHandle + Sync + Send + 'static,
 	TServer: Resource + LoadAnimationAssets<TGraph, AnimationClips>,
 {
-	fn register_animations(&mut self, animations: HashMap<AnimationKey, Animation2>) {
+	fn register_animations(&mut self, animations: &HashMap<AnimationKey, Animation2>) {
 		let animation_paths = animations
 			.values()
 			.map(|Animation2 { path, .. }| path.clone())
@@ -26,17 +26,17 @@ where
 		let (graph, new_clips) = self.asset_server.load_animation_assets(animation_paths);
 		let graph = self.graphs.add(graph);
 		let animations = animations
-			.into_iter()
+			.iter()
 			.filter_map(move |(key, animation)| {
 				let animation_clips = new_clips.get(&animation.path)?;
 				let data = AnimationLookupData {
 					animation_clips: *animation_clips,
 					play_mode: animation.play_mode,
 					mask: animation.mask,
-					bones: animation.bones,
+					bones: animation.bones.clone(),
 				};
 
-				Some((key, data))
+				Some((*key, data))
 			})
 			.collect();
 
@@ -133,7 +133,7 @@ mod tests {
 			.run_system_once(move |mut p: AnimationsParamMut<_Server, _Graph>| {
 				let key = AnimationsKey { entity };
 				let mut ctx = AnimationsParamMut::get_context_mut(&mut p, key).unwrap();
-				ctx.register_animations(HashMap::default());
+				ctx.register_animations(&HashMap::default());
 			})?;
 
 		assert!(app.world().entity(entity).contains::<_GraphComponent>());
@@ -152,7 +152,7 @@ mod tests {
 			.run_system_once(move |mut p: AnimationsParamMut<_Server, _Graph>| {
 				let key = AnimationsKey { entity };
 				let mut ctx = AnimationsParamMut::get_context_mut(&mut p, key).unwrap();
-				ctx.register_animations(HashMap::default());
+				ctx.register_animations(&HashMap::default());
 			})?;
 
 		assert_eq!(
@@ -231,7 +231,7 @@ mod tests {
 					},
 				};
 
-				ctx.register_animations(HashMap::from([
+				ctx.register_animations(&HashMap::from([
 					(AnimationKey::Idle, a),
 					(AnimationKey::Walk, b),
 					(AnimationKey::Skill(SlotKey(42)), c),

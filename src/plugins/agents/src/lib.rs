@@ -21,7 +21,7 @@ use common::{
 	states::game_state::{GameState, LoadingEssentialAssets},
 	tools::action_key::slot::{NoValidAgentKey, PlayerSlot, SlotKey},
 	traits::{
-		animation::RegisterAnimations,
+		animation::{AnimationsParamMut, HandlesAnimations, RegisterAnimations},
 		delta::Delta,
 		handles_agents::HandlesAgents,
 		handles_custom_assets::HandlesCustomFolderAssets,
@@ -61,7 +61,7 @@ where
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesPhysicalAttributes + HandlesRaycast,
-	TAnimations: ThreadSafe + RegisterAnimations,
+	TAnimations: ThreadSafe + RegisterAnimations + HandlesAnimations,
 	TLights: ThreadSafe + HandlesLights,
 	TMaps: ThreadSafe + HandlesMapGeneration,
 	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation + HandlesSkillControl,
@@ -97,7 +97,7 @@ where
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesPhysicalAttributes + HandlesRaycast,
-	TAnimations: ThreadSafe + RegisterAnimations,
+	TAnimations: ThreadSafe + RegisterAnimations + HandlesAnimations,
 	TLights: ThreadSafe + HandlesLights,
 	TMaps: ThreadSafe + HandlesMapGeneration,
 	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation + HandlesSkillControl,
@@ -120,6 +120,7 @@ where
 			Update,
 			(
 				Agent::insert_model,
+				Agent::register_animations::<AnimationsParamMut<TAnimations>>,
 				Agent::<AgentConfigAsset>::insert_attributes::<TPhysics::TDefaultAttributes>,
 			),
 		);

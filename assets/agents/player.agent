@@ -72,5 +72,129 @@
 		},
 		"gravity_interaction": "Affected",
 		"force_interaction": "Affected"
-	}
+	},
+	"animations": [
+		[
+			"Idle",
+			{
+				"path": {
+					"Single": "models/player.glb#Animation1"
+				},
+				"play_mode": "Repeat",
+				"mask": "11111",
+				"bones": {
+					"from_root": "metarig",
+					"until_exclusive": [
+						"top_shoulder.L",
+						"top_shoulder.R",
+						"bottom_shoulder.L",
+						"bottom_shoulder.R"
+					]
+				}
+			}
+		],
+		[
+			"Walk",
+			{
+				"path": {
+					"Single": "models/player.glb#Animation2"
+				},
+				"play_mode": "Repeat",
+				"mask": "11111",
+				"bones": {
+					"from_root": "metarig",
+					"until_exclusive": [
+						"top_shoulder.L",
+						"top_shoulder.R",
+						"bottom_shoulder.L",
+						"bottom_shoulder.R"
+					]
+				}
+			}
+		],
+		[
+			"Run",
+			{
+				"path": {
+					"Directional": {
+						"forward": "models/player.glb#Animation3",
+						"backward": "models/player.glb#Animation4",
+						"right": "models/player.glb#Animation5",
+						"left": "models/player.glb#Animation6"
+					}
+				},
+				"play_mode": "Repeat",
+				"mask": "11111",
+				"bones": {
+					"from_root": "metarig",
+					"until_exclusive": [
+						"top_shoulder.L",
+						"top_shoulder.R",
+						"bottom_shoulder.L",
+						"bottom_shoulder.R"
+					]
+				}
+			}
+		],
+		[
+			{
+				"Skill": 0
+			},
+			{
+				"path": {
+					"Single": "models/player.glb#Animation9"
+				},
+				"play_mode": "Repeat",
+				"mask": "00010",
+				"bones": {
+					"from_root": "top_shoulder.L"
+				}
+			}
+		],
+		[
+			{
+				"Skill": 1
+			},
+			{
+				"path": {
+					"Single": "models/player.glb#Animation7"
+				},
+				"play_mode": "Repeat",
+				"mask": "00100",
+				"bones": {
+					"from_root": "bottom_shoulder.L"
+				}
+			}
+		],
+		[
+			{
+				"Skill": 2
+			},
+			{
+				"path": {
+					"Single": "models/player.glb#Animation8"
+				},
+				"play_mode": "Repeat",
+				"mask": "01000",
+				"bones": {
+					"from_root": "bottom_shoulder.R"
+				}
+			}
+		],
+		[
+			{
+				"Skill": 3
+			},
+			{
+				"path": {
+					"Single": "models/player.glb#Animation10"
+				},
+				"play_mode": "Repeat",
+				"mask": "10000",
+				"bones": {
+					"from_root": "top_shoulder.R"
+				}
+			}
+		]
+	]
 }
