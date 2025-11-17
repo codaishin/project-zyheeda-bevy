@@ -15,6 +15,7 @@ use bevy::{
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Error};
 use std::{
 	collections::{HashMap, HashSet},
+	ops::DerefMut,
 	sync::Arc,
 };
 
@@ -29,10 +30,25 @@ pub struct Animations {
 	pub entity: Entity,
 }
 
+impl From<Animations> for Entity {
+	fn from(Animations { entity }: Animations) -> Self {
+		entity
+	}
+}
+
 pub type AnimationsParamMut<'w, 's, T> = <T as HandlesAnimations>::TAnimationsMut<'w, 's>;
 
 pub trait RegisterAnimations2 {
-	fn register_animations(&mut self, animations: HashMap<AnimationKey, Animation2>);
+	fn register_animations(&mut self, animations: &HashMap<AnimationKey, Animation2>);
+}
+
+impl<T> RegisterAnimations2 for T
+where
+	T: DerefMut<Target: RegisterAnimations2>,
+{
+	fn register_animations(&mut self, animations: &HashMap<AnimationKey, Animation2>) {
+		self.deref_mut().register_animations(animations);
+	}
 }
 
 pub trait OverrideAnimations {
@@ -180,6 +196,7 @@ pub struct Animation2 {
 #[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
 pub struct AffectedAnimationBones2 {
 	pub from_root: BoneName,
+	#[serde(default)]
 	pub until_exclusive: HashSet<BoneName>,
 }
 
