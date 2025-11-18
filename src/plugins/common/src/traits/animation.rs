@@ -97,6 +97,15 @@ pub trait SetMovementDirection {
 	fn set_movement_direction(&mut self, direction: Dir3);
 }
 
+impl<T> SetMovementDirection for T
+where
+	T: DerefMut<Target: SetMovementDirection>,
+{
+	fn set_movement_direction(&mut self, direction: Dir3) {
+		self.deref_mut().set_movement_direction(direction);
+	}
+}
+
 pub trait StartAnimation {
 	fn start_animation<TLayer>(&mut self, layer: TLayer, animation: Animation)
 	where

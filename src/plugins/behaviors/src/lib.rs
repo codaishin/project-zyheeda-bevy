@@ -22,7 +22,12 @@ use common::{
 	states::game_state::GameState,
 	systems::log::OnError,
 	traits::{
-		animation::{HasAnimationsDispatch, RegisterAnimations},
+		animation::{
+			AnimationsParamMut,
+			HandlesAnimations,
+			HasAnimationsDispatch,
+			RegisterAnimations,
+		},
 		handles_input::HandlesInput,
 		handles_movement::HandlesMovement,
 		handles_orientation::HandlesOrientation,
@@ -69,7 +74,11 @@ impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding>
 where
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
+	TAnimations: ThreadSafe
+		+ HasAnimationsDispatch
+		+ RegisterAnimations
+		+ SystemSetDefinition
+		+ HandlesAnimations,
 	TPhysics: ThreadSafe
 		+ HandlesPhysicalObjects
 		+ HandlesMotion
@@ -94,7 +103,11 @@ impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding> Plugin
 where
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
+	TAnimations: ThreadSafe
+		+ HasAnimationsDispatch
+		+ RegisterAnimations
+		+ SystemSetDefinition
+		+ HandlesAnimations,
 	TPhysics: ThreadSafe
 		+ HandlesPhysicalObjects
 		+ HandlesMotion
@@ -123,6 +136,10 @@ where
 			Movement<TPhysics::TMotion>,
 			TAnimations::TAnimationDispatch,
 		>;
+		let animate_movement_2 = MovementDefinition::animate_movement_forward::<
+			Movement<TPhysics::TMotion>,
+			AnimationsParamMut<TAnimations>,
+		>;
 
 		app
 			// Resources
@@ -145,6 +162,7 @@ where
 						execute_path,
 						execute_movement,
 						animate_movement,
+						animate_movement_2,
 					)
 						.chain(),
 					// Skill execution

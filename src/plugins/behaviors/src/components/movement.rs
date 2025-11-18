@@ -103,6 +103,15 @@ where
 	}
 }
 
+impl<TMotion> GetProperty<Option<MovementTarget>> for Movement<TMotion>
+where
+	TMotion: ThreadSafe,
+{
+	fn get_property(&self) -> Option<MovementTarget> {
+		self.target
+	}
+}
+
 impl<TMotion> MovementUpdate for Movement<TMotion>
 where
 	TMotion:

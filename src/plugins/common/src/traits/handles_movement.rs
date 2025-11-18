@@ -1,7 +1,7 @@
 use crate::{
 	tools::{Units, UnitsPerSecond},
 	traits::{
-		accessors::get::{GetContext, GetContextMut},
+		accessors::get::{GetContext, GetContextMut, Property},
 		animation::Animation,
 	},
 };
@@ -42,6 +42,10 @@ impl From<Vec3> for MovementTarget {
 	fn from(point: Vec3) -> Self {
 		Self::Point(point)
 	}
+}
+
+impl Property for MovementTarget {
+	type TValue<'a> = Self;
 }
 
 pub trait StartMovement {
