@@ -9,7 +9,7 @@ use common::{
 use std::{collections::VecDeque, marker::PhantomData};
 
 #[derive(Component, Debug, PartialEq)]
-pub(crate) struct PathOrDirection<TMotion> {
+pub struct PathOrDirection<TMotion> {
 	pub(crate) mode: Mode,
 	pub(crate) _m: PhantomData<TMotion>,
 }

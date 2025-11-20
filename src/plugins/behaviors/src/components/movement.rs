@@ -24,7 +24,7 @@ use std::marker::PhantomData;
 #[derive(Component, SavableComponent, Debug)]
 #[require(GlobalTransform)]
 #[savable_component(dto = MovementDto<TMotion>)]
-pub(crate) struct Movement<TMotion>
+pub struct Movement<TMotion>
 where
 	TMotion: ThreadSafe,
 {

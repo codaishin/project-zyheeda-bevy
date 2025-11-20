@@ -1,16 +1,22 @@
 use crate::{
 	tools::{Units, UnitsPerSecond},
-	traits::{accessors::get::GetContextMut, animation::Animation},
+	traits::{
+		accessors::get::{GetContext, GetContextMut},
+		animation::Animation,
+	},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
 use serde::{Deserialize, Serialize};
 use std::ops::{Deref, DerefMut};
 
 pub trait HandlesMovement {
+	type TMovement<'w, 's>: SystemParam
+		+ for<'c> GetContext<Movement, TContext<'c>: CurrentMovement>;
 	type TMovementMut<'w, 's>: SystemParam
 		+ for<'c> GetContextMut<Movement, TContext<'c>: ControlMovement>;
 }
 
+pub type MovementSystemParam<'w, 's, T> = <T as HandlesMovement>::TMovement<'w, 's>;
 pub type MovementSystemParamMut<'w, 's, T> = <T as HandlesMovement>::TMovementMut<'w, 's>;
 
 pub trait ControlMovement: StartMovement + UpdateMovement + StopMovement + CurrentMovement {}

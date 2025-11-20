@@ -12,7 +12,7 @@ use crate::{
 	},
 	system_param::{
 		face_param::FaceParamMut,
-		movement_param::MovementParamMut,
+		movement_param::{MovementParam, MovementParamMut, context_changed::JustRemovedMovements},
 		skill_param::SkillParamMut,
 	},
 };
@@ -125,6 +125,8 @@ where
 		>;
 
 		app
+			// Resources
+			.init_resource::<JustRemovedMovements>()
 			// Required components
 			.register_required_components::<SkillContact, TSaveGame::TSaveEntityMarker>()
 			.register_required_components::<SkillProjection, TSaveGame::TSaveEntityMarker>()
@@ -161,6 +163,7 @@ where
 						SetFace::get_faces.pipe(execute_face::<RaycastSystemParam<TPhysics>>),
 					)
 						.chain(),
+					MovementParam::<TPhysics::TMotion>::update_just_removed,
 				)
 					.chain()
 					.in_set(BehaviorSystems)
@@ -223,6 +226,7 @@ impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding> HandlesMovement
 where
 	TPhysics: HandlesMotion,
 {
+	type TMovement<'w, 's> = MovementParam<'w, 's, TPhysics::TMotion>;
 	type TMovementMut<'w, 's> = MovementParamMut<'w, 's, TPhysics::TMotion>;
 }
 

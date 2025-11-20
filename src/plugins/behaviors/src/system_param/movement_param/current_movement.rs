@@ -1,8 +1,20 @@
-use crate::system_param::movement_param::MovementContextMut;
+use crate::system_param::movement_param::{MovementContext, MovementContextMut};
 use common::traits::{
 	handles_movement::{CurrentMovement, MovementTarget},
 	thread_safe::ThreadSafe,
 };
+
+impl<TMotion> CurrentMovement for MovementContext<'_, TMotion>
+where
+	TMotion: ThreadSafe,
+{
+	fn current_movement(&self) -> Option<MovementTarget> {
+		match self {
+			MovementContext::Movement(movement) => movement.target,
+			_ => None,
+		}
+	}
+}
 
 impl<TMotion> CurrentMovement for MovementContextMut<'_, TMotion>
 where
@@ -18,7 +30,11 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::movement::{Movement, path_or_direction::PathOrDirection},
-		system_param::movement_param::MovementParamMut,
+		system_param::movement_param::{
+			MovementParam,
+			MovementParamMut,
+			context_changed::JustRemovedMovements,
+		},
 	};
 	use bevy::{
 		app::{App, Update},
@@ -26,7 +42,7 @@ mod tests {
 		math::Vec3,
 	};
 	use common::traits::{
-		accessors::get::GetContextMut,
+		accessors::get::{GetContext, GetContextMut},
 		handles_movement::Movement as MovementMarker,
 	};
 	use testing::SingleThreadedApp;
@@ -34,11 +50,35 @@ mod tests {
 	struct _Motion;
 
 	fn setup() -> App {
-		App::new().single_threaded(Update)
+		let mut app = App::new().single_threaded(Update);
+
+		app.init_resource::<JustRemovedMovements>();
+
+		app
 	}
 
 	#[test]
 	fn return_current_movement_target() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let entity = app
+			.world_mut()
+			.spawn(Movement::<PathOrDirection<_Motion>>::to(Vec3::new(
+				1., 2., 3.,
+			)))
+			.id();
+		app.world_mut()
+			.run_system_once(move |m: MovementParam<_Motion>| {
+				let ctx = MovementParam::get_context(&m, MovementMarker { entity }).unwrap();
+
+				assert_eq!(
+					Some(MovementTarget::Point(Vec3::new(1., 2., 3.))),
+					ctx.current_movement(),
+				);
+			})
+	}
+
+	#[test]
+	fn return_current_movement_target_mut() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
