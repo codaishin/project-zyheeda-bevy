@@ -19,9 +19,10 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	states::game_state::{GameState, LoadingEssentialAssets},
+	systems::log::OnError,
 	tools::action_key::slot::{NoValidAgentKey, PlayerSlot, SlotKey},
 	traits::{
-		animation::{AnimationsParamMut, HandlesAnimations, RegisterAnimations},
+		animation::{AnimationsSystemParamMut, HandlesAnimations, RegisterAnimations},
 		delta::Delta,
 		handles_agents::HandlesAgents,
 		handles_custom_assets::HandlesCustomFolderAssets,
@@ -29,7 +30,7 @@ use common::{
 		handles_input::{HandlesInput, InputSystemParam},
 		handles_lights::HandlesLights,
 		handles_map_generation::HandlesMapGeneration,
-		handles_movement::{HandlesMovement, MovementSystemParamMut},
+		handles_movement::{HandlesMovement, MovementSystemParam, MovementSystemParamMut},
 		handles_orientation::{FacingSystemParamMut, HandlesOrientation},
 		handles_physics::{HandlesPhysicalAttributes, HandlesRaycast, RaycastSystemParam},
 		handles_player::{ConfiguresPlayerSkillAnimations, HandlesPlayer, PlayerMainCamera},
@@ -120,7 +121,7 @@ where
 			Update,
 			(
 				Agent::insert_model,
-				Agent::register_animations::<AnimationsParamMut<TAnimations>>,
+				Agent::register_animations::<AnimationsSystemParamMut<TAnimations>>,
 				Agent::<AgentConfigAsset>::insert_attributes::<TPhysics::TDefaultAttributes>,
 			),
 		);
@@ -156,13 +157,24 @@ where
 		app.add_systems(
 			Update,
 			(
-				Player::movement::<
-					InputSystemParam<TInput>,
-					RaycastSystemParam<TPhysics>,
-					MovementSystemParamMut<TBehaviors>,
-				>,
-				Player::toggle_speed::<InputSystemParam<TInput>, MovementSystemParamMut<TBehaviors>>,
-				Player::use_skills::<InputSystemParam<TInput>, SkillControlParamMut<TBehaviors>>,
+				(
+					Player::movement::<
+						InputSystemParam<TInput>,
+						RaycastSystemParam<TPhysics>,
+						MovementSystemParamMut<TBehaviors>,
+					>,
+					Player::toggle_speed::<
+						InputSystemParam<TInput>,
+						MovementSystemParamMut<TBehaviors>,
+					>,
+					Player::animate_movement::<
+						MovementSystemParam<TBehaviors>,
+						AnimationsSystemParamMut<TAnimations>,
+					>
+						.pipe(OnError::log),
+					Player::use_skills::<InputSystemParam<TInput>, SkillControlParamMut<TBehaviors>>,
+				)
+					.chain(),
 				(
 					Enemy::attack_decision::<RaycastSystemParam<TPhysics>>,
 					Enemy::chase_decision,

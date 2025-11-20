@@ -1,3 +1,4 @@
+pub(crate) mod animate_movement;
 pub(crate) mod movement;
 pub(crate) mod register_target_definition;
 pub(crate) mod toggle_speed;

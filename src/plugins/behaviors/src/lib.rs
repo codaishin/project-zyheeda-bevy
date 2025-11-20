@@ -23,7 +23,7 @@ use common::{
 	systems::log::OnError,
 	traits::{
 		animation::{
-			AnimationsParamMut,
+			AnimationsSystemParamMut,
 			HandlesAnimations,
 			HasAnimationsDispatch,
 			RegisterAnimations,
@@ -138,7 +138,7 @@ where
 		>;
 		let animate_movement_2 = MovementDefinition::animate_movement_forward::<
 			Movement<TPhysics::TMotion>,
-			AnimationsParamMut<TAnimations>,
+			AnimationsSystemParamMut<TAnimations>,
 		>;
 
 		app
