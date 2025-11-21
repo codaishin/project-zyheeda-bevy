@@ -1,32 +1,23 @@
-use crate::components::{
-	movement_config::MovementConfig,
-	player::{PLAYER_RUN, Player},
-};
+use crate::{components::enemy::Enemy, systems::player::animate_movement::Move};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
 	accessors::get::{GetChangedContext, GetContext, GetContextMut},
-	animation::{
-		ActiveAnimationsMut,
-		AnimationKey,
-		AnimationPriority,
-		Animations,
-		AnimationsUnprepared,
-	},
+	animation::{ActiveAnimationsMut, AnimationKey, Animations, AnimationsUnprepared},
 	handles_movement::{CurrentMovement, Movement},
 };
 use std::collections::HashSet;
 
-impl Player {
+impl Enemy {
 	pub(crate) fn animate_movement<TMovement, TAnimations>(
 		movement: StaticSystemParam<TMovement>,
 		mut animations: StaticSystemParam<TAnimations>,
-		players: Query<(Entity, &MovementConfig), With<Self>>,
+		enemies: Query<Entity, With<Self>>,
 	) -> Result<(), Vec<AnimationsUnprepared>>
 	where
 		TMovement: for<'c> GetContext<Movement, TContext<'c>: CurrentMovement>,
 		TAnimations: for<'c> GetContextMut<Animations, TContext<'c>: ActiveAnimationsMut>,
 	{
-		let animate_movement = |(entity, config)| {
+		let animate_movement = |entity| {
 			let key = Movement { entity };
 			let movement = TMovement::get_changed_context(&movement, key)?;
 
@@ -39,14 +30,14 @@ impl Player {
 			};
 
 			match movement.current_movement() {
-				Some(_) => Self::start_run_or_walk_animation(movement_animations, config),
-				None => Self::stop_move_animations(movement_animations),
-			}
+				Some(_) => *movement_animations = HashSet::from([AnimationKey::Run]),
+				None => movement_animations.clear(),
+			};
 
 			None
 		};
 
-		let errors = players
+		let errors = enemies
 			.iter()
 			.filter_map(animate_movement)
 			.collect::<Vec<_>>();
@@ -57,114 +48,31 @@ impl Player {
 
 		Ok(())
 	}
-
-	fn start_run_or_walk_animation(
-		movement_animations: &mut HashSet<AnimationKey>,
-		config: &MovementConfig,
-	) {
-		let walk_or_run = if config == &*PLAYER_RUN {
-			AnimationKey::Run
-		} else {
-			AnimationKey::Walk
-		};
-
-		*movement_animations = HashSet::from([walk_or_run]);
-	}
-
-	fn stop_move_animations(movement_animations: &mut HashSet<AnimationKey>) {
-		movement_animations.clear();
-	}
-}
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub(crate) struct Move;
-
-impl From<Move> for AnimationPriority {
-	fn from(_: Move) -> Self {
-		Self::Medium
-	}
 }
 
 #[cfg(test)]
-pub(crate) mod tests {
+mod tests {
 	use super::*;
-	use crate::components::{movement_config::MovementConfig, player::PLAYER_WALK};
-	use common::traits::{
-		animation::{ActiveAnimations, AnimationKey, AnimationPriority, AnimationsUnprepared},
-		handles_movement::MovementTarget,
+	use crate::systems::player::animate_movement::tests::{
+		_AnimationErrors,
+		_Animations,
+		_Movement,
 	};
-	use std::{collections::HashMap, sync::LazyLock};
-	use test_case::test_case;
+	use common::traits::{animation::AnimationKey, handles_movement::MovementTarget};
+	use std::collections::{HashMap, HashSet};
 	use testing::SingleThreadedApp;
-
-	#[derive(Component)]
-	pub(crate) struct _Movement(pub(crate) Option<MovementTarget>);
-
-	impl CurrentMovement for _Movement {
-		fn current_movement(&self) -> Option<MovementTarget> {
-			self.0
-		}
-	}
-
-	static EMPTY: LazyLock<HashSet<AnimationKey>> = LazyLock::new(HashSet::default);
-
-	#[derive(Component, Debug, PartialEq)]
-	pub(crate) enum _Animations {
-		Unprepared(Entity),
-		Prepared(HashMap<AnimationPriority, HashSet<AnimationKey>>),
-	}
-
-	impl Default for _Animations {
-		fn default() -> Self {
-			Self::Prepared(HashMap::default())
-		}
-	}
-
-	impl ActiveAnimations for _Animations {
-		fn active_animations<TLayer>(
-			&self,
-			layer: TLayer,
-		) -> Result<&HashSet<AnimationKey>, AnimationsUnprepared>
-		where
-			TLayer: Into<AnimationPriority>,
-		{
-			match self {
-				_Animations::Unprepared(entity) => Err(AnimationsUnprepared { entity: *entity }),
-				_Animations::Prepared(hash_map) => {
-					Ok(hash_map.get(&layer.into()).unwrap_or(&*EMPTY))
-				}
-			}
-		}
-	}
-
-	impl ActiveAnimationsMut for _Animations {
-		fn active_animations_mut<TLayer>(
-			&mut self,
-			layer: TLayer,
-		) -> Result<&mut HashSet<AnimationKey>, AnimationsUnprepared>
-		where
-			TLayer: Into<AnimationPriority>,
-		{
-			match self {
-				_Animations::Unprepared(entity) => Err(AnimationsUnprepared { entity: *entity }),
-				_Animations::Prepared(hash_map) => Ok(hash_map.entry(layer.into()).or_default()),
-			}
-		}
-	}
-
-	#[derive(Resource, Debug, PartialEq)]
-	pub(crate) struct _AnimationErrors(pub(crate) Vec<AnimationsUnprepared>);
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.add_systems(
 			Update,
-			Player::animate_movement::<Query<Ref<_Movement>>, Query<Mut<_Animations>>>.pipe(
+			Enemy::animate_movement::<Query<Ref<_Movement>>, Query<Mut<_Animations>>>.pipe(
 				|In(errors), mut commands: Commands| {
 					let Err(errors) = errors else {
 						return;
 					};
+
 					commands.insert_resource(_AnimationErrors(errors));
 				},
 			),
@@ -173,16 +81,14 @@ pub(crate) mod tests {
 		app
 	}
 
-	#[test_case(PLAYER_RUN.clone(), AnimationKey::Run; "run")]
-	#[test_case(PLAYER_WALK.clone(), AnimationKey::Walk; "walk")]
-	fn start_animation(config: MovementConfig, animation: AnimationKey) {
+	#[test]
+	fn start_animation_run() {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
 			.spawn((
-				Player,
+				Enemy::default(),
 				_Movement(Some(MovementTarget::Dir(Dir3::X))),
-				config,
 				_Animations::default(),
 			))
 			.id();
@@ -192,25 +98,23 @@ pub(crate) mod tests {
 		assert_eq!(
 			Some(&_Animations::Prepared(HashMap::from([(
 				Move.into(),
-				HashSet::from([animation])
+				HashSet::from([AnimationKey::Run]),
 			)]))),
 			app.world().entity(entity).get::<_Animations>(),
 		);
 	}
 
-	#[test_case(PLAYER_RUN.clone(), AnimationKey::Run; "run")]
-	#[test_case(PLAYER_WALK.clone(), AnimationKey::Walk; "walk")]
-	fn override_all_movement_animations(config: MovementConfig, animation: AnimationKey) {
+	#[test]
+	fn override_other_movement_animations() {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
 			.spawn((
-				Player,
+				Enemy::default(),
 				_Movement(Some(MovementTarget::Dir(Dir3::X))),
-				config,
 				_Animations::Prepared(HashMap::from([(
 					Move.into(),
-					HashSet::from([AnimationKey::Idle]),
+					HashSet::from([AnimationKey::Walk]),
 				)])),
 			))
 			.id();
@@ -220,7 +124,7 @@ pub(crate) mod tests {
 		assert_eq!(
 			Some(&_Animations::Prepared(HashMap::from([(
 				Move.into(),
-				HashSet::from([animation])
+				HashSet::from([AnimationKey::Run]),
 			)]))),
 			app.world().entity(entity).get::<_Animations>(),
 		);
@@ -232,9 +136,8 @@ pub(crate) mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Player,
+				Enemy::default(),
 				_Movement(Some(MovementTarget::Dir(Dir3::X))),
-				PLAYER_RUN.clone(),
 				_Animations::default(),
 			))
 			.id();
@@ -253,17 +156,16 @@ pub(crate) mod tests {
 	}
 
 	#[test]
-	fn stop_movement_animations() {
+	fn stop_animation() {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
 			.spawn((
-				Player,
+				Enemy::default(),
 				_Movement(Some(MovementTarget::Dir(Dir3::X))),
-				PLAYER_RUN.clone(),
 				_Animations::Prepared(HashMap::from([(
 					Move.into(),
-					HashSet::from([AnimationKey::Idle]),
+					HashSet::from([AnimationKey::Run]),
 				)])),
 			))
 			.id();
@@ -275,20 +177,19 @@ pub(crate) mod tests {
 		assert_eq!(
 			Some(&_Animations::Prepared(HashMap::from([(
 				Move.into(),
-				HashSet::from([]),
-			)])),),
+				HashSet::from([])
+			)]))),
 			app.world().entity(entity).get::<_Animations>(),
 		);
 	}
 
 	#[test]
-	fn do_nothing_if_player_is_missing() {
+	fn do_nothing_if_enemy_is_missing() {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
 			.spawn((
 				_Movement(Some(MovementTarget::Dir(Dir3::X))),
-				PLAYER_RUN.clone(),
 				_Animations::default(),
 			))
 			.id();
@@ -307,9 +208,8 @@ pub(crate) mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Player,
+				Enemy::default(),
 				_Movement(Some(MovementTarget::Dir(Dir3::X))),
-				PLAYER_RUN.clone(),
 			))
 			.id();
 		app.world_mut()

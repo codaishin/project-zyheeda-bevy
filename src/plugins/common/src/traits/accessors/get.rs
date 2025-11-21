@@ -129,6 +129,28 @@ pub trait GetContext<TKey>: SystemParam {
 	) -> Option<Self::TContext<'ctx>>;
 }
 
+pub trait GetChangedContext<TKey>: GetContext<TKey> {
+	fn get_changed_context<'ctx>(
+		param: &'ctx SystemParamItem<Self>,
+		key: TKey,
+	) -> Option<Self::TContext<'ctx>>;
+}
+
+impl<T, TKey> GetChangedContext<TKey> for T
+where
+	T: GetContext<TKey>,
+{
+	fn get_changed_context<'ctx>(
+		param: &'ctx SystemParamItem<Self>,
+		key: TKey,
+	) -> Option<Self::TContext<'ctx>> {
+		match T::get_context(param, key) {
+			Some(ctx) if ctx.context_changed() => Some(ctx),
+			_ => None,
+		}
+	}
+}
+
 pub trait GetMut<TKey> {
 	type TValue<'a>
 	where

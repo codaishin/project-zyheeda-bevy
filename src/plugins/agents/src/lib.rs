@@ -179,6 +179,11 @@ where
 					Enemy::attack_decision::<RaycastSystemParam<TPhysics>>,
 					Enemy::chase_decision,
 					Enemy::chase_player::<MovementSystemParamMut<TBehaviors>>,
+					Enemy::animate_movement::<
+						MovementSystemParam<TBehaviors>,
+						AnimationsSystemParamMut<TAnimations>,
+					>
+						.pipe(OnError::log),
 					Enemy::begin_attack,
 					Enemy::hold_attack::<SkillControlParamMut<TBehaviors>>,
 					Update::delta.pipe(Enemy::advance_attack_phase),
