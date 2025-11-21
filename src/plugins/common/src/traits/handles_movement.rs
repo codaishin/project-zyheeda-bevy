@@ -1,9 +1,6 @@
 use crate::{
 	tools::{Units, UnitsPerSecond},
-	traits::{
-		accessors::get::{GetContext, GetContextMut, Property},
-		animation::Animation,
-	},
+	traits::accessors::get::{GetContext, GetContextMut, Property},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
 use serde::{Deserialize, Serialize};
@@ -49,13 +46,8 @@ impl Property for MovementTarget {
 }
 
 pub trait StartMovement {
-	fn start<T>(
-		&mut self,
-		target: T,
-		radius: Units,
-		speed: UnitsPerSecond,
-		animation: Option<Animation>,
-	) where
+	fn start<T>(&mut self, target: T, radius: Units, speed: UnitsPerSecond)
+	where
 		T: Into<MovementTarget> + 'static;
 }
 
@@ -63,29 +55,24 @@ impl<T> StartMovement for T
 where
 	T: DerefMut<Target: StartMovement>,
 {
-	fn start<TTarget>(
-		&mut self,
-		target: TTarget,
-		radius: Units,
-		speed: UnitsPerSecond,
-		animation: Option<Animation>,
-	) where
+	fn start<TTarget>(&mut self, target: TTarget, radius: Units, speed: UnitsPerSecond)
+	where
 		TTarget: Into<MovementTarget> + 'static,
 	{
-		self.deref_mut().start(target, radius, speed, animation)
+		self.deref_mut().start(target, radius, speed)
 	}
 }
 
 pub trait UpdateMovement {
-	fn update(&mut self, speed: UnitsPerSecond, animation: Option<Animation>);
+	fn update(&mut self, speed: UnitsPerSecond);
 }
 
 impl<T> UpdateMovement for T
 where
 	T: DerefMut<Target: UpdateMovement>,
 {
-	fn update(&mut self, speed: UnitsPerSecond, animation: Option<Animation>) {
-		self.deref_mut().update(speed, animation);
+	fn update(&mut self, speed: UnitsPerSecond) {
+		self.deref_mut().update(speed);
 	}
 }
 

@@ -53,18 +53,10 @@ static PLAYER_COLLIDER_RADIUS: LazyLock<Units> = LazyLock::new(|| Units::from(0.
 pub(crate) static PLAYER_RUN: LazyLock<MovementConfig> = LazyLock::new(|| MovementConfig {
 	collider_radius: *PLAYER_COLLIDER_RADIUS,
 	speed: UnitsPerSecond::from(1.5),
-	animation: Some(Animation::new(
-		Player::animation_asset(PlayerAnimationKey::Run),
-		PlayMode::Repeat,
-	)),
 });
 pub(crate) static PLAYER_WALK: LazyLock<MovementConfig> = LazyLock::new(|| MovementConfig {
 	collider_radius: *PLAYER_COLLIDER_RADIUS,
 	speed: UnitsPerSecond::from(0.75),
-	animation: Some(Animation::new(
-		Player::animation_asset(PlayerAnimationKey::Walk),
-		PlayMode::Repeat,
-	)),
 });
 
 impl Player {

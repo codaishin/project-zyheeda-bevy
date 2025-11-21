@@ -132,11 +132,7 @@ where
 		let execute_path =
 			MovementDefinition::execute_movement::<Movement<PathOrDirection<TPhysics::TMotion>>>;
 		let execute_movement = MovementDefinition::execute_movement::<Movement<TPhysics::TMotion>>;
-		let animate_movement = MovementDefinition::animate_movement::<
-			Movement<TPhysics::TMotion>,
-			TAnimations::TAnimationDispatch,
-		>;
-		let animate_movement_2 = MovementDefinition::animate_movement_forward::<
+		let animate_movement_forward = MovementDefinition::animate_movement_forward::<
 			Movement<TPhysics::TMotion>,
 			AnimationsSystemParamMut<TAnimations>,
 		>;
@@ -161,8 +157,7 @@ where
 						compute_path,
 						execute_path,
 						execute_movement,
-						animate_movement,
-						animate_movement_2,
+						animate_movement_forward,
 					)
 						.chain(),
 					// Skill execution

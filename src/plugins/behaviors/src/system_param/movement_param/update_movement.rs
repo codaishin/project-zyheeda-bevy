@@ -1,20 +1,19 @@
 use crate::system_param::movement_param::MovementContextMut;
 use common::{
 	tools::UnitsPerSecond,
-	traits::{animation::Animation, handles_movement::UpdateMovement, thread_safe::ThreadSafe},
+	traits::{handles_movement::UpdateMovement, thread_safe::ThreadSafe},
 };
 
 impl<TMotion> UpdateMovement for MovementContextMut<'_, TMotion>
 where
 	TMotion: ThreadSafe,
 {
-	fn update(&mut self, speed: UnitsPerSecond, animation: Option<Animation>) {
+	fn update(&mut self, speed: UnitsPerSecond) {
 		let Some(movement_definition) = self.movement_definition.as_deref_mut() else {
 			return;
 		};
 
 		movement_definition.speed = speed;
-		movement_definition.animation = animation;
 	}
 }
 
@@ -31,11 +30,7 @@ mod tests {
 	};
 	use common::{
 		tools::Units,
-		traits::{
-			accessors::get::GetContextMut,
-			animation::{AnimationPath, PlayMode},
-			handles_movement::Movement,
-		},
+		traits::{accessors::get::GetContextMut, handles_movement::Movement},
 	};
 	use testing::SingleThreadedApp;
 
@@ -53,10 +48,6 @@ mod tests {
 			.spawn(MovementDefinition {
 				radius: Units::from(42.),
 				speed: UnitsPerSecond::from(11.),
-				animation: Some(Animation {
-					path: AnimationPath::from("my/animation/path"),
-					play_mode: PlayMode::Repeat,
-				}),
 			})
 			.id();
 
@@ -64,23 +55,13 @@ mod tests {
 			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
 				let mut ctx =
 					MovementParamMut::get_context_mut(&mut p, Movement { entity }).unwrap();
-				ctx.update(
-					UnitsPerSecond::from(110.),
-					Some(Animation {
-						path: AnimationPath::from("my/other/animation/path"),
-						play_mode: PlayMode::Repeat,
-					}),
-				);
+				ctx.update(UnitsPerSecond::from(110.));
 			})?;
 
 		assert_eq!(
 			Some(&MovementDefinition {
 				radius: Units::from(42.),
 				speed: UnitsPerSecond::from(110.),
-				animation: Some(Animation {
-					path: AnimationPath::from("my/other/animation/path"),
-					play_mode: PlayMode::Repeat,
-				}),
 			}),
 			app.world().entity(entity).get::<MovementDefinition>(),
 		);

@@ -44,7 +44,7 @@ impl Player {
 			} else {
 				&*PLAYER_RUN
 			};
-			ctx.update(new_config.speed, new_config.animation.clone());
+			ctx.update(new_config.speed);
 
 			commands.try_apply_on(&entity, move |mut e| {
 				e.try_insert(new_config.clone());
@@ -66,7 +66,7 @@ mod tests {
 			UnitsPerSecond,
 			action_key::{ActionKey, movement::MovementKey},
 		},
-		traits::{animation::Animation, handles_input::InputState, iteration::IterFinite},
+		traits::{handles_input::InputState, iteration::IterFinite},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -94,8 +94,8 @@ mod tests {
 
 	#[automock]
 	impl UpdateMovement for _Movement {
-		fn update(&mut self, speed: UnitsPerSecond, animation: Option<Animation>) {
-			self.mock.update(speed, animation);
+		fn update(&mut self, speed: UnitsPerSecond) {
+			self.mock.update(speed);
 		}
 	}
 
@@ -131,7 +131,7 @@ mod tests {
 				_Movement::new().with_mock(|mock| {
 					mock.expect_update()
 						.once()
-						.with(eq(PLAYER_WALK.speed), eq(PLAYER_WALK.animation.clone()))
+						.with(eq(PLAYER_WALK.speed))
 						.return_const(());
 				}),
 			));
@@ -190,7 +190,7 @@ mod tests {
 				_Movement::new().with_mock(|mock| {
 					mock.expect_update()
 						.once()
-						.with(eq(PLAYER_RUN.speed), eq(PLAYER_RUN.animation.clone()))
+						.with(eq(PLAYER_RUN.speed))
 						.return_const(());
 				}),
 			));
