@@ -41,7 +41,6 @@ where
 			let animation_masks = Self::animations();
 			let animation_paths = animation_masks.keys().cloned().collect::<Vec<_>>();
 			let (graph, new_clips) = server.load_animation_assets(animation_paths);
-			let graph = graphs.add(graph);
 			let lookup = AnimationLookup {
 				animations: HashMap::from_iter(new_clips.into_iter().filter_map(
 					|(definition, clip)| {
@@ -52,7 +51,7 @@ where
 			};
 
 			commands.try_apply_on(&entity, |mut e| {
-				e.try_insert((lookup, TGraph::wrap(graph)));
+				e.try_insert((lookup, TGraph::wrap_handle(graphs.add(graph))));
 			});
 		}
 	}
@@ -65,7 +64,7 @@ mod tests {
 		animation::{AffectedAnimationBones, AnimationPath},
 		iteration::{Iter, IterFinite},
 		thread_safe::ThreadSafe,
-		wrap_handle::UnwrapHandle,
+		wrap_handle::GetHandle,
 	};
 	use macros::NestedMocks;
 	use mockall::automock;
@@ -83,7 +82,7 @@ mod tests {
 	impl WrapHandle for _Graph {
 		type TComponent = _GraphComponent;
 
-		fn wrap(_: Handle<Self>) -> Self::TComponent {
+		fn wrap_handle(_: Handle<Self>) -> Self::TComponent {
 			_GraphComponent
 		}
 	}
@@ -91,10 +90,10 @@ mod tests {
 	#[derive(Component, Debug, PartialEq)]
 	struct _GraphComponent;
 
-	impl UnwrapHandle for _GraphComponent {
+	impl GetHandle for _GraphComponent {
 		type TAsset = _Graph;
 
-		fn unwrap(&self) -> &Handle<Self::TAsset> {
+		fn get_handle(&self) -> &Handle<Self::TAsset> {
 			panic!("NOT USED HERE")
 		}
 	}

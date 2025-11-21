@@ -1,26 +1,23 @@
 use bevy::{animation::AnimationTarget, prelude::*};
 use common::{
-	traits::{accessors::get::TryApplyOn, wrap_handle::UnwrapHandle},
+	traits::{accessors::get::TryApplyOn, wrap_handle::GetHandle},
 	zyheeda_commands::ZyheedaCommands,
 };
 
-impl<T> RemoveUnusedAnimationTargets2 for T where
-	T: Component + UnwrapHandle<TAsset = AnimationGraph>
-{
-}
+impl<T> RemoveUnusedAnimationTargets2 for T where T: Component + GetHandle<TAsset = AnimationGraph> {}
 
 pub(crate) trait RemoveUnusedAnimationTargets2:
-	Component + UnwrapHandle<TAsset = AnimationGraph>
+	Component + GetHandle<TAsset = AnimationGraph> + Sized
 {
 	fn remove_unused_animation_targets2(
 		mut commands: ZyheedaCommands,
 		graphs: Res<Assets<AnimationGraph>>,
-		players: Query<(Entity, &AnimationGraphHandle), Added<AnimationGraphHandle>>,
+		players: Query<(Entity, &Self), Added<Self>>,
 		bones: Query<(Entity, &AnimationTarget)>,
 		children: Query<&Children>,
 	) {
-		for (player, AnimationGraphHandle(handle)) in &players {
-			let Some(graph) = graphs.get(handle) else {
+		for (player, graph) in &players {
+			let Some(graph) = graphs.get(graph.get_handle()) else {
 				continue;
 			};
 
@@ -54,10 +51,10 @@ mod tests {
 	#[derive(Component)]
 	struct _Graph(Handle<AnimationGraph>);
 
-	impl UnwrapHandle for _Graph {
+	impl GetHandle for _Graph {
 		type TAsset = AnimationGraph;
 
-		fn unwrap(&self) -> &Handle<Self::TAsset> {
+		fn get_handle(&self) -> &Handle<Self::TAsset> {
 			&self.0
 		}
 	}
@@ -90,7 +87,7 @@ mod tests {
 		];
 		let handle = new_handle();
 		let mut app = setup(&handle, new_graph(used_targets));
-		let player = app.world_mut().spawn(AnimationGraphHandle(handle)).id();
+		let player = app.world_mut().spawn(_Graph(handle)).id();
 		let targets = [
 			app.world_mut()
 				.spawn(AnimationTarget {
@@ -134,7 +131,7 @@ mod tests {
 		];
 		let handle = new_handle();
 		let mut app = setup(&handle, new_graph(used_targets));
-		let player = app.world_mut().spawn(AnimationGraphHandle(handle)).id();
+		let player = app.world_mut().spawn(_Graph(handle)).id();
 		let targets = [
 			app.world_mut()
 				.spawn(AnimationTarget {
@@ -182,7 +179,7 @@ mod tests {
 		];
 		let handle = new_handle();
 		let mut app = setup(&handle, new_graph(used_targets));
-		let player = app.world_mut().spawn(AnimationGraphHandle(handle)).id();
+		let player = app.world_mut().spawn(_Graph(handle)).id();
 		let targets = [
 			app.world_mut()
 				.spawn(AnimationTarget {
@@ -222,7 +219,7 @@ mod tests {
 		];
 		let handle = new_handle();
 		let mut app = setup(&handle, new_graph(used_targets));
-		let player = app.world_mut().spawn(AnimationGraphHandle(handle)).id();
+		let player = app.world_mut().spawn(_Graph(handle)).id();
 		let other = app.world_mut().spawn_empty().id();
 		let targets = [
 			app.world_mut()
@@ -267,7 +264,7 @@ mod tests {
 		];
 		let handle = new_handle();
 		let mut app = setup(&handle, new_graph(used_targets));
-		let player = app.world_mut().spawn(AnimationGraphHandle(handle)).id();
+		let player = app.world_mut().spawn(_Graph(handle)).id();
 		let targets =
 			used_targets.map(|id| app.world_mut().spawn(AnimationTarget { id, player }).id());
 
@@ -290,7 +287,7 @@ mod tests {
 		];
 		let handle = new_handle();
 		let mut app = setup(&handle, new_graph(used_targets));
-		let player = app.world_mut().spawn(AnimationGraphHandle(handle)).id();
+		let player = app.world_mut().spawn(_Graph(handle)).id();
 		let targets = [
 			app.world_mut()
 				.spawn(AnimationTarget {

@@ -6,14 +6,14 @@ use bevy::{
 use common::traits::{
 	animation::BoneName,
 	iter_descendants_conditional::IterDescendantsConditional,
-	wrap_handle::UnwrapHandle,
+	wrap_handle::GetHandle,
 };
 use std::{collections::HashSet, iter};
 
-impl<T> InitAnimationBoneGroups for T where T: Component + UnwrapHandle<TAsset = AnimationGraph> {}
+impl<T> InitAnimationBoneGroups for T where T: Component + GetHandle<TAsset = AnimationGraph> {}
 
 pub(crate) trait InitAnimationBoneGroups:
-	Component + UnwrapHandle<TAsset = AnimationGraph> + Sized
+	Component + GetHandle<TAsset = AnimationGraph> + Sized
 {
 	fn init_animation_bone_groups(
 		mut graphs: ResMut<Assets<AnimationGraph>>,
@@ -22,7 +22,7 @@ pub(crate) trait InitAnimationBoneGroups:
 		children: Query<&Children>,
 	) {
 		for (entity, lookup, handle_component) in &lookups {
-			let Some(graph) = graphs.get_mut(handle_component.unwrap()) else {
+			let Some(graph) = graphs.get_mut(handle_component.get_handle()) else {
 				continue;
 			};
 			let chains =

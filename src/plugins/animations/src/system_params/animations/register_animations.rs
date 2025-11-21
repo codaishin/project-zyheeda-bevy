@@ -24,7 +24,6 @@ where
 			.map(|Animation2 { path, .. }| path.clone())
 			.collect::<Vec<_>>();
 		let (graph, new_clips) = self.asset_server.load_animation_assets(animation_paths);
-		let graph = self.graphs.add(graph);
 		let animations = animations
 			.iter()
 			.filter_map(move |(key, animation)| {
@@ -43,7 +42,7 @@ where
 		self.entity.try_insert((
 			AnimationDispatch::<AnimationKey>::default(),
 			AnimationLookup2 { animations },
-			TGraph::wrap(graph),
+			TGraph::wrap_handle(self.graphs.add(graph)),
 		));
 	}
 }
@@ -67,7 +66,7 @@ mod tests {
 				BoneName,
 				PlayMode,
 			},
-			wrap_handle::UnwrapHandle,
+			wrap_handle::GetHandle,
 		},
 	};
 	use macros::NestedMocks;
@@ -96,7 +95,7 @@ mod tests {
 	impl WrapHandle for _Graph {
 		type TComponent = _GraphComponent;
 
-		fn wrap(_: Handle<Self>) -> Self::TComponent {
+		fn wrap_handle(_: Handle<Self>) -> Self::TComponent {
 			_GraphComponent
 		}
 	}
@@ -104,10 +103,10 @@ mod tests {
 	#[derive(Component, Debug, PartialEq)]
 	struct _GraphComponent;
 
-	impl UnwrapHandle for _GraphComponent {
+	impl GetHandle for _GraphComponent {
 		type TAsset = _Graph;
 
-		fn unwrap(&self) -> &Handle<Self::TAsset> {
+		fn get_handle(&self) -> &Handle<Self::TAsset> {
 			panic!("NOT USED HERE")
 		}
 	}

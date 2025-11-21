@@ -3,11 +3,11 @@ use crate::{
 	traits::asset_server::animation_graph::GetNodeMut,
 };
 use bevy::prelude::*;
-use common::traits::{iterate::Iterate, thread_safe::ThreadSafe, wrap_handle::UnwrapHandle};
+use common::traits::{iterate::Iterate, thread_safe::ThreadSafe, wrap_handle::GetHandle};
 
-impl<T> MaskAllBits for T where T: Component + UnwrapHandle<TAsset: GetNodeMut> {}
+impl<T> MaskAllBits for T where T: Component + GetHandle<TAsset: GetNodeMut> {}
 
-pub(crate) trait MaskAllBits: Component + UnwrapHandle<TAsset: GetNodeMut> + Sized {
+pub(crate) trait MaskAllBits: Component + GetHandle<TAsset: GetNodeMut> + Sized {
 	fn init_animation_mask<TAnimations>(
 		graphs: Query<(&Self, &AnimationLookup2<TAnimations>), Added<Self>>,
 		mut assets: ResMut<Assets<Self::TAsset>>,
@@ -15,7 +15,7 @@ pub(crate) trait MaskAllBits: Component + UnwrapHandle<TAsset: GetNodeMut> + Siz
 		TAnimations: for<'a> Iterate<'a, TItem = &'a AnimationNodeIndex> + ThreadSafe,
 	{
 		for (graph, lookup) in &graphs {
-			let handle = graph.unwrap();
+			let handle = graph.get_handle();
 			let Some(graph) = assets.get_mut(handle) else {
 				continue;
 			};
@@ -44,10 +44,10 @@ mod tests {
 	#[derive(Component)]
 	struct _Component(Handle<_Asset>);
 
-	impl UnwrapHandle for _Component {
+	impl GetHandle for _Component {
 		type TAsset = _Asset;
 
-		fn unwrap(&self) -> &Handle<Self::TAsset> {
+		fn get_handle(&self) -> &Handle<Self::TAsset> {
 			&self.0
 		}
 	}

@@ -5,7 +5,7 @@ use crate::{
 use bevy::prelude::*;
 use common::traits::{
 	animation::{Animation, GetMovementDirection},
-	wrap_handle::{UnwrapHandle, WrapHandle},
+	wrap_handle::{GetHandle, WrapHandle},
 };
 use std::f32::consts::FRAC_PI_2;
 
@@ -60,7 +60,7 @@ fn set_directional_animation_weights<TDispatch, TGraph, TMovementDirection>(
 			let Ok(player) = players.get(entity) else {
 				continue;
 			};
-			let Some(graph) = graphs.get_mut(player.unwrap()) else {
+			let Some(graph) = graphs.get_mut(player.get_handle()) else {
 				continue;
 			};
 
@@ -115,7 +115,7 @@ mod tests {
 	use common::traits::{
 		animation::{AnimationPath, PlayMode},
 		iterate::Iterate,
-		wrap_handle::{UnwrapHandle, WrapHandle},
+		wrap_handle::{GetHandle, WrapHandle},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -166,7 +166,7 @@ mod tests {
 	impl WrapHandle for _Graph {
 		type TComponent = _GraphComponent;
 
-		fn wrap(handle: Handle<Self>) -> Self::TComponent {
+		fn wrap_handle(handle: Handle<Self>) -> Self::TComponent {
 			_GraphComponent(handle)
 		}
 	}
@@ -174,10 +174,10 @@ mod tests {
 	#[derive(Component)]
 	struct _GraphComponent(Handle<_Graph>);
 
-	impl UnwrapHandle for _GraphComponent {
+	impl GetHandle for _GraphComponent {
 		type TAsset = _Graph;
 
-		fn unwrap(&self) -> &Handle<Self::TAsset> {
+		fn get_handle(&self) -> &Handle<Self::TAsset> {
 			&self.0
 		}
 	}

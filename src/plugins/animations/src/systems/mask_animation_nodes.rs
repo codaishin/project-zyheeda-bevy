@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use common::traits::{
 	iterate::Iterate,
 	thread_safe::ThreadSafe,
-	wrap_handle::{UnwrapHandle, WrapHandle},
+	wrap_handle::{GetHandle, WrapHandle},
 };
 
 impl<T> MaskAnimationNodes for T where T: Component {}
@@ -30,7 +30,7 @@ fn mask_animation_nodes<TAgent, TGraph, TAnimations>(
 	for<'a> TAnimations: Iterate<'a, TItem = &'a AnimationNodeIndex>,
 {
 	for (graph_component, lookup) in &agents {
-		let handle = graph_component.unwrap();
+		let handle = graph_component.get_handle();
 		let Some(graph) = graphs.get_mut(handle) else {
 			continue;
 		};
@@ -51,7 +51,7 @@ fn mask_animation_nodes<TAgent, TGraph, TAnimations>(
 mod tests {
 	use super::*;
 	use crate::test_tools::unique_animation_asset;
-	use common::traits::wrap_handle::{UnwrapHandle, WrapHandle};
+	use common::traits::wrap_handle::{GetHandle, WrapHandle};
 	use std::{collections::HashMap, slice::Iter};
 	use testing::{SingleThreadedApp, new_handle};
 
@@ -74,7 +74,7 @@ mod tests {
 	impl WrapHandle for _Graph {
 		type TComponent = _GraphComponent;
 
-		fn wrap(handle: Handle<Self>) -> Self::TComponent {
+		fn wrap_handle(handle: Handle<Self>) -> Self::TComponent {
 			_GraphComponent(handle)
 		}
 	}
@@ -99,10 +99,10 @@ mod tests {
 	#[derive(Component)]
 	struct _GraphComponent(Handle<_Graph>);
 
-	impl UnwrapHandle for _GraphComponent {
+	impl GetHandle for _GraphComponent {
 		type TAsset = _Graph;
 
-		fn unwrap(&self) -> &Handle<Self::TAsset> {
+		fn get_handle(&self) -> &Handle<Self::TAsset> {
 			&self.0
 		}
 	}

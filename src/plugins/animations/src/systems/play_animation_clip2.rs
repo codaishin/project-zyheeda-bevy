@@ -18,7 +18,7 @@ use common::traits::{
 	animation::{AnimationKey, AnimationPriority, PlayMode},
 	iterate::Iterate,
 	thread_safe::ThreadSafe,
-	wrap_handle::{UnwrapHandle, WrapHandle},
+	wrap_handle::{GetHandle, WrapHandle},
 };
 use std::collections::HashSet;
 
@@ -78,11 +78,10 @@ fn play_animation_clip_via2<TAnimationPlayer, TDispatch, TGraph, TAnimations>(
 {
 	for (dispatcher, lookup, graph_component) in &agents {
 		for entity in dispatcher.animation_players() {
-			let graph_handle = graph_component.unwrap();
 			let Ok(mut player) = players.get_mut(entity) else {
 				continue;
 			};
-			let Some(graph) = graphs.get_mut(graph_handle) else {
+			let Some(graph) = graphs.get_mut(graph_component.get_handle()) else {
 				continue;
 			};
 			let active_animations = play_active(graph, &mut player, lookup, dispatcher);
@@ -272,7 +271,7 @@ mod tests {
 	impl WrapHandle for _Graph {
 		type TComponent = _GraphComponent;
 
-		fn wrap(handle: Handle<Self>) -> Self::TComponent {
+		fn wrap_handle(handle: Handle<Self>) -> Self::TComponent {
 			_GraphComponent(handle)
 		}
 	}
@@ -297,10 +296,10 @@ mod tests {
 	#[derive(Component)]
 	struct _GraphComponent(Handle<_Graph>);
 
-	impl UnwrapHandle for _GraphComponent {
+	impl GetHandle for _GraphComponent {
 		type TAsset = _Graph;
 
-		fn unwrap(&self) -> &Handle<Self::TAsset> {
+		fn get_handle(&self) -> &Handle<Self::TAsset> {
 			&self.0
 		}
 	}
