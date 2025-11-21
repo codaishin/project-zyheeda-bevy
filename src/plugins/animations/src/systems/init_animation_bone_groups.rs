@@ -1,4 +1,7 @@
-use crate::components::animation_lookup::{AnimationLookup2, AnimationLookupData};
+use crate::components::{
+	animation_lookup::{AnimationLookup2, AnimationLookupData},
+	setup_animations::SetupAnimations,
+};
 use bevy::{
 	animation::{AnimationTarget, AnimationTargetId},
 	prelude::*,
@@ -17,7 +20,7 @@ pub(crate) trait InitAnimationBoneGroups:
 {
 	fn init_animation_bone_groups(
 		mut graphs: ResMut<Assets<AnimationGraph>>,
-		lookups: Query<(Entity, &AnimationLookup2, &Self), Added<Self>>,
+		lookups: Query<(Entity, &AnimationLookup2, &Self), With<SetupAnimations>>,
 		bones: Query<(&Name, &AnimationTarget)>,
 		children: Query<&Children>,
 	) {
@@ -171,6 +174,7 @@ mod tests {
 					)]),
 				},
 				AnimationGraphHandle(handle.clone()),
+				SetupAnimations,
 			))
 			.id();
 		app.world_mut()
@@ -223,6 +227,7 @@ mod tests {
 					]),
 				},
 				AnimationGraphHandle(handle.clone()),
+				SetupAnimations,
 			))
 			.id();
 		app.world_mut()
@@ -262,6 +267,7 @@ mod tests {
 					)]),
 				},
 				AnimationGraphHandle(handle.clone()),
+				SetupAnimations,
 			))
 			.id();
 		app.world_mut()
@@ -307,6 +313,7 @@ mod tests {
 					)]),
 				},
 				AnimationGraphHandle(handle.clone()),
+				SetupAnimations,
 			))
 			.id();
 		app.world_mut()
@@ -355,6 +362,7 @@ mod tests {
 					)]),
 				},
 				AnimationGraphHandle(handle.clone()),
+				SetupAnimations,
 			))
 			.id();
 		app.world_mut()
@@ -440,6 +448,7 @@ mod tests {
 					)]),
 				},
 				AnimationGraphHandle(handle.clone()),
+				SetupAnimations,
 			))
 			.id();
 		app.world_mut()
@@ -519,6 +528,7 @@ mod tests {
 					)]),
 				},
 				AnimationGraphHandle(handle.clone()),
+				SetupAnimations,
 			))
 			.id();
 		app.world_mut()
@@ -572,6 +582,7 @@ mod tests {
 					)]),
 				},
 				AnimationGraphHandle(handle.clone()),
+				SetupAnimations,
 			))
 			.id();
 		app.world_mut()
@@ -647,6 +658,7 @@ mod tests {
 					)]),
 				},
 				AnimationGraphHandle(handle.clone()),
+				SetupAnimations,
 			))
 			.id();
 		let preceded = app.world_mut().spawn(ChildOf(root)).id();
@@ -690,6 +702,7 @@ mod tests {
 					)]),
 				},
 				AnimationGraphHandle(handle.clone()),
+				SetupAnimations,
 			))
 			.id();
 		app.world_mut()
@@ -722,7 +735,7 @@ mod tests {
 	}
 
 	#[test]
-	fn act_only_once() {
+	fn do_nothing_when_not_setting_up_animations() {
 		let handle = new_handle();
 		let mut app = setup(&handle);
 		let root = app
@@ -748,13 +761,6 @@ mod tests {
 			.entity_mut(root)
 			.insert(bone_components(["root"], root));
 
-		app.update();
-		app.world_mut()
-			.resource_mut::<Assets<AnimationGraph>>()
-			.get_mut(&handle)
-			.unwrap()
-			.mask_groups
-			.clear();
 		app.update();
 
 		assert_eq!(

@@ -15,6 +15,14 @@ pub(crate) struct AnimationLookup2<TAnimationClips = AnimationClips> {
 	pub(crate) animations: HashMap<AnimationKey, AnimationLookupData<TAnimationClips>>,
 }
 
+impl Default for AnimationLookup2 {
+	fn default() -> Self {
+		Self {
+			animations: HashMap::default(),
+		}
+	}
+}
+
 #[derive(Debug, PartialEq, Default)]
 pub(crate) struct AnimationLookupData<TAnimations = AnimationClips> {
 	pub(crate) animation_clips: TAnimations,

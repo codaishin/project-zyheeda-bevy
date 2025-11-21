@@ -1,5 +1,5 @@
 use crate::{
-	components::animation_lookup::AnimationLookup2,
+	components::{animation_lookup::AnimationLookup2, setup_animations::SetupAnimations},
 	traits::asset_server::animation_graph::GetNodeMut,
 };
 use bevy::prelude::*;
@@ -9,7 +9,7 @@ impl<T> MaskAllBits for T where T: Component + GetHandle<TAsset: GetNodeMut> {}
 
 pub(crate) trait MaskAllBits: Component + GetHandle<TAsset: GetNodeMut> + Sized {
 	fn init_animation_mask<TAnimations>(
-		graphs: Query<(&Self, &AnimationLookup2<TAnimations>), Added<Self>>,
+		graphs: Query<(&Self, &AnimationLookup2<TAnimations>), With<SetupAnimations>>,
 		mut assets: ResMut<Assets<Self::TAsset>>,
 	) where
 		TAnimations: for<'a> Iterate<'a, TItem = &'a AnimationNodeIndex> + ThreadSafe,
@@ -109,6 +109,7 @@ mod tests {
 				)]),
 			},
 			_Component(handle.clone()),
+			SetupAnimations,
 		));
 
 		app.update();
@@ -124,7 +125,7 @@ mod tests {
 	}
 
 	#[test]
-	fn act_only_once() {
+	fn do_nothing_when_not_setting_up_animations() {
 		let handle = new_handle();
 		let asset = _Asset(HashMap::from([(
 			AnimationNodeIndex::new(42),
@@ -144,11 +145,6 @@ mod tests {
 			_Component(handle.clone()),
 		));
 
-		app.update();
-		let mut graphs = app.world_mut().resource_mut::<Assets<_Asset>>();
-		let graph = graphs.get_mut(&handle).unwrap();
-		let node = graph.0.get_mut(&AnimationNodeIndex::new(42)).unwrap();
-		node.mask = 0;
 		app.update();
 
 		assert_eq!(

@@ -1,4 +1,5 @@
 mod components;
+mod observers;
 mod system_params;
 mod systems;
 mod traits;
@@ -7,7 +8,7 @@ mod traits;
 pub(crate) mod test_tools;
 
 use crate::{
-	components::animation_lookup::AnimationClips,
+	components::{animation_lookup::AnimationClips, setup_animations::SetupAnimations},
 	system_params::animations::{AnimationsParamMut, override_animations::AnimationOverrideEvent},
 	systems::{
 		discover_animation_mask_bones::DiscoverMaskChains,
@@ -22,7 +23,7 @@ use crate::{
 		set_directional_animation_weights2::SetDirectionalAnimationWeights2,
 	},
 };
-use bevy::prelude::*;
+use bevy::{prelude::*, scene::SceneInstanceReady};
 use common::{
 	systems::track_components::TrackComponentInSelfAndChildren,
 	traits::{
@@ -106,12 +107,14 @@ where
 		type DispatchNew = AnimationDispatch<AnimationKey>;
 		TSavegame::register_savable_component::<DispatchNew>(app);
 		app.add_observer(AnimationOverrideEvent::observe);
+		app.add_observer(SetupAnimations::insert_when::<SceneInstanceReady>);
 		app.add_systems(
 			Update,
 			(
 				AnimationGraphHandle::init_animation_mask::<AnimationClips>,
 				AnimationGraphHandle::init_animation_bone_groups,
 				AnimationGraphHandle::remove_unused_animation_targets2,
+				SetupAnimations::stop,
 				DispatchNew::track_in_self_and_children::<AnimationPlayer>().system(),
 				DispatchNew::track_in_self_and_children::<AnimationGraphHandle>().system(),
 				DispatchNew::distribute_player_components::<AnimationGraphHandle>,

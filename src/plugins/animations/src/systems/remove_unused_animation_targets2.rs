@@ -4,15 +4,18 @@ use common::{
 	zyheeda_commands::ZyheedaCommands,
 };
 
+use crate::components::{animation_lookup::AnimationLookup2, setup_animations::SetupAnimations};
+
 impl<T> RemoveUnusedAnimationTargets2 for T where T: Component + GetHandle<TAsset = AnimationGraph> {}
 
 pub(crate) trait RemoveUnusedAnimationTargets2:
 	Component + GetHandle<TAsset = AnimationGraph> + Sized
 {
+	#[allow(clippy::type_complexity)]
 	fn remove_unused_animation_targets2(
 		mut commands: ZyheedaCommands,
 		graphs: Res<Assets<AnimationGraph>>,
-		players: Query<(Entity, &Self), Added<Self>>,
+		players: Query<(Entity, &Self), (With<AnimationLookup2>, With<SetupAnimations>)>,
 		bones: Query<(Entity, &AnimationTarget)>,
 		children: Query<&Children>,
 	) {
@@ -87,7 +90,10 @@ mod tests {
 		];
 		let handle = new_handle();
 		let mut app = setup(&handle, new_graph(used_targets));
-		let player = app.world_mut().spawn(_Graph(handle)).id();
+		let player = app
+			.world_mut()
+			.spawn((_Graph(handle), SetupAnimations, AnimationLookup2::default()))
+			.id();
 		let targets = [
 			app.world_mut()
 				.spawn(AnimationTarget {
@@ -131,7 +137,10 @@ mod tests {
 		];
 		let handle = new_handle();
 		let mut app = setup(&handle, new_graph(used_targets));
-		let player = app.world_mut().spawn(_Graph(handle)).id();
+		let player = app
+			.world_mut()
+			.spawn((_Graph(handle), SetupAnimations, AnimationLookup2::default()))
+			.id();
 		let targets = [
 			app.world_mut()
 				.spawn(AnimationTarget {
@@ -179,7 +188,10 @@ mod tests {
 		];
 		let handle = new_handle();
 		let mut app = setup(&handle, new_graph(used_targets));
-		let player = app.world_mut().spawn(_Graph(handle)).id();
+		let player = app
+			.world_mut()
+			.spawn((_Graph(handle), SetupAnimations, AnimationLookup2::default()))
+			.id();
 		let targets = [
 			app.world_mut()
 				.spawn(AnimationTarget {
@@ -219,7 +231,10 @@ mod tests {
 		];
 		let handle = new_handle();
 		let mut app = setup(&handle, new_graph(used_targets));
-		let player = app.world_mut().spawn(_Graph(handle)).id();
+		let player = app
+			.world_mut()
+			.spawn((_Graph(handle), SetupAnimations, AnimationLookup2::default()))
+			.id();
 		let other = app.world_mut().spawn_empty().id();
 		let targets = [
 			app.world_mut()
@@ -264,7 +279,10 @@ mod tests {
 		];
 		let handle = new_handle();
 		let mut app = setup(&handle, new_graph(used_targets));
-		let player = app.world_mut().spawn(_Graph(handle)).id();
+		let player = app
+			.world_mut()
+			.spawn((_Graph(handle), SetupAnimations, AnimationLookup2::default()))
+			.id();
 		let targets =
 			used_targets.map(|id| app.world_mut().spawn(AnimationTarget { id, player }).id());
 
@@ -279,7 +297,7 @@ mod tests {
 	}
 
 	#[test]
-	fn act_only_once() {
+	fn do_nothing_when_not_setting_up_animations() {
 		let used_targets = [
 			AnimationTargetId::from_name(&Name::from("a")),
 			AnimationTargetId::from_name(&Name::from("b")),
@@ -287,7 +305,10 @@ mod tests {
 		];
 		let handle = new_handle();
 		let mut app = setup(&handle, new_graph(used_targets));
-		let player = app.world_mut().spawn(_Graph(handle)).id();
+		let player = app
+			.world_mut()
+			.spawn((_Graph(handle), AnimationLookup2::default()))
+			.id();
 		let targets = [
 			app.world_mut()
 				.spawn(AnimationTarget {
@@ -313,12 +334,52 @@ mod tests {
 		];
 
 		app.update();
-		for target in targets {
-			app.world_mut().entity_mut(target).insert(AnimationTarget {
-				id: AnimationTargetId::from_name(&Name::from("should not be removed")),
-				player,
-			});
-		}
+
+		assert_eq!(
+			[true, true, true],
+			app.world()
+				.entity(targets)
+				.map(|entity| entity.contains::<AnimationTarget>())
+		)
+	}
+
+	#[test]
+	fn do_nothing_when_no_animation_lookup_present() {
+		let used_targets = [
+			AnimationTargetId::from_name(&Name::from("a")),
+			AnimationTargetId::from_name(&Name::from("b")),
+			AnimationTargetId::from_name(&Name::from("c")),
+		];
+		let handle = new_handle();
+		let mut app = setup(&handle, new_graph(used_targets));
+		let player = app
+			.world_mut()
+			.spawn((_Graph(handle), SetupAnimations))
+			.id();
+		let targets = [
+			app.world_mut()
+				.spawn(AnimationTarget {
+					id: AnimationTargetId::from_name(&Name::from("d")),
+					player,
+				})
+				.insert(ChildOf(player))
+				.id(),
+			app.world_mut()
+				.spawn(AnimationTarget {
+					id: AnimationTargetId::from_name(&Name::from("e")),
+					player,
+				})
+				.insert(ChildOf(player))
+				.id(),
+			app.world_mut()
+				.spawn(AnimationTarget {
+					id: AnimationTargetId::from_name(&Name::from("f")),
+					player,
+				})
+				.insert(ChildOf(player))
+				.id(),
+		];
+
 		app.update();
 
 		assert_eq!(
