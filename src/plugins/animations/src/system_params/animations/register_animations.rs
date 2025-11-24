@@ -1,7 +1,7 @@
 use crate::{
 	components::{
 		animation_dispatch::AnimationDispatch,
-		animation_lookup::{AnimationClips, AnimationLookup2, AnimationLookupData},
+		animation_lookup::{AnimationClips, AnimationLookup, AnimationLookupData},
 	},
 	system_params::animations::AnimationsContextMut,
 	traits::LoadAnimationAssets,
@@ -41,7 +41,7 @@ where
 
 		self.entity.try_insert((
 			AnimationDispatch::<AnimationKey>::default(),
-			AnimationLookup2 { animations },
+			AnimationLookup { animations },
 			TGraph::wrap_handle(self.graphs.add(graph)),
 		));
 	}
@@ -238,7 +238,7 @@ mod tests {
 			})?;
 
 		assert_eq!(
-			Some(&AnimationLookup2 {
+			Some(&AnimationLookup {
 				animations: HashMap::from([
 					(
 						AnimationKey::Idle,
@@ -278,7 +278,7 @@ mod tests {
 					),
 				])
 			}),
-			app.world().entity(entity).get::<AnimationLookup2>()
+			app.world().entity(entity).get::<AnimationLookup>()
 		);
 		Ok(())
 	}

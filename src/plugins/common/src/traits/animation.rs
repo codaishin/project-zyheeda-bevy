@@ -122,6 +122,7 @@ pub struct Directional {
 	pub right: Path,
 }
 
+// FIXME: remove when consumers moved to new `HandlesAnimations` interface
 pub trait HasAnimationsDispatch {
 	type TAnimationDispatch: StartAnimation
 		+ SetAnimations

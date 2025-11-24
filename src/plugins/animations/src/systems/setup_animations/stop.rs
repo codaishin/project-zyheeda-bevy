@@ -1,11 +1,11 @@
-use crate::components::{animation_lookup::AnimationLookup2, setup_animations::SetupAnimations};
+use crate::components::{animation_lookup::AnimationLookup, setup_animations::SetupAnimations};
 use bevy::prelude::*;
 use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
 impl SetupAnimations {
 	pub(crate) fn stop(
 		mut commands: ZyheedaCommands,
-		setups: Query<Entity, (With<AnimationLookup2>, With<Self>)>,
+		setups: Query<Entity, (With<AnimationLookup>, With<Self>)>,
 	) {
 		for entity in &setups {
 			commands.try_apply_on(&entity, |mut e| {
@@ -33,7 +33,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((AnimationLookup2::default(), SetupAnimations))
+			.spawn((AnimationLookup::default(), SetupAnimations))
 			.id();
 
 		app.update();

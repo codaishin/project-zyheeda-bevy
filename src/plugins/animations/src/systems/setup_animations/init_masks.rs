@@ -1,5 +1,5 @@
 use crate::{
-	components::{animation_lookup::AnimationLookup2, setup_animations::SetupAnimations},
+	components::{animation_lookup::AnimationLookup, setup_animations::SetupAnimations},
 	traits::asset_server::animation_graph::GetNodeMut,
 };
 use bevy::prelude::*;
@@ -7,7 +7,7 @@ use common::traits::{iterate::Iterate, thread_safe::ThreadSafe, wrap_handle::Get
 
 impl SetupAnimations {
 	pub(crate) fn init_masks<TGraph, TAnimations>(
-		graphs: Query<(&TGraph, &AnimationLookup2<TAnimations>), With<Self>>,
+		graphs: Query<(&TGraph, &AnimationLookup<TAnimations>), With<Self>>,
 		mut assets: ResMut<Assets<TGraph::TAsset>>,
 	) where
 		TGraph: Component + GetHandle<TAsset: GetNodeMut>,
@@ -35,7 +35,7 @@ impl SetupAnimations {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::animation_lookup::{AnimationLookup2, AnimationLookupData};
+	use crate::components::animation_lookup::{AnimationLookup, AnimationLookupData};
 	use common::traits::animation::AnimationKey;
 	use std::{collections::HashMap, slice::Iter};
 	use testing::{SingleThreadedApp, new_handle};
@@ -101,7 +101,7 @@ mod tests {
 		)]));
 		let mut app = setup([(&handle, asset)]);
 		app.world_mut().spawn((
-			AnimationLookup2 {
+			AnimationLookup {
 				animations: HashMap::from([(
 					AnimationKey::Run,
 					AnimationLookupData {
@@ -135,7 +135,7 @@ mod tests {
 		)]));
 		let mut app = setup([(&handle, asset)]);
 		app.world_mut().spawn((
-			AnimationLookup2 {
+			AnimationLookup {
 				animations: HashMap::from([(
 					AnimationKey::Run,
 					AnimationLookupData {

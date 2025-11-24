@@ -1,5 +1,5 @@
 use crate::components::{
-	animation_lookup::{AnimationLookup2, AnimationLookupData},
+	animation_lookup::{AnimationLookup, AnimationLookupData},
 	setup_animations::SetupAnimations,
 };
 use bevy::{
@@ -16,7 +16,7 @@ use std::{collections::HashSet, iter};
 impl SetupAnimations {
 	pub(crate) fn init_bone_groups<TGraph: Component + GetHandle<TAsset = AnimationGraph>>(
 		mut graphs: ResMut<Assets<AnimationGraph>>,
-		lookups: Query<(Entity, &AnimationLookup2, &TGraph), With<Self>>,
+		lookups: Query<(Entity, &AnimationLookup, &TGraph), With<Self>>,
 		bones: Query<(&Name, &AnimationTarget)>,
 		children: Query<&Children>,
 	) {
@@ -72,8 +72,6 @@ fn update_graph(graph: &mut AnimationGraph, mask_bones: Vec<(AnimationTargetId, 
 	for (target, mask) in mask_bones {
 		*graph.mask_groups.entry(target).or_default() |= mask;
 	}
-
-	println!("{:#?}", graph.mask_groups);
 }
 
 fn animation_bone_chains<'a>(
@@ -161,7 +159,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup2 {
+				AnimationLookup {
 					animations: HashMap::from([(
 						AnimationKey::Run,
 						AnimationLookupData::<AnimationClips> {
@@ -201,7 +199,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup2 {
+				AnimationLookup {
 					animations: HashMap::from([
 						(
 							AnimationKey::Run,
@@ -254,7 +252,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup2 {
+				AnimationLookup {
 					animations: HashMap::from([(
 						AnimationKey::Run,
 						AnimationLookupData::<AnimationClips> {
@@ -300,7 +298,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup2 {
+				AnimationLookup {
 					animations: HashMap::from([(
 						AnimationKey::Run,
 						AnimationLookupData::<AnimationClips> {
@@ -349,7 +347,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup2 {
+				AnimationLookup {
 					animations: HashMap::from([(
 						AnimationKey::Run,
 						AnimationLookupData::<AnimationClips> {
@@ -435,7 +433,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup2 {
+				AnimationLookup {
 					animations: HashMap::from([(
 						AnimationKey::Run,
 						AnimationLookupData::<AnimationClips> {
@@ -515,7 +513,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup2 {
+				AnimationLookup {
 					animations: HashMap::from([(
 						AnimationKey::Run,
 						AnimationLookupData::<AnimationClips> {
@@ -566,7 +564,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup2 {
+				AnimationLookup {
 					animations: HashMap::from([(
 						AnimationKey::Run,
 						AnimationLookupData::<AnimationClips> {
@@ -645,7 +643,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup2 {
+				AnimationLookup {
 					animations: HashMap::from([(
 						AnimationKey::Run,
 						AnimationLookupData::<AnimationClips> {
@@ -689,7 +687,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup2 {
+				AnimationLookup {
 					animations: HashMap::from([(
 						AnimationKey::Run,
 						AnimationLookupData::<AnimationClips> {
@@ -742,7 +740,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup2 {
+				AnimationLookup {
 					animations: HashMap::from([(
 						AnimationKey::Run,
 						AnimationLookupData::<AnimationClips> {

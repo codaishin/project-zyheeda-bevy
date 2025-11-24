@@ -1,18 +1,23 @@
+use crate::components::{animation_lookup::AnimationLookup, setup_animations::SetupAnimations};
 use bevy::{animation::AnimationTarget, prelude::*};
-use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
+use common::{
+	traits::{accessors::get::TryApplyOn, wrap_handle::GetHandle},
+	zyheeda_commands::ZyheedaCommands,
+};
 
-impl<T> RemoveUnusedAnimationTargets for T where T: Component {}
-
-pub(crate) trait RemoveUnusedAnimationTargets: Component {
-	fn remove_unused_animation_targets(
+impl SetupAnimations {
+	#[allow(clippy::type_complexity)]
+	pub(crate) fn remove_unused_animation_targets<TGraph>(
 		mut commands: ZyheedaCommands,
 		graphs: Res<Assets<AnimationGraph>>,
-		players: Query<(Entity, &AnimationGraphHandle), Added<AnimationGraphHandle>>,
+		players: Query<(Entity, &TGraph), (With<AnimationLookup>, With<Self>)>,
 		bones: Query<(Entity, &AnimationTarget)>,
 		children: Query<&Children>,
-	) {
-		for (player, AnimationGraphHandle(handle)) in &players {
-			let Some(graph) = graphs.get(handle) else {
+	) where
+		TGraph: Component + GetHandle<TAsset = AnimationGraph>,
+	{
+		for (player, graph) in &players {
+			let Some(graph) = graphs.get(graph.get_handle()) else {
 				continue;
 			};
 
@@ -44,7 +49,15 @@ mod tests {
 	use testing::{SingleThreadedApp, new_handle};
 
 	#[derive(Component)]
-	struct _Agent;
+	struct _Graph(Handle<AnimationGraph>);
+
+	impl GetHandle for _Graph {
+		type TAsset = AnimationGraph;
+
+		fn get_handle(&self) -> &Handle<Self::TAsset> {
+			&self.0
+		}
+	}
 
 	fn setup(handle: &Handle<AnimationGraph>, graph: AnimationGraph) -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -52,7 +65,10 @@ mod tests {
 
 		graphs.insert(handle, graph);
 		app.insert_resource(graphs);
-		app.add_systems(Update, _Agent::remove_unused_animation_targets);
+		app.add_systems(
+			Update,
+			SetupAnimations::remove_unused_animation_targets::<_Graph>,
+		);
 
 		app
 	}
@@ -74,7 +90,10 @@ mod tests {
 		];
 		let handle = new_handle();
 		let mut app = setup(&handle, new_graph(used_targets));
-		let player = app.world_mut().spawn(AnimationGraphHandle(handle)).id();
+		let player = app
+			.world_mut()
+			.spawn((_Graph(handle), SetupAnimations, AnimationLookup::default()))
+			.id();
 		let targets = [
 			app.world_mut()
 				.spawn(AnimationTarget {
@@ -118,7 +137,10 @@ mod tests {
 		];
 		let handle = new_handle();
 		let mut app = setup(&handle, new_graph(used_targets));
-		let player = app.world_mut().spawn(AnimationGraphHandle(handle)).id();
+		let player = app
+			.world_mut()
+			.spawn((_Graph(handle), SetupAnimations, AnimationLookup::default()))
+			.id();
 		let targets = [
 			app.world_mut()
 				.spawn(AnimationTarget {
@@ -166,7 +188,10 @@ mod tests {
 		];
 		let handle = new_handle();
 		let mut app = setup(&handle, new_graph(used_targets));
-		let player = app.world_mut().spawn(AnimationGraphHandle(handle)).id();
+		let player = app
+			.world_mut()
+			.spawn((_Graph(handle), SetupAnimations, AnimationLookup::default()))
+			.id();
 		let targets = [
 			app.world_mut()
 				.spawn(AnimationTarget {
@@ -206,7 +231,10 @@ mod tests {
 		];
 		let handle = new_handle();
 		let mut app = setup(&handle, new_graph(used_targets));
-		let player = app.world_mut().spawn(AnimationGraphHandle(handle)).id();
+		let player = app
+			.world_mut()
+			.spawn((_Graph(handle), SetupAnimations, AnimationLookup::default()))
+			.id();
 		let other = app.world_mut().spawn_empty().id();
 		let targets = [
 			app.world_mut()
@@ -251,7 +279,10 @@ mod tests {
 		];
 		let handle = new_handle();
 		let mut app = setup(&handle, new_graph(used_targets));
-		let player = app.world_mut().spawn(AnimationGraphHandle(handle)).id();
+		let player = app
+			.world_mut()
+			.spawn((_Graph(handle), SetupAnimations, AnimationLookup::default()))
+			.id();
 		let targets =
 			used_targets.map(|id| app.world_mut().spawn(AnimationTarget { id, player }).id());
 
@@ -266,7 +297,7 @@ mod tests {
 	}
 
 	#[test]
-	fn act_only_once() {
+	fn do_nothing_when_not_setting_up_animations() {
 		let used_targets = [
 			AnimationTargetId::from_name(&Name::from("a")),
 			AnimationTargetId::from_name(&Name::from("b")),
@@ -274,7 +305,10 @@ mod tests {
 		];
 		let handle = new_handle();
 		let mut app = setup(&handle, new_graph(used_targets));
-		let player = app.world_mut().spawn(AnimationGraphHandle(handle)).id();
+		let player = app
+			.world_mut()
+			.spawn((_Graph(handle), AnimationLookup::default()))
+			.id();
 		let targets = [
 			app.world_mut()
 				.spawn(AnimationTarget {
@@ -300,12 +334,52 @@ mod tests {
 		];
 
 		app.update();
-		for target in targets {
-			app.world_mut().entity_mut(target).insert(AnimationTarget {
-				id: AnimationTargetId::from_name(&Name::from("should not be removed")),
-				player,
-			});
-		}
+
+		assert_eq!(
+			[true, true, true],
+			app.world()
+				.entity(targets)
+				.map(|entity| entity.contains::<AnimationTarget>())
+		)
+	}
+
+	#[test]
+	fn do_nothing_when_no_animation_lookup_present() {
+		let used_targets = [
+			AnimationTargetId::from_name(&Name::from("a")),
+			AnimationTargetId::from_name(&Name::from("b")),
+			AnimationTargetId::from_name(&Name::from("c")),
+		];
+		let handle = new_handle();
+		let mut app = setup(&handle, new_graph(used_targets));
+		let player = app
+			.world_mut()
+			.spawn((_Graph(handle), SetupAnimations))
+			.id();
+		let targets = [
+			app.world_mut()
+				.spawn(AnimationTarget {
+					id: AnimationTargetId::from_name(&Name::from("d")),
+					player,
+				})
+				.insert(ChildOf(player))
+				.id(),
+			app.world_mut()
+				.spawn(AnimationTarget {
+					id: AnimationTargetId::from_name(&Name::from("e")),
+					player,
+				})
+				.insert(ChildOf(player))
+				.id(),
+			app.world_mut()
+				.spawn(AnimationTarget {
+					id: AnimationTargetId::from_name(&Name::from("f")),
+					player,
+				})
+				.insert(ChildOf(player))
+				.id(),
+		];
+
 		app.update();
 
 		assert_eq!(
