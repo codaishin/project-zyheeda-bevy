@@ -36,7 +36,7 @@ use std::{
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
 #[savable_component(dto = AnimationDispatchDto<TAnimation>)]
-pub struct AnimationDispatch<TAnimation = Animation>
+pub struct AnimationDispatch<TAnimation = AnimationKey>
 where
 	TAnimation: Eq + Hash,
 {
@@ -47,18 +47,6 @@ where
 		HashSet<TAnimation>,
 		HashSet<TAnimation>,
 	),
-}
-
-#[cfg(test)]
-impl AnimationDispatch {
-	pub(crate) fn to<const N: usize>(entities: [Entity; N]) -> Self {
-		let mut dispatch = Self::default();
-		for entity in entities {
-			dispatch.animation_players.insert(entity);
-		}
-
-		dispatch
-	}
 }
 
 impl<TAnimation> AnimationDispatch<TAnimation>
@@ -116,7 +104,7 @@ where
 	}
 }
 
-impl<'w, 's, TComponent> DerivableFrom<'w, 's, TComponent> for AnimationDispatch
+impl<'w, 's, TComponent> DerivableFrom<'w, 's, TComponent> for AnimationDispatch<Animation>
 where
 	TComponent: ConfigureNewAnimationDispatch,
 {
@@ -274,7 +262,7 @@ impl<'a, TAnimation> Iterator for IterAll<'a, TAnimation> {
 	}
 }
 
-impl StartAnimation for AnimationDispatch {
+impl StartAnimation for AnimationDispatch<Animation> {
 	fn start_animation<TLayer>(&mut self, layer: TLayer, animation: Animation)
 	where
 		TLayer: Into<AnimationPriority>,
@@ -283,7 +271,7 @@ impl StartAnimation for AnimationDispatch {
 	}
 }
 
-impl SetAnimations for AnimationDispatch {
+impl SetAnimations for AnimationDispatch<Animation> {
 	fn set_animations<TLayer, TAnimations>(&mut self, layer: TLayer, animations: TAnimations)
 	where
 		TLayer: Into<AnimationPriority> + 'static,

@@ -1,18 +1,18 @@
-use super::{UnwrapHandle, WrapHandle};
+use super::{GetHandle, WrapHandle};
 use bevy::prelude::*;
 
 impl WrapHandle for AnimationGraph {
 	type TComponent = AnimationGraphHandle;
 
-	fn wrap(handle: Handle<Self>) -> Self::TComponent {
+	fn wrap_handle(handle: Handle<Self>) -> Self::TComponent {
 		AnimationGraphHandle(handle)
 	}
 }
 
-impl UnwrapHandle for AnimationGraphHandle {
+impl GetHandle for AnimationGraphHandle {
 	type TAsset = AnimationGraph;
 
-	fn unwrap(&self) -> &Handle<Self::TAsset> {
+	fn get_handle(&self) -> &Handle<Self::TAsset> {
 		&self.0
 	}
 }

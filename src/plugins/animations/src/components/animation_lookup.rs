@@ -1,18 +1,21 @@
 use bevy::prelude::*;
 use common::traits::{
-	animation::{AffectedAnimationBones2, AnimationKey, AnimationPath, PlayMode},
+	animation::{AffectedAnimationBones2, AnimationKey, PlayMode},
 	iterate::Iterate,
 };
 use std::collections::HashMap;
 
 #[derive(Component, Debug, PartialEq)]
-pub(crate) struct AnimationLookup<TAnimations = AnimationClips> {
-	pub(crate) animations: HashMap<AnimationPath, (TAnimations, AnimationMask)>,
+pub(crate) struct AnimationLookup<TAnimationClips = AnimationClips> {
+	pub(crate) animations: HashMap<AnimationKey, AnimationLookupData<TAnimationClips>>,
 }
 
-#[derive(Component, Debug, PartialEq)]
-pub(crate) struct AnimationLookup2<TAnimationClips = AnimationClips> {
-	pub(crate) animations: HashMap<AnimationKey, AnimationLookupData<TAnimationClips>>,
+impl Default for AnimationLookup {
+	fn default() -> Self {
+		Self {
+			animations: HashMap::default(),
+		}
+	}
 }
 
 #[derive(Debug, PartialEq, Default)]

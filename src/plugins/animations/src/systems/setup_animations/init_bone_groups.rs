@@ -1,94 +1,71 @@
-use crate::{components::animation_dispatch::AnimationDispatch, traits::AnimationPlayers};
+use crate::components::{
+	animation_lookup::{AnimationLookup, AnimationLookupData},
+	setup_animations::SetupAnimations,
+};
 use bevy::{
 	animation::{AnimationTarget, AnimationTargetId},
 	prelude::*,
 };
 use common::traits::{
-	animation::{AffectedAnimationBones, GetAnimationDefinitions},
-	iteration::IterFinite,
+	animation::BoneName,
+	iter_descendants_conditional::IterDescendantsConditional,
+	wrap_handle::GetHandle,
 };
-use std::iter;
+use std::{collections::HashSet, iter};
 
-impl<TAgent> DiscoverMaskChains for TAgent
-where
-	TAgent: GetAnimationDefinitions + Component,
-	for<'a> AnimationMask: From<&'a TAgent::TAnimationMask>,
-	for<'a> AffectedAnimationBones: From<&'a TAgent::TAnimationMask>,
-{
-}
-
-pub(crate) trait DiscoverMaskChains: GetAnimationDefinitions + Component + Sized
-where
-	for<'a> AnimationMask: From<&'a Self::TAnimationMask>,
-	for<'a> AffectedAnimationBones: From<&'a Self::TAnimationMask>,
-{
-	fn set_animation_mask_bones(
+impl SetupAnimations {
+	pub(crate) fn init_bone_groups<TGraph: Component + GetHandle<TAsset = AnimationGraph>>(
 		mut graphs: ResMut<Assets<AnimationGraph>>,
-		agents: Query<&AnimationDispatch, With<Self>>,
-		players: Query<&AnimationGraphHandle, Added<AnimationGraphHandle>>,
-		children: Query<&Children>,
+		lookups: Query<(Entity, &AnimationLookup, &TGraph), With<Self>>,
 		bones: Query<(&Name, &AnimationTarget)>,
+		children: Query<&Children>,
 	) {
-		let animation_masks = Self::TAnimationMask::iterator().collect::<Vec<_>>();
+		for (entity, lookup, handle_component) in &lookups {
+			let Some(graph) = graphs.get_mut(handle_component.get_handle()) else {
+				continue;
+			};
+			let chains =
+				all_animation_bone_chains(entity, &children, &bones, lookup.animations.values());
 
-		for dispatch in &agents {
-			for player in dispatch.animation_players() {
-				let Ok(AnimationGraphHandle(handle)) = players.get(player) else {
-					continue;
-				};
-				let Some(graph) = graphs.get_mut(handle) else {
-					continue;
-				};
-				let chains = get_mask_bones(player, &children, &bones, &animation_masks);
-
-				update_graph(graph, chains);
-			}
+			update_graph(graph, chains);
 		}
 	}
 }
 
-fn get_mask_bones<TAnimationMask>(
-	player: Entity,
+fn all_animation_bone_chains<'a>(
+	entity: Entity,
 	children: &Query<&Children>,
-	bones: &Query<(&Name, &AnimationTarget)>,
-	animation_masks: &[TAnimationMask],
-) -> Vec<(AnimationTargetId, AnimationMask)>
-where
-	for<'a> AnimationMask: From<&'a TAnimationMask>,
-	for<'a> AffectedAnimationBones: From<&'a TAnimationMask>,
-{
-	let mut r_bones = vec![];
+	animation_targets: &Query<(&Name, &AnimationTarget)>,
+	animation_masks: impl Iterator<Item = &'a AnimationLookupData>,
+) -> Vec<(AnimationTargetId, AnimationMask)> {
+	let mut bones = vec![];
 	let get_bone = |child| {
-		let (name, target) = bones.get(child).ok()?;
-		if target.player != player {
+		let (name, target) = animation_targets.get(child).ok()?;
+		if target.player != entity {
 			return None;
 		}
 		Some((child, name, target))
 	};
 
-	for mask in animation_masks {
-		let bones = match AffectedAnimationBones::from(mask) {
-			AffectedAnimationBones::Leaf { root: from_root } => {
-				mask_bones(player, &from_root, children, &get_bone)
-					.map(|bones| bones.collect::<Vec<_>>())
-			}
-			AffectedAnimationBones::SubTree {
-				root: from_root,
-				until_exclusive: exclude_roots,
-			} => mask_bones_with_exclusions(player, from_root, exclude_roots, children, &get_bone),
-		};
+	for data in animation_masks {
+		let animation_bones = animation_bone_chains(
+			entity,
+			&data.bones.from_root,
+			&data.bones.until_exclusive,
+			children,
+			&get_bone,
+		);
 
-		let Some(bones) = bones else {
+		let Some(animation_bones) = animation_bones else {
 			continue;
 		};
 
-		let animation_mask = AnimationMask::from(mask);
-		for bone in bones {
-			r_bones.push((bone, animation_mask));
+		for mask_bone in animation_bones {
+			bones.push((mask_bone, data.mask));
 		}
 	}
 
-	r_bones
+	bones
 }
 
 fn update_graph(graph: &mut AnimationGraph, mask_bones: Vec<(AnimationTargetId, AnimationMask)>) {
@@ -97,37 +74,22 @@ fn update_graph(graph: &mut AnimationGraph, mask_bones: Vec<(AnimationTargetId, 
 	}
 }
 
-fn mask_bones_with_exclusions<'a>(
+fn animation_bone_chains<'a>(
 	player: Entity,
-	mask_root: Name,
-	exclude_root: Vec<Name>,
+	mask_root: &BoneName,
+	until_excluded: &HashSet<BoneName>,
 	children: &Query<'_, '_, &Children>,
 	get_bone: &'a impl Fn(Entity) -> Option<(Entity, &'a Name, &'a AnimationTarget)>,
-) -> Option<Vec<AnimationTargetId>> {
-	let exclude = exclude_root
-		.iter()
-		.filter_map(|mask_root| mask_bones(player, mask_root, children, get_bone))
-		.flatten()
-		.collect::<Vec<_>>();
-
-	Some(
-		mask_bones(player, &mask_root, children, get_bone)
-			.into_iter()
-			.flatten()
-			.filter(|bone| !exclude.contains(bone))
-			.collect::<Vec<_>>(),
-	)
-}
-
-fn mask_bones<'a>(
-	player: Entity,
-	mask_root: &Name,
-	children: &Query<&Children>,
-	get_bone: &'a impl Fn(Entity) -> Option<(Entity, &'a Name, &'a AnimationTarget)>,
 ) -> Option<impl Iterator<Item = AnimationTargetId>> {
+	let not_excluded = |e| {
+		let Some((_, name, _)) = get_bone(e) else {
+			return true;
+		};
+		!until_excluded.contains(&BoneName::from(name))
+	};
 	let (entity, _, target) = root_bone(player, mask_root, children, get_bone)?;
 	let children = children
-		.iter_descendants(entity)
+		.iter_descendants_conditional(entity, not_excluded)
 		.filter_map(get_bone)
 		.map(|(.., target)| target.id);
 
@@ -136,7 +98,7 @@ fn mask_bones<'a>(
 
 fn root_bone<'a>(
 	player: Entity,
-	mask_root: &Name,
+	mask_root: &BoneName,
 	children: &Query<'_, '_, &Children>,
 	get_bone: &'a impl Fn(Entity) -> Option<(Entity, &'a Name, &'a AnimationTarget)>,
 ) -> Option<(Entity, &'a Name, &'a AnimationTarget)> {
@@ -152,70 +114,11 @@ fn root_bone<'a>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::animation_dispatch::AnimationDispatch;
-	use bevy::{animation::AnimationTargetId, platform::collections::HashMap};
-	use common::traits::{
-		animation::{AffectedAnimationBones, AnimationPath},
-		iteration::{Iter, IterFinite},
-	};
+	use crate::components::animation_lookup::AnimationClips;
+	use bevy::{animation::AnimationTargetId, platform::collections::HashMap as BevyHashMap};
+	use common::traits::animation::{AffectedAnimationBones2, AnimationKey};
+	use std::collections::HashMap;
 	use testing::{SingleThreadedApp, new_handle};
-
-	macro_rules! agent_animation_definitions {
-		($masks:expr) => {
-			#[derive(Debug, Clone, Copy)]
-			struct _Mask {
-				id: AnimationMask,
-				def: fn() -> AffectedAnimationBones,
-			}
-
-			impl PartialEq for _Mask {
-				fn eq(&self, other: &Self) -> bool {
-					self.id == other.id && std::ptr::fn_addr_eq(self.def, other.def)
-				}
-			}
-
-			impl From<&_Mask> for AnimationMask {
-				fn from(_Mask { id, .. }: &_Mask) -> Self {
-					*id
-				}
-			}
-
-			impl From<&_Mask> for AffectedAnimationBones {
-				fn from(_Mask { def, .. }: &_Mask) -> Self {
-					def()
-				}
-			}
-
-			static MASKS: &[_Mask] = $masks;
-
-			impl IterFinite for _Mask {
-				fn iterator() -> Iter<Self> {
-					Iter(MASKS.get(0).copied())
-				}
-
-				fn next(current: &Iter<Self>) -> Option<Self> {
-					let Iter(Some(current)) = current else {
-						return None;
-					};
-
-					let pos = MASKS.iter().position(|v| v == current)?;
-
-					MASKS.get(pos + 1).copied()
-				}
-			}
-
-			#[derive(Component)]
-			struct _Agent;
-
-			impl GetAnimationDefinitions for _Agent {
-				type TAnimationMask = _Mask;
-
-				fn animations() -> std::collections::HashMap<AnimationPath, AnimationMask> {
-					panic!("SHOULD NOT BE USED HERE")
-				}
-			}
-		};
-	}
 
 	fn bone_components<const N: usize>(
 		bone_chain: [&str; N],
@@ -235,107 +138,136 @@ mod tests {
 		}
 	}
 
-	fn setup<TAgent>(handle: &Handle<AnimationGraph>) -> App
-	where
-		TAgent: Component + GetAnimationDefinitions,
-		for<'a> AnimationMask: From<&'a TAgent::TAnimationMask>,
-		for<'a> AffectedAnimationBones: From<&'a TAgent::TAnimationMask>,
-	{
+	fn setup(handle: &Handle<AnimationGraph>) -> App {
 		let mut app = App::new().single_threaded(Update);
 		let mut assets = Assets::default();
 
 		assets.insert(handle, AnimationGraph::new());
 		app.insert_resource(assets);
-		app.add_systems(Update, TAgent::set_animation_mask_bones);
+		app.add_systems(
+			Update,
+			SetupAnimations::init_bone_groups::<AnimationGraphHandle>,
+		);
 
 		app
 	}
 
 	#[test]
 	fn set_when_root() {
-		agent_animation_definitions!(&[_Mask {
-			id: 1,
-			def: || AffectedAnimationBones::Leaf {
-				root: Name::from("root")
-			},
-		}]);
 		let handle = new_handle();
-		let mut app = setup::<_Agent>(&handle);
+		let mut app = setup(&handle);
 		let root = app
 			.world_mut()
-			.spawn(AnimationGraphHandle(handle.clone()))
+			.spawn((
+				AnimationLookup {
+					animations: HashMap::from([(
+						AnimationKey::Run,
+						AnimationLookupData::<AnimationClips> {
+							mask: 1,
+							bones: AffectedAnimationBones2 {
+								from_root: BoneName::from("root"),
+								..default()
+							},
+							..default()
+						},
+					)]),
+				},
+				AnimationGraphHandle(handle.clone()),
+				SetupAnimations,
+			))
 			.id();
 		app.world_mut()
 			.entity_mut(root)
 			.insert(bone_components(["root"], root));
-		app.world_mut()
-			.spawn((Name::from("agent"), _Agent, AnimationDispatch::to([root])));
 
 		app.update();
 
 		assert_eq!(
-			HashMap::from([(AnimationTargetId::from_name(&Name::from("root")), 1)]),
+			BevyHashMap::from([(AnimationTargetId::from_name(&Name::from("root")), 1)]),
 			app.world()
 				.resource::<Assets<AnimationGraph>>()
 				.get(&handle)
-				.expect("NO MATCHING GRAPH")
+				.unwrap()
 				.mask_groups
 		);
 	}
 
 	#[test]
 	fn set_when_root_multiple_masks() {
-		agent_animation_definitions!(&[
-			_Mask {
-				id: 1,
-				def: || AffectedAnimationBones::Leaf {
-					root: Name::from("root")
-				},
-			},
-			_Mask {
-				id: 2,
-				def: || AffectedAnimationBones::Leaf {
-					root: Name::from("root")
-				},
-			}
-		]);
 		let handle = new_handle();
-		let mut app = setup::<_Agent>(&handle);
+		let mut app = setup(&handle);
 		let root = app
 			.world_mut()
-			.spawn(AnimationGraphHandle(handle.clone()))
+			.spawn((
+				AnimationLookup {
+					animations: HashMap::from([
+						(
+							AnimationKey::Run,
+							AnimationLookupData::<AnimationClips> {
+								mask: 1,
+								bones: AffectedAnimationBones2 {
+									from_root: BoneName::from("root"),
+									..default()
+								},
+								..default()
+							},
+						),
+						(
+							AnimationKey::Walk,
+							AnimationLookupData::<AnimationClips> {
+								mask: 2,
+								bones: AffectedAnimationBones2 {
+									from_root: BoneName::from("root"),
+									..default()
+								},
+								..default()
+							},
+						),
+					]),
+				},
+				AnimationGraphHandle(handle.clone()),
+				SetupAnimations,
+			))
 			.id();
 		app.world_mut()
 			.entity_mut(root)
 			.insert(bone_components(["root"], root));
-		app.world_mut()
-			.spawn((Name::from("agent"), _Agent, AnimationDispatch::to([root])));
 
 		app.update();
 
 		assert_eq!(
-			HashMap::from([(AnimationTargetId::from_name(&Name::from("root")), 3)]),
+			BevyHashMap::from([(AnimationTargetId::from_name(&Name::from("root")), 3)]),
 			app.world()
 				.resource::<Assets<AnimationGraph>>()
 				.get(&handle)
-				.expect("NO MATCHING GRAPH")
+				.unwrap()
 				.mask_groups
 		);
 	}
 
 	#[test]
 	fn set_chain() {
-		agent_animation_definitions!(&[_Mask {
-			id: 1,
-			def: || AffectedAnimationBones::Leaf {
-				root: Name::from("mask root")
-			},
-		}]);
 		let handle = new_handle();
-		let mut app = setup::<_Agent>(&handle);
+		let mut app = setup(&handle);
 		let root = app
 			.world_mut()
-			.spawn(AnimationGraphHandle(handle.clone()))
+			.spawn((
+				AnimationLookup {
+					animations: HashMap::from([(
+						AnimationKey::Run,
+						AnimationLookupData::<AnimationClips> {
+							mask: 1,
+							bones: AffectedAnimationBones2 {
+								from_root: BoneName::from("mask root"),
+								..default()
+							},
+							..default()
+						},
+					)]),
+				},
+				AnimationGraphHandle(handle.clone()),
+				SetupAnimations,
+			))
 			.id();
 		app.world_mut()
 			.entity_mut(root)
@@ -343,37 +275,45 @@ mod tests {
 		app.world_mut()
 			.spawn(bone_components(["root", "mask root"], root))
 			.insert(ChildOf(root));
-		app.world_mut()
-			.spawn((Name::from("agent"), _Agent, AnimationDispatch::to([root])));
 
 		app.update();
 
 		assert_eq!(
-			HashMap::from([(
+			BevyHashMap::from([(
 				AnimationTargetId::from_names([Name::from("root"), Name::from("mask root")].iter()),
 				1
 			)]),
 			app.world()
 				.resource::<Assets<AnimationGraph>>()
 				.get(&handle)
-				.expect("NO MATCHING GRAPH")
+				.unwrap()
 				.mask_groups
 		);
 	}
 
 	#[test]
 	fn ignore_path_not_containing_mask_root() {
-		agent_animation_definitions!(&[_Mask {
-			id: 1,
-			def: || AffectedAnimationBones::Leaf {
-				root: Name::from("mask root")
-			},
-		}]);
 		let handle = new_handle();
-		let mut app = setup::<_Agent>(&handle);
+		let mut app = setup(&handle);
 		let root = app
 			.world_mut()
-			.spawn(AnimationGraphHandle(handle.clone()))
+			.spawn((
+				AnimationLookup {
+					animations: HashMap::from([(
+						AnimationKey::Run,
+						AnimationLookupData::<AnimationClips> {
+							mask: 1,
+							bones: AffectedAnimationBones2 {
+								from_root: BoneName::from("mask root"),
+								..default()
+							},
+							..default()
+						},
+					)]),
+				},
+				AnimationGraphHandle(handle.clone()),
+				SetupAnimations,
+			))
 			.id();
 		app.world_mut()
 			.entity_mut(root)
@@ -384,37 +324,45 @@ mod tests {
 		app.world_mut()
 			.spawn(bone_components(["root", "not mask root"], root))
 			.insert(ChildOf(root));
-		app.world_mut()
-			.spawn((Name::from("agent"), _Agent, AnimationDispatch::to([root])));
 
 		app.update();
 
 		assert_eq!(
-			HashMap::from([(
+			BevyHashMap::from([(
 				AnimationTargetId::from_names([Name::from("root"), Name::from("mask root")].iter()),
 				1
 			)]),
 			app.world()
 				.resource::<Assets<AnimationGraph>>()
 				.get(&handle)
-				.expect("NO MATCHING GRAPH")
+				.unwrap()
 				.mask_groups
 		);
 	}
 
 	#[test]
 	fn add_multiple_names_below_mask_root_when_single_chain() {
-		agent_animation_definitions!(&[_Mask {
-			id: 1,
-			def: || AffectedAnimationBones::Leaf {
-				root: Name::from("mask root")
-			},
-		}]);
 		let handle = new_handle();
-		let mut app = setup::<_Agent>(&handle);
+		let mut app = setup(&handle);
 		let root = app
 			.world_mut()
-			.spawn(AnimationGraphHandle(handle.clone()))
+			.spawn((
+				AnimationLookup {
+					animations: HashMap::from([(
+						AnimationKey::Run,
+						AnimationLookupData::<AnimationClips> {
+							mask: 1,
+							bones: AffectedAnimationBones2 {
+								from_root: BoneName::from("mask root"),
+								..default()
+							},
+							..default()
+						},
+					)]),
+				},
+				AnimationGraphHandle(handle.clone()),
+				SetupAnimations,
+			))
 			.id();
 		app.world_mut()
 			.entity_mut(root)
@@ -435,13 +383,11 @@ mod tests {
 				root,
 			))
 			.insert(ChildOf(child_a));
-		app.world_mut()
-			.spawn((Name::from("agent"), _Agent, AnimationDispatch::to([root])));
 
 		app.update();
 
 		assert_eq!(
-			HashMap::from([
+			BevyHashMap::from([
 				(
 					AnimationTargetId::from_names(
 						[Name::from("root"), Name::from("mask root")].iter()
@@ -475,24 +421,34 @@ mod tests {
 			app.world()
 				.resource::<Assets<AnimationGraph>>()
 				.get(&handle)
-				.expect("NO MATCHING GRAPH")
+				.unwrap()
 				.mask_groups
 		);
 	}
 
 	#[test]
 	fn add_names_below_mask_root_when_not_single_chain() {
-		agent_animation_definitions!(&[_Mask {
-			id: 1,
-			def: || AffectedAnimationBones::Leaf {
-				root: Name::from("mask root")
-			},
-		}]);
 		let handle = new_handle();
-		let mut app = setup::<_Agent>(&handle);
+		let mut app = setup(&handle);
 		let root = app
 			.world_mut()
-			.spawn(AnimationGraphHandle(handle.clone()))
+			.spawn((
+				AnimationLookup {
+					animations: HashMap::from([(
+						AnimationKey::Run,
+						AnimationLookupData::<AnimationClips> {
+							mask: 1,
+							bones: AffectedAnimationBones2 {
+								from_root: BoneName::from("mask root"),
+								..default()
+							},
+							..default()
+						},
+					)]),
+				},
+				AnimationGraphHandle(handle.clone()),
+				SetupAnimations,
+			))
 			.id();
 		app.world_mut()
 			.entity_mut(root)
@@ -508,13 +464,11 @@ mod tests {
 		app.world_mut()
 			.spawn(bone_components(["root", "mask root", "child b"], root))
 			.insert(ChildOf(mask_root));
-		app.world_mut()
-			.spawn((Name::from("agent"), _Agent, AnimationDispatch::to([root])));
 
 		app.update();
 
 		assert_eq!(
-			HashMap::from([
+			BevyHashMap::from([
 				(
 					AnimationTargetId::from_names(
 						[Name::from("root"), Name::from("mask root")].iter()
@@ -547,24 +501,34 @@ mod tests {
 			app.world()
 				.resource::<Assets<AnimationGraph>>()
 				.get(&handle)
-				.expect("NO MATCHING GRAPH")
+				.unwrap()
 				.mask_groups
 		);
 	}
 
 	#[test]
 	fn ignore_targets_not_belonging_to_root() {
-		agent_animation_definitions!(&[_Mask {
-			id: 1,
-			def: || AffectedAnimationBones::Leaf {
-				root: Name::from("mask root")
-			},
-		}]);
 		let handle = new_handle();
-		let mut app = setup::<_Agent>(&handle);
+		let mut app = setup(&handle);
 		let root = app
 			.world_mut()
-			.spawn(AnimationGraphHandle(handle.clone()))
+			.spawn((
+				AnimationLookup {
+					animations: HashMap::from([(
+						AnimationKey::Run,
+						AnimationLookupData::<AnimationClips> {
+							mask: 1,
+							bones: AffectedAnimationBones2 {
+								from_root: BoneName::from("mask root"),
+								..default()
+							},
+							..default()
+						},
+					)]),
+				},
+				AnimationGraphHandle(handle.clone()),
+				SetupAnimations,
+			))
 			.id();
 		app.world_mut()
 			.entity_mut(root)
@@ -577,38 +541,48 @@ mod tests {
 		app.world_mut()
 			.spawn(bone_components(["other"], Entity::from_raw(42)))
 			.insert(ChildOf(mask_root));
-		app.world_mut()
-			.spawn((Name::from("agent"), _Agent, AnimationDispatch::to([root])));
 
 		app.update();
 
 		assert_eq!(
-			HashMap::from([(
+			BevyHashMap::from([(
 				AnimationTargetId::from_names([Name::from("root"), Name::from("mask root")].iter()),
 				1
 			)]),
 			app.world()
 				.resource::<Assets<AnimationGraph>>()
 				.get(&handle)
-				.expect("NO MATCHING GRAPH")
+				.unwrap()
 				.mask_groups
 		);
 	}
 
 	#[test]
 	fn set_exclusion_mask() {
-		agent_animation_definitions!(&[_Mask {
-			id: 1,
-			def: || AffectedAnimationBones::SubTree {
-				root: Name::from("root"),
-				until_exclusive: vec![Name::from("a"), Name::from("b"),]
-			},
-		}]);
 		let handle = new_handle();
-		let mut app = setup::<_Agent>(&handle);
+		let mut app = setup(&handle);
 		let root = app
 			.world_mut()
-			.spawn(AnimationGraphHandle(handle.clone()))
+			.spawn((
+				AnimationLookup {
+					animations: HashMap::from([(
+						AnimationKey::Run,
+						AnimationLookupData::<AnimationClips> {
+							mask: 1,
+							bones: AffectedAnimationBones2 {
+								from_root: BoneName::from("root"),
+								until_exclusive: HashSet::from([
+									BoneName::from("a"),
+									BoneName::from("b"),
+								]),
+							},
+							..default()
+						},
+					)]),
+				},
+				AnimationGraphHandle(handle.clone()),
+				SetupAnimations,
+			))
 			.id();
 		app.world_mut()
 			.entity_mut(root)
@@ -637,13 +611,11 @@ mod tests {
 		app.world_mut()
 			.spawn(bone_components(["root", "child", "c"], root))
 			.insert(ChildOf(child));
-		app.world_mut()
-			.spawn((Name::from("agent"), _Agent, AnimationDispatch::to([root])));
 
 		app.update();
 
 		assert_eq!(
-			HashMap::from([
+			BevyHashMap::from([
 				(AnimationTargetId::from_name(&Name::from("root")), 1),
 				(
 					AnimationTargetId::from_names([Name::from("root"), Name::from("child")].iter()),
@@ -659,78 +631,143 @@ mod tests {
 			app.world()
 				.resource::<Assets<AnimationGraph>>()
 				.get(&handle)
-				.expect("NO MATCHING GRAPH")
+				.unwrap()
 				.mask_groups
 		);
 	}
 
 	#[test]
-	fn act_only_once() {
-		agent_animation_definitions!(&[_Mask {
-			id: 1,
-			def: || AffectedAnimationBones::Leaf {
-				root: Name::from("root")
-			},
-		}]);
+	fn add_root_when_preceded_by_entities_with_missing_bone_components() {
 		let handle = new_handle();
-		let mut app = setup::<_Agent>(&handle);
+		let mut app = setup(&handle);
 		let root = app
 			.world_mut()
-			.spawn(AnimationGraphHandle(handle.clone()))
+			.spawn((
+				AnimationLookup {
+					animations: HashMap::from([(
+						AnimationKey::Run,
+						AnimationLookupData::<AnimationClips> {
+							mask: 1,
+							bones: AffectedAnimationBones2 {
+								from_root: BoneName::from("root"),
+								..default()
+							},
+							..default()
+						},
+					)]),
+				},
+				AnimationGraphHandle(handle.clone()),
+				SetupAnimations,
+			))
 			.id();
+		let preceded = app.world_mut().spawn(ChildOf(root)).id();
 		app.world_mut()
-			.entity_mut(root)
+			.entity_mut(preceded)
 			.insert(bone_components(["root"], root));
-		app.world_mut()
-			.spawn((Name::from("agent"), _Agent, AnimationDispatch::to([root])));
 
-		app.update();
-		app.world_mut()
-			.resource_mut::<Assets<AnimationGraph>>()
-			.get_mut(&handle)
-			.expect("NO MATCHING GRAPH")
-			.mask_groups
-			.clear();
 		app.update();
 
 		assert_eq!(
-			HashMap::from([]),
+			BevyHashMap::from([(
+				AnimationTargetId::from_names([Name::from("root")].iter()),
+				1
+			)]),
 			app.world()
 				.resource::<Assets<AnimationGraph>>()
 				.get(&handle)
-				.expect("NO MATCHING GRAPH")
+				.unwrap()
 				.mask_groups
 		);
 	}
 
 	#[test]
-	fn do_not_act_when_agent_missing_on_dispatch() {
-		agent_animation_definitions!(&[_Mask {
-			id: 1,
-			def: || AffectedAnimationBones::Leaf {
-				root: Name::from("root")
-			},
-		}]);
+	fn do_not_stop_at_intermediate_entity_with_missing_bone_components() {
 		let handle = new_handle();
-		let mut app = setup::<_Agent>(&handle);
+		let mut app = setup(&handle);
 		let root = app
 			.world_mut()
-			.spawn(AnimationGraphHandle(handle.clone()))
+			.spawn((
+				AnimationLookup {
+					animations: HashMap::from([(
+						AnimationKey::Run,
+						AnimationLookupData::<AnimationClips> {
+							mask: 1,
+							bones: AffectedAnimationBones2 {
+								from_root: BoneName::from("root"),
+								..default()
+							},
+							..default()
+						},
+					)]),
+				},
+				AnimationGraphHandle(handle.clone()),
+				SetupAnimations,
+			))
 			.id();
 		app.world_mut()
 			.entity_mut(root)
 			.insert(bone_components(["root"], root));
+		let intermediate = app.world_mut().spawn(ChildOf(root)).id();
 		app.world_mut()
-			.spawn((Name::from("agent"), AnimationDispatch::to([root])));
+			.spawn(bone_components(["root", "child"], root))
+			.insert(ChildOf(intermediate));
 
 		app.update();
 
 		assert_eq!(
-			HashMap::from([]),
+			BevyHashMap::from([
+				(
+					AnimationTargetId::from_names([Name::from("root")].iter()),
+					1
+				),
+				(
+					AnimationTargetId::from_names([Name::from("root"), Name::from("child")].iter()),
+					1
+				)
+			]),
 			app.world()
 				.resource::<Assets<AnimationGraph>>()
 				.get(&handle)
-				.expect("NO MATCHING GRAPH")
+				.unwrap()
+				.mask_groups
+		);
+	}
+
+	#[test]
+	fn do_nothing_when_not_setting_up_animations() {
+		let handle = new_handle();
+		let mut app = setup(&handle);
+		let root = app
+			.world_mut()
+			.spawn((
+				AnimationLookup {
+					animations: HashMap::from([(
+						AnimationKey::Run,
+						AnimationLookupData::<AnimationClips> {
+							mask: 1,
+							bones: AffectedAnimationBones2 {
+								from_root: BoneName::from("root"),
+								..default()
+							},
+							..default()
+						},
+					)]),
+				},
+				AnimationGraphHandle(handle.clone()),
+			))
+			.id();
+		app.world_mut()
+			.entity_mut(root)
+			.insert(bone_components(["root"], root));
+
+		app.update();
+
+		assert_eq!(
+			BevyHashMap::from([]),
+			app.world()
+				.resource::<Assets<AnimationGraph>>()
+				.get(&handle)
+				.unwrap()
 				.mask_groups
 		);
 	}
