@@ -1,7 +1,8 @@
-pub(crate) mod override_animations;
+pub(crate) mod active_animations;
 mod register_animations;
 mod set_movement_direction;
 
+use crate::components::animation_dispatch::AnimationDispatch;
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::{
 	traits::{
@@ -23,6 +24,7 @@ pub struct AnimationsParamMut<
 {
 	commands: ZyheedaCommands<'w, 's>,
 	asset_server: ResMut<'w, TAnimationServer>,
+	dispatchers: Query<'w, 's, &'static mut AnimationDispatch>,
 	graphs: ResMut<'w, Assets<TAnimationGraph>>,
 }
 
@@ -39,11 +41,13 @@ where
 		animations: Animations,
 	) -> Option<Self::TContext<'ctx>> {
 		let entity = param.commands.get_mut(&animations.entity)?;
+		let dispatch = param.dispatchers.get_mut(animations.entity).ok();
 		let asset_server = &mut param.asset_server;
 		let graphs = &mut param.graphs;
 
 		Some(AnimationsContextMut {
 			entity,
+			dispatch,
 			asset_server,
 			graphs,
 		})
@@ -55,6 +59,7 @@ where
 	TAnimationGraph: Asset,
 {
 	entity: ZyheedaEntityCommands<'a>,
+	dispatch: Option<Mut<'a, AnimationDispatch>>,
 	asset_server: &'a mut TLoadAnimations,
 	graphs: &'a mut Assets<TAnimationGraph>,
 }

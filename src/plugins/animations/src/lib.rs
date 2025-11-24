@@ -9,7 +9,7 @@ pub(crate) mod test_tools;
 
 use crate::{
 	components::{animation_lookup::AnimationClips, setup_animations::SetupAnimations},
-	system_params::animations::{AnimationsParamMut, override_animations::AnimationOverrideEvent},
+	system_params::animations::AnimationsParamMut,
 	systems::{
 		play_animation_clip::PlayAnimationClip2,
 		set_directional_animation_weights::SetDirectionalAnimationWeights,
@@ -77,7 +77,6 @@ where
 	fn build(&self, app: &mut App) {
 		type Dispatch = AnimationDispatch<AnimationKey>;
 		TSavegame::register_savable_component::<Dispatch>(app);
-		app.add_observer(AnimationOverrideEvent::observe);
 		app.add_observer(SetupAnimations::insert_when::<SceneInstanceReady>);
 		app.add_systems(
 			Update,

@@ -22,7 +22,7 @@ use std::{
 pub trait HandlesAnimations {
 	type TAnimationsMut<'w, 's>: SystemParam
 		+ for<'c> GetContextMut<Animations, TContext<'c>: RegisterAnimations2>
-		+ for<'c> GetContextMut<Animations, TContext<'c>: OverrideAnimations>
+		+ for<'c> GetContextMut<Animations, TContext<'c>: ActiveAnimationsMut>
 		+ for<'c> GetContextMut<Animations, TContext<'c>: SetMovementDirection>;
 }
 
@@ -51,11 +51,25 @@ where
 	}
 }
 
-pub trait OverrideAnimations {
-	fn override_animations<TLayer, TAnimations>(&mut self, layer: TLayer, animations: TAnimations)
+pub trait ActiveAnimations {
+	fn active_animations<TLayer>(
+		&self,
+		layer: TLayer,
+	) -> Result<&HashSet<AnimationKey>, AnimationsNotRegistered>
 	where
-		TLayer: Into<AnimationPriority> + 'static,
-		TAnimations: IntoIterator<Item = AnimationKey> + 'static;
+		TLayer: Into<AnimationPriority>;
+}
+
+#[derive(Debug, PartialEq)]
+pub struct AnimationsNotRegistered;
+
+pub trait ActiveAnimationsMut: ActiveAnimations {
+	fn active_animations_mut<TLayer>(
+		&mut self,
+		layer: TLayer,
+	) -> Result<&mut HashSet<AnimationKey>, AnimationsNotRegistered>
+	where
+		TLayer: Into<AnimationPriority>;
 }
 
 pub trait SetMovementDirection {
