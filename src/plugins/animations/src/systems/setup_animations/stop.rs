@@ -5,7 +5,7 @@ use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaComman
 impl SetupAnimations {
 	pub(crate) fn stop(
 		mut commands: ZyheedaCommands,
-		setups: Query<Entity, (With<AnimationLookup2>, With<SetupAnimations>)>,
+		setups: Query<Entity, (With<AnimationLookup2>, With<Self>)>,
 	) {
 		for entity in &setups {
 			commands.try_apply_on(&entity, |mut e| {

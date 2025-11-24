@@ -12,13 +12,10 @@ use crate::{
 	system_params::animations::{AnimationsParamMut, override_animations::AnimationOverrideEvent},
 	systems::{
 		discover_animation_mask_bones::DiscoverMaskChains,
-		init_animation_bone_groups::InitAnimationBoneGroups,
 		init_animation_components::InitAnimationComponents,
-		init_animation_mask::MaskAllBits,
 		mask_animation_nodes::MaskAnimationNodes,
 		play_animation_clip2::PlayAnimationClip2,
 		remove_unused_animation_targets::RemoveUnusedAnimationTargets,
-		remove_unused_animation_targets2::RemoveUnusedAnimationTargets2,
 		set_directional_animation_weights::SetDirectionalAnimationWeights,
 		set_directional_animation_weights2::SetDirectionalAnimationWeights2,
 	},
@@ -111,9 +108,9 @@ where
 		app.add_systems(
 			Update,
 			(
-				AnimationGraphHandle::init_animation_mask::<AnimationClips>,
-				AnimationGraphHandle::init_animation_bone_groups,
-				AnimationGraphHandle::remove_unused_animation_targets2,
+				SetupAnimations::init_masks::<AnimationGraphHandle, AnimationClips>,
+				SetupAnimations::init_bone_groups::<AnimationGraphHandle>,
+				SetupAnimations::remove_unused_animation_targets2::<AnimationGraphHandle>,
 				SetupAnimations::stop,
 				DispatchNew::track_in_self_and_children::<AnimationPlayer>().system(),
 				DispatchNew::track_in_self_and_children::<AnimationGraphHandle>().system(),

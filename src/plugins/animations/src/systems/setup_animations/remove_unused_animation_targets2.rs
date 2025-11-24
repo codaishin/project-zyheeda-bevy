@@ -1,24 +1,21 @@
+use crate::components::{animation_lookup::AnimationLookup2, setup_animations::SetupAnimations};
 use bevy::{animation::AnimationTarget, prelude::*};
 use common::{
 	traits::{accessors::get::TryApplyOn, wrap_handle::GetHandle},
 	zyheeda_commands::ZyheedaCommands,
 };
 
-use crate::components::{animation_lookup::AnimationLookup2, setup_animations::SetupAnimations};
-
-impl<T> RemoveUnusedAnimationTargets2 for T where T: Component + GetHandle<TAsset = AnimationGraph> {}
-
-pub(crate) trait RemoveUnusedAnimationTargets2:
-	Component + GetHandle<TAsset = AnimationGraph> + Sized
-{
+impl SetupAnimations {
 	#[allow(clippy::type_complexity)]
-	fn remove_unused_animation_targets2(
+	pub(crate) fn remove_unused_animation_targets2<TGraph>(
 		mut commands: ZyheedaCommands,
 		graphs: Res<Assets<AnimationGraph>>,
-		players: Query<(Entity, &Self), (With<AnimationLookup2>, With<SetupAnimations>)>,
+		players: Query<(Entity, &TGraph), (With<AnimationLookup2>, With<Self>)>,
 		bones: Query<(Entity, &AnimationTarget)>,
 		children: Query<&Children>,
-	) {
+	) where
+		TGraph: Component + GetHandle<TAsset = AnimationGraph>,
+	{
 		for (player, graph) in &players {
 			let Some(graph) = graphs.get(graph.get_handle()) else {
 				continue;
@@ -68,7 +65,10 @@ mod tests {
 
 		graphs.insert(handle, graph);
 		app.insert_resource(graphs);
-		app.add_systems(Update, _Graph::remove_unused_animation_targets2);
+		app.add_systems(
+			Update,
+			SetupAnimations::remove_unused_animation_targets2::<_Graph>,
+		);
 
 		app
 	}

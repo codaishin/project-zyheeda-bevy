@@ -13,14 +13,10 @@ use common::traits::{
 };
 use std::{collections::HashSet, iter};
 
-impl<T> InitAnimationBoneGroups for T where T: Component + GetHandle<TAsset = AnimationGraph> {}
-
-pub(crate) trait InitAnimationBoneGroups:
-	Component + GetHandle<TAsset = AnimationGraph> + Sized
-{
-	fn init_animation_bone_groups(
+impl SetupAnimations {
+	pub(crate) fn init_bone_groups<TGraph: Component + GetHandle<TAsset = AnimationGraph>>(
 		mut graphs: ResMut<Assets<AnimationGraph>>,
-		lookups: Query<(Entity, &AnimationLookup2, &Self), With<SetupAnimations>>,
+		lookups: Query<(Entity, &AnimationLookup2, &TGraph), With<Self>>,
 		bones: Query<(&Name, &AnimationTarget)>,
 		children: Query<&Children>,
 	) {
@@ -76,6 +72,8 @@ fn update_graph(graph: &mut AnimationGraph, mask_bones: Vec<(AnimationTargetId, 
 	for (target, mask) in mask_bones {
 		*graph.mask_groups.entry(target).or_default() |= mask;
 	}
+
+	println!("{:#?}", graph.mask_groups);
 }
 
 fn animation_bone_chains<'a>(
@@ -148,7 +146,10 @@ mod tests {
 
 		assets.insert(handle, AnimationGraph::new());
 		app.insert_resource(assets);
-		app.add_systems(Update, AnimationGraphHandle::init_animation_bone_groups);
+		app.add_systems(
+			Update,
+			SetupAnimations::init_bone_groups::<AnimationGraphHandle>,
+		);
 
 		app
 	}

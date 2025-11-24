@@ -5,13 +5,12 @@ use crate::{
 use bevy::prelude::*;
 use common::traits::{iterate::Iterate, thread_safe::ThreadSafe, wrap_handle::GetHandle};
 
-impl<T> MaskAllBits for T where T: Component + GetHandle<TAsset: GetNodeMut> {}
-
-pub(crate) trait MaskAllBits: Component + GetHandle<TAsset: GetNodeMut> + Sized {
-	fn init_animation_mask<TAnimations>(
-		graphs: Query<(&Self, &AnimationLookup2<TAnimations>), With<SetupAnimations>>,
-		mut assets: ResMut<Assets<Self::TAsset>>,
+impl SetupAnimations {
+	pub(crate) fn init_masks<TGraph, TAnimations>(
+		graphs: Query<(&TGraph, &AnimationLookup2<TAnimations>), With<Self>>,
+		mut assets: ResMut<Assets<TGraph::TAsset>>,
 	) where
+		TGraph: Component + GetHandle<TAsset: GetNodeMut>,
 		TAnimations: for<'a> Iterate<'a, TItem = &'a AnimationNodeIndex> + ThreadSafe,
 	{
 		for (graph, lookup) in &graphs {
@@ -85,7 +84,10 @@ mod tests {
 		}
 
 		app.insert_resource(asset_resource);
-		app.add_systems(Update, _Component::init_animation_mask::<_Animations>);
+		app.add_systems(
+			Update,
+			SetupAnimations::init_masks::<_Component, _Animations>,
+		);
 
 		app
 	}
