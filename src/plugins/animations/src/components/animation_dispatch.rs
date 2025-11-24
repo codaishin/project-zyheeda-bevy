@@ -16,7 +16,6 @@ use common::traits::{
 		AnimationKey,
 		AnimationPriority,
 		ConfigureNewAnimationDispatch,
-		OverrideAnimations,
 		SetAnimations,
 		StartAnimation,
 		StopAnimation,
@@ -53,7 +52,7 @@ impl<TAnimation> AnimationDispatch<TAnimation>
 where
 	TAnimation: Eq + Hash,
 {
-	fn slot_mut<TLayer>(&mut self, layer: TLayer) -> &mut HashSet<TAnimation>
+	pub(crate) fn slot_mut<TLayer>(&mut self, layer: TLayer) -> &mut HashSet<TAnimation>
 	where
 		TLayer: Into<AnimationPriority>,
 	{
@@ -64,7 +63,7 @@ where
 		}
 	}
 
-	fn slot<TLayer>(&self, layer: TLayer) -> &HashSet<TAnimation>
+	pub(crate) fn slot<TLayer>(&self, layer: TLayer) -> &HashSet<TAnimation>
 	where
 		TLayer: Into<AnimationPriority>,
 	{
@@ -293,22 +292,10 @@ where
 	}
 }
 
-impl OverrideAnimations for AnimationDispatch<AnimationKey> {
-	fn override_animations<TLayer, TAnimations>(&mut self, layer: TLayer, animations: TAnimations)
-	where
-		TLayer: Into<AnimationPriority> + 'static,
-		TAnimations: IntoIterator<Item = AnimationKey> + 'static,
-	{
-		*self.slot_mut(layer) = HashSet::from_iter(animations);
-	}
-}
-
 #[cfg(test)]
 mod tests {
 	use super::*;
 	use bevy::prelude::default;
-	use common::tools::action_key::slot::SlotKey;
-	use test_case::test_case;
 
 	#[derive(Default, Debug, PartialEq, Eq, Hash, Clone)]
 	struct _Animation {
@@ -665,74 +652,5 @@ mod tests {
 				.copied()
 				.collect::<HashSet<_>>()
 		)
-	}
-
-	#[test_case([AnimationKey::Walk]; "single")]
-	#[test_case([AnimationKey::Walk, AnimationKey::Skill(SlotKey(11))]; "multiple")]
-	fn override_high_priority<const N: usize>(keys: [AnimationKey; N]) {
-		let mut dispatch = AnimationDispatch {
-			priorities: (
-				HashSet::from([AnimationKey::Run]),
-				HashSet::from([]),
-				HashSet::from([]),
-			),
-			..default()
-		};
-
-		dispatch.override_animations(_Hi, keys);
-
-		assert_eq!(
-			AnimationDispatch {
-				priorities: (HashSet::from(keys), HashSet::from([]), HashSet::from([])),
-				..default()
-			},
-			dispatch
-		);
-	}
-
-	#[test_case([AnimationKey::Walk]; "single")]
-	#[test_case([AnimationKey::Walk, AnimationKey::Skill(SlotKey(11))]; "multiple")]
-	fn override_medium_priority<const N: usize>(keys: [AnimationKey; N]) {
-		let mut dispatch = AnimationDispatch {
-			priorities: (
-				HashSet::from([]),
-				HashSet::from([AnimationKey::Run]),
-				HashSet::from([]),
-			),
-			..default()
-		};
-
-		dispatch.override_animations(_Me, keys);
-
-		assert_eq!(
-			AnimationDispatch {
-				priorities: (HashSet::from([]), HashSet::from(keys), HashSet::from([])),
-				..default()
-			},
-			dispatch
-		);
-	}
-
-	#[test_case([AnimationKey::Walk]; "single")]
-	#[test_case([AnimationKey::Walk, AnimationKey::Skill(SlotKey(11))]; "multiple")]
-	fn override_low_priority<const N: usize>(keys: [AnimationKey; N]) {
-		let mut dispatch = AnimationDispatch {
-			priorities: (
-				HashSet::from([]),
-				HashSet::from([]),
-				HashSet::from([AnimationKey::Run]),
-			),
-			..default()
-		};
-
-		dispatch.override_animations(_Lo, keys);
-
-		assert_eq!(
-			AnimationDispatch {
-				priorities: (HashSet::from([]), HashSet::from([]), HashSet::from(keys)),
-				..default()
-			},
-			dispatch
-		);
 	}
 }
