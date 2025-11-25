@@ -79,20 +79,10 @@ impl Player {
 
 			match (Dir3::try_from(directions), target, directional_movement) {
 				(Ok(dir), ..) => {
-					ctx.start(
-						dir,
-						config.collider_radius,
-						config.speed,
-						config.animation.clone(),
-					);
+					ctx.start(dir, config.collider_radius, config.speed);
 				}
 				(_, Some(MouseGroundPoint(point)), DirectionalMovement::NotStopped) => {
-					ctx.start(
-						point,
-						config.collider_radius,
-						config.speed,
-						config.animation.clone(),
-					);
+					ctx.start(point, config.collider_radius, config.speed);
 				}
 				(Err(_), .., DirectionalMovement::Stopped) => {
 					ctx.stop();
@@ -119,7 +109,6 @@ mod tests {
 			action_key::{ActionKey, movement::MovementKey},
 		},
 		traits::{
-			animation::{Animation, AnimationPath, PlayMode},
 			handles_input::InputState,
 			handles_movement::MovementTarget,
 			iteration::IterFinite,
@@ -163,16 +152,11 @@ mod tests {
 	}
 
 	impl StartMovement for _Movement {
-		fn start<T>(
-			&mut self,
-			target: T,
-			radius: Units,
-			speed: UnitsPerSecond,
-			animation: Option<Animation>,
-		) where
+		fn start<T>(&mut self, target: T, radius: Units, speed: UnitsPerSecond)
+		where
 			T: Into<MovementTarget> + 'static,
 		{
-			self.mock.start(target, radius, speed, animation);
+			self.mock.start(target, radius, speed);
 		}
 	}
 
@@ -190,7 +174,6 @@ mod tests {
 				target: T,
 				radius: Units,
 				speed: UnitsPerSecond,
-				animation: Option<Animation>,
 			) where T: Into<MovementTarget> + 'static;
 		}
 		impl StopMovement for _Movement {
@@ -217,10 +200,6 @@ mod tests {
 	fn move_to_point(input: InputState, cam_transform: Transform, target: Vec3) {
 		let collider_radius = Units::from(42.);
 		let speed = UnitsPerSecond::from(11.);
-		let animation = Some(Animation::new(
-			AnimationPath::from("my/asset"),
-			PlayMode::Repeat,
-		));
 		let mut app = setup(
 			_Input::new().with_mock(move |mock| {
 				mock.expect_get_all_input_states()
@@ -237,17 +216,11 @@ mod tests {
 			MovementConfig {
 				collider_radius,
 				speed,
-				animation: animation.clone(),
 			},
 			_Movement::new().with_mock(move |mock| {
 				mock.expect_start()
 					.times(1)
-					.with(
-						eq(target),
-						eq(collider_radius),
-						eq(speed),
-						eq(animation.clone()),
-					)
+					.with(eq(target), eq(collider_radius), eq(speed))
 					.return_const(());
 			}),
 		));
@@ -273,10 +246,6 @@ mod tests {
 	) {
 		let collider_radius = Units::from(42.);
 		let speed = UnitsPerSecond::from(11.);
-		let animation = Some(Animation::new(
-			AnimationPath::from("my/asset"),
-			PlayMode::Repeat,
-		));
 		let mut app = setup(
 			_Input::new().with_mock(move |mock| {
 				mock.expect_get_all_input_states()
@@ -290,17 +259,11 @@ mod tests {
 			MovementConfig {
 				collider_radius,
 				speed,
-				animation: animation.clone(),
 			},
 			_Movement::new().with_mock(move |mock| {
 				mock.expect_start()
 					.times(1)
-					.with(
-						eq(move_direction),
-						eq(collider_radius),
-						eq(speed),
-						eq(animation.clone()),
-					)
+					.with(eq(move_direction), eq(collider_radius), eq(speed))
 					.return_const(());
 			}),
 		));
@@ -317,10 +280,6 @@ mod tests {
 	fn when_directly_looking_down(movement_key: MovementKey, cam_up: Dir3, move_direction: Dir3) {
 		let collider_radius = Units::from(42.);
 		let speed = UnitsPerSecond::from(11.);
-		let animation = Some(Animation::new(
-			AnimationPath::from("my/asset"),
-			PlayMode::Repeat,
-		));
 		let mut app = setup(
 			_Input::new().with_mock(move |mock| {
 				mock.expect_get_all_input_states().returning(move || {
@@ -335,17 +294,11 @@ mod tests {
 			MovementConfig {
 				collider_radius,
 				speed,
-				animation: animation.clone(),
 			},
 			_Movement::new().with_mock(move |mock| {
 				mock.expect_start()
 					.times(1)
-					.with(
-						eq(move_direction),
-						eq(collider_radius),
-						eq(speed),
-						eq(animation.clone()),
-					)
+					.with(eq(move_direction), eq(collider_radius), eq(speed))
 					.return_const(());
 			}),
 		));
@@ -362,10 +315,6 @@ mod tests {
 		let expected = Dir3::try_from(Vec3::new(-1., 0., -1.)).unwrap();
 		let collider_radius = Units::from(42.);
 		let speed = UnitsPerSecond::from(11.);
-		let animation = Some(Animation::new(
-			AnimationPath::from("my/asset"),
-			PlayMode::Repeat,
-		));
 		let mut app = setup(
 			_Input::new().with_mock(move |mock| {
 				mock.expect_get_all_input_states().returning(move || {
@@ -384,12 +333,11 @@ mod tests {
 			MovementConfig {
 				collider_radius,
 				speed,
-				animation: animation.clone(),
 			},
 			_Movement::new().with_mock(move |mock| {
 				mock.expect_start::<Dir3>()
 					.times(1)
-					.withf(move |t, _, _, _| {
+					.withf(move |t, _, _| {
 						assert_eq_approx!(expected, t, 0.001);
 						true
 					})
@@ -409,10 +357,6 @@ mod tests {
 	fn ignore_move_direction_if_it_sums_up_to_zero(inputs: [MovementKey; 2]) {
 		let collider_radius = Units::from(42.);
 		let speed = UnitsPerSecond::from(11.);
-		let animation = Some(Animation::new(
-			AnimationPath::from("my/asset"),
-			PlayMode::Repeat,
-		));
 		let mut app = setup(
 			_Input::new().with_mock(move |mock| {
 				mock.expect_get_all_input_states().returning(move || {
@@ -427,7 +371,6 @@ mod tests {
 			MovementConfig {
 				collider_radius,
 				speed,
-				animation: animation.clone(),
 			},
 			_Movement::new().with_mock(move |mock| {
 				mock.expect_start::<Dir3>().never();
@@ -450,10 +393,6 @@ mod tests {
 	fn direction_movement_overrides_pointer_movement<const N: usize>(inputs: [MovementKey; N]) {
 		let collider_radius = Units::from(42.);
 		let speed = UnitsPerSecond::from(11.);
-		let animation = Some(Animation::new(
-			AnimationPath::from("my/asset"),
-			PlayMode::Repeat,
-		));
 		let mut app = setup(
 			_Input::new().with_mock(move |mock| {
 				mock.expect_get_all_input_states().returning(move || {
@@ -471,7 +410,6 @@ mod tests {
 			MovementConfig {
 				collider_radius,
 				speed,
-				animation: animation.clone(),
 			},
 			_Movement::new().with_mock(move |mock| {
 				mock.expect_start::<Dir3>().times(1).return_const(());
@@ -493,10 +431,6 @@ mod tests {
 	fn stop_movement_on_just_released_direction(input: MovementKey) {
 		let collider_radius = Units::from(42.);
 		let speed = UnitsPerSecond::from(11.);
-		let animation = Some(Animation::new(
-			AnimationPath::from("my/asset"),
-			PlayMode::Repeat,
-		));
 		let mut app = setup(
 			_Input::new().with_mock(move |mock| {
 				mock.expect_get_all_input_states::<MovementKey>()
@@ -521,7 +455,6 @@ mod tests {
 			MovementConfig {
 				collider_radius,
 				speed,
-				animation: animation.clone(),
 			},
 			_Movement::new().with_mock(move |mock| {
 				mock.expect_start::<Vec3>().never();
@@ -541,10 +474,6 @@ mod tests {
 	fn no_stop_movement_on_released_direction(input: MovementKey) {
 		let collider_radius = Units::from(42.);
 		let speed = UnitsPerSecond::from(11.);
-		let animation = Some(Animation::new(
-			AnimationPath::from("my/asset"),
-			PlayMode::Repeat,
-		));
 		let mut app = setup(
 			_Input::new().with_mock(move |mock| {
 				mock.expect_get_all_input_states::<MovementKey>()
@@ -558,7 +487,6 @@ mod tests {
 			MovementConfig {
 				collider_radius,
 				speed,
-				animation: animation.clone(),
 			},
 			_Movement::new().with_mock(move |mock| {
 				mock.expect_stop().never();
@@ -579,10 +507,6 @@ mod tests {
 	) {
 		let collider_radius = Units::from(42.);
 		let speed = UnitsPerSecond::from(11.);
-		let animation = Some(Animation::new(
-			AnimationPath::from("my/asset"),
-			PlayMode::Repeat,
-		));
 		let mut app = setup(
 			_Input::new().with_mock(move |mock| {
 				mock.expect_get_all_input_states::<MovementKey>()
@@ -604,7 +528,6 @@ mod tests {
 			MovementConfig {
 				collider_radius,
 				speed,
-				animation: animation.clone(),
 			},
 			_Movement::new().with_mock(move |mock| {
 				mock.expect_stop().never();
@@ -621,10 +544,6 @@ mod tests {
 	fn no_movement_when_cam_missing() {
 		let collider_radius = Units::from(42.);
 		let speed = UnitsPerSecond::from(11.);
-		let animation = Some(Animation::new(
-			AnimationPath::from("my/asset"),
-			PlayMode::Repeat,
-		));
 		let mut app = setup(
 			_Input::new().with_mock(move |mock| {
 				mock.expect_get_all_input_states()
@@ -641,7 +560,6 @@ mod tests {
 			MovementConfig {
 				collider_radius,
 				speed,
-				animation: animation.clone(),
 			},
 			_Movement::new().with_mock(move |mock| {
 				mock.expect_start::<Vec3>().never();
@@ -658,10 +576,6 @@ mod tests {
 	fn no_movement_when_player_missing() {
 		let collider_radius = Units::from(42.);
 		let speed = UnitsPerSecond::from(11.);
-		let animation = Some(Animation::new(
-			AnimationPath::from("my/asset"),
-			PlayMode::Repeat,
-		));
 		let mut app = setup(
 			_Input::new().with_mock(move |mock| {
 				mock.expect_get_all_input_states()
@@ -678,7 +592,6 @@ mod tests {
 			MovementConfig {
 				collider_radius,
 				speed,
-				animation: animation.clone(),
 			},
 			_Movement::new().with_mock(move |mock| {
 				mock.expect_start::<Vec3>().never();

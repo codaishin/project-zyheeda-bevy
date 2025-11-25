@@ -22,7 +22,12 @@ use common::{
 	states::game_state::GameState,
 	systems::log::OnError,
 	traits::{
-		animation::{HasAnimationsDispatch, RegisterAnimations},
+		animation::{
+			AnimationsSystemParamMut,
+			HandlesAnimations,
+			HasAnimationsDispatch,
+			RegisterAnimations,
+		},
 		handles_input::HandlesInput,
 		handles_movement::HandlesMovement,
 		handles_orientation::HandlesOrientation,
@@ -69,7 +74,11 @@ impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding>
 where
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
+	TAnimations: ThreadSafe
+		+ HasAnimationsDispatch
+		+ RegisterAnimations
+		+ SystemSetDefinition
+		+ HandlesAnimations,
 	TPhysics: ThreadSafe
 		+ HandlesPhysicalObjects
 		+ HandlesMotion
@@ -94,7 +103,11 @@ impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding> Plugin
 where
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TAnimations: ThreadSafe + HasAnimationsDispatch + RegisterAnimations + SystemSetDefinition,
+	TAnimations: ThreadSafe
+		+ HasAnimationsDispatch
+		+ RegisterAnimations
+		+ SystemSetDefinition
+		+ HandlesAnimations,
 	TPhysics: ThreadSafe
 		+ HandlesPhysicalObjects
 		+ HandlesMotion
@@ -119,9 +132,9 @@ where
 		let execute_path =
 			MovementDefinition::execute_movement::<Movement<PathOrDirection<TPhysics::TMotion>>>;
 		let execute_movement = MovementDefinition::execute_movement::<Movement<TPhysics::TMotion>>;
-		let animate_movement = MovementDefinition::animate_movement::<
+		let animate_movement_forward = MovementDefinition::animate_movement_forward::<
 			Movement<TPhysics::TMotion>,
-			TAnimations::TAnimationDispatch,
+			AnimationsSystemParamMut<TAnimations>,
 		>;
 
 		app
@@ -144,7 +157,7 @@ where
 						compute_path,
 						execute_path,
 						execute_movement,
-						animate_movement,
+						animate_movement_forward,
 					)
 						.chain(),
 					// Skill execution

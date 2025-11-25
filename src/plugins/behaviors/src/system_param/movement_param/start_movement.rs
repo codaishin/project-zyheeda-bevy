@@ -8,7 +8,6 @@ use crate::{
 use common::{
 	tools::{Units, UnitsPerSecond},
 	traits::{
-		animation::Animation,
 		handles_movement::{MovementTarget, StartMovement},
 		thread_safe::ThreadSafe,
 	},
@@ -18,22 +17,13 @@ impl<TMotion> StartMovement for MovementContextMut<'_, TMotion>
 where
 	TMotion: ThreadSafe,
 {
-	fn start<T>(
-		&mut self,
-		target: T,
-		radius: Units,
-		speed: UnitsPerSecond,
-		animation: Option<Animation>,
-	) where
+	fn start<T>(&mut self, target: T, radius: Units, speed: UnitsPerSecond)
+	where
 		T: Into<MovementTarget>,
 	{
 		self.entity.try_insert((
 			Movement::<PathOrDirection<TMotion>>::to(target),
-			MovementDefinition {
-				radius,
-				speed,
-				animation,
-			},
+			MovementDefinition { radius, speed },
 		));
 	}
 }
@@ -55,7 +45,6 @@ mod tests {
 	};
 	use common::traits::{
 		accessors::get::GetContextMut,
-		animation::{AnimationPath, PlayMode},
 		handles_movement::Movement as MovementMarker,
 		thread_safe::ThreadSafe,
 	};
@@ -82,10 +71,6 @@ mod tests {
 					Vec3::new(1., 2., 3.),
 					Units::from(42.),
 					UnitsPerSecond::from(11.),
-					Some(Animation {
-						path: AnimationPath::from("my/animation/path"),
-						play_mode: PlayMode::Repeat,
-					}),
 				);
 			})?;
 
@@ -93,10 +78,6 @@ mod tests {
 			Some(&MovementDefinition {
 				radius: Units::from(42.),
 				speed: UnitsPerSecond::from(11.),
-				animation: Some(Animation {
-					path: AnimationPath::from("my/animation/path"),
-					play_mode: PlayMode::Repeat,
-				}),
 			}),
 			app.world().entity(entity).get::<MovementDefinition>(),
 		);
@@ -115,15 +96,7 @@ mod tests {
 			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
 				let mut ctx =
 					MovementParamMut::get_context_mut(&mut p, MovementMarker { entity }).unwrap();
-				ctx.start(
-					target,
-					Units::from(42.),
-					UnitsPerSecond::from(11.),
-					Some(Animation {
-						path: AnimationPath::from("my/animation/path"),
-						play_mode: PlayMode::Repeat,
-					}),
-				);
+				ctx.start(target, Units::from(42.), UnitsPerSecond::from(11.));
 			})?;
 
 		assert_eq!(

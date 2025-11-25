@@ -1,8 +1,5 @@
 use bevy::prelude::Component;
-use common::{
-	tools::{Units, UnitsPerSecond},
-	traits::animation::Animation,
-};
+use common::tools::{Units, UnitsPerSecond};
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
@@ -10,7 +7,6 @@ use serde::{Deserialize, Serialize};
 pub struct MovementConfig {
 	pub(crate) collider_radius: Units,
 	pub(crate) speed: UnitsPerSecond,
-	pub(crate) animation: Option<Animation>,
 }
 
 impl Default for MovementConfig {
@@ -18,7 +14,6 @@ impl Default for MovementConfig {
 		Self {
 			collider_radius: Units::from(0.5),
 			speed: UnitsPerSecond::from(1.0),
-			animation: None,
 		}
 	}
 }

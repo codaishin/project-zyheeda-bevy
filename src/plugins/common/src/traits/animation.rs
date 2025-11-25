@@ -17,7 +17,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Error};
 use std::{
 	collections::{HashMap, HashSet},
 	fmt::Display,
-	ops::DerefMut,
+	ops::{Deref, DerefMut},
 	sync::Arc,
 };
 
@@ -38,7 +38,7 @@ impl From<Animations> for Entity {
 	}
 }
 
-pub type AnimationsParamMut<'w, 's, T> = <T as HandlesAnimations>::TAnimationsMut<'w, 's>;
+pub type AnimationsSystemParamMut<'w, 's, T> = <T as HandlesAnimations>::TAnimationsMut<'w, 's>;
 
 pub trait RegisterAnimations2 {
 	fn register_animations(&mut self, animations: &HashMap<AnimationKey, Animation2>);
@@ -60,6 +60,45 @@ pub trait ActiveAnimations {
 	) -> Result<&HashSet<AnimationKey>, AnimationsUnprepared>
 	where
 		TLayer: Into<AnimationPriority>;
+}
+
+impl<T> ActiveAnimations for T
+where
+	T: Deref<Target: ActiveAnimations>,
+{
+	fn active_animations<TLayer>(
+		&self,
+		layer: TLayer,
+	) -> Result<&HashSet<AnimationKey>, AnimationsUnprepared>
+	where
+		TLayer: Into<AnimationPriority>,
+	{
+		self.deref().active_animations(layer)
+	}
+}
+
+pub trait ActiveAnimationsMut: ActiveAnimations {
+	fn active_animations_mut<TLayer>(
+		&mut self,
+		layer: TLayer,
+	) -> Result<&mut HashSet<AnimationKey>, AnimationsUnprepared>
+	where
+		TLayer: Into<AnimationPriority>;
+}
+
+impl<T> ActiveAnimationsMut for T
+where
+	T: DerefMut<Target: ActiveAnimationsMut>,
+{
+	fn active_animations_mut<TLayer>(
+		&mut self,
+		layer: TLayer,
+	) -> Result<&mut HashSet<AnimationKey>, AnimationsUnprepared>
+	where
+		TLayer: Into<AnimationPriority>,
+	{
+		self.deref_mut().active_animations_mut(layer)
+	}
 }
 
 #[derive(Debug, PartialEq)]
@@ -84,17 +123,17 @@ impl ErrorData for AnimationsUnprepared {
 	}
 }
 
-pub trait ActiveAnimationsMut: ActiveAnimations {
-	fn active_animations_mut<TLayer>(
-		&mut self,
-		layer: TLayer,
-	) -> Result<&mut HashSet<AnimationKey>, AnimationsUnprepared>
-	where
-		TLayer: Into<AnimationPriority>;
-}
-
 pub trait SetMovementDirection {
 	fn set_movement_direction(&mut self, direction: Dir3);
+}
+
+impl<T> SetMovementDirection for T
+where
+	T: DerefMut<Target: SetMovementDirection>,
+{
+	fn set_movement_direction(&mut self, direction: Dir3) {
+		self.deref_mut().set_movement_direction(direction);
+	}
 }
 
 pub trait StartAnimation {

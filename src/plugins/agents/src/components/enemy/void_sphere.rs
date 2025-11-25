@@ -80,7 +80,6 @@ impl VoidSphere {
 		MovementConfig {
 			collider_radius: Units::from(Self::OUTER_RADIUS),
 			speed: UnitsPerSecond::from(1.),
-			..default()
 		}
 	}
 }

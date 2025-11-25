@@ -36,12 +36,7 @@ impl Enemy {
 					if current_movement == Some(MovementTarget::Point(player.translation)) {
 						continue;
 					}
-					ctx.start(
-						player.translation,
-						config.collider_radius,
-						config.speed,
-						config.animation.clone(),
-					);
+					ctx.start(player.translation, config.collider_radius, config.speed);
 				}
 				_ => {}
 			}
@@ -55,10 +50,7 @@ mod tests {
 	use crate::components::movement_config::MovementConfig;
 	use common::{
 		tools::{Units, UnitsPerSecond},
-		traits::{
-			animation::{Animation, AnimationPath, PlayMode},
-			handles_movement::MovementTarget,
-		},
+		traits::handles_movement::MovementTarget,
 	};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
@@ -71,16 +63,11 @@ mod tests {
 	}
 
 	impl StartMovement for _Movement {
-		fn start<T>(
-			&mut self,
-			target: T,
-			radius: Units,
-			speed: UnitsPerSecond,
-			animation: Option<Animation>,
-		) where
+		fn start<T>(&mut self, target: T, radius: Units, speed: UnitsPerSecond)
+		where
 			T: Into<MovementTarget> + 'static,
 		{
-			self.mock.start(target, radius, speed, animation);
+			self.mock.start(target, radius, speed);
 		}
 	}
 
@@ -104,7 +91,6 @@ mod tests {
 				target: T,
 				radius:Units,
 				speed: UnitsPerSecond,
-				animation: Option<Animation>,
 			) where T: Into<MovementTarget> + 'static;
 		}
 		impl StopMovement for _Movement {
@@ -129,10 +115,6 @@ mod tests {
 	fn move_to_chase_player(current_movement: Option<MovementTarget>) {
 		let speed = UnitsPerSecond::from(42.);
 		let collider_radius = Units::from(11.);
-		let animation = Some(Animation::new(
-			AnimationPath::from("my/asset"),
-			PlayMode::Replay,
-		));
 		let mut app = setup();
 		let player = app.world_mut().spawn(Transform::from_xyz(1., 2., 3.)).id();
 		app.world_mut().spawn((
@@ -144,18 +126,12 @@ mod tests {
 			MovementConfig {
 				speed,
 				collider_radius,
-				animation: animation.clone(),
 			},
 			Chasing { player },
 			_Movement::new().with_mock(move |mock| {
 				mock.expect_start()
 					.once()
-					.with(
-						eq(Vec3::new(1., 2., 3.)),
-						eq(collider_radius),
-						eq(speed),
-						eq(animation.clone()),
-					)
+					.with(eq(Vec3::new(1., 2., 3.)), eq(collider_radius), eq(speed))
 					.return_const(());
 				mock.expect_current_movement()
 					.return_const(current_movement);
@@ -169,10 +145,6 @@ mod tests {
 	fn stop_moving_when_not_chasing() {
 		let speed = UnitsPerSecond::from(42.);
 		let collider_radius = Units::from(11.);
-		let animation = Some(Animation::new(
-			AnimationPath::from("my/asset"),
-			PlayMode::Replay,
-		));
 		let mut app = setup();
 		app.world_mut().spawn((
 			Transform::from_xyz(1., 2., 7.1),
@@ -184,7 +156,6 @@ mod tests {
 			MovementConfig {
 				speed,
 				collider_radius,
-				animation: animation.clone(),
 			},
 			_Movement::new().with_mock(move |mock| {
 				mock.expect_start::<Vec3>().never();
@@ -202,10 +173,6 @@ mod tests {
 	fn do_not_move_when_chasing_and_already_moving_to_same_place() {
 		let speed = UnitsPerSecond::from(42.);
 		let collider_radius = Units::from(11.);
-		let animation = Some(Animation::new(
-			AnimationPath::from("my/asset"),
-			PlayMode::Replay,
-		));
 		let mut app = setup();
 		let player = app.world_mut().spawn(Transform::from_xyz(1., 2., 3.)).id();
 		app.world_mut().spawn((
@@ -218,7 +185,6 @@ mod tests {
 			MovementConfig {
 				speed,
 				collider_radius,
-				animation: animation.clone(),
 			},
 			Chasing { player },
 			_Movement::new().with_mock(move |mock| {
@@ -237,10 +203,6 @@ mod tests {
 	fn do_not_stop_moving_when_not_chasing_but_not_already_moving() {
 		let speed = UnitsPerSecond::from(42.);
 		let collider_radius = Units::from(11.);
-		let animation = Some(Animation::new(
-			AnimationPath::from("my/asset"),
-			PlayMode::Replay,
-		));
 		let mut app = setup();
 		app.world_mut().spawn((
 			Enemy {
@@ -251,7 +213,6 @@ mod tests {
 			MovementConfig {
 				speed,
 				collider_radius,
-				animation: animation.clone(),
 			},
 			_Movement::new().with_mock(move |mock| {
 				mock.expect_start::<Vec3>().never();
