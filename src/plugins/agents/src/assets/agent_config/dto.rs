@@ -2,10 +2,11 @@ use crate::{
 	assets::agent_config::{AgentConfigAsset, AgentModel, Bones, Loadout},
 	components::enemy::void_sphere::VoidSphere,
 };
+use bevy::prelude::*;
 use common::{
 	errors::Unreachable,
 	traits::{
-		animation::{Animation2, AnimationKey},
+		animation::{AffectedAnimationBones2, Animation2, AnimationKey, AnimationMaskBits},
 		handles_custom_assets::{AssetFileExtensions, TryLoadFrom},
 		handles_physics::PhysicalDefaultAttributes,
 	},
@@ -16,11 +17,12 @@ use zyheeda_core::serialization::as_vec;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct AgentConfigAssetDto {
-	pub(crate) model: Model,
-	pub(crate) loadout: Loadout,
-	pub(crate) attributes: PhysicalDefaultAttributes,
+	model: Model,
+	loadout: Loadout,
+	attributes: PhysicalDefaultAttributes,
 	#[serde(with = "as_vec")]
-	pub(crate) animations: HashMap<AnimationKey, Animation2>,
+	animations: HashMap<AnimationKey, Animation2>,
+	animation_mask_groups: HashMap<AnimationMaskBits, AffectedAnimationBones2>,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -62,6 +64,7 @@ impl TryLoadFrom<AgentConfigAssetDto> for AgentConfigAsset {
 			loadout,
 			attributes,
 			animations,
+			animation_mask_groups,
 		}: AgentConfigAssetDto,
 		_: &mut TLoadAsset,
 	) -> Result<Self, Self::TInstantiationError> {
@@ -73,6 +76,7 @@ impl TryLoadFrom<AgentConfigAssetDto> for AgentConfigAsset {
 			agent_model,
 			attributes,
 			animations,
+			animation_mask_groups,
 		})
 	}
 }

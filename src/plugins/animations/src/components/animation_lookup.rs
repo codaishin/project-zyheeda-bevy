@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use common::traits::{
-	animation::{AffectedAnimationBones2, AnimationKey, PlayMode},
+	animation::{AffectedAnimationBones2, AnimationKey, AnimationMaskBits, PlayMode},
 	iterate::Iterate,
 };
 use std::collections::HashMap;
@@ -8,12 +8,14 @@ use std::collections::HashMap;
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct AnimationLookup<TAnimationClips = AnimationClips> {
 	pub(crate) animations: HashMap<AnimationKey, AnimationLookupData<TAnimationClips>>,
+	pub(crate) animation_mask_groups: HashMap<AnimationMaskBits, AffectedAnimationBones2>,
 }
 
-impl Default for AnimationLookup {
+impl<TAnimationClips> Default for AnimationLookup<TAnimationClips> {
 	fn default() -> Self {
 		Self {
 			animations: HashMap::default(),
+			animation_mask_groups: HashMap::default(),
 		}
 	}
 }
@@ -22,8 +24,7 @@ impl Default for AnimationLookup {
 pub(crate) struct AnimationLookupData<TAnimations = AnimationClips> {
 	pub(crate) animation_clips: TAnimations,
 	pub(crate) play_mode: PlayMode,
-	pub(crate) mask: AnimationMask,
-	pub(crate) bones: AffectedAnimationBones2,
+	pub(crate) mask: AnimationMaskBits,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]

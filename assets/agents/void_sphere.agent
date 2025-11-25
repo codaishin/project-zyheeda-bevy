@@ -19,5 +19,6 @@
 		"gravity_interaction": "Affected",
 		"force_interaction": "Affected"
 	},
+	"animation_mask_groups": {},
 	"animations": []
 }

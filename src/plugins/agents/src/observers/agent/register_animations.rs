@@ -28,7 +28,7 @@ impl Agent {
 			};
 
 			commands.try_apply_on(&entity, |mut e| {
-				ctx.register_animations(&config.animations);
+				ctx.register_animations(&config.animations, &config.animation_mask_groups);
 				e.try_insert(marker::AnimationsRegistered);
 			});
 		}
@@ -53,7 +53,9 @@ mod tests {
 				AffectedAnimationBones2,
 				Animation2,
 				AnimationKey,
+				AnimationMaskBits,
 				AnimationPath,
+				BoneName,
 				PlayMode,
 			},
 			handles_map_generation::AgentType,
@@ -71,8 +73,13 @@ mod tests {
 
 	#[automock]
 	impl RegisterAnimations2 for _Component {
-		fn register_animations(&mut self, animations: &HashMap<AnimationKey, Animation2>) {
-			self.mock.register_animations(animations);
+		fn register_animations(
+			&mut self,
+			animations: &HashMap<AnimationKey, Animation2>,
+			animation_mask_groups: &HashMap<AnimationMaskBits, AffectedAnimationBones2>,
+		) {
+			self.mock
+				.register_animations(animations, animation_mask_groups);
 		}
 	}
 
@@ -95,15 +102,22 @@ mod tests {
 		let animations = HashMap::from([(
 			AnimationKey::Run,
 			Animation2 {
-				bones: AffectedAnimationBones2::default(),
 				path: AnimationPath::Single(Path::from("my/path")),
 				play_mode: PlayMode::Replay,
-				mask: 1 << 42,
+				mask_groups: AnimationMaskBits(1 << 42),
+			},
+		)]);
+		let animation_mask_groups = HashMap::from([(
+			AnimationMaskBits(16),
+			AffectedAnimationBones2 {
+				from_root: BoneName::from("root"),
+				..default()
 			},
 		)]);
 		let handle = new_handle();
 		let asset = AgentConfigAsset {
 			animations: animations.clone(),
+			animation_mask_groups: animation_mask_groups.clone(),
 			..default()
 		};
 		let mut app = setup([(&handle, asset)]);
@@ -115,7 +129,7 @@ mod tests {
 			_Component::new().with_mock(move |mock| {
 				mock.expect_register_animations()
 					.times(1)
-					.with(eq(animations.clone()))
+					.with(eq(animations.clone()), eq(animation_mask_groups.clone()))
 					.return_const(());
 			}),
 		));
@@ -125,20 +139,8 @@ mod tests {
 
 	#[test]
 	fn act_only_once() {
-		let animations = HashMap::from([(
-			AnimationKey::Run,
-			Animation2 {
-				bones: AffectedAnimationBones2::default(),
-				path: AnimationPath::Single(Path::from("my/path")),
-				play_mode: PlayMode::Replay,
-				mask: 1 << 42,
-			},
-		)]);
 		let handle = new_handle();
-		let asset = AgentConfigAsset {
-			animations: animations.clone(),
-			..default()
-		};
+		let asset = AgentConfigAsset::default();
 		let mut app = setup([(&handle, asset)]);
 		app.world_mut().spawn((
 			Agent {
@@ -159,15 +161,22 @@ mod tests {
 		let animations = HashMap::from([(
 			AnimationKey::Run,
 			Animation2 {
-				bones: AffectedAnimationBones2::default(),
 				path: AnimationPath::Single(Path::from("my/path")),
 				play_mode: PlayMode::Replay,
-				mask: 1 << 42,
+				mask_groups: AnimationMaskBits(1 << 42),
+			},
+		)]);
+		let animation_mask_groups = HashMap::from([(
+			AnimationMaskBits(16),
+			AffectedAnimationBones2 {
+				from_root: BoneName::from("root"),
+				..default()
 			},
 		)]);
 		let handle = new_handle();
 		let asset = AgentConfigAsset {
 			animations: animations.clone(),
+			animation_mask_groups: animation_mask_groups.clone(),
 			..default()
 		};
 		let mut app = setup([]);
@@ -179,7 +188,7 @@ mod tests {
 			_Component::new().with_mock(move |mock| {
 				mock.expect_register_animations()
 					.times(1)
-					.with(eq(animations.clone()))
+					.with(eq(animations.clone()), eq(animation_mask_groups.clone()))
 					.return_const(());
 			}),
 		));

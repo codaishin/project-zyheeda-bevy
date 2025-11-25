@@ -41,15 +41,24 @@ impl From<Animations> for Entity {
 pub type AnimationsSystemParamMut<'w, 's, T> = <T as HandlesAnimations>::TAnimationsMut<'w, 's>;
 
 pub trait RegisterAnimations2 {
-	fn register_animations(&mut self, animations: &HashMap<AnimationKey, Animation2>);
+	fn register_animations(
+		&mut self,
+		animations: &HashMap<AnimationKey, Animation2>,
+		animation_mask_groups: &HashMap<AnimationMaskBits, AffectedAnimationBones2>,
+	);
 }
 
 impl<T> RegisterAnimations2 for T
 where
 	T: DerefMut<Target: RegisterAnimations2>,
 {
-	fn register_animations(&mut self, animations: &HashMap<AnimationKey, Animation2>) {
-		self.deref_mut().register_animations(animations);
+	fn register_animations(
+		&mut self,
+		animations: &HashMap<AnimationKey, Animation2>,
+		animation_mask_groups: &HashMap<AnimationMaskBits, AffectedAnimationBones2>,
+	) {
+		self.deref_mut()
+			.register_animations(animations, animation_mask_groups);
 	}
 }
 
@@ -263,10 +272,13 @@ impl Animation {
 pub struct Animation2 {
 	pub path: AnimationPath,
 	pub play_mode: PlayMode,
-	#[serde(deserialize_with = "bits_to_mask", serialize_with = "mask_to_bits")]
-	pub mask: AnimationMask,
-	pub bones: AffectedAnimationBones2,
+	pub mask_groups: AnimationMaskBits,
 }
+
+#[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Copy, Serialize, Deserialize)]
+pub struct AnimationMaskBits(
+	#[serde(deserialize_with = "bits_to_mask", serialize_with = "mask_to_bits")] pub AnimationMask,
+);
 
 #[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
 pub struct AffectedAnimationBones2 {

@@ -132,9 +132,9 @@ where
 				};
 
 				active_animations.insert(*id);
-				animation_node.remove_mask(animation_data.mask);
+				animation_node.remove_mask(animation_data.mask.0);
 				animation_node.add_mask(blocked_by_higher_priority);
-				add(&mut higher_priority_mask, animation_data.mask);
+				add(&mut higher_priority_mask, animation_data.mask.0);
 
 				if player.is_playing(*id) {
 					continue;
@@ -175,10 +175,7 @@ fn add(dst: &mut AnimationMask, src: AnimationMask) {
 mod tests {
 	use super::*;
 	use crate::test_tools::leak_iterator;
-	use common::{
-		tools::action_key::slot::SlotKey,
-		traits::animation::{AffectedAnimationBones2, BoneName},
-	};
+	use common::{tools::action_key::slot::SlotKey, traits::animation::AnimationMaskBits};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
 	use std::{
@@ -448,6 +445,7 @@ mod tests {
 					..default()
 				},
 			)]),
+			..default()
 		};
 		let mut app = setup!(&lookup, &handle);
 		let animation_player = app
@@ -502,6 +500,7 @@ mod tests {
 					..default()
 				},
 			)]),
+			..default()
 		};
 		let mut app = setup!(&lookup, &handle);
 		let animation_player = app
@@ -563,11 +562,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[0..=1]),
 						play_mode: PlayMode::Replay,
-						mask: 0,
-						bones: AffectedAnimationBones2 {
-							from_root: BoneName::from(""),
-							..default()
-						},
+						mask: AnimationMaskBits(0),
 					},
 				),
 				(
@@ -575,11 +570,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[2..=3]),
 						play_mode: PlayMode::Replay,
-						mask: 0,
-						bones: AffectedAnimationBones2 {
-							from_root: BoneName::from(""),
-							..default()
-						},
+						mask: AnimationMaskBits(0),
 					},
 				),
 				(
@@ -587,11 +578,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[4..=5]),
 						play_mode: PlayMode::Replay,
-						mask: 0,
-						bones: AffectedAnimationBones2 {
-							from_root: BoneName::from(""),
-							..default()
-						},
+						mask: AnimationMaskBits(0),
 					},
 				),
 				(
@@ -599,11 +586,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[6..=7]),
 						play_mode: PlayMode::Replay,
-						mask: 0,
-						bones: AffectedAnimationBones2 {
-							from_root: BoneName::from(""),
-							..default()
-						},
+						mask: AnimationMaskBits(0),
 					},
 				),
 				(
@@ -611,11 +594,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[8..=9]),
 						play_mode: PlayMode::Replay,
-						mask: 0,
-						bones: AffectedAnimationBones2 {
-							from_root: BoneName::from(""),
-							..default()
-						},
+						mask: AnimationMaskBits(0),
 					},
 				),
 				(
@@ -623,14 +602,11 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[10..=11]),
 						play_mode: PlayMode::Replay,
-						mask: 0,
-						bones: AffectedAnimationBones2 {
-							from_root: BoneName::from(""),
-							..default()
-						},
+						mask: AnimationMaskBits(0),
 					},
 				),
 			]),
+			..default()
 		};
 		let mut app = setup!(&lookup, &handle);
 		let animation_player = app
@@ -698,6 +674,7 @@ mod tests {
 					..default()
 				},
 			)]),
+			..default()
 		};
 		let mut app = setup!(&lookup, &handle);
 		let animation_player = app
@@ -755,6 +732,7 @@ mod tests {
 					..default()
 				},
 			)]),
+			..default()
 		};
 		let mut app = setup!(&lookup, &handle);
 		let animation_player = app
@@ -802,6 +780,7 @@ mod tests {
 					..default()
 				},
 			)]),
+			..default()
 		};
 		let mut app = setup!(&lookup, &handle);
 		let animation_player = app
@@ -845,6 +824,7 @@ mod tests {
 					..default()
 				},
 			)]),
+			..default()
 		};
 		let mut app = setup!(&lookup, &handle);
 		let animation_player = app
@@ -908,11 +888,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[0..=1]),
 						play_mode: PlayMode::Replay,
-						mask: 1 << 0,
-						bones: AffectedAnimationBones2 {
-							from_root: BoneName::from(""),
-							..default()
-						},
+						mask: AnimationMaskBits(1 << 0),
 					},
 				),
 				(
@@ -920,11 +896,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[2..=3]),
 						play_mode: PlayMode::Replay,
-						mask: 1 << 1,
-						bones: AffectedAnimationBones2 {
-							from_root: BoneName::from(""),
-							..default()
-						},
+						mask: AnimationMaskBits(1 << 1),
 					},
 				),
 				(
@@ -932,11 +904,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[4..=5]),
 						play_mode: PlayMode::Replay,
-						mask: 1 << 2,
-						bones: AffectedAnimationBones2 {
-							from_root: BoneName::from(""),
-							..default()
-						},
+						mask: AnimationMaskBits(1 << 2),
 					},
 				),
 				(
@@ -944,11 +912,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[6..=7]),
 						play_mode: PlayMode::Replay,
-						mask: 1 << 3,
-						bones: AffectedAnimationBones2 {
-							from_root: BoneName::from(""),
-							..default()
-						},
+						mask: AnimationMaskBits(1 << 3),
 					},
 				),
 				(
@@ -956,11 +920,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[8..=9]),
 						play_mode: PlayMode::Replay,
-						mask: 1 << 4,
-						bones: AffectedAnimationBones2 {
-							from_root: BoneName::from(""),
-							..default()
-						},
+						mask: AnimationMaskBits(1 << 4),
 					},
 				),
 				(
@@ -968,14 +928,11 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[10..=11]),
 						play_mode: PlayMode::Replay,
-						mask: 1 << 5,
-						bones: AffectedAnimationBones2 {
-							from_root: BoneName::from(""),
-							..default()
-						},
+						mask: AnimationMaskBits(1 << 5),
 					},
 				),
 			]),
+			..default()
 		};
 		let mut app = setup!(&lookup, &handle);
 		let animation_player = app.world_mut().spawn(_AnimationPlayer::default()).id();
@@ -1056,11 +1013,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[0..=1]),
 						play_mode: PlayMode::Replay,
-						mask: 1 << 0,
-						bones: AffectedAnimationBones2 {
-							from_root: BoneName::from(""),
-							..default()
-						},
+						mask: AnimationMaskBits(1 << 0),
 					},
 				),
 				(
@@ -1068,11 +1021,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[2..=3]),
 						play_mode: PlayMode::Replay,
-						mask: 1 << 1,
-						bones: AffectedAnimationBones2 {
-							from_root: BoneName::from(""),
-							..default()
-						},
+						mask: AnimationMaskBits(1 << 1),
 					},
 				),
 				(
@@ -1080,11 +1029,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[4..=5]),
 						play_mode: PlayMode::Replay,
-						mask: 1 << 2,
-						bones: AffectedAnimationBones2 {
-							from_root: BoneName::from(""),
-							..default()
-						},
+						mask: AnimationMaskBits(1 << 2),
 					},
 				),
 				(
@@ -1092,11 +1037,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[6..=7]),
 						play_mode: PlayMode::Replay,
-						mask: 1 << 3,
-						bones: AffectedAnimationBones2 {
-							from_root: BoneName::from(""),
-							..default()
-						},
+						mask: AnimationMaskBits(1 << 3),
 					},
 				),
 				(
@@ -1104,11 +1045,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[8..=9]),
 						play_mode: PlayMode::Replay,
-						mask: 1 << 4,
-						bones: AffectedAnimationBones2 {
-							from_root: BoneName::from(""),
-							..default()
-						},
+						mask: AnimationMaskBits(1 << 4),
 					},
 				),
 				(
@@ -1116,14 +1053,11 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[10..=11]),
 						play_mode: PlayMode::Replay,
-						mask: 1 << 5,
-						bones: AffectedAnimationBones2 {
-							from_root: BoneName::from(""),
-							..default()
-						},
+						mask: AnimationMaskBits(1 << 5),
 					},
 				),
 			]),
+			..default()
 		};
 		let initial_mask = 0b111111;
 		let mut app = setup!(&lookup, &handle, initial_mask);
@@ -1200,11 +1134,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[0..=1]),
 						play_mode: PlayMode::Replay,
-						mask: 0b000001,
-						bones: AffectedAnimationBones2 {
-							from_root: BoneName::from(""),
-							..default()
-						},
+						mask: AnimationMaskBits(0b000001),
 					},
 				),
 				(
@@ -1212,14 +1142,11 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[2..=3]),
 						play_mode: PlayMode::Replay,
-						mask: 0b000111, // wants to play on high masks (..11)
-						bones: AffectedAnimationBones2 {
-							from_root: BoneName::from(""),
-							..default()
-						},
+						mask: AnimationMaskBits(0b000111), // wants to play on high masks (..11)
 					},
 				),
 			]),
+			..default()
 		};
 		let initial_mask = 0b111111;
 		let mut app = setup!(&lookup, &handle, initial_mask);
@@ -1294,6 +1221,7 @@ mod tests {
 					..default()
 				},
 			)]),
+			..default()
 		};
 		let mut app = setup!(&lookup, &handle);
 		let animation_player = app.world_mut().spawn(_AnimationPlayer::default()).id();
