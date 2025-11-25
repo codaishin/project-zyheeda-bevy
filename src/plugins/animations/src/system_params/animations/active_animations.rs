@@ -4,7 +4,7 @@ use common::traits::animation::{
 	ActiveAnimationsMut,
 	AnimationKey,
 	AnimationPriority,
-	AnimationsNotRegistered,
+	AnimationsUnprepared,
 };
 use std::collections::HashSet;
 
@@ -12,13 +12,15 @@ impl<TServer> ActiveAnimations for AnimationsContextMut<'_, TServer> {
 	fn active_animations<TLayer>(
 		&self,
 		layer: TLayer,
-	) -> Result<&HashSet<AnimationKey>, AnimationsNotRegistered>
+	) -> Result<&HashSet<AnimationKey>, AnimationsUnprepared>
 	where
 		TLayer: Into<AnimationPriority>,
 	{
 		match &self.dispatch {
 			Some(dispatch) => Ok(dispatch.slot(layer)),
-			None => Err(AnimationsNotRegistered),
+			None => Err(AnimationsUnprepared {
+				entity: self.entity.id(),
+			}),
 		}
 	}
 }
@@ -27,13 +29,15 @@ impl<TServer> ActiveAnimationsMut for AnimationsContextMut<'_, TServer> {
 	fn active_animations_mut<TLayer>(
 		&mut self,
 		layer: TLayer,
-	) -> Result<&mut HashSet<AnimationKey>, AnimationsNotRegistered>
+	) -> Result<&mut HashSet<AnimationKey>, AnimationsUnprepared>
 	where
 		TLayer: Into<AnimationPriority>,
 	{
 		match &mut self.dispatch {
 			Some(dispatch) => Ok(dispatch.slot_mut(layer)),
-			None => Err(AnimationsNotRegistered),
+			None => Err(AnimationsUnprepared {
+				entity: self.entity.id(),
+			}),
 		}
 	}
 }

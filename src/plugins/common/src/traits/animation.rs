@@ -2,6 +2,7 @@ mod priority_order;
 
 use super::iteration::IterFinite;
 use crate::{
+	errors::{ErrorData, Level},
 	tools::{action_key::slot::SlotKey, path::Path},
 	traits::{
 		accessors::get::GetContextMut,
@@ -15,6 +16,7 @@ use bevy::{
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Error};
 use std::{
 	collections::{HashMap, HashSet},
+	fmt::Display,
 	ops::DerefMut,
 	sync::Arc,
 };
@@ -55,19 +57,38 @@ pub trait ActiveAnimations {
 	fn active_animations<TLayer>(
 		&self,
 		layer: TLayer,
-	) -> Result<&HashSet<AnimationKey>, AnimationsNotRegistered>
+	) -> Result<&HashSet<AnimationKey>, AnimationsUnprepared>
 	where
 		TLayer: Into<AnimationPriority>;
 }
 
 #[derive(Debug, PartialEq)]
-pub struct AnimationsNotRegistered;
+pub struct AnimationsUnprepared {
+	pub entity: Entity,
+}
+
+impl ErrorData for AnimationsUnprepared {
+	fn level(&self) -> Level {
+		Level::Error
+	}
+
+	fn label() -> impl Display {
+		"Animations unprepared"
+	}
+
+	fn into_details(self) -> impl Display {
+		format!(
+			"Tried to retrieve animations for {:?}, but animations have not been registered (yet)",
+			self.entity
+		)
+	}
+}
 
 pub trait ActiveAnimationsMut: ActiveAnimations {
 	fn active_animations_mut<TLayer>(
 		&mut self,
 		layer: TLayer,
-	) -> Result<&mut HashSet<AnimationKey>, AnimationsNotRegistered>
+	) -> Result<&mut HashSet<AnimationKey>, AnimationsUnprepared>
 	where
 		TLayer: Into<AnimationPriority>;
 }
