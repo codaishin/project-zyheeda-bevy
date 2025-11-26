@@ -131,10 +131,11 @@ where
 					continue;
 				};
 
+				let mask = animation_data.mask.to_animation_mask();
 				active_animations.insert(*id);
-				animation_node.remove_mask(animation_data.mask.0);
+				animation_node.remove_mask(mask);
 				animation_node.add_mask(blocked_by_higher_priority);
-				add(&mut higher_priority_mask, animation_data.mask.0);
+				add(&mut higher_priority_mask, mask);
 
 				if player.is_playing(*id) {
 					continue;
@@ -175,7 +176,11 @@ fn add(dst: &mut AnimationMask, src: AnimationMask) {
 mod tests {
 	use super::*;
 	use crate::test_tools::leak_iterator;
-	use common::{tools::action_key::slot::SlotKey, traits::animation::AnimationMaskBits};
+	use common::{
+		bit_mask_index,
+		tools::action_key::slot::SlotKey,
+		traits::animation::AnimationMaskBits,
+	};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
 	use std::{
@@ -562,7 +567,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[0..=1]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits(0),
+						mask: AnimationMaskBits::zero(),
 					},
 				),
 				(
@@ -570,7 +575,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[2..=3]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits(0),
+						mask: AnimationMaskBits::zero(),
 					},
 				),
 				(
@@ -578,7 +583,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[4..=5]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits(0),
+						mask: AnimationMaskBits::zero(),
 					},
 				),
 				(
@@ -586,7 +591,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[6..=7]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits(0),
+						mask: AnimationMaskBits::zero(),
 					},
 				),
 				(
@@ -594,7 +599,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[8..=9]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits(0),
+						mask: AnimationMaskBits::zero(),
 					},
 				),
 				(
@@ -602,7 +607,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[10..=11]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits(0),
+						mask: AnimationMaskBits::zero(),
 					},
 				),
 			]),
@@ -888,7 +893,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[0..=1]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits(1 << 0),
+						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 					},
 				),
 				(
@@ -896,7 +901,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[2..=3]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits(1 << 1),
+						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(1)),
 					},
 				),
 				(
@@ -904,7 +909,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[4..=5]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits(1 << 2),
+						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
 					},
 				),
 				(
@@ -912,7 +917,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[6..=7]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits(1 << 3),
+						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(3)),
 					},
 				),
 				(
@@ -920,7 +925,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[8..=9]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits(1 << 4),
+						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(4)),
 					},
 				),
 				(
@@ -928,7 +933,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[10..=11]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits(1 << 5),
+						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(5)),
 					},
 				),
 			]),
@@ -1013,7 +1018,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[0..=1]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits(1 << 0),
+						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 					},
 				),
 				(
@@ -1021,7 +1026,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[2..=3]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits(1 << 1),
+						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(1)),
 					},
 				),
 				(
@@ -1029,7 +1034,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[4..=5]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits(1 << 2),
+						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
 					},
 				),
 				(
@@ -1037,7 +1042,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[6..=7]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits(1 << 3),
+						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(3)),
 					},
 				),
 				(
@@ -1045,7 +1050,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[8..=9]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits(1 << 4),
+						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(4)),
 					},
 				),
 				(
@@ -1053,7 +1058,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[10..=11]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits(1 << 5),
+						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(5)),
 					},
 				),
 			]),
@@ -1134,7 +1139,7 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[0..=1]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits(0b000001),
+						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 					},
 				),
 				(
@@ -1142,7 +1147,10 @@ mod tests {
 					AnimationLookupData {
 						animation_clips: _Animations::from(&indices[2..=3]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits(0b000111), // wants to play on high masks (..11)
+						mask: AnimationMaskBits::zero()
+							.with_set(bit_mask_index!(0))
+							.with_set(bit_mask_index!(1))
+							.with_set(bit_mask_index!(2)),
 					},
 				),
 			]),

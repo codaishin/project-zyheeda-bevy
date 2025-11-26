@@ -69,8 +69,8 @@ fn update_graph(
 	graph: &mut AnimationGraph,
 	mask_bones: Vec<(AnimationTargetId, AnimationMaskBits)>,
 ) {
-	for (target, AnimationMaskBits(mask)) in mask_bones {
-		*graph.mask_groups.entry(target).or_default() |= mask;
+	for (target, bits) in mask_bones {
+		*graph.mask_groups.entry(target).or_default() |= bits.to_animation_mask();
 	}
 }
 
@@ -116,7 +116,10 @@ mod tests {
 	use super::*;
 	use crate::components::animation_lookup::AnimationClips;
 	use bevy::{animation::AnimationTargetId, platform::collections::HashMap as BevyHashMap};
-	use common::traits::animation::{AffectedAnimationBones2, AnimationMaskBits};
+	use common::{
+		bit_mask_index,
+		traits::animation::{AffectedAnimationBones2, AnimationMaskBits},
+	};
 	use std::collections::HashMap;
 	use testing::{SingleThreadedApp, new_handle};
 
@@ -161,7 +164,7 @@ mod tests {
 			.spawn((
 				AnimationLookup::<AnimationClips> {
 					animation_mask_groups: HashMap::from([(
-						AnimationMaskBits(1),
+						AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 						AffectedAnimationBones2 {
 							from_root: BoneName::from("root"),
 							..default()
@@ -199,14 +202,14 @@ mod tests {
 				AnimationLookup::<AnimationClips> {
 					animation_mask_groups: HashMap::from([
 						(
-							AnimationMaskBits(1),
+							AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 							AffectedAnimationBones2 {
 								from_root: BoneName::from("root"),
 								..default()
 							},
 						),
 						(
-							AnimationMaskBits(2),
+							AnimationMaskBits::zero().with_set(bit_mask_index!(1)),
 							AffectedAnimationBones2 {
 								from_root: BoneName::from("root"),
 								..default()
@@ -244,7 +247,7 @@ mod tests {
 			.spawn((
 				AnimationLookup::<AnimationClips> {
 					animation_mask_groups: HashMap::from([(
-						AnimationMaskBits(1),
+						AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 						AffectedAnimationBones2 {
 							from_root: BoneName::from("mask root"),
 							..default()
@@ -287,7 +290,7 @@ mod tests {
 			.spawn((
 				AnimationLookup::<AnimationClips> {
 					animation_mask_groups: HashMap::from([(
-						AnimationMaskBits(1),
+						AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 						AffectedAnimationBones2 {
 							from_root: BoneName::from("mask root"),
 							..default()
@@ -333,7 +336,7 @@ mod tests {
 			.spawn((
 				AnimationLookup::<AnimationClips> {
 					animation_mask_groups: HashMap::from([(
-						AnimationMaskBits(1),
+						AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 						AffectedAnimationBones2 {
 							from_root: BoneName::from("mask root"),
 							..default()
@@ -416,7 +419,7 @@ mod tests {
 			.spawn((
 				AnimationLookup::<AnimationClips> {
 					animation_mask_groups: HashMap::from([(
-						AnimationMaskBits(1),
+						AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 						AffectedAnimationBones2 {
 							from_root: BoneName::from("mask root"),
 							..default()
@@ -493,7 +496,7 @@ mod tests {
 			.spawn((
 				AnimationLookup::<AnimationClips> {
 					animation_mask_groups: HashMap::from([(
-						AnimationMaskBits(1),
+						AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 						AffectedAnimationBones2 {
 							from_root: BoneName::from("root"),
 							until_exclusive: HashSet::from([
@@ -569,7 +572,7 @@ mod tests {
 			.spawn((
 				AnimationLookup::<AnimationClips> {
 					animation_mask_groups: HashMap::from([(
-						AnimationMaskBits(1),
+						AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 						AffectedAnimationBones2 {
 							from_root: BoneName::from("root"),
 							..default()
@@ -610,7 +613,7 @@ mod tests {
 			.spawn((
 				AnimationLookup::<AnimationClips> {
 					animation_mask_groups: HashMap::from([(
-						AnimationMaskBits(1),
+						AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 						AffectedAnimationBones2 {
 							from_root: BoneName::from("root"),
 							..default()
@@ -660,7 +663,7 @@ mod tests {
 			.spawn((
 				AnimationLookup::<AnimationClips> {
 					animation_mask_groups: HashMap::from([(
-						AnimationMaskBits(1),
+						AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 						AffectedAnimationBones2 {
 							from_root: BoneName::from("root"),
 							..default()

@@ -47,6 +47,7 @@ mod tests {
 	use super::*;
 	use crate::assets::agent_config::AgentConfigAsset;
 	use common::{
+		bit_mask_index,
 		tools::path::Path,
 		traits::{
 			animation::{
@@ -104,11 +105,11 @@ mod tests {
 			Animation2 {
 				path: AnimationPath::Single(Path::from("my/path")),
 				play_mode: PlayMode::Replay,
-				mask_groups: AnimationMaskBits(1 << 42),
+				mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(42)),
 			},
 		)]);
 		let animation_mask_groups = HashMap::from([(
-			AnimationMaskBits(16),
+			AnimationMaskBits::zero().with_set(bit_mask_index!(4)),
 			AffectedAnimationBones2 {
 				from_root: BoneName::from("root"),
 				..default()
@@ -163,11 +164,11 @@ mod tests {
 			Animation2 {
 				path: AnimationPath::Single(Path::from("my/path")),
 				play_mode: PlayMode::Replay,
-				mask_groups: AnimationMaskBits(1 << 42),
+				mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(42)),
 			},
 		)]);
 		let animation_mask_groups = HashMap::from([(
-			AnimationMaskBits(16),
+			AnimationMaskBits::zero().with_set(bit_mask_index!(4)),
 			AffectedAnimationBones2 {
 				from_root: BoneName::from("root"),
 				..default()

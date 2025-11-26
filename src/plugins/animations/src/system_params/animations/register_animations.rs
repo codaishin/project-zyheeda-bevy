@@ -69,6 +69,7 @@ mod tests {
 	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
+		bit_mask_index,
 		tools::action_key::slot::SlotKey,
 		traits::{
 			accessors::get::GetContextMut,
@@ -218,17 +219,17 @@ mod tests {
 				let a = Animation2 {
 					path: AnimationPath::from("path/a"),
 					play_mode: PlayMode::Repeat,
-					mask_groups: AnimationMaskBits(1),
+					mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 				};
 				let b = Animation2 {
 					path: AnimationPath::from("path/b"),
 					play_mode: PlayMode::Repeat,
-					mask_groups: AnimationMaskBits(2),
+					mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(1)),
 				};
 				let c = Animation2 {
 					path: AnimationPath::from("path/c"),
 					play_mode: PlayMode::Replay,
-					mask_groups: AnimationMaskBits(4),
+					mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
 				};
 
 				ctx.register_animations(
@@ -239,21 +240,21 @@ mod tests {
 					]),
 					&HashMap::from([
 						(
-							AnimationMaskBits(1),
+							AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 							AffectedAnimationBones2 {
 								from_root: BoneName::from("root a"),
 								..default()
 							},
 						),
 						(
-							AnimationMaskBits(2),
+							AnimationMaskBits::zero().with_set(bit_mask_index!(1)),
 							AffectedAnimationBones2 {
 								from_root: BoneName::from("root b"),
 								..default()
 							},
 						),
 						(
-							AnimationMaskBits(4),
+							AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
 							AffectedAnimationBones2 {
 								from_root: BoneName::from("root c"),
 								..default()
@@ -271,7 +272,7 @@ mod tests {
 						AnimationLookupData {
 							animation_clips: AnimationClips::Single(AnimationNodeIndex::new(1)),
 							play_mode: PlayMode::Repeat,
-							mask: AnimationMaskBits(1),
+							mask: AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 						},
 					),
 					(
@@ -279,7 +280,7 @@ mod tests {
 						AnimationLookupData {
 							animation_clips: AnimationClips::Single(AnimationNodeIndex::new(2)),
 							play_mode: PlayMode::Repeat,
-							mask: AnimationMaskBits(2),
+							mask: AnimationMaskBits::zero().with_set(bit_mask_index!(1)),
 						},
 					),
 					(
@@ -287,27 +288,27 @@ mod tests {
 						AnimationLookupData {
 							animation_clips: AnimationClips::Single(AnimationNodeIndex::new(3)),
 							play_mode: PlayMode::Replay,
-							mask: AnimationMaskBits(4),
+							mask: AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
 						},
 					),
 				]),
 				animation_mask_groups: HashMap::from([
 					(
-						AnimationMaskBits(1),
+						AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 						AffectedAnimationBones2 {
 							from_root: BoneName::from("root a"),
 							..default()
 						},
 					),
 					(
-						AnimationMaskBits(2),
+						AnimationMaskBits::zero().with_set(bit_mask_index!(1)),
 						AffectedAnimationBones2 {
 							from_root: BoneName::from("root b"),
 							..default()
 						},
 					),
 					(
-						AnimationMaskBits(4),
+						AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
 						AffectedAnimationBones2 {
 							from_root: BoneName::from("root c"),
 							..default()
