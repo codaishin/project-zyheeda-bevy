@@ -1,17 +1,17 @@
-use crate::components::{
-	animation_lookup::{AnimationLookup, AnimationLookupData},
-	setup_animations::SetupAnimations,
-};
+use crate::components::{animation_lookup::AnimationLookup, setup_animations::SetupAnimations};
 use bevy::{
 	animation::{AnimationTarget, AnimationTargetId},
 	prelude::*,
 };
 use common::traits::{
-	animation::BoneName,
+	animation::{AffectedAnimationBones2, AnimationMaskBits, BoneName},
 	iter_descendants_conditional::IterDescendantsConditional,
 	wrap_handle::GetHandle,
 };
-use std::{collections::HashSet, iter};
+use std::{
+	collections::{HashMap, HashSet},
+	iter,
+};
 
 impl SetupAnimations {
 	pub(crate) fn init_bone_groups<TGraph: Component + GetHandle<TAsset = AnimationGraph>>(
@@ -25,33 +25,30 @@ impl SetupAnimations {
 				continue;
 			};
 			let chains =
-				all_animation_bone_chains(entity, &children, &bones, lookup.animations.values());
+				all_animation_bone_chains(entity, &children, &bones, &lookup.animation_mask_groups);
 
 			update_graph(graph, chains);
 		}
 	}
 }
 
-fn all_animation_bone_chains<'a>(
+fn all_animation_bone_chains(
 	entity: Entity,
 	children: &Query<&Children>,
 	animation_targets: &Query<(&Name, &AnimationTarget)>,
-	animation_masks: impl Iterator<Item = &'a AnimationLookupData>,
-) -> Vec<(AnimationTargetId, AnimationMask)> {
+	animation_mask_groups: &HashMap<AnimationMaskBits, AffectedAnimationBones2>,
+) -> Vec<(AnimationTargetId, AnimationMaskBits)> {
 	let mut bones = vec![];
 	let get_bone = |child| {
 		let (name, target) = animation_targets.get(child).ok()?;
-		if target.player != entity {
-			return None;
-		}
 		Some((child, name, target))
 	};
 
-	for data in animation_masks {
+	for (mask, affected_bones) in animation_mask_groups {
 		let animation_bones = animation_bone_chains(
 			entity,
-			&data.bones.from_root,
-			&data.bones.until_exclusive,
+			&affected_bones.from_root,
+			&affected_bones.until_exclusive,
 			children,
 			&get_bone,
 		);
@@ -61,16 +58,19 @@ fn all_animation_bone_chains<'a>(
 		};
 
 		for mask_bone in animation_bones {
-			bones.push((mask_bone, data.mask));
+			bones.push((mask_bone, *mask));
 		}
 	}
 
 	bones
 }
 
-fn update_graph(graph: &mut AnimationGraph, mask_bones: Vec<(AnimationTargetId, AnimationMask)>) {
-	for (target, mask) in mask_bones {
-		*graph.mask_groups.entry(target).or_default() |= mask;
+fn update_graph(
+	graph: &mut AnimationGraph,
+	mask_bones: Vec<(AnimationTargetId, AnimationMaskBits)>,
+) {
+	for (target, bits) in mask_bones {
+		*graph.mask_groups.entry(target).or_default() |= bits.to_animation_mask();
 	}
 }
 
@@ -116,7 +116,10 @@ mod tests {
 	use super::*;
 	use crate::components::animation_lookup::AnimationClips;
 	use bevy::{animation::AnimationTargetId, platform::collections::HashMap as BevyHashMap};
-	use common::traits::animation::{AffectedAnimationBones2, AnimationKey};
+	use common::{
+		bit_mask_index,
+		traits::animation::{AffectedAnimationBones2, AnimationMaskBits},
+	};
 	use std::collections::HashMap;
 	use testing::{SingleThreadedApp, new_handle};
 
@@ -159,18 +162,15 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup {
-					animations: HashMap::from([(
-						AnimationKey::Run,
-						AnimationLookupData::<AnimationClips> {
-							mask: 1,
-							bones: AffectedAnimationBones2 {
-								from_root: BoneName::from("root"),
-								..default()
-							},
+				AnimationLookup::<AnimationClips> {
+					animation_mask_groups: HashMap::from([(
+						AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
+						AffectedAnimationBones2 {
+							from_root: BoneName::from("root"),
 							..default()
 						},
 					)]),
+					..default()
 				},
 				AnimationGraphHandle(handle.clone()),
 				SetupAnimations,
@@ -199,31 +199,24 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup {
-					animations: HashMap::from([
+				AnimationLookup::<AnimationClips> {
+					animation_mask_groups: HashMap::from([
 						(
-							AnimationKey::Run,
-							AnimationLookupData::<AnimationClips> {
-								mask: 1,
-								bones: AffectedAnimationBones2 {
-									from_root: BoneName::from("root"),
-									..default()
-								},
+							AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
+							AffectedAnimationBones2 {
+								from_root: BoneName::from("root"),
 								..default()
 							},
 						),
 						(
-							AnimationKey::Walk,
-							AnimationLookupData::<AnimationClips> {
-								mask: 2,
-								bones: AffectedAnimationBones2 {
-									from_root: BoneName::from("root"),
-									..default()
-								},
+							AnimationMaskBits::zero().with_set(bit_mask_index!(1)),
+							AffectedAnimationBones2 {
+								from_root: BoneName::from("root"),
 								..default()
 							},
 						),
 					]),
+					..default()
 				},
 				AnimationGraphHandle(handle.clone()),
 				SetupAnimations,
@@ -252,18 +245,15 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup {
-					animations: HashMap::from([(
-						AnimationKey::Run,
-						AnimationLookupData::<AnimationClips> {
-							mask: 1,
-							bones: AffectedAnimationBones2 {
-								from_root: BoneName::from("mask root"),
-								..default()
-							},
+				AnimationLookup::<AnimationClips> {
+					animation_mask_groups: HashMap::from([(
+						AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
+						AffectedAnimationBones2 {
+							from_root: BoneName::from("mask root"),
 							..default()
 						},
 					)]),
+					..default()
 				},
 				AnimationGraphHandle(handle.clone()),
 				SetupAnimations,
@@ -298,18 +288,15 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup {
-					animations: HashMap::from([(
-						AnimationKey::Run,
-						AnimationLookupData::<AnimationClips> {
-							mask: 1,
-							bones: AffectedAnimationBones2 {
-								from_root: BoneName::from("mask root"),
-								..default()
-							},
+				AnimationLookup::<AnimationClips> {
+					animation_mask_groups: HashMap::from([(
+						AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
+						AffectedAnimationBones2 {
+							from_root: BoneName::from("mask root"),
 							..default()
 						},
 					)]),
+					..default()
 				},
 				AnimationGraphHandle(handle.clone()),
 				SetupAnimations,
@@ -347,18 +334,15 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup {
-					animations: HashMap::from([(
-						AnimationKey::Run,
-						AnimationLookupData::<AnimationClips> {
-							mask: 1,
-							bones: AffectedAnimationBones2 {
-								from_root: BoneName::from("mask root"),
-								..default()
-							},
+				AnimationLookup::<AnimationClips> {
+					animation_mask_groups: HashMap::from([(
+						AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
+						AffectedAnimationBones2 {
+							from_root: BoneName::from("mask root"),
 							..default()
 						},
 					)]),
+					..default()
 				},
 				AnimationGraphHandle(handle.clone()),
 				SetupAnimations,
@@ -433,18 +417,15 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup {
-					animations: HashMap::from([(
-						AnimationKey::Run,
-						AnimationLookupData::<AnimationClips> {
-							mask: 1,
-							bones: AffectedAnimationBones2 {
-								from_root: BoneName::from("mask root"),
-								..default()
-							},
+				AnimationLookup::<AnimationClips> {
+					animation_mask_groups: HashMap::from([(
+						AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
+						AffectedAnimationBones2 {
+							from_root: BoneName::from("mask root"),
 							..default()
 						},
 					)]),
+					..default()
 				},
 				AnimationGraphHandle(handle.clone()),
 				SetupAnimations,
@@ -507,78 +488,24 @@ mod tests {
 	}
 
 	#[test]
-	fn ignore_targets_not_belonging_to_root() {
-		let handle = new_handle();
-		let mut app = setup(&handle);
-		let root = app
-			.world_mut()
-			.spawn((
-				AnimationLookup {
-					animations: HashMap::from([(
-						AnimationKey::Run,
-						AnimationLookupData::<AnimationClips> {
-							mask: 1,
-							bones: AffectedAnimationBones2 {
-								from_root: BoneName::from("mask root"),
-								..default()
-							},
-							..default()
-						},
-					)]),
-				},
-				AnimationGraphHandle(handle.clone()),
-				SetupAnimations,
-			))
-			.id();
-		app.world_mut()
-			.entity_mut(root)
-			.insert(bone_components(["root"], root));
-		let mask_root = app
-			.world_mut()
-			.spawn(bone_components(["root", "mask root"], root))
-			.insert(ChildOf(root))
-			.id();
-		app.world_mut()
-			.spawn(bone_components(["other"], Entity::from_raw(42)))
-			.insert(ChildOf(mask_root));
-
-		app.update();
-
-		assert_eq!(
-			BevyHashMap::from([(
-				AnimationTargetId::from_names([Name::from("root"), Name::from("mask root")].iter()),
-				1
-			)]),
-			app.world()
-				.resource::<Assets<AnimationGraph>>()
-				.get(&handle)
-				.unwrap()
-				.mask_groups
-		);
-	}
-
-	#[test]
 	fn set_exclusion_mask() {
 		let handle = new_handle();
 		let mut app = setup(&handle);
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup {
-					animations: HashMap::from([(
-						AnimationKey::Run,
-						AnimationLookupData::<AnimationClips> {
-							mask: 1,
-							bones: AffectedAnimationBones2 {
-								from_root: BoneName::from("root"),
-								until_exclusive: HashSet::from([
-									BoneName::from("a"),
-									BoneName::from("b"),
-								]),
-							},
-							..default()
+				AnimationLookup::<AnimationClips> {
+					animation_mask_groups: HashMap::from([(
+						AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
+						AffectedAnimationBones2 {
+							from_root: BoneName::from("root"),
+							until_exclusive: HashSet::from([
+								BoneName::from("a"),
+								BoneName::from("b"),
+							]),
 						},
 					)]),
+					..default()
 				},
 				AnimationGraphHandle(handle.clone()),
 				SetupAnimations,
@@ -643,18 +570,15 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup {
-					animations: HashMap::from([(
-						AnimationKey::Run,
-						AnimationLookupData::<AnimationClips> {
-							mask: 1,
-							bones: AffectedAnimationBones2 {
-								from_root: BoneName::from("root"),
-								..default()
-							},
+				AnimationLookup::<AnimationClips> {
+					animation_mask_groups: HashMap::from([(
+						AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
+						AffectedAnimationBones2 {
+							from_root: BoneName::from("root"),
 							..default()
 						},
 					)]),
+					..default()
 				},
 				AnimationGraphHandle(handle.clone()),
 				SetupAnimations,
@@ -687,18 +611,15 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup {
-					animations: HashMap::from([(
-						AnimationKey::Run,
-						AnimationLookupData::<AnimationClips> {
-							mask: 1,
-							bones: AffectedAnimationBones2 {
-								from_root: BoneName::from("root"),
-								..default()
-							},
+				AnimationLookup::<AnimationClips> {
+					animation_mask_groups: HashMap::from([(
+						AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
+						AffectedAnimationBones2 {
+							from_root: BoneName::from("root"),
 							..default()
 						},
 					)]),
+					..default()
 				},
 				AnimationGraphHandle(handle.clone()),
 				SetupAnimations,
@@ -740,18 +661,15 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup {
-					animations: HashMap::from([(
-						AnimationKey::Run,
-						AnimationLookupData::<AnimationClips> {
-							mask: 1,
-							bones: AffectedAnimationBones2 {
-								from_root: BoneName::from("root"),
-								..default()
-							},
+				AnimationLookup::<AnimationClips> {
+					animation_mask_groups: HashMap::from([(
+						AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
+						AffectedAnimationBones2 {
+							from_root: BoneName::from("root"),
 							..default()
 						},
 					)]),
+					..default()
 				},
 				AnimationGraphHandle(handle.clone()),
 			))

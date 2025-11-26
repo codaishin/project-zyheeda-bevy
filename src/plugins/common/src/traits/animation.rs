@@ -41,15 +41,24 @@ impl From<Animations> for Entity {
 pub type AnimationsSystemParamMut<'w, 's, T> = <T as HandlesAnimations>::TAnimationsMut<'w, 's>;
 
 pub trait RegisterAnimations2 {
-	fn register_animations(&mut self, animations: &HashMap<AnimationKey, Animation2>);
+	fn register_animations(
+		&mut self,
+		animations: &HashMap<AnimationKey, Animation2>,
+		animation_mask_groups: &HashMap<AnimationMaskBits, AffectedAnimationBones2>,
+	);
 }
 
 impl<T> RegisterAnimations2 for T
 where
 	T: DerefMut<Target: RegisterAnimations2>,
 {
-	fn register_animations(&mut self, animations: &HashMap<AnimationKey, Animation2>) {
-		self.deref_mut().register_animations(animations);
+	fn register_animations(
+		&mut self,
+		animations: &HashMap<AnimationKey, Animation2>,
+		animation_mask_groups: &HashMap<AnimationMaskBits, AffectedAnimationBones2>,
+	) {
+		self.deref_mut()
+			.register_animations(animations, animation_mask_groups);
 	}
 }
 
@@ -263,10 +272,71 @@ impl Animation {
 pub struct Animation2 {
 	pub path: AnimationPath,
 	pub play_mode: PlayMode,
-	#[serde(deserialize_with = "bits_to_mask", serialize_with = "mask_to_bits")]
-	pub mask: AnimationMask,
-	pub bones: AffectedAnimationBones2,
+	pub mask_groups: AnimationMaskBits,
 }
+
+#[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Copy, Serialize, Deserialize)]
+pub struct AnimationMaskBits(#[serde(with = "bits_conversion")] AnimationMask);
+
+impl AnimationMaskBits {
+	pub const ZERO: Self = Self::zero();
+
+	pub const fn zero() -> Self {
+		Self(0)
+	}
+
+	pub fn to_animation_mask(&self) -> AnimationMask {
+		self.0
+	}
+
+	pub fn with_set(mut self, bit: BitMaskIndex) -> Self {
+		self.set(bit);
+		self
+	}
+
+	pub fn set(&mut self, BitMaskIndex(bit): BitMaskIndex) {
+		self.0 |= 1 << bit;
+	}
+}
+
+pub struct BitMaskIndex(u8);
+
+#[macro_export]
+macro_rules! bit_mask_index {
+	($bit:expr) => {{
+		type BitMaskIndex = $crate::traits::animation::BitMaskIndex;
+		const INDEX: BitMaskIndex = match BitMaskIndex::try_parse($bit) {
+			Ok(index) => index,
+			Err(_) => panic!("invalid BitMaskIndex"),
+		};
+		INDEX
+	}};
+}
+
+impl BitMaskIndex {
+	const MAX_BIT_INDEX: u8 = 63;
+
+	pub const MAX_INDEX: Self = bit_mask_index!(BitMaskIndex::MAX_BIT_INDEX);
+
+	pub const fn try_parse(index: u8) -> Result<Self, MaxBitExceeded> {
+		if index > Self::MAX_BIT_INDEX {
+			return Err(MaxBitExceeded);
+		}
+
+		Ok(Self(index))
+	}
+}
+
+impl TryFrom<u8> for BitMaskIndex {
+	type Error = MaxBitExceeded;
+
+	fn try_from(bit: u8) -> Result<Self, Self::Error> {
+		Self::try_parse(bit)
+	}
+}
+
+#[derive(Debug)]
+pub struct MaxBitExceeded;
 
 #[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
 pub struct AffectedAnimationBones2 {
@@ -319,25 +389,29 @@ enum U64OrString {
 	String(String),
 }
 
-pub(crate) fn bits_to_mask<'a, D>(deserializer: D) -> Result<AnimationMask, D::Error>
-where
-	D: Deserializer<'a>,
-{
-	match U64OrString::deserialize(deserializer)? {
-		U64OrString::U64(mask) => Ok(mask),
-		U64OrString::String(bits) if bits.is_empty() => Ok(0),
-		U64OrString::String(bits) => AnimationMask::from_str_radix(&bits, 2)
-			.map_err(|error| Error::custom(format!("{DESERIALIZE_ERROR_PREFIX}: {error}"))),
-	}
-}
+mod bits_conversion {
+	use super::*;
 
-pub(crate) fn mask_to_bits<S>(mask: &AnimationMask, serializer: S) -> Result<S::Ok, S::Error>
-where
-	S: Serializer,
-{
-	match mask {
-		0 => "".serialize(serializer),
-		mask => format!("{mask:b}").serialize(serializer),
+	pub(crate) fn deserialize<'a, D>(deserializer: D) -> Result<AnimationMask, D::Error>
+	where
+		D: Deserializer<'a>,
+	{
+		match U64OrString::deserialize(deserializer)? {
+			U64OrString::U64(mask) => Ok(mask),
+			U64OrString::String(bits) if bits.is_empty() => Ok(0),
+			U64OrString::String(bits) => AnimationMask::from_str_radix(&bits, 2)
+				.map_err(|error| Error::custom(format!("{DESERIALIZE_ERROR_PREFIX}: {error}"))),
+		}
+	}
+
+	pub(crate) fn serialize<S>(mask: &AnimationMask, serializer: S) -> Result<S::Ok, S::Error>
+	where
+		S: Serializer,
+	{
+		match mask {
+			0 => "".serialize(serializer),
+			mask => format!("{mask:b}").serialize(serializer),
+		}
 	}
 }
 
@@ -348,7 +422,7 @@ mod tests {
 
 	#[derive(Debug, PartialEq, Serialize, Deserialize)]
 	struct _Wrapper {
-		#[serde(deserialize_with = "bits_to_mask", serialize_with = "mask_to_bits")]
+		#[serde(with = "bits_conversion")]
 		mask: AnimationMask,
 	}
 
@@ -394,13 +468,13 @@ mod tests {
 		}
 
 		#[test]
-		fn parse_error() {
+		fn parse_error_invalid_digits() {
 			let value = json! ({
 				"mask": "123"
 			});
 
 			let Err(error) = serde_json::from_value::<_Wrapper>(value) else {
-				panic!("EXPECTED ERROR");
+				panic!("EXPECTED ERROR, BUT WAS VALUE");
 			};
 
 			assert_eq!(

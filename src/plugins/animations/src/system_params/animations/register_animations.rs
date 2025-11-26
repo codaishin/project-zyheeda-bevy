@@ -8,7 +8,13 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::traits::{
-	animation::{Animation2, AnimationKey, RegisterAnimations2},
+	animation::{
+		AffectedAnimationBones2,
+		Animation2,
+		AnimationKey,
+		AnimationMaskBits,
+		RegisterAnimations2,
+	},
 	wrap_handle::WrapHandle,
 };
 use std::collections::HashMap;
@@ -18,11 +24,16 @@ where
 	TGraph: Asset + WrapHandle + Sync + Send + 'static,
 	TServer: Resource + LoadAnimationAssets<TGraph, AnimationClips>,
 {
-	fn register_animations(&mut self, animations: &HashMap<AnimationKey, Animation2>) {
+	fn register_animations(
+		&mut self,
+		animations: &HashMap<AnimationKey, Animation2>,
+		animation_mask_groups: &HashMap<AnimationMaskBits, AffectedAnimationBones2>,
+	) {
 		let animation_paths = animations
 			.values()
 			.map(|Animation2 { path, .. }| path.clone())
 			.collect::<Vec<_>>();
+		let animation_mask_groups = animation_mask_groups.clone();
 		let (graph, new_clips) = self.asset_server.load_animation_assets(animation_paths);
 		let animations = animations
 			.iter()
@@ -31,8 +42,7 @@ where
 				let data = AnimationLookupData {
 					animation_clips: *animation_clips,
 					play_mode: animation.play_mode,
-					mask: animation.mask,
-					bones: animation.bones.clone(),
+					mask: animation.mask_groups,
 				};
 
 				Some((*key, data))
@@ -41,7 +51,10 @@ where
 
 		self.entity.try_insert((
 			AnimationDispatch::<AnimationKey>::default(),
-			AnimationLookup { animations },
+			AnimationLookup {
+				animations,
+				animation_mask_groups,
+			},
 			TGraph::wrap_handle(self.graphs.add(graph)),
 		));
 	}
@@ -56,6 +69,7 @@ mod tests {
 	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
+		bit_mask_index,
 		tools::action_key::slot::SlotKey,
 		traits::{
 			accessors::get::GetContextMut,
@@ -132,7 +146,7 @@ mod tests {
 			.run_system_once(move |mut p: AnimationsParamMut<_Server, _Graph>| {
 				let key = AnimationsKey { entity };
 				let mut ctx = AnimationsParamMut::get_context_mut(&mut p, key).unwrap();
-				ctx.register_animations(&HashMap::default());
+				ctx.register_animations(&HashMap::default(), &HashMap::default());
 			})?;
 
 		assert!(app.world().entity(entity).contains::<_GraphComponent>());
@@ -151,7 +165,7 @@ mod tests {
 			.run_system_once(move |mut p: AnimationsParamMut<_Server, _Graph>| {
 				let key = AnimationsKey { entity };
 				let mut ctx = AnimationsParamMut::get_context_mut(&mut p, key).unwrap();
-				ctx.register_animations(&HashMap::default());
+				ctx.register_animations(&HashMap::default(), &HashMap::default());
 			})?;
 
 		assert_eq!(
@@ -205,36 +219,49 @@ mod tests {
 				let a = Animation2 {
 					path: AnimationPath::from("path/a"),
 					play_mode: PlayMode::Repeat,
-					mask: 1,
-					bones: AffectedAnimationBones2 {
-						from_root: BoneName::from("root a"),
-						..default()
-					},
+					mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 				};
 				let b = Animation2 {
 					path: AnimationPath::from("path/b"),
 					play_mode: PlayMode::Repeat,
-					mask: 2,
-					bones: AffectedAnimationBones2 {
-						from_root: BoneName::from("root b"),
-						..default()
-					},
+					mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(1)),
 				};
 				let c = Animation2 {
 					path: AnimationPath::from("path/c"),
 					play_mode: PlayMode::Replay,
-					mask: 4,
-					bones: AffectedAnimationBones2 {
-						from_root: BoneName::from("root c"),
-						..default()
-					},
+					mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
 				};
 
-				ctx.register_animations(&HashMap::from([
-					(AnimationKey::Idle, a),
-					(AnimationKey::Walk, b),
-					(AnimationKey::Skill(SlotKey(42)), c),
-				]));
+				ctx.register_animations(
+					&HashMap::from([
+						(AnimationKey::Idle, a),
+						(AnimationKey::Walk, b),
+						(AnimationKey::Skill(SlotKey(42)), c),
+					]),
+					&HashMap::from([
+						(
+							AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
+							AffectedAnimationBones2 {
+								from_root: BoneName::from("root a"),
+								..default()
+							},
+						),
+						(
+							AnimationMaskBits::zero().with_set(bit_mask_index!(1)),
+							AffectedAnimationBones2 {
+								from_root: BoneName::from("root b"),
+								..default()
+							},
+						),
+						(
+							AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
+							AffectedAnimationBones2 {
+								from_root: BoneName::from("root c"),
+								..default()
+							},
+						),
+					]),
+				);
 			})?;
 
 		assert_eq!(
@@ -245,11 +272,7 @@ mod tests {
 						AnimationLookupData {
 							animation_clips: AnimationClips::Single(AnimationNodeIndex::new(1)),
 							play_mode: PlayMode::Repeat,
-							mask: 1,
-							bones: AffectedAnimationBones2 {
-								from_root: BoneName::from("root a"),
-								..default()
-							}
+							mask: AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 						},
 					),
 					(
@@ -257,11 +280,7 @@ mod tests {
 						AnimationLookupData {
 							animation_clips: AnimationClips::Single(AnimationNodeIndex::new(2)),
 							play_mode: PlayMode::Repeat,
-							mask: 2,
-							bones: AffectedAnimationBones2 {
-								from_root: BoneName::from("root b"),
-								..default()
-							}
+							mask: AnimationMaskBits::zero().with_set(bit_mask_index!(1)),
 						},
 					),
 					(
@@ -269,14 +288,33 @@ mod tests {
 						AnimationLookupData {
 							animation_clips: AnimationClips::Single(AnimationNodeIndex::new(3)),
 							play_mode: PlayMode::Replay,
-							mask: 4,
-							bones: AffectedAnimationBones2 {
-								from_root: BoneName::from("root c"),
-								..default()
-							}
+							mask: AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
 						},
 					),
-				])
+				]),
+				animation_mask_groups: HashMap::from([
+					(
+						AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
+						AffectedAnimationBones2 {
+							from_root: BoneName::from("root a"),
+							..default()
+						},
+					),
+					(
+						AnimationMaskBits::zero().with_set(bit_mask_index!(1)),
+						AffectedAnimationBones2 {
+							from_root: BoneName::from("root b"),
+							..default()
+						},
+					),
+					(
+						AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
+						AffectedAnimationBones2 {
+							from_root: BoneName::from("root c"),
+							..default()
+						},
+					),
+				]),
 			}),
 			app.world().entity(entity).get::<AnimationLookup>()
 		);

@@ -109,6 +109,7 @@ mod tests {
 						..default()
 					},
 				)]),
+				..default()
 			},
 			_Component(handle.clone()),
 			SetupAnimations,
@@ -143,6 +144,7 @@ mod tests {
 						..default()
 					},
 				)]),
+				..default()
 			},
 			_Component(handle.clone()),
 		));

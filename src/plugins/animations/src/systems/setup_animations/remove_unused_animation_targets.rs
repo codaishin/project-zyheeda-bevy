@@ -45,6 +45,7 @@ impl SetupAnimations {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::components::animation_lookup::AnimationClips;
 	use bevy::animation::{AnimationTarget, AnimationTargetId};
 	use testing::{SingleThreadedApp, new_handle};
 
@@ -92,7 +93,11 @@ mod tests {
 		let mut app = setup(&handle, new_graph(used_targets));
 		let player = app
 			.world_mut()
-			.spawn((_Graph(handle), SetupAnimations, AnimationLookup::default()))
+			.spawn((
+				_Graph(handle),
+				SetupAnimations,
+				AnimationLookup::<AnimationClips>::default(),
+			))
 			.id();
 		let targets = [
 			app.world_mut()
@@ -139,7 +144,11 @@ mod tests {
 		let mut app = setup(&handle, new_graph(used_targets));
 		let player = app
 			.world_mut()
-			.spawn((_Graph(handle), SetupAnimations, AnimationLookup::default()))
+			.spawn((
+				_Graph(handle),
+				SetupAnimations,
+				AnimationLookup::<AnimationClips>::default(),
+			))
 			.id();
 		let targets = [
 			app.world_mut()
@@ -190,7 +199,11 @@ mod tests {
 		let mut app = setup(&handle, new_graph(used_targets));
 		let player = app
 			.world_mut()
-			.spawn((_Graph(handle), SetupAnimations, AnimationLookup::default()))
+			.spawn((
+				_Graph(handle),
+				SetupAnimations,
+				AnimationLookup::<AnimationClips>::default(),
+			))
 			.id();
 		let targets = [
 			app.world_mut()
@@ -233,7 +246,11 @@ mod tests {
 		let mut app = setup(&handle, new_graph(used_targets));
 		let player = app
 			.world_mut()
-			.spawn((_Graph(handle), SetupAnimations, AnimationLookup::default()))
+			.spawn((
+				_Graph(handle),
+				SetupAnimations,
+				AnimationLookup::<AnimationClips>::default(),
+			))
 			.id();
 		let other = app.world_mut().spawn_empty().id();
 		let targets = [
@@ -281,7 +298,11 @@ mod tests {
 		let mut app = setup(&handle, new_graph(used_targets));
 		let player = app
 			.world_mut()
-			.spawn((_Graph(handle), SetupAnimations, AnimationLookup::default()))
+			.spawn((
+				_Graph(handle),
+				SetupAnimations,
+				AnimationLookup::<AnimationClips>::default(),
+			))
 			.id();
 		let targets =
 			used_targets.map(|id| app.world_mut().spawn(AnimationTarget { id, player }).id());
@@ -307,7 +328,7 @@ mod tests {
 		let mut app = setup(&handle, new_graph(used_targets));
 		let player = app
 			.world_mut()
-			.spawn((_Graph(handle), AnimationLookup::default()))
+			.spawn((_Graph(handle), AnimationLookup::<AnimationClips>::default()))
 			.id();
 		let targets = [
 			app.world_mut()

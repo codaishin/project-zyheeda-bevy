@@ -7,7 +7,7 @@ use common::{
 	tools::{action_key::slot::SlotKey, path::Path},
 	traits::{
 		accessors::get::GetProperty,
-		animation::{Animation2, AnimationKey},
+		animation::{AffectedAnimationBones2, Animation2, AnimationKey, AnimationMaskBits},
 		bone_key::{BoneKey, ConfiguredBones},
 		handles_custom_assets::AssetFolderPath,
 		handles_map_generation::AgentType,
@@ -28,6 +28,7 @@ pub struct AgentConfigAsset {
 	pub(crate) agent_model: AgentModel,
 	pub(crate) attributes: PhysicalDefaultAttributes,
 	pub(crate) animations: HashMap<AnimationKey, Animation2>,
+	pub(crate) animation_mask_groups: HashMap<AnimationMaskBits, AffectedAnimationBones2>,
 }
 
 impl AssetFolderPath for AgentConfigAsset {

@@ -235,6 +235,7 @@ mod tests {
 					..default()
 				},
 			)]),
+			..default()
 		};
 		let weights = HashMap::from_iter(initial_weights());
 		let mut app = setup(&lookup, weights, &handle);
@@ -284,6 +285,7 @@ mod tests {
 					..default()
 				},
 			)]),
+			..default()
 		};
 		let mut app = setup(&lookup, HashMap::from([]), &handle);
 		let player = app.world_mut().spawn(_GraphComponent(handle.clone())).id();
@@ -335,6 +337,7 @@ mod tests {
 					..default()
 				},
 			)]),
+			..default()
 		};
 		let mut app = setup(&lookup, HashMap::from([]), &handle);
 		let player = app.world_mut().spawn(_GraphComponent(handle.clone())).id();
@@ -383,6 +386,7 @@ mod tests {
 					..default()
 				},
 			)]),
+			..default()
 		};
 		let mut app = setup(&lookup, HashMap::from([]), &handle);
 		let player = app.world_mut().spawn(_GraphComponent(handle.clone())).id();
