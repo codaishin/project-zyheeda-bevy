@@ -133,7 +133,7 @@ where
 			Update,
 			(
 				ring_rotation,
-				SkillAnimation::system::<TAnimations::TAnimationDispatch>,
+				SkillAnimation::system::<AnimationsSystemParamMut<TAnimations>>,
 			)
 				.run_if(in_state(GameState::Play)),
 		);

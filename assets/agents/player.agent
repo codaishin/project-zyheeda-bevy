@@ -87,13 +87,13 @@
 			"from_root": "top_shoulder.L"
 		},
 		"00100": {
-			"from_root": "top_shoulder.R"
-		},
-		"01000": {
 			"from_root": "bottom_shoulder.L"
 		},
-		"10000": {
+		"01000": {
 			"from_root": "bottom_shoulder.R"
+		},
+		"10000": {
+			"from_root": "top_shoulder.R"
 		}
 	},
 	"animations": [
