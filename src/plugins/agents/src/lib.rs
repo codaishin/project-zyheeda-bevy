@@ -7,6 +7,7 @@ use crate::{
 	assets::agent_config::{AgentConfigAsset, AgentConfigData, dto::AgentConfigAssetDto},
 	components::{
 		agent::{Agent, tag::AgentTag},
+		animate_idle::AnimateIdle,
 		enemy::{Enemy, attack_phase::EnemyAttackPhase, void_sphere::VoidSphere},
 		movement_config::MovementConfig,
 		player::Player,
@@ -189,7 +190,9 @@ where
 					Update::delta.pipe(Enemy::advance_attack_phase),
 				)
 					.chain(),
+				AnimateIdle::execute::<AnimationsSystemParamMut<TAnimations>>,
 			)
+				.chain()
 				.run_if(in_state(GameState::Play))
 				.after(TInput::SYSTEMS),
 		);

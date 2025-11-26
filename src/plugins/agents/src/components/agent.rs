@@ -2,7 +2,7 @@ pub(crate) mod tag;
 
 use crate::{
 	assets::agent_config::{AgentConfigAsset, AgentConfigData},
-	components::{enemy::void_sphere::VoidSphere, player::Player},
+	components::{animate_idle::AnimateIdle, enemy::void_sphere::VoidSphere, player::Player},
 	observers::agent::{insert_concrete_agent::InsertEnemyOrPlayer, insert_from::AgentHandle},
 };
 use bevy::prelude::*;
@@ -33,6 +33,7 @@ use macros::{SavableComponent, agent_asset};
 	RigidBody = RigidBody::Dynamic,
 	GravityScale = GravityScale(0.),
 	IsBlocker = [Blocker::Character],
+	AnimateIdle,
 )]
 pub struct Agent<TAsset = AgentConfigAsset>
 where
