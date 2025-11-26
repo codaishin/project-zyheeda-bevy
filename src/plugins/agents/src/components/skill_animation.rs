@@ -1,12 +1,9 @@
-use crate::components::player::PlayerAnimationKey;
-
-use super::player::Player;
-use bevy::{ecs::component::Mutable, prelude::*};
+use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	tools::action_key::slot::PlayerSlot,
 	traits::{
-		accessors::get::TryApplyOn,
-		animation::{Animation, AnimationPriority, PlayMode, StartAnimation, StopAnimation},
+		accessors::get::{GetContextMut, TryApplyOn},
+		animation::{ActiveAnimationsMut, AnimationKey, AnimationPriority, Animations},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -18,26 +15,28 @@ pub enum SkillAnimation {
 }
 
 impl SkillAnimation {
-	pub(crate) fn system<TAnimationDispatch>(
+	pub(crate) fn system<TAnimations>(
 		mut commands: ZyheedaCommands,
-		mut players: Query<
-			(Entity, &SkillAnimation, &mut TAnimationDispatch),
-			Added<SkillAnimation>,
-		>,
+		mut animations: StaticSystemParam<TAnimations>,
+		mut players: Query<(Entity, &SkillAnimation)>,
 	) where
-		TAnimationDispatch: Component<Mutability = Mutable> + StartAnimation + StopAnimation,
+		TAnimations: for<'c> GetContextMut<Animations, TContext<'c>: ActiveAnimationsMut>,
 	{
-		for (entity, apply, mut dispatch) in &mut players {
+		for (entity, apply) in &mut players {
+			let key = Animations { entity };
+			let Some(mut ctx) = TAnimations::get_context_mut(&mut animations, key) else {
+				continue;
+			};
+			let Ok(skill_animations) = ctx.active_animations_mut(Skill) else {
+				continue;
+			};
+
 			match apply {
-				SkillAnimation::Start(slot) => dispatch.start_animation(
-					Skill,
-					Animation::new(
-						Player::animation_asset(PlayerAnimationKey::Skill(*slot)),
-						PlayMode::Repeat,
-					),
-				),
+				SkillAnimation::Start(slot) => {
+					skill_animations.insert(AnimationKey::Skill((*slot).into()));
+				}
 				SkillAnimation::Stop => {
-					dispatch.stop_animation(Skill);
+					skill_animations.clear();
 				}
 			};
 			commands.try_apply_on(&entity, |mut e| {
@@ -59,56 +58,18 @@ impl From<Skill> for AnimationPriority {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::player::Player;
-	use common::{
-		tools::action_key::slot::Side,
-		traits::animation::{Animation, AnimationPriority, StartAnimation},
+	use crate::{
+		components::player::Player,
+		systems::player::animate_movement::tests::_Animations,
 	};
-	use macros::NestedMocks;
-	use mockall::{mock, predicate::eq};
+	use common::tools::action_key::slot::{Side, SlotKey};
+	use std::collections::{HashMap, HashSet};
 	use test_case::test_case;
-	use testing::{NestedMocks, SingleThreadedApp};
-
-	#[derive(Component, NestedMocks)]
-	struct _Dispatch {
-		mock: Mock_Dispatch,
-	}
-
-	impl StartAnimation for _Dispatch {
-		fn start_animation<TLayer>(&mut self, layer: TLayer, animation: Animation)
-		where
-			TLayer: Into<AnimationPriority> + 'static,
-		{
-			self.mock.start_animation(layer, animation);
-		}
-	}
-
-	impl StopAnimation for _Dispatch {
-		fn stop_animation<TLayer>(&mut self, layer: TLayer)
-		where
-			TLayer: Into<AnimationPriority> + 'static,
-		{
-			self.mock.stop_animation(layer);
-		}
-	}
-
-	mock! {
-		_Dispatch {}
-		impl StartAnimation for _Dispatch {
-			fn start_animation<TLayer>(&mut self, layer: TLayer, animation: Animation)
-			where
-				TLayer: Into<AnimationPriority> + 'static;
-		}
-		impl StopAnimation for _Dispatch {
-			fn stop_animation<TLayer>(&mut self, layer: TLayer)
-			where
-				TLayer: Into<AnimationPriority> + 'static;
-		}
-	}
+	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, SkillAnimation::system::<_Dispatch>);
+		app.add_systems(Update, SkillAnimation::system::<Query<Mut<_Animations>>>);
 
 		app
 	}
@@ -119,58 +80,46 @@ mod tests {
 	#[test_case(PlayerSlot::Lower(Side::Right); "bottom right")]
 	fn play_animation(slot: PlayerSlot) {
 		let mut app = setup();
-		app.world_mut().spawn((
-			Player,
-			SkillAnimation::Start(slot),
-			_Dispatch::new().with_mock(|mock| {
-				mock.expect_start_animation()
-					.with(
-						eq(Skill),
-						eq(Animation::new(
-							Player::animation_asset(PlayerAnimationKey::Skill(slot)),
-							PlayMode::Repeat,
-						)),
-					)
-					.times(1)
-					.return_const(());
-			}),
-		));
+		let entity = app
+			.world_mut()
+			.spawn((Player, SkillAnimation::Start(slot), _Animations::default()))
+			.id();
 
 		app.update();
+
+		assert_eq!(
+			Some(&_Animations::Prepared(HashMap::from([(
+				Skill.into(),
+				HashSet::from([AnimationKey::Skill(slot.into())])
+			)]))),
+			app.world().entity(entity).get::<_Animations>()
+		);
 	}
 
 	#[test]
 	fn stop_animation() {
 		let mut app = setup();
-		app.world_mut().spawn((
-			Player,
-			SkillAnimation::Stop,
-			_Dispatch::new().with_mock(|mock| {
-				mock.expect_stop_animation()
-					.with(eq(Skill))
-					.times(1)
-					.return_const(());
-			}),
-		));
+		let entity = app
+			.world_mut()
+			.spawn((
+				Player,
+				SkillAnimation::Stop,
+				_Animations::Prepared(HashMap::from([(
+					Skill.into(),
+					HashSet::from([AnimationKey::Skill(SlotKey(42))]),
+				)])),
+			))
+			.id();
 
 		app.update();
-	}
 
-	#[test]
-	fn only_operate_when_skill_animation_is_added() {
-		let mut app = setup();
-		app.world_mut().spawn((
-			Player,
-			SkillAnimation::Start(PlayerSlot::Upper(Side::Left)),
-			_Dispatch::new().with_mock(|mock| {
-				mock.expect_start_animation::<Skill>()
-					.times(1)
-					.return_const(());
-			}),
-		));
-
-		app.update();
-		app.update();
+		assert_eq!(
+			Some(&_Animations::Prepared(HashMap::from([(
+				Skill.into(),
+				HashSet::default()
+			)]))),
+			app.world().entity(entity).get::<_Animations>()
+		);
 	}
 
 	#[test]
@@ -181,11 +130,7 @@ mod tests {
 			.spawn((
 				Player,
 				SkillAnimation::Start(PlayerSlot::Upper(Side::Left)),
-				_Dispatch::new().with_mock(|mock| {
-					mock.expect_start_animation::<Skill>()
-						.times(1)
-						.return_const(());
-				}),
+				_Animations::default(),
 			))
 			.id();
 
