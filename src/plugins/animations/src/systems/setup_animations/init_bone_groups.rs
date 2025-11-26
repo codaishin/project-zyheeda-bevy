@@ -41,9 +41,6 @@ fn all_animation_bone_chains(
 	let mut bones = vec![];
 	let get_bone = |child| {
 		let (name, target) = animation_targets.get(child).ok()?;
-		if target.player != entity {
-			return None;
-		}
 		Some((child, name, target))
 	};
 
@@ -479,54 +476,6 @@ mod tests {
 					1
 				)
 			]),
-			app.world()
-				.resource::<Assets<AnimationGraph>>()
-				.get(&handle)
-				.unwrap()
-				.mask_groups
-		);
-	}
-
-	#[test]
-	fn ignore_targets_not_belonging_to_root() {
-		let handle = new_handle();
-		let mut app = setup(&handle);
-		let root = app
-			.world_mut()
-			.spawn((
-				AnimationLookup::<AnimationClips> {
-					animation_mask_groups: HashMap::from([(
-						AnimationMaskBits(1),
-						AffectedAnimationBones2 {
-							from_root: BoneName::from("mask root"),
-							..default()
-						},
-					)]),
-					..default()
-				},
-				AnimationGraphHandle(handle.clone()),
-				SetupAnimations,
-			))
-			.id();
-		app.world_mut()
-			.entity_mut(root)
-			.insert(bone_components(["root"], root));
-		let mask_root = app
-			.world_mut()
-			.spawn(bone_components(["root", "mask root"], root))
-			.insert(ChildOf(root))
-			.id();
-		app.world_mut()
-			.spawn(bone_components(["other"], Entity::from_raw(42)))
-			.insert(ChildOf(mask_root));
-
-		app.update();
-
-		assert_eq!(
-			BevyHashMap::from([(
-				AnimationTargetId::from_names([Name::from("root"), Name::from("mask root")].iter()),
-				1
-			)]),
 			app.world()
 				.resource::<Assets<AnimationGraph>>()
 				.get(&handle)
