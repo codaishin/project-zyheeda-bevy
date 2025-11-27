@@ -9,29 +9,29 @@ use crate::{
 use bevy::prelude::*;
 use common::traits::{
 	handles_animations::{
-		AffectedAnimationBones2,
-		Animation2,
+		AffectedAnimationBones,
+		Animation,
 		AnimationKey,
 		AnimationMaskBits,
-		RegisterAnimations2,
+		RegisterAnimations,
 	},
 	wrap_handle::WrapHandle,
 };
 use std::collections::HashMap;
 
-impl<TServer, TGraph> RegisterAnimations2 for AnimationsContextMut<'_, TServer, TGraph>
+impl<TServer, TGraph> RegisterAnimations for AnimationsContextMut<'_, TServer, TGraph>
 where
 	TGraph: Asset + WrapHandle + Sync + Send + 'static,
 	TServer: Resource + LoadAnimationAssets<TGraph, AnimationClips>,
 {
 	fn register_animations(
 		&mut self,
-		animations: &HashMap<AnimationKey, Animation2>,
-		animation_mask_groups: &HashMap<AnimationMaskBits, AffectedAnimationBones2>,
+		animations: &HashMap<AnimationKey, Animation>,
+		animation_mask_groups: &HashMap<AnimationMaskBits, AffectedAnimationBones>,
 	) {
 		let animation_paths = animations
 			.values()
-			.map(|Animation2 { path, .. }| path.clone())
+			.map(|Animation { path, .. }| path.clone())
 			.collect::<Vec<_>>();
 		let animation_mask_groups = animation_mask_groups.clone();
 		let (graph, new_clips) = self.asset_server.load_animation_assets(animation_paths);
@@ -74,7 +74,7 @@ mod tests {
 		traits::{
 			accessors::get::GetContextMut,
 			handles_animations::{
-				AffectedAnimationBones2,
+				AffectedAnimationBones,
 				AnimationPath,
 				Animations as AnimationsKey,
 				BoneName,
@@ -214,17 +214,17 @@ mod tests {
 			.run_system_once(move |mut p: AnimationsParamMut<_Server, _Graph>| {
 				let key = AnimationsKey { entity };
 				let mut ctx = AnimationsParamMut::get_context_mut(&mut p, key).unwrap();
-				let a = Animation2 {
+				let a = Animation {
 					path: AnimationPath::from("path/a"),
 					play_mode: PlayMode::Repeat,
 					mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 				};
-				let b = Animation2 {
+				let b = Animation {
 					path: AnimationPath::from("path/b"),
 					play_mode: PlayMode::Repeat,
 					mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(1)),
 				};
-				let c = Animation2 {
+				let c = Animation {
 					path: AnimationPath::from("path/c"),
 					play_mode: PlayMode::Replay,
 					mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
@@ -239,21 +239,21 @@ mod tests {
 					&HashMap::from([
 						(
 							AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
-							AffectedAnimationBones2 {
+							AffectedAnimationBones {
 								from_root: BoneName::from("root a"),
 								..default()
 							},
 						),
 						(
 							AnimationMaskBits::zero().with_set(bit_mask_index!(1)),
-							AffectedAnimationBones2 {
+							AffectedAnimationBones {
 								from_root: BoneName::from("root b"),
 								..default()
 							},
 						),
 						(
 							AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
-							AffectedAnimationBones2 {
+							AffectedAnimationBones {
 								from_root: BoneName::from("root c"),
 								..default()
 							},
@@ -293,21 +293,21 @@ mod tests {
 				animation_mask_groups: HashMap::from([
 					(
 						AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
-						AffectedAnimationBones2 {
+						AffectedAnimationBones {
 							from_root: BoneName::from("root a"),
 							..default()
 						},
 					),
 					(
 						AnimationMaskBits::zero().with_set(bit_mask_index!(1)),
-						AffectedAnimationBones2 {
+						AffectedAnimationBones {
 							from_root: BoneName::from("root b"),
 							..default()
 						},
 					),
 					(
 						AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
-						AffectedAnimationBones2 {
+						AffectedAnimationBones {
 							from_root: BoneName::from("root c"),
 							..default()
 						},

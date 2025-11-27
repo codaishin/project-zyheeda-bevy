@@ -11,7 +11,7 @@ use crate::{
 	components::{animation_lookup::AnimationClips, setup_animations::SetupAnimations},
 	system_params::animations::AnimationsParamMut,
 	systems::{
-		play_animation_clip::PlayAnimationClip2,
+		play_animation_clip::PlayAnimationClip,
 		set_directional_animation_weights::SetDirectionalAnimationWeights,
 	},
 };

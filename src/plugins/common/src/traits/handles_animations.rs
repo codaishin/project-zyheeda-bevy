@@ -19,7 +19,7 @@ use std::{
 
 pub trait HandlesAnimations {
 	type TAnimationsMut<'w, 's>: SystemParam
-		+ for<'c> GetContextMut<Animations, TContext<'c>: RegisterAnimations2>
+		+ for<'c> GetContextMut<Animations, TContext<'c>: RegisterAnimations>
 		+ for<'c> GetContextMut<Animations, TContext<'c>: ActiveAnimationsMut>
 		+ for<'c> GetContextMut<Animations, TContext<'c>: MoveDirectionMut>;
 }
@@ -36,22 +36,22 @@ impl From<Animations> for Entity {
 
 pub type AnimationsSystemParamMut<'w, 's, T> = <T as HandlesAnimations>::TAnimationsMut<'w, 's>;
 
-pub trait RegisterAnimations2 {
+pub trait RegisterAnimations {
 	fn register_animations(
 		&mut self,
-		animations: &HashMap<AnimationKey, Animation2>,
-		animation_mask_groups: &HashMap<AnimationMaskBits, AffectedAnimationBones2>,
+		animations: &HashMap<AnimationKey, Animation>,
+		animation_mask_groups: &HashMap<AnimationMaskBits, AffectedAnimationBones>,
 	);
 }
 
-impl<T> RegisterAnimations2 for T
+impl<T> RegisterAnimations for T
 where
-	T: DerefMut<Target: RegisterAnimations2>,
+	T: DerefMut<Target: RegisterAnimations>,
 {
 	fn register_animations(
 		&mut self,
-		animations: &HashMap<AnimationKey, Animation2>,
-		animation_mask_groups: &HashMap<AnimationMaskBits, AffectedAnimationBones2>,
+		animations: &HashMap<AnimationKey, Animation>,
+		animation_mask_groups: &HashMap<AnimationMaskBits, AffectedAnimationBones>,
 	) {
 		self.deref_mut()
 			.register_animations(animations, animation_mask_groups);
@@ -195,7 +195,7 @@ pub enum PlayMode {
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct Animation2 {
+pub struct Animation {
 	pub path: AnimationPath,
 	pub play_mode: PlayMode,
 	pub mask_groups: AnimationMaskBits,
@@ -265,7 +265,7 @@ impl TryFrom<u8> for BitMaskIndex {
 pub struct MaxBitExceeded;
 
 #[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
-pub struct AffectedAnimationBones2 {
+pub struct AffectedAnimationBones {
 	pub from_root: BoneName,
 	#[serde(default)]
 	pub until_exclusive: HashSet<BoneName>,

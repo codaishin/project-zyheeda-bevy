@@ -22,12 +22,12 @@ use common::traits::{
 };
 use std::collections::HashSet;
 
-impl<TDispatch> PlayAnimationClip2 for TDispatch where
+impl<TDispatch> PlayAnimationClip for TDispatch where
 	TDispatch: Component + AnimationPlayers + GetActiveAnimations
 {
 }
 
-pub(crate) trait PlayAnimationClip2
+pub(crate) trait PlayAnimationClip
 where
 	Self: Component + AnimationPlayers + GetActiveAnimations + Sized,
 {

@@ -8,12 +8,7 @@ use common::{
 	traits::{
 		accessors::get::GetProperty,
 		bone_key::{BoneKey, ConfiguredBones},
-		handles_animations::{
-			AffectedAnimationBones2,
-			Animation2,
-			AnimationKey,
-			AnimationMaskBits,
-		},
+		handles_animations::{AffectedAnimationBones, Animation, AnimationKey, AnimationMaskBits},
 		handles_custom_assets::AssetFolderPath,
 		handles_map_generation::AgentType,
 		handles_physics::PhysicalDefaultAttributes,
@@ -32,8 +27,8 @@ pub struct AgentConfigAsset {
 	pub(crate) bones: Bones,
 	pub(crate) agent_model: AgentModel,
 	pub(crate) attributes: PhysicalDefaultAttributes,
-	pub(crate) animations: HashMap<AnimationKey, Animation2>,
-	pub(crate) animation_mask_groups: HashMap<AnimationMaskBits, AffectedAnimationBones2>,
+	pub(crate) animations: HashMap<AnimationKey, Animation>,
+	pub(crate) animation_mask_groups: HashMap<AnimationMaskBits, AffectedAnimationBones>,
 }
 
 impl AssetFolderPath for AgentConfigAsset {
