@@ -22,11 +22,10 @@ where
 	TAnimationGraph: Asset,
 {
 	fn drop(&mut self) {
-		let Some(dir) = self.movement_direction else {
-			return;
+		match self.movement_direction {
+			Some(dir) => self.entity.try_insert(MovementDirection(dir)),
+			None => self.entity.try_remove::<MovementDirection>(),
 		};
-
-		self.entity.try_insert(MovementDirection(dir));
 	}
 }
 
@@ -90,6 +89,25 @@ mod tests {
 			Some(&MovementDirection(Dir3::NEG_Z)),
 			app.world().entity(entity).get::<MovementDirection>(),
 		);
+		Ok(())
+	}
+
+	#[test]
+	fn set_movement_direction_to_none() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let entity = app
+			.world_mut()
+			.spawn((GlobalTransform::default(), MovementDirection(Dir3::NEG_Z)))
+			.id();
+
+		app.world_mut()
+			.run_system_once(move |mut p: AnimationsParamMut<_Server>| {
+				let key = Animations { entity };
+				let mut ctx = AnimationsParamMut::get_context_mut(&mut p, key).unwrap();
+				*ctx.move_direction_mut() = None;
+			})?;
+
+		assert_eq!(None, app.world().entity(entity).get::<MovementDirection>());
 		Ok(())
 	}
 }
