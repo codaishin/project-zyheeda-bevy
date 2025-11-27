@@ -36,7 +36,7 @@ impl SetupAnimations {
 mod tests {
 	use super::*;
 	use crate::components::animation_lookup::{AnimationLookup, AnimationLookupData};
-	use common::traits::animation::AnimationKey;
+	use common::traits::handles_animations::AnimationKey;
 	use std::{collections::HashMap, slice::Iter};
 	use testing::{SingleThreadedApp, new_handle};
 

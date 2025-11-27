@@ -3,7 +3,7 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	traits::{
 		accessors::get::{GetContextMut, TryApplyOn},
-		animation::{Animations, RegisterAnimations2},
+		handles_animations::{Animations, RegisterAnimations},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -15,7 +15,7 @@ impl Agent {
 		agents: Query<(Entity, &Self), Without<marker::AnimationsRegistered>>,
 		configs: Res<Assets<AgentConfigAsset>>,
 	) where
-		TAnimations: for<'c> GetContextMut<Animations, TContext<'c>: RegisterAnimations2>,
+		TAnimations: for<'c> GetContextMut<Animations, TContext<'c>: RegisterAnimations>,
 	{
 		for (entity, Self { config_handle, .. }) in agents {
 			let key = Animations { entity };
@@ -50,9 +50,9 @@ mod tests {
 		bit_mask_index,
 		tools::path::Path,
 		traits::{
-			animation::{
-				AffectedAnimationBones2,
-				Animation2,
+			handles_animations::{
+				AffectedAnimationBones,
+				Animation,
 				AnimationKey,
 				AnimationMaskBits,
 				AnimationPath,
@@ -73,11 +73,11 @@ mod tests {
 	}
 
 	#[automock]
-	impl RegisterAnimations2 for _Component {
+	impl RegisterAnimations for _Component {
 		fn register_animations(
 			&mut self,
-			animations: &HashMap<AnimationKey, Animation2>,
-			animation_mask_groups: &HashMap<AnimationMaskBits, AffectedAnimationBones2>,
+			animations: &HashMap<AnimationKey, Animation>,
+			animation_mask_groups: &HashMap<AnimationMaskBits, AffectedAnimationBones>,
 		) {
 			self.mock
 				.register_animations(animations, animation_mask_groups);
@@ -102,7 +102,7 @@ mod tests {
 	fn set_animations_from_config() {
 		let animations = HashMap::from([(
 			AnimationKey::Run,
-			Animation2 {
+			Animation {
 				path: AnimationPath::Single(Path::from("my/path")),
 				play_mode: PlayMode::Replay,
 				mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(42)),
@@ -110,7 +110,7 @@ mod tests {
 		)]);
 		let animation_mask_groups = HashMap::from([(
 			AnimationMaskBits::zero().with_set(bit_mask_index!(4)),
-			AffectedAnimationBones2 {
+			AffectedAnimationBones {
 				from_root: BoneName::from("root"),
 				..default()
 			},
@@ -161,7 +161,7 @@ mod tests {
 	fn set_animations_from_config_when_config_is_late() {
 		let animations = HashMap::from([(
 			AnimationKey::Run,
-			Animation2 {
+			Animation {
 				path: AnimationPath::Single(Path::from("my/path")),
 				play_mode: PlayMode::Replay,
 				mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(42)),
@@ -169,7 +169,7 @@ mod tests {
 		)]);
 		let animation_mask_groups = HashMap::from([(
 			AnimationMaskBits::zero().with_set(bit_mask_index!(4)),
-			AffectedAnimationBones2 {
+			AffectedAnimationBones {
 				from_root: BoneName::from("root"),
 				..default()
 			},

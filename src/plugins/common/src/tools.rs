@@ -7,7 +7,6 @@ pub mod inventory_key;
 pub mod is_not;
 pub mod item_type;
 pub mod iter_helpers;
-pub mod movement_animation;
 pub mod ordered_hash_map;
 pub mod path;
 pub mod skill_execution;

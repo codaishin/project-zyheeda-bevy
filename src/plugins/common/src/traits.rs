@@ -1,6 +1,5 @@
 pub mod accessors;
 pub mod add_asset;
-pub mod animation;
 pub mod asset_marker;
 pub mod automatic_transitions;
 pub mod bone_key;
@@ -13,6 +12,7 @@ pub mod get_asset_path;
 pub mod get_handle_from_path;
 pub mod get_ray;
 pub mod handles_agents;
+pub mod handles_animations;
 pub mod handles_asset_resource_loading;
 pub mod handles_custom_assets;
 pub mod handles_enemies;

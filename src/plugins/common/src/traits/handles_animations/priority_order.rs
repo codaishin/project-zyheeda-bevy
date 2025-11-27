@@ -1,4 +1,4 @@
-use crate::traits::animation::AnimationPriority;
+use crate::traits::handles_animations::AnimationPriority;
 
 #[derive(Debug, PartialEq)]
 pub struct DescendingAnimationPriorities {

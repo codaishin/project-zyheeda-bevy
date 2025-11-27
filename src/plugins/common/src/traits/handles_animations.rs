@@ -1,18 +1,14 @@
 mod priority_order;
 
-use super::iteration::IterFinite;
 use crate::{
 	errors::{ErrorData, Level},
 	tools::{action_key::slot::SlotKey, path::Path},
 	traits::{
 		accessors::get::GetContextMut,
-		animation::priority_order::DescendingAnimationPriorities,
+		handles_animations::priority_order::DescendingAnimationPriorities,
 	},
 };
-use bevy::{
-	ecs::{component::Mutable, system::SystemParam},
-	prelude::*,
-};
+use bevy::{ecs::system::SystemParam, prelude::*};
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Error};
 use std::{
 	collections::{HashMap, HashSet},
@@ -23,7 +19,7 @@ use std::{
 
 pub trait HandlesAnimations {
 	type TAnimationsMut<'w, 's>: SystemParam
-		+ for<'c> GetContextMut<Animations, TContext<'c>: RegisterAnimations2>
+		+ for<'c> GetContextMut<Animations, TContext<'c>: RegisterAnimations>
 		+ for<'c> GetContextMut<Animations, TContext<'c>: ActiveAnimationsMut>
 		+ for<'c> GetContextMut<Animations, TContext<'c>: MoveDirectionMut>;
 }
@@ -40,22 +36,22 @@ impl From<Animations> for Entity {
 
 pub type AnimationsSystemParamMut<'w, 's, T> = <T as HandlesAnimations>::TAnimationsMut<'w, 's>;
 
-pub trait RegisterAnimations2 {
+pub trait RegisterAnimations {
 	fn register_animations(
 		&mut self,
-		animations: &HashMap<AnimationKey, Animation2>,
-		animation_mask_groups: &HashMap<AnimationMaskBits, AffectedAnimationBones2>,
+		animations: &HashMap<AnimationKey, Animation>,
+		animation_mask_groups: &HashMap<AnimationMaskBits, AffectedAnimationBones>,
 	);
 }
 
-impl<T> RegisterAnimations2 for T
+impl<T> RegisterAnimations for T
 where
-	T: DerefMut<Target: RegisterAnimations2>,
+	T: DerefMut<Target: RegisterAnimations>,
 {
 	fn register_animations(
 		&mut self,
-		animations: &HashMap<AnimationKey, Animation2>,
-		animation_mask_groups: &HashMap<AnimationMaskBits, AffectedAnimationBones2>,
+		animations: &HashMap<AnimationKey, Animation>,
+		animation_mask_groups: &HashMap<AnimationMaskBits, AffectedAnimationBones>,
 	) {
 		self.deref_mut()
 			.register_animations(animations, animation_mask_groups);
@@ -158,46 +154,6 @@ where
 	}
 }
 
-pub trait StartAnimation {
-	fn start_animation<TLayer>(&mut self, layer: TLayer, animation: Animation)
-	where
-		TLayer: Into<AnimationPriority> + 'static;
-}
-
-pub trait SetAnimations {
-	fn set_animations<TLayer, TAnimations>(&mut self, layer: TLayer, animations: TAnimations)
-	where
-		TLayer: Into<AnimationPriority> + 'static,
-		TAnimations: IntoIterator<Item = Animation> + 'static;
-}
-
-pub trait StopAnimation {
-	fn stop_animation<TLayer>(&mut self, layer: TLayer)
-	where
-		TLayer: Into<AnimationPriority> + 'static;
-}
-
-pub trait GetAnimationDefinitions
-where
-	for<'a> AnimationMask: From<&'a Self::TAnimationMask>,
-	for<'a> AffectedAnimationBones: From<&'a Self::TAnimationMask>,
-{
-	type TAnimationMask: IterFinite;
-
-	fn animations() -> HashMap<AnimationPath, AnimationMask>;
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum AffectedAnimationBones {
-	SubTree {
-		root: Name,
-		until_exclusive: Vec<Name>,
-	},
-	Leaf {
-		root: Name,
-	},
-}
-
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
 pub enum AnimationPath {
 	Single(Path),
@@ -216,37 +172,6 @@ pub struct Directional {
 	pub backward: Path,
 	pub left: Path,
 	pub right: Path,
-}
-
-// FIXME: remove when consumers moved to new `HandlesAnimations` interface
-pub trait HasAnimationsDispatch {
-	type TAnimationDispatch: StartAnimation
-		+ SetAnimations
-		+ StopAnimation
-		+ Component<Mutability = Mutable>;
-}
-
-pub trait ConfigureNewAnimationDispatch {
-	fn configure_animation_dispatch(
-		&self,
-		new_animation_dispatch: &mut (impl StartAnimation + StopAnimation),
-	);
-}
-
-pub trait GetMovementDirection {
-	fn movement_direction(&self, transform: &GlobalTransform) -> Option<Dir3>;
-}
-
-pub trait RegisterAnimations: HasAnimationsDispatch {
-	fn register_animations<TAgent>(app: &mut App)
-	where
-		TAgent: Component + GetAnimationDefinitions + ConfigureNewAnimationDispatch,
-		for<'a> AnimationMask: From<&'a TAgent::TAnimationMask>,
-		for<'a> AffectedAnimationBones: From<&'a TAgent::TAnimationMask>;
-
-	fn register_movement_direction<TMovementDirection>(app: &mut App)
-	where
-		TMovementDirection: Component + GetMovementDirection;
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
@@ -269,20 +194,8 @@ pub enum PlayMode {
 	Repeat,
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
-pub struct Animation {
-	pub path: AnimationPath,
-	pub play_mode: PlayMode,
-}
-
-impl Animation {
-	pub const fn new(path: AnimationPath, play_mode: PlayMode) -> Self {
-		Self { path, play_mode }
-	}
-}
-
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct Animation2 {
+pub struct Animation {
 	pub path: AnimationPath,
 	pub play_mode: PlayMode,
 	pub mask_groups: AnimationMaskBits,
@@ -317,7 +230,7 @@ pub struct BitMaskIndex(u8);
 #[macro_export]
 macro_rules! bit_mask_index {
 	($bit:expr) => {{
-		type BitMaskIndex = $crate::traits::animation::BitMaskIndex;
+		type BitMaskIndex = $crate::traits::handles_animations::BitMaskIndex;
 		const INDEX: BitMaskIndex = match BitMaskIndex::try_parse($bit) {
 			Ok(index) => index,
 			Err(_) => panic!("invalid BitMaskIndex"),
@@ -352,7 +265,7 @@ impl TryFrom<u8> for BitMaskIndex {
 pub struct MaxBitExceeded;
 
 #[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
-pub struct AffectedAnimationBones2 {
+pub struct AffectedAnimationBones {
 	pub from_root: BoneName,
 	#[serde(default)]
 	pub until_exclusive: HashSet<BoneName>,
@@ -393,17 +306,17 @@ pub enum AnimationKey {
 	Skill(SlotKey),
 }
 
-const DESERIALIZE_ERROR_PREFIX: &str = "Failed to parse animation mask";
-
-#[derive(Deserialize)]
-#[serde(untagged)]
-enum U64OrString {
-	U64(u64),
-	String(String),
-}
-
 mod bits_conversion {
 	use super::*;
+
+	pub(super) const DESERIALIZE_ERROR_PREFIX: &str = "Failed to parse animation mask";
+
+	#[derive(Deserialize)]
+	#[serde(untagged)]
+	enum U64OrString {
+		U64(u64),
+		String(String),
+	}
 
 	pub(crate) fn deserialize<'a, D>(deserializer: D) -> Result<AnimationMask, D::Error>
 	where
@@ -491,7 +404,10 @@ mod tests {
 			};
 
 			assert_eq!(
-				format!("{DESERIALIZE_ERROR_PREFIX}: invalid digit found in string"),
+				format!(
+					"{}: invalid digit found in string",
+					bits_conversion::DESERIALIZE_ERROR_PREFIX
+				),
 				error.to_string(),
 			)
 		}

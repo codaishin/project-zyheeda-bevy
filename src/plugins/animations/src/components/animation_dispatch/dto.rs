@@ -1,38 +1,32 @@
 use crate::components::animation_dispatch::AnimationDispatch;
 use bevy::prelude::*;
-use common::{errors::Unreachable, traits::handles_custom_assets::TryLoadFrom};
+use common::{
+	errors::Unreachable,
+	traits::{handles_animations::AnimationKey, handles_custom_assets::TryLoadFrom},
+};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, hash::Hash};
+use std::collections::HashSet;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub struct AnimationDispatchDto<TAnimation>
-where
-	TAnimation: Eq + Hash,
-{
+pub struct AnimationDispatchDto {
 	priorities: (
-		HashSet<TAnimation>,
-		HashSet<TAnimation>,
-		HashSet<TAnimation>,
+		HashSet<AnimationKey>,
+		HashSet<AnimationKey>,
+		HashSet<AnimationKey>,
 	),
 }
 
-impl<TAnimation> From<AnimationDispatch<TAnimation>> for AnimationDispatchDto<TAnimation>
-where
-	TAnimation: Eq + Hash,
-{
-	fn from(AnimationDispatch { priorities, .. }: AnimationDispatch<TAnimation>) -> Self {
+impl From<AnimationDispatch> for AnimationDispatchDto {
+	fn from(AnimationDispatch { priorities, .. }: AnimationDispatch) -> Self {
 		Self { priorities }
 	}
 }
 
-impl<TAnimation> TryLoadFrom<AnimationDispatchDto<TAnimation>> for AnimationDispatch<TAnimation>
-where
-	TAnimation: Eq + Hash,
-{
+impl TryLoadFrom<AnimationDispatchDto> for AnimationDispatch {
 	type TInstantiationError = Unreachable;
 
 	fn try_load_from<TLoadAsset>(
-		AnimationDispatchDto { priorities: stack }: AnimationDispatchDto<TAnimation>,
+		AnimationDispatchDto { priorities: stack }: AnimationDispatchDto,
 		_: &mut TLoadAsset,
 	) -> Result<Self, Self::TInstantiationError> {
 		Ok(Self {

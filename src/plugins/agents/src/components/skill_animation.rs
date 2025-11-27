@@ -3,7 +3,7 @@ use common::{
 	tools::action_key::slot::PlayerSlot,
 	traits::{
 		accessors::get::{GetContextMut, TryApplyOn},
-		animation::{ActiveAnimationsMut, AnimationKey, AnimationPriority, Animations},
+		handles_animations::{ActiveAnimationsMut, AnimationKey, AnimationPriority, Animations},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };

@@ -22,12 +22,7 @@ use common::{
 	states::game_state::GameState,
 	systems::log::OnError,
 	traits::{
-		animation::{
-			AnimationsSystemParamMut,
-			HandlesAnimations,
-			HasAnimationsDispatch,
-			RegisterAnimations,
-		},
+		handles_animations::{AnimationsSystemParamMut, HandlesAnimations},
 		handles_input::HandlesInput,
 		handles_movement::HandlesMovement,
 		handles_orientation::HandlesOrientation,
@@ -74,11 +69,7 @@ impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding>
 where
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TAnimations: ThreadSafe
-		+ HasAnimationsDispatch
-		+ RegisterAnimations
-		+ SystemSetDefinition
-		+ HandlesAnimations,
+	TAnimations: ThreadSafe + SystemSetDefinition + HandlesAnimations,
 	TPhysics: ThreadSafe
 		+ HandlesPhysicalObjects
 		+ HandlesMotion
@@ -103,11 +94,7 @@ impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding> Plugin
 where
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TAnimations: ThreadSafe
-		+ HasAnimationsDispatch
-		+ RegisterAnimations
-		+ SystemSetDefinition
-		+ HandlesAnimations,
+	TAnimations: ThreadSafe + SystemSetDefinition + HandlesAnimations,
 	TPhysics: ThreadSafe
 		+ HandlesPhysicalObjects
 		+ HandlesMotion
@@ -116,8 +103,6 @@ where
 	TPathFinding: ThreadSafe + HandlesPathFinding,
 {
 	fn build(&self, app: &mut App) {
-		TAnimations::register_movement_direction::<Movement<TPhysics::TMotion>>(app);
-
 		TSaveGame::register_savable_component::<SkillContact>(app);
 		TSaveGame::register_savable_component::<SkillProjection>(app);
 		TSaveGame::register_savable_component::<SetFace>(app);

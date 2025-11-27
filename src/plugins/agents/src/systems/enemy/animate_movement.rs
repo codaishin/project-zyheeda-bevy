@@ -2,7 +2,7 @@ use crate::{components::enemy::Enemy, systems::player::animate_movement::Move};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
 	accessors::get::{GetChangedContext, GetContext, GetContextMut},
-	animation::{ActiveAnimationsMut, AnimationKey, Animations, AnimationsUnprepared},
+	handles_animations::{ActiveAnimationsMut, AnimationKey, Animations, AnimationsUnprepared},
 	handles_movement::{CurrentMovement, Movement},
 };
 use std::collections::HashSet;
@@ -58,7 +58,7 @@ mod tests {
 		_Animations,
 		_Movement,
 	};
-	use common::traits::{animation::AnimationKey, handles_movement::MovementTarget};
+	use common::traits::{handles_animations::AnimationKey, handles_movement::MovementTarget};
 	use std::collections::{HashMap, HashSet};
 	use testing::SingleThreadedApp;
 

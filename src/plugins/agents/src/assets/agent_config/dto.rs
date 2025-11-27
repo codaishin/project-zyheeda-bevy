@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use common::{
 	errors::Unreachable,
 	traits::{
-		animation::{AffectedAnimationBones2, Animation2, AnimationKey, AnimationMaskBits},
+		handles_animations::{AffectedAnimationBones, Animation, AnimationKey, AnimationMaskBits},
 		handles_custom_assets::{AssetFileExtensions, TryLoadFrom},
 		handles_physics::PhysicalDefaultAttributes,
 	},
@@ -21,8 +21,8 @@ pub struct AgentConfigAssetDto {
 	loadout: Loadout,
 	attributes: PhysicalDefaultAttributes,
 	#[serde(with = "as_vec")]
-	animations: HashMap<AnimationKey, Animation2>,
-	animation_mask_groups: HashMap<AnimationMaskBits, AffectedAnimationBones2>,
+	animations: HashMap<AnimationKey, Animation>,
+	animation_mask_groups: HashMap<AnimationMaskBits, AffectedAnimationBones>,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]

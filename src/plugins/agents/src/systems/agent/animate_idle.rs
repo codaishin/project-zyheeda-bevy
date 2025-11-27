@@ -3,7 +3,7 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	traits::{
 		accessors::get::{GetContextMut, TryApplyOn},
-		animation::{ActiveAnimationsMut, AnimationKey, AnimationPriority, Animations},
+		handles_animations::{ActiveAnimationsMut, AnimationKey, AnimationPriority, Animations},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -46,7 +46,7 @@ impl From<Idle> for AnimationPriority {
 mod test {
 	use super::*;
 	use crate::systems::player::animate_movement::tests::_Animations;
-	use common::traits::animation::AnimationKey;
+	use common::traits::handles_animations::AnimationKey;
 	use std::collections::{HashMap, HashSet};
 	use testing::SingleThreadedApp;
 
