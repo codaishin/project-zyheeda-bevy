@@ -194,18 +194,6 @@ pub enum PlayMode {
 	Repeat,
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
-pub struct Animation {
-	pub path: AnimationPath,
-	pub play_mode: PlayMode,
-}
-
-impl Animation {
-	pub const fn new(path: AnimationPath, play_mode: PlayMode) -> Self {
-		Self { path, play_mode }
-	}
-}
-
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Animation2 {
 	pub path: AnimationPath,
