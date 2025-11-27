@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use common::{
 	tools::path::Path,
 	traits::{
-		animation::{AnimationPath, Directional},
+		handles_animations::{AnimationPath, Directional},
 		load_asset::LoadAsset,
 	},
 };

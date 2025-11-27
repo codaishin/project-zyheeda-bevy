@@ -2,7 +2,7 @@ use crate::components::movement_definition::MovementDefinition;
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
 	accessors::get::{GetContextMut, GetProperty},
-	animation::{Animations, MoveDirectionMut},
+	handles_animations::{Animations, MoveDirectionMut},
 	handles_movement::MovementTarget,
 };
 
@@ -42,7 +42,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::animation::MoveDirection;
+	use common::traits::handles_animations::MoveDirection;
 	use testing::SingleThreadedApp;
 
 	#[derive(Component)]

@@ -10,7 +10,7 @@ use common::{
 	errors::Unreachable,
 	tools::{Units, UnitsPerSecond, collider_radius::ColliderRadius},
 	traits::{
-		animation::AnimationPriority,
+		handles_animations::AnimationPriority,
 		handles_lights::HandlesLights,
 		handles_map_generation::AgentType,
 		load_asset::LoadAsset,

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use common::traits::{
-	animation::{AffectedAnimationBones2, AnimationKey, AnimationMaskBits, PlayMode},
+	handles_animations::{AffectedAnimationBones2, AnimationKey, AnimationMaskBits, PlayMode},
 	iterate::Iterate,
 };
 use std::collections::HashMap;

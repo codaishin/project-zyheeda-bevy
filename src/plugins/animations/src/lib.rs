@@ -19,7 +19,7 @@ use bevy::{prelude::*, scene::SceneInstanceReady};
 use common::{
 	systems::track_components::TrackComponentInSelfAndChildren,
 	traits::{
-		animation::HandlesAnimations,
+		handles_animations::HandlesAnimations,
 		handles_saving::HandlesSaving,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,

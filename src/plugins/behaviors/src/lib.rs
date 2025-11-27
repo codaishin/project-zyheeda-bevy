@@ -22,7 +22,7 @@ use common::{
 	states::game_state::GameState,
 	systems::log::OnError,
 	traits::{
-		animation::{AnimationsSystemParamMut, HandlesAnimations},
+		handles_animations::{AnimationsSystemParamMut, HandlesAnimations},
 		handles_input::HandlesInput,
 		handles_movement::HandlesMovement,
 		handles_orientation::HandlesOrientation,

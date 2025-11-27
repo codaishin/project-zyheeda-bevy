@@ -15,7 +15,7 @@ use crate::{
 };
 use bevy::{ecs::query::QueryData, prelude::*};
 use common::traits::{
-	animation::{AnimationPriority, PlayMode},
+	handles_animations::{AnimationPriority, PlayMode},
 	iterate::Iterate,
 	thread_safe::ThreadSafe,
 	wrap_handle::{GetHandle, WrapHandle},
@@ -175,7 +175,7 @@ mod tests {
 	use common::{
 		bit_mask_index,
 		tools::action_key::slot::SlotKey,
-		traits::animation::{AnimationKey, AnimationMaskBits},
+		traits::handles_animations::{AnimationKey, AnimationMaskBits},
 	};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};

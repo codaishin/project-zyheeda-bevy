@@ -4,7 +4,7 @@ use bevy::{
 	prelude::*,
 };
 use common::traits::{
-	animation::{AffectedAnimationBones2, AnimationMaskBits, BoneName},
+	handles_animations::{AffectedAnimationBones2, AnimationMaskBits, BoneName},
 	iter_descendants_conditional::IterDescendantsConditional,
 	wrap_handle::GetHandle,
 };
@@ -118,7 +118,7 @@ mod tests {
 	use bevy::{animation::AnimationTargetId, platform::collections::HashMap as BevyHashMap};
 	use common::{
 		bit_mask_index,
-		traits::animation::{AffectedAnimationBones2, AnimationMaskBits},
+		traits::handles_animations::{AffectedAnimationBones2, AnimationMaskBits},
 	};
 	use std::collections::HashMap;
 	use testing::{SingleThreadedApp, new_handle};

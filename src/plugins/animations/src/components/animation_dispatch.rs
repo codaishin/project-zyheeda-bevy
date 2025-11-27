@@ -11,7 +11,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::traits::{
-	animation::{AnimationKey, AnimationPriority},
+	handles_animations::{AnimationKey, AnimationPriority},
 	track::{IsTracking, Track, Untrack},
 };
 use macros::SavableComponent;

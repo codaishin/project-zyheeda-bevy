@@ -107,7 +107,7 @@ mod tests {
 		DirectionalIndices,
 	};
 	use common::traits::{
-		animation::AnimationKey,
+		handles_animations::AnimationKey,
 		iterate::Iterate,
 		wrap_handle::{GetHandle, WrapHandle},
 	};

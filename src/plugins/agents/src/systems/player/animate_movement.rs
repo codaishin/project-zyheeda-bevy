@@ -5,7 +5,7 @@ use crate::components::{
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
 	accessors::get::{GetChangedContext, GetContext, GetContextMut},
-	animation::{
+	handles_animations::{
 		ActiveAnimationsMut,
 		AnimationKey,
 		AnimationPriority,
@@ -90,7 +90,12 @@ pub(crate) mod tests {
 	use super::*;
 	use crate::components::{movement_config::MovementConfig, player::PLAYER_WALK};
 	use common::traits::{
-		animation::{ActiveAnimations, AnimationKey, AnimationPriority, AnimationsUnprepared},
+		handles_animations::{
+			ActiveAnimations,
+			AnimationKey,
+			AnimationPriority,
+			AnimationsUnprepared,
+		},
 		handles_movement::MovementTarget,
 	};
 	use std::{collections::HashMap, sync::LazyLock};

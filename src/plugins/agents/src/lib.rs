@@ -23,9 +23,9 @@ use common::{
 	systems::log::OnError,
 	tools::action_key::slot::{NoValidAgentKey, PlayerSlot, SlotKey},
 	traits::{
-		animation::{AnimationsSystemParamMut, HandlesAnimations},
 		delta::Delta,
 		handles_agents::HandlesAgents,
+		handles_animations::{AnimationsSystemParamMut, HandlesAnimations},
 		handles_custom_assets::HandlesCustomFolderAssets,
 		handles_enemies::HandlesEnemies,
 		handles_input::{HandlesInput, InputSystemParam},

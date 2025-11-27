@@ -8,7 +8,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::traits::{
-	animation::{
+	handles_animations::{
 		AffectedAnimationBones2,
 		Animation2,
 		AnimationKey,
@@ -73,7 +73,7 @@ mod tests {
 		tools::action_key::slot::SlotKey,
 		traits::{
 			accessors::get::GetContextMut,
-			animation::{
+			handles_animations::{
 				AffectedAnimationBones2,
 				AnimationPath,
 				Animations as AnimationsKey,

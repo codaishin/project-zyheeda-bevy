@@ -2,7 +2,7 @@ use crate::components::animation_dispatch::AnimationDispatch;
 use bevy::prelude::*;
 use common::{
 	errors::Unreachable,
-	traits::{animation::AnimationKey, handles_custom_assets::TryLoadFrom},
+	traits::{handles_animations::AnimationKey, handles_custom_assets::TryLoadFrom},
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;

@@ -6,7 +6,12 @@ use bevy::prelude::*;
 use common::{
 	errors::Unreachable,
 	traits::{
-		animation::{AffectedAnimationBones2, Animation2, AnimationKey, AnimationMaskBits},
+		handles_animations::{
+			AffectedAnimationBones2,
+			Animation2,
+			AnimationKey,
+			AnimationMaskBits,
+		},
 		handles_custom_assets::{AssetFileExtensions, TryLoadFrom},
 		handles_physics::PhysicalDefaultAttributes,
 	},

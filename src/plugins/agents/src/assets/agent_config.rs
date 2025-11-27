@@ -7,8 +7,13 @@ use common::{
 	tools::{action_key::slot::SlotKey, path::Path},
 	traits::{
 		accessors::get::GetProperty,
-		animation::{AffectedAnimationBones2, Animation2, AnimationKey, AnimationMaskBits},
 		bone_key::{BoneKey, ConfiguredBones},
+		handles_animations::{
+			AffectedAnimationBones2,
+			Animation2,
+			AnimationKey,
+			AnimationMaskBits,
+		},
 		handles_custom_assets::AssetFolderPath,
 		handles_map_generation::AgentType,
 		handles_physics::PhysicalDefaultAttributes,

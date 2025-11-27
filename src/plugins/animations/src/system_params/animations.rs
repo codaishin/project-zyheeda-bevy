@@ -10,7 +10,7 @@ use bevy::{ecs::system::SystemParam, prelude::*};
 use common::{
 	traits::{
 		accessors::get::{GetContextMut, GetMut},
-		animation::Animations,
+		handles_animations::Animations,
 	},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };

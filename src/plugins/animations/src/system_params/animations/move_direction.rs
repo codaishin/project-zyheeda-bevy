@@ -3,7 +3,7 @@ use crate::{
 	system_params::animations::AnimationsContextMut,
 };
 use bevy::prelude::*;
-use common::traits::animation::{MoveDirection, MoveDirectionMut};
+use common::traits::handles_animations::{MoveDirection, MoveDirectionMut};
 
 impl<TServer> MoveDirection for AnimationsContextMut<'_, TServer> {
 	fn move_direction(&self) -> Option<Dir3> {
@@ -41,7 +41,7 @@ mod tests {
 			system::{RunSystemError, RunSystemOnce},
 		},
 	};
-	use common::traits::{accessors::get::GetContextMut, animation::Animations};
+	use common::traits::{accessors::get::GetContextMut, handles_animations::Animations};
 	use testing::SingleThreadedApp;
 
 	#[derive(Resource)]

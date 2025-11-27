@@ -3,7 +3,7 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	traits::{
 		accessors::get::{GetContextMut, TryApplyOn},
-		animation::{Animations, RegisterAnimations2},
+		handles_animations::{Animations, RegisterAnimations2},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -50,7 +50,7 @@ mod tests {
 		bit_mask_index,
 		tools::path::Path,
 		traits::{
-			animation::{
+			handles_animations::{
 				AffectedAnimationBones2,
 				Animation2,
 				AnimationKey,

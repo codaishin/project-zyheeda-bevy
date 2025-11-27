@@ -5,7 +5,7 @@ use crate::{
 	tools::{action_key::slot::SlotKey, path::Path},
 	traits::{
 		accessors::get::GetContextMut,
-		animation::priority_order::DescendingAnimationPriorities,
+		handles_animations::priority_order::DescendingAnimationPriorities,
 	},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
@@ -242,7 +242,7 @@ pub struct BitMaskIndex(u8);
 #[macro_export]
 macro_rules! bit_mask_index {
 	($bit:expr) => {{
-		type BitMaskIndex = $crate::traits::animation::BitMaskIndex;
+		type BitMaskIndex = $crate::traits::handles_animations::BitMaskIndex;
 		const INDEX: BitMaskIndex = match BitMaskIndex::try_parse($bit) {
 			Ok(index) => index,
 			Err(_) => panic!("invalid BitMaskIndex"),

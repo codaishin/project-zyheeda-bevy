@@ -1,5 +1,5 @@
 use crate::system_params::animations::AnimationsContextMut;
-use common::traits::animation::{
+use common::traits::handles_animations::{
 	ActiveAnimations,
 	ActiveAnimationsMut,
 	AnimationKey,
@@ -55,7 +55,7 @@ mod tests {
 	};
 	use common::{
 		tools::action_key::slot::SlotKey,
-		traits::{accessors::get::GetContextMut, animation::Animations},
+		traits::{accessors::get::GetContextMut, handles_animations::Animations},
 	};
 	use test_case::test_case;
 	use testing::SingleThreadedApp;
