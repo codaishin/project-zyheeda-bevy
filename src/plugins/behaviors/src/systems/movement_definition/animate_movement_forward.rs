@@ -2,7 +2,7 @@ use crate::components::movement_definition::MovementDefinition;
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
 	accessors::get::{GetContextMut, GetProperty},
-	animation::{Animations, SetMovementDirection},
+	animation::{Animations, MoveDirectionMut},
 	handles_movement::MovementTarget,
 };
 
@@ -12,7 +12,7 @@ impl MovementDefinition {
 		movements: Query<(Entity, &TMovement, &Transform), Changed<TMovement>>,
 	) where
 		TMovement: Component + GetProperty<Option<MovementTarget>>,
-		TAnimations: for<'c> GetContextMut<Animations, TContext<'c>: SetMovementDirection>,
+		TAnimations: for<'c> GetContextMut<Animations, TContext<'c>: MoveDirectionMut>,
 	{
 		for (entity, movement, transform) in &movements {
 			let key = Animations { entity };
@@ -24,7 +24,7 @@ impl MovementDefinition {
 				continue;
 			};
 
-			animations.set_movement_direction(forward);
+			*animations.move_direction_mut() = Some(forward);
 		}
 	}
 }
@@ -42,9 +42,8 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use macros::NestedMocks;
-	use mockall::{automock, predicate::eq};
-	use testing::{NestedMocks, SingleThreadedApp};
+	use common::traits::animation::MoveDirection;
+	use testing::SingleThreadedApp;
 
 	#[derive(Component)]
 	struct _Movement(MovementTarget);
@@ -55,15 +54,18 @@ mod tests {
 		}
 	}
 
-	#[derive(Component, NestedMocks)]
-	struct _Animations {
-		mock: Mock_Animations,
+	#[derive(Component, Debug, PartialEq)]
+	struct _Animations(Option<Dir3>);
+
+	impl MoveDirection for _Animations {
+		fn move_direction(&self) -> Option<Dir3> {
+			self.0
+		}
 	}
 
-	#[automock]
-	impl SetMovementDirection for _Animations {
-		fn set_movement_direction(&mut self, direction: Dir3) {
-			self.mock.set_movement_direction(direction);
+	impl MoveDirectionMut for _Animations {
+		fn move_direction_mut(&mut self) -> &mut Option<Dir3> {
+			&mut self.0
 		}
 	}
 
@@ -81,52 +83,66 @@ mod tests {
 	#[test]
 	fn set_forward_from_direction() {
 		let mut app = setup();
-		app.world_mut().spawn((
-			_Movement(MovementTarget::Dir(Dir3::NEG_X)),
-			_Animations::new().with_mock(|mock| {
-				mock.expect_set_movement_direction()
-					.times(1)
-					.with(eq(Dir3::NEG_X))
-					.return_const(());
-			}),
-			Transform::default(),
-		));
+		let entity = app
+			.world_mut()
+			.spawn((
+				_Movement(MovementTarget::Dir(Dir3::NEG_X)),
+				_Animations(None),
+				Transform::default(),
+			))
+			.id();
 
 		app.update();
+
+		assert_eq!(
+			Some(&_Animations(Some(Dir3::NEG_X))),
+			app.world().entity(entity).get::<_Animations>(),
+		);
 	}
 
 	#[test]
 	fn set_forward_from_target_point() {
 		let mut app = setup();
-		app.world_mut().spawn((
-			_Movement(MovementTarget::Point(Vec3::new(1., 2., 3.))),
-			_Animations::new().with_mock(|mock| {
-				mock.expect_set_movement_direction()
-					.times(1)
-					.with(eq(Dir3::NEG_X))
-					.return_const(());
-			}),
-			Transform::from_xyz(2., 2., 3.),
-		));
+		let entity = app
+			.world_mut()
+			.spawn((
+				_Movement(MovementTarget::Point(Vec3::new(1., 2., 3.))),
+				_Animations(None),
+				Transform::from_xyz(2., 2., 3.),
+			))
+			.id();
 
 		app.update();
+
+		assert_eq!(
+			Some(&_Animations(Some(Dir3::NEG_X))),
+			app.world().entity(entity).get::<_Animations>(),
+		);
 	}
 
 	#[test]
 	fn act_only_once() {
 		let mut app = setup();
-		app.world_mut().spawn((
-			_Movement(MovementTarget::Dir(Dir3::NEG_X)),
-			_Animations::new().with_mock(|mock| {
-				mock.expect_set_movement_direction()
-					.times(1)
-					.return_const(());
-			}),
-			Transform::default(),
-		));
+		let entity = app
+			.world_mut()
+			.spawn((
+				_Movement(MovementTarget::Dir(Dir3::NEG_X)),
+				_Animations(None),
+				Transform::default(),
+			))
+			.id();
 
 		app.update();
+		*app.world_mut()
+			.entity_mut(entity)
+			.get_mut::<_Animations>()
+			.unwrap() = _Animations(None);
 		app.update();
+
+		assert_eq!(
+			Some(&_Animations(None)),
+			app.world().entity(entity).get::<_Animations>(),
+		);
 	}
 
 	#[test]
@@ -136,20 +152,25 @@ mod tests {
 			.world_mut()
 			.spawn((
 				_Movement(MovementTarget::Dir(Dir3::NEG_X)),
-				_Animations::new().with_mock(|mock| {
-					mock.expect_set_movement_direction()
-						.times(2)
-						.return_const(());
-				}),
+				_Animations(None),
 				Transform::default(),
 			))
 			.id();
 
 		app.update();
+		*app.world_mut()
+			.entity_mut(entity)
+			.get_mut::<_Animations>()
+			.unwrap() = _Animations(None);
 		app.world_mut()
 			.entity_mut(entity)
 			.get_mut::<_Movement>()
 			.as_deref_mut();
 		app.update();
+
+		assert_eq!(
+			Some(&_Animations(Some(Dir3::NEG_X))),
+			app.world().entity(entity).get::<_Animations>(),
+		);
 	}
 }
