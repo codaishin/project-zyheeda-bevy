@@ -15,7 +15,7 @@ use crate::{
 };
 use bevy::{ecs::query::QueryData, prelude::*};
 use common::traits::{
-	animation::{AnimationKey, AnimationPriority, PlayMode},
+	animation::{AnimationPriority, PlayMode},
 	iterate::Iterate,
 	thread_safe::ThreadSafe,
 	wrap_handle::{GetHandle, WrapHandle},
@@ -23,24 +23,20 @@ use common::traits::{
 use std::collections::HashSet;
 
 impl<TDispatch> PlayAnimationClip2 for TDispatch where
-	TDispatch: Component + AnimationPlayers + GetActiveAnimations<AnimationKey>
+	TDispatch: Component + AnimationPlayers + GetActiveAnimations
 {
 }
 
 pub(crate) trait PlayAnimationClip2
 where
-	Self: Component + AnimationPlayers + GetActiveAnimations<AnimationKey> + Sized,
+	Self: Component + AnimationPlayers + GetActiveAnimations + Sized,
 {
 	#[allow(clippy::type_complexity)]
 	fn play_animation_clip<TAnimationPlayer>(
 		players: Query<TAnimationPlayer>,
 		dispatchers: Query<
-			(
-				&AnimationDispatch<AnimationKey>,
-				&AnimationLookup,
-				&AnimationGraphHandle,
-			),
-			Changed<AnimationDispatch<AnimationKey>>,
+			(&AnimationDispatch, &AnimationLookup, &AnimationGraphHandle),
+			Changed<AnimationDispatch>,
 		>,
 		graphs: ResMut<Assets<AnimationGraph>>,
 	) where
@@ -69,7 +65,7 @@ fn play_animation_clip<TAnimationPlayer, TDispatch, TGraph, TAnimations>(
 ) where
 	TAnimationPlayer: QueryData,
 	TGraph: Asset + GetNodeMut + WrapHandle,
-	TDispatch: Component + AnimationPlayers + GetActiveAnimations<AnimationKey>,
+	TDispatch: Component + AnimationPlayers + GetActiveAnimations,
 	for<'a> TAnimations: ThreadSafe + Iterate<'a, TItem = &'a AnimationNodeIndex>,
 	for<'a> TAnimationPlayer::Item<'a>: IsPlaying<AnimationNodeIndex>
 		+ ReplayAnimation<AnimationNodeIndex>
@@ -111,7 +107,7 @@ where
 	TPlayer: IsPlaying<AnimationNodeIndex>
 		+ ReplayAnimation<AnimationNodeIndex>
 		+ RepeatAnimation<AnimationNodeIndex>,
-	TDispatcher: GetActiveAnimations<AnimationKey>,
+	TDispatcher: GetActiveAnimations,
 	TGraph: Asset + GetNodeMut,
 	for<'a> TAnimations: Iterate<'a, TItem = &'a AnimationNodeIndex>,
 {
@@ -179,7 +175,7 @@ mod tests {
 	use common::{
 		bit_mask_index,
 		tools::action_key::slot::SlotKey,
-		traits::animation::AnimationMaskBits,
+		traits::animation::{AnimationKey, AnimationMaskBits},
 	};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
@@ -206,12 +202,11 @@ mod tests {
 		}
 	}
 
-	impl GetActiveAnimations<AnimationKey> for _AnimationDispatch {
+	impl GetActiveAnimations for _AnimationDispatch {
 		type TIter<'a>
 			= Iter<'a, AnimationKey>
 		where
-			Self: 'a,
-			AnimationKey: 'a;
+			Self: 'a;
 
 		fn get_active_animations<TPriority>(&self, priority: TPriority) -> Self::TIter<'_>
 		where
@@ -228,12 +223,11 @@ mod tests {
 
 			fn animation_players(&self) -> _Iter;
 		}
-		impl GetActiveAnimations<AnimationKey> for _AnimationDispatch {
+		impl GetActiveAnimations for _AnimationDispatch {
 			type TIter<'a>
 				= Iter<'a, AnimationKey>
 			where
-				Self: 'a,
-				AnimationKey: 'a;
+				Self: 'a;
 
 			fn get_active_animations<TPriority>(&self, priority: TPriority) -> Iter<'static, AnimationKey>
 			where

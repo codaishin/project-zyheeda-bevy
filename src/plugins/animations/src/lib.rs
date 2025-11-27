@@ -19,17 +19,7 @@ use bevy::{prelude::*, scene::SceneInstanceReady};
 use common::{
 	systems::track_components::TrackComponentInSelfAndChildren,
 	traits::{
-		animation::{
-			AffectedAnimationBones,
-			Animation,
-			AnimationKey,
-			ConfigureNewAnimationDispatch,
-			GetAnimationDefinitions,
-			GetMovementDirection,
-			HandlesAnimations,
-			HasAnimationsDispatch,
-			RegisterAnimations,
-		},
+		animation::HandlesAnimations,
 		handles_saving::HandlesSaving,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
@@ -50,33 +40,12 @@ where
 	}
 }
 
-impl<TDependencies> RegisterAnimations for AnimationsPlugin<TDependencies> {
-	fn register_animations<TAgent>(_: &mut App)
-	where
-		TAgent: Component + GetAnimationDefinitions + ConfigureNewAnimationDispatch,
-		for<'a> AnimationMask: From<&'a TAgent::TAnimationMask>,
-		for<'a> AffectedAnimationBones: From<&'a TAgent::TAnimationMask>,
-	{
-	}
-
-	fn register_movement_direction<TMovementDirection>(_: &mut App)
-	where
-		TMovementDirection: Component + GetMovementDirection,
-	{
-	}
-}
-
-impl<TDependencies> HasAnimationsDispatch for AnimationsPlugin<TDependencies> {
-	type TAnimationDispatch = AnimationDispatch<Animation>;
-}
-
 impl<TSavegame> Plugin for AnimationsPlugin<TSavegame>
 where
 	TSavegame: ThreadSafe + HandlesSaving,
 {
 	fn build(&self, app: &mut App) {
-		type Dispatch = AnimationDispatch<AnimationKey>;
-		TSavegame::register_savable_component::<Dispatch>(app);
+		TSavegame::register_savable_component::<AnimationDispatch>(app);
 		app.add_observer(SetupAnimations::insert_when::<SceneInstanceReady>);
 		app.add_systems(
 			Update,
@@ -85,11 +54,11 @@ where
 				SetupAnimations::init_bone_groups::<AnimationGraphHandle>,
 				SetupAnimations::remove_unused_animation_targets::<AnimationGraphHandle>,
 				SetupAnimations::stop,
-				Dispatch::track_in_self_and_children::<AnimationPlayer>().system(),
-				Dispatch::track_in_self_and_children::<AnimationGraphHandle>().system(),
-				Dispatch::distribute_player_components::<AnimationGraphHandle>,
-				Dispatch::play_animation_clip::<&mut AnimationPlayer>,
-				Dispatch::set_directional_animation_weights,
+				AnimationDispatch::track_in_self_and_children::<AnimationPlayer>().system(),
+				AnimationDispatch::track_in_self_and_children::<AnimationGraphHandle>().system(),
+				AnimationDispatch::distribute_player_components::<AnimationGraphHandle>,
+				AnimationDispatch::play_animation_clip::<&mut AnimationPlayer>,
+				AnimationDispatch::set_directional_animation_weights,
 			)
 				.chain()
 				.in_set(AnimationSystems),

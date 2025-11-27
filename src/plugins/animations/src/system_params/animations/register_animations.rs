@@ -50,7 +50,7 @@ where
 			.collect();
 
 		self.entity.try_insert((
-			AnimationDispatch::<AnimationKey>::default(),
+			AnimationDispatch::default(),
 			AnimationLookup {
 				animations,
 				animation_mask_groups,
@@ -169,10 +169,8 @@ mod tests {
 			})?;
 
 		assert_eq!(
-			Some(&AnimationDispatch::<AnimationKey>::default()),
-			app.world()
-				.entity(entity)
-				.get::<AnimationDispatch<AnimationKey>>()
+			Some(&AnimationDispatch::default()),
+			app.world().entity(entity).get::<AnimationDispatch>()
 		);
 		Ok(())
 	}

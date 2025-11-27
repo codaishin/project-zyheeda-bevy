@@ -63,9 +63,7 @@ mod tests {
 	#[derive(Resource)]
 	struct _Server;
 
-	fn dispatch_with<TAnimations, TLayer, TKeys>(
-		animations: TAnimations,
-	) -> AnimationDispatch<AnimationKey>
+	fn dispatch_with<TAnimations, TLayer, TKeys>(animations: TAnimations) -> AnimationDispatch
 	where
 		TAnimations: IntoIterator<Item = (TLayer, TKeys)>,
 		TLayer: Into<AnimationPriority> + Copy,
@@ -93,10 +91,7 @@ mod tests {
 	fn get_mut_animations(animation_priority: AnimationPriority) -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let animations = [AnimationKey::Run, AnimationKey::Skill(SlotKey(11))];
-		let entity = app
-			.world_mut()
-			.spawn(AnimationDispatch::<AnimationKey>::default())
-			.id();
+		let entity = app.world_mut().spawn(AnimationDispatch::default()).id();
 
 		app.world_mut()
 			.run_system_once(move |mut p: AnimationsParamMut<_Server>| {
@@ -109,9 +104,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&dispatch_with([(animation_priority, animations)])),
-			app.world()
-				.entity(entity)
-				.get::<AnimationDispatch<AnimationKey>>(),
+			app.world().entity(entity).get::<AnimationDispatch>(),
 		);
 		Ok(())
 	}

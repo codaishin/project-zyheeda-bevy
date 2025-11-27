@@ -4,7 +4,7 @@ pub(crate) mod player_idle;
 pub(crate) mod tuple_animation_player_transitions;
 
 use bevy::prelude::*;
-use common::traits::animation::{AnimationPath, AnimationPriority};
+use common::traits::animation::{AnimationKey, AnimationPath, AnimationPriority};
 use std::collections::HashMap;
 
 pub(crate) trait LoadAnimationAssets<TGraph, TIndices> {
@@ -14,22 +14,20 @@ pub(crate) trait LoadAnimationAssets<TGraph, TIndices> {
 	) -> (TGraph, HashMap<AnimationPath, TIndices>);
 }
 
-pub trait GetActiveAnimations<TAnimation> {
-	type TIter<'a>: Iterator<Item = &'a TAnimation>
+pub trait GetActiveAnimations {
+	type TIter<'a>: Iterator<Item = &'a AnimationKey>
 	where
-		Self: 'a,
-		TAnimation: 'a;
+		Self: 'a;
 
 	fn get_active_animations<TPriority>(&self, priority: TPriority) -> Self::TIter<'_>
 	where
 		TPriority: Into<AnimationPriority> + 'static;
 }
 
-pub trait GetAllActiveAnimations<TAnimation> {
-	type TIter<'a>: Iterator<Item = &'a TAnimation>
+pub trait GetAllActiveAnimations {
+	type TIter<'a>: Iterator<Item = &'a AnimationKey>
 	where
-		Self: 'a,
-		TAnimation: 'a;
+		Self: 'a;
 
 	fn get_all_active_animations(&self) -> Self::TIter<'_>;
 }

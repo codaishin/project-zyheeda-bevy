@@ -23,7 +23,7 @@ use common::{
 	systems::log::OnError,
 	tools::action_key::slot::{NoValidAgentKey, PlayerSlot, SlotKey},
 	traits::{
-		animation::{AnimationsSystemParamMut, HandlesAnimations, RegisterAnimations},
+		animation::{AnimationsSystemParamMut, HandlesAnimations},
 		delta::Delta,
 		handles_agents::HandlesAgents,
 		handles_custom_assets::HandlesCustomFolderAssets,
@@ -63,7 +63,7 @@ where
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesPhysicalAttributes + HandlesRaycast,
-	TAnimations: ThreadSafe + RegisterAnimations + HandlesAnimations,
+	TAnimations: ThreadSafe + HandlesAnimations,
 	TLights: ThreadSafe + HandlesLights,
 	TMaps: ThreadSafe + HandlesMapGeneration,
 	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation + HandlesSkillControl,
@@ -99,7 +99,7 @@ where
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesPhysicalAttributes + HandlesRaycast,
-	TAnimations: ThreadSafe + RegisterAnimations + HandlesAnimations,
+	TAnimations: ThreadSafe + HandlesAnimations,
 	TLights: ThreadSafe + HandlesLights,
 	TMaps: ThreadSafe + HandlesMapGeneration,
 	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation + HandlesSkillControl,
@@ -124,18 +124,8 @@ where
 				Agent::insert_model,
 				Agent::register_animations::<AnimationsSystemParamMut<TAnimations>>,
 				Agent::<AgentConfigAsset>::insert_attributes::<TPhysics::TDefaultAttributes>,
-			),
-		);
-
-		// # Animations
-		TAnimations::register_animations::<Player>(app);
-		app.add_systems(
-			Update,
-			(
-				ring_rotation,
 				SkillAnimation::system::<AnimationsSystemParamMut<TAnimations>>,
-			)
-				.run_if(in_state(GameState::Play)),
+			),
 		);
 
 		// # Savedata
@@ -173,6 +163,7 @@ where
 						AnimationsSystemParamMut<TAnimations>,
 					>
 						.pipe(OnError::log),
+					SkillAnimation::system::<AnimationsSystemParamMut<TAnimations>>,
 					Player::use_skills::<InputSystemParam<TInput>, SkillControlParamMut<TBehaviors>>,
 				)
 					.chain(),
@@ -185,6 +176,7 @@ where
 						AnimationsSystemParamMut<TAnimations>,
 					>
 						.pipe(OnError::log),
+					ring_rotation,
 					Enemy::begin_attack,
 					Enemy::hold_attack::<SkillControlParamMut<TBehaviors>>,
 					Update::delta.pipe(Enemy::advance_attack_phase),

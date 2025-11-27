@@ -10,7 +10,6 @@ use common::{
 	tools::{Done, speed::Speed},
 	traits::{
 		accessors::get::{DynProperty, GetProperty, TryApplyOn},
-		animation::GetMovementDirection,
 		handles_movement::MovementTarget,
 		handles_orientation::Face,
 		handles_physics::LinearMotion,
@@ -140,18 +139,6 @@ where
 				agent.try_insert(TMotion::from(new_motion));
 				Done(false)
 			}
-		}
-	}
-}
-
-impl<TMotion> GetMovementDirection for Movement<TMotion>
-where
-	TMotion: ThreadSafe,
-{
-	fn movement_direction(&self, transform: &GlobalTransform) -> Option<Dir3> {
-		match self.target? {
-			MovementTarget::Point(vec3) => (vec3 - transform.translation()).try_into().ok(),
-			MovementTarget::Dir(dir3) => Some(dir3),
 		}
 	}
 }
@@ -345,45 +332,6 @@ mod tests {
 				Some(&SetFace(Face::Direction(Dir3::NEG_X))),
 				app.world().entity(entity).get::<SetFace>()
 			);
-		}
-	}
-
-	mod get_direction {
-		use super::*;
-
-		#[test]
-		fn get_movement_from_translation() {
-			let target = Vec3::new(1., 2., 3.);
-			let position = Vec3::new(4., 7., -1.);
-			let movement = Movement::<_Motion>::to(target);
-
-			let direction =
-				movement.movement_direction(&GlobalTransform::from_translation(position));
-
-			assert_eq!(Some(Dir3::try_from(target - position).unwrap()), direction);
-		}
-
-		#[test]
-		fn get_no_movement_direction_when_target_is_position() {
-			let target = Vec3::new(1., 2., 3.);
-			let position = target;
-			let movement = Movement::<_Motion>::to(target);
-
-			let direction =
-				movement.movement_direction(&GlobalTransform::from_translation(position));
-
-			assert_eq!(None, direction);
-		}
-
-		#[test]
-		fn get_movement_from_direction() {
-			let target = Dir3::NEG_Z;
-			let movement = Movement::<_Motion>::to(target);
-
-			let direction = movement
-				.movement_direction(&GlobalTransform::from_translation(Vec3::new(4., 7., -1.)));
-
-			assert_eq!(Some(Dir3::NEG_Z), direction);
 		}
 	}
 

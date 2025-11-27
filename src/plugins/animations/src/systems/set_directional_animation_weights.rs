@@ -6,19 +6,16 @@ use crate::{
 	traits::{AnimationPlayers, GetAllActiveAnimations, asset_server::animation_graph::GetNodeMut},
 };
 use bevy::prelude::*;
-use common::traits::{
-	animation::AnimationKey,
-	wrap_handle::{GetHandle, WrapHandle},
-};
+use common::traits::wrap_handle::{GetHandle, WrapHandle};
 use std::f32::consts::FRAC_PI_2;
 
 impl<T> SetDirectionalAnimationWeights for T where
-	T: Component + AnimationPlayers + GetAllActiveAnimations<AnimationKey>
+	T: Component + AnimationPlayers + GetAllActiveAnimations
 {
 }
 
 pub(crate) trait SetDirectionalAnimationWeights:
-	Component + AnimationPlayers + GetAllActiveAnimations<AnimationKey> + Sized
+	Component + AnimationPlayers + GetAllActiveAnimations + Sized
 {
 	fn set_directional_animation_weights(
 		graphs: ResMut<Assets<AnimationGraph>>,
@@ -44,7 +41,7 @@ fn set_directional_animation_weights<TDispatch, TGraph>(
 	)>,
 	players: Query<&TGraph::TComponent>,
 ) where
-	TDispatch: Component + AnimationPlayers + GetAllActiveAnimations<AnimationKey>,
+	TDispatch: Component + AnimationPlayers + GetAllActiveAnimations,
 	TGraph: Asset + GetNodeMut + WrapHandle,
 {
 	for (dispatch, MovementDirection(direction), transform, lookup) in &agents {
@@ -110,6 +107,7 @@ mod tests {
 		DirectionalIndices,
 	};
 	use common::traits::{
+		animation::AnimationKey,
 		iterate::Iterate,
 		wrap_handle::{GetHandle, WrapHandle},
 	};
@@ -131,12 +129,11 @@ mod tests {
 		}
 	}
 
-	impl GetAllActiveAnimations<AnimationKey> for _Dispatch {
+	impl GetAllActiveAnimations for _Dispatch {
 		type TIter<'a>
 			= Iter<'a, AnimationKey>
 		where
-			Self: 'a,
-			AnimationKey: 'a;
+			Self: 'a;
 
 		fn get_all_active_animations(&self) -> Self::TIter<'_> {
 			self.animations.iter()
