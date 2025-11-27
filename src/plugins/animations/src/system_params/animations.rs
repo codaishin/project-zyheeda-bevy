@@ -1,8 +1,11 @@
 pub(crate) mod active_animations;
+mod move_direction;
 mod register_animations;
-mod set_movement_direction;
 
-use crate::components::animation_dispatch::AnimationDispatch;
+use crate::components::{
+	animation_dispatch::AnimationDispatch,
+	movement_direction::MovementDirection,
+};
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::{
 	traits::{
@@ -25,6 +28,7 @@ pub struct AnimationsParamMut<
 	commands: ZyheedaCommands<'w, 's>,
 	asset_server: ResMut<'w, TAnimationServer>,
 	dispatchers: Query<'w, 's, &'static mut AnimationDispatch>,
+	movement_directions: Query<'w, 's, &'static MovementDirection>,
 	graphs: ResMut<'w, Assets<TAnimationGraph>>,
 }
 
@@ -42,12 +46,15 @@ where
 	) -> Option<Self::TContext<'ctx>> {
 		let entity = param.commands.get_mut(&animations.entity)?;
 		let dispatch = param.dispatchers.get_mut(animations.entity).ok();
+		let movement_direction = param.movement_directions.get(animations.entity).ok();
+		let movement_direction = movement_direction.map(|MovementDirection(d)| *d);
 		let asset_server = &mut param.asset_server;
 		let graphs = &mut param.graphs;
 
 		Some(AnimationsContextMut {
 			entity,
 			dispatch,
+			movement_direction,
 			asset_server,
 			graphs,
 		})
@@ -60,6 +67,7 @@ where
 {
 	entity: ZyheedaEntityCommands<'a>,
 	dispatch: Option<Mut<'a, AnimationDispatch>>,
+	movement_direction: Option<Dir3>,
 	asset_server: &'a mut TLoadAnimations,
 	graphs: &'a mut Assets<TAnimationGraph>,
 }

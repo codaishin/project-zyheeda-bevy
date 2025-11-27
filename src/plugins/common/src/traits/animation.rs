@@ -25,7 +25,7 @@ pub trait HandlesAnimations {
 	type TAnimationsMut<'w, 's>: SystemParam
 		+ for<'c> GetContextMut<Animations, TContext<'c>: RegisterAnimations2>
 		+ for<'c> GetContextMut<Animations, TContext<'c>: ActiveAnimationsMut>
-		+ for<'c> GetContextMut<Animations, TContext<'c>: SetMovementDirection>;
+		+ for<'c> GetContextMut<Animations, TContext<'c>: MoveDirectionMut>;
 }
 
 pub struct Animations {
@@ -132,16 +132,29 @@ impl ErrorData for AnimationsUnprepared {
 	}
 }
 
-pub trait SetMovementDirection {
-	fn set_movement_direction(&mut self, direction: Dir3);
+pub trait MoveDirection {
+	fn move_direction(&self) -> Option<Dir3>;
 }
 
-impl<T> SetMovementDirection for T
+impl<T> MoveDirection for T
 where
-	T: DerefMut<Target: SetMovementDirection>,
+	T: Deref<Target: MoveDirection>,
 {
-	fn set_movement_direction(&mut self, direction: Dir3) {
-		self.deref_mut().set_movement_direction(direction);
+	fn move_direction(&self) -> Option<Dir3> {
+		self.deref().move_direction()
+	}
+}
+
+pub trait MoveDirectionMut: MoveDirection {
+	fn move_direction_mut(&mut self) -> &mut Option<Dir3>;
+}
+
+impl<T> MoveDirectionMut for T
+where
+	T: DerefMut<Target: MoveDirectionMut>,
+{
+	fn move_direction_mut(&mut self) -> &mut Option<Dir3> {
+		self.deref_mut().move_direction_mut()
 	}
 }
 
