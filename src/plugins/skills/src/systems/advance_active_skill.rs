@@ -1,6 +1,6 @@
 use crate::{
-	skills::{AnimationStrategy, RunSkillBehavior, SkillState},
-	traits::{Flush, GetActiveSkill, GetAnimationStrategy, GetSkillBehavior, Schedule},
+	skills::{RunSkillBehavior, SkillState},
+	traits::{Flush, GetActiveSkill, GetSkillBehavior, Schedule, ShouldAnimate},
 };
 use bevy::{
 	ecs::{
@@ -110,7 +110,7 @@ where
 }
 
 fn advance<TPlayerAnimations, TFacing, TSkillExecutor>(
-	mut skill: impl GetSkillBehavior + GetAnimationStrategy + UpdatedStates<SkillState>,
+	mut skill: impl GetSkillBehavior + ShouldAnimate + UpdatedStates<SkillState>,
 	mut agent: EntityCommands,
 	mut skill_executer: Mut<TSkillExecutor>,
 	delta: Duration,
@@ -149,7 +149,7 @@ where
 }
 
 fn animate<TPlayerAnimations>(
-	skill: &(impl GetAnimationStrategy + GetSkillBehavior),
+	skill: &(impl ShouldAnimate + GetSkillBehavior),
 	entity: &mut EntityCommands,
 ) -> Result<(), TPlayerAnimations::TError>
 where
@@ -157,14 +157,8 @@ where
 {
 	let (slot, ..) = skill.behavior();
 
-	match skill.animation_strategy() {
-		AnimationStrategy::Animate => {
-			entity.try_insert(TPlayerAnimations::start_skill_animation(slot)?);
-		}
-		AnimationStrategy::DoNotAnimate => {
-			entity.try_insert(TPlayerAnimations::stop_skill_animation());
-		}
-		AnimationStrategy::None => {}
+	if skill.should_animate() {
+		entity.try_insert(TPlayerAnimations::start_skill_animation(slot)?);
 	}
 	Ok(())
 }
@@ -252,8 +246,8 @@ mod tests {
 		impl GetSkillBehavior for _Skill {
 			fn behavior<'a>(&self) -> (SlotKey, RunSkillBehavior);
 		}
-		impl GetAnimationStrategy for _Skill {
-			fn animation_strategy(&self) -> AnimationStrategy;
+		impl ShouldAnimate for _Skill {
+			fn should_animate(&self) -> bool;
 		}
 	}
 
@@ -420,8 +414,7 @@ mod tests {
 			_Dequeue {
 				active: Some(Box::new(|| {
 					Mock_Skill::new_mock(|mock| {
-						mock.expect_animation_strategy()
-							.return_const(AnimationStrategy::None);
+						mock.expect_should_animate().return_const(false);
 						mock.expect_behavior()
 							.return_const((SlotKey(0), RunSkillBehavior::default()));
 						mock.expect_updated_states()
@@ -449,8 +442,7 @@ mod tests {
 				_Dequeue {
 					active: Some(Box::new(move || {
 						Mock_Skill::new_mock(|mock| {
-							mock.expect_animation_strategy()
-								.return_const(AnimationStrategy::Animate);
+							mock.expect_should_animate().return_const(true);
 							mock.expect_behavior()
 								.return_const((SlotKey(42), RunSkillBehavior::default()));
 							mock.expect_updated_states().return_const(HashSet::<
@@ -481,8 +473,7 @@ mod tests {
 			_Dequeue {
 				active: Some(Box::new(move || {
 					Mock_Skill::new_mock(|mock| {
-						mock.expect_animation_strategy()
-							.return_const(AnimationStrategy::Animate);
+						mock.expect_should_animate().return_const(true);
 						mock.expect_behavior()
 							.return_const((SlotKey(42), RunSkillBehavior::default()));
 						mock.expect_updated_states().return_const(
@@ -512,8 +503,7 @@ mod tests {
 			_Dequeue {
 				active: Some(Box::new(move || {
 					Mock_Skill::new_mock(|mock| {
-						mock.expect_animation_strategy()
-							.return_const(AnimationStrategy::Animate);
+						mock.expect_should_animate().return_const(true);
 						mock.expect_behavior()
 							.return_const((SlotKey(0), RunSkillBehavior::default()));
 						mock.expect_updated_states().return_const(
@@ -535,78 +525,6 @@ mod tests {
 	}
 
 	#[test]
-	fn stop_animation_on_when_beginning_to_aim_and_animate_is_do_not_animate() {
-		let (mut app, agent) = setup::<_Player>();
-		let entity = app
-			.world_mut()
-			.entity_mut(agent)
-			.insert((
-				_Dequeue {
-					active: Some(Box::new(move || {
-						Mock_Skill::new_mock(|mock| {
-							mock.expect_animation_strategy()
-								.return_const(AnimationStrategy::DoNotAnimate);
-							mock.expect_behavior()
-								.return_const((SlotKey(0), RunSkillBehavior::default()));
-							mock.expect_updated_states().return_const(HashSet::<
-								StateMeta<SkillState>,
-							>::from([
-								StateMeta::Entering(SkillState::Aim),
-							]));
-						})
-					})),
-				},
-				Transform::default(),
-				_Facing::default(),
-			))
-			.id();
-
-		app.update();
-
-		assert_eq!(
-			Some(&_SkillAnimation::Stop),
-			app.world().entity(entity).get::<_SkillAnimation>(),
-		);
-	}
-
-	#[test]
-	fn do_not_stop_animation_when_not_beginning_to_aim_and_animate_is_do_not_animate() {
-		let (mut app, agent) = setup::<_Player>();
-		let entity = app
-			.world_mut()
-			.entity_mut(agent)
-			.insert((
-				_Dequeue {
-					active: Some(Box::new(move || {
-						Mock_Skill::new_mock(|skill| {
-							skill
-								.expect_animation_strategy()
-								.return_const(AnimationStrategy::DoNotAnimate);
-							skill
-								.expect_behavior()
-								.return_const((SlotKey(0), RunSkillBehavior::default()));
-							skill.expect_updated_states().return_const(HashSet::<
-								StateMeta<SkillState>,
-							>::from([
-								StateMeta::In(SkillState::Aim),
-								StateMeta::Entering(SkillState::Active),
-								StateMeta::In(SkillState::Active),
-								StateMeta::Done,
-							]));
-						})
-					})),
-				},
-				Transform::default(),
-				_Facing::default(),
-			))
-			.id();
-
-		app.update();
-
-		assert_eq!(None, app.world().entity(entity).get::<_SkillAnimation>());
-	}
-
-	#[test]
 	fn do_not_start_or_stop_animation_when_beginning_to_aim_and_animate_is_none() {
 		let (mut app, agent) = setup::<_Player>();
 		let entity = app
@@ -616,8 +534,7 @@ mod tests {
 				_Dequeue {
 					active: Some(Box::new(move || {
 						Mock_Skill::new_mock(|mock| {
-							mock.expect_animation_strategy()
-								.return_const(AnimationStrategy::None);
+							mock.expect_should_animate().return_const(false);
 							mock.expect_behavior()
 								.return_const((SlotKey(0), RunSkillBehavior::default()));
 							mock.expect_updated_states().return_const(HashSet::<
@@ -669,8 +586,7 @@ mod tests {
 				_Dequeue {
 					active: Some(Box::new(|| {
 						Mock_Skill::new_mock(|mock| {
-							mock.expect_animation_strategy()
-								.return_const(AnimationStrategy::None);
+							mock.expect_should_animate().return_const(false);
 							mock.expect_behavior()
 								.return_const((SlotKey(0), RunSkillBehavior::default()));
 							mock.expect_updated_states()
@@ -755,8 +671,7 @@ mod tests {
 		let mut dequeue = dequeue.get_mut::<_Dequeue>().unwrap();
 		dequeue.active = Some(Box::new(|| {
 			Mock_Skill::new_mock(|mock| {
-				mock.expect_animation_strategy()
-					.return_const(AnimationStrategy::None);
+				mock.expect_should_animate().return_const(false);
 				mock.expect_behavior()
 					.return_const((SlotKey(0), RunSkillBehavior::default()));
 				mock.expect_updated_states()
@@ -785,8 +700,7 @@ mod tests {
 			_Dequeue {
 				active: Some(Box::new(|| {
 					Mock_Skill::new_mock(|mock| {
-						mock.expect_animation_strategy()
-							.return_const(AnimationStrategy::None);
+						mock.expect_should_animate().return_const(false);
 						mock.expect_behavior()
 							.return_const((SlotKey(0), RunSkillBehavior::default()));
 						mock.expect_updated_states().return_const(
@@ -813,8 +727,7 @@ mod tests {
 			_Dequeue {
 				active: Some(Box::new(|| {
 					Mock_Skill::new_mock(|mock| {
-						mock.expect_animation_strategy()
-							.return_const(AnimationStrategy::None);
+						mock.expect_should_animate().return_const(false);
 						mock.expect_behavior()
 							.return_const((SlotKey(0), RunSkillBehavior::default()));
 						mock.expect_updated_states().return_const(
@@ -859,8 +772,7 @@ mod tests {
 			_Dequeue {
 				active: Some(Box::new(|| {
 					Mock_Skill::new_mock(|mock| {
-						mock.expect_animation_strategy()
-							.return_const(AnimationStrategy::None);
+						mock.expect_should_animate().return_const(false);
 						mock.expect_behavior().returning(|| {
 							(
 								SlotKey::from(PlayerSlot::Upper(Side::Left)),
@@ -904,8 +816,7 @@ mod tests {
 			_Dequeue {
 				active: Some(Box::new(|| {
 					Mock_Skill::new_mock(|mock| {
-						mock.expect_animation_strategy()
-							.return_const(AnimationStrategy::None);
+						mock.expect_should_animate().return_const(false);
 						mock.expect_behavior().returning(|| {
 							(
 								SlotKey::from(PlayerSlot::Lower(Side::Left)),
@@ -933,8 +844,7 @@ mod tests {
 			_Dequeue {
 				active: Some(Box::new(|| {
 					Mock_Skill::new_mock(|mock| {
-						mock.expect_animation_strategy()
-							.return_const(AnimationStrategy::None);
+						mock.expect_should_animate().return_const(false);
 						mock.expect_behavior()
 							.never()
 							.return_const((SlotKey(0), RunSkillBehavior::default()));
@@ -964,8 +874,7 @@ mod tests {
 			_Dequeue {
 				active: Some(Box::new(|| {
 					Mock_Skill::new_mock(|mock| {
-						mock.expect_animation_strategy()
-							.return_const(AnimationStrategy::None);
+						mock.expect_should_animate().return_const(false);
 						mock.expect_behavior()
 							.return_const((SlotKey(0), RunSkillBehavior::default()));
 						mock.expect_updated_states().return_const(
@@ -992,8 +901,7 @@ mod tests {
 			_Dequeue {
 				active: Some(Box::new(|| {
 					Mock_Skill::new_mock(|mock| {
-						mock.expect_animation_strategy()
-							.return_const(AnimationStrategy::None);
+						mock.expect_should_animate().return_const(false);
 						mock.expect_behavior()
 							.return_const((SlotKey(0), RunSkillBehavior::default()));
 						mock.expect_updated_states().return_const(
@@ -1018,8 +926,7 @@ mod tests {
 			_Dequeue {
 				active: Some(Box::new(|| {
 					Mock_Skill::new_mock(|mock| {
-						mock.expect_animation_strategy()
-							.return_const(AnimationStrategy::None);
+						mock.expect_should_animate().return_const(false);
 						mock.expect_behavior()
 							.return_const((SlotKey(0), RunSkillBehavior::default()));
 						mock.expect_updated_states().return_const(
@@ -1050,8 +957,7 @@ mod tests {
 			_Dequeue {
 				active: Some(Box::new(|| {
 					Mock_Skill::new_mock(|mock| {
-						mock.expect_animation_strategy()
-							.return_const(AnimationStrategy::None);
+						mock.expect_should_animate().return_const(false);
 						mock.expect_behavior()
 							.return_const((SlotKey(0), RunSkillBehavior::default()));
 						mock.expect_updated_states().return_const(
@@ -1079,8 +985,7 @@ mod tests {
 			_Dequeue {
 				active: Some(Box::new(|| {
 					Mock_Skill::new_mock(|mock| {
-						mock.expect_animation_strategy()
-							.return_const(AnimationStrategy::None);
+						mock.expect_should_animate().return_const(false);
 						mock.expect_behavior()
 							.return_const((SlotKey(0), RunSkillBehavior::default()));
 						mock.expect_updated_states().return_const(
@@ -1130,8 +1035,7 @@ mod tests {
 				_Dequeue {
 					active: Some(Box::new(move || {
 						Mock_Skill::new_mock(|mock| {
-							mock.expect_animation_strategy()
-								.return_const(AnimationStrategy::None);
+							mock.expect_should_animate().return_const(false);
 							mock.expect_behavior()
 								.return_const((SlotKey(0), RunSkillBehavior::default()));
 							mock.expect_updated_states()

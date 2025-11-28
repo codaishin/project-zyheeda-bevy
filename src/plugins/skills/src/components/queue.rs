@@ -2,15 +2,15 @@ pub(crate) mod dto;
 
 use crate::{
 	QueueDto,
-	skills::{AnimationStrategy, QueuedSkill, RunSkillBehavior, Skill, SkillMode, SkillState},
+	skills::{QueuedSkill, RunSkillBehavior, Skill, SkillMode, SkillState},
 	traits::{
 		Enqueue,
 		Flush,
 		GetActiveSkill,
-		GetAnimationStrategy,
 		GetSkillBehavior,
 		IterAddedMut,
 		IterHoldingMut,
+		ShouldAnimate,
 	},
 };
 use bevy::prelude::*;
@@ -207,9 +207,9 @@ impl GetSkillBehavior for ActiveSkill<'_> {
 	}
 }
 
-impl GetAnimationStrategy for ActiveSkill<'_> {
-	fn animation_strategy(&self) -> AnimationStrategy {
-		self.skill.skill.animation
+impl ShouldAnimate for ActiveSkill<'_> {
+	fn should_animate(&self) -> bool {
+		self.skill.skill.animate
 	}
 }
 
@@ -615,7 +615,7 @@ mod test_queue_active_skill {
 			SkillBehaviorConfig,
 			spawn_skill::{OnSkillStop, SpawnSkill},
 		},
-		skills::{AnimationStrategy, RunSkillBehavior},
+		skills::RunSkillBehavior,
 		traits::skill_builder::SkillShape,
 	};
 	use test_case::test_case;
@@ -888,14 +888,13 @@ mod test_queue_active_skill {
 		);
 	}
 
-	#[test_case(AnimationStrategy::DoNotAnimate; "do not animate")]
-	#[test_case(AnimationStrategy::Animate; "animate")]
-	#[test_case(AnimationStrategy::None; "none")]
-	fn get_animation(animation: AnimationStrategy) {
+	#[test_case(true)]
+	#[test_case(false)]
+	fn get_animation(animate: bool) {
 		let active = ActiveSkill {
 			skill: &mut QueuedSkill {
 				skill: Skill {
-					animation,
+					animate,
 					..default()
 				},
 				key: default(),
@@ -904,40 +903,6 @@ mod test_queue_active_skill {
 			elapsed: &mut default(),
 		};
 
-		assert_eq!(animation, active.animation_strategy());
-	}
-
-	#[test]
-	fn get_ignore_animation() {
-		let active = ActiveSkill {
-			skill: &mut QueuedSkill {
-				skill: Skill {
-					animation: AnimationStrategy::None,
-					..default()
-				},
-				key: SlotKey(11),
-				skill_mode: SkillMode::default(),
-			},
-			elapsed: &mut SkillElapsed::default(),
-		};
-
-		assert_eq!(AnimationStrategy::None, active.animation_strategy())
-	}
-
-	#[test]
-	fn get_none_animation() {
-		let active = ActiveSkill {
-			skill: &mut QueuedSkill {
-				skill: Skill {
-					animation: AnimationStrategy::None,
-					..default()
-				},
-				key: SlotKey(11),
-				..default()
-			},
-			elapsed: &mut SkillElapsed::default(),
-		};
-
-		assert_eq!(AnimationStrategy::None, active.animation_strategy())
+		assert_eq!(animate, active.should_animate());
 	}
 }

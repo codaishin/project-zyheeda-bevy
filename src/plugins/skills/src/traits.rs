@@ -9,7 +9,7 @@ pub(crate) mod skill_state;
 pub(crate) mod spawn_skill_behavior;
 pub(crate) mod visualize_item;
 
-use crate::skills::{AnimationStrategy, RunSkillBehavior, Skill};
+use crate::skills::{RunSkillBehavior, Skill};
 use common::{
 	tools::{action_key::slot::SlotKey, item_type::ItemType},
 	traits::{
@@ -54,7 +54,7 @@ pub(crate) trait ReleaseSkill {
 }
 
 pub(crate) trait GetActiveSkill<TSkillState> {
-	type TActive<'a>: GetSkillBehavior + GetAnimationStrategy + UpdatedStates<TSkillState>
+	type TActive<'a>: GetSkillBehavior + ShouldAnimate + UpdatedStates<TSkillState>
 	where
 		Self: 'a;
 
@@ -70,8 +70,8 @@ pub(crate) trait SetNextCombo<TCombo> {
 	fn set_next_combo(&mut self, value: TCombo);
 }
 
-pub(crate) trait GetAnimationStrategy {
-	fn animation_strategy(&self) -> AnimationStrategy;
+pub(crate) trait ShouldAnimate {
+	fn should_animate(&self) -> bool;
 }
 
 pub(crate) trait GetSkillBehavior {
