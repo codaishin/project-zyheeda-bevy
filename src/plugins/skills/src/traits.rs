@@ -54,7 +54,7 @@ pub(crate) trait ReleaseSkill {
 }
 
 pub(crate) trait GetActiveSkill<TSkillState> {
-	type TActive<'a>: GetSkillBehavior + ShouldAnimate + UpdatedStates<TSkillState>
+	type TActive<'a>: GetSkillBehavior + UpdatedStates<TSkillState>
 	where
 		Self: 'a;
 
@@ -68,10 +68,6 @@ pub(crate) trait AdvanceCombo {
 
 pub(crate) trait SetNextCombo<TCombo> {
 	fn set_next_combo(&mut self, value: TCombo);
-}
-
-pub(crate) trait ShouldAnimate {
-	fn should_animate(&self) -> bool;
 }
 
 pub(crate) trait GetSkillBehavior {

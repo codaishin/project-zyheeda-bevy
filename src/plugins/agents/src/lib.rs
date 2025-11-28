@@ -12,7 +12,6 @@ use crate::{
 		movement_config::MovementConfig,
 		player::Player,
 		player_camera::PlayerCamera,
-		skill_animation::SkillAnimation,
 	},
 	observers::agent::{insert_concrete_agent::InsertConcreteAgent, insert_from::InsertFrom},
 	systems::agent::insert_model::InsertModelSystem,
@@ -21,7 +20,6 @@ use bevy::prelude::*;
 use common::{
 	states::game_state::{GameState, LoadingEssentialAssets},
 	systems::log::OnError,
-	tools::action_key::slot::{NoValidAgentKey, PlayerSlot, SlotKey},
 	traits::{
 		delta::Delta,
 		handles_agents::HandlesAgents,
@@ -34,7 +32,7 @@ use common::{
 		handles_movement::{HandlesMovement, MovementSystemParam, MovementSystemParamMut},
 		handles_orientation::{FacingSystemParamMut, HandlesOrientation},
 		handles_physics::{HandlesPhysicalAttributes, HandlesRaycast, RaycastSystemParam},
-		handles_player::{ConfiguresPlayerSkillAnimations, HandlesPlayer, PlayerMainCamera},
+		handles_player::{HandlesPlayer, PlayerMainCamera},
 		handles_saving::HandlesSaving,
 		handles_skills_control::{HandlesSkillControl, SkillControlParamMut},
 		prefab::AddPrefabObserver,
@@ -124,7 +122,6 @@ where
 				Agent::insert_model,
 				Agent::register_animations::<AnimationsSystemParamMut<TAnimations>>,
 				Agent::<AgentConfigAsset>::insert_attributes::<TPhysics::TDefaultAttributes>,
-				SkillAnimation::system::<AnimationsSystemParamMut<TAnimations>>,
 			),
 		);
 
@@ -163,7 +160,6 @@ where
 						AnimationsSystemParamMut<TAnimations>,
 					>
 						.pipe(OnError::log),
-					SkillAnimation::system::<AnimationsSystemParamMut<TAnimations>>,
 					Player::use_skills::<InputSystemParam<TInput>, SkillControlParamMut<TBehaviors>>,
 				)
 					.chain(),
@@ -197,19 +193,6 @@ impl<TDependencies> HandlesEnemies for AgentsPlugin<TDependencies> {
 
 impl<TDependencies> HandlesPlayer for AgentsPlugin<TDependencies> {
 	type TPlayer = Player;
-}
-
-impl<TDependencies> ConfiguresPlayerSkillAnimations for AgentsPlugin<TDependencies> {
-	type TAnimationMarker = SkillAnimation;
-	type TError = NoValidAgentKey<PlayerSlot>;
-
-	fn start_skill_animation(slot_key: SlotKey) -> Result<Self::TAnimationMarker, Self::TError> {
-		Ok(SkillAnimation::Start(PlayerSlot::try_from(slot_key)?))
-	}
-
-	fn stop_skill_animation() -> Self::TAnimationMarker {
-		SkillAnimation::Stop
-	}
 }
 
 impl<TDependencies> PlayerMainCamera for AgentsPlugin<TDependencies> {

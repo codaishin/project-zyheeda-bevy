@@ -26,7 +26,6 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	states::game_state::{GameState, LoadingGame},
-	systems::log::OnError,
 	traits::{
 		handles_agents::HandlesAgents,
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
@@ -34,7 +33,6 @@ use common::{
 		handles_loadout::HandlesLoadout,
 		handles_orientation::{FacingSystemParamMut, HandlesOrientation},
 		handles_physics::{HandlesAllPhysicalEffects, HandlesRaycast, RaycastSystemParam},
-		handles_player::ConfiguresPlayerSkillAnimations,
 		handles_saving::HandlesSaving,
 		handles_skill_behaviors::HandlesSkillBehaviors,
 		system_set_definition::SystemSetDefinition,
@@ -70,7 +68,7 @@ where
 	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesRaycast,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation + SystemSetDefinition,
-	TAgents: ThreadSafe + ConfiguresPlayerSkillAnimations + HandlesAgents,
+	TAgents: ThreadSafe + HandlesAgents,
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn from_plugins(
@@ -132,12 +130,10 @@ where
 				flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
 				advance_active_skill::<
 					Queue,
-					TAgents,
 					FacingSystemParamMut<TBehaviors>,
 					SkillExecuter,
 					Virtual,
-				>
-					.pipe(OnError::log),
+				>,
 				execute_skill,
 				flush::<Queue>,
 			)
@@ -155,7 +151,7 @@ where
 	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesRaycast,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation + SystemSetDefinition,
-	TAgents: ThreadSafe + ConfiguresPlayerSkillAnimations + HandlesAgents,
+	TAgents: ThreadSafe + HandlesAgents,
 {
 	fn build(&self, app: &mut App) {
 		self.skill_load(app);

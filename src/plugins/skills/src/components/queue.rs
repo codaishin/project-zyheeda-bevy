@@ -3,15 +3,7 @@ pub(crate) mod dto;
 use crate::{
 	QueueDto,
 	skills::{QueuedSkill, RunSkillBehavior, Skill, SkillMode, SkillState},
-	traits::{
-		Enqueue,
-		Flush,
-		GetActiveSkill,
-		GetSkillBehavior,
-		IterAddedMut,
-		IterHoldingMut,
-		ShouldAnimate,
-	},
+	traits::{Enqueue, Flush, GetActiveSkill, GetSkillBehavior, IterAddedMut, IterHoldingMut},
 };
 use bevy::prelude::*;
 use common::{
@@ -204,12 +196,6 @@ impl StateDuration<SkillState> for ActiveSkill<'_> {
 impl GetSkillBehavior for ActiveSkill<'_> {
 	fn behavior(&self) -> (SlotKey, RunSkillBehavior) {
 		(self.skill.key, self.skill.skill.behavior.clone())
-	}
-}
-
-impl ShouldAnimate for ActiveSkill<'_> {
-	fn should_animate(&self) -> bool {
-		self.skill.skill.animate
 	}
 }
 
@@ -618,7 +604,6 @@ mod test_queue_active_skill {
 		skills::RunSkillBehavior,
 		traits::skill_builder::SkillShape,
 	};
-	use test_case::test_case;
 
 	#[test]
 	fn get_phase_times_for_holding() {
@@ -886,23 +871,5 @@ mod test_queue_active_skill {
 			(SlotKey(86), RunSkillBehavior::OnAim(behaviors)),
 			active.behavior()
 		);
-	}
-
-	#[test_case(true)]
-	#[test_case(false)]
-	fn get_animation(animate: bool) {
-		let active = ActiveSkill {
-			skill: &mut QueuedSkill {
-				skill: Skill {
-					animate,
-					..default()
-				},
-				key: default(),
-				..default()
-			},
-			elapsed: &mut default(),
-		};
-
-		assert_eq!(animate, active.should_animate());
 	}
 }
