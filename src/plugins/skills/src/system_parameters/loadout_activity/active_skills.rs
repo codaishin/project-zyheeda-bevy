@@ -1,6 +1,5 @@
 use crate::{
 	components::queue::Queue,
-	skills::AnimationStrategy,
 	system_parameters::loadout_activity::LoadoutActivityContext,
 };
 use common::traits::{
@@ -34,7 +33,7 @@ impl Iterator for ActiveSkillsIter<'_> {
 
 		Some(ActiveSkill {
 			key: queued.key,
-			animated: queued.skill.animation == AnimationStrategy::Animate,
+			animate: queued.skill.animate,
 		})
 	}
 }
@@ -80,7 +79,7 @@ mod tests {
 		assert_eq!(
 			vec![ActiveSkill {
 				key: SlotKey(42),
-				animated: false,
+				animate: false,
 			}],
 			active_skills
 		);
@@ -106,7 +105,7 @@ mod tests {
 		assert_eq!(
 			vec![ActiveSkill {
 				key: SlotKey(42),
-				animated: false,
+				animate: false,
 			}],
 			active_skills
 		);
@@ -120,7 +119,7 @@ mod tests {
 			.world_mut()
 			.spawn(Queue::from([QueuedSkill::new(
 				Skill {
-					animation: AnimationStrategy::Animate,
+					animate: true,
 					..default()
 				},
 				SlotKey(42),
@@ -135,7 +134,7 @@ mod tests {
 		assert_eq!(
 			vec![ActiveSkill {
 				key: SlotKey(42),
-				animated: true,
+				animate: true,
 			}],
 			active_skills
 		);

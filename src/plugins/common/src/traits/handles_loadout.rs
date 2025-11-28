@@ -78,5 +78,5 @@ pub trait ActiveSkills {
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct ActiveSkill {
 	pub key: SlotKey,
-	pub animated: bool,
+	pub animate: bool,
 }

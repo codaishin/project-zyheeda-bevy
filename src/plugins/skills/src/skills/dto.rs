@@ -1,6 +1,6 @@
 pub(crate) mod run_skill_behavior;
 
-use super::{AnimationStrategy, Skill};
+use super::Skill;
 use crate::skills::{RunSkillBehavior, SkillId};
 use bevy::asset::{AssetPath, Handle};
 use common::{
@@ -26,7 +26,7 @@ pub(crate) struct SkillDto {
 	id: Uuid,
 	token: String,
 	cast_time: DurationInSeconds,
-	animation: AnimationStrategy,
+	animate: bool,
 	behavior: RunSkillBehaviorDto,
 	is_usable_with: HashSet<ItemType>,
 	icon: Option<Path>,
@@ -49,7 +49,7 @@ impl TryLoadFrom<SkillDto> for Skill {
 			id: SkillId(skill_data.id),
 			token: Token::from(skill_data.token),
 			cast_time: Duration::from(skill_data.cast_time),
-			animation: skill_data.animation,
+			animate: skill_data.animate,
 			behavior: RunSkillBehavior::from(skill_data.behavior),
 			compatible_items: CompatibleItems(skill_data.is_usable_with),
 			icon: match &skill_data.icon {
@@ -66,7 +66,7 @@ impl From<Skill> for SkillDto {
 			id: skill.id.0,
 			token: (*skill.token).to_owned(),
 			cast_time: DurationInSeconds::from(skill.cast_time),
-			animation: skill.animation,
+			animate: skill.animate,
 			behavior: RunSkillBehaviorDto::from(skill.behavior),
 			is_usable_with: skill.compatible_items.0,
 			icon: skill.icon.path().map(AssetPath::to_string).map(Path::from),

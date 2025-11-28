@@ -35,21 +35,13 @@ use uuid::Uuid;
 #[cfg(test)]
 use uuid::uuid;
 
-#[derive(PartialEq, Debug, Default, Clone, Copy, Serialize, Deserialize)]
-pub enum AnimationStrategy {
-	#[default]
-	None,
-	DoNotAnimate,
-	Animate,
-}
-
 #[derive(PartialEq, Debug, Clone, TypePath, Asset)]
 #[cfg_attr(test, derive(Default))]
 pub struct Skill {
 	pub(crate) id: SkillId,
 	pub(crate) token: Token,
 	pub(crate) cast_time: Duration,
-	pub(crate) animation: AnimationStrategy,
+	pub(crate) animate: bool,
 	pub(crate) behavior: RunSkillBehavior,
 	pub(crate) compatible_items: CompatibleItems,
 	pub(crate) icon: Handle<Image>,
