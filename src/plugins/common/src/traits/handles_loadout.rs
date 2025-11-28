@@ -68,9 +68,15 @@ impl From<PlayerSlot> for LoadoutKey {
 }
 
 pub trait ActiveSkills {
-	type TIter<'a>: Iterator<Item = SlotKey>
+	type TIter<'a>: Iterator<Item = ActiveSkill>
 	where
 		Self: 'a;
 
 	fn active_skills(&self) -> Self::TIter<'_>;
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct ActiveSkill {
+	pub key: SlotKey,
+	pub animated: bool,
 }

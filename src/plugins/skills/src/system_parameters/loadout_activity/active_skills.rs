@@ -1,37 +1,41 @@
 use crate::{
 	components::queue::Queue,
+	skills::AnimationStrategy,
 	system_parameters::loadout_activity::LoadoutActivityContext,
 };
-use common::{
-	tools::action_key::slot::SlotKey,
-	traits::{handles_loadout::ActiveSkills, iterate::Iterate},
+use common::traits::{
+	handles_loadout::{ActiveSkill, ActiveSkills},
+	iterate::Iterate,
 };
 
 impl ActiveSkills for LoadoutActivityContext<'_> {
 	type TIter<'a>
-		= SlotIter<'a>
+		= ActiveSkillsIter<'a>
 	where
 		Self: 'a;
 
 	fn active_skills(&self) -> Self::TIter<'_> {
 		let queue = Some(self.queue.as_ref().iterate());
 
-		SlotIter { queue }
+		ActiveSkillsIter { queue }
 	}
 }
 
-pub struct SlotIter<'a> {
+pub struct ActiveSkillsIter<'a> {
 	queue: Option<<Queue as Iterate<'a>>::TIter>,
 }
 
-impl Iterator for SlotIter<'_> {
-	type Item = SlotKey;
+impl Iterator for ActiveSkillsIter<'_> {
+	type Item = ActiveSkill;
 
 	fn next(&mut self) -> Option<Self::Item> {
 		let mut queue = self.queue.take()?;
 		let queued = queue.next()?;
 
-		Some(queued.key)
+		Some(ActiveSkill {
+			key: queued.key,
+			animated: queued.skill.animation == AnimationStrategy::Animate,
+		})
 	}
 }
 
@@ -44,10 +48,13 @@ mod tests {
 		system_parameters::loadout_activity::LoadoutActivity,
 	};
 	use bevy::{
-		app::{App, Update},
 		ecs::system::{RunSystemError, RunSystemOnce},
+		prelude::*,
 	};
-	use common::traits::{accessors::get::GetContext, handles_loadout::skills::Skills};
+	use common::{
+		tools::action_key::slot::SlotKey,
+		traits::{accessors::get::GetContext, handles_loadout::skills::Skills},
+	};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -70,7 +77,13 @@ mod tests {
 			ctx.active_skills().collect::<Vec<_>>()
 		})?;
 
-		assert_eq!(vec![SlotKey(42)], active_skills);
+		assert_eq!(
+			vec![ActiveSkill {
+				key: SlotKey(42),
+				animated: false,
+			}],
+			active_skills
+		);
 		Ok(())
 	}
 
@@ -90,7 +103,42 @@ mod tests {
 			ctx.active_skills().collect::<Vec<_>>()
 		})?;
 
-		assert_eq!(vec![SlotKey(42)], active_skills);
+		assert_eq!(
+			vec![ActiveSkill {
+				key: SlotKey(42),
+				animated: false,
+			}],
+			active_skills
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn return_animated_true() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let entity = app
+			.world_mut()
+			.spawn(Queue::from([QueuedSkill::new(
+				Skill {
+					animation: AnimationStrategy::Animate,
+					..default()
+				},
+				SlotKey(42),
+			)]))
+			.id();
+
+		let active_skills = app.world_mut().run_system_once(move |p: LoadoutActivity| {
+			let ctx = LoadoutActivity::get_context(&p, Skills { entity }).unwrap();
+			ctx.active_skills().collect::<Vec<_>>()
+		})?;
+
+		assert_eq!(
+			vec![ActiveSkill {
+				key: SlotKey(42),
+				animated: true,
+			}],
+			active_skills
+		);
 		Ok(())
 	}
 }
