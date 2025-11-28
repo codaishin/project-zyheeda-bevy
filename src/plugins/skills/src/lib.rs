@@ -17,7 +17,10 @@ use crate::{
 		slots::visualization::SlotVisualization,
 	},
 	skills::SkillId,
-	system_parameters::loadout::{LoadoutReader, LoadoutWriter},
+	system_parameters::{
+		loadout::{LoadoutReader, LoadoutWriter},
+		loadout_activity::LoadoutActivity,
+	},
 	systems::enqueue::EnqueueSystem,
 };
 use bevy::prelude::*;
@@ -166,4 +169,5 @@ impl<TDependencies> HandlesLoadout for SkillsPlugin<TDependencies> {
 	type TSkillID = SkillId;
 	type TLoadoutRead<'w, 's> = LoadoutReader<'w, 's>;
 	type TLoadoutMut<'w, 's> = LoadoutWriter<'w, 's>;
+	type TLoadoutActivity<'w, 's> = LoadoutActivity;
 }

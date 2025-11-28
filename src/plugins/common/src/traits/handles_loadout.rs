@@ -34,10 +34,13 @@ pub trait HandlesLoadout {
 	type TLoadoutMut<'w, 's>: SystemParam
 		+ for<'c> GetContextMut<Items, TContext<'c>: SwapItems>
 		+ for<'c> GetContextMut<Combos, TContext<'c>: UpdateCombos<Self::TSkillID>>;
+
+	type TLoadoutActivity<'w, 's>: SystemParam;
 }
 
 pub type LoadoutReadParam<'w, 's, T> = <T as HandlesLoadout>::TLoadoutRead<'w, 's>;
 pub type LoadoutMutParam<'w, 's, T> = <T as HandlesLoadout>::TLoadoutMut<'w, 's>;
+pub type LoadoutActivityParam<'w, 's, T> = <T as HandlesLoadout>::TLoadoutActivity<'w, 's>;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum LoadoutKey {
