@@ -1,4 +1,4 @@
-use crate::{assets::agent_config::AgentConfigAsset, components::agent::Agent};
+use crate::{assets::agent_config::AgentConfig, components::agent::Agent};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
 	accessors::get::GetContextMut,
@@ -10,7 +10,7 @@ impl Agent {
 		trigger: Trigger<OnAdd, Self>,
 		mut skills: StaticSystemParam<TSkills>,
 		agents: Query<&Agent>,
-		configs: Res<Assets<AgentConfigAsset>>,
+		configs: Res<Assets<AgentConfig>>,
 	) where
 		TSkills: for<'c> GetContextMut<SkillSpawnPoints, TContext<'c>: SpawnPointsDefinition>,
 	{
@@ -33,7 +33,7 @@ impl Agent {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::assets::agent_config::{AgentConfigAsset, Bones};
+	use crate::assets::agent_config::{AgentConfig, Bones};
 	use common::{
 		tools::{action_key::slot::SlotKey, bone_name::BoneName},
 		traits::{handles_map_generation::AgentType, handles_skill_behaviors::SkillSpawner},
@@ -55,7 +55,7 @@ mod tests {
 		}
 	}
 
-	fn setup<const N: usize>(configs: [(&Handle<AgentConfigAsset>, AgentConfigAsset); N]) -> App {
+	fn setup<const N: usize>(configs: [(&Handle<AgentConfig>, AgentConfig); N]) -> App {
 		let mut app = App::new().single_threaded(Update);
 		let mut configs_asset = Assets::default();
 
@@ -71,7 +71,7 @@ mod tests {
 	#[test]
 	fn insert_spawners_definition() {
 		let config_handle = new_handle();
-		let asset = AgentConfigAsset {
+		let asset = AgentConfig {
 			bones: Bones {
 				spawners: HashMap::from([
 					(BoneName::from("a"), SkillSpawner::Neutral),
@@ -103,7 +103,7 @@ mod tests {
 	#[test]
 	fn act_only_once() {
 		let config_handle = new_handle();
-		let asset = AgentConfigAsset {
+		let asset = AgentConfig {
 			bones: Bones {
 				spawners: HashMap::from([
 					(BoneName::from("a"), SkillSpawner::Neutral),

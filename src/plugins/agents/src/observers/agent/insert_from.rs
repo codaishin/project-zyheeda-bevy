@@ -1,4 +1,4 @@
-use crate::assets::agent_config::AgentConfigAsset;
+use crate::assets::agent_config::AgentConfig;
 use bevy::prelude::*;
 use common::{
 	traits::{
@@ -8,10 +8,10 @@ use common::{
 	zyheeda_commands::ZyheedaCommands,
 };
 
-impl<T> InsertFrom for T where T: Component + From<(AgentType, Handle<AgentConfigAsset>)> {}
+impl<T> InsertFrom for T where T: Component + From<(AgentType, Handle<AgentConfig>)> {}
 
 pub(crate) trait InsertFrom:
-	Component + From<(AgentType, Handle<AgentConfigAsset>)> + Sized
+	Component + From<(AgentType, Handle<AgentConfig>)> + Sized
 {
 	fn insert_from<TSource>(
 		trigger: Trigger<OnInsert, TSource>,
@@ -27,7 +27,7 @@ pub(crate) trait InsertFrom:
 }
 
 pub(crate) trait AgentHandle<TAssets> {
-	fn agent_handle(agent_type: AgentType, assets: &mut TAssets) -> Handle<AgentConfigAsset>;
+	fn agent_handle(agent_type: AgentType, assets: &mut TAssets) -> Handle<AgentConfig>;
 }
 
 fn insert_from_internal<TAgent, TAssetServer, TSource>(
@@ -36,7 +36,7 @@ fn insert_from_internal<TAgent, TAssetServer, TSource>(
 	mut commands: ZyheedaCommands,
 	sources: Query<&TSource>,
 ) where
-	TAgent: Component + From<(AgentType, Handle<AgentConfigAsset>)> + AgentHandle<TAssetServer>,
+	TAgent: Component + From<(AgentType, Handle<AgentConfig>)> + AgentHandle<TAssetServer>,
 	TAssetServer: Resource,
 	TSource: Component + GetProperty<AgentType>,
 {
@@ -56,7 +56,7 @@ fn insert_from_internal<TAgent, TAssetServer, TSource>(
 mod tests {
 	use super::*;
 	use crate::{
-		assets::agent_config::AgentConfigAsset,
+		assets::agent_config::AgentConfig,
 		components::{enemy::void_sphere::VoidSphere, player::Player},
 	};
 	use std::sync::LazyLock;
@@ -77,19 +77,19 @@ mod tests {
 	#[derive(Component, Debug, PartialEq)]
 	struct _Agent {
 		agent_type: AgentType,
-		handle: Handle<AgentConfigAsset>,
+		handle: Handle<AgentConfig>,
 	}
 
-	impl From<(AgentType, Handle<AgentConfigAsset>)> for _Agent {
-		fn from((agent_type, handle): (AgentType, Handle<AgentConfigAsset>)) -> Self {
+	impl From<(AgentType, Handle<AgentConfig>)> for _Agent {
+		fn from((agent_type, handle): (AgentType, Handle<AgentConfig>)) -> Self {
 			Self { agent_type, handle }
 		}
 	}
 
-	static HANDLE: LazyLock<Handle<AgentConfigAsset>> = LazyLock::new(new_handle);
+	static HANDLE: LazyLock<Handle<AgentConfig>> = LazyLock::new(new_handle);
 
 	impl AgentHandle<_AssetServer> for _Agent {
-		fn agent_handle(_: AgentType, _: &mut _AssetServer) -> Handle<AgentConfigAsset> {
+		fn agent_handle(_: AgentType, _: &mut _AssetServer) -> Handle<AgentConfig> {
 			HANDLE.clone()
 		}
 	}

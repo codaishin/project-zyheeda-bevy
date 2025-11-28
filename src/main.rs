@@ -65,7 +65,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		&map_generation,
 		&behaviors,
 	);
-	let skills = SkillsPlugin::from_plugins(&savegame, &physics, &loading, &behaviors, &agents);
+	let skills = SkillsPlugin::from_plugins(&savegame, &physics, &loading, &behaviors);
 	let menus = MenuPlugin::from_plugins(
 		&loading,
 		&savegame,

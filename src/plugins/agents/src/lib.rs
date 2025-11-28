@@ -4,7 +4,7 @@ mod observers;
 mod systems;
 
 use crate::{
-	assets::agent_config::{AgentConfigAsset, AgentConfigData, dto::AgentConfigAssetDto},
+	assets::agent_config::{AgentConfig, dto::AgentConfigDto},
 	components::{
 		agent::{Agent, tag::AgentTag},
 		animate_idle::AnimateIdle,
@@ -14,7 +14,6 @@ use crate::{
 		player_camera::PlayerCamera,
 	},
 	observers::agent::{insert_concrete_agent::InsertConcreteAgent, insert_from::InsertFrom},
-	systems::agent::insert_model::InsertModelSystem,
 };
 use bevy::prelude::*;
 use common::{
@@ -105,11 +104,11 @@ where
 	fn build(&self, app: &mut App) {
 		// # Load Agent
 		TLoading::register_custom_folder_assets::<
-			AgentConfigAsset,
-			AgentConfigAssetDto,
+			AgentConfig,
+			AgentConfigDto,
 			LoadingEssentialAssets,
 		>(app);
-		app.init_asset::<AgentConfigAsset>();
+		app.init_asset::<AgentConfig>();
 
 		// Using `AgentTag` to buffer the map agent type, in case `TNewWorldAgent` is not
 		// persistent across game sessions
@@ -121,7 +120,7 @@ where
 			(
 				Agent::insert_model,
 				Agent::register_animations::<AnimationsSystemParamMut<TAnimations>>,
-				Agent::<AgentConfigAsset>::insert_attributes::<TPhysics::TDefaultAttributes>,
+				Agent::<AgentConfig>::insert_attributes::<TPhysics::TDefaultAttributes>,
 			),
 		);
 
@@ -200,6 +199,5 @@ impl<TDependencies> PlayerMainCamera for AgentsPlugin<TDependencies> {
 }
 
 impl<TDependencies> HandlesAgents for AgentsPlugin<TDependencies> {
-	type TAgentConfig<'a> = AgentConfigData<'a>;
 	type TAgent = Agent;
 }

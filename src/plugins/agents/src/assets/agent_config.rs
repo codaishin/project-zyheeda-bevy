@@ -1,20 +1,15 @@
 pub(crate) mod dto;
 
-use crate::systems::agent::insert_model::InsertModel;
 use bevy::prelude::*;
 use common::{
-	components::asset_model::AssetModel,
 	tools::{action_key::slot::SlotKey, bone_name::BoneName, path::Path},
 	traits::{
 		accessors::get::GetProperty,
-		bone_key::{BoneKey, ConfiguredBones},
 		handles_animations::{AffectedAnimationBones, Animation, AnimationKey, AnimationMaskBits},
 		handles_custom_assets::AssetFolderPath,
-		handles_map_generation::AgentType,
 		handles_physics::PhysicalDefaultAttributes,
 		handles_skill_behaviors::SkillSpawner,
-		loadout::{ItemName, LoadoutConfig},
-		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
+		loadout::ItemName,
 	},
 	zyheeda_commands::ZyheedaEntityCommands,
 };
@@ -22,7 +17,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Asset, TypePath, Debug, PartialEq, Default, Clone)]
-pub struct AgentConfigAsset {
+pub struct AgentConfig {
 	pub(crate) loadout: Loadout,
 	pub(crate) bones: Bones,
 	pub(crate) agent_model: AgentModel,
@@ -31,93 +26,15 @@ pub struct AgentConfigAsset {
 	pub(crate) animation_mask_groups: HashMap<AnimationMaskBits, AffectedAnimationBones>,
 }
 
-impl AssetFolderPath for AgentConfigAsset {
+impl AssetFolderPath for AgentConfig {
 	fn asset_folder_path() -> Path {
 		Path::from("agents")
 	}
 }
 
-impl GetProperty<PhysicalDefaultAttributes> for AgentConfigAsset {
+impl GetProperty<PhysicalDefaultAttributes> for AgentConfig {
 	fn get_property(&self) -> PhysicalDefaultAttributes {
 		self.attributes
-	}
-}
-
-#[derive(Debug, PartialEq)]
-pub struct AgentConfigData<'a, TAsset = AgentConfigAsset> {
-	pub(crate) agent_type: AgentType,
-	pub(crate) asset: &'a TAsset,
-}
-
-impl LoadoutConfig for AgentConfigData<'_> {
-	fn inventory(&self) -> impl Iterator<Item = Option<ItemName>> {
-		self.asset.loadout.inventory.iter().cloned()
-	}
-
-	fn slots(&self) -> impl Iterator<Item = (SlotKey, Option<ItemName>)> {
-		self.asset.loadout.slots.iter().cloned()
-	}
-}
-
-impl BoneKey<EssenceSlot> for AgentConfigData<'_> {
-	fn bone_key(&self, bone_name: &str) -> Option<EssenceSlot> {
-		self.asset
-			.bones
-			.essence_slots
-			.get(bone_name)
-			.copied()
-			.map(EssenceSlot::from)
-	}
-}
-
-impl ConfiguredBones<EssenceSlot> for AgentConfigData<'_> {
-	fn bone_names(&self) -> impl Iterator<Item = BoneName> {
-		self.asset.bones.essence_slots.keys().cloned()
-	}
-}
-
-impl BoneKey<HandSlot> for AgentConfigData<'_> {
-	fn bone_key(&self, bone_name: &str) -> Option<HandSlot> {
-		self.asset
-			.bones
-			.hand_slots
-			.get(bone_name)
-			.copied()
-			.map(HandSlot::from)
-	}
-}
-
-impl ConfiguredBones<HandSlot> for AgentConfigData<'_> {
-	fn bone_names(&self) -> impl Iterator<Item = BoneName> {
-		self.asset.bones.hand_slots.keys().cloned()
-	}
-}
-
-impl BoneKey<ForearmSlot> for AgentConfigData<'_> {
-	fn bone_key(&self, bone_name: &str) -> Option<ForearmSlot> {
-		self.asset
-			.bones
-			.forearm_slots
-			.get(bone_name)
-			.copied()
-			.map(ForearmSlot::from)
-	}
-}
-
-impl ConfiguredBones<ForearmSlot> for AgentConfigData<'_> {
-	fn bone_names(&self) -> impl Iterator<Item = BoneName> {
-		self.asset.bones.forearm_slots.keys().cloned()
-	}
-}
-
-impl InsertModel for AgentConfigData<'_> {
-	fn insert_model(&self, entity: &mut ZyheedaEntityCommands) {
-		match &self.asset.agent_model {
-			AgentModel::Asset(path) => {
-				entity.try_insert(AssetModel::from(path));
-			}
-			AgentModel::Procedural(insert_procedural_on) => insert_procedural_on(entity),
-		}
 	}
 }
 
@@ -139,6 +56,12 @@ pub(crate) struct Bones {
 pub(crate) enum AgentModel {
 	Asset(String),
 	Procedural(fn(&mut ZyheedaEntityCommands)),
+}
+
+impl From<&str> for AgentModel {
+	fn from(value: &str) -> Self {
+		Self::Asset(String::from(value))
+	}
 }
 
 impl Default for AgentModel {
