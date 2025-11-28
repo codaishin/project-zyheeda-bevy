@@ -1,5 +1,5 @@
 use crate::{
-	assets::agent_config::{AgentConfigAsset, AgentModel, Bones, Loadout},
+	assets::agent_config::{AgentConfig, AgentModel, Bones, Loadout},
 	components::enemy::void_sphere::VoidSphere,
 };
 use bevy::prelude::*;
@@ -16,7 +16,7 @@ use std::collections::HashMap;
 use zyheeda_core::serialization::as_vec;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub struct AgentConfigAssetDto {
+pub struct AgentConfigDto {
 	model: Model,
 	loadout: Loadout,
 	attributes: PhysicalDefaultAttributes,
@@ -55,22 +55,22 @@ pub(crate) enum ProceduralModel {
 	VoidSphere,
 }
 
-impl TryLoadFrom<AgentConfigAssetDto> for AgentConfigAsset {
+impl TryLoadFrom<AgentConfigDto> for AgentConfig {
 	type TInstantiationError = Unreachable;
 
 	fn try_load_from<TLoadAsset>(
-		AgentConfigAssetDto {
+		AgentConfigDto {
 			model,
 			loadout,
 			attributes,
 			animations,
 			animation_mask_groups,
-		}: AgentConfigAssetDto,
+		}: AgentConfigDto,
 		_: &mut TLoadAsset,
 	) -> Result<Self, Self::TInstantiationError> {
 		let (agent_model, bones) = model.definition();
 
-		Ok(AgentConfigAsset {
+		Ok(AgentConfig {
 			loadout,
 			bones,
 			agent_model,
@@ -81,7 +81,7 @@ impl TryLoadFrom<AgentConfigAssetDto> for AgentConfigAsset {
 	}
 }
 
-impl AssetFileExtensions for AgentConfigAssetDto {
+impl AssetFileExtensions for AgentConfigDto {
 	fn asset_file_extensions() -> &'static [&'static str] {
 		&["agent"]
 	}

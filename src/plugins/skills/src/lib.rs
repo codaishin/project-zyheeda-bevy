@@ -24,7 +24,6 @@ use bevy::prelude::*;
 use common::{
 	states::game_state::{GameState, LoadingGame},
 	traits::{
-		handles_agents::HandlesAgents,
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
 		handles_load_tracking::HandlesLoadTracking,
 		handles_loadout::HandlesLoadout,
@@ -58,23 +57,16 @@ use systems::{
 
 pub struct SkillsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSaveGame, TPhysics, TLoading, TBehaviors, TAgents>
-	SkillsPlugin<(TSaveGame, TPhysics, TLoading, TBehaviors, TAgents)>
+impl<TSaveGame, TPhysics, TLoading, TBehaviors>
+	SkillsPlugin<(TSaveGame, TPhysics, TLoading, TBehaviors)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesRaycast,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation + SystemSetDefinition,
-	TAgents: ThreadSafe + HandlesAgents,
 {
 	#[allow(clippy::too_many_arguments)]
-	pub fn from_plugins(
-		_: &TSaveGame,
-		_: &TPhysics,
-		_: &TLoading,
-		_: &TBehaviors,
-		_: &TAgents,
-	) -> Self {
+	pub fn from_plugins(_: &TSaveGame, _: &TPhysics, _: &TLoading, _: &TBehaviors) -> Self {
 		Self(PhantomData)
 	}
 
@@ -90,21 +82,19 @@ where
 		TSaveGame::register_savable_component::<Inventory>(app);
 		TSaveGame::register_savable_component::<Slots>(app);
 
-		app.add_observer(Slots::set_self_entity)
-			.add_observer(AgentDefinition::insert_from_agent::<TAgents::TAgent>)
-			.add_systems(
-				Update,
-				(
-					Loadout::<AgentDefinition>::insert,
-					SlotVisualization::<HandSlot>::track_slots_for::<AgentDefinition>,
-					SlotVisualization::<HandSlot>::visualize_items,
-					SlotVisualization::<ForearmSlot>::track_slots_for::<AgentDefinition>,
-					SlotVisualization::<ForearmSlot>::visualize_items,
-					SlotVisualization::<EssenceSlot>::track_slots_for::<AgentDefinition>,
-					SlotVisualization::<EssenceSlot>::visualize_items,
-				)
-					.chain(),
-			);
+		app.add_observer(Slots::set_self_entity).add_systems(
+			Update,
+			(
+				Loadout::<AgentDefinition>::insert,
+				SlotVisualization::<HandSlot>::track_slots_for::<AgentDefinition>,
+				SlotVisualization::<HandSlot>::visualize_items,
+				SlotVisualization::<ForearmSlot>::track_slots_for::<AgentDefinition>,
+				SlotVisualization::<ForearmSlot>::visualize_items,
+				SlotVisualization::<EssenceSlot>::track_slots_for::<AgentDefinition>,
+				SlotVisualization::<EssenceSlot>::visualize_items,
+			)
+				.chain(),
+		);
 	}
 
 	fn skill_execution(&self, app: &mut App) {
@@ -141,14 +131,13 @@ where
 	}
 }
 
-impl<TSaveGame, TPhysics, TLoading, TBehaviors, TAgents> Plugin
-	for SkillsPlugin<(TSaveGame, TPhysics, TLoading, TBehaviors, TAgents)>
+impl<TSaveGame, TPhysics, TLoading, TBehaviors> Plugin
+	for SkillsPlugin<(TSaveGame, TPhysics, TLoading, TBehaviors)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesRaycast,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
 	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation + SystemSetDefinition,
-	TAgents: ThreadSafe + HandlesAgents,
 {
 	fn build(&self, app: &mut App) {
 		self.skill_load(app);

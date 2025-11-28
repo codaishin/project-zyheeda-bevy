@@ -1,32 +1,34 @@
+use crate::{
+	assets::agent_config::{AgentConfig, AgentModel},
+	components::agent::Agent,
+};
 use bevy::prelude::*;
 use common::{
-	traits::{
-		accessors::get::{AssociatedSystemParam, GetFromSystemParam, TryApplyOn},
-		handles_agents::AgentConfig,
-	},
-	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
+	components::asset_model::AssetModel,
+	traits::accessors::get::TryApplyOn,
+	zyheeda_commands::ZyheedaCommands,
 };
 
-impl<T> InsertModelSystem for T where
-	T: Component + for<'a> GetFromSystemParam<AgentConfig, TItem<'a>: InsertModel>
-{
-}
-
-pub(crate) trait InsertModelSystem:
-	Component + for<'a> GetFromSystemParam<AgentConfig, TItem<'a>: InsertModel> + Sized
-{
-	fn insert_model(
+impl Agent {
+	pub(crate) fn insert_model(
 		mut commands: ZyheedaCommands,
-		param: AssociatedSystemParam<Self, AgentConfig>,
+		configs: Res<Assets<AgentConfig>>,
 		agents: Query<(Entity, &Self), Without<ModelInserted>>,
 	) {
 		for (entity, agent) in &agents {
-			let Some(config) = agent.get_from_param(&AgentConfig, &param) else {
+			let Some(config) = configs.get(&agent.config_handle) else {
 				continue;
 			};
 
 			commands.try_apply_on(&entity, |mut e| {
-				config.insert_model(&mut e);
+				match &config.agent_model {
+					AgentModel::Asset(path) => {
+						e.try_insert(AssetModel::path(path));
+					}
+					AgentModel::Procedural(func) => {
+						func(&mut e);
+					}
+				};
 				e.try_insert(ModelInserted);
 			});
 		}
@@ -36,51 +38,78 @@ pub(crate) trait InsertModelSystem:
 #[derive(Component)]
 pub(crate) struct ModelInserted;
 
-pub(crate) trait InsertModel {
-	fn insert_model(&self, entity: &mut ZyheedaEntityCommands);
-}
-
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use testing::SingleThreadedApp;
+	use crate::assets::agent_config::{AgentConfig, AgentModel};
+	use common::{
+		traits::handles_map_generation::AgentType,
+		zyheeda_commands::ZyheedaEntityCommands,
+	};
+	use testing::{SingleThreadedApp, new_handle};
 
-	#[derive(Component)]
-	struct _Agent;
-
-	impl GetFromSystemParam<AgentConfig> for _Agent {
-		type TParam<'world, 'state> = ();
-		type TItem<'item> = _Data;
-
-		fn get_from_param(&self, _: &AgentConfig, _: &()) -> Option<_Data> {
-			Some(_Data)
-		}
-	}
-
-	#[derive(Clone)]
-	struct _Data;
-
-	impl InsertModel for _Data {
-		fn insert_model(&self, entity: &mut ZyheedaEntityCommands) {
-			entity.try_insert(_Model);
-		}
-	}
-
-	#[derive(Component, Debug, PartialEq)]
-	struct _Model;
-
-	fn setup() -> App {
+	fn setup<const N: usize>(model_data: [(&Handle<AgentConfig>, AgentConfig); N]) -> App {
 		let mut app = App::new().single_threaded(Update);
+		let mut assets = Assets::default();
 
-		app.add_systems(Update, _Agent::insert_model);
+		for (id, asset) in model_data {
+			assets.insert(id, asset);
+		}
+
+		app.insert_resource(assets);
+		app.add_systems(Update, Agent::insert_model);
 
 		app
 	}
 
 	#[test]
-	fn insert_model() {
-		let mut app = setup();
-		let entity = app.world_mut().spawn(_Agent).id();
+	fn insert_asset_model() {
+		let config_handle = new_handle();
+		let config = AgentConfig {
+			agent_model: AgentModel::from("my/path"),
+			..default()
+		};
+		let mut app = setup([(&config_handle, config)]);
+		let entity = app
+			.world_mut()
+			.spawn(Agent {
+				config_handle,
+				agent_type: AgentType::Player,
+			})
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&AssetModel::from("my/path")),
+			app.world().entity(entity).get::<AssetModel>()
+		);
+	}
+
+	#[derive(Component, Debug, PartialEq)]
+	struct _Model;
+
+	impl _Model {
+		fn insert(e: &mut ZyheedaEntityCommands) {
+			e.try_insert(Self);
+		}
+	}
+
+	#[test]
+	fn insert_procedural_model() {
+		let config_handle = new_handle();
+		let config = AgentConfig {
+			agent_model: AgentModel::Procedural(_Model::insert),
+			..default()
+		};
+		let mut app = setup([(&config_handle, config)]);
+		let entity = app
+			.world_mut()
+			.spawn(Agent {
+				config_handle,
+				agent_type: AgentType::Player,
+			})
+			.id();
 
 		app.update();
 
@@ -89,13 +118,49 @@ mod tests {
 
 	#[test]
 	fn insert_model_only_once() {
-		let mut app = setup();
-		let entity = app.world_mut().spawn(_Agent).id();
+		let config_handle = new_handle();
+		let config = AgentConfig {
+			agent_model: AgentModel::Procedural(_Model::insert),
+			..default()
+		};
+		let mut app = setup([(&config_handle, config)]);
+		let entity = app
+			.world_mut()
+			.spawn(Agent {
+				config_handle,
+				agent_type: AgentType::Player,
+			})
+			.id();
 
 		app.update();
 		app.world_mut().entity_mut(entity).remove::<_Model>();
 		app.update();
 
 		assert_eq!(None, app.world().entity(entity).get::<_Model>());
+	}
+
+	#[test]
+	fn insert_model_if_config_is_available_later_than_agent_insertion() {
+		let config_handle = new_handle();
+		let config = AgentConfig {
+			agent_model: AgentModel::Procedural(_Model::insert),
+			..default()
+		};
+		let mut app = setup([]);
+		let entity = app
+			.world_mut()
+			.spawn(Agent {
+				config_handle: config_handle.clone(),
+				agent_type: AgentType::Player,
+			})
+			.id();
+
+		app.update();
+		app.world_mut()
+			.resource_mut::<Assets<AgentConfig>>()
+			.insert(&config_handle, config);
+		app.update();
+
+		assert_eq!(Some(&_Model), app.world().entity(entity).get::<_Model>());
 	}
 }
