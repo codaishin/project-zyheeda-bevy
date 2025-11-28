@@ -35,7 +35,8 @@ pub trait HandlesLoadout {
 		+ for<'c> GetContextMut<Items, TContext<'c>: SwapItems>
 		+ for<'c> GetContextMut<Combos, TContext<'c>: UpdateCombos<Self::TSkillID>>;
 
-	type TLoadoutActivity<'w, 's>: SystemParam;
+	type TLoadoutActivity<'w, 's>: SystemParam
+		+ for<'c> GetContext<Skills, TContext<'c>: ActiveSkills>;
 }
 
 pub type LoadoutReadParam<'w, 's, T> = <T as HandlesLoadout>::TLoadoutRead<'w, 's>;
@@ -64,4 +65,12 @@ impl From<PlayerSlot> for LoadoutKey {
 	fn from(key: PlayerSlot) -> Self {
 		Self::Slot(SlotKey::from(key))
 	}
+}
+
+pub trait ActiveSkills {
+	type TIter<'a>: Iterator<Item = SlotKey>
+	where
+		Self: 'a;
+
+	fn active_skills(&self) -> Self::TIter<'_>;
 }

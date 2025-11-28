@@ -169,5 +169,5 @@ impl<TDependencies> HandlesLoadout for SkillsPlugin<TDependencies> {
 	type TSkillID = SkillId;
 	type TLoadoutRead<'w, 's> = LoadoutReader<'w, 's>;
 	type TLoadoutMut<'w, 's> = LoadoutWriter<'w, 's>;
-	type TLoadoutActivity<'w, 's> = LoadoutActivity;
+	type TLoadoutActivity<'w, 's> = LoadoutActivity<'w, 's>;
 }
