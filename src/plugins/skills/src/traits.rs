@@ -54,7 +54,7 @@ pub(crate) trait ReleaseSkill {
 }
 
 pub(crate) trait GetActiveSkill<TSkillState> {
-	type TActive<'a>: GetSkillBehavior + GetAnimationStrategy + UpdatedStates<TSkillState>
+	type TActive<'a>: GetSkillBehavior + UpdatedStates<TSkillState>
 	where
 		Self: 'a;
 
