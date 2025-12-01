@@ -60,7 +60,7 @@ fn insert_internal<TAgent, TAssetServer>(
 	}
 }
 
-fn asset_path(ItemName(name): ItemName) -> AssetPath<'static> {
+fn asset_path(name: ItemName) -> AssetPath<'static> {
 	AssetPath::from(format!("items/{name}.item"))
 }
 
