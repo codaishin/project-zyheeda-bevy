@@ -1,5 +1,6 @@
 pub mod available_skills;
 pub mod combos;
+pub mod default_items;
 pub mod items;
 pub mod skills;
 
@@ -13,6 +14,7 @@ use crate::{
 		handles_loadout::{
 			available_skills::{AvailableSkills, ReadAvailableSkills},
 			combos::{Combos, ReadCombos, UpdateCombos},
+			default_items::{InsertDefaultLoadout, NotLoadedOut},
 			items::{Items, ReadItems, SwapItems},
 			skills::{ReadSkills, Skills},
 		},
@@ -33,7 +35,8 @@ pub trait HandlesLoadout {
 
 	type TLoadoutMut<'w, 's>: SystemParam
 		+ for<'c> GetContextMut<Items, TContext<'c>: SwapItems>
-		+ for<'c> GetContextMut<Combos, TContext<'c>: UpdateCombos<Self::TSkillID>>;
+		+ for<'c> GetContextMut<Combos, TContext<'c>: UpdateCombos<Self::TSkillID>>
+		+ for<'c> GetContextMut<NotLoadedOut, TContext<'c>: InsertDefaultLoadout>;
 
 	type TLoadoutActivity<'w, 's>: SystemParam
 		+ for<'c> GetContext<Skills, TContext<'c>: ActiveSkills>;

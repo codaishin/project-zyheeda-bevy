@@ -10,6 +10,15 @@ use std::iter::Enumerate;
 #[savable_component(dto = InventoryDto)]
 pub struct Inventory(pub(crate) Vec<Option<Handle<Item>>>);
 
+impl Inventory {
+	pub(crate) fn fill_up_to(&mut self, index: usize) {
+		if index < self.0.len() {
+			return;
+		}
+		self.0.resize_with(index + 1, || None);
+	}
+}
+
 impl<T> From<T> for Inventory
 where
 	T: IntoIterator<Item = Option<Handle<Item>>>,
