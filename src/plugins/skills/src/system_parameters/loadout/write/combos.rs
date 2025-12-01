@@ -20,7 +20,7 @@ impl GetContextMut<CombosMarker> for LoadoutWriter<'_, '_> {
 		param: &'ctx mut LoadoutWriter,
 		CombosMarker { entity }: CombosMarker,
 	) -> Option<Self::TContext<'ctx>> {
-		let (.., combos) = param.agents.get_mut(entity).ok()?;
+		let combos = param.combos.get_mut(entity).ok()?;
 
 		Some(CombosMut {
 			combos,
