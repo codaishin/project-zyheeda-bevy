@@ -44,7 +44,7 @@ use systems::void_sphere::ring_rotation::ring_rotation;
 
 pub struct AgentsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights, TMaps, TBehaviors>
+impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights, TMaps, TBehaviors, TLoadout>
 	AgentsPlugin<(
 		TLoading,
 		TInput,
@@ -54,6 +54,7 @@ impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights, TMaps, TBehavi
 		TLights,
 		TMaps,
 		TBehaviors,
+		TLoadout,
 	)>
 where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
@@ -64,6 +65,7 @@ where
 	TLights: ThreadSafe + HandlesLights,
 	TMaps: ThreadSafe + HandlesMapGeneration,
 	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation + HandlesSkillControl,
+	TLoadout: ThreadSafe,
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn from_plugins(
@@ -75,12 +77,14 @@ where
 		_: &TLights,
 		_: &TMaps,
 		_: &TBehaviors,
+		_: &TLoadout,
 	) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights, TMaps, TBehaviors> Plugin
+impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights, TMaps, TBehaviors, TLoadout>
+	Plugin
 	for AgentsPlugin<(
 		TLoading,
 		TInput,
@@ -90,6 +94,7 @@ impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights, TMaps, TBehavi
 		TLights,
 		TMaps,
 		TBehaviors,
+		TLoadout,
 	)>
 where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
@@ -100,6 +105,7 @@ where
 	TLights: ThreadSafe + HandlesLights,
 	TMaps: ThreadSafe + HandlesMapGeneration,
 	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation + HandlesSkillControl,
+	TLoadout: ThreadSafe,
 {
 	fn build(&self, app: &mut App) {
 		// # Load Agent
