@@ -1,6 +1,6 @@
 use crate::{
 	components::{inventory::Inventory, loadout::Loadout, slots::Slots},
-	system_parameters::loadout::LoadoutWriter,
+	system_parameters::loadout::LoadoutPrep,
 };
 use bevy::prelude::*;
 use common::{
@@ -58,14 +58,14 @@ where
 	server: &'ctx mut TAssetServer,
 }
 
-impl<TAssetServer> GetContextMut<NotLoadedOut> for LoadoutWriter<'_, '_, TAssetServer>
+impl<TAssetServer> GetContextMut<NotLoadedOut> for LoadoutPrep<'_, '_, TAssetServer>
 where
 	TAssetServer: Resource + LoadAsset,
 {
 	type TContext<'ctx> = PrepareLoadout<'ctx, TAssetServer>;
 
 	fn get_context_mut<'ctx>(
-		param: &'ctx mut LoadoutWriter<TAssetServer>,
+		param: &'ctx mut LoadoutPrep<TAssetServer>,
 		NotLoadedOut { entity }: NotLoadedOut,
 	) -> Option<Self::TContext<'ctx>> {
 		if param.inventories.contains(entity) && param.slots.contains(entity) {
@@ -124,9 +124,9 @@ mod tests {
 		let entity = app.world_mut().spawn_empty().id();
 
 		app.world_mut()
-			.run_system_once(move |mut loadout: LoadoutWriter<MockAssetServer>| {
+			.run_system_once(move |mut loadout: LoadoutPrep<MockAssetServer>| {
 				let key = NotLoadedOut { entity };
-				let mut ctx = LoadoutWriter::get_context_mut(&mut loadout, key).unwrap();
+				let mut ctx = LoadoutPrep::get_context_mut(&mut loadout, key).unwrap();
 				ctx.insert_default_loadout([
 					(LoadoutKey::from(InventoryKey(0)), ItemName::from("item_0")),
 					(LoadoutKey::from(InventoryKey(1)), ItemName::from("item_1")),
@@ -167,9 +167,9 @@ mod tests {
 		let entity = app.world_mut().spawn_empty().id();
 
 		app.world_mut()
-			.run_system_once(move |mut loadout: LoadoutWriter<MockAssetServer>| {
+			.run_system_once(move |mut loadout: LoadoutPrep<MockAssetServer>| {
 				let key = NotLoadedOut { entity };
-				let mut ctx = LoadoutWriter::get_context_mut(&mut loadout, key).unwrap();
+				let mut ctx = LoadoutPrep::get_context_mut(&mut loadout, key).unwrap();
 				ctx.insert_default_loadout([
 					(LoadoutKey::from(InventoryKey(3)), ItemName::from("item_0")),
 					(LoadoutKey::from(InventoryKey(1)), ItemName::from("item_1")),
@@ -196,11 +196,11 @@ mod tests {
 			.spawn((Slots::default(), Inventory::default()))
 			.id();
 
-		let ctx_is_none = app.world_mut().run_system_once(
-			move |mut loadout: LoadoutWriter<MockAssetServer>| {
-				LoadoutWriter::get_context_mut(&mut loadout, NotLoadedOut { entity }).is_none()
-			},
-		)?;
+		let ctx_is_none =
+			app.world_mut()
+				.run_system_once(move |mut loadout: LoadoutPrep<MockAssetServer>| {
+					LoadoutPrep::get_context_mut(&mut loadout, NotLoadedOut { entity }).is_none()
+				})?;
 
 		assert!(ctx_is_none);
 		Ok(())
@@ -237,9 +237,9 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once(move |mut loadout: LoadoutWriter<MockAssetServer>| {
+			.run_system_once(move |mut loadout: LoadoutPrep<MockAssetServer>| {
 				let key = NotLoadedOut { entity };
-				let mut ctx = LoadoutWriter::get_context_mut(&mut loadout, key).unwrap();
+				let mut ctx = LoadoutPrep::get_context_mut(&mut loadout, key).unwrap();
 				ctx.insert_default_loadout([
 					(LoadoutKey::from(SlotKey(2)), ItemName::from("item_2")),
 					(LoadoutKey::from(SlotKey(3)), ItemName::from("item_3")),
@@ -294,9 +294,9 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once(move |mut loadout: LoadoutWriter<MockAssetServer>| {
+			.run_system_once(move |mut loadout: LoadoutPrep<MockAssetServer>| {
 				let key = NotLoadedOut { entity };
-				let mut ctx = LoadoutWriter::get_context_mut(&mut loadout, key).unwrap();
+				let mut ctx = LoadoutPrep::get_context_mut(&mut loadout, key).unwrap();
 				ctx.insert_default_loadout([
 					(LoadoutKey::from(InventoryKey(2)), ItemName::from("item_2")),
 					(LoadoutKey::from(InventoryKey(3)), ItemName::from("item_3")),
@@ -326,9 +326,9 @@ mod tests {
 		let entity = app.world_mut().spawn_empty().id();
 
 		app.world_mut()
-			.run_system_once(move |mut loadout: LoadoutWriter<MockAssetServer>| {
+			.run_system_once(move |mut loadout: LoadoutPrep<MockAssetServer>| {
 				let key = NotLoadedOut { entity };
-				let mut ctx = LoadoutWriter::get_context_mut(&mut loadout, key).unwrap();
+				let mut ctx = LoadoutPrep::get_context_mut(&mut loadout, key).unwrap();
 				ctx.insert_default_loadout([]);
 			})?;
 

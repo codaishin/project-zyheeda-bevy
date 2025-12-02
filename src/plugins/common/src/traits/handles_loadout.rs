@@ -27,6 +27,9 @@ use std::fmt::Debug;
 pub trait HandlesLoadout {
 	type TSkillID: Debug + PartialEq + Copy + ThreadSafe;
 
+	type TLoadoutPrep<'w, 's>: SystemParam
+		+ for<'c> GetContextMut<NotLoadedOut, TContext<'c>: InsertDefaultLoadout>;
+
 	type TLoadoutRead<'w, 's>: SystemParam
 		+ for<'c> GetContext<Items, TContext<'c>: ReadItems>
 		+ for<'c> GetContext<Skills, TContext<'c>: ReadSkills>
@@ -35,13 +38,13 @@ pub trait HandlesLoadout {
 
 	type TLoadoutMut<'w, 's>: SystemParam
 		+ for<'c> GetContextMut<Items, TContext<'c>: SwapItems>
-		+ for<'c> GetContextMut<Combos, TContext<'c>: UpdateCombos<Self::TSkillID>>
-		+ for<'c> GetContextMut<NotLoadedOut, TContext<'c>: InsertDefaultLoadout>;
+		+ for<'c> GetContextMut<Combos, TContext<'c>: UpdateCombos<Self::TSkillID>>;
 
 	type TLoadoutActivity<'w, 's>: SystemParam
 		+ for<'c> GetContext<Skills, TContext<'c>: ActiveSkills>;
 }
 
+pub type LoadoutPrepParam<'w, 's, T> = <T as HandlesLoadout>::TLoadoutPrep<'w, 's>;
 pub type LoadoutReadParam<'w, 's, T> = <T as HandlesLoadout>::TLoadoutRead<'w, 's>;
 pub type LoadoutMutParam<'w, 's, T> = <T as HandlesLoadout>::TLoadoutMut<'w, 's>;
 pub type LoadoutActivityParam<'w, 's, T> = <T as HandlesLoadout>::TLoadoutActivity<'w, 's>;
