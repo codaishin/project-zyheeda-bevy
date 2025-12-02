@@ -9,6 +9,7 @@ use crate::{
 		agent::{Agent, tag::AgentTag},
 		animate_idle::AnimateIdle,
 		enemy::{Enemy, attack_phase::EnemyAttackPhase, void_sphere::VoidSphere},
+		insert_agent_default_loadout::InsertAgentDefaultLoadout,
 		movement_config::MovementConfig,
 		player::Player,
 		player_camera::PlayerCamera,
@@ -27,6 +28,7 @@ use common::{
 		handles_enemies::HandlesEnemies,
 		handles_input::{HandlesInput, InputSystemParam},
 		handles_lights::HandlesLights,
+		handles_loadout::{HandlesLoadout, LoadoutPrepParam},
 		handles_map_generation::HandlesMapGeneration,
 		handles_movement::{HandlesMovement, MovementSystemParam, MovementSystemParamMut},
 		handles_orientation::{FacingSystemParamMut, HandlesOrientation},
@@ -65,7 +67,7 @@ where
 	TLights: ThreadSafe + HandlesLights,
 	TMaps: ThreadSafe + HandlesMapGeneration,
 	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation + HandlesSkillControl,
-	TLoadout: ThreadSafe,
+	TLoadout: ThreadSafe + HandlesLoadout,
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn from_plugins(
@@ -105,7 +107,7 @@ where
 	TLights: ThreadSafe + HandlesLights,
 	TMaps: ThreadSafe + HandlesMapGeneration,
 	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation + HandlesSkillControl,
-	TLoadout: ThreadSafe,
+	TLoadout: ThreadSafe + HandlesLoadout,
 {
 	fn build(&self, app: &mut App) {
 		// # Load Agent
@@ -127,6 +129,7 @@ where
 				Agent::insert_model,
 				Agent::register_animations::<AnimationsSystemParamMut<TAnimations>>,
 				Agent::<AgentConfig>::insert_attributes::<TPhysics::TDefaultAttributes>,
+				InsertAgentDefaultLoadout::execute::<AgentConfig, LoadoutPrepParam<TLoadout>>,
 			),
 		);
 
