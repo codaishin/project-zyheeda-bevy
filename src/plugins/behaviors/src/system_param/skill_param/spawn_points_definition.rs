@@ -2,10 +2,12 @@ use crate::{
 	components::fix_points::FixPointsDefinition,
 	system_param::skill_param::SpawnPointContextMut,
 };
-use common::traits::{
-	handles_animations::BoneName,
-	handles_skill_behaviors::SkillSpawner,
-	handles_skills_control::SpawnPointsDefinition,
+use common::{
+	tools::bone_name::BoneName,
+	traits::{
+		handles_skill_behaviors::SkillSpawner,
+		handles_skills_control::SpawnPointsDefinition,
+	},
 };
 use std::collections::HashMap;
 

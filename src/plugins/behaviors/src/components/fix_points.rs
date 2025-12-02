@@ -9,12 +9,8 @@ use bevy::{ecs::entity::EntityHashSet, prelude::*};
 use common::{
 	components::persistent_entity::PersistentEntity,
 	errors::{ErrorData, Level},
-	traits::{
-		accessors::get::Get,
-		handles_animations::BoneName,
-		handles_skill_behaviors::SkillSpawner,
-		or_ok::OrOk,
-	},
+	tools::bone_name::BoneName,
+	traits::{accessors::get::Get, handles_skill_behaviors::SkillSpawner, or_ok::OrOk},
 	zyheeda_commands::ZyheedaCommands,
 };
 use std::{any::type_name, collections::HashMap, fmt::Display, marker::PhantomData};

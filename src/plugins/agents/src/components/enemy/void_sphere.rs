@@ -18,9 +18,8 @@ use bevy_rapier3d::geometry::Collider;
 use common::{
 	components::{ground_offset::GroundOffset, insert_asset::InsertAsset},
 	errors::Unreachable,
-	tools::{Units, UnitsPerSecond, action_key::slot::SlotKey},
+	tools::{Units, UnitsPerSecond, action_key::slot::SlotKey, bone_name::BoneName},
 	traits::{
-		handles_animations::BoneName,
 		handles_enemies::EnemyType,
 		handles_map_generation::AgentType,
 		handles_skill_behaviors::SkillSpawner,

@@ -1,4 +1,4 @@
-use crate::traits::handles_animations::BoneName;
+use crate::tools::bone_name::BoneName;
 
 pub trait BoneKey<TBone> {
 	fn bone_key(&self, bone_name: &str) -> Option<TBone>;

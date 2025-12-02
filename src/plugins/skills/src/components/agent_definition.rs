@@ -1,11 +1,10 @@
 use bevy::prelude::*;
 use common::{
-	tools::action_key::slot::SlotKey,
+	tools::{action_key::slot::SlotKey, bone_name::BoneName},
 	traits::{
 		accessors::get::{AssociatedSystemParam, GetFromSystemParam, TryApplyOn},
 		bone_key::{BoneKey, ConfiguredBones},
 		handles_agents::AgentConfig,
-		handles_animations::BoneName,
 		loadout::{ItemName, LoadoutConfig},
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
 	},

@@ -1,10 +1,6 @@
 use crate::{
-	tools::action_key::slot::SlotKey,
-	traits::{
-		accessors::get::GetContextMut,
-		handles_animations::BoneName,
-		handles_skill_behaviors::SkillSpawner,
-	},
+	tools::{action_key::slot::SlotKey, bone_name::BoneName},
+	traits::{accessors::get::GetContextMut, handles_skill_behaviors::SkillSpawner},
 };
 use bevy::ecs::{entity::Entity, system::SystemParam};
 use std::{collections::HashMap, ops::DerefMut};

@@ -53,7 +53,7 @@ fn get_root<'a>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::handles_animations::BoneName;
+	use common::tools::bone_name::BoneName;
 	use std::collections::HashMap;
 	use testing::SingleThreadedApp;
 

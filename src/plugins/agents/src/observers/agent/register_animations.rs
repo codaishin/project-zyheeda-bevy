@@ -48,7 +48,7 @@ mod tests {
 	use crate::assets::agent_config::AgentConfigAsset;
 	use common::{
 		bit_mask_index,
-		tools::path::Path,
+		tools::{bone_name::BoneName, path::Path},
 		traits::{
 			handles_animations::{
 				AffectedAnimationBones,
@@ -56,7 +56,6 @@ mod tests {
 				AnimationKey,
 				AnimationMaskBits,
 				AnimationPath,
-				BoneName,
 				PlayMode,
 			},
 			handles_map_generation::AgentType,

@@ -70,14 +70,13 @@ mod tests {
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
 		bit_mask_index,
-		tools::action_key::slot::SlotKey,
+		tools::{action_key::slot::SlotKey, bone_name::BoneName},
 		traits::{
 			accessors::get::GetContextMut,
 			handles_animations::{
 				AffectedAnimationBones,
 				AnimationPath,
 				Animations as AnimationsKey,
-				BoneName,
 				PlayMode,
 			},
 			wrap_handle::GetHandle,

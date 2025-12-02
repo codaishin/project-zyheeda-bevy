@@ -4,17 +4,11 @@ use crate::systems::agent::insert_model::InsertModel;
 use bevy::prelude::*;
 use common::{
 	components::asset_model::AssetModel,
-	tools::{action_key::slot::SlotKey, path::Path},
+	tools::{action_key::slot::SlotKey, bone_name::BoneName, path::Path},
 	traits::{
 		accessors::get::GetProperty,
 		bone_key::{BoneKey, ConfiguredBones},
-		handles_animations::{
-			AffectedAnimationBones,
-			Animation,
-			AnimationKey,
-			AnimationMaskBits,
-			BoneName,
-		},
+		handles_animations::{AffectedAnimationBones, Animation, AnimationKey, AnimationMaskBits},
 		handles_custom_assets::AssetFolderPath,
 		handles_map_generation::AgentType,
 		handles_physics::PhysicalDefaultAttributes,
