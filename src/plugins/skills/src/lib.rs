@@ -12,7 +12,6 @@ use crate::{
 		bone_definitions::BoneDefinitions,
 		combos::dto::CombosDto,
 		combos_time_out::dto::CombosTimeOutDto,
-		loadout::Loadout,
 		queue::dto::QueueDto,
 		slots::visualization::SlotVisualization,
 	},
@@ -88,7 +87,6 @@ where
 		app.add_observer(Slots::set_self_entity).add_systems(
 			Update,
 			(
-				Loadout::<BoneDefinitions>::insert,
 				SlotVisualization::<HandSlot>::track_slots_for::<BoneDefinitions>,
 				SlotVisualization::<HandSlot>::visualize_items,
 				SlotVisualization::<ForearmSlot>::track_slots_for::<BoneDefinitions>,

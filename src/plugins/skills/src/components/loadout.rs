@@ -5,21 +5,13 @@ use crate::components::{
 	skill_executer::SkillExecuter,
 };
 use bevy::prelude::*;
-use std::{marker::PhantomData, time::Duration};
+use std::time::Duration;
 
-// FIXME: Remove generic type after dependency on agents has been removed and `AgentConfig` has
-//        been reworked (limited to slot bone definitions)
-#[derive(Component, Debug, PartialEq)]
+#[derive(Component, Debug, PartialEq, Default)]
 #[require(
 	Combos,
 	CombosTimeOut = CombosTimeOut::after(Duration::from_secs(2)),
 	Queue,
 	SkillExecuter,
 )]
-pub(crate) struct Loadout<T = ()>(PhantomData<fn() -> T>);
-
-impl<T> Default for Loadout<T> {
-	fn default() -> Self {
-		Self(PhantomData)
-	}
-}
+pub(crate) struct Loadout;
