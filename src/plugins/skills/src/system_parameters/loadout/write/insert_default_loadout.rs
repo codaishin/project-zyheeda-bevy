@@ -23,20 +23,20 @@ where
 {
 	fn insert_default_loadout<TItems>(&mut self, loadout: TItems)
 	where
-		TItems: IntoIterator<Item = (LoadoutKey, ItemName)>,
+		TItems: IntoIterator<Item = (LoadoutKey, Option<ItemName>)>,
 	{
 		let mut slots = Slots::default();
 		let mut inventory = Inventory::default();
 
 		for (key, name) in loadout.into_iter() {
-			let item = self.server.load_asset(asset_path(name));
+			let item = name.map(|name| self.server.load_asset(asset_path(name)));
 			match key {
 				LoadoutKey::Inventory(InventoryKey(key)) => {
 					inventory.fill_up_to(key);
-					inventory.0[key] = Some(item);
+					inventory.0[key] = item;
 				}
 				LoadoutKey::Slot(key) => {
-					slots.items.insert(key, Some(item));
+					slots.items.insert(key, item);
 				}
 			}
 		}
@@ -128,10 +128,16 @@ mod tests {
 				let key = NotLoadedOut { entity };
 				let mut ctx = LoadoutPrep::get_context_mut(&mut loadout, key).unwrap();
 				ctx.insert_default_loadout([
-					(LoadoutKey::from(InventoryKey(0)), ItemName::from("item_0")),
-					(LoadoutKey::from(InventoryKey(1)), ItemName::from("item_1")),
-					(LoadoutKey::from(SlotKey(0)), ItemName::from("item_2")),
-					(LoadoutKey::from(SlotKey(1)), ItemName::from("item_3")),
+					(
+						LoadoutKey::from(InventoryKey(0)),
+						Some(ItemName::from("item_0")),
+					),
+					(
+						LoadoutKey::from(InventoryKey(1)),
+						Some(ItemName::from("item_1")),
+					),
+					(LoadoutKey::from(SlotKey(0)), Some(ItemName::from("item_2"))),
+					(LoadoutKey::from(SlotKey(1)), Some(ItemName::from("item_3"))),
 				]);
 			})?;
 
@@ -171,8 +177,14 @@ mod tests {
 				let key = NotLoadedOut { entity };
 				let mut ctx = LoadoutPrep::get_context_mut(&mut loadout, key).unwrap();
 				ctx.insert_default_loadout([
-					(LoadoutKey::from(InventoryKey(3)), ItemName::from("item_0")),
-					(LoadoutKey::from(InventoryKey(1)), ItemName::from("item_1")),
+					(
+						LoadoutKey::from(InventoryKey(3)),
+						Some(ItemName::from("item_0")),
+					),
+					(
+						LoadoutKey::from(InventoryKey(1)),
+						Some(ItemName::from("item_1")),
+					),
 				]);
 			})?;
 
@@ -241,9 +253,12 @@ mod tests {
 				let key = NotLoadedOut { entity };
 				let mut ctx = LoadoutPrep::get_context_mut(&mut loadout, key).unwrap();
 				ctx.insert_default_loadout([
-					(LoadoutKey::from(SlotKey(2)), ItemName::from("item_2")),
-					(LoadoutKey::from(SlotKey(3)), ItemName::from("item_3")),
-					(LoadoutKey::from(InventoryKey(0)), ItemName::from("item_4")),
+					(LoadoutKey::from(SlotKey(2)), Some(ItemName::from("item_2"))),
+					(LoadoutKey::from(SlotKey(3)), Some(ItemName::from("item_3"))),
+					(
+						LoadoutKey::from(InventoryKey(0)),
+						Some(ItemName::from("item_4")),
+					),
 				]);
 			})?;
 
@@ -298,9 +313,15 @@ mod tests {
 				let key = NotLoadedOut { entity };
 				let mut ctx = LoadoutPrep::get_context_mut(&mut loadout, key).unwrap();
 				ctx.insert_default_loadout([
-					(LoadoutKey::from(InventoryKey(2)), ItemName::from("item_2")),
-					(LoadoutKey::from(InventoryKey(3)), ItemName::from("item_3")),
-					(LoadoutKey::from(SlotKey(4)), ItemName::from("item_4")),
+					(
+						LoadoutKey::from(InventoryKey(2)),
+						Some(ItemName::from("item_2")),
+					),
+					(
+						LoadoutKey::from(InventoryKey(3)),
+						Some(ItemName::from("item_3")),
+					),
+					(LoadoutKey::from(SlotKey(4)), Some(ItemName::from("item_4"))),
 				]);
 			})?;
 
