@@ -20,6 +20,7 @@ use common::{
 	errors::Unreachable,
 	tools::{Units, UnitsPerSecond, action_key::slot::SlotKey},
 	traits::{
+		handles_animations::BoneName,
 		handles_enemies::EnemyType,
 		handles_map_generation::AgentType,
 		handles_skill_behaviors::SkillSpawner,
@@ -28,7 +29,7 @@ use common::{
 	},
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, f32::consts::PI, time::Duration};
+use std::{collections::HashMap, f32::consts::PI, sync::LazyLock, time::Duration};
 
 #[derive(Component, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
 #[require(
@@ -38,6 +39,13 @@ use std::{collections::HashMap, f32::consts::PI, time::Duration};
 	GroundOffset = GroundOffset(Self::GROUND_OFFSET),
 )]
 pub struct VoidSphere;
+
+type LazyBoneName = LazyLock<BoneName>;
+
+/// We use the same name for hand/forearm/essence slots.
+static ALL_PURPOSE_SLOT_BONE: LazyBoneName = LazyLock::new(|| BoneName::from("slot"));
+static SKILL_SPAWN: LazyBoneName = LazyLock::new(|| BoneName::from("skill_spawn"));
+static SKILL_SPAWN_NEUTRAL: LazyBoneName = LazyLock::new(|| BoneName::from("skill_spawn_neutral"));
 
 impl VoidSphere {
 	const SLOT_KEY: SlotKey = SlotKey(0);
@@ -53,12 +61,6 @@ impl VoidSphere {
 		Self::GROUND_OFFSET.y,
 		Self::GROUND_OFFSET.z - (Self::OUTER_RADIUS + Self::TORUS_RING_RADIUS),
 	);
-
-	/// We use the same name for hand/forearm/essence slots.
-	pub(crate) const ALL_PURPOSE_SLOT_BONE: &str = "slot";
-
-	pub(crate) const SKILL_SPAWN: &str = "skill_spawn";
-	pub(crate) const SKILL_SPAWN_NEUTRAL: &str = "skill_spawn_neutral";
 
 	fn attack_config() -> EnemyAttackConfig {
 		EnemyAttackConfig {
@@ -118,17 +120,17 @@ impl Prefab<()> for VoidSphere {
 			// One unified slot bone
 			.with_child((
 				Transform::from_translation(Self::SLOT_OFFSET),
-				Name::from(Self::ALL_PURPOSE_SLOT_BONE),
+				Name::from(ALL_PURPOSE_SLOT_BONE.clone()),
 			))
 			// Skill spawn directly on slot offset
 			.with_child((
 				Transform::from_translation(Self::SLOT_OFFSET),
-				Name::from(Self::SKILL_SPAWN),
+				Name::from(SKILL_SPAWN.clone()),
 			))
 			// Neutral skill spawn directly on slot offset
 			.with_child((
 				Transform::from_translation(Self::SLOT_OFFSET),
-				Name::from(Self::SKILL_SPAWN_NEUTRAL),
+				Name::from(SKILL_SPAWN_NEUTRAL.clone()),
 			));
 
 		Ok(())
@@ -139,27 +141,15 @@ impl BonesConfig for VoidSphere {
 	fn bones() -> Bones {
 		Bones {
 			spawners: HashMap::from([
+				(SKILL_SPAWN_NEUTRAL.clone(), SkillSpawner::Neutral),
 				(
-					VoidSphere::SKILL_SPAWN_NEUTRAL.to_owned(),
-					SkillSpawner::Neutral,
-				),
-				(
-					VoidSphere::SKILL_SPAWN.to_owned(),
+					SKILL_SPAWN.clone(),
 					SkillSpawner::Slot(VoidSphere::SLOT_KEY),
 				),
 			]),
-			hand_slots: HashMap::from([(
-				VoidSphere::ALL_PURPOSE_SLOT_BONE.to_owned(),
-				VoidSphere::SLOT_KEY,
-			)]),
-			forearm_slots: HashMap::from([(
-				VoidSphere::ALL_PURPOSE_SLOT_BONE.to_owned(),
-				VoidSphere::SLOT_KEY,
-			)]),
-			essence_slots: HashMap::from([(
-				VoidSphere::ALL_PURPOSE_SLOT_BONE.to_owned(),
-				VoidSphere::SLOT_KEY,
-			)]),
+			hand_slots: HashMap::from([(ALL_PURPOSE_SLOT_BONE.clone(), VoidSphere::SLOT_KEY)]),
+			forearm_slots: HashMap::from([(ALL_PURPOSE_SLOT_BONE.clone(), VoidSphere::SLOT_KEY)]),
+			essence_slots: HashMap::from([(ALL_PURPOSE_SLOT_BONE.clone(), VoidSphere::SLOT_KEY)]),
 		}
 	}
 }

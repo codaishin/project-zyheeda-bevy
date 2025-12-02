@@ -36,7 +36,11 @@ mod tests {
 	use crate::assets::agent_config::{AgentConfigAsset, Bones};
 	use common::{
 		tools::action_key::slot::SlotKey,
-		traits::{handles_map_generation::AgentType, handles_skill_behaviors::SkillSpawner},
+		traits::{
+			handles_animations::BoneName,
+			handles_map_generation::AgentType,
+			handles_skill_behaviors::SkillSpawner,
+		},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -50,7 +54,7 @@ mod tests {
 
 	#[automock]
 	impl SpawnPointsDefinition for _Skills {
-		fn insert_spawn_point_definition(&mut self, definition: HashMap<String, SkillSpawner>) {
+		fn insert_spawn_point_definition(&mut self, definition: HashMap<BoneName, SkillSpawner>) {
 			self.mock.insert_spawn_point_definition(definition);
 		}
 	}
@@ -74,8 +78,8 @@ mod tests {
 		let asset = AgentConfigAsset {
 			bones: Bones {
 				spawners: HashMap::from([
-					("a".to_owned(), SkillSpawner::Neutral),
-					("b".to_owned(), SkillSpawner::Slot(SlotKey(42))),
+					(BoneName::from("a"), SkillSpawner::Neutral),
+					(BoneName::from("b"), SkillSpawner::Slot(SlotKey(42))),
 				]),
 				..default()
 			},
@@ -92,8 +96,8 @@ mod tests {
 				mock.expect_insert_spawn_point_definition()
 					.once()
 					.with(eq(HashMap::from([
-						(String::from("a"), SkillSpawner::Neutral),
-						(String::from("b"), SkillSpawner::Slot(SlotKey(42))),
+						(BoneName::from("a"), SkillSpawner::Neutral),
+						(BoneName::from("b"), SkillSpawner::Slot(SlotKey(42))),
 					])))
 					.return_const(());
 			}),
@@ -106,8 +110,8 @@ mod tests {
 		let asset = AgentConfigAsset {
 			bones: Bones {
 				spawners: HashMap::from([
-					("a".to_owned(), SkillSpawner::Neutral),
-					("b".to_owned(), SkillSpawner::Slot(SlotKey(42))),
+					(BoneName::from("a"), SkillSpawner::Neutral),
+					(BoneName::from("b"), SkillSpawner::Slot(SlotKey(42))),
 				]),
 				..default()
 			},

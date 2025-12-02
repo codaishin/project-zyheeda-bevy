@@ -1,6 +1,10 @@
 use crate::{
 	tools::action_key::slot::SlotKey,
-	traits::{accessors::get::GetContextMut, handles_skill_behaviors::SkillSpawner},
+	traits::{
+		accessors::get::GetContextMut,
+		handles_animations::BoneName,
+		handles_skill_behaviors::SkillSpawner,
+	},
 };
 use bevy::ecs::{entity::Entity, system::SystemParam};
 use std::{collections::HashMap, ops::DerefMut};
@@ -53,14 +57,14 @@ impl From<SkillSpawnPoints> for Entity {
 }
 
 pub trait SpawnPointsDefinition {
-	fn insert_spawn_point_definition(&mut self, definition: HashMap<String, SkillSpawner>);
+	fn insert_spawn_point_definition(&mut self, definition: HashMap<BoneName, SkillSpawner>);
 }
 
 impl<T> SpawnPointsDefinition for T
 where
 	T: DerefMut<Target: SpawnPointsDefinition>,
 {
-	fn insert_spawn_point_definition(&mut self, definition: HashMap<String, SkillSpawner>) {
+	fn insert_spawn_point_definition(&mut self, definition: HashMap<BoneName, SkillSpawner>) {
 		self.deref_mut().insert_spawn_point_definition(definition);
 	}
 }
