@@ -8,5 +8,5 @@ pub struct NotLoadedOut {
 pub trait InsertDefaultLoadout {
 	fn insert_default_loadout<TItems>(&mut self, loadout: TItems)
 	where
-		TItems: IntoIterator<Item = (LoadoutKey, ItemName)>;
+		TItems: IntoIterator<Item = (LoadoutKey, Option<ItemName>)>;
 }
