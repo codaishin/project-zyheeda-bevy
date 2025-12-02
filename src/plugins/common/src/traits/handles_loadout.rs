@@ -1,7 +1,8 @@
 pub mod available_skills;
 pub mod combos;
-pub mod default_items;
+pub mod insert_default_loadout;
 pub mod items;
+pub mod register_loadout_bones;
 pub mod skills;
 
 use crate::{
@@ -14,8 +15,9 @@ use crate::{
 		handles_loadout::{
 			available_skills::{AvailableSkills, ReadAvailableSkills},
 			combos::{Combos, ReadCombos, UpdateCombos},
-			default_items::{InsertDefaultLoadout, NotLoadedOut},
+			insert_default_loadout::{InsertDefaultLoadout, NotLoadedOut},
 			items::{Items, ReadItems, SwapItems},
+			register_loadout_bones::{NoBonesRegistered, RegisterLoadoutBones},
 			skills::{ReadSkills, Skills},
 		},
 		thread_safe::ThreadSafe,
@@ -28,7 +30,8 @@ pub trait HandlesLoadout {
 	type TSkillID: Debug + PartialEq + Copy + ThreadSafe;
 
 	type TLoadoutPrep<'w, 's>: SystemParam
-		+ for<'c> GetContextMut<NotLoadedOut, TContext<'c>: InsertDefaultLoadout>;
+		+ for<'c> GetContextMut<NotLoadedOut, TContext<'c>: InsertDefaultLoadout>
+		+ for<'c> GetContextMut<NoBonesRegistered, TContext<'c>: RegisterLoadoutBones>;
 
 	type TLoadoutRead<'w, 's>: SystemParam
 		+ for<'c> GetContext<Items, TContext<'c>: ReadItems>

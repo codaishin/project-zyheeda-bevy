@@ -9,7 +9,7 @@ mod traits;
 
 use crate::{
 	components::{
-		agent_definition::AgentDefinition,
+		bone_definitions::BoneDefinitions,
 		combos::dto::CombosDto,
 		combos_time_out::dto::CombosTimeOutDto,
 		loadout::Loadout,
@@ -96,16 +96,16 @@ where
 		TSaveGame::register_savable_component::<Slots>(app);
 
 		app.add_observer(Slots::set_self_entity)
-			.add_observer(AgentDefinition::insert_from_agent::<TAgents::TAgent>)
+			.add_observer(BoneDefinitions::insert_from_agent::<TAgents::TAgent>)
 			.add_systems(
 				Update,
 				(
-					Loadout::<AgentDefinition>::insert,
-					SlotVisualization::<HandSlot>::track_slots_for::<AgentDefinition>,
+					Loadout::<BoneDefinitions>::insert,
+					SlotVisualization::<HandSlot>::track_slots_for::<BoneDefinitions>,
 					SlotVisualization::<HandSlot>::visualize_items,
-					SlotVisualization::<ForearmSlot>::track_slots_for::<AgentDefinition>,
+					SlotVisualization::<ForearmSlot>::track_slots_for::<BoneDefinitions>,
 					SlotVisualization::<ForearmSlot>::visualize_items,
-					SlotVisualization::<EssenceSlot>::track_slots_for::<AgentDefinition>,
+					SlotVisualization::<EssenceSlot>::track_slots_for::<BoneDefinitions>,
 					SlotVisualization::<EssenceSlot>::visualize_items,
 				)
 					.chain(),
