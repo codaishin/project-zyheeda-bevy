@@ -53,6 +53,7 @@ fn get_root<'a>(
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use common::tools::bone_name::BoneName;
 	use std::collections::HashMap;
 	use testing::SingleThreadedApp;
 
@@ -76,7 +77,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn(FixPointsDefinition(HashMap::from([(
-				String::from("a"),
+				BoneName::from("a"),
 				SkillSpawner::Neutral,
 			)])))
 			.id();
@@ -106,7 +107,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn(FixPointsDefinition(HashMap::from([(
-				String::from("a"),
+				BoneName::from("a"),
 				SkillSpawner::Neutral,
 			)])))
 			.id();
@@ -138,7 +139,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn(FixPointsDefinition(HashMap::from([(
-				String::from("a"),
+				BoneName::from("a"),
 				SkillSpawner::Neutral,
 			)])))
 			.id();
@@ -175,7 +176,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn(FixPointsDefinition(HashMap::from([(
-				String::from("a"),
+				BoneName::from("a"),
 				SkillSpawner::Neutral,
 			)])))
 			.id();

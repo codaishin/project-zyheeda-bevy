@@ -3,10 +3,13 @@ use bevy::{
 	animation::{AnimationTarget, AnimationTargetId},
 	prelude::*,
 };
-use common::traits::{
-	handles_animations::{AffectedAnimationBones, AnimationMaskBits, BoneName},
-	iter_descendants_conditional::IterDescendantsConditional,
-	wrap_handle::GetHandle,
+use common::{
+	tools::bone_name::BoneName,
+	traits::{
+		handles_animations::{AffectedAnimationBones, AnimationMaskBits},
+		iter_descendants_conditional::IterDescendantsConditional,
+		wrap_handle::GetHandle,
+	},
 };
 use std::{
 	collections::{HashMap, HashSet},

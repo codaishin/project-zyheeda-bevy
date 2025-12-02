@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use common::{
-	tools::action_key::slot::SlotKey,
+	tools::{action_key::slot::SlotKey, bone_name::BoneName},
 	traits::{
 		accessors::get::{AssociatedSystemParam, GetFromSystemParam, TryApplyOn},
 		bone_key::{BoneKey, ConfiguredBones},
@@ -14,9 +14,9 @@ use std::collections::HashMap;
 
 #[derive(Component, Debug, PartialEq, Default)]
 pub(crate) struct AgentDefinition {
-	pub(crate) forearms: HashMap<String, ForearmSlot>,
-	pub(crate) hands: HashMap<String, HandSlot>,
-	pub(crate) essences: HashMap<String, EssenceSlot>,
+	pub(crate) forearms: HashMap<BoneName, ForearmSlot>,
+	pub(crate) hands: HashMap<BoneName, HandSlot>,
+	pub(crate) essences: HashMap<BoneName, EssenceSlot>,
 	pub(crate) default_inventory_loadout: Vec<Option<ItemName>>,
 	pub(crate) default_slots_loadout: Vec<(SlotKey, Option<ItemName>)>,
 }
@@ -84,11 +84,11 @@ impl AgentDefinition {
 	}
 }
 
-fn get_bones<TKey>(conf: &impl ConfiguredBones<TKey>) -> HashMap<String, TKey> {
+fn get_bones<TKey>(conf: &impl ConfiguredBones<TKey>) -> HashMap<BoneName, TKey> {
 	conf.bone_names()
 		.filter_map(|bone| {
-			let key = conf.bone_key(bone)?;
-			Some((bone.to_owned(), key))
+			let key = conf.bone_key(&bone)?;
+			Some((bone.clone(), key))
 		})
 		.collect()
 }

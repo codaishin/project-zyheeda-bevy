@@ -2,14 +2,17 @@ use crate::{
 	components::fix_points::FixPointsDefinition,
 	system_param::skill_param::SpawnPointContextMut,
 };
-use common::traits::{
-	handles_skill_behaviors::SkillSpawner,
-	handles_skills_control::SpawnPointsDefinition,
+use common::{
+	tools::bone_name::BoneName,
+	traits::{
+		handles_skill_behaviors::SkillSpawner,
+		handles_skills_control::SpawnPointsDefinition,
+	},
 };
 use std::collections::HashMap;
 
 impl SpawnPointsDefinition for SpawnPointContextMut<'_> {
-	fn insert_spawn_point_definition(&mut self, definition: HashMap<String, SkillSpawner>) {
+	fn insert_spawn_point_definition(&mut self, definition: HashMap<BoneName, SkillSpawner>) {
 		self.entity.try_insert(FixPointsDefinition(definition));
 	}
 }
@@ -40,8 +43,8 @@ mod tests {
 		let mut app = setup();
 		let entity = app.world_mut().spawn_empty().id();
 		let map = HashMap::from([
-			(String::from("a"), SkillSpawner::Neutral),
-			(String::from("b"), SkillSpawner::Slot(SlotKey(42))),
+			(BoneName::from("a"), SkillSpawner::Neutral),
+			(BoneName::from("b"), SkillSpawner::Slot(SlotKey(42))),
 		]);
 		let map_clone = map.clone();
 

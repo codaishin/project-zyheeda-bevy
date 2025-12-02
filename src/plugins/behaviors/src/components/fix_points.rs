@@ -9,6 +9,7 @@ use bevy::{ecs::entity::EntityHashSet, prelude::*};
 use common::{
 	components::persistent_entity::PersistentEntity,
 	errors::{ErrorData, Level},
+	tools::bone_name::BoneName,
 	traits::{accessors::get::Get, handles_skill_behaviors::SkillSpawner, or_ok::OrOk},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -119,7 +120,7 @@ impl<TFilter> AnchorBuilder<TFilter> {
 pub struct FixPoints(EntityHashSet);
 
 #[derive(Component, Debug, PartialEq, Clone, Default)]
-pub struct FixPointsDefinition(pub(crate) HashMap<String, SkillSpawner>);
+pub struct FixPointsDefinition(pub(crate) HashMap<BoneName, SkillSpawner>);
 
 #[derive(Component, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum AnchorError {

@@ -4,7 +4,7 @@ use crate::systems::agent::insert_model::InsertModel;
 use bevy::prelude::*;
 use common::{
 	components::asset_model::AssetModel,
-	tools::{action_key::slot::SlotKey, path::Path},
+	tools::{action_key::slot::SlotKey, bone_name::BoneName, path::Path},
 	traits::{
 		accessors::get::GetProperty,
 		bone_key::{BoneKey, ConfiguredBones},
@@ -71,8 +71,8 @@ impl BoneKey<EssenceSlot> for AgentConfigData<'_> {
 }
 
 impl ConfiguredBones<EssenceSlot> for AgentConfigData<'_> {
-	fn bone_names(&self) -> impl Iterator<Item = &str> {
-		self.asset.bones.essence_slots.keys().map(|e| e.as_str())
+	fn bone_names(&self) -> impl Iterator<Item = BoneName> {
+		self.asset.bones.essence_slots.keys().cloned()
 	}
 }
 
@@ -88,8 +88,8 @@ impl BoneKey<HandSlot> for AgentConfigData<'_> {
 }
 
 impl ConfiguredBones<HandSlot> for AgentConfigData<'_> {
-	fn bone_names(&self) -> impl Iterator<Item = &str> {
-		self.asset.bones.hand_slots.keys().map(|e| e.as_str())
+	fn bone_names(&self) -> impl Iterator<Item = BoneName> {
+		self.asset.bones.hand_slots.keys().cloned()
 	}
 }
 
@@ -105,8 +105,8 @@ impl BoneKey<ForearmSlot> for AgentConfigData<'_> {
 }
 
 impl ConfiguredBones<ForearmSlot> for AgentConfigData<'_> {
-	fn bone_names(&self) -> impl Iterator<Item = &str> {
-		self.asset.bones.forearm_slots.keys().map(|e| e.as_str())
+	fn bone_names(&self) -> impl Iterator<Item = BoneName> {
+		self.asset.bones.forearm_slots.keys().cloned()
 	}
 }
 
@@ -129,10 +129,10 @@ pub(crate) struct Loadout {
 
 #[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
 pub(crate) struct Bones {
-	pub(crate) spawners: HashMap<String, SkillSpawner>,
-	pub(crate) hand_slots: HashMap<String, SlotKey>,
-	pub(crate) forearm_slots: HashMap<String, SlotKey>,
-	pub(crate) essence_slots: HashMap<String, SlotKey>,
+	pub(crate) spawners: HashMap<BoneName, SkillSpawner>,
+	pub(crate) hand_slots: HashMap<BoneName, SlotKey>,
+	pub(crate) forearm_slots: HashMap<BoneName, SlotKey>,
+	pub(crate) essence_slots: HashMap<BoneName, SlotKey>,
 }
 
 #[derive(Debug, Clone)]
