@@ -24,14 +24,20 @@ type ReadComponents = (
 );
 
 #[derive(SystemParam)]
-pub struct LoadoutWriter<'w, 's, TAssetServer = AssetServer>
+pub struct LoadoutWriter<'w, 's> {
+	slots: Query<'w, 's, &'static mut Slots>,
+	inventories: Query<'w, 's, &'static mut Inventory>,
+	combos: Query<'w, 's, &'static mut Combos>,
+	skills: Res<'w, Assets<Skill>>,
+}
+
+#[derive(SystemParam)]
+pub struct LoadoutPrep<'w, 's, TAssetServer = AssetServer>
 where
 	TAssetServer: Resource + LoadAsset,
 {
 	commands: ZyheedaCommands<'w, 's>,
 	slots: Query<'w, 's, &'static mut Slots>,
 	inventories: Query<'w, 's, &'static mut Inventory>,
-	combos: Query<'w, 's, &'static mut Combos>,
-	skills: Res<'w, Assets<Skill>>,
 	asset_server: ResMut<'w, TAssetServer>,
 }

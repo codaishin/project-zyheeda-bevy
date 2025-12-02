@@ -18,7 +18,7 @@ use crate::{
 	},
 	skills::SkillId,
 	system_parameters::{
-		loadout::{LoadoutReader, LoadoutWriter},
+		loadout::{LoadoutPrep, LoadoutReader, LoadoutWriter},
 		loadout_activity::LoadoutActivity,
 	},
 	systems::enqueue::EnqueueSystem,
@@ -167,6 +167,7 @@ where
 
 impl<TDependencies> HandlesLoadout for SkillsPlugin<TDependencies> {
 	type TSkillID = SkillId;
+	type TLoadoutPrep<'w, 's> = LoadoutPrep<'w, 's>;
 	type TLoadoutRead<'w, 's> = LoadoutReader<'w, 's>;
 	type TLoadoutMut<'w, 's> = LoadoutWriter<'w, 's>;
 	type TLoadoutActivity<'w, 's> = LoadoutActivity<'w, 's>;

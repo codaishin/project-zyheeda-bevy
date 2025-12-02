@@ -11,18 +11,14 @@ use common::{
 			LoadoutKey,
 			items::{Items, SwapItems},
 		},
-		load_asset::LoadAsset,
 	},
 };
 
-impl<TAssetServer> GetContextMut<Items> for LoadoutWriter<'_, '_, TAssetServer>
-where
-	TAssetServer: Resource + LoadAsset,
-{
+impl GetContextMut<Items> for LoadoutWriter<'_, '_> {
 	type TContext<'ctx> = ItemsMut<'ctx>;
 
 	fn get_context_mut<'ctx>(
-		param: &'ctx mut LoadoutWriter<TAssetServer>,
+		param: &'ctx mut LoadoutWriter,
 		Items { entity }: Items,
 	) -> Option<Self::TContext<'ctx>> {
 		let slots = param.slots.get_mut(entity).ok()?;
@@ -89,7 +85,7 @@ mod tests {
 		skills::Skill,
 	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{tools::action_key::slot::SlotKey, traits::load_asset::mock::MockAssetServer};
+	use common::tools::action_key::slot::SlotKey;
 	use std::ops::Deref;
 	use testing::{IsChanged, SingleThreadedApp, new_handle};
 
@@ -100,7 +96,6 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.init_resource::<Assets<Skill>>();
-		app.init_resource::<MockAssetServer>();
 		app.add_systems(
 			Update,
 			(IsChanged::<Slots>::detect, IsChanged::<Inventory>::detect).in_set(_ChangeDetection),
@@ -128,7 +123,7 @@ mod tests {
 				.id();
 
 			app.world_mut()
-				.run_system_once(move |mut loadout: LoadoutWriter<MockAssetServer>| {
+				.run_system_once(move |mut loadout: LoadoutWriter| {
 					let ctx =
 						LoadoutWriter::get_context_mut(&mut loadout, Items { entity }).unwrap();
 
@@ -163,7 +158,7 @@ mod tests {
 				.id();
 
 			app.world_mut()
-				.run_system_once(move |mut p: LoadoutWriter<MockAssetServer>| {
+				.run_system_once(move |mut p: LoadoutWriter| {
 					let mut ctx = LoadoutWriter::get_context_mut(&mut p, Items { entity }).unwrap();
 					ctx.swap_items(InventoryKey(0), InventoryKey(1));
 				})?;
@@ -194,7 +189,7 @@ mod tests {
 				.id();
 
 			app.world_mut()
-				.run_system_once(move |mut p: LoadoutWriter<MockAssetServer>| {
+				.run_system_once(move |mut p: LoadoutWriter| {
 					let mut ctx = LoadoutWriter::get_context_mut(&mut p, Items { entity }).unwrap();
 					ctx.swap_items(key_a, key_b);
 				})?;
@@ -225,7 +220,7 @@ mod tests {
 				.id();
 
 			app.world_mut()
-				.run_system_once(move |mut p: LoadoutWriter<MockAssetServer>| {
+				.run_system_once(move |mut p: LoadoutWriter| {
 					let mut ctx = LoadoutWriter::get_context_mut(&mut p, Items { entity }).unwrap();
 					ctx.swap_items(key_a, key_b);
 				})?;
@@ -256,7 +251,7 @@ mod tests {
 				.id();
 
 			app.world_mut()
-				.run_system_once(move |mut p: LoadoutWriter<MockAssetServer>| {
+				.run_system_once(move |mut p: LoadoutWriter| {
 					let mut ctx = LoadoutWriter::get_context_mut(&mut p, Items { entity }).unwrap();
 					ctx.swap_items(key_a, key_b);
 				})?;
@@ -286,7 +281,7 @@ mod tests {
 				.id();
 
 			app.world_mut()
-				.run_system_once(move |mut p: LoadoutWriter<MockAssetServer>| {
+				.run_system_once(move |mut p: LoadoutWriter| {
 					let mut ctx = LoadoutWriter::get_context_mut(&mut p, Items { entity }).unwrap();
 					ctx.swap_items(SlotKey(11), SlotKey(42));
 				})?;
@@ -316,7 +311,7 @@ mod tests {
 				.id();
 
 			app.world_mut()
-				.run_system_once(move |mut p: LoadoutWriter<MockAssetServer>| {
+				.run_system_once(move |mut p: LoadoutWriter| {
 					let mut ctx = LoadoutWriter::get_context_mut(&mut p, Items { entity }).unwrap();
 					ctx.swap_items(key_a, key_b);
 				})?;
@@ -350,7 +345,7 @@ mod tests {
 				.id();
 
 			app.world_mut()
-				.run_system_once(move |mut p: LoadoutWriter<MockAssetServer>| {
+				.run_system_once(move |mut p: LoadoutWriter| {
 					let mut ctx = LoadoutWriter::get_context_mut(&mut p, Items { entity }).unwrap();
 					ctx.swap_items(key_a, key_b);
 				})?;
@@ -386,7 +381,7 @@ mod tests {
 				.id();
 
 			app.world_mut()
-				.run_system_once(move |mut p: LoadoutWriter<MockAssetServer>| {
+				.run_system_once(move |mut p: LoadoutWriter| {
 					let mut ctx = LoadoutWriter::get_context_mut(&mut p, Items { entity }).unwrap();
 					ctx.swap_items(key_a, key_b);
 				})?;
@@ -422,7 +417,7 @@ mod tests {
 				.id();
 
 			app.world_mut()
-				.run_system_once(move |mut p: LoadoutWriter<MockAssetServer>| {
+				.run_system_once(move |mut p: LoadoutWriter| {
 					let mut ctx = LoadoutWriter::get_context_mut(&mut p, Items { entity }).unwrap();
 					ctx.swap_items(key_a, key_b);
 				})?;
@@ -458,7 +453,7 @@ mod tests {
 				.id();
 
 			app.world_mut()
-				.run_system_once(move |mut p: LoadoutWriter<MockAssetServer>| {
+				.run_system_once(move |mut p: LoadoutWriter| {
 					let mut ctx = LoadoutWriter::get_context_mut(&mut p, Items { entity }).unwrap();
 					ctx.swap_items(key_a, key_b);
 				})?;
@@ -494,7 +489,7 @@ mod tests {
 				.id();
 
 			app.world_mut()
-				.run_system_once(move |mut p: LoadoutWriter<MockAssetServer>| {
+				.run_system_once(move |mut p: LoadoutWriter| {
 					let mut ctx = LoadoutWriter::get_context_mut(&mut p, Items { entity }).unwrap();
 					ctx.swap_items(key_a, key_b);
 				})?;
@@ -529,7 +524,7 @@ mod tests {
 				.id();
 			app.add_systems(
 				Update,
-				(move |mut p: LoadoutWriter<MockAssetServer>| {
+				(move |mut p: LoadoutWriter| {
 					let mut ctx = LoadoutWriter::get_context_mut(&mut p, Items { entity }).unwrap();
 					ctx.swap_items(key_a, key_b);
 				})
