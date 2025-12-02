@@ -9,7 +9,7 @@ use common::{
 		accessors::get::{GetContextMut, GetMut},
 		handles_loadout::{
 			LoadoutKey,
-			default_items::{InsertDefaultLoadout, NotLoadedOut},
+			insert_default_loadout::{InsertDefaultLoadout, NotLoadedOut},
 		},
 		load_asset::LoadAsset,
 		loadout::ItemName,

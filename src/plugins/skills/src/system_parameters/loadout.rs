@@ -2,7 +2,13 @@ mod read;
 mod write;
 
 use crate::{
-	components::{combos::Combos, inventory::Inventory, queue::Queue, slots::Slots},
+	components::{
+		bone_definitions::BoneDefinitions,
+		combos::Combos,
+		inventory::Inventory,
+		queue::Queue,
+		slots::Slots,
+	},
 	item::Item,
 	skills::Skill,
 };
@@ -39,5 +45,6 @@ where
 	commands: ZyheedaCommands<'w, 's>,
 	slots: Query<'w, 's, &'static mut Slots>,
 	inventories: Query<'w, 's, &'static mut Inventory>,
+	bone_definitions: Query<'w, 's, (), With<BoneDefinitions>>,
 	asset_server: ResMut<'w, TAssetServer>,
 }
