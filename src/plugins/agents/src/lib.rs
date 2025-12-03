@@ -192,7 +192,8 @@ where
 				Agent::animate_skills::<
 					LoadoutActivityParam<TLoadout>,
 					AnimationsSystemParamMut<TAnimations>,
-				>,
+				>
+					.pipe(OnError::log),
 			)
 				.chain()
 				.run_if(in_state(GameState::Play))
