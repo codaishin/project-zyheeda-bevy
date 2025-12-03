@@ -7,6 +7,7 @@ use crate::{
 		enemy::void_sphere::VoidSphere,
 		insert_agent_default_loadout::InsertAgentDefaultLoadout,
 		player::Player,
+		register_agent_loadout_bones::RegisterAgentLoadoutBones,
 	},
 	observers::agent::{insert_concrete_agent::InsertEnemyOrPlayer, insert_from::AgentHandle},
 };
@@ -35,6 +36,7 @@ use macros::{SavableComponent, agent_asset};
 	IsBlocker = [Blocker::Character],
 	AnimateIdle,
 	InsertAgentDefaultLoadout,
+	RegisterAgentLoadoutBones,
 )]
 pub struct Agent<TAsset = AgentConfig>
 where

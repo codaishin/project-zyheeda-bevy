@@ -13,6 +13,7 @@ use crate::{
 		movement_config::MovementConfig,
 		player::Player,
 		player_camera::PlayerCamera,
+		register_agent_loadout_bones::RegisterAgentLoadoutBones,
 	},
 	observers::agent::{insert_concrete_agent::InsertConcreteAgent, insert_from::InsertFrom},
 };
@@ -130,6 +131,7 @@ where
 				Agent::register_animations::<AnimationsSystemParamMut<TAnimations>>,
 				Agent::<AgentConfig>::insert_attributes::<TPhysics::TDefaultAttributes>,
 				InsertAgentDefaultLoadout::execute::<AgentConfig, LoadoutPrepParam<TLoadout>>,
+				RegisterAgentLoadoutBones::execute::<LoadoutPrepParam<TLoadout>>,
 			),
 		);
 
