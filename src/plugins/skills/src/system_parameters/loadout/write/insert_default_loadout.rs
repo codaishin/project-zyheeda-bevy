@@ -41,8 +41,7 @@ where
 			}
 		}
 
-		self.entity
-			.try_insert_if_new((Loadout::<()>::default(), inventory, slots));
+		self.entity.try_insert_if_new((Loadout, inventory, slots));
 	}
 }
 

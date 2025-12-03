@@ -4,24 +4,23 @@ mod observers;
 mod systems;
 
 use crate::{
-	assets::agent_config::{AgentConfigAsset, AgentConfigData, dto::AgentConfigAssetDto},
+	assets::agent_config::{AgentConfig, dto::AgentConfigDto},
 	components::{
 		agent::{Agent, tag::AgentTag},
 		animate_idle::AnimateIdle,
 		enemy::{Enemy, attack_phase::EnemyAttackPhase, void_sphere::VoidSphere},
+		insert_agent_default_loadout::InsertAgentDefaultLoadout,
 		movement_config::MovementConfig,
 		player::Player,
 		player_camera::PlayerCamera,
-		skill_animation::SkillAnimation,
+		register_agent_loadout_bones::RegisterAgentLoadoutBones,
 	},
 	observers::agent::{insert_concrete_agent::InsertConcreteAgent, insert_from::InsertFrom},
-	systems::agent::insert_model::InsertModelSystem,
 };
 use bevy::prelude::*;
 use common::{
 	states::game_state::{GameState, LoadingEssentialAssets},
 	systems::log::OnError,
-	tools::action_key::slot::{NoValidAgentKey, PlayerSlot, SlotKey},
 	traits::{
 		delta::Delta,
 		handles_agents::HandlesAgents,
@@ -30,11 +29,12 @@ use common::{
 		handles_enemies::HandlesEnemies,
 		handles_input::{HandlesInput, InputSystemParam},
 		handles_lights::HandlesLights,
+		handles_loadout::{HandlesLoadout, LoadoutActivityParam, LoadoutPrepParam},
 		handles_map_generation::HandlesMapGeneration,
 		handles_movement::{HandlesMovement, MovementSystemParam, MovementSystemParamMut},
 		handles_orientation::{FacingSystemParamMut, HandlesOrientation},
 		handles_physics::{HandlesPhysicalAttributes, HandlesRaycast, RaycastSystemParam},
-		handles_player::{ConfiguresPlayerSkillAnimations, HandlesPlayer, PlayerMainCamera},
+		handles_player::{HandlesPlayer, PlayerMainCamera},
 		handles_saving::HandlesSaving,
 		handles_skills_control::{HandlesSkillControl, SkillControlParamMut},
 		prefab::AddPrefabObserver,
@@ -47,7 +47,7 @@ use systems::void_sphere::ring_rotation::ring_rotation;
 
 pub struct AgentsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights, TMaps, TBehaviors>
+impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights, TMaps, TBehaviors, TLoadout>
 	AgentsPlugin<(
 		TLoading,
 		TInput,
@@ -57,6 +57,7 @@ impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights, TMaps, TBehavi
 		TLights,
 		TMaps,
 		TBehaviors,
+		TLoadout,
 	)>
 where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
@@ -67,6 +68,7 @@ where
 	TLights: ThreadSafe + HandlesLights,
 	TMaps: ThreadSafe + HandlesMapGeneration,
 	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation + HandlesSkillControl,
+	TLoadout: ThreadSafe + HandlesLoadout,
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn from_plugins(
@@ -78,12 +80,14 @@ where
 		_: &TLights,
 		_: &TMaps,
 		_: &TBehaviors,
+		_: &TLoadout,
 	) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights, TMaps, TBehaviors> Plugin
+impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights, TMaps, TBehaviors, TLoadout>
+	Plugin
 	for AgentsPlugin<(
 		TLoading,
 		TInput,
@@ -93,6 +97,7 @@ impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights, TMaps, TBehavi
 		TLights,
 		TMaps,
 		TBehaviors,
+		TLoadout,
 	)>
 where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
@@ -103,15 +108,16 @@ where
 	TLights: ThreadSafe + HandlesLights,
 	TMaps: ThreadSafe + HandlesMapGeneration,
 	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation + HandlesSkillControl,
+	TLoadout: ThreadSafe + HandlesLoadout,
 {
 	fn build(&self, app: &mut App) {
 		// # Load Agent
 		TLoading::register_custom_folder_assets::<
-			AgentConfigAsset,
-			AgentConfigAssetDto,
+			AgentConfig,
+			AgentConfigDto,
 			LoadingEssentialAssets,
 		>(app);
-		app.init_asset::<AgentConfigAsset>();
+		app.init_asset::<AgentConfig>();
 
 		// Using `AgentTag` to buffer the map agent type, in case `TNewWorldAgent` is not
 		// persistent across game sessions
@@ -123,8 +129,9 @@ where
 			(
 				Agent::insert_model,
 				Agent::register_animations::<AnimationsSystemParamMut<TAnimations>>,
-				Agent::<AgentConfigAsset>::insert_attributes::<TPhysics::TDefaultAttributes>,
-				SkillAnimation::system::<AnimationsSystemParamMut<TAnimations>>,
+				Agent::<AgentConfig>::insert_attributes::<TPhysics::TDefaultAttributes>,
+				InsertAgentDefaultLoadout::execute::<AgentConfig, LoadoutPrepParam<TLoadout>>,
+				RegisterAgentLoadoutBones::execute::<LoadoutPrepParam<TLoadout>>,
 			),
 		);
 
@@ -163,7 +170,6 @@ where
 						AnimationsSystemParamMut<TAnimations>,
 					>
 						.pipe(OnError::log),
-					SkillAnimation::system::<AnimationsSystemParamMut<TAnimations>>,
 					Player::use_skills::<InputSystemParam<TInput>, SkillControlParamMut<TBehaviors>>,
 				)
 					.chain(),
@@ -183,6 +189,11 @@ where
 				)
 					.chain(),
 				AnimateIdle::execute::<AnimationsSystemParamMut<TAnimations>>,
+				Agent::animate_skills::<
+					LoadoutActivityParam<TLoadout>,
+					AnimationsSystemParamMut<TAnimations>,
+				>
+					.pipe(OnError::log),
 			)
 				.chain()
 				.run_if(in_state(GameState::Play))
@@ -199,24 +210,10 @@ impl<TDependencies> HandlesPlayer for AgentsPlugin<TDependencies> {
 	type TPlayer = Player;
 }
 
-impl<TDependencies> ConfiguresPlayerSkillAnimations for AgentsPlugin<TDependencies> {
-	type TAnimationMarker = SkillAnimation;
-	type TError = NoValidAgentKey<PlayerSlot>;
-
-	fn start_skill_animation(slot_key: SlotKey) -> Result<Self::TAnimationMarker, Self::TError> {
-		Ok(SkillAnimation::Start(PlayerSlot::try_from(slot_key)?))
-	}
-
-	fn stop_skill_animation() -> Self::TAnimationMarker {
-		SkillAnimation::Stop
-	}
-}
-
 impl<TDependencies> PlayerMainCamera for AgentsPlugin<TDependencies> {
 	type TPlayerMainCamera = PlayerCamera;
 }
 
 impl<TDependencies> HandlesAgents for AgentsPlugin<TDependencies> {
-	type TAgentConfig<'a> = AgentConfigData<'a>;
 	type TAgent = Agent;
 }

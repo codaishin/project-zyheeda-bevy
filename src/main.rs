@@ -51,10 +51,10 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let light = LightPlugin::from_plugin(&savegame);
 	let map_generation = MapGenerationPlugin::from_plugins(&loading, &savegame, &physics, &light);
 	let path_finding = PathFindingPlugin::from_plugin(&map_generation);
-
 	let behaviors =
 		BehaviorsPlugin::from_plugins(&input, &savegame, &animations, &physics, &path_finding);
 	let graphics = GraphicsPlugin::from_plugins(&loading, &savegame, &physics, &behaviors);
+	let skills = SkillsPlugin::from_plugins(&savegame, &physics, &loading, &behaviors);
 	let agents = AgentsPlugin::from_plugins(
 		&loading,
 		&input,
@@ -64,8 +64,8 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		&light,
 		&map_generation,
 		&behaviors,
+		&skills,
 	);
-	let skills = SkillsPlugin::from_plugins(&savegame, &physics, &loading, &behaviors, &agents);
 	let menus = MenuPlugin::from_plugins(
 		&loading,
 		&savegame,

@@ -49,7 +49,6 @@ impl RegisterLoadoutBones for PrepareLoadoutBones<'_> {
 			forearms,
 			hands,
 			essences,
-			..default()
 		});
 	}
 }
@@ -91,7 +90,6 @@ mod tests {
 				forearms: HashMap::from([(BoneName::from("a"), SlotKey(0))]),
 				hands: HashMap::from([(BoneName::from("b"), SlotKey(1))]),
 				essences: HashMap::from([(BoneName::from("c"), SlotKey(2))]),
-				..default()
 			}),
 			app.world().entity(entity).get::<BoneDefinitions>()
 		);

@@ -1,4 +1,4 @@
-use crate::{assets::agent_config::AgentConfigAsset, components::agent::Agent};
+use crate::{assets::agent_config::AgentConfig, components::agent::Agent};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	traits::{
@@ -13,7 +13,7 @@ impl Agent {
 		mut commands: ZyheedaCommands,
 		mut animations: StaticSystemParam<TAnimations>,
 		agents: Query<(Entity, &Self), Without<marker::AnimationsRegistered>>,
-		configs: Res<Assets<AgentConfigAsset>>,
+		configs: Res<Assets<AgentConfig>>,
 	) where
 		TAnimations: for<'c> GetContextMut<Animations, TContext<'c>: RegisterAnimations>,
 	{
@@ -45,7 +45,7 @@ mod marker {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::assets::agent_config::AgentConfigAsset;
+	use crate::assets::agent_config::AgentConfig;
 	use common::{
 		bit_mask_index,
 		tools::{bone_name::BoneName, path::Path},
@@ -83,7 +83,7 @@ mod tests {
 		}
 	}
 
-	fn setup<const N: usize>(configs: [(&Handle<AgentConfigAsset>, AgentConfigAsset); N]) -> App {
+	fn setup<const N: usize>(configs: [(&Handle<AgentConfig>, AgentConfig); N]) -> App {
 		let mut app = App::new().single_threaded(Update);
 		let mut config_assets = Assets::default();
 
@@ -115,7 +115,7 @@ mod tests {
 			},
 		)]);
 		let handle = new_handle();
-		let asset = AgentConfigAsset {
+		let asset = AgentConfig {
 			animations: animations.clone(),
 			animation_mask_groups: animation_mask_groups.clone(),
 			..default()
@@ -140,7 +140,7 @@ mod tests {
 	#[test]
 	fn act_only_once() {
 		let handle = new_handle();
-		let asset = AgentConfigAsset::default();
+		let asset = AgentConfig::default();
 		let mut app = setup([(&handle, asset)]);
 		app.world_mut().spawn((
 			Agent {
@@ -174,7 +174,7 @@ mod tests {
 			},
 		)]);
 		let handle = new_handle();
-		let asset = AgentConfigAsset {
+		let asset = AgentConfig {
 			animations: animations.clone(),
 			animation_mask_groups: animation_mask_groups.clone(),
 			..default()
@@ -195,7 +195,7 @@ mod tests {
 
 		app.update();
 		app.world_mut()
-			.resource_mut::<Assets<AgentConfigAsset>>()
+			.resource_mut::<Assets<AgentConfig>>()
 			.insert(&handle, asset);
 		app.update();
 	}

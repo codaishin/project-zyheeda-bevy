@@ -1,28 +1,30 @@
 pub(crate) mod dto;
 
-use crate::systems::agent::insert_model::InsertModel;
+use crate::systems::insert_default_loadout::internal::GetDefaultLoadout;
 use bevy::prelude::*;
 use common::{
-	components::asset_model::AssetModel,
-	tools::{action_key::slot::SlotKey, bone_name::BoneName, path::Path},
+	tools::{
+		action_key::slot::SlotKey,
+		bone_name::BoneName,
+		inventory_key::InventoryKey,
+		path::Path,
+	},
 	traits::{
 		accessors::get::GetProperty,
-		bone_key::{BoneKey, ConfiguredBones},
 		handles_animations::{AffectedAnimationBones, Animation, AnimationKey, AnimationMaskBits},
 		handles_custom_assets::AssetFolderPath,
-		handles_map_generation::AgentType,
+		handles_loadout::LoadoutKey,
 		handles_physics::PhysicalDefaultAttributes,
 		handles_skill_behaviors::SkillSpawner,
-		loadout::{ItemName, LoadoutConfig},
-		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
+		loadout::ItemName,
 	},
 	zyheeda_commands::ZyheedaEntityCommands,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{collections::HashMap, iter::Enumerate, slice::Iter};
 
 #[derive(Asset, TypePath, Debug, PartialEq, Default, Clone)]
-pub struct AgentConfigAsset {
+pub struct AgentConfig {
 	pub(crate) loadout: Loadout,
 	pub(crate) bones: Bones,
 	pub(crate) agent_model: AgentModel,
@@ -31,92 +33,28 @@ pub struct AgentConfigAsset {
 	pub(crate) animation_mask_groups: HashMap<AnimationMaskBits, AffectedAnimationBones>,
 }
 
-impl AssetFolderPath for AgentConfigAsset {
+impl AssetFolderPath for AgentConfig {
 	fn asset_folder_path() -> Path {
 		Path::from("agents")
 	}
 }
 
-impl GetProperty<PhysicalDefaultAttributes> for AgentConfigAsset {
+impl GetProperty<PhysicalDefaultAttributes> for AgentConfig {
 	fn get_property(&self) -> PhysicalDefaultAttributes {
 		self.attributes
 	}
 }
 
-#[derive(Debug, PartialEq)]
-pub struct AgentConfigData<'a, TAsset = AgentConfigAsset> {
-	pub(crate) agent_type: AgentType,
-	pub(crate) asset: &'a TAsset,
-}
+impl GetDefaultLoadout for AgentConfig {
+	type TLoadout<'a>
+		= LoadoutIterator<'a>
+	where
+		Self: 'a;
 
-impl LoadoutConfig for AgentConfigData<'_> {
-	fn inventory(&self) -> impl Iterator<Item = Option<ItemName>> {
-		self.asset.loadout.inventory.iter().cloned()
-	}
-
-	fn slots(&self) -> impl Iterator<Item = (SlotKey, Option<ItemName>)> {
-		self.asset.loadout.slots.iter().cloned()
-	}
-}
-
-impl BoneKey<EssenceSlot> for AgentConfigData<'_> {
-	fn bone_key(&self, bone_name: &str) -> Option<EssenceSlot> {
-		self.asset
-			.bones
-			.essence_slots
-			.get(bone_name)
-			.copied()
-			.map(EssenceSlot::from)
-	}
-}
-
-impl ConfiguredBones<EssenceSlot> for AgentConfigData<'_> {
-	fn bone_names(&self) -> impl Iterator<Item = BoneName> {
-		self.asset.bones.essence_slots.keys().cloned()
-	}
-}
-
-impl BoneKey<HandSlot> for AgentConfigData<'_> {
-	fn bone_key(&self, bone_name: &str) -> Option<HandSlot> {
-		self.asset
-			.bones
-			.hand_slots
-			.get(bone_name)
-			.copied()
-			.map(HandSlot::from)
-	}
-}
-
-impl ConfiguredBones<HandSlot> for AgentConfigData<'_> {
-	fn bone_names(&self) -> impl Iterator<Item = BoneName> {
-		self.asset.bones.hand_slots.keys().cloned()
-	}
-}
-
-impl BoneKey<ForearmSlot> for AgentConfigData<'_> {
-	fn bone_key(&self, bone_name: &str) -> Option<ForearmSlot> {
-		self.asset
-			.bones
-			.forearm_slots
-			.get(bone_name)
-			.copied()
-			.map(ForearmSlot::from)
-	}
-}
-
-impl ConfiguredBones<ForearmSlot> for AgentConfigData<'_> {
-	fn bone_names(&self) -> impl Iterator<Item = BoneName> {
-		self.asset.bones.forearm_slots.keys().cloned()
-	}
-}
-
-impl InsertModel for AgentConfigData<'_> {
-	fn insert_model(&self, entity: &mut ZyheedaEntityCommands) {
-		match &self.asset.agent_model {
-			AgentModel::Asset(path) => {
-				entity.try_insert(AssetModel::from(path));
-			}
-			AgentModel::Procedural(insert_procedural_on) => insert_procedural_on(entity),
+	fn get_default_loadout(&self) -> Self::TLoadout<'_> {
+		LoadoutIterator {
+			inventory: self.loadout.inventory.iter().enumerate(),
+			slots: self.loadout.slots.iter(),
 		}
 	}
 }
@@ -125,6 +63,33 @@ impl InsertModel for AgentConfigData<'_> {
 pub(crate) struct Loadout {
 	inventory: Vec<Option<ItemName>>,
 	slots: Vec<(SlotKey, Option<ItemName>)>,
+}
+
+pub struct LoadoutIterator<'a> {
+	inventory: Enumerate<Iter<'a, Option<ItemName>>>,
+	slots: Iter<'a, (SlotKey, Option<ItemName>)>,
+}
+
+impl LoadoutIterator<'_> {
+	fn inventory_next(&mut self) -> Option<(LoadoutKey, Option<ItemName>)> {
+		self.inventory
+			.next()
+			.map(|(key, item)| (LoadoutKey::Inventory(InventoryKey(key)), item.clone()))
+	}
+
+	fn slot_next(&mut self) -> Option<(LoadoutKey, Option<ItemName>)> {
+		self.slots
+			.next()
+			.map(|(key, item)| (LoadoutKey::Slot(*key), item.clone()))
+	}
+}
+
+impl Iterator for LoadoutIterator<'_> {
+	type Item = (LoadoutKey, Option<ItemName>);
+
+	fn next(&mut self) -> Option<Self::Item> {
+		self.inventory_next().or_else(|| self.slot_next())
+	}
 }
 
 #[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
@@ -141,6 +106,12 @@ pub(crate) enum AgentModel {
 	Procedural(fn(&mut ZyheedaEntityCommands)),
 }
 
+impl From<&str> for AgentModel {
+	fn from(value: &str) -> Self {
+		Self::Asset(String::from(value))
+	}
+}
+
 impl Default for AgentModel {
 	fn default() -> Self {
 		Self::Procedural(|_| {})
@@ -154,5 +125,60 @@ impl PartialEq for AgentModel {
 			(Self::Procedural(l0), Self::Procedural(r0)) => std::ptr::fn_addr_eq(*l0, *r0),
 			_ => false,
 		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use LoadoutKey::{Inventory, Slot};
+	use common::tools::inventory_key::InventoryKey;
+
+	#[test]
+	fn iter_inventory_items() {
+		let config = AgentConfig {
+			loadout: Loadout {
+				inventory: vec![Some(ItemName::from("a")), None, Some(ItemName::from("b"))],
+				slots: vec![],
+			},
+			..default()
+		};
+
+		let default_loadout = config.get_default_loadout().collect::<Vec<_>>();
+
+		assert_eq!(
+			vec![
+				(Inventory(InventoryKey(0)), Some(ItemName::from("a"))),
+				(Inventory(InventoryKey(1)), None),
+				(Inventory(InventoryKey(2)), Some(ItemName::from("b")))
+			],
+			default_loadout,
+		);
+	}
+
+	#[test]
+	fn iter_slot_items() {
+		let config = AgentConfig {
+			loadout: Loadout {
+				inventory: vec![],
+				slots: vec![
+					(SlotKey(11), Some(ItemName::from("a"))),
+					(SlotKey(4), None),
+					(SlotKey(42), Some(ItemName::from("b"))),
+				],
+			},
+			..default()
+		};
+
+		let default_loadout = config.get_default_loadout().collect::<Vec<_>>();
+
+		assert_eq!(
+			vec![
+				(Slot(SlotKey(11)), Some(ItemName::from("a"))),
+				(Slot(SlotKey(4)), None),
+				(Slot(SlotKey(42)), Some(ItemName::from("b")))
+			],
+			default_loadout,
+		);
 	}
 }
