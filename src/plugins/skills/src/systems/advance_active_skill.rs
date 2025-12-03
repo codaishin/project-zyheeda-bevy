@@ -3,10 +3,7 @@ use crate::{
 	traits::{Flush, GetActiveSkill, GetSkillBehavior, Schedule},
 };
 use bevy::{
-	ecs::{
-		component::Mutable,
-		system::{EntityCommands, StaticSystemParam},
-	},
+	ecs::{component::Mutable, system::StaticSystemParam},
 	prelude::*,
 };
 use common::{
@@ -15,6 +12,7 @@ use common::{
 		accessors::get::GetContextMut,
 		handles_orientation::{Face, Facing, OverrideFace},
 		state_duration::{StateMeta, UpdatedStates},
+		thread_safe::ThreadSafe,
 	},
 };
 use std::time::Duration;
@@ -25,40 +23,25 @@ enum Advancement {
 	InProcess,
 }
 
-#[derive(Component)]
-pub struct SkillSideEffectsCleared;
-
-type Components<'a, TGetSkill, TSkillExecutor> = (
-	Entity,
-	&'a mut TGetSkill,
-	&'a mut TSkillExecutor,
-	Option<&'a SkillSideEffectsCleared>,
-);
-
 pub(crate) fn advance_active_skill<TGetSkill, TFacing, TSkillExecutor, TTime>(
 	time: Res<Time<TTime>>,
-	mut commands: Commands,
-	mut agents: Query<Components<TGetSkill, TSkillExecutor>>,
+	mut agents: Query<(Entity, &mut TGetSkill, &mut TSkillExecutor)>,
 	mut facing: StaticSystemParam<TFacing>,
 ) where
 	TGetSkill: GetActiveSkill<SkillState> + Component<Mutability = Mutable>,
 	TFacing: for<'c> GetContextMut<Facing, TContext<'c>: OverrideFace>,
 	TSkillExecutor: Component<Mutability = Mutable> + Schedule<RunSkillBehavior> + Flush,
-	TTime: Send + Sync + Default + 'static,
+	TTime: Default + ThreadSafe,
 {
 	let delta = time.delta();
 
-	for (entity, mut dequeue, skill_executer, cleared) in &mut agents {
-		let Ok(agent) = commands.get_entity(entity) else {
-			continue;
-		};
+	for (entity, mut dequeue, skill_executer) in &mut agents {
 		let Some(mut ctx) = TFacing::get_context_mut(&mut facing, Facing { entity }) else {
 			continue;
 		};
 		let advancement = match dequeue.get_active() {
-			Some(skill) => advance(skill, agent, skill_executer, delta, &mut ctx),
-			None if is_not(cleared) => clear_side_effects(&mut ctx),
-			_ => Advancement::InProcess,
+			Some(skill) => advance(skill, skill_executer, delta, &mut ctx),
+			None => clear_side_effects(&mut ctx),
 		};
 
 		if advancement == Advancement::InProcess {
@@ -67,10 +50,6 @@ pub(crate) fn advance_active_skill<TGetSkill, TFacing, TSkillExecutor, TTime>(
 
 		dequeue.clear_active();
 	}
-}
-
-fn is_not(cleared: Option<&SkillSideEffectsCleared>) -> bool {
-	cleared.is_none()
 }
 
 fn clear_side_effects<TFacing>(facing: &mut TFacing) -> Advancement
@@ -84,20 +63,16 @@ where
 
 fn advance<TFacing, TSkillExecutor>(
 	mut skill: impl GetSkillBehavior + UpdatedStates<SkillState>,
-	mut agent: EntityCommands,
 	mut skill_executer: Mut<TSkillExecutor>,
 	delta: Duration,
 	facing: &mut TFacing,
 ) -> Advancement
 where
 	TFacing: OverrideFace,
-	TSkillExecutor: Component + Schedule<RunSkillBehavior> + Flush,
+	TSkillExecutor: Schedule<RunSkillBehavior> + Flush,
 {
 	let skill = &mut skill;
-	let agent = &mut agent;
 	let states = skill.updated_states(delta);
-
-	agent.remove::<SkillSideEffectsCleared>();
 
 	if states.contains(&StateMeta::Entering(SkillState::Aim)) {
 		facing.override_face(Face::Target);
@@ -196,12 +171,6 @@ mod tests {
 		impl GetSkillBehavior for _Skill {
 			fn behavior<'a>(&self) -> (SlotKey, RunSkillBehavior);
 		}
-	}
-
-	#[derive(Component, Debug, PartialEq)]
-	enum _SkillAnimation {
-		Start(SlotKey),
-		Stop,
 	}
 
 	#[derive(Component, NestedMocks)]
