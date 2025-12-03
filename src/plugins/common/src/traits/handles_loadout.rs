@@ -24,7 +24,7 @@ use crate::{
 	},
 };
 use bevy::ecs::system::SystemParam;
-use std::fmt::Debug;
+use std::{fmt::Debug, ops::Deref};
 
 pub trait HandlesLoadout {
 	type TSkillID: Debug + PartialEq + Copy + ThreadSafe;
@@ -82,6 +82,20 @@ pub trait ActiveSkills {
 		Self: 'a;
 
 	fn active_skills(&self) -> Self::TIter<'_>;
+}
+
+impl<T> ActiveSkills for T
+where
+	T: Deref<Target: ActiveSkills>,
+{
+	type TIter<'a>
+		= <T::Target as ActiveSkills>::TIter<'a>
+	where
+		Self: 'a;
+
+	fn active_skills(&self) -> Self::TIter<'_> {
+		self.deref().active_skills()
+	}
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]

@@ -29,7 +29,7 @@ use common::{
 		handles_enemies::HandlesEnemies,
 		handles_input::{HandlesInput, InputSystemParam},
 		handles_lights::HandlesLights,
-		handles_loadout::{HandlesLoadout, LoadoutPrepParam},
+		handles_loadout::{HandlesLoadout, LoadoutActivityParam, LoadoutPrepParam},
 		handles_map_generation::HandlesMapGeneration,
 		handles_movement::{HandlesMovement, MovementSystemParam, MovementSystemParamMut},
 		handles_orientation::{FacingSystemParamMut, HandlesOrientation},
@@ -189,6 +189,10 @@ where
 				)
 					.chain(),
 				AnimateIdle::execute::<AnimationsSystemParamMut<TAnimations>>,
+				Agent::animate_skills::<
+					LoadoutActivityParam<TLoadout>,
+					AnimationsSystemParamMut<TAnimations>,
+				>,
 			)
 				.chain()
 				.run_if(in_state(GameState::Play))
