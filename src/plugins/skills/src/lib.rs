@@ -8,6 +8,7 @@ mod traits;
 
 use crate::{
 	components::{
+		active_slots::{ActiveSlots, Old},
 		bone_definitions::BoneDefinitions,
 		combos::dto::CombosDto,
 		combos_time_out::dto::CombosTimeOutDto,
@@ -123,6 +124,7 @@ where
 				>,
 				execute_skill,
 				flush::<Queue>,
+				ActiveSlots::<Old>::track,
 			)
 				.chain()
 				.before(TBehaviors::SYSTEMS)

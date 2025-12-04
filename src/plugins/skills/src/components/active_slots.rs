@@ -29,6 +29,8 @@ impl<TFrame> Default for ActiveSlots<TFrame> {
 	}
 }
 
+#[derive(Debug, PartialEq)]
 pub(crate) struct Current;
 
+#[derive(Debug, PartialEq)]
 pub(crate) struct Old;
