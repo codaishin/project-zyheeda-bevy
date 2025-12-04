@@ -56,7 +56,7 @@ use common::{
 			HandlesLoadTracking,
 			LoadGroup,
 		},
-		handles_loadout::{HandlesLoadout, LoadoutMutParam, LoadoutReadParam},
+		handles_loadout::{HandlesLoadout, LoadoutMutParam, LoadoutParam},
 		handles_localization::{HandlesLocalization, Token, localized::Localized},
 		handles_player::HandlesPlayer,
 		handles_saving::HandlesSaving,
@@ -235,11 +235,11 @@ where
 			.add_systems(
 				Update,
 				(
-					QuickbarPanel::set_icon::<TPlayers::TPlayer, LoadoutReadParam<TLoadout>>,
+					QuickbarPanel::set_icon::<TPlayers::TPlayer, LoadoutParam<TLoadout>>,
 					QuickbarPanel::set_color::<
 						TPlayers::TPlayer,
 						TInput::TActionKeyButton,
-						LoadoutReadParam<TLoadout>,
+						LoadoutParam<TLoadout>,
 					>,
 					panel_colors::<QuickbarPanel>,
 				)
@@ -266,21 +266,21 @@ where
 			(
 				ComboOverview::update_from::<
 					TPlayers::TPlayer,
-					LoadoutReadParam<TLoadout>,
+					LoadoutParam<TLoadout>,
 					TLoadout::TSkillID,
 				>,
 				KeySelectDropdownCommand::insert_dropdown::<
 					TPlayers::TPlayer,
-					LoadoutReadParam<TLoadout>,
+					LoadoutParam<TLoadout>,
 				>,
 				SkillSelectDropdownCommand::<Vertical>::insert_dropdown::<
 					TPlayers::TPlayer,
-					LoadoutReadParam<TLoadout>,
+					LoadoutParam<TLoadout>,
 					TLoadout::TSkillID,
 				>,
 				SkillSelectDropdownCommand::<Horizontal>::insert_dropdown::<
 					TPlayers::TPlayer,
-					LoadoutReadParam<TLoadout>,
+					LoadoutParam<TLoadout>,
 					TLoadout::TSkillID,
 				>,
 				VerticalItem::<TLoadout::TSkillID>::update::<
@@ -299,7 +299,7 @@ where
 				Trigger::<TLoadout::TSkillID>::visualize_invalid::<
 					Unusable,
 					TPlayers::TPlayer,
-					LoadoutReadParam<TLoadout>,
+					LoadoutParam<TLoadout>,
 				>,
 			)
 				.chain()
@@ -316,7 +316,7 @@ where
 		.add_systems(
 			Update,
 			(
-				InventoryPanel::set_label::<TPlayers::TPlayer, LoadoutReadParam<TLoadout>>,
+				InventoryPanel::set_label::<TPlayers::TPlayer, LoadoutParam<TLoadout>>,
 				panel_colors::<InventoryPanel>,
 				drag_item::<TPlayers::TPlayer>,
 				drop_item::<TPlayers::TPlayer, LoadoutMutParam<TLoadout>>,
