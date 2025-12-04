@@ -37,7 +37,6 @@ impl TryLoadFrom<SlotsDto> for Slots {
 		TLoadAsset: LoadAsset,
 	{
 		Ok(Self {
-			self_entity: None,
 			items: items
 				.into_iter()
 				.map(|(key, item)| (key, item.map(|item| asset_server.load_asset(item))))

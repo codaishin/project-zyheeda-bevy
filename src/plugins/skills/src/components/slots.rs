@@ -26,7 +26,6 @@ use std::{collections::HashMap, fmt::Debug};
 )]
 #[savable_component(dto = SlotsDto)]
 pub struct Slots {
-	pub(crate) self_entity: Option<Entity>,
 	pub(crate) items: HashMap<SlotKey, Option<Handle<Item>>>,
 }
 
@@ -36,7 +35,6 @@ where
 {
 	fn from(slots: T) -> Self {
 		Self {
-			self_entity: None,
 			items: HashMap::from_iter(slots),
 		}
 	}
