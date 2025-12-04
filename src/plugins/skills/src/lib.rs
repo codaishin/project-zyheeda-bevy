@@ -1,7 +1,6 @@
 mod behaviors;
 mod components;
 mod item;
-mod observers;
 mod skills;
 mod system_parameters;
 mod systems;
@@ -84,7 +83,7 @@ where
 		TSaveGame::register_savable_component::<Inventory>(app);
 		TSaveGame::register_savable_component::<Slots>(app);
 
-		app.add_observer(Slots::set_self_entity).add_systems(
+		app.add_systems(
 			Update,
 			(
 				SlotVisualization::<HandSlot>::track_slots_for::<BoneDefinitions>,
