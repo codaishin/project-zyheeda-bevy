@@ -112,7 +112,7 @@ where
 		app.add_systems(
 			Update,
 			(
-				TBehaviors::TSkillUsage::enqueue::<Slots, Queue>,
+				Queue::enqueue_system::<Slots>,
 				Combos::update::<Queue>,
 				flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
 				advance_active_skill::<

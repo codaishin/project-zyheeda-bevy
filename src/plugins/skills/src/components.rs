@@ -1,3 +1,4 @@
+pub(crate) mod active_slots;
 pub(crate) mod bone_definitions;
 pub(crate) mod combo_node;
 pub(crate) mod combos;

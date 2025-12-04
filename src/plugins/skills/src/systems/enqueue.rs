@@ -1,4 +1,5 @@
 use crate::{
+	components::active_slots::{ActiveSlots, Current, Old},
 	item::Item,
 	skills::Skill,
 	traits::{Enqueue, IterHoldingMut, ReleaseSkill},
@@ -6,36 +7,41 @@ use crate::{
 use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
 	tools::action_key::slot::SlotKey,
-	traits::{
-		accessors::get::{GetProperty, GetRef},
-		handles_skill_behaviors::HoldSkills,
-	},
+	traits::accessors::get::{GetProperty, GetRef},
 };
 
-impl<T> EnqueueSystem for T where T: Component + HoldSkills {}
+impl<T> EnqueueSystem for T where
+	T: Component<Mutability = Mutable>
+		+ Enqueue<(Skill, SlotKey)>
+		+ IterHoldingMut<TItem: ReleaseSkill + GetProperty<SlotKey>>
+{
+}
 
-pub(crate) trait EnqueueSystem: Component + HoldSkills + Sized {
-	fn enqueue<TSlots, TQueue>(
-		mut agents: Query<(&TSlots, &mut TQueue, &Self)>,
+pub(crate) trait EnqueueSystem:
+	Component<Mutability = Mutable>
+	+ Enqueue<(Skill, SlotKey)>
+	+ IterHoldingMut<TItem: ReleaseSkill + GetProperty<SlotKey>>
+	+ Sized
+{
+	fn enqueue_system<TSlots>(
+		mut agents: Query<(&mut Self, &TSlots, &ActiveSlots<Current>, &ActiveSlots<Old>)>,
 		items: Res<Assets<Item>>,
 		skills: Res<Assets<Skill>>,
 	) where
-		TQueue: Enqueue<(Skill, SlotKey)> + IterHoldingMut + Component<Mutability = Mutable>,
-		TQueue::TItem: ReleaseSkill + GetProperty<SlotKey>,
 		for<'a> TSlots: GetRef<SlotKey, TValue<'a> = &'a Handle<Item>> + Component,
 	{
-		for (slots, mut queue, agent) in &mut agents {
-			for key in agent.started_holding() {
-				let Some(skill) = get_skill(&key, slots, &items, &skills) else {
+		for (mut queue, slots, current_active, old_active) in &mut agents {
+			let is_new = |s: &&SlotKey| !old_active.slots.contains(s);
+			for key in current_active.slots.iter().filter(is_new) {
+				let Some(skill) = get_skill(key, slots, &items, &skills) else {
 					continue;
 				};
-				queue.enqueue((skill.clone(), key));
+				queue.enqueue((skill.clone(), *key));
 			}
 
-			let holding = agent.holding().collect::<Vec<_>>();
 			for skill in queue.iter_holding_mut() {
 				let key = skill.get_property();
-				if holding.contains(&key) {
+				if current_active.slots.contains(&key) {
 					continue;
 				}
 				skill.release_skill();
@@ -66,7 +72,7 @@ mod tests {
 	use common::{tools::action_key::slot::PlayerSlot, traits::handles_localization::Token};
 	use macros::{NestedMocks, simple_mock};
 	use mockall::{automock, predicate::eq};
-	use std::{collections::HashMap, iter::Cloned, slice::Iter};
+	use std::collections::HashMap;
 	use testing::{Mock, NestedMocks, SingleThreadedApp, new_handle};
 
 	simple_mock! {
@@ -115,24 +121,6 @@ mod tests {
 
 	struct _SkillLoader;
 
-	#[derive(Component)]
-	struct _Agent {
-		started_holding: Vec<SlotKey>,
-		holding: Vec<SlotKey>,
-	}
-
-	impl HoldSkills for _Agent {
-		type Iter<'a> = Cloned<Iter<'a, SlotKey>>;
-
-		fn holding(&self) -> Self::Iter<'_> {
-			self.holding.iter().cloned()
-		}
-
-		fn started_holding(&self) -> Self::Iter<'_> {
-			self.started_holding.iter().cloned()
-		}
-	}
-
 	fn setup<TEnqueue>(
 		items: Vec<(AssetId<Item>, Item)>,
 		skills: Vec<(AssetId<Skill>, Skill)>,
@@ -156,13 +144,13 @@ mod tests {
 
 		app.insert_resource(item_assets);
 		app.insert_resource(skill_assets);
-		app.add_systems(Update, _Agent::enqueue::<_Skills, TEnqueue>);
+		app.add_systems(Update, TEnqueue::enqueue_system::<_Skills>);
 
 		app
 	}
 
 	#[test]
-	fn enqueue_skill_in_started_holding() {
+	fn enqueue_skill_in_current_active_slots_but_not_in_old_active_slots() {
 		#[derive(Component, NestedMocks)]
 		struct _Enqueue {
 			mock: Mock_Enqueue,
@@ -211,10 +199,11 @@ mod tests {
 		)]));
 		app.world_mut().spawn((
 			skills,
-			_Agent {
-				started_holding: vec![SlotKey::from(PlayerSlot::UPPER_R)],
-				holding: vec![],
-			},
+			ActiveSlots::<Current>::from([
+				SlotKey::from(PlayerSlot::LOWER_R),
+				SlotKey::from(PlayerSlot::UPPER_R),
+			]),
+			ActiveSlots::<Old>::from([SlotKey::from(PlayerSlot::LOWER_L)]),
 			_Enqueue::new().with_mock(|mock| {
 				mock.expect_enqueue()
 					.times(1)
@@ -233,14 +222,12 @@ mod tests {
 	}
 
 	#[test]
-	fn release_skill_release_when_not_in_holding() {
+	fn release_skill_when_not_in_current_active_slots() {
 		let mut app = setup::<_Enqueue>(vec![], vec![]);
 		app.world_mut().spawn((
 			_Skills::default(),
-			_Agent {
-				started_holding: vec![],
-				holding: vec![SlotKey::from(PlayerSlot::LOWER_R)],
-			},
+			ActiveSlots::<Current>::from([SlotKey::from(PlayerSlot::LOWER_R)]),
+			ActiveSlots::<Old>::from([]),
 			_Enqueue {
 				queued: HashMap::from([
 					(
