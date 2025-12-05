@@ -8,7 +8,7 @@ use common::{
 	traits::{
 		accessors::get::GetContextMut,
 		handles_input::{GetAllInputStates, InputState},
-		handles_loadout::{HeldSkillsMut, skills::Skills},
+		handles_loadout::{HeldSkills, HeldSkillsMut, skills::Skills},
 	},
 };
 
@@ -35,7 +35,13 @@ impl Player {
 				continue;
 			};
 
-			*ctx.held_skills_mut() = held().map(SlotKey::from).collect();
+			let new_held_skills = held().map(SlotKey::from).collect();
+
+			if ctx.held_skills() == &new_held_skills {
+				continue;
+			}
+
+			*ctx.held_skills_mut() = new_held_skills;
 		}
 	}
 }
@@ -53,7 +59,7 @@ mod tests {
 	use mockall::automock;
 	use std::collections::{HashMap, HashSet};
 	use test_case::test_case;
-	use testing::SingleThreadedApp;
+	use testing::{IsChanged, SingleThreadedApp};
 
 	#[derive(Resource)]
 	struct _Input(HashMap<ActionKey, InputState>);
@@ -110,7 +116,11 @@ mod tests {
 		app.insert_resource(input);
 		app.add_systems(
 			Update,
-			Player::use_skills::<Res<_Input>, Query<&mut _Loadout>>,
+			(
+				Player::use_skills::<Res<_Input>, Query<&mut _Loadout>>,
+				IsChanged::<_Loadout>::detect,
+			)
+				.chain(),
 		);
 
 		app
@@ -160,6 +170,24 @@ mod tests {
 		assert_eq!(
 			Some(&_Loadout::default()),
 			app.world().entity(entity).get::<_Loadout>(),
+		);
+	}
+
+	#[test_case(InputState::just_pressed(); "on just pressed")]
+	#[test_case(InputState::pressed(); "on pressed")]
+	fn do_nothing_if_current_held_would_not_change(state: InputState) {
+		let mut app = setup(_Input::from(std::iter::once((PlayerSlot::UPPER_L, state))));
+		let entity = app
+			.world_mut()
+			.spawn((Player, _Loadout::from([SlotKey::from(PlayerSlot::UPPER_L)])))
+			.id();
+
+		app.update();
+		app.update();
+
+		assert_eq!(
+			Some(&IsChanged::FALSE),
+			app.world().entity(entity).get::<IsChanged<_Loadout>>(),
 		);
 	}
 }
