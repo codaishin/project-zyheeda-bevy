@@ -3,12 +3,12 @@ use common::tools::action_key::slot::SlotKey;
 use std::{collections::HashSet, marker::PhantomData};
 
 #[derive(Component, Debug, PartialEq)]
-pub(crate) struct ActiveSlots<TFrame> {
+pub(crate) struct HeldSlots<TFrame> {
 	pub(crate) slots: HashSet<SlotKey>,
 	_f: PhantomData<fn() -> TFrame>,
 }
 
-impl<T, TFrame> From<T> for ActiveSlots<TFrame>
+impl<T, TFrame> From<T> for HeldSlots<TFrame>
 where
 	T: IntoIterator<Item = SlotKey>,
 {
@@ -20,7 +20,7 @@ where
 	}
 }
 
-impl<TFrame> Default for ActiveSlots<TFrame> {
+impl<TFrame> Default for HeldSlots<TFrame> {
 	fn default() -> Self {
 		Self {
 			slots: HashSet::default(),

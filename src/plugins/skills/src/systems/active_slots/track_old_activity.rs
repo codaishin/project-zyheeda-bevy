@@ -1,9 +1,9 @@
-use crate::components::active_slots::{ActiveSlots, Current, Old};
+use crate::components::held_slots::{Current, HeldSlots, Old};
 use bevy::prelude::*;
 
-impl ActiveSlots<Old> {
+impl HeldSlots<Old> {
 	pub(crate) fn track(
-		mut active_slots: Query<(&mut Self, &ActiveSlots<Current>), Changed<ActiveSlots<Current>>>,
+		mut active_slots: Query<(&mut Self, &HeldSlots<Current>), Changed<HeldSlots<Current>>>,
 	) {
 		for (mut old, current) in &mut active_slots {
 			old.slots = current.slots.clone();
@@ -22,11 +22,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			(
-				ActiveSlots::<Old>::track,
-				IsChanged::<ActiveSlots<Old>>::detect,
-			)
-				.chain(),
+			(HeldSlots::<Old>::track, IsChanged::<HeldSlots<Old>>::detect).chain(),
 		);
 
 		app
@@ -38,16 +34,16 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				ActiveSlots::<Current>::from([SlotKey(1), SlotKey(2)]),
-				ActiveSlots::<Old>::default(),
+				HeldSlots::<Current>::from([SlotKey(1), SlotKey(2)]),
+				HeldSlots::<Old>::default(),
 			))
 			.id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&ActiveSlots::from([SlotKey(1), SlotKey(2)])),
-			app.world().entity(entity).get::<ActiveSlots<Old>>(),
+			Some(&HeldSlots::from([SlotKey(1), SlotKey(2)])),
+			app.world().entity(entity).get::<HeldSlots<Old>>(),
 		);
 	}
 
@@ -57,16 +53,16 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				ActiveSlots::<Current>::from([SlotKey(1), SlotKey(2)]),
-				ActiveSlots::<Old>::from([SlotKey(11), SlotKey(12)]),
+				HeldSlots::<Current>::from([SlotKey(1), SlotKey(2)]),
+				HeldSlots::<Old>::from([SlotKey(11), SlotKey(12)]),
 			))
 			.id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&ActiveSlots::from([SlotKey(1), SlotKey(2)])),
-			app.world().entity(entity).get::<ActiveSlots<Old>>(),
+			Some(&HeldSlots::from([SlotKey(1), SlotKey(2)])),
+			app.world().entity(entity).get::<HeldSlots<Old>>(),
 		);
 	}
 
@@ -76,8 +72,8 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				ActiveSlots::<Current>::from([SlotKey(1), SlotKey(2)]),
-				ActiveSlots::<Old>::default(),
+				HeldSlots::<Current>::from([SlotKey(1), SlotKey(2)]),
+				HeldSlots::<Old>::default(),
 			))
 			.id();
 
@@ -88,7 +84,7 @@ mod tests {
 			Some(&IsChanged::FALSE),
 			app.world()
 				.entity(entity)
-				.get::<IsChanged<ActiveSlots<Old>>>(),
+				.get::<IsChanged<HeldSlots<Old>>>(),
 		);
 	}
 
@@ -98,15 +94,15 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				ActiveSlots::<Current>::from([SlotKey(1), SlotKey(2)]),
-				ActiveSlots::<Old>::default(),
+				HeldSlots::<Current>::from([SlotKey(1), SlotKey(2)]),
+				HeldSlots::<Old>::default(),
 			))
 			.id();
 
 		app.update();
 		app.world_mut()
 			.entity_mut(entity)
-			.get_mut::<ActiveSlots<Current>>()
+			.get_mut::<HeldSlots<Current>>()
 			.as_deref_mut();
 		app.update();
 
@@ -114,7 +110,7 @@ mod tests {
 			Some(&IsChanged::TRUE),
 			app.world()
 				.entity(entity)
-				.get::<IsChanged<ActiveSlots<Old>>>(),
+				.get::<IsChanged<HeldSlots<Old>>>(),
 		);
 	}
 }

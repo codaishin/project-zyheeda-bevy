@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 impl HeldSkills for LoadoutActivityReadContext<'_> {
 	fn held_skills(&self) -> &HashSet<SlotKey> {
-		&self.active_slots.slots
+		&self.held_slots.slots
 	}
 }
 
@@ -13,7 +13,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::{
-			active_slots::{ActiveSlots, Current},
+			held_slots::{Current, HeldSlots},
 			queue::Queue,
 		},
 		system_parameters::loadout_activity::LoadoutActivityReader,
@@ -35,7 +35,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				ActiveSlots::<Current>::from([SlotKey(0), SlotKey(1)]),
+				HeldSlots::<Current>::from([SlotKey(0), SlotKey(1)]),
 				Queue::default(),
 			))
 			.id();

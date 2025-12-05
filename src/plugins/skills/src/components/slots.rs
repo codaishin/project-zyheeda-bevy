@@ -4,7 +4,7 @@ mod dto;
 
 use crate::{
 	components::{
-		active_slots::{ActiveSlots, Current, Old},
+		held_slots::{Current, HeldSlots, Old},
 		slots::{dto::SlotsDto, visualization::SlotVisualization},
 	},
 	item::Item,
@@ -26,8 +26,8 @@ use std::{collections::HashMap, fmt::Debug};
 	SlotVisualization<HandSlot>,
 	SlotVisualization<ForearmSlot>,
 	SlotVisualization<EssenceSlot>,
-	ActiveSlots<Current>,
-	ActiveSlots<Old>,
+	HeldSlots<Current>,
+	HeldSlots<Old>,
 )]
 #[savable_component(dto = SlotsDto)]
 pub struct Slots {

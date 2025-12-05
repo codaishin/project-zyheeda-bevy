@@ -1,5 +1,5 @@
 use crate::{
-	components::active_slots::{ActiveSlots, Current, Old},
+	components::held_slots::{Current, HeldSlots, Old},
 	item::Item,
 	skills::Skill,
 	traits::{Enqueue, IterHoldingMut, ReleaseSkill},
@@ -24,7 +24,7 @@ pub(crate) trait EnqueueSystem:
 	+ Sized
 {
 	fn enqueue_system<TSlots>(
-		mut agents: Query<(&mut Self, &TSlots, &ActiveSlots<Current>, &ActiveSlots<Old>)>,
+		mut agents: Query<(&mut Self, &TSlots, &HeldSlots<Current>, &HeldSlots<Old>)>,
 		items: Res<Assets<Item>>,
 		skills: Res<Assets<Skill>>,
 	) where
@@ -150,7 +150,7 @@ mod tests {
 	}
 
 	#[test]
-	fn enqueue_skill_in_current_active_slots_but_not_in_old_active_slots() {
+	fn enqueue_skill_in_current_held_slots_but_not_in_old_held_slots() {
 		#[derive(Component, NestedMocks)]
 		struct _Enqueue {
 			mock: Mock_Enqueue,
@@ -199,11 +199,11 @@ mod tests {
 		)]));
 		app.world_mut().spawn((
 			skills,
-			ActiveSlots::<Current>::from([
+			HeldSlots::<Current>::from([
 				SlotKey::from(PlayerSlot::LOWER_R),
 				SlotKey::from(PlayerSlot::UPPER_R),
 			]),
-			ActiveSlots::<Old>::from([SlotKey::from(PlayerSlot::LOWER_L)]),
+			HeldSlots::<Old>::from([SlotKey::from(PlayerSlot::LOWER_L)]),
 			_Enqueue::new().with_mock(|mock| {
 				mock.expect_enqueue()
 					.times(1)
@@ -222,12 +222,12 @@ mod tests {
 	}
 
 	#[test]
-	fn release_skill_when_not_in_current_active_slots() {
+	fn release_skill_when_not_in_current_held_slots() {
 		let mut app = setup::<_Enqueue>(vec![], vec![]);
 		app.world_mut().spawn((
 			_Skills::default(),
-			ActiveSlots::<Current>::from([SlotKey::from(PlayerSlot::LOWER_R)]),
-			ActiveSlots::<Old>::from([]),
+			HeldSlots::<Current>::from([SlotKey::from(PlayerSlot::LOWER_R)]),
+			HeldSlots::<Old>::from([]),
 			_Enqueue {
 				queued: HashMap::from([
 					(
