@@ -4,22 +4,22 @@ use bevy::{
 	prelude::*,
 };
 use common::{
-	tools::action_key::slot::PlayerSlot,
+	tools::action_key::slot::{PlayerSlot, SlotKey},
 	traits::{
 		accessors::get::GetContextMut,
 		handles_input::{GetAllInputStates, InputState},
-		handles_skills_control::{HoldSkill, SkillControl},
+		handles_loadout::{HeldSkillsMut, skills::Skills},
 	},
 };
 
 impl Player {
-	pub(crate) fn use_skills<TInput, TSkills>(
-		mut skills: StaticSystemParam<TSkills>,
+	pub(crate) fn use_skills<TInput, TLoadout>(
+		mut skills: StaticSystemParam<TLoadout>,
 		input: StaticSystemParam<TInput>,
 		players: Query<Entity, With<Self>>,
 	) where
 		TInput: for<'w, 's> SystemParam<Item<'w, 's>: GetAllInputStates>,
-		TSkills: for<'c> GetContextMut<SkillControl, TContext<'c>: HoldSkill>,
+		TLoadout: for<'c> GetContextMut<Skills, TContext<'c>: HeldSkillsMut>,
 	{
 		let held = || {
 			input
@@ -31,14 +31,11 @@ impl Player {
 		};
 
 		for entity in &players {
-			let ctx = TSkills::get_context_mut(&mut skills, SkillControl { entity });
-			let Some(mut ctx) = ctx else {
+			let Some(mut ctx) = TLoadout::get_context_mut(&mut skills, Skills { entity }) else {
 				continue;
 			};
 
-			for key in held() {
-				ctx.holding(key);
-			}
+			*ctx.held_skills_mut() = held().map(SlotKey::from).collect();
 		}
 	}
 }
@@ -51,16 +48,29 @@ mod tests {
 			ActionKey,
 			slot::{PlayerSlot, SlotKey},
 		},
-		traits::{handles_input::InputState, iteration::IterFinite},
+		traits::{handles_input::InputState, handles_loadout::HeldSkills, iteration::IterFinite},
 	};
-	use macros::NestedMocks;
-	use mockall::{automock, predicate::eq};
+	use mockall::automock;
+	use std::collections::{HashMap, HashSet};
 	use test_case::test_case;
-	use testing::{NestedMocks, SingleThreadedApp};
+	use testing::SingleThreadedApp;
 
-	#[derive(Resource, NestedMocks)]
-	struct _Input {
-		mock: Mock_Input,
+	#[derive(Resource)]
+	struct _Input(HashMap<ActionKey, InputState>);
+
+	impl<TAction, T> From<T> for _Input
+	where
+		TAction: TryInto<ActionKey>,
+		T: IntoIterator<Item = (TAction, InputState)>,
+	{
+		fn from(inputs: T) -> Self {
+			Self(
+				inputs
+					.into_iter()
+					.filter_map(|(a, i)| Some((a.try_into().ok()?, i)))
+					.collect(),
+			)
+		}
 	}
 
 	#[automock]
@@ -69,22 +79,28 @@ mod tests {
 		where
 			TAction: Into<ActionKey> + IterFinite + 'static,
 		{
-			self.mock.get_all_input_states()
+			TAction::iterator().filter_map(|a| Some((a, self.0.get(&a.into()).copied()?)))
 		}
 	}
 
-	#[derive(Component, NestedMocks)]
-	struct _Skills {
-		mock: Mock_Skills,
+	#[derive(Component, Debug, PartialEq, Default)]
+	struct _Loadout(HashSet<SlotKey>);
+
+	impl<const N: usize> From<[SlotKey; N]> for _Loadout {
+		fn from(slots: [SlotKey; N]) -> Self {
+			Self(HashSet::from(slots))
+		}
 	}
 
-	#[automock]
-	impl HoldSkill for _Skills {
-		fn holding<TSlot>(&mut self, key: TSlot)
-		where
-			TSlot: Into<SlotKey> + 'static,
-		{
-			self.mock.holding(key);
+	impl HeldSkills for _Loadout {
+		fn held_skills(&self) -> &HashSet<SlotKey> {
+			&self.0
+		}
+	}
+
+	impl HeldSkillsMut for _Loadout {
+		fn held_skills_mut(&mut self) -> &mut HashSet<SlotKey> {
+			&mut self.0
 		}
 	}
 
@@ -94,7 +110,7 @@ mod tests {
 		app.insert_resource(input);
 		app.add_systems(
 			Update,
-			Player::use_skills::<Res<_Input>, Query<&mut _Skills>>,
+			Player::use_skills::<Res<_Input>, Query<&mut _Loadout>>,
 		);
 
 		app
@@ -102,39 +118,48 @@ mod tests {
 
 	#[test_case(InputState::just_pressed(); "on just pressed")]
 	#[test_case(InputState::pressed(); "on pressed")]
-	fn hold_skill(state: InputState) {
-		let mut app = setup(_Input::new().with_mock(move |mock| {
-			mock.expect_get_all_input_states::<PlayerSlot>()
-				.returning(move || Box::new(std::iter::once((PlayerSlot::UPPER_L, state))));
-		}));
-		app.world_mut().spawn((
-			Player,
-			_Skills::new().with_mock(|mock| {
-				mock.expect_holding()
-					.once()
-					.with(eq(PlayerSlot::UPPER_L))
-					.return_const(());
-			}),
-		));
+	fn insert_held_skill(state: InputState) {
+		let mut app = setup(_Input::from(std::iter::once((PlayerSlot::UPPER_L, state))));
+		let entity = app.world_mut().spawn((Player, _Loadout::default())).id();
 
 		app.update();
+
+		assert_eq!(
+			Some(&_Loadout::from([SlotKey::from(PlayerSlot::UPPER_L)])),
+			app.world().entity(entity).get::<_Loadout>(),
+		);
+	}
+
+	#[test_case(InputState::just_pressed(); "on just pressed")]
+	#[test_case(InputState::pressed(); "on pressed")]
+	fn override_held_skills(state: InputState) {
+		let mut app = setup(_Input::from(std::iter::once((PlayerSlot::UPPER_L, state))));
+		let entity = app
+			.world_mut()
+			.spawn((Player, _Loadout::from([SlotKey::from(PlayerSlot::UPPER_R)])))
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&_Loadout::from([SlotKey::from(PlayerSlot::UPPER_L)])),
+			app.world().entity(entity).get::<_Loadout>(),
+		);
 	}
 
 	#[test]
 	fn do_nothing_if_player_missing() {
-		let mut app = setup(_Input::new().with_mock(move |mock| {
-			mock.expect_get_all_input_states::<PlayerSlot>()
-				.returning(move || {
-					Box::new(std::iter::once((
-						PlayerSlot::UPPER_L,
-						InputState::pressed(),
-					)))
-				});
-		}));
-		app.world_mut().spawn(_Skills::new().with_mock(|mock| {
-			mock.expect_holding::<PlayerSlot>().never();
-		}));
+		let mut app = setup(_Input::from(std::iter::once((
+			PlayerSlot::UPPER_L,
+			InputState::pressed(),
+		))));
+		let entity = app.world_mut().spawn(_Loadout::default()).id();
 
 		app.update();
+
+		assert_eq!(
+			Some(&_Loadout::default()),
+			app.world().entity(entity).get::<_Loadout>(),
+		);
 	}
 }

@@ -29,7 +29,12 @@ use common::{
 		handles_enemies::HandlesEnemies,
 		handles_input::{HandlesInput, InputSystemParam},
 		handles_lights::HandlesLights,
-		handles_loadout::{HandlesLoadout, LoadoutActivityParam, LoadoutPrepParam},
+		handles_loadout::{
+			HandlesLoadout,
+			LoadoutActivityMutParam,
+			LoadoutActivityParam,
+			LoadoutPrepParam,
+		},
 		handles_map_generation::HandlesMapGeneration,
 		handles_movement::{HandlesMovement, MovementSystemParam, MovementSystemParamMut},
 		handles_orientation::{FacingSystemParamMut, HandlesOrientation},
@@ -170,7 +175,7 @@ where
 						AnimationsSystemParamMut<TAnimations>,
 					>
 						.pipe(OnError::log),
-					Player::use_skills::<InputSystemParam<TInput>, SkillControlParamMut<TBehaviors>>,
+					Player::use_skills::<InputSystemParam<TInput>, LoadoutActivityMutParam<TLoadout>>,
 				)
 					.chain(),
 				(
@@ -184,7 +189,7 @@ where
 						.pipe(OnError::log),
 					ring_rotation,
 					Enemy::begin_attack,
-					Enemy::hold_attack::<SkillControlParamMut<TBehaviors>>,
+					Enemy::hold_attack::<LoadoutActivityMutParam<TLoadout>>,
 					Update::delta.pipe(Enemy::advance_attack_phase),
 				)
 					.chain(),

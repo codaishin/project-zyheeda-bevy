@@ -24,7 +24,11 @@ use crate::{
 	},
 };
 use bevy::ecs::system::SystemParam;
-use std::{collections::HashSet, fmt::Debug, ops::Deref};
+use std::{
+	collections::HashSet,
+	fmt::Debug,
+	ops::{Deref, DerefMut},
+};
 
 pub trait HandlesLoadout {
 	type TSkillID: Debug + PartialEq + Copy + ThreadSafe;
@@ -113,6 +117,24 @@ pub trait HeldSkills {
 	fn held_skills(&self) -> &HashSet<SlotKey>;
 }
 
+impl<T> HeldSkills for T
+where
+	T: Deref<Target: HeldSkills>,
+{
+	fn held_skills(&self) -> &HashSet<SlotKey> {
+		self.deref().held_skills()
+	}
+}
+
 pub trait HeldSkillsMut: HeldSkills {
 	fn held_skills_mut(&mut self) -> &mut HashSet<SlotKey>;
+}
+
+impl<T> HeldSkillsMut for T
+where
+	T: DerefMut<Target: HeldSkillsMut>,
+{
+	fn held_skills_mut(&mut self) -> &mut HashSet<SlotKey> {
+		self.deref_mut().held_skills_mut()
+	}
 }
