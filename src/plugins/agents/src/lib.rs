@@ -41,7 +41,7 @@ use common::{
 		handles_physics::{HandlesPhysicalAttributes, HandlesRaycast, RaycastSystemParam},
 		handles_player::{HandlesPlayer, PlayerMainCamera},
 		handles_saving::HandlesSaving,
-		handles_skills_control::{HandlesSkillControl, SkillControlParamMut},
+		handles_skill_spawning::{HandlesSkillSpawning, SkillSpawnerMut},
 		prefab::AddPrefabObserver,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
@@ -72,7 +72,7 @@ where
 	TAnimations: ThreadSafe + HandlesAnimations,
 	TLights: ThreadSafe + HandlesLights,
 	TMaps: ThreadSafe + HandlesMapGeneration,
-	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation + HandlesSkillControl,
+	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation + HandlesSkillSpawning,
 	TLoadout: ThreadSafe + HandlesLoadout,
 {
 	#[allow(clippy::too_many_arguments)]
@@ -112,7 +112,7 @@ where
 	TAnimations: ThreadSafe + HandlesAnimations,
 	TLights: ThreadSafe + HandlesLights,
 	TMaps: ThreadSafe + HandlesMapGeneration,
-	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation + HandlesSkillControl,
+	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation + HandlesSkillSpawning,
 	TLoadout: ThreadSafe + HandlesLoadout,
 {
 	fn build(&self, app: &mut App) {
@@ -154,7 +154,7 @@ where
 
 		// # Behaviors
 		app.register_required_components::<PlayerCamera, TPhysics::TWorldCamera>();
-		app.add_observer(Agent::register_skill_spawn_points::<SkillControlParamMut<TBehaviors>>);
+		app.add_observer(Agent::register_skill_spawn_points::<SkillSpawnerMut<TBehaviors>>);
 		app.add_observer(Player::register_target_definition::<FacingSystemParamMut<TBehaviors>>);
 		app.add_observer(Enemy::register_target_definition::<FacingSystemParamMut<TBehaviors>>);
 		app.add_systems(

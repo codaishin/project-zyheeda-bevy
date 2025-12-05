@@ -1,12 +1,12 @@
 use crate::{
 	components::fix_points::FixPointsDefinition,
-	system_param::skill_param::SpawnPointContextMut,
+	system_param::skill_spawner::SpawnPointContextMut,
 };
 use common::{
 	tools::bone_name::BoneName,
 	traits::{
 		handles_skill_behaviors::SkillSpawner,
-		handles_skills_control::SpawnPointsDefinition,
+		handles_skill_spawning::SpawnPointsDefinition,
 	},
 };
 use std::collections::HashMap;
@@ -22,7 +22,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::fix_points::FixPointsDefinition,
-		system_param::skill_param::SkillParamMut,
+		system_param::skill_spawner::SkillSpawnerMut,
 	};
 	use bevy::{
 		app::{App, Update},
@@ -30,7 +30,7 @@ mod tests {
 	};
 	use common::{
 		tools::action_key::slot::SlotKey,
-		traits::{accessors::get::GetContextMut, handles_skills_control::SkillSpawnPoints},
+		traits::{accessors::get::GetContextMut, handles_skill_spawning::SkillSpawnPoints},
 	};
 	use testing::SingleThreadedApp;
 
@@ -49,9 +49,9 @@ mod tests {
 		let map_clone = map.clone();
 
 		app.world_mut()
-			.run_system_once(move |mut p: SkillParamMut| {
+			.run_system_once(move |mut p: SkillSpawnerMut| {
 				let mut ctx =
-					SkillParamMut::get_context_mut(&mut p, SkillSpawnPoints { entity }).unwrap();
+					SkillSpawnerMut::get_context_mut(&mut p, SkillSpawnPoints { entity }).unwrap();
 
 				ctx.insert_spawn_point_definition(map_clone.clone());
 			})?;
