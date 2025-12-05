@@ -1,10 +1,12 @@
-use crate::components::held_slots::{Current, HeldSlots, Old};
+use crate::components::held_slots::{HeldSlots, Old};
 use bevy::prelude::*;
 
 impl HeldSlots<Old> {
-	pub(crate) fn track(
-		mut active_slots: Query<(&mut Self, &HeldSlots<Current>), Changed<HeldSlots<Current>>>,
-	) {
+	pub(crate) fn update_from<TFrame>(
+		mut active_slots: Query<(&mut Self, &HeldSlots<TFrame>), Changed<HeldSlots<TFrame>>>,
+	) where
+		TFrame: 'static,
+	{
 		for (mut old, current) in &mut active_slots {
 			old.slots = current.slots.clone();
 		}
@@ -17,12 +19,18 @@ mod tests {
 	use common::tools::action_key::slot::SlotKey;
 	use testing::{IsChanged, SingleThreadedApp};
 
+	struct _Source;
+
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.add_systems(
 			Update,
-			(HeldSlots::<Old>::track, IsChanged::<HeldSlots<Old>>::detect).chain(),
+			(
+				HeldSlots::<Old>::update_from::<_Source>,
+				IsChanged::<HeldSlots<Old>>::detect,
+			)
+				.chain(),
 		);
 
 		app
@@ -34,7 +42,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				HeldSlots::<Current>::from([SlotKey(1), SlotKey(2)]),
+				HeldSlots::<_Source>::from([SlotKey(1), SlotKey(2)]),
 				HeldSlots::<Old>::default(),
 			))
 			.id();
@@ -53,7 +61,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				HeldSlots::<Current>::from([SlotKey(1), SlotKey(2)]),
+				HeldSlots::<_Source>::from([SlotKey(1), SlotKey(2)]),
 				HeldSlots::<Old>::from([SlotKey(11), SlotKey(12)]),
 			))
 			.id();
@@ -72,7 +80,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				HeldSlots::<Current>::from([SlotKey(1), SlotKey(2)]),
+				HeldSlots::<_Source>::from([SlotKey(1), SlotKey(2)]),
 				HeldSlots::<Old>::default(),
 			))
 			.id();
@@ -94,7 +102,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				HeldSlots::<Current>::from([SlotKey(1), SlotKey(2)]),
+				HeldSlots::<_Source>::from([SlotKey(1), SlotKey(2)]),
 				HeldSlots::<Old>::default(),
 			))
 			.id();
@@ -102,7 +110,7 @@ mod tests {
 		app.update();
 		app.world_mut()
 			.entity_mut(entity)
-			.get_mut::<HeldSlots<Current>>()
+			.get_mut::<HeldSlots<_Source>>()
 			.as_deref_mut();
 		app.update();
 

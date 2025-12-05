@@ -11,7 +11,7 @@ use crate::{
 		bone_definitions::BoneDefinitions,
 		combos::dto::CombosDto,
 		combos_time_out::dto::CombosTimeOutDto,
-		held_slots::{HeldSlots, Old},
+		held_slots::{Current, HeldSlots, Old},
 		queue::dto::QueueDto,
 		slots::visualization::SlotVisualization,
 	},
@@ -124,7 +124,7 @@ where
 				>,
 				execute_skill,
 				flush::<Queue>,
-				HeldSlots::<Old>::track,
+				HeldSlots::<Old>::update_from::<Current>,
 			)
 				.chain()
 				.before(TBehaviors::SYSTEMS)
