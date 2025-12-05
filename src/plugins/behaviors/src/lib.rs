@@ -8,12 +8,11 @@ use crate::{
 		SetFace,
 		fix_points::{Anchor, fix_point::FixPointSpawner},
 		movement_definition::MovementDefinition,
-		skill_usage::SkillUsage,
 	},
 	system_param::{
 		face_param::FaceParamMut,
 		movement_param::{MovementParam, MovementParamMut, context_changed::JustRemovedMovements},
-		skill_param::SkillParamMut,
+		skill_spawner::SkillSpawnerMut,
 	},
 };
 use bevy::prelude::*;
@@ -42,7 +41,7 @@ use common::{
 			SkillEntities,
 			SkillRoot,
 		},
-		handles_skills_control::HandlesSkillControl,
+		handles_skill_spawning::HandlesSkillSpawning,
 		prefab::AddPrefabObserver,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
@@ -136,7 +135,7 @@ where
 				Update,
 				(
 					// Prep systems
-					(FixPointSpawner::insert, SkillUsage::clear_not_refreshed).chain(),
+					FixPointSpawner::insert,
 					// Movement
 					(
 						compute_path,
@@ -177,7 +176,6 @@ where
 impl<TDependencies> HandlesSkillBehaviors for BehaviorsPlugin<TDependencies> {
 	type TSkillContact = SkillContact;
 	type TSkillProjection = SkillProjection;
-	type TSkillUsage = SkillUsage;
 
 	fn spawn_skill(
 		commands: &mut ZyheedaCommands,
@@ -228,6 +226,6 @@ where
 	type TMovementMut<'w, 's> = MovementParamMut<'w, 's, TPhysics::TMotion>;
 }
 
-impl<TDependencies> HandlesSkillControl for BehaviorsPlugin<TDependencies> {
-	type TSkillControlMut<'w, 's> = SkillParamMut<'w, 's>;
+impl<TDependencies> HandlesSkillSpawning for BehaviorsPlugin<TDependencies> {
+	type TSkillSpawnerMut<'w, 's> = SkillSpawnerMut<'w, 's>;
 }

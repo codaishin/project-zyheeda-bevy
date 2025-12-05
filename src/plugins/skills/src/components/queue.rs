@@ -2,6 +2,7 @@ pub(crate) mod dto;
 
 use crate::{
 	QueueDto,
+	components::held_slots::{Current, HeldSlots, Old},
 	skills::{QueuedSkill, RunSkillBehavior, Skill, SkillMode, SkillState},
 	traits::{Enqueue, Flush, GetActiveSkill, GetSkillBehavior, IterAddedMut, IterHoldingMut},
 };
@@ -28,6 +29,7 @@ enum State {
 
 #[derive(Component, SavableComponent, PartialEq, Debug, Clone)]
 #[savable_component(dto = QueueDto)]
+#[require(HeldSlots<Current>, HeldSlots<Old>)]
 pub struct Queue {
 	queue: VecDeque<QueuedSkill>,
 	active: Option<SkillElapsed<Duration>>,

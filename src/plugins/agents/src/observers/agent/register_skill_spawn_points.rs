@@ -2,7 +2,7 @@ use crate::{assets::agent_config::AgentConfig, components::agent::Agent};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
 	accessors::get::GetContextMut,
-	handles_skills_control::{SkillSpawnPoints, SpawnPointsDefinition},
+	handles_skill_spawning::{SkillSpawnPoints, SpawnPointsDefinition},
 };
 
 impl Agent {

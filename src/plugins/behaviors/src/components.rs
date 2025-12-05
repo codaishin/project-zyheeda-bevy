@@ -5,7 +5,6 @@ pub(crate) mod movement;
 pub(crate) mod movement_definition;
 pub(crate) mod set_motion_forward;
 pub(crate) mod skill_behavior;
-pub(crate) mod skill_usage;
 pub(crate) mod when_traveled_insert;
 
 use bevy::prelude::*;

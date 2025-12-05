@@ -1,13 +1,13 @@
 use crate::{
 	components::queue::Queue,
-	system_parameters::loadout_activity::LoadoutActivityContext,
+	system_parameters::loadout_activity::LoadoutActivityReadContext,
 };
 use common::traits::{
 	handles_loadout::{ActiveSkill, ActiveSkills},
 	iterate::Iterate,
 };
 
-impl ActiveSkills for LoadoutActivityContext<'_> {
+impl ActiveSkills for LoadoutActivityReadContext<'_> {
 	type TIter<'a>
 		= ActiveSkillsIter<'a>
 	where
@@ -44,7 +44,7 @@ mod tests {
 	use crate::{
 		components::queue::Queue,
 		skills::{QueuedSkill, Skill},
-		system_parameters::loadout_activity::LoadoutActivity,
+		system_parameters::loadout_activity::LoadoutActivityReader,
 	};
 	use bevy::{
 		ecs::system::{RunSystemError, RunSystemOnce},
@@ -71,10 +71,12 @@ mod tests {
 			)]))
 			.id();
 
-		let active_skills = app.world_mut().run_system_once(move |p: LoadoutActivity| {
-			let ctx = LoadoutActivity::get_context(&p, Skills { entity }).unwrap();
-			ctx.active_skills().collect::<Vec<_>>()
-		})?;
+		let active_skills = app
+			.world_mut()
+			.run_system_once(move |p: LoadoutActivityReader| {
+				let ctx = LoadoutActivityReader::get_context(&p, Skills { entity }).unwrap();
+				ctx.active_skills().collect::<Vec<_>>()
+			})?;
 
 		assert_eq!(
 			vec![ActiveSkill {
@@ -97,10 +99,12 @@ mod tests {
 			]))
 			.id();
 
-		let active_skills = app.world_mut().run_system_once(move |p: LoadoutActivity| {
-			let ctx = LoadoutActivity::get_context(&p, Skills { entity }).unwrap();
-			ctx.active_skills().collect::<Vec<_>>()
-		})?;
+		let active_skills = app
+			.world_mut()
+			.run_system_once(move |p: LoadoutActivityReader| {
+				let ctx = LoadoutActivityReader::get_context(&p, Skills { entity }).unwrap();
+				ctx.active_skills().collect::<Vec<_>>()
+			})?;
 
 		assert_eq!(
 			vec![ActiveSkill {
@@ -126,10 +130,12 @@ mod tests {
 			)]))
 			.id();
 
-		let active_skills = app.world_mut().run_system_once(move |p: LoadoutActivity| {
-			let ctx = LoadoutActivity::get_context(&p, Skills { entity }).unwrap();
-			ctx.active_skills().collect::<Vec<_>>()
-		})?;
+		let active_skills = app
+			.world_mut()
+			.run_system_once(move |p: LoadoutActivityReader| {
+				let ctx = LoadoutActivityReader::get_context(&p, Skills { entity }).unwrap();
+				ctx.active_skills().collect::<Vec<_>>()
+			})?;
 
 		assert_eq!(
 			vec![ActiveSkill {

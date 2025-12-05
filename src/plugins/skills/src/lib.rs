@@ -11,13 +11,14 @@ use crate::{
 		bone_definitions::BoneDefinitions,
 		combos::dto::CombosDto,
 		combos_time_out::dto::CombosTimeOutDto,
+		held_slots::{Current, HeldSlots, Old},
 		queue::dto::QueueDto,
 		slots::visualization::SlotVisualization,
 	},
 	skills::SkillId,
 	system_parameters::{
 		loadout::{LoadoutPrep, LoadoutReader, LoadoutWriter},
-		loadout_activity::LoadoutActivity,
+		loadout_activity::{LoadoutActivityReader, LoadoutActivityWriter},
 	},
 	systems::enqueue::EnqueueSystem,
 };
@@ -112,7 +113,7 @@ where
 		app.add_systems(
 			Update,
 			(
-				TBehaviors::TSkillUsage::enqueue::<Slots, Queue>,
+				Queue::enqueue_system::<Slots>,
 				Combos::update::<Queue>,
 				flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
 				advance_active_skill::<
@@ -123,6 +124,7 @@ where
 				>,
 				execute_skill,
 				flush::<Queue>,
+				HeldSlots::<Old>::update_from::<Current>,
 			)
 				.chain()
 				.before(TBehaviors::SYSTEMS)
@@ -150,7 +152,8 @@ where
 impl<TDependencies> HandlesLoadout for SkillsPlugin<TDependencies> {
 	type TSkillID = SkillId;
 	type TLoadoutPrep<'w, 's> = LoadoutPrep<'w, 's>;
-	type TLoadoutRead<'w, 's> = LoadoutReader<'w, 's>;
+	type TLoadout<'w, 's> = LoadoutReader<'w, 's>;
 	type TLoadoutMut<'w, 's> = LoadoutWriter<'w, 's>;
-	type TLoadoutActivity<'w, 's> = LoadoutActivity<'w, 's>;
+	type TLoadoutActivity<'w, 's> = LoadoutActivityReader<'w, 's>;
+	type TLoadoutActivityMut<'w, 's> = LoadoutActivityWriter<'w, 's>;
 }

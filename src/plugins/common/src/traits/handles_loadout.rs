@@ -24,7 +24,11 @@ use crate::{
 	},
 };
 use bevy::ecs::system::SystemParam;
-use std::{fmt::Debug, ops::Deref};
+use std::{
+	collections::HashSet,
+	fmt::Debug,
+	ops::{Deref, DerefMut},
+};
 
 pub trait HandlesLoadout {
 	type TSkillID: Debug + PartialEq + Copy + ThreadSafe;
@@ -33,7 +37,7 @@ pub trait HandlesLoadout {
 		+ for<'c> GetContextMut<NotLoadedOut, TContext<'c>: InsertDefaultLoadout>
 		+ for<'c> GetContextMut<NoBonesRegistered, TContext<'c>: RegisterLoadoutBones>;
 
-	type TLoadoutRead<'w, 's>: SystemParam
+	type TLoadout<'w, 's>: SystemParam
 		+ for<'c> GetContext<Items, TContext<'c>: ReadItems>
 		+ for<'c> GetContext<Skills, TContext<'c>: ReadSkills>
 		+ for<'c> GetContext<Combos, TContext<'c>: ReadCombos<Self::TSkillID>>
@@ -44,13 +48,18 @@ pub trait HandlesLoadout {
 		+ for<'c> GetContextMut<Combos, TContext<'c>: UpdateCombos<Self::TSkillID>>;
 
 	type TLoadoutActivity<'w, 's>: SystemParam
-		+ for<'c> GetContext<Skills, TContext<'c>: ActiveSkills>;
+		+ for<'c> GetContext<Skills, TContext<'c>: ActiveSkills>
+		+ for<'c> GetContext<Skills, TContext<'c>: HeldSkills>;
+
+	type TLoadoutActivityMut<'w, 's>: SystemParam
+		+ for<'c> GetContextMut<Skills, TContext<'c>: HeldSkillsMut>;
 }
 
 pub type LoadoutPrepParam<'w, 's, T> = <T as HandlesLoadout>::TLoadoutPrep<'w, 's>;
-pub type LoadoutReadParam<'w, 's, T> = <T as HandlesLoadout>::TLoadoutRead<'w, 's>;
+pub type LoadoutParam<'w, 's, T> = <T as HandlesLoadout>::TLoadout<'w, 's>;
 pub type LoadoutMutParam<'w, 's, T> = <T as HandlesLoadout>::TLoadoutMut<'w, 's>;
 pub type LoadoutActivityParam<'w, 's, T> = <T as HandlesLoadout>::TLoadoutActivity<'w, 's>;
+pub type LoadoutActivityMutParam<'w, 's, T> = <T as HandlesLoadout>::TLoadoutActivityMut<'w, 's>;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum LoadoutKey {
@@ -102,4 +111,30 @@ where
 pub struct ActiveSkill {
 	pub key: SlotKey,
 	pub animate: bool,
+}
+
+pub trait HeldSkills {
+	fn held_skills(&self) -> &HashSet<SlotKey>;
+}
+
+impl<T> HeldSkills for T
+where
+	T: Deref<Target: HeldSkills>,
+{
+	fn held_skills(&self) -> &HashSet<SlotKey> {
+		self.deref().held_skills()
+	}
+}
+
+pub trait HeldSkillsMut: HeldSkills {
+	fn held_skills_mut(&mut self) -> &mut HashSet<SlotKey>;
+}
+
+impl<T> HeldSkillsMut for T
+where
+	T: DerefMut<Target: HeldSkillsMut>,
+{
+	fn held_skills_mut(&mut self) -> &mut HashSet<SlotKey> {
+		self.deref_mut().held_skills_mut()
+	}
 }
