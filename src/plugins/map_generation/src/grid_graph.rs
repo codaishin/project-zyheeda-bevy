@@ -121,7 +121,11 @@ where
 	type TLNode = GridGraphNode;
 
 	fn line_of_sight(&self, a: &Self::TLNode, b: &Self::TLNode) -> bool {
-		LineWide::new(a, b).all(|LineNode { x, z }| !self.extra.obstacles.contains(&(x, z)))
+		let Ok(mut line) = LineWide::new(*a, *b) else {
+			return false;
+		};
+
+		line.all(|LineNode { x, z }| !self.extra.obstacles.contains(&(x, z)))
 	}
 }
 

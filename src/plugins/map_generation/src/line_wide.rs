@@ -9,70 +9,47 @@ use std::ops::RangeInclusive;
 ///   Some nodes might be excluded by longer almost diagonal lines.
 ///   This shouldn't be a problem though, when using primarily
 ///   round colliders.
+///
+///   For performance and memory overflow concerns the distance of
+///   the start and end nodes in each dimension must not exceed
+///   [LineWide::MAX_ALLOWED_DISTANCE].
 /// </div>
+#[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct LineWide {
 	orientation: Orientation,
-	new_node: NewNodeFn,
-	range: RangeInclusive<u32>,
+	normalized: Normalized,
 }
 
 impl LineWide {
-	pub(crate) fn new(start: &GridGraphNode, end: &GridGraphNode) -> Self {
-		let (low, high, new_node) = Self::normalize_layout(start, end);
-		let (i_low, d_low) = match low.1 > low.0 {
-			true => (1, (low.1 - low.0) as i32),
-			false => (-1, (low.0 - low.1) as i32),
-		};
+	const MAX_ALLOWED_DISTANCE: u32 = 10_000;
 
-		let orientation = match d_low {
-			0 => Orientation::Straight { v_low: low.0 },
-			_ => {
-				let d_high = (high.1 - high.0) as i32;
-				let step = Step {
-					d: (2 * d_low) - d_high,
-					v_lows: [low.0; 2],
-					d_up: (2 * d_low) as u32,
-					d_down: 2 * (d_low - d_high),
-				};
-
+	pub(crate) fn new(start: GridGraphNode, end: GridGraphNode) -> Result<Self, NodesTooFarApart> {
+		let normalized = Normalized::try_new(start, end)?;
+		let orientation = match normalized.diff_low {
+			0 => Orientation::Straight {
+				low: normalized.low.0,
+			},
+			diff_low => {
+				let diff_high = normalized.high.start().abs_diff(*normalized.high.end());
 				Orientation::Odd(Line {
-					i_low,
-					low_start: low.0,
-					low_end: low.1,
-					step,
+					iterate: normalized.iterate,
+					low_start: normalized.low.0,
+					low_end: normalized.low.1,
+					step: Step {
+						diff: 2 * diff_low as i32 - diff_high as i32,
+						low: [normalized.low.0; 2],
+						diff_up: 2 * diff_low,
+						diff_down: 2 * (diff_low as i32 - diff_high as i32),
+					},
 					additional_nodes: [None; 3],
 				})
 			}
 		};
 
-		Self {
-			range: high.0..=high.1,
-			new_node,
+		Ok(Self {
+			normalized,
 			orientation,
-		}
-	}
-
-	fn normalize_layout(start: &GridGraphNode, end: &GridGraphNode) -> (Low, High, NewNodeFn) {
-		let dx = end.x().abs_diff(start.x());
-		let dz = end.z().abs_diff(start.z());
-		let is_low = dx > dz;
-
-		match is_low {
-			true if start.x() < end.x() => {
-				(Low(start.z(), end.z()), High(start.x(), end.x()), Low::node)
-			}
-			true => (Low(end.z(), start.z()), High(end.x(), start.x()), Low::node),
-			false if start.z() < end.z() => (
-				Low(start.x(), end.x()),
-				High(start.z(), end.z()),
-				High::node,
-			),
-			false => (
-				Low(end.x(), start.x()),
-				High(end.z(), start.z()),
-				High::node,
-			),
-		}
+		})
 	}
 }
 
@@ -81,9 +58,9 @@ impl Iterator for LineWide {
 
 	fn next(&mut self) -> Option<Self::Item> {
 		match &mut self.orientation {
-			Orientation::Straight { v_low } => {
-				let v_high = self.range.next()?;
-				let node = (self.new_node)(*v_low, v_high);
+			Orientation::Straight { low } => {
+				let high = self.normalized.high.next()?;
+				let node = self.normalized.new_node(*low, high);
 				Some(node)
 			}
 			Orientation::Odd(line) => match &mut line.additional_nodes {
@@ -91,29 +68,29 @@ impl Iterator for LineWide {
 				[_, node, _] if node.is_some() => node.take(),
 				[_, _, node] if node.is_some() => node.take(),
 				_ => {
-					let high = self.range.next()?;
-					let low_0 = line.step.v_lows[0];
-					let low_1 = line.step.v_lows[1];
-					let is_doubled = low_0 != low_1;
-					let add_border = !is_doubled || line.step.steps_fast();
+					let high = self.normalized.high.next()?;
+					let low_0 = line.step.low[0];
+					let low_1 = line.step.low[1];
+					let between_lows = line.step.between_lows();
+					let add_border = !between_lows || line.step.steps_fast();
 
-					let node = (self.new_node)(low_0, high);
+					let node = self.normalized.new_node(low_0, high);
 
 					if add_border && low_0 != line.low_start {
-						let low = low_0.checked_add_signed(-line.i_low)?;
-						line.additional_nodes[0] = Some((self.new_node)(low, high));
+						let last_low = low_0.checked_add_signed(-line.iterate)?;
+						line.additional_nodes[0] = Some(self.normalized.new_node(last_low, high));
 					}
 
-					if is_doubled {
-						line.additional_nodes[1] = Some((self.new_node)(low_1, high));
+					if between_lows {
+						line.additional_nodes[1] = Some(self.normalized.new_node(low_1, high));
 					}
 
 					if add_border && low_1 != line.low_end {
-						let low = low_1.checked_add_signed(line.i_low)?;
-						line.additional_nodes[2] = Some((self.new_node)(low, high));
+						let next_low = low_1.checked_add_signed(line.iterate)?;
+						line.additional_nodes[2] = Some(self.normalized.new_node(next_low, high));
 					}
 
-					line.step.step(line.i_low)?;
+					line.step.step(line.iterate);
 
 					Some(node)
 				}
@@ -122,13 +99,69 @@ impl Iterator for LineWide {
 	}
 }
 
+#[cfg_attr(test, derive(Debug, PartialEq))]
+struct Normalized {
+	low: (u32, u32),
+	high: RangeInclusive<u32>,
+	iterate: i32,
+	diff_low: u32,
+	is_low: bool,
+}
+
+impl Normalized {
+	fn try_new(start: GridGraphNode, end: GridGraphNode) -> Result<Normalized, NodesTooFarApart> {
+		let dx = end.x().abs_diff(start.x());
+		let dz = end.z().abs_diff(start.z());
+
+		if dx > LineWide::MAX_ALLOWED_DISTANCE || dz > LineWide::MAX_ALLOWED_DISTANCE {
+			return Err(NodesTooFarApart);
+		}
+
+		let is_low = dx > dz;
+
+		let (low, high) = match is_low {
+			true if start.x() < end.x() => ((start.z(), end.z()), (start.x(), end.x())),
+			true => ((end.z(), start.z()), (end.x(), start.x())),
+			false if start.z() < end.z() => ((start.x(), end.x()), (start.z(), end.z())),
+			false => ((end.x(), start.x()), (end.z(), start.z())),
+		};
+
+		let (iterate, diff_low) = match low.1 > low.0 {
+			true => (1, low.1 - low.0),
+			false => (-1, low.0 - low.1),
+		};
+
+		Ok(Self {
+			low: (low.0, low.1),
+			high: RangeInclusive::new(high.0, high.1),
+			iterate,
+			diff_low,
+			is_low,
+		})
+	}
+
+	fn new_node(&self, x: u32, z: u32) -> LineNode {
+		let (x, z) = match self.is_low {
+			true => (z, x),
+			false => (x, z),
+		};
+
+		LineNode { x, z }
+	}
+}
+
+#[derive(Debug, PartialEq)]
+pub(crate) struct NodesTooFarApart;
+
+#[cfg_attr(test, derive(Debug, PartialEq))]
 enum Orientation {
-	Straight { v_low: u32 },
+	Straight { low: u32 },
 	Odd(Line),
 }
 
+#[cfg_attr(test, derive(Debug, PartialEq))]
 struct Line {
-	i_low: i32,
+	iterate: i32,
 	low_start: u32,
 	low_end: u32,
 	step: Step,
@@ -142,55 +175,38 @@ pub struct LineNode {
 	pub(crate) z: u32,
 }
 
-type NewNodeFn = fn(u32, u32) -> LineNode;
-
-struct Low(u32, u32);
-
-impl Low {
-	fn node(x: u32, z: u32) -> LineNode {
-		LineNode { x: z, z: x }
-	}
-}
-
-struct High(u32, u32);
-
-impl High {
-	fn node(x: u32, z: u32) -> LineNode {
-		LineNode { x, z }
-	}
-}
-
 #[derive(Debug, PartialEq)]
 struct Step {
-	d: i32,
-	v_lows: [u32; 2],
-	d_up: u32,
-	d_down: i32,
+	diff: i32,
+	low: [u32; 2],
+	diff_up: u32,
+	diff_down: i32,
 }
 
 impl Step {
-	#[must_use]
-	fn step(&mut self, i_low: i32) -> Option<()> {
-		if self.d < 0 {
-			self.d += self.d_up as i32;
-			return Some(());
+	fn step(&mut self, i_low: i32) {
+		match self.diff {
+			d if d > 0 => {
+				self.diff += self.diff_down;
+				let low = self.low[0].saturating_add_signed(i_low);
+				self.low.fill(low);
+			}
+			d if d < 0 => {
+				self.diff += self.diff_up as i32;
+			}
+			_ => {
+				self.diff += self.diff_up as i32;
+				self.low[1] = self.low[1].saturating_add_signed(i_low);
+			}
 		}
-
-		if self.d == 0 {
-			self.d += self.d_up as i32;
-			self.v_lows[1] = self.v_lows[1].checked_add_signed(i_low)?;
-			return Some(());
-		}
-
-		self.v_lows[0] = self.v_lows[0].checked_add_signed(i_low)?;
-		self.v_lows[1] = self.v_lows[0];
-		self.d += self.d_down;
-
-		Some(())
 	}
 
 	fn steps_fast(&self) -> bool {
-		self.d_down.unsigned_abs() < self.d_up
+		self.diff_down.unsigned_abs() < self.diff_up
+	}
+
+	fn between_lows(&self) -> bool {
+		self.low[0] != self.low[1]
 	}
 }
 
@@ -200,52 +216,102 @@ mod tests {
 	use std::collections::HashSet;
 	use test_case::test_case;
 
-	fn line_end(x: u32, z: u32) -> GridGraphNode {
+	fn node(x: u32, z: u32) -> GridGraphNode {
 		GridGraphNode::new(x, z)
 	}
 
-	#[test_case(line_end(1, 0), line_end(3, 0), [(1, 0), (2, 0), (3, 0)]; "x aligned")]
-	#[test_case(line_end(0, 1), line_end(0, 3), [(0, 1), (0, 2), (0, 3)]; "z aligned")]
-	#[test_case(line_end(1, 4), line_end(3, 4), [(1, 4), (2, 4), (3, 4)]; "x aligned with non zero z")]
-	fn straight<const N: usize>(start: GridGraphNode, end: GridGraphNode, nodes: [(u32, u32); N]) {
+	#[test_case(node(1, 0), node(3, 0), [(1, 0), (2, 0), (3, 0)]; "x aligned")]
+	#[test_case(node(0, 1), node(0, 3), [(0, 1), (0, 2), (0, 3)]; "z aligned")]
+	#[test_case(node(1, 4), node(3, 4), [(1, 4), (2, 4), (3, 4)]; "x aligned with non zero z")]
+	fn straight<const N: usize>(
+		start: GridGraphNode,
+		end: GridGraphNode,
+		nodes: [(u32, u32); N],
+	) -> Result<(), NodesTooFarApart> {
 		assert_eq!(
 			HashSet::from(nodes.map(|(x, z)| LineNode { x, z })),
-			LineWide::new(&start, &end).collect::<HashSet<_>>()
-		)
+			LineWide::new(start, end)?.collect::<HashSet<_>>()
+		);
+		Ok(())
 	}
 
-	#[test_case(line_end(1, 1), line_end(3, 3), [(1, 1), (1, 2), (2, 1), (2, 2), (2, 3), (3, 2), (3, 3)]; "ascending")]
-	#[test_case(line_end(3, 3), line_end(1, 1), [(1, 1), (1, 2), (2, 1), (2, 2), (2, 3), (3, 2), (3, 3)]; "ascending reversed")]
-	#[test_case(line_end(1, 3), line_end(3, 1), [(1, 3), (1, 2), (2, 3), (2, 2), (2, 1), (3, 2), (3, 1)]; "descending")]
-	#[test_case(line_end(3, 1), line_end(1, 3), [(1, 3), (1, 2), (2, 3), (2, 2), (2, 1), (3, 2), (3, 1)]; "descending reversed")]
-	fn diagonal<const N: usize>(start: GridGraphNode, end: GridGraphNode, nodes: [(u32, u32); N]) {
+	#[test_case(node(1, 1), node(3, 3), [(1, 1), (1, 2), (2, 1), (2, 2), (2, 3), (3, 2), (3, 3)]; "ascending")]
+	#[test_case(node(3, 3), node(1, 1), [(1, 1), (1, 2), (2, 1), (2, 2), (2, 3), (3, 2), (3, 3)]; "ascending reversed")]
+	#[test_case(node(1, 3), node(3, 1), [(1, 3), (1, 2), (2, 3), (2, 2), (2, 1), (3, 2), (3, 1)]; "descending")]
+	#[test_case(node(3, 1), node(1, 3), [(1, 3), (1, 2), (2, 3), (2, 2), (2, 1), (3, 2), (3, 1)]; "descending reversed")]
+	#[test_case(node(254, 254), node(256, 256), [(254, 254), (254, 255), (255, 254), (255, 255), (255, 256), (256, 255), (256, 256)]; "larger ascending")]
+	#[test_case(node(256, 256), node(254, 254), [(254, 254), (254, 255), (255, 254), (255, 255), (255, 256), (256, 255), (256, 256)]; "larger ascending reversed")]
+	#[test_case(node(254, 256), node(256, 254), [(254, 256), (254, 255), (255, 256), (255, 255), (255, 254), (256, 255), (256, 254)]; "larger descending")]
+	#[test_case(node(256, 254), node(254, 256), [(254, 256), (254, 255), (255, 256), (255, 255), (255, 254), (256, 255), (256, 254)]; "larger descending reversed")]
+	fn diagonal<const N: usize>(
+		start: GridGraphNode,
+		end: GridGraphNode,
+		nodes: [(u32, u32); N],
+	) -> Result<(), NodesTooFarApart> {
 		assert_eq!(
 			HashSet::from(nodes.map(|(x, z)| LineNode { x, z })),
-			LineWide::new(&start, &end).collect::<HashSet<_>>()
-		)
+			LineWide::new(start, end)?.collect::<HashSet<_>>()
+		);
+		Ok(())
 	}
 
-	#[test_case(line_end(1, 1), line_end(3, 2), [(1, 1), (1, 2), (2, 1), (2, 2), (3, 1), (3, 2)]; "low")]
-	#[test_case(line_end(1, 1), line_end(2, 3), [(1, 1), (2, 1), (1, 2), (2, 2), (1, 3), (2, 3)]; "high")]
+	#[test_case(node(1, 1), node(3, 2), [(1, 1), (1, 2), (2, 1), (2, 2), (3, 1), (3, 2)]; "low")]
+	#[test_case(node(1, 1), node(2, 3), [(1, 1), (2, 1), (1, 2), (2, 2), (1, 3), (2, 3)]; "high")]
 	fn draws_rectangle<const N: usize>(
 		start: GridGraphNode,
 		end: GridGraphNode,
 		nodes: [(u32, u32); N],
-	) {
+	) -> Result<(), NodesTooFarApart> {
 		assert_eq!(
 			HashSet::from(nodes.map(|(x, z)| LineNode { x, z })),
-			LineWide::new(&start, &end).collect::<HashSet<_>>()
-		)
+			LineWide::new(start, end)?.collect::<HashSet<_>>()
+		);
+		Ok(())
 	}
 
-	#[test_case(line_end(1, 1), line_end(4, 3), [(1, 1), (1, 2), (2, 1), (2, 2), (2, 3), (3, 1), (3, 2), (3, 3), (4, 2), (4, 3)]; "low")]
-	#[test_case(line_end(4, 3), line_end(1, 1), [(1, 1), (1, 2), (2, 1), (2, 2), (2, 3), (3, 1), (3, 2), (3, 3), (4, 2), (4, 3)]; "low reversed")]
-	#[test_case(line_end(1, 1), line_end(3, 4), [(1, 1), (1, 2), (1, 3), (2, 1), (2, 2), (2, 3), (2, 4), (3, 2), (3, 3), (3, 4)]; "high")]
-	#[test_case(line_end(3, 4), line_end(1, 1), [(1, 1), (1, 2), (1, 3), (2, 1), (2, 2), (2, 3), (2, 4), (3, 2), (3, 3), (3, 4)]; "high reversed")]
-	fn odd<const N: usize>(start: GridGraphNode, end: GridGraphNode, nodes: [(u32, u32); N]) {
+	#[test_case(node(1, 1), node(4, 3), [(1, 1), (1, 2), (2, 1), (2, 2), (2, 3), (3, 1), (3, 2), (3, 3), (4, 2), (4, 3)]; "low")]
+	#[test_case(node(4, 3), node(1, 1), [(1, 1), (1, 2), (2, 1), (2, 2), (2, 3), (3, 1), (3, 2), (3, 3), (4, 2), (4, 3)]; "low reversed")]
+	#[test_case(node(1, 1), node(3, 4), [(1, 1), (1, 2), (1, 3), (2, 1), (2, 2), (2, 3), (2, 4), (3, 2), (3, 3), (3, 4)]; "high")]
+	#[test_case(node(3, 4), node(1, 1), [(1, 1), (1, 2), (1, 3), (2, 1), (2, 2), (2, 3), (2, 4), (3, 2), (3, 3), (3, 4)]; "high reversed")]
+	fn odd<const N: usize>(
+		start: GridGraphNode,
+		end: GridGraphNode,
+		nodes: [(u32, u32); N],
+	) -> Result<(), NodesTooFarApart> {
 		assert_eq!(
 			HashSet::from(nodes.map(|(x, z)| LineNode { x, z })),
-			LineWide::new(&start, &end).collect::<HashSet<_>>()
-		)
+			LineWide::new(start, end)?.collect::<HashSet<_>>()
+		);
+		Ok(())
+	}
+
+	#[test_case(GridGraphNode::new(20, 30), GridGraphNode::new(20 + LineWide::MAX_ALLOWED_DISTANCE + 1, 30); "in x dimension")]
+	#[test_case(GridGraphNode::new(20, 30), GridGraphNode::new(20 ,30 + LineWide::MAX_ALLOWED_DISTANCE + 1); "in z dimension")]
+	fn error_when_distance_exceeding_max_allowed_distance(
+		start: GridGraphNode,
+		end: GridGraphNode,
+	) {
+		let line = LineWide::new(start, end);
+
+		assert_eq!(Err(NodesTooFarApart), line);
+	}
+
+	#[test]
+	fn diagonal_max() -> Result<(), NodesTooFarApart> {
+		let start = node(0, 0);
+		let end = node(
+			LineWide::MAX_ALLOWED_DISTANCE,
+			LineWide::MAX_ALLOWED_DISTANCE,
+		);
+		let not_in_diagonal = |LineNode { x, z }: &LineNode| {
+			let x_minus_1 = x.saturating_sub(1);
+			let x_plus_1 = x.saturating_add(1);
+			!(x_minus_1..=x_plus_1).contains(z)
+		};
+
+		let first_outlier = LineWide::new(start, end)?.find(not_in_diagonal);
+
+		assert_eq!(None, first_outlier);
+		Ok(())
 	}
 }
