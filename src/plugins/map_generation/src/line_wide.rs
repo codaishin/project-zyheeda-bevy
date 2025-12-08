@@ -136,6 +136,7 @@ struct Line {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
+#[cfg_attr(test, derive(Eq, Hash))]
 pub struct LineNode {
 	pub(crate) x: u32,
 	pub(crate) z: u32,
@@ -190,5 +191,61 @@ impl Step {
 
 	fn steps_fast(&self) -> bool {
 		self.d_down.unsigned_abs() < self.d_up
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use std::collections::HashSet;
+	use test_case::test_case;
+
+	fn line_end(x: u32, z: u32) -> GridGraphNode {
+		GridGraphNode::new(x, z)
+	}
+
+	#[test_case(line_end(1, 0), line_end(3, 0), [(1, 0), (2, 0), (3, 0)]; "x aligned")]
+	#[test_case(line_end(0, 1), line_end(0, 3), [(0, 1), (0, 2), (0, 3)]; "z aligned")]
+	#[test_case(line_end(1, 4), line_end(3, 4), [(1, 4), (2, 4), (3, 4)]; "x aligned with non zero z")]
+	fn straight<const N: usize>(start: GridGraphNode, end: GridGraphNode, nodes: [(u32, u32); N]) {
+		assert_eq!(
+			HashSet::from(nodes.map(|(x, z)| LineNode { x, z })),
+			LineWide::new(&start, &end).collect::<HashSet<_>>()
+		)
+	}
+
+	#[test_case(line_end(1, 1), line_end(3, 3), [(1, 1), (1, 2), (2, 1), (2, 2), (2, 3), (3, 2), (3, 3)]; "ascending")]
+	#[test_case(line_end(3, 3), line_end(1, 1), [(1, 1), (1, 2), (2, 1), (2, 2), (2, 3), (3, 2), (3, 3)]; "ascending reversed")]
+	#[test_case(line_end(1, 3), line_end(3, 1), [(1, 3), (1, 2), (2, 3), (2, 2), (2, 1), (3, 2), (3, 1)]; "descending")]
+	#[test_case(line_end(3, 1), line_end(1, 3), [(1, 3), (1, 2), (2, 3), (2, 2), (2, 1), (3, 2), (3, 1)]; "descending reversed")]
+	fn diagonal<const N: usize>(start: GridGraphNode, end: GridGraphNode, nodes: [(u32, u32); N]) {
+		assert_eq!(
+			HashSet::from(nodes.map(|(x, z)| LineNode { x, z })),
+			LineWide::new(&start, &end).collect::<HashSet<_>>()
+		)
+	}
+
+	#[test_case(line_end(1, 1), line_end(3, 2), [(1, 1), (1, 2), (2, 1), (2, 2), (3, 1), (3, 2)]; "low")]
+	#[test_case(line_end(1, 1), line_end(2, 3), [(1, 1), (2, 1), (1, 2), (2, 2), (1, 3), (2, 3)]; "high")]
+	fn draws_rectangle<const N: usize>(
+		start: GridGraphNode,
+		end: GridGraphNode,
+		nodes: [(u32, u32); N],
+	) {
+		assert_eq!(
+			HashSet::from(nodes.map(|(x, z)| LineNode { x, z })),
+			LineWide::new(&start, &end).collect::<HashSet<_>>()
+		)
+	}
+
+	#[test_case(line_end(1, 1), line_end(4, 3), [(1, 1), (1, 2), (2, 1), (2, 2), (2, 3), (3, 1), (3, 2), (3, 3), (4, 2), (4, 3)]; "low")]
+	#[test_case(line_end(4, 3), line_end(1, 1), [(1, 1), (1, 2), (2, 1), (2, 2), (2, 3), (3, 1), (3, 2), (3, 3), (4, 2), (4, 3)]; "low reversed")]
+	#[test_case(line_end(1, 1), line_end(3, 4), [(1, 1), (1, 2), (1, 3), (2, 1), (2, 2), (2, 3), (2, 4), (3, 2), (3, 3), (3, 4)]; "high")]
+	#[test_case(line_end(3, 4), line_end(1, 1), [(1, 1), (1, 2), (1, 3), (2, 1), (2, 2), (2, 3), (2, 4), (3, 2), (3, 3), (3, 4)]; "high reversed")]
+	fn odd<const N: usize>(start: GridGraphNode, end: GridGraphNode, nodes: [(u32, u32); N]) {
+		assert_eq!(
+			HashSet::from(nodes.map(|(x, z)| LineNode { x, z })),
+			LineWide::new(&start, &end).collect::<HashSet<_>>()
+		)
 	}
 }

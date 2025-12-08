@@ -275,6 +275,11 @@ pub struct GridGraphNode {
 }
 
 impl GridGraphNode {
+	#[cfg(test)]
+	pub(crate) fn new(x: u32, z: u32) -> Self {
+		Self { key: (x, z) }
+	}
+
 	pub(crate) fn x(&self) -> u32 {
 		self.key.0
 	}
