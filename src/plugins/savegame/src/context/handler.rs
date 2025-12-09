@@ -12,7 +12,6 @@ use serde_json::{Error, Value};
 use std::{
 	any::type_name,
 	collections::{HashSet, hash_map::Entry},
-	marker::PhantomData,
 };
 
 #[derive(Debug, Clone)]
@@ -20,7 +19,6 @@ pub(crate) struct ComponentHandler<TLoadAsset = AssetServer> {
 	buffer_fn: fn(&mut SaveBuffer, EntityRef) -> Result<(), Error>,
 	insert_fn: fn(&mut EntityCommands, Value, &mut TLoadAsset) -> Result<(), SerdeJsonError>,
 	component_name_fn: fn() -> &'static str,
-	_p: PhantomData<TLoadAsset>,
 }
 
 impl<TLoadAsset> ComponentHandler<TLoadAsset>
@@ -35,7 +33,6 @@ where
 			buffer_fn: Self::buffer::<T>,
 			insert_fn: Self::insert::<T>,
 			component_name_fn: || type_name::<T>(),
-			_p: PhantomData,
 		}
 	}
 
