@@ -78,6 +78,6 @@ pub trait Schedule<TBehavior> {
 	fn schedule(&mut self, slot_key: SlotKey, behavior: TBehavior);
 }
 
-pub(crate) trait Execute<TEffects, TSkillBehavior> {
+pub(crate) trait Execute<TPhysics> {
 	fn execute(&mut self, commands: &mut ZyheedaCommands, caster: SkillCaster, target: SkillTarget);
 }

@@ -18,13 +18,13 @@ use common::{
 impl<T> ExecuteSkills for T where T: Component<Mutability = Mutable> + Sized {}
 
 pub(crate) trait ExecuteSkills: Component<Mutability = Mutable> + Sized {
-	fn execute_system<TEffects, TSkillBehaviors, TRaycast>(
+	fn execute_system<TPhysics, TRaycast>(
 		mut ray_cast: StaticSystemParam<TRaycast>,
 		mut commands: ZyheedaCommands,
 		mut agents: Query<(Entity, &mut Self), Changed<Self>>,
 		persistent_entities: Query<&PersistentEntity>,
 	) where
-		Self: Execute<TEffects, TSkillBehaviors>,
+		Self: Execute<TPhysics>,
 		TRaycast: for<'w, 's> SystemParam<Item<'w, 's>: Raycast<MouseHover>>,
 	{
 		for (entity, mut skill_executer) in &mut agents {
@@ -89,11 +89,9 @@ mod tests {
 		called_with: Vec<(SkillCaster, SkillTarget)>,
 	}
 
-	struct _HandlesEffects;
+	struct _HandlesPhysics;
 
-	struct _HandlesSkillBehaviors;
-
-	impl Execute<_HandlesEffects, _HandlesSkillBehaviors> for _Executor {
+	impl Execute<_HandlesPhysics> for _Executor {
 		fn execute(&mut self, _: &mut ZyheedaCommands, caster: SkillCaster, target: SkillTarget) {
 			self.called_with.push((caster, target));
 		}
@@ -105,7 +103,7 @@ mod tests {
 		app.insert_resource(ray_caster);
 		app.add_systems(
 			Update,
-			_Executor::execute_system::<_HandlesEffects, _HandlesSkillBehaviors, ResMut<_RayCaster>>,
+			_Executor::execute_system::<_HandlesPhysics, ResMut<_RayCaster>>,
 		);
 
 		app

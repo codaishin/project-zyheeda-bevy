@@ -68,11 +68,11 @@ where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesPhysicalAttributes + HandlesRaycast,
+	TPhysics: ThreadSafe + HandlesPhysicalAttributes + HandlesSkillSpawning + HandlesRaycast,
 	TAnimations: ThreadSafe + HandlesAnimations,
 	TLights: ThreadSafe + HandlesLights,
 	TMaps: ThreadSafe + HandlesMapGeneration,
-	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation + HandlesSkillSpawning,
+	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation,
 	TLoadout: ThreadSafe + HandlesLoadout,
 {
 	#[allow(clippy::too_many_arguments)]
@@ -108,11 +108,11 @@ where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesPhysicalAttributes + HandlesRaycast,
+	TPhysics: ThreadSafe + HandlesPhysicalAttributes + HandlesSkillSpawning + HandlesRaycast,
 	TAnimations: ThreadSafe + HandlesAnimations,
 	TLights: ThreadSafe + HandlesLights,
 	TMaps: ThreadSafe + HandlesMapGeneration,
-	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation + HandlesSkillSpawning,
+	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation,
 	TLoadout: ThreadSafe + HandlesLoadout,
 {
 	fn build(&self, app: &mut App) {
@@ -154,7 +154,7 @@ where
 
 		// # Behaviors
 		app.register_required_components::<PlayerCamera, TPhysics::TWorldCamera>();
-		app.add_observer(Agent::register_skill_spawn_points::<SkillSpawnerMut<TBehaviors>>);
+		app.add_observer(Agent::register_skill_spawn_points::<SkillSpawnerMut<TPhysics>>);
 		app.add_observer(Player::register_target_definition::<FacingSystemParamMut<TBehaviors>>);
 		app.add_observer(Enemy::register_target_definition::<FacingSystemParamMut<TBehaviors>>);
 		app.add_systems(
