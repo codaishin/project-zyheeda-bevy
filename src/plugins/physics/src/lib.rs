@@ -4,6 +4,7 @@ mod app;
 mod components;
 mod observers;
 mod resources;
+mod system_params;
 mod systems;
 mod traits;
 
@@ -24,6 +25,7 @@ use crate::{
 		world_camera::WorldCamera,
 	},
 	observers::update_blockers::UpdateBlockersObserver,
+	system_params::skill_spawner::SkillSpawnerMut,
 	systems::{apply_pull::ApplyPull, insert_affected::InsertAffected},
 	traits::ray_cast::RayCaster,
 };
@@ -48,6 +50,7 @@ use common::{
 			SkillEntities,
 			SkillRoot,
 		},
+		handles_skill_spawning::HandlesSkillSpawning,
 		prefab::AddPrefabObserver,
 		register_derived_component::RegisterDerivedComponent,
 		thread_safe::ThreadSafe,
@@ -216,6 +219,10 @@ impl<TDependencies> HandlesPhysicalObjects for PhysicsPlugin<TDependencies> {
 
 impl<TDependencies> HandlesMotion for PhysicsPlugin<TDependencies> {
 	type TMotion = Motion;
+}
+
+impl<TDependencies> HandlesSkillSpawning for PhysicsPlugin<TDependencies> {
+	type TSkillSpawnerMut<'w, 's> = SkillSpawnerMut<'w, 's>;
 }
 
 impl<TDependencies> HandlesSkillBehaviors for PhysicsPlugin<TDependencies> {
