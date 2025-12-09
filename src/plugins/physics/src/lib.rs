@@ -1,12 +1,14 @@
-pub mod components;
 pub mod events;
-pub mod traits;
 
+mod app;
+mod components;
 mod observers;
 mod resources;
 mod systems;
+mod traits;
 
 use crate::{
+	app::add_physics::AddPhysics,
 	components::{
 		affected::{force_affected::ForceAffected, gravity_affected::GravityAffected, life::Life},
 		blockable::Blockable,
@@ -17,14 +19,10 @@ use crate::{
 		world_camera::WorldCamera,
 	},
 	observers::update_blockers::UpdateBlockersObserver,
-	systems::{
-		apply_pull::ApplyPull,
-		insert_affected::InsertAffected,
-		interactions::act_on::ActOnSystem,
-	},
+	systems::{apply_pull::ApplyPull, insert_affected::InsertAffected},
 	traits::ray_cast::RayCaster,
 };
-use bevy::{ecs::component::Mutable, prelude::*};
+use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use common::{
 	systems::log::OnError,
@@ -36,7 +34,7 @@ use common::{
 			HandlesPhysicalObjects,
 			HandlesRaycast,
 		},
-		handles_saving::{HandlesSaving, SavableComponent},
+		handles_saving::HandlesSaving,
 		register_derived_component::RegisterDerivedComponent,
 		thread_safe::ThreadSafe,
 	},
@@ -44,8 +42,6 @@ use common::{
 use components::{
 	active_beam::ActiveBeam,
 	effect::{gravity::GravityEffect, health_damage::HealthDamageEffect},
-	interacting_entities::InteractingEntities,
-	running_interactions::RunningInteractions,
 };
 use events::{InteractionEvent, Ray};
 use resources::{
@@ -160,40 +156,6 @@ where
 
 #[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 struct CollisionSystems;
-
-trait AddPhysics {
-	fn add_physics<TActor, TTarget, TSaveGame>(&mut self) -> &mut Self
-	where
-		TActor: ActOn<TTarget> + Component<Mutability = Mutable> + SavableComponent,
-		TTarget: Component<Mutability = Mutable> + SavableComponent,
-		TSaveGame: HandlesSaving;
-}
-
-impl AddPhysics for App {
-	fn add_physics<TActor, TTarget, TSaveGame>(&mut self) -> &mut Self
-	where
-		TActor: ActOn<TTarget> + Component<Mutability = Mutable> + SavableComponent,
-		TTarget: Component<Mutability = Mutable> + SavableComponent,
-		TSaveGame: HandlesSaving,
-	{
-		TSaveGame::register_savable_component::<TActor>(self);
-		TSaveGame::register_savable_component::<TTarget>(self);
-		TSaveGame::register_savable_component::<RunningInteractions<TActor, TTarget>>(self);
-
-		self.register_required_components::<TActor, InteractingEntities>();
-		self.register_required_components::<TActor, RunningInteractions<TActor, TTarget>>();
-		self.add_systems(
-			Update,
-			(
-				Update::delta.pipe(TActor::act_on::<TTarget>),
-				RunningInteractions::<TActor, TTarget>::untrack_non_interacting_targets,
-			)
-				.chain()
-				.in_set(PhysicsSystems)
-				.after(CollisionSystems),
-		)
-	}
-}
 
 #[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone)]
 pub struct PhysicsSystems;
