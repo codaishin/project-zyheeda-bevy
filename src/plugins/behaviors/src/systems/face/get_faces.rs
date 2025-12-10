@@ -1,4 +1,4 @@
-use crate::components::{CanFace, SetFace, SetFaceOverride};
+use crate::components::facing::{CanFace, SetFace, SetFaceOverride};
 use bevy::prelude::*;
 use common::traits::handles_orientation::Face;
 
@@ -24,15 +24,6 @@ fn face_value(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{CanFace, SetFace};
-	use bevy::{
-		app::{App, Update},
-		ecs::{
-			component::Component,
-			system::{Commands, In, IntoSystem},
-		},
-		math::Vec3,
-	};
 	use testing::SingleThreadedApp;
 
 	#[derive(Component, Debug, PartialEq)]

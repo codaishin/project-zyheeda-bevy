@@ -1,5 +1,5 @@
 use super::Movement;
-use crate::traits::MovementUpdate;
+use crate::traits::movement_update::MovementUpdate;
 use bevy::prelude::*;
 use common::{
 	tools::{Done, speed::Speed},

@@ -2,8 +2,10 @@ pub(crate) mod path_or_direction;
 
 mod dto;
 
-use super::SetFace;
-use crate::{components::movement::dto::MovementDto, traits::MovementUpdate};
+use crate::{
+	components::{facing::SetFace, movement::dto::MovementDto},
+	traits::movement_update::MovementUpdate,
+};
 use bevy::prelude::*;
 use common::{
 	components::immobilized::Immobilized,
