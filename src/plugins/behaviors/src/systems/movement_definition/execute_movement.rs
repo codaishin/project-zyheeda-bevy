@@ -1,4 +1,7 @@
-use crate::{components::movement_definition::MovementDefinition, traits::MovementUpdate};
+use crate::{
+	components::movement_definition::MovementDefinition,
+	traits::movement_update::MovementUpdate,
+};
 use bevy::prelude::*;
 use common::{
 	tools::speed::Speed,

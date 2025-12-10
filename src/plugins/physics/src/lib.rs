@@ -4,6 +4,7 @@ mod app;
 mod components;
 mod observers;
 mod resources;
+mod system_params;
 mod systems;
 mod traits;
 
@@ -14,17 +15,24 @@ use crate::{
 		blockable::Blockable,
 		default_attributes::DefaultAttributes,
 		effect::force::ForceEffect,
+		fix_points::{Always, Anchor, Once, fix_point::FixPointSpawner},
+		ground_target::GroundTarget,
 		motion::Motion,
 		no_hover::NoMouseHover,
+		set_motion_forward::SetMotionForward,
+		skill_prefabs::{skill_contact::SkillContact, skill_projection::SkillProjection},
+		when_traveled::DestroyAfterDistanceTraveled,
 		world_camera::WorldCamera,
 	},
 	observers::update_blockers::UpdateBlockersObserver,
+	system_params::skill_spawner::SkillSpawnerMut,
 	systems::{apply_pull::ApplyPull, insert_affected::InsertAffected},
 	traits::ray_cast::RayCaster,
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use common::{
+	components::{child_of_persistent::ChildOfPersistent, persistent_entity::PersistentEntity},
 	systems::log::OnError,
 	traits::{
 		delta::Delta,
@@ -35,9 +43,19 @@ use common::{
 			HandlesRaycast,
 		},
 		handles_saving::HandlesSaving,
+		handles_skill_behaviors::{
+			Contact,
+			HandlesSkillBehaviors,
+			Projection,
+			SkillEntities,
+			SkillRoot,
+		},
+		handles_skill_spawning::HandlesSkillSpawning,
+		prefab::AddPrefabObserver,
 		register_derived_component::RegisterDerivedComponent,
 		thread_safe::ThreadSafe,
 	},
+	zyheeda_commands::ZyheedaCommands,
 };
 use components::{
 	active_beam::ActiveBeam,
@@ -81,6 +99,8 @@ where
 {
 	fn build(&self, app: &mut App) {
 		TSaveGame::register_savable_component::<Motion>(app);
+		TSaveGame::register_savable_component::<SkillContact>(app);
+		TSaveGame::register_savable_component::<SkillProjection>(app);
 
 		app
 			// World camera
@@ -103,6 +123,11 @@ where
 					.pipe(Motion::set_done)
 					.in_set(PhysicsSystems),
 			)
+			// Skills
+			.register_required_components::<SkillContact, TSaveGame::TSaveEntityMarker>()
+			.register_required_components::<SkillProjection, TSaveGame::TSaveEntityMarker>()
+			.add_prefab_observer::<SkillContact, ()>()
+			.add_prefab_observer::<SkillProjection, ()>()
 			// Deal health damage
 			.add_physics::<HealthDamageEffect, Life, TSaveGame>()
 			.add_observer(HealthDamageEffect::update_blockers)
@@ -139,14 +164,29 @@ where
 			.add_systems(
 				Update,
 				(
-					apply_fragile_blocks,
-					ActiveBeam::execute,
-					execute_ray_caster
-						.pipe(apply_interruptable_ray_blocks)
-						.pipe(map_ray_cast_result_to_interaction_events)
-						.pipe(send_interaction_events::<TrackRayInteractions>),
-					map_collision_events_to::<InteractionEvent, TrackInteractionDuplicates>,
-					update_interacting_entities, // must be last to ensure `InteractionEvent`s and `InteractingEntities` are synched
+					// Skill spawning/lifetime
+					(
+						FixPointSpawner::insert_fix_points,
+						GroundTarget::set_position,
+						DestroyAfterDistanceTraveled::system,
+						SkillContact::update_range,
+						Anchor::<Once>::system.pipe(OnError::log),
+						Anchor::<Always>::system.pipe(OnError::log),
+						SetMotionForward::system,
+					)
+						.chain(),
+					// Physical effects
+					(
+						apply_fragile_blocks,
+						ActiveBeam::execute,
+						execute_ray_caster
+							.pipe(apply_interruptable_ray_blocks)
+							.pipe(map_ray_cast_result_to_interaction_events)
+							.pipe(send_interaction_events::<TrackRayInteractions>),
+						map_collision_events_to::<InteractionEvent, TrackInteractionDuplicates>,
+						update_interacting_entities, // must be last to ensure `InteractionEvent`s and `InteractingEntities` are synched
+					)
+						.chain(),
 				)
 					.chain()
 					.in_set(CollisionSystems),
@@ -179,4 +219,39 @@ impl<TDependencies> HandlesPhysicalObjects for PhysicsPlugin<TDependencies> {
 
 impl<TDependencies> HandlesMotion for PhysicsPlugin<TDependencies> {
 	type TMotion = Motion;
+}
+
+impl<TDependencies> HandlesSkillSpawning for PhysicsPlugin<TDependencies> {
+	type TSkillSpawnerMut<'w, 's> = SkillSpawnerMut<'w, 's>;
+}
+
+impl<TDependencies> HandlesSkillBehaviors for PhysicsPlugin<TDependencies> {
+	type TSkillContact = SkillContact;
+	type TSkillProjection = SkillProjection;
+
+	fn spawn_skill(
+		commands: &mut ZyheedaCommands,
+		contact: Contact,
+		projection: Projection,
+	) -> SkillEntities {
+		let persistent_contact = PersistentEntity::default();
+		let contact = commands
+			.spawn((SkillContact::from(contact), persistent_contact))
+			.id();
+		let projection = commands
+			.spawn((
+				SkillProjection::from(projection),
+				ChildOfPersistent(persistent_contact),
+			))
+			.id();
+
+		SkillEntities {
+			root: SkillRoot {
+				persistent_entity: persistent_contact,
+				entity: contact,
+			},
+			contact,
+			projection,
+		}
+	}
 }

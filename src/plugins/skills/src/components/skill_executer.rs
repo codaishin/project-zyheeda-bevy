@@ -55,12 +55,10 @@ impl<TBehavior> Flush for SkillExecuter<TBehavior> {
 	}
 }
 
-impl<TBehavior, TEffects, TSkillBehavior> Execute<TEffects, TSkillBehavior>
-	for SkillExecuter<TBehavior>
+impl<TBehavior, TPhysics> Execute<TPhysics> for SkillExecuter<TBehavior>
 where
 	TBehavior: SpawnSkillBehavior,
-	TEffects: HandlesAllPhysicalEffects + 'static,
-	TSkillBehavior: HandlesSkillBehaviors + 'static,
+	TPhysics: HandlesAllPhysicalEffects + HandlesSkillBehaviors + 'static,
 {
 	fn execute(
 		&mut self,
@@ -75,7 +73,7 @@ where
 					SpawnOn::Slot => SkillSpawner::Slot(*slot_key),
 				};
 				let on_skill_stop_behavior =
-					shape.spawn::<TEffects, TSkillBehavior>(commands, caster, spawner, target);
+					shape.spawn::<TPhysics>(commands, caster, spawner, target);
 
 				*self = match on_skill_stop_behavior {
 					OnSkillStop::Ignore => SkillExecuter::Idle,
@@ -119,9 +117,9 @@ mod tests {
 
 	struct _Commands;
 
-	struct _HandlesEffects;
+	struct _HandlesPhysics;
 
-	impl<T> HandlesPhysicalEffect<T> for _HandlesEffects
+	impl<T> HandlesPhysicalEffect<T> for _HandlesPhysics
 	where
 		T: Effect + ThreadSafe,
 	{
@@ -133,21 +131,7 @@ mod tests {
 		}
 	}
 
-	#[derive(Component)]
-	struct _Effect;
-
-	#[derive(Component)]
-	struct _Affected;
-
-	impl GetProperty<Health> for _Affected {
-		fn get_property(&self) -> Health {
-			panic!("NOT USED")
-		}
-	}
-
-	struct _HandlesSkillBehaviors;
-
-	impl HandlesSkillBehaviors for _HandlesSkillBehaviors {
+	impl HandlesSkillBehaviors for _HandlesPhysics {
 		type TSkillContact = _Contact;
 		type TSkillProjection = _Projection;
 
@@ -160,6 +144,18 @@ mod tests {
 				contact: commands.spawn(_Contact).id(),
 				projection: commands.spawn(_Projection).id(),
 			}
+		}
+	}
+
+	#[derive(Component)]
+	struct _Effect;
+
+	#[derive(Component)]
+	struct _Affected;
+
+	impl GetProperty<Health> for _Affected {
+		fn get_property(&self) -> Health {
+			panic!("NOT USED")
 		}
 	}
 
@@ -177,7 +173,7 @@ mod tests {
 			SpawnOn::Slot
 		}
 
-		fn spawn<TEffects, TSkillBehaviors>(
+		fn spawn<TPhysics>(
 			&self,
 			_: &mut ZyheedaCommands,
 			_: SkillCaster,
@@ -185,14 +181,13 @@ mod tests {
 			_: SkillTarget,
 		) -> OnSkillStop
 		where
-			TEffects: HandlesAllPhysicalEffects + 'static,
-			TSkillBehaviors: HandlesSkillBehaviors + 'static,
+			TPhysics: HandlesAllPhysicalEffects + HandlesSkillBehaviors + 'static,
 		{
 			self.0
 		}
 	}
 
-	type _Executer<'a> = &'a mut dyn Execute<_HandlesEffects, _HandlesSkillBehaviors>;
+	type _Executer<'a> = &'a mut dyn Execute<_HandlesPhysics>;
 
 	#[derive(Debug, PartialEq)]
 	struct _Behavior {
@@ -205,7 +200,7 @@ mod tests {
 			self.spawn_on
 		}
 
-		fn spawn<TEffects, TSkillBehaviors>(
+		fn spawn<TEffects>(
 			&self,
 			commands: &mut ZyheedaCommands,
 			caster: SkillCaster,
@@ -213,8 +208,7 @@ mod tests {
 			target: SkillTarget,
 		) -> OnSkillStop
 		where
-			TEffects: HandlesAllPhysicalEffects + 'static,
-			TSkillBehaviors: HandlesSkillBehaviors + 'static,
+			TEffects: HandlesAllPhysicalEffects + HandlesSkillBehaviors + 'static,
 		{
 			commands.spawn(_SpawnedBehavior {
 				caster,
@@ -232,9 +226,7 @@ mod tests {
 		target: SkillTarget,
 	}
 
-	fn as_executer(
-		e: &mut SkillExecuter<_Behavior>,
-	) -> &mut impl Execute<_HandlesEffects, _HandlesSkillBehaviors> {
+	fn as_executer(e: &mut SkillExecuter<_Behavior>) -> &mut impl Execute<_HandlesPhysics> {
 		e
 	}
 

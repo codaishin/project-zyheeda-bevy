@@ -1,5 +1,5 @@
 use bevy::ecs::query::QueryFilter;
 
-pub(crate) trait HasFilter {
+pub(crate) trait QueryFilterDefinition {
 	type TFilter: QueryFilter;
 }

@@ -1,19 +1,12 @@
-use crate::components::fix_points::{FixPoints, FixPointsDefinition};
-use bevy::prelude::*;
-use common::{
-	traits::{accessors::get::TryApplyOn, handles_skill_behaviors::SkillSpawner},
-	zyheeda_commands::ZyheedaCommands,
+use crate::components::fix_points::{
+	FixPointsDefinition,
+	fix_point::{FixPointOf, FixPointSpawner},
 };
-
-#[derive(Component, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-#[relationship(relationship_target = FixPoints)]
-pub struct FixPointOf(pub(crate) Entity);
-
-#[derive(Component, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub(crate) struct FixPointSpawner(pub(crate) SkillSpawner);
+use bevy::prelude::*;
+use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
 impl FixPointSpawner {
-	pub(crate) fn insert(
+	pub(crate) fn insert_fix_points(
 		mut commands: ZyheedaCommands,
 		bones: Query<(Entity, &Name), Changed<Name>>,
 		definitions: Query<&FixPointsDefinition>,
@@ -53,7 +46,7 @@ fn get_root<'a>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::tools::bone_name::BoneName;
+	use common::{tools::bone_name::BoneName, traits::handles_skill_behaviors::SkillSpawner};
 	use std::collections::HashMap;
 	use testing::SingleThreadedApp;
 
@@ -66,7 +59,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, FixPointSpawner::insert);
+		app.add_systems(Update, FixPointSpawner::insert_fix_points);
 
 		app
 	}

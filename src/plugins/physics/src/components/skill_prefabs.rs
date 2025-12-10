@@ -1,16 +1,13 @@
-pub mod skill_contact;
-pub mod skill_projection;
+pub(crate) mod skill_contact;
+pub(crate) mod skill_projection;
 
-use super::{
-	Always,
-	Once,
-	fix_points::Anchor,
-	ground_target::GroundTarget,
-	when_traveled_insert::WhenTraveled,
-};
 use crate::components::{
+	blockable::Blockable,
+	fix_points::{Always, Anchor, Once},
+	ground_target::GroundTarget,
 	set_motion_forward::SetMotionForward,
-	skill_behavior::skill_contact::CreatedFrom,
+	skill_prefabs::skill_contact::CreatedFrom,
+	when_traveled::WhenTraveled,
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
@@ -22,24 +19,22 @@ use common::{
 	},
 	errors::{ErrorData, Level, Unreachable},
 	traits::{
-		handles_physics::{HandlesPhysicalObjects, PhysicalObject},
+		handles_physics::PhysicalObject,
 		handles_skill_behaviors::{ContactShape, Motion, ProjectionShape},
 		prefab::PrefabEntityCommands,
 	},
 };
 use std::{f32::consts::PI, fmt::Display};
 
-trait SimplePrefab {
+trait SkillPrefab {
 	type TExtra;
 	type TError;
 
-	fn prefab<TPhysics>(
+	fn prefab(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		extra: Self::TExtra,
-	) -> Result<(), Self::TError>
-	where
-		TPhysics: HandlesPhysicalObjects;
+	) -> Result<(), Self::TError>;
 }
 
 const SPHERE_MODEL: &str = "models/sphere.glb";
@@ -55,25 +50,22 @@ const HALF_FORWARD: Transform = Transform::from_translation(Vec3 {
 	z: -0.5,
 });
 
-impl SimplePrefab for ContactShape {
+impl SkillPrefab for ContactShape {
 	type TExtra = Vec3;
 	type TError = FaultyColliderShape;
 
-	fn prefab<TPhysics>(
+	fn prefab(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		offset: Vec3,
-	) -> Result<(), FaultyColliderShape>
-	where
-		TPhysics: HandlesPhysicalObjects,
-	{
+	) -> Result<(), FaultyColliderShape> {
 		let (interaction, (model, model_transform), (collider, collider_transform)) = match self {
 			Self::Sphere {
 				radius,
 				hollow_collider,
 				destroyed_by,
 			} => (
-				TPhysics::TPhysicalObjectComponent::from(PhysicalObject::Fragile {
+				Blockable(PhysicalObject::Fragile {
 					destroyed_by: destroyed_by.clone(),
 				}),
 				(
@@ -91,7 +83,7 @@ impl SimplePrefab for ContactShape {
 				scale,
 				destroyed_by,
 			} => (
-				TPhysics::TPhysicalObjectComponent::from(PhysicalObject::Fragile {
+				Blockable(PhysicalObject::Fragile {
 					destroyed_by: destroyed_by.clone(),
 				}),
 				(Model::Asset(model.clone()), Transform::from_scale(*scale)),
@@ -102,7 +94,7 @@ impl SimplePrefab for ContactShape {
 				blocked_by,
 				radius,
 			} => (
-				TPhysics::TPhysicalObjectComponent::from(PhysicalObject::Beam {
+				Blockable(PhysicalObject::Beam {
 					range: *range,
 					blocked_by: blocked_by.clone(),
 				}),
@@ -147,18 +139,15 @@ impl SimplePrefab for ContactShape {
 	}
 }
 
-impl SimplePrefab for ProjectionShape {
+impl SkillPrefab for ProjectionShape {
 	type TExtra = Vec3;
 	type TError = FaultyColliderShape;
 
-	fn prefab<TPhysics>(
+	fn prefab(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		offset: Vec3,
-	) -> Result<(), FaultyColliderShape>
-	where
-		TPhysics: HandlesPhysicalObjects,
-	{
+	) -> Result<(), FaultyColliderShape> {
 		let ((model, model_transform), (collider, collider_transform)) = match self {
 			Self::Sphere { radius } => (
 				(
@@ -223,19 +212,16 @@ enum Model {
 	Proc(InsertAsset<Mesh>),
 }
 
-impl SimplePrefab for Motion {
+impl SkillPrefab for Motion {
 	type TExtra = CreatedFrom;
 	type TError = Unreachable;
 
-	fn prefab<TPhysics>(
+	fn prefab(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		created_from: CreatedFrom,
-	) -> Result<(), Unreachable>
-	where
-		TPhysics: HandlesPhysicalObjects,
-	{
-		match self.clone() {
+	) -> Result<(), Unreachable> {
+		match *self {
 			Motion::HeldBy { caster, spawner } => {
 				entity.try_insert_if_new((
 					RigidBody::Fixed,

@@ -1,44 +1,38 @@
+use crate::components::ground_target::GroundTarget;
 use bevy::prelude::*;
 use common::{
-	tools::Units,
 	traits::{
-		accessors::get::{Get, GetMut, TryApplyOn},
-		handles_skill_behaviors::{SkillCaster, SkillTarget},
+		accessors::get::{Get, TryApplyOn},
+		handles_skill_behaviors::SkillTarget,
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
 
-#[derive(Component, Debug, PartialEq, Clone)]
-pub(crate) struct GroundTarget {
-	pub caster: SkillCaster,
-	pub target: SkillTarget,
-	pub max_cast_range: Units,
-}
-
 impl GroundTarget {
-	#[cfg(test)]
-	fn with_caster(caster: SkillCaster) -> Self {
-		GroundTarget {
-			caster,
-			target: SkillTarget::default(),
-			max_cast_range: Units::from(f32::INFINITY),
+	pub(crate) fn set_position(
+		mut commands: ZyheedaCommands,
+		transforms: Query<&Transform>,
+		ground_targets: Query<(Entity, &GroundTarget), Added<GroundTarget>>,
+	) {
+		for (entity, ground_target) in &ground_targets {
+			let Some(mut transform) = ground_target.transform(&commands, transforms) else {
+				continue;
+			};
+			let Some(caster) = commands.get(&ground_target.caster.0) else {
+				continue;
+			};
+
+			if let Ok(caster) = transforms.get(caster) {
+				ground_target.correct_for_max_range(&mut transform, caster);
+				Self::sync_forward(&mut transform, caster);
+			}
+
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_insert(transform);
+			});
 		}
 	}
 
-	#[cfg(test)]
-	fn with_target(mut self, target: impl Into<SkillTarget>) -> Self {
-		self.target = target.into();
-		self
-	}
-
-	#[cfg(test)]
-	fn with_max_range(mut self, max_range: Units) -> Self {
-		self.max_cast_range = max_range;
-		self
-	}
-}
-
-impl GroundTarget {
 	fn transform(
 		&self,
 		commands: &ZyheedaCommands,
@@ -67,30 +61,6 @@ impl GroundTarget {
 	fn sync_forward(transform: &mut Transform, caster: &Transform) {
 		transform.look_to(caster.forward(), Vec3::Y);
 	}
-
-	pub(crate) fn set_position(
-		mut commands: ZyheedaCommands,
-		transforms: Query<&Transform>,
-		ground_targets: Query<(Entity, &GroundTarget), Added<GroundTarget>>,
-	) {
-		for (entity, ground_target) in &ground_targets {
-			let Some(mut transform) = ground_target.transform(&commands, transforms) else {
-				continue;
-			};
-			let Some(caster) = commands.get_mut(&ground_target.caster.0) else {
-				continue;
-			};
-
-			if let Ok(caster) = transforms.get(caster.id()) {
-				ground_target.correct_for_max_range(&mut transform, caster);
-				Self::sync_forward(&mut transform, caster);
-			}
-
-			commands.try_apply_on(&entity, |mut e| {
-				e.try_insert(transform);
-			});
-		}
-	}
 }
 
 #[cfg(test)]
@@ -98,7 +68,11 @@ mod tests {
 	use super::*;
 	use common::{
 		components::persistent_entity::PersistentEntity,
-		traits::register_persistent_entities::RegisterPersistentEntities,
+		tools::Units,
+		traits::{
+			handles_skill_behaviors::SkillCaster,
+			register_persistent_entities::RegisterPersistentEntities,
+		},
 	};
 	use testing::{SingleThreadedApp, assert_eq_approx};
 

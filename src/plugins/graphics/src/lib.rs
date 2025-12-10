@@ -52,15 +52,13 @@ use traits::{
 
 pub struct GraphicsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TSavegame, TPhysics, TBehaviors>
-	GraphicsPlugin<(TLoading, TSavegame, TPhysics, TBehaviors)>
+impl<TLoading, TSavegame, TPhysics> GraphicsPlugin<(TLoading, TSavegame, TPhysics)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesAllPhysicalEffects,
-	TBehaviors: ThreadSafe + HandlesSkillBehaviors,
+	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillBehaviors,
 {
-	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TPhysics, _: &TBehaviors) -> Self {
+	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TPhysics) -> Self {
 		Self(PhantomData)
 	}
 
@@ -74,8 +72,8 @@ where
 		register_custom_effect_shader::<TPhysics, Gravity>(app);
 		register_effect_shader::<TPhysics, HealthDamage>(app);
 
-		app.register_required_components::<TBehaviors::TSkillContact, EffectShadersTarget>()
-			.register_required_components::<TBehaviors::TSkillProjection, EffectShadersTarget>()
+		app.register_required_components::<TPhysics::TSkillContact, EffectShadersTarget>()
+			.register_required_components::<TPhysics::TSkillProjection, EffectShadersTarget>()
 			.register_required_components::<EffectShader<HealthDamage>, DamageEffectShaders>()
 			.add_prefab_observer::<DamageEffectShaders, ()>()
 			.add_systems(
@@ -115,13 +113,11 @@ where
 	}
 }
 
-impl<TLoading, TSavegame, TPhysics, TBehaviors> Plugin
-	for GraphicsPlugin<(TLoading, TSavegame, TPhysics, TBehaviors)>
+impl<TLoading, TSavegame, TPhysics> Plugin for GraphicsPlugin<(TLoading, TSavegame, TPhysics)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesAllPhysicalEffects,
-	TBehaviors: ThreadSafe + HandlesSkillBehaviors,
+	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillBehaviors,
 {
 	fn build(&self, app: &mut App) {
 		Self::track_render_pipeline_ready(app);

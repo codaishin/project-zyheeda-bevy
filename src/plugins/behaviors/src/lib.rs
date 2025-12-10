@@ -4,22 +4,15 @@ mod systems;
 mod traits;
 
 use crate::{
-	components::{
-		SetFace,
-		fix_points::{Anchor, fix_point::FixPointSpawner},
-		movement_definition::MovementDefinition,
-	},
+	components::{facing::SetFace, movement_definition::MovementDefinition},
 	system_param::{
 		face_param::FaceParamMut,
 		movement_param::{MovementParam, MovementParamMut, context_changed::JustRemovedMovements},
-		skill_spawner::SkillSpawnerMut,
 	},
 };
 use bevy::prelude::*;
 use common::{
-	components::{child_of_persistent::ChildOfPersistent, persistent_entity::PersistentEntity},
 	states::game_state::GameState,
-	systems::log::OnError,
 	traits::{
 		handles_animations::{AnimationsSystemParamMut, HandlesAnimations},
 		handles_input::HandlesInput,
@@ -34,29 +27,13 @@ use common::{
 			RaycastSystemParam,
 		},
 		handles_saving::HandlesSaving,
-		handles_skill_behaviors::{
-			Contact,
-			HandlesSkillBehaviors,
-			Projection,
-			SkillEntities,
-			SkillRoot,
-		},
-		handles_skill_spawning::HandlesSkillSpawning,
-		prefab::AddPrefabObserver,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 	},
-	zyheeda_commands::ZyheedaCommands,
 };
 use components::{
-	Always,
-	Once,
-	SetFaceOverride,
-	ground_target::GroundTarget,
+	facing::SetFaceOverride,
 	movement::{Movement, path_or_direction::PathOrDirection},
-	set_motion_forward::SetMotionForward,
-	skill_behavior::{skill_contact::SkillContact, skill_projection::SkillProjection},
-	when_traveled_insert::DestroyAfterDistanceTraveled,
 };
 use std::marker::PhantomData;
 use systems::face::execute_face::execute_face;
@@ -102,8 +79,6 @@ where
 	TPathFinding: ThreadSafe + HandlesPathFinding,
 {
 	fn build(&self, app: &mut App) {
-		TSaveGame::register_savable_component::<SkillContact>(app);
-		TSaveGame::register_savable_component::<SkillProjection>(app);
 		TSaveGame::register_savable_component::<SetFace>(app);
 		TSaveGame::register_savable_component::<SetFaceOverride>(app);
 		TSaveGame::register_savable_component::<Movement<PathOrDirection<TPhysics::TMotion>>>(app);
@@ -124,34 +99,16 @@ where
 		app
 			// Resources
 			.init_resource::<JustRemovedMovements>()
-			// Required components
-			.register_required_components::<SkillContact, TSaveGame::TSaveEntityMarker>()
-			.register_required_components::<SkillProjection, TSaveGame::TSaveEntityMarker>()
-			// Observers
-			.add_prefab_observer::<SkillContact, TPhysics>()
-			.add_prefab_observer::<SkillProjection, TPhysics>()
 			// Systems
 			.add_systems(
 				Update,
 				(
-					// Prep systems
-					FixPointSpawner::insert,
 					// Movement
 					(
 						compute_path,
 						execute_path,
 						execute_movement,
 						animate_movement_forward,
-					)
-						.chain(),
-					// Skill execution
-					(
-						GroundTarget::set_position,
-						DestroyAfterDistanceTraveled::system,
-						SkillContact::update_range,
-						Anchor::<Once>::system.pipe(OnError::log),
-						Anchor::<Always>::system.pipe(OnError::log),
-						SetMotionForward::system::<TPhysics::TMotion>,
 					)
 						.chain(),
 					// Apply facing
@@ -170,37 +127,6 @@ where
 					.after(TPhysics::SYSTEMS)
 					.run_if(in_state(GameState::Play)),
 			);
-	}
-}
-
-impl<TDependencies> HandlesSkillBehaviors for BehaviorsPlugin<TDependencies> {
-	type TSkillContact = SkillContact;
-	type TSkillProjection = SkillProjection;
-
-	fn spawn_skill(
-		commands: &mut ZyheedaCommands,
-		contact: Contact,
-		projection: Projection,
-	) -> SkillEntities {
-		let persistent_contact = PersistentEntity::default();
-		let contact = commands
-			.spawn((SkillContact::from(contact), persistent_contact))
-			.id();
-		let projection = commands
-			.spawn((
-				SkillProjection::from(projection),
-				ChildOfPersistent(persistent_contact),
-			))
-			.id();
-
-		SkillEntities {
-			root: SkillRoot {
-				persistent_entity: persistent_contact,
-				entity: contact,
-			},
-			contact,
-			projection,
-		}
 	}
 }
 
@@ -224,8 +150,4 @@ where
 {
 	type TMovement<'w, 's> = MovementParam<'w, 's, TPhysics::TMotion>;
 	type TMovementMut<'w, 's> = MovementParamMut<'w, 's, TPhysics::TMotion>;
-}
-
-impl<TDependencies> HandlesSkillSpawning for BehaviorsPlugin<TDependencies> {
-	type TSkillSpawnerMut<'w, 's> = SkillSpawnerMut<'w, 's>;
 }

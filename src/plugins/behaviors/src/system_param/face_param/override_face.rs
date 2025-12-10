@@ -1,4 +1,4 @@
-use crate::{components::SetFaceOverride, system_param::face_param::FaceContextMut};
+use crate::{components::facing::SetFaceOverride, system_param::face_param::FaceContextMut};
 use common::traits::handles_orientation::{Face, OverrideFace};
 
 impl OverrideFace for FaceContextMut<'_> {
@@ -13,7 +13,7 @@ impl OverrideFace for FaceContextMut<'_> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{components::SetFaceOverride, system_param::face_param::FaceParamMut};
+	use crate::system_param::face_param::FaceParamMut;
 	use bevy::{
 		app::{App, Update},
 		ecs::system::{RunSystemError, RunSystemOnce},

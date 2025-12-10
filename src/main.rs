@@ -53,7 +53,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let path_finding = PathFindingPlugin::from_plugin(&map_generation);
 	let behaviors =
 		BehaviorsPlugin::from_plugins(&input, &savegame, &animations, &physics, &path_finding);
-	let graphics = GraphicsPlugin::from_plugins(&loading, &savegame, &physics, &behaviors);
+	let graphics = GraphicsPlugin::from_plugins(&loading, &savegame, &physics);
 	let skills = SkillsPlugin::from_plugins(&savegame, &physics, &loading, &behaviors);
 	let agents = AgentsPlugin::from_plugins(
 		&loading,

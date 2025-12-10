@@ -190,7 +190,7 @@ impl SpawnSkillBehavior for RunSkillBehavior {
 		}
 	}
 
-	fn spawn<TEffects, TSkillBehaviors>(
+	fn spawn<TPhysics>(
 		&self,
 		commands: &mut ZyheedaCommands,
 		caster: SkillCaster,
@@ -198,21 +198,20 @@ impl SpawnSkillBehavior for RunSkillBehavior {
 		target: SkillTarget,
 	) -> OnSkillStop
 	where
-		TEffects: HandlesAllPhysicalEffects + 'static,
-		TSkillBehaviors: HandlesSkillBehaviors + 'static,
+		TPhysics: HandlesAllPhysicalEffects + HandlesSkillBehaviors + 'static,
 	{
 		match self {
 			RunSkillBehavior::OnActive(conf) => {
-				spawn::<TEffects, TSkillBehaviors>(conf, commands, caster, spawner, target)
+				spawn::<TPhysics>(conf, commands, caster, spawner, target)
 			}
 			RunSkillBehavior::OnAim(conf) => {
-				spawn::<TEffects, TSkillBehaviors>(conf, commands, caster, spawner, target)
+				spawn::<TPhysics>(conf, commands, caster, spawner, target)
 			}
 		}
 	}
 }
 
-fn spawn<TEffects, TSkillBehaviors>(
+fn spawn<TPhysics>(
 	behavior: &SkillBehaviorConfig,
 	commands: &mut ZyheedaCommands,
 	caster: SkillCaster,
@@ -220,17 +219,16 @@ fn spawn<TEffects, TSkillBehaviors>(
 	target: SkillTarget,
 ) -> OnSkillStop
 where
-	TEffects: HandlesAllPhysicalEffects + 'static,
-	TSkillBehaviors: HandlesSkillBehaviors + 'static,
+	TPhysics: HandlesAllPhysicalEffects + HandlesSkillBehaviors + 'static,
 {
-	let shape = behavior.spawn_shape::<TSkillBehaviors>(commands, caster, spawner, target);
+	let shape = behavior.spawn_shape::<TPhysics>(commands, caster, spawner, target);
 
 	if let Some(mut contact) = commands.get_mut(&shape.contact) {
-		behavior.start_contact_behavior::<TEffects>(&mut contact, caster, target);
+		behavior.start_contact_behavior::<TPhysics>(&mut contact, caster, target);
 	};
 
 	if let Some(mut projection) = commands.get_mut(&shape.projection) {
-		behavior.start_projection_behavior::<TEffects>(&mut projection, caster, target);
+		behavior.start_projection_behavior::<TPhysics>(&mut projection, caster, target);
 	};
 
 	shape.on_skill_stop
@@ -268,9 +266,9 @@ mod tests {
 	#[derive(Component)]
 	struct _Projection;
 
-	struct _HandlesEffects;
+	struct _HandlesPhysics;
 
-	impl<T> HandlesPhysicalEffect<T> for _HandlesEffects
+	impl<T> HandlesPhysicalEffect<T> for _HandlesPhysics
 	where
 		T: Effect + ThreadSafe,
 	{
@@ -282,21 +280,7 @@ mod tests {
 		}
 	}
 
-	#[derive(Component)]
-	struct _Effect;
-
-	#[derive(Component)]
-	struct _Affected;
-
-	impl GetProperty<Health> for _Affected {
-		fn get_property(&self) -> Health {
-			panic!("NOT USED")
-		}
-	}
-
-	struct _HandlesSkillBehaviors;
-
-	impl HandlesSkillBehaviors for _HandlesSkillBehaviors {
+	impl HandlesSkillBehaviors for _HandlesPhysics {
 		type TSkillContact = _Contact;
 		type TSkillProjection = _Projection;
 
@@ -309,6 +293,18 @@ mod tests {
 				contact: commands.spawn(_Contact).id(),
 				projection: commands.spawn(_Projection).id(),
 			}
+		}
+	}
+
+	#[derive(Component)]
+	struct _Effect;
+
+	#[derive(Component)]
+	struct _Affected;
+
+	impl GetProperty<Health> for _Affected {
+		fn get_property(&self) -> Health {
+			panic!("NOT USED")
 		}
 	}
 
@@ -360,8 +356,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
-				behavior
-					.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(cmd, caster, spawner, target);
+				behavior.spawn::<_HandlesPhysics>(cmd, caster, spawner, target);
 			})?;
 
 		assert_eq!(
@@ -388,8 +383,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
-				behavior
-					.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(cmd, caster, spawner, target);
+				behavior.spawn::<_HandlesPhysics>(cmd, caster, spawner, target);
 			})?;
 
 		assert_eq!(
@@ -425,8 +419,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
-				behavior
-					.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(cmd, caster, spawner, target);
+				behavior.spawn::<_HandlesPhysics>(cmd, caster, spawner, target);
 			})?;
 
 		assert_eq!(
@@ -452,8 +445,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
-				behavior
-					.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(cmd, caster, spawner, target);
+				behavior.spawn::<_HandlesPhysics>(cmd, caster, spawner, target);
 			})?;
 
 		assert_eq!(
@@ -489,8 +481,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
-				behavior
-					.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(cmd, caster, spawner, target);
+				behavior.spawn::<_HandlesPhysics>(cmd, caster, spawner, target);
 			})?;
 
 		let spawn_args = app
@@ -521,8 +512,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
-				behavior
-					.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(cmd, caster, spawner, target);
+				behavior.spawn::<_HandlesPhysics>(cmd, caster, spawner, target);
 			})?;
 
 		assert_eq!(
@@ -549,8 +539,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
-				behavior
-					.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(cmd, caster, spawner, target);
+				behavior.spawn::<_HandlesPhysics>(cmd, caster, spawner, target);
 			})?;
 
 		assert_eq!(
@@ -589,8 +578,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
-				behavior
-					.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(cmd, caster, spawner, target);
+				behavior.spawn::<_HandlesPhysics>(cmd, caster, spawner, target);
 			})?;
 
 		let spawn_args = app
@@ -620,8 +608,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
-				behavior
-					.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(cmd, caster, spawner, target);
+				behavior.spawn::<_HandlesPhysics>(cmd, caster, spawner, target);
 			})?;
 
 		assert_eq!(
@@ -660,8 +647,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once_with(execute_callback, move |cmd| {
-				behavior
-					.spawn::<_HandlesEffects, _HandlesSkillBehaviors>(cmd, caster, spawner, target);
+				behavior.spawn::<_HandlesPhysics>(cmd, caster, spawner, target);
 			})?;
 
 		let spawn_args = app

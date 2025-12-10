@@ -1,8 +1,7 @@
-use super::SimplePrefab;
-use crate::components::skill_behavior::FaultyColliderShape;
+use super::SkillPrefab;
+use crate::components::skill_prefabs::FaultyColliderShape;
 use bevy::prelude::*;
 use common::traits::{
-	handles_physics::HandlesPhysicalObjects,
 	handles_skill_behaviors::{Projection, ProjectionOffset, ProjectionShape},
 	load_asset::LoadAsset,
 	prefab::{Prefab, PrefabEntityCommands},
@@ -23,10 +22,7 @@ impl From<Projection> for SkillProjection {
 	}
 }
 
-impl<TPhysics> Prefab<TPhysics> for SkillProjection
-where
-	TPhysics: HandlesPhysicalObjects,
-{
+impl Prefab<()> for SkillProjection {
 	type TError = FaultyColliderShape;
 
 	fn insert_prefab_components(
@@ -39,6 +35,6 @@ where
 			_ => Vec3::ZERO,
 		};
 
-		self.shape.prefab::<TPhysics>(entity, offset)
+		self.shape.prefab(entity, offset)
 	}
 }

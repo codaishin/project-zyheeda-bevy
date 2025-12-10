@@ -63,9 +63,9 @@ impl<TSaveGame, TPhysics, TLoading, TBehaviors>
 	SkillsPlugin<(TSaveGame, TPhysics, TLoading, TBehaviors)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesRaycast,
+	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillBehaviors + HandlesRaycast,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
-	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation + SystemSetDefinition,
+	TBehaviors: ThreadSafe + HandlesOrientation + SystemSetDefinition,
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn from_plugins(_: &TSaveGame, _: &TPhysics, _: &TLoading, _: &TBehaviors) -> Self {
@@ -106,7 +106,6 @@ where
 
 		let execute_skill = SkillExecuter::<RunSkillBehavior>::execute_system::<
 			TPhysics,
-			TBehaviors,
 			RaycastSystemParam<TPhysics>,
 		>;
 
@@ -137,9 +136,9 @@ impl<TSaveGame, TPhysics, TLoading, TBehaviors> Plugin
 	for SkillsPlugin<(TSaveGame, TPhysics, TLoading, TBehaviors)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesRaycast,
+	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillBehaviors + HandlesRaycast,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
-	TBehaviors: ThreadSafe + HandlesSkillBehaviors + HandlesOrientation + SystemSetDefinition,
+	TBehaviors: ThreadSafe + HandlesOrientation + SystemSetDefinition,
 {
 	fn build(&self, app: &mut App) {
 		self.skill_load(app);

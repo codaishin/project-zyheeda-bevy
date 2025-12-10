@@ -1,4 +1,4 @@
-use crate::components::skill_behavior::skill_contact::{CreatedFrom, SkillContact};
+use crate::components::skill_prefabs::skill_contact::{CreatedFrom, SkillContact};
 use common::{
 	errors::Unreachable,
 	traits::{

@@ -9,7 +9,7 @@ use common::{
 
 pub(crate) trait SpawnSkillBehavior {
 	fn spawn_on(&self) -> SpawnOn;
-	fn spawn<TEffects, TSkillBehaviors>(
+	fn spawn<TPhysics>(
 		&self,
 		commands: &mut ZyheedaCommands,
 		caster: SkillCaster,
@@ -17,6 +17,5 @@ pub(crate) trait SpawnSkillBehavior {
 		target: SkillTarget,
 	) -> OnSkillStop
 	where
-		TEffects: HandlesAllPhysicalEffects + 'static,
-		TSkillBehaviors: HandlesSkillBehaviors + 'static;
+		TPhysics: HandlesAllPhysicalEffects + HandlesSkillBehaviors + 'static;
 }

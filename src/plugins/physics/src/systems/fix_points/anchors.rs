@@ -1,59 +1,20 @@
-pub(crate) mod fix_point;
-
-use super::{Always, Once};
 use crate::{
-	components::fix_points::fix_point::{FixPointOf, FixPointSpawner},
-	traits::has_filter::HasFilter,
+	components::fix_points::{Anchor, AnchorError, FixPoints, fix_point::FixPointSpawner},
+	traits::query_filter_definition::QueryFilterDefinition,
 };
-use bevy::{ecs::entity::EntityHashSet, prelude::*};
+use bevy::prelude::*;
 use common::{
-	components::persistent_entity::PersistentEntity,
-	errors::{ErrorData, Level},
-	tools::bone_name::BoneName,
-	traits::{accessors::get::Get, handles_skill_behaviors::SkillSpawner, or_ok::OrOk},
+	traits::{accessors::get::Get, or_ok::OrOk},
 	zyheeda_commands::ZyheedaCommands,
 };
-use std::{any::type_name, collections::HashMap, fmt::Display, marker::PhantomData};
-
-#[derive(Component, Debug, PartialEq, Clone, Copy)]
-#[require(Transform)]
-pub(crate) struct Anchor<TFilter> {
-	pub(crate) target: PersistentEntity,
-	pub(crate) skill_spawner: SkillSpawner,
-	pub(crate) use_target_rotation: bool,
-	_p: PhantomData<TFilter>,
-}
-
-impl HasFilter for Anchor<Once> {
-	type TFilter = Added<Self>;
-}
-
-impl HasFilter for Anchor<Always> {
-	type TFilter = ();
-}
 
 impl<TFilter> Anchor<TFilter>
 where
-	Self: HasFilter + Send + Sync + 'static,
+	Self: QueryFilterDefinition + 'static,
 {
-	pub(crate) fn to_target<TEntity>(target: TEntity) -> AnchorBuilder<TFilter>
-	where
-		TEntity: Into<PersistentEntity>,
-	{
-		AnchorBuilder {
-			target: target.into(),
-			_p: PhantomData,
-		}
-	}
-
-	pub(crate) fn with_target_rotation(mut self) -> Self {
-		self.use_target_rotation = true;
-		self
-	}
-
 	pub(crate) fn system(
 		commands: ZyheedaCommands,
-		mut agents: Query<(&Self, &mut Transform), <Self as HasFilter>::TFilter>,
+		mut agents: Query<(&Self, &mut Transform), <Self as QueryFilterDefinition>::TFilter>,
 		fix_points: Query<(&FixPoints, &GlobalTransform)>,
 		spawners: Query<&FixPointSpawner>,
 		transforms: Query<&GlobalTransform>,
@@ -62,7 +23,7 @@ where
 			.iter_mut()
 			.filter_map(|(anchor, mut anchor_transform)| {
 				let target = commands.get(&anchor.target)?;
-				let Ok((FixPoints(fix_points), target_transform)) = fix_points.get(target) else {
+				let Ok((fix_points, target_transform)) = fix_points.get(target) else {
 					return Some(AnchorError::FixPointsMissingOn(anchor.target));
 				};
 				let Some(fix_point) = fix_points.iter().find(matching(anchor, &spawners)) else {
@@ -98,76 +59,19 @@ fn matching<TFilter>(
 	}
 }
 
-pub(crate) struct AnchorBuilder<TFilter> {
-	target: PersistentEntity,
-	_p: PhantomData<TFilter>,
-}
-
-impl<TFilter> AnchorBuilder<TFilter> {
-	pub(crate) fn on_spawner(self, spawner: SkillSpawner) -> Anchor<TFilter> {
-		Anchor {
-			target: self.target,
-			skill_spawner: spawner,
-			use_target_rotation: false,
-			_p: PhantomData,
-		}
-	}
-}
-
-#[derive(Component, Debug, PartialEq, Clone, Default)]
-#[relationship_target(relationship = FixPointOf)]
-#[require(GlobalTransform)]
-pub struct FixPoints(EntityHashSet);
-
-#[derive(Component, Debug, PartialEq, Clone, Default)]
-pub struct FixPointsDefinition(pub(crate) HashMap<BoneName, SkillSpawner>);
-
-#[derive(Component, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub enum AnchorError {
-	NoFixPointEntityFor(SkillSpawner),
-	FixPointsMissingOn(PersistentEntity),
-	GlobalTransformMissingOn(Entity),
-}
-
-impl Display for AnchorError {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		match self {
-			AnchorError::FixPointsMissingOn(entity) => {
-				let type_name = type_name::<FixPoints>();
-				write!(f, "{entity:?}: {type_name} missing")
-			}
-			AnchorError::GlobalTransformMissingOn(entity) => {
-				let type_name = type_name::<GlobalTransform>();
-				write!(f, "{entity}: {type_name} missing")
-			}
-			AnchorError::NoFixPointEntityFor(entity) => {
-				write!(f, "{entity:?} missing")
-			}
-		}
-	}
-}
-
-impl ErrorData for AnchorError {
-	fn level(&self) -> Level {
-		Level::Error
-	}
-
-	fn label() -> impl Display {
-		"Anchor error"
-	}
-
-	fn into_details(self) -> impl Display {
-		self
-	}
-}
-
 #[cfg(test)]
 mod tests {
+	use crate::components::fix_points::fix_point::FixPointOf;
+
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
+		components::persistent_entity::PersistentEntity,
 		tools::action_key::slot::SlotKey,
-		traits::register_persistent_entities::RegisterPersistentEntities,
+		traits::{
+			handles_skill_behaviors::SkillSpawner,
+			register_persistent_entities::RegisterPersistentEntities,
+		},
 	};
 	use std::sync::LazyLock;
 	use testing::SingleThreadedApp;
@@ -177,7 +81,7 @@ mod tests {
 	#[derive(Component)]
 	struct _Ignore;
 
-	impl HasFilter for Anchor<_WithoutIgnore> {
+	impl QueryFilterDefinition for Anchor<_WithoutIgnore> {
 		type TFilter = Without<_Ignore>;
 	}
 

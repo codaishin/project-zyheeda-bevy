@@ -1,37 +1,10 @@
+use crate::components::when_traveled::DestroyAfterDistanceTraveled;
 use bevy::prelude::*;
 use common::{
 	tools::{Done, Units},
 	traits::accessors::get::TryApplyOn,
 	zyheeda_commands::ZyheedaCommands,
 };
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub(crate) struct WhenTraveled {
-	distance: Units,
-}
-
-impl WhenTraveled {
-	pub(crate) fn distance(distance: Units) -> Self {
-		Self { distance }
-	}
-
-	pub(crate) fn destroy(self) -> DestroyAfterDistanceTraveled {
-		DestroyAfterDistanceTraveled {
-			remaining_distance: self.distance,
-		}
-	}
-}
-
-#[derive(Component, Debug, PartialEq, Clone, Copy)]
-pub(crate) struct DestroyAfterDistanceTraveled {
-	remaining_distance: Units,
-}
-
-impl DestroyAfterDistanceTraveled {
-	pub(crate) fn remaining_distance(&self) -> Units {
-		self.remaining_distance
-	}
-}
 
 impl DestroyAfterDistanceTraveled {
 	pub(crate) fn system(
@@ -70,6 +43,8 @@ pub(crate) struct LastTranslation(Vec3);
 
 #[cfg(test)]
 mod tests {
+	use crate::components::when_traveled::WhenTraveled;
+
 	use super::*;
 	use testing::SingleThreadedApp;
 

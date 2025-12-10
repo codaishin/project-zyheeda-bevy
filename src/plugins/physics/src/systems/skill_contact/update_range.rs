@@ -1,6 +1,6 @@
-use crate::{
-	DestroyAfterDistanceTraveled,
-	components::skill_behavior::skill_contact::SkillContact,
+use crate::components::{
+	skill_prefabs::skill_contact::SkillContact,
+	when_traveled::DestroyAfterDistanceTraveled,
 };
 use bevy::prelude::*;
 use common::traits::handles_skill_behaviors::Motion;
@@ -11,7 +11,7 @@ impl SkillContact {
 			let Motion::Projectile { range, .. } = &mut contact.motion else {
 				continue;
 			};
-			*range = range_limiter.remaining_distance();
+			*range = range_limiter.remaining_distance;
 		}
 	}
 }
@@ -20,8 +20,8 @@ impl SkillContact {
 mod tests {
 	use super::*;
 	use crate::components::{
-		skill_behavior::skill_contact::CreatedFrom,
-		when_traveled_insert::WhenTraveled,
+		skill_prefabs::skill_contact::CreatedFrom,
+		when_traveled::WhenTraveled,
 	};
 	use common::{
 		tools::{Units, UnitsPerSecond},

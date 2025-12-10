@@ -100,7 +100,7 @@ pub enum ProjectionShape {
 	},
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum Motion {
 	HeldBy {
 		caster: SkillCaster,
