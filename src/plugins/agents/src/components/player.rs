@@ -1,6 +1,5 @@
 use super::movement_config::MovementConfig;
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::*;
 use common::{
 	components::{
 		collider_relationship::InteractionTarget,
@@ -8,10 +7,11 @@ use common::{
 		ground_offset::GroundOffset,
 	},
 	errors::Unreachable,
-	tools::{Units, UnitsPerSecond, collider_radius::ColliderRadius},
+	tools::{Units, UnitsPerSecond},
 	traits::{
 		handles_animations::AnimationPriority,
 		handles_map_generation::AgentType,
+		handles_physics::colliders::{Collider, ColliderType, HandlesColliders, Shape},
 		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
@@ -24,12 +24,13 @@ use std::sync::LazyLock;
 	MovementConfig = PLAYER_RUN.clone(),
 	Name = "Player",
 	FlipHorizontally = FlipHorizontally::on("metarig"),
-	GroundOffset = Vec3::Y,
-	LockedAxes = LockedAxes::ROTATION_LOCKED | LockedAxes::TRANSLATION_LOCKED_Y,
+	GroundOffset = GROUND_OFFSET,
 )]
 pub struct Player;
 
+static GROUND_OFFSET: Vec3 = Vec3::new(0., 0.7, 0.);
 static PLAYER_COLLIDER_RADIUS: LazyLock<Units> = LazyLock::new(|| Units::from(0.2));
+static PLAYER_COLLIDER_HEIGHT: LazyLock<Units> = LazyLock::new(|| Units::from(0.4));
 pub(crate) static PLAYER_RUN: LazyLock<MovementConfig> = LazyLock::new(|| MovementConfig {
 	collider_radius: *PLAYER_COLLIDER_RADIUS,
 	speed: UnitsPerSecond::from(1.5),
@@ -38,12 +39,6 @@ pub(crate) static PLAYER_WALK: LazyLock<MovementConfig> = LazyLock::new(|| Movem
 	collider_radius: *PLAYER_COLLIDER_RADIUS,
 	speed: UnitsPerSecond::from(0.75),
 });
-
-impl Player {
-	fn collider_radius() -> ColliderRadius {
-		ColliderRadius(Units::from(0.2))
-	}
-}
 
 impl From<Player> for AgentType {
 	fn from(_: Player) -> Self {
@@ -59,7 +54,10 @@ impl From<Idle> for AnimationPriority {
 	}
 }
 
-impl Prefab<()> for Player {
+impl<TPhysics> Prefab<TPhysics> for Player
+where
+	TPhysics: HandlesColliders,
+{
 	type TError = Unreachable;
 
 	fn insert_prefab_components(
@@ -67,11 +65,15 @@ impl Prefab<()> for Player {
 		entity: &mut impl PrefabEntityCommands,
 		_: &mut impl LoadAsset,
 	) -> Result<(), Unreachable> {
-		entity.with_child(Collider::capsule(
-			Vec3::new(0.0, 0.2, -0.05),
-			Vec3::new(0.0, 1.4, -0.05),
-			**Self::collider_radius(),
-		));
+		let shape = Shape::Capsule {
+			half_y: **PLAYER_COLLIDER_HEIGHT,
+			radius: **PLAYER_COLLIDER_RADIUS,
+		};
+		let collider = Collider::from_shape(shape)
+			.with_center_offset(GROUND_OFFSET)
+			.with_collider_type(ColliderType::Agent);
+
+		entity.try_insert_if_new(TPhysics::TCollider::from(collider));
 
 		Ok(())
 	}
