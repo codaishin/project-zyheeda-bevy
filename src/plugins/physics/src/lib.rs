@@ -13,6 +13,7 @@ use crate::{
 	components::{
 		affected::{force_affected::ForceAffected, gravity_affected::GravityAffected, life::Life},
 		blockable::Blockable,
+		colliders::{ColliderDefinition, ColliderShape},
 		default_attributes::DefaultAttributes,
 		effect::force::ForceEffect,
 		fix_points::{Always, Anchor, Once, fix_point::FixPointSpawner},
@@ -41,6 +42,7 @@ use common::{
 			HandlesPhysicalAttributes,
 			HandlesPhysicalObjects,
 			HandlesRaycast,
+			colliders::Colliders,
 		},
 		handles_saving::HandlesSaving,
 		handles_skill_behaviors::{
@@ -128,6 +130,9 @@ where
 			.register_required_components::<SkillProjection, TSaveGame::TSaveEntityMarker>()
 			.add_prefab_observer::<SkillContact, ()>()
 			.add_prefab_observer::<SkillProjection, ()>()
+			// Colliders
+			.add_prefab_observer::<ColliderShape, ()>()
+			.add_observer(ColliderShape::spawn_unique)
 			// Deal health damage
 			.add_physics::<HealthDamageEffect, Life, TSaveGame>()
 			.add_observer(HealthDamageEffect::update_blockers)
@@ -219,6 +224,10 @@ impl<TDependencies> HandlesPhysicalObjects for PhysicsPlugin<TDependencies> {
 
 impl<TDependencies> HandlesMotion for PhysicsPlugin<TDependencies> {
 	type TMotion = Motion;
+}
+
+impl<TDependencies> Colliders for PhysicsPlugin<TDependencies> {
+	type TCollider = ColliderDefinition;
 }
 
 impl<TDependencies> HandlesSkillSpawning for PhysicsPlugin<TDependencies> {

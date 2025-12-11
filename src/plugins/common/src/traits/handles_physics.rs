@@ -1,3 +1,5 @@
+pub mod colliders;
+
 use crate::{
 	attributes::{effect_target::EffectTarget, health::Health},
 	components::is_blocker::Blocker,
