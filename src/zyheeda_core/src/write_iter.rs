@@ -21,7 +21,6 @@ pub use write_iter;
 
 #[cfg(test)]
 mod tests {
-	use super::*;
 	use std::fmt::Display;
 
 	mod without_label {
