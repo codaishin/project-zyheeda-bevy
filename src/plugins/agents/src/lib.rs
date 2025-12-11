@@ -28,7 +28,6 @@ use common::{
 		handles_custom_assets::HandlesCustomFolderAssets,
 		handles_enemies::HandlesEnemies,
 		handles_input::{HandlesInput, InputSystemParam},
-		handles_lights::HandlesLights,
 		handles_loadout::{
 			HandlesLoadout,
 			LoadoutActivityMutParam,
@@ -52,14 +51,13 @@ use systems::void_sphere::ring_rotation::ring_rotation;
 
 pub struct AgentsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights, TMaps, TBehaviors, TLoadout>
+impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TMaps, TBehaviors, TLoadout>
 	AgentsPlugin<(
 		TLoading,
 		TInput,
 		TSaveGame,
 		TPhysics,
 		TAnimations,
-		TLights,
 		TMaps,
 		TBehaviors,
 		TLoadout,
@@ -70,7 +68,6 @@ where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesPhysicalAttributes + HandlesSkillSpawning + HandlesRaycast,
 	TAnimations: ThreadSafe + HandlesAnimations,
-	TLights: ThreadSafe + HandlesLights,
 	TMaps: ThreadSafe + HandlesMapGeneration,
 	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation,
 	TLoadout: ThreadSafe + HandlesLoadout,
@@ -82,7 +79,6 @@ where
 		_: &TSaveGame,
 		_: &TPhysics,
 		_: &TAnimations,
-		_: &TLights,
 		_: &TMaps,
 		_: &TBehaviors,
 		_: &TLoadout,
@@ -91,15 +87,13 @@ where
 	}
 }
 
-impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TLights, TMaps, TBehaviors, TLoadout>
-	Plugin
+impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TMaps, TBehaviors, TLoadout> Plugin
 	for AgentsPlugin<(
 		TLoading,
 		TInput,
 		TSaveGame,
 		TPhysics,
 		TAnimations,
-		TLights,
 		TMaps,
 		TBehaviors,
 		TLoadout,
@@ -110,7 +104,6 @@ where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesPhysicalAttributes + HandlesSkillSpawning + HandlesRaycast,
 	TAnimations: ThreadSafe + HandlesAnimations,
-	TLights: ThreadSafe + HandlesLights,
 	TMaps: ThreadSafe + HandlesMapGeneration,
 	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation,
 	TLoadout: ThreadSafe + HandlesLoadout,
@@ -149,7 +142,7 @@ where
 		app.register_required_components::<Agent, TSaveGame::TSaveEntityMarker>();
 
 		// # Prefabs
-		app.add_prefab_observer::<Player, TLights>();
+		app.add_prefab_observer::<Player, ()>();
 		app.add_prefab_observer::<VoidSphere, ()>();
 
 		// # Behaviors
