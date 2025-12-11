@@ -44,7 +44,7 @@ impl From<Shape> for Collider {
 /// - `x`: width
 /// - `y`: height
 /// - `z`: depth
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Shape {
 	Sphere {
 		radius: f32,
