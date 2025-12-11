@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-pub trait Colliders {
+pub trait HandlesColliders {
 	type TCollider: Component + From<Collider>;
 }
 
@@ -32,7 +32,7 @@ impl Collider {
 		self
 	}
 
-	pub const fn with_collision_type(mut self, collider_type: ColliderType) -> Self {
+	pub const fn with_collider_type(mut self, collider_type: ColliderType) -> Self {
 		self.collider_type = collider_type;
 		self
 	}

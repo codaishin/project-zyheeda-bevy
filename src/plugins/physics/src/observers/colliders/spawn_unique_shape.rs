@@ -134,7 +134,7 @@ mod tests {
 		let shape = Shape::Sphere { radius: 42. };
 
 		let entity = app.world_mut().spawn(ColliderDefinition(
-			Collider::from_shape(shape).with_collision_type(collision_type),
+			Collider::from_shape(shape).with_collider_type(collision_type),
 		));
 
 		assert_eq!(Some(&rigid_body), entity.get::<RigidBody>(),);
