@@ -1,6 +1,10 @@
 use crate::components::colliders::{ColliderDefinition, ColliderOf, ColliderShape, Colliders};
 use bevy::prelude::*;
-use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
+use bevy_rapier3d::prelude::*;
+use common::{
+	traits::{accessors::get::TryApplyOn, handles_physics::colliders::ColliderType},
+	zyheeda_commands::ZyheedaCommands,
+};
 
 impl ColliderShape {
 	pub(crate) fn spawn_unique(
@@ -14,11 +18,12 @@ impl ColliderShape {
 		};
 
 		despawn_current_collider_shapes(&mut commands, colliders);
-		spawn_collider_shape(commands, entity, definition);
+		insert_rigid_body(&mut commands, entity, definition);
+		spawn_collider_shape(&mut commands, entity, definition);
 	}
 }
 
-fn despawn_current_collider_shapes(commands: &mut ZyheedaCommands<'_, '_>, colliders: &Colliders) {
+fn despawn_current_collider_shapes(commands: &mut ZyheedaCommands, colliders: &Colliders) {
 	for entity in colliders.iter() {
 		commands.try_apply_on(&entity, |e| {
 			e.try_despawn();
@@ -26,8 +31,21 @@ fn despawn_current_collider_shapes(commands: &mut ZyheedaCommands<'_, '_>, colli
 	}
 }
 
+fn insert_rigid_body(
+	commands: &mut ZyheedaCommands,
+	entity: Entity,
+	ColliderDefinition(definition): &ColliderDefinition,
+) {
+	commands.try_apply_on(&entity, |mut e| {
+		e.try_insert(match definition.collider_type {
+			ColliderType::Agent => RigidBody::Dynamic,
+			ColliderType::Terrain => RigidBody::Fixed,
+		});
+	});
+}
+
 fn spawn_collider_shape(
-	mut commands: ZyheedaCommands<'_, '_>,
+	commands: &mut ZyheedaCommands,
 	entity: Entity,
 	ColliderDefinition(definition): &ColliderDefinition,
 ) {
@@ -44,6 +62,7 @@ mod tests {
 	use super::*;
 	use common::traits::handles_physics::colliders::{Collider, Shape};
 	use std::f32::consts::PI;
+	use test_case::test_case;
 	use testing::{SingleThreadedApp, assert_count, get_children};
 
 	fn setup() -> App {
@@ -106,6 +125,19 @@ mod tests {
 			Some(&Transform::from_rotation(rotation)),
 			child.get::<Transform>(),
 		);
+	}
+
+	#[test_case(ColliderType::Terrain, RigidBody::Fixed; "fixed")]
+	#[test_case(ColliderType::Agent, RigidBody::Dynamic; "dynamic")]
+	fn insert_rigid_body(collision_type: ColliderType, rigid_body: RigidBody) {
+		let mut app = setup();
+		let shape = Shape::Sphere { radius: 42. };
+
+		let entity = app.world_mut().spawn(ColliderDefinition(
+			Collider::from_shape(shape).with_collision_type(collision_type),
+		));
+
+		assert_eq!(Some(&rigid_body), entity.get::<RigidBody>(),);
 	}
 
 	#[test]

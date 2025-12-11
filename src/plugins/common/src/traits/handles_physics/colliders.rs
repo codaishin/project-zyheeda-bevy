@@ -6,15 +6,17 @@ pub trait Colliders {
 
 #[derive(Debug, PartialEq)]
 pub struct Collider {
+	pub shape: Shape,
+	pub collider_type: ColliderType,
 	pub center_offset: Vec3,
 	pub rotation: Quat,
-	pub shape: Shape,
 }
 
 impl Collider {
 	pub const fn from_shape(shape: Shape) -> Self {
 		Self {
 			shape,
+			collider_type: ColliderType::Terrain,
 			center_offset: Vec3::ZERO,
 			rotation: Quat::IDENTITY,
 		}
@@ -27,6 +29,11 @@ impl Collider {
 
 	pub const fn with_rotation(mut self, rotation: Quat) -> Self {
 		self.rotation = rotation;
+		self
+	}
+
+	pub const fn with_collision_type(mut self, collider_type: ColliderType) -> Self {
+		self.collider_type = collider_type;
 		self
 	}
 }
@@ -58,4 +65,10 @@ pub enum Shape {
 		half_y: f32,
 		radius: f32,
 	},
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum ColliderType {
+	Agent,
+	Terrain,
 }
