@@ -5,6 +5,7 @@ use common::{
 	traits::{accessors::get::TryApplyOn, handles_physics::colliders::ColliderType},
 	zyheeda_commands::ZyheedaCommands,
 };
+use std::sync::LazyLock;
 
 impl ColliderShape {
 	pub(crate) fn spawn_unique(
@@ -23,6 +24,9 @@ impl ColliderShape {
 	}
 }
 
+static LOCKED_AGENT_AXES: LazyLock<LockedAxes> =
+	LazyLock::new(|| LockedAxes::ROTATION_LOCKED | LockedAxes::TRANSLATION_LOCKED_Y);
+
 fn despawn_current_collider_shapes(commands: &mut ZyheedaCommands, colliders: &Colliders) {
 	for entity in colliders.iter() {
 		commands.try_apply_on(&entity, |e| {
@@ -36,11 +40,13 @@ fn insert_rigid_body(
 	entity: Entity,
 	ColliderDefinition(definition): &ColliderDefinition,
 ) {
-	commands.try_apply_on(&entity, |mut e| {
-		e.try_insert(match definition.collider_type {
-			ColliderType::Agent => RigidBody::Dynamic,
-			ColliderType::Terrain => RigidBody::Fixed,
-		});
+	commands.try_apply_on(&entity, |mut e| match definition.collider_type {
+		ColliderType::Agent => {
+			e.try_insert((*LOCKED_AGENT_AXES, RigidBody::Dynamic));
+		}
+		ColliderType::Terrain => {
+			e.try_insert(RigidBody::Fixed);
+		}
 	});
 }
 
@@ -127,17 +133,27 @@ mod tests {
 		);
 	}
 
-	#[test_case(ColliderType::Terrain, RigidBody::Fixed; "fixed")]
-	#[test_case(ColliderType::Agent, RigidBody::Dynamic; "dynamic")]
-	fn insert_rigid_body(collision_type: ColliderType, rigid_body: RigidBody) {
+	#[test_case(ColliderType::Terrain, RigidBody::Fixed, None; "fixed")]
+	#[test_case(ColliderType::Agent, RigidBody::Dynamic, Some(*LOCKED_AGENT_AXES); "dynamic")]
+	fn insert_additional_components(
+		collider_type: ColliderType,
+		rigid_body: RigidBody,
+		locked_axes: Option<LockedAxes>,
+	) {
 		let mut app = setup();
 		let shape = Shape::Sphere { radius: 42. };
 
 		let entity = app.world_mut().spawn(ColliderDefinition(
-			Collider::from_shape(shape).with_collision_type(collision_type),
+			Collider::from_shape(shape).with_collider_type(collider_type),
 		));
 
-		assert_eq!(Some(&rigid_body), entity.get::<RigidBody>(),);
+		assert_eq!(
+			(Some(&rigid_body), locked_axes),
+			(
+				entity.get::<RigidBody>(),
+				entity.get::<LockedAxes>().copied()
+			)
+		);
 	}
 
 	#[test]

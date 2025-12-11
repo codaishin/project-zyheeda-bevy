@@ -42,7 +42,7 @@ use common::{
 			HandlesPhysicalAttributes,
 			HandlesPhysicalObjects,
 			HandlesRaycast,
-			colliders::Colliders,
+			colliders::HandlesColliders,
 		},
 		handles_saving::HandlesSaving,
 		handles_skill_behaviors::{
@@ -226,7 +226,7 @@ impl<TDependencies> HandlesMotion for PhysicsPlugin<TDependencies> {
 	type TMotion = Motion;
 }
 
-impl<TDependencies> Colliders for PhysicsPlugin<TDependencies> {
+impl<TDependencies> HandlesColliders for PhysicsPlugin<TDependencies> {
 	type TCollider = ColliderDefinition;
 }
 
