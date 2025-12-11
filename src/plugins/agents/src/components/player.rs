@@ -11,7 +11,6 @@ use common::{
 	tools::{Units, UnitsPerSecond, collider_radius::ColliderRadius},
 	traits::{
 		handles_animations::AnimationPriority,
-		handles_lights::HandlesLights,
 		handles_map_generation::AgentType,
 		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
@@ -60,10 +59,7 @@ impl From<Idle> for AnimationPriority {
 	}
 }
 
-impl<TLights> Prefab<TLights> for Player
-where
-	TLights: HandlesLights,
-{
+impl Prefab<()> for Player {
 	type TError = Unreachable;
 
 	fn insert_prefab_components(
@@ -71,13 +67,10 @@ where
 		entity: &mut impl PrefabEntityCommands,
 		_: &mut impl LoadAsset,
 	) -> Result<(), Unreachable> {
-		entity.with_child((
-			TLights::responsive_light_trigger(),
-			Collider::capsule(
-				Vec3::new(0.0, 0.2, -0.05),
-				Vec3::new(0.0, 1.4, -0.05),
-				**Self::collider_radius(),
-			),
+		entity.with_child(Collider::capsule(
+			Vec3::new(0.0, 0.2, -0.05),
+			Vec3::new(0.0, 1.4, -0.05),
+			**Self::collider_radius(),
 		));
 
 		Ok(())

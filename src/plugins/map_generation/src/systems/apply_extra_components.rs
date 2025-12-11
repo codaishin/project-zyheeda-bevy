@@ -48,23 +48,7 @@ mod tests {
 	struct _Lights;
 
 	impl HandlesLights for _Lights {
-		type TResponsiveLightBundle = ();
-		type TResponsiveLightTrigger = ();
-
 		const DEFAULT_LIGHT: Srgba = Srgba::BLACK;
-
-		fn responsive_light_trigger() -> Self::TResponsiveLightTrigger {
-			panic!("SHOULD NOT BE CALLED")
-		}
-
-		fn responsive_light_bundle<TDriver>(
-			_: common::traits::handles_lights::Responsive,
-		) -> Self::TResponsiveLightBundle
-		where
-			TDriver: 'static,
-		{
-			panic!("SHOULD NOT BE CALLED")
-		}
 	}
 
 	#[derive(Component, Debug, PartialEq, Clone)]

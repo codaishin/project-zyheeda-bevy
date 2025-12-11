@@ -1,21 +1,13 @@
-pub mod components;
-
+mod components;
 mod systems;
-mod traits;
 
 use crate::components::global_light::GlobalLight;
 use bevy::{color::palettes::css::WHITE, prelude::*};
-use bevy_rapier3d::geometry::CollidingEntities;
 use common::traits::{
-	handles_lights::{HandlesLights, Responsive},
+	handles_lights::HandlesLights,
 	handles_saving::HandlesSaving,
-	prefab::AddPrefabObserver,
 	register_derived_component::RegisterDerivedComponent,
 	thread_safe::ThreadSafe,
-};
-use components::{
-	responsive_light::ResponsiveLight,
-	responsive_light_trigger::ResponsiveLightTrigger,
 };
 use std::marker::PhantomData;
 
@@ -37,41 +29,12 @@ where
 	fn build(&self, app: &mut App) {
 		TSavegame::register_savable_component::<GlobalLight>(app);
 
-		app.add_prefab_observer::<ResponsiveLight, ()>()
-			.register_required_components::<GlobalLight, TSavegame::TSaveEntityMarker>()
+		app.register_required_components::<GlobalLight, TSavegame::TSaveEntityMarker>()
 			.register_derived_component::<GlobalLight, DirectionalLight>()
-			.add_systems(Startup, GlobalLight::spawn(Self::DEFAULT_LIGHT))
-			.add_systems(
-				Update,
-				(
-					ResponsiveLight::insert_light,
-					ResponsiveLight::detect_change::<CollidingEntities>,
-					ResponsiveLight::apply_change::<Virtual, PointLight>,
-					ResponsiveLight::apply_change::<Virtual, SpotLight>,
-					ResponsiveLight::apply_change::<Virtual, DirectionalLight>,
-				)
-					.chain(),
-			);
+			.add_systems(Startup, GlobalLight::spawn(Self::DEFAULT_LIGHT));
 	}
 }
 
-impl<TSavegame> HandlesLights for LightPlugin<TSavegame>
-where
-	TSavegame: ThreadSafe + HandlesSaving,
-{
-	type TResponsiveLightBundle = ResponsiveLight;
-	type TResponsiveLightTrigger = ResponsiveLightTrigger;
-
+impl<TDependencies> HandlesLights for LightPlugin<TDependencies> {
 	const DEFAULT_LIGHT: Srgba = WHITE;
-
-	fn responsive_light_bundle<TDriver>(responsive_data: Responsive) -> Self::TResponsiveLightBundle
-	where
-		TDriver: 'static,
-	{
-		ResponsiveLight::for_driver::<TDriver>(responsive_data)
-	}
-
-	fn responsive_light_trigger() -> Self::TResponsiveLightTrigger {
-		ResponsiveLightTrigger
-	}
 }
