@@ -1,5 +1,5 @@
 use bevy::{ecs::entity::EntityHashSet, prelude::*};
-use bevy_rapier3d::prelude::Collider as BevyCollider;
+use bevy_rapier3d::prelude::Collider as RapierCollider;
 use common::{
 	errors::Unreachable,
 	traits::{
@@ -41,17 +41,17 @@ impl Prefab<()> for ColliderShape {
 	) -> Result<(), Self::TError> {
 		match self.0 {
 			Shape::Sphere { radius } => {
-				entity.try_insert_if_new(BevyCollider::ball(radius));
+				entity.try_insert_if_new(RapierCollider::ball(radius));
 			}
 			Shape::Cuboid {
 				half_x,
 				half_y,
 				half_z,
 			} => {
-				entity.try_insert_if_new(BevyCollider::cuboid(half_x, half_y, half_z));
+				entity.try_insert_if_new(RapierCollider::cuboid(half_x, half_y, half_z));
 			}
 			Shape::Capsule { half_y, radius } => {
-				entity.try_insert_if_new(BevyCollider::capsule_y(half_y, radius));
+				entity.try_insert_if_new(RapierCollider::capsule_y(half_y, radius));
 			}
 		}
 
