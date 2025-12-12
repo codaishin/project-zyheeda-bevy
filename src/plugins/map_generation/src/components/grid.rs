@@ -8,7 +8,6 @@ use crate::{
 	},
 };
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
-use bevy_rapier3d::prelude::*;
 use common::{
 	errors::{ErrorData, Level as ErrorLevel, Unreachable},
 	traits::{accessors::get::TryApplyOn, thread_safe::ThreadSafe},
@@ -17,7 +16,7 @@ use common::{
 use std::{any::type_name, fmt::Display, marker::PhantomData};
 
 #[derive(Component, Debug, PartialEq)]
-#[require(Name = Self::name(), Transform, Visibility, Sensor)]
+#[require(Name = Self::name(), Transform, Visibility)]
 pub struct Grid<const SUBDIVISIONS: u8 = 0, TGraph = GridGraph>
 where
 	TGraph: ToSubdivided,
