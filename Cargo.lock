@@ -3413,7 +3413,6 @@ name = "map_generation"
 version = "0.1.0"
 dependencies = [
  "bevy",
- "bevy_rapier3d",
  "common",
  "macros",
  "mockall",

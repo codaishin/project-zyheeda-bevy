@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use common::{
-	components::is_blocker::{Blocker, IsBlocker},
+	components::is_blocker::Blocker,
 	errors::Unreachable,
 	traits::{
 		handles_physics::colliders::{Collider, ColliderType, HandlesColliders, Shape},
@@ -10,10 +10,7 @@ use common::{
 };
 
 #[derive(Component, Debug, PartialEq)]
-#[require(
-	Transform,
-	IsBlocker = [Blocker::Physical],
-)]
+#[require(Transform)]
 pub(crate) struct WallCell;
 
 impl<TPhysics> Prefab<TPhysics> for WallCell
@@ -32,7 +29,9 @@ where
 			half_y: 0.5,
 			half_z: 0.5,
 		};
-		let collider = Collider::from_shape(shape).with_collider_type(ColliderType::Terrain);
+		let collider = Collider::from_shape(shape)
+			.with_collider_type(ColliderType::Terrain)
+			.with_blocker_types([Blocker::Physical]);
 
 		entity.try_insert_if_new(TPhysics::TCollider::from(collider));
 
