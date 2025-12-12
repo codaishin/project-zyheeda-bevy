@@ -1,9 +1,6 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
-use common::components::{
-	is_blocker::{Blocker, IsBlocker},
-	no_target::NoTarget,
-};
+use common::components::is_blocker::{Blocker, IsBlocker};
 use std::sync::LazyLock;
 
 #[derive(Component, Debug, PartialEq)]
@@ -11,7 +8,6 @@ use std::sync::LazyLock;
 	Transform,
 	IsBlocker = [Blocker::Physical],
 	Collider = UNIT_CUBE.clone(),
-	NoTarget
 )]
 pub(crate) struct WallCell;
 
