@@ -1,4 +1,7 @@
-use crate::components::colliders::{ColliderDefinition, ColliderOf, ColliderShape, Colliders};
+use crate::components::{
+	colliders::{ColliderDefinition, ColliderOf, ColliderShape, Colliders},
+	no_hover::NoMouseHover,
+};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
@@ -25,7 +28,7 @@ impl ColliderShape {
 }
 
 const AGENT_GRAVITY_SCALE: GravityScale = GravityScale(0.);
-static LOCKED_AGENT_AXES: LazyLock<LockedAxes> =
+static AGENT_LOCKED_AXES: LazyLock<LockedAxes> =
 	LazyLock::new(|| LockedAxes::ROTATION_LOCKED | LockedAxes::TRANSLATION_LOCKED_Y);
 
 fn despawn_current_collider_shapes(commands: &mut ZyheedaCommands, colliders: &Colliders) {
@@ -43,7 +46,7 @@ fn insert_rigid_body(
 ) {
 	commands.try_apply_on(&entity, |mut e| match definition.collider_type {
 		ColliderType::Agent => {
-			e.try_insert((*LOCKED_AGENT_AXES, AGENT_GRAVITY_SCALE, RigidBody::Dynamic));
+			e.try_insert((*AGENT_LOCKED_AXES, AGENT_GRAVITY_SCALE, RigidBody::Dynamic));
 		}
 		ColliderType::Terrain => {
 			e.try_insert(RigidBody::Fixed);
@@ -56,12 +59,18 @@ fn spawn_collider_shape(
 	entity: Entity,
 	ColliderDefinition(definition): &ColliderDefinition,
 ) {
-	commands.spawn((
+	let mut entity = commands.spawn((
 		ColliderOf(entity),
 		ChildOf(entity),
 		Transform::from_translation(definition.center_offset).with_rotation(definition.rotation),
 		ColliderShape(definition.shape),
 	));
+
+	if definition.collider_type != ColliderType::Terrain {
+		return;
+	}
+
+	entity.insert(NoMouseHover);
 }
 
 #[cfg(test)]
@@ -134,9 +143,9 @@ mod tests {
 		);
 	}
 
-	#[test_case(ColliderType::Terrain, RigidBody::Fixed, None, None; "fixed")]
-	#[test_case(ColliderType::Agent, RigidBody::Dynamic, Some(*LOCKED_AGENT_AXES), Some(AGENT_GRAVITY_SCALE); "dynamic")]
-	fn insert_additional_components(
+	#[test_case(ColliderType::Terrain, RigidBody::Fixed, None, None; "terrain")]
+	#[test_case(ColliderType::Agent, RigidBody::Dynamic, Some(*AGENT_LOCKED_AXES), Some(AGENT_GRAVITY_SCALE); "agent")]
+	fn insert_additional_root_components(
 		collider_type: ColliderType,
 		rigid_body: RigidBody,
 		locked_axes: Option<LockedAxes>,
@@ -157,6 +166,26 @@ mod tests {
 				entity.get::<GravityScale>().copied(),
 			)
 		);
+	}
+
+	#[test_case(ColliderType::Terrain, Some(NoMouseHover); "terrain")]
+	#[test_case(ColliderType::Agent, None; "agent")]
+	fn insert_additional_collider_components(
+		collider_type: ColliderType,
+		no_mouse_hover: Option<NoMouseHover>,
+	) {
+		let mut app = setup();
+		let shape = Shape::Sphere { radius: 42. };
+
+		let entity = app
+			.world_mut()
+			.spawn(ColliderDefinition(
+				Collider::from_shape(shape).with_collider_type(collider_type),
+			))
+			.id();
+
+		let [child] = assert_count!(1, get_children!(app, entity));
+		assert_eq!(no_mouse_hover, child.get::<NoMouseHover>().copied());
 	}
 
 	#[test]
