@@ -37,7 +37,12 @@ use common::{
 		handles_map_generation::HandlesMapGeneration,
 		handles_movement::{HandlesMovement, MovementSystemParam, MovementSystemParamMut},
 		handles_orientation::{FacingSystemParamMut, HandlesOrientation},
-		handles_physics::{HandlesPhysicalAttributes, HandlesRaycast, RaycastSystemParam},
+		handles_physics::{
+			HandlesPhysicalAttributes,
+			HandlesRaycast,
+			RaycastSystemParam,
+			colliders::HandlesColliders,
+		},
 		handles_player::{HandlesPlayer, PlayerMainCamera},
 		handles_saving::HandlesSaving,
 		handles_skill_spawning::{HandlesSkillSpawning, SkillSpawnerMut},
@@ -66,7 +71,11 @@ where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesPhysicalAttributes + HandlesSkillSpawning + HandlesRaycast,
+	TPhysics: ThreadSafe
+		+ HandlesPhysicalAttributes
+		+ HandlesColliders
+		+ HandlesRaycast
+		+ HandlesSkillSpawning,
 	TAnimations: ThreadSafe + HandlesAnimations,
 	TMaps: ThreadSafe + HandlesMapGeneration,
 	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation,
@@ -102,7 +111,11 @@ where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesPhysicalAttributes + HandlesSkillSpawning + HandlesRaycast,
+	TPhysics: ThreadSafe
+		+ HandlesPhysicalAttributes
+		+ HandlesColliders
+		+ HandlesRaycast
+		+ HandlesSkillSpawning,
 	TAnimations: ThreadSafe + HandlesAnimations,
 	TMaps: ThreadSafe + HandlesMapGeneration,
 	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation,
@@ -142,8 +155,8 @@ where
 		app.register_required_components::<Agent, TSaveGame::TSaveEntityMarker>();
 
 		// # Prefabs
-		app.add_prefab_observer::<Player, ()>();
-		app.add_prefab_observer::<VoidSphere, ()>();
+		app.add_prefab_observer::<Player, TPhysics>();
+		app.add_prefab_observer::<VoidSphere, TPhysics>();
 
 		// # Behaviors
 		app.register_required_components::<PlayerCamera, TPhysics::TWorldCamera>();

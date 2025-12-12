@@ -6,7 +6,6 @@ pub(crate) mod void_sphere;
 
 use crate::components::{enemy::attack_config::EnemyAttackConfig, movement_config::MovementConfig};
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::{GravityScale, RigidBody};
 use common::{
 	components::{
 		collider_relationship::InteractionTarget,
@@ -24,8 +23,6 @@ use serde::{Deserialize, Serialize};
 	PersistentEntity,
 	Transform,
 	Visibility,
-	RigidBody = RigidBody::Dynamic,
-	GravityScale = GravityScale(0.),
 	IsBlocker = [Blocker::Character],
 	MovementConfig,
 	EnemyAttackConfig,
