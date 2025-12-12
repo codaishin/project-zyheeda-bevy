@@ -13,11 +13,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	components::{
-		collider_relationship::InteractionTarget,
-		is_blocker::{Blocker, IsBlocker},
-		persistent_entity::PersistentEntity,
-	},
+	components::{collider_relationship::InteractionTarget, persistent_entity::PersistentEntity},
 	traits::{handles_enemies::EnemyType, handles_map_generation::AgentType},
 	zyheeda_commands::ZyheedaEntityCommands,
 };
@@ -30,10 +26,9 @@ use macros::{SavableComponent, agent_asset};
 	PersistentEntity,
 	Transform,
 	Visibility,
-	IsBlocker = [Blocker::Character],
 	AnimateIdle,
 	InsertAgentDefaultLoadout,
-	RegisterAgentLoadoutBones,
+	RegisterAgentLoadoutBones
 )]
 pub struct Agent<TAsset = AgentConfig>
 where

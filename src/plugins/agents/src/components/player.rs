@@ -5,6 +5,7 @@ use common::{
 		collider_relationship::InteractionTarget,
 		flip::FlipHorizontally,
 		ground_offset::GroundOffset,
+		is_blocker::Blocker,
 	},
 	errors::Unreachable,
 	tools::{Units, UnitsPerSecond},
@@ -71,7 +72,8 @@ where
 		};
 		let collider = Collider::from_shape(shape)
 			.with_center_offset(GROUND_OFFSET)
-			.with_collider_type(ColliderType::Agent);
+			.with_collider_type(ColliderType::Agent)
+			.with_blocker_types([Blocker::Character]);
 
 		entity.try_insert_if_new(TPhysics::TCollider::from(collider));
 
