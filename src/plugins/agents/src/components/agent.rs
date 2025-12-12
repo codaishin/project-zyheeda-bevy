@@ -12,7 +12,6 @@ use crate::{
 	observers::agent::{insert_concrete_agent::InsertEnemyOrPlayer, insert_from::AgentHandle},
 };
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::{GravityScale, RigidBody};
 use common::{
 	components::{
 		collider_relationship::InteractionTarget,
@@ -31,8 +30,6 @@ use macros::{SavableComponent, agent_asset};
 	PersistentEntity,
 	Transform,
 	Visibility,
-	RigidBody = RigidBody::Dynamic,
-	GravityScale = GravityScale(0.),
 	IsBlocker = [Blocker::Character],
 	AnimateIdle,
 	InsertAgentDefaultLoadout,
