@@ -3,7 +3,6 @@ use animations::AnimationsPlugin;
 use bars::BarsPlugin;
 use behaviors::BehaviorsPlugin;
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::*;
 use camera_control::CameraControlPlugin;
 use common::CommonPlugin;
 use frame_limiter::FrameLimiterPlugin;
@@ -36,6 +35,8 @@ fn main() -> ZyheedaAppExit {
 	ZyheedaAppExit::from(app.run())
 }
 
+const TARGET_FPS: u32 = 60;
+
 fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let Some(home) = home_dir() else {
 		return Err(ZyheedaAppError::NoHomeDirectoryFound);
@@ -46,7 +47,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let input = InputPlugin::from_plugin(&loading);
 	let localization = LocalizationPlugin::from_plugin(&loading);
 	let savegame = SavegamePlugin::from_plugin(&input).with_game_directory(game_dir);
-	let physics = PhysicsPlugin::from_plugin(&savegame);
+	let physics = PhysicsPlugin::new(TARGET_FPS, &savegame);
 	let animations = AnimationsPlugin::from_plugin(&savegame);
 	let light = LightPlugin::from_plugin(&savegame);
 	let map_generation = MapGenerationPlugin::from_plugins(&loading, &savegame, &physics, &light);
@@ -78,9 +79,10 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let camera_control = CameraControlPlugin::from_plugins(&input, &savegame, &agents, &graphics);
 
 	app.add_plugins(DefaultPlugins)
-		.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
 		.add_plugins(CommonPlugin)
-		.add_plugins(FrameLimiterPlugin { target_fps: 60 })
+		.add_plugins(FrameLimiterPlugin {
+			target_fps: TARGET_FPS,
+		})
 		.add_plugins(agents)
 		.add_plugins(animations)
 		.add_plugins(bars)
@@ -148,7 +150,6 @@ impl From<ZyheedaAppError> for ExitCode {
 pub mod debug_utils {
 	use super::*;
 	use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
-	use physics::events::{InteractionEvent, Ray};
 	use std::ops::Not;
 
 	const FORWARD_GIZMO_COLOR: Color = Color::srgb(0., 0., 1.);
@@ -159,31 +160,11 @@ pub mod debug_utils {
 				enable_multipass_for_primary_context: true,
 			})
 			.add_plugins(WorldInspectorPlugin::new())
-			.add_plugins(RapierDebugRenderPlugin::default())
 			.add_systems(Update, toggle_gizmos)
 			.add_systems(
 				Update,
 				forward_gizmo(&["skill_spawn", "Player"], &FORWARD_GIZMO_COLOR),
-			)
-			.add_systems(Update, display_events);
-	}
-
-	fn display_events(
-		mut collision_events: EventReader<CollisionEvent>,
-		mut contact_force_events: EventReader<ContactForceEvent>,
-		mut ray_cast_events: EventReader<InteractionEvent<Ray>>,
-	) {
-		for collision_event in collision_events.read() {
-			println!("Received collision event: {collision_event:?}");
-		}
-
-		for contact_force_event in contact_force_events.read() {
-			println!("Received contact force event: {contact_force_event:?}");
-		}
-
-		for ray_cast_event in ray_cast_events.read() {
-			println!("Received ray cast event: {ray_cast_event:?}");
-		}
+			);
 	}
 
 	#[derive(Resource, PartialEq, Clone, Copy)]

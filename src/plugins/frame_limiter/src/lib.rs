@@ -5,7 +5,6 @@ use bevy::{
 	prelude::*,
 	render::{Render, RenderApp, RenderSet},
 };
-use bevy_rapier3d::plugin::TimestepMode;
 use std::{
 	thread,
 	time::{Duration, Instant},
@@ -56,8 +55,6 @@ impl Plugin for FrameLimiterPlugin {
 			.insert_resource(Sleep(time_per_frame))
 			.insert_resource(LastSleep(Instant::now()))
 			.add_systems(Render, Sleep::system.in_set(RenderSet::Cleanup));
-
-		app.add_systems(Update, configure_rapier(time_per_frame));
 	}
 }
 
@@ -75,20 +72,5 @@ impl Sleep {
 
 		thread::sleep(sleep);
 		*last_sleep = Instant::now();
-	}
-}
-
-fn configure_rapier(time_per_frame: Duration) -> impl Fn(Option<ResMut<TimestepMode>>) {
-	move |time_step_mode: Option<ResMut<TimestepMode>>| {
-		let Some(mut time_step_mode) = time_step_mode else {
-			return;
-		};
-		let time_step_mode = time_step_mode.as_mut();
-
-		*time_step_mode = TimestepMode::Variable {
-			max_dt: time_per_frame.as_secs_f32(),
-			time_scale: 1.,
-			substeps: 1,
-		}
 	}
 }

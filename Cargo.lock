@@ -204,7 +204,6 @@ name = "animations"
 version = "0.1.0"
 dependencies = [
  "bevy",
- "bevy_rapier3d",
  "common",
  "macros",
  "mockall",
@@ -433,7 +432,6 @@ name = "bars"
 version = "0.1.0"
 dependencies = [
  "bevy",
- "bevy_rapier3d",
  "common",
  "macros",
  "mockall",
@@ -458,7 +456,6 @@ name = "behaviors"
 version = "0.1.0"
 dependencies = [
  "bevy",
- "bevy_rapier3d",
  "common",
  "macros",
  "mockall",
@@ -1198,7 +1195,6 @@ dependencies = [
  "log",
  "nalgebra",
  "rapier3d",
- "serde",
 ]
 
 [[package]]
@@ -1620,9 +1616,6 @@ name = "bit-vec"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5e764a1d40d510daf35e07be9eb06e75770908c27d411ee6c92109c9840eaaf7"
-dependencies = [
- "serde",
-]
 
 [[package]]
 name = "bit_field"
@@ -1773,7 +1766,6 @@ name = "camera_control"
 version = "0.1.0"
 dependencies = [
  "bevy",
- "bevy_rapier3d",
  "common",
  "macros",
  "mockall",
@@ -2614,7 +2606,6 @@ name = "frame_limiter"
 version = "0.1.0"
 dependencies = [
  "bevy",
- "bevy_rapier3d",
  "common",
 ]
 
@@ -3304,7 +3295,6 @@ name = "light"
 version = "0.1.0"
 dependencies = [
  "bevy",
- "bevy_rapier3d",
  "common",
  "macros",
  "mockall",
@@ -3471,7 +3461,6 @@ name = "menu"
 version = "0.1.0"
 dependencies = [
  "bevy",
- "bevy_rapier3d",
  "common",
  "macros",
  "mockall",
@@ -3594,7 +3583,6 @@ dependencies = [
  "num-complex",
  "num-rational",
  "num-traits",
- "serde",
  "simba",
  "typenum",
 ]
@@ -3757,7 +3745,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73f88a1307638156682bada9d7604135552957b7818057dcef22705b4d509495"
 dependencies = [
  "num-traits",
- "serde",
 ]
 
 [[package]]
@@ -4239,7 +4226,6 @@ dependencies = [
  "num-traits",
  "ordered-float 5.0.0",
  "rstar",
- "serde",
  "simba",
  "slab",
  "spade",
@@ -4495,7 +4481,6 @@ dependencies = [
  "behaviors",
  "bevy",
  "bevy-inspector-egui",
- "bevy_rapier3d",
  "camera_control",
  "common",
  "fluent",
@@ -4641,7 +4626,6 @@ dependencies = [
  "parry3d",
  "profiling",
  "rustc-hash 2.1.1",
- "serde",
  "simba",
  "thiserror 2.0.12",
 ]
@@ -5095,7 +5079,6 @@ name = "skills"
 version = "0.1.0"
 dependencies = [
  "bevy",
- "bevy_rapier3d",
  "common",
  "macros",
  "mockall",
@@ -5186,7 +5169,6 @@ dependencies = [
  "hashbrown",
  "num-traits",
  "robust",
- "serde",
  "smallvec",
 ]
 
@@ -5388,7 +5370,6 @@ name = "testing"
 version = "0.1.0"
 dependencies = [
  "bevy",
- "bevy_rapier3d",
  "uuid",
 ]
 
