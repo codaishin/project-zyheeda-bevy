@@ -1,4 +1,6 @@
+use crate::components::is_blocker::Blocker;
 use bevy::prelude::*;
+use std::collections::HashSet;
 
 pub trait HandlesColliders {
 	type TCollider: Component + From<Collider>;
@@ -8,32 +10,42 @@ pub trait HandlesColliders {
 pub struct Collider {
 	pub shape: Shape,
 	pub collider_type: ColliderType,
+	pub blocker_types: HashSet<Blocker>,
 	pub center_offset: Vec3,
 	pub rotation: Quat,
 }
 
 impl Collider {
-	pub const fn from_shape(shape: Shape) -> Self {
+	pub fn from_shape(shape: Shape) -> Self {
 		Self {
 			shape,
 			collider_type: ColliderType::Terrain,
+			blocker_types: HashSet::from([Blocker::Physical]),
 			center_offset: Vec3::ZERO,
 			rotation: Quat::IDENTITY,
 		}
 	}
 
-	pub const fn with_center_offset(mut self, center_offset: Vec3) -> Self {
+	pub fn with_center_offset(mut self, center_offset: Vec3) -> Self {
 		self.center_offset = center_offset;
 		self
 	}
 
-	pub const fn with_rotation(mut self, rotation: Quat) -> Self {
+	pub fn with_rotation(mut self, rotation: Quat) -> Self {
 		self.rotation = rotation;
 		self
 	}
 
-	pub const fn with_collider_type(mut self, collider_type: ColliderType) -> Self {
+	pub fn with_collider_type(mut self, collider_type: ColliderType) -> Self {
 		self.collider_type = collider_type;
+		self
+	}
+
+	pub fn with_blocker_types<TBlocks>(mut self, blocks: TBlocks) -> Self
+	where
+		TBlocks: IntoIterator<Item = Blocker>,
+	{
+		self.blocker_types = HashSet::from_iter(blocks);
 		self
 	}
 }

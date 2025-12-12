@@ -13,7 +13,7 @@ use crate::{
 	components::{
 		affected::{force_affected::ForceAffected, gravity_affected::GravityAffected, life::Life},
 		blockable::Blockable,
-		colliders::{ColliderDefinition, ColliderShape},
+		colliders::{ColliderDefinition, ColliderShape, Colliders},
 		default_attributes::DefaultAttributes,
 		effect::force::ForceEffect,
 		fix_points::{Always, Anchor, Once, fix_point::FixPointSpawner},
@@ -169,6 +169,8 @@ where
 			.add_systems(
 				Update,
 				(
+					// Colliders
+					Colliders::dispatch_blocker_types,
 					// Skill spawning/lifetime
 					(
 						FixPointSpawner::insert_fix_points,

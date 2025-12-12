@@ -15,7 +15,7 @@ use bevy::{
 	utils::default,
 };
 use common::{
-	components::{ground_offset::GroundOffset, insert_asset::InsertAsset},
+	components::{ground_offset::GroundOffset, insert_asset::InsertAsset, is_blocker::Blocker},
 	errors::Unreachable,
 	tools::{Units, UnitsPerSecond, action_key::slot::SlotKey, bone_name::BoneName},
 	traits::{
@@ -108,7 +108,8 @@ where
 		};
 		let collider = Collider::from_shape(shape)
 			.with_center_offset(Self::GROUND_OFFSET)
-			.with_collider_type(ColliderType::Agent);
+			.with_collider_type(ColliderType::Agent)
+			.with_blocker_types([Blocker::Character]);
 		let mut transform_2nd_ring = child_transform;
 		transform_2nd_ring.rotate_axis(Dir3::Z, PI / 2.);
 
