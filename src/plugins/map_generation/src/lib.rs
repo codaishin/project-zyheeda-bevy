@@ -25,8 +25,9 @@ use common::{
 		handles_lights::HandlesLights,
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInApp},
 		handles_map_generation::HandlesMapGeneration,
-		handles_physics::HandlesRaycast,
+		handles_physics::{HandlesRaycast, colliders::HandlesColliders},
 		handles_saving::HandlesSaving,
+		prefab::AddPrefabObserver,
 		spawn::Spawn,
 		thread_safe::ThreadSafe,
 	},
@@ -44,7 +45,7 @@ impl<TLoading, TSavegame, TLights, TPhysics>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesRaycast,
+	TPhysics: ThreadSafe + HandlesRaycast + HandlesColliders,
 	TLights: ThreadSafe + HandlesLights,
 {
 	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TPhysics, _: &TLights) -> Self {
@@ -57,7 +58,7 @@ impl<TLoading, TSavegame, TLights, TPhysics> Plugin
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesRaycast,
+	TPhysics: ThreadSafe + HandlesRaycast + HandlesColliders,
 	TLights: ThreadSafe + HandlesLights,
 {
 	fn build(&self, app: &mut App) {
@@ -75,6 +76,7 @@ where
 		app.register_required_components::<Map, TSavegame::TSaveEntityMarker>()
 			.register_required_components::<WallCell, TPhysics::TNoMouseHover>()
 			.register_map_cell::<TLoading, TSavegame, Corridor>()
+			.add_prefab_observer::<WallCell, TPhysics>()
 			.add_systems(
 				OnEnter(GameState::LoadingEssentialAssets),
 				AgentsColorLookupImages::<Image>::lookup_images,
