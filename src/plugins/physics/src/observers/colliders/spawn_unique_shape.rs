@@ -24,6 +24,7 @@ impl ColliderShape {
 	}
 }
 
+const AGENT_GRAVITY_SCALE: GravityScale = GravityScale(0.);
 static LOCKED_AGENT_AXES: LazyLock<LockedAxes> =
 	LazyLock::new(|| LockedAxes::ROTATION_LOCKED | LockedAxes::TRANSLATION_LOCKED_Y);
 
@@ -42,7 +43,7 @@ fn insert_rigid_body(
 ) {
 	commands.try_apply_on(&entity, |mut e| match definition.collider_type {
 		ColliderType::Agent => {
-			e.try_insert((*LOCKED_AGENT_AXES, RigidBody::Dynamic));
+			e.try_insert((*LOCKED_AGENT_AXES, AGENT_GRAVITY_SCALE, RigidBody::Dynamic));
 		}
 		ColliderType::Terrain => {
 			e.try_insert(RigidBody::Fixed);
@@ -133,12 +134,13 @@ mod tests {
 		);
 	}
 
-	#[test_case(ColliderType::Terrain, RigidBody::Fixed, None; "fixed")]
-	#[test_case(ColliderType::Agent, RigidBody::Dynamic, Some(*LOCKED_AGENT_AXES); "dynamic")]
+	#[test_case(ColliderType::Terrain, RigidBody::Fixed, None, None; "fixed")]
+	#[test_case(ColliderType::Agent, RigidBody::Dynamic, Some(*LOCKED_AGENT_AXES), Some(AGENT_GRAVITY_SCALE); "dynamic")]
 	fn insert_additional_components(
 		collider_type: ColliderType,
 		rigid_body: RigidBody,
 		locked_axes: Option<LockedAxes>,
+		gravity_scale: Option<GravityScale>,
 	) {
 		let mut app = setup();
 		let shape = Shape::Sphere { radius: 42. };
@@ -148,10 +150,11 @@ mod tests {
 		));
 
 		assert_eq!(
-			(Some(&rigid_body), locked_axes),
+			(Some(&rigid_body), locked_axes, gravity_scale),
 			(
 				entity.get::<RigidBody>(),
-				entity.get::<LockedAxes>().copied()
+				entity.get::<LockedAxes>().copied(),
+				entity.get::<GravityScale>().copied(),
 			)
 		);
 	}
