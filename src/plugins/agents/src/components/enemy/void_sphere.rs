@@ -14,7 +14,6 @@ use bevy::{
 	transform::components::Transform,
 	utils::default,
 };
-use bevy_rapier3d::geometry::Collider;
 use common::{
 	components::{ground_offset::GroundOffset, insert_asset::InsertAsset},
 	errors::Unreachable,
@@ -22,6 +21,7 @@ use common::{
 	traits::{
 		handles_enemies::EnemyType,
 		handles_map_generation::AgentType,
+		handles_physics::colliders::{Collider, ColliderType, HandlesColliders, Shape},
 		handles_skill_behaviors::SkillSpawner,
 		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
@@ -91,7 +91,10 @@ impl From<VoidSphere> for AgentType {
 	}
 }
 
-impl Prefab<()> for VoidSphere {
+impl<TPhysics> Prefab<TPhysics> for VoidSphere
+where
+	TPhysics: HandlesColliders,
+{
 	type TError = Unreachable;
 
 	fn insert_prefab_components(
@@ -99,23 +102,29 @@ impl Prefab<()> for VoidSphere {
 		entity: &mut impl PrefabEntityCommands,
 		_: &mut impl LoadAsset,
 	) -> Result<(), Unreachable> {
-		let transform = Transform::from_translation(Self::GROUND_OFFSET);
-		let mut transform_2nd_ring = transform;
+		let child_transform = Transform::from_translation(Self::GROUND_OFFSET);
+		let shape = Shape::Sphere {
+			radius: Self::OUTER_RADIUS,
+		};
+		let collider = Collider::from_shape(shape)
+			.with_center_offset(Self::GROUND_OFFSET)
+			.with_collider_type(ColliderType::Agent);
+		let mut transform_2nd_ring = child_transform;
 		transform_2nd_ring.rotate_axis(Dir3::Z, PI / 2.);
 
 		entity
-			.with_child((VoidSpherePart::Core, VoidSphereCore, transform))
+			.try_insert_if_new(TPhysics::TCollider::from(collider))
+			.with_child((VoidSpherePart::Core, VoidSphereCore, child_transform))
 			.with_child((
 				VoidSpherePart::RingA(UnitsPerSecond::from(PI / 50.)),
 				VoidSphereRing,
-				transform,
+				child_transform,
 			))
 			.with_child((
 				VoidSpherePart::RingB(UnitsPerSecond::from(PI / 75.)),
 				VoidSphereRing,
 				transform_2nd_ring,
 			))
-			.with_child((Collider::ball(Self::OUTER_RADIUS), transform))
 			// One unified slot bone
 			.with_child((
 				Transform::from_translation(Self::SLOT_OFFSET),

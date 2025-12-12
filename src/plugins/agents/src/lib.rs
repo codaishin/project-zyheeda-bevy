@@ -156,7 +156,7 @@ where
 
 		// # Prefabs
 		app.add_prefab_observer::<Player, TPhysics>();
-		app.add_prefab_observer::<VoidSphere, ()>();
+		app.add_prefab_observer::<VoidSphere, TPhysics>();
 
 		// # Behaviors
 		app.register_required_components::<PlayerCamera, TPhysics::TWorldCamera>();
