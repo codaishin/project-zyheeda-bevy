@@ -15,13 +15,13 @@ use bevy::{
 	utils::default,
 };
 use common::{
-	components::{ground_offset::GroundOffset, insert_asset::InsertAsset, is_blocker::Blocker},
+	components::{ground_offset::GroundOffset, insert_asset::InsertAsset},
 	errors::Unreachable,
 	tools::{Units, UnitsPerSecond, action_key::slot::SlotKey, bone_name::BoneName},
 	traits::{
 		handles_enemies::EnemyType,
 		handles_map_generation::AgentType,
-		handles_physics::colliders::{Collider, ColliderType, HandlesColliders, Shape},
+		handles_physics::colliders::{Blocker, Collider, ColliderType, HandlesColliders, Shape},
 		handles_skill_behaviors::SkillSpawner,
 		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},

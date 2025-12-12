@@ -1,9 +1,8 @@
 use bevy::prelude::*;
 use common::{
-	components::is_blocker::Blocker,
 	errors::Unreachable,
 	traits::{
-		handles_physics::colliders::{Collider, ColliderType, HandlesColliders, Shape},
+		handles_physics::colliders::{Blocker, Collider, ColliderType, HandlesColliders, Shape},
 		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
 	},

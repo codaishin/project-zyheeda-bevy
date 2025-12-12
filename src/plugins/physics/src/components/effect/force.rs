@@ -1,17 +1,14 @@
 use crate::{
 	ActOn,
 	PhysicsPlugin,
-	components::affected::force_affected::ForceAffected,
+	components::{affected::force_affected::ForceAffected, blocker_types::BlockerTypes},
 	traits::update_blockers::UpdateBlockers,
 };
 use bevy::prelude::*;
 use common::{
-	components::{
-		is_blocker::{Blocker, IsBlocker},
-		persistent_entity::PersistentEntity,
-	},
+	components::persistent_entity::PersistentEntity,
 	effects::force::Force,
-	traits::handles_physics::HandlesPhysicalEffect,
+	traits::handles_physics::{HandlesPhysicalEffect, colliders::Blocker},
 };
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
@@ -30,7 +27,7 @@ impl<TDependencies> HandlesPhysicalEffect<Force> for PhysicsPlugin<TDependencies
 }
 
 impl UpdateBlockers for ForceEffect {
-	fn update(&self, IsBlocker(blockers): &mut IsBlocker) {
+	fn update(&self, BlockerTypes(blockers): &mut BlockerTypes) {
 		blockers.insert(Blocker::Force);
 	}
 }

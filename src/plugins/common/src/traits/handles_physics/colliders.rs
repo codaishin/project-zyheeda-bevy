@@ -1,5 +1,6 @@
-use crate::components::is_blocker::Blocker;
+use crate::traits::iteration::{Iter, IterFinite};
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
 pub trait HandlesColliders {
@@ -83,4 +84,54 @@ pub enum Shape {
 pub enum ColliderType {
 	Agent,
 	Terrain,
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
+pub enum Blocker {
+	Physical,
+	Force,
+	Character,
+}
+
+impl Blocker {
+	pub fn all<TBlockers>() -> TBlockers
+	where
+		TBlockers: FromIterator<Blocker>,
+	{
+		Blocker::iterator().collect()
+	}
+
+	pub fn none<TBlockers>() -> TBlockers
+	where
+		TBlockers: FromIterator<Blocker>,
+	{
+		std::iter::empty().collect()
+	}
+}
+
+impl IterFinite for Blocker {
+	fn iterator() -> Iter<Self> {
+		Iter(Some(Blocker::Physical))
+	}
+
+	fn next(current: &Iter<Self>) -> Option<Self> {
+		match current.0? {
+			Blocker::Physical => Some(Blocker::Force),
+			Blocker::Force => Some(Blocker::Character),
+			Blocker::Character => None,
+		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn iterate() {
+		assert_eq!(
+			vec![Blocker::Physical, Blocker::Force, Blocker::Character],
+			Blocker::iterator().take(100).collect::<Vec<_>>()
+		);
+	}
 }

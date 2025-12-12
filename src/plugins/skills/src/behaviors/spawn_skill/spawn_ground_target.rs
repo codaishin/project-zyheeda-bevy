@@ -4,19 +4,21 @@ use crate::{
 	traits::skill_builder::{SkillLifetime, SpawnShape},
 };
 use common::{
-	components::is_blocker::Blocker,
 	dto::duration_in_seconds::DurationInSeconds,
 	tools::Units,
-	traits::handles_skill_behaviors::{
-		Contact,
-		ContactShape,
-		HandlesSkillBehaviors,
-		Motion,
-		Projection,
-		ProjectionShape,
-		SkillEntities,
-		SkillSpawner,
-		SkillTarget,
+	traits::{
+		handles_physics::colliders::Blocker,
+		handles_skill_behaviors::{
+			Contact,
+			ContactShape,
+			HandlesSkillBehaviors,
+			Motion,
+			Projection,
+			ProjectionShape,
+			SkillEntities,
+			SkillSpawner,
+			SkillTarget,
+		},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };

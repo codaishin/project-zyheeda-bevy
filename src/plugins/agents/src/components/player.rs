@@ -1,13 +1,13 @@
 use super::movement_config::MovementConfig;
 use bevy::prelude::*;
 use common::{
-	components::{flip::FlipHorizontally, ground_offset::GroundOffset, is_blocker::Blocker},
+	components::{flip::FlipHorizontally, ground_offset::GroundOffset},
 	errors::Unreachable,
 	tools::{Units, UnitsPerSecond},
 	traits::{
 		handles_animations::AnimationPriority,
 		handles_map_generation::AgentType,
-		handles_physics::colliders::{Collider, ColliderType, HandlesColliders, Shape},
+		handles_physics::colliders::{Blocker, Collider, ColliderType, HandlesColliders, Shape},
 		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
 	},

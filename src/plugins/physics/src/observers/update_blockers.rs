@@ -1,10 +1,6 @@
-use crate::traits::update_blockers::UpdateBlockers;
+use crate::{components::blocker_types::BlockerTypes, traits::update_blockers::UpdateBlockers};
 use bevy::prelude::*;
-use common::{
-	components::is_blocker::IsBlocker,
-	traits::accessors::get::TryApplyOn,
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
 impl<T> UpdateBlockersObserver for T where T: Component + UpdateBlockers {}
 
@@ -12,7 +8,7 @@ pub(crate) trait UpdateBlockersObserver: Component + Sized + UpdateBlockers {
 	fn update_blockers(
 		trigger: Trigger<OnInsert, Self>,
 		mut commands: ZyheedaCommands,
-		mut effects: Query<(&Self, Option<&mut IsBlocker>)>,
+		mut effects: Query<(&Self, Option<&mut BlockerTypes>)>,
 	) {
 		let entity = trigger.target();
 		let Ok((effect, blockers)) = effects.get_mut(entity) else {
@@ -24,7 +20,7 @@ pub(crate) trait UpdateBlockersObserver: Component + Sized + UpdateBlockers {
 				effect.update(&mut blockers);
 			}
 			None => {
-				let mut blockers = IsBlocker::from([]);
+				let mut blockers = BlockerTypes::default();
 				effect.update(&mut blockers);
 				commands.try_apply_on(&entity, |mut e| {
 					e.try_insert(blockers);
@@ -37,13 +33,13 @@ pub(crate) trait UpdateBlockersObserver: Component + Sized + UpdateBlockers {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::components::is_blocker::Blocker;
+	use common::traits::handles_physics::colliders::Blocker;
 
 	#[derive(Component)]
 	struct _Effect(Blocker);
 
 	impl UpdateBlockers for _Effect {
-		fn update(&self, IsBlocker(blockers): &mut IsBlocker) {
+		fn update(&self, BlockerTypes(blockers): &mut BlockerTypes) {
 			blockers.insert(self.0);
 		}
 	}
@@ -62,11 +58,11 @@ mod tests {
 
 		let entity = app
 			.world_mut()
-			.spawn((_Effect(Blocker::Force), IsBlocker::from([])));
+			.spawn((_Effect(Blocker::Force), BlockerTypes::from([])));
 
 		assert_eq!(
-			Some(&IsBlocker::from([Blocker::Force])),
-			entity.get::<IsBlocker>(),
+			Some(&BlockerTypes::from([Blocker::Force])),
+			entity.get::<BlockerTypes>(),
 		);
 	}
 
@@ -77,8 +73,8 @@ mod tests {
 		let entity = app.world_mut().spawn(_Effect(Blocker::Force));
 
 		assert_eq!(
-			Some(&IsBlocker::from([Blocker::Force])),
-			entity.get::<IsBlocker>(),
+			Some(&BlockerTypes::from([Blocker::Force])),
+			entity.get::<BlockerTypes>(),
 		);
 	}
 
@@ -88,12 +84,12 @@ mod tests {
 
 		let mut entity = app
 			.world_mut()
-			.spawn((_Effect(Blocker::Force), IsBlocker::from([])));
+			.spawn((_Effect(Blocker::Force), BlockerTypes::from([])));
 		entity.insert(_Effect(Blocker::Physical));
 
 		assert_eq!(
-			Some(&IsBlocker::from([Blocker::Force, Blocker::Physical])),
-			entity.get::<IsBlocker>(),
+			Some(&BlockerTypes::from([Blocker::Force, Blocker::Physical])),
+			entity.get::<BlockerTypes>(),
 		);
 	}
 }
