@@ -86,6 +86,12 @@ impl Property for LinearMotion {
 	type TValue<'a> = Self;
 }
 
+pub trait HandlesPhysicalEffectTargets: HandlesAllPhysicalEffects {
+	fn mark_as_effect_target<T>(app: &mut App)
+	where
+		T: Component;
+}
+
 pub trait HandlesAllPhysicalEffects:
 	HandlesLife + HandlesPhysicalEffect<Gravity> + HandlesPhysicalEffect<Force>
 {

@@ -20,12 +20,7 @@ use crate::{
 	},
 };
 use bevy::prelude::*;
-use components::{
-	asset_model::AssetModel,
-	collider_relationship::ColliderOfInteractionTarget,
-	flip::FlipHorizontally,
-	insert_asset::InsertAsset,
-};
+use components::{asset_model::AssetModel, flip::FlipHorizontally, insert_asset::InsertAsset};
 
 pub struct CommonPlugin;
 
@@ -34,7 +29,6 @@ impl Plugin for CommonPlugin {
 		game_state(app);
 		persistent_entities(app);
 		asset_loading(app);
-		colliders(app);
 		life_cycles(app);
 	}
 }
@@ -46,10 +40,6 @@ fn game_state(app: &mut App) {
 fn persistent_entities(app: &mut App) {
 	app.register_persistent_entities();
 	app.add_observer(ChildOfPersistent::insert_child_of);
-}
-
-fn colliders(app: &mut App) {
-	app.add_observer(ColliderOfInteractionTarget::link);
 }
 
 fn asset_loading(app: &mut App) {

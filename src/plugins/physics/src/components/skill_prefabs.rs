@@ -5,6 +5,7 @@ use crate::components::{
 	blockable::Blockable,
 	fix_points::{Always, Anchor, Once},
 	ground_target::GroundTarget,
+	interaction_target::InteractionTarget,
 	set_motion_forward::SetMotionForward,
 	skill_prefabs::skill_contact::CreatedFrom,
 	when_traveled::WhenTraveled,
@@ -12,11 +13,7 @@ use crate::components::{
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::{
-		asset_model::AssetModel,
-		collider_relationship::InteractionTarget,
-		insert_asset::InsertAsset,
-	},
+	components::{asset_model::AssetModel, insert_asset::InsertAsset},
 	errors::{ErrorData, Level, Unreachable},
 	traits::{
 		handles_physics::PhysicalObject,

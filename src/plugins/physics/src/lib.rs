@@ -18,6 +18,7 @@ use crate::{
 		effect::force::ForceEffect,
 		fix_points::{Always, Anchor, Once, fix_point::FixPointSpawner},
 		ground_target::GroundTarget,
+		interaction_target::{ColliderOfInteractionTarget, InteractionTarget},
 		motion::Motion,
 		no_hover::NoMouseHover,
 		set_motion_forward::SetMotionForward,
@@ -40,6 +41,7 @@ use common::{
 		handles_physics::{
 			HandlesMotion,
 			HandlesPhysicalAttributes,
+			HandlesPhysicalEffectTargets,
 			HandlesPhysicalObjects,
 			HandlesRaycast,
 			colliders::HandlesColliders,
@@ -132,6 +134,7 @@ where
 			.add_prefab_observer::<SkillProjection, ()>()
 			// Colliders
 			.add_prefab_observer::<ColliderShape, ()>()
+			.add_observer(ColliderOfInteractionTarget::link)
 			.add_observer(ColliderShape::spawn_unique)
 			// Deal health damage
 			.add_physics::<HealthDamageEffect, Life, TSaveGame>()
@@ -222,6 +225,15 @@ impl<TDependencies> HandlesPhysicalObjects for PhysicsPlugin<TDependencies> {
 	type TPhysicalObjectComponent = Blockable;
 
 	const SYSTEMS: Self::TSystems = PhysicsSystems;
+}
+
+impl<TDependencies> HandlesPhysicalEffectTargets for PhysicsPlugin<TDependencies> {
+	fn mark_as_effect_target<T>(app: &mut App)
+	where
+		T: Component,
+	{
+		app.register_required_components::<T, InteractionTarget>();
+	}
 }
 
 impl<TDependencies> HandlesMotion for PhysicsPlugin<TDependencies> {

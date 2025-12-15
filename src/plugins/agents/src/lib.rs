@@ -39,6 +39,7 @@ use common::{
 		handles_orientation::{FacingSystemParamMut, HandlesOrientation},
 		handles_physics::{
 			HandlesPhysicalAttributes,
+			HandlesPhysicalEffectTargets,
 			HandlesRaycast,
 			RaycastSystemParam,
 			colliders::HandlesColliders,
@@ -72,6 +73,7 @@ where
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe
+		+ HandlesPhysicalEffectTargets
 		+ HandlesPhysicalAttributes
 		+ HandlesColliders
 		+ HandlesRaycast
@@ -112,6 +114,7 @@ where
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe
+		+ HandlesPhysicalEffectTargets
 		+ HandlesPhysicalAttributes
 		+ HandlesColliders
 		+ HandlesRaycast
@@ -132,6 +135,7 @@ where
 
 		// Using `AgentTag` to buffer the map agent type, in case `TNewWorldAgent` is not
 		// persistent across game sessions
+		TPhysics::mark_as_effect_target::<Agent>(app);
 		app.add_observer(AgentTag::insert_from::<TMaps::TNewWorldAgent>);
 		app.add_observer(Agent::insert_from::<AgentTag>);
 		app.add_observer(Agent::insert_concrete_agent);

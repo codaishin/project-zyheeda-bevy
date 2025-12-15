@@ -1,7 +1,9 @@
 use super::execute_ray_caster::RayCastResult;
-use crate::events::{Collision, InteractionEvent, Ray};
+use crate::{
+	components::interaction_target::ColliderOfInteractionTarget,
+	events::{Collision, InteractionEvent, Ray},
+};
 use bevy::prelude::*;
-use common::components::collider_relationship::ColliderOfInteractionTarget;
 use std::collections::HashMap;
 
 pub(crate) fn map_ray_cast_result_to_interaction_events(
@@ -30,7 +32,7 @@ pub(crate) fn map_ray_cast_result_to_interaction_events(
 
 fn get_target(entity: Entity, roots: &Query<&ColliderOfInteractionTarget>) -> Entity {
 	match roots.get(entity) {
-		Ok(root) => root.target(),
+		Ok(ColliderOfInteractionTarget(root)) => *root,
 		Err(_) => entity,
 	}
 }
@@ -100,11 +102,11 @@ mod tests {
 		let target_b = app.world_mut().spawn_empty().id();
 		let collider_a = app
 			.world_mut()
-			.spawn(ColliderOfInteractionTarget::from_raw(target_a))
+			.spawn(ColliderOfInteractionTarget(target_a))
 			.id();
 		let collider_b = app
 			.world_mut()
-			.spawn(ColliderOfInteractionTarget::from_raw(target_b))
+			.spawn(ColliderOfInteractionTarget(target_b))
 			.id();
 		let ray_casts = HashMap::from([(
 			Entity::from_raw(5),
