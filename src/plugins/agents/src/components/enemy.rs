@@ -8,7 +8,6 @@ use crate::components::{enemy::attack_config::EnemyAttackConfig, movement_config
 use bevy::prelude::*;
 use common::{
 	components::{
-		collider_relationship::InteractionTarget,
 		is_blocker::{Blocker, IsBlocker},
 		persistent_entity::PersistentEntity,
 	},
@@ -19,7 +18,6 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
 #[require(
-	InteractionTarget,
 	PersistentEntity,
 	Transform,
 	Visibility,

@@ -1,10 +1,7 @@
-use crate::{
-	components::collider_relationship::{ColliderOfInteractionTarget, InteractionTarget},
-	traits::accessors::get::TryApplyOn,
-	zyheeda_commands::ZyheedaCommands,
-};
+use crate::components::interaction_target::{ColliderOfInteractionTarget, InteractionTarget};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
+use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
 impl ColliderOfInteractionTarget {
 	pub(crate) fn link(
@@ -32,7 +29,6 @@ impl ColliderOfInteractionTarget {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::collider_relationship::InteractionTarget;
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {

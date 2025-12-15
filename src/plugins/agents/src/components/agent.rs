@@ -13,7 +13,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	components::{collider_relationship::InteractionTarget, persistent_entity::PersistentEntity},
+	components::persistent_entity::PersistentEntity,
 	traits::{handles_enemies::EnemyType, handles_map_generation::AgentType},
 	zyheeda_commands::ZyheedaEntityCommands,
 };
@@ -22,7 +22,6 @@ use macros::{SavableComponent, agent_asset};
 #[derive(Component, SavableComponent, Clone, Debug, PartialEq)]
 #[component(immutable)]
 #[require(
-	InteractionTarget,
 	PersistentEntity,
 	Transform,
 	Visibility,

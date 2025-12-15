@@ -1,12 +1,7 @@
 use super::movement_config::MovementConfig;
 use bevy::prelude::*;
 use common::{
-	components::{
-		collider_relationship::InteractionTarget,
-		flip::FlipHorizontally,
-		ground_offset::GroundOffset,
-		is_blocker::Blocker,
-	},
+	components::{flip::FlipHorizontally, ground_offset::GroundOffset, is_blocker::Blocker},
 	errors::Unreachable,
 	tools::{Units, UnitsPerSecond},
 	traits::{
@@ -21,7 +16,6 @@ use std::sync::LazyLock;
 
 #[derive(Component, Default, Debug, PartialEq, Clone)]
 #[require(
-	InteractionTarget,
 	MovementConfig = PLAYER_RUN.clone(),
 	Name = "Player",
 	FlipHorizontally = FlipHorizontally::on("metarig"),

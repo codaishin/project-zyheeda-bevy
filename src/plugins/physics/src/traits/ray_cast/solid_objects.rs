@@ -1,4 +1,7 @@
-use crate::traits::ray_cast::RayCaster;
+use crate::{
+	components::interaction_target::ColliderOfInteractionTarget,
+	traits::ray_cast::RayCaster,
+};
 use bevy_rapier3d::prelude::{Real, *};
 use common::traits::handles_physics::{Raycast, RaycastHit, SolidObjects};
 
@@ -26,7 +29,7 @@ impl Raycast<SolidObjects> for RayCaster<'_, '_> {
 		let (entity, time_of_impact) =
 			ray_caster.cast_ray(ray.origin, *ray.direction, Real::MAX, true, filter)?;
 
-		let Ok(sub_collider) = self.interaction_colliders.get(entity) else {
+		let Ok(ColliderOfInteractionTarget(target)) = self.interaction_colliders.get(entity) else {
 			return Some(RaycastHit {
 				entity,
 				time_of_impact,
@@ -34,7 +37,7 @@ impl Raycast<SolidObjects> for RayCaster<'_, '_> {
 		};
 
 		Some(RaycastHit {
-			entity: sub_collider.target(),
+			entity: *target,
 			time_of_impact,
 		})
 	}
@@ -43,17 +46,17 @@ impl Raycast<SolidObjects> for RayCaster<'_, '_> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{PhysicsPlugin, components::no_hover::NoMouseHover};
+	use crate::{
+		PhysicsPlugin,
+		components::{interaction_target::ColliderOfInteractionTarget, no_hover::NoMouseHover},
+	};
 	use bevy::{
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
 		render::mesh::MeshPlugin,
 		scene::ScenePlugin,
 	};
-	use common::{
-		components::collider_relationship::ColliderOfInteractionTarget,
-		traits::handles_physics::RaycastSystemParam,
-	};
+	use common::traits::handles_physics::RaycastSystemParam;
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -107,7 +110,7 @@ mod tests {
 			RigidBody::Fixed,
 			Transform::default(),
 			Collider::ball(0.5),
-			ColliderOfInteractionTarget::from_raw(root),
+			ColliderOfInteractionTarget(root),
 		));
 		app.update();
 

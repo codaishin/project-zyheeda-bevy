@@ -1,7 +1,9 @@
-use crate::traits::{FromCollisionEvent, Track, TrackState};
+use crate::{
+	components::interaction_target::ColliderOfInteractionTarget,
+	traits::{FromCollisionEvent, Track, TrackState},
+};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::CollisionEvent;
-use common::components::collider_relationship::ColliderOfInteractionTarget;
 
 pub(crate) fn map_collision_events_to<TEvent, TEventTracker>(
 	mut collisions: EventReader<CollisionEvent>,
@@ -13,7 +15,7 @@ pub(crate) fn map_collision_events_to<TEvent, TEventTracker>(
 	TEventTracker: Resource + Track<TEvent>,
 {
 	let get_target = |entity| match colliders.get(entity) {
-		Ok(collider) => collider.target(),
+		Ok(ColliderOfInteractionTarget(target)) => *target,
 		Err(_) => entity,
 	};
 
@@ -115,15 +117,9 @@ mod tests {
 		let mut app = setup::<_Event, true>();
 
 		let a = app.world_mut().spawn_empty().id();
-		let collider_a = app
-			.world_mut()
-			.spawn(ColliderOfInteractionTarget::from_raw(a))
-			.id();
+		let collider_a = app.world_mut().spawn(ColliderOfInteractionTarget(a)).id();
 		let b = app.world_mut().spawn_empty().id();
-		let collider_b = app
-			.world_mut()
-			.spawn(ColliderOfInteractionTarget::from_raw(b))
-			.id();
+		let collider_b = app.world_mut().spawn(ColliderOfInteractionTarget(b)).id();
 
 		app.world_mut().send_event(CollisionEvent::Started(
 			collider_a,
