@@ -3,7 +3,7 @@ use crate::components::{blockable::Blockable, interaction_target::ColliderOfInte
 use bevy::prelude::*;
 use common::{
 	components::is_blocker::{Blocker, IsBlocker},
-	traits::{cast_ray::TimeOfImpact, handles_physics::PhysicalObject},
+	traits::handles_physics::{PhysicalObject, TimeOfImpact},
 };
 use std::collections::{HashMap, HashSet};
 
@@ -73,7 +73,6 @@ mod tests {
 	use super::*;
 	use crate::events::RayCastInfo;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::traits::cast_ray::TimeOfImpact;
 
 	fn setup() -> App {
 		App::new()

@@ -25,7 +25,8 @@ use bevy_rapier3d::{
 	geometry::CollisionGroups,
 	pipeline::{QueryFilter, QueryFilterFlags},
 };
-use common::traits::cast_ray::TimeOfImpact;
+
+use common::traits::handles_physics::TimeOfImpact;
 #[cfg(test)]
 use testing::ApproxEqual;
 

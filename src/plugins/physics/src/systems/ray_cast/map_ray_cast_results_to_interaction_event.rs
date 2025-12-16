@@ -42,7 +42,7 @@ mod tests {
 	use super::*;
 	use crate::events::RayCastInfo;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::traits::cast_ray::TimeOfImpact;
+	use common::traits::handles_physics::TimeOfImpact;
 
 	fn setup() -> App {
 		App::new()

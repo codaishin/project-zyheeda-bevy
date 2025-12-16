@@ -3,9 +3,13 @@ use bevy::{
 	ecs::system::SystemParam,
 	math::{Ray3d, Vec3},
 };
-use common::traits::{
-	cast_ray::TimeOfImpact,
-	handles_physics::{Ground, MouseHover, MouseHoversOver, Raycast, SolidObjects},
+use common::traits::handles_physics::{
+	Ground,
+	MouseHover,
+	MouseHoversOver,
+	Raycast,
+	SolidObjects,
+	TimeOfImpact,
 };
 
 impl<T> Raycast<MouseHover> for RayCaster<'_, '_, T>
@@ -68,7 +72,7 @@ mod tests {
 		},
 		prelude::*,
 	};
-	use common::traits::{cast_ray::TimeOfImpact, handles_physics::RaycastHit};
+	use common::traits::handles_physics::RaycastHit;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::collections::HashMap;

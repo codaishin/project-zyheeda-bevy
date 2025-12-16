@@ -5,10 +5,7 @@ use crate::{
 	components::is_blocker::Blocker,
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
 	tools::{Done, Units, speed::Speed},
-	traits::{
-		accessors::get::{GetProperty, Property},
-		cast_ray::TimeOfImpact,
-	},
+	traits::accessors::get::{GetProperty, Property},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
 use serde::{Deserialize, Serialize};
@@ -166,6 +163,9 @@ pub struct Ground {
 impl RaycastResult for Ground {
 	type TResult = Option<TimeOfImpact>;
 }
+
+#[derive(Debug, Default, PartialEq, PartialOrd, Clone, Copy)]
+pub struct TimeOfImpact(pub f32);
 
 #[derive(Debug, PartialEq)]
 pub struct SolidObjects {

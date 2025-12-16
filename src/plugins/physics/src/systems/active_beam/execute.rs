@@ -5,7 +5,10 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	tools::Units,
-	traits::{accessors::get::TryApplyOn, cast_ray::TimeOfImpact, handles_physics::PhysicalObject},
+	traits::{
+		accessors::get::TryApplyOn,
+		handles_physics::{PhysicalObject, TimeOfImpact},
+	},
 	zyheeda_commands::ZyheedaCommands,
 };
 
@@ -84,10 +87,7 @@ mod tests {
 		components::RayCasterArgs,
 		events::{InteractionEvent, Ray},
 	};
-	use common::traits::{
-		cast_ray::TimeOfImpact,
-		register_persistent_entities::RegisterPersistentEntities,
-	};
+	use common::traits::register_persistent_entities::RegisterPersistentEntities;
 	use testing::{SingleThreadedApp, assert_eq_approx};
 
 	fn setup() -> App {
