@@ -1,7 +1,10 @@
 use crate::traits::ray_cast::RayCaster;
-use common::traits::{
-	cast_ray::TimeOfImpact,
-	handles_physics::{Ground, MouseGroundHover, MouseGroundPoint, Raycast},
+use common::traits::handles_physics::{
+	Ground,
+	MouseGroundHover,
+	MouseGroundPoint,
+	Raycast,
+	TimeOfImpact,
 };
 
 impl Raycast<MouseGroundHover> for RayCaster<'_, '_> {

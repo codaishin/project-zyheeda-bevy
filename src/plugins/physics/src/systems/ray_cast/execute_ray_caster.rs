@@ -1,13 +1,11 @@
-use crate::{components::RayCasterArgs, events::RayCastInfo};
+use crate::{
+	components::RayCasterArgs,
+	events::RayCastInfo,
+	traits::cast_ray::{CastRayContinuouslySorted, GetContinuousSortedRayCaster},
+};
 use bevy::prelude::*;
 use bevy_rapier3d::plugin::ReadRapierContext;
-use common::{
-	traits::{
-		accessors::get::TryApplyOn,
-		cast_ray::{CastRayContinuouslySorted, GetContinuousSortedRayCaster},
-	},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -61,7 +59,7 @@ mod tests {
 	use crate::events::RayCastInfo;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use bevy_rapier3d::math::Real;
-	use common::traits::cast_ray::TimeOfImpact;
+	use common::traits::handles_physics::TimeOfImpact;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use testing::{NestedMocks, SingleThreadedApp};

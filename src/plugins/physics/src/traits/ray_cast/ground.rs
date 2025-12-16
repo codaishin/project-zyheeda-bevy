@@ -1,9 +1,6 @@
 use crate::traits::ray_cast::RayCaster;
 use bevy::prelude::*;
-use common::traits::{
-	cast_ray::TimeOfImpact,
-	handles_physics::{Ground, Raycast},
-};
+use common::traits::handles_physics::{Ground, Raycast, TimeOfImpact};
 
 const HORIZONTAL_PLANE: InfinitePlane3d = InfinitePlane3d { normal: Dir3::Y };
 

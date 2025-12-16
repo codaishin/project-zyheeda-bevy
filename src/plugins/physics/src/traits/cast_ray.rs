@@ -2,19 +2,8 @@ pub mod read_rapier_context;
 pub mod system_input;
 
 use bevy::ecs::entity::Entity;
-use bevy_rapier3d::{math::Real, prelude::RayIntersection};
-
-#[derive(Debug, Default, PartialEq, PartialOrd, Clone, Copy)]
-pub struct TimeOfImpact(pub Real);
-
-pub trait GetRayCaster<TRayData> {
-	type TError;
-	type TRayCaster<'a>: CastRay<TRayData>
-	where
-		Self: 'a;
-
-	fn get_ray_caster(&self) -> Result<Self::TRayCaster<'_>, Self::TError>;
-}
+use bevy_rapier3d::prelude::RayIntersection;
+use common::traits::handles_physics::TimeOfImpact;
 
 pub trait GetContinuousSortedRayCaster<TRayData> {
 	type TError;
@@ -23,10 +12,6 @@ pub trait GetContinuousSortedRayCaster<TRayData> {
 		Self: 'a;
 
 	fn get_continuous_sorted_ray_caster(&self) -> Result<Self::TRayCaster<'_>, Self::TError>;
-}
-
-pub trait CastRay<TRayData> {
-	fn cast_ray(&self, ray_data: &TRayData) -> Option<(Entity, TimeOfImpact)>;
 }
 
 pub trait CastRayContinuously<TRayData> {
