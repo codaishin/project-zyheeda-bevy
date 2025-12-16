@@ -41,17 +41,20 @@ impl Prefab<()> for ColliderShape {
 	) -> Result<(), Self::TError> {
 		match self.0 {
 			Shape::Sphere { radius } => {
-				entity.try_insert_if_new(RapierCollider::ball(radius));
+				entity.try_insert_if_new(RapierCollider::ball(*radius));
 			}
 			Shape::Cuboid {
 				half_x,
 				half_y,
 				half_z,
 			} => {
-				entity.try_insert_if_new(RapierCollider::cuboid(half_x, half_y, half_z));
+				entity.try_insert_if_new(RapierCollider::cuboid(*half_x, *half_y, *half_z));
+			}
+			Shape::Cylinder { half_y, radius } => {
+				entity.try_insert_if_new(RapierCollider::cylinder(*half_y, *radius));
 			}
 			Shape::Capsule { half_y, radius } => {
-				entity.try_insert_if_new(RapierCollider::capsule_y(half_y, radius));
+				entity.try_insert_if_new(RapierCollider::capsule_y(*half_y, *radius));
 			}
 		}
 

@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use common::{
 	errors::Unreachable,
+	tools::Units,
 	traits::{
 		handles_physics::colliders::{Blocker, Collider, ColliderType, HandlesColliders, Shape},
 		load_asset::LoadAsset,
@@ -24,9 +25,9 @@ where
 		_: &mut impl LoadAsset,
 	) -> Result<(), Self::TError> {
 		let shape = Shape::Cuboid {
-			half_x: 0.5,
-			half_y: 0.5,
-			half_z: 0.5,
+			half_x: Units::from(0.5),
+			half_y: Units::from(0.5),
+			half_z: Units::from(0.5),
 		};
 		let collider = Collider::from_shape(shape)
 			.with_collider_type(ColliderType::Terrain)

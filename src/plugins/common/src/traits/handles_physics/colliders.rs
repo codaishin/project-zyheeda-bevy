@@ -1,4 +1,7 @@
-use crate::traits::iteration::{Iter, IterFinite};
+use crate::{
+	tools::Units,
+	traits::iteration::{Iter, IterFinite},
+};
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -7,7 +10,7 @@ pub trait HandlesColliders {
 	type TCollider: Component + From<Collider>;
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Collider {
 	pub shape: Shape,
 	pub collider_type: ColliderType,
@@ -64,23 +67,31 @@ impl From<Shape> for Collider {
 /// - `x`: width
 /// - `y`: height
 /// - `z`: depth
-#[derive(Debug, PartialEq, Clone, Copy)]
+///
+/// All fields that apply to the same geometric dimension are to
+/// be interpreted additively in order to prevent illogical value combinations.
+/// For instance a capsule collider's full height is composed of `2 * half_y + 2 * radius`.
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum Shape {
 	Sphere {
-		radius: f32,
+		radius: Units,
 	},
 	Cuboid {
-		half_x: f32,
-		half_y: f32,
-		half_z: f32,
+		half_x: Units,
+		half_y: Units,
+		half_z: Units,
 	},
 	Capsule {
-		half_y: f32,
-		radius: f32,
+		half_y: Units,
+		radius: Units,
+	},
+	Cylinder {
+		half_y: Units,
+		radius: Units,
 	},
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum ColliderType {
 	Agent,
 	Terrain,

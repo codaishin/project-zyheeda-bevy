@@ -104,7 +104,7 @@ where
 	) -> Result<(), Unreachable> {
 		let child_transform = Transform::from_translation(Self::GROUND_OFFSET);
 		let shape = Shape::Sphere {
-			radius: Self::OUTER_RADIUS,
+			radius: Units::from(Self::OUTER_RADIUS),
 		};
 		let collider = Collider::from_shape(shape)
 			.with_center_offset(Self::GROUND_OFFSET)
