@@ -1,10 +1,9 @@
 use crate::{
-	components::blockable::Blockable,
+	components::{blockable::Blockable, blocker_types::BlockerTypes},
 	events::{Collision, InteractionEvent},
 };
 use bevy::prelude::*;
 use common::{
-	components::is_blocker::IsBlocker,
 	traits::{accessors::get::TryApplyOn, handles_physics::PhysicalObject::Fragile},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -13,7 +12,7 @@ pub(crate) fn apply_fragile_blocks(
 	mut commands: ZyheedaCommands,
 	mut interaction_event: EventReader<InteractionEvent>,
 	fragiles: Query<(Entity, &Blockable)>,
-	blockers: Query<&IsBlocker>,
+	blockers: Query<&BlockerTypes>,
 ) {
 	for (a, b) in interaction_event.read().filter_map(collision_started) {
 		if let Some(fragile) = fragile_blocked_entity(a, b, &fragiles, &blockers) {
@@ -38,9 +37,9 @@ fn fragile_blocked_entity(
 	fragile: &Entity,
 	blocker: &Entity,
 	fragiles: &Query<(Entity, &Blockable)>,
-	blockers: &Query<&IsBlocker>,
+	blockers: &Query<&BlockerTypes>,
 ) -> Option<Entity> {
-	let IsBlocker(blocker) = blockers.get(*blocker).ok()?;
+	let BlockerTypes(blocker) = blockers.get(*blocker).ok()?;
 	let Ok((entity, Blockable(Fragile { destroyed_by }))) = fragiles.get(*fragile) else {
 		return None;
 	};
@@ -51,7 +50,7 @@ fn fragile_blocked_entity(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{components::is_blocker::Blocker, traits::handles_physics::PhysicalObject::Beam};
+	use common::traits::handles_physics::{PhysicalObject::Beam, colliders::Blocker};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -74,7 +73,7 @@ mod tests {
 			.id();
 		let blocker = app
 			.world_mut()
-			.spawn(IsBlocker::from([Blocker::Physical]))
+			.spawn(BlockerTypes::from([Blocker::Physical]))
 			.id();
 
 		app.update();
@@ -100,7 +99,7 @@ mod tests {
 			.id();
 		let blocker = app
 			.world_mut()
-			.spawn(IsBlocker::from([Blocker::Physical]))
+			.spawn(BlockerTypes::from([Blocker::Physical]))
 			.id();
 
 		app.update();
@@ -125,7 +124,7 @@ mod tests {
 			.id();
 		let blocker = app
 			.world_mut()
-			.spawn(IsBlocker::from([Blocker::Force]))
+			.spawn(BlockerTypes::from([Blocker::Force]))
 			.id();
 
 		app.update();
@@ -150,7 +149,7 @@ mod tests {
 			.id();
 		let blocker = app
 			.world_mut()
-			.spawn(IsBlocker::from([Blocker::Physical]))
+			.spawn(BlockerTypes::from([Blocker::Physical]))
 			.id();
 
 		app.update();
@@ -175,7 +174,7 @@ mod tests {
 			.id();
 		let blocker = app
 			.world_mut()
-			.spawn(IsBlocker::from([Blocker::Force]))
+			.spawn(BlockerTypes::from([Blocker::Force]))
 			.id();
 
 		app.update();

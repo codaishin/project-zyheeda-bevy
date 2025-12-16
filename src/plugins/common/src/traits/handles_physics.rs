@@ -2,10 +2,12 @@ pub mod colliders;
 
 use crate::{
 	attributes::{effect_target::EffectTarget, health::Health},
-	components::is_blocker::Blocker,
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
 	tools::{Done, Units, speed::Speed},
-	traits::accessors::get::{GetProperty, Property},
+	traits::{
+		accessors::get::{GetProperty, Property},
+		handles_physics::colliders::Blocker,
+	},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
 use serde::{Deserialize, Serialize};

@@ -6,19 +6,22 @@ use crate::{
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Collider;
 use common::{
-	components::{asset_model::AssetModel, is_blocker::Blocker},
+	components::asset_model::AssetModel,
 	tools::Units,
-	traits::handles_skill_behaviors::{
-		Contact,
-		ContactShape,
-		HandlesSkillBehaviors,
-		Motion,
-		Projection,
-		ProjectionOffset,
-		ProjectionShape,
-		SkillEntities,
-		SkillSpawner,
-		SkillTarget,
+	traits::{
+		handles_physics::colliders::Blocker,
+		handles_skill_behaviors::{
+			Contact,
+			ContactShape,
+			HandlesSkillBehaviors,
+			Motion,
+			Projection,
+			ProjectionOffset,
+			ProjectionShape,
+			SkillEntities,
+			SkillSpawner,
+			SkillTarget,
+		},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };

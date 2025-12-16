@@ -1,7 +1,9 @@
-use crate::components::colliders::{ColliderDefinition, Colliders};
+use crate::components::{
+	blocker_types::BlockerTypes,
+	colliders::{ColliderDefinition, Colliders},
+};
 use bevy::prelude::*;
 use common::{
-	components::is_blocker::IsBlocker,
 	traits::{accessors::get::TryApplyOn, handles_physics::colliders::Collider},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -16,7 +18,7 @@ impl Colliders {
 		for (colliders, ColliderDefinition(Collider { blocker_types, .. })) in &colliders {
 			for entity in colliders.iter() {
 				commands.try_apply_on(&entity, |mut e| {
-					e.try_insert(IsBlocker(blocker_types.clone()));
+					e.try_insert(BlockerTypes(blocker_types.clone()));
 				});
 			}
 		}
@@ -27,10 +29,7 @@ impl Colliders {
 mod tests {
 	use super::*;
 	use crate::components::colliders::{ColliderDefinition, ColliderOf};
-	use common::{
-		components::is_blocker::{Blocker, IsBlocker},
-		traits::handles_physics::colliders::{Collider, Shape},
-	};
+	use common::traits::handles_physics::colliders::{Blocker, Collider, Shape};
 	use std::collections::HashSet;
 	use testing::SingleThreadedApp;
 
@@ -59,8 +58,8 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&IsBlocker(blockers)),
-			app.world().entity(collider).get::<IsBlocker>(),
+			Some(&BlockerTypes(blockers)),
+			app.world().entity(collider).get::<BlockerTypes>(),
 		);
 	}
 
@@ -77,10 +76,12 @@ mod tests {
 		let collider = app.world_mut().spawn(ColliderOf(root)).id();
 
 		app.update();
-		app.world_mut().entity_mut(collider).remove::<IsBlocker>();
+		app.world_mut()
+			.entity_mut(collider)
+			.remove::<BlockerTypes>();
 		app.update();
 
-		assert_eq!(None, app.world().entity(collider).get::<IsBlocker>());
+		assert_eq!(None, app.world().entity(collider).get::<BlockerTypes>());
 	}
 
 	#[test]
@@ -96,7 +97,9 @@ mod tests {
 		let collider = app.world_mut().spawn(ColliderOf(root)).id();
 
 		app.update();
-		app.world_mut().entity_mut(collider).remove::<IsBlocker>();
+		app.world_mut()
+			.entity_mut(collider)
+			.remove::<BlockerTypes>();
 		app.world_mut()
 			.entity_mut(root)
 			.get_mut::<Colliders>()
@@ -104,8 +107,8 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&IsBlocker(blockers)),
-			app.world().entity(collider).get::<IsBlocker>()
+			Some(&BlockerTypes(blockers)),
+			app.world().entity(collider).get::<BlockerTypes>()
 		);
 	}
 
@@ -122,7 +125,9 @@ mod tests {
 		let collider = app.world_mut().spawn(ColliderOf(root)).id();
 
 		app.update();
-		app.world_mut().entity_mut(collider).remove::<IsBlocker>();
+		app.world_mut()
+			.entity_mut(collider)
+			.remove::<BlockerTypes>();
 		app.world_mut()
 			.entity_mut(root)
 			.get_mut::<ColliderDefinition>()
@@ -130,8 +135,8 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&IsBlocker(blockers)),
-			app.world().entity(collider).get::<IsBlocker>()
+			Some(&BlockerTypes(blockers)),
+			app.world().entity(collider).get::<BlockerTypes>()
 		);
 	}
 }

@@ -9,8 +9,11 @@ use crate::{
 	traits::skill_builder::{SkillBuilder, SkillShape},
 };
 use common::{
-	components::{is_blocker::Blocker, persistent_entity::PersistentEntity},
-	traits::handles_skill_behaviors::{HandlesSkillBehaviors, SkillSpawner},
+	components::persistent_entity::PersistentEntity,
+	traits::{
+		handles_physics::colliders::Blocker,
+		handles_skill_behaviors::{HandlesSkillBehaviors, SkillSpawner},
+	},
 	zyheeda_commands::ZyheedaCommands,
 };
 use serde::{Deserialize, Serialize};

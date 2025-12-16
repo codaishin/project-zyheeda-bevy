@@ -6,13 +6,7 @@ pub(crate) mod void_sphere;
 
 use crate::components::{enemy::attack_config::EnemyAttackConfig, movement_config::MovementConfig};
 use bevy::prelude::*;
-use common::{
-	components::{
-		is_blocker::{Blocker, IsBlocker},
-		persistent_entity::PersistentEntity,
-	},
-	tools::Units,
-};
+use common::{components::persistent_entity::PersistentEntity, tools::Units};
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
@@ -21,9 +15,8 @@ use serde::{Deserialize, Serialize};
 	PersistentEntity,
 	Transform,
 	Visibility,
-	IsBlocker = [Blocker::Character],
 	MovementConfig,
-	EnemyAttackConfig,
+	EnemyAttackConfig
 )]
 pub struct Enemy {
 	pub(crate) aggro_range: Units,

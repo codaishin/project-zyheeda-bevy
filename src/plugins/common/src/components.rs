@@ -5,7 +5,6 @@ pub mod flip;
 pub mod ground_offset;
 pub mod immobilized;
 pub mod insert_asset;
-pub mod is_blocker;
 pub mod lifetime;
 pub mod persistent_entity;
 pub mod protected;
