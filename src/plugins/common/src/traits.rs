@@ -30,7 +30,6 @@ pub mod handles_player;
 pub mod handles_saving;
 pub mod handles_skill_behaviors;
 pub mod handles_skill_spawning;
-pub mod has_collisions;
 pub mod init_resource;
 pub mod insert;
 pub mod iter_descendants_conditional;

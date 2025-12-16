@@ -1,11 +1,10 @@
 use crate::{
 	components::{asset_model::AssetModel, persistent_entity::PersistentEntity},
 	tools::{Index, Units, UnitsPerSecond, action_key::slot::SlotKey},
-	traits::handles_physics::colliders::Blocker,
+	traits::handles_physics::colliders::{Blocker, Shape},
 	zyheeda_commands::ZyheedaCommands,
 };
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, ops::Deref};
 
@@ -71,8 +70,8 @@ pub enum ContactShape {
 	},
 	Custom {
 		model: AssetModel,
-		collider: Collider,
-		scale: Vec3,
+		model_scale: Vec3,
+		collider: Shape,
 		destroyed_by: HashSet<Blocker>,
 	},
 	Beam {
@@ -89,8 +88,8 @@ pub enum ProjectionShape {
 	},
 	Custom {
 		model: AssetModel,
-		collider: Collider,
-		scale: Vec3,
+		model_scale: Vec3,
+		collider: Shape,
 	},
 	Beam {
 		radius: Units,

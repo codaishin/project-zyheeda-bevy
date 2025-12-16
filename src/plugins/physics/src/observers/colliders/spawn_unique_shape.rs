@@ -76,7 +76,10 @@ fn spawn_collider_shape(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::handles_physics::colliders::{Collider, Shape};
+	use common::{
+		tools::Units,
+		traits::handles_physics::colliders::{Collider, Shape},
+	};
 	use std::f32::consts::PI;
 	use test_case::test_case;
 	use testing::{SingleThreadedApp, assert_count, get_children};
@@ -92,7 +95,9 @@ mod tests {
 	#[test]
 	fn spawn_as_child() {
 		let mut app = setup();
-		let shape = Shape::Sphere { radius: 42. };
+		let shape = Shape::Sphere {
+			radius: Units::from(42.),
+		};
 
 		let entity = app
 			.world_mut()
@@ -106,7 +111,9 @@ mod tests {
 	#[test]
 	fn spawn_with_offset() {
 		let mut app = setup();
-		let shape = Shape::Sphere { radius: 42. };
+		let shape = Shape::Sphere {
+			radius: Units::from(42.),
+		};
 		let offset = Vec3::ONE;
 
 		let entity = app
@@ -126,7 +133,9 @@ mod tests {
 	#[test]
 	fn spawn_with_rotation() {
 		let mut app = setup();
-		let shape = Shape::Sphere { radius: 42. };
+		let shape = Shape::Sphere {
+			radius: Units::from(42.),
+		};
 		let rotation = Quat::from_rotation_x(PI);
 
 		let entity = app
@@ -152,7 +161,9 @@ mod tests {
 		gravity_scale: Option<GravityScale>,
 	) {
 		let mut app = setup();
-		let shape = Shape::Sphere { radius: 42. };
+		let shape = Shape::Sphere {
+			radius: Units::from(42.),
+		};
 
 		let entity = app.world_mut().spawn(ColliderDefinition(
 			Collider::from_shape(shape).with_collider_type(collider_type),
@@ -175,7 +186,9 @@ mod tests {
 		no_mouse_hover: Option<NoMouseHover>,
 	) {
 		let mut app = setup();
-		let shape = Shape::Sphere { radius: 42. };
+		let shape = Shape::Sphere {
+			radius: Units::from(42.),
+		};
 
 		let entity = app
 			.world_mut()
@@ -191,12 +204,14 @@ mod tests {
 	#[test]
 	fn reinsert_collider() {
 		let mut app = setup();
-		let shape = Shape::Sphere { radius: 42. };
+		let shape = Shape::Sphere {
+			radius: Units::from(42.),
+		};
 
 		let entity = app
 			.world_mut()
 			.spawn(ColliderDefinition(Collider::from_shape(Shape::Sphere {
-				radius: 11.,
+				radius: Units::from(11.),
 			})))
 			.insert(ColliderDefinition(Collider::from(shape)))
 			.id();

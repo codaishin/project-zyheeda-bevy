@@ -4,12 +4,11 @@ use crate::{
 	traits::skill_builder::{SkillLifetime, SpawnShape},
 };
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::Collider;
 use common::{
 	components::asset_model::AssetModel,
 	tools::Units,
 	traits::{
-		handles_physics::colliders::Blocker,
+		handles_physics::colliders::{Blocker, Shape},
 		handles_skill_behaviors::{
 			Contact,
 			ContactShape,
@@ -49,8 +48,12 @@ impl SpawnShape for SpawnShield {
 			Contact {
 				shape: ContactShape::Custom {
 					model: AssetModel::path("models/shield.glb").flipped_on("Shield"),
-					collider: Collider::cuboid(0.5, 0.5, 0.05),
-					scale: Vec3::splat(1.),
+					collider: Shape::Cuboid {
+						half_x: Units::from(0.5),
+						half_y: Units::from(0.5),
+						half_z: Units::from(0.05),
+					},
+					model_scale: Vec3::splat(1.),
 					destroyed_by: Blocker::none(),
 				},
 				motion: Motion::HeldBy {

@@ -61,8 +61,8 @@ where
 		_: &mut impl LoadAsset,
 	) -> Result<(), Unreachable> {
 		let shape = Shape::Capsule {
-			half_y: **PLAYER_COLLIDER_HEIGHT,
-			radius: **PLAYER_COLLIDER_RADIUS,
+			half_y: *PLAYER_COLLIDER_HEIGHT,
+			radius: *PLAYER_COLLIDER_RADIUS,
 		};
 		let collider = Collider::from_shape(shape)
 			.with_center_offset(GROUND_OFFSET)

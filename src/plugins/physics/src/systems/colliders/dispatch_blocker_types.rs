@@ -29,11 +29,16 @@ impl Colliders {
 mod tests {
 	use super::*;
 	use crate::components::colliders::{ColliderDefinition, ColliderOf};
-	use common::traits::handles_physics::colliders::{Blocker, Collider, Shape};
-	use std::collections::HashSet;
+	use common::{
+		tools::Units,
+		traits::handles_physics::colliders::{Blocker, Collider, Shape},
+	};
+	use std::{collections::HashSet, sync::LazyLock};
 	use testing::SingleThreadedApp;
 
-	const SHAPE: Shape = Shape::Sphere { radius: 42. };
+	static SHAPE: LazyLock<Shape> = LazyLock::new(|| Shape::Sphere {
+		radius: Units::from(42.),
+	});
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -50,7 +55,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn(ColliderDefinition(
-				Collider::from_shape(SHAPE).with_blocker_types(blockers.clone()),
+				Collider::from_shape(*SHAPE).with_blocker_types(blockers.clone()),
 			))
 			.id();
 		let collider = app.world_mut().spawn(ColliderOf(root)).id();
@@ -70,7 +75,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn(ColliderDefinition(
-				Collider::from_shape(SHAPE).with_blocker_types(blockers.clone()),
+				Collider::from_shape(*SHAPE).with_blocker_types(blockers.clone()),
 			))
 			.id();
 		let collider = app.world_mut().spawn(ColliderOf(root)).id();
@@ -91,7 +96,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn(ColliderDefinition(
-				Collider::from_shape(SHAPE).with_blocker_types(blockers.clone()),
+				Collider::from_shape(*SHAPE).with_blocker_types(blockers.clone()),
 			))
 			.id();
 		let collider = app.world_mut().spawn(ColliderOf(root)).id();
@@ -119,7 +124,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn(ColliderDefinition(
-				Collider::from_shape(SHAPE).with_blocker_types(blockers.clone()),
+				Collider::from_shape(*SHAPE).with_blocker_types(blockers.clone()),
 			))
 			.id();
 		let collider = app.world_mut().spawn(ColliderOf(root)).id();
