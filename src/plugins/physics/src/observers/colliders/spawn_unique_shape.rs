@@ -1,4 +1,5 @@
 use crate::components::{
+	blocker_types::BlockerTypes,
 	colliders::{ColliderDefinition, ColliderOf, ColliderShape, Colliders},
 	no_hover::NoMouseHover,
 };
@@ -23,7 +24,7 @@ impl ColliderShape {
 
 		despawn_current_collider_shapes(&mut commands, colliders);
 		insert_rigid_body(&mut commands, entity, definition);
-		spawn_collider_shape(&mut commands, entity, definition);
+		apply_definition(&mut commands, entity, definition);
 	}
 }
 
@@ -54,11 +55,15 @@ fn insert_rigid_body(
 	});
 }
 
-fn spawn_collider_shape(
+fn apply_definition(
 	commands: &mut ZyheedaCommands,
 	entity: Entity,
 	ColliderDefinition(definition): &ColliderDefinition,
 ) {
+	commands.try_apply_on(&entity, |mut e| {
+		e.try_insert(BlockerTypes(definition.blocker_types.clone()));
+	});
+
 	let mut entity = commands.spawn((
 		ColliderOf(entity),
 		ChildOf(entity),
@@ -78,7 +83,7 @@ mod tests {
 	use super::*;
 	use common::{
 		tools::Units,
-		traits::handles_physics::colliders::{Collider, Shape},
+		traits::handles_physics::colliders::{Blocker, Collider, Shape},
 	};
 	use std::f32::consts::PI;
 	use test_case::test_case;
@@ -161,20 +166,29 @@ mod tests {
 		gravity_scale: Option<GravityScale>,
 	) {
 		let mut app = setup();
+		let blocks = [Blocker::Force, Blocker::Physical];
 		let shape = Shape::Sphere {
 			radius: Units::from(42.),
 		};
 
 		let entity = app.world_mut().spawn(ColliderDefinition(
-			Collider::from_shape(shape).with_collider_type(collider_type),
+			Collider::from_shape(shape)
+				.with_collider_type(collider_type)
+				.with_blocker_types(blocks),
 		));
 
 		assert_eq!(
-			(Some(&rigid_body), locked_axes, gravity_scale),
+			(
+				Some(&rigid_body),
+				locked_axes,
+				gravity_scale,
+				Some(&BlockerTypes::from(blocks))
+			),
 			(
 				entity.get::<RigidBody>(),
 				entity.get::<LockedAxes>().copied(),
 				entity.get::<GravityScale>().copied(),
+				entity.get::<BlockerTypes>(),
 			)
 		);
 	}
