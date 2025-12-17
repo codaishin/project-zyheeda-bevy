@@ -24,7 +24,7 @@ use common::{
 		prefab::PrefabEntityCommands,
 	},
 };
-use std::{f32::consts::PI, fmt::Display};
+use std::{f32::consts::PI, fmt::Display, sync::LazyLock};
 
 trait SkillPrefab {
 	type TExtra;
@@ -49,6 +49,7 @@ const HALF_FORWARD: Transform = Transform::from_translation(Vec3 {
 	y: 0.,
 	z: -0.5,
 });
+static HOLLOW_OUTER_THICKNESS: LazyLock<Units> = LazyLock::new(|| Units::from(0.3));
 
 impl SkillPrefab for ContactShape {
 	type TExtra = Vec3;
@@ -74,7 +75,9 @@ impl SkillPrefab for ContactShape {
 					match hollow_collider {
 						true => (
 							ColliderShape(Shape::Sphere { radius }),
-							Some(Hollow),
+							Some(Hollow {
+								radius: Units::from(*radius - **HOLLOW_OUTER_THICKNESS),
+							}),
 							Transform::default(),
 						),
 						false => (
