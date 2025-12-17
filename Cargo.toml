@@ -9,7 +9,6 @@ edition = "2024"
 # external
 bevy = { version = "0.16.0", features = ["serialize"] }
 bevy-inspector-egui = "0.31.0"
-bevy_rapier3d = { version = "0.30.0", features = ["serde-serialize"] }
 fluent = "0.16.1"
 fluent-syntax = "0.11.1"
 mockall = "=0.13.1"
@@ -47,7 +46,6 @@ edition.workspace = true
 # external
 bevy.workspace = true
 bevy-inspector-egui.workspace = true
-bevy_rapier3d.workspace = true
 fluent.workspace = true
 fluent-syntax.workspace = true
 serde.workspace = true

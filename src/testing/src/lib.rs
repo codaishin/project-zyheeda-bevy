@@ -2,7 +2,6 @@ use bevy::{
 	ecs::schedule::{ExecutorKind, ScheduleLabel},
 	prelude::*,
 };
-use bevy_rapier3d::prelude::Velocity;
 use std::{
 	any::{Any, TypeId, type_name},
 	fmt::Debug,
@@ -45,13 +44,6 @@ impl ApproxEqual<f32> for Transform {
 		self.translation.approx_equal(&other.translation, tolerance)
 			&& self.scale.approx_equal(&other.scale, tolerance)
 			&& self.rotation.approx_equal(&other.rotation, tolerance)
-	}
-}
-
-impl ApproxEqual<f32> for Velocity {
-	fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
-		self.linvel.approx_equal(&other.linvel, tolerance)
-			&& self.angvel.approx_equal(&other.angvel, tolerance)
 	}
 }
 

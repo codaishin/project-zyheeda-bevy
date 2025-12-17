@@ -1,12 +1,14 @@
-pub mod events;
-
 mod app;
 mod components;
+mod events;
 mod observers;
 mod resources;
 mod system_params;
 mod systems;
 mod traits;
+
+#[cfg(debug_assertions)]
+mod debug;
 
 use crate::{
 	app::add_physics::AddPhysics,
@@ -32,7 +34,10 @@ use crate::{
 	traits::ray_cast::RayCaster,
 };
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::Velocity;
+use bevy_rapier3d::{
+	plugin::{NoUserData, RapierPhysicsPlugin, TimestepMode},
+	prelude::Velocity,
+};
 use common::{
 	components::{child_of_persistent::ChildOfPersistent, persistent_entity::PersistentEntity},
 	systems::log::OnError,
@@ -70,7 +75,7 @@ use resources::{
 	track_interaction_duplicates::TrackInteractionDuplicates,
 	track_ray_interactions::TrackRayInteractions,
 };
-use std::marker::PhantomData;
+use std::{marker::PhantomData, time::Duration};
 use systems::{
 	interactions::{
 		apply_fragile_blocks::apply_fragile_blocks,
@@ -86,14 +91,20 @@ use systems::{
 };
 use traits::act_on::ActOn;
 
-pub struct PhysicsPlugin<TDependencies>(PhantomData<TDependencies>);
+pub struct PhysicsPlugin<TDependencies> {
+	target_fps: u32,
+	_p: PhantomData<TDependencies>,
+}
 
 impl<TSaveGame> PhysicsPlugin<TSaveGame>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
 {
-	pub fn from_plugin(_: &TSaveGame) -> Self {
-		Self(PhantomData)
+	pub fn new(target_fps: u32, _: &TSaveGame) -> Self {
+		Self {
+			target_fps,
+			_p: PhantomData,
+		}
 	}
 }
 
@@ -102,11 +113,20 @@ where
 	TSaveGame: ThreadSafe + HandlesSaving,
 {
 	fn build(&self, app: &mut App) {
+		#[cfg(debug_assertions)]
+		app.add_plugins(crate::debug::Debug);
+
 		TSaveGame::register_savable_component::<Motion>(app);
 		TSaveGame::register_savable_component::<SkillContact>(app);
 		TSaveGame::register_savable_component::<SkillProjection>(app);
 
 		app
+			// Add/Configure rapier
+			.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
+			.add_systems(
+				Startup,
+				set_rapier_time_step(Duration::from_secs(1) / self.target_fps),
+			)
 			// World camera
 			.add_observer(WorldCamera::remove_old_cameras)
 			.add_systems(
@@ -201,6 +221,16 @@ where
 					.chain()
 					.in_set(CollisionSystems),
 			);
+	}
+}
+
+fn set_rapier_time_step(time_per_frame: Duration) -> impl Fn(ResMut<TimestepMode>) {
+	move |mut time_step_mode: ResMut<TimestepMode>| {
+		*time_step_mode = TimestepMode::Variable {
+			max_dt: time_per_frame.as_secs_f32(),
+			time_scale: 1.,
+			substeps: 1,
+		}
 	}
 }
 
