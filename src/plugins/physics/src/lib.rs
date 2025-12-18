@@ -206,7 +206,6 @@ where
 						.chain(),
 					// Physical effects
 					(
-						apply_fragile_blocks,
 						ActiveBeam::execute,
 						execute_ray_caster
 							.pipe(apply_interruptable_ray_blocks)
@@ -219,6 +218,12 @@ where
 				)
 					.chain()
 					.in_set(CollisionSystems),
+			)
+			.add_systems(
+				Update,
+				apply_fragile_blocks
+					.after(PhysicsSystems)
+					.after(CollisionSystems),
 			);
 	}
 }
