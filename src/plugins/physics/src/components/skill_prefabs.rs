@@ -16,7 +16,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
 	components::{asset_model::AssetModel, insert_asset::InsertAsset},
-	errors::{ErrorData, Level, Unreachable},
+	errors::Unreachable,
 	tools::Units,
 	traits::{
 		handles_physics::{PhysicalObject, colliders::Shape},
@@ -24,7 +24,7 @@ use common::{
 		prefab::PrefabEntityCommands,
 	},
 };
-use std::{f32::consts::PI, fmt::Display, sync::LazyLock};
+use std::{f32::consts::PI, sync::LazyLock};
 
 trait SkillPrefab {
 	type TExtra;
@@ -53,13 +53,13 @@ static HOLLOW_OUTER_THICKNESS: LazyLock<Units> = LazyLock::new(|| Units::from(0.
 
 impl SkillPrefab for ContactShape {
 	type TExtra = Vec3;
-	type TError = FaultyColliderShape;
+	type TError = Unreachable;
 
 	fn prefab(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		offset: Vec3,
-	) -> Result<(), FaultyColliderShape> {
+	) -> Result<(), Unreachable> {
 		let (interaction, (model, model_transform), (collider, hollow, collider_transform)) =
 			match self.clone() {
 				Self::Sphere {
@@ -156,13 +156,13 @@ impl SkillPrefab for ContactShape {
 
 impl SkillPrefab for ProjectionShape {
 	type TExtra = Vec3;
-	type TError = FaultyColliderShape;
+	type TError = Unreachable;
 
 	fn prefab(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		offset: Vec3,
-	) -> Result<(), FaultyColliderShape> {
+	) -> Result<(), Unreachable> {
 		let ((model, model_transform), (collider, collider_transform)) = match self.clone() {
 			Self::Sphere { radius } => (
 				(
@@ -294,29 +294,5 @@ impl SkillPrefab for Motion {
 			}
 		}
 		Ok(())
-	}
-}
-
-pub struct FaultyColliderShape {
-	shape: ComputedColliderShape,
-}
-
-impl Display for FaultyColliderShape {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "Faulty collider shape ({:?})", self.shape)
-	}
-}
-
-impl ErrorData for FaultyColliderShape {
-	fn level(&self) -> Level {
-		Level::Error
-	}
-
-	fn label() -> impl Display {
-		"Construction error"
-	}
-
-	fn into_details(self) -> impl Display {
-		self
 	}
 }

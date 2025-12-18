@@ -1,12 +1,15 @@
 pub(crate) mod dto;
 
 use super::SkillPrefab;
-use crate::components::skill_prefabs::{FaultyColliderShape, skill_contact::dto::SkillContactDto};
+use crate::components::skill_prefabs::skill_contact::dto::SkillContactDto;
 use bevy::prelude::*;
-use common::traits::{
-	handles_skill_behaviors::{Contact, ContactShape, Motion},
-	load_asset::LoadAsset,
-	prefab::{Prefab, PrefabEntityCommands},
+use common::{
+	errors::Unreachable,
+	traits::{
+		handles_skill_behaviors::{Contact, ContactShape, Motion},
+		load_asset::LoadAsset,
+		prefab::{Prefab, PrefabEntityCommands},
+	},
 };
 use macros::SavableComponent;
 
@@ -36,13 +39,13 @@ impl From<Contact> for SkillContact {
 }
 
 impl Prefab<()> for SkillContact {
-	type TError = FaultyColliderShape;
+	type TError = Unreachable;
 
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		_: &mut impl LoadAsset,
-	) -> Result<(), FaultyColliderShape> {
+	) -> Result<(), Unreachable> {
 		let Ok(()) = self.motion.prefab(entity, self.created_from);
 		self.shape.prefab(entity, Vec3::ZERO)
 	}
