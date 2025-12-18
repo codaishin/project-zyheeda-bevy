@@ -6,16 +6,17 @@ use crate::components::{
 	colliders::ColliderShape,
 	fix_points::{Always, Anchor, Once},
 	ground_target::GroundTarget,
+	hollow::Hollow,
 	interaction_target::InteractionTarget,
 	set_motion_forward::SetMotionForward,
 	skill_prefabs::skill_contact::CreatedFrom,
 	when_traveled::WhenTraveled,
 };
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::{Collider as RapierCollider, *};
+use bevy_rapier3d::prelude::*;
 use common::{
 	components::{asset_model::AssetModel, insert_asset::InsertAsset},
-	errors::{ErrorData, Level, Unreachable},
+	errors::Unreachable,
 	tools::Units,
 	traits::{
 		handles_physics::{PhysicalObject, colliders::Shape},
@@ -23,7 +24,7 @@ use common::{
 		prefab::PrefabEntityCommands,
 	},
 };
-use std::{f32::consts::PI, fmt::Display};
+use std::{f32::consts::PI, sync::LazyLock};
 
 trait SkillPrefab {
 	type TExtra;
@@ -48,129 +49,120 @@ const HALF_FORWARD: Transform = Transform::from_translation(Vec3 {
 	y: 0.,
 	z: -0.5,
 });
+static HOLLOW_OUTER_THICKNESS: LazyLock<Units> = LazyLock::new(|| Units::from(0.3));
 
 impl SkillPrefab for ContactShape {
 	type TExtra = Vec3;
-	type TError = FaultyColliderShape;
+	type TError = Unreachable;
 
 	fn prefab(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		offset: Vec3,
-	) -> Result<(), FaultyColliderShape> {
-		let (interaction, (model, model_transform), (collider, collider_transform)) = match self
-			.clone()
-		{
-			Self::Sphere {
-				radius,
-				hollow_collider,
-				destroyed_by,
-			} => (
-				Blockable(PhysicalObject::Fragile { destroyed_by }),
-				(
-					Model::Asset(AssetModel::path(SPHERE_MODEL)),
-					Transform::from_scale(Vec3::splat(*radius * 2.)),
-				),
-				match hollow_collider {
-					true => ring_collider(*radius).map(|(c, t)| (ColliderVariant::Old(c), t))?,
-					false => (
-						ColliderVariant::New(ColliderShape(Shape::Sphere { radius })),
-						Transform::default(),
+	) -> Result<(), Unreachable> {
+		let (interaction, (model, model_transform), (collider, hollow, collider_transform)) =
+			match self.clone() {
+				Self::Sphere {
+					radius,
+					hollow_collider,
+					destroyed_by,
+				} => (
+					Blockable(PhysicalObject::Fragile { destroyed_by }),
+					(
+						Model::Asset(AssetModel::path(SPHERE_MODEL)),
+						Transform::from_scale(Vec3::splat(*radius * 2.)),
 					),
-				},
-			),
-			Self::Custom {
-				model,
-				collider,
-				model_scale,
-				destroyed_by,
-			} => (
-				Blockable(PhysicalObject::Fragile { destroyed_by }),
-				(Model::Asset(model), Transform::from_scale(model_scale)),
-				(
-					ColliderVariant::New(ColliderShape(collider)),
-					Transform::default(),
+					match hollow_collider {
+						true => (
+							ColliderShape(Shape::Sphere { radius }),
+							Some(Hollow {
+								radius: Units::from(*radius - **HOLLOW_OUTER_THICKNESS),
+							}),
+							Transform::default(),
+						),
+						false => (
+							ColliderShape(Shape::Sphere { radius }),
+							None,
+							Transform::default(),
+						),
+					},
 				),
-			),
-			Self::Beam {
-				range,
-				blocked_by,
-				radius,
-			} => (
-				Blockable(PhysicalObject::Beam { range, blocked_by }),
-				(
-					Model::Proc(InsertAsset::shared::<Beam>(BEAM_MODEL)),
-					HALF_FORWARD
-						.with_scale(Vec3 {
-							x: *radius,
-							y: 1.,
-							z: *radius,
-						})
-						.with_rotation(Quat::from_rotation_x(PI / 2.)),
+				Self::Custom {
+					model,
+					collider,
+					model_scale,
+					destroyed_by,
+				} => (
+					Blockable(PhysicalObject::Fragile { destroyed_by }),
+					(Model::Asset(model), Transform::from_scale(model_scale)),
+					(ColliderShape(collider), None, Transform::default()),
 				),
-				(
-					ColliderVariant::New(ColliderShape(Shape::Cylinder {
-						half_y: Units::from(0.5),
-						radius,
-					})),
-					HALF_FORWARD.with_rotation(Quat::from_rotation_x(PI / 2.)),
+				Self::Beam {
+					range,
+					blocked_by,
+					radius,
+				} => (
+					Blockable(PhysicalObject::Beam { range, blocked_by }),
+					(
+						Model::Proc(InsertAsset::shared::<Beam>(BEAM_MODEL)),
+						HALF_FORWARD
+							.with_scale(Vec3 {
+								x: *radius,
+								y: 1.,
+								z: *radius,
+							})
+							.with_rotation(Quat::from_rotation_x(PI / 2.)),
+					),
+					(
+						ColliderShape(Shape::Cylinder {
+							half_y: Units::from(0.5),
+							radius,
+						}),
+						None,
+						HALF_FORWARD.with_rotation(Quat::from_rotation_x(PI / 2.)),
+					),
 				),
-			),
-		};
+			};
 
-		entity.try_insert_if_new((
-			Transform::from_translation(offset),
-			Visibility::default(),
-			InteractionTarget,
-			interaction,
-		));
+		entity
+			.try_insert_if_new((
+				Transform::from_translation(offset),
+				Visibility::default(),
+				InteractionTarget,
+				interaction,
+			))
+			.with_children(|parent| {
+				match model {
+					Model::Asset(asset_model) => parent.spawn((asset_model, model_transform)),
+					Model::Proc(insert_asset) => parent.spawn((insert_asset, model_transform)),
+				};
 
-		match model {
-			Model::Asset(asset_model) => entity.with_child((asset_model, model_transform)),
-			Model::Proc(insert_asset) => entity.with_child((insert_asset, model_transform)),
-		};
-
-		match collider {
-			ColliderVariant::Old(collider) => entity.with_child((
-				collider,
-				collider_transform,
-				ActiveEvents::COLLISION_EVENTS,
-				ActiveCollisionTypes::default(),
-				Sensor,
-			)),
-			ColliderVariant::New(collider_shape) => entity.with_child((
-				collider_shape,
-				collider_transform,
-				ActiveEvents::COLLISION_EVENTS,
-				ActiveCollisionTypes::default(),
-				Sensor,
-			)),
-		};
+				let mut child = parent.spawn((
+					collider,
+					collider_transform,
+					ActiveEvents::COLLISION_EVENTS,
+					ActiveCollisionTypes::default(),
+					Sensor,
+				));
+				let Some(hollow) = hollow else {
+					return;
+				};
+				child.insert(hollow);
+			});
 
 		Ok(())
 	}
 }
 
-// FIXME: Remove when using bevy rapier physics hooks to create better hollow spherical colliders.
-//        Hollow colliders just need to work with spherical or capsule colliders inside of
-//        hollow (half)spherical colliders (shield domes).
-/// This enum is a temporary measure to allow creation of a fake hollow sphere collider.
-enum ColliderVariant {
-	/// Data needed for current hollow spherical colliders
-	Old(RapierCollider),
-	/// Newer approach using a common collider definition
-	New(ColliderShape),
-}
-
 impl SkillPrefab for ProjectionShape {
 	type TExtra = Vec3;
-	type TError = FaultyColliderShape;
+	type TError = Unreachable;
 
 	fn prefab(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		offset: Vec3,
-	) -> Result<(), FaultyColliderShape> {
+	) -> Result<(), Unreachable> {
 		let ((model, model_transform), (collider, collider_transform)) = match self.clone() {
 			Self::Sphere { radius } => (
 				(
@@ -302,43 +294,5 @@ impl SkillPrefab for Motion {
 			}
 		}
 		Ok(())
-	}
-}
-
-fn ring_collider(radius: f32) -> Result<(RapierCollider, Transform), FaultyColliderShape> {
-	let transform = Transform::default().with_rotation(Quat::from_axis_angle(Vec3::X, PI / 2.));
-	let ring = Annulus::new(radius * 0.9, radius);
-	let torus = Mesh::from(Extrusion::new(ring, radius * 2.));
-	let shape = ComputedColliderShape::TriMesh(TriMeshFlags::MERGE_DUPLICATE_VERTICES);
-	let collider = RapierCollider::from_bevy_mesh(&torus, &shape);
-
-	let Some(collider) = collider else {
-		return Err(FaultyColliderShape { shape });
-	};
-
-	Ok((collider, transform))
-}
-
-pub struct FaultyColliderShape {
-	shape: ComputedColliderShape,
-}
-
-impl Display for FaultyColliderShape {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "Faulty collider shape ({:?})", self.shape)
-	}
-}
-
-impl ErrorData for FaultyColliderShape {
-	fn level(&self) -> Level {
-		Level::Error
-	}
-
-	fn label() -> impl Display {
-		"Construction error"
-	}
-
-	fn into_details(self) -> impl Display {
-		self
 	}
 }

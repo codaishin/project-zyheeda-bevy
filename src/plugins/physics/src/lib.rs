@@ -2,6 +2,7 @@ mod app;
 mod components;
 mod events;
 mod observers;
+mod physics_hooks;
 mod resources;
 mod system_params;
 mod systems;
@@ -29,15 +30,13 @@ use crate::{
 		world_camera::WorldCamera,
 	},
 	observers::update_blockers::UpdateBlockersObserver,
+	physics_hooks::check_hollow_colliders::CheckHollowColliders,
 	system_params::skill_spawner::SkillSpawnerMut,
 	systems::{apply_pull::ApplyPull, insert_affected::InsertAffected},
 	traits::ray_cast::RayCaster,
 };
 use bevy::prelude::*;
-use bevy_rapier3d::{
-	plugin::{NoUserData, RapierPhysicsPlugin, TimestepMode},
-	prelude::Velocity,
-};
+use bevy_rapier3d::prelude::*;
 use common::{
 	components::{child_of_persistent::ChildOfPersistent, persistent_entity::PersistentEntity},
 	systems::log::OnError,
@@ -122,7 +121,7 @@ where
 
 		app
 			// Add/Configure rapier
-			.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
+			.add_plugins(RapierPhysicsPlugin::<CheckHollowColliders>::default())
 			.add_systems(
 				Startup,
 				set_rapier_time_step(Duration::from_secs(1) / self.target_fps),
@@ -207,7 +206,6 @@ where
 						.chain(),
 					// Physical effects
 					(
-						apply_fragile_blocks,
 						ActiveBeam::execute,
 						execute_ray_caster
 							.pipe(apply_interruptable_ray_blocks)
@@ -220,6 +218,12 @@ where
 				)
 					.chain()
 					.in_set(CollisionSystems),
+			)
+			.add_systems(
+				Update,
+				apply_fragile_blocks
+					.after(PhysicsSystems)
+					.after(CollisionSystems),
 			);
 	}
 }

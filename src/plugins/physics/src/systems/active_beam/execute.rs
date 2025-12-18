@@ -56,7 +56,7 @@ fn update_ray_caster_args(
 		e.try_insert(RayCasterArgs {
 			origin: origin.translation(),
 			direction: origin.forward(),
-			solid: true,
+			solid: false,
 			filter: RayFilter::default(),
 			max_toi: TimeOfImpact(*range),
 		});
@@ -122,7 +122,7 @@ mod tests {
 				origin: Vec3::new(2., 2., 2.),
 				direction: Dir3::X,
 				max_toi: TimeOfImpact(100.),
-				solid: true,
+				solid: false,
 				filter: RayFilter::default(),
 			}),
 			app.world().entity(beam).get::<RayCasterArgs>(),

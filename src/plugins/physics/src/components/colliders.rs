@@ -1,7 +1,9 @@
+use crate::physics_hooks::check_hollow_colliders::SimpleOuterRadius;
 use bevy::{ecs::entity::EntityHashSet, prelude::*};
 use bevy_rapier3d::prelude::Collider as RapierCollider;
 use common::{
 	errors::Unreachable,
+	tools::Units,
 	traits::{
 		handles_physics::colliders::{Collider, Shape},
 		load_asset::LoadAsset,
@@ -30,6 +32,16 @@ impl From<Collider> for ColliderDefinition {
 #[derive(Component, Debug, PartialEq)]
 #[require(Transform)]
 pub(crate) struct ColliderShape(pub(crate) Shape);
+
+impl SimpleOuterRadius for ColliderShape {
+	fn simple_outer_radius(&self) -> Option<Units> {
+		match self.0 {
+			Shape::Sphere { radius } => Some(radius),
+			Shape::Capsule { half_y, radius } => Some(Units::from(*half_y + *radius)),
+			Shape::Cylinder { .. } | Shape::Cuboid { .. } => None,
+		}
+	}
+}
 
 impl Prefab<()> for ColliderShape {
 	type TError = Unreachable;
