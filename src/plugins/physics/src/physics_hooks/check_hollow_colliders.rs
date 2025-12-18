@@ -1,15 +1,21 @@
 use crate::components::{colliders::ColliderShape, hollow::Hollow};
 use bevy::{ecs::system::SystemParam, prelude::*};
 use bevy_rapier3d::prelude::*;
-use common::traits::handles_physics::colliders::Shape;
+use common::tools::Units;
 
 #[derive(SystemParam)]
-pub(crate) struct CheckHollowColliders<'w, 's> {
-	colliders: Query<'w, 's, (&'static ColliderShape, &'static GlobalTransform)>,
+pub(crate) struct CheckHollowColliders<'w, 's, TCollider = ColliderShape>
+where
+	TCollider: Component + SimpleOuterRadius,
+{
+	colliders: Query<'w, 's, (&'static TCollider, &'static GlobalTransform)>,
 	hollows: Query<'w, 's, (&'static Hollow, &'static GlobalTransform)>,
 }
 
-impl CheckHollowColliders<'_, '_> {
+impl<TCollider> CheckHollowColliders<'_, '_, TCollider>
+where
+	TCollider: Component + SimpleOuterRadius,
+{
 	fn may_collide(&self, a: Entity, b: Entity) -> bool {
 		if self.fully_inside_hollow(a, b) || self.fully_inside_hollow(b, a) {
 			return false;
@@ -23,13 +29,16 @@ impl CheckHollowColliders<'_, '_> {
 			Ok((Hollow { radius }, t)) => (**radius, t.translation()),
 			_ => return false,
 		};
-		let (collider_radius, collider_offset) = match self.colliders.get(collider) {
-			Ok((ColliderShape(Shape::Sphere { radius }), t)) => (**radius, t.translation()),
+		let (collider, collider_offset) = match self.colliders.get(collider) {
+			Ok((collider, t)) => (collider, t.translation()),
 			_ => return false,
+		};
+		let Some(collider_radius) = collider.simple_outer_radius() else {
+			return false;
 		};
 		let offset = (collider_offset - hollow_offset).length();
 
-		offset + collider_radius <= hollow_radius
+		offset + *collider_radius <= hollow_radius
 	}
 }
 
@@ -39,6 +48,10 @@ impl BevyPhysicsHooks for CheckHollowColliders<'_, '_> {
 	}
 }
 
+pub(crate) trait SimpleOuterRadius {
+	fn simple_outer_radius(&self) -> Option<Units>;
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -46,6 +59,18 @@ mod tests {
 	use common::tools::Units;
 	use test_case::test_case;
 	use testing::SingleThreadedApp;
+
+	#[derive(Component)]
+	#[require(Transform)]
+	struct _Collider {
+		radius: Units,
+	}
+
+	impl SimpleOuterRadius for _Collider {
+		fn simple_outer_radius(&self) -> Option<Units> {
+			Some(self.radius)
+		}
+	}
 
 	fn setup() -> App {
 		App::new().single_threaded(Update)
@@ -59,9 +84,9 @@ mod tests {
 		let mut app = setup();
 		let a = app
 			.world_mut()
-			.spawn(ColliderShape(Shape::Sphere {
+			.spawn(_Collider {
 				radius: Units::from(11.),
-			}))
+			})
 			.id();
 		let b = app
 			.world_mut()
@@ -70,12 +95,12 @@ mod tests {
 			})
 			.id();
 
-		let may_collide = app
-			.world_mut()
-			.run_system_once(move |c: CheckHollowColliders| {
-				let (a, b) = sort(a, b);
-				c.may_collide(a, b)
-			})?;
+		let may_collide =
+			app.world_mut()
+				.run_system_once(move |c: CheckHollowColliders<_Collider>| {
+					let (a, b) = sort(a, b);
+					c.may_collide(a, b)
+				})?;
 
 		assert!(!may_collide);
 		Ok(())
@@ -89,9 +114,9 @@ mod tests {
 		let mut app = setup();
 		let a = app
 			.world_mut()
-			.spawn(ColliderShape(Shape::Sphere {
+			.spawn(_Collider {
 				radius: Units::from(42.),
-			}))
+			})
 			.id();
 		let b = app
 			.world_mut()
@@ -100,12 +125,12 @@ mod tests {
 			})
 			.id();
 
-		let may_collide = app
-			.world_mut()
-			.run_system_once(move |c: CheckHollowColliders| {
-				let (a, b) = sort(a, b);
-				c.may_collide(a, b)
-			})?;
+		let may_collide =
+			app.world_mut()
+				.run_system_once(move |c: CheckHollowColliders<_Collider>| {
+					let (a, b) = sort(a, b);
+					c.may_collide(a, b)
+				})?;
 
 		assert!(may_collide);
 		Ok(())
@@ -121,9 +146,9 @@ mod tests {
 			.world_mut()
 			.spawn((
 				GlobalTransform::from_xyz(8., 0., 0.),
-				ColliderShape(Shape::Sphere {
+				_Collider {
 					radius: Units::from(5.),
-				}),
+				},
 			))
 			.id();
 		let b = app
@@ -133,12 +158,12 @@ mod tests {
 			})
 			.id();
 
-		let may_collide = app
-			.world_mut()
-			.run_system_once(move |c: CheckHollowColliders| {
-				let (a, b) = sort(a, b);
-				c.may_collide(a, b)
-			})?;
+		let may_collide =
+			app.world_mut()
+				.run_system_once(move |c: CheckHollowColliders<_Collider>| {
+					let (a, b) = sort(a, b);
+					c.may_collide(a, b)
+				})?;
 
 		assert!(may_collide);
 		Ok(())
@@ -152,9 +177,9 @@ mod tests {
 		let mut app = setup();
 		let a = app
 			.world_mut()
-			.spawn(ColliderShape(Shape::Sphere {
+			.spawn(_Collider {
 				radius: Units::from(5.),
-			}))
+			})
 			.id();
 		let b = app
 			.world_mut()
@@ -166,12 +191,12 @@ mod tests {
 			))
 			.id();
 
-		let may_collide = app
-			.world_mut()
-			.run_system_once(move |c: CheckHollowColliders| {
-				let (a, b) = sort(a, b);
-				c.may_collide(a, b)
-			})?;
+		let may_collide =
+			app.world_mut()
+				.run_system_once(move |c: CheckHollowColliders<_Collider>| {
+					let (a, b) = sort(a, b);
+					c.may_collide(a, b)
+				})?;
 
 		assert!(may_collide);
 		Ok(())
