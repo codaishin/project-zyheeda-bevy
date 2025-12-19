@@ -15,6 +15,7 @@ pub(crate) mod no_hover;
 pub(crate) mod running_interactions;
 pub(crate) mod set_motion_forward;
 pub(crate) mod skill;
+pub(crate) mod skill_transform;
 pub(crate) mod when_traveled;
 pub(crate) mod world_camera;
 

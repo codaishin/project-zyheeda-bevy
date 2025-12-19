@@ -200,6 +200,7 @@ where
 					// Physical effects
 					(
 						ActiveBeam::execute,
+						ActiveBeam::update_transform,
 						execute_ray_caster
 							.pipe(OnError::log_and_return(HashMap::default))
 							.pipe(apply_interruptable_ray_blocks)

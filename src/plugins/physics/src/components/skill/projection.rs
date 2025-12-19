@@ -11,6 +11,7 @@ use crate::components::{
 		SkillProjection,
 		insert_effect,
 	},
+	skill_transform::SkillTransformOf,
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
@@ -26,7 +27,7 @@ use common::{
 use std::f32::consts::PI;
 
 impl Skill {
-	pub(crate) fn projection(&self, entity: &mut ZyheedaEntityCommands) {
+	pub(crate) fn projection(&self, entity: &mut ZyheedaEntityCommands, root: Entity) {
 		let ((model, model_transform), (collider, collider_transform)) =
 			match self.projection.shape.clone() {
 				ProjectionShape::Sphere { radius } => (
@@ -85,11 +86,16 @@ impl Skill {
 		));
 
 		match model {
-			Model::Asset(asset_model) => entity.with_child((asset_model, model_transform)),
-			Model::Proc(insert_asset) => entity.with_child((insert_asset, model_transform)),
+			Model::Asset(asset_model) => {
+				entity.with_child((SkillTransformOf(root), asset_model, model_transform))
+			}
+			Model::Proc(insert_asset) => {
+				entity.with_child((SkillTransformOf(root), insert_asset, model_transform))
+			}
 		};
 
 		entity.with_child((
+			SkillTransformOf(root),
 			collider,
 			collider_transform,
 			ActiveEvents::COLLISION_EVENTS,

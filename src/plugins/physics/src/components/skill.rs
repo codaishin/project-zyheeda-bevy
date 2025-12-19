@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize};
 use std::{sync::LazyLock, time::Duration};
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
-#[require(PersistentEntity)]
+#[require(PersistentEntity, Transform, Visibility)]
 #[savable_component(dto = SkillDto)]
 pub struct Skill {
 	pub(crate) lifetime: Option<Duration>,

@@ -12,12 +12,11 @@ impl Skill {
 		mut commands: ZyheedaCommands,
 		skills: Query<&Self>,
 	) {
-		let target = trigger.target();
-		let Ok(skill) = skills.get(target) else {
+		let root = trigger.target();
+		let Ok(skill) = skills.get(root) else {
 			return;
 		};
-
-		let Some(mut entity) = commands.get_mut(&target) else {
+		let Some(mut entity) = commands.get_mut(&root) else {
 			return;
 		};
 
@@ -26,7 +25,7 @@ impl Skill {
 		}
 
 		skill.motion(&mut entity);
-		skill.contact(&mut entity);
-		skill.projection(&mut commands.spawn(ChildOf(target)).into());
+		skill.contact(&mut commands.spawn(ChildOf(root)).into(), root);
+		skill.projection(&mut commands.spawn(ChildOf(root)).into(), root);
 	}
 }

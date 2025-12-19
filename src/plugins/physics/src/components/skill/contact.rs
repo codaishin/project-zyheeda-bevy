@@ -14,6 +14,7 @@ use crate::components::{
 		SkillContact,
 		insert_effect,
 	},
+	skill_transform::SkillTransformOf,
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
@@ -29,8 +30,8 @@ use common::{
 use std::f32::consts::PI;
 
 impl Skill {
-	pub(crate) fn contact(&self, entity: &mut ZyheedaEntityCommands) {
-		let (interaction, (model, model_transform), (collider, hollow, collider_transform)) =
+	pub(crate) fn contact(&self, entity: &mut ZyheedaEntityCommands, root: Entity) {
+		let (blockable, (model, model_transform), (collider, hollow, collider_transform)) =
 			match self.contact.shape.clone() {
 				ContactShape::Sphere {
 					radius,
@@ -100,15 +101,20 @@ impl Skill {
 				Transform::default(),
 				Visibility::default(),
 				InteractionTarget,
-				interaction,
+				blockable,
 			))
 			.with_children(|parent| {
 				match model {
-					Model::Asset(asset_model) => parent.spawn((asset_model, model_transform)),
-					Model::Proc(insert_asset) => parent.spawn((insert_asset, model_transform)),
+					Model::Asset(asset_model) => {
+						parent.spawn((SkillTransformOf(root), asset_model, model_transform))
+					}
+					Model::Proc(insert_asset) => {
+						parent.spawn((SkillTransformOf(root), insert_asset, model_transform))
+					}
 				};
 
 				let mut child = parent.spawn((
+					SkillTransformOf(root),
 					collider,
 					collider_transform,
 					ActiveEvents::COLLISION_EVENTS,
