@@ -10,6 +10,7 @@ use crate::components::{
 	interaction_target::InteractionTarget,
 	set_motion_forward::SetMotionForward,
 	skill_prefabs::skill_contact::CreatedFrom,
+	skill_transform::SkillTransform,
 	when_traveled::WhenTraveled,
 };
 use bevy::prelude::*;
@@ -133,11 +134,16 @@ impl SkillPrefab for ContactShape {
 			))
 			.with_children(|parent| {
 				match model {
-					Model::Asset(asset_model) => parent.spawn((asset_model, model_transform)),
-					Model::Proc(insert_asset) => parent.spawn((insert_asset, model_transform)),
+					Model::Asset(asset_model) => {
+						parent.spawn((SkillTransform, asset_model, model_transform))
+					}
+					Model::Proc(insert_asset) => {
+						parent.spawn((SkillTransform, insert_asset, model_transform))
+					}
 				};
 
 				let mut child = parent.spawn((
+					SkillTransform,
 					collider,
 					collider_transform,
 					ActiveEvents::COLLISION_EVENTS,
@@ -213,11 +219,16 @@ impl SkillPrefab for ProjectionShape {
 		));
 
 		match model {
-			Model::Asset(asset_model) => entity.with_child((asset_model, model_transform)),
-			Model::Proc(insert_asset) => entity.with_child((insert_asset, model_transform)),
+			Model::Asset(asset_model) => {
+				entity.with_child((SkillTransform, asset_model, model_transform))
+			}
+			Model::Proc(insert_asset) => {
+				entity.with_child((SkillTransform, insert_asset, model_transform))
+			}
 		};
 
 		entity.with_child((
+			SkillTransform,
 			collider,
 			collider_transform,
 			ActiveEvents::COLLISION_EVENTS,
