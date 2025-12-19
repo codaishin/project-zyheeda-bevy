@@ -26,6 +26,7 @@ use crate::{
 		no_hover::NoMouseHover,
 		set_motion_forward::SetMotionForward,
 		skill_prefabs::{skill_contact::SkillContact, skill_projection::SkillProjection},
+		skill_transform::SkillTransform,
 		when_traveled::DestroyAfterDistanceTraveled,
 		world_camera::WorldCamera,
 	},
@@ -151,6 +152,7 @@ where
 			.register_required_components::<SkillProjection, TSaveGame::TSaveEntityMarker>()
 			.add_prefab_observer::<SkillContact, ()>()
 			.add_prefab_observer::<SkillProjection, ()>()
+			.add_observer(SkillTransform::link_to_skill_collider)
 			// Colliders
 			.add_prefab_observer::<ColliderShape, ()>()
 			.add_observer(ColliderOfInteractionTarget::link)
@@ -207,6 +209,7 @@ where
 					// Physical effects
 					(
 						ActiveBeam::execute,
+						ActiveBeam::update_children_transform,
 						execute_ray_caster
 							.pipe(apply_interruptable_ray_blocks)
 							.pipe(map_ray_cast_result_to_interaction_events)
@@ -296,10 +299,8 @@ impl<TDependencies> HandlesSkillBehaviors for PhysicsPlugin<TDependencies> {
 			.spawn((SkillContact::from(contact), persistent_contact))
 			.id();
 		let projection = commands
-			.spawn((
-				SkillProjection::from(projection),
-				ChildOfPersistent(persistent_contact),
-			))
+			.spawn(ChildOfPersistent(persistent_contact))
+			.insert(SkillProjection::from(projection))
 			.id();
 
 		SkillEntities {
