@@ -62,6 +62,9 @@ pub struct Units(f32);
 
 impl Units {
 	pub const ZERO: Self = Self(0.);
+
+	/// Wraps `f32::EPSILON`
+	pub const EPSILON: Self = Self(f32::EPSILON);
 }
 
 #[derive(Debug, PartialEq, Clone, ClampZeroPositive)]
