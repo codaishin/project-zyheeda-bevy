@@ -1,6 +1,8 @@
 use bevy::prelude::*;
+use common::tools::Units;
 
 #[derive(Component, Debug, PartialEq)]
 #[require(Transform, Visibility)]
-#[component(immutable)]
-pub(crate) struct ActiveBeam;
+pub(crate) struct ActiveBeam {
+	pub(crate) length: Units,
+}
