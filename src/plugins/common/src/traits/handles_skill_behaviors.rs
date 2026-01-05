@@ -1,16 +1,21 @@
 use crate::{
 	components::{asset_model::AssetModel, persistent_entity::PersistentEntity},
 	tools::{Index, Units, UnitsPerSecond, action_key::slot::SlotKey},
-	traits::handles_physics::colliders::{Blocker, Shape},
+	traits::{
+		accessors::get::GetContextMut,
+		handles_physics::colliders::{Blocker, Shape},
+	},
 	zyheeda_commands::ZyheedaCommands,
 };
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemParam, prelude::*};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, ops::Deref};
 
 pub trait HandlesSkillBehaviors {
 	type TSkillContact: Component;
 	type TSkillProjection: Component;
+	type TSkillSpawnerMut<'w, 's>: SystemParam
+		+ for<'c> GetContextMut<NewSkill, TContext<'c>: SpawnNewSkill>;
 
 	/// Skills always have a contact and a projection shape.
 	///
@@ -21,6 +26,12 @@ pub trait HandlesSkillBehaviors {
 		projection: Projection,
 	) -> SkillEntities;
 }
+
+pub trait SpawnNewSkill {
+	fn spawn_new_skill(&mut self, contact: Contact, projection: Projection) -> SkillEntities;
+}
+
+pub struct NewSkill;
 
 /// Describes the contact shape of a skill
 ///
@@ -41,13 +52,9 @@ pub struct Projection {
 }
 
 /// The entities of a spawned skill.
-///
-/// Skill root should be used to control the lifetime of a skill and can be used to despawn the
-/// whole skill.
-///
-/// Contact components should be added to the contact entity.
-///
-/// Projection/AoE components should be added to the projection entity.
+/// - `root`: The skill's top level entity (can be used to despawn the skill)
+/// - `contact`: add/remove contact effect components (projectiles, force fields, ..)
+/// - `projection`: add/remove projection/AoE effect components (gravity fields, explosions, ..)
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct SkillEntities {
 	pub root: SkillRoot,

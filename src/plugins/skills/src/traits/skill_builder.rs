@@ -102,10 +102,20 @@ pub(crate) struct SkillShape {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce, SystemParam};
 	use common::{
 		components::persistent_entity::PersistentEntity,
-		traits::handles_skill_behaviors::{Contact, Projection, SkillEntities, SkillRoot},
+		traits::{
+			accessors::get::GetContextMut,
+			handles_skill_behaviors::{
+				Contact,
+				NewSkill,
+				Projection,
+				SkillEntities,
+				SkillRoot,
+				SpawnNewSkill,
+			},
+		},
 	};
 	use std::{any::type_name, sync::LazyLock, time::Duration};
 
@@ -114,9 +124,32 @@ mod tests {
 	impl HandlesSkillBehaviors for _HandlesSkillBehaviors {
 		type TSkillContact = _Contact;
 		type TSkillProjection = _Projection;
+		type TSkillSpawnerMut<'w, 's> = _SkillSpawner;
 
 		fn spawn_skill(_: &mut ZyheedaCommands, _: Contact, _: Projection) -> SkillEntities {
 			panic!("SHOULD NOT BE CALLED")
+		}
+	}
+
+	#[derive(SystemParam)]
+	struct _SkillSpawner;
+
+	impl GetContextMut<NewSkill> for _SkillSpawner {
+		type TContext<'ctx> = _Context;
+
+		fn get_context_mut<'ctx>(
+			_: &'ctx mut _SkillSpawner,
+			_: NewSkill,
+		) -> Option<Self::TContext<'ctx>> {
+			None
+		}
+	}
+
+	struct _Context;
+
+	impl SpawnNewSkill for _Context {
+		fn spawn_new_skill(&mut self, _: Contact, _: Projection) -> SkillEntities {
+			todo!()
 		}
 	}
 

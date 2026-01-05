@@ -286,6 +286,7 @@ impl<TDependencies> HandlesSkillSpawning for PhysicsPlugin<TDependencies> {
 impl<TDependencies> HandlesSkillBehaviors for PhysicsPlugin<TDependencies> {
 	type TSkillContact = SkillContact;
 	type TSkillProjection = SkillProjection;
+	type TSkillSpawnerMut<'w, 's> = SkillSpawnerMut<'w, 's>;
 
 	fn spawn_skill(
 		commands: &mut ZyheedaCommands,

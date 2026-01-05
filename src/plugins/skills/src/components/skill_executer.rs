@@ -100,15 +100,22 @@ fn stop<TSkillShape>(
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce, SystemParam};
 	use common::{
 		attributes::health::Health,
 		components::persistent_entity::PersistentEntity,
 		tools::action_key::slot::{PlayerSlot, Side},
 		traits::{
-			accessors::get::GetProperty,
+			accessors::get::{GetContextMut, GetProperty},
 			handles_physics::{Effect, HandlesPhysicalEffect},
-			handles_skill_behaviors::{Contact, Projection, SkillEntities, SkillRoot},
+			handles_skill_behaviors::{
+				Contact,
+				NewSkill,
+				Projection,
+				SkillEntities,
+				SkillRoot,
+				SpawnNewSkill,
+			},
 			register_persistent_entities::RegisterPersistentEntities,
 			thread_safe::ThreadSafe,
 		},
@@ -135,6 +142,7 @@ mod tests {
 	impl HandlesSkillBehaviors for _HandlesPhysics {
 		type TSkillContact = _Contact;
 		type TSkillProjection = _Projection;
+		type TSkillSpawnerMut<'w, 's> = _SkillSpawner;
 
 		fn spawn_skill(commands: &mut ZyheedaCommands, _: Contact, _: Projection) -> SkillEntities {
 			SkillEntities {
@@ -165,6 +173,28 @@ mod tests {
 
 	#[derive(Component)]
 	struct _Projection;
+
+	#[derive(SystemParam)]
+	struct _SkillSpawner;
+
+	impl GetContextMut<NewSkill> for _SkillSpawner {
+		type TContext<'ctx> = _Context;
+
+		fn get_context_mut<'ctx>(
+			_: &'ctx mut _SkillSpawner,
+			_: NewSkill,
+		) -> Option<Self::TContext<'ctx>> {
+			None
+		}
+	}
+
+	struct _Context;
+
+	impl SpawnNewSkill for _Context {
+		fn spawn_new_skill(&mut self, _: Contact, _: Projection) -> SkillEntities {
+			todo!()
+		}
+	}
 
 	#[derive(Debug, PartialEq, Clone)]
 	struct _ShapeSlotted(OnSkillStop);
