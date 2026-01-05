@@ -128,6 +128,7 @@ pub(crate) struct ComponentString {
 
 #[cfg(test)]
 mod test_write_buffer {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use macros::simple_mock;
 	use serde_json::from_str;

@@ -116,6 +116,7 @@ fn root_bone<'a>(
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::components::animation_lookup::AnimationClips;
 	use bevy::{animation::AnimationTargetId, platform::collections::HashMap as BevyHashMap};

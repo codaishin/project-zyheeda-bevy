@@ -282,17 +282,24 @@ macro_rules! assert_no_panic {
 }
 
 pub trait TickTime {
-	fn tick_time(&mut self, delta: Duration);
+	fn tick_time(&mut self, delta: Duration) -> Result<(), MissingLastUpdate>;
 }
 
+#[derive(Debug)]
+pub struct MissingLastUpdate;
+
 impl TickTime for App {
-	fn tick_time(&mut self, delta: Duration) {
+	/// Intended for use in tests
+	fn tick_time(&mut self, delta: Duration) -> Result<(), MissingLastUpdate> {
 		let mut time = self.world_mut().resource_mut::<Time<Real>>();
 		if time.last_update().is_none() {
 			time.update();
 		}
-		let last_update = time.last_update().unwrap();
+		let Some(last_update) = time.last_update() else {
+			return Err(MissingLastUpdate);
+		};
 		time.update_with_instant(last_update + delta);
+		Ok(())
 	}
 }
 

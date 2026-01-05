@@ -138,7 +138,7 @@ mod test_clamp_zero_positive {
 
 		let value = serde_json::from_value::<_Value>(json);
 
-		assert_eq!(_Value(42.), value.unwrap());
+		assert!(matches!(value, Ok(_Value(42.))));
 	}
 
 	#[test]
@@ -147,6 +147,6 @@ mod test_clamp_zero_positive {
 
 		let value = serde_json::from_value::<_Value>(json);
 
-		assert_eq!(_Value(0.), value.unwrap());
+		assert!(matches!(value, Ok(_Value(0.))));
 	}
 }

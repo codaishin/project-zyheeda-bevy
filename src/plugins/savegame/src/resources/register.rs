@@ -168,6 +168,7 @@ mod test_registration {
 
 #[cfg(test)]
 mod test_update_context {
+	#![allow(clippy::expect_used)]
 	use super::*;
 	use crate::file_io::FileIO;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};

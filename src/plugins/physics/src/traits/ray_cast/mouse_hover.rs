@@ -62,6 +62,7 @@ fn point(ray: Ray3d, toi: f32) -> Vec3 {
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::components::world_camera::WorldCamera;
 	use bevy::{

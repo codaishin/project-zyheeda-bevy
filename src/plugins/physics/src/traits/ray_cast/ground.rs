@@ -13,6 +13,7 @@ impl Raycast<Ground> for RayCaster<'_, '_> {
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::PhysicsPlugin;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};

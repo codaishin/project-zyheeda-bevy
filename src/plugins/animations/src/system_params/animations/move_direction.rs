@@ -31,6 +31,7 @@ where
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::system_params::animations::AnimationsParamMut;
 	use bevy::{

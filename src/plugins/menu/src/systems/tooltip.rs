@@ -70,6 +70,7 @@ where
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{components::tooltip::TooltipUiConfig, traits::insert_ui_content::InsertUiContent};
 	use bevy::ecs::relationship::RelatedSpawnerCommands;

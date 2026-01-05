@@ -34,6 +34,7 @@ where
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use common::{
 		attributes::{effect_target::EffectTarget, health::Health},

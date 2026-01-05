@@ -12,6 +12,7 @@ impl OverrideFace for FaceContextMut<'_> {
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::system_param::face_param::FaceParamMut;
 	use bevy::{

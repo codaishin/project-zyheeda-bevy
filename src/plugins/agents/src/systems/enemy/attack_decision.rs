@@ -71,6 +71,7 @@ impl Enemy {
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::components::{enemy::attacking::Attacking, player::Player};
 	use common::{tools::Units, traits::handles_physics::RaycastHit};

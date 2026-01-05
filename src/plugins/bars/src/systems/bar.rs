@@ -81,6 +81,7 @@ fn update_bar_values<TSource, TValue, TCamera>(
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use bevy::{
 		app::{App, Update},

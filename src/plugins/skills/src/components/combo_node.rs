@@ -287,6 +287,7 @@ where
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use bevy::prelude::default;
 	use common::{tools::action_key::slot::PlayerSlot, traits::handles_localization::Token};

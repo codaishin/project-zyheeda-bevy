@@ -23,6 +23,7 @@ pub(crate) fn update_children<TComponent, TLocalization>(
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use bevy::ecs::relationship::RelatedSpawnerCommands;
 	use common::traits::{

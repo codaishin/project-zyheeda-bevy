@@ -79,6 +79,7 @@ impl SwapItems for ItemsMut<'_> {
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{
 		components::{combos::Combos, queue::Queue},

@@ -40,9 +40,11 @@ where
 			true
 		});
 
-		// Safety: removing all the NaN values should make the unwrap below never fail.
 		results.retain(|(_, toi)| !toi.0.is_nan());
-		results.sort_by(|(_, toi_a), (_, toi_b)| toi_a.partial_cmp(toi_b).unwrap());
+		results.sort_by(|(_, toi_a), (_, toi_b)| match toi_a.partial_cmp(toi_b) {
+			Some(ord) => ord,
+			None => unreachable!("Should never be reached. NaN values are filtered out"),
+		});
 
 		results
 	}

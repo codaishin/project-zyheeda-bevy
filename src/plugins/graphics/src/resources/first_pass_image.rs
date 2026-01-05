@@ -68,15 +68,15 @@ where
 
 #[cfg(test)]
 mod test {
-	use std::{
-		ops::DerefMut,
-		sync::{Arc, Mutex},
-	};
-
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::resources::window_size::WindowSize;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
+	use std::{
+		ops::DerefMut,
+		sync::{Arc, Mutex},
+	};
 	use testing::{NestedMocks, SingleThreadedApp, is_changed_resource};
 
 	#[derive(Asset, TypePath, NestedMocks)]

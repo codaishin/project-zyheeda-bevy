@@ -9,6 +9,7 @@ impl RegisterFaceTargetDefinition for FaceContextMut<'_> {
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{components::face_target::FaceTarget, system_param::face_param::FaceParamMut};
 	use bevy::{

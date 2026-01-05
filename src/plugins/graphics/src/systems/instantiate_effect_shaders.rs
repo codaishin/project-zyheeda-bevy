@@ -65,6 +65,7 @@ fn instantiate(commands: &mut ZyheedaCommands, effect_shaders: &EffectShadersTar
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::components::effect_shaders_target::{EffectShaderHandle, EffectShadersTarget};
 	use bevy::render::render_resource::AsBindGroup;

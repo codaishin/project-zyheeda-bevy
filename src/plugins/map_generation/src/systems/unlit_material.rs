@@ -15,6 +15,7 @@ pub(crate) fn unlit_material(
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use bevy::{
 		app::{App, Update},

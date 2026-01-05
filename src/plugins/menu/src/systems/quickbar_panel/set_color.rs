@@ -95,6 +95,7 @@ fn update_color_override(color: Option<ColorConfig>, mut entity: ZyheedaEntityCo
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::components::{ColorOverride, dispatch_text_color::DispatchTextColor};
 	use bevy::state::app::StatesPlugin;

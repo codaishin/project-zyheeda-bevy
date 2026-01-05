@@ -314,6 +314,7 @@ pub struct Obstacles {
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::expect_used)]
 	use super::*;
 	use macros::simple_mock;
 	use mockall::predicate::eq;
