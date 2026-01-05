@@ -87,6 +87,7 @@ impl From<Move> for AnimationPriority {
 
 #[cfg(test)]
 pub(crate) mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::components::{movement_config::MovementConfig, player::PLAYER_WALK};
 	use common::traits::{

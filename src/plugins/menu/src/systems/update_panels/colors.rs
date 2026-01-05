@@ -33,6 +33,7 @@ pub fn panel_colors<TPanel: Component + GetProperty<PanelState> + HasPanelColors
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{
 		components::dispatch_text_color::DispatchTextColor,

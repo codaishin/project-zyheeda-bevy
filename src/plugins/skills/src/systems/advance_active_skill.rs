@@ -129,6 +129,7 @@ fn schedule_start<TSkillExecutor, TSkill>(
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{
 		behaviors::{
@@ -141,7 +142,7 @@ mod tests {
 	use macros::{NestedMocks, simple_mock};
 	use mockall::{automock, mock, predicate::eq};
 	use std::collections::HashSet;
-	use testing::{IsChanged, Mock, NestedMocks, SingleThreadedApp, TickTime};
+	use testing::{IsChanged, MissingLastUpdate, Mock, NestedMocks, SingleThreadedApp, TickTime};
 
 	#[derive(Component, Default)]
 	struct _Dequeue {
@@ -237,7 +238,7 @@ mod tests {
 		)))
 	}
 
-	fn setup() -> (App, Entity) {
+	fn setup() -> Result<(App, Entity), MissingLastUpdate> {
 		let mut app = App::new().single_threaded(Update);
 		let agent = app
 			.world_mut()
@@ -248,19 +249,19 @@ mod tests {
 			.id();
 
 		app.init_resource::<Time<Real>>();
-		app.tick_time(Duration::ZERO);
+		app.tick_time(Duration::ZERO)?;
 		app.update();
 		app.add_systems(
 			Update,
 			advance_active_skill::<_Dequeue, Query<Mut<_Facing>>, _Executor, Real>,
 		);
 
-		(app, agent)
+		Ok((app, agent))
 	}
 
 	#[test]
-	fn call_update_with_delta() {
-		let (mut app, agent) = setup();
+	fn call_update_with_delta() -> Result<(), MissingLastUpdate> {
+		let (mut app, agent) = setup()?;
 		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
@@ -278,13 +279,14 @@ mod tests {
 			_Facing::default(),
 		));
 
-		app.tick_time(Duration::from_millis(100));
+		app.tick_time(Duration::from_millis(100))?;
 		app.update();
+		Ok(())
 	}
 
 	#[test]
-	fn clear_queue_of_active() {
-		let (mut app, agent) = setup();
+	fn clear_queue_of_active() -> Result<(), MissingLastUpdate> {
+		let (mut app, agent) = setup()?;
 		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
@@ -306,11 +308,12 @@ mod tests {
 		let agent = app.world().entity(agent);
 
 		assert!(agent.get::<_Dequeue>().unwrap().active.is_none());
+		Ok(())
 	}
 
 	#[test]
-	fn do_not_remove_skill_when_not_done() {
-		let (mut app, agent) = setup();
+	fn do_not_remove_skill_when_not_done() -> Result<(), MissingLastUpdate> {
+		let (mut app, agent) = setup()?;
 		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
@@ -334,11 +337,12 @@ mod tests {
 		let agent = app.world().entity(agent);
 
 		assert!(agent.get::<_Dequeue>().unwrap().active.is_some());
+		Ok(())
 	}
 
 	#[test]
-	fn run_on_active() {
-		let (mut app, agent) = setup();
+	fn run_on_active() -> Result<(), MissingLastUpdate> {
+		let (mut app, agent) = setup()?;
 		app.world_mut().entity_mut(agent).insert((
 			_Executor::new().with_mock(|mock| {
 				mock.expect_flush().return_const(());
@@ -377,11 +381,12 @@ mod tests {
 		));
 
 		app.update();
+		Ok(())
 	}
 
 	#[test]
-	fn run_on_aim() {
-		let (mut app, agent) = setup();
+	fn run_on_aim() -> Result<(), MissingLastUpdate> {
+		let (mut app, agent) = setup()?;
 		app.world_mut().entity_mut(agent).insert((
 			_Executor::new().with_mock(|mock| {
 				mock.expect_flush().return_const(());
@@ -420,11 +425,12 @@ mod tests {
 		));
 
 		app.update();
+		Ok(())
 	}
 
 	#[test]
-	fn do_not_run_when_not_activating_this_frame() {
-		let (mut app, agent) = setup();
+	fn do_not_run_when_not_activating_this_frame() -> Result<(), MissingLastUpdate> {
+		let (mut app, agent) = setup()?;
 		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
@@ -445,11 +451,12 @@ mod tests {
 		));
 
 		app.update();
+		Ok(())
 	}
 
 	#[test]
-	fn flush() {
-		let (mut app, agent) = setup();
+	fn flush() -> Result<(), MissingLastUpdate> {
+		let (mut app, agent) = setup()?;
 		app.world_mut().entity_mut(agent).insert((
 			_Executor::new().with_mock(|mock| {
 				mock.expect_schedule().return_const(());
@@ -471,11 +478,12 @@ mod tests {
 		));
 
 		app.update();
+		Ok(())
 	}
 
 	#[test]
-	fn do_not_stop_when_not_done() {
-		let (mut app, agent) = setup();
+	fn do_not_stop_when_not_done() -> Result<(), MissingLastUpdate> {
+		let (mut app, agent) = setup()?;
 		app.world_mut().entity_mut(agent).insert((
 			_Executor::new().with_mock(|mock| {
 				mock.expect_schedule().return_const(());
@@ -499,11 +507,12 @@ mod tests {
 		));
 
 		app.update();
+		Ok(())
 	}
 
 	#[test]
-	fn apply_facing() {
-		let (mut app, agent) = setup();
+	fn apply_facing() -> Result<(), MissingLastUpdate> {
+		let (mut app, agent) = setup()?;
 		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
@@ -529,11 +538,12 @@ mod tests {
 		));
 
 		app.update();
+		Ok(())
 	}
 
 	#[test]
-	fn do_not_apply_facing_when_not_beginning_to_aim() {
-		let (mut app, agent) = setup();
+	fn do_not_apply_facing_when_not_beginning_to_aim() -> Result<(), MissingLastUpdate> {
+		let (mut app, agent) = setup()?;
 		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
@@ -556,11 +566,12 @@ mod tests {
 		));
 
 		app.update();
+		Ok(())
 	}
 
 	#[test]
-	fn apply_facing_override_when_beginning_to_aim() {
-		let (mut app, agent) = setup();
+	fn apply_facing_override_when_beginning_to_aim() -> Result<(), MissingLastUpdate> {
+		let (mut app, agent) = setup()?;
 		app.world_mut().entity_mut(agent).insert((
 			_Dequeue {
 				active: Some(Box::new(|| {
@@ -586,11 +597,12 @@ mod tests {
 		));
 
 		app.update();
+		Ok(())
 	}
 
 	#[test]
-	fn stop_facing_override_when_no_skills_active() {
-		let (mut app, agent) = setup();
+	fn stop_facing_override_when_no_skills_active() -> Result<(), MissingLastUpdate> {
+		let (mut app, agent) = setup()?;
 		app.world_mut().entity_mut(agent).insert((
 			_Dequeue { active: None },
 			Transform::from_xyz(-1., -2., -3.),
@@ -601,11 +613,12 @@ mod tests {
 		));
 
 		app.update();
+		Ok(())
 	}
 
 	#[test]
-	fn do_not_mutable_deref_executer_when_skill_states_empty() {
-		let (mut app, agent) = setup();
+	fn do_not_mutable_deref_executer_when_skill_states_empty() -> Result<(), MissingLastUpdate> {
+		let (mut app, agent) = setup()?;
 		app = app.single_threaded(PostUpdate);
 		let entity = app
 			.world_mut()
@@ -633,5 +646,6 @@ mod tests {
 			Some(&IsChanged::<_Executor>::FALSE),
 			app.world().entity(entity).get::<IsChanged<_Executor>>()
 		);
+		Ok(())
 	}
 }

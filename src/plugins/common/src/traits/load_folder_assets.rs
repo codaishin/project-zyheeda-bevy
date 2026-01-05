@@ -25,6 +25,7 @@ pub mod mock {
 	};
 	use uuid::Uuid;
 
+	/// Use for test mocks only
 	#[derive(Resource, Default, Debug)]
 	pub struct MockFolderAssetServer {
 		assets: HashMap<MockAssetPath, Handle<LoadedFolder>>,
@@ -48,6 +49,7 @@ pub mod mock {
 		{
 			let path = MockAssetPath::from(path.into());
 
+			#[allow(clippy::unwrap_used)]
 			let calls = self.calls.read().unwrap();
 
 			calls.get(&path).copied().unwrap_or_default()
@@ -60,6 +62,8 @@ pub mod mock {
 			TPath: Into<AssetPath<'a>>,
 		{
 			let path = MockAssetPath::from(path.into());
+
+			#[allow(clippy::unwrap_used)]
 			let mut calls = self.calls.write().unwrap();
 
 			let calls = calls.entry(path.clone()).or_default();

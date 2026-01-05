@@ -58,6 +58,7 @@ where
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};

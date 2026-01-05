@@ -38,6 +38,7 @@ impl Enemy {
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::components::enemy::attack_phase::EnemyAttackPhase;
 	use common::{tools::action_key::slot::SlotKey, traits::handles_loadout::HeldSkills};

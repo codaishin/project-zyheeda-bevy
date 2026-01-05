@@ -170,6 +170,7 @@ fn add(dst: &mut AnimationMask, src: AnimationMask) {
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::test_tools::leak_iterator;
 	use common::{

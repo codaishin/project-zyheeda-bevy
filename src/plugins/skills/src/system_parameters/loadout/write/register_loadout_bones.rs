@@ -55,6 +55,7 @@ impl RegisterLoadoutBones for PrepareLoadoutBones<'_> {
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::components::bone_definitions::BoneDefinitions;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};

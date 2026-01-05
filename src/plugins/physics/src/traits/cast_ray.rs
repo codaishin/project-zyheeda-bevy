@@ -1,9 +1,12 @@
 pub mod read_rapier_context;
 pub mod system_input;
 
-use bevy::ecs::entity::Entity;
+use bevy::{ecs::entity::Entity, math::Vec3};
 use bevy_rapier3d::prelude::RayIntersection;
-use common::traits::handles_physics::TimeOfImpact;
+use common::{
+	errors::{ErrorData, Level},
+	traits::handles_physics::{IsNaN, TimeOfImpact},
+};
 
 pub trait GetContinuousSortedRayCaster<TRayData> {
 	type TError;
@@ -22,7 +25,24 @@ pub trait CastRayContinuously<TRayData> {
 	);
 }
 
-pub type SortedByTimeOfImpactAscending = Vec<(Entity, TimeOfImpact)>;
+pub type SortedByTimeOfImpactAscending = Result<Vec<(Entity, TimeOfImpact)>, InvalidIntersections>;
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct InvalidIntersections(pub Vec<Vec3>);
+
+impl ErrorData for InvalidIntersections {
+	fn level(&self) -> Level {
+		Level::Error
+	}
+
+	fn label() -> impl std::fmt::Display {
+		"Raycast Intersections sorting failed"
+	}
+
+	fn into_details(self) -> impl std::fmt::Display {
+		format!("Intersections with `NaN` time of impact: {:?}", self.0)
+	}
+}
 
 pub trait CastRayContinuouslySorted<TRayData> {
 	fn cast_ray_continuously_sorted(&self, ray: &TRayData) -> SortedByTimeOfImpactAscending;
@@ -33,18 +53,25 @@ where
 	T: CastRayContinuously<TRayData>,
 {
 	fn cast_ray_continuously_sorted(&self, ray: &TRayData) -> SortedByTimeOfImpactAscending {
-		let mut results = Vec::new();
+		let mut results = vec![];
+		let mut invalid_intersections = vec![];
 
-		self.cast_ray_continuously(ray, |entity, RayIntersection { time_of_impact, .. }| {
-			results.push((entity, TimeOfImpact(time_of_impact)));
+		self.cast_ray_continuously(ray, |entity, intersection| {
+			match TimeOfImpact::try_from(intersection.time_of_impact) {
+				Ok(time_of_impact) => results.push((entity, time_of_impact)),
+				Err(IsNaN) => invalid_intersections.push(intersection.point),
+			};
+
 			true
 		});
 
-		// Safety: removing all the NaN values should make the unwrap below never fail.
-		results.retain(|(_, toi)| !toi.0.is_nan());
-		results.sort_by(|(_, toi_a), (_, toi_b)| toi_a.partial_cmp(toi_b).unwrap());
+		if !invalid_intersections.is_empty() {
+			return Err(InvalidIntersections(invalid_intersections));
+		}
 
-		results
+		results.sort_by_key(|(.., toi)| *toi);
+
+		Ok(results)
 	}
 }
 
@@ -53,6 +80,7 @@ mod tests {
 	use super::*;
 	use bevy::math::Vec3;
 	use bevy_rapier3d::parry::shape::FeatureId;
+	use common::toi;
 	use core::f32;
 	use testing::assert_no_panic;
 
@@ -88,11 +116,11 @@ mod tests {
 		let hits = mock.cast_ray_continuously_sorted(&_Ray);
 
 		assert_eq!(
-			vec![
-				(Entity::from_raw(3), TimeOfImpact(3.)),
-				(Entity::from_raw(2), TimeOfImpact(20.)),
-				(Entity::from_raw(1), TimeOfImpact(f32::INFINITY))
-			],
+			Ok(vec![
+				(Entity::from_raw(3), toi!(3.)),
+				(Entity::from_raw(2), toi!(20.)),
+				(Entity::from_raw(1), toi!(f32::INFINITY))
+			]),
 			hits
 		)
 	}
@@ -107,7 +135,10 @@ mod tests {
 				_: &_Ray,
 				mut callback: F,
 			) {
-				callback(Entity::from_raw(666), intersection_toi(f32::NAN));
+				let mut invalid = intersection_toi(f32::NAN);
+				invalid.point = Vec3::new(1., 2., 3.);
+
+				callback(Entity::from_raw(666), invalid);
 				callback(Entity::from_raw(2), intersection_toi(20.));
 				callback(Entity::from_raw(3), intersection_toi(3.));
 			}
@@ -117,12 +148,6 @@ mod tests {
 
 		let hits = assert_no_panic!(mock.cast_ray_continuously_sorted(&_Ray));
 
-		assert_eq!(
-			vec![
-				(Entity::from_raw(3), TimeOfImpact(3.)),
-				(Entity::from_raw(2), TimeOfImpact(20.)),
-			],
-			hits
-		);
+		assert_eq!(Err(InvalidIntersections(vec![Vec3::new(1., 2., 3.)])), hits);
 	}
 }

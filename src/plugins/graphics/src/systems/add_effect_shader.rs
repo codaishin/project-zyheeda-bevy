@@ -22,6 +22,7 @@ pub(crate) fn add_effect_shader<TPhysics, TEffect>(
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::components::effect_shaders_target::EffectShadersTarget;
 	use bevy::{asset::UntypedAssetId, render::render_resource::AsBindGroup};

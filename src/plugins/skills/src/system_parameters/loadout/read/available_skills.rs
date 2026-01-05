@@ -126,6 +126,7 @@ impl GetSkillId<SkillId> for ReadAvailableSkill {
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{components::combos::Combos, skills::Skill};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};

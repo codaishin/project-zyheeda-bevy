@@ -34,7 +34,7 @@ impl From<Duration> for Lifetime {
 mod tests {
 	use super::*;
 	use std::time::Duration;
-	use testing::{SingleThreadedApp, TickTime};
+	use testing::{MissingLastUpdate, SingleThreadedApp, TickTime};
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -45,46 +45,49 @@ mod tests {
 	}
 
 	#[test]
-	fn decrease_lifetime_by_delta() {
+	fn decrease_lifetime_by_delta() -> Result<(), MissingLastUpdate> {
 		let mut app = setup();
 		let lifetime = app
 			.world_mut()
 			.spawn(Lifetime(Duration::from_secs(100)))
 			.id();
 
-		app.tick_time(Duration::from_secs(10));
+		app.tick_time(Duration::from_secs(10))?;
 		app.update();
 
 		let lifetime = app.world().entity(lifetime).get::<Lifetime>();
 
 		assert_eq!(Some(&Lifetime(Duration::from_secs(90))), lifetime);
+		Ok(())
 	}
 
 	#[test]
-	fn despawn_when_lifetime_zero() {
+	fn despawn_when_lifetime_zero() -> Result<(), MissingLastUpdate> {
 		let mut app = setup();
 		let lifetime = app
 			.world_mut()
 			.spawn(Lifetime(Duration::from_secs(100)))
 			.id();
 
-		app.tick_time(Duration::from_secs(100));
+		app.tick_time(Duration::from_secs(100))?;
 		app.update();
 
 		assert!(app.world().get_entity(lifetime).is_err());
+		Ok(())
 	}
 
 	#[test]
-	fn despawn_when_lifetime_below_zero() {
+	fn despawn_when_lifetime_below_zero() -> Result<(), MissingLastUpdate> {
 		let mut app = setup();
 		let lifetime = app
 			.world_mut()
 			.spawn(Lifetime(Duration::from_secs(100)))
 			.id();
 
-		app.tick_time(Duration::from_secs(101));
+		app.tick_time(Duration::from_secs(101))?;
 		app.update();
 
 		assert!(app.world().get_entity(lifetime).is_err());
+		Ok(())
 	}
 }

@@ -1,7 +1,11 @@
 use crate::{
 	components::RayCasterArgs,
 	events::RayCastInfo,
-	traits::cast_ray::{CastRayContinuouslySorted, GetContinuousSortedRayCaster},
+	traits::cast_ray::{
+		CastRayContinuouslySorted,
+		GetContinuousSortedRayCaster,
+		InvalidIntersections,
+	},
 };
 use bevy::prelude::*;
 use bevy_rapier3d::plugin::ReadRapierContext;
@@ -17,7 +21,7 @@ pub(crate) fn execute_ray_caster(
 	cast_ray: ReadRapierContext,
 	commands: ZyheedaCommands,
 	ray_casters: Query<(Entity, &RayCasterArgs)>,
-) -> HashMap<Entity, RayCastResult> {
+) -> Result<HashMap<Entity, RayCastResult>, InvalidIntersections> {
 	internal_execute_ray_caster(cast_ray, commands, ray_casters)
 }
 
@@ -25,19 +29,27 @@ pub(crate) fn internal_execute_ray_caster<TGetRayCaster>(
 	cast_ray: TGetRayCaster,
 	mut commands: ZyheedaCommands,
 	ray_casters: Query<(Entity, &RayCasterArgs)>,
-) -> HashMap<Entity, RayCastResult>
+) -> Result<HashMap<Entity, RayCastResult>, InvalidIntersections>
 where
 	TGetRayCaster: GetContinuousSortedRayCaster<RayCasterArgs>,
 {
 	let mut results = HashMap::new();
+	let mut invalid_intersections = vec![];
 
 	let Ok(ray_caster) = cast_ray.get_continuous_sorted_ray_caster() else {
-		return results;
+		return Ok(results);
 	};
 
 	for (source, ray_caster_args) in &ray_casters {
+		let hits = match ray_caster.cast_ray_continuously_sorted(ray_caster_args) {
+			Ok(hits) => hits,
+			Err(InvalidIntersections(invalids)) => {
+				invalid_intersections.extend(invalids);
+				continue;
+			}
+		};
 		let info = RayCastInfo {
-			hits: ray_caster.cast_ray_continuously_sorted(ray_caster_args),
+			hits,
 			ray: Ray3d {
 				origin: ray_caster_args.origin,
 				direction: ray_caster_args.direction,
@@ -50,16 +62,20 @@ where
 		});
 	}
 
-	results
+	if !invalid_intersections.is_empty() {
+		return Err(InvalidIntersections(invalid_intersections));
+	}
+
+	Ok(results)
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::events::RayCastInfo;
+	use crate::{events::RayCastInfo, traits::cast_ray::SortedByTimeOfImpactAscending};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use bevy_rapier3d::math::Real;
-	use common::traits::handles_physics::TimeOfImpact;
+	use common::{toi, traits::handles_physics::TimeOfImpact};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use testing::{NestedMocks, SingleThreadedApp};
@@ -91,7 +107,10 @@ mod tests {
 
 	#[automock]
 	impl CastRayContinuouslySorted<RayCasterArgs> for _RayCaster {
-		fn cast_ray_continuously_sorted(&self, ray: &RayCasterArgs) -> Vec<(Entity, TimeOfImpact)> {
+		fn cast_ray_continuously_sorted(
+			&self,
+			ray: &RayCasterArgs,
+		) -> SortedByTimeOfImpactAscending {
 			self.mock.cast_ray_continuously_sorted(ray)
 		}
 	}
@@ -112,11 +131,11 @@ mod tests {
 							.with(eq(RayCasterArgs {
 								origin: Vec3::ZERO,
 								direction: Dir3::NEG_Y,
-								max_toi: TimeOfImpact(42.),
+								max_toi: toi!(42.),
 								solid: true,
 								filter: default(),
 							}))
-							.return_const(vec![]);
+							.return_const(Ok(vec![]));
 					}))
 				});
 		});
@@ -125,12 +144,12 @@ mod tests {
 		app.world_mut().spawn(RayCasterArgs {
 			origin: Vec3::ZERO,
 			direction: Dir3::NEG_Y,
-			max_toi: TimeOfImpact(42.),
+			max_toi: toi!(42.),
 			solid: true,
 			filter: default(),
 		});
 
-		app.world_mut().run_system_once_with(
+		_ = app.world_mut().run_system_once_with(
 			internal_execute_ray_caster::<In<_GetRayCaster>>,
 			get_ray_caster,
 		)?;
@@ -145,10 +164,10 @@ mod tests {
 				.returning(|| {
 					Ok(_RayCaster::new().with_mock(|mock| {
 						mock.expect_cast_ray_continuously_sorted()
-							.return_const(vec![
-								(Entity::from_raw(42), TimeOfImpact(42.)),
-								(Entity::from_raw(420), TimeOfImpact(420.)),
-							]);
+							.return_const(Ok(vec![
+								(Entity::from_raw(42), toi!(42.)),
+								(Entity::from_raw(420), toi!(420.)),
+							]));
 					}))
 				});
 		});
@@ -158,7 +177,7 @@ mod tests {
 			.spawn(RayCasterArgs {
 				origin: Vec3::ONE,
 				direction: Dir3::Y,
-				max_toi: TimeOfImpact(Real::INFINITY),
+				max_toi: toi!(Real::INFINITY),
 				..default()
 			})
 			.id();
@@ -169,22 +188,54 @@ mod tests {
 		)?;
 
 		assert_eq!(
-			HashMap::from([(
+			Ok(HashMap::from([(
 				ray_caster,
 				RayCastResult {
 					info: RayCastInfo {
 						hits: vec![
-							(Entity::from_raw(42), TimeOfImpact(42.)),
-							(Entity::from_raw(420), TimeOfImpact(420.)),
+							(Entity::from_raw(42), toi!(42.)),
+							(Entity::from_raw(420), toi!(420.)),
 						],
 						ray: Ray3d {
 							origin: Vec3::ONE,
 							direction: Dir3::Y
 						},
-						max_toi: TimeOfImpact(Real::INFINITY)
+						max_toi: toi!(Real::INFINITY)
 					}
 				}
-			)]),
+			)])),
+			results
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn return_error() -> Result<(), RunSystemError> {
+		let get_ray_caster = _GetRayCaster::new().with_mock(|mock| {
+			mock.expect_get_continuous_sorted_ray_caster()
+				.times(1)
+				.returning(|| {
+					Ok(_RayCaster::new().with_mock(|mock| {
+						mock.expect_cast_ray_continuously_sorted()
+							.return_const(Err(InvalidIntersections(vec![Vec3::new(1., 2., 3.)])));
+					}))
+				});
+		});
+		let mut app = setup();
+		app.world_mut().spawn(RayCasterArgs {
+			origin: Vec3::ONE,
+			direction: Dir3::Y,
+			max_toi: toi!(Real::INFINITY),
+			..default()
+		});
+
+		let results = app.world_mut().run_system_once_with(
+			internal_execute_ray_caster::<In<_GetRayCaster>>,
+			get_ray_caster,
+		)?;
+
+		assert_eq!(
+			Err(InvalidIntersections(vec![Vec3::new(1., 2., 3.)])),
 			results
 		);
 		Ok(())
@@ -199,7 +250,7 @@ mod tests {
 					Ok(_RayCaster::new().with_mock(|mock| {
 						mock.expect_cast_ray_continuously_sorted()
 							.times(1)
-							.return_const(vec![]);
+							.return_const(Ok(vec![]));
 					}))
 				});
 		});
@@ -210,7 +261,7 @@ mod tests {
 					Ok(_RayCaster::new().with_mock(|mock| {
 						mock.expect_cast_ray_continuously_sorted()
 							.times(0)
-							.return_const(vec![]);
+							.return_const(Ok(vec![]));
 					}))
 				});
 		});
@@ -218,16 +269,16 @@ mod tests {
 		app.world_mut().spawn(RayCasterArgs {
 			origin: Vec3::ZERO,
 			direction: Dir3::NEG_Y,
-			max_toi: TimeOfImpact(42.),
+			max_toi: toi!(42.),
 			solid: true,
 			filter: default(),
 		});
 
-		app.world_mut().run_system_once_with(
+		_ = app.world_mut().run_system_once_with(
 			internal_execute_ray_caster::<In<_GetRayCaster>>,
 			get_ray_caster_with_call,
 		)?;
-		app.world_mut().run_system_once_with(
+		_ = app.world_mut().run_system_once_with(
 			internal_execute_ray_caster::<In<_GetRayCaster>>,
 			get_ray_caster_without_call,
 		)?;
@@ -242,7 +293,7 @@ mod tests {
 				.returning(|| {
 					Ok(_RayCaster::new().with_mock(|mock| {
 						mock.expect_cast_ray_continuously_sorted()
-							.return_const(vec![]);
+							.return_const(Ok(vec![]));
 					}))
 				});
 		});
@@ -252,13 +303,13 @@ mod tests {
 			.spawn(RayCasterArgs {
 				origin: Vec3::ZERO,
 				direction: Dir3::NEG_Y,
-				max_toi: TimeOfImpact(42.),
+				max_toi: toi!(42.),
 				solid: true,
 				filter: default(),
 			})
 			.id();
 
-		app.world_mut().run_system_once_with(
+		_ = app.world_mut().run_system_once_with(
 			internal_execute_ray_caster::<In<_GetRayCaster>>,
 			get_ray_caster,
 		)?;

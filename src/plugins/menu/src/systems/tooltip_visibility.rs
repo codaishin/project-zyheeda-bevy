@@ -31,20 +31,20 @@ mod tests {
 		time::Real,
 	};
 	use std::time::Duration;
-	use testing::{SingleThreadedApp, TickTime};
+	use testing::{MissingLastUpdate, SingleThreadedApp, TickTime};
 
-	fn setup() -> App {
+	fn setup() -> Result<App, MissingLastUpdate> {
 		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<Time<Real>>();
-		app.tick_time(Duration::ZERO);
+		app.tick_time(Duration::ZERO)?;
 		app.add_systems(Update, tooltip_visibility::<Real, ()>);
 
-		app
+		Ok(app)
 	}
 
 	#[test]
-	fn set_to_visible_after_delay() {
-		let mut app = setup();
+	fn set_to_visible_after_delay() -> Result<(), MissingLastUpdate> {
+		let mut app = setup()?;
 		let tooltip_ui = app
 			.world_mut()
 			.spawn((
@@ -53,17 +53,18 @@ mod tests {
 			))
 			.id();
 
-		app.tick_time(Duration::from_millis(100));
+		app.tick_time(Duration::from_millis(100))?;
 		app.update();
 
 		let tooltip_ui = app.world().entity(tooltip_ui);
 
 		assert_eq!(Some(&Visibility::Visible), tooltip_ui.get::<Visibility>());
+		Ok(())
 	}
 
 	#[test]
-	fn do_not_set_to_visible_before_delay() {
-		let mut app = setup();
+	fn do_not_set_to_visible_before_delay() -> Result<(), MissingLastUpdate> {
+		let mut app = setup()?;
 		let tooltip_ui = app
 			.world_mut()
 			.spawn((
@@ -72,17 +73,18 @@ mod tests {
 			))
 			.id();
 
-		app.tick_time(Duration::from_millis(9));
+		app.tick_time(Duration::from_millis(9))?;
 		app.update();
 
 		let tooltip_ui = app.world().entity(tooltip_ui);
 
 		assert_eq!(Some(&Visibility::Hidden), tooltip_ui.get::<Visibility>());
+		Ok(())
 	}
 
 	#[test]
-	fn set_to_visible_after_delay_reached_in_successive_updates() {
-		let mut app = setup();
+	fn set_to_visible_after_delay_reached_in_successive_updates() -> Result<(), MissingLastUpdate> {
+		let mut app = setup()?;
 		let tooltip_ui = app
 			.world_mut()
 			.spawn((
@@ -91,20 +93,21 @@ mod tests {
 			))
 			.id();
 
-		app.tick_time(Duration::from_millis(500));
+		app.tick_time(Duration::from_millis(500))?;
 		app.update();
 
-		app.tick_time(Duration::from_millis(500));
+		app.tick_time(Duration::from_millis(500))?;
 		app.update();
 
 		let tooltip_ui = app.world().entity(tooltip_ui);
 
 		assert_eq!(Some(&Visibility::Visible), tooltip_ui.get::<Visibility>());
+		Ok(())
 	}
 
 	#[test]
-	fn set_delay_to_zero_when_delta_exceeds_delay() {
-		let mut app = setup();
+	fn set_delay_to_zero_when_delta_exceeds_delay() -> Result<(), MissingLastUpdate> {
+		let mut app = setup()?;
 		let tooltip_ui = app
 			.world_mut()
 			.spawn((
@@ -113,7 +116,7 @@ mod tests {
 			))
 			.id();
 
-		app.tick_time(Duration::from_millis(11));
+		app.tick_time(Duration::from_millis(11))?;
 		app.update();
 
 		let tooltip_ui = app.world().entity(tooltip_ui);
@@ -125,5 +128,6 @@ mod tests {
 			)),
 			tooltip_ui.get::<TooltipContent<()>>()
 		);
+		Ok(())
 	}
 }

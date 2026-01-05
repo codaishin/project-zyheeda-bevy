@@ -11,7 +11,7 @@ impl CastRayContinuously<RayCasterArgs> for RapierContext<'_> {
 		self.intersections_with_ray(
 			ray.origin,
 			ray.direction.into(),
-			ray.max_toi.0,
+			*ray.max_toi,
 			ray.solid,
 			QueryFilter::from(ray.filter.clone()),
 			callback,

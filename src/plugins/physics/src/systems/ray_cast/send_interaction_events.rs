@@ -28,7 +28,7 @@ mod tests {
 	use super::*;
 	use crate::events::Collision;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::traits::handles_physics::TimeOfImpact;
+	use common::{toi, traits::handles_physics::TimeOfImpact};
 	use macros::NestedMocks;
 	use mockall::{Sequence, mock, predicate::eq};
 	use testing::{NestedMocks, SingleThreadedApp, get_current_update_events};
@@ -112,7 +112,7 @@ mod tests {
 				Vec3::new(1., 2., 3.),
 				Dir3::new_unchecked(Vec3::new(3., 2., 1.).normalize()),
 			),
-			TimeOfImpact(900.),
+			toi!(900.),
 		);
 		let collisions = vec![];
 		let mut app = setup(_Tracker::new().with_mock(|mock| {
@@ -129,7 +129,7 @@ mod tests {
 					Vec3::new(1., 2., 3.),
 					Dir3::new_unchecked(Vec3::new(3., 2., 1.).normalize())
 				),
-				TimeOfImpact(900.),
+				toi!(900.),
 			)],
 			get_current_update_events!(app, InteractionEvent<Ray>).collect::<Vec<_>>()
 		);

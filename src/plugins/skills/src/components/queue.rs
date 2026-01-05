@@ -203,6 +203,7 @@ impl GetSkillBehavior for ActiveSkill<'_> {
 
 #[cfg(test)]
 mod test_queue_collection {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use bevy::utils::default;
 	use common::traits::handles_localization::Token;
@@ -597,6 +598,7 @@ mod test_queue_collection {
 
 #[cfg(test)]
 mod test_queue_active_skill {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{
 		behaviors::{

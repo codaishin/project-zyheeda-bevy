@@ -7,16 +7,17 @@ const HORIZONTAL_PLANE: InfinitePlane3d = InfinitePlane3d { normal: Dir3::Y };
 impl Raycast<Ground> for RayCaster<'_, '_> {
 	fn raycast(&mut self, Ground { ray }: Ground) -> Option<TimeOfImpact> {
 		ray.intersect_plane(Vec3::ZERO, HORIZONTAL_PLANE)
-			.map(TimeOfImpact)
+			.and_then(|toi| TimeOfImpact::try_from_f32(toi).ok())
 	}
 }
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::PhysicsPlugin;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::traits::handles_physics::RaycastSystemParam;
+	use common::{toi, traits::handles_physics::RaycastSystemParam};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -37,7 +38,7 @@ mod tests {
 				})
 			},
 		)?;
-		assert_eq!(Some(TimeOfImpact(1.)), hit);
+		assert_eq!(Some(toi!(1.)), hit);
 		Ok(())
 	}
 
@@ -55,7 +56,7 @@ mod tests {
 				})
 			},
 		)?;
-		assert_eq!(Some(TimeOfImpact(10.)), hit);
+		assert_eq!(Some(toi!(10.)), hit);
 		Ok(())
 	}
 }

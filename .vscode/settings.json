@@ -10,6 +10,14 @@
 	"editor.indentSize": "tabSize",
 	"editor.insertSpaces": false,
 	"rust-analyzer.check.command": "clippy",
+	"rust-analyzer.check.extraArgs": [
+		"--no-deps",
+		"--",
+		"-D",
+		"clippy::unwrap_used",
+		"-D",
+		"clippy::expect_used"
+	],
 	"rust-analyzer.showUnlinkedFileNotification": false,
 	"rust-analyzer.rustfmt.extraArgs": [
 		"+nightly"

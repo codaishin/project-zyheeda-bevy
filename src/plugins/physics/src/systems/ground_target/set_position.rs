@@ -65,6 +65,7 @@ impl GroundTarget {
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use common::{
 		components::persistent_entity::PersistentEntity,

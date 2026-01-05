@@ -29,6 +29,7 @@ impl WindowSize {
 
 #[cfg(test)]
 mod test {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use bevy::window::WindowResolution;
 	use std::sync::{Arc, Mutex};

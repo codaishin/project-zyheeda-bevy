@@ -80,6 +80,7 @@ impl GetProperty<ItemToken> for ReadItem {
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{components::combos::Combos, skills::Skill};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};

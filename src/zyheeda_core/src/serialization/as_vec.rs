@@ -88,6 +88,7 @@ where
 
 #[cfg(test)]
 mod test_as_vec {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use serde_json::json;
 

@@ -176,6 +176,7 @@ impl ErrorData for SetBundleError {
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::resources::ftl_server::Locale;
 	use fluent::FluentError;

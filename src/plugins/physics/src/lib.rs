@@ -74,7 +74,7 @@ use resources::{
 	track_interaction_duplicates::TrackInteractionDuplicates,
 	track_ray_interactions::TrackRayInteractions,
 };
-use std::{marker::PhantomData, time::Duration};
+use std::{collections::HashMap, marker::PhantomData, time::Duration};
 use systems::{
 	interactions::{
 		apply_fragile_blocks::apply_fragile_blocks,
@@ -208,6 +208,7 @@ where
 					(
 						ActiveBeam::execute,
 						execute_ray_caster
+							.pipe(OnError::log_and_return(HashMap::default))
 							.pipe(apply_interruptable_ray_blocks)
 							.pipe(map_ray_cast_result_to_interaction_events)
 							.pipe(send_interaction_events::<TrackRayInteractions>),

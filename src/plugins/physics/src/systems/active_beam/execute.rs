@@ -58,7 +58,7 @@ fn update_ray_caster_args(
 			direction: origin.forward(),
 			solid: false,
 			filter: RayFilter::default(),
-			max_toi: TimeOfImpact(*range),
+			max_toi: TimeOfImpact::from(range),
 		});
 	});
 }
@@ -76,8 +76,7 @@ fn insert_active_beam(
 }
 
 fn update_transform(transform: &mut Transform, ray: &Ray) {
-	let TimeOfImpact(toi) = ray.1;
-	transform.scale.z = f32::max(toi, f32::EPSILON);
+	transform.scale.z = f32::max(*ray.1, f32::EPSILON);
 }
 
 #[cfg(test)]
@@ -87,7 +86,7 @@ mod tests {
 		components::RayCasterArgs,
 		events::{InteractionEvent, Ray},
 	};
-	use common::traits::register_persistent_entities::RegisterPersistentEntities;
+	use common::{toi, traits::register_persistent_entities::RegisterPersistentEntities};
 	use testing::{SingleThreadedApp, assert_eq_approx};
 
 	fn setup() -> App {
@@ -121,7 +120,7 @@ mod tests {
 			Some(&RayCasterArgs {
 				origin: Vec3::new(2., 2., 2.),
 				direction: Dir3::X,
-				max_toi: TimeOfImpact(100.),
+				max_toi: toi!(100.),
 				solid: false,
 				filter: RayFilter::default(),
 			}),
@@ -148,7 +147,7 @@ mod tests {
 				origin: Vec3::new(1., 0., 0.),
 				direction: Dir3::Y,
 			},
-			TimeOfImpact(10.),
+			toi!(10.),
 		));
 
 		app.update();
@@ -187,7 +186,7 @@ mod tests {
 				origin: Vec3::new(1., 0., 0.),
 				direction: Dir3::Y,
 			},
-			TimeOfImpact(0.),
+			toi!(0.),
 		));
 
 		app.update();
@@ -226,7 +225,7 @@ mod tests {
 				origin: Vec3::new(1., 0., 0.),
 				direction: Dir3::Z,
 			},
-			TimeOfImpact(10.),
+			toi!(10.),
 		));
 
 		app.update();
@@ -235,7 +234,7 @@ mod tests {
 				origin: Vec3::new(1., 0., 0.),
 				direction: Dir3::Y,
 			},
-			TimeOfImpact(5.),
+			toi!(5.),
 		));
 
 		app.update();
@@ -274,7 +273,7 @@ mod tests {
 				origin: Vec3::new(1., 0., 0.),
 				direction: Dir3::Z,
 			},
-			TimeOfImpact(5.),
+			toi!(5.),
 		));
 
 		app.update();
@@ -283,7 +282,7 @@ mod tests {
 				origin: Vec3::new(1., 0., 0.),
 				direction: Dir3::Y,
 			},
-			TimeOfImpact(0.),
+			toi!(0.),
 		));
 
 		app.update();

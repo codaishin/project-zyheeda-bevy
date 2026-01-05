@@ -11,7 +11,10 @@ use crate::{
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, ops::DerefMut};
+use std::{
+	collections::HashSet,
+	ops::{Deref, DerefMut},
+};
 
 pub trait HandlesRaycast {
 	/// Marks the world camera used in [`MouseHover`] raycasting. Only one instance may exist in
@@ -166,8 +169,70 @@ impl RaycastResult for Ground {
 	type TResult = Option<TimeOfImpact>;
 }
 
-#[derive(Debug, Default, PartialEq, PartialOrd, Clone, Copy)]
-pub struct TimeOfImpact(pub f32);
+#[derive(Debug, Default, PartialEq, Clone, Copy)]
+pub struct TimeOfImpact(f32);
+
+impl TimeOfImpact {
+	pub const fn try_from_f32(toi: f32) -> Result<Self, IsNaN> {
+		if toi.is_nan() {
+			return Err(IsNaN);
+		}
+
+		Ok(Self(toi))
+	}
+}
+
+impl From<Units> for TimeOfImpact {
+	fn from(toi: Units) -> Self {
+		Self(*toi)
+	}
+}
+
+impl TryFrom<f32> for TimeOfImpact {
+	type Error = IsNaN;
+
+	fn try_from(toi: f32) -> Result<Self, Self::Error> {
+		Self::try_from_f32(toi)
+	}
+}
+
+impl Deref for TimeOfImpact {
+	type Target = f32;
+
+	fn deref(&self) -> &Self::Target {
+		&self.0
+	}
+}
+
+/// Create a [`TimeOfImpact`] value at compile time.
+#[macro_export]
+macro_rules! toi {
+	($toi:expr) => {{
+		const TOI: TimeOfImpact = match TimeOfImpact::try_from_f32($toi) {
+			Ok(toi) => toi,
+			Err(IsNaN) => panic!("invalid time of impact"),
+		};
+		TOI
+	}};
+}
+
+impl Eq for TimeOfImpact {}
+
+impl PartialOrd for TimeOfImpact {
+	fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+		Some(self.cmp(other))
+	}
+}
+
+impl Ord for TimeOfImpact {
+	fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+		self.0.partial_cmp(&other.0).unwrap_or_else(|| {
+			unreachable!("Should not have happened, `NaN`s are not allowed in `TimeOfImpact`")
+		})
+	}
+}
+
+pub struct IsNaN;
 
 #[derive(Debug, PartialEq)]
 pub struct SolidObjects {

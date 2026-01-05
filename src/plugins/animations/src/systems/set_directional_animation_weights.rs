@@ -100,6 +100,7 @@ fn weight(body_direction: Dir3, move_direction: Dir3) -> f32 {
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::components::animation_lookup::{
 		AnimationClips,

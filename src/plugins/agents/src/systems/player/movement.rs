@@ -100,6 +100,7 @@ enum DirectionalMovement {
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::components::player_camera::PlayerCamera;
 	use common::{
