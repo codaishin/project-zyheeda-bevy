@@ -74,6 +74,7 @@ mod tests {
 	use super::*;
 	use crate::events::RayCastInfo;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
+	use common::toi;
 
 	fn setup() -> App {
 		App::new()
@@ -99,12 +100,8 @@ mod tests {
 			interruptable,
 			RayCastResult {
 				info: RayCastInfo {
-					hits: vec![
-						(close, TimeOfImpact(1.)),
-						(blocker, TimeOfImpact(2.)),
-						(far, TimeOfImpact(3.)),
-					],
-					max_toi: TimeOfImpact(99.),
+					hits: vec![(close, toi!(1.)), (blocker, toi!(2.)), (far, toi!(3.))],
+					max_toi: toi!(99.),
 					..default()
 				},
 			},
@@ -119,8 +116,8 @@ mod tests {
 				interruptable,
 				RayCastResult {
 					info: RayCastInfo {
-						hits: vec![(close, TimeOfImpact(1.)), (blocker, TimeOfImpact(2.))],
-						max_toi: TimeOfImpact(2.),
+						hits: vec![(close, toi!(1.)), (blocker, toi!(2.))],
+						max_toi: toi!(2.),
 						..default()
 					},
 				}
@@ -155,12 +152,8 @@ mod tests {
 			interruptable,
 			RayCastResult {
 				info: RayCastInfo {
-					hits: vec![
-						(close, TimeOfImpact(1.)),
-						(blocker, TimeOfImpact(2.)),
-						(far, TimeOfImpact(3.)),
-					],
-					max_toi: TimeOfImpact(99.),
+					hits: vec![(close, toi!(1.)), (blocker, toi!(2.)), (far, toi!(3.))],
+					max_toi: toi!(99.),
 					..default()
 				},
 			},
@@ -175,8 +168,8 @@ mod tests {
 				interruptable,
 				RayCastResult {
 					info: RayCastInfo {
-						hits: vec![(close, TimeOfImpact(1.)), (blocker, TimeOfImpact(2.))],
-						max_toi: TimeOfImpact(2.),
+						hits: vec![(close, toi!(1.)), (blocker, toi!(2.))],
+						max_toi: toi!(2.),
 						..default()
 					},
 				}
@@ -206,12 +199,8 @@ mod tests {
 			interruptable,
 			RayCastResult {
 				info: RayCastInfo {
-					hits: vec![
-						(close, TimeOfImpact(1.)),
-						(blocker, TimeOfImpact(2.)),
-						(far, TimeOfImpact(3.)),
-					],
-					max_toi: TimeOfImpact(99.),
+					hits: vec![(close, toi!(1.)), (blocker, toi!(2.)), (far, toi!(3.))],
+					max_toi: toi!(99.),
 					..default()
 				},
 			},
@@ -226,12 +215,8 @@ mod tests {
 				interruptable,
 				RayCastResult {
 					info: RayCastInfo {
-						hits: vec![
-							(close, TimeOfImpact(1.)),
-							(blocker, TimeOfImpact(2.)),
-							(far, TimeOfImpact(3.)),
-						],
-						max_toi: TimeOfImpact(99.),
+						hits: vec![(close, toi!(1.)), (blocker, toi!(2.)), (far, toi!(3.)),],
+						max_toi: toi!(99.),
 						..default()
 					},
 				}
@@ -261,12 +246,8 @@ mod tests {
 			interruptable,
 			RayCastResult {
 				info: RayCastInfo {
-					hits: vec![
-						(close, TimeOfImpact(1.)),
-						(blocker, TimeOfImpact(2.)),
-						(far, TimeOfImpact(3.)),
-					],
-					max_toi: TimeOfImpact(99.),
+					hits: vec![(close, toi!(1.)), (blocker, toi!(2.)), (far, toi!(3.))],
+					max_toi: toi!(99.),
 					..default()
 				},
 			},
@@ -281,12 +262,8 @@ mod tests {
 				interruptable,
 				RayCastResult {
 					info: RayCastInfo {
-						hits: vec![
-							(close, TimeOfImpact(1.)),
-							(blocker, TimeOfImpact(2.)),
-							(far, TimeOfImpact(3.)),
-						],
-						max_toi: TimeOfImpact(99.),
+						hits: vec![(close, toi!(1.)), (blocker, toi!(2.)), (far, toi!(3.)),],
+						max_toi: toi!(99.),
 						..default()
 					},
 				}
@@ -315,12 +292,8 @@ mod tests {
 			interruptable,
 			RayCastResult {
 				info: RayCastInfo {
-					hits: vec![
-						(close, TimeOfImpact(1.)),
-						(blocker, TimeOfImpact(2.)),
-						(far, TimeOfImpact(3.)),
-					],
-					max_toi: TimeOfImpact(99.),
+					hits: vec![(close, toi!(1.)), (blocker, toi!(2.)), (far, toi!(3.))],
+					max_toi: toi!(99.),
 					..default()
 				},
 			},
@@ -335,12 +308,8 @@ mod tests {
 				interruptable,
 				RayCastResult {
 					info: RayCastInfo {
-						hits: vec![
-							(close, TimeOfImpact(1.)),
-							(blocker, TimeOfImpact(2.)),
-							(far, TimeOfImpact(3.)),
-						],
-						max_toi: TimeOfImpact(99.),
+						hits: vec![(close, toi!(1.)), (blocker, toi!(2.)), (far, toi!(3.)),],
+						max_toi: toi!(99.),
 						..default()
 					},
 				}

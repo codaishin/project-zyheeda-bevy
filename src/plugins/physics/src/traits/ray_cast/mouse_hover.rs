@@ -3,14 +3,7 @@ use bevy::{
 	ecs::system::SystemParam,
 	math::{Ray3d, Vec3},
 };
-use common::traits::handles_physics::{
-	Ground,
-	MouseHover,
-	MouseHoversOver,
-	Raycast,
-	SolidObjects,
-	TimeOfImpact,
-};
+use common::traits::handles_physics::{Ground, MouseHover, MouseHoversOver, Raycast, SolidObjects};
 
 impl<T> Raycast<MouseHover> for RayCaster<'_, '_, T>
 where
@@ -33,14 +26,14 @@ where
 		let ground_hit = self.raycast(Ground { ray });
 		let hover = match (object_hit, ground_hit) {
 			(None, None) => return None,
-			(None, Some(TimeOfImpact(time_of_impact))) => MouseHoversOver::Ground {
-				point: point(ray, time_of_impact),
+			(None, Some(time_of_impact)) => MouseHoversOver::Ground {
+				point: point(ray, *time_of_impact),
 			},
-			(Some(object), Some(TimeOfImpact(ground_time_of_impact)))
-				if object.time_of_impact > ground_time_of_impact =>
+			(Some(object), Some(ground_time_of_impact))
+				if object.time_of_impact > *ground_time_of_impact =>
 			{
 				MouseHoversOver::Ground {
-					point: point(ray, ground_time_of_impact),
+					point: point(ray, *ground_time_of_impact),
 				}
 			}
 			(Some(object), _) => MouseHoversOver::Object {
@@ -73,7 +66,10 @@ mod tests {
 		},
 		prelude::*,
 	};
-	use common::traits::handles_physics::RaycastHit;
+	use common::{
+		toi,
+		traits::handles_physics::{RaycastHit, TimeOfImpact},
+	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::collections::HashMap;
@@ -159,7 +155,7 @@ mod tests {
 			_Ground::new().with_mock(|mock| {
 				mock.expect_raycast()
 					.with(eq(Ground { ray }))
-					.return_const(TimeOfImpact(44.));
+					.return_const(toi!(44.));
 			}),
 		);
 
@@ -200,7 +196,7 @@ mod tests {
 			_Ground::new().with_mock(|mock| {
 				mock.expect_raycast()
 					.with(eq(Ground { ray }))
-					.return_const(TimeOfImpact(44.));
+					.return_const(toi!(44.));
 			}),
 		);
 
@@ -243,7 +239,7 @@ mod tests {
 			_Ground::new().with_mock(|mock| {
 				mock.expect_raycast()
 					.with(eq(Ground { ray }))
-					.return_const(TimeOfImpact(44.));
+					.return_const(toi!(44.));
 			}),
 		);
 
@@ -328,7 +324,7 @@ mod tests {
 			_Ground::new().with_mock(|mock| {
 				mock.expect_raycast()
 					.with(eq(Ground { ray }))
-					.return_const(TimeOfImpact(44.));
+					.return_const(toi!(44.));
 			}),
 		);
 

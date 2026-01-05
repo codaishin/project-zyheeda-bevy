@@ -58,7 +58,7 @@ impl ApproxEqual<f32> for RayCasterArgs {
 	fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
 		self.origin.approx_equal(&other.origin, tolerance)
 			&& self.direction.approx_equal(&other.direction, tolerance)
-			&& self.max_toi.0.approx_equal(&other.max_toi.0, tolerance)
+			&& self.max_toi.approx_equal(&other.max_toi, tolerance)
 			&& self.solid == other.solid
 			&& self.filter == other.filter
 	}

@@ -42,7 +42,7 @@ mod tests {
 	use super::*;
 	use crate::events::RayCastInfo;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::traits::handles_physics::TimeOfImpact;
+	use common::{toi, traits::handles_physics::TimeOfImpact};
 
 	fn setup() -> App {
 		App::new()
@@ -57,10 +57,10 @@ mod tests {
 			RayCastResult {
 				info: RayCastInfo {
 					hits: vec![
-						(Entity::from_raw(42), TimeOfImpact(42.)),
-						(Entity::from_raw(11), TimeOfImpact(11.)),
+						(Entity::from_raw(42), toi!(42.)),
+						(Entity::from_raw(11), toi!(11.)),
 					],
-					max_toi: TimeOfImpact(100.),
+					max_toi: toi!(100.),
 					ray: Ray3d::new(
 						Vec3::new(1., 2., 3.),
 						Dir3::new_unchecked(Vec3::new(5., 6., 7.).normalize()),
@@ -81,7 +81,7 @@ mod tests {
 						Vec3::new(1., 2., 3.),
 						Dir3::new_unchecked(Vec3::new(5., 6., 7.).normalize())
 					),
-					TimeOfImpact(100.)
+					toi!(100.)
 				),
 				vec![
 					interaction.collision(Collision::Started(Entity::from_raw(42))),
@@ -112,11 +112,8 @@ mod tests {
 			Entity::from_raw(5),
 			RayCastResult {
 				info: RayCastInfo {
-					hits: vec![
-						(collider_a, TimeOfImpact(42.)),
-						(collider_b, TimeOfImpact(11.)),
-					],
-					max_toi: TimeOfImpact(100.),
+					hits: vec![(collider_a, toi!(42.)), (collider_b, toi!(11.))],
+					max_toi: toi!(100.),
 					ray: Ray3d::new(
 						Vec3::new(1., 2., 3.),
 						Dir3::new_unchecked(Vec3::new(5., 6., 7.).normalize()),
@@ -137,7 +134,7 @@ mod tests {
 						Vec3::new(1., 2., 3.),
 						Dir3::new_unchecked(Vec3::new(5., 6., 7.).normalize())
 					),
-					TimeOfImpact(100.)
+					toi!(100.)
 				),
 				vec![
 					interaction.collision(Collision::Started(target_a)),
