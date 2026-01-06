@@ -32,6 +32,13 @@ impl<'w, 's> ZyheedaCommands<'w, 's> {
 	{
 		self.commands.trigger(event);
 	}
+
+	pub fn reborrow(&mut self) -> ZyheedaCommands<'w, '_> {
+		ZyheedaCommands {
+			commands: self.commands.reborrow(),
+			persistent_entities: self.persistent_entities.as_ref().map(Res::clone),
+		}
+	}
 }
 
 impl GetMut<Entity> for ZyheedaCommands<'_, '_> {
@@ -121,6 +128,12 @@ impl ZyheedaEntityCommands<'_> {
 		TEvent: Event,
 	{
 		self.entity.commands_mut().trigger(event);
+	}
+
+	pub fn reborrow(&mut self) -> ZyheedaEntityCommands<'_> {
+		ZyheedaEntityCommands {
+			entity: self.entity.reborrow(),
+		}
 	}
 }
 
