@@ -1,6 +1,6 @@
 use crate::components::fix_points::FixPoints;
 use bevy::prelude::*;
-use common::traits::handles_skill_behaviors::SkillSpawner;
+use common::traits::handles_skill_physics::SkillSpawner;
 
 #[derive(Component, Debug, PartialEq)]
 #[relationship(relationship_target = FixPoints)]

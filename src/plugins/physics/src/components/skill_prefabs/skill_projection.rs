@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use common::{
 	errors::Unreachable,
 	traits::{
-		handles_skill_behaviors::{Projection, ProjectionOffset, ProjectionShape},
+		handles_skill_physics::{Projection, ProjectionOffset, ProjectionShape},
 		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
@@ -11,7 +11,7 @@ use common::{
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
-#[derive(Component, SavableComponent, Debug, Clone, Serialize, Deserialize)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct SkillProjection {
 	pub shape: ProjectionShape,
 	#[serde(skip_serializing_if = "Option::is_none")]

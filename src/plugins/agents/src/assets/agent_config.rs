@@ -15,7 +15,7 @@ use common::{
 		handles_custom_assets::AssetFolderPath,
 		handles_loadout::LoadoutKey,
 		handles_physics::PhysicalDefaultAttributes,
-		handles_skill_behaviors::SkillSpawner,
+		handles_skill_physics::SkillSpawner,
 		loadout::ItemName,
 	},
 	zyheeda_commands::ZyheedaEntityCommands,

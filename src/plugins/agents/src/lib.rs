@@ -46,7 +46,7 @@ use common::{
 		},
 		handles_player::{HandlesPlayer, PlayerMainCamera},
 		handles_saving::HandlesSaving,
-		handles_skill_spawning::{HandlesSkillSpawning, SkillSpawnerMut},
+		handles_skill_physics::{HandlesPhysicalSkillSpawnPoints, SkillSpawnPointsMut},
 		prefab::AddPrefabObserver,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
@@ -77,7 +77,7 @@ where
 		+ HandlesPhysicalAttributes
 		+ HandlesColliders
 		+ HandlesRaycast
-		+ HandlesSkillSpawning,
+		+ HandlesPhysicalSkillSpawnPoints,
 	TAnimations: ThreadSafe + HandlesAnimations,
 	TMaps: ThreadSafe + HandlesMapGeneration,
 	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation,
@@ -118,7 +118,7 @@ where
 		+ HandlesPhysicalAttributes
 		+ HandlesColliders
 		+ HandlesRaycast
-		+ HandlesSkillSpawning,
+		+ HandlesPhysicalSkillSpawnPoints,
 	TAnimations: ThreadSafe + HandlesAnimations,
 	TMaps: ThreadSafe + HandlesMapGeneration,
 	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation,
@@ -164,7 +164,7 @@ where
 
 		// # Behaviors
 		app.register_required_components::<PlayerCamera, TPhysics::TWorldCamera>();
-		app.add_observer(Agent::register_skill_spawn_points::<SkillSpawnerMut<TPhysics>>);
+		app.add_observer(Agent::register_skill_spawn_points::<SkillSpawnPointsMut<TPhysics>>);
 		app.add_observer(Player::register_target_definition::<FacingSystemParamMut<TBehaviors>>);
 		app.add_observer(Enemy::register_target_definition::<FacingSystemParamMut<TBehaviors>>);
 		app.add_systems(

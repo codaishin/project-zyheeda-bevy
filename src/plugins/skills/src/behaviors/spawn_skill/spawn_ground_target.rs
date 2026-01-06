@@ -8,10 +8,10 @@ use common::{
 	tools::Units,
 	traits::{
 		handles_physics::colliders::Blocker,
-		handles_skill_behaviors::{
+		handles_skill_physics::{
 			Contact,
 			ContactShape,
-			HandlesSkillBehaviors,
+			HandlesNewPhysicalSkill,
 			Motion,
 			Projection,
 			ProjectionShape,
@@ -61,7 +61,7 @@ impl SpawnShape for SpawnGroundTargetedAoe {
 		target: SkillTarget,
 	) -> SkillEntities
 	where
-		TSkillBehaviors: HandlesSkillBehaviors + 'static,
+		TSkillBehaviors: HandlesNewPhysicalSkill + 'static,
 	{
 		TSkillBehaviors::spawn_skill(
 			commands,

@@ -4,8 +4,8 @@ use common::{
 	components::{lifetime::Lifetime, persistent_entity::PersistentEntity},
 	traits::{
 		accessors::get::TryApplyOn,
-		handles_skill_behaviors::{
-			HandlesSkillBehaviors,
+		handles_skill_physics::{
+			HandlesNewPhysicalSkill,
 			SkillCaster,
 			SkillEntities,
 			SkillSpawner,
@@ -24,7 +24,7 @@ pub(crate) trait SkillBuilder {
 		target: SkillTarget,
 	) -> SkillShape
 	where
-		TSkillBehaviors: HandlesSkillBehaviors + 'static;
+		TSkillBehaviors: HandlesNewPhysicalSkill + 'static;
 }
 
 impl<T> SkillBuilder for T
@@ -39,7 +39,7 @@ where
 		target: SkillTarget,
 	) -> SkillShape
 	where
-		TSkillBehaviors: HandlesSkillBehaviors + 'static,
+		TSkillBehaviors: HandlesNewPhysicalSkill + 'static,
 	{
 		let skill_entities = self.spawn_shape::<TSkillBehaviors>(commands, caster, spawner, target);
 		let on_skill_stop = match self.lifetime() {
@@ -86,7 +86,7 @@ pub(crate) trait SpawnShape {
 		target: SkillTarget,
 	) -> SkillEntities
 	where
-		TSkillBehaviors: HandlesSkillBehaviors + 'static;
+		TSkillBehaviors: HandlesNewPhysicalSkill + 'static;
 }
 
 pub(crate) trait SkillLifetime {
@@ -107,13 +107,14 @@ mod tests {
 		components::persistent_entity::PersistentEntity,
 		traits::{
 			accessors::get::GetContextMut,
-			handles_skill_behaviors::{
+			handles_skill_physics::{
 				Contact,
 				NewSkill,
 				Projection,
+				Skill,
 				SkillEntities,
 				SkillRoot,
-				SpawnNewSkill,
+				Spawn,
 			},
 		},
 	};
@@ -121,9 +122,7 @@ mod tests {
 
 	struct _HandlesSkillBehaviors;
 
-	impl HandlesSkillBehaviors for _HandlesSkillBehaviors {
-		type TSkillContact = _Contact;
-		type TSkillProjection = _Projection;
+	impl HandlesNewPhysicalSkill for _HandlesSkillBehaviors {
 		type TSkillSpawnerMut<'w, 's> = _SkillSpawner;
 
 		fn spawn_skill(_: &mut ZyheedaCommands, _: Contact, _: Projection) -> SkillEntities {
@@ -147,9 +146,43 @@ mod tests {
 
 	struct _Context;
 
-	impl SpawnNewSkill for _Context {
-		fn spawn_new_skill(&mut self, _: Contact, _: Projection) -> SkillEntities {
-			todo!()
+	impl Spawn for _Context {
+		type TSkill<'c>
+			= _SpawnedSkill
+		where
+			Self: 'c;
+
+		fn spawn(&mut self, _: Contact, _: Projection) -> Self::TSkill<'_> {
+			panic!("SHOULD NOT BE CALLED")
+		}
+	}
+
+	struct _SpawnedSkill;
+
+	impl Skill for _SpawnedSkill {
+		fn root(&self) -> PersistentEntity {
+			panic!("SHOULD NOT BE CALLED")
+		}
+
+		fn insert_on_root<T>(&mut self, _: T)
+		where
+			T: Bundle,
+		{
+			panic!("SHOULD NOT BE CALLED")
+		}
+
+		fn insert_on_contact<T>(&mut self, _: T)
+		where
+			T: Bundle,
+		{
+			panic!("SHOULD NOT BE CALLED")
+		}
+
+		fn insert_on_projection<T>(&mut self, _: T)
+		where
+			T: Bundle,
+		{
+			panic!("SHOULD NOT BE CALLED")
 		}
 	}
 
@@ -188,7 +221,7 @@ mod tests {
 			target: SkillTarget,
 		) -> SkillEntities
 		where
-			TSkillBehaviors: HandlesSkillBehaviors + 'static,
+			TSkillBehaviors: HandlesNewPhysicalSkill + 'static,
 		{
 			let root = commands
 				.spawn((_Root {

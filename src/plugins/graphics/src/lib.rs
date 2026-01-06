@@ -22,7 +22,7 @@ use common::{
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInSubApp},
 		handles_physics::{Effect, HandlesAllPhysicalEffects, HandlesPhysicalEffect},
 		handles_saving::HandlesSaving,
-		handles_skill_behaviors::HandlesSkillBehaviors,
+		handles_skill_physics::HandlesSkillPhysics,
 		prefab::AddPrefabObserver,
 		register_derived_component::RegisterDerivedComponent,
 		thread_safe::ThreadSafe,
@@ -56,7 +56,7 @@ impl<TLoading, TSavegame, TPhysics> GraphicsPlugin<(TLoading, TSavegame, TPhysic
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillBehaviors,
+	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillPhysics,
 {
 	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TPhysics) -> Self {
 		Self(PhantomData)
@@ -117,7 +117,7 @@ impl<TLoading, TSavegame, TPhysics> Plugin for GraphicsPlugin<(TLoading, TSavega
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillBehaviors,
+	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillPhysics,
 {
 	fn build(&self, app: &mut App) {
 		Self::track_render_pipeline_ready(app);

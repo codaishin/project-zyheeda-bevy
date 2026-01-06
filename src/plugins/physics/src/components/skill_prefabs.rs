@@ -20,7 +20,7 @@ use common::{
 	tools::Units,
 	traits::{
 		handles_physics::{PhysicalObject, colliders::Shape},
-		handles_skill_behaviors::{ContactShape, Motion, ProjectionShape},
+		handles_skill_physics::{ContactShape, Motion, ProjectionShape},
 		prefab::PrefabEntityCommands,
 	},
 };

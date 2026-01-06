@@ -2,7 +2,7 @@ use crate::{assets::agent_config::AgentConfig, components::agent::Agent};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
 	accessors::get::GetContextMut,
-	handles_skill_spawning::{SkillSpawnPoints, SpawnPointsDefinition},
+	handles_skill_physics::{RegisterDefinition, SkillSpawnPoints},
 };
 
 impl Agent {
@@ -12,7 +12,7 @@ impl Agent {
 		agents: Query<&Agent>,
 		configs: Res<Assets<AgentConfig>>,
 	) where
-		TSkills: for<'c> GetContextMut<SkillSpawnPoints, TContext<'c>: SpawnPointsDefinition>,
+		TSkills: for<'c> GetContextMut<SkillSpawnPoints, TContext<'c>: RegisterDefinition>,
 	{
 		let entity = trigger.target();
 		let ctx = TSkills::get_context_mut(&mut skills, SkillSpawnPoints { entity });
@@ -26,7 +26,7 @@ impl Agent {
 			return;
 		};
 
-		ctx.insert_spawn_point_definition(config.bones.spawners.clone());
+		ctx.register_definition(config.bones.spawners.clone());
 	}
 }
 
@@ -36,7 +36,7 @@ mod tests {
 	use crate::assets::agent_config::{AgentConfig, Bones};
 	use common::{
 		tools::{action_key::slot::SlotKey, bone_name::BoneName},
-		traits::{handles_map_generation::AgentType, handles_skill_behaviors::SkillSpawner},
+		traits::{handles_map_generation::AgentType, handles_skill_physics::SkillSpawner},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -49,9 +49,9 @@ mod tests {
 	}
 
 	#[automock]
-	impl SpawnPointsDefinition for _Skills {
-		fn insert_spawn_point_definition(&mut self, definition: HashMap<BoneName, SkillSpawner>) {
-			self.mock.insert_spawn_point_definition(definition);
+	impl RegisterDefinition for _Skills {
+		fn register_definition(&mut self, definition: HashMap<BoneName, SkillSpawner>) {
+			self.mock.register_definition(definition);
 		}
 	}
 
@@ -89,7 +89,7 @@ mod tests {
 				config_handle,
 			},
 			_Skills::new().with_mock(|mock| {
-				mock.expect_insert_spawn_point_definition()
+				mock.expect_register_definition()
 					.once()
 					.with(eq(HashMap::from([
 						(BoneName::from("a"), SkillSpawner::Neutral),
@@ -117,9 +117,7 @@ mod tests {
 
 		app.world_mut()
 			.spawn(_Skills::new().with_mock(|mock| {
-				mock.expect_insert_spawn_point_definition()
-					.once()
-					.return_const(());
+				mock.expect_register_definition().once().return_const(());
 			}))
 			.insert(Agent {
 				agent_type: AgentType::Player,

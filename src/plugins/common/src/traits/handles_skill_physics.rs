@@ -1,21 +1,40 @@
 use crate::{
 	components::{asset_model::AssetModel, persistent_entity::PersistentEntity},
-	tools::{Index, Units, UnitsPerSecond, action_key::slot::SlotKey},
+	tools::{Index, Units, UnitsPerSecond, action_key::slot::SlotKey, bone_name::BoneName},
 	traits::{
 		accessors::get::GetContextMut,
 		handles_physics::colliders::{Blocker, Shape},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
-use bevy::{ecs::system::SystemParam, prelude::*};
+use bevy::{
+	ecs::{entity::Entity, system::SystemParam},
+	prelude::*,
+};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, ops::Deref};
+use std::{
+	collections::{HashMap, HashSet},
+	ops::{Deref, DerefMut},
+};
 
-pub trait HandlesSkillBehaviors {
+pub trait HandlesSkillPhysics:
+	HandlesNewPhysicalSkill + HandlesPhysicalSkillSpawnPoints + HandlesPhysicalSkillComponents
+{
+}
+
+impl<T> HandlesSkillPhysics for T where
+	T: HandlesNewPhysicalSkill + HandlesPhysicalSkillSpawnPoints + HandlesPhysicalSkillComponents
+{
+}
+
+pub trait HandlesPhysicalSkillComponents {
 	type TSkillContact: Component;
 	type TSkillProjection: Component;
+}
+
+pub trait HandlesNewPhysicalSkill {
 	type TSkillSpawnerMut<'w, 's>: SystemParam
-		+ for<'c> GetContextMut<NewSkill, TContext<'c>: SpawnNewSkill>;
+		+ for<'c> GetContextMut<NewSkill, TContext<'c>: Spawn>;
 
 	/// Skills always have a contact and a projection shape.
 	///
@@ -27,8 +46,45 @@ pub trait HandlesSkillBehaviors {
 	) -> SkillEntities;
 }
 
-pub trait SpawnNewSkill {
-	fn spawn_new_skill(&mut self, contact: Contact, projection: Projection) -> SkillEntities;
+pub type SkillSpawnerMut<'w, 's, T> = <T as HandlesNewPhysicalSkill>::TSkillSpawnerMut<'w, 's>;
+
+pub trait Spawn {
+	type TSkill<'c>: Skill
+	where
+		Self: 'c;
+
+	fn spawn(&mut self, contact: Contact, projection: Projection) -> Self::TSkill<'_>;
+}
+
+pub trait HandlesPhysicalSkillSpawnPoints {
+	type TSkillSpawnPointsMut<'w, 's>: SystemParam
+		+ for<'c> GetContextMut<SkillSpawnPoints, TContext<'c>: RegisterDefinition>;
+}
+
+pub type SkillSpawnPointsMut<'w, 's, T> =
+	<T as HandlesPhysicalSkillSpawnPoints>::TSkillSpawnPointsMut<'w, 's>;
+
+pub struct SkillSpawnPoints {
+	pub entity: Entity,
+}
+
+impl From<SkillSpawnPoints> for Entity {
+	fn from(SkillSpawnPoints { entity }: SkillSpawnPoints) -> Self {
+		entity
+	}
+}
+
+pub trait RegisterDefinition {
+	fn register_definition(&mut self, definition: HashMap<BoneName, SkillSpawner>);
+}
+
+impl<T> RegisterDefinition for T
+where
+	T: DerefMut<Target: RegisterDefinition>,
+{
+	fn register_definition(&mut self, definition: HashMap<BoneName, SkillSpawner>) {
+		self.deref_mut().register_definition(definition);
+	}
 }
 
 pub struct NewSkill;
@@ -51,6 +107,23 @@ pub struct Projection {
 	pub offset: Option<ProjectionOffset>,
 }
 
+/// A newly spawned skill.
+///
+/// The provided insertion methods can be used to avoid usage of [`Commands`], which might conflict
+/// with the [`SystemParam`] used to spawn the skill.
+pub trait Skill {
+	fn root(&self) -> PersistentEntity;
+	fn insert_on_root<T>(&mut self, bundle: T)
+	where
+		T: Bundle;
+	fn insert_on_contact<T>(&mut self, bundle: T)
+	where
+		T: Bundle;
+	fn insert_on_projection<T>(&mut self, bundle: T)
+	where
+		T: Bundle;
+}
+
 /// The entities of a spawned skill.
 /// - `root`: The skill's top level entity (can be used to despawn the skill)
 /// - `contact`: add/remove contact effect components (projectiles, force fields, ..)
@@ -68,7 +141,7 @@ pub struct SkillRoot {
 	pub persistent_entity: PersistentEntity,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum ContactShape {
 	Sphere {
 		radius: Units,
@@ -88,7 +161,7 @@ pub enum ContactShape {
 	},
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum ProjectionShape {
 	Sphere {
 		radius: Units,

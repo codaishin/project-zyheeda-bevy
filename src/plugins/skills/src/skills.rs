@@ -6,7 +6,7 @@ use crate::{
 		SkillBehaviorConfig,
 		spawn_skill::{OnSkillStop, SpawnOn},
 	},
-	traits::{ReleaseSkill, spawn_skill_behavior::SpawnSkillBehavior},
+	traits::{ReleaseSkill, spawn_loadout_skill::SpawnLoadoutSkill},
 };
 use bevy::prelude::*;
 use common::{
@@ -21,7 +21,7 @@ use common::{
 		handles_loadout::skills::{GetSkillId, SkillIcon, SkillToken},
 		handles_localization::Token,
 		handles_physics::HandlesAllPhysicalEffects,
-		handles_skill_behaviors::{HandlesSkillBehaviors, SkillCaster, SkillSpawner, SkillTarget},
+		handles_skill_physics::{HandlesNewPhysicalSkill, SkillCaster, SkillSpawner, SkillTarget},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -182,7 +182,7 @@ impl Default for RunSkillBehavior {
 	}
 }
 
-impl SpawnSkillBehavior for RunSkillBehavior {
+impl SpawnLoadoutSkill for RunSkillBehavior {
 	fn spawn_on(&self) -> SpawnOn {
 		match self {
 			RunSkillBehavior::OnActive(skill) => skill.spawn_on,
@@ -198,7 +198,7 @@ impl SpawnSkillBehavior for RunSkillBehavior {
 		target: SkillTarget,
 	) -> OnSkillStop
 	where
-		TPhysics: HandlesAllPhysicalEffects + HandlesSkillBehaviors + 'static,
+		TPhysics: HandlesAllPhysicalEffects + HandlesNewPhysicalSkill + 'static,
 	{
 		match self {
 			RunSkillBehavior::OnActive(conf) => {
@@ -219,7 +219,7 @@ fn spawn<TPhysics>(
 	target: SkillTarget,
 ) -> OnSkillStop
 where
-	TPhysics: HandlesAllPhysicalEffects + HandlesSkillBehaviors + 'static,
+	TPhysics: HandlesAllPhysicalEffects + HandlesNewPhysicalSkill + 'static,
 {
 	let shape = behavior.spawn_shape::<TPhysics>(commands, caster, spawner, target);
 
@@ -248,13 +248,15 @@ mod tests {
 		traits::{
 			accessors::get::GetContextMut,
 			handles_physics::{Effect, HandlesPhysicalEffect},
-			handles_skill_behaviors::{
+			handles_skill_physics::{
 				Contact,
+				HandlesNewPhysicalSkill,
 				NewSkill,
 				Projection,
+				Skill,
 				SkillEntities,
 				SkillRoot,
-				SpawnNewSkill,
+				Spawn,
 			},
 			thread_safe::ThreadSafe,
 		},
@@ -290,9 +292,43 @@ mod tests {
 
 	struct _Context;
 
-	impl SpawnNewSkill for _Context {
-		fn spawn_new_skill(&mut self, _: Contact, _: Projection) -> SkillEntities {
-			todo!()
+	impl Spawn for _Context {
+		type TSkill<'c>
+			= _SpawnedSkill
+		where
+			Self: 'c;
+
+		fn spawn(&mut self, _: Contact, _: Projection) -> Self::TSkill<'_> {
+			panic!("SHOULD NOT BE CALLED")
+		}
+	}
+
+	struct _SpawnedSkill;
+
+	impl Skill for _SpawnedSkill {
+		fn root(&self) -> PersistentEntity {
+			panic!("SHOULD NOT BE CALLED")
+		}
+
+		fn insert_on_root<T>(&mut self, _: T)
+		where
+			T: Bundle,
+		{
+			panic!("SHOULD NOT BE CALLED")
+		}
+
+		fn insert_on_contact<T>(&mut self, _: T)
+		where
+			T: Bundle,
+		{
+			panic!("SHOULD NOT BE CALLED")
+		}
+
+		fn insert_on_projection<T>(&mut self, _: T)
+		where
+			T: Bundle,
+		{
+			panic!("SHOULD NOT BE CALLED")
 		}
 	}
 
@@ -310,9 +346,7 @@ mod tests {
 		}
 	}
 
-	impl HandlesSkillBehaviors for _HandlesPhysics {
-		type TSkillContact = _Contact;
-		type TSkillProjection = _Projection;
+	impl HandlesNewPhysicalSkill for _HandlesPhysics {
 		type TSkillSpawnerMut<'w, 's> = _SkillSpawner;
 
 		fn spawn_skill(commands: &mut ZyheedaCommands, _: Contact, _: Projection) -> SkillEntities {

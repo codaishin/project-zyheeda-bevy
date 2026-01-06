@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use common::{
 	traits::{
 		accessors::get::{Get, TryApplyOn},
-		handles_skill_behaviors::SkillTarget,
+		handles_skill_physics::SkillTarget,
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -71,7 +71,7 @@ mod tests {
 		components::persistent_entity::PersistentEntity,
 		tools::Units,
 		traits::{
-			handles_skill_behaviors::SkillCaster,
+			handles_skill_physics::SkillCaster,
 			register_persistent_entities::RegisterPersistentEntities,
 		},
 	};

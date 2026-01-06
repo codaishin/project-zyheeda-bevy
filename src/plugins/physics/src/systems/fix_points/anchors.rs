@@ -69,7 +69,7 @@ mod tests {
 		components::persistent_entity::PersistentEntity,
 		tools::action_key::slot::SlotKey,
 		traits::{
-			handles_skill_behaviors::SkillSpawner,
+			handles_skill_physics::SkillSpawner,
 			register_persistent_entities::RegisterPersistentEntities,
 		},
 	};

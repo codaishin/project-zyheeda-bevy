@@ -32,7 +32,7 @@ use common::{
 		handles_orientation::{FacingSystemParamMut, HandlesOrientation},
 		handles_physics::{HandlesAllPhysicalEffects, HandlesRaycast, RaycastSystemParam},
 		handles_saving::HandlesSaving,
-		handles_skill_behaviors::HandlesSkillBehaviors,
+		handles_skill_physics::HandlesSkillPhysics,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
@@ -63,7 +63,7 @@ impl<TSaveGame, TPhysics, TLoading, TBehaviors>
 	SkillsPlugin<(TSaveGame, TPhysics, TLoading, TBehaviors)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillBehaviors + HandlesRaycast,
+	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillPhysics + HandlesRaycast,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
 	TBehaviors: ThreadSafe + HandlesOrientation + SystemSetDefinition,
 {
@@ -136,7 +136,7 @@ impl<TSaveGame, TPhysics, TLoading, TBehaviors> Plugin
 	for SkillsPlugin<(TSaveGame, TPhysics, TLoading, TBehaviors)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillBehaviors + HandlesRaycast,
+	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillPhysics + HandlesRaycast,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
 	TBehaviors: ThreadSafe + HandlesOrientation + SystemSetDefinition,
 {
