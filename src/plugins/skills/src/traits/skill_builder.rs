@@ -109,6 +109,7 @@ mod tests {
 			accessors::get::GetContextMut,
 			handles_skill_physics::{
 				Contact,
+				Effect,
 				NewSkill,
 				Projection,
 				Skill,
@@ -171,17 +172,11 @@ mod tests {
 			panic!("SHOULD NOT BE CALLED")
 		}
 
-		fn insert_on_contact<T>(&mut self, _: T)
-		where
-			T: Bundle,
-		{
+		fn insert_on_contact(&mut self, _: Effect) {
 			panic!("SHOULD NOT BE CALLED")
 		}
 
-		fn insert_on_projection<T>(&mut self, _: T)
-		where
-			T: Bundle,
-		{
+		fn insert_on_projection(&mut self, _: Effect) {
 			panic!("SHOULD NOT BE CALLED")
 		}
 	}
