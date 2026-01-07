@@ -7,6 +7,7 @@ pub(crate) mod peek_next_recursive;
 pub(crate) mod skill_builder;
 pub(crate) mod skill_state;
 pub(crate) mod spawn_loadout_skill;
+pub(crate) mod spawn_skill;
 pub(crate) mod visualize_item;
 
 use crate::skills::{RunSkillBehavior, Skill};

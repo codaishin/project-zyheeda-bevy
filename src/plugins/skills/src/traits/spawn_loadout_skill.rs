@@ -1,4 +1,4 @@
-use crate::behaviors::spawn_skill::{OnSkillStop, SpawnOn};
+use crate::behaviors::skill_shape::{OnSkillStop, SpawnOn};
 use common::{
 	traits::{
 		handles_physics::HandlesAllPhysicalEffects,

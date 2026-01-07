@@ -1,12 +1,12 @@
-pub mod spawn_beam;
-pub mod spawn_ground_target;
-pub mod spawn_projectile;
-pub mod spawn_shield;
+pub mod beam;
+pub mod ground_target;
+pub mod projectile;
+pub mod shield;
 
 use super::{SkillCaster, SkillTarget};
 use crate::{
-	behaviors::spawn_skill::spawn_beam::SpawnBeam,
-	traits::skill_builder::{SkillBuilder, SkillShape},
+	behaviors::skill_shape::beam::Beam,
+	traits::skill_builder::{SkillBuilder, SkillLayout},
 };
 use common::{
 	components::persistent_entity::PersistentEntity,
@@ -16,36 +16,36 @@ use common::{
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
+use ground_target::GroundTargetedAoe;
+use projectile::Projectile;
 use serde::{Deserialize, Serialize};
-use spawn_ground_target::SpawnGroundTargetedAoe;
-use spawn_projectile::SpawnProjectile;
-use spawn_shield::SpawnShield;
+use shield::Shield;
 use std::collections::HashSet;
 
 #[cfg(test)]
 pub(crate) type SpawnSkillFn =
-	fn(&mut ZyheedaCommands, SkillCaster, SkillSpawner, SkillTarget) -> SkillShape;
+	fn(&mut ZyheedaCommands, SkillCaster, SkillSpawner, SkillTarget) -> SkillLayout;
 
 #[derive(Debug, Clone)]
 #[cfg_attr(not(test), derive(PartialEq))]
-pub(crate) enum SpawnSkill {
-	GroundTargetedAoe(SpawnGroundTargetedAoe),
-	Projectile(SpawnProjectile),
-	Beam(SpawnBeam),
-	Shield(SpawnShield),
+pub(crate) enum SkillShape {
+	GroundTargetedAoe(GroundTargetedAoe),
+	Projectile(Projectile),
+	Beam(Beam),
+	Shield(Shield),
 	#[cfg(test)]
-	Fn(SpawnSkillFn),
+	Fn(SpawnSkillFn), // TODO: REMOVE
 }
 
 #[cfg(test)]
-impl Default for SpawnSkill {
+impl Default for SkillShape {
 	fn default() -> Self {
 		use bevy::prelude::*;
 
 		Self::Fn(|commands, _, _, _| {
 			let contact = commands.spawn(()).id();
 			let projection = commands.spawn(ChildOf(contact)).id();
-			SkillShape {
+			SkillLayout {
 				contact,
 				projection,
 				on_skill_stop: OnSkillStop::Ignore,
@@ -55,7 +55,7 @@ impl Default for SpawnSkill {
 }
 
 #[cfg(test)]
-impl PartialEq for SpawnSkill {
+impl PartialEq for SkillShape {
 	fn eq(&self, other: &Self) -> bool {
 		match (self, other) {
 			(Self::GroundTargetedAoe(l0), Self::GroundTargetedAoe(r0)) => l0 == r0,
@@ -67,9 +67,9 @@ impl PartialEq for SpawnSkill {
 	}
 }
 
-impl SpawnSkill {
+impl SkillShape {
 	#[cfg(test)]
-	pub(crate) const NO_SHAPE: SpawnSkill = SpawnSkill::Fn(Self::no_shape);
+	pub(crate) const NO_SHAPE: SkillShape = SkillShape::Fn(Self::no_shape);
 
 	#[cfg(test)]
 	fn no_shape(
@@ -77,7 +77,7 @@ impl SpawnSkill {
 		_: SkillCaster,
 		_: SkillSpawner,
 		_: SkillTarget,
-	) -> SkillShape {
+	) -> SkillLayout {
 		use bevy::prelude::*;
 
 		let contact = commands.spawn(()).id();
@@ -85,7 +85,7 @@ impl SpawnSkill {
 		let projection = commands.spawn((ChildOf(contact), persistent_contact)).id();
 		let on_skill_stop = OnSkillStop::Stop(persistent_contact);
 
-		SkillShape {
+		SkillLayout {
 			contact,
 			projection,
 			on_skill_stop,
@@ -98,7 +98,7 @@ impl SpawnSkill {
 		caster: SkillCaster,
 		spawner: SkillSpawner,
 		target: SkillTarget,
-	) -> SkillShape
+	) -> SkillLayout
 	where
 		TSkillBehaviors: HandlesNewPhysicalSkill + 'static,
 	{

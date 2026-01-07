@@ -4,7 +4,7 @@ pub(crate) mod lifetime_definition;
 use crate::{
 	behaviors::{
 		SkillBehaviorConfig,
-		spawn_skill::{OnSkillStop, SpawnOn},
+		skill_shape::{OnSkillStop, SpawnOn},
 	},
 	traits::{ReleaseSkill, spawn_loadout_skill::SpawnLoadoutSkill},
 };
@@ -176,9 +176,9 @@ pub enum RunSkillBehavior {
 #[cfg(test)]
 impl Default for RunSkillBehavior {
 	fn default() -> Self {
-		use crate::behaviors::spawn_skill::SpawnSkill;
+		use crate::behaviors::skill_shape::SkillShape;
 
-		Self::OnActive(SkillBehaviorConfig::from_shape(SpawnSkill::NO_SHAPE))
+		Self::OnActive(SkillBehaviorConfig::from_shape(SkillShape::NO_SHAPE))
 	}
 }
 
@@ -238,8 +238,8 @@ where
 mod tests {
 	use super::*;
 	use crate::{
-		behaviors::{attach_skill_effect::AttachEffect, spawn_skill::SpawnSkill},
-		traits::skill_builder::SkillShape,
+		behaviors::{attach_skill_effect::AttachEffect, skill_shape::SkillShape},
+		traits::skill_builder::SkillLayout,
 	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce, SystemParam};
 	use common::{
@@ -396,7 +396,7 @@ mod tests {
 	fn spawn_skill_contact_entity_on_active() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let behavior = RunSkillBehavior::OnActive(
-			SkillBehaviorConfig::from_shape(SpawnSkill::Fn(|cmd, caster, _, target| SkillShape {
+			SkillBehaviorConfig::from_shape(SkillShape::Fn(|cmd, caster, _, target| SkillLayout {
 				contact: cmd.spawn(_Args { caster, target }).id(),
 				projection: cmd.spawn(()).id(),
 				on_skill_stop: OnSkillStop::Ignore,
@@ -423,7 +423,7 @@ mod tests {
 	fn spawn_skill_contact_entity_on_active_centered() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let behavior = RunSkillBehavior::OnActive(
-			SkillBehaviorConfig::from_shape(SpawnSkill::Fn(|cmd, caster, _, target| SkillShape {
+			SkillBehaviorConfig::from_shape(SkillShape::Fn(|cmd, caster, _, target| SkillLayout {
 				contact: cmd.spawn(_Args { caster, target }).id(),
 				projection: cmd.spawn(()).id(),
 				on_skill_stop: OnSkillStop::Ignore,
@@ -453,8 +453,8 @@ mod tests {
 			_: SkillCaster,
 			_: SkillSpawner,
 			_: SkillTarget,
-		) -> SkillShape {
-			SkillShape {
+		) -> SkillLayout {
+			SkillLayout {
 				contact: cmd.spawn(_Contact).id(),
 				projection: cmd.spawn(()).id(),
 				on_skill_stop: OnSkillStop::Ignore,
@@ -463,7 +463,7 @@ mod tests {
 
 		let mut app = setup();
 		let behavior = RunSkillBehavior::OnActive(
-			SkillBehaviorConfig::from_shape(SpawnSkill::Fn(shape))
+			SkillBehaviorConfig::from_shape(SkillShape::Fn(shape))
 				.with_contact_effects(vec![AttachEffect::Fn(effect_fn)]),
 		);
 		let caster = SkillCaster(PersistentEntity::default());
@@ -485,8 +485,8 @@ mod tests {
 	#[test]
 	fn spawn_skill_projection_entity_on_active() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let behavior = RunSkillBehavior::OnActive(SkillBehaviorConfig::from_shape(SpawnSkill::Fn(
-			|cmd, caster, _, target| SkillShape {
+		let behavior = RunSkillBehavior::OnActive(SkillBehaviorConfig::from_shape(SkillShape::Fn(
+			|cmd, caster, _, target| SkillLayout {
 				contact: cmd.spawn(_Args { caster, target }).id(),
 				projection: cmd.spawn(()).id(),
 				on_skill_stop: OnSkillStop::Ignore,
@@ -515,8 +515,8 @@ mod tests {
 			_: SkillCaster,
 			_: SkillSpawner,
 			_: SkillTarget,
-		) -> SkillShape {
-			SkillShape {
+		) -> SkillLayout {
+			SkillLayout {
 				contact: cmd.spawn(()).id(),
 				projection: cmd.spawn(_Projection).id(),
 				on_skill_stop: OnSkillStop::Ignore,
@@ -525,7 +525,7 @@ mod tests {
 
 		let mut app = setup();
 		let behavior = RunSkillBehavior::OnActive(
-			SkillBehaviorConfig::from_shape(SpawnSkill::Fn(shape))
+			SkillBehaviorConfig::from_shape(SkillShape::Fn(shape))
 				.with_projection_effects(vec![AttachEffect::Fn(effect_fn)]),
 		);
 		let caster = SkillCaster(PersistentEntity::default());
@@ -552,7 +552,7 @@ mod tests {
 	fn spawn_skill_contact_entity_on_aim() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let behavior = RunSkillBehavior::OnAim(
-			SkillBehaviorConfig::from_shape(SpawnSkill::Fn(|cmd, caster, _, target| SkillShape {
+			SkillBehaviorConfig::from_shape(SkillShape::Fn(|cmd, caster, _, target| SkillLayout {
 				contact: cmd.spawn(_Args { caster, target }).id(),
 				projection: cmd.spawn(()).id(),
 				on_skill_stop: OnSkillStop::Ignore,
@@ -579,7 +579,7 @@ mod tests {
 	fn spawn_skill_contact_entity_on_aim_centered() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let behavior = RunSkillBehavior::OnAim(
-			SkillBehaviorConfig::from_shape(SpawnSkill::Fn(|cmd, caster, _, target| SkillShape {
+			SkillBehaviorConfig::from_shape(SkillShape::Fn(|cmd, caster, _, target| SkillLayout {
 				contact: cmd.spawn(_Args { caster, target }).id(),
 				projection: cmd.spawn(()).id(),
 				on_skill_stop: OnSkillStop::Ignore,
@@ -612,8 +612,8 @@ mod tests {
 			_: SkillCaster,
 			_: SkillSpawner,
 			_: SkillTarget,
-		) -> SkillShape {
-			SkillShape {
+		) -> SkillLayout {
+			SkillLayout {
 				contact: cmd.spawn(_Contact).id(),
 				projection: cmd.spawn(()).id(),
 				on_skill_stop: OnSkillStop::Ignore,
@@ -622,7 +622,7 @@ mod tests {
 
 		let mut app = setup();
 		let behavior = RunSkillBehavior::OnAim(
-			SkillBehaviorConfig::from_shape(SpawnSkill::Fn(shape))
+			SkillBehaviorConfig::from_shape(SkillShape::Fn(shape))
 				.with_contact_effects(vec![AttachEffect::Fn(effect_fn)]),
 		);
 		let caster = SkillCaster(PersistentEntity::default());
@@ -648,8 +648,8 @@ mod tests {
 	#[test]
 	fn spawn_skill_projection_entity_on_aim() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let behavior = RunSkillBehavior::OnAim(SkillBehaviorConfig::from_shape(SpawnSkill::Fn(
-			|cmd, caster, _, target| SkillShape {
+		let behavior = RunSkillBehavior::OnAim(SkillBehaviorConfig::from_shape(SkillShape::Fn(
+			|cmd, caster, _, target| SkillLayout {
 				contact: cmd.spawn(_Args { caster, target }).id(),
 				projection: cmd.spawn(()).id(),
 				on_skill_stop: OnSkillStop::Ignore,
@@ -681,8 +681,8 @@ mod tests {
 			_: SkillCaster,
 			_: SkillSpawner,
 			_: SkillTarget,
-		) -> SkillShape {
-			SkillShape {
+		) -> SkillLayout {
+			SkillLayout {
 				contact: cmd.spawn(()).id(),
 				projection: cmd.spawn(_Projection).id(),
 				on_skill_stop: OnSkillStop::Ignore,
@@ -691,7 +691,7 @@ mod tests {
 
 		let mut app = setup();
 		let behavior = RunSkillBehavior::OnAim(
-			SkillBehaviorConfig::from_shape(SpawnSkill::Fn(shape))
+			SkillBehaviorConfig::from_shape(SkillShape::Fn(shape))
 				.with_projection_effects(vec![AttachEffect::Fn(effect_fn)]),
 		);
 		let caster = SkillCaster(PersistentEntity::default());

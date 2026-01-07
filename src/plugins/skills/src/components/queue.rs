@@ -603,10 +603,10 @@ mod test_queue_active_skill {
 	use crate::{
 		behaviors::{
 			SkillBehaviorConfig,
-			spawn_skill::{OnSkillStop, SpawnSkill},
+			skill_shape::{OnSkillStop, SkillShape},
 		},
 		skills::RunSkillBehavior,
-		traits::skill_builder::SkillShape,
+		traits::skill_builder::SkillLayout,
 	};
 
 	#[test]
@@ -826,7 +826,7 @@ mod test_queue_active_skill {
 	#[test]
 	fn test_start_behavior_fn_on_active() {
 		let behaviors =
-			SkillBehaviorConfig::from_shape(SpawnSkill::Fn(|commands, _, _, _| SkillShape {
+			SkillBehaviorConfig::from_shape(SkillShape::Fn(|commands, _, _, _| SkillLayout {
 				contact: commands.spawn(()).id(),
 				projection: commands.spawn(()).id(),
 				on_skill_stop: OnSkillStop::Ignore,
@@ -853,7 +853,7 @@ mod test_queue_active_skill {
 	#[test]
 	fn test_start_behavior_fn_on_aim() {
 		let behaviors =
-			SkillBehaviorConfig::from_shape(SpawnSkill::Fn(|commands, _, _, _| SkillShape {
+			SkillBehaviorConfig::from_shape(SkillShape::Fn(|commands, _, _, _| SkillLayout {
 				contact: commands.spawn(()).id(),
 				projection: commands.spawn(()).id(),
 				on_skill_stop: OnSkillStop::Ignore,

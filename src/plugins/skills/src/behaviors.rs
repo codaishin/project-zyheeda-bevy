@@ -1,23 +1,34 @@
 pub mod attach_skill_effect;
-pub mod spawn_skill;
+pub mod skill_shape;
 
 use crate::{
-	behaviors::{attach_skill_effect::AttachEffect, spawn_skill::SpawnOn},
-	traits::skill_builder::SkillShape,
+	behaviors::{attach_skill_effect::AttachEffect, skill_shape::SpawnOn},
+	skills::lifetime_definition::LifeTimeDefinition,
+	traits::{
+		skill_builder::{SkillLayout, SkillLifetime},
+		spawn_skill::{SkillContact, SkillProjection},
+	},
 };
 use bevy::prelude::*;
 use common::{
 	traits::{
 		handles_physics::HandlesAllPhysicalEffects,
-		handles_skill_physics::{HandlesNewPhysicalSkill, SkillCaster, SkillSpawner, SkillTarget},
+		handles_skill_physics::{
+			Contact,
+			HandlesNewPhysicalSkill,
+			Projection,
+			SkillCaster,
+			SkillSpawner,
+			SkillTarget,
+		},
 	},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
-use spawn_skill::SpawnSkill;
+use skill_shape::SkillShape;
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct SkillBehaviorConfig {
-	pub(crate) shape: SpawnSkill,
+	pub(crate) shape: SkillShape,
 	pub(crate) contact: Vec<AttachEffect>,
 	pub(crate) projection: Vec<AttachEffect>,
 	pub(crate) spawn_on: SpawnOn,
@@ -25,7 +36,7 @@ pub struct SkillBehaviorConfig {
 
 impl SkillBehaviorConfig {
 	#[cfg(test)]
-	pub(crate) fn from_shape(shape: SpawnSkill) -> Self {
+	pub(crate) fn from_shape(shape: SkillShape) -> Self {
 		Self {
 			shape,
 			contact: default(),
@@ -70,7 +81,7 @@ impl SkillBehaviorConfig {
 		caster: SkillCaster,
 		spawner: SkillSpawner,
 		target: SkillTarget,
-	) -> SkillShape
+	) -> SkillLayout
 	where
 		TSkillBehaviors: HandlesNewPhysicalSkill + 'static,
 	{
@@ -102,5 +113,43 @@ impl SkillBehaviorConfig {
 		for start in &self.projection {
 			start.attach::<TEffects>(entity, caster, target);
 		}
+	}
+}
+
+macro_rules! match_shape {
+	($config:expr, $callback:expr) => {
+		match $config {
+			SkillShape::GroundTargetedAoe(shape) => $callback(shape),
+			SkillShape::Projectile(shape) => $callback(shape),
+			SkillShape::Beam(shape) => $callback(shape),
+			SkillShape::Shield(shape) => $callback(shape),
+			#[cfg(test)]
+			SkillShape::Fn(_) => todo!(), // TODO: REMOVE ARM
+		}
+	};
+}
+
+impl SkillContact for SkillBehaviorConfig {
+	fn skill_contact(
+		&self,
+		caster: SkillCaster,
+		spawner: SkillSpawner,
+		target: SkillTarget,
+	) -> Contact {
+		match_shape!(&self.shape, |shape| SkillContact::skill_contact(
+			shape, caster, spawner, target,
+		))
+	}
+}
+
+impl SkillProjection for SkillBehaviorConfig {
+	fn skill_projection(&self) -> Projection {
+		match_shape!(&self.shape, SkillProjection::skill_projection)
+	}
+}
+
+impl SkillLifetime for SkillBehaviorConfig {
+	fn lifetime(&self) -> LifeTimeDefinition {
+		match_shape!(&self.shape, SkillLifetime::lifetime)
 	}
 }

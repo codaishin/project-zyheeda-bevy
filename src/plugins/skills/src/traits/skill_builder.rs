@@ -1,4 +1,4 @@
-use crate::{behaviors::spawn_skill::OnSkillStop, skills::lifetime_definition::LifeTimeDefinition};
+use crate::{behaviors::skill_shape::OnSkillStop, skills::lifetime_definition::LifeTimeDefinition};
 use bevy::prelude::*;
 use common::{
 	components::{lifetime::Lifetime, persistent_entity::PersistentEntity},
@@ -22,7 +22,7 @@ pub(crate) trait SkillBuilder {
 		caster: SkillCaster,
 		spawner: SkillSpawner,
 		target: SkillTarget,
-	) -> SkillShape
+	) -> SkillLayout
 	where
 		TSkillBehaviors: HandlesNewPhysicalSkill + 'static;
 }
@@ -37,7 +37,7 @@ where
 		caster: SkillCaster,
 		spawner: SkillSpawner,
 		target: SkillTarget,
-	) -> SkillShape
+	) -> SkillLayout
 	where
 		TSkillBehaviors: HandlesNewPhysicalSkill + 'static,
 	{
@@ -50,7 +50,7 @@ where
 			LifeTimeDefinition::Infinite => infinite(),
 		};
 
-		SkillShape {
+		SkillLayout {
 			contact: skill_entities.contact,
 			projection: skill_entities.projection,
 			on_skill_stop,
@@ -93,7 +93,7 @@ pub(crate) trait SkillLifetime {
 	fn lifetime(&self) -> LifeTimeDefinition;
 }
 
-pub(crate) struct SkillShape {
+pub(crate) struct SkillLayout {
 	pub(crate) contact: Entity,
 	pub(crate) projection: Entity,
 	pub(crate) on_skill_stop: OnSkillStop,
@@ -233,7 +233,7 @@ mod tests {
 	fn build_skill(
 		args: In<(_Skill, SkillCaster, SkillSpawner, SkillTarget)>,
 		mut commands: ZyheedaCommands,
-	) -> SkillShape {
+	) -> SkillLayout {
 		let In((skill, caster, spawner, target)) = args;
 		skill.build::<_HandlesSkillBehaviors>(&mut commands, caster, spawner, target)
 	}

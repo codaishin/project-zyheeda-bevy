@@ -1,7 +1,10 @@
 use crate::{
 	behaviors::SkillCaster,
 	skills::lifetime_definition::LifeTimeDefinition,
-	traits::skill_builder::{SkillLifetime, SpawnShape},
+	traits::{
+		skill_builder::{SkillLifetime, SpawnShape},
+		spawn_skill::{SkillContact, SkillProjection},
+	},
 };
 use bevy::prelude::*;
 use common::{
@@ -27,9 +30,14 @@ use common::{
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct SpawnShield;
+pub struct Shield;
 
-impl SpawnShape for SpawnShield {
+impl Shield {
+	const RADIUS: f32 = 1.;
+	const PROJECTION_OFFSET: Vec3 = Vec3::new(0., 0., -Self::RADIUS);
+}
+
+impl SpawnShape for Shield {
 	fn spawn_shape<TSkillBehaviors>(
 		&self,
 		commands: &mut ZyheedaCommands,
@@ -40,9 +48,6 @@ impl SpawnShape for SpawnShield {
 	where
 		TSkillBehaviors: HandlesNewPhysicalSkill + 'static,
 	{
-		let radius = 1.;
-		let offset = Vec3::new(0., 0., -radius);
-
 		TSkillBehaviors::spawn_skill(
 			commands,
 			Contact {
@@ -53,7 +58,7 @@ impl SpawnShape for SpawnShield {
 						half_y: Units::from(0.5),
 						half_z: Units::from(0.05),
 					},
-					model_scale: Vec3::splat(1.),
+					model_scale: Vec3::ONE,
 					destroyed_by: Blocker::none(),
 				},
 				motion: Motion::HeldBy {
@@ -63,15 +68,47 @@ impl SpawnShape for SpawnShield {
 			},
 			Projection {
 				shape: ProjectionShape::Sphere {
-					radius: Units::from(radius),
+					radius: Units::from(Self::RADIUS),
 				},
-				offset: Some(ProjectionOffset(offset)),
+				offset: Some(ProjectionOffset(Self::PROJECTION_OFFSET)),
 			},
 		)
 	}
 }
 
-impl SkillLifetime for SpawnShield {
+impl SkillContact for Shield {
+	fn skill_contact(&self, caster: SkillCaster, _: SkillSpawner, _: SkillTarget) -> Contact {
+		Contact {
+			shape: ContactShape::Custom {
+				model: AssetModel::path("models/shield.glb").flipped_on("Shield"),
+				collider: Shape::Cuboid {
+					half_x: Units::from(0.5),
+					half_y: Units::from(0.5),
+					half_z: Units::from(0.05),
+				},
+				model_scale: Vec3::ONE,
+				destroyed_by: Blocker::none(),
+			},
+			motion: Motion::HeldBy {
+				caster,
+				spawner: SkillSpawner::Neutral,
+			},
+		}
+	}
+}
+
+impl SkillProjection for Shield {
+	fn skill_projection(&self) -> Projection {
+		Projection {
+			shape: ProjectionShape::Sphere {
+				radius: Units::from(Self::RADIUS),
+			},
+			offset: Some(ProjectionOffset(Self::PROJECTION_OFFSET)),
+		}
+	}
+}
+
+impl SkillLifetime for Shield {
 	fn lifetime(&self) -> LifeTimeDefinition {
 		LifeTimeDefinition::UntilStopped
 	}

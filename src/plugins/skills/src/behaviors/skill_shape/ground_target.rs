@@ -1,7 +1,10 @@
 use crate::{
 	behaviors::SkillCaster,
 	skills::lifetime_definition::LifeTimeDefinition,
-	traits::skill_builder::{SkillLifetime, SpawnShape},
+	traits::{
+		skill_builder::{SkillLifetime, SpawnShape},
+		spawn_skill::{SkillContact, SkillProjection},
+	},
 };
 use common::{
 	dto::duration_in_seconds::DurationInSeconds,
@@ -26,14 +29,14 @@ use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
 #[derive(Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct SpawnGroundTargetedAoe<TDuration = Duration> {
+pub struct GroundTargetedAoe<TDuration = Duration> {
 	pub lifetime: LifeTimeDefinition<TDuration>,
 	pub max_range: Units,
 	pub radius: Units,
 }
 
-impl From<SpawnGroundTargetedAoe<DurationInSeconds>> for SpawnGroundTargetedAoe {
-	fn from(with_lifetime_dto: SpawnGroundTargetedAoe<DurationInSeconds>) -> Self {
+impl From<GroundTargetedAoe<DurationInSeconds>> for GroundTargetedAoe {
+	fn from(with_lifetime_dto: GroundTargetedAoe<DurationInSeconds>) -> Self {
 		Self {
 			lifetime: with_lifetime_dto.lifetime.into(),
 			max_range: with_lifetime_dto.max_range,
@@ -42,8 +45,8 @@ impl From<SpawnGroundTargetedAoe<DurationInSeconds>> for SpawnGroundTargetedAoe 
 	}
 }
 
-impl From<SpawnGroundTargetedAoe> for SpawnGroundTargetedAoe<DurationInSeconds> {
-	fn from(with_lifetime_duration: SpawnGroundTargetedAoe) -> Self {
+impl From<GroundTargetedAoe> for GroundTargetedAoe<DurationInSeconds> {
+	fn from(with_lifetime_duration: GroundTargetedAoe) -> Self {
 		Self {
 			lifetime: with_lifetime_duration.lifetime.into(),
 			max_range: with_lifetime_duration.max_range,
@@ -52,7 +55,7 @@ impl From<SpawnGroundTargetedAoe> for SpawnGroundTargetedAoe<DurationInSeconds> 
 	}
 }
 
-impl SpawnShape for SpawnGroundTargetedAoe {
+impl SpawnShape for GroundTargetedAoe {
 	fn spawn_shape<TSkillBehaviors>(
 		&self,
 		commands: &mut ZyheedaCommands,
@@ -87,7 +90,35 @@ impl SpawnShape for SpawnGroundTargetedAoe {
 	}
 }
 
-impl SkillLifetime for SpawnGroundTargetedAoe {
+impl SkillContact for GroundTargetedAoe {
+	fn skill_contact(&self, caster: SkillCaster, _: SkillSpawner, target: SkillTarget) -> Contact {
+		Contact {
+			shape: ContactShape::Sphere {
+				radius: self.radius,
+				hollow_collider: true,
+				destroyed_by: Blocker::none(),
+			},
+			motion: Motion::Stationary {
+				caster,
+				max_cast_range: self.max_range,
+				target,
+			},
+		}
+	}
+}
+
+impl SkillProjection for GroundTargetedAoe {
+	fn skill_projection(&self) -> Projection {
+		Projection {
+			shape: ProjectionShape::Sphere {
+				radius: self.radius,
+			},
+			offset: None,
+		}
+	}
+}
+
+impl SkillLifetime for GroundTargetedAoe {
 	fn lifetime(&self) -> LifeTimeDefinition {
 		self.lifetime
 	}

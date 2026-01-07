@@ -1,7 +1,7 @@
 mod dto;
 
 use crate::{
-	behaviors::spawn_skill::{OnSkillStop, SpawnOn},
+	behaviors::skill_shape::{OnSkillStop, SpawnOn},
 	skills::{RunSkillBehavior, dto::run_skill_behavior::RunSkillBehaviorDto},
 	traits::{Execute, Flush, Schedule, spawn_loadout_skill::SpawnLoadoutSkill},
 };

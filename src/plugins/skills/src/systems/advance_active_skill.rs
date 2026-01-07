@@ -134,9 +134,9 @@ mod tests {
 	use crate::{
 		behaviors::{
 			SkillBehaviorConfig,
-			spawn_skill::{OnSkillStop, SpawnSkill},
+			skill_shape::{OnSkillStop, SkillShape},
 		},
-		traits::skill_builder::SkillShape,
+		traits::skill_builder::SkillLayout,
 	};
 	use common::tools::action_key::slot::{PlayerSlot, Side};
 	use macros::{NestedMocks, simple_mock};
@@ -229,8 +229,8 @@ mod tests {
 	fn skill_behavior(
 		activation_type: impl Fn(SkillBehaviorConfig) -> RunSkillBehavior,
 	) -> RunSkillBehavior {
-		activation_type(SkillBehaviorConfig::from_shape(SpawnSkill::Fn(
-			|commands, _, _, _| SkillShape {
+		activation_type(SkillBehaviorConfig::from_shape(SkillShape::Fn(
+			|commands, _, _, _| SkillLayout {
 				contact: commands.spawn(()).id(),
 				projection: commands.spawn(()).id(),
 				on_skill_stop: OnSkillStop::Ignore,

@@ -2,7 +2,10 @@ use super::Blockers;
 use crate::{
 	behaviors::SkillCaster,
 	skills::lifetime_definition::LifeTimeDefinition,
-	traits::skill_builder::{SkillLifetime, SpawnShape},
+	traits::{
+		skill_builder::{SkillLifetime, SpawnShape},
+		spawn_skill::{SkillContact, SkillProjection},
+	},
 };
 use common::{
 	tools::Units,
@@ -22,12 +25,12 @@ use common::{
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct SpawnBeam {
+pub struct Beam {
 	range: Units,
 	blocked_by: Blockers,
 }
 
-impl SpawnShape for SpawnBeam {
+impl SpawnShape for Beam {
 	fn spawn_shape<TSkillBehaviors>(
 		&self,
 		commands: &mut ZyheedaCommands,
@@ -58,7 +61,31 @@ impl SpawnShape for SpawnBeam {
 	}
 }
 
-impl SkillLifetime for SpawnBeam {
+impl SkillContact for Beam {
+	fn skill_contact(&self, caster: SkillCaster, spawner: SkillSpawner, _: SkillTarget) -> Contact {
+		Contact {
+			shape: ContactShape::Beam {
+				range: self.range,
+				radius: Units::from(0.003),
+				blocked_by: self.blocked_by.clone().into(),
+			},
+			motion: Motion::HeldBy { caster, spawner },
+		}
+	}
+}
+
+impl SkillProjection for Beam {
+	fn skill_projection(&self) -> Projection {
+		Projection {
+			shape: ProjectionShape::Beam {
+				radius: Units::from(0.2),
+			},
+			offset: None,
+		}
+	}
+}
+
+impl SkillLifetime for Beam {
 	fn lifetime(&self) -> LifeTimeDefinition {
 		LifeTimeDefinition::UntilStopped
 	}

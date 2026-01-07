@@ -1,22 +1,22 @@
-use crate::behaviors::spawn_skill::{
-	SpawnSkill,
-	spawn_beam::SpawnBeam,
-	spawn_ground_target::SpawnGroundTargetedAoe,
-	spawn_projectile::SpawnProjectile,
-	spawn_shield::SpawnShield,
+use crate::behaviors::skill_shape::{
+	SkillShape,
+	beam::Beam,
+	ground_target::GroundTargetedAoe,
+	projectile::Projectile,
+	shield::Shield,
 };
 use common::dto::duration_in_seconds::DurationInSeconds;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub(crate) enum SpawnSkillDto {
-	GroundTargetedAoe(SpawnGroundTargetedAoe<DurationInSeconds>),
-	Projectile(SpawnProjectile),
-	Beam(SpawnBeam),
-	Shield(SpawnShield),
+	GroundTargetedAoe(GroundTargetedAoe<DurationInSeconds>),
+	Projectile(Projectile),
+	Beam(Beam),
+	Shield(Shield),
 }
 
-impl From<SpawnSkillDto> for SpawnSkill {
+impl From<SpawnSkillDto> for SkillShape {
 	fn from(value: SpawnSkillDto) -> Self {
 		match value {
 			SpawnSkillDto::GroundTargetedAoe(v) => Self::GroundTargetedAoe(v.into()),
@@ -27,15 +27,15 @@ impl From<SpawnSkillDto> for SpawnSkill {
 	}
 }
 
-impl From<SpawnSkill> for SpawnSkillDto {
-	fn from(value: SpawnSkill) -> Self {
+impl From<SkillShape> for SpawnSkillDto {
+	fn from(value: SkillShape) -> Self {
 		match value {
-			SpawnSkill::GroundTargetedAoe(v) => Self::GroundTargetedAoe(v.into()),
-			SpawnSkill::Projectile(v) => Self::Projectile(v),
-			SpawnSkill::Shield(v) => Self::Shield(v),
-			SpawnSkill::Beam(v) => Self::Beam(v),
+			SkillShape::GroundTargetedAoe(v) => Self::GroundTargetedAoe(v.into()),
+			SkillShape::Projectile(v) => Self::Projectile(v),
+			SkillShape::Shield(v) => Self::Shield(v),
+			SkillShape::Beam(v) => Self::Beam(v),
 			#[cfg(test)]
-			SpawnSkill::Fn(_) => panic!("FN CANNOT BE SERIALIZED"),
+			SkillShape::Fn(_) => panic!("FN CANNOT BE SERIALIZED"),
 		}
 	}
 }
