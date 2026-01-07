@@ -247,9 +247,10 @@ mod tests {
 		components::persistent_entity::PersistentEntity,
 		traits::{
 			accessors::get::GetContextMut,
-			handles_physics::{Effect, HandlesPhysicalEffect},
+			handles_physics::{Effect as EffectTrait, HandlesPhysicalEffect},
 			handles_skill_physics::{
 				Contact,
+				Effect,
 				HandlesNewPhysicalSkill,
 				NewSkill,
 				Projection,
@@ -317,17 +318,11 @@ mod tests {
 			panic!("SHOULD NOT BE CALLED")
 		}
 
-		fn insert_on_contact<T>(&mut self, _: T)
-		where
-			T: Bundle,
-		{
+		fn insert_on_contact(&mut self, _: Effect) {
 			panic!("SHOULD NOT BE CALLED")
 		}
 
-		fn insert_on_projection<T>(&mut self, _: T)
-		where
-			T: Bundle,
-		{
+		fn insert_on_projection(&mut self, _: Effect) {
 			panic!("SHOULD NOT BE CALLED")
 		}
 	}
@@ -336,7 +331,7 @@ mod tests {
 
 	impl<T> HandlesPhysicalEffect<T> for _HandlesPhysics
 	where
-		T: Effect + ThreadSafe,
+		T: EffectTrait + ThreadSafe,
 	{
 		type TEffectComponent = _Effect;
 		type TAffectedComponent = _Affected;

@@ -1,5 +1,6 @@
 use crate::{
 	components::{asset_model::AssetModel, persistent_entity::PersistentEntity},
+	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
 	tools::{Index, Units, UnitsPerSecond, action_key::slot::SlotKey, bone_name::BoneName},
 	traits::{
 		accessors::get::GetContextMut,
@@ -89,6 +90,13 @@ where
 
 pub struct NewSkill;
 
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum Effect {
+	Force(Force),
+	Gravity(Gravity),
+	HealthDamage(HealthDamage),
+}
+
 /// Describes the contact shape of a skill
 ///
 /// These should be used for physical effects like projectile bodies, barriers or beam cores.
@@ -116,12 +124,8 @@ pub trait Skill {
 	fn insert_on_root<T>(&mut self, bundle: T)
 	where
 		T: Bundle;
-	fn insert_on_contact<T>(&mut self, bundle: T)
-	where
-		T: Bundle;
-	fn insert_on_projection<T>(&mut self, bundle: T)
-	where
-		T: Bundle;
+	fn insert_on_contact(&mut self, effect: Effect);
+	fn insert_on_projection(&mut self, effect: Effect);
 }
 
 /// The entities of a spawned skill.
