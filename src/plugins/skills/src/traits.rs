@@ -6,14 +6,14 @@ pub(crate) mod peek_next;
 pub(crate) mod peek_next_recursive;
 pub(crate) mod skill_builder;
 pub(crate) mod skill_state;
-pub(crate) mod spawn_skill_behavior;
+pub(crate) mod spawn_loadout_skill;
 pub(crate) mod visualize_item;
 
 use crate::skills::{RunSkillBehavior, Skill};
 use common::{
 	tools::{action_key::slot::SlotKey, item_type::ItemType},
 	traits::{
-		handles_skill_behaviors::{SkillCaster, SkillTarget},
+		handles_skill_physics::{SkillCaster, SkillTarget},
 		state_duration::UpdatedStates,
 	},
 	zyheeda_commands::ZyheedaCommands,

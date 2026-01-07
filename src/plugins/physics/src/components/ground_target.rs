@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use common::{
 	tools::Units,
-	traits::handles_skill_behaviors::{SkillCaster, SkillTarget},
+	traits::handles_skill_physics::{SkillCaster, SkillTarget},
 };
 
 #[derive(Component, Debug, PartialEq)]

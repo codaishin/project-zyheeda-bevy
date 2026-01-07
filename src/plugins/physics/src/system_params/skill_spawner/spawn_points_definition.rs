@@ -4,15 +4,12 @@ use crate::{
 };
 use common::{
 	tools::bone_name::BoneName,
-	traits::{
-		handles_skill_behaviors::SkillSpawner,
-		handles_skill_spawning::SpawnPointsDefinition,
-	},
+	traits::handles_skill_physics::{RegisterDefinition, SkillSpawner},
 };
 use std::collections::HashMap;
 
-impl SpawnPointsDefinition for SpawnPointContextMut<'_> {
-	fn insert_spawn_point_definition(&mut self, definition: HashMap<BoneName, SkillSpawner>) {
+impl RegisterDefinition for SpawnPointContextMut<'_> {
+	fn register_definition(&mut self, definition: HashMap<BoneName, SkillSpawner>) {
 		self.entity.try_insert(FixPointsDefinition(definition));
 	}
 }
@@ -31,7 +28,7 @@ mod tests {
 	};
 	use common::{
 		tools::action_key::slot::SlotKey,
-		traits::{accessors::get::GetContextMut, handles_skill_spawning::SkillSpawnPoints},
+		traits::{accessors::get::GetContextMut, handles_skill_physics::SkillSpawnPoints},
 	};
 	use testing::SingleThreadedApp;
 
@@ -54,7 +51,7 @@ mod tests {
 				let mut ctx =
 					SkillSpawnerMut::get_context_mut(&mut p, SkillSpawnPoints { entity }).unwrap();
 
-				ctx.insert_spawn_point_definition(map_clone.clone());
+				ctx.register_definition(map_clone.clone());
 			})?;
 
 		assert_eq!(

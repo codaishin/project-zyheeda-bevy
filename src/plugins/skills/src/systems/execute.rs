@@ -10,7 +10,7 @@ use common::{
 	components::persistent_entity::PersistentEntity,
 	traits::{
 		handles_physics::{MouseHover, MouseHoversOver, Raycast},
-		handles_skill_behaviors::{SkillCaster, SkillTarget},
+		handles_skill_physics::{SkillCaster, SkillTarget},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };

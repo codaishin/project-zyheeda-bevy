@@ -9,7 +9,7 @@ use bevy::prelude::*;
 use common::{
 	traits::{
 		handles_physics::HandlesAllPhysicalEffects,
-		handles_skill_behaviors::{HandlesSkillBehaviors, SkillCaster, SkillSpawner, SkillTarget},
+		handles_skill_physics::{HandlesNewPhysicalSkill, SkillCaster, SkillSpawner, SkillTarget},
 	},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
@@ -72,7 +72,7 @@ impl SkillBehaviorConfig {
 		target: SkillTarget,
 	) -> SkillShape
 	where
-		TSkillBehaviors: HandlesSkillBehaviors + 'static,
+		TSkillBehaviors: HandlesNewPhysicalSkill + 'static,
 	{
 		self.shape
 			.build::<TSkillBehaviors>(commands, caster, spawner, target)

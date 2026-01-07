@@ -6,14 +6,14 @@ use bevy::prelude::*;
 use common::{
 	errors::Unreachable,
 	traits::{
-		handles_skill_behaviors::{Contact, ContactShape, Motion},
+		handles_skill_physics::{Contact, ContactShape, Motion},
 		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
 use macros::SavableComponent;
 
-#[derive(Component, SavableComponent, Debug, Clone)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
 #[require(Visibility, Transform)]
 #[savable_component(dto = SkillContactDto)]
 pub struct SkillContact {

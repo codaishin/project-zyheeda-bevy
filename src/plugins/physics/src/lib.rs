@@ -51,14 +51,15 @@ use common::{
 			colliders::HandlesColliders,
 		},
 		handles_saving::HandlesSaving,
-		handles_skill_behaviors::{
+		handles_skill_physics::{
 			Contact,
-			HandlesSkillBehaviors,
+			HandlesNewPhysicalSkill,
+			HandlesPhysicalSkillComponents,
+			HandlesPhysicalSkillSpawnPoints,
 			Projection,
 			SkillEntities,
 			SkillRoot,
 		},
-		handles_skill_spawning::HandlesSkillSpawning,
 		prefab::AddPrefabObserver,
 		register_derived_component::RegisterDerivedComponent,
 		thread_safe::ThreadSafe,
@@ -279,13 +280,12 @@ impl<TDependencies> HandlesColliders for PhysicsPlugin<TDependencies> {
 	type TCollider = ColliderDefinition;
 }
 
-impl<TDependencies> HandlesSkillSpawning for PhysicsPlugin<TDependencies> {
-	type TSkillSpawnerMut<'w, 's> = SkillSpawnerMut<'w, 's>;
+impl<TDependencies> HandlesPhysicalSkillSpawnPoints for PhysicsPlugin<TDependencies> {
+	type TSkillSpawnPointsMut<'w, 's> = SkillSpawnerMut<'w, 's>;
 }
 
-impl<TDependencies> HandlesSkillBehaviors for PhysicsPlugin<TDependencies> {
-	type TSkillContact = SkillContact;
-	type TSkillProjection = SkillProjection;
+impl<TDependencies> HandlesNewPhysicalSkill for PhysicsPlugin<TDependencies> {
+	type TSkillSpawnerMut<'w, 's> = SkillSpawnerMut<'w, 's>;
 
 	fn spawn_skill(
 		commands: &mut ZyheedaCommands,
@@ -312,4 +312,9 @@ impl<TDependencies> HandlesSkillBehaviors for PhysicsPlugin<TDependencies> {
 			projection,
 		}
 	}
+}
+
+impl<TDependencies> HandlesPhysicalSkillComponents for PhysicsPlugin<TDependencies> {
+	type TSkillContact = SkillContact;
+	type TSkillProjection = SkillProjection;
 }

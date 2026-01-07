@@ -3,7 +3,7 @@ mod dto;
 use crate::{
 	behaviors::spawn_skill::{OnSkillStop, SpawnOn},
 	skills::{RunSkillBehavior, dto::run_skill_behavior::RunSkillBehaviorDto},
-	traits::{Execute, Flush, Schedule, spawn_skill_behavior::SpawnSkillBehavior},
+	traits::{Execute, Flush, Schedule, spawn_loadout_skill::SpawnLoadoutSkill},
 };
 use bevy::prelude::*;
 use common::{
@@ -12,7 +12,7 @@ use common::{
 	traits::{
 		accessors::get::TryApplyOn,
 		handles_physics::HandlesAllPhysicalEffects,
-		handles_skill_behaviors::{HandlesSkillBehaviors, SkillCaster, SkillSpawner, SkillTarget},
+		handles_skill_physics::{HandlesNewPhysicalSkill, SkillCaster, SkillSpawner, SkillTarget},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -55,10 +55,10 @@ impl<TBehavior> Flush for SkillExecuter<TBehavior> {
 	}
 }
 
-impl<TBehavior, TPhysics> Execute<TPhysics> for SkillExecuter<TBehavior>
+impl<TSpawnSkill, TPhysics> Execute<TPhysics> for SkillExecuter<TSpawnSkill>
 where
-	TBehavior: SpawnSkillBehavior,
-	TPhysics: HandlesAllPhysicalEffects + HandlesSkillBehaviors + 'static,
+	TSpawnSkill: SpawnLoadoutSkill,
+	TPhysics: HandlesAllPhysicalEffects + HandlesNewPhysicalSkill + 'static,
 {
 	fn execute(
 		&mut self,
@@ -100,15 +100,24 @@ fn stop<TSkillShape>(
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce, SystemParam};
 	use common::{
 		attributes::health::Health,
 		components::persistent_entity::PersistentEntity,
 		tools::action_key::slot::{PlayerSlot, Side},
 		traits::{
-			accessors::get::GetProperty,
+			accessors::get::{GetContextMut, GetProperty},
 			handles_physics::{Effect, HandlesPhysicalEffect},
-			handles_skill_behaviors::{Contact, Projection, SkillEntities, SkillRoot},
+			handles_skill_physics::{
+				Contact,
+				HandlesNewPhysicalSkill,
+				NewSkill,
+				Projection,
+				Skill,
+				SkillEntities,
+				SkillRoot,
+				Spawn,
+			},
 			register_persistent_entities::RegisterPersistentEntities,
 			thread_safe::ThreadSafe,
 		},
@@ -132,9 +141,8 @@ mod tests {
 		}
 	}
 
-	impl HandlesSkillBehaviors for _HandlesPhysics {
-		type TSkillContact = _Contact;
-		type TSkillProjection = _Projection;
+	impl HandlesNewPhysicalSkill for _HandlesPhysics {
+		type TSkillSpawnerMut<'w, 's> = _SkillSpawner;
 
 		fn spawn_skill(commands: &mut ZyheedaCommands, _: Contact, _: Projection) -> SkillEntities {
 			SkillEntities {
@@ -166,10 +174,66 @@ mod tests {
 	#[derive(Component)]
 	struct _Projection;
 
+	#[derive(SystemParam)]
+	struct _SkillSpawner;
+
+	impl GetContextMut<NewSkill> for _SkillSpawner {
+		type TContext<'ctx> = _Context;
+
+		fn get_context_mut<'ctx>(
+			_: &'ctx mut _SkillSpawner,
+			_: NewSkill,
+		) -> Option<Self::TContext<'ctx>> {
+			None
+		}
+	}
+
+	struct _Context;
+
+	impl Spawn for _Context {
+		type TSkill<'c>
+			= _SpawnedSkill
+		where
+			Self: 'c;
+
+		fn spawn(&mut self, _: Contact, _: Projection) -> Self::TSkill<'_> {
+			panic!("SHOULD NOT BE CALLED")
+		}
+	}
+
+	struct _SpawnedSkill;
+
+	impl Skill for _SpawnedSkill {
+		fn root(&self) -> PersistentEntity {
+			panic!("SHOULD NOT BE CALLED")
+		}
+
+		fn insert_on_root<T>(&mut self, _: T)
+		where
+			T: Bundle,
+		{
+			panic!("SHOULD NOT BE CALLED")
+		}
+
+		fn insert_on_contact<T>(&mut self, _: T)
+		where
+			T: Bundle,
+		{
+			panic!("SHOULD NOT BE CALLED")
+		}
+
+		fn insert_on_projection<T>(&mut self, _: T)
+		where
+			T: Bundle,
+		{
+			panic!("SHOULD NOT BE CALLED")
+		}
+	}
+
 	#[derive(Debug, PartialEq, Clone)]
 	struct _ShapeSlotted(OnSkillStop);
 
-	impl SpawnSkillBehavior for _ShapeSlotted {
+	impl SpawnLoadoutSkill for _ShapeSlotted {
 		fn spawn_on(&self) -> SpawnOn {
 			SpawnOn::Slot
 		}
@@ -182,7 +246,7 @@ mod tests {
 			_: SkillTarget,
 		) -> OnSkillStop
 		where
-			TPhysics: HandlesAllPhysicalEffects + HandlesSkillBehaviors + 'static,
+			TPhysics: HandlesAllPhysicalEffects + HandlesNewPhysicalSkill + 'static,
 		{
 			self.0
 		}
@@ -196,7 +260,7 @@ mod tests {
 		on_skill_stop: OnSkillStop,
 	}
 
-	impl SpawnSkillBehavior for _Behavior {
+	impl SpawnLoadoutSkill for _Behavior {
 		fn spawn_on(&self) -> SpawnOn {
 			self.spawn_on
 		}
@@ -209,7 +273,7 @@ mod tests {
 			target: SkillTarget,
 		) -> OnSkillStop
 		where
-			TEffects: HandlesAllPhysicalEffects + HandlesSkillBehaviors + 'static,
+			TEffects: HandlesAllPhysicalEffects + HandlesNewPhysicalSkill + 'static,
 		{
 			commands.spawn(_SpawnedBehavior {
 				caster,

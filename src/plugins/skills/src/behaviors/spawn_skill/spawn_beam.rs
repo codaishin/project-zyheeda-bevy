@@ -6,10 +6,10 @@ use crate::{
 };
 use common::{
 	tools::Units,
-	traits::handles_skill_behaviors::{
+	traits::handles_skill_physics::{
 		Contact,
 		ContactShape,
-		HandlesSkillBehaviors,
+		HandlesNewPhysicalSkill,
 		Motion,
 		Projection,
 		ProjectionShape,
@@ -36,7 +36,7 @@ impl SpawnShape for SpawnBeam {
 		_: SkillTarget,
 	) -> SkillEntities
 	where
-		TSkillBehaviors: HandlesSkillBehaviors + 'static,
+		TSkillBehaviors: HandlesNewPhysicalSkill + 'static,
 	{
 		TSkillBehaviors::spawn_skill(
 			commands,

@@ -46,7 +46,7 @@ fn get_root<'a>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{tools::bone_name::BoneName, traits::handles_skill_behaviors::SkillSpawner};
+	use common::{tools::bone_name::BoneName, traits::handles_skill_physics::SkillSpawner};
 	use std::collections::HashMap;
 	use testing::SingleThreadedApp;
 

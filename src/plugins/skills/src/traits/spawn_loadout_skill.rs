@@ -2,12 +2,12 @@ use crate::behaviors::spawn_skill::{OnSkillStop, SpawnOn};
 use common::{
 	traits::{
 		handles_physics::HandlesAllPhysicalEffects,
-		handles_skill_behaviors::{HandlesSkillBehaviors, SkillCaster, SkillSpawner, SkillTarget},
+		handles_skill_physics::{HandlesNewPhysicalSkill, SkillCaster, SkillSpawner, SkillTarget},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
 
-pub(crate) trait SpawnSkillBehavior {
+pub(crate) trait SpawnLoadoutSkill {
 	fn spawn_on(&self) -> SpawnOn;
 	fn spawn<TPhysics>(
 		&self,
@@ -17,5 +17,5 @@ pub(crate) trait SpawnSkillBehavior {
 		target: SkillTarget,
 	) -> OnSkillStop
 	where
-		TPhysics: HandlesAllPhysicalEffects + HandlesSkillBehaviors + 'static;
+		TPhysics: HandlesAllPhysicalEffects + HandlesNewPhysicalSkill + 'static;
 }

@@ -12,7 +12,7 @@ use common::{
 	components::persistent_entity::PersistentEntity,
 	errors::{ErrorData, Level},
 	tools::bone_name::BoneName,
-	traits::handles_skill_behaviors::SkillSpawner,
+	traits::handles_skill_physics::SkillSpawner,
 };
 use std::{any::type_name, collections::HashMap, fmt::Display, marker::PhantomData};
 

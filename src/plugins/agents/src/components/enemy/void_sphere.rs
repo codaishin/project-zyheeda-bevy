@@ -22,7 +22,7 @@ use common::{
 		handles_enemies::EnemyType,
 		handles_map_generation::AgentType,
 		handles_physics::colliders::{Blocker, Collider, ColliderType, HandlesColliders, Shape},
-		handles_skill_behaviors::SkillSpawner,
+		handles_skill_physics::SkillSpawner,
 		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
 	},

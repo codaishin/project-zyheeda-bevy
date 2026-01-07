@@ -9,10 +9,10 @@ use common::{
 	tools::Units,
 	traits::{
 		handles_physics::colliders::{Blocker, Shape},
-		handles_skill_behaviors::{
+		handles_skill_physics::{
 			Contact,
 			ContactShape,
-			HandlesSkillBehaviors,
+			HandlesNewPhysicalSkill,
 			Motion,
 			Projection,
 			ProjectionOffset,
@@ -38,7 +38,7 @@ impl SpawnShape for SpawnShield {
 		_: SkillTarget,
 	) -> SkillEntities
 	where
-		TSkillBehaviors: HandlesSkillBehaviors + 'static,
+		TSkillBehaviors: HandlesNewPhysicalSkill + 'static,
 	{
 		let radius = 1.;
 		let offset = Vec3::new(0., 0., -radius);

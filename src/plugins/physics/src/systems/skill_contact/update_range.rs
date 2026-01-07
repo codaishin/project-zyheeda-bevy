@@ -3,7 +3,7 @@ use crate::components::{
 	when_traveled::DestroyAfterDistanceTraveled,
 };
 use bevy::prelude::*;
-use common::traits::handles_skill_behaviors::Motion;
+use common::traits::handles_skill_physics::Motion;
 
 impl SkillContact {
 	pub(crate) fn update_range(mut contacts: Query<(&mut Self, &DestroyAfterDistanceTraveled)>) {
@@ -25,7 +25,7 @@ mod tests {
 	};
 	use common::{
 		tools::{Units, UnitsPerSecond},
-		traits::handles_skill_behaviors::{ContactShape, Motion, SkillCaster, SkillSpawner},
+		traits::handles_skill_physics::{ContactShape, Motion, SkillCaster, SkillSpawner},
 	};
 	use testing::SingleThreadedApp;
 

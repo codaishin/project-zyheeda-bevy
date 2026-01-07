@@ -12,7 +12,7 @@ use common::{
 	components::persistent_entity::PersistentEntity,
 	traits::{
 		handles_physics::colliders::Blocker,
-		handles_skill_behaviors::{HandlesSkillBehaviors, SkillSpawner},
+		handles_skill_physics::{HandlesNewPhysicalSkill, SkillSpawner},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -100,7 +100,7 @@ impl SpawnSkill {
 		target: SkillTarget,
 	) -> SkillShape
 	where
-		TSkillBehaviors: HandlesSkillBehaviors + 'static,
+		TSkillBehaviors: HandlesNewPhysicalSkill + 'static,
 	{
 		match self {
 			Self::GroundTargetedAoe(gt) => {
