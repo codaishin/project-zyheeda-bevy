@@ -1,12 +1,12 @@
 use crate::behaviors::{SkillCaster, SkillTarget};
 use common::{
-	effects::health_damage::HealthDamage,
-	traits::handles_physics::HandlesPhysicalEffect,
+	effects::{EffectApplies, health_damage::HealthDamage},
+	traits::{handles_physics::HandlesPhysicalEffect, handles_skill_physics::Effect},
 	zyheeda_commands::ZyheedaEntityCommands,
 };
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum AttachHealthDamage {
 	OneTime(f32),
 	OverTime(f32),
@@ -25,6 +25,19 @@ impl AttachHealthDamage {
 			Self::OneTime(dmg) => HealthDamage::once(dmg),
 			Self::OverTime(dmg) => HealthDamage::per_second(dmg),
 		}));
+	}
+}
+
+impl From<AttachHealthDamage> for Effect {
+	fn from(value: AttachHealthDamage) -> Self {
+		match value {
+			AttachHealthDamage::OneTime(dmg) => {
+				Effect::HealthDamage(HealthDamage(dmg, EffectApplies::Once))
+			}
+			AttachHealthDamage::OverTime(dmg) => {
+				Effect::HealthDamage(HealthDamage(dmg, EffectApplies::Always))
+			}
+		}
 	}
 }
 

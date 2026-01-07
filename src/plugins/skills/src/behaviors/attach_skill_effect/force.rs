@@ -1,12 +1,12 @@
 use crate::behaviors::{SkillCaster, SkillTarget};
 use common::{
 	effects::force::Force,
-	traits::handles_physics::HandlesPhysicalEffect,
+	traits::{handles_physics::HandlesPhysicalEffect, handles_skill_physics::Effect},
 	zyheeda_commands::ZyheedaEntityCommands,
 };
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub struct AttachForce;
 
 impl AttachForce {
@@ -19,6 +19,12 @@ impl AttachForce {
 		TPhysics: HandlesPhysicalEffect<Force>,
 	{
 		entity.try_insert(TPhysics::into_effect_component(Force));
+	}
+}
+
+impl From<AttachForce> for Effect {
+	fn from(_: AttachForce) -> Self {
+		Effect::Force(Force)
 	}
 }
 

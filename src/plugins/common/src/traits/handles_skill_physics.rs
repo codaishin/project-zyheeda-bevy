@@ -107,7 +107,7 @@ pub enum Effect {
 /// Describes the contact shape of a skill
 ///
 /// These should be used for physical effects like projectile bodies, barriers or beam cores.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Contact {
 	pub shape: ContactShape,
 	pub motion: Motion,
@@ -116,7 +116,7 @@ pub struct Contact {
 /// Describes the projection shape of a skill
 ///
 /// These should be used for AoE.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Projection {
 	pub shape: ProjectionShape,
 	pub offset: Option<ProjectionOffset>,

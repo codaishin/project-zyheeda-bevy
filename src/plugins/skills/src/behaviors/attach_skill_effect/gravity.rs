@@ -2,12 +2,12 @@ use crate::behaviors::{SkillCaster, SkillTarget};
 use common::{
 	effects::gravity::Gravity,
 	tools::UnitsPerSecond,
-	traits::handles_physics::HandlesPhysicalEffect,
+	traits::{handles_physics::HandlesPhysicalEffect, handles_skill_physics::Effect},
 	zyheeda_commands::ZyheedaEntityCommands,
 };
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub struct AttachGravity {
 	strength: UnitsPerSecond,
 }
@@ -24,6 +24,12 @@ impl AttachGravity {
 		entity.try_insert(TPhysics::into_effect_component(Gravity {
 			strength: self.strength,
 		}));
+	}
+}
+
+impl From<AttachGravity> for Effect {
+	fn from(AttachGravity { strength }: AttachGravity) -> Self {
+		Self::Gravity(Gravity { strength })
 	}
 }
 

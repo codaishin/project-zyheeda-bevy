@@ -1,12 +1,14 @@
 pub mod attach_skill_effect;
 pub mod skill_shape;
 
+use std::slice::Iter;
+
 use crate::{
 	behaviors::{attach_skill_effect::AttachEffect, skill_shape::SpawnOn},
 	skills::lifetime_definition::LifeTimeDefinition,
 	traits::{
 		skill_builder::{SkillLayout, SkillLifetime},
-		spawn_skill::{SkillContact, SkillProjection},
+		spawn_skill::{SkillContact, SkillContactEffects, SkillProjection, SkillProjectionEffects},
 	},
 };
 use bevy::prelude::*;
@@ -15,6 +17,7 @@ use common::{
 		handles_physics::HandlesAllPhysicalEffects,
 		handles_skill_physics::{
 			Contact,
+			Effect,
 			HandlesNewPhysicalSkill,
 			Projection,
 			SkillCaster,
@@ -151,5 +154,49 @@ impl SkillProjection for SkillBehaviorConfig {
 impl SkillLifetime for SkillBehaviorConfig {
 	fn lifetime(&self) -> LifeTimeDefinition {
 		match_shape!(&self.shape, SkillLifetime::lifetime)
+	}
+}
+
+impl SkillContactEffects for SkillBehaviorConfig {
+	type TIter<'a>
+		= Effects<'a>
+	where
+		Self: 'a;
+
+	fn skill_contact_effects(&self) -> Self::TIter<'_> {
+		Effects {
+			effects: self.contact.iter(),
+		}
+	}
+}
+
+impl SkillProjectionEffects for SkillBehaviorConfig {
+	type TIter<'a>
+		= Effects<'a>
+	where
+		Self: 'a;
+
+	fn skill_projection_effects(&self) -> Self::TIter<'_> {
+		Effects {
+			effects: self.projection.iter(),
+		}
+	}
+}
+
+pub(crate) struct Effects<'a> {
+	effects: Iter<'a, AttachEffect>,
+}
+
+impl Iterator for Effects<'_> {
+	type Item = Effect;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		match self.effects.next()? {
+			AttachEffect::Gravity(attach) => Some((*attach).into()),
+			AttachEffect::Damage(attach) => Some((*attach).into()),
+			AttachEffect::Force(attach) => Some((*attach).into()),
+			#[cfg(test)]
+			AttachEffect::Fn(_) => None,
+		}
 	}
 }
