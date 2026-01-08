@@ -105,18 +105,14 @@ mod tests {
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce, SystemParam};
 	use common::{
 		components::persistent_entity::PersistentEntity,
-		traits::{
-			accessors::get::GetContextMut,
-			handles_skill_physics::{
-				Contact,
-				Effect,
-				NewSkill,
-				Projection,
-				Skill,
-				SkillEntities,
-				SkillRoot,
-				Spawn,
-			},
+		traits::handles_skill_physics::{
+			Contact,
+			Effect,
+			Projection,
+			Skill,
+			SkillEntities,
+			SkillRoot,
+			Spawn,
 		},
 	};
 	use std::{any::type_name, sync::LazyLock, time::Duration};
@@ -134,20 +130,7 @@ mod tests {
 	#[derive(SystemParam)]
 	struct _SkillSpawner;
 
-	impl GetContextMut<NewSkill> for _SkillSpawner {
-		type TContext<'ctx> = _Context;
-
-		fn get_context_mut<'ctx>(
-			_: &'ctx mut _SkillSpawner,
-			_: NewSkill,
-		) -> Option<Self::TContext<'ctx>> {
-			None
-		}
-	}
-
-	struct _Context;
-
-	impl Spawn for _Context {
+	impl Spawn for _SkillSpawner {
 		type TSkill<'c>
 			= _SpawnedSkill
 		where

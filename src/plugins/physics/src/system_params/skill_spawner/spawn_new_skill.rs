@@ -3,7 +3,7 @@ use crate::{
 		effect::{force::ForceEffect, gravity::GravityEffect, health_damage::HealthDamageEffect},
 		skill_prefabs::{skill_contact::SkillContact, skill_projection::SkillProjection},
 	},
-	system_params::skill_spawner::SpawnNewSkillContextMut,
+	system_params::skill_spawner::SkillSpawnerMut,
 };
 use bevy::prelude::*;
 use common::{
@@ -23,7 +23,7 @@ use common::{
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
 
-impl Spawn for SpawnNewSkillContextMut<'_> {
+impl Spawn for SkillSpawnerMut<'_, '_> {
 	type TSkill<'c>
 		= Skill<'c>
 	where
@@ -112,16 +112,12 @@ mod tests {
 	use common::{
 		CommonPlugin,
 		tools::Units,
-		traits::{
-			accessors::get::GetContextMut,
-			handles_skill_physics::{
-				ContactShape,
-				Motion,
-				NewSkill,
-				ProjectionShape,
-				SkillCaster,
-				SkillSpawner,
-			},
+		traits::handles_skill_physics::{
+			ContactShape,
+			Motion,
+			ProjectionShape,
+			SkillCaster,
+			SkillSpawner,
 		},
 	};
 	use std::{collections::HashSet, sync::LazyLock};
@@ -163,8 +159,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |mut p: SkillSpawnerMut| {
-					let mut ctx = SkillSpawnerMut::get_context_mut(&mut p, NewSkill).unwrap();
-					ctx.spawn(CONTACT.clone(), PROJECTION.clone());
+					p.spawn(CONTACT.clone(), PROJECTION.clone());
 				})?;
 
 			let skills = app
@@ -181,8 +176,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |mut p: SkillSpawnerMut| {
-					let mut ctx = SkillSpawnerMut::get_context_mut(&mut p, NewSkill).unwrap();
-					ctx.spawn(CONTACT.clone(), PROJECTION.clone());
+					p.spawn(CONTACT.clone(), PROJECTION.clone());
 				})?;
 
 			let skills = app
@@ -203,8 +197,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |mut p: SkillSpawnerMut| {
-					let mut ctx = SkillSpawnerMut::get_context_mut(&mut p, NewSkill).unwrap();
-					ctx.spawn(CONTACT.clone(), PROJECTION.clone());
+					p.spawn(CONTACT.clone(), PROJECTION.clone());
 				})?;
 
 			let skills = app
@@ -241,8 +234,7 @@ mod tests {
 			let root = app
 				.world_mut()
 				.run_system_once(move |mut p: SkillSpawnerMut| {
-					let mut ctx = SkillSpawnerMut::get_context_mut(&mut p, NewSkill).unwrap();
-					let skill = ctx.spawn(CONTACT.clone(), PROJECTION.clone());
+					let skill = p.spawn(CONTACT.clone(), PROJECTION.clone());
 					skill.root()
 				})?;
 
@@ -261,8 +253,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |mut p: SkillSpawnerMut| {
-					let mut ctx = SkillSpawnerMut::get_context_mut(&mut p, NewSkill).unwrap();
-					let mut skill = ctx.spawn(CONTACT.clone(), PROJECTION.clone());
+					let mut skill = p.spawn(CONTACT.clone(), PROJECTION.clone());
 					skill.insert_on_root(_Marker);
 				})?;
 
@@ -292,8 +283,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |mut p: SkillSpawnerMut| {
-					let mut ctx = SkillSpawnerMut::get_context_mut(&mut p, NewSkill).unwrap();
-					let mut skill = ctx.spawn(CONTACT.clone(), PROJECTION.clone());
+					let mut skill = p.spawn(CONTACT.clone(), PROJECTION.clone());
 					skill.insert_on_contact(effect);
 				})?;
 
@@ -317,8 +307,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |mut p: SkillSpawnerMut| {
-					let mut ctx = SkillSpawnerMut::get_context_mut(&mut p, NewSkill).unwrap();
-					let mut skill = ctx.spawn(CONTACT.clone(), PROJECTION.clone());
+					let mut skill = p.spawn(CONTACT.clone(), PROJECTION.clone());
 					skill.insert_on_projection(effect);
 				})?;
 
