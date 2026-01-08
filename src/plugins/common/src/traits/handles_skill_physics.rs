@@ -34,8 +34,7 @@ pub trait HandlesPhysicalSkillComponents {
 }
 
 pub trait HandlesNewPhysicalSkill {
-	type TSkillSpawnerMut<'w, 's>: SystemParam
-		+ for<'c> GetContextMut<NewSkill, TContext<'c>: Spawn>;
+	type TSkillSpawnerMut<'w, 's>: SystemParam<Item<'w, 's>: Spawn>;
 
 	/// Skills always have a contact and a projection shape.
 	///
@@ -87,8 +86,6 @@ where
 		self.deref_mut().register_definition(definition);
 	}
 }
-
-pub struct NewSkill;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Effect {

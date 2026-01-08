@@ -5,7 +5,7 @@ use bevy::{ecs::system::SystemParam, prelude::*};
 use common::{
 	traits::{
 		accessors::get::{GetContextMut, GetMut},
-		handles_skill_physics::{NewSkill, SkillSpawnPoints},
+		handles_skill_physics::SkillSpawnPoints,
 	},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
@@ -30,21 +30,4 @@ impl GetContextMut<SkillSpawnPoints> for SkillSpawnerMut<'_, '_> {
 
 pub struct SpawnPointContextMut<'ctx> {
 	entity: ZyheedaEntityCommands<'ctx>,
-}
-
-impl<'w, 's> GetContextMut<NewSkill> for SkillSpawnerMut<'w, 's> {
-	type TContext<'ctx> = SpawnNewSkillContextMut<'ctx>;
-
-	fn get_context_mut<'ctx>(
-		param: &'ctx mut SkillSpawnerMut,
-		_: NewSkill,
-	) -> Option<Self::TContext<'ctx>> {
-		Some(SpawnNewSkillContextMut {
-			commands: param.commands.reborrow(),
-		})
-	}
-}
-
-pub struct SpawnNewSkillContextMut<'ctx> {
-	commands: ZyheedaCommands<'ctx, 'ctx>,
 }
