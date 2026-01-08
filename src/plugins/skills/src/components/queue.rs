@@ -600,13 +600,10 @@ mod test_queue_collection {
 mod test_queue_active_skill {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::{
-		behaviors::{
-			SkillBehaviorConfig,
-			spawn_skill::{OnSkillStop, SpawnSkill},
-		},
-		skills::RunSkillBehavior,
-		traits::skill_builder::SkillShape,
+	use crate::skills::{
+		RunSkillBehavior,
+		behaviors::SkillBehaviorConfig,
+		shape::{SkillShape, shield::Shield},
 	};
 
 	#[test]
@@ -825,12 +822,7 @@ mod test_queue_active_skill {
 
 	#[test]
 	fn test_start_behavior_fn_on_active() {
-		let behaviors =
-			SkillBehaviorConfig::from_shape(SpawnSkill::Fn(|commands, _, _, _| SkillShape {
-				contact: commands.spawn(()).id(),
-				projection: commands.spawn(()).id(),
-				on_skill_stop: OnSkillStop::Ignore,
-			}));
+		let behaviors = SkillBehaviorConfig::from_shape(SkillShape::Shield(Shield));
 
 		let active = ActiveSkill {
 			skill: &mut QueuedSkill {
@@ -852,12 +844,7 @@ mod test_queue_active_skill {
 
 	#[test]
 	fn test_start_behavior_fn_on_aim() {
-		let behaviors =
-			SkillBehaviorConfig::from_shape(SpawnSkill::Fn(|commands, _, _, _| SkillShape {
-				contact: commands.spawn(()).id(),
-				projection: commands.spawn(()).id(),
-				on_skill_stop: OnSkillStop::Ignore,
-			}));
+		let behaviors = SkillBehaviorConfig::from_shape(SkillShape::Shield(Shield));
 
 		let active = ActiveSkill {
 			skill: &mut QueuedSkill {

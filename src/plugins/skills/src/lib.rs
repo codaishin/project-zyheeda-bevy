@@ -1,4 +1,3 @@
-mod behaviors;
 mod components;
 mod item;
 mod skills;
@@ -32,29 +31,28 @@ use common::{
 		handles_orientation::{FacingSystemParamMut, HandlesOrientation},
 		handles_physics::{HandlesAllPhysicalEffects, HandlesRaycast, RaycastSystemParam},
 		handles_saving::HandlesSaving,
-		handles_skill_physics::HandlesSkillPhysics,
+		handles_skill_physics::{HandlesSkillPhysics, SkillSpawnerMut},
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
 	},
 };
 use components::{
+	active_skill::ActiveSkill,
 	combos::Combos,
 	combos_time_out::CombosTimeOut,
 	inventory::Inventory,
 	queue::Queue,
-	skill_executer::SkillExecuter,
 	slots::Slots,
 };
 use item::{Item, dto::ItemDto};
-use skills::{RunSkillBehavior, Skill, dto::SkillDto};
+use skills::{Skill, dto::SkillDto};
 use std::marker::PhantomData;
 use systems::{
-	advance_active_skill::advance_active_skill,
 	combos::queue_update::ComboQueueUpdate,
-	execute::ExecuteSkills,
 	flush::flush,
 	flush_skill_combos::flush_skill_combos,
+	schedule_active_skill::schedule_active_skill,
 };
 
 pub struct SkillsPlugin<TDependencies>(PhantomData<TDependencies>);
@@ -102,12 +100,7 @@ where
 		TSaveGame::register_savable_component::<CombosTimeOut>(app);
 		TSaveGame::register_savable_component::<Combos>(app);
 		TSaveGame::register_savable_component::<Queue>(app);
-		TSaveGame::register_savable_component::<SkillExecuter>(app);
-
-		let execute_skill = SkillExecuter::<RunSkillBehavior>::execute_system::<
-			TPhysics,
-			RaycastSystemParam<TPhysics>,
-		>;
+		TSaveGame::register_savable_component::<ActiveSkill>(app);
 
 		app.add_systems(
 			Update,
@@ -115,13 +108,13 @@ where
 				Queue::enqueue_system::<Slots>,
 				Combos::update::<Queue>,
 				flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
-				advance_active_skill::<
+				schedule_active_skill::<
 					Queue,
 					FacingSystemParamMut<TBehaviors>,
-					SkillExecuter,
+					ActiveSkill,
 					Virtual,
 				>,
-				execute_skill,
+				ActiveSkill::execute::<SkillSpawnerMut<TPhysics>, RaycastSystemParam<TPhysics>>,
 				flush::<Queue>,
 				HeldSlots::<Old>::update_from::<Current>,
 			)

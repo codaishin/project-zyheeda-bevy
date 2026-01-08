@@ -60,8 +60,31 @@ pub trait Spawn {
 	fn spawn(&mut self, contact: Contact, projection: Projection) -> Self::TSkill<'_>;
 }
 
+impl<T> Spawn for T
+where
+	T: DerefMut<Target: Spawn>,
+{
+	type TSkill<'c>
+		= <T::Target as Spawn>::TSkill<'c>
+	where
+		Self: 'c;
+
+	fn spawn(&mut self, contact: Contact, projection: Projection) -> Self::TSkill<'_> {
+		self.deref_mut().spawn(contact, projection)
+	}
+}
+
 pub trait Despawn {
 	fn despawn(&mut self, skill: SkillEntity);
+}
+
+impl<T> Despawn for T
+where
+	T: DerefMut<Target: Despawn>,
+{
+	fn despawn(&mut self, skill: SkillEntity) {
+		self.deref_mut().despawn(skill);
+	}
 }
 
 pub trait HandlesPhysicalSkillSpawnPoints {
@@ -95,9 +118,10 @@ where
 	}
 }
 
+#[derive(Debug, PartialEq)]
 pub struct SkillEntity(pub PersistentEntity);
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum Effect {
 	Force(Force),
 	Gravity(Gravity),
@@ -107,7 +131,7 @@ pub enum Effect {
 /// Describes the contact shape of a skill
 ///
 /// These should be used for physical effects like projectile bodies, barriers or beam cores.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Contact {
 	pub shape: ContactShape,
 	pub motion: Motion,
@@ -116,7 +140,7 @@ pub struct Contact {
 /// Describes the projection shape of a skill
 ///
 /// These should be used for AoE.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Projection {
 	pub shape: ProjectionShape,
 	pub offset: Option<ProjectionOffset>,

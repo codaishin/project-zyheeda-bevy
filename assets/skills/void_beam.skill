@@ -16,9 +16,10 @@
 			"spawn_on": "Slot",
 			"contact": [
 				{
-					"Damage": {
-						"OverTime": 10
-					}
+					"HealthDamage": [
+						10,
+						"OncePerSecond"
+					]
 				}
 			],
 			"projection": []

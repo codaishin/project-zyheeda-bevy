@@ -62,6 +62,10 @@ pub struct Units(f32);
 
 impl Units {
 	pub const ZERO: Self = Self(0.);
+
+	pub const fn from_u8(u8: u8) -> Self {
+		Self(u8 as f32)
+	}
 }
 
 #[derive(Debug, PartialEq, Clone, ClampZeroPositive)]

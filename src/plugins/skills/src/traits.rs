@@ -6,17 +6,13 @@ pub(crate) mod peek_next;
 pub(crate) mod peek_next_recursive;
 pub(crate) mod skill_builder;
 pub(crate) mod skill_state;
-pub(crate) mod spawn_loadout_skill;
+pub(crate) mod spawn_skill;
 pub(crate) mod visualize_item;
 
 use crate::skills::{RunSkillBehavior, Skill};
 use common::{
 	tools::{action_key::slot::SlotKey, item_type::ItemType},
-	traits::{
-		handles_skill_physics::{SkillCaster, SkillTarget},
-		state_duration::UpdatedStates,
-	},
-	zyheeda_commands::ZyheedaCommands,
+	traits::state_duration::UpdatedStates,
 };
 
 pub(crate) trait Enqueue<TItem> {
@@ -76,8 +72,4 @@ pub(crate) trait GetSkillBehavior {
 
 pub trait Schedule<TBehavior> {
 	fn schedule(&mut self, slot_key: SlotKey, behavior: TBehavior);
-}
-
-pub(crate) trait Execute<TPhysics> {
-	fn execute(&mut self, commands: &mut ZyheedaCommands, caster: SkillCaster, target: SkillTarget);
 }

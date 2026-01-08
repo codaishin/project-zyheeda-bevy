@@ -37,7 +37,7 @@ impl ActOn<Life> for HealthDamageEffect {
 	}
 
 	fn on_repeated_interaction(&mut self, _: PersistentEntity, life: &mut Life, delta: Duration) {
-		let Self(HealthDamage(damage, EffectApplies::Always)) = *self else {
+		let Self(HealthDamage(damage, EffectApplies::OncePerSecond)) = *self else {
 			return;
 		};
 

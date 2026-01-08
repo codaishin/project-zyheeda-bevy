@@ -15,9 +15,10 @@
 			"spawn_on": "Slot",
 			"contact": [
 				{
-					"Damage": {
-						"OneTime": 1
-					}
+					"HealthDamage": [
+						1,
+						"Once"
+					]
 				}
 			],
 			"projection": []
