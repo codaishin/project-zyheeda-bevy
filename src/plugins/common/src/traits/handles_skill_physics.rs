@@ -34,7 +34,7 @@ pub trait HandlesPhysicalSkillComponents {
 }
 
 pub trait HandlesNewPhysicalSkill {
-	type TSkillSpawnerMut<'w, 's>: SystemParam<Item<'w, 's>: Spawn>;
+	type TSkillSpawnerMut<'world, 'state>: for<'w, 's> SystemParam<Item<'w, 's>: Spawn>;
 
 	/// Skills always have a contact and a projection shape.
 	///
