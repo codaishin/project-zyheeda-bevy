@@ -1,6 +1,7 @@
 use crate::{
 	components::{
 		effect::{force::ForceEffect, gravity::GravityEffect, health_damage::HealthDamageEffect},
+		skill::Skill,
 		skill_prefabs::{skill_contact::SkillContact, skill_projection::SkillProjection},
 	},
 	system_params::skill_spawner::SkillSpawnerMut,
@@ -25,15 +26,15 @@ use common::{
 
 impl Spawn for SkillSpawnerMut<'_, '_> {
 	type TSkill<'c>
-		= Skill<'c>
+		= SkillCommands<'c>
 	where
 		Self: 'c;
 
-	fn spawn(&mut self, contact: Contact, projection: Projection) -> Skill<'_> {
+	fn spawn(&mut self, contact: Contact, projection: Projection) -> SkillCommands<'_> {
 		let persistent_entity = PersistentEntity::default();
 		let contact = self
 			.commands
-			.spawn((SkillContact::from(contact), persistent_entity))
+			.spawn((Skill, SkillContact::from(contact), persistent_entity))
 			.id();
 		let projection = self
 			.commands
@@ -52,19 +53,19 @@ impl Spawn for SkillSpawnerMut<'_, '_> {
 			projection,
 		};
 
-		Skill {
+		SkillCommands {
 			commands: self.commands.reborrow(),
 			entities,
 		}
 	}
 }
 
-pub struct Skill<'c> {
+pub struct SkillCommands<'c> {
 	commands: ZyheedaCommands<'c, 'c>,
 	entities: SkillEntities,
 }
 
-impl SkillTrait for Skill<'_> {
+impl SkillTrait for SkillCommands<'_> {
 	fn root(&self) -> PersistentEntity {
 		self.entities.root.persistent_entity
 	}
@@ -167,6 +168,24 @@ mod tests {
 				.iter_entities()
 				.filter(|e| e.contains::<PersistentEntity>());
 			assert_count!(1, skills);
+			Ok(())
+		}
+
+		#[test]
+		fn skill() -> Result<(), RunSystemError> {
+			let mut app = setup();
+
+			app.world_mut()
+				.run_system_once(move |mut p: SkillSpawnerMut| {
+					p.spawn(CONTACT.clone(), PROJECTION.clone());
+				})?;
+
+			let skills = app
+				.world()
+				.iter_entities()
+				.filter(|e| e.contains::<PersistentEntity>());
+			let [skill] = assert_count!(1, skills);
+			assert_eq!(Some(&Skill), skill.get::<Skill>());
 			Ok(())
 		}
 

@@ -34,7 +34,11 @@ pub trait HandlesPhysicalSkillComponents {
 }
 
 pub trait HandlesNewPhysicalSkill {
-	type TSkillSpawnerMut<'world, 'state>: for<'w, 's> SystemParam<Item<'w, 's>: Spawn>;
+	/// Skill spawner
+	///
+	/// Implementations of this are likely to use [`Commands`]. Insertion of skill components/effects
+	/// and despawning should be handled through this [`SystemParam`].
+	type TSkillSpawnerMut<'world, 'state>: for<'w, 's> SystemParam<Item<'w, 's>: Spawn + Despawn>;
 
 	/// Skills always have a contact and a projection shape.
 	///
@@ -54,6 +58,10 @@ pub trait Spawn {
 		Self: 'c;
 
 	fn spawn(&mut self, contact: Contact, projection: Projection) -> Self::TSkill<'_>;
+}
+
+pub trait Despawn {
+	fn despawn(&mut self, skill: SkillEntity);
 }
 
 pub trait HandlesPhysicalSkillSpawnPoints {
@@ -86,6 +94,8 @@ where
 		self.deref_mut().register_definition(definition);
 	}
 }
+
+pub struct SkillEntity(pub PersistentEntity);
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Effect {
