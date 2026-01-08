@@ -1,6 +1,8 @@
+mod despawn_skill;
 mod spawn_new_skill;
 mod spawn_points_definition;
 
+use crate::components::skill::Skill;
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::{
 	traits::{
@@ -12,6 +14,7 @@ use common::{
 
 #[derive(SystemParam)]
 pub struct SkillSpawnerMut<'w, 's> {
+	skills: Query<'w, 's, (), With<Skill>>,
 	commands: ZyheedaCommands<'w, 's>,
 }
 

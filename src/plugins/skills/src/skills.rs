@@ -249,11 +249,13 @@ mod tests {
 			handles_physics::{Effect as EffectTrait, HandlesPhysicalEffect},
 			handles_skill_physics::{
 				Contact,
+				Despawn,
 				Effect,
 				HandlesNewPhysicalSkill,
 				Projection,
 				Skill,
 				SkillEntities,
+				SkillEntity,
 				SkillRoot,
 				Spawn,
 			},
@@ -285,6 +287,12 @@ mod tests {
 			Self: 'c;
 
 		fn spawn(&mut self, _: Contact, _: Projection) -> Self::TSkill<'_> {
+			panic!("SHOULD NOT BE CALLED")
+		}
+	}
+
+	impl Despawn for _SkillSpawner {
+		fn despawn(&mut self, _: SkillEntity) {
 			panic!("SHOULD NOT BE CALLED")
 		}
 	}
