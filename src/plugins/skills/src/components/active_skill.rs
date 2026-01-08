@@ -1,8 +1,7 @@
 mod dto;
 
 use crate::{
-	behaviors::SkillBehaviorConfig,
-	skills::dto::run_skill_behavior::skill_behavior_config::SkillBehaviorConfigDto,
+	skills::behaviors::{SkillBehaviorConfig, dto::SkillBehaviorConfigDto},
 	traits::{Flush, Schedule},
 };
 use bevy::prelude::*;
@@ -15,8 +14,8 @@ use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
-#[savable_component(dto = SkillExecuter<SkillBehaviorConfigDto>)]
-pub(crate) enum SkillExecuter<TSkillBehavior = SkillBehaviorConfig> {
+#[savable_component(dto = ActiveSkill<SkillBehaviorConfigDto>)]
+pub(crate) enum ActiveSkill<TSkillBehavior = SkillBehaviorConfig> {
 	#[default]
 	Idle,
 	Start {
@@ -27,23 +26,23 @@ pub(crate) enum SkillExecuter<TSkillBehavior = SkillBehaviorConfig> {
 	Stop(PersistentEntity),
 }
 
-impl<TBehavior> Schedule<TBehavior> for SkillExecuter<TBehavior> {
+impl<TBehavior> Schedule<TBehavior> for ActiveSkill<TBehavior> {
 	fn schedule(&mut self, slot_key: SlotKey, behavior: TBehavior) {
-		*self = SkillExecuter::Start {
+		*self = ActiveSkill::Start {
 			slot_key,
 			shape: behavior,
 		};
 	}
 }
 
-impl<TBehavior> Flush for SkillExecuter<TBehavior> {
+impl<TBehavior> Flush for ActiveSkill<TBehavior> {
 	fn flush(&mut self) {
 		match self {
-			SkillExecuter::Stoppable(entity) => {
-				*self = SkillExecuter::Stop(*entity);
+			ActiveSkill::Stoppable(entity) => {
+				*self = ActiveSkill::Stop(*entity);
 			}
-			SkillExecuter::Start { .. } => {
-				*self = SkillExecuter::Idle;
+			ActiveSkill::Start { .. } => {
+				*self = ActiveSkill::Idle;
 			}
 			_ => {}
 		}

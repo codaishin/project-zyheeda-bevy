@@ -121,7 +121,7 @@ where
 #[derive(Debug, PartialEq)]
 pub struct SkillEntity(pub PersistentEntity);
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum Effect {
 	Force(Force),
 	Gravity(Gravity),

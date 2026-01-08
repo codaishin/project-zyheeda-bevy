@@ -600,12 +600,10 @@ mod test_queue_collection {
 mod test_queue_active_skill {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::{
-		behaviors::{
-			SkillBehaviorConfig,
-			skill_shape::{SkillShape, shield::Shield},
-		},
-		skills::RunSkillBehavior,
+	use crate::skills::{
+		RunSkillBehavior,
+		behaviors::SkillBehaviorConfig,
+		shape::{SkillShape, shield::Shield},
 	};
 
 	#[test]

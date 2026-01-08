@@ -1,21 +1,17 @@
-use crate::{
-	behaviors::{
-		Contact,
-		SkillCaster,
-		SkillContact,
-		SkillLifetime,
-		SkillProjection,
-		skill_shape::Blockers,
-	},
-	skills::lifetime_definition::LifeTimeDefinition,
+use crate::skills::{
+	behaviors::{SkillContact, SkillLifetime, SkillProjection},
+	lifetime_definition::LifeTimeDefinition,
+	shape::Blockers,
 };
 use common::{
 	tools::Units,
 	traits::handles_skill_physics::{
+		Contact,
 		ContactShape,
 		Motion,
 		Projection,
 		ProjectionShape,
+		SkillCaster,
 		SkillSpawner,
 		SkillTarget,
 	},

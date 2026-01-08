@@ -3,7 +3,7 @@ pub mod ground_target;
 pub mod projectile;
 pub mod shield;
 
-use crate::behaviors::skill_shape::beam::Beam;
+use crate::skills::shape::beam::Beam;
 use common::{
 	components::persistent_entity::PersistentEntity,
 	traits::handles_physics::colliders::Blocker,

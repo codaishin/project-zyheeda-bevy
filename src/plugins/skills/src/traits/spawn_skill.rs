@@ -1,6 +1,6 @@
 mod extension;
 
-use crate::behaviors::skill_shape::OnSkillStop;
+use crate::skills::shape::OnSkillStop;
 use common::traits::handles_skill_physics::{SkillCaster, SkillSpawner, SkillTarget};
 
 pub(crate) trait SpawnSkill<TSkillConfig> {

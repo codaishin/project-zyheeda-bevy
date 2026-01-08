@@ -1,6 +1,5 @@
 use crate::{
-	behaviors::SkillBehaviorConfig,
-	skills::{RunSkillBehavior, SkillState},
+	skills::{RunSkillBehavior, SkillState, behaviors::SkillBehaviorConfig},
 	traits::{Flush, GetActiveSkill, GetSkillBehavior, Schedule},
 };
 use bevy::{
@@ -24,14 +23,14 @@ enum Advancement {
 	InProcess,
 }
 
-pub(crate) fn advance_active_skill<TGetSkill, TFacing, TSkillExecutor, TTime>(
+pub(crate) fn schedule_active_skill<TGetSkill, TFacing, TActiveSkill, TTime>(
 	time: Res<Time<TTime>>,
-	mut agents: Query<(Entity, &mut TGetSkill, &mut TSkillExecutor)>,
+	mut agents: Query<(Entity, &mut TGetSkill, &mut TActiveSkill)>,
 	mut facing: StaticSystemParam<TFacing>,
 ) where
 	TGetSkill: GetActiveSkill<SkillState> + Component<Mutability = Mutable>,
 	TFacing: for<'c> GetContextMut<Facing, TContext<'c>: OverrideFace>,
-	TSkillExecutor: Component<Mutability = Mutable> + Schedule<SkillBehaviorConfig> + Flush,
+	TActiveSkill: Component<Mutability = Mutable> + Schedule<SkillBehaviorConfig> + Flush,
 	TTime: Default + ThreadSafe,
 {
 	let delta = time.delta();
@@ -132,10 +131,7 @@ fn schedule_start<TSkillExecutor, TSkill>(
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::behaviors::{
-		SkillBehaviorConfig,
-		skill_shape::{SkillShape, shield::Shield},
-	};
+	use crate::skills::shape::{SkillShape, shield::Shield};
 	use common::tools::action_key::slot::{PlayerSlot, Side};
 	use macros::{NestedMocks, simple_mock};
 	use mockall::{automock, mock, predicate::eq};
@@ -247,7 +243,7 @@ mod tests {
 		app.update();
 		app.add_systems(
 			Update,
-			advance_active_skill::<_Dequeue, Query<Mut<_Facing>>, _Executor, Real>,
+			schedule_active_skill::<_Dequeue, Query<Mut<_Facing>>, _Executor, Real>,
 		);
 
 		Ok((app, agent))

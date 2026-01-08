@@ -1,6 +1,6 @@
 use crate::{
-	behaviors::skill_shape::OnSkillStop,
-	components::skill_executer::SkillExecuter,
+	components::active_skill::ActiveSkill,
+	skills::shape::OnSkillStop,
 	traits::spawn_skill::SpawnSkill,
 };
 use bevy::{
@@ -16,11 +16,11 @@ use common::{
 	},
 };
 
-impl<TConfig> SkillExecuter<TConfig>
+impl<TConfig> ActiveSkill<TConfig>
 where
 	TConfig: ThreadSafe + Clone,
 {
-	pub(crate) fn execute_system<TSpawn, TRaycast>(
+	pub(crate) fn execute<TSpawn, TRaycast>(
 		mut spawn: StaticSystemParam<TSpawn>,
 		mut ray_cast: StaticSystemParam<TRaycast>,
 		mut agents: Query<(Entity, &mut Self)>,
@@ -159,8 +159,8 @@ mod tests {
 		app.add_systems(
 			Update,
 			(
-				SkillExecuter::<_Config>::execute_system::<ResMut<_Spawner>, ResMut<_RayCaster>>,
-				IsChanged::<SkillExecuter<_Config>>::detect,
+				ActiveSkill::<_Config>::execute::<ResMut<_Spawner>, ResMut<_RayCaster>>,
+				IsChanged::<ActiveSkill<_Config>>::detect,
 			)
 				.chain(),
 		);
@@ -184,7 +184,7 @@ mod tests {
 		);
 		app.world_mut().spawn((
 			*CASTER,
-			SkillExecuter::Start {
+			ActiveSkill::Start {
 				slot_key: SlotKey(11),
 				shape: _Config,
 			},
@@ -221,7 +221,7 @@ mod tests {
 		}));
 		app.world_mut().spawn((
 			*CASTER,
-			SkillExecuter::Start {
+			ActiveSkill::Start {
 				slot_key: SlotKey(11),
 				shape: _Config,
 			},
@@ -243,9 +243,9 @@ mod tests {
 		}
 	}
 
-	#[test_case(OnSkillStop::Ignore, SkillExecuter::Idle; "idle")]
-	#[test_case(OnSkillStop::Stop(*SKILL), SkillExecuter::Stoppable(*SKILL); "stoppable")]
-	fn set_started_to(on_skill_stop: OnSkillStop, expected: SkillExecuter<_Config>) {
+	#[test_case(OnSkillStop::Ignore, ActiveSkill::Idle; "idle")]
+	#[test_case(OnSkillStop::Stop(*SKILL), ActiveSkill::Stoppable(*SKILL); "stoppable")]
+	fn set_started_to(on_skill_stop: OnSkillStop, expected: ActiveSkill<_Config>) {
 		let mut app = setup(
 			_RayCaster::new().with_mock(|mock| {
 				mock.expect_raycast().return_const(MouseHoversOver::Ground {
@@ -261,7 +261,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				*CASTER,
-				SkillExecuter::Start {
+				ActiveSkill::Start {
 					slot_key: SlotKey(11),
 					shape: _Config,
 				},
@@ -272,7 +272,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&expected),
-			app.world().entity(entity).get::<SkillExecuter<_Config>>(),
+			app.world().entity(entity).get::<ActiveSkill<_Config>>(),
 		);
 	}
 
@@ -283,7 +283,7 @@ mod tests {
 			_Spawner::new().with_mock(assert_call_despawn),
 		);
 		app.world_mut()
-			.spawn((*CASTER, SkillExecuter::<_Config>::Stop(*SKILL)));
+			.spawn((*CASTER, ActiveSkill::<_Config>::Stop(*SKILL)));
 
 		app.update();
 
@@ -311,14 +311,14 @@ mod tests {
 		);
 		let entity = app
 			.world_mut()
-			.spawn((*CASTER, SkillExecuter::<_Config>::Stop(*SKILL)))
+			.spawn((*CASTER, ActiveSkill::<_Config>::Stop(*SKILL)))
 			.id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&SkillExecuter::Idle),
-			app.world().entity(entity).get::<SkillExecuter<_Config>>(),
+			Some(&ActiveSkill::Idle),
+			app.world().entity(entity).get::<ActiveSkill<_Config>>(),
 		);
 	}
 
@@ -333,7 +333,7 @@ mod tests {
 		);
 		app.world_mut().spawn((
 			*CASTER,
-			SkillExecuter::Start {
+			ActiveSkill::Start {
 				slot_key: SlotKey(11),
 				shape: _Config,
 			},
@@ -349,9 +349,9 @@ mod tests {
 		}
 	}
 
-	#[test_case(SkillExecuter::Idle; "idle")]
-	#[test_case(SkillExecuter::Stoppable(*SKILL); "stoppable")]
-	fn do_not_change(executor: SkillExecuter<_Config>) {
+	#[test_case(ActiveSkill::Idle; "idle")]
+	#[test_case(ActiveSkill::Stoppable(*SKILL); "stoppable")]
+	fn do_not_change(executor: ActiveSkill<_Config>) {
 		let mut app = setup(
 			_RayCaster::new().with_mock(|mock| {
 				mock.expect_raycast().return_const(MouseHoversOver::Ground {
@@ -372,7 +372,7 @@ mod tests {
 			Some(&IsChanged::FALSE),
 			app.world()
 				.entity(entity)
-				.get::<IsChanged<SkillExecuter<_Config>>>(),
+				.get::<IsChanged<ActiveSkill<_Config>>>(),
 		);
 	}
 }

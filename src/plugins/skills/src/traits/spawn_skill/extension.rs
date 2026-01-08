@@ -1,6 +1,9 @@
 use crate::{
-	behaviors::{SkillBehaviorConfig, skill_shape::OnSkillStop},
-	skills::lifetime_definition::LifeTimeDefinition,
+	skills::{
+		behaviors::SkillBehaviorConfig,
+		lifetime_definition::LifeTimeDefinition,
+		shape::OnSkillStop,
+	},
 	traits::spawn_skill::SpawnSkill,
 };
 use common::{
@@ -24,12 +27,12 @@ where
 			config.skill_projection(),
 		);
 
-		for effect in config.contact.iter().map(|effect| (*effect).into()) {
-			skill.insert_on_contact(effect);
+		for effect in config.skill_contact_effects() {
+			skill.insert_on_contact(*effect);
 		}
 
-		for effect in config.projection.iter().map(|effect| (*effect).into()) {
-			skill.insert_on_projection(effect);
+		for effect in config.skill_projection_effects() {
+			skill.insert_on_projection(*effect);
 		}
 
 		match config.lifetime() {
@@ -46,12 +49,9 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		behaviors::{
-			attach_skill_effect::{AttachEffect, force::AttachForce},
-			skill_shape::{SkillShape, ground_target::GroundTargetedAoe, shield::Shield},
-		},
-		skills::lifetime_definition::LifeTimeDefinition,
+	use crate::skills::{
+		lifetime_definition::LifeTimeDefinition,
+		shape::{SkillShape, ground_target::GroundTargetedAoe, shield::Shield},
 	};
 	use bevy::ecs::bundle::Bundle;
 	use common::{
@@ -171,7 +171,7 @@ mod tests {
 			mock.expect_spawn()
 				.returning(|_, _| Mock_Skill::new_mock(assert_added_effects).with_defaults());
 		});
-		let config = SHIELD.with_contact_effects(vec![AttachEffect::Force(AttachForce)]);
+		let config = SHIELD.with_contact_effects(vec![Effect::Force(Force)]);
 
 		spawn.spawn_skill(config, *CASTER, SPAWNER, *TARGET);
 
@@ -189,7 +189,7 @@ mod tests {
 			mock.expect_spawn()
 				.returning(|_, _| Mock_Skill::new_mock(assert_added_effects).with_defaults());
 		});
-		let config = SHIELD.with_projection_effects(vec![AttachEffect::Force(AttachForce)]);
+		let config = SHIELD.with_projection_effects(vec![Effect::Force(Force)]);
 
 		spawn.spawn_skill(config, *CASTER, SPAWNER, *TARGET);
 

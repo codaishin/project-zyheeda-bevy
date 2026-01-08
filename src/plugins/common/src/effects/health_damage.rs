@@ -11,7 +11,7 @@ impl HealthDamage {
 	}
 
 	pub const fn per_second(amount: f32) -> Self {
-		HealthDamage(amount, EffectApplies::Always)
+		HealthDamage(amount, EffectApplies::OncePerSecond)
 	}
 }
 

@@ -1,6 +1,6 @@
-use crate::{
-	behaviors::{Contact, SkillCaster, SkillContact, SkillLifetime, SkillProjection},
-	skills::lifetime_definition::LifeTimeDefinition,
+use crate::skills::{
+	behaviors::{SkillContact, SkillLifetime, SkillProjection},
+	lifetime_definition::LifeTimeDefinition,
 };
 use common::{
 	dto::duration_in_seconds::DurationInSeconds,
@@ -8,10 +8,12 @@ use common::{
 	traits::{
 		handles_physics::colliders::Blocker,
 		handles_skill_physics::{
+			Contact,
 			ContactShape,
 			Motion,
 			Projection,
 			ProjectionShape,
+			SkillCaster,
 			SkillSpawner,
 			SkillTarget,
 		},

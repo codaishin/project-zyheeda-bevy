@@ -1,6 +1,6 @@
-use crate::{
-	behaviors::{Contact, SkillCaster, SkillContact, SkillLifetime, SkillProjection},
-	skills::lifetime_definition::LifeTimeDefinition,
+use crate::skills::{
+	behaviors::{SkillContact, SkillLifetime, SkillProjection},
+	lifetime_definition::LifeTimeDefinition,
 };
 use bevy::prelude::*;
 use common::{
@@ -9,11 +9,13 @@ use common::{
 	traits::{
 		handles_physics::colliders::{Blocker, Shape},
 		handles_skill_physics::{
+			Contact,
 			ContactShape,
 			Motion,
 			Projection,
 			ProjectionOffset,
 			ProjectionShape,
+			SkillCaster,
 			SkillSpawner,
 			SkillTarget,
 		},

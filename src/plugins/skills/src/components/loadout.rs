@@ -1,8 +1,8 @@
 use crate::components::{
+	active_skill::ActiveSkill,
 	combos::Combos,
 	combos_time_out::CombosTimeOut,
 	queue::Queue,
-	skill_executer::SkillExecuter,
 };
 use bevy::prelude::*;
 use std::time::Duration;
@@ -12,6 +12,6 @@ use std::time::Duration;
 	Combos,
 	CombosTimeOut = CombosTimeOut::after(Duration::from_secs(2)),
 	Queue,
-	SkillExecuter,
+	ActiveSkill,
 )]
 pub(crate) struct Loadout;

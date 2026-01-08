@@ -1,19 +1,18 @@
-pub mod attach_skill_effect;
-pub mod skill_shape;
+pub(crate) mod dto;
 
-use crate::{
-	behaviors::{attach_skill_effect::AttachEffect, skill_shape::SpawnOn},
-	skills::lifetime_definition::LifeTimeDefinition,
+use crate::skills::{
+	lifetime_definition::LifeTimeDefinition,
+	shape::{SkillShape, SpawnOn},
 };
 use bevy::prelude::*;
 use common::traits::handles_skill_physics::{
 	Contact,
+	Effect,
 	Projection,
 	SkillCaster,
 	SkillSpawner,
 	SkillTarget,
 };
-use skill_shape::SkillShape;
 
 macro_rules! match_shape {
 	($config:expr, $callback:expr) => {
@@ -28,10 +27,10 @@ macro_rules! match_shape {
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct SkillBehaviorConfig {
-	pub(crate) shape: SkillShape,
-	pub(crate) contact: Vec<AttachEffect>,
-	pub(crate) projection: Vec<AttachEffect>,
-	pub(crate) spawn_on: SpawnOn,
+	shape: SkillShape,
+	contact: Vec<Effect>,
+	projection: Vec<Effect>,
+	spawn_on: SpawnOn,
 }
 
 impl SkillBehaviorConfig {
@@ -46,7 +45,7 @@ impl SkillBehaviorConfig {
 	}
 
 	#[cfg(test)]
-	pub(crate) fn with_contact_effects(self, contact: Vec<AttachEffect>) -> Self {
+	pub(crate) fn with_contact_effects(self, contact: Vec<Effect>) -> Self {
 		Self {
 			shape: self.shape,
 			contact,
@@ -56,7 +55,7 @@ impl SkillBehaviorConfig {
 	}
 
 	#[cfg(test)]
-	pub(crate) fn with_projection_effects(self, projection: Vec<AttachEffect>) -> Self {
+	pub(crate) fn with_projection_effects(self, projection: Vec<Effect>) -> Self {
 		Self {
 			shape: self.shape,
 			contact: self.contact,
@@ -78,6 +77,14 @@ impl SkillBehaviorConfig {
 
 	pub(crate) fn skill_projection(&self) -> Projection {
 		match_shape!(&self.shape, SkillProjection::skill_projection)
+	}
+
+	pub(crate) fn skill_contact_effects(&self) -> impl Iterator<Item = &'_ Effect> {
+		self.contact.iter()
+	}
+
+	pub(crate) fn skill_projection_effects(&self) -> impl Iterator<Item = &'_ Effect> {
+		self.projection.iter()
 	}
 
 	pub(crate) fn lifetime(&self) -> LifeTimeDefinition {

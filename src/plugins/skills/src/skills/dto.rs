@@ -1,7 +1,9 @@
-pub(crate) mod run_skill_behavior;
-
 use super::Skill;
-use crate::skills::{RunSkillBehavior, SkillId};
+use crate::skills::{
+	RunSkillBehavior,
+	SkillId,
+	behaviors::{SkillBehaviorConfig, dto::SkillBehaviorConfigDto},
+};
 use bevy::asset::{AssetPath, Handle};
 use common::{
 	dto::duration_in_seconds::DurationInSeconds,
@@ -16,7 +18,6 @@ use common::{
 		load_asset::LoadAsset,
 	},
 };
-use run_skill_behavior::RunSkillBehaviorDto;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, time::Duration};
 use uuid::Uuid;
@@ -70,6 +71,30 @@ impl From<Skill> for SkillDto {
 			behavior: RunSkillBehaviorDto::from(skill.behavior),
 			is_usable_with: skill.compatible_items.0,
 			icon: skill.icon.path().map(AssetPath::to_string).map(Path::from),
+		}
+	}
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+pub(crate) enum RunSkillBehaviorDto {
+	OnActive(SkillBehaviorConfigDto),
+	OnAim(SkillBehaviorConfigDto),
+}
+
+impl From<RunSkillBehaviorDto> for RunSkillBehavior {
+	fn from(value: RunSkillBehaviorDto) -> Self {
+		match value {
+			RunSkillBehaviorDto::OnActive(v) => Self::OnActive(SkillBehaviorConfig::from(v)),
+			RunSkillBehaviorDto::OnAim(v) => Self::OnAim(SkillBehaviorConfig::from(v)),
+		}
+	}
+}
+
+impl From<RunSkillBehavior> for RunSkillBehaviorDto {
+	fn from(value: RunSkillBehavior) -> Self {
+		match value {
+			RunSkillBehavior::OnActive(v) => Self::OnActive(SkillBehaviorConfigDto::from(v)),
+			RunSkillBehavior::OnAim(v) => Self::OnAim(SkillBehaviorConfigDto::from(v)),
 		}
 	}
 }
