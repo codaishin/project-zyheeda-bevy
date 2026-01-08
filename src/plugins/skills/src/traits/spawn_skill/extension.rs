@@ -1,21 +1,20 @@
 use crate::{
-	behaviors::skill_shape::OnSkillStop,
+	behaviors::{SkillBehaviorConfig, skill_shape::OnSkillStop},
 	skills::lifetime_definition::LifeTimeDefinition,
-	traits::spawn_skill::{SkillData, SpawnSkill},
+	traits::spawn_skill::SpawnSkill,
 };
 use common::{
 	components::lifetime::Lifetime,
 	traits::handles_skill_physics::{Skill, SkillCaster, SkillSpawner, SkillTarget, Spawn},
 };
 
-impl<T, TSkillConfig> SpawnSkill<TSkillConfig> for T
+impl<T> SpawnSkill<SkillBehaviorConfig> for T
 where
 	T: Spawn,
-	TSkillConfig: SkillData,
 {
 	fn spawn_skill(
 		&mut self,
-		config: TSkillConfig,
+		config: SkillBehaviorConfig,
 		caster: SkillCaster,
 		spawner: SkillSpawner,
 		target: SkillTarget,
@@ -25,11 +24,11 @@ where
 			config.skill_projection(),
 		);
 
-		for effect in config.skill_contact_effects() {
+		for effect in config.contact.iter().map(|effect| (*effect).into()) {
 			skill.insert_on_contact(effect);
 		}
 
-		for effect in config.skill_projection_effects() {
+		for effect in config.projection.iter().map(|effect| (*effect).into()) {
 			skill.insert_on_projection(effect);
 		}
 
@@ -48,33 +47,22 @@ where
 mod tests {
 	use super::*;
 	use crate::{
-		skills::lifetime_definition::LifeTimeDefinition,
-		traits::spawn_skill::{
-			SkillContact,
-			SkillContactEffects,
-			SkillLifetime,
-			SkillProjection,
-			SkillProjectionEffects,
+		behaviors::{
+			attach_skill_effect::{AttachEffect, force::AttachForce},
+			skill_shape::{SkillShape, ground_target::GroundTargetedAoe, shield::Shield},
 		},
+		skills::lifetime_definition::LifeTimeDefinition,
 	};
-	use bevy::{ecs::bundle::Bundle, math::Vec3};
+	use bevy::ecs::bundle::Bundle;
 	use common::{
 		components::{lifetime::Lifetime, persistent_entity::PersistentEntity},
 		effects::force::Force,
 		tools::{Units, action_key::slot::SlotKey},
-		traits::handles_skill_physics::{
-			Contact,
-			ContactShape,
-			Effect,
-			Motion,
-			Projection,
-			ProjectionShape,
-			Skill,
-		},
+		traits::handles_skill_physics::{Contact, Effect, Projection, Skill},
 	};
 	use macros::simple_mock;
 	use mockall::predicate::eq;
-	use std::{collections::HashSet, iter::Copied, slice::Iter, sync::LazyLock, time::Duration};
+	use std::{sync::LazyLock, time::Duration};
 	use test_case::test_case;
 	use testing::Mock;
 
@@ -107,120 +95,43 @@ mod tests {
 		}
 	}
 
-	simple_mock! {
-		_Config {}
-		impl SkillContact for _Config {
-			fn skill_contact(&self, c: SkillCaster, s: SkillSpawner, t: SkillTarget) -> Contact;
-		}
-		impl SkillContactEffects for _Config {
-			type TIter<'a> = Copied<Iter<'a, Effect>> where Self: 'a;
-			fn skill_contact_effects<'a>(&'a self) -> Copied<Iter<'a, Effect>>;
-		}
-		impl SkillProjection for _Config {
-			fn skill_projection(&self) -> Projection;
-		}
-		impl SkillProjectionEffects for _Config {
-			type TIter<'a> = Copied<Iter<'a, Effect>> where Self: 'a;
-			fn skill_projection_effects<'a>(&'a self) -> Copied<Iter<'a, Effect>>;
-		}
-		impl SkillLifetime for _Config {
-			fn lifetime(&self) -> LifeTimeDefinition;
-		}
+	const fn ground_target(radius: u8, lifetime: LifeTimeDefinition) -> SkillBehaviorConfig {
+		SkillBehaviorConfig::from_shape(SkillShape::GroundTargetedAoe(GroundTargetedAoe {
+			max_range: Units::from_u8(u8::MAX),
+			radius: Units::from_u8(radius),
+			lifetime,
+		}))
 	}
 
-	const EMPTY: &[Effect] = &[];
+	const SHIELD: SkillBehaviorConfig = SkillBehaviorConfig::from_shape(SkillShape::Shield(Shield));
 
-	fn contact() -> Contact {
-		Contact {
-			shape: ContactShape::Sphere {
-				radius: Units::from(1.),
-				hollow_collider: false,
-				destroyed_by: HashSet::from([]),
-			},
-			motion: Motion::Stationary {
-				caster: SkillCaster(PersistentEntity::default()),
-				target: SkillTarget::Ground(Vec3::ZERO),
-				max_cast_range: Units::from(1.),
-			},
-		}
-	}
-
-	fn projection() -> Projection {
-		Projection {
-			shape: ProjectionShape::Sphere {
-				radius: Units::from(1.),
-			},
-			offset: None,
-		}
-	}
-
-	impl Mock_Config {
-		fn with_defaults(mut self) -> Self {
-			self.expect_skill_contact().return_const(contact());
-			self.expect_skill_projection().return_const(projection());
-			self.expect_skill_contact_effects()
-				.returning(|| EMPTY.iter().copied());
-			self.expect_skill_projection_effects()
-				.returning(|| EMPTY.iter().copied());
-			self.expect_lifetime()
-				.return_const(LifeTimeDefinition::<Duration>::Infinite);
-
-			self
-		}
-	}
+	static CASTER: LazyLock<SkillCaster> =
+		LazyLock::new(|| SkillCaster(PersistentEntity::default()));
+	const SPAWNER: SkillSpawner = SkillSpawner::Slot(SlotKey(123));
+	static TARGET: LazyLock<SkillTarget> =
+		LazyLock::new(|| SkillTarget::Entity(PersistentEntity::default()));
 
 	#[test]
 	fn spawn_contact_and_projection() {
-		static ENTITY: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
-
-		fn contact() -> Contact {
-			Contact {
-				shape: ContactShape::Sphere {
-					radius: Units::from(11.),
-					hollow_collider: true,
-					destroyed_by: HashSet::from([]),
-				},
-				motion: Motion::Stationary {
-					caster: SkillCaster(*ENTITY),
-					target: SkillTarget::Ground(Vec3::ZERO),
-					max_cast_range: Units::from(11.),
-				},
-			}
-		}
-
-		fn projection() -> Projection {
-			Projection {
-				shape: ProjectionShape::Sphere {
-					radius: Units::from(1.),
-				},
-				offset: None,
-			}
-		}
-
+		const CONFIG: SkillBehaviorConfig = ground_target(11, LifeTimeDefinition::Infinite);
 		let mut spawn = Mock_Spawn::new_mock(assert_contact_and_projection_used);
-		let config = Mock_Config::new_mock(|mock| {
-			mock.expect_skill_contact().return_const(contact());
-			mock.expect_skill_projection().return_const(projection());
-		})
-		.with_defaults();
 
-		spawn.spawn_skill(
-			config,
-			SkillCaster(PersistentEntity::default()),
-			SkillSpawner::Neutral,
-			SkillTarget::Entity(PersistentEntity::default()),
-		);
+		spawn.spawn_skill(CONFIG, *CASTER, SPAWNER, *TARGET);
 
 		fn assert_contact_and_projection_used(mock: &mut Mock_Spawn) {
 			mock.expect_spawn()
 				.once()
-				.with(eq(contact()), eq(projection()))
+				.with(
+					eq(CONFIG.skill_contact(*CASTER, SPAWNER, *TARGET)),
+					eq(CONFIG.skill_projection()),
+				)
 				.returning(|_, _| Mock_Skill::new().with_defaults());
 		}
 	}
 
 	#[test]
 	fn return_stoppable() {
+		const CONFIG: SkillBehaviorConfig = ground_target(11, LifeTimeDefinition::UntilStopped);
 		let root = PersistentEntity::default();
 		let mut spawn = Mock_Spawn::new_mock(move |mock| {
 			mock.expect_spawn().returning(move |_, _| {
@@ -230,25 +141,15 @@ mod tests {
 				.with_defaults()
 			});
 		});
-		let config = Mock_Config::new_mock(|mock| {
-			mock.expect_lifetime()
-				.return_const(LifeTimeDefinition::<Duration>::UntilStopped);
-		})
-		.with_defaults();
 
-		let on_skill_stop = spawn.spawn_skill(
-			config,
-			SkillCaster(PersistentEntity::default()),
-			SkillSpawner::Slot(SlotKey(42)),
-			SkillTarget::Entity(PersistentEntity::default()),
-		);
+		let on_skill_stop = spawn.spawn_skill(CONFIG, *CASTER, SPAWNER, *TARGET);
 
 		assert_eq!(OnSkillStop::Stop(root), on_skill_stop);
 	}
 
-	#[test_case(LifeTimeDefinition::Infinite; "infinite")]
-	#[test_case(LifeTimeDefinition::UntilOutlived(Duration::default()); "with lifetime")]
-	fn return_non_stoppable(lifetime: LifeTimeDefinition) {
+	#[test_case(ground_target(1, LifeTimeDefinition::Infinite); "infinite")]
+	#[test_case(ground_target(1, LifeTimeDefinition::UntilOutlived(Duration::ZERO)); "with lifetime")]
+	fn return_non_stoppable(config: SkillBehaviorConfig) {
 		let root = PersistentEntity::default();
 		let mut spawn = Mock_Spawn::new_mock(move |mock| {
 			mock.expect_spawn().returning(move |_, _| {
@@ -258,63 +159,21 @@ mod tests {
 				.with_defaults()
 			});
 		});
-		let config = Mock_Config::new_mock(|mock| {
-			mock.expect_lifetime().return_const(lifetime);
-		})
-		.with_defaults();
 
-		let on_skill_stop = spawn.spawn_skill(
-			config,
-			SkillCaster(PersistentEntity::default()),
-			SkillSpawner::Slot(SlotKey(42)),
-			SkillTarget::Entity(PersistentEntity::default()),
-		);
+		let on_skill_stop = spawn.spawn_skill(config, *CASTER, SPAWNER, *TARGET);
 
 		assert_eq!(OnSkillStop::Ignore, on_skill_stop);
 	}
 
 	#[test]
-	fn use_contact_parameters() {
-		static CASTER: LazyLock<SkillCaster> =
-			LazyLock::new(|| SkillCaster(PersistentEntity::default()));
-		static TARGET: LazyLock<SkillTarget> =
-			LazyLock::new(|| SkillTarget::Entity(PersistentEntity::default()));
-		const SPAWNER: SkillSpawner = SkillSpawner::Slot(SlotKey(42));
-		let mut spawn = Mock_Spawn::new_mock(|mock| {
-			mock.expect_spawn()
-				.returning(|_, _| Mock_Skill::new().with_defaults());
-		});
-		let config = Mock_Config::new_mock(assert_contact_parameters).with_defaults();
-
-		spawn.spawn_skill(config, *CASTER, SPAWNER, *TARGET);
-
-		fn assert_contact_parameters(mock: &mut Mock_Config) {
-			mock.expect_skill_contact()
-				.once()
-				.with(eq(*CASTER), eq(SPAWNER), eq(*TARGET))
-				.return_const(contact());
-		}
-	}
-
-	#[test]
 	fn add_contact_effect() {
-		const EFFECTS: &[Effect] = &[Effect::Force(Force)];
 		let mut spawn = Mock_Spawn::new_mock(|mock| {
 			mock.expect_spawn()
 				.returning(|_, _| Mock_Skill::new_mock(assert_added_effects).with_defaults());
 		});
-		let config = Mock_Config::new_mock(|mock| {
-			mock.expect_skill_contact_effects()
-				.returning(|| EFFECTS.iter().copied());
-		})
-		.with_defaults();
+		let config = SHIELD.with_contact_effects(vec![AttachEffect::Force(AttachForce)]);
 
-		spawn.spawn_skill(
-			config,
-			SkillCaster(PersistentEntity::default()),
-			SkillSpawner::Neutral,
-			SkillTarget::Entity(PersistentEntity::default()),
-		);
+		spawn.spawn_skill(config, *CASTER, SPAWNER, *TARGET);
 
 		fn assert_added_effects(mock: &mut Mock_Skill) {
 			mock.expect_insert_on_contact()
@@ -326,23 +185,13 @@ mod tests {
 
 	#[test]
 	fn add_projection_effect() {
-		const EFFECTS: &[Effect] = &[Effect::Force(Force)];
 		let mut spawn = Mock_Spawn::new_mock(|mock| {
 			mock.expect_spawn()
 				.returning(|_, _| Mock_Skill::new_mock(assert_added_effects).with_defaults());
 		});
-		let config = Mock_Config::new_mock(|mock| {
-			mock.expect_skill_projection_effects()
-				.returning(|| EFFECTS.iter().copied());
-		})
-		.with_defaults();
+		let config = SHIELD.with_projection_effects(vec![AttachEffect::Force(AttachForce)]);
 
-		spawn.spawn_skill(
-			config,
-			SkillCaster(PersistentEntity::default()),
-			SkillSpawner::Neutral,
-			SkillTarget::Entity(PersistentEntity::default()),
-		);
+		spawn.spawn_skill(config, *CASTER, SPAWNER, *TARGET);
 
 		fn assert_added_effects(mock: &mut Mock_Skill) {
 			mock.expect_insert_on_projection()
@@ -358,18 +207,9 @@ mod tests {
 			mock.expect_spawn()
 				.returning(|_, _| Mock_Skill::new_mock(assert_added_effects).with_defaults());
 		});
-		let config = Mock_Config::new_mock(|mock| {
-			mock.expect_lifetime()
-				.return_const(LifeTimeDefinition::UntilOutlived(Duration::from_secs(2)));
-		})
-		.with_defaults();
+		let config = ground_target(1, LifeTimeDefinition::UntilOutlived(Duration::from_secs(2)));
 
-		spawn.spawn_skill(
-			config,
-			SkillCaster(PersistentEntity::default()),
-			SkillSpawner::Neutral,
-			SkillTarget::Entity(PersistentEntity::default()),
-		);
+		spawn.spawn_skill(config, *CASTER, SPAWNER, *TARGET);
 
 		fn assert_added_effects(mock: &mut Mock_Skill) {
 			mock.expect_insert_on_root()

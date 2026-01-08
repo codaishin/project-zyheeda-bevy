@@ -4,7 +4,7 @@ pub mod health_damage;
 
 use super::{SkillCaster, SkillTarget};
 use common::{
-	traits::handles_physics::HandlesAllPhysicalEffects,
+	traits::{handles_physics::HandlesAllPhysicalEffects, handles_skill_physics::Effect},
 	zyheeda_commands::ZyheedaEntityCommands,
 };
 use force::AttachForce;
@@ -14,7 +14,7 @@ use health_damage::AttachHealthDamage;
 #[cfg(test)]
 pub type AttachEffectFn = fn(&mut ZyheedaEntityCommands, SkillCaster, SkillTarget);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 #[cfg_attr(not(test), derive(PartialEq))]
 pub enum AttachEffect {
 	Gravity(AttachGravity),
@@ -39,6 +39,18 @@ impl AttachEffect {
 			AttachEffect::Force(fc) => fc.attach::<TEffects>(entity, caster, target),
 			#[cfg(test)]
 			AttachEffect::Fn(attach) => attach(entity, caster, target),
+		}
+	}
+}
+
+impl From<AttachEffect> for Effect {
+	fn from(value: AttachEffect) -> Self {
+		match value {
+			AttachEffect::Gravity(effect) => effect.into(),
+			AttachEffect::Damage(effect) => effect.into(),
+			AttachEffect::Force(effect) => effect.into(),
+			#[cfg(test)]
+			AttachEffect::Fn(_) => todo!(),
 		}
 	}
 }

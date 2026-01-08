@@ -1,10 +1,6 @@
 use crate::{
-	behaviors::SkillCaster,
+	behaviors::{Contact, SkillCaster, SkillContact, SkillLifetime, SkillProjection},
 	skills::lifetime_definition::LifeTimeDefinition,
-	traits::{
-		skill_builder::{SkillLifetime, SpawnShape},
-		spawn_skill::{SkillContact, SkillProjection},
-	},
 };
 use common::{
 	dto::duration_in_seconds::DurationInSeconds,
@@ -12,27 +8,23 @@ use common::{
 	traits::{
 		handles_physics::colliders::Blocker,
 		handles_skill_physics::{
-			Contact,
 			ContactShape,
-			HandlesNewPhysicalSkill,
 			Motion,
 			Projection,
 			ProjectionShape,
-			SkillEntities,
 			SkillSpawner,
 			SkillTarget,
 		},
 	},
-	zyheeda_commands::ZyheedaCommands,
 };
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
 #[derive(Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct GroundTargetedAoe<TDuration = Duration> {
-	pub lifetime: LifeTimeDefinition<TDuration>,
-	pub max_range: Units,
-	pub radius: Units,
+	pub(crate) lifetime: LifeTimeDefinition<TDuration>,
+	pub(crate) max_range: Units,
+	pub(crate) radius: Units,
 }
 
 impl From<GroundTargetedAoe<DurationInSeconds>> for GroundTargetedAoe {
@@ -52,41 +44,6 @@ impl From<GroundTargetedAoe> for GroundTargetedAoe<DurationInSeconds> {
 			max_range: with_lifetime_duration.max_range,
 			radius: with_lifetime_duration.radius,
 		}
-	}
-}
-
-impl SpawnShape for GroundTargetedAoe {
-	fn spawn_shape<TSkillBehaviors>(
-		&self,
-		commands: &mut ZyheedaCommands,
-		caster: SkillCaster,
-		_: SkillSpawner,
-		target: SkillTarget,
-	) -> SkillEntities
-	where
-		TSkillBehaviors: HandlesNewPhysicalSkill + 'static,
-	{
-		TSkillBehaviors::spawn_skill(
-			commands,
-			Contact {
-				shape: ContactShape::Sphere {
-					radius: self.radius,
-					hollow_collider: true,
-					destroyed_by: Blocker::none(),
-				},
-				motion: Motion::Stationary {
-					caster,
-					max_cast_range: self.max_range,
-					target,
-				},
-			},
-			Projection {
-				shape: ProjectionShape::Sphere {
-					radius: self.radius,
-				},
-				offset: None,
-			},
-		)
 	}
 }
 

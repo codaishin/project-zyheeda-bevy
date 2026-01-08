@@ -34,8 +34,6 @@ impl From<SkillShape> for SpawnSkillDto {
 			SkillShape::Projectile(v) => Self::Projectile(v),
 			SkillShape::Shield(v) => Self::Shield(v),
 			SkillShape::Beam(v) => Self::Beam(v),
-			#[cfg(test)]
-			SkillShape::Fn(_) => panic!("FN CANNOT BE SERIALIZED"),
 		}
 	}
 }

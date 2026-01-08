@@ -1,4 +1,5 @@
 use crate::{
+	behaviors::SkillBehaviorConfig,
 	skills::{RunSkillBehavior, SkillState},
 	traits::{Flush, GetActiveSkill, GetSkillBehavior, Schedule},
 };
@@ -30,7 +31,7 @@ pub(crate) fn advance_active_skill<TGetSkill, TFacing, TSkillExecutor, TTime>(
 ) where
 	TGetSkill: GetActiveSkill<SkillState> + Component<Mutability = Mutable>,
 	TFacing: for<'c> GetContextMut<Facing, TContext<'c>: OverrideFace>,
-	TSkillExecutor: Component<Mutability = Mutable> + Schedule<RunSkillBehavior> + Flush,
+	TSkillExecutor: Component<Mutability = Mutable> + Schedule<SkillBehaviorConfig> + Flush,
 	TTime: Default + ThreadSafe,
 {
 	let delta = time.delta();
@@ -69,18 +70,18 @@ fn advance<TFacing, TSkillExecutor>(
 ) -> Advancement
 where
 	TFacing: OverrideFace,
-	TSkillExecutor: Schedule<RunSkillBehavior> + Flush,
+	TSkillExecutor: Schedule<SkillBehaviorConfig> + Flush,
 {
 	let skill = &mut skill;
 	let states = skill.updated_states(delta);
 
 	if states.contains(&StateMeta::Entering(SkillState::Aim)) {
 		facing.override_face(Face::Target);
-		schedule_start(&mut skill_executer, skill, run_on_aim);
+		schedule_start(&mut skill_executer, skill, try_run_on_aim);
 	}
 
 	if states.contains(&StateMeta::Entering(SkillState::Active)) {
-		schedule_start(&mut skill_executer, skill, run_on_active);
+		schedule_start(&mut skill_executer, skill, try_run_on_active);
 	}
 
 	if states.contains(&StateMeta::Done) {
@@ -91,24 +92,24 @@ where
 	Advancement::InProcess
 }
 
-fn run_on_aim<TSkill>(skill: &TSkill) -> Option<(SlotKey, RunSkillBehavior)>
+fn try_run_on_aim<TSkill>(skill: &TSkill) -> Option<(SlotKey, SkillBehaviorConfig)>
 where
 	TSkill: GetSkillBehavior,
 {
 	let (slot_key, behavior) = skill.behavior();
-	match &behavior {
-		RunSkillBehavior::OnAim(_) => Some((slot_key, behavior)),
+	match behavior {
+		RunSkillBehavior::OnAim(behavior) => Some((slot_key, behavior)),
 		_ => None,
 	}
 }
 
-fn run_on_active<TSkill>(skill: &TSkill) -> Option<(SlotKey, RunSkillBehavior)>
+fn try_run_on_active<TSkill>(skill: &TSkill) -> Option<(SlotKey, SkillBehaviorConfig)>
 where
 	TSkill: GetSkillBehavior,
 {
 	let (slot_key, behavior) = skill.behavior();
-	match &behavior {
-		RunSkillBehavior::OnActive(_) => Some((slot_key, behavior)),
+	match behavior {
+		RunSkillBehavior::OnActive(behavior) => Some((slot_key, behavior)),
 		_ => None,
 	}
 }
@@ -116,9 +117,9 @@ where
 fn schedule_start<TSkillExecutor, TSkill>(
 	executer: &mut Mut<TSkillExecutor>,
 	skill: &TSkill,
-	get_start_fn: fn(&TSkill) -> Option<(SlotKey, RunSkillBehavior)>,
+	get_start_fn: fn(&TSkill) -> Option<(SlotKey, SkillBehaviorConfig)>,
 ) where
-	TSkillExecutor: Schedule<RunSkillBehavior>,
+	TSkillExecutor: Schedule<SkillBehaviorConfig>,
 	TSkill: GetSkillBehavior,
 {
 	let Some((slot_key, start_fn)) = get_start_fn(skill) else {
@@ -131,12 +132,9 @@ fn schedule_start<TSkillExecutor, TSkill>(
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::{
-		behaviors::{
-			SkillBehaviorConfig,
-			skill_shape::{OnSkillStop, SkillShape},
-		},
-		traits::skill_builder::SkillLayout,
+	use crate::behaviors::{
+		SkillBehaviorConfig,
+		skill_shape::{SkillShape, shield::Shield},
 	};
 	use common::tools::action_key::slot::{PlayerSlot, Side};
 	use macros::{NestedMocks, simple_mock};
@@ -204,8 +202,8 @@ mod tests {
 		mock: Mock_Executor,
 	}
 
-	impl Schedule<RunSkillBehavior> for _Executor {
-		fn schedule(&mut self, slot_key: SlotKey, start: RunSkillBehavior) {
+	impl Schedule<SkillBehaviorConfig> for _Executor {
+		fn schedule(&mut self, slot_key: SlotKey, start: SkillBehaviorConfig) {
 			self.mock.schedule(slot_key, start)
 		}
 	}
@@ -218,24 +216,20 @@ mod tests {
 
 	mock! {
 		_Executor {}
-		impl Schedule<RunSkillBehavior> for _Executor {
-			fn schedule(&mut self, slot_key: SlotKey, start: RunSkillBehavior);
+		impl Schedule<SkillBehaviorConfig> for _Executor {
+			fn schedule(&mut self, slot_key: SlotKey, start: SkillBehaviorConfig);
 		}
 		impl Flush for _Executor {
 			fn flush(&mut self);
 		}
 	}
 
-	fn skill_behavior(
-		activation_type: impl Fn(SkillBehaviorConfig) -> RunSkillBehavior,
-	) -> RunSkillBehavior {
-		activation_type(SkillBehaviorConfig::from_shape(SkillShape::Fn(
-			|commands, _, _, _| SkillLayout {
-				contact: commands.spawn(()).id(),
-				projection: commands.spawn(()).id(),
-				on_skill_stop: OnSkillStop::Ignore,
-			},
-		)))
+	fn no_wrap<T>(v: T) -> T {
+		v
+	}
+
+	fn skill_behavior<TResult>(wrapper: impl Fn(SkillBehaviorConfig) -> TResult) -> TResult {
+		wrapper(SkillBehaviorConfig::from_shape(SkillShape::Shield(Shield)))
 	}
 
 	fn setup() -> Result<(App, Entity), MissingLastUpdate> {
@@ -352,7 +346,7 @@ mod tests {
 						assert_eq!(
 							(
 								&SlotKey::from(PlayerSlot::Upper(Side::Left)),
-								&skill_behavior(RunSkillBehavior::OnActive)
+								&skill_behavior(no_wrap)
 							),
 							(slot_key, start),
 						);
@@ -396,7 +390,7 @@ mod tests {
 						assert_eq!(
 							(
 								&SlotKey::from(PlayerSlot::Lower(Side::Left)),
-								&skill_behavior(RunSkillBehavior::OnAim)
+								&skill_behavior(no_wrap)
 							),
 							(slot_key, start),
 						);

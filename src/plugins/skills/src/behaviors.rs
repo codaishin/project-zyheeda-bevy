@@ -1,33 +1,30 @@
 pub mod attach_skill_effect;
 pub mod skill_shape;
 
-use std::slice::Iter;
-
 use crate::{
 	behaviors::{attach_skill_effect::AttachEffect, skill_shape::SpawnOn},
 	skills::lifetime_definition::LifeTimeDefinition,
-	traits::{
-		skill_builder::{SkillLayout, SkillLifetime},
-		spawn_skill::{SkillContact, SkillContactEffects, SkillProjection, SkillProjectionEffects},
-	},
 };
 use bevy::prelude::*;
-use common::{
-	traits::{
-		handles_physics::HandlesAllPhysicalEffects,
-		handles_skill_physics::{
-			Contact,
-			Effect,
-			HandlesNewPhysicalSkill,
-			Projection,
-			SkillCaster,
-			SkillSpawner,
-			SkillTarget,
-		},
-	},
-	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
+use common::traits::handles_skill_physics::{
+	Contact,
+	Projection,
+	SkillCaster,
+	SkillSpawner,
+	SkillTarget,
 };
 use skill_shape::SkillShape;
+
+macro_rules! match_shape {
+	($config:expr, $callback:expr) => {
+		match $config {
+			SkillShape::GroundTargetedAoe(shape) => $callback(shape),
+			SkillShape::Projectile(shape) => $callback(shape),
+			SkillShape::Beam(shape) => $callback(shape),
+			SkillShape::Shield(shape) => $callback(shape),
+		}
+	};
+}
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct SkillBehaviorConfig {
@@ -39,22 +36,12 @@ pub struct SkillBehaviorConfig {
 
 impl SkillBehaviorConfig {
 	#[cfg(test)]
-	pub(crate) fn from_shape(shape: SkillShape) -> Self {
+	pub(crate) const fn from_shape(shape: SkillShape) -> Self {
 		Self {
 			shape,
-			contact: default(),
-			projection: default(),
-			spawn_on: default(),
-		}
-	}
-
-	#[cfg(test)]
-	pub(crate) fn spawning_on(self, spawn_on: SpawnOn) -> Self {
-		Self {
-			shape: self.shape,
-			contact: self.contact,
-			spawn_on,
-			projection: self.projection,
+			contact: vec![],
+			projection: vec![],
+			spawn_on: SpawnOn::Center,
 		}
 	}
 
@@ -78,62 +65,7 @@ impl SkillBehaviorConfig {
 		}
 	}
 
-	pub(crate) fn spawn_shape<TSkillBehaviors>(
-		&self,
-		commands: &mut ZyheedaCommands,
-		caster: SkillCaster,
-		spawner: SkillSpawner,
-		target: SkillTarget,
-	) -> SkillLayout
-	where
-		TSkillBehaviors: HandlesNewPhysicalSkill + 'static,
-	{
-		self.shape
-			.build::<TSkillBehaviors>(commands, caster, spawner, target)
-	}
-
-	pub(crate) fn start_contact_behavior<TEffects>(
-		&self,
-		entity: &mut ZyheedaEntityCommands,
-		caster: SkillCaster,
-		target: SkillTarget,
-	) where
-		TEffects: HandlesAllPhysicalEffects,
-	{
-		for start in &self.contact {
-			start.attach::<TEffects>(entity, caster, target);
-		}
-	}
-
-	pub(crate) fn start_projection_behavior<TEffects>(
-		&self,
-		entity: &mut ZyheedaEntityCommands,
-		caster: SkillCaster,
-		target: SkillTarget,
-	) where
-		TEffects: HandlesAllPhysicalEffects,
-	{
-		for start in &self.projection {
-			start.attach::<TEffects>(entity, caster, target);
-		}
-	}
-}
-
-macro_rules! match_shape {
-	($config:expr, $callback:expr) => {
-		match $config {
-			SkillShape::GroundTargetedAoe(shape) => $callback(shape),
-			SkillShape::Projectile(shape) => $callback(shape),
-			SkillShape::Beam(shape) => $callback(shape),
-			SkillShape::Shield(shape) => $callback(shape),
-			#[cfg(test)]
-			SkillShape::Fn(_) => todo!(), // TODO: REMOVE ARM
-		}
-	};
-}
-
-impl SkillContact for SkillBehaviorConfig {
-	fn skill_contact(
+	pub(crate) fn skill_contact(
 		&self,
 		caster: SkillCaster,
 		spawner: SkillSpawner,
@@ -143,60 +75,29 @@ impl SkillContact for SkillBehaviorConfig {
 			shape, caster, spawner, target,
 		))
 	}
-}
 
-impl SkillProjection for SkillBehaviorConfig {
-	fn skill_projection(&self) -> Projection {
+	pub(crate) fn skill_projection(&self) -> Projection {
 		match_shape!(&self.shape, SkillProjection::skill_projection)
 	}
-}
 
-impl SkillLifetime for SkillBehaviorConfig {
-	fn lifetime(&self) -> LifeTimeDefinition {
+	pub(crate) fn lifetime(&self) -> LifeTimeDefinition {
 		match_shape!(&self.shape, SkillLifetime::lifetime)
 	}
 }
 
-impl SkillContactEffects for SkillBehaviorConfig {
-	type TIter<'a>
-		= Effects<'a>
-	where
-		Self: 'a;
-
-	fn skill_contact_effects(&self) -> Self::TIter<'_> {
-		Effects {
-			effects: self.contact.iter(),
-		}
-	}
+pub(crate) trait SkillContact {
+	fn skill_contact(
+		&self,
+		caster: SkillCaster,
+		spawner: SkillSpawner,
+		target: SkillTarget,
+	) -> Contact;
 }
 
-impl SkillProjectionEffects for SkillBehaviorConfig {
-	type TIter<'a>
-		= Effects<'a>
-	where
-		Self: 'a;
-
-	fn skill_projection_effects(&self) -> Self::TIter<'_> {
-		Effects {
-			effects: self.projection.iter(),
-		}
-	}
+pub(crate) trait SkillProjection {
+	fn skill_projection(&self) -> Projection;
 }
 
-pub(crate) struct Effects<'a> {
-	effects: Iter<'a, AttachEffect>,
-}
-
-impl Iterator for Effects<'_> {
-	type Item = Effect;
-
-	fn next(&mut self) -> Option<Self::Item> {
-		match self.effects.next()? {
-			AttachEffect::Gravity(attach) => Some((*attach).into()),
-			AttachEffect::Damage(attach) => Some((*attach).into()),
-			AttachEffect::Force(attach) => Some((*attach).into()),
-			#[cfg(test)]
-			AttachEffect::Fn(_) => None,
-		}
-	}
+pub(crate) trait SkillLifetime {
+	fn lifetime(&self) -> LifeTimeDefinition;
 }

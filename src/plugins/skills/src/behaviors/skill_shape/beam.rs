@@ -1,64 +1,31 @@
-use super::Blockers;
 use crate::{
-	behaviors::SkillCaster,
-	skills::lifetime_definition::LifeTimeDefinition,
-	traits::{
-		skill_builder::{SkillLifetime, SpawnShape},
-		spawn_skill::{SkillContact, SkillProjection},
+	behaviors::{
+		Contact,
+		SkillCaster,
+		SkillContact,
+		SkillLifetime,
+		SkillProjection,
+		skill_shape::Blockers,
 	},
+	skills::lifetime_definition::LifeTimeDefinition,
 };
 use common::{
 	tools::Units,
 	traits::handles_skill_physics::{
-		Contact,
 		ContactShape,
-		HandlesNewPhysicalSkill,
 		Motion,
 		Projection,
 		ProjectionShape,
-		SkillEntities,
 		SkillSpawner,
 		SkillTarget,
 	},
-	zyheeda_commands::ZyheedaCommands,
 };
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Beam {
-	range: Units,
-	blocked_by: Blockers,
-}
-
-impl SpawnShape for Beam {
-	fn spawn_shape<TSkillBehaviors>(
-		&self,
-		commands: &mut ZyheedaCommands,
-		caster: SkillCaster,
-		spawner: SkillSpawner,
-		_: SkillTarget,
-	) -> SkillEntities
-	where
-		TSkillBehaviors: HandlesNewPhysicalSkill + 'static,
-	{
-		TSkillBehaviors::spawn_skill(
-			commands,
-			Contact {
-				shape: ContactShape::Beam {
-					range: self.range,
-					radius: Units::from(0.003),
-					blocked_by: self.blocked_by.clone().into(),
-				},
-				motion: Motion::HeldBy { caster, spawner },
-			},
-			Projection {
-				shape: ProjectionShape::Beam {
-					radius: Units::from(0.2),
-				},
-				offset: None,
-			},
-		)
-	}
+	pub(crate) range: Units,
+	pub(crate) blocked_by: Blockers,
 }
 
 impl SkillContact for Beam {

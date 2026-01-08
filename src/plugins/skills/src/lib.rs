@@ -7,6 +7,7 @@ mod systems;
 mod traits;
 
 use crate::{
+	behaviors::SkillBehaviorConfig,
 	components::{
 		bone_definitions::BoneDefinitions,
 		combos::dto::CombosDto,
@@ -32,7 +33,7 @@ use common::{
 		handles_orientation::{FacingSystemParamMut, HandlesOrientation},
 		handles_physics::{HandlesAllPhysicalEffects, HandlesRaycast, RaycastSystemParam},
 		handles_saving::HandlesSaving,
-		handles_skill_physics::HandlesSkillPhysics,
+		handles_skill_physics::{HandlesSkillPhysics, SkillSpawnerMut},
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
@@ -47,12 +48,11 @@ use components::{
 	slots::Slots,
 };
 use item::{Item, dto::ItemDto};
-use skills::{RunSkillBehavior, Skill, dto::SkillDto};
+use skills::{Skill, dto::SkillDto};
 use std::marker::PhantomData;
 use systems::{
 	advance_active_skill::advance_active_skill,
 	combos::queue_update::ComboQueueUpdate,
-	execute::ExecuteSkills,
 	flush::flush,
 	flush_skill_combos::flush_skill_combos,
 };
@@ -104,8 +104,8 @@ where
 		TSaveGame::register_savable_component::<Queue>(app);
 		TSaveGame::register_savable_component::<SkillExecuter>(app);
 
-		let execute_skill = SkillExecuter::<RunSkillBehavior>::execute_system::<
-			TPhysics,
+		let execute_skill = SkillExecuter::<SkillBehaviorConfig>::execute_system::<
+			SkillSpawnerMut<TPhysics>,
 			RaycastSystemParam<TPhysics>,
 		>;
 
