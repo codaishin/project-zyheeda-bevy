@@ -6,7 +6,6 @@ use crate::{
 		accessors::get::GetContextMut,
 		handles_physics::colliders::{Blocker, Shape},
 	},
-	zyheeda_commands::ZyheedaCommands,
 };
 use bevy::{
 	ecs::{entity::Entity, system::SystemParam},
@@ -39,15 +38,6 @@ pub trait HandlesNewPhysicalSkill {
 	/// Implementations of this are likely to use [`Commands`]. Insertion of skill components/effects
 	/// and despawning should be handled through this [`SystemParam`].
 	type TSkillSpawnerMut<'world, 'state>: for<'w, 's> SystemParam<Item<'w, 's>: Spawn + Despawn>;
-
-	/// Skills always have a contact and a projection shape.
-	///
-	/// Activity of those shapes should be controlled by their attached effects.
-	fn spawn_skill(
-		commands: &mut ZyheedaCommands,
-		contact: Contact,
-		projection: Projection,
-	) -> SkillEntities;
 }
 
 pub type SkillSpawnerMut<'w, 's, T> = <T as HandlesNewPhysicalSkill>::TSkillSpawnerMut<'w, 's>;
@@ -157,17 +147,6 @@ pub trait Skill {
 		T: Bundle;
 	fn insert_on_contact(&mut self, effect: Effect);
 	fn insert_on_projection(&mut self, effect: Effect);
-}
-
-/// The entities of a spawned skill.
-/// - `root`: The skill's top level entity (can be used to despawn the skill)
-/// - `contact`: add/remove contact effect components (projectiles, force fields, ..)
-/// - `projection`: add/remove projection/AoE effect components (gravity fields, explosions, ..)
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub struct SkillEntities {
-	pub root: SkillRoot,
-	pub contact: Entity,
-	pub projection: Entity,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
