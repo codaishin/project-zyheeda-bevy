@@ -33,7 +33,7 @@ impl Spawn for SkillSpawnerMut<'_, '_> {
 		let persistent_entity = PersistentEntity::default();
 		let contact = self
 			.commands
-			.spawn((Skill, SkillContact::from(contact), persistent_entity))
+			.spawn((SkillContact::from(contact), persistent_entity))
 			.id();
 		let projection = self
 			.commands
@@ -42,6 +42,13 @@ impl Spawn for SkillSpawnerMut<'_, '_> {
 				ChildOfPersistent(persistent_entity),
 			))
 			.id();
+
+		self.commands.try_apply_on(&contact, |mut e| {
+			e.try_insert(Skill {
+				contact,
+				projection,
+			});
+		});
 
 		let entities = SkillEntities {
 			root: SkillRoot {
@@ -178,24 +185,6 @@ mod tests {
 		}
 
 		#[test]
-		fn skill() -> Result<(), RunSystemError> {
-			let mut app = setup();
-
-			app.world_mut()
-				.run_system_once(move |mut p: SkillSpawnerMut| {
-					p.spawn(CONTACT.clone(), PROJECTION.clone());
-				})?;
-
-			let skills = app
-				.world()
-				.iter_entities()
-				.filter(|e| e.contains::<PersistentEntity>());
-			let [skill] = assert_count!(1, skills);
-			assert_eq!(Some(&Skill), skill.get::<Skill>());
-			Ok(())
-		}
-
-		#[test]
 		fn contact() -> Result<(), RunSystemError> {
 			let mut app = setup();
 
@@ -237,16 +226,42 @@ mod tests {
 			);
 			Ok(())
 		}
+
+		#[test]
+		fn skill() -> Result<(), RunSystemError> {
+			let mut app = setup();
+
+			app.world_mut()
+				.run_system_once(move |mut p: SkillSpawnerMut| {
+					p.spawn(CONTACT.clone(), PROJECTION.clone());
+				})?;
+
+			let skills = app
+				.world()
+				.iter_entities()
+				.filter(|e| e.contains::<PersistentEntity>());
+			let [skill] = assert_count!(1, skills);
+			let contact = skill.id();
+			let [projection] = assert_count!(1, get_children!(app, contact));
+			let projection = projection.id();
+			assert_eq!(
+				Some(&Skill {
+					contact,
+					projection
+				}),
+				app.world().entity(contact).get::<Skill>(),
+			);
+			Ok(())
+		}
 	}
 
 	mod returned_skill {
-		use std::fmt::Debug;
-
 		use super::*;
 		use common::{
 			effects::{EffectApplies, force::Force, gravity::Gravity, health_damage::HealthDamage},
 			tools::UnitsPerSecond,
 		};
+		use std::fmt::Debug;
 		use test_case::test_case;
 
 		#[derive(Component, Debug, PartialEq)]
