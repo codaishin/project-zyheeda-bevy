@@ -38,7 +38,6 @@ use crate::{
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::{child_of_persistent::ChildOfPersistent, persistent_entity::PersistentEntity},
 	systems::log::OnError,
 	traits::{
 		delta::Delta,
@@ -52,19 +51,14 @@ use common::{
 		},
 		handles_saving::HandlesSaving,
 		handles_skill_physics::{
-			Contact,
 			HandlesNewPhysicalSkill,
 			HandlesPhysicalSkillComponents,
 			HandlesPhysicalSkillSpawnPoints,
-			Projection,
-			SkillEntities,
-			SkillRoot,
 		},
 		prefab::AddPrefabObserver,
 		register_derived_component::RegisterDerivedComponent,
 		thread_safe::ThreadSafe,
 	},
-	zyheeda_commands::ZyheedaCommands,
 };
 use components::{
 	active_beam::ActiveBeam,
@@ -286,32 +280,6 @@ impl<TDependencies> HandlesPhysicalSkillSpawnPoints for PhysicsPlugin<TDependenc
 
 impl<TDependencies> HandlesNewPhysicalSkill for PhysicsPlugin<TDependencies> {
 	type TSkillSpawnerMut<'w, 's> = SkillSpawnerMut<'w, 's>;
-
-	fn spawn_skill(
-		commands: &mut ZyheedaCommands,
-		contact: Contact,
-		projection: Projection,
-	) -> SkillEntities {
-		let persistent_contact = PersistentEntity::default();
-		let contact = commands
-			.spawn((SkillContact::from(contact), persistent_contact))
-			.id();
-		let projection = commands
-			.spawn((
-				SkillProjection::from(projection),
-				ChildOfPersistent(persistent_contact),
-			))
-			.id();
-
-		SkillEntities {
-			root: SkillRoot {
-				persistent_entity: persistent_contact,
-				entity: contact,
-			},
-			contact,
-			projection,
-		}
-	}
 }
 
 impl<TDependencies> HandlesPhysicalSkillComponents for PhysicsPlugin<TDependencies> {

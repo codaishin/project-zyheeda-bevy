@@ -16,7 +16,6 @@ use common::{
 			Effect,
 			Projection,
 			Skill as SkillTrait,
-			SkillEntities,
 			SkillRoot,
 			Spawn,
 		},
@@ -63,6 +62,13 @@ impl Spawn for SkillSpawnerMut<'_, '_> {
 pub struct SkillCommands<'c> {
 	commands: ZyheedaCommands<'c, 'c>,
 	entities: SkillEntities,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+struct SkillEntities {
+	root: SkillRoot,
+	contact: Entity,
+	projection: Entity,
 }
 
 impl SkillTrait for SkillCommands<'_> {
