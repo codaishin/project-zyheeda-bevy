@@ -3,7 +3,10 @@ use crate::{
 	resources::persistent_entities::PersistentEntities,
 	traits::accessors::get::{Get, GetMut},
 };
-use bevy::{ecs::system::SystemParam, prelude::*};
+use bevy::{
+	ecs::{relationship::RelatedSpawnerCommands, system::SystemParam},
+	prelude::*,
+};
 
 #[derive(SystemParam)]
 pub struct ZyheedaCommands<'w, 's> {
@@ -111,6 +114,22 @@ impl ZyheedaEntityCommands<'_> {
 		self
 	}
 
+	pub fn with_child<TBundle>(&mut self, bundle: TBundle) -> &mut Self
+	where
+		TBundle: Bundle,
+	{
+		self.entity.with_child(bundle);
+		self
+	}
+
+	pub fn with_children<TFunc>(&mut self, func: TFunc) -> &mut Self
+	where
+		TFunc: FnOnce(&mut RelatedSpawnerCommands<ChildOf>),
+	{
+		self.entity.with_children(func);
+		self
+	}
+
 	pub fn try_remove<TBundle>(&mut self) -> &mut Self
 	where
 		TBundle: Bundle,
@@ -188,6 +207,8 @@ mod test {
 	}
 
 	mod entity {
+		use testing::get_children;
+
 		use super::*;
 
 		#[test]
@@ -332,6 +353,44 @@ mod test {
 				})?;
 
 			assert!(app.world().get_entity(entity).is_err());
+			Ok(())
+		}
+
+		#[test]
+		fn with_child() -> Result<(), RunSystemError> {
+			let mut app = setup();
+			let entity = app.world_mut().spawn_empty().id();
+
+			app.world_mut()
+				.run_system_once(move |mut commands: ZyheedaCommands| {
+					let Some(mut entity_cmds) = commands.get_mut(&entity) else {
+						return;
+					};
+					entity_cmds.with_child(_Component("child"));
+				})?;
+
+			let [child] = assert_count!(1, get_children!(app, entity));
+			assert_eq!(Some(&_Component("child")), child.get::<_Component>());
+			Ok(())
+		}
+
+		#[test]
+		fn with_children() -> Result<(), RunSystemError> {
+			let mut app = setup();
+			let entity = app.world_mut().spawn_empty().id();
+
+			app.world_mut()
+				.run_system_once(move |mut commands: ZyheedaCommands| {
+					let Some(mut entity_cmds) = commands.get_mut(&entity) else {
+						return;
+					};
+					entity_cmds.with_children(|parent| {
+						parent.spawn(_Component("child"));
+					});
+				})?;
+
+			let [child] = assert_count!(1, get_children!(app, entity));
+			assert_eq!(Some(&_Component("child")), child.get::<_Component>());
 			Ok(())
 		}
 	}
