@@ -1,6 +1,5 @@
 use crate::{
 	components::{
-		effect::{force::ForceEffect, gravity::GravityEffect, health_damage::HealthDamageEffect},
 		skill::Skill,
 		skill_prefabs::{
 			skill_contact::{CreatedFrom, SkillContact},
@@ -11,23 +10,12 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	components::{
-		child_of_persistent::ChildOfPersistent,
-		lifetime::Lifetime,
-		persistent_entity::PersistentEntity,
-	},
+	components::{child_of_persistent::ChildOfPersistent, persistent_entity::PersistentEntity},
 	traits::{
 		accessors::get::TryApplyOn,
-		handles_skill_physics::{
-			Contact,
-			Effect,
-			Projection,
-			Skill as SkillTrait,
-			SkillRoot,
-			Spawn,
-		},
+		handles_skill_physics::{Contact, Effect, Projection, Skill as SkillTrait, Spawn},
 	},
-	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
+	zyheeda_commands::ZyheedaCommands,
 };
 use std::time::Duration;
 
@@ -38,88 +26,63 @@ impl Spawn for SkillSpawnerMut<'_, '_> {
 		Self: 'c;
 
 	fn spawn(&mut self, contact: Contact, projection: Projection) -> SkillCommands<'_> {
-		let persistent_entity = PersistentEntity::default();
-		let contact = self
-			.commands
-			.spawn((
-				Skill {
-					created_from: CreatedFrom::Spawn,
-					contact: contact.clone(),
-					projection: projection.clone(),
-				},
-				SkillContact::from(contact),
-				persistent_entity,
-			))
-			.id();
-		let projection = self
-			.commands
-			.spawn((
-				SkillProjection::from(projection),
-				ChildOfPersistent(persistent_entity),
-			))
-			.id();
-
-		let entities = SkillEntities {
-			root: SkillRoot {
-				entity: contact,
-				persistent_entity,
-			},
-			contact,
-			projection,
+		let skill = Skill {
+			lifetime: None,
+			created_from: CreatedFrom::Spawn,
+			contact: contact.clone(),
+			contact_effects: vec![],
+			projection: projection.clone(),
+			projection_effects: vec![],
 		};
+		let persistent_entity = PersistentEntity::default();
+		let entity = self
+			.commands
+			.spawn((SkillContact::from(contact), persistent_entity))
+			.id();
+		self.commands.spawn((
+			SkillProjection::from(projection),
+			ChildOfPersistent(persistent_entity),
+		));
 
 		SkillCommands {
+			entity,
+			persistent_entity,
 			commands: self.commands.reborrow(),
-			entities,
+			skill,
 		}
 	}
 }
 
 pub struct SkillCommands<'c> {
 	commands: ZyheedaCommands<'c, 'c>,
-	entities: SkillEntities,
+	entity: Entity,
+	persistent_entity: PersistentEntity,
+	skill: Skill,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-struct SkillEntities {
-	root: SkillRoot,
-	contact: Entity,
-	projection: Entity,
+impl Drop for SkillCommands<'_> {
+	fn drop(&mut self) {
+		self.commands.try_apply_on(&self.entity, |mut e| {
+			e.try_insert(self.skill.clone());
+		});
+	}
 }
 
 impl SkillTrait for SkillCommands<'_> {
 	fn root(&self) -> PersistentEntity {
-		self.entities.root.persistent_entity
+		self.persistent_entity
 	}
 
 	fn set_lifetime(&mut self, duration: Duration) {
-		let entity = &self.entities.root.entity;
-
-		self.commands.try_apply_on(entity, |mut e| {
-			e.try_insert(Lifetime::from(duration));
-		});
+		self.skill.lifetime = Some(duration);
 	}
 
 	fn insert_on_contact(&mut self, effect: Effect) {
-		let entity = &self.entities.contact;
-
-		self.commands.try_apply_on(entity, try_insert(effect));
+		self.skill.contact_effects.push(effect);
 	}
 
 	fn insert_on_projection(&mut self, effect: Effect) {
-		let entity = &self.entities.projection;
-
-		self.commands.try_apply_on(entity, try_insert(effect));
-	}
-}
-
-fn try_insert(effect: Effect) -> impl Fn(ZyheedaEntityCommands) {
-	move |mut e| {
-		match effect {
-			Effect::Force(force) => e.try_insert(ForceEffect(force)),
-			Effect::Gravity(gravity) => e.try_insert(GravityEffect(gravity)),
-			Effect::HealthDamage(health_damage) => e.try_insert(HealthDamageEffect(health_damage)),
-		};
+		self.skill.projection_effects.push(effect);
 	}
 }
 
@@ -206,9 +169,12 @@ mod tests {
 			let [skill] = assert_count!(1, skills);
 			assert_eq!(
 				Some(&Skill {
+					lifetime: None,
 					created_from: CreatedFrom::Spawn,
 					contact: CONTACT.clone(),
-					projection: PROJECTION.clone()
+					contact_effects: vec![],
+					projection: PROJECTION.clone(),
+					projection_effects: vec![],
 				}),
 				skill.get::<Skill>()
 			);
@@ -260,15 +226,9 @@ mod tests {
 	}
 
 	mod returned_skill {
-		use std::fmt::Debug;
-
 		use super::*;
-		use common::{
-			components::lifetime::Lifetime,
-			effects::{EffectApplies, force::Force, gravity::Gravity, health_damage::HealthDamage},
-			tools::UnitsPerSecond,
-		};
-		use test_case::test_case;
+		use common::effects::force::Force;
+		use std::fmt::Debug;
 
 		#[derive(Component, Debug, PartialEq)]
 		struct _Marker;
@@ -309,26 +269,16 @@ mod tests {
 				.filter(|e| e.contains::<PersistentEntity>());
 			let [skill] = assert_count!(1, skills);
 			assert_eq!(
-				Some(&Lifetime::from(Duration::from_millis(42))),
-				skill.get::<Lifetime>()
+				Some(Duration::from_millis(42)),
+				skill.get::<Skill>().and_then(|s| s.lifetime)
 			);
 			Ok(())
 		}
 
-		static GRAVITY: LazyLock<Gravity> = LazyLock::new(|| Gravity {
-			strength: UnitsPerSecond::from(11.),
-		});
-		static HEALTH_DAMAGE: LazyLock<HealthDamage> =
-			LazyLock::new(|| HealthDamage(42., EffectApplies::Once));
-
-		#[test_case(Effect::Force(Force), ForceEffect(Force); "force")]
-		#[test_case(Effect::Gravity(*GRAVITY), GravityEffect(*GRAVITY); "gravity")]
-		#[test_case(Effect::HealthDamage(*HEALTH_DAMAGE), HealthDamageEffect(*HEALTH_DAMAGE); "damage")]
-		fn insert_on_contact<T>(effect: Effect, component: T) -> Result<(), RunSystemError>
-		where
-			T: Component + Debug + PartialEq,
-		{
+		#[test]
+		fn insert_on_contact() -> Result<(), RunSystemError> {
 			let mut app = setup();
+			let effect = Effect::Force(Force);
 
 			app.world_mut()
 				.run_system_once(move |mut p: SkillSpawnerMut| {
@@ -341,18 +291,17 @@ mod tests {
 				.iter_entities()
 				.filter(|e| e.contains::<PersistentEntity>());
 			let [skill] = assert_count!(1, skills);
-			assert_eq!(Some(&component), skill.get::<T>());
+			assert_eq!(
+				Some(&vec![effect]),
+				skill.get::<Skill>().map(|s| &s.contact_effects)
+			);
 			Ok(())
 		}
 
-		#[test_case(Effect::Force(Force), ForceEffect(Force); "force")]
-		#[test_case(Effect::Gravity(*GRAVITY), GravityEffect(*GRAVITY); "gravity")]
-		#[test_case(Effect::HealthDamage(*HEALTH_DAMAGE), HealthDamageEffect(*HEALTH_DAMAGE); "damage")]
-		fn insert_on_projection<T>(effect: Effect, component: T) -> Result<(), RunSystemError>
-		where
-			T: Component + Debug + PartialEq,
-		{
+		#[test]
+		fn insert_on_projection() -> Result<(), RunSystemError> {
 			let mut app = setup();
+			let effect = Effect::Force(Force);
 
 			app.world_mut()
 				.run_system_once(move |mut p: SkillSpawnerMut| {
@@ -365,8 +314,10 @@ mod tests {
 				.iter_entities()
 				.filter(|e| e.contains::<PersistentEntity>());
 			let [skill] = assert_count!(1, skills);
-			let [projection] = assert_count!(1, get_children!(app, skill.id()));
-			assert_eq!(Some(&component), projection.get::<T>());
+			assert_eq!(
+				Some(&vec![effect]),
+				skill.get::<Skill>().map(|s| &s.projection_effects)
+			);
 			Ok(())
 		}
 	}
