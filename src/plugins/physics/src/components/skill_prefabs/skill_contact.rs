@@ -24,14 +24,14 @@ pub struct SkillContact {
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) enum CreatedFrom {
-	Contact,
+	Spawn,
 	Save,
 }
 
 impl From<Contact> for SkillContact {
 	fn from(Contact { shape, motion }: Contact) -> Self {
 		Self {
-			created_from: CreatedFrom::Contact,
+			created_from: CreatedFrom::Spawn,
 			shape,
 			motion,
 		}

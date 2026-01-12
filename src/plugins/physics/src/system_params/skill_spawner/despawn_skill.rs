@@ -41,7 +41,10 @@ mod tests {
 	fn despawn_skill() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let persistent_entity = PersistentEntity::default();
-		let entity = app.world_mut().spawn((Skill, persistent_entity)).id();
+		let entity = app
+			.world_mut()
+			.spawn((Skill::default(), persistent_entity))
+			.id();
 
 		app.world_mut()
 			.run_system_once(move |mut p: SkillSpawnerMut| {

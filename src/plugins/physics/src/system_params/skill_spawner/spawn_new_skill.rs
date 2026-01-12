@@ -1,10 +1,11 @@
-use std::time::Duration;
-
 use crate::{
 	components::{
 		effect::{force::ForceEffect, gravity::GravityEffect, health_damage::HealthDamageEffect},
 		skill::Skill,
-		skill_prefabs::{skill_contact::SkillContact, skill_projection::SkillProjection},
+		skill_prefabs::{
+			skill_contact::{CreatedFrom, SkillContact},
+			skill_projection::SkillProjection,
+		},
 	},
 	system_params::skill_spawner::SkillSpawnerMut,
 };
@@ -28,6 +29,7 @@ use common::{
 	},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
+use std::time::Duration;
 
 impl Spawn for SkillSpawnerMut<'_, '_> {
 	type TSkill<'c>
@@ -39,7 +41,15 @@ impl Spawn for SkillSpawnerMut<'_, '_> {
 		let persistent_entity = PersistentEntity::default();
 		let contact = self
 			.commands
-			.spawn((Skill, SkillContact::from(contact), persistent_entity))
+			.spawn((
+				Skill {
+					created_from: CreatedFrom::Spawn,
+					contact: contact.clone(),
+					projection: projection.clone(),
+				},
+				SkillContact::from(contact),
+				persistent_entity,
+			))
 			.id();
 		let projection = self
 			.commands
@@ -194,7 +204,14 @@ mod tests {
 				.iter_entities()
 				.filter(|e| e.contains::<PersistentEntity>());
 			let [skill] = assert_count!(1, skills);
-			assert_eq!(Some(&Skill), skill.get::<Skill>());
+			assert_eq!(
+				Some(&Skill {
+					created_from: CreatedFrom::Spawn,
+					contact: CONTACT.clone(),
+					projection: PROJECTION.clone()
+				}),
+				skill.get::<Skill>()
+			);
 			Ok(())
 		}
 

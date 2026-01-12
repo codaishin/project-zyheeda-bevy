@@ -32,7 +32,7 @@ mod tests {
 	impl SkillContact {
 		fn fake_projectile_motion(range: Units) -> Self {
 			Self {
-				created_from: CreatedFrom::Contact,
+				created_from: CreatedFrom::Spawn,
 				shape: ContactShape::Sphere {
 					radius: Units::from(1.),
 					hollow_collider: false,
