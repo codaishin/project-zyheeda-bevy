@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::{
 	components::{
 		effect::{force::ForceEffect, gravity::GravityEffect, health_damage::HealthDamageEffect},
@@ -8,7 +10,11 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	components::{child_of_persistent::ChildOfPersistent, persistent_entity::PersistentEntity},
+	components::{
+		child_of_persistent::ChildOfPersistent,
+		lifetime::Lifetime,
+		persistent_entity::PersistentEntity,
+	},
 	traits::{
 		accessors::get::TryApplyOn,
 		handles_skill_physics::{
@@ -76,14 +82,11 @@ impl SkillTrait for SkillCommands<'_> {
 		self.entities.root.persistent_entity
 	}
 
-	fn insert_on_root<T>(&mut self, bundle: T)
-	where
-		T: Bundle,
-	{
+	fn set_lifetime(&mut self, duration: Duration) {
 		let entity = &self.entities.root.entity;
 
 		self.commands.try_apply_on(entity, |mut e| {
-			e.try_insert(bundle);
+			e.try_insert(Lifetime::from(duration));
 		});
 	}
 
@@ -244,6 +247,7 @@ mod tests {
 
 		use super::*;
 		use common::{
+			components::lifetime::Lifetime,
 			effects::{EffectApplies, force::Force, gravity::Gravity, health_damage::HealthDamage},
 			tools::UnitsPerSecond,
 		};
@@ -273,13 +277,13 @@ mod tests {
 		}
 
 		#[test]
-		fn insert_on_root() -> Result<(), RunSystemError> {
+		fn set_lifetime() -> Result<(), RunSystemError> {
 			let mut app = setup();
 
 			app.world_mut()
 				.run_system_once(move |mut p: SkillSpawnerMut| {
 					let mut skill = p.spawn(CONTACT.clone(), PROJECTION.clone());
-					skill.insert_on_root(_Marker);
+					skill.set_lifetime(Duration::from_millis(42));
 				})?;
 
 			let skills = app
@@ -287,7 +291,10 @@ mod tests {
 				.iter_entities()
 				.filter(|e| e.contains::<PersistentEntity>());
 			let [skill] = assert_count!(1, skills);
-			assert_eq!(Some(&_Marker), skill.get::<_Marker>());
+			assert_eq!(
+				Some(&Lifetime::from(Duration::from_millis(42))),
+				skill.get::<Lifetime>()
+			);
 			Ok(())
 		}
 

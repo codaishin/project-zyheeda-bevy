@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 use std::{
 	collections::{HashMap, HashSet},
 	ops::{Deref, DerefMut},
+	time::Duration,
 };
 
 pub trait HandlesSkillPhysics:
@@ -136,15 +137,9 @@ pub struct Projection {
 	pub offset: Option<ProjectionOffset>,
 }
 
-/// A newly spawned skill.
-///
-/// The provided insertion methods can be used to avoid usage of [`Commands`], which might conflict
-/// with the [`SystemParam`] used to spawn the skill.
 pub trait Skill {
 	fn root(&self) -> PersistentEntity;
-	fn insert_on_root<T>(&mut self, bundle: T)
-	where
-		T: Bundle;
+	fn set_lifetime(&mut self, lifetime: Duration);
 	fn insert_on_contact(&mut self, effect: Effect);
 	fn insert_on_projection(&mut self, effect: Effect);
 }

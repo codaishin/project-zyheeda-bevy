@@ -6,10 +6,7 @@ use crate::{
 	},
 	traits::spawn_skill::SpawnSkill,
 };
-use common::{
-	components::lifetime::Lifetime,
-	traits::handles_skill_physics::{Skill, SkillCaster, SkillSpawner, SkillTarget, Spawn},
-};
+use common::traits::handles_skill_physics::{Skill, SkillCaster, SkillSpawner, SkillTarget, Spawn};
 
 impl<T> SpawnSkill<SkillBehaviorConfig> for T
 where
@@ -39,7 +36,7 @@ where
 			LifeTimeDefinition::Infinite => OnSkillStop::Ignore,
 			LifeTimeDefinition::UntilStopped => OnSkillStop::Stop(skill.root()),
 			LifeTimeDefinition::UntilOutlived(lifetime) => {
-				skill.insert_on_root(Lifetime::from(lifetime));
+				skill.set_lifetime(lifetime);
 				OnSkillStop::Ignore
 			}
 		}
@@ -53,9 +50,8 @@ mod tests {
 		lifetime_definition::LifeTimeDefinition,
 		shape::{SkillShape, ground_target::GroundTargetedAoe, shield::Shield},
 	};
-	use bevy::ecs::bundle::Bundle;
 	use common::{
-		components::{lifetime::Lifetime, persistent_entity::PersistentEntity},
+		components::persistent_entity::PersistentEntity,
 		effects::force::Force,
 		tools::{Units, action_key::slot::SlotKey},
 		traits::handles_skill_physics::{Contact, Effect, Projection, Skill},
@@ -78,7 +74,7 @@ mod tests {
 		_Skill {}
 		impl Skill for _Skill {
 			fn root(&self) -> PersistentEntity;
-			fn insert_on_root<T>(&mut self, bundle: T) where T: Bundle;
+			fn set_lifetime(&mut self, lifetime: Duration);
 			fn insert_on_contact(&mut self, effect: Effect);
 			fn insert_on_projection(&mut self, effect: Effect);
 		}
@@ -87,7 +83,7 @@ mod tests {
 	impl Mock_Skill {
 		fn with_defaults(mut self) -> Self {
 			self.expect_root().return_const(PersistentEntity::default());
-			self.expect_insert_on_root::<Lifetime>().return_const(());
+			self.expect_set_lifetime().return_const(());
 			self.expect_insert_on_contact().return_const(());
 			self.expect_insert_on_projection().return_const(());
 
@@ -212,9 +208,9 @@ mod tests {
 		spawn.spawn_skill(config, *CASTER, SPAWNER, *TARGET);
 
 		fn assert_added_effects(mock: &mut Mock_Skill) {
-			mock.expect_insert_on_root()
+			mock.expect_set_lifetime()
 				.once()
-				.with(eq(Lifetime::from(Duration::from_secs(2))))
+				.with(eq(Duration::from_secs(2)))
 				.return_const(());
 		}
 	}
