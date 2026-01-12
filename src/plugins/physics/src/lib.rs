@@ -25,7 +25,7 @@ use crate::{
 		motion::Motion,
 		no_hover::NoMouseHover,
 		set_motion_forward::SetMotionForward,
-		skill_prefabs::{skill_contact::SkillContact, skill_projection::SkillProjection},
+		skill::{Skill, SkillContact, SkillProjection},
 		when_traveled::DestroyAfterDistanceTraveled,
 		world_camera::WorldCamera,
 	},
@@ -111,8 +111,7 @@ where
 		app.add_plugins(crate::debug::Debug);
 
 		TSaveGame::register_savable_component::<Motion>(app);
-		TSaveGame::register_savable_component::<SkillContact>(app);
-		TSaveGame::register_savable_component::<SkillProjection>(app);
+		TSaveGame::register_savable_component::<Skill>(app);
 
 		app
 			// Add/Configure rapier
@@ -142,10 +141,8 @@ where
 					.in_set(PhysicsSystems),
 			)
 			// Skills
-			.register_required_components::<SkillContact, TSaveGame::TSaveEntityMarker>()
-			.register_required_components::<SkillProjection, TSaveGame::TSaveEntityMarker>()
-			.add_prefab_observer::<SkillContact, ()>()
-			.add_prefab_observer::<SkillProjection, ()>()
+			.register_required_components::<Skill, TSaveGame::TSaveEntityMarker>()
+			.add_observer(Skill::prefab)
 			// Colliders
 			.add_prefab_observer::<ColliderShape, ()>()
 			.add_observer(ColliderOfInteractionTarget::link)
@@ -193,7 +190,6 @@ where
 						FixPointSpawner::insert_fix_points,
 						GroundTarget::set_position,
 						DestroyAfterDistanceTraveled::system,
-						SkillContact::update_range,
 						Anchor::<Once>::system.pipe(OnError::log),
 						Anchor::<Always>::system.pipe(OnError::log),
 						SetMotionForward::system,

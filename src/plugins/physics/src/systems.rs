@@ -9,6 +9,5 @@ pub(crate) mod life;
 pub(crate) mod motion;
 pub(crate) mod ray_cast;
 pub(crate) mod set_motion_forward;
-pub(crate) mod skill_contact;
 pub(crate) mod when_traveled;
 pub(crate) mod world_camera;
