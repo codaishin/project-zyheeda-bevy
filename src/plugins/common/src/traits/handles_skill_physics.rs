@@ -44,24 +44,15 @@ pub trait HandlesNewPhysicalSkill {
 pub type SkillSpawnerMut<'w, 's, T> = <T as HandlesNewPhysicalSkill>::TSkillSpawnerMut<'w, 's>;
 
 pub trait Spawn {
-	type TSkill<'c>: Skill
-	where
-		Self: 'c;
-
-	fn spawn(&mut self, contact: Contact, projection: Projection) -> Self::TSkill<'_>;
+	fn spawn(&mut self, args: SpawnArgs) -> PersistentEntity;
 }
 
 impl<T> Spawn for T
 where
 	T: DerefMut<Target: Spawn>,
 {
-	type TSkill<'c>
-		= <T::Target as Spawn>::TSkill<'c>
-	where
-		Self: 'c;
-
-	fn spawn(&mut self, contact: Contact, projection: Projection) -> Self::TSkill<'_> {
-		self.deref_mut().spawn(contact, projection)
+	fn spawn(&mut self, args: SpawnArgs) -> PersistentEntity {
+		self.deref_mut().spawn(args)
 	}
 }
 
@@ -112,6 +103,42 @@ where
 #[derive(Debug, PartialEq)]
 pub struct SkillEntity(pub PersistentEntity);
 
+#[derive(Debug, PartialEq)]
+pub struct SpawnArgs {
+	pub contact: Contact,
+	pub projection: Projection,
+	pub lifetime: Option<Duration>,
+	pub contact_effects: Vec<Effect>,
+	pub projection_effects: Vec<Effect>,
+}
+
+impl SpawnArgs {
+	pub fn with_shape(contact: Contact, projection: Projection) -> Self {
+		Self {
+			contact,
+			projection,
+			lifetime: None,
+			contact_effects: vec![],
+			projection_effects: vec![],
+		}
+	}
+
+	pub fn with_lifetime(mut self, lifetime: Duration) -> Self {
+		self.lifetime = Some(lifetime);
+		self
+	}
+
+	pub fn with_contact_effects(mut self, effects: Vec<Effect>) -> Self {
+		self.contact_effects = effects;
+		self
+	}
+
+	pub fn with_projection_effects(mut self, effects: Vec<Effect>) -> Self {
+		self.projection_effects = effects;
+		self
+	}
+}
+
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum Effect {
 	Force(Force),
@@ -135,13 +162,6 @@ pub struct Contact {
 pub struct Projection {
 	pub shape: ProjectionShape,
 	pub offset: Option<ProjectionOffset>,
-}
-
-pub trait Skill {
-	fn root(&self) -> PersistentEntity;
-	fn set_lifetime(&mut self, lifetime: Duration);
-	fn insert_on_contact(&mut self, effect: Effect);
-	fn insert_on_projection(&mut self, effect: Effect);
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]

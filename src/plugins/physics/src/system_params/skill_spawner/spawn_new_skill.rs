@@ -2,67 +2,34 @@ use crate::{
 	components::skill::{CreatedFrom, Skill},
 	system_params::skill_spawner::SkillSpawnerMut,
 };
-use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
-	traits::handles_skill_physics::{Contact, Effect, Projection, Skill as SkillTrait, Spawn},
-	zyheeda_commands::ZyheedaCommands,
+	traits::handles_skill_physics::{Spawn, SpawnArgs},
 };
-use std::time::Duration;
 
 impl Spawn for SkillSpawnerMut<'_, '_> {
-	type TSkill<'c>
-		= SkillCommands<'c>
-	where
-		Self: 'c;
-
-	fn spawn(&mut self, contact: Contact, projection: Projection) -> SkillCommands<'_> {
+	fn spawn(
+		&mut self,
+		SpawnArgs {
+			contact,
+			projection,
+			lifetime,
+			contact_effects,
+			projection_effects,
+		}: SpawnArgs,
+	) -> PersistentEntity {
 		let skill = Skill {
-			lifetime: None,
 			created_from: CreatedFrom::Spawn,
-			contact: contact.clone(),
-			contact_effects: vec![],
-			projection: projection.clone(),
-			projection_effects: vec![],
+			lifetime,
+			contact,
+			contact_effects,
+			projection,
+			projection_effects,
 		};
 		let persistent_entity = PersistentEntity::default();
+		self.commands.spawn((persistent_entity, skill));
 
-		SkillCommands {
-			persistent_entity,
-			commands: self.commands.reborrow(),
-			skill,
-		}
-	}
-}
-
-pub struct SkillCommands<'c> {
-	commands: ZyheedaCommands<'c, 'c>,
-	persistent_entity: PersistentEntity,
-	skill: Skill,
-}
-
-impl Drop for SkillCommands<'_> {
-	fn drop(&mut self) {
-		self.commands
-			.spawn((self.persistent_entity, self.skill.clone()));
-	}
-}
-
-impl SkillTrait for SkillCommands<'_> {
-	fn root(&self) -> PersistentEntity {
-		self.persistent_entity
-	}
-
-	fn set_lifetime(&mut self, duration: Duration) {
-		self.skill.lifetime = Some(duration);
-	}
-
-	fn insert_on_contact(&mut self, effect: Effect) {
-		self.skill.contact_effects.push(effect);
-	}
-
-	fn insert_on_projection(&mut self, effect: Effect) {
-		self.skill.projection_effects.push(effect);
+		persistent_entity
 	}
 }
 
@@ -71,13 +38,18 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::system_params::skill_spawner::SkillSpawnerMut;
-	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
+	use bevy::{
+		ecs::system::{RunSystemError, RunSystemOnce},
+		prelude::*,
+	};
 	use common::{
 		CommonPlugin,
 		tools::Units,
 		traits::handles_skill_physics::{
+			Contact,
 			ContactShape,
 			Motion,
+			Projection,
 			ProjectionShape,
 			SkillCaster,
 			SkillSpawner,
@@ -122,7 +94,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |mut p: SkillSpawnerMut| {
-					p.spawn(CONTACT.clone(), PROJECTION.clone());
+					p.spawn(SpawnArgs::with_shape(CONTACT.clone(), PROJECTION.clone()));
 				})?;
 
 			let skills = app
@@ -139,7 +111,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |mut p: SkillSpawnerMut| {
-					p.spawn(CONTACT.clone(), PROJECTION.clone());
+					p.spawn(SpawnArgs::with_shape(CONTACT.clone(), PROJECTION.clone()));
 				})?;
 
 			let skills = app
@@ -164,8 +136,8 @@ mod tests {
 
 	mod returned_skill {
 		use super::*;
-		use common::effects::force::Force;
-		use std::fmt::Debug;
+		use common::{effects::force::Force, traits::handles_skill_physics::Effect};
+		use std::{fmt::Debug, time::Duration};
 
 		#[derive(Component, Debug, PartialEq)]
 		struct _Marker;
@@ -177,8 +149,7 @@ mod tests {
 			let root = app
 				.world_mut()
 				.run_system_once(move |mut p: SkillSpawnerMut| {
-					let skill = p.spawn(CONTACT.clone(), PROJECTION.clone());
-					skill.root()
+					p.spawn(SpawnArgs::with_shape(CONTACT.clone(), PROJECTION.clone()))
 				})?;
 
 			let skills = app
@@ -196,8 +167,10 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |mut p: SkillSpawnerMut| {
-					let mut skill = p.spawn(CONTACT.clone(), PROJECTION.clone());
-					skill.set_lifetime(Duration::from_millis(42));
+					p.spawn(
+						SpawnArgs::with_shape(CONTACT.clone(), PROJECTION.clone())
+							.with_lifetime(Duration::from_millis(42)),
+					);
 				})?;
 
 			let skills = app
@@ -219,8 +192,10 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |mut p: SkillSpawnerMut| {
-					let mut skill = p.spawn(CONTACT.clone(), PROJECTION.clone());
-					skill.insert_on_contact(effect);
+					p.spawn(
+						SpawnArgs::with_shape(CONTACT.clone(), PROJECTION.clone())
+							.with_contact_effects(vec![effect]),
+					);
 				})?;
 
 			let skills = app
@@ -242,8 +217,10 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |mut p: SkillSpawnerMut| {
-					let mut skill = p.spawn(CONTACT.clone(), PROJECTION.clone());
-					skill.insert_on_projection(effect);
+					p.spawn(
+						SpawnArgs::with_shape(CONTACT.clone(), PROJECTION.clone())
+							.with_projection_effects(vec![effect]),
+					);
 				})?;
 
 			let skills = app

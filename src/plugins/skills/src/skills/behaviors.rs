@@ -79,16 +79,16 @@ impl SkillBehaviorConfig {
 		match_shape!(&self.shape, SkillProjection::skill_projection)
 	}
 
-	pub(crate) fn skill_contact_effects(&self) -> impl Iterator<Item = &'_ Effect> {
-		self.contact.iter()
-	}
-
-	pub(crate) fn skill_projection_effects(&self) -> impl Iterator<Item = &'_ Effect> {
-		self.projection.iter()
-	}
-
 	pub(crate) fn lifetime(&self) -> LifeTimeDefinition {
 		match_shape!(&self.shape, SkillLifetime::lifetime)
+	}
+
+	pub(crate) fn take_skill_contact_effects(&mut self) -> Vec<Effect> {
+		std::mem::take(&mut self.contact)
+	}
+
+	pub(crate) fn take_skill_projection_effects(&mut self) -> Vec<Effect> {
+		std::mem::take(&mut self.projection)
 	}
 }
 
