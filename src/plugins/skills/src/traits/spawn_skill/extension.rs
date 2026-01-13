@@ -6,9 +6,12 @@ use crate::{
 	},
 	traits::spawn_skill::SpawnSkill,
 };
-use common::{
-	components::lifetime::Lifetime,
-	traits::handles_skill_physics::{Skill, SkillCaster, SkillSpawner, SkillTarget, Spawn},
+use common::traits::handles_skill_physics::{
+	SkillCaster,
+	SkillSpawner,
+	SkillTarget,
+	Spawn,
+	SpawnArgs,
 };
 
 impl<T> SpawnSkill<SkillBehaviorConfig> for T
@@ -17,31 +20,28 @@ where
 {
 	fn spawn_skill(
 		&mut self,
-		config: SkillBehaviorConfig,
+		mut config: SkillBehaviorConfig,
 		caster: SkillCaster,
 		spawner: SkillSpawner,
 		target: SkillTarget,
 	) -> OnSkillStop {
-		let mut skill = self.spawn(
-			config.skill_contact(caster, spawner, target),
-			config.skill_projection(),
-		);
+		let (stoppable, lifetime) = match config.lifetime() {
+			LifeTimeDefinition::Infinite => (false, None),
+			LifeTimeDefinition::UntilStopped => (true, None),
+			LifeTimeDefinition::UntilOutlived(lifetime) => (false, Some(lifetime)),
+		};
 
-		for effect in config.skill_contact_effects() {
-			skill.insert_on_contact(*effect);
-		}
+		let entity = self.spawn(SpawnArgs {
+			contact: config.skill_contact(caster, spawner, target),
+			projection: config.skill_projection(),
+			lifetime,
+			contact_effects: config.take_skill_contact_effects(),
+			projection_effects: config.take_skill_projection_effects(),
+		});
 
-		for effect in config.skill_projection_effects() {
-			skill.insert_on_projection(*effect);
-		}
-
-		match config.lifetime() {
-			LifeTimeDefinition::Infinite => OnSkillStop::Ignore,
-			LifeTimeDefinition::UntilStopped => OnSkillStop::Stop(skill.root()),
-			LifeTimeDefinition::UntilOutlived(lifetime) => {
-				skill.insert_on_root(Lifetime::from(lifetime));
-				OnSkillStop::Ignore
-			}
+		match stoppable {
+			true => OnSkillStop::Stop(entity),
+			false => OnSkillStop::Ignore,
 		}
 	}
 }
@@ -53,12 +53,11 @@ mod tests {
 		lifetime_definition::LifeTimeDefinition,
 		shape::{SkillShape, ground_target::GroundTargetedAoe, shield::Shield},
 	};
-	use bevy::ecs::bundle::Bundle;
 	use common::{
-		components::{lifetime::Lifetime, persistent_entity::PersistentEntity},
+		components::persistent_entity::PersistentEntity,
 		effects::force::Force,
 		tools::{Units, action_key::slot::SlotKey},
-		traits::handles_skill_physics::{Contact, Effect, Projection, Skill},
+		traits::handles_skill_physics::Effect,
 	};
 	use macros::simple_mock;
 	use mockall::predicate::eq;
@@ -69,29 +68,7 @@ mod tests {
 	simple_mock! {
 		_Spawn {}
 		impl Spawn for _Spawn {
-			type TSkill<'c> = Mock_Skill where Self: 'c;
-			fn spawn(&mut self, contact: Contact, projection: Projection) -> Mock_Skill;
-		}
-	}
-
-	simple_mock! {
-		_Skill {}
-		impl Skill for _Skill {
-			fn root(&self) -> PersistentEntity;
-			fn insert_on_root<T>(&mut self, bundle: T) where T: Bundle;
-			fn insert_on_contact(&mut self, effect: Effect);
-			fn insert_on_projection(&mut self, effect: Effect);
-		}
-	}
-
-	impl Mock_Skill {
-		fn with_defaults(mut self) -> Self {
-			self.expect_root().return_const(PersistentEntity::default());
-			self.expect_insert_on_root::<Lifetime>().return_const(());
-			self.expect_insert_on_contact().return_const(());
-			self.expect_insert_on_projection().return_const(());
-
-			self
+			fn spawn(&mut self, args: SpawnArgs) -> PersistentEntity;
 		}
 	}
 
@@ -121,43 +98,33 @@ mod tests {
 		fn assert_contact_and_projection_used(mock: &mut Mock_Spawn) {
 			mock.expect_spawn()
 				.once()
-				.with(
-					eq(CONFIG.skill_contact(*CASTER, SPAWNER, *TARGET)),
-					eq(CONFIG.skill_projection()),
-				)
-				.returning(|_, _| Mock_Skill::new().with_defaults());
+				.with(eq(SpawnArgs::with_shape(
+					CONFIG.skill_contact(*CASTER, SPAWNER, *TARGET),
+					CONFIG.skill_projection(),
+				)))
+				.return_const(PersistentEntity::default());
 		}
 	}
 
 	#[test]
 	fn return_stoppable() {
 		const CONFIG: SkillBehaviorConfig = ground_target(11, LifeTimeDefinition::UntilStopped);
-		let root = PersistentEntity::default();
+		let entity = PersistentEntity::default();
 		let mut spawn = Mock_Spawn::new_mock(move |mock| {
-			mock.expect_spawn().returning(move |_, _| {
-				Mock_Skill::new_mock(|mock| {
-					mock.expect_root().return_const(root);
-				})
-				.with_defaults()
-			});
+			mock.expect_spawn().return_const(entity);
 		});
 
 		let on_skill_stop = spawn.spawn_skill(CONFIG, *CASTER, SPAWNER, *TARGET);
 
-		assert_eq!(OnSkillStop::Stop(root), on_skill_stop);
+		assert_eq!(OnSkillStop::Stop(entity), on_skill_stop);
 	}
 
 	#[test_case(ground_target(1, LifeTimeDefinition::Infinite); "infinite")]
 	#[test_case(ground_target(1, LifeTimeDefinition::UntilOutlived(Duration::ZERO)); "with lifetime")]
 	fn return_non_stoppable(config: SkillBehaviorConfig) {
-		let root = PersistentEntity::default();
 		let mut spawn = Mock_Spawn::new_mock(move |mock| {
-			mock.expect_spawn().returning(move |_, _| {
-				Mock_Skill::new_mock(|mock| {
-					mock.expect_root().return_const(root);
-				})
-				.with_defaults()
-			});
+			mock.expect_spawn()
+				.return_const(PersistentEntity::default());
 		});
 
 		let on_skill_stop = spawn.spawn_skill(config, *CASTER, SPAWNER, *TARGET);
@@ -167,55 +134,64 @@ mod tests {
 
 	#[test]
 	fn add_contact_effect() {
-		let mut spawn = Mock_Spawn::new_mock(|mock| {
-			mock.expect_spawn()
-				.returning(|_, _| Mock_Skill::new_mock(assert_added_effects).with_defaults());
-		});
 		let config = SHIELD.with_contact_effects(vec![Effect::Force(Force)]);
+		let mut spawn = Mock_Spawn::new_mock(assert_added_effects(config.clone()));
 
 		spawn.spawn_skill(config, *CASTER, SPAWNER, *TARGET);
 
-		fn assert_added_effects(mock: &mut Mock_Skill) {
-			mock.expect_insert_on_contact()
-				.once()
-				.with(eq(Effect::Force(Force)))
-				.return_const(());
+		fn assert_added_effects(mut config: SkillBehaviorConfig) -> impl FnMut(&mut Mock_Spawn) {
+			move |mock| {
+				mock.expect_spawn()
+					.once()
+					.with(eq(SpawnArgs::with_shape(
+						config.skill_contact(*CASTER, SPAWNER, *TARGET),
+						config.skill_projection(),
+					)
+					.with_contact_effects(config.take_skill_contact_effects())))
+					.return_const(PersistentEntity::default());
+			}
 		}
 	}
 
 	#[test]
 	fn add_projection_effect() {
-		let mut spawn = Mock_Spawn::new_mock(|mock| {
-			mock.expect_spawn()
-				.returning(|_, _| Mock_Skill::new_mock(assert_added_effects).with_defaults());
-		});
 		let config = SHIELD.with_projection_effects(vec![Effect::Force(Force)]);
+		let mut spawn = Mock_Spawn::new_mock(assert_added_effects(config.clone()));
 
 		spawn.spawn_skill(config, *CASTER, SPAWNER, *TARGET);
 
-		fn assert_added_effects(mock: &mut Mock_Skill) {
-			mock.expect_insert_on_projection()
-				.once()
-				.with(eq(Effect::Force(Force)))
-				.return_const(());
+		fn assert_added_effects(mut config: SkillBehaviorConfig) -> impl FnMut(&mut Mock_Spawn) {
+			move |mock| {
+				mock.expect_spawn()
+					.once()
+					.with(eq(SpawnArgs::with_shape(
+						config.skill_contact(*CASTER, SPAWNER, *TARGET),
+						config.skill_projection(),
+					)
+					.with_projection_effects(config.take_skill_projection_effects())))
+					.return_const(PersistentEntity::default());
+			}
 		}
 	}
 
 	#[test]
 	fn add_lifetime() {
-		let mut spawn = Mock_Spawn::new_mock(|mock| {
-			mock.expect_spawn()
-				.returning(|_, _| Mock_Skill::new_mock(assert_added_effects).with_defaults());
-		});
 		let config = ground_target(1, LifeTimeDefinition::UntilOutlived(Duration::from_secs(2)));
+		let mut spawn = Mock_Spawn::new_mock(assert_lifetime(config.clone()));
 
 		spawn.spawn_skill(config, *CASTER, SPAWNER, *TARGET);
 
-		fn assert_added_effects(mock: &mut Mock_Skill) {
-			mock.expect_insert_on_root()
-				.once()
-				.with(eq(Lifetime::from(Duration::from_secs(2))))
-				.return_const(());
+		fn assert_lifetime(config: SkillBehaviorConfig) -> impl Fn(&mut Mock_Spawn) {
+			move |mock| {
+				mock.expect_spawn()
+					.once()
+					.with(eq(SpawnArgs::with_shape(
+						config.skill_contact(*CASTER, SPAWNER, *TARGET),
+						config.skill_projection(),
+					)
+					.with_lifetime(Duration::from_secs(2))))
+					.return_const(PersistentEntity::default());
+			}
 		}
 	}
 }

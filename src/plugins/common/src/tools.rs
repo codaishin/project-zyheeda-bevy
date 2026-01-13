@@ -57,6 +57,14 @@ impl<T: Debug + PartialEq> Deref for Last<'_, T> {
 #[derive(Debug, PartialEq, PartialOrd, Clone, Copy, ClampZeroPositive, Serialize)]
 pub struct UnitsPerSecond(f32);
 
+impl UnitsPerSecond {
+	pub const ZERO: Self = Self(0.);
+
+	pub const fn from_u8(u8: u8) -> Self {
+		Self(u8 as f32)
+	}
+}
+
 #[derive(Debug, PartialEq, PartialOrd, Clone, Copy, ClampZeroPositive, Serialize)]
 pub struct Units(f32);
 
