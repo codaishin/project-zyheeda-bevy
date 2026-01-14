@@ -4,7 +4,7 @@ mod motion;
 mod projection;
 
 use crate::components::{
-	effect::{force::ForceEffect, gravity::GravityEffect, health_damage::HealthDamageEffect},
+	effects::{force::ForceEffect, gravity::GravityEffect, health_damage::HealthDamageEffect},
 	skill::dto::SkillDto,
 };
 use bevy::prelude::*;

@@ -18,7 +18,7 @@ use crate::{
 		blockable::Blockable,
 		colliders::{ColliderDefinition, ColliderShape, Colliders},
 		default_attributes::DefaultAttributes,
-		effect::force::ForceEffect,
+		effects::{Effects, force::ForceEffect},
 		fix_points::{Always, Anchor, Once, fix_point::FixPointSpawner},
 		ground_target::GroundTarget,
 		interaction_target::{ColliderOfInteractionTarget, InteractionTarget},
@@ -62,7 +62,7 @@ use common::{
 };
 use components::{
 	active_beam::ActiveBeam,
-	effect::{gravity::GravityEffect, health_damage::HealthDamageEffect},
+	effects::{gravity::GravityEffect, health_damage::HealthDamageEffect},
 };
 use events::{InteractionEvent, Ray};
 use resources::{
@@ -147,6 +147,8 @@ where
 			.add_prefab_observer::<ColliderShape, ()>()
 			.add_observer(ColliderOfInteractionTarget::link)
 			.add_observer(ColliderShape::spawn_unique)
+			// All effects
+			.add_observer(Effects::insert)
 			// Deal health damage
 			.add_physics::<HealthDamageEffect, Life, TSaveGame>()
 			.add_observer(HealthDamageEffect::update_blockers)
