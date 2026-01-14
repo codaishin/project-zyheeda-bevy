@@ -12,7 +12,7 @@ pub mod traits;
 pub mod zyheeda_commands;
 
 use crate::{
-	components::{child_of_persistent::ChildOfPersistent, lifetime::Lifetime},
+	components::{child_of_persistent::ChildOfPersistent, lifetime::Lifetime, model::Model},
 	states::game_state::GameState,
 	traits::{
 		register_controlled_state::RegisterControlledState,
@@ -44,6 +44,7 @@ fn persistent_entities(app: &mut App) {
 
 fn asset_loading(app: &mut App) {
 	app.add_systems(Update, FlipHorizontally::system);
+	app.add_observer(Model::insert);
 	app.add_observer(AssetModel::load);
 	app.add_observer(InsertAsset::<Mesh>::apply);
 	app.add_observer(InsertAsset::<StandardMaterial>::apply);
