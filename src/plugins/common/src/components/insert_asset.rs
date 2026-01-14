@@ -2,7 +2,7 @@ use crate::traits::asset_marker::AssetMarker;
 use bevy::prelude::*;
 use std::{any::TypeId, collections::HashMap};
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Clone)]
 /// Defines an asset that should be added to an [`Entity`]
 ///
 /// This is a command like component and will be removed from
