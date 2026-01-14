@@ -149,7 +149,7 @@ macro_rules! get_current_update_events {
 
 #[macro_export]
 macro_rules! assert_count {
-	($count:literal, $iterator:expr) => {{
+	($count:literal, $iterator:expr $(,)?) => {{
 		let vec = $iterator.collect::<Vec<_>>();
 		let vec_len = vec.len();
 		let Ok(array) = <[_; $count]>::try_from(vec) else {

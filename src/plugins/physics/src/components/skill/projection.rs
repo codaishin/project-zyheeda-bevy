@@ -1,110 +1,82 @@
-use crate::components::{
-	colliders::ColliderShape,
-	interaction_target::InteractionTarget,
-	skill::{
-		BEAM_MODEL,
-		Beam,
-		HALF_FORWARD,
-		Model,
-		SPHERE_MODEL,
-		Skill,
-		SkillProjection,
-		insert_effect,
+use crate::{
+	components::{
+		colliders::ColliderShape,
+		effects::Effects,
+		skill::{BEAM_MODEL, Beam, HALF_FORWARD, SPHERE_MODEL, Skill},
 	},
-	skill_transform::SkillTransformOf,
+	observers::skill_prefab::{GetProjectionPrefab, ProjectionCollider, SubModel},
 };
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::*;
 use common::{
-	components::{asset_model::AssetModel, insert_asset::InsertAsset},
+	components::{asset_model::AssetModel, insert_asset::InsertAsset, model::Model},
 	tools::Units,
 	traits::{
 		handles_physics::colliders::Shape,
 		handles_skill_physics::{ProjectionOffset, ProjectionShape},
 	},
-	zyheeda_commands::ZyheedaEntityCommands,
 };
 use std::f32::consts::PI;
 
-impl Skill {
-	pub(crate) fn projection(&self, entity: &mut ZyheedaEntityCommands, root: Entity) {
-		let ((model, model_transform), (collider, collider_transform)) =
-			match self.projection.shape.clone() {
-				ProjectionShape::Sphere { radius } => (
-					(
-						Model::Asset(AssetModel::path(SPHERE_MODEL)),
-						Transform::from_scale(Vec3::splat(*radius * 2.)),
-					),
-					(
-						ColliderShape(Shape::Sphere { radius }),
-						Transform::default(),
-					),
-				),
-				ProjectionShape::Custom {
-					model,
-					model_scale,
-					collider,
-				} => (
-					(
-						Model::Asset(model.clone()),
-						Transform::from_scale(model_scale),
-					),
-					(ColliderShape(collider), Transform::default()),
-				),
-				ProjectionShape::Beam { radius } => (
-					(
-						Model::Proc(InsertAsset::shared::<Beam>(BEAM_MODEL)),
-						HALF_FORWARD
-							.with_scale(Vec3 {
-								x: *radius,
-								y: 1.,
-								z: *radius,
-							})
-							.with_rotation(Quat::from_rotation_x(PI / 2.)),
-					),
-					(
-						ColliderShape(Shape::Cylinder {
-							half_y: Units::from(0.5),
-							radius,
-						}),
-						HALF_FORWARD.with_rotation(Quat::from_rotation_x(PI / 2.)),
-					),
-				),
-			};
-
-		let offset = self
-			.projection
-			.offset
-			.map(|ProjectionOffset(offset)| offset)
-			.unwrap_or_default();
-
-		entity.try_insert_if_new((
-			SkillProjection,
-			Transform::from_translation(offset),
-			Visibility::default(),
-			InteractionTarget,
-		));
-
-		match model {
-			Model::Asset(asset_model) => {
-				entity.with_child((SkillTransformOf(root), asset_model, model_transform))
-			}
-			Model::Proc(insert_asset) => {
-				entity.with_child((SkillTransformOf(root), insert_asset, model_transform))
-			}
+impl GetProjectionPrefab for Skill {
+	fn get_projection_prefab(
+		&self,
+	) -> (
+		Option<ProjectionOffset>,
+		SubModel,
+		ProjectionCollider,
+		Effects,
+	) {
+		let (model, collider) = match self.projection.shape.clone() {
+			ProjectionShape::Sphere { radius } => (
+				SubModel {
+					model: Model::Asset(AssetModel::path(SPHERE_MODEL)),
+					transform: Transform::from_scale(Vec3::splat(*radius * 2.)),
+				},
+				ProjectionCollider {
+					shape: ColliderShape::from(Shape::Sphere { radius }),
+					transform: Transform::default(),
+				},
+			),
+			ProjectionShape::Custom {
+				model,
+				model_scale,
+				collider,
+			} => (
+				SubModel {
+					model: Model::Asset(model.clone()),
+					transform: Transform::from_scale(model_scale),
+				},
+				ProjectionCollider {
+					shape: ColliderShape::from(collider),
+					transform: Transform::default(),
+				},
+			),
+			ProjectionShape::Beam { radius } => (
+				SubModel {
+					model: Model::Procedural(InsertAsset::shared::<Beam>(BEAM_MODEL)),
+					transform: HALF_FORWARD
+						.with_scale(Vec3 {
+							x: *radius,
+							y: 1.,
+							z: *radius,
+						})
+						.with_rotation(Quat::from_rotation_x(PI / 2.)),
+				},
+				ProjectionCollider {
+					shape: ColliderShape::from(Shape::Cylinder {
+						half_y: Units::from(0.5),
+						radius,
+					}),
+					transform: HALF_FORWARD.with_rotation(Quat::from_rotation_x(PI / 2.)),
+				},
+			),
 		};
 
-		entity.with_child((
-			SkillTransformOf(root),
+		(
+			self.projection.offset,
+			model,
 			collider,
-			collider_transform,
-			ActiveEvents::COLLISION_EVENTS,
-			ActiveCollisionTypes::default(),
-			Sensor,
-		));
-
-		for effect in &self.projection_effects {
-			insert_effect(entity, *effect);
-		}
+			Effects(self.projection_effects.clone()),
+		)
 	}
 }

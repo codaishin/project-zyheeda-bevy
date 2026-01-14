@@ -25,11 +25,11 @@ use crate::{
 		motion::Motion,
 		no_hover::NoMouseHover,
 		set_motion_forward::SetMotionForward,
-		skill::{Skill, SkillContact, SkillProjection},
+		skill::{ContactInteractionTarget, ProjectionInteractionTarget, Skill},
 		when_traveled::DestroyAfterDistanceTraveled,
 		world_camera::WorldCamera,
 	},
-	observers::update_blockers::UpdateBlockersObserver,
+	observers::{skill_prefab::SkillPrefab, update_blockers::UpdateBlockersObserver},
 	physics_hooks::check_hollow_colliders::CheckHollowColliders,
 	system_params::skill_spawner::SkillSpawnerMut,
 	systems::{apply_pull::ApplyPull, insert_affected::InsertAffected},
@@ -282,6 +282,6 @@ impl<TDependencies> HandlesNewPhysicalSkill for PhysicsPlugin<TDependencies> {
 }
 
 impl<TDependencies> HandlesPhysicalSkillComponents for PhysicsPlugin<TDependencies> {
-	type TSkillContact = SkillContact;
-	type TSkillProjection = SkillProjection;
+	type TSkillContact = ContactInteractionTarget;
+	type TSkillProjection = ProjectionInteractionTarget;
 }
