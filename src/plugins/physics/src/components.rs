@@ -4,7 +4,7 @@ pub(crate) mod blockable;
 pub(crate) mod blocker_types;
 pub(crate) mod colliders;
 pub(crate) mod default_attributes;
-pub(crate) mod effect;
+pub(crate) mod effects;
 pub(crate) mod fix_points;
 pub(crate) mod ground_target;
 pub(crate) mod hollow;
@@ -15,6 +15,7 @@ pub(crate) mod no_hover;
 pub(crate) mod running_interactions;
 pub(crate) mod set_motion_forward;
 pub(crate) mod skill;
+pub(crate) mod skill_transform;
 pub(crate) mod when_traveled;
 pub(crate) mod world_camera;
 

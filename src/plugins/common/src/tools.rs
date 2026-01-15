@@ -71,6 +71,9 @@ pub struct Units(f32);
 impl Units {
 	pub const ZERO: Self = Self(0.);
 
+	/// Wraps `f32::EPSILON`
+	pub const EPSILON: Self = Self(f32::EPSILON);
+
 	pub const fn from_u8(u8: u8) -> Self {
 		Self(u8 as f32)
 	}

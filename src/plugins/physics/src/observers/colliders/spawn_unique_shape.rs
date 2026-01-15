@@ -68,7 +68,7 @@ fn apply_definition(
 		ColliderOf(entity),
 		ChildOf(entity),
 		Transform::from_translation(definition.center_offset).with_rotation(definition.rotation),
-		ColliderShape(definition.shape),
+		ColliderShape::from(definition.shape),
 	));
 
 	if definition.collider_type != ColliderType::Terrain {
@@ -110,7 +110,10 @@ mod tests {
 			.id();
 
 		let [child] = assert_count!(1, get_children!(app, entity));
-		assert_eq!(Some(&ColliderShape(shape)), child.get::<ColliderShape>());
+		assert_eq!(
+			Some(&ColliderShape::from(shape)),
+			child.get::<ColliderShape>()
+		);
 	}
 
 	#[test]
@@ -231,6 +234,9 @@ mod tests {
 			.id();
 
 		let [child] = assert_count!(1, get_children!(app, entity));
-		assert_eq!(Some(&ColliderShape(shape)), child.get::<ColliderShape>());
+		assert_eq!(
+			Some(&ColliderShape::from(shape)),
+			child.get::<ColliderShape>()
+		);
 	}
 }

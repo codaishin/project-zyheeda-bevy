@@ -11,72 +11,51 @@ use common::{
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
-
-type BeamComponents<'a> = (
-	Entity,
-	&'a Blockable,
-	&'a mut GlobalTransform,
-	&'a mut Transform,
-	Option<&'a ActiveBeam>,
-);
+use core::f32;
 
 impl ActiveBeam {
 	pub(crate) fn execute(
 		mut commands: ZyheedaCommands,
 		mut ray_cast_events: EventReader<InteractionEvent<Ray>>,
-		mut beams: Query<BeamComponents>,
+		mut beams: Query<(
+			Entity,
+			&Blockable,
+			&GlobalTransform,
+			Option<&mut ActiveBeam>,
+		)>,
 	) {
 		for (entity, Blockable(beam), global_transform, ..) in &beams {
 			let PhysicalObject::Beam { range, .. } = beam else {
 				continue;
 			};
 
-			update_ray_caster_args(&mut commands, entity, global_transform, *range);
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_insert(RayCasterArgs {
+					origin: global_transform.translation(),
+					direction: global_transform.forward(),
+					solid: false,
+					filter: RayFilter::default(),
+					max_toi: TimeOfImpact::from(*range),
+				});
+			});
 		}
 
-		for InteractionEvent(entity, ray) in ray_cast_events.read() {
+		for InteractionEvent(entity, Ray(.., toi)) in ray_cast_events.read() {
+			let length = Units::from(f32::max(**toi, f32::EPSILON));
+
 			match beams.get_mut(*entity) {
 				Err(_) => continue,
-				Ok((entity, .., mut transform, None)) => {
-					insert_active_beam(&mut commands, entity, transform.as_mut(), ray)
+				Ok((entity, .., None)) => {
+					commands.try_apply_on(&entity, |mut e| {
+						e.try_insert(ActiveBeam { length });
+					});
 				}
-				Ok((.., mut transform, Some(_beam))) => update_transform(transform.as_mut(), ray),
+				Ok((.., Some(mut beam))) => {
+					beam.length = length;
+				}
 			}
 		}
 	}
-}
-
-fn update_ray_caster_args(
-	commands: &mut ZyheedaCommands,
-	entity: Entity,
-	origin: &GlobalTransform,
-	range: Units,
-) {
-	commands.try_apply_on(&entity, |mut e| {
-		e.try_insert(RayCasterArgs {
-			origin: origin.translation(),
-			direction: origin.forward(),
-			solid: false,
-			filter: RayFilter::default(),
-			max_toi: TimeOfImpact::from(range),
-		});
-	});
-}
-
-fn insert_active_beam(
-	commands: &mut ZyheedaCommands,
-	entity: Entity,
-	transform: &mut Transform,
-	ray: &Ray,
-) {
-	commands.try_apply_on(&entity, |mut e| {
-		e.try_insert(ActiveBeam);
-	});
-	update_transform(transform, ray);
-}
-
-fn update_transform(transform: &mut Transform, ray: &Ray) {
-	transform.scale.z = f32::max(*ray.1, f32::EPSILON);
 }
 
 #[cfg(test)]
@@ -153,18 +132,10 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			(
-				Some(&ActiveBeam),
-				Some(
-					&Transform::from_xyz(1., 0., 0.)
-						.looking_to(Dir3::Z, Vec3::Y)
-						.with_scale(Vec3::new(1., 1., 10.))
-				)
-			),
-			(
-				app.world().entity(beam).get::<ActiveBeam>(),
-				app.world().entity(beam).get::<Transform>(),
-			)
+			Some(&ActiveBeam {
+				length: Units::from(10.)
+			}),
+			app.world().entity(beam).get::<ActiveBeam>(),
 		);
 	}
 
@@ -192,18 +163,10 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			(
-				Some(&ActiveBeam),
-				Some(
-					&Transform::from_xyz(1., 0., 0.)
-						.looking_to(Dir3::Z, Vec3::Y)
-						.with_scale(Vec3::new(1., 1., f32::EPSILON))
-				)
-			),
-			(
-				app.world().entity(beam).get::<ActiveBeam>(),
-				app.world().entity(beam).get::<Transform>(),
-			)
+			Some(&ActiveBeam {
+				length: Units::EPSILON
+			}),
+			app.world().entity(beam).get::<ActiveBeam>(),
 		);
 	}
 
@@ -240,18 +203,10 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			(
-				Some(&ActiveBeam),
-				Some(
-					&Transform::from_xyz(1., 0., 0.)
-						.looking_to(Dir3::Z, Vec3::Y)
-						.with_scale(Vec3::new(1., 1., 5.))
-				)
-			),
-			(
-				app.world().entity(beam).get::<ActiveBeam>(),
-				app.world().entity(beam).get::<Transform>(),
-			)
+			Some(&ActiveBeam {
+				length: Units::from(5.)
+			}),
+			app.world().entity(beam).get::<ActiveBeam>(),
 		);
 	}
 
@@ -288,18 +243,10 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			(
-				Some(&ActiveBeam),
-				Some(
-					&Transform::from_xyz(1., 0., 0.)
-						.looking_to(Dir3::Z, Vec3::Y)
-						.with_scale(Vec3::new(1., 1., f32::EPSILON))
-				)
-			),
-			(
-				app.world().entity(beam).get::<ActiveBeam>(),
-				app.world().entity(beam).get::<Transform>(),
-			)
+			Some(&ActiveBeam {
+				length: Units::EPSILON
+			}),
+			app.world().entity(beam).get::<ActiveBeam>(),
 		);
 	}
 }
