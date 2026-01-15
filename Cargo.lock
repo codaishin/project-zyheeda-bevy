@@ -6919,8 +6919,10 @@ name = "zyheeda_core"
 version = "0.1.0"
 dependencies = [
  "macros",
+ "mockall",
  "serde",
  "serde_json",
  "test-case",
+ "testing",
  "tracing",
 ]

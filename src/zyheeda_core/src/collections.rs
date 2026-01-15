@@ -1,3 +1,3 @@
-pub mod sorted_vec;
+pub mod sorted;
 
-pub use sorted_vec::SortedVec;
+pub use sorted::Sorted;
