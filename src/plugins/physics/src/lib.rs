@@ -69,10 +69,7 @@ use components::{
 	effects::{gravity::GravityEffect, health_damage::HealthDamageEffect},
 };
 use events::{InteractionEvent, Ray};
-use resources::{
-	track_interaction_duplicates::TrackInteractionDuplicates,
-	track_ray_interactions::TrackRayInteractions,
-};
+use resources::track_ray_interactions::TrackRayInteractions;
 use std::{collections::HashMap, marker::PhantomData, time::Duration};
 use systems::{
 	interactions::{
@@ -183,7 +180,6 @@ where
 			// Apply interactions
 			.add_event::<InteractionEvent>()
 			.add_event::<InteractionEvent<Ray>>()
-			.init_resource::<TrackInteractionDuplicates>()
 			.init_resource::<TrackRayInteractions>()
 			.add_systems(
 				Update,
