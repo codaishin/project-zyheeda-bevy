@@ -1,11 +1,14 @@
 use super::execute_ray_caster::RayCastResult;
-use crate::components::{
-	blockable::Blockable,
-	blocker_types::BlockerTypes,
-	interaction_target::ColliderOfInteractionTarget,
+use crate::{
+	components::{
+		blockable::Blockable,
+		blocker_types::BlockerTypes,
+		interaction_target::ColliderOfInteractionTarget,
+	},
+	traits::cast_ray::RayHit,
 };
 use bevy::prelude::*;
-use common::traits::handles_physics::{PhysicalObject, TimeOfImpact, colliders::Blocker};
+use common::traits::handles_physics::{PhysicalObject, colliders::Blocker};
 use std::collections::{HashMap, HashSet};
 
 pub(crate) fn apply_interruptable_ray_blocks(
@@ -24,15 +27,15 @@ pub(crate) fn apply_interruptable_ray_blocks(
 		};
 
 		let mut interrupt = None;
-		let no_or_first_interruption = |(hit, toi): &(Entity, TimeOfImpact)| {
+		let no_or_first_interruption = |RayHit { entity, toi }: &RayHit| {
 			if interrupt.is_some() {
 				return false;
 			}
 
 			let hit = colliders
-				.get(*hit)
+				.get(*entity)
 				.map(|ColliderOfInteractionTarget(target)| *target)
-				.unwrap_or(*hit);
+				.unwrap_or(*entity);
 			let hit = blockers.get(hit).ok();
 			if is_interrupted(blocked_by, hit) {
 				interrupt = Some(*toi);
@@ -75,6 +78,7 @@ mod tests {
 	use crate::events::RayCastInfo;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::toi;
+	use zyheeda_core::prelude::Sorted;
 
 	fn setup() -> App {
 		App::new()
@@ -100,7 +104,20 @@ mod tests {
 			interruptable,
 			RayCastResult {
 				info: RayCastInfo {
-					hits: vec![(close, toi!(1.)), (blocker, toi!(2.)), (far, toi!(3.))],
+					hits: Sorted::from([
+						RayHit {
+							entity: close,
+							toi: toi!(1.),
+						},
+						RayHit {
+							entity: blocker,
+							toi: toi!(2.),
+						},
+						RayHit {
+							entity: far,
+							toi: toi!(3.),
+						},
+					]),
 					max_toi: toi!(99.),
 					..default()
 				},
@@ -116,7 +133,16 @@ mod tests {
 				interruptable,
 				RayCastResult {
 					info: RayCastInfo {
-						hits: vec![(close, toi!(1.)), (blocker, toi!(2.))],
+						hits: Sorted::from([
+							RayHit {
+								entity: close,
+								toi: toi!(1.),
+							},
+							RayHit {
+								entity: blocker,
+								toi: toi!(2.),
+							},
+						]),
 						max_toi: toi!(2.),
 						..default()
 					},
@@ -152,7 +178,20 @@ mod tests {
 			interruptable,
 			RayCastResult {
 				info: RayCastInfo {
-					hits: vec![(close, toi!(1.)), (blocker, toi!(2.)), (far, toi!(3.))],
+					hits: Sorted::from([
+						RayHit {
+							entity: close,
+							toi: toi!(1.),
+						},
+						RayHit {
+							entity: blocker,
+							toi: toi!(2.),
+						},
+						RayHit {
+							entity: far,
+							toi: toi!(3.),
+						},
+					]),
 					max_toi: toi!(99.),
 					..default()
 				},
@@ -168,7 +207,16 @@ mod tests {
 				interruptable,
 				RayCastResult {
 					info: RayCastInfo {
-						hits: vec![(close, toi!(1.)), (blocker, toi!(2.))],
+						hits: Sorted::from([
+							RayHit {
+								entity: close,
+								toi: toi!(1.),
+							},
+							RayHit {
+								entity: blocker,
+								toi: toi!(2.),
+							},
+						]),
 						max_toi: toi!(2.),
 						..default()
 					},
@@ -199,7 +247,20 @@ mod tests {
 			interruptable,
 			RayCastResult {
 				info: RayCastInfo {
-					hits: vec![(close, toi!(1.)), (blocker, toi!(2.)), (far, toi!(3.))],
+					hits: Sorted::from([
+						RayHit {
+							entity: close,
+							toi: toi!(1.),
+						},
+						RayHit {
+							entity: blocker,
+							toi: toi!(2.),
+						},
+						RayHit {
+							entity: far,
+							toi: toi!(3.),
+						},
+					]),
 					max_toi: toi!(99.),
 					..default()
 				},
@@ -215,7 +276,20 @@ mod tests {
 				interruptable,
 				RayCastResult {
 					info: RayCastInfo {
-						hits: vec![(close, toi!(1.)), (blocker, toi!(2.)), (far, toi!(3.)),],
+						hits: Sorted::from([
+							RayHit {
+								entity: close,
+								toi: toi!(1.),
+							},
+							RayHit {
+								entity: blocker,
+								toi: toi!(2.),
+							},
+							RayHit {
+								entity: far,
+								toi: toi!(3.),
+							},
+						]),
 						max_toi: toi!(99.),
 						..default()
 					},
@@ -246,7 +320,20 @@ mod tests {
 			interruptable,
 			RayCastResult {
 				info: RayCastInfo {
-					hits: vec![(close, toi!(1.)), (blocker, toi!(2.)), (far, toi!(3.))],
+					hits: Sorted::from([
+						RayHit {
+							entity: close,
+							toi: toi!(1.),
+						},
+						RayHit {
+							entity: blocker,
+							toi: toi!(2.),
+						},
+						RayHit {
+							entity: far,
+							toi: toi!(3.),
+						},
+					]),
 					max_toi: toi!(99.),
 					..default()
 				},
@@ -262,7 +349,20 @@ mod tests {
 				interruptable,
 				RayCastResult {
 					info: RayCastInfo {
-						hits: vec![(close, toi!(1.)), (blocker, toi!(2.)), (far, toi!(3.)),],
+						hits: Sorted::from([
+							RayHit {
+								entity: close,
+								toi: toi!(1.),
+							},
+							RayHit {
+								entity: blocker,
+								toi: toi!(2.),
+							},
+							RayHit {
+								entity: far,
+								toi: toi!(3.),
+							},
+						]),
 						max_toi: toi!(99.),
 						..default()
 					},
@@ -292,7 +392,20 @@ mod tests {
 			interruptable,
 			RayCastResult {
 				info: RayCastInfo {
-					hits: vec![(close, toi!(1.)), (blocker, toi!(2.)), (far, toi!(3.))],
+					hits: Sorted::from([
+						RayHit {
+							entity: close,
+							toi: toi!(1.),
+						},
+						RayHit {
+							entity: blocker,
+							toi: toi!(2.),
+						},
+						RayHit {
+							entity: far,
+							toi: toi!(3.),
+						},
+					]),
 					max_toi: toi!(99.),
 					..default()
 				},
@@ -308,7 +421,20 @@ mod tests {
 				interruptable,
 				RayCastResult {
 					info: RayCastInfo {
-						hits: vec![(close, toi!(1.)), (blocker, toi!(2.)), (far, toi!(3.)),],
+						hits: Sorted::from([
+							RayHit {
+								entity: close,
+								toi: toi!(1.),
+							},
+							RayHit {
+								entity: blocker,
+								toi: toi!(2.),
+							},
+							RayHit {
+								entity: far,
+								toi: toi!(3.),
+							},
+						]),
 						max_toi: toi!(99.),
 						..default()
 					},

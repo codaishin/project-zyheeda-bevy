@@ -2,6 +2,7 @@ use super::execute_ray_caster::RayCastResult;
 use crate::{
 	components::interaction_target::ColliderOfInteractionTarget,
 	events::{Collision, InteractionEvent, Ray},
+	traits::cast_ray::RayHit,
 };
 use bevy::prelude::*;
 use std::collections::HashMap;
@@ -18,8 +19,8 @@ pub(crate) fn map_ray_cast_result_to_interaction_events(
 
 		let target_entity = get_target(entity, &colliders);
 		let event = InteractionEvent::of(target_entity);
-		for (hit, ..) in &info.hits {
-			let target_hit = get_target(*hit, &colliders);
+		for RayHit { entity, .. } in info.hits {
+			let target_hit = get_target(entity, &colliders);
 			let event = event.collision(Collision::Started(target_hit));
 			collisions.push(event);
 		}
@@ -42,7 +43,8 @@ mod tests {
 	use super::*;
 	use crate::events::RayCastInfo;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{toi, traits::handles_physics::TimeOfImpact};
+	use common::toi;
+	use zyheeda_core::prelude::Sorted;
 
 	fn setup() -> App {
 		App::new()
@@ -56,10 +58,16 @@ mod tests {
 			Entity::from_raw(5),
 			RayCastResult {
 				info: RayCastInfo {
-					hits: vec![
-						(Entity::from_raw(42), toi!(42.)),
-						(Entity::from_raw(11), toi!(11.)),
-					],
+					hits: Sorted::from([
+						RayHit {
+							entity: Entity::from_raw(42),
+							toi: toi!(42.),
+						},
+						RayHit {
+							entity: Entity::from_raw(11),
+							toi: toi!(11.),
+						},
+					]),
 					max_toi: toi!(100.),
 					ray: Ray3d::new(
 						Vec3::new(1., 2., 3.),
@@ -84,8 +92,8 @@ mod tests {
 					toi!(100.)
 				),
 				vec![
-					interaction.collision(Collision::Started(Entity::from_raw(42))),
 					interaction.collision(Collision::Started(Entity::from_raw(11))),
+					interaction.collision(Collision::Started(Entity::from_raw(42))),
 				]
 			)],
 			events
@@ -112,7 +120,16 @@ mod tests {
 			Entity::from_raw(5),
 			RayCastResult {
 				info: RayCastInfo {
-					hits: vec![(collider_a, toi!(42.)), (collider_b, toi!(11.))],
+					hits: Sorted::from([
+						RayHit {
+							entity: collider_a,
+							toi: toi!(42.),
+						},
+						RayHit {
+							entity: collider_b,
+							toi: toi!(11.),
+						},
+					]),
 					max_toi: toi!(100.),
 					ray: Ray3d::new(
 						Vec3::new(1., 2., 3.),
@@ -137,8 +154,8 @@ mod tests {
 					toi!(100.)
 				),
 				vec![
-					interaction.collision(Collision::Started(target_a)),
 					interaction.collision(Collision::Started(target_b)),
+					interaction.collision(Collision::Started(target_a)),
 				]
 			)],
 			events

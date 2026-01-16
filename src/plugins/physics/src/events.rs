@@ -1,4 +1,4 @@
-use crate::traits::FromCollisionEvent;
+use crate::traits::{FromCollisionEvent, cast_ray::RayHit};
 use bevy::{
 	ecs::{entity::Entity, event::Event},
 	math::{Dir3, Ray3d, Vec3},
@@ -6,6 +6,7 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::CollisionEvent;
 use common::traits::handles_physics::TimeOfImpact;
+use zyheeda_core::prelude::Sorted;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Ray(pub Ray3d, pub TimeOfImpact);
@@ -51,7 +52,7 @@ impl FromCollisionEvent for InteractionEvent {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct RayCastInfo {
-	pub hits: Vec<(Entity, TimeOfImpact)>,
+	pub hits: Sorted<RayHit>,
 	pub ray: Ray3d,
 	pub max_toi: TimeOfImpact,
 }

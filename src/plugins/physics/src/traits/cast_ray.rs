@@ -7,6 +7,7 @@ use common::{
 	errors::{ErrorData, Level},
 	traits::handles_physics::{IsNaN, TimeOfImpact},
 };
+use zyheeda_core::prelude::Sorted;
 
 pub trait GetContinuousSortedRayCaster<TRayData> {
 	type TError;
@@ -25,7 +26,23 @@ pub trait CastRayContinuously<TRayData> {
 	);
 }
 
-pub type SortedByTimeOfImpactAscending = Result<Vec<(Entity, TimeOfImpact)>, InvalidIntersections>;
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub(crate) struct RayHit {
+	pub(crate) entity: Entity,
+	pub(crate) toi: TimeOfImpact,
+}
+
+impl PartialOrd for RayHit {
+	fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+		Some(self.cmp(other))
+	}
+}
+
+impl Ord for RayHit {
+	fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+		self.toi.cmp(&other.toi)
+	}
+}
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct InvalidIntersections(pub Vec<Vec3>);
@@ -45,20 +62,26 @@ impl ErrorData for InvalidIntersections {
 }
 
 pub trait CastRayContinuouslySorted<TRayData> {
-	fn cast_ray_continuously_sorted(&self, ray: &TRayData) -> SortedByTimeOfImpactAscending;
+	fn cast_ray_continuously_sorted(
+		&self,
+		ray: &TRayData,
+	) -> Result<Sorted<RayHit>, InvalidIntersections>;
 }
 
 impl<T, TRayData> CastRayContinuouslySorted<TRayData> for T
 where
 	T: CastRayContinuously<TRayData>,
 {
-	fn cast_ray_continuously_sorted(&self, ray: &TRayData) -> SortedByTimeOfImpactAscending {
-		let mut results = vec![];
+	fn cast_ray_continuously_sorted(
+		&self,
+		ray: &TRayData,
+	) -> Result<Sorted<RayHit>, InvalidIntersections> {
+		let mut results = Sorted::default();
 		let mut invalid_intersections = vec![];
 
 		self.cast_ray_continuously(ray, |entity, intersection| {
 			match TimeOfImpact::try_from(intersection.time_of_impact) {
-				Ok(time_of_impact) => results.push((entity, time_of_impact)),
+				Ok(toi) => results.push(RayHit { entity, toi }),
 				Err(IsNaN) => invalid_intersections.push(intersection.point),
 			};
 
@@ -68,8 +91,6 @@ where
 		if !invalid_intersections.is_empty() {
 			return Err(InvalidIntersections(invalid_intersections));
 		}
-
-		results.sort_by_key(|(.., toi)| *toi);
 
 		Ok(results)
 	}
@@ -96,7 +117,7 @@ mod tests {
 	}
 
 	#[test]
-	fn sort_hits_ascending() {
+	fn sort_hits_ascending() -> Result<(), InvalidIntersections> {
 		struct _CastRay;
 
 		impl CastRayContinuously<_Ray> for _CastRay {
@@ -113,16 +134,26 @@ mod tests {
 
 		let mock = _CastRay;
 
-		let hits = mock.cast_ray_continuously_sorted(&_Ray);
+		let hits = mock.cast_ray_continuously_sorted(&_Ray)?;
 
 		assert_eq!(
-			Ok(vec![
-				(Entity::from_raw(3), toi!(3.)),
-				(Entity::from_raw(2), toi!(20.)),
-				(Entity::from_raw(1), toi!(f32::INFINITY))
-			]),
-			hits
-		)
+			&[
+				RayHit {
+					entity: Entity::from_raw(3),
+					toi: toi!(3.)
+				},
+				RayHit {
+					entity: Entity::from_raw(2),
+					toi: toi!(20.)
+				},
+				RayHit {
+					entity: Entity::from_raw(1),
+					toi: toi!(f32::INFINITY)
+				},
+			],
+			&*hits
+		);
+		Ok(())
 	}
 
 	#[test]
