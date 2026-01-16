@@ -3,6 +3,7 @@ pub mod physical_bodies;
 use crate::{
 	attributes::{effect_target::EffectTarget, health::Health},
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
+	toi,
 	tools::{Done, Units, speed::Speed},
 	traits::{
 		accessors::get::{GetProperty, Property},
@@ -173,6 +174,8 @@ impl RaycastResult for Ground {
 pub struct TimeOfImpact(f32);
 
 impl TimeOfImpact {
+	pub const ZERO: Self = toi!(0.);
+
 	pub const fn try_from_f32(toi: f32) -> Result<Self, IsNaN> {
 		if toi.is_nan() {
 			return Err(IsNaN);

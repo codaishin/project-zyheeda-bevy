@@ -1,5 +1,6 @@
 pub(crate) mod active_beam;
 pub(crate) mod apply_pull;
+pub(crate) mod blockable;
 pub(crate) mod body;
 pub(crate) mod fix_points;
 pub(crate) mod ground_target;

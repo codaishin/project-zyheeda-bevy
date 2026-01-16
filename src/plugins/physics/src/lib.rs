@@ -30,7 +30,7 @@ use crate::{
 		when_traveled::DestroyAfterDistanceTraveled,
 		world_camera::WorldCamera,
 	},
-	events::RayEvent,
+	events::{BeamInteraction, RayEvent},
 	observers::{skill_prefab::SkillPrefab, update_blockers::UpdateBlockersObserver},
 	physics_hooks::check_hollow_colliders::CheckHollowColliders,
 	resources::ongoing_interactions::OngoingInteractions,
@@ -182,6 +182,7 @@ where
 			)
 			// Apply interactions
 			.add_event::<RayEvent>()
+			.add_event::<BeamInteraction>()
 			.init_resource::<OngoingInteractions>()
 			.add_systems(
 				Update,
@@ -201,6 +202,7 @@ where
 					// Physical effects
 					(
 						OngoingInteractions::clear,
+						Blockable::beam_interactions.pipe(OnError::log),
 						ActiveBeam::execute,
 						ActiveBeam::update_transform,
 						execute_ray_caster

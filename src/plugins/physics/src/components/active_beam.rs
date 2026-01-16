@@ -6,3 +6,11 @@ use common::tools::Units;
 pub(crate) struct ActiveBeam {
 	pub(crate) length: Units,
 }
+
+impl Default for ActiveBeam {
+	fn default() -> Self {
+		Self {
+			length: Units::EPSILON,
+		}
+	}
+}

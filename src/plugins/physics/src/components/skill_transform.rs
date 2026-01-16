@@ -1,6 +1,6 @@
 use bevy::{ecs::entity::EntityHashSet, prelude::*};
 
-#[derive(Component, Debug, PartialEq)]
+#[derive(Component, Debug, PartialEq, Default)]
 #[relationship_target(relationship = SkillTransformOf)]
 pub(crate) struct SkillTransforms(EntityHashSet);
 
