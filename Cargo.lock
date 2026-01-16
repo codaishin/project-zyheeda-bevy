@@ -4280,6 +4280,7 @@ dependencies = [
  "test-case",
  "testing",
  "tracing",
+ "zyheeda_core",
 ]
 
 [[package]]

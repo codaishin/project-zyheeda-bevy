@@ -208,10 +208,11 @@ impl Deref for TimeOfImpact {
 #[macro_export]
 macro_rules! toi {
 	($toi:expr) => {{
-		const TOI: TimeOfImpact = match TimeOfImpact::try_from_f32($toi) {
-			Ok(toi) => toi,
-			Err(IsNaN) => panic!("invalid time of impact"),
-		};
+		const TOI: $crate::traits::handles_physics::TimeOfImpact =
+			match $crate::traits::handles_physics::TimeOfImpact::try_from_f32($toi) {
+				Ok(toi) => toi,
+				Err(IsNaN) => panic!("invalid time of impact"),
+			};
 		TOI
 	}};
 }

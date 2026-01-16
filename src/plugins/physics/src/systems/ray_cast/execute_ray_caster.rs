@@ -72,13 +72,14 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{events::RayCastInfo, traits::cast_ray::SortedByTimeOfImpactAscending};
+	use crate::{events::RayCastInfo, traits::cast_ray::RayHit};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use bevy_rapier3d::math::Real;
-	use common::{toi, traits::handles_physics::TimeOfImpact};
+	use common::toi;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use testing::{NestedMocks, SingleThreadedApp};
+	use zyheeda_core::prelude::Sorted;
 
 	#[derive(NestedMocks)]
 	struct _GetRayCaster {
@@ -110,7 +111,7 @@ mod tests {
 		fn cast_ray_continuously_sorted(
 			&self,
 			ray: &RayCasterArgs,
-		) -> SortedByTimeOfImpactAscending {
+		) -> Result<Sorted<RayHit>, InvalidIntersections> {
 			self.mock.cast_ray_continuously_sorted(ray)
 		}
 	}
@@ -135,7 +136,7 @@ mod tests {
 								solid: true,
 								filter: default(),
 							}))
-							.return_const(Ok(vec![]));
+							.return_const(Ok(Sorted::default()));
 					}))
 				});
 		});
@@ -164,10 +165,16 @@ mod tests {
 				.returning(|| {
 					Ok(_RayCaster::new().with_mock(|mock| {
 						mock.expect_cast_ray_continuously_sorted()
-							.return_const(Ok(vec![
-								(Entity::from_raw(42), toi!(42.)),
-								(Entity::from_raw(420), toi!(420.)),
-							]));
+							.return_const(Ok(Sorted::from([
+								RayHit {
+									entity: Entity::from_raw(42),
+									toi: toi!(42.),
+								},
+								RayHit {
+									entity: Entity::from_raw(420),
+									toi: toi!(420.),
+								},
+							])));
 					}))
 				});
 		});
@@ -192,10 +199,16 @@ mod tests {
 				ray_caster,
 				RayCastResult {
 					info: RayCastInfo {
-						hits: vec![
-							(Entity::from_raw(42), toi!(42.)),
-							(Entity::from_raw(420), toi!(420.)),
-						],
+						hits: Sorted::from([
+							RayHit {
+								entity: Entity::from_raw(42),
+								toi: toi!(42.),
+							},
+							RayHit {
+								entity: Entity::from_raw(420),
+								toi: toi!(420.),
+							},
+						]),
 						ray: Ray3d {
 							origin: Vec3::ONE,
 							direction: Dir3::Y
@@ -250,7 +263,7 @@ mod tests {
 					Ok(_RayCaster::new().with_mock(|mock| {
 						mock.expect_cast_ray_continuously_sorted()
 							.times(1)
-							.return_const(Ok(vec![]));
+							.return_const(Ok(Sorted::default()));
 					}))
 				});
 		});
@@ -261,7 +274,7 @@ mod tests {
 					Ok(_RayCaster::new().with_mock(|mock| {
 						mock.expect_cast_ray_continuously_sorted()
 							.times(0)
-							.return_const(Ok(vec![]));
+							.return_const(Ok(Sorted::default()));
 					}))
 				});
 		});
@@ -293,7 +306,7 @@ mod tests {
 				.returning(|| {
 					Ok(_RayCaster::new().with_mock(|mock| {
 						mock.expect_cast_ray_continuously_sorted()
-							.return_const(Ok(vec![]));
+							.return_const(Ok(Sorted::default()));
 					}))
 				});
 		});

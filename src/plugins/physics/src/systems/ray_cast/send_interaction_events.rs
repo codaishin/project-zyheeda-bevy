@@ -28,7 +28,7 @@ mod tests {
 	use super::*;
 	use crate::events::Collision;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{toi, traits::handles_physics::TimeOfImpact};
+	use common::toi;
 	use macros::NestedMocks;
 	use mockall::{Sequence, mock, predicate::eq};
 	use testing::{NestedMocks, SingleThreadedApp, get_current_update_events};
