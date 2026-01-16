@@ -31,8 +31,12 @@ use crate::{
 	},
 	observers::{skill_prefab::SkillPrefab, update_blockers::UpdateBlockersObserver},
 	physics_hooks::check_hollow_colliders::CheckHollowColliders,
-	system_params::skill_spawner::SkillSpawnerMut,
-	systems::{apply_pull::ApplyPull, insert_affected::InsertAffected},
+	system_params::{interaction_sender::InteractionSender, skill_spawner::SkillSpawnerMut},
+	systems::{
+		apply_pull::ApplyPull,
+		insert_affected::InsertAffected,
+		interactions::send_collisions_as_interactions::SendCollisionEventInteractions,
+	},
 	traits::ray_cast::RayCaster,
 };
 use bevy::prelude::*;
@@ -65,15 +69,11 @@ use components::{
 	effects::{gravity::GravityEffect, health_damage::HealthDamageEffect},
 };
 use events::{InteractionEvent, Ray};
-use resources::{
-	track_interaction_duplicates::TrackInteractionDuplicates,
-	track_ray_interactions::TrackRayInteractions,
-};
+use resources::track_ray_interactions::TrackRayInteractions;
 use std::{collections::HashMap, marker::PhantomData, time::Duration};
 use systems::{
 	interactions::{
 		apply_fragile_blocks::apply_fragile_blocks,
-		map_collision_events::map_collision_events_to,
 		update_interacting_entities::update_interacting_entities,
 	},
 	ray_cast::{
@@ -180,7 +180,6 @@ where
 			// Apply interactions
 			.add_event::<InteractionEvent>()
 			.add_event::<InteractionEvent<Ray>>()
-			.init_resource::<TrackInteractionDuplicates>()
 			.init_resource::<TrackRayInteractions>()
 			.add_systems(
 				Update,
@@ -206,7 +205,7 @@ where
 							.pipe(apply_interruptable_ray_blocks)
 							.pipe(map_ray_cast_result_to_interaction_events)
 							.pipe(send_interaction_events::<TrackRayInteractions>),
-						map_collision_events_to::<InteractionEvent, TrackInteractionDuplicates>,
+						InteractionSender::send_collision_event_interactions,
 						update_interacting_entities, // must be last to ensure `InteractionEvent`s and `InteractingEntities` are synched
 					)
 						.chain(),
