@@ -74,10 +74,7 @@ use events::{InteractionEvent, Ray};
 use resources::track_ray_interactions::TrackRayInteractions;
 use std::{collections::HashMap, marker::PhantomData, time::Duration};
 use systems::{
-	interactions::{
-		apply_fragile_blocks::apply_fragile_blocks,
-		update_interacting_entities::update_interacting_entities,
-	},
+	interactions::apply_fragile_blocks::apply_fragile_blocks,
 	ray_cast::{
 		apply_interruptable_blocks::apply_interruptable_ray_blocks,
 		execute_ray_caster::execute_ray_caster,
@@ -210,7 +207,6 @@ where
 							.pipe(map_ray_cast_result_to_interaction_events)
 							.pipe(send_interaction_events::<TrackRayInteractions>),
 						InteractionSender::send_collision_event_interactions,
-						update_interacting_entities, // must be last to ensure `InteractionEvent`s and `InteractingEntities` are synched
 					)
 						.chain(),
 				)

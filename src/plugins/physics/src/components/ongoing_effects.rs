@@ -5,17 +5,17 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
 #[derive(Component, SavableComponent, Serialize, Deserialize)]
-pub(crate) struct RunningInteractions<TActor, TTarget>
+pub(crate) struct OngoingEffects<TActor, TTarget>
 where
 	TActor: Component,
 	TTarget: Component,
 {
-	entities: HashSet<PersistentEntity>,
+	pub(crate) entities: HashSet<PersistentEntity>,
 	#[serde(skip)]
 	_p: PhantomData<(TActor, TTarget)>,
 }
 
-impl<TActor, TTarget> Clone for RunningInteractions<TActor, TTarget>
+impl<TActor, TTarget> Clone for OngoingEffects<TActor, TTarget>
 where
 	TActor: Component,
 	TTarget: Component,
@@ -28,24 +28,7 @@ where
 	}
 }
 
-impl<TActor, TTarget> RunningInteractions<TActor, TTarget>
-where
-	TActor: Component,
-	TTarget: Component,
-{
-	pub(crate) fn insert(&mut self, entity: PersistentEntity) -> bool {
-		self.entities.insert(entity)
-	}
-
-	pub(crate) fn retain<F>(&mut self, predicate: F)
-	where
-		F: FnMut(&PersistentEntity) -> bool,
-	{
-		self.entities.retain(predicate);
-	}
-}
-
-impl<TActor, TTarget> Default for RunningInteractions<TActor, TTarget>
+impl<TActor, TTarget> Default for OngoingEffects<TActor, TTarget>
 where
 	TActor: Component,
 	TTarget: Component,
@@ -58,7 +41,7 @@ where
 	}
 }
 
-impl<TActor, TTarget> Debug for RunningInteractions<TActor, TTarget>
+impl<TActor, TTarget> Debug for OngoingEffects<TActor, TTarget>
 where
 	TActor: Component,
 	TTarget: Component,
@@ -71,7 +54,7 @@ where
 	}
 }
 
-impl<TActor, TTarget> PartialEq for RunningInteractions<TActor, TTarget>
+impl<TActor, TTarget> PartialEq for OngoingEffects<TActor, TTarget>
 where
 	TActor: Component,
 	TTarget: Component,
@@ -83,7 +66,7 @@ where
 
 #[cfg(test)]
 impl<TActor, TTarget, const N: usize> From<[PersistentEntity; N]>
-	for RunningInteractions<TActor, TTarget>
+	for OngoingEffects<TActor, TTarget>
 where
 	TActor: Component,
 	TTarget: Component,
