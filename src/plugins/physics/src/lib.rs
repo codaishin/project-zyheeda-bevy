@@ -30,6 +30,7 @@ use crate::{
 		when_traveled::DestroyAfterDistanceTraveled,
 		world_camera::WorldCamera,
 	},
+	events::RayEvent,
 	observers::{skill_prefab::SkillPrefab, update_blockers::UpdateBlockersObserver},
 	physics_hooks::check_hollow_colliders::CheckHollowColliders,
 	resources::ongoing_interactions::OngoingInteractions,
@@ -40,7 +41,10 @@ use crate::{
 	systems::{
 		apply_pull::ApplyPull,
 		insert_affected::InsertAffected,
-		interactions::push_ongoing_collisions::PushOngoingCollisions,
+		interactions::{
+			push_beam_collisions::PushOngoingBeamCollisions,
+			push_ongoing_collisions::PushOngoingCollisions,
+		},
 	},
 	traits::ray_cast::RayCaster,
 };
@@ -73,16 +77,13 @@ use components::{
 	active_beam::ActiveBeam,
 	effects::{gravity::GravityEffect, health_damage::HealthDamageEffect},
 };
-use events::{InteractionEvent, Ray};
-use resources::track_ray_interactions::TrackRayInteractions;
 use std::{collections::HashMap, marker::PhantomData, time::Duration};
 use systems::{
 	interactions::apply_fragile_blocks::apply_fragile_blocks,
 	ray_cast::{
 		apply_interruptable_blocks::apply_interruptable_ray_blocks,
 		execute_ray_caster::execute_ray_caster,
-		map_ray_cast_results_to_interaction_event::map_ray_cast_result_to_interaction_events,
-		send_interaction_events::send_interaction_events,
+		map_ray_cast_results_to_interactions::map_ray_cast_results_to_interactions,
 	},
 };
 use traits::act_on::ActOn;
@@ -180,10 +181,8 @@ where
 				ForceAffected::insert_from::<DefaultAttributes>.in_set(PhysicsSystems),
 			)
 			// Apply interactions
-			.add_event::<InteractionEvent>()
-			.add_event::<InteractionEvent<Ray>>()
+			.add_event::<RayEvent>()
 			.init_resource::<OngoingInteractions>()
-			.init_resource::<TrackRayInteractions>()
 			.add_systems(
 				Update,
 				(
@@ -207,8 +206,8 @@ where
 						execute_ray_caster
 							.pipe(OnError::log_and_return(HashMap::default))
 							.pipe(apply_interruptable_ray_blocks)
-							.pipe(map_ray_cast_result_to_interaction_events)
-							.pipe(send_interaction_events::<TrackRayInteractions>),
+							.pipe(map_ray_cast_results_to_interactions)
+							.pipe(UpdateOngoingInteractions::push_ongoing_beam_collisions),
 						UpdateOngoingInteractions::push_ongoing_collisions,
 					)
 						.chain(),

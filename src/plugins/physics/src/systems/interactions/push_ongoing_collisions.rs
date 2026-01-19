@@ -38,11 +38,11 @@ mod tests {
 	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Resource, NestedMocks)]
-	struct _Sender {
-		mock: Mock_Sender,
+	struct _OngoingCollisions {
+		mock: Mock_OngoingCollisions,
 	}
 
-	impl Default for _Sender {
+	impl Default for _OngoingCollisions {
 		fn default() -> Self {
 			Self::new().with_mock(|mock| {
 				mock.expect_push_ongoing_interaction().return_const(());
@@ -50,14 +50,14 @@ mod tests {
 		}
 	}
 
-	impl PushOngoingInteraction for ResMut<'_, _Sender> {
+	impl PushOngoingInteraction for ResMut<'_, _OngoingCollisions> {
 		fn push_ongoing_interaction(&mut self, a: Entity, b: Entity) {
 			self.mock.push_ongoing_interaction(a, b);
 		}
 	}
 
 	#[automock]
-	impl PushOngoingInteraction for _Sender {
+	impl PushOngoingInteraction for _OngoingCollisions {
 		fn push_ongoing_interaction(&mut self, a: Entity, b: Entity) {
 			self.mock.push_ongoing_interaction(a, b);
 		}
@@ -71,12 +71,12 @@ mod tests {
 		app.add_event::<MassModifiedEvent>();
 		app.init_resource::<TimestepMode>();
 
-		app.init_resource::<_Sender>();
+		app.init_resource::<_OngoingCollisions>();
 		app.add_systems(
 			Update,
 			(
 				RapierPhysicsPlugin::<()>::get_systems(PhysicsSet::Writeback), // updates `InteractingEntities`
-				ResMut::<_Sender>::push_ongoing_collisions,
+				ResMut::<_OngoingCollisions>::push_ongoing_collisions,
 			)
 				.chain(),
 		);
@@ -96,7 +96,7 @@ mod tests {
 		));
 
 		app.world_mut()
-			.insert_resource(_Sender::new().with_mock(move |mock| {
+			.insert_resource(_OngoingCollisions::new().with_mock(move |mock| {
 				mock.expect_push_ongoing_interaction()
 					.with(eq(actor), eq(target))
 					.once()
@@ -118,7 +118,7 @@ mod tests {
 		));
 
 		app.world_mut()
-			.insert_resource(_Sender::new().with_mock(move |mock| {
+			.insert_resource(_OngoingCollisions::new().with_mock(move |mock| {
 				mock.expect_push_ongoing_interaction()
 					.with(eq(actor), eq(target))
 					.times(3)
@@ -142,7 +142,7 @@ mod tests {
 		));
 
 		app.world_mut()
-			.insert_resource(_Sender::new().with_mock(move |mock| {
+			.insert_resource(_OngoingCollisions::new().with_mock(move |mock| {
 				mock.expect_push_ongoing_interaction()
 					.with(eq(actor), eq(target))
 					.times(2)
