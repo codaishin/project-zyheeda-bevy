@@ -7,6 +7,7 @@ pub(crate) mod insert_affected;
 pub(crate) mod interactions;
 pub(crate) mod life;
 pub(crate) mod motion;
+pub(crate) mod ongoing_interactions;
 pub(crate) mod ray_cast;
 pub(crate) mod set_motion_forward;
 pub(crate) mod when_traveled;

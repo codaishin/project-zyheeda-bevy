@@ -32,6 +32,7 @@ use crate::{
 	},
 	observers::{skill_prefab::SkillPrefab, update_blockers::UpdateBlockersObserver},
 	physics_hooks::check_hollow_colliders::CheckHollowColliders,
+	resources::ongoing_interactions::OngoingInteractions,
 	system_params::{interaction_sender::InteractionSender, skill_spawner::SkillSpawnerMut},
 	systems::{
 		apply_pull::ApplyPull,
@@ -181,6 +182,7 @@ where
 			// Apply interactions
 			.add_event::<InteractionEvent>()
 			.add_event::<InteractionEvent<Ray>>()
+			.init_resource::<OngoingInteractions>()
 			.init_resource::<TrackRayInteractions>()
 			.add_systems(
 				Update,
@@ -199,6 +201,7 @@ where
 						.chain(),
 					// Physical effects
 					(
+						OngoingInteractions::clear,
 						ActiveBeam::execute,
 						ActiveBeam::update_transform,
 						execute_ray_caster
