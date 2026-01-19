@@ -32,7 +32,10 @@ pub(crate) trait ActOnSystem: Component<Mutability = Mutable> + Sized {
 		TTarget: Component<Mutability = Mutable>,
 	{
 		for (entity, persistent_entity, mut actor, mut ongoing_effects) in &mut actors {
-			let interaction_targets = ongoing_interactions.0.get(&entity).unwrap_or_else(empty);
+			let interaction_targets = ongoing_interactions
+				.targets
+				.get(&entity)
+				.unwrap_or_else(empty);
 
 			ongoing_effects.entities.retain(|persistent_target| {
 				match commands.get(persistent_target) {
@@ -131,10 +134,9 @@ mod tests {
 			.world_mut()
 			.spawn(OngoingEffects::<_Actor, _Target>::default())
 			.id();
-		app.insert_resource(OngoingInteractions(HashMap::from([(
-			entity,
-			HashSet::from([target]),
-		)])));
+		app.insert_resource(OngoingInteractions {
+			targets: HashMap::from([(entity, HashSet::from([target]))]),
+		});
 
 		app.world_mut()
 			.entity_mut(entity)
@@ -158,10 +160,9 @@ mod tests {
 			.world_mut()
 			.spawn(OngoingEffects::<_Actor, _Target>::default())
 			.id();
-		app.insert_resource(OngoingInteractions(HashMap::from([(
-			entity,
-			HashSet::from([target]),
-		)])));
+		app.insert_resource(OngoingInteractions {
+			targets: HashMap::from([(entity, HashSet::from([target]))]),
+		});
 		app.world_mut()
 			.entity_mut(entity)
 			.insert(_Actor::new().with_mock(|mock| {
@@ -189,10 +190,9 @@ mod tests {
 			.world_mut()
 			.spawn(OngoingEffects::<_Actor, _Target>::from([*TARGET]))
 			.id();
-		app.insert_resource(OngoingInteractions(HashMap::from([(
-			entity,
-			HashSet::from([target]),
-		)])));
+		app.insert_resource(OngoingInteractions {
+			targets: HashMap::from([(entity, HashSet::from([target]))]),
+		});
 		app.world_mut()
 			.entity_mut(entity)
 			.insert(_Actor::new().with_mock(|mock| {
@@ -231,11 +231,9 @@ mod tests {
 				))
 				.id();
 			app.world_mut().spawn(not_interacting);
-			app.world_mut()
-				.insert_resource(OngoingInteractions(HashMap::from([(
-					entity,
-					HashSet::from(interacting_entities),
-				)])));
+			app.world_mut().insert_resource(OngoingInteractions {
+				targets: HashMap::from([(entity, HashSet::from(interacting_entities))]),
+			});
 
 			app.world_mut()
 				.run_system_once_with(_Actor::act_on::<_Target>, Duration::from_millis(42))?;
@@ -298,11 +296,9 @@ mod tests {
 					}),
 				))
 				.id();
-			app.world_mut()
-				.insert_resource(OngoingInteractions(HashMap::from([(
-					entity,
-					HashSet::from(interacting_entities),
-				)])));
+			app.world_mut().insert_resource(OngoingInteractions {
+				targets: HashMap::from([(entity, HashSet::from(interacting_entities))]),
+			});
 
 			app.world_mut()
 				.run_system_once_with(_Actor::act_on::<_Target>, Duration::from_millis(42))?;

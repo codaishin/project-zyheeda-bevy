@@ -3,7 +3,7 @@ use bevy::prelude::*;
 
 impl OngoingInteractions {
 	pub(crate) fn clear(mut interactions: ResMut<Self>) {
-		interactions.0.clear();
+		interactions.targets.clear();
 	}
 }
 
@@ -24,10 +24,9 @@ mod tests {
 
 	#[test]
 	fn clear() {
-		let mut app = setup(OngoingInteractions(HashMap::from([(
-			Entity::from_raw(42),
-			HashSet::from([]),
-		)])));
+		let mut app = setup(OngoingInteractions {
+			targets: HashMap::from([(Entity::from_raw(42), HashSet::from([]))]),
+		});
 
 		app.update();
 

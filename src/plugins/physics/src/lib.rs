@@ -33,11 +33,14 @@ use crate::{
 	observers::{skill_prefab::SkillPrefab, update_blockers::UpdateBlockersObserver},
 	physics_hooks::check_hollow_colliders::CheckHollowColliders,
 	resources::ongoing_interactions::OngoingInteractions,
-	system_params::{interaction_sender::InteractionSender, skill_spawner::SkillSpawnerMut},
+	system_params::{
+		skill_spawner::SkillSpawnerMut,
+		update_ongoing_interactions::UpdateOngoingInteractions,
+	},
 	systems::{
 		apply_pull::ApplyPull,
 		insert_affected::InsertAffected,
-		interactions::send_collisions_as_interactions::SendCollisionEventInteractions,
+		interactions::push_ongoing_collisions::PushOngoingCollisions,
 	},
 	traits::ray_cast::RayCaster,
 };
@@ -206,7 +209,7 @@ where
 							.pipe(apply_interruptable_ray_blocks)
 							.pipe(map_ray_cast_result_to_interaction_events)
 							.pipe(send_interaction_events::<TrackRayInteractions>),
-						InteractionSender::send_collision_event_interactions,
+						UpdateOngoingInteractions::push_ongoing_collisions,
 					)
 						.chain(),
 				)
