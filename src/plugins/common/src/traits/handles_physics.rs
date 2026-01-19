@@ -1,4 +1,4 @@
-pub mod colliders;
+pub mod physical_bodies;
 
 use crate::{
 	attributes::{effect_target::EffectTarget, health::Health},
@@ -6,7 +6,7 @@ use crate::{
 	tools::{Done, Units, speed::Speed},
 	traits::{
 		accessors::get::{GetProperty, Property},
-		handles_physics::colliders::Blocker,
+		handles_physics::physical_bodies::Blocker,
 	},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};

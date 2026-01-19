@@ -1,6 +1,6 @@
 use crate::{
 	components::{
-		colliders::ColliderShape,
+		collider::ColliderShape,
 		effects::Effects,
 		skill::{BEAM_MODEL, Beam, HALF_FORWARD, SPHERE_MODEL, Skill},
 	},
@@ -11,7 +11,7 @@ use common::{
 	components::{asset_model::AssetModel, insert_asset::InsertAsset, model::Model},
 	tools::Units,
 	traits::{
-		handles_physics::colliders::Shape,
+		handles_physics::physical_bodies::Shape,
 		handles_skill_physics::{ProjectionOffset, ProjectionShape},
 	},
 };

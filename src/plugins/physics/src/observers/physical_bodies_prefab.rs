@@ -1,30 +1,31 @@
 use crate::components::{
 	blocker_types::BlockerTypes,
-	colliders::{ColliderDefinition, ColliderOf, ColliderShape, Colliders},
+	collider::{ColliderOf, ColliderShape, Colliders},
 	no_hover::NoMouseHover,
+	physical_body::PhysicalBody,
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
-	traits::{accessors::get::TryApplyOn, handles_physics::colliders::ColliderType},
+	traits::{accessors::get::TryApplyOn, handles_physics::physical_bodies::PhysicsType},
 	zyheeda_commands::ZyheedaCommands,
 };
 use std::sync::LazyLock;
 
-impl ColliderShape {
-	pub(crate) fn spawn_unique(
-		trigger: Trigger<OnInsert, ColliderDefinition>,
+impl PhysicalBody {
+	pub(crate) fn prefab(
+		trigger: Trigger<OnInsert, Self>,
 		mut commands: ZyheedaCommands,
-		definitions: Query<(&ColliderDefinition, &Colliders)>,
+		bodies: Query<(&Self, &Colliders)>,
 	) {
 		let entity = trigger.target();
-		let Ok((definition, colliders)) = definitions.get(entity) else {
+		let Ok((body, colliders)) = bodies.get(entity) else {
 			return;
 		};
 
 		despawn_current_collider_shapes(&mut commands, colliders);
-		insert_rigid_body(&mut commands, entity, definition);
-		apply_definition(&mut commands, entity, definition);
+		insert_rigid_body(&mut commands, entity, body);
+		apply_definition(&mut commands, entity, body);
 	}
 }
 
@@ -43,13 +44,13 @@ fn despawn_current_collider_shapes(commands: &mut ZyheedaCommands, colliders: &C
 fn insert_rigid_body(
 	commands: &mut ZyheedaCommands,
 	entity: Entity,
-	ColliderDefinition(definition): &ColliderDefinition,
+	PhysicalBody(body): &PhysicalBody,
 ) {
-	commands.try_apply_on(&entity, |mut e| match definition.collider_type {
-		ColliderType::Agent => {
+	commands.try_apply_on(&entity, |mut e| match body.physics_type {
+		PhysicsType::Agent => {
 			e.try_insert((*AGENT_LOCKED_AXES, AGENT_GRAVITY_SCALE, RigidBody::Dynamic));
 		}
-		ColliderType::Terrain => {
+		PhysicsType::Terrain => {
 			e.try_insert(RigidBody::Fixed);
 		}
 	});
@@ -58,7 +59,7 @@ fn insert_rigid_body(
 fn apply_definition(
 	commands: &mut ZyheedaCommands,
 	entity: Entity,
-	ColliderDefinition(definition): &ColliderDefinition,
+	PhysicalBody(definition): &PhysicalBody,
 ) {
 	commands.try_apply_on(&entity, |mut e| {
 		e.try_insert(BlockerTypes(definition.blocker_types.clone()));
@@ -71,7 +72,7 @@ fn apply_definition(
 		ColliderShape::from(definition.shape),
 	));
 
-	if definition.collider_type != ColliderType::Terrain {
+	if definition.physics_type != PhysicsType::Terrain {
 		return;
 	}
 
@@ -83,7 +84,7 @@ mod tests {
 	use super::*;
 	use common::{
 		tools::Units,
-		traits::handles_physics::colliders::{Blocker, Collider, Shape},
+		traits::handles_physics::physical_bodies::{Blocker, Body, Shape},
 	};
 	use std::f32::consts::PI;
 	use test_case::test_case;
@@ -92,7 +93,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_observer(ColliderShape::spawn_unique);
+		app.add_observer(PhysicalBody::prefab);
 
 		app
 	}
@@ -106,13 +107,13 @@ mod tests {
 
 		let entity = app
 			.world_mut()
-			.spawn(ColliderDefinition(Collider::from_shape(shape)))
+			.spawn(PhysicalBody(Body::from_shape(shape)))
 			.id();
 
 		let [child] = assert_count!(1, get_children!(app, entity));
 		assert_eq!(
 			Some(&ColliderShape::from(shape)),
-			child.get::<ColliderShape>()
+			child.get::<ColliderShape>(),
 		);
 	}
 
@@ -126,8 +127,8 @@ mod tests {
 
 		let entity = app
 			.world_mut()
-			.spawn(ColliderDefinition(
-				Collider::from_shape(shape).with_center_offset(offset),
+			.spawn(PhysicalBody(
+				Body::from_shape(shape).with_center_offset(offset),
 			))
 			.id();
 
@@ -148,8 +149,8 @@ mod tests {
 
 		let entity = app
 			.world_mut()
-			.spawn(ColliderDefinition(
-				Collider::from_shape(shape).with_rotation(rotation),
+			.spawn(PhysicalBody(
+				Body::from_shape(shape).with_rotation(rotation),
 			))
 			.id();
 
@@ -160,10 +161,10 @@ mod tests {
 		);
 	}
 
-	#[test_case(ColliderType::Terrain, RigidBody::Fixed, None, None; "terrain")]
-	#[test_case(ColliderType::Agent, RigidBody::Dynamic, Some(*AGENT_LOCKED_AXES), Some(AGENT_GRAVITY_SCALE); "agent")]
+	#[test_case(PhysicsType::Terrain, RigidBody::Fixed, None, None; "terrain")]
+	#[test_case(PhysicsType::Agent, RigidBody::Dynamic, Some(*AGENT_LOCKED_AXES), Some(AGENT_GRAVITY_SCALE); "agent")]
 	fn insert_additional_root_components(
-		collider_type: ColliderType,
+		physics_type: PhysicsType,
 		rigid_body: RigidBody,
 		locked_axes: Option<LockedAxes>,
 		gravity_scale: Option<GravityScale>,
@@ -174,9 +175,9 @@ mod tests {
 			radius: Units::from(42.),
 		};
 
-		let entity = app.world_mut().spawn(ColliderDefinition(
-			Collider::from_shape(shape)
-				.with_collider_type(collider_type)
+		let entity = app.world_mut().spawn(PhysicalBody(
+			Body::from_shape(shape)
+				.with_physics_type(physics_type)
 				.with_blocker_types(blocks),
 		));
 
@@ -196,10 +197,10 @@ mod tests {
 		);
 	}
 
-	#[test_case(ColliderType::Terrain, Some(NoMouseHover); "terrain")]
-	#[test_case(ColliderType::Agent, None; "agent")]
+	#[test_case(PhysicsType::Terrain, Some(NoMouseHover); "terrain")]
+	#[test_case(PhysicsType::Agent, None; "agent")]
 	fn insert_additional_collider_components(
-		collider_type: ColliderType,
+		collider_type: PhysicsType,
 		no_mouse_hover: Option<NoMouseHover>,
 	) {
 		let mut app = setup();
@@ -209,8 +210,8 @@ mod tests {
 
 		let entity = app
 			.world_mut()
-			.spawn(ColliderDefinition(
-				Collider::from_shape(shape).with_collider_type(collider_type),
+			.spawn(PhysicalBody(
+				Body::from_shape(shape).with_physics_type(collider_type),
 			))
 			.id();
 
@@ -227,10 +228,10 @@ mod tests {
 
 		let entity = app
 			.world_mut()
-			.spawn(ColliderDefinition(Collider::from_shape(Shape::Sphere {
+			.spawn(PhysicalBody(Body::from_shape(Shape::Sphere {
 				radius: Units::from(11.),
 			})))
-			.insert(ColliderDefinition(Collider::from(shape)))
+			.insert(PhysicalBody(Body::from(shape)))
 			.id();
 
 		let [child] = assert_count!(1, get_children!(app, entity));

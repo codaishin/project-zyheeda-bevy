@@ -8,7 +8,7 @@ use crate::{
 	traits::cast_ray::RayHit,
 };
 use bevy::prelude::*;
-use common::traits::handles_physics::{PhysicalObject, colliders::Blocker};
+use common::traits::handles_physics::{PhysicalObject, physical_bodies::Blocker};
 use std::collections::{HashMap, HashSet};
 
 pub(crate) fn apply_interruptable_ray_blocks(

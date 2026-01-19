@@ -3,7 +3,13 @@ use common::{
 	errors::Unreachable,
 	tools::Units,
 	traits::{
-		handles_physics::colliders::{Blocker, Collider, ColliderType, HandlesColliders, Shape},
+		handles_physics::physical_bodies::{
+			Blocker,
+			Body,
+			HandlesPhysicalBodies,
+			PhysicsType,
+			Shape,
+		},
 		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
@@ -15,7 +21,7 @@ pub(crate) struct WallCell;
 
 impl<TPhysics> Prefab<TPhysics> for WallCell
 where
-	TPhysics: HandlesColliders,
+	TPhysics: HandlesPhysicalBodies,
 {
 	type TError = Unreachable;
 
@@ -29,11 +35,11 @@ where
 			half_y: Units::from(0.5),
 			half_z: Units::from(0.5),
 		};
-		let collider = Collider::from_shape(shape)
-			.with_collider_type(ColliderType::Terrain)
+		let body = Body::from_shape(shape)
+			.with_physics_type(PhysicsType::Terrain)
 			.with_blocker_types([Blocker::Physical]);
 
-		entity.try_insert_if_new(TPhysics::TCollider::from(collider));
+		entity.try_insert_if_new(TPhysics::TBody::from(body));
 
 		Ok(())
 	}

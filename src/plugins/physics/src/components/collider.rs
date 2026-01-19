@@ -5,7 +5,7 @@ use common::{
 	errors::Unreachable,
 	tools::Units,
 	traits::{
-		handles_physics::colliders::{Collider, Shape},
+		handles_physics::physical_bodies::Shape,
 		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
@@ -18,16 +18,6 @@ pub(crate) struct Colliders(EntityHashSet);
 #[derive(Component)]
 #[relationship(relationship_target= Colliders)]
 pub(crate) struct ColliderOf(pub(crate) Entity);
-
-#[derive(Component, Debug, PartialEq)]
-#[require(Colliders)]
-pub struct ColliderDefinition(pub(crate) Collider);
-
-impl From<Collider> for ColliderDefinition {
-	fn from(collider: Collider) -> Self {
-		Self(collider)
-	}
-}
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
 #[require(Transform)]

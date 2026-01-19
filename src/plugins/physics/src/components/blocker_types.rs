@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::traits::handles_physics::colliders::Blocker;
+use common::traits::handles_physics::physical_bodies::Blocker;
 use std::collections::HashSet;
 
 #[derive(Component, Debug, PartialEq, Default)]

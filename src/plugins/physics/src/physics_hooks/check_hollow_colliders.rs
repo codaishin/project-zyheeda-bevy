@@ -1,4 +1,4 @@
-use crate::components::{colliders::ColliderShape, hollow::Hollow};
+use crate::components::{collider::ColliderShape, hollow::Hollow};
 use bevy::{ecs::system::SystemParam, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::tools::Units;

@@ -16,7 +16,7 @@ use crate::{
 	components::{
 		affected::{force_affected::ForceAffected, gravity_affected::GravityAffected, life::Life},
 		blockable::Blockable,
-		colliders::{ColliderDefinition, ColliderShape, Colliders},
+		collider::ColliderShape,
 		default_attributes::DefaultAttributes,
 		effects::{Effects, force::ForceEffect},
 		fix_points::{Always, Anchor, Once, fix_point::FixPointSpawner},
@@ -24,6 +24,7 @@ use crate::{
 		interaction_target::{ColliderOfInteractionTarget, InteractionTarget},
 		motion::Motion,
 		no_hover::NoMouseHover,
+		physical_body::PhysicalBody,
 		set_motion_forward::SetMotionForward,
 		skill::{ContactInteractionTarget, ProjectionInteractionTarget, Skill},
 		when_traveled::DestroyAfterDistanceTraveled,
@@ -51,7 +52,7 @@ use common::{
 			HandlesPhysicalEffectTargets,
 			HandlesPhysicalObjects,
 			HandlesRaycast,
-			colliders::HandlesColliders,
+			physical_bodies::HandlesPhysicalBodies,
 		},
 		handles_saving::HandlesSaving,
 		handles_skill_physics::{
@@ -143,10 +144,10 @@ where
 			// Skills
 			.register_required_components::<Skill, TSaveGame::TSaveEntityMarker>()
 			.add_observer(Skill::prefab)
-			// Colliders
+			// Colliders/Bodies
 			.add_prefab_observer::<ColliderShape, ()>()
 			.add_observer(ColliderOfInteractionTarget::link)
-			.add_observer(ColliderShape::spawn_unique)
+			.add_observer(PhysicalBody::prefab)
 			// All effects
 			.add_observer(Effects::insert)
 			// Deal health damage
@@ -184,8 +185,8 @@ where
 			.add_systems(
 				Update,
 				(
-					// Colliders
-					Colliders::dispatch_blocker_types,
+					// Bodies
+					PhysicalBody::dispatch_blocker_types,
 					// Skill spawning/lifetime
 					(
 						FixPointSpawner::insert_fix_points,
@@ -268,8 +269,8 @@ impl<TDependencies> HandlesMotion for PhysicsPlugin<TDependencies> {
 	type TMotion = Motion;
 }
 
-impl<TDependencies> HandlesColliders for PhysicsPlugin<TDependencies> {
-	type TCollider = ColliderDefinition;
+impl<TDependencies> HandlesPhysicalBodies for PhysicsPlugin<TDependencies> {
+	type TBody = PhysicalBody;
 }
 
 impl<TDependencies> HandlesPhysicalSkillSpawnPoints for PhysicsPlugin<TDependencies> {

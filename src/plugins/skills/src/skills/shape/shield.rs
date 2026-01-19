@@ -7,7 +7,7 @@ use common::{
 	components::asset_model::AssetModel,
 	tools::Units,
 	traits::{
-		handles_physics::colliders::{Blocker, Shape},
+		handles_physics::physical_bodies::{Blocker, Shape},
 		handles_skill_physics::{
 			Contact,
 			ContactShape,
