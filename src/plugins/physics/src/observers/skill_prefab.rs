@@ -60,8 +60,6 @@ pub(crate) trait SkillPrefab:
 					SkillTransformOf(root),
 					cont_collider.transform,
 					cont_collider.shape,
-					ActiveEvents::COLLISION_EVENTS,
-					ActiveCollisionTypes::default(),
 					Sensor,
 				),
 				(
@@ -78,8 +76,6 @@ pub(crate) trait SkillPrefab:
 							SkillTransformOf(root),
 							proj_collider.transform,
 							proj_collider.shape,
-							ActiveEvents::COLLISION_EVENTS,
-							ActiveCollisionTypes::default(),
 							Sensor,
 						),
 					]
@@ -410,24 +406,13 @@ mod tests {
 		}
 
 		#[test]
-		fn spawn_collider_rapier_components() {
+		fn spawn_collider_rapier_sensor() {
 			let mut app = setup();
 
 			let skill = app.world_mut().spawn(_Skill::default()).id();
 
 			let [_, collider, _] = assert_count!(3, get_children!(app, skill));
-			assert_eq!(
-				(
-					Some(&ActiveEvents::COLLISION_EVENTS),
-					Some(&ActiveCollisionTypes::default()),
-					Some(&Sensor),
-				),
-				(
-					collider.get::<ActiveEvents>(),
-					collider.get::<ActiveCollisionTypes>(),
-					collider.get::<Sensor>(),
-				),
-			);
+			assert_eq!(Some(&Sensor), collider.get::<Sensor>());
 		}
 
 		#[test]
@@ -540,25 +525,14 @@ mod tests {
 		}
 
 		#[test]
-		fn spawn_collider_rapier_components() {
+		fn spawn_collider_rapier_sensor() {
 			let mut app = setup();
 
 			let skill = app.world_mut().spawn(_Skill::default()).id();
 
 			let [projection] = assert_count!(1, get_projection!(app, skill).map(|e| e.id()));
 			let [.., collider] = assert_count!(2, get_children!(app, projection));
-			assert_eq!(
-				(
-					Some(&ActiveEvents::COLLISION_EVENTS),
-					Some(&ActiveCollisionTypes::default()),
-					Some(&Sensor),
-				),
-				(
-					collider.get::<ActiveEvents>(),
-					collider.get::<ActiveCollisionTypes>(),
-					collider.get::<Sensor>(),
-				),
-			);
+			assert_eq!(Some(&Sensor), collider.get::<Sensor>());
 		}
 
 		#[test]
