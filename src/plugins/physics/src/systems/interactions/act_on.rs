@@ -1,19 +1,21 @@
 use crate::{
-	components::{
-		interacting_entities::InteractingEntities,
-		running_interactions::RunningInteractions,
-	},
+	components::ongoing_effects::OngoingEffects,
+	resources::ongoing_interactions::OngoingInteractions,
 	traits::act_on::ActOn,
 };
 use bevy::{ecs::component::Mutable, prelude::*};
-use common::components::persistent_entity::PersistentEntity;
-use std::time::Duration;
+use common::{
+	components::persistent_entity::PersistentEntity,
+	traits::accessors::get::Get,
+	zyheeda_commands::ZyheedaCommands,
+};
+use std::{collections::HashSet, sync::LazyLock, time::Duration};
 
 type Components<'a, TActor, TTarget> = (
+	Entity,
 	&'a PersistentEntity,
 	&'a mut TActor,
-	&'a mut RunningInteractions<TActor, TTarget>,
-	&'a InteractingEntities,
+	&'a mut OngoingEffects<TActor, TTarget>,
 );
 
 impl<T> ActOnSystem for T where T: Component<Mutability = Mutable> + Sized {}
@@ -21,35 +23,58 @@ impl<T> ActOnSystem for T where T: Component<Mutability = Mutable> + Sized {}
 pub(crate) trait ActOnSystem: Component<Mutability = Mutable> + Sized {
 	fn act_on<TTarget>(
 		In(delta): In<Duration>,
+		commands: ZyheedaCommands,
+		ongoing_interactions: Res<OngoingInteractions>,
 		mut actors: Query<Components<Self, TTarget>>,
 		mut targets: Query<(&PersistentEntity, &mut TTarget)>,
 	) where
 		Self: ActOn<TTarget>,
 		TTarget: Component<Mutability = Mutable>,
 	{
-		for (entity, mut actor, mut interactions, interacting_entities) in &mut actors {
-			for target in interacting_entities.iter() {
-				let Ok((target_entity, mut target)) = targets.get_mut(*target) else {
+		for (entity, persistent_entity, mut actor, mut ongoing_effects) in &mut actors {
+			let interaction_targets = ongoing_interactions
+				.targets
+				.get(&entity)
+				.unwrap_or_else(empty);
+
+			ongoing_effects.entities.retain(|persistent_target| {
+				match commands.get(persistent_target) {
+					Some(target) => interaction_targets.contains(&target),
+					None => false,
+				}
+			});
+
+			for target in interaction_targets {
+				let Ok((persistent_target_entity, mut target)) = targets.get_mut(*target) else {
 					continue;
 				};
 
-				match interactions.insert(*target_entity) {
-					true => actor.on_begin_interaction(*entity, &mut target),
-					false => actor.on_repeated_interaction(*entity, &mut target, delta),
+				match ongoing_effects.entities.insert(*persistent_target_entity) {
+					true => actor.on_begin_interaction(*persistent_entity, &mut target),
+					false => actor.on_repeated_interaction(*persistent_entity, &mut target, delta),
 				}
 			}
 		}
 	}
 }
 
+fn empty<'a>() -> &'a HashSet<Entity> {
+	static EMPTY: LazyLock<HashSet<Entity>> = LazyLock::new(HashSet::default);
+	&EMPTY
+}
+
 #[cfg(test)]
 mod tests {
-	use std::sync::LazyLock;
+	use std::{
+		collections::{HashMap, HashSet},
+		sync::LazyLock,
+	};
 
 	use super::*;
 	use crate::traits::update_blockers::UpdateBlockers;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
+		CommonPlugin,
 		components::persistent_entity::PersistentEntity,
 		traits::register_persistent_entities::RegisterPersistentEntities,
 	};
@@ -94,6 +119,8 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
+		app.add_plugins(CommonPlugin);
+		app.init_resource::<OngoingInteractions>();
 		app.register_persistent_entities();
 
 		app
@@ -105,11 +132,12 @@ mod tests {
 		let target = app.world_mut().spawn(_Target).id();
 		let entity = app
 			.world_mut()
-			.spawn((
-				RunningInteractions::<_Actor, _Target>::default(),
-				InteractingEntities::new([target]),
-			))
+			.spawn(OngoingEffects::<_Actor, _Target>::default())
 			.id();
+		app.insert_resource(OngoingInteractions {
+			targets: HashMap::from([(entity, HashSet::from([target]))]),
+		});
+
 		app.world_mut()
 			.entity_mut(entity)
 			.insert(_Actor::new().with_mock(|mock| {
@@ -130,11 +158,11 @@ mod tests {
 		let target = app.world_mut().spawn(_Target).id();
 		let entity = app
 			.world_mut()
-			.spawn((
-				RunningInteractions::<_Actor, _Target>::default(),
-				InteractingEntities::new([target]),
-			))
+			.spawn(OngoingEffects::<_Actor, _Target>::default())
 			.id();
+		app.insert_resource(OngoingInteractions {
+			targets: HashMap::from([(entity, HashSet::from([target]))]),
+		});
 		app.world_mut()
 			.entity_mut(entity)
 			.insert(_Actor::new().with_mock(|mock| {
@@ -146,10 +174,10 @@ mod tests {
 			.run_system_once_with(_Actor::act_on::<_Target>, Duration::from_millis(42))?;
 
 		assert_eq!(
-			Some(&RunningInteractions::<_Actor, _Target>::from([*TARGET])),
+			Some(&OngoingEffects::<_Actor, _Target>::from([*TARGET])),
 			app.world()
 				.entity(entity)
-				.get::<RunningInteractions::<_Actor, _Target>>(),
+				.get::<OngoingEffects::<_Actor, _Target>>(),
 		);
 		Ok(())
 	}
@@ -160,11 +188,11 @@ mod tests {
 		let target = app.world_mut().spawn(_Target).id();
 		let entity = app
 			.world_mut()
-			.spawn((
-				RunningInteractions::<_Actor, _Target>::from([*TARGET]),
-				InteractingEntities::new([target]),
-			))
+			.spawn(OngoingEffects::<_Actor, _Target>::from([*TARGET]))
 			.id();
+		app.insert_resource(OngoingInteractions {
+			targets: HashMap::from([(entity, HashSet::from([target]))]),
+		});
 		app.world_mut()
 			.entity_mut(entity)
 			.insert(_Actor::new().with_mock(|mock| {
@@ -177,5 +205,111 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once_with(_Actor::act_on::<_Target>, Duration::from_millis(42))
+	}
+
+	mod ongoing_effects {
+		use super::*;
+
+		#[test]
+		fn remove_entities_not_contained_in_ongoing_interactions() -> Result<(), RunSystemError> {
+			let mut app = setup();
+			let not_interacting = PersistentEntity::default();
+			let interacting = [PersistentEntity::default(), PersistentEntity::default()];
+			let interacting_entities = interacting.map(|e| app.world_mut().spawn(e).id());
+			let entity = app
+				.world_mut()
+				.spawn((
+					OngoingEffects::<_Actor, _Target>::from([
+						interacting[0],
+						interacting[1],
+						not_interacting,
+					]),
+					_Actor::new().with_mock(|mock| {
+						mock.expect_on_begin_interaction().return_const(());
+						mock.expect_on_repeated_interaction().return_const(());
+					}),
+				))
+				.id();
+			app.world_mut().spawn(not_interacting);
+			app.world_mut().insert_resource(OngoingInteractions {
+				targets: HashMap::from([(entity, HashSet::from(interacting_entities))]),
+			});
+
+			app.world_mut()
+				.run_system_once_with(_Actor::act_on::<_Target>, Duration::from_millis(42))?;
+
+			assert_eq!(
+				Some(&OngoingEffects::<_Actor, _Target>::from(interacting)),
+				app.world()
+					.entity(entity)
+					.get::<OngoingEffects<_Actor, _Target>>(),
+			);
+			Ok(())
+		}
+
+		#[test]
+		fn remove_entities_not_contained_when_ongoing_interactions_has_actor_entry()
+		-> Result<(), RunSystemError> {
+			let mut app = setup();
+			let not_interacting = PersistentEntity::default();
+			let entity = app
+				.world_mut()
+				.spawn((
+					OngoingEffects::<_Actor, _Target>::from([not_interacting]),
+					_Actor::new().with_mock(|mock| {
+						mock.expect_on_begin_interaction().return_const(());
+						mock.expect_on_repeated_interaction().return_const(());
+					}),
+				))
+				.id();
+			app.world_mut().spawn(not_interacting);
+
+			app.world_mut()
+				.run_system_once_with(_Actor::act_on::<_Target>, Duration::from_millis(42))?;
+
+			assert_eq!(
+				Some(&OngoingEffects::<_Actor, _Target>::from([])),
+				app.world()
+					.entity(entity)
+					.get::<OngoingEffects<_Actor, _Target>>(),
+			);
+			Ok(())
+		}
+
+		#[test]
+		fn remove_entities_that_does_not_exist() -> Result<(), RunSystemError> {
+			let mut app = setup();
+			let not_interacting = PersistentEntity::default();
+			let interacting = [PersistentEntity::default(), PersistentEntity::default()];
+			let interacting_entities = interacting.map(|e| app.world_mut().spawn(e).id());
+			let entity = app
+				.world_mut()
+				.spawn((
+					OngoingEffects::<_Actor, _Target>::from([
+						interacting[0],
+						interacting[1],
+						not_interacting,
+					]),
+					_Actor::new().with_mock(|mock| {
+						mock.expect_on_begin_interaction().return_const(());
+						mock.expect_on_repeated_interaction().return_const(());
+					}),
+				))
+				.id();
+			app.world_mut().insert_resource(OngoingInteractions {
+				targets: HashMap::from([(entity, HashSet::from(interacting_entities))]),
+			});
+
+			app.world_mut()
+				.run_system_once_with(_Actor::act_on::<_Target>, Duration::from_millis(42))?;
+
+			assert_eq!(
+				Some(&OngoingEffects::<_Actor, _Target>::from(interacting)),
+				app.world()
+					.entity(entity)
+					.get::<OngoingEffects<_Actor, _Target>>(),
+			);
+			Ok(())
+		}
 	}
 }

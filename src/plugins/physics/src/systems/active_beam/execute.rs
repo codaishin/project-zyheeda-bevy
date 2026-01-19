@@ -1,6 +1,6 @@
 use crate::{
 	components::{RayCasterArgs, RayFilter, active_beam::ActiveBeam, blockable::Blockable},
-	events::{InteractionEvent, Ray},
+	events::{Ray, RayEvent},
 };
 use bevy::prelude::*;
 use common::{
@@ -16,7 +16,7 @@ use core::f32;
 impl ActiveBeam {
 	pub(crate) fn execute(
 		mut commands: ZyheedaCommands,
-		mut ray_cast_events: EventReader<InteractionEvent<Ray>>,
+		mut ray_events: EventReader<RayEvent>,
 		mut beams: Query<(
 			Entity,
 			&Blockable,
@@ -40,7 +40,7 @@ impl ActiveBeam {
 			});
 		}
 
-		for InteractionEvent(entity, Ray(.., toi)) in ray_cast_events.read() {
+		for RayEvent(entity, Ray(.., toi)) in ray_events.read() {
 			let length = Units::from(f32::max(**toi, f32::EPSILON));
 
 			match beams.get_mut(*entity) {
@@ -63,7 +63,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::RayCasterArgs,
-		events::{InteractionEvent, Ray},
+		events::{Ray, RayEvent},
 	};
 	use common::{toi, traits::register_persistent_entities::RegisterPersistentEntities};
 	use testing::{SingleThreadedApp, assert_eq_approx};
@@ -72,7 +72,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.register_persistent_entities();
-		app.add_event::<InteractionEvent<Ray>>();
+		app.add_event::<RayEvent>();
 		app.add_systems(Update, ActiveBeam::execute);
 
 		app
@@ -121,12 +121,15 @@ mod tests {
 				}),
 			))
 			.id();
-		app.world_mut().send_event(InteractionEvent::of(beam).ray(
-			Ray3d {
-				origin: Vec3::new(1., 0., 0.),
-				direction: Dir3::Y,
-			},
-			toi!(10.),
+		app.world_mut().send_event(RayEvent(
+			beam,
+			Ray(
+				Ray3d {
+					origin: Vec3::new(1., 0., 0.),
+					direction: Dir3::Y,
+				},
+				toi!(10.),
+			),
 		));
 
 		app.update();
@@ -152,12 +155,15 @@ mod tests {
 				}),
 			))
 			.id();
-		app.world_mut().send_event(InteractionEvent::of(beam).ray(
-			Ray3d {
-				origin: Vec3::new(1., 0., 0.),
-				direction: Dir3::Y,
-			},
-			toi!(0.),
+		app.world_mut().send_event(RayEvent(
+			beam,
+			Ray(
+				Ray3d {
+					origin: Vec3::new(1., 0., 0.),
+					direction: Dir3::Y,
+				},
+				toi!(0.),
+			),
 		));
 
 		app.update();
@@ -183,21 +189,27 @@ mod tests {
 				}),
 			))
 			.id();
-		app.world_mut().send_event(InteractionEvent::of(beam).ray(
-			Ray3d {
-				origin: Vec3::new(1., 0., 0.),
-				direction: Dir3::Z,
-			},
-			toi!(10.),
+		app.world_mut().send_event(RayEvent(
+			beam,
+			Ray(
+				Ray3d {
+					origin: Vec3::new(1., 0., 0.),
+					direction: Dir3::Y,
+				},
+				toi!(10.),
+			),
 		));
 
 		app.update();
-		app.world_mut().send_event(InteractionEvent::of(beam).ray(
-			Ray3d {
-				origin: Vec3::new(1., 0., 0.),
-				direction: Dir3::Y,
-			},
-			toi!(5.),
+		app.world_mut().send_event(RayEvent(
+			beam,
+			Ray(
+				Ray3d {
+					origin: Vec3::new(1., 0., 0.),
+					direction: Dir3::Y,
+				},
+				toi!(5.),
+			),
 		));
 
 		app.update();
@@ -223,21 +235,27 @@ mod tests {
 				}),
 			))
 			.id();
-		app.world_mut().send_event(InteractionEvent::of(beam).ray(
-			Ray3d {
-				origin: Vec3::new(1., 0., 0.),
-				direction: Dir3::Z,
-			},
-			toi!(5.),
+		app.world_mut().send_event(RayEvent(
+			beam,
+			Ray(
+				Ray3d {
+					origin: Vec3::new(1., 0., 0.),
+					direction: Dir3::Y,
+				},
+				toi!(5.),
+			),
 		));
 
 		app.update();
-		app.world_mut().send_event(InteractionEvent::of(beam).ray(
-			Ray3d {
-				origin: Vec3::new(1., 0., 0.),
-				direction: Dir3::Y,
-			},
-			toi!(0.),
+		app.world_mut().send_event(RayEvent(
+			beam,
+			Ray(
+				Ray3d {
+					origin: Vec3::new(1., 0., 0.),
+					direction: Dir3::Y,
+				},
+				toi!(0.),
+			),
 		));
 
 		app.update();

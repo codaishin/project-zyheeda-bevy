@@ -1,6 +1,6 @@
 use crate::{components::hollow::Hollow, physics_hooks::check_hollow_colliders::SimpleOuterRadius};
 use bevy::{ecs::entity::EntityHashSet, prelude::*};
-use bevy_rapier3d::prelude::Collider as RapierCollider;
+use bevy_rapier3d::prelude::*;
 use common::{
 	errors::Unreachable,
 	tools::Units,
@@ -81,12 +81,18 @@ impl Prefab<()> for ColliderShape {
 		entity: &mut impl PrefabEntityCommands,
 		_: &mut impl LoadAsset,
 	) -> Result<(), Self::TError> {
+		entity.try_insert_if_new((
+			CollidingEntities::default(),
+			ActiveEvents::COLLISION_EVENTS,
+			ActiveCollisionTypes::default(),
+		));
+
 		match *self {
 			Self::Sphere {
 				radius,
 				hollow_radius,
 			} => {
-				entity.try_insert_if_new(RapierCollider::ball(*radius));
+				entity.try_insert_if_new(Collider::ball(*radius));
 				let Some(hollow_radius) = hollow_radius else {
 					return Ok(());
 				};
@@ -99,16 +105,62 @@ impl Prefab<()> for ColliderShape {
 				half_y,
 				half_z,
 			} => {
-				entity.try_insert_if_new(RapierCollider::cuboid(*half_x, *half_y, *half_z));
+				entity.try_insert_if_new(Collider::cuboid(*half_x, *half_y, *half_z));
 			}
 			Self::Cylinder { half_y, radius } => {
-				entity.try_insert_if_new(RapierCollider::cylinder(*half_y, *radius));
+				entity.try_insert_if_new(Collider::cylinder(*half_y, *radius));
 			}
 			Self::Capsule { half_y, radius } => {
-				entity.try_insert_if_new(RapierCollider::capsule_y(*half_y, *radius));
+				entity.try_insert_if_new(Collider::capsule_y(*half_y, *radius));
 			}
 		}
 
 		Ok(())
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	#![allow(clippy::unwrap_used)]
+	use super::*;
+	use bevy_rapier3d::prelude::{ActiveCollisionTypes, ActiveEvents, CollidingEntities};
+	use common::traits::load_asset::mock::MockAssetServer;
+	use test_case::test_case;
+	use testing::SingleThreadedApp;
+
+	fn setup() -> App {
+		let mut app = App::new().single_threaded(Update);
+
+		app.add_observer(
+			|trigger: Trigger<OnInsert, ColliderShape>,
+			 mut commands: Commands,
+			 shapes: Query<&ColliderShape>| {
+				let shape = shapes.get(trigger.target()).unwrap();
+				let mut entity = commands.get_entity(trigger.target()).unwrap();
+				let Ok(()) =
+					shape.insert_prefab_components(&mut entity, &mut MockAssetServer::default());
+			},
+		);
+
+		app
+	}
+
+	#[test_case(ColliderShape::Sphere {radius: Units::from(1.), hollow_radius: None}; "sphere")]
+	#[test_case(ColliderShape::Cuboid { half_x: Units::from(1.), half_y: Units::from(1.), half_z: Units::from(1.) }; "cube")]
+	#[test_case(ColliderShape::Cylinder { half_y: Units::from(1.), radius: Units::from(1.) }; "cylinder")]
+	#[test_case(ColliderShape::Capsule { half_y: Units::from(1.), radius: Units::from(1.) }; "capsule")]
+	fn add_required_rapier_components(shape: ColliderShape) {
+		let mut app = setup();
+
+		let entity = app.world_mut().spawn(shape);
+
+		assert_eq!(
+			(true, true, true),
+			(
+				entity.contains::<CollidingEntities>(),
+				entity.contains::<ActiveEvents>(),
+				entity.contains::<ActiveCollisionTypes>(),
+			)
+		)
 	}
 }

@@ -1,6 +1,7 @@
-use crate::events::{InteractionEvent, Ray};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
+
+use crate::events::RayEvent;
 
 pub(crate) struct Debug;
 
@@ -8,7 +9,7 @@ impl Debug {
 	fn display_events(
 		mut collision_events: EventReader<CollisionEvent>,
 		mut contact_force_events: EventReader<ContactForceEvent>,
-		mut ray_cast_events: EventReader<InteractionEvent<Ray>>,
+		mut ray_cast_events: EventReader<RayEvent>,
 	) {
 		for collision_event in collision_events.read() {
 			info!("Received collision event: {collision_event:?}");

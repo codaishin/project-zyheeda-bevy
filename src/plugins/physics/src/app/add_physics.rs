@@ -1,10 +1,7 @@
 use crate::{
 	CollisionSystems,
 	PhysicsSystems,
-	components::{
-		interacting_entities::InteractingEntities,
-		running_interactions::RunningInteractions,
-	},
+	components::ongoing_effects::OngoingEffects,
 	systems::interactions::act_on::ActOnSystem,
 	traits::act_on::ActOn,
 };
@@ -31,17 +28,13 @@ impl AddPhysics for App {
 	{
 		TSaveGame::register_savable_component::<TActor>(self);
 		TSaveGame::register_savable_component::<TTarget>(self);
-		TSaveGame::register_savable_component::<RunningInteractions<TActor, TTarget>>(self);
+		TSaveGame::register_savable_component::<OngoingEffects<TActor, TTarget>>(self);
 
-		self.register_required_components::<TActor, InteractingEntities>();
-		self.register_required_components::<TActor, RunningInteractions<TActor, TTarget>>();
+		self.register_required_components::<TActor, OngoingEffects<TActor, TTarget>>();
 		self.add_systems(
 			Update,
-			(
-				Update::delta.pipe(TActor::act_on::<TTarget>),
-				RunningInteractions::<TActor, TTarget>::untrack_non_interacting_targets,
-			)
-				.chain()
+			Update::delta
+				.pipe(TActor::act_on::<TTarget>)
 				.in_set(PhysicsSystems)
 				.after(CollisionSystems),
 		)
