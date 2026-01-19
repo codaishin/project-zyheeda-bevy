@@ -50,7 +50,7 @@ fn fragile_blocked_entity(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::handles_physics::{PhysicalObject::Beam, colliders::Blocker};
+	use common::traits::handles_physics::{PhysicalObject::Beam, physical_bodies::Blocker};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {

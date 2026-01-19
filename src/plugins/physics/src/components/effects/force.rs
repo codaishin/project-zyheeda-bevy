@@ -8,7 +8,7 @@ use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
 	effects::force::Force,
-	traits::handles_physics::{HandlesPhysicalEffect, colliders::Blocker},
+	traits::handles_physics::{HandlesPhysicalEffect, physical_bodies::Blocker},
 };
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};

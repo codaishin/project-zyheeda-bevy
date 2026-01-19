@@ -6,7 +6,7 @@ use common::{
 	dto::duration_in_seconds::DurationInSeconds,
 	tools::Units,
 	traits::{
-		handles_physics::colliders::Blocker,
+		handles_physics::physical_bodies::Blocker,
 		handles_skill_physics::{
 			Contact,
 			ContactShape,

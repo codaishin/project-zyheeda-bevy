@@ -6,24 +6,24 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
-pub trait HandlesColliders {
-	type TCollider: Component + From<Collider>;
+pub trait HandlesPhysicalBodies {
+	type TBody: Component + From<Body>;
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct Collider {
+pub struct Body {
 	pub shape: Shape,
-	pub collider_type: ColliderType,
+	pub physics_type: PhysicsType,
 	pub blocker_types: HashSet<Blocker>,
 	pub center_offset: Vec3,
 	pub rotation: Quat,
 }
 
-impl Collider {
+impl Body {
 	pub fn from_shape(shape: Shape) -> Self {
 		Self {
 			shape,
-			collider_type: ColliderType::Terrain,
+			physics_type: PhysicsType::Terrain,
 			blocker_types: HashSet::from([Blocker::Physical]),
 			center_offset: Vec3::ZERO,
 			rotation: Quat::IDENTITY,
@@ -40,8 +40,8 @@ impl Collider {
 		self
 	}
 
-	pub fn with_collider_type(mut self, collider_type: ColliderType) -> Self {
-		self.collider_type = collider_type;
+	pub fn with_physics_type(mut self, physics_type: PhysicsType) -> Self {
+		self.physics_type = physics_type;
 		self
 	}
 
@@ -54,13 +54,13 @@ impl Collider {
 	}
 }
 
-impl From<Shape> for Collider {
+impl From<Shape> for Body {
 	fn from(shape: Shape) -> Self {
 		Self::from_shape(shape)
 	}
 }
 
-/// Shape of a collider
+/// Shape definition, usually used to describe physics colliders.
 ///
 /// Coordinates are in line with the bevy coordinate system.
 /// So without rotations they are:
@@ -92,7 +92,7 @@ pub enum Shape {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
-pub enum ColliderType {
+pub enum PhysicsType {
 	Agent,
 	Terrain,
 }

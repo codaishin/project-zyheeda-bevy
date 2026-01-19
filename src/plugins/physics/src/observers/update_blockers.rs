@@ -33,7 +33,7 @@ pub(crate) trait UpdateBlockersObserver: Component + Sized + UpdateBlockers {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::handles_physics::colliders::Blocker;
+	use common::traits::handles_physics::physical_bodies::Blocker;
 
 	#[derive(Component)]
 	struct _Effect(Blocker);

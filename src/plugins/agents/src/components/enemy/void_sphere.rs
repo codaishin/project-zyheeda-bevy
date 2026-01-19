@@ -21,7 +21,13 @@ use common::{
 	traits::{
 		handles_enemies::EnemyType,
 		handles_map_generation::AgentType,
-		handles_physics::colliders::{Blocker, Collider, ColliderType, HandlesColliders, Shape},
+		handles_physics::physical_bodies::{
+			Blocker,
+			Body,
+			HandlesPhysicalBodies,
+			PhysicsType,
+			Shape,
+		},
 		handles_skill_physics::SkillSpawner,
 		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
@@ -93,7 +99,7 @@ impl From<VoidSphere> for AgentType {
 
 impl<TPhysics> Prefab<TPhysics> for VoidSphere
 where
-	TPhysics: HandlesColliders,
+	TPhysics: HandlesPhysicalBodies,
 {
 	type TError = Unreachable;
 
@@ -106,15 +112,15 @@ where
 		let shape = Shape::Sphere {
 			radius: Units::from(Self::OUTER_RADIUS),
 		};
-		let collider = Collider::from_shape(shape)
+		let body = Body::from_shape(shape)
 			.with_center_offset(Self::GROUND_OFFSET)
-			.with_collider_type(ColliderType::Agent)
+			.with_physics_type(PhysicsType::Agent)
 			.with_blocker_types([Blocker::Character]);
 		let mut transform_2nd_ring = child_transform;
 		transform_2nd_ring.rotate_axis(Dir3::Z, PI / 2.);
 
 		entity
-			.try_insert_if_new(TPhysics::TCollider::from(collider))
+			.try_insert_if_new(TPhysics::TBody::from(body))
 			.with_child((VoidSpherePart::Core, VoidSphereCore, child_transform))
 			.with_child((
 				VoidSpherePart::RingA(UnitsPerSecond::from(PI / 50.)),

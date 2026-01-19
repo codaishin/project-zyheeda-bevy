@@ -1,6 +1,6 @@
 use crate::components::{
 	blockable::Blockable,
-	colliders::ColliderShape,
+	collider::ColliderShape,
 	effects::Effects,
 	skill::{ContactInteractionTarget, ProjectionInteractionTarget},
 	skill_transform::SkillTransformOf,
@@ -145,7 +145,7 @@ mod tests {
 		effects::force::Force,
 		tools::Units,
 		traits::{
-			handles_physics::{PhysicalObject, colliders::Shape},
+			handles_physics::{PhysicalObject, physical_bodies::Shape},
 			handles_skill_physics::Effect,
 		},
 	};

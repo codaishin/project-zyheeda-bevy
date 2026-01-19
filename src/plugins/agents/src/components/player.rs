@@ -7,7 +7,13 @@ use common::{
 	traits::{
 		handles_animations::AnimationPriority,
 		handles_map_generation::AgentType,
-		handles_physics::colliders::{Blocker, Collider, ColliderType, HandlesColliders, Shape},
+		handles_physics::physical_bodies::{
+			Blocker,
+			Body,
+			HandlesPhysicalBodies,
+			PhysicsType,
+			Shape,
+		},
 		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
@@ -51,7 +57,7 @@ impl From<Idle> for AnimationPriority {
 
 impl<TPhysics> Prefab<TPhysics> for Player
 where
-	TPhysics: HandlesColliders,
+	TPhysics: HandlesPhysicalBodies,
 {
 	type TError = Unreachable;
 
@@ -64,12 +70,12 @@ where
 			half_y: *PLAYER_COLLIDER_HEIGHT,
 			radius: *PLAYER_COLLIDER_RADIUS,
 		};
-		let collider = Collider::from_shape(shape)
+		let body = Body::from_shape(shape)
 			.with_center_offset(GROUND_OFFSET)
-			.with_collider_type(ColliderType::Agent)
+			.with_physics_type(PhysicsType::Agent)
 			.with_blocker_types([Blocker::Character]);
 
-		entity.try_insert_if_new(TPhysics::TCollider::from(collider));
+		entity.try_insert_if_new(TPhysics::TBody::from(body));
 
 		Ok(())
 	}

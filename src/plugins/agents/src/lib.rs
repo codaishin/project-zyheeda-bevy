@@ -42,7 +42,7 @@ use common::{
 			HandlesPhysicalEffectTargets,
 			HandlesRaycast,
 			RaycastSystemParam,
-			colliders::HandlesColliders,
+			physical_bodies::HandlesPhysicalBodies,
 		},
 		handles_player::{HandlesPlayer, PlayerMainCamera},
 		handles_saving::HandlesSaving,
@@ -75,7 +75,7 @@ where
 	TPhysics: ThreadSafe
 		+ HandlesPhysicalEffectTargets
 		+ HandlesPhysicalAttributes
-		+ HandlesColliders
+		+ HandlesPhysicalBodies
 		+ HandlesRaycast
 		+ HandlesPhysicalSkillSpawnPoints,
 	TAnimations: ThreadSafe + HandlesAnimations,
@@ -116,7 +116,7 @@ where
 	TPhysics: ThreadSafe
 		+ HandlesPhysicalEffectTargets
 		+ HandlesPhysicalAttributes
-		+ HandlesColliders
+		+ HandlesPhysicalBodies
 		+ HandlesRaycast
 		+ HandlesPhysicalSkillSpawnPoints,
 	TAnimations: ThreadSafe + HandlesAnimations,

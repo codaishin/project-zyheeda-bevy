@@ -4,7 +4,7 @@ use crate::{
 	tools::{Index, Units, UnitsPerSecond, action_key::slot::SlotKey, bone_name::BoneName},
 	traits::{
 		accessors::get::GetContextMut,
-		handles_physics::colliders::{Blocker, Shape},
+		handles_physics::physical_bodies::{Blocker, Shape},
 	},
 };
 use bevy::{

@@ -6,7 +6,7 @@ pub mod shield;
 use crate::skills::shape::beam::Beam;
 use common::{
 	components::persistent_entity::PersistentEntity,
-	traits::handles_physics::colliders::Blocker,
+	traits::handles_physics::physical_bodies::Blocker,
 };
 use ground_target::GroundTargetedAoe;
 use projectile::Projectile;

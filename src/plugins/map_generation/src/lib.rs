@@ -25,7 +25,7 @@ use common::{
 		handles_lights::HandlesLights,
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInApp},
 		handles_map_generation::HandlesMapGeneration,
-		handles_physics::{HandlesRaycast, colliders::HandlesColliders},
+		handles_physics::{HandlesRaycast, physical_bodies::HandlesPhysicalBodies},
 		handles_saving::HandlesSaving,
 		prefab::AddPrefabObserver,
 		spawn::Spawn,
@@ -45,7 +45,7 @@ impl<TLoading, TSavegame, TLights, TPhysics>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesRaycast + HandlesColliders,
+	TPhysics: ThreadSafe + HandlesRaycast + HandlesPhysicalBodies,
 	TLights: ThreadSafe + HandlesLights,
 {
 	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TPhysics, _: &TLights) -> Self {
@@ -58,7 +58,7 @@ impl<TLoading, TSavegame, TLights, TPhysics> Plugin
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesRaycast + HandlesColliders,
+	TPhysics: ThreadSafe + HandlesRaycast + HandlesPhysicalBodies,
 	TLights: ThreadSafe + HandlesLights,
 {
 	fn build(&self, app: &mut App) {

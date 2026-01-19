@@ -1,6 +1,6 @@
 use crate::{
 	components::{
-		colliders::ColliderShape,
+		collider::ColliderShape,
 		effects::Effects,
 		skill::{BEAM_MODEL, Beam, HALF_FORWARD, HOLLOW_OUTER_THICKNESS, SPHERE_MODEL, Skill},
 	},
@@ -11,7 +11,7 @@ use common::{
 	components::{asset_model::AssetModel, insert_asset::InsertAsset, model::Model},
 	tools::Units,
 	traits::{
-		handles_physics::{PhysicalObject, colliders::Shape},
+		handles_physics::{PhysicalObject, physical_bodies::Shape},
 		handles_skill_physics::ContactShape,
 	},
 };
