@@ -185,6 +185,7 @@ where
 						GroundTarget::set_position,
 						DestroyAfterDistanceTraveled::system,
 						Anchor::<Once>::system.pipe(OnError::log),
+						Anchor::<Always>::despawn_when_target_invalid,
 						Anchor::<Always>::system.pipe(OnError::log),
 						SetMotionForward::system,
 					)
