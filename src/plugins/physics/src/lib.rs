@@ -42,7 +42,7 @@ use crate::{
 		apply_pull::ApplyPull,
 		insert_affected::InsertAffected,
 		interactions::{
-			push_beam_collisions::PushOngoingBeamCollisions,
+			push_beam_interactions::PushBeamInteractions,
 			push_ongoing_collisions::PushOngoingCollisions,
 		},
 	},
@@ -73,19 +73,9 @@ use common::{
 		thread_safe::ThreadSafe,
 	},
 };
-use components::{
-	active_beam::ActiveBeam,
-	effects::{gravity::GravityEffect, health_damage::HealthDamageEffect},
-};
-use std::{collections::HashMap, marker::PhantomData, time::Duration};
-use systems::{
-	interactions::apply_fragile_blocks::apply_fragile_blocks,
-	ray_cast::{
-		apply_interruptable_blocks::apply_interruptable_ray_blocks,
-		execute_ray_caster::execute_ray_caster,
-		map_ray_cast_results_to_interactions::map_ray_cast_results_to_interactions,
-	},
-};
+use components::effects::{gravity::GravityEffect, health_damage::HealthDamageEffect};
+use std::{marker::PhantomData, time::Duration};
+use systems::interactions::apply_fragile_blocks::apply_fragile_blocks;
 use traits::act_on::ActOn;
 
 pub struct PhysicsPlugin<TDependencies> {
@@ -201,15 +191,9 @@ where
 						.chain(),
 					// Physical effects
 					(
-						OngoingInteractions::clear,
 						Blockable::beam_interactions.pipe(OnError::log),
-						ActiveBeam::execute,
-						ActiveBeam::update_transform,
-						execute_ray_caster
-							.pipe(OnError::log_and_return(HashMap::default))
-							.pipe(apply_interruptable_ray_blocks)
-							.pipe(map_ray_cast_results_to_interactions)
-							.pipe(UpdateOngoingInteractions::push_ongoing_beam_collisions),
+						OngoingInteractions::clear,
+						UpdateOngoingInteractions::push_beam_interactions,
 						UpdateOngoingInteractions::push_ongoing_collisions,
 					)
 						.chain(),

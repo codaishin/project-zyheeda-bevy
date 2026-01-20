@@ -1,26 +1,23 @@
-use crate::{
-	systems::ray_cast::map_ray_cast_results_to_interactions::RayInteraction,
-	traits::send_collision_interaction::PushOngoingInteraction,
-};
+use crate::{events::BeamInteraction, traits::send_collision_interaction::PushOngoingInteraction};
 use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
 
-impl<T> PushOngoingBeamCollisions for T where
+impl<T> PushBeamInteractions for T where
 	T: for<'w, 's> SystemParam<Item<'w, 's>: PushOngoingInteraction>
 {
 }
 
-pub(crate) trait PushOngoingBeamCollisions:
+pub trait PushBeamInteractions:
 	for<'w, 's> SystemParam<Item<'w, 's>: PushOngoingInteraction>
 {
-	fn push_ongoing_beam_collisions(
-		In(interactions): In<Vec<RayInteraction>>,
+	fn push_beam_interactions(
 		mut ongoing_interactions: StaticSystemParam<Self>,
+		mut beam_interactions: EventReader<BeamInteraction>,
 	) {
-		for RayInteraction { ray, intersecting } in interactions {
-			ongoing_interactions.push_ongoing_interaction(ray, intersecting);
+		for BeamInteraction { beam, intersects } in beam_interactions.read() {
+			ongoing_interactions.push_ongoing_interaction(*beam, *intersects);
 		}
 	}
 }
@@ -28,7 +25,7 @@ pub(crate) trait PushOngoingBeamCollisions:
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
+	use crate::events::BeamInteraction;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use testing::{NestedMocks, SingleThreadedApp};
@@ -62,29 +59,31 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
+		app.add_event::<BeamInteraction>();
 		app.init_resource::<_OngoingCollisions>();
+		app.add_systems(Update, ResMut::<_OngoingCollisions>::push_beam_interactions);
 
 		app
 	}
 
 	#[test]
-	fn push_ray_intersections() -> Result<(), RunSystemError> {
+	fn push_interaction_from_beam_to_target() {
 		let mut app = setup();
+		let actor = app.world_mut().spawn_empty().id();
+		let target = app.world_mut().spawn_empty().id();
+		app.world_mut().send_event(BeamInteraction {
+			beam: actor,
+			intersects: target,
+		});
 
-		app.insert_resource(_OngoingCollisions::new().with_mock(|mock| {
-			mock.expect_push_ongoing_interaction()
-				.with(eq(Entity::from_raw(11)), eq(Entity::from_raw(42)))
-				.once()
-				.return_const(());
-		}));
+		app.world_mut()
+			.insert_resource(_OngoingCollisions::new().with_mock(move |mock| {
+				mock.expect_push_ongoing_interaction()
+					.with(eq(actor), eq(target))
+					.once()
+					.return_const(());
+			}));
 
-		app.world_mut().run_system_once_with(
-			ResMut::<_OngoingCollisions>::push_ongoing_beam_collisions,
-			vec![RayInteraction {
-				ray: Entity::from_raw(11),
-				intersecting: Entity::from_raw(42),
-			}],
-		)?;
-		Ok(())
+		app.update();
 	}
 }
