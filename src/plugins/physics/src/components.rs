@@ -1,4 +1,3 @@
-pub(crate) mod active_beam;
 pub(crate) mod affected;
 pub(crate) mod blockable;
 pub(crate) mod blocker_types;
