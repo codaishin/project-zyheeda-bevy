@@ -81,15 +81,18 @@ impl Blockable {
 					continue;
 				}
 			};
-			let not_blocked = Self::not_blocked(&interaction_colliders, &blockers, blocked_by);
 			let mut toi = ray.max_toi;
 
-			for hit in hits.into_iter().take_while(not_blocked) {
-				toi = hit.toi;
+			for hit in hits {
 				beam_interactions.write(BeamInteraction {
 					beam: entity,
 					intersects: hit.entity,
 				});
+
+				if Self::blocked(&hit, blockers, interaction_colliders, blocked_by) {
+					toi = hit.toi;
+					break;
+				}
 			}
 
 			for entity in skill_transforms.iter() {
@@ -122,31 +125,22 @@ impl Blockable {
 		}
 	}
 
-	fn not_blocked(
-		interaction_colliders: &Query<&ColliderOfInteractionTarget>,
-		blockers: &Query<&BlockerTypes>,
+	fn blocked(
+		hit: &RayHit,
+		blockers: Query<&BlockerTypes>,
+		interaction_colliders: Query<&ColliderOfInteractionTarget>,
 		blocked_by: &HashSet<Blocker>,
-	) -> impl FnMut(&RayHit) -> bool {
-		let mut blocked = false;
+	) -> bool {
+		let entity = match interaction_colliders.get(hit.entity) {
+			Ok(ColliderOfInteractionTarget(entity)) => *entity,
+			Err(_) => hit.entity,
+		};
 
-		move |hit: &RayHit| {
-			if blocked {
-				return false;
-			}
+		let Ok(BlockerTypes(blockers)) = blockers.get(entity) else {
+			return false;
+		};
 
-			let entity = match interaction_colliders.get(hit.entity) {
-				Ok(ColliderOfInteractionTarget(entity)) => *entity,
-				Err(_) => hit.entity,
-			};
-
-			let Ok(BlockerTypes(blockers)) = blockers.get(entity) else {
-				return true;
-			};
-
-			blocked = blockers.intersection(blocked_by).any(|_| true);
-
-			true
-		}
+		!blockers.is_disjoint(blocked_by)
 	}
 }
 
@@ -265,7 +259,7 @@ mod tests {
 					Transform::from_xyz(1., 2., 3.).looking_to(Dir3::NEG_Y, Vec3::Y),
 				),
 				Blockable(PhysicalObject::Beam {
-					range: Units::from(11.),
+					range: Units::from(11000.),
 					blocked_by: HashSet::from([]),
 				}),
 			));
@@ -280,7 +274,7 @@ mod tests {
 					.with(eq(RayCasterArgs {
 						origin: Vec3::new(1., 2., 3.),
 						direction: Dir3::NEG_Y,
-						max_toi: toi!(11.),
+						max_toi: toi!(11000.),
 						solid: false,
 						filter: RayFilter::default(),
 					}))
@@ -294,7 +288,7 @@ mod tests {
 		use super::*;
 
 		#[test]
-		fn update_to_reach_last_hit() -> Result<(), RunSystemError> {
+		fn update_to_reach_max_length() -> Result<(), RunSystemError> {
 			let mut app = setup(|_| {
 				Mock_RayCaster::new_mock(|mock| {
 					mock.expect_cast_ray_continuously_sorted()
@@ -317,7 +311,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn(Blockable(PhysicalObject::Beam {
-					range: Units::from(11.),
+					range: Units::from(11000.),
 					blocked_by: HashSet::from([]),
 				}))
 				.id();
@@ -329,8 +323,8 @@ mod tests {
 
 			assert_eq!(
 				Some(&Transform {
-					translation: Vec3::ZERO.with_z(-550.),
-					scale: Vec3::ONE.with_y(1100.),
+					translation: Vec3::ZERO.with_z(-5500.),
+					scale: Vec3::ONE.with_y(11000.),
 					..default()
 				}),
 				app.world().entity(skill_transform).get::<Transform>(),
@@ -368,7 +362,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn(Blockable(PhysicalObject::Beam {
-					range: Units::from(11.),
+					range: Units::from(11000.),
 					blocked_by: HashSet::from([Blocker::Force, Blocker::Character]),
 				}))
 				.id();
@@ -420,7 +414,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn(Blockable(PhysicalObject::Beam {
-					range: Units::from(11.),
+					range: Units::from(11000.),
 					blocked_by: HashSet::from([Blocker::Force, Blocker::Character]),
 				}))
 				.id();
@@ -442,7 +436,7 @@ mod tests {
 		}
 
 		#[test]
-		fn update_to_reach_last_hit_if_blockers_do_not_match() -> Result<(), RunSystemError> {
+		fn update_to_reach_max_length_if_blockers_do_not_match() -> Result<(), RunSystemError> {
 			let mut app = setup(|world| {
 				Mock_RayCaster::new_mock(|mock| {
 					let blocker = world
@@ -468,7 +462,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn(Blockable(PhysicalObject::Beam {
-					range: Units::from(11.),
+					range: Units::from(11000.),
 					blocked_by: HashSet::from([Blocker::Force, Blocker::Character]),
 				}))
 				.id();
@@ -480,8 +474,8 @@ mod tests {
 
 			assert_eq!(
 				Some(&Transform {
-					translation: Vec3::ZERO.with_z(-550.),
-					scale: Vec3::ONE.with_y(1100.),
+					translation: Vec3::ZERO.with_z(-5500.),
+					scale: Vec3::ONE.with_y(11000.),
 					..default()
 				}),
 				app.world().entity(skill_transform).get::<Transform>(),
@@ -490,7 +484,7 @@ mod tests {
 		}
 
 		#[test]
-		fn update_to_max_toi_if_not_blocked() -> Result<(), RunSystemError> {
+		fn update_to_max_range_if_not_blocked() -> Result<(), RunSystemError> {
 			let mut app = setup(|_| {
 				Mock_RayCaster::new_mock(|mock| {
 					mock.expect_cast_ray_continuously_sorted()
@@ -500,7 +494,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn(Blockable(PhysicalObject::Beam {
-					range: Units::from(11.),
+					range: Units::from(11000.),
 					blocked_by: HashSet::from([Blocker::Force, Blocker::Character]),
 				}))
 				.id();
@@ -512,8 +506,8 @@ mod tests {
 
 			assert_eq!(
 				Some(&Transform {
-					translation: Vec3::ZERO.with_z(-5.5),
-					scale: Vec3::ONE.with_y(11.),
+					translation: Vec3::ZERO.with_z(-5500.),
+					scale: Vec3::ONE.with_y(11000.),
 					..default()
 				}),
 				app.world().entity(skill_transform).get::<Transform>(),
@@ -549,7 +543,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn(Blockable(PhysicalObject::Beam {
-					range: Units::from(11.),
+					range: Units::from(11000.),
 					blocked_by: HashSet::from([]),
 				}))
 				.id();
@@ -609,7 +603,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn(Blockable(PhysicalObject::Beam {
-					range: Units::from(11.),
+					range: Units::from(11000.),
 					blocked_by: HashSet::from([Blocker::Physical, Blocker::Character]),
 				}))
 				.id();
@@ -654,7 +648,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn(Blockable(PhysicalObject::Beam {
-					range: Units::from(11.),
+					range: Units::from(11000.),
 					blocked_by: HashSet::from([]),
 				}))
 				.id();
@@ -682,7 +676,7 @@ mod tests {
 				})
 			});
 			app.world_mut().spawn(Blockable(PhysicalObject::Beam {
-				range: Units::from(11.),
+				range: Units::from(11000.),
 				blocked_by: HashSet::from([]),
 			}));
 
@@ -734,7 +728,7 @@ mod tests {
 				})
 			});
 			app.world_mut().spawn(Blockable(PhysicalObject::Beam {
-				range: Units::from(11.),
+				range: Units::from(11000.),
 				blocked_by: HashSet::from([]),
 			}));
 
