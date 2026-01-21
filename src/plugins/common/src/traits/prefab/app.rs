@@ -1,5 +1,11 @@
 use super::{AddPrefabObserver, Prefab};
-use crate::{systems::log::OnError, traits::load_asset::LoadAsset};
+use crate::{
+	systems::log::OnError,
+	traits::{
+		load_asset::LoadAsset,
+		prefab::Reapply::{Always, Never},
+	},
+};
 use bevy::prelude::*;
 
 impl AddPrefabObserver for App {
@@ -8,14 +14,19 @@ impl AddPrefabObserver for App {
 		TPrefab: Prefab<TDependencies> + Component,
 		TDependencies: 'static,
 	{
-		self.add_observer(
-			instantiate_prefab::<TPrefab, TDependencies, AssetServer>.pipe(OnError::log),
-		)
+		match TPrefab::REAPPLY {
+			Always => self.add_observer(
+				instantiate::<OnInsert, TPrefab, TDependencies, AssetServer>.pipe(OnError::log),
+			),
+			Never => self.add_observer(
+				instantiate::<OnAdd, TPrefab, TDependencies, AssetServer>.pipe(OnError::log),
+			),
+		}
 	}
 }
 
-fn instantiate_prefab<TPrefab, TDependencies, TAssetServer>(
-	trigger: Trigger<OnAdd, TPrefab>,
+fn instantiate<TTrigger, TPrefab, TDependencies, TAssetServer>(
+	trigger: Trigger<TTrigger, TPrefab>,
 	components: Query<&TPrefab>,
 	mut commands: Commands,
 	mut asset_server: ResMut<TAssetServer>,
@@ -43,6 +54,7 @@ mod tests {
 		traits::{load_asset::mock::MockAssetServer, prefab::PrefabEntityCommands},
 	};
 	use std::fmt::Display;
+	use test_case::test_case;
 	use testing::{SingleThreadedApp, new_handle};
 
 	#[derive(Asset, TypePath, Debug, PartialEq)]
@@ -106,12 +118,15 @@ mod tests {
 		commands.insert_resource(_Result(result));
 	}
 
-	fn setup(asset_server: MockAssetServer) -> App {
+	fn setup<TEvent>(asset_server: MockAssetServer) -> App
+	where
+		TEvent: Event,
+	{
 		let mut app = App::new().single_threaded(Update);
 
 		app.insert_resource(asset_server);
 		app.add_observer(
-			instantiate_prefab::<_Component, _Dependency, MockAssetServer>.pipe(save_result),
+			instantiate::<TEvent, _Component, _Dependency, MockAssetServer>.pipe(save_result),
 		);
 
 		app
@@ -120,7 +135,7 @@ mod tests {
 	#[test]
 	fn call_prefab_instantiation_method() {
 		let handle = new_handle();
-		let mut app = setup(
+		let mut app = setup::<OnInsert>(
 			MockAssetServer::default()
 				.path("my/path")
 				.returns(handle.clone()),
@@ -138,7 +153,7 @@ mod tests {
 
 	#[test]
 	fn return_error() {
-		let mut app = setup(MockAssetServer::default());
+		let mut app = setup::<OnInsert>(MockAssetServer::default());
 
 		let entity = app.world_mut().spawn(_Component {
 			prefab: Err(_Error),
@@ -150,9 +165,13 @@ mod tests {
 		);
 	}
 
-	#[test]
-	fn act_only_once() {
-		let mut app = setup(MockAssetServer::default());
+	#[test_case(OnAdd, (1, 0); "on add")]
+	#[test_case(OnInsert, (1, 1); "on insert")]
+	fn use_trigger_event<TEvent>(_: TEvent, expected_calls: (usize, usize))
+	where
+		TEvent: Event,
+	{
+		let mut app = setup::<TEvent>(MockAssetServer::default());
 
 		app.world_mut()
 			.spawn(_Component {
@@ -164,7 +183,7 @@ mod tests {
 
 		let server = app.world().resource::<MockAssetServer>();
 		assert_eq!(
-			(1, 0),
+			expected_calls,
 			(server.calls("my/path/a"), server.calls("my/path/b")),
 		);
 	}
