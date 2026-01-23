@@ -14,18 +14,14 @@ use std::sync::LazyLock;
 
 impl PhysicalBody {
 	pub(crate) fn prefab(
-		trigger: Trigger<OnInsert, Self>,
 		mut commands: ZyheedaCommands,
-		bodies: Query<(&Self, &Colliders)>,
+		bodies: Query<(Entity, &Self, &Colliders), Changed<Self>>,
 	) {
-		let entity = trigger.target();
-		let Ok((body, colliders)) = bodies.get(entity) else {
-			return;
-		};
-
-		despawn_current_collider_shapes(&mut commands, colliders);
-		insert_rigid_body(&mut commands, entity, body);
-		apply_definition(&mut commands, entity, body);
+		for (entity, body, colliders) in &bodies {
+			despawn_current_collider_shapes(&mut commands, colliders);
+			insert_rigid_body(&mut commands, entity, body);
+			apply_definition(&mut commands, entity, body);
+		}
 	}
 }
 
@@ -93,7 +89,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_observer(PhysicalBody::prefab);
+		app.add_systems(Update, PhysicalBody::prefab);
 
 		app
 	}
@@ -104,11 +100,12 @@ mod tests {
 		let shape = Shape::Sphere {
 			radius: Units::from(42.),
 		};
-
 		let entity = app
 			.world_mut()
 			.spawn(PhysicalBody(Body::from_shape(shape)))
 			.id();
+
+		app.update();
 
 		let [child] = assert_count!(1, get_children!(app, entity));
 		assert_eq!(
@@ -124,13 +121,14 @@ mod tests {
 			radius: Units::from(42.),
 		};
 		let offset = Vec3::ONE;
-
 		let entity = app
 			.world_mut()
 			.spawn(PhysicalBody(
 				Body::from_shape(shape).with_center_offset(offset),
 			))
 			.id();
+
+		app.update();
 
 		let [child] = assert_count!(1, get_children!(app, entity));
 		assert_eq!(
@@ -146,13 +144,14 @@ mod tests {
 			radius: Units::from(42.),
 		};
 		let rotation = Quat::from_rotation_x(PI);
-
 		let entity = app
 			.world_mut()
 			.spawn(PhysicalBody(
 				Body::from_shape(shape).with_rotation(rotation),
 			))
 			.id();
+
+		app.update();
 
 		let [child] = assert_count!(1, get_children!(app, entity));
 		assert_eq!(
@@ -174,12 +173,16 @@ mod tests {
 		let shape = Shape::Sphere {
 			radius: Units::from(42.),
 		};
+		let entity = app
+			.world_mut()
+			.spawn(PhysicalBody(
+				Body::from_shape(shape)
+					.with_physics_type(physics_type)
+					.with_blocker_types(blocks),
+			))
+			.id();
 
-		let entity = app.world_mut().spawn(PhysicalBody(
-			Body::from_shape(shape)
-				.with_physics_type(physics_type)
-				.with_blocker_types(blocks),
-		));
+		app.update();
 
 		assert_eq!(
 			(
@@ -189,10 +192,10 @@ mod tests {
 				Some(&BlockerTypes::from(blocks))
 			),
 			(
-				entity.get::<RigidBody>(),
-				entity.get::<LockedAxes>().copied(),
-				entity.get::<GravityScale>().copied(),
-				entity.get::<BlockerTypes>(),
+				app.world().entity(entity).get::<RigidBody>(),
+				app.world().entity(entity).get::<LockedAxes>().copied(),
+				app.world().entity(entity).get::<GravityScale>().copied(),
+				app.world().entity(entity).get::<BlockerTypes>(),
 			)
 		);
 	}
@@ -207,7 +210,6 @@ mod tests {
 		let shape = Shape::Sphere {
 			radius: Units::from(42.),
 		};
-
 		let entity = app
 			.world_mut()
 			.spawn(PhysicalBody(
@@ -215,8 +217,37 @@ mod tests {
 			))
 			.id();
 
+		app.update();
+
 		let [child] = assert_count!(1, get_children!(app, entity));
 		assert_eq!(no_mouse_hover, child.get::<NoMouseHover>().copied());
+	}
+
+	#[test]
+	fn do_nothing_when_not_changed() {
+		let mut app = setup();
+		let shape = Shape::Sphere {
+			radius: Units::from(42.),
+		};
+		let entity = app
+			.world_mut()
+			.spawn(PhysicalBody(Body::from_shape(Shape::Sphere {
+				radius: Units::from(11.),
+			})))
+			.id();
+
+		app.update();
+		let [child] = assert_count!(1, get_children!(app, entity).map(|e| e.id()));
+		app.world_mut()
+			.entity_mut(child)
+			.insert(ColliderShape::from(shape));
+		app.update();
+
+		let [child] = assert_count!(1, get_children!(app, entity));
+		assert_eq!(
+			Some(&ColliderShape::from(shape)),
+			child.get::<ColliderShape>()
+		);
 	}
 
 	#[test]
@@ -225,14 +256,18 @@ mod tests {
 		let shape = Shape::Sphere {
 			radius: Units::from(42.),
 		};
-
 		let entity = app
 			.world_mut()
 			.spawn(PhysicalBody(Body::from_shape(Shape::Sphere {
 				radius: Units::from(11.),
 			})))
-			.insert(PhysicalBody(Body::from(shape)))
 			.id();
+
+		app.update();
+		app.world_mut()
+			.entity_mut(entity)
+			.insert(PhysicalBody(Body::from(shape)));
+		app.update();
 
 		let [child] = assert_count!(1, get_children!(app, entity));
 		assert_eq!(
