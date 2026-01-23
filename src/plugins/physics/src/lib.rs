@@ -139,7 +139,10 @@ where
 			// Colliders/Bodies
 			.add_prefab_observer::<ColliderShape, ()>()
 			.add_observer(ColliderOfInteractionTarget::link)
-			.add_observer(PhysicalBody::prefab)
+			.add_systems(
+				PostUpdate,
+				PhysicalBody::prefab.after(TransformSystem::TransformPropagate),
+			)
 			// All effects
 			.add_observer(Effects::insert)
 			// Deal health damage

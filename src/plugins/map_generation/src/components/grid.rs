@@ -17,6 +17,7 @@ use std::{any::type_name, fmt::Display, marker::PhantomData};
 
 #[derive(Component, Debug, PartialEq)]
 #[require(Name = Self::name(), Transform, Visibility)]
+#[component(immutable)]
 pub struct Grid<const SUBDIVISIONS: u8 = 0, TGraph = GridGraph>
 where
 	TGraph: ToSubdivided,
@@ -245,32 +246,6 @@ mod test_insert_subdivided {
 		app.update();
 
 		assert_eq!(None, app.world().entity(entity).get::<Grid::<5, _Graph>>());
-	}
-
-	#[test]
-	fn insert_again_when_level_changed() {
-		let mut app = setup::<5>();
-		let entity = app
-			.world_mut()
-			.spawn(Grid::<0, _Graph> {
-				graph: _Graph { subdivisions: 0 },
-			})
-			.id();
-
-		app.update();
-		app.world_mut()
-			.entity_mut(entity)
-			.remove::<Grid<5, _Graph>>()
-			.get_mut::<Grid<0, _Graph>>()
-			.as_deref_mut();
-		app.update();
-
-		assert_eq!(
-			Some(&Grid {
-				graph: _Graph { subdivisions: 5 }
-			}),
-			app.world().entity(entity).get::<Grid::<5, _Graph>>()
-		);
 	}
 
 	#[test]
