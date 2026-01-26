@@ -20,6 +20,7 @@ use crate::{
 		default_attributes::DefaultAttributes,
 		effects::{Effects, force::ForceEffect},
 		fix_points::{Always, Anchor, Once, fix_point::FixPointSpawner},
+		followers::Followers,
 		ground_target::GroundTarget,
 		interaction_target::{ColliderOfInteractionTarget, InteractionTarget},
 		motion::Motion,
@@ -195,6 +196,7 @@ where
 						.chain(),
 					// Physical effects
 					(
+						Followers::follow,
 						Blockable::beam_interactions.pipe(OnError::log),
 						OngoingInteractions::clear,
 						UpdateOngoingInteractions::push_beam_interactions,
