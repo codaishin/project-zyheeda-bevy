@@ -1,10 +1,11 @@
-use crate::components::followers::Followers;
+use crate::components::followers::{FollowWithOffset, Followers};
 use bevy::prelude::*;
 
 impl Followers {
 	pub(crate) fn follow(
 		parents: Query<(Entity, &Self)>,
 		mut transforms: Query<&mut GlobalTransform>,
+		offsets: Query<&FollowWithOffset>,
 	) {
 		for (followed, followers) in &parents {
 			for follower in followers.iter() {
@@ -14,6 +15,10 @@ impl Followers {
 				let Ok(mut transform) = transforms.get_mut(follower) else {
 					continue;
 				};
+				let translation = offsets
+					.get(follower)
+					.map(|FollowWithOffset(offset)| translation + rotation * *offset)
+					.unwrap_or(translation);
 
 				*transform = Transform::from_translation(translation)
 					.with_rotation(rotation)
@@ -41,13 +46,19 @@ mod tests {
 		forward: Dir3,
 	}
 
-	impl Characteristics {
-		fn new(transform: &GlobalTransform) -> Self {
+	impl From<&GlobalTransform> for Characteristics {
+		fn from(transform: &GlobalTransform) -> Self {
 			Self {
 				translation: transform.translation(),
 				scale: transform.scale(),
 				forward: transform.forward(),
 			}
+		}
+	}
+
+	impl From<GlobalTransform> for Characteristics {
+		fn from(transform: GlobalTransform) -> Self {
+			Self::from(&transform)
 		}
 	}
 
@@ -79,11 +90,11 @@ mod tests {
 		app.update();
 
 		assert_eq_approx!(
-			Some(Characteristics::new(&GlobalTransform::from_xyz(1., 2., 3.))),
+			Some(Characteristics::from(GlobalTransform::from_xyz(1., 2., 3.))),
 			app.world()
 				.entity(child)
 				.get::<GlobalTransform>()
-				.map(Characteristics::new),
+				.map(Characteristics::from),
 			0.001,
 		);
 	}
@@ -102,13 +113,13 @@ mod tests {
 		app.update();
 
 		assert_eq_approx!(
-			Some(Characteristics::new(&GlobalTransform::from(
+			Some(Characteristics::from(GlobalTransform::from(
 				Transform::default().looking_to(Dir3::NEG_X, Dir3::Y)
 			))),
 			app.world()
 				.entity(child)
 				.get::<GlobalTransform>()
-				.map(Characteristics::new),
+				.map(Characteristics::from),
 			0.001,
 		);
 	}
@@ -133,13 +144,65 @@ mod tests {
 		app.update();
 
 		assert_eq_approx!(
-			Some(Characteristics::new(&GlobalTransform::from(
+			Some(Characteristics::from(GlobalTransform::from(
 				Transform::default().with_scale(Vec3::splat(3.))
 			))),
 			app.world()
 				.entity(child)
 				.get::<GlobalTransform>()
-				.map(Characteristics::new),
+				.map(Characteristics::from),
+			0.001,
+		);
+	}
+
+	#[test]
+	fn update_global_transform_with_offset() {
+		let mut app = setup();
+		let parent = app
+			.world_mut()
+			.spawn(GlobalTransform::from_xyz(1., 2., 3.))
+			.id();
+		let child = app
+			.world_mut()
+			.spawn(Follow(parent).with_offset(Vec3::new(3., 4., 5.)))
+			.id();
+
+		app.update();
+
+		assert_eq_approx!(
+			Some(Characteristics::from(GlobalTransform::from_xyz(4., 6., 8.))),
+			app.world()
+				.entity(child)
+				.get::<GlobalTransform>()
+				.map(Characteristics::from),
+			0.001,
+		);
+	}
+
+	#[test]
+	fn update_global_transform_with_offset_based_on_follower_rotation() {
+		let mut app = setup();
+		let parent = app
+			.world_mut()
+			.spawn(GlobalTransform::from(
+				Transform::from_xyz(1., 2., 3.).looking_to(Dir3::X, Dir3::Y),
+			))
+			.id();
+		let child = app
+			.world_mut()
+			.spawn(Follow(parent).with_offset(Vec3::new(3., 4., 5.)))
+			.id();
+
+		app.update();
+
+		assert_eq_approx!(
+			Some(Characteristics::from(GlobalTransform::from(
+				Transform::from_xyz(-4., 6., 6.).looking_to(Dir3::X, Dir3::Y)
+			))),
+			app.world()
+				.entity(child)
+				.get::<GlobalTransform>()
+				.map(Characteristics::from),
 			0.001,
 		);
 	}
