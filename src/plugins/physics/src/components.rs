@@ -5,6 +5,7 @@ pub(crate) mod collider;
 pub(crate) mod default_attributes;
 pub(crate) mod effects;
 pub(crate) mod fix_points;
+pub(crate) mod followers;
 pub(crate) mod ground_target;
 pub(crate) mod hollow;
 pub(crate) mod interaction_target;
