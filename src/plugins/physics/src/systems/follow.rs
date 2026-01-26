@@ -3,33 +3,32 @@ use bevy::prelude::*;
 
 impl Followers {
 	pub(crate) fn follow(
-		parents: Query<(Entity, &Self)>,
+		parents: Query<(&Self, &Transform), Changed<Transform>>,
 		mut transforms: Query<&mut GlobalTransform>,
 		offsets: Query<&FollowWithOffset>,
 	) {
-		for (followed, followers) in &parents {
+		for (followers, followed) in &parents {
 			for follower in followers.iter() {
-				let Ok((translation, rotation)) = transforms.get(followed).map(Self::unpack) else {
-					continue;
-				};
 				let Ok(mut transform) = transforms.get_mut(follower) else {
 					continue;
 				};
 				let translation = offsets
 					.get(follower)
-					.map(|FollowWithOffset(offset)| translation + rotation * *offset)
-					.unwrap_or(translation);
+					.map(Self::compute_offset_to(followed))
+					.unwrap_or(followed.translation);
 
 				*transform = Transform::from_translation(translation)
-					.with_rotation(rotation)
+					.with_rotation(followed.rotation)
 					.with_scale(transform.scale())
 					.into();
 			}
 		}
 	}
 
-	fn unpack(transform: &GlobalTransform) -> (Vec3, Quat) {
-		(transform.translation(), transform.rotation())
+	fn compute_offset_to(followed: &Transform) -> impl Fn(&FollowWithOffset) -> Vec3 {
+		move |FollowWithOffset(offset): &FollowWithOffset| {
+			followed.translation + followed.rotation * *offset
+		}
 	}
 }
 
@@ -37,7 +36,7 @@ impl Followers {
 mod tests {
 	use super::*;
 	use crate::components::followers::Follow;
-	use testing::{ApproxEqual, SingleThreadedApp, assert_eq_approx};
+	use testing::{ApproxEqual, IsChanged, SingleThreadedApp, assert_eq_approx};
 
 	#[derive(Debug, PartialEq)]
 	struct Characteristics {
@@ -73,7 +72,10 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, Followers::follow);
+		app.add_systems(
+			Update,
+			(Followers::follow, IsChanged::<GlobalTransform>::detect).chain(),
+		);
 
 		app
 	}
@@ -81,10 +83,7 @@ mod tests {
 	#[test]
 	fn update_global_transform() {
 		let mut app = setup();
-		let parent = app
-			.world_mut()
-			.spawn(GlobalTransform::from_xyz(1., 2., 3.))
-			.id();
+		let parent = app.world_mut().spawn(Transform::from_xyz(1., 2., 3.)).id();
 		let child = app.world_mut().spawn(Follow(parent)).id();
 
 		app.update();
@@ -104,9 +103,7 @@ mod tests {
 		let mut app = setup();
 		let parent = app
 			.world_mut()
-			.spawn(GlobalTransform::from(
-				Transform::default().looking_to(Dir3::NEG_X, Dir3::Y),
-			))
+			.spawn(Transform::default().looking_to(Dir3::NEG_X, Dir3::Y))
 			.id();
 		let child = app.world_mut().spawn(Follow(parent)).id();
 
@@ -129,9 +126,7 @@ mod tests {
 		let mut app = setup();
 		let parent = app
 			.world_mut()
-			.spawn(GlobalTransform::from(
-				Transform::default().with_scale(Vec3::splat(2.)),
-			))
+			.spawn(Transform::default().with_scale(Vec3::splat(2.)))
 			.id();
 		let child = app
 			.world_mut()
@@ -158,10 +153,7 @@ mod tests {
 	#[test]
 	fn update_global_transform_with_offset() {
 		let mut app = setup();
-		let parent = app
-			.world_mut()
-			.spawn(GlobalTransform::from_xyz(1., 2., 3.))
-			.id();
+		let parent = app.world_mut().spawn(Transform::from_xyz(1., 2., 3.)).id();
 		let child = app
 			.world_mut()
 			.spawn(Follow(parent).with_offset(Vec3::new(3., 4., 5.)))
@@ -184,9 +176,7 @@ mod tests {
 		let mut app = setup();
 		let parent = app
 			.world_mut()
-			.spawn(GlobalTransform::from(
-				Transform::from_xyz(1., 2., 3.).looking_to(Dir3::X, Dir3::Y),
-			))
+			.spawn(Transform::from_xyz(1., 2., 3.).looking_to(Dir3::X, Dir3::Y))
 			.id();
 		let child = app
 			.world_mut()
@@ -204,6 +194,44 @@ mod tests {
 				.get::<GlobalTransform>()
 				.map(Characteristics::from),
 			0.001,
+		);
+	}
+
+	#[test]
+	fn act_only_once() {
+		let mut app = setup();
+		let parent = app.world_mut().spawn(Transform::from_xyz(1., 2., 3.)).id();
+		let child = app.world_mut().spawn(Follow(parent)).id();
+
+		app.update();
+		app.update();
+
+		assert_eq!(
+			Some(&IsChanged::FALSE),
+			app.world()
+				.entity(child)
+				.get::<IsChanged<GlobalTransform>>()
+		);
+	}
+
+	#[test]
+	fn act_again_on_change() {
+		let mut app = setup();
+		let parent = app.world_mut().spawn(Transform::from_xyz(1., 2., 3.)).id();
+		let child = app.world_mut().spawn(Follow(parent)).id();
+
+		app.update();
+		app.world_mut()
+			.entity_mut(parent)
+			.get_mut::<Transform>()
+			.as_deref_mut();
+		app.update();
+
+		assert_eq!(
+			Some(&IsChanged::TRUE),
+			app.world()
+				.entity(child)
+				.get::<IsChanged<GlobalTransform>>()
 		);
 	}
 }
