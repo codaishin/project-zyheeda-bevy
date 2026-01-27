@@ -20,9 +20,10 @@ use crate::{
 		default_attributes::DefaultAttributes,
 		effects::{Effects, force::ForceEffect},
 		fix_points::{Always, Anchor, Once, fix_point::FixPointSpawner},
-		followers::Followers,
+		followers::{Follow, Followers},
 		ground_target::GroundTarget,
 		interaction_target::{ColliderOfInteractionTarget, InteractionTarget},
+		lifetime::LifetimeTiedTo,
 		motion::Motion,
 		no_hover::NoMouseHover,
 		physical_body::PhysicalBody,
@@ -174,6 +175,9 @@ where
 				Update,
 				ForceAffected::insert_from::<DefaultAttributes>.in_set(PhysicsSystems),
 			)
+			// General Lifetime relationship
+			.add_observer(LifetimeTiedTo::insert_on::<Anchor<Always>>)
+			.add_observer(LifetimeTiedTo::insert_on::<Follow>)
 			// Apply interactions
 			.add_event::<RayEvent>()
 			.add_event::<BeamInteraction>()
