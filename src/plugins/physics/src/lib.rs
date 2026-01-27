@@ -23,7 +23,7 @@ use crate::{
 		followers::{Follow, Followers},
 		ground_target::GroundTarget,
 		interaction_target::{ColliderOfInteractionTarget, InteractionTarget},
-		lifetime::LifetimeTiedTo,
+		lifetime::{LifetimeTiedTo, TiedLifetimes},
 		motion::Motion,
 		no_hover::NoMouseHover,
 		physical_body::PhysicalBody,
@@ -178,6 +178,7 @@ where
 			// General Lifetime relationship
 			.add_observer(LifetimeTiedTo::insert_on::<Anchor<Always>>)
 			.add_observer(LifetimeTiedTo::insert_on::<Follow>)
+			.add_observer(TiedLifetimes::despawn_relationships_on_remove)
 			// Apply interactions
 			.add_event::<RayEvent>()
 			.add_event::<BeamInteraction>()
@@ -193,7 +194,6 @@ where
 						GroundTarget::set_position,
 						DestroyAfterDistanceTraveled::system,
 						Anchor::<Once>::system.pipe(OnError::log),
-						Anchor::<Always>::despawn_when_target_invalid,
 						Anchor::<Always>::system.pipe(OnError::log),
 						SetMotionForward::system,
 					)
