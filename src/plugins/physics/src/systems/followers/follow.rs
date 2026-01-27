@@ -6,7 +6,7 @@ impl Followers {
 	pub(crate) fn follow(
 		followed: Query<(Entity, &Self), Changed<FollowStateDirty>>,
 		mut transforms: Query<(&mut GlobalTransform, &mut Transform)>,
-		follower_transforms: Query<&FollowTransform>,
+		follow_transforms: Query<&FollowTransform>,
 		children_entities: Query<(), With<ChildOf>>,
 		follower_entities: Query<(), With<Follow>>,
 	) -> Result<(), Vec<FollowError>> {
@@ -30,12 +30,13 @@ impl Followers {
 				let Ok((mut global, mut local)) = transforms.get_mut(follower) else {
 					continue;
 				};
-				let follower_transform = follower_transforms
-					.get(follower)
-					.map(Self::compute_follower_transform(&followed_transform))
-					.unwrap_or_else(|_| followed_transform);
+				let Ok(follow_transform) = follow_transforms.get(follower) else {
+					continue;
+				};
 
-				*local = follower_transform.with_scale(global.scale());
+				*local = follow_transform
+					.compute(&followed_transform)
+					.with_scale(global.scale());
 				*global = GlobalTransform::from(*local);
 			}
 		}
@@ -46,11 +47,13 @@ impl Followers {
 
 		Ok(())
 	}
+}
 
-	fn compute_follower_transform(followed: &Transform) -> impl Fn(&FollowTransform) -> Transform {
-		move |follower: &FollowTransform| Transform {
-			translation: followed.translation + followed.rotation * follower.translation,
-			rotation: followed.rotation * follower.rotation,
+impl FollowTransform {
+	fn compute(&self, followed: &Transform) -> Transform {
+		Transform {
+			translation: followed.translation + followed.rotation * self.translation,
+			rotation: followed.rotation * self.rotation,
 			..default()
 		}
 	}

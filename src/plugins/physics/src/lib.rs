@@ -200,6 +200,7 @@ where
 						.chain(),
 					// Physical effects
 					(
+						Followers::mark_dirty,
 						Followers::follow.pipe(OnError::log),
 						Blockable::beam_interactions.pipe(OnError::log),
 						OngoingInteractions::clear,

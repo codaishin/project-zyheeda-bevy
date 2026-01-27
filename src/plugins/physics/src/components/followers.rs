@@ -15,7 +15,7 @@ pub(crate) struct Followers(EntityHashSet);
 /// Must not be used nested or in [`ChildOf`] relationships
 #[derive(Component, Debug, PartialEq)]
 #[relationship(relationship_target = Followers)]
-#[require(Transform)]
+#[require(Transform, FollowTransform)]
 pub(crate) struct Follow(pub(crate) Entity);
 
 impl GetProperty<LifetimeRoot> for Follow {
