@@ -9,6 +9,7 @@ pub(crate) mod followers;
 pub(crate) mod ground_target;
 pub(crate) mod hollow;
 pub(crate) mod interaction_target;
+pub(crate) mod lifetime;
 pub(crate) mod motion;
 pub(crate) mod no_hover;
 pub(crate) mod ongoing_effects;

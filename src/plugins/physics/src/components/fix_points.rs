@@ -2,6 +2,7 @@ pub(crate) mod fix_point;
 
 use crate::{
 	components::fix_points::fix_point::FixPointOf,
+	observers::lifetime::insert_on::LifetimeRoot,
 	traits::query_filter_definition::QueryFilterDefinition,
 };
 use bevy::{
@@ -12,7 +13,7 @@ use common::{
 	components::persistent_entity::PersistentEntity,
 	errors::{ErrorData, Level},
 	tools::bone_name::BoneName,
-	traits::handles_skill_physics::SkillSpawner,
+	traits::{accessors::get::GetProperty, handles_skill_physics::SkillSpawner},
 };
 use std::{any::type_name, collections::HashMap, fmt::Display, marker::PhantomData};
 
@@ -50,6 +51,12 @@ where
 	pub(crate) fn with_target_rotation(mut self) -> Self {
 		self.use_target_rotation = true;
 		self
+	}
+}
+
+impl<TFilter> GetProperty<LifetimeRoot> for Anchor<TFilter> {
+	fn get_property(&self) -> LifetimeRoot {
+		LifetimeRoot::Persistent(self.target)
 	}
 }
 

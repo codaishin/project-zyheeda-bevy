@@ -1,4 +1,6 @@
+use crate::observers::lifetime::insert_on::LifetimeRoot;
 use bevy::{ecs::entity::EntityHashSet, prelude::*};
+use common::traits::accessors::get::GetProperty;
 
 /// Used for early selective transform propagation
 ///
@@ -14,6 +16,12 @@ pub(crate) struct Followers(EntityHashSet);
 #[relationship(relationship_target = Followers)]
 #[require(GlobalTransform)]
 pub(crate) struct Follow(pub(crate) Entity);
+
+impl GetProperty<LifetimeRoot> for Follow {
+	fn get_property(&self) -> LifetimeRoot {
+		LifetimeRoot::Transient(self.0)
+	}
+}
 
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct FollowWithOffset(pub(crate) Vec3);
