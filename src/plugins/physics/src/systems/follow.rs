@@ -1,12 +1,12 @@
-use crate::components::followers::{Follow, FollowWithOffset, Followers};
+use crate::components::followers::{Follow, FollowTransform, Followers};
 use bevy::prelude::*;
 use common::errors::{ErrorData, Level};
 
 impl Followers {
 	pub(crate) fn follow(
 		followed: Query<(Entity, &Self, &Transform), TransformOrFollowersChanged>,
-		mut transforms: Query<&mut GlobalTransform>,
-		offsets: Query<&FollowWithOffset>,
+		mut global_transforms: Query<&mut GlobalTransform>,
+		follower_transforms: Query<&FollowTransform>,
 		children_entities: Query<(), With<ChildOf>>,
 		follower_entities: Query<(), With<Follow>>,
 	) -> Result<(), Vec<FollowError>> {
@@ -23,18 +23,17 @@ impl Followers {
 			}
 
 			for follower in followers.iter() {
-				let Ok(mut follower_transform) = transforms.get_mut(follower) else {
+				let Ok(mut follower_global_transform) = global_transforms.get_mut(follower) else {
 					continue;
 				};
-				let follower_translation = offsets
+				let follower_transform = follower_transforms
 					.get(follower)
-					.map(Self::compute_offset_translation_to(followed_transform))
-					.unwrap_or(followed_transform.translation);
+					.map(Self::compute_transform(followed_transform))
+					.unwrap_or_else(|_| *followed_transform);
 
-				*follower_transform = Transform::from_translation(follower_translation)
-					.with_rotation(followed_transform.rotation)
-					.with_scale(follower_transform.scale())
-					.into();
+				*follower_global_transform = GlobalTransform::from(
+					follower_transform.with_scale(follower_global_transform.scale()),
+				);
 			}
 		}
 
@@ -45,9 +44,11 @@ impl Followers {
 		Ok(())
 	}
 
-	fn compute_offset_translation_to(followed: &Transform) -> impl Fn(&FollowWithOffset) -> Vec3 {
-		move |FollowWithOffset(offset): &FollowWithOffset| {
-			followed.translation + followed.rotation * *offset
+	fn compute_transform(followed: &Transform) -> impl Fn(&FollowTransform) -> Transform {
+		move |follower: &FollowTransform| Transform {
+			translation: followed.translation + followed.rotation * follower.translation,
+			rotation: followed.rotation * follower.rotation,
+			..default()
 		}
 	}
 }
@@ -86,6 +87,8 @@ impl ErrorData for FollowError {
 
 #[cfg(test)]
 mod tests {
+	use std::f32::consts::PI;
+
 	use super::*;
 	use crate::components::followers::Follow;
 	use testing::{ApproxEqual, IsChanged, SingleThreadedApp, assert_eq_approx};
@@ -216,12 +219,18 @@ mod tests {
 	}
 
 	#[test]
-	fn update_global_transform_with_offset() {
+	fn update_global_transform_with_follower_translation() {
 		let mut app = setup();
 		let followed = app.world_mut().spawn(Transform::from_xyz(1., 2., 3.)).id();
 		let follower = app
 			.world_mut()
-			.spawn((Follow(followed), FollowWithOffset(Vec3::new(3., 4., 5.))))
+			.spawn((
+				Follow(followed),
+				FollowTransform {
+					translation: Vec3::new(3., 4., 5.),
+					..default()
+				},
+			))
 			.id();
 
 		app.update();
@@ -237,7 +246,7 @@ mod tests {
 	}
 
 	#[test]
-	fn update_global_transform_with_offset_based_on_followed_rotation() {
+	fn update_global_transform_with_follower_translation_based_on_followed_rotation() {
 		let mut app = setup();
 		let followed = app
 			.world_mut()
@@ -245,7 +254,13 @@ mod tests {
 			.id();
 		let follower = app
 			.world_mut()
-			.spawn((Follow(followed), FollowWithOffset(Vec3::new(3., 4., 5.))))
+			.spawn((
+				Follow(followed),
+				FollowTransform {
+					translation: Vec3::new(3., 4., 5.),
+					..default()
+				},
+			))
 			.id();
 
 		app.update();
@@ -253,6 +268,67 @@ mod tests {
 		assert_eq_approx!(
 			Some(Characteristics::from(GlobalTransform::from(
 				Transform::from_xyz(-4., 6., 6.).looking_to(Dir3::X, Dir3::Y)
+			))),
+			app.world()
+				.entity(follower)
+				.get::<GlobalTransform>()
+				.map(Characteristics::from),
+			0.001,
+		);
+	}
+
+	#[test]
+	fn update_global_transform_with_follower_rotation() {
+		let mut app = setup();
+		let followed = app.world_mut().spawn(Transform::default()).id();
+		let follower = app
+			.world_mut()
+			.spawn((
+				Follow(followed),
+				FollowTransform {
+					rotation: Quat::from_rotation_y(PI / 2.),
+					..default()
+				},
+			))
+			.id();
+
+		app.update();
+
+		assert_eq_approx!(
+			Some(Characteristics::from(GlobalTransform::from(
+				Transform::from_rotation(Quat::from_rotation_y(PI / 2.))
+			))),
+			app.world()
+				.entity(follower)
+				.get::<GlobalTransform>()
+				.map(Characteristics::from),
+			0.001,
+		);
+	}
+
+	#[test]
+	fn update_global_transform_with_follower_rotation_based_on_followed_rotation() {
+		let mut app = setup();
+		let followed = app
+			.world_mut()
+			.spawn(Transform::from_rotation(Quat::from_rotation_y(PI / 2.)))
+			.id();
+		let follower = app
+			.world_mut()
+			.spawn((
+				Follow(followed),
+				FollowTransform {
+					rotation: Quat::from_rotation_y(PI / 2.),
+					..default()
+				},
+			))
+			.id();
+
+		app.update();
+
+		assert_eq_approx!(
+			Some(Characteristics::from(GlobalTransform::from(
+				Transform::from_rotation(Quat::from_rotation_y(PI))
 			))),
 			app.world()
 				.entity(follower)
