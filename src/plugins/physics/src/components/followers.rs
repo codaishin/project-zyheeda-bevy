@@ -23,5 +23,8 @@ impl GetProperty<LifetimeRoot> for Follow {
 	}
 }
 
-#[derive(Component, Debug, PartialEq)]
-pub(crate) struct FollowWithOffset(pub(crate) Vec3);
+#[derive(Component, Debug, PartialEq, Default)]
+pub(crate) struct FollowTransform {
+	pub(crate) translation: Vec3,
+	pub(crate) rotation: Quat,
+}
