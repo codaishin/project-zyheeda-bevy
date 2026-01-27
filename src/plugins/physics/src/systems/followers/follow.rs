@@ -1,18 +1,18 @@
-use crate::components::followers::{Follow, FollowTransform, Followers};
+use crate::components::followers::{Follow, FollowStateDirty, FollowTransform, Followers};
 use bevy::prelude::*;
 use common::errors::{ErrorData, Level};
 
 impl Followers {
 	pub(crate) fn follow(
-		followed: Query<(Entity, &Self, &Transform), TransformOrFollowersChanged>,
-		mut global_transforms: Query<&mut GlobalTransform>,
-		follower_transforms: Query<&FollowTransform>,
+		followed: Query<(Entity, &Self), Changed<FollowStateDirty>>,
+		mut transforms: Query<(&mut GlobalTransform, &mut Transform)>,
+		follow_transforms: Query<&FollowTransform>,
 		children_entities: Query<(), With<ChildOf>>,
 		follower_entities: Query<(), With<Follow>>,
 	) -> Result<(), Vec<FollowError>> {
 		let mut errors = vec![];
 
-		for (followed, followers, followed_transform) in &followed {
+		for (followed, followers) in &followed {
 			if children_entities.contains(followed) {
 				errors.push(FollowError::IsChild(followed));
 				continue;
@@ -22,18 +22,22 @@ impl Followers {
 				continue;
 			}
 
+			let Ok(followed_transform) = transforms.get(followed).map(|(.., t)| *t) else {
+				continue;
+			};
+
 			for follower in followers.iter() {
-				let Ok(mut follower_global_transform) = global_transforms.get_mut(follower) else {
+				let Ok((mut global, mut local)) = transforms.get_mut(follower) else {
 					continue;
 				};
-				let follower_transform = follower_transforms
-					.get(follower)
-					.map(Self::compute_transform(followed_transform))
-					.unwrap_or_else(|_| *followed_transform);
+				let Ok(follow_transform) = follow_transforms.get(follower) else {
+					continue;
+				};
 
-				*follower_global_transform = GlobalTransform::from(
-					follower_transform.with_scale(follower_global_transform.scale()),
-				);
+				*local = follow_transform
+					.compute(&followed_transform)
+					.with_scale(global.scale());
+				*global = GlobalTransform::from(*local);
 			}
 		}
 
@@ -43,17 +47,17 @@ impl Followers {
 
 		Ok(())
 	}
+}
 
-	fn compute_transform(followed: &Transform) -> impl Fn(&FollowTransform) -> Transform {
-		move |follower: &FollowTransform| Transform {
-			translation: followed.translation + followed.rotation * follower.translation,
-			rotation: followed.rotation * follower.rotation,
+impl FollowTransform {
+	fn compute(&self, followed: &Transform) -> Transform {
+		Transform {
+			translation: followed.translation + followed.rotation * self.translation,
+			rotation: followed.rotation * self.rotation,
 			..default()
 		}
 	}
 }
-
-type TransformOrFollowersChanged = Or<(Changed<Transform>, Changed<Followers>)>;
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum FollowError {
@@ -116,6 +120,22 @@ mod tests {
 		}
 	}
 
+	impl From<&Transform> for Characteristics {
+		fn from(transform: &Transform) -> Self {
+			Self {
+				translation: transform.translation,
+				scale: transform.scale,
+				forward: transform.forward(),
+			}
+		}
+	}
+
+	impl From<Transform> for Characteristics {
+		fn from(transform: Transform) -> Self {
+			Self::from(&transform)
+		}
+	}
+
 	impl ApproxEqual<f32> for Characteristics {
 		fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
 			self.translation.approx_equal(&other.translation, tolerance)
@@ -161,6 +181,24 @@ mod tests {
 			app.world()
 				.entity(follower)
 				.get::<GlobalTransform>()
+				.map(Characteristics::from),
+			0.001,
+		);
+	}
+
+	#[test]
+	fn update_local_transform() {
+		let mut app = setup();
+		let followed = app.world_mut().spawn(Transform::from_xyz(1., 2., 3.)).id();
+		let follower = app.world_mut().spawn(Follow(followed)).id();
+
+		app.update();
+
+		assert_eq_approx!(
+			Some(Characteristics::from(Transform::from_xyz(1., 2., 3.))),
+			app.world()
+				.entity(follower)
+				.get::<Transform>()
 				.map(Characteristics::from),
 			0.001,
 		);
@@ -356,7 +394,7 @@ mod tests {
 	}
 
 	#[test]
-	fn act_again_on_followed_transform_change() {
+	fn act_again_when_marked_dirty() {
 		let mut app = setup();
 		let followed = app.world_mut().spawn(Transform::from_xyz(1., 2., 3.)).id();
 		let follower = app.world_mut().spawn(Follow(followed)).id();
@@ -364,7 +402,7 @@ mod tests {
 		app.update();
 		app.world_mut()
 			.entity_mut(followed)
-			.get_mut::<Transform>()
+			.get_mut::<FollowStateDirty>()
 			.as_deref_mut();
 		app.update();
 
@@ -373,28 +411,6 @@ mod tests {
 			app.world()
 				.entity(follower)
 				.get::<IsChanged<GlobalTransform>>()
-		);
-	}
-
-	#[test]
-	fn act_again_when_follower_added() {
-		let mut app = setup();
-		let followed = app
-			.world_mut()
-			.spawn((Transform::from_xyz(1., 2., 3.), Followers::default()))
-			.id();
-
-		app.update();
-		let follower = app.world_mut().spawn(Follow(followed)).id();
-		app.update();
-
-		assert_eq_approx!(
-			Some(Characteristics::from(GlobalTransform::from_xyz(1., 2., 3.))),
-			app.world()
-				.entity(follower)
-				.get::<GlobalTransform>()
-				.map(Characteristics::from),
-			0.001,
 		);
 	}
 

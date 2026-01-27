@@ -7,6 +7,7 @@ use common::traits::accessors::get::GetProperty;
 /// Must not be used nested or in [`ChildOf`] relationships
 #[derive(Component, Debug, PartialEq, Default)]
 #[relationship_target(relationship = Follow)]
+#[require(Transform, FollowStateDirty)]
 pub(crate) struct Followers(EntityHashSet);
 
 /// Used for early selective transform propagation
@@ -14,7 +15,7 @@ pub(crate) struct Followers(EntityHashSet);
 /// Must not be used nested or in [`ChildOf`] relationships
 #[derive(Component, Debug, PartialEq)]
 #[relationship(relationship_target = Followers)]
-#[require(GlobalTransform)]
+#[require(Transform, FollowTransform)]
 pub(crate) struct Follow(pub(crate) Entity);
 
 impl GetProperty<LifetimeRoot> for Follow {
@@ -28,3 +29,6 @@ pub(crate) struct FollowTransform {
 	pub(crate) translation: Vec3,
 	pub(crate) rotation: Quat,
 }
+
+#[derive(Component, Debug, PartialEq, Default)]
+pub(crate) struct FollowStateDirty;
