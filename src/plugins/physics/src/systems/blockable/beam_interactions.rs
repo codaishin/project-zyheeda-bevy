@@ -4,6 +4,7 @@ use crate::{
 		RayFilter,
 		blockable::Blockable,
 		blocker_types::BlockerTypes,
+		collider::ColliderShape,
 		interaction_target::ColliderOfInteractionTarget,
 		skill_transform::SkillTransforms,
 	},
@@ -23,7 +24,11 @@ use bevy_rapier3d::plugin::ReadRapierContext;
 use common::{
 	errors::{ErrorData, Level},
 	tools::Units,
-	traits::handles_physics::{PhysicalObject, TimeOfImpact, physical_bodies::Blocker},
+	traits::{
+		accessors::get::TryApplyOn,
+		handles_physics::{PhysicalObject, TimeOfImpact, physical_bodies::Blocker},
+	},
+	zyheeda_commands::ZyheedaCommands,
 };
 use std::{collections::HashSet, fmt::Debug};
 
@@ -32,17 +37,19 @@ impl Blockable {
 		beam_interactions: EventWriter<BeamInteraction>,
 		cast_ray: StaticSystemParam<ReadRapierContext>,
 		objects: Query<(Entity, &Self, &SkillTransforms, &GlobalTransform)>,
-		transforms: Query<&mut Transform>,
+		transforms_and_colliders: Query<(&mut Transform, Option<&ColliderShape>)>,
 		blockers: Query<&BlockerTypes>,
 		interaction_colliders: Query<&ColliderOfInteractionTarget>,
+		commands: ZyheedaCommands,
 	) -> Result<(), BeamError> {
 		Self::beam_interactions_internal(
 			beam_interactions,
 			cast_ray,
 			objects,
-			transforms,
+			transforms_and_colliders,
 			blockers,
 			interaction_colliders,
+			commands,
 		)
 	}
 
@@ -50,9 +57,10 @@ impl Blockable {
 		mut beam_interactions: EventWriter<BeamInteraction>,
 		cast_ray: StaticSystemParam<TGetRayCaster>,
 		objects: Query<(Entity, &Self, &SkillTransforms, &GlobalTransform)>,
-		mut transforms: Query<&mut Transform>,
+		mut transforms_and_colliders: Query<(&mut Transform, Option<&ColliderShape>)>,
 		blockers: Query<&BlockerTypes>,
 		interaction_colliders: Query<&ColliderOfInteractionTarget>,
+		mut commands: ZyheedaCommands,
 	) -> Result<(), BeamError<TCasterError>>
 	where
 		TGetRayCaster: for<'w, 's> SystemParam<
@@ -96,15 +104,32 @@ impl Blockable {
 			}
 
 			for entity in skill_transforms.iter() {
-				let Ok(mut transform) = transforms.get_mut(entity) else {
+				let Ok((mut transform, collider)) = transforms_and_colliders.get_mut(entity) else {
 					continue;
 				};
+				let half_length = *toi / 2.;
 
 				// move beam center in the middle of both ends
-				transform.translation.z = -*toi / 2.;
+				transform.translation.z = -half_length;
 
-				// beams are y-aligned cylinders/capsules rotated forward, so we need to scale y direction
-				transform.scale.y = *toi;
+				// beams are y-aligned cylinders rotated forward, so we need to scale y direction
+				match collider {
+					// update collider shape to trigger reinsertion for immediate collider update
+					Some(ColliderShape::Cylinder { radius, half_y }) => {
+						if **half_y == half_length {
+							continue;
+						}
+						commands.try_apply_on(&entity, |mut e| {
+							e.try_insert(ColliderShape::Cylinder {
+								half_y: Units::from(half_length),
+								radius: *radius,
+							});
+						});
+					}
+					_ => {
+						transform.scale.y = *toi;
+					}
+				}
 			}
 		}
 
@@ -511,6 +536,133 @@ mod tests {
 					..default()
 				}),
 				app.world().entity(skill_transform).get::<Transform>(),
+			);
+			Ok(())
+		}
+	}
+
+	mod colliders {
+		use super::*;
+		use testing::IsChanged;
+
+		#[test]
+		fn update_cylinder_collider() -> Result<(), RunSystemError> {
+			let mut app = setup(|_| {
+				Mock_RayCaster::new_mock(|mock| {
+					mock.expect_cast_ray_continuously_sorted()
+						.return_const(Ok(Sorted::from([
+							RayHit {
+								entity: Entity::from_raw(42),
+								toi: toi!(11.),
+							},
+							RayHit {
+								entity: Entity::from_raw(41),
+								toi: toi!(110.),
+							},
+							RayHit {
+								entity: Entity::from_raw(40),
+								toi: toi!(1100.),
+							},
+						])));
+				})
+			});
+			let entity = app
+				.world_mut()
+				.spawn(Blockable(PhysicalObject::Beam {
+					range: Units::from(11000.),
+					blocked_by: HashSet::from([]),
+				}))
+				.id();
+			let skill_transform = app
+				.world_mut()
+				.spawn((
+					SkillTransformOf(entity),
+					ColliderShape::Cylinder {
+						half_y: Units::from(0.5),
+						radius: Units::from(2.),
+					},
+				))
+				.id();
+
+			_ = app.world_mut().run_system_once(
+				Blockable::beam_interactions_internal::<Res<_GetRayCaster>, Unreachable>,
+			)?;
+
+			assert_eq!(
+				(
+					Some(&Transform {
+						translation: Vec3::ZERO.with_z(-5500.),
+						..default()
+					}),
+					Some(&ColliderShape::Cylinder {
+						half_y: Units::from(5500.),
+						radius: Units::from(2.)
+					}),
+				),
+				(
+					app.world().entity(skill_transform).get::<Transform>(),
+					app.world().entity(skill_transform).get::<ColliderShape>(),
+				)
+			);
+			Ok(())
+		}
+
+		#[test]
+		fn do_not_update_collider_when_beam_length_did_not_change() -> Result<(), RunSystemError> {
+			let mut app = setup(|_| {
+				Mock_RayCaster::new_mock(|mock| {
+					mock.expect_cast_ray_continuously_sorted()
+						.return_const(Ok(Sorted::from([
+							RayHit {
+								entity: Entity::from_raw(42),
+								toi: toi!(11.),
+							},
+							RayHit {
+								entity: Entity::from_raw(41),
+								toi: toi!(110.),
+							},
+							RayHit {
+								entity: Entity::from_raw(40),
+								toi: toi!(1100.),
+							},
+						])));
+				})
+			});
+			let entity = app
+				.world_mut()
+				.spawn(Blockable(PhysicalObject::Beam {
+					range: Units::from(11000.),
+					blocked_by: HashSet::from([]),
+				}))
+				.id();
+			let skill_transform = app
+				.world_mut()
+				.spawn((
+					SkillTransformOf(entity),
+					ColliderShape::Cylinder {
+						half_y: Units::from(0.5),
+						radius: Units::from(2.),
+					},
+				))
+				.id();
+
+			app.add_systems(
+				Update,
+				(
+					Blockable::beam_interactions_internal::<Res<_GetRayCaster>, Unreachable>
+						.pipe(|In(_)| {}),
+					IsChanged::<ColliderShape>::detect,
+				)
+					.chain(),
+			);
+			app.update();
+			app.update();
+
+			assert_eq!(
+				Some(&IsChanged::FALSE),
+				app.world()
+					.entity(skill_transform)
+					.get::<IsChanged<ColliderShape>>(),
 			);
 			Ok(())
 		}
