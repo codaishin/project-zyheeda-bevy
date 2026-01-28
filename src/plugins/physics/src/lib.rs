@@ -20,7 +20,6 @@ use crate::{
 		default_attributes::DefaultAttributes,
 		effects::{Effects, force::ForceEffect},
 		fix_points::{Always, Anchor, Once, fix_point::FixPointSpawner},
-		followers::{Follow, Followers},
 		ground_target::GroundTarget,
 		interaction_target::{ColliderOfInteractionTarget, InteractionTarget},
 		lifetime::{LifetimeTiedTo, TiedLifetimes},
@@ -177,7 +176,6 @@ where
 			)
 			// General Lifetime relationship
 			.add_observer(LifetimeTiedTo::insert_on::<Anchor<Always>>)
-			.add_observer(LifetimeTiedTo::insert_on::<Follow>)
 			.add_observer(TiedLifetimes::despawn_relationships_on_remove)
 			// Apply interactions
 			.add_event::<RayEvent>()
@@ -200,8 +198,6 @@ where
 						.chain(),
 					// Physical effects
 					(
-						Followers::mark_dirty,
-						Followers::follow.pipe(OnError::log),
 						Blockable::beam_interactions.pipe(OnError::log),
 						OngoingInteractions::clear,
 						UpdateOngoingInteractions::push_beam_interactions,

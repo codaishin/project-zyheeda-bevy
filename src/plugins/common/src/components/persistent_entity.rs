@@ -3,6 +3,8 @@ use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::traits::accessors::get::Property;
+
 /// Used as an [`Entity`] reference through different game sessions
 ///
 /// Works in tandem with [`PersistentEntities`](crate::resources::persistent_entities::PersistentEntities).
@@ -68,6 +70,10 @@ impl Default for PersistentEntity {
 	fn default() -> Self {
 		Self(Uuid::new_v4())
 	}
+}
+
+impl Property for PersistentEntity {
+	type TValue<'a> = Self;
 }
 
 #[cfg(test)]
