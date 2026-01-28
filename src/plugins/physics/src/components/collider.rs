@@ -7,7 +7,7 @@ use common::{
 	traits::{
 		handles_physics::physical_bodies::Shape,
 		load_asset::LoadAsset,
-		prefab::{Prefab, PrefabEntityCommands},
+		prefab::{Prefab, PrefabEntityCommands, Reapply},
 	},
 };
 
@@ -77,43 +77,41 @@ impl SimpleOuterRadius for ColliderShape {
 impl Prefab<()> for ColliderShape {
 	type TError = Unreachable;
 
+	const REAPPLY: Reapply = Reapply::Always;
+
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
 		_: &mut impl LoadAsset,
 	) -> Result<(), Self::TError> {
+		entity.try_remove::<Hollow>();
 		entity.try_insert_if_new((
 			CollidingEntities::default(),
 			ActiveEvents::COLLISION_EVENTS,
 			ActiveCollisionTypes::default(),
 		));
 
-		match *self {
+		let (collider, hollow) = match *self {
 			Self::Sphere {
 				radius,
 				hollow_radius,
-			} => {
-				entity.try_insert_if_new(Collider::ball(*radius));
-				let Some(hollow_radius) = hollow_radius else {
-					return Ok(());
-				};
-				entity.try_insert_if_new(Hollow {
-					radius: hollow_radius,
-				});
-			}
+			} => (
+				Collider::ball(*radius),
+				hollow_radius.map(Hollow::with_radius),
+			),
 			Self::Cuboid {
 				half_x,
 				half_y,
 				half_z,
-			} => {
-				entity.try_insert_if_new(Collider::cuboid(*half_x, *half_y, *half_z));
-			}
-			Self::Cylinder { half_y, radius } => {
-				entity.try_insert_if_new(Collider::cylinder(*half_y, *radius));
-			}
-			Self::Capsule { half_y, radius } => {
-				entity.try_insert_if_new(Collider::capsule_y(*half_y, *radius));
-			}
+			} => (Collider::cuboid(*half_x, *half_y, *half_z), None),
+			Self::Cylinder { half_y, radius } => (Collider::cylinder(*half_y, *radius), None),
+			Self::Capsule { half_y, radius } => (Collider::capsule_y(*half_y, *radius), None),
+		};
+
+		entity.try_insert(collider);
+
+		if let Some(hollow) = hollow {
+			entity.try_insert(hollow);
 		}
 
 		Ok(())

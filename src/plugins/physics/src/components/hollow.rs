@@ -7,3 +7,9 @@ use common::tools::Units;
 pub(crate) struct Hollow {
 	pub(crate) radius: Units,
 }
+
+impl Hollow {
+	pub(crate) fn with_radius(radius: Units) -> Self {
+		Self { radius }
+	}
+}
