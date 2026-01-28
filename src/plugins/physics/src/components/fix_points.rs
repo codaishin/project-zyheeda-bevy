@@ -2,7 +2,6 @@ pub(crate) mod fix_point;
 
 use crate::{
 	components::fix_points::fix_point::FixPointOf,
-	observers::lifetime::insert_on::LifetimeRoot,
 	traits::query_filter_definition::QueryFilterDefinition,
 };
 use bevy::{
@@ -54,9 +53,9 @@ where
 	}
 }
 
-impl<TFilter> GetProperty<LifetimeRoot> for Anchor<TFilter> {
-	fn get_property(&self) -> LifetimeRoot {
-		LifetimeRoot::Persistent(self.target)
+impl<TFilter> GetProperty<PersistentEntity> for Anchor<TFilter> {
+	fn get_property(&self) -> PersistentEntity {
+		self.target
 	}
 }
 
