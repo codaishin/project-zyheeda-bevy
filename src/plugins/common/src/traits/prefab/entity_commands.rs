@@ -1,4 +1,4 @@
-use crate::traits::prefab::{TryInsertIfNew, WithChild, WithChildren};
+use crate::traits::prefab::{TryInsert, TryInsertIfNew, TryRemove, WithChild, WithChildren};
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 
 impl TryInsertIfNew for EntityCommands<'_> {
@@ -7,6 +7,24 @@ impl TryInsertIfNew for EntityCommands<'_> {
 		TBundle: Bundle,
 	{
 		EntityCommands::try_insert_if_new(self, bundle)
+	}
+}
+
+impl TryInsert for EntityCommands<'_> {
+	fn try_insert<TBundle>(&mut self, bundle: TBundle) -> &mut Self
+	where
+		TBundle: Bundle,
+	{
+		EntityCommands::try_insert(self, bundle)
+	}
+}
+
+impl TryRemove for EntityCommands<'_> {
+	fn try_remove<TBundle>(&mut self) -> &mut Self
+	where
+		TBundle: Bundle,
+	{
+		EntityCommands::try_remove::<TBundle>(self)
 	}
 }
 
@@ -42,6 +60,25 @@ mod tests {
 			let mut entity = commands.entity(entity);
 
 			<EntityCommands as TryInsertIfNew>::try_insert_if_new(&mut entity, component.clone());
+		}
+	}
+
+	fn try_insert_system(entity: Entity, component: _Component) -> impl Fn(Commands) {
+		move |mut commands| {
+			let mut entity = commands.entity(entity);
+
+			<EntityCommands as TryInsert>::try_insert(&mut entity, component.clone());
+		}
+	}
+
+	fn try_remove_system<T>(entity: Entity) -> impl Fn(Commands)
+	where
+		T: Bundle,
+	{
+		move |mut commands| {
+			let mut entity = commands.entity(entity);
+
+			<EntityCommands as TryRemove>::try_remove::<T>(&mut entity);
 		}
 	}
 
@@ -84,7 +121,7 @@ mod tests {
 	}
 
 	#[test]
-	fn do_no_override_existing_component() -> Result<(), RunSystemError> {
+	fn do_not_override_existing_component() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let entity = app.world_mut().spawn(_Component("don't forget me")).id();
 
@@ -95,6 +132,33 @@ mod tests {
 			Some(&_Component("don't forget me")),
 			app.world().entity(entity).get::<_Component>(),
 		);
+		Ok(())
+	}
+
+	#[test]
+	fn override_existing_component() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let entity = app.world_mut().spawn(_Component("don't forget me")).id();
+
+		app.world_mut()
+			.run_system_once(try_insert_system(entity, _Component("I don't care")))?;
+
+		assert_eq!(
+			Some(&_Component("I don't care")),
+			app.world().entity(entity).get::<_Component>(),
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn remove_component() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let entity = app.world_mut().spawn(_Component("forget me")).id();
+
+		app.world_mut()
+			.run_system_once(try_remove_system::<_Component>(entity))?;
+
+		assert_eq!(None, app.world().entity(entity).get::<_Component>());
 		Ok(())
 	}
 

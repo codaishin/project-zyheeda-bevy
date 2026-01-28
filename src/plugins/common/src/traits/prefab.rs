@@ -41,8 +41,20 @@ pub trait AddPrefabObserver {
 		TDependencies: 'static;
 }
 
+pub trait TryInsert {
+	fn try_insert<TBundle>(&mut self, bundle: TBundle) -> &mut Self
+	where
+		TBundle: Bundle;
+}
+
 pub trait TryInsertIfNew {
 	fn try_insert_if_new<TBundle>(&mut self, bundle: TBundle) -> &mut Self
+	where
+		TBundle: Bundle;
+}
+
+pub trait TryRemove {
+	fn try_remove<TBundle>(&mut self) -> &mut Self
 	where
 		TBundle: Bundle;
 }
@@ -59,6 +71,12 @@ pub trait WithChildren {
 		TFunc: FnOnce(&mut RelatedSpawnerCommands<ChildOf>);
 }
 
-pub trait PrefabEntityCommands: TryInsertIfNew + WithChild + WithChildren {}
+pub trait PrefabEntityCommands:
+	TryInsert + TryInsertIfNew + TryRemove + WithChild + WithChildren
+{
+}
 
-impl<T> PrefabEntityCommands for T where T: TryInsertIfNew + WithChild + WithChildren {}
+impl<T> PrefabEntityCommands for T where
+	T: TryInsert + TryInsertIfNew + TryRemove + WithChild + WithChildren
+{
+}
