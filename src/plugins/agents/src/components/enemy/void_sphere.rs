@@ -37,6 +37,7 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, f32::consts::PI, sync::LazyLock, time::Duration};
 
 #[derive(Component, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+#[component(immutable)]
 #[require(
 	Enemy = Self::enemy(),
 	EnemyAttackConfig = Self::attack_config(),

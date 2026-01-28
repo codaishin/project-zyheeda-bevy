@@ -21,6 +21,7 @@ use common::{
 use std::sync::LazyLock;
 
 #[derive(Component, Default, Debug, PartialEq, Clone)]
+#[component(immutable)]
 #[require(
 	MovementConfig = PLAYER_RUN.clone(),
 	Name = "Player",

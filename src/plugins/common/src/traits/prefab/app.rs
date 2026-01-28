@@ -61,6 +61,7 @@ mod tests {
 	struct _Asset;
 
 	#[derive(Component)]
+	#[component(immutable)]
 	struct _Component {
 		prefab: Result<_Prefab<&'static str>, _Error>,
 	}

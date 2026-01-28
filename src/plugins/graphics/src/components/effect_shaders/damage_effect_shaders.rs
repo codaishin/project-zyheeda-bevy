@@ -9,6 +9,7 @@ use common::{
 };
 
 #[derive(Component, Debug, PartialEq, Default)]
+#[component(immutable)]
 pub struct DamageEffectShaders;
 
 impl Prefab<()> for DamageEffectShaders {

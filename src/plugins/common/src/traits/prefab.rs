@@ -2,9 +2,12 @@ mod app;
 mod entity_commands;
 
 use crate::{errors::ErrorData, traits::load_asset::LoadAsset};
-use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
+use bevy::{
+	ecs::{component::Immutable, relationship::RelatedSpawnerCommands},
+	prelude::*,
+};
 
-pub trait Prefab<TDependency>: Component {
+pub trait Prefab<TDependency>: Component<Mutability = Immutable> {
 	type TError: ErrorData;
 
 	const REAPPLY: Reapply = Reapply::Never;
