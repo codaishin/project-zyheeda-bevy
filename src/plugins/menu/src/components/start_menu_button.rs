@@ -18,6 +18,7 @@ use common::{
 };
 
 #[derive(Component, Debug, PartialEq, Default)]
+#[component(immutable)]
 #[require(Button, Node = Self::node())]
 pub(crate) struct StartMenuButton {
 	pub(crate) label: Localized,

@@ -16,6 +16,7 @@ use common::{
 };
 
 #[derive(Component, Debug, PartialEq)]
+#[component(immutable)]
 #[require(Transform)]
 pub(crate) struct WallCell;
 

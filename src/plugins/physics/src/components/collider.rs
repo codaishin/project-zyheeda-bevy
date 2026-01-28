@@ -20,6 +20,7 @@ pub(crate) struct Colliders(EntityHashSet);
 pub(crate) struct ColliderOf(pub(crate) Entity);
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
+#[component(immutable)]
 #[require(Transform)]
 pub(crate) enum ColliderShape {
 	Sphere {
