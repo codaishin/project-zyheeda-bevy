@@ -11,7 +11,7 @@ where
 {
 	pub(crate) fn load_map_image(
 		file: &str,
-	) -> impl Fn(Trigger<OnInsert, Self>, ZyheedaCommands, ResMut<AssetServer>, Query<&Self>) {
+	) -> impl Fn(On<Insert, Self>, ZyheedaCommands, ResMut<AssetServer>, Query<&Self>) {
 		load_map_image(file)
 	}
 }
@@ -19,18 +19,13 @@ where
 #[allow(clippy::type_complexity)]
 fn load_map_image<TCell, TAssets>(
 	file: &str,
-) -> impl Fn(
-	Trigger<OnInsert, MapFolder<TCell>>,
-	ZyheedaCommands,
-	ResMut<TAssets>,
-	Query<&MapFolder<TCell>>,
-)
+) -> impl Fn(On<Insert, MapFolder<TCell>>, ZyheedaCommands, ResMut<TAssets>, Query<&MapFolder<TCell>>)
 where
 	TCell: ThreadSafe,
 	TAssets: Resource + LoadAsset,
 {
-	move |trigger, mut commands, mut asset_server, assets| {
-		let entity = trigger.target();
+	move |on_insert, mut commands, mut asset_server, assets| {
+		let entity = on_insert.entity;
 		let Ok(MapFolder { path, .. }) = assets.get(entity) else {
 			return;
 		};

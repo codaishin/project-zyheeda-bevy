@@ -88,7 +88,7 @@ use components::{
 	tooltip::{Tooltip, TooltipUIControl},
 	ui_overlay::UIOverlay,
 };
-use events::DropdownEvent;
+use events::DropdownMessage;
 use states::menus_change_able::MenusChangeable;
 use std::{marker::PhantomData, time::Duration};
 use systems::{
@@ -164,8 +164,8 @@ where
 			});
 	}
 
-	fn events(&self, app: &mut App) {
-		app.add_event::<DropdownEvent>();
+	fn messages(&self, app: &mut App) {
+		app.add_message::<DropdownMessage>();
 	}
 
 	fn state_control(&self, app: &mut App) {
@@ -402,7 +402,7 @@ where
 {
 	fn build(&self, app: &mut App) {
 		self.resources(app);
-		self.events(app);
+		self.messages(app);
 		self.state_control(app);
 		self.start_menu(app);
 		self.loading_screen::<LoadingEssentialAssets>(app);

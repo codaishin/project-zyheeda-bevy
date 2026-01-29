@@ -47,7 +47,7 @@ mod test {
 	fn update_window_size() {
 		let mut app = setup();
 		app.world_mut().spawn(Window {
-			resolution: WindowResolution::new(100., 20.),
+			resolution: WindowResolution::new(100, 20),
 			..default()
 		});
 
@@ -68,7 +68,7 @@ mod test {
 		let mut app = setup();
 		app.add_systems(Last, is_changed_resource!(WindowSize, &changed));
 		app.world_mut().spawn(Window {
-			resolution: WindowResolution::new(100., 20.),
+			resolution: WindowResolution::new(100, 20),
 			..default()
 		});
 

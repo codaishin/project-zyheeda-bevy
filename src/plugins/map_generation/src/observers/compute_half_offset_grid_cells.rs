@@ -17,7 +17,7 @@ pub(crate) type Cells<TCell> = (Entity, Vec<(Vec3, HalfOffsetCell<TCell>)>);
 
 impl HalfOffsetGrid {
 	pub(crate) fn compute_cells<TCell>(
-		trigger: Trigger<OnAdd, Self>,
+		trigger: On<Add, Self>,
 		grids: Query<&CellsRef<TCell>, With<Self>>,
 		maps: Query<(&MapGridGraph<TCell>, &MapCells<TCell>)>,
 	) -> Result<Cells<TCell>, GridError>
@@ -27,7 +27,7 @@ impl HalfOffsetGrid {
 			+ Clone
 			+ MapCellsExtra<TExtra = CellGrid<HalfOffsetCell<TCell>>>,
 	{
-		let entity = trigger.target();
+		let entity = trigger.entity;
 		let Ok(cells_ref) = grids.get(entity) else {
 			return Err(GridError::NoRefToCellDefinition);
 		};
@@ -77,7 +77,7 @@ mod test_get_half_offset_grid {
 	};
 	use macros::new_valid;
 	use std::collections::HashMap;
-	use testing::{SingleThreadedApp, assert_eq_unordered};
+	use testing::{SingleThreadedApp, assert_eq_unordered, fake_entity};
 
 	#[derive(Debug, PartialEq, Default, Clone)]
 	struct _Cell(&'static str);
@@ -370,7 +370,7 @@ mod test_get_half_offset_grid {
 
 		app.world_mut().spawn((
 			HalfOffsetGrid,
-			CellsRef::<_Cell>::from_grid_definition(Entity::from_raw(123)),
+			CellsRef::<_Cell>::from_grid_definition(fake_entity!(123)),
 		));
 
 		assert_eq!(

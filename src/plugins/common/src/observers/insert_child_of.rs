@@ -7,11 +7,11 @@ use bevy::prelude::*;
 
 impl ChildOfPersistent {
 	pub(crate) fn insert_child_of(
-		trigger: Trigger<OnInsert, Self>,
+		on_insert: On<Insert, Self>,
 		mut commands: ZyheedaCommands,
 		children_of_persistent: Query<&Self>,
 	) {
-		let child = trigger.target();
+		let child = on_insert.entity;
 		let Ok(ChildOfPersistent(persistent_parent)) = children_of_persistent.get(child) else {
 			return;
 		};

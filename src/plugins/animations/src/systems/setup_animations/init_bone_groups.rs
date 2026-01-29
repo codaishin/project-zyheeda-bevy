@@ -149,7 +149,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 		let mut assets = Assets::default();
 
-		assets.insert(handle, AnimationGraph::new());
+		_ = assets.insert(handle, AnimationGraph::new());
 		app.insert_resource(assets);
 		app.add_systems(
 			Update,

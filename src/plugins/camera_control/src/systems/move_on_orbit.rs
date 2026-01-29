@@ -11,7 +11,7 @@ use common::{
 
 pub(crate) fn move_on_orbit<TOrbit, TInput>(
 	input: StaticSystemParam<TInput>,
-	mut mouse_motion: EventReader<MouseMotion>,
+	mut mouse_motion: MessageReader<MouseMotion>,
 	mut query: Query<(&TOrbit, &mut Transform)>,
 ) where
 	TOrbit: Orbit + Component,
@@ -32,7 +32,7 @@ pub(crate) fn move_on_orbit<TOrbit, TInput>(
 mod tests {
 	use super::*;
 	use crate::traits::orbit::Vec2Radians;
-	use bevy::{ecs::event::Events, input::mouse::MouseMotion};
+	use bevy::input::mouse::MouseMotion;
 	use common::tools::action_key::ActionKey;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -71,7 +71,7 @@ mod tests {
 
 		app.insert_resource(map);
 		app.add_systems(Update, move_on_orbit::<_Orbit, Res<_Input>>);
-		app.add_event::<MouseMotion>();
+		app.add_message::<MouseMotion>();
 
 		app
 	}
@@ -97,8 +97,8 @@ mod tests {
 			Transform::from_translation(Vec3::ZERO),
 		));
 		app.world_mut()
-			.resource_mut::<Events<MouseMotion>>()
-			.send(MouseMotion {
+			.resource_mut::<Messages<MouseMotion>>()
+			.write(MouseMotion {
 				delta: Vec2::new(3., 4.),
 			});
 
@@ -126,8 +126,8 @@ mod tests {
 			Transform::from_translation(Vec3::ZERO),
 		));
 		app.world_mut()
-			.resource_mut::<Events<MouseMotion>>()
-			.send(MouseMotion {
+			.resource_mut::<Messages<MouseMotion>>()
+			.write(MouseMotion {
 				delta: Vec2::new(3., 4.),
 			});
 
@@ -166,8 +166,8 @@ mod tests {
 			Transform::from_translation(Vec3::ZERO),
 		));
 		app.world_mut()
-			.resource_mut::<Events<MouseMotion>>()
-			.send(MouseMotion {
+			.resource_mut::<Messages<MouseMotion>>()
+			.write(MouseMotion {
 				delta: Vec2::new(3., 4.),
 			});
 

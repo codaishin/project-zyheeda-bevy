@@ -1,6 +1,6 @@
 mod app;
 mod components;
-mod events;
+mod messages;
 mod observers;
 mod physics_hooks;
 mod resources;
@@ -31,7 +31,7 @@ use crate::{
 		when_traveled::DestroyAfterDistanceTraveled,
 		world_camera::WorldCamera,
 	},
-	events::{BeamInteraction, RayEvent},
+	messages::{BeamInteraction, RayEvent},
 	observers::{skill_prefab::SkillPrefab, update_blockers::UpdateBlockersObserver},
 	physics_hooks::check_hollow_colliders::CheckHollowColliders,
 	resources::ongoing_interactions::OngoingInteractions,
@@ -142,7 +142,7 @@ where
 			.add_observer(ColliderOfInteractionTarget::link)
 			.add_systems(
 				PostUpdate,
-				PhysicalBody::prefab.after(TransformSystem::TransformPropagate),
+				PhysicalBody::prefab.after(TransformSystems::Propagate),
 			)
 			// All effects
 			.add_observer(Effects::insert)
@@ -178,8 +178,8 @@ where
 			.add_observer(LifetimeTiedTo::insert_on::<Anchor<Always>>)
 			.add_observer(TiedLifetimes::despawn_relationships_on_remove)
 			// Apply interactions
-			.add_event::<RayEvent>()
-			.add_event::<BeamInteraction>()
+			.add_message::<RayEvent>()
+			.add_message::<BeamInteraction>()
 			.init_resource::<OngoingInteractions>()
 			.add_systems(
 				Update,

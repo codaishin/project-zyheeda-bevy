@@ -6,7 +6,7 @@ edition.workspace = true
 [dependencies]
 # external
 bevy.workspace = true
-bevy_rapier3d = "0.30.0"
+bevy_rapier3d = "0.32.0"
 serde.workspace = true
 tracing.workspace = true
 

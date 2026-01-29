@@ -4,8 +4,8 @@ mod traits;
 
 use bevy::{
 	app::{App, Plugin, Update},
+	camera::{Camera, visibility::RenderLayers},
 	ecs::schedule::IntoScheduleConfigs,
-	render::{camera::Camera, view::RenderLayers},
 };
 use common::{
 	attributes::health::Health,

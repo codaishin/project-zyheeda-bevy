@@ -52,7 +52,7 @@ mod tests {
 		let mut folder_assets = Assets::default();
 
 		for (id, asset) in folders {
-			folder_assets.insert(id, asset);
+			_ = folder_assets.insert(id, asset);
 		}
 
 		app.insert_resource(folder_assets);

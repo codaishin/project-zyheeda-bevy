@@ -8,7 +8,7 @@ impl CastRayContinuously<RayCasterArgs> for RapierContext<'_> {
 		ray: &RayCasterArgs,
 		callback: F,
 	) {
-		self.intersections_with_ray(
+		self.intersect_ray(
 			ray.origin,
 			ray.direction.into(),
 			*ray.max_toi,

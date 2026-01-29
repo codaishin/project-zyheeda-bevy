@@ -97,11 +97,10 @@ mod tests {
 					p.spawn(SpawnArgs::with_shape(CONTACT.clone(), PROJECTION.clone()));
 				})?;
 
-			let skills = app
-				.world()
-				.iter_entities()
-				.filter(|e| e.contains::<PersistentEntity>());
-			assert_count!(1, skills);
+			let mut skills = app
+				.world_mut()
+				.query_filtered::<(), With<PersistentEntity>>();
+			assert_count!(1, skills.iter(app.world()));
 			Ok(())
 		}
 
@@ -114,21 +113,20 @@ mod tests {
 					p.spawn(SpawnArgs::with_shape(CONTACT.clone(), PROJECTION.clone()));
 				})?;
 
-			let skills = app
-				.world()
-				.iter_entities()
-				.filter(|e| e.contains::<PersistentEntity>());
-			let [skill] = assert_count!(1, skills);
+			let mut skills = app
+				.world_mut()
+				.query_filtered::<&Skill, With<PersistentEntity>>();
+			let [skill] = assert_count!(1, skills.iter(app.world()));
 			assert_eq!(
-				Some(&Skill {
+				&Skill {
 					lifetime: None,
 					created_from: CreatedFrom::Spawn,
 					contact: CONTACT.clone(),
 					contact_effects: vec![],
 					projection: PROJECTION.clone(),
 					projection_effects: vec![],
-				}),
-				skill.get::<Skill>()
+				},
+				skill
 			);
 			Ok(())
 		}
@@ -152,11 +150,8 @@ mod tests {
 					p.spawn(SpawnArgs::with_shape(CONTACT.clone(), PROJECTION.clone()))
 				})?;
 
-			let skills = app
-				.world()
-				.iter_entities()
-				.filter_map(|e| e.get::<PersistentEntity>());
-			let [skill] = assert_count!(1, skills);
+			let mut skills = app.world_mut().query::<&PersistentEntity>();
+			let [skill] = assert_count!(1, skills.iter(app.world()));
 			assert_eq!(root, *skill);
 			Ok(())
 		}
@@ -173,15 +168,11 @@ mod tests {
 					);
 				})?;
 
-			let skills = app
-				.world()
-				.iter_entities()
-				.filter(|e| e.contains::<PersistentEntity>());
-			let [skill] = assert_count!(1, skills);
-			assert_eq!(
-				Some(Duration::from_millis(42)),
-				skill.get::<Skill>().and_then(|s| s.lifetime)
-			);
+			let mut skills = app
+				.world_mut()
+				.query_filtered::<&Skill, With<PersistentEntity>>();
+			let [skill] = assert_count!(1, skills.iter(app.world()));
+			assert_eq!(Some(Duration::from_millis(42)), skill.lifetime);
 			Ok(())
 		}
 
@@ -198,15 +189,11 @@ mod tests {
 					);
 				})?;
 
-			let skills = app
-				.world()
-				.iter_entities()
-				.filter(|e| e.contains::<PersistentEntity>());
-			let [skill] = assert_count!(1, skills);
-			assert_eq!(
-				Some(&vec![effect]),
-				skill.get::<Skill>().map(|s| &s.contact_effects)
-			);
+			let mut skills = app
+				.world_mut()
+				.query_filtered::<&Skill, With<PersistentEntity>>();
+			let [skill] = assert_count!(1, skills.iter(app.world()));
+			assert_eq!(vec![effect], skill.contact_effects);
 			Ok(())
 		}
 
@@ -223,15 +210,11 @@ mod tests {
 					);
 				})?;
 
-			let skills = app
-				.world()
-				.iter_entities()
-				.filter(|e| e.contains::<PersistentEntity>());
-			let [skill] = assert_count!(1, skills);
-			assert_eq!(
-				Some(&vec![effect]),
-				skill.get::<Skill>().map(|s| &s.projection_effects)
-			);
+			let mut skills = app
+				.world_mut()
+				.query_filtered::<&Skill, With<PersistentEntity>>();
+			let [skill] = assert_count!(1, skills.iter(app.world()));
+			assert_eq!(vec![effect], skill.projection_effects);
 			Ok(())
 		}
 	}

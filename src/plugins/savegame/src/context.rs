@@ -133,7 +133,7 @@ mod test_write_buffer {
 	use macros::simple_mock;
 	use serde_json::from_str;
 	use std::path::PathBuf;
-	use testing::{Mock, SingleThreadedApp};
+	use testing::{Mock, SingleThreadedApp, fake_entity};
 
 	simple_mock! {
 		_Handler {}
@@ -153,7 +153,7 @@ mod test_write_buffer {
 		fn buffer() {
 			fn get_buffer() -> SaveBuffer {
 				HashMap::from([(
-					Entity::from_raw(42),
+					fake_entity!(42),
 					HashSet::from([ComponentString {
 						comp: "name".to_owned(),
 						value: from_str("[\"state\"]").unwrap(),
@@ -219,7 +219,7 @@ mod test_write_buffer {
 		fn buffer() {
 			fn get_buffer() -> SaveBuffer {
 				HashMap::from([(
-					Entity::from_raw(42),
+					fake_entity!(42),
 					HashSet::from([ComponentString {
 						comp: "name".to_owned(),
 						value: from_str("[\"state\"]").unwrap(),

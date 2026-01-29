@@ -7,14 +7,14 @@ use common::traits::{
 
 impl Agent {
 	pub(crate) fn register_skill_spawn_points<TSkills>(
-		trigger: Trigger<OnAdd, Self>,
+		trigger: On<Add, Self>,
 		mut skills: StaticSystemParam<TSkills>,
 		agents: Query<&Agent>,
 		configs: Res<Assets<AgentConfig>>,
 	) where
 		TSkills: for<'c> GetContextMut<SkillSpawnPoints, TContext<'c>: RegisterDefinition>,
 	{
-		let entity = trigger.target();
+		let entity = trigger.entity;
 		let ctx = TSkills::get_context_mut(&mut skills, SkillSpawnPoints { entity });
 		let Some(mut ctx) = ctx else {
 			return;
@@ -60,7 +60,7 @@ mod tests {
 		let mut configs_asset = Assets::default();
 
 		for (id, asset) in configs {
-			configs_asset.insert(id, asset);
+			_ = configs_asset.insert(id, asset);
 		}
 		app.insert_resource(configs_asset);
 		app.add_observer(Agent::register_skill_spawn_points::<Query<&mut _Skills>>);

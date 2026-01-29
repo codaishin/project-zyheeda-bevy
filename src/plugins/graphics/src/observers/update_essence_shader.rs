@@ -10,7 +10,7 @@ use common::{
 
 impl MaterialOverride {
 	pub(crate) fn update_essence_shader(
-		trigger: Trigger<OnInsert, Self>,
+		on_insert: On<Insert, Self>,
 		commands: ZyheedaCommands,
 		assets: ResMut<Assets<EssenceMaterial>>,
 		overrides: Query<&Self>,
@@ -18,7 +18,7 @@ impl MaterialOverride {
 		with_inactive_standard_material: Query<&inactive::Material>,
 	) {
 		Self::update_essence_shader_internal(
-			trigger,
+			on_insert,
 			commands,
 			assets,
 			overrides,
@@ -28,7 +28,7 @@ impl MaterialOverride {
 	}
 
 	fn update_essence_shader_internal<TAssets>(
-		trigger: Trigger<OnInsert, Self>,
+		on_insert: On<Insert, Self>,
 		commands: ZyheedaCommands,
 		assets: ResMut<TAssets>,
 		overrides: Query<&Self>,
@@ -37,7 +37,7 @@ impl MaterialOverride {
 	) where
 		TAssets: AddAsset<EssenceMaterial> + Resource,
 	{
-		let entity = trigger.target();
+		let entity = on_insert.entity;
 
 		let Ok(material_override) = overrides.get(entity) else {
 			return;

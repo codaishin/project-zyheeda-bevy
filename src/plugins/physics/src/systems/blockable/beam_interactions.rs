@@ -8,7 +8,7 @@ use crate::{
 		interaction_target::ColliderOfInteractionTarget,
 		skill_transform::SkillTransforms,
 	},
-	events::BeamInteraction,
+	messages::BeamInteraction,
 	traits::cast_ray::{
 		CastRayContinuouslySorted,
 		GetContinuousSortedRayCaster,
@@ -34,7 +34,7 @@ use std::{collections::HashSet, fmt::Debug};
 
 impl Blockable {
 	pub(crate) fn beam_interactions(
-		beam_interactions: EventWriter<BeamInteraction>,
+		beam_interactions: MessageWriter<BeamInteraction>,
 		cast_ray: StaticSystemParam<ReadRapierContext>,
 		objects: Query<(Entity, &Self, &SkillTransforms, &GlobalTransform)>,
 		transforms_and_colliders: Query<(&mut Transform, Option<&ColliderShape>)>,
@@ -54,7 +54,7 @@ impl Blockable {
 	}
 
 	fn beam_interactions_internal<TGetRayCaster, TCasterError>(
-		mut beam_interactions: EventWriter<BeamInteraction>,
+		mut beam_interactions: MessageWriter<BeamInteraction>,
 		cast_ray: StaticSystemParam<TGetRayCaster>,
 		objects: Query<(Entity, &Self, &SkillTransforms, &GlobalTransform)>,
 		mut transforms_and_colliders: Query<(&mut Transform, Option<&ColliderShape>)>,
@@ -208,7 +208,7 @@ mod tests {
 			interaction_target::ColliderOfInteractionTarget,
 			skill_transform::SkillTransformOf,
 		},
-		events::BeamInteraction,
+		messages::BeamInteraction,
 		traits::cast_ray::{CastRayContinuouslySorted, InvalidIntersections, RayHit},
 	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
@@ -221,7 +221,7 @@ mod tests {
 	use macros::simple_mock;
 	use mockall::predicate::eq;
 	use std::collections::HashSet;
-	use testing::{Mock, SingleThreadedApp, get_current_update_events};
+	use testing::{Mock, SingleThreadedApp, fake_entity, get_current_update_messages};
 	use zyheeda_core::prelude::Sorted;
 
 	#[derive(Resource)]
@@ -267,7 +267,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 		let mock = new_mock(app.world_mut());
 
-		app.add_event::<BeamInteraction>();
+		app.add_message::<BeamInteraction>();
 		app.insert_resource(_GetRayCaster { mock });
 
 		app
@@ -319,15 +319,15 @@ mod tests {
 					mock.expect_cast_ray_continuously_sorted()
 						.return_const(Ok(Sorted::from([
 							RayHit {
-								entity: Entity::from_raw(42),
+								entity: fake_entity!(42),
 								toi: toi!(11.),
 							},
 							RayHit {
-								entity: Entity::from_raw(41),
+								entity: fake_entity!(41),
 								toi: toi!(110.),
 							},
 							RayHit {
-								entity: Entity::from_raw(40),
+								entity: fake_entity!(40),
 								toi: toi!(1100.),
 							},
 						])));
@@ -370,7 +370,7 @@ mod tests {
 					mock.expect_cast_ray_continuously_sorted()
 						.return_const(Ok(Sorted::from([
 							RayHit {
-								entity: Entity::from_raw(42),
+								entity: fake_entity!(42),
 								toi: toi!(11.),
 							},
 							RayHit {
@@ -378,7 +378,7 @@ mod tests {
 								toi: toi!(110.),
 							},
 							RayHit {
-								entity: Entity::from_raw(40),
+								entity: fake_entity!(40),
 								toi: toi!(1100.),
 							},
 						])));
@@ -422,7 +422,7 @@ mod tests {
 					mock.expect_cast_ray_continuously_sorted()
 						.return_const(Ok(Sorted::from([
 							RayHit {
-								entity: Entity::from_raw(42),
+								entity: fake_entity!(42),
 								toi: toi!(11.),
 							},
 							RayHit {
@@ -430,7 +430,7 @@ mod tests {
 								toi: toi!(110.),
 							},
 							RayHit {
-								entity: Entity::from_raw(40),
+								entity: fake_entity!(40),
 								toi: toi!(1100.),
 							},
 						])));
@@ -470,7 +470,7 @@ mod tests {
 					mock.expect_cast_ray_continuously_sorted()
 						.return_const(Ok(Sorted::from([
 							RayHit {
-								entity: Entity::from_raw(42),
+								entity: fake_entity!(42),
 								toi: toi!(11.),
 							},
 							RayHit {
@@ -478,7 +478,7 @@ mod tests {
 								toi: toi!(110.),
 							},
 							RayHit {
-								entity: Entity::from_raw(40),
+								entity: fake_entity!(40),
 								toi: toi!(1100.),
 							},
 						])));
@@ -552,15 +552,15 @@ mod tests {
 					mock.expect_cast_ray_continuously_sorted()
 						.return_const(Ok(Sorted::from([
 							RayHit {
-								entity: Entity::from_raw(42),
+								entity: fake_entity!(42),
 								toi: toi!(11.),
 							},
 							RayHit {
-								entity: Entity::from_raw(41),
+								entity: fake_entity!(41),
 								toi: toi!(110.),
 							},
 							RayHit {
-								entity: Entity::from_raw(40),
+								entity: fake_entity!(40),
 								toi: toi!(1100.),
 							},
 						])));
@@ -614,15 +614,15 @@ mod tests {
 					mock.expect_cast_ray_continuously_sorted()
 						.return_const(Ok(Sorted::from([
 							RayHit {
-								entity: Entity::from_raw(42),
+								entity: fake_entity!(42),
 								toi: toi!(11.),
 							},
 							RayHit {
-								entity: Entity::from_raw(41),
+								entity: fake_entity!(41),
 								toi: toi!(110.),
 							},
 							RayHit {
-								entity: Entity::from_raw(40),
+								entity: fake_entity!(40),
 								toi: toi!(1100.),
 							},
 						])));
@@ -669,6 +669,8 @@ mod tests {
 	}
 
 	mod beam_interaction_events {
+		use testing::assert_count;
+
 		use super::*;
 
 		#[test]
@@ -678,15 +680,15 @@ mod tests {
 					mock.expect_cast_ray_continuously_sorted()
 						.return_const(Ok(Sorted::from([
 							RayHit {
-								entity: Entity::from_raw(42),
+								entity: fake_entity!(42),
 								toi: toi!(11.),
 							},
 							RayHit {
-								entity: Entity::from_raw(41),
+								entity: fake_entity!(41),
 								toi: toi!(110.),
 							},
 							RayHit {
-								entity: Entity::from_raw(40),
+								entity: fake_entity!(40),
 								toi: toi!(1100.),
 							},
 						])));
@@ -708,18 +710,18 @@ mod tests {
 				vec![
 					&BeamInteraction {
 						beam: entity,
-						intersects: Entity::from_raw(42)
+						intersects: fake_entity!(42)
 					},
 					&BeamInteraction {
 						beam: entity,
-						intersects: Entity::from_raw(41)
+						intersects: fake_entity!(41)
 					},
 					&BeamInteraction {
 						beam: entity,
-						intersects: Entity::from_raw(40)
+						intersects: fake_entity!(40)
 					},
 				],
-				get_current_update_events!(app, BeamInteraction).collect::<Vec<_>>(),
+				get_current_update_messages!(app, BeamInteraction).collect::<Vec<_>>(),
 			);
 			Ok(())
 		}
@@ -738,7 +740,7 @@ mod tests {
 					mock.expect_cast_ray_continuously_sorted()
 						.return_const(Ok(Sorted::from([
 							RayHit {
-								entity: Entity::from_raw(42),
+								entity: fake_entity!(42),
 								toi: toi!(11.),
 							},
 							RayHit {
@@ -746,7 +748,7 @@ mod tests {
 								toi: toi!(110.),
 							},
 							RayHit {
-								entity: Entity::from_raw(40),
+								entity: fake_entity!(40),
 								toi: toi!(1100.),
 							},
 						])));
@@ -764,23 +766,22 @@ mod tests {
 				Blockable::beam_interactions_internal::<Res<_GetRayCaster>, Unreachable>,
 			)?;
 
-			let blocker = app
-				.world()
-				.iter_entities()
-				.find(|e| e.contains::<BlockerTypes>())
-				.unwrap();
+			let mut blockers = app
+				.world_mut()
+				.query_filtered::<Entity, With<BlockerTypes>>();
+			let [blocker] = assert_count!(1, blockers.iter(app.world()));
 			assert_eq!(
 				vec![
 					&BeamInteraction {
 						beam: entity,
-						intersects: Entity::from_raw(42)
+						intersects: fake_entity!(42)
 					},
 					&BeamInteraction {
 						beam: entity,
-						intersects: blocker.id()
+						intersects: blocker
 					},
 				],
-				get_current_update_events!(app, BeamInteraction).collect::<Vec<_>>(),
+				get_current_update_messages!(app, BeamInteraction).collect::<Vec<_>>(),
 			);
 			Ok(())
 		}

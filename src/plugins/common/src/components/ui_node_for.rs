@@ -1,5 +1,5 @@
 use crate::traits::handles_graphics::StaticRenderLayers;
-use bevy::{prelude::*, render::view::RenderLayers};
+use bevy::{camera::visibility::RenderLayers, prelude::*};
 use std::marker::PhantomData;
 
 #[derive(Component, Debug, PartialEq)]

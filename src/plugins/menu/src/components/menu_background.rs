@@ -78,6 +78,7 @@ mod tests {
 	use super::*;
 	use std::fmt::Debug;
 	use test_case::test_case;
+	use testing::fake_entity;
 
 	#[test_case(AlignItems::End, |node| node.align_items; "align items")]
 	#[test_case(JustifyContent::End, |node| node.justify_content; "justify content")]
@@ -88,7 +89,7 @@ mod tests {
 		MenuBackground: WithOverride<T>,
 	{
 		let background = MenuBackground::default().with(value);
-		let node = Node::derive_from(Entity::from_raw(42), &background, &());
+		let node = Node::derive_from(fake_entity!(42), &background, &());
 
 		assert_eq!(value, get_item(&node));
 	}

@@ -8,13 +8,13 @@ use common::{
 
 impl LifetimeTiedTo {
 	pub(crate) fn insert_on<T>(
-		trigger: Trigger<OnInsert, T>,
+		on_insert: On<Insert, T>,
 		components: Query<&T>,
 		mut commands: ZyheedaCommands,
 	) where
 		T: Component + GetProperty<PersistentEntity>,
 	{
-		let entity = trigger.target();
+		let entity = on_insert.entity;
 		let Ok(component) = components.get(entity) else {
 			return;
 		};

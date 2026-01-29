@@ -1,4 +1,7 @@
-use crate::{events::BeamInteraction, traits::send_collision_interaction::PushOngoingInteraction};
+use crate::{
+	messages::BeamInteraction,
+	traits::send_collision_interaction::PushOngoingInteraction,
+};
 use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
@@ -14,7 +17,7 @@ pub trait PushBeamInteractions:
 {
 	fn push_beam_interactions(
 		mut ongoing_interactions: StaticSystemParam<Self>,
-		mut beam_interactions: EventReader<BeamInteraction>,
+		mut beam_interactions: MessageReader<BeamInteraction>,
 	) {
 		for BeamInteraction { beam, intersects } in beam_interactions.read() {
 			ongoing_interactions.push_ongoing_interaction(*beam, *intersects);
@@ -25,7 +28,7 @@ pub trait PushBeamInteractions:
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::events::BeamInteraction;
+	use crate::messages::BeamInteraction;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use testing::{NestedMocks, SingleThreadedApp};
@@ -59,7 +62,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_event::<BeamInteraction>();
+		app.add_message::<BeamInteraction>();
 		app.init_resource::<_OngoingCollisions>();
 		app.add_systems(Update, ResMut::<_OngoingCollisions>::push_beam_interactions);
 
@@ -71,7 +74,7 @@ mod tests {
 		let mut app = setup();
 		let actor = app.world_mut().spawn_empty().id();
 		let target = app.world_mut().spawn_empty().id();
-		app.world_mut().send_event(BeamInteraction {
+		app.world_mut().write_message(BeamInteraction {
 			beam: actor,
 			intersects: target,
 		});

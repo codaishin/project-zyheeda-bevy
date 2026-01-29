@@ -119,6 +119,7 @@ impl From<RayFilter> for QueryFilter<'_> {
 mod tests_ray_filter_from_query_filter {
 	use super::*;
 	use bevy_rapier3d::geometry::Group;
+	use testing::fake_entity;
 
 	#[test]
 	fn set_all_flags() {
@@ -128,8 +129,8 @@ mod tests_ray_filter_from_query_filter {
 				memberships: Group::all(),
 				filters: Group::empty(),
 			}),
-			exclude_collider: Some(Entity::from_raw(42)),
-			exclude_rigid_body: Some(Entity::from_raw(24)),
+			exclude_collider: Some(fake_entity!(42)),
+			exclude_rigid_body: Some(fake_entity!(24)),
 		};
 		let query_filter: QueryFilter = ray_filter.into();
 
@@ -140,8 +141,8 @@ mod tests_ray_filter_from_query_filter {
 					memberships: Group::all(),
 					filters: Group::empty(),
 				}),
-				Some(Entity::from_raw(42)),
-				Some(Entity::from_raw(24)),
+				Some(fake_entity!(42)),
+				Some(fake_entity!(24)),
 				true,
 			),
 			(
@@ -159,6 +160,7 @@ mod tests_ray_filter_from_query_filter {
 mod test_ray_filter_from_query_filter {
 	use super::*;
 	use bevy_rapier3d::geometry::Group;
+	use testing::fake_entity;
 
 	#[test]
 	fn set_all_flags_except_dynamic_filter() {
@@ -168,8 +170,8 @@ mod test_ray_filter_from_query_filter {
 				memberships: Group::all(),
 				filters: Group::empty(),
 			}),
-			exclude_collider: Some(Entity::from_raw(42)),
-			exclude_rigid_body: Some(Entity::from_raw(24)),
+			exclude_collider: Some(fake_entity!(42)),
+			exclude_rigid_body: Some(fake_entity!(24)),
 			..default()
 		};
 		let ray_filter = RayFilter::try_from(query_filter);
@@ -181,8 +183,8 @@ mod test_ray_filter_from_query_filter {
 					memberships: Group::all(),
 					filters: Group::empty(),
 				}),
-				exclude_collider: Some(Entity::from_raw(42)),
-				exclude_rigid_body: Some(Entity::from_raw(24)),
+				exclude_collider: Some(fake_entity!(42)),
+				exclude_rigid_body: Some(fake_entity!(24)),
 			}),
 			ray_filter
 		);

@@ -109,7 +109,7 @@ mod tests {
 			handles_localization::Token,
 		},
 	};
-	use std::{collections::HashMap, sync::LazyLock};
+	use std::{collections::HashMap, marker::PhantomData, sync::LazyLock};
 	use testing::SingleThreadedApp;
 
 	#[derive(Component)]
@@ -146,9 +146,7 @@ mod tests {
 	#[derive(Debug, PartialEq, Clone)]
 	struct _Skill(SkillExecution);
 
-	const IMAGE: Handle<Image> = Handle::Weak(AssetId::Uuid {
-		uuid: AssetId::<Image>::DEFAULT_UUID,
-	});
+	const IMAGE: Handle<Image> = Handle::Uuid(AssetId::<Image>::DEFAULT_UUID, PhantomData);
 
 	impl GetProperty<SkillIcon> for _Skill {
 		fn get_property(&self) -> &'_ Handle<Image> {

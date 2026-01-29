@@ -195,7 +195,7 @@ mod tests {
 			}
 		}
 
-		graphs.insert(graph_handle, graph);
+		_ = graphs.insert(graph_handle, graph);
 		app.insert_resource(graphs);
 		app.add_systems(
 			Update,

@@ -117,12 +117,12 @@ mod tests {
 		render::render_resource::AsBindGroup,
 	};
 	use common::{traits::accessors::get::GetMut, zyheeda_commands::ZyheedaCommands};
-	use testing::new_handle;
+	use testing::{fake_entity, new_handle};
 
 	#[test]
 	fn push_mesh_handle() {
 		let mut shader = EffectShadersTarget::default();
-		let entity = Entity::from_raw(42);
+		let entity = fake_entity!(42);
 
 		shader.track(entity, &Mesh3d(new_handle()));
 
@@ -132,7 +132,7 @@ mod tests {
 	#[test]
 	fn push_mesh_handles() {
 		let mut shader = EffectShadersTarget::default();
-		let entities = [Entity::from_raw(11), Entity::from_raw(66)];
+		let entities = [fake_entity!(11), fake_entity!(66)];
 
 		for entity in &entities {
 			shader.track(*entity, &Mesh3d(new_handle()));
@@ -144,27 +144,27 @@ mod tests {
 	#[test]
 	fn remove_mesh_handles() {
 		let mut shader = EffectShadersTarget {
-			meshes: HashSet::from([Entity::from_raw(11), Entity::from_raw(66)]),
+			meshes: HashSet::from([fake_entity!(11), fake_entity!(66)]),
 			..default()
 		};
 
-		shader.untrack(&Entity::from_raw(66));
+		shader.untrack(&fake_entity!(66));
 
-		assert_eq!(HashSet::from([Entity::from_raw(11)]), shader.meshes);
+		assert_eq!(HashSet::from([fake_entity!(11)]), shader.meshes);
 	}
 
 	#[test]
 	fn contains_mesh_handles() {
 		let shader = EffectShadersTarget {
-			meshes: HashSet::from([Entity::from_raw(11)]),
+			meshes: HashSet::from([fake_entity!(11)]),
 			..default()
 		};
 
 		assert_eq!(
 			[true, false],
 			[
-				shader.is_tracking(&Entity::from_raw(11)),
-				shader.is_tracking(&Entity::from_raw(12))
+				shader.is_tracking(&fake_entity!(11)),
+				shader.is_tracking(&fake_entity!(12))
 			]
 		);
 	}

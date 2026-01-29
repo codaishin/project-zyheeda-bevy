@@ -16,26 +16,27 @@ impl AddPrefabObserver for App {
 	{
 		match TPrefab::REAPPLY {
 			Always => self.add_observer(
-				instantiate::<OnInsert, TPrefab, TDependencies, AssetServer>.pipe(OnError::log),
+				instantiate::<Insert, TPrefab, TDependencies, AssetServer>.pipe(OnError::log),
 			),
 			Never => self.add_observer(
-				instantiate::<OnAdd, TPrefab, TDependencies, AssetServer>.pipe(OnError::log),
+				instantiate::<Add, TPrefab, TDependencies, AssetServer>.pipe(OnError::log),
 			),
 		}
 	}
 }
 
-fn instantiate<TTrigger, TPrefab, TDependencies, TAssetServer>(
-	trigger: Trigger<TTrigger, TPrefab>,
+fn instantiate<TEvent, TPrefab, TDependencies, TAssetServer>(
+	trigger: On<TEvent, TPrefab>,
 	components: Query<&TPrefab>,
 	mut commands: Commands,
 	mut asset_server: ResMut<TAssetServer>,
 ) -> Result<(), TPrefab::TError>
 where
+	TEvent: EntityEvent,
 	TPrefab: Prefab<TDependencies> + Component,
 	TAssetServer: Resource + LoadAsset,
 {
-	let entity = trigger.target();
+	let entity = trigger.event_target();
 	let Ok(component) = components.get(entity) else {
 		return Ok(());
 	};
@@ -121,7 +122,7 @@ mod tests {
 
 	fn setup<TEvent>(asset_server: MockAssetServer) -> App
 	where
-		TEvent: Event,
+		TEvent: EntityEvent,
 	{
 		let mut app = App::new().single_threaded(Update);
 
@@ -136,7 +137,7 @@ mod tests {
 	#[test]
 	fn call_prefab_instantiation_method() {
 		let handle = new_handle();
-		let mut app = setup::<OnInsert>(
+		let mut app = setup::<Insert>(
 			MockAssetServer::default()
 				.path("my/path")
 				.returns(handle.clone()),
@@ -154,7 +155,7 @@ mod tests {
 
 	#[test]
 	fn return_error() {
-		let mut app = setup::<OnInsert>(MockAssetServer::default());
+		let mut app = setup::<Insert>(MockAssetServer::default());
 
 		let entity = app.world_mut().spawn(_Component {
 			prefab: Err(_Error),
@@ -166,11 +167,16 @@ mod tests {
 		);
 	}
 
-	#[test_case(OnAdd, (1, 0); "on add")]
-	#[test_case(OnInsert, (1, 1); "on insert")]
+	const FAKE_ENTITY: Entity = match Entity::from_raw_u32(4242) {
+		Some(e) => e,
+		None => panic!("INVALID ENTITY"),
+	};
+
+	#[test_case(Add { entity: FAKE_ENTITY }, (1, 0); "on add")]
+	#[test_case(Insert { entity: FAKE_ENTITY }, (1, 1); "on insert")]
 	fn use_trigger_event<TEvent>(_: TEvent, expected_calls: (usize, usize))
 	where
-		TEvent: Event,
+		TEvent: EntityEvent,
 	{
 		let mut app = setup::<TEvent>(MockAssetServer::default());
 

@@ -1,7 +1,7 @@
-use bevy::prelude::{Entity, Event};
+use bevy::prelude::*;
 
-#[derive(Event, Debug, PartialEq)]
-pub(crate) enum DropdownEvent {
+#[derive(Message, Debug, PartialEq)]
+pub(crate) enum DropdownMessage {
 	Added(Entity),
 	Removed(Entity),
 }

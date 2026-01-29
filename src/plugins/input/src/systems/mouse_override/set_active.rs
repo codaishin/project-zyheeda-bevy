@@ -37,7 +37,7 @@ mod tests {
 		traits::handles_input::InputState,
 	};
 	use test_case::test_case;
-	use testing::SingleThreadedApp;
+	use testing::{SingleThreadedApp, fake_entity};
 
 	#[derive(Resource, Debug, PartialEq)]
 	struct _OverrideChanged(bool);
@@ -109,7 +109,7 @@ mod tests {
 	#[test]
 	fn set_when_mouse_override_set_to_other_panel() {
 		let mut app = setup(MouseOverride::Active {
-			panel: Entity::from_raw(42),
+			panel: fake_entity!(42),
 			action: ActionKey::from(PlayerSlot::LOWER_R),
 			input_state: None,
 		});
@@ -139,7 +139,7 @@ mod tests {
 	#[test]
 	fn do_nothing_when_mouse_override_set_to_active_and_has_input() {
 		let mut app = setup(MouseOverride::Active {
-			panel: Entity::from_raw(123),
+			panel: fake_entity!(123),
 			action: ActionKey::default(),
 			input_state: Some(InputState::just_pressed()),
 		});
@@ -155,7 +155,7 @@ mod tests {
 
 		assert_eq!(
 			&MouseOverride::Active {
-				panel: Entity::from_raw(123),
+				panel: fake_entity!(123),
 				action: ActionKey::default(),
 				input_state: Some(InputState::just_pressed()),
 			},

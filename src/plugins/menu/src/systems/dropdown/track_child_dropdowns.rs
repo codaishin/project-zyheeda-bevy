@@ -1,15 +1,15 @@
-use crate::{components::dropdown::DropdownUI, events::DropdownEvent};
+use crate::{components::dropdown::DropdownUI, events::DropdownMessage};
 use bevy::prelude::*;
 
 pub(crate) fn dropdown_track_child_dropdowns<TItem: Send + Sync + 'static>(
-	mut events: EventReader<DropdownEvent>,
+	mut messages: MessageReader<DropdownMessage>,
 	mut dropdown_uis: Query<&mut DropdownUI<TItem>>,
 	children: Query<&ChildOf>,
 ) {
-	for event in events.read() {
-		match event {
-			DropdownEvent::Added(child) => add_child(&mut dropdown_uis, &children, child),
-			DropdownEvent::Removed(child) => remove_child(&mut dropdown_uis, child),
+	for message in messages.read() {
+		match message {
+			DropdownMessage::Added(child) => add_child(&mut dropdown_uis, &children, child),
+			DropdownMessage::Removed(child) => remove_child(&mut dropdown_uis, child),
 		}
 	}
 }
@@ -39,14 +39,14 @@ fn remove_child<TItem: Send + Sync + 'static>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use testing::SingleThreadedApp;
+	use testing::{SingleThreadedApp, fake_entity};
 
 	#[derive(Debug, PartialEq)]
 	struct _Item;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_event::<DropdownEvent>();
+		app.add_message::<DropdownMessage>();
 		app.add_systems(Update, dropdown_track_child_dropdowns::<_Item>);
 
 		app
@@ -56,11 +56,11 @@ mod tests {
 	fn add_child_entity() {
 		let mut app = setup();
 
-		let source = Entity::from_raw(42);
+		let source = fake_entity!(42);
 		let dropdown = app.world_mut().spawn(DropdownUI::<_Item>::new(source)).id();
 		let child_dropdown = app.world_mut().spawn(ChildOf(dropdown)).id();
 		app.world_mut()
-			.send_event(DropdownEvent::Added(child_dropdown));
+			.write_message(DropdownMessage::Added(child_dropdown));
 
 		app.update();
 
@@ -76,11 +76,11 @@ mod tests {
 	fn do_not_add_child_entity_when_not_child_of_dropdown_ui() {
 		let mut app = setup();
 
-		let source = Entity::from_raw(42);
+		let source = fake_entity!(42);
 		let dropdown = app.world_mut().spawn(DropdownUI::<_Item>::new(source)).id();
 		let child_dropdown = app.world_mut().spawn_empty().id();
 		app.world_mut()
-			.send_event(DropdownEvent::Added(child_dropdown));
+			.write_message(DropdownMessage::Added(child_dropdown));
 
 		app.update();
 
@@ -96,12 +96,12 @@ mod tests {
 	fn do_not_add_child_entity_when_dropdown_ui_has_children_but_event_entity_is_not_one_of_them() {
 		let mut app = setup();
 
-		let source = Entity::from_raw(42);
+		let source = fake_entity!(42);
 		let dropdown = app.world_mut().spawn(DropdownUI::<_Item>::new(source)).id();
 		app.world_mut().spawn(ChildOf(dropdown));
 		let child_dropdown = app.world_mut().spawn_empty().id();
 		app.world_mut()
-			.send_event(DropdownEvent::Added(child_dropdown));
+			.write_message(DropdownMessage::Added(child_dropdown));
 
 		app.update();
 
@@ -117,12 +117,12 @@ mod tests {
 	fn add_child_entity_when_nested_deeply_under_dropdown_ui() {
 		let mut app = setup();
 
-		let source = Entity::from_raw(42);
+		let source = fake_entity!(42);
 		let dropdown = app.world_mut().spawn(DropdownUI::<_Item>::new(source)).id();
 		let in_between = app.world_mut().spawn(ChildOf(dropdown)).id();
 		let child_dropdown = app.world_mut().spawn(ChildOf(in_between)).id();
 		app.world_mut()
-			.send_event(DropdownEvent::Added(child_dropdown));
+			.write_message(DropdownMessage::Added(child_dropdown));
 
 		app.update();
 
@@ -138,14 +138,14 @@ mod tests {
 	fn add_multiple_child_entities() {
 		let mut app = setup();
 
-		let source = Entity::from_raw(42);
+		let source = fake_entity!(42);
 		let dropdown = app.world_mut().spawn(DropdownUI::<_Item>::new(source)).id();
 		let child_dropdown_a = app.world_mut().spawn(ChildOf(dropdown)).id();
 		let child_dropdown_b = app.world_mut().spawn(ChildOf(dropdown)).id();
 		app.world_mut()
-			.send_event(DropdownEvent::Added(child_dropdown_a));
+			.write_message(DropdownMessage::Added(child_dropdown_a));
 		app.world_mut()
-			.send_event(DropdownEvent::Added(child_dropdown_b));
+			.write_message(DropdownMessage::Added(child_dropdown_b));
 
 		app.update();
 
@@ -163,23 +163,23 @@ mod tests {
 	fn remove_child_unchecked() {
 		let mut app = setup();
 
-		let source = Entity::from_raw(42);
+		let source = fake_entity!(42);
 		let dropdown = app
 			.world_mut()
 			.spawn(
 				DropdownUI::<_Item>::new(source)
-					.with_child_dropdowns([Entity::from_raw(1), Entity::from_raw(2)]),
+					.with_child_dropdowns([fake_entity!(1), fake_entity!(2)]),
 			)
 			.id();
 		app.world_mut()
-			.send_event(DropdownEvent::Removed(Entity::from_raw(2)));
+			.write_message(DropdownMessage::Removed(fake_entity!(2)));
 
 		app.update();
 
 		let dropdown = app.world().entity(dropdown);
 
 		assert_eq!(
-			Some(&DropdownUI::new(source).with_child_dropdowns([Entity::from_raw(1)])),
+			Some(&DropdownUI::new(source).with_child_dropdowns([fake_entity!(1)])),
 			dropdown.get::<DropdownUI<_Item>>()
 		)
 	}

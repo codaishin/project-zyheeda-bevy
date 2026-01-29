@@ -69,7 +69,7 @@ mod tests {
 	use macros::simple_mock;
 	use mockall::predicate::eq;
 	use std::collections::HashSet;
-	use testing::{Mock, SingleThreadedApp};
+	use testing::{Mock, SingleThreadedApp, fake_entity};
 
 	#[derive(Debug, PartialEq, Clone)]
 	struct _Error;
@@ -103,7 +103,7 @@ mod tests {
 		});
 		let context = Arc::new(Mutex::new(
 			SaveContext::from(writer)
-				.with_save_buffer([(Entity::from_raw(42), HashSet::from([string.clone()]))]),
+				.with_save_buffer([(fake_entity!(42), HashSet::from([string.clone()]))]),
 		));
 		let mut app = setup();
 
@@ -158,7 +158,7 @@ mod tests {
 				.return_const(Ok(()));
 		});
 		let context = Arc::new(Mutex::new(SaveContext::from(writer).with_save_buffer([(
-			Entity::from_raw(42),
+			fake_entity!(42),
 			HashSet::from([string_a.clone(), string_b.clone()]),
 		)])));
 		let mut app = setup();
@@ -214,8 +214,8 @@ mod tests {
 				.return_const(Ok(()));
 		});
 		let context = Arc::new(Mutex::new(SaveContext::from(writer).with_save_buffer([
-			(Entity::from_raw(42), HashSet::from([string_a.clone()])),
-			(Entity::from_raw(43), HashSet::from([string_b.clone()])),
+			(fake_entity!(42), HashSet::from([string_a.clone()])),
+			(fake_entity!(43), HashSet::from([string_b.clone()])),
 		])));
 		let mut app = setup();
 
@@ -231,7 +231,7 @@ mod tests {
 			mock.expect_write().return_const(Ok(()));
 		});
 		let context = Arc::new(Mutex::new(SaveContext::from(writer).with_save_buffer([(
-			Entity::from_raw(42),
+			fake_entity!(42),
 			HashSet::from([ComponentString {
 				comp: "A".to_owned(),
 				value: serde_json::from_str(r#"{"value": 32}"#).unwrap(),

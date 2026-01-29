@@ -1,5 +1,5 @@
 use crate::components::tooltip::{TooltipContent, TooltipUiConfig};
-use bevy::{ecs::system::Res, prelude::Query, render::view::Visibility, time::Time};
+use bevy::prelude::*;
 use common::traits::thread_safe::ThreadSafe;
 use std::time::Duration;
 
@@ -25,13 +25,8 @@ pub(crate) fn tooltip_visibility<TTime, T>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{
-		app::{App, Update},
-		prelude::Entity,
-		time::Real,
-	};
 	use std::time::Duration;
-	use testing::{MissingLastUpdate, SingleThreadedApp, TickTime};
+	use testing::{MissingLastUpdate, SingleThreadedApp, TickTime, fake_entity};
 
 	fn setup() -> Result<App, MissingLastUpdate> {
 		let mut app = App::new().single_threaded(Update);
@@ -48,7 +43,7 @@ mod tests {
 		let tooltip_ui = app
 			.world_mut()
 			.spawn((
-				TooltipContent::<()>::new(Entity::from_raw(42), Duration::from_millis(100)),
+				TooltipContent::<()>::new(fake_entity!(42), Duration::from_millis(100)),
 				Visibility::Hidden,
 			))
 			.id();
@@ -68,7 +63,7 @@ mod tests {
 		let tooltip_ui = app
 			.world_mut()
 			.spawn((
-				TooltipContent::<()>::new(Entity::from_raw(42), Duration::from_millis(10)),
+				TooltipContent::<()>::new(fake_entity!(42), Duration::from_millis(10)),
 				Visibility::Hidden,
 			))
 			.id();
@@ -88,7 +83,7 @@ mod tests {
 		let tooltip_ui = app
 			.world_mut()
 			.spawn((
-				TooltipContent::<()>::new(Entity::from_raw(42), Duration::from_millis(1000)),
+				TooltipContent::<()>::new(fake_entity!(42), Duration::from_millis(1000)),
 				Visibility::Hidden,
 			))
 			.id();
@@ -111,7 +106,7 @@ mod tests {
 		let tooltip_ui = app
 			.world_mut()
 			.spawn((
-				TooltipContent::<()>::new(Entity::from_raw(42), Duration::from_millis(10)),
+				TooltipContent::<()>::new(fake_entity!(42), Duration::from_millis(10)),
 				Visibility::Hidden,
 			))
 			.id();
@@ -122,10 +117,7 @@ mod tests {
 		let tooltip_ui = app.world().entity(tooltip_ui);
 
 		assert_eq!(
-			Some(&TooltipContent::<()>::new(
-				Entity::from_raw(42),
-				Duration::ZERO
-			)),
+			Some(&TooltipContent::<()>::new(fake_entity!(42), Duration::ZERO)),
 			tooltip_ui.get::<TooltipContent<()>>()
 		);
 		Ok(())

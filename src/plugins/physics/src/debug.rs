@@ -1,26 +1,26 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 
-use crate::events::RayEvent;
+use crate::messages::RayEvent;
 
 pub(crate) struct Debug;
 
 impl Debug {
 	fn display_events(
-		mut collision_events: EventReader<CollisionEvent>,
-		mut contact_force_events: EventReader<ContactForceEvent>,
-		mut ray_cast_events: EventReader<RayEvent>,
+		mut collision_messages: MessageReader<CollisionEvent>,
+		mut contact_force_messages: MessageReader<ContactForceEvent>,
+		mut ray_cast_messages: MessageReader<RayEvent>,
 	) {
-		for collision_event in collision_events.read() {
-			info!("Received collision event: {collision_event:?}");
+		for collision_message in collision_messages.read() {
+			info!("Received collision message: {collision_message:?}");
 		}
 
-		for contact_force_event in contact_force_events.read() {
-			info!("Received contact force event: {contact_force_event:?}");
+		for contact_force_message in contact_force_messages.read() {
+			info!("Received contact force message: {contact_force_message:?}");
 		}
 
-		for ray_cast_event in ray_cast_events.read() {
-			info!("Received ray cast event: {ray_cast_event:?}");
+		for ray_cast_message in ray_cast_messages.read() {
+			info!("Received ray cast message: {ray_cast_message:?}");
 		}
 	}
 }

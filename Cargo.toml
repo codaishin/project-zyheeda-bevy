@@ -7,8 +7,8 @@ edition = "2024"
 
 [workspace.dependencies]
 # external
-bevy = { version = "0.16.0", features = ["serialize"] }
-bevy-inspector-egui = "0.31.0"
+bevy = { version = "0.17.3", features = ["serialize"] }
+bevy-inspector-egui = "0.35.0"
 fluent = "0.16.1"
 fluent-syntax = "0.11.1"
 mockall = "=0.13.1"

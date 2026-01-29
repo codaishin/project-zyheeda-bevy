@@ -129,12 +129,8 @@ mod tests {
 
 		app.update();
 
-		assert_count!(
-			0,
-			app.world()
-				.iter_entities()
-				.filter(|e| e.contains::<_Child>())
-		);
+		let mut children = app.world_mut().query_filtered::<(), With<_Child>>();
+		assert_count!(0, children.iter(app.world()));
 	}
 
 	#[test]
@@ -165,6 +161,7 @@ mod tests {
 
 		app.update();
 
+		let mut children = app.world_mut().query_filtered::<(), With<_Child>>();
 		assert_eq!(
 			([true, true], [false, false], 4),
 			(
@@ -174,10 +171,7 @@ mod tests {
 				app.world()
 					.entity(entities)
 					.map(|e| e.contains::<KeyBind<Rebinding<_Action>>>()),
-				app.world()
-					.iter_entities()
-					.filter(|e| e.contains::<_Child>())
-					.count()
+				children.iter(app.world()).count()
 			)
 		);
 	}

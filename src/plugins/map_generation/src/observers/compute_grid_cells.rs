@@ -14,14 +14,14 @@ pub(crate) type Cells<TCell> = (Entity, Vec<(Vec3, TCell)>);
 
 impl Grid {
 	pub(crate) fn compute_cells<TCell>(
-		trigger: Trigger<OnAdd, Self>,
+		trigger: On<Add, Self>,
 		grids: Query<(&Self, &CellsRef<TCell>)>,
 		cells: Query<&MapCells<TCell>>,
 	) -> Result<Cells<TCell>, GridError>
 	where
 		TCell: TypePath + ThreadSafe + Clone + MapCellsExtra,
 	{
-		let entity = trigger.target();
+		let entity = trigger.entity;
 		let Ok((grid, cells_ref)) = grids.get(entity) else {
 			return Err(GridError::NoRefToCellDefinition);
 		};
@@ -66,7 +66,7 @@ mod tests {
 		traits::map_cells_extra::{CellGridDefinition, MapCellsExtra},
 	};
 	use std::collections::HashMap;
-	use testing::{SingleThreadedApp, assert_eq_unordered};
+	use testing::{SingleThreadedApp, assert_eq_unordered, fake_entity};
 
 	#[derive(Resource, Debug, PartialEq, Clone)]
 	struct _Result(Result<(Entity, Vec<(Vec3, _Cell)>), GridError>);
@@ -201,7 +201,7 @@ mod tests {
 
 		app.world_mut().spawn((
 			Grid::from(&GridGraph::default()),
-			CellsRef::<_Cell>::from_grid_definition(Entity::from_raw(123)),
+			CellsRef::<_Cell>::from_grid_definition(fake_entity!(123)),
 		));
 
 		assert_eq!(

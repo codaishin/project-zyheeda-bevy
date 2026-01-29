@@ -146,7 +146,7 @@ where
 impl<TDependencies> HandlesSaving for SavegamePlugin<TDependencies> {
 	type TSaveEntityMarker = Save;
 
-	fn can_quick_load() -> impl Condition<()> {
+	fn can_quick_load() -> impl SystemCondition<()> {
 		IntoSystem::into_system(
 			Inspector::<FileIO>::quick_save_file_exists.pipe(OnError::log_and_return(|| false)),
 		)

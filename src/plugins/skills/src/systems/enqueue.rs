@@ -135,11 +135,11 @@ mod tests {
 		let mut skill_assets = Assets::<Skill>::default();
 
 		for (id, item) in items {
-			item_assets.insert(id, item);
+			_ = item_assets.insert(id, item);
 		}
 
 		for (id, skill) in skills {
-			skill_assets.insert(id, skill);
+			_ = skill_assets.insert(id, skill);
 		}
 
 		app.insert_resource(item_assets);

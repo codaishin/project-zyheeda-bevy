@@ -84,7 +84,7 @@ mod tests {
 	};
 	use std::f32::consts::PI;
 	use test_case::test_case;
-	use testing::{SingleThreadedApp, assert_count, get_children};
+	use testing::{SingleThreadedApp, assert_children_count};
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -107,7 +107,7 @@ mod tests {
 
 		app.update();
 
-		let [child] = assert_count!(1, get_children!(app, entity));
+		let [child] = assert_children_count!(1, app, entity);
 		assert_eq!(
 			Some(&ColliderShape::from(shape)),
 			child.get::<ColliderShape>(),
@@ -130,7 +130,7 @@ mod tests {
 
 		app.update();
 
-		let [child] = assert_count!(1, get_children!(app, entity));
+		let [child] = assert_children_count!(1, app, entity);
 		assert_eq!(
 			Some(&Transform::from_translation(offset)),
 			child.get::<Transform>(),
@@ -153,7 +153,7 @@ mod tests {
 
 		app.update();
 
-		let [child] = assert_count!(1, get_children!(app, entity));
+		let [child] = assert_children_count!(1, app, entity);
 		assert_eq!(
 			Some(&Transform::from_rotation(rotation)),
 			child.get::<Transform>(),
@@ -219,7 +219,7 @@ mod tests {
 
 		app.update();
 
-		let [child] = assert_count!(1, get_children!(app, entity));
+		let [child] = assert_children_count!(1, app, entity);
 		assert_eq!(no_mouse_hover, child.get::<NoMouseHover>().copied());
 	}
 
@@ -237,13 +237,13 @@ mod tests {
 			.id();
 
 		app.update();
-		let [child] = assert_count!(1, get_children!(app, entity).map(|e| e.id()));
+		let [child] = assert_children_count!(1, app, entity).map(|e| e.id());
 		app.world_mut()
 			.entity_mut(child)
 			.insert(ColliderShape::from(shape));
 		app.update();
 
-		let [child] = assert_count!(1, get_children!(app, entity));
+		let [child] = assert_children_count!(1, app, entity);
 		assert_eq!(
 			Some(&ColliderShape::from(shape)),
 			child.get::<ColliderShape>()
@@ -269,7 +269,7 @@ mod tests {
 			.insert(PhysicalBody(Body::from(shape)));
 		app.update();
 
-		let [child] = assert_count!(1, get_children!(app, entity));
+		let [child] = assert_children_count!(1, app, entity);
 		assert_eq!(
 			Some(&ColliderShape::from(shape)),
 			child.get::<ColliderShape>()

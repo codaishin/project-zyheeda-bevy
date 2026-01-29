@@ -64,7 +64,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 		let mut graphs = Assets::default();
 
-		graphs.insert(handle, graph);
+		_ = graphs.insert(handle, graph);
 		app.insert_resource(graphs);
 		app.add_systems(
 			Update,

@@ -100,7 +100,7 @@ mod tests {
 		let mut configs = Assets::default();
 
 		for id in handles {
-			configs.insert(id, _Config);
+			_ = configs.insert(id, _Config);
 		}
 
 		app.insert_resource(configs);
@@ -180,7 +180,7 @@ mod tests {
 
 		app.update();
 		let mut configs = app.world_mut().resource_mut::<Assets<_Config>>();
-		configs.insert(&config_handle, _Config);
+		_ = configs.insert(&config_handle, _Config);
 		app.update();
 
 		assert_eq!(

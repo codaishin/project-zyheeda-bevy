@@ -5,7 +5,7 @@ use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaComman
 
 impl ColliderOfInteractionTarget {
 	pub(crate) fn link(
-		trigger: Trigger<OnAdd, Collider>,
+		trigger: On<Add, Collider>,
 		mut commands: ZyheedaCommands,
 		collider_roots: Query<Entity, With<InteractionTarget>>,
 		ancestors: Query<&ChildOf>,
@@ -15,7 +15,7 @@ impl ColliderOfInteractionTarget {
 				.iter_ancestors(entity)
 				.find(|ancestor| collider_roots.contains(*ancestor))
 		};
-		let entity = trigger.target();
+		let entity = trigger.entity;
 		let Some(target) = get_target_in_ancestor_of(entity) else {
 			return;
 		};

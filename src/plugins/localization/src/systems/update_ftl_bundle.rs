@@ -19,13 +19,13 @@ impl<T> UpdateFtlBundle for T where T: Resource + CurrentLocaleMut {}
 pub(crate) trait UpdateFtlBundle: Resource + CurrentLocaleMut {
 	fn update_ftl_bundle(
 		mut server: ResMut<Self>,
-		mut events: EventReader<AssetEvent<Ftl>>,
+		mut messages: MessageReader<AssetEvent<Ftl>>,
 		files: Res<Assets<Ftl>>,
 		mut folders: ResMut<Assets<LoadedFolder>>,
 	) -> Result<(), Vec<SetBundleError>> {
 		let locale = server.current_locale_mut();
 
-		events
+		messages
 			.read()
 			.filter_map(added_id)
 			.filter_map(update_bundle(locale, &files, &mut folders))
@@ -204,10 +204,10 @@ mod tests {
 		let mut folder_assets = Assets::default();
 
 		for (handle, handles) in folders {
-			folder_assets.insert(&handle, LoadedFolder { handles });
+			_ = folder_assets.insert(&handle, LoadedFolder { handles });
 		}
 
-		app.add_event::<AssetEvent<Ftl>>();
+		app.add_message::<AssetEvent<Ftl>>();
 		for (event, ftl) in added {
 			let id = match event {
 				AssetEvent::Added { id } => id,
@@ -217,9 +217,9 @@ mod tests {
 				AssetEvent::LoadedWithDependencies { id } => id,
 			};
 			if let Some(ftl) = ftl {
-				file_assets.insert(id, ftl);
+				_ = file_assets.insert(id, ftl);
 			}
-			app.world_mut().send_event(event);
+			app.world_mut().write_message(event);
 		}
 		app.insert_resource(file_assets);
 		app.insert_resource(folder_assets);

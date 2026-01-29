@@ -10,13 +10,13 @@ use common::{
 
 impl AgentTag {
 	pub(crate) fn insert_from<TSource>(
-		trigger: Trigger<OnInsert, TSource>,
+		on_insert: On<Insert, TSource>,
 		mut commands: ZyheedaCommands,
 		sources: Query<&TSource>,
 	) where
 		TSource: Component + GetProperty<AgentType>,
 	{
-		let entity = trigger.target();
+		let entity = on_insert.entity;
 		let Ok(source) = sources.get(entity) else {
 			return;
 		};

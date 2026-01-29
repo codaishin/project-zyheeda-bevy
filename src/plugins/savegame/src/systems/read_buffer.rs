@@ -212,22 +212,12 @@ mod tests {
 
 	static FILE_IO: LazyLock<FileIO> = LazyLock::new(|| FileIO::with_file(PathBuf::new()));
 
-	macro_rules! non_observers {
-		($app:expr) => {
-			$app.world()
-				.iter_entities()
-				.filter(|e| !e.contains::<Observer>())
-		};
-	}
-
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.add_observer(
-			|trigger: Trigger<OnInsert, _CountA>,
-			 mut q: Query<&mut _CountA>,
-			 a: Query<(), With<_A>>| {
-				let Ok(mut knows) = q.get_mut(trigger.target()) else {
+			|on_insert: On<Insert, _CountA>, mut q: Query<&mut _CountA>, a: Query<(), With<_A>>| {
+				let Ok(mut knows) = q.get_mut(on_insert.entity) else {
 					panic!("THERE WAS NO `_KnowA` present");
 				};
 
@@ -253,7 +243,8 @@ mod tests {
 			.world_mut()
 			.run_system_once(SaveContext::read_buffer_system(context))?;
 
-		let [entity] = assert_count!(1, non_observers!(&app));
+		let mut entities = app.world_mut().query::<EntityRef>();
+		let [entity] = assert_count!(1, entities.iter(app.world()));
 		assert_eq!(
 			(Some(&_A(Value::Null)), None),
 			(entity.get::<_A>(), entity.get::<_B>())
@@ -275,7 +266,8 @@ mod tests {
 			.world_mut()
 			.run_system_once(SaveContext::read_buffer_system(context))?;
 
-		let [entity] = assert_count!(1, non_observers!(&app));
+		let mut entities = app.world_mut().query::<EntityRef>();
+		let [entity] = assert_count!(1, entities.iter(app.world()));
 		assert_eq!(
 			(Some(&_A(json!(null))), None),
 			(entity.get::<_A>(), entity.get::<_B>())
@@ -301,7 +293,8 @@ mod tests {
 			.world_mut()
 			.run_system_once(SaveContext::read_buffer_system(context))?;
 
-		let [one, two] = assert_count!(2, non_observers!(&app));
+		let mut entities = app.world_mut().query::<EntityRef>();
+		let [one, two] = assert_count!(2, entities.iter(app.world()));
 		assert_eq!(
 			(Some(&_A(json!([1]))), Some(&_A(json!([2]))),),
 			(one.get::<_A>(), two.get::<_A>())
@@ -331,10 +324,11 @@ mod tests {
 			.world_mut()
 			.run_system_once(SaveContext::read_buffer_system(context))?;
 
-		let [fst, snd] = assert_count!(2, non_observers!(&app));
+		let mut entities = app.world_mut().query::<EntityRef>();
+		let [one, two] = assert_count!(2, entities.iter(app.world()));
 		assert_eq!(
 			(Some(&_CountA { a_count: 2 }), Some(&_CountA { a_count: 2 })),
-			(fst.get::<_CountA>(), snd.get::<_CountA>())
+			(one.get::<_CountA>(), two.get::<_CountA>())
 		);
 		Ok(())
 	}

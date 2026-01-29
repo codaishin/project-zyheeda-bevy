@@ -10,7 +10,7 @@ use bevy::prelude::*;
 
 impl AssetModel {
 	pub(crate) fn load(
-		trigger: Trigger<OnAdd, AssetModel>,
+		trigger: On<Add, AssetModel>,
 		commands: ZyheedaCommands,
 		asset_models: Query<&AssetModel>,
 		asset_server: ResMut<AssetServer>,
@@ -20,14 +20,14 @@ impl AssetModel {
 }
 
 fn load_asset_model<TServer>(
-	trigger: Trigger<OnAdd, AssetModel>,
+	trigger: On<Add, AssetModel>,
 	mut commands: ZyheedaCommands,
 	asset_models: Query<&AssetModel>,
 	mut asset_server: ResMut<TServer>,
 ) where
 	for<'a> TServer: Resource + LoadAsset,
 {
-	let entity = trigger.target();
+	let entity = trigger.entity;
 
 	let Ok(asset_model) = asset_models.get(entity) else {
 		return;

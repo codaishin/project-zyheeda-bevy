@@ -13,14 +13,14 @@ where
 	TCell: ThreadSafe,
 {
 	pub(crate) fn spawn_child<TGrid>(
-		trigger: Trigger<OnInsert, Self>,
+		on_insert: On<Insert, Self>,
 		maps: Query<(&Self, Option<&Children>)>,
 		grids: Query<&TGrid>,
 		mut commands: ZyheedaCommands,
 	) where
 		for<'a> TGrid: Component + From<&'a GridGraph>,
 	{
-		let target = trigger.target();
+		let target = on_insert.entity;
 		let Ok((map, children)) = maps.get(target) else {
 			return;
 		};
@@ -61,7 +61,7 @@ mod tests {
 	};
 	use macros::new_valid;
 	use std::collections::HashMap;
-	use testing::{SingleThreadedApp, assert_count, get_children};
+	use testing::{SingleThreadedApp, assert_children_count};
 
 	#[derive(TypePath, Debug, PartialEq)]
 	struct _Cell;
@@ -73,13 +73,6 @@ mod tests {
 		fn from(graph: &GridGraph) -> Self {
 			Self(graph.clone())
 		}
-	}
-
-	fn contains<T>(entity: &EntityRef) -> bool
-	where
-		T: Component,
-	{
-		entity.contains::<T>()
 	}
 
 	fn setup() -> App {
@@ -108,7 +101,7 @@ mod tests {
 			.spawn(MapGridGraph::<_Cell>::from(graph.clone()))
 			.id();
 
-		let [grid] = assert_count!(1, get_children!(app, entity));
+		let [grid] = assert_children_count!(1, app, entity);
 		assert_eq!(Some(&_Grid(graph)), grid.get::<_Grid>());
 	}
 
@@ -130,7 +123,7 @@ mod tests {
 			.spawn(MapGridGraph::<_Cell>::from(graph.clone()))
 			.id();
 
-		let [grid] = assert_count!(1, get_children!(app, entity));
+		let [grid] = assert_children_count!(1, app, entity);
 		assert_eq!(
 			Some(&CellsRef::<_Cell>::from_grid_definition(entity)),
 			grid.get::<CellsRef<_Cell>>()
@@ -170,9 +163,8 @@ mod tests {
 			.insert(MapGridGraph::<_Cell>::from(graph_b.clone()))
 			.id();
 
-		assert_count!(1, get_children!(app, entity).filter(contains::<_Child>));
-		let [grid] = assert_count!(1, get_children!(app, entity).filter(contains::<_Grid>));
-		assert_eq!(Some(&_Grid(graph_b)), grid.get::<_Grid>());
+		let [grid] = assert_children_count!(1, app, entity, |entity| entity.get::<_Grid>());
+		assert_eq!(&_Grid(graph_b), grid);
 	}
 
 	#[test]
@@ -193,7 +185,7 @@ mod tests {
 			.spawn(MapGridGraph::<_Cell>::from(graph.clone()))
 			.id();
 
-		let [grid] = assert_count!(1, get_children!(app, entity, |entity| entity.id()));
+		let [grid] = assert_children_count!(1, app, entity, |entity| Some(entity.id()));
 		assert_eq!(
 			Some(&NavGrid::<_Grid>::from(grid)),
 			app.world().entity(entity).get::<NavGrid<_Grid>>()

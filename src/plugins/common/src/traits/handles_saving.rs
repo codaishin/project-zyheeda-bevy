@@ -10,7 +10,7 @@ pub trait HandlesSaving {
 	/// Check whether quick loading is possible
 	///
 	/// Useful for button (dis|en)ables.
-	fn can_quick_load() -> impl Condition<()>;
+	fn can_quick_load() -> impl SystemCondition<()>;
 
 	fn register_savable_component<TComponent>(app: &mut App)
 	where

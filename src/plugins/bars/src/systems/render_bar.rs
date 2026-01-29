@@ -86,6 +86,8 @@ fn noop() {}
 #[cfg(test)]
 mod tests {
 	#![allow(clippy::unwrap_used)]
+	use testing::assert_count;
+
 	use super::*;
 
 	struct _Display;
@@ -98,14 +100,6 @@ mod tests {
 		fn foreground_color() -> Color {
 			Color::srgb(0.8, 0.7, 0.23)
 		}
-	}
-
-	fn no_parent(entity: &EntityRef) -> bool {
-		!entity.contains::<ChildOf>()
-	}
-
-	fn with_parent(entity: &EntityRef) -> bool {
-		entity.contains::<ChildOf>()
 	}
 
 	#[test]
@@ -122,24 +116,16 @@ mod tests {
 
 		app.update();
 
-		let (background, ..) = app
-			.world()
-			.iter_entities()
-			.filter(no_parent)
-			.find_map(|e| Some((e.id(), e.get::<Node>()?)))
-			.unwrap();
-		let (foreground, ..) = app
-			.world()
-			.iter_entities()
-			.filter(with_parent)
-			.find_map(|e| Some((e.id(), e.get::<Node>()?)))
-			.unwrap();
-		let bar = app
-			.world()
-			.entity(bar)
-			.get::<BarValues<_Display>>()
-			.unwrap();
-
+		let mut backgrounds = app
+			.world_mut()
+			.query_filtered::<Entity, (With<Node>, Without<ChildOf>)>();
+		let mut foregrounds = app
+			.world_mut()
+			.query_filtered::<Entity, (With<Node>, With<ChildOf>)>();
+		let mut bar_values = app.world_mut().query::<&BarValues<_Display>>();
+		let background = backgrounds.iter(app.world()).next().unwrap();
+		let foreground = foregrounds.iter(app.world()).next().unwrap();
+		let bar = bar_values.get(app.world(), bar).unwrap();
 		assert_eq!(
 			Some(UI {
 				background,
@@ -163,18 +149,11 @@ mod tests {
 
 		app.update();
 
-		let (background, ..) = app
-			.world()
-			.iter_entities()
-			.filter(no_parent)
-			.find_map(|e| Some((e.id(), e.get::<Node>()?)))
-			.unwrap();
-		let background = app.world().entity(background);
-
-		assert_eq!(
-			Some(&UiNodeFor::<Bar>::with(bar)),
-			background.get::<UiNodeFor<Bar>>()
-		);
+		let mut backgrounds = app
+			.world_mut()
+			.query_filtered::<&UiNodeFor<Bar>, (With<Node>, Without<ChildOf>)>();
+		let background = backgrounds.iter(app.world()).next();
+		assert_eq!(Some(&UiNodeFor::<Bar>::with(bar)), background);
 	}
 
 	#[test]
@@ -192,16 +171,11 @@ mod tests {
 
 		app.update();
 
-		let style = app
-			.world()
-			.iter_entities()
-			.filter(no_parent)
-			.find_map(|e| e.get::<Node>())
-			.unwrap();
-
+		let mut backgrounds = app.world_mut().query_filtered::<&Node, Without<ChildOf>>();
+		let background = backgrounds.iter(app.world()).next().unwrap();
 		assert_eq!(
 			(Val::Px(BASE_DIMENSIONS.x), Val::Px(BASE_DIMENSIONS.y)),
-			(style.width, style.height)
+			(background.width, background.height)
 		);
 	}
 
@@ -220,19 +194,14 @@ mod tests {
 
 		app.update();
 
-		let style = app
-			.world()
-			.iter_entities()
-			.filter(no_parent)
-			.find_map(|e| e.get::<Node>())
-			.unwrap();
-
+		let mut backgrounds = app.world_mut().query_filtered::<&Node, Without<ChildOf>>();
+		let background = backgrounds.iter(app.world()).next().unwrap();
 		assert_eq!(
 			(
 				Val::Px(BASE_DIMENSIONS.x * 2.),
 				Val::Px(BASE_DIMENSIONS.y * 2.)
 			),
-			(style.width, style.height)
+			(background.width, background.height)
 		);
 	}
 
@@ -251,20 +220,15 @@ mod tests {
 
 		app.update();
 
-		let style = app
-			.world()
-			.iter_entities()
-			.filter(no_parent)
-			.find_map(|e| e.get::<Node>())
-			.unwrap();
-
+		let mut backgrounds = app.world_mut().query_filtered::<&Node, Without<ChildOf>>();
+		let background = backgrounds.iter(app.world()).next().unwrap();
 		assert_eq!(
 			(
 				PositionType::Absolute,
 				Val::Px(300. - BASE_DIMENSIONS.x / 2.),
 				Val::Px(400. - BASE_DIMENSIONS.y / 2.)
 			),
-			(style.position_type, style.left, style.top)
+			(background.position_type, background.left, background.top)
 		);
 	}
 
@@ -283,20 +247,15 @@ mod tests {
 
 		app.update();
 
-		let style = app
-			.world()
-			.iter_entities()
-			.filter(no_parent)
-			.find_map(|e| e.get::<Node>())
-			.unwrap();
-
+		let mut backgrounds = app.world_mut().query_filtered::<&Node, Without<ChildOf>>();
+		let background = backgrounds.iter(app.world()).next().unwrap();
 		assert_eq!(
 			(
 				PositionType::Absolute,
 				Val::Px(300. - BASE_DIMENSIONS.x * 2. / 2.),
 				Val::Px(400. - BASE_DIMENSIONS.y * 2. / 2.)
 			),
-			(style.position_type, style.left, style.top)
+			(background.position_type, background.left, background.top)
 		);
 	}
 
@@ -314,14 +273,11 @@ mod tests {
 
 		app.update();
 
-		let color = app
-			.world()
-			.iter_entities()
-			.filter(no_parent)
-			.find_map(|e| e.get::<BackgroundColor>())
-			.unwrap();
-
-		assert_eq!(BarValues::<_Display>::background_color(), color.0);
+		let mut backgrounds = app
+			.world_mut()
+			.query_filtered::<&BackgroundColor, (With<Node>, Without<ChildOf>)>();
+		let background = backgrounds.iter(app.world()).next().unwrap();
+		assert_eq!(BarValues::<_Display>::background_color(), background.0);
 	}
 
 	#[test]
@@ -338,14 +294,11 @@ mod tests {
 
 		app.update();
 
-		let color = app
-			.world()
-			.iter_entities()
-			.filter(with_parent)
-			.find_map(|e| e.get::<BackgroundColor>())
-			.unwrap();
-
-		assert_eq!(BarValues::<_Display>::foreground_color(), color.0);
+		let mut foreground = app
+			.world_mut()
+			.query_filtered::<&BackgroundColor, (With<Node>, With<ChildOf>)>();
+		let foreground = foreground.iter(app.world()).next().unwrap();
+		assert_eq!(BarValues::<_Display>::foreground_color(), foreground.0);
 	}
 
 	#[test]
@@ -362,14 +315,9 @@ mod tests {
 
 		app.update();
 
-		let style = app
-			.world()
-			.iter_entities()
-			.filter(with_parent)
-			.find_map(|e| e.get::<Node>())
-			.unwrap();
-
-		assert_eq!(Val::Percent(20.), style.width);
+		let mut foreground = app.world_mut().query_filtered::<&Node, With<ChildOf>>();
+		let foreground = foreground.iter(app.world()).next().unwrap();
+		assert_eq!(Val::Percent(20.), foreground.width);
 	}
 
 	#[test]
@@ -393,21 +341,14 @@ mod tests {
 
 		app.update();
 
-		let styles = app
-			.world()
-			.iter_entities()
-			.filter(no_parent)
-			.filter_map(|e| e.get::<Node>())
-			.collect::<Vec<_>>();
-		let style = styles[0];
-
+		let mut backgrounds = app.world_mut().query_filtered::<&Node, Without<ChildOf>>();
+		let [background] = assert_count!(1, backgrounds.iter(app.world()));
 		assert_eq!(
 			(
-				1,
 				Val::Px(100. - BASE_DIMENSIONS.x / 2.),
 				Val::Px(200. - BASE_DIMENSIONS.y / 2.)
 			),
-			(styles.len(), style.left, style.top)
+			(background.left, background.top)
 		);
 	}
 
@@ -432,21 +373,14 @@ mod tests {
 
 		app.update();
 
-		let styles = app
-			.world()
-			.iter_entities()
-			.filter(no_parent)
-			.filter_map(|e| e.get::<Node>())
-			.collect::<Vec<_>>();
-		let style = styles[0];
-
+		let mut backgrounds = app.world_mut().query_filtered::<&Node, Without<ChildOf>>();
+		let [background] = assert_count!(1, backgrounds.iter(app.world()));
 		assert_eq!(
 			(
-				1,
 				Val::Px(100. - BASE_DIMENSIONS.x * 2. / 2.),
 				Val::Px(200. - BASE_DIMENSIONS.y * 2. / 2.)
 			),
-			(styles.len(), style.left, style.top)
+			(background.left, background.top)
 		);
 	}
 
@@ -471,13 +405,8 @@ mod tests {
 
 		app.update();
 
-		let style = app
-			.world()
-			.iter_entities()
-			.filter(with_parent)
-			.find_map(|e| e.get::<Node>())
-			.unwrap();
-
-		assert_eq!(Val::Percent(120. / 200. * 100.), style.width);
+		let mut foreground = app.world_mut().query_filtered::<&Node, With<ChildOf>>();
+		let foreground = foreground.iter(app.world()).next().unwrap();
+		assert_eq!(Val::Percent(120. / 200. * 100.), foreground.width);
 	}
 }

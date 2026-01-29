@@ -6,11 +6,11 @@ impl<T> UpdateBlockersObserver for T where T: Component + UpdateBlockers {}
 
 pub(crate) trait UpdateBlockersObserver: Component + Sized + UpdateBlockers {
 	fn update_blockers(
-		trigger: Trigger<OnInsert, Self>,
+		on_insert: On<Insert, Self>,
 		mut commands: ZyheedaCommands,
 		mut effects: Query<(&Self, Option<&mut BlockerTypes>)>,
 	) {
-		let entity = trigger.target();
+		let entity = on_insert.entity;
 		let Ok((effect, blockers)) = effects.get_mut(entity) else {
 			return;
 		};

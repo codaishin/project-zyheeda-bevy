@@ -50,7 +50,7 @@ fn unfocus(new_focus: &mut Vec<Entity>, despawned: &Entity) {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use testing::SingleThreadedApp;
+	use testing::{SingleThreadedApp, fake_entity};
 
 	#[derive(Debug, PartialEq)]
 	struct _Item;
@@ -79,19 +79,15 @@ mod tests {
 	#[test]
 	fn despawn_dropdown_ui() {
 		let mut app = setup();
-		app.world_mut()
-			.spawn(DropdownUI::<_Item>::new(Entity::from_raw(42)));
-
+		let entity = app
+			.world_mut()
+			.spawn(DropdownUI::<_Item>::new(fake_entity!(42)))
+			.id();
 		app.world_mut().insert_resource(_In(Focus::New(vec![])));
 
 		app.update();
 
-		let dropdown_uis = app
-			.world()
-			.iter_entities()
-			.find(|e| e.contains::<DropdownUI<_Item>>());
-
-		assert!(dropdown_uis.is_none());
+		assert!(app.world().get_entity(entity).is_err());
 	}
 
 	#[test]
@@ -100,66 +96,47 @@ mod tests {
 		struct _Other;
 
 		let mut app = setup();
-		app.world_mut()
-			.spawn(DropdownUI::<_Item>::new(Entity::from_raw(42)));
-		app.world_mut().spawn(_Other);
-
+		let entity = app.world_mut().spawn(_Other).id();
 		app.world_mut().insert_resource(_In(Focus::New(vec![])));
 
 		app.update();
 
-		let other = app.world().iter_entities().find(|e| e.contains::<_Other>());
-
-		assert!(other.is_some());
+		assert!(app.world().get_entity(entity).is_ok());
 	}
 
 	#[test]
 	fn despawn_dropdown_ui_recursively() {
-		#[derive(Component)]
-		struct _Child;
-
 		let mut app = setup();
-		app.world_mut()
-			.spawn(DropdownUI::<_Item>::new(Entity::from_raw(42)))
-			.with_children(|dropdown_ui| {
-				dropdown_ui.spawn(_Child);
-			});
-
+		let dropdown = app
+			.world_mut()
+			.spawn(DropdownUI::<_Item>::new(fake_entity!(42)))
+			.id();
+		let child = app.world_mut().spawn(ChildOf(dropdown)).id();
 		app.world_mut().insert_resource(_In(Focus::New(vec![])));
 
 		app.update();
 
-		let children = app.world().iter_entities().find(|e| e.contains::<_Child>());
-
-		assert!(children.is_none());
+		assert!(app.world().get_entity(child).is_err());
 	}
 
 	#[test]
 	fn do_nothing_when_focus_unchanged() {
 		let mut app = setup();
-		app.world_mut()
-			.spawn(DropdownUI::<_Item>::new(Entity::from_raw(42)));
-
+		let entity = app
+			.world_mut()
+			.spawn(DropdownUI::<_Item>::new(fake_entity!(42)))
+			.id();
 		app.world_mut().insert_resource(_In(Focus::Unchanged));
 
 		app.update();
 
-		let dropdown_uis = app
-			.world()
-			.iter_entities()
-			.find(|e| e.contains::<DropdownUI<_Item>>());
-
-		assert!(dropdown_uis.is_some());
+		assert!(app.world().get_entity(entity).is_ok());
 	}
 
 	#[test]
 	fn return_new_focus() {
 		let mut app = setup();
-		let focus = Focus::New(vec![
-			Entity::from_raw(42),
-			Entity::from_raw(11),
-			Entity::from_raw(69),
-		]);
+		let focus = Focus::New(vec![fake_entity!(42), fake_entity!(11), fake_entity!(69)]);
 
 		app.world_mut().insert_resource(_In(focus.clone()));
 
@@ -183,23 +160,23 @@ mod tests {
 	#[test]
 	fn return_new_focus_without_source_of_despawned() {
 		let mut app = setup();
-		let source = Entity::from_raw(101);
+		let source = fake_entity!(101);
 
 		app.world_mut().spawn(DropdownUI::<_Item>::new(source));
 		app.world_mut().insert_resource(_In(Focus::New(vec![
-			Entity::from_raw(42),
+			fake_entity!(42),
 			source,
-			Entity::from_raw(69),
-			Entity::from_raw(77),
+			fake_entity!(69),
+			fake_entity!(77),
 		])));
 
 		app.update();
 
 		assert_eq!(
 			&_Result(Focus::New(vec![
-				Entity::from_raw(42),
-				Entity::from_raw(69),
-				Entity::from_raw(77),
+				fake_entity!(42),
+				fake_entity!(69),
+				fake_entity!(77),
 			])),
 			app.world().resource::<_Result>()
 		);
@@ -209,7 +186,7 @@ mod tests {
 	fn do_not_despawn_dropdown_ui_when_children_pressed() {
 		let mut app = setup();
 
-		let source = Entity::from_raw(42);
+		let source = fake_entity!(42);
 		let child = app.world_mut().spawn(Interaction::Pressed).id();
 		let dropdown = app
 			.world_mut()

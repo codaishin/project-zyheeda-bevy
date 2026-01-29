@@ -6,11 +6,11 @@ use bevy::prelude::*;
 
 impl PersistentEntities {
 	pub(crate) fn remove_entity(
-		trigger: Trigger<OnRemove, PersistentEntity>,
+		on_remove: On<Remove, PersistentEntity>,
 		persistent_entities: Option<ResMut<Self>>,
 		entities: Query<&PersistentEntity>,
 	) {
-		let entity = trigger.target();
+		let entity = on_remove.entity;
 		let Some(mut persistent_entities) = persistent_entities else {
 			return;
 		};
