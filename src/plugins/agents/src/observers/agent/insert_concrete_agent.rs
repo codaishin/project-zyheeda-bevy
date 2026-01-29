@@ -8,11 +8,11 @@ impl<T> InsertConcreteAgent for T where T: Component + InsertEnemyOrPlayer + Siz
 
 pub(crate) trait InsertConcreteAgent: Component + InsertEnemyOrPlayer + Sized {
 	fn insert_concrete_agent(
-		trigger: Trigger<OnInsert, Self>,
+		on_insert: On<Insert, Self>,
 		mut commands: ZyheedaCommands,
 		agents: Query<&Self>,
 	) {
-		let entity = trigger.target();
+		let entity = on_insert.entity;
 		let Ok(agent) = agents.get(entity) else {
 			return;
 		};

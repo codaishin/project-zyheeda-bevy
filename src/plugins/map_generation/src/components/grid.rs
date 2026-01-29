@@ -293,7 +293,7 @@ mod test_spawn_cells {
 	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use macros::new_valid;
-	use testing::{SingleThreadedApp, assert_count, get_children};
+	use testing::{SingleThreadedApp, assert_children_count, fake_entity};
 
 	#[derive(Default)]
 	struct _Cell {
@@ -356,7 +356,7 @@ mod test_spawn_cells {
 			.world_mut()
 			.run_system_once_with(Grid::spawn_cells, cells)?;
 
-		let entities = assert_count!(3, get_children!(app, grid));
+		let entities = assert_children_count!(3, app, grid);
 		assert_eq!(
 			[
 				Some(&Transform::from_xyz(1., 2.25, 3.).with_scale(Vec3::splat(0.5))),
@@ -386,7 +386,7 @@ mod test_spawn_cells {
 			.world_mut()
 			.run_system_once_with(Grid::spawn_cells, cells)?;
 
-		let entities = assert_count!(3, get_children!(app, grid));
+		let entities = assert_children_count!(3, app, grid);
 		assert_eq!(
 			[
 				Some(&_CellComponent),
@@ -417,7 +417,7 @@ mod test_spawn_cells {
 	fn return_commands_error_when_entity_not_valid() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		app.world_mut().spawn(Grid::default());
-		let cells: Result<Cells<_Cell>, _Error> = Ok((Entity::from_raw(111), vec![]));
+		let cells: Result<Cells<_Cell>, _Error> = Ok((fake_entity!(111), vec![]));
 
 		let result = app
 			.world_mut()

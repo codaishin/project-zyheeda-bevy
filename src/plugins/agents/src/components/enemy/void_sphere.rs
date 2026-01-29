@@ -7,10 +7,10 @@ use crate::{
 };
 use bevy::{
 	color::{Color, LinearRgba},
+	light::NotShadowCaster,
 	math::{Dir3, Vec3, primitives::Torus},
-	pbr::{NotShadowCaster, StandardMaterial},
+	pbr::StandardMaterial,
 	prelude::*,
-	render::mesh::Mesh,
 	transform::components::Transform,
 	utils::default,
 };

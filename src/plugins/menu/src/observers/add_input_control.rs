@@ -8,13 +8,13 @@ use common::{
 
 impl QuickbarPanel {
 	pub(crate) fn add_input_control<TActionKeyButton>(
-		trigger: Trigger<OnAdd, Self>,
+		trigger: On<Add, Self>,
 		mut commands: ZyheedaCommands,
 		panels: Query<&Self>,
 	) where
 		TActionKeyButton: Component + From<ActionKey>,
 	{
-		let entity = trigger.target();
+		let entity = trigger.entity;
 		let Ok(Self { key, .. }) = panels.get(entity) else {
 			return;
 		};

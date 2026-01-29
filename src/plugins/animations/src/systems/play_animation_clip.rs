@@ -41,10 +41,10 @@ where
 		graphs: ResMut<Assets<AnimationGraph>>,
 	) where
 		TAnimationPlayer: QueryData
-			+ for<'a> QueryData<Item<'a>: IsPlaying<AnimationNodeIndex>>
-			+ for<'a> QueryData<Item<'a>: ReplayAnimation<AnimationNodeIndex>>
-			+ for<'a> QueryData<Item<'a>: RepeatAnimation<AnimationNodeIndex>>
-			+ for<'a> QueryData<Item<'a>: StopAnimation<AnimationNodeIndex>>,
+			+ for<'w, 's> QueryData<Item<'w, 's>: IsPlaying<AnimationNodeIndex>>
+			+ for<'w, 's> QueryData<Item<'w, 's>: ReplayAnimation<AnimationNodeIndex>>
+			+ for<'w, 's> QueryData<Item<'w, 's>: RepeatAnimation<AnimationNodeIndex>>
+			+ for<'w, 's> QueryData<Item<'w, 's>: StopAnimation<AnimationNodeIndex>>,
 	{
 		play_animation_clip(players, dispatchers, graphs)
 	}
@@ -67,7 +67,7 @@ fn play_animation_clip<TAnimationPlayer, TDispatch, TGraph, TAnimations>(
 	TGraph: Asset + GetNodeMut + WrapHandle,
 	TDispatch: Component + AnimationPlayers + GetActiveAnimations,
 	for<'a> TAnimations: ThreadSafe + Iterate<'a, TItem = &'a AnimationNodeIndex>,
-	for<'a> TAnimationPlayer::Item<'a>: IsPlaying<AnimationNodeIndex>
+	for<'w, 's> TAnimationPlayer::Item<'w, 's>: IsPlaying<AnimationNodeIndex>
 		+ ReplayAnimation<AnimationNodeIndex>
 		+ RepeatAnimation<AnimationNodeIndex>
 		+ StopAnimation<AnimationNodeIndex>,
@@ -418,7 +418,7 @@ mod tests {
 			}
 		}
 
-		graphs.insert(graph_handle, graph);
+		_ = graphs.insert(graph_handle, graph);
 		app.insert_resource(graphs);
 		app.add_systems(
 			Update,

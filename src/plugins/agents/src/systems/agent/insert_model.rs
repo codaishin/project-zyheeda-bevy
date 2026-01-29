@@ -53,7 +53,7 @@ mod tests {
 		let mut assets = Assets::default();
 
 		for (id, asset) in model_data {
-			assets.insert(id, asset);
+			_ = assets.insert(id, asset);
 		}
 
 		app.insert_resource(assets);
@@ -156,7 +156,8 @@ mod tests {
 			.id();
 
 		app.update();
-		app.world_mut()
+		_ = app
+			.world_mut()
 			.resource_mut::<Assets<AgentConfig>>()
 			.insert(&config_handle, config);
 		app.update();

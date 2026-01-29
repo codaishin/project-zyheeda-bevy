@@ -33,6 +33,6 @@ impl<'a> From<&'a str> for Path {
 
 impl<'a> From<&'a Path> for AssetPath<'a> {
 	fn from(value: &'a Path) -> Self {
-		AssetPath::from(value.path())
+		AssetPath::from(value.path().to_owned())
 	}
 }

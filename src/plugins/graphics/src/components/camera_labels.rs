@@ -1,7 +1,9 @@
 use bevy::{
-	core_pipeline::{bloom::Bloom, tonemapping::Tonemapping},
+	camera::visibility::RenderLayers,
+	core_pipeline::tonemapping::Tonemapping,
+	post_process::bloom::Bloom,
 	prelude::*,
-	render::view::RenderLayers,
+	render::view::Hdr,
 };
 use common::traits::handles_graphics::StaticRenderLayers;
 use macros::SavableComponent;
@@ -24,7 +26,7 @@ pub struct WorldCamera;
 	Serialize,
 	Deserialize,
 )]
-#[require(WorldCamera,Tonemapping = Self, Bloom)]
+#[require(WorldCamera, Hdr, Tonemapping = Self, Bloom)]
 pub struct FirstPass;
 
 impl From<FirstPass> for Tonemapping {
@@ -48,6 +50,7 @@ impl From<FirstPass> for Tonemapping {
 )]
 #[require(
 	WorldCamera,
+	Hdr,
 	Camera = Self,
 	Tonemapping = Self,
 	Bloom,
@@ -66,7 +69,6 @@ impl SecondPass {
 impl From<SecondPass> for Camera {
 	fn from(_: SecondPass) -> Self {
 		Camera {
-			hdr: true,
 			order: SecondPass::ORDER as isize,
 			..default()
 		}
@@ -100,6 +102,7 @@ impl From<SecondPass> for RenderLayers {
 )]
 #[require(
 	WorldCamera,
+	Hdr,
 	Camera = Self,
 	Tonemapping = Self,
 	RenderLayers = Self,
@@ -114,7 +117,6 @@ impl From<Ui> for Camera {
 	fn from(_: Ui) -> Self {
 		Camera {
 			order: Ui::ORDER as isize,
-			hdr: true,
 			clear_color: ClearColorConfig::None,
 			..default()
 		}

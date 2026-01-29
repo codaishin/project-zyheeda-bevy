@@ -80,7 +80,7 @@ mod tests {
 		let mut asset_resource = Assets::default();
 
 		for (id, asset) in assets {
-			asset_resource.insert(id, asset);
+			_ = asset_resource.insert(id, asset);
 		}
 
 		app.insert_resource(asset_resource);

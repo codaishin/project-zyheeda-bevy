@@ -6,11 +6,11 @@ use bevy::prelude::*;
 
 impl PersistentEntities {
 	pub(crate) fn insert_entity(
-		trigger: Trigger<OnInsert, PersistentEntity>,
+		on_insert: On<Insert, PersistentEntity>,
 		persistent_entities: Option<ResMut<Self>>,
 		entities: Query<&PersistentEntity>,
 	) {
-		let entity = trigger.target();
+		let entity = on_insert.entity;
 		let Ok(persistent_entity) = entities.get(entity) else {
 			return;
 		};

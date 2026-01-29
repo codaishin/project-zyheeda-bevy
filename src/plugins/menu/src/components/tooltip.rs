@@ -173,7 +173,7 @@ mod tests {
 		Token,
 		localized::Localized,
 	};
-	use testing::{SingleThreadedApp, assert_count, get_children};
+	use testing::{SingleThreadedApp, assert_children_count, assert_count, fake_entity};
 
 	impl TooltipUiConfig for () {}
 
@@ -303,23 +303,21 @@ mod tests {
 		let mut app = setup_despawn_all::<()>();
 		app.world_mut().spawn_batch([
 			(
-				TooltipContent::<()>::new(Entity::from_raw(100), default()),
+				TooltipContent::<()>::new(fake_entity!(100), default()),
 				Node::default(),
 			),
 			(
-				TooltipContent::<()>::new(Entity::from_raw(200), default()),
+				TooltipContent::<()>::new(fake_entity!(200), default()),
 				Node::default(),
 			),
 		]);
 
 		app.update();
 
-		let tooltip_uis = app
-			.world()
-			.iter_entities()
-			.filter(|e| e.contains::<TooltipContent<()>>());
-
-		assert_eq!(0, tooltip_uis.count());
+		let mut tooltip_uis = app
+			.world_mut()
+			.query_filtered::<(), With<TooltipContent<Token>>>();
+		assert_count!(0, tooltip_uis.iter(app.world()));
 	}
 
 	#[test]
@@ -327,7 +325,7 @@ mod tests {
 		let mut app = setup_despawn_all::<()>();
 		app.world_mut()
 			.spawn((
-				TooltipContent::<()>::new(Entity::from_raw(100), default()),
+				TooltipContent::<()>::new(fake_entity!(100), default()),
 				Node::default(),
 			))
 			.with_children(|parent| {
@@ -336,12 +334,8 @@ mod tests {
 
 		app.update();
 
-		let children = app
-			.world()
-			.iter_entities()
-			.filter(|e| e.contains::<_Child>());
-
-		assert_eq!(0, children.count());
+		let mut children = app.world_mut().query_filtered::<(), With<_Child>>();
+		assert_count!(0, children.iter(app.world()));
 	}
 
 	#[test]
@@ -359,19 +353,15 @@ mod tests {
 		}
 
 		app.update();
-
 		for tooltip in tooltips {
 			app.world_mut().entity_mut(tooltip).despawn();
 		}
-
 		app.update();
 
-		let tooltip_uis = app
-			.world()
-			.iter_entities()
-			.filter(|e| e.contains::<TooltipContent<Token>>());
-
-		assert_eq!(0, tooltip_uis.count());
+		let mut tooltip_uis = app
+			.world_mut()
+			.query_filtered::<(), With<TooltipContent<Token>>>();
+		assert_count!(0, tooltip_uis.iter(app.world()));
 	}
 
 	#[test]
@@ -393,19 +383,13 @@ mod tests {
 		}
 
 		app.update();
-
 		for tooltip in tooltips {
 			app.world_mut().entity_mut(tooltip).despawn();
 		}
-
 		app.update();
 
-		let children = app
-			.world()
-			.iter_entities()
-			.filter(|e| e.contains::<_Child>());
-
-		assert_eq!(0, children.count());
+		let mut children = app.world_mut().query_filtered::<(), With<_Child>>();
+		assert_count!(0, children.iter(app.world()));
 	}
 
 	#[test]
@@ -424,12 +408,10 @@ mod tests {
 
 		app.update();
 
-		let tooltip_uis = app
-			.world()
-			.iter_entities()
-			.filter(|e| e.contains::<TooltipContent<Token>>());
-
-		assert_eq!(2, tooltip_uis.count());
+		let mut tooltip_uis = app
+			.world_mut()
+			.query_filtered::<(), With<TooltipContent<Token>>>();
+		assert_count!(2, tooltip_uis.iter(app.world()));
 	}
 
 	#[test]
@@ -439,11 +421,11 @@ mod tests {
 			.world_mut()
 			.spawn_batch([
 				(
-					TooltipContent::<Token>::new(Entity::from_raw(100), default()),
+					TooltipContent::<Token>::new(fake_entity!(100), default()),
 					Node::default(),
 				),
 				(
-					TooltipContent::<Token>::new(Entity::from_raw(200), default()),
+					TooltipContent::<Token>::new(fake_entity!(200), default()),
 					Node::default(),
 				),
 			])
@@ -480,12 +462,11 @@ mod tests {
 
 		app.update();
 
-		let tooltip_ui = app
-			.world()
-			.iter_entities()
-			.find(|e| e.contains::<TooltipContent<_T>>())
-			.expect("no tooltip spawned");
-		assert_eq!(Some(&Visibility::Hidden), tooltip_ui.get::<Visibility>());
+		let mut containers = app
+			.world_mut()
+			.query_filtered::<&Visibility, With<TooltipContent<_T>>>();
+		let tooltip_ui = containers.iter(app.world()).next();
+		assert_eq!(Some(&Visibility::Hidden), tooltip_ui);
 	}
 
 	#[test]
@@ -497,12 +478,11 @@ mod tests {
 
 		app.update();
 
-		let containers = app
-			.world()
-			.iter_entities()
-			.filter(|e| e.contains::<TooltipContent<_T>>());
-		let [container] = assert_count!(1, containers);
-		let [content] = assert_count!(1, get_children!(app, container.id()));
+		let mut containers = app
+			.world_mut()
+			.query_filtered::<Entity, With<TooltipContent<_T>>>();
+		let [container] = assert_count!(1, containers.iter(app.world()));
+		let [content] = assert_children_count!(1, app, container);
 		assert_eq!(
 			Some(&_Child::from("Token: My Content")),
 			content.get::<_Child>(),
@@ -516,10 +496,10 @@ mod tests {
 
 		app.update();
 
-		let tooltip_ui = app
-			.world()
-			.iter_entities()
-			.find_map(|e| e.get::<TooltipContent<_T>>())
+		let mut containers = app.world_mut().query::<&TooltipContent<_T>>();
+		let tooltip_ui = containers
+			.iter(app.world())
+			.next()
 			.expect("no tooltip spawned");
 		assert_eq!(tooltip, tooltip_ui.source);
 	}
@@ -531,10 +511,10 @@ mod tests {
 
 		app.update();
 
-		let tooltip_ui = app
-			.world()
-			.iter_entities()
-			.find_map(|e| e.get::<TooltipContent<_T>>())
+		let mut containers = app.world_mut().query::<&TooltipContent<_T>>();
+		let tooltip_ui = containers
+			.iter(app.world())
+			.next()
 			.expect("no tooltip spawned");
 		assert_eq!(Duration::from_secs(4000), tooltip_ui.delay);
 	}

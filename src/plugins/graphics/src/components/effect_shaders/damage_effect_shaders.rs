@@ -1,5 +1,5 @@
 use crate::components::camera_labels::SecondPass;
-use bevy::{color::palettes::css::WHITE, prelude::*, render::view::RenderLayers};
+use bevy::{camera::visibility::RenderLayers, color::palettes::css::WHITE, prelude::*};
 use common::{
 	errors::Unreachable,
 	traits::{

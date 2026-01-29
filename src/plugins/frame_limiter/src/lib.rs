@@ -3,7 +3,7 @@ mod debug;
 
 use bevy::{
 	prelude::*,
-	render::{Render, RenderApp, RenderSet},
+	render::{Render, RenderApp, RenderSystems},
 };
 use std::{
 	thread,
@@ -54,7 +54,7 @@ impl Plugin for FrameLimiterPlugin {
 		render_app
 			.insert_resource(Sleep(time_per_frame))
 			.insert_resource(LastSleep(Instant::now()))
-			.add_systems(Render, Sleep::system.in_set(RenderSet::Cleanup));
+			.add_systems(Render, Sleep::system.in_set(RenderSystems::Cleanup));
 	}
 }
 

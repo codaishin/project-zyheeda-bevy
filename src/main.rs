@@ -156,9 +156,7 @@ pub mod debug_utils {
 
 	pub fn prepare_debug(app: &mut App) {
 		app.insert_resource(ShowGizmos::No)
-			.add_plugins(EguiPlugin {
-				enable_multipass_for_primary_context: true,
-			})
+			.add_plugins(EguiPlugin::default())
 			.add_plugins(WorldInspectorPlugin::new())
 			.add_systems(Update, toggle_gizmos)
 			.add_systems(

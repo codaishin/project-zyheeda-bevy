@@ -35,10 +35,7 @@ mod tests {
 
 		app.update();
 
-		let entities_with_component = app
-			.world()
-			.iter_entities()
-			.filter(|e| e.contains::<_Component>());
-		assert_count!(1, entities_with_component);
+		let mut entities_with_component = app.world_mut().query::<&_Component>();
+		assert_count!(1, entities_with_component.iter(app.world()));
 	}
 }

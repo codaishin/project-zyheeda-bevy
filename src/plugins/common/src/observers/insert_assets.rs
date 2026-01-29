@@ -11,13 +11,13 @@ where
 	TAsset: AssetMarker,
 {
 	pub(crate) fn apply(
-		trigger: Trigger<OnAdd, Self>,
+		on_insert: On<Insert, Self>,
 		mut commands: ZyheedaCommands,
 		mut caches: Local<HashMap<TypeId, Handle<TAsset>>>,
 		mut assets: ResMut<Assets<TAsset>>,
 		components: Query<&Self>,
 	) {
-		let entity = trigger.target();
+		let entity = on_insert.entity;
 		let Ok(component) = components.get(entity) else {
 			return;
 		};

@@ -30,7 +30,7 @@ mod tests {
 		handles_localization::{LocalizationResult, Token, localized::Localized},
 		thread_safe::ThreadSafe,
 	};
-	use testing::SingleThreadedApp;
+	use testing::{SingleThreadedApp, assert_children_count};
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Child(Localized);
@@ -89,56 +89,51 @@ mod tests {
 	#[test]
 	fn render_children() {
 		let mut app = setup();
-		let parent = app.world_mut().spawn(_Component("My Component")).id();
+		let entity = app.world_mut().spawn(_Component("My Component")).id();
 
 		app.update();
 
-		let children = app
-			.world()
-			.iter_entities()
-			.filter_map(|e| Some((e.get::<ChildOf>()?.parent(), e.get::<_Child>()?)));
-
+		let children = assert_children_count!(3, app, entity, |e| e.get::<_Child>());
 		assert_eq!(
-			vec![
-				(parent, &_Child::from("Token A")),
-				(parent, &_Child::from("Token B")),
-				(parent, &_Child::from("Token C")),
+			[
+				&_Child::from("Token A"),
+				&_Child::from("Token B"),
+				&_Child::from("Token C"),
 			],
-			children.collect::<Vec<_>>()
+			children,
 		)
 	}
 
 	#[test]
 	fn remove_previous_children() {
 		let mut app = setup();
-		app.world_mut()
+		let entity = app
+			.world_mut()
 			.spawn(_Component("My Component"))
 			.with_children(|parent| {
 				parent.spawn(_Child::from("Previous A"));
 				parent.spawn(_Child::from("Previous B"));
-			});
+			})
+			.id();
 
 		app.update();
 
-		let children = app
-			.world()
-			.iter_entities()
-			.filter_map(|e| e.get::<_Child>());
-
+		let children = assert_children_count!(3, app, entity, |e| e.get::<_Child>());
 		assert_eq!(
-			vec![
+			[
 				&_Child::from("Token A"),
 				&_Child::from("Token B"),
 				&_Child::from("Token C"),
 			],
-			children.collect::<Vec<_>>()
+			children
 		)
 	}
 
 	#[test]
 	fn remove_previous_children_recursively() {
 		let mut app = setup();
-		app.world_mut()
+		let entity = app
+			.world_mut()
 			.spawn(_Component("My Component"))
 			.with_children(|parent| {
 				parent
@@ -146,81 +141,64 @@ mod tests {
 					.with_children(|parent| {
 						parent.spawn(_Child::from("Previous A Child"));
 					});
-			});
+			})
+			.id();
 
 		app.update();
 
-		let children = app
-			.world()
-			.iter_entities()
-			.filter_map(|e| e.get::<_Child>());
-
+		let children = assert_children_count!(3, app, entity, |e| e.get::<_Child>());
 		assert_eq!(
-			vec![
+			[
 				&_Child::from("Token A"),
 				&_Child::from("Token B"),
 				&_Child::from("Token C"),
 			],
-			children.collect::<Vec<_>>()
+			children
 		)
 	}
 
 	#[test]
 	fn only_work_when_added() {
 		let mut app = setup();
-		let parent = app.world_mut().spawn(_Component("My Component")).id();
+		let entity = app.world_mut().spawn(_Component("My Component")).id();
 
 		app.update();
-
-		app.world_mut().entity_mut(parent).with_children(|parent| {
-			parent.spawn(_Child::from("Do not remove"));
-		});
-
+		app.world_mut()
+			.entity_mut(entity)
+			.with_child(_Child::from("Do not remove"));
 		app.update();
 
-		let children = app
-			.world()
-			.iter_entities()
-			.filter_map(|e| e.get::<_Child>());
-
+		let children = assert_children_count!(4, app, entity, |e| e.get::<_Child>());
 		assert_eq!(
-			vec![
+			[
 				&_Child::from("Token A"),
 				&_Child::from("Token B"),
 				&_Child::from("Token C"),
 				&_Child::from("Do not remove"),
 			],
-			children.collect::<Vec<_>>()
+			children
 		)
 	}
 
 	#[test]
 	fn work_when_changed() {
 		let mut app = setup();
-		let parent = app.world_mut().spawn(_Component("My Component")).id();
+		let entity = app.world_mut().spawn(_Component("My Component")).id();
 
 		app.update();
-
-		let mut parent = app.world_mut().entity_mut(parent);
+		let mut parent = app.world_mut().entity_mut(entity);
 		parent.get_mut::<_Component>().unwrap().0 = "My changed Component";
-		parent.with_children(|parent| {
-			parent.spawn(_Child::from("Do remove"));
-		});
-
+		parent.with_child(_Child::from("Do remove"));
 		app.update();
 
-		let children = app
-			.world()
-			.iter_entities()
-			.filter_map(|e| e.get::<_Child>());
-
+		let children = assert_children_count!(3, app, entity, |e| e.get::<_Child>());
 		assert_eq!(
-			vec![
+			[
 				&_Child::from("Token A"),
 				&_Child::from("Token B"),
 				&_Child::from("Token C"),
 			],
-			children.collect::<Vec<_>>()
+			children
 		)
 	}
 }

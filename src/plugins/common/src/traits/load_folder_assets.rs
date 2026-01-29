@@ -75,9 +75,7 @@ pub mod mock {
 					// Returning randomly generated handle when not configured instead of the bevy default.
 					// Allows test setups to be shorter but avoids tests passing falsely, when actual
 					// bevy default handles are expected.
-					Handle::Weak(AssetId::Uuid {
-						uuid: Uuid::new_v4(),
-					})
+					Handle::from(Uuid::new_v4())
 				}
 			}
 		}

@@ -44,7 +44,7 @@ mod tests {
 	use super::*;
 	use macros::simple_mock;
 	use mockall::predicate::eq;
-	use testing::Mock;
+	use testing::{Mock, fake_entity};
 
 	simple_mock! {
 		_Logger {}
@@ -56,7 +56,7 @@ mod tests {
 
 	#[test]
 	fn get_entity() {
-		let target = Entity::from_raw(42);
+		let target = fake_entity!(42);
 		let persistent_entity = PersistentEntity::default();
 		let persistent_entities = PersistentEntities {
 			entities: HashMap::from([(persistent_entity, target)]),

@@ -1,14 +1,15 @@
 use crate::components::effect_shaders_target::EffectShadersTarget;
-use bevy::{prelude::*, render::view::RenderLayers};
+use bevy::{camera::visibility::RenderLayers, prelude::*};
 use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
 pub(crate) fn insert_effect_shader_render_layers<TPass>(
 	pass: TPass,
 ) -> impl Fn(ZyheedaCommands, Query<&EffectShadersTarget, Changed<EffectShadersTarget>>)
 where
-	RenderLayers: From<TPass>,
+	TPass: Into<RenderLayers>,
 {
-	let layer = RenderLayers::from(pass);
+	let layer = pass.into();
+
 	move |mut commands: ZyheedaCommands,
 	      shader_targets: Query<&EffectShadersTarget, Changed<EffectShadersTarget>>| {
 		for EffectShadersTarget { meshes, .. } in &shader_targets {

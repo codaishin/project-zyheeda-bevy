@@ -34,7 +34,7 @@ impl RegisterDerivedComponent for App {
 }
 
 fn insert_if_new<TComponent, TDerived>(
-	trigger: Trigger<OnInsert, TComponent>,
+	on_insert: On<Insert, TComponent>,
 	mut commands: ZyheedaCommands,
 	components: Query<&TComponent>,
 	param: StaticSystemParam<<TDerived as DerivableFrom<'_, '_, TComponent>>::TParam>,
@@ -42,7 +42,7 @@ fn insert_if_new<TComponent, TDerived>(
 	TComponent: Component,
 	for<'w, 's> TDerived: DerivableFrom<'w, 's, TComponent>,
 {
-	let entity = trigger.target();
+	let entity = on_insert.entity;
 	let Ok(component) = components.get(entity) else {
 		return;
 	};
@@ -52,7 +52,7 @@ fn insert_if_new<TComponent, TDerived>(
 }
 
 fn insert_always<TComponent, TDerived>(
-	trigger: Trigger<OnInsert, TComponent>,
+	on_insert: On<Insert, TComponent>,
 	mut commands: ZyheedaCommands,
 	components: Query<&TComponent>,
 	param: StaticSystemParam<<TDerived as DerivableFrom<'_, '_, TComponent>>::TParam>,
@@ -60,7 +60,7 @@ fn insert_always<TComponent, TDerived>(
 	TComponent: Component,
 	for<'w, 's> TDerived: DerivableFrom<'w, 's, TComponent>,
 {
-	let entity = trigger.target();
+	let entity = on_insert.entity;
 	let Ok(component) = components.get(entity) else {
 		return;
 	};
@@ -92,7 +92,7 @@ impl<TComponent, TRequired> Default for Observing<TComponent, TRequired> {
 mod tests {
 	use super::*;
 	use crate::traits::register_derived_component::{DerivableFrom, InsertDerivedComponent};
-	use bevy::ecs::system::SystemParamItem;
+	use bevy::ecs::{entity_disabling::DefaultQueryFilters, system::SystemParamItem};
 	use testing::{SingleThreadedApp, assert_count};
 
 	#[derive(Component)]
@@ -185,7 +185,9 @@ mod tests {
 
 			app.register_derived_component::<_Component, _NewlyDerived>();
 
-			assert_count!(1, app.world().iter_entities());
+			app.world_mut().remove_resource::<DefaultQueryFilters>();
+			let mut observers = app.world_mut().query::<&Observer>();
+			assert_count!(1, observers.iter(app.world()));
 		}
 	}
 
@@ -236,7 +238,9 @@ mod tests {
 
 			app.register_derived_component::<_Component, _AlwaysDerived>();
 
-			assert_count!(1, app.world().iter_entities());
+			app.world_mut().remove_resource::<DefaultQueryFilters>();
+			let mut observers = app.world_mut().query::<&Observer>();
+			assert_count!(1, observers.iter(app.world()));
 		}
 	}
 }

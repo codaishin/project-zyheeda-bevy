@@ -23,9 +23,9 @@ pub trait WriteBufferSystem {
 				return Err(SerializationOrLockError::LockPoisoned(LockPoisonedError));
 			};
 
-			let errors = world
-				.iter_entities()
-				.filter(|entity| entity.contains::<Save>())
+			let mut save_entities = world.query_filtered::<EntityRef, With<Save>>();
+			let errors = save_entities
+				.iter(world)
 				.filter_map(|entity| match context.write_buffer(entity) {
 					Ok(()) => None,
 					Err(errors) => Some((entity.id(), errors)),

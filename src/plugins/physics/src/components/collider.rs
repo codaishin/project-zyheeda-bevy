@@ -131,11 +131,11 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.add_observer(
-			|trigger: Trigger<OnInsert, ColliderShape>,
+			|on_insert: On<Insert, ColliderShape>,
 			 mut commands: Commands,
 			 shapes: Query<&ColliderShape>| {
-				let shape = shapes.get(trigger.target()).unwrap();
-				let mut entity = commands.get_entity(trigger.target()).unwrap();
+				let shape = shapes.get(on_insert.entity).unwrap();
+				let mut entity = commands.get_entity(on_insert.entity).unwrap();
 				let Ok(()) =
 					shape.insert_prefab_components(&mut entity, &mut MockAssetServer::default());
 			},

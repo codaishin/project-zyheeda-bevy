@@ -3,11 +3,11 @@ use bevy::prelude::*;
 use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
 impl SetupAnimations {
-	pub(crate) fn insert_when<TEvent>(trigger: Trigger<TEvent>, mut commands: ZyheedaCommands)
+	pub(crate) fn insert_when<TEvent>(trigger: On<TEvent>, mut commands: ZyheedaCommands)
 	where
-		TEvent: Event,
+		TEvent: EntityEvent,
 	{
-		commands.try_apply_on(&trigger.target(), |mut e| {
+		commands.try_apply_on(&trigger.event_target(), |mut e| {
 			e.try_insert(Self);
 		});
 	}
@@ -18,8 +18,8 @@ mod tests {
 	use super::*;
 	use testing::SingleThreadedApp;
 
-	#[derive(Event)]
-	struct _Event;
+	#[derive(EntityEvent)]
+	struct _Event(Entity);
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -34,8 +34,12 @@ mod tests {
 		let mut app = setup();
 		let mut entity = app.world_mut().spawn_empty();
 
-		entity.trigger(_Event);
+		let entity = entity.trigger(_Event).id();
+		app.update();
 
-		assert_eq!(Some(&SetupAnimations), entity.get::<SetupAnimations>(),);
+		assert_eq!(
+			Some(&SetupAnimations),
+			app.world().entity(entity).get::<SetupAnimations>(),
+		);
 	}
 }

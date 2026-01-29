@@ -6,7 +6,7 @@ use std::collections::VecDeque;
 pub trait IterDescendantsConditional<'w, 's, D>
 where
 	D: QueryData,
-	D::ReadOnly: QueryData<Item<'w> = &'w Children>,
+	D::ReadOnly: QueryData<Item<'w, 's> = &'w Children>,
 {
 	/// Iterate descendants
 	///
@@ -23,7 +23,7 @@ where
 pub struct IterDescendantsWithPredicate<'w, 's, D, TPredicate>
 where
 	D: QueryData,
-	D::ReadOnly: QueryData<Item<'w> = &'w Children>,
+	D::ReadOnly: QueryData<Item<'w, 's> = &'w Children>,
 {
 	children: &'w Query<'w, 's, D>,
 	remaining: VecDeque<Entity>,

@@ -87,12 +87,6 @@ mod tests {
 		app
 	}
 
-	macro_rules! entities_with {
-		($ty:ty, $app:expr) => {
-			$app.world().iter_entities().filter(|e| e.contains::<$ty>())
-		};
-	}
-
 	#[test]
 	fn spawn_player_on_1_by_1_grid() {
 		let mut app = setup();
@@ -109,11 +103,11 @@ mod tests {
 
 		app.update();
 
-		let [agent] = assert_count!(1, entities_with!(WorldAgent, app));
-		assert_eq!(
-			Some(&Transform::from_xyz(0., 0., 0.)),
-			agent.get::<Transform>(),
-		);
+		let mut agents = app
+			.world_mut()
+			.query_filtered::<&Transform, With<WorldAgent>>();
+		let [agent] = assert_count!(1, agents.iter(app.world()));
+		assert_eq!(&Transform::from_xyz(0., 0., 0.), agent);
 	}
 
 	#[test]
@@ -135,13 +129,14 @@ mod tests {
 
 		app.update();
 
-		let [agent] = assert_count!(1, entities_with!(WorldAgent, app));
+		let mut agents = app.world_mut().query::<(&Transform, &WorldAgent)>();
+		let [(transform, agent)] = assert_count!(1, agents.iter(app.world()));
 		assert_eq!(
 			(
-				Some(&Transform::from_xyz(0., 0., 0.)),
-				Some(&WorldAgent(AgentType::Enemy(EnemyType::VoidSphere))),
+				&Transform::from_xyz(0., 0., 0.),
+				&WorldAgent(AgentType::Enemy(EnemyType::VoidSphere)),
 			),
-			(agent.get::<Transform>(), agent.get::<WorldAgent>(),)
+			(transform, agent)
 		);
 	}
 
@@ -195,20 +190,23 @@ mod tests {
 
 		app.update();
 
-		let agents = assert_count!(9, entities_with!(WorldAgent, app));
+		let mut agents = app
+			.world_mut()
+			.query_filtered::<&Transform, With<WorldAgent>>();
+		let agents = assert_count!(9, agents.iter(app.world()));
 		assert_eq_unordered!(
 			[
-				Some(&Transform::from_xyz(-4., 0., -4.)),
-				Some(&Transform::from_xyz(-4., 0., 0.)),
-				Some(&Transform::from_xyz(-4., 0., 4.)),
-				Some(&Transform::from_xyz(0., 0., -4.)),
-				Some(&Transform::from_xyz(0., 0., 0.)),
-				Some(&Transform::from_xyz(0., 0., 4.)),
-				Some(&Transform::from_xyz(4., 0., -4.)),
-				Some(&Transform::from_xyz(4., 0., 0.)),
-				Some(&Transform::from_xyz(4., 0., 4.)),
+				&Transform::from_xyz(-4., 0., -4.),
+				&Transform::from_xyz(-4., 0., 0.),
+				&Transform::from_xyz(-4., 0., 4.),
+				&Transform::from_xyz(0., 0., -4.),
+				&Transform::from_xyz(0., 0., 0.),
+				&Transform::from_xyz(0., 0., 4.),
+				&Transform::from_xyz(4., 0., -4.),
+				&Transform::from_xyz(4., 0., 0.),
+				&Transform::from_xyz(4., 0., 4.),
 			],
-			agents.map(|e| e.get::<Transform>()),
+			agents
 		);
 	}
 
@@ -254,11 +252,11 @@ mod tests {
 
 		app.update();
 
-		let [agent] = assert_count!(1, entities_with!(WorldAgent, app));
-		assert_eq!(
-			Some(&AgentOfPersistentMap(persistent_entity)),
-			agent.get::<AgentOfPersistentMap>(),
-		);
+		let mut agents = app
+			.world_mut()
+			.query_filtered::<&AgentOfPersistentMap, With<WorldAgent>>();
+		let [agent] = assert_count!(1, agents.iter(app.world()));
+		assert_eq!(&AgentOfPersistentMap(persistent_entity), agent);
 	}
 
 	#[test]
@@ -284,10 +282,10 @@ mod tests {
 
 		app.update();
 
-		let [agent] = assert_count!(1, entities_with!(WorldAgent, app));
-		assert_eq!(
-			Some(&AgentOfPersistentMap(persistent_entity)),
-			agent.get::<AgentOfPersistentMap>(),
-		);
+		let mut agents = app
+			.world_mut()
+			.query_filtered::<&AgentOfPersistentMap, With<WorldAgent>>();
+		let [agent] = assert_count!(1, agents.iter(app.world()));
+		assert_eq!(&AgentOfPersistentMap(persistent_entity), agent);
 	}
 }

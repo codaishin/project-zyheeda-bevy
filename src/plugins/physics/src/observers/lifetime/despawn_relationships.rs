@@ -4,11 +4,11 @@ use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaComman
 
 impl TiedLifetimes {
 	pub(crate) fn despawn_relationships_on_remove(
-		trigger: Trigger<OnRemove, Self>,
+		on_remove: On<Remove, Self>,
 		tied_lifetimes: Query<&Self>,
 		mut commands: ZyheedaCommands,
 	) {
-		let Ok(tied_lifetimes) = tied_lifetimes.get(trigger.target()) else {
+		let Ok(tied_lifetimes) = tied_lifetimes.get(on_remove.entity) else {
 			return;
 		};
 
@@ -45,11 +45,7 @@ mod tests {
 
 		target.despawn();
 
-		assert_count!(
-			0,
-			app.world()
-				.iter_entities()
-				.filter(|e| e.contains::<_Related>())
-		);
+		let mut related = app.world_mut().query_filtered::<(), With<_Related>>();
+		assert_count!(0, related.iter(app.world()));
 	}
 }

@@ -16,7 +16,8 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{asset::AssetPath, render::view::RenderLayers};
+	use bevy::{asset::AssetPath, camera::visibility::RenderLayers};
+	use testing::assert_count;
 
 	#[derive(Component, Resource, Default)]
 	struct _Server;
@@ -56,13 +57,8 @@ mod tests {
 		app.add_systems(Update, spawn::<_Component, _Server, _Graphics>);
 		app.update();
 
-		assert_eq!(
-			1,
-			app.world()
-				.iter_entities()
-				.filter(|e| e.contains::<_Component>())
-				.count()
-		);
+		let mut components = app.world_mut().query_filtered::<(), With<_Component>>();
+		assert_count!(1, components.iter(app.world()));
 	}
 
 	#[test]
@@ -73,13 +69,12 @@ mod tests {
 		app.add_systems(Update, spawn::<_Component, _Server, _Graphics>);
 		app.update();
 
-		assert_eq!(
+		let mut render_layers = app.world_mut().query::<&RenderLayers>();
+		assert_count!(
 			1,
-			app.world()
-				.iter_entities()
-				.filter_map(|e| e.get::<RenderLayers>())
+			render_layers
+				.iter(app.world())
 				.filter(|r| r == &&RenderLayers::layer(11))
-				.count()
 		);
 	}
 }

@@ -10,14 +10,14 @@ use common::{
 
 impl UILabel {
 	pub(crate) fn localize<TLocalizer>(
-		trigger: Trigger<OnInsert, UILabel<Token>>,
+		on_insert: On<Insert, UILabel<Token>>,
 		mut commands: ZyheedaCommands,
 		labels: Query<&UILabel<Token>>,
 		localizer: Res<TLocalizer>,
 	) where
 		TLocalizer: Resource + Localize,
 	{
-		let entity = trigger.target();
+		let entity = on_insert.entity;
 		let Ok(UILabel(token)) = labels.get(entity) else {
 			return;
 		};

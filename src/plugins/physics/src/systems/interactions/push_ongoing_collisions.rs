@@ -67,8 +67,8 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		// Needed for rapier
-		app.add_event::<CollisionEvent>();
-		app.add_event::<MassModifiedEvent>();
+		app.add_message::<CollisionEvent>();
+		app.add_message::<MassModifiedEvent>();
 		app.init_resource::<TimestepMode>();
 
 		app.init_resource::<_OngoingCollisions>();
@@ -89,7 +89,7 @@ mod tests {
 		let mut app = setup();
 		let actor = app.world_mut().spawn(CollidingEntities::default()).id();
 		let target = app.world_mut().spawn_empty().id();
-		app.world_mut().send_event(CollisionEvent::Started(
+		app.world_mut().write_message(CollisionEvent::Started(
 			actor,
 			target,
 			CollisionEventFlags::empty(),
@@ -111,7 +111,7 @@ mod tests {
 		let mut app = setup();
 		let actor = app.world_mut().spawn(CollidingEntities::default()).id();
 		let target = app.world_mut().spawn_empty().id();
-		app.world_mut().send_event(CollisionEvent::Started(
+		app.world_mut().write_message(CollisionEvent::Started(
 			actor,
 			target,
 			CollisionEventFlags::empty(),
@@ -135,7 +135,7 @@ mod tests {
 		let mut app = setup();
 		let actor = app.world_mut().spawn(CollidingEntities::default()).id();
 		let target = app.world_mut().spawn_empty().id();
-		app.world_mut().send_event(CollisionEvent::Started(
+		app.world_mut().write_message(CollisionEvent::Started(
 			actor,
 			target,
 			CollisionEventFlags::empty(),
@@ -151,7 +151,7 @@ mod tests {
 
 		app.update();
 		app.update();
-		app.world_mut().send_event(CollisionEvent::Stopped(
+		app.world_mut().write_message(CollisionEvent::Stopped(
 			actor,
 			target,
 			CollisionEventFlags::empty(),

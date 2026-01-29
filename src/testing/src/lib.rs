@@ -117,32 +117,34 @@ macro_rules! assert_eq_approx {
 }
 
 #[macro_export]
-macro_rules! get_children {
-	($app:expr, $parent:expr $(,)?) => {
-		get_children!($app, $parent, |entity| entity)
+macro_rules! assert_children_count {
+	($count:literal, $app:expr, $parent:expr $(,)?) => {
+		assert_children_count!($count, $app, $parent, |entity| Some(entity))
 	};
-	($app:expr, $parent:expr, $mapper:expr $(,)?) => {
-		$app.world()
-			.iter_entities()
+	($count:literal, $app:expr, $parent:expr, $filter_map:expr $(,)?) => {{
+		let mut query = $app.world_mut().query::<bevy::prelude::EntityRef>();
+		let children = query
+			.iter($app.world())
 			.filter(|entity| {
 				entity
 					.get::<bevy::prelude::ChildOf>()
 					.map(|p| p.parent() == $parent)
 					.unwrap_or(false)
 			})
-			.map($mapper)
-	};
+			.filter_map($filter_map);
+		$crate::assert_count!($count, children)
+	}};
 }
 
 #[macro_export]
-macro_rules! get_current_update_events {
+macro_rules! get_current_update_messages {
 	($app:expr, $ty:ty $(,)?) => {
-		get_current_update_events!($app, $ty, |entity| entity)
+		get_current_update_messages!($app, $ty, |entity| entity)
 	};
 	($app:expr, $ty:ty, $mapper:expr $(,)?) => {
 		$app.world()
-			.resource::<bevy::prelude::Events<$ty>>()
-			.iter_current_update_events()
+			.resource::<bevy::prelude::Messages<$ty>>()
+			.iter_current_update_messages()
 			.map($mapper)
 	};
 }
@@ -150,7 +152,7 @@ macro_rules! get_current_update_events {
 #[macro_export]
 macro_rules! assert_count {
 	($count:literal, $iterator:expr $(,)?) => {{
-		let vec = $iterator.collect::<Vec<_>>();
+		let vec = $iterator.collect::<std::vec::Vec<_>>();
 		let vec_len = vec.len();
 		let Ok(array) = <[_; $count]>::try_from(vec) else {
 			panic!(
@@ -161,6 +163,19 @@ macro_rules! assert_count {
 		};
 
 		array
+	}};
+}
+
+#[macro_export]
+macro_rules! fake_entity {
+	($row:literal) => {{
+		const ENTITY: Option<bevy::prelude::Entity> = bevy::prelude::Entity::from_raw_u32($row);
+		match ENTITY {
+			Some(e) => e,
+			None => {
+				panic!("Invalid Entity row");
+			}
+		}
 	}};
 }
 
@@ -339,7 +354,7 @@ pub fn new_handle<TAsset: Asset>() -> Handle<TAsset> {
 }
 
 pub fn new_handle_from<TAsset: Asset>(uuid: Uuid) -> Handle<TAsset> {
-	Handle::Weak(AssetId::Uuid { uuid })
+	Handle::from(uuid)
 }
 
 #[derive(Component, Clone, Copy)]

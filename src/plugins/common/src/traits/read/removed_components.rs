@@ -1,5 +1,5 @@
 use super::Read;
-use bevy::{ecs::removal_detection::RemovedIter, prelude::*};
+use bevy::{ecs::lifecycle::RemovedIter, prelude::*};
 
 impl<'a, TComponent> Read<'a> for RemovedComponents<'_, '_, TComponent>
 where

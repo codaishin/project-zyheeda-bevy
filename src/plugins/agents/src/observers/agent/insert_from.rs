@@ -14,7 +14,7 @@ pub(crate) trait InsertFrom:
 	Component + From<(AgentType, Handle<AgentConfig>)> + Sized
 {
 	fn insert_from<TSource>(
-		trigger: Trigger<OnInsert, TSource>,
+		on_insert: On<Insert, TSource>,
 		asset_server: ResMut<AssetServer>,
 		commands: ZyheedaCommands,
 		sources: Query<&TSource>,
@@ -22,7 +22,12 @@ pub(crate) trait InsertFrom:
 		Self: AgentHandle<AssetServer>,
 		TSource: Component + GetProperty<AgentType>,
 	{
-		insert_from_internal::<Self, AssetServer, TSource>(trigger, asset_server, commands, sources)
+		insert_from_internal::<Self, AssetServer, TSource>(
+			on_insert,
+			asset_server,
+			commands,
+			sources,
+		)
 	}
 }
 
@@ -31,7 +36,7 @@ pub(crate) trait AgentHandle<TAssets> {
 }
 
 fn insert_from_internal<TAgent, TAssetServer, TSource>(
-	trigger: Trigger<OnInsert, TSource>,
+	on_insert: On<Insert, TSource>,
 	mut asset_server: ResMut<TAssetServer>,
 	mut commands: ZyheedaCommands,
 	sources: Query<&TSource>,
@@ -40,7 +45,7 @@ fn insert_from_internal<TAgent, TAssetServer, TSource>(
 	TAssetServer: Resource,
 	TSource: Component + GetProperty<AgentType>,
 {
-	let entity = trigger.target();
+	let entity = on_insert.entity;
 	let Ok(source) = sources.get(entity) else {
 		return;
 	};

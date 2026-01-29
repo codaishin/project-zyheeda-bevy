@@ -114,7 +114,7 @@ mod tests {
 		let mut assets = Assets::default();
 
 		for (id, image) in images {
-			assets.insert(id, image);
+			_ = assets.insert(id, image);
 		}
 		app.insert_resource(assets);
 		app.init_resource::<_Lookup>();

@@ -7,13 +7,13 @@ use common::traits::{
 
 impl Enemy {
 	pub(crate) fn register_target_definition<TFacing>(
-		trigger: Trigger<OnAdd, Self>,
+		trigger: On<Add, Self>,
 		players: Query<Entity, With<Player>>,
 		mut facing: StaticSystemParam<TFacing>,
 	) where
 		TFacing: for<'c> GetContextMut<Facing, TContext<'c>: RegisterFaceTargetDefinition>,
 	{
-		let entity = trigger.target();
+		let entity = trigger.entity;
 		let Ok(player) = players.single() else {
 			return;
 		};

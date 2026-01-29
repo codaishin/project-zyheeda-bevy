@@ -5,10 +5,10 @@ use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaComman
 
 impl Motion {
 	pub(crate) fn zero_velocity_on_remove(
-		trigger: Trigger<OnRemove, Self>,
+		on_remove: On<Remove, Self>,
 		mut commands: ZyheedaCommands,
 	) {
-		commands.try_apply_on(&trigger.target(), |mut e| {
+		commands.try_apply_on(&on_remove.entity, |mut e| {
 			e.try_insert(Velocity::zero());
 		});
 	}

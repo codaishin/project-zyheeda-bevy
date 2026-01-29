@@ -5,7 +5,7 @@ use std::collections::VecDeque;
 impl<'w, 's, D> IterDescendantsConditional<'w, 's, D> for Query<'w, 's, D>
 where
 	D: QueryData,
-	D::ReadOnly: QueryData<Item<'w> = &'w Children>,
+	D::ReadOnly: QueryData<Item<'w, 's> = &'w Children>,
 {
 	fn iter_descendants_conditional<TPredicate>(
 		&'w self,
@@ -32,7 +32,7 @@ impl<'w, 's, D, TPredicate> Iterator for super::IterDescendantsWithPredicate<'w,
 where
 	TPredicate: Fn(Entity) -> bool,
 	D: QueryData,
-	D::ReadOnly: QueryData<Item<'w> = &'w Children>,
+	D::ReadOnly: QueryData<Item<'w, 's> = &'w Children>,
 {
 	type Item = Entity;
 
@@ -51,7 +51,7 @@ impl<'w, 's, D, TPredicate> super::IterDescendantsWithPredicate<'w, 's, D, TPred
 where
 	TPredicate: Fn(Entity) -> bool,
 	D: QueryData,
-	D::ReadOnly: QueryData<Item<'w> = &'w Children>,
+	D::ReadOnly: QueryData<Item<'w, 's> = &'w Children>,
 {
 	fn next_matching(&mut self) -> Option<Entity> {
 		while let Some(next) = self.remaining.pop_front() {

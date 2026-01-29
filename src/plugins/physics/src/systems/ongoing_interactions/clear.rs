@@ -11,7 +11,7 @@ impl OngoingInteractions {
 mod tests {
 	use super::*;
 	use std::collections::{HashMap, HashSet};
-	use testing::SingleThreadedApp;
+	use testing::{SingleThreadedApp, fake_entity};
 
 	fn setup(interactions: OngoingInteractions) -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -25,7 +25,7 @@ mod tests {
 	#[test]
 	fn clear() {
 		let mut app = setup(OngoingInteractions {
-			targets: HashMap::from([(Entity::from_raw(42), HashSet::from([]))]),
+			targets: HashMap::from([(fake_entity!(42), HashSet::from([]))]),
 		});
 
 		app.update();

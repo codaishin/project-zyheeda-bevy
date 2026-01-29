@@ -185,6 +185,7 @@ mod tests {
 	use super::*;
 	use bevy::prelude::default;
 	use common::tools::action_key::slot::SlotKey;
+	use testing::fake_entity;
 
 	struct _Lo;
 
@@ -221,13 +222,11 @@ mod tests {
 	#[test]
 	fn track_animation_player() {
 		let dispatch = &mut AnimationDispatch::default();
-		as_track::<AnimationPlayer>(dispatch)
-			.track(Entity::from_raw(1), &AnimationPlayer::default());
-		as_track::<AnimationPlayer>(dispatch)
-			.track(Entity::from_raw(2), &AnimationPlayer::default());
+		as_track::<AnimationPlayer>(dispatch).track(fake_entity!(1), &AnimationPlayer::default());
+		as_track::<AnimationPlayer>(dispatch).track(fake_entity!(2), &AnimationPlayer::default());
 
 		assert_eq!(
-			HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
+			HashSet::from([fake_entity!(1), fake_entity!(2)]),
 			dispatch.animation_players
 		)
 	}
@@ -235,29 +234,26 @@ mod tests {
 	#[test]
 	fn untrack_animation_player() {
 		let dispatch = &mut AnimationDispatch {
-			animation_players: HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
+			animation_players: HashSet::from([fake_entity!(1), fake_entity!(2)]),
 			..default()
 		};
-		as_track::<AnimationPlayer>(dispatch).untrack(&Entity::from_raw(1));
+		as_track::<AnimationPlayer>(dispatch).untrack(&fake_entity!(1));
 
-		assert_eq!(
-			HashSet::from([Entity::from_raw(2)]),
-			dispatch.animation_players
-		)
+		assert_eq!(HashSet::from([fake_entity!(2)]), dispatch.animation_players)
 	}
 
 	#[test]
 	fn is_tracking_animation_player() {
 		let dispatch = &mut AnimationDispatch {
-			animation_players: HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
+			animation_players: HashSet::from([fake_entity!(1), fake_entity!(2)]),
 			..default()
 		};
 
 		assert_eq!(
 			[true, false],
 			[
-				as_track::<AnimationPlayer>(dispatch).is_tracking(&Entity::from_raw(2)),
-				as_track::<AnimationPlayer>(dispatch).is_tracking(&Entity::from_raw(3)),
+				as_track::<AnimationPlayer>(dispatch).is_tracking(&fake_entity!(2)),
+				as_track::<AnimationPlayer>(dispatch).is_tracking(&fake_entity!(3)),
 			]
 		)
 	}
@@ -266,12 +262,12 @@ mod tests {
 	fn track_animation_graph() {
 		let dispatch = &mut AnimationDispatch::default();
 		as_track::<AnimationGraphHandle>(dispatch)
-			.track(Entity::from_raw(1), &AnimationGraphHandle::default());
+			.track(fake_entity!(1), &AnimationGraphHandle::default());
 		as_track::<AnimationGraphHandle>(dispatch)
-			.track(Entity::from_raw(2), &AnimationGraphHandle::default());
+			.track(fake_entity!(2), &AnimationGraphHandle::default());
 
 		assert_eq!(
-			HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
+			HashSet::from([fake_entity!(1), fake_entity!(2)]),
 			dispatch.animation_handles
 		)
 	}
@@ -279,29 +275,26 @@ mod tests {
 	#[test]
 	fn untrack_animation_graph() {
 		let dispatch = &mut AnimationDispatch {
-			animation_handles: HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
+			animation_handles: HashSet::from([fake_entity!(1), fake_entity!(2)]),
 			..default()
 		};
-		as_track::<AnimationGraphHandle>(dispatch).untrack(&Entity::from_raw(1));
+		as_track::<AnimationGraphHandle>(dispatch).untrack(&fake_entity!(1));
 
-		assert_eq!(
-			HashSet::from([Entity::from_raw(2)]),
-			dispatch.animation_handles
-		)
+		assert_eq!(HashSet::from([fake_entity!(2)]), dispatch.animation_handles)
 	}
 
 	#[test]
 	fn is_tracking_animation_graph() {
 		let dispatch = &mut AnimationDispatch {
-			animation_handles: HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
+			animation_handles: HashSet::from([fake_entity!(1), fake_entity!(2)]),
 			..default()
 		};
 
 		assert_eq!(
 			[true, false],
 			[
-				as_track::<AnimationGraphHandle>(dispatch).is_tracking(&Entity::from_raw(2)),
-				as_track::<AnimationGraphHandle>(dispatch).is_tracking(&Entity::from_raw(3)),
+				as_track::<AnimationGraphHandle>(dispatch).is_tracking(&fake_entity!(2)),
+				as_track::<AnimationGraphHandle>(dispatch).is_tracking(&fake_entity!(3)),
 			]
 		)
 	}
@@ -309,12 +302,12 @@ mod tests {
 	#[test]
 	fn iterate_animation_players() {
 		let dispatch = AnimationDispatch {
-			animation_players: HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
+			animation_players: HashSet::from([fake_entity!(1), fake_entity!(2)]),
 			..default()
 		};
 
 		assert_eq!(
-			HashSet::from([Entity::from_raw(1), Entity::from_raw(2)]),
+			HashSet::from([fake_entity!(1), fake_entity!(2)]),
 			dispatch.animation_players().collect::<HashSet<_>>(),
 		)
 	}
@@ -322,17 +315,13 @@ mod tests {
 	#[test]
 	fn iterate_animation_players_without_transitions() {
 		let dispatch = AnimationDispatch {
-			animation_players: HashSet::from([
-				Entity::from_raw(1),
-				Entity::from_raw(2),
-				Entity::from_raw(3),
-			]),
-			animation_handles: HashSet::from([Entity::from_raw(2)]),
+			animation_players: HashSet::from([fake_entity!(1), fake_entity!(2), fake_entity!(3)]),
+			animation_handles: HashSet::from([fake_entity!(2)]),
 			..default()
 		};
 
 		assert_eq!(
-			HashSet::from([Entity::from_raw(1), Entity::from_raw(3)]),
+			HashSet::from([fake_entity!(1), fake_entity!(3)]),
 			dispatch
 				.animation_players_without_graph()
 				.collect::<HashSet<_>>(),

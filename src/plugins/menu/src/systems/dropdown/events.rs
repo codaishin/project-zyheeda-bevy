@@ -1,30 +1,30 @@
-use crate::{components::dropdown::Dropdown, events::DropdownEvent};
+use crate::{components::dropdown::Dropdown, events::DropdownMessage};
 use bevy::prelude::*;
 
 pub(crate) fn dropdown_events<TItem: Send + Sync + 'static>(
 	dropdowns: Query<Entity, Added<Dropdown<TItem>>>,
 	mut removed_dropdowns: RemovedComponents<Dropdown<TItem>>,
-	mut events: EventWriter<DropdownEvent>,
+	mut messages: MessageWriter<DropdownMessage>,
 ) {
 	for entity in &dropdowns {
-		events.write(DropdownEvent::Added(entity));
+		messages.write(DropdownMessage::Added(entity));
 	}
 
 	for entity in removed_dropdowns.read() {
-		events.write(DropdownEvent::Removed(entity));
+		messages.write(DropdownMessage::Removed(entity));
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use testing::{SingleThreadedApp, get_current_update_events};
+	use testing::{SingleThreadedApp, get_current_update_messages};
 
 	struct _Item;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_event::<DropdownEvent>();
+		app.add_message::<DropdownMessage>();
 		app.add_systems(Update, dropdown_events::<_Item>);
 
 		app
@@ -38,8 +38,8 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			vec![&DropdownEvent::Added(dropdown)],
-			get_current_update_events!(app, DropdownEvent).collect::<Vec<_>>()
+			vec![&DropdownMessage::Added(dropdown)],
+			get_current_update_messages!(app, DropdownMessage).collect::<Vec<_>>()
 		)
 	}
 
@@ -51,8 +51,8 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			vec![] as Vec<&DropdownEvent>,
-			get_current_update_events!(app, DropdownEvent).collect::<Vec<_>>()
+			vec![] as Vec<&DropdownMessage>,
+			get_current_update_messages!(app, DropdownMessage).collect::<Vec<_>>()
 		)
 	}
 
@@ -64,7 +64,10 @@ mod tests {
 		app.update();
 		app.update();
 
-		assert_eq!(None, get_current_update_events!(app, DropdownEvent).next())
+		assert_eq!(
+			None,
+			get_current_update_messages!(app, DropdownMessage).next()
+		)
 	}
 
 	#[test]
@@ -79,8 +82,8 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			vec![&DropdownEvent::Removed(dropdown)],
-			get_current_update_events!(app, DropdownEvent).collect::<Vec<_>>()
+			vec![&DropdownMessage::Removed(dropdown)],
+			get_current_update_messages!(app, DropdownMessage).collect::<Vec<_>>()
 		)
 	}
 }

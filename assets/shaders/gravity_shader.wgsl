@@ -8,8 +8,8 @@
 
 @group(0) @binding(11) var<uniform> globals: Globals;
 
-@group(2) @binding(0) var first_pass_texture: texture_2d<f32>;
-@group(2) @binding(1) var first_pass_sampler: sampler;
+@group(#{MATERIAL_BIND_GROUP}) @binding(0) var first_pass_texture: texture_2d<f32>;
+@group(#{MATERIAL_BIND_GROUP}) @binding(1) var first_pass_sampler: sampler;
 
 struct PulseParams {
     speed: f32,

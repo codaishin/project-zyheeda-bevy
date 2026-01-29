@@ -52,8 +52,8 @@ mod tests {
 	};
 	use bevy::{
 		ecs::system::{RunSystemError, RunSystemOnce},
+		mesh::MeshPlugin,
 		prelude::*,
-		render::mesh::MeshPlugin,
 		scene::ScenePlugin,
 	};
 	use common::traits::handles_physics::RaycastSystemParam;

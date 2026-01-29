@@ -1,4 +1,4 @@
-use bevy::{prelude::Component, render::view::RenderLayers};
+use bevy::{camera::visibility::RenderLayers, prelude::Component};
 
 pub trait StaticRenderLayers {
 	fn render_layers() -> RenderLayers;

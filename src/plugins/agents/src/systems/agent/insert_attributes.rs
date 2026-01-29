@@ -65,7 +65,7 @@ mod tests {
 		let mut assets = Assets::default();
 
 		for (id, asset) in attributes {
-			assets.insert(id, asset);
+			_ = assets.insert(id, asset);
 		}
 
 		app.insert_resource(assets);

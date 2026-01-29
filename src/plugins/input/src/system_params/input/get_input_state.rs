@@ -214,6 +214,7 @@ mod tests {
 		use super::*;
 		use common::tools::action_key::slot::PlayerSlot;
 		use test_case::test_case;
+		use testing::fake_entity;
 
 		const LEFT_MOUSE: MouseButton = MouseButton::Left;
 
@@ -224,7 +225,7 @@ mod tests {
 					.return_const(LEFT_MOUSE);
 			}));
 			app.insert_resource(MouseOverride::Active {
-				panel: Entity::from_raw(42),
+				panel: fake_entity!(42),
 				action: ActionKey::from(PlayerSlot::LOWER_L),
 				input_state: None,
 			});
@@ -264,7 +265,7 @@ mod tests {
 				mock.expect_get_input::<ActionKey>().never();
 			}));
 			app.insert_resource(MouseOverride::Active {
-				panel: Entity::from_raw(123),
+				panel: fake_entity!(123),
 				action,
 				input_state: Some(input_state),
 			});

@@ -103,7 +103,7 @@ mod tests {
 	use bevy_rapier3d::parry::shape::FeatureId;
 	use common::toi;
 	use core::f32;
-	use testing::assert_no_panic;
+	use testing::{assert_no_panic, fake_entity};
 
 	struct _Ray;
 
@@ -126,9 +126,9 @@ mod tests {
 				_: &_Ray,
 				mut callback: F,
 			) {
-				callback(Entity::from_raw(1), intersection_toi(f32::INFINITY));
-				callback(Entity::from_raw(2), intersection_toi(20.));
-				callback(Entity::from_raw(3), intersection_toi(3.));
+				callback(fake_entity!(1), intersection_toi(f32::INFINITY));
+				callback(fake_entity!(2), intersection_toi(20.));
+				callback(fake_entity!(3), intersection_toi(3.));
 			}
 		}
 
@@ -139,15 +139,15 @@ mod tests {
 		assert_eq!(
 			&[
 				RayHit {
-					entity: Entity::from_raw(3),
+					entity: fake_entity!(3),
 					toi: toi!(3.)
 				},
 				RayHit {
-					entity: Entity::from_raw(2),
+					entity: fake_entity!(2),
 					toi: toi!(20.)
 				},
 				RayHit {
-					entity: Entity::from_raw(1),
+					entity: fake_entity!(1),
 					toi: toi!(f32::INFINITY)
 				},
 			],
@@ -169,9 +169,9 @@ mod tests {
 				let mut invalid = intersection_toi(f32::NAN);
 				invalid.point = Vec3::new(1., 2., 3.);
 
-				callback(Entity::from_raw(666), invalid);
-				callback(Entity::from_raw(2), intersection_toi(20.));
-				callback(Entity::from_raw(3), intersection_toi(3.));
+				callback(fake_entity!(666), invalid);
+				callback(fake_entity!(2), intersection_toi(20.));
+				callback(fake_entity!(3), intersection_toi(3.));
 			}
 		}
 

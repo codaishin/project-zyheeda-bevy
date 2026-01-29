@@ -26,12 +26,8 @@ impl<T> SkillPrefab for T where
 pub(crate) trait SkillPrefab:
 	Component + GetLifetime + GetContactPrefab + GetProjectionPrefab + ApplyMotionPrefab + Sized
 {
-	fn prefab(
-		trigger: Trigger<OnInsert, Self>,
-		mut commands: ZyheedaCommands,
-		skills: Query<&Self>,
-	) {
-		let root = trigger.target();
+	fn prefab(on_insert: On<Insert, Self>, mut commands: ZyheedaCommands, skills: Query<&Self>) {
+		let root = on_insert.entity;
 		let Some(mut entity) = commands.get_mut(&root) else {
 			return;
 		};
@@ -146,7 +142,7 @@ mod tests {
 		},
 	};
 	use std::collections::HashSet;
-	use testing::{SingleThreadedApp, assert_count, get_children};
+	use testing::{SingleThreadedApp, assert_children_count};
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Motion;
@@ -258,9 +254,15 @@ mod tests {
 		}
 	}
 
-	macro_rules! get_projection {
-		($app:expr, $skill:expr) => {
-			get_children!($app, $skill).filter(|e| e.contains::<ProjectionInteractionTarget>())
+	macro_rules! assert_projection_count {
+		($count:literal, $app:expr, $skill:expr) => {
+			assert_children_count!($count, $app, $skill, |e| {
+				if e.contains::<ProjectionInteractionTarget>() {
+					Some(e.id())
+				} else {
+					None
+				}
+			})
 		};
 	}
 
@@ -334,7 +336,7 @@ mod tests {
 
 			let skill = app.world_mut().spawn(_Skill::default()).id();
 
-			assert_count!(1, get_projection!(app, skill));
+			assert_projection_count!(1, app, skill);
 		}
 	}
 
@@ -361,7 +363,7 @@ mod tests {
 				})
 				.id();
 
-			let [model, ..] = assert_count!(3, get_children!(app, skill));
+			let [model, ..] = assert_children_count!(3, app, skill);
 			assert_eq!(
 				(
 					Some(&Model::Asset(AssetModel::from("asset/path"))),
@@ -393,7 +395,7 @@ mod tests {
 				})
 				.id();
 
-			let [_, collider, _] = assert_count!(3, get_children!(app, skill));
+			let [_, collider, _] = assert_children_count!(3, app, skill);
 			assert_eq!(
 				(
 					Some(&ColliderShape::from(Shape::Sphere {
@@ -411,7 +413,7 @@ mod tests {
 
 			let skill = app.world_mut().spawn(_Skill::default()).id();
 
-			let [_, collider, _] = assert_count!(3, get_children!(app, skill));
+			let [_, collider, _] = assert_children_count!(3, app, skill);
 			assert_eq!(Some(&Sensor), collider.get::<Sensor>());
 		}
 
@@ -421,7 +423,7 @@ mod tests {
 
 			let skill = app.world_mut().spawn(_Skill::default()).id();
 
-			let [model, collider, ..] = assert_count!(3, get_children!(app, skill));
+			let [model, collider, ..] = assert_children_count!(3, app, skill);
 			assert_eq!(
 				(
 					Some(&SkillTransformOf(skill)),
@@ -478,8 +480,8 @@ mod tests {
 				})
 				.id();
 
-			let [projection] = assert_count!(1, get_projection!(app, skill).map(|e| e.id()));
-			let [model, ..] = assert_count!(2, get_children!(app, projection));
+			let [projection] = assert_projection_count!(1, app, skill);
+			let [model, ..] = assert_children_count!(2, app, projection);
 			assert_eq!(
 				(
 					Some(&Model::Asset(AssetModel::from("asset/path"))),
@@ -511,8 +513,8 @@ mod tests {
 				})
 				.id();
 
-			let [projection] = assert_count!(1, get_projection!(app, skill).map(|e| e.id()));
-			let [.., collider] = assert_count!(2, get_children!(app, projection));
+			let [projection] = assert_projection_count!(1, app, skill);
+			let [.., collider] = assert_children_count!(2, app, projection);
 			assert_eq!(
 				(
 					Some(&ColliderShape::from(Shape::Sphere {
@@ -530,8 +532,8 @@ mod tests {
 
 			let skill = app.world_mut().spawn(_Skill::default()).id();
 
-			let [projection] = assert_count!(1, get_projection!(app, skill).map(|e| e.id()));
-			let [.., collider] = assert_count!(2, get_children!(app, projection));
+			let [projection] = assert_projection_count!(1, app, skill);
+			let [.., collider] = assert_children_count!(2, app, projection);
 			assert_eq!(Some(&Sensor), collider.get::<Sensor>());
 		}
 
@@ -552,7 +554,7 @@ mod tests {
 				})
 				.id();
 
-			let [.., projection] = assert_count!(3, get_children!(app, skill));
+			let [.., projection] = assert_children_count!(3, app, skill);
 			assert_eq!(
 				Some(&Transform::from_xyz(1., 2., 3.)),
 				projection.get::<Transform>(),
@@ -565,8 +567,8 @@ mod tests {
 
 			let skill = app.world_mut().spawn(_Skill::default()).id();
 
-			let [projection] = assert_count!(1, get_projection!(app, skill).map(|e| e.id()));
-			let [model, collider] = assert_count!(2, get_children!(app, projection));
+			let [projection] = assert_projection_count!(1, app, skill);
+			let [model, collider] = assert_children_count!(2, app, projection);
 			assert_eq!(
 				(
 					Some(&SkillTransformOf(skill)),
@@ -596,7 +598,7 @@ mod tests {
 				})
 				.id();
 
-			let [.., projection] = assert_count!(3, get_children!(app, skill));
+			let [.., projection] = assert_children_count!(3, app, skill);
 			assert_eq!(
 				Some(&Effects(vec![Effect::Force(Force)])),
 				projection.get::<Effects>(),

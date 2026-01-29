@@ -4,11 +4,11 @@ use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaComman
 
 impl WorldCamera {
 	pub(crate) fn remove_old_cameras(
-		trigger: Trigger<OnInsert, Self>,
+		on_insert: On<Insert, Self>,
 		mut commands: ZyheedaCommands,
 		cameras: Query<Entity, With<Self>>,
 	) {
-		let entity = trigger.target();
+		let entity = on_insert.entity;
 
 		for cam in &cameras {
 			if cam == entity {

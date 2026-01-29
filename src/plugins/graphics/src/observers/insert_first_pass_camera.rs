@@ -1,16 +1,15 @@
 use crate::{components::camera_labels::FirstPass, resources::first_pass_image::FirstPassImage};
-use bevy::{prelude::*, render::camera::RenderTarget};
+use bevy::{camera::RenderTarget, prelude::*};
 use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
 impl FirstPass {
 	pub(crate) fn insert_camera(
-		trigger: Trigger<OnInsert, Self>,
+		on_insert: On<Insert, Self>,
 		first_pass_image: Res<FirstPassImage>,
 		mut commands: ZyheedaCommands,
 	) {
-		commands.try_apply_on(&trigger.target(), |mut e| {
+		commands.try_apply_on(&on_insert.entity, |mut e| {
 			e.try_insert(Camera {
-				hdr: true,
 				target: RenderTarget::Image(first_pass_image.handle.clone().into()),
 				..default()
 			});
@@ -22,7 +21,7 @@ impl FirstPass {
 mod tests {
 	use super::*;
 	use crate::resources::first_pass_image::FirstPassImage;
-	use bevy::{math::FloatOrd, render::camera::RenderTarget};
+	use bevy::math::FloatOrd;
 	use testing::{SingleThreadedApp, new_handle};
 
 	fn setup(first_pass_image: Handle<Image>) -> App {
@@ -52,8 +51,8 @@ mod tests {
 		let entity = app.world_mut().spawn(FirstPass);
 
 		assert_eq!(
-			Some((true, Some((&FloatOrd(1.0), &handle)))),
-			entity.get::<Camera>().map(|c| (c.hdr, unwrap(&c.target)))
+			Some((&FloatOrd(1.0), &handle)),
+			entity.get::<Camera>().and_then(|c| unwrap(&c.target))
 		);
 	}
 
@@ -67,8 +66,8 @@ mod tests {
 		entity.insert(FirstPass);
 
 		assert_eq!(
-			Some((true, Some((&FloatOrd(1.0), &handle)))),
-			entity.get::<Camera>().map(|c| (c.hdr, unwrap(&c.target)))
+			Some((&FloatOrd(1.0), &handle)),
+			entity.get::<Camera>().and_then(|c| unwrap(&c.target))
 		);
 	}
 }

@@ -31,7 +31,7 @@ impl<'w, 's> ZyheedaCommands<'w, 's> {
 
 	pub fn trigger_observers_for<TEvent>(&mut self, event: TEvent)
 	where
-		TEvent: Event,
+		TEvent: for<'a> Event<Trigger<'a>: Default>,
 	{
 		self.commands.trigger(event);
 	}
@@ -144,7 +144,7 @@ impl ZyheedaEntityCommands<'_> {
 
 	pub fn trigger_observers_for<TEvent>(&mut self, event: TEvent)
 	where
-		TEvent: Event,
+		TEvent: for<'a> Event<Trigger<'a>: Default>,
 	{
 		self.entity.commands_mut().trigger(event);
 	}
@@ -184,7 +184,8 @@ mod test {
 				commands.spawn(());
 			})?;
 
-		assert_count!(1, app.world().iter_entities());
+		let mut entities = app.world_mut().query::<()>();
+		assert_count!(1, entities.iter(app.world()));
 		Ok(())
 	}
 
@@ -197,17 +198,13 @@ mod test {
 				commands.spawn(_Component(""));
 			})?;
 
-		assert_count!(
-			1,
-			app.world()
-				.iter_entities()
-				.filter(|e| e.contains::<_Component>())
-		);
+		let mut entities = app.world_mut().query_filtered::<(), With<_Component>>();
+		assert_count!(1, entities.iter(app.world()));
 		Ok(())
 	}
 
 	mod entity {
-		use testing::get_children;
+		use testing::assert_children_count;
 
 		use super::*;
 
@@ -369,7 +366,7 @@ mod test {
 					entity_cmds.with_child(_Component("child"));
 				})?;
 
-			let [child] = assert_count!(1, get_children!(app, entity));
+			let [child] = assert_children_count!(1, app, entity);
 			assert_eq!(Some(&_Component("child")), child.get::<_Component>());
 			Ok(())
 		}
@@ -389,7 +386,7 @@ mod test {
 					});
 				})?;
 
-			let [child] = assert_count!(1, get_children!(app, entity));
+			let [child] = assert_children_count!(1, app, entity);
 			assert_eq!(Some(&_Component("child")), child.get::<_Component>());
 			Ok(())
 		}
@@ -476,7 +473,7 @@ mod test {
 		fn setup() -> App {
 			let mut app = App::new().single_threaded(Update);
 
-			app.add_observer(|trigger: Trigger<_Event>, mut commands: Commands| {
+			app.add_observer(|trigger: On<_Event>, mut commands: Commands| {
 				let event = trigger.event();
 				commands.entity(event.entity).insert(_Triggered);
 			});

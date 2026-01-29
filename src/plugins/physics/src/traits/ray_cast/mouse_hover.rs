@@ -73,7 +73,7 @@ mod tests {
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::collections::HashMap;
-	use testing::{NestedMocks, SingleThreadedApp};
+	use testing::{NestedMocks, SingleThreadedApp, fake_entity};
 
 	#[derive(Resource, NestedMocks)]
 	struct _Objects {
@@ -137,7 +137,7 @@ mod tests {
 			origin: Vec3::new(1., 2., 3.),
 			direction: Dir3::NEG_Y,
 		};
-		let exclude = Entity::from_raw(444);
+		let exclude = fake_entity!(444);
 		let (mut app, _) = setup(
 			ray,
 			_Objects::new().with_mock(|mock| {
@@ -148,7 +148,7 @@ mod tests {
 						only_hoverable: true,
 					}))
 					.return_const(RaycastHit {
-						entity: Entity::from_raw(123),
+						entity: fake_entity!(123),
 						time_of_impact: 42.,
 					});
 			}),
@@ -167,7 +167,7 @@ mod tests {
 
 				assert_eq!(
 					Some(MouseHoversOver::Object {
-						entity: Entity::from_raw(123),
+						entity: fake_entity!(123),
 						point: Vec3::new(1., -40., 3.),
 					}),
 					hit,
@@ -181,7 +181,7 @@ mod tests {
 			origin: Vec3::new(1., 2., 3.),
 			direction: Dir3::NEG_Y,
 		};
-		let exclude = Entity::from_raw(444);
+		let exclude = fake_entity!(444);
 		let (mut app, _) = setup(
 			ray,
 			_Objects::new().with_mock(|mock| {
@@ -221,7 +221,7 @@ mod tests {
 			origin: Vec3::new(1., 2., 3.),
 			direction: Dir3::NEG_Y,
 		};
-		let exclude = Entity::from_raw(444);
+		let exclude = fake_entity!(444);
 		let (mut app, _) = setup(
 			ray,
 			_Objects::new().with_mock(|mock| {
@@ -232,7 +232,7 @@ mod tests {
 						only_hoverable: true,
 					}))
 					.return_const(RaycastHit {
-						entity: Entity::from_raw(123),
+						entity: fake_entity!(123),
 						time_of_impact: 100.,
 					});
 			}),
@@ -264,7 +264,7 @@ mod tests {
 			origin: Vec3::new(1., 2., 3.),
 			direction: Dir3::NEG_Y,
 		};
-		let exclude = Entity::from_raw(444);
+		let exclude = fake_entity!(444);
 		let (mut app, cam) = setup(
 			ray,
 			_Objects::new().with_mock(|mock| {
@@ -279,7 +279,7 @@ mod tests {
 		cam.mouse_hover.insert(
 			vec![exclude],
 			MouseHoversOver::Object {
-				entity: Entity::from_raw(321),
+				entity: fake_entity!(321),
 				point: Vec3::new(4., 11., 2.),
 			},
 		);
@@ -292,7 +292,7 @@ mod tests {
 
 				assert_eq!(
 					Some(MouseHoversOver::Object {
-						entity: Entity::from_raw(321),
+						entity: fake_entity!(321),
 						point: Vec3::new(4., 11., 2.),
 					}),
 					hit,
@@ -306,7 +306,7 @@ mod tests {
 			origin: Vec3::new(1., 2., 3.),
 			direction: Dir3::NEG_Y,
 		};
-		let exclude = Entity::from_raw(444);
+		let exclude = fake_entity!(444);
 		let (mut app, cam) = setup(
 			ray,
 			_Objects::new().with_mock(|mock| {
@@ -317,7 +317,7 @@ mod tests {
 						only_hoverable: true,
 					}))
 					.return_const(RaycastHit {
-						entity: Entity::from_raw(123),
+						entity: fake_entity!(123),
 						time_of_impact: 42.,
 					});
 			}),
@@ -340,7 +340,7 @@ mod tests {
 				mouse_hover: HashMap::from([(
 					vec![exclude],
 					MouseHoversOver::Object {
-						entity: Entity::from_raw(123),
+						entity: fake_entity!(123),
 						point: Vec3::new(1., -40., 3.),
 					}
 				)]),

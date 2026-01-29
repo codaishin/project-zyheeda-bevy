@@ -50,7 +50,7 @@ impl WithChildren for EntityCommands<'_> {
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use testing::{SingleThreadedApp, assert_count, get_children};
+	use testing::{SingleThreadedApp, assert_children_count};
 
 	#[derive(Component, Debug, PartialEq, Clone)]
 	struct _Component(&'static str);
@@ -170,7 +170,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(with_child_system(entity, _Component("Hey, there")))?;
 
-		let [child] = assert_count!(1, get_children!(app, entity));
+		let [child] = assert_children_count!(1, app, entity);
 		assert_eq!(Some(&_Component("Hey, there")), child.get::<_Component>());
 		Ok(())
 	}
@@ -186,7 +186,7 @@ mod tests {
 				p.spawn(_Component("And here am I"));
 			}))?;
 
-		let [child_a, child_b] = assert_count!(2, get_children!(app, entity));
+		let [child_a, child_b] = assert_children_count!(2, app, entity);
 		assert_eq!(
 			(
 				Some(&_Component("Here I am")),

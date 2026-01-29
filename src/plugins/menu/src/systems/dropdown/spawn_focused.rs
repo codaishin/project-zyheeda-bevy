@@ -256,18 +256,17 @@ mod tests {
 	}
 
 	macro_rules! try_last_child_of {
-		($app:expr, $entity:expr) => {
-			$app.world()
-				.iter_entities()
-				.filter_map(|e| {
-					if e.get::<ChildOf>()?.parent() == $entity {
-						Some(e)
-					} else {
-						None
-					}
-				})
+		($app:expr, $entity:expr) => {{
+			let mut children = $app.world_mut().query::<(EntityRef, &ChildOf)>();
+			children
+				.iter($app.world())
+				.filter_map(
+					|(e, ChildOf(parent))| {
+						if parent == &$entity { Some(e) } else { None }
+					},
+				)
 				.last()
-		};
+		}};
 	}
 
 	macro_rules! last_child_of {

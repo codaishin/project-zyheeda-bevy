@@ -12,11 +12,11 @@ use common::{
 
 impl Effects {
 	pub(crate) fn insert(
-		trigger: Trigger<OnInsert, Self>,
+		on_insert: On<Insert, Self>,
 		mut commands: ZyheedaCommands,
 		effects: Query<&Self>,
 	) {
-		let entity = trigger.target();
+		let entity = on_insert.entity;
 		let Ok(Effects(effects)) = effects.get(entity) else {
 			return;
 		};

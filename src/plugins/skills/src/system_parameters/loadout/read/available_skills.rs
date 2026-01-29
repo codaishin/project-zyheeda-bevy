@@ -149,11 +149,11 @@ mod tests {
 			let mut skill_assets = Assets::default();
 
 			for (id, asset) in items {
-				item_assets.insert(id, asset);
+				_ = item_assets.insert(id, asset);
 			}
 
 			for (id, asset) in skills {
-				skill_assets.insert(id, asset);
+				_ = skill_assets.insert(id, asset);
 			}
 
 			app.insert_resource(item_assets);

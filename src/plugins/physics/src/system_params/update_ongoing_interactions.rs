@@ -35,7 +35,7 @@ mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use std::collections::{HashMap, HashSet};
-	use testing::SingleThreadedApp;
+	use testing::{SingleThreadedApp, fake_entity};
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -51,15 +51,12 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once(move |mut sender: UpdateOngoingInteractions| {
-				sender.push_ongoing_interaction(Entity::from_raw(1), Entity::from_raw(2));
+				sender.push_ongoing_interaction(fake_entity!(1), fake_entity!(2));
 			})?;
 
 		assert_eq!(
 			&OngoingInteractions {
-				targets: HashMap::from([(
-					Entity::from_raw(1),
-					HashSet::from([Entity::from_raw(2)])
-				)])
+				targets: HashMap::from([(fake_entity!(1), HashSet::from([fake_entity!(2)]))])
 			},
 			app.world().resource::<OngoingInteractions>()
 		);
@@ -101,18 +98,18 @@ mod tests {
 		let mut app = setup();
 
 		app.world_mut().insert_resource(OngoingInteractions {
-			targets: HashMap::from([(Entity::from_raw(1), HashSet::from([Entity::from_raw(11)]))]),
+			targets: HashMap::from([(fake_entity!(1), HashSet::from([fake_entity!(11)]))]),
 		});
 		app.world_mut()
 			.run_system_once(move |mut sender: UpdateOngoingInteractions| {
-				sender.push_ongoing_interaction(Entity::from_raw(1), Entity::from_raw(2));
+				sender.push_ongoing_interaction(fake_entity!(1), fake_entity!(2));
 			})?;
 
 		assert_eq!(
 			&OngoingInteractions {
 				targets: HashMap::from([(
-					Entity::from_raw(1),
-					HashSet::from([Entity::from_raw(11), Entity::from_raw(2)])
+					fake_entity!(1),
+					HashSet::from([fake_entity!(11), fake_entity!(2)])
 				)])
 			},
 			app.world().resource::<OngoingInteractions>()

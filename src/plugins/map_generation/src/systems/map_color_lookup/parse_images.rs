@@ -130,7 +130,7 @@ mod tests {
 			app.insert_resource(lookup_images);
 		}
 		for (handle, image) in images.into_iter() {
-			assets.insert(&handle, image);
+			_ = assets.insert(&handle, image);
 		}
 		app.insert_resource(assets);
 

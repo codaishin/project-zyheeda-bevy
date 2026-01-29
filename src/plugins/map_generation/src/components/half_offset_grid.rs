@@ -104,7 +104,7 @@ mod tests {
 	use crate::traits::insert_cell_quadrant_components::Quadrant;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use std::collections::HashSet;
-	use testing::{SingleThreadedApp, assert_count, assert_eq_unordered, get_children};
+	use testing::{SingleThreadedApp, assert_children_count, assert_eq_unordered, fake_entity};
 
 	struct _Cell {
 		name: &'static str,
@@ -179,7 +179,7 @@ mod tests {
 		let result = app
 			.world_mut()
 			.run_system_once_with(HalfOffsetGrid::spawn_cells, cells)?;
-		let children = assert_count!(4, get_children!(app, grid));
+		let children = assert_children_count!(4, app, grid);
 		assert_eq_unordered!(
 			[
 				Some(&Transform::from_xyz(1., 2., 3.).looking_to(Dir3::NEG_Z, Vec3::Y)),
@@ -213,7 +213,7 @@ mod tests {
 		let result = app
 			.world_mut()
 			.run_system_once_with(HalfOffsetGrid::spawn_cells, cells)?;
-		let children = assert_count!(4, get_children!(app, grid));
+		let children = assert_children_count!(4, app, grid);
 		assert_eq_unordered!(
 			[
 				Some(&_Quadrant {
@@ -259,7 +259,7 @@ mod tests {
 		let result = app
 			.world_mut()
 			.run_system_once_with(HalfOffsetGrid::spawn_cells, cells)?;
-		let children = assert_count!(4, get_children!(app, grid));
+		let children = assert_children_count!(4, app, grid);
 		assert_eq_unordered!(
 			[
 				Some(&_Quadrant {
@@ -295,7 +295,7 @@ mod tests {
 		app.world_mut().spawn(HalfOffsetGrid);
 		let mut app = setup();
 		let cells: Result<Cells<_Cell>, _Error> = Ok((
-			Entity::from_raw(123),
+			fake_entity!(123),
 			vec![(
 				Vec3::new(1., 2., 3.),
 				HalfOffsetCell::from([

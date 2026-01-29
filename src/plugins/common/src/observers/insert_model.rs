@@ -7,11 +7,11 @@ use bevy::prelude::*;
 
 impl Model {
 	pub(crate) fn insert(
-		trigger: Trigger<OnInsert, Self>,
+		on_insert: On<Insert, Self>,
 		mut commands: ZyheedaCommands,
 		models: Query<&Self>,
 	) {
-		let Some(mut entity) = commands.get_mut(&trigger.target()) else {
+		let Some(mut entity) = commands.get_mut(&on_insert.entity) else {
 			return;
 		};
 
