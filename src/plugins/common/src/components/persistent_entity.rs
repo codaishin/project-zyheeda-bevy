@@ -66,6 +66,12 @@ use crate::traits::accessors::get::Property;
 #[savable_component(has_priority)]
 pub struct PersistentEntity(Uuid);
 
+impl PersistentEntity {
+	pub const fn from_uuid(uuid: Uuid) -> Self {
+		Self(uuid)
+	}
+}
+
 impl Default for PersistentEntity {
 	fn default() -> Self {
 		Self(Uuid::new_v4())

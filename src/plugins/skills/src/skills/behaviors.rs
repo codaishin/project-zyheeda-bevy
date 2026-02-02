@@ -1,36 +1,13 @@
 pub(crate) mod dto;
 
-use crate::skills::{
-	lifetime_definition::LifeTimeDefinition,
-	shape::{SkillShape, SpawnOn},
-};
 use bevy::prelude::*;
-use common::traits::handles_skill_physics::{
-	Contact,
-	Effect,
-	Projection,
-	SkillCaster,
-	SkillSpawner,
-	SkillTarget,
-};
-
-macro_rules! match_shape {
-	($config:expr, $callback:expr) => {
-		match $config {
-			SkillShape::GroundTargetedAoe(shape) => $callback(shape),
-			SkillShape::Projectile(shape) => $callback(shape),
-			SkillShape::Beam(shape) => $callback(shape),
-			SkillShape::Shield(shape) => $callback(shape),
-		}
-	};
-}
+use common::traits::handles_skill_physics::{Effect, SkillShape};
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct SkillBehaviorConfig {
-	shape: SkillShape,
-	contact: Vec<Effect>,
-	projection: Vec<Effect>,
-	spawn_on: SpawnOn,
+	pub(crate) shape: SkillShape,
+	pub(crate) contact: Vec<Effect>,
+	pub(crate) projection: Vec<Effect>,
 }
 
 impl SkillBehaviorConfig {
@@ -40,7 +17,6 @@ impl SkillBehaviorConfig {
 			shape,
 			contact: vec![],
 			projection: vec![],
-			spawn_on: SpawnOn::Center,
 		}
 	}
 
@@ -49,7 +25,6 @@ impl SkillBehaviorConfig {
 		Self {
 			shape: self.shape,
 			contact,
-			spawn_on: self.spawn_on,
 			projection: self.projection,
 		}
 	}
@@ -59,52 +34,7 @@ impl SkillBehaviorConfig {
 		Self {
 			shape: self.shape,
 			contact: self.contact,
-			spawn_on: self.spawn_on,
 			projection,
 		}
 	}
-
-	pub(crate) fn skill_contact(
-		&self,
-		caster: SkillCaster,
-		spawner: SkillSpawner,
-		target: SkillTarget,
-	) -> Contact {
-		match_shape!(&self.shape, |shape| SkillContact::skill_contact(
-			shape, caster, spawner, target,
-		))
-	}
-
-	pub(crate) fn skill_projection(&self) -> Projection {
-		match_shape!(&self.shape, SkillProjection::skill_projection)
-	}
-
-	pub(crate) fn lifetime(&self) -> LifeTimeDefinition {
-		match_shape!(&self.shape, SkillLifetime::lifetime)
-	}
-
-	pub(crate) fn take_skill_contact_effects(&mut self) -> Vec<Effect> {
-		std::mem::take(&mut self.contact)
-	}
-
-	pub(crate) fn take_skill_projection_effects(&mut self) -> Vec<Effect> {
-		std::mem::take(&mut self.projection)
-	}
-}
-
-pub(crate) trait SkillContact {
-	fn skill_contact(
-		&self,
-		caster: SkillCaster,
-		spawner: SkillSpawner,
-		target: SkillTarget,
-	) -> Contact;
-}
-
-pub(crate) trait SkillProjection {
-	fn skill_projection(&self) -> Projection;
-}
-
-pub(crate) trait SkillLifetime {
-	fn lifetime(&self) -> LifeTimeDefinition;
 }

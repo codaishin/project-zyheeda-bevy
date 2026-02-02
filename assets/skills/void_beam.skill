@@ -13,7 +13,6 @@
 					"blocked_by": "All"
 				}
 			},
-			"spawn_on": "Slot",
 			"contact": [
 				{
 					"HealthDamage": [

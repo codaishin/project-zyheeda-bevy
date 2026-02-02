@@ -2,7 +2,17 @@ use crate::{
 	components::{
 		collider::ColliderShape,
 		effects::Effects,
-		skill::{BEAM_MODEL, Beam, HALF_FORWARD, HOLLOW_OUTER_THICKNESS, SPHERE_MODEL, Skill},
+		skill::{
+			BEAM_CONTACT_RADIUS,
+			BEAM_MODEL,
+			HALF_FORWARD,
+			HOLLOW_OUTER_THICKNESS,
+			PROJECTILE_CONTACT_RADIUS,
+			SHIELD_CONTACT_COLLIDER,
+			SHIELD_MODEL,
+			SPHERE_MODEL,
+			Skill,
+		},
 	},
 	observers::skill_prefab::{ContactCollider, GetContactPrefab, SubModel},
 };
@@ -11,83 +21,91 @@ use common::{
 	components::{asset_model::AssetModel, insert_asset::InsertAsset, model::Model},
 	tools::Units,
 	traits::{
-		handles_physics::{PhysicalObject, physical_bodies::Shape},
-		handles_skill_physics::ContactShape,
+		handles_physics::{PhysicalObject, physical_bodies::Blocker},
+		handles_skill_physics::{
+			SkillShape,
+			beam::Beam,
+			ground_target::SphereAoE,
+			projectile::Projectile,
+			shield::Shield,
+		},
 	},
 };
 use std::f32::consts::PI;
 
 impl GetContactPrefab for Skill {
 	fn get_contact_prefab(&self) -> (PhysicalObject, SubModel, ContactCollider, Effects) {
-		let (blockable, model, collider) = match self.contact.shape.clone() {
-			ContactShape::Sphere {
-				radius,
-				hollow_collider,
-				destroyed_by,
-			} => (
-				PhysicalObject::Fragile { destroyed_by },
+		let (obj, model, collider) = match &self.shape {
+			SkillShape::SphereAoE(SphereAoE { radius, .. }) => (
+				PhysicalObject::Fragile {
+					destroyed_by: Blocker::none(),
+				},
 				SubModel {
 					model: Model::Asset(AssetModel::path(SPHERE_MODEL)),
-					transform: Transform::from_scale(Vec3::splat(*radius * 2.)),
+					transform: Transform::from_scale(Vec3::splat(**radius * 2.)),
 				},
 				ContactCollider {
 					shape: ColliderShape::Sphere {
-						radius,
-						hollow_radius: match hollow_collider {
-							true => Some(Units::from(*radius - **HOLLOW_OUTER_THICKNESS)),
-							false => None,
-						},
+						radius: *radius,
+						hollow_radius: Some(Units::from(**radius - **HOLLOW_OUTER_THICKNESS)),
 					},
 					transform: Transform::default(),
 				},
 			),
-			ContactShape::Custom {
-				model,
-				collider,
-				model_scale,
-				destroyed_by,
-			} => (
-				PhysicalObject::Fragile { destroyed_by },
+			SkillShape::Projectile(Projectile { destroyed_by }) => (
+				PhysicalObject::Fragile {
+					destroyed_by: destroyed_by.clone().into(),
+				},
 				SubModel {
-					model: Model::Asset(model),
-					transform: Transform::from_scale(model_scale),
+					model: Model::Asset(AssetModel::path(SPHERE_MODEL)),
+					transform: Transform::from_scale(Vec3::splat(PROJECTILE_CONTACT_RADIUS * 2.)),
 				},
 				ContactCollider {
-					shape: ColliderShape::from(collider),
+					shape: ColliderShape::Sphere {
+						radius: Units::from(PROJECTILE_CONTACT_RADIUS),
+						hollow_radius: None,
+					},
 					transform: Transform::default(),
 				},
 			),
-			ContactShape::Beam {
-				range,
-				blocked_by,
-				radius,
-			} => (
-				PhysicalObject::Beam { range, blocked_by },
+			SkillShape::Beam(Beam { range, blocked_by }) => (
+				PhysicalObject::Beam {
+					range: *range,
+					blocked_by: blocked_by.clone().into(),
+				},
 				SubModel {
 					model: Model::Procedural(InsertAsset::shared::<Beam>(BEAM_MODEL)),
 					transform: HALF_FORWARD
 						.with_scale(Vec3 {
-							x: *radius,
+							x: BEAM_CONTACT_RADIUS * 2.,
 							y: 1.,
-							z: *radius,
+							z: BEAM_CONTACT_RADIUS * 2.,
 						})
 						.with_rotation(Quat::from_rotation_x(PI / 2.)),
 				},
 				ContactCollider {
-					shape: ColliderShape::from(Shape::Cylinder {
-						half_y: Units::from(0.5),
-						radius,
-					}),
+					shape: ColliderShape::Cylinder {
+						half_y: Units::from(1.),
+						radius: Units::from(BEAM_CONTACT_RADIUS),
+					},
 					transform: HALF_FORWARD.with_rotation(Quat::from_rotation_x(PI / 2.)),
+				},
+			),
+			SkillShape::Shield(Shield) => (
+				PhysicalObject::Fragile {
+					destroyed_by: Blocker::none(),
+				},
+				SubModel {
+					model: Model::Asset(AssetModel::path(SHIELD_MODEL)),
+					transform: Transform::default(),
+				},
+				ContactCollider {
+					shape: *SHIELD_CONTACT_COLLIDER,
+					transform: Transform::default(),
 				},
 			),
 		};
 
-		(
-			blockable,
-			model,
-			collider,
-			Effects(self.contact_effects.clone()),
-		)
+		(obj, model, collider, Effects(self.contact_effects.clone()))
 	}
 }

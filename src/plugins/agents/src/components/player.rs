@@ -1,7 +1,7 @@
 use super::movement_config::MovementConfig;
 use bevy::prelude::*;
 use common::{
-	components::{flip::FlipHorizontally, ground_offset::GroundOffset},
+	components::ground_offset::GroundOffset,
 	errors::Unreachable,
 	tools::{Units, UnitsPerSecond},
 	traits::{
@@ -25,7 +25,6 @@ use std::sync::LazyLock;
 #[require(
 	MovementConfig = PLAYER_RUN.clone(),
 	Name = "Player",
-	FlipHorizontally = FlipHorizontally::on("metarig"),
 	GroundOffset = GROUND_OFFSET,
 )]
 pub struct Player;

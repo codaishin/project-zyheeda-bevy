@@ -131,8 +131,10 @@ fn schedule_start<TSkillExecutor, TSkill>(
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::skills::shape::{SkillShape, shield::Shield};
-	use common::tools::action_key::slot::{PlayerSlot, Side};
+	use common::{
+		tools::action_key::slot::{PlayerSlot, Side},
+		traits::handles_skill_physics::{SkillShape, shield::Shield},
+	};
 	use macros::{NestedMocks, simple_mock};
 	use mockall::{automock, mock, predicate::eq};
 	use std::collections::HashSet;

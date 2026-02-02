@@ -20,7 +20,7 @@ use crate::{
 	},
 };
 use bevy::prelude::*;
-use components::{asset_model::AssetModel, flip::FlipHorizontally, insert_asset::InsertAsset};
+use components::{asset_model::AssetModel, insert_asset::InsertAsset};
 
 pub struct CommonPlugin;
 
@@ -43,7 +43,6 @@ fn persistent_entities(app: &mut App) {
 }
 
 fn asset_loading(app: &mut App) {
-	app.add_systems(Update, FlipHorizontally::system);
 	app.add_observer(Model::insert);
 	app.add_observer(AssetModel::load);
 	app.add_observer(InsertAsset::<Mesh>::apply);

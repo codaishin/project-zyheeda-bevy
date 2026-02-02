@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Component, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
 #[require(Transform, Visibility)]
 pub struct AssetModel {
-	pub(crate) flip_horizontally: Option<Name>,
 	pub(crate) model: Model,
 }
 
@@ -30,23 +29,11 @@ impl AssetModel {
 		T: Into<String>,
 	{
 		Self {
-			flip_horizontally: None,
 			model: Model::Path(path.into()),
 		}
 	}
 
 	pub fn none() -> Self {
-		Self {
-			flip_horizontally: None,
-			model: Model::None,
-		}
-	}
-
-	pub fn flipped_on<T>(mut self, name: T) -> Self
-	where
-		T: Into<Name>,
-	{
-		self.flip_horizontally = Some(name.into());
-		self
+		Self { model: Model::None }
 	}
 }

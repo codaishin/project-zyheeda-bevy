@@ -9,11 +9,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
 	components::{lifetime::Lifetime, model::Model},
-	traits::{
-		accessors::get::GetMut,
-		handles_physics::PhysicalObject,
-		handles_skill_physics::ProjectionOffset,
-	},
+	traits::{accessors::get::GetMut, handles_physics::PhysicalObject},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
 use std::time::Duration;
@@ -36,10 +32,7 @@ pub(crate) trait SkillPrefab:
 		};
 		let rigid_body = skill.apply_motion_prefab(&mut entity);
 		let (obj, cont_model, cont_collider, cont_effects) = skill.get_contact_prefab();
-		let (proj_offset, proj_model, proj_collider, proj_effects) = skill.get_projection_prefab();
-		let proj_offset = proj_offset
-			.map(|ProjectionOffset(offset)| Transform::from_translation(offset))
-			.unwrap_or_default();
+		let (proj_model, proj_collider, proj_effects) = skill.get_projection_prefab();
 
 		entity.try_insert((
 			rigid_body,
@@ -61,7 +54,6 @@ pub(crate) trait SkillPrefab:
 				(
 					ProjectionInteractionTarget,
 					proj_effects,
-					proj_offset,
 					children![
 						(
 							SkillTransformOf(root),
@@ -96,14 +88,7 @@ pub(crate) trait GetContactPrefab {
 }
 
 pub(crate) trait GetProjectionPrefab {
-	fn get_projection_prefab(
-		&self,
-	) -> (
-		Option<ProjectionOffset>,
-		SubModel,
-		ProjectionCollider,
-		Effects,
-	);
+	fn get_projection_prefab(&self) -> (SubModel, ProjectionCollider, Effects);
 }
 
 pub(crate) trait ApplyMotionPrefab {
@@ -152,12 +137,7 @@ mod tests {
 		rigid_body: RigidBody,
 		lifetime: Option<Duration>,
 		contact: (PhysicalObject, SubModel, ContactCollider, Effects),
-		projection: (
-			Option<ProjectionOffset>,
-			SubModel,
-			ProjectionCollider,
-			Effects,
-		),
+		projection: (SubModel, ProjectionCollider, Effects),
 	}
 
 	impl _Skill {
@@ -181,10 +161,6 @@ mod tests {
 				}),
 				transform: Transform::default(),
 			}
-		}
-
-		fn default_projection_offset() -> Option<ProjectionOffset> {
-			None
 		}
 
 		fn default_projection_collider() -> ProjectionCollider {
@@ -213,7 +189,6 @@ mod tests {
 					Effects(vec![]),
 				),
 				projection: (
-					Self::default_projection_offset(),
 					Self::default_model(),
 					Self::default_projection_collider(),
 					Effects(vec![]),
@@ -242,14 +217,7 @@ mod tests {
 		}
 	}
 	impl GetProjectionPrefab for _Skill {
-		fn get_projection_prefab(
-			&self,
-		) -> (
-			Option<ProjectionOffset>,
-			SubModel,
-			ProjectionCollider,
-			Effects,
-		) {
+		fn get_projection_prefab(&self) -> (SubModel, ProjectionCollider, Effects) {
 			self.projection.clone()
 		}
 	}
@@ -468,7 +436,6 @@ mod tests {
 				.world_mut()
 				.spawn(_Skill {
 					projection: (
-						_Skill::default_projection_offset(),
 						SubModel {
 							model: Model::Asset(AssetModel::from("asset/path")),
 							transform: Transform::from_xyz(1., 2., 3.),
@@ -499,7 +466,6 @@ mod tests {
 				.world_mut()
 				.spawn(_Skill {
 					projection: (
-						_Skill::default_projection_offset(),
 						_Skill::default_model(),
 						ProjectionCollider {
 							shape: ColliderShape::from(Shape::Sphere {
@@ -538,30 +504,6 @@ mod tests {
 		}
 
 		#[test]
-		fn insert_offset() {
-			let mut app = setup();
-
-			let skill = app
-				.world_mut()
-				.spawn(_Skill {
-					projection: (
-						Some(ProjectionOffset(Vec3::new(1., 2., 3.))),
-						_Skill::default_model(),
-						_Skill::default_projection_collider(),
-						_Skill::default_effects(),
-					),
-					..default()
-				})
-				.id();
-
-			let [.., projection] = assert_children_count!(3, app, skill);
-			assert_eq!(
-				Some(&Transform::from_xyz(1., 2., 3.)),
-				projection.get::<Transform>(),
-			);
-		}
-
-		#[test]
 		fn add_skill_transform_children() {
 			let mut app = setup();
 
@@ -589,7 +531,6 @@ mod tests {
 				.world_mut()
 				.spawn(_Skill {
 					projection: (
-						_Skill::default_projection_offset(),
 						_Skill::default_model(),
 						_Skill::default_projection_collider(),
 						Effects(vec![Effect::Force(Force)]),
