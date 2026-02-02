@@ -4,12 +4,11 @@ pub mod projectile;
 pub mod shield;
 
 use crate::{
-	components::{asset_model::AssetModel, persistent_entity::PersistentEntity},
+	components::persistent_entity::PersistentEntity,
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
-	tools::{Index, Units, UnitsPerSecond, action_key::slot::SlotKey, bone_name::BoneName},
+	tools::{Index, action_key::slot::SlotKey, bone_name::BoneName},
 	traits::{
 		accessors::get::GetContextMut,
-		handles_physics::physical_bodies::{Blocker, Shape},
 		handles_skill_physics::{
 			beam::Beam,
 			ground_target::SphereAoE,
@@ -24,7 +23,7 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 use std::{
-	collections::{HashMap, HashSet},
+	collections::HashMap,
 	ops::{Deref, DerefMut},
 };
 
@@ -144,60 +143,6 @@ pub struct SkillRoot {
 	pub persistent_entity: PersistentEntity,
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub enum ContactShape {
-	Sphere {
-		radius: Units,
-		hollow_collider: bool,
-		destroyed_by: HashSet<Blocker>,
-	},
-	Custom {
-		model: AssetModel,
-		model_scale: Vec3,
-		collider: Shape,
-		destroyed_by: HashSet<Blocker>,
-	},
-	Beam {
-		range: Units,
-		radius: Units,
-		blocked_by: HashSet<Blocker>,
-	},
-}
-
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub enum ProjectionShape {
-	Sphere {
-		radius: Units,
-	},
-	Custom {
-		model: AssetModel,
-		model_scale: Vec3,
-		collider: Shape,
-	},
-	Beam {
-		radius: Units,
-	},
-}
-
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
-pub enum Motion {
-	HeldBy {
-		caster: SkillCaster,
-		spawner: SkillSpawner,
-	},
-	Stationary {
-		caster: SkillCaster,
-		max_cast_range: Units,
-		target: SkillTarget,
-	},
-	Projectile {
-		caster: SkillCaster,
-		spawner: SkillSpawner,
-		speed: UnitsPerSecond,
-		range: Units,
-	},
-}
-
 #[derive(Debug, PartialEq, Clone, Copy, Default, Serialize, Deserialize)]
 pub struct SkillCaster(pub PersistentEntity);
 
@@ -252,6 +197,7 @@ impl From<SkillSpawner> for Index<usize> {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use bevy::platform::collections::HashSet;
 
 	#[test]
 	fn to_index() {
