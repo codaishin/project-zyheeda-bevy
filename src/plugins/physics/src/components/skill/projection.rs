@@ -2,7 +2,16 @@ use crate::{
 	components::{
 		collider::ColliderShape,
 		effects::Effects,
-		skill::{BEAM_MODEL, Beam, HALF_FORWARD, SPHERE_MODEL, Skill},
+		skill::{
+			BEAM_MODEL,
+			BEAM_PROJECTION_RADIUS,
+			HALF_FORWARD,
+			PROJECTILE_PROJECTION_RADIUS,
+			SHIELD_PROJECTION_RADIUS,
+			SHIELD_PROJECTION_TRANSFORM,
+			SPHERE_MODEL,
+			Skill,
+		},
 	},
 	observers::skill_prefab::{GetProjectionPrefab, ProjectionCollider, SubModel},
 };
@@ -10,73 +19,80 @@ use bevy::prelude::*;
 use common::{
 	components::{asset_model::AssetModel, insert_asset::InsertAsset, model::Model},
 	tools::Units,
-	traits::{
-		handles_physics::physical_bodies::Shape,
-		handles_skill_physics::{ProjectionOffset, ProjectionShape},
+	traits::handles_skill_physics::{
+		SkillShape,
+		beam::Beam,
+		ground_target::SphereAoE,
+		shield::Shield,
 	},
 };
 use std::f32::consts::PI;
 
 impl GetProjectionPrefab for Skill {
-	fn get_projection_prefab(
-		&self,
-	) -> (
-		Option<ProjectionOffset>,
-		SubModel,
-		ProjectionCollider,
-		Effects,
-	) {
-		let (model, collider) = match self.projection.shape.clone() {
-			ProjectionShape::Sphere { radius } => (
+	fn get_projection_prefab(&self) -> (SubModel, ProjectionCollider, Effects) {
+		let (model, collider) = match &self.shape {
+			SkillShape::SphereAoE(SphereAoE { radius, .. }) => (
 				SubModel {
 					model: Model::Asset(AssetModel::path(SPHERE_MODEL)),
-					transform: Transform::from_scale(Vec3::splat(*radius * 2.)),
+					transform: Transform::from_scale(Vec3::splat(**radius * 2.)),
 				},
 				ProjectionCollider {
-					shape: ColliderShape::from(Shape::Sphere { radius }),
+					shape: ColliderShape::Sphere {
+						radius: *radius,
+						hollow_radius: None,
+					},
 					transform: Transform::default(),
 				},
 			),
-			ProjectionShape::Custom {
-				model,
-				model_scale,
-				collider,
-			} => (
+			SkillShape::Projectile(..) => (
 				SubModel {
-					model: Model::Asset(model.clone()),
-					transform: Transform::from_scale(model_scale),
+					model: Model::Asset(AssetModel::path(SPHERE_MODEL)),
+					transform: Transform::from_scale(Vec3::splat(
+						PROJECTILE_PROJECTION_RADIUS * 2.,
+					)),
 				},
 				ProjectionCollider {
-					shape: ColliderShape::from(collider),
+					shape: ColliderShape::Sphere {
+						radius: Units::from(PROJECTILE_PROJECTION_RADIUS),
+						hollow_radius: None,
+					},
 					transform: Transform::default(),
 				},
 			),
-			ProjectionShape::Beam { radius } => (
+			SkillShape::Beam(Beam { .. }) => (
 				SubModel {
 					model: Model::Procedural(InsertAsset::shared::<Beam>(BEAM_MODEL)),
 					transform: HALF_FORWARD
 						.with_scale(Vec3 {
-							x: *radius,
+							x: BEAM_PROJECTION_RADIUS * 2.,
 							y: 1.,
-							z: *radius,
+							z: BEAM_PROJECTION_RADIUS * 2.,
 						})
 						.with_rotation(Quat::from_rotation_x(PI / 2.)),
 				},
 				ProjectionCollider {
-					shape: ColliderShape::from(Shape::Cylinder {
-						half_y: Units::from(0.5),
-						radius,
-					}),
+					shape: ColliderShape::Cylinder {
+						half_y: Units::from(1.),
+						radius: Units::from(BEAM_PROJECTION_RADIUS),
+					},
 					transform: HALF_FORWARD.with_rotation(Quat::from_rotation_x(PI / 2.)),
+				},
+			),
+			SkillShape::Shield(Shield) => (
+				SubModel {
+					model: Model::Asset(AssetModel::path(SPHERE_MODEL)),
+					transform: Transform::from_scale(Vec3::splat(SHIELD_PROJECTION_RADIUS * 2.)),
+				},
+				ProjectionCollider {
+					shape: ColliderShape::Sphere {
+						radius: Units::from(SHIELD_PROJECTION_RADIUS),
+						hollow_radius: None,
+					},
+					transform: SHIELD_PROJECTION_TRANSFORM,
 				},
 			),
 		};
 
-		(
-			self.projection.offset,
-			model,
-			collider,
-			Effects(self.projection_effects.clone()),
-		)
+		(model, collider, Effects(self.projection_effects.clone()))
 	}
 }

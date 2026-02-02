@@ -10,15 +10,12 @@
 			"shape": {
 				"GroundTargetedAoe": {
 					"lifetime": {
-						"UntilOutlived": {
-							"seconds": 5
-						}
+						"seconds": 5
 					},
 					"max_range": 10,
 					"radius": 2
 				}
 			},
-			"spawn_on": "Center",
 			"contact": [],
 			"projection": [
 				{

@@ -599,12 +599,10 @@ mod test_queue_collection {
 #[cfg(test)]
 mod test_queue_active_skill {
 	#![allow(clippy::unwrap_used)]
+	use common::traits::handles_skill_physics::{SkillShape, shield::Shield};
+
 	use super::*;
-	use crate::skills::{
-		RunSkillBehavior,
-		behaviors::SkillBehaviorConfig,
-		shape::{SkillShape, shield::Shield},
-	};
+	use crate::skills::{RunSkillBehavior, behaviors::SkillBehaviorConfig};
 
 	#[test]
 	fn get_phase_times_for_holding() {

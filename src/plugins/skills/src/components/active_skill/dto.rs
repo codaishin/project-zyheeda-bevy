@@ -48,11 +48,11 @@ impl TryLoadFrom<ActiveSkill<SkillBehaviorConfigDto>> for ActiveSkill {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::skills::shape::{SkillShape, shield::Shield};
 	use bevy::{asset::AssetPath, prelude::*};
 	use common::{
 		components::persistent_entity::PersistentEntity,
 		tools::action_key::slot::{PlayerSlot, Side, SlotKey},
+		traits::handles_skill_physics::{SkillShape, shield::Shield},
 	};
 	use test_case::test_case;
 

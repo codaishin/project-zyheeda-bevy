@@ -10,7 +10,6 @@
 			"shape": {
 				"Shield": null
 			},
-			"spawn_on": "Center",
 			"contact": [
 				{
 					"Force": null

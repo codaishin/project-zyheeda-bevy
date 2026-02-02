@@ -1,6 +1,5 @@
 pub(crate) mod behaviors;
 pub(crate) mod dto;
-pub(crate) mod lifetime_definition;
 pub(crate) mod shape;
 
 use crate::{skills::behaviors::SkillBehaviorConfig, traits::ReleaseSkill};
@@ -170,7 +169,7 @@ pub enum RunSkillBehavior {
 #[cfg(test)]
 impl Default for RunSkillBehavior {
 	fn default() -> Self {
-		use crate::skills::shape::{SkillShape, shield::Shield};
+		use common::traits::handles_skill_physics::{SkillShape, shield::Shield};
 
 		Self::OnActive(SkillBehaviorConfig::from_shape(SkillShape::Shield(Shield)))
 	}

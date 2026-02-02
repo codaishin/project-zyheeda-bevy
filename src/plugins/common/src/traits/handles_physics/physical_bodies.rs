@@ -134,6 +134,21 @@ impl IterFinite for Blocker {
 	}
 }
 
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+pub enum Blockers {
+	All,
+	AnyOf(HashSet<Blocker>),
+}
+
+impl From<Blockers> for HashSet<Blocker> {
+	fn from(value: Blockers) -> Self {
+		match value {
+			Blockers::All => Blocker::all(),
+			Blockers::AnyOf(blockers) => blockers,
+		}
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;

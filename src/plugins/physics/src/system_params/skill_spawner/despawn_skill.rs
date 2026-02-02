@@ -21,12 +21,22 @@ impl Despawn for SkillSpawnerMut<'_, '_> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::skill::Skill;
+	use crate::components::skill::{CreatedFrom, Skill};
 	use bevy::{
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
 	};
-	use common::{CommonPlugin, components::persistent_entity::PersistentEntity};
+	use common::{
+		CommonPlugin,
+		components::persistent_entity::PersistentEntity,
+		traits::handles_skill_physics::{
+			SkillCaster,
+			SkillShape,
+			SkillSpawner,
+			SkillTarget,
+			shield::Shield,
+		},
+	};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -37,14 +47,23 @@ mod tests {
 		app
 	}
 
+	fn skill() -> Skill {
+		Skill {
+			created_from: CreatedFrom::Save,
+			shape: SkillShape::Shield(Shield),
+			contact_effects: vec![],
+			projection_effects: vec![],
+			caster: SkillCaster(PersistentEntity::default()),
+			spawner: SkillSpawner::Neutral,
+			target: SkillTarget::Entity(PersistentEntity::default()),
+		}
+	}
+
 	#[test]
 	fn despawn_skill() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let persistent_entity = PersistentEntity::default();
-		let entity = app
-			.world_mut()
-			.spawn((Skill::default(), persistent_entity))
-			.id();
+		let entity = app.world_mut().spawn((skill(), persistent_entity)).id();
 
 		app.world_mut()
 			.run_system_once(move |mut p: SkillSpawnerMut| {

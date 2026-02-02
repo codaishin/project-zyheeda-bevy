@@ -1,3 +1,8 @@
+pub mod beam;
+pub mod ground_target;
+pub mod projectile;
+pub mod shield;
+
 use crate::{
 	components::{asset_model::AssetModel, persistent_entity::PersistentEntity},
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
@@ -5,6 +10,12 @@ use crate::{
 	traits::{
 		accessors::get::GetContextMut,
 		handles_physics::physical_bodies::{Blocker, Shape},
+		handles_skill_physics::{
+			beam::Beam,
+			ground_target::SphereAoE,
+			projectile::Projectile,
+			shield::Shield,
+		},
 	},
 };
 use bevy::{
@@ -15,7 +26,6 @@ use serde::{Deserialize, Serialize};
 use std::{
 	collections::{HashMap, HashSet},
 	ops::{Deref, DerefMut},
-	time::Duration,
 };
 
 pub trait HandlesSkillPhysics:
@@ -44,14 +54,14 @@ pub trait HandlesNewPhysicalSkill {
 pub type SkillSpawnerMut<'w, 's, T> = <T as HandlesNewPhysicalSkill>::TSkillSpawnerMut<'w, 's>;
 
 pub trait Spawn {
-	fn spawn(&mut self, args: SpawnArgs) -> PersistentEntity;
+	fn spawn(&mut self, args: SpawnArgs<'_>) -> PersistentEntity;
 }
 
 impl<T> Spawn for T
 where
 	T: DerefMut<Target: Spawn>,
 {
-	fn spawn(&mut self, args: SpawnArgs) -> PersistentEntity {
+	fn spawn(&mut self, args: SpawnArgs<'_>) -> PersistentEntity {
 		self.deref_mut().spawn(args)
 	}
 }
@@ -103,40 +113,22 @@ where
 #[derive(Debug, PartialEq)]
 pub struct SkillEntity(pub PersistentEntity);
 
-#[derive(Debug, PartialEq)]
-pub struct SpawnArgs {
-	pub contact: Contact,
-	pub projection: Projection,
-	pub lifetime: Option<Duration>,
-	pub contact_effects: Vec<Effect>,
-	pub projection_effects: Vec<Effect>,
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct SpawnArgs<'a> {
+	pub shape: &'a SkillShape,
+	pub contact_effects: &'a [Effect],
+	pub projection_effects: &'a [Effect],
+	pub caster: SkillCaster,
+	pub spawner: SkillSpawner,
+	pub target: SkillTarget,
 }
 
-impl SpawnArgs {
-	pub fn with_shape(contact: Contact, projection: Projection) -> Self {
-		Self {
-			contact,
-			projection,
-			lifetime: None,
-			contact_effects: vec![],
-			projection_effects: vec![],
-		}
-	}
-
-	pub fn with_lifetime(mut self, lifetime: Duration) -> Self {
-		self.lifetime = Some(lifetime);
-		self
-	}
-
-	pub fn with_contact_effects(mut self, effects: Vec<Effect>) -> Self {
-		self.contact_effects = effects;
-		self
-	}
-
-	pub fn with_projection_effects(mut self, effects: Vec<Effect>) -> Self {
-		self.projection_effects = effects;
-		self
-	}
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+pub enum SkillShape {
+	SphereAoE(SphereAoE),
+	Projectile(Projectile),
+	Beam(Beam),
+	Shield(Shield),
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
@@ -144,24 +136,6 @@ pub enum Effect {
 	Force(Force),
 	Gravity(Gravity),
 	HealthDamage(HealthDamage),
-}
-
-/// Describes the contact shape of a skill
-///
-/// These should be used for physical effects like projectile bodies, barriers or beam cores.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Contact {
-	pub shape: ContactShape,
-	pub motion: Motion,
-}
-
-/// Describes the projection shape of a skill
-///
-/// These should be used for AoE.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Projection {
-	pub shape: ProjectionShape,
-	pub offset: Option<ProjectionOffset>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -274,9 +248,6 @@ impl From<SkillSpawner> for Index<usize> {
 		}
 	}
 }
-
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
-pub struct ProjectionOffset(pub Vec3);
 
 #[cfg(test)]
 mod tests {
