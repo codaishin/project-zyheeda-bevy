@@ -1,8 +1,5 @@
 use crate::{
-	components::{
-		asset_model::{AssetModel, Model},
-		flip::FlipHorizontally,
-	},
+	components::asset_model::{AssetModel, Model},
 	traits::{accessors::get::GetMut, load_asset::LoadAsset},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -43,10 +40,6 @@ fn load_asset_model<TServer>(
 			asset_server.load_asset(GltfAssetLabel::Scene(0).from_asset(path.clone()))
 		}
 	};
-
-	if let Some(target) = &asset_model.flip_horizontally {
-		entity.try_insert(FlipHorizontally::on(target.clone()));
-	}
 
 	entity.try_insert(SceneRoot(handle));
 	entity.try_remove::<AssetModel>();
@@ -104,20 +97,5 @@ mod tests {
 		let model = app.world_mut().spawn(AssetModel::path("my/model.glb")).id();
 
 		assert_eq!(None, app.world().entity(model).get::<AssetModel>(),);
-	}
-
-	#[test]
-	fn insert_flip() {
-		let mut app = setup(MockAssetServer::default());
-
-		let model = app
-			.world_mut()
-			.spawn(AssetModel::path("my/model.glb").flipped_on("flipper"))
-			.id();
-
-		assert_eq!(
-			Some(&FlipHorizontally::on("flipper")),
-			app.world().entity(model).get::<FlipHorizontally>(),
-		);
 	}
 }
