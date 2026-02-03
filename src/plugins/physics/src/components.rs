@@ -1,4 +1,5 @@
 pub(crate) mod affected;
+pub(crate) mod async_collider;
 pub(crate) mod blockable;
 pub(crate) mod blocker_types;
 pub(crate) mod collider;
