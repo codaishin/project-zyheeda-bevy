@@ -6,9 +6,9 @@ use crate::{
 			BEAM_MODEL,
 			BEAM_PROJECTION_RADIUS,
 			HALF_FORWARD,
+			ICO_SPHERE_HALF,
 			PROJECTILE_PROJECTION_RADIUS,
-			SHIELD_PROJECTION_RADIUS,
-			SHIELD_PROJECTION_TRANSFORM,
+			SHIELD_PROJECTION_SCALE,
 			SPHERE_MODEL,
 			Skill,
 		},
@@ -16,6 +16,7 @@ use crate::{
 	observers::skill_prefab::{GetProjectionPrefab, ProjectionCollider, SubModel},
 };
 use bevy::prelude::*;
+use bevy_rapier3d::prelude::ColliderScale;
 use common::{
 	components::{asset_model::AssetModel, insert_asset::InsertAsset, model::Model},
 	tools::Units,
@@ -80,15 +81,15 @@ impl GetProjectionPrefab for Skill {
 			),
 			SkillShape::Shield(Shield) => (
 				SubModel {
-					model: Model::Asset(AssetModel::path(SPHERE_MODEL)),
-					transform: Transform::from_scale(Vec3::splat(SHIELD_PROJECTION_RADIUS * 2.)),
+					model: Model::Asset(AssetModel::path(ICO_SPHERE_HALF)),
+					transform: Transform::from_scale(SHIELD_PROJECTION_SCALE),
 				},
 				ProjectionCollider {
-					shape: ColliderShape::Sphere {
-						radius: Units::from(SHIELD_PROJECTION_RADIUS),
-						hollow_radius: None,
+					shape: ColliderShape::CustomConvexAsset {
+						mesh: ICO_SPHERE_HALF,
+						scale: ColliderScale::Relative(SHIELD_PROJECTION_SCALE),
 					},
-					transform: SHIELD_PROJECTION_TRANSFORM,
+					transform: Transform::default(),
 				},
 			),
 		};
