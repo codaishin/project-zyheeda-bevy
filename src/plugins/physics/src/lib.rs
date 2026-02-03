@@ -15,6 +15,7 @@ use crate::{
 	app::add_physics::AddPhysics,
 	components::{
 		affected::{force_affected::ForceAffected, gravity_affected::GravityAffected, life::Life},
+		async_collider::AsyncConvexCollider,
 		blockable::Blockable,
 		collider::ColliderShape,
 		default_attributes::DefaultAttributes,
@@ -142,7 +143,10 @@ where
 			.add_observer(ColliderOfInteractionTarget::link)
 			.add_systems(
 				PostUpdate,
-				PhysicalBody::prefab.after(TransformSystems::Propagate),
+				(
+					PhysicalBody::prefab.after(TransformSystems::Propagate),
+					AsyncConvexCollider::insert_collider.pipe(OnError::log),
+				),
 			)
 			// All effects
 			.add_observer(Effects::insert)

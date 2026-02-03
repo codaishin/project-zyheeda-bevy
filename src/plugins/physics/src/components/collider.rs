@@ -1,4 +1,7 @@
-use crate::{components::hollow::Hollow, physics_hooks::check_hollow_colliders::SimpleOuterRadius};
+use crate::{
+	components::{async_collider::AsyncConvexCollider, hollow::Hollow},
+	physics_hooks::check_hollow_colliders::SimpleOuterRadius,
+};
 use bevy::{ecs::entity::EntityHashSet, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::{
@@ -40,6 +43,11 @@ pub(crate) enum ColliderShape {
 		half_y: Units,
 		radius: Units,
 	},
+	#[allow(dead_code)] // FIXME: REMOVE `allow` WHEN USED
+	CustomConvexAsset {
+		mesh: &'static str,
+		scale: ColliderScale,
+	},
 }
 
 impl From<Shape> for ColliderShape {
@@ -69,7 +77,7 @@ impl SimpleOuterRadius for ColliderShape {
 		match *self {
 			Self::Sphere { radius, .. } => Some(radius),
 			Self::Capsule { half_y, radius } => Some(Units::from(*half_y + *radius)),
-			Self::Cylinder { .. } | Self::Cuboid { .. } => None,
+			Self::Cylinder { .. } | Self::Cuboid { .. } | Self::CustomConvexAsset { .. } => None,
 		}
 	}
 }
@@ -96,19 +104,39 @@ impl Prefab<()> for ColliderShape {
 				radius,
 				hollow_radius,
 			} => (
-				Collider::ball(*radius),
+				SyncOrAsync::Sync(Collider::ball(*radius)),
 				hollow_radius.map(Hollow::with_radius),
 			),
 			Self::Cuboid {
 				half_x,
 				half_y,
 				half_z,
-			} => (Collider::cuboid(*half_x, *half_y, *half_z), None),
-			Self::Cylinder { half_y, radius } => (Collider::cylinder(*half_y, *radius), None),
-			Self::Capsule { half_y, radius } => (Collider::capsule_y(*half_y, *radius), None),
+			} => (
+				SyncOrAsync::Sync(Collider::cuboid(*half_x, *half_y, *half_z)),
+				None,
+			),
+			Self::Cylinder { half_y, radius } => (
+				SyncOrAsync::Sync(Collider::cylinder(*half_y, *radius)),
+				None,
+			),
+			Self::Capsule { half_y, radius } => (
+				SyncOrAsync::Sync(Collider::capsule_y(*half_y, *radius)),
+				None,
+			),
+			Self::CustomConvexAsset { scale, mesh } => (
+				SyncOrAsync::Async(AsyncConvexCollider {
+					path: mesh,
+					mesh: None,
+					scale: Some(scale),
+				}),
+				None,
+			),
 		};
 
-		entity.try_insert(collider);
+		match collider {
+			SyncOrAsync::Sync(collider) => entity.try_insert(collider),
+			SyncOrAsync::Async(collider) => entity.try_insert(collider),
+		};
 
 		if let Some(hollow) = hollow {
 			entity.try_insert(hollow);
@@ -116,6 +144,11 @@ impl Prefab<()> for ColliderShape {
 
 		Ok(())
 	}
+}
+
+enum SyncOrAsync {
+	Sync(Collider),
+	Async(AsyncConvexCollider),
 }
 
 #[cfg(test)]
