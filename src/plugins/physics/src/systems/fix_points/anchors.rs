@@ -33,7 +33,12 @@ where
 					return Some(AnchorError::GlobalTransformMissingOn(*fix_point));
 				};
 
-				anchor_transform.translation = fix_point_transform.translation();
+				let fix_point_translation = fix_point_transform.translation();
+				if fix_point_translation.is_nan() {
+					return Some(AnchorError::FixPointTranslationNaN(*fix_point));
+				}
+
+				anchor_transform.translation = fix_point_translation;
 				let rotation = match anchor.use_target_rotation {
 					true => target_transform.rotation(),
 					false => fix_point_transform.rotation(),
@@ -308,6 +313,33 @@ mod tests {
 
 		assert_eq!(
 			Err(vec![AnchorError::GlobalTransformMissingOn(spawner)]),
+			errors
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn fix_point_translation_nan() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let spawner_key = SkillSpawner::Slot(SlotKey(22));
+		let agent = app.world_mut().spawn(*AGENT).id();
+		let spawner = app
+			.world_mut()
+			.spawn((
+				FixPointOf(agent),
+				FixPointSpawner(spawner_key),
+				GlobalTransform::from_translation(Vec3::NAN),
+			))
+			.id();
+		app.world_mut()
+			.spawn(Anchor::<_WithoutIgnore>::to_target(*AGENT).on_spawner(spawner_key));
+
+		let errors = app
+			.world_mut()
+			.run_system_once(Anchor::<_WithoutIgnore>::system)?;
+
+		assert_eq!(
+			Err(vec![AnchorError::FixPointTranslationNaN(spawner)]),
 			errors
 		);
 		Ok(())
