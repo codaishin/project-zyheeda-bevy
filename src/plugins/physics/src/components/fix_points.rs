@@ -100,6 +100,7 @@ pub enum AnchorError {
 	NoFixPointEntityFor(SkillSpawner),
 	FixPointsMissingOn(PersistentEntity),
 	GlobalTransformMissingOn(Entity),
+	FixPointTranslationNaN(Entity),
 }
 
 impl Display for AnchorError {
@@ -115,6 +116,9 @@ impl Display for AnchorError {
 			}
 			AnchorError::NoFixPointEntityFor(entity) => {
 				write!(f, "{entity:?} missing")
+			}
+			AnchorError::FixPointTranslationNaN(entity) => {
+				write!(f, "{entity:?} translation is NaN")
 			}
 		}
 	}
