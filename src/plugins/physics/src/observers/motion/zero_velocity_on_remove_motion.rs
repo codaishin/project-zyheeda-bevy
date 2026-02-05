@@ -1,16 +1,24 @@
 use crate::components::motion::Motion;
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::Velocity;
+use bevy_rapier3d::prelude::{KinematicCharacterController, Velocity};
 use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
 impl Motion {
-	pub(crate) fn zero_velocity_on_remove(
+	pub(crate) fn stop_on_remove(
 		on_remove: On<Remove, Self>,
 		mut commands: ZyheedaCommands,
+		mut characters: Query<&mut KinematicCharacterController>,
 	) {
-		commands.try_apply_on(&on_remove.entity, |mut e| {
-			e.try_insert(Velocity::zero());
-		});
+		match characters.get_mut(on_remove.entity) {
+			Ok(mut character) => {
+				character.translation = None;
+			}
+			Err(_) => {
+				commands.try_apply_on(&on_remove.entity, |mut e| {
+					e.try_insert(Velocity::zero());
+				});
+			}
+		}
 	}
 }
 
@@ -24,7 +32,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_observer(Motion::zero_velocity_on_remove);
+		app.add_observer(Motion::stop_on_remove);
 
 		app
 	}

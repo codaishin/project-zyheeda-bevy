@@ -7,6 +7,10 @@ use std::ops::Deref;
 #[derive(Debug, PartialEq, Clone, Copy, Default, Serialize, Deserialize)]
 pub struct Speed(pub UnitsPerSecond);
 
+impl Speed {
+	pub const ZERO: Self = Self(UnitsPerSecond::ZERO);
+}
+
 impl From<UnitsPerSecond> for Speed {
 	fn from(speed: UnitsPerSecond) -> Self {
 		Speed(speed)

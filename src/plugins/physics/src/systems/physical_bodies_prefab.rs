@@ -44,7 +44,11 @@ fn insert_rigid_body(
 ) {
 	commands.try_apply_on(&entity, |mut e| match body.physics_type {
 		PhysicsType::Agent => {
-			e.try_insert((*AGENT_LOCKED_AXES, AGENT_GRAVITY_SCALE, RigidBody::Dynamic));
+			e.try_insert((
+				*AGENT_LOCKED_AXES,
+				AGENT_GRAVITY_SCALE,
+				RigidBody::KinematicPositionBased,
+			));
 		}
 		PhysicsType::Terrain => {
 			e.try_insert(RigidBody::Fixed);
@@ -61,18 +65,26 @@ fn apply_definition(
 		e.try_insert(BlockerTypes(definition.blocker_types.clone()));
 	});
 
-	let mut entity = commands.spawn((
+	let mut child = commands.spawn((
 		ColliderOf(entity),
 		ChildOf(entity),
 		Transform::from_translation(definition.center_offset).with_rotation(definition.rotation),
 		ColliderShape::from(definition.shape),
 	));
 
-	if definition.physics_type != PhysicsType::Terrain {
-		return;
-	}
-
-	entity.insert(NoMouseHover);
+	match definition.physics_type {
+		PhysicsType::Agent => {
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_insert(KinematicCharacterController {
+					custom_shape: Some((Collider::ball(0.5), Vec3::ZERO, Quat::IDENTITY)),
+					..default()
+				});
+			});
+		}
+		PhysicsType::Terrain => {
+			child.insert(NoMouseHover);
+		}
+	};
 }
 
 #[cfg(test)]
