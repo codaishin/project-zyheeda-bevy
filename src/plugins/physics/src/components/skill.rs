@@ -75,6 +75,10 @@ static SHIELD_CONTACT_COLLIDER: LazyLock<ColliderShape> = LazyLock::new(|| Colli
 	half_y: Units::from(0.5),
 	half_z: Units::from(0.05),
 });
-const SHIELD_PROJECTION_RADIUS: f32 = 1.;
-const SHIELD_PROJECTION_TRANSFORM: Transform =
-	Transform::from_xyz(0., 0., -SHIELD_PROJECTION_RADIUS);
+const SHIELD_PROJECTION_SCALE: Vec3 = Vec3 {
+	x: 2.,
+	y: 2.,
+	z: 2.,
+};
+
+const ICO_SPHERE_HALF: &str = "models/icosphere_half.glb#Mesh0/Primitive0";

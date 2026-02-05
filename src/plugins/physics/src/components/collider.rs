@@ -43,7 +43,6 @@ pub(crate) enum ColliderShape {
 		half_y: Units,
 		radius: Units,
 	},
-	#[allow(dead_code)] // FIXME: REMOVE `allow` WHEN USED
 	CustomConvexAsset {
 		mesh: &'static str,
 		scale: ColliderScale,
