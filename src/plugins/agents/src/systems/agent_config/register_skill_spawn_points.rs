@@ -1,32 +1,40 @@
-use crate::{assets::agent_config::AgentConfigAsset, components::agent_config::AgentConfig};
+use crate::{
+	assets::agent_config::AgentConfigAsset,
+	components::agent_config::{AgentConfig, RegisterSkillSpawnPoints},
+};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
-use common::traits::{
-	accessors::get::GetContextMut,
-	handles_skill_physics::{RegisterDefinition, SkillSpawnPoints},
+use common::{
+	traits::{
+		accessors::get::{GetContextMut, TryApplyOn},
+		handles_skill_physics::{RegisterDefinition, SkillSpawnPoints},
+	},
+	zyheeda_commands::ZyheedaCommands,
 };
 
-impl AgentConfig {
-	pub(crate) fn register_skill_spawn_points<TSkills>(
-		trigger: On<Add, Self>,
-		mut skills: StaticSystemParam<TSkills>,
-		agents: Query<&AgentConfig>,
+impl RegisterSkillSpawnPoints {
+	pub(crate) fn execute<TLoadout>(
+		mut commands: ZyheedaCommands,
+		mut loadout: StaticSystemParam<TLoadout>,
+		agents: Query<(Entity, &AgentConfig), With<Self>>,
 		configs: Res<Assets<AgentConfigAsset>>,
 	) where
-		TSkills: for<'c> GetContextMut<SkillSpawnPoints, TContext<'c>: RegisterDefinition>,
+		TLoadout: for<'c> GetContextMut<SkillSpawnPoints, TContext<'c>: RegisterDefinition>,
 	{
-		let entity = trigger.entity;
-		let ctx = TSkills::get_context_mut(&mut skills, SkillSpawnPoints { entity });
-		let Some(mut ctx) = ctx else {
-			return;
-		};
-		let Ok(AgentConfig { config_handle, .. }) = agents.get(entity) else {
-			return;
-		};
-		let Some(config) = configs.get(config_handle) else {
-			return;
-		};
+		for (entity, AgentConfig { config_handle }) in &agents {
+			let key = SkillSpawnPoints { entity };
 
-		ctx.register_definition(config.bones.spawners.clone());
+			let Some(config) = configs.get(config_handle) else {
+				continue;
+			};
+			let Some(mut ctx) = TLoadout::get_context_mut(&mut loadout, key) else {
+				continue;
+			};
+
+			commands.try_apply_on(&entity, |mut e| {
+				ctx.register_definition(config.bones.spawners.clone());
+				e.try_remove::<Self>();
+			});
+		}
 	}
 }
 
@@ -63,7 +71,10 @@ mod tests {
 			_ = configs_asset.insert(id, asset);
 		}
 		app.insert_resource(configs_asset);
-		app.add_observer(AgentConfig::register_skill_spawn_points::<Query<&mut _Skills>>);
+		app.add_systems(
+			Update,
+			RegisterSkillSpawnPoints::execute::<Query<&mut _Skills>>,
+		);
 
 		app
 	}
@@ -82,7 +93,6 @@ mod tests {
 			..default()
 		};
 		let mut app = setup([(&config_handle, asset)]);
-
 		app.world_mut().spawn((
 			AgentConfig { config_handle },
 			_Skills::new().with_mock(|mock| {
@@ -95,6 +105,8 @@ mod tests {
 					.return_const(());
 			}),
 		));
+
+		app.update();
 	}
 
 	#[test]
@@ -111,7 +123,6 @@ mod tests {
 			..default()
 		};
 		let mut app = setup([(&config_handle, asset)]);
-
 		app.world_mut()
 			.spawn(_Skills::new().with_mock(|mock| {
 				mock.expect_register_definition().once().return_const(());
@@ -120,5 +131,7 @@ mod tests {
 				config_handle: config_handle.clone(),
 			})
 			.insert(AgentConfig { config_handle });
+
+		app.update();
 	}
 }

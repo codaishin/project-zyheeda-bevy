@@ -1,6 +1,6 @@
 use crate::{
 	assets::agent_config::{AgentConfigAsset, AgentModel},
-	components::agent_config::AgentConfig,
+	components::agent_config::{AgentConfig, InsertAgentModel},
 };
 use bevy::prelude::*;
 use common::{
@@ -9,14 +9,14 @@ use common::{
 	zyheeda_commands::ZyheedaCommands,
 };
 
-impl AgentConfig {
-	pub(crate) fn insert_model(
+impl InsertAgentModel {
+	pub(crate) fn execute(
 		mut commands: ZyheedaCommands,
 		configs: Res<Assets<AgentConfigAsset>>,
-		agents: Query<(Entity, &Self), Without<ModelInserted>>,
+		agents: Query<(Entity, &AgentConfig), With<Self>>,
 	) {
-		for (entity, agent) in &agents {
-			let Some(config) = configs.get(&agent.config_handle) else {
+		for (entity, AgentConfig { config_handle }) in &agents {
+			let Some(config) = configs.get(config_handle) else {
 				continue;
 			};
 
@@ -29,14 +29,11 @@ impl AgentConfig {
 						func(&mut e);
 					}
 				};
-				e.try_insert(ModelInserted);
+				e.try_remove::<Self>();
 			});
 		}
 	}
 }
-
-#[derive(Component)]
-pub(crate) struct ModelInserted;
 
 #[cfg(test)]
 mod tests {
@@ -56,7 +53,7 @@ mod tests {
 		}
 
 		app.insert_resource(assets);
-		app.add_systems(Update, AgentConfig::insert_model);
+		app.add_systems(Update, InsertAgentModel::execute);
 
 		app
 	}

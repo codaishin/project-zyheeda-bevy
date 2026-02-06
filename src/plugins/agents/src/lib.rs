@@ -1,20 +1,24 @@
 mod assets;
 mod components;
-mod observers;
 mod systems;
 
 use crate::{
 	assets::agent_config::{AgentConfigAsset, dto::AgentConfigDto},
 	components::{
 		agent::Agent,
-		agent_config::AgentConfig,
+		agent_config::{
+			AgentConfig,
+			InsertAgentDefaultLoadout,
+			InsertAgentModel,
+			RegisterAgentAnimations,
+			RegisterAgentLoadoutBones,
+			RegisterSkillSpawnPoints,
+		},
 		animate_idle::AnimateIdle,
 		enemy::{Enemy, attack_phase::EnemyAttackPhase, void_sphere::VoidSphere},
-		insert_agent_default_loadout::InsertAgentDefaultLoadout,
 		movement_config::MovementConfig,
 		player::Player,
 		player_camera::PlayerCamera,
-		register_agent_loadout_bones::RegisterAgentLoadoutBones,
 	},
 };
 use bevy::prelude::*;
@@ -139,11 +143,12 @@ where
 		app.add_systems(
 			Update,
 			(
-				AgentConfig::insert_model,
-				AgentConfig::register_animations::<AnimationsSystemParamMut<TAnimations>>,
 				AgentConfig::<AgentConfigAsset>::insert_attributes::<TPhysics::TDefaultAttributes>,
+				InsertAgentModel::execute,
 				InsertAgentDefaultLoadout::execute::<AgentConfigAsset, LoadoutPrepParam<TLoadout>>,
 				RegisterAgentLoadoutBones::execute::<LoadoutPrepParam<TLoadout>>,
+				RegisterSkillSpawnPoints::execute::<SkillSpawnPointsMut<TPhysics>>,
+				RegisterAgentAnimations::execute::<AnimationsSystemParamMut<TAnimations>>,
 			),
 		);
 
@@ -162,7 +167,6 @@ where
 
 		// # Behaviors
 		app.register_required_components::<PlayerCamera, TPhysics::TWorldCamera>();
-		app.add_observer(AgentConfig::register_skill_spawn_points::<SkillSpawnPointsMut<TPhysics>>);
 		app.add_observer(Player::register_target_definition::<FacingSystemParamMut<TBehaviors>>);
 		app.add_observer(Enemy::register_target_definition::<FacingSystemParamMut<TBehaviors>>);
 		app.add_systems(

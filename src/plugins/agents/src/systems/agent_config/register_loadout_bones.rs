@@ -1,9 +1,6 @@
 use crate::{
 	assets::agent_config::AgentConfigAsset,
-	components::{
-		agent_config::AgentConfig,
-		register_agent_loadout_bones::RegisterAgentLoadoutBones,
-	},
+	components::agent_config::{AgentConfig, RegisterAgentLoadoutBones},
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
@@ -23,7 +20,7 @@ impl RegisterAgentLoadoutBones {
 	) where
 		TLoadout: for<'c> GetContextMut<NoBonesRegistered, TContext<'c>: RegisterLoadoutBones>,
 	{
-		for (entity, AgentConfig { config_handle, .. }) in &agents {
+		for (entity, AgentConfig { config_handle }) in &agents {
 			let Some(config) = configs.get(config_handle) else {
 				continue;
 			};
@@ -32,12 +29,12 @@ impl RegisterAgentLoadoutBones {
 				continue;
 			};
 
-			ctx.register_loadout_bones(
-				config.bones.forearm_slots.clone(),
-				config.bones.hand_slots.clone(),
-				config.bones.essence_slots.clone(),
-			);
 			commands.try_apply_on(&entity, |mut e| {
+				ctx.register_loadout_bones(
+					config.bones.forearm_slots.clone(),
+					config.bones.hand_slots.clone(),
+					config.bones.essence_slots.clone(),
+				);
 				e.try_remove::<Self>();
 			});
 		}

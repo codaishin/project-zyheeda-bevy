@@ -1,6 +1,6 @@
 pub(crate) mod dto;
 
-use crate::systems::insert_default_loadout::internal::GetDefaultLoadout;
+use crate::systems::agent_config::insert_default_loadout::internal::GetDefaultLoadout;
 use bevy::prelude::*;
 use common::{
 	tools::{

@@ -1,11 +1,4 @@
-use crate::{
-	assets::agent_config::AgentConfigAsset,
-	components::{
-		animate_idle::AnimateIdle,
-		insert_agent_default_loadout::InsertAgentDefaultLoadout,
-		register_agent_loadout_bones::RegisterAgentLoadoutBones,
-	},
-};
+use crate::{assets::agent_config::AgentConfigAsset, components::animate_idle::AnimateIdle};
 use bevy::prelude::*;
 use common::components::persistent_entity::PersistentEntity;
 
@@ -16,8 +9,11 @@ use common::components::persistent_entity::PersistentEntity;
 	Transform,
 	Visibility,
 	AnimateIdle,
+	InsertAgentModel,
 	InsertAgentDefaultLoadout,
-	RegisterAgentLoadoutBones
+	RegisterAgentLoadoutBones,
+	RegisterSkillSpawnPoints,
+	RegisterAgentAnimations
 )]
 pub struct AgentConfig<TAsset = AgentConfigAsset>
 where
@@ -33,3 +29,18 @@ impl Default for AgentConfig {
 		}
 	}
 }
+
+#[derive(Component, Debug, PartialEq, Default)]
+pub(crate) struct InsertAgentModel;
+
+#[derive(Component, Debug, PartialEq, Default)]
+pub(crate) struct RegisterAgentAnimations;
+
+#[derive(Component, Debug, PartialEq, Default)]
+pub(crate) struct RegisterAgentLoadoutBones;
+
+#[derive(Component, Debug, PartialEq, Default)]
+pub(crate) struct RegisterSkillSpawnPoints;
+
+#[derive(Component, Debug, PartialEq, Default)]
+pub(crate) struct InsertAgentDefaultLoadout;

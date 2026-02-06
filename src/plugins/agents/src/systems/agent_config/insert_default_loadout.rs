@@ -1,7 +1,4 @@
-use crate::components::{
-	agent_config::AgentConfig,
-	insert_agent_default_loadout::InsertAgentDefaultLoadout,
-};
+use crate::components::agent_config::{AgentConfig, InsertAgentDefaultLoadout};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	traits::{
@@ -25,7 +22,7 @@ impl InsertAgentDefaultLoadout {
 		TLoadout: for<'c> GetContextMut<NotLoadedOut, TContext<'c>: InsertDefaultLoadout>,
 		TConfig: Asset + internal::GetDefaultLoadout,
 	{
-		for (entity, AgentConfig { config_handle, .. }) in agents {
+		for (entity, AgentConfig { config_handle }) in agents {
 			let key = NotLoadedOut { entity };
 			let Some(config) = configs.get(config_handle) else {
 				continue;

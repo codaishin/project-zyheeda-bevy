@@ -19,7 +19,7 @@ where
 	) where
 		TComponent: Component + From<PhysicalDefaultAttributes>,
 	{
-		for (entity, AgentConfig { config_handle, .. }) in &agents {
+		for (entity, AgentConfig { config_handle }) in &agents {
 			let Some(config) = configs.get(config_handle) else {
 				continue;
 			};

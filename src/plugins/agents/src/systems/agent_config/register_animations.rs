@@ -1,4 +1,7 @@
-use crate::{assets::agent_config::AgentConfigAsset, components::agent_config::AgentConfig};
+use crate::{
+	assets::agent_config::AgentConfigAsset,
+	components::agent_config::{AgentConfig, RegisterAgentAnimations},
+};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	traits::{
@@ -8,16 +11,16 @@ use common::{
 	zyheeda_commands::ZyheedaCommands,
 };
 
-impl AgentConfig {
-	pub(crate) fn register_animations<TAnimations>(
+impl RegisterAgentAnimations {
+	pub(crate) fn execute<TAnimations>(
 		mut commands: ZyheedaCommands,
 		mut animations: StaticSystemParam<TAnimations>,
-		agents: Query<(Entity, &Self), Without<marker::AnimationsRegistered>>,
+		agents: Query<(Entity, &AgentConfig), With<Self>>,
 		configs: Res<Assets<AgentConfigAsset>>,
 	) where
 		TAnimations: for<'c> GetContextMut<Animations, TContext<'c>: RegisterAnimations>,
 	{
-		for (entity, Self { config_handle, .. }) in agents {
+		for (entity, AgentConfig { config_handle }) in &agents {
 			let key = Animations { entity };
 
 			let Some(config) = configs.get(config_handle) else {
@@ -29,17 +32,10 @@ impl AgentConfig {
 
 			commands.try_apply_on(&entity, |mut e| {
 				ctx.register_animations(&config.animations, &config.animation_mask_groups);
-				e.try_insert(marker::AnimationsRegistered);
+				e.try_remove::<Self>();
 			});
 		}
 	}
-}
-
-mod marker {
-	use super::*;
-
-	#[derive(Component)]
-	pub struct AnimationsRegistered;
 }
 
 #[cfg(test)]
@@ -91,7 +87,7 @@ mod tests {
 		app.insert_resource(config_assets);
 		app.add_systems(
 			Update,
-			AgentConfig::register_animations::<Query<Mut<_Component>>>,
+			RegisterAgentAnimations::execute::<Query<Mut<_Component>>>,
 		);
 
 		app
@@ -114,17 +110,15 @@ mod tests {
 				..default()
 			},
 		)]);
-		let handle = new_handle();
+		let config_handle = new_handle();
 		let asset = AgentConfigAsset {
 			animations: animations.clone(),
 			animation_mask_groups: animation_mask_groups.clone(),
 			..default()
 		};
-		let mut app = setup([(&handle, asset)]);
+		let mut app = setup([(&config_handle, asset)]);
 		app.world_mut().spawn((
-			AgentConfig {
-				config_handle: handle,
-			},
+			AgentConfig { config_handle },
 			_Component::new().with_mock(move |mock| {
 				mock.expect_register_animations()
 					.times(1)
