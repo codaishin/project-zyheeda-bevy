@@ -1,21 +1,25 @@
 mod assets;
 mod components;
-mod observers;
 mod systems;
 
 use crate::{
-	assets::agent_config::{AgentConfig, dto::AgentConfigDto},
+	assets::agent_config::{AgentConfigAsset, dto::AgentConfigDto},
 	components::{
-		agent::{Agent, tag::AgentTag},
+		agent::Agent,
+		agent_config::{
+			AgentConfig,
+			InsertAgentDefaultLoadout,
+			InsertAgentModel,
+			RegisterAgentAnimations,
+			RegisterAgentLoadoutBones,
+			RegisterSkillSpawnPoints,
+		},
 		animate_idle::AnimateIdle,
 		enemy::{Enemy, attack_phase::EnemyAttackPhase, void_sphere::VoidSphere},
-		insert_agent_default_loadout::InsertAgentDefaultLoadout,
 		movement_config::MovementConfig,
 		player::Player,
 		player_camera::PlayerCamera,
-		register_agent_loadout_bones::RegisterAgentLoadoutBones,
 	},
-	observers::agent::{insert_concrete_agent::InsertConcreteAgent, insert_from::InsertFrom},
 };
 use bevy::prelude::*;
 use common::{
@@ -48,6 +52,7 @@ use common::{
 		handles_saving::HandlesSaving,
 		handles_skill_physics::{HandlesPhysicalSkillSpawnPoints, SkillSpawnPointsMut},
 		prefab::AddPrefabObserver,
+		register_derived_component::RegisterDerivedComponent,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 	},
@@ -127,31 +132,28 @@ where
 	fn build(&self, app: &mut App) {
 		// # Load Agent
 		TLoading::register_custom_folder_assets::<
-			AgentConfig,
+			AgentConfigAsset,
 			AgentConfigDto,
 			LoadingEssentialAssets,
 		>(app);
-		app.init_asset::<AgentConfig>();
+		app.init_asset::<AgentConfigAsset>();
 
-		// Using `AgentTag` to buffer the map agent type, in case `TNewWorldAgent` is not
-		// persistent across game sessions
 		TPhysics::mark_as_effect_target::<Agent>(app);
-		app.add_observer(AgentTag::insert_from::<TMaps::TNewWorldAgent>);
-		app.add_observer(Agent::insert_from::<AgentTag>);
-		app.add_observer(Agent::insert_concrete_agent);
+		app.register_derived_component::<TMaps::TNewWorldAgent, Agent>();
 		app.add_systems(
 			Update,
 			(
-				Agent::insert_model,
-				Agent::register_animations::<AnimationsSystemParamMut<TAnimations>>,
-				Agent::<AgentConfig>::insert_attributes::<TPhysics::TDefaultAttributes>,
-				InsertAgentDefaultLoadout::execute::<AgentConfig, LoadoutPrepParam<TLoadout>>,
+				AgentConfig::<AgentConfigAsset>::insert_attributes::<TPhysics::TDefaultAttributes>,
+				InsertAgentModel::execute,
+				InsertAgentDefaultLoadout::execute::<AgentConfigAsset, LoadoutPrepParam<TLoadout>>,
 				RegisterAgentLoadoutBones::execute::<LoadoutPrepParam<TLoadout>>,
+				RegisterSkillSpawnPoints::execute::<SkillSpawnPointsMut<TPhysics>>,
+				RegisterAgentAnimations::execute::<AnimationsSystemParamMut<TAnimations>>,
 			),
 		);
 
 		// # Savedata
-		TSaveGame::register_savable_component::<AgentTag>(app);
+		TSaveGame::register_savable_component::<Agent>(app);
 		TSaveGame::register_savable_component::<Enemy>(app);
 		TSaveGame::register_savable_component::<PlayerCamera>(app);
 		TSaveGame::register_savable_component::<MovementConfig>(app);
@@ -159,12 +161,12 @@ where
 		app.register_required_components::<Agent, TSaveGame::TSaveEntityMarker>();
 
 		// # Prefabs
+		app.add_prefab_observer::<Agent, ()>();
 		app.add_prefab_observer::<Player, TPhysics>();
 		app.add_prefab_observer::<VoidSphere, TPhysics>();
 
 		// # Behaviors
 		app.register_required_components::<PlayerCamera, TPhysics::TWorldCamera>();
-		app.add_observer(Agent::register_skill_spawn_points::<SkillSpawnPointsMut<TPhysics>>);
 		app.add_observer(Player::register_target_definition::<FacingSystemParamMut<TBehaviors>>);
 		app.add_observer(Enemy::register_target_definition::<FacingSystemParamMut<TBehaviors>>);
 		app.add_systems(
@@ -204,7 +206,7 @@ where
 				)
 					.chain(),
 				AnimateIdle::execute::<AnimationsSystemParamMut<TAnimations>>,
-				Agent::animate_skills::<
+				AgentConfig::animate_skills::<
 					LoadoutActivityParam<TLoadout>,
 					AnimationsSystemParamMut<TAnimations>,
 				>
@@ -230,5 +232,5 @@ impl<TDependencies> PlayerMainCamera for AgentsPlugin<TDependencies> {
 }
 
 impl<TDependencies> HandlesAgents for AgentsPlugin<TDependencies> {
-	type TAgent = Agent;
+	type TAgent = AgentConfig;
 }

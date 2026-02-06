@@ -1,6 +1,6 @@
 use crate::{
-	assets::agent_config::AgentConfig,
-	components::{agent::Agent, register_agent_loadout_bones::RegisterAgentLoadoutBones},
+	assets::agent_config::AgentConfigAsset,
+	components::agent_config::{AgentConfig, RegisterAgentLoadoutBones},
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
@@ -15,12 +15,12 @@ impl RegisterAgentLoadoutBones {
 	pub(crate) fn execute<TLoadout>(
 		mut loadout: StaticSystemParam<TLoadout>,
 		mut commands: ZyheedaCommands,
-		agents: Query<(Entity, &Agent), With<Self>>,
-		configs: Res<Assets<AgentConfig>>,
+		agents: Query<(Entity, &AgentConfig), With<Self>>,
+		configs: Res<Assets<AgentConfigAsset>>,
 	) where
 		TLoadout: for<'c> GetContextMut<NoBonesRegistered, TContext<'c>: RegisterLoadoutBones>,
 	{
-		for (entity, Agent { config_handle, .. }) in &agents {
+		for (entity, AgentConfig { config_handle }) in &agents {
 			let Some(config) = configs.get(config_handle) else {
 				continue;
 			};
@@ -29,12 +29,12 @@ impl RegisterAgentLoadoutBones {
 				continue;
 			};
 
-			ctx.register_loadout_bones(
-				config.bones.forearm_slots.clone(),
-				config.bones.hand_slots.clone(),
-				config.bones.essence_slots.clone(),
-			);
 			commands.try_apply_on(&entity, |mut e| {
+				ctx.register_loadout_bones(
+					config.bones.forearm_slots.clone(),
+					config.bones.hand_slots.clone(),
+					config.bones.essence_slots.clone(),
+				);
 				e.try_remove::<Self>();
 			});
 		}
@@ -44,11 +44,8 @@ impl RegisterAgentLoadoutBones {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::assets::agent_config::{AgentConfig, Bones};
-	use common::{
-		tools::{action_key::slot::SlotKey, bone_name::BoneName},
-		traits::handles_map_generation::AgentType,
-	};
+	use crate::assets::agent_config::{AgentConfigAsset, Bones};
+	use common::tools::{action_key::slot::SlotKey, bone_name::BoneName};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::collections::HashMap;
@@ -71,7 +68,7 @@ mod tests {
 		}
 	}
 
-	fn setup<const N: usize>(configs: [(&Handle<AgentConfig>, AgentConfig); N]) -> App {
+	fn setup<const N: usize>(configs: [(&Handle<AgentConfigAsset>, AgentConfigAsset); N]) -> App {
 		let mut app = App::new().single_threaded(Update);
 		let mut config_assets = Assets::default();
 
@@ -91,7 +88,7 @@ mod tests {
 	#[test]
 	fn register_bones() {
 		let config_handle = new_handle();
-		let config = AgentConfig {
+		let config = AgentConfigAsset {
 			bones: Bones {
 				spawners: HashMap::from([]),
 				forearm_slots: HashMap::from([(BoneName::from("a"), SlotKey(0))]),
@@ -102,10 +99,7 @@ mod tests {
 		};
 		let mut app = setup([(&config_handle, config)]);
 		app.world_mut().spawn((
-			Agent {
-				agent_type: AgentType::Player,
-				config_handle,
-			},
+			AgentConfig { config_handle },
 			_LoadoutHandler::new().with_mock(|mock| {
 				mock.expect_register_loadout_bones()
 					.times(1)
@@ -124,13 +118,10 @@ mod tests {
 	#[test]
 	fn act_only_once() {
 		let config_handle = new_handle();
-		let config = AgentConfig::default();
+		let config = AgentConfigAsset::default();
 		let mut app = setup([(&config_handle, config)]);
 		app.world_mut().spawn((
-			Agent {
-				agent_type: AgentType::Player,
-				config_handle,
-			},
+			AgentConfig { config_handle },
 			_LoadoutHandler::new().with_mock(|mock| {
 				mock.expect_register_loadout_bones()
 					.times(1)
@@ -145,7 +136,7 @@ mod tests {
 	#[test]
 	fn register_bones_when_asset_available_later() {
 		let config_handle = new_handle();
-		let config = AgentConfig {
+		let config = AgentConfigAsset {
 			bones: Bones {
 				spawners: HashMap::from([]),
 				forearm_slots: HashMap::from([(BoneName::from("a"), SlotKey(0))]),
@@ -156,8 +147,7 @@ mod tests {
 		};
 		let mut app = setup([]);
 		app.world_mut().spawn((
-			Agent {
-				agent_type: AgentType::Player,
+			AgentConfig {
 				config_handle: config_handle.clone(),
 			},
 			_LoadoutHandler::new().with_mock(|mock| {
@@ -175,7 +165,7 @@ mod tests {
 		app.update();
 		_ = app
 			.world_mut()
-			.resource_mut::<Assets<AgentConfig>>()
+			.resource_mut::<Assets<AgentConfigAsset>>()
 			.insert(&config_handle, config);
 		app.update();
 	}

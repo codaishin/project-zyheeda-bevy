@@ -1,6 +1,6 @@
 pub(crate) mod dto;
 
-use crate::systems::insert_default_loadout::internal::GetDefaultLoadout;
+use crate::systems::agent_config::insert_default_loadout::internal::GetDefaultLoadout;
 use bevy::prelude::*;
 use common::{
 	tools::{
@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, iter::Enumerate, slice::Iter};
 
 #[derive(Asset, TypePath, Debug, PartialEq, Default, Clone)]
-pub struct AgentConfig {
+pub struct AgentConfigAsset {
 	pub(crate) loadout: Loadout,
 	pub(crate) bones: Bones,
 	pub(crate) agent_model: AgentModel,
@@ -33,19 +33,19 @@ pub struct AgentConfig {
 	pub(crate) animation_mask_groups: HashMap<AnimationMaskBits, AffectedAnimationBones>,
 }
 
-impl AssetFolderPath for AgentConfig {
+impl AssetFolderPath for AgentConfigAsset {
 	fn asset_folder_path() -> Path {
 		Path::from("agents")
 	}
 }
 
-impl GetProperty<PhysicalDefaultAttributes> for AgentConfig {
+impl GetProperty<PhysicalDefaultAttributes> for AgentConfigAsset {
 	fn get_property(&self) -> PhysicalDefaultAttributes {
 		self.attributes
 	}
 }
 
-impl GetDefaultLoadout for AgentConfig {
+impl GetDefaultLoadout for AgentConfigAsset {
 	type TLoadout<'a>
 		= LoadoutIterator<'a>
 	where
@@ -136,7 +136,7 @@ mod tests {
 
 	#[test]
 	fn iter_inventory_items() {
-		let config = AgentConfig {
+		let config = AgentConfigAsset {
 			loadout: Loadout {
 				inventory: vec![Some(ItemName::from("a")), None, Some(ItemName::from("b"))],
 				slots: vec![],
@@ -158,7 +158,7 @@ mod tests {
 
 	#[test]
 	fn iter_slot_items() {
-		let config = AgentConfig {
+		let config = AgentConfigAsset {
 			loadout: Loadout {
 				inventory: vec![],
 				slots: vec![

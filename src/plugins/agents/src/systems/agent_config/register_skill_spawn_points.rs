@@ -1,42 +1,50 @@
-use crate::{assets::agent_config::AgentConfig, components::agent::Agent};
+use crate::{
+	assets::agent_config::AgentConfigAsset,
+	components::agent_config::{AgentConfig, RegisterSkillSpawnPoints},
+};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
-use common::traits::{
-	accessors::get::GetContextMut,
-	handles_skill_physics::{RegisterDefinition, SkillSpawnPoints},
+use common::{
+	traits::{
+		accessors::get::{GetContextMut, TryApplyOn},
+		handles_skill_physics::{RegisterDefinition, SkillSpawnPoints},
+	},
+	zyheeda_commands::ZyheedaCommands,
 };
 
-impl Agent {
-	pub(crate) fn register_skill_spawn_points<TSkills>(
-		trigger: On<Add, Self>,
-		mut skills: StaticSystemParam<TSkills>,
-		agents: Query<&Agent>,
-		configs: Res<Assets<AgentConfig>>,
+impl RegisterSkillSpawnPoints {
+	pub(crate) fn execute<TLoadout>(
+		mut commands: ZyheedaCommands,
+		mut loadout: StaticSystemParam<TLoadout>,
+		agents: Query<(Entity, &AgentConfig), With<Self>>,
+		configs: Res<Assets<AgentConfigAsset>>,
 	) where
-		TSkills: for<'c> GetContextMut<SkillSpawnPoints, TContext<'c>: RegisterDefinition>,
+		TLoadout: for<'c> GetContextMut<SkillSpawnPoints, TContext<'c>: RegisterDefinition>,
 	{
-		let entity = trigger.entity;
-		let ctx = TSkills::get_context_mut(&mut skills, SkillSpawnPoints { entity });
-		let Some(mut ctx) = ctx else {
-			return;
-		};
-		let Ok(Agent { config_handle, .. }) = agents.get(entity) else {
-			return;
-		};
-		let Some(config) = configs.get(config_handle) else {
-			return;
-		};
+		for (entity, AgentConfig { config_handle }) in &agents {
+			let key = SkillSpawnPoints { entity };
 
-		ctx.register_definition(config.bones.spawners.clone());
+			let Some(config) = configs.get(config_handle) else {
+				continue;
+			};
+			let Some(mut ctx) = TLoadout::get_context_mut(&mut loadout, key) else {
+				continue;
+			};
+
+			commands.try_apply_on(&entity, |mut e| {
+				ctx.register_definition(config.bones.spawners.clone());
+				e.try_remove::<Self>();
+			});
+		}
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::assets::agent_config::{AgentConfig, Bones};
+	use crate::assets::agent_config::{AgentConfigAsset, Bones};
 	use common::{
 		tools::{action_key::slot::SlotKey, bone_name::BoneName},
-		traits::{handles_map_generation::AgentType, handles_skill_physics::SkillSpawner},
+		traits::handles_skill_physics::SkillSpawner,
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -55,7 +63,7 @@ mod tests {
 		}
 	}
 
-	fn setup<const N: usize>(configs: [(&Handle<AgentConfig>, AgentConfig); N]) -> App {
+	fn setup<const N: usize>(configs: [(&Handle<AgentConfigAsset>, AgentConfigAsset); N]) -> App {
 		let mut app = App::new().single_threaded(Update);
 		let mut configs_asset = Assets::default();
 
@@ -63,7 +71,10 @@ mod tests {
 			_ = configs_asset.insert(id, asset);
 		}
 		app.insert_resource(configs_asset);
-		app.add_observer(Agent::register_skill_spawn_points::<Query<&mut _Skills>>);
+		app.add_systems(
+			Update,
+			RegisterSkillSpawnPoints::execute::<Query<&mut _Skills>>,
+		);
 
 		app
 	}
@@ -71,7 +82,7 @@ mod tests {
 	#[test]
 	fn insert_spawners_definition() {
 		let config_handle = new_handle();
-		let asset = AgentConfig {
+		let asset = AgentConfigAsset {
 			bones: Bones {
 				spawners: HashMap::from([
 					(BoneName::from("a"), SkillSpawner::Neutral),
@@ -82,12 +93,8 @@ mod tests {
 			..default()
 		};
 		let mut app = setup([(&config_handle, asset)]);
-
 		app.world_mut().spawn((
-			Agent {
-				agent_type: AgentType::Player,
-				config_handle,
-			},
+			AgentConfig { config_handle },
 			_Skills::new().with_mock(|mock| {
 				mock.expect_register_definition()
 					.once()
@@ -98,12 +105,14 @@ mod tests {
 					.return_const(());
 			}),
 		));
+
+		app.update();
 	}
 
 	#[test]
 	fn act_only_once() {
 		let config_handle = new_handle();
-		let asset = AgentConfig {
+		let asset = AgentConfigAsset {
 			bones: Bones {
 				spawners: HashMap::from([
 					(BoneName::from("a"), SkillSpawner::Neutral),
@@ -114,18 +123,15 @@ mod tests {
 			..default()
 		};
 		let mut app = setup([(&config_handle, asset)]);
-
 		app.world_mut()
 			.spawn(_Skills::new().with_mock(|mock| {
 				mock.expect_register_definition().once().return_const(());
 			}))
-			.insert(Agent {
-				agent_type: AgentType::Player,
+			.insert(AgentConfig {
 				config_handle: config_handle.clone(),
 			})
-			.insert(Agent {
-				agent_type: AgentType::Player,
-				config_handle,
-			});
+			.insert(AgentConfig { config_handle });
+
+		app.update();
 	}
 }

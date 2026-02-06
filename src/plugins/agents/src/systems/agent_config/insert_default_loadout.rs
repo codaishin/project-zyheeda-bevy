@@ -1,4 +1,4 @@
-use crate::components::{agent::Agent, insert_agent_default_loadout::InsertAgentDefaultLoadout};
+use crate::components::agent_config::{AgentConfig, InsertAgentDefaultLoadout};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	traits::{
@@ -16,13 +16,13 @@ impl InsertAgentDefaultLoadout {
 	pub(crate) fn execute<TConfig, TLoadout>(
 		mut loadout: StaticSystemParam<TLoadout>,
 		mut commands: ZyheedaCommands,
-		agents: Query<(Entity, &Agent<TConfig>), With<Self>>,
+		agents: Query<(Entity, &AgentConfig<TConfig>), With<Self>>,
 		configs: Res<Assets<TConfig>>,
 	) where
 		TLoadout: for<'c> GetContextMut<NotLoadedOut, TContext<'c>: InsertDefaultLoadout>,
 		TConfig: Asset + internal::GetDefaultLoadout,
 	{
-		for (entity, Agent { config_handle, .. }) in agents {
+		for (entity, AgentConfig { config_handle }) in agents {
 			let key = NotLoadedOut { entity };
 			let Some(config) = configs.get(config_handle) else {
 				continue;
@@ -54,7 +54,6 @@ pub(crate) mod internal {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::handles_map_generation::AgentType;
 	use std::{any::type_name, collections::HashMap};
 	use testing::{SingleThreadedApp, new_handle};
 
@@ -118,13 +117,7 @@ mod tests {
 		let mut app = setup([&config_handle]);
 		let entity = app
 			.world_mut()
-			.spawn((
-				Agent {
-					agent_type: AgentType::Player,
-					config_handle,
-				},
-				_LoadoutHandler::default(),
-			))
+			.spawn((AgentConfig { config_handle }, _LoadoutHandler::default()))
 			.id();
 
 		app.update();
@@ -143,13 +136,7 @@ mod tests {
 		let mut app = setup([&config_handle]);
 		let entity = app
 			.world_mut()
-			.spawn((
-				Agent {
-					agent_type: AgentType::Player,
-					config_handle,
-				},
-				_LoadoutHandler::default(),
-			))
+			.spawn((AgentConfig { config_handle }, _LoadoutHandler::default()))
 			.id();
 
 		app.update();
@@ -170,8 +157,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Agent {
-					agent_type: AgentType::Player,
+				AgentConfig {
 					config_handle: config_handle.clone(),
 				},
 				_LoadoutHandler::default(),
