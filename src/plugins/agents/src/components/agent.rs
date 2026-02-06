@@ -1,67 +1,72 @@
-pub(crate) mod tag;
-
 use crate::{
-	assets::agent_config::AgentConfig,
-	components::{
-		animate_idle::AnimateIdle,
-		enemy::void_sphere::VoidSphere,
-		insert_agent_default_loadout::InsertAgentDefaultLoadout,
-		player::Player,
-		register_agent_loadout_bones::RegisterAgentLoadoutBones,
-	},
-	observers::agent::{insert_concrete_agent::InsertEnemyOrPlayer, insert_from::AgentHandle},
+	assets::agent_config::AgentConfigAsset,
+	components::{agent_config::AgentConfig, enemy::void_sphere::VoidSphere, player::Player},
 };
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemParamItem, prelude::*};
 use common::{
-	components::persistent_entity::PersistentEntity,
-	traits::{handles_enemies::EnemyType, handles_map_generation::AgentType},
-	zyheeda_commands::ZyheedaEntityCommands,
+	errors::Unreachable,
+	traits::{
+		accessors::get::GetProperty,
+		handles_enemies::EnemyType,
+		handles_map_generation::AgentType,
+		load_asset::LoadAsset,
+		prefab::{Prefab, PrefabEntityCommands},
+		register_derived_component::{DerivableFrom, InsertDerivedComponent},
+	},
 };
 use macros::{SavableComponent, agent_asset};
+use serde::{Deserialize, Serialize};
 
-#[derive(Component, SavableComponent, Clone, Debug, PartialEq)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[component(immutable)]
-#[require(
-	PersistentEntity,
-	Transform,
-	Visibility,
-	AnimateIdle,
-	InsertAgentDefaultLoadout,
-	RegisterAgentLoadoutBones
-)]
-pub struct Agent<TAsset = AgentConfig>
-where
-	TAsset: Asset,
-{
+#[require(AgentConfig)]
+pub(crate) struct Agent {
 	pub(crate) agent_type: AgentType,
-	pub(crate) config_handle: Handle<TAsset>,
 }
 
-impl From<(AgentType, Handle<AgentConfig>)> for Agent {
-	fn from((agent_type, config_handle): (AgentType, Handle<AgentConfig>)) -> Self {
+impl GetProperty<AgentType> for Agent {
+	fn get_property(&self) -> AgentType {
+		self.agent_type
+	}
+}
+
+impl<TSource> DerivableFrom<'_, '_, TSource> for Agent
+where
+	TSource: GetProperty<AgentType>,
+{
+	const INSERT: InsertDerivedComponent = InsertDerivedComponent::IfNew;
+	type TParam = ();
+
+	fn derive_from(_: Entity, source: &TSource, _: &SystemParamItem<Self::TParam>) -> Self {
 		Self {
-			agent_type,
-			config_handle,
+			agent_type: source.get_property(),
 		}
 	}
 }
 
-impl AgentHandle<AssetServer> for Agent {
-	fn agent_handle(agent_type: AgentType, assets: &mut AssetServer) -> Handle<AgentConfig> {
-		let path = match agent_type {
-			AgentType::Player => agent_asset!("player"),
-			AgentType::Enemy(EnemyType::VoidSphere) => agent_asset!("void_sphere"),
-		};
+impl Prefab<()> for Agent {
+	type TError = Unreachable;
 
-		assets.load(path)
-	}
-}
-
-impl InsertEnemyOrPlayer for Agent {
-	fn insert_enemy_or_player(&self, mut entity: ZyheedaEntityCommands) {
+	fn insert_prefab_components(
+		&self,
+		entity: &mut impl PrefabEntityCommands,
+		assets: &mut impl LoadAsset,
+	) -> Result<(), Self::TError> {
 		match self.agent_type {
-			AgentType::Player => entity.try_insert(Player),
-			AgentType::Enemy(EnemyType::VoidSphere) => entity.try_insert(VoidSphere),
+			AgentType::Player => entity.try_insert((
+				Player,
+				AgentConfig::<AgentConfigAsset> {
+					config_handle: assets.load_asset(agent_asset!("player")),
+				},
+			)),
+			AgentType::Enemy(EnemyType::VoidSphere) => entity.try_insert((
+				VoidSphere,
+				AgentConfig::<AgentConfigAsset> {
+					config_handle: assets.load_asset(agent_asset!("void_sphere")),
+				},
+			)),
 		};
+
+		Ok(())
 	}
 }

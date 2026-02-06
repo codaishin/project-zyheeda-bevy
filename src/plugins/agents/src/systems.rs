@@ -1,4 +1,4 @@
-pub(crate) mod agent;
+pub(crate) mod agent_config;
 pub(crate) mod enemy;
 pub(crate) mod insert_default_loadout;
 pub(crate) mod player;

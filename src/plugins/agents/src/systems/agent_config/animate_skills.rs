@@ -1,4 +1,4 @@
-use crate::components::agent::Agent;
+use crate::components::agent_config::AgentConfig;
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
 	accessors::get::{GetChangedContext, GetContext, GetContextMut},
@@ -12,7 +12,7 @@ use common::traits::{
 	handles_loadout::{ActiveSkill, ActiveSkills, skills::Skills},
 };
 
-impl Agent {
+impl AgentConfig {
 	pub(crate) fn animate_skills<TLoadout, TAnimations>(
 		loadout: StaticSystemParam<TLoadout>,
 		mut animations: StaticSystemParam<TAnimations>,
@@ -76,7 +76,7 @@ impl From<SkillAnimations> for AnimationPriority {
 #[cfg(test)]
 mod tests {
 	use crate::{
-		assets::agent_config::AgentConfig,
+		assets::agent_config::AgentConfigAsset,
 		systems::player::animate_movement::tests::_Animations,
 	};
 
@@ -86,7 +86,6 @@ mod tests {
 		traits::{
 			handles_animations::{AnimationKey, AnimationPriority},
 			handles_loadout::{ActiveSkill, ActiveSkills},
-			handles_map_generation::AgentType,
 		},
 	};
 	use std::{
@@ -120,7 +119,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			Agent::animate_skills::<Query<Ref<_Loadout>>, Query<&mut _Animations>>.pipe(
+			AgentConfig::animate_skills::<Query<Ref<_Loadout>>, Query<&mut _Animations>>.pipe(
 				|In(result), mut commands: Commands| {
 					commands.insert_resource(_Result(result));
 				},
@@ -136,9 +135,8 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Agent {
-					agent_type: AgentType::Player,
-					config_handle: new_handle::<AgentConfig>(),
+				AgentConfig {
+					config_handle: new_handle::<AgentConfigAsset>(),
 				},
 				_Loadout {
 					active: vec![
@@ -176,9 +174,8 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Agent {
-					agent_type: AgentType::Player,
-					config_handle: new_handle::<AgentConfig>(),
+				AgentConfig {
+					config_handle: new_handle::<AgentConfigAsset>(),
 				},
 				_Loadout {
 					active: vec![
@@ -213,9 +210,8 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Agent {
-					agent_type: AgentType::Player,
-					config_handle: new_handle::<AgentConfig>(),
+				AgentConfig {
+					config_handle: new_handle::<AgentConfigAsset>(),
 				},
 				_Loadout { active: vec![] },
 				_Animations::Prepared(HashMap::from([
@@ -280,9 +276,8 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Agent {
-					agent_type: AgentType::Player,
-					config_handle: new_handle::<AgentConfig>(),
+				AgentConfig {
+					config_handle: new_handle::<AgentConfigAsset>(),
 				},
 				_Loadout {
 					active: vec![ActiveSkill {
@@ -312,9 +307,8 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Agent {
-					agent_type: AgentType::Player,
-					config_handle: new_handle::<AgentConfig>(),
+				AgentConfig {
+					config_handle: new_handle::<AgentConfigAsset>(),
 				},
 				_Loadout {
 					active: vec![ActiveSkill {
@@ -349,9 +343,8 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Agent {
-					agent_type: AgentType::Player,
-					config_handle: new_handle::<AgentConfig>(),
+				AgentConfig {
+					config_handle: new_handle::<AgentConfigAsset>(),
 				},
 				_Loadout { active: vec![] },
 			))

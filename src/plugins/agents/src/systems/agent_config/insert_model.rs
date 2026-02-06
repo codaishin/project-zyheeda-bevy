@@ -1,6 +1,6 @@
 use crate::{
-	assets::agent_config::{AgentConfig, AgentModel},
-	components::agent::Agent,
+	assets::agent_config::{AgentConfigAsset, AgentModel},
+	components::agent_config::AgentConfig,
 };
 use bevy::prelude::*;
 use common::{
@@ -9,10 +9,10 @@ use common::{
 	zyheeda_commands::ZyheedaCommands,
 };
 
-impl Agent {
+impl AgentConfig {
 	pub(crate) fn insert_model(
 		mut commands: ZyheedaCommands,
-		configs: Res<Assets<AgentConfig>>,
+		configs: Res<Assets<AgentConfigAsset>>,
 		agents: Query<(Entity, &Self), Without<ModelInserted>>,
 	) {
 		for (entity, agent) in &agents {
@@ -41,14 +41,13 @@ pub(crate) struct ModelInserted;
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::assets::agent_config::{AgentConfig, AgentModel};
-	use common::{
-		traits::handles_map_generation::AgentType,
-		zyheeda_commands::ZyheedaEntityCommands,
-	};
+	use crate::assets::agent_config::{AgentConfigAsset, AgentModel};
+	use common::zyheeda_commands::ZyheedaEntityCommands;
 	use testing::{SingleThreadedApp, new_handle};
 
-	fn setup<const N: usize>(model_data: [(&Handle<AgentConfig>, AgentConfig); N]) -> App {
+	fn setup<const N: usize>(
+		model_data: [(&Handle<AgentConfigAsset>, AgentConfigAsset); N],
+	) -> App {
 		let mut app = App::new().single_threaded(Update);
 		let mut assets = Assets::default();
 
@@ -57,7 +56,7 @@ mod tests {
 		}
 
 		app.insert_resource(assets);
-		app.add_systems(Update, Agent::insert_model);
+		app.add_systems(Update, AgentConfig::insert_model);
 
 		app
 	}
@@ -65,18 +64,12 @@ mod tests {
 	#[test]
 	fn insert_asset_model() {
 		let config_handle = new_handle();
-		let config = AgentConfig {
+		let config = AgentConfigAsset {
 			agent_model: AgentModel::from("my/path"),
 			..default()
 		};
 		let mut app = setup([(&config_handle, config)]);
-		let entity = app
-			.world_mut()
-			.spawn(Agent {
-				config_handle,
-				agent_type: AgentType::Player,
-			})
-			.id();
+		let entity = app.world_mut().spawn(AgentConfig { config_handle }).id();
 
 		app.update();
 
@@ -98,18 +91,12 @@ mod tests {
 	#[test]
 	fn insert_procedural_model() {
 		let config_handle = new_handle();
-		let config = AgentConfig {
+		let config = AgentConfigAsset {
 			agent_model: AgentModel::Procedural(_Model::insert),
 			..default()
 		};
 		let mut app = setup([(&config_handle, config)]);
-		let entity = app
-			.world_mut()
-			.spawn(Agent {
-				config_handle,
-				agent_type: AgentType::Player,
-			})
-			.id();
+		let entity = app.world_mut().spawn(AgentConfig { config_handle }).id();
 
 		app.update();
 
@@ -119,18 +106,12 @@ mod tests {
 	#[test]
 	fn insert_model_only_once() {
 		let config_handle = new_handle();
-		let config = AgentConfig {
+		let config = AgentConfigAsset {
 			agent_model: AgentModel::Procedural(_Model::insert),
 			..default()
 		};
 		let mut app = setup([(&config_handle, config)]);
-		let entity = app
-			.world_mut()
-			.spawn(Agent {
-				config_handle,
-				agent_type: AgentType::Player,
-			})
-			.id();
+		let entity = app.world_mut().spawn(AgentConfig { config_handle }).id();
 
 		app.update();
 		app.world_mut().entity_mut(entity).remove::<_Model>();
@@ -142,23 +123,22 @@ mod tests {
 	#[test]
 	fn insert_model_if_config_is_available_later_than_agent_insertion() {
 		let config_handle = new_handle();
-		let config = AgentConfig {
+		let config = AgentConfigAsset {
 			agent_model: AgentModel::Procedural(_Model::insert),
 			..default()
 		};
 		let mut app = setup([]);
 		let entity = app
 			.world_mut()
-			.spawn(Agent {
+			.spawn(AgentConfig {
 				config_handle: config_handle.clone(),
-				agent_type: AgentType::Player,
 			})
 			.id();
 
 		app.update();
 		_ = app
 			.world_mut()
-			.resource_mut::<Assets<AgentConfig>>()
+			.resource_mut::<Assets<AgentConfigAsset>>()
 			.insert(&config_handle, config);
 		app.update();
 

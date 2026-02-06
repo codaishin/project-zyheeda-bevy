@@ -1,4 +1,4 @@
-use crate::components::agent::Agent;
+use crate::components::agent_config::AgentConfig;
 use bevy::prelude::*;
 use common::{
 	traits::{
@@ -8,7 +8,7 @@ use common::{
 	zyheeda_commands::ZyheedaCommands,
 };
 
-impl<TAsset> Agent<TAsset>
+impl<TAsset> AgentConfig<TAsset>
 where
 	TAsset: Asset + GetProperty<PhysicalDefaultAttributes>,
 {
@@ -19,7 +19,7 @@ where
 	) where
 		TComponent: Component + From<PhysicalDefaultAttributes>,
 	{
-		for (entity, Agent { config_handle, .. }) in &agents {
+		for (entity, AgentConfig { config_handle, .. }) in &agents {
 			let Some(config) = configs.get(config_handle) else {
 				continue;
 			};
@@ -36,10 +36,7 @@ where
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use common::{
-		attributes::{effect_target::EffectTarget, health::Health},
-		traits::handles_map_generation::AgentType,
-	};
+	use common::attributes::{effect_target::EffectTarget, health::Health};
 	use testing::{SingleThreadedApp, new_handle};
 
 	#[derive(Asset, TypePath)]
@@ -69,7 +66,10 @@ mod tests {
 		}
 
 		app.insert_resource(assets);
-		app.add_systems(Update, Agent::<_Config>::insert_attributes::<_Component>);
+		app.add_systems(
+			Update,
+			AgentConfig::<_Config>::insert_attributes::<_Component>,
+		);
 
 		app
 	}
@@ -83,13 +83,7 @@ mod tests {
 			gravity_interaction: EffectTarget::Affected,
 		};
 		let mut app = setup([(&config_handle, _Config(attributes))]);
-		let entity = app
-			.world_mut()
-			.spawn(Agent {
-				agent_type: AgentType::Player,
-				config_handle,
-			})
-			.id();
+		let entity = app.world_mut().spawn(AgentConfig { config_handle }).id();
 
 		app.update();
 
@@ -110,8 +104,7 @@ mod tests {
 		let mut app = setup([(&config_handle, _Config(attributes))]);
 		let entity = app
 			.world_mut()
-			.spawn(Agent {
-				agent_type: AgentType::Player,
+			.spawn(AgentConfig {
 				config_handle: config_handle.clone(),
 			})
 			.id();
@@ -139,8 +132,7 @@ mod tests {
 		let mut app = setup([(&config_handle, _Config(attributes))]);
 		let entity = app
 			.world_mut()
-			.spawn(Agent {
-				agent_type: AgentType::Player,
+			.spawn(AgentConfig {
 				config_handle: config_handle.clone(),
 			})
 			.id();
