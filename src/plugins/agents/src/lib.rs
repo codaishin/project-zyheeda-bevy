@@ -145,9 +145,9 @@ where
 		app.add_systems(
 			Update,
 			(
-				AgentConfig::<AgentConfigAsset>::insert_attributes::<TPhysics::TDefaultAttributes>,
+				AgentConfig::insert_attributes::<TPhysics::TDefaultAttributes>,
 				InsertAgentModel::execute,
-				InsertAgentDefaultLoadout::execute::<AgentConfigAsset, LoadoutPrepParam<TLoadout>>,
+				InsertAgentDefaultLoadout::execute::<LoadoutPrepParam<TLoadout>>,
 				RegisterAgentLoadoutBones::execute::<LoadoutPrepParam<TLoadout>>,
 				RegisterSkillSpawnPoints::execute::<SkillSpawnPointsMut<TPhysics>>,
 				RegisterAgentAnimations::execute::<AnimationsSystemParamMut<TAnimations>>,

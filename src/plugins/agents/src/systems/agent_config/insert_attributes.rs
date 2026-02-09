@@ -1,21 +1,15 @@
-use crate::components::agent_config::AgentConfig;
+use crate::{assets::agent_config::AgentConfigAsset, components::agent_config::AgentConfig};
 use bevy::prelude::*;
 use common::{
-	traits::{
-		accessors::get::{GetProperty, TryApplyOn},
-		handles_physics::PhysicalDefaultAttributes,
-	},
+	traits::{accessors::get::TryApplyOn, handles_physics::PhysicalDefaultAttributes},
 	zyheeda_commands::ZyheedaCommands,
 };
 
-impl<TAsset> AgentConfig<TAsset>
-where
-	TAsset: Asset + GetProperty<PhysicalDefaultAttributes>,
-{
+impl AgentConfig {
 	pub(crate) fn insert_attributes<TComponent>(
 		mut commands: ZyheedaCommands,
 		agents: Query<(Entity, &Self), Without<TComponent>>,
-		configs: Res<Assets<TAsset>>,
+		configs: Res<Assets<AgentConfigAsset>>,
 	) where
 		TComponent: Component + From<PhysicalDefaultAttributes>,
 	{
@@ -25,8 +19,7 @@ where
 			};
 
 			commands.try_apply_on(&entity, |mut e| {
-				let default_attributes = config.get_property();
-				e.try_insert(TComponent::from(default_attributes));
+				e.try_insert(TComponent::from(config.attributes));
 			});
 		}
 	}
@@ -39,15 +32,6 @@ mod tests {
 	use common::attributes::{effect_target::EffectTarget, health::Health};
 	use testing::{SingleThreadedApp, new_handle};
 
-	#[derive(Asset, TypePath)]
-	struct _Config(PhysicalDefaultAttributes);
-
-	impl GetProperty<PhysicalDefaultAttributes> for _Config {
-		fn get_property(&self) -> PhysicalDefaultAttributes {
-			self.0
-		}
-	}
-
 	#[derive(Component, Debug, PartialEq)]
 	struct _Component(PhysicalDefaultAttributes);
 
@@ -57,19 +41,16 @@ mod tests {
 		}
 	}
 
-	fn setup<const N: usize>(attributes: [(&Handle<_Config>, _Config); N]) -> App {
+	fn setup<const N: usize>(configs: [(&Handle<AgentConfigAsset>, AgentConfigAsset); N]) -> App {
 		let mut app = App::new().single_threaded(Update);
-		let mut assets = Assets::default();
+		let mut config_assets = Assets::default();
 
-		for (id, asset) in attributes {
-			_ = assets.insert(id, asset);
+		for (id, config) in configs {
+			_ = config_assets.insert(id, config);
 		}
 
-		app.insert_resource(assets);
-		app.add_systems(
-			Update,
-			AgentConfig::<_Config>::insert_attributes::<_Component>,
-		);
+		app.insert_resource(config_assets);
+		app.add_systems(Update, AgentConfig::insert_attributes::<_Component>);
 
 		app
 	}
@@ -82,7 +63,13 @@ mod tests {
 			force_interaction: EffectTarget::Immune,
 			gravity_interaction: EffectTarget::Affected,
 		};
-		let mut app = setup([(&config_handle, _Config(attributes))]);
+		let mut app = setup([(
+			&config_handle,
+			AgentConfigAsset {
+				attributes,
+				..default()
+			},
+		)]);
 		let entity = app.world_mut().spawn(AgentConfig { config_handle }).id();
 
 		app.update();
@@ -101,7 +88,13 @@ mod tests {
 			force_interaction: EffectTarget::Immune,
 			gravity_interaction: EffectTarget::Affected,
 		};
-		let mut app = setup([(&config_handle, _Config(attributes))]);
+		let mut app = setup([(
+			&config_handle,
+			AgentConfigAsset {
+				attributes,
+				..default()
+			},
+		)]);
 		let entity = app
 			.world_mut()
 			.spawn(AgentConfig {
@@ -110,9 +103,9 @@ mod tests {
 			.id();
 
 		app.update();
-		let mut configs = app.world_mut().resource_mut::<Assets<_Config>>();
+		let mut configs = app.world_mut().resource_mut::<Assets<AgentConfigAsset>>();
 		let config = configs.get_mut(&config_handle).unwrap();
-		config.0.health = Health::new(42.);
+		config.attributes.health = Health::new(42.);
 		app.update();
 
 		assert_eq!(
@@ -129,7 +122,13 @@ mod tests {
 			force_interaction: EffectTarget::Immune,
 			gravity_interaction: EffectTarget::Affected,
 		};
-		let mut app = setup([(&config_handle, _Config(attributes))]);
+		let mut app = setup([(
+			&config_handle,
+			AgentConfigAsset {
+				attributes,
+				..default()
+			},
+		)]);
 		let entity = app
 			.world_mut()
 			.spawn(AgentConfig {

@@ -2,7 +2,7 @@ use crate::{assets::agent_config::AgentConfigAsset, components::animate_idle::An
 use bevy::prelude::*;
 use common::components::persistent_entity::PersistentEntity;
 
-#[derive(Component, Clone, Debug, PartialEq)]
+#[derive(Component, Clone, Debug, PartialEq, Default)]
 #[component(immutable)]
 #[require(
 	PersistentEntity,
@@ -15,19 +15,8 @@ use common::components::persistent_entity::PersistentEntity;
 	RegisterSkillSpawnPoints,
 	RegisterAgentAnimations
 )]
-pub struct AgentConfig<TAsset = AgentConfigAsset>
-where
-	TAsset: Asset,
-{
-	pub(crate) config_handle: Handle<TAsset>,
-}
-
-impl Default for AgentConfig {
-	fn default() -> Self {
-		Self {
-			config_handle: Handle::default(),
-		}
-	}
+pub struct AgentConfig {
+	pub(crate) config_handle: Handle<AgentConfigAsset>,
 }
 
 #[derive(Component, Debug, PartialEq, Default)]
