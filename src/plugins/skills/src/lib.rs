@@ -16,7 +16,12 @@ use crate::{
 	},
 	skills::SkillId,
 	system_parameters::{
-		loadout::{LoadoutPrep, LoadoutReader, LoadoutWriter},
+		loadout::{
+			LoadoutPrep,
+			LoadoutReader,
+			LoadoutWriter,
+			write::insert_default_loadout::DefaultLoadout,
+		},
 		loadout_activity::{LoadoutActivityReader, LoadoutActivityWriter},
 	},
 	systems::enqueue::EnqueueSystem,
@@ -82,6 +87,7 @@ where
 		TSaveGame::register_savable_component::<Inventory>(app);
 		TSaveGame::register_savable_component::<Slots>(app);
 
+		app.add_observer(DefaultLoadout::insert::<AssetServer>);
 		app.add_systems(
 			Update,
 			(

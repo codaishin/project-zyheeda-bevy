@@ -1,8 +1,7 @@
-use std::fmt::Display;
-
-use crate::{
-	assets::agent_config::AgentConfigAsset,
-	components::{agent_config::AgentConfig, enemy::void_sphere::VoidSphere, player::Player},
+use crate::components::{
+	agent_config::AgentConfig,
+	enemy::void_sphere::VoidSphere,
+	player::Player,
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
@@ -18,10 +17,11 @@ use common::{
 };
 use macros::{SavableComponent, agent_asset};
 use serde::{Deserialize, Serialize};
+use std::fmt::Display;
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[component(immutable)]
-#[require(AgentConfig, Transform)]
+#[require(AgentConfig, ApplyAgentConfig, Transform)]
 pub(crate) struct Agent {
 	pub(crate) agent_type: AgentType,
 }
@@ -74,13 +74,13 @@ impl Prefab<()> for Agent {
 		match self.agent_type {
 			AgentType::Player => entity.try_insert((
 				Player,
-				AgentConfig::<AgentConfigAsset> {
+				AgentConfig {
 					config_handle: assets.load_asset(agent_asset!("player")),
 				},
 			)),
 			AgentType::Enemy(EnemyType::VoidSphere) => entity.try_insert((
 				VoidSphere,
-				AgentConfig::<AgentConfigAsset> {
+				AgentConfig {
 					config_handle: assets.load_asset(agent_asset!("void_sphere")),
 				},
 			)),
@@ -89,6 +89,9 @@ impl Prefab<()> for Agent {
 		Ok(())
 	}
 }
+
+#[derive(Component, Debug, PartialEq, Default)]
+pub(crate) struct ApplyAgentConfig;
 
 #[derive(Debug, PartialEq)]
 pub struct NoPrefabContext;

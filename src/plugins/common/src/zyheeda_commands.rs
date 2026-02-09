@@ -142,11 +142,12 @@ impl ZyheedaEntityCommands<'_> {
 		self.entity.try_despawn();
 	}
 
-	pub fn trigger_observers_for<TEvent>(&mut self, event: TEvent)
+	pub fn trigger<TFn, TEvent>(&mut self, event: TFn)
 	where
-		TEvent: for<'a> Event<Trigger<'a>: Default>,
+		TFn: FnOnce(Entity) -> TEvent,
+		TEvent: for<'a> EntityEvent<Trigger<'a>: Default>,
 	{
-		self.entity.commands_mut().trigger(event);
+		self.entity.trigger(event);
 	}
 
 	pub fn reborrow(&mut self) -> ZyheedaEntityCommands<'_> {
@@ -458,11 +459,10 @@ mod test {
 	}
 
 	mod trigger_observers {
+		use super::*;
 		use crate::traits::accessors::get::TryApplyOn;
 
-		use super::*;
-
-		#[derive(Event)]
+		#[derive(EntityEvent)]
 		struct _Event {
 			entity: Entity,
 		}
@@ -505,8 +505,7 @@ mod test {
 
 			app.world_mut()
 				.run_system_once(move |mut commands: ZyheedaCommands| {
-					commands
-						.try_apply_on(&entity, |mut e| e.trigger_observers_for(_Event { entity }));
+					commands.try_apply_on(&entity, |mut e| e.trigger(|entity| _Event { entity }));
 				})?;
 
 			assert_eq!(
