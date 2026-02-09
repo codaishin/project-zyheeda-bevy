@@ -5,16 +5,16 @@ use crate::{
 			cells::{CellGrid, MapCells, agent::Agent},
 		},
 		map_agents::AgentOfPersistentMap,
-		world_agent::WorldAgent,
 	},
 	grid_graph::grid_context::GridContext,
+	resources::agents::prefab::AgentPrefab,
 	traits::{GridCellDistanceDefinition, grid_min::GridMin},
 };
 use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
 	traits::{accessors::get::TryApplyOn, thread_safe::ThreadSafe},
-	zyheeda_commands::ZyheedaCommands,
+	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
 
 impl<TCell> MapCells<Agent<TCell>>
@@ -24,7 +24,10 @@ where
 	pub(crate) fn spawn_world_agents(
 		mut commands: ZyheedaCommands,
 		cells: Query<(Entity, &PersistentEntity, &Self)>,
+		agent_prefab: Res<AgentPrefab>,
 	) {
+		let AgentPrefab(apply_prefab) = *agent_prefab;
+
 		for (entity, persistent_entity, MapCells { definition, .. }) in &cells {
 			let context = GridContext {
 				cell_count_x: definition.size.x,
@@ -39,11 +42,12 @@ where
 					continue;
 				};
 
-				commands.spawn((
-					WorldAgent(*agent_type),
-					AgentOfPersistentMap(*persistent_entity),
-					transform::<TCell>(x, z, min),
-				));
+				let entity = commands.spawn(AgentOfPersistentMap(*persistent_entity));
+				apply_prefab(
+					ZyheedaEntityCommands::from(entity),
+					translation::<TCell>(x, z, min),
+					*agent_type,
+				);
 			}
 			commands.try_apply_on(&entity, |mut e| {
 				e.try_insert(AgentsLoaded);
@@ -52,12 +56,11 @@ where
 	}
 }
 
-fn transform<TCell>(x: &u32, z: &u32, min: Vec3) -> Transform
+fn translation<TCell>(x: &u32, z: &u32, min: Vec3) -> Vec3
 where
 	TCell: GridCellDistanceDefinition,
 {
-	let translation = min + Vec3::new(*x as f32, 0., *z as f32) * *TCell::CELL_DISTANCE;
-	Transform::from_translation(translation)
+	min + Vec3::new(*x as f32, 0., *z as f32) * *TCell::CELL_DISTANCE
 }
 
 #[cfg(test)]
@@ -66,11 +69,18 @@ mod tests {
 	use crate::{
 		cell_grid_size::CellGridSize,
 		grid_graph::grid_context::{CellCount, CellDistance},
+		resources::agents::prefab::AgentPrefab,
 		traits::map_cells_extra::CellGridDefinition,
 	};
 	use common::traits::{handles_enemies::EnemyType, handles_map_generation::AgentType};
 	use macros::new_valid;
 	use testing::{SingleThreadedApp, assert_count, assert_eq_unordered};
+
+	#[derive(Component, Debug, PartialEq)]
+	struct _NewAgent {
+		ground_position: Vec3,
+		agent_type: AgentType,
+	}
 
 	#[derive(Clone, Debug, PartialEq, TypePath)]
 	struct _Cell;
@@ -82,6 +92,12 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
+		app.insert_resource(AgentPrefab(|mut entity, ground_position, agent_type| {
+			entity.try_insert(_NewAgent {
+				ground_position,
+				agent_type,
+			});
+		}));
 		app.add_systems(Update, MapCells::<Agent<_Cell>>::spawn_world_agents);
 
 		app
@@ -103,11 +119,15 @@ mod tests {
 
 		app.update();
 
-		let mut agents = app
-			.world_mut()
-			.query_filtered::<&Transform, With<WorldAgent>>();
+		let mut agents = app.world_mut().query::<&_NewAgent>();
 		let [agent] = assert_count!(1, agents.iter(app.world()));
-		assert_eq!(&Transform::from_xyz(0., 0., 0.), agent);
+		assert_eq!(
+			&_NewAgent {
+				agent_type: AgentType::Player,
+				ground_position: Vec3::ZERO,
+			},
+			agent
+		);
 	}
 
 	#[test]
@@ -129,14 +149,14 @@ mod tests {
 
 		app.update();
 
-		let mut agents = app.world_mut().query::<(&Transform, &WorldAgent)>();
-		let [(transform, agent)] = assert_count!(1, agents.iter(app.world()));
+		let mut agents = app.world_mut().query::<&_NewAgent>();
+		let [agent] = assert_count!(1, agents.iter(app.world()));
 		assert_eq!(
-			(
-				&Transform::from_xyz(0., 0., 0.),
-				&WorldAgent(AgentType::Enemy(EnemyType::VoidSphere)),
-			),
-			(transform, agent)
+			&_NewAgent {
+				ground_position: Vec3::ZERO,
+				agent_type: AgentType::Enemy(EnemyType::VoidSphere)
+			},
+			agent
 		);
 	}
 
@@ -190,21 +210,46 @@ mod tests {
 
 		app.update();
 
-		let mut agents = app
-			.world_mut()
-			.query_filtered::<&Transform, With<WorldAgent>>();
+		let mut agents = app.world_mut().query::<&_NewAgent>();
 		let agents = assert_count!(9, agents.iter(app.world()));
 		assert_eq_unordered!(
 			[
-				&Transform::from_xyz(-4., 0., -4.),
-				&Transform::from_xyz(-4., 0., 0.),
-				&Transform::from_xyz(-4., 0., 4.),
-				&Transform::from_xyz(0., 0., -4.),
-				&Transform::from_xyz(0., 0., 0.),
-				&Transform::from_xyz(0., 0., 4.),
-				&Transform::from_xyz(4., 0., -4.),
-				&Transform::from_xyz(4., 0., 0.),
-				&Transform::from_xyz(4., 0., 4.),
+				&_NewAgent {
+					ground_position: Vec3::new(-4., 0., -4.),
+					agent_type: AgentType::Enemy(EnemyType::VoidSphere),
+				},
+				&_NewAgent {
+					ground_position: Vec3::new(-4., 0., 4.),
+					agent_type: AgentType::Enemy(EnemyType::VoidSphere),
+				},
+				&_NewAgent {
+					ground_position: Vec3::new(-4., 0., 0.),
+					agent_type: AgentType::Enemy(EnemyType::VoidSphere),
+				},
+				&_NewAgent {
+					ground_position: Vec3::new(0., 0., -4.),
+					agent_type: AgentType::Player,
+				},
+				&_NewAgent {
+					ground_position: Vec3::new(0., 0., 0.),
+					agent_type: AgentType::Enemy(EnemyType::VoidSphere),
+				},
+				&_NewAgent {
+					ground_position: Vec3::new(0., 0., 4.),
+					agent_type: AgentType::Enemy(EnemyType::VoidSphere),
+				},
+				&_NewAgent {
+					ground_position: Vec3::new(4., 0., -4.),
+					agent_type: AgentType::Enemy(EnemyType::VoidSphere),
+				},
+				&_NewAgent {
+					ground_position: Vec3::new(4., 0., 0.),
+					agent_type: AgentType::Enemy(EnemyType::VoidSphere),
+				},
+				&_NewAgent {
+					ground_position: Vec3::new(4., 0., 4.),
+					agent_type: AgentType::Enemy(EnemyType::VoidSphere),
+				},
 			],
 			agents
 		);
@@ -254,7 +299,7 @@ mod tests {
 
 		let mut agents = app
 			.world_mut()
-			.query_filtered::<&AgentOfPersistentMap, With<WorldAgent>>();
+			.query_filtered::<&AgentOfPersistentMap, With<_NewAgent>>();
 		let [agent] = assert_count!(1, agents.iter(app.world()));
 		assert_eq!(&AgentOfPersistentMap(persistent_entity), agent);
 	}
@@ -284,7 +329,7 @@ mod tests {
 
 		let mut agents = app
 			.world_mut()
-			.query_filtered::<&AgentOfPersistentMap, With<WorldAgent>>();
+			.query_filtered::<&AgentOfPersistentMap, With<_NewAgent>>();
 		let [agent] = assert_count!(1, agents.iter(app.world()));
 		assert_eq!(&AgentOfPersistentMap(persistent_entity), agent);
 	}

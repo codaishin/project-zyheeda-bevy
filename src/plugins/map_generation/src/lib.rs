@@ -5,6 +5,7 @@ mod grid_graph;
 mod line_wide;
 mod observers;
 mod resources;
+mod system_params;
 mod systems;
 mod traits;
 
@@ -13,9 +14,12 @@ use crate::{
 		map::{Map, agents::AgentsLoaded, cells::corridor::Corridor, demo_map::DemoMap},
 		map_agents::{AgentOfPersistentMap, GridAgentOf},
 		wall_cell::WallCell,
-		world_agent::WorldAgent,
 	},
-	resources::agents::color_lookup::{AgentsColorLookup, AgentsColorLookupImages},
+	resources::agents::{
+		color_lookup::{AgentsColorLookup, AgentsColorLookupImages},
+		prefab::AgentPrefab,
+	},
+	system_params::set_agent_prefab::SetAgentPrefab,
 };
 use bevy::prelude::*;
 use common::{
@@ -73,7 +77,8 @@ where
 		TSavegame::register_savable_component::<AgentOfPersistentMap>(app);
 		TSavegame::register_savable_component::<DemoMap>(app);
 
-		app.register_required_components::<Map, TSavegame::TSaveEntityMarker>()
+		app.init_resource::<AgentPrefab>()
+			.register_required_components::<Map, TSavegame::TSaveEntityMarker>()
 			.register_required_components::<WallCell, TPhysics::TNoMouseHover>()
 			.register_map_cell::<TLoading, TSavegame, Corridor>()
 			.add_prefab_observer::<WallCell, TPhysics>()
@@ -107,12 +112,13 @@ where
 pub struct MapSystems;
 
 impl<TDependencies> HandlesMapGeneration for MapGenerationPlugin<TDependencies> {
-	type TMap = Grid<1>;
-	type TGraph = GridGraph;
-	type TSystemSet = MapSystems;
-	type TNewWorldAgent = WorldAgent;
-
 	const SYSTEMS: Self::TSystemSet = MapSystems;
+	type TSystemSet = MapSystems;
 
+	type TNewMapAgent<'w, 's> = SetAgentPrefab<'w>;
+
+	type TGraph = GridGraph;
+
+	type TMap = Grid<1>;
 	type TMapRef = GridAgentOf;
 }

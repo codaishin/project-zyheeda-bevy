@@ -10,7 +10,6 @@ pub(crate) mod quadrants;
 pub(crate) mod wall_back;
 pub(crate) mod wall_cell;
 pub(crate) mod wall_light;
-pub(crate) mod world_agent;
 
 use bevy::prelude::*;
 

@@ -38,7 +38,7 @@ use common::{
 			LoadoutActivityParam,
 			LoadoutPrepParam,
 		},
-		handles_map_generation::HandlesMapGeneration,
+		handles_map_generation::{HandlesMapGeneration, NewMapAgentParamMut},
 		handles_movement::{HandlesMovement, MovementSystemParam, MovementSystemParamMut},
 		handles_orientation::{FacingSystemParamMut, HandlesOrientation},
 		handles_physics::{
@@ -52,7 +52,6 @@ use common::{
 		handles_saving::HandlesSaving,
 		handles_skill_physics::{HandlesPhysicalSkillSpawnPoints, SkillSpawnPointsMut},
 		prefab::AddPrefabObserver,
-		register_derived_component::RegisterDerivedComponent,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 	},
@@ -139,7 +138,10 @@ where
 		app.init_asset::<AgentConfigAsset>();
 
 		TPhysics::mark_as_effect_target::<Agent>(app);
-		app.register_derived_component::<TMaps::TNewWorldAgent, Agent>();
+		app.add_systems(
+			Startup,
+			Agent::set_prefab_essentials::<NewMapAgentParamMut<TMaps>>.pipe(OnError::log),
+		);
 		app.add_systems(
 			Update,
 			(
