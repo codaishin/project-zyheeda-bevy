@@ -21,7 +21,7 @@ use std::fmt::Display;
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[component(immutable)]
-#[require(AgentConfig, Transform)]
+#[require(AgentConfig, ApplyAgentConfig, Transform)]
 pub(crate) struct Agent {
 	pub(crate) agent_type: AgentType,
 }
@@ -89,6 +89,9 @@ impl Prefab<()> for Agent {
 		Ok(())
 	}
 }
+
+#[derive(Component, Debug, PartialEq, Default)]
+pub(crate) struct ApplyAgentConfig;
 
 #[derive(Debug, PartialEq)]
 pub struct NoPrefabContext;

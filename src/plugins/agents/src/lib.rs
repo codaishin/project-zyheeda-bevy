@@ -5,15 +5,8 @@ mod systems;
 use crate::{
 	assets::agent_config::{AgentConfigAsset, dto::AgentConfigDto},
 	components::{
-		agent::Agent,
-		agent_config::{
-			AgentConfig,
-			InsertAgentDefaultLoadout,
-			InsertAgentModel,
-			RegisterAgentAnimations,
-			RegisterAgentLoadoutBones,
-			RegisterSkillSpawnPoints,
-		},
+		agent::{Agent, ApplyAgentConfig},
+		agent_config::AgentConfig,
 		animate_idle::AnimateIdle,
 		enemy::{Enemy, attack_phase::EnemyAttackPhase, void_sphere::VoidSphere},
 		movement_config::MovementConfig,
@@ -144,14 +137,12 @@ where
 		);
 		app.add_systems(
 			Update,
-			(
-				AgentConfig::insert_attributes::<TPhysics::TDefaultAttributes>,
-				InsertAgentModel::execute,
-				InsertAgentDefaultLoadout::execute::<LoadoutPrepParam<TLoadout>>,
-				RegisterAgentLoadoutBones::execute::<LoadoutPrepParam<TLoadout>>,
-				RegisterSkillSpawnPoints::execute::<SkillSpawnPointsMut<TPhysics>>,
-				RegisterAgentAnimations::execute::<AnimationsSystemParamMut<TAnimations>>,
-			),
+			ApplyAgentConfig::system::<
+				LoadoutPrepParam<TLoadout>,
+				SkillSpawnPointsMut<TPhysics>,
+				AnimationsSystemParamMut<TAnimations>,
+				TPhysics::TDefaultAttributes,
+			>,
 		);
 
 		// # Savedata
