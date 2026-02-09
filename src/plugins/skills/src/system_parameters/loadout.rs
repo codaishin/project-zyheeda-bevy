@@ -1,5 +1,5 @@
 mod read;
-mod write;
+pub(crate) mod write;
 
 use crate::{
 	components::{
@@ -13,7 +13,7 @@ use crate::{
 	skills::Skill,
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
-use common::{traits::load_asset::LoadAsset, zyheeda_commands::ZyheedaCommands};
+use common::zyheeda_commands::ZyheedaCommands;
 
 #[derive(SystemParam)]
 pub struct LoadoutReader<'w, 's> {
@@ -38,13 +38,9 @@ pub struct LoadoutWriter<'w, 's> {
 }
 
 #[derive(SystemParam)]
-pub struct LoadoutPrep<'w, 's, TAssetServer = AssetServer>
-where
-	TAssetServer: Resource + LoadAsset,
-{
+pub struct LoadoutPrep<'w, 's> {
 	commands: ZyheedaCommands<'w, 's>,
 	slots: Query<'w, 's, &'static mut Slots>,
 	inventories: Query<'w, 's, &'static mut Inventory>,
 	bone_definitions: Query<'w, 's, (), With<BoneDefinitions>>,
-	asset_server: ResMut<'w, TAssetServer>,
 }

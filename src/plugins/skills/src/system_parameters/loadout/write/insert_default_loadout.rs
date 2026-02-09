@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use common::{
 	tools::inventory_key::InventoryKey,
 	traits::{
-		accessors::get::{GetContextMut, GetMut},
+		accessors::get::{GetContextMut, GetMut, TryApplyOn},
 		handles_loadout::{
 			LoadoutKey,
 			insert_default_loadout::{InsertDefaultLoadout, NotLoadedOut},
@@ -14,57 +14,66 @@ use common::{
 		load_asset::LoadAsset,
 		loadout::ItemName,
 	},
-	zyheeda_commands::ZyheedaEntityCommands,
+	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
 
-impl<TAssetServer> InsertDefaultLoadout for PrepareLoadout<'_, TAssetServer>
-where
-	TAssetServer: Resource + LoadAsset,
-{
+impl InsertDefaultLoadout for DefaultLoadout<'_> {
 	fn insert_default_loadout<TItems>(&mut self, loadout: TItems)
 	where
 		TItems: IntoIterator<Item = (LoadoutKey, Option<ItemName>)>,
 	{
+		let loadout = loadout.into_iter().collect();
+		self.entity
+			.trigger(move |entity| InsertLoadoutEvent { entity, loadout });
+	}
+}
+
+pub struct DefaultLoadout<'ctx> {
+	entity: ZyheedaEntityCommands<'ctx>,
+}
+
+impl DefaultLoadout<'_> {
+	fn asset_path(name: &ItemName) -> String {
+		format!("items/{name}.item")
+	}
+
+	pub(crate) fn insert<TAssetServer>(
+		on_insert_loadout: On<InsertLoadoutEvent>,
+		mut commands: ZyheedaCommands,
+		mut server: ResMut<TAssetServer>,
+	) where
+		TAssetServer: Resource + LoadAsset,
+	{
 		let mut slots = Slots::default();
 		let mut inventory = Inventory::default();
 
-		for (key, name) in loadout.into_iter() {
-			let item = name.map(|name| self.server.load_asset(asset_path(name)));
+		for (key, name) in &on_insert_loadout.loadout {
+			let item = name
+				.as_ref()
+				.map(|name| server.load_asset(Self::asset_path(name)));
+
 			match key {
 				LoadoutKey::Inventory(InventoryKey(key)) => {
-					inventory.fill_up_to(key);
-					inventory.0[key] = item;
+					inventory.fill_up_to(*key);
+					inventory.0[*key] = item;
 				}
 				LoadoutKey::Slot(key) => {
-					slots.items.insert(key, item);
+					slots.items.insert(*key, item);
 				}
 			}
 		}
 
-		self.entity.try_insert_if_new((Loadout, inventory, slots));
+		commands.try_apply_on(&on_insert_loadout.entity, move |mut e| {
+			e.try_insert_if_new((Loadout, inventory, slots));
+		});
 	}
 }
 
-fn asset_path(name: ItemName) -> String {
-	format!("items/{name}.item")
-}
-
-pub struct PrepareLoadout<'ctx, TAssetServer>
-where
-	TAssetServer: Resource + LoadAsset,
-{
-	entity: ZyheedaEntityCommands<'ctx>,
-	server: &'ctx mut TAssetServer,
-}
-
-impl<TAssetServer> GetContextMut<NotLoadedOut> for LoadoutPrep<'_, '_, TAssetServer>
-where
-	TAssetServer: Resource + LoadAsset,
-{
-	type TContext<'ctx> = PrepareLoadout<'ctx, TAssetServer>;
+impl GetContextMut<NotLoadedOut> for LoadoutPrep<'_, '_> {
+	type TContext<'ctx> = DefaultLoadout<'ctx>;
 
 	fn get_context_mut<'ctx>(
-		param: &'ctx mut LoadoutPrep<TAssetServer>,
+		param: &'ctx mut LoadoutPrep,
 		NotLoadedOut { entity }: NotLoadedOut,
 	) -> Option<Self::TContext<'ctx>> {
 		if param.inventories.contains(entity) && param.slots.contains(entity) {
@@ -72,10 +81,15 @@ where
 		}
 
 		let entity = param.commands.get_mut(&entity)?;
-		let server = param.asset_server.as_mut();
 
-		Some(PrepareLoadout { entity, server })
+		Some(DefaultLoadout { entity })
 	}
+}
+
+#[derive(EntityEvent, Debug, PartialEq)]
+pub(crate) struct InsertLoadoutEvent {
+	entity: Entity,
+	loadout: Vec<(LoadoutKey, Option<ItemName>)>,
 }
 
 #[cfg(test)]
@@ -98,6 +112,7 @@ mod tests {
 
 		app.init_resource::<Assets<Skill>>();
 		app.insert_resource(server);
+		app.add_observer(DefaultLoadout::insert::<MockAssetServer>);
 
 		app
 	}
@@ -124,7 +139,7 @@ mod tests {
 		let entity = app.world_mut().spawn_empty().id();
 
 		app.world_mut()
-			.run_system_once(move |mut loadout: LoadoutPrep<MockAssetServer>| {
+			.run_system_once(move |mut loadout: LoadoutPrep| {
 				let key = NotLoadedOut { entity };
 				let mut ctx = LoadoutPrep::get_context_mut(&mut loadout, key).unwrap();
 				ctx.insert_default_loadout([
@@ -173,7 +188,7 @@ mod tests {
 		let entity = app.world_mut().spawn_empty().id();
 
 		app.world_mut()
-			.run_system_once(move |mut loadout: LoadoutPrep<MockAssetServer>| {
+			.run_system_once(move |mut loadout: LoadoutPrep| {
 				let key = NotLoadedOut { entity };
 				let mut ctx = LoadoutPrep::get_context_mut(&mut loadout, key).unwrap();
 				ctx.insert_default_loadout([
@@ -208,11 +223,11 @@ mod tests {
 			.spawn((Slots::default(), Inventory::default()))
 			.id();
 
-		let ctx_is_none =
-			app.world_mut()
-				.run_system_once(move |mut loadout: LoadoutPrep<MockAssetServer>| {
-					LoadoutPrep::get_context_mut(&mut loadout, NotLoadedOut { entity }).is_none()
-				})?;
+		let ctx_is_none = app
+			.world_mut()
+			.run_system_once(move |mut loadout: LoadoutPrep| {
+				LoadoutPrep::get_context_mut(&mut loadout, NotLoadedOut { entity }).is_none()
+			})?;
 
 		assert!(ctx_is_none);
 		Ok(())
@@ -249,7 +264,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once(move |mut loadout: LoadoutPrep<MockAssetServer>| {
+			.run_system_once(move |mut loadout: LoadoutPrep| {
 				let key = NotLoadedOut { entity };
 				let mut ctx = LoadoutPrep::get_context_mut(&mut loadout, key).unwrap();
 				ctx.insert_default_loadout([
@@ -309,7 +324,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once(move |mut loadout: LoadoutPrep<MockAssetServer>| {
+			.run_system_once(move |mut loadout: LoadoutPrep| {
 				let key = NotLoadedOut { entity };
 				let mut ctx = LoadoutPrep::get_context_mut(&mut loadout, key).unwrap();
 				ctx.insert_default_loadout([
@@ -347,7 +362,7 @@ mod tests {
 		let entity = app.world_mut().spawn_empty().id();
 
 		app.world_mut()
-			.run_system_once(move |mut loadout: LoadoutPrep<MockAssetServer>| {
+			.run_system_once(move |mut loadout: LoadoutPrep| {
 				let key = NotLoadedOut { entity };
 				let mut ctx = LoadoutPrep::get_context_mut(&mut loadout, key).unwrap();
 				ctx.insert_default_loadout([]);
