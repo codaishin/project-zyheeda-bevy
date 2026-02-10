@@ -58,7 +58,6 @@ uuid.workspace = true
 agents = { path = "src/plugins/agents" }
 animations = { path = "src/plugins/animations" }
 bars = { path = "src/plugins/bars" }
-behaviors = { path = "src/plugins/behaviors" }
 camera_control = { path = "src/plugins/camera_control" }
 common.workspace = true
 frame_limiter = { path = "src/plugins/frame_limiter" }
@@ -67,6 +66,7 @@ loading = { path = "src/plugins/loading" }
 localization = { path = "src/plugins/localization" }
 map_generation = { path = "src/plugins/map_generation" }
 menu = { path = "src/plugins/menu" }
+movement = { path = "src/plugins/movement" }
 graphics = { path = "src/plugins/graphics" }
 input = { path = "src/plugins/input" }
 path_finding = { path = "src/plugins/path_finding" }

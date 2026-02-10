@@ -1,5 +1,5 @@
 [package]
-name = "behaviors"
+name = "movement"
 version.workspace = true
 edition.workspace = true
 

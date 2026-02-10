@@ -1,7 +1,6 @@
 use agents::AgentsPlugin;
 use animations::AnimationsPlugin;
 use bars::BarsPlugin;
-use behaviors::BehaviorsPlugin;
 use bevy::prelude::*;
 use camera_control::CameraControlPlugin;
 use common::CommonPlugin;
@@ -13,6 +12,7 @@ use loading::LoadingPlugin;
 use localization::LocalizationPlugin;
 use map_generation::MapGenerationPlugin;
 use menu::MenuPlugin;
+use movement::MovementPlugin;
 use path_finding::PathFindingPlugin;
 use physics::PhysicsPlugin;
 use savegame::SavegamePlugin;
@@ -52,10 +52,10 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let light = LightPlugin::from_plugin(&savegame);
 	let map_generation = MapGenerationPlugin::from_plugins(&loading, &savegame, &physics, &light);
 	let path_finding = PathFindingPlugin::from_plugin(&map_generation);
-	let behaviors =
-		BehaviorsPlugin::from_plugins(&input, &savegame, &animations, &physics, &path_finding);
+	let movement =
+		MovementPlugin::from_plugins(&input, &savegame, &animations, &physics, &path_finding);
 	let graphics = GraphicsPlugin::from_plugins(&loading, &savegame, &physics);
-	let skills = SkillsPlugin::from_plugins(&savegame, &physics, &loading, &behaviors);
+	let skills = SkillsPlugin::from_plugins(&savegame, &physics, &loading, &movement);
 	let agents = AgentsPlugin::from_plugins(
 		&loading,
 		&input,
@@ -63,7 +63,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		&physics,
 		&animations,
 		&map_generation,
-		&behaviors,
+		&movement,
 		&skills,
 	);
 	let menus = MenuPlugin::from_plugins(
@@ -86,7 +86,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		.add_plugins(agents)
 		.add_plugins(animations)
 		.add_plugins(bars)
-		.add_plugins(behaviors)
+		.add_plugins(movement)
 		.add_plugins(camera_control)
 		.add_plugins(graphics)
 		.add_plugins(physics)
