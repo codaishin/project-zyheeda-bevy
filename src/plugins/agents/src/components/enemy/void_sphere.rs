@@ -39,6 +39,7 @@ use std::{collections::HashMap, f32::consts::PI, sync::LazyLock, time::Duration}
 #[derive(Component, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
 #[component(immutable)]
 #[require(
+	Name = "Void Sphere",
 	Enemy = Self::enemy(),
 	EnemyAttackConfig = Self::attack_config(),
 	MovementConfig = Self::movement_config(),

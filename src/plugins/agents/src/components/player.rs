@@ -23,8 +23,8 @@ use std::sync::LazyLock;
 #[derive(Component, Default, Debug, PartialEq, Clone)]
 #[component(immutable)]
 #[require(
-	MovementConfig = PLAYER_RUN.clone(),
 	Name = "Player",
+	MovementConfig = PLAYER_RUN.clone(),
 	GroundOffset = GROUND_OFFSET,
 )]
 pub struct Player;
