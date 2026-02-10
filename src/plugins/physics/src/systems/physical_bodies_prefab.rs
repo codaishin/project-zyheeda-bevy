@@ -64,7 +64,7 @@ fn apply_definition(
 	let mut entity = commands.spawn((
 		ColliderOf(entity),
 		ChildOf(entity),
-		Transform::from_translation(definition.center_offset).with_rotation(definition.rotation),
+		Transform::from_rotation(definition.rotation),
 		ColliderShape::from(definition.shape),
 	));
 
@@ -111,29 +111,6 @@ mod tests {
 		assert_eq!(
 			Some(&ColliderShape::from(shape)),
 			child.get::<ColliderShape>(),
-		);
-	}
-
-	#[test]
-	fn spawn_with_offset() {
-		let mut app = setup();
-		let shape = Shape::Sphere {
-			radius: Units::from(42.),
-		};
-		let offset = Vec3::ONE;
-		let entity = app
-			.world_mut()
-			.spawn(PhysicalBody(
-				Body::from_shape(shape).with_center_offset(offset),
-			))
-			.id();
-
-		app.update();
-
-		let [child] = assert_children_count!(1, app, entity);
-		assert_eq!(
-			Some(&Transform::from_translation(offset)),
-			child.get::<Transform>(),
 		);
 	}
 
