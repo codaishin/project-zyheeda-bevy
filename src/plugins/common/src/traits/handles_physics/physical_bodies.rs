@@ -15,7 +15,6 @@ pub struct Body {
 	pub shape: Shape,
 	pub physics_type: PhysicsType,
 	pub blocker_types: HashSet<Blocker>,
-	pub center_offset: Vec3,
 	pub rotation: Quat,
 }
 
@@ -25,14 +24,8 @@ impl Body {
 			shape,
 			physics_type: PhysicsType::Terrain,
 			blocker_types: HashSet::from([Blocker::Physical]),
-			center_offset: Vec3::ZERO,
 			rotation: Quat::IDENTITY,
 		}
-	}
-
-	pub fn with_center_offset(mut self, center_offset: Vec3) -> Self {
-		self.center_offset = center_offset;
-		self
 	}
 
 	pub fn with_rotation(mut self, rotation: Quat) -> Self {

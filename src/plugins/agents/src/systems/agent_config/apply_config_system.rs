@@ -31,7 +31,7 @@ impl ApplyAgentConfig {
 		mut skills_param: StaticSystemParam<TSkills>,
 		mut animations_param: StaticSystemParam<TAnimations>,
 		mut commands: ZyheedaCommands,
-		agents: Query<(Entity, &AgentConfig), With<Self>>,
+		agents: Query<(Entity, &AgentConfig, &mut Transform), With<Self>>,
 		configs: Res<Assets<AgentConfigAsset>>,
 	) where
 		TLoadout: SystemParam
@@ -43,7 +43,7 @@ impl ApplyAgentConfig {
 			SystemParam + for<'c> GetContextMut<Animations, TContext<'c>: RegisterAnimations>,
 		TAttributes: Component + From<PhysicalDefaultAttributes>,
 	{
-		for (entity, AgentConfig { config_handle }) in agents {
+		for (entity, AgentConfig { config_handle }, mut transform) in agents {
 			let Some(config) = configs.get(config_handle) else {
 				continue;
 			};
@@ -71,6 +71,8 @@ impl ApplyAgentConfig {
 			if let Some(mut ctx) = TAnimations::get_context_mut(&mut animations_param, animations) {
 				ctx.register_animations(&config.animations, &config.animation_mask_groups);
 			}
+
+			transform.translation += config.ground_offset;
 
 			commands.try_apply_on(&entity, |mut e| {
 				match &config.agent_model {
@@ -288,6 +290,7 @@ mod tests {
 				IsChanged::<_Animations>::detect,
 				IsChanged::<AssetModel>::detect,
 				IsChanged::<_Attributes>::detect,
+				IsChanged::<Transform>::detect,
 			)
 				.chain(),
 		);
@@ -313,6 +316,7 @@ mod tests {
 				.world_mut()
 				.spawn((
 					ApplyAgentConfig,
+					Transform::default(),
 					AgentConfig { config_handle },
 					_Loadout::default(),
 				))
@@ -357,6 +361,7 @@ mod tests {
 			let mut app = setup([(&config_handle, config)]);
 			app.world_mut().spawn((
 				ApplyAgentConfig,
+				Transform::default(),
 				AgentConfig { config_handle },
 				_Loadout {
 					bones: Mock_Bones::new_mock(|mock| {
@@ -396,6 +401,7 @@ mod tests {
 			let mut app = setup([(&config_handle, asset)]);
 			app.world_mut().spawn((
 				ApplyAgentConfig,
+				Transform::default(),
 				AgentConfig { config_handle },
 				_Skills::new().with_mock(|mock| {
 					mock.expect_register_definition()
@@ -441,6 +447,7 @@ mod tests {
 			let mut app = setup([(&config_handle, asset)]);
 			app.world_mut().spawn((
 				ApplyAgentConfig,
+				Transform::default(),
 				AgentConfig { config_handle },
 				_Animations::new().with_mock(move |mock| {
 					mock.expect_register_animations()
@@ -467,7 +474,11 @@ mod tests {
 			let mut app = setup([(&config_handle, config)]);
 			let entity = app
 				.world_mut()
-				.spawn((ApplyAgentConfig, AgentConfig { config_handle }))
+				.spawn((
+					ApplyAgentConfig,
+					Transform::default(),
+					AgentConfig { config_handle },
+				))
 				.id();
 
 			app.update();
@@ -497,12 +508,44 @@ mod tests {
 			let mut app = setup([(&config_handle, config)]);
 			let entity = app
 				.world_mut()
-				.spawn((ApplyAgentConfig, AgentConfig { config_handle }))
+				.spawn((
+					ApplyAgentConfig,
+					Transform::default(),
+					AgentConfig { config_handle },
+				))
 				.id();
 
 			app.update();
 
 			assert_eq!(Some(&_Model), app.world().entity(entity).get::<_Model>());
+		}
+	}
+	mod apply_ground_offset {
+		use super::*;
+
+		#[test]
+		fn update_transform() {
+			let config_handle = new_handle();
+			let config = AgentConfigAsset {
+				ground_offset: Vec3::new(5., 6., 7.),
+				..default()
+			};
+			let mut app = setup([(&config_handle, config)]);
+			let entity = app
+				.world_mut()
+				.spawn((
+					ApplyAgentConfig,
+					Transform::from_xyz(1., 2., 3.),
+					AgentConfig { config_handle },
+				))
+				.id();
+
+			app.update();
+
+			assert_eq!(
+				Some(&Transform::from_xyz(6., 8., 10.)),
+				app.world().entity(entity).get::<Transform>()
+			);
 		}
 	}
 
@@ -526,7 +569,11 @@ mod tests {
 			)]);
 			let entity = app
 				.world_mut()
-				.spawn((ApplyAgentConfig, AgentConfig { config_handle }))
+				.spawn((
+					ApplyAgentConfig,
+					Transform::default(),
+					AgentConfig { config_handle },
+				))
 				.id();
 
 			app.update();
@@ -552,6 +599,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				ApplyAgentConfig,
+				Transform::default(),
 				AgentConfig { config_handle },
 				_Loadout::default(),
 				_Skills::default(),
@@ -569,6 +617,7 @@ mod tests {
 				Some(&IsChanged::FALSE),
 				Some(&IsChanged::FALSE),
 				Some(&IsChanged::FALSE),
+				Some(&IsChanged::FALSE),
 			),
 			(
 				app.world().entity(entity).get::<IsChanged<_Loadout>>(),
@@ -576,6 +625,7 @@ mod tests {
 				app.world().entity(entity).get::<IsChanged<_Animations>>(),
 				app.world().entity(entity).get::<IsChanged<AssetModel>>(),
 				app.world().entity(entity).get::<IsChanged<_Attributes>>(),
+				app.world().entity(entity).get::<IsChanged<Transform>>(),
 			),
 		);
 	}
@@ -615,6 +665,7 @@ mod tests {
 				Some(&IsChanged::TRUE),
 				Some(&IsChanged::TRUE),
 				Some(&IsChanged::TRUE),
+				Some(&IsChanged::TRUE),
 			),
 			(
 				app.world().entity(entity).get::<IsChanged<_Loadout>>(),
@@ -622,6 +673,7 @@ mod tests {
 				app.world().entity(entity).get::<IsChanged<_Animations>>(),
 				app.world().entity(entity).get::<IsChanged<AssetModel>>(),
 				app.world().entity(entity).get::<IsChanged<_Attributes>>(),
+				app.world().entity(entity).get::<IsChanged<Transform>>(),
 			),
 		);
 	}

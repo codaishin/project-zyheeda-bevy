@@ -7,7 +7,6 @@ use bevy::{
 	prelude::*,
 };
 use common::{
-	components::ground_offset::GroundOffset,
 	traits::{
 		accessors::get::TryApplyOn,
 		handles_physics::{Raycast, SolidObjects},
@@ -20,7 +19,7 @@ impl Enemy {
 		mut commands: ZyheedaCommands,
 		mut raycast: StaticSystemParam<TRaycast>,
 		players: Query<(Entity, &Transform), With<Player>>,
-		enemies: Query<(Entity, &Self, &Transform, Option<&GroundOffset>)>,
+		enemies: Query<(Entity, &Self, &Transform)>,
 	) where
 		TRaycast: for<'w, 's> SystemParam<Item<'w, 's>: Raycast<SolidObjects>>,
 	{
@@ -28,17 +27,16 @@ impl Enemy {
 			return;
 		};
 
-		for (entity, enemy, transform, ground_offset) in &enemies {
+		for (entity, enemy, transform) in &enemies {
 			let mut attacking = || {
 				let direction = player_transform.translation - transform.translation;
 				if direction.length() > *enemy.attack_range {
 					return None;
 				};
 				let direction = Dir3::try_from(direction).ok()?;
-				let ground_offset = ground_offset.map(|GroundOffset(o)| *o).unwrap_or_default();
 				let hit = raycast.raycast(SolidObjects {
 					ray: Ray3d {
-						origin: transform.translation + ground_offset,
+						origin: transform.translation,
 						direction,
 					},
 					exclude: vec![entity],
@@ -122,53 +120,6 @@ mod tests {
 				.with(eq(SolidObjects {
 					ray: Ray3d {
 						origin: Vec3::new(1., 2., 7.9),
-						direction: Dir3::try_from(Vec3::new(1., 2., 3.) - Vec3::new(1., 2., 7.9))
-							.unwrap(),
-					},
-					exclude: vec![enemy],
-					only_hoverable: false,
-				}))
-				.return_const(RaycastHit {
-					entity: player,
-					time_of_impact: 42.,
-				});
-		}));
-
-		app.update();
-
-		assert_eq!(
-			Some(&Attacking {
-				has_los: true,
-				player
-			}),
-			app.world().entity(enemy).get::<Attacking>(),
-		);
-	}
-
-	#[test]
-	fn in_attack_range_from_ground_offset() {
-		let mut app = setup();
-		let player = app
-			.world_mut()
-			.spawn((Player, Transform::from_xyz(1., 2., 3.)))
-			.id();
-		let enemy = app
-			.world_mut()
-			.spawn((
-				Enemy {
-					attack_range: Units::from(5.),
-					..default()
-				},
-				GroundOffset(Vec3::new(0., 2., 0.)),
-				Transform::from_xyz(1., 2., 7.9),
-			))
-			.id();
-		app.insert_resource(_Raycast::new().with_mock(|mock| {
-			mock.expect_raycast()
-				.once()
-				.with(eq(SolidObjects {
-					ray: Ray3d {
-						origin: Vec3::new(1., 4., 7.9),
 						direction: Dir3::try_from(Vec3::new(1., 2., 3.) - Vec3::new(1., 2., 7.9))
 							.unwrap(),
 					},
