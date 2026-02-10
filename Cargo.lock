@@ -392,22 +392,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 
 [[package]]
-name = "behaviors"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "common",
- "macros",
- "mockall",
- "serde",
- "serde_json",
- "test-case",
- "testing",
- "tracing",
- "zyheeda_core",
-]
-
-[[package]]
 name = "bevy"
 version = "0.17.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3741,6 +3725,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "movement"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "common",
+ "macros",
+ "mockall",
+ "serde",
+ "serde_json",
+ "test-case",
+ "testing",
+ "tracing",
+ "zyheeda_core",
+]
+
+[[package]]
 name = "naga"
 version = "26.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4713,7 +4713,6 @@ dependencies = [
  "agents",
  "animations",
  "bars",
- "behaviors",
  "bevy",
  "bevy-inspector-egui",
  "camera_control",
@@ -4730,6 +4729,7 @@ dependencies = [
  "map_generation",
  "menu",
  "mockall",
+ "movement",
  "path_finding",
  "physics",
  "savegame",

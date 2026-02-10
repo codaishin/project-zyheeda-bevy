@@ -62,16 +62,16 @@ use systems::{
 
 pub struct SkillsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSaveGame, TPhysics, TLoading, TBehaviors>
-	SkillsPlugin<(TSaveGame, TPhysics, TLoading, TBehaviors)>
+impl<TSaveGame, TPhysics, TLoading, TMovement>
+	SkillsPlugin<(TSaveGame, TPhysics, TLoading, TMovement)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillPhysics + HandlesRaycast,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
-	TBehaviors: ThreadSafe + HandlesOrientation + SystemSetDefinition,
+	TMovement: ThreadSafe + HandlesOrientation + SystemSetDefinition,
 {
 	#[allow(clippy::too_many_arguments)]
-	pub fn from_plugins(_: &TSaveGame, _: &TPhysics, _: &TLoading, _: &TBehaviors) -> Self {
+	pub fn from_plugins(_: &TSaveGame, _: &TPhysics, _: &TLoading, _: &TMovement) -> Self {
 		Self(PhantomData)
 	}
 
@@ -114,30 +114,25 @@ where
 				Queue::enqueue_system::<Slots>,
 				Combos::update::<Queue>,
 				flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
-				schedule_active_skill::<
-					Queue,
-					FacingSystemParamMut<TBehaviors>,
-					ActiveSkill,
-					Virtual,
-				>,
+				schedule_active_skill::<Queue, FacingSystemParamMut<TMovement>, ActiveSkill, Virtual>,
 				ActiveSkill::execute::<SkillSpawnerMut<TPhysics>, RaycastSystemParam<TPhysics>>,
 				flush::<Queue>,
 				HeldSlots::<Old>::update_from::<Current>,
 			)
 				.chain()
-				.before(TBehaviors::SYSTEMS)
+				.before(TMovement::SYSTEMS)
 				.run_if(in_state(GameState::Play)),
 		);
 	}
 }
 
-impl<TSaveGame, TPhysics, TLoading, TBehaviors> Plugin
-	for SkillsPlugin<(TSaveGame, TPhysics, TLoading, TBehaviors)>
+impl<TSaveGame, TPhysics, TLoading, TMovement> Plugin
+	for SkillsPlugin<(TSaveGame, TPhysics, TLoading, TMovement)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillPhysics + HandlesRaycast,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
-	TBehaviors: ThreadSafe + HandlesOrientation + SystemSetDefinition,
+	TMovement: ThreadSafe + HandlesOrientation + SystemSetDefinition,
 {
 	fn build(&self, app: &mut App) {
 		self.skill_load(app);

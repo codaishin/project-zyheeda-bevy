@@ -54,7 +54,7 @@ use systems::void_sphere::ring_rotation::ring_rotation;
 
 pub struct AgentsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TMaps, TBehaviors, TLoadout>
+impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TMaps, TMovement, TLoadout>
 	AgentsPlugin<(
 		TLoading,
 		TInput,
@@ -62,7 +62,7 @@ impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TMaps, TBehaviors, TLoa
 		TPhysics,
 		TAnimations,
 		TMaps,
-		TBehaviors,
+		TMovement,
 		TLoadout,
 	)>
 where
@@ -77,7 +77,7 @@ where
 		+ HandlesPhysicalSkillSpawnPoints,
 	TAnimations: ThreadSafe + HandlesAnimations,
 	TMaps: ThreadSafe + HandlesMapGeneration,
-	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation,
+	TMovement: ThreadSafe + HandlesMovement + HandlesOrientation,
 	TLoadout: ThreadSafe + HandlesLoadout,
 {
 	#[allow(clippy::too_many_arguments)]
@@ -88,14 +88,14 @@ where
 		_: &TPhysics,
 		_: &TAnimations,
 		_: &TMaps,
-		_: &TBehaviors,
+		_: &TMovement,
 		_: &TLoadout,
 	) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TMaps, TBehaviors, TLoadout> Plugin
+impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TMaps, TMovement, TLoadout> Plugin
 	for AgentsPlugin<(
 		TLoading,
 		TInput,
@@ -103,7 +103,7 @@ impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TMaps, TBehaviors, TLoa
 		TPhysics,
 		TAnimations,
 		TMaps,
-		TBehaviors,
+		TMovement,
 		TLoadout,
 	)>
 where
@@ -118,7 +118,7 @@ where
 		+ HandlesPhysicalSkillSpawnPoints,
 	TAnimations: ThreadSafe + HandlesAnimations,
 	TMaps: ThreadSafe + HandlesMapGeneration,
-	TBehaviors: ThreadSafe + HandlesMovement + HandlesOrientation,
+	TMovement: ThreadSafe + HandlesMovement + HandlesOrientation,
 	TLoadout: ThreadSafe + HandlesLoadout,
 {
 	fn build(&self, app: &mut App) {
@@ -160,8 +160,8 @@ where
 
 		// # Behaviors
 		app.register_required_components::<PlayerCamera, TPhysics::TWorldCamera>();
-		app.add_observer(Player::register_target_definition::<FacingSystemParamMut<TBehaviors>>);
-		app.add_observer(Enemy::register_target_definition::<FacingSystemParamMut<TBehaviors>>);
+		app.add_observer(Player::register_target_definition::<FacingSystemParamMut<TMovement>>);
+		app.add_observer(Enemy::register_target_definition::<FacingSystemParamMut<TMovement>>);
 		app.add_systems(
 			Update,
 			(
@@ -169,14 +169,14 @@ where
 					Player::movement::<
 						InputSystemParam<TInput>,
 						RaycastSystemParam<TPhysics>,
-						MovementSystemParamMut<TBehaviors>,
+						MovementSystemParamMut<TMovement>,
 					>,
 					Player::toggle_speed::<
 						InputSystemParam<TInput>,
-						MovementSystemParamMut<TBehaviors>,
+						MovementSystemParamMut<TMovement>,
 					>,
 					Player::animate_movement::<
-						MovementSystemParam<TBehaviors>,
+						MovementSystemParam<TMovement>,
 						AnimationsSystemParamMut<TAnimations>,
 					>
 						.pipe(OnError::log),
@@ -186,9 +186,9 @@ where
 				(
 					Enemy::attack_decision::<RaycastSystemParam<TPhysics>>,
 					Enemy::chase_decision,
-					Enemy::chase_player::<MovementSystemParamMut<TBehaviors>>,
+					Enemy::chase_player::<MovementSystemParamMut<TMovement>>,
 					Enemy::animate_movement::<
-						MovementSystemParam<TBehaviors>,
+						MovementSystemParam<TMovement>,
 						AnimationsSystemParamMut<TAnimations>,
 					>
 						.pipe(OnError::log),

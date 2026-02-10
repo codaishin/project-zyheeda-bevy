@@ -38,10 +38,10 @@ use components::{
 use std::marker::PhantomData;
 use systems::face::execute_face::execute_face;
 
-pub struct BehaviorsPlugin<TDependencies>(PhantomData<TDependencies>);
+pub struct MovementPlugin<TDependencies>(PhantomData<TDependencies>);
 
 impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding>
-	BehaviorsPlugin<(TInput, TSaveGame, TAnimations, TPhysics, TPathFinding)>
+	MovementPlugin<(TInput, TSaveGame, TAnimations, TPhysics, TPathFinding)>
 where
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
@@ -66,7 +66,7 @@ where
 }
 
 impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding> Plugin
-	for BehaviorsPlugin<(TInput, TSaveGame, TAnimations, TPhysics, TPathFinding)>
+	for MovementPlugin<(TInput, TSaveGame, TAnimations, TPhysics, TPathFinding)>
 where
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
@@ -120,7 +120,7 @@ where
 					MovementParam::<TPhysics::TMotion>::update_just_removed,
 				)
 					.chain()
-					.in_set(BehaviorSystems)
+					.in_set(MovementSystems)
 					.after(TInput::SYSTEMS)
 					.after(TAnimations::SYSTEMS)
 					.after(TPathFinding::SYSTEMS)
@@ -130,21 +130,21 @@ where
 	}
 }
 
-impl<TDependencies> HandlesOrientation for BehaviorsPlugin<TDependencies> {
+impl<TDependencies> HandlesOrientation for MovementPlugin<TDependencies> {
 	type TFaceSystemParam<'w, 's> = FaceParamMut<'w, 's>;
 }
 
 #[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub struct BehaviorSystems;
+pub struct MovementSystems;
 
-impl<TDependencies> SystemSetDefinition for BehaviorsPlugin<TDependencies> {
-	type TSystemSet = BehaviorSystems;
+impl<TDependencies> SystemSetDefinition for MovementPlugin<TDependencies> {
+	type TSystemSet = MovementSystems;
 
-	const SYSTEMS: Self::TSystemSet = BehaviorSystems;
+	const SYSTEMS: Self::TSystemSet = MovementSystems;
 }
 
 impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding> HandlesMovement
-	for BehaviorsPlugin<(TInput, TSaveGame, TAnimations, TPhysics, TPathFinding)>
+	for MovementPlugin<(TInput, TSaveGame, TAnimations, TPhysics, TPathFinding)>
 where
 	TPhysics: HandlesMotion,
 {
