@@ -21,6 +21,7 @@ pub struct AgentConfigAsset {
 	pub(crate) loadout: Loadout,
 	pub(crate) bones: Bones,
 	pub(crate) agent_model: AgentModel,
+	pub(crate) ground_offset: Vec3,
 	pub(crate) attributes: PhysicalDefaultAttributes,
 	pub(crate) animations: HashMap<AnimationKey, Animation>,
 	pub(crate) animation_mask_groups: HashMap<AnimationMaskBits, AffectedAnimationBones>,

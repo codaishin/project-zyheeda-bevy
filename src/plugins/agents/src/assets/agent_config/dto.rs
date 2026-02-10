@@ -28,14 +28,22 @@ pub struct AgentConfigDto {
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[allow(clippy::large_enum_variant)]
 pub(crate) enum Model {
-	Asset { model_path: String, bones: Bones },
+	Asset {
+		model_path: String,
+		bones: Bones,
+		ground_offset: Vec3,
+	},
 	Procedural(ProceduralModel),
 }
 
 impl Model {
-	fn definition(self) -> (AgentModel, Bones) {
+	fn definition(self) -> (AgentModel, Bones, Vec3) {
 		let procedural = match self {
-			Model::Asset { model_path, bones } => return (AgentModel::Asset(model_path), bones),
+			Model::Asset {
+				model_path,
+				bones,
+				ground_offset,
+			} => return (AgentModel::Asset(model_path), bones, ground_offset),
 			Model::Procedural(proc) => proc,
 		};
 
@@ -45,6 +53,7 @@ impl Model {
 					e.try_insert(VoidSphere);
 				}),
 				VoidSphere::bones(),
+				VoidSphere::GROUND_OFFSET,
 			),
 		}
 	}
@@ -68,12 +77,13 @@ impl TryLoadFrom<AgentConfigDto> for AgentConfigAsset {
 		}: AgentConfigDto,
 		_: &mut TLoadAsset,
 	) -> Result<Self, Self::TInstantiationError> {
-		let (agent_model, bones) = model.definition();
+		let (agent_model, bones, ground_offset) = model.definition();
 
 		Ok(AgentConfigAsset {
 			loadout,
 			bones,
 			agent_model,
+			ground_offset,
 			attributes,
 			animations,
 			animation_mask_groups,
@@ -85,8 +95,4 @@ impl AssetFileExtensions for AgentConfigDto {
 	fn asset_file_extensions() -> &'static [&'static str] {
 		&["agent"]
 	}
-}
-
-pub(crate) trait BonesConfig {
-	fn bones() -> Bones;
 }

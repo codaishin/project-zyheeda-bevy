@@ -28,6 +28,11 @@
 	"model": {
 		"Asset": {
 			"model_path": "models/player.glb",
+			"ground_offset": [
+				0,
+				0.65,
+				0
+			],
 			"bones": {
 				"spawners": {
 					"skill_spawn": "Neutral",

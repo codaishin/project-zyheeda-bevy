@@ -71,7 +71,6 @@ where
 			radius: *PLAYER_COLLIDER_RADIUS,
 		};
 		let body = Body::from_shape(shape)
-			.with_center_offset(GROUND_OFFSET)
 			.with_physics_type(PhysicsType::Agent)
 			.with_blocker_types([Blocker::Character]);
 
