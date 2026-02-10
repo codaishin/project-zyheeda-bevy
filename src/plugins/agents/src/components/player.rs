@@ -29,7 +29,7 @@ use std::sync::LazyLock;
 )]
 pub struct Player;
 
-static GROUND_OFFSET: Vec3 = Vec3::new(0., 0.7, 0.);
+static GROUND_OFFSET: Vec3 = Vec3::new(0., 0.65, 0.);
 static PLAYER_COLLIDER_RADIUS: LazyLock<Units> = LazyLock::new(|| Units::from(0.2));
 static PLAYER_COLLIDER_HEIGHT: LazyLock<Units> = LazyLock::new(|| Units::from(0.4));
 pub(crate) static PLAYER_RUN: LazyLock<MovementConfig> = LazyLock::new(|| MovementConfig {
