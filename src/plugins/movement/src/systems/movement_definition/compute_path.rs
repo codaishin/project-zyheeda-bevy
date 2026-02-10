@@ -83,7 +83,7 @@ impl MovementDefinition {
 		let Some(path) = computer.compute_path(start, end, self.radius) else {
 			return VecDeque::from([]);
 		};
-		let mut path = path.peekable();
+		let mut path = path.map(|v| v.with_y(start.y)).peekable();
 
 		match path.peek() {
 			Some(first) if first == &start => VecDeque::from_iter(path.skip(1)),
@@ -195,9 +195,52 @@ mod test_new_path {
 			assert_eq!(
 				Some(&PathOrDirection::<_MoveMethod> {
 					mode: Mode::Path(VecDeque::from([
+						Vec3::new(1., 0., 1.),
+						Vec3::new(2., 0., 2.),
+						Vec3::new(3., 0., 3.),
+					])),
+					_m: PhantomData,
+				}),
+				app.world()
+					.entity(entity)
+					.get::<PathOrDirection<_MoveMethod>>()
+			);
+		}
+
+		#[test]
+		fn set_path_with_current_height() {
+			let mut app = setup();
+			let computer = app
+				.world_mut()
+				.spawn(_ComputePath::new().with_mock(|mock| {
+					mock.expect_compute_path().return_const(Some(iter![
 						Vec3::splat(1.),
 						Vec3::splat(2.),
 						Vec3::splat(3.),
+					]));
+				}))
+				.id();
+			let entity = app
+				.world_mut()
+				.spawn((
+					MovementDefinition {
+						radius: Units::from(1.),
+						..default()
+					},
+					Movement::<PathOrDirection<_MoveMethod>>::to(Vec3::default()),
+					GlobalTransform::from_xyz(0., 11., 0.),
+					_GetComputer(computer),
+				))
+				.id();
+
+			app.update();
+
+			assert_eq!(
+				Some(&PathOrDirection::<_MoveMethod> {
+					mode: Mode::Path(VecDeque::from([
+						Vec3::new(1., 11., 1.),
+						Vec3::new(2., 11., 2.),
+						Vec3::new(3., 11., 3.),
 					])),
 					_m: PhantomData,
 				}),
@@ -272,7 +315,10 @@ mod test_new_path {
 
 			assert_eq!(
 				Some(&PathOrDirection::<_MoveMethod> {
-					mode: Mode::Path(VecDeque::from([Vec3::splat(2.), Vec3::splat(3.)])),
+					mode: Mode::Path(VecDeque::from([
+						Vec3::new(2., 1., 2.),
+						Vec3::new(3., 1., 3.)
+					])),
 					_m: PhantomData,
 				}),
 				app.world()
