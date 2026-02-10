@@ -15,7 +15,7 @@ use bevy::{
 	utils::default,
 };
 use common::{
-	components::{ground_offset::GroundOffset, insert_asset::InsertAsset},
+	components::insert_asset::InsertAsset,
 	errors::Unreachable,
 	tools::{Units, UnitsPerSecond, action_key::slot::SlotKey, bone_name::BoneName},
 	traits::{
@@ -43,7 +43,6 @@ use std::{collections::HashMap, sync::LazyLock, time::Duration};
 	Enemy = Self::enemy(),
 	EnemyAttackConfig = Self::attack_config(),
 	MovementConfig = Self::movement_config(),
-	GroundOffset = GroundOffset(Self::GROUND_OFFSET),
 )]
 pub struct VoidSphere;
 

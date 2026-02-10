@@ -1,7 +1,6 @@
 use super::movement_config::MovementConfig;
 use bevy::prelude::*;
 use common::{
-	components::ground_offset::GroundOffset,
 	errors::Unreachable,
 	tools::{Units, UnitsPerSecond},
 	traits::{
@@ -25,11 +24,9 @@ use std::sync::LazyLock;
 #[require(
 	Name = "Player",
 	MovementConfig = PLAYER_RUN.clone(),
-	GroundOffset = GROUND_OFFSET,
 )]
 pub struct Player;
 
-static GROUND_OFFSET: Vec3 = Vec3::new(0., 0.65, 0.);
 static PLAYER_COLLIDER_RADIUS: LazyLock<Units> = LazyLock::new(|| Units::from(0.2));
 static PLAYER_COLLIDER_HEIGHT: LazyLock<Units> = LazyLock::new(|| Units::from(0.4));
 pub(crate) static PLAYER_RUN: LazyLock<MovementConfig> = LazyLock::new(|| MovementConfig {
