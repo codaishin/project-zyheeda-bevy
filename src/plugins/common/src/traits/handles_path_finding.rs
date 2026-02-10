@@ -10,5 +10,9 @@ pub trait HandlesPathFinding {
 }
 
 pub trait ComputePath {
-	fn compute_path(&self, start: Vec3, end: Vec3, agent_radius: Units) -> Option<Vec<Vec3>>;
+	type TIter<'a>: Iterator<Item = Vec3>
+	where
+		Self: 'a;
+
+	fn compute_path(&self, start: Vec3, end: Vec3, agent_radius: Units) -> Option<Self::TIter<'_>>;
 }

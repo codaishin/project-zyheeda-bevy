@@ -85,6 +85,7 @@
 		"mockall",
 		"nanos",
 		"Numpad",
+		"peekable",
 		"quickbar",
 		"reborrow",
 		"savegame",

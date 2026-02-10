@@ -16,58 +16,6 @@ pub struct Navigation<TMethod, TGraph> {
 	pub(crate) method: TMethod,
 }
 
-impl<TMethod, TGraph> Navigation<TMethod, TGraph>
-where
-	TMethod: ComputePathLazy<TGraph>,
-	TGraph: Graph,
-{
-	fn replace_start(
-		&self,
-		node: &TGraph::TNode,
-		path: &[TGraph::TNode],
-		start_node: TGraph::TNode,
-		start: Vec3,
-		agent_radius: Units,
-	) -> Option<Vec<Vec3>> {
-		if node != &start_node {
-			return None;
-		}
-
-		let [_, next, ..] = path else {
-			return None;
-		};
-
-		Some(match self.graph.naive_path(start, next, agent_radius) {
-			NaivePath::Ok => vec![start],
-			NaivePath::PartialUntil(extra) => vec![start, extra],
-			NaivePath::CannotCompute => vec![self.graph.translation(node)],
-		})
-	}
-
-	fn replace_end(
-		&self,
-		node: &TGraph::TNode,
-		path: &[TGraph::TNode],
-		end_node: TGraph::TNode,
-		end: Vec3,
-		agent_radius: Units,
-	) -> Option<Vec<Vec3>> {
-		if node != &end_node {
-			return None;
-		};
-
-		let [.., next, _] = path else {
-			return None;
-		};
-
-		Some(match self.graph.naive_path(end, next, agent_radius) {
-			NaivePath::Ok => vec![end],
-			NaivePath::PartialUntil(extra) => vec![extra, end],
-			NaivePath::CannotCompute => vec![self.graph.translation(node)],
-		})
-	}
-}
-
 impl<'w, 's, TMap, TMethod, TGraph> DerivableFrom<'w, 's, TMap> for Navigation<TMethod, TGraph>
 where
 	for<'a> TGraph: From<&'a TMap> + ThreadSafe,
@@ -90,38 +38,165 @@ where
 	TMethod: ComputePathLazy<TGraph>,
 	TGraph: Graph,
 {
-	fn compute_path(&self, start: Vec3, end: Vec3, agent_radius: Units) -> Option<Vec<Vec3>> {
+	type TIter<'a>
+		= Iter<'a, TGraph>
+	where
+		Self: 'a;
+
+	fn compute_path(&self, start: Vec3, end: Vec3, agent_radius: Units) -> Option<Self::TIter<'_>> {
 		let start_node = self.graph.node(start)?;
 		let end_node = self.graph.node(end)?;
 
 		if start_node == end_node {
-			return Some(vec![start, end]);
+			return Some(Iter::Direct {
+				path: [start, end],
+				index: 0,
+			});
 		}
 
 		let path = self
 			.method
 			.compute_path(&self.graph, start_node, end_node)
-			.collect::<Vec<_>>();
+			.collect();
 
-		let path = path
-			.iter()
-			.flat_map(|node| {
-				let new_start = self.replace_start(node, &path, start_node, start, agent_radius);
-				if let Some(nodes) = new_start {
-					return nodes;
-				}
-
-				let new_end = self.replace_end(node, &path, end_node, end, agent_radius);
-				if let Some(nodes) = new_end {
-					return nodes;
-				}
-
-				vec![self.graph.translation(node)]
-			})
-			.collect::<Vec<_>>();
-
-		Some(path)
+		Some(Iter::Compute {
+			points: (start, end),
+			nodes: (start_node, end_node),
+			graph: &self.graph,
+			path,
+			path_index: 0,
+			agent_radius,
+			next_buffered: None,
+		})
 	}
+}
+
+pub enum Iter<'a, TGraph>
+where
+	TGraph: Graph,
+{
+	Direct {
+		path: [Vec3; 2],
+		index: u8,
+	},
+	Compute {
+		points: (Vec3, Vec3),
+		nodes: (TGraph::TNode, TGraph::TNode),
+		path: Vec<TGraph::TNode>,
+		path_index: usize,
+		next_buffered: Option<Vec3>,
+		graph: &'a TGraph,
+		agent_radius: Units,
+	},
+}
+
+impl<TGraph> Iterator for Iter<'_, TGraph>
+where
+	TGraph: Graph,
+{
+	type Item = Vec3;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		match self {
+			Iter::Direct { path, index } => {
+				let point = path.get(*index as usize)?;
+				*index += 1;
+				Some(*point)
+			}
+			Iter::Compute {
+				points,
+				nodes,
+				path,
+				path_index,
+				next_buffered,
+				graph,
+				agent_radius,
+			} => {
+				if let Some(next) = next_buffered.take() {
+					return Some(next);
+				}
+
+				let node = path.get(*path_index)?;
+				*path_index += 1;
+
+				match refine_start(*graph, node, path, nodes.0, points.0, *agent_radius) {
+					Some((start, None)) => {
+						return Some(start);
+					}
+					Some((start, Some(extra))) => {
+						*next_buffered = Some(extra);
+						return Some(start);
+					}
+					None => {}
+				}
+
+				match refine_end(*graph, node, path, nodes.1, points.1, *agent_radius) {
+					Some((end, None)) => {
+						return Some(end);
+					}
+					Some((extra, Some(end))) => {
+						*next_buffered = Some(end);
+						return Some(extra);
+					}
+					None => {}
+				}
+
+				Some(graph.translation(node))
+			}
+		}
+	}
+}
+
+fn refine_start<TGraph>(
+	graph: &TGraph,
+	node: &TGraph::TNode,
+	path: &[TGraph::TNode],
+	start_node: TGraph::TNode,
+	start: Vec3,
+	agent_radius: Units,
+) -> Option<(Vec3, Option<Vec3>)>
+where
+	TGraph: Graph,
+{
+	if node != &start_node {
+		return None;
+	}
+
+	let [_current, next, ..] = path else {
+		return None;
+	};
+
+	Some(match graph.naive_path(start, next, agent_radius) {
+		NaivePath::Ok => (start, None),
+		NaivePath::PartialUntil(extra) => (start, Some(extra)),
+		NaivePath::CannotCompute => (graph.translation(node), None),
+	})
+}
+
+fn refine_end<TGraph>(
+	graph: &TGraph,
+	node: &TGraph::TNode,
+	path: &[TGraph::TNode],
+	end_node: TGraph::TNode,
+	end: Vec3,
+	agent_radius: Units,
+) -> Option<(Vec3, Option<Vec3>)>
+where
+	TGraph: Graph,
+{
+	if node != &end_node {
+		return None;
+	};
+
+	let [.., last, _current] = path else {
+		return None;
+	};
+
+	Some(match graph.naive_path(end, last, agent_radius) {
+		NaivePath::Ok => (end, None),
+		NaivePath::PartialUntil(extra) => (extra, Some(end)),
+		NaivePath::CannotCompute => (graph.translation(node), None),
+	})
 }
 
 #[cfg(test)]
@@ -287,7 +362,7 @@ mod tests {
 			Some(Vec::from(path.map(|_Node(x, y, z)| Vec3::new(
 				x as f32, y as f32, z as f32
 			)))),
-			computed_path
+			computed_path.map(|p| p.collect()),
 		);
 	}
 
@@ -309,7 +384,7 @@ mod tests {
 		);
 		assert_eq!(
 			Some(vec![Vec3::new(0.8, 1., 1.3), Vec3::new(1.1, 1., 0.9)]),
-			path
+			path.map(|p| p.collect()),
 		);
 	}
 
@@ -354,7 +429,7 @@ mod tests {
 				Vec3::new(4., 4., 4.),
 				Vec3::new(2.1, 2., 1.9)
 			]),
-			path,
+			path.map(|p| p.collect()),
 		);
 	}
 
@@ -390,7 +465,7 @@ mod tests {
 				Vec3::new(4., 4., 4.),
 				Vec3::new(2.1, 2., 1.9)
 			]),
-			path,
+			path.map(|p| p.collect()),
 		);
 	}
 
@@ -426,7 +501,7 @@ mod tests {
 				Vec3::new(10., 10., 10.),
 				Vec3::new(4., 4., 4.),
 			]),
-			path,
+			path.map(|p| p.collect()),
 		);
 	}
 
@@ -472,7 +547,7 @@ mod tests {
 				Vec3::new(4.5, 4.5, 4.5),
 				Vec3::new(2.1, 2., 1.9)
 			]),
-			path,
+			path.map(|p| p.collect()),
 		);
 	}
 
@@ -532,7 +607,7 @@ mod tests {
 				Vec3::new(6., 6., 6.),
 				Vec3::new(2.1, 2., 1.9)
 			]),
-			path,
+			path.map(|p| p.collect()),
 		);
 	}
 
@@ -578,7 +653,7 @@ mod tests {
 				Vec3::new(4., 4., 4.),
 				Vec3::new(2., 2., 2.),
 			]),
-			path,
+			path.map(|p| p.collect()),
 		);
 	}
 
@@ -607,7 +682,7 @@ mod tests {
 			Vec3::new(2.1, 2., 1.9),
 			Units::from(0.1),
 		);
-		assert_eq!(Some(vec![Vec3::new(1., 1., 1.)]), path);
+		assert_eq!(Some(vec![Vec3::new(1., 1., 1.)]), path.map(|p| p.collect()));
 	}
 
 	#[test]
@@ -635,6 +710,6 @@ mod tests {
 			Vec3::new(2.1, 2., 1.9),
 			Units::from(0.1),
 		);
-		assert_eq!(Some(vec![Vec3::new(2., 2., 2.)]), path);
+		assert_eq!(Some(vec![Vec3::new(2., 2., 2.)]), path.map(|p| p.collect()));
 	}
 }
