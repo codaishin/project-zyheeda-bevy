@@ -1,5 +1,5 @@
 use crate::{
-	components::fix_points::FixPointsDefinition,
+	components::mount_points::MountPointsDefinition,
 	system_params::skill_spawner::SpawnPointContextMut,
 };
 use common::{
@@ -10,7 +10,7 @@ use std::collections::HashMap;
 
 impl RegisterDefinition for SpawnPointContextMut<'_> {
 	fn register_definition(&mut self, definition: HashMap<BoneName, SkillSpawner>) {
-		self.entity.try_insert(FixPointsDefinition(definition));
+		self.entity.try_insert(MountPointsDefinition(definition));
 	}
 }
 
@@ -18,10 +18,7 @@ impl RegisterDefinition for SpawnPointContextMut<'_> {
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::{
-		components::fix_points::FixPointsDefinition,
-		system_params::skill_spawner::SkillSpawnerMut,
-	};
+	use crate::system_params::skill_spawner::SkillSpawnerMut;
 	use bevy::{
 		app::{App, Update},
 		ecs::system::{RunSystemError, RunSystemOnce},
@@ -55,8 +52,10 @@ mod tests {
 			})?;
 
 		assert_eq!(
-			Some(&FixPointsDefinition(map)),
-			app.world().entity(entity).get::<FixPointsDefinition>(),
+			Some(&MountPointsDefinition(map)),
+			app.world()
+				.entity(entity)
+				.get::<MountPointsDefinition<SkillSpawner>>(),
 		);
 		Ok(())
 	}
