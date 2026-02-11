@@ -1,10 +1,18 @@
+use std::fmt::Display;
+
 use crate::{
-	components::fix_points::{Anchor, AnchorError, FixPoints, fix_point::FixPointSpawner},
-	traits::query_filter_definition::QueryFilterDefinition,
+	components::fix_points::Anchor,
+	system_params::mount_points_lookup::{MountPointsLookup, get_mount_point::MountPointError},
+	traits::{get_mount_point::GetMountPoint, query_filter_definition::QueryFilterDefinition},
 };
-use bevy::prelude::*;
+use bevy::{
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
+};
 use common::{
-	traits::{accessors::get::Get, or_ok::OrOk},
+	components::persistent_entity::PersistentEntity,
+	errors::{ErrorData, Level},
+	traits::{accessors::get::Get, handles_skill_physics::SkillSpawner, or_ok::OrOk},
 	zyheeda_commands::ZyheedaCommands,
 };
 
@@ -14,34 +22,50 @@ where
 {
 	pub(crate) fn system(
 		commands: ZyheedaCommands,
-		mut agents: Query<(&Self, &mut Transform), <Self as QueryFilterDefinition>::TFilter>,
-		fix_points: Query<(&FixPoints, &GlobalTransform)>,
-		spawners: Query<&FixPointSpawner>,
+		lookup: StaticSystemParam<MountPointsLookup<SkillSpawner>>,
+		agents: Query<(&Self, &mut Transform), <Self as QueryFilterDefinition>::TFilter>,
 		transforms: Query<&GlobalTransform>,
-	) -> Result<(), Vec<AnchorError>> {
+	) -> Result<(), Vec<AnchorError<MountPointError<SkillSpawner>>>> {
+		Self::system_internal(commands, lookup, agents, transforms)
+	}
+
+	fn system_internal<TLookup, TMountError>(
+		commands: ZyheedaCommands,
+		mut lookup: StaticSystemParam<TLookup>,
+		mut agents: Query<(&Self, &mut Transform), <Self as QueryFilterDefinition>::TFilter>,
+		transforms: Query<&GlobalTransform>,
+	) -> Result<(), Vec<AnchorError<TMountError>>>
+	where
+		TLookup: for<'w, 's> SystemParam<
+			Item<'w, 's>: GetMountPoint<SkillSpawner, TError = TMountError>,
+		>,
+	{
 		agents
 			.iter_mut()
 			.filter_map(|(anchor, mut anchor_transform)| {
 				let target = commands.get(&anchor.target)?;
-				let Ok((fix_points, target_transform)) = fix_points.get(target) else {
-					return Some(AnchorError::FixPointsMissingOn(anchor.target));
-				};
-				let Some(fix_point) = fix_points.iter().find(matching(anchor, &spawners)) else {
-					return Some(AnchorError::NoFixPointEntityFor(anchor.skill_spawner));
-				};
-				let Ok(fix_point_transform) = transforms.get(*fix_point) else {
-					return Some(AnchorError::GlobalTransformMissingOn(*fix_point));
+				let mount_point = match lookup.get_mount_point(target, anchor.skill_spawner) {
+					Ok(mount_point) => mount_point,
+					Err(error) => return Some(AnchorError::MountError(error)),
 				};
 
-				let fix_point_translation = fix_point_transform.translation();
-				if fix_point_translation.is_nan() {
-					return Some(AnchorError::FixPointTranslationNaN(*fix_point));
+				let Ok(target_transform) = transforms.get(target) else {
+					return Some(AnchorError::RootHasNoTransform(anchor.target));
+				};
+
+				let Ok(mount_point_transform) = transforms.get(mount_point) else {
+					return Some(AnchorError::MountHasNoTransform(mount_point));
+				};
+
+				let mount_point_translation = mount_point_transform.translation();
+				if mount_point_translation.is_nan() {
+					return Some(AnchorError::MountTranslationIsNan(mount_point));
 				}
 
-				anchor_transform.translation = fix_point_translation;
+				anchor_transform.translation = mount_point_translation;
 				let rotation = match anchor.use_target_rotation {
 					true => target_transform.rotation(),
-					false => fix_point_transform.rotation(),
+					false => mount_point_transform.rotation(),
 				};
 				anchor_transform.rotation = rotation;
 
@@ -52,22 +76,47 @@ where
 	}
 }
 
-fn matching<TFilter>(
-	anchor: &Anchor<TFilter>,
-	spawners: &Query<&FixPointSpawner>,
-) -> impl Fn(&&Entity) -> bool {
-	move |e| {
-		let Ok(FixPointSpawner(spawner)) = spawners.get(**e) else {
-			return false;
-		};
-		spawner == &anchor.skill_spawner
+#[derive(Debug, PartialEq)]
+pub(crate) enum AnchorError<TMountError> {
+	MountError(TMountError),
+	RootHasNoTransform(PersistentEntity),
+	MountHasNoTransform(Entity),
+	MountTranslationIsNan(Entity),
+}
+
+impl<TMountError> Display for AnchorError<TMountError>
+where
+	TMountError: Display,
+{
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			AnchorError::MountError(error) => write!(f, "{error}"),
+			AnchorError::RootHasNoTransform(e) => write!(f, "{e:?}: Has no transform"),
+			AnchorError::MountHasNoTransform(e) => write!(f, "{e}: Has no transform"),
+			AnchorError::MountTranslationIsNan(e) => write!(f, "{e}: Translation is NaN"),
+		}
+	}
+}
+
+impl<TMountError> ErrorData for AnchorError<TMountError>
+where
+	TMountError: ErrorData + Display,
+{
+	fn level(&self) -> Level {
+		Level::Error
+	}
+
+	fn label() -> impl std::fmt::Display {
+		"Anchor Error"
+	}
+
+	fn into_details(self) -> impl std::fmt::Display {
+		self
 	}
 }
 
 #[cfg(test)]
 mod tests {
-	use crate::components::fix_points::fix_point::FixPointOf;
-
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
@@ -78,7 +127,7 @@ mod tests {
 			register_persistent_entities::RegisterPersistentEntities,
 		},
 	};
-	use std::sync::LazyLock;
+	use std::{collections::HashMap, sync::LazyLock};
 	use testing::SingleThreadedApp;
 
 	struct _WithoutIgnore;
@@ -86,38 +135,69 @@ mod tests {
 	#[derive(Component)]
 	struct _Ignore;
 
+	#[derive(Resource)]
+	struct _Lookup {
+		mount_points: HashMap<(SkillSpawner, Entity), Entity>,
+	}
+
+	impl GetMountPoint<SkillSpawner> for ResMut<'_, _Lookup> {
+		type TError = _Error;
+
+		fn get_mount_point(
+			&mut self,
+			root: Entity,
+			key: SkillSpawner,
+		) -> Result<Entity, Self::TError> {
+			match self.mount_points.get(&(key, root)) {
+				Some(entity) => Ok(*entity),
+				None => Err(_Error),
+			}
+		}
+	}
+
+	#[derive(Debug, PartialEq)]
+	struct _Error;
+
 	impl QueryFilterDefinition for Anchor<_WithoutIgnore> {
 		type TFilter = Without<_Ignore>;
 	}
+
+	static AGENT: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.register_persistent_entities();
+		app.insert_resource(_Lookup {
+			mount_points: HashMap::default(),
+		});
 
 		app
 	}
 
-	static AGENT: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
-
 	#[test]
 	fn copy_location_translation() -> Result<(), RunSystemError> {
-		let mut app = setup();
 		let spawner_key = SkillSpawner::Slot(SlotKey(22));
-		let agent = app.world_mut().spawn(*AGENT).id();
-		app.world_mut().spawn((
-			FixPointOf(agent),
-			FixPointSpawner(spawner_key),
-			GlobalTransform::from_xyz(4., 11., 9.),
-		));
+		let mut app = setup();
+		let agent = app
+			.world_mut()
+			.spawn((*AGENT, GlobalTransform::default()))
+			.id();
+		let mount_point = app
+			.world_mut()
+			.spawn(GlobalTransform::from_xyz(4., 11., 9.))
+			.id();
 		let anchor = app
 			.world_mut()
 			.spawn(Anchor::<_WithoutIgnore>::to_target(*AGENT).on_spawner(spawner_key))
 			.id();
+		app.insert_resource(_Lookup {
+			mount_points: HashMap::from([((spawner_key, agent), mount_point)]),
+		});
 
-		_ = app
-			.world_mut()
-			.run_system_once(Anchor::<_WithoutIgnore>::system)?;
+		_ = app.world_mut().run_system_once(
+			Anchor::<_WithoutIgnore>::system_internal::<ResMut<_Lookup>, _Error>,
+		)?;
 
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 11., 9.)),
@@ -127,25 +207,30 @@ mod tests {
 	}
 
 	#[test]
-	fn copy_location_rotation_of_fix_point() -> Result<(), RunSystemError> {
+	fn copy_location_rotation_of_mount_point() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let spawner_key = SkillSpawner::Slot(SlotKey(22));
-		let agent = app.world_mut().spawn(*AGENT).id();
-		app.world_mut().spawn((
-			FixPointOf(agent),
-			FixPointSpawner(spawner_key),
-			GlobalTransform::from(
+		let agent = app
+			.world_mut()
+			.spawn((*AGENT, GlobalTransform::default()))
+			.id();
+		let mount_point = app
+			.world_mut()
+			.spawn(GlobalTransform::from(
 				Transform::from_xyz(4., 11., 9.).looking_to(Dir3::NEG_Z, Dir3::Y),
-			),
-		));
+			))
+			.id();
 		let anchor = app
 			.world_mut()
 			.spawn(Anchor::<_WithoutIgnore>::to_target(*AGENT).on_spawner(spawner_key))
 			.id();
+		app.insert_resource(_Lookup {
+			mount_points: HashMap::from([((spawner_key, agent), mount_point)]),
+		});
 
-		_ = app
-			.world_mut()
-			.run_system_once(Anchor::<_WithoutIgnore>::system)?;
+		_ = app.world_mut().run_system_once(
+			Anchor::<_WithoutIgnore>::system_internal::<ResMut<_Lookup>, _Error>,
+		)?;
 
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 11., 9.).looking_to(Dir3::NEG_Z, Dir3::Y)),
@@ -165,11 +250,10 @@ mod tests {
 				GlobalTransform::from(Transform::default().looking_to(Dir3::NEG_Z, Dir3::Y)),
 			))
 			.id();
-		app.world_mut().spawn((
-			FixPointOf(agent),
-			FixPointSpawner(spawner_key),
-			GlobalTransform::from_xyz(4., 11., 9.),
-		));
+		let mount_point = app
+			.world_mut()
+			.spawn(GlobalTransform::from_xyz(4., 11., 9.))
+			.id();
 		let anchor = app
 			.world_mut()
 			.spawn(
@@ -178,10 +262,13 @@ mod tests {
 					.with_target_rotation(),
 			)
 			.id();
+		app.insert_resource(_Lookup {
+			mount_points: HashMap::from([((spawner_key, agent), mount_point)]),
+		});
 
-		_ = app
-			.world_mut()
-			.run_system_once(Anchor::<_WithoutIgnore>::system)?;
+		_ = app.world_mut().run_system_once(
+			Anchor::<_WithoutIgnore>::system_internal::<ResMut<_Lookup>, _Error>,
+		)?;
 
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 11., 9.).looking_to(Dir3::NEG_Z, Dir3::Y)),
@@ -201,19 +288,23 @@ mod tests {
 				GlobalTransform::from(Transform::default().with_scale(Vec3::splat(2.))),
 			))
 			.id();
-		app.world_mut().spawn((
-			FixPointOf(agent),
-			FixPointSpawner(spawner_key),
-			GlobalTransform::from(Transform::from_xyz(4., 11., 9.).with_scale(Vec3::splat(2.))),
-		));
+		let mount_point = app
+			.world_mut()
+			.spawn(GlobalTransform::from(
+				Transform::from_xyz(4., 11., 9.).with_scale(Vec3::splat(2.)),
+			))
+			.id();
 		let anchor = app
 			.world_mut()
 			.spawn(Anchor::<_WithoutIgnore>::to_target(*AGENT).on_spawner(spawner_key))
 			.id();
+		app.insert_resource(_Lookup {
+			mount_points: HashMap::from([((spawner_key, agent), mount_point)]),
+		});
 
-		_ = app
-			.world_mut()
-			.run_system_once(Anchor::<_WithoutIgnore>::system)?;
+		_ = app.world_mut().run_system_once(
+			Anchor::<_WithoutIgnore>::system_internal::<ResMut<_Lookup>, _Error>,
+		)?;
 
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 11., 9.)),
@@ -226,12 +317,14 @@ mod tests {
 	fn apply_filter() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let spawner_key = SkillSpawner::Slot(SlotKey(22));
-		let agent = app.world_mut().spawn(*AGENT).id();
-		app.world_mut().spawn((
-			FixPointOf(agent),
-			FixPointSpawner(spawner_key),
-			GlobalTransform::from_xyz(4., 11., 9.),
-		));
+		let agent = app
+			.world_mut()
+			.spawn((*AGENT, GlobalTransform::default()))
+			.id();
+		let mount_point = app
+			.world_mut()
+			.spawn(GlobalTransform::from_xyz(4., 11., 9.))
+			.id();
 		let anchor = app
 			.world_mut()
 			.spawn((
@@ -239,10 +332,13 @@ mod tests {
 				_Ignore,
 			))
 			.id();
+		app.insert_resource(_Lookup {
+			mount_points: HashMap::from([((spawner_key, agent), mount_point)]),
+		});
 
-		_ = app
-			.world_mut()
-			.run_system_once(Anchor::<_WithoutIgnore>::system)?;
+		_ = app.world_mut().run_system_once(
+			Anchor::<_WithoutIgnore>::system_internal::<ResMut<_Lookup>, _Error>,
+		)?;
 
 		assert_eq!(
 			Some(&Transform::default()),
@@ -252,94 +348,91 @@ mod tests {
 	}
 
 	#[test]
-	fn fix_point_missing() -> Result<(), RunSystemError> {
+	fn return_mount_error() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let spawner_key = SkillSpawner::Slot(SlotKey(22));
 		app.world_mut().spawn(*AGENT);
-		app.world_mut().spawn((
-			FixPointSpawner(spawner_key),
-			GlobalTransform::from_xyz(4., 11., 9.),
-		));
 		app.world_mut()
 			.spawn(Anchor::<_WithoutIgnore>::to_target(*AGENT).on_spawner(spawner_key));
 
-		let errors = app
-			.world_mut()
-			.run_system_once(Anchor::<_WithoutIgnore>::system)?;
+		let errors = app.world_mut().run_system_once(
+			Anchor::<_WithoutIgnore>::system_internal::<ResMut<_Lookup>, _Error>,
+		)?;
 
-		assert_eq!(Err(vec![AnchorError::FixPointsMissingOn(*AGENT)]), errors);
+		assert_eq!(Err(vec![AnchorError::MountError(_Error)]), errors);
 		Ok(())
 	}
 
 	#[test]
-	fn fix_point_entity_missing() -> Result<(), RunSystemError> {
+	fn return_root_no_transform_error() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let spawner_key = SkillSpawner::Slot(SlotKey(22));
 		let agent = app.world_mut().spawn(*AGENT).id();
-		app.world_mut().spawn((
-			FixPointOf(agent),
-			FixPointSpawner(SkillSpawner::Slot(SlotKey(11))),
-			GlobalTransform::from_xyz(4., 11., 9.),
-		));
+		let mount_point = app.world_mut().spawn_empty().id();
 		app.world_mut()
 			.spawn(Anchor::<_WithoutIgnore>::to_target(*AGENT).on_spawner(spawner_key));
+		app.insert_resource(_Lookup {
+			mount_points: HashMap::from([((spawner_key, agent), mount_point)]),
+		});
 
-		let errors = app
+		let errors = app.world_mut().run_system_once(
+			Anchor::<_WithoutIgnore>::system_internal::<ResMut<_Lookup>, _Error>,
+		)?;
+
+		assert_eq!(Err(vec![AnchorError::RootHasNoTransform(*AGENT)]), errors);
+		Ok(())
+	}
+
+	#[test]
+	fn return_mount_point_no_transform_error() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let spawner_key = SkillSpawner::Slot(SlotKey(22));
+		let agent = app
 			.world_mut()
-			.run_system_once(Anchor::<_WithoutIgnore>::system)?;
+			.spawn((*AGENT, GlobalTransform::default()))
+			.id();
+		let mount_point = app.world_mut().spawn_empty().id();
+		app.world_mut()
+			.spawn(Anchor::<_WithoutIgnore>::to_target(*AGENT).on_spawner(spawner_key));
+		app.insert_resource(_Lookup {
+			mount_points: HashMap::from([((spawner_key, agent), mount_point)]),
+		});
+
+		let errors = app.world_mut().run_system_once(
+			Anchor::<_WithoutIgnore>::system_internal::<ResMut<_Lookup>, _Error>,
+		)?;
 
 		assert_eq!(
-			Err(vec![AnchorError::NoFixPointEntityFor(spawner_key)]),
+			Err(vec![AnchorError::MountHasNoTransform(mount_point)]),
 			errors
 		);
 		Ok(())
 	}
 
 	#[test]
-	fn transform_missing_on_fix_point() -> Result<(), RunSystemError> {
+	fn return_mount_point_transform_nan_error() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let spawner_key = SkillSpawner::Slot(SlotKey(22));
-		let agent = app.world_mut().spawn(*AGENT).id();
-		let spawner = app
+		let agent = app
 			.world_mut()
-			.spawn((FixPointOf(agent), FixPointSpawner(spawner_key)))
+			.spawn((*AGENT, GlobalTransform::default()))
+			.id();
+		let mount_point = app
+			.world_mut()
+			.spawn(GlobalTransform::from_translation(Vec3::NAN))
 			.id();
 		app.world_mut()
 			.spawn(Anchor::<_WithoutIgnore>::to_target(*AGENT).on_spawner(spawner_key));
+		app.insert_resource(_Lookup {
+			mount_points: HashMap::from([((spawner_key, agent), mount_point)]),
+		});
 
-		let errors = app
-			.world_mut()
-			.run_system_once(Anchor::<_WithoutIgnore>::system)?;
-
-		assert_eq!(
-			Err(vec![AnchorError::GlobalTransformMissingOn(spawner)]),
-			errors
-		);
-		Ok(())
-	}
-
-	#[test]
-	fn fix_point_translation_nan() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		let spawner_key = SkillSpawner::Slot(SlotKey(22));
-		let agent = app.world_mut().spawn(*AGENT).id();
-		let spawner = app
-			.world_mut()
-			.spawn((
-				FixPointOf(agent),
-				FixPointSpawner(spawner_key),
-				GlobalTransform::from_translation(Vec3::NAN),
-			))
-			.id();
-		app.world_mut()
-			.spawn(Anchor::<_WithoutIgnore>::to_target(*AGENT).on_spawner(spawner_key));
-
-		let errors = app
-			.world_mut()
-			.run_system_once(Anchor::<_WithoutIgnore>::system)?;
+		let errors = app.world_mut().run_system_once(
+			Anchor::<_WithoutIgnore>::system_internal::<ResMut<_Lookup>, _Error>,
+		)?;
 
 		assert_eq!(
-			Err(vec![AnchorError::FixPointTranslationNaN(spawner)]),
+			Err(vec![AnchorError::MountTranslationIsNan(mount_point)]),
 			errors
 		);
 		Ok(())

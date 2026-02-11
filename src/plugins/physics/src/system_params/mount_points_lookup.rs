@@ -1,4 +1,4 @@
-mod get_mount_point;
+pub(crate) mod get_mount_point;
 
 use crate::components::{fix_points::MountPointsDefinition, mount_points::MountPoints};
 use bevy::{ecs::system::SystemParam, prelude::*};
