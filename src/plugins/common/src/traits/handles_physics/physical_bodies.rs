@@ -15,7 +15,6 @@ pub struct Body {
 	pub shape: Shape,
 	pub physics_type: PhysicsType,
 	pub blocker_types: HashSet<Blocker>,
-	pub rotation: Quat,
 }
 
 impl Body {
@@ -24,13 +23,7 @@ impl Body {
 			shape,
 			physics_type: PhysicsType::Terrain,
 			blocker_types: HashSet::from([Blocker::Physical]),
-			rotation: Quat::IDENTITY,
 		}
-	}
-
-	pub fn with_rotation(mut self, rotation: Quat) -> Self {
-		self.rotation = rotation;
-		self
 	}
 
 	pub fn with_physics_type(mut self, physics_type: PhysicsType) -> Self {

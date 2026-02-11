@@ -64,7 +64,6 @@ fn apply_definition(
 	let mut entity = commands.spawn((
 		ColliderOf(entity),
 		ChildOf(entity),
-		Transform::from_rotation(definition.rotation),
 		ColliderShape::from(definition.shape),
 	));
 
@@ -82,7 +81,6 @@ mod tests {
 		tools::Units,
 		traits::handles_physics::physical_bodies::{Blocker, Body, Shape},
 	};
-	use std::f32::consts::PI;
 	use test_case::test_case;
 	use testing::{SingleThreadedApp, assert_children_count};
 
@@ -111,29 +109,6 @@ mod tests {
 		assert_eq!(
 			Some(&ColliderShape::from(shape)),
 			child.get::<ColliderShape>(),
-		);
-	}
-
-	#[test]
-	fn spawn_with_rotation() {
-		let mut app = setup();
-		let shape = Shape::Sphere {
-			radius: Units::from(42.),
-		};
-		let rotation = Quat::from_rotation_x(PI);
-		let entity = app
-			.world_mut()
-			.spawn(PhysicalBody(
-				Body::from_shape(shape).with_rotation(rotation),
-			))
-			.id();
-
-		app.update();
-
-		let [child] = assert_children_count!(1, app, entity);
-		assert_eq!(
-			Some(&Transform::from_rotation(rotation)),
-			child.get::<Transform>(),
 		);
 	}
 
