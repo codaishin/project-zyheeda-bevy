@@ -1,7 +1,5 @@
-use std::fmt::Display;
-
 use crate::{
-	components::fix_points::Anchor,
+	components::anchor::Anchor,
 	system_params::mount_points_lookup::{MountPointsLookup, get_mount_point::MountPointError},
 	traits::{get_mount_point::GetMountPoint, query_filter_definition::QueryFilterDefinition},
 };
@@ -15,6 +13,7 @@ use common::{
 	traits::{accessors::get::Get, handles_skill_physics::SkillSpawner, or_ok::OrOk},
 	zyheeda_commands::ZyheedaCommands,
 };
+use std::fmt::Display;
 
 impl<TFilter> Anchor<TFilter>
 where

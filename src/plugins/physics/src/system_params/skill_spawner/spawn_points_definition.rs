@@ -1,5 +1,5 @@
 use crate::{
-	components::fix_points::MountPointsDefinition,
+	components::mount_points::MountPointsDefinition,
 	system_params::skill_spawner::SpawnPointContextMut,
 };
 use common::{
@@ -18,10 +18,7 @@ impl RegisterDefinition for SpawnPointContextMut<'_> {
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::{
-		components::fix_points::MountPointsDefinition,
-		system_params::skill_spawner::SkillSpawnerMut,
-	};
+	use crate::system_params::skill_spawner::SkillSpawnerMut;
 	use bevy::{
 		app::{App, Update},
 		ecs::system::{RunSystemError, RunSystemOnce},

@@ -15,12 +15,12 @@ use crate::{
 	app::add_physics::AddPhysics,
 	components::{
 		affected::{force_affected::ForceAffected, gravity_affected::GravityAffected, life::Life},
+		anchor::{Always, Anchor, Once},
 		async_collider::AsyncConvexCollider,
 		blockable::Blockable,
 		collider::ColliderShape,
 		default_attributes::DefaultAttributes,
 		effects::{Effects, force::ForceEffect},
-		fix_points::{Always, Anchor, Once, fix_point::FixPointSpawner},
 		ground_target::GroundTarget,
 		interaction_target::{ColliderOfInteractionTarget, InteractionTarget},
 		lifetime::{LifetimeTiedTo, TiedLifetimes},
@@ -192,7 +192,6 @@ where
 					PhysicalBody::dispatch_blocker_types,
 					// Skill spawning/lifetime
 					(
-						FixPointSpawner::insert_fix_points,
 						GroundTarget::set_position,
 						DestroyAfterDistanceTraveled::system,
 						Anchor::<Once>::system.pipe(OnError::log),

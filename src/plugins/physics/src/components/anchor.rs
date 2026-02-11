@@ -1,20 +1,10 @@
-pub(crate) mod fix_point;
-
-use crate::{
-	components::{fix_points::fix_point::FixPointOf, mount_points::MountPoints},
-	traits::query_filter_definition::QueryFilterDefinition,
-};
-use bevy::{ecs::entity::EntityHashSet, prelude::*};
+use crate::traits::query_filter_definition::QueryFilterDefinition;
+use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
-	tools::bone_name::BoneName,
-	traits::{
-		accessors::get::GetProperty,
-		handles_skill_physics::SkillSpawner,
-		thread_safe::ThreadSafe,
-	},
+	traits::{accessors::get::GetProperty, handles_skill_physics::SkillSpawner},
 };
-use std::{collections::HashMap, hash::Hash, marker::PhantomData};
+use std::marker::PhantomData;
 
 #[derive(Component, Debug, PartialEq)]
 #[require(Transform)]
@@ -78,25 +68,5 @@ impl<TFilter> AnchorBuilder<TFilter> {
 			use_target_rotation: false,
 			_p: PhantomData,
 		}
-	}
-}
-
-#[derive(Component, Debug, PartialEq, Clone, Default)]
-#[relationship_target(relationship = FixPointOf)]
-#[require(GlobalTransform)]
-pub struct FixPoints(EntityHashSet);
-
-#[derive(Component, Debug, PartialEq, Clone)]
-#[require(MountPoints<T>)]
-pub struct MountPointsDefinition<T>(pub(crate) HashMap<BoneName, T>)
-where
-	T: Eq + Hash + ThreadSafe;
-
-impl<T> Default for MountPointsDefinition<T>
-where
-	T: Eq + Hash + ThreadSafe,
-{
-	fn default() -> Self {
-		Self(HashMap::default())
 	}
 }

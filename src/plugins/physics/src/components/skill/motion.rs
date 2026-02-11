@@ -1,6 +1,6 @@
 use crate::{
 	components::{
-		fix_points::{Always, Anchor, Once},
+		anchor::{Always, Anchor, Once},
 		ground_target::GroundTarget,
 		set_motion_forward::SetMotionForward,
 		skill::{CreatedFrom, PROJECTILE_RANGE, PROJECTILE_SPEED, Skill},

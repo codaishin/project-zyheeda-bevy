@@ -1,5 +1,5 @@
 use crate::{
-	components::fix_points::MountPointsDefinition,
+	components::mount_points::MountPointsDefinition,
 	system_params::mount_points_lookup::MountPointsLookup,
 	traits::get_mount_point::GetMountPoint,
 };
@@ -93,7 +93,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{fix_points::MountPointsDefinition, mount_points::MountPoints};
+	use crate::components::mount_points::MountPoints;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::tools::bone_name::BoneName;
 	use std::collections::HashMap;
