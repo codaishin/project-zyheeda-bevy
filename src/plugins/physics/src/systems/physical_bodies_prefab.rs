@@ -1,6 +1,6 @@
 use crate::components::{
 	blocker_types::BlockerTypes,
-	collider::{ColliderOf, ColliderShape, Colliders},
+	collider::ColliderShape,
 	no_hover::NoMouseHover,
 	physical_body::PhysicalBody,
 };
@@ -15,12 +15,30 @@ use std::sync::LazyLock;
 impl PhysicalBody {
 	pub(crate) fn prefab(
 		mut commands: ZyheedaCommands,
-		bodies: Query<(Entity, &Self, &Colliders), Changed<Self>>,
+		bodies: Query<(Entity, &Self), Changed<Self>>,
 	) {
-		for (entity, body, colliders) in &bodies {
-			despawn_current_collider_shapes(&mut commands, colliders);
-			insert_rigid_body(&mut commands, entity, body);
-			apply_definition(&mut commands, entity, body);
+		for (entity, PhysicalBody(body)) in &bodies {
+			commands.try_apply_on(&entity, |mut e| {
+				match body.physics_type {
+					PhysicsType::Agent => {
+						e.try_insert((*AGENT_LOCKED_AXES, AGENT_GRAVITY_SCALE, RigidBody::Dynamic));
+					}
+					PhysicsType::Terrain => {
+						e.try_insert(RigidBody::Fixed);
+					}
+				};
+
+				e.try_insert((
+					BlockerTypes(body.blocker_types.clone()),
+					ColliderShape::from(body.shape),
+				));
+
+				if body.physics_type != PhysicsType::Terrain {
+					return;
+				}
+
+				e.try_insert(NoMouseHover);
+			});
 		}
 	}
 }
@@ -28,51 +46,6 @@ impl PhysicalBody {
 const AGENT_GRAVITY_SCALE: GravityScale = GravityScale(0.);
 static AGENT_LOCKED_AXES: LazyLock<LockedAxes> =
 	LazyLock::new(|| LockedAxes::ROTATION_LOCKED | LockedAxes::TRANSLATION_LOCKED_Y);
-
-fn despawn_current_collider_shapes(commands: &mut ZyheedaCommands, colliders: &Colliders) {
-	for entity in colliders.iter() {
-		commands.try_apply_on(&entity, |e| {
-			e.try_despawn();
-		});
-	}
-}
-
-fn insert_rigid_body(
-	commands: &mut ZyheedaCommands,
-	entity: Entity,
-	PhysicalBody(body): &PhysicalBody,
-) {
-	commands.try_apply_on(&entity, |mut e| match body.physics_type {
-		PhysicsType::Agent => {
-			e.try_insert((*AGENT_LOCKED_AXES, AGENT_GRAVITY_SCALE, RigidBody::Dynamic));
-		}
-		PhysicsType::Terrain => {
-			e.try_insert(RigidBody::Fixed);
-		}
-	});
-}
-
-fn apply_definition(
-	commands: &mut ZyheedaCommands,
-	entity: Entity,
-	PhysicalBody(definition): &PhysicalBody,
-) {
-	commands.try_apply_on(&entity, |mut e| {
-		e.try_insert(BlockerTypes(definition.blocker_types.clone()));
-	});
-
-	let mut entity = commands.spawn((
-		ColliderOf(entity),
-		ChildOf(entity),
-		ColliderShape::from(definition.shape),
-	));
-
-	if definition.physics_type != PhysicsType::Terrain {
-		return;
-	}
-
-	entity.insert(NoMouseHover);
-}
 
 #[cfg(test)]
 mod tests {
@@ -82,7 +55,7 @@ mod tests {
 		traits::handles_physics::physical_bodies::{Blocker, Body, Shape},
 	};
 	use test_case::test_case;
-	use testing::{SingleThreadedApp, assert_children_count};
+	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -93,7 +66,7 @@ mod tests {
 	}
 
 	#[test]
-	fn spawn_as_child() {
+	fn insert_collider() {
 		let mut app = setup();
 		let shape = Shape::Sphere {
 			radius: Units::from(42.),
@@ -105,16 +78,15 @@ mod tests {
 
 		app.update();
 
-		let [child] = assert_children_count!(1, app, entity);
 		assert_eq!(
 			Some(&ColliderShape::from(shape)),
-			child.get::<ColliderShape>(),
+			app.world().entity(entity).get::<ColliderShape>(),
 		);
 	}
 
 	#[test_case(PhysicsType::Terrain, RigidBody::Fixed, None, None; "terrain")]
 	#[test_case(PhysicsType::Agent, RigidBody::Dynamic, Some(*AGENT_LOCKED_AXES), Some(AGENT_GRAVITY_SCALE); "agent")]
-	fn insert_additional_root_components(
+	fn insert_physics_constraints(
 		physics_type: PhysicsType,
 		rigid_body: RigidBody,
 		locked_axes: Option<LockedAxes>,
@@ -152,11 +124,11 @@ mod tests {
 		);
 	}
 
-	#[test_case(PhysicsType::Terrain, Some(NoMouseHover); "terrain")]
-	#[test_case(PhysicsType::Agent, None; "agent")]
-	fn insert_additional_collider_components(
+	#[test_case(PhysicsType::Terrain, Some(&NoMouseHover); "no mouse hover on terrain")]
+	#[test_case(PhysicsType::Agent, None; "mouse hover on agent")]
+	fn insert_mouse_hover_control(
 		collider_type: PhysicsType,
-		no_mouse_hover: Option<NoMouseHover>,
+		no_mouse_hover: Option<&NoMouseHover>,
 	) {
 		let mut app = setup();
 		let shape = Shape::Sphere {
@@ -171,8 +143,10 @@ mod tests {
 
 		app.update();
 
-		let [child] = assert_children_count!(1, app, entity);
-		assert_eq!(no_mouse_hover, child.get::<NoMouseHover>().copied());
+		assert_eq!(
+			no_mouse_hover,
+			app.world().entity(entity).get::<NoMouseHover>(),
+		);
 	}
 
 	#[test]
@@ -189,16 +163,14 @@ mod tests {
 			.id();
 
 		app.update();
-		let [child] = assert_children_count!(1, app, entity).map(|e| e.id());
 		app.world_mut()
-			.entity_mut(child)
+			.entity_mut(entity)
 			.insert(ColliderShape::from(shape));
 		app.update();
 
-		let [child] = assert_children_count!(1, app, entity);
 		assert_eq!(
 			Some(&ColliderShape::from(shape)),
-			child.get::<ColliderShape>()
+			app.world().entity(entity).get::<ColliderShape>()
 		);
 	}
 
@@ -221,10 +193,9 @@ mod tests {
 			.insert(PhysicalBody(Body::from(shape)));
 		app.update();
 
-		let [child] = assert_children_count!(1, app, entity);
 		assert_eq!(
 			Some(&ColliderShape::from(shape)),
-			child.get::<ColliderShape>()
+			app.world().entity(entity).get::<ColliderShape>(),
 		);
 	}
 }
