@@ -2,7 +2,7 @@ use crate::{
 	components::{async_collider::AsyncConvexCollider, hollow::Hollow},
 	physics_hooks::check_hollow_colliders::SimpleOuterRadius,
 };
-use bevy::{ecs::entity::EntityHashSet, prelude::*};
+use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
 	errors::Unreachable,
@@ -13,14 +13,6 @@ use common::{
 		prefab::{Prefab, PrefabEntityCommands, Reapply},
 	},
 };
-
-#[derive(Component, Default)]
-#[relationship_target(relationship = ColliderOf)]
-pub(crate) struct Colliders(EntityHashSet);
-
-#[derive(Component)]
-#[relationship(relationship_target= Colliders)]
-pub(crate) struct ColliderOf(pub(crate) Entity);
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
 #[component(immutable)]
