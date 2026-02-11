@@ -188,8 +188,6 @@ where
 			.add_systems(
 				Update,
 				(
-					// Bodies
-					PhysicalBody::dispatch_blocker_types,
 					// Skill spawning/lifetime
 					(
 						GroundTarget::set_position,
