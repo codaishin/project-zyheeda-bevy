@@ -1,7 +1,7 @@
 pub(crate) mod fix_point;
 
 use crate::{
-	components::fix_points::fix_point::FixPointOf,
+	components::{fix_points::fix_point::FixPointOf, mount_points::MountPoints},
 	traits::query_filter_definition::QueryFilterDefinition,
 };
 use bevy::{
@@ -12,9 +12,13 @@ use common::{
 	components::persistent_entity::PersistentEntity,
 	errors::{ErrorData, Level},
 	tools::bone_name::BoneName,
-	traits::{accessors::get::GetProperty, handles_skill_physics::SkillSpawner},
+	traits::{
+		accessors::get::GetProperty,
+		handles_skill_physics::SkillSpawner,
+		thread_safe::ThreadSafe,
+	},
 };
-use std::{any::type_name, collections::HashMap, fmt::Display, marker::PhantomData};
+use std::{any::type_name, collections::HashMap, fmt::Display, hash::Hash, marker::PhantomData};
 
 #[derive(Component, Debug, PartialEq)]
 #[require(Transform)]
@@ -92,8 +96,20 @@ impl FixPoints {
 	}
 }
 
-#[derive(Component, Debug, PartialEq, Clone, Default)]
-pub struct FixPointsDefinition(pub(crate) HashMap<BoneName, SkillSpawner>);
+#[derive(Component, Debug, PartialEq, Clone)]
+#[require(MountPoints<T>)]
+pub struct MountPointsDefinition<T>(pub(crate) HashMap<BoneName, T>)
+where
+	T: Eq + Hash + ThreadSafe;
+
+impl<T> Default for MountPointsDefinition<T>
+where
+	T: Eq + Hash + ThreadSafe,
+{
+	fn default() -> Self {
+		Self(HashMap::default())
+	}
+}
 
 #[derive(Component, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum AnchorError {

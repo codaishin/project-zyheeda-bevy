@@ -1,15 +1,18 @@
 use crate::components::fix_points::{
-	FixPointsDefinition,
+	MountPointsDefinition,
 	fix_point::{FixPointOf, FixPointSpawner},
 };
 use bevy::prelude::*;
-use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
+use common::{
+	traits::{accessors::get::TryApplyOn, handles_skill_physics::SkillSpawner},
+	zyheeda_commands::ZyheedaCommands,
+};
 
 impl FixPointSpawner {
 	pub(crate) fn insert_fix_points(
 		mut commands: ZyheedaCommands,
 		bones: Query<(Entity, &Name), Changed<Name>>,
-		definitions: Query<&FixPointsDefinition>,
+		definitions: Query<&MountPointsDefinition<SkillSpawner>>,
 		parents: Query<&ChildOf>,
 	) {
 		for (entity, name) in &bones {
@@ -34,10 +37,10 @@ impl FixPointSpawner {
 }
 
 fn get_root<'a>(
-	definitions: &'a Query<&FixPointsDefinition>,
+	definitions: &'a Query<&MountPointsDefinition<SkillSpawner>>,
 	parents: &Query<&ChildOf>,
 	entity: Entity,
-) -> Option<(Entity, &'a FixPointsDefinition)> {
+) -> Option<(Entity, &'a MountPointsDefinition<SkillSpawner>)> {
 	parents
 		.iter_ancestors(entity)
 		.find_map(|ancestor| Some((ancestor, definitions.get(ancestor).ok()?)))
@@ -69,7 +72,7 @@ mod tests {
 		let mut app = setup();
 		let agent = app
 			.world_mut()
-			.spawn(FixPointsDefinition(HashMap::from([(
+			.spawn(MountPointsDefinition(HashMap::from([(
 				BoneName::from("a"),
 				SkillSpawner::Neutral,
 			)])))
@@ -99,7 +102,7 @@ mod tests {
 		let mut app = setup();
 		let agent = app
 			.world_mut()
-			.spawn(FixPointsDefinition(HashMap::from([(
+			.spawn(MountPointsDefinition(HashMap::from([(
 				BoneName::from("a"),
 				SkillSpawner::Neutral,
 			)])))
@@ -131,7 +134,7 @@ mod tests {
 		let mut app = setup();
 		let agent = app
 			.world_mut()
-			.spawn(FixPointsDefinition(HashMap::from([(
+			.spawn(MountPointsDefinition(HashMap::from([(
 				BoneName::from("a"),
 				SkillSpawner::Neutral,
 			)])))
@@ -168,7 +171,7 @@ mod tests {
 		let mut app = setup();
 		let agent = app
 			.world_mut()
-			.spawn(FixPointsDefinition(HashMap::from([(
+			.spawn(MountPointsDefinition(HashMap::from([(
 				BoneName::from("a"),
 				SkillSpawner::Neutral,
 			)])))
