@@ -1,13 +1,7 @@
 use crate::system_param::movement_param::{MovementContext, MovementContextMut};
-use common::traits::{
-	handles_movement::{CurrentMovement, MovementTarget},
-	thread_safe::ThreadSafe,
-};
+use common::traits::handles_movement::{CurrentMovement, MovementTarget};
 
-impl<TMotion> CurrentMovement for MovementContext<'_, TMotion>
-where
-	TMotion: ThreadSafe,
-{
+impl<TMotion, TImmobilized> CurrentMovement for MovementContext<'_, TMotion, TImmobilized> {
 	fn current_movement(&self) -> Option<MovementTarget> {
 		match self {
 			MovementContext::Movement(movement) => movement.target,
@@ -16,10 +10,7 @@ where
 	}
 }
 
-impl<TMotion> CurrentMovement for MovementContextMut<'_, TMotion>
-where
-	TMotion: ThreadSafe,
-{
+impl<TMotion, TImmobilized> CurrentMovement for MovementContextMut<'_, TMotion, TImmobilized> {
 	fn current_movement(&self) -> Option<MovementTarget> {
 		self.movement.and_then(|movement| movement.target)
 	}
@@ -48,6 +39,8 @@ mod tests {
 	};
 	use testing::SingleThreadedApp;
 
+	struct _Immobilized;
+
 	struct _Motion;
 
 	fn setup() -> App {
@@ -63,12 +56,12 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Movement::<PathOrDirection<_Motion>>::to(Vec3::new(
-				1., 2., 3.,
-			)))
+			.spawn(Movement::<PathOrDirection<_Motion>, _Immobilized>::to(
+				Vec3::new(1., 2., 3.),
+			))
 			.id();
 		app.world_mut()
-			.run_system_once(move |m: MovementParam<_Motion>| {
+			.run_system_once(move |m: MovementParam<_Motion, _Immobilized>| {
 				let ctx = MovementParam::get_context(&m, MovementMarker { entity }).unwrap();
 
 				assert_eq!(
@@ -83,12 +76,12 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Movement::<PathOrDirection<_Motion>>::to(Vec3::new(
-				1., 2., 3.,
-			)))
+			.spawn(Movement::<PathOrDirection<_Motion>, _Immobilized>::to(
+				Vec3::new(1., 2., 3.),
+			))
 			.id();
 		app.world_mut()
-			.run_system_once(move |mut m: MovementParamMut<_Motion>| {
+			.run_system_once(move |mut m: MovementParamMut<_Motion, _Immobilized>| {
 				let ctx =
 					MovementParamMut::get_context_mut(&mut m, MovementMarker { entity }).unwrap();
 
