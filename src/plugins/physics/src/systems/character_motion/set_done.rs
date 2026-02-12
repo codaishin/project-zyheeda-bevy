@@ -13,23 +13,23 @@ impl ApplyCharacterMotion {
 		motions: Query<(Entity, &Self, &Transform)>,
 	) {
 		for (entity, motion, transform) in &motions {
-			let ApplyCharacterMotion::Ongoing(linear_motion) = motion else {
+			let ApplyCharacterMotion::Ongoing(motion) = motion else {
 				continue;
 			};
 
-			if !is_done(linear_motion, transform, delta) {
+			if !is_done(motion, transform, delta) {
 				continue;
 			}
 
 			commands.try_apply_on(&entity, |mut e| {
-				e.try_insert(Self::Done(*linear_motion));
+				e.try_insert(Self::Done(*motion));
 			});
 		}
 	}
 }
 
-fn is_done(linear_motion: &CharacterMotion, transform: &Transform, delta: Duration) -> bool {
-	let (speed, target) = match linear_motion {
+fn is_done(motion: &CharacterMotion, transform: &Transform, delta: Duration) -> bool {
+	let (speed, target) = match motion {
 		CharacterMotion::Direction { .. } => return false,
 		CharacterMotion::Stop => return true,
 		CharacterMotion::ToTarget { speed, target } => (speed, target),

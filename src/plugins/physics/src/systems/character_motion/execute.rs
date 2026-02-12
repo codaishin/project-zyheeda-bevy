@@ -4,6 +4,12 @@ use bevy_rapier3d::prelude::*;
 use common::traits::handles_physics::CharacterMotion;
 use std::time::Duration;
 
+macro_rules! no_motion {
+	() => {
+		ApplyCharacterMotion::Done(..) | ApplyCharacterMotion::Ongoing(CharacterMotion::Stop)
+	};
+}
+
 impl ApplyCharacterMotion {
 	pub(crate) fn execute(
 		delta: In<Duration>,
@@ -20,7 +26,7 @@ impl ApplyCharacterMotion {
 						.unwrap_or_default()
 						* **speed * delta.as_secs_f32()
 				}
-				_ => continue,
+				no_motion!() => continue,
 			};
 
 			character.translation = Some(translation);

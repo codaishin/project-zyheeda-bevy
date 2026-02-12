@@ -163,8 +163,8 @@ mod tests {
 	impl GetProperty<CharacterMotion> for _Motion {
 		fn get_property(&self) -> CharacterMotion {
 			match self {
-				_Motion::NotDone(linear_motion) => *linear_motion,
-				_Motion::Done(linear_motion) => *linear_motion,
+				_Motion::NotDone(motion) => *motion,
+				_Motion::Done(motion) => *motion,
 			}
 		}
 	}

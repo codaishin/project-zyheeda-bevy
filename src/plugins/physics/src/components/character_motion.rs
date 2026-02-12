@@ -17,16 +17,16 @@ pub enum ApplyCharacterMotion {
 }
 
 impl From<CharacterMotion> for ApplyCharacterMotion {
-	fn from(linear_motion: CharacterMotion) -> Self {
-		Self::Ongoing(linear_motion)
+	fn from(motion: CharacterMotion) -> Self {
+		Self::Ongoing(motion)
 	}
 }
 
 impl GetProperty<CharacterMotion> for ApplyCharacterMotion {
 	fn get_property(&self) -> CharacterMotion {
 		match self {
-			ApplyCharacterMotion::Ongoing(linear_motion) => *linear_motion,
-			ApplyCharacterMotion::Done(linear_motion) => *linear_motion,
+			ApplyCharacterMotion::Ongoing(motion) => *motion,
+			ApplyCharacterMotion::Done(motion) => *motion,
 		}
 	}
 }
