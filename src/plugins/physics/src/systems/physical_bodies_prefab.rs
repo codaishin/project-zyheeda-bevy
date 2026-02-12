@@ -20,7 +20,12 @@ impl PhysicalBody {
 			commands.try_apply_on(&entity, |mut e| {
 				match body.physics_type {
 					PhysicsType::Agent => {
-						e.try_insert((RigidBody::KinematicPositionBased, Self::agent_controller()));
+						e.try_insert((
+							RigidBody::KinematicPositionBased,
+							ActiveEvents::COLLISION_EVENTS,
+							ActiveCollisionTypes::all(),
+							Self::agent_controller(),
+						));
 					}
 					PhysicsType::Terrain => {
 						e.try_insert(RigidBody::Fixed);
@@ -42,7 +47,7 @@ impl PhysicalBody {
 	}
 
 	fn agent_controller() -> KinematicCharacterController {
-		KinematicCharacterController::default()
+		KinematicCharacterController { ..default() }
 	}
 }
 
@@ -83,12 +88,14 @@ mod tests {
 		);
 	}
 
-	#[test_case(PhysicsType::Terrain, RigidBody::Fixed, false;  "terrain")]
-	#[test_case(PhysicsType::Agent, RigidBody::KinematicPositionBased, true; "agent")]
+	#[test_case(PhysicsType::Terrain, RigidBody::Fixed, false, None, None; "terrain")]
+	#[test_case(PhysicsType::Agent, RigidBody::KinematicPositionBased, true, Some(&ActiveEvents::COLLISION_EVENTS), Some(&ActiveCollisionTypes::all()); "agent")]
 	fn insert_physics_constraints(
 		physics_type: PhysicsType,
 		rigid_body: RigidBody,
 		has_character_controller: bool,
+		active_events: Option<&ActiveEvents>,
+		collision_types: Option<&ActiveCollisionTypes>,
 	) {
 		let mut app = setup();
 		let shape = Shape::Sphere {
@@ -104,12 +111,19 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			(Some(&rigid_body), has_character_controller),
+			(
+				Some(&rigid_body),
+				has_character_controller,
+				active_events,
+				collision_types
+			),
 			(
 				app.world().entity(entity).get::<RigidBody>(),
 				app.world()
 					.entity(entity)
 					.contains::<KinematicCharacterController>(),
+				app.world().entity(entity).get::<ActiveEvents>(),
+				app.world().entity(entity).get::<ActiveCollisionTypes>(),
 			)
 		);
 	}
