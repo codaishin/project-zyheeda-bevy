@@ -72,7 +72,6 @@ use common::{
 			HandlesPhysicalSkillSpawnPoints,
 		},
 		prefab::AddPrefabObserver,
-		register_derived_component::RegisterDerivedComponent,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -128,12 +127,13 @@ where
 					.in_set(PhysicsSystems),
 			)
 			// Motion
-			.register_derived_component::<Motion, Velocity>()
-			.add_observer(Motion::zero_velocity_on_remove)
 			.add_systems(
 				FixedUpdate,
-				FixedUpdate::delta
-					.pipe(Motion::set_done)
+				(
+					FixedUpdate::delta.pipe(Motion::apply),
+					FixedUpdate::delta.pipe(Motion::set_done),
+				)
+					.chain()
 					.in_set(PhysicsSystems),
 			)
 			// Skills
