@@ -3,4 +3,4 @@ use common::tools::UnitsPerSecond;
 
 #[derive(Component, Debug, PartialEq)]
 #[require(Transform)]
-pub(crate) struct SetMotionForward(pub(crate) UnitsPerSecond);
+pub(crate) struct SetVelocityForward(pub(crate) UnitsPerSecond);

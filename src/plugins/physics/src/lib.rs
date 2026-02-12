@@ -18,6 +18,7 @@ use crate::{
 		anchor::{Always, Anchor, Once},
 		async_collider::AsyncConvexCollider,
 		blockable::Blockable,
+		character_motion::ApplyCharacterMotion,
 		collider::ColliderShape,
 		default_attributes::DefaultAttributes,
 		effects::{Effects, force::ForceEffect},
@@ -25,10 +26,9 @@ use crate::{
 		immobilized::Immobilized,
 		interaction_target::{ColliderOfInteractionTarget, InteractionTarget},
 		lifetime::{LifetimeTiedTo, TiedLifetimes},
-		motion::Motion,
 		no_hover::NoMouseHover,
 		physical_body::PhysicalBody,
-		set_motion_forward::SetMotionForward,
+		set_velocity_forward::SetVelocityForward,
 		skill::{ContactInteractionTarget, ProjectionInteractionTarget, Skill},
 		when_traveled::DestroyAfterDistanceTraveled,
 		world_camera::WorldCamera,
@@ -72,7 +72,6 @@ use common::{
 			HandlesPhysicalSkillSpawnPoints,
 		},
 		prefab::AddPrefabObserver,
-		register_derived_component::RegisterDerivedComponent,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -106,7 +105,7 @@ where
 		#[cfg(debug_assertions)]
 		app.add_plugins(crate::debug::Debug);
 
-		TSaveGame::register_savable_component::<Motion>(app);
+		TSaveGame::register_savable_component::<ApplyCharacterMotion>(app);
 		TSaveGame::register_savable_component::<Skill>(app);
 
 		app
@@ -127,13 +126,14 @@ where
 					.chain()
 					.in_set(PhysicsSystems),
 			)
-			// Motion
-			.register_derived_component::<Motion, Velocity>()
-			.add_observer(Motion::zero_velocity_on_remove)
+			// Character Motion
 			.add_systems(
 				FixedUpdate,
-				FixedUpdate::delta
-					.pipe(Motion::set_done)
+				(
+					FixedUpdate::delta.pipe(ApplyCharacterMotion::execute),
+					FixedUpdate::delta.pipe(ApplyCharacterMotion::set_done),
+				)
+					.chain()
 					.in_set(PhysicsSystems),
 			)
 			// Skills
@@ -195,7 +195,7 @@ where
 						DestroyAfterDistanceTraveled::system,
 						Anchor::<Once>::system.pipe(OnError::log),
 						Anchor::<Always>::system.pipe(OnError::log),
-						SetMotionForward::system,
+						SetVelocityForward::system,
 					)
 						.chain(),
 					// Physical effects
@@ -262,8 +262,8 @@ impl<TDependencies> HandlesPhysicalEffectTargets for PhysicsPlugin<TDependencies
 }
 
 impl<TDependencies> HandlesMotion for PhysicsPlugin<TDependencies> {
-	type TMotion = Motion;
-	type TImmobilized = Immobilized;
+	type TCharacterMotion = ApplyCharacterMotion;
+	type TCharacterImmobilized = Immobilized;
 }
 
 impl<TDependencies> HandlesPhysicalBodies for PhysicsPlugin<TDependencies> {

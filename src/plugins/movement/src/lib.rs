@@ -82,23 +82,23 @@ where
 		TSaveGame::register_savable_component::<SetFace>(app);
 		TSaveGame::register_savable_component::<SetFaceOverride>(app);
 		TSaveGame::register_savable_component::<
-			Movement<PathOrDirection<TPhysics::TMotion>, TPhysics::TImmobilized>,
+			Movement<PathOrDirection<TPhysics::TCharacterMotion>, TPhysics::TCharacterImmobilized>,
 		>(app);
 
 		let compute_path = MovementDefinition::compute_path::<
-			TPhysics::TMotion,
-			TPhysics::TImmobilized,
+			TPhysics::TCharacterMotion,
+			TPhysics::TCharacterImmobilized,
 			TPathFinding::TComputePath,
 			TPathFinding::TComputerRef,
 		>;
 		let execute_path = MovementDefinition::execute_movement::<
-			Movement<PathOrDirection<TPhysics::TMotion>, TPhysics::TImmobilized>,
+			Movement<PathOrDirection<TPhysics::TCharacterMotion>, TPhysics::TCharacterImmobilized>,
 		>;
 		let execute_movement = MovementDefinition::execute_movement::<
-			Movement<TPhysics::TMotion, TPhysics::TImmobilized>,
+			Movement<TPhysics::TCharacterMotion, TPhysics::TCharacterImmobilized>,
 		>;
 		let animate_movement_forward = MovementDefinition::animate_movement_forward::<
-			Movement<TPhysics::TMotion, TPhysics::TImmobilized>,
+			Movement<TPhysics::TCharacterMotion, TPhysics::TCharacterImmobilized>,
 			AnimationsSystemParamMut<TAnimations>,
 		>;
 
@@ -119,11 +119,11 @@ where
 						.chain(),
 					// Apply facing
 					(
-						Movement::<TPhysics::TMotion, TPhysics::TImmobilized>::set_faces,
+						Movement::<TPhysics::TCharacterMotion, TPhysics::TCharacterImmobilized>::set_faces,
 						SetFace::get_faces.pipe(execute_face::<RaycastSystemParam<TPhysics>>),
 					)
 						.chain(),
-					MovementParam::<TPhysics::TMotion, TPhysics::TImmobilized>::update_just_removed,
+					MovementParam::<TPhysics::TCharacterMotion, TPhysics::TCharacterImmobilized>::update_just_removed,
 				)
 					.chain()
 					.in_set(MovementSystems)
@@ -154,6 +154,8 @@ impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding> HandlesMovement
 where
 	TPhysics: HandlesMotion,
 {
-	type TMovement<'w, 's> = MovementParam<'w, 's, TPhysics::TMotion, TPhysics::TImmobilized>;
-	type TMovementMut<'w, 's> = MovementParamMut<'w, 's, TPhysics::TMotion, TPhysics::TImmobilized>;
+	type TMovement<'w, 's> =
+		MovementParam<'w, 's, TPhysics::TCharacterMotion, TPhysics::TCharacterImmobilized>;
+	type TMovementMut<'w, 's> =
+		MovementParamMut<'w, 's, TPhysics::TCharacterMotion, TPhysics::TCharacterImmobilized>;
 }

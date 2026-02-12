@@ -1,38 +1,38 @@
-use crate::components::motion::Motion;
+use crate::components::character_motion::ApplyCharacterMotion;
 use bevy::prelude::*;
 use common::{
-	traits::{accessors::get::TryApplyOn, handles_physics::LinearMotion},
+	traits::{accessors::get::TryApplyOn, handles_physics::CharacterMotion},
 	zyheeda_commands::ZyheedaCommands,
 };
 use std::time::Duration;
 
-impl Motion {
+impl ApplyCharacterMotion {
 	pub(crate) fn set_done(
 		In(delta): In<Duration>,
 		mut commands: ZyheedaCommands,
 		motions: Query<(Entity, &Self, &Transform)>,
 	) {
 		for (entity, motion, transform) in &motions {
-			let Motion::Ongoing(linear_motion) = motion else {
+			let ApplyCharacterMotion::Ongoing(motion) = motion else {
 				continue;
 			};
 
-			if !is_done(linear_motion, transform, delta) {
+			if !is_done(motion, transform, delta) {
 				continue;
 			}
 
 			commands.try_apply_on(&entity, |mut e| {
-				e.try_insert(Self::Done(*linear_motion));
+				e.try_insert(Self::Done(*motion));
 			});
 		}
 	}
 }
 
-fn is_done(linear_motion: &LinearMotion, transform: &Transform, delta: Duration) -> bool {
-	let (speed, target) = match linear_motion {
-		LinearMotion::Direction { .. } => return false,
-		LinearMotion::Stop => return true,
-		LinearMotion::ToTarget { speed, target } => (speed, target),
+fn is_done(motion: &CharacterMotion, transform: &Transform, delta: Duration) -> bool {
+	let (speed, target) = match motion {
+		CharacterMotion::Direction { .. } => return false,
+		CharacterMotion::Stop => return true,
+		CharacterMotion::ToTarget { speed, target } => (speed, target),
 	};
 
 	if target == &transform.translation {
@@ -50,14 +50,14 @@ mod tests {
 	use super::*;
 	use common::{
 		tools::{UnitsPerSecond, speed::Speed},
-		traits::handles_physics::LinearMotion,
+		traits::handles_physics::CharacterMotion,
 	};
 	use testing::SingleThreadedApp;
 
 	fn setup(delta: Duration) -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, (move || delta).pipe(Motion::set_done));
+		app.add_systems(Update, (move || delta).pipe(ApplyCharacterMotion::set_done));
 
 		app
 	}
@@ -67,14 +67,17 @@ mod tests {
 		let mut app = setup(Duration::default());
 		let entity = app
 			.world_mut()
-			.spawn((Transform::default(), Motion::Ongoing(LinearMotion::Stop)))
+			.spawn((
+				Transform::default(),
+				ApplyCharacterMotion::Ongoing(CharacterMotion::Stop),
+			))
 			.id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&Motion::Done(LinearMotion::Stop)),
-			app.world().entity(entity).get::<Motion>(),
+			Some(&ApplyCharacterMotion::Done(CharacterMotion::Stop)),
+			app.world().entity(entity).get::<ApplyCharacterMotion>(),
 		);
 	}
 
@@ -85,7 +88,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 2., 3.),
-				Motion::Ongoing(LinearMotion::ToTarget {
+				ApplyCharacterMotion::Ongoing(CharacterMotion::ToTarget {
 					speed: Speed(UnitsPerSecond::from(1.)),
 					target: Vec3::new(1., 2., 3.),
 				}),
@@ -95,11 +98,11 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&Motion::Done(LinearMotion::ToTarget {
+			Some(&ApplyCharacterMotion::Done(CharacterMotion::ToTarget {
 				speed: Speed(UnitsPerSecond::from(1.)),
 				target: Vec3::new(1., 2., 3.),
 			})),
-			app.world().entity(entity).get::<Motion>(),
+			app.world().entity(entity).get::<ApplyCharacterMotion>(),
 		);
 	}
 
@@ -110,7 +113,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 2., 3.),
-				Motion::Ongoing(LinearMotion::ToTarget {
+				ApplyCharacterMotion::Ongoing(CharacterMotion::ToTarget {
 					speed: Speed(UnitsPerSecond::from(1.)),
 					target: Vec3::new(10., 2., 3.),
 				}),
@@ -120,11 +123,11 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&Motion::Ongoing(LinearMotion::ToTarget {
+			Some(&ApplyCharacterMotion::Ongoing(CharacterMotion::ToTarget {
 				speed: Speed(UnitsPerSecond::from(1.)),
 				target: Vec3::new(10., 2., 3.),
 			})),
-			app.world().entity(entity).get::<Motion>(),
+			app.world().entity(entity).get::<ApplyCharacterMotion>(),
 		);
 	}
 
@@ -135,7 +138,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 2., 3.),
-				Motion::Ongoing(LinearMotion::ToTarget {
+				ApplyCharacterMotion::Ongoing(CharacterMotion::ToTarget {
 					speed: Speed(UnitsPerSecond::from(1.)),
 					target: Vec3::new(1.099, 2., 3.),
 				}),
@@ -145,11 +148,11 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&Motion::Done(LinearMotion::ToTarget {
+			Some(&ApplyCharacterMotion::Done(CharacterMotion::ToTarget {
 				speed: Speed(UnitsPerSecond::from(1.)),
 				target: Vec3::new(1.099, 2., 3.),
 			})),
-			app.world().entity(entity).get::<Motion>(),
+			app.world().entity(entity).get::<ApplyCharacterMotion>(),
 		);
 	}
 
@@ -160,7 +163,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 2., 3.),
-				Motion::Ongoing(LinearMotion::ToTarget {
+				ApplyCharacterMotion::Ongoing(CharacterMotion::ToTarget {
 					speed: Speed(UnitsPerSecond::from(2.)),
 					target: Vec3::new(1.199, 2., 3.),
 				}),
@@ -170,11 +173,11 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&Motion::Done(LinearMotion::ToTarget {
+			Some(&ApplyCharacterMotion::Done(CharacterMotion::ToTarget {
 				speed: Speed(UnitsPerSecond::from(2.)),
 				target: Vec3::new(1.199, 2., 3.),
 			})),
-			app.world().entity(entity).get::<Motion>(),
+			app.world().entity(entity).get::<ApplyCharacterMotion>(),
 		);
 	}
 }
