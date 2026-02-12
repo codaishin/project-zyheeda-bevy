@@ -2,7 +2,7 @@ use crate::{
 	components::{
 		anchor::{Always, Anchor, Once},
 		ground_target::GroundTarget,
-		set_motion_forward::SetMotionForward,
+		set_velocity_forward::SetVelocityForward,
 		skill::{CreatedFrom, PROJECTILE_RANGE, PROJECTILE_SPEED, Skill},
 		when_traveled::WhenTraveled,
 	},
@@ -38,7 +38,7 @@ impl ApplyMotionPrefab for Skill {
 						Anchor::<Once>::to_target(self.caster.0)
 							.on_spawner(self.spawner)
 							.with_target_rotation(),
-						SetMotionForward(PROJECTILE_SPEED),
+						SetVelocityForward(PROJECTILE_SPEED),
 					));
 				}
 

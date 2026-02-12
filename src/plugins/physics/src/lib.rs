@@ -28,7 +28,7 @@ use crate::{
 		motion::Motion,
 		no_hover::NoMouseHover,
 		physical_body::PhysicalBody,
-		set_motion_forward::SetMotionForward,
+		set_velocity_forward::SetVelocityForward,
 		skill::{ContactInteractionTarget, ProjectionInteractionTarget, Skill},
 		when_traveled::DestroyAfterDistanceTraveled,
 		world_camera::WorldCamera,
@@ -195,7 +195,7 @@ where
 						DestroyAfterDistanceTraveled::system,
 						Anchor::<Once>::system.pipe(OnError::log),
 						Anchor::<Always>::system.pipe(OnError::log),
-						SetMotionForward::system,
+						SetVelocityForward::system,
 					)
 						.chain(),
 					// Physical effects

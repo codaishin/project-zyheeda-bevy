@@ -16,7 +16,7 @@ pub(crate) mod mount_points;
 pub(crate) mod no_hover;
 pub(crate) mod ongoing_effects;
 pub(crate) mod physical_body;
-pub(crate) mod set_motion_forward;
+pub(crate) mod set_velocity_forward;
 pub(crate) mod skill;
 pub(crate) mod skill_transform;
 pub(crate) mod when_traveled;

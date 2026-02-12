@@ -9,6 +9,6 @@ pub(crate) mod life;
 pub(crate) mod motion;
 pub(crate) mod ongoing_interactions;
 pub(crate) mod physical_bodies_prefab;
-pub(crate) mod set_motion_forward;
+pub(crate) mod set_velocity_forward;
 pub(crate) mod when_traveled;
 pub(crate) mod world_camera;
