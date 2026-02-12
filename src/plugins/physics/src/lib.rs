@@ -18,6 +18,7 @@ use crate::{
 		anchor::{Always, Anchor, Once},
 		async_collider::AsyncConvexCollider,
 		blockable::Blockable,
+		character_motion::ApplyCharacterMotion,
 		collider::ColliderShape,
 		default_attributes::DefaultAttributes,
 		effects::{Effects, force::ForceEffect},
@@ -25,7 +26,6 @@ use crate::{
 		immobilized::Immobilized,
 		interaction_target::{ColliderOfInteractionTarget, InteractionTarget},
 		lifetime::{LifetimeTiedTo, TiedLifetimes},
-		motion::Motion,
 		no_hover::NoMouseHover,
 		physical_body::PhysicalBody,
 		set_velocity_forward::SetVelocityForward,
@@ -105,7 +105,7 @@ where
 		#[cfg(debug_assertions)]
 		app.add_plugins(crate::debug::Debug);
 
-		TSaveGame::register_savable_component::<Motion>(app);
+		TSaveGame::register_savable_component::<ApplyCharacterMotion>(app);
 		TSaveGame::register_savable_component::<Skill>(app);
 
 		app
@@ -126,12 +126,12 @@ where
 					.chain()
 					.in_set(PhysicsSystems),
 			)
-			// Motion
+			// Character Motion
 			.add_systems(
 				FixedUpdate,
 				(
-					FixedUpdate::delta.pipe(Motion::apply),
-					FixedUpdate::delta.pipe(Motion::set_done),
+					FixedUpdate::delta.pipe(ApplyCharacterMotion::execute),
+					FixedUpdate::delta.pipe(ApplyCharacterMotion::set_done),
 				)
 					.chain()
 					.in_set(PhysicsSystems),
@@ -262,8 +262,8 @@ impl<TDependencies> HandlesPhysicalEffectTargets for PhysicsPlugin<TDependencies
 }
 
 impl<TDependencies> HandlesMotion for PhysicsPlugin<TDependencies> {
-	type TMotion = Motion;
-	type TImmobilized = Immobilized;
+	type TCharacterMotion = ApplyCharacterMotion;
+	type TCharacterImmobilized = Immobilized;
 }
 
 impl<TDependencies> HandlesPhysicalBodies for PhysicsPlugin<TDependencies> {

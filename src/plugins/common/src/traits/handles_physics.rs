@@ -71,23 +71,27 @@ pub trait HandlesPhysicalObjects {
 }
 
 pub trait HandlesMotion {
-	/// The component controlling physical motion and related physical and collider computations.
+	/// The component controlling physical motion of characters and related physical and collider
+	/// computations.
 	///
 	/// Implementors must make sure this works on top level entities. No guarantees are made for
 	/// entities that are a child of other entities.
-	type TMotion: Component + From<LinearMotion> + GetProperty<Done> + GetProperty<LinearMotion>;
+	type TCharacterMotion: Component
+		+ From<CharacterMotion>
+		+ GetProperty<Done>
+		+ GetProperty<CharacterMotion>;
 
-	type TImmobilized: Component;
+	type TCharacterImmobilized: Component;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
-pub enum LinearMotion {
+pub enum CharacterMotion {
 	Direction { speed: Speed, direction: Dir3 },
 	ToTarget { speed: Speed, target: Vec3 },
 	Stop,
 }
 
-impl Property for LinearMotion {
+impl Property for CharacterMotion {
 	type TValue<'a> = Self;
 }
 

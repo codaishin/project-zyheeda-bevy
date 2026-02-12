@@ -1,20 +1,20 @@
-use crate::components::motion::Motion;
+use crate::components::character_motion::ApplyCharacterMotion;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
-use common::traits::handles_physics::LinearMotion;
+use common::traits::handles_physics::CharacterMotion;
 use std::time::Duration;
 
-impl Motion {
-	pub(crate) fn apply(
+impl ApplyCharacterMotion {
+	pub(crate) fn execute(
 		delta: In<Duration>,
 		characters: Query<(&mut KinematicCharacterController, &Transform, &Self)>,
 	) {
 		for (mut character, transform, motion) in characters {
 			let translation = match motion {
-				Motion::Ongoing(LinearMotion::Direction { speed, direction }) => {
+				ApplyCharacterMotion::Ongoing(CharacterMotion::Direction { speed, direction }) => {
 					*direction * **speed * delta.as_secs_f32()
 				}
-				Motion::Ongoing(LinearMotion::ToTarget { speed, target }) => {
+				ApplyCharacterMotion::Ongoing(CharacterMotion::ToTarget { speed, target }) => {
 					(target - transform.translation)
 						.try_normalize()
 						.unwrap_or_default()
@@ -37,7 +37,7 @@ mod tests {
 	fn setup(delta: Duration) -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, (move || delta).pipe(Motion::apply));
+		app.add_systems(Update, (move || delta).pipe(ApplyCharacterMotion::execute));
 
 		app
 	}
@@ -54,7 +54,7 @@ mod tests {
 				.spawn((
 					Transform::from_xyz(1., 2., 3.),
 					KinematicCharacterController::default(),
-					Motion::Ongoing(LinearMotion::ToTarget {
+					ApplyCharacterMotion::Ongoing(CharacterMotion::ToTarget {
 						speed: Speed(UnitsPerSecond::from(1.)),
 						target: Vec3::new(3., -1., 11.),
 					}),
@@ -81,7 +81,7 @@ mod tests {
 				.spawn((
 					Transform::from_xyz(1., 2., 3.),
 					KinematicCharacterController::default(),
-					Motion::Ongoing(LinearMotion::ToTarget {
+					ApplyCharacterMotion::Ongoing(CharacterMotion::ToTarget {
 						speed: Speed(UnitsPerSecond::from(2.)),
 						target: Vec3::new(3., -1., 11.),
 					}),
@@ -112,7 +112,7 @@ mod tests {
 				.spawn((
 					Transform::default(),
 					KinematicCharacterController::default(),
-					Motion::Ongoing(LinearMotion::Direction {
+					ApplyCharacterMotion::Ongoing(CharacterMotion::Direction {
 						speed: Speed(UnitsPerSecond::from(1.)),
 						direction: Dir3::NEG_Y,
 					}),
@@ -139,7 +139,7 @@ mod tests {
 				.spawn((
 					Transform::default(),
 					KinematicCharacterController::default(),
-					Motion::Ongoing(LinearMotion::Direction {
+					ApplyCharacterMotion::Ongoing(CharacterMotion::Direction {
 						speed: Speed(UnitsPerSecond::from(2.)),
 						direction: Dir3::NEG_Y,
 					}),

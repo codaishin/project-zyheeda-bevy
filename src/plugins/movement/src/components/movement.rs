@@ -13,7 +13,7 @@ use common::{
 		accessors::get::{DynProperty, GetProperty, TryApplyOn},
 		handles_movement::MovementTarget,
 		handles_orientation::Face,
-		handles_physics::LinearMotion,
+		handles_physics::CharacterMotion,
 	},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
@@ -102,7 +102,7 @@ impl<TMotion, TImmobilized> GetProperty<Option<MovementTarget>>
 
 impl<TMotion, TImmobilized> MovementUpdate for Movement<TMotion, TImmobilized>
 where
-	TMotion: From<LinearMotion> + GetProperty<Done> + GetProperty<LinearMotion> + Component,
+	TMotion: From<CharacterMotion> + GetProperty<Done> + GetProperty<CharacterMotion> + Component,
 	TImmobilized: Component,
 {
 	type TComponents<'a> = Option<&'a TMotion>;
@@ -115,13 +115,13 @@ where
 		speed: Speed,
 	) -> Done {
 		let new_motion = match self.target {
-			Some(MovementTarget::Point(target)) => LinearMotion::ToTarget { target, speed },
-			Some(MovementTarget::Dir(direction)) => LinearMotion::Direction { direction, speed },
-			None => LinearMotion::Stop,
+			Some(MovementTarget::Point(target)) => CharacterMotion::ToTarget { target, speed },
+			Some(MovementTarget::Dir(direction)) => CharacterMotion::Direction { direction, speed },
+			None => CharacterMotion::Stop,
 		};
 
 		match motion {
-			Some(motion) if motion.dyn_property::<LinearMotion>() == new_motion => {
+			Some(motion) if motion.dyn_property::<CharacterMotion>() == new_motion => {
 				Done::when(motion.dyn_property::<Done>())
 			}
 			_ => {
@@ -144,12 +144,12 @@ mod tests {
 
 	#[derive(Component, Debug, PartialEq, Clone, Copy)]
 	enum _Motion {
-		NotDone(LinearMotion),
-		Done(LinearMotion),
+		NotDone(CharacterMotion),
+		Done(CharacterMotion),
 	}
 
-	impl From<LinearMotion> for _Motion {
-		fn from(linear: LinearMotion) -> Self {
+	impl From<CharacterMotion> for _Motion {
+		fn from(linear: CharacterMotion) -> Self {
 			Self::NotDone(linear)
 		}
 	}
@@ -160,8 +160,8 @@ mod tests {
 		}
 	}
 
-	impl GetProperty<LinearMotion> for _Motion {
-		fn get_property(&self) -> LinearMotion {
+	impl GetProperty<CharacterMotion> for _Motion {
+		fn get_property(&self) -> CharacterMotion {
 			match self {
 				_Motion::NotDone(linear_motion) => *linear_motion,
 				_Motion::Done(linear_motion) => *linear_motion,
@@ -386,7 +386,7 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(&_Motion::from(LinearMotion::ToTarget { speed, target })),
+				Some(&_Motion::from(CharacterMotion::ToTarget { speed, target })),
 				app.world().entity(agent).get::<_Motion>()
 			);
 		}
@@ -406,7 +406,10 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(&_Motion::from(LinearMotion::Direction { speed, direction })),
+				Some(&_Motion::from(CharacterMotion::Direction {
+					speed,
+					direction
+				})),
 				app.world().entity(agent).get::<_Motion>()
 			);
 		}
@@ -428,7 +431,7 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(&_Motion::from(LinearMotion::Stop)),
+				Some(&_Motion::from(CharacterMotion::Stop)),
 				app.world().entity(agent).get::<_Motion>()
 			);
 		}
@@ -443,7 +446,7 @@ mod tests {
 				.spawn((
 					Movement::<_Motion, _Immobilized>::to(target),
 					_UpdateParams((
-						Some(_Motion::NotDone(LinearMotion::ToTarget {
+						Some(_Motion::NotDone(CharacterMotion::ToTarget {
 							speed: Speed(UnitsPerSecond::from(42.)),
 							target: Vec3::new(1., 2., 3.),
 						})),
@@ -455,7 +458,7 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(&_Motion::from(LinearMotion::ToTarget { speed, target })),
+				Some(&_Motion::from(CharacterMotion::ToTarget { speed, target })),
 				app.world().entity(agent).get::<_Motion>()
 			);
 		}
@@ -470,7 +473,7 @@ mod tests {
 				.spawn((
 					Movement::<_Motion, _Immobilized>::to(target),
 					_UpdateParams((
-						Some(_Motion::Done(LinearMotion::ToTarget { speed, target })),
+						Some(_Motion::Done(CharacterMotion::ToTarget { speed, target })),
 						speed,
 					)),
 				))
@@ -510,7 +513,7 @@ mod tests {
 				.spawn((
 					Movement::<_Motion, _Immobilized>::to(target),
 					_UpdateParams((
-						Some(_Motion::from(LinearMotion::ToTarget {
+						Some(_Motion::from(CharacterMotion::ToTarget {
 							speed: Speed::default(),
 							target: Vec3::default(),
 						})),
@@ -537,7 +540,7 @@ mod tests {
 				.spawn((
 					Movement::<_Motion, _Immobilized>::to(target),
 					_UpdateParams((
-						Some(_Motion::from(LinearMotion::Direction {
+						Some(_Motion::from(CharacterMotion::Direction {
 							speed: Speed::default(),
 							direction: Dir3::NEG_X,
 						})),
@@ -585,7 +588,7 @@ mod tests {
 				.spawn((
 					Movement::<_Motion, _Immobilized>::to(target),
 					_UpdateParams((
-						Some(_Motion::Done(LinearMotion::ToTarget { speed, target })),
+						Some(_Motion::Done(CharacterMotion::ToTarget { speed, target })),
 						speed,
 					)),
 				))
@@ -609,7 +612,7 @@ mod tests {
 				.spawn((
 					Movement::<_Motion, _Immobilized>::to(target),
 					_UpdateParams((
-						Some(_Motion::Done(LinearMotion::ToTarget {
+						Some(_Motion::Done(CharacterMotion::ToTarget {
 							speed: Speed(UnitsPerSecond::from(42.)),
 							target: Vec3::new(11., 1., 8.),
 						})),
