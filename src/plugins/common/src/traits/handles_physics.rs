@@ -76,6 +76,8 @@ pub trait HandlesMotion {
 	/// Implementors must make sure this works on top level entities. No guarantees are made for
 	/// entities that are a child of other entities.
 	type TMotion: Component + From<LinearMotion> + GetProperty<Done> + GetProperty<LinearMotion>;
+
+	type TImmobilized: Component;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]

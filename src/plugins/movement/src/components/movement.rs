@@ -8,14 +8,12 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	components::immobilized::Immobilized,
 	tools::{Done, speed::Speed},
 	traits::{
 		accessors::get::{DynProperty, GetProperty, TryApplyOn},
 		handles_movement::MovementTarget,
 		handles_orientation::Face,
 		handles_physics::LinearMotion,
-		thread_safe::ThreadSafe,
 	},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
@@ -24,19 +22,13 @@ use std::marker::PhantomData;
 
 #[derive(Component, SavableComponent, Debug)]
 #[require(GlobalTransform)]
-#[savable_component(dto = MovementDto<TMotion>)]
-pub struct Movement<TMotion>
-where
-	TMotion: ThreadSafe,
-{
+#[savable_component(dto = MovementDto)]
+pub struct Movement<TMotion, TImmobilized> {
 	pub(crate) target: Option<MovementTarget>,
-	_m: PhantomData<TMotion>,
+	_m: PhantomData<fn() -> (TMotion, TImmobilized)>,
 }
 
-impl<TMotion> Movement<TMotion>
-where
-	TMotion: ThreadSafe,
-{
+impl<TMotion, TImmobilized> Movement<TMotion, TImmobilized> {
 	pub(crate) fn stop() -> Self {
 		Self {
 			target: None,
@@ -58,7 +50,9 @@ where
 		mut commands: ZyheedaCommands,
 		mut removed: RemovedComponents<Self>,
 		changed: Query<(Entity, &Self), Changed<Self>>,
-	) {
+	) where
+		Self: Component,
+	{
 		for entity in removed.read() {
 			commands.try_apply_on(&entity, |mut e| {
 				e.try_remove::<SetFace>();
@@ -83,19 +77,13 @@ where
 	}
 }
 
-impl<TMotion> PartialEq for Movement<TMotion>
-where
-	TMotion: ThreadSafe,
-{
+impl<TMotion, TImmobilized> PartialEq for Movement<TMotion, TImmobilized> {
 	fn eq(&self, other: &Self) -> bool {
 		self.target == other.target
 	}
 }
 
-impl<TMotion> Clone for Movement<TMotion>
-where
-	TMotion: ThreadSafe,
-{
+impl<TMotion, TImmobilized> Clone for Movement<TMotion, TImmobilized> {
 	fn clone(&self) -> Self {
 		Self {
 			target: self.target,
@@ -104,22 +92,21 @@ where
 	}
 }
 
-impl<TMotion> GetProperty<Option<MovementTarget>> for Movement<TMotion>
-where
-	TMotion: ThreadSafe,
+impl<TMotion, TImmobilized> GetProperty<Option<MovementTarget>>
+	for Movement<TMotion, TImmobilized>
 {
 	fn get_property(&self) -> Option<MovementTarget> {
 		self.target
 	}
 }
 
-impl<TMotion> MovementUpdate for Movement<TMotion>
+impl<TMotion, TImmobilized> MovementUpdate for Movement<TMotion, TImmobilized>
 where
-	TMotion:
-		ThreadSafe + From<LinearMotion> + GetProperty<Done> + GetProperty<LinearMotion> + Component,
+	TMotion: From<LinearMotion> + GetProperty<Done> + GetProperty<LinearMotion> + Component,
+	TImmobilized: Component,
 {
 	type TComponents<'a> = Option<&'a TMotion>;
-	type TConstraint = Without<Immobilized>;
+	type TConstraint = Without<TImmobilized>;
 
 	fn update(
 		&self,
@@ -152,6 +139,9 @@ mod tests {
 	use bevy::ecs::system::ScheduleSystem;
 	use testing::SingleThreadedApp;
 
+	#[derive(Component)]
+	struct _Immobilized;
+
 	#[derive(Component, Debug, PartialEq, Clone, Copy)]
 	enum _Motion {
 		NotDone(LinearMotion),
@@ -183,10 +173,7 @@ mod tests {
 		use super::*;
 		use testing::ApproxEqual;
 
-		impl<TMotion> ApproxEqual<f32> for Movement<TMotion>
-		where
-			TMotion: ThreadSafe,
-		{
+		impl<TMotion, TImmobilized> ApproxEqual<f32> for Movement<TMotion, TImmobilized> {
 			fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
 				let (a, b) = match (self.target, other.target) {
 					(Some(a), Some(b)) => (a, b),
@@ -216,10 +203,10 @@ mod tests {
 
 		#[test]
 		fn set_to_face_translation_on_update() {
-			let mut app = setup(Movement::<_Motion>::set_faces);
+			let mut app = setup(Movement::<_Motion, _Immobilized>::set_faces);
 			let entity = app
 				.world_mut()
-				.spawn(Movement::<_Motion>::to(Vec3::new(1., 2., 3.)))
+				.spawn(Movement::<_Motion, _Immobilized>::to(Vec3::new(1., 2., 3.)))
 				.id();
 
 			app.update();
@@ -232,10 +219,10 @@ mod tests {
 
 		#[test]
 		fn do_not_set_to_face_translation_on_update_when_not_added() {
-			let mut app = setup(Movement::<_Motion>::set_faces);
+			let mut app = setup(Movement::<_Motion, _Immobilized>::set_faces);
 			let entity = app
 				.world_mut()
-				.spawn(Movement::<_Motion>::to(Vec3::new(1., 2., 3.)))
+				.spawn(Movement::<_Motion, _Immobilized>::to(Vec3::new(1., 2., 3.)))
 				.id();
 
 			app.update();
@@ -247,15 +234,17 @@ mod tests {
 
 		#[test]
 		fn set_to_face_translation_on_update_when_changed() {
-			let mut app = setup(Movement::<_Motion>::set_faces);
+			let mut app = setup(Movement::<_Motion, _Immobilized>::set_faces);
 			let entity = app
 				.world_mut()
-				.spawn(Movement::<_Motion>::to(Vec3::new(1., 2., 3.)))
+				.spawn(Movement::<_Motion, _Immobilized>::to(Vec3::new(1., 2., 3.)))
 				.id();
 
 			app.update();
 			let mut movement = app.world_mut().entity_mut(entity);
-			let mut movement = movement.get_mut::<Movement<_Motion>>().unwrap();
+			let mut movement = movement
+				.get_mut::<Movement<_Motion, _Immobilized>>()
+				.unwrap();
 			movement.target = Some(Vec3::new(3., 4., 5.).into());
 			app.update();
 
@@ -267,15 +256,17 @@ mod tests {
 
 		#[test]
 		fn set_to_face_direction_on_update_when_changed() {
-			let mut app = setup(Movement::<_Motion>::set_faces);
+			let mut app = setup(Movement::<_Motion, _Immobilized>::set_faces);
 			let entity = app
 				.world_mut()
-				.spawn(Movement::<_Motion>::to(Dir3::NEG_X))
+				.spawn(Movement::<_Motion, _Immobilized>::to(Dir3::NEG_X))
 				.id();
 
 			app.update();
 			let mut movement = app.world_mut().entity_mut(entity);
-			let mut movement = movement.get_mut::<Movement<_Motion>>().unwrap();
+			let mut movement = movement
+				.get_mut::<Movement<_Motion, _Immobilized>>()
+				.unwrap();
 			movement.target = Some(Dir3::NEG_Z.into());
 			app.update();
 
@@ -287,16 +278,19 @@ mod tests {
 
 		#[test]
 		fn remove_set_face_on_update_when_removed() {
-			let mut app = setup(Movement::<_Motion>::set_faces);
+			let mut app = setup(Movement::<_Motion, _Immobilized>::set_faces);
 			let entity = app
 				.world_mut()
-				.spawn((Movement::<_Motion>::to(Dir3::NEG_X), SetFace(Face::Target)))
+				.spawn((
+					Movement::<_Motion, _Immobilized>::to(Dir3::NEG_X),
+					SetFace(Face::Target),
+				))
 				.id();
 
 			app.update();
 			app.world_mut()
 				.entity_mut(entity)
-				.remove::<Movement<_Motion>>();
+				.remove::<Movement<_Motion, _Immobilized>>();
 			app.update();
 
 			assert_eq!(None, app.world().entity(entity).get::<SetFace>());
@@ -304,13 +298,13 @@ mod tests {
 
 		#[test]
 		fn remove_set_face_on_update_when_set_to_stop() {
-			let mut app = setup(Movement::<_Motion>::set_faces);
+			let mut app = setup(Movement::<_Motion, _Immobilized>::set_faces);
 			let entity = app.world_mut().spawn(SetFace(Face::Target)).id();
 
 			app.update();
 			app.world_mut()
 				.entity_mut(entity)
-				.insert(Movement::<_Motion>::stop());
+				.insert(Movement::<_Motion, _Immobilized>::stop());
 			app.update();
 
 			assert_eq!(None, app.world().entity(entity).get::<SetFace>());
@@ -318,17 +312,20 @@ mod tests {
 
 		#[test]
 		fn when_movement_inserted_after_removal_in_same_frame_add_face() {
-			let mut app = setup(Movement::<_Motion>::set_faces);
+			let mut app = setup(Movement::<_Motion, _Immobilized>::set_faces);
 			let entity = app
 				.world_mut()
-				.spawn((Movement::<_Motion>::to(Dir3::NEG_X), SetFace(Face::Target)))
+				.spawn((
+					Movement::<_Motion, _Immobilized>::to(Dir3::NEG_X),
+					SetFace(Face::Target),
+				))
 				.id();
 
 			app.update();
 			app.world_mut()
 				.entity_mut(entity)
-				.remove::<Movement<_Motion>>()
-				.insert(Movement::<_Motion>::to(Dir3::NEG_X));
+				.remove::<Movement<_Motion, _Immobilized>>()
+				.insert(Movement::<_Motion, _Immobilized>::to(Dir3::NEG_X));
 			app.update();
 
 			assert_eq!(
@@ -352,8 +349,8 @@ mod tests {
 		fn call_update(
 			mut commands: ZyheedaCommands,
 			agents: Query<
-				(Entity, &Movement<_Motion>, &_UpdateParams),
-				<Movement<_Motion> as MovementUpdate>::TConstraint,
+				(Entity, &Movement<_Motion, _Immobilized>, &_UpdateParams),
+				<Movement<_Motion, _Immobilized> as MovementUpdate>::TConstraint,
 			>,
 		) {
 			for (entity, movement, params) in &agents {
@@ -381,7 +378,7 @@ mod tests {
 			let agent = app
 				.world_mut()
 				.spawn((
-					Movement::<_Motion>::to(target),
+					Movement::<_Motion, _Immobilized>::to(target),
 					_UpdateParams((None, speed)),
 				))
 				.id();
@@ -401,7 +398,7 @@ mod tests {
 			let agent = app
 				.world_mut()
 				.spawn((
-					Movement::<_Motion>::to(direction),
+					Movement::<_Motion, _Immobilized>::to(direction),
 					_UpdateParams((None, speed)),
 				))
 				.id();
@@ -420,7 +417,7 @@ mod tests {
 			let agent = app
 				.world_mut()
 				.spawn((
-					Movement::<_Motion> {
+					Movement::<_Motion, _Immobilized> {
 						target: None,
 						_m: PhantomData,
 					},
@@ -444,7 +441,7 @@ mod tests {
 			let agent = app
 				.world_mut()
 				.spawn((
-					Movement::<_Motion>::to(target),
+					Movement::<_Motion, _Immobilized>::to(target),
 					_UpdateParams((
 						Some(_Motion::NotDone(LinearMotion::ToTarget {
 							speed: Speed(UnitsPerSecond::from(42.)),
@@ -471,7 +468,7 @@ mod tests {
 			let agent = app
 				.world_mut()
 				.spawn((
-					Movement::<_Motion>::to(target),
+					Movement::<_Motion, _Immobilized>::to(target),
 					_UpdateParams((
 						Some(_Motion::Done(LinearMotion::ToTarget { speed, target })),
 						speed,
@@ -492,9 +489,9 @@ mod tests {
 			let agent = app
 				.world_mut()
 				.spawn((
-					Movement::<_Motion>::to(target),
+					Movement::<_Motion, _Immobilized>::to(target),
 					_UpdateParams((None, speed)),
-					Immobilized,
+					_Immobilized,
 				))
 				.id();
 
@@ -511,7 +508,7 @@ mod tests {
 			let agent = app
 				.world_mut()
 				.spawn((
-					Movement::<_Motion>::to(target),
+					Movement::<_Motion, _Immobilized>::to(target),
 					_UpdateParams((
 						Some(_Motion::from(LinearMotion::ToTarget {
 							speed: Speed::default(),
@@ -538,7 +535,7 @@ mod tests {
 			let agent = app
 				.world_mut()
 				.spawn((
-					Movement::<_Motion>::to(target),
+					Movement::<_Motion, _Immobilized>::to(target),
 					_UpdateParams((
 						Some(_Motion::from(LinearMotion::Direction {
 							speed: Speed::default(),
@@ -565,7 +562,7 @@ mod tests {
 			let agent = app
 				.world_mut()
 				.spawn((
-					Movement::<_Motion>::to(target),
+					Movement::<_Motion, _Immobilized>::to(target),
 					_UpdateParams((None, speed)),
 				))
 				.id();
@@ -586,7 +583,7 @@ mod tests {
 			let agent = app
 				.world_mut()
 				.spawn((
-					Movement::<_Motion>::to(target),
+					Movement::<_Motion, _Immobilized>::to(target),
 					_UpdateParams((
 						Some(_Motion::Done(LinearMotion::ToTarget { speed, target })),
 						speed,
@@ -610,7 +607,7 @@ mod tests {
 			let agent = app
 				.world_mut()
 				.spawn((
-					Movement::<_Motion>::to(target),
+					Movement::<_Motion, _Immobilized>::to(target),
 					_UpdateParams((
 						Some(_Motion::Done(LinearMotion::ToTarget {
 							speed: Speed(UnitsPerSecond::from(42.)),

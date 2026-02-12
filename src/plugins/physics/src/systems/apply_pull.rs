@@ -1,8 +1,7 @@
-use crate::components::affected::gravity_affected::GravityPull;
+use crate::components::{affected::gravity_affected::GravityPull, immobilized::Immobilized};
 use bevy::{ecs::component::Mutable, prelude::*};
 use bevy_rapier3d::prelude::Velocity;
 use common::{
-	components::immobilized::Immobilized,
 	traits::accessors::get::{Get, TryApplyOn},
 	zyheeda_commands::ZyheedaCommands,
 };

@@ -4,13 +4,14 @@ use crate::{
 };
 use common::traits::{handles_movement::StopMovement, thread_safe::ThreadSafe};
 
-impl<TMotion> StopMovement for MovementContextMut<'_, TMotion>
+impl<TMotion, TImmobilized> StopMovement for MovementContextMut<'_, TMotion, TImmobilized>
 where
 	TMotion: ThreadSafe,
+	TImmobilized: ThreadSafe,
 {
 	fn stop(&mut self) {
 		self.entity
-			.try_insert(Movement::<PathOrDirection<TMotion>>::stop());
+			.try_insert(Movement::<PathOrDirection<TMotion>, TImmobilized>::stop());
 	}
 }
 
@@ -33,6 +34,9 @@ mod tests {
 	use testing::SingleThreadedApp;
 
 	#[derive(Debug, PartialEq)]
+	struct _Immobilized;
+
+	#[derive(Debug, PartialEq)]
 	struct _Motion;
 
 	fn setup() -> App {
@@ -44,23 +48,24 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Movement::<PathOrDirection<_Motion>>::to(Vec3::new(
-				1., 2., 3.,
-			)))
+			.spawn(Movement::<PathOrDirection<_Motion>, _Immobilized>::to(
+				Vec3::new(1., 2., 3.),
+			))
 			.id();
 
-		app.world_mut()
-			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
+		app.world_mut().run_system_once(
+			move |mut p: MovementParamMut<_Motion, _Immobilized>| {
 				let mut ctx =
 					MovementParamMut::get_context_mut(&mut p, MovementMarker { entity }).unwrap();
 				ctx.stop();
-			})?;
+			},
+		)?;
 
 		assert_eq!(
-			Some(&Movement::<PathOrDirection<_Motion>>::stop()),
+			Some(&Movement::stop()),
 			app.world()
 				.entity(entity)
-				.get::<Movement<PathOrDirection<_Motion>>>()
+				.get::<Movement<PathOrDirection<_Motion>, _Immobilized>>()
 		);
 		Ok(())
 	}

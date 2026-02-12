@@ -22,6 +22,7 @@ use crate::{
 		default_attributes::DefaultAttributes,
 		effects::{Effects, force::ForceEffect},
 		ground_target::GroundTarget,
+		immobilized::Immobilized,
 		interaction_target::{ColliderOfInteractionTarget, InteractionTarget},
 		lifetime::{LifetimeTiedTo, TiedLifetimes},
 		motion::Motion,
@@ -262,6 +263,7 @@ impl<TDependencies> HandlesPhysicalEffectTargets for PhysicsPlugin<TDependencies
 
 impl<TDependencies> HandlesMotion for PhysicsPlugin<TDependencies> {
 	type TMotion = Motion;
+	type TImmobilized = Immobilized;
 }
 
 impl<TDependencies> HandlesPhysicalBodies for PhysicsPlugin<TDependencies> {

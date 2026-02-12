@@ -13,16 +13,17 @@ use common::{
 	},
 };
 
-impl<TMotion> StartMovement for MovementContextMut<'_, TMotion>
+impl<TMotion, TImmobilized> StartMovement for MovementContextMut<'_, TMotion, TImmobilized>
 where
 	TMotion: ThreadSafe,
+	TImmobilized: ThreadSafe,
 {
 	fn start<T>(&mut self, target: T, radius: Units, speed: UnitsPerSecond)
 	where
 		T: Into<MovementTarget>,
 	{
 		self.entity.try_insert((
-			Movement::<PathOrDirection<TMotion>>::to(target),
+			Movement::<PathOrDirection<TMotion>, TImmobilized>::to(target),
 			MovementDefinition { radius, speed },
 		));
 	}
@@ -53,6 +54,9 @@ mod tests {
 	use testing::SingleThreadedApp;
 
 	#[derive(Debug, PartialEq)]
+	struct _Immobilized;
+
+	#[derive(Debug, PartialEq)]
 	struct _Motion;
 
 	fn setup() -> App {
@@ -64,8 +68,8 @@ mod tests {
 		let mut app = setup();
 		let entity = app.world_mut().spawn_empty().id();
 
-		app.world_mut()
-			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
+		app.world_mut().run_system_once(
+			move |mut p: MovementParamMut<_Motion, _Immobilized>| {
 				let mut ctx =
 					MovementParamMut::get_context_mut(&mut p, MovementMarker { entity }).unwrap();
 				ctx.start(
@@ -73,7 +77,8 @@ mod tests {
 					Units::from(42.),
 					UnitsPerSecond::from(11.),
 				);
-			})?;
+			},
+		)?;
 
 		assert_eq!(
 			Some(&MovementDefinition {
@@ -93,18 +98,19 @@ mod tests {
 		let mut app = setup();
 		let entity = app.world_mut().spawn_empty().id();
 
-		app.world_mut()
-			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
+		app.world_mut().run_system_once(
+			move |mut p: MovementParamMut<_Motion, _Immobilized>| {
 				let mut ctx =
 					MovementParamMut::get_context_mut(&mut p, MovementMarker { entity }).unwrap();
 				ctx.start(target, Units::from(42.), UnitsPerSecond::from(11.));
-			})?;
+			},
+		)?;
 
 		assert_eq!(
 			Some(&Movement::to(target)),
 			app.world()
 				.entity(entity)
-				.get::<Movement<PathOrDirection<_Motion>>>(),
+				.get::<Movement<PathOrDirection<_Motion>, _Immobilized>>(),
 		);
 		Ok(())
 	}

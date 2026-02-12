@@ -81,18 +81,24 @@ where
 	fn build(&self, app: &mut App) {
 		TSaveGame::register_savable_component::<SetFace>(app);
 		TSaveGame::register_savable_component::<SetFaceOverride>(app);
-		TSaveGame::register_savable_component::<Movement<PathOrDirection<TPhysics::TMotion>>>(app);
+		TSaveGame::register_savable_component::<
+			Movement<PathOrDirection<TPhysics::TMotion>, TPhysics::TImmobilized>,
+		>(app);
 
 		let compute_path = MovementDefinition::compute_path::<
 			TPhysics::TMotion,
+			TPhysics::TImmobilized,
 			TPathFinding::TComputePath,
 			TPathFinding::TComputerRef,
 		>;
-		let execute_path =
-			MovementDefinition::execute_movement::<Movement<PathOrDirection<TPhysics::TMotion>>>;
-		let execute_movement = MovementDefinition::execute_movement::<Movement<TPhysics::TMotion>>;
+		let execute_path = MovementDefinition::execute_movement::<
+			Movement<PathOrDirection<TPhysics::TMotion>, TPhysics::TImmobilized>,
+		>;
+		let execute_movement = MovementDefinition::execute_movement::<
+			Movement<TPhysics::TMotion, TPhysics::TImmobilized>,
+		>;
 		let animate_movement_forward = MovementDefinition::animate_movement_forward::<
-			Movement<TPhysics::TMotion>,
+			Movement<TPhysics::TMotion, TPhysics::TImmobilized>,
 			AnimationsSystemParamMut<TAnimations>,
 		>;
 
@@ -113,11 +119,11 @@ where
 						.chain(),
 					// Apply facing
 					(
-						Movement::<TPhysics::TMotion>::set_faces,
+						Movement::<TPhysics::TMotion, TPhysics::TImmobilized>::set_faces,
 						SetFace::get_faces.pipe(execute_face::<RaycastSystemParam<TPhysics>>),
 					)
 						.chain(),
-					MovementParam::<TPhysics::TMotion>::update_just_removed,
+					MovementParam::<TPhysics::TMotion, TPhysics::TImmobilized>::update_just_removed,
 				)
 					.chain()
 					.in_set(MovementSystems)
@@ -148,6 +154,6 @@ impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding> HandlesMovement
 where
 	TPhysics: HandlesMotion,
 {
-	type TMovement<'w, 's> = MovementParam<'w, 's, TPhysics::TMotion>;
-	type TMovementMut<'w, 's> = MovementParamMut<'w, 's, TPhysics::TMotion>;
+	type TMovement<'w, 's> = MovementParam<'w, 's, TPhysics::TMotion, TPhysics::TImmobilized>;
+	type TMovementMut<'w, 's> = MovementParamMut<'w, 's, TPhysics::TMotion, TPhysics::TImmobilized>;
 }

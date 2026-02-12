@@ -6,10 +6,7 @@ use bevy::prelude::*;
 use common::traits::{accessors::get::ContextChanged, thread_safe::ThreadSafe};
 use std::collections::HashSet;
 
-impl<TMotion> ContextChanged for MovementContext<'_, TMotion>
-where
-	TMotion: ThreadSafe,
-{
+impl<TMotion, TImmobilized> ContextChanged for MovementContext<'_, TMotion, TImmobilized> {
 	fn context_changed(&self) -> bool {
 		match self {
 			MovementContext::Movement(movement) => movement.is_changed(),
@@ -19,13 +16,14 @@ where
 	}
 }
 
-impl<TMotion> MovementParam<'_, '_, TMotion>
+impl<TMotion, TImmobilized> MovementParam<'_, '_, TMotion, TImmobilized>
 where
 	TMotion: ThreadSafe,
+	TImmobilized: ThreadSafe,
 {
 	pub(crate) fn update_just_removed(
 		mut just_removed: ResMut<JustRemovedMovements>,
-		mut removed: RemovedComponents<Movement<PathOrDirection<TMotion>>>,
+		mut removed: RemovedComponents<Movement<PathOrDirection<TMotion>, TImmobilized>>,
 	) {
 		if !just_removed.0.is_empty() {
 			just_removed.0.clear();
@@ -53,6 +51,8 @@ mod tests {
 	};
 	use testing::SingleThreadedApp;
 
+	struct _Immobilized;
+
 	struct _Motion;
 
 	#[derive(Component, Debug, PartialEq)]
@@ -64,8 +64,10 @@ mod tests {
 		app.init_resource::<JustRemovedMovements>().add_systems(
 			Update,
 			(
-				MovementParam::<_Motion>::update_just_removed,
-				|mut commands: Commands, m: MovementParam<_Motion>, entities: Query<Entity>| {
+				MovementParam::<_Motion, _Immobilized>::update_just_removed,
+				|mut commands: Commands,
+				 m: MovementParam<_Motion, _Immobilized>,
+				 entities: Query<Entity>| {
 					for entity in &entities {
 						let key = MovementMarker { entity };
 						let Some(ctx) = MovementParam::get_context(&m, key) else {
@@ -89,9 +91,9 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Movement::<PathOrDirection<_Motion>>::to(Vec3::new(
-				1., 2., 3.,
-			)))
+			.spawn(Movement::<PathOrDirection<_Motion>, _Immobilized>::to(
+				Vec3::new(1., 2., 3.),
+			))
 			.id();
 
 		app.update();
@@ -107,9 +109,9 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Movement::<PathOrDirection<_Motion>>::to(Vec3::new(
-				1., 2., 3.,
-			)))
+			.spawn(Movement::<PathOrDirection<_Motion>, _Immobilized>::to(
+				Vec3::new(1., 2., 3.),
+			))
 			.id();
 
 		app.update();
@@ -126,15 +128,15 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Movement::<PathOrDirection<_Motion>>::to(Vec3::new(
-				1., 2., 3.,
-			)))
+			.spawn(Movement::<PathOrDirection<_Motion>, _Immobilized>::to(
+				Vec3::new(1., 2., 3.),
+			))
 			.id();
 
 		app.update();
 		app.world_mut()
 			.entity_mut(entity)
-			.get_mut::<Movement<PathOrDirection<_Motion>>>()
+			.get_mut::<Movement<PathOrDirection<_Motion>, _Immobilized>>()
 			.as_deref_mut();
 		app.update();
 
@@ -149,15 +151,15 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Movement::<PathOrDirection<_Motion>>::to(Vec3::new(
-				1., 2., 3.,
-			)))
+			.spawn(Movement::<PathOrDirection<_Motion>, _Immobilized>::to(
+				Vec3::new(1., 2., 3.),
+			))
 			.id();
 
 		app.update();
 		app.world_mut()
 			.entity_mut(entity)
-			.remove::<Movement<PathOrDirection<_Motion>>>();
+			.remove::<Movement<PathOrDirection<_Motion>, _Immobilized>>();
 		app.update();
 
 		assert_eq!(
@@ -171,15 +173,15 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Movement::<PathOrDirection<_Motion>>::to(Vec3::new(
-				1., 2., 3.,
-			)))
+			.spawn(Movement::<PathOrDirection<_Motion>, _Immobilized>::to(
+				Vec3::new(1., 2., 3.),
+			))
 			.id();
 
 		app.update();
 		app.world_mut()
 			.entity_mut(entity)
-			.remove::<Movement<PathOrDirection<_Motion>>>();
+			.remove::<Movement<PathOrDirection<_Motion>, _Immobilized>>();
 		app.update();
 		app.update();
 
