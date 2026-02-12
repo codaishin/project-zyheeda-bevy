@@ -10,7 +10,6 @@ use common::{
 	traits::{accessors::get::TryApplyOn, handles_physics::physical_bodies::PhysicsType},
 	zyheeda_commands::ZyheedaCommands,
 };
-use std::sync::LazyLock;
 
 impl PhysicalBody {
 	pub(crate) fn prefab(
@@ -21,7 +20,7 @@ impl PhysicalBody {
 			commands.try_apply_on(&entity, |mut e| {
 				match body.physics_type {
 					PhysicsType::Agent => {
-						e.try_insert((*AGENT_LOCKED_AXES, AGENT_GRAVITY_SCALE, RigidBody::Dynamic));
+						e.try_insert((RigidBody::KinematicPositionBased, Self::agent_controller()));
 					}
 					PhysicsType::Terrain => {
 						e.try_insert(RigidBody::Fixed);
@@ -41,11 +40,11 @@ impl PhysicalBody {
 			});
 		}
 	}
-}
 
-const AGENT_GRAVITY_SCALE: GravityScale = GravityScale(0.);
-static AGENT_LOCKED_AXES: LazyLock<LockedAxes> =
-	LazyLock::new(|| LockedAxes::ROTATION_LOCKED | LockedAxes::TRANSLATION_LOCKED_Y);
+	fn agent_controller() -> KinematicCharacterController {
+		KinematicCharacterController::default()
+	}
+}
 
 #[cfg(test)]
 mod tests {
@@ -84,14 +83,39 @@ mod tests {
 		);
 	}
 
-	#[test_case(PhysicsType::Terrain, RigidBody::Fixed, None, None; "terrain")]
-	#[test_case(PhysicsType::Agent, RigidBody::Dynamic, Some(*AGENT_LOCKED_AXES), Some(AGENT_GRAVITY_SCALE); "agent")]
+	#[test_case(PhysicsType::Terrain, RigidBody::Fixed, false;  "terrain")]
+	#[test_case(PhysicsType::Agent, RigidBody::KinematicPositionBased, true; "agent")]
 	fn insert_physics_constraints(
 		physics_type: PhysicsType,
 		rigid_body: RigidBody,
-		locked_axes: Option<LockedAxes>,
-		gravity_scale: Option<GravityScale>,
+		has_character_controller: bool,
 	) {
+		let mut app = setup();
+		let shape = Shape::Sphere {
+			radius: Units::from(42.),
+		};
+		let entity = app
+			.world_mut()
+			.spawn(PhysicalBody(
+				Body::from_shape(shape).with_physics_type(physics_type),
+			))
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			(Some(&rigid_body), has_character_controller),
+			(
+				app.world().entity(entity).get::<RigidBody>(),
+				app.world()
+					.entity(entity)
+					.contains::<KinematicCharacterController>(),
+			)
+		);
+	}
+
+	#[test]
+	fn insert_blocker_types() {
 		let mut app = setup();
 		let blocks = [Blocker::Force, Blocker::Physical];
 		let shape = Shape::Sphere {
@@ -100,27 +124,15 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(PhysicalBody(
-				Body::from_shape(shape)
-					.with_physics_type(physics_type)
-					.with_blocker_types(blocks),
+				Body::from_shape(shape).with_blocker_types(blocks),
 			))
 			.id();
 
 		app.update();
 
 		assert_eq!(
-			(
-				Some(&rigid_body),
-				locked_axes,
-				gravity_scale,
-				Some(&BlockerTypes::from(blocks))
-			),
-			(
-				app.world().entity(entity).get::<RigidBody>(),
-				app.world().entity(entity).get::<LockedAxes>().copied(),
-				app.world().entity(entity).get::<GravityScale>().copied(),
-				app.world().entity(entity).get::<BlockerTypes>(),
-			)
+			Some(&BlockerTypes::from(blocks)),
+			app.world().entity(entity).get::<BlockerTypes>(),
 		);
 	}
 
