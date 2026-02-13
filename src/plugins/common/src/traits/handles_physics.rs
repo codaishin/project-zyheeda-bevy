@@ -80,8 +80,6 @@ pub trait HandlesMotion {
 		+ From<CharacterMotion>
 		+ GetProperty<Done>
 		+ GetProperty<CharacterMotion>;
-
-	type TCharacterImmobilized: Component;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]

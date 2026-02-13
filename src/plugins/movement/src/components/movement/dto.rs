@@ -13,13 +13,13 @@ pub struct MovementDto {
 	target: Option<MovementTarget>,
 }
 
-impl<TMovement, TImmobilized> From<Movement<TMovement, TImmobilized>> for MovementDto {
-	fn from(Movement { target, .. }: Movement<TMovement, TImmobilized>) -> Self {
+impl<TMovement> From<Movement<TMovement>> for MovementDto {
+	fn from(Movement { target, .. }: Movement<TMovement>) -> Self {
 		Self { target }
 	}
 }
 
-impl<TMovement, TImmobilized> TryLoadFrom<MovementDto> for Movement<TMovement, TImmobilized> {
+impl<TMovement> TryLoadFrom<MovementDto> for Movement<TMovement> {
 	type TInstantiationError = Unreachable;
 
 	fn try_load_from<TLoadAsset>(

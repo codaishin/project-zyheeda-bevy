@@ -1,4 +1,4 @@
-use crate::components::character_motion::ApplyCharacterMotion;
+use crate::components::{character_motion::ApplyCharacterMotion, immobilized::Immobilized};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::traits::handles_physics::CharacterMotion;
@@ -13,7 +13,10 @@ macro_rules! no_motion {
 impl ApplyCharacterMotion {
 	pub(crate) fn execute(
 		delta: In<Duration>,
-		characters: Query<(&mut KinematicCharacterController, &Transform, &Self)>,
+		characters: Query<
+			(&mut KinematicCharacterController, &Transform, &Self),
+			Without<Immobilized>,
+		>,
 	) {
 		for (mut character, transform, motion) in characters {
 			let translation = match motion {
@@ -156,6 +159,37 @@ mod tests {
 
 			assert_eq!(
 				Some(Vec3::NEG_Y * 0.2),
+				app.world()
+					.entity(entity)
+					.get::<KinematicCharacterController>()
+					.and_then(|c| c.translation),
+			);
+		}
+	}
+
+	mod immobilized {
+		use super::*;
+
+		#[test]
+		fn do_nothing_when_immobilized() {
+			let mut app = setup(Duration::from_millis(100));
+			let entity = app
+				.world_mut()
+				.spawn((
+					Immobilized,
+					Transform::default(),
+					KinematicCharacterController::default(),
+					ApplyCharacterMotion::Ongoing(CharacterMotion::ToTarget {
+						speed: Speed(UnitsPerSecond::from(1.)),
+						target: Vec3::new(3., -1., 11.),
+					}),
+				))
+				.id();
+
+			app.update();
+
+			assert_eq!(
+				None,
 				app.world()
 					.entity(entity)
 					.get::<KinematicCharacterController>()

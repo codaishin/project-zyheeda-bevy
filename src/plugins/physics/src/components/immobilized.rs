@@ -1,4 +1,4 @@
 use bevy::prelude::*;
 
 #[derive(Component, Debug, PartialEq)]
-pub struct Immobilized;
+pub(crate) struct Immobilized;
