@@ -1,35 +1,33 @@
-use crate::components::{character_motion::ApplyCharacterMotion, immobilized::Immobilized};
+use crate::components::{
+	character_motion::{ApplyCharacterMotion, IsInMotion},
+	immobilized::Immobilized,
+};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::traits::handles_physics::CharacterMotion;
 use std::time::Duration;
 
-macro_rules! no_motion {
-	() => {
-		ApplyCharacterMotion::Done(..) | ApplyCharacterMotion::Ongoing(CharacterMotion::Stop)
-	};
-}
-
 impl ApplyCharacterMotion {
+	#[allow(clippy::type_complexity)]
 	pub(crate) fn execute(
 		delta: In<Duration>,
 		characters: Query<
 			(&mut KinematicCharacterController, &Transform, &Self),
-			Without<Immobilized>,
+			(Without<Immobilized>, With<IsInMotion>),
 		>,
 	) {
-		for (mut character, transform, motion) in characters {
+		for (mut character, transform, Self { motion, .. }) in characters {
 			let translation = match motion {
-				ApplyCharacterMotion::Ongoing(CharacterMotion::Direction { speed, direction }) => {
+				CharacterMotion::Direction { speed, direction } => {
 					*direction * **speed * delta.as_secs_f32()
 				}
-				ApplyCharacterMotion::Ongoing(CharacterMotion::ToTarget { speed, target }) => {
+				CharacterMotion::ToTarget { speed, target } => {
 					(target - transform.translation)
 						.try_normalize()
 						.unwrap_or_default()
 						* **speed * delta.as_secs_f32()
 				}
-				no_motion!() => continue,
+				CharacterMotion::Stop => continue,
 			};
 
 			character.translation = Some(translation);
@@ -63,7 +61,7 @@ mod tests {
 				.spawn((
 					Transform::from_xyz(1., 2., 3.),
 					KinematicCharacterController::default(),
-					ApplyCharacterMotion::Ongoing(CharacterMotion::ToTarget {
+					ApplyCharacterMotion::from(CharacterMotion::ToTarget {
 						speed: Speed(UnitsPerSecond::from(1.)),
 						target: Vec3::new(3., -1., 11.),
 					}),
@@ -90,7 +88,7 @@ mod tests {
 				.spawn((
 					Transform::from_xyz(1., 2., 3.),
 					KinematicCharacterController::default(),
-					ApplyCharacterMotion::Ongoing(CharacterMotion::ToTarget {
+					ApplyCharacterMotion::from(CharacterMotion::ToTarget {
 						speed: Speed(UnitsPerSecond::from(2.)),
 						target: Vec3::new(3., -1., 11.),
 					}),
@@ -121,7 +119,7 @@ mod tests {
 				.spawn((
 					Transform::default(),
 					KinematicCharacterController::default(),
-					ApplyCharacterMotion::Ongoing(CharacterMotion::Direction {
+					ApplyCharacterMotion::from(CharacterMotion::Direction {
 						speed: Speed(UnitsPerSecond::from(1.)),
 						direction: Dir3::NEG_Y,
 					}),
@@ -148,7 +146,7 @@ mod tests {
 				.spawn((
 					Transform::default(),
 					KinematicCharacterController::default(),
-					ApplyCharacterMotion::Ongoing(CharacterMotion::Direction {
+					ApplyCharacterMotion::from(CharacterMotion::Direction {
 						speed: Speed(UnitsPerSecond::from(2.)),
 						direction: Dir3::NEG_Y,
 					}),
@@ -167,7 +165,7 @@ mod tests {
 		}
 	}
 
-	mod immobilized {
+	mod filters {
 		use super::*;
 
 		#[test]
@@ -179,11 +177,39 @@ mod tests {
 					Immobilized,
 					Transform::default(),
 					KinematicCharacterController::default(),
-					ApplyCharacterMotion::Ongoing(CharacterMotion::ToTarget {
+					ApplyCharacterMotion::from(CharacterMotion::ToTarget {
 						speed: Speed(UnitsPerSecond::from(1.)),
 						target: Vec3::new(3., -1., 11.),
 					}),
 				))
+				.id();
+
+			app.update();
+
+			assert_eq!(
+				None,
+				app.world()
+					.entity(entity)
+					.get::<KinematicCharacterController>()
+					.and_then(|c| c.translation),
+			);
+		}
+
+		#[test]
+		fn do_nothing_not_in_motion() {
+			let mut app = setup(Duration::from_millis(100));
+			let entity = app
+				.world_mut()
+				.spawn((
+					IsInMotion,
+					Transform::default(),
+					KinematicCharacterController::default(),
+					ApplyCharacterMotion::from(CharacterMotion::ToTarget {
+						speed: Speed(UnitsPerSecond::from(1.)),
+						target: Vec3::new(3., -1., 11.),
+					}),
+				))
+				.remove::<IsInMotion>()
 				.id();
 
 			app.update();

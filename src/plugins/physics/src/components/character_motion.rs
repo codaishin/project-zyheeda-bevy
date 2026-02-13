@@ -11,46 +11,42 @@ use testing::ApproxEqual;
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 #[component(immutable)]
-pub enum ApplyCharacterMotion {
-	Ongoing(CharacterMotion),
-	Done(CharacterMotion),
+#[require(IsInMotion)]
+pub struct ApplyCharacterMotion {
+	pub(crate) motion: CharacterMotion,
+	pub(crate) is_done: bool,
 }
 
 impl From<CharacterMotion> for ApplyCharacterMotion {
 	fn from(motion: CharacterMotion) -> Self {
-		Self::Ongoing(motion)
+		Self {
+			motion,
+			is_done: false,
+		}
 	}
 }
 
 impl GetProperty<CharacterMotion> for ApplyCharacterMotion {
 	fn get_property(&self) -> CharacterMotion {
-		match self {
-			ApplyCharacterMotion::Ongoing(motion) => *motion,
-			ApplyCharacterMotion::Done(motion) => *motion,
-		}
+		self.motion
 	}
 }
 
 impl GetProperty<Done> for ApplyCharacterMotion {
 	fn get_property(&self) -> bool {
-		matches!(self, ApplyCharacterMotion::Done(..))
+		self.is_done
 	}
 }
 
 #[cfg(test)]
 impl ApproxEqual<f32> for ApplyCharacterMotion {
 	fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
-		match (self, other) {
-			(ApplyCharacterMotion::Ongoing(a), ApplyCharacterMotion::Ongoing(b)) => {
-				approx_equal(a, b, tolerance)
-			}
-			(ApplyCharacterMotion::Done(a), ApplyCharacterMotion::Done(b)) => {
-				approx_equal(a, b, tolerance)
-			}
-			_ => false,
-		}
+		approx_equal(&self.motion, &other.motion, tolerance) && self.is_done == other.is_done
 	}
 }
+
+#[derive(Component, Debug, PartialEq, Default)]
+pub(crate) struct IsInMotion;
 
 /// Matches all [CharacterMotion] pair permutations without silently falling through when new
 /// variations are added
