@@ -1,22 +1,22 @@
-use crate::components::{character_motion::ApplyCharacterMotion, immobilized::Immobilized};
+use crate::components::{
+	character_motion::{ApplyCharacterMotion, IsInMotion},
+	immobilized::Immobilized,
+};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::traits::handles_physics::CharacterMotion;
 use std::time::Duration;
 
 impl ApplyCharacterMotion {
+	#[allow(clippy::type_complexity)]
 	pub(crate) fn execute(
 		delta: In<Duration>,
 		characters: Query<
 			(&mut KinematicCharacterController, &Transform, &Self),
-			Without<Immobilized>,
+			(Without<Immobilized>, With<IsInMotion>),
 		>,
 	) {
-		for (mut character, transform, Self { motion, is_done }) in characters {
-			if *is_done {
-				continue;
-			}
-
+		for (mut character, transform, Self { motion, .. }) in characters {
 			let translation = match motion {
 				CharacterMotion::Direction { speed, direction } => {
 					*direction * **speed * delta.as_secs_f32()
@@ -165,11 +165,11 @@ mod tests {
 		}
 	}
 
-	mod immobilized {
+	mod filters {
 		use super::*;
 
 		#[test]
-		fn do_nothing() {
+		fn do_nothing_when_immobilized() {
 			let mut app = setup(Duration::from_millis(100));
 			let entity = app
 				.world_mut()
@@ -194,27 +194,22 @@ mod tests {
 					.and_then(|c| c.translation),
 			);
 		}
-	}
-
-	mod done {
-		use super::*;
 
 		#[test]
-		fn do_nothing() {
+		fn do_nothing_not_in_motion() {
 			let mut app = setup(Duration::from_millis(100));
 			let entity = app
 				.world_mut()
 				.spawn((
+					IsInMotion,
 					Transform::default(),
 					KinematicCharacterController::default(),
-					ApplyCharacterMotion {
-						motion: CharacterMotion::ToTarget {
-							speed: Speed(UnitsPerSecond::from(1.)),
-							target: Vec3::new(3., -1., 11.),
-						},
-						is_done: true,
-					},
+					ApplyCharacterMotion::from(CharacterMotion::ToTarget {
+						speed: Speed(UnitsPerSecond::from(1.)),
+						target: Vec3::new(3., -1., 11.),
+					}),
 				))
+				.remove::<IsInMotion>()
 				.id();
 
 			app.update();

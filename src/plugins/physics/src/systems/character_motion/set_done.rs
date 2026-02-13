@@ -1,4 +1,4 @@
-use crate::components::character_motion::ApplyCharacterMotion;
+use crate::components::character_motion::{ApplyCharacterMotion, IsInMotion};
 use bevy::prelude::*;
 use common::{
 	traits::{accessors::get::TryApplyOn, handles_physics::CharacterMotion},
@@ -10,24 +10,21 @@ impl ApplyCharacterMotion {
 	pub(crate) fn set_done(
 		In(delta): In<Duration>,
 		mut commands: ZyheedaCommands,
-		motions: Query<(Entity, &Self, &Transform)>,
+		motions: Query<(Entity, &Self, &Transform), With<IsInMotion>>,
 	) {
-		for (entity, motion, transform) in motions {
-			if motion.is_done {
-				continue;
-			}
-
-			if !is_done(&motion.motion, transform, delta) {
+		for (entity, apply, transform) in motions {
+			if !is_done(&apply.motion, transform, delta) {
 				continue;
 			}
 
 			commands.try_apply_on(&entity, |mut e| {
-				e.try_insert(motion.as_done());
+				e.try_insert(apply.is_done());
+				e.try_remove::<IsInMotion>();
 			});
 		}
 	}
 
-	fn as_done(&self) -> Self {
+	fn is_done(&self) -> Self {
 		Self {
 			motion: self.motion,
 			is_done: true,
@@ -55,6 +52,8 @@ fn is_done(motion: &CharacterMotion, transform: &Transform, delta: Duration) -> 
 #[cfg(test)]
 mod tests {
 	#![allow(clippy::unwrap_used)]
+	use crate::components::character_motion::IsInMotion;
+
 	use super::*;
 	use common::{
 		tools::{UnitsPerSecond, speed::Speed},
@@ -91,11 +90,14 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(true),
-			app.world()
-				.entity(entity)
-				.get::<ApplyCharacterMotion>()
-				.map(|m| m.is_done),
+			(Some(true), None),
+			(
+				app.world()
+					.entity(entity)
+					.get::<ApplyCharacterMotion>()
+					.map(|m| m.is_done),
+				app.world().entity(entity).get::<IsInMotion>()
+			)
 		);
 	}
 
@@ -116,11 +118,14 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(true),
-			app.world()
-				.entity(entity)
-				.get::<ApplyCharacterMotion>()
-				.map(|m| m.is_done),
+			(Some(true), None),
+			(
+				app.world()
+					.entity(entity)
+					.get::<ApplyCharacterMotion>()
+					.map(|m| m.is_done),
+				app.world().entity(entity).get::<IsInMotion>()
+			)
 		);
 	}
 
@@ -141,11 +146,14 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(false),
-			app.world()
-				.entity(entity)
-				.get::<ApplyCharacterMotion>()
-				.map(|m| m.is_done),
+			(Some(false), Some(&IsInMotion)),
+			(
+				app.world()
+					.entity(entity)
+					.get::<ApplyCharacterMotion>()
+					.map(|m| m.is_done),
+				app.world().entity(entity).get::<IsInMotion>()
+			)
 		);
 	}
 
@@ -166,11 +174,14 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(true),
-			app.world()
-				.entity(entity)
-				.get::<ApplyCharacterMotion>()
-				.map(|m| m.is_done),
+			(Some(true), None),
+			(
+				app.world()
+					.entity(entity)
+					.get::<ApplyCharacterMotion>()
+					.map(|m| m.is_done),
+				app.world().entity(entity).get::<IsInMotion>()
+			)
 		);
 	}
 
@@ -191,11 +202,14 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(true),
-			app.world()
-				.entity(entity)
-				.get::<ApplyCharacterMotion>()
-				.map(|m| m.is_done),
+			(Some(true), None),
+			(
+				app.world()
+					.entity(entity)
+					.get::<ApplyCharacterMotion>()
+					.map(|m| m.is_done),
+				app.world().entity(entity).get::<IsInMotion>()
+			)
 		);
 	}
 
@@ -225,7 +239,7 @@ mod tests {
 	}
 
 	#[test]
-	fn act_delayed() {
+	fn act_again_when_is_in_motion_present() {
 		let mut app = setup(Duration::from_millis(100));
 		let entity = app
 			.world_mut()
@@ -233,23 +247,20 @@ mod tests {
 				Transform::default(),
 				ApplyCharacterMotion::from(CharacterMotion::ToTarget {
 					speed: Speed(UnitsPerSecond::from(1.)),
-					target: Vec3::ONE,
+					target: Vec3::ZERO,
 				}),
 			))
 			.id();
 
 		app.update();
-		app.world_mut()
-			.entity_mut(entity)
-			.insert(Transform::from_translation(Vec3::ONE));
+		app.world_mut().entity_mut(entity).insert(IsInMotion);
 		app.update();
 
 		assert_eq!(
-			Some(true),
+			Some(&IsChanged::TRUE),
 			app.world()
 				.entity(entity)
-				.get::<ApplyCharacterMotion>()
-				.map(|m| m.is_done),
+				.get::<IsChanged<ApplyCharacterMotion>>(),
 		);
 	}
 }

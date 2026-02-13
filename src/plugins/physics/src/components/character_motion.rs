@@ -11,6 +11,7 @@ use testing::ApproxEqual;
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 #[component(immutable)]
+#[require(IsInMotion)]
 pub struct ApplyCharacterMotion {
 	pub(crate) motion: CharacterMotion,
 	pub(crate) is_done: bool,
@@ -43,6 +44,9 @@ impl ApproxEqual<f32> for ApplyCharacterMotion {
 		approx_equal(&self.motion, &other.motion, tolerance) && self.is_done == other.is_done
 	}
 }
+
+#[derive(Component, Debug, PartialEq, Default)]
+pub(crate) struct IsInMotion;
 
 /// Matches all [CharacterMotion] pair permutations without silently falling through when new
 /// variations are added
