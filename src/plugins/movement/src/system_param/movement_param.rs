@@ -22,25 +22,22 @@ use common::{
 };
 
 #[derive(SystemParam)]
-pub struct MovementParam<'w, 's, TMotion, TImmobilized>
+pub struct MovementParam<'w, 's, TMotion>
 where
 	TMotion: ThreadSafe,
-	TImmobilized: ThreadSafe,
 {
-	movements: Query<'w, 's, Ref<'static, Movement<PathOrDirection<TMotion>, TImmobilized>>>,
+	movements: Query<'w, 's, Ref<'static, Movement<PathOrDirection<TMotion>>>>,
 	just_removed_movements: Res<'w, JustRemovedMovements>,
 }
 
-impl<TMotion, TImmobilized> GetContext<MovementMarker>
-	for MovementParam<'_, '_, TMotion, TImmobilized>
+impl<TMotion> GetContext<MovementMarker> for MovementParam<'_, '_, TMotion>
 where
 	TMotion: ThreadSafe,
-	TImmobilized: ThreadSafe,
 {
-	type TContext<'ctx> = MovementContext<'ctx, TMotion, TImmobilized>;
+	type TContext<'ctx> = MovementContext<'ctx, TMotion>;
 
 	fn get_context<'ctx>(
-		param: &'ctx MovementParam<TMotion, TImmobilized>,
+		param: &'ctx MovementParam<TMotion>,
 		MovementMarker { entity }: MovementMarker,
 	) -> Option<Self::TContext<'ctx>> {
 		let ctx = match param.movements.get(entity) {
@@ -54,26 +51,23 @@ where
 }
 
 #[derive(SystemParam)]
-pub struct MovementParamMut<'w, 's, TMotion, TImmobilized>
+pub struct MovementParamMut<'w, 's, TMotion>
 where
 	TMotion: ThreadSafe,
-	TImmobilized: ThreadSafe,
 {
 	commands: ZyheedaCommands<'w, 's>,
 	movement_definitions: Query<'w, 's, &'static mut MovementDefinition>,
-	movements: Query<'w, 's, &'static Movement<PathOrDirection<TMotion>, TImmobilized>>,
+	movements: Query<'w, 's, &'static Movement<PathOrDirection<TMotion>>>,
 }
 
-impl<TMotion, TImmobilized> GetContextMut<MovementMarker>
-	for MovementParamMut<'_, '_, TMotion, TImmobilized>
+impl<TMotion> GetContextMut<MovementMarker> for MovementParamMut<'_, '_, TMotion>
 where
 	TMotion: ThreadSafe,
-	TImmobilized: ThreadSafe,
 {
-	type TContext<'ctx> = MovementContextMut<'ctx, TMotion, TImmobilized>;
+	type TContext<'ctx> = MovementContextMut<'ctx, TMotion>;
 
 	fn get_context_mut<'ctx>(
-		param: &'ctx mut MovementParamMut<TMotion, TImmobilized>,
+		param: &'ctx mut MovementParamMut<TMotion>,
 		MovementMarker { entity }: MovementMarker,
 	) -> Option<Self::TContext<'ctx>> {
 		let movement_definition = param.movement_definitions.get_mut(entity).ok();
@@ -88,14 +82,14 @@ where
 	}
 }
 
-pub enum MovementContext<'ctx, TMotion, TImmobilized> {
-	Movement(Ref<'ctx, Movement<PathOrDirection<TMotion>, TImmobilized>>),
+pub enum MovementContext<'ctx, TMotion> {
+	Movement(Ref<'ctx, Movement<PathOrDirection<TMotion>>>),
 	JustRemoved,
 	Empty,
 }
 
-pub struct MovementContextMut<'ctx, TMotion, TImmobilized> {
+pub struct MovementContextMut<'ctx, TMotion> {
 	entity: ZyheedaEntityCommands<'ctx>,
 	movement_definition: Option<Mut<'ctx, MovementDefinition>>,
-	movement: Option<&'ctx Movement<PathOrDirection<TMotion>, TImmobilized>>,
+	movement: Option<&'ctx Movement<PathOrDirection<TMotion>>>,
 }

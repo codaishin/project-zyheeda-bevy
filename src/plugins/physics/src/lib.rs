@@ -23,7 +23,6 @@ use crate::{
 		default_attributes::DefaultAttributes,
 		effects::{Effects, force::ForceEffect},
 		ground_target::GroundTarget,
-		immobilized::Immobilized,
 		interaction_target::{ColliderOfInteractionTarget, InteractionTarget},
 		lifetime::{LifetimeTiedTo, TiedLifetimes},
 		no_hover::NoMouseHover,
@@ -263,7 +262,6 @@ impl<TDependencies> HandlesPhysicalEffectTargets for PhysicsPlugin<TDependencies
 
 impl<TDependencies> HandlesMotion for PhysicsPlugin<TDependencies> {
 	type TCharacterMotion = ApplyCharacterMotion;
-	type TCharacterImmobilized = Immobilized;
 }
 
 impl<TDependencies> HandlesPhysicalBodies for PhysicsPlugin<TDependencies> {

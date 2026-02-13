@@ -14,23 +14,19 @@ use common::{
 };
 use std::collections::VecDeque;
 
-type MoveComponents<TMotion, TImmobilized, TGetComputer> = (
+type MoveComponents<TMotion, TGetComputer> = (
 	Entity,
 	&'static MovementDefinition,
 	&'static GlobalTransform,
-	&'static Movement<PathOrDirection<TMotion>, TImmobilized>,
+	&'static Movement<PathOrDirection<TMotion>>,
 	&'static TGetComputer,
 );
-type ChangedMovement<TMotion, TImmobilized> =
-	Changed<Movement<PathOrDirection<TMotion>, TImmobilized>>;
+type ChangedMovement<TMotion> = Changed<Movement<PathOrDirection<TMotion>>>;
 
 impl MovementDefinition {
-	pub(crate) fn compute_path<TMotion, TImmobilized, TComputer, TGetComputer>(
+	pub(crate) fn compute_path<TMotion, TComputer, TGetComputer>(
 		mut commands: ZyheedaCommands,
-		movements: Query<
-			MoveComponents<TMotion, TImmobilized, TGetComputer>,
-			ChangedMovement<TMotion, TImmobilized>,
-		>,
+		movements: Query<MoveComponents<TMotion, TGetComputer>, ChangedMovement<TMotion>>,
 		computers: Query<&TComputer>,
 	) where
 		TMotion: ThreadSafe,
@@ -44,16 +40,16 @@ impl MovementDefinition {
 			let path_or_direction = definition.new_movement(computer, transform, movement);
 			commands.try_apply_on(&entity, |mut e| {
 				e.try_insert(path_or_direction);
-				e.try_remove::<Movement<TMotion, TImmobilized>>();
+				e.try_remove::<Movement<TMotion>>();
 			});
 		}
 	}
 
-	fn new_movement<TMotion, TImmobilized, TComputer>(
+	fn new_movement<TMotion, TComputer>(
 		&self,
 		computer: &TComputer,
 		transform: &GlobalTransform,
-		movement: &Movement<PathOrDirection<TMotion>, TImmobilized>,
+		movement: &Movement<PathOrDirection<TMotion>>,
 	) -> PathOrDirection<TMotion>
 	where
 		TComputer: ComputePath,
@@ -104,9 +100,6 @@ mod test_new_path {
 	use mockall::{automock, predicate::eq};
 	use std::{collections::VecDeque, marker::PhantomData};
 	use testing::{NestedMocks, SingleThreadedApp, assert_no_panic};
-
-	#[derive(Debug, PartialEq, Default)]
-	struct _Immobilized;
 
 	#[derive(Debug, PartialEq, Default)]
 	struct _MoveMethod;
@@ -162,7 +155,7 @@ mod test_new_path {
 
 		app.add_systems(
 			Update,
-			MovementDefinition::compute_path::<_MoveMethod, _Immobilized, _ComputePath, _GetComputer>,
+			MovementDefinition::compute_path::<_MoveMethod, _ComputePath, _GetComputer>,
 		);
 
 		app
@@ -191,7 +184,7 @@ mod test_new_path {
 						radius: Units::from(1.),
 						..default()
 					},
-					Movement::<PathOrDirection<_MoveMethod>, _Immobilized>::to(Vec3::default()),
+					Movement::<PathOrDirection<_MoveMethod>>::to(Vec3::default()),
 					GlobalTransform::default(),
 					_GetComputer(computer),
 				))
@@ -234,7 +227,7 @@ mod test_new_path {
 						radius: Units::from(1.),
 						..default()
 					},
-					Movement::<PathOrDirection<_MoveMethod>, _Immobilized>::to(Vec3::default()),
+					Movement::<PathOrDirection<_MoveMethod>>::to(Vec3::default()),
 					GlobalTransform::from_xyz(0., 11., 0.),
 					_GetComputer(computer),
 				))
@@ -273,7 +266,7 @@ mod test_new_path {
 						radius: Units::from(1.),
 						..default()
 					},
-					Movement::<PathOrDirection<_MoveMethod>, _Immobilized>::to(Vec3::default()),
+					Movement::<PathOrDirection<_MoveMethod>>::to(Vec3::default()),
 					GlobalTransform::default(),
 					_GetComputer(computer),
 				))
@@ -312,7 +305,7 @@ mod test_new_path {
 						radius: Units::from(1.),
 						..default()
 					},
-					Movement::<PathOrDirection<_MoveMethod>, _Immobilized>::to(Vec3::default()),
+					Movement::<PathOrDirection<_MoveMethod>>::to(Vec3::default()),
 					GlobalTransform::from_translation(Vec3::splat(1.)),
 					_GetComputer(computer),
 				))
@@ -348,7 +341,7 @@ mod test_new_path {
 					radius: Units::from(1.),
 					..default()
 				},
-				Movement::<PathOrDirection<_MoveMethod>, _Immobilized>::to(Vec3::default()),
+				Movement::<PathOrDirection<_MoveMethod>>::to(Vec3::default()),
 				GlobalTransform::default(),
 				_GetComputer(computer),
 			));
@@ -376,9 +369,9 @@ mod test_new_path {
 						radius: Units::from(1.),
 						..default()
 					},
-					Movement::<PathOrDirection<_MoveMethod>, _Immobilized>::to(Vec3::default()),
+					Movement::<PathOrDirection<_MoveMethod>>::to(Vec3::default()),
 					GlobalTransform::default(),
-					Movement::<_MoveMethod, _Immobilized>::to(Vec3::default()),
+					Movement::<_MoveMethod>::to(Vec3::default()),
 					_GetComputer(computer),
 				))
 				.id();
@@ -387,9 +380,7 @@ mod test_new_path {
 
 			assert_eq!(
 				None,
-				app.world()
-					.entity(entity)
-					.get::<Movement::<_MoveMethod, _Immobilized>>()
+				app.world().entity(entity).get::<Movement::<_MoveMethod>>()
 			);
 		}
 
@@ -414,7 +405,7 @@ mod test_new_path {
 					radius: Units::from(42.),
 					..default()
 				},
-				Movement::<PathOrDirection<_MoveMethod>, _Immobilized>::to(Vec3::new(4., 5., 6.)),
+				Movement::<PathOrDirection<_MoveMethod>>::to(Vec3::new(4., 5., 6.)),
 				GlobalTransform::from_xyz(1., 2., 3.),
 				_GetComputer(computer),
 			));
@@ -441,7 +432,7 @@ mod test_new_path {
 						radius: Units::from(1.),
 						..default()
 					},
-					Movement::<PathOrDirection<_MoveMethod>, _Immobilized>::to(Dir3::NEG_Z),
+					Movement::<PathOrDirection<_MoveMethod>>::to(Dir3::NEG_Z),
 					GlobalTransform::default(),
 					_GetComputer(computer),
 				))
@@ -478,7 +469,7 @@ mod test_new_path {
 					radius: Units::from(1.),
 					..default()
 				},
-				Movement::<PathOrDirection<_MoveMethod>, _Immobilized>::to(Vec3::default()),
+				Movement::<PathOrDirection<_MoveMethod>>::to(Vec3::default()),
 				GlobalTransform::default(),
 				_GetComputer(computer),
 			));
@@ -503,7 +494,7 @@ mod test_new_path {
 						radius: Units::from(1.),
 						..default()
 					},
-					Movement::<PathOrDirection<_MoveMethod>, _Immobilized>::to(Vec3::default()),
+					Movement::<PathOrDirection<_MoveMethod>>::to(Vec3::default()),
 					GlobalTransform::default(),
 					_GetComputer(computer),
 				))
@@ -512,7 +503,7 @@ mod test_new_path {
 			app.update();
 			app.world_mut()
 				.entity_mut(entity)
-				.get_mut::<Movement<PathOrDirection<_MoveMethod>, _Immobilized>>()
+				.get_mut::<Movement<PathOrDirection<_MoveMethod>>>()
 				.as_deref_mut();
 			app.update();
 		}

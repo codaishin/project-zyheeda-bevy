@@ -36,13 +36,12 @@ where
 	}
 }
 
-impl<TMotion, TImmobilized> MovementUpdate for Movement<PathOrDirection<TMotion>, TImmobilized>
+impl<TMotion> MovementUpdate for Movement<PathOrDirection<TMotion>>
 where
 	TMotion: ThreadSafe,
-	TImmobilized: ThreadSafe,
 {
 	type TComponents<'a> = &'a mut PathOrDirection<TMotion>;
-	type TConstraint = Without<Movement<TMotion, TImmobilized>>;
+	type TConstraint = Without<Movement<TMotion>>;
 
 	fn update(
 		&self,
@@ -52,11 +51,11 @@ where
 	) -> Done {
 		let Some(wp) = next_waypoint(&mut path_or_direction) else {
 			agent.try_remove::<PathOrDirection<TMotion>>();
-			agent.try_insert(Movement::<TMotion, TImmobilized>::stop());
+			agent.try_insert(Movement::<TMotion>::stop());
 			return Done::from(true);
 		};
 
-		agent.try_insert(Movement::<TMotion, TImmobilized>::to(wp));
+		agent.try_insert(Movement::<TMotion>::to(wp));
 
 		Done::from(false)
 	}
@@ -88,9 +87,6 @@ mod test_with_path {
 	};
 	use std::sync::LazyLock;
 	use testing::SingleThreadedApp;
-
-	#[derive(Component, Debug, PartialEq)]
-	struct _Immobilized;
 
 	#[derive(Debug, PartialEq, Default)]
 	struct _MoveMethod;
@@ -132,15 +128,13 @@ mod test_with_path {
 
 			app.world_mut()
 				.run_system_once(system(move |entity, components| {
-					let movement = Movement::<PathOrDirection<_MoveMethod>, _Immobilized>::stop();
+					let movement = Movement::<PathOrDirection<_MoveMethod>>::stop();
 					movement.update(entity, components, *SPEED)
 				}))?;
 
 			assert_eq!(
 				Some(&Movement::to(wp)),
-				app.world()
-					.entity(entity)
-					.get::<Movement<_MoveMethod, _Immobilized>>()
+				app.world().entity(entity).get::<Movement<_MoveMethod>>()
 			);
 			Ok(())
 		}
@@ -159,7 +153,7 @@ mod test_with_path {
 
 			app.world_mut()
 				.run_system_once(system(move |entity, components| {
-					let movement = Movement::<PathOrDirection<_MoveMethod>, _Immobilized>::stop();
+					let movement = Movement::<PathOrDirection<_MoveMethod>>::stop();
 					movement.update(entity, components, *SPEED)
 				}))?;
 
@@ -187,7 +181,7 @@ mod test_with_path {
 			let is_done = app
 				.world_mut()
 				.run_system_once(system(|entity, components| {
-					let movement = Movement::<PathOrDirection<_MoveMethod>, _Immobilized>::stop();
+					let movement = Movement::<PathOrDirection<_MoveMethod>>::stop();
 					movement.update(entity, components, *SPEED)
 				}))?;
 
@@ -206,7 +200,7 @@ mod test_with_path {
 			let is_done = app
 				.world_mut()
 				.run_system_once(system(|entity, components| {
-					let movement = Movement::<PathOrDirection<_MoveMethod>, _Immobilized>::stop();
+					let movement = Movement::<PathOrDirection<_MoveMethod>>::stop();
 					movement.update(entity, components, *SPEED)
 				}))?;
 
@@ -227,15 +221,13 @@ mod test_with_path {
 
 			app.world_mut()
 				.run_system_once(system(|entity, components| {
-					let movement = Movement::<PathOrDirection<_MoveMethod>, _Immobilized>::stop();
+					let movement = Movement::<PathOrDirection<_MoveMethod>>::stop();
 					movement.update(entity, components, *SPEED)
 				}))?;
 
 			assert_eq!(
 				Some(&Movement::stop()),
-				app.world()
-					.entity(entity)
-					.get::<Movement<_MoveMethod, _Immobilized>>()
+				app.world().entity(entity).get::<Movement<_MoveMethod>>()
 			);
 			Ok(())
 		}
@@ -253,7 +245,7 @@ mod test_with_path {
 
 			app.world_mut()
 				.run_system_once(system(|entity, components| {
-					let movement = Movement::<PathOrDirection<_MoveMethod>, _Immobilized>::stop();
+					let movement = Movement::<PathOrDirection<_MoveMethod>>::stop();
 					movement.update(entity, components, *SPEED)
 				}))?;
 
@@ -284,15 +276,13 @@ mod test_with_path {
 
 			app.world_mut()
 				.run_system_once(system(move |entity, components| {
-					let movement = Movement::<PathOrDirection<_MoveMethod>, _Immobilized>::stop();
+					let movement = Movement::<PathOrDirection<_MoveMethod>>::stop();
 					movement.update(entity, components, *SPEED)
 				}))?;
 
 			assert_eq!(
 				Some(&Movement::to(wp)),
-				app.world()
-					.entity(entity)
-					.get::<Movement<_MoveMethod, _Immobilized>>()
+				app.world().entity(entity).get::<Movement<_MoveMethod>>()
 			);
 			Ok(())
 		}
@@ -310,7 +300,7 @@ mod test_with_path {
 
 			app.world_mut()
 				.run_system_once(system(move |entity, components| {
-					let movement = Movement::<PathOrDirection<_MoveMethod>, _Immobilized>::stop();
+					let movement = Movement::<PathOrDirection<_MoveMethod>>::stop();
 					movement.update(entity, components, *SPEED)
 				}))?;
 
@@ -338,7 +328,7 @@ mod test_with_path {
 			let is_done = app
 				.world_mut()
 				.run_system_once(system(|entity, components| {
-					let movement = Movement::<PathOrDirection<_MoveMethod>, _Immobilized>::stop();
+					let movement = Movement::<PathOrDirection<_MoveMethod>>::stop();
 					movement.update(entity, components, *SPEED)
 				}))?;
 
@@ -357,7 +347,7 @@ mod test_with_path {
 			let is_done = app
 				.world_mut()
 				.run_system_once(system(|entity, components| {
-					let movement = Movement::<PathOrDirection<_MoveMethod>, _Immobilized>::stop();
+					let movement = Movement::<PathOrDirection<_MoveMethod>>::stop();
 					movement.update(entity, components, *SPEED)
 				}))?;
 
@@ -378,7 +368,7 @@ mod test_with_path {
 
 			app.world_mut()
 				.run_system_once(system(|entity, components| {
-					let movement = Movement::<PathOrDirection<_MoveMethod>, _Immobilized>::stop();
+					let movement = Movement::<PathOrDirection<_MoveMethod>>::stop();
 					movement.update(entity, components, *SPEED)
 				}))?;
 
