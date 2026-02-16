@@ -5,6 +5,7 @@ use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[savable_component(id = "force affected")]
 pub struct ForceAffected(pub(crate) EffectTarget<Force>);
 
 impl From<EffectTarget<Force>> for ForceAffected {

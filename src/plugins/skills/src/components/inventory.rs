@@ -7,7 +7,7 @@ use macros::SavableComponent;
 use std::iter::Enumerate;
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Default, Clone)]
-#[savable_component(dto = InventoryDto)]
+#[savable_component(id = "inventory", dto = InventoryDto)]
 pub struct Inventory(pub(crate) Vec<Option<Handle<Item>>>);
 
 impl Inventory {

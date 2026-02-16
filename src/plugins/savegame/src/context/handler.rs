@@ -153,7 +153,7 @@ mod tests {
 	}
 
 	#[derive(Component, SavableComponent, Clone, PartialEq, Debug)]
-	#[savable_component(dto = _ADto)]
+	#[savable_component(id = "a", dto = _ADto)]
 	struct _A {
 		value: i32,
 	}
@@ -185,11 +185,13 @@ mod tests {
 	}
 
 	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone, PartialEq, Debug)]
+	#[savable_component(id = "b")]
 	struct _B {
 		v: i32,
 	}
 
 	#[derive(Component, SavableComponent, Clone)]
+	#[savable_component(id = "fail")]
 	struct _Fail;
 
 	impl Serialize for _Fail {
@@ -323,6 +325,7 @@ mod tests {
 		use serde_json::json;
 
 		#[derive(Component, SavableComponent, Serialize, Deserialize, Clone, PartialEq, Debug)]
+		#[savable_component(id = "c")]
 		struct _C {
 			v: i32,
 		}

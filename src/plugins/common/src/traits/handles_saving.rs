@@ -2,7 +2,8 @@ mod external;
 
 use crate::{errors::Unreachable, traits::handles_custom_assets::TryLoadFrom};
 use bevy::prelude::*;
-use serde::{Serialize, de::DeserializeOwned};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use std::ops::Deref;
 
 pub trait HandlesSaving {
 	type TSaveEntityMarker: Component + Default;
@@ -36,6 +37,38 @@ pub trait SavableComponent:
 
 	/// Whether this component should be loaded before non priority components from a save file
 	const PRIORITY: bool = false;
+
+	/// Identifier for component saving/loading
+	const ID: SavableComponentId;
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
+pub struct SavableComponentId(pub &'static str);
+
+impl Deref for SavableComponentId {
+	type Target = str;
+
+	fn deref(&self) -> &Self::Target {
+		self.0
+	}
+}
+
+impl From<&'static str> for SavableComponentId {
+	fn from(id: &'static str) -> Self {
+		Self(id)
+	}
+}
+
+impl From<&SavableComponentId> for String {
+	fn from(SavableComponentId(id): &SavableComponentId) -> Self {
+		(*id).to_owned()
+	}
+}
+
+impl From<SavableComponentId> for String {
+	fn from(id: SavableComponentId) -> Self {
+		Self::from(&id)
+	}
 }
 
 #[cfg(test)]
@@ -46,10 +79,11 @@ mod test_savable_component_derive {
 	use std::any::TypeId;
 
 	#[derive(Component, SavableComponent, Clone, Serialize, Deserialize)]
+	#[savable_component(id = "default")]
 	struct _Default;
 
 	#[derive(Component, SavableComponent, Clone)]
-	#[savable_component(dto = _Dto)]
+	#[savable_component(id = "with dto", dto = _Dto)]
 	struct _WithDto;
 
 	#[derive(Serialize, Deserialize)]
@@ -73,7 +107,7 @@ mod test_savable_component_derive {
 	}
 
 	#[derive(Component, SavableComponent, Clone, Serialize, Deserialize)]
-	#[savable_component(has_priority)]
+	#[savable_component(id = "priority", has_priority)]
 	struct _Priority;
 
 	#[test]

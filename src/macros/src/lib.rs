@@ -432,9 +432,10 @@ fn find_attribute<'a>(input: &'a DeriveInput, name: &str) -> Option<&'a syn::Att
 /// This derive macro supports the following optional attribute:
 ///
 /// `#[savable_component(...)]`
+/// - `id = &str` *(required)*:
+///   Sets `SavableComponent::ID` to the given value.
 /// - `dto = Type` *(optional)*:
 ///   Sets `SavableComponent::TDto` to the given type. Defaults to `Self`.
-///
 /// - `has_priority` *(optional, flag)*:
 ///   When present, `SavableComponent::PRIORITY` will be `true`. Defaults to `false`.
 #[proc_macro_derive(SavableComponent, attributes(savable_component))]
@@ -446,6 +447,7 @@ pub fn derive_savable_component(input: TokenStream) -> TokenStream {
 	let input = parse_macro_input!(input as DeriveInput);
 	let name = &input.ident;
 	let (impl_generics, type_generics, where_clause) = &input.generics.split_for_impl();
+	let mut id = None;
 	let mut dto = None;
 	let mut priority = false;
 	let mut where_clause = match where_clause.cloned() {
@@ -462,6 +464,10 @@ pub fn derive_savable_component(input: TokenStream) -> TokenStream {
 		}
 
 		let result = attr.parse_nested_meta(|nested| match nested.path.get_ident() {
+			Some(ident) if ident == "id" => {
+				id = Some(nested.value()?.parse::<Lit>()?);
+				Ok(())
+			}
 			Some(ident) if ident == "dto" => {
 				dto = Some(nested.value()?.parse::<Type>()?);
 				Ok(())
@@ -481,6 +487,18 @@ pub fn derive_savable_component(input: TokenStream) -> TokenStream {
 			return TokenStream::from(error.to_compile_error());
 		}
 	}
+
+	let id = match id {
+		Some(id) => {
+			quote! {
+				const ID: #common::traits::handles_saving::SavableComponentId =
+					#common::traits::handles_saving::SavableComponentId(#id);
+			}
+		}
+		None => {
+			quote! {}
+		}
+	};
 
 	let dto = match dto {
 		Some(dto) => quote! {#dto},
@@ -504,6 +522,7 @@ pub fn derive_savable_component(input: TokenStream) -> TokenStream {
 		impl #impl_generics #common::traits::handles_saving::SavableComponent for #name #type_generics #where_clause {
 			type TDto = #dto;
 			const PRIORITY: bool = #priority;
+			#id
 		}
 	})
 }

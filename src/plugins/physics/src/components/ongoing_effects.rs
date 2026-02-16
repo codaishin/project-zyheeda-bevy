@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
 #[derive(Component, SavableComponent, Serialize, Deserialize)]
+#[savable_component(id = "ongoing effects")]
 pub(crate) struct OngoingEffects<TActor, TTarget>
 where
 	TActor: Component,

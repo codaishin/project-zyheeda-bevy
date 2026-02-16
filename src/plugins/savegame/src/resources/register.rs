@@ -84,17 +84,19 @@ mod test_registration {
 	use serde::{Deserialize, Serialize};
 
 	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
+	#[savable_component(id = "a")]
 	struct _A;
 
 	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
+	#[savable_component(id = "b")]
 	struct _B;
 
 	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
-	#[savable_component(has_priority)]
+	#[savable_component(id = "pa", has_priority)]
 	struct _PA;
 
 	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
-	#[savable_component(has_priority)]
+	#[savable_component(id = "pb", has_priority)]
 	struct _PB;
 
 	#[test]
@@ -178,15 +180,19 @@ mod test_update_context {
 	use testing::SingleThreadedApp;
 
 	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
+	#[savable_component(id = "a")]
 	struct _A;
 
 	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
+	#[savable_component(id = "b")]
 	struct _B;
 
 	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
+	#[savable_component(id = "c")]
 	struct _C;
 
 	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
+	#[savable_component(id = "d")]
 	struct _D;
 
 	fn setup(handlers: Handlers<ComponentHandler>) -> App {

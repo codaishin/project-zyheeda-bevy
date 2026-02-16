@@ -14,7 +14,7 @@ use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
-#[savable_component(dto = ActiveSkill<SkillBehaviorConfigDto>)]
+#[savable_component(id = "active skill", dto = ActiveSkill<SkillBehaviorConfigDto>)]
 pub(crate) enum ActiveSkill<TSkillBehavior = SkillBehaviorConfig> {
 	#[default]
 	Idle,

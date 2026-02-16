@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[savable_component(id = "force effect")]
 pub struct ForceEffect(pub(crate) Force);
 
 impl<TDependencies> HandlesPhysicalEffect<Force> for PhysicsPlugin<TDependencies> {

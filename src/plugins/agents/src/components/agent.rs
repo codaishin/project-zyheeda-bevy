@@ -21,6 +21,7 @@ use std::fmt::Display;
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[component(immutable)]
+#[savable_component(id = "agent")]
 #[require(AgentConfig, ApplyAgentConfig, Transform)]
 pub(crate) struct Agent {
 	pub(crate) agent_type: AgentType,

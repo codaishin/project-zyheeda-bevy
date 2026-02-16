@@ -177,9 +177,11 @@ mod tests {
 	use testing::SingleThreadedApp;
 
 	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
+	#[savable_component(id = "a")]
 	struct _A;
 
 	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
+	#[savable_component(id = "b")]
 	struct _B;
 
 	fn setup() -> App {

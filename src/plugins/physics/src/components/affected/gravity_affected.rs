@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::vec::Drain;
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[savable_component(id = "gravity affected")]
 pub enum GravityAffected {
 	AffectedBy {
 		#[serde(default, skip_serializing_if = "Vec::is_empty")]

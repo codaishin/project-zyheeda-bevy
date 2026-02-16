@@ -63,7 +63,7 @@ use crate::traits::accessors::get::Property;
 	Component, SavableComponent, Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize,
 )]
 #[component(immutable)]
-#[savable_component(has_priority)]
+#[savable_component(id = "persistent entity", has_priority)]
 pub struct PersistentEntity(Uuid);
 
 impl PersistentEntity {

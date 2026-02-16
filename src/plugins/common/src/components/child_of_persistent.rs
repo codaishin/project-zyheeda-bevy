@@ -8,4 +8,5 @@ use serde::{Deserialize, Serialize};
 /// Inserts [`ChildOf`] on its [`Entity`] via the [`CommonPlugin`](crate::CommonPlugin)
 #[derive(Component, SavableComponent, Debug, PartialEq, Serialize, Deserialize, Clone)]
 #[component(immutable)]
+#[savable_component(id = "child of persistent")]
 pub struct ChildOfPersistent(pub PersistentEntity);

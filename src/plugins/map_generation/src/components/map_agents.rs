@@ -21,5 +21,6 @@ impl GetProperty<Entity> for GridAgentOf {
 }
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Serialize, Deserialize, Clone)]
+#[savable_component(id = "agent of persistent map")]
 #[component(immutable)]
 pub struct AgentOfPersistentMap(pub(crate) PersistentEntity);

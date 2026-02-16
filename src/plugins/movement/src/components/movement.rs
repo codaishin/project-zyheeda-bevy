@@ -22,7 +22,7 @@ use std::marker::PhantomData;
 
 #[derive(Component, SavableComponent, Debug)]
 #[require(GlobalTransform)]
-#[savable_component(dto = MovementDto)]
+#[savable_component(id = "movement", dto = MovementDto)]
 pub struct Movement<TMotion> {
 	pub(crate) target: Option<MovementTarget>,
 	_m: PhantomData<fn() -> TMotion>,

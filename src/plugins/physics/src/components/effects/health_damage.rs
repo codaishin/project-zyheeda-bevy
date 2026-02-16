@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[savable_component(id = "health damage")]
 pub struct HealthDamageEffect(pub(crate) HealthDamage);
 
 impl<TSaveGame> HandlesPhysicalEffect<HealthDamage> for PhysicsPlugin<TSaveGame> {

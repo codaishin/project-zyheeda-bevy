@@ -11,6 +11,7 @@ use testing::ApproxEqual;
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 #[component(immutable)]
+#[savable_component(id = "apply character motion")]
 #[require(IsInMotion)]
 pub struct ApplyCharacterMotion {
 	pub(crate) motion: CharacterMotion,
