@@ -7,11 +7,10 @@ use crate::{
 	traits::{buffer_entity_component::BufferEntityComponent, write_buffer::WriteBuffer},
 };
 use bevy::prelude::*;
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
-pub(crate) type SaveBuffer = HashMap<Entity, HashSet<ComponentString>>;
+pub(crate) type SaveBuffer = HashMap<Entity, HashMap<String, Value>>;
 pub(crate) type EntityLoadBuffer<TComponent> = HashMap<String, TComponent>;
 pub(crate) type LoadBuffer<TComponent> = Vec<EntityLoadBuffer<TComponent>>;
 
@@ -117,15 +116,6 @@ impl<TComponentHandler> Default for Handlers<TComponentHandler> {
 	}
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
-pub(crate) struct ComponentString {
-	/// Component id, abbreviated to reduce memory usage
-	pub(crate) id: String,
-
-	/// Component serialized value
-	pub(crate) value: Value,
-}
-
 #[cfg(test)]
 mod test_write_buffer {
 	#![allow(clippy::unwrap_used)]
@@ -154,10 +144,7 @@ mod test_write_buffer {
 			fn get_buffer() -> SaveBuffer {
 				HashMap::from([(
 					fake_entity!(42),
-					HashSet::from([ComponentString {
-						id: "name".to_owned(),
-						value: from_str("[\"state\"]").unwrap(),
-					}]),
+					HashMap::from([("name".to_owned(), from_str("[\"state\"]").unwrap())]),
 				)])
 			}
 
@@ -220,10 +207,7 @@ mod test_write_buffer {
 			fn get_buffer() -> SaveBuffer {
 				HashMap::from([(
 					fake_entity!(42),
-					HashSet::from([ComponentString {
-						id: "name".to_owned(),
-						value: from_str("[\"state\"]").unwrap(),
-					}]),
+					HashMap::from([("name".to_owned(), from_str("[\"state\"]").unwrap())]),
 				)])
 			}
 

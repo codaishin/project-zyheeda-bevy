@@ -1,5 +1,5 @@
 use crate::{
-	context::{ComponentString, SaveBuffer},
+	context::SaveBuffer,
 	errors::SerdeJsonError,
 	traits::{
 		buffer_entity_component::BufferEntityComponent,
@@ -12,7 +12,7 @@ use common::traits::{
 	load_asset::LoadAsset,
 };
 use serde_json::{Error, Value};
-use std::collections::{HashSet, hash_map::Entry};
+use std::collections::{HashMap, hash_map::Entry};
 
 #[derive(Debug, Clone)]
 pub(crate) struct ComponentHandler<TLoadAsset = AssetServer> {
@@ -43,17 +43,15 @@ where
 		let Some(component) = entity.get::<T>() else {
 			return Ok(());
 		};
-		let component_str = ComponentString {
-			id: String::from(T::ID),
-			value: serde_json::to_value(T::TDto::from(component.clone()))?,
-		};
+		let id = String::from(T::ID);
+		let value = serde_json::to_value(T::TDto::from(component.clone()))?;
 
 		match buffer.entry(entity.id()) {
 			Entry::Occupied(mut occupied_entry) => {
-				occupied_entry.get_mut().insert(component_str);
+				occupied_entry.get_mut().insert(id, value);
 			}
 			Entry::Vacant(vacant_entry) => {
-				vacant_entry.insert(HashSet::from([component_str]));
+				vacant_entry.insert(HashMap::from([(id, value)]));
 			}
 		};
 		Ok(())
@@ -231,10 +229,10 @@ mod tests {
 			assert_eq!(
 				HashMap::from([(
 					entity.id(),
-					HashSet::from([ComponentString {
-						id: "a".to_owned(),
-						value: from_str(&to_string(&_ADto { value: 42 }).unwrap()).unwrap()
-					}])
+					HashMap::from([(
+						"a".to_owned(),
+						from_str(&to_string(&_ADto { value: 42 }).unwrap()).unwrap()
+					)])
 				)]),
 				buffer
 			);
@@ -252,10 +250,10 @@ mod tests {
 			assert_eq!(
 				HashMap::from([(
 					entity.id(),
-					HashSet::from([ComponentString {
-						id: "b".to_owned(),
-						value: from_str(&to_string(&_B { v: 42 }).unwrap()).unwrap()
-					}])
+					HashMap::from([(
+						"b".to_owned(),
+						from_str(&to_string(&_B { v: 42 }).unwrap()).unwrap()
+					)])
 				)]),
 				buffer
 			);
@@ -274,15 +272,15 @@ mod tests {
 			assert_eq!(
 				HashMap::from([(
 					entity.id(),
-					HashSet::from([
-						ComponentString {
-							id: "a".to_owned(),
-							value: from_str(&to_string(&_ADto { value: 42 }).unwrap()).unwrap()
-						},
-						ComponentString {
-							id: "b".to_owned(),
-							value: from_str(&to_string(&_B { v: 11 }).unwrap()).unwrap()
-						}
+					HashMap::from([
+						(
+							"a".to_owned(),
+							from_str(&to_string(&_ADto { value: 42 }).unwrap()).unwrap()
+						),
+						(
+							"b".to_owned(),
+							from_str(&to_string(&_B { v: 11 }).unwrap()).unwrap()
+						)
 					])
 				)]),
 				buffer
