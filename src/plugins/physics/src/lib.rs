@@ -29,6 +29,7 @@ use crate::{
 		physical_body::PhysicalBody,
 		set_velocity_forward::SetVelocityForward,
 		skill::{ContactInteractionTarget, ProjectionInteractionTarget, Skill},
+		velocity::LinearVelocity,
 		when_traveled::DestroyAfterDistanceTraveled,
 		world_camera::WorldCamera,
 	},
@@ -106,14 +107,16 @@ where
 
 		TSaveGame::register_savable_component::<ApplyCharacterMotion>(app);
 		TSaveGame::register_savable_component::<Skill>(app);
+		TSaveGame::register_savable_component::<LinearVelocity>(app);
 
 		app
-			// Add/Configure rapier
+			// Rapier
 			.add_plugins(RapierPhysicsPlugin::<CheckHollowColliders>::default())
 			.add_systems(
 				Startup,
 				set_rapier_time_step(Duration::from_secs(1) / self.target_fps),
 			)
+			.add_observer(LinearVelocity::apply)
 			// World camera
 			.add_observer(WorldCamera::remove_old_cameras)
 			.add_systems(
