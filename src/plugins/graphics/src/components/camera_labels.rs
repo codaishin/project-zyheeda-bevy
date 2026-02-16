@@ -26,6 +26,7 @@ pub struct WorldCamera;
 	Serialize,
 	Deserialize,
 )]
+#[savable_component(id = "1st pass camera")]
 #[require(WorldCamera, Hdr, Tonemapping = Self, Bloom)]
 pub struct FirstPass;
 
@@ -48,6 +49,7 @@ impl From<FirstPass> for Tonemapping {
 	Serialize,
 	Deserialize,
 )]
+#[savable_component(id = "2nd pass camera")]
 #[require(
 	WorldCamera,
 	Hdr,
@@ -100,6 +102,7 @@ impl From<SecondPass> for RenderLayers {
 	Serialize,
 	Deserialize,
 )]
+#[savable_component(id = "ui camera")]
 #[require(
 	WorldCamera,
 	Hdr,

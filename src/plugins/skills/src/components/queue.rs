@@ -28,7 +28,7 @@ enum State {
 }
 
 #[derive(Component, SavableComponent, PartialEq, Debug, Clone)]
-#[savable_component(dto = QueueDto)]
+#[savable_component(id = "queue", dto = QueueDto)]
 #[require(HeldSlots<Current>, HeldSlots<Old>)]
 pub struct Queue {
 	queue: VecDeque<QueuedSkill>,

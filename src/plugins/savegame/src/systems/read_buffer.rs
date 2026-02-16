@@ -113,7 +113,7 @@ where
 				continue;
 			};
 			for handler in handlers {
-				let Some(component) = components.remove(handler.component_name()) else {
+				let Some(component) = components.remove(&*handler.id()) else {
 					continue;
 				};
 				let Err(err) = handler.insert_component(&mut entity, component, assets) else {
@@ -135,10 +135,9 @@ mod tests {
 		asset::AssetPath,
 		ecs::system::{RunSystemError, RunSystemOnce},
 	};
-	use common::traits::load_asset::LoadAsset;
+	use common::traits::{handles_saving::UniqueComponentId, load_asset::LoadAsset};
 	use serde_json::{Value, json};
 	use std::{
-		any::type_name,
 		collections::{HashMap, HashSet},
 		path::PathBuf,
 		sync::LazyLock,
@@ -197,12 +196,12 @@ mod tests {
 			Ok(())
 		}
 
-		fn component_name(&self) -> &'static str {
+		fn id(&self) -> UniqueComponentId {
 			match self {
-				_FakeHandler::A => type_name::<_A>(),
-				_FakeHandler::B => type_name::<_B>(),
-				_FakeHandler::CountA => type_name::<_CountA>(),
-				_FakeHandler::ErrorForA => type_name::<_A>(),
+				_FakeHandler::A => "a".into(),
+				_FakeHandler::B => "b".into(),
+				_FakeHandler::CountA => "count a".into(),
+				_FakeHandler::ErrorForA => "a".into(),
 			}
 		}
 	}
@@ -232,7 +231,7 @@ mod tests {
 	#[test]
 	fn spawn_entity() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let components = HashMap::from([(type_name::<_A>().to_owned(), json!(null))]);
+		let components = HashMap::from([("a".to_owned(), json!(null))]);
 		let context = Arc::new(Mutex::new(
 			SaveContext::from(FILE_IO.clone())
 				.with_load_buffer([components.clone()])
@@ -255,7 +254,7 @@ mod tests {
 	#[test]
 	fn spawn_entity_with_priority_component() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let components = HashMap::from([(type_name::<_A>().to_owned(), json!(null))]);
+		let components = HashMap::from([("a".to_owned(), json!(null))]);
 		let context = Arc::new(Mutex::new(
 			SaveContext::from(FILE_IO.clone())
 				.with_load_buffer([components.clone()])
@@ -278,8 +277,8 @@ mod tests {
 	#[test]
 	fn spawn_multiple_entities() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let components_for_entity_1 = HashMap::from([(type_name::<_A>().to_owned(), json!([1]))]);
-		let components_for_entity_2 = HashMap::from([(type_name::<_A>().to_owned(), json!([2]))]);
+		let components_for_entity_1 = HashMap::from([("a".to_owned(), json!([1]))]);
+		let components_for_entity_2 = HashMap::from([("a".to_owned(), json!([2]))]);
 		let context = Arc::new(Mutex::new(
 			SaveContext::from(FILE_IO.clone())
 				.with_load_buffer([
@@ -306,12 +305,12 @@ mod tests {
 	fn insert_priority_components_on_all_entities_first() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let components_for_entity_1 = HashMap::from([
-			(type_name::<_CountA>().to_owned(), json!({"a_count": 0})),
-			(type_name::<_A>().to_owned(), json!({"value": 42})),
+			("count a".to_owned(), json!({"a_count": 0})),
+			("a".to_owned(), json!({"value": 42})),
 		]);
 		let components_for_entity_2 = HashMap::from([
-			(type_name::<_CountA>().to_owned(), json!({"a_count": 0})),
-			(type_name::<_A>().to_owned(), json!({"value": 42})),
+			("count a".to_owned(), json!({"a_count": 0})),
+			("a".to_owned(), json!({"value": 42})),
 		]);
 		let context = Arc::new(Mutex::new(
 			SaveContext::from(FILE_IO.clone())
@@ -336,7 +335,7 @@ mod tests {
 	#[test]
 	fn return_high_priority_error() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let components = HashMap::from([(type_name::<_A>().to_owned(), json!(null))]);
+		let components = HashMap::from([("a".to_owned(), json!(null))]);
 		let context = Arc::new(Mutex::new(
 			SaveContext::from(FILE_IO.clone())
 				.with_load_buffer([components])
@@ -360,7 +359,7 @@ mod tests {
 	#[test]
 	fn return_low_priority_error() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let components = HashMap::from([(type_name::<_A>().to_owned(), json!(null))]);
+		let components = HashMap::from([("a".to_owned(), json!(null))]);
 		let context = Arc::new(Mutex::new(
 			SaveContext::from(FILE_IO.clone())
 				.with_load_buffer([components])
@@ -384,7 +383,7 @@ mod tests {
 	#[test]
 	fn context_is_empty_when_ran() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let components = HashMap::from([(type_name::<_A>().to_owned(), json!(null))]);
+		let components = HashMap::from([("a".to_owned(), json!(null))]);
 		let context = Arc::new(Mutex::new(
 			SaveContext::from(FILE_IO.clone())
 				.with_load_buffer([components.clone(), components.clone()])
@@ -408,7 +407,7 @@ mod tests {
 		struct _C;
 
 		let mut app = setup();
-		let components = HashMap::from([(type_name::<_C>().to_owned(), json!(null))]);
+		let components = HashMap::from([("c".to_owned(), json!(null))]);
 		let context = Arc::new(Mutex::new(
 			SaveContext::from(FILE_IO.clone())
 				.with_load_buffer([components])
@@ -423,7 +422,7 @@ mod tests {
 		assert_eq!(
 			Err(DeserializationOrLockError::DeserializationErrors(
 				IOErrors::from(vec![InsertionError::UnknownComponents(HashSet::from([
-					String::from(type_name::<_C>())
+					String::from("c")
 				]))])
 			)),
 			result,
@@ -440,8 +439,8 @@ mod tests {
 		struct _D;
 
 		let mut app = setup();
-		let components_1 = HashMap::from([(type_name::<_C>().to_owned(), json!(null))]);
-		let components_2 = HashMap::from([(type_name::<_D>().to_owned(), json!(null))]);
+		let components_1 = HashMap::from([("c".to_owned(), json!(null))]);
+		let components_2 = HashMap::from([("d".to_owned(), json!(null))]);
 		let context = Arc::new(Mutex::new(
 			SaveContext::from(FILE_IO.clone())
 				.with_load_buffer([components_1, components_2])
@@ -456,8 +455,8 @@ mod tests {
 		assert_eq!(
 			Err(DeserializationOrLockError::DeserializationErrors(
 				IOErrors::from(vec![InsertionError::UnknownComponents(HashSet::from([
-					String::from(type_name::<_C>()),
-					String::from(type_name::<_D>()),
+					String::from("c"),
+					String::from("d"),
 				]))])
 			)),
 			result,

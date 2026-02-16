@@ -4,6 +4,7 @@ use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[savable_component(id = "global light")]
 #[require(Transform, Visibility)]
 pub(crate) struct GlobalLight(pub(crate) Srgba);
 

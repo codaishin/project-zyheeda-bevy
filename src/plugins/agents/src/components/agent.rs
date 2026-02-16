@@ -21,13 +21,14 @@ use std::fmt::Display;
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[component(immutable)]
+#[savable_component(id = "agent")]
 #[require(AgentConfig, ApplyAgentConfig, Transform)]
 pub(crate) struct Agent {
 	pub(crate) agent_type: AgentType,
 }
 
 impl Agent {
-	fn prefab_essentials(
+	fn map_prefab(
 		mut entity: ZyheedaEntityCommands,
 		translation: GroundPosition,
 		agent_type: AgentType,
@@ -38,20 +39,21 @@ impl Agent {
 				..default()
 			},
 			Agent { agent_type },
+			AgentTransformDirty,
 		));
 	}
 
-	pub(crate) fn set_prefab_essentials<TNewAgent>(
-		mut new_agent: StaticSystemParam<TNewAgent>,
+	pub(crate) fn configure_map_prefab<TNewMapAgent>(
+		mut new_agent: StaticSystemParam<TNewMapAgent>,
 	) -> Result<(), NoPrefabContext>
 	where
-		TNewAgent: for<'c> GetContextMut<AgentPrefab, TContext<'c>: SetMapAgentPrefab>,
+		TNewMapAgent: for<'c> GetContextMut<AgentPrefab, TContext<'c>: SetMapAgentPrefab>,
 	{
-		let Some(mut ctx) = TNewAgent::get_context_mut(&mut new_agent, AgentPrefab) else {
+		let Some(mut ctx) = TNewMapAgent::get_context_mut(&mut new_agent, AgentPrefab) else {
 			return Err(NoPrefabContext);
 		};
 
-		ctx.set_map_agent_prefab(Self::prefab_essentials);
+		ctx.set_map_agent_prefab(Self::map_prefab);
 
 		Ok(())
 	}
@@ -92,6 +94,9 @@ impl Prefab<()> for Agent {
 
 #[derive(Component, Debug, PartialEq, Default)]
 pub(crate) struct ApplyAgentConfig;
+
+#[derive(Component, Debug, PartialEq)]
+pub(crate) struct AgentTransformDirty;
 
 #[derive(Debug, PartialEq)]
 pub struct NoPrefabContext;

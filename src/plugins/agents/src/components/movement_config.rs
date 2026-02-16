@@ -4,6 +4,7 @@ use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[savable_component(id = "movement config")]
 pub struct MovementConfig {
 	pub(crate) collider_radius: Units,
 	pub(crate) speed: UnitsPerSecond,

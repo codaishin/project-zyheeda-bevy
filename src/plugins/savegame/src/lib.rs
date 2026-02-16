@@ -8,7 +8,7 @@ mod systems;
 mod traits;
 
 use crate::{
-	resources::inspector::Inspector,
+	resources::{inspector::Inspector, unique_ids::UniqueIds},
 	systems::{trigger_state::TriggerState, write_buffer::WriteBufferSystem},
 };
 use bevy::prelude::*;
@@ -38,6 +38,7 @@ use context::SaveContext;
 use file_io::FileIO;
 use resources::register::Register;
 use std::{
+	any::{TypeId, type_name},
 	marker::PhantomData,
 	path::PathBuf,
 	sync::{Arc, Mutex},
@@ -156,6 +157,26 @@ impl<TDependencies> HandlesSaving for SavegamePlugin<TDependencies> {
 	where
 		TComponent: SavableComponent,
 	{
+		let new_type = TypeId::of::<TComponent>();
+		let unique_id = TComponent::ID;
+
+		match app.world_mut().get_resource_mut::<UniqueIds>() {
+			Some(mut unique_ids) => {
+				match unique_ids.0.get(&unique_id) {
+					Some(old_type) if old_type != &new_type => panic!(
+						"attempted to register `{}` as savable, but its id `{:?}` already exists for another component",
+						type_name::<TComponent>(),
+						unique_id
+					),
+					_ => unique_ids.0.insert(unique_id, new_type),
+				};
+			}
+			None => {
+				let unique_ids = UniqueIds::from([(unique_id, new_type)]);
+				app.world_mut().insert_resource(unique_ids);
+			}
+		};
+
 		match app.world_mut().get_resource_mut::<Register>() {
 			None => {
 				let mut register = Register::<AssetServer>::default();
@@ -174,12 +195,19 @@ mod tests {
 	use super::*;
 	use macros::SavableComponent;
 	use serde::{Deserialize, Serialize};
+	use std::panic::catch_unwind;
 	use testing::SingleThreadedApp;
 
 	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
+	#[savable_component(id = "a")]
 	struct _A;
 
 	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
+	#[savable_component(id = "a")]
+	struct _AAgain;
+
+	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
+	#[savable_component(id = "b")]
 	struct _B;
 
 	fn setup() -> App {
@@ -208,5 +236,42 @@ mod tests {
 		expected.register_component::<_A>();
 		expected.register_component::<_B>();
 		assert_eq!(Some(&expected), app.world().get_resource::<Register>());
+	}
+
+	#[test]
+	fn crash_when_id_not_unique() {
+		let result = catch_unwind(|| {
+			let mut app = setup();
+
+			SavegamePlugin::<()>::register_savable_component::<_A>(&mut app);
+			SavegamePlugin::<()>::register_savable_component::<_AAgain>(&mut app);
+		});
+
+		assert!(result.is_err());
+	}
+
+	#[test]
+	fn crash_when_id_not_unique_after_first_was_okay() {
+		let result = catch_unwind(|| {
+			let mut app = setup();
+
+			SavegamePlugin::<()>::register_savable_component::<_B>(&mut app);
+			SavegamePlugin::<()>::register_savable_component::<_A>(&mut app);
+			SavegamePlugin::<()>::register_savable_component::<_AAgain>(&mut app);
+		});
+
+		assert!(result.is_err());
+	}
+
+	#[test]
+	fn do_not_crash_when_same_component_registered_twice() {
+		let result = catch_unwind(|| {
+			let mut app = setup();
+
+			SavegamePlugin::<()>::register_savable_component::<_A>(&mut app);
+			SavegamePlugin::<()>::register_savable_component::<_A>(&mut app);
+		});
+
+		assert!(result.is_ok());
 	}
 }

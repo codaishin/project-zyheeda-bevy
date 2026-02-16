@@ -1,6 +1,9 @@
 use crate::{
 	assets::agent_config::{AgentConfigAsset, AgentModel, Loadout},
-	components::{agent::ApplyAgentConfig, agent_config::AgentConfig},
+	components::{
+		agent::{AgentTransformDirty, ApplyAgentConfig},
+		agent_config::AgentConfig,
+	},
 };
 use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
@@ -31,7 +34,15 @@ impl ApplyAgentConfig {
 		mut skills_param: StaticSystemParam<TSkills>,
 		mut animations_param: StaticSystemParam<TAnimations>,
 		mut commands: ZyheedaCommands,
-		agents: Query<(Entity, &AgentConfig, &mut Transform), With<Self>>,
+		agents: Query<
+			(
+				Entity,
+				&AgentConfig,
+				&mut Transform,
+				Option<&AgentTransformDirty>,
+			),
+			With<Self>,
+		>,
 		configs: Res<Assets<AgentConfigAsset>>,
 	) where
 		TLoadout: SystemParam
@@ -43,7 +54,7 @@ impl ApplyAgentConfig {
 			SystemParam + for<'c> GetContextMut<Animations, TContext<'c>: RegisterAnimations>,
 		TAttributes: Component + From<PhysicalDefaultAttributes>,
 	{
-		for (entity, AgentConfig { config_handle }, mut transform) in agents {
+		for (entity, AgentConfig { config_handle }, mut transform, transform_dirty) in agents {
 			let Some(config) = configs.get(config_handle) else {
 				continue;
 			};
@@ -72,7 +83,9 @@ impl ApplyAgentConfig {
 				ctx.register_animations(&config.animations, &config.animation_mask_groups);
 			}
 
-			transform.translation += config.ground_offset;
+			if transform_dirty.is_some() {
+				transform.translation += config.ground_offset;
+			}
 
 			commands.try_apply_on(&entity, |mut e| {
 				match &config.agent_model {
@@ -84,7 +97,7 @@ impl ApplyAgentConfig {
 					}
 				};
 				e.try_insert(TAttributes::from(config.attributes));
-				e.try_remove::<Self>();
+				e.try_remove::<(Self, AgentTransformDirty)>();
 			});
 		}
 	}
@@ -133,7 +146,10 @@ impl<'a> IntoIterator for &'a Loadout {
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::assets::agent_config::{Bones, Loadout};
+	use crate::{
+		assets::agent_config::{Bones, Loadout},
+		components::agent::AgentTransformDirty,
+	};
 	use common::{
 		attributes::{effect_target::EffectTarget, health::Health},
 		bit_mask_index,
@@ -535,6 +551,7 @@ mod tests {
 				.world_mut()
 				.spawn((
 					ApplyAgentConfig,
+					AgentTransformDirty,
 					Transform::from_xyz(1., 2., 3.),
 					AgentConfig { config_handle },
 				))
@@ -545,6 +562,57 @@ mod tests {
 			assert_eq!(
 				Some(&Transform::from_xyz(6., 8., 10.)),
 				app.world().entity(entity).get::<Transform>()
+			);
+		}
+
+		#[test]
+		fn do_not_update_transform_when_agent_transform_not_dirty() {
+			let config_handle = new_handle();
+			let config = AgentConfigAsset {
+				ground_offset: Vec3::new(5., 6., 7.),
+				..default()
+			};
+			let mut app = setup([(&config_handle, config)]);
+			let entity = app
+				.world_mut()
+				.spawn((
+					ApplyAgentConfig,
+					Transform::from_xyz(1., 2., 3.),
+					AgentConfig { config_handle },
+				))
+				.id();
+
+			app.update();
+
+			assert_eq!(
+				Some(&Transform::from_xyz(1., 2., 3.)),
+				app.world().entity(entity).get::<Transform>()
+			);
+		}
+
+		#[test]
+		fn remove_transform_dirty_marker() {
+			let config_handle = new_handle();
+			let config = AgentConfigAsset {
+				ground_offset: Vec3::new(5., 6., 7.),
+				..default()
+			};
+			let mut app = setup([(&config_handle, config)]);
+			let entity = app
+				.world_mut()
+				.spawn((
+					ApplyAgentConfig,
+					AgentTransformDirty,
+					Transform::from_xyz(1., 2., 3.),
+					AgentConfig { config_handle },
+				))
+				.id();
+
+			app.update();
+
+			assert_eq!(
+				None,
+				app.world().entity(entity).get::<AgentTransformDirty>()
 			);
 		}
 	}
@@ -600,6 +668,7 @@ mod tests {
 			.spawn((
 				ApplyAgentConfig,
 				Transform::default(),
+				AgentTransformDirty,
 				AgentConfig { config_handle },
 				_Loadout::default(),
 				_Skills::default(),
@@ -638,6 +707,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				ApplyAgentConfig,
+				AgentTransformDirty,
 				AgentConfig {
 					config_handle: config_handle.clone(),
 				},

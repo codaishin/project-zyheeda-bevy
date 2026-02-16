@@ -29,7 +29,7 @@ use std::{collections::HashMap, fmt::Debug};
 	HeldSlots<Current>,
 	HeldSlots<Old>,
 )]
-#[savable_component(dto = SlotsDto)]
+#[savable_component(id = "slots", dto = SlotsDto)]
 pub struct Slots {
 	pub(crate) items: HashMap<SlotKey, Option<Handle<Item>>>,
 }

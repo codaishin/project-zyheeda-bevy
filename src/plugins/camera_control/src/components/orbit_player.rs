@@ -8,6 +8,7 @@ use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[savable_component(id = "orbit player")]
 #[require(Transform)]
 pub struct OrbitPlayer {
 	pub center: OrbitCenter,

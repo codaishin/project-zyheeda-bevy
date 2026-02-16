@@ -10,7 +10,7 @@ use macros::SavableComponent;
 use std::time::Duration;
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-#[savable_component(dto = CombosTimeOutDto)]
+#[savable_component(id = "combos timeout", dto = CombosTimeOutDto)]
 pub struct CombosTimeOut {
 	max_duration: Duration,
 	duration: Duration,

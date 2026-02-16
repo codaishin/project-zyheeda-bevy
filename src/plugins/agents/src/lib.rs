@@ -133,7 +133,7 @@ where
 		TPhysics::mark_as_effect_target::<Agent>(app);
 		app.add_systems(
 			Startup,
-			Agent::set_prefab_essentials::<NewMapAgentParamMut<TMaps>>.pipe(OnError::log),
+			Agent::configure_map_prefab::<NewMapAgentParamMut<TMaps>>.pipe(OnError::log),
 		);
 		app.add_systems(
 			Update,

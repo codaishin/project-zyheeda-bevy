@@ -16,6 +16,7 @@ pub(crate) trait AddPhysics {
 	where
 		TActor: ActOn<TTarget> + Component<Mutability = Mutable> + SavableComponent,
 		TTarget: Component<Mutability = Mutable> + SavableComponent,
+		OngoingEffects<TActor, TTarget>: Component<Mutability = Mutable> + SavableComponent,
 		TSaveGame: HandlesSaving;
 }
 
@@ -24,6 +25,7 @@ impl AddPhysics for App {
 	where
 		TActor: ActOn<TTarget> + Component<Mutability = Mutable> + SavableComponent,
 		TTarget: Component<Mutability = Mutable> + SavableComponent,
+		OngoingEffects<TActor, TTarget>: Component<Mutability = Mutable> + SavableComponent,
 		TSaveGame: HandlesSaving,
 	{
 		TSaveGame::register_savable_component::<TActor>(self);

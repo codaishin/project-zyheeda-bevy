@@ -1,12 +1,16 @@
 use crate::{
-	context::{ComponentString, SaveContext},
+	context::SaveContext,
 	errors::{ContextIOError, IOErrors, LockPoisonedError, SerdeJsonError},
 	traits::read_file::ReadFile,
 };
 use bevy::prelude::*;
-use std::sync::{Arc, Mutex};
+use serde_json::Value;
+use std::{
+	collections::HashMap,
+	sync::{Arc, Mutex},
+};
 
-type SerializedEntities = Vec<Vec<ComponentString>>;
+type SerializedEntities = Vec<HashMap<String, Value>>;
 
 impl<TFileIO> SaveContext<TFileIO>
 where
@@ -24,7 +28,8 @@ where
 				Err(e) => return Err(ContextIOError::FileError(e)),
 				Ok(entities) => entities,
 			};
-			let entities = match serde_json::from_str::<SerializedEntities>(&entities) {
+
+			context.buffers.load = match serde_json::from_str::<SerializedEntities>(&entities) {
 				Err(error) => {
 					return Err(ContextIOError::SerdeErrors(IOErrors::from(vec![
 						SerdeJsonError(error),
@@ -32,16 +37,6 @@ where
 				}
 				Ok(components) => components,
 			};
-
-			context.buffers.load = entities
-				.into_iter()
-				.map(|components| {
-					components
-						.into_iter()
-						.map(|ComponentString { comp, value }| (comp, value))
-						.collect()
-				})
-				.collect();
 
 			Ok(())
 		}
@@ -53,7 +48,7 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	#![allow(clippy::expect_used)]
 	use super::*;
-	use crate::{context::ComponentString, errors::IOErrors};
+	use crate::errors::IOErrors;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use macros::simple_mock;
 	use std::collections::HashMap;
@@ -76,17 +71,10 @@ mod tests {
 
 	#[test]
 	fn call_read() -> Result<(), RunSystemError> {
-		let component = serde_json::to_string(&ComponentString {
-			comp: "A".to_owned(),
-			value: serde_json::from_str(r#"{"value": 32}"#).unwrap(),
-		})
-		.unwrap();
-		let entity = format!("[{component}]");
-		let entities = format!("[{entity}]");
 		let reader = Mock_Reader::new_mock(|mock| {
 			mock.expect_read()
 				.times(1)
-				.return_const(Ok(entities.clone()));
+				.return_const(Ok("[]".to_owned()));
 		});
 		let context = Arc::new(Mutex::new(SaveContext::from(reader)));
 		let mut app = setup();
@@ -99,15 +87,9 @@ mod tests {
 
 	#[test]
 	fn write_load_buffer() -> Result<(), RunSystemError> {
-		let component = serde_json::to_string(&ComponentString {
-			comp: "A".to_owned(),
-			value: serde_json::from_str(r#"{"value": 32}"#).unwrap(),
-		})
-		.unwrap();
-		let entity = format!("[{component}]");
-		let entities = format!("[{entity}]");
 		let reader = Mock_Reader::new_mock(|mock| {
-			mock.expect_read().return_const(Ok(entities.clone()));
+			mock.expect_read()
+				.return_const(Ok(r#"[{"A":{"value":32}}]"#.to_owned()));
 		});
 		let context = Arc::new(Mutex::new(SaveContext::from(reader)));
 		let mut app = setup();
@@ -119,7 +101,7 @@ mod tests {
 		assert_eq!(
 			vec![HashMap::from([(
 				"A".to_owned(),
-				serde_json::from_str(r#"{"value": 32}"#).unwrap(),
+				serde_json::from_str(r#"{"value":32}"#).unwrap(),
 			)])],
 			context.lock().expect("COULD NOT LOCK CONTEXT").buffers.load
 		);

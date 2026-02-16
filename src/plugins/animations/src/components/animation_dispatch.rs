@@ -24,7 +24,7 @@ use std::{
 };
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
-#[savable_component(dto = AnimationDispatchDto)]
+#[savable_component(id = "animation dispatch", dto = AnimationDispatchDto)]
 pub struct AnimationDispatch {
 	pub(crate) animation_players: HashSet<Entity>,
 	animation_handles: HashSet<Entity>,

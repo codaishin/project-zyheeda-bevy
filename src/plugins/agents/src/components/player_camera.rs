@@ -15,4 +15,5 @@ use serde::{Deserialize, Serialize};
 	Serialize,
 	Deserialize,
 )]
+#[savable_component(id = "player camera")]
 pub struct PlayerCamera;

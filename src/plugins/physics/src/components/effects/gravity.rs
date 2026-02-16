@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[savable_component(id = "gravity effect")]
 pub struct GravityEffect(pub(crate) Gravity);
 
 impl<TDependencies> HandlesPhysicalEffect<Gravity> for PhysicsPlugin<TDependencies> {

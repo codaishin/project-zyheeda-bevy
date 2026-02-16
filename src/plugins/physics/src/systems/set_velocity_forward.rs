@@ -1,6 +1,5 @@
-use crate::components::set_velocity_forward::SetVelocityForward;
+use crate::components::{set_velocity_forward::SetVelocityForward, velocity::LinearVelocity};
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::Velocity;
 use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
 impl SetVelocityForward {
@@ -10,7 +9,7 @@ impl SetVelocityForward {
 	) {
 		for (entity, SetVelocityForward(speed), transform) in &set_velocities {
 			commands.try_apply_on(&entity, |mut e| {
-				e.try_insert(Velocity::linear(*transform.forward() * **speed));
+				e.try_insert(LinearVelocity(*transform.forward() * **speed));
 				e.try_remove::<SetVelocityForward>();
 			});
 		}
@@ -26,20 +25,7 @@ mod tests {
 		tools::UnitsPerSecond,
 		traits::register_persistent_entities::RegisterPersistentEntities,
 	};
-	use testing::{ApproxEqual, SingleThreadedApp, assert_eq_approx};
-
-	#[derive(Debug, PartialEq)]
-	struct _CompVelocity<'a>(&'a Velocity);
-
-	impl ApproxEqual<f32> for _CompVelocity<'_> {
-		fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
-			let Self(l) = self;
-			let Self(r) = other;
-
-			l.linvel.approx_equal(&r.linvel, tolerance)
-				&& l.angvel.approx_equal(&r.angvel, tolerance)
-		}
-	}
+	use testing::{SingleThreadedApp, assert_eq_approx};
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -64,13 +50,8 @@ mod tests {
 			.run_system_once(SetVelocityForward::system)?;
 
 		assert_eq_approx!(
-			Some(_CompVelocity(&Velocity::linear(
-				Vec3::new(1., 2., 3.).normalize()
-			))),
-			app.world()
-				.entity(entity)
-				.get::<Velocity>()
-				.map(_CompVelocity),
+			Some(&LinearVelocity(Vec3::new(1., 2., 3.).normalize())),
+			app.world().entity(entity).get::<LinearVelocity>(),
 			0.00001
 		);
 		Ok(())
@@ -91,13 +72,8 @@ mod tests {
 			.run_system_once(SetVelocityForward::system)?;
 
 		assert_eq_approx!(
-			Some(_CompVelocity(&Velocity::linear(
-				Vec3::new(1., 2., 3.).normalize() * 10.
-			))),
-			app.world()
-				.entity(entity)
-				.get::<Velocity>()
-				.map(_CompVelocity),
+			Some(&LinearVelocity(Vec3::new(1., 2., 3.).normalize() * 10.)),
+			app.world().entity(entity).get::<LinearVelocity>(),
 			0.00001
 		);
 		Ok(())

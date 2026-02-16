@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::traits::load_asset::LoadAsset;
+use common::traits::{handles_saving::UniqueComponentId, load_asset::LoadAsset};
 
 pub(crate) trait InsertEntityComponent<TLoadAsset>
 where
@@ -8,7 +8,7 @@ where
 	type TComponent;
 	type TError;
 
-	fn component_name(&self) -> &'static str;
+	fn id(&self) -> UniqueComponentId;
 	fn insert_component(
 		&self,
 		entity: &mut EntityCommands,

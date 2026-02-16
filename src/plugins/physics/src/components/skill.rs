@@ -21,7 +21,7 @@ use std::sync::LazyLock;
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
 #[require(PersistentEntity, Transform, Visibility)]
-#[savable_component(dto = SkillDto)]
+#[savable_component(id = "skill", dto = SkillDto)]
 pub struct Skill {
 	pub(crate) created_from: CreatedFrom,
 	pub(crate) shape: SkillShape,

@@ -20,7 +20,7 @@ use macros::SavableComponent;
 use std::collections::HashSet;
 
 #[derive(Component, SavableComponent, PartialEq, Debug, Clone)]
-#[savable_component(dto = CombosDto)]
+#[savable_component(id = "combos", dto = CombosDto)]
 pub struct Combos<TComboNode = ComboNode> {
 	config: TComboNode,
 	current: Option<TComboNode>,

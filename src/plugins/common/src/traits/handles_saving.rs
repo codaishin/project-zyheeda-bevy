@@ -3,6 +3,7 @@ mod external;
 use crate::{errors::Unreachable, traits::handles_custom_assets::TryLoadFrom};
 use bevy::prelude::*;
 use serde::{Serialize, de::DeserializeOwned};
+use std::ops::Deref;
 
 pub trait HandlesSaving {
 	type TSaveEntityMarker: Component + Default;
@@ -12,6 +13,9 @@ pub trait HandlesSaving {
 	/// Useful for button (dis|en)ables.
 	fn can_quick_load() -> impl SystemCondition<()>;
 
+	/// Register savable components.
+	///
+	/// Implementors are likely to panic if uniqueness of [`SavableComponent::ID`] is violated.
 	fn register_savable_component<TComponent>(app: &mut App)
 	where
 		TComponent: SavableComponent;
@@ -36,6 +40,44 @@ pub trait SavableComponent:
 
 	/// Whether this component should be loaded before non priority components from a save file
 	const PRIORITY: bool = false;
+
+	/// Identifier for component saving/loading
+	const ID: UniqueComponentId;
+}
+
+/// A unique id for a component.
+///
+/// Uniqueness:
+/// - must be enforced by users of `SavableComponent`.
+/// - is likely essential. Meaning that uniqueness violations may crash the application, thus,
+///   checking on app startup is desired.
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub struct UniqueComponentId(pub &'static str);
+
+impl Deref for UniqueComponentId {
+	type Target = str;
+
+	fn deref(&self) -> &Self::Target {
+		self.0
+	}
+}
+
+impl From<&'static str> for UniqueComponentId {
+	fn from(id: &'static str) -> Self {
+		Self(id)
+	}
+}
+
+impl From<&UniqueComponentId> for String {
+	fn from(UniqueComponentId(id): &UniqueComponentId) -> Self {
+		(*id).to_owned()
+	}
+}
+
+impl From<UniqueComponentId> for String {
+	fn from(id: UniqueComponentId) -> Self {
+		Self::from(&id)
+	}
 }
 
 #[cfg(test)]
@@ -46,10 +88,11 @@ mod test_savable_component_derive {
 	use std::any::TypeId;
 
 	#[derive(Component, SavableComponent, Clone, Serialize, Deserialize)]
+	#[savable_component(id = "default")]
 	struct _Default;
 
 	#[derive(Component, SavableComponent, Clone)]
-	#[savable_component(dto = _Dto)]
+	#[savable_component(id = "with dto", dto = _Dto)]
 	struct _WithDto;
 
 	#[derive(Serialize, Deserialize)]
@@ -73,7 +116,7 @@ mod test_savable_component_derive {
 	}
 
 	#[derive(Component, SavableComponent, Clone, Serialize, Deserialize)]
-	#[savable_component(has_priority)]
+	#[savable_component(id = "priority", has_priority)]
 	struct _Priority;
 
 	#[test]
