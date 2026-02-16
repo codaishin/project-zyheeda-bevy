@@ -33,7 +33,7 @@ impl<TFileIO> SaveContext<TFileIO> {
 			.buffers
 			.save
 			.drain()
-			.filter_map(|(_, components)| match to_value(&components) {
+			.map(|(_, components)| match to_value(&components) {
 				Ok(value) => Some(value),
 				Err(error) => {
 					errors.push(SerdeJsonError(error));
@@ -89,7 +89,7 @@ mod tests {
 	#[test]
 	fn call_write() -> Result<(), RunSystemError> {
 		let string = ComponentString {
-			comp: "A".to_owned(),
+			id: "A".to_owned(),
 			value: serde_json::from_str(r#"{"value": 32}"#).unwrap(),
 		};
 		let writer = Mock_Writer::new_mock(|mock| {
@@ -116,11 +116,11 @@ mod tests {
 	#[test]
 	fn write_multiple_components_per_entity_on_flush() -> Result<(), RunSystemError> {
 		let string_a = ComponentString {
-			comp: "A".to_owned(),
+			id: "A".to_owned(),
 			value: serde_json::from_str(r#"{"value": 32}"#).unwrap(),
 		};
 		let string_b = ComponentString {
-			comp: "B".to_owned(),
+			id: "B".to_owned(),
 			value: serde_json::from_str(r#"{"v": 42}"#).unwrap(),
 		};
 		let writer = Mock_Writer::new_mock(|mock| {
@@ -130,12 +130,12 @@ mod tests {
 					let a_b = format!(
 						"[[{},{}]]",
 						serde_json::to_string(&ComponentString {
-							comp: "A".to_owned(),
+							id: "A".to_owned(),
 							value: serde_json::from_str(r#"{"value": 32}"#).unwrap(),
 						})
 						.unwrap(),
 						serde_json::to_string(&ComponentString {
-							comp: "B".to_owned(),
+							id: "B".to_owned(),
 							value: serde_json::from_str(r#"{"v": 42}"#).unwrap(),
 						})
 						.unwrap(),
@@ -143,12 +143,12 @@ mod tests {
 					let b_a = format!(
 						"[[{},{}]]",
 						serde_json::to_string(&ComponentString {
-							comp: "B".to_owned(),
+							id: "B".to_owned(),
 							value: serde_json::from_str(r#"{"v": 42}"#).unwrap(),
 						})
 						.unwrap(),
 						serde_json::to_string(&ComponentString {
-							comp: "A".to_owned(),
+							id: "A".to_owned(),
 							value: serde_json::from_str(r#"{"value": 32}"#).unwrap(),
 						})
 						.unwrap(),
@@ -172,11 +172,11 @@ mod tests {
 	#[test]
 	fn write_multiple_entities() -> Result<(), RunSystemError> {
 		let string_a = ComponentString {
-			comp: "A".to_owned(),
+			id: "A".to_owned(),
 			value: serde_json::from_str(r#"{"value": 32}"#).unwrap(),
 		};
 		let string_b = ComponentString {
-			comp: "B".to_owned(),
+			id: "B".to_owned(),
 			value: serde_json::from_str(r#"{"v": 42}"#).unwrap(),
 		};
 		let writer = Mock_Writer::new_mock(|mock| {
@@ -186,12 +186,12 @@ mod tests {
 					let a_b = format!(
 						"[[{}],[{}]]",
 						serde_json::to_string(&ComponentString {
-							comp: "A".to_owned(),
+							id: "A".to_owned(),
 							value: serde_json::from_str(r#"{"value": 32}"#).unwrap(),
 						})
 						.unwrap(),
 						serde_json::to_string(&ComponentString {
-							comp: "B".to_owned(),
+							id: "B".to_owned(),
 							value: serde_json::from_str(r#"{"v": 42}"#).unwrap(),
 						})
 						.unwrap(),
@@ -199,12 +199,12 @@ mod tests {
 					let b_a = format!(
 						"[[{}],[{}]]",
 						serde_json::to_string(&ComponentString {
-							comp: "B".to_owned(),
+							id: "B".to_owned(),
 							value: serde_json::from_str(r#"{"v": 42}"#).unwrap(),
 						})
 						.unwrap(),
 						serde_json::to_string(&ComponentString {
-							comp: "A".to_owned(),
+							id: "A".to_owned(),
 							value: serde_json::from_str(r#"{"value": 32}"#).unwrap(),
 						})
 						.unwrap(),
@@ -233,7 +233,7 @@ mod tests {
 		let context = Arc::new(Mutex::new(SaveContext::from(writer).with_save_buffer([(
 			fake_entity!(42),
 			HashSet::from([ComponentString {
-				comp: "A".to_owned(),
+				id: "A".to_owned(),
 				value: serde_json::from_str(r#"{"value": 32}"#).unwrap(),
 			}]),
 		)])));

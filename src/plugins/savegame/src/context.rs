@@ -119,8 +119,8 @@ impl<TComponentHandler> Default for Handlers<TComponentHandler> {
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
 pub(crate) struct ComponentString {
-	/// Component type name, abbreviated to reduce memory usage
-	pub(crate) comp: String,
+	/// Component id, abbreviated to reduce memory usage
+	pub(crate) id: String,
 
 	/// Component serialized value
 	pub(crate) value: Value,
@@ -155,7 +155,7 @@ mod test_write_buffer {
 				HashMap::from([(
 					fake_entity!(42),
 					HashSet::from([ComponentString {
-						comp: "name".to_owned(),
+						id: "name".to_owned(),
 						value: from_str("[\"state\"]").unwrap(),
 					}]),
 				)])
@@ -221,7 +221,7 @@ mod test_write_buffer {
 				HashMap::from([(
 					fake_entity!(42),
 					HashSet::from([ComponentString {
-						comp: "name".to_owned(),
+						id: "name".to_owned(),
 						value: from_str("[\"state\"]").unwrap(),
 					}]),
 				)])

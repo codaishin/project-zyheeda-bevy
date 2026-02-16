@@ -38,7 +38,7 @@ where
 				.map(|components| {
 					components
 						.into_iter()
-						.map(|ComponentString { comp, value }| (comp, value))
+						.map(|ComponentString { id, value }| (id, value))
 						.collect()
 				})
 				.collect();
@@ -77,7 +77,7 @@ mod tests {
 	#[test]
 	fn call_read() -> Result<(), RunSystemError> {
 		let component = serde_json::to_string(&ComponentString {
-			comp: "A".to_owned(),
+			id: "A".to_owned(),
 			value: serde_json::from_str(r#"{"value": 32}"#).unwrap(),
 		})
 		.unwrap();
@@ -100,7 +100,7 @@ mod tests {
 	#[test]
 	fn write_load_buffer() -> Result<(), RunSystemError> {
 		let component = serde_json::to_string(&ComponentString {
-			comp: "A".to_owned(),
+			id: "A".to_owned(),
 			value: serde_json::from_str(r#"{"value": 32}"#).unwrap(),
 		})
 		.unwrap();

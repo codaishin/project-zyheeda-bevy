@@ -7,18 +7,18 @@ use crate::{
 	},
 };
 use bevy::prelude::*;
-use common::traits::{handles_saving::SavableComponent, load_asset::LoadAsset};
-use serde_json::{Error, Value};
-use std::{
-	any::type_name,
-	collections::{HashSet, hash_map::Entry},
+use common::traits::{
+	handles_saving::{SavableComponent, SavableComponentId},
+	load_asset::LoadAsset,
 };
+use serde_json::{Error, Value};
+use std::collections::{HashSet, hash_map::Entry};
 
 #[derive(Debug, Clone)]
 pub(crate) struct ComponentHandler<TLoadAsset = AssetServer> {
 	buffer_fn: fn(&mut SaveBuffer, EntityRef) -> Result<(), Error>,
 	insert_fn: fn(&mut EntityCommands, Value, &mut TLoadAsset) -> Result<(), SerdeJsonError>,
-	component_name_fn: fn() -> &'static str,
+	component_id: SavableComponentId,
 }
 
 impl<TLoadAsset> ComponentHandler<TLoadAsset>
@@ -32,7 +32,7 @@ where
 		Self {
 			buffer_fn: Self::buffer::<T>,
 			insert_fn: Self::insert::<T>,
-			component_name_fn: || type_name::<T>(),
+			component_id: T::ID,
 		}
 	}
 
@@ -44,7 +44,7 @@ where
 			return Ok(());
 		};
 		let component_str = ComponentString {
-			comp: type_name::<T>().to_owned(),
+			id: String::from(T::ID),
 			value: serde_json::to_value(T::TDto::from(component.clone()))?,
 		};
 
@@ -108,8 +108,8 @@ where
 		(self.insert_fn)(entity, components, asset_server)
 	}
 
-	fn component_name(&self) -> &'static str {
-		(self.component_name_fn)()
+	fn id(&self) -> SavableComponentId {
+		self.component_id
 	}
 }
 
@@ -126,7 +126,7 @@ mod tests {
 	use macros::SavableComponent;
 	use serde::{Deserialize, Serialize};
 	use serde_json::{from_str, to_string};
-	use std::{any::type_name, collections::HashMap};
+	use std::collections::HashMap;
 	use testing::SingleThreadedApp;
 
 	#[derive(Resource)]
@@ -232,7 +232,7 @@ mod tests {
 				HashMap::from([(
 					entity.id(),
 					HashSet::from([ComponentString {
-						comp: type_name::<_A>().to_owned(),
+						id: "a".to_owned(),
 						value: from_str(&to_string(&_ADto { value: 42 }).unwrap()).unwrap()
 					}])
 				)]),
@@ -253,7 +253,7 @@ mod tests {
 				HashMap::from([(
 					entity.id(),
 					HashSet::from([ComponentString {
-						comp: type_name::<_B>().to_owned(),
+						id: "b".to_owned(),
 						value: from_str(&to_string(&_B { v: 42 }).unwrap()).unwrap()
 					}])
 				)]),
@@ -276,11 +276,11 @@ mod tests {
 					entity.id(),
 					HashSet::from([
 						ComponentString {
-							comp: type_name::<_A>().to_owned(),
+							id: "a".to_owned(),
 							value: from_str(&to_string(&_ADto { value: 42 }).unwrap()).unwrap()
 						},
 						ComponentString {
-							comp: type_name::<_B>().to_owned(),
+							id: "b".to_owned(),
 							value: from_str(&to_string(&_B { v: 11 }).unwrap()).unwrap()
 						}
 					])
@@ -407,7 +407,7 @@ mod tests {
 		fn get_component_name() {
 			let handler = ComponentHandler::<_LoadAsset>::new::<_A>();
 
-			assert_eq!(type_name::<_A>(), handler.component_name());
+			assert_eq!(_A::ID, handler.id());
 		}
 	}
 }
