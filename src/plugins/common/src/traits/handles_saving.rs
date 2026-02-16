@@ -2,7 +2,7 @@ mod external;
 
 use crate::{errors::Unreachable, traits::handles_custom_assets::TryLoadFrom};
 use bevy::prelude::*;
-use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use serde::{Serialize, de::DeserializeOwned};
 use std::ops::Deref;
 
 pub trait HandlesSaving {
@@ -13,6 +13,9 @@ pub trait HandlesSaving {
 	/// Useful for button (dis|en)ables.
 	fn can_quick_load() -> impl SystemCondition<()>;
 
+	/// Register savable components.
+	///
+	/// Implementors are likely to panic if uniqueness of [`SavableComponent::ID`] is violated.
 	fn register_savable_component<TComponent>(app: &mut App)
 	where
 		TComponent: SavableComponent;
@@ -39,13 +42,19 @@ pub trait SavableComponent:
 	const PRIORITY: bool = false;
 
 	/// Identifier for component saving/loading
-	const ID: SavableComponentId;
+	const ID: UniqueComponentId;
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
-pub struct SavableComponentId(pub &'static str);
+/// A unique id for a component.
+///
+/// Uniqueness:
+/// - must be enforced by users of `SavableComponent`.
+/// - is likely essential. Meaning that uniqueness violations may crash the application, thus,
+///   checking on app startup is desired.
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub struct UniqueComponentId(pub &'static str);
 
-impl Deref for SavableComponentId {
+impl Deref for UniqueComponentId {
 	type Target = str;
 
 	fn deref(&self) -> &Self::Target {
@@ -53,20 +62,20 @@ impl Deref for SavableComponentId {
 	}
 }
 
-impl From<&'static str> for SavableComponentId {
+impl From<&'static str> for UniqueComponentId {
 	fn from(id: &'static str) -> Self {
 		Self(id)
 	}
 }
 
-impl From<&SavableComponentId> for String {
-	fn from(SavableComponentId(id): &SavableComponentId) -> Self {
+impl From<&UniqueComponentId> for String {
+	fn from(UniqueComponentId(id): &UniqueComponentId) -> Self {
 		(*id).to_owned()
 	}
 }
 
-impl From<SavableComponentId> for String {
-	fn from(id: SavableComponentId) -> Self {
+impl From<UniqueComponentId> for String {
+	fn from(id: UniqueComponentId) -> Self {
 		Self::from(&id)
 	}
 }

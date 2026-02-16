@@ -491,8 +491,8 @@ pub fn derive_savable_component(input: TokenStream) -> TokenStream {
 	let id = match id {
 		Some(id) => {
 			quote! {
-				const ID: #common::traits::handles_saving::SavableComponentId =
-					#common::traits::handles_saving::SavableComponentId(#id);
+				const ID: #common::traits::handles_saving::UniqueComponentId =
+					#common::traits::handles_saving::UniqueComponentId(#id);
 			}
 		}
 		None => {

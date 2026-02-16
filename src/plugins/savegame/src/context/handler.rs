@@ -8,7 +8,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::traits::{
-	handles_saving::{SavableComponent, SavableComponentId},
+	handles_saving::{SavableComponent, UniqueComponentId},
 	load_asset::LoadAsset,
 };
 use serde_json::{Error, Value};
@@ -18,7 +18,7 @@ use std::collections::{HashMap, hash_map::Entry};
 pub(crate) struct ComponentHandler<TLoadAsset = AssetServer> {
 	buffer_fn: fn(&mut SaveBuffer, EntityRef) -> Result<(), Error>,
 	insert_fn: fn(&mut EntityCommands, Value, &mut TLoadAsset) -> Result<(), SerdeJsonError>,
-	component_id: SavableComponentId,
+	component_id: UniqueComponentId,
 }
 
 impl<TLoadAsset> ComponentHandler<TLoadAsset>
@@ -106,7 +106,7 @@ where
 		(self.insert_fn)(entity, components, asset_server)
 	}
 
-	fn id(&self) -> SavableComponentId {
+	fn id(&self) -> UniqueComponentId {
 		self.component_id
 	}
 }

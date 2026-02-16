@@ -1,11 +1,16 @@
+use crate::components::{
+	affected::{force_affected::ForceAffected, gravity_affected::GravityAffected, life::Life},
+	effects::{force::ForceEffect, gravity::GravityEffect, health_damage::HealthDamageEffect},
+};
 use bevy::prelude::{Component, default};
-use common::components::persistent_entity::PersistentEntity;
-use macros::SavableComponent;
+use common::{
+	components::persistent_entity::PersistentEntity,
+	traits::handles_saving::{SavableComponent, UniqueComponentId},
+};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
-#[derive(Component, SavableComponent, Serialize, Deserialize)]
-#[savable_component(id = "ongoing effects")]
+#[derive(Component, Serialize, Deserialize)]
 pub(crate) struct OngoingEffects<TActor, TTarget>
 where
 	TActor: Component,
@@ -14,6 +19,24 @@ where
 	pub(crate) entities: HashSet<PersistentEntity>,
 	#[serde(skip)]
 	_p: PhantomData<(TActor, TTarget)>,
+}
+
+impl SavableComponent for OngoingEffects<HealthDamageEffect, Life> {
+	type TDto = Self;
+
+	const ID: UniqueComponentId = UniqueComponentId("ongoing health damage effects");
+}
+
+impl SavableComponent for OngoingEffects<GravityEffect, GravityAffected> {
+	type TDto = Self;
+
+	const ID: UniqueComponentId = UniqueComponentId("ongoing gravity effects");
+}
+
+impl SavableComponent for OngoingEffects<ForceEffect, ForceAffected> {
+	type TDto = Self;
+
+	const ID: UniqueComponentId = UniqueComponentId("ongoing force effects");
 }
 
 impl<TActor, TTarget> Clone for OngoingEffects<TActor, TTarget>

@@ -135,7 +135,7 @@ mod tests {
 		asset::AssetPath,
 		ecs::system::{RunSystemError, RunSystemOnce},
 	};
-	use common::traits::{handles_saving::SavableComponentId, load_asset::LoadAsset};
+	use common::traits::{handles_saving::UniqueComponentId, load_asset::LoadAsset};
 	use serde_json::{Value, json};
 	use std::{
 		collections::{HashMap, HashSet},
@@ -196,7 +196,7 @@ mod tests {
 			Ok(())
 		}
 
-		fn id(&self) -> SavableComponentId {
+		fn id(&self) -> UniqueComponentId {
 			match self {
 				_FakeHandler::A => "a".into(),
 				_FakeHandler::B => "b".into(),
