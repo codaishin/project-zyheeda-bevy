@@ -2,14 +2,22 @@ use crate::{
 	components::{
 		anchor::{Always, Anchor, Once},
 		ground_target::GroundTarget,
+		prevent_tunneling::PreventTunneling,
 		set_velocity_forward::SetVelocityForward,
-		skill::{CreatedFrom, PROJECTILE_RANGE, PROJECTILE_SPEED, Skill},
+		skill::{
+			CreatedFrom,
+			PROJECTILE_CONTACT_RADIUS,
+			PROJECTILE_RANGE,
+			PROJECTILE_SPEED,
+			Skill,
+		},
 		when_traveled::WhenTraveled,
 	},
 	observers::skill_prefab::ApplyMotionPrefab,
 };
 use bevy_rapier3d::prelude::*;
 use common::{
+	tools::Units,
 	traits::handles_skill_physics::{SkillShape, ground_target::SphereAoE},
 	zyheeda_commands::ZyheedaEntityCommands,
 };
@@ -30,6 +38,9 @@ impl ApplyMotionPrefab for Skill {
 				entity.try_insert_if_new((
 					GravityScale(0.),
 					Ccd::enabled(),
+					PreventTunneling {
+						leading_edge: Units::from(PROJECTILE_CONTACT_RADIUS),
+					},
 					WhenTraveled::distance(PROJECTILE_RANGE).destroy(),
 				));
 

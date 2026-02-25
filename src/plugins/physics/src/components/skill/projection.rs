@@ -40,7 +40,7 @@ impl GetProjectionPrefab for Skill {
 				ProjectionCollider {
 					shape: ColliderShape::Sphere {
 						radius: *radius,
-						hollow_radius: None,
+						hollow: false,
 					},
 					transform: Transform::default(),
 				},
@@ -55,7 +55,7 @@ impl GetProjectionPrefab for Skill {
 				ProjectionCollider {
 					shape: ColliderShape::Sphere {
 						radius: Units::from(PROJECTILE_PROJECTION_RADIUS),
-						hollow_radius: None,
+						hollow: false,
 					},
 					transform: Transform::default(),
 				},
