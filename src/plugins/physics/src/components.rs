@@ -15,6 +15,7 @@ pub(crate) mod mount_points;
 pub(crate) mod no_hover;
 pub(crate) mod ongoing_effects;
 pub(crate) mod physical_body;
+pub(crate) mod prevent_tunneling;
 pub(crate) mod set_velocity_forward;
 pub(crate) mod skill;
 pub(crate) mod skill_transform;
@@ -74,6 +75,13 @@ pub struct RayFilter {
 	groups: Option<CollisionGroups>,
 	exclude_collider: Option<Entity>,
 	exclude_rigid_body: Option<Entity>,
+}
+
+impl RayFilter {
+	pub(crate) fn exclude_rigid_body(mut self, entity: Entity) -> Self {
+		self.exclude_rigid_body = Some(entity);
+		self
+	}
 }
 
 #[derive(Debug, PartialEq)]

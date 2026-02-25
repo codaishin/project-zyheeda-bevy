@@ -26,6 +26,7 @@ use crate::{
 		lifetime::{LifetimeTiedTo, TiedLifetimes},
 		no_hover::NoMouseHover,
 		physical_body::PhysicalBody,
+		prevent_tunneling::PreventTunneling,
 		set_velocity_forward::SetVelocityForward,
 		skill::{ContactInteractionTarget, ProjectionInteractionTarget, Skill},
 		velocity::LinearVelocity,
@@ -203,6 +204,9 @@ where
 						Blockable::beam_interactions.pipe(OnError::log),
 						OngoingInteractions::clear,
 						UpdateOngoingInteractions::push_beam_interactions,
+						Update::delta
+							.pipe(PreventTunneling::system)
+							.pipe(OnError::log),
 						UpdateOngoingInteractions::push_ongoing_collisions,
 					)
 						.chain(),
