@@ -1,4 +1,4 @@
-use crate::components::async_collider::AsyncConvexCollider;
+use crate::components::async_collider::{AsyncCollider, ColliderType};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
@@ -8,7 +8,7 @@ use common::{
 };
 use std::fmt::Display;
 
-impl AsyncConvexCollider {
+impl AsyncCollider {
 	pub(crate) fn insert_collider(
 		colliders: Query<(Entity, &mut Self)>,
 		commands: ZyheedaCommands,
@@ -26,7 +26,7 @@ impl AsyncConvexCollider {
 	) -> Result<(), Vec<FailedToComputeCollider>>
 	where
 		TAssetServer: Resource + LoadAsset,
-		TCollider: Component + ConvexMeshCollider,
+		TCollider: Component + ConvexMeshCollider + ConcaveMeshCollider,
 	{
 		let mut errors = vec![];
 
@@ -46,7 +46,7 @@ impl AsyncConvexCollider {
 
 					entity.try_remove::<Self>();
 
-					let Some(collider) = TCollider::convex_mesh_collider(mesh) else {
+					let Some(collider) = async_collider.get_mesh_collider::<TCollider>(mesh) else {
 						errors.push(FailedToComputeCollider {
 							path: async_collider.path,
 						});
@@ -70,6 +70,16 @@ impl AsyncConvexCollider {
 
 		Ok(())
 	}
+
+	fn get_mesh_collider<TCollider>(&self, mesh: &Mesh) -> Option<TCollider>
+	where
+		TCollider: ConvexMeshCollider + ConcaveMeshCollider,
+	{
+		match self.collider_type {
+			ColliderType::Convex => TCollider::convex_mesh_collider(mesh),
+			ColliderType::Concave => TCollider::concave_mesh_collider(mesh),
+		}
+	}
 }
 
 pub(crate) trait ConvexMeshCollider: Sized {
@@ -82,6 +92,23 @@ impl ConvexMeshCollider for Collider {
 	}
 }
 
+pub(crate) trait ConcaveMeshCollider: Sized {
+	fn concave_mesh_collider(mesh: &Mesh) -> Option<Self>;
+}
+
+impl ConcaveMeshCollider for Collider {
+	fn concave_mesh_collider(mesh: &Mesh) -> Option<Self> {
+		Collider::from_bevy_mesh(
+			mesh,
+			&ComputedColliderShape::TriMesh(
+				TriMeshFlags::FIX_INTERNAL_EDGES
+					| TriMeshFlags::MERGE_DUPLICATE_VERTICES
+					| TriMeshFlags::DELETE_DEGENERATE_TRIANGLES,
+			),
+		)
+	}
+}
+
 #[derive(Debug, PartialEq)]
 pub(crate) struct FailedToComputeCollider {
 	path: &'static str,
@@ -89,7 +116,7 @@ pub(crate) struct FailedToComputeCollider {
 
 impl Display for FailedToComputeCollider {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "{}: cannot compute convex collider", self.path)
+		write!(f, "{}: cannot compute collider", self.path)
 	}
 }
 
@@ -116,12 +143,28 @@ mod tests {
 	use test_case::test_case;
 	use testing::{SingleThreadedApp, new_handle};
 
+	impl AsyncCollider {
+		fn with_mesh(mut self, mesh: Handle<Mesh>) -> Self {
+			self.mesh = Some(mesh);
+			self
+		}
+	}
+
 	#[derive(Component, Debug, PartialEq)]
-	struct _Collider(Mesh);
+	enum _Collider {
+		Convex(Mesh),
+		Concave(Mesh),
+	}
 
 	impl ConvexMeshCollider for _Collider {
 		fn convex_mesh_collider(mesh: &Mesh) -> Option<Self> {
-			Some(_Collider(mesh.clone()))
+			Some(_Collider::Convex(mesh.clone()))
+		}
+	}
+
+	impl ConcaveMeshCollider for _Collider {
+		fn concave_mesh_collider(mesh: &Mesh) -> Option<Self> {
+			Some(_Collider::Concave(mesh.clone()))
 		}
 	}
 
@@ -130,7 +173,7 @@ mod tests {
 
 	fn setup<TCollider>(assets: &[(Handle<Mesh>, Mesh)], server: MockAssetServer) -> App
 	where
-		TCollider: Component + ConvexMeshCollider,
+		TCollider: Component + ConvexMeshCollider + ConcaveMeshCollider,
 	{
 		let mut app = App::new().single_threaded(Update);
 		let mut asset_resource = Assets::default();
@@ -143,7 +186,7 @@ mod tests {
 		app.insert_resource(server);
 		app.add_systems(
 			Update,
-			AsyncConvexCollider::insert_collider_via::<MockAssetServer, TCollider>.pipe(
+			AsyncCollider::insert_collider_via::<MockAssetServer, TCollider>.pipe(
 				|In(result), mut c: Commands| {
 					c.insert_resource(_Result(result));
 				},
@@ -164,43 +207,49 @@ mod tests {
 		);
 		let entity = app
 			.world_mut()
-			.spawn(AsyncConvexCollider {
-				path: "my/path",
-				mesh: None,
-				scale: None,
-			})
+			.spawn(AsyncCollider::concave("my/path"))
 			.id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&AsyncConvexCollider {
-				path: "my/path",
-				mesh: Some(handle),
-				scale: None,
-			}),
-			app.world().entity(entity).get::<AsyncConvexCollider>(),
+			Some(&AsyncCollider::concave("my/path").with_mesh(handle)),
+			app.world().entity(entity).get::<AsyncCollider>(),
 		);
 	}
 
 	#[test]
-	fn insert_collider() {
+	fn insert_convex_collider() {
 		let handle = new_handle::<Mesh>();
 		let mesh = Mesh::from(Cuboid::new(1., 2., 3.));
 		let mut app = setup::<_Collider>(&[(handle.clone(), mesh)], MockAssetServer::default());
 		let entity = app
 			.world_mut()
-			.spawn(AsyncConvexCollider {
-				mesh: Some(handle),
-				path: "",
-				scale: None,
-			})
+			.spawn(AsyncCollider::convex("path").with_mesh(handle))
 			.id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&_Collider(Mesh::from(Cuboid::new(1., 2., 3.)))),
+			Some(&_Collider::Convex(Mesh::from(Cuboid::new(1., 2., 3.)))),
+			app.world().entity(entity).get::<_Collider>(),
+		);
+	}
+
+	#[test]
+	fn insert_concave_collider() {
+		let handle = new_handle::<Mesh>();
+		let mesh = Mesh::from(Cuboid::new(1., 2., 3.));
+		let mut app = setup::<_Collider>(&[(handle.clone(), mesh)], MockAssetServer::default());
+		let entity = app
+			.world_mut()
+			.spawn(AsyncCollider::concave("path").with_mesh(handle))
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&_Collider::Concave(Mesh::from(Cuboid::new(1., 2., 3.)))),
 			app.world().entity(entity).get::<_Collider>(),
 		);
 	}
@@ -212,11 +261,11 @@ mod tests {
 		let mut app = setup::<_Collider>(&[(handle.clone(), mesh)], MockAssetServer::default());
 		let entity = app
 			.world_mut()
-			.spawn(AsyncConvexCollider {
-				mesh: Some(handle),
-				path: "",
-				scale: Some(ColliderScale::Absolute(Vec3::new(1., 2., 3.))),
-			})
+			.spawn(
+				AsyncCollider::concave("")
+					.with_mesh(handle)
+					.with_scale(ColliderScale::Absolute(Vec3::new(1., 2., 3.))),
+			)
 			.id();
 
 		app.update();
@@ -232,10 +281,10 @@ mod tests {
 	const MESH_DOES_NOT_EXIST: Handle<Mesh> =
 		Handle::Uuid(uuid!("7342b7fa-2742-4688-94c8-82436c0d4d8a"), PhantomData);
 
-	#[test_case(AsyncConvexCollider {path: "my/path", mesh: None, scale: None}, true; "not when only path")]
-	#[test_case(AsyncConvexCollider {path: "my/path", mesh: Some(MESH_DOES_NOT_EXIST), scale: None}, true; "not when mesh missing")]
-	#[test_case(AsyncConvexCollider {path: "my/path", mesh: Some(MESH_EXISTS), scale: None}, false; "when mesh exists")]
-	fn remove_async_collider(collider: AsyncConvexCollider, is_present: bool) {
+	#[test_case(AsyncCollider::concave("my/path"), true; "not when only path")]
+	#[test_case(AsyncCollider::concave("my/path").with_mesh(MESH_DOES_NOT_EXIST), true; "not when mesh missing")]
+	#[test_case(AsyncCollider::concave("my/path").with_mesh(MESH_EXISTS), false; "when mesh exists")]
+	fn remove_async_collider(collider: AsyncCollider, is_present: bool) {
 		let mut app = setup::<_Collider>(
 			&[(MESH_EXISTS, Mesh::from(Sphere::new(1.)))],
 			MockAssetServer::default(),
@@ -246,7 +295,7 @@ mod tests {
 
 		assert_eq!(
 			is_present,
-			app.world().entity(entity).contains::<AsyncConvexCollider>(),
+			app.world().entity(entity).contains::<AsyncCollider>(),
 		);
 	}
 
@@ -259,16 +308,24 @@ mod tests {
 		}
 	}
 
-	#[test]
-	fn return_error_on_failure() {
+	impl ConcaveMeshCollider for _FaultyCollider {
+		fn concave_mesh_collider(_: &Mesh) -> Option<Self> {
+			None
+		}
+	}
+
+	#[test_case(ColliderType::Convex; "convex")]
+	#[test_case(ColliderType::Concave; "concave")]
+	fn return_error_on_failure(collider_type: ColliderType) {
 		let handle = new_handle();
 		let mut app = setup::<_FaultyCollider>(
 			&[(handle.clone(), Mesh::from(Sphere::new(1.)))],
 			MockAssetServer::default(),
 		);
-		app.world_mut().spawn(AsyncConvexCollider {
-			mesh: Some(handle),
+		app.world_mut().spawn(AsyncCollider {
+			collider_type,
 			path: "my/path",
+			mesh: Some(handle),
 			scale: None,
 		});
 
@@ -289,19 +346,17 @@ mod tests {
 		);
 		let entity = app
 			.world_mut()
-			.spawn(AsyncConvexCollider {
-				mesh: Some(handle),
+			.spawn(AsyncCollider {
+				collider_type: ColliderType::Concave,
 				path: "my/path",
+				mesh: Some(handle),
 				scale: None,
 			})
 			.id();
 
 		app.update();
 
-		assert_eq!(
-			None,
-			app.world().entity(entity).get::<AsyncConvexCollider>(),
-		);
+		assert_eq!(None, app.world().entity(entity).get::<AsyncCollider>(),);
 	}
 
 	#[test]
@@ -311,11 +366,8 @@ mod tests {
 			&[(handle.clone(), Mesh::from(Sphere::new(1.)))],
 			MockAssetServer::default(),
 		);
-		app.world_mut().spawn(AsyncConvexCollider {
-			mesh: Some(handle),
-			path: "my/path",
-			scale: None,
-		});
+		app.world_mut()
+			.spawn(AsyncCollider::concave("my/path").with_mesh(handle));
 
 		app.update();
 

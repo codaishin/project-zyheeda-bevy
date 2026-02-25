@@ -2,7 +2,6 @@ mod app;
 mod components;
 mod messages;
 mod observers;
-mod physics_hooks;
 mod resources;
 mod system_params;
 mod systems;
@@ -16,7 +15,7 @@ use crate::{
 	components::{
 		affected::{force_affected::ForceAffected, gravity_affected::GravityAffected, life::Life},
 		anchor::{Always, Anchor, Once},
-		async_collider::AsyncConvexCollider,
+		async_collider::AsyncCollider,
 		blockable::Blockable,
 		character_motion::ApplyCharacterMotion,
 		collider::ColliderShape,
@@ -35,7 +34,6 @@ use crate::{
 	},
 	messages::{BeamInteraction, RayEvent},
 	observers::{skill_prefab::SkillPrefab, update_blockers::UpdateBlockersObserver},
-	physics_hooks::check_hollow_colliders::CheckHollowColliders,
 	resources::ongoing_interactions::OngoingInteractions,
 	system_params::{
 		skill_spawner::SkillSpawnerMut,
@@ -111,7 +109,7 @@ where
 
 		app
 			// Rapier
-			.add_plugins(RapierPhysicsPlugin::<CheckHollowColliders>::default())
+			.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
 			.add_systems(
 				Startup,
 				set_rapier_time_step(Duration::from_secs(1) / self.target_fps),
@@ -148,7 +146,7 @@ where
 				PostUpdate,
 				(
 					PhysicalBody::prefab.after(TransformSystems::Propagate),
-					AsyncConvexCollider::insert_collider.pipe(OnError::log),
+					AsyncCollider::insert_collider.pipe(OnError::log),
 				),
 			)
 			// All effects

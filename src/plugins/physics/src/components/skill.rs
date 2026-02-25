@@ -67,7 +67,6 @@ const HALF_FORWARD: Transform = Transform::from_translation(Vec3 {
 	y: 0.,
 	z: -0.5,
 });
-static HOLLOW_OUTER_THICKNESS: LazyLock<Units> = LazyLock::new(|| Units::from(0.3));
 
 const SHIELD_MODEL: &str = "models/shield.glb";
 static SHIELD_CONTACT_COLLIDER: LazyLock<ColliderShape> = LazyLock::new(|| ColliderShape::Cuboid {

@@ -8,7 +8,6 @@ pub(crate) mod collider;
 pub(crate) mod default_attributes;
 pub(crate) mod effects;
 pub(crate) mod ground_target;
-pub(crate) mod hollow;
 pub(crate) mod immobilized;
 pub(crate) mod interaction_target;
 pub(crate) mod lifetime;

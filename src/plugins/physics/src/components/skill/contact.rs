@@ -6,7 +6,6 @@ use crate::{
 			BEAM_CONTACT_RADIUS,
 			BEAM_MODEL,
 			HALF_FORWARD,
-			HOLLOW_OUTER_THICKNESS,
 			PROJECTILE_CONTACT_RADIUS,
 			SHIELD_CONTACT_COLLIDER,
 			SHIELD_MODEL,
@@ -47,7 +46,7 @@ impl GetContactPrefab for Skill {
 				ContactCollider {
 					shape: ColliderShape::Sphere {
 						radius: *radius,
-						hollow_radius: Some(Units::from(**radius - **HOLLOW_OUTER_THICKNESS)),
+						hollow: true,
 					},
 					transform: Transform::default(),
 				},
@@ -63,7 +62,7 @@ impl GetContactPrefab for Skill {
 				ContactCollider {
 					shape: ColliderShape::Sphere {
 						radius: Units::from(PROJECTILE_CONTACT_RADIUS),
-						hollow_radius: None,
+						hollow: false,
 					},
 					transform: Transform::default(),
 				},

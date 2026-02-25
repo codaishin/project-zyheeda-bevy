@@ -145,7 +145,7 @@ impl Blockable {
 			origin: transform.translation(),
 			direction: transform.forward(),
 			max_toi: TimeOfImpact::from(range),
-			solid: false,
+			solid: true,
 			filter: RayFilter::default(),
 		}
 	}
@@ -300,7 +300,7 @@ mod tests {
 						origin: Vec3::new(1., 2., 3.),
 						direction: Dir3::NEG_Y,
 						max_toi: toi!(11000.),
-						solid: false,
+						solid: true,
 						filter: RayFilter::default(),
 					}))
 					.return_const(Ok(Sorted::from([])));
