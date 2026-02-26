@@ -3,10 +3,10 @@ use crate::{
 	traits::compute_path_lazy::ComputePathLazy,
 };
 use common::traits::handles_map_generation::{
+	GraphGroundPosition,
 	GraphLineOfSight,
 	GraphObstacle,
 	GraphSuccessors,
-	GraphTranslation,
 };
 use std::hash::Hash;
 
@@ -17,10 +17,10 @@ pub struct ThetaStar {
 impl ThetaStar {
 	fn distance<TGraph>(&self, graph: &TGraph, a: &TGraph::TTNode, b: &TGraph::TTNode) -> f32
 	where
-		TGraph: GraphTranslation,
+		TGraph: GraphGroundPosition,
 	{
-		let a = graph.translation(a);
-		let b = graph.translation(b);
+		let a = graph.ground_position(a);
+		let b = graph.ground_position(b);
 		let d_x = (a.x - b.x).abs();
 		let d_z = (a.z - b.z).abs();
 		let (long, short) = match d_x > d_z {
@@ -39,7 +39,7 @@ impl ThetaStar {
 		neighbor: &TGraph::TLNode,
 	) -> Option<(TGraph::TLNode, f32)>
 	where
-		TGraph: GraphLineOfSight + GraphTranslation<TTNode = TGraph::TLNode>,
+		TGraph: GraphLineOfSight + GraphGroundPosition<TTNode = TGraph::TLNode>,
 		TGraph::TLNode: Eq + Hash + Copy,
 	{
 		let los = |a, b| graph.line_of_sight(a, b);
@@ -59,7 +59,7 @@ impl ThetaStar {
 		neighbor: &TGraph::TTNode,
 	) -> Option<(TGraph::TTNode, f32)>
 	where
-		TGraph: GraphTranslation,
+		TGraph: GraphGroundPosition,
 		TGraph::TTNode: Eq + Hash + Copy,
 	{
 		let g = g_scores.get(current) + self.distance(graph, current, neighbor);
@@ -86,7 +86,7 @@ where
 	TGraph: GraphSuccessors
 		+ GraphLineOfSight<TLNode = TGraph::TSNode>
 		+ GraphObstacle<TONode = TGraph::TSNode>
-		+ GraphTranslation<TTNode = TGraph::TSNode>,
+		+ GraphGroundPosition<TTNode = TGraph::TSNode>,
 {
 	fn compute_path(
 		&self,

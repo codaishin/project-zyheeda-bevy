@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use common::{
 	tools::Units,
 	traits::{
-		handles_map_generation::{Graph, NaivePath},
+		handles_map_generation::{Graph, GroundPosition, NaivePath},
 		handles_path_finding::ComputePath,
 		register_derived_component::{DerivableFrom, InsertDerivedComponent},
 		thread_safe::ThreadSafe,
@@ -46,10 +46,15 @@ where
 	fn compute_path(&self, start: Vec3, end: Vec3, agent_radius: Units) -> Option<Self::TIter<'_>> {
 		let start_node = self.graph.node(start)?;
 		let end_node = self.graph.node(end)?;
+		let start_ground = self.graph.ground_position(&start_node);
+		let end_ground = self.graph.ground_position(&end_node);
 
 		if start_node == end_node {
 			return Some(Iter::Direct {
-				path: [start, end],
+				path: [
+					GroundPosition(Vec3::new(start.x, start_ground.y, start.z)),
+					GroundPosition(Vec3::new(end.x, end_ground.y, end.z)),
+				],
 				index: 0,
 			});
 		}
@@ -60,7 +65,10 @@ where
 			.collect();
 
 		Some(Iter::Compute {
-			points: (start, end),
+			points: (
+				GroundPosition(Vec3::new(start.x, start_ground.y, start.z)),
+				GroundPosition(Vec3::new(end.x, end_ground.y, end.z)),
+			),
 			nodes: (start_node, end_node),
 			graph: &self.graph,
 			path,
@@ -76,15 +84,15 @@ where
 	TGraph: Graph,
 {
 	Direct {
-		path: [Vec3; 2],
+		path: [GroundPosition; 2],
 		index: u8,
 	},
 	Compute {
-		points: (Vec3, Vec3),
+		points: (GroundPosition, GroundPosition),
 		nodes: (TGraph::TNode, TGraph::TNode),
 		path: Vec<TGraph::TNode>,
 		path_index: usize,
-		next_buffered: Option<Vec3>,
+		next_buffered: Option<GroundPosition>,
 		graph: &'a TGraph,
 		agent_radius: Units,
 	},
@@ -94,7 +102,7 @@ impl<TGraph> Iterator for Iter<'_, TGraph>
 where
 	TGraph: Graph,
 {
-	type Item = Vec3;
+	type Item = GroundPosition;
 
 	fn next(&mut self) -> Option<Self::Item> {
 		match self {
@@ -141,7 +149,7 @@ where
 					None => {}
 				}
 
-				Some(graph.translation(node))
+				Some(graph.ground_position(node))
 			}
 		}
 	}
@@ -152,9 +160,9 @@ fn refine_start<TGraph>(
 	node: &TGraph::TNode,
 	path: &[TGraph::TNode],
 	start_node: TGraph::TNode,
-	start: Vec3,
+	start: GroundPosition,
 	agent_radius: Units,
-) -> Option<(Vec3, Option<Vec3>)>
+) -> Option<(GroundPosition, Option<GroundPosition>)>
 where
 	TGraph: Graph,
 {
@@ -166,10 +174,10 @@ where
 		return None;
 	};
 
-	Some(match graph.naive_path(start, next, agent_radius) {
+	Some(match graph.naive_path(*start, next, agent_radius) {
 		NaivePath::Ok => (start, None),
 		NaivePath::PartialUntil(extra) => (start, Some(extra)),
-		NaivePath::CannotCompute => (graph.translation(node), None),
+		NaivePath::CannotCompute => (graph.ground_position(node), None),
 	})
 }
 
@@ -178,9 +186,9 @@ fn refine_end<TGraph>(
 	node: &TGraph::TNode,
 	path: &[TGraph::TNode],
 	end_node: TGraph::TNode,
-	end: Vec3,
+	end: GroundPosition,
 	agent_radius: Units,
-) -> Option<(Vec3, Option<Vec3>)>
+) -> Option<(GroundPosition, Option<GroundPosition>)>
 where
 	TGraph: Graph,
 {
@@ -192,10 +200,10 @@ where
 		return None;
 	};
 
-	Some(match graph.naive_path(end, last, agent_radius) {
+	Some(match graph.naive_path(*end, last, agent_radius) {
 		NaivePath::Ok => (end, None),
 		NaivePath::PartialUntil(extra) => (extra, Some(end)),
-		NaivePath::CannotCompute => (graph.translation(node), None),
+		NaivePath::CannotCompute => (graph.ground_position(node), None),
 	})
 }
 
@@ -203,12 +211,12 @@ where
 mod tests {
 	use super::*;
 	use common::traits::handles_map_generation::{
+		GraphGroundPosition,
 		GraphLineOfSight,
 		GraphNaivePath,
 		GraphNode,
 		GraphObstacle,
 		GraphSuccessors,
-		GraphTranslation,
 		NaivePath,
 	};
 	use macros::simple_mock;
@@ -240,7 +248,11 @@ mod tests {
 	}
 
 	#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-	struct _Node(u8, u8, u8);
+	struct _Node(u8, u8);
+
+	impl _Node {
+		const HEIGHT: f32 = -10.;
+	}
 
 	#[derive(Debug, PartialEq)]
 	struct _Graph;
@@ -251,15 +263,15 @@ mod tests {
 
 	impl GraphNode for _Graph {
 		type TNNode = _Node;
-		fn node(&self, Vec3 { x, y, z }: Vec3) -> Option<_Node> {
-			Some(_Node(x.round() as u8, y.round() as u8, z.round() as u8))
+		fn node(&self, Vec3 { x, z, .. }: Vec3) -> Option<_Node> {
+			Some(_Node(x.round() as u8, z.round() as u8))
 		}
 	}
 
-	impl GraphTranslation for _Graph {
+	impl GraphGroundPosition for _Graph {
 		type TTNode = _Node;
-		fn translation(&self, _Node(x, y, z): &_Node) -> Vec3 {
-			Vec3::new(*x as f32, *y as f32, *z as f32)
+		fn ground_position(&self, _Node(x, z): &_Node) -> GroundPosition {
+			GroundPosition(Vec3::new(*x as f32, _Node::HEIGHT, *z as f32))
 		}
 	}
 
@@ -273,14 +285,14 @@ mod tests {
 	impl GraphLineOfSight for _Graph {
 		type TLNode = _Node;
 		fn line_of_sight(&self, _: &_Node, _: &_Node) -> bool {
-			todo!()
+			false
 		}
 	}
 
 	impl GraphObstacle for _Graph {
 		type TONode = _Node;
 		fn is_obstacle(&self, _: &_Node) -> bool {
-			todo!()
+			false
 		}
 	}
 
@@ -288,7 +300,7 @@ mod tests {
 		type TNNode = _Node;
 
 		fn naive_path(&self, _: Vec3, _: &Self::TNNode, _: Units) -> NaivePath {
-			todo!()
+			NaivePath::CannotCompute
 		}
 	}
 
@@ -298,9 +310,9 @@ mod tests {
 			type TNNode = _Node;
 			fn node(&self, translation: Vec3) -> Option<_Node>;
 		}
-		impl GraphTranslation for _Graph {
+		impl GraphGroundPosition for _Graph {
 			type TTNode = _Node;
-			fn translation(&self, node: &_Node) -> Vec3;
+			fn ground_position(&self, node: &_Node) -> GroundPosition;
 		}
 		impl GraphSuccessors for _Graph {
 			type TSNode = _Node;
@@ -332,7 +344,7 @@ mod tests {
 			method: Mock_Method::new_mock(|mock| {
 				mock.expect_compute_path()
 					.times(1)
-					.with(eq(_Graph), eq(_Node(1, 1, 1)), eq(_Node(2, 2, 2)))
+					.with(eq(_Graph), eq(_Node(1, 1)), eq(_Node(2, 2)))
 					.returning(|_, _, _| Box::new([].into_iter()));
 			}),
 			graph: _Graph,
@@ -343,7 +355,7 @@ mod tests {
 
 	#[test]
 	fn return_computed_path() {
-		let path = [_Node(1, 1, 1), _Node(2, 2, 2), _Node(3, 3, 3)];
+		let path = [_Node(1, 1), _Node(2, 2), _Node(3, 3)];
 		let grid = Navigation {
 			method: Mock_Method::new_mock(|mock| {
 				mock.expect_compute_path()
@@ -359,8 +371,8 @@ mod tests {
 		);
 
 		assert_eq!(
-			Some(Vec::from(path.map(|_Node(x, y, z)| Vec3::new(
-				x as f32, y as f32, z as f32
+			Some(Vec::from(path.map(|_Node(x, z)| GroundPosition(
+				Vec3::new(x as f32, _Node::HEIGHT, z as f32)
 			)))),
 			computed_path.map(|p| p.collect()),
 		);
@@ -383,7 +395,10 @@ mod tests {
 			Units::from(0.1),
 		);
 		assert_eq!(
-			Some(vec![Vec3::new(0.8, 1., 1.3), Vec3::new(1.1, 1., 0.9)]),
+			Some(vec![
+				GroundPosition(Vec3::new(0.8, _Node::HEIGHT, 1.3)),
+				GroundPosition(Vec3::new(1.1, _Node::HEIGHT, 0.9))
+			]),
 			path.map(|p| p.collect()),
 		);
 	}
@@ -393,26 +408,19 @@ mod tests {
 		let grid = Navigation {
 			method: Mock_Method2::new_mock(|mock| {
 				mock.expect_compute_path().returning(|_, _, _| {
-					Box::new(
-						[
-							_Node(1, 1, 1),
-							_Node(10, 10, 10),
-							_Node(4, 4, 4),
-							_Node(2, 2, 2),
-						]
-						.into_iter(),
-					)
+					Box::new([_Node(1, 1), _Node(10, 10), _Node(4, 4), _Node(2, 2)].into_iter())
 				});
 			}),
 			graph: Mock_Graph::new_mock(|mock| {
 				mock.expect_node()
 					.with(eq(Vec3::new(0.8, 1., 1.3)))
-					.return_const(Some(_Node(1, 1, 1)));
+					.return_const(Some(_Node(1, 1)));
 				mock.expect_node()
 					.with(eq(Vec3::new(2.1, 2., 1.9)))
-					.return_const(Some(_Node(2, 2, 2)));
-				mock.expect_translation()
-					.returning(|_Node(x, y, z)| Vec3::new(*x as f32, *y as f32, *z as f32));
+					.return_const(Some(_Node(2, 2)));
+				mock.expect_ground_position().returning(|_Node(x, z)| {
+					GroundPosition(Vec3::new(*x as f32, _Node::HEIGHT, *z as f32))
+				});
 				mock.expect_naive_path().return_const(NaivePath::Ok);
 			}),
 		};
@@ -424,10 +432,10 @@ mod tests {
 		);
 		assert_eq!(
 			Some(vec![
-				Vec3::new(0.8, 1., 1.3),
-				Vec3::new(10., 10., 10.),
-				Vec3::new(4., 4., 4.),
-				Vec3::new(2.1, 2., 1.9)
+				GroundPosition(Vec3::new(0.8, _Node::HEIGHT, 1.3)),
+				GroundPosition(Vec3::new(10., _Node::HEIGHT, 10.)),
+				GroundPosition(Vec3::new(4., _Node::HEIGHT, 4.)),
+				GroundPosition(Vec3::new(2.1, _Node::HEIGHT, 1.9))
 			]),
 			path.map(|p| p.collect()),
 		);
@@ -438,18 +446,19 @@ mod tests {
 		let grid = Navigation {
 			method: Mock_Method2::new_mock(|mock| {
 				mock.expect_compute_path().returning(|_, _, _| {
-					Box::new([_Node(10, 10, 10), _Node(4, 4, 4), _Node(2, 2, 2)].into_iter())
+					Box::new([_Node(10, 10), _Node(4, 4), _Node(2, 2)].into_iter())
 				});
 			}),
 			graph: Mock_Graph::new_mock(|mock| {
 				mock.expect_node()
 					.with(eq(Vec3::new(0.8, 1., 1.3)))
-					.return_const(Some(_Node(1, 1, 1)));
+					.return_const(Some(_Node(1, 1)));
 				mock.expect_node()
 					.with(eq(Vec3::new(2.1, 2., 1.9)))
-					.return_const(Some(_Node(2, 2, 2)));
-				mock.expect_translation()
-					.returning(|_Node(x, y, z)| Vec3::new(*x as f32, *y as f32, *z as f32));
+					.return_const(Some(_Node(2, 2)));
+				mock.expect_ground_position().returning(|_Node(x, z)| {
+					GroundPosition(Vec3::new(*x as f32, _Node::HEIGHT, *z as f32))
+				});
 				mock.expect_naive_path().return_const(NaivePath::Ok);
 			}),
 		};
@@ -461,9 +470,9 @@ mod tests {
 		);
 		assert_eq!(
 			Some(vec![
-				Vec3::new(10., 10., 10.),
-				Vec3::new(4., 4., 4.),
-				Vec3::new(2.1, 2., 1.9)
+				GroundPosition(Vec3::new(10., _Node::HEIGHT, 10.)),
+				GroundPosition(Vec3::new(4., _Node::HEIGHT, 4.)),
+				GroundPosition(Vec3::new(2.1, _Node::HEIGHT, 1.9))
 			]),
 			path.map(|p| p.collect()),
 		);
@@ -474,18 +483,19 @@ mod tests {
 		let grid = Navigation {
 			method: Mock_Method2::new_mock(|mock| {
 				mock.expect_compute_path().returning(|_, _, _| {
-					Box::new([_Node(1, 1, 1), _Node(10, 10, 10), _Node(4, 4, 4)].into_iter())
+					Box::new([_Node(1, 1), _Node(10, 10), _Node(4, 4)].into_iter())
 				});
 			}),
 			graph: Mock_Graph::new_mock(|mock| {
 				mock.expect_node()
 					.with(eq(Vec3::new(0.8, 1., 1.3)))
-					.return_const(Some(_Node(1, 1, 1)));
+					.return_const(Some(_Node(1, 1)));
 				mock.expect_node()
 					.with(eq(Vec3::new(2.1, 2., 1.9)))
-					.return_const(Some(_Node(2, 2, 2)));
-				mock.expect_translation()
-					.returning(|_Node(x, y, z)| Vec3::new(*x as f32, *y as f32, *z as f32));
+					.return_const(Some(_Node(2, 2)));
+				mock.expect_ground_position().returning(|_Node(x, z)| {
+					GroundPosition(Vec3::new(*x as f32, _Node::HEIGHT, *z as f32))
+				});
 				mock.expect_naive_path().return_const(NaivePath::Ok);
 			}),
 		};
@@ -497,9 +507,9 @@ mod tests {
 		);
 		assert_eq!(
 			Some(vec![
-				Vec3::new(0.8, 1., 1.3),
-				Vec3::new(10., 10., 10.),
-				Vec3::new(4., 4., 4.),
+				GroundPosition(Vec3::new(0.8, _Node::HEIGHT, 1.3)),
+				GroundPosition(Vec3::new(10., _Node::HEIGHT, 10.)),
+				GroundPosition(Vec3::new(4., _Node::HEIGHT, 4.)),
 			]),
 			path.map(|p| p.collect()),
 		);
@@ -510,26 +520,18 @@ mod tests {
 		let grid = Navigation {
 			method: Mock_Method2::new_mock(|mock| {
 				mock.expect_compute_path().returning(|_, _, _| {
-					Box::new(
-						[
-							_Node(1, 1, 1),
-							_Node(10, 10, 10),
-							_Node(4, 4, 4),
-							_Node(2, 2, 2),
-						]
-						.into_iter(),
-					)
+					Box::new([_Node(1, 1), _Node(10, 10), _Node(4, 4), _Node(2, 2)].into_iter())
 				});
 			}),
 			graph: Mock_Graph::new_mock(|mock| {
 				mock.expect_node()
 					.with(eq(Vec3::new(0.8, 1., 1.3)))
-					.return_const(Some(_Node(1, 1, 1)));
+					.return_const(Some(_Node(1, 1)));
 				mock.expect_node()
 					.with(eq(Vec3::new(2.1, 2., 1.9)))
-					.return_const(Some(_Node(2, 2, 2)));
-				mock.expect_translation().returning(|_Node(x, y, z)| {
-					Vec3::new(*x as f32 + 0.5, *y as f32 + 0.5, *z as f32 + 0.5)
+					.return_const(Some(_Node(2, 2)));
+				mock.expect_ground_position().returning(|_Node(x, z)| {
+					GroundPosition(Vec3::new(*x as f32 + 0.5, _Node::HEIGHT, *z as f32 + 0.5))
 				});
 				mock.expect_naive_path().return_const(NaivePath::Ok);
 			}),
@@ -542,10 +544,10 @@ mod tests {
 		);
 		assert_eq!(
 			Some(vec![
-				Vec3::new(0.8, 1., 1.3),
-				Vec3::new(10.5, 10.5, 10.5),
-				Vec3::new(4.5, 4.5, 4.5),
-				Vec3::new(2.1, 2., 1.9)
+				GroundPosition(Vec3::new(0.8, _Node::HEIGHT, 1.3)),
+				GroundPosition(Vec3::new(10.5, _Node::HEIGHT, 10.5)),
+				GroundPosition(Vec3::new(4.5, _Node::HEIGHT, 4.5)),
+				GroundPosition(Vec3::new(2.1, _Node::HEIGHT, 1.9))
 			]),
 			path.map(|p| p.collect()),
 		);
@@ -556,40 +558,41 @@ mod tests {
 		let grid = Navigation {
 			method: Mock_Method2::new_mock(|mock| {
 				mock.expect_compute_path().returning(|_, _, _| {
-					Box::new(
-						[
-							_Node(1, 1, 1),
-							_Node(10, 10, 10),
-							_Node(4, 4, 4),
-							_Node(2, 2, 2),
-						]
-						.into_iter(),
-					)
+					Box::new([_Node(1, 1), _Node(10, 10), _Node(4, 4), _Node(2, 2)].into_iter())
 				});
 			}),
 			graph: Mock_Graph::new_mock(|mock| {
 				mock.expect_node()
 					.with(eq(Vec3::new(0.8, 1., 1.3)))
-					.return_const(Some(_Node(1, 1, 1)));
+					.return_const(Some(_Node(1, 1)));
 				mock.expect_node()
 					.with(eq(Vec3::new(2.1, 2., 1.9)))
-					.return_const(Some(_Node(2, 2, 2)));
-				mock.expect_translation()
-					.returning(|_Node(x, y, z)| Vec3::new(*x as f32, *y as f32, *z as f32));
+					.return_const(Some(_Node(2, 2)));
+				mock.expect_ground_position().returning(|_Node(x, z)| {
+					GroundPosition(Vec3::new(*x as f32, _Node::HEIGHT, *z as f32))
+				});
 				mock.expect_naive_path()
 					.with(
-						eq(Vec3::new(0.8, 1., 1.3)),
-						eq(_Node(10, 10, 10)),
+						eq(Vec3::new(0.8, _Node::HEIGHT, 1.3)),
+						eq(_Node(10, 10)),
 						eq(Units::from(0.1)),
 					)
-					.return_const(NaivePath::PartialUntil(Vec3::new(5., 5., 5.)));
+					.return_const(NaivePath::PartialUntil(GroundPosition(Vec3::new(
+						5.,
+						_Node::HEIGHT,
+						5.,
+					))));
 				mock.expect_naive_path()
 					.with(
-						eq(Vec3::new(2.1, 2., 1.9)),
-						eq(_Node(4, 4, 4)),
+						eq(Vec3::new(2.1, _Node::HEIGHT, 1.9)),
+						eq(_Node(4, 4)),
 						eq(Units::from(0.1)),
 					)
-					.return_const(NaivePath::PartialUntil(Vec3::new(6., 6., 6.)));
+					.return_const(NaivePath::PartialUntil(GroundPosition(Vec3::new(
+						6.,
+						_Node::HEIGHT,
+						6.,
+					))));
 			}),
 		};
 
@@ -600,12 +603,12 @@ mod tests {
 		);
 		assert_eq!(
 			Some(vec![
-				Vec3::new(0.8, 1., 1.3),
-				Vec3::new(5., 5., 5.),
-				Vec3::new(10., 10., 10.),
-				Vec3::new(4., 4., 4.),
-				Vec3::new(6., 6., 6.),
-				Vec3::new(2.1, 2., 1.9)
+				GroundPosition(Vec3::new(0.8, _Node::HEIGHT, 1.3)),
+				GroundPosition(Vec3::new(5., _Node::HEIGHT, 5.)),
+				GroundPosition(Vec3::new(10., _Node::HEIGHT, 10.)),
+				GroundPosition(Vec3::new(4., _Node::HEIGHT, 4.)),
+				GroundPosition(Vec3::new(6., _Node::HEIGHT, 6.)),
+				GroundPosition(Vec3::new(2.1, _Node::HEIGHT, 1.9))
 			]),
 			path.map(|p| p.collect()),
 		);
@@ -616,26 +619,19 @@ mod tests {
 		let grid = Navigation {
 			method: Mock_Method2::new_mock(|mock| {
 				mock.expect_compute_path().returning(|_, _, _| {
-					Box::new(
-						[
-							_Node(1, 1, 1),
-							_Node(10, 10, 10),
-							_Node(4, 4, 4),
-							_Node(2, 2, 2),
-						]
-						.into_iter(),
-					)
+					Box::new([_Node(1, 1), _Node(10, 10), _Node(4, 4), _Node(2, 2)].into_iter())
 				});
 			}),
 			graph: Mock_Graph::new_mock(|mock| {
 				mock.expect_node()
 					.with(eq(Vec3::new(0.8, 1., 1.3)))
-					.return_const(Some(_Node(1, 1, 1)));
+					.return_const(Some(_Node(1, 1)));
 				mock.expect_node()
 					.with(eq(Vec3::new(2.1, 2., 1.9)))
-					.return_const(Some(_Node(2, 2, 2)));
-				mock.expect_translation()
-					.returning(|_Node(x, y, z)| Vec3::new(*x as f32, *y as f32, *z as f32));
+					.return_const(Some(_Node(2, 2)));
+				mock.expect_ground_position().returning(|_Node(x, z)| {
+					GroundPosition(Vec3::new(*x as f32, _Node::HEIGHT, *z as f32))
+				});
 				mock.expect_naive_path()
 					.return_const(NaivePath::CannotCompute);
 			}),
@@ -648,10 +644,10 @@ mod tests {
 		);
 		assert_eq!(
 			Some(vec![
-				Vec3::new(1., 1., 1.),
-				Vec3::new(10., 10., 10.),
-				Vec3::new(4., 4., 4.),
-				Vec3::new(2., 2., 2.),
+				GroundPosition(Vec3::new(1., _Node::HEIGHT, 1.)),
+				GroundPosition(Vec3::new(10., _Node::HEIGHT, 10.)),
+				GroundPosition(Vec3::new(4., _Node::HEIGHT, 4.)),
+				GroundPosition(Vec3::new(2., _Node::HEIGHT, 2.)),
 			]),
 			path.map(|p| p.collect()),
 		);
@@ -662,17 +658,18 @@ mod tests {
 		let grid = Navigation {
 			method: Mock_Method2::new_mock(|mock| {
 				mock.expect_compute_path()
-					.returning(|_, _, _| Box::new([_Node(1, 1, 1)].into_iter()));
+					.returning(|_, _, _| Box::new([_Node(1, 1)].into_iter()));
 			}),
 			graph: Mock_Graph::new_mock(|mock| {
 				mock.expect_node()
 					.with(eq(Vec3::new(0.8, 1., 1.3)))
-					.return_const(Some(_Node(1, 1, 1)));
+					.return_const(Some(_Node(1, 1)));
 				mock.expect_node()
 					.with(eq(Vec3::new(2.1, 2., 1.9)))
-					.return_const(Some(_Node(2, 2, 2)));
-				mock.expect_translation()
-					.returning(|_Node(x, y, z)| Vec3::new(*x as f32, *y as f32, *z as f32));
+					.return_const(Some(_Node(2, 2)));
+				mock.expect_ground_position().returning(|_Node(x, z)| {
+					GroundPosition(Vec3::new(*x as f32, _Node::HEIGHT, *z as f32))
+				});
 				mock.expect_naive_path().never().return_const(NaivePath::Ok);
 			}),
 		};
@@ -682,7 +679,10 @@ mod tests {
 			Vec3::new(2.1, 2., 1.9),
 			Units::from(0.1),
 		);
-		assert_eq!(Some(vec![Vec3::new(1., 1., 1.)]), path.map(|p| p.collect()));
+		assert_eq!(
+			Some(vec![GroundPosition(Vec3::new(1., _Node::HEIGHT, 1.))]),
+			path.map(|p| p.collect())
+		);
 	}
 
 	#[test]
@@ -690,17 +690,18 @@ mod tests {
 		let grid = Navigation {
 			method: Mock_Method2::new_mock(|mock| {
 				mock.expect_compute_path()
-					.returning(|_, _, _| Box::new([_Node(2, 2, 2)].into_iter()));
+					.returning(|_, _, _| Box::new([_Node(2, 2)].into_iter()));
 			}),
 			graph: Mock_Graph::new_mock(|mock| {
 				mock.expect_node()
 					.with(eq(Vec3::new(0.8, 1., 1.3)))
-					.return_const(Some(_Node(1, 1, 1)));
+					.return_const(Some(_Node(1, 1)));
 				mock.expect_node()
 					.with(eq(Vec3::new(2.1, 2., 1.9)))
-					.return_const(Some(_Node(2, 2, 2)));
-				mock.expect_translation()
-					.returning(|_Node(x, y, z)| Vec3::new(*x as f32, *y as f32, *z as f32));
+					.return_const(Some(_Node(2, 2)));
+				mock.expect_ground_position().returning(|_Node(x, z)| {
+					GroundPosition(Vec3::new(*x as f32, _Node::HEIGHT, *z as f32))
+				});
 				mock.expect_naive_path().never().return_const(NaivePath::Ok);
 			}),
 		};
@@ -710,6 +711,9 @@ mod tests {
 			Vec3::new(2.1, 2., 1.9),
 			Units::from(0.1),
 		);
-		assert_eq!(Some(vec![Vec3::new(2., 2., 2.)]), path.map(|p| p.collect()));
+		assert_eq!(
+			Some(vec![GroundPosition(Vec3::new(2., _Node::HEIGHT, 2.))]),
+			path.map(|p| p.collect())
+		);
 	}
 }

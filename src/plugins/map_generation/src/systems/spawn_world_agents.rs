@@ -13,7 +13,11 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
-	traits::{accessors::get::TryApplyOn, thread_safe::ThreadSafe},
+	traits::{
+		accessors::get::TryApplyOn,
+		handles_map_generation::GroundPosition,
+		thread_safe::ThreadSafe,
+	},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
 
@@ -45,7 +49,7 @@ where
 				let entity = commands.spawn(AgentOfPersistentMap(*persistent_entity));
 				apply_prefab(
 					ZyheedaEntityCommands::from(entity),
-					translation::<TCell>(x, z, min),
+					ground_position::<TCell>(x, z, min),
 					*agent_type,
 				);
 			}
@@ -56,11 +60,11 @@ where
 	}
 }
 
-fn translation<TCell>(x: &u32, z: &u32, min: Vec3) -> Vec3
+fn ground_position<TCell>(x: &u32, z: &u32, GroundPosition(min): GroundPosition) -> GroundPosition
 where
 	TCell: GridCellDistanceDefinition,
 {
-	min + Vec3::new(*x as f32, 0., *z as f32) * *TCell::CELL_DISTANCE
+	GroundPosition(min + Vec3::new(*x as f32, 0., *z as f32) * *TCell::CELL_DISTANCE)
 }
 
 #[cfg(test)]
@@ -92,12 +96,14 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.insert_resource(AgentPrefab(|mut entity, ground_position, agent_type| {
-			entity.try_insert(_NewAgent {
-				ground_position,
-				agent_type,
-			});
-		}));
+		app.insert_resource(AgentPrefab(
+			|mut entity, GroundPosition(ground_position), agent_type| {
+				entity.try_insert(_NewAgent {
+					ground_position,
+					agent_type,
+				});
+			},
+		));
 		app.add_systems(Update, MapCells::<Agent<_Cell>>::spawn_world_agents);
 
 		app

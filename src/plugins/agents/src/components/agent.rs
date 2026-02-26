@@ -30,14 +30,11 @@ pub(crate) struct Agent {
 impl Agent {
 	fn map_prefab(
 		mut entity: ZyheedaEntityCommands,
-		translation: GroundPosition,
+		ground_position: GroundPosition,
 		agent_type: AgentType,
 	) {
 		entity.try_insert((
-			Transform {
-				translation,
-				..default()
-			},
+			Transform::from_translation(*ground_position),
 			Agent { agent_type },
 			AgentTransformDirty,
 		));

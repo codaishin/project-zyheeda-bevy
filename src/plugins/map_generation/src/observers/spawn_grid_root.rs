@@ -59,6 +59,7 @@ mod tests {
 		Obstacles,
 		grid_context::{CellCount, CellDistance, GridContext},
 	};
+	use common::traits::handles_map_generation::GroundPosition;
 	use macros::new_valid;
 	use std::collections::HashMap;
 	use testing::{SingleThreadedApp, assert_children_count};
@@ -86,7 +87,7 @@ mod tests {
 	#[test]
 	fn spawn_grid() {
 		let graph = GridGraph {
-			nodes: HashMap::from([((0, 0), Vec3::ZERO)]),
+			nodes: HashMap::from([((0, 0), GroundPosition::ZERO)]),
 			extra: Obstacles::default(),
 			context: GridContext {
 				cell_count_x: new_valid!(CellCount, 1),
@@ -108,7 +109,7 @@ mod tests {
 	#[test]
 	fn spawn_grid_cell_type() {
 		let graph = GridGraph {
-			nodes: HashMap::from([((0, 0), Vec3::ZERO)]),
+			nodes: HashMap::from([((0, 0), GroundPosition::ZERO)]),
 			extra: Obstacles::default(),
 			context: GridContext {
 				cell_count_x: new_valid!(CellCount, 1),
@@ -136,7 +137,7 @@ mod tests {
 		struct _Child;
 
 		let graph_a = GridGraph {
-			nodes: HashMap::from([((0, 0), Vec3::ZERO)]),
+			nodes: HashMap::from([((0, 0), GroundPosition::ZERO)]),
 			extra: Obstacles::default(),
 			context: GridContext {
 				cell_count_x: new_valid!(CellCount, 1),
@@ -145,7 +146,7 @@ mod tests {
 			},
 		};
 		let graph_b = GridGraph {
-			nodes: HashMap::from([((0, 0), Vec3::ZERO)]),
+			nodes: HashMap::from([((0, 0), GroundPosition::ZERO)]),
 			extra: Obstacles::default(),
 			context: GridContext {
 				cell_count_x: new_valid!(CellCount, 1),
@@ -170,7 +171,7 @@ mod tests {
 	#[test]
 	fn spawn_map_child() {
 		let graph = GridGraph {
-			nodes: HashMap::from([((0, 0), Vec3::ZERO)]),
+			nodes: HashMap::from([((0, 0), GroundPosition::ZERO)]),
 			extra: Obstacles::default(),
 			context: GridContext {
 				cell_count_x: new_valid!(CellCount, 1),

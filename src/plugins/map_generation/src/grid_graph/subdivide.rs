@@ -70,6 +70,7 @@ mod tests {
 		grid_context::{CellCount, CellDistance, GridContext},
 	};
 	use bevy::math::Vec3;
+	use common::traits::handles_map_generation::GroundPosition;
 	use macros::new_valid;
 	use std::collections::{HashMap, HashSet};
 
@@ -77,10 +78,10 @@ mod tests {
 	fn subdivide_0_returns_same_graph() {
 		let graph = GridGraph {
 			nodes: HashMap::from([
-				((0, 0), Vec3::new(-5., 0., -5.)),
-				((0, 1), Vec3::new(-5., 0., 5.)),
-				((1, 0), Vec3::new(5., 0., -5.)),
-				((1, 1), Vec3::new(5., 0., 5.)),
+				((0, 0), GroundPosition(Vec3::new(-5., 0., -5.))),
+				((0, 1), GroundPosition(Vec3::new(-5., 0., 5.))),
+				((1, 0), GroundPosition(Vec3::new(5., 0., -5.))),
+				((1, 1), GroundPosition(Vec3::new(5., 0., 5.))),
 			]),
 			extra: Obstacles {
 				obstacles: HashSet::from([(0, 1), (1, 1)]),
@@ -133,10 +134,10 @@ mod tests {
 	fn subdivide_1_without_obstacles() {
 		let graph = GridGraph {
 			nodes: HashMap::from([
-				((0, 0), Vec3::new(-5., 0., -5.)),
-				((0, 1), Vec3::new(-5., 0., 5.)),
-				((1, 0), Vec3::new(5., 0., -5.)),
-				((1, 1), Vec3::new(5., 0., 5.)),
+				((0, 0), GroundPosition(Vec3::new(-5., 0., -5.))),
+				((0, 1), GroundPosition(Vec3::new(-5., 0., 5.))),
+				((1, 0), GroundPosition(Vec3::new(5., 0., -5.))),
+				((1, 1), GroundPosition(Vec3::new(5., 0., 5.))),
 			]),
 			extra: Obstacles {
 				obstacles: HashSet::from([]),
@@ -154,25 +155,25 @@ mod tests {
 			Ok(GridGraph {
 				nodes: HashMap::from([
 					// old (0, 0)
-					((0, 0), Vec3::new(-7.5, 0., -7.5)),
-					((0, 1), Vec3::new(-7.5, 0., -2.5)),
-					((1, 0), Vec3::new(-2.5, 0., -7.5)),
-					((1, 1), Vec3::new(-2.5, 0., -2.5)),
+					((0, 0), GroundPosition(Vec3::new(-7.5, 0., -7.5))),
+					((0, 1), GroundPosition(Vec3::new(-7.5, 0., -2.5))),
+					((1, 0), GroundPosition(Vec3::new(-2.5, 0., -7.5))),
+					((1, 1), GroundPosition(Vec3::new(-2.5, 0., -2.5))),
 					// old (1, 0)
-					((2, 0), Vec3::new(2.5, 0., -7.5)),
-					((2, 1), Vec3::new(2.5, 0., -2.5)),
-					((3, 0), Vec3::new(7.5, 0., -7.5)),
-					((3, 1), Vec3::new(7.5, 0., -2.5)),
+					((2, 0), GroundPosition(Vec3::new(2.5, 0., -7.5))),
+					((2, 1), GroundPosition(Vec3::new(2.5, 0., -2.5))),
+					((3, 0), GroundPosition(Vec3::new(7.5, 0., -7.5))),
+					((3, 1), GroundPosition(Vec3::new(7.5, 0., -2.5))),
 					// old (0, 1)
-					((0, 2), Vec3::new(-7.5, 0., 2.5)),
-					((0, 3), Vec3::new(-7.5, 0., 7.5)),
-					((1, 2), Vec3::new(-2.5, 0., 2.5)),
-					((1, 3), Vec3::new(-2.5, 0., 7.5)),
+					((0, 2), GroundPosition(Vec3::new(-7.5, 0., 2.5))),
+					((0, 3), GroundPosition(Vec3::new(-7.5, 0., 7.5))),
+					((1, 2), GroundPosition(Vec3::new(-2.5, 0., 2.5))),
+					((1, 3), GroundPosition(Vec3::new(-2.5, 0., 7.5))),
 					// old (1, 1)
-					((2, 2), Vec3::new(2.5, 0., 2.5)),
-					((2, 3), Vec3::new(2.5, 0., 7.5)),
-					((3, 2), Vec3::new(7.5, 0., 2.5)),
-					((3, 3), Vec3::new(7.5, 0., 7.5)),
+					((2, 2), GroundPosition(Vec3::new(2.5, 0., 2.5))),
+					((2, 3), GroundPosition(Vec3::new(2.5, 0., 7.5))),
+					((3, 2), GroundPosition(Vec3::new(7.5, 0., 2.5))),
+					((3, 3), GroundPosition(Vec3::new(7.5, 0., 7.5))),
 				]),
 				extra: Obstacles {
 					obstacles: HashSet::from([]),
@@ -191,8 +192,8 @@ mod tests {
 	fn subdivide_1_without_obstacles_and_ignoring_empty_nodes() {
 		let graph = GridGraph {
 			nodes: HashMap::from([
-				((0, 0), Vec3::new(-5., 0., -5.)),
-				((1, 0), Vec3::new(5., 0., -5.)),
+				((0, 0), GroundPosition(Vec3::new(-5., 0., -5.))),
+				((1, 0), GroundPosition(Vec3::new(5., 0., -5.))),
 			]),
 			extra: Obstacles {
 				obstacles: HashSet::from([]),
@@ -210,15 +211,15 @@ mod tests {
 			Ok(GridGraph {
 				nodes: HashMap::from([
 					// old (0, 0)
-					((0, 0), Vec3::new(-7.5, 0., -7.5)),
-					((0, 1), Vec3::new(-7.5, 0., -2.5)),
-					((1, 0), Vec3::new(-2.5, 0., -7.5)),
-					((1, 1), Vec3::new(-2.5, 0., -2.5)),
+					((0, 0), GroundPosition(Vec3::new(-7.5, 0., -7.5))),
+					((0, 1), GroundPosition(Vec3::new(-7.5, 0., -2.5))),
+					((1, 0), GroundPosition(Vec3::new(-2.5, 0., -7.5))),
+					((1, 1), GroundPosition(Vec3::new(-2.5, 0., -2.5))),
 					// old (1, 0)
-					((2, 0), Vec3::new(2.5, 0., -7.5)),
-					((2, 1), Vec3::new(2.5, 0., -2.5)),
-					((3, 0), Vec3::new(7.5, 0., -7.5)),
-					((3, 1), Vec3::new(7.5, 0., -2.5)),
+					((2, 0), GroundPosition(Vec3::new(2.5, 0., -7.5))),
+					((2, 1), GroundPosition(Vec3::new(2.5, 0., -2.5))),
+					((3, 0), GroundPosition(Vec3::new(7.5, 0., -7.5))),
+					((3, 1), GroundPosition(Vec3::new(7.5, 0., -2.5))),
 				]),
 				extra: Obstacles {
 					obstacles: HashSet::from([]),
@@ -237,10 +238,10 @@ mod tests {
 	fn subdivide_1() {
 		let graph = GridGraph {
 			nodes: HashMap::from([
-				((0, 0), Vec3::new(-5., 0., -5.)),
-				((0, 1), Vec3::new(-5., 0., 5.)),
-				((1, 0), Vec3::new(5., 0., -5.)),
-				((1, 1), Vec3::new(5., 0., 5.)),
+				((0, 0), GroundPosition(Vec3::new(-5., 0., -5.))),
+				((0, 1), GroundPosition(Vec3::new(-5., 0., 5.))),
+				((1, 0), GroundPosition(Vec3::new(5., 0., -5.))),
+				((1, 1), GroundPosition(Vec3::new(5., 0., 5.))),
 			]),
 			extra: Obstacles {
 				obstacles: HashSet::from([(0, 1), (1, 1)]),
@@ -258,25 +259,25 @@ mod tests {
 			Ok(GridGraph {
 				nodes: HashMap::from([
 					// old (0, 0)
-					((0, 0), Vec3::new(-7.5, 0., -7.5)),
-					((0, 1), Vec3::new(-7.5, 0., -2.5)),
-					((1, 0), Vec3::new(-2.5, 0., -7.5)),
-					((1, 1), Vec3::new(-2.5, 0., -2.5)),
+					((0, 0), GroundPosition(Vec3::new(-7.5, 0., -7.5))),
+					((0, 1), GroundPosition(Vec3::new(-7.5, 0., -2.5))),
+					((1, 0), GroundPosition(Vec3::new(-2.5, 0., -7.5))),
+					((1, 1), GroundPosition(Vec3::new(-2.5, 0., -2.5))),
 					// old (1, 0)
-					((2, 0), Vec3::new(2.5, 0., -7.5)),
-					((2, 1), Vec3::new(2.5, 0., -2.5)),
-					((3, 0), Vec3::new(7.5, 0., -7.5)),
-					((3, 1), Vec3::new(7.5, 0., -2.5)),
+					((2, 0), GroundPosition(Vec3::new(2.5, 0., -7.5))),
+					((2, 1), GroundPosition(Vec3::new(2.5, 0., -2.5))),
+					((3, 0), GroundPosition(Vec3::new(7.5, 0., -7.5))),
+					((3, 1), GroundPosition(Vec3::new(7.5, 0., -2.5))),
 					// old (0, 1)
-					((0, 2), Vec3::new(-7.5, 0., 2.5)),
-					((0, 3), Vec3::new(-7.5, 0., 7.5)),
-					((1, 2), Vec3::new(-2.5, 0., 2.5)),
-					((1, 3), Vec3::new(-2.5, 0., 7.5)),
+					((0, 2), GroundPosition(Vec3::new(-7.5, 0., 2.5))),
+					((0, 3), GroundPosition(Vec3::new(-7.5, 0., 7.5))),
+					((1, 2), GroundPosition(Vec3::new(-2.5, 0., 2.5))),
+					((1, 3), GroundPosition(Vec3::new(-2.5, 0., 7.5))),
 					// old (1, 1)
-					((2, 2), Vec3::new(2.5, 0., 2.5)),
-					((2, 3), Vec3::new(2.5, 0., 7.5)),
-					((3, 2), Vec3::new(7.5, 0., 2.5)),
-					((3, 3), Vec3::new(7.5, 0., 7.5)),
+					((2, 2), GroundPosition(Vec3::new(2.5, 0., 2.5))),
+					((2, 3), GroundPosition(Vec3::new(2.5, 0., 7.5))),
+					((3, 2), GroundPosition(Vec3::new(7.5, 0., 2.5))),
+					((3, 3), GroundPosition(Vec3::new(7.5, 0., 7.5))),
 				]),
 				extra: Obstacles {
 					obstacles: HashSet::from([

@@ -11,9 +11,9 @@ use crate::{
 	traits::{GridCellDistanceDefinition, map_cells_extra::MapCellsExtra},
 };
 use bevy::prelude::*;
-use common::traits::thread_safe::ThreadSafe;
+use common::traits::{handles_map_generation::GroundPosition, thread_safe::ThreadSafe};
 
-pub(crate) type Cells<TCell> = (Entity, Vec<(Vec3, HalfOffsetCell<TCell>)>);
+pub(crate) type Cells<TCell> = (Entity, Vec<(GroundPosition, HalfOffsetCell<TCell>)>);
 
 impl HalfOffsetGrid {
 	pub(crate) fn compute_cells<TCell>(
@@ -42,14 +42,17 @@ impl HalfOffsetGrid {
 
 		for x in 0..(*map.definition.size.x - 1) {
 			for z in 0..(*map.definition.size.z - 1) {
-				let Some(translation) = graph.nodes.get(&(x, z)) else {
+				let Some(GroundPosition(ground_position)) = graph.nodes.get(&(x, z)) else {
 					continue;
 				};
 				let Some(cell) = half_offset_cells.get(&(x, z)) else {
 					index_mismatch.push((x, z));
 					continue;
 				};
-				cells.push((translation + Vec3::new(offset, 0., offset), cell.clone()));
+				cells.push((
+					GroundPosition(ground_position + Vec3::new(offset, 0., offset)),
+					cell.clone(),
+				));
 			}
 		}
 
@@ -113,10 +116,10 @@ mod test_get_half_offset_grid {
 			.spawn((
 				MapGridGraph::<_Cell>::from(GridGraph {
 					nodes: HashMap::from([
-						((0, 0), Vec3::new(-1., -0., -1.)),
-						((0, 1), Vec3::new(-1., -0., 1.)),
-						((1, 0), Vec3::new(1., -0., -1.)),
-						((1, 1), Vec3::new(1., -0., 1.)),
+						((0, 0), GroundPosition(Vec3::new(-1., -0., -1.))),
+						((0, 1), GroundPosition(Vec3::new(-1., -0., 1.))),
+						((1, 0), GroundPosition(Vec3::new(1., -0., -1.))),
+						((1, 1), GroundPosition(Vec3::new(1., -0., 1.))),
 					]),
 					..default()
 				}),
@@ -148,7 +151,7 @@ mod test_get_half_offset_grid {
 
 		assert_eq_unordered!(
 			Ok(vec![(
-				Vec3::new(0., 0., 0.),
+				GroundPosition(Vec3::new(0., 0., 0.)),
 				HalfOffsetCell::from([
 					(Direction::Z, _Cell("00")),
 					(Direction::NegX, _Cell("01")),
@@ -172,12 +175,12 @@ mod test_get_half_offset_grid {
 			.spawn((
 				MapGridGraph::<_Cell>::from(GridGraph {
 					nodes: HashMap::from([
-						((0, 0), Vec3::new(-2., -0., -1.)),
-						((0, 1), Vec3::new(-2., -0., 1.)),
-						((1, 0), Vec3::new(0., -0., -1.)),
-						((1, 1), Vec3::new(0., -0., 1.)),
-						((2, 0), Vec3::new(2., -0., -1.)),
-						((2, 1), Vec3::new(2., -0., 1.)),
+						((0, 0), GroundPosition(Vec3::new(-2., -0., -1.))),
+						((0, 1), GroundPosition(Vec3::new(-2., -0., 1.))),
+						((1, 0), GroundPosition(Vec3::new(0., -0., -1.))),
+						((1, 1), GroundPosition(Vec3::new(0., -0., 1.))),
+						((2, 0), GroundPosition(Vec3::new(2., -0., -1.))),
+						((2, 1), GroundPosition(Vec3::new(2., -0., 1.))),
 					]),
 					..default()
 				}),
@@ -221,7 +224,7 @@ mod test_get_half_offset_grid {
 		assert_eq_unordered!(
 			Ok(vec![
 				(
-					Vec3::new(-1., 0., 0.),
+					GroundPosition(Vec3::new(-1., 0., 0.)),
 					HalfOffsetCell::from([
 						(Direction::Z, _Cell("a 00")),
 						(Direction::NegX, _Cell("a 01")),
@@ -230,7 +233,7 @@ mod test_get_half_offset_grid {
 					]),
 				),
 				(
-					Vec3::new(1., 0., 0.),
+					GroundPosition(Vec3::new(1., 0., 0.)),
 					HalfOffsetCell::from([
 						(Direction::Z, _Cell("b 00")),
 						(Direction::NegX, _Cell("b 01")),
@@ -255,10 +258,10 @@ mod test_get_half_offset_grid {
 			.spawn((
 				MapGridGraph::<_Cell>::from(GridGraph {
 					nodes: HashMap::from([
-						((0, 0), Vec3::new(-1., -0., -1.)),
-						((0, 1), Vec3::new(-1., -0., 1.)),
-						((1, 0), Vec3::new(1., -0., -1.)),
-						((1, 1), Vec3::new(1., -0., 1.)),
+						((0, 0), GroundPosition(Vec3::new(-1., -0., -1.))),
+						((0, 1), GroundPosition(Vec3::new(-1., -0., 1.))),
+						((1, 0), GroundPosition(Vec3::new(1., -0., -1.))),
+						((1, 1), GroundPosition(Vec3::new(1., -0., 1.))),
 					]),
 					..default()
 				}),
@@ -309,12 +312,12 @@ mod test_get_half_offset_grid {
 			.spawn((
 				MapGridGraph::<_Cell>::from(GridGraph {
 					nodes: HashMap::from([
-						((0, 0), Vec3::new(-2., -0., -1.)),
-						((0, 1), Vec3::new(-2., -0., 1.)),
-						((1, 0), Vec3::new(0., -0., -1.)),
-						((1, 1), Vec3::new(0., -0., 1.)),
-						((2, 0), Vec3::new(2., -0., -1.)),
-						((2, 1), Vec3::new(2., -0., 1.)),
+						((0, 0), GroundPosition(Vec3::new(-2., -0., -1.))),
+						((0, 1), GroundPosition(Vec3::new(-2., -0., 1.))),
+						((1, 0), GroundPosition(Vec3::new(0., -0., -1.))),
+						((1, 1), GroundPosition(Vec3::new(0., -0., 1.))),
+						((2, 0), GroundPosition(Vec3::new(2., -0., -1.))),
+						((2, 1), GroundPosition(Vec3::new(2., -0., 1.))),
 					]),
 					..default()
 				}),

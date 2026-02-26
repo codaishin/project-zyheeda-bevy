@@ -8,9 +8,9 @@ use crate::{
 	traits::map_cells_extra::MapCellsExtra,
 };
 use bevy::prelude::*;
-use common::traits::thread_safe::ThreadSafe;
+use common::traits::{handles_map_generation::GroundPosition, thread_safe::ThreadSafe};
 
-pub(crate) type Cells<TCell> = (Entity, Vec<(Vec3, TCell)>);
+pub(crate) type Cells<TCell> = (Entity, Vec<(GroundPosition, TCell)>);
 
 impl Grid {
 	pub(crate) fn compute_cells<TCell>(
@@ -31,7 +31,7 @@ impl Grid {
 		let CellGrid(cells) = &definition.cells;
 
 		let mut index_mismatch = None;
-		let cell_translation = |((x, z), translation): (&(u32, u32), &Vec3)| {
+		let cell_translation = |((x, z), translation): (&(u32, u32), &GroundPosition)| {
 			let x = *x;
 			let z = *z;
 			let Some(cell) = cells.get(&(x, z)) else {
@@ -69,7 +69,7 @@ mod tests {
 	use testing::{SingleThreadedApp, assert_eq_unordered, fake_entity};
 
 	#[derive(Resource, Debug, PartialEq, Clone)]
-	struct _Result(Result<(Entity, Vec<(Vec3, _Cell)>), GridError>);
+	struct _Result(Result<(Entity, Vec<(GroundPosition, _Cell)>), GridError>);
 
 	#[derive(Clone, Debug, PartialEq, TypePath)]
 	struct _Cell(&'static str);
@@ -112,10 +112,10 @@ mod tests {
 		app.world_mut().spawn((
 			Grid::from(&GridGraph {
 				nodes: HashMap::from([
-					((0, 0), Vec3::new(-1., -0., -1.)),
-					((0, 1), Vec3::new(-1., -0., 1.)),
-					((1, 0), Vec3::new(1., -0., -1.)),
-					((1, 1), Vec3::new(1., -0., 1.)),
+					((0, 0), GroundPosition(Vec3::new(-1., -0., -1.))),
+					((0, 1), GroundPosition(Vec3::new(-1., -0., 1.))),
+					((1, 0), GroundPosition(Vec3::new(1., -0., -1.))),
+					((1, 1), GroundPosition(Vec3::new(1., -0., 1.))),
 				]),
 				..default()
 			}),
@@ -124,10 +124,10 @@ mod tests {
 
 		assert_eq_unordered!(
 			Ok(vec![
-				(Vec3::new(-1., 0., -1.), _Cell("00")),
-				(Vec3::new(-1., 0., 1.), _Cell("01")),
-				(Vec3::new(1., 0., -1.), _Cell("10")),
-				(Vec3::new(1., 0., 1.), _Cell("11")),
+				(GroundPosition(Vec3::new(-1., 0., -1.)), _Cell("00")),
+				(GroundPosition(Vec3::new(-1., 0., 1.)), _Cell("01")),
+				(GroundPosition(Vec3::new(1., 0., -1.)), _Cell("10")),
+				(GroundPosition(Vec3::new(1., 0., 1.)), _Cell("11")),
 			]),
 			app.world()
 				.resource::<_Result>()
@@ -141,10 +141,10 @@ mod tests {
 	fn return_grid_entity() {
 		let graph = GridGraph {
 			nodes: HashMap::from([
-				((0, 0), Vec3::new(-1., -0., -1.)),
-				((0, 1), Vec3::new(-1., -0., 1.)),
-				((1, 0), Vec3::new(1., -0., -1.)),
-				((1, 1), Vec3::new(1., -0., 1.)),
+				((0, 0), GroundPosition(Vec3::new(-1., -0., -1.))),
+				((0, 1), GroundPosition(Vec3::new(-1., -0., 1.))),
+				((1, 0), GroundPosition(Vec3::new(1., -0., -1.))),
+				((1, 1), GroundPosition(Vec3::new(1., -0., 1.))),
 			]),
 			..default()
 		};
@@ -231,10 +231,10 @@ mod tests {
 		app.world_mut().spawn((
 			Grid::from(&GridGraph {
 				nodes: HashMap::from([
-					((0, 0), Vec3::new(-1., -0., -1.)),
-					((0, 1), Vec3::new(-1., -0., 1.)),
-					((1, 0), Vec3::new(1., -0., -1.)),
-					((1, 1), Vec3::new(1., -0., 1.)),
+					((0, 0), GroundPosition(Vec3::new(-1., -0., -1.))),
+					((0, 1), GroundPosition(Vec3::new(-1., -0., 1.))),
+					((1, 0), GroundPosition(Vec3::new(1., -0., -1.))),
+					((1, 1), GroundPosition(Vec3::new(1., -0., 1.))),
 				]),
 				..default()
 			}),

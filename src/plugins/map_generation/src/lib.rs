@@ -11,6 +11,7 @@ mod traits;
 
 use crate::{
 	components::{
+		agent_spawner::AgentSpawner,
 		map::{
 			Map,
 			agents::AgentsLoaded,
@@ -59,7 +60,7 @@ where
 	TPhysics: ThreadSafe + HandlesRaycast + HandlesPhysicalBodies,
 	TLights: ThreadSafe + HandlesLights,
 {
-	const SPAWNERS: [(&'static str, AgentType); 2] = [
+	const SPAWNERS: &[(&'static str, AgentType)] = &[
 		("PlayerSpawn", AgentType::Player),
 		("VoidSphereSpawn", AgentType::Enemy(EnemyType::VoidSphere)),
 	];
@@ -87,6 +88,7 @@ where
 
 		TSavegame::register_savable_component::<AgentsLoaded>(app);
 		TSavegame::register_savable_component::<AgentOfPersistentMap>(app);
+		TSavegame::register_savable_component::<Map>(app);
 		TSavegame::register_savable_component::<BayMap>(app);
 		TSavegame::register_savable_component::<DemoMap>(app);
 
@@ -106,7 +108,15 @@ where
 					.run_if(not(resource_exists::<AgentsColorLookup>)),
 			)
 			.add_systems(OnEnter(GameState::NewGame), DemoMap::spawn)
-			.add_systems(Update, AgentPrefab::spawn_agents(Self::SPAWNERS))
+			.add_observer(AgentSpawner::identify(Self::SPAWNERS))
+			.add_systems(
+				Update,
+				(
+					AgentSpawner::link_with_map.pipe(OnError::log),
+					AgentSpawner::spawn_agent,
+				)
+					.chain(),
+			)
 			.add_systems(Update, Grid::<1>::insert.pipe(OnError::log))
 			.add_systems(
 				Update,

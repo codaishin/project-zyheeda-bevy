@@ -9,6 +9,15 @@ pub struct AgentPrefab(pub(crate) fn(ZyheedaEntityCommands, GroundPosition, Agen
 
 impl AgentPrefab {
 	const fn noop(_: ZyheedaEntityCommands, _: GroundPosition, _: AgentType) {}
+
+	pub(crate) fn apply(
+		&self,
+		entity: ZyheedaEntityCommands,
+		ground_position: GroundPosition,
+		agent_type: AgentType,
+	) {
+		(self.0)(entity, ground_position, agent_type)
+	}
 }
 
 impl Default for AgentPrefab {

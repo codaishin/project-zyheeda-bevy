@@ -10,7 +10,11 @@ use crate::{
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{
 	errors::{ErrorData, Level as ErrorLevel, Unreachable},
-	traits::{accessors::get::TryApplyOn, thread_safe::ThreadSafe},
+	traits::{
+		accessors::get::TryApplyOn,
+		handles_map_generation::GroundPosition,
+		thread_safe::ThreadSafe,
+	},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
 use std::{any::type_name, fmt::Display, marker::PhantomData};
@@ -151,15 +155,15 @@ where
 }
 
 fn spawn_children<TCell>(
-	cells: Vec<(Vec3, TCell)>,
+	cells: Vec<(GroundPosition, TCell)>,
 	scale: Vec3,
 ) -> impl FnOnce(&mut RelatedSpawnerCommands<ChildOf>)
 where
 	TCell: InsertCellComponents + GridCellDistanceDefinition,
 {
 	move |parent| {
-		for (translation, cell) in cells {
-			let mut transform = Transform::from_translation(translation).with_scale(scale);
+		for (GroundPosition(ground_position), cell) in cells {
+			let mut transform = Transform::from_translation(ground_position).with_scale(scale);
 			if cell.offset_height() {
 				transform.translation.y += *TCell::CELL_DISTANCE / 2.;
 			}
@@ -332,19 +336,19 @@ mod test_spawn_cells {
 			grid,
 			vec![
 				(
-					Vec3::new(1., 2., 3.),
+					GroundPosition(Vec3::new(1., 2., 3.)),
 					_Cell {
 						offset_height: true,
 					},
 				),
 				(
-					Vec3::new(3., 4., 5.),
+					GroundPosition(Vec3::new(3., 4., 5.)),
 					_Cell {
 						offset_height: false,
 					},
 				),
 				(
-					Vec3::new(10., 21., 2.),
+					GroundPosition(Vec3::new(10., 21., 2.)),
 					_Cell {
 						offset_height: true,
 					},
@@ -376,9 +380,9 @@ mod test_spawn_cells {
 		let cells: Result<Cells<_>, _Error> = Ok((
 			grid,
 			vec![
-				(Vec3::default(), _Cell::default()),
-				(Vec3::default(), _Cell::default()),
-				(Vec3::default(), _Cell::default()),
+				(GroundPosition::default(), _Cell::default()),
+				(GroundPosition::default(), _Cell::default()),
+				(GroundPosition::default(), _Cell::default()),
 			],
 		));
 
