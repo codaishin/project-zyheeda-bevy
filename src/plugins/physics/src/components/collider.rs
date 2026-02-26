@@ -1,4 +1,4 @@
-use crate::components::async_collider::AsyncCollider;
+use crate::components::async_collider::{AsyncCollider, ColliderType, Source};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
@@ -32,9 +32,13 @@ pub(crate) enum ColliderShape {
 		half_y: Units,
 		radius: Units,
 	},
-	CustomConvexAsset {
+	CustomAsset {
 		mesh: &'static str,
 		scale: ColliderScale,
+		collider_type: ColliderType,
+	},
+	EntityMesh {
+		collider_type: ColliderType,
 	},
 }
 
@@ -56,6 +60,9 @@ impl From<Shape> for ColliderShape {
 			},
 			Shape::Capsule { half_y, radius } => Self::Capsule { half_y, radius },
 			Shape::Cylinder { half_y, radius } => Self::Cylinder { half_y, radius },
+			Shape::StaticGltfMesh3d => Self::EntityMesh {
+				collider_type: ColliderType::Concave,
+			},
 		}
 	}
 }
@@ -85,10 +92,11 @@ impl Prefab<()> for ColliderShape {
 			Self::Sphere {
 				radius,
 				hollow: true,
-			} => SyncOrAsync::Async(
-				AsyncCollider::concave("models/icosphere.glb#Mesh0/Primitive0")
-					.with_scale(ColliderScale::Absolute(Vec3::splat(*radius * 2.))),
-			),
+			} => SyncOrAsync::Async(AsyncCollider {
+				source: Source::Path("models/icosphere.glb#Mesh0/Primitive0"),
+				scale: Some(ColliderScale::Absolute(Vec3::splat(*radius * 2.))),
+				collider_type: ColliderType::Concave,
+			}),
 			Self::Cuboid {
 				half_x,
 				half_y,
@@ -100,9 +108,20 @@ impl Prefab<()> for ColliderShape {
 			Self::Capsule { half_y, radius } => {
 				SyncOrAsync::Sync(Collider::capsule_y(*half_y, *radius))
 			}
-			Self::CustomConvexAsset { scale, mesh } => {
-				SyncOrAsync::Async(AsyncCollider::convex(mesh).with_scale(scale))
-			}
+			Self::CustomAsset {
+				scale,
+				mesh,
+				collider_type,
+			} => SyncOrAsync::Async(AsyncCollider {
+				source: Source::Path(mesh),
+				scale: Some(scale),
+				collider_type,
+			}),
+			Self::EntityMesh { collider_type } => SyncOrAsync::Async(AsyncCollider {
+				source: Source::MeshOfEntity,
+				scale: None,
+				collider_type,
+			}),
 		};
 
 		match collider {
