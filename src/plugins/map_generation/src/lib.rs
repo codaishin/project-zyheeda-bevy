@@ -30,7 +30,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	states::game_state::{GameState, LoadingEssentialAssets},
+	states::game_state::{GameState, LoadingEssentialAssets, LoadingGame},
 	systems::log::OnError,
 	traits::{
 		handles_enemies::EnemyType,
@@ -85,6 +85,11 @@ where
 			AssetsProgress,
 		>();
 		register_agents_lookup_load_tracking.in_app(app, resource_exists::<AgentsColorLookup>);
+
+		TLoading::register_load_tracking::<Map, LoadingGame, AssetsProgress>()
+			.in_app(app, Map::is_loaded);
+		TLoading::register_load_tracking::<AgentSpawner, LoadingGame, AssetsProgress>()
+			.in_app(app, AgentSpawner::is_loaded);
 
 		TSavegame::register_savable_component::<AgentsLoaded>(app);
 		TSavegame::register_savable_component::<AgentOfPersistentMap>(app);
