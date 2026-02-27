@@ -1,10 +1,4 @@
-pub(crate) mod agents;
 pub(crate) mod bay;
-pub(crate) mod cells;
-pub(crate) mod demo_map;
-pub(crate) mod folder;
-pub(crate) mod grid_graph;
-pub(crate) mod image;
 pub(crate) mod objects;
 
 use bevy::prelude::*;

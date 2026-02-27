@@ -77,11 +77,6 @@ impl CellCount {
 
 		Ok(Self(product))
 	}
-
-	pub(crate) fn try_from_max_index(i: u32) -> Option<Self> {
-		let count = i.checked_add(1)?;
-		Some(Self(count))
-	}
 }
 
 #[derive(Debug, PartialEq)]

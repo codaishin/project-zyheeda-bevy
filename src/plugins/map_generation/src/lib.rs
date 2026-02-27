@@ -1,6 +1,4 @@
-mod cell_grid_size;
 mod components;
-mod errors;
 mod grid_graph;
 mod line_wide;
 mod observers;
@@ -12,26 +10,16 @@ mod traits;
 use crate::{
 	components::{
 		agent_spawner::AgentSpawner,
-		map::{
-			Map,
-			agents::AgentsLoaded,
-			bay::BayMap,
-			cells::corridor::Corridor,
-			demo_map::DemoMap,
-		},
+		map::{Map, bay::BayMap},
 		map_agents::{AgentOfPersistentMap, GridAgentOf},
 		mesh_collider::MeshCollider,
-		wall_cell::WallCell,
 	},
-	resources::agents::{
-		color_lookup::{AgentsColorLookup, AgentsColorLookupImages},
-		prefab::AgentPrefab,
-	},
+	resources::agents::prefab::AgentPrefab,
 	system_params::set_agent_prefab::SetAgentPrefab,
 };
 use bevy::prelude::*;
 use common::{
-	states::game_state::{GameState, LoadingEssentialAssets, LoadingGame},
+	states::game_state::{GameState, LoadingGame},
 	systems::log::OnError,
 	traits::{
 		handles_enemies::EnemyType,
@@ -40,7 +28,6 @@ use common::{
 		handles_map_generation::{AgentType, HandlesMapGeneration},
 		handles_physics::{HandlesRaycast, physical_bodies::HandlesPhysicalBodies},
 		handles_saving::HandlesSaving,
-		prefab::AddPrefabObserver,
 		spawn::Spawn,
 		thread_safe::ThreadSafe,
 	},
@@ -49,7 +36,6 @@ use components::{floor_light::FloorLight, grid::Grid, wall_back::WallBack, wall_
 use grid_graph::GridGraph;
 use std::marker::PhantomData;
 use systems::{apply_extra_components::ApplyExtraComponents, unlit_material::unlit_material};
-use traits::register_map_cell::RegisterMapCell;
 
 pub struct MapGenerationPlugin<TDependencies>(PhantomData<TDependencies>);
 
@@ -82,41 +68,19 @@ where
 	TLights: ThreadSafe + HandlesLights,
 {
 	fn build(&self, app: &mut App) {
-		let register_agents_lookup_load_tracking = TLoading::register_load_tracking::<
-			AgentsColorLookup,
-			LoadingEssentialAssets,
-			AssetsProgress,
-		>();
-		register_agents_lookup_load_tracking.in_app(app, resource_exists::<AgentsColorLookup>);
-
 		TLoading::register_load_tracking::<Map, LoadingGame, AssetsProgress>()
 			.in_app(app, Map::is_loaded);
 		TLoading::register_load_tracking::<AgentSpawner, LoadingGame, AssetsProgress>()
 			.in_app(app, AgentSpawner::is_loaded);
 
-		TSavegame::register_savable_component::<AgentsLoaded>(app);
 		TSavegame::register_savable_component::<AgentOfPersistentMap>(app);
 		TSavegame::register_savable_component::<Map>(app);
 		TSavegame::register_savable_component::<BayMap>(app);
-		TSavegame::register_savable_component::<DemoMap>(app);
 
 		app.init_resource::<AgentPrefab>()
 			.register_required_components::<Map, TSavegame::TSaveEntityMarker>()
 			.register_required_components_with::<MeshCollider, TPhysics::TBody>(MeshCollider::body)
-			.register_required_components::<WallCell, TPhysics::TNoMouseHover>()
-			.register_map_cell::<TLoading, TSavegame, Corridor>()
-			.add_prefab_observer::<WallCell, TPhysics>()
-			.add_systems(
-				OnEnter(GameState::LoadingEssentialAssets),
-				AgentsColorLookupImages::<Image>::lookup_images,
-			)
-			.add_systems(
-				Update,
-				AgentsColorLookup::parse_images
-					.pipe(OnError::log)
-					.run_if(not(resource_exists::<AgentsColorLookup>)),
-			)
-			.add_systems(OnEnter(GameState::NewGame), DemoMap::spawn)
+			.add_systems(OnEnter(GameState::NewGame), BayMap::spawn)
 			.add_observer(AgentSpawner::identify(Self::SPAWNERS))
 			.add_observer(MeshCollider::identify(Self::MESH_COLLIDER_PREFIX))
 			.add_systems(
