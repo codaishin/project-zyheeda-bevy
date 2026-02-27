@@ -62,8 +62,8 @@ impl<TMotion> Movement<TMotion> {
 		for (entity, movement) in &changed {
 			commands.try_apply_on(&entity, |mut e| {
 				match &movement.target {
-					Some(MovementTarget::Point(vec3)) => {
-						e.try_insert(SetFace(Face::Translation(*vec3)));
+					Some(MovementTarget::Point(pos)) => {
+						e.try_insert(SetFace(Face::Translation(*pos)));
 					}
 					Some(MovementTarget::Dir(dir3)) => {
 						e.try_insert(SetFace(Face::Direction(*dir3)));

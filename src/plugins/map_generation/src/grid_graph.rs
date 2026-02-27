@@ -10,12 +10,13 @@ use common::{
 	tools::Units,
 	traits::handles_map_generation::{
 		Graph,
+		GraphGroundPosition,
 		GraphLineOfSight,
 		GraphNaivePath,
 		GraphNode,
 		GraphObstacle,
 		GraphSuccessors,
-		GraphTranslation,
+		GroundPosition,
 		NaivePath,
 	},
 };
@@ -27,13 +28,13 @@ use std::{
 };
 
 #[derive(Debug, PartialEq, Default, Clone)]
-pub struct GridGraph<TValue = Vec3, TExtra = Obstacles, TGridContext = GridContext> {
+pub struct GridGraph<TValue = GroundPosition, TExtra = Obstacles, TGridContext = GridContext> {
 	pub(crate) nodes: HashMap<(u32, u32), TValue>,
 	pub(crate) extra: TExtra,
 	pub(crate) context: TGridContext,
 }
 
-impl<TGridContext> GridGraph<Vec3, Obstacles, TGridContext>
+impl<TGridContext> GridGraph<GroundPosition, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
@@ -48,7 +49,7 @@ where
 		to: &GridGraphNode,
 		half_width: Units,
 	) -> Vec3 {
-		let offset = origin - self.translation(&origin_node);
+		let offset = origin - *self.ground_position(&origin_node);
 
 		match origin_node.x() == to.x() {
 			true if offset.x > 0. => Vec3::new(offset.x + *half_width, 0., 0.),
@@ -68,14 +69,14 @@ where
 	}
 }
 
-impl<TGridContext> Graph for GridGraph<Vec3, Obstacles, TGridContext>
+impl<TGridContext> Graph for GridGraph<GroundPosition, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
 	type TNode = GridGraphNode;
 }
 
-impl<TGridContext> GraphNode for GridGraph<Vec3, Obstacles, TGridContext>
+impl<TGridContext> GraphNode for GridGraph<GroundPosition, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
@@ -92,7 +93,7 @@ where
 	}
 }
 
-impl<TGridContext> GraphSuccessors for GridGraph<Vec3, Obstacles, TGridContext>
+impl<TGridContext> GraphSuccessors for GridGraph<GroundPosition, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
@@ -114,7 +115,7 @@ where
 	}
 }
 
-impl<TGridContext> GraphLineOfSight for GridGraph<Vec3, Obstacles, TGridContext>
+impl<TGridContext> GraphLineOfSight for GridGraph<GroundPosition, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
@@ -129,24 +130,24 @@ where
 	}
 }
 
-impl<TGridContext> GraphTranslation for GridGraph<Vec3, Obstacles, TGridContext>
+impl<TGridContext> GraphGroundPosition for GridGraph<GroundPosition, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
 	type TTNode = GridGraphNode;
 
-	fn translation(&self, GridGraphNode { key }: &Self::TTNode) -> Vec3 {
+	fn ground_position(&self, GridGraphNode { key }: &Self::TTNode) -> GroundPosition {
 		match self.nodes.get(key).copied() {
-			Some(translation) => translation,
+			Some(ground_position) => ground_position,
 			None => unreachable!(
-				"Tried retrieving translation of an invalid node, should not have happened. \
+				"Tried retrieving ground position of an invalid node, should not have happened. \
 				 How was this node created?"
 			),
 		}
 	}
 }
 
-impl<TGridContext> GraphObstacle for GridGraph<Vec3, Obstacles, TGridContext>
+impl<TGridContext> GraphObstacle for GridGraph<GroundPosition, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
@@ -157,7 +158,7 @@ where
 	}
 }
 
-impl<TGridContext> GraphNaivePath for GridGraph<Vec3, Obstacles, TGridContext>
+impl<TGridContext> GraphNaivePath for GridGraph<GroundPosition, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
@@ -202,31 +203,31 @@ where
 			let mut next = furthest;
 
 			let Some(key) = next.key.0.checked_add_signed(key_step.0) else {
-				return NaivePath::PartialUntil(self.translation(&furthest));
+				return NaivePath::PartialUntil(self.ground_position(&furthest));
 			};
 			next.key.0 = key;
 
 			let Some(key) = next.key.1.checked_add_signed(key_step.1) else {
-				return NaivePath::PartialUntil(self.translation(&furthest));
+				return NaivePath::PartialUntil(self.ground_position(&furthest));
 			};
 			next.key.1 = key;
 
 			if self.is_obstacle(&next) {
-				return NaivePath::PartialUntil(self.translation(&furthest));
+				return NaivePath::PartialUntil(self.ground_position(&furthest));
 			}
 
-			let Some(next_translation) = self.nodes.get(&next.key).copied() else {
+			let Some(next_position) = self.nodes.get(&next.key).copied() else {
 				return NaivePath::CannotCompute;
 			};
 
-			let grazing = next_translation + path_border_offset;
+			let grazing = *next_position + path_border_offset;
 
 			let Some(grazing) = self.node(grazing) else {
-				return NaivePath::PartialUntil(self.translation(&furthest));
+				return NaivePath::PartialUntil(self.ground_position(&furthest));
 			};
 
 			if self.is_obstacle(&grazing) {
-				return NaivePath::PartialUntil(self.translation(&furthest));
+				return NaivePath::PartialUntil(self.ground_position(&furthest));
 			}
 
 			furthest = next;
@@ -330,7 +331,7 @@ mod tests {
 	#[test]
 	fn gat_matching_node() {
 		let graph = GridGraph {
-			nodes: HashMap::from([((1, 2), Vec3::new(1., 2., 3.))]),
+			nodes: HashMap::from([((1, 2), GroundPosition(Vec3::new(1., 2., 3.)))]),
 			extra: default(),
 			context: Mock_Mapper::new_mock(|mock| {
 				mock.expect_key_for().return_const((1, 2));
@@ -345,7 +346,7 @@ mod tests {
 	#[test]
 	fn gat_matching_node_none() {
 		let graph = GridGraph {
-			nodes: HashMap::from([((1, 2), Vec3::new(1., 2., 3.))]),
+			nodes: HashMap::from([((1, 2), GroundPosition(Vec3::new(1., 2., 3.)))]),
 			extra: default(),
 			context: Mock_Mapper::new_mock(|mock| {
 				mock.expect_key_for().return_const((1, 3));
@@ -360,7 +361,7 @@ mod tests {
 	#[test]
 	fn supply_key_getter_with_proper_arguments() {
 		let graph = GridGraph {
-			nodes: HashMap::from([((1, 2), Vec3::new(1., 2., 3.))]),
+			nodes: HashMap::from([((1, 2), GroundPosition(Vec3::new(1., 2., 3.)))]),
 			extra: default(),
 			context: Mock_Mapper::new_mock(|mock| {
 				mock.expect_key_for()
@@ -376,7 +377,7 @@ mod tests {
 	#[test]
 	fn node_is_obstacle() {
 		let graph = GridGraph {
-			nodes: HashMap::from([((1, 2), Vec3::default())]),
+			nodes: HashMap::from([((1, 2), GroundPosition::default())]),
 			extra: Obstacles {
 				obstacles: HashSet::from([(1, 2)]),
 			},
@@ -395,16 +396,16 @@ mod tests {
 	fn get_neighbors() {
 		let graph = GridGraph {
 			nodes: HashMap::from([
-				((1, 1), Vec3::default()),
-				((1, 2), Vec3::default()),
-				((1, 3), Vec3::default()),
-				((2, 1), Vec3::default()),
-				((2, 2), Vec3::default()),
-				((2, 3), Vec3::default()),
-				((3, 1), Vec3::default()),
-				((3, 3), Vec3::default()),
-				((3, 4), Vec3::default()),
-				((1, 4), Vec3::default()),
+				((1, 1), GroundPosition::default()),
+				((1, 2), GroundPosition::default()),
+				((1, 3), GroundPosition::default()),
+				((2, 1), GroundPosition::default()),
+				((2, 2), GroundPosition::default()),
+				((2, 3), GroundPosition::default()),
+				((3, 1), GroundPosition::default()),
+				((3, 3), GroundPosition::default()),
+				((3, 4), GroundPosition::default()),
+				((1, 4), GroundPosition::default()),
 			]),
 			extra: Obstacles {
 				obstacles: HashSet::from([(1, 2), (3, 1)]),
@@ -435,12 +436,12 @@ mod tests {
 	fn naive_path_okay_when_not_straight_and_no_obstacles_in_the_way() {
 		let graph = GridGraph {
 			nodes: HashMap::from([
-				((1, 1), Vec3::new(1., 0., 1.)),
-				((1, 2), Vec3::new(1., 0., 2.)),
-				((1, 3), Vec3::new(1., 0., 3.)),
-				((2, 1), Vec3::new(2., 0., 1.)),
-				((2, 2), Vec3::new(2., 0., 2.)),
-				((2, 3), Vec3::new(2., 0., 3.)),
+				((1, 1), GroundPosition(Vec3::new(1., 0., 1.))),
+				((1, 2), GroundPosition(Vec3::new(1., 0., 2.))),
+				((1, 3), GroundPosition(Vec3::new(1., 0., 3.))),
+				((2, 1), GroundPosition(Vec3::new(2., 0., 1.))),
+				((2, 2), GroundPosition(Vec3::new(2., 0., 2.))),
+				((2, 3), GroundPosition(Vec3::new(2., 0., 3.))),
 			]),
 			extra: Obstacles {
 				obstacles: HashSet::from([]),
@@ -461,12 +462,12 @@ mod tests {
 	fn naive_path_not_computable_when_not_straight_and_obstacles_in_the_way() {
 		let graph = GridGraph {
 			nodes: HashMap::from([
-				((1, 1), Vec3::new(1., 0., 1.)),
-				((1, 2), Vec3::new(1., 0., 2.)),
-				((1, 3), Vec3::new(1., 0., 3.)),
-				((2, 1), Vec3::new(2., 0., 1.)),
-				((2, 2), Vec3::new(2., 0., 2.)),
-				((2, 3), Vec3::new(2., 0., 3.)),
+				((1, 1), GroundPosition(Vec3::new(1., 0., 1.))),
+				((1, 2), GroundPosition(Vec3::new(1., 0., 2.))),
+				((1, 3), GroundPosition(Vec3::new(1., 0., 3.))),
+				((2, 1), GroundPosition(Vec3::new(2., 0., 1.))),
+				((2, 2), GroundPosition(Vec3::new(2., 0., 2.))),
+				((2, 3), GroundPosition(Vec3::new(2., 0., 3.))),
 			]),
 			extra: Obstacles {
 				obstacles: HashSet::from([(2, 1)]),
@@ -487,11 +488,11 @@ mod tests {
 	fn naive_path_not_computable_when_origin_node_cannot_be_retrieved() {
 		let graph = GridGraph {
 			nodes: HashMap::from([
-				((1, 2), Vec3::new(1., 0., 2.)),
-				((1, 3), Vec3::new(1., 0., 3.)),
-				((2, 1), Vec3::new(2., 0., 1.)),
-				((2, 2), Vec3::new(2., 0., 2.)),
-				((2, 3), Vec3::new(2., 0., 3.)),
+				((1, 2), GroundPosition(Vec3::new(1., 0., 2.))),
+				((1, 3), GroundPosition(Vec3::new(1., 0., 3.))),
+				((2, 1), GroundPosition(Vec3::new(2., 0., 1.))),
+				((2, 2), GroundPosition(Vec3::new(2., 0., 2.))),
+				((2, 3), GroundPosition(Vec3::new(2., 0., 3.))),
 			]),
 			extra: Obstacles {
 				obstacles: HashSet::from([]),
@@ -512,12 +513,12 @@ mod tests {
 	fn naive_path_partial_when_straight_but_obstructed_because_width_grazed_obstacle() {
 		let graph = GridGraph {
 			nodes: HashMap::from([
-				((1, 1), Vec3::new(1., 0., 1.)),
-				((1, 2), Vec3::new(1., 0., 2.)),
-				((1, 3), Vec3::new(1., 0., 3.)),
-				((2, 1), Vec3::new(2., 0., 1.)),
-				((2, 2), Vec3::new(2., 0., 2.)),
-				((2, 3), Vec3::new(2., 0., 3.)),
+				((1, 1), GroundPosition(Vec3::new(1., 0., 1.))),
+				((1, 2), GroundPosition(Vec3::new(1., 0., 2.))),
+				((1, 3), GroundPosition(Vec3::new(1., 0., 3.))),
+				((2, 1), GroundPosition(Vec3::new(2., 0., 1.))),
+				((2, 2), GroundPosition(Vec3::new(2., 0., 2.))),
+				((2, 3), GroundPosition(Vec3::new(2., 0., 3.))),
 			]),
 			extra: Obstacles {
 				obstacles: HashSet::from([(2, 3)]),
@@ -531,18 +532,18 @@ mod tests {
 		let node = graph.node(Vec3::new(1., 0., 3.)).expect("NO SUCH NODE");
 		let path = graph.naive_path(Vec3::new(1.3, 0., 1.), &node, Units::from(0.3));
 
-		assert_eq!(NaivePath::PartialUntil(Vec3::new(1., 0., 2.)), path);
+		assert_eq!(NaivePath::PartialUntil(Vec3::new(1., 0., 2.).into()), path);
 	}
 
 	#[test]
 	fn naive_path_partial_when_straight_but_obstructed_because_width_grazed_non_existing() {
 		let graph = GridGraph {
 			nodes: HashMap::from([
-				((1, 1), Vec3::new(1., 0., 1.)),
-				((1, 2), Vec3::new(1., 0., 2.)),
-				((1, 3), Vec3::new(1., 0., 3.)),
-				((2, 1), Vec3::new(2., 0., 1.)),
-				((2, 2), Vec3::new(2., 0., 2.)),
+				((1, 1), GroundPosition(Vec3::new(1., 0., 1.))),
+				((1, 2), GroundPosition(Vec3::new(1., 0., 2.))),
+				((1, 3), GroundPosition(Vec3::new(1., 0., 3.))),
+				((2, 1), GroundPosition(Vec3::new(2., 0., 1.))),
+				((2, 2), GroundPosition(Vec3::new(2., 0., 2.))),
 			]),
 			extra: Obstacles {
 				obstacles: HashSet::from([]),
@@ -556,15 +557,15 @@ mod tests {
 		let node = graph.node(Vec3::new(1., 0., 3.)).expect("NO SUCH NODE");
 		let path = graph.naive_path(Vec3::new(1.3, 0., 1.), &node, Units::from(0.3));
 
-		assert_eq!(NaivePath::PartialUntil(Vec3::new(1., 0., 2.)), path);
+		assert_eq!(NaivePath::PartialUntil(Vec3::new(1., 0., 2.).into()), path);
 	}
 
 	#[test]
 	fn naive_path_non_computable_when_straight_but_in_between_node_does_not_exist() {
 		let graph = GridGraph {
 			nodes: HashMap::from([
-				((1, 1), Vec3::new(1., 0., 1.)),
-				((1, 3), Vec3::new(1., 0., 3.)),
+				((1, 1), GroundPosition(Vec3::new(1., 0., 1.))),
+				((1, 3), GroundPosition(Vec3::new(1., 0., 3.))),
 			]),
 			extra: Obstacles {
 				obstacles: HashSet::from([]),
@@ -585,12 +586,12 @@ mod tests {
 	fn naive_path_partial_when_straight_but_obstructed_because_width_grazed_obstacle_other_side() {
 		let graph = GridGraph {
 			nodes: HashMap::from([
-				((1, 1), Vec3::new(1., 0., 1.)),
-				((1, 2), Vec3::new(1., 0., 2.)),
-				((1, 3), Vec3::new(1., 0., 3.)),
-				((2, 1), Vec3::new(2., 0., 1.)),
-				((2, 2), Vec3::new(2., 0., 2.)),
-				((2, 3), Vec3::new(2., 0., 3.)),
+				((1, 1), GroundPosition(Vec3::new(1., 0., 1.))),
+				((1, 2), GroundPosition(Vec3::new(1., 0., 2.))),
+				((1, 3), GroundPosition(Vec3::new(1., 0., 3.))),
+				((2, 1), GroundPosition(Vec3::new(2., 0., 1.))),
+				((2, 2), GroundPosition(Vec3::new(2., 0., 2.))),
+				((2, 3), GroundPosition(Vec3::new(2., 0., 3.))),
 			]),
 			extra: Obstacles {
 				obstacles: HashSet::from([(1, 3)]),
@@ -604,19 +605,19 @@ mod tests {
 		let node = graph.node(Vec3::new(2., 0., 3.)).expect("NO SUCH NODE");
 		let path = graph.naive_path(Vec3::new(1.7, 0., 1.), &node, Units::from(0.3));
 
-		assert_eq!(NaivePath::PartialUntil(Vec3::new(2., 0., 2.)), path);
+		assert_eq!(NaivePath::PartialUntil(Vec3::new(2., 0., 2.).into()), path);
 	}
 
 	#[test]
 	fn naive_path_partial_when_straight_but_obstructed_because_width_grazed_obstacle_rotated() {
 		let graph = GridGraph {
 			nodes: HashMap::from([
-				((1, 1), Vec3::new(1., 0., 1.)),
-				((1, 2), Vec3::new(1., 0., 2.)),
-				((2, 1), Vec3::new(2., 0., 1.)),
-				((2, 2), Vec3::new(2., 0., 2.)),
-				((3, 1), Vec3::new(3., 0., 1.)),
-				((3, 2), Vec3::new(3., 0., 2.)),
+				((1, 1), GroundPosition(Vec3::new(1., 0., 1.))),
+				((1, 2), GroundPosition(Vec3::new(1., 0., 2.))),
+				((2, 1), GroundPosition(Vec3::new(2., 0., 1.))),
+				((2, 2), GroundPosition(Vec3::new(2., 0., 2.))),
+				((3, 1), GroundPosition(Vec3::new(3., 0., 1.))),
+				((3, 2), GroundPosition(Vec3::new(3., 0., 2.))),
 			]),
 			extra: Obstacles {
 				obstacles: HashSet::from([(3, 2)]),
@@ -630,7 +631,7 @@ mod tests {
 		let node = graph.node(Vec3::new(3., 0., 1.)).expect("NO SUCH NODE");
 		let path = graph.naive_path(Vec3::new(1., 0., 1.3), &node, Units::from(0.3));
 
-		assert_eq!(NaivePath::PartialUntil(Vec3::new(2., 0., 1.)), path);
+		assert_eq!(NaivePath::PartialUntil(Vec3::new(2., 0., 1.).into()), path);
 	}
 
 	#[test]
@@ -638,12 +639,12 @@ mod tests {
 	 {
 		let graph = GridGraph {
 			nodes: HashMap::from([
-				((1, 1), Vec3::new(1., 0., 1.)),
-				((1, 2), Vec3::new(1., 0., 2.)),
-				((2, 1), Vec3::new(2., 0., 1.)),
-				((2, 2), Vec3::new(2., 0., 2.)),
-				((3, 1), Vec3::new(3., 0., 1.)),
-				((3, 2), Vec3::new(3., 0., 2.)),
+				((1, 1), GroundPosition(Vec3::new(1., 0., 1.))),
+				((1, 2), GroundPosition(Vec3::new(1., 0., 2.))),
+				((2, 1), GroundPosition(Vec3::new(2., 0., 1.))),
+				((2, 2), GroundPosition(Vec3::new(2., 0., 2.))),
+				((3, 1), GroundPosition(Vec3::new(3., 0., 1.))),
+				((3, 2), GroundPosition(Vec3::new(3., 0., 2.))),
 			]),
 			extra: Obstacles {
 				obstacles: HashSet::from([(3, 1)]),
@@ -657,19 +658,19 @@ mod tests {
 		let node = graph.node(Vec3::new(3., 0., 2.)).expect("NO SUCH NODE");
 		let path = graph.naive_path(Vec3::new(1., 0., 1.7), &node, Units::from(0.3));
 
-		assert_eq!(NaivePath::PartialUntil(Vec3::new(2., 0., 2.)), path);
+		assert_eq!(NaivePath::PartialUntil(Vec3::new(2., 0., 2.).into()), path);
 	}
 
 	#[test]
 	fn naive_path_partial_when_straight_but_obstructed_because_width_grazed_obstacle_to_negative() {
 		let graph = GridGraph {
 			nodes: HashMap::from([
-				((1, 1), Vec3::new(1., 0., 1.)),
-				((1, 2), Vec3::new(1., 0., 2.)),
-				((1, 3), Vec3::new(1., 0., 3.)),
-				((2, 1), Vec3::new(2., 0., 1.)),
-				((2, 2), Vec3::new(2., 0., 2.)),
-				((2, 3), Vec3::new(2., 0., 3.)),
+				((1, 1), GroundPosition(Vec3::new(1., 0., 1.))),
+				((1, 2), GroundPosition(Vec3::new(1., 0., 2.))),
+				((1, 3), GroundPosition(Vec3::new(1., 0., 3.))),
+				((2, 1), GroundPosition(Vec3::new(2., 0., 1.))),
+				((2, 2), GroundPosition(Vec3::new(2., 0., 2.))),
+				((2, 3), GroundPosition(Vec3::new(2., 0., 3.))),
 			]),
 			extra: Obstacles {
 				obstacles: HashSet::from([(2, 1)]),
@@ -683,7 +684,7 @@ mod tests {
 		let node = graph.node(Vec3::new(1., 0., 1.)).expect("NO SUCH NODE");
 		let path = graph.naive_path(Vec3::new(1.3, 0., 3.), &node, Units::from(0.3));
 
-		assert_eq!(NaivePath::PartialUntil(Vec3::new(1., 0., 2.)), path);
+		assert_eq!(NaivePath::PartialUntil(Vec3::new(1., 0., 2.).into()), path);
 	}
 
 	#[test]
@@ -691,12 +692,12 @@ mod tests {
 	 {
 		let graph = GridGraph {
 			nodes: HashMap::from([
-				((1, 1), Vec3::new(1., 0., 1.)),
-				((1, 2), Vec3::new(1., 0., 2.)),
-				((2, 1), Vec3::new(2., 0., 1.)),
-				((2, 2), Vec3::new(2., 0., 2.)),
-				((3, 1), Vec3::new(3., 0., 1.)),
-				((3, 2), Vec3::new(3., 0., 2.)),
+				((1, 1), GroundPosition(Vec3::new(1., 0., 1.))),
+				((1, 2), GroundPosition(Vec3::new(1., 0., 2.))),
+				((2, 1), GroundPosition(Vec3::new(2., 0., 1.))),
+				((2, 2), GroundPosition(Vec3::new(2., 0., 2.))),
+				((3, 1), GroundPosition(Vec3::new(3., 0., 1.))),
+				((3, 2), GroundPosition(Vec3::new(3., 0., 2.))),
 			]),
 			extra: Obstacles {
 				obstacles: HashSet::from([(1, 2)]),
@@ -710,19 +711,19 @@ mod tests {
 		let node = graph.node(Vec3::new(1., 0., 1.)).expect("NO SUCH NODE");
 		let path = graph.naive_path(Vec3::new(3., 0., 1.3), &node, Units::from(0.3));
 
-		assert_eq!(NaivePath::PartialUntil(Vec3::new(2., 0., 1.)), path);
+		assert_eq!(NaivePath::PartialUntil(Vec3::new(2., 0., 1.).into()), path);
 	}
 
 	#[test]
 	fn naive_path_ok_when_straight_and_width_grazing_no_obstructed_nodes() {
 		let graph = GridGraph {
 			nodes: HashMap::from([
-				((1, 1), Vec3::new(1., 0., 1.)),
-				((1, 2), Vec3::new(1., 0., 2.)),
-				((1, 3), Vec3::new(1., 0., 3.)),
-				((2, 1), Vec3::new(2., 0., 1.)),
-				((2, 2), Vec3::new(2., 0., 2.)),
-				((2, 3), Vec3::new(2., 0., 3.)),
+				((1, 1), GroundPosition(Vec3::new(1., 0., 1.))),
+				((1, 2), GroundPosition(Vec3::new(1., 0., 2.))),
+				((1, 3), GroundPosition(Vec3::new(1., 0., 3.))),
+				((2, 1), GroundPosition(Vec3::new(2., 0., 1.))),
+				((2, 2), GroundPosition(Vec3::new(2., 0., 2.))),
+				((2, 3), GroundPosition(Vec3::new(2., 0., 3.))),
 			]),
 			extra: Obstacles {
 				obstacles: HashSet::from([]),
@@ -743,12 +744,12 @@ mod tests {
 	fn naive_path_partial_when_straight_and_obstacles_in_the_way() {
 		let graph = GridGraph {
 			nodes: HashMap::from([
-				((1, 1), Vec3::new(1., 0., 1.)),
-				((1, 2), Vec3::new(1., 0., 2.)),
-				((1, 3), Vec3::new(1., 0., 3.)),
-				((2, 1), Vec3::new(2., 0., 1.)),
-				((2, 2), Vec3::new(2., 0., 2.)),
-				((2, 3), Vec3::new(2., 0., 3.)),
+				((1, 1), GroundPosition(Vec3::new(1., 0., 1.))),
+				((1, 2), GroundPosition(Vec3::new(1., 0., 2.))),
+				((1, 3), GroundPosition(Vec3::new(1., 0., 3.))),
+				((2, 1), GroundPosition(Vec3::new(2., 0., 1.))),
+				((2, 2), GroundPosition(Vec3::new(2., 0., 2.))),
+				((2, 3), GroundPosition(Vec3::new(2., 0., 3.))),
 			]),
 			extra: Obstacles {
 				obstacles: HashSet::from([(1, 3)]),
@@ -762,16 +763,19 @@ mod tests {
 		let node = graph.node(Vec3::new(1., 0., 3.)).expect("NO SUCH NODE");
 		let path = graph.naive_path(Vec3::new(1.4, 0., 1.), &node, Units::from(0.3));
 
-		assert_eq!(NaivePath::PartialUntil(Vec3::new(1.0, 0.0, 2.0)), path);
+		assert_eq!(
+			NaivePath::PartialUntil(Vec3::new(1.0, 0.0, 2.0).into()),
+			path
+		);
 	}
 
 	#[test]
 	fn naive_path_not_computable_when_straight_and_start_is_obstacle() {
 		let graph = GridGraph {
 			nodes: HashMap::from([
-				((1, 1), Vec3::new(1., 0., 1.)),
-				((1, 2), Vec3::new(1., 0., 2.)),
-				((1, 3), Vec3::new(1., 0., 3.)),
+				((1, 1), GroundPosition(Vec3::new(1., 0., 1.))),
+				((1, 2), GroundPosition(Vec3::new(1., 0., 2.))),
+				((1, 3), GroundPosition(Vec3::new(1., 0., 3.))),
 			]),
 			extra: Obstacles {
 				obstacles: HashSet::from([(1, 1)]),

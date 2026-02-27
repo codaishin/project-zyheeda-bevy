@@ -9,7 +9,11 @@ use crate::{
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
 use serde::{Deserialize, Serialize};
-use std::{fmt::Debug, hash::Hash};
+use std::{
+	fmt::Debug,
+	hash::Hash,
+	ops::{Deref, DerefMut},
+};
 
 pub trait HandlesMapGeneration {
 	const SYSTEMS: Self::TSystemSet;
@@ -31,7 +35,7 @@ pub trait Graph:
 	+ GraphSuccessors<TSNode = Self::TNode>
 	+ GraphLineOfSight<TLNode = Self::TNode>
 	+ GraphObstacle<TONode = Self::TNode>
-	+ GraphTranslation<TTNode = Self::TNode>
+	+ GraphGroundPosition<TTNode = Self::TNode>
 	+ GraphNaivePath<TNNode = Self::TNode>
 {
 	type TNode: Eq + Hash + Copy;
@@ -61,10 +65,10 @@ pub trait GraphObstacle {
 	fn is_obstacle(&self, node: &Self::TONode) -> bool;
 }
 
-pub trait GraphTranslation {
+pub trait GraphGroundPosition {
 	type TTNode;
 
-	fn translation(&self, node: &Self::TTNode) -> Vec3;
+	fn ground_position(&self, node: &Self::TTNode) -> GroundPosition;
 }
 
 pub trait GraphNaivePath {
@@ -75,10 +79,36 @@ pub trait GraphNaivePath {
 	///
 	/// Useful when trying to replace path endpoint node translations with real world path start and
 	/// end coordinates.
-	fn naive_path(&self, origin: Vec3, to: &Self::TNNode, half_width: Units) -> NaivePath;
+	fn naive_path(&self, translation: Vec3, to: &Self::TNNode, half_width: Units) -> NaivePath;
 }
 
-pub type GroundPosition = Vec3;
+#[derive(Debug, PartialEq, Default, Clone, Copy, Serialize, Deserialize)]
+pub struct GroundPosition(pub Vec3);
+
+impl GroundPosition {
+	pub const ZERO: Self = Self(Vec3::ZERO);
+	pub const ONE: Self = Self(Vec3::ONE);
+}
+
+impl From<Vec3> for GroundPosition {
+	fn from(ground_position: Vec3) -> Self {
+		Self(ground_position)
+	}
+}
+
+impl Deref for GroundPosition {
+	type Target = Vec3;
+
+	fn deref(&self) -> &Self::Target {
+		&self.0
+	}
+}
+
+impl DerefMut for GroundPosition {
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		&mut self.0
+	}
+}
 
 pub trait SetMapAgentPrefab {
 	fn set_map_agent_prefab(

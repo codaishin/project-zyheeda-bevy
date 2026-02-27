@@ -11,7 +11,14 @@ mod traits;
 
 use crate::{
 	components::{
-		map::{Map, agents::AgentsLoaded, cells::corridor::Corridor, demo_map::DemoMap},
+		agent_spawner::AgentSpawner,
+		map::{
+			Map,
+			agents::AgentsLoaded,
+			bay::BayMap,
+			cells::corridor::Corridor,
+			demo_map::DemoMap,
+		},
 		map_agents::{AgentOfPersistentMap, GridAgentOf},
 		wall_cell::WallCell,
 	},
@@ -23,12 +30,13 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	states::game_state::{GameState, LoadingEssentialAssets},
+	states::game_state::{GameState, LoadingEssentialAssets, LoadingGame},
 	systems::log::OnError,
 	traits::{
+		handles_enemies::EnemyType,
 		handles_lights::HandlesLights,
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInApp},
-		handles_map_generation::HandlesMapGeneration,
+		handles_map_generation::{AgentType, HandlesMapGeneration},
 		handles_physics::{HandlesRaycast, physical_bodies::HandlesPhysicalBodies},
 		handles_saving::HandlesSaving,
 		prefab::AddPrefabObserver,
@@ -52,6 +60,11 @@ where
 	TPhysics: ThreadSafe + HandlesRaycast + HandlesPhysicalBodies,
 	TLights: ThreadSafe + HandlesLights,
 {
+	const SPAWNERS: &[(&'static str, AgentType)] = &[
+		("PlayerSpawn", AgentType::Player),
+		("VoidSphereSpawn", AgentType::Enemy(EnemyType::VoidSphere)),
+	];
+
 	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TPhysics, _: &TLights) -> Self {
 		Self(PhantomData)
 	}
@@ -73,8 +86,15 @@ where
 		>();
 		register_agents_lookup_load_tracking.in_app(app, resource_exists::<AgentsColorLookup>);
 
+		TLoading::register_load_tracking::<Map, LoadingGame, AssetsProgress>()
+			.in_app(app, Map::is_loaded);
+		TLoading::register_load_tracking::<AgentSpawner, LoadingGame, AssetsProgress>()
+			.in_app(app, AgentSpawner::is_loaded);
+
 		TSavegame::register_savable_component::<AgentsLoaded>(app);
 		TSavegame::register_savable_component::<AgentOfPersistentMap>(app);
+		TSavegame::register_savable_component::<Map>(app);
+		TSavegame::register_savable_component::<BayMap>(app);
 		TSavegame::register_savable_component::<DemoMap>(app);
 
 		app.init_resource::<AgentPrefab>()
@@ -93,6 +113,15 @@ where
 					.run_if(not(resource_exists::<AgentsColorLookup>)),
 			)
 			.add_systems(OnEnter(GameState::NewGame), DemoMap::spawn)
+			.add_observer(AgentSpawner::identify(Self::SPAWNERS))
+			.add_systems(
+				Update,
+				(
+					AgentSpawner::link_with_map.pipe(OnError::log),
+					AgentSpawner::spawn_agent,
+				)
+					.chain(),
+			)
 			.add_systems(Update, Grid::<1>::insert.pipe(OnError::log))
 			.add_systems(
 				Update,

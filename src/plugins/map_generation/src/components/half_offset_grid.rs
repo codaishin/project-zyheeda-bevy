@@ -9,7 +9,10 @@ use crate::{
 	},
 };
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
-use common::zyheeda_commands::ZyheedaEntityCommands;
+use common::{
+	traits::handles_map_generation::GroundPosition,
+	zyheeda_commands::ZyheedaEntityCommands,
+};
 use std::collections::HashMap;
 
 #[derive(Component, Debug, PartialEq)]
@@ -42,7 +45,7 @@ impl From<&GridGraph> for HalfOffsetGrid {
 }
 
 fn spawn_children<TCell>(
-	cells: Vec<(Vec3, HalfOffsetCell<TCell>)>,
+	cells: Vec<(GroundPosition, HalfOffsetCell<TCell>)>,
 ) -> impl FnOnce(&mut RelatedSpawnerCommands<ChildOf>)
 where
 	TCell: InsertCellQuadrantComponents + IsWalkable,
@@ -56,7 +59,7 @@ where
 
 fn spawn_quadrant<TCell>(
 	parent: &mut RelatedSpawnerCommands<ChildOf>,
-	pos: Vec3,
+	GroundPosition(pos): GroundPosition,
 	cell: HalfOffsetCell<TCell>,
 ) where
 	TCell: InsertCellQuadrantComponents + IsWalkable,
@@ -166,7 +169,7 @@ mod tests {
 		let cells: Result<Cells<_Cell>, _Error> = Ok((
 			grid,
 			vec![(
-				Vec3::new(1., 2., 3.),
+				GroundPosition(Vec3::new(1., 2., 3.)),
 				HalfOffsetCell::from([
 					(Direction::NegZ, _Cell::walkable("")),
 					(Direction::X, _Cell::walkable("")),
@@ -200,7 +203,7 @@ mod tests {
 		let cells: Result<Cells<_Cell>, _Error> = Ok((
 			grid,
 			vec![(
-				Vec3::new(1., 2., 3.),
+				GroundPosition(Vec3::new(1., 2., 3.)),
 				HalfOffsetCell::from([
 					(Direction::NegZ, _Cell::walkable("neg z")),
 					(Direction::X, _Cell::walkable("x")),
@@ -246,7 +249,7 @@ mod tests {
 		let cells: Result<Cells<_Cell>, _Error> = Ok((
 			grid,
 			vec![(
-				Vec3::new(1., 2., 3.),
+				GroundPosition(Vec3::new(1., 2., 3.)),
 				HalfOffsetCell::from([
 					(Direction::X, _Cell::walkable("x")),
 					(Direction::Z, _Cell::walkable("z")),
@@ -297,7 +300,7 @@ mod tests {
 		let cells: Result<Cells<_Cell>, _Error> = Ok((
 			fake_entity!(123),
 			vec![(
-				Vec3::new(1., 2., 3.),
+				GroundPosition(Vec3::new(1., 2., 3.)),
 				HalfOffsetCell::from([
 					(Direction::X, _Cell::walkable("x")),
 					(Direction::Z, _Cell::walkable("z")),

@@ -87,6 +87,7 @@ mod tests {
 			map_cells_extra::{CellGridDefinition, MapCellsExtra},
 		},
 	};
+	use common::traits::handles_map_generation::GroundPosition;
 	use macros::new_valid;
 	use std::collections::{HashMap, HashSet};
 	use testing::SingleThreadedApp;
@@ -155,10 +156,10 @@ mod tests {
 		assert_eq!(
 			Some(&MapGridGraph::from(GridGraph {
 				nodes: HashMap::from([
-					((0, 0), Vec3::new(-2., 0., -2.)),
-					((0, 1), Vec3::new(-2., 0., 2.)),
-					((1, 0), Vec3::new(2., 0., -2.)),
-					((1, 1), Vec3::new(2., 0., 2.)),
+					((0, 0), GroundPosition(Vec3::new(-2., 0., -2.))),
+					((0, 1), GroundPosition(Vec3::new(-2., 0., 2.))),
+					((1, 0), GroundPosition(Vec3::new(2., 0., -2.))),
+					((1, 1), GroundPosition(Vec3::new(2., 0., 2.))),
 				]),
 				extra: Obstacles::default(),
 				context: GridContext {
@@ -203,15 +204,15 @@ mod tests {
 		assert_eq!(
 			Some(&MapGridGraph::from(GridGraph {
 				nodes: HashMap::from([
-					((0, 0), Vec3::new(-4., 0., -4.)),
-					((0, 1), Vec3::new(-4., 0., 0.)),
-					((0, 2), Vec3::new(-4., 0., 4.)),
-					((1, 0), Vec3::new(0., 0., -4.)),
-					((1, 1), Vec3::new(0., 0., 0.)),
-					((1, 2), Vec3::new(0., 0., 4.)),
-					((2, 0), Vec3::new(4., 0., -4.)),
-					((2, 1), Vec3::new(4., 0., 0.)),
-					((2, 2), Vec3::new(4., 0., 4.)),
+					((0, 0), GroundPosition(Vec3::new(-4., 0., -4.))),
+					((0, 1), GroundPosition(Vec3::new(-4., 0., 0.))),
+					((0, 2), GroundPosition(Vec3::new(-4., 0., 4.))),
+					((1, 0), GroundPosition(Vec3::new(0., 0., -4.))),
+					((1, 1), GroundPosition(Vec3::new(0., 0., 0.))),
+					((1, 2), GroundPosition(Vec3::new(0., 0., 4.))),
+					((2, 0), GroundPosition(Vec3::new(4., 0., -4.))),
+					((2, 1), GroundPosition(Vec3::new(4., 0., 0.))),
+					((2, 2), GroundPosition(Vec3::new(4., 0., 4.))),
 				]),
 				extra: Obstacles::default(),
 				context: GridContext {
@@ -251,10 +252,10 @@ mod tests {
 		assert_eq!(
 			Some(&MapGridGraph::from(GridGraph {
 				nodes: HashMap::from([
-					((0, 0), Vec3::new(-2., 0., -2.)),
-					((0, 1), Vec3::new(-2., 0., 2.)),
-					((1, 0), Vec3::new(2., 0., -2.)),
-					((1, 1), Vec3::new(2., 0., 2.)),
+					((0, 0), GroundPosition(Vec3::new(-2., 0., -2.))),
+					((0, 1), GroundPosition(Vec3::new(-2., 0., 2.))),
+					((1, 0), GroundPosition(Vec3::new(2., 0., -2.))),
+					((1, 1), GroundPosition(Vec3::new(2., 0., 2.))),
 				]),
 				extra: Obstacles {
 					obstacles: HashSet::from([(0, 1), (1, 0), (1, 1)])
@@ -298,15 +299,15 @@ mod tests {
 		assert_eq!(
 			Some(&MapGridGraph::from(GridGraph {
 				nodes: HashMap::from([
-					((0, 0), Vec3::new(-4., 0., -4.)),
-					((0, 1), Vec3::new(-4., 0., 0.)),
-					((0, 2), Vec3::new(-4., 0., 4.)),
-					((1, 0), Vec3::new(0., 0., -4.)),
-					((1, 1), Vec3::new(0., 0., 0.)),
-					((1, 2), Vec3::new(0., 0., 4.)),
-					((2, 0), Vec3::new(4., 0., -4.)),
-					((2, 1), Vec3::new(4., 0., 0.)),
-					((2, 2), Vec3::new(4., 0., 4.)),
+					((0, 0), GroundPosition(Vec3::new(-4., 0., -4.))),
+					((0, 1), GroundPosition(Vec3::new(-4., 0., 0.))),
+					((0, 2), GroundPosition(Vec3::new(-4., 0., 4.))),
+					((1, 0), GroundPosition(Vec3::new(0., 0., -4.))),
+					((1, 1), GroundPosition(Vec3::new(0., 0., 0.))),
+					((1, 2), GroundPosition(Vec3::new(0., 0., 4.))),
+					((2, 0), GroundPosition(Vec3::new(4., 0., -4.))),
+					((2, 1), GroundPosition(Vec3::new(4., 0., 0.))),
+					((2, 2), GroundPosition(Vec3::new(4., 0., 4.))),
 				]),
 				extra: Obstacles {
 					obstacles: HashSet::from([(0, 1), (2, 0), (2, 1)])

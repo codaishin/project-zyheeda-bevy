@@ -1,4 +1,7 @@
-use crate::{tools::Units, traits::accessors::get::GetProperty};
+use crate::{
+	tools::Units,
+	traits::{accessors::get::GetProperty, handles_map_generation::GroundPosition},
+};
 use bevy::prelude::*;
 
 pub trait HandlesPathFinding {
@@ -10,7 +13,7 @@ pub trait HandlesPathFinding {
 }
 
 pub trait ComputePath {
-	type TIter<'a>: Iterator<Item = Vec3>
+	type TIter<'a>: Iterator<Item = GroundPosition>
 	where
 		Self: 'a;
 

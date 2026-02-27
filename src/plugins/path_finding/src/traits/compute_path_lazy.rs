@@ -1,8 +1,8 @@
 use common::traits::handles_map_generation::{
+	GraphGroundPosition,
 	GraphLineOfSight,
 	GraphObstacle,
 	GraphSuccessors,
-	GraphTranslation,
 };
 use std::hash::Hash;
 
@@ -12,7 +12,7 @@ where
 	TGraph: GraphSuccessors
 		+ GraphLineOfSight<TLNode = TGraph::TSNode>
 		+ GraphObstacle<TONode = TGraph::TSNode>
-		+ GraphTranslation<TTNode = TGraph::TSNode>,
+		+ GraphGroundPosition<TTNode = TGraph::TSNode>,
 {
 	fn compute_path(
 		&self,

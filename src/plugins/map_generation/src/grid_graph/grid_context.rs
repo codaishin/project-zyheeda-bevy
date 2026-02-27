@@ -1,8 +1,8 @@
-use std::fmt::Display;
-
 use crate::traits::{grid_min::GridMin, key_mapper::KeyMapper};
 use bevy::prelude::*;
+use common::traits::handles_map_generation::GroundPosition;
 use macros::{InRange, new_valid};
+use std::fmt::Display;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct GridContext {
@@ -26,18 +26,18 @@ impl Default for GridContext {
 }
 
 impl GridMin for GridContext {
-	fn grid_min(&self) -> Vec3 {
+	fn grid_min(&self) -> GroundPosition {
 		let x = ((*self.cell_count_x - 1) as f32 * *self.cell_distance) / 2.;
 		let z = ((*self.cell_count_z - 1) as f32 * *self.cell_distance) / 2.;
 
-		Vec3::new(-x, 0., -z)
+		GroundPosition(Vec3::new(-x, 0., -z))
 	}
 }
 
 impl KeyMapper for GridContext {
-	fn key_for(&self, translation: Vec3) -> Option<(u32, u32)> {
-		let start = self.grid_min();
-		let Vec3 { x, z, .. } = translation - start;
+	fn key_for(&self, pos: Vec3) -> Option<(u32, u32)> {
+		let GroundPosition(start) = self.grid_min();
+		let Vec3 { x, z, .. } = pos - start;
 		let x = (x / *self.cell_distance).round();
 		let z = (z / *self.cell_distance).round();
 
@@ -149,7 +149,7 @@ mod tests {
 
 		let min = context.grid_min();
 
-		assert_eq!(result, min);
+		assert_eq!(GroundPosition(result), min);
 	}
 
 	#[test_case(CELL_COUNT_2, CELL_COUNT_2, CELL_DISTANCE_1, Vec3::new(0.5, 0., -0.5), Some((1, 0)); "grid 2 by 2 with distance 1")]

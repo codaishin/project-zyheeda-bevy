@@ -7,6 +7,7 @@ use bevy::prelude::*;
 use common::{
 	traits::{
 		accessors::get::{GetProperty, TryApplyOn},
+		handles_map_generation::GroundPosition,
 		handles_path_finding::ComputePath,
 		thread_safe::ThreadSafe,
 	},
@@ -83,11 +84,11 @@ impl MovementDefinition {
 		let Some(path) = computer.compute_path(start, end, self.radius) else {
 			return VecDeque::from([]);
 		};
-		let mut path = path.map(|v| v.with_y(start.y)).peekable();
+		let mut path = path.map(|v| GroundPosition(v.with_y(start.y))).peekable();
 
 		match path.peek() {
-			Some(first) if first == &start => VecDeque::from_iter(path.skip(1)),
-			_ => VecDeque::from_iter(path),
+			Some(first) if **first == start => VecDeque::from_iter(path.skip(1).map(|p| *p)),
+			_ => VecDeque::from_iter(path.map(|p| *p)),
 		}
 	}
 }
@@ -131,10 +132,10 @@ mod test_new_path {
 	}
 
 	#[derive(Clone)]
-	pub struct Iter(VecDeque<Vec3>);
+	pub struct Iter(VecDeque<GroundPosition>);
 
 	impl Iterator for Iter {
-		type Item = Vec3;
+		type Item = GroundPosition;
 
 		fn next(&mut self) -> Option<Self::Item> {
 			self.0.pop_front()
@@ -171,9 +172,9 @@ mod test_new_path {
 				.world_mut()
 				.spawn(_ComputePath::new().with_mock(|mock| {
 					mock.expect_compute_path().return_const(Some(iter![
-						Vec3::splat(1.),
-						Vec3::splat(2.),
-						Vec3::splat(3.),
+						GroundPosition(Vec3::splat(1.)),
+						GroundPosition(Vec3::splat(2.)),
+						GroundPosition(Vec3::splat(3.)),
 					]));
 				}))
 				.id();
@@ -214,9 +215,9 @@ mod test_new_path {
 				.world_mut()
 				.spawn(_ComputePath::new().with_mock(|mock| {
 					mock.expect_compute_path().return_const(Some(iter![
-						Vec3::splat(1.),
-						Vec3::splat(2.),
-						Vec3::splat(3.),
+						GroundPosition(Vec3::splat(1.)),
+						GroundPosition(Vec3::splat(2.)),
+						GroundPosition(Vec3::splat(3.)),
 					]));
 				}))
 				.id();
@@ -292,9 +293,9 @@ mod test_new_path {
 				.world_mut()
 				.spawn(_ComputePath::new().with_mock(|mock| {
 					mock.expect_compute_path().return_const(Some(iter![
-						Vec3::splat(1.),
-						Vec3::splat(2.),
-						Vec3::splat(3.),
+						GroundPosition(Vec3::splat(1.)),
+						GroundPosition(Vec3::splat(2.)),
+						GroundPosition(Vec3::splat(3.)),
 					]));
 				}))
 				.id();
@@ -306,7 +307,7 @@ mod test_new_path {
 						..default()
 					},
 					Movement::<PathOrDirection<_MoveMethod>>::to(Vec3::default()),
-					GlobalTransform::from_translation(Vec3::splat(1.)),
+					GlobalTransform::from_translation(Vec3::ONE),
 					_GetComputer(computer),
 				))
 				.id();
@@ -317,7 +318,7 @@ mod test_new_path {
 				Some(&PathOrDirection::<_MoveMethod> {
 					mode: Mode::Path(VecDeque::from([
 						Vec3::new(2., 1., 2.),
-						Vec3::new(3., 1., 3.)
+						Vec3::new(3., 1., 3.),
 					])),
 					_m: PhantomData,
 				}),
@@ -356,9 +357,9 @@ mod test_new_path {
 				.world_mut()
 				.spawn(_ComputePath::new().with_mock(|mock| {
 					mock.expect_compute_path().return_const(Some(iter![
-						Vec3::splat(1.),
-						Vec3::splat(2.),
-						Vec3::splat(3.),
+						GroundPosition(Vec3::splat(1.)),
+						GroundPosition(Vec3::splat(2.)),
+						GroundPosition(Vec3::splat(3.)),
 					]));
 				}))
 				.id();
