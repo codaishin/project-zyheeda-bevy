@@ -1,9 +1,10 @@
-use crate::components::mesh_collider::MeshCollider;
 use bevy::{ecs::system::IntoObserverSystem, gltf::GltfMeshName, prelude::*};
 use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
-impl MeshCollider {
-	pub(crate) fn identify(prefix: &'static str) -> impl IntoObserverSystem<Add, GltfMeshName, ()> {
+impl<T> IdentifyByPrefix for T where T: Component + Default {}
+
+pub(crate) trait IdentifyByPrefix: Component + Default {
+	fn identify_by_prefix(prefix: &'static str) -> impl IntoObserverSystem<Add, GltfMeshName, ()> {
 		#[rustfmt::skip]
 		let observer = move |
 			on_add: On<Add, GltfMeshName>,
@@ -19,7 +20,7 @@ impl MeshCollider {
 			}
 
 			commands.try_apply_on(&on_add.entity, |mut e| {
-				e.try_insert(Self);
+				e.try_insert(Self::default());
 			});
 		};
 
@@ -34,10 +35,13 @@ mod tests {
 	use test_case::test_case;
 	use testing::SingleThreadedApp;
 
+	#[derive(Component, Debug, PartialEq, Default)]
+	struct _Component;
+
 	fn setup(prefix: &'static str) -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_observer(MeshCollider::identify(prefix));
+		app.add_observer(_Component::identify_by_prefix(prefix));
 
 		app
 	}
@@ -48,7 +52,7 @@ mod tests {
 
 		let entity = app.world_mut().spawn(GltfMeshName("Collider".to_owned()));
 
-		assert_eq!(Some(&MeshCollider), entity.get::<MeshCollider>());
+		assert_eq!(Some(&_Component), entity.get::<_Component>());
 	}
 
 	#[test_case("Collider", "Foo"; "collider vs foo")]
@@ -61,7 +65,7 @@ mod tests {
 
 		let entity = app.world_mut().spawn(GltfMeshName(name.to_owned()));
 
-		assert_eq!(None, entity.get::<MeshCollider>());
+		assert_eq!(None, entity.get::<_Component>());
 	}
 
 	#[test]
@@ -72,7 +76,7 @@ mod tests {
 			.world_mut()
 			.spawn(GltfMeshName("ColliderFooBar".to_owned()));
 
-		assert_eq!(Some(&MeshCollider), entity.get::<MeshCollider>());
+		assert_eq!(Some(&_Component), entity.get::<_Component>());
 	}
 
 	#[test]
@@ -80,9 +84,9 @@ mod tests {
 		let mut app = setup("Collider");
 
 		let mut entity = app.world_mut().spawn(GltfMeshName("Collider".to_owned()));
-		entity.remove::<MeshCollider>();
+		entity.remove::<_Component>();
 		entity.insert(GltfMeshName("Collider".to_owned()));
 
-		assert_eq!(None, entity.get::<MeshCollider>());
+		assert_eq!(None, entity.get::<_Component>());
 	}
 }

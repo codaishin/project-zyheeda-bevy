@@ -22,8 +22,10 @@ use crate::{
 		},
 		map_agents::{AgentOfPersistentMap, GridAgentOf},
 		mesh_collider::MeshCollider,
+		nav_mesh::NavMesh,
 		wall_cell::WallCell,
 	},
+	observers::identify_by_prefix::IdentifyByPrefix,
 	resources::agents::{
 		color_lookup::{AgentsColorLookup, AgentsColorLookupImages},
 		prefab::AgentPrefab,
@@ -62,12 +64,12 @@ where
 	TPhysics: ThreadSafe + HandlesRaycast + HandlesPhysicalBodies,
 	TLights: ThreadSafe + HandlesLights,
 {
-	const SPAWNERS: &[(&'static str, AgentType)] = &[
+	const SPAWNERS: &[(&str, AgentType)] = &[
 		("PlayerSpawn", AgentType::Player),
 		("VoidSphereSpawn", AgentType::Enemy(EnemyType::VoidSphere)),
 	];
-
 	const MESH_COLLIDER_PREFIX: &str = "Collider";
+	const NAV_MESH_PREFIX: &str = "NavMesh";
 
 	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TPhysics, _: &TLights) -> Self {
 		Self(PhantomData)
@@ -118,8 +120,9 @@ where
 					.run_if(not(resource_exists::<AgentsColorLookup>)),
 			)
 			.add_systems(OnEnter(GameState::NewGame), DemoMap::spawn)
-			.add_observer(AgentSpawner::identify(Self::SPAWNERS))
-			.add_observer(MeshCollider::identify(Self::MESH_COLLIDER_PREFIX))
+			.add_observer(AgentSpawner::identify_by_prefix_map(Self::SPAWNERS))
+			.add_observer(MeshCollider::identify_by_prefix(Self::MESH_COLLIDER_PREFIX))
+			.add_observer(NavMesh::identify_by_prefix(Self::NAV_MESH_PREFIX))
 			.add_systems(
 				Update,
 				(

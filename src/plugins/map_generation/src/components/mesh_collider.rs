@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use common::traits::handles_physics::physical_bodies::{Blocker, Body, PhysicsType, Shape};
 
-#[derive(Component, Debug, PartialEq)]
+#[derive(Component, Debug, PartialEq, Default)]
 pub(crate) struct MeshCollider;
 
 impl MeshCollider {
