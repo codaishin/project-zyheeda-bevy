@@ -1,5 +1,5 @@
 use crate::{
-	grid_graph::GridGraph,
+	square_grid_graph::SquareGridGraph,
 	traits::to_subdivided::{SubdivisionError, ToSubdivided},
 };
 use bevy::prelude::*;
@@ -11,7 +11,7 @@ use common::{
 #[derive(Component, Debug, PartialEq)]
 #[require(Name = Self::name(), Transform, Visibility)]
 #[component(immutable)]
-pub struct Grid<const SUBDIVISIONS: u8 = 0, TGraph = GridGraph>
+pub struct Grid<const SUBDIVISIONS: u8 = 0, TGraph = SquareGridGraph>
 where
 	TGraph: ToSubdivided,
 {
@@ -64,15 +64,15 @@ impl Default for Grid {
 	}
 }
 
-impl From<&GridGraph> for Grid {
-	fn from(graph: &GridGraph) -> Self {
+impl From<&SquareGridGraph> for Grid {
+	fn from(graph: &SquareGridGraph) -> Self {
 		Grid {
 			graph: graph.clone(),
 		}
 	}
 }
 
-impl<const SUBDIVISIONS: u8> From<&Grid<SUBDIVISIONS>> for GridGraph {
+impl<const SUBDIVISIONS: u8> From<&Grid<SUBDIVISIONS>> for SquareGridGraph {
 	fn from(value: &Grid<SUBDIVISIONS>) -> Self {
 		value.graph.clone()
 	}

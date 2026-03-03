@@ -1,4 +1,4 @@
-pub(crate) mod grid_context;
+pub(crate) mod context;
 pub(crate) mod subdivide;
 
 use crate::{
@@ -20,7 +20,7 @@ use common::{
 		NaivePath,
 	},
 };
-use grid_context::GridContext;
+use context::SquareGridContext;
 use std::{
 	cmp::Ordering,
 	collections::{HashMap, HashSet, hash_map::IntoIter},
@@ -28,13 +28,17 @@ use std::{
 };
 
 #[derive(Debug, PartialEq, Default, Clone)]
-pub struct GridGraph<TValue = GroundPosition, TExtra = Obstacles, TGridContext = GridContext> {
+pub struct SquareGridGraph<
+	TValue = GroundPosition,
+	TExtra = Obstacles,
+	TGridContext = SquareGridContext,
+> {
 	pub(crate) nodes: HashMap<(u32, u32), TValue>,
 	pub(crate) extra: TExtra,
 	pub(crate) context: TGridContext,
 }
 
-impl<TGridContext> GridGraph<GroundPosition, Obstacles, TGridContext>
+impl<TGridContext> SquareGridGraph<GroundPosition, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
@@ -69,14 +73,14 @@ where
 	}
 }
 
-impl<TGridContext> Graph for GridGraph<GroundPosition, Obstacles, TGridContext>
+impl<TGridContext> Graph for SquareGridGraph<GroundPosition, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
 	type TNode = GridGraphNode;
 }
 
-impl<TGridContext> GraphNode for GridGraph<GroundPosition, Obstacles, TGridContext>
+impl<TGridContext> GraphNode for SquareGridGraph<GroundPosition, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
@@ -93,7 +97,7 @@ where
 	}
 }
 
-impl<TGridContext> GraphSuccessors for GridGraph<GroundPosition, Obstacles, TGridContext>
+impl<TGridContext> GraphSuccessors for SquareGridGraph<GroundPosition, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
@@ -115,7 +119,7 @@ where
 	}
 }
 
-impl<TGridContext> GraphLineOfSight for GridGraph<GroundPosition, Obstacles, TGridContext>
+impl<TGridContext> GraphLineOfSight for SquareGridGraph<GroundPosition, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
@@ -130,7 +134,7 @@ where
 	}
 }
 
-impl<TGridContext> GraphGroundPosition for GridGraph<GroundPosition, Obstacles, TGridContext>
+impl<TGridContext> GraphGroundPosition for SquareGridGraph<GroundPosition, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
@@ -147,7 +151,7 @@ where
 	}
 }
 
-impl<TGridContext> GraphObstacle for GridGraph<GroundPosition, Obstacles, TGridContext>
+impl<TGridContext> GraphObstacle for SquareGridGraph<GroundPosition, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
@@ -158,7 +162,7 @@ where
 	}
 }
 
-impl<TGridContext> GraphNaivePath for GridGraph<GroundPosition, Obstacles, TGridContext>
+impl<TGridContext> GraphNaivePath for SquareGridGraph<GroundPosition, Obstacles, TGridContext>
 where
 	TGridContext: KeyMapper,
 {
@@ -237,7 +241,7 @@ where
 	}
 }
 
-impl<TValue, TExtra> IntoIterator for GridGraph<TValue, TExtra> {
+impl<TValue, TExtra> IntoIterator for SquareGridGraph<TValue, TExtra> {
 	type Item = TValue;
 
 	type IntoIter = Iter<TValue>;
@@ -330,7 +334,7 @@ mod tests {
 
 	#[test]
 	fn gat_matching_node() {
-		let graph = GridGraph {
+		let graph = SquareGridGraph {
 			nodes: HashMap::from([((1, 2), GroundPosition(Vec3::new(1., 2., 3.)))]),
 			extra: default(),
 			context: Mock_Mapper::new_mock(|mock| {
@@ -345,7 +349,7 @@ mod tests {
 
 	#[test]
 	fn gat_matching_node_none() {
-		let graph = GridGraph {
+		let graph = SquareGridGraph {
 			nodes: HashMap::from([((1, 2), GroundPosition(Vec3::new(1., 2., 3.)))]),
 			extra: default(),
 			context: Mock_Mapper::new_mock(|mock| {
@@ -360,7 +364,7 @@ mod tests {
 
 	#[test]
 	fn supply_key_getter_with_proper_arguments() {
-		let graph = GridGraph {
+		let graph = SquareGridGraph {
 			nodes: HashMap::from([((1, 2), GroundPosition(Vec3::new(1., 2., 3.)))]),
 			extra: default(),
 			context: Mock_Mapper::new_mock(|mock| {
@@ -376,7 +380,7 @@ mod tests {
 
 	#[test]
 	fn node_is_obstacle() {
-		let graph = GridGraph {
+		let graph = SquareGridGraph {
 			nodes: HashMap::from([((1, 2), GroundPosition::default())]),
 			extra: Obstacles {
 				obstacles: HashSet::from([(1, 2)]),
@@ -394,7 +398,7 @@ mod tests {
 
 	#[test]
 	fn get_neighbors() {
-		let graph = GridGraph {
+		let graph = SquareGridGraph {
 			nodes: HashMap::from([
 				((1, 1), GroundPosition::default()),
 				((1, 2), GroundPosition::default()),
@@ -434,7 +438,7 @@ mod tests {
 
 	#[test]
 	fn naive_path_okay_when_not_straight_and_no_obstacles_in_the_way() {
-		let graph = GridGraph {
+		let graph = SquareGridGraph {
 			nodes: HashMap::from([
 				((1, 1), GroundPosition(Vec3::new(1., 0., 1.))),
 				((1, 2), GroundPosition(Vec3::new(1., 0., 2.))),
@@ -460,7 +464,7 @@ mod tests {
 
 	#[test]
 	fn naive_path_not_computable_when_not_straight_and_obstacles_in_the_way() {
-		let graph = GridGraph {
+		let graph = SquareGridGraph {
 			nodes: HashMap::from([
 				((1, 1), GroundPosition(Vec3::new(1., 0., 1.))),
 				((1, 2), GroundPosition(Vec3::new(1., 0., 2.))),
@@ -486,7 +490,7 @@ mod tests {
 
 	#[test]
 	fn naive_path_not_computable_when_origin_node_cannot_be_retrieved() {
-		let graph = GridGraph {
+		let graph = SquareGridGraph {
 			nodes: HashMap::from([
 				((1, 2), GroundPosition(Vec3::new(1., 0., 2.))),
 				((1, 3), GroundPosition(Vec3::new(1., 0., 3.))),
@@ -511,7 +515,7 @@ mod tests {
 
 	#[test]
 	fn naive_path_partial_when_straight_but_obstructed_because_width_grazed_obstacle() {
-		let graph = GridGraph {
+		let graph = SquareGridGraph {
 			nodes: HashMap::from([
 				((1, 1), GroundPosition(Vec3::new(1., 0., 1.))),
 				((1, 2), GroundPosition(Vec3::new(1., 0., 2.))),
@@ -537,7 +541,7 @@ mod tests {
 
 	#[test]
 	fn naive_path_partial_when_straight_but_obstructed_because_width_grazed_non_existing() {
-		let graph = GridGraph {
+		let graph = SquareGridGraph {
 			nodes: HashMap::from([
 				((1, 1), GroundPosition(Vec3::new(1., 0., 1.))),
 				((1, 2), GroundPosition(Vec3::new(1., 0., 2.))),
@@ -562,7 +566,7 @@ mod tests {
 
 	#[test]
 	fn naive_path_non_computable_when_straight_but_in_between_node_does_not_exist() {
-		let graph = GridGraph {
+		let graph = SquareGridGraph {
 			nodes: HashMap::from([
 				((1, 1), GroundPosition(Vec3::new(1., 0., 1.))),
 				((1, 3), GroundPosition(Vec3::new(1., 0., 3.))),
@@ -584,7 +588,7 @@ mod tests {
 
 	#[test]
 	fn naive_path_partial_when_straight_but_obstructed_because_width_grazed_obstacle_other_side() {
-		let graph = GridGraph {
+		let graph = SquareGridGraph {
 			nodes: HashMap::from([
 				((1, 1), GroundPosition(Vec3::new(1., 0., 1.))),
 				((1, 2), GroundPosition(Vec3::new(1., 0., 2.))),
@@ -610,7 +614,7 @@ mod tests {
 
 	#[test]
 	fn naive_path_partial_when_straight_but_obstructed_because_width_grazed_obstacle_rotated() {
-		let graph = GridGraph {
+		let graph = SquareGridGraph {
 			nodes: HashMap::from([
 				((1, 1), GroundPosition(Vec3::new(1., 0., 1.))),
 				((1, 2), GroundPosition(Vec3::new(1., 0., 2.))),
@@ -637,7 +641,7 @@ mod tests {
 	#[test]
 	fn naive_path_partial_when_straight_but_obstructed_because_width_grazed_obstacle_rotated_other_side()
 	 {
-		let graph = GridGraph {
+		let graph = SquareGridGraph {
 			nodes: HashMap::from([
 				((1, 1), GroundPosition(Vec3::new(1., 0., 1.))),
 				((1, 2), GroundPosition(Vec3::new(1., 0., 2.))),
@@ -663,7 +667,7 @@ mod tests {
 
 	#[test]
 	fn naive_path_partial_when_straight_but_obstructed_because_width_grazed_obstacle_to_negative() {
-		let graph = GridGraph {
+		let graph = SquareGridGraph {
 			nodes: HashMap::from([
 				((1, 1), GroundPosition(Vec3::new(1., 0., 1.))),
 				((1, 2), GroundPosition(Vec3::new(1., 0., 2.))),
@@ -690,7 +694,7 @@ mod tests {
 	#[test]
 	fn naive_path_partial_when_straight_but_obstructed_because_width_grazed_obstacle_rotated_negative()
 	 {
-		let graph = GridGraph {
+		let graph = SquareGridGraph {
 			nodes: HashMap::from([
 				((1, 1), GroundPosition(Vec3::new(1., 0., 1.))),
 				((1, 2), GroundPosition(Vec3::new(1., 0., 2.))),
@@ -716,7 +720,7 @@ mod tests {
 
 	#[test]
 	fn naive_path_ok_when_straight_and_width_grazing_no_obstructed_nodes() {
-		let graph = GridGraph {
+		let graph = SquareGridGraph {
 			nodes: HashMap::from([
 				((1, 1), GroundPosition(Vec3::new(1., 0., 1.))),
 				((1, 2), GroundPosition(Vec3::new(1., 0., 2.))),
@@ -742,7 +746,7 @@ mod tests {
 
 	#[test]
 	fn naive_path_partial_when_straight_and_obstacles_in_the_way() {
-		let graph = GridGraph {
+		let graph = SquareGridGraph {
 			nodes: HashMap::from([
 				((1, 1), GroundPosition(Vec3::new(1., 0., 1.))),
 				((1, 2), GroundPosition(Vec3::new(1., 0., 2.))),
@@ -771,7 +775,7 @@ mod tests {
 
 	#[test]
 	fn naive_path_not_computable_when_straight_and_start_is_obstacle() {
-		let graph = GridGraph {
+		let graph = SquareGridGraph {
 			nodes: HashMap::from([
 				((1, 1), GroundPosition(Vec3::new(1., 0., 1.))),
 				((1, 2), GroundPosition(Vec3::new(1., 0., 2.))),
