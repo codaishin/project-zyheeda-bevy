@@ -108,6 +108,15 @@ impl Blocker {
 	}
 }
 
+impl IntoIterator for Blocker {
+	type Item = Self;
+	type IntoIter = std::iter::Once<Self>;
+
+	fn into_iter(self) -> Self::IntoIter {
+		std::iter::once(self)
+	}
+}
+
 impl IterFinite for Blocker {
 	fn iterator() -> Iter<Self> {
 		Iter(Some(Blocker::Physical))
