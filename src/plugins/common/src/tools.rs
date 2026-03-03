@@ -13,6 +13,7 @@ pub mod path;
 pub mod skill_execution;
 pub mod speed;
 pub mod swap_key;
+pub mod vec_not_nan;
 
 pub(crate) mod get_recursively;
 
