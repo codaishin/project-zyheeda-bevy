@@ -14,7 +14,9 @@ use crate::{
 		map::{Map, bay::BayMap},
 		map_agents::{AgentOfPersistentMap, GridAgentOf},
 		mesh_collider::MeshCollider,
+		nav_mesh::NavMesh,
 	},
+	observers::identify_by_prefix::IdentifyByPrefix,
 	resources::agents::prefab::AgentPrefab,
 	system_params::set_agent_prefab::SetAgentPrefab,
 };
@@ -48,12 +50,12 @@ where
 	TPhysics: ThreadSafe + HandlesRaycast + HandlesPhysicalBodies,
 	TLights: ThreadSafe + HandlesLights,
 {
-	const SPAWNERS: &[(&'static str, AgentType)] = &[
+	const SPAWNERS: &[(&str, AgentType)] = &[
 		("PlayerSpawn", AgentType::Player),
 		("VoidSphereSpawn", AgentType::Enemy(EnemyType::VoidSphere)),
 	];
-
 	const MESH_COLLIDER_PREFIX: &str = "Collider";
+	const NAV_MESH_PREFIX: &str = "NavMesh";
 
 	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TPhysics, _: &TLights) -> Self {
 		Self(PhantomData)
@@ -82,8 +84,9 @@ where
 			.register_required_components::<Map, TSavegame::TSaveEntityMarker>()
 			.register_required_components_with::<MeshCollider, TPhysics::TBody>(MeshCollider::body)
 			.add_systems(OnEnter(GameState::NewGame), BayMap::spawn)
-			.add_observer(AgentSpawner::identify(Self::SPAWNERS))
-			.add_observer(MeshCollider::identify(Self::MESH_COLLIDER_PREFIX))
+			.add_observer(AgentSpawner::identify_by_prefix_map(Self::SPAWNERS))
+			.add_observer(MeshCollider::identify_by_prefix(Self::MESH_COLLIDER_PREFIX))
+			.add_observer(NavMesh::identify_by_prefix(Self::NAV_MESH_PREFIX))
 			.add_systems(
 				Update,
 				(
