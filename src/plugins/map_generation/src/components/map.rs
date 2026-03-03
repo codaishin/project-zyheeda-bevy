@@ -1,6 +1,7 @@
 pub(crate) mod bay;
 pub(crate) mod objects;
 
+use crate::components::map::objects::MapObjects;
 use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
@@ -11,7 +12,7 @@ use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Default)]
-#[require(PersistentEntity)]
+#[require(PersistentEntity, MapObjects)]
 #[savable_component(id = "map", dto = MapDto)]
 pub(crate) struct Map {
 	pub(crate) created_from_save: bool,
