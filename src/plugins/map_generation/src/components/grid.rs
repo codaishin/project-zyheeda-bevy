@@ -64,11 +64,23 @@ impl Default for Grid {
 	}
 }
 
-impl From<&SquareGridGraph> for Grid {
-	fn from(graph: &SquareGridGraph) -> Self {
+impl<TGraph> From<&TGraph> for Grid<0, TGraph>
+where
+	TGraph: Clone + ToSubdivided,
+{
+	fn from(graph: &TGraph) -> Self {
 		Grid {
 			graph: graph.clone(),
 		}
+	}
+}
+
+impl<TGraph> From<TGraph> for Grid<0, TGraph>
+where
+	TGraph: ToSubdivided,
+{
+	fn from(graph: TGraph) -> Self {
+		Grid { graph }
 	}
 }
 

@@ -16,6 +16,7 @@ use crate::{
 		mesh_collider::MeshCollider,
 		nav_mesh::NavMesh,
 	},
+	mesh_grid_graph::MeshGridGraph,
 	observers::identify_by_prefix::IdentifyByPrefix,
 	resources::agents::prefab::AgentPrefab,
 	system_params::set_agent_prefab::SetAgentPrefab,
@@ -93,6 +94,7 @@ where
 				Update,
 				(
 					NavMesh::link_with_map.pipe(OnError::log),
+					NavMesh::spawn_grid::<MeshGridGraph>.pipe(OnError::log),
 					AgentSpawner::link_with_map.pipe(OnError::log),
 					AgentSpawner::spawn_agent,
 				)
