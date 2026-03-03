@@ -1,6 +1,6 @@
-use crate::components::{
-	agent_spawner::{AgentSpawner, SpawnerActive},
-	map::{Map, objects::MapObjectOfPersistent},
+use crate::components::map::{
+	Map,
+	objects::{MapObjectOf, MapObjectOfPersistent},
 };
 use bevy::prelude::*;
 use common::{
@@ -11,11 +11,13 @@ use common::{
 };
 use std::fmt::Display;
 
-impl AgentSpawner {
-	pub(crate) fn link_with_map(
+impl<T> LinkWithMap for T where T: Component {}
+
+pub(crate) trait LinkWithMap: Component + Sized {
+	fn link_with_map(
 		mut commands: ZyheedaCommands,
 		parents: Query<&ChildOf>,
-		maps: Query<(&PersistentEntity, &Map)>,
+		maps: Query<(Entity, &PersistentEntity, &Map)>,
 		spawners: Query<Entity, (With<Self>, Without<MapObjectOfPersistent>)>,
 	) -> Result<(), Vec<MapError>> {
 		let errors = spawners
@@ -24,15 +26,12 @@ impl AgentSpawner {
 				let Some(map) = parents.iter_ancestors(entity).last() else {
 					return Some(MapError::NoParentOf(entity));
 				};
-				let Ok((persistent_map, Map { created_from_save })) = maps.get(map) else {
+				let Ok((map, persistent_map, Map { .. })) = maps.get(map) else {
 					return Some(MapError::NoMapOn(map));
 				};
 
 				commands.try_apply_on(&entity, |mut e| {
-					e.try_insert(MapObjectOfPersistent(*persistent_map));
-					if *created_from_save {
-						e.try_remove::<SpawnerActive>();
-					}
+					e.try_insert((MapObjectOf(map), MapObjectOfPersistent(*persistent_map)));
 				});
 
 				None
@@ -79,20 +78,33 @@ impl ErrorData for MapError {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{
-		agent_spawner::SpawnerActive,
-		map::{Map, objects::MapObjectOfPersistent},
-	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{
-		components::persistent_entity::PersistentEntity,
-		traits::handles_map_generation::AgentType,
-	};
-	use test_case::test_case;
 	use testing::{IsChanged, SingleThreadedApp};
+
+	#[derive(Component)]
+	struct _Component;
 
 	fn setup() -> App {
 		App::new().single_threaded(Update)
+	}
+
+	#[test]
+	fn link_with_map() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let map = app.world_mut().spawn(Map::default()).id();
+		let in_between = app.world_mut().spawn(ChildOf(map)).id();
+		let spawner = app
+			.world_mut()
+			.spawn((ChildOf(in_between), _Component))
+			.id();
+
+		_ = app.world_mut().run_system_once(_Component::link_with_map)?;
+
+		assert_eq!(
+			Some(&MapObjectOf(map)),
+			app.world().entity(spawner).get::<MapObjectOf>(),
+		);
+		Ok(())
 	}
 
 	#[test]
@@ -103,12 +115,10 @@ mod tests {
 		let in_between = app.world_mut().spawn(ChildOf(map)).id();
 		let spawner = app
 			.world_mut()
-			.spawn((ChildOf(in_between), AgentSpawner(AgentType::Player)))
+			.spawn((ChildOf(in_between), _Component))
 			.id();
 
-		_ = app
-			.world_mut()
-			.run_system_once(AgentSpawner::link_with_map)?;
+		_ = app.world_mut().run_system_once(_Component::link_with_map)?;
 
 		assert_eq!(
 			Some(&MapObjectOfPersistent(persistent)),
@@ -117,40 +127,16 @@ mod tests {
 		Ok(())
 	}
 
-	#[test_case(Map {created_from_save: true}, false; "map created from save")]
-	#[test_case(Map {created_from_save: false}, true; "map not created from save")]
-	fn control_active_marker(map: Map, is_active: bool) -> Result<(), RunSystemError> {
-		let mut app = setup();
-		let map = app.world_mut().spawn(map).id();
-		let spawner = app
-			.world_mut()
-			.spawn((ChildOf(map), AgentSpawner(AgentType::Player)))
-			.id();
-
-		_ = app
-			.world_mut()
-			.run_system_once(AgentSpawner::link_with_map)?;
-
-		assert_eq!(
-			is_active,
-			app.world().entity(spawner).contains::<SpawnerActive>(),
-		);
-		Ok(())
-	}
-
 	#[test]
 	fn act_only_once() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let map = app.world_mut().spawn(Map::default()).id();
-		let spawner = app
-			.world_mut()
-			.spawn((ChildOf(map), AgentSpawner(AgentType::Player)))
-			.id();
+		let spawner = app.world_mut().spawn((ChildOf(map), _Component)).id();
 
 		app.add_systems(
 			Update,
 			(
-				AgentSpawner::link_with_map.pipe(|In(_)| {}),
+				_Component::link_with_map.pipe(|In(_)| {}),
 				IsChanged::<MapObjectOfPersistent>::detect,
 			)
 				.chain(),
@@ -170,11 +156,9 @@ mod tests {
 	#[test]
 	fn return_no_parent() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let spawner = app.world_mut().spawn(AgentSpawner(AgentType::Player)).id();
+		let spawner = app.world_mut().spawn(_Component).id();
 
-		let result = app
-			.world_mut()
-			.run_system_once(AgentSpawner::link_with_map)?;
+		let result = app.world_mut().run_system_once(_Component::link_with_map)?;
 
 		assert_eq!(Err(vec![MapError::NoParentOf(spawner)]), result);
 		Ok(())
@@ -184,12 +168,9 @@ mod tests {
 	fn return_map_missing_error() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let map = app.world_mut().spawn_empty().id();
-		app.world_mut()
-			.spawn((ChildOf(map), AgentSpawner(AgentType::Player)));
+		app.world_mut().spawn((ChildOf(map), _Component));
 
-		let result = app
-			.world_mut()
-			.run_system_once(AgentSpawner::link_with_map)?;
+		let result = app.world_mut().run_system_once(_Component::link_with_map)?;
 
 		assert_eq!(Err(vec![MapError::NoMapOn(map)]), result);
 		Ok(())
@@ -199,12 +180,9 @@ mod tests {
 	fn return_ok() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let map = app.world_mut().spawn(Map::default()).id();
-		app.world_mut()
-			.spawn((ChildOf(map), AgentSpawner(AgentType::Player)));
+		app.world_mut().spawn((ChildOf(map), _Component));
 
-		let result = app
-			.world_mut()
-			.run_system_once(AgentSpawner::link_with_map)?;
+		let result = app.world_mut().run_system_once(_Component::link_with_map)?;
 
 		assert_eq!(Ok(()), result);
 		Ok(())

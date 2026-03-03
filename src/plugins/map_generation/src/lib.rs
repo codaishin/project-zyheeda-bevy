@@ -12,7 +12,7 @@ mod traits;
 
 use crate::{
 	components::{
-		agent_spawner::AgentSpawner,
+		agent_spawner::{AgentSpawner, SpawnerActive},
 		map::{
 			Map,
 			agents::AgentsLoaded,
@@ -31,6 +31,7 @@ use crate::{
 		prefab::AgentPrefab,
 	},
 	system_params::set_agent_prefab::SetAgentPrefab,
+	systems::link_with_map::LinkWithMap,
 };
 use bevy::prelude::*;
 use common::{
@@ -120,12 +121,14 @@ where
 					.run_if(not(resource_exists::<AgentsColorLookup>)),
 			)
 			.add_systems(OnEnter(GameState::NewGame), DemoMap::spawn)
-			.add_observer(AgentSpawner::identify_by_prefix_map(Self::SPAWNERS))
-			.add_observer(MeshCollider::identify_by_prefix(Self::MESH_COLLIDER_PREFIX))
 			.add_observer(NavMesh::identify_by_prefix(Self::NAV_MESH_PREFIX))
+			.add_observer(MeshCollider::identify_by_prefix(Self::MESH_COLLIDER_PREFIX))
+			.add_observer(AgentSpawner::identify_by_prefix_map(Self::SPAWNERS))
+			.add_observer(SpawnerActive::remove_when_map_created_from_save)
 			.add_systems(
 				Update,
 				(
+					NavMesh::link_with_map.pipe(OnError::log),
 					AgentSpawner::link_with_map.pipe(OnError::log),
 					AgentSpawner::spawn_agent,
 				)
