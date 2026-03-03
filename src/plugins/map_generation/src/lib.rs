@@ -20,6 +20,7 @@ use crate::{
 			demo_map::DemoMap,
 		},
 		map_agents::{AgentOfPersistentMap, GridAgentOf},
+		mesh_collider::MeshCollider,
 		wall_cell::WallCell,
 	},
 	resources::agents::{
@@ -65,6 +66,8 @@ where
 		("VoidSphereSpawn", AgentType::Enemy(EnemyType::VoidSphere)),
 	];
 
+	const MESH_COLLIDER_PREFIX: &str = "Collider";
+
 	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TPhysics, _: &TLights) -> Self {
 		Self(PhantomData)
 	}
@@ -99,6 +102,7 @@ where
 
 		app.init_resource::<AgentPrefab>()
 			.register_required_components::<Map, TSavegame::TSaveEntityMarker>()
+			.register_required_components_with::<MeshCollider, TPhysics::TBody>(MeshCollider::body)
 			.register_required_components::<WallCell, TPhysics::TNoMouseHover>()
 			.register_map_cell::<TLoading, TSavegame, Corridor>()
 			.add_prefab_observer::<WallCell, TPhysics>()
@@ -114,6 +118,7 @@ where
 			)
 			.add_systems(OnEnter(GameState::NewGame), DemoMap::spawn)
 			.add_observer(AgentSpawner::identify(Self::SPAWNERS))
+			.add_observer(MeshCollider::identify(Self::MESH_COLLIDER_PREFIX))
 			.add_systems(
 				Update,
 				(

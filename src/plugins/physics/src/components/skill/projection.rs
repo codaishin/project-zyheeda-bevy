@@ -1,5 +1,6 @@
 use crate::{
 	components::{
+		async_collider::ColliderType,
 		collider::ColliderShape,
 		effects::Effects,
 		skill::{
@@ -85,9 +86,10 @@ impl GetProjectionPrefab for Skill {
 					transform: Transform::from_scale(SHIELD_PROJECTION_SCALE),
 				},
 				ProjectionCollider {
-					shape: ColliderShape::CustomConvexAsset {
+					shape: ColliderShape::CustomAsset {
 						mesh: ICO_SPHERE_HALF,
 						scale: ColliderScale::Relative(SHIELD_PROJECTION_SCALE),
+						collider_type: ColliderType::Convex,
 					},
 					transform: Transform::default(),
 				},

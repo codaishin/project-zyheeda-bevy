@@ -46,7 +46,7 @@ impl From<Shape> for Body {
 	}
 }
 
-/// Shape definition, usually used to describe physics colliders.
+/// Shape definition. Used to describe physics colliders.
 ///
 /// Coordinates are in line with the bevy coordinate system.
 /// So without rotations they are:
@@ -75,6 +75,8 @@ pub enum Shape {
 		half_y: Units,
 		radius: Units,
 	},
+	/// Use the [`Entity`]'s [`Mesh3d`] for a static collider
+	StaticGltfMesh3d,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
@@ -103,6 +105,15 @@ impl Blocker {
 		TBlockers: FromIterator<Blocker>,
 	{
 		std::iter::empty().collect()
+	}
+}
+
+impl IntoIterator for Blocker {
+	type Item = Self;
+	type IntoIter = std::iter::Once<Self>;
+
+	fn into_iter(self) -> Self::IntoIter {
+		std::iter::once(self)
 	}
 }
 

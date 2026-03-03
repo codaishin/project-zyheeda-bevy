@@ -6,6 +6,7 @@ pub(crate) mod grid;
 pub(crate) mod half_offset_grid;
 pub(crate) mod map;
 pub(crate) mod map_agents;
+pub(crate) mod mesh_collider;
 pub(crate) mod nav_grid;
 pub(crate) mod quadrants;
 pub(crate) mod wall_back;
