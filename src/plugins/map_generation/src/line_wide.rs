@@ -1,4 +1,4 @@
-use crate::grid_graph::GridGraphNode;
+use crate::square_grid_graph::GridGraphNode;
 use std::ops::RangeInclusive;
 
 /// This adds all nodes to the graph, that would

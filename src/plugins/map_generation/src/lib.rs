@@ -1,10 +1,10 @@
 mod cell_grid_size;
 mod components;
 mod errors;
-mod grid_graph;
 mod line_wide;
 mod observers;
 mod resources;
+mod square_grid_graph;
 mod system_params;
 mod systems;
 mod traits;
@@ -46,7 +46,7 @@ use common::{
 	},
 };
 use components::{floor_light::FloorLight, grid::Grid, wall_back::WallBack, wall_light::WallLight};
-use grid_graph::GridGraph;
+use square_grid_graph::SquareGridGraph;
 use std::marker::PhantomData;
 use systems::{apply_extra_components::ApplyExtraComponents, unlit_material::unlit_material};
 use traits::register_map_cell::RegisterMapCell;
@@ -151,7 +151,7 @@ impl<TDependencies> HandlesMapGeneration for MapGenerationPlugin<TDependencies> 
 
 	type TNewMapAgent<'w, 's> = SetAgentPrefab<'w>;
 
-	type TGraph = GridGraph;
+	type TGraph = SquareGridGraph;
 
 	type TMap = Grid<1>;
 	type TMapRef = GridAgentOf;

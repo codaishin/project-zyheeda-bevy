@@ -62,7 +62,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::map::cells::CellGrid,
-		grid_graph::GridGraph,
+		square_grid_graph::SquareGridGraph,
 		traits::map_cells_extra::{CellGridDefinition, MapCellsExtra},
 	};
 	use std::collections::HashMap;
@@ -110,7 +110,7 @@ mod tests {
 			.id();
 
 		app.world_mut().spawn((
-			Grid::from(&GridGraph {
+			Grid::from(&SquareGridGraph {
 				nodes: HashMap::from([
 					((0, 0), GroundPosition(Vec3::new(-1., -0., -1.))),
 					((0, 1), GroundPosition(Vec3::new(-1., -0., 1.))),
@@ -139,7 +139,7 @@ mod tests {
 
 	#[test]
 	fn return_grid_entity() {
-		let graph = GridGraph {
+		let graph = SquareGridGraph {
 			nodes: HashMap::from([
 				((0, 0), GroundPosition(Vec3::new(-1., -0., -1.))),
 				((0, 1), GroundPosition(Vec3::new(-1., -0., 1.))),
@@ -187,7 +187,8 @@ mod tests {
 	fn error_when_no_cell_ref() {
 		let mut app = setup();
 
-		app.world_mut().spawn(Grid::from(&GridGraph::default()));
+		app.world_mut()
+			.spawn(Grid::from(&SquareGridGraph::default()));
 
 		assert_eq!(
 			Some(&_Result(Err(GridError::NoRefToCellDefinition))),
@@ -200,7 +201,7 @@ mod tests {
 		let mut app = setup();
 
 		app.world_mut().spawn((
-			Grid::from(&GridGraph::default()),
+			Grid::from(&SquareGridGraph::default()),
 			CellsRef::<_Cell>::from_grid_definition(fake_entity!(123)),
 		));
 
@@ -229,7 +230,7 @@ mod tests {
 			.id();
 
 		app.world_mut().spawn((
-			Grid::from(&GridGraph {
+			Grid::from(&SquareGridGraph {
 				nodes: HashMap::from([
 					((0, 0), GroundPosition(Vec3::new(-1., -0., -1.))),
 					((0, 1), GroundPosition(Vec3::new(-1., -0., 1.))),

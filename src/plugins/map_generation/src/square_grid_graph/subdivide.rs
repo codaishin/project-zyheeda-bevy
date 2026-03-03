@@ -1,11 +1,11 @@
-use super::{GridGraph, grid_context::GridContext};
+use super::{SquareGridGraph, context::SquareGridContext};
 use crate::traits::{
 	grid_min::GridMin,
 	to_subdivided::{SubdivisionError, ToSubdivided},
 };
 use bevy::utils::default;
 
-impl ToSubdivided for GridGraph {
+impl ToSubdivided for SquareGridGraph {
 	fn to_subdivided(&self, subdivisions: u8) -> Result<Self, SubdivisionError> {
 		match subdivisions {
 			0 => Ok(self.clone()),
@@ -14,11 +14,14 @@ impl ToSubdivided for GridGraph {
 	}
 }
 
-fn subdivide(source: &GridGraph, subdivisions: u8) -> Result<GridGraph, SubdivisionError> {
+fn subdivide(
+	source: &SquareGridGraph,
+	subdivisions: u8,
+) -> Result<SquareGridGraph, SubdivisionError> {
 	let factor = subdivisions + 1;
 	let source_grid = source.context;
-	let mut subdivided: GridGraph = GridGraph {
-		context: GridContext {
+	let mut subdivided: SquareGridGraph = SquareGridGraph {
+		context: SquareGridContext {
 			cell_count_x: source_grid
 				.cell_count_x
 				.multiply_by(factor)
@@ -65,9 +68,9 @@ fn source_key(x: u32, z: u32, factor: u8) -> (u32, u32) {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::grid_graph::{
+	use crate::square_grid_graph::{
 		Obstacles,
-		grid_context::{CellCount, CellDistance, GridContext},
+		context::{CellCount, CellDistance, SquareGridContext},
 	};
 	use bevy::math::Vec3;
 	use common::traits::handles_map_generation::GroundPosition;
@@ -76,7 +79,7 @@ mod tests {
 
 	#[test]
 	fn subdivide_0_returns_same_graph() {
-		let graph = GridGraph {
+		let graph = SquareGridGraph {
 			nodes: HashMap::from([
 				((0, 0), GroundPosition(Vec3::new(-5., 0., -5.))),
 				((0, 1), GroundPosition(Vec3::new(-5., 0., 5.))),
@@ -86,7 +89,7 @@ mod tests {
 			extra: Obstacles {
 				obstacles: HashSet::from([(0, 1), (1, 1)]),
 			},
-			context: GridContext {
+			context: SquareGridContext {
 				cell_count_x: new_valid!(CellCount, 2),
 				cell_count_z: new_valid!(CellCount, 2),
 				cell_distance: new_valid!(CellDistance, 10.),
@@ -100,12 +103,12 @@ mod tests {
 
 	#[test]
 	fn subdivide_1_with_all_empty_nodes() {
-		let graph = GridGraph {
+		let graph = SquareGridGraph {
 			nodes: HashMap::from([]),
 			extra: Obstacles {
 				obstacles: HashSet::from([]),
 			},
-			context: GridContext {
+			context: SquareGridContext {
 				cell_count_x: new_valid!(CellCount, 2),
 				cell_count_z: new_valid!(CellCount, 2),
 				cell_distance: new_valid!(CellDistance, 10.),
@@ -115,12 +118,12 @@ mod tests {
 		let resized = graph.clone().to_subdivided(1);
 
 		assert_eq!(
-			Ok(GridGraph {
+			Ok(SquareGridGraph {
 				nodes: HashMap::from([]),
 				extra: Obstacles {
 					obstacles: HashSet::from([]),
 				},
-				context: GridContext {
+				context: SquareGridContext {
 					cell_count_x: new_valid!(CellCount, 4),
 					cell_count_z: new_valid!(CellCount, 4),
 					cell_distance: new_valid!(CellDistance, 5.),
@@ -132,7 +135,7 @@ mod tests {
 
 	#[test]
 	fn subdivide_1_without_obstacles() {
-		let graph = GridGraph {
+		let graph = SquareGridGraph {
 			nodes: HashMap::from([
 				((0, 0), GroundPosition(Vec3::new(-5., 0., -5.))),
 				((0, 1), GroundPosition(Vec3::new(-5., 0., 5.))),
@@ -142,7 +145,7 @@ mod tests {
 			extra: Obstacles {
 				obstacles: HashSet::from([]),
 			},
-			context: GridContext {
+			context: SquareGridContext {
 				cell_count_x: new_valid!(CellCount, 2),
 				cell_count_z: new_valid!(CellCount, 2),
 				cell_distance: new_valid!(CellDistance, 10.),
@@ -152,7 +155,7 @@ mod tests {
 		let resized = graph.to_subdivided(1);
 
 		assert_eq!(
-			Ok(GridGraph {
+			Ok(SquareGridGraph {
 				nodes: HashMap::from([
 					// old (0, 0)
 					((0, 0), GroundPosition(Vec3::new(-7.5, 0., -7.5))),
@@ -178,7 +181,7 @@ mod tests {
 				extra: Obstacles {
 					obstacles: HashSet::from([]),
 				},
-				context: GridContext {
+				context: SquareGridContext {
 					cell_count_x: new_valid!(CellCount, 4),
 					cell_count_z: new_valid!(CellCount, 4),
 					cell_distance: new_valid!(CellDistance, 5.),
@@ -190,7 +193,7 @@ mod tests {
 
 	#[test]
 	fn subdivide_1_without_obstacles_and_ignoring_empty_nodes() {
-		let graph = GridGraph {
+		let graph = SquareGridGraph {
 			nodes: HashMap::from([
 				((0, 0), GroundPosition(Vec3::new(-5., 0., -5.))),
 				((1, 0), GroundPosition(Vec3::new(5., 0., -5.))),
@@ -198,7 +201,7 @@ mod tests {
 			extra: Obstacles {
 				obstacles: HashSet::from([]),
 			},
-			context: GridContext {
+			context: SquareGridContext {
 				cell_count_x: new_valid!(CellCount, 2),
 				cell_count_z: new_valid!(CellCount, 2),
 				cell_distance: new_valid!(CellDistance, 10.),
@@ -208,7 +211,7 @@ mod tests {
 		let resized = graph.clone().to_subdivided(1);
 
 		assert_eq!(
-			Ok(GridGraph {
+			Ok(SquareGridGraph {
 				nodes: HashMap::from([
 					// old (0, 0)
 					((0, 0), GroundPosition(Vec3::new(-7.5, 0., -7.5))),
@@ -224,7 +227,7 @@ mod tests {
 				extra: Obstacles {
 					obstacles: HashSet::from([]),
 				},
-				context: GridContext {
+				context: SquareGridContext {
 					cell_count_x: new_valid!(CellCount, 4),
 					cell_count_z: new_valid!(CellCount, 4),
 					cell_distance: new_valid!(CellDistance, 5.),
@@ -236,7 +239,7 @@ mod tests {
 
 	#[test]
 	fn subdivide_1() {
-		let graph = GridGraph {
+		let graph = SquareGridGraph {
 			nodes: HashMap::from([
 				((0, 0), GroundPosition(Vec3::new(-5., 0., -5.))),
 				((0, 1), GroundPosition(Vec3::new(-5., 0., 5.))),
@@ -246,7 +249,7 @@ mod tests {
 			extra: Obstacles {
 				obstacles: HashSet::from([(0, 1), (1, 1)]),
 			},
-			context: GridContext {
+			context: SquareGridContext {
 				cell_count_x: new_valid!(CellCount, 2),
 				cell_count_z: new_valid!(CellCount, 2),
 				cell_distance: new_valid!(CellDistance, 10.),
@@ -256,7 +259,7 @@ mod tests {
 		let resized = graph.clone().to_subdivided(1);
 
 		assert_eq!(
-			Ok(GridGraph {
+			Ok(SquareGridGraph {
 				nodes: HashMap::from([
 					// old (0, 0)
 					((0, 0), GroundPosition(Vec3::new(-7.5, 0., -7.5))),
@@ -293,7 +296,7 @@ mod tests {
 						(3, 3),
 					]),
 				},
-				context: GridContext {
+				context: SquareGridContext {
 					cell_count_x: new_valid!(CellCount, 4),
 					cell_count_z: new_valid!(CellCount, 4),
 					cell_distance: new_valid!(CellDistance, 5.),

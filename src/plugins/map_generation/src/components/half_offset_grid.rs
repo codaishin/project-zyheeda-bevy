@@ -1,8 +1,8 @@
 use super::grid::SpawnCellError;
 use crate::{
 	components::map::cells::{Direction, half_offset_cell::HalfOffsetCell},
-	grid_graph::GridGraph,
 	observers::compute_half_offset_grid_cells::Cells,
+	square_grid_graph::SquareGridGraph,
 	traits::{
 		insert_cell_quadrant_components::{InsertCellQuadrantComponents, Quadrant},
 		is_walkable::IsWalkable,
@@ -38,8 +38,8 @@ impl HalfOffsetGrid {
 	}
 }
 
-impl From<&GridGraph> for HalfOffsetGrid {
-	fn from(_: &GridGraph) -> Self {
+impl From<&SquareGridGraph> for HalfOffsetGrid {
+	fn from(_: &SquareGridGraph) -> Self {
 		Self
 	}
 }

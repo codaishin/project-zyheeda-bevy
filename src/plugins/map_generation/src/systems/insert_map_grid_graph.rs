@@ -1,6 +1,6 @@
 use crate::{
 	components::map::{cells::MapCells, grid_graph::MapGridGraph},
-	grid_graph::{GridGraph, Obstacles, grid_context::GridContext},
+	square_grid_graph::{Obstacles, SquareGridGraph, context::SquareGridContext},
 	traits::{
 		GridCellDistanceDefinition,
 		grid_min::GridMin,
@@ -24,12 +24,12 @@ where
 		mut commands: ZyheedaCommands,
 	) {
 		for (entity, map) in &maps {
-			let context = GridContext {
+			let context = SquareGridContext {
 				cell_count_x: map.definition.size.x,
 				cell_count_z: map.definition.size.z,
 				cell_distance: TCell::CELL_DISTANCE,
 			};
-			let mut graph = GridGraph {
+			let mut graph = SquareGridGraph {
 				nodes: HashMap::default(),
 				extra: Obstacles::default(),
 				context,
@@ -76,11 +76,7 @@ mod tests {
 	use crate::{
 		cell_grid_size::CellGridSize,
 		components::map::cells::CellGrid,
-		grid_graph::{
-			GridGraph,
-			Obstacles,
-			grid_context::{CellCount, CellDistance, GridContext},
-		},
+		square_grid_graph::context::{CellCount, CellDistance},
 		traits::{
 			GridCellDistanceDefinition,
 			is_walkable::IsWalkable,
@@ -154,7 +150,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&MapGridGraph::from(GridGraph {
+			Some(&MapGridGraph::from(SquareGridGraph {
 				nodes: HashMap::from([
 					((0, 0), GroundPosition(Vec3::new(-2., 0., -2.))),
 					((0, 1), GroundPosition(Vec3::new(-2., 0., 2.))),
@@ -162,7 +158,7 @@ mod tests {
 					((1, 1), GroundPosition(Vec3::new(2., 0., 2.))),
 				]),
 				extra: Obstacles::default(),
-				context: GridContext {
+				context: SquareGridContext {
 					cell_count_x: new_valid!(CellCount, 2),
 					cell_count_z: new_valid!(CellCount, 2),
 					cell_distance: _Cell::CELL_DISTANCE
@@ -202,7 +198,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&MapGridGraph::from(GridGraph {
+			Some(&MapGridGraph::from(SquareGridGraph {
 				nodes: HashMap::from([
 					((0, 0), GroundPosition(Vec3::new(-4., 0., -4.))),
 					((0, 1), GroundPosition(Vec3::new(-4., 0., 0.))),
@@ -215,7 +211,7 @@ mod tests {
 					((2, 2), GroundPosition(Vec3::new(4., 0., 4.))),
 				]),
 				extra: Obstacles::default(),
-				context: GridContext {
+				context: SquareGridContext {
 					cell_count_x: new_valid!(CellCount, 3),
 					cell_count_z: new_valid!(CellCount, 3),
 					cell_distance: _Cell::CELL_DISTANCE
@@ -250,7 +246,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&MapGridGraph::from(GridGraph {
+			Some(&MapGridGraph::from(SquareGridGraph {
 				nodes: HashMap::from([
 					((0, 0), GroundPosition(Vec3::new(-2., 0., -2.))),
 					((0, 1), GroundPosition(Vec3::new(-2., 0., 2.))),
@@ -260,7 +256,7 @@ mod tests {
 				extra: Obstacles {
 					obstacles: HashSet::from([(0, 1), (1, 0), (1, 1)])
 				},
-				context: GridContext {
+				context: SquareGridContext {
 					cell_count_x: new_valid!(CellCount, 2),
 					cell_count_z: new_valid!(CellCount, 2),
 					cell_distance: _Cell::CELL_DISTANCE
@@ -297,7 +293,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&MapGridGraph::from(GridGraph {
+			Some(&MapGridGraph::from(SquareGridGraph {
 				nodes: HashMap::from([
 					((0, 0), GroundPosition(Vec3::new(-4., 0., -4.))),
 					((0, 1), GroundPosition(Vec3::new(-4., 0., 0.))),
@@ -312,7 +308,7 @@ mod tests {
 				extra: Obstacles {
 					obstacles: HashSet::from([(0, 1), (2, 0), (2, 1)])
 				},
-				context: GridContext {
+				context: SquareGridContext {
 					cell_count_x: new_valid!(CellCount, 3),
 					cell_count_z: new_valid!(CellCount, 3),
 					cell_distance: _Cell::CELL_DISTANCE

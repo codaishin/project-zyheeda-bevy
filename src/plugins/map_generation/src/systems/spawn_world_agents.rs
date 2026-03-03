@@ -6,8 +6,8 @@ use crate::{
 		},
 		map_agents::AgentOfPersistentMap,
 	},
-	grid_graph::grid_context::GridContext,
 	resources::agents::prefab::AgentPrefab,
+	square_grid_graph::context::SquareGridContext,
 	traits::{GridCellDistanceDefinition, grid_min::GridMin},
 };
 use bevy::prelude::*;
@@ -33,7 +33,7 @@ where
 		let AgentPrefab(apply_prefab) = *agent_prefab;
 
 		for (entity, persistent_entity, MapCells { definition, .. }) in &cells {
-			let context = GridContext {
+			let context = SquareGridContext {
 				cell_count_x: definition.size.x,
 				cell_count_z: definition.size.z,
 				cell_distance: TCell::CELL_DISTANCE,
@@ -72,8 +72,8 @@ mod tests {
 	use super::*;
 	use crate::{
 		cell_grid_size::CellGridSize,
-		grid_graph::grid_context::{CellCount, CellDistance},
 		resources::agents::prefab::AgentPrefab,
+		square_grid_graph::context::{CellCount, CellDistance},
 		traits::map_cells_extra::CellGridDefinition,
 	};
 	use common::traits::{handles_enemies::EnemyType, handles_map_generation::AgentType};

@@ -1,7 +1,7 @@
 use crate::{
 	components::map::cells::parsed_color::ParsedColor,
-	grid_graph::grid_context::CellDistance,
 	resources::agents::color_lookup::AgentsColorLookup,
+	square_grid_graph::context::CellDistance,
 	traits::{
 		GridCellDistanceDefinition,
 		map_cells_extra::MapCellsExtra,

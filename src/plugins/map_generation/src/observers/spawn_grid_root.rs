@@ -1,6 +1,6 @@
 use crate::{
 	components::{cells_ref::CellsRef, map::grid_graph::MapGridGraph, nav_grid::NavGrid},
-	grid_graph::GridGraph,
+	square_grid_graph::SquareGridGraph,
 };
 use bevy::prelude::*;
 use common::{
@@ -18,7 +18,7 @@ where
 		grids: Query<&TGrid>,
 		mut commands: ZyheedaCommands,
 	) where
-		for<'a> TGrid: Component + From<&'a GridGraph>,
+		for<'a> TGrid: Component + From<&'a SquareGridGraph>,
 	{
 		let target = on_insert.entity;
 		let Ok((map, children)) = maps.get(target) else {
@@ -54,11 +54,12 @@ where
 
 #[cfg(test)]
 mod tests {
-	use super::*;
-	use crate::grid_graph::{
+	use crate::square_grid_graph::{
 		Obstacles,
-		grid_context::{CellCount, CellDistance, GridContext},
+		context::{CellCount, CellDistance, SquareGridContext},
 	};
+
+	use super::*;
 	use common::traits::handles_map_generation::GroundPosition;
 	use macros::new_valid;
 	use std::collections::HashMap;
@@ -68,10 +69,10 @@ mod tests {
 	struct _Cell;
 
 	#[derive(Component, Debug, PartialEq)]
-	struct _Grid(GridGraph);
+	struct _Grid(SquareGridGraph);
 
-	impl From<&GridGraph> for _Grid {
-		fn from(graph: &GridGraph) -> Self {
+	impl From<&SquareGridGraph> for _Grid {
+		fn from(graph: &SquareGridGraph) -> Self {
 			Self(graph.clone())
 		}
 	}
@@ -86,10 +87,10 @@ mod tests {
 
 	#[test]
 	fn spawn_grid() {
-		let graph = GridGraph {
+		let graph = SquareGridGraph {
 			nodes: HashMap::from([((0, 0), GroundPosition::ZERO)]),
 			extra: Obstacles::default(),
-			context: GridContext {
+			context: SquareGridContext {
 				cell_count_x: new_valid!(CellCount, 1),
 				cell_count_z: new_valid!(CellCount, 1),
 				cell_distance: new_valid!(CellDistance, 2.),
@@ -108,10 +109,10 @@ mod tests {
 
 	#[test]
 	fn spawn_grid_cell_type() {
-		let graph = GridGraph {
+		let graph = SquareGridGraph {
 			nodes: HashMap::from([((0, 0), GroundPosition::ZERO)]),
 			extra: Obstacles::default(),
-			context: GridContext {
+			context: SquareGridContext {
 				cell_count_x: new_valid!(CellCount, 1),
 				cell_count_z: new_valid!(CellCount, 1),
 				cell_distance: new_valid!(CellDistance, 2.),
@@ -136,19 +137,19 @@ mod tests {
 		#[derive(Component, Debug, PartialEq)]
 		struct _Child;
 
-		let graph_a = GridGraph {
+		let graph_a = SquareGridGraph {
 			nodes: HashMap::from([((0, 0), GroundPosition::ZERO)]),
 			extra: Obstacles::default(),
-			context: GridContext {
+			context: SquareGridContext {
 				cell_count_x: new_valid!(CellCount, 1),
 				cell_count_z: new_valid!(CellCount, 1),
 				cell_distance: new_valid!(CellDistance, 2.),
 			},
 		};
-		let graph_b = GridGraph {
+		let graph_b = SquareGridGraph {
 			nodes: HashMap::from([((0, 0), GroundPosition::ZERO)]),
 			extra: Obstacles::default(),
-			context: GridContext {
+			context: SquareGridContext {
 				cell_count_x: new_valid!(CellCount, 1),
 				cell_count_z: new_valid!(CellCount, 1),
 				cell_distance: new_valid!(CellDistance, 10.),
@@ -170,10 +171,10 @@ mod tests {
 
 	#[test]
 	fn spawn_map_child() {
-		let graph = GridGraph {
+		let graph = SquareGridGraph {
 			nodes: HashMap::from([((0, 0), GroundPosition::ZERO)]),
 			extra: Obstacles::default(),
-			context: GridContext {
+			context: SquareGridContext {
 				cell_count_x: new_valid!(CellCount, 1),
 				cell_count_z: new_valid!(CellCount, 1),
 				cell_distance: new_valid!(CellDistance, 2.),

@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use common::errors::{ErrorData, Level};
 
-use crate::grid_graph::grid_context::{DividedToZero, MultipliedTooHigh};
+use crate::square_grid_graph::context::{DividedToZero, MultipliedTooHigh};
 
 pub trait ToSubdivided: Sized {
 	fn to_subdivided(&self, subdivisions: u8) -> Result<Self, SubdivisionError>;
