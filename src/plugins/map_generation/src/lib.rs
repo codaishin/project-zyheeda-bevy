@@ -2,6 +2,7 @@ mod cell_grid_size;
 mod components;
 mod errors;
 mod line_wide;
+mod mesh_grid_graph;
 mod observers;
 mod resources;
 mod square_grid_graph;
