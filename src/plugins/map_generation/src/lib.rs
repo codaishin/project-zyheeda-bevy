@@ -25,6 +25,7 @@ use crate::{
 		nav_mesh::NavMesh,
 		wall_cell::WallCell,
 	},
+	mesh_grid_graph::MeshGridGraph,
 	observers::identify_by_prefix::IdentifyByPrefix,
 	resources::agents::{
 		color_lookup::{AgentsColorLookup, AgentsColorLookupImages},
@@ -129,6 +130,7 @@ where
 				Update,
 				(
 					NavMesh::link_with_map.pipe(OnError::log),
+					NavMesh::spawn_grid::<MeshGridGraph>.pipe(OnError::log),
 					AgentSpawner::link_with_map.pipe(OnError::log),
 					AgentSpawner::spawn_agent,
 				)

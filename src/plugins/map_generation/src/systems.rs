@@ -9,5 +9,6 @@ pub(crate) mod link_with_map;
 pub(crate) mod map_assets_loaded;
 pub(crate) mod map_color_lookup;
 pub(crate) mod map_loaded;
+pub(crate) mod spawn_grid;
 pub(crate) mod spawn_world_agents;
 pub(crate) mod unlit_material;
