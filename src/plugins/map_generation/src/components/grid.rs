@@ -1,4 +1,5 @@
 use crate::{
+	mesh_grid_graph::MeshGridGraph,
 	square_grid_graph::SquareGridGraph,
 	traits::to_subdivided::{SubdivisionError, ToSubdivided},
 };
@@ -86,6 +87,12 @@ where
 
 impl<const SUBDIVISIONS: u8> From<&Grid<SUBDIVISIONS>> for SquareGridGraph {
 	fn from(value: &Grid<SUBDIVISIONS>) -> Self {
+		value.graph.clone()
+	}
+}
+
+impl From<&Grid<0, MeshGridGraph>> for MeshGridGraph {
+	fn from(value: &Grid<0, MeshGridGraph>) -> Self {
 		value.graph.clone()
 	}
 }
