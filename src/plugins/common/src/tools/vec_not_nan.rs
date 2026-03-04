@@ -1,8 +1,34 @@
 use bevy::prelude::*;
 use std::{hash::Hash, ops::Deref};
 
+#[macro_export]
+macro_rules! vec3_not_nan {
+	($x:literal, $y:literal, $z:literal $(,)?) => {{
+		const VEC: Vec3NotNan = match Vec3NotNan::try_from_xyz($x, $y, $z) {
+			Ok(vec) => vec,
+			Err(_) => panic!("Vector is `NaN`"),
+		};
+
+		VEC
+	}};
+}
+
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Vec3NotNan(Vec3);
+
+impl Vec3NotNan {
+	pub const ZERO: Self = vec3_not_nan!(0., 0., 0.);
+
+	pub const fn try_from_xyz(x: f32, y: f32, z: f32) -> Result<Self, IsNaN> {
+		let vec = Vec3 { x, y, z };
+
+		if x.is_nan() || y.is_nan() || z.is_nan() {
+			return Err(IsNaN(vec));
+		}
+
+		Ok(Self(vec))
+	}
+}
 
 impl Eq for Vec3NotNan {}
 
@@ -22,12 +48,8 @@ impl Hash for Vec3NotNan {
 impl TryFrom<Vec3> for Vec3NotNan {
 	type Error = IsNaN;
 
-	fn try_from(vec: Vec3) -> Result<Self, Self::Error> {
-		if vec.is_nan() {
-			return Err(IsNaN(vec));
-		}
-
-		Ok(Self(vec))
+	fn try_from(Vec3 { x, y, z }: Vec3) -> Result<Self, Self::Error> {
+		Self::try_from_xyz(x, y, z)
 	}
 }
 
