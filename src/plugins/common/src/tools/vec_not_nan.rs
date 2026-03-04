@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use std::{hash::Hash, ops::Deref};
+use std::{cmp::Ordering, hash::Hash, ops::Deref};
 
 #[macro_export]
 macro_rules! vec3_not_nan {
@@ -42,6 +42,22 @@ impl Hash for Vec3NotNan {
 
 			bits.hash(state);
 		}
+	}
+}
+
+impl Ord for Vec3NotNan {
+	fn cmp(&self, other: &Self) -> Ordering {
+		self.0
+			.x
+			.total_cmp(&other.0.x)
+			.then(self.0.y.total_cmp(&other.0.y))
+			.then(self.0.z.total_cmp(&other.0.z))
+	}
+}
+
+impl PartialOrd for Vec3NotNan {
+	fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+		Some(self.cmp(other))
 	}
 }
 
