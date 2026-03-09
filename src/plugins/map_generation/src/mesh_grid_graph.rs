@@ -1,5 +1,5 @@
-use common::tools::vec_not_nan::Vec3NotNan;
+use common::tools::vec_not_nan::VecNotNan;
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct MeshGridGraph(HashMap<Vec3NotNan, HashSet<Vec3NotNan>>);
+pub struct MeshGridGraph(HashMap<VecNotNan<3>, HashSet<VecNotNan<3>>>);
