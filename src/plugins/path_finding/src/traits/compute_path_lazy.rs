@@ -1,8 +1,11 @@
-use common::traits::handles_map_generation::{
-	GraphGroundPosition,
-	GraphLineOfSight,
-	GraphObstacle,
-	GraphSuccessors,
+use common::{
+	tools::Units,
+	traits::handles_map_generation::{
+		GraphGroundPosition,
+		GraphLineOfSight,
+		GraphObstacle,
+		GraphSuccessors,
+	},
 };
 use std::hash::Hash;
 
@@ -19,5 +22,6 @@ where
 		graph: &TGraph,
 		start: TGraph::TSNode,
 		end: TGraph::TSNode,
+		required_clearance: Units,
 	) -> impl Iterator<Item = TGraph::TSNode>;
 }
