@@ -121,7 +121,7 @@ where
 {
 	type TLNode = GridGraphNode;
 
-	fn line_of_sight(&self, a: &Self::TLNode, b: &Self::TLNode) -> bool {
+	fn line_of_sight(&self, a: &Self::TLNode, b: &Self::TLNode, _: Units) -> bool {
 		let Ok(mut line) = LineWide::new(*a, *b) else {
 			return false;
 		};
@@ -153,7 +153,7 @@ where
 {
 	type TONode = GridGraphNode;
 
-	fn is_obstacle(&self, GridGraphNode { key }: &Self::TONode) -> bool {
+	fn is_obstacle(&self, GridGraphNode { key }: &Self::TONode, _: Units) -> bool {
 		self.extra.obstacles.contains(key)
 	}
 }
@@ -179,23 +179,24 @@ where
 	///     the provided vector
 	///   - in practice usage of the partial path should be sufficient to avoid agent collisions
 	///     when the used origin's node and target node are neighbors in a valid path
-	fn naive_path(&self, origin: Vec3, to: &Self::TNNode, half_width: Units) -> NaivePath {
+	fn naive_path(&self, origin: Vec3, to: &Self::TNNode, required_clearance: Units) -> NaivePath {
 		let Some(origin_node) = self.node(origin) else {
 			return NaivePath::CannotCompute;
 		};
 
-		if self.is_obstacle(&origin_node) {
+		if self.is_obstacle(&origin_node, required_clearance) {
 			return NaivePath::CannotCompute;
 		}
 
 		if !Self::is_straight(to, origin_node) {
-			return match self.line_of_sight(&origin_node, to) {
+			return match self.line_of_sight(&origin_node, to, required_clearance) {
 				true => NaivePath::Ok,
 				false => NaivePath::CannotCompute,
 			};
 		}
 
-		let path_border_offset = self.path_border_offset(origin_node, origin, to, half_width);
+		let path_border_offset =
+			self.path_border_offset(origin_node, origin, to, required_clearance);
 		let key_step = Self::path_step(origin_node, to);
 
 		let mut furthest = origin_node;
@@ -212,7 +213,7 @@ where
 			};
 			next.key.1 = key;
 
-			if self.is_obstacle(&next) {
+			if self.is_obstacle(&next, required_clearance) {
 				return NaivePath::PartialUntil(self.ground_position(&furthest));
 			}
 
@@ -226,7 +227,7 @@ where
 				return NaivePath::PartialUntil(self.ground_position(&furthest));
 			};
 
-			if self.is_obstacle(&grazing) {
+			if self.is_obstacle(&grazing, required_clearance) {
 				return NaivePath::PartialUntil(self.ground_position(&furthest));
 			}
 
@@ -387,7 +388,7 @@ mod tests {
 		};
 
 		let node = graph.node(Vec3::default()).expect("NO NODE RETURNED");
-		let is_obstacle = graph.is_obstacle(&node);
+		let is_obstacle = graph.is_obstacle(&node, Units::default());
 
 		assert!(is_obstacle);
 	}

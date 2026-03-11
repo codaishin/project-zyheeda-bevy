@@ -2,11 +2,14 @@ use crate::{
 	tools::{closed_list::ClosedList, g_scores::GScores, open_list::OpenList},
 	traits::compute_path_lazy::ComputePathLazy,
 };
-use common::traits::handles_map_generation::{
-	GraphGroundPosition,
-	GraphLineOfSight,
-	GraphObstacle,
-	GraphSuccessors,
+use common::{
+	tools::Units,
+	traits::handles_map_generation::{
+		GraphGroundPosition,
+		GraphLineOfSight,
+		GraphObstacle,
+		GraphSuccessors,
+	},
 };
 use std::hash::Hash;
 
@@ -37,12 +40,13 @@ impl ThetaStar {
 		g_scores: &GScores<TGraph::TLNode>,
 		current: &TGraph::TLNode,
 		neighbor: &TGraph::TLNode,
+		required_clearance: Units,
 	) -> Option<(TGraph::TLNode, f32)>
 	where
 		TGraph: GraphLineOfSight + GraphGroundPosition<TTNode = TGraph::TLNode>,
 		TGraph::TLNode: Eq + Hash + Copy,
 	{
-		let los = |a, b| graph.line_of_sight(a, b);
+		let los = |a, b| graph.line_of_sight(a, b, required_clearance);
 
 		match closed.parent(current) {
 			Some(parent) if los(parent, neighbor) => self.relax(graph, g_scores, parent, neighbor),
@@ -93,6 +97,7 @@ where
 		graph: &TGraph,
 		start: TGraph::TSNode,
 		end: TGraph::TSNode,
+		required_clearance: Units,
 	) -> impl Iterator<Item = TGraph::TSNode> {
 		let mut open = OpenList::new(end, start, |a, b| self.distance(graph, a, b));
 		let mut closed = ClosedList::new(end);
@@ -104,11 +109,18 @@ where
 			}
 
 			for neighbor in graph.successors(&current) {
-				if graph.is_obstacle(&neighbor) {
+				if graph.is_obstacle(&neighbor, required_clearance) {
 					continue;
 				}
 
-				let current = self.vertex(graph, &closed, &g_scores, &current, &neighbor);
+				let current = self.vertex(
+					graph,
+					&closed,
+					&g_scores,
+					&current,
+					&neighbor,
+					required_clearance,
+				);
 
 				let Some((current, g)) = current else {
 					continue;

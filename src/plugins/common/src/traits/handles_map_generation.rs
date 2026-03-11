@@ -56,13 +56,13 @@ pub trait GraphSuccessors {
 pub trait GraphLineOfSight {
 	type TLNode;
 
-	fn line_of_sight(&self, a: &Self::TLNode, b: &Self::TLNode) -> bool;
+	fn line_of_sight(&self, a: &Self::TLNode, b: &Self::TLNode, width: Units) -> bool;
 }
 
 pub trait GraphObstacle {
 	type TONode;
 
-	fn is_obstacle(&self, node: &Self::TONode) -> bool;
+	fn is_obstacle(&self, node: &Self::TONode, required_clearance: Units) -> bool;
 }
 
 pub trait GraphGroundPosition {
@@ -79,7 +79,12 @@ pub trait GraphNaivePath {
 	///
 	/// Useful when trying to replace path endpoint node translations with real world path start and
 	/// end coordinates.
-	fn naive_path(&self, translation: Vec3, to: &Self::TNNode, half_width: Units) -> NaivePath;
+	fn naive_path(
+		&self,
+		translation: Vec3,
+		to: &Self::TNNode,
+		required_clearance: Units,
+	) -> NaivePath;
 }
 
 #[derive(Debug, PartialEq, Default, Clone, Copy, Serialize, Deserialize)]

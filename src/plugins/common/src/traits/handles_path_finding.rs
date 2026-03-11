@@ -17,5 +17,10 @@ pub trait ComputePath {
 	where
 		Self: 'a;
 
-	fn compute_path(&self, start: Vec3, end: Vec3, agent_radius: Units) -> Option<Self::TIter<'_>>;
+	fn compute_path(
+		&self,
+		start: Vec3,
+		end: Vec3,
+		required_clearance: Units,
+	) -> Option<Self::TIter<'_>>;
 }

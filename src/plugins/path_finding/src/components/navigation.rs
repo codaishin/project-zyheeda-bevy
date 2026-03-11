@@ -61,7 +61,7 @@ where
 
 		let path = self
 			.method
-			.compute_path(&self.graph, start_node, end_node)
+			.compute_path(&self.graph, start_node, end_node, agent_radius)
 			.collect();
 
 		Some(Iter::Compute {
@@ -231,6 +231,7 @@ mod tests {
 				graph: & _Graph,
 				start: _Node,
 				end: _Node,
+				required_clearance: Units,
 			) -> impl Iterator<Item = _Node>;
 		}
 	}
@@ -243,6 +244,7 @@ mod tests {
 				graph: & Mock_Graph,
 				start: _Node,
 				end: _Node,
+				required_clearance: Units,
 			) -> impl Iterator<Item = _Node>;
 		}
 	}
@@ -284,14 +286,14 @@ mod tests {
 
 	impl GraphLineOfSight for _Graph {
 		type TLNode = _Node;
-		fn line_of_sight(&self, _: &_Node, _: &_Node) -> bool {
+		fn line_of_sight(&self, _: &_Node, _: &_Node, _: Units) -> bool {
 			false
 		}
 	}
 
 	impl GraphObstacle for _Graph {
 		type TONode = _Node;
-		fn is_obstacle(&self, _: &_Node) -> bool {
+		fn is_obstacle(&self, _: &_Node, _: Units) -> bool {
 			false
 		}
 	}
@@ -320,11 +322,11 @@ mod tests {
 		}
 		impl GraphLineOfSight for _Graph {
 			type TLNode = _Node;
-			fn line_of_sight(&self, a: &_Node, b: &_Node) -> bool;
+			fn line_of_sight(&self, a: &_Node, b: &_Node, width: Units) -> bool;
 		}
 		impl GraphObstacle for _Graph {
 			type TONode = _Node;
-			fn is_obstacle(&self, node: &_Node) -> bool;
+			fn is_obstacle(&self, node: &_Node, required_clearance: Units) -> bool;
 		}
 		impl GraphNaivePath for _Graph {
 			type TNNode = _Node;
@@ -344,8 +346,13 @@ mod tests {
 			method: Mock_Method::new_mock(|mock| {
 				mock.expect_compute_path()
 					.times(1)
-					.with(eq(_Graph), eq(_Node(1, 1)), eq(_Node(2, 2)))
-					.returning(|_, _, _| Box::new([].into_iter()));
+					.with(
+						eq(_Graph),
+						eq(_Node(1, 1)),
+						eq(_Node(2, 2)),
+						eq(Units::from(0.1)),
+					)
+					.returning(|_, _, _, _| Box::new([].into_iter()));
 			}),
 			graph: _Graph,
 		};
@@ -359,7 +366,7 @@ mod tests {
 		let grid = Navigation {
 			method: Mock_Method::new_mock(|mock| {
 				mock.expect_compute_path()
-					.returning(move |_, _, _| Box::new(path.into_iter()));
+					.returning(move |_, _, _, _| Box::new(path.into_iter()));
 			}),
 			graph: _Graph,
 		};
@@ -384,7 +391,7 @@ mod tests {
 			method: Mock_Method::new_mock(|mock| {
 				mock.expect_compute_path()
 					.never()
-					.returning(|_, _, _| Box::new([].into_iter()));
+					.returning(|_, _, _, _| Box::new([].into_iter()));
 			}),
 			graph: _Graph,
 		};
@@ -407,7 +414,7 @@ mod tests {
 	fn replace_start_and_end_with_called_start_and_end() {
 		let grid = Navigation {
 			method: Mock_Method2::new_mock(|mock| {
-				mock.expect_compute_path().returning(|_, _, _| {
+				mock.expect_compute_path().returning(|_, _, _, _| {
 					Box::new([_Node(1, 1), _Node(10, 10), _Node(4, 4), _Node(2, 2)].into_iter())
 				});
 			}),
@@ -445,7 +452,7 @@ mod tests {
 	fn do_not_replace_start_with_called_start_if_path_omitted_start() {
 		let grid = Navigation {
 			method: Mock_Method2::new_mock(|mock| {
-				mock.expect_compute_path().returning(|_, _, _| {
+				mock.expect_compute_path().returning(|_, _, _, _| {
 					Box::new([_Node(10, 10), _Node(4, 4), _Node(2, 2)].into_iter())
 				});
 			}),
@@ -482,7 +489,7 @@ mod tests {
 	fn do_not_replace_end_with_called_end_if_path_omitted_end() {
 		let grid = Navigation {
 			method: Mock_Method2::new_mock(|mock| {
-				mock.expect_compute_path().returning(|_, _, _| {
+				mock.expect_compute_path().returning(|_, _, _, _| {
 					Box::new([_Node(1, 1), _Node(10, 10), _Node(4, 4)].into_iter())
 				});
 			}),
@@ -519,7 +526,7 @@ mod tests {
 	fn replace_start_and_end_with_called_start_and_end_with_different_grid_mapping() {
 		let grid = Navigation {
 			method: Mock_Method2::new_mock(|mock| {
-				mock.expect_compute_path().returning(|_, _, _| {
+				mock.expect_compute_path().returning(|_, _, _, _| {
 					Box::new([_Node(1, 1), _Node(10, 10), _Node(4, 4), _Node(2, 2)].into_iter())
 				});
 			}),
@@ -557,7 +564,7 @@ mod tests {
 	fn replace_start_and_end_with_naive_path_corrected_start_and_end() {
 		let grid = Navigation {
 			method: Mock_Method2::new_mock(|mock| {
-				mock.expect_compute_path().returning(|_, _, _| {
+				mock.expect_compute_path().returning(|_, _, _, _| {
 					Box::new([_Node(1, 1), _Node(10, 10), _Node(4, 4), _Node(2, 2)].into_iter())
 				});
 			}),
@@ -618,7 +625,7 @@ mod tests {
 	fn do_not_replace_start_and_end_when_naive_path_cannot_be_computed() {
 		let grid = Navigation {
 			method: Mock_Method2::new_mock(|mock| {
-				mock.expect_compute_path().returning(|_, _, _| {
+				mock.expect_compute_path().returning(|_, _, _, _| {
 					Box::new([_Node(1, 1), _Node(10, 10), _Node(4, 4), _Node(2, 2)].into_iter())
 				});
 			}),
@@ -658,7 +665,7 @@ mod tests {
 		let grid = Navigation {
 			method: Mock_Method2::new_mock(|mock| {
 				mock.expect_compute_path()
-					.returning(|_, _, _| Box::new([_Node(1, 1)].into_iter()));
+					.returning(|_, _, _, _| Box::new([_Node(1, 1)].into_iter()));
 			}),
 			graph: Mock_Graph::new_mock(|mock| {
 				mock.expect_node()
@@ -690,7 +697,7 @@ mod tests {
 		let grid = Navigation {
 			method: Mock_Method2::new_mock(|mock| {
 				mock.expect_compute_path()
-					.returning(|_, _, _| Box::new([_Node(2, 2)].into_iter()));
+					.returning(|_, _, _, _| Box::new([_Node(2, 2)].into_iter()));
 			}),
 			graph: Mock_Graph::new_mock(|mock| {
 				mock.expect_node()
