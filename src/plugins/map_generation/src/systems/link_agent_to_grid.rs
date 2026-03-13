@@ -1,7 +1,6 @@
 use crate::components::{
-	grid::Grid,
 	map_agents::{AgentOfPersistentMap, GridAgentOf},
-	nav_grid::NavGrid,
+	nav_grid::NavGridEntity,
 };
 use bevy::prelude::*;
 use common::{
@@ -10,9 +9,9 @@ use common::{
 };
 
 impl AgentOfPersistentMap {
-	pub(crate) fn link_to_grid(
+	pub(crate) fn link_to_nav_grid(
 		mut commands: ZyheedaCommands,
-		maps: Query<&NavGrid<Grid>>,
+		maps: Query<&NavGridEntity>,
 		agents: Query<(Entity, &Self), Changed<Self>>,
 	) {
 		for (entity, AgentOfPersistentMap(map)) in &agents {
@@ -43,7 +42,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.register_persistent_entities();
-		app.add_systems(Update, AgentOfPersistentMap::link_to_grid);
+		app.add_systems(Update, AgentOfPersistentMap::link_to_nav_grid);
 
 		app
 	}
@@ -53,7 +52,7 @@ mod tests {
 		let mut app = setup();
 		let grid = app.world_mut().spawn_empty().id();
 		let map = PersistentEntity::default();
-		app.world_mut().spawn((map, NavGrid::<Grid>::from(grid)));
+		app.world_mut().spawn((map, NavGridEntity::from(grid)));
 		let entity = app.world_mut().spawn(AgentOfPersistentMap(map)).id();
 
 		app.update();
@@ -69,7 +68,7 @@ mod tests {
 		let mut app = setup();
 		let grid = app.world_mut().spawn_empty().id();
 		let map = PersistentEntity::default();
-		app.world_mut().spawn((map, NavGrid::<Grid>::from(grid)));
+		app.world_mut().spawn((map, NavGridEntity::from(grid)));
 		let entity = app.world_mut().spawn(AgentOfPersistentMap(map)).id();
 
 		app.update();
@@ -84,7 +83,7 @@ mod tests {
 		let mut app = setup();
 		let grid = app.world_mut().spawn_empty().id();
 		let map = PersistentEntity::default();
-		app.world_mut().spawn((map, NavGrid::<Grid>::from(grid)));
+		app.world_mut().spawn((map, NavGridEntity::from(grid)));
 		let entity = app.world_mut().spawn(AgentOfPersistentMap(map)).id();
 
 		app.update();

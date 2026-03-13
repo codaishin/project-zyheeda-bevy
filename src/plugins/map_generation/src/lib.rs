@@ -132,7 +132,7 @@ where
 					MapObject::link_with_map.pipe(OnError::log),
 					NavMesh::spawn_grid::<MeshGridGraph>.pipe(OnError::log),
 					AgentSpawner::spawn_agent,
-					AgentOfPersistentMap::link_to_grid.run_if(in_state(GameState::Play)),
+					AgentOfPersistentMap::link_to_nav_grid.run_if(in_state(GameState::Play)),
 				)
 					.chain(),
 			)
