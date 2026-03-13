@@ -19,9 +19,9 @@ use crate::{
 			bay::BayMap,
 			cells::corridor::Corridor,
 			demo_map::DemoMap,
-			objects::MapObject,
+			objects::{MapObject, PersistentMapObject},
 		},
-		map_agents::{AgentOfPersistentMap, GridAgentOf},
+		map_agents::{GridAgent, GridAgentOf},
 		mesh_collider::MeshCollider,
 		nav_mesh::NavMesh,
 		wall_cell::WallCell,
@@ -100,10 +100,11 @@ where
 			.in_app(app, AgentSpawner::is_loaded);
 
 		TSavegame::register_savable_component::<AgentsLoaded>(app);
-		TSavegame::register_savable_component::<AgentOfPersistentMap>(app);
 		TSavegame::register_savable_component::<Map>(app);
 		TSavegame::register_savable_component::<BayMap>(app);
 		TSavegame::register_savable_component::<DemoMap>(app);
+		TSavegame::register_savable_component::<PersistentMapObject>(app);
+		TSavegame::register_savable_component::<GridAgent>(app);
 
 		app.init_resource::<AgentPrefab>()
 			.register_required_components::<Map, TSavegame::TSaveEntityMarker>()
@@ -130,9 +131,11 @@ where
 				Update,
 				(
 					MapObject::link_with_map.pipe(OnError::log),
+					PersistentMapObject::link_with_map.pipe(OnError::log),
 					NavMesh::spawn_grid::<MeshGridGraph>.pipe(OnError::log),
 					AgentSpawner::spawn_agent,
-					AgentOfPersistentMap::link_to_nav_grid.run_if(in_state(GameState::Play)),
+					GridAgent::link_to_grid::<SquareGridGraph>.run_if(in_state(GameState::Play)),
+					GridAgent::link_to_grid::<MeshGridGraph>.run_if(in_state(GameState::Play)),
 				)
 					.chain(),
 			)

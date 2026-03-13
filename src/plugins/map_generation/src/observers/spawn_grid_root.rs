@@ -1,5 +1,8 @@
 use crate::{
-	components::{cells_ref::CellsRef, map::grid_graph::MapGridGraph, nav_grid::NavGrid},
+	components::{
+		cells_ref::CellsRef,
+		map::{grid_graph::MapGridGraph, objects::MapObjectOf},
+	},
 	square_grid_graph::SquareGridGraph,
 };
 use bevy::prelude::*;
@@ -29,16 +32,12 @@ where
 			commands.try_apply_on(&grid, |e| e.try_despawn());
 		}
 
-		let child = commands
-			.spawn((
-				ChildOf(target),
-				TGrid::from(map.graph()),
-				CellsRef::<TCell>::from_grid_definition(target),
-			))
-			.id();
-		commands.try_apply_on(&target, |mut e| {
-			e.try_insert(NavGrid::<TGrid>::from(child));
-		});
+		commands.spawn((
+			ChildOf(target),
+			MapObjectOf(target),
+			TGrid::from(map.graph()),
+			CellsRef::<TCell>::from_grid_definition(target),
+		));
 	}
 }
 
@@ -187,10 +186,7 @@ mod tests {
 			.spawn(MapGridGraph::<_Cell>::from(graph.clone()))
 			.id();
 
-		let [grid] = assert_children_count!(1, app, entity, |entity| Some(entity.id()));
-		assert_eq!(
-			Some(&NavGrid::<_Grid>::from(grid)),
-			app.world().entity(entity).get::<NavGrid<_Grid>>()
-		);
+		let [grid] = assert_children_count!(1, app, entity);
+		assert_eq!(Some(&MapObjectOf(entity)), grid.get::<MapObjectOf>());
 	}
 }

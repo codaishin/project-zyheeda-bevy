@@ -1,10 +1,9 @@
 use crate::components::map::{
 	Map,
-	objects::{MapObject, MapObjectOf, MapObjectOfPersistent},
+	objects::{MapObject, MapObjectOf},
 };
 use bevy::prelude::*;
 use common::{
-	components::persistent_entity::PersistentEntity,
 	errors::{ErrorData, Level},
 	traits::accessors::get::TryApplyOn,
 	zyheeda_commands::ZyheedaCommands,
@@ -15,7 +14,7 @@ impl MapObject {
 	pub(crate) fn link_with_map(
 		mut commands: ZyheedaCommands,
 		parents: Query<&ChildOf>,
-		maps: Query<(Entity, &PersistentEntity, &Map)>,
+		maps: Query<(Entity, &Map)>,
 		spawners: Query<Entity, (With<Self>, Without<MapObjectOf>)>,
 	) -> Result<(), Vec<MapError>> {
 		let errors = spawners
@@ -24,12 +23,12 @@ impl MapObject {
 				let Some(map) = parents.iter_ancestors(entity).last() else {
 					return Some(MapError::NoParentOf(entity));
 				};
-				let Ok((map, persistent_map, Map { .. })) = maps.get(map) else {
+				let Ok((map, Map { .. })) = maps.get(map) else {
 					return Some(MapError::NoMapOn(map));
 				};
 
 				commands.try_apply_on(&entity, |mut e| {
-					e.try_insert((MapObjectOf(map), MapObjectOfPersistent(*persistent_map)));
+					e.try_insert(MapObjectOf(map));
 				});
 
 				None
@@ -100,23 +99,6 @@ mod tests {
 	}
 
 	#[test]
-	fn link_with_persistent_map() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		let persistent = PersistentEntity::default();
-		let map = app.world_mut().spawn((Map::default(), persistent)).id();
-		let in_between = app.world_mut().spawn(ChildOf(map)).id();
-		let spawner = app.world_mut().spawn((ChildOf(in_between), MapObject)).id();
-
-		_ = app.world_mut().run_system_once(MapObject::link_with_map)?;
-
-		assert_eq!(
-			Some(&MapObjectOfPersistent(persistent)),
-			app.world().entity(spawner).get::<MapObjectOfPersistent>(),
-		);
-		Ok(())
-	}
-
-	#[test]
 	fn act_only_once() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let map = app.world_mut().spawn(Map::default()).id();
@@ -126,7 +108,7 @@ mod tests {
 			Update,
 			(
 				MapObject::link_with_map.pipe(|In(_)| {}),
-				IsChanged::<MapObjectOfPersistent>::detect,
+				IsChanged::<MapObjectOf>::detect,
 			)
 				.chain(),
 		);
@@ -137,7 +119,7 @@ mod tests {
 			Some(&IsChanged::FALSE),
 			app.world()
 				.entity(spawner)
-				.get::<IsChanged::<MapObjectOfPersistent>>(),
+				.get::<IsChanged::<MapObjectOf>>(),
 		);
 		Ok(())
 	}

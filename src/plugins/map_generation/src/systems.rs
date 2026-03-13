@@ -6,6 +6,7 @@ pub(crate) mod insert_map_cells;
 pub(crate) mod insert_map_grid_graph;
 pub(crate) mod link_agent_to_grid;
 pub(crate) mod link_map_object_with_map;
+pub(crate) mod link_persistent_map_object_with_map;
 pub(crate) mod map_assets_loaded;
 pub(crate) mod map_color_lookup;
 pub(crate) mod map_loaded;

@@ -1,4 +1,5 @@
 use crate::{
+	components::map::objects::MapObject,
 	observers::compute_grid_cells::Cells,
 	square_grid_graph::SquareGridGraph,
 	traits::{
@@ -20,7 +21,7 @@ use common::{
 use std::{any::type_name, fmt::Display, marker::PhantomData};
 
 #[derive(Component, Debug, PartialEq)]
-#[require(Name = Self::name(), Transform, Visibility)]
+#[require(Name = Self::name(), Transform, Visibility, MapObject)]
 #[component(immutable)]
 pub struct Grid<const SUBDIVISIONS: u8 = 0, TGraph = SquareGridGraph>
 where
