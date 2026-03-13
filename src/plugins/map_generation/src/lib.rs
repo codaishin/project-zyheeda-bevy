@@ -19,6 +19,7 @@ use crate::{
 			bay::BayMap,
 			cells::corridor::Corridor,
 			demo_map::DemoMap,
+			objects::MapObject,
 		},
 		map_agents::{AgentOfPersistentMap, GridAgentOf},
 		mesh_collider::MeshCollider,
@@ -32,7 +33,6 @@ use crate::{
 		prefab::AgentPrefab,
 	},
 	system_params::set_agent_prefab::SetAgentPrefab,
-	systems::link_with_map::LinkWithMap,
 };
 use bevy::prelude::*;
 use common::{
@@ -129,10 +129,10 @@ where
 			.add_systems(
 				Update,
 				(
-					NavMesh::link_with_map.pipe(OnError::log),
+					MapObject::link_with_map.pipe(OnError::log),
 					NavMesh::spawn_grid::<MeshGridGraph>.pipe(OnError::log),
-					AgentSpawner::link_with_map.pipe(OnError::log),
 					AgentSpawner::spawn_agent,
+					AgentOfPersistentMap::link_to_grid.run_if(in_state(GameState::Play)),
 				)
 					.chain(),
 			)
@@ -143,7 +143,6 @@ where
 					WallBack::apply_extra_components::<TLights>,
 					WallLight::apply_extra_components::<TLights>,
 					FloorLight::apply_extra_components::<TLights>,
-					AgentOfPersistentMap::link_to_grid.run_if(in_state(GameState::Play)),
 				)
 					.in_set(Self::SYSTEMS),
 			)

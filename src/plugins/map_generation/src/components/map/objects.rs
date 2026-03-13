@@ -2,6 +2,9 @@ use bevy::{ecs::entity::EntityHashSet, prelude::*};
 use common::components::persistent_entity::PersistentEntity;
 
 #[derive(Component, Debug, PartialEq, Default)]
+pub(crate) struct MapObject;
+
+#[derive(Component, Debug, PartialEq, Default)]
 #[relationship_target(relationship = MapObjectOf)]
 pub(crate) struct MapObjects(EntityHashSet);
 

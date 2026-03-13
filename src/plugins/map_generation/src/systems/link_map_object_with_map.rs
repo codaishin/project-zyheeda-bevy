@@ -1,6 +1,6 @@
 use crate::components::map::{
 	Map,
-	objects::{MapObjectOf, MapObjectOfPersistent},
+	objects::{MapObject, MapObjectOf, MapObjectOfPersistent},
 };
 use bevy::prelude::*;
 use common::{
@@ -11,14 +11,12 @@ use common::{
 };
 use std::fmt::Display;
 
-impl<T> LinkWithMap for T where T: Component {}
-
-pub(crate) trait LinkWithMap: Component + Sized {
-	fn link_with_map(
+impl MapObject {
+	pub(crate) fn link_with_map(
 		mut commands: ZyheedaCommands,
 		parents: Query<&ChildOf>,
 		maps: Query<(Entity, &PersistentEntity, &Map)>,
-		spawners: Query<Entity, (With<Self>, Without<MapObjectOfPersistent>)>,
+		spawners: Query<Entity, (With<Self>, Without<MapObjectOf>)>,
 	) -> Result<(), Vec<MapError>> {
 		let errors = spawners
 			.iter()
@@ -81,9 +79,6 @@ mod tests {
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use testing::{IsChanged, SingleThreadedApp};
 
-	#[derive(Component)]
-	struct _Component;
-
 	fn setup() -> App {
 		App::new().single_threaded(Update)
 	}
@@ -93,12 +88,9 @@ mod tests {
 		let mut app = setup();
 		let map = app.world_mut().spawn(Map::default()).id();
 		let in_between = app.world_mut().spawn(ChildOf(map)).id();
-		let spawner = app
-			.world_mut()
-			.spawn((ChildOf(in_between), _Component))
-			.id();
+		let spawner = app.world_mut().spawn((ChildOf(in_between), MapObject)).id();
 
-		_ = app.world_mut().run_system_once(_Component::link_with_map)?;
+		_ = app.world_mut().run_system_once(MapObject::link_with_map)?;
 
 		assert_eq!(
 			Some(&MapObjectOf(map)),
@@ -113,12 +105,9 @@ mod tests {
 		let persistent = PersistentEntity::default();
 		let map = app.world_mut().spawn((Map::default(), persistent)).id();
 		let in_between = app.world_mut().spawn(ChildOf(map)).id();
-		let spawner = app
-			.world_mut()
-			.spawn((ChildOf(in_between), _Component))
-			.id();
+		let spawner = app.world_mut().spawn((ChildOf(in_between), MapObject)).id();
 
-		_ = app.world_mut().run_system_once(_Component::link_with_map)?;
+		_ = app.world_mut().run_system_once(MapObject::link_with_map)?;
 
 		assert_eq!(
 			Some(&MapObjectOfPersistent(persistent)),
@@ -131,12 +120,12 @@ mod tests {
 	fn act_only_once() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let map = app.world_mut().spawn(Map::default()).id();
-		let spawner = app.world_mut().spawn((ChildOf(map), _Component)).id();
+		let spawner = app.world_mut().spawn((ChildOf(map), MapObject)).id();
 
 		app.add_systems(
 			Update,
 			(
-				_Component::link_with_map.pipe(|In(_)| {}),
+				MapObject::link_with_map.pipe(|In(_)| {}),
 				IsChanged::<MapObjectOfPersistent>::detect,
 			)
 				.chain(),
@@ -156,9 +145,9 @@ mod tests {
 	#[test]
 	fn return_no_parent() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let spawner = app.world_mut().spawn(_Component).id();
+		let spawner = app.world_mut().spawn(MapObject).id();
 
-		let result = app.world_mut().run_system_once(_Component::link_with_map)?;
+		let result = app.world_mut().run_system_once(MapObject::link_with_map)?;
 
 		assert_eq!(Err(vec![MapError::NoParentOf(spawner)]), result);
 		Ok(())
@@ -168,9 +157,9 @@ mod tests {
 	fn return_map_missing_error() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let map = app.world_mut().spawn_empty().id();
-		app.world_mut().spawn((ChildOf(map), _Component));
+		app.world_mut().spawn((ChildOf(map), MapObject));
 
-		let result = app.world_mut().run_system_once(_Component::link_with_map)?;
+		let result = app.world_mut().run_system_once(MapObject::link_with_map)?;
 
 		assert_eq!(Err(vec![MapError::NoMapOn(map)]), result);
 		Ok(())
@@ -180,9 +169,9 @@ mod tests {
 	fn return_ok() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let map = app.world_mut().spawn(Map::default()).id();
-		app.world_mut().spawn((ChildOf(map), _Component));
+		app.world_mut().spawn((ChildOf(map), MapObject));
 
-		let result = app.world_mut().run_system_once(_Component::link_with_map)?;
+		let result = app.world_mut().run_system_once(MapObject::link_with_map)?;
 
 		assert_eq!(Ok(()), result);
 		Ok(())
