@@ -16,7 +16,7 @@ impl<'w, 's> DerivableFrom<'w, 's, GlobalLight> for DirectionalLight {
 	fn derive_from(_: Entity, GlobalLight(color): &GlobalLight, _: &()) -> Self {
 		DirectionalLight {
 			shadows_enabled: false,
-			illuminance: 100.,
+			illuminance: 500.,
 			color: Color::from(*color),
 			..default()
 		}
