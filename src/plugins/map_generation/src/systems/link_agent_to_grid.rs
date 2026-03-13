@@ -1,29 +1,36 @@
-use crate::components::{
-	grid::Grid,
-	map_agents::{AgentOfPersistentMap, GridAgentOf},
-	nav_grid::NavGrid,
+use crate::{
+	components::{
+		grid::Grid,
+		map::objects::{MapObjectOf, MapObjects},
+		map_agents::{GridAgent, GridAgentOf},
+	},
+	traits::to_subdivided::ToSubdivided,
 };
 use bevy::prelude::*;
 use common::{
-	traits::accessors::get::{GetMut, TryApplyOn},
+	traits::{accessors::get::TryApplyOn, thread_safe::ThreadSafe},
 	zyheeda_commands::ZyheedaCommands,
 };
 
-impl AgentOfPersistentMap {
-	pub(crate) fn link_to_grid(
+impl GridAgent {
+	#[allow(clippy::type_complexity)]
+	pub(crate) fn link_to_grid<TGraph>(
 		mut commands: ZyheedaCommands,
-		maps: Query<&NavGrid<Grid>>,
-		agents: Query<(Entity, &Self), Changed<Self>>,
-	) {
-		for (entity, AgentOfPersistentMap(map)) in &agents {
-			let Some(map) = commands.get_mut(map).map(|e| e.id()) else {
+		maps: Query<&MapObjects>,
+		agents: Query<(Entity, &MapObjectOf), (With<Self>, Without<GridAgentOf>)>,
+		grids: Query<Entity, With<Grid<0, TGraph>>>,
+	) where
+		TGraph: ToSubdivided + ThreadSafe,
+	{
+		for (entity, MapObjectOf(map)) in agents {
+			let Ok(map_objects) = maps.get(*map) else {
 				continue;
 			};
-			let Ok(nav_grid) = maps.get(map) else {
+			let Some(grid) = map_objects.iter().find(|obj| grids.contains(*obj)) else {
 				continue;
 			};
 			commands.try_apply_on(&entity, |mut e| {
-				e.try_insert(GridAgentOf(nav_grid.entity));
+				e.try_insert(GridAgentOf(grid));
 			});
 		}
 	}
@@ -32,18 +39,30 @@ impl AgentOfPersistentMap {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::map_agents::GridAgentOf;
-	use common::{
-		components::persistent_entity::PersistentEntity,
-		traits::register_persistent_entities::RegisterPersistentEntities,
-	};
-	use testing::SingleThreadedApp;
+	use crate::traits::to_subdivided::SubdivisionError;
+	use common::traits::register_persistent_entities::RegisterPersistentEntities;
+	use testing::{IsChanged, SingleThreadedApp};
+
+	struct _Graph;
+
+	impl ToSubdivided for _Graph {
+		fn to_subdivided(&self, _: u8) -> Result<Self, SubdivisionError> {
+			Err(SubdivisionError::CannotSubdivide)
+		}
+	}
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.register_persistent_entities();
-		app.add_systems(Update, AgentOfPersistentMap::link_to_grid);
+		app.add_systems(
+			Update,
+			(
+				GridAgent::link_to_grid::<_Graph>,
+				IsChanged::<GridAgentOf>::detect,
+			)
+				.chain(),
+		);
 
 		app
 	}
@@ -51,10 +70,12 @@ mod tests {
 	#[test]
 	fn add_link() {
 		let mut app = setup();
-		let grid = app.world_mut().spawn_empty().id();
-		let map = PersistentEntity::default();
-		app.world_mut().spawn((map, NavGrid::<Grid>::from(grid)));
-		let entity = app.world_mut().spawn(AgentOfPersistentMap(map)).id();
+		let map = app.world_mut().spawn_empty().id();
+		let grid = app
+			.world_mut()
+			.spawn((MapObjectOf(map), Grid::<0, _Graph>::from(_Graph)))
+			.id();
+		let entity = app.world_mut().spawn((MapObjectOf(map), GridAgent)).id();
 
 		app.update();
 
@@ -65,38 +86,53 @@ mod tests {
 	}
 
 	#[test]
-	fn act_only_once() {
+	fn do_not_work_on_non_grid_agents() {
 		let mut app = setup();
-		let grid = app.world_mut().spawn_empty().id();
-		let map = PersistentEntity::default();
-		app.world_mut().spawn((map, NavGrid::<Grid>::from(grid)));
-		let entity = app.world_mut().spawn(AgentOfPersistentMap(map)).id();
+		let map = app.world_mut().spawn_empty().id();
+		app.world_mut()
+			.spawn((MapObjectOf(map), Grid::<0, _Graph>::from(_Graph)));
+		let entity = app.world_mut().spawn(MapObjectOf(map)).id();
 
-		app.update();
-		app.world_mut().entity_mut(entity).remove::<GridAgentOf>();
 		app.update();
 
 		assert_eq!(None, app.world().entity(entity).get::<GridAgentOf>());
 	}
 
 	#[test]
-	fn act_again_when_new_map_reference_inserted() {
+	fn do_not_use_wrong_grid() {
+		struct _OtherGraph;
+
+		impl ToSubdivided for _OtherGraph {
+			fn to_subdivided(&self, _: u8) -> Result<Self, SubdivisionError> {
+				Err(SubdivisionError::CannotSubdivide)
+			}
+		}
+
 		let mut app = setup();
-		let grid = app.world_mut().spawn_empty().id();
-		let map = PersistentEntity::default();
-		app.world_mut().spawn((map, NavGrid::<Grid>::from(grid)));
-		let entity = app.world_mut().spawn(AgentOfPersistentMap(map)).id();
+		let map = app.world_mut().spawn_empty().id();
+		app.world_mut()
+			.spawn((MapObjectOf(map), Grid::<0, _OtherGraph>::from(_OtherGraph)));
+		let entity = app.world_mut().spawn((MapObjectOf(map), GridAgent)).id();
 
 		app.update();
+
+		assert_eq!(None, app.world().entity(entity).get::<GridAgentOf>());
+	}
+
+	#[test]
+	fn act_only_once() {
+		let mut app = setup();
+		let map = app.world_mut().spawn_empty().id();
 		app.world_mut()
-			.entity_mut(entity)
-			.remove::<GridAgentOf>()
-			.insert(AgentOfPersistentMap(map));
+			.spawn((MapObjectOf(map), Grid::<0, _Graph>::from(_Graph)));
+		let entity = app.world_mut().spawn((MapObjectOf(map), GridAgent)).id();
+
+		app.update();
 		app.update();
 
 		assert_eq!(
-			Some(&GridAgentOf(grid)),
-			app.world().entity(entity).get::<GridAgentOf>(),
+			Some(&IsChanged::FALSE),
+			app.world().entity(entity).get::<IsChanged<GridAgentOf>>(),
 		);
 	}
 }

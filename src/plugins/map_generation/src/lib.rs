@@ -1,28 +1,33 @@
 mod cell_grid_size;
 mod components;
 mod errors;
-mod grid_graph;
 mod line_wide;
+mod mesh_grid_graph;
 mod observers;
 mod resources;
+mod square_grid_graph;
 mod system_params;
 mod systems;
 mod traits;
 
 use crate::{
 	components::{
-		agent_spawner::AgentSpawner,
+		agent_spawner::{AgentSpawner, SpawnerActive},
 		map::{
 			Map,
 			agents::AgentsLoaded,
 			bay::BayMap,
 			cells::corridor::Corridor,
 			demo_map::DemoMap,
+			objects::{MapObject, PersistentMapObject},
 		},
-		map_agents::{AgentOfPersistentMap, GridAgentOf},
+		map_agents::{GridAgent, GridAgentOf},
 		mesh_collider::MeshCollider,
+		nav_mesh::NavMesh,
 		wall_cell::WallCell,
 	},
+	mesh_grid_graph::MeshGridGraph,
+	observers::identify_by_prefix::IdentifyByPrefix,
 	resources::agents::{
 		color_lookup::{AgentsColorLookup, AgentsColorLookupImages},
 		prefab::AgentPrefab,
@@ -46,7 +51,7 @@ use common::{
 	},
 };
 use components::{floor_light::FloorLight, grid::Grid, wall_back::WallBack, wall_light::WallLight};
-use grid_graph::GridGraph;
+use square_grid_graph::SquareGridGraph;
 use std::marker::PhantomData;
 use systems::{apply_extra_components::ApplyExtraComponents, unlit_material::unlit_material};
 use traits::register_map_cell::RegisterMapCell;
@@ -61,12 +66,12 @@ where
 	TPhysics: ThreadSafe + HandlesRaycast + HandlesPhysicalBodies,
 	TLights: ThreadSafe + HandlesLights,
 {
-	const SPAWNERS: &[(&'static str, AgentType)] = &[
+	const SPAWNERS: &[(&str, AgentType)] = &[
 		("PlayerSpawn", AgentType::Player),
 		("VoidSphereSpawn", AgentType::Enemy(EnemyType::VoidSphere)),
 	];
-
 	const MESH_COLLIDER_PREFIX: &str = "Collider";
+	const NAV_MESH_PREFIX: &str = "NavMesh";
 
 	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TPhysics, _: &TLights) -> Self {
 		Self(PhantomData)
@@ -95,10 +100,11 @@ where
 			.in_app(app, AgentSpawner::is_loaded);
 
 		TSavegame::register_savable_component::<AgentsLoaded>(app);
-		TSavegame::register_savable_component::<AgentOfPersistentMap>(app);
 		TSavegame::register_savable_component::<Map>(app);
 		TSavegame::register_savable_component::<BayMap>(app);
 		TSavegame::register_savable_component::<DemoMap>(app);
+		TSavegame::register_savable_component::<PersistentMapObject>(app);
+		TSavegame::register_savable_component::<GridAgent>(app);
 
 		app.init_resource::<AgentPrefab>()
 			.register_required_components::<Map, TSavegame::TSaveEntityMarker>()
@@ -117,13 +123,19 @@ where
 					.run_if(not(resource_exists::<AgentsColorLookup>)),
 			)
 			.add_systems(OnEnter(GameState::NewGame), DemoMap::spawn)
-			.add_observer(AgentSpawner::identify(Self::SPAWNERS))
-			.add_observer(MeshCollider::identify(Self::MESH_COLLIDER_PREFIX))
+			.add_observer(NavMesh::identify_by_prefix(Self::NAV_MESH_PREFIX))
+			.add_observer(MeshCollider::identify_by_prefix(Self::MESH_COLLIDER_PREFIX))
+			.add_observer(AgentSpawner::identify_by_prefix_map(Self::SPAWNERS))
+			.add_observer(SpawnerActive::remove_when_map_created_from_save)
 			.add_systems(
 				Update,
 				(
-					AgentSpawner::link_with_map.pipe(OnError::log),
+					MapObject::link_with_map.pipe(OnError::log),
+					PersistentMapObject::link_with_map.pipe(OnError::log),
+					NavMesh::spawn_grid::<MeshGridGraph>.pipe(OnError::log),
 					AgentSpawner::spawn_agent,
+					GridAgent::link_to_grid::<SquareGridGraph>.run_if(in_state(GameState::Play)),
+					GridAgent::link_to_grid::<MeshGridGraph>.run_if(in_state(GameState::Play)),
 				)
 					.chain(),
 			)
@@ -134,7 +146,6 @@ where
 					WallBack::apply_extra_components::<TLights>,
 					WallLight::apply_extra_components::<TLights>,
 					FloorLight::apply_extra_components::<TLights>,
-					AgentOfPersistentMap::link_to_grid.run_if(in_state(GameState::Play)),
 				)
 					.in_set(Self::SYSTEMS),
 			)
@@ -151,7 +162,7 @@ impl<TDependencies> HandlesMapGeneration for MapGenerationPlugin<TDependencies> 
 
 	type TNewMapAgent<'w, 's> = SetAgentPrefab<'w>;
 
-	type TGraph = GridGraph;
+	type TGraph = SquareGridGraph;
 
 	type TMap = Grid<1>;
 	type TMapRef = GridAgentOf;

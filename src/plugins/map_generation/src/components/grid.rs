@@ -1,6 +1,7 @@
 use crate::{
-	grid_graph::GridGraph,
+	components::map::objects::MapObject,
 	observers::compute_grid_cells::Cells,
+	square_grid_graph::SquareGridGraph,
 	traits::{
 		GridCellDistanceDefinition,
 		insert_cell_components::InsertCellComponents,
@@ -20,9 +21,9 @@ use common::{
 use std::{any::type_name, fmt::Display, marker::PhantomData};
 
 #[derive(Component, Debug, PartialEq)]
-#[require(Name = Self::name(), Transform, Visibility)]
+#[require(Name = Self::name(), Transform, Visibility, MapObject)]
 #[component(immutable)]
-pub struct Grid<const SUBDIVISIONS: u8 = 0, TGraph = GridGraph>
+pub struct Grid<const SUBDIVISIONS: u8 = 0, TGraph = SquareGridGraph>
 where
 	TGraph: ToSubdivided,
 {
@@ -30,7 +31,7 @@ where
 }
 
 impl Grid {
-	pub(crate) fn graph(&self) -> &GridGraph {
+	pub(crate) fn graph(&self) -> &SquareGridGraph {
 		&self.graph
 	}
 
@@ -99,15 +100,27 @@ impl Default for Grid {
 	}
 }
 
-impl From<&GridGraph> for Grid {
-	fn from(graph: &GridGraph) -> Self {
+impl<TGraph> From<&TGraph> for Grid<0, TGraph>
+where
+	TGraph: Clone + ToSubdivided,
+{
+	fn from(graph: &TGraph) -> Self {
 		Grid {
 			graph: graph.clone(),
 		}
 	}
 }
 
-impl<const SUBDIVISIONS: u8> From<&Grid<SUBDIVISIONS>> for GridGraph {
+impl<TGraph> From<TGraph> for Grid<0, TGraph>
+where
+	TGraph: ToSubdivided,
+{
+	fn from(graph: TGraph) -> Self {
+		Grid { graph }
+	}
+}
+
+impl<const SUBDIVISIONS: u8> From<&Grid<SUBDIVISIONS>> for SquareGridGraph {
 	fn from(value: &Grid<SUBDIVISIONS>) -> Self {
 		value.graph.clone()
 	}
@@ -176,7 +189,7 @@ where
 #[cfg(test)]
 mod test_insert_subdivided {
 	use super::*;
-	use crate::grid_graph::grid_context::DividedToZero;
+	use crate::square_grid_graph::context::DividedToZero;
 
 	#[derive(Debug, PartialEq)]
 	struct _Graph {
@@ -292,7 +305,7 @@ mod test_insert_subdivided {
 mod test_spawn_cells {
 	use super::*;
 	use crate::{
-		grid_graph::grid_context::CellDistance,
+		square_grid_graph::context::CellDistance,
 		traits::insert_cell_components::InsertCellComponents,
 	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};

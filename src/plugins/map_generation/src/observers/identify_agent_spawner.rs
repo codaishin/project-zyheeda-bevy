@@ -7,7 +7,7 @@ use common::{
 use std::collections::HashMap;
 
 impl AgentSpawner {
-	pub(crate) fn identify(
+	pub(crate) fn identify_by_prefix_map(
 		agent_types: &[(&'static str, AgentType)],
 	) -> impl IntoObserverSystem<Add, GltfMeshName, ()> {
 		let agent_types = agent_types
@@ -59,7 +59,7 @@ mod tests {
 	fn setup(config: &[(&'static str, AgentType)]) -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_observer(AgentSpawner::identify(config));
+		app.add_observer(AgentSpawner::identify_by_prefix_map(config));
 
 		app
 	}

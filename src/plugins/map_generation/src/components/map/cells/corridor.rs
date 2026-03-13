@@ -17,8 +17,8 @@ use crate::{
 		},
 		wall_cell::WallCell,
 	},
-	grid_graph::grid_context::CellDistance,
 	resources::map::color_lookup::MapColorLookup,
+	square_grid_graph::context::CellDistance,
 	systems::map_color_lookup::load_images::ColorLookupAssetPath,
 	traits::{
 		GridCellDistanceDefinition,

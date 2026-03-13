@@ -5,13 +5,13 @@ use macros::{InRange, new_valid};
 use std::fmt::Display;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub struct GridContext {
+pub struct SquareGridContext {
 	pub(crate) cell_count_x: CellCount,
 	pub(crate) cell_count_z: CellCount,
 	pub(crate) cell_distance: CellDistance,
 }
 
-impl GridContext {
+impl SquareGridContext {
 	const DEFAULT: Self = Self {
 		cell_count_x: new_valid!(CellCount, 2),
 		cell_count_z: new_valid!(CellCount, 2),
@@ -19,13 +19,13 @@ impl GridContext {
 	};
 }
 
-impl Default for GridContext {
+impl Default for SquareGridContext {
 	fn default() -> Self {
 		Self::DEFAULT
 	}
 }
 
-impl GridMin for GridContext {
+impl GridMin for SquareGridContext {
 	fn grid_min(&self) -> GroundPosition {
 		let x = ((*self.cell_count_x - 1) as f32 * *self.cell_distance) / 2.;
 		let z = ((*self.cell_count_z - 1) as f32 * *self.cell_distance) / 2.;
@@ -34,7 +34,7 @@ impl GridMin for GridContext {
 	}
 }
 
-impl KeyMapper for GridContext {
+impl KeyMapper for SquareGridContext {
 	fn key_for(&self, pos: Vec3) -> Option<(u32, u32)> {
 		let GroundPosition(start) = self.grid_min();
 		let Vec3 { x, z, .. } = pos - start;
@@ -141,7 +141,7 @@ mod tests {
 		cell_distance: CellDistance,
 		result: Vec3,
 	) {
-		let context = GridContext {
+		let context = SquareGridContext {
 			cell_count_x,
 			cell_count_z,
 			cell_distance,
@@ -167,7 +167,7 @@ mod tests {
 		target: Vec3,
 		result: Option<(u32, u32)>,
 	) {
-		let context = GridContext {
+		let context = SquareGridContext {
 			cell_count_x,
 			cell_count_z,
 			cell_distance,

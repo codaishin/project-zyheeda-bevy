@@ -3,11 +3,12 @@ use crate::{
 		map::{
 			agents::AgentsLoaded,
 			cells::{CellGrid, MapCells, agent::Agent},
+			objects::PersistentMapObject,
 		},
-		map_agents::AgentOfPersistentMap,
+		map_agents::GridAgent,
 	},
-	grid_graph::grid_context::GridContext,
 	resources::agents::prefab::AgentPrefab,
+	square_grid_graph::context::SquareGridContext,
 	traits::{GridCellDistanceDefinition, grid_min::GridMin},
 };
 use bevy::prelude::*;
@@ -33,7 +34,7 @@ where
 		let AgentPrefab(apply_prefab) = *agent_prefab;
 
 		for (entity, persistent_entity, MapCells { definition, .. }) in &cells {
-			let context = GridContext {
+			let context = SquareGridContext {
 				cell_count_x: definition.size.x,
 				cell_count_z: definition.size.z,
 				cell_distance: TCell::CELL_DISTANCE,
@@ -46,7 +47,12 @@ where
 					continue;
 				};
 
-				let entity = commands.spawn(AgentOfPersistentMap(*persistent_entity));
+				let entity = commands.spawn((
+					GridAgent,
+					PersistentMapObject {
+						map: *persistent_entity,
+					},
+				));
 				apply_prefab(
 					ZyheedaEntityCommands::from(entity),
 					ground_position::<TCell>(x, z, min),
@@ -72,8 +78,8 @@ mod tests {
 	use super::*;
 	use crate::{
 		cell_grid_size::CellGridSize,
-		grid_graph::grid_context::{CellCount, CellDistance},
 		resources::agents::prefab::AgentPrefab,
+		square_grid_graph::context::{CellCount, CellDistance},
 		traits::map_cells_extra::CellGridDefinition,
 	};
 	use common::traits::{handles_enemies::EnemyType, handles_map_generation::AgentType};
@@ -284,7 +290,7 @@ mod tests {
 	}
 
 	#[test]
-	fn spawn_player_with_reference() {
+	fn spawn_player_with_basic_component() {
 		let mut app = setup();
 		let persistent_entity = PersistentEntity::default();
 		app.world_mut().spawn((
@@ -305,13 +311,21 @@ mod tests {
 
 		let mut agents = app
 			.world_mut()
-			.query_filtered::<&AgentOfPersistentMap, With<_NewAgent>>();
+			.query_filtered::<(&PersistentMapObject, &GridAgent), With<_NewAgent>>();
 		let [agent] = assert_count!(1, agents.iter(app.world()));
-		assert_eq!(&AgentOfPersistentMap(persistent_entity), agent);
+		assert_eq!(
+			(
+				&PersistentMapObject {
+					map: persistent_entity
+				},
+				&GridAgent
+			),
+			agent
+		);
 	}
 
 	#[test]
-	fn spawn_enemy_with_reference() {
+	fn spawn_enemy_with_basic_component() {
 		let mut app = setup();
 		let persistent_entity = PersistentEntity::default();
 		app.world_mut().spawn((
@@ -335,8 +349,16 @@ mod tests {
 
 		let mut agents = app
 			.world_mut()
-			.query_filtered::<&AgentOfPersistentMap, With<_NewAgent>>();
+			.query_filtered::<(&PersistentMapObject, &GridAgent), With<_NewAgent>>();
 		let [agent] = assert_count!(1, agents.iter(app.world()));
-		assert_eq!(&AgentOfPersistentMap(persistent_entity), agent);
+		assert_eq!(
+			(
+				&PersistentMapObject {
+					map: persistent_entity
+				},
+				&GridAgent
+			),
+			agent
+		);
 	}
 }

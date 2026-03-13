@@ -1,4 +1,4 @@
-use crate::grid_graph::GridGraph;
+use crate::square_grid_graph::SquareGridGraph;
 use bevy::prelude::*;
 use std::marker::PhantomData;
 
@@ -6,12 +6,12 @@ use std::marker::PhantomData;
 #[component(immutable)]
 #[require(Transform, Visibility)]
 pub(crate) struct MapGridGraph<TCell> {
-	graph: GridGraph,
+	graph: SquareGridGraph,
 	_p: PhantomData<TCell>,
 }
 
-impl<TCell> From<GridGraph> for MapGridGraph<TCell> {
-	fn from(graph: GridGraph) -> Self {
+impl<TCell> From<SquareGridGraph> for MapGridGraph<TCell> {
+	fn from(graph: SquareGridGraph) -> Self {
 		Self {
 			graph,
 			_p: PhantomData,
@@ -20,7 +20,7 @@ impl<TCell> From<GridGraph> for MapGridGraph<TCell> {
 }
 
 impl<TCell> MapGridGraph<TCell> {
-	pub(crate) fn graph(&self) -> &GridGraph {
+	pub(crate) fn graph(&self) -> &SquareGridGraph {
 		&self.graph
 	}
 }

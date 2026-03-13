@@ -1,10 +1,11 @@
 use bevy::{ecs::entity::EntityHashSet, prelude::*};
-use common::{
-	components::persistent_entity::PersistentEntity,
-	traits::accessors::get::GetProperty,
-};
+use common::traits::accessors::get::GetProperty;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
+
+#[derive(SavableComponent, Component, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+#[savable_component(id = "grid agent")]
+pub struct GridAgent;
 
 #[derive(Component, Debug, PartialEq)]
 #[relationship_target(relationship = GridAgentOf)]
@@ -19,8 +20,3 @@ impl GetProperty<Entity> for GridAgentOf {
 		self.0
 	}
 }
-
-#[derive(Component, SavableComponent, Debug, PartialEq, Serialize, Deserialize, Clone)]
-#[savable_component(id = "agent of persistent map")]
-#[component(immutable)]
-pub struct AgentOfPersistentMap(pub(crate) PersistentEntity);

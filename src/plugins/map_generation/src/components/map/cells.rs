@@ -9,7 +9,7 @@ use crate::{
 		Map,
 		cells::{half_offset_cell::HalfOffsetCell, parsed_color::ParsedColor},
 	},
-	grid_graph::grid_context::CellCount,
+	square_grid_graph::context::CellCount,
 	traits::{
 		map_cells_extra::{CellGridDefinition, MapCellsExtra},
 		parse_map_image::ParseMapImage,

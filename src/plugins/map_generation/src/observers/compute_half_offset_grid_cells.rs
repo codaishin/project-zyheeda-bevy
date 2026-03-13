@@ -69,9 +69,9 @@ mod test_get_half_offset_grid {
 	use crate::{
 		cell_grid_size::CellGridSize,
 		components::{cells_ref::CellsRef, map::cells::Direction},
-		grid_graph::{
-			GridGraph,
-			grid_context::{CellCount, CellDistance},
+		square_grid_graph::{
+			SquareGridGraph,
+			context::{CellCount, CellDistance},
 		},
 		traits::{
 			GridCellDistanceDefinition,
@@ -114,7 +114,7 @@ mod test_get_half_offset_grid {
 		let cells = app
 			.world_mut()
 			.spawn((
-				MapGridGraph::<_Cell>::from(GridGraph {
+				MapGridGraph::<_Cell>::from(SquareGridGraph {
 					nodes: HashMap::from([
 						((0, 0), GroundPosition(Vec3::new(-1., -0., -1.))),
 						((0, 1), GroundPosition(Vec3::new(-1., -0., 1.))),
@@ -173,7 +173,7 @@ mod test_get_half_offset_grid {
 		let cells = app
 			.world_mut()
 			.spawn((
-				MapGridGraph::<_Cell>::from(GridGraph {
+				MapGridGraph::<_Cell>::from(SquareGridGraph {
 					nodes: HashMap::from([
 						((0, 0), GroundPosition(Vec3::new(-2., -0., -1.))),
 						((0, 1), GroundPosition(Vec3::new(-2., -0., 1.))),
@@ -256,7 +256,7 @@ mod test_get_half_offset_grid {
 		let cells = app
 			.world_mut()
 			.spawn((
-				MapGridGraph::<_Cell>::from(GridGraph {
+				MapGridGraph::<_Cell>::from(SquareGridGraph {
 					nodes: HashMap::from([
 						((0, 0), GroundPosition(Vec3::new(-1., -0., -1.))),
 						((0, 1), GroundPosition(Vec3::new(-1., -0., 1.))),
@@ -310,7 +310,7 @@ mod test_get_half_offset_grid {
 		let cells = app
 			.world_mut()
 			.spawn((
-				MapGridGraph::<_Cell>::from(GridGraph {
+				MapGridGraph::<_Cell>::from(SquareGridGraph {
 					nodes: HashMap::from([
 						((0, 0), GroundPosition(Vec3::new(-2., -0., -1.))),
 						((0, 1), GroundPosition(Vec3::new(-2., -0., 1.))),

@@ -1,4 +1,4 @@
-use crate::grid_graph::grid_context::CellCount;
+use crate::square_grid_graph::context::CellCount;
 use macros::new_valid;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
