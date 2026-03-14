@@ -2,6 +2,9 @@ mod clearance;
 mod edge;
 mod line;
 
+#[cfg(debug_assertions)]
+pub(crate) mod debug;
+
 use crate::{
 	mesh_grid_graph::clearance::{Clearance, SetClearance},
 	systems::spawn_grid::TryFromTriangles,

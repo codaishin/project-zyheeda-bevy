@@ -19,7 +19,7 @@ use common::{
 	},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
-use std::{any::type_name, fmt::Display, marker::PhantomData};
+use std::{any::type_name, fmt::Display, marker::PhantomData, ops::Deref};
 
 #[derive(Component, Debug, PartialEq)]
 #[require(Name = Self::name(), Transform, Visibility, MapObject)]
@@ -130,6 +130,17 @@ impl<const SUBDIVISIONS: u8> From<&Grid<SUBDIVISIONS>> for SquareGridGraph {
 impl From<&Grid<0, MeshGridGraph>> for MeshGridGraph {
 	fn from(value: &Grid<0, MeshGridGraph>) -> Self {
 		value.graph.clone()
+	}
+}
+
+impl<const SUBDIVISIONS: u8, TGraph> Deref for Grid<SUBDIVISIONS, TGraph>
+where
+	TGraph: ToSubdivided,
+{
+	type Target = TGraph;
+
+	fn deref(&self) -> &Self::Target {
+		&self.graph
 	}
 }
 

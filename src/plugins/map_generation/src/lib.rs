@@ -106,6 +106,9 @@ where
 		TSavegame::register_savable_component::<PersistentMapObject>(app);
 		TSavegame::register_savable_component::<GridAgent>(app);
 
+		#[cfg(debug_assertions)]
+		crate::mesh_grid_graph::debug::draw(app);
+
 		app.init_resource::<AgentPrefab>()
 			.register_required_components::<Map, TSavegame::TSaveEntityMarker>()
 			.register_required_components_with::<MeshCollider, TPhysics::TBody>(MeshCollider::body)
