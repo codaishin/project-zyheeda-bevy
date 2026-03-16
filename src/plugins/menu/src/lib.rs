@@ -24,6 +24,7 @@ use crate::{
 		dispatch_text_color::DispatchTextColor,
 		key_select_dropdown_command::KeySelectDropdownCommand,
 		label::UILabel,
+		pause_menu::PauseMenu,
 		ui_disabled::UIDisabled,
 	},
 	systems::{
@@ -185,6 +186,22 @@ where
 		);
 	}
 
+	fn loading_screen<TLoadGroup>(&self, app: &mut App)
+	where
+		TLoadGroup: LoadGroup + ThreadSafe,
+	{
+		let load_assets = TLoading::processing_state::<TLoadGroup, AssetsProgress>();
+		let load_dependencies = TLoading::processing_state::<TLoadGroup, DependenciesProgress>();
+
+		app
+			.add_ui::<LoadingScreen<AssetsProgress>, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
+				load_assets
+			)
+			.add_ui::<LoadingScreen<DependenciesProgress>, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
+				load_dependencies
+			);
+	}
+
 	fn start_menu(&self, app: &mut App) {
 		let start_menu = GameState::StartMenu;
 		let quick_load = GameState::Save(SaveState::AttemptLoad);
@@ -211,20 +228,10 @@ where
 			);
 	}
 
-	fn loading_screen<TLoadGroup>(&self, app: &mut App)
-	where
-		TLoadGroup: LoadGroup + ThreadSafe,
-	{
-		let load_assets = TLoading::processing_state::<TLoadGroup, AssetsProgress>();
-		let load_dependencies = TLoading::processing_state::<TLoadGroup, DependenciesProgress>();
-
-		app
-			.add_ui::<LoadingScreen<AssetsProgress>, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
-				load_assets
-			)
-			.add_ui::<LoadingScreen<DependenciesProgress>, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
-				load_dependencies
-			);
+	fn pause_menu(&self, app: &mut App) {
+		app.add_ui::<PauseMenu, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
+			GameState::IngameMenu(MenuState::Paused),
+		);
 	}
 
 	fn ui_overlay(&self, app: &mut App) {
@@ -404,9 +411,10 @@ where
 		self.resources(app);
 		self.messages(app);
 		self.state_control(app);
-		self.start_menu(app);
 		self.loading_screen::<LoadingEssentialAssets>(app);
 		self.loading_screen::<LoadingGame>(app);
+		self.start_menu(app);
+		self.pause_menu(app);
 		self.ui_overlay(app);
 		self.combo_overview(app);
 		self.inventory_screen(app);
