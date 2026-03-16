@@ -19,6 +19,7 @@ pub enum MenuState {
 	Inventory,
 	ComboOverview,
 	Settings,
+	Paused,
 }
 
 impl From<MenuState> for GameState {
@@ -39,6 +40,7 @@ impl From<MenuState> for UserInput {
 			MenuState::Inventory => Self::from(KeyCode::KeyI),
 			MenuState::ComboOverview => Self::from(KeyCode::KeyK),
 			MenuState::Settings => Self::from(KeyCode::Escape),
+			MenuState::Paused => Self::from(KeyCode::KeyP),
 		}
 	}
 }
@@ -49,6 +51,7 @@ impl From<MenuState> for Token {
 			MenuState::Inventory => Token::from("menu-inventory"),
 			MenuState::ComboOverview => Token::from("menu-combos"),
 			MenuState::Settings => Token::from("menu-settings"),
+			MenuState::Paused => Token::from("menu-paused"),
 		}
 	}
 }
@@ -84,7 +87,8 @@ impl IterFinite for MenuState {
 		match &current.0? {
 			MenuState::Inventory => Some(MenuState::ComboOverview),
 			MenuState::ComboOverview => Some(MenuState::Settings),
-			MenuState::Settings => None,
+			MenuState::Settings => Some(MenuState::Paused),
+			MenuState::Paused => None,
 		}
 	}
 }
@@ -105,7 +109,8 @@ mod tests {
 			vec![
 				MenuState::Inventory,
 				MenuState::ComboOverview,
-				MenuState::Settings
+				MenuState::Settings,
+				MenuState::Paused,
 			],
 			MenuState::iterator().take(100).collect::<Vec<_>>(),
 		);
