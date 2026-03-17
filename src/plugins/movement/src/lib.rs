@@ -100,6 +100,9 @@ where
 			AnimationsSystemParamMut<TAnimations>,
 		>;
 
+		#[cfg(debug_assertions)]
+		crate::components::movement::debug::draw::<TPhysics::TCharacterMotion>(app);
+
 		app
 			// Resources
 			.init_resource::<JustRemovedMovements>()

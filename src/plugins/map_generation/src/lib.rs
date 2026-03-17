@@ -32,6 +32,7 @@ use crate::{
 		color_lookup::{AgentsColorLookup, AgentsColorLookupImages},
 		prefab::AgentPrefab,
 	},
+	square_grid_graph::SquareGridGraph,
 	system_params::set_agent_prefab::SetAgentPrefab,
 };
 use bevy::prelude::*;
@@ -51,7 +52,6 @@ use common::{
 	},
 };
 use components::{floor_light::FloorLight, grid::Grid, wall_back::WallBack, wall_light::WallLight};
-use square_grid_graph::SquareGridGraph;
 use std::marker::PhantomData;
 use systems::{apply_extra_components::ApplyExtraComponents, unlit_material::unlit_material};
 use traits::register_map_cell::RegisterMapCell;
@@ -106,6 +106,9 @@ where
 		TSavegame::register_savable_component::<PersistentMapObject>(app);
 		TSavegame::register_savable_component::<GridAgent>(app);
 
+		#[cfg(debug_assertions)]
+		crate::mesh_grid_graph::debug::draw(app);
+
 		app.init_resource::<AgentPrefab>()
 			.register_required_components::<Map, TSavegame::TSaveEntityMarker>()
 			.register_required_components_with::<MeshCollider, TPhysics::TBody>(MeshCollider::body)
@@ -122,7 +125,7 @@ where
 					.pipe(OnError::log)
 					.run_if(not(resource_exists::<AgentsColorLookup>)),
 			)
-			.add_systems(OnEnter(GameState::NewGame), DemoMap::spawn)
+			.add_systems(OnEnter(GameState::NewGame), BayMap::spawn)
 			.add_observer(NavMesh::identify_by_prefix(Self::NAV_MESH_PREFIX))
 			.add_observer(MeshCollider::identify_by_prefix(Self::MESH_COLLIDER_PREFIX))
 			.add_observer(AgentSpawner::identify_by_prefix_map(Self::SPAWNERS))
@@ -162,8 +165,8 @@ impl<TDependencies> HandlesMapGeneration for MapGenerationPlugin<TDependencies> 
 
 	type TNewMapAgent<'w, 's> = SetAgentPrefab<'w>;
 
-	type TGraph = SquareGridGraph;
+	type TGraph = MeshGridGraph;
 
-	type TMap = Grid<1>;
+	type TMap = Grid<0, MeshGridGraph>;
 	type TMapRef = GridAgentOf;
 }
