@@ -1,6 +1,6 @@
 use crate::{
 	components::grid::Grid,
-	mesh_grid_graph::{Clearance, MeshGridGraph, NodeId},
+	mesh_grid_graph::{Clearance, NodeId},
 };
 use bevy::{
 	color::palettes::css::{BLUE, GREEN, RED},
@@ -12,7 +12,7 @@ pub(crate) fn draw(app: &mut App) {
 	app.add_systems(Update, draw_vertices);
 }
 
-fn draw_vertices(grids: Query<&Grid<0, MeshGridGraph>>, mut gizmos: Gizmos) {
+fn draw_vertices(grids: Query<&Grid>, mut gizmos: Gizmos) {
 	for grid in grids {
 		let graph = grid.deref();
 

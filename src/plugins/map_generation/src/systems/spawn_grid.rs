@@ -1,7 +1,4 @@
-use crate::{
-	components::{grid::Grid, nav_mesh::NavMesh},
-	traits::to_subdivided::ToSubdivided,
-};
+use crate::components::{grid::Grid, nav_mesh::NavMesh};
 use bevy::{mesh::MeshTrianglesError, prelude::*};
 use common::{
 	errors::{ErrorData, Level},
@@ -15,11 +12,11 @@ impl NavMesh {
 	#[allow(clippy::type_complexity)]
 	pub(crate) fn spawn_grid<TGridGraph>(
 		mut commands: ZyheedaCommands,
-		meshes: Query<(Entity, &Mesh3d), (With<Self>, Without<Grid<0, TGridGraph>>)>,
+		meshes: Query<(Entity, &Mesh3d), (With<Self>, Without<Grid<TGridGraph>>)>,
 		assets: Res<Assets<Mesh>>,
 	) -> Result<(), Vec<NavMeshError<TGridGraph::TError>>>
 	where
-		TGridGraph: TryFromTriangles + ToSubdivided + ThreadSafe,
+		TGridGraph: TryFromTriangles + ThreadSafe,
 	{
 		let mut mesh_errors = vec![];
 
@@ -152,7 +149,6 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::to_subdivided::{SubdivisionError, ToSubdivided};
 	use bevy::{
 		asset::RenderAssetUsages,
 		mesh::{Indices, PrimitiveTopology},
@@ -234,12 +230,6 @@ mod tests {
 		}
 	}
 
-	impl ToSubdivided for _Graph {
-		fn to_subdivided(&self, _: u8) -> Result<Self, SubdivisionError> {
-			Err(SubdivisionError::CannotSubdivide)
-		}
-	}
-
 	#[derive(Debug, PartialEq, Default)]
 	struct _FaultyGraph;
 
@@ -248,12 +238,6 @@ mod tests {
 
 		fn try_from_triangles<TIterator>(_: TIterator) -> Result<Self, _Error> {
 			Err(_Error)
-		}
-	}
-
-	impl ToSubdivided for _FaultyGraph {
-		fn to_subdivided(&self, _: u8) -> Result<Self, SubdivisionError> {
-			Err(SubdivisionError::CannotSubdivide)
 		}
 	}
 
@@ -271,7 +255,7 @@ mod tests {
 
 	fn setup<'a, TGraph>(meshes: impl IntoIterator<Item = (&'a Handle<Mesh>, Mesh)>) -> App
 	where
-		TGraph: TryFromTriangles<TError = _Error> + ToSubdivided + ThreadSafe,
+		TGraph: TryFromTriangles<TError = _Error> + ThreadSafe,
 	{
 		let mut app = App::new().single_threaded(Update);
 		let mut assets = Assets::default();
@@ -287,7 +271,7 @@ mod tests {
 				NavMesh::spawn_grid::<TGraph>.pipe(|In(r), mut c: Commands| {
 					c.insert_resource(_Result(r));
 				}),
-				IsChanged::<Grid<0, TGraph>>::detect,
+				IsChanged::<Grid<TGraph>>::detect,
 			)
 				.chain(),
 		);
@@ -329,7 +313,7 @@ mod tests {
 				&_Result(Ok(()))
 			),
 			(
-				app.world().entity(entity).get::<Grid<0, _Graph>>(),
+				app.world().entity(entity).get::<Grid<_Graph>>(),
 				app.world().resource::<_Result>(),
 			),
 		);
@@ -374,7 +358,7 @@ mod tests {
 				&_Result(Err(vec![NavMeshError::HasNaNVertices { entity }]))
 			),
 			(
-				app.world().entity(entity).get::<Grid<0, _Graph>>(),
+				app.world().entity(entity).get::<Grid<_Graph>>(),
 				app.world().resource::<_Result>(),
 			),
 		);
@@ -401,7 +385,7 @@ mod tests {
 				}]))
 			),
 			(
-				app.world().entity(entity).get::<Grid<0, _Graph>>(),
+				app.world().entity(entity).get::<Grid<_Graph>>(),
 				app.world().resource::<_Result>(),
 			),
 		);
@@ -424,7 +408,7 @@ mod tests {
 				}]))
 			),
 			(
-				app.world().entity(entity).get::<Grid<0, _FaultyGraph>>(),
+				app.world().entity(entity).get::<Grid<_FaultyGraph>>(),
 				app.world().resource::<_Result>(),
 			),
 		);
@@ -441,9 +425,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&IsChanged::FALSE),
-			app.world()
-				.entity(entity)
-				.get::<IsChanged<Grid<0, _Graph>>>()
+			app.world().entity(entity).get::<IsChanged<Grid<_Graph>>>()
 		);
 	}
 
@@ -455,6 +437,6 @@ mod tests {
 
 		app.update();
 
-		assert_eq!(None, app.world().entity(entity).get::<Grid<0, _Graph>>());
+		assert_eq!(None, app.world().entity(entity).get::<Grid<_Graph>>());
 	}
 }

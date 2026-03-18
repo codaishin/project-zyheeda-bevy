@@ -8,7 +8,6 @@ pub(crate) mod debug;
 use crate::{
 	mesh_grid_graph::clearance::{Clearance, SetClearance},
 	systems::spawn_grid::TryFromTriangles,
-	traits::to_subdivided::{SubdivisionError, ToSubdivided},
 };
 use bevy::{math::InvalidDirectionError, prelude::*};
 use common::{
@@ -69,12 +68,6 @@ impl MeshGridGraph {
 
 			neighbors.push(neighbor);
 		}
-	}
-}
-
-impl ToSubdivided for MeshGridGraph {
-	fn to_subdivided(&self, _: u8) -> Result<Self, SubdivisionError> {
-		Err(SubdivisionError::CannotSubdivide)
 	}
 }
 

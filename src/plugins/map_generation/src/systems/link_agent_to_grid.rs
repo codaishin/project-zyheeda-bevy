@@ -1,10 +1,7 @@
-use crate::{
-	components::{
-		grid::Grid,
-		map::objects::{MapObjectOf, MapObjects},
-		map_agents::{GridAgent, GridAgentOf},
-	},
-	traits::to_subdivided::ToSubdivided,
+use crate::components::{
+	grid::Grid,
+	map::objects::{MapObjectOf, MapObjects},
+	map_agents::{GridAgent, GridAgentOf},
 };
 use bevy::prelude::*;
 use common::{
@@ -18,9 +15,9 @@ impl GridAgent {
 		mut commands: ZyheedaCommands,
 		maps: Query<&MapObjects>,
 		agents: Query<(Entity, &MapObjectOf), (With<Self>, Without<GridAgentOf>)>,
-		grids: Query<Entity, With<Grid<0, TGraph>>>,
+		grids: Query<Entity, With<Grid<TGraph>>>,
 	) where
-		TGraph: ToSubdivided + ThreadSafe,
+		TGraph: ThreadSafe,
 	{
 		for (entity, MapObjectOf(map)) in agents {
 			let Ok(map_objects) = maps.get(*map) else {
@@ -39,17 +36,10 @@ impl GridAgent {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::to_subdivided::SubdivisionError;
 	use common::traits::register_persistent_entities::RegisterPersistentEntities;
 	use testing::{IsChanged, SingleThreadedApp};
 
 	struct _Graph;
-
-	impl ToSubdivided for _Graph {
-		fn to_subdivided(&self, _: u8) -> Result<Self, SubdivisionError> {
-			Err(SubdivisionError::CannotSubdivide)
-		}
-	}
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -73,7 +63,7 @@ mod tests {
 		let map = app.world_mut().spawn_empty().id();
 		let grid = app
 			.world_mut()
-			.spawn((MapObjectOf(map), Grid::<0, _Graph>::from(_Graph)))
+			.spawn((MapObjectOf(map), Grid::<_Graph>::from(_Graph)))
 			.id();
 		let entity = app.world_mut().spawn((MapObjectOf(map), GridAgent)).id();
 
@@ -90,7 +80,7 @@ mod tests {
 		let mut app = setup();
 		let map = app.world_mut().spawn_empty().id();
 		app.world_mut()
-			.spawn((MapObjectOf(map), Grid::<0, _Graph>::from(_Graph)));
+			.spawn((MapObjectOf(map), Grid::<_Graph>::from(_Graph)));
 		let entity = app.world_mut().spawn(MapObjectOf(map)).id();
 
 		app.update();
@@ -102,16 +92,10 @@ mod tests {
 	fn do_not_use_wrong_grid() {
 		struct _OtherGraph;
 
-		impl ToSubdivided for _OtherGraph {
-			fn to_subdivided(&self, _: u8) -> Result<Self, SubdivisionError> {
-				Err(SubdivisionError::CannotSubdivide)
-			}
-		}
-
 		let mut app = setup();
 		let map = app.world_mut().spawn_empty().id();
 		app.world_mut()
-			.spawn((MapObjectOf(map), Grid::<0, _OtherGraph>::from(_OtherGraph)));
+			.spawn((MapObjectOf(map), Grid::<_OtherGraph>::from(_OtherGraph)));
 		let entity = app.world_mut().spawn((MapObjectOf(map), GridAgent)).id();
 
 		app.update();
@@ -124,7 +108,7 @@ mod tests {
 		let mut app = setup();
 		let map = app.world_mut().spawn_empty().id();
 		app.world_mut()
-			.spawn((MapObjectOf(map), Grid::<0, _Graph>::from(_Graph)));
+			.spawn((MapObjectOf(map), Grid::<_Graph>::from(_Graph)));
 		let entity = app.world_mut().spawn((MapObjectOf(map), GridAgent)).id();
 
 		app.update();

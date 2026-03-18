@@ -3,13 +3,9 @@ pub(crate) mod insert_cell_components;
 pub(crate) mod insert_cell_quadrant_components;
 pub(crate) mod is_walkable;
 pub(crate) mod key_mapper;
-pub(crate) mod map_cells_extra;
 pub(crate) mod parse_map_image;
 pub(crate) mod pixels;
-pub(crate) mod register_map_cell;
-pub(crate) mod to_subdivided;
 
-use crate::square_grid_graph::context::CellDistance;
 use bevy::prelude::*;
 use common::{
 	traits::{handles_lights::HandlesLights, thread_safe::ThreadSafe},
@@ -21,8 +17,4 @@ pub(crate) trait ExtraComponentsDefinition {
 	fn insert_bundle<TLights>(entity: &mut ZyheedaEntityCommands)
 	where
 		TLights: HandlesLights + ThreadSafe;
-}
-
-pub(crate) trait GridCellDistanceDefinition {
-	const CELL_DISTANCE: CellDistance;
 }

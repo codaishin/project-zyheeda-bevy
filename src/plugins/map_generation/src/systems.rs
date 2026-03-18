@@ -1,15 +1,6 @@
 pub(crate) mod agent_spawner;
-pub(crate) mod agents_color_lookup;
-pub(crate) mod apply_extra_components;
-pub(crate) mod insert_agents_folder;
-pub(crate) mod insert_map_cells;
-pub(crate) mod insert_map_grid_graph;
 pub(crate) mod link_agent_to_grid;
 pub(crate) mod link_map_object_with_map;
 pub(crate) mod link_persistent_map_object_with_map;
-pub(crate) mod map_assets_loaded;
-pub(crate) mod map_color_lookup;
 pub(crate) mod map_loaded;
 pub(crate) mod spawn_grid;
-pub(crate) mod spawn_world_agents;
-pub(crate) mod unlit_material;
