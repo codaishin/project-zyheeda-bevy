@@ -108,6 +108,7 @@ where
 		TSaveGame::register_savable_component::<ApplyCharacterMotion>(app);
 		TSaveGame::register_savable_component::<Skill>(app);
 		TSaveGame::register_savable_component::<LinearVelocity>(app);
+		TSaveGame::register_savable_component::<CharacterGravity>(app);
 
 		app
 			// Rapier
