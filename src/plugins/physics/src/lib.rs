@@ -17,6 +17,7 @@ use crate::{
 		anchor::{Always, Anchor, Once},
 		async_collider::AsyncCollider,
 		blockable::Blockable,
+		character_gravity::CharacterGravity,
 		character_motion::ApplyCharacterMotion,
 		collider::ColliderShape,
 		default_attributes::DefaultAttributes,
@@ -128,11 +129,13 @@ where
 					.in_set(PhysicsSystems),
 			)
 			// Character Motion
+			.register_required_components::<KinematicCharacterController, CharacterGravity>()
 			.add_systems(
 				FixedUpdate,
 				(
 					FixedUpdate::delta.pipe(ApplyCharacterMotion::execute),
 					FixedUpdate::delta.pipe(ApplyCharacterMotion::set_done),
+					FixedUpdate::delta.pipe(CharacterGravity::apply),
 				)
 					.chain()
 					.in_set(PhysicsSystems),
