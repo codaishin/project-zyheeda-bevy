@@ -1,4 +1,4 @@
 use bevy::prelude::*;
 
 #[derive(Component, Debug, PartialEq, Default)]
-pub(crate) struct CharacterGravity;
+pub(crate) struct CharacterGravity(pub(crate) f32);
