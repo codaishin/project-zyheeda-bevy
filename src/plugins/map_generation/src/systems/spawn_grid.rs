@@ -1,7 +1,4 @@
-use crate::{
-	components::{grid::Grid, nav_mesh::NavMesh},
-	traits::to_subdivided::ToSubdivided,
-};
+use crate::components::{grid::Grid, nav_mesh::NavMesh};
 use bevy::{mesh::MeshTrianglesError, prelude::*};
 use common::{
 	errors::{ErrorData, Level},
@@ -19,7 +16,7 @@ impl NavMesh {
 		assets: Res<Assets<Mesh>>,
 	) -> Result<(), Vec<NavMeshError<TGridGraph::TError>>>
 	where
-		TGridGraph: TryFromTriangles + ToSubdivided + ThreadSafe,
+		TGridGraph: TryFromTriangles + ThreadSafe,
 	{
 		let mut mesh_errors = vec![];
 
@@ -152,7 +149,6 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::to_subdivided::{SubdivisionError, ToSubdivided};
 	use bevy::{
 		asset::RenderAssetUsages,
 		mesh::{Indices, PrimitiveTopology},
@@ -234,12 +230,6 @@ mod tests {
 		}
 	}
 
-	impl ToSubdivided for _Graph {
-		fn to_subdivided(&self, _: u8) -> Result<Self, SubdivisionError> {
-			Err(SubdivisionError::CannotSubdivide)
-		}
-	}
-
 	#[derive(Debug, PartialEq, Default)]
 	struct _FaultyGraph;
 
@@ -248,12 +238,6 @@ mod tests {
 
 		fn try_from_triangles<TIterator>(_: TIterator) -> Result<Self, _Error> {
 			Err(_Error)
-		}
-	}
-
-	impl ToSubdivided for _FaultyGraph {
-		fn to_subdivided(&self, _: u8) -> Result<Self, SubdivisionError> {
-			Err(SubdivisionError::CannotSubdivide)
 		}
 	}
 
@@ -271,7 +255,7 @@ mod tests {
 
 	fn setup<'a, TGraph>(meshes: impl IntoIterator<Item = (&'a Handle<Mesh>, Mesh)>) -> App
 	where
-		TGraph: TryFromTriangles<TError = _Error> + ToSubdivided + ThreadSafe,
+		TGraph: TryFromTriangles<TError = _Error> + ThreadSafe,
 	{
 		let mut app = App::new().single_threaded(Update);
 		let mut assets = Assets::default();
