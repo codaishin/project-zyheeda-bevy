@@ -119,6 +119,6 @@ impl<TDependencies> HandlesMapGeneration for MapGenerationPlugin<TDependencies> 
 
 	type TGraph = MeshGridGraph;
 
-	type TMap = Grid<0, MeshGridGraph>;
+	type TMap = Grid;
 	type TMapRef = GridAgentOf;
 }

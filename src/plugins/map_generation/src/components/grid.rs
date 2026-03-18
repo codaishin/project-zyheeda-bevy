@@ -3,16 +3,10 @@ use bevy::prelude::*;
 use std::ops::Deref;
 
 #[derive(Component, Debug, PartialEq)]
-#[require(Name = Self::name(), Transform, Visibility, MapObject)]
+#[require(Name = "Grid", Transform, Visibility, MapObject)]
 #[component(immutable)]
-pub struct Grid<const SUBDIVISIONS: u8 = 0, TGraph = MeshGridGraph> {
+pub struct Grid<TGraph = MeshGridGraph> {
 	graph: TGraph,
-}
-
-impl<const SUBDIVISIONS: u8, TGraph> Grid<SUBDIVISIONS, TGraph> {
-	fn name() -> String {
-		format!("Grid (subdivisions: {SUBDIVISIONS})")
-	}
 }
 
 impl Default for Grid {
@@ -23,7 +17,7 @@ impl Default for Grid {
 	}
 }
 
-impl<TGraph> From<&TGraph> for Grid<0, TGraph>
+impl<TGraph> From<&TGraph> for Grid<TGraph>
 where
 	TGraph: Clone,
 {
@@ -34,19 +28,19 @@ where
 	}
 }
 
-impl<TGraph> From<TGraph> for Grid<0, TGraph> {
+impl<TGraph> From<TGraph> for Grid<TGraph> {
 	fn from(graph: TGraph) -> Self {
 		Grid { graph }
 	}
 }
 
-impl From<&Grid<0, MeshGridGraph>> for MeshGridGraph {
-	fn from(value: &Grid<0, MeshGridGraph>) -> Self {
+impl From<&Grid> for MeshGridGraph {
+	fn from(value: &Grid) -> Self {
 		value.graph.clone()
 	}
 }
 
-impl<const SUBDIVISIONS: u8, TGraph> Deref for Grid<SUBDIVISIONS, TGraph> {
+impl<TGraph> Deref for Grid<TGraph> {
 	type Target = TGraph;
 
 	fn deref(&self) -> &Self::Target {

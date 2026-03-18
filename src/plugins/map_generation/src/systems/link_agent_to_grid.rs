@@ -15,7 +15,7 @@ impl GridAgent {
 		mut commands: ZyheedaCommands,
 		maps: Query<&MapObjects>,
 		agents: Query<(Entity, &MapObjectOf), (With<Self>, Without<GridAgentOf>)>,
-		grids: Query<Entity, With<Grid<0, TGraph>>>,
+		grids: Query<Entity, With<Grid<TGraph>>>,
 	) where
 		TGraph: ThreadSafe,
 	{
@@ -63,7 +63,7 @@ mod tests {
 		let map = app.world_mut().spawn_empty().id();
 		let grid = app
 			.world_mut()
-			.spawn((MapObjectOf(map), Grid::<0, _Graph>::from(_Graph)))
+			.spawn((MapObjectOf(map), Grid::<_Graph>::from(_Graph)))
 			.id();
 		let entity = app.world_mut().spawn((MapObjectOf(map), GridAgent)).id();
 
@@ -80,7 +80,7 @@ mod tests {
 		let mut app = setup();
 		let map = app.world_mut().spawn_empty().id();
 		app.world_mut()
-			.spawn((MapObjectOf(map), Grid::<0, _Graph>::from(_Graph)));
+			.spawn((MapObjectOf(map), Grid::<_Graph>::from(_Graph)));
 		let entity = app.world_mut().spawn(MapObjectOf(map)).id();
 
 		app.update();
@@ -95,7 +95,7 @@ mod tests {
 		let mut app = setup();
 		let map = app.world_mut().spawn_empty().id();
 		app.world_mut()
-			.spawn((MapObjectOf(map), Grid::<0, _OtherGraph>::from(_OtherGraph)));
+			.spawn((MapObjectOf(map), Grid::<_OtherGraph>::from(_OtherGraph)));
 		let entity = app.world_mut().spawn((MapObjectOf(map), GridAgent)).id();
 
 		app.update();
@@ -108,7 +108,7 @@ mod tests {
 		let mut app = setup();
 		let map = app.world_mut().spawn_empty().id();
 		app.world_mut()
-			.spawn((MapObjectOf(map), Grid::<0, _Graph>::from(_Graph)));
+			.spawn((MapObjectOf(map), Grid::<_Graph>::from(_Graph)));
 		let entity = app.world_mut().spawn((MapObjectOf(map), GridAgent)).id();
 
 		app.update();

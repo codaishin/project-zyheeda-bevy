@@ -12,7 +12,7 @@ impl NavMesh {
 	#[allow(clippy::type_complexity)]
 	pub(crate) fn spawn_grid<TGridGraph>(
 		mut commands: ZyheedaCommands,
-		meshes: Query<(Entity, &Mesh3d), (With<Self>, Without<Grid<0, TGridGraph>>)>,
+		meshes: Query<(Entity, &Mesh3d), (With<Self>, Without<Grid<TGridGraph>>)>,
 		assets: Res<Assets<Mesh>>,
 	) -> Result<(), Vec<NavMeshError<TGridGraph::TError>>>
 	where
@@ -271,7 +271,7 @@ mod tests {
 				NavMesh::spawn_grid::<TGraph>.pipe(|In(r), mut c: Commands| {
 					c.insert_resource(_Result(r));
 				}),
-				IsChanged::<Grid<0, TGraph>>::detect,
+				IsChanged::<Grid<TGraph>>::detect,
 			)
 				.chain(),
 		);
@@ -313,7 +313,7 @@ mod tests {
 				&_Result(Ok(()))
 			),
 			(
-				app.world().entity(entity).get::<Grid<0, _Graph>>(),
+				app.world().entity(entity).get::<Grid<_Graph>>(),
 				app.world().resource::<_Result>(),
 			),
 		);
@@ -358,7 +358,7 @@ mod tests {
 				&_Result(Err(vec![NavMeshError::HasNaNVertices { entity }]))
 			),
 			(
-				app.world().entity(entity).get::<Grid<0, _Graph>>(),
+				app.world().entity(entity).get::<Grid<_Graph>>(),
 				app.world().resource::<_Result>(),
 			),
 		);
@@ -385,7 +385,7 @@ mod tests {
 				}]))
 			),
 			(
-				app.world().entity(entity).get::<Grid<0, _Graph>>(),
+				app.world().entity(entity).get::<Grid<_Graph>>(),
 				app.world().resource::<_Result>(),
 			),
 		);
@@ -408,7 +408,7 @@ mod tests {
 				}]))
 			),
 			(
-				app.world().entity(entity).get::<Grid<0, _FaultyGraph>>(),
+				app.world().entity(entity).get::<Grid<_FaultyGraph>>(),
 				app.world().resource::<_Result>(),
 			),
 		);
@@ -425,9 +425,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&IsChanged::FALSE),
-			app.world()
-				.entity(entity)
-				.get::<IsChanged<Grid<0, _Graph>>>()
+			app.world().entity(entity).get::<IsChanged<Grid<_Graph>>>()
 		);
 	}
 
@@ -439,6 +437,6 @@ mod tests {
 
 		app.update();
 
-		assert_eq!(None, app.world().entity(entity).get::<Grid<0, _Graph>>());
+		assert_eq!(None, app.world().entity(entity).get::<Grid<_Graph>>());
 	}
 }
