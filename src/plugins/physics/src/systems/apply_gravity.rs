@@ -1,21 +1,33 @@
 use crate::components::character_gravity::CharacterGravity;
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::KinematicCharacterController;
+use bevy_rapier3d::prelude::*;
 use std::time::Duration;
 
 impl CharacterGravity {
-	const GRAVITY_STRENGTHS: f32 = 10.;
+	const GROUNDED_GRAVITY: f32 = 0.01;
+	const FALL_GRAVITY: f32 = 10.;
 
 	pub(crate) fn apply(
 		delta: In<Duration>,
-		characters: Query<&mut KinematicCharacterController, With<Self>>,
+		characters: Query<
+			(
+				&mut KinematicCharacterController,
+				&KinematicCharacterControllerOutput,
+			),
+			With<Self>,
+		>,
 	) {
-		let gravity_strength = Self::GRAVITY_STRENGTHS * delta.as_secs_f32();
+		let delta_secs = delta.as_secs_f32();
 
-		for mut character in characters {
+		for (mut character, state) in characters {
+			let gravity = match state.grounded {
+				true => Self::GROUNDED_GRAVITY,
+				false => Self::FALL_GRAVITY,
+			};
+
 			let translation = match character.translation {
-				Some(translation) => translation.with_y(translation.y - gravity_strength),
-				None => Vec3::new(0., -gravity_strength, 0.),
+				Some(translation) => translation.with_y(translation.y - gravity * delta_secs),
+				None => Vec3::new(0., -gravity * delta_secs, 0.),
 			};
 
 			character.translation = Some(translation);
@@ -40,17 +52,21 @@ mod tests {
 
 	#[test_case(Duration::from_secs(1); "1 sec delta")]
 	#[test_case(Duration::from_millis(100); "100 millis delta")]
-	fn apply_gravity(delta: Duration) {
+	fn apply_fall_gravity(delta: Duration) {
 		let mut app = setup(delta);
 		let entity = app
 			.world_mut()
-			.spawn((CharacterGravity, KinematicCharacterController::default()))
+			.spawn((
+				CharacterGravity,
+				KinematicCharacterControllerOutput::default(),
+				KinematicCharacterController::default(),
+			))
 			.id();
 
 		app.update();
 
 		assert_eq!(
-			Some(Vec3::NEG_Y * CharacterGravity::GRAVITY_STRENGTHS * delta.as_secs_f32()),
+			Some(Vec3::NEG_Y * CharacterGravity::FALL_GRAVITY * delta.as_secs_f32()),
 			app.world()
 				.entity(entity)
 				.get::<KinematicCharacterController>()
@@ -60,12 +76,40 @@ mod tests {
 
 	#[test_case(Duration::from_secs(1); "1 sec delta")]
 	#[test_case(Duration::from_millis(100); "100 millis delta")]
-	fn add_gravity(delta: Duration) {
+	fn apply_grounded_gravity(delta: Duration) {
 		let mut app = setup(delta);
 		let entity = app
 			.world_mut()
 			.spawn((
 				CharacterGravity,
+				KinematicCharacterControllerOutput {
+					grounded: true,
+					..default()
+				},
+				KinematicCharacterController::default(),
+			))
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			Some(Vec3::NEG_Y * CharacterGravity::GROUNDED_GRAVITY * delta.as_secs_f32()),
+			app.world()
+				.entity(entity)
+				.get::<KinematicCharacterController>()
+				.and_then(|c| c.translation),
+		);
+	}
+
+	#[test_case(Duration::from_secs(1); "1 sec delta")]
+	#[test_case(Duration::from_millis(100); "100 millis delta")]
+	fn add_fall_gravity(delta: Duration) {
+		let mut app = setup(delta);
+		let entity = app
+			.world_mut()
+			.spawn((
+				CharacterGravity,
+				KinematicCharacterControllerOutput::default(),
 				KinematicCharacterController {
 					translation: Some(Vec3::new(1., 2., 3.)),
 					..default()
@@ -78,7 +122,40 @@ mod tests {
 		assert_eq!(
 			Some(
 				Vec3::new(1., 2., 3.)
-					+ (Vec3::NEG_Y * CharacterGravity::GRAVITY_STRENGTHS * delta.as_secs_f32())
+					+ (Vec3::NEG_Y * CharacterGravity::FALL_GRAVITY * delta.as_secs_f32())
+			),
+			app.world()
+				.entity(entity)
+				.get::<KinematicCharacterController>()
+				.and_then(|c| c.translation),
+		);
+	}
+
+	#[test_case(Duration::from_secs(1); "1 sec delta")]
+	#[test_case(Duration::from_millis(100); "100 millis delta")]
+	fn add_grounded_gravity(delta: Duration) {
+		let mut app = setup(delta);
+		let entity = app
+			.world_mut()
+			.spawn((
+				CharacterGravity,
+				KinematicCharacterControllerOutput {
+					grounded: true,
+					..default()
+				},
+				KinematicCharacterController {
+					translation: Some(Vec3::new(1., 2., 3.)),
+					..default()
+				},
+			))
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			Some(
+				Vec3::new(1., 2., 3.)
+					+ (Vec3::NEG_Y * CharacterGravity::GROUNDED_GRAVITY * delta.as_secs_f32())
 			),
 			app.world()
 				.entity(entity)
@@ -92,7 +169,10 @@ mod tests {
 		let mut app = setup(Duration::from_secs(1));
 		let entity = app
 			.world_mut()
-			.spawn(KinematicCharacterController::default())
+			.spawn((
+				KinematicCharacterControllerOutput::default(),
+				KinematicCharacterController::default(),
+			))
 			.id();
 
 		app.update();
