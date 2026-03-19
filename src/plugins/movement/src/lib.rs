@@ -17,6 +17,7 @@ use crate::{
 		face_param::FaceParamMut,
 		movement_param::{MovementParam, MovementParamMut, context_changed::JustRemovedMovements},
 	},
+	systems::{advance_movement::AdvanceMovement, compute_path::ComputePathSystem},
 };
 use bevy::prelude::*;
 use common::{
@@ -45,8 +46,8 @@ use systems::face::execute_face::execute_face;
 
 pub struct MovementPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding>
-	MovementPlugin<(TInput, TSaveGame, TAnimations, TPhysics, TPathFinding)>
+impl<TInput, TSaveGame, TAnimations, TPhysics, TPathing>
+	MovementPlugin<(TInput, TSaveGame, TAnimations, TPhysics, TPathing)>
 where
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
@@ -56,7 +57,7 @@ where
 		+ HandlesMotion
 		+ HandlesAllPhysicalEffects
 		+ HandlesRaycast,
-	TPathFinding: ThreadSafe + HandlesPathFinding,
+	TPathing: ThreadSafe + HandlesPathFinding,
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn from_plugins(
@@ -64,14 +65,14 @@ where
 		_: &TSaveGame,
 		_: &TAnimations,
 		_: &TPhysics,
-		_: &TPathFinding,
+		_: &TPathing,
 	) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding> Plugin
-	for MovementPlugin<(TInput, TSaveGame, TAnimations, TPhysics, TPathFinding)>
+impl<TInput, TSaveGame, TAnimations, TPhysics, TPathing> Plugin
+	for MovementPlugin<(TInput, TSaveGame, TAnimations, TPhysics, TPathing)>
 where
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
@@ -81,7 +82,7 @@ where
 		+ HandlesMotion
 		+ HandlesAllPhysicalEffects
 		+ HandlesRaycast,
-	TPathFinding: ThreadSafe + HandlesPathFinding,
+	TPathing: ThreadSafe + HandlesPathFinding,
 {
 	fn build(&self, app: &mut App) {
 		TSaveGame::register_savable_component::<SetFace>(app);
@@ -90,12 +91,14 @@ where
 		TSaveGame::register_savable_component::<MovementPath>(app);
 		TSaveGame::register_savable_component::<MovementDefinition>(app);
 
-		let compute_path = MovementDefinition::compute_path::<
-			TPathFinding::TComputePath,
-			TPathFinding::TComputerRef,
-		>;
-		let execute_path = MovementDefinition::execute_movement::<MovementPath>;
-		let execute_movement = MovementDefinition::execute_movement::<TPhysics::TCharacterMotion>;
+		type ChangedPath = Changed<MovementPath>;
+		type NotMoving = Without<IsMoving>;
+		type Moving = With<IsMoving>;
+
+		let compute_path = ChangedPath::compute::<TPathing::TComputePath, TPathing::TComputerRef>;
+		let execute_path = NotMoving::advance::<MovementPath>;
+		let execute_movement = Moving::advance::<(OngoingMovement, TPhysics::TCharacterMotion)>;
+
 		let animate_movement_forward = MovementDefinition::animate_movement_forward::<
 			TPhysics::TCharacterMotion,
 			AnimationsSystemParamMut<TAnimations>,
@@ -124,13 +127,14 @@ where
 						SetFace::get_faces.pipe(execute_face::<RaycastSystemParam<TPhysics>>),
 					)
 						.chain(),
-					MovementParam::update_just_removed,
+					// Track removed motions
+					MovementParam::<TPhysics::TCharacterMotion>::update_just_removed,
 				)
 					.chain()
 					.in_set(MovementSystems)
 					.after(TInput::SYSTEMS)
 					.after(TAnimations::SYSTEMS)
-					.after(TPathFinding::SYSTEMS)
+					.after(TPathing::SYSTEMS)
 					.after(TPhysics::SYSTEMS)
 					.run_if(in_state(GameState::Play)),
 			);
@@ -150,7 +154,11 @@ impl<TDependencies> SystemSetDefinition for MovementPlugin<TDependencies> {
 	const SYSTEMS: Self::TSystemSet = MovementSystems;
 }
 
-impl<TDependencies> HandlesMovement for MovementPlugin<TDependencies> {
-	type TMovement<'w, 's> = MovementParam<'w, 's>;
-	type TMovementMut<'w, 's> = MovementParamMut<'w, 's>;
+impl<TInput, TSaveGame, TAnimations, TPhysics, TPathing> HandlesMovement
+	for MovementPlugin<(TInput, TSaveGame, TAnimations, TPhysics, TPathing)>
+where
+	TPhysics: HandlesMotion,
+{
+	type TMovement<'w, 's> = MovementParam<'w, 's, TPhysics::TCharacterMotion>;
+	type TMovementMut<'w, 's> = MovementParamMut<'w, 's, TPhysics::TCharacterMotion>;
 }

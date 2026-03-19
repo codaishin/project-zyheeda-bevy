@@ -33,6 +33,7 @@ impl OngoingMovement {
 					OngoingMovement::Stopped => {
 						e.try_remove::<SetFace>();
 					}
+					OngoingMovement::Stop => {}
 				};
 			});
 		}
@@ -132,10 +133,6 @@ mod tests {
 			.spawn((OngoingMovement::Stopped, SetFace(Face::Target)))
 			.id();
 
-		app.update();
-		app.world_mut()
-			.entity_mut(entity)
-			.remove::<OngoingMovement>();
 		app.update();
 
 		assert_eq!(None, app.world().entity(entity).get::<SetFace>());

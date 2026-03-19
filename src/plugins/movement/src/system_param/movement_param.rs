@@ -5,7 +5,7 @@ mod stop_movement;
 mod update_movement;
 
 use crate::{
-	components::{movement_definition::MovementDefinition, movement_path::MovementPath},
+	components::movement_definition::MovementDefinition,
 	system_param::movement_param::context_changed::JustRemovedMovements,
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
@@ -18,16 +18,22 @@ use common::{
 };
 
 #[derive(SystemParam)]
-pub struct MovementParam<'w, 's> {
-	movements: Query<'w, 's, Ref<'static, MovementPath>>,
+pub struct MovementParam<'w, 's, TMotion>
+where
+	TMotion: Component,
+{
+	movements: Query<'w, 's, Ref<'static, TMotion>>,
 	just_removed_movements: Res<'w, JustRemovedMovements>,
 }
 
-impl GetContext<Movement> for MovementParam<'_, '_> {
-	type TContext<'ctx> = MovementContext<'ctx>;
+impl<TMotion> GetContext<Movement> for MovementParam<'_, '_, TMotion>
+where
+	TMotion: Component,
+{
+	type TContext<'ctx> = MovementContext<'ctx, TMotion>;
 
 	fn get_context<'ctx>(
-		param: &'ctx MovementParam,
+		param: &'ctx MovementParam<TMotion>,
 		Movement { entity }: Movement,
 	) -> Option<Self::TContext<'ctx>> {
 		let ctx = match param.movements.get(entity) {
@@ -41,39 +47,51 @@ impl GetContext<Movement> for MovementParam<'_, '_> {
 }
 
 #[derive(SystemParam)]
-pub struct MovementParamMut<'w, 's> {
+pub struct MovementParamMut<'w, 's, TMotion>
+where
+	TMotion: Component,
+{
 	commands: ZyheedaCommands<'w, 's>,
 	movement_definitions: Query<'w, 's, &'static mut MovementDefinition>,
-	movements: Query<'w, 's, &'static MovementPath>,
+	motions: Query<'w, 's, &'static TMotion>,
 }
 
-impl GetContextMut<Movement> for MovementParamMut<'_, '_> {
-	type TContext<'ctx> = MovementContextMut<'ctx>;
+impl<TMotion> GetContextMut<Movement> for MovementParamMut<'_, '_, TMotion>
+where
+	TMotion: Component,
+{
+	type TContext<'ctx> = MovementContextMut<'ctx, TMotion>;
 
 	fn get_context_mut<'ctx>(
-		param: &'ctx mut MovementParamMut,
+		param: &'ctx mut MovementParamMut<TMotion>,
 		Movement { entity }: Movement,
 	) -> Option<Self::TContext<'ctx>> {
 		let movement_definition = param.movement_definitions.get_mut(entity).ok();
-		let movement = param.movements.get(entity).ok();
+		let motion = param.motions.get(entity).ok();
 		let entity = param.commands.get_mut(&entity)?;
 
 		Some(MovementContextMut {
 			entity,
 			movement_definition,
-			movement,
+			motion,
 		})
 	}
 }
 
-pub enum MovementContext<'ctx> {
-	Movement(Ref<'ctx, MovementPath>),
+pub enum MovementContext<'ctx, TMotion>
+where
+	TMotion: Component,
+{
+	Movement(Ref<'ctx, TMotion>),
 	JustRemoved,
 	Empty,
 }
 
-pub struct MovementContextMut<'ctx> {
+pub struct MovementContextMut<'ctx, TMotion>
+where
+	TMotion: Component,
+{
 	entity: ZyheedaEntityCommands<'ctx>,
 	movement_definition: Option<Mut<'ctx, MovementDefinition>>,
-	movement: Option<&'ctx MovementPath>,
+	motion: Option<&'ctx TMotion>,
 }

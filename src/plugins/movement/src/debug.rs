@@ -16,7 +16,7 @@ pub(crate) fn draw(app: &mut App) {
 fn draw_path(paths: Query<(&Transform, &OngoingMovement, &MovementPath)>, mut gizmos: Gizmos) {
 	for (transform, movement, path) in paths {
 		let mut current = match movement {
-			OngoingMovement::Stopped => continue,
+			OngoingMovement::Stopped | OngoingMovement::Stop => continue,
 			OngoingMovement::Target(MovementTarget::Dir(direction)) => {
 				let target = transform.translation + **direction;
 				gizmos.arrow(transform.translation, target, LIGHT_CYAN);

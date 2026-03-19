@@ -2,15 +2,17 @@ use crate::{
 	components::movement_definition::MovementDefinition,
 	traits::movement_update::MovementUpdate,
 };
-use bevy::prelude::*;
+use bevy::{ecs::query::QueryFilter, prelude::*};
 use common::{tools::Done, traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
-impl MovementDefinition {
-	pub(crate) fn execute_movement<TMovement>(
+impl<T> AdvanceMovement for T where T: QueryFilter {}
+
+pub(crate) trait AdvanceMovement: QueryFilter + Sized {
+	fn advance<TMovement>(
 		mut commands: ZyheedaCommands,
-		mut agents: Query<(Entity, TMovement::TComponents, &Self), TMovement::TConstraint>,
+		mut agents: Query<(Entity, TMovement::TComponents, &MovementDefinition), Self>,
 	) where
-		TMovement: Component + MovementUpdate,
+		TMovement: MovementUpdate,
 	{
 		for (entity, components, definition) in &mut agents {
 			commands.try_apply_on(&entity, |mut e| {
@@ -46,7 +48,6 @@ mod tests {
 
 	impl MovementUpdate for _Movement {
 		type TComponents = &'static _Movement;
-		type TConstraint = Without<_DoNotMove>;
 
 		fn update(agent: &mut ZyheedaEntityCommands, movement: &_Movement, speed: Speed) -> Done {
 			agent.try_insert(_Speed(speed));
@@ -63,7 +64,7 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, MovementDefinition::execute_movement::<_Movement>);
+		app.add_systems(Update, Without::<_DoNotMove>::advance::<_Movement>);
 
 		app
 	}

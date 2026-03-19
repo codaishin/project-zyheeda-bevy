@@ -2,7 +2,7 @@ use crate::{
 	MovementPath,
 	components::{movement_definition::MovementDefinition, movement_path::Mode},
 };
-use bevy::prelude::*;
+use bevy::{ecs::query::QueryFilter, prelude::*};
 use common::{
 	traits::{
 		accessors::get::{GetProperty, TryApplyOn},
@@ -20,12 +20,13 @@ type MoveComponents<TGetComputer> = (
 	&'static MovementPath,
 	&'static TGetComputer,
 );
-type ChangedMovement = Changed<MovementPath>;
 
-impl MovementDefinition {
-	pub(crate) fn compute_path<TComputer, TGetComputer>(
+impl<T> ComputePathSystem for T where T: QueryFilter {}
+
+pub(crate) trait ComputePathSystem: QueryFilter + Sized {
+	fn compute<TComputer, TGetComputer>(
 		mut commands: ZyheedaCommands,
-		movements: Query<MoveComponents<TGetComputer>, ChangedMovement>,
+		movements: Query<MoveComponents<TGetComputer>, Self>,
 		computers: Query<&TComputer>,
 	) where
 		TComputer: Component + ComputePath,
@@ -38,15 +39,17 @@ impl MovementDefinition {
 			let Mode::PathTarget(Some(target)) = path.0 else {
 				continue;
 			};
-			let path = definition.compute_path_internal(computer, transform, target);
+			let path = definition.compute_path(computer, transform, target);
 
 			commands.try_apply_on(&entity, |mut e| {
 				e.try_insert(MovementPath::path(path));
 			});
 		}
 	}
+}
 
-	fn compute_path_internal<TComputer>(
+impl MovementDefinition {
+	fn compute_path<TComputer>(
 		&self,
 		computer: &TComputer,
 		transform: &GlobalTransform,
@@ -76,6 +79,9 @@ mod tests {
 	use mockall::{automock, predicate::eq};
 	use std::collections::VecDeque;
 	use testing::{NestedMocks, SingleThreadedApp, assert_no_panic};
+
+	#[derive(Component)]
+	struct _ExecComputation;
 
 	#[derive(Debug, PartialEq, Default)]
 	struct _MoveMethod;
@@ -131,7 +137,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			MovementDefinition::compute_path::<_ComputePath, _GetComputer>,
+			With::<_ExecComputation>::compute::<_ComputePath, _GetComputer>,
 		);
 
 		app
@@ -156,6 +162,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn((
+					_ExecComputation,
 					MovementDefinition {
 						radius: Units::from(1.),
 						..default()
@@ -194,6 +201,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn((
+					_ExecComputation,
 					MovementDefinition {
 						radius: Units::from(1.),
 						..default()
@@ -228,6 +236,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn((
+					_ExecComputation,
 					MovementDefinition {
 						radius: Units::from(1.),
 						..default()
@@ -262,6 +271,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn((
+					_ExecComputation,
 					MovementDefinition {
 						radius: Units::from(1.),
 						..default()
@@ -293,6 +303,7 @@ mod tests {
 				}))
 				.id();
 			app.world_mut().spawn((
+				_ExecComputation,
 				MovementDefinition {
 					radius: Units::from(1.),
 					..default()
@@ -322,6 +333,7 @@ mod tests {
 				}))
 				.id();
 			app.world_mut().spawn((
+				_ExecComputation,
 				MovementDefinition {
 					radius: Units::from(42.),
 					..default()
@@ -349,6 +361,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn((
+					_ExecComputation,
 					MovementDefinition {
 						radius: Units::from(1.),
 						..default()
@@ -372,15 +385,16 @@ mod tests {
 		use super::*;
 
 		#[test]
-		fn act_only_once() {
+		fn do_nothing_when_query_filter_does_not_apply() {
 			let mut app = setup();
 			let computer = app
 				.world_mut()
 				.spawn(_ComputePath::new().with_mock(|mock| {
-					mock.expect_compute_path().times(1).return_const(None);
+					mock.expect_compute_path().never().return_const(None);
 				}))
 				.id();
 			app.world_mut().spawn((
+				// NO `_ExecComputation``
 				MovementDefinition {
 					radius: Units::from(1.),
 					..default()
@@ -390,36 +404,6 @@ mod tests {
 				_GetComputer(computer),
 			));
 
-			app.update();
-			app.update();
-		}
-
-		#[test]
-		fn act_again_if_path_changed() {
-			let mut app = setup();
-			let computer = app
-				.world_mut()
-				.spawn(_ComputePath::new().with_mock(|mock| {
-					mock.expect_compute_path().times(2).return_const(None);
-				}))
-				.id();
-			let entity = app
-				.world_mut()
-				.spawn((
-					MovementDefinition {
-						radius: Units::from(1.),
-						..default()
-					},
-					MovementPath::target(Vec3::default()),
-					GlobalTransform::default(),
-					_GetComputer(computer),
-				))
-				.id();
-
-			app.update();
-			app.world_mut()
-				.entity_mut(entity)
-				.insert(MovementPath::target(Vec3::default()));
 			app.update();
 		}
 	}

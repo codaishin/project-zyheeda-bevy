@@ -85,6 +85,7 @@
 		"mockall",
 		"nanos",
 		"Numpad",
+		"Pathing",
 		"peekable",
 		"quickbar",
 		"reborrow",

@@ -14,8 +14,13 @@ impl IsMoving {
 
 		commands.try_apply_on(&on_insert.entity, |mut e| {
 			match movement {
-				OngoingMovement::Stopped => e.try_remove::<IsMoving>(),
-				OngoingMovement::Target(..) => e.try_insert(IsMoving),
+				OngoingMovement::Stop => {}
+				OngoingMovement::Stopped => {
+					e.try_remove::<IsMoving>();
+				}
+				OngoingMovement::Target(..) => {
+					e.try_insert(IsMoving);
+				}
 			};
 		});
 	}
@@ -74,7 +79,7 @@ mod tests {
 	}
 
 	#[test]
-	fn remove_when_ongoing_movement_stopped() {
+	fn remove_when_ongoing_movement_stopped_inserted() {
 		let mut app = setup();
 
 		let entity = app.world_mut().spawn(OngoingMovement::Stopped);
@@ -83,24 +88,38 @@ mod tests {
 	}
 
 	#[test]
-	fn remove_when_ongoing_movement_reinserted() {
+	fn remove_when_ongoing_movement_stopped_reinserted() {
 		let mut app = setup();
-
 		let mut entity = app
 			.world_mut()
 			.spawn(OngoingMovement::target(Vec3::default()));
+
 		entity.insert(OngoingMovement::Stopped);
 
 		assert_eq!(None, entity.get::<IsMoving>());
 	}
 
+	#[test_case((), false; "do not insert")]
+	#[test_case(IsMoving, true; "do not remove")]
+	fn when_inserting_ongoing_movement_stop<TBundle>(bundle: TBundle, has_moving: bool)
+	where
+		TBundle: Bundle,
+	{
+		let mut app = setup();
+		let mut entity = app.world_mut().spawn(bundle);
+
+		entity.insert(OngoingMovement::Stop);
+
+		assert_eq!(has_moving, entity.contains::<IsMoving>());
+	}
+
 	#[test]
 	fn remove_when_ongoing_movement_removed() {
 		let mut app = setup();
-
 		let mut entity = app
 			.world_mut()
 			.spawn(OngoingMovement::target(Vec3::default()));
+
 		entity.remove::<OngoingMovement>();
 
 		assert_eq!(None, entity.get::<IsMoving>());

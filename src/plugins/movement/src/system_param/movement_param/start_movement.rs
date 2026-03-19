@@ -6,12 +6,16 @@ use crate::{
 	},
 	system_param::movement_param::MovementContextMut,
 };
+use bevy::ecs::component::Component;
 use common::{
 	tools::{Units, UnitsPerSecond},
 	traits::handles_movement::{MovementTarget, StartMovement},
 };
 
-impl StartMovement for MovementContextMut<'_> {
+impl<TMotion> StartMovement for MovementContextMut<'_, TMotion>
+where
+	TMotion: Component,
+{
 	fn start<T>(&mut self, target: T, radius: Units, speed: UnitsPerSecond)
 	where
 		T: Into<MovementTarget>,
@@ -45,7 +49,7 @@ mod tests {
 	use test_case::test_case;
 	use testing::SingleThreadedApp;
 
-	#[derive(Debug, PartialEq)]
+	#[derive(Component)]
 	struct _Motion;
 
 	fn setup() -> App {
@@ -58,7 +62,7 @@ mod tests {
 		let entity = app.world_mut().spawn_empty().id();
 
 		app.world_mut()
-			.run_system_once(move |mut p: MovementParamMut| {
+			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
 				let mut ctx =
 					MovementParamMut::get_context_mut(&mut p, Movement { entity }).unwrap();
 				ctx.start(
@@ -87,7 +91,7 @@ mod tests {
 		let entity = app.world_mut().spawn_empty().id();
 
 		app.world_mut()
-			.run_system_once(move |mut p: MovementParamMut| {
+			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
 				let mut ctx =
 					MovementParamMut::get_context_mut(&mut p, Movement { entity }).unwrap();
 				ctx.start(target, Units::from(42.), UnitsPerSecond::from(11.));
@@ -101,12 +105,12 @@ mod tests {
 	}
 
 	#[test]
-	fn insert_stop() -> Result<(), RunSystemError> {
+	fn insert_stopped() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let entity = app.world_mut().spawn_empty().id();
 
 		app.world_mut()
-			.run_system_once(move |mut p: MovementParamMut| {
+			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
 				let mut ctx =
 					MovementParamMut::get_context_mut(&mut p, Movement { entity }).unwrap();
 				ctx.start(

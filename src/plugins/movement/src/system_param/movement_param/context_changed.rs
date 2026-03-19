@@ -1,12 +1,12 @@
-use crate::{
-	components::movement_path::MovementPath,
-	system_param::movement_param::{MovementContext, MovementParam},
-};
+use crate::system_param::movement_param::{MovementContext, MovementParam};
 use bevy::prelude::*;
 use common::traits::accessors::get::ContextChanged;
 use std::collections::HashSet;
 
-impl ContextChanged for MovementContext<'_> {
+impl<TMotion> ContextChanged for MovementContext<'_, TMotion>
+where
+	TMotion: Component,
+{
 	fn context_changed(&self) -> bool {
 		match self {
 			MovementContext::Movement(movement) => movement.is_changed(),
@@ -16,10 +16,13 @@ impl ContextChanged for MovementContext<'_> {
 	}
 }
 
-impl MovementParam<'_, '_> {
+impl<TMotion> MovementParam<'_, '_, TMotion>
+where
+	TMotion: Component,
+{
 	pub(crate) fn update_just_removed(
 		mut just_removed: ResMut<JustRemovedMovements>,
-		mut removed: RemovedComponents<MovementPath>,
+		mut removed: RemovedComponents<TMotion>,
 	) {
 		if !just_removed.0.is_empty() {
 			just_removed.0.clear();
@@ -37,13 +40,11 @@ pub(crate) struct JustRemovedMovements(pub(crate) HashSet<Entity>);
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		components::movement_path::MovementPath,
-		system_param::movement_param::MovementParam,
-	};
+	use crate::system_param::movement_param::MovementParam;
 	use common::traits::{accessors::get::GetContext, handles_movement::Movement};
 	use testing::SingleThreadedApp;
 
+	#[derive(Component)]
 	struct _Motion;
 
 	#[derive(Component, Debug, PartialEq)]
@@ -55,8 +56,8 @@ mod tests {
 		app.init_resource::<JustRemovedMovements>().add_systems(
 			Update,
 			(
-				MovementParam::update_just_removed,
-				|mut commands: Commands, m: MovementParam, entities: Query<Entity>| {
+				MovementParam::<_Motion>::update_just_removed,
+				|mut commands: Commands, m: MovementParam<_Motion>, entities: Query<Entity>| {
 					for entity in &entities {
 						let key = Movement { entity };
 						let Some(ctx) = MovementParam::get_context(&m, key) else {
@@ -78,10 +79,7 @@ mod tests {
 	#[test]
 	fn is_changed_when_movement_added() {
 		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn(MovementPath::target(Vec3::new(1., 2., 3.)))
-			.id();
+		let entity = app.world_mut().spawn(_Motion).id();
 
 		app.update();
 
@@ -94,10 +92,7 @@ mod tests {
 	#[test]
 	fn is_not_changed_when_movement_not_added() {
 		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn(MovementPath::target(Vec3::new(1., 2., 3.)))
-			.id();
+		let entity = app.world_mut().spawn(_Motion).id();
 
 		app.update();
 		app.update();
@@ -111,15 +106,12 @@ mod tests {
 	#[test]
 	fn is_changed_when_movement_changed() {
 		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn(MovementPath::target(Vec3::new(1., 2., 3.)))
-			.id();
+		let entity = app.world_mut().spawn(_Motion).id();
 
 		app.update();
 		app.world_mut()
 			.entity_mut(entity)
-			.get_mut::<MovementPath>()
+			.get_mut::<_Motion>()
 			.as_deref_mut();
 		app.update();
 
@@ -132,13 +124,10 @@ mod tests {
 	#[test]
 	fn is_changed_when_movement_just_removed() {
 		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn(MovementPath::target(Vec3::new(1., 2., 3.)))
-			.id();
+		let entity = app.world_mut().spawn(_Motion).id();
 
 		app.update();
-		app.world_mut().entity_mut(entity).remove::<MovementPath>();
+		app.world_mut().entity_mut(entity).remove::<_Motion>();
 		app.update();
 
 		assert_eq!(
@@ -150,13 +139,10 @@ mod tests {
 	#[test]
 	fn is_not_changed_when_movement_not_just_removed() {
 		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn(MovementPath::target(Vec3::new(1., 2., 3.)))
-			.id();
+		let entity = app.world_mut().spawn(_Motion).id();
 
 		app.update();
-		app.world_mut().entity_mut(entity).remove::<MovementPath>();
+		app.world_mut().entity_mut(entity).remove::<_Motion>();
 		app.update();
 		app.update();
 

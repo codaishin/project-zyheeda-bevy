@@ -2,12 +2,16 @@ use crate::{
 	components::{movement_path::MovementPath, ongoing_movement::OngoingMovement},
 	system_param::movement_param::MovementContextMut,
 };
+use bevy::ecs::component::Component;
 use common::traits::handles_movement::StopMovement;
 
-impl StopMovement for MovementContextMut<'_> {
+impl<TMotion> StopMovement for MovementContextMut<'_, TMotion>
+where
+	TMotion: Component,
+{
 	fn stop(&mut self) {
 		self.entity
-			.try_insert((MovementPath::stop(), OngoingMovement::Stopped));
+			.try_insert((MovementPath::stop(), OngoingMovement::Stop));
 	}
 }
 
@@ -29,7 +33,7 @@ mod tests {
 	};
 	use testing::SingleThreadedApp;
 
-	#[derive(Debug, PartialEq)]
+	#[derive(Component)]
 	struct _Motion;
 
 	fn setup() -> App {
@@ -45,7 +49,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once(move |mut p: MovementParamMut| {
+			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
 				let mut ctx =
 					MovementParamMut::get_context_mut(&mut p, MovementMarker { entity }).unwrap();
 				ctx.stop();
@@ -67,14 +71,14 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once(move |mut p: MovementParamMut| {
+			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
 				let mut ctx =
 					MovementParamMut::get_context_mut(&mut p, MovementMarker { entity }).unwrap();
 				ctx.stop();
 			})?;
 
 		assert_eq!(
-			Some(&OngoingMovement::Stopped),
+			Some(&OngoingMovement::Stop),
 			app.world().entity(entity).get::<OngoingMovement>(),
 		);
 		Ok(())

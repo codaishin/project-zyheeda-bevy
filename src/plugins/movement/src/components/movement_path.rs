@@ -1,5 +1,5 @@
 use crate::{
-	components::ongoing_movement::{IsMoving, OngoingMovement},
+	components::ongoing_movement::OngoingMovement,
 	traits::movement_update::MovementUpdate,
 };
 use bevy::prelude::*;
@@ -60,7 +60,6 @@ where
 
 impl MovementUpdate for MovementPath {
 	type TComponents = &'static mut Self;
-	type TConstraint = Without<IsMoving>;
 
 	fn update(entity: &mut ZyheedaEntityCommands, mut path: Mut<Self>, _: Speed) -> Done {
 		match path.take_next() {

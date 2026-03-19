@@ -1,7 +1,11 @@
 use crate::system_param::movement_param::MovementContextMut;
+use bevy::ecs::component::Component;
 use common::{tools::UnitsPerSecond, traits::handles_movement::UpdateMovement};
 
-impl UpdateMovement for MovementContextMut<'_> {
+impl<TMotion> UpdateMovement for MovementContextMut<'_, TMotion>
+where
+	TMotion: Component,
+{
 	fn update(&mut self, speed: UnitsPerSecond) {
 		let Some(movement_definition) = self.movement_definition.as_deref_mut() else {
 			return;
@@ -29,6 +33,7 @@ mod tests {
 	};
 	use testing::SingleThreadedApp;
 
+	#[derive(Component)]
 	struct _Motion;
 
 	fn setup() -> App {
@@ -47,7 +52,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once(move |mut p: MovementParamMut| {
+			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
 				let mut ctx =
 					MovementParamMut::get_context_mut(&mut p, Movement { entity }).unwrap();
 				ctx.update(UnitsPerSecond::from(110.));
