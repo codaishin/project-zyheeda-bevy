@@ -4,7 +4,11 @@ mod systems;
 mod traits;
 
 use crate::{
-	components::{facing::SetFace, movement_definition::MovementDefinition},
+	components::{
+		facing::SetFace,
+		movement_definition::MovementDefinition,
+		new_movement::NewMovement,
+	},
 	system_param::{
 		face_param::FaceParamMut,
 		movement_param::{MovementParam, MovementParamMut, context_changed::JustRemovedMovements},
@@ -121,6 +125,7 @@ where
 					// Apply facing
 					(
 						Movement::<TPhysics::TCharacterMotion>::set_faces,
+						NewMovement::set_facing,
 						SetFace::get_faces.pipe(execute_face::<RaycastSystemParam<TPhysics>>),
 					)
 						.chain(),
