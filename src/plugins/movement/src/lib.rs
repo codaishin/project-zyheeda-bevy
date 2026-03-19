@@ -88,6 +88,7 @@ where
 		TSaveGame::register_savable_component::<SetFaceOverride>(app);
 		TSaveGame::register_savable_component::<OngoingMovement>(app);
 		TSaveGame::register_savable_component::<MovementPath>(app);
+		TSaveGame::register_savable_component::<MovementDefinition>(app);
 
 		let compute_path = MovementDefinition::compute_path::<
 			TPathFinding::TComputePath,
