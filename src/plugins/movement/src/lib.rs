@@ -98,7 +98,7 @@ where
 		>;
 
 		#[cfg(debug_assertions)]
-		crate::components::movement::debug::draw::<TPhysics::TCharacterMotion>(app);
+		crate::components::movement::debug::draw(app);
 
 		app.init_resource::<JustRemovedMovements>()
 			.add_observer(IsMoving::mark)

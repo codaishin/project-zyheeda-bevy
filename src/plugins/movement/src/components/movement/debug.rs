@@ -1,33 +1,30 @@
 use crate::{
 	MovementSystems,
-	components::movement::path_or_direction::{Mode, PathOrDirection},
+	components::{
+		movement::path_or_direction::{Mode, PathOrDirection},
+		new_movement::NewMovement,
+	},
 };
 use bevy::{color::palettes::css::LIGHT_CYAN, prelude::*};
-use common::traits::{accessors::get::GetProperty, handles_physics::CharacterMotion};
+use common::traits::handles_movement::MovementTarget;
 
-pub(crate) fn draw<TMotion>(app: &mut App)
-where
-	TMotion: GetProperty<CharacterMotion> + Component,
-{
-	app.add_systems(Update, draw_path::<TMotion>.after(MovementSystems));
+pub(crate) fn draw(app: &mut App) {
+	app.add_systems(Update, draw_path.after(MovementSystems));
 }
 
 #[allow(clippy::type_complexity)]
-fn draw_path<TMotion>(paths: Query<(&Transform, &TMotion, &PathOrDirection)>, mut gizmos: Gizmos)
-where
-	TMotion: GetProperty<CharacterMotion> + Component,
-{
-	for (transform, motion, path) in paths {
-		let mut current = match motion.get_property() {
-			CharacterMotion::Stop => continue,
-			CharacterMotion::Direction { speed, direction } => {
-				let target = transform.translation + *direction * *speed;
+fn draw_path(paths: Query<(&Transform, &NewMovement, &PathOrDirection)>, mut gizmos: Gizmos) {
+	for (transform, movement, path) in paths {
+		let mut current = match movement {
+			NewMovement::Stopped => continue,
+			NewMovement::Target(MovementTarget::Dir(direction)) => {
+				let target = transform.translation + **direction;
 				gizmos.arrow(transform.translation, target, LIGHT_CYAN);
 				continue;
 			}
-			CharacterMotion::ToTarget { target, .. } => {
-				gizmos.arrow(transform.translation, target, LIGHT_CYAN);
-				target
+			NewMovement::Target(MovementTarget::Point(point)) => {
+				gizmos.arrow(transform.translation, *point, LIGHT_CYAN);
+				*point
 			}
 		};
 
