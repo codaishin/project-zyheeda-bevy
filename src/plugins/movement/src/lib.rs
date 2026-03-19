@@ -1,4 +1,5 @@
 mod components;
+mod observers;
 mod system_param;
 mod systems;
 mod traits;
@@ -7,7 +8,7 @@ use crate::{
 	components::{
 		facing::SetFace,
 		movement_definition::MovementDefinition,
-		new_movement::NewMovement,
+		new_movement::{IsMoving, NewMovement},
 	},
 	system_param::{
 		face_param::FaceParamMut,
@@ -35,10 +36,7 @@ use common::{
 		thread_safe::ThreadSafe,
 	},
 };
-use components::{
-	facing::SetFaceOverride,
-	movement::{Movement, path_or_direction::PathOrDirection},
-};
+use components::{facing::SetFaceOverride, movement::path_or_direction::PathOrDirection};
 use std::marker::PhantomData;
 use systems::face::execute_face::execute_face;
 
@@ -85,32 +83,25 @@ where
 	fn build(&self, app: &mut App) {
 		TSaveGame::register_savable_component::<SetFace>(app);
 		TSaveGame::register_savable_component::<SetFaceOverride>(app);
-		TSaveGame::register_savable_component::<
-			Movement<PathOrDirection<TPhysics::TCharacterMotion>>,
-		>(app);
+		TSaveGame::register_savable_component::<NewMovement>(app);
+		TSaveGame::register_savable_component::<PathOrDirection>(app);
 
 		let compute_path = MovementDefinition::compute_path::<
-			TPhysics::TCharacterMotion,
 			TPathFinding::TComputePath,
 			TPathFinding::TComputerRef,
 		>;
-		let execute_path = MovementDefinition::execute_movement::<
-			Movement<PathOrDirection<TPhysics::TCharacterMotion>>,
-		>;
-		let execute_movement =
-			MovementDefinition::execute_movement::<Movement<TPhysics::TCharacterMotion>>;
+		let execute_path = MovementDefinition::execute_movement::<PathOrDirection>;
+		let execute_movement = MovementDefinition::execute_movement::<TPhysics::TCharacterMotion>;
 		let animate_movement_forward = MovementDefinition::animate_movement_forward::<
-			Movement<TPhysics::TCharacterMotion>,
+			TPhysics::TCharacterMotion,
 			AnimationsSystemParamMut<TAnimations>,
 		>;
 
 		#[cfg(debug_assertions)]
 		crate::components::movement::debug::draw::<TPhysics::TCharacterMotion>(app);
 
-		app
-			// Resources
-			.init_resource::<JustRemovedMovements>()
-			// Systems
+		app.init_resource::<JustRemovedMovements>()
+			.add_observer(IsMoving::mark)
 			.add_systems(
 				Update,
 				(
@@ -124,12 +115,11 @@ where
 						.chain(),
 					// Apply facing
 					(
-						Movement::<TPhysics::TCharacterMotion>::set_faces,
 						NewMovement::set_facing,
 						SetFace::get_faces.pipe(execute_face::<RaycastSystemParam<TPhysics>>),
 					)
 						.chain(),
-					MovementParam::<TPhysics::TCharacterMotion>::update_just_removed,
+					MovementParam::update_just_removed,
 				)
 					.chain()
 					.in_set(MovementSystems)
@@ -155,11 +145,7 @@ impl<TDependencies> SystemSetDefinition for MovementPlugin<TDependencies> {
 	const SYSTEMS: Self::TSystemSet = MovementSystems;
 }
 
-impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding> HandlesMovement
-	for MovementPlugin<(TInput, TSaveGame, TAnimations, TPhysics, TPathFinding)>
-where
-	TPhysics: HandlesMotion,
-{
-	type TMovement<'w, 's> = MovementParam<'w, 's, TPhysics::TCharacterMotion>;
-	type TMovementMut<'w, 's> = MovementParamMut<'w, 's, TPhysics::TCharacterMotion>;
+impl<TDependencies> HandlesMovement for MovementPlugin<TDependencies> {
+	type TMovement<'w, 's> = MovementParam<'w, 's>;
+	type TMovementMut<'w, 's> = MovementParamMut<'w, 's>;
 }

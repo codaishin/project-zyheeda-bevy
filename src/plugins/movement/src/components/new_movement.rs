@@ -1,31 +1,22 @@
 use bevy::prelude::*;
-use common::traits::{
-	accessors::get::{GetProperty, Property},
-	handles_movement::MovementTarget,
-};
+use common::traits::handles_movement::MovementTarget;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
-#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+#[component(immutable)]
 #[savable_component(id = "new movement")]
-pub(crate) struct NewMovement {
-	pub(crate) target: Option<MovementTarget>,
+pub(crate) enum NewMovement {
+	#[default]
+	Stopped,
+	Target(MovementTarget),
 }
 
 impl NewMovement {
-	pub(crate) fn stop() -> Self {
-		Self { target: None }
-	}
-
 	pub(crate) fn to(target: impl Into<MovementTarget>) -> Self {
-		Self {
-			target: Some(target.into()),
-		}
+		Self::Target(target.into())
 	}
 }
 
-impl GetProperty<Option<MovementTarget>> for NewMovement {
-	fn get_property(&self) -> <Option<MovementTarget> as Property>::TValue<'_> {
-		self.target
-	}
-}
+#[derive(Component, Debug, PartialEq)]
+pub(crate) struct IsMoving;

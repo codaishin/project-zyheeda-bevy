@@ -3,7 +3,7 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
 	accessors::get::{GetContextMut, GetProperty},
 	handles_animations::{Animations, MoveDirectionMut},
-	handles_movement::MovementTarget,
+	handles_physics::CharacterMotion,
 };
 
 impl MovementDefinition {
@@ -11,7 +11,7 @@ impl MovementDefinition {
 		mut animations: StaticSystemParam<TAnimations>,
 		movements: Query<(Entity, &TMovement, &Transform), Changed<TMovement>>,
 	) where
-		TMovement: Component + GetProperty<Option<MovementTarget>>,
+		TMovement: Component + GetProperty<CharacterMotion>,
 		TAnimations: for<'c> GetContextMut<Animations, TContext<'c>: MoveDirectionMut>,
 	{
 		for (entity, movement, transform) in &movements {
@@ -31,11 +31,14 @@ impl MovementDefinition {
 
 fn get_forward_direction<TMovement>(movement: &TMovement, transform: &Transform) -> Option<Dir3>
 where
-	TMovement: GetProperty<Option<MovementTarget>>,
+	TMovement: GetProperty<CharacterMotion>,
 {
-	match movement.get_property()? {
-		MovementTarget::Dir(direction) => Some(direction),
-		MovementTarget::Point(point) => Dir3::try_from(point - transform.translation).ok(),
+	match movement.get_property() {
+		CharacterMotion::Direction { direction, .. } => Some(direction),
+		CharacterMotion::ToTarget { target, .. } => {
+			Dir3::try_from(target - transform.translation).ok()
+		}
+		CharacterMotion::Stop => None,
 	}
 }
 
@@ -43,15 +46,15 @@ where
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use common::traits::handles_animations::MoveDirection;
+	use common::{tools::speed::Speed, traits::handles_animations::MoveDirection};
 	use testing::SingleThreadedApp;
 
 	#[derive(Component)]
-	struct _Movement(MovementTarget);
+	struct _Movement(CharacterMotion);
 
-	impl GetProperty<Option<MovementTarget>> for _Movement {
-		fn get_property(&self) -> Option<MovementTarget> {
-			Some(self.0)
+	impl GetProperty<CharacterMotion> for _Movement {
+		fn get_property(&self) -> CharacterMotion {
+			self.0
 		}
 	}
 
@@ -87,7 +90,10 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				_Movement(MovementTarget::Dir(Dir3::NEG_X)),
+				_Movement(CharacterMotion::Direction {
+					direction: Dir3::NEG_X,
+					speed: Speed::ZERO,
+				}),
 				_Animations(None),
 				Transform::default(),
 			))
@@ -107,7 +113,10 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				_Movement(MovementTarget::Point(Vec3::new(1., 2., 3.))),
+				_Movement(CharacterMotion::ToTarget {
+					target: Vec3::new(1., 2., 3.),
+					speed: Speed::ZERO,
+				}),
 				_Animations(None),
 				Transform::from_xyz(2., 2., 3.),
 			))
@@ -127,7 +136,10 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				_Movement(MovementTarget::Dir(Dir3::NEG_X)),
+				_Movement(CharacterMotion::Direction {
+					direction: Dir3::NEG_X,
+					speed: Speed::ZERO,
+				}),
 				_Animations(None),
 				Transform::default(),
 			))
@@ -152,7 +164,10 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				_Movement(MovementTarget::Dir(Dir3::NEG_X)),
+				_Movement(CharacterMotion::Direction {
+					direction: Dir3::NEG_X,
+					speed: Speed::ZERO,
+				}),
 				_Animations(None),
 				Transform::default(),
 			))

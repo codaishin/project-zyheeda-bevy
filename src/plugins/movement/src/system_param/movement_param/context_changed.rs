@@ -1,12 +1,12 @@
 use crate::{
-	components::movement::{Movement, path_or_direction::PathOrDirection},
+	components::movement::path_or_direction::PathOrDirection,
 	system_param::movement_param::{MovementContext, MovementParam},
 };
 use bevy::prelude::*;
-use common::traits::{accessors::get::ContextChanged, thread_safe::ThreadSafe};
+use common::traits::accessors::get::ContextChanged;
 use std::collections::HashSet;
 
-impl<TMotion> ContextChanged for MovementContext<'_, TMotion> {
+impl ContextChanged for MovementContext<'_> {
 	fn context_changed(&self) -> bool {
 		match self {
 			MovementContext::Movement(movement) => movement.is_changed(),
@@ -16,13 +16,10 @@ impl<TMotion> ContextChanged for MovementContext<'_, TMotion> {
 	}
 }
 
-impl<TMotion> MovementParam<'_, '_, TMotion>
-where
-	TMotion: ThreadSafe,
-{
+impl MovementParam<'_, '_> {
 	pub(crate) fn update_just_removed(
 		mut just_removed: ResMut<JustRemovedMovements>,
-		mut removed: RemovedComponents<Movement<PathOrDirection<TMotion>>>,
+		mut removed: RemovedComponents<PathOrDirection>,
 	) {
 		if !just_removed.0.is_empty() {
 			just_removed.0.clear();
@@ -41,13 +38,10 @@ pub(crate) struct JustRemovedMovements(pub(crate) HashSet<Entity>);
 mod tests {
 	use super::*;
 	use crate::{
-		components::movement::{Movement, path_or_direction::PathOrDirection},
+		components::movement::path_or_direction::PathOrDirection,
 		system_param::movement_param::MovementParam,
 	};
-	use common::traits::{
-		accessors::get::GetContext,
-		handles_movement::Movement as MovementMarker,
-	};
+	use common::traits::{accessors::get::GetContext, handles_movement::Movement};
 	use testing::SingleThreadedApp;
 
 	struct _Motion;
@@ -61,10 +55,10 @@ mod tests {
 		app.init_resource::<JustRemovedMovements>().add_systems(
 			Update,
 			(
-				MovementParam::<_Motion>::update_just_removed,
-				|mut commands: Commands, m: MovementParam<_Motion>, entities: Query<Entity>| {
+				MovementParam::update_just_removed,
+				|mut commands: Commands, m: MovementParam, entities: Query<Entity>| {
 					for entity in &entities {
-						let key = MovementMarker { entity };
+						let key = Movement { entity };
 						let Some(ctx) = MovementParam::get_context(&m, key) else {
 							continue;
 						};
@@ -86,9 +80,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Movement::<PathOrDirection<_Motion>>::to(Vec3::new(
-				1., 2., 3.,
-			)))
+			.spawn(PathOrDirection::target(Vec3::new(1., 2., 3.)))
 			.id();
 
 		app.update();
@@ -104,9 +96,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Movement::<PathOrDirection<_Motion>>::to(Vec3::new(
-				1., 2., 3.,
-			)))
+			.spawn(PathOrDirection::target(Vec3::new(1., 2., 3.)))
 			.id();
 
 		app.update();
@@ -123,15 +113,13 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Movement::<PathOrDirection<_Motion>>::to(Vec3::new(
-				1., 2., 3.,
-			)))
+			.spawn(PathOrDirection::target(Vec3::new(1., 2., 3.)))
 			.id();
 
 		app.update();
 		app.world_mut()
 			.entity_mut(entity)
-			.get_mut::<Movement<PathOrDirection<_Motion>>>()
+			.get_mut::<PathOrDirection>()
 			.as_deref_mut();
 		app.update();
 
@@ -146,15 +134,13 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Movement::<PathOrDirection<_Motion>>::to(Vec3::new(
-				1., 2., 3.,
-			)))
+			.spawn(PathOrDirection::target(Vec3::new(1., 2., 3.)))
 			.id();
 
 		app.update();
 		app.world_mut()
 			.entity_mut(entity)
-			.remove::<Movement<PathOrDirection<_Motion>>>();
+			.remove::<PathOrDirection>();
 		app.update();
 
 		assert_eq!(
@@ -168,15 +154,13 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Movement::<PathOrDirection<_Motion>>::to(Vec3::new(
-				1., 2., 3.,
-			)))
+			.spawn(PathOrDirection::target(Vec3::new(1., 2., 3.)))
 			.id();
 
 		app.update();
 		app.world_mut()
 			.entity_mut(entity)
-			.remove::<Movement<PathOrDirection<_Motion>>>();
+			.remove::<PathOrDirection>();
 		app.update();
 		app.update();
 

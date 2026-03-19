@@ -13,10 +13,8 @@ where
 }
 
 #[allow(clippy::type_complexity)]
-fn draw_path<TMotion>(
-	paths: Query<(&Transform, &TMotion, &PathOrDirection<TMotion>)>,
-	mut gizmos: Gizmos,
-) where
+fn draw_path<TMotion>(paths: Query<(&Transform, &TMotion, &PathOrDirection)>, mut gizmos: Gizmos)
+where
 	TMotion: GetProperty<CharacterMotion> + Component,
 {
 	for (transform, motion, path) in paths {

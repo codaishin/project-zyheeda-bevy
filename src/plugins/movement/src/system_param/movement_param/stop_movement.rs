@@ -1,16 +1,13 @@
 use crate::{
-	components::movement::{Movement, path_or_direction::PathOrDirection},
+	components::{movement::path_or_direction::PathOrDirection, new_movement::NewMovement},
 	system_param::movement_param::MovementContextMut,
 };
-use common::traits::{handles_movement::StopMovement, thread_safe::ThreadSafe};
+use common::traits::handles_movement::StopMovement;
 
-impl<TMotion> StopMovement for MovementContextMut<'_, TMotion>
-where
-	TMotion: ThreadSafe,
-{
+impl StopMovement for MovementContextMut<'_> {
 	fn stop(&mut self) {
 		self.entity
-			.try_insert(Movement::<PathOrDirection<TMotion>>::stop());
+			.try_insert((PathOrDirection::stop(), NewMovement::Stopped));
 	}
 }
 
@@ -19,7 +16,7 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{
-		components::movement::{Movement, path_or_direction::PathOrDirection},
+		components::movement::path_or_direction::PathOrDirection,
 		system_param::movement_param::MovementParamMut,
 	};
 	use bevy::{
@@ -40,27 +37,45 @@ mod tests {
 	}
 
 	#[test]
-	fn insert_stop() -> Result<(), RunSystemError> {
+	fn insert_path_stop() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Movement::<PathOrDirection<_Motion>>::to(Vec3::new(
-				1., 2., 3.,
-			)))
+			.spawn(PathOrDirection::target(Vec3::new(1., 2., 3.)))
 			.id();
 
 		app.world_mut()
-			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
+			.run_system_once(move |mut p: MovementParamMut| {
 				let mut ctx =
 					MovementParamMut::get_context_mut(&mut p, MovementMarker { entity }).unwrap();
 				ctx.stop();
 			})?;
 
 		assert_eq!(
-			Some(&Movement::stop()),
-			app.world()
-				.entity(entity)
-				.get::<Movement<PathOrDirection<_Motion>>>()
+			Some(&PathOrDirection::stop()),
+			app.world().entity(entity).get::<PathOrDirection>(),
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn insert_movement_stop() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let entity = app
+			.world_mut()
+			.spawn(PathOrDirection::target(Vec3::new(1., 2., 3.)))
+			.id();
+
+		app.world_mut()
+			.run_system_once(move |mut p: MovementParamMut| {
+				let mut ctx =
+					MovementParamMut::get_context_mut(&mut p, MovementMarker { entity }).unwrap();
+				ctx.stop();
+			})?;
+
+		assert_eq!(
+			Some(&NewMovement::Stopped),
+			app.world().entity(entity).get::<NewMovement>(),
 		);
 		Ok(())
 	}

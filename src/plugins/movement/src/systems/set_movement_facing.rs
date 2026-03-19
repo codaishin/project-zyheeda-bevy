@@ -14,9 +14,7 @@ impl NewMovement {
 		mut commands: ZyheedaCommands,
 		mut removed: RemovedComponents<Self>,
 		changed: Query<(Entity, &Self), Changed<Self>>,
-	) where
-		Self: Component,
-	{
+	) {
 		for entity in removed.read() {
 			commands.try_apply_on(&entity, |mut e| {
 				e.try_remove::<SetFace>();
@@ -25,14 +23,14 @@ impl NewMovement {
 
 		for (entity, movement) in &changed {
 			commands.try_apply_on(&entity, |mut e| {
-				match &movement.target {
-					Some(MovementTarget::Point(pos)) => {
+				match &movement {
+					NewMovement::Target(MovementTarget::Point(pos)) => {
 						e.try_insert(SetFace(Face::Translation(*pos)));
 					}
-					Some(MovementTarget::Dir(dir3)) => {
+					NewMovement::Target(MovementTarget::Dir(dir3)) => {
 						e.try_insert(SetFace(Face::Direction(*dir3)));
 					}
-					None => {
+					NewMovement::Stopped => {
 						e.try_remove::<SetFace>();
 					}
 				};
@@ -87,7 +85,7 @@ mod tests {
 	}
 
 	#[test]
-	fn set_to_face_translation_on_update_when_changed() {
+	fn set_to_face_translation_on_update_when_added() {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
@@ -95,9 +93,9 @@ mod tests {
 			.id();
 
 		app.update();
-		let mut movement = app.world_mut().entity_mut(entity);
-		let mut movement = movement.get_mut::<NewMovement>().unwrap();
-		movement.target = Some(Vec3::new(3., 4., 5.).into());
+		app.world_mut()
+			.entity_mut(entity)
+			.insert(NewMovement::to(Vec3::new(3., 4., 5.)));
 		app.update();
 
 		assert_eq!(
@@ -107,20 +105,35 @@ mod tests {
 	}
 
 	#[test]
-	fn set_to_face_direction_on_update_when_changed() {
+	fn set_to_face_direction_on_update_when_added() {
 		let mut app = setup();
 		let entity = app.world_mut().spawn(NewMovement::to(Dir3::NEG_X)).id();
 
 		app.update();
-		let mut movement = app.world_mut().entity_mut(entity);
-		let mut movement = movement.get_mut::<NewMovement>().unwrap();
-		movement.target = Some(Dir3::NEG_Z.into());
+		app.world_mut()
+			.entity_mut(entity)
+			.insert(NewMovement::to(Dir3::NEG_Z));
 		app.update();
 
 		assert_eq!(
 			Some(&SetFace(Face::Direction(Dir3::NEG_Z))),
 			app.world().entity(entity).get::<SetFace>()
 		);
+	}
+
+	#[test]
+	fn remove_set_face_on_update_when_stopped() {
+		let mut app = setup();
+		let entity = app
+			.world_mut()
+			.spawn((NewMovement::Stopped, SetFace(Face::Target)))
+			.id();
+
+		app.update();
+		app.world_mut().entity_mut(entity).remove::<NewMovement>();
+		app.update();
+
+		assert_eq!(None, app.world().entity(entity).get::<SetFace>());
 	}
 
 	#[test]
@@ -133,20 +146,6 @@ mod tests {
 
 		app.update();
 		app.world_mut().entity_mut(entity).remove::<NewMovement>();
-		app.update();
-
-		assert_eq!(None, app.world().entity(entity).get::<SetFace>());
-	}
-
-	#[test]
-	fn remove_set_face_on_update_when_set_to_stop() {
-		let mut app = setup();
-		let entity = app.world_mut().spawn(SetFace(Face::Target)).id();
-
-		app.update();
-		app.world_mut()
-			.entity_mut(entity)
-			.insert(NewMovement::stop());
 		app.update();
 
 		assert_eq!(None, app.world().entity(entity).get::<SetFace>());

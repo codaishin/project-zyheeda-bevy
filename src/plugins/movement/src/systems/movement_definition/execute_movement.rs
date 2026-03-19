@@ -3,7 +3,7 @@ use crate::{
 	traits::movement_update::MovementUpdate,
 };
 use bevy::prelude::*;
-use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
+use common::{tools::Done, traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
 impl MovementDefinition {
 	pub(crate) fn execute_movement<TMovement>(
@@ -16,11 +16,11 @@ impl MovementDefinition {
 			commands.try_apply_on(&entity, |mut e| {
 				let e = &mut e;
 
-				if !TMovement::update(e, components, definition.speed.into()).is_done() {
+				if let Done(false) = TMovement::update(e, components, definition.speed.into()) {
 					return;
 				};
 
-				TMovement::stop(e);
+				TMovement::stop(e)
 			});
 		}
 	}

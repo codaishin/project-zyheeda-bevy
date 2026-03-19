@@ -38,25 +38,29 @@ where
 		(movement, motion): (&NewMovement, Option<&TMotion>),
 		speed: Speed,
 	) -> Done {
-		let new_motion = match movement.target {
-			Some(MovementTarget::Point(target)) => CharacterMotion::ToTarget { target, speed },
-			Some(MovementTarget::Dir(direction)) => CharacterMotion::Direction { direction, speed },
-			None => CharacterMotion::Stop,
+		let new_motion = match *movement {
+			NewMovement::Stopped => CharacterMotion::Stop,
+			NewMovement::Target(MovementTarget::Point(target)) => {
+				CharacterMotion::ToTarget { target, speed }
+			}
+			NewMovement::Target(MovementTarget::Dir(direction)) => {
+				CharacterMotion::Direction { direction, speed }
+			}
 		};
 
 		match motion {
 			Some(motion) if motion.dyn_property::<CharacterMotion>() == new_motion => {
-				Done::when(motion.dyn_property::<Done>())
+				Done(motion.dyn_property::<Done>())
 			}
 			_ => {
 				agent.try_insert(TMotion::from(new_motion));
-				Done(false)
+				Done::when(new_motion == CharacterMotion::Stop)
 			}
 		}
 	}
 
 	fn stop(entity: &mut ZyheedaEntityCommands) {
-		entity.try_insert(TMotion::from(CharacterMotion::Stop));
+		entity.try_insert(NewMovement::Stopped);
 	}
 }
 
@@ -158,25 +162,6 @@ mod tests {
 				speed,
 				direction
 			})),
-			app.world().entity(agent).get::<_Motion>()
-		);
-	}
-
-	#[test]
-	fn update_applies_stop_motion() {
-		let mut app = setup();
-		let agent = app
-			.world_mut()
-			.spawn((
-				NewMovement::stop(),
-				_Speed(Speed(UnitsPerSecond::from(11.))),
-			))
-			.id();
-
-		app.update();
-
-		assert_eq!(
-			Some(&_Motion::from(CharacterMotion::Stop)),
 			app.world().entity(agent).get::<_Motion>()
 		);
 	}
@@ -292,7 +277,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Result(Done::from(false))),
+			Some(&_Result(Done(false))),
 			app.world().entity(agent).get::<_Result>()
 		);
 	}
@@ -314,13 +299,13 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Result(Done::from(true))),
+			Some(&_Result(Done(true))),
 			app.world().entity(agent).get::<_Result>()
 		);
 	}
 
 	#[test]
-	fn update_returns_not_done_when_inserting_new_motion_done() {
+	fn update_returns_not_done_when_inserting_movement_with_different_target() {
 		let mut app = setup();
 		let target = Vec3::new(10., 0., 7.);
 		let speed = Speed(UnitsPerSecond::from(11.));
@@ -339,7 +324,31 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Result(Done::from(false))),
+			Some(&_Result(Done(false))),
+			app.world().entity(agent).get::<_Result>()
+		);
+	}
+
+	#[test]
+	fn update_returns_done_when_inserting_stopped_movement() {
+		let mut app = setup();
+		let speed = Speed(UnitsPerSecond::from(11.));
+		let agent = app
+			.world_mut()
+			.spawn((
+				NewMovement::Stopped,
+				_Motion::NotDone(CharacterMotion::ToTarget {
+					speed: Speed(UnitsPerSecond::from(42.)),
+					target: Vec3::new(11., 1., 8.),
+				}),
+				_Speed(speed),
+			))
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&_Result(Done(true))),
 			app.world().entity(agent).get::<_Result>()
 		);
 	}

@@ -1,7 +1,7 @@
 use crate::system_param::movement_param::MovementContextMut;
 use common::{tools::UnitsPerSecond, traits::handles_movement::UpdateMovement};
 
-impl<TMotion> UpdateMovement for MovementContextMut<'_, TMotion> {
+impl UpdateMovement for MovementContextMut<'_> {
 	fn update(&mut self, speed: UnitsPerSecond) {
 		let Some(movement_definition) = self.movement_definition.as_deref_mut() else {
 			return;
@@ -47,7 +47,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
+			.run_system_once(move |mut p: MovementParamMut| {
 				let mut ctx =
 					MovementParamMut::get_context_mut(&mut p, Movement { entity }).unwrap();
 				ctx.update(UnitsPerSecond::from(110.));
