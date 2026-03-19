@@ -1,5 +1,5 @@
 use crate::{
-	components::movement::path_or_direction::PathOrDirection,
+	components::movement_path::MovementPath,
 	system_param::movement_param::{MovementContext, MovementParam},
 };
 use bevy::prelude::*;
@@ -19,7 +19,7 @@ impl ContextChanged for MovementContext<'_> {
 impl MovementParam<'_, '_> {
 	pub(crate) fn update_just_removed(
 		mut just_removed: ResMut<JustRemovedMovements>,
-		mut removed: RemovedComponents<PathOrDirection>,
+		mut removed: RemovedComponents<MovementPath>,
 	) {
 		if !just_removed.0.is_empty() {
 			just_removed.0.clear();
@@ -38,7 +38,7 @@ pub(crate) struct JustRemovedMovements(pub(crate) HashSet<Entity>);
 mod tests {
 	use super::*;
 	use crate::{
-		components::movement::path_or_direction::PathOrDirection,
+		components::movement_path::MovementPath,
 		system_param::movement_param::MovementParam,
 	};
 	use common::traits::{accessors::get::GetContext, handles_movement::Movement};
@@ -80,7 +80,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(PathOrDirection::target(Vec3::new(1., 2., 3.)))
+			.spawn(MovementPath::target(Vec3::new(1., 2., 3.)))
 			.id();
 
 		app.update();
@@ -96,7 +96,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(PathOrDirection::target(Vec3::new(1., 2., 3.)))
+			.spawn(MovementPath::target(Vec3::new(1., 2., 3.)))
 			.id();
 
 		app.update();
@@ -113,13 +113,13 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(PathOrDirection::target(Vec3::new(1., 2., 3.)))
+			.spawn(MovementPath::target(Vec3::new(1., 2., 3.)))
 			.id();
 
 		app.update();
 		app.world_mut()
 			.entity_mut(entity)
-			.get_mut::<PathOrDirection>()
+			.get_mut::<MovementPath>()
 			.as_deref_mut();
 		app.update();
 
@@ -134,13 +134,11 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(PathOrDirection::target(Vec3::new(1., 2., 3.)))
+			.spawn(MovementPath::target(Vec3::new(1., 2., 3.)))
 			.id();
 
 		app.update();
-		app.world_mut()
-			.entity_mut(entity)
-			.remove::<PathOrDirection>();
+		app.world_mut().entity_mut(entity).remove::<MovementPath>();
 		app.update();
 
 		assert_eq!(
@@ -154,13 +152,11 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(PathOrDirection::target(Vec3::new(1., 2., 3.)))
+			.spawn(MovementPath::target(Vec3::new(1., 2., 3.)))
 			.id();
 
 		app.update();
-		app.world_mut()
-			.entity_mut(entity)
-			.remove::<PathOrDirection>();
+		app.world_mut().entity_mut(entity).remove::<MovementPath>();
 		app.update();
 		app.update();
 

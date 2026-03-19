@@ -1,4 +1,4 @@
-use crate::components::{facing::SetFace, new_movement::NewMovement};
+use crate::components::{facing::SetFace, ongoing_movement::OngoingMovement};
 use bevy::prelude::*;
 use common::{
 	traits::{
@@ -9,7 +9,7 @@ use common::{
 	zyheeda_commands::ZyheedaCommands,
 };
 
-impl NewMovement {
+impl OngoingMovement {
 	pub(crate) fn set_facing(
 		mut commands: ZyheedaCommands,
 		mut removed: RemovedComponents<Self>,
@@ -24,13 +24,13 @@ impl NewMovement {
 		for (entity, movement) in &changed {
 			commands.try_apply_on(&entity, |mut e| {
 				match &movement {
-					NewMovement::Target(MovementTarget::Point(pos)) => {
+					OngoingMovement::Target(MovementTarget::Point(pos)) => {
 						e.try_insert(SetFace(Face::Translation(*pos)));
 					}
-					NewMovement::Target(MovementTarget::Dir(dir3)) => {
+					OngoingMovement::Target(MovementTarget::Dir(dir3)) => {
 						e.try_insert(SetFace(Face::Direction(*dir3)));
 					}
-					NewMovement::Stopped => {
+					OngoingMovement::Stopped => {
 						e.try_remove::<SetFace>();
 					}
 				};
@@ -48,7 +48,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, NewMovement::set_facing);
+		app.add_systems(Update, OngoingMovement::set_facing);
 
 		app
 	}
@@ -58,7 +58,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(NewMovement::to(Vec3::new(1., 2., 3.)))
+			.spawn(OngoingMovement::target(Vec3::new(1., 2., 3.)))
 			.id();
 
 		app.update();
@@ -74,7 +74,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(NewMovement::to(Vec3::new(1., 2., 3.)))
+			.spawn(OngoingMovement::target(Vec3::new(1., 2., 3.)))
 			.id();
 
 		app.update();
@@ -89,13 +89,13 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(NewMovement::to(Vec3::new(1., 2., 3.)))
+			.spawn(OngoingMovement::target(Vec3::new(1., 2., 3.)))
 			.id();
 
 		app.update();
 		app.world_mut()
 			.entity_mut(entity)
-			.insert(NewMovement::to(Vec3::new(3., 4., 5.)));
+			.insert(OngoingMovement::target(Vec3::new(3., 4., 5.)));
 		app.update();
 
 		assert_eq!(
@@ -107,12 +107,12 @@ mod tests {
 	#[test]
 	fn set_to_face_direction_on_update_when_added() {
 		let mut app = setup();
-		let entity = app.world_mut().spawn(NewMovement::to(Dir3::NEG_X)).id();
+		let entity = app.world_mut().spawn(OngoingMovement::target(Dir3::NEG_X)).id();
 
 		app.update();
 		app.world_mut()
 			.entity_mut(entity)
-			.insert(NewMovement::to(Dir3::NEG_Z));
+			.insert(OngoingMovement::target(Dir3::NEG_Z));
 		app.update();
 
 		assert_eq!(
@@ -126,11 +126,13 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((NewMovement::Stopped, SetFace(Face::Target)))
+			.spawn((OngoingMovement::Stopped, SetFace(Face::Target)))
 			.id();
 
 		app.update();
-		app.world_mut().entity_mut(entity).remove::<NewMovement>();
+		app.world_mut()
+			.entity_mut(entity)
+			.remove::<OngoingMovement>();
 		app.update();
 
 		assert_eq!(None, app.world().entity(entity).get::<SetFace>());
@@ -141,11 +143,13 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((NewMovement::to(Dir3::NEG_X), SetFace(Face::Target)))
+			.spawn((OngoingMovement::target(Dir3::NEG_X), SetFace(Face::Target)))
 			.id();
 
 		app.update();
-		app.world_mut().entity_mut(entity).remove::<NewMovement>();
+		app.world_mut()
+			.entity_mut(entity)
+			.remove::<OngoingMovement>();
 		app.update();
 
 		assert_eq!(None, app.world().entity(entity).get::<SetFace>());
@@ -156,14 +160,14 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((NewMovement::to(Dir3::NEG_X), SetFace(Face::Target)))
+			.spawn((OngoingMovement::target(Dir3::NEG_X), SetFace(Face::Target)))
 			.id();
 
 		app.update();
 		app.world_mut()
 			.entity_mut(entity)
-			.remove::<NewMovement>()
-			.insert(NewMovement::to(Dir3::NEG_X));
+			.remove::<OngoingMovement>()
+			.insert(OngoingMovement::target(Dir3::NEG_X));
 		app.update();
 
 		assert_eq!(

@@ -1,6 +1,6 @@
 use crate::{
-	PathOrDirection,
-	components::{movement::path_or_direction::Mode, movement_definition::MovementDefinition},
+	MovementPath,
+	components::{movement_definition::MovementDefinition, movement_path::Mode},
 };
 use bevy::prelude::*;
 use common::{
@@ -17,10 +17,10 @@ type MoveComponents<TGetComputer> = (
 	Entity,
 	&'static MovementDefinition,
 	&'static GlobalTransform,
-	&'static PathOrDirection,
+	&'static MovementPath,
 	&'static TGetComputer,
 );
-type ChangedMovement = Changed<PathOrDirection>;
+type ChangedMovement = Changed<MovementPath>;
 
 impl MovementDefinition {
 	pub(crate) fn compute_path<TComputer, TGetComputer>(
@@ -35,13 +35,13 @@ impl MovementDefinition {
 			let Ok(computer) = computers.get(get_computer.get_property()) else {
 				continue;
 			};
-			let Mode::PathTarget(Some(target)) = path.mode else {
+			let Mode::PathTarget(Some(target)) = path.0 else {
 				continue;
 			};
 			let path = definition.compute_path_internal(computer, transform, target);
 
 			commands.try_apply_on(&entity, |mut e| {
-				e.try_insert(PathOrDirection::path(path));
+				e.try_insert(MovementPath::path(path));
 			});
 		}
 	}
@@ -160,7 +160,7 @@ mod tests {
 						radius: Units::from(1.),
 						..default()
 					},
-					PathOrDirection::target(Vec3::default()),
+					MovementPath::target(Vec3::default()),
 					GlobalTransform::default(),
 					_GetComputer(computer),
 				))
@@ -169,14 +169,12 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(&PathOrDirection {
-					mode: Mode::Path(VecDeque::from([
-						Vec3::new(1., 0., 1.),
-						Vec3::new(2., 0., 2.),
-						Vec3::new(3., 0., 3.),
-					])),
-				}),
-				app.world().entity(entity).get::<PathOrDirection>()
+				Some(&MovementPath::path([
+					Vec3::new(1., 0., 1.),
+					Vec3::new(2., 0., 2.),
+					Vec3::new(3., 0., 3.),
+				])),
+				app.world().entity(entity).get::<MovementPath>()
 			);
 		}
 
@@ -200,7 +198,7 @@ mod tests {
 						radius: Units::from(1.),
 						..default()
 					},
-					PathOrDirection::target(Vec3::default()),
+					MovementPath::target(Vec3::default()),
 					GlobalTransform::from_xyz(0., 11., 0.),
 					_GetComputer(computer),
 				))
@@ -209,14 +207,12 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(&PathOrDirection {
-					mode: Mode::Path(VecDeque::from([
-						Vec3::new(1., 11., 1.),
-						Vec3::new(2., 11., 2.),
-						Vec3::new(3., 11., 3.),
-					])),
-				}),
-				app.world().entity(entity).get::<PathOrDirection>()
+				Some(&MovementPath::path([
+					Vec3::new(1., 11., 1.),
+					Vec3::new(2., 11., 2.),
+					Vec3::new(3., 11., 3.),
+				])),
+				app.world().entity(entity).get::<MovementPath>()
 			);
 		}
 
@@ -236,7 +232,7 @@ mod tests {
 						radius: Units::from(1.),
 						..default()
 					},
-					PathOrDirection::target(Vec3::default()),
+					MovementPath::target(Vec3::default()),
 					GlobalTransform::default(),
 					_GetComputer(computer),
 				))
@@ -245,10 +241,8 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(&PathOrDirection {
-					mode: Mode::Path(VecDeque::from([])),
-				}),
-				app.world().entity(entity).get::<PathOrDirection>()
+				Some(&MovementPath::path([])),
+				app.world().entity(entity).get::<MovementPath>()
 			);
 		}
 
@@ -272,7 +266,7 @@ mod tests {
 						radius: Units::from(1.),
 						..default()
 					},
-					PathOrDirection::target(Vec3::default()),
+					MovementPath::target(Vec3::default()),
 					GlobalTransform::from_translation(Vec3::ONE),
 					_GetComputer(computer),
 				))
@@ -281,13 +275,11 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(&PathOrDirection {
-					mode: Mode::Path(VecDeque::from([
-						Vec3::new(2., 1., 2.),
-						Vec3::new(3., 1., 3.),
-					])),
-				}),
-				app.world().entity(entity).get::<PathOrDirection>()
+				Some(&MovementPath::path([
+					Vec3::new(2., 1., 2.),
+					Vec3::new(3., 1., 3.),
+				])),
+				app.world().entity(entity).get::<MovementPath>()
 			);
 		}
 
@@ -305,7 +297,7 @@ mod tests {
 					radius: Units::from(1.),
 					..default()
 				},
-				PathOrDirection::target(Vec3::default()),
+				MovementPath::target(Vec3::default()),
 				GlobalTransform::default(),
 				_GetComputer(computer),
 			));
@@ -334,7 +326,7 @@ mod tests {
 					radius: Units::from(42.),
 					..default()
 				},
-				PathOrDirection::target(Vec3::new(4., 5., 6.)),
+				MovementPath::target(Vec3::new(4., 5., 6.)),
 				GlobalTransform::from_xyz(1., 2., 3.),
 				_GetComputer(computer),
 			));
@@ -361,7 +353,7 @@ mod tests {
 						radius: Units::from(1.),
 						..default()
 					},
-					PathOrDirection::direction(Dir3::NEG_Z),
+					MovementPath::direction(Dir3::NEG_Z),
 					GlobalTransform::default(),
 					_GetComputer(computer),
 				))
@@ -370,8 +362,8 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(&PathOrDirection::direction(Dir3::NEG_Z)),
-				app.world().entity(entity).get::<PathOrDirection>()
+				Some(&MovementPath::direction(Dir3::NEG_Z)),
+				app.world().entity(entity).get::<MovementPath>()
 			);
 		}
 	}
@@ -393,7 +385,7 @@ mod tests {
 					radius: Units::from(1.),
 					..default()
 				},
-				PathOrDirection::target(Vec3::default()),
+				MovementPath::target(Vec3::default()),
 				GlobalTransform::default(),
 				_GetComputer(computer),
 			));
@@ -418,7 +410,7 @@ mod tests {
 						radius: Units::from(1.),
 						..default()
 					},
-					PathOrDirection::target(Vec3::default()),
+					MovementPath::target(Vec3::default()),
 					GlobalTransform::default(),
 					_GetComputer(computer),
 				))
@@ -427,7 +419,7 @@ mod tests {
 			app.update();
 			app.world_mut()
 				.entity_mut(entity)
-				.insert(PathOrDirection::target(Vec3::default()));
+				.insert(MovementPath::target(Vec3::default()));
 			app.update();
 		}
 	}

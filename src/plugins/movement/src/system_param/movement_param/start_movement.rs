@@ -1,8 +1,8 @@
 use crate::{
 	components::{
-		movement::path_or_direction::PathOrDirection,
+		movement_path::MovementPath,
 		movement_definition::MovementDefinition,
-		new_movement::NewMovement,
+		ongoing_movement::OngoingMovement,
 	},
 	system_param::movement_param::MovementContextMut,
 };
@@ -17,8 +17,8 @@ impl StartMovement for MovementContextMut<'_> {
 		T: Into<MovementTarget>,
 	{
 		self.entity.try_insert((
-			NewMovement::Stopped,
-			PathOrDirection::from(target),
+			OngoingMovement::Stopped,
+			MovementPath::from(target),
 			MovementDefinition { radius, speed },
 		));
 	}
@@ -30,7 +30,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::{
-			movement::path_or_direction::PathOrDirection,
+			movement_path::MovementPath,
 			movement_definition::MovementDefinition,
 		},
 		system_param::movement_param::MovementParamMut,
@@ -97,8 +97,8 @@ mod tests {
 			})?;
 
 		assert_eq!(
-			Some(&PathOrDirection::from(target)),
-			app.world().entity(entity).get::<PathOrDirection>(),
+			Some(&MovementPath::from(target)),
+			app.world().entity(entity).get::<MovementPath>(),
 		);
 		Ok(())
 	}
@@ -120,8 +120,8 @@ mod tests {
 			})?;
 
 		assert_eq!(
-			Some(&NewMovement::Stopped),
-			app.world().entity(entity).get::<NewMovement>(),
+			Some(&OngoingMovement::Stopped),
+			app.world().entity(entity).get::<OngoingMovement>(),
 		);
 		Ok(())
 	}

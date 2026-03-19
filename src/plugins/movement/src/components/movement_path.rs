@@ -1,5 +1,5 @@
 use crate::{
-	components::new_movement::{IsMoving, NewMovement},
+	components::ongoing_movement::{IsMoving, OngoingMovement},
 	traits::movement_update::MovementUpdate,
 };
 use bevy::prelude::*;
@@ -13,18 +13,16 @@ use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
-#[savable_component(id = "movement")]
-pub struct PathOrDirection {
-	pub(crate) mode: Mode,
-}
+#[savable_component(id = "movement path")]
+pub struct MovementPath(pub(crate) Mode);
 
-impl PathOrDirection {
+impl MovementPath {
 	fn take_next(&mut self) -> Option<MovementTarget> {
-		match &mut self.mode {
+		match &mut self.0 {
 			Mode::PathTarget(_) => None,
 			Mode::Direction(target) => {
 				let wp = Some(MovementTarget::Dir(*target));
-				self.mode = Mode::PathTarget(None);
+				self.0 = Mode::PathTarget(None);
 				wp
 			}
 			Mode::Path(path) => path.pop_front().map(MovementTarget::Point),
@@ -32,31 +30,23 @@ impl PathOrDirection {
 	}
 
 	pub(crate) fn stop() -> Self {
-		Self {
-			mode: Mode::PathTarget(None),
-		}
+		Self(Mode::PathTarget(None))
 	}
 
 	pub(crate) fn direction(dir: Dir3) -> Self {
-		Self {
-			mode: Mode::Direction(dir),
-		}
+		Self(Mode::Direction(dir))
 	}
 
 	pub(crate) fn target(pos: Vec3) -> Self {
-		Self {
-			mode: Mode::PathTarget(Some(pos)),
-		}
+		Self(Mode::PathTarget(Some(pos)))
 	}
 
 	pub(crate) fn path(path: impl Into<VecDeque<Vec3>>) -> Self {
-		Self {
-			mode: Mode::Path(path.into()),
-		}
+		Self(Mode::Path(path.into()))
 	}
 }
 
-impl<T> From<T> for PathOrDirection
+impl<T> From<T> for MovementPath
 where
 	T: Into<MovementTarget>,
 {
@@ -68,18 +58,18 @@ where
 	}
 }
 
-impl MovementUpdate for PathOrDirection {
+impl MovementUpdate for MovementPath {
 	type TComponents = &'static mut Self;
 	type TConstraint = Without<IsMoving>;
 
 	fn update(entity: &mut ZyheedaEntityCommands, mut path: Mut<Self>, _: Speed) -> Done {
 		match path.take_next() {
 			Some(next) => {
-				entity.try_insert(NewMovement::to(next));
+				entity.try_insert(OngoingMovement::target(next));
 				Done(false)
 			}
 			None => {
-				entity.try_insert(NewMovement::Stopped);
+				entity.try_insert(OngoingMovement::Stopped);
 				Done(true)
 			}
 		}
@@ -90,9 +80,9 @@ impl MovementUpdate for PathOrDirection {
 	}
 }
 
-impl CurrentMovement for PathOrDirection {
+impl CurrentMovement for MovementPath {
 	fn current_movement(&self) -> Option<MovementTarget> {
-		match &self.mode {
+		match &self.0 {
 			Mode::Direction(dir) => Some(MovementTarget::Dir(*dir)),
 			Mode::PathTarget(target) => target.as_ref().copied().map(MovementTarget::Point),
 			Mode::Path(path) => path.back().copied().map(MovementTarget::Point),
@@ -123,8 +113,8 @@ mod test_with_path {
 	struct _MoveMethod;
 
 	fn system<R>(
-		func: impl Fn(&mut ZyheedaEntityCommands, Mut<PathOrDirection>) -> R,
-	) -> impl Fn(ZyheedaCommands, Query<(Entity, &mut PathOrDirection)>) -> R
+		func: impl Fn(&mut ZyheedaEntityCommands, Mut<MovementPath>) -> R,
+	) -> impl Fn(ZyheedaCommands, Query<(Entity, &mut MovementPath)>) -> R
 	where
 		R: Default,
 	{
@@ -150,7 +140,7 @@ mod test_with_path {
 
 		#[test]
 		fn target() {
-			let path = PathOrDirection::target(Vec3::new(1., 2., 3.));
+			let path = MovementPath::target(Vec3::new(1., 2., 3.));
 
 			assert_eq!(
 				Some(MovementTarget::Point(Vec3::new(1., 2., 3.))),
@@ -160,14 +150,14 @@ mod test_with_path {
 
 		#[test]
 		fn direction() {
-			let path = PathOrDirection::direction(Dir3::X);
+			let path = MovementPath::direction(Dir3::X);
 
 			assert_eq!(Some(MovementTarget::Dir(Dir3::X)), path.current_movement());
 		}
 
 		#[test]
 		fn path() {
-			let path = PathOrDirection::path([Vec3::new(1., 2., 3.), Vec3::new(3., 4., 5.)]);
+			let path = MovementPath::path([Vec3::new(1., 2., 3.), Vec3::new(3., 4., 5.)]);
 
 			assert_eq!(
 				Some(MovementTarget::Point(Vec3::new(3., 4., 5.))),
@@ -177,7 +167,7 @@ mod test_with_path {
 
 		#[test]
 		fn stop() {
-			let path = PathOrDirection::stop();
+			let path = MovementPath::stop();
 
 			assert_eq!(None, path.current_movement());
 		}
@@ -192,19 +182,17 @@ mod test_with_path {
 			let wp = Vec3::new(1., 2., 3.);
 			let entity = app
 				.world_mut()
-				.spawn(PathOrDirection {
-					mode: Mode::Path(VecDeque::from([wp, Vec3::default()])),
-				})
+				.spawn(MovementPath::path([wp, Vec3::default()]))
 				.id();
 
 			app.world_mut()
 				.run_system_once(system(move |entity, components| {
-					PathOrDirection::update(entity, components, *SPEED)
+					MovementPath::update(entity, components, *SPEED)
 				}))?;
 
 			assert_eq!(
-				Some(&NewMovement::to(wp)),
-				app.world().entity(entity).get::<NewMovement>(),
+				Some(&OngoingMovement::target(wp)),
+				app.world().entity(entity).get::<OngoingMovement>(),
 			);
 			Ok(())
 		}
@@ -215,21 +203,17 @@ mod test_with_path {
 			let other = Vec3::new(1., 2., 3.);
 			let entity = app
 				.world_mut()
-				.spawn(PathOrDirection {
-					mode: Mode::Path(VecDeque::from([Vec3::new(-1., -2., -3.), other])),
-				})
+				.spawn(MovementPath::path([Vec3::new(-1., -2., -3.), other]))
 				.id();
 
 			app.world_mut()
 				.run_system_once(system(move |entity, components| {
-					PathOrDirection::update(entity, components, *SPEED)
+					MovementPath::update(entity, components, *SPEED)
 				}))?;
 
 			assert_eq!(
-				Some(&PathOrDirection {
-					mode: Mode::Path(VecDeque::from([other])),
-				}),
-				app.world().entity(entity).get::<PathOrDirection>()
+				Some(&MovementPath::path([other])),
+				app.world().entity(entity).get::<MovementPath>()
 			);
 			Ok(())
 		}
@@ -238,14 +222,12 @@ mod test_with_path {
 		fn is_not_done_when_path_can_be_dequeued() -> Result<(), RunSystemError> {
 			let mut app = setup();
 			let wp = Vec3::new(1., 2., 3.);
-			app.world_mut().spawn(PathOrDirection {
-				mode: Mode::Path(VecDeque::from([wp])),
-			});
+			app.world_mut().spawn(MovementPath::path([wp]));
 
 			let is_done = app
 				.world_mut()
 				.run_system_once(system(|entity, components| {
-					PathOrDirection::update(entity, components, *SPEED)
+					MovementPath::update(entity, components, *SPEED)
 				}))?;
 
 			assert_eq!(Done::from(false), is_done);
@@ -255,14 +237,12 @@ mod test_with_path {
 		#[test]
 		fn is_done_when_path_can_not_be_dequeued() -> Result<(), RunSystemError> {
 			let mut app = setup();
-			app.world_mut().spawn(PathOrDirection {
-				mode: Mode::Path(VecDeque::from([])),
-			});
+			app.world_mut().spawn(MovementPath::path([]));
 
 			let is_done = app
 				.world_mut()
 				.run_system_once(system(|entity, components| {
-					PathOrDirection::update(entity, components, *SPEED)
+					MovementPath::update(entity, components, *SPEED)
 				}))?;
 
 			assert_eq!(Done::from(true), is_done);
@@ -272,21 +252,16 @@ mod test_with_path {
 		#[test]
 		fn stop_movement_when_done() -> Result<(), RunSystemError> {
 			let mut app = setup();
-			let entity = app
-				.world_mut()
-				.spawn(PathOrDirection {
-					mode: Mode::Path(VecDeque::from([])),
-				})
-				.id();
+			let entity = app.world_mut().spawn(MovementPath::path([])).id();
 
 			app.world_mut()
 				.run_system_once(system(|entity, components| {
-					PathOrDirection::update(entity, components, *SPEED)
+					MovementPath::update(entity, components, *SPEED)
 				}))?;
 
 			assert_eq!(
-				Some(&NewMovement::Stopped),
-				app.world().entity(entity).get::<NewMovement>()
+				Some(&OngoingMovement::Stopped),
+				app.world().entity(entity).get::<OngoingMovement>()
 			);
 			Ok(())
 		}
@@ -294,20 +269,15 @@ mod test_with_path {
 		#[test]
 		fn set_stop_on_stop() -> Result<(), RunSystemError> {
 			let mut app = setup();
-			let entity = app
-				.world_mut()
-				.spawn(PathOrDirection {
-					mode: Mode::Path(VecDeque::from([])),
-				})
-				.id();
+			let entity = app.world_mut().spawn(MovementPath::path([])).id();
 
 			app.world_mut().run_system_once(system(|entity, _| {
-				<PathOrDirection as MovementUpdate>::stop(entity)
+				<MovementPath as MovementUpdate>::stop(entity)
 			}))?;
 
 			assert_eq!(
-				Some(&PathOrDirection::stop()),
-				app.world().entity(entity).get::<PathOrDirection>(),
+				Some(&MovementPath::stop()),
+				app.world().entity(entity).get::<MovementPath>(),
 			);
 			Ok(())
 		}
@@ -320,16 +290,16 @@ mod test_with_path {
 		fn insert_movement_from_wasd() -> Result<(), RunSystemError> {
 			let mut app = setup();
 			let dir = Dir3::NEG_Z;
-			let entity = app.world_mut().spawn(PathOrDirection::direction(dir)).id();
+			let entity = app.world_mut().spawn(MovementPath::direction(dir)).id();
 
 			app.world_mut()
 				.run_system_once(system(move |entity, components| {
-					PathOrDirection::update(entity, components, *SPEED)
+					MovementPath::update(entity, components, *SPEED)
 				}))?;
 
 			assert_eq!(
-				Some(&NewMovement::to(dir)),
-				app.world().entity(entity).get::<NewMovement>(),
+				Some(&OngoingMovement::target(dir)),
+				app.world().entity(entity).get::<OngoingMovement>(),
 			);
 			Ok(())
 		}
@@ -338,12 +308,12 @@ mod test_with_path {
 		fn is_not_done_when_wasd_has_some_target() -> Result<(), RunSystemError> {
 			let mut app = setup();
 			let dir = Dir3::NEG_Z;
-			app.world_mut().spawn(PathOrDirection::direction(dir));
+			app.world_mut().spawn(MovementPath::direction(dir));
 
 			let is_done = app
 				.world_mut()
 				.run_system_once(system(|entity, components| {
-					PathOrDirection::update(entity, components, *SPEED)
+					MovementPath::update(entity, components, *SPEED)
 				}))?;
 
 			assert_eq!(Done::from(false), is_done);
@@ -354,17 +324,17 @@ mod test_with_path {
 		fn take_direction() -> Result<(), RunSystemError> {
 			let mut app = setup();
 			let dir = Dir3::NEG_Z;
-			let entity = app.world_mut().spawn(PathOrDirection::direction(dir)).id();
+			let entity = app.world_mut().spawn(MovementPath::direction(dir)).id();
 
 			_ = app
 				.world_mut()
 				.run_system_once(system(|entity, components| {
-					PathOrDirection::update(entity, components, *SPEED)
+					MovementPath::update(entity, components, *SPEED)
 				}))?;
 
 			assert_eq!(
-				Some(&PathOrDirection::stop()),
-				app.world().entity(entity).get::<PathOrDirection>(),
+				Some(&MovementPath::stop()),
+				app.world().entity(entity).get::<MovementPath>(),
 			);
 			Ok(())
 		}
@@ -372,15 +342,15 @@ mod test_with_path {
 		#[test]
 		fn set_stop_on_stop() -> Result<(), RunSystemError> {
 			let mut app = setup();
-			let entity = app.world_mut().spawn(PathOrDirection::stop()).id();
+			let entity = app.world_mut().spawn(MovementPath::stop()).id();
 
 			app.world_mut().run_system_once(system(|entity, _| {
-				<PathOrDirection as MovementUpdate>::stop(entity)
+				<MovementPath as MovementUpdate>::stop(entity)
 			}))?;
 
 			assert_eq!(
-				Some(&PathOrDirection::stop()),
-				app.world().entity(entity).get::<PathOrDirection>(),
+				Some(&MovementPath::stop()),
+				app.world().entity(entity).get::<MovementPath>(),
 			);
 			Ok(())
 		}

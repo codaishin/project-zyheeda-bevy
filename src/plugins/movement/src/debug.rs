@@ -1,8 +1,8 @@
 use crate::{
 	MovementSystems,
 	components::{
-		movement::path_or_direction::{Mode, PathOrDirection},
-		new_movement::NewMovement,
+		movement_path::{Mode, MovementPath},
+		ongoing_movement::OngoingMovement,
 	},
 };
 use bevy::{color::palettes::css::LIGHT_CYAN, prelude::*};
@@ -13,22 +13,22 @@ pub(crate) fn draw(app: &mut App) {
 }
 
 #[allow(clippy::type_complexity)]
-fn draw_path(paths: Query<(&Transform, &NewMovement, &PathOrDirection)>, mut gizmos: Gizmos) {
+fn draw_path(paths: Query<(&Transform, &OngoingMovement, &MovementPath)>, mut gizmos: Gizmos) {
 	for (transform, movement, path) in paths {
 		let mut current = match movement {
-			NewMovement::Stopped => continue,
-			NewMovement::Target(MovementTarget::Dir(direction)) => {
+			OngoingMovement::Stopped => continue,
+			OngoingMovement::Target(MovementTarget::Dir(direction)) => {
 				let target = transform.translation + **direction;
 				gizmos.arrow(transform.translation, target, LIGHT_CYAN);
 				continue;
 			}
-			NewMovement::Target(MovementTarget::Point(point)) => {
+			OngoingMovement::Target(MovementTarget::Point(point)) => {
 				gizmos.arrow(transform.translation, *point, LIGHT_CYAN);
 				*point
 			}
 		};
 
-		let Mode::Path(remaining_path) = &path.mode else {
+		let Mode::Path(remaining_path) = &path.0 else {
 			continue;
 		};
 

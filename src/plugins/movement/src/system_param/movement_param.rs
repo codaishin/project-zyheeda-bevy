@@ -5,10 +5,7 @@ mod stop_movement;
 mod update_movement;
 
 use crate::{
-	components::{
-		movement::path_or_direction::PathOrDirection,
-		movement_definition::MovementDefinition,
-	},
+	components::{movement_definition::MovementDefinition, movement_path::MovementPath},
 	system_param::movement_param::context_changed::JustRemovedMovements,
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
@@ -22,7 +19,7 @@ use common::{
 
 #[derive(SystemParam)]
 pub struct MovementParam<'w, 's> {
-	movements: Query<'w, 's, Ref<'static, PathOrDirection>>,
+	movements: Query<'w, 's, Ref<'static, MovementPath>>,
 	just_removed_movements: Res<'w, JustRemovedMovements>,
 }
 
@@ -47,7 +44,7 @@ impl GetContext<Movement> for MovementParam<'_, '_> {
 pub struct MovementParamMut<'w, 's> {
 	commands: ZyheedaCommands<'w, 's>,
 	movement_definitions: Query<'w, 's, &'static mut MovementDefinition>,
-	movements: Query<'w, 's, &'static PathOrDirection>,
+	movements: Query<'w, 's, &'static MovementPath>,
 }
 
 impl GetContextMut<Movement> for MovementParamMut<'_, '_> {
@@ -70,7 +67,7 @@ impl GetContextMut<Movement> for MovementParamMut<'_, '_> {
 }
 
 pub enum MovementContext<'ctx> {
-	Movement(Ref<'ctx, PathOrDirection>),
+	Movement(Ref<'ctx, MovementPath>),
 	JustRemoved,
 	Empty,
 }
@@ -78,5 +75,5 @@ pub enum MovementContext<'ctx> {
 pub struct MovementContextMut<'ctx> {
 	entity: ZyheedaEntityCommands<'ctx>,
 	movement_definition: Option<Mut<'ctx, MovementDefinition>>,
-	movement: Option<&'ctx PathOrDirection>,
+	movement: Option<&'ctx MovementPath>,
 }

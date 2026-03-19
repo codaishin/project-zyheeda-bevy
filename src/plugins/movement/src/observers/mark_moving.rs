@@ -1,12 +1,12 @@
-use crate::components::new_movement::{IsMoving, NewMovement};
+use crate::components::ongoing_movement::{IsMoving, OngoingMovement};
 use bevy::prelude::*;
 use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
 impl IsMoving {
 	pub(crate) fn mark(
-		on_insert: On<Insert, NewMovement>,
+		on_insert: On<Insert, OngoingMovement>,
 		mut commands: ZyheedaCommands,
-		movements: Query<&NewMovement>,
+		movements: Query<&OngoingMovement>,
 	) {
 		let Ok(movement) = movements.get(on_insert.entity) else {
 			return;
@@ -14,8 +14,8 @@ impl IsMoving {
 
 		commands.try_apply_on(&on_insert.entity, |mut e| {
 			match movement {
-				NewMovement::Stopped => e.try_remove::<IsMoving>(),
-				NewMovement::Target(..) => e.try_insert(IsMoving),
+				OngoingMovement::Stopped => e.try_remove::<IsMoving>(),
+				OngoingMovement::Target(..) => e.try_insert(IsMoving),
 			};
 		});
 	}
@@ -44,7 +44,7 @@ mod tests {
 	{
 		let mut app = setup();
 
-		let entity = app.world_mut().spawn(NewMovement::to(target));
+		let entity = app.world_mut().spawn(OngoingMovement::target(target));
 
 		assert_eq!(Some(&IsMoving), entity.get::<IsMoving>());
 	}
@@ -57,8 +57,8 @@ mod tests {
 	{
 		let mut app = setup();
 
-		let mut entity = app.world_mut().spawn(NewMovement::Stopped);
-		entity.insert(NewMovement::to(target));
+		let mut entity = app.world_mut().spawn(OngoingMovement::Stopped);
+		entity.insert(OngoingMovement::target(target));
 
 		assert_eq!(Some(&IsMoving), entity.get::<IsMoving>());
 	}
@@ -67,7 +67,7 @@ mod tests {
 	fn remove_when_stopped() {
 		let mut app = setup();
 
-		let entity = app.world_mut().spawn(NewMovement::Stopped);
+		let entity = app.world_mut().spawn(OngoingMovement::Stopped);
 
 		assert_eq!(None, entity.get::<IsMoving>());
 	}
@@ -76,8 +76,10 @@ mod tests {
 	fn remove_on_reinsert() {
 		let mut app = setup();
 
-		let mut entity = app.world_mut().spawn(NewMovement::to(Vec3::default()));
-		entity.insert(NewMovement::Stopped);
+		let mut entity = app
+			.world_mut()
+			.spawn(OngoingMovement::target(Vec3::default()));
+		entity.insert(OngoingMovement::Stopped);
 
 		assert_eq!(None, entity.get::<IsMoving>());
 	}

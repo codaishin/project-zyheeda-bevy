@@ -4,11 +4,14 @@ mod system_param;
 mod systems;
 mod traits;
 
+#[cfg(debug_assertions)]
+mod debug;
+
 use crate::{
 	components::{
 		facing::SetFace,
 		movement_definition::MovementDefinition,
-		new_movement::{IsMoving, NewMovement},
+		ongoing_movement::{IsMoving, OngoingMovement},
 	},
 	system_param::{
 		face_param::FaceParamMut,
@@ -36,7 +39,7 @@ use common::{
 		thread_safe::ThreadSafe,
 	},
 };
-use components::{facing::SetFaceOverride, movement::path_or_direction::PathOrDirection};
+use components::{facing::SetFaceOverride, movement_path::MovementPath};
 use std::marker::PhantomData;
 use systems::face::execute_face::execute_face;
 
@@ -83,14 +86,14 @@ where
 	fn build(&self, app: &mut App) {
 		TSaveGame::register_savable_component::<SetFace>(app);
 		TSaveGame::register_savable_component::<SetFaceOverride>(app);
-		TSaveGame::register_savable_component::<NewMovement>(app);
-		TSaveGame::register_savable_component::<PathOrDirection>(app);
+		TSaveGame::register_savable_component::<OngoingMovement>(app);
+		TSaveGame::register_savable_component::<MovementPath>(app);
 
 		let compute_path = MovementDefinition::compute_path::<
 			TPathFinding::TComputePath,
 			TPathFinding::TComputerRef,
 		>;
-		let execute_path = MovementDefinition::execute_movement::<PathOrDirection>;
+		let execute_path = MovementDefinition::execute_movement::<MovementPath>;
 		let execute_movement = MovementDefinition::execute_movement::<TPhysics::TCharacterMotion>;
 		let animate_movement_forward = MovementDefinition::animate_movement_forward::<
 			TPhysics::TCharacterMotion,
@@ -98,7 +101,7 @@ where
 		>;
 
 		#[cfg(debug_assertions)]
-		crate::components::movement::debug::draw(app);
+		debug::draw(app);
 
 		app.init_resource::<JustRemovedMovements>()
 			.add_observer(IsMoving::mark)
@@ -115,7 +118,7 @@ where
 						.chain(),
 					// Apply facing
 					(
-						NewMovement::set_facing,
+						OngoingMovement::set_facing,
 						SetFace::get_faces.pipe(execute_face::<RaycastSystemParam<TPhysics>>),
 					)
 						.chain(),

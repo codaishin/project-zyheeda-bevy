@@ -1,4 +1,4 @@
-use crate::components::new_movement::NewMovement;
+use crate::components::ongoing_movement::OngoingMovement;
 use bevy::{
 	ecs::query::{QueryData, QueryFilter, QueryItem},
 	prelude::*,
@@ -30,20 +30,20 @@ impl<TMotion> MovementUpdate for TMotion
 where
 	TMotion: From<CharacterMotion> + GetProperty<Done> + GetProperty<CharacterMotion> + Component,
 {
-	type TComponents = (&'static NewMovement, Option<&'static TMotion>);
+	type TComponents = (&'static OngoingMovement, Option<&'static TMotion>);
 	type TConstraint = ();
 
 	fn update(
 		agent: &mut ZyheedaEntityCommands,
-		(movement, motion): (&NewMovement, Option<&TMotion>),
+		(movement, motion): (&OngoingMovement, Option<&TMotion>),
 		speed: Speed,
 	) -> Done {
 		let new_motion = match *movement {
-			NewMovement::Stopped => CharacterMotion::Stop,
-			NewMovement::Target(MovementTarget::Point(target)) => {
+			OngoingMovement::Stopped => CharacterMotion::Stop,
+			OngoingMovement::Target(MovementTarget::Point(target)) => {
 				CharacterMotion::ToTarget { target, speed }
 			}
-			NewMovement::Target(MovementTarget::Dir(direction)) => {
+			OngoingMovement::Target(MovementTarget::Dir(direction)) => {
 				CharacterMotion::Direction { direction, speed }
 			}
 		};
@@ -60,7 +60,7 @@ where
 	}
 
 	fn stop(entity: &mut ZyheedaEntityCommands) {
-		entity.try_insert(NewMovement::Stopped);
+		entity.try_insert(OngoingMovement::Stopped);
 	}
 }
 
@@ -110,7 +110,7 @@ mod tests {
 	#[allow(clippy::type_complexity)]
 	fn call_update(
 		mut commands: ZyheedaCommands,
-		agents: Query<(Entity, &NewMovement, Option<&_Motion>, &_Speed)>,
+		agents: Query<(Entity, &OngoingMovement, Option<&_Motion>, &_Speed)>,
 	) {
 		for (entity, movement, motion, _Speed(speed)) in &agents {
 			commands.try_apply_on(&entity, |mut e| {
@@ -135,7 +135,7 @@ mod tests {
 		let speed = Speed(UnitsPerSecond::from(11.));
 		let agent = app
 			.world_mut()
-			.spawn((NewMovement::to(target), _Speed(speed)))
+			.spawn((OngoingMovement::target(target), _Speed(speed)))
 			.id();
 
 		app.update();
@@ -152,7 +152,7 @@ mod tests {
 		let speed = Speed(UnitsPerSecond::from(11.));
 		let agent = app
 			.world_mut()
-			.spawn((NewMovement::to(direction), _Speed(speed)))
+			.spawn((OngoingMovement::target(direction), _Speed(speed)))
 			.id();
 
 		app.update();
@@ -174,7 +174,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				NewMovement::to(target),
+				OngoingMovement::target(target),
 				_Motion::NotDone(CharacterMotion::ToTarget {
 					speed: Speed(UnitsPerSecond::from(42.)),
 					target: Vec3::new(1., 2., 3.),
@@ -199,7 +199,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				NewMovement::to(target),
+				OngoingMovement::target(target),
 				_Motion::Done(CharacterMotion::ToTarget { speed, target }),
 				_Speed(speed),
 			))
@@ -222,7 +222,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				NewMovement::to(target),
+				OngoingMovement::target(target),
 				_Motion::from(CharacterMotion::ToTarget {
 					speed: Speed::default(),
 					target: Vec3::default(),
@@ -247,7 +247,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				NewMovement::to(target),
+				OngoingMovement::target(target),
 				_Motion::from(CharacterMotion::Direction {
 					speed: Speed::default(),
 					direction: Dir3::NEG_X,
@@ -271,7 +271,7 @@ mod tests {
 		let speed = Speed(UnitsPerSecond::from(11.));
 		let agent = app
 			.world_mut()
-			.spawn((NewMovement::to(target), _Speed(speed)))
+			.spawn((OngoingMovement::target(target), _Speed(speed)))
 			.id();
 
 		app.update();
@@ -290,7 +290,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				NewMovement::to(target),
+				OngoingMovement::target(target),
 				_Motion::Done(CharacterMotion::ToTarget { speed, target }),
 				_Speed(speed),
 			))
@@ -312,7 +312,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				NewMovement::to(target),
+				OngoingMovement::target(target),
 				_Motion::Done(CharacterMotion::ToTarget {
 					speed: Speed(UnitsPerSecond::from(42.)),
 					target: Vec3::new(11., 1., 8.),
@@ -336,7 +336,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				NewMovement::Stopped,
+				OngoingMovement::Stopped,
 				_Motion::NotDone(CharacterMotion::ToTarget {
 					speed: Speed(UnitsPerSecond::from(42.)),
 					target: Vec3::new(11., 1., 8.),

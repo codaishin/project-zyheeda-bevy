@@ -5,15 +5,15 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
 #[component(immutable)]
-#[savable_component(id = "new movement")]
-pub(crate) enum NewMovement {
+#[savable_component(id = "ongoing movement")]
+pub(crate) enum OngoingMovement {
 	#[default]
 	Stopped,
 	Target(MovementTarget),
 }
 
-impl NewMovement {
-	pub(crate) fn to(target: impl Into<MovementTarget>) -> Self {
+impl OngoingMovement {
+	pub(crate) fn target(target: impl Into<MovementTarget>) -> Self {
 		Self::Target(target.into())
 	}
 }

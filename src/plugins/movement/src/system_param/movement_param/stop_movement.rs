@@ -1,5 +1,5 @@
 use crate::{
-	components::{movement::path_or_direction::PathOrDirection, new_movement::NewMovement},
+	components::{movement_path::MovementPath, ongoing_movement::OngoingMovement},
 	system_param::movement_param::MovementContextMut,
 };
 use common::traits::handles_movement::StopMovement;
@@ -7,7 +7,7 @@ use common::traits::handles_movement::StopMovement;
 impl StopMovement for MovementContextMut<'_> {
 	fn stop(&mut self) {
 		self.entity
-			.try_insert((PathOrDirection::stop(), NewMovement::Stopped));
+			.try_insert((MovementPath::stop(), OngoingMovement::Stopped));
 	}
 }
 
@@ -16,7 +16,7 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{
-		components::movement::path_or_direction::PathOrDirection,
+		components::movement_path::MovementPath,
 		system_param::movement_param::MovementParamMut,
 	};
 	use bevy::{
@@ -41,7 +41,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(PathOrDirection::target(Vec3::new(1., 2., 3.)))
+			.spawn(MovementPath::target(Vec3::new(1., 2., 3.)))
 			.id();
 
 		app.world_mut()
@@ -52,8 +52,8 @@ mod tests {
 			})?;
 
 		assert_eq!(
-			Some(&PathOrDirection::stop()),
-			app.world().entity(entity).get::<PathOrDirection>(),
+			Some(&MovementPath::stop()),
+			app.world().entity(entity).get::<MovementPath>(),
 		);
 		Ok(())
 	}
@@ -63,7 +63,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(PathOrDirection::target(Vec3::new(1., 2., 3.)))
+			.spawn(MovementPath::target(Vec3::new(1., 2., 3.)))
 			.id();
 
 		app.world_mut()
@@ -74,8 +74,8 @@ mod tests {
 			})?;
 
 		assert_eq!(
-			Some(&NewMovement::Stopped),
-			app.world().entity(entity).get::<NewMovement>(),
+			Some(&OngoingMovement::Stopped),
+			app.world().entity(entity).get::<OngoingMovement>(),
 		);
 		Ok(())
 	}
