@@ -105,16 +105,15 @@ impl<TMotion> MovementUpdate for Movement<TMotion>
 where
 	TMotion: From<CharacterMotion> + GetProperty<Done> + GetProperty<CharacterMotion> + Component,
 {
-	type TComponents<'a> = Option<&'a TMotion>;
+	type TComponents = (&'static Self, Option<&'static TMotion>);
 	type TConstraint = ();
 
 	fn update(
-		&self,
-		agent: &mut ZyheedaEntityCommands,
-		motion: Option<&TMotion>,
+		entity: &mut ZyheedaEntityCommands,
+		(movement, motion): (&Self, Option<&TMotion>),
 		speed: Speed,
 	) -> Done {
-		let new_motion = match self.target {
+		let new_motion = match movement.target {
 			Some(MovementTarget::Point(target)) => CharacterMotion::ToTarget { target, speed },
 			Some(MovementTarget::Dir(direction)) => CharacterMotion::Direction { direction, speed },
 			None => CharacterMotion::Stop,
@@ -125,10 +124,14 @@ where
 				Done::when(motion.dyn_property::<Done>())
 			}
 			_ => {
-				agent.try_insert(TMotion::from(new_motion));
+				entity.try_insert(TMotion::from(new_motion));
 				Done(false)
 			}
 		}
+	}
+
+	fn stop(entity: &mut ZyheedaEntityCommands) {
+		entity.try_insert(TMotion::from(CharacterMotion::Stop));
 	}
 }
 
@@ -340,7 +343,8 @@ mod tests {
 			for (entity, movement, params) in &agents {
 				commands.try_apply_on(&entity, |mut e| {
 					let _UpdateParams((motion, speed)) = *params;
-					let result = movement.update(&mut e, motion.as_ref(), speed);
+					let result =
+						Movement::<_Motion>::update(&mut e, (movement, motion.as_ref()), speed);
 					e.try_insert(_Result(result));
 				});
 			}
