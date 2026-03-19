@@ -1,17 +1,17 @@
-use bevy::ecs::query::{QueryData, QueryFilter, QueryItem};
+use bevy::ecs::query::{QueryData, QueryItem};
 use common::{
 	tools::{Done, speed::Speed},
 	zyheeda_commands::ZyheedaEntityCommands,
 };
 
 pub(crate) trait MovementUpdate {
-	type TComponents<'a>: QueryData;
-	type TConstraint: QueryFilter;
+	type TComponents: QueryData;
 
 	fn update(
-		&self,
-		agent: &mut ZyheedaEntityCommands,
-		components: QueryItem<Self::TComponents<'_>>,
+		entity: &mut ZyheedaEntityCommands,
+		components: QueryItem<Self::TComponents>,
 		speed: Speed,
 	) -> Done;
+
+	fn stop(entity: &mut ZyheedaEntityCommands);
 }

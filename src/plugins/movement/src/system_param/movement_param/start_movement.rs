@@ -1,28 +1,28 @@
 use crate::{
 	components::{
-		movement::{Movement, path_or_direction::PathOrDirection},
 		movement_definition::MovementDefinition,
+		movement_path::MovementPath,
+		ongoing_movement::OngoingMovement,
 	},
 	system_param::movement_param::MovementContextMut,
 };
+use bevy::ecs::component::Component;
 use common::{
 	tools::{Units, UnitsPerSecond},
-	traits::{
-		handles_movement::{MovementTarget, StartMovement},
-		thread_safe::ThreadSafe,
-	},
+	traits::handles_movement::{MovementTarget, StartMovement},
 };
 
 impl<TMotion> StartMovement for MovementContextMut<'_, TMotion>
 where
-	TMotion: ThreadSafe,
+	TMotion: Component,
 {
 	fn start<T>(&mut self, target: T, radius: Units, speed: UnitsPerSecond)
 	where
 		T: Into<MovementTarget>,
 	{
 		self.entity.try_insert((
-			Movement::<PathOrDirection<TMotion>>::to(target),
+			OngoingMovement::Stopped,
+			MovementPath::from(target),
 			MovementDefinition { radius, speed },
 		));
 	}
@@ -33,10 +33,7 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{
-		components::{
-			movement::{Movement, path_or_direction::PathOrDirection},
-			movement_definition::MovementDefinition,
-		},
+		components::{movement_definition::MovementDefinition, movement_path::MovementPath},
 		system_param::movement_param::MovementParamMut,
 	};
 	use bevy::{
@@ -46,13 +43,13 @@ mod tests {
 	};
 	use common::traits::{
 		accessors::get::GetContextMut,
-		handles_movement::Movement as MovementMarker,
+		handles_movement::Movement,
 		thread_safe::ThreadSafe,
 	};
 	use test_case::test_case;
 	use testing::SingleThreadedApp;
 
-	#[derive(Debug, PartialEq)]
+	#[derive(Component)]
 	struct _Motion;
 
 	fn setup() -> App {
@@ -67,7 +64,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
 				let mut ctx =
-					MovementParamMut::get_context_mut(&mut p, MovementMarker { entity }).unwrap();
+					MovementParamMut::get_context_mut(&mut p, Movement { entity }).unwrap();
 				ctx.start(
 					Vec3::new(1., 2., 3.),
 					Units::from(42.),
@@ -87,7 +84,7 @@ mod tests {
 
 	#[test_case(Vec3::new(1.,2.,3.); "to point")]
 	#[test_case(Dir3::NEG_X; "towards direction")]
-	fn insert_movement(
+	fn insert_path(
 		target: impl Into<MovementTarget> + Copy + ThreadSafe,
 	) -> Result<(), RunSystemError> {
 		let mut app = setup();
@@ -96,15 +93,36 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
 				let mut ctx =
-					MovementParamMut::get_context_mut(&mut p, MovementMarker { entity }).unwrap();
+					MovementParamMut::get_context_mut(&mut p, Movement { entity }).unwrap();
 				ctx.start(target, Units::from(42.), UnitsPerSecond::from(11.));
 			})?;
 
 		assert_eq!(
-			Some(&Movement::to(target)),
-			app.world()
-				.entity(entity)
-				.get::<Movement<PathOrDirection<_Motion>>>(),
+			Some(&MovementPath::from(target)),
+			app.world().entity(entity).get::<MovementPath>(),
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn insert_stopped() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let entity = app.world_mut().spawn_empty().id();
+
+		app.world_mut()
+			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
+				let mut ctx =
+					MovementParamMut::get_context_mut(&mut p, Movement { entity }).unwrap();
+				ctx.start(
+					Vec3::new(1., 2., 3.),
+					Units::from(42.),
+					UnitsPerSecond::from(11.),
+				);
+			})?;
+
+		assert_eq!(
+			Some(&OngoingMovement::Stopped),
+			app.world().entity(entity).get::<OngoingMovement>(),
 		);
 		Ok(())
 	}

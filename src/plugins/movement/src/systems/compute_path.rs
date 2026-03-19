@@ -1,77 +1,55 @@
 use crate::{
-	Movement,
-	PathOrDirection,
-	components::{movement::path_or_direction::Mode, movement_definition::MovementDefinition},
+	MovementPath,
+	components::{movement_definition::MovementDefinition, movement_path::Mode},
 };
-use bevy::prelude::*;
+use bevy::{ecs::query::QueryFilter, prelude::*};
 use common::{
 	traits::{
 		accessors::get::{GetProperty, TryApplyOn},
 		handles_map_generation::GroundPosition,
 		handles_path_finding::ComputePath,
-		thread_safe::ThreadSafe,
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
 use std::collections::VecDeque;
 
-type MoveComponents<TMotion, TGetComputer> = (
+type MoveComponents<TGetComputer> = (
 	Entity,
 	&'static MovementDefinition,
 	&'static GlobalTransform,
-	&'static Movement<PathOrDirection<TMotion>>,
+	&'static MovementPath,
 	&'static TGetComputer,
 );
-type ChangedMovement<TMotion> = Changed<Movement<PathOrDirection<TMotion>>>;
 
-impl MovementDefinition {
-	pub(crate) fn compute_path<TMotion, TComputer, TGetComputer>(
+impl<T> ComputePathSystem for T where T: QueryFilter {}
+
+pub(crate) trait ComputePathSystem: QueryFilter + Sized {
+	fn compute<TComputer, TGetComputer>(
 		mut commands: ZyheedaCommands,
-		movements: Query<MoveComponents<TMotion, TGetComputer>, ChangedMovement<TMotion>>,
+		movements: Query<MoveComponents<TGetComputer>, Self>,
 		computers: Query<&TComputer>,
 	) where
-		TMotion: ThreadSafe,
 		TComputer: Component + ComputePath,
 		TGetComputer: Component + GetProperty<Entity>,
 	{
-		for (entity, definition, transform, movement, get_computer) in &movements {
+		for (entity, definition, transform, path, get_computer) in &movements {
 			let Ok(computer) = computers.get(get_computer.get_property()) else {
 				continue;
 			};
-			let path_or_direction = definition.new_movement(computer, transform, movement);
+			let Mode::PathTarget(Some(target)) = path.0 else {
+				continue;
+			};
+			let path = definition.compute_path(computer, transform, target);
+
 			commands.try_apply_on(&entity, |mut e| {
-				e.try_insert(path_or_direction);
-				e.try_remove::<Movement<TMotion>>();
+				e.try_insert(MovementPath::path(path));
 			});
 		}
 	}
+}
 
-	fn new_movement<TMotion, TComputer>(
-		&self,
-		computer: &TComputer,
-		transform: &GlobalTransform,
-		movement: &Movement<PathOrDirection<TMotion>>,
-	) -> PathOrDirection<TMotion>
-	where
-		TComputer: ComputePath,
-		TMotion: ThreadSafe,
-	{
-		let mut new_movement = PathOrDirection::<TMotion>::from(movement.target);
-
-		let Mode::Path(move_path) = &mut new_movement.mode else {
-			return new_movement;
-		};
-
-		let ([end], []) = move_path.as_slices() else {
-			return new_movement;
-		};
-
-		*move_path = self.compute_path_internal(computer, transform, *end);
-
-		new_movement
-	}
-
-	fn compute_path_internal<TComputer>(
+impl MovementDefinition {
+	fn compute_path<TComputer>(
 		&self,
 		computer: &TComputer,
 		transform: &GlobalTransform,
@@ -94,13 +72,16 @@ impl MovementDefinition {
 }
 
 #[cfg(test)]
-mod test_new_path {
+mod tests {
 	use super::*;
 	use common::tools::Units;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
-	use std::{collections::VecDeque, marker::PhantomData};
+	use std::collections::VecDeque;
 	use testing::{NestedMocks, SingleThreadedApp, assert_no_panic};
+
+	#[derive(Component)]
+	struct _ExecComputation;
 
 	#[derive(Debug, PartialEq, Default)]
 	struct _MoveMethod;
@@ -156,7 +137,7 @@ mod test_new_path {
 
 		app.add_systems(
 			Update,
-			MovementDefinition::compute_path::<_MoveMethod, _ComputePath, _GetComputer>,
+			With::<_ExecComputation>::compute::<_ComputePath, _GetComputer>,
 		);
 
 		app
@@ -181,11 +162,12 @@ mod test_new_path {
 			let entity = app
 				.world_mut()
 				.spawn((
+					_ExecComputation,
 					MovementDefinition {
 						radius: Units::from(1.),
 						..default()
 					},
-					Movement::<PathOrDirection<_MoveMethod>>::to(Vec3::default()),
+					MovementPath::target(Vec3::default()),
 					GlobalTransform::default(),
 					_GetComputer(computer),
 				))
@@ -194,17 +176,12 @@ mod test_new_path {
 			app.update();
 
 			assert_eq!(
-				Some(&PathOrDirection::<_MoveMethod> {
-					mode: Mode::Path(VecDeque::from([
-						Vec3::new(1., 0., 1.),
-						Vec3::new(2., 0., 2.),
-						Vec3::new(3., 0., 3.),
-					])),
-					_m: PhantomData,
-				}),
-				app.world()
-					.entity(entity)
-					.get::<PathOrDirection<_MoveMethod>>()
+				Some(&MovementPath::path([
+					Vec3::new(1., 0., 1.),
+					Vec3::new(2., 0., 2.),
+					Vec3::new(3., 0., 3.),
+				])),
+				app.world().entity(entity).get::<MovementPath>()
 			);
 		}
 
@@ -224,11 +201,12 @@ mod test_new_path {
 			let entity = app
 				.world_mut()
 				.spawn((
+					_ExecComputation,
 					MovementDefinition {
 						radius: Units::from(1.),
 						..default()
 					},
-					Movement::<PathOrDirection<_MoveMethod>>::to(Vec3::default()),
+					MovementPath::target(Vec3::default()),
 					GlobalTransform::from_xyz(0., 11., 0.),
 					_GetComputer(computer),
 				))
@@ -237,17 +215,12 @@ mod test_new_path {
 			app.update();
 
 			assert_eq!(
-				Some(&PathOrDirection::<_MoveMethod> {
-					mode: Mode::Path(VecDeque::from([
-						Vec3::new(1., 11., 1.),
-						Vec3::new(2., 11., 2.),
-						Vec3::new(3., 11., 3.),
-					])),
-					_m: PhantomData,
-				}),
-				app.world()
-					.entity(entity)
-					.get::<PathOrDirection<_MoveMethod>>()
+				Some(&MovementPath::path([
+					Vec3::new(1., 11., 1.),
+					Vec3::new(2., 11., 2.),
+					Vec3::new(3., 11., 3.),
+				])),
+				app.world().entity(entity).get::<MovementPath>()
 			);
 		}
 
@@ -263,11 +236,12 @@ mod test_new_path {
 			let entity = app
 				.world_mut()
 				.spawn((
+					_ExecComputation,
 					MovementDefinition {
 						radius: Units::from(1.),
 						..default()
 					},
-					Movement::<PathOrDirection<_MoveMethod>>::to(Vec3::default()),
+					MovementPath::target(Vec3::default()),
 					GlobalTransform::default(),
 					_GetComputer(computer),
 				))
@@ -276,13 +250,8 @@ mod test_new_path {
 			app.update();
 
 			assert_eq!(
-				Some(&PathOrDirection::<_MoveMethod> {
-					mode: Mode::Path(VecDeque::from([])),
-					_m: PhantomData,
-				}),
-				app.world()
-					.entity(entity)
-					.get::<PathOrDirection<_MoveMethod>>()
+				Some(&MovementPath::path([])),
+				app.world().entity(entity).get::<MovementPath>()
 			);
 		}
 
@@ -302,11 +271,12 @@ mod test_new_path {
 			let entity = app
 				.world_mut()
 				.spawn((
+					_ExecComputation,
 					MovementDefinition {
 						radius: Units::from(1.),
 						..default()
 					},
-					Movement::<PathOrDirection<_MoveMethod>>::to(Vec3::default()),
+					MovementPath::target(Vec3::default()),
 					GlobalTransform::from_translation(Vec3::ONE),
 					_GetComputer(computer),
 				))
@@ -315,16 +285,11 @@ mod test_new_path {
 			app.update();
 
 			assert_eq!(
-				Some(&PathOrDirection::<_MoveMethod> {
-					mode: Mode::Path(VecDeque::from([
-						Vec3::new(2., 1., 2.),
-						Vec3::new(3., 1., 3.),
-					])),
-					_m: PhantomData,
-				}),
-				app.world()
-					.entity(entity)
-					.get::<PathOrDirection<_MoveMethod>>()
+				Some(&MovementPath::path([
+					Vec3::new(2., 1., 2.),
+					Vec3::new(3., 1., 3.),
+				])),
+				app.world().entity(entity).get::<MovementPath>()
 			);
 		}
 
@@ -338,51 +303,17 @@ mod test_new_path {
 				}))
 				.id();
 			app.world_mut().spawn((
+				_ExecComputation,
 				MovementDefinition {
 					radius: Units::from(1.),
 					..default()
 				},
-				Movement::<PathOrDirection<_MoveMethod>>::to(Vec3::default()),
+				MovementPath::target(Vec3::default()),
 				GlobalTransform::default(),
 				_GetComputer(computer),
 			));
 
 			assert_no_panic!(app.update());
-		}
-
-		#[test]
-		fn remove_present_movement() {
-			let mut app = setup();
-			let computer = app
-				.world_mut()
-				.spawn(_ComputePath::new().with_mock(|mock| {
-					mock.expect_compute_path().return_const(Some(iter![
-						GroundPosition(Vec3::splat(1.)),
-						GroundPosition(Vec3::splat(2.)),
-						GroundPosition(Vec3::splat(3.)),
-					]));
-				}))
-				.id();
-			let entity = app
-				.world_mut()
-				.spawn((
-					MovementDefinition {
-						radius: Units::from(1.),
-						..default()
-					},
-					Movement::<PathOrDirection<_MoveMethod>>::to(Vec3::default()),
-					GlobalTransform::default(),
-					Movement::<_MoveMethod>::to(Vec3::default()),
-					_GetComputer(computer),
-				))
-				.id();
-
-			app.update();
-
-			assert_eq!(
-				None,
-				app.world().entity(entity).get::<Movement::<_MoveMethod>>()
-			);
 		}
 
 		#[test]
@@ -402,11 +333,12 @@ mod test_new_path {
 				}))
 				.id();
 			app.world_mut().spawn((
+				_ExecComputation,
 				MovementDefinition {
 					radius: Units::from(42.),
 					..default()
 				},
-				Movement::<PathOrDirection<_MoveMethod>>::to(Vec3::new(4., 5., 6.)),
+				MovementPath::target(Vec3::new(4., 5., 6.)),
 				GlobalTransform::from_xyz(1., 2., 3.),
 				_GetComputer(computer),
 			));
@@ -414,11 +346,11 @@ mod test_new_path {
 			app.update();
 		}
 	}
-	mod wasd {
+	mod direction {
 		use super::*;
 
 		#[test]
-		fn set_target_when_wasd() {
+		fn set_target_when_direction() {
 			let mut app = setup();
 			let computer = app
 				.world_mut()
@@ -429,11 +361,12 @@ mod test_new_path {
 			let entity = app
 				.world_mut()
 				.spawn((
+					_ExecComputation,
 					MovementDefinition {
 						radius: Units::from(1.),
 						..default()
 					},
-					Movement::<PathOrDirection<_MoveMethod>>::to(Dir3::NEG_Z),
+					MovementPath::direction(Dir3::NEG_Z),
 					GlobalTransform::default(),
 					_GetComputer(computer),
 				))
@@ -442,13 +375,8 @@ mod test_new_path {
 			app.update();
 
 			assert_eq!(
-				Some(&PathOrDirection::<_MoveMethod> {
-					mode: Mode::Direction(Some(Dir3::NEG_Z)),
-					_m: PhantomData,
-				}),
-				app.world()
-					.entity(entity)
-					.get::<PathOrDirection<_MoveMethod>>()
+				Some(&MovementPath::direction(Dir3::NEG_Z)),
+				app.world().entity(entity).get::<MovementPath>()
 			);
 		}
 	}
@@ -457,55 +385,25 @@ mod test_new_path {
 		use super::*;
 
 		#[test]
-		fn act_only_once() {
+		fn do_nothing_when_query_filter_does_not_apply() {
 			let mut app = setup();
 			let computer = app
 				.world_mut()
 				.spawn(_ComputePath::new().with_mock(|mock| {
-					mock.expect_compute_path().times(1).return_const(None);
+					mock.expect_compute_path().never().return_const(None);
 				}))
 				.id();
 			app.world_mut().spawn((
+				// NO `_ExecComputation``
 				MovementDefinition {
 					radius: Units::from(1.),
 					..default()
 				},
-				Movement::<PathOrDirection<_MoveMethod>>::to(Vec3::default()),
+				MovementPath::target(Vec3::default()),
 				GlobalTransform::default(),
 				_GetComputer(computer),
 			));
 
-			app.update();
-			app.update();
-		}
-
-		#[test]
-		fn act_again_if_movement_changed() {
-			let mut app = setup();
-			let computer = app
-				.world_mut()
-				.spawn(_ComputePath::new().with_mock(|mock| {
-					mock.expect_compute_path().times(2).return_const(None);
-				}))
-				.id();
-			let entity = app
-				.world_mut()
-				.spawn((
-					MovementDefinition {
-						radius: Units::from(1.),
-						..default()
-					},
-					Movement::<PathOrDirection<_MoveMethod>>::to(Vec3::default()),
-					GlobalTransform::default(),
-					_GetComputer(computer),
-				))
-				.id();
-
-			app.update();
-			app.world_mut()
-				.entity_mut(entity)
-				.get_mut::<Movement<PathOrDirection<_MoveMethod>>>()
-				.as_deref_mut();
 			app.update();
 		}
 	}

@@ -1,14 +1,23 @@
 mod components;
+mod observers;
 mod system_param;
 mod systems;
 mod traits;
 
+#[cfg(debug_assertions)]
+mod debug;
+
 use crate::{
-	components::{facing::SetFace, movement_definition::MovementDefinition},
+	components::{
+		facing::SetFace,
+		movement_definition::MovementDefinition,
+		ongoing_movement::{IsMoving, OngoingMovement},
+	},
 	system_param::{
 		face_param::FaceParamMut,
 		movement_param::{MovementParam, MovementParamMut, context_changed::JustRemovedMovements},
 	},
+	systems::{advance_movement::AdvanceMovement, compute_path::ComputePathSystem},
 };
 use bevy::prelude::*;
 use common::{
@@ -31,17 +40,14 @@ use common::{
 		thread_safe::ThreadSafe,
 	},
 };
-use components::{
-	facing::SetFaceOverride,
-	movement::{Movement, path_or_direction::PathOrDirection},
-};
+use components::{facing::SetFaceOverride, movement_path::MovementPath};
 use std::marker::PhantomData;
 use systems::face::execute_face::execute_face;
 
 pub struct MovementPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding>
-	MovementPlugin<(TInput, TSaveGame, TAnimations, TPhysics, TPathFinding)>
+impl<TInput, TSaveGame, TAnimations, TPhysics, TPathing>
+	MovementPlugin<(TInput, TSaveGame, TAnimations, TPhysics, TPathing)>
 where
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
@@ -51,7 +57,7 @@ where
 		+ HandlesMotion
 		+ HandlesAllPhysicalEffects
 		+ HandlesRaycast,
-	TPathFinding: ThreadSafe + HandlesPathFinding,
+	TPathing: ThreadSafe + HandlesPathFinding,
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn from_plugins(
@@ -59,14 +65,14 @@ where
 		_: &TSaveGame,
 		_: &TAnimations,
 		_: &TPhysics,
-		_: &TPathFinding,
+		_: &TPathing,
 	) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding> Plugin
-	for MovementPlugin<(TInput, TSaveGame, TAnimations, TPhysics, TPathFinding)>
+impl<TInput, TSaveGame, TAnimations, TPhysics, TPathing> Plugin
+	for MovementPlugin<(TInput, TSaveGame, TAnimations, TPhysics, TPathing)>
 where
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
@@ -76,37 +82,34 @@ where
 		+ HandlesMotion
 		+ HandlesAllPhysicalEffects
 		+ HandlesRaycast,
-	TPathFinding: ThreadSafe + HandlesPathFinding,
+	TPathing: ThreadSafe + HandlesPathFinding,
 {
 	fn build(&self, app: &mut App) {
 		TSaveGame::register_savable_component::<SetFace>(app);
 		TSaveGame::register_savable_component::<SetFaceOverride>(app);
-		TSaveGame::register_savable_component::<
-			Movement<PathOrDirection<TPhysics::TCharacterMotion>>,
-		>(app);
+		TSaveGame::register_savable_component::<OngoingMovement>(app);
+		TSaveGame::register_savable_component::<MovementPath>(app);
+		TSaveGame::register_savable_component::<MovementDefinition>(app);
 
-		let compute_path = MovementDefinition::compute_path::<
-			TPhysics::TCharacterMotion,
-			TPathFinding::TComputePath,
-			TPathFinding::TComputerRef,
-		>;
-		let execute_path = MovementDefinition::execute_movement::<
-			Movement<PathOrDirection<TPhysics::TCharacterMotion>>,
-		>;
-		let execute_movement =
-			MovementDefinition::execute_movement::<Movement<TPhysics::TCharacterMotion>>;
+		type ChangedPath = Changed<MovementPath>;
+		type NotMoving = Without<IsMoving>;
+		type Moving = With<IsMoving>;
+
+		let compute_path = ChangedPath::compute::<TPathing::TComputePath, TPathing::TComputerRef>;
+		let execute_path = NotMoving::advance::<MovementPath>;
+		let execute_movement = Moving::advance::<(OngoingMovement, TPhysics::TCharacterMotion)>;
+
 		let animate_movement_forward = MovementDefinition::animate_movement_forward::<
-			Movement<TPhysics::TCharacterMotion>,
+			TPhysics::TCharacterMotion,
 			AnimationsSystemParamMut<TAnimations>,
 		>;
 
 		#[cfg(debug_assertions)]
-		crate::components::movement::debug::draw::<TPhysics::TCharacterMotion>(app);
+		debug::draw(app);
 
-		app
-			// Resources
-			.init_resource::<JustRemovedMovements>()
-			// Systems
+		app.init_resource::<JustRemovedMovements>()
+			.add_observer(IsMoving::mark)
+			.add_observer(IsMoving::unmark_stale)
 			.add_systems(
 				Update,
 				(
@@ -120,17 +123,18 @@ where
 						.chain(),
 					// Apply facing
 					(
-						Movement::<TPhysics::TCharacterMotion>::set_faces,
+						OngoingMovement::set_facing,
 						SetFace::get_faces.pipe(execute_face::<RaycastSystemParam<TPhysics>>),
 					)
 						.chain(),
+					// Track removed motions
 					MovementParam::<TPhysics::TCharacterMotion>::update_just_removed,
 				)
 					.chain()
 					.in_set(MovementSystems)
 					.after(TInput::SYSTEMS)
 					.after(TAnimations::SYSTEMS)
-					.after(TPathFinding::SYSTEMS)
+					.after(TPathing::SYSTEMS)
 					.after(TPhysics::SYSTEMS)
 					.run_if(in_state(GameState::Play)),
 			);
@@ -150,8 +154,8 @@ impl<TDependencies> SystemSetDefinition for MovementPlugin<TDependencies> {
 	const SYSTEMS: Self::TSystemSet = MovementSystems;
 }
 
-impl<TInput, TSaveGame, TAnimations, TPhysics, TPathFinding> HandlesMovement
-	for MovementPlugin<(TInput, TSaveGame, TAnimations, TPhysics, TPathFinding)>
+impl<TInput, TSaveGame, TAnimations, TPhysics, TPathing> HandlesMovement
+	for MovementPlugin<(TInput, TSaveGame, TAnimations, TPhysics, TPathing)>
 where
 	TPhysics: HandlesMotion,
 {
