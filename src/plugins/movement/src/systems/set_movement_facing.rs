@@ -107,7 +107,10 @@ mod tests {
 	#[test]
 	fn set_to_face_direction_on_update_when_added() {
 		let mut app = setup();
-		let entity = app.world_mut().spawn(OngoingMovement::target(Dir3::NEG_X)).id();
+		let entity = app
+			.world_mut()
+			.spawn(OngoingMovement::target(Dir3::NEG_X))
+			.id();
 
 		app.update();
 		app.world_mut()

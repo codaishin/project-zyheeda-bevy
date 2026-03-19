@@ -1,7 +1,7 @@
 use crate::{
 	components::{
-		movement_path::MovementPath,
 		movement_definition::MovementDefinition,
+		movement_path::MovementPath,
 		ongoing_movement::OngoingMovement,
 	},
 	system_param::movement_param::MovementContextMut,
@@ -29,10 +29,7 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{
-		components::{
-			movement_path::MovementPath,
-			movement_definition::MovementDefinition,
-		},
+		components::{movement_definition::MovementDefinition, movement_path::MovementPath},
 		system_param::movement_param::MovementParamMut,
 	};
 	use bevy::{
