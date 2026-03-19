@@ -19,6 +19,15 @@ impl IsMoving {
 			};
 		});
 	}
+
+	pub(crate) fn unmark_stale(
+		on_remove: On<Remove, OngoingMovement>,
+		mut commands: ZyheedaCommands,
+	) {
+		commands.try_apply_on(&on_remove.entity, |mut e| {
+			e.try_remove::<IsMoving>();
+		});
+	}
 }
 
 #[cfg(test)]
@@ -32,13 +41,14 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.add_observer(IsMoving::mark);
+		app.add_observer(IsMoving::unmark_stale);
 
 		app
 	}
 
 	#[test_case(Vec3::default(); "position")]
 	#[test_case(Dir3::X; "direction")]
-	fn add_when_moving<T>(target: T)
+	fn add_when_ongoing_movement_inserted<T>(target: T)
 	where
 		T: Into<MovementTarget>,
 	{
@@ -51,7 +61,7 @@ mod tests {
 
 	#[test_case(Vec3::default(); "position")]
 	#[test_case(Dir3::X; "direction")]
-	fn add_on_reinsert<T>(target: T)
+	fn add_when_ongoing_movement_reinserted<T>(target: T)
 	where
 		T: Into<MovementTarget>,
 	{
@@ -64,7 +74,7 @@ mod tests {
 	}
 
 	#[test]
-	fn remove_when_stopped() {
+	fn remove_when_ongoing_movement_stopped() {
 		let mut app = setup();
 
 		let entity = app.world_mut().spawn(OngoingMovement::Stopped);
@@ -73,13 +83,25 @@ mod tests {
 	}
 
 	#[test]
-	fn remove_on_reinsert() {
+	fn remove_when_ongoing_movement_reinserted() {
 		let mut app = setup();
 
 		let mut entity = app
 			.world_mut()
 			.spawn(OngoingMovement::target(Vec3::default()));
 		entity.insert(OngoingMovement::Stopped);
+
+		assert_eq!(None, entity.get::<IsMoving>());
+	}
+
+	#[test]
+	fn remove_when_ongoing_movement_removed() {
+		let mut app = setup();
+
+		let mut entity = app
+			.world_mut()
+			.spawn(OngoingMovement::target(Vec3::default()));
+		entity.remove::<OngoingMovement>();
 
 		assert_eq!(None, entity.get::<IsMoving>());
 	}

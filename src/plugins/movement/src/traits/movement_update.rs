@@ -1,4 +1,4 @@
-use crate::components::ongoing_movement::OngoingMovement;
+use crate::components::ongoing_movement::{IsMoving, OngoingMovement};
 use bevy::{
 	ecs::query::{QueryData, QueryFilter, QueryItem},
 	prelude::*,
@@ -31,7 +31,7 @@ where
 	TMotion: From<CharacterMotion> + GetProperty<Done> + GetProperty<CharacterMotion> + Component,
 {
 	type TComponents = (&'static OngoingMovement, Option<&'static TMotion>);
-	type TConstraint = ();
+	type TConstraint = With<IsMoving>;
 
 	fn update(
 		agent: &mut ZyheedaEntityCommands,

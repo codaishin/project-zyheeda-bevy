@@ -106,6 +106,7 @@ where
 
 		app.init_resource::<JustRemovedMovements>()
 			.add_observer(IsMoving::mark)
+			.add_observer(IsMoving::unmark_stale)
 			.add_systems(
 				Update,
 				(
