@@ -1,12 +1,12 @@
 use crate::components::collider::{GENERIC_COLLISION_GROUP, RAY_GROUP, TERRAIN_GROUP};
-use bevy::{
-	ecs::{query::QueryEntityError, system::StaticSystemParam},
-	prelude::*,
-};
+use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use bevy_rapier3d::prelude::*;
-use common::traits::{
-	handles_physics::physical_bodies::{Body, PhysicsType},
-	prefab::{Prefab, PrefabEntityCommands},
+use common::{
+	errors::Unreachable,
+	traits::{
+		handles_physics::physical_bodies::{Body, PhysicsType},
+		prefab::{Prefab, PrefabEntityCommands},
+	},
 };
 
 #[derive(Component, Debug, PartialEq)]
@@ -20,15 +20,15 @@ impl From<Body> for PhysicalBody {
 }
 
 impl Prefab<()> for PhysicalBody {
-	type TError = QueryEntityError;
-	type TSystemParam<'w, 's> = Query<'w, 's, &'static PhysicalBody>;
+	type TError = Unreachable;
+	type TSystemParam<'w, 's> = ();
 
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
-		bodies: StaticSystemParam<Self::TSystemParam<'_, '_>>,
+		_: StaticSystemParam<()>,
 	) -> Result<(), Self::TError> {
-		let Self(Body { physics_type, .. }) = bodies.get(entity.entity_id())?;
+		let Self(Body { physics_type, .. }) = self;
 		let groups = match physics_type {
 			PhysicsType::Agent => GENERIC_COLLISION_GROUP,
 			PhysicsType::Terrain => GENERIC_COLLISION_GROUP | TERRAIN_GROUP,
