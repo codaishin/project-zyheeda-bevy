@@ -3,12 +3,18 @@ use bevy::{
 	ecs::system::SystemParam,
 	math::{Ray3d, Vec3},
 };
-use common::traits::handles_physics::{Ground, MouseHover, MouseHoversOver, Raycast, SolidObjects};
+use common::traits::handles_physics::{
+	MouseHover,
+	MouseHoversOver,
+	Raycast,
+	SolidObjects,
+	Terrain,
+};
 
 impl<T> Raycast<MouseHover> for RayCaster<'_, '_, T>
 where
 	T: SystemParam + 'static,
-	Self: Raycast<SolidObjects> + Raycast<Ground>,
+	Self: Raycast<SolidObjects> + Raycast<Terrain>,
 {
 	fn raycast(&mut self, MouseHover { exclude }: MouseHover) -> Option<MouseHoversOver> {
 		let cam = self.world_cams.single_mut().ok()?;
@@ -23,16 +29,16 @@ where
 			exclude: exclude.clone(),
 			only_hoverable: true,
 		});
-		let ground_hit = self.raycast(Ground { ray });
+		let ground_hit = self.raycast(Terrain { ray });
 		let hover = match (object_hit, ground_hit) {
 			(None, None) => return None,
-			(None, Some(time_of_impact)) => MouseHoversOver::Ground {
+			(None, Some(time_of_impact)) => MouseHoversOver::Terrain {
 				point: point(ray, *time_of_impact),
 			},
 			(Some(object), Some(ground_time_of_impact))
 				if object.time_of_impact > *ground_time_of_impact =>
 			{
-				MouseHoversOver::Ground {
+				MouseHoversOver::Terrain {
 					point: point(ray, *ground_time_of_impact),
 				}
 			}
@@ -93,8 +99,8 @@ mod tests {
 	}
 
 	#[automock]
-	impl Raycast<Ground> for _Ground {
-		fn raycast(&mut self, args: Ground) -> Option<TimeOfImpact> {
+	impl Raycast<Terrain> for _Ground {
+		fn raycast(&mut self, args: Terrain) -> Option<TimeOfImpact> {
 			self.mock.raycast(args)
 		}
 	}
@@ -108,8 +114,8 @@ mod tests {
 		}
 	}
 
-	impl Raycast<Ground> for _RayCaster<'_, '_> {
-		fn raycast(&mut self, args: Ground) -> Option<TimeOfImpact> {
+	impl Raycast<Terrain> for _RayCaster<'_, '_> {
+		fn raycast(&mut self, args: Terrain) -> Option<TimeOfImpact> {
 			self.context.1.raycast(args)
 		}
 	}
@@ -154,7 +160,7 @@ mod tests {
 			}),
 			_Ground::new().with_mock(|mock| {
 				mock.expect_raycast()
-					.with(eq(Ground { ray }))
+					.with(eq(Terrain { ray }))
 					.return_const(toi!(44.));
 			}),
 		);
@@ -195,7 +201,7 @@ mod tests {
 			}),
 			_Ground::new().with_mock(|mock| {
 				mock.expect_raycast()
-					.with(eq(Ground { ray }))
+					.with(eq(Terrain { ray }))
 					.return_const(toi!(44.));
 			}),
 		);
@@ -207,7 +213,7 @@ mod tests {
 				});
 
 				assert_eq!(
-					Some(MouseHoversOver::Ground {
+					Some(MouseHoversOver::Terrain {
 						point: Vec3::new(1., -42., 3.)
 					}),
 					hit,
@@ -238,7 +244,7 @@ mod tests {
 			}),
 			_Ground::new().with_mock(|mock| {
 				mock.expect_raycast()
-					.with(eq(Ground { ray }))
+					.with(eq(Terrain { ray }))
 					.return_const(toi!(44.));
 			}),
 		);
@@ -250,7 +256,7 @@ mod tests {
 				});
 
 				assert_eq!(
-					Some(MouseHoversOver::Ground {
+					Some(MouseHoversOver::Terrain {
 						point: Vec3::new(1., -42., 3.)
 					}),
 					hit,
@@ -323,7 +329,7 @@ mod tests {
 			}),
 			_Ground::new().with_mock(|mock| {
 				mock.expect_raycast()
-					.with(eq(Ground { ray }))
+					.with(eq(Terrain { ray }))
 					.return_const(toi!(44.));
 			}),
 		);

@@ -1,7 +1,7 @@
-mod ground;
-mod mouse_ground_hover;
 mod mouse_hover;
+mod mouse_terrain_hover;
 mod solid_objects;
+mod terrain;
 
 use crate::components::{
 	interaction_target::ColliderOfInteractionTarget,

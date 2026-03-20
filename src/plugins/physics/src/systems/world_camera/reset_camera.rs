@@ -38,7 +38,7 @@ mod tests {
 			.spawn(WorldCamera {
 				mouse_hover: HashMap::from([(
 					vec![],
-					MouseHoversOver::Ground {
+					MouseHoversOver::Terrain {
 						point: Vec3::default(),
 					},
 				)]),
