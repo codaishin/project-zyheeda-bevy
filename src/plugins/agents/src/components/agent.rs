@@ -10,7 +10,6 @@ use common::{
 		accessors::get::{GetContextMut, GetProperty},
 		handles_enemies::EnemyType,
 		handles_map_generation::{AgentPrefab, AgentType, GroundPosition, SetMapAgentPrefab},
-		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 	zyheeda_commands::ZyheedaEntityCommands,
@@ -64,23 +63,24 @@ impl GetProperty<AgentType> for Agent {
 
 impl Prefab<()> for Agent {
 	type TError = Unreachable;
+	type TSystemParam<'w, 's> = Res<'w, AssetServer>;
 
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
-		assets: &mut impl LoadAsset,
+		assets: StaticSystemParam<Res<AssetServer>>,
 	) -> Result<(), Self::TError> {
 		match self.agent_type {
 			AgentType::Player => entity.try_insert((
 				Player,
 				AgentConfig {
-					config_handle: assets.load_asset(agent_asset!("player")),
+					config_handle: assets.load(agent_asset!("player")),
 				},
 			)),
 			AgentType::Enemy(EnemyType::VoidSphere) => entity.try_insert((
 				VoidSphere,
 				AgentConfig {
-					config_handle: assets.load_asset(agent_asset!("void_sphere")),
+					config_handle: assets.load(agent_asset!("void_sphere")),
 				},
 			)),
 		};

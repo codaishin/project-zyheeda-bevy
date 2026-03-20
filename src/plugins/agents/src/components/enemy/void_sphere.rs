@@ -7,6 +7,7 @@ use crate::{
 };
 use bevy::{
 	color::{Color, LinearRgba},
+	ecs::system::StaticSystemParam,
 	light::NotShadowCaster,
 	math::{Vec3, primitives::Torus},
 	pbr::StandardMaterial,
@@ -29,7 +30,6 @@ use common::{
 			Shape,
 		},
 		handles_skill_physics::SkillSpawner,
-		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
@@ -114,11 +114,12 @@ where
 	TPhysics: HandlesPhysicalBodies,
 {
 	type TError = Unreachable;
+	type TSystemParam<'w, 's> = ();
 
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
-		_: &mut impl LoadAsset,
+		_: StaticSystemParam<()>,
 	) -> Result<(), Unreachable> {
 		let shape = Shape::Sphere {
 			radius: Units::from(Self::OUTER_RADIUS),
