@@ -1,4 +1,4 @@
-use crate::{components::RayCasterArgs, traits::cast_ray::CastRayContinuously};
+use crate::{components::RayCasterArgs, traits::ray_cast::CastRayContinuously};
 use bevy::ecs::entity::Entity;
 use bevy_rapier3d::{pipeline::QueryFilter, plugin::RapierContext, prelude::RayIntersection};
 

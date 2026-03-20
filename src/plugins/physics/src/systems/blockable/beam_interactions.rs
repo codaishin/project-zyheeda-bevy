@@ -9,7 +9,7 @@ use crate::{
 		skill_transform::SkillTransforms,
 	},
 	messages::BeamInteraction,
-	traits::cast_ray::{
+	traits::ray_cast::{
 		CastRayContinuouslySorted,
 		GetContinuousSortedRayCaster,
 		InvalidIntersections,
@@ -209,7 +209,7 @@ mod tests {
 			skill_transform::SkillTransformOf,
 		},
 		messages::BeamInteraction,
-		traits::cast_ray::{CastRayContinuouslySorted, InvalidIntersections, RayHit},
+		traits::ray_cast::{CastRayContinuouslySorted, InvalidIntersections, RayHit},
 	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{

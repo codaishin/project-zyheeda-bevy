@@ -2,7 +2,7 @@ use crate::{
 	components::{RayCasterArgs, RayFilter, prevent_tunneling::PreventTunneling},
 	system_params::update_ongoing_interactions::UpdateOngoingInteractions,
 	traits::{
-		cast_ray::{CastRayContinuouslySorted, GetContinuousSortedRayCaster, InvalidIntersections},
+		ray_cast::{CastRayContinuouslySorted, GetContinuousSortedRayCaster, InvalidIntersections},
 		send_collision_interaction::PushOngoingInteraction,
 	},
 };
@@ -137,7 +137,7 @@ pub(crate) struct InvalidForward {
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::traits::cast_ray::{InvalidIntersections, RayHit};
+	use crate::traits::ray_cast::{InvalidIntersections, RayHit};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{tools::Units, traits::handles_physics::TimeOfImpact};
 	use core::f32;
