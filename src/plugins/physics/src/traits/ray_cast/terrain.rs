@@ -1,62 +1,128 @@
-use crate::traits::ray_cast::RayCaster;
+use crate::{
+	components::collider::{RAY_GROUP, TERRAIN_GROUP},
+	traits::ray_cast::RayCaster,
+};
 use bevy::prelude::*;
+use bevy_rapier3d::{math::Real, prelude::*};
 use common::traits::handles_physics::{Raycast, Terrain, TimeOfImpact};
-
-const HORIZONTAL_PLANE: InfinitePlane3d = InfinitePlane3d { normal: Dir3::Y };
 
 impl Raycast<Terrain> for RayCaster<'_, '_> {
 	fn raycast(&mut self, Terrain { ray }: Terrain) -> Option<TimeOfImpact> {
-		ray.intersect_plane(Vec3::ZERO, HORIZONTAL_PLANE)
-			.and_then(|toi| TimeOfImpact::try_from_f32(toi).ok())
+		let ray_caster = self.context.single().ok()?;
+
+		let (_, toi) = ray_caster.cast_ray(
+			ray.origin,
+			*ray.direction,
+			Real::MAX,
+			true,
+			QueryFilter {
+				groups: Some(CollisionGroups::new(RAY_GROUP, TERRAIN_GROUP)),
+				..default()
+			},
+		)?;
+
+		TimeOfImpact::try_from_f32(toi).ok()
 	}
 }
 
 #[cfg(test)]
 mod tests {
-	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::PhysicsPlugin;
-	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{toi, traits::handles_physics::RaycastSystemParam};
+	use bevy::{
+		ecs::system::{RunSystemError, RunSystemOnce},
+		mesh::MeshPlugin,
+		scene::ScenePlugin,
+	};
+	use common::{tools::Units, traits::handles_physics::RaycastSystemParam};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
-		App::new().single_threaded(Update)
+		let mut app = App::new().single_threaded(Update);
+
+		app.add_plugins((
+			MinimalPlugins,
+			AssetPlugin::default(),
+			MeshPlugin,
+			ScenePlugin,
+			RapierPhysicsPlugin::<NoUserData>::default(),
+		));
+
+		app
 	}
 
 	#[test]
-	fn intersect_origin() -> Result<(), RunSystemError> {
+	fn raycast_onto_object() -> Result<(), RunSystemError> {
 		let mut app = setup();
+		let ray = Ray3d {
+			origin: Vec3::Y,
+			direction: Dir3::NEG_Y,
+		};
+		app.world_mut().spawn((
+			CollisionGroups::new(TERRAIN_GROUP, RAY_GROUP),
+			Collider::ball(0.5),
+		));
+		app.update();
 
 		let hit = app.world_mut().run_system_once(
-			|mut ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
-				ray_caster.raycast(Terrain {
-					ray: Ray3d {
-						origin: Vec3::Y,
-						direction: Dir3::NEG_Y,
-					},
-				})
+			move |mut ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
+				ray_caster.raycast(Terrain { ray })
 			},
 		)?;
-		assert_eq!(Some(toi!(1.)), hit);
+
+		assert_eq!(Some(TimeOfImpact::from(Units::from(0.5))), hit);
 		Ok(())
 	}
 
 	#[test]
-	fn intersect_off() -> Result<(), RunSystemError> {
+	fn no_raycast_onto_object_if_not_terrain_member() -> Result<(), RunSystemError> {
 		let mut app = setup();
+		let ray = Ray3d {
+			origin: Vec3::Y,
+			direction: Dir3::NEG_Y,
+		};
+		app.world_mut().spawn((
+			CollisionGroups {
+				memberships: Group::all() & !TERRAIN_GROUP,
+				filters: RAY_GROUP,
+			},
+			Collider::ball(0.5),
+		));
+		app.update();
 
 		let hit = app.world_mut().run_system_once(
-			|mut ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
-				ray_caster.raycast(Terrain {
-					ray: Ray3d {
-						origin: Vec3::new(10., 8., 22.),
-						direction: Dir3::try_from(Vec3::new(-3., -4., 0.)).unwrap(),
-					},
-				})
+			move |mut ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
+				ray_caster.raycast(Terrain { ray })
 			},
 		)?;
-		assert_eq!(Some(toi!(10.)), hit);
+
+		assert_eq!(None, hit);
+		Ok(())
+	}
+
+	#[test]
+	fn no_raycast_onto_object_if_not_filtering_rays() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let ray = Ray3d {
+			origin: Vec3::Y,
+			direction: Dir3::NEG_Y,
+		};
+		app.world_mut().spawn((
+			CollisionGroups {
+				memberships: TERRAIN_GROUP,
+				filters: Group::all() & !RAY_GROUP,
+			},
+			Collider::ball(0.5),
+		));
+		app.update();
+
+		let hit = app.world_mut().run_system_once(
+			move |mut ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
+				ray_caster.raycast(Terrain { ray })
+			},
+		)?;
+
+		assert_eq!(None, hit);
 		Ok(())
 	}
 }

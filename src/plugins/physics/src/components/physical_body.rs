@@ -1,3 +1,4 @@
+use crate::components::collider::{GENERIC_COLLISION_GROUP, RAY_GROUP, TERRAIN_GROUP};
 use bevy::{
 	ecs::{query::QueryEntityError, system::StaticSystemParam},
 	prelude::*,
@@ -11,11 +12,6 @@ use common::traits::{
 #[derive(Component, Debug, PartialEq)]
 #[component(immutable)]
 pub struct PhysicalBody(pub(crate) Body);
-
-impl PhysicalBody {
-	const COLLISION_GROUP: Group = Group::GROUP_1;
-	const TERRAIN_GROUP: Group = Group::GROUP_2;
-}
 
 impl From<Body> for PhysicalBody {
 	fn from(body: Body) -> Self {
@@ -32,13 +28,16 @@ impl Prefab<()> for PhysicalBody {
 		entity: &mut impl PrefabEntityCommands,
 		bodies: StaticSystemParam<Self::TSystemParam<'_, '_>>,
 	) -> Result<(), Self::TError> {
-		let body = bodies.get(entity.entity_id())?;
-		let groups = match body.0.physics_type {
-			PhysicsType::Agent => Self::COLLISION_GROUP,
-			PhysicsType::Terrain => Self::COLLISION_GROUP | Self::TERRAIN_GROUP,
+		let Self(Body { physics_type, .. }) = bodies.get(entity.entity_id())?;
+		let groups = match physics_type {
+			PhysicsType::Agent => GENERIC_COLLISION_GROUP,
+			PhysicsType::Terrain => GENERIC_COLLISION_GROUP | TERRAIN_GROUP,
 		};
 
-		entity.try_insert(CollisionGroups::new(groups, Self::COLLISION_GROUP));
+		entity.try_insert(CollisionGroups::new(
+			groups,
+			GENERIC_COLLISION_GROUP | RAY_GROUP,
+		));
 
 		Ok(())
 	}

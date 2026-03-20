@@ -10,6 +10,10 @@ use common::{
 	},
 };
 
+pub(crate) const GENERIC_COLLISION_GROUP: Group = Group::GROUP_1;
+pub(crate) const TERRAIN_GROUP: Group = Group::GROUP_2;
+pub(crate) const RAY_GROUP: Group = Group::GROUP_3;
+
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
 #[component(immutable)]
 #[require(Transform)]
