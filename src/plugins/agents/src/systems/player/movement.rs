@@ -14,7 +14,7 @@ use common::{
 		accessors::get::GetContextMut,
 		handles_input::{GetAllInputStates, InputState},
 		handles_movement::{Movement, StartMovement, StopMovement},
-		handles_physics::{MouseTerrainPoint, MouseTerrainHover, Raycast},
+		handles_physics::{MouseTerrainHover, MouseTerrainPoint, Raycast},
 	},
 };
 

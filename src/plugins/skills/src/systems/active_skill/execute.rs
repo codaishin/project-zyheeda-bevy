@@ -176,9 +176,10 @@ mod tests {
 	fn spawn_started_skill_on_ground() {
 		let mut app = setup(
 			_RayCaster::new().with_mock(|mock| {
-				mock.expect_raycast().return_const(MouseHoversOver::Terrain {
-					point: Vec3::new(1., 2., 3.),
-				});
+				mock.expect_raycast()
+					.return_const(MouseHoversOver::Terrain {
+						point: Vec3::new(1., 2., 3.),
+					});
 			}),
 			_Spawner::new().with_mock(assert_call_spawn),
 		);
@@ -248,9 +249,10 @@ mod tests {
 	fn set_started_to(on_skill_stop: OnSkillStop, expected: ActiveSkill<_Config>) {
 		let mut app = setup(
 			_RayCaster::new().with_mock(|mock| {
-				mock.expect_raycast().return_const(MouseHoversOver::Terrain {
-					point: Vec3::new(1., 2., 3.),
-				});
+				mock.expect_raycast()
+					.return_const(MouseHoversOver::Terrain {
+						point: Vec3::new(1., 2., 3.),
+					});
 			}),
 			_Spawner::new().with_mock(|mock| {
 				mock.expect_spawn_skill().return_const(on_skill_stop);
@@ -300,9 +302,10 @@ mod tests {
 	fn set_stopped_to_idle() {
 		let mut app = setup(
 			_RayCaster::new().with_mock(|mock| {
-				mock.expect_raycast().return_const(MouseHoversOver::Terrain {
-					point: Vec3::new(1., 2., 3.),
-				});
+				mock.expect_raycast()
+					.return_const(MouseHoversOver::Terrain {
+						point: Vec3::new(1., 2., 3.),
+					});
 			}),
 			_Spawner::new().with_mock(|mock| {
 				mock.expect_spawn_skill().return_const(OnSkillStop::Ignore);
@@ -354,9 +357,10 @@ mod tests {
 	fn do_not_change(executor: ActiveSkill<_Config>) {
 		let mut app = setup(
 			_RayCaster::new().with_mock(|mock| {
-				mock.expect_raycast().return_const(MouseHoversOver::Terrain {
-					point: Vec3::new(1., 2., 3.),
-				});
+				mock.expect_raycast()
+					.return_const(MouseHoversOver::Terrain {
+						point: Vec3::new(1., 2., 3.),
+					});
 			}),
 			_Spawner::new().with_mock(|mock| {
 				mock.expect_spawn_skill().return_const(OnSkillStop::Ignore);
