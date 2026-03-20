@@ -66,7 +66,7 @@ where
 	})?;
 
 	match hover {
-		MouseHoversOver::Ground { point } => Some(point),
+		MouseHoversOver::Terrain { point } => Some(point),
 		MouseHoversOver::Object { entity, .. } => {
 			transforms.get(entity).ok().map(|tr| tr.translation)
 		}
@@ -139,7 +139,7 @@ mod tests {
 				.with(eq(MouseHover {
 					exclude: vec![agent],
 				}))
-				.return_const(MouseHoversOver::Ground {
+				.return_const(MouseHoversOver::Terrain {
 					point: Vec3::new(1., 2., 3.),
 				});
 		}));
@@ -191,7 +191,7 @@ mod tests {
 				.with(eq(MouseHover {
 					exclude: vec![agent],
 				}))
-				.return_const(MouseHoversOver::Ground {
+				.return_const(MouseHoversOver::Terrain {
 					point: Vec3::new(6., 3., 7.),
 				});
 		}));

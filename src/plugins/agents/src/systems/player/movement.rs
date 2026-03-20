@@ -14,7 +14,7 @@ use common::{
 		accessors::get::GetContextMut,
 		handles_input::{GetAllInputStates, InputState},
 		handles_movement::{Movement, StartMovement, StopMovement},
-		handles_physics::{MouseGroundHover, MouseGroundPoint, Raycast},
+		handles_physics::{MouseTerrainHover, MouseTerrainPoint, Raycast},
 	},
 };
 
@@ -27,7 +27,7 @@ impl Player {
 		players: Query<(Entity, &MovementConfig), With<Self>>,
 	) where
 		for<'w, 's> TInput: SystemParam<Item<'w, 's>: GetAllInputStates>,
-		for<'w, 's> TRaycast: SystemParam<Item<'w, 's>: Raycast<MouseGroundHover>>,
+		for<'w, 's> TRaycast: SystemParam<Item<'w, 's>: Raycast<MouseTerrainHover>>,
 		for<'c> TMovement: GetContextMut<Movement, TContext<'c>: StartMovement + StopMovement>,
 	{
 		let Some(cam_transform) = cameras.iter().next() else {
@@ -47,7 +47,7 @@ impl Player {
 			for (key, state) in inputs() {
 				match (key, state) {
 					(Pointer, InputState::Pressed { .. }) => {
-						target = raycast.raycast(MouseGroundHover);
+						target = raycast.raycast(MouseTerrainHover);
 					}
 					(Forward, InputState::Pressed { .. }) => {
 						directions += cam_transform
@@ -81,7 +81,7 @@ impl Player {
 				(Ok(dir), ..) => {
 					ctx.start(dir, config.collider_radius, config.speed);
 				}
-				(_, Some(MouseGroundPoint(point)), DirectionalMovement::NotStopped) => {
+				(_, Some(MouseTerrainPoint(point)), DirectionalMovement::NotStopped) => {
 					ctx.start(point, config.collider_radius, config.speed);
 				}
 				(Err(_), .., DirectionalMovement::Stopped) => {
@@ -141,8 +141,8 @@ mod tests {
 	}
 
 	#[automock]
-	impl Raycast<MouseGroundHover> for _Raycast {
-		fn raycast(&mut self, hover: MouseGroundHover) -> Option<MouseGroundPoint> {
+	impl Raycast<MouseTerrainHover> for _Raycast {
+		fn raycast(&mut self, hover: MouseTerrainHover) -> Option<MouseTerrainPoint> {
 			self.mock.raycast(hover)
 		}
 	}
@@ -208,7 +208,7 @@ mod tests {
 			}),
 			_Raycast::new().with_mock(|mock| {
 				mock.expect_raycast()
-					.return_const(Some(MouseGroundPoint(target)));
+					.return_const(Some(MouseTerrainPoint(target)));
 			}),
 		);
 		app.world_mut().spawn((
@@ -402,7 +402,7 @@ mod tests {
 			}),
 			_Raycast::new().with_mock(|mock| {
 				mock.expect_raycast()
-					.return_const(MouseGroundPoint(Vec3::new(4., 2., 1.)));
+					.return_const(MouseTerrainPoint(Vec3::new(4., 2., 1.)));
 			}),
 		);
 		app.world_mut().spawn((
@@ -447,7 +447,7 @@ mod tests {
 			}),
 			_Raycast::new().with_mock(|mock| {
 				mock.expect_raycast()
-					.return_const(MouseGroundPoint(Vec3::ZERO));
+					.return_const(MouseTerrainPoint(Vec3::ZERO));
 			}),
 		);
 		app.world_mut().spawn((
@@ -552,7 +552,7 @@ mod tests {
 			}),
 			_Raycast::new().with_mock(|mock| {
 				mock.expect_raycast()
-					.return_const(MouseGroundPoint(Vec3::ZERO));
+					.return_const(MouseTerrainPoint(Vec3::ZERO));
 			}),
 		);
 		app.world_mut().spawn((
@@ -584,7 +584,7 @@ mod tests {
 			}),
 			_Raycast::new().with_mock(|mock| {
 				mock.expect_raycast()
-					.return_const(MouseGroundPoint(Vec3::ZERO));
+					.return_const(MouseTerrainPoint(Vec3::ZERO));
 			}),
 		);
 		app.world_mut().spawn((

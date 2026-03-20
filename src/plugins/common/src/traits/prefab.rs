@@ -49,6 +49,10 @@ pub trait AddPrefabObserver {
 		TDependencies: 'static;
 }
 
+pub trait EntityId {
+	fn entity_id(&self) -> Entity;
+}
+
 pub trait TryInsert {
 	fn try_insert<TBundle>(&mut self, bundle: TBundle) -> &mut Self
 	where
@@ -80,11 +84,11 @@ pub trait WithChildren {
 }
 
 pub trait PrefabEntityCommands:
-	TryInsert + TryInsertIfNew + TryRemove + WithChild + WithChildren
+	EntityId + TryInsert + TryInsertIfNew + TryRemove + WithChild + WithChildren
 {
 }
 
 impl<T> PrefabEntityCommands for T where
-	T: TryInsert + TryInsertIfNew + TryRemove + WithChild + WithChildren
+	T: EntityId + TryInsert + TryInsertIfNew + TryRemove + WithChild + WithChildren
 {
 }

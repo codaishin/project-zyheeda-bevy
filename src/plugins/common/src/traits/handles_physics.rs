@@ -29,8 +29,8 @@ pub trait HandlesRaycast {
 	/// attached to the actual camera.
 	type TRaycast<'world, 'state>: SystemParam
 		+ for<'w, 's> SystemParam<Item<'w, 's>: Raycast<SolidObjects>>
-		+ for<'w, 's> SystemParam<Item<'w, 's>: Raycast<Ground>>
-		+ for<'w, 's> SystemParam<Item<'w, 's>: Raycast<MouseGroundHover>>
+		+ for<'w, 's> SystemParam<Item<'w, 's>: Raycast<Terrain>>
+		+ for<'w, 's> SystemParam<Item<'w, 's>: Raycast<MouseTerrainHover>>
 		+ for<'w, 's> SystemParam<Item<'w, 's>: Raycast<MouseHover>>;
 }
 
@@ -166,11 +166,11 @@ pub enum PhysicalObject {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Ground {
+pub struct Terrain {
 	pub ray: Ray3d,
 }
 
-impl RaycastResult for Ground {
+impl RaycastResult for Terrain {
 	type TResult = Option<TimeOfImpact>;
 }
 
@@ -274,18 +274,18 @@ impl RaycastResult for MouseHover {
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum MouseHoversOver {
-	/// Hovering over ground on the given point
-	Ground { point: Vec3 },
+	/// Hovering over terrain on the given point
+	Terrain { point: Vec3 },
 	/// Hovering an entity on the given point (which may not be the entities translation)
 	Object { entity: Entity, point: Vec3 },
 }
 
 #[derive(Debug, PartialEq)]
-pub struct MouseGroundHover;
+pub struct MouseTerrainHover;
 
-impl RaycastResult for MouseGroundHover {
-	type TResult = Option<MouseGroundPoint>;
+impl RaycastResult for MouseTerrainHover {
+	type TResult = Option<MouseTerrainPoint>;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Default)]
-pub struct MouseGroundPoint(pub Vec3);
+pub struct MouseTerrainPoint(pub Vec3);
