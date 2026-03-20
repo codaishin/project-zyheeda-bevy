@@ -1,12 +1,11 @@
 use crate::components::async_collider::{AsyncCollider, ColliderType, Source};
-use bevy::prelude::*;
+use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::{
 	errors::Unreachable,
 	tools::Units,
 	traits::{
 		handles_physics::physical_bodies::Shape,
-		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands, Reapply},
 	},
 };
@@ -69,13 +68,14 @@ impl From<Shape> for ColliderShape {
 
 impl Prefab<()> for ColliderShape {
 	type TError = Unreachable;
+	type TSystemParam<'w, 's> = ();
 
 	const REAPPLY: Reapply = Reapply::Always;
 
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
-		_: &mut impl LoadAsset,
+		_: StaticSystemParam<()>,
 	) -> Result<(), Self::TError> {
 		entity.try_remove::<(Collider, AsyncCollider)>();
 		entity.try_insert_if_new((
@@ -143,7 +143,6 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use bevy_rapier3d::prelude::{ActiveCollisionTypes, ActiveEvents, CollidingEntities};
-	use common::traits::load_asset::mock::MockAssetServer;
 	use test_case::test_case;
 	use testing::SingleThreadedApp;
 
@@ -153,11 +152,11 @@ mod tests {
 		app.add_observer(
 			|on_insert: On<Insert, ColliderShape>,
 			 mut commands: Commands,
-			 shapes: Query<&ColliderShape>| {
+			 shapes: Query<&ColliderShape>,
+			 param: StaticSystemParam<()>| {
 				let shape = shapes.get(on_insert.entity).unwrap();
 				let mut entity = commands.get_entity(on_insert.entity).unwrap();
-				let Ok(()) =
-					shape.insert_prefab_components(&mut entity, &mut MockAssetServer::default());
+				let Ok(()) = shape.insert_prefab_components(&mut entity, param);
 			},
 		);
 

@@ -5,14 +5,13 @@ use crate::{
 		trigger_game_state::TriggerState,
 	},
 };
-use bevy::prelude::*;
+use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	errors::Unreachable,
 	states::game_state::GameState,
 	traits::{
 		accessors::get::GetProperty,
 		handles_localization::localized::Localized,
-		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
@@ -58,11 +57,12 @@ impl TriggerState for StartMenuButton {
 
 impl Prefab<()> for StartMenuButton {
 	type TError = Unreachable;
+	type TSystemParam<'w, 's> = ();
 
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
-		_: &mut impl LoadAsset,
+		_: StaticSystemParam<()>,
 	) -> Result<(), Unreachable> {
 		entity.with_child((
 			Text::from(&self.label),

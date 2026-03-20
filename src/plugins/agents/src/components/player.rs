@@ -1,5 +1,5 @@
 use super::movement_config::MovementConfig;
-use bevy::prelude::*;
+use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	errors::Unreachable,
 	tools::{Units, UnitsPerSecond},
@@ -13,7 +13,6 @@ use common::{
 			PhysicsType,
 			Shape,
 		},
-		load_asset::LoadAsset,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
@@ -57,11 +56,12 @@ where
 	TPhysics: HandlesPhysicalBodies,
 {
 	type TError = Unreachable;
+	type TSystemParam<'w, 's> = ();
 
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
-		_: &mut impl LoadAsset,
+		_: StaticSystemParam<()>,
 	) -> Result<(), Unreachable> {
 		let shape = Shape::Capsule {
 			half_y: *PLAYER_COLLIDER_HEIGHT,

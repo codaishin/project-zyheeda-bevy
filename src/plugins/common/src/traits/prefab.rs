@@ -1,21 +1,26 @@
 mod app;
 mod entity_commands;
 
-use crate::{errors::ErrorData, traits::load_asset::LoadAsset};
+use crate::errors::ErrorData;
 use bevy::{
-	ecs::{component::Immutable, relationship::RelatedSpawnerCommands},
+	ecs::{
+		component::Immutable,
+		relationship::RelatedSpawnerCommands,
+		system::{StaticSystemParam, SystemParam},
+	},
 	prelude::*,
 };
 
 pub trait Prefab<TDependency>: Component<Mutability = Immutable> {
 	type TError: ErrorData;
+	type TSystemParam<'w, 's>: SystemParam;
 
 	const REAPPLY: Reapply = Reapply::Never;
 
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
-		assets: &mut impl LoadAsset,
+		system_param: StaticSystemParam<Self::TSystemParam<'_, '_>>,
 	) -> Result<(), Self::TError>;
 }
 

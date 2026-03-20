@@ -1,12 +1,9 @@
 use super::{AddPrefabObserver, Prefab};
 use crate::{
 	systems::log::OnError,
-	traits::{
-		load_asset::LoadAsset,
-		prefab::Reapply::{Always, Never},
-	},
+	traits::prefab::Reapply::{Always, Never},
 };
-use bevy::prelude::*;
+use bevy::{ecs::system::StaticSystemParam, prelude::*};
 
 impl AddPrefabObserver for App {
 	fn add_prefab_observer<TPrefab, TDependencies>(&mut self) -> &mut Self
@@ -15,26 +12,25 @@ impl AddPrefabObserver for App {
 		TDependencies: 'static,
 	{
 		match TPrefab::REAPPLY {
-			Always => self.add_observer(
-				instantiate::<Insert, TPrefab, TDependencies, AssetServer>.pipe(OnError::log),
-			),
-			Never => self.add_observer(
-				instantiate::<Add, TPrefab, TDependencies, AssetServer>.pipe(OnError::log),
-			),
+			Always => {
+				self.add_observer(instantiate::<Insert, TPrefab, TDependencies>.pipe(OnError::log))
+			}
+			Never => {
+				self.add_observer(instantiate::<Add, TPrefab, TDependencies>.pipe(OnError::log))
+			}
 		}
 	}
 }
 
-fn instantiate<TEvent, TPrefab, TDependencies, TAssetServer>(
+fn instantiate<TEvent, TPrefab, TDependencies>(
 	trigger: On<TEvent, TPrefab>,
 	components: Query<&TPrefab>,
 	mut commands: Commands,
-	mut asset_server: ResMut<TAssetServer>,
+	system_param: StaticSystemParam<TPrefab::TSystemParam<'_, '_>>,
 ) -> Result<(), TPrefab::TError>
 where
 	TEvent: EntityEvent,
 	TPrefab: Prefab<TDependencies> + Component,
-	TAssetServer: Resource + LoadAsset,
 {
 	let entity = trigger.event_target();
 	let Ok(component) = components.get(entity) else {
@@ -44,7 +40,7 @@ where
 		return Ok(());
 	};
 
-	component.insert_prefab_components(&mut entity, asset_server.as_mut())
+	component.insert_prefab_components(&mut entity, system_param)
 }
 
 #[cfg(test)]
@@ -52,11 +48,11 @@ mod tests {
 	use super::*;
 	use crate::{
 		errors::{ErrorData, Level},
-		traits::{load_asset::mock::MockAssetServer, prefab::PrefabEntityCommands},
+		traits::prefab::PrefabEntityCommands,
 	};
 	use std::fmt::Display;
 	use test_case::test_case;
-	use testing::{SingleThreadedApp, new_handle};
+	use testing::SingleThreadedApp;
 
 	#[derive(Asset, TypePath, Debug, PartialEq)]
 	struct _Asset;
@@ -64,25 +60,31 @@ mod tests {
 	#[derive(Component)]
 	#[component(immutable)]
 	struct _Component {
-		prefab: Result<_Prefab<&'static str>, _Error>,
+		prefab: Result<fn(usize) -> _Prefab, _Error>,
 	}
 
-	#[derive(Component, Debug, PartialEq, Clone)]
-	struct _Prefab<TAsset>(TAsset);
+	#[derive(Component, Debug, PartialEq)]
+	struct _Prefab(usize);
 
 	struct _Dependency;
 
+	#[derive(Resource, Debug, PartialEq, Default)]
+	struct _Counter(usize);
+
 	impl Prefab<_Dependency> for _Component {
 		type TError = _Error;
+		type TSystemParam<'w, 's> = ResMut<'w, _Counter>;
 
 		fn insert_prefab_components(
 			&self,
 			entity: &mut impl PrefabEntityCommands,
-			asset_server: &mut impl LoadAsset,
+			mut counter: StaticSystemParam<ResMut<_Counter>>,
 		) -> Result<(), _Error> {
 			match &self.prefab {
-				Ok(_Prefab(path)) => entity
-					.try_insert_if_new(_Prefab::<Handle<_Asset>>(asset_server.load_asset(*path))),
+				Ok(prefab) => {
+					counter.0 += 1;
+					entity.try_insert(prefab(counter.0))
+				}
 				Err(error) => return Err(*error),
 			};
 
@@ -120,42 +122,32 @@ mod tests {
 		commands.insert_resource(_Result(result));
 	}
 
-	fn setup<TEvent>(asset_server: MockAssetServer) -> App
+	fn setup<TEvent>() -> App
 	where
 		TEvent: EntityEvent,
 	{
 		let mut app = App::new().single_threaded(Update);
 
-		app.insert_resource(asset_server);
-		app.add_observer(
-			instantiate::<TEvent, _Component, _Dependency, MockAssetServer>.pipe(save_result),
-		);
+		app.init_resource::<_Counter>();
+		app.add_observer(instantiate::<TEvent, _Component, _Dependency>.pipe(save_result));
 
 		app
 	}
 
 	#[test]
 	fn call_prefab_instantiation_method() {
-		let handle = new_handle();
-		let mut app = setup::<Insert>(
-			MockAssetServer::default()
-				.path("my/path")
-				.returns(handle.clone()),
-		);
+		let mut app = setup::<Insert>();
 
 		let entity = app.world_mut().spawn(_Component {
-			prefab: Ok(_Prefab("my/path")),
+			prefab: Ok(_Prefab),
 		});
 
-		assert_eq!(
-			Some(&_Prefab(handle)),
-			entity.get::<_Prefab::<Handle<_Asset>>>()
-		);
+		assert_eq!(Some(&_Prefab(1)), entity.get::<_Prefab>());
 	}
 
 	#[test]
 	fn return_error() {
-		let mut app = setup::<Insert>(MockAssetServer::default());
+		let mut app = setup::<Insert>();
 
 		let entity = app.world_mut().spawn(_Component {
 			prefab: Err(_Error),
@@ -172,26 +164,25 @@ mod tests {
 		None => panic!("INVALID ENTITY"),
 	};
 
-	#[test_case(Add { entity: FAKE_ENTITY }, (1, 0); "on add")]
-	#[test_case(Insert { entity: FAKE_ENTITY }, (1, 1); "on insert")]
-	fn use_trigger_event<TEvent>(_: TEvent, expected_calls: (usize, usize))
+	#[test_case(Add { entity: FAKE_ENTITY }, 1; "on add")]
+	#[test_case(Insert { entity: FAKE_ENTITY }, 2; "on insert")]
+	fn use_trigger_event<TEvent>(_: TEvent, expected_count: usize)
 	where
 		TEvent: EntityEvent,
 	{
-		let mut app = setup::<TEvent>(MockAssetServer::default());
+		let mut app = setup::<TEvent>();
 
 		app.world_mut()
 			.spawn(_Component {
-				prefab: Ok(_Prefab("my/path/a")),
+				prefab: Ok(_Prefab),
 			})
 			.insert(_Component {
-				prefab: Ok(_Prefab("my/path/b")),
+				prefab: Ok(_Prefab),
 			});
 
-		let server = app.world().resource::<MockAssetServer>();
 		assert_eq!(
-			expected_calls,
-			(server.calls("my/path/a"), server.calls("my/path/b")),
+			&_Counter(expected_count),
+			app.world().resource::<_Counter>(),
 		);
 	}
 }
