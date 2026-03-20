@@ -1,5 +1,18 @@
-use crate::traits::prefab::{TryInsert, TryInsertIfNew, TryRemove, WithChild, WithChildren};
+use crate::traits::prefab::{
+	EntityId,
+	TryInsert,
+	TryInsertIfNew,
+	TryRemove,
+	WithChild,
+	WithChildren,
+};
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
+
+impl EntityId for EntityCommands<'_> {
+	fn entity_id(&self) -> Entity {
+		EntityCommands::id(self)
+	}
+}
 
 impl TryInsertIfNew for EntityCommands<'_> {
 	fn try_insert_if_new<TBundle>(&mut self, bundle: TBundle) -> &mut Self

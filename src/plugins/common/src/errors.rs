@@ -1,4 +1,8 @@
-use bevy::{ecs::error::BevyError, math::InvalidDirectionError, reflect::TypePath};
+use bevy::{
+	ecs::{error::BevyError, query::QueryEntityError},
+	math::InvalidDirectionError,
+	reflect::TypePath,
+};
 use std::{
 	any::type_name,
 	convert::Infallible,
@@ -199,5 +203,19 @@ where
 {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		write_iter!(f, self.0)
+	}
+}
+
+impl ErrorData for QueryEntityError {
+	fn level(&self) -> Level {
+		Level::Error
+	}
+
+	fn label() -> impl Display {
+		"Query Entity Error"
+	}
+
+	fn into_details(self) -> impl Display {
+		self
 	}
 }
