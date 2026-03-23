@@ -51,59 +51,60 @@ fn add_quickbar(parent: &mut RelatedSpawnerCommands<ChildOf>) {
 }
 
 fn add_slot(quickbar: &mut RelatedSpawnerCommands<ChildOf>, key: PlayerSlot) {
-	quickbar
-		.spawn(Node {
+	let slot_desc_text_size = 22.;
+	let slot_desc_size = 30.;
+	let slot_desc_border = 2.;
+	let slot_desc_offset = -slot_desc_size / 2. - slot_desc_border;
+
+	quickbar.spawn((
+		Node {
 			width: Val::Px(70.0),
 			height: Val::Px(70.0),
 			margin: UiRect::all(Val::Px(10.0)),
 			justify_content: JustifyContent::Center,
 			align_items: AlignItems::Center,
 			..default()
-		})
-		.with_children(|background| {
-			background
-				.spawn(get_quickbar_panel(key))
-				.with_children(|parent| {
-					let font_size = 22.;
-					let size = 30.;
-					let border = 2.;
-					let offset = -size / 2. - border;
-					parent
-						.spawn((
-							Node {
-								position_type: PositionType::Absolute,
-								left: Val::Px(offset),
-								top: Val::Px(offset),
-								width: Val::Px(size),
-								height: Val::Px(size),
-								border: UiRect::all(Val::Px(border)),
-								..default()
-							},
-							BorderColor::from(PanelColors::DEFAULT.filled.text),
-							BackgroundColor::from(PanelColors::DEFAULT.filled.background),
-						))
-						.with_child((
-							TextFont {
-								font_size,
-								..default()
-							},
-							TextColor(PanelColors::DEFAULT.filled.text),
-							InputLabel { key },
-						));
-				});
-		});
-}
-
-fn get_quickbar_panel(key: PlayerSlot) -> (QuickbarPanel, Button, Node) {
-	(
-		QuickbarPanel::from(key),
-		Button,
-		Node {
-			width: Val::Percent(100.),
-			height: Val::Percent(100.),
-			justify_content: JustifyContent::Start,
-			align_items: AlignItems::Start,
-			..default()
 		},
-	)
+		children![(
+			QuickbarPanel::from(key),
+			Button,
+			Node {
+				width: Val::Percent(100.),
+				height: Val::Percent(100.),
+				justify_content: JustifyContent::Start,
+				align_items: AlignItems::Start,
+				..default()
+			},
+			children![(
+				Node {
+					position_type: PositionType::Absolute,
+					left: Val::Px(slot_desc_offset),
+					top: Val::Px(slot_desc_offset),
+					width: Val::Px(slot_desc_size),
+					height: Val::Px(slot_desc_size),
+					border: UiRect::all(Val::Px(slot_desc_border)),
+					..default()
+				},
+				BorderColor::from(PanelColors::DEFAULT.filled.text),
+				BackgroundColor::from(PanelColors::DEFAULT.filled.background),
+				children![(
+					Node {
+						width: Val::Px(slot_desc_size - 2. * slot_desc_border),
+						height: Val::Px(slot_desc_size - 2. * slot_desc_border),
+						..default()
+					},
+					TextLayout {
+						justify: Justify::Center,
+						..default()
+					},
+					TextFont {
+						font_size: slot_desc_text_size,
+						..default()
+					},
+					TextColor(PanelColors::DEFAULT.filled.text),
+					InputLabel { key },
+				)],
+			)],
+		)],
+	));
 }

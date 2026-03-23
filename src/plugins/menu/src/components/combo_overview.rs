@@ -257,8 +257,23 @@ impl ComboOverview<()> {
 		)
 	}
 
-	pub(crate) fn skill_key_text(key: PlayerSlot) -> InputLabel {
-		InputLabel { key }
+	pub(crate) fn skill_key_text(key: PlayerSlot) -> (Node, TextLayout, InputLabel) {
+		(
+			Node {
+				width: Val::from(
+					Self::KEY_BUTTON_DIMENSIONS.width - Self::KEY_BUTTON_DIMENSIONS.border,
+				),
+				height: Val::from(
+					Self::KEY_BUTTON_DIMENSIONS.height - Self::KEY_BUTTON_DIMENSIONS.border,
+				),
+				..default()
+			},
+			TextLayout {
+				justify: Justify::Center,
+				..default()
+			},
+			InputLabel { key },
+		)
 	}
 
 	pub(crate) fn modify_button_text(key: &str) -> (Text, TextFont, TextColor) {

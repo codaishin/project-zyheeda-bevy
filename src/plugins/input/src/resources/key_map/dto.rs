@@ -1,4 +1,5 @@
 use super::KeyMap;
+use bevy::reflect::TypePath;
 use common::{
 	tools::action_key::{ActionKey, user_input::UserInput},
 	traits::{handles_custom_assets::AssetFileExtensions, iteration::IterFinite},
@@ -6,7 +7,7 @@ use common::{
 use serde::{Deserialize, Serialize};
 use std::hash::Hash;
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(TypePath, Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct KeyMapDto<TAllKeys>
 where
 	TAllKeys: Eq + Hash,

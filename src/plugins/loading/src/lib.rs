@@ -227,7 +227,7 @@ impl HandlesCustomAssets for LoadingPlugin {
 	fn register_custom_assets<TAsset, TDto>(app: &mut App)
 	where
 		TAsset: Asset + TryLoadFrom<TDto> + Clone + std::fmt::Debug,
-		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + ThreadSafe,
+		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + TypePath + ThreadSafe,
 	{
 		app.init_asset::<TAsset>()
 			.register_asset_loader(CustomAssetLoader::<TAsset, TDto>::default());
@@ -238,7 +238,7 @@ impl HandlesCustomFolderAssets for LoadingPlugin {
 	fn register_custom_folder_assets<TAsset, TDto, TLoadGroup>(app: &mut App)
 	where
 		TAsset: Asset + AssetFolderPath + TryLoadFrom<TDto> + Clone + std::fmt::Debug,
-		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + ThreadSafe,
+		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + TypePath + ThreadSafe,
 		TLoadGroup: ThreadSafe,
 	{
 		LoadingPlugin::register_custom_assets::<TAsset, TDto>(app);
@@ -259,9 +259,12 @@ struct FolderLoadingOf<TAsset>(PhantomData<TAsset>);
 impl HandlesAssetResourceLoading for LoadingPlugin {
 	fn register_custom_resource_loading<TResource, TDto, TLoadGroup>(app: &mut App, path: Path)
 	where
-		TResource: Resource + Asset + Clone + TryLoadFrom<TDto> + Debug,
-		TResource::TInstantiationError: Error + TypePath + ThreadSafe,
-		for<'a> TDto: Deserialize<'a> + ThreadSafe + AssetFileExtensions,
+		TResource: Resource
+			+ Asset
+			+ Clone
+			+ TryLoadFrom<TDto, TInstantiationError: Error + TypePath + ThreadSafe>
+			+ Debug,
+		for<'a> TDto: Deserialize<'a> + ThreadSafe + TypePath + AssetFileExtensions,
 		TLoadGroup: LoadGroup + ThreadSafe,
 	{
 		let loading = TLoadGroup::LOAD_STATE;

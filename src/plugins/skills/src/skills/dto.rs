@@ -4,7 +4,10 @@ use crate::skills::{
 	SkillId,
 	behaviors::{SkillBehaviorConfig, dto::SkillBehaviorConfigDto},
 };
-use bevy::asset::{AssetPath, Handle};
+use bevy::{
+	asset::{AssetPath, Handle},
+	reflect::TypePath,
+};
 use common::{
 	dto::duration_in_seconds::DurationInSeconds,
 	errors::Unreachable,
@@ -22,7 +25,7 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, time::Duration};
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(TypePath, Debug, PartialEq, Serialize, Deserialize)]
 pub(crate) struct SkillDto {
 	id: Uuid,
 	token: String,

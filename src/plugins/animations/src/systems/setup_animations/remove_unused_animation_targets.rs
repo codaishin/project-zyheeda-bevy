@@ -1,5 +1,8 @@
 use crate::components::{animation_lookup::AnimationLookup, setup_animations::SetupAnimations};
-use bevy::{animation::AnimationTarget, prelude::*};
+use bevy::{
+	animation::{AnimatedBy, AnimationTargetId},
+	prelude::*,
+};
 use common::{
 	traits::{accessors::get::TryApplyOn, wrap_handle::GetHandle},
 	zyheeda_commands::ZyheedaCommands,
@@ -11,7 +14,7 @@ impl SetupAnimations {
 		mut commands: ZyheedaCommands,
 		graphs: Res<Assets<AnimationGraph>>,
 		players: Query<(Entity, &TGraph), (With<AnimationLookup>, With<Self>)>,
-		bones: Query<(Entity, &AnimationTarget)>,
+		bones: Query<(Entity, &AnimatedBy, &AnimationTargetId)>,
 		children: Query<&Children>,
 	) where
 		TGraph: Component + GetHandle<TAsset = AnimationGraph>,
@@ -22,20 +25,20 @@ impl SetupAnimations {
 			};
 
 			for entity in children.iter_descendants(player) {
-				let Ok((entity, target)) = bones.get(entity) else {
+				let Ok((entity, target_player, target)) = bones.get(entity) else {
 					continue;
 				};
 
-				if target.player != player {
+				if target_player.0 != player {
 					continue;
 				}
 
-				if graph.mask_groups.contains_key(&target.id) {
+				if graph.mask_groups.contains_key(target) {
 					continue;
 				}
 
 				commands.try_apply_on(&entity, |mut e| {
-					e.try_remove::<AnimationTarget>();
+					e.try_remove::<(AnimatedBy, AnimationTargetId)>();
 				});
 			}
 		}
@@ -46,7 +49,6 @@ impl SetupAnimations {
 mod tests {
 	use super::*;
 	use crate::components::animation_lookup::AnimationClips;
-	use bevy::animation::{AnimationTarget, AnimationTargetId};
 	use testing::{SingleThreadedApp, new_handle};
 
 	#[derive(Component)]
@@ -101,24 +103,24 @@ mod tests {
 			.id();
 		let targets = [
 			app.world_mut()
-				.spawn(AnimationTarget {
-					id: AnimationTargetId::from_name(&Name::from("d")),
-					player,
-				})
+				.spawn((
+					AnimationTargetId::from_name(&Name::from("d")),
+					AnimatedBy(player),
+				))
 				.insert(ChildOf(player))
 				.id(),
 			app.world_mut()
-				.spawn(AnimationTarget {
-					id: AnimationTargetId::from_name(&Name::from("e")),
-					player,
-				})
+				.spawn((
+					AnimationTargetId::from_name(&Name::from("e")),
+					AnimatedBy(player),
+				))
 				.insert(ChildOf(player))
 				.id(),
 			app.world_mut()
-				.spawn(AnimationTarget {
-					id: AnimationTargetId::from_name(&Name::from("f")),
-					player,
-				})
+				.spawn((
+					AnimationTargetId::from_name(&Name::from("f")),
+					AnimatedBy(player),
+				))
 				.insert(ChildOf(player))
 				.id(),
 		];
@@ -126,11 +128,12 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			[false, false, false],
-			app.world()
-				.entity(targets)
-				.map(|entity| entity.contains::<AnimationTarget>())
-		)
+			[(false, false), (false, false), (false, false)],
+			app.world().entity(targets).map(|entity| (
+				entity.contains::<AnimationTargetId>(),
+				entity.contains::<AnimatedBy>(),
+			))
+		);
 	}
 
 	#[test]
@@ -152,23 +155,23 @@ mod tests {
 			.id();
 		let targets = [
 			app.world_mut()
-				.spawn(AnimationTarget {
-					id: AnimationTargetId::from_name(&Name::from("d")),
-					player,
-				})
+				.spawn((
+					AnimationTargetId::from_name(&Name::from("d")),
+					AnimatedBy(player),
+				))
 				.insert(ChildOf(player))
 				.id(),
 			app.world_mut()
-				.spawn(AnimationTarget {
-					id: AnimationTargetId::from_name(&Name::from("e")),
-					player,
-				})
+				.spawn((
+					AnimationTargetId::from_name(&Name::from("e")),
+					AnimatedBy(player),
+				))
 				.id(),
 			app.world_mut()
-				.spawn(AnimationTarget {
-					id: AnimationTargetId::from_name(&Name::from("f")),
-					player,
-				})
+				.spawn((
+					AnimationTargetId::from_name(&Name::from("f")),
+					AnimatedBy(player),
+				))
 				.id(),
 		];
 		app.world_mut()
@@ -181,11 +184,12 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			[false, false, false],
-			app.world()
-				.entity(targets)
-				.map(|entity| entity.contains::<AnimationTarget>())
-		)
+			[(false, false), (false, false), (false, false)],
+			app.world().entity(targets).map(|entity| (
+				entity.contains::<AnimationTargetId>(),
+				entity.contains::<AnimatedBy>(),
+			))
+		);
 	}
 
 	#[test]
@@ -207,22 +211,22 @@ mod tests {
 			.id();
 		let targets = [
 			app.world_mut()
-				.spawn(AnimationTarget {
-					id: AnimationTargetId::from_name(&Name::from("d")),
-					player,
-				})
+				.spawn((
+					AnimationTargetId::from_name(&Name::from("d")),
+					AnimatedBy(player),
+				))
 				.id(),
 			app.world_mut()
-				.spawn(AnimationTarget {
-					id: AnimationTargetId::from_name(&Name::from("e")),
-					player,
-				})
+				.spawn((
+					AnimationTargetId::from_name(&Name::from("e")),
+					AnimatedBy(player),
+				))
 				.id(),
 			app.world_mut()
-				.spawn(AnimationTarget {
-					id: AnimationTargetId::from_name(&Name::from("f")),
-					player,
-				})
+				.spawn((
+					AnimationTargetId::from_name(&Name::from("f")),
+					AnimatedBy(player),
+				))
 				.id(),
 		];
 
@@ -232,7 +236,7 @@ mod tests {
 			[true, true, true],
 			app.world()
 				.entity(targets)
-				.map(|entity| entity.contains::<AnimationTarget>())
+				.map(|entity| entity.contains::<AnimationTargetId>())
 		)
 	}
 	#[test]
@@ -255,24 +259,24 @@ mod tests {
 		let other = app.world_mut().spawn_empty().id();
 		let targets = [
 			app.world_mut()
-				.spawn(AnimationTarget {
-					id: AnimationTargetId::from_name(&Name::from("d")),
-					player: other,
-				})
+				.spawn((
+					AnimationTargetId::from_name(&Name::from("d")),
+					AnimatedBy(other),
+				))
 				.insert(ChildOf(player))
 				.id(),
 			app.world_mut()
-				.spawn(AnimationTarget {
-					id: AnimationTargetId::from_name(&Name::from("e")),
-					player: other,
-				})
+				.spawn((
+					AnimationTargetId::from_name(&Name::from("e")),
+					AnimatedBy(other),
+				))
 				.insert(ChildOf(player))
 				.id(),
 			app.world_mut()
-				.spawn(AnimationTarget {
-					id: AnimationTargetId::from_name(&Name::from("f")),
-					player: other,
-				})
+				.spawn((
+					AnimationTargetId::from_name(&Name::from("f")),
+					AnimatedBy(other),
+				))
 				.insert(ChildOf(player))
 				.id(),
 		];
@@ -283,7 +287,7 @@ mod tests {
 			[true, true, true],
 			app.world()
 				.entity(targets)
-				.map(|entity| entity.contains::<AnimationTarget>())
+				.map(|entity| entity.contains::<AnimationTargetId>())
 		)
 	}
 
@@ -304,17 +308,17 @@ mod tests {
 				AnimationLookup::<AnimationClips>::default(),
 			))
 			.id();
-		let targets =
-			used_targets.map(|id| app.world_mut().spawn(AnimationTarget { id, player }).id());
+		let targets = used_targets.map(|id| app.world_mut().spawn((id, AnimatedBy(player))).id());
 
 		app.update();
 
 		assert_eq!(
-			[true, true, true],
-			app.world()
-				.entity(targets)
-				.map(|entity| entity.contains::<AnimationTarget>())
-		)
+			[(true, true), (true, true), (true, true)],
+			app.world().entity(targets).map(|entity| (
+				entity.contains::<AnimationTargetId>(),
+				entity.contains::<AnimatedBy>(),
+			))
+		);
 	}
 
 	#[test]
@@ -332,24 +336,24 @@ mod tests {
 			.id();
 		let targets = [
 			app.world_mut()
-				.spawn(AnimationTarget {
-					id: AnimationTargetId::from_name(&Name::from("d")),
-					player,
-				})
+				.spawn((
+					AnimationTargetId::from_name(&Name::from("d")),
+					AnimatedBy(player),
+				))
 				.insert(ChildOf(player))
 				.id(),
 			app.world_mut()
-				.spawn(AnimationTarget {
-					id: AnimationTargetId::from_name(&Name::from("e")),
-					player,
-				})
+				.spawn((
+					AnimationTargetId::from_name(&Name::from("e")),
+					AnimatedBy(player),
+				))
 				.insert(ChildOf(player))
 				.id(),
 			app.world_mut()
-				.spawn(AnimationTarget {
-					id: AnimationTargetId::from_name(&Name::from("f")),
-					player,
-				})
+				.spawn((
+					AnimationTargetId::from_name(&Name::from("f")),
+					AnimatedBy(player),
+				))
 				.insert(ChildOf(player))
 				.id(),
 		];
@@ -357,11 +361,12 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			[true, true, true],
-			app.world()
-				.entity(targets)
-				.map(|entity| entity.contains::<AnimationTarget>())
-		)
+			[(true, true), (true, true), (true, true)],
+			app.world().entity(targets).map(|entity| (
+				entity.contains::<AnimationTargetId>(),
+				entity.contains::<AnimatedBy>(),
+			))
+		);
 	}
 
 	#[test]
@@ -379,24 +384,24 @@ mod tests {
 			.id();
 		let targets = [
 			app.world_mut()
-				.spawn(AnimationTarget {
-					id: AnimationTargetId::from_name(&Name::from("d")),
-					player,
-				})
+				.spawn((
+					AnimationTargetId::from_name(&Name::from("d")),
+					AnimatedBy(player),
+				))
 				.insert(ChildOf(player))
 				.id(),
 			app.world_mut()
-				.spawn(AnimationTarget {
-					id: AnimationTargetId::from_name(&Name::from("e")),
-					player,
-				})
+				.spawn((
+					AnimationTargetId::from_name(&Name::from("e")),
+					AnimatedBy(player),
+				))
 				.insert(ChildOf(player))
 				.id(),
 			app.world_mut()
-				.spawn(AnimationTarget {
-					id: AnimationTargetId::from_name(&Name::from("f")),
-					player,
-				})
+				.spawn((
+					AnimationTargetId::from_name(&Name::from("f")),
+					AnimatedBy(player),
+				))
 				.insert(ChildOf(player))
 				.id(),
 		];
@@ -404,10 +409,11 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			[true, true, true],
-			app.world()
-				.entity(targets)
-				.map(|entity| entity.contains::<AnimationTarget>())
-		)
+			[(true, true), (true, true), (true, true)],
+			app.world().entity(targets).map(|entity| (
+				entity.contains::<AnimationTargetId>(),
+				entity.contains::<AnimatedBy>(),
+			))
+		);
 	}
 }

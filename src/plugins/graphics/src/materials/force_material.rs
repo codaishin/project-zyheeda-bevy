@@ -1,4 +1,3 @@
-use crate::traits::shadows_aware_material::ShadowsAwareMaterial;
 use bevy::{prelude::*, render::render_resource::AsBindGroup, shader::ShaderRef};
 
 #[derive(Asset, TypePath, AsBindGroup, Clone, Default)]
@@ -25,10 +24,8 @@ impl Material for ForceMaterial {
 	fn alpha_mode(&self) -> AlphaMode {
 		self.alpha_mode
 	}
-}
 
-impl ShadowsAwareMaterial for ForceMaterial {
-	fn shadows_enabled() -> bool {
+	fn enable_shadows() -> bool {
 		false
 	}
 }

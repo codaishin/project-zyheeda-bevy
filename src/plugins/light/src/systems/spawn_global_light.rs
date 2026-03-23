@@ -2,9 +2,9 @@ use crate::components::global_light::GlobalLight;
 use bevy::prelude::*;
 
 impl GlobalLight {
-	pub(crate) fn spawn(default_color: Srgba) -> impl Fn(Commands, ResMut<AmbientLight>) {
+	pub(crate) fn spawn(default_color: Srgba) -> impl Fn(Commands, ResMut<GlobalAmbientLight>) {
 		move |mut commands, mut ambient_light| {
-			*ambient_light = AmbientLight::NONE;
+			*ambient_light = GlobalAmbientLight::NONE;
 
 			for x in [-1., 1.] {
 				for z in [-1., 1.] {

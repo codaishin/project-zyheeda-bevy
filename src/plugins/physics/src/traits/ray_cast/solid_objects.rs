@@ -64,6 +64,7 @@ mod tests {
 
 		app.add_plugins((
 			MinimalPlugins,
+			TransformPlugin,
 			AssetPlugin::default(),
 			MeshPlugin,
 			ScenePlugin,

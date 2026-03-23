@@ -16,6 +16,7 @@ use std::{
 	str::{Utf8Error, from_utf8},
 };
 
+#[derive(TypePath)]
 pub(crate) struct CustomAssetLoader<TAsset, TDto> {
 	phantom_data: PhantomData<(TAsset, TDto)>,
 }
@@ -40,9 +41,8 @@ impl<TAsset, TDto> Default for CustomAssetLoader<TAsset, TDto> {
 
 impl<TAsset, TDto> AssetLoader for CustomAssetLoader<TAsset, TDto>
 where
-	TAsset: Asset + TryLoadFrom<TDto>,
-	TAsset::TInstantiationError: Error + TypePath + ThreadSafe,
-	for<'a> TDto: Deserialize<'a> + AssetFileExtensions + Sync + Send + 'static,
+	TAsset: Asset + TryLoadFrom<TDto, TInstantiationError: Error + TypePath + ThreadSafe>,
+	for<'a> TDto: Deserialize<'a> + AssetFileExtensions + TypePath + Sync + Send + 'static,
 {
 	type Asset = TAsset;
 	type Settings = ();
