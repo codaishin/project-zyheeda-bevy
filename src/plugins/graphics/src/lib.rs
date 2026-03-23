@@ -45,10 +45,7 @@ use systems::{
 	no_waiting_pipelines::no_waiting_pipelines,
 	spawn_cameras::spawn_cameras,
 };
-use traits::{
-	get_effect_material::GetEffectMaterial,
-	shadows_aware_material::ShadowsAwareMaterial,
-};
+use traits::get_effect_material::GetEffectMaterial;
 
 pub struct GraphicsPlugin<TDependencies>(PhantomData<TDependencies>);
 
@@ -130,24 +127,21 @@ where
 trait RegisterShader {
 	fn register_shader<TMaterial>(&mut self) -> &mut Self
 	where
-		TMaterial: ShadowsAwareMaterial,
+		TMaterial: Material,
 		TMaterial::Data: PartialEq + Eq + Hash + Clone;
 }
 
 impl RegisterShader for App {
 	fn register_shader<TMaterial>(&mut self) -> &mut Self
 	where
-		TMaterial: ShadowsAwareMaterial,
+		TMaterial: Material,
 		TMaterial::Data: PartialEq + Eq + Hash + Clone,
 	{
 		if self.is_plugin_added::<MaterialPlugin<TMaterial>>() {
 			return self;
 		}
 
-		self.add_plugins(MaterialPlugin::<TMaterial> {
-			shadows_enabled: TMaterial::shadows_enabled(),
-			..default()
-		})
+		self.add_plugins(MaterialPlugin::<TMaterial>::default())
 	}
 }
 
@@ -155,7 +149,7 @@ fn register_custom_effect_shader<TPhysics, TEffect>(app: &mut App)
 where
 	TPhysics: HandlesPhysicalEffect<TEffect> + 'static,
 	TEffect: GetEffectMaterial + Effect + ThreadSafe,
-	TEffect::TMaterial: ShadowsAwareMaterial,
+	TEffect::TMaterial: Material,
 	<TEffect::TMaterial as AsBindGroup>::Data: PartialEq + Eq + Hash + Clone,
 {
 	app.register_shader::<TEffect::TMaterial>();

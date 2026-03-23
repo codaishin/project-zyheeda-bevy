@@ -10,6 +10,7 @@ use std::{
 	str::{Utf8Error, from_utf8},
 };
 
+#[derive(TypePath)]
 pub(crate) struct FtlLoader;
 
 impl FtlLoader {

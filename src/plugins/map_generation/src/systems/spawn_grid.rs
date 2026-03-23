@@ -151,7 +151,7 @@ mod tests {
 	use super::*;
 	use bevy::{
 		asset::RenderAssetUsages,
-		mesh::{Indices, PrimitiveTopology},
+		mesh::{Indices, MeshAccessError, PrimitiveTopology},
 	};
 	use common::{tools::vec_not_nan::VecNotNan, vec3_not_nan};
 	use testing::{IsChanged, SingleThreadedApp, new_handle};
@@ -381,7 +381,7 @@ mod tests {
 				Some(&Grid::from(_Graph { triangles: vec![] })),
 				&_Result(Err(vec![NavMeshError::TriangleError {
 					entity,
-					error: MeshTrianglesError::MissingPositions
+					error: MeshTrianglesError::MeshAccessError(MeshAccessError::NotFound)
 				}]))
 			),
 			(

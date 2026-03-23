@@ -1,8 +1,5 @@
 use crate::components::{animation_lookup::AnimationLookup, setup_animations::SetupAnimations};
-use bevy::{
-	animation::{AnimationTarget, AnimationTargetId},
-	prelude::*,
-};
+use bevy::{animation::AnimationTargetId, prelude::*};
 use common::{
 	tools::bone_name::BoneName,
 	traits::{
@@ -20,7 +17,7 @@ impl SetupAnimations {
 	pub(crate) fn init_bone_groups<TGraph: Component + GetHandle<TAsset = AnimationGraph>>(
 		mut graphs: ResMut<Assets<AnimationGraph>>,
 		lookups: Query<(Entity, &AnimationLookup, &TGraph), With<Self>>,
-		bones: Query<(&Name, &AnimationTarget)>,
+		bones: Query<(&Name, &AnimationTargetId)>,
 		children: Query<&Children>,
 	) {
 		for (entity, lookup, handle_component) in &lookups {
@@ -38,7 +35,7 @@ impl SetupAnimations {
 fn all_animation_bone_chains(
 	entity: Entity,
 	children: &Query<&Children>,
-	animation_targets: &Query<(&Name, &AnimationTarget)>,
+	animation_targets: &Query<(&Name, &AnimationTargetId)>,
 	animation_mask_groups: &HashMap<AnimationMaskBits, AffectedAnimationBones>,
 ) -> Vec<(AnimationTargetId, AnimationMaskBits)> {
 	let mut bones = vec![];
@@ -82,7 +79,7 @@ fn animation_bone_chains<'a>(
 	mask_root: &BoneName,
 	until_excluded: &HashSet<BoneName>,
 	children: &Query<'_, '_, &Children>,
-	get_bone: &'a impl Fn(Entity) -> Option<(Entity, &'a Name, &'a AnimationTarget)>,
+	get_bone: &'a impl Fn(Entity) -> Option<(Entity, &'a Name, &'a AnimationTargetId)>,
 ) -> Option<impl Iterator<Item = AnimationTargetId>> {
 	let not_excluded = |e| {
 		let Some((_, name, _)) = get_bone(e) else {
@@ -94,17 +91,17 @@ fn animation_bone_chains<'a>(
 	let children = children
 		.iter_descendants_conditional(entity, not_excluded)
 		.filter_map(get_bone)
-		.map(|(.., target)| target.id);
+		.map(|(.., target)| *target);
 
-	Some(iter::once(target.id).chain(children))
+	Some(iter::once(*target).chain(children))
 }
 
 fn root_bone<'a>(
 	player: Entity,
 	mask_root: &BoneName,
 	children: &Query<'_, '_, &Children>,
-	get_bone: &'a impl Fn(Entity) -> Option<(Entity, &'a Name, &'a AnimationTarget)>,
-) -> Option<(Entity, &'a Name, &'a AnimationTarget)> {
+	get_bone: &'a impl Fn(Entity) -> Option<(Entity, &'a Name, &'a AnimationTargetId)>,
+) -> Option<(Entity, &'a Name, &'a AnimationTargetId)> {
 	match get_bone(player) {
 		Some((entity, name, target)) if name == mask_root => Some((entity, name, target)),
 		_ => children
@@ -127,20 +124,14 @@ mod tests {
 	use std::collections::HashMap;
 	use testing::{SingleThreadedApp, new_handle};
 
-	fn bone_components<const N: usize>(
-		bone_chain: [&str; N],
-		player: Entity,
-	) -> (Name, AnimationTarget) {
+	fn bone_components<const N: usize>(bone_chain: [&str; N]) -> (Name, AnimationTargetId) {
 		let names = bone_chain.map(Name::from);
 
 		match names.as_slice() {
 			[] => panic!("AT LEAST ONE BONE NAME REQUIRED"),
 			[bones @ .., last] => (
 				last.clone(),
-				AnimationTarget {
-					player,
-					id: AnimationTargetId::from_names(bones.iter().chain([last])),
-				},
+				AnimationTargetId::from_names(bones.iter().chain([last])),
 			),
 		}
 	}
@@ -182,7 +173,7 @@ mod tests {
 			.id();
 		app.world_mut()
 			.entity_mut(root)
-			.insert(bone_components(["root"], root));
+			.insert(bone_components(["root"]));
 
 		app.update();
 
@@ -228,7 +219,7 @@ mod tests {
 			.id();
 		app.world_mut()
 			.entity_mut(root)
-			.insert(bone_components(["root"], root));
+			.insert(bone_components(["root"]));
 
 		app.update();
 
@@ -265,9 +256,9 @@ mod tests {
 			.id();
 		app.world_mut()
 			.entity_mut(root)
-			.insert(bone_components(["root"], root));
+			.insert(bone_components(["root"]));
 		app.world_mut()
-			.spawn(bone_components(["root", "mask root"], root))
+			.spawn(bone_components(["root", "mask root"]))
 			.insert(ChildOf(root));
 
 		app.update();
@@ -308,12 +299,12 @@ mod tests {
 			.id();
 		app.world_mut()
 			.entity_mut(root)
-			.insert(bone_components(["root"], root));
+			.insert(bone_components(["root"]));
 		app.world_mut()
-			.spawn(bone_components(["root", "mask root"], root))
+			.spawn(bone_components(["root", "mask root"]))
 			.insert(ChildOf(root));
 		app.world_mut()
-			.spawn(bone_components(["root", "not mask root"], root))
+			.spawn(bone_components(["root", "not mask root"]))
 			.insert(ChildOf(root));
 
 		app.update();
@@ -354,22 +345,19 @@ mod tests {
 			.id();
 		app.world_mut()
 			.entity_mut(root)
-			.insert(bone_components(["root"], root));
+			.insert(bone_components(["root"]));
 		let mask_root = app
 			.world_mut()
-			.spawn(bone_components(["root", "mask root"], root))
+			.spawn(bone_components(["root", "mask root"]))
 			.insert(ChildOf(root))
 			.id();
 		let child_a = app
 			.world_mut()
-			.spawn(bone_components(["root", "mask root", "child a"], root))
+			.spawn(bone_components(["root", "mask root", "child a"]))
 			.insert(ChildOf(mask_root))
 			.id();
 		app.world_mut()
-			.spawn(bone_components(
-				["root", "mask root", "child a", "child b"],
-				root,
-			))
+			.spawn(bone_components(["root", "mask root", "child a", "child b"]))
 			.insert(ChildOf(child_a));
 
 		app.update();
@@ -437,17 +425,17 @@ mod tests {
 			.id();
 		app.world_mut()
 			.entity_mut(root)
-			.insert(bone_components(["root"], root));
+			.insert(bone_components(["root"]));
 		let mask_root = app
 			.world_mut()
-			.spawn(bone_components(["root", "mask root"], root))
+			.spawn(bone_components(["root", "mask root"]))
 			.insert(ChildOf(root))
 			.id();
 		app.world_mut()
-			.spawn(bone_components(["root", "mask root", "child a"], root))
+			.spawn(bone_components(["root", "mask root", "child a"]))
 			.insert(ChildOf(mask_root));
 		app.world_mut()
-			.spawn(bone_components(["root", "mask root", "child b"], root))
+			.spawn(bone_components(["root", "mask root", "child b"]))
 			.insert(ChildOf(mask_root));
 
 		app.update();
@@ -517,30 +505,30 @@ mod tests {
 			.id();
 		app.world_mut()
 			.entity_mut(root)
-			.insert(bone_components(["root"], root));
+			.insert(bone_components(["root"]));
 		let child = app
 			.world_mut()
-			.spawn(bone_components(["root", "child"], root))
+			.spawn(bone_components(["root", "child"]))
 			.insert(ChildOf(root))
 			.id();
 		let a = app
 			.world_mut()
-			.spawn(bone_components(["root", "child", "a"], root))
+			.spawn(bone_components(["root", "child", "a"]))
 			.insert(ChildOf(child))
 			.id();
 		app.world_mut()
-			.spawn(bone_components(["root", "child", "a", "a child"], root))
+			.spawn(bone_components(["root", "child", "a", "a child"]))
 			.insert(ChildOf(a));
 		let b = app
 			.world_mut()
-			.spawn(bone_components(["root", "child", "b"], root))
+			.spawn(bone_components(["root", "child", "b"]))
 			.insert(ChildOf(child))
 			.id();
 		app.world_mut()
-			.spawn(bone_components(["root", "child", "b", "b child"], root))
+			.spawn(bone_components(["root", "child", "b", "b child"]))
 			.insert(ChildOf(b));
 		app.world_mut()
-			.spawn(bone_components(["root", "child", "c"], root))
+			.spawn(bone_components(["root", "child", "c"]))
 			.insert(ChildOf(child));
 
 		app.update();
@@ -591,7 +579,7 @@ mod tests {
 		let preceded = app.world_mut().spawn(ChildOf(root)).id();
 		app.world_mut()
 			.entity_mut(preceded)
-			.insert(bone_components(["root"], root));
+			.insert(bone_components(["root"]));
 
 		app.update();
 
@@ -631,10 +619,10 @@ mod tests {
 			.id();
 		app.world_mut()
 			.entity_mut(root)
-			.insert(bone_components(["root"], root));
+			.insert(bone_components(["root"]));
 		let intermediate = app.world_mut().spawn(ChildOf(root)).id();
 		app.world_mut()
-			.spawn(bone_components(["root", "child"], root))
+			.spawn(bone_components(["root", "child"]))
 			.insert(ChildOf(intermediate));
 
 		app.update();
@@ -680,7 +668,7 @@ mod tests {
 			.id();
 		app.world_mut()
 			.entity_mut(root)
-			.insert(bone_components(["root"], root));
+			.insert(bone_components(["root"]));
 
 		app.update();
 

@@ -8,14 +8,14 @@ pub trait HandlesCustomAssets {
 	fn register_custom_assets<TAsset, TDto>(app: &mut App)
 	where
 		TAsset: Asset + TryLoadFrom<TDto> + Clone + Debug,
-		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + ThreadSafe;
+		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + TypePath + ThreadSafe;
 }
 
 pub trait HandlesCustomFolderAssets {
 	fn register_custom_folder_assets<TAsset, TDto, TLoadGroup>(app: &mut App)
 	where
 		TAsset: Asset + AssetFolderPath + TryLoadFrom<TDto> + Clone + Debug,
-		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + ThreadSafe,
+		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + TypePath + ThreadSafe,
 		TLoadGroup: ThreadSafe;
 }
 

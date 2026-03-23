@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use zyheeda_core::serialization::as_vec;
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(TypePath, Debug, PartialEq, Serialize, Deserialize)]
 pub struct AgentConfigDto {
 	model: Model,
 	loadout: Loadout,

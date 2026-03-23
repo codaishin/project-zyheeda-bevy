@@ -9,10 +9,10 @@ impl FirstPass {
 		mut commands: ZyheedaCommands,
 	) {
 		commands.try_apply_on(&on_insert.entity, |mut e| {
-			e.try_insert(Camera {
-				target: RenderTarget::Image(first_pass_image.handle.clone().into()),
-				..default()
-			});
+			e.try_insert((
+				Camera::default(),
+				RenderTarget::Image(first_pass_image.handle.clone().into()),
+			));
 		});
 	}
 }
@@ -21,7 +21,6 @@ impl FirstPass {
 mod tests {
 	use super::*;
 	use crate::resources::first_pass_image::FirstPassImage;
-	use bevy::math::FloatOrd;
 	use testing::{SingleThreadedApp, new_handle};
 
 	fn setup(first_pass_image: Handle<Image>) -> App {
@@ -35,7 +34,7 @@ mod tests {
 		app
 	}
 
-	fn unwrap(target: &RenderTarget) -> Option<(&FloatOrd, &Handle<Image>)> {
+	fn unwrap(target: &RenderTarget) -> Option<(&f32, &Handle<Image>)> {
 		let RenderTarget::Image(target) = target else {
 			return None;
 		};
@@ -51,8 +50,11 @@ mod tests {
 		let entity = app.world_mut().spawn(FirstPass);
 
 		assert_eq!(
-			Some((&FloatOrd(1.0), &handle)),
-			entity.get::<Camera>().and_then(|c| unwrap(&c.target))
+			(Some((&1.0, &handle)), true),
+			(
+				entity.get::<RenderTarget>().and_then(unwrap),
+				entity.contains::<Camera>(),
+			),
 		);
 	}
 
@@ -62,12 +64,15 @@ mod tests {
 		let mut app = setup(handle.clone());
 
 		let mut entity = app.world_mut().spawn(FirstPass);
-		entity.remove::<Camera>();
+		entity.remove::<(Camera, RenderTarget)>();
 		entity.insert(FirstPass);
 
 		assert_eq!(
-			Some((&FloatOrd(1.0), &handle)),
-			entity.get::<Camera>().and_then(|c| unwrap(&c.target))
+			(Some((&1.0, &handle)), true),
+			(
+				entity.get::<RenderTarget>().and_then(unwrap),
+				entity.contains::<Camera>(),
+			),
 		);
 	}
 }

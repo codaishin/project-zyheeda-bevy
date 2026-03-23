@@ -242,7 +242,9 @@ mod tests {
 			.world_mut()
 			.run_system_once(SaveContext::read_buffer_system(context))?;
 
-		let mut entities = app.world_mut().query::<EntityRef>();
+		let mut entities = app
+			.world_mut()
+			.query_filtered::<EntityRef, Without<Observer>>();
 		let [entity] = assert_count!(1, entities.iter(app.world()));
 		assert_eq!(
 			(Some(&_A(Value::Null)), None),
@@ -265,7 +267,9 @@ mod tests {
 			.world_mut()
 			.run_system_once(SaveContext::read_buffer_system(context))?;
 
-		let mut entities = app.world_mut().query::<EntityRef>();
+		let mut entities = app
+			.world_mut()
+			.query_filtered::<EntityRef, Without<Observer>>();
 		let [entity] = assert_count!(1, entities.iter(app.world()));
 		assert_eq!(
 			(Some(&_A(json!(null))), None),
@@ -292,7 +296,9 @@ mod tests {
 			.world_mut()
 			.run_system_once(SaveContext::read_buffer_system(context))?;
 
-		let mut entities = app.world_mut().query::<EntityRef>();
+		let mut entities = app
+			.world_mut()
+			.query_filtered::<EntityRef, Without<Observer>>();
 		let [one, two] = assert_count!(2, entities.iter(app.world()));
 		assert_eq!(
 			(Some(&_A(json!([1]))), Some(&_A(json!([2]))),),
@@ -323,7 +329,9 @@ mod tests {
 			.world_mut()
 			.run_system_once(SaveContext::read_buffer_system(context))?;
 
-		let mut entities = app.world_mut().query::<EntityRef>();
+		let mut entities = app
+			.world_mut()
+			.query_filtered::<EntityRef, Without<Observer>>();
 		let [one, two] = assert_count!(2, entities.iter(app.world()));
 		assert_eq!(
 			(Some(&_CountA { a_count: 2 }), Some(&_CountA { a_count: 2 })),
