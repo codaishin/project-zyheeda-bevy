@@ -22,10 +22,11 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	states::game_state::GameState,
+	tools::speed::Speed,
 	traits::{
 		handles_animations::{AnimationsSystemParamMut, HandlesAnimations},
 		handles_input::HandlesInput,
-		handles_movement::HandlesMovement,
+		handles_movement::{HandlesMovement, RequiredClearance},
 		handles_orientation::HandlesOrientation,
 		handles_path_finding::HandlesPathFinding,
 		handles_physics::{
@@ -91,19 +92,6 @@ where
 		TSaveGame::register_savable_component::<MovementPath>(app);
 		TSaveGame::register_savable_component::<MovementDefinition>(app);
 
-		type ChangedPath = Changed<MovementPath>;
-		type NotMoving = Without<IsMoving>;
-		type Moving = With<IsMoving>;
-
-		let compute_path = ChangedPath::compute::<TPathing::TComputePath, TPathing::TComputerRef>;
-		let execute_path = NotMoving::advance::<MovementPath>;
-		let execute_movement = Moving::advance::<(OngoingMovement, TPhysics::TCharacterMotion)>;
-
-		let animate_movement_forward = MovementDefinition::animate_movement_forward::<
-			TPhysics::TCharacterMotion,
-			AnimationsSystemParamMut<TAnimations>,
-		>;
-
 		#[cfg(debug_assertions)]
 		debug::draw(app);
 
@@ -113,29 +101,12 @@ where
 			.add_systems(
 				Update,
 				(
-					// Movement
-					(
-						compute_path,
-						execute_path,
-						execute_movement,
-						animate_movement_forward,
-					)
-						.chain(),
-					// Apply facing
-					(
-						OngoingMovement::set_facing,
-						SetFace::get_faces.pipe(execute_face::<RaycastSystemParam<TPhysics>>),
-					)
-						.chain(),
-					// Track removed motions
+					OngoingMovement::set_facing,
+					SetFace::get_faces.pipe(execute_face::<RaycastSystemParam<TPhysics>>),
 					MovementParam::<TPhysics::TCharacterMotion>::update_just_removed,
 				)
 					.chain()
-					.in_set(MovementSystems)
-					.after(TInput::SYSTEMS)
-					.after(TAnimations::SYSTEMS)
-					.after(TPathing::SYSTEMS)
-					.after(TPhysics::SYSTEMS)
+					.after(MovementSystems)
 					.run_if(in_state(GameState::Play)),
 			);
 	}
@@ -157,8 +128,52 @@ impl<TDependencies> SystemSetDefinition for MovementPlugin<TDependencies> {
 impl<TInput, TSaveGame, TAnimations, TPhysics, TPathing> HandlesMovement
 	for MovementPlugin<(TInput, TSaveGame, TAnimations, TPhysics, TPathing)>
 where
-	TPhysics: HandlesMotion,
+	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
+	TSaveGame: ThreadSafe + HandlesSaving,
+	TAnimations: ThreadSafe + SystemSetDefinition + HandlesAnimations,
+	TPhysics: ThreadSafe
+		+ HandlesPhysicalObjects
+		+ HandlesMotion
+		+ HandlesAllPhysicalEffects
+		+ HandlesRaycast,
+	TPathing: ThreadSafe + HandlesPathFinding,
 {
 	type TMovement<'w, 's> = MovementParam<'w, 's, TPhysics::TCharacterMotion>;
 	type TMovementMut<'w, 's> = MovementParamMut<'w, 's, TPhysics::TCharacterMotion>;
+
+	fn register_movement<TMovementDefinition>(app: &mut App)
+	where
+		TMovementDefinition: Component,
+		for<'a> &'a TMovementDefinition: Into<Speed> + Into<RequiredClearance>,
+	{
+		type ChangedPath = Changed<MovementPath>;
+		type NotMoving = Without<IsMoving>;
+		type Moving = With<IsMoving>;
+
+		let compute_path = ChangedPath::compute::<TPathing::TComputePath, TPathing::TComputerRef>;
+		let execute_path = NotMoving::advance::<MovementPath>;
+		let execute_movement = Moving::advance::<(OngoingMovement, TPhysics::TCharacterMotion)>;
+
+		let animate_movement_forward = MovementDefinition::animate_movement_forward::<
+			TPhysics::TCharacterMotion,
+			AnimationsSystemParamMut<TAnimations>,
+		>;
+
+		app.add_systems(
+			Update,
+			(
+				compute_path,
+				execute_path,
+				execute_movement,
+				animate_movement_forward,
+			)
+				.chain()
+				.in_set(MovementSystems)
+				.after(TInput::SYSTEMS)
+				.after(TAnimations::SYSTEMS)
+				.after(TPathing::SYSTEMS)
+				.after(TPhysics::SYSTEMS)
+				.run_if(in_state(GameState::Play)),
+		);
+	}
 }

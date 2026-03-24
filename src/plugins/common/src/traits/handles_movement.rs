@@ -1,5 +1,5 @@
 use crate::{
-	tools::{Units, UnitsPerSecond},
+	tools::{Units, UnitsPerSecond, speed::Speed},
 	traits::accessors::get::{GetContext, GetContextMut, Property},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
@@ -11,6 +11,14 @@ pub trait HandlesMovement {
 		+ for<'c> GetContext<Movement, TContext<'c>: CurrentMovement>;
 	type TMovementMut<'w, 's>: SystemParam
 		+ for<'c> GetContextMut<Movement, TContext<'c>: ControlMovement>;
+
+	/// Register movement execution via the provided movement definition.
+	/// Without doing this an implementing plugin might not execute any movement
+	/// at all.
+	fn register_movement<TMovementDefinition>(app: &mut App)
+	where
+		TMovementDefinition: Component,
+		for<'a> &'a TMovementDefinition: Into<Speed> + Into<RequiredClearance>;
 }
 
 pub type MovementSystemParam<'w, 's, T> = <T as HandlesMovement>::TMovement<'w, 's>;
@@ -22,6 +30,9 @@ impl<T> ControlMovement for T where
 	T: StartMovement + UpdateMovement + StopMovement + CurrentMovement
 {
 }
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct RequiredClearance(pub Units);
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum MovementTarget {

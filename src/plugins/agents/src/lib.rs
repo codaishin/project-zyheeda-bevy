@@ -130,6 +130,8 @@ where
 		>(app);
 		app.init_asset::<AgentConfigAsset>();
 
+		TMovement::register_movement::<MovementConfig>(app);
+
 		TPhysics::mark_as_effect_target::<Agent>(app);
 		app.add_systems(
 			Startup,
