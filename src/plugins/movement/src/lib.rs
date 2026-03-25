@@ -10,6 +10,7 @@ mod debug;
 use crate::{
 	components::{
 		facing::SetFace,
+		movable::Movable,
 		ongoing_movement::{IsMoving, OngoingMovement},
 	},
 	system_param::{
@@ -18,6 +19,7 @@ use crate::{
 	},
 	systems::{
 		advance_movement::AdvanceMovement,
+		check_movability::CheckMovability,
 		compute_path::ComputePathSystem,
 		set_forward_animation_direction::SetForwardAnimationDirection,
 	},
@@ -25,6 +27,7 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	states::game_state::GameState,
+	systems::log::OnError,
 	tools::speed::Speed,
 	traits::{
 		handles_animations::{AnimationsSystemParamMut, HandlesAnimations},
@@ -103,6 +106,7 @@ where
 			.add_systems(
 				Update,
 				(
+					Changed::<MovementPath>::check_movability.pipe(OnError::log),
 					OngoingMovement::set_facing,
 					SetFace::get_faces.pipe(execute_face::<RaycastSystemParam<TPhysics>>),
 					MovementParam::<TPhysics::TCharacterMotion>::update_just_removed,
@@ -148,6 +152,7 @@ where
 		TMovementDefinition: Component,
 		for<'a> &'a TMovementDefinition: Into<Speed> + Into<RequiredClearance>,
 	{
+		app.register_required_components::<TMovementDefinition, Movable>();
 		app.add_systems(
 			Update,
 			(
