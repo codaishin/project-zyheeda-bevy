@@ -18,8 +18,8 @@ use crate::{
 	},
 	systems::{
 		advance_movement::AdvanceMovement,
-		animate_movement_forward::AnimateMovementForward,
 		compute_path::ComputePathSystem,
+		set_forward_animation_direction::SetForwardAnimationDirection,
 	},
 };
 use bevy::prelude::*;
@@ -143,10 +143,10 @@ where
 	type TMovement<'w, 's> = MovementParam<'w, 's, TPhysics::TCharacterMotion>;
 	type TMovementMut<'w, 's> = MovementParamMut<'w, 's, TPhysics::TCharacterMotion>;
 
-	fn register_movement<TConfig>(app: &mut App)
+	fn register_movement<TMovementDefinition>(app: &mut App)
 	where
-		TConfig: Component,
-		for<'a> &'a TConfig: Into<Speed> + Into<RequiredClearance>,
+		TMovementDefinition: Component,
+		for<'a> &'a TMovementDefinition: Into<Speed> + Into<RequiredClearance>,
 	{
 		app.add_systems(
 			Update,
@@ -154,11 +154,15 @@ where
 				Changed::<MovementPath>::compute::<
 					TPathing::TComputePath,
 					TPathing::TComputerRef,
-					TConfig,
+					TMovementDefinition,
 				>,
-				Without::<IsMoving>::advance::<MovementPath, TConfig>,
-				With::<IsMoving>::advance::<(OngoingMovement, TPhysics::TCharacterMotion), TConfig>,
-				TPhysics::TCharacterMotion::animate_movement_forward::<
+				Without::<IsMoving>::advance::<MovementPath, TMovementDefinition>,
+				With::<IsMoving>::advance::<
+					(OngoingMovement, TPhysics::TCharacterMotion),
+					TMovementDefinition,
+				>,
+				With::<TMovementDefinition>::set_forward_animation_direction::<
+					TPhysics::TCharacterMotion,
 					AnimationsSystemParamMut<TAnimations>,
 				>,
 			)

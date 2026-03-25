@@ -1,19 +1,21 @@
-use bevy::{ecs::system::StaticSystemParam, prelude::*};
+use bevy::{
+	ecs::{query::QueryFilter, system::StaticSystemParam},
+	prelude::*,
+};
 use common::traits::{
 	accessors::get::{GetContextMut, GetProperty},
 	handles_animations::{Animations, MoveDirectionMut},
 	handles_physics::CharacterMotion,
 };
 
-impl<T> AnimateMovementForward for T where T: Component + GetProperty<CharacterMotion> {}
+impl<T> SetForwardAnimationDirection for T where T: QueryFilter {}
 
-pub(crate) trait AnimateMovementForward:
-	Component + GetProperty<CharacterMotion> + Sized
-{
-	fn animate_movement_forward<TAnimations>(
+pub(crate) trait SetForwardAnimationDirection: QueryFilter + Sized {
+	fn set_forward_animation_direction<TMovement, TAnimations>(
 		mut animations: StaticSystemParam<TAnimations>,
-		movements: Query<(Entity, &Self, &Transform), Changed<Self>>,
+		movements: Query<(Entity, &TMovement, &Transform), (Changed<TMovement>, Self)>,
 	) where
+		TMovement: Component + GetProperty<CharacterMotion>,
 		TAnimations: for<'c> GetContextMut<Animations, TContext<'c>: MoveDirectionMut>,
 	{
 		for (entity, movement, transform) in &movements {
@@ -52,6 +54,9 @@ mod tests {
 	use testing::SingleThreadedApp;
 
 	#[derive(Component)]
+	struct _Animate;
+
+	#[derive(Component)]
 	struct _Movement(CharacterMotion);
 
 	impl GetProperty<CharacterMotion> for _Movement {
@@ -80,7 +85,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			_Movement::animate_movement_forward::<Query<Mut<_Animations>>>,
+			With::<_Animate>::set_forward_animation_direction::<_Movement, Query<Mut<_Animations>>>,
 		);
 
 		app
@@ -92,6 +97,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
+				_Animate,
 				_Movement(CharacterMotion::Direction {
 					direction: Dir3::NEG_X,
 					speed: Speed::ZERO,
@@ -115,6 +121,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
+				_Animate,
 				_Movement(CharacterMotion::ToTarget {
 					target: Vec3::new(1., 2., 3.),
 					speed: Speed::ZERO,
@@ -138,6 +145,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
+				_Animate,
 				_Movement(CharacterMotion::Direction {
 					direction: Dir3::NEG_X,
 					speed: Speed::ZERO,
@@ -166,6 +174,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
+				_Animate,
 				_Movement(CharacterMotion::Direction {
 					direction: Dir3::NEG_X,
 					speed: Speed::ZERO,
@@ -188,6 +197,30 @@ mod tests {
 
 		assert_eq!(
 			Some(&_Animations(Some(Dir3::NEG_X))),
+			app.world().entity(entity).get::<_Animations>(),
+		);
+	}
+
+	#[test]
+	fn do_nothing_on_filter_mismatch() {
+		let mut app = setup();
+		let entity = app
+			.world_mut()
+			.spawn((
+				// No `_Animate`
+				_Movement(CharacterMotion::Direction {
+					direction: Dir3::NEG_X,
+					speed: Speed::ZERO,
+				}),
+				_Animations(None),
+				Transform::default(),
+			))
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&_Animations(None)),
 			app.world().entity(entity).get::<_Animations>(),
 		);
 	}
