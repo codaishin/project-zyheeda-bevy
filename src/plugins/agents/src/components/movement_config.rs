@@ -1,5 +1,8 @@
 use bevy::prelude::Component;
-use common::tools::{Units, UnitsPerSecond};
+use common::{
+	tools::{Units, UnitsPerSecond, speed::Speed},
+	traits::handles_movement::RequiredClearance,
+};
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
@@ -16,5 +19,17 @@ impl Default for MovementConfig {
 			collider_radius: Units::from(0.5),
 			speed: UnitsPerSecond::from(1.0),
 		}
+	}
+}
+
+impl From<&'_ MovementConfig> for Speed {
+	fn from(config: &MovementConfig) -> Self {
+		Speed(config.speed)
+	}
+}
+
+impl From<&'_ MovementConfig> for RequiredClearance {
+	fn from(config: &'_ MovementConfig) -> Self {
+		RequiredClearance(config.collider_radius)
 	}
 }

@@ -130,6 +130,8 @@ where
 		>(app);
 		app.init_asset::<AgentConfigAsset>();
 
+		TMovement::register_movement::<MovementConfig>(app);
+
 		TPhysics::mark_as_effect_target::<Agent>(app);
 		app.add_systems(
 			Startup,
@@ -171,10 +173,7 @@ where
 						RaycastSystemParam<TPhysics>,
 						MovementSystemParamMut<TMovement>,
 					>,
-					Player::toggle_speed::<
-						InputSystemParam<TInput>,
-						MovementSystemParamMut<TMovement>,
-					>,
+					Player::toggle_speed::<InputSystemParam<TInput>>,
 					Player::animate_movement::<
 						MovementSystemParam<TMovement>,
 						AnimationsSystemParamMut<TAnimations>,

@@ -1,8 +1,4 @@
-use crate::components::{
-	movement_config::MovementConfig,
-	player::Player,
-	player_camera::PlayerCamera,
-};
+use crate::components::{player::Player, player_camera::PlayerCamera};
 use MovementKey::{Backward, Forward, Left, Pointer, Right};
 use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
@@ -24,7 +20,7 @@ impl Player {
 		mut raycast: StaticSystemParam<TRaycast>,
 		input: StaticSystemParam<TInput>,
 		cameras: Query<&Transform, With<PlayerCamera>>,
-		players: Query<(Entity, &MovementConfig), With<Self>>,
+		players: Query<Entity, With<Self>>,
 	) where
 		for<'w, 's> TInput: SystemParam<Item<'w, 's>: GetAllInputStates>,
 		for<'w, 's> TRaycast: SystemParam<Item<'w, 's>: Raycast<MouseTerrainHover>>,
@@ -35,7 +31,7 @@ impl Player {
 		};
 		let inputs = || input.get_all_input_states::<MovementKey>();
 
-		for (entity, config) in &players {
+		for entity in &players {
 			let Some(mut ctx) = TMovement::get_context_mut(&mut m, Movement { entity }) else {
 				continue;
 			};
@@ -79,10 +75,10 @@ impl Player {
 
 			match (Dir3::try_from(directions), target, directional_movement) {
 				(Ok(dir), ..) => {
-					ctx.start(dir, config.collider_radius, config.speed);
+					ctx.start(dir);
 				}
 				(_, Some(MouseTerrainPoint(point)), DirectionalMovement::NotStopped) => {
-					ctx.start(point, config.collider_radius, config.speed);
+					ctx.start(point);
 				}
 				(Err(_), .., DirectionalMovement::Stopped) => {
 					ctx.stop();
@@ -104,11 +100,7 @@ mod tests {
 	use super::*;
 	use crate::components::player_camera::PlayerCamera;
 	use common::{
-		tools::{
-			Units,
-			UnitsPerSecond,
-			action_key::{ActionKey, movement::MovementKey},
-		},
+		tools::action_key::{ActionKey, movement::MovementKey},
 		traits::{
 			handles_input::InputState,
 			handles_movement::MovementTarget,
@@ -153,11 +145,11 @@ mod tests {
 	}
 
 	impl StartMovement for _Movement {
-		fn start<T>(&mut self, target: T, radius: Units, speed: UnitsPerSecond)
+		fn start<T>(&mut self, target: T)
 		where
 			T: Into<MovementTarget> + 'static,
 		{
-			self.mock.start(target, radius, speed);
+			self.mock.start(target);
 		}
 	}
 
@@ -170,12 +162,7 @@ mod tests {
 	mock! {
 		_Movement {}
 		impl StartMovement for _Movement {
-			fn start<T>(
-				&mut self,
-				target: T,
-				radius: Units,
-				speed: UnitsPerSecond,
-			) where T: Into<MovementTarget> + 'static;
+			fn start<T>(&mut self, target: T) where T: Into<MovementTarget> + 'static;
 		}
 		impl StopMovement for _Movement {
 			fn stop(&mut self);
@@ -199,8 +186,6 @@ mod tests {
 	#[test_case(InputState::just_pressed(), Transform::from_xyz(0., 1., 0.), Vec3::ZERO; "just pressed")]
 	#[test_case(InputState::pressed(), Transform::from_xyz(1., 8., 3.), Vec3::new(1., 4., 6.); "offset")]
 	fn move_to_point(input: InputState, cam_transform: Transform, target: Vec3) {
-		let collider_radius = Units::from(42.);
-		let speed = UnitsPerSecond::from(11.);
 		let mut app = setup(
 			_Input::new().with_mock(move |mock| {
 				mock.expect_get_all_input_states()
@@ -214,14 +199,10 @@ mod tests {
 		app.world_mut().spawn((
 			Player,
 			Transform::default(),
-			MovementConfig {
-				collider_radius,
-				speed,
-			},
 			_Movement::new().with_mock(move |mock| {
 				mock.expect_start()
 					.times(1)
-					.with(eq(target), eq(collider_radius), eq(speed))
+					.with(eq(target))
 					.return_const(());
 			}),
 		));
@@ -245,8 +226,6 @@ mod tests {
 		cam_direction: Vec3,
 		move_direction: Dir3,
 	) {
-		let collider_radius = Units::from(42.);
-		let speed = UnitsPerSecond::from(11.);
 		let mut app = setup(
 			_Input::new().with_mock(move |mock| {
 				mock.expect_get_all_input_states()
@@ -257,14 +236,10 @@ mod tests {
 		app.world_mut().spawn((
 			Player,
 			Transform::default(),
-			MovementConfig {
-				collider_radius,
-				speed,
-			},
 			_Movement::new().with_mock(move |mock| {
 				mock.expect_start()
 					.times(1)
-					.with(eq(move_direction), eq(collider_radius), eq(speed))
+					.with(eq(move_direction))
 					.return_const(());
 			}),
 		));
@@ -279,8 +254,6 @@ mod tests {
 	#[test_case( Forward, Dir3::X, Dir3::X; "use cam up for forward")]
 	#[test_case( Backward, Dir3::X, Dir3::NEG_X; "use cam down for backward")]
 	fn when_directly_looking_down(movement_key: MovementKey, cam_up: Dir3, move_direction: Dir3) {
-		let collider_radius = Units::from(42.);
-		let speed = UnitsPerSecond::from(11.);
 		let mut app = setup(
 			_Input::new().with_mock(move |mock| {
 				mock.expect_get_all_input_states().returning(move || {
@@ -292,14 +265,10 @@ mod tests {
 		app.world_mut().spawn((
 			Player,
 			Transform::default(),
-			MovementConfig {
-				collider_radius,
-				speed,
-			},
 			_Movement::new().with_mock(move |mock| {
 				mock.expect_start()
 					.times(1)
-					.with(eq(move_direction), eq(collider_radius), eq(speed))
+					.with(eq(move_direction))
 					.return_const(());
 			}),
 		));
@@ -314,8 +283,6 @@ mod tests {
 	#[test]
 	fn sum_up_movement_directions() {
 		let expected = Dir3::try_from(Vec3::new(-1., 0., -1.)).unwrap();
-		let collider_radius = Units::from(42.);
-		let speed = UnitsPerSecond::from(11.);
 		let mut app = setup(
 			_Input::new().with_mock(move |mock| {
 				mock.expect_get_all_input_states().returning(move || {
@@ -331,14 +298,10 @@ mod tests {
 		app.world_mut().spawn((
 			Player,
 			Transform::default(),
-			MovementConfig {
-				collider_radius,
-				speed,
-			},
 			_Movement::new().with_mock(move |mock| {
 				mock.expect_start::<Dir3>()
 					.times(1)
-					.withf(move |t, _, _| {
+					.withf(move |t| {
 						assert_eq_approx!(expected, t, 0.001);
 						true
 					})
@@ -356,8 +319,6 @@ mod tests {
 	#[test_case([Forward, Backward]; "forward and back")]
 	#[test_case([Left, Right]; "left and right")]
 	fn ignore_move_direction_if_it_sums_up_to_zero(inputs: [MovementKey; 2]) {
-		let collider_radius = Units::from(42.);
-		let speed = UnitsPerSecond::from(11.);
 		let mut app = setup(
 			_Input::new().with_mock(move |mock| {
 				mock.expect_get_all_input_states().returning(move || {
@@ -369,10 +330,6 @@ mod tests {
 		app.world_mut().spawn((
 			Player,
 			Transform::default(),
-			MovementConfig {
-				collider_radius,
-				speed,
-			},
 			_Movement::new().with_mock(move |mock| {
 				mock.expect_start::<Dir3>().never();
 				mock.expect_start::<Vec3>().never();
@@ -392,8 +349,6 @@ mod tests {
 	#[test_case([Pointer, Right]; "right")]
 	#[test_case([Forward, Pointer]; "first direction then pointer")]
 	fn direction_movement_overrides_pointer_movement<const N: usize>(inputs: [MovementKey; N]) {
-		let collider_radius = Units::from(42.);
-		let speed = UnitsPerSecond::from(11.);
 		let mut app = setup(
 			_Input::new().with_mock(move |mock| {
 				mock.expect_get_all_input_states().returning(move || {
@@ -408,10 +363,6 @@ mod tests {
 		app.world_mut().spawn((
 			Player,
 			Transform::default(),
-			MovementConfig {
-				collider_radius,
-				speed,
-			},
 			_Movement::new().with_mock(move |mock| {
 				mock.expect_start::<Dir3>().times(1).return_const(());
 				mock.expect_start::<Vec3>().never();
@@ -430,8 +381,6 @@ mod tests {
 	#[test_case(Left; "left")]
 	#[test_case(Right; "right")]
 	fn stop_movement_on_just_released_direction(input: MovementKey) {
-		let collider_radius = Units::from(42.);
-		let speed = UnitsPerSecond::from(11.);
 		let mut app = setup(
 			_Input::new().with_mock(move |mock| {
 				mock.expect_get_all_input_states::<MovementKey>()
@@ -453,10 +402,6 @@ mod tests {
 		app.world_mut().spawn((
 			Player,
 			Transform::default(),
-			MovementConfig {
-				collider_radius,
-				speed,
-			},
 			_Movement::new().with_mock(move |mock| {
 				mock.expect_start::<Vec3>().never();
 				mock.expect_start::<Dir3>().never();
@@ -473,8 +418,6 @@ mod tests {
 	#[test_case(Left; "left")]
 	#[test_case(Right; "right")]
 	fn no_stop_movement_on_released_direction(input: MovementKey) {
-		let collider_radius = Units::from(42.);
-		let speed = UnitsPerSecond::from(11.);
 		let mut app = setup(
 			_Input::new().with_mock(move |mock| {
 				mock.expect_get_all_input_states::<MovementKey>()
@@ -485,10 +428,6 @@ mod tests {
 		app.world_mut().spawn((
 			Player,
 			Transform::default(),
-			MovementConfig {
-				collider_radius,
-				speed,
-			},
 			_Movement::new().with_mock(move |mock| {
 				mock.expect_stop().never();
 			}),
@@ -506,8 +445,6 @@ mod tests {
 		input: MovementKey,
 		other_input: MovementKey,
 	) {
-		let collider_radius = Units::from(42.);
-		let speed = UnitsPerSecond::from(11.);
 		let mut app = setup(
 			_Input::new().with_mock(move |mock| {
 				mock.expect_get_all_input_states::<MovementKey>()
@@ -526,10 +463,6 @@ mod tests {
 		app.world_mut().spawn((
 			Player,
 			Transform::default(),
-			MovementConfig {
-				collider_radius,
-				speed,
-			},
 			_Movement::new().with_mock(move |mock| {
 				mock.expect_stop().never();
 				mock.expect_start::<Vec3>().return_const(());
@@ -543,8 +476,6 @@ mod tests {
 
 	#[test]
 	fn no_movement_when_cam_missing() {
-		let collider_radius = Units::from(42.);
-		let speed = UnitsPerSecond::from(11.);
 		let mut app = setup(
 			_Input::new().with_mock(move |mock| {
 				mock.expect_get_all_input_states()
@@ -558,10 +489,6 @@ mod tests {
 		app.world_mut().spawn((
 			Player,
 			Transform::default(),
-			MovementConfig {
-				collider_radius,
-				speed,
-			},
 			_Movement::new().with_mock(move |mock| {
 				mock.expect_start::<Vec3>().never();
 				mock.expect_start::<Dir3>().never();
@@ -575,8 +502,6 @@ mod tests {
 
 	#[test]
 	fn no_movement_when_player_missing() {
-		let collider_radius = Units::from(42.);
-		let speed = UnitsPerSecond::from(11.);
 		let mut app = setup(
 			_Input::new().with_mock(move |mock| {
 				mock.expect_get_all_input_states()
@@ -590,10 +515,6 @@ mod tests {
 		app.world_mut().spawn((
 			/* No player */
 			Transform::default(),
-			MovementConfig {
-				collider_radius,
-				speed,
-			},
 			_Movement::new().with_mock(move |mock| {
 				mock.expect_start::<Vec3>().never();
 				mock.expect_start::<Dir3>().never();

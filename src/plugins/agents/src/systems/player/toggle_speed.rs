@@ -9,22 +9,19 @@ use bevy::{
 use common::{
 	tools::action_key::movement::MovementKey,
 	traits::{
-		accessors::get::{GetContextMut, TryApplyOn},
+		accessors::get::TryApplyOn,
 		handles_input::{GetAllInputStates, InputState},
-		handles_movement::{Movement, UpdateMovement},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
 
 impl Player {
-	pub(crate) fn toggle_speed<TInput, TMovement>(
+	pub(crate) fn toggle_speed<TInput>(
 		mut commands: ZyheedaCommands,
-		mut movement: StaticSystemParam<TMovement>,
 		input: StaticSystemParam<TInput>,
 		players: Query<(Entity, &MovementConfig), With<Self>>,
 	) where
 		for<'w, 's> TInput: SystemParam<Item<'w, 's>: GetAllInputStates>,
-		for<'c> TMovement: GetContextMut<Movement, TContext<'c>: UpdateMovement>,
 	{
 		let just_toggled = input
 			.get_all_input_states::<MovementKey>()
@@ -35,16 +32,11 @@ impl Player {
 		}
 
 		for (entity, config) in &players {
-			let ctx = TMovement::get_context_mut(&mut movement, Movement { entity });
-			let Some(mut ctx) = ctx else {
-				continue;
-			};
 			let new_config = if config == &*PLAYER_RUN {
 				&*PLAYER_WALK
 			} else {
 				&*PLAYER_RUN
 			};
-			ctx.update(new_config.speed);
 
 			commands.try_apply_on(&entity, move |mut e| {
 				e.try_insert(new_config.clone());
@@ -62,14 +54,11 @@ mod tests {
 	use super::*;
 	use crate::components::player::PLAYER_WALK;
 	use common::{
-		tools::{
-			UnitsPerSecond,
-			action_key::{ActionKey, movement::MovementKey},
-		},
+		tools::action_key::{ActionKey, movement::MovementKey},
 		traits::{handles_input::InputState, iteration::IterFinite},
 	};
 	use macros::NestedMocks;
-	use mockall::{automock, predicate::eq};
+	use mockall::automock;
 	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Resource, NestedMocks)]
@@ -87,25 +76,10 @@ mod tests {
 		}
 	}
 
-	#[derive(Component, NestedMocks)]
-	struct _Movement {
-		mock: Mock_Movement,
-	}
-
-	#[automock]
-	impl UpdateMovement for _Movement {
-		fn update(&mut self, speed: UnitsPerSecond) {
-			self.mock.update(speed);
-		}
-	}
-
 	fn setup(input: _Input) -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(
-			Update,
-			Player::toggle_speed::<Res<_Input>, Query<&mut _Movement>>,
-		);
+		app.add_systems(Update, Player::toggle_speed::<Res<_Input>>);
 		app.insert_resource(input);
 
 		app
@@ -113,31 +87,6 @@ mod tests {
 
 	mod run_to_walk {
 		use super::*;
-
-		#[test]
-		fn call_update() {
-			let mut app = setup(_Input::new().with_mock(|mock| {
-				mock.expect_get_all_input_states::<MovementKey>()
-					.returning(|| {
-						Box::new(std::iter::once((
-							MovementKey::ToggleWalkRun,
-							InputState::just_pressed(),
-						)))
-					});
-			}));
-			app.world_mut().spawn((
-				Player,
-				PLAYER_RUN.clone(),
-				_Movement::new().with_mock(|mock| {
-					mock.expect_update()
-						.once()
-						.with(eq(PLAYER_WALK.speed))
-						.return_const(());
-				}),
-			));
-
-			app.update();
-		}
 
 		#[test]
 		fn insert_walk() {
@@ -150,16 +99,7 @@ mod tests {
 						)))
 					});
 			}));
-			let entity = app
-				.world_mut()
-				.spawn((
-					Player,
-					PLAYER_RUN.clone(),
-					_Movement::new().with_mock(|mock| {
-						mock.expect_update().return_const(());
-					}),
-				))
-				.id();
+			let entity = app.world_mut().spawn((Player, PLAYER_RUN.clone())).id();
 
 			app.update();
 
@@ -174,31 +114,6 @@ mod tests {
 		use super::*;
 
 		#[test]
-		fn call_update() {
-			let mut app = setup(_Input::new().with_mock(|mock| {
-				mock.expect_get_all_input_states::<MovementKey>()
-					.returning(|| {
-						Box::new(std::iter::once((
-							MovementKey::ToggleWalkRun,
-							InputState::just_pressed(),
-						)))
-					});
-			}));
-			app.world_mut().spawn((
-				Player,
-				PLAYER_WALK.clone(),
-				_Movement::new().with_mock(|mock| {
-					mock.expect_update()
-						.once()
-						.with(eq(PLAYER_RUN.speed))
-						.return_const(());
-				}),
-			));
-
-			app.update();
-		}
-
-		#[test]
 		fn insert_run() {
 			let mut app = setup(_Input::new().with_mock(|mock| {
 				mock.expect_get_all_input_states::<MovementKey>()
@@ -209,16 +124,7 @@ mod tests {
 						)))
 					});
 			}));
-			let entity = app
-				.world_mut()
-				.spawn((
-					Player,
-					PLAYER_WALK.clone(),
-					_Movement::new().with_mock(|mock| {
-						mock.expect_update().return_const(());
-					}),
-				))
-				.id();
+			let entity = app.world_mut().spawn((Player, PLAYER_WALK.clone())).id();
 
 			app.update();
 
@@ -243,13 +149,7 @@ mod tests {
 						)))
 					});
 			}));
-			app.world_mut().spawn((
-				Player,
-				PLAYER_WALK.clone(),
-				_Movement::new().with_mock(|mock| {
-					mock.expect_update().never();
-				}),
-			));
+			app.world_mut().spawn((Player, PLAYER_WALK.clone()));
 
 			app.update();
 		}
@@ -265,16 +165,7 @@ mod tests {
 						)))
 					});
 			}));
-			let entity = app
-				.world_mut()
-				.spawn((
-					Player,
-					PLAYER_WALK.clone(),
-					_Movement::new().with_mock(|mock| {
-						mock.expect_update().return_const(());
-					}),
-				))
-				.id();
+			let entity = app.world_mut().spawn((Player, PLAYER_WALK.clone())).id();
 
 			app.update();
 
@@ -299,12 +190,7 @@ mod tests {
 						)))
 					});
 			}));
-			app.world_mut().spawn((
-				PLAYER_WALK.clone(),
-				_Movement::new().with_mock(|mock| {
-					mock.expect_update().never();
-				}),
-			));
+			app.world_mut().spawn((PLAYER_WALK.clone(),));
 
 			app.update();
 		}
@@ -320,15 +206,7 @@ mod tests {
 						)))
 					});
 			}));
-			let entity = app
-				.world_mut()
-				.spawn((
-					PLAYER_WALK.clone(),
-					_Movement::new().with_mock(|mock| {
-						mock.expect_update().return_const(());
-					}),
-				))
-				.id();
+			let entity = app.world_mut().spawn((PLAYER_WALK.clone(),)).id();
 
 			app.update();
 
