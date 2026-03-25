@@ -1,5 +1,5 @@
 use crate::{
-	tools::{Units, UnitsPerSecond, speed::Speed},
+	tools::{Units, speed::Speed},
 	traits::accessors::get::{GetContext, GetContextMut, Property},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
@@ -24,12 +24,9 @@ pub trait HandlesMovement {
 pub type MovementSystemParam<'w, 's, T> = <T as HandlesMovement>::TMovement<'w, 's>;
 pub type MovementSystemParamMut<'w, 's, T> = <T as HandlesMovement>::TMovementMut<'w, 's>;
 
-pub trait ControlMovement: StartMovement + UpdateMovement + StopMovement + CurrentMovement {}
+pub trait ControlMovement: StartMovement + StopMovement + CurrentMovement {}
 
-impl<T> ControlMovement for T where
-	T: StartMovement + UpdateMovement + StopMovement + CurrentMovement
-{
-}
+impl<T> ControlMovement for T where T: StartMovement + StopMovement + CurrentMovement {}
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct RequiredClearance(pub Units);
@@ -57,7 +54,7 @@ impl Property for MovementTarget {
 }
 
 pub trait StartMovement {
-	fn start<T>(&mut self, target: T, radius: Units, speed: UnitsPerSecond)
+	fn start<T>(&mut self, target: T)
 	where
 		T: Into<MovementTarget> + 'static;
 }
@@ -66,24 +63,11 @@ impl<T> StartMovement for T
 where
 	T: DerefMut<Target: StartMovement>,
 {
-	fn start<TTarget>(&mut self, target: TTarget, radius: Units, speed: UnitsPerSecond)
+	fn start<TTarget>(&mut self, target: TTarget)
 	where
 		TTarget: Into<MovementTarget> + 'static,
 	{
-		self.deref_mut().start(target, radius, speed)
-	}
-}
-
-pub trait UpdateMovement {
-	fn update(&mut self, speed: UnitsPerSecond);
-}
-
-impl<T> UpdateMovement for T
-where
-	T: DerefMut<Target: UpdateMovement>,
-{
-	fn update(&mut self, speed: UnitsPerSecond) {
-		self.deref_mut().update(speed);
+		self.deref_mut().start(target)
 	}
 }
 

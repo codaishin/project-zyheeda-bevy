@@ -3,16 +3,13 @@ use crate::{
 	system_param::movement_param::MovementContextMut,
 };
 use bevy::ecs::component::Component;
-use common::{
-	tools::{Units, UnitsPerSecond},
-	traits::handles_movement::{MovementTarget, StartMovement},
-};
+use common::traits::handles_movement::{MovementTarget, StartMovement};
 
 impl<TMotion> StartMovement for MovementContextMut<'_, TMotion>
 where
 	TMotion: Component,
 {
-	fn start<T>(&mut self, target: T, _: Units, _: UnitsPerSecond)
+	fn start<T>(&mut self, target: T)
 	where
 		T: Into<MovementTarget>,
 	{
@@ -61,7 +58,7 @@ mod tests {
 			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
 				let mut ctx =
 					MovementParamMut::get_context_mut(&mut p, Movement { entity }).unwrap();
-				ctx.start(target, Units::from(42.), UnitsPerSecond::from(11.));
+				ctx.start(target);
 			})?;
 
 		assert_eq!(
@@ -80,11 +77,7 @@ mod tests {
 			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
 				let mut ctx =
 					MovementParamMut::get_context_mut(&mut p, Movement { entity }).unwrap();
-				ctx.start(
-					Vec3::new(1., 2., 3.),
-					Units::from(42.),
-					UnitsPerSecond::from(11.),
-				);
+				ctx.start(Vec3::new(1., 2., 3.));
 			})?;
 
 		assert_eq!(

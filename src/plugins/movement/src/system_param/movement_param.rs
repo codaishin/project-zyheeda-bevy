@@ -2,7 +2,6 @@ pub(crate) mod context_changed;
 mod current_movement;
 mod start_movement;
 mod stop_movement;
-mod update_movement;
 
 use crate::system_param::movement_param::context_changed::JustRemovedMovements;
 use bevy::{ecs::system::SystemParam, prelude::*};

@@ -1,7 +1,4 @@
-use crate::components::{
-	enemy::{Enemy, chasing::Chasing},
-	movement_config::MovementConfig,
-};
+use crate::components::enemy::{Enemy, chasing::Chasing};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
 	accessors::get::GetContextMut,
@@ -11,7 +8,7 @@ use common::traits::{
 impl Enemy {
 	pub(crate) fn chase_player<TMovement>(
 		mut movement: StaticSystemParam<TMovement>,
-		enemies: Query<(Entity, &MovementConfig, Option<&Chasing>), With<Self>>,
+		enemies: Query<(Entity, Option<&Chasing>), With<Self>>,
 		transforms: Query<&Transform>,
 	) where
 		TMovement: for<'c> GetContextMut<
@@ -19,7 +16,7 @@ impl Enemy {
 				TContext<'c>: StartMovement + StopMovement + CurrentMovement,
 			>,
 	{
-		for (entity, config, chasing) in &enemies {
+		for (entity, chasing) in &enemies {
 			let ctx = TMovement::get_context_mut(&mut movement, Movement { entity });
 			let Some(mut ctx) = ctx else {
 				continue;
@@ -36,7 +33,7 @@ impl Enemy {
 					if current_movement == Some(MovementTarget::Point(player.translation)) {
 						continue;
 					}
-					ctx.start(player.translation, config.collider_radius, config.speed);
+					ctx.start(player.translation);
 				}
 				_ => {}
 			}
@@ -47,11 +44,7 @@ impl Enemy {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::movement_config::MovementConfig;
-	use common::{
-		tools::{Units, UnitsPerSecond},
-		traits::handles_movement::MovementTarget,
-	};
+	use common::{tools::Units, traits::handles_movement::MovementTarget};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
 	use test_case::test_case;
@@ -63,11 +56,11 @@ mod tests {
 	}
 
 	impl StartMovement for _Movement {
-		fn start<T>(&mut self, target: T, radius: Units, speed: UnitsPerSecond)
+		fn start<T>(&mut self, target: T)
 		where
 			T: Into<MovementTarget> + 'static,
 		{
-			self.mock.start(target, radius, speed);
+			self.mock.start(target);
 		}
 	}
 
@@ -86,12 +79,7 @@ mod tests {
 	mock! {
 		_Movement {}
 		impl StartMovement for _Movement {
-			fn start<T>(
-				&mut self,
-				target: T,
-				radius:Units,
-				speed: UnitsPerSecond,
-			) where T: Into<MovementTarget> + 'static;
+			fn start<T>(&mut self, target: T) where T: Into<MovementTarget> + 'static;
 		}
 		impl StopMovement for _Movement {
 			fn stop(&mut self);
@@ -113,8 +101,6 @@ mod tests {
 	#[test_case(Some(MovementTarget::Dir(Dir3::NEG_Z)); "and current movement is directional")]
 	#[test_case(None; "and no current movement")]
 	fn move_to_chase_player(current_movement: Option<MovementTarget>) {
-		let speed = UnitsPerSecond::from(42.);
-		let collider_radius = Units::from(11.);
 		let mut app = setup();
 		let player = app.world_mut().spawn(Transform::from_xyz(1., 2., 3.)).id();
 		app.world_mut().spawn((
@@ -123,15 +109,11 @@ mod tests {
 				attack_range: Units::from(3.),
 				min_target_distance: None,
 			},
-			MovementConfig {
-				speed,
-				collider_radius,
-			},
 			Chasing { player },
 			_Movement::new().with_mock(move |mock| {
 				mock.expect_start()
 					.once()
-					.with(eq(Vec3::new(1., 2., 3.)), eq(collider_radius), eq(speed))
+					.with(eq(Vec3::new(1., 2., 3.)))
 					.return_const(());
 				mock.expect_current_movement()
 					.return_const(current_movement);
@@ -143,8 +125,6 @@ mod tests {
 
 	#[test]
 	fn stop_moving_when_not_chasing() {
-		let speed = UnitsPerSecond::from(42.);
-		let collider_radius = Units::from(11.);
 		let mut app = setup();
 		app.world_mut().spawn((
 			Transform::from_xyz(1., 2., 7.1),
@@ -152,10 +132,6 @@ mod tests {
 				aggro_range: Units::from(4.),
 				attack_range: Units::from(3.),
 				min_target_distance: None,
-			},
-			MovementConfig {
-				speed,
-				collider_radius,
 			},
 			_Movement::new().with_mock(move |mock| {
 				mock.expect_start::<Vec3>().never();
@@ -171,8 +147,6 @@ mod tests {
 
 	#[test]
 	fn do_not_move_when_chasing_and_already_moving_to_same_place() {
-		let speed = UnitsPerSecond::from(42.);
-		let collider_radius = Units::from(11.);
 		let mut app = setup();
 		let player = app.world_mut().spawn(Transform::from_xyz(1., 2., 3.)).id();
 		app.world_mut().spawn((
@@ -181,10 +155,6 @@ mod tests {
 				aggro_range: Units::from(4.),
 				attack_range: Units::from(3.),
 				min_target_distance: None,
-			},
-			MovementConfig {
-				speed,
-				collider_radius,
 			},
 			Chasing { player },
 			_Movement::new().with_mock(move |mock| {
@@ -201,18 +171,12 @@ mod tests {
 
 	#[test]
 	fn do_not_stop_moving_when_not_chasing_but_not_already_moving() {
-		let speed = UnitsPerSecond::from(42.);
-		let collider_radius = Units::from(11.);
 		let mut app = setup();
 		app.world_mut().spawn((
 			Enemy {
 				aggro_range: Units::from(4.),
 				attack_range: Units::from(3.),
 				min_target_distance: None,
-			},
-			MovementConfig {
-				speed,
-				collider_radius,
 			},
 			_Movement::new().with_mock(move |mock| {
 				mock.expect_start::<Vec3>().never();

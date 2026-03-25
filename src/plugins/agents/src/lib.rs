@@ -173,10 +173,7 @@ where
 						RaycastSystemParam<TPhysics>,
 						MovementSystemParamMut<TMovement>,
 					>,
-					Player::toggle_speed::<
-						InputSystemParam<TInput>,
-						MovementSystemParamMut<TMovement>,
-					>,
+					Player::toggle_speed::<InputSystemParam<TInput>>,
 					Player::animate_movement::<
 						MovementSystemParam<TMovement>,
 						AnimationsSystemParamMut<TAnimations>,
