@@ -1,4 +1,3 @@
-use crate::components::movement_definition::MovementDefinition;
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
 	accessors::get::{GetContextMut, GetProperty},
@@ -6,12 +5,15 @@ use common::traits::{
 	handles_physics::CharacterMotion,
 };
 
-impl MovementDefinition {
-	pub(crate) fn animate_movement_forward<TMovement, TAnimations>(
+impl<T> AnimateMovementForward for T where T: Component + GetProperty<CharacterMotion> {}
+
+pub(crate) trait AnimateMovementForward:
+	Component + GetProperty<CharacterMotion> + Sized
+{
+	fn animate_movement_forward<TAnimations>(
 		mut animations: StaticSystemParam<TAnimations>,
-		movements: Query<(Entity, &TMovement, &Transform), Changed<TMovement>>,
+		movements: Query<(Entity, &Self, &Transform), Changed<Self>>,
 	) where
-		TMovement: Component + GetProperty<CharacterMotion>,
 		TAnimations: for<'c> GetContextMut<Animations, TContext<'c>: MoveDirectionMut>,
 	{
 		for (entity, movement, transform) in &movements {
@@ -78,7 +80,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			MovementDefinition::animate_movement_forward::<_Movement, Query<Mut<_Animations>>>,
+			_Movement::animate_movement_forward::<Query<Mut<_Animations>>>,
 		);
 
 		app

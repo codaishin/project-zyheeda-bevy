@@ -1,9 +1,5 @@
 use crate::{
-	components::{
-		movement_definition::MovementDefinition,
-		movement_path::MovementPath,
-		ongoing_movement::OngoingMovement,
-	},
+	components::{movement_path::MovementPath, ongoing_movement::OngoingMovement},
 	system_param::movement_param::MovementContextMut,
 };
 use bevy::ecs::component::Component;
@@ -16,15 +12,12 @@ impl<TMotion> StartMovement for MovementContextMut<'_, TMotion>
 where
 	TMotion: Component,
 {
-	fn start<T>(&mut self, target: T, radius: Units, speed: UnitsPerSecond)
+	fn start<T>(&mut self, target: T, _: Units, _: UnitsPerSecond)
 	where
 		T: Into<MovementTarget>,
 	{
-		self.entity.try_insert((
-			OngoingMovement::Stopped,
-			MovementPath::from(target),
-			MovementDefinition { radius, speed },
-		));
+		self.entity
+			.try_insert((OngoingMovement::Stopped, MovementPath::from(target)));
 	}
 }
 
@@ -33,7 +26,7 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{
-		components::{movement_definition::MovementDefinition, movement_path::MovementPath},
+		components::movement_path::MovementPath,
 		system_param::movement_param::MovementParamMut,
 	};
 	use bevy::{
@@ -54,32 +47,6 @@ mod tests {
 
 	fn setup() -> App {
 		App::new().single_threaded(Update)
-	}
-
-	#[test]
-	fn insert_movement_definition() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		let entity = app.world_mut().spawn_empty().id();
-
-		app.world_mut()
-			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
-				let mut ctx =
-					MovementParamMut::get_context_mut(&mut p, Movement { entity }).unwrap();
-				ctx.start(
-					Vec3::new(1., 2., 3.),
-					Units::from(42.),
-					UnitsPerSecond::from(11.),
-				);
-			})?;
-
-		assert_eq!(
-			Some(&MovementDefinition {
-				radius: Units::from(42.),
-				speed: UnitsPerSecond::from(11.),
-			}),
-			app.world().entity(entity).get::<MovementDefinition>(),
-		);
-		Ok(())
 	}
 
 	#[test_case(Vec3::new(1.,2.,3.); "to point")]

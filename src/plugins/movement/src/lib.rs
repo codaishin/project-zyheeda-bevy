@@ -10,14 +10,17 @@ mod debug;
 use crate::{
 	components::{
 		facing::SetFace,
-		movement_definition::MovementDefinition,
 		ongoing_movement::{IsMoving, OngoingMovement},
 	},
 	system_param::{
 		face_param::FaceParamMut,
 		movement_param::{MovementParam, MovementParamMut, context_changed::JustRemovedMovements},
 	},
-	systems::{advance_movement::AdvanceMovement, compute_path::ComputePathSystem},
+	systems::{
+		advance_movement::AdvanceMovement,
+		animate_movement_forward::AnimateMovementForward,
+		compute_path::ComputePathSystem,
+	},
 };
 use bevy::prelude::*;
 use common::{
@@ -90,7 +93,6 @@ where
 		TSaveGame::register_savable_component::<SetFaceOverride>(app);
 		TSaveGame::register_savable_component::<OngoingMovement>(app);
 		TSaveGame::register_savable_component::<MovementPath>(app);
-		TSaveGame::register_savable_component::<MovementDefinition>(app);
 
 		#[cfg(debug_assertions)]
 		debug::draw(app);
@@ -141,31 +143,24 @@ where
 	type TMovement<'w, 's> = MovementParam<'w, 's, TPhysics::TCharacterMotion>;
 	type TMovementMut<'w, 's> = MovementParamMut<'w, 's, TPhysics::TCharacterMotion>;
 
-	fn register_movement<TMovementDefinition>(app: &mut App)
+	fn register_movement<TConfig>(app: &mut App)
 	where
-		TMovementDefinition: Component,
-		for<'a> &'a TMovementDefinition: Into<Speed> + Into<RequiredClearance>,
+		TConfig: Component,
+		for<'a> &'a TConfig: Into<Speed> + Into<RequiredClearance>,
 	{
-		type ChangedPath = Changed<MovementPath>;
-		type NotMoving = Without<IsMoving>;
-		type Moving = With<IsMoving>;
-
-		let compute_path = ChangedPath::compute::<TPathing::TComputePath, TPathing::TComputerRef>;
-		let execute_path = NotMoving::advance::<MovementPath>;
-		let execute_movement = Moving::advance::<(OngoingMovement, TPhysics::TCharacterMotion)>;
-
-		let animate_movement_forward = MovementDefinition::animate_movement_forward::<
-			TPhysics::TCharacterMotion,
-			AnimationsSystemParamMut<TAnimations>,
-		>;
-
 		app.add_systems(
 			Update,
 			(
-				compute_path,
-				execute_path,
-				execute_movement,
-				animate_movement_forward,
+				Changed::<MovementPath>::compute::<
+					TPathing::TComputePath,
+					TPathing::TComputerRef,
+					TConfig,
+				>,
+				Without::<IsMoving>::advance::<MovementPath, TConfig>,
+				With::<IsMoving>::advance::<(OngoingMovement, TPhysics::TCharacterMotion), TConfig>,
+				TPhysics::TCharacterMotion::animate_movement_forward::<
+					AnimationsSystemParamMut<TAnimations>,
+				>,
 			)
 				.chain()
 				.in_set(MovementSystems)

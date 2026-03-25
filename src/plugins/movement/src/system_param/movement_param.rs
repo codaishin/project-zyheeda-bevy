@@ -4,10 +4,7 @@ mod start_movement;
 mod stop_movement;
 mod update_movement;
 
-use crate::{
-	components::movement_definition::MovementDefinition,
-	system_param::movement_param::context_changed::JustRemovedMovements,
-};
+use crate::system_param::movement_param::context_changed::JustRemovedMovements;
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::{
 	traits::{
@@ -52,7 +49,6 @@ where
 	TMotion: Component,
 {
 	commands: ZyheedaCommands<'w, 's>,
-	movement_definitions: Query<'w, 's, &'static mut MovementDefinition>,
 	motions: Query<'w, 's, &'static TMotion>,
 }
 
@@ -66,15 +62,10 @@ where
 		param: &'ctx mut MovementParamMut<TMotion>,
 		Movement { entity }: Movement,
 	) -> Option<Self::TContext<'ctx>> {
-		let movement_definition = param.movement_definitions.get_mut(entity).ok();
 		let motion = param.motions.get(entity).ok();
 		let entity = param.commands.get_mut(&entity)?;
 
-		Some(MovementContextMut {
-			entity,
-			movement_definition,
-			motion,
-		})
+		Some(MovementContextMut { entity, motion })
 	}
 }
 
@@ -92,6 +83,5 @@ where
 	TMotion: Component,
 {
 	entity: ZyheedaEntityCommands<'ctx>,
-	movement_definition: Option<Mut<'ctx, MovementDefinition>>,
 	motion: Option<&'ctx TMotion>,
 }
