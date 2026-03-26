@@ -2,7 +2,7 @@ use crate::traits::query_filter_definition::QueryFilterDefinition;
 use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
-	traits::{accessors::get::GetProperty, handles_skill_physics::SkillSpawner},
+	traits::{accessors::get::View, handles_skill_physics::SkillSpawner},
 };
 use std::marker::PhantomData;
 
@@ -43,8 +43,8 @@ where
 	}
 }
 
-impl<TFilter> GetProperty<PersistentEntity> for Anchor<TFilter> {
-	fn get_property(&self) -> PersistentEntity {
+impl<TFilter> View<PersistentEntity> for Anchor<TFilter> {
+	fn view(&self) -> PersistentEntity {
 		self.target
 	}
 }

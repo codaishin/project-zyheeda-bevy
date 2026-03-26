@@ -3,7 +3,7 @@ use crate::{
 	errors::{ErrorData, Level},
 	tools::is_not::IsNot,
 	traits::{
-		accessors::get::Property,
+		accessors::get::ViewField,
 		handles_input::InvalidUserInput,
 		handles_localization::Token,
 		iteration::{Iter, IterFinite},
@@ -16,7 +16,7 @@ use std::{any::type_name, fmt::Display, marker::PhantomData};
 #[derive(Clone, Copy, Default, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
 pub struct SlotKey(pub u8);
 
-impl Property for SlotKey {
+impl ViewField for SlotKey {
 	type TValue<'a> = Self;
 }
 
@@ -136,7 +136,7 @@ impl PartialEq<SlotKey> for PlayerSlot {
 	}
 }
 
-impl Property for PlayerSlot {
+impl ViewField for PlayerSlot {
 	type TValue<'a> = Self;
 }
 

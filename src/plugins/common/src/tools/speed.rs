@@ -1,6 +1,5 @@
-use crate::traits::accessors::get::Property;
-
 use super::UnitsPerSecond;
+use crate::traits::accessors::get::ViewField;
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 
@@ -25,6 +24,6 @@ impl Deref for Speed {
 	}
 }
 
-impl Property for Speed {
+impl ViewField for Speed {
 	type TValue<'a> = UnitsPerSecond;
 }

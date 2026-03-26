@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use common::{
 	tools::{action_key::slot::SlotKey, bone_name::BoneName, path::Path},
 	traits::{
-		accessors::get::GetProperty,
+		accessors::get::View,
 		handles_animations::{AffectedAnimationBones, Animation, AnimationKey, AnimationMaskBits},
 		handles_custom_assets::AssetFolderPath,
 		handles_physics::PhysicalDefaultAttributes,
@@ -33,8 +33,8 @@ impl AssetFolderPath for AgentConfigAsset {
 	}
 }
 
-impl GetProperty<PhysicalDefaultAttributes> for AgentConfigAsset {
-	fn get_property(&self) -> PhysicalDefaultAttributes {
+impl View<PhysicalDefaultAttributes> for AgentConfigAsset {
+	fn view(&self) -> PhysicalDefaultAttributes {
 		self.attributes
 	}
 }

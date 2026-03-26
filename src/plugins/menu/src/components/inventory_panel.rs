@@ -4,7 +4,7 @@ use crate::{
 	traits::colors::{HasPanelColors, PanelColors},
 };
 use bevy::prelude::*;
-use common::traits::accessors::{get::GetProperty, set::Setter};
+use common::traits::accessors::{get::View, set::Setter};
 
 #[derive(Component, Debug, PartialEq)]
 #[require(UILabel)]
@@ -16,8 +16,8 @@ impl From<PanelState> for InventoryPanel {
 	}
 }
 
-impl GetProperty<PanelState> for InventoryPanel {
-	fn get_property(&self) -> PanelState {
+impl View<PanelState> for InventoryPanel {
+	fn view(&self) -> PanelState {
 		self.0
 	}
 }
@@ -39,13 +39,13 @@ mod tests {
 	#[test]
 	fn get_empty() {
 		let panel = InventoryPanel::from(PanelState::Empty);
-		assert_eq!(PanelState::Empty, panel.get_property());
+		assert_eq!(PanelState::Empty, panel.view());
 	}
 
 	#[test]
 	fn get_filled() {
 		let panel = InventoryPanel::from(PanelState::Filled);
-		assert_eq!(PanelState::Filled, panel.get_property());
+		assert_eq!(PanelState::Filled, panel.view());
 	}
 
 	#[test]

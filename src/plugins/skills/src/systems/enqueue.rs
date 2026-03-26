@@ -7,20 +7,20 @@ use crate::{
 use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
 	tools::action_key::slot::SlotKey,
-	traits::accessors::get::{GetProperty, GetRef},
+	traits::accessors::get::{GetRef, View},
 };
 
 impl<T> EnqueueSystem for T where
 	T: Component<Mutability = Mutable>
 		+ Enqueue<(Skill, SlotKey)>
-		+ IterHoldingMut<TItem: ReleaseSkill + GetProperty<SlotKey>>
+		+ IterHoldingMut<TItem: ReleaseSkill + View<SlotKey>>
 {
 }
 
 pub(crate) trait EnqueueSystem:
 	Component<Mutability = Mutable>
 	+ Enqueue<(Skill, SlotKey)>
-	+ IterHoldingMut<TItem: ReleaseSkill + GetProperty<SlotKey>>
+	+ IterHoldingMut<TItem: ReleaseSkill + View<SlotKey>>
 	+ Sized
 {
 	fn enqueue_system<TSlots>(
@@ -40,7 +40,7 @@ pub(crate) trait EnqueueSystem:
 			}
 
 			for skill in queue.iter_holding_mut() {
-				let key = skill.get_property();
+				let key = skill.view();
 				if current_active.slots.contains(&key) {
 					continue;
 				}
@@ -80,8 +80,8 @@ mod tests {
 		impl ReleaseSkill for _SkillQueued {
 			fn release_skill(&mut self) {}
 		}
-		impl GetProperty< SlotKey> for _SkillQueued {
-			fn get_property(&self) -> SlotKey {}
+		impl View< SlotKey> for _SkillQueued {
+			fn view(&self) -> SlotKey {}
 		}
 	}
 
@@ -234,7 +234,7 @@ mod tests {
 						SlotKey::from(PlayerSlot::LOWER_L),
 						Mock_SkillQueued::new_mock(|mock| {
 							mock.expect_release_skill().times(1).return_const(());
-							mock.expect_get_property()
+							mock.expect_view()
 								.return_const(SlotKey::from(PlayerSlot::LOWER_L));
 						}),
 					),
@@ -242,7 +242,7 @@ mod tests {
 						SlotKey::from(PlayerSlot::LOWER_R),
 						Mock_SkillQueued::new_mock(|mock| {
 							mock.expect_release_skill().never().return_const(());
-							mock.expect_get_property()
+							mock.expect_view()
 								.return_const(SlotKey::from(PlayerSlot::LOWER_R));
 						}),
 					),

@@ -3,7 +3,7 @@ use common::{
 	attributes::{effect_target::EffectTarget, health::Health},
 	effects::{force::Force, gravity::Gravity},
 	tools::attribute::AttributeOnSpawn,
-	traits::{accessors::get::GetProperty, handles_physics::PhysicalDefaultAttributes},
+	traits::{accessors::get::View, handles_physics::PhysicalDefaultAttributes},
 };
 
 #[derive(Component, Debug, PartialEq)]
@@ -15,20 +15,20 @@ impl From<PhysicalDefaultAttributes> for DefaultAttributes {
 	}
 }
 
-impl GetProperty<AttributeOnSpawn<Health>> for DefaultAttributes {
-	fn get_property(&self) -> Health {
+impl View<AttributeOnSpawn<Health>> for DefaultAttributes {
+	fn view(&self) -> Health {
 		self.0.health
 	}
 }
 
-impl GetProperty<AttributeOnSpawn<EffectTarget<Gravity>>> for DefaultAttributes {
-	fn get_property(&self) -> EffectTarget<Gravity> {
+impl View<AttributeOnSpawn<EffectTarget<Gravity>>> for DefaultAttributes {
+	fn view(&self) -> EffectTarget<Gravity> {
 		self.0.gravity_interaction
 	}
 }
 
-impl GetProperty<AttributeOnSpawn<EffectTarget<Force>>> for DefaultAttributes {
-	fn get_property(&self) -> EffectTarget<Force> {
+impl View<AttributeOnSpawn<EffectTarget<Force>>> for DefaultAttributes {
+	fn view(&self) -> EffectTarget<Force> {
 		self.0.force_interaction
 	}
 }

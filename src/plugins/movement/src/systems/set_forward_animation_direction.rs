@@ -3,7 +3,7 @@ use bevy::{
 	prelude::*,
 };
 use common::traits::{
-	accessors::get::{GetContextMut, GetProperty},
+	accessors::get::{GetContextMut, View},
 	handles_animations::{Animations, MoveDirectionMut},
 	handles_physics::CharacterMotion,
 };
@@ -15,7 +15,7 @@ pub(crate) trait SetForwardAnimationDirection: QueryFilter + Sized {
 		mut animations: StaticSystemParam<TAnimations>,
 		movements: Query<(Entity, &TMovement, &Transform), (Changed<TMovement>, Self)>,
 	) where
-		TMovement: Component + GetProperty<CharacterMotion>,
+		TMovement: Component + View<CharacterMotion>,
 		TAnimations: for<'c> GetContextMut<Animations, TContext<'c>: MoveDirectionMut>,
 	{
 		for (entity, movement, transform) in &movements {
@@ -35,9 +35,9 @@ pub(crate) trait SetForwardAnimationDirection: QueryFilter + Sized {
 
 fn get_forward_direction<TMovement>(movement: &TMovement, transform: &Transform) -> Option<Dir3>
 where
-	TMovement: GetProperty<CharacterMotion>,
+	TMovement: View<CharacterMotion>,
 {
-	match movement.get_property() {
+	match movement.view() {
 		CharacterMotion::Direction { direction, .. } => Some(direction),
 		CharacterMotion::ToTarget { target, .. } => {
 			Dir3::try_from(target - transform.translation).ok()
@@ -59,8 +59,8 @@ mod tests {
 	#[derive(Component)]
 	struct _Movement(CharacterMotion);
 
-	impl GetProperty<CharacterMotion> for _Movement {
-		fn get_property(&self) -> CharacterMotion {
+	impl View<CharacterMotion> for _Movement {
+		fn view(&self) -> CharacterMotion {
 			self.0
 		}
 	}

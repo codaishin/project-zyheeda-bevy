@@ -17,6 +17,7 @@ pub mod vec_not_nan;
 
 pub(crate) mod get_recursively;
 
+use crate::traits::accessors::get::ViewField;
 use bevy::prelude::Entity;
 use macros::ClampZeroPositive;
 use serde::Serialize;
@@ -24,8 +25,6 @@ use std::{
 	fmt::Debug,
 	ops::{Deref, DerefMut},
 };
-
-use crate::traits::accessors::get::Property;
 
 #[derive(Debug, PartialEq)]
 pub struct This<'a, T: Debug + PartialEq>(pub &'a mut T);
@@ -121,7 +120,7 @@ impl From<bool> for Done {
 	}
 }
 
-impl Property for Done {
+impl ViewField for Done {
 	type TValue<'a> = bool;
 }
 

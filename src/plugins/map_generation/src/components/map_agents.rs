@@ -1,5 +1,5 @@
 use bevy::{ecs::entity::EntityHashSet, prelude::*};
-use common::traits::accessors::get::GetProperty;
+use common::traits::accessors::get::View;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
@@ -15,8 +15,8 @@ pub struct GridAgents(EntityHashSet);
 #[relationship(relationship_target = GridAgents)]
 pub struct GridAgentOf(pub(crate) Entity);
 
-impl GetProperty<Entity> for GridAgentOf {
-	fn get_property(&self) -> Entity {
+impl View<Entity> for GridAgentOf {
+	fn view(&self) -> Entity {
 		self.0
 	}
 }

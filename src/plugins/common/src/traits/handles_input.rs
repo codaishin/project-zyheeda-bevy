@@ -3,7 +3,7 @@ mod bevy_impls;
 use crate::{
 	tools::action_key::{ActionKey, user_input::UserInput},
 	traits::{
-		accessors::get::{GetProperty, Property},
+		accessors::get::{View, ViewField},
 		iteration::IterFinite,
 	},
 };
@@ -13,14 +13,14 @@ use std::hash::Hash;
 pub trait HandlesActionKeyButton {
 	/// Controls triggering of actions through mouse left clicking the associated
 	/// button.
-	type TActionKeyButton: Component + From<ActionKey> + GetProperty<MouseOverrideActive>;
+	type TActionKeyButton: Component + From<ActionKey> + View<MouseOverrideActive>;
 }
 
 /// Indicates whether left mouse behavior is overridden when querying input from an associated
 /// instance that implements [`GetInputState`].
 pub struct MouseOverrideActive;
 
-impl Property for MouseOverrideActive {
+impl ViewField for MouseOverrideActive {
 	type TValue<'a> = bool;
 }
 

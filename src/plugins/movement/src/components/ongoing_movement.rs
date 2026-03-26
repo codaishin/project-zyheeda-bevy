@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use common::{
 	tools::{Done, speed::Speed},
 	traits::{
-		accessors::get::{DynProperty, GetProperty},
+		accessors::get::{View, ViewOf},
 		handles_movement::MovementTarget,
 		handles_physics::CharacterMotion,
 	},
@@ -36,7 +36,7 @@ pub(crate) struct IsMoving;
 
 impl<TMotion> MovementUpdate for (OngoingMovement, TMotion)
 where
-	TMotion: From<CharacterMotion> + GetProperty<Done> + GetProperty<CharacterMotion> + Component,
+	TMotion: From<CharacterMotion> + View<Done> + View<CharacterMotion> + Component,
 {
 	type TComponents = (&'static OngoingMovement, Option<&'static TMotion>);
 
@@ -56,8 +56,8 @@ where
 		};
 
 		match motion {
-			Some(motion) if motion.dyn_property::<CharacterMotion>() == new_motion => {
-				Done(motion.dyn_property::<Done>())
+			Some(motion) if motion.view_of::<CharacterMotion>() == new_motion => {
+				Done(motion.view_of::<Done>())
 			}
 			_ => {
 				agent.try_insert(TMotion::from(new_motion));
@@ -94,14 +94,14 @@ mod tests {
 		}
 	}
 
-	impl GetProperty<Done> for _Motion {
-		fn get_property(&self) -> bool {
+	impl View<Done> for _Motion {
+		fn view(&self) -> bool {
 			matches!(self, _Motion::Done(..))
 		}
 	}
 
-	impl GetProperty<CharacterMotion> for _Motion {
-		fn get_property(&self) -> CharacterMotion {
+	impl View<CharacterMotion> for _Motion {
+		fn view(&self) -> CharacterMotion {
 			match self {
 				_Motion::NotDone(motion) => *motion,
 				_Motion::Done(motion) => *motion,

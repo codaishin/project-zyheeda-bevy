@@ -2,7 +2,7 @@ use crate::traits::movement_update::MovementUpdate;
 use bevy::{ecs::query::QueryFilter, prelude::*};
 use common::{
 	tools::{Done, speed::Speed},
-	traits::accessors::get::TryApplyOn,
+	traits::accessors::get::{TryApplyOn, View},
 	zyheeda_commands::ZyheedaCommands,
 };
 
@@ -14,14 +14,13 @@ pub(crate) trait AdvanceMovement: QueryFilter + Sized {
 		mut agents: Query<(Entity, TMovement::TComponents, &TConfig), Self>,
 	) where
 		TMovement: MovementUpdate,
-		TConfig: Component,
-		for<'a> &'a TConfig: Into<Speed>,
+		TConfig: Component + View<Speed>,
 	{
 		for (entity, components, config) in &mut agents {
 			commands.try_apply_on(&entity, |mut e| {
 				let e = &mut e;
 
-				if let Done(false) = TMovement::update(e, components, config.into()) {
+				if let Done(false) = TMovement::update(e, components, Speed(config.view())) {
 					return;
 				};
 
@@ -43,9 +42,9 @@ mod tests {
 	#[derive(Component, Default)]
 	struct _Config(Speed);
 
-	impl From<&'_ _Config> for Speed {
-		fn from(_Config(speed): &'_ _Config) -> Self {
-			*speed
+	impl View<Speed> for _Config {
+		fn view(&self) -> UnitsPerSecond {
+			self.0.0
 		}
 	}
 

@@ -5,7 +5,7 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	traits::{
-		accessors::get::{GetProperty, Property, TryApplyOn},
+		accessors::get::{TryApplyOn, View, ViewField},
 		thread_safe::ThreadSafe,
 	},
 	zyheeda_commands::ZyheedaCommands,
@@ -26,9 +26,9 @@ pub(crate) fn bar<TSource, TValue, TCamera, TMainCameraLabel>(
 	with_bar_values: Query<OldBars<TSource, TValue>>,
 	camera: Query<(&TCamera, &GlobalTransform), With<TMainCameraLabel>>,
 ) where
-	TValue: ThreadSafe + for<'a> Property<TValue<'a> = TValue>,
+	TValue: ThreadSafe + for<'a> ViewField<TValue<'a> = TValue>,
 	BarValues<TValue>: UIBarUpdate<TValue>,
-	TSource: Component + GetProperty<TValue>,
+	TSource: Component + View<TValue>,
 	TCamera: Component + GetScreenPosition,
 	TMainCameraLabel: Component,
 {
@@ -45,8 +45,8 @@ fn add_bar_values<TSource, TValue, TCamera>(
 	camera: &TCamera,
 	camera_transform: &GlobalTransform,
 ) where
-	TValue: ThreadSafe + for<'a> Property<TValue<'a> = TValue>,
-	TSource: Component + GetProperty<TValue>,
+	TValue: ThreadSafe + for<'a> ViewField<TValue<'a> = TValue>,
+	TSource: Component + View<TValue>,
 	TCamera: Component + GetScreenPosition,
 	BarValues<TValue>: UIBarUpdate<TValue>,
 {
@@ -54,7 +54,7 @@ fn add_bar_values<TSource, TValue, TCamera>(
 		let world_position = transform.translation() + bar.offset;
 		bar.position = camera.get_screen_position(camera_transform, world_position);
 		let mut bar_values = BarValues::default();
-		bar_values.update(&display.get_property());
+		bar_values.update(&display.view());
 
 		commands.try_apply_on(&id, |mut e| {
 			e.try_insert(bar_values);
@@ -67,15 +67,15 @@ fn update_bar_values<TSource, TValue, TCamera>(
 	camera: &TCamera,
 	camera_transform: &GlobalTransform,
 ) where
-	TValue: ThreadSafe + for<'a> Property<TValue<'a> = TValue>,
-	TSource: Component + GetProperty<TValue>,
+	TValue: ThreadSafe + for<'a> ViewField<TValue<'a> = TValue>,
+	TSource: Component + View<TValue>,
 	TCamera: Component + GetScreenPosition,
 	BarValues<TValue>: UIBarUpdate<TValue>,
 {
 	for (transform, display, mut bar, mut bar_values) in &mut agents {
 		let world_position = transform.translation() + bar.offset;
 		bar.position = camera.get_screen_position(camera_transform, world_position);
-		bar_values.update(&display.get_property());
+		bar_values.update(&display.view());
 	}
 }
 
@@ -113,12 +113,12 @@ mod tests {
 	#[derive(Component, Default)]
 	struct _Source(_Value);
 
-	impl Property for _Value {
+	impl ViewField for _Value {
 		type TValue<'a> = Self;
 	}
 
-	impl GetProperty<_Value> for _Source {
-		fn get_property(&self) -> _Value {
+	impl View<_Value> for _Source {
+		fn view(&self) -> _Value {
 			self.0
 		}
 	}

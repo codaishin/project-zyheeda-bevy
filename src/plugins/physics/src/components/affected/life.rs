@@ -1,6 +1,6 @@
 use crate::systems::insert_affected::AffectedComponent;
 use bevy::prelude::*;
-use common::{attributes::health::Health, traits::accessors::get::GetProperty};
+use common::{attributes::health::Health, traits::accessors::get::View};
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
@@ -27,8 +27,8 @@ impl From<Health> for Life {
 	}
 }
 
-impl GetProperty<Health> for Life {
-	fn get_property(&self) -> Health {
+impl View<Health> for Life {
+	fn view(&self) -> Health {
 		self.0
 	}
 }

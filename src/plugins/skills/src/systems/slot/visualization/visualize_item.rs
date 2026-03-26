@@ -7,7 +7,7 @@ use bevy::prelude::*;
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::{GetProperty, GetRef, TryApplyOn},
+		accessors::get::{GetRef, TryApplyOn, View},
 		thread_safe::ThreadSafe,
 	},
 	zyheeda_commands::ZyheedaCommands,
@@ -16,7 +16,7 @@ use std::hash::Hash;
 
 impl<TKey> SlotVisualization<TKey>
 where
-	TKey: Eq + Hash + ThreadSafe + VisualizeItem + GetProperty<SlotKey>,
+	TKey: Eq + Hash + ThreadSafe + VisualizeItem + View<SlotKey>,
 {
 	pub(crate) fn visualize_items(
 		mut commands: ZyheedaCommands,
@@ -25,9 +25,7 @@ where
 	) {
 		for (slots, visualization) in &slots {
 			for (key, entity) in &visualization.slots {
-				let item = slots
-					.get_ref(&key.get_property())
-					.and_then(|slot| items.get(slot));
+				let item = slots.get_ref(&key.view()).and_then(|slot| items.get(slot));
 
 				commands.try_apply_on(entity, |mut e| {
 					e.try_insert(TKey::visualize(item));
@@ -50,8 +48,8 @@ mod tests {
 	#[derive(Debug, PartialEq, Eq, Hash)]
 	struct _Key(SlotKey);
 
-	impl GetProperty<SlotKey> for _Key {
-		fn get_property(&self) -> SlotKey {
+	impl View<SlotKey> for _Key {
+		fn view(&self) -> SlotKey {
 			self.0
 		}
 	}

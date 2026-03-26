@@ -1,7 +1,7 @@
 use crate::{
 	tools::skill_execution::SkillExecution,
 	traits::{
-		accessors::get::{GetProperty, Property},
+		accessors::get::{View, ViewField},
 		handles_loadout::LoadoutKey,
 		handles_localization::Token,
 	},
@@ -21,13 +21,13 @@ impl From<Skills> for Entity {
 
 pub struct SkillToken;
 
-impl Property for SkillToken {
+impl ViewField for SkillToken {
 	type TValue<'a> = &'a Token;
 }
 
 pub struct SkillIcon;
 
-impl Property for SkillIcon {
+impl ViewField for SkillIcon {
 	type TValue<'a> = &'a Handle<Image>;
 }
 
@@ -36,7 +36,7 @@ pub trait GetSkillId<TSkillId> {
 }
 
 pub trait ReadSkills {
-	type TSkill<'a>: GetProperty<SkillToken> + GetProperty<SkillIcon> + GetProperty<SkillExecution>
+	type TSkill<'a>: View<SkillToken> + View<SkillIcon> + View<SkillExecution>
 	where
 		Self: 'a;
 

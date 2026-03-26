@@ -8,7 +8,7 @@ use bevy::prelude::*;
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::{ContextChanged, GetContext, GetProperty},
+		accessors::get::{ContextChanged, GetContext, View},
 		handles_loadout::{
 			available_skills::{AvailableSkills, ReadAvailableSkills},
 			skills::{GetSkillId, SkillIcon, SkillToken},
@@ -106,14 +106,14 @@ pub struct ReadAvailableSkill {
 	icon: Handle<Image>,
 }
 
-impl GetProperty<SkillToken> for ReadAvailableSkill {
-	fn get_property(&self) -> &'_ Token {
+impl View<SkillToken> for ReadAvailableSkill {
+	fn view(&self) -> &'_ Token {
 		&self.token
 	}
 }
 
-impl GetProperty<SkillIcon> for ReadAvailableSkill {
-	fn get_property(&self) -> &'_ Handle<Image> {
+impl View<SkillIcon> for ReadAvailableSkill {
+	fn view(&self) -> &'_ Handle<Image> {
 		&self.icon
 	}
 }
@@ -238,7 +238,7 @@ mod tests {
 
 	mod skill {
 		use super::*;
-		use common::traits::accessors::get::DynProperty;
+		use common::traits::accessors::get::ViewOf;
 		use uuid::Uuid;
 
 		#[test]
@@ -249,7 +249,7 @@ mod tests {
 				icon: new_handle(),
 			};
 
-			assert_eq!(&Token::from("my skill"), skill.dyn_property::<SkillToken>());
+			assert_eq!(&Token::from("my skill"), skill.view_of::<SkillToken>());
 		}
 
 		#[test]
@@ -260,7 +260,7 @@ mod tests {
 				icon: new_handle(),
 			};
 
-			assert_eq!(&skill.icon, skill.dyn_property::<SkillIcon>());
+			assert_eq!(&skill.icon, skill.view_of::<SkillIcon>());
 		}
 
 		#[test]

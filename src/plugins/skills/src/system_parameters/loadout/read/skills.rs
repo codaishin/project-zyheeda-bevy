@@ -9,7 +9,7 @@ use bevy::prelude::*;
 use common::{
 	tools::{inventory_key::InventoryKey, skill_execution::SkillExecution},
 	traits::{
-		accessors::get::{ContextChanged, GetContext, GetProperty},
+		accessors::get::{ContextChanged, GetContext, View},
 		handles_loadout::{
 			LoadoutKey,
 			skills::{ReadSkills, SkillIcon, SkillToken, Skills},
@@ -121,20 +121,20 @@ pub struct ReadSkill {
 	execution: SkillExecution,
 }
 
-impl GetProperty<SkillToken> for ReadSkill {
-	fn get_property(&self) -> &'_ Token {
+impl View<SkillToken> for ReadSkill {
+	fn view(&self) -> &'_ Token {
 		&self.token
 	}
 }
 
-impl GetProperty<SkillIcon> for ReadSkill {
-	fn get_property(&self) -> &'_ Handle<Image> {
+impl View<SkillIcon> for ReadSkill {
+	fn view(&self) -> &'_ Handle<Image> {
 		&self.icon
 	}
 }
 
-impl GetProperty<SkillExecution> for ReadSkill {
-	fn get_property(&self) -> SkillExecution {
+impl View<SkillExecution> for ReadSkill {
+	fn view(&self) -> SkillExecution {
 		self.execution
 	}
 }
@@ -482,7 +482,7 @@ mod tests {
 
 	mod skill {
 		use super::*;
-		use common::traits::accessors::get::DynProperty;
+		use common::traits::accessors::get::ViewOf;
 
 		#[test]
 		fn get_token() {
@@ -492,7 +492,7 @@ mod tests {
 				execution: SkillExecution::None,
 			};
 
-			assert_eq!(&Token::from("my skill"), skill.dyn_property::<SkillToken>());
+			assert_eq!(&Token::from("my skill"), skill.view_of::<SkillToken>());
 		}
 
 		#[test]
@@ -503,7 +503,7 @@ mod tests {
 				execution: SkillExecution::None,
 			};
 
-			assert_eq!(&skill.icon, skill.dyn_property::<SkillIcon>());
+			assert_eq!(&skill.icon, skill.view_of::<SkillIcon>());
 		}
 
 		#[test]
@@ -514,10 +514,7 @@ mod tests {
 				execution: SkillExecution::Queued,
 			};
 
-			assert_eq!(
-				SkillExecution::Queued,
-				skill.dyn_property::<SkillExecution>(),
-			);
+			assert_eq!(SkillExecution::Queued, skill.view_of::<SkillExecution>(),);
 		}
 	}
 }

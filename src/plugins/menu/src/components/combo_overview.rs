@@ -24,7 +24,7 @@ use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{
 	tools::action_key::slot::{PlayerSlot, SlotKey},
 	traits::{
-		accessors::get::{DynProperty, GetProperty},
+		accessors::get::{View, ViewOf},
 		handles_loadout::skills::{GetSkillId, SkillIcon, SkillToken},
 		handles_localization::{Localize, LocalizeToken, Token, localized::Localized},
 		load_asset::LoadAsset,
@@ -300,14 +300,14 @@ where
 
 impl<TSkill, TId> From<TSkill> for ComboSkill<TId>
 where
-	TSkill: GetSkillId<TId> + GetProperty<SkillToken> + GetProperty<SkillIcon>,
+	TSkill: GetSkillId<TId> + View<SkillToken> + View<SkillIcon>,
 	TId: Debug + PartialEq + Clone,
 {
 	fn from(skill: TSkill) -> Self {
 		Self {
 			id: skill.get_skill_id(),
-			token: skill.dyn_property::<SkillToken>().clone(),
-			icon: skill.dyn_property::<SkillIcon>().clone(),
+			token: skill.view_of::<SkillToken>().clone(),
+			icon: skill.view_of::<SkillIcon>().clone(),
 		}
 	}
 }

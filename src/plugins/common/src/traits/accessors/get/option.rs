@@ -1,8 +1,8 @@
-use crate::traits::accessors::get::Property;
+use crate::traits::accessors::get::ViewField;
 
-impl<T> Property for Option<T>
+impl<T> ViewField for Option<T>
 where
-	T: Property,
+	T: ViewField,
 {
 	type TValue<'a> = Option<T::TValue<'a>>;
 }

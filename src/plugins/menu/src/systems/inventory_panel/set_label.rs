@@ -5,7 +5,7 @@ use crate::{
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	traits::{
-		accessors::get::{GetContext, GetProperty, TryApplyOn},
+		accessors::get::{GetContext, TryApplyOn, View},
 		handles_loadout::items::{Items, ReadItems},
 	},
 	zyheeda_commands::ZyheedaCommands,
@@ -36,7 +36,7 @@ impl InventoryPanel {
 					}
 					Some(item) => {
 						commands.try_apply_on(&panel_entity, |mut e| {
-							e.try_insert(UILabel(item.get_property().clone()));
+							e.try_insert(UILabel(item.view().clone()));
 						});
 						PanelState::Filled
 					}
@@ -70,8 +70,8 @@ mod tests {
 	#[derive(Clone)]
 	struct _Item(Token);
 
-	impl GetProperty<ItemToken> for _Item {
-		fn get_property(&self) -> &Token {
+	impl View<ItemToken> for _Item {
+		fn view(&self) -> &Token {
 			&self.0
 		}
 	}

@@ -7,7 +7,7 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	errors::{ErrorData, Level, Unreachable},
 	traits::{
-		accessors::get::{GetContextMut, GetProperty},
+		accessors::get::{GetContextMut, View},
 		handles_enemies::EnemyType,
 		handles_map_generation::{AgentPrefab, AgentType, GroundPosition, SetMapAgentPrefab},
 		prefab::{Prefab, PrefabEntityCommands},
@@ -55,8 +55,8 @@ impl Agent {
 	}
 }
 
-impl GetProperty<AgentType> for Agent {
-	fn get_property(&self) -> AgentType {
+impl View<AgentType> for Agent {
+	fn view(&self) -> AgentType {
 		self.agent_type
 	}
 }

@@ -1,4 +1,4 @@
-use crate::traits::accessors::get::Property;
+use crate::traits::accessors::get::ViewField;
 
 #[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
 pub enum SkillExecution {
@@ -8,6 +8,6 @@ pub enum SkillExecution {
 	Queued,
 }
 
-impl Property for SkillExecution {
+impl ViewField for SkillExecution {
 	type TValue<'a> = Self;
 }

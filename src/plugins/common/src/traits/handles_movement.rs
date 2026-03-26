@@ -1,6 +1,6 @@
 use crate::{
 	tools::{Units, speed::Speed},
-	traits::accessors::get::{GetContext, GetContextMut, Property},
+	traits::accessors::get::{GetContext, GetContextMut, View, ViewField},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
 use serde::{Deserialize, Serialize};
@@ -17,8 +17,7 @@ pub trait HandlesMovement {
 	/// at all.
 	fn register_movement<TMovementDefinition>(app: &mut App)
 	where
-		TMovementDefinition: Component,
-		for<'a> &'a TMovementDefinition: Into<Speed> + Into<RequiredClearance>;
+		TMovementDefinition: Component + View<Speed> + View<RequiredClearance>;
 }
 
 pub type MovementSystemParam<'w, 's, T> = <T as HandlesMovement>::TMovement<'w, 's>;
@@ -30,6 +29,10 @@ impl<T> ControlMovement for T where T: StartMovement + StopMovement + CurrentMov
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct RequiredClearance(pub Units);
+
+impl ViewField for RequiredClearance {
+	type TValue<'a> = Units;
+}
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum MovementTarget {
@@ -49,7 +52,7 @@ impl From<Vec3> for MovementTarget {
 	}
 }
 
-impl Property for MovementTarget {
+impl ViewField for MovementTarget {
 	type TValue<'a> = Self;
 }
 

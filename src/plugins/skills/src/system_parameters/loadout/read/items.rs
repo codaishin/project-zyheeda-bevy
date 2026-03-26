@@ -7,7 +7,7 @@ use bevy::prelude::*;
 use common::{
 	tools::inventory_key::InventoryKey,
 	traits::{
-		accessors::get::{ContextChanged, GetContext, GetProperty},
+		accessors::get::{ContextChanged, GetContext, View},
 		handles_loadout::{
 			LoadoutKey,
 			items::{ItemToken, Items, ReadItems},
@@ -72,8 +72,8 @@ pub struct ReadItem {
 	token: Token,
 }
 
-impl GetProperty<ItemToken> for ReadItem {
-	fn get_property(&self) -> &'_ Token {
+impl View<ItemToken> for ReadItem {
+	fn view(&self) -> &'_ Token {
 		&self.token
 	}
 }
@@ -179,7 +179,7 @@ mod tests {
 				token: Token::from("my item"),
 			};
 
-			assert_eq!(&Token::from("my item"), item.get_property());
+			assert_eq!(&Token::from("my item"), item.view());
 		}
 	}
 }
