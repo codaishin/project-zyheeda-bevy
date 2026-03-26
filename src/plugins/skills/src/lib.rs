@@ -30,6 +30,7 @@ use bevy::prelude::*;
 use common::{
 	states::game_state::{GameState, LoadingGame},
 	traits::{
+		after_plugin::AfterPlugin,
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
 		handles_load_tracking::HandlesLoadTracking,
 		handles_loadout::HandlesLoadout,
@@ -120,7 +121,7 @@ where
 				HeldSlots::<Old>::update_from::<Current>,
 			)
 				.chain()
-				.after(TMovement::SYSTEMS)
+				.after_plugin(TMovement::SYSTEMS)
 				.run_if(in_state(GameState::Play)),
 		);
 	}

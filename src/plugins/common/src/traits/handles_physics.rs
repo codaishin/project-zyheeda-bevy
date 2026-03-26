@@ -8,6 +8,7 @@ use crate::{
 	traits::{
 		accessors::get::{View, ViewField},
 		handles_physics::physical_bodies::Blocker,
+		system_set_definition::SystemSetDefinition,
 	},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
@@ -63,11 +64,8 @@ pub trait HandlesPhysicalAttributes {
 	type TDefaultAttributes: Component + From<PhysicalDefaultAttributes>;
 }
 
-pub trait HandlesPhysicalObjects {
-	type TSystems: SystemSet;
+pub trait HandlesPhysicalObjects: SystemSetDefinition {
 	type TPhysicalObjectComponent: Component + From<PhysicalObject>;
-
-	const SYSTEMS: Self::TSystems;
 }
 
 pub trait HandlesMotion {

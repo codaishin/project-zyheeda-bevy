@@ -90,6 +90,7 @@
 		"quickbar",
 		"reborrow",
 		"savegame",
+		"schedulable",
 		"serde",
 		"srgb",
 		"srgba",

@@ -27,6 +27,7 @@ use common::{
 	systems::log::OnError,
 	tools::action_key::{ActionKey, save_key::SaveKey},
 	traits::{
+		after_plugin::AfterPlugin,
 		handles_input::{HandlesInput, InputSystemParam},
 		handles_saving::{HandlesSaving, SavableComponent},
 		system_set_definition::SystemSetDefinition,
@@ -115,7 +116,7 @@ where
 					trigger_quick_load_attempt.run_if(Self::can_quick_load()),
 				)
 					.run_if(in_state(GameState::Play))
-					.after(TInput::SYSTEMS),
+					.after_plugin(TInput::SYSTEMS),
 			)
 			.add_systems(
 				OnEnter(GameState::Save(SaveState::Save)),

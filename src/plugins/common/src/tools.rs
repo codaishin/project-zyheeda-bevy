@@ -10,6 +10,7 @@ pub mod item_type;
 pub mod iter_helpers;
 pub mod ordered_hash_map;
 pub mod path;
+pub mod plugin_system_set;
 pub mod skill_execution;
 pub mod speed;
 pub mod swap_key;

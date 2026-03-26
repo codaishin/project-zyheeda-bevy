@@ -28,9 +28,10 @@ use bevy::prelude::*;
 use common::{
 	states::game_state::GameState,
 	systems::log::OnError,
-	tools::speed::Speed,
+	tools::{plugin_system_set::PluginSystemSet, speed::Speed},
 	traits::{
 		accessors::get::View,
+		after_plugin::AfterPlugin,
 		handles_animations::{AnimationsSystemParamMut, HandlesAnimations},
 		handles_input::HandlesInput,
 		handles_movement::{HandlesMovement, RequiredClearance},
@@ -129,7 +130,7 @@ pub struct MovementSystems;
 impl<TDependencies> SystemSetDefinition for MovementPlugin<TDependencies> {
 	type TSystemSet = MovementSystems;
 
-	const SYSTEMS: Self::TSystemSet = MovementSystems;
+	const SYSTEMS: PluginSystemSet<Self::TSystemSet> = PluginSystemSet::from_set(MovementSystems);
 }
 
 impl<TInput, TSaveGame, TAnimations, TPhysics, TPathing> HandlesMovement
@@ -173,10 +174,10 @@ where
 			)
 				.chain()
 				.in_set(MovementSystems)
-				.after(TInput::SYSTEMS)
-				.after(TAnimations::SYSTEMS)
-				.after(TPathing::SYSTEMS)
-				.after(TPhysics::SYSTEMS)
+				.after_plugin(TInput::SYSTEMS)
+				.after_plugin(TAnimations::SYSTEMS)
+				.after_plugin(TPathing::SYSTEMS)
+				.after_plugin(TPhysics::SYSTEMS)
 				.run_if(in_state(GameState::Play)),
 		);
 	}

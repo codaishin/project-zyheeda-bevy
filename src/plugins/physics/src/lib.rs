@@ -55,6 +55,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
 	systems::log::OnError,
+	tools::plugin_system_set::PluginSystemSet,
 	traits::{
 		delta::Delta,
 		handles_physics::{
@@ -72,6 +73,7 @@ use common::{
 			HandlesPhysicalSkillSpawnPoints,
 		},
 		prefab::AddPrefabObserver,
+		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -254,10 +256,13 @@ impl<TDependencies> HandlesPhysicalAttributes for PhysicsPlugin<TDependencies> {
 }
 
 impl<TDependencies> HandlesPhysicalObjects for PhysicsPlugin<TDependencies> {
-	type TSystems = PhysicsSystems;
 	type TPhysicalObjectComponent = Blockable;
+}
 
-	const SYSTEMS: Self::TSystems = PhysicsSystems;
+impl<TDependencies> SystemSetDefinition for PhysicsPlugin<TDependencies> {
+	type TSystemSet = PhysicsSystems;
+
+	const SYSTEMS: PluginSystemSet<Self::TSystemSet> = PluginSystemSet::from_set(PhysicsSystems);
 }
 
 impl<TDependencies> HandlesPhysicalEffectTargets for PhysicsPlugin<TDependencies> {

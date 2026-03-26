@@ -13,7 +13,7 @@ use bevy::prelude::*;
 use common::{
 	states::game_state::LoadingEssentialAssets,
 	systems::log::OnError,
-	tools::{action_key::ActionKey, path::Path},
+	tools::{action_key::ActionKey, path::Path, plugin_system_set::PluginSystemSet},
 	traits::{
 		handles_asset_resource_loading::HandlesAssetResourceLoading,
 		handles_input::{HandlesActionKeyButton, HandlesInput, HandlesInputMut},
@@ -79,7 +79,7 @@ pub struct InputSystems;
 impl<TDependencies> SystemSetDefinition for InputPlugin<TDependencies> {
 	type TSystemSet = InputSystems;
 
-	const SYSTEMS: Self::TSystemSet = InputSystems;
+	const SYSTEMS: PluginSystemSet<Self::TSystemSet> = PluginSystemSet::from_set(InputSystems);
 }
 
 impl<TDependencies> HandlesActionKeyButton for InputPlugin<TDependencies> {
