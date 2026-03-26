@@ -14,7 +14,7 @@ use crate::{
 	app::add_physics::AddPhysics,
 	components::{
 		affected::{force_affected::ForceAffected, gravity_affected::GravityAffected, life::Life},
-		anchor::{Always, Anchor, Once},
+		anchor::{Anchor, AnchorDirty},
 		async_collider::AsyncCollider,
 		blockable::Blockable,
 		character_gravity::CharacterGravity,
@@ -187,12 +187,15 @@ where
 				ForceAffected::insert_from::<DefaultAttributes>.in_set(PhysicsSystems),
 			)
 			// General Lifetime relationship
-			.add_observer(LifetimeTiedTo::insert_on::<Anchor<Always>>)
+			.add_observer(LifetimeTiedTo::insert_on::<Anchor>)
 			.add_observer(TiedLifetimes::despawn_relationships_on_remove)
 			// Apply interactions
 			.add_message::<RayEvent>()
 			.add_message::<BeamInteraction>()
 			.init_resource::<OngoingInteractions>()
+			// Anchor
+			.add_observer(AnchorDirty::process.pipe(OnError::log))
+			.add_systems(Update, Anchor::mark_dirty.in_set(PhysicsSystems))
 			.add_systems(
 				Update,
 				(
@@ -200,8 +203,6 @@ where
 					(
 						GroundTarget::set_position,
 						DestroyAfterDistanceTraveled::system,
-						Anchor::<Once>::system.pipe(OnError::log),
-						Anchor::<Always>::system.pipe(OnError::log),
 						SetVelocityForward::system,
 					)
 						.chain(),

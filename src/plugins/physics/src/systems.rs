@@ -1,4 +1,3 @@
-pub(crate) mod anchor_system;
 pub(crate) mod apply_gravity;
 pub(crate) mod apply_pull;
 pub(crate) mod async_collider;
@@ -8,6 +7,7 @@ pub(crate) mod ground_target;
 pub(crate) mod insert_affected;
 pub(crate) mod interactions;
 pub(crate) mod life;
+pub(crate) mod mark_anchor_dirty;
 pub(crate) mod ongoing_interactions;
 pub(crate) mod physical_bodies_prefab;
 pub(crate) mod prevent_tunneling;
