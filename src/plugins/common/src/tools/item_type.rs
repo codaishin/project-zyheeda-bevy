@@ -1,7 +1,6 @@
+use crate::traits::accessors::get::ViewField;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
-
-use crate::traits::accessors::get::Property;
 
 #[derive(Debug, Default, Hash, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
 pub enum ItemType {
@@ -12,7 +11,7 @@ pub enum ItemType {
 	VoidBeam,
 }
 
-impl Property for ItemType {
+impl ViewField for ItemType {
 	type TValue<'a> = Self;
 }
 
@@ -25,6 +24,6 @@ impl<const N: usize> From<[ItemType; N]> for CompatibleItems {
 	}
 }
 
-impl Property for CompatibleItems {
+impl ViewField for CompatibleItems {
 	type TValue<'a> = &'a HashSet<ItemType>;
 }

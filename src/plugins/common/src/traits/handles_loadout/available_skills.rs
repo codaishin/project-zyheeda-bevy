@@ -1,7 +1,7 @@
 use crate::{
 	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::GetProperty,
+		accessors::get::View,
 		handles_loadout::skills::{GetSkillId, SkillIcon, SkillToken},
 	},
 };
@@ -19,7 +19,7 @@ impl From<AvailableSkills> for Entity {
 }
 
 pub trait ReadAvailableSkills<TSkillID> {
-	type TSkill<'a>: GetProperty<SkillToken> + GetProperty<SkillIcon> + GetSkillId<TSkillID>
+	type TSkill<'a>: View<SkillToken> + View<SkillIcon> + GetSkillId<TSkillID>
 	where
 		Self: 'a;
 

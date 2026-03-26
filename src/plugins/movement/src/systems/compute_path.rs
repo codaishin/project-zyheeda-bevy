@@ -2,7 +2,7 @@ use crate::{MovementPath, components::movement_path::Mode};
 use bevy::{ecs::query::QueryFilter, prelude::*};
 use common::{
 	traits::{
-		accessors::get::{GetProperty, TryApplyOn},
+		accessors::get::{TryApplyOn, View},
 		handles_map_generation::GroundPosition,
 		handles_movement::RequiredClearance,
 		handles_path_finding::ComputePath,
@@ -28,12 +28,12 @@ pub(crate) trait ComputePathSystem: QueryFilter + Sized {
 		computers: Query<&TComputer>,
 	) where
 		TComputer: Component + ComputePath,
-		TGetComputer: Component + GetProperty<Entity>,
+		TGetComputer: Component + View<Entity>,
 		TConfig: Component,
 		for<'a> &'a TConfig: Into<RequiredClearance>,
 	{
 		for (entity, config, transform, path, get_computer) in &movements {
-			let Ok(computer) = computers.get(get_computer.get_property()) else {
+			let Ok(computer) = computers.get(get_computer.view()) else {
 				continue;
 			};
 			let Mode::PathTarget(Some(target)) = path.0 else {
@@ -96,8 +96,8 @@ mod tests {
 	#[derive(Component)]
 	struct _GetComputer(Entity);
 
-	impl GetProperty<Entity> for _GetComputer {
-		fn get_property(&self) -> Entity {
+	impl View<Entity> for _GetComputer {
+		fn view(&self) -> Entity {
 			self.0
 		}
 	}

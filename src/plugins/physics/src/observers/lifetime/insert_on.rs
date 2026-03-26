@@ -2,7 +2,7 @@ use crate::components::lifetime::LifetimeTiedTo;
 use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
-	traits::accessors::get::{Get, GetProperty, TryApplyOn},
+	traits::accessors::get::{Get, TryApplyOn, View},
 	zyheeda_commands::ZyheedaCommands,
 };
 
@@ -12,13 +12,13 @@ impl LifetimeTiedTo {
 		components: Query<&T>,
 		mut commands: ZyheedaCommands,
 	) where
-		T: Component + GetProperty<PersistentEntity>,
+		T: Component + View<PersistentEntity>,
 	{
 		let entity = on_insert.entity;
 		let Ok(component) = components.get(entity) else {
 			return;
 		};
-		let Some(root) = commands.get(&component.get_property()) else {
+		let Some(root) = commands.get(&component.view()) else {
 			return;
 		};
 
@@ -37,8 +37,8 @@ mod tests {
 	#[derive(Component)]
 	struct _Component(PersistentEntity);
 
-	impl GetProperty<PersistentEntity> for _Component {
-		fn get_property(&self) -> PersistentEntity {
+	impl View<PersistentEntity> for _Component {
+		fn view(&self) -> PersistentEntity {
 			self.0
 		}
 	}

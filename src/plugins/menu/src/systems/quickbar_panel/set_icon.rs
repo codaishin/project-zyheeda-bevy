@@ -2,7 +2,7 @@ use crate::components::{icon::Icon, label::UILabel, quickbar_panel::QuickbarPane
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	traits::{
-		accessors::get::{DynProperty, GetContext, TryApplyOn},
+		accessors::get::{GetContext, TryApplyOn, ViewOf},
 		handles_loadout::skills::{ReadSkills, SkillIcon, SkillToken, Skills},
 		handles_localization::Token,
 	},
@@ -28,8 +28,8 @@ impl QuickbarPanel {
 				let Some(skill) = ctx.get_skill(*key) else {
 					continue;
 				};
-				let token = skill.dyn_property::<SkillToken>();
-				let image = skill.dyn_property::<SkillIcon>();
+				let token = skill.view_of::<SkillToken>();
+				let image = skill.view_of::<SkillIcon>();
 
 				commands.try_apply_on(&panel_entity, |mut e| {
 					if !loaded(current_icon, image) {
@@ -69,11 +69,7 @@ mod tests {
 	};
 	use common::{
 		tools::{action_key::slot::PlayerSlot, skill_execution::SkillExecution},
-		traits::{
-			accessors::get::GetProperty,
-			handles_loadout::LoadoutKey,
-			handles_localization::Token,
-		},
+		traits::{accessors::get::View, handles_loadout::LoadoutKey, handles_localization::Token},
 	};
 	use std::collections::HashMap;
 	use testing::{IsChanged, SingleThreadedApp, new_handle};
@@ -104,20 +100,20 @@ mod tests {
 		token: Token,
 	}
 
-	impl GetProperty<SkillIcon> for _Skill {
-		fn get_property(&self) -> &'_ Handle<Image> {
+	impl View<SkillIcon> for _Skill {
+		fn view(&self) -> &'_ Handle<Image> {
 			&self.icon
 		}
 	}
 
-	impl GetProperty<SkillToken> for _Skill {
-		fn get_property(&self) -> &'_ Token {
+	impl View<SkillToken> for _Skill {
+		fn view(&self) -> &'_ Token {
 			&self.token
 		}
 	}
 
-	impl GetProperty<SkillExecution> for _Skill {
-		fn get_property(&self) -> SkillExecution {
+	impl View<SkillExecution> for _Skill {
+		fn view(&self) -> SkillExecution {
 			SkillExecution::None
 		}
 	}

@@ -1,7 +1,7 @@
 use crate::{
 	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::GetProperty,
+		accessors::get::View,
 		handles_loadout::skills::{GetSkillId, SkillIcon, SkillToken},
 	},
 };
@@ -56,13 +56,13 @@ where
 }
 
 pub trait ReadCombos<TId>:
-	GetCombosOrdered<TSkill: GetSkillId<TId> + GetProperty<SkillToken> + GetProperty<SkillIcon>>
+	GetCombosOrdered<TSkill: GetSkillId<TId> + View<SkillToken> + View<SkillIcon>>
 	+ NextConfiguredKeys<SlotKey>
 {
 }
 
 impl<T, TId> ReadCombos<TId> for T where
-	T: GetCombosOrdered<TSkill: GetSkillId<TId> + GetProperty<SkillToken> + GetProperty<SkillIcon>>
+	T: GetCombosOrdered<TSkill: GetSkillId<TId> + View<SkillToken> + View<SkillIcon>>
 		+ NextConfiguredKeys<SlotKey>
 {
 }

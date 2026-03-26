@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use common::{
 	tools::attribute::AttributeOnSpawn,
-	traits::accessors::get::{GetProperty, TryApplyOn},
+	traits::accessors::get::{TryApplyOn, View},
 	zyheeda_commands::ZyheedaCommands,
 };
 
@@ -12,11 +12,11 @@ pub(crate) trait InsertAffected: AffectedComponent {
 		mut commands: ZyheedaCommands,
 		default_attributes: Query<(Entity, &TDefaultAttributes), Without<Self>>,
 	) where
-		TDefaultAttributes: Component + GetProperty<AttributeOnSpawn<Self::TAttribute>>,
+		TDefaultAttributes: Component + View<AttributeOnSpawn<Self::TAttribute>>,
 	{
 		for (entity, default_attribute) in &default_attributes {
 			commands.try_apply_on(&entity, |mut e| {
-				let attribute = default_attribute.get_property();
+				let attribute = default_attribute.view();
 				e.try_insert(Self::from(attribute));
 			});
 		}
@@ -51,8 +51,8 @@ mod tests {
 	#[derive(Component)]
 	struct _DefaultAttribute(_Attribute);
 
-	impl GetProperty<AttributeOnSpawn<_Attribute>> for _DefaultAttribute {
-		fn get_property(&self) -> _Attribute {
+	impl View<AttributeOnSpawn<_Attribute>> for _DefaultAttribute {
+		fn view(&self) -> _Attribute {
 			self.0
 		}
 	}

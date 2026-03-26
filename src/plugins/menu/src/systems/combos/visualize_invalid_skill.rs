@@ -60,7 +60,7 @@ mod tests {
 	use common::{
 		tools::action_key::slot::{PlayerSlot, SlotKey},
 		traits::{
-			accessors::get::GetProperty,
+			accessors::get::View,
 			handles_loadout::skills::{SkillIcon, SkillToken},
 			handles_localization::Token,
 		},
@@ -100,16 +100,16 @@ mod tests {
 
 	const IMAGE: Handle<Image> = Handle::Uuid(AssetId::<Image>::DEFAULT_UUID, PhantomData);
 
-	impl GetProperty<SkillIcon> for _Skill {
-		fn get_property(&self) -> &'_ Handle<Image> {
+	impl View<SkillIcon> for _Skill {
+		fn view(&self) -> &'_ Handle<Image> {
 			&IMAGE
 		}
 	}
 
 	static TOKEN: LazyLock<Token> = LazyLock::new(|| Token::from("my skill token"));
 
-	impl GetProperty<SkillToken> for _Skill {
-		fn get_property(&self) -> &Token {
+	impl View<SkillToken> for _Skill {
+		fn view(&self) -> &Token {
 			&TOKEN
 		}
 	}

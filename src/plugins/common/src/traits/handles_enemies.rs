@@ -1,5 +1,5 @@
 use crate::traits::{
-	accessors::get::Property,
+	accessors::get::ViewField,
 	iteration::{Iter, IterFinite},
 };
 use bevy::prelude::*;
@@ -26,7 +26,7 @@ impl IterFinite for EnemyType {
 	}
 }
 
-impl Property for EnemyType {
+impl ViewField for EnemyType {
 	type TValue<'a> = Self;
 }
 

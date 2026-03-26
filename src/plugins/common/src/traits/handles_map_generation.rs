@@ -2,7 +2,7 @@ use super::thread_safe::ThreadSafe;
 use crate::{
 	tools::Units,
 	traits::{
-		accessors::get::{GetContextMut, GetProperty, Property},
+		accessors::get::{GetContextMut, View, ViewField},
 		handles_enemies::EnemyType,
 	},
 	zyheeda_commands::ZyheedaEntityCommands,
@@ -25,7 +25,7 @@ pub trait HandlesMapGeneration {
 	type TGraph: Graph + for<'a> From<&'a Self::TMap> + ThreadSafe;
 
 	type TMap: Component;
-	type TMapRef: Component + GetProperty<Entity>;
+	type TMapRef: Component + View<Entity>;
 }
 
 pub type NewMapAgentParamMut<'w, 's, TMaps> = <TMaps as HandlesMapGeneration>::TNewMapAgent<'w, 's>;
@@ -137,6 +137,6 @@ pub enum AgentType {
 	Enemy(EnemyType),
 }
 
-impl Property for AgentType {
+impl ViewField for AgentType {
 	type TValue<'a> = Self;
 }

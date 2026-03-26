@@ -1,6 +1,5 @@
+use crate::traits::accessors::get::ViewField;
 use serde::{Deserialize, Serialize};
-
-use crate::traits::accessors::get::Property;
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub struct Health {
@@ -17,6 +16,6 @@ impl Health {
 	}
 }
 
-impl Property for Health {
+impl ViewField for Health {
 	type TValue<'a> = Self;
 }

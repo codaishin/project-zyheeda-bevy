@@ -1,5 +1,5 @@
 use bevy::ui::{UiRect, Val};
-use common::{tools::Index, traits::accessors::get::Property};
+use common::{tools::Index, traits::accessors::get::ViewField};
 use std::ops::{Add, Div, Mul, Sub};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -8,7 +8,7 @@ pub enum PanelState {
 	Filled,
 }
 
-impl Property for PanelState {
+impl ViewField for PanelState {
 	type TValue<'a> = Self;
 }
 

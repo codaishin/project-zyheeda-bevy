@@ -1,6 +1,6 @@
-use crate::traits::accessors::get::Property;
+use crate::traits::accessors::get::ViewField;
 use bevy::ecs::entity::Entity;
 
-impl Property for Entity {
+impl ViewField for Entity {
 	type TValue<'a> = Self;
 }

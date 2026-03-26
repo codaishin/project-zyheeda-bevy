@@ -7,7 +7,7 @@ use crate::components::{
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	traits::{
-		accessors::get::{DynProperty, GetContext, TryApplyOn},
+		accessors::get::{GetContext, TryApplyOn, ViewOf},
 		handles_loadout::{
 			available_skills::{AvailableSkills, ReadAvailableSkills},
 			skills::{GetSkillId, SkillIcon, SkillToken},
@@ -44,8 +44,8 @@ impl<TLayout> SkillSelectDropdownCommand<TLayout> {
 						ComboSkillButton::<DropdownItem<TLayout>, TId>::new(
 							ComboSkill {
 								id: skill.get_skill_id(),
-								token: skill.dyn_property::<SkillToken>().clone(),
-								icon: skill.dyn_property::<SkillIcon>().clone(),
+								token: skill.view_of::<SkillToken>().clone(),
+								icon: skill.view_of::<SkillIcon>().clone(),
 							},
 							command.key_path.clone(),
 						)
@@ -67,7 +67,7 @@ mod tests {
 	use crate::components::dropdown::Dropdown;
 	use common::{
 		tools::action_key::slot::{PlayerSlot, Side, SlotKey},
-		traits::{accessors::get::GetProperty, handles_localization::Token},
+		traits::{accessors::get::View, handles_localization::Token},
 	};
 	use std::collections::HashMap;
 	use testing::{SingleThreadedApp, new_handle};
@@ -108,14 +108,14 @@ mod tests {
 		}
 	}
 
-	impl GetProperty<SkillToken> for _Skill {
-		fn get_property(&self) -> &Token {
+	impl View<SkillToken> for _Skill {
+		fn view(&self) -> &Token {
 			&self.token
 		}
 	}
 
-	impl GetProperty<SkillIcon> for _Skill {
-		fn get_property(&self) -> &'_ Handle<Image> {
+	impl View<SkillIcon> for _Skill {
+		fn view(&self) -> &'_ Handle<Image> {
 			&self.icon
 		}
 	}

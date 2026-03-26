@@ -10,7 +10,7 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	tools::skill_execution::SkillExecution,
 	traits::{
-		accessors::get::{DynProperty, GetContext, GetProperty, TryApplyOn},
+		accessors::get::{GetContext, TryApplyOn, View, ViewOf},
 		handles_input::MouseOverrideActive,
 		handles_loadout::skills::{ReadSkills, Skills},
 	},
@@ -25,7 +25,7 @@ impl QuickbarPanel {
 		param: StaticSystemParam<TLoadout>,
 	) where
 		TAgent: Component,
-		TActionKeyButton: Component + GetProperty<MouseOverrideActive>,
+		TActionKeyButton: Component + View<MouseOverrideActive>,
 		TLoadout: for<'c> GetContext<Skills, TContext<'c>: ReadSkills>,
 	{
 		set_color(commands, buttons, agents, param)
@@ -39,7 +39,7 @@ fn set_color<TAgent, TActionKeyButton, TLoadout>(
 	param: StaticSystemParam<TLoadout>,
 ) where
 	TAgent: Component,
-	TActionKeyButton: Component + GetProperty<MouseOverrideActive>,
+	TActionKeyButton: Component + View<MouseOverrideActive>,
 	TLoadout: for<'c> GetContext<Skills, TContext<'c>: ReadSkills>,
 {
 	for entity in &agents {
@@ -62,13 +62,13 @@ fn get_color_override<TActionKeyButton, TContext>(
 	ctx: &TContext,
 ) -> Option<ColorConfig>
 where
-	TActionKeyButton: Component + GetProperty<MouseOverrideActive>,
+	TActionKeyButton: Component + View<MouseOverrideActive>,
 	TContext: ReadSkills,
 {
 	let skill = ctx.get_skill(*key)?;
-	let activate_on_mouse_left = || action_button.dyn_property::<MouseOverrideActive>();
+	let activate_on_mouse_left = || action_button.view_of::<MouseOverrideActive>();
 
-	match skill.dyn_property::<SkillExecution>() {
+	match skill.view_of::<SkillExecution>() {
 		SkillExecution::Active => Some(QuickbarPanel::ACTIVE_COLORS),
 		SkillExecution::Queued => Some(QuickbarPanel::QUEUED_COLORS),
 		SkillExecution::None if activate_on_mouse_left() => {
@@ -117,8 +117,8 @@ mod tests {
 		mouse_overridden: bool,
 	}
 
-	impl GetProperty<MouseOverrideActive> for _ActionKeyButton {
-		fn get_property(&self) -> bool {
+	impl View<MouseOverrideActive> for _ActionKeyButton {
+		fn view(&self) -> bool {
 			self.mouse_overridden
 		}
 	}
@@ -148,22 +148,22 @@ mod tests {
 
 	const IMAGE: Handle<Image> = Handle::Uuid(AssetId::<Image>::DEFAULT_UUID, PhantomData);
 
-	impl GetProperty<SkillIcon> for _Skill {
-		fn get_property(&self) -> &'_ Handle<Image> {
+	impl View<SkillIcon> for _Skill {
+		fn view(&self) -> &'_ Handle<Image> {
 			&IMAGE
 		}
 	}
 
 	static TOKEN: LazyLock<Token> = LazyLock::new(|| Token::from("my skill"));
 
-	impl GetProperty<SkillToken> for _Skill {
-		fn get_property(&self) -> &'_ Token {
+	impl View<SkillToken> for _Skill {
+		fn view(&self) -> &'_ Token {
 			&TOKEN
 		}
 	}
 
-	impl GetProperty<SkillExecution> for _Skill {
-		fn get_property(&self) -> SkillExecution {
+	impl View<SkillExecution> for _Skill {
+		fn view(&self) -> SkillExecution {
 			self.0
 		}
 	}

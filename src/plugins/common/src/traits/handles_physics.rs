@@ -6,7 +6,7 @@ use crate::{
 	toi,
 	tools::{Done, Units, speed::Speed},
 	traits::{
-		accessors::get::{GetProperty, Property},
+		accessors::get::{View, ViewField},
 		handles_physics::physical_bodies::Blocker,
 	},
 };
@@ -76,10 +76,7 @@ pub trait HandlesMotion {
 	///
 	/// Implementors must make sure this works on top level entities. No guarantees are made for
 	/// entities that are a child of other entities.
-	type TCharacterMotion: Component
-		+ From<CharacterMotion>
-		+ GetProperty<Done>
-		+ GetProperty<CharacterMotion>;
+	type TCharacterMotion: Component + From<CharacterMotion> + View<Done> + View<CharacterMotion>;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
@@ -89,7 +86,7 @@ pub enum CharacterMotion {
 	Stop,
 }
 
-impl Property for CharacterMotion {
+impl ViewField for CharacterMotion {
 	type TValue<'a> = Self;
 }
 
@@ -120,12 +117,12 @@ where
 }
 
 pub trait HandlesLife:
-	HandlesPhysicalEffect<HealthDamage, TAffectedComponent: GetProperty<Health>>
+	HandlesPhysicalEffect<HealthDamage, TAffectedComponent: View<Health>>
 {
 }
 
 impl<T> HandlesLife for T where
-	T: HandlesPhysicalEffect<HealthDamage, TAffectedComponent: GetProperty<Health>>
+	T: HandlesPhysicalEffect<HealthDamage, TAffectedComponent: View<Health>>
 {
 }
 
@@ -150,7 +147,7 @@ impl Default for PhysicalDefaultAttributes {
 	}
 }
 
-impl Property for PhysicalDefaultAttributes {
+impl ViewField for PhysicalDefaultAttributes {
 	type TValue<'a> = Self;
 }
 

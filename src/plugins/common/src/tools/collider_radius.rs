@@ -1,6 +1,5 @@
-use crate::traits::accessors::get::Property;
-
 use super::Units;
+use crate::traits::accessors::get::ViewField;
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 
@@ -22,6 +21,6 @@ impl Deref for ColliderRadius {
 	}
 }
 
-impl Property for ColliderRadius {
+impl ViewField for ColliderRadius {
 	type TValue<'a> = Units;
 }

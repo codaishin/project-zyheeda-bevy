@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::GetProperty,
+		accessors::get::View,
 		handles_loadout::{
 			combos::GetCombosOrdered,
 			skills::{GetSkillId, SkillIcon, SkillToken},
@@ -39,7 +39,7 @@ where
 impl<T, TId> BuildComboTreeLayout<TId> for T
 where
 	TId: Debug + PartialEq + Clone,
-	T: GetCombosOrdered<TSkill: GetProperty<SkillToken> + GetProperty<SkillIcon> + GetSkillId<TId>>,
+	T: GetCombosOrdered<TSkill: View<SkillToken> + View<SkillIcon> + GetSkillId<TId>>,
 {
 	fn build_combo_tree_layout(&self) -> ComboTreeLayout<SlotKey, ComboSkill<TId>> {
 		let mut get_first_symbol = get_first_symbol(HasRoot::False);
@@ -75,7 +75,7 @@ fn drain_last<TSkill, TId>(
 ) -> ComboTreeElement<SlotKey, ComboSkill<TId>>
 where
 	TId: Debug + PartialEq + Clone,
-	TSkill: GetProperty<SkillToken> + GetProperty<SkillIcon> + GetSkillId<TId>,
+	TSkill: View<SkillToken> + View<SkillIcon> + GetSkillId<TId>,
 {
 	let (key_path, skill) = combo.remove(combo.len() - 1);
 	ComboTreeElement::Leaf {
@@ -127,7 +127,7 @@ fn layout_element<TSkill, TId>(
 	encountered: &mut HashSet<Vec<SlotKey>>,
 ) -> ComboTreeElement<SlotKey, ComboSkill<TId>>
 where
-	TSkill: GetSkillId<TId> + GetProperty<SkillToken> + GetProperty<SkillIcon>,
+	TSkill: GetSkillId<TId> + View<SkillToken> + View<SkillIcon>,
 	TId: Debug + PartialEq + Clone,
 {
 	if encountered.contains(&key_path) {
@@ -195,14 +195,14 @@ mod tests {
 		}
 	}
 
-	impl GetProperty<SkillToken> for _Skill {
-		fn get_property(&self) -> &'_ Token {
+	impl View<SkillToken> for _Skill {
+		fn view(&self) -> &'_ Token {
 			&self.token
 		}
 	}
 
-	impl GetProperty<SkillIcon> for _Skill {
-		fn get_property(&self) -> &'_ Handle<Image> {
+	impl View<SkillIcon> for _Skill {
+		fn view(&self) -> &'_ Handle<Image> {
 			&self.icon
 		}
 	}

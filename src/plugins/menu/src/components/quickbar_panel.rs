@@ -5,7 +5,7 @@ use crate::{
 use bevy::{color::Color, ecs::component::Component};
 use common::{
 	tools::action_key::slot::{PlayerSlot, SlotKey},
-	traits::accessors::get::GetProperty,
+	traits::accessors::get::View,
 };
 
 #[derive(Component)]
@@ -44,20 +44,20 @@ impl From<PlayerSlot> for QuickbarPanel {
 	}
 }
 
-impl GetProperty<PanelState> for QuickbarPanel {
-	fn get_property(&self) -> PanelState {
+impl View<PanelState> for QuickbarPanel {
+	fn view(&self) -> PanelState {
 		self.state
 	}
 }
 
-impl GetProperty<PlayerSlot> for QuickbarPanel {
-	fn get_property(&self) -> PlayerSlot {
+impl View<PlayerSlot> for QuickbarPanel {
+	fn view(&self) -> PlayerSlot {
 		self.key
 	}
 }
 
-impl GetProperty<SlotKey> for QuickbarPanel {
-	fn get_property(&self) -> SlotKey {
+impl View<SlotKey> for QuickbarPanel {
+	fn view(&self) -> SlotKey {
 		SlotKey::from(self.key)
 	}
 }
@@ -69,7 +69,7 @@ impl HasPanelColors for QuickbarPanel {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{tools::action_key::slot::Side, traits::accessors::get::DynProperty};
+	use common::{tools::action_key::slot::Side, traits::accessors::get::ViewOf};
 
 	#[test]
 	fn get_empty() {
@@ -77,7 +77,7 @@ mod tests {
 			key: PlayerSlot::Lower(Side::Right),
 			state: PanelState::Empty,
 		};
-		assert_eq!(PanelState::Empty, panel.dyn_property::<PanelState>());
+		assert_eq!(PanelState::Empty, panel.view_of::<PanelState>());
 	}
 
 	#[test]
@@ -86,7 +86,7 @@ mod tests {
 			key: PlayerSlot::Lower(Side::Right),
 			state: PanelState::Filled,
 		};
-		assert_eq!(PanelState::Filled, panel.dyn_property::<PanelState>());
+		assert_eq!(PanelState::Filled, panel.view_of::<PanelState>());
 	}
 
 	#[test]
@@ -96,10 +96,7 @@ mod tests {
 			state: PanelState::Empty,
 		};
 
-		assert_eq!(
-			PlayerSlot::Lower(Side::Left),
-			panel.dyn_property::<PlayerSlot>()
-		);
+		assert_eq!(PlayerSlot::Lower(Side::Left), panel.view_of::<PlayerSlot>());
 	}
 
 	#[test]
@@ -111,7 +108,7 @@ mod tests {
 
 		assert_eq!(
 			SlotKey::from(PlayerSlot::Lower(Side::Left)),
-			panel.dyn_property::<SlotKey>(),
+			panel.view_of::<SlotKey>(),
 		);
 	}
 }

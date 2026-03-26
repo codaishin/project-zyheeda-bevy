@@ -92,16 +92,17 @@ pub trait TryApplyOn<'a, TKey>: GetMut<TKey> + 'a {
 
 impl<'a, T, TEntity> TryApplyOn<'a, TEntity> for T where T: GetMut<TEntity> + 'a {}
 
-/// A type-level descriptor for use with [`GetProperty`].
+/// A type-level descriptor for use with [`View`] or [`ViewOf`].
 ///
-/// Implementors of this trait define how a value should be accessed through [`GetProperty`].
-/// The associated type [`TValue<'a>`](Property::TValue) determines whether the value is retrieved
-/// by reference (useful for computation-heavy or non-`Clone` types) or by value.
+/// Implementers of this trait define how a value should be accessed through [`View`] or
+/// [`ViewOf`]. The associated type [`TValue<'a>`](ViewField::TValue) determines whether the
+/// value is retrieved by reference (useful for computation-heavy or non-`Clone` types) or by value.
 ///
 /// This can also be used for wrappers or markers to expose a different type.
+///
 /// # Example
 /// ```
-/// use common::traits::accessors::get::{Property};
+/// use common::traits::accessors::get::{ViewField};
 ///
 /// // Small types can be returned by value.
 /// #[derive(Clone, Copy)]
@@ -110,118 +111,124 @@ impl<'a, T, TEntity> TryApplyOn<'a, TEntity> for T where T: GetMut<TEntity> + 'a
 ///   B,
 /// }
 ///
-/// impl Property for TinyEnum {
+/// impl ViewField for TinyEnum {
 ///   type TValue<'a> = Self;
 /// }
 ///
 /// // Large or expensive-to-clone types are better returned by reference.
 /// struct GiantArray([String; 100_000]);
 ///
-/// impl Property for GiantArray {
+/// impl ViewField for GiantArray {
 ///   type TValue<'a> = &'a Self;
 /// }
 ///
-/// // Wrapper types can choose to expose their inner value directly,
-/// // independent of how the value itself is stored.
+/// // Wrapper types can choose to expose their inner value directly
 /// struct NumberOfLimbs(u8);
 ///
-/// impl Property for NumberOfLimbs {
+/// impl ViewField for NumberOfLimbs {
 ///   type TValue<'a> = u8;
 /// }
 ///
 /// // Markers, that don't hold data, can be used to name a property
 /// struct NumberOfDoors;
 ///
-/// impl Property for NumberOfDoors {
+/// impl ViewField for NumberOfDoors {
 ///   type TValue<'a> = u8;
 /// }
 /// ```
-pub trait Property {
+pub trait ViewField {
 	type TValue<'a>;
 }
 
-/// A generic getter trait over a [`Property`].
+/// View a [`ViewField`].
 ///
-/// The property specifies how the value is exposed (by reference, by value, or via a transformed
-/// inner type). This allows consumers to request a value in a uniform way, while letting the
-/// property control the retrieval strategy.
+/// The view field type specifies how the value is exposed (by reference, by value, or via a
+/// transformed type). This allows consumers to request a value in a uniform way, while letting the
+/// view field type control the retrieval strategy.
 ///
 /// # Example
 /// ```
-/// use common::traits::accessors::get::{Property, GetProperty};
+/// use common::traits::accessors::get::{ViewField, View};
 ///
 /// #[derive(Debug, PartialEq)]
-/// struct MyProperty;
+/// struct MyField;
 ///
-/// impl Property for MyProperty {
+/// impl ViewField for MyField {
 ///   type TValue<'a> = Self;
 /// }
 ///
-/// struct Obj;
+/// struct MyObj;
 ///
-/// impl GetProperty<MyProperty> for Obj {
-///   fn get_property(&self) -> MyProperty {
-///     MyProperty
+/// impl View<MyField> for MyObj {
+///   fn view(&self) -> MyField {
+///     MyField
 ///   }
 /// }
 ///
-/// let obj = Obj;
+/// let obj = MyObj;
 ///
-/// assert_eq!(MyProperty, obj.get_property());
+/// assert_eq!(MyField, obj.view());
 /// ```
-pub trait GetProperty<TProperty>
+pub trait View<TField>
 where
-	TProperty: Property,
+	TField: ViewField,
 {
-	fn get_property(&self) -> TProperty::TValue<'_>;
+	fn view(&self) -> TField::TValue<'_>;
 }
 
-/// A convenience trait to access any [`Property`] dynamically.
+/// A convenience trait to access any [`ViewField`] by naming it.
 ///
 /// Useful when you want to name the retrieved property directly on the call.
 ///
 /// ```
-/// use common::traits::accessors::get::{Property, GetProperty, DynProperty};
+/// use common::traits::accessors::get::{ViewField, View, ViewOf};
 ///
 /// #[derive(Debug, PartialEq)]
-/// struct MyProperty;
+/// struct MyField;
 ///
-/// impl Property for MyProperty {
+/// impl ViewField for MyField {
 ///   type TValue<'a> = Self;
 /// }
 ///
-/// struct Obj;
+/// struct MyObj;
 ///
-/// impl GetProperty<MyProperty> for Obj {
-///   fn get_property(&self) -> MyProperty {
-///     MyProperty
+/// impl View<MyField> for MyObj {
+///   fn view(&self) -> MyField {
+///     MyField
 ///   }
 /// }
 ///
-/// let obj = Obj;
+/// let obj = MyObj;
 ///
-/// // when rust cannot determine which `GetProperty` impl of many to use:
-/// let a: MyProperty = obj.get_property();
+/// // naming the field type in case of ambiguity between multiple `View<T>` impls
+/// let a: MyField = obj.view();
 ///
-/// // same issue as above, but using `DynProperty`:
-/// let b = obj.dyn_property::<MyProperty>();
+/// assert_eq!(MyField, a);
 ///
-/// assert_eq!(a, b);
+/// // naming the full `View` trait in case of ambiguity between multiple `View<T>` impls
+/// let b = View::<MyField>::view(&obj);
+///
+/// assert_eq!(MyField, b);
+///
+/// // using `ViewOf` in case of ambiguity between multiple `View<T>` impls
+/// let c = obj.view_of::<MyField>();
+///
+/// assert_eq!(MyField, c);
 /// ```
-pub trait DynProperty {
-	fn dyn_property<TProperty>(&self) -> TProperty::TValue<'_>
+pub trait ViewOf {
+	fn view_of<TField>(&self) -> TField::TValue<'_>
 	where
-		TProperty: Property,
-		Self: GetProperty<TProperty>;
+		TField: ViewField,
+		Self: View<TField>;
 }
 
-impl<T> DynProperty for T {
-	fn dyn_property<TProperty>(&self) -> TProperty::TValue<'_>
+impl<T> ViewOf for T {
+	fn view_of<TField>(&self) -> TField::TValue<'_>
 	where
-		TProperty: Property,
-		Self: GetProperty<TProperty>,
+		TField: ViewField,
+		Self: View<TField>,
 	{
-		GetProperty::<TProperty>::get_property(self)
+		View::<TField>::view(self)
 	}
 }
 

@@ -1,9 +1,8 @@
+use crate::traits::accessors::get::ViewField;
 use bevy::prelude::*;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-
-use crate::traits::accessors::get::Property;
 
 /// Used as an [`Entity`] reference through different game sessions
 ///
@@ -78,7 +77,7 @@ impl Default for PersistentEntity {
 	}
 }
 
-impl Property for PersistentEntity {
+impl ViewField for PersistentEntity {
 	type TValue<'a> = Self;
 }
 

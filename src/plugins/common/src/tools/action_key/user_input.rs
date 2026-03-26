@@ -1,6 +1,6 @@
 use crate::{
 	tools::is_not::IsNot,
-	traits::{accessors::get::Property, handles_localization::Token},
+	traits::{accessors::get::ViewField, handles_localization::Token},
 };
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -63,6 +63,6 @@ impl TryFrom<UserInput> for MouseButton {
 	}
 }
 
-impl Property for UserInput {
+impl ViewField for UserInput {
 	type TValue<'a> = Self;
 }

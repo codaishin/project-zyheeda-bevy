@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use common::{
 	tools::Done,
-	traits::{accessors::get::GetProperty, handles_physics::CharacterMotion},
+	traits::{accessors::get::View, handles_physics::CharacterMotion},
 };
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
@@ -27,14 +27,14 @@ impl From<CharacterMotion> for ApplyCharacterMotion {
 	}
 }
 
-impl GetProperty<CharacterMotion> for ApplyCharacterMotion {
-	fn get_property(&self) -> CharacterMotion {
+impl View<CharacterMotion> for ApplyCharacterMotion {
+	fn view(&self) -> CharacterMotion {
 		self.motion
 	}
 }
 
-impl GetProperty<Done> for ApplyCharacterMotion {
-	fn get_property(&self) -> bool {
+impl View<Done> for ApplyCharacterMotion {
+	fn view(&self) -> bool {
 		self.is_done
 	}
 }

@@ -1,6 +1,6 @@
 use crate::{
 	tools::{Units, speed::Speed},
-	traits::accessors::get::{GetContext, GetContextMut, Property},
+	traits::accessors::get::{GetContext, GetContextMut, ViewField},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
 use serde::{Deserialize, Serialize};
@@ -49,7 +49,7 @@ impl From<Vec3> for MovementTarget {
 	}
 }
 
-impl Property for MovementTarget {
+impl ViewField for MovementTarget {
 	type TValue<'a> = Self;
 }
 

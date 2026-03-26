@@ -1,7 +1,7 @@
-use crate::traits::accessors::get::Property;
+use crate::traits::accessors::get::ViewField;
 use bevy::asset::{Asset, Handle};
 
-impl<T> Property for Handle<T>
+impl<T> ViewField for Handle<T>
 where
 	T: Asset,
 {

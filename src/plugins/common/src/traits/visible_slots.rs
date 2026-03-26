@@ -1,4 +1,4 @@
-use crate::{tools::action_key::slot::SlotKey, traits::accessors::get::GetProperty};
+use crate::{tools::action_key::slot::SlotKey, traits::accessors::get::View};
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct EssenceSlot(pub SlotKey);
@@ -9,8 +9,8 @@ impl From<SlotKey> for EssenceSlot {
 	}
 }
 
-impl GetProperty<SlotKey> for EssenceSlot {
-	fn get_property(&self) -> SlotKey {
+impl View<SlotKey> for EssenceSlot {
+	fn view(&self) -> SlotKey {
 		self.0
 	}
 }
@@ -24,8 +24,8 @@ impl From<SlotKey> for HandSlot {
 	}
 }
 
-impl GetProperty<SlotKey> for HandSlot {
-	fn get_property(&self) -> SlotKey {
+impl View<SlotKey> for HandSlot {
+	fn view(&self) -> SlotKey {
 		self.0
 	}
 }
@@ -39,8 +39,8 @@ impl From<SlotKey> for ForearmSlot {
 	}
 }
 
-impl GetProperty<SlotKey> for ForearmSlot {
-	fn get_property(&self) -> SlotKey {
+impl View<SlotKey> for ForearmSlot {
+	fn view(&self) -> SlotKey {
 		self.0
 	}
 }

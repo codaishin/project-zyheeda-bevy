@@ -10,7 +10,7 @@ use common::{
 	components::{asset_model::AssetModel, essence::Essence},
 	tools::item_type::ItemType,
 	traits::{
-		accessors::get::GetProperty,
+		accessors::get::View,
 		handles_localization::Token,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
 	},
@@ -25,14 +25,14 @@ pub struct Item {
 	pub item_type: ItemType,
 }
 
-impl GetProperty<ItemType> for Item {
-	fn get_property(&self) -> ItemType {
+impl View<ItemType> for Item {
+	fn view(&self) -> ItemType {
 		self.item_type
 	}
 }
 
-impl GetProperty<Option<Handle<Skill>>> for Item {
-	fn get_property(&self) -> Option<&'_ Handle<Skill>> {
+impl View<Option<Handle<Skill>>> for Item {
+	fn view(&self) -> Option<&'_ Handle<Skill>> {
 		self.skill.as_ref()
 	}
 }

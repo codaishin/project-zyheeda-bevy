@@ -1,6 +1,6 @@
-use crate::traits::accessors::get::Property;
+use crate::traits::accessors::get::ViewField;
 use bevy::prelude::*;
 
-impl Property for Ray3d {
+impl ViewField for Ray3d {
 	type TValue<'a> = Self;
 }

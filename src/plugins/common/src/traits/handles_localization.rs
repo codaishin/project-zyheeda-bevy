@@ -3,12 +3,11 @@ pub mod localized;
 mod key_code;
 mod mouse_button;
 
+use crate::traits::accessors::get::ViewField;
 use bevy::prelude::*;
 use localized::Localized;
 use std::{fmt::Display, ops::Deref, sync::Arc};
 use unic_langid::LanguageIdentifier;
-
-use crate::traits::accessors::get::Property;
 
 pub trait HandlesLocalization {
 	type TLocalizationServer: Resource + SetLocalization + Localize;
@@ -75,7 +74,7 @@ impl Deref for Token {
 	}
 }
 
-impl Property for Token {
+impl ViewField for Token {
 	type TValue<'a> = &'a Self;
 }
 

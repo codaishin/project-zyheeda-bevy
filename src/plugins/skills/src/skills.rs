@@ -11,7 +11,7 @@ use common::{
 		path::Path,
 	},
 	traits::{
-		accessors::get::GetProperty,
+		accessors::get::View,
 		handles_custom_assets::AssetFolderPath,
 		handles_loadout::skills::{GetSkillId, SkillIcon, SkillToken},
 		handles_localization::Token,
@@ -55,20 +55,20 @@ impl AssetFolderPath for Skill {
 	}
 }
 
-impl GetProperty<SkillToken> for Skill {
-	fn get_property(&self) -> &Token {
+impl View<SkillToken> for Skill {
+	fn view(&self) -> &Token {
 		&self.token
 	}
 }
 
-impl GetProperty<SkillIcon> for Skill {
-	fn get_property(&self) -> &Handle<Image> {
+impl View<SkillIcon> for Skill {
+	fn view(&self) -> &Handle<Image> {
 		&self.icon
 	}
 }
 
-impl GetProperty<CompatibleItems> for Skill {
-	fn get_property(&self) -> &HashSet<ItemType> {
+impl View<CompatibleItems> for Skill {
+	fn view(&self) -> &HashSet<ItemType> {
 		&self.compatible_items.0
 	}
 }
@@ -119,14 +119,14 @@ impl QueuedSkill {
 	}
 }
 
-impl GetProperty<SlotKey> for QueuedSkill {
-	fn get_property(&self) -> SlotKey {
+impl View<SlotKey> for QueuedSkill {
+	fn view(&self) -> SlotKey {
 		self.key
 	}
 }
 
-impl GetProperty<Token> for QueuedSkill {
-	fn get_property(&self) -> &Token {
+impl View<Token> for QueuedSkill {
+	fn view(&self) -> &Token {
 		&self.skill.token
 	}
 }

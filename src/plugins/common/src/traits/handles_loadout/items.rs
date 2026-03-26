@@ -1,5 +1,5 @@
 use crate::traits::{
-	accessors::get::{GetProperty, Property},
+	accessors::get::{View, ViewField},
 	handles_loadout::LoadoutKey,
 	handles_localization::Token,
 };
@@ -18,12 +18,12 @@ impl From<Items> for Entity {
 
 pub struct ItemToken;
 
-impl Property for ItemToken {
+impl ViewField for ItemToken {
 	type TValue<'a> = &'a Token;
 }
 
 pub trait ReadItems {
-	type TItem<'a>: GetProperty<ItemToken>
+	type TItem<'a>: View<ItemToken>
 	where
 		Self: 'a;
 
