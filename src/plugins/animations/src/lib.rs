@@ -18,6 +18,7 @@ use crate::{
 use bevy::{prelude::*, scene::SceneInstanceReady};
 use common::{
 	systems::track_components::TrackComponentInSelfAndChildren,
+	tools::plugin_system_set::PluginSystemSet,
 	traits::{
 		handles_animations::HandlesAnimations,
 		handles_saving::HandlesSaving,
@@ -72,7 +73,7 @@ pub struct AnimationSystems;
 impl<TDependencies> SystemSetDefinition for AnimationsPlugin<TDependencies> {
 	type TSystemSet = AnimationSystems;
 
-	const SYSTEMS: Self::TSystemSet = AnimationSystems;
+	const SYSTEMS: PluginSystemSet<Self::TSystemSet> = PluginSystemSet::from_set(AnimationSystems);
 }
 
 impl<TDependencies> HandlesAnimations for AnimationsPlugin<TDependencies> {

@@ -7,6 +7,7 @@ use common::{
 	states::game_state::GameState,
 	systems::log::OnError,
 	traits::{
+		after_plugin::AfterPlugin,
 		handles_graphics::{FirstPassCamera, WorldCameras},
 		handles_input::{HandlesInput, InputSystemParam},
 		handles_player::{HandlesPlayer, PlayerMainCamera},
@@ -58,7 +59,7 @@ where
 				move_with_target::<OrbitPlayer>,
 			)
 				.chain()
-				.after(TInput::SYSTEMS)
+				.after_plugin(TInput::SYSTEMS)
 				.run_if(in_state(GameState::Play)),
 		);
 	}

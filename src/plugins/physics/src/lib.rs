@@ -14,7 +14,7 @@ use crate::{
 	app::add_physics::AddPhysics,
 	components::{
 		affected::{force_affected::ForceAffected, gravity_affected::GravityAffected, life::Life},
-		anchor::{Always, Anchor, Once},
+		anchor::{Anchor, AnchorDirty},
 		async_collider::AsyncCollider,
 		blockable::Blockable,
 		character_gravity::CharacterGravity,
@@ -55,6 +55,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
 	systems::log::OnError,
+	tools::plugin_system_set::PluginSystemSet,
 	traits::{
 		delta::Delta,
 		handles_physics::{
@@ -72,6 +73,7 @@ use common::{
 			HandlesPhysicalSkillSpawnPoints,
 		},
 		prefab::AddPrefabObserver,
+		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -185,12 +187,15 @@ where
 				ForceAffected::insert_from::<DefaultAttributes>.in_set(PhysicsSystems),
 			)
 			// General Lifetime relationship
-			.add_observer(LifetimeTiedTo::insert_on::<Anchor<Always>>)
+			.add_observer(LifetimeTiedTo::insert_on::<Anchor>)
 			.add_observer(TiedLifetimes::despawn_relationships_on_remove)
 			// Apply interactions
 			.add_message::<RayEvent>()
 			.add_message::<BeamInteraction>()
 			.init_resource::<OngoingInteractions>()
+			// Anchor
+			.add_observer(AnchorDirty::process.pipe(OnError::log))
+			.add_systems(Update, Anchor::mark_dirty.in_set(PhysicsSystems))
 			.add_systems(
 				Update,
 				(
@@ -198,8 +203,6 @@ where
 					(
 						GroundTarget::set_position,
 						DestroyAfterDistanceTraveled::system,
-						Anchor::<Once>::system.pipe(OnError::log),
-						Anchor::<Always>::system.pipe(OnError::log),
 						SetVelocityForward::system,
 					)
 						.chain(),
@@ -254,10 +257,13 @@ impl<TDependencies> HandlesPhysicalAttributes for PhysicsPlugin<TDependencies> {
 }
 
 impl<TDependencies> HandlesPhysicalObjects for PhysicsPlugin<TDependencies> {
-	type TSystems = PhysicsSystems;
 	type TPhysicalObjectComponent = Blockable;
+}
 
-	const SYSTEMS: Self::TSystems = PhysicsSystems;
+impl<TDependencies> SystemSetDefinition for PhysicsPlugin<TDependencies> {
+	type TSystemSet = PhysicsSystems;
+
+	const SYSTEMS: PluginSystemSet<Self::TSystemSet> = PluginSystemSet::from_set(PhysicsSystems);
 }
 
 impl<TDependencies> HandlesPhysicalEffectTargets for PhysicsPlugin<TDependencies> {

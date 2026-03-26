@@ -19,6 +19,7 @@ use common::{
 	states::game_state::{GameState, LoadingEssentialAssets},
 	systems::log::OnError,
 	traits::{
+		after_plugin::AfterPlugin,
 		delta::Delta,
 		handles_agents::HandlesAgents,
 		handles_animations::{AnimationsSystemParamMut, HandlesAnimations},
@@ -206,7 +207,7 @@ where
 			)
 				.chain()
 				.run_if(in_state(GameState::Play))
-				.after(TInput::SYSTEMS),
+				.after_plugin(TInput::SYSTEMS),
 		);
 	}
 }

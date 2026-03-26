@@ -4,6 +4,7 @@ use crate::{
 	traits::{
 		accessors::get::{GetContextMut, View, ViewField},
 		handles_enemies::EnemyType,
+		system_set_definition::SystemSetDefinition,
 	},
 	zyheeda_commands::ZyheedaEntityCommands,
 };
@@ -15,10 +16,7 @@ use std::{
 	ops::{Deref, DerefMut},
 };
 
-pub trait HandlesMapGeneration {
-	const SYSTEMS: Self::TSystemSet;
-	type TSystemSet: SystemSet;
-
+pub trait HandlesMapGeneration: SystemSetDefinition {
 	type TNewMapAgent<'w, 's>: SystemParam
 		+ for<'c> GetContextMut<AgentPrefab, TContext<'c>: SetMapAgentPrefab>;
 

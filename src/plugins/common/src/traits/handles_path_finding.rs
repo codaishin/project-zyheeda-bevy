@@ -1,15 +1,16 @@
 use crate::{
 	tools::Units,
-	traits::{accessors::get::View, handles_map_generation::GroundPosition},
+	traits::{
+		accessors::get::View,
+		handles_map_generation::GroundPosition,
+		system_set_definition::SystemSetDefinition,
+	},
 };
 use bevy::prelude::*;
 
-pub trait HandlesPathFinding {
+pub trait HandlesPathFinding: SystemSetDefinition {
 	type TComputePath: Component + ComputePath;
-	type TSystemSet: SystemSet;
 	type TComputerRef: Component + View<Entity>;
-
-	const SYSTEMS: Self::TSystemSet;
 }
 
 pub trait ComputePath {

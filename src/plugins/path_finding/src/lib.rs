@@ -5,11 +5,15 @@ mod traits;
 pub mod components;
 
 use bevy::prelude::*;
-use common::traits::{
-	handles_map_generation::HandlesMapGeneration,
-	handles_path_finding::HandlesPathFinding,
-	register_derived_component::RegisterDerivedComponent,
-	thread_safe::ThreadSafe,
+use common::{
+	tools::plugin_system_set::PluginSystemSet,
+	traits::{
+		handles_map_generation::HandlesMapGeneration,
+		handles_path_finding::HandlesPathFinding,
+		register_derived_component::RegisterDerivedComponent,
+		system_set_definition::SystemSetDefinition,
+		thread_safe::ThreadSafe,
+	},
 };
 use components::navigation::Navigation;
 use methods::theta_star::ThetaStar;
@@ -40,8 +44,14 @@ where
 	TMaps: HandlesMapGeneration + ThreadSafe,
 {
 	type TComputePath = Navigation<ThetaStar, TMaps::TGraph>;
-	type TSystemSet = TMaps::TSystemSet;
 	type TComputerRef = TMaps::TMapRef;
+}
 
-	const SYSTEMS: Self::TSystemSet = TMaps::SYSTEMS;
+impl<TMaps> SystemSetDefinition for PathFindingPlugin<TMaps>
+where
+	TMaps: SystemSetDefinition + ThreadSafe,
+{
+	type TSystemSet = TMaps::TSystemSet;
+
+	const SYSTEMS: PluginSystemSet<Self::TSystemSet> = TMaps::SYSTEMS;
 }

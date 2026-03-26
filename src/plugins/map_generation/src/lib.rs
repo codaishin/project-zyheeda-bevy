@@ -27,6 +27,7 @@ use bevy::prelude::*;
 use common::{
 	states::game_state::{GameState, LoadingGame},
 	systems::log::OnError,
+	tools::plugin_system_set::PluginSystemSet,
 	traits::{
 		handles_enemies::EnemyType,
 		handles_lights::HandlesLights,
@@ -35,6 +36,7 @@ use common::{
 		handles_physics::{HandlesRaycast, physical_bodies::HandlesPhysicalBodies},
 		handles_saving::HandlesSaving,
 		spawn::Spawn,
+		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -112,13 +114,16 @@ where
 pub struct MapSystems;
 
 impl<TDependencies> HandlesMapGeneration for MapGenerationPlugin<TDependencies> {
-	const SYSTEMS: Self::TSystemSet = MapSystems;
-	type TSystemSet = MapSystems;
-
 	type TNewMapAgent<'w, 's> = SetAgentPrefab<'w>;
 
 	type TGraph = MeshGridGraph;
 
 	type TMap = Grid;
 	type TMapRef = GridAgentOf;
+}
+
+impl<TDependencies> SystemSetDefinition for MapGenerationPlugin<TDependencies> {
+	type TSystemSet = MapSystems;
+
+	const SYSTEMS: PluginSystemSet<Self::TSystemSet> = PluginSystemSet::from_set(MapSystems);
 }

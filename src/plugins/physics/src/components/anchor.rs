@@ -1,39 +1,25 @@
-use crate::traits::query_filter_definition::QueryFilterDefinition;
 use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
 	traits::{accessors::get::View, handles_skill_physics::SkillSpawner},
 };
-use std::marker::PhantomData;
 
 #[derive(Component, Debug, PartialEq)]
-#[require(Transform)]
-pub(crate) struct Anchor<TFilter> {
+#[require(Transform, AnchorDirty)]
+pub(crate) struct Anchor {
 	pub(crate) target: PersistentEntity,
 	pub(crate) skill_spawner: SkillSpawner,
 	pub(crate) use_target_rotation: bool,
-	_p: PhantomData<fn() -> TFilter>,
+	pub(crate) persistent: bool,
 }
 
-impl QueryFilterDefinition for Anchor<Once> {
-	type TFilter = Added<Self>;
-}
-
-impl QueryFilterDefinition for Anchor<Always> {
-	type TFilter = ();
-}
-
-impl<TFilter> Anchor<TFilter>
-where
-	Self: QueryFilterDefinition + 'static,
-{
-	pub(crate) fn to_target<TEntity>(target: TEntity) -> AnchorBuilder<TFilter>
+impl Anchor {
+	pub(crate) fn to_target<TEntity>(target: TEntity) -> AnchorTarget
 	where
 		TEntity: Into<PersistentEntity>,
 	{
-		AnchorBuilder {
+		AnchorTarget {
 			target: target.into(),
-			_p: PhantomData,
 		}
 	}
 
@@ -41,32 +27,39 @@ where
 		self.use_target_rotation = true;
 		self
 	}
+
+	pub(crate) fn once(mut self) -> Self {
+		self.persistent = false;
+		self
+	}
+
+	pub(crate) fn always(mut self) -> Self {
+		self.persistent = true;
+		self
+	}
 }
 
-impl<TFilter> View<PersistentEntity> for Anchor<TFilter> {
+impl View<PersistentEntity> for Anchor {
 	fn view(&self) -> PersistentEntity {
 		self.target
 	}
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub(crate) struct Always;
+#[derive(Component, Debug, PartialEq, Default)]
+#[component(immutable)]
+pub(crate) struct AnchorDirty;
 
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub(crate) struct Once;
-
-pub(crate) struct AnchorBuilder<TFilter> {
+pub(crate) struct AnchorTarget {
 	target: PersistentEntity,
-	_p: PhantomData<TFilter>,
 }
 
-impl<TFilter> AnchorBuilder<TFilter> {
-	pub(crate) fn on_spawner(self, spawner: SkillSpawner) -> Anchor<TFilter> {
+impl AnchorTarget {
+	pub(crate) fn on_spawner(self, spawner: SkillSpawner) -> Anchor {
 		Anchor {
 			target: self.target,
 			skill_spawner: spawner,
 			use_target_rotation: false,
-			_p: PhantomData,
+			persistent: false,
 		}
 	}
 }

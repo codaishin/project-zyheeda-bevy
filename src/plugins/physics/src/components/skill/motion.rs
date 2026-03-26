@@ -1,6 +1,6 @@
 use crate::{
 	components::{
-		anchor::{Always, Anchor, Once},
+		anchor::Anchor,
 		ground_target::GroundTarget,
 		prevent_tunneling::PreventTunneling,
 		set_velocity_forward::SetVelocityForward,
@@ -26,7 +26,7 @@ impl ApplyMotionPrefab for Skill {
 	fn apply_motion_prefab(&self, entity: &mut ZyheedaEntityCommands) -> RigidBody {
 		match &self.shape {
 			SkillShape::SphereAoE(SphereAoE { max_range, .. }) => {
-				entity.try_insert_if_new(GroundTarget {
+				entity.try_insert(GroundTarget {
 					caster: self.caster,
 					max_cast_range: *max_range,
 					target: self.target,
@@ -35,7 +35,7 @@ impl ApplyMotionPrefab for Skill {
 				RigidBody::Fixed
 			}
 			SkillShape::Projectile(..) => {
-				entity.try_insert_if_new((
+				entity.try_insert((
 					GravityScale(0.),
 					Ccd::enabled(),
 					PreventTunneling {
@@ -45,10 +45,11 @@ impl ApplyMotionPrefab for Skill {
 				));
 
 				if self.created_from == CreatedFrom::Spawn {
-					entity.try_insert_if_new((
-						Anchor::<Once>::to_target(self.caster.0)
+					entity.try_insert((
+						Anchor::to_target(self.caster.0)
 							.on_spawner(self.spawner)
-							.with_target_rotation(),
+							.with_target_rotation()
+							.once(),
 						SetVelocityForward(PROJECTILE_SPEED),
 					));
 				}
@@ -56,10 +57,11 @@ impl ApplyMotionPrefab for Skill {
 				RigidBody::Dynamic
 			}
 			SkillShape::Beam(..) | SkillShape::Shield(..) => {
-				entity.try_insert_if_new(
-					Anchor::<Always>::to_target(self.caster.0)
+				entity.try_insert(
+					Anchor::to_target(self.caster.0)
 						.on_spawner(self.spawner)
-						.with_target_rotation(),
+						.with_target_rotation()
+						.always(),
 				);
 
 				RigidBody::Fixed
