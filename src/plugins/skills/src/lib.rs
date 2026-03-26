@@ -120,7 +120,7 @@ where
 				HeldSlots::<Old>::update_from::<Current>,
 			)
 				.chain()
-				.before(TMovement::SYSTEMS)
+				.after(TMovement::SYSTEMS)
 				.run_if(in_state(GameState::Play)),
 		);
 	}
