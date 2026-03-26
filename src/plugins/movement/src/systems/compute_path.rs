@@ -1,6 +1,7 @@
 use crate::{MovementPath, components::movement_path::Mode};
 use bevy::{ecs::query::QueryFilter, prelude::*};
 use common::{
+	tools::Units,
 	traits::{
 		accessors::get::{TryApplyOn, View},
 		handles_map_generation::GroundPosition,
@@ -29,8 +30,7 @@ pub(crate) trait ComputePathSystem: QueryFilter + Sized {
 	) where
 		TComputer: Component + ComputePath,
 		TGetComputer: Component + View<Entity>,
-		TConfig: Component,
-		for<'a> &'a TConfig: Into<RequiredClearance>,
+		TConfig: Component + View<RequiredClearance>,
 	{
 		for (entity, config, transform, path, get_computer) in &movements {
 			let Ok(computer) = computers.get(get_computer.view()) else {
@@ -39,7 +39,7 @@ pub(crate) trait ComputePathSystem: QueryFilter + Sized {
 			let Mode::PathTarget(Some(target)) = path.0 else {
 				continue;
 			};
-			let path = compute_path(computer, transform, target, config.into());
+			let path = compute_path(computer, transform, target, config.view());
 
 			commands.try_apply_on(&entity, |mut e| {
 				e.try_insert(MovementPath::path(path));
@@ -52,7 +52,7 @@ fn compute_path<TComputer>(
 	computer: &TComputer,
 	transform: &GlobalTransform,
 	end: Vec3,
-	RequiredClearance(required_clearance): RequiredClearance,
+	required_clearance: Units,
 ) -> VecDeque<Vec3>
 where
 	TComputer: ComputePath,
@@ -81,9 +81,9 @@ mod tests {
 	#[derive(Component)]
 	struct _Config(RequiredClearance);
 
-	impl From<&'_ _Config> for RequiredClearance {
-		fn from(_Config(required_clearance): &'_ _Config) -> Self {
-			*required_clearance
+	impl View<RequiredClearance> for _Config {
+		fn view(&self) -> Units {
+			self.0.0
 		}
 	}
 

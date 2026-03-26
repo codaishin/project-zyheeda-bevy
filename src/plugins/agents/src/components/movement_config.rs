@@ -1,7 +1,7 @@
 use bevy::prelude::Component;
 use common::{
 	tools::{Units, UnitsPerSecond, speed::Speed},
-	traits::handles_movement::RequiredClearance,
+	traits::{accessors::get::View, handles_movement::RequiredClearance},
 };
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
@@ -22,14 +22,14 @@ impl Default for MovementConfig {
 	}
 }
 
-impl From<&'_ MovementConfig> for Speed {
-	fn from(config: &MovementConfig) -> Self {
-		Speed(config.speed)
+impl View<Speed> for MovementConfig {
+	fn view(&self) -> UnitsPerSecond {
+		self.speed
 	}
 }
 
-impl From<&'_ MovementConfig> for RequiredClearance {
-	fn from(config: &'_ MovementConfig) -> Self {
-		RequiredClearance(config.collider_radius)
+impl View<RequiredClearance> for MovementConfig {
+	fn view(&self) -> Units {
+		self.collider_radius
 	}
 }

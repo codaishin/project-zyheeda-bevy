@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use common::{
 	tools::{Done, speed::Speed},
 	traits::{
-		accessors::get::{ViewOf, View},
+		accessors::get::{View, ViewOf},
 		handles_movement::MovementTarget,
 		handles_physics::CharacterMotion,
 	},

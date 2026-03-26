@@ -30,6 +30,7 @@ use common::{
 	systems::log::OnError,
 	tools::speed::Speed,
 	traits::{
+		accessors::get::View,
 		handles_animations::{AnimationsSystemParamMut, HandlesAnimations},
 		handles_input::HandlesInput,
 		handles_movement::{HandlesMovement, RequiredClearance},
@@ -149,8 +150,7 @@ where
 
 	fn register_movement<TMovementDefinition>(app: &mut App)
 	where
-		TMovementDefinition: Component,
-		for<'a> &'a TMovementDefinition: Into<Speed> + Into<RequiredClearance>,
+		TMovementDefinition: Component + View<Speed> + View<RequiredClearance>,
 	{
 		app.register_required_components::<TMovementDefinition, Movable>();
 		app.add_systems(
