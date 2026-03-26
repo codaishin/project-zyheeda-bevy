@@ -2,7 +2,7 @@ use crate::{
 	assets::agent_config::Bones,
 	components::{
 		enemy::{Enemy, attack_config::EnemyAttackConfig},
-		movement_config::MovementConfig,
+		movement_config::{MovementConfig, MovementSpeed},
 	},
 };
 use bevy::{
@@ -83,7 +83,7 @@ impl VoidSphere {
 	fn movement_config() -> MovementConfig {
 		MovementConfig {
 			collider_radius: Units::from(Self::OUTER_RADIUS),
-			speed: UnitsPerSecond::from(1.),
+			speed: MovementSpeed::FixedRun(UnitsPerSecond::from_u8(1)),
 		}
 	}
 

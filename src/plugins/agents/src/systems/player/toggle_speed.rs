@@ -1,6 +1,6 @@
 use crate::components::{
-	movement_config::MovementConfig,
-	player::{PLAYER_RUN, PLAYER_WALK, Player},
+	movement_config::{CurrentSpeed, MovementConfig, MovementSpeed},
+	player::Player,
 };
 use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
@@ -8,18 +8,13 @@ use bevy::{
 };
 use common::{
 	tools::action_key::movement::MovementKey,
-	traits::{
-		accessors::get::TryApplyOn,
-		handles_input::{GetAllInputStates, InputState},
-	},
-	zyheeda_commands::ZyheedaCommands,
+	traits::handles_input::{GetAllInputStates, InputState},
 };
 
 impl Player {
 	pub(crate) fn toggle_speed<TInput>(
-		mut commands: ZyheedaCommands,
 		input: StaticSystemParam<TInput>,
-		players: Query<(Entity, &MovementConfig), With<Self>>,
+		players: Query<&mut MovementConfig, With<Self>>,
 	) where
 		for<'w, 's> TInput: SystemParam<Item<'w, 's>: GetAllInputStates>,
 	{
@@ -31,16 +26,15 @@ impl Player {
 			return;
 		}
 
-		for (entity, config) in &players {
-			let new_config = if config == &*PLAYER_RUN {
-				&*PLAYER_WALK
-			} else {
-				&*PLAYER_RUN
+		for mut config in players {
+			let MovementSpeed::Variable(speed) = &mut config.speed else {
+				continue;
 			};
 
-			commands.try_apply_on(&entity, move |mut e| {
-				e.try_insert(new_config.clone());
-			});
+			speed.current = match &speed.current {
+				CurrentSpeed::Walk => CurrentSpeed::Run,
+				CurrentSpeed::Run => CurrentSpeed::Walk,
+			};
 		}
 	}
 }
@@ -52,7 +46,7 @@ fn just_toggled((key, state): (MovementKey, InputState)) -> bool {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::player::PLAYER_WALK;
+	use crate::components::movement_config::VariableSpeed;
 	use common::{
 		tools::action_key::{ActionKey, movement::MovementKey},
 		traits::{handles_input::InputState, iteration::IterFinite},
@@ -89,7 +83,7 @@ mod tests {
 		use super::*;
 
 		#[test]
-		fn insert_walk() {
+		fn set_walk() {
 			let mut app = setup(_Input::new().with_mock(|mock| {
 				mock.expect_get_all_input_states::<MovementKey>()
 					.returning(|| {
@@ -99,13 +93,24 @@ mod tests {
 						)))
 					});
 			}));
-			let entity = app.world_mut().spawn((Player, PLAYER_RUN.clone())).id();
+			let entity = app
+				.world_mut()
+				.spawn((
+					Player,
+					MovementConfig::with_speed(VariableSpeed::from_current(CurrentSpeed::Run)),
+				))
+				.id();
 
 			app.update();
 
 			assert_eq!(
-				Some(&*PLAYER_WALK),
-				app.world().entity(entity).get::<MovementConfig>(),
+				Some(&MovementSpeed::Variable(VariableSpeed::from_current(
+					CurrentSpeed::Walk
+				))),
+				app.world()
+					.entity(entity)
+					.get::<MovementConfig>()
+					.map(|c| &c.speed),
 			);
 		}
 	}
@@ -114,7 +119,7 @@ mod tests {
 		use super::*;
 
 		#[test]
-		fn insert_run() {
+		fn set_run() {
 			let mut app = setup(_Input::new().with_mock(|mock| {
 				mock.expect_get_all_input_states::<MovementKey>()
 					.returning(|| {
@@ -124,13 +129,24 @@ mod tests {
 						)))
 					});
 			}));
-			let entity = app.world_mut().spawn((Player, PLAYER_WALK.clone())).id();
+			let entity = app
+				.world_mut()
+				.spawn((
+					Player,
+					MovementConfig::with_speed(VariableSpeed::from_current(CurrentSpeed::Walk)),
+				))
+				.id();
 
 			app.update();
 
 			assert_eq!(
-				Some(&*PLAYER_RUN),
-				app.world().entity(entity).get::<MovementConfig>(),
+				Some(&MovementSpeed::Variable(VariableSpeed::from_current(
+					CurrentSpeed::Run
+				))),
+				app.world()
+					.entity(entity)
+					.get::<MovementConfig>()
+					.map(|c| &c.speed),
 			);
 		}
 	}
@@ -149,13 +165,16 @@ mod tests {
 						)))
 					});
 			}));
-			app.world_mut().spawn((Player, PLAYER_WALK.clone()));
+			app.world_mut().spawn((
+				Player,
+				MovementConfig::with_speed(VariableSpeed::from_current(CurrentSpeed::Run)),
+			));
 
 			app.update();
 		}
 
 		#[test]
-		fn do_not_insert_config() {
+		fn do_not_update_walk() {
 			let mut app = setup(_Input::new().with_mock(|mock| {
 				mock.expect_get_all_input_states::<MovementKey>()
 					.returning(|| {
@@ -165,12 +184,20 @@ mod tests {
 						)))
 					});
 			}));
-			let entity = app.world_mut().spawn((Player, PLAYER_WALK.clone())).id();
+			let entity = app
+				.world_mut()
+				.spawn((
+					Player,
+					MovementConfig::with_speed(VariableSpeed::from_current(CurrentSpeed::Run)),
+				))
+				.id();
 
 			app.update();
 
 			assert_eq!(
-				Some(&*PLAYER_WALK),
+				Some(&MovementConfig::with_speed(VariableSpeed::from_current(
+					CurrentSpeed::Run,
+				))),
 				app.world().entity(entity).get::<MovementConfig>(),
 			);
 		}
@@ -190,7 +217,10 @@ mod tests {
 						)))
 					});
 			}));
-			app.world_mut().spawn((PLAYER_WALK.clone(),));
+			app.world_mut()
+				.spawn(MovementConfig::with_speed(VariableSpeed::from_current(
+					CurrentSpeed::Run,
+				)));
 
 			app.update();
 		}
@@ -206,12 +236,19 @@ mod tests {
 						)))
 					});
 			}));
-			let entity = app.world_mut().spawn((PLAYER_WALK.clone(),)).id();
+			let entity = app
+				.world_mut()
+				.spawn(MovementConfig::with_speed(VariableSpeed::from_current(
+					CurrentSpeed::Run,
+				)))
+				.id();
 
 			app.update();
 
 			assert_eq!(
-				Some(&*PLAYER_WALK),
+				Some(&MovementConfig::with_speed(VariableSpeed::from_current(
+					CurrentSpeed::Run,
+				))),
 				app.world().entity(entity).get::<MovementConfig>(),
 			);
 		}

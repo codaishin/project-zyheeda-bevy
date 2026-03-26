@@ -1,4 +1,5 @@
 use super::movement_config::MovementConfig;
+use crate::components::movement_config::{CurrentSpeed, MovementSpeed, VariableSpeed};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	errors::Unreachable,
@@ -22,19 +23,19 @@ use std::sync::LazyLock;
 #[component(immutable)]
 #[require(
 	Name = "Player",
-	MovementConfig = PLAYER_RUN.clone(),
+	MovementConfig = PLAYER_MOVEMENT.clone(),
 )]
 pub struct Player;
 
 static PLAYER_COLLIDER_RADIUS: LazyLock<Units> = LazyLock::new(|| Units::from(0.2));
 static PLAYER_COLLIDER_HEIGHT: LazyLock<Units> = LazyLock::new(|| Units::from(0.4));
-pub(crate) static PLAYER_RUN: LazyLock<MovementConfig> = LazyLock::new(|| MovementConfig {
+static PLAYER_MOVEMENT: LazyLock<MovementConfig> = LazyLock::new(|| MovementConfig {
 	collider_radius: *PLAYER_COLLIDER_RADIUS,
-	speed: UnitsPerSecond::from(1.5),
-});
-pub(crate) static PLAYER_WALK: LazyLock<MovementConfig> = LazyLock::new(|| MovementConfig {
-	collider_radius: *PLAYER_COLLIDER_RADIUS,
-	speed: UnitsPerSecond::from(0.75),
+	speed: MovementSpeed::Variable(VariableSpeed {
+		current: CurrentSpeed::Run,
+		run: UnitsPerSecond::from(1.5),
+		walk: UnitsPerSecond::from(0.75),
+	}),
 });
 
 impl From<Player> for AgentType {
