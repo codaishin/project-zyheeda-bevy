@@ -1,8 +1,9 @@
 pub(crate) mod dto;
 
+use crate::components::movement_config::MovementSpeed;
 use bevy::prelude::*;
 use common::{
-	tools::{action_key::slot::SlotKey, bone_name::BoneName, path::Path},
+	tools::{Units, action_key::slot::SlotKey, bone_name::BoneName, path::Path},
 	traits::{
 		accessors::get::View,
 		handles_animations::{AffectedAnimationBones, Animation, AnimationKey, AnimationMaskBits},
@@ -22,6 +23,8 @@ pub struct AgentConfigAsset {
 	pub(crate) bones: Bones,
 	pub(crate) agent_model: AgentModel,
 	pub(crate) ground_offset: Vec3,
+	pub(crate) required_clearance: Units,
+	pub(crate) speed: MovementSpeed,
 	pub(crate) attributes: PhysicalDefaultAttributes,
 	pub(crate) animations: HashMap<AnimationKey, Animation>,
 	pub(crate) animation_mask_groups: HashMap<AnimationMaskBits, AffectedAnimationBones>,

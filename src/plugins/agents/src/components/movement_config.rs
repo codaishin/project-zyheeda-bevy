@@ -27,7 +27,7 @@ impl Default for MovementConfig {
 	fn default() -> Self {
 		Self {
 			collider_radius: Units::from(0.5),
-			speed: MovementSpeed::FixedRun(UnitsPerSecond::from(1.0)),
+			speed: MovementSpeed::default(),
 		}
 	}
 }
@@ -52,6 +52,12 @@ pub(crate) enum MovementSpeed {
 	FixedRun(UnitsPerSecond),
 	FixedWalk(UnitsPerSecond),
 	Variable(VariableSpeed),
+}
+
+impl Default for MovementSpeed {
+	fn default() -> Self {
+		Self::FixedRun(UnitsPerSecond::from(1.0))
+	}
 }
 
 impl From<UnitsPerSecond> for MovementSpeed {

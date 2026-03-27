@@ -1,4 +1,12 @@
 {
+	"attributes": {
+		"health": {
+			"current": 100,
+			"max": 100
+		},
+		"gravity_interaction": "Affected",
+		"force_interaction": "Affected"
+	},
 	"loadout": {
 		"inventory": [
 			"pistol",
@@ -28,6 +36,14 @@
 	"model": {
 		"Asset": {
 			"model_path": "models/player.glb",
+			"required_movement_clearance": 0.5,
+			"movement_speed": {
+				"Variable": {
+					"current": "Run",
+					"run": 1.5,
+					"walk": 0.75
+				}
+			},
 			"ground_offset": [
 				0,
 				0.65,
@@ -67,123 +83,115 @@
 					"ArmBottomRightData": 2,
 					"ArmTopRightData": 3
 				}
-			}
-		}
-	},
-	"attributes": {
-		"health": {
-			"current": 100,
-			"max": 100
-		},
-		"gravity_interaction": "Affected",
-		"force_interaction": "Affected"
-	},
-	"animation_mask_groups": {
-		"00001": {
-			"from_root": "metarig",
-			"until_exclusive": [
-				"top_shoulder.L",
-				"top_shoulder.R",
-				"bottom_shoulder.L",
-				"bottom_shoulder.R"
-			]
-		},
-		"00010": {
-			"from_root": "top_shoulder.L"
-		},
-		"00100": {
-			"from_root": "bottom_shoulder.L"
-		},
-		"01000": {
-			"from_root": "bottom_shoulder.R"
-		},
-		"10000": {
-			"from_root": "top_shoulder.R"
-		}
-	},
-	"animations": [
-		[
-			"Idle",
-			{
-				"path": {
-					"Single": "models/player.glb#Animation1"
-				},
-				"play_mode": "Repeat",
-				"mask_groups": "11111"
-			}
-		],
-		[
-			"Walk",
-			{
-				"path": {
-					"Single": "models/player.glb#Animation2"
-				},
-				"play_mode": "Repeat",
-				"mask_groups": "11111"
-			}
-		],
-		[
-			"Run",
-			{
-				"path": {
-					"Directional": {
-						"forward": "models/player.glb#Animation3",
-						"backward": "models/player.glb#Animation4",
-						"right": "models/player.glb#Animation5",
-						"left": "models/player.glb#Animation6"
+			},
+			"animations": [
+				[
+					"Idle",
+					{
+						"path": {
+							"Single": "models/player.glb#Animation1"
+						},
+						"play_mode": "Repeat",
+						"mask_groups": "11111"
 					}
+				],
+				[
+					"Walk",
+					{
+						"path": {
+							"Single": "models/player.glb#Animation2"
+						},
+						"play_mode": "Repeat",
+						"mask_groups": "11111"
+					}
+				],
+				[
+					"Run",
+					{
+						"path": {
+							"Directional": {
+								"forward": "models/player.glb#Animation3",
+								"backward": "models/player.glb#Animation4",
+								"right": "models/player.glb#Animation5",
+								"left": "models/player.glb#Animation6"
+							}
+						},
+						"play_mode": "Repeat",
+						"mask_groups": "11111"
+					}
+				],
+				[
+					{
+						"Skill": 0
+					},
+					{
+						"path": {
+							"Single": "models/player.glb#Animation9"
+						},
+						"play_mode": "Repeat",
+						"mask_groups": "00010"
+					}
+				],
+				[
+					{
+						"Skill": 1
+					},
+					{
+						"path": {
+							"Single": "models/player.glb#Animation7"
+						},
+						"play_mode": "Repeat",
+						"mask_groups": "00100"
+					}
+				],
+				[
+					{
+						"Skill": 2
+					},
+					{
+						"path": {
+							"Single": "models/player.glb#Animation8"
+						},
+						"play_mode": "Repeat",
+						"mask_groups": "01000"
+					}
+				],
+				[
+					{
+						"Skill": 3
+					},
+					{
+						"path": {
+							"Single": "models/player.glb#Animation10"
+						},
+						"play_mode": "Repeat",
+						"mask_groups": "10000"
+					}
+				]
+			],
+			"animation_mask_groups": {
+				"00001": {
+					"from_root": "metarig",
+					"until_exclusive": [
+						"top_shoulder.L",
+						"top_shoulder.R",
+						"bottom_shoulder.L",
+						"bottom_shoulder.R"
+					]
 				},
-				"play_mode": "Repeat",
-				"mask_groups": "11111"
-			}
-		],
-		[
-			{
-				"Skill": 0
-			},
-			{
-				"path": {
-					"Single": "models/player.glb#Animation9"
+				"00010": {
+					"from_root": "top_shoulder.L"
 				},
-				"play_mode": "Repeat",
-				"mask_groups": "00010"
-			}
-		],
-		[
-			{
-				"Skill": 1
-			},
-			{
-				"path": {
-					"Single": "models/player.glb#Animation7"
+				"00100": {
+					"from_root": "bottom_shoulder.L"
 				},
-				"play_mode": "Repeat",
-				"mask_groups": "00100"
-			}
-		],
-		[
-			{
-				"Skill": 2
-			},
-			{
-				"path": {
-					"Single": "models/player.glb#Animation8"
+				"01000": {
+					"from_root": "bottom_shoulder.R"
 				},
-				"play_mode": "Repeat",
-				"mask_groups": "01000"
+				"10000": {
+					"from_root": "top_shoulder.R"
+				}
 			}
-		],
-		[
-			{
-				"Skill": 3
-			},
-			{
-				"path": {
-					"Single": "models/player.glb#Animation10"
-				},
-				"play_mode": "Repeat",
-				"mask_groups": "10000"
-			}
-		]
-	]
+		}
+	}
 }
