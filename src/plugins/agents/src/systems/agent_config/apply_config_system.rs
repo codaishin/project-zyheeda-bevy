@@ -102,6 +102,7 @@ impl ApplyAgentConfig {
 					MovementConfig {
 						required_clearance: config.required_clearance,
 						speed: config.speed,
+						ground_offset: config.ground_offset,
 					},
 				));
 				e.try_remove::<(Self, AgentTransformDirty)>();
@@ -558,6 +559,7 @@ mod tests {
 			let config = AgentConfigAsset {
 				required_clearance: Units::from_u8(12),
 				speed: MovementSpeed::FixedWalk(UnitsPerSecond::from_u8(21)),
+				ground_offset: Vec3::new(1., 2., 3.),
 				..default()
 			};
 			let mut app = setup([(&config_handle, config)]);
@@ -571,7 +573,8 @@ mod tests {
 			assert_eq!(
 				Some(&MovementConfig {
 					required_clearance: Units::from_u8(12),
-					speed: MovementSpeed::FixedWalk(UnitsPerSecond::from_u8(21))
+					speed: MovementSpeed::FixedWalk(UnitsPerSecond::from_u8(21)),
+					ground_offset: Vec3::new(1., 2., 3.),
 				}),
 				app.world().entity(entity).get::<MovementConfig>(),
 			);
@@ -590,6 +593,7 @@ mod tests {
 					MovementConfig {
 						required_clearance: Units::from_u8(12),
 						speed: MovementSpeed::FixedWalk(UnitsPerSecond::from_u8(21)),
+						ground_offset: Vec3::new(1., 2., 3.),
 					},
 				))
 				.id();
@@ -599,7 +603,8 @@ mod tests {
 			assert_eq!(
 				Some(&MovementConfig {
 					required_clearance: Units::from_u8(12),
-					speed: MovementSpeed::FixedWalk(UnitsPerSecond::from_u8(21))
+					speed: MovementSpeed::FixedWalk(UnitsPerSecond::from_u8(21)),
+					ground_offset: Vec3::new(1., 2., 3.),
 				}),
 				app.world().entity(entity).get::<MovementConfig>(),
 			);

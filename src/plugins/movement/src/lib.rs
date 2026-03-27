@@ -34,7 +34,7 @@ use common::{
 		after_plugin::AfterPlugin,
 		handles_animations::{AnimationsSystemParamMut, HandlesAnimations},
 		handles_input::HandlesInput,
-		handles_movement::{HandlesMovement, RequiredClearance},
+		handles_movement::{GroundOffset, HandlesMovement, RequiredClearance},
 		handles_orientation::HandlesOrientation,
 		handles_path_finding::HandlesPathFinding,
 		handles_physics::{
@@ -151,7 +151,7 @@ where
 
 	fn register_movement<TMovementDefinition>(app: &mut App)
 	where
-		TMovementDefinition: Component + View<Speed> + View<RequiredClearance>,
+		TMovementDefinition: Component + View<Speed> + View<RequiredClearance> + View<GroundOffset>,
 	{
 		app.register_required_components::<TMovementDefinition, Movable>();
 		app.add_systems(

@@ -1,7 +1,10 @@
 use bevy::prelude::*;
 use common::{
 	tools::{Units, UnitsPerSecond, speed::Speed},
-	traits::{accessors::get::View, handles_movement::RequiredClearance},
+	traits::{
+		accessors::get::View,
+		handles_movement::{GroundOffset, RequiredClearance},
+	},
 };
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
@@ -11,6 +14,7 @@ use serde::{Deserialize, Serialize};
 pub struct MovementConfig {
 	pub(crate) required_clearance: Units,
 	pub(crate) speed: MovementSpeed,
+	pub(crate) ground_offset: Vec3,
 }
 
 #[cfg(test)]
@@ -28,6 +32,7 @@ impl Default for MovementConfig {
 		Self {
 			required_clearance: Units::from(0.5),
 			speed: MovementSpeed::default(),
+			ground_offset: Vec3::ZERO,
 		}
 	}
 }
@@ -44,6 +49,12 @@ impl View<Speed> for MovementConfig {
 impl View<RequiredClearance> for MovementConfig {
 	fn view(&self) -> Units {
 		self.required_clearance
+	}
+}
+
+impl View<GroundOffset> for MovementConfig {
+	fn view(&self) -> Vec3 {
+		self.ground_offset
 	}
 }
 

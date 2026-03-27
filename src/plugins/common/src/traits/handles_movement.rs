@@ -17,7 +17,7 @@ pub trait HandlesMovement {
 	/// at all.
 	fn register_movement<TMovementDefinition>(app: &mut App)
 	where
-		TMovementDefinition: Component + View<Speed> + View<RequiredClearance>;
+		TMovementDefinition: Component + View<Speed> + View<RequiredClearance> + View<GroundOffset>;
 }
 
 pub type MovementSystemParam<'w, 's, T> = <T as HandlesMovement>::TMovement<'w, 's>;
@@ -28,10 +28,17 @@ pub trait ControlMovement: StartMovement + StopMovement + CurrentMovement {}
 impl<T> ControlMovement for T where T: StartMovement + StopMovement + CurrentMovement {}
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub struct RequiredClearance(pub Units);
+pub struct RequiredClearance;
 
 impl ViewField for RequiredClearance {
 	type TValue<'a> = Units;
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct GroundOffset;
+
+impl ViewField for GroundOffset {
+	type TValue<'a> = Vec3;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]

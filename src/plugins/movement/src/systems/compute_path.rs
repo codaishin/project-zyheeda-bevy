@@ -1,11 +1,10 @@
 use crate::{MovementPath, components::movement_path::Mode};
 use bevy::{ecs::query::QueryFilter, prelude::*};
 use common::{
-	tools::Units,
 	traits::{
-		accessors::get::{TryApplyOn, View},
+		accessors::get::{TryApplyOn, View, ViewOf},
 		handles_map_generation::GroundPosition,
-		handles_movement::RequiredClearance,
+		handles_movement::{GroundOffset, RequiredClearance},
 		handles_path_finding::ComputePath,
 	},
 	zyheeda_commands::ZyheedaCommands,
@@ -30,7 +29,7 @@ pub(crate) trait ComputePathSystem: QueryFilter + Sized {
 	) where
 		TComputer: Component + ComputePath,
 		TGetComputer: Component + View<Entity>,
-		TConfig: Component + View<RequiredClearance>,
+		TConfig: Component + View<RequiredClearance> + View<GroundOffset>,
 	{
 		for (entity, config, transform, path, get_computer) in &movements {
 			let Ok(computer) = computers.get(get_computer.view()) else {
@@ -39,7 +38,7 @@ pub(crate) trait ComputePathSystem: QueryFilter + Sized {
 			let Mode::PathTarget(Some(target)) = path.0 else {
 				continue;
 			};
-			let path = compute_path(computer, transform, target, config.view());
+			let path = compute_path(computer, transform, target, config);
 
 			commands.try_apply_on(&entity, |mut e| {
 				e.try_insert(MovementPath::path(path));
@@ -48,24 +47,27 @@ pub(crate) trait ComputePathSystem: QueryFilter + Sized {
 	}
 }
 
-fn compute_path<TComputer>(
+fn compute_path<TComputer, TConfig>(
 	computer: &TComputer,
 	transform: &GlobalTransform,
 	end: Vec3,
-	required_clearance: Units,
+	config: &TConfig,
 ) -> VecDeque<Vec3>
 where
 	TComputer: ComputePath,
+	TConfig: View<RequiredClearance> + View<GroundOffset>,
 {
 	let start = transform.translation();
+	let required_clearance = config.view_of::<RequiredClearance>();
+	let ground_offset = config.view_of::<GroundOffset>();
 	let Some(path) = computer.compute_path(start, end, required_clearance) else {
 		return VecDeque::from([]);
 	};
-	let mut path = path.map(|v| GroundPosition(v.with_y(start.y))).peekable();
+	let mut path = path.map(|GroundPosition(v)| v + ground_offset).peekable();
 
 	match path.peek() {
-		Some(first) if **first == start => VecDeque::from_iter(path.skip(1).map(|p| *p)),
-		_ => VecDeque::from_iter(path.map(|p| *p)),
+		Some(first) if first.xz() == start.xz() => VecDeque::from_iter(path.skip(1)),
+		_ => VecDeque::from_iter(path),
 	}
 }
 
@@ -78,12 +80,21 @@ mod tests {
 	use std::collections::VecDeque;
 	use testing::{NestedMocks, SingleThreadedApp, assert_no_panic};
 
-	#[derive(Component)]
-	struct _Config(RequiredClearance);
+	#[derive(Component, Default)]
+	struct _Config {
+		required_clearance: Units,
+		ground_offset: Vec3,
+	}
 
 	impl View<RequiredClearance> for _Config {
 		fn view(&self) -> Units {
-			self.0.0
+			self.required_clearance
+		}
+	}
+
+	impl View<GroundOffset> for _Config {
+		fn view(&self) -> Vec3 {
+			self.ground_offset
 		}
 	}
 
@@ -170,7 +181,7 @@ mod tests {
 				.world_mut()
 				.spawn((
 					_ExecComputation,
-					_Config(RequiredClearance(Units::from_u8(1))),
+					_Config::default(),
 					MovementPath::target(Vec3::default()),
 					GlobalTransform::default(),
 					_GetComputer(computer),
@@ -181,16 +192,16 @@ mod tests {
 
 			assert_eq!(
 				Some(&MovementPath::path([
-					Vec3::new(1., 0., 1.),
-					Vec3::new(2., 0., 2.),
-					Vec3::new(3., 0., 3.),
+					Vec3::splat(1.),
+					Vec3::splat(2.),
+					Vec3::splat(3.),
 				])),
 				app.world().entity(entity).get::<MovementPath>()
 			);
 		}
 
 		#[test]
-		fn set_path_with_current_height() {
+		fn set_path_with_ground_offset() {
 			let mut app = setup();
 			let computer = app
 				.world_mut()
@@ -206,7 +217,10 @@ mod tests {
 				.world_mut()
 				.spawn((
 					_ExecComputation,
-					_Config(RequiredClearance(Units::from_u8(1))),
+					_Config {
+						ground_offset: Vec3::new(1., 2., 3.),
+						..default()
+					},
 					MovementPath::target(Vec3::default()),
 					GlobalTransform::from_xyz(0., 11., 0.),
 					_GetComputer(computer),
@@ -217,9 +231,9 @@ mod tests {
 
 			assert_eq!(
 				Some(&MovementPath::path([
-					Vec3::new(1., 11., 1.),
-					Vec3::new(2., 11., 2.),
-					Vec3::new(3., 11., 3.),
+					Vec3::splat(1.) + Vec3::new(1., 2., 3.),
+					Vec3::splat(2.) + Vec3::new(1., 2., 3.),
+					Vec3::splat(3.) + Vec3::new(1., 2., 3.),
 				])),
 				app.world().entity(entity).get::<MovementPath>()
 			);
@@ -238,7 +252,7 @@ mod tests {
 				.world_mut()
 				.spawn((
 					_ExecComputation,
-					_Config(RequiredClearance(Units::from_u8(1))),
+					_Config::default(),
 					MovementPath::target(Vec3::default()),
 					GlobalTransform::default(),
 					_GetComputer(computer),
@@ -254,7 +268,7 @@ mod tests {
 		}
 
 		#[test]
-		fn set_path_ignoring_first_when_matching_translation() {
+		fn set_path_ignoring_first_when_matching_translation_horizontally() {
 			let mut app = setup();
 			let computer = app
 				.world_mut()
@@ -270,9 +284,9 @@ mod tests {
 				.world_mut()
 				.spawn((
 					_ExecComputation,
-					_Config(RequiredClearance(Units::from_u8(1))),
+					_Config::default(),
 					MovementPath::target(Vec3::default()),
-					GlobalTransform::from_translation(Vec3::ONE),
+					GlobalTransform::from_translation(Vec3::new(1., 0., 1.)),
 					_GetComputer(computer),
 				))
 				.id();
@@ -280,10 +294,7 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(&MovementPath::path([
-					Vec3::new(2., 1., 2.),
-					Vec3::new(3., 1., 3.),
-				])),
+				Some(&MovementPath::path([Vec3::splat(2.), Vec3::splat(3.)])),
 				app.world().entity(entity).get::<MovementPath>()
 			);
 		}
@@ -299,7 +310,10 @@ mod tests {
 				.id();
 			app.world_mut().spawn((
 				_ExecComputation,
-				_Config(RequiredClearance(Units::from_u8(1))),
+				_Config {
+					required_clearance: Units::from_u8(1),
+					..default()
+				},
 				MovementPath::target(Vec3::default()),
 				GlobalTransform::default(),
 				_GetComputer(computer),
@@ -326,7 +340,10 @@ mod tests {
 				.id();
 			app.world_mut().spawn((
 				_ExecComputation,
-				_Config(RequiredClearance(Units::from_u8(42))),
+				_Config {
+					required_clearance: Units::from_u8(42),
+					..default()
+				},
 				MovementPath::target(Vec3::new(4., 5., 6.)),
 				GlobalTransform::from_xyz(1., 2., 3.),
 				_GetComputer(computer),
@@ -351,7 +368,7 @@ mod tests {
 				.world_mut()
 				.spawn((
 					_ExecComputation,
-					_Config(RequiredClearance(Units::from_u8(1))),
+					_Config::default(),
 					MovementPath::direction(Dir3::NEG_Z),
 					GlobalTransform::default(),
 					_GetComputer(computer),
@@ -381,7 +398,10 @@ mod tests {
 				.id();
 			app.world_mut().spawn((
 				// NO `_ExecComputation``
-				_Config(RequiredClearance(Units::from_u8(1))),
+				_Config {
+					required_clearance: Units::from_u8(1),
+					..default()
+				},
 				MovementPath::target(Vec3::default()),
 				GlobalTransform::default(),
 				_GetComputer(computer),
