@@ -3,6 +3,7 @@ use crate::{
 	components::{
 		agent::{AgentTransformDirty, ApplyAgentConfig},
 		agent_config::AgentConfig,
+		movement_config::MovementConfig,
 	},
 };
 use bevy::{
@@ -96,7 +97,13 @@ impl ApplyAgentConfig {
 						func(&mut e);
 					}
 				};
-				e.try_insert(TAttributes::from(config.attributes));
+				e.try_insert_if_new((
+					TAttributes::from(config.attributes),
+					MovementConfig {
+						required_clearance: config.required_clearance,
+						speed: config.speed,
+					},
+				));
 				e.try_remove::<(Self, AgentTransformDirty)>();
 			});
 		}
@@ -148,12 +155,17 @@ mod tests {
 	use super::*;
 	use crate::{
 		assets::agent_config::{Bones, Loadout},
-		components::agent::AgentTransformDirty,
+		components::{
+			agent::AgentTransformDirty,
+			movement_config::{MovementConfig, MovementSpeed},
+		},
 	};
 	use common::{
 		attributes::{effect_target::EffectTarget, health::Health},
 		bit_mask_index,
 		tools::{
+			Units,
+			UnitsPerSecond,
 			action_key::slot::SlotKey,
 			bone_name::BoneName,
 			inventory_key::InventoryKey,
@@ -536,6 +548,64 @@ mod tests {
 			assert_eq!(Some(&_Model), app.world().entity(entity).get::<_Model>());
 		}
 	}
+
+	mod movement_config {
+		use super::*;
+
+		#[test]
+		fn insert_movement_config() {
+			let config_handle = new_handle();
+			let config = AgentConfigAsset {
+				required_clearance: Units::from_u8(12),
+				speed: MovementSpeed::FixedWalk(UnitsPerSecond::from_u8(21)),
+				..default()
+			};
+			let mut app = setup([(&config_handle, config)]);
+			let entity = app
+				.world_mut()
+				.spawn((ApplyAgentConfig, AgentConfig { config_handle }))
+				.id();
+
+			app.update();
+
+			assert_eq!(
+				Some(&MovementConfig {
+					required_clearance: Units::from_u8(12),
+					speed: MovementSpeed::FixedWalk(UnitsPerSecond::from_u8(21))
+				}),
+				app.world().entity(entity).get::<MovementConfig>(),
+			);
+		}
+
+		#[test]
+		fn do_not_override_movement_config() {
+			let config_handle = new_handle();
+			let config = AgentConfigAsset::default();
+			let mut app = setup([(&config_handle, config)]);
+			let entity = app
+				.world_mut()
+				.spawn((
+					ApplyAgentConfig,
+					AgentConfig { config_handle },
+					MovementConfig {
+						required_clearance: Units::from_u8(12),
+						speed: MovementSpeed::FixedWalk(UnitsPerSecond::from_u8(21)),
+					},
+				))
+				.id();
+
+			app.update();
+
+			assert_eq!(
+				Some(&MovementConfig {
+					required_clearance: Units::from_u8(12),
+					speed: MovementSpeed::FixedWalk(UnitsPerSecond::from_u8(21))
+				}),
+				app.world().entity(entity).get::<MovementConfig>(),
+			);
+		}
+	}
+
 	mod apply_ground_offset {
 		use super::*;
 

@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[savable_component(id = "movement config")]
 pub struct MovementConfig {
-	pub(crate) collider_radius: Units,
+	pub(crate) required_clearance: Units,
 	pub(crate) speed: MovementSpeed,
 }
 
@@ -26,7 +26,7 @@ impl MovementConfig {
 impl Default for MovementConfig {
 	fn default() -> Self {
 		Self {
-			collider_radius: Units::from(0.5),
+			required_clearance: Units::from(0.5),
 			speed: MovementSpeed::default(),
 		}
 	}
@@ -43,11 +43,11 @@ impl View<Speed> for MovementConfig {
 
 impl View<RequiredClearance> for MovementConfig {
 	fn view(&self) -> Units {
-		self.collider_radius
+		self.required_clearance
 	}
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub(crate) enum MovementSpeed {
 	FixedRun(UnitsPerSecond),
 	FixedWalk(UnitsPerSecond),
@@ -72,7 +72,7 @@ impl From<VariableSpeed> for MovementSpeed {
 	}
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub(crate) struct VariableSpeed {
 	pub(crate) current: CurrentSpeed,
 	pub(crate) run: UnitsPerSecond,
@@ -97,7 +97,7 @@ impl VariableSpeed {
 	}
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub(crate) enum CurrentSpeed {
 	Walk,
 	Run,

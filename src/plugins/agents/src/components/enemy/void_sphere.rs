@@ -2,7 +2,7 @@ use crate::{
 	assets::agent_config::{AgentConfigAsset, AgentModel, Bones, Loadout},
 	components::{
 		enemy::{Enemy, attack_config::EnemyAttackConfig},
-		movement_config::{MovementConfig, MovementSpeed},
+		movement_config::MovementSpeed,
 	},
 };
 use bevy::{
@@ -39,7 +39,6 @@ use std::{collections::HashMap, sync::LazyLock, time::Duration};
 	Name = "Void Sphere",
 	Enemy = Self::enemy(),
 	EnemyAttackConfig = Self::attack_config(),
-	MovementConfig = Self::movement_config(),
 )]
 pub struct VoidSphere;
 
@@ -92,13 +91,6 @@ impl VoidSphere {
 			aggro_range: Units::from(8.),
 			attack_range: Units::from(6.),
 			min_target_distance: Some(Units::from(3.)),
-		}
-	}
-
-	fn movement_config() -> MovementConfig {
-		MovementConfig {
-			collider_radius: Units::from(Self::OUTER_RADIUS),
-			speed: MovementSpeed::FixedRun(UnitsPerSecond::from_u8(1)),
 		}
 	}
 
