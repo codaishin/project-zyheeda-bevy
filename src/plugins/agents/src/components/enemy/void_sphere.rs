@@ -1,8 +1,8 @@
 use crate::{
-	assets::agent_config::Bones,
+	assets::agent_config::{AgentConfigAsset, AgentModel, Bones, Loadout},
 	components::{
 		enemy::{Enemy, attack_config::EnemyAttackConfig},
-		movement_config::MovementConfig,
+		movement_config::MovementSpeed,
 	},
 };
 use bevy::{
@@ -22,12 +22,9 @@ use common::{
 	traits::{
 		handles_enemies::EnemyType,
 		handles_map_generation::AgentType,
-		handles_physics::physical_bodies::{
-			Blocker,
-			Body,
-			HandlesPhysicalBodies,
-			PhysicsType,
-			Shape,
+		handles_physics::{
+			PhysicalDefaultAttributes,
+			physical_bodies::{Blocker, Body, HandlesPhysicalBodies, PhysicsType, Shape},
 		},
 		handles_skill_physics::SkillSpawner,
 		prefab::{Prefab, PrefabEntityCommands},
@@ -42,7 +39,6 @@ use std::{collections::HashMap, sync::LazyLock, time::Duration};
 	Name = "Void Sphere",
 	Enemy = Self::enemy(),
 	EnemyAttackConfig = Self::attack_config(),
-	MovementConfig = Self::movement_config(),
 )]
 pub struct VoidSphere;
 
@@ -72,6 +68,24 @@ impl VoidSphere {
 		}
 	}
 
+	pub(crate) fn config(
+		loadout: Loadout,
+		attributes: PhysicalDefaultAttributes,
+	) -> AgentConfigAsset {
+		AgentConfigAsset {
+			loadout,
+			attributes,
+			agent_model: AgentModel::Procedural(|e| {
+				e.try_insert(Self);
+			}),
+			bones: Self::bones(),
+			ground_offset: Self::GROUND_OFFSET,
+			required_clearance: Units::from(Self::OUTER_RADIUS),
+			speed: MovementSpeed::FixedRun(UnitsPerSecond::from_u8(1)),
+			..default()
+		}
+	}
+
 	fn enemy() -> Enemy {
 		Enemy {
 			aggro_range: Units::from(8.),
@@ -80,14 +94,7 @@ impl VoidSphere {
 		}
 	}
 
-	fn movement_config() -> MovementConfig {
-		MovementConfig {
-			collider_radius: Units::from(Self::OUTER_RADIUS),
-			speed: UnitsPerSecond::from(1.),
-		}
-	}
-
-	pub(crate) fn bones() -> Bones {
+	fn bones() -> Bones {
 		Bones {
 			spawners: HashMap::from([
 				(SKILL_SPAWN_NEUTRAL.clone(), SkillSpawner::Neutral),

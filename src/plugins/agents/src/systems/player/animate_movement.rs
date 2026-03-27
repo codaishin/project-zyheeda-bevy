@@ -1,6 +1,6 @@
 use crate::components::{
-	movement_config::MovementConfig,
-	player::{PLAYER_RUN, Player},
+	movement_config::{CurrentSpeed, MovementConfig, MovementSpeed, VariableSpeed},
+	player::Player,
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
@@ -62,10 +62,12 @@ impl Player {
 		movement_animations: &mut HashSet<AnimationKey>,
 		config: &MovementConfig,
 	) {
-		let walk_or_run = if config == &*PLAYER_RUN {
-			AnimationKey::Run
-		} else {
-			AnimationKey::Walk
+		use CurrentSpeed::{Run, Walk};
+		use MovementSpeed::{FixedRun, FixedWalk, Variable};
+
+		let walk_or_run = match config.speed {
+			FixedRun(..) | Variable(VariableSpeed { current: Run, .. }) => AnimationKey::Run,
+			FixedWalk(..) | Variable(VariableSpeed { current: Walk, .. }) => AnimationKey::Walk,
 		};
 
 		*movement_animations = HashSet::from([walk_or_run]);
@@ -89,15 +91,18 @@ impl From<Move> for AnimationPriority {
 pub(crate) mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::components::{movement_config::MovementConfig, player::PLAYER_WALK};
-	use common::traits::{
-		handles_animations::{
-			ActiveAnimations,
-			AnimationKey,
-			AnimationPriority,
-			AnimationsUnprepared,
+	use crate::components::movement_config::MovementConfig;
+	use common::{
+		tools::UnitsPerSecond,
+		traits::{
+			handles_animations::{
+				ActiveAnimations,
+				AnimationKey,
+				AnimationPriority,
+				AnimationsUnprepared,
+			},
+			handles_movement::MovementTarget,
 		},
-		handles_movement::MovementTarget,
 	};
 	use std::{collections::HashMap, sync::LazyLock};
 	use test_case::test_case;
@@ -179,16 +184,22 @@ pub(crate) mod tests {
 		app
 	}
 
-	#[test_case(PLAYER_RUN.clone(), AnimationKey::Run; "run")]
-	#[test_case(PLAYER_WALK.clone(), AnimationKey::Walk; "walk")]
-	fn start_animation(config: MovementConfig, animation: AnimationKey) {
+	fn variable(current: CurrentSpeed) -> VariableSpeed {
+		VariableSpeed::from_current(current)
+	}
+
+	#[test_case(MovementSpeed::FixedRun(UnitsPerSecond::ZERO), AnimationKey::Run; "fixed run")]
+	#[test_case(MovementSpeed::FixedWalk(UnitsPerSecond::ZERO), AnimationKey::Walk; "fixed walk")]
+	#[test_case(MovementSpeed::Variable(variable(CurrentSpeed::Run)), AnimationKey::Run; "variable run")]
+	#[test_case(MovementSpeed::Variable(variable(CurrentSpeed::Walk)), AnimationKey::Walk; "variable walk")]
+	fn start_animation(speed: MovementSpeed, animation: AnimationKey) {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
 			.spawn((
 				Player,
 				_Movement(Some(MovementTarget::Dir(Dir3::X))),
-				config,
+				MovementConfig::with_speed(speed),
 				_Animations::default(),
 			))
 			.id();
@@ -204,16 +215,18 @@ pub(crate) mod tests {
 		);
 	}
 
-	#[test_case(PLAYER_RUN.clone(), AnimationKey::Run; "run")]
-	#[test_case(PLAYER_WALK.clone(), AnimationKey::Walk; "walk")]
-	fn override_all_movement_animations(config: MovementConfig, animation: AnimationKey) {
+	#[test_case(MovementSpeed::FixedRun(UnitsPerSecond::ZERO), AnimationKey::Run; "fixed run")]
+	#[test_case(MovementSpeed::FixedWalk(UnitsPerSecond::ZERO), AnimationKey::Walk; "fixed walk")]
+	#[test_case(MovementSpeed::Variable(variable(CurrentSpeed::Run)), AnimationKey::Run; "variable run")]
+	#[test_case(MovementSpeed::Variable(variable(CurrentSpeed::Walk)), AnimationKey::Walk; "variable walk")]
+	fn override_all_movement_animations(speed: MovementSpeed, animation: AnimationKey) {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
 			.spawn((
 				Player,
 				_Movement(Some(MovementTarget::Dir(Dir3::X))),
-				config,
+				MovementConfig::with_speed(speed),
 				_Animations::Prepared(HashMap::from([(
 					Move.into(),
 					HashSet::from([AnimationKey::Idle]),
@@ -240,7 +253,7 @@ pub(crate) mod tests {
 			.spawn((
 				Player,
 				_Movement(Some(MovementTarget::Dir(Dir3::X))),
-				PLAYER_RUN.clone(),
+				MovementConfig::default(),
 				_Animations::default(),
 			))
 			.id();
@@ -266,7 +279,7 @@ pub(crate) mod tests {
 			.spawn((
 				Player,
 				_Movement(Some(MovementTarget::Dir(Dir3::X))),
-				PLAYER_RUN.clone(),
+				MovementConfig::default(),
 				_Animations::Prepared(HashMap::from([(
 					Move.into(),
 					HashSet::from([AnimationKey::Idle]),
@@ -294,7 +307,7 @@ pub(crate) mod tests {
 			.world_mut()
 			.spawn((
 				_Movement(Some(MovementTarget::Dir(Dir3::X))),
-				PLAYER_RUN.clone(),
+				MovementConfig::default(),
 				_Animations::default(),
 			))
 			.id();
@@ -315,7 +328,7 @@ pub(crate) mod tests {
 			.spawn((
 				Player,
 				_Movement(Some(MovementTarget::Dir(Dir3::X))),
-				PLAYER_RUN.clone(),
+				MovementConfig::default(),
 			))
 			.id();
 		app.world_mut()

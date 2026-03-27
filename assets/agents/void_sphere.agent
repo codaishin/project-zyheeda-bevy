@@ -1,4 +1,12 @@
 {
+	"attributes": {
+		"health": {
+			"current": 5,
+			"max": 5
+		},
+		"gravity_interaction": "Affected",
+		"force_interaction": "Affected"
+	},
 	"loadout": {
 		"inventory": [],
 		"slots": [
@@ -10,15 +18,5 @@
 	},
 	"model": {
 		"Procedural": "VoidSphere"
-	},
-	"attributes": {
-		"health": {
-			"current": 5,
-			"max": 5
-		},
-		"gravity_interaction": "Affected",
-		"force_interaction": "Affected"
-	},
-	"animation_mask_groups": {},
-	"animations": []
+	}
 }

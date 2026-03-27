@@ -1,8 +1,7 @@
-use super::movement_config::MovementConfig;
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	errors::Unreachable,
-	tools::{Units, UnitsPerSecond},
+	tools::Units,
 	traits::{
 		handles_animations::AnimationPriority,
 		handles_map_generation::AgentType,
@@ -20,22 +19,11 @@ use std::sync::LazyLock;
 
 #[derive(Component, Default, Debug, PartialEq, Clone)]
 #[component(immutable)]
-#[require(
-	Name = "Player",
-	MovementConfig = PLAYER_RUN.clone(),
-)]
+#[require(Name = "Player")]
 pub struct Player;
 
 static PLAYER_COLLIDER_RADIUS: LazyLock<Units> = LazyLock::new(|| Units::from(0.2));
 static PLAYER_COLLIDER_HEIGHT: LazyLock<Units> = LazyLock::new(|| Units::from(0.4));
-pub(crate) static PLAYER_RUN: LazyLock<MovementConfig> = LazyLock::new(|| MovementConfig {
-	collider_radius: *PLAYER_COLLIDER_RADIUS,
-	speed: UnitsPerSecond::from(1.5),
-});
-pub(crate) static PLAYER_WALK: LazyLock<MovementConfig> = LazyLock::new(|| MovementConfig {
-	collider_radius: *PLAYER_COLLIDER_RADIUS,
-	speed: UnitsPerSecond::from(0.75),
-});
 
 impl From<Player> for AgentType {
 	fn from(_: Player) -> Self {
