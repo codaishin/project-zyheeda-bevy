@@ -79,11 +79,11 @@ mod tests {
 	use testing::{NestedMocks, SingleThreadedApp, assert_no_panic};
 
 	#[derive(Component)]
-	struct _Config(RequiredClearance);
+	struct _ConfigClearance(Units);
 
-	impl View<RequiredClearance> for _Config {
+	impl View<RequiredClearance> for _ConfigClearance {
 		fn view(&self) -> Units {
-			self.0.0
+			self.0
 		}
 	}
 
@@ -144,7 +144,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			With::<_ExecComputation>::compute::<_ComputePath, _GetComputer, _Config>,
+			With::<_ExecComputation>::compute::<_ComputePath, _GetComputer, _ConfigClearance>,
 		);
 
 		app
@@ -170,7 +170,7 @@ mod tests {
 				.world_mut()
 				.spawn((
 					_ExecComputation,
-					_Config(RequiredClearance(Units::from_u8(1))),
+					_ConfigClearance(Units::from_u8(1)),
 					MovementPath::target(Vec3::default()),
 					GlobalTransform::default(),
 					_GetComputer(computer),
@@ -206,7 +206,7 @@ mod tests {
 				.world_mut()
 				.spawn((
 					_ExecComputation,
-					_Config(RequiredClearance(Units::from_u8(1))),
+					_ConfigClearance(Units::from_u8(1)),
 					MovementPath::target(Vec3::default()),
 					GlobalTransform::from_xyz(0., 11., 0.),
 					_GetComputer(computer),
@@ -238,7 +238,7 @@ mod tests {
 				.world_mut()
 				.spawn((
 					_ExecComputation,
-					_Config(RequiredClearance(Units::from_u8(1))),
+					_ConfigClearance(Units::from_u8(1)),
 					MovementPath::target(Vec3::default()),
 					GlobalTransform::default(),
 					_GetComputer(computer),
@@ -270,7 +270,7 @@ mod tests {
 				.world_mut()
 				.spawn((
 					_ExecComputation,
-					_Config(RequiredClearance(Units::from_u8(1))),
+					_ConfigClearance(Units::from_u8(1)),
 					MovementPath::target(Vec3::default()),
 					GlobalTransform::from_translation(Vec3::ONE),
 					_GetComputer(computer),
@@ -299,7 +299,7 @@ mod tests {
 				.id();
 			app.world_mut().spawn((
 				_ExecComputation,
-				_Config(RequiredClearance(Units::from_u8(1))),
+				_ConfigClearance(Units::from_u8(1)),
 				MovementPath::target(Vec3::default()),
 				GlobalTransform::default(),
 				_GetComputer(computer),
@@ -326,7 +326,7 @@ mod tests {
 				.id();
 			app.world_mut().spawn((
 				_ExecComputation,
-				_Config(RequiredClearance(Units::from_u8(42))),
+				_ConfigClearance(Units::from_u8(42)),
 				MovementPath::target(Vec3::new(4., 5., 6.)),
 				GlobalTransform::from_xyz(1., 2., 3.),
 				_GetComputer(computer),
@@ -351,7 +351,7 @@ mod tests {
 				.world_mut()
 				.spawn((
 					_ExecComputation,
-					_Config(RequiredClearance(Units::from_u8(1))),
+					_ConfigClearance(Units::from_u8(1)),
 					MovementPath::direction(Dir3::NEG_Z),
 					GlobalTransform::default(),
 					_GetComputer(computer),
@@ -381,7 +381,7 @@ mod tests {
 				.id();
 			app.world_mut().spawn((
 				// NO `_ExecComputation``
-				_Config(RequiredClearance(Units::from_u8(1))),
+				_ConfigClearance(Units::from_u8(1)),
 				MovementPath::target(Vec3::default()),
 				GlobalTransform::default(),
 				_GetComputer(computer),
