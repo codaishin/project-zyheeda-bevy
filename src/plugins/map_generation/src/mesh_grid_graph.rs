@@ -33,12 +33,12 @@ use std::{
 	ops::Deref,
 };
 
-#[derive(Debug, Clone, Default)]
-#[cfg_attr(not(test), derive(PartialEq))]
+#[derive(Debug, Clone)]
 pub struct MeshGridGraph {
 	vertices: Vec<VecNotNan<3>>,
 	neighbors: Vec<Vec<NodeId>>,
 	clearance: Vec<Clearance>,
+	max_los_fn: fn(LoSParams, &Self) -> Option<NodeId>,
 }
 
 impl MeshGridGraph {
@@ -68,6 +68,38 @@ impl MeshGridGraph {
 
 			neighbors.push(neighbor);
 		}
+	}
+
+	fn compute_max_los(&self, origin: NodeId, target: NodeId, width: Units) -> Option<NodeId> {
+		(self.max_los_fn)(
+			LoSParams {
+				origin,
+				target,
+				width,
+			},
+			self,
+		)
+	}
+}
+
+impl Default for MeshGridGraph {
+	fn default() -> Self {
+		Self {
+			vertices: vec![],
+			neighbors: vec![],
+			clearance: vec![],
+			max_los_fn: |los_param, graph| line::IterLine::new(los_param, graph).last(),
+		}
+	}
+}
+
+#[cfg(not(test))]
+impl PartialEq for MeshGridGraph {
+	fn eq(&self, other: &Self) -> bool {
+		self.vertices == other.vertices
+			&& self.neighbors == other.neighbors
+			&& self.clearance == other.clearance
+			&& std::ptr::fn_addr_eq(self.max_los_fn, other.max_los_fn)
 	}
 }
 
@@ -196,8 +228,7 @@ impl GraphLineOfSight for MeshGridGraph {
 	type TLNode = NodeId;
 
 	fn line_of_sight(&self, origin: &Self::TLNode, target: &Self::TLNode, width: Units) -> bool {
-		let line = line::IterLine::new(*origin, *target, self, width);
-		line.last() == Some(*target)
+		self.compute_max_los(*origin, *target, width) == Some(*target)
 	}
 }
 
@@ -226,16 +257,14 @@ impl GraphNaivePath for MeshGridGraph {
 		target: &Self::TNNode,
 		required_clearance: Units,
 	) -> NaivePath {
-		let line = self
-			.node(translation)
-			.map(|start| line::IterLine::new(start, *target, self, required_clearance))
-			.into_iter()
-			.flatten();
+		let Some(start) = self.node(translation) else {
+			return NaivePath::CannotCompute;
+		};
 
-		match line.last() {
+		match self.compute_max_los(start, *target, required_clearance) {
 			Some(last) if &last == target => NaivePath::Ok,
-			Some(last) => NaivePath::PartialUntil(self.ground_position(&last)),
-			None => NaivePath::CannotCompute,
+			Some(last) if last != start => NaivePath::PartialUntil(self.ground_position(&last)),
+			_ => NaivePath::CannotCompute,
 		}
 	}
 }
@@ -261,6 +290,13 @@ impl IntoIterator for NodeId {
 }
 
 #[derive(Debug, PartialEq)]
+struct LoSParams {
+	origin: NodeId,
+	target: NodeId,
+	width: Units,
+}
+
+#[derive(Debug, PartialEq)]
 pub(crate) struct TriangleEdgeError(VecNotNan<3>, VecNotNan<3>);
 
 impl Display for TriangleEdgeError {
@@ -276,6 +312,7 @@ impl Display for TriangleEdgeError {
 
 #[cfg(test)]
 mod test {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use common::vec3_not_nan;
 
@@ -303,6 +340,10 @@ mod test {
 			}
 
 			if self.neighbors.len() != other.neighbors.len() {
+				return false;
+			}
+
+			if !std::ptr::fn_addr_eq(self.max_los_fn, other.max_los_fn) {
 				return false;
 			}
 
@@ -342,6 +383,7 @@ mod test {
 					vertices: vec![a, b, c],
 					neighbors: neighbors![[1, 2], [0, 2], [0, 1],],
 					clearance: vec![Clearance::NONE; 3],
+					..default()
 				}),
 				graph
 			);
@@ -366,6 +408,7 @@ mod test {
 					vertices: vec![a, b, c, d],
 					neighbors: neighbors![[1, 2, 3], [0, 2, 3], [0, 1, 3], [0, 1, 2]],
 					clearance: vec![Clearance::NONE; 4],
+					..default()
 				}),
 				graph,
 			);
@@ -390,6 +433,7 @@ mod test {
 					vertices: vec![a, b, c, d],
 					neighbors: neighbors![[1, 2, 3], [0, 2, 3], [0, 1, 3], [0, 1, 2]],
 					clearance: vec![Clearance::NONE; 4],
+					..default()
 				}),
 				graph,
 			);
@@ -412,6 +456,7 @@ mod test {
 					vertices: vec![a, b],
 					neighbors: neighbors![[1], [0]],
 					clearance: vec![Clearance::INFINITY; 2],
+					..default()
 				}),
 				graph,
 			);
@@ -438,6 +483,7 @@ mod test {
 					vertices: vec![a, b, c, d],
 					neighbors: neighbors![[1, 2], [0, 2, 3], [0, 1, 3], [1, 2]],
 					clearance: vec![Clearance::NONE; 4],
+					..default()
 				}),
 				graph,
 			);
@@ -464,6 +510,7 @@ mod test {
 					vertices: vec![a, b, c, d],
 					neighbors: neighbors![[1, 2], [0, 2, 3], [0, 1, 3], [1, 2]],
 					clearance: vec![Clearance::NONE; 4],
+					..default()
 				}),
 				graph,
 			);
@@ -514,6 +561,7 @@ mod test {
 						[1, 2, 4],
 					],
 					clearance: vec![Clearance::NONE; 6],
+					..default()
 				}),
 				graph,
 			);
@@ -538,6 +586,7 @@ mod test {
 					vertices: vec![a, b, c, d],
 					neighbors: neighbors![[1, 2, 3], [0, 2, 3], [0, 1, 3], [0, 1, 2]],
 					clearance: vec![Clearance::NONE; 4],
+					..default()
 				}),
 				graph,
 			);
@@ -585,6 +634,7 @@ mod test {
 						Clearance::NONE,
 						Clearance::NONE,
 					],
+					..default()
 				}),
 				graph,
 			);
@@ -981,6 +1031,7 @@ mod test {
 				vertices: vec![vec3_not_nan!(1., 2., 3.), vec3_not_nan!(4., 5., 6.)],
 				neighbors: neighbors![[], []],
 				clearance: vec![Clearance::INFINITY; 2],
+				..default()
 			};
 
 			let node = graph.node(Vec3::new(4., 5., 6.));
@@ -994,6 +1045,7 @@ mod test {
 				vertices: vec![vec3_not_nan!(10., 2., 3.), vec3_not_nan!(1., 2., 3.)],
 				neighbors: neighbors![[], []],
 				clearance: vec![Clearance::INFINITY; 2],
+				..default()
 			};
 
 			let node = graph.node(Vec3::new(2., 3., 4.));
@@ -1011,6 +1063,7 @@ mod test {
 				],
 				neighbors: neighbors![[], [], []],
 				clearance: vec![Clearance::INFINITY, Clearance::NONE, Clearance::INFINITY],
+				..default()
 			};
 
 			let node = graph.node(Vec3::new(2., 3., 4.));
@@ -1028,6 +1081,7 @@ mod test {
 				vertices: vec![vec3_not_nan!(1., 2., 3.)],
 				neighbors: neighbors![[1, 2]],
 				clearance: vec![Clearance::INFINITY; 2],
+				..default()
 			};
 
 			let successors = graph.successors(&NodeId(0));
@@ -1036,6 +1090,144 @@ mod test {
 				HashSet::from([NodeId(1), NodeId(2)]),
 				successors.collect::<HashSet<_>>(),
 			);
+		}
+	}
+
+	fn setup_graph(max_los_fn: fn(LoSParams, &MeshGridGraph) -> Option<NodeId>) -> MeshGridGraph {
+		MeshGridGraph {
+			vertices: vec![
+				vec3_not_nan!(0., 0., 0.),
+				vec3_not_nan!(1., 0., 0.),
+				vec3_not_nan!(1., 0., 1.),
+			],
+			neighbors: vec![vec![]; 3],
+			clearance: vec![Clearance::INFINITY; 3],
+			max_los_fn,
+		}
+	}
+
+	mod los {
+		use super::*;
+
+		#[test]
+		fn call_max_los_fn() {
+			let graph = setup_graph(assert_los_args);
+
+			graph.line_of_sight(&NodeId(0), &NodeId(2), Units::from_u8(11));
+
+			fn assert_los_args(low_params: LoSParams, _: &MeshGridGraph) -> Option<NodeId> {
+				assert_eq!(
+					LoSParams {
+						origin: NodeId(0),
+						target: NodeId(2),
+						width: Units::from_u8(11)
+					},
+					low_params
+				);
+				None
+			}
+		}
+
+		#[test]
+		fn los_true_if_max_node_is_target() {
+			let graph = setup_graph(|_, _| Some(NodeId(2)));
+
+			let los = graph.line_of_sight(&NodeId(0), &NodeId(2), Units::from_u8(1));
+
+			assert!(los);
+		}
+
+		#[test]
+		fn los_false_if_no_max_node() {
+			let graph = setup_graph(|_, _| None);
+
+			let los = graph.line_of_sight(&NodeId(0), &NodeId(2), Units::from_u8(1));
+
+			assert!(!los);
+		}
+
+		#[test]
+		fn los_false_if_max_node_is_not_target() {
+			let graph = setup_graph(|_, _| Some(NodeId(1)));
+
+			let los = graph.line_of_sight(&NodeId(0), &NodeId(2), Units::from_u8(1));
+
+			assert!(!los);
+		}
+	}
+
+	mod naive_path {
+		use super::*;
+
+		#[test]
+		fn call_max_los_fn() {
+			let graph = setup_graph(assert_los_args);
+
+			graph.naive_path(Vec3::new(1.1, 0., 0.9), &NodeId(1), Units::from_u8(11));
+
+			fn assert_los_args(los_params: LoSParams, _: &MeshGridGraph) -> Option<NodeId> {
+				assert_eq!(
+					LoSParams {
+						origin: NodeId(2),
+						target: NodeId(1),
+						width: Units::from_u8(11)
+					},
+					los_params
+				);
+				None
+			}
+		}
+
+		#[test]
+		fn ok_if_max_node_is_target() {
+			let graph = setup_graph(|_, _| Some(NodeId(2)));
+
+			let path = graph.naive_path(Vec3::new(0., 0., 0.), &NodeId(2), Units::from_u8(1));
+
+			assert_eq!(NaivePath::Ok, path);
+		}
+
+		#[test]
+		fn cannot_compute_if_no_max_node() {
+			let graph = setup_graph(|_, _| None);
+
+			let path = graph.naive_path(Vec3::new(0., 0., 0.), &NodeId(2), Units::from_u8(1));
+
+			assert_eq!(NaivePath::CannotCompute, path);
+		}
+
+		#[test]
+		fn partial_if_last_node_is_not_target() {
+			let graph = setup_graph(|_, _| Some(NodeId(1)));
+
+			let path = graph.naive_path(Vec3::new(0., 0., 0.), &NodeId(2), Units::from_u8(1));
+
+			assert_eq!(
+				NaivePath::PartialUntil(GroundPosition(Vec3::new(1., 0., 0.))),
+				path,
+			);
+		}
+
+		#[test]
+		fn cannot_compute_if_max_node_is_start() {
+			let graph = setup_graph(|_, _| Some(NodeId(0)));
+
+			let path = graph.naive_path(Vec3::new(0., 0., 0.), &NodeId(2), Units::from_u8(1));
+
+			assert_eq!(NaivePath::CannotCompute, path);
+		}
+
+		#[test]
+		fn cannot_compute_if_no_node_valid() {
+			let mut graph = setup_graph(|_, _| Some(NodeId(2)));
+			graph
+				.clearance
+				.iter_mut()
+				.for_each(|c| *c = Clearance::NONE);
+
+			let path = graph.naive_path(Vec3::new(0., 0., 0.), &NodeId(2), Units::from_u8(1));
+
+			assert_eq!(NaivePath::CannotCompute, path);
 		}
 	}
 }

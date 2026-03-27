@@ -12,19 +12,21 @@ pub(super) struct IterLine<'a> {
 
 impl<'a> IterLine<'a> {
 	pub(super) fn new(
-		origin: NodeId,
-		target: NodeId,
+		LoSParams {
+			origin,
+			target,
+			width,
+		}: LoSParams,
 		graph: &'a MeshGridGraph,
-		required_clearance: Units,
 	) -> Self {
 		let GroundPosition(target_pos) = graph.ground_position(&target);
 
-		line::IterLine {
+		IterLine {
 			graph,
 			seen: HashSet::from([origin]),
 			open: VecDeque::from([origin]),
 			target_pos,
-			required_clearance,
+			required_clearance: width,
 		}
 	}
 }
@@ -148,9 +150,17 @@ mod tests {
 				[3, 4],
 			],
 			clearance: vec![Clearance::from(Units::from(1.0)); 6],
+			..default()
 		};
 
-		let line = IterLine::new(NodeId(0), NodeId(5), &graph, Units::ZERO);
+		let line = IterLine::new(
+			LoSParams {
+				origin: NodeId(0),
+				target: NodeId(5),
+				width: Units::ZERO,
+			},
+			&graph,
+		);
 
 		assert_eq!(
 			vec![
@@ -227,9 +237,17 @@ mod tests {
 				[13, 14, 18],
 			],
 			clearance: vec![Clearance::from(Units::from(1.0)); 20],
+			..default()
 		};
 
-		let line = IterLine::new(NodeId(6), NodeId(13), &graph, Units::ZERO);
+		let line = IterLine::new(
+			LoSParams {
+				origin: NodeId(6),
+				target: NodeId(13),
+				width: Units::ZERO,
+			},
+			&graph,
+		);
 
 		assert_eq!(
 			vec![NodeId(6), NodeId(12), NodeId(7), NodeId(13)],
@@ -255,9 +273,17 @@ mod tests {
 			vertices: vec![a, n1, n2, n3, b],
 			neighbors: neighbors![[1, 2], [0, 2, 4], [0, 1, 3], [2], [1]],
 			clearance: vec![Clearance::from(Units::from(1.0)); 5],
+			..default()
 		};
 
-		let line = IterLine::new(NodeId(0), NodeId(4), &graph, Units::ZERO);
+		let line = IterLine::new(
+			LoSParams {
+				origin: NodeId(0),
+				target: NodeId(4),
+				width: Units::ZERO,
+			},
+			&graph,
+		);
 
 		assert_eq!(line.last(), Some(NodeId(4)));
 	}
@@ -295,9 +321,17 @@ mod tests {
 				Clearance::from(Units::from(1.0)),
 				Clearance::from(Units::from(1.0)),
 			],
+			..default()
 		};
 
-		let line = IterLine::new(NodeId(0), NodeId(5), &graph, Units::from_u8(1));
+		let line = IterLine::new(
+			LoSParams {
+				origin: NodeId(0),
+				target: NodeId(5),
+				width: Units::from_u8(1),
+			},
+			&graph,
+		);
 
 		assert_eq!(
 			vec![NodeId(0), NodeId(2), NodeId(1), NodeId(4)],
@@ -327,9 +361,17 @@ mod tests {
 				Clearance::from(Units::from(1.0)),
 				Clearance::NONE,
 			],
+			..default()
 		};
 
-		let line = IterLine::new(NodeId(0), NodeId(3), &graph, Units::from_u8(0));
+		let line = IterLine::new(
+			LoSParams {
+				origin: NodeId(0),
+				target: NodeId(3),
+				width: Units::ZERO,
+			},
+			&graph,
+		);
 
 		assert_eq!(
 			vec![NodeId(0), NodeId(1), NodeId(2)],
@@ -359,9 +401,17 @@ mod tests {
 				Clearance::from(Units::from(1.0)),
 				Clearance::NONE,
 			],
+			..default()
 		};
 
-		let line = IterLine::new(NodeId(0), NodeId(3), &graph, Units::from_u8(0));
+		let line = IterLine::new(
+			LoSParams {
+				origin: NodeId(0),
+				target: NodeId(3),
+				width: Units::ZERO,
+			},
+			&graph,
+		);
 
 		assert_eq!(
 			vec![NodeId(0), NodeId(2), NodeId(1)],
@@ -387,9 +437,17 @@ mod tests {
 			vertices: vec![a, n1, n2, n3, b],
 			neighbors: neighbors![[1, 2], [0, 2, 3], [0, 1, 3], [1, 2, 4], [3]],
 			clearance: vec![Clearance::from(Units::from(1.0)); 5],
+			..default()
 		};
 
-		let line = IterLine::new(NodeId(0), NodeId(4), &graph, Units::ZERO);
+		let line = IterLine::new(
+			LoSParams {
+				origin: NodeId(0),
+				target: NodeId(4),
+				width: Units::ZERO,
+			},
+			&graph,
+		);
 
 		assert_eq!(
 			vec![NodeId(0), NodeId(1), NodeId(2), NodeId(3), NodeId(4)],
@@ -430,9 +488,17 @@ mod tests {
 				Clearance::NONE,
 				Clearance::NONE,
 			],
+			..default()
 		};
 
-		let line = IterLine::new(NodeId(0), NodeId(5), &graph, Units::ZERO);
+		let line = IterLine::new(
+			LoSParams {
+				origin: NodeId(0),
+				target: NodeId(5),
+				width: Units::ZERO,
+			},
+			&graph,
+		);
 
 		assert_eq!(vec![] as Vec<NodeId>, line.collect::<Vec<_>>());
 	}

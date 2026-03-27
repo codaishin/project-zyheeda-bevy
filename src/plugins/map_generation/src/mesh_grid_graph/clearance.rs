@@ -135,6 +135,7 @@ mod tests {
 				Clearance::INFINITY,
 				Clearance::INFINITY,
 			],
+			..default()
 		};
 		let mut set_clearance = SetClearance::from_boundary([NodeId(0), NodeId(2)]);
 
@@ -155,6 +156,7 @@ mod tests {
 					Clearance::INFINITY,
 					Clearance::INFINITY,
 				],
+				..default()
 			},
 			graph,
 		);
@@ -176,6 +178,7 @@ mod tests {
 				Clearance::INFINITY,
 				Clearance::INFINITY,
 			],
+			..default()
 		};
 		let mut set_clearance = SetClearance::from_boundary([NodeId(0), NodeId(2)]);
 
@@ -197,6 +200,7 @@ mod tests {
 					Clearance::NONE,
 					Clearance::INFINITY,
 				],
+				..default()
 			},
 			graph,
 		);
@@ -218,6 +222,7 @@ mod tests {
 				Clearance::INFINITY,
 				Clearance::INFINITY,
 			],
+			..default()
 		};
 		let mut set_clearance = SetClearance::from_boundary([NodeId(0), NodeId(2)]);
 
@@ -241,6 +246,7 @@ mod tests {
 					Clearance::NONE,
 					Clearance::from(Units::from(f32::sqrt(2.))),
 				],
+				..default()
 			},
 			graph,
 		);
@@ -262,6 +268,7 @@ mod tests {
 				Clearance::INFINITY,
 				Clearance::INFINITY,
 			],
+			..default()
 		};
 		let mut set_clearance = SetClearance::from_boundary([NodeId(0), NodeId(2)]);
 
@@ -287,6 +294,7 @@ mod tests {
 					Clearance::NONE,
 					Clearance::from(Units::from(1.)),
 				],
+				..default()
 			},
 			graph,
 		);
@@ -308,6 +316,7 @@ mod tests {
 				Clearance::INFINITY,
 				Clearance::INFINITY,
 			],
+			..default()
 		};
 		let mut set_clearance = SetClearance::from_boundary([NodeId(0)]);
 
@@ -330,6 +339,7 @@ mod tests {
 					Clearance::from(Units::from(1. + f32::sqrt(2.))),
 					Clearance::from(Units::from(2. + f32::sqrt(2.))),
 				],
+				..default()
 			},
 			graph,
 		);
@@ -351,6 +361,7 @@ mod tests {
 				Clearance::INFINITY,
 				Clearance::INFINITY,
 			],
+			..default()
 		};
 		let mut set_clearance = SetClearance::from_boundary([NodeId(0), NodeId(2)]);
 
@@ -380,6 +391,7 @@ mod tests {
 				Clearance::INFINITY,
 				Clearance::INFINITY,
 			],
+			..default()
 		};
 		let mut set_clearance = SetClearance::from_boundary([NodeId(0), NodeId(1), NodeId(2)]);
 
@@ -403,6 +415,7 @@ mod tests {
 					Clearance::NONE,
 					Clearance::from(Units::from(1.)),
 				],
+				..default()
 			},
 			graph,
 		);
