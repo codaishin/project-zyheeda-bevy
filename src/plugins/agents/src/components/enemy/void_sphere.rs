@@ -52,7 +52,8 @@ static SKILL_SPAWN_NEUTRAL: LazyBoneName = LazyLock::new(|| BoneName::from("skil
 impl VoidSphere {
 	const SLOT_KEY: SlotKey = SlotKey(0);
 
-	pub(crate) const GROUND_OFFSET: Vec3 = Vec3::new(0., 1.2, 0.);
+	const COLLIDER_GROUND_OFFSET: Vec3 = Vec3::new(0., 0.6, 0.);
+	const INNER_MODEL_OFFSET: Vec3 = Vec3::new(0., 0.2, 0.);
 	const INNER_RADIUS: f32 = 0.3;
 	const OUTER_RADIUS: f32 = 0.4;
 	const TORUS_RADIUS: f32 = 0.35;
@@ -79,7 +80,7 @@ impl VoidSphere {
 				e.try_insert(Self);
 			}),
 			bones: Self::bones(),
-			ground_offset: Self::GROUND_OFFSET,
+			ground_offset: Self::COLLIDER_GROUND_OFFSET,
 			required_clearance: Units::from(Self::OUTER_RADIUS),
 			speed: MovementSpeed::FixedRun(UnitsPerSecond::from_u8(1)),
 			..default()
@@ -128,7 +129,8 @@ where
 		entity: &mut impl PrefabEntityCommands,
 		_: StaticSystemParam<()>,
 	) -> Result<(), Unreachable> {
-		let shape = Shape::Sphere {
+		let shape = Shape::Capsule {
+			half_y: Units::from(Self::INNER_MODEL_OFFSET.y),
 			radius: Units::from(Self::OUTER_RADIUS),
 		};
 		let body = Body::from_shape(shape)
@@ -137,29 +139,35 @@ where
 
 		entity
 			.try_insert_if_new(TPhysics::TBody::from(body))
-			.with_child((VoidSpherePart::Core, VoidSphereCore))
 			.with_child((
+				Transform::from_translation(Self::INNER_MODEL_OFFSET),
+				VoidSpherePart::Core,
+				VoidSphereCore,
+			))
+			.with_child((
+				Transform::from_translation(Self::INNER_MODEL_OFFSET),
 				VoidSpherePart::RingA(UnitsPerSecond::from(3.6_f32.to_radians())),
 				VoidSphereRing,
 			))
 			.with_child((
+				Transform::from_translation(Self::INNER_MODEL_OFFSET)
+					.with_rotation(Quat::from_rotation_z(90_f32.to_radians())),
 				VoidSpherePart::RingB(UnitsPerSecond::from(2.4_f32.to_radians())),
 				VoidSphereRing,
-				Transform::from_rotation(Quat::from_rotation_z(90_f32.to_radians())),
 			))
 			// One unified slot bone
 			.with_child((
-				Transform::from_translation(Self::SLOT_OFFSET),
+				Transform::from_translation(Self::INNER_MODEL_OFFSET + Self::SLOT_OFFSET),
 				Name::from(ALL_PURPOSE_SLOT_BONE.clone()),
 			))
 			// Skill spawn directly on slot offset
 			.with_child((
-				Transform::from_translation(Self::SLOT_OFFSET),
+				Transform::from_translation(Self::INNER_MODEL_OFFSET + Self::SLOT_OFFSET),
 				Name::from(SKILL_SPAWN.clone()),
 			))
 			// Neutral skill spawn directly on slot offset
 			.with_child((
-				Transform::from_translation(Self::SLOT_OFFSET),
+				Transform::from_translation(Self::INNER_MODEL_OFFSET + Self::SLOT_OFFSET),
 				Name::from(SKILL_SPAWN_NEUTRAL.clone()),
 			));
 
