@@ -4,7 +4,7 @@ pub(crate) mod attacking;
 pub(crate) mod chasing;
 pub(crate) mod void_sphere;
 
-use crate::components::{enemy::attack_config::EnemyAttackConfig, movement_config::MovementConfig};
+use crate::components::enemy::attack_config::EnemyAttackConfig;
 use bevy::prelude::*;
 use common::{components::persistent_entity::PersistentEntity, tools::Units};
 use macros::SavableComponent;
@@ -12,13 +12,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
 #[savable_component(id = "enemy")]
-#[require(
-	PersistentEntity,
-	Transform,
-	Visibility,
-	MovementConfig,
-	EnemyAttackConfig
-)]
+#[require(PersistentEntity, Transform, Visibility, EnemyAttackConfig)]
 pub struct Enemy {
 	pub(crate) aggro_range: Units,
 	pub(crate) attack_range: Units,

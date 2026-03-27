@@ -83,7 +83,8 @@ impl VoidSphere {
 			ground_offset: Self::COLLIDER_GROUND_OFFSET,
 			required_clearance: Units::from(Self::OUTER_RADIUS),
 			speed: MovementSpeed::FixedRun(UnitsPerSecond::from_u8(1)),
-			..default()
+			animations: HashMap::from([]),
+			animation_mask_groups: HashMap::from([]),
 		}
 	}
 
