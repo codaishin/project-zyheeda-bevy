@@ -13,7 +13,7 @@ use common::{
 #[derive(SystemParam)]
 pub struct MovementConfigParamMut<'w, 's> {
 	commands: ZyheedaCommands<'w, 's>,
-	not_configure: Query<'w, 's, (), Without<Config>>,
+	configured: Query<'w, 's, (), With<Config>>,
 }
 
 impl GetContextMut<NotConfiguredMovement> for MovementConfigParamMut<'_, '_> {
@@ -23,7 +23,7 @@ impl GetContextMut<NotConfiguredMovement> for MovementConfigParamMut<'_, '_> {
 		param: &'ctx mut bevy::ecs::system::SystemParamItem<Self>,
 		NotConfiguredMovement { entity }: NotConfiguredMovement,
 	) -> Option<Self::TContext<'ctx>> {
-		if !param.not_configure.contains(entity) {
+		if param.configured.contains(entity) {
 			return None;
 		}
 
