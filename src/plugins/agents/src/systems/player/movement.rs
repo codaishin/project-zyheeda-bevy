@@ -9,7 +9,7 @@ use common::{
 	traits::{
 		accessors::get::GetContextMut,
 		handles_input::{GetAllInputStates, InputState},
-		handles_movement::{Movement, StartMovement, StopMovement},
+		handles_movement::{ConfiguredMovement, StartMovement, StopMovement},
 		handles_physics::{MouseTerrainHover, MouseTerrainPoint, Raycast},
 	},
 };
@@ -24,7 +24,8 @@ impl Player {
 	) where
 		for<'w, 's> TInput: SystemParam<Item<'w, 's>: GetAllInputStates>,
 		for<'w, 's> TRaycast: SystemParam<Item<'w, 's>: Raycast<MouseTerrainHover>>,
-		for<'c> TMovement: GetContextMut<Movement, TContext<'c>: StartMovement + StopMovement>,
+		for<'c> TMovement:
+			GetContextMut<ConfiguredMovement, TContext<'c>: StartMovement + StopMovement>,
 	{
 		let Some(cam_transform) = cameras.iter().next() else {
 			return;
@@ -32,7 +33,8 @@ impl Player {
 		let inputs = || input.get_all_input_states::<MovementKey>();
 
 		for entity in &players {
-			let Some(mut ctx) = TMovement::get_context_mut(&mut m, Movement { entity }) else {
+			let Some(mut ctx) = TMovement::get_context_mut(&mut m, ConfiguredMovement { entity })
+			else {
 				continue;
 			};
 

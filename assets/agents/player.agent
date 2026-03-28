@@ -38,11 +38,10 @@
 			"model_path": "models/player.glb",
 			"required_movement_clearance": 0.5,
 			"movement_speed": {
-				"Variable": {
-					"current": "Run",
-					"run": 1.5,
-					"walk": 0.75
-				}
+				"Variable": [
+					1.5,
+					0.75
+				]
 			},
 			"ground_offset": [
 				0,

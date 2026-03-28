@@ -1,9 +1,6 @@
 use crate::{
 	assets::agent_config::{AgentConfigAsset, AgentModel, Bones, Loadout},
-	components::{
-		enemy::{Enemy, attack_config::EnemyAttackConfig},
-		movement_config::MovementSpeed,
-	},
+	components::enemy::{Enemy, attack_config::EnemyAttackConfig},
 };
 use bevy::{
 	color::{Color, LinearRgba},
@@ -22,6 +19,7 @@ use common::{
 	traits::{
 		handles_enemies::EnemyType,
 		handles_map_generation::AgentType,
+		handles_movement::MovementSpeed,
 		handles_physics::{
 			PhysicalDefaultAttributes,
 			physical_bodies::{Blocker, Body, HandlesPhysicalBodies, PhysicsType, Shape},
@@ -82,7 +80,7 @@ impl VoidSphere {
 			bones: Self::bones(),
 			ground_offset: Self::COLLIDER_GROUND_OFFSET,
 			required_clearance: Units::from(Self::OUTER_RADIUS),
-			speed: MovementSpeed::FixedRun(UnitsPerSecond::from_u8(1)),
+			speed: MovementSpeed::Fixed(UnitsPerSecond::from_u8(1)),
 			animations: HashMap::from([]),
 			animation_mask_groups: HashMap::from([]),
 		}

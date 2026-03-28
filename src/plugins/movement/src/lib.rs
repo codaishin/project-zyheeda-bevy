@@ -9,17 +9,17 @@ mod debug;
 
 use crate::{
 	components::{
+		config::{Config, SpeedIndex},
 		facing::SetFace,
-		movable::Movable,
 		ongoing_movement::{IsMoving, OngoingMovement},
 	},
 	system_param::{
 		face_param::FaceParamMut,
+		movement_config_param::MovementConfigParamMut,
 		movement_param::{MovementParam, MovementParamMut, context_changed::JustRemovedMovements},
 	},
 	systems::{
 		advance_movement::AdvanceMovement,
-		check_movability::CheckMovability,
 		compute_path::ComputePathSystem,
 		set_forward_animation_direction::SetForwardAnimationDirection,
 	},
@@ -27,14 +27,12 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	states::game_state::GameState,
-	systems::log::OnError,
-	tools::{plugin_system_set::PluginSystemSet, speed::Speed},
+	tools::plugin_system_set::PluginSystemSet,
 	traits::{
-		accessors::get::View,
 		after_plugin::AfterPlugin,
 		handles_animations::{AnimationsSystemParamMut, HandlesAnimations},
 		handles_input::HandlesInput,
-		handles_movement::{GroundOffset, HandlesMovement, RequiredClearance},
+		handles_movement::HandlesMovement,
 		handles_orientation::HandlesOrientation,
 		handles_path_finding::HandlesPathFinding,
 		handles_physics::{
@@ -98,6 +96,7 @@ where
 		TSaveGame::register_savable_component::<SetFaceOverride>(app);
 		TSaveGame::register_savable_component::<OngoingMovement>(app);
 		TSaveGame::register_savable_component::<MovementPath>(app);
+		TSaveGame::register_savable_component::<SpeedIndex>(app);
 
 		#[cfg(debug_assertions)]
 		debug::draw(app);
@@ -108,13 +107,26 @@ where
 			.add_systems(
 				Update,
 				(
-					Changed::<MovementPath>::check_movability.pipe(OnError::log),
+					Changed::<MovementPath>::compute::<
+						TPathing::TComputePath,
+						TPathing::TComputerRef,
+					>,
+					Without::<IsMoving>::advance::<MovementPath>,
+					With::<IsMoving>::advance::<(OngoingMovement, TPhysics::TCharacterMotion)>,
+					With::<Config>::set_forward_animation_direction::<
+						TPhysics::TCharacterMotion,
+						AnimationsSystemParamMut<TAnimations>,
+					>,
 					OngoingMovement::set_facing,
 					SetFace::get_faces.pipe(execute_face::<RaycastSystemParam<TPhysics>>),
 					MovementParam::<TPhysics::TCharacterMotion>::update_just_removed,
 				)
 					.chain()
-					.after(MovementSystems)
+					.in_set(MovementSystems)
+					.after_plugin(TInput::SYSTEMS)
+					.after_plugin(TAnimations::SYSTEMS)
+					.after_plugin(TPathing::SYSTEMS)
+					.after_plugin(TPhysics::SYSTEMS)
 					.run_if(in_state(GameState::Play)),
 			);
 	}
@@ -148,37 +160,5 @@ where
 {
 	type TMovement<'w, 's> = MovementParam<'w, 's, TPhysics::TCharacterMotion>;
 	type TMovementMut<'w, 's> = MovementParamMut<'w, 's, TPhysics::TCharacterMotion>;
-
-	fn register_movement<TMovementDefinition>(app: &mut App)
-	where
-		TMovementDefinition: Component + View<Speed> + View<RequiredClearance> + View<GroundOffset>,
-	{
-		app.register_required_components::<TMovementDefinition, Movable>();
-		app.add_systems(
-			Update,
-			(
-				Changed::<MovementPath>::compute::<
-					TPathing::TComputePath,
-					TPathing::TComputerRef,
-					TMovementDefinition,
-				>,
-				Without::<IsMoving>::advance::<MovementPath, TMovementDefinition>,
-				With::<IsMoving>::advance::<
-					(OngoingMovement, TPhysics::TCharacterMotion),
-					TMovementDefinition,
-				>,
-				With::<TMovementDefinition>::set_forward_animation_direction::<
-					TPhysics::TCharacterMotion,
-					AnimationsSystemParamMut<TAnimations>,
-				>,
-			)
-				.chain()
-				.in_set(MovementSystems)
-				.after_plugin(TInput::SYSTEMS)
-				.after_plugin(TAnimations::SYSTEMS)
-				.after_plugin(TPathing::SYSTEMS)
-				.after_plugin(TPhysics::SYSTEMS)
-				.run_if(in_state(GameState::Play)),
-		);
-	}
+	type TMovementConfig<'w, 's> = MovementConfigParamMut<'w, 's>;
 }

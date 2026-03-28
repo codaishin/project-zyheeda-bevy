@@ -1,4 +1,4 @@
-use crate::system_param::movement_param::{MovementContext, MovementParam};
+use crate::system_param::movement_param::{MotionState, MovementContext, MovementParam};
 use bevy::prelude::*;
 use common::traits::accessors::get::ContextChanged;
 use std::collections::HashSet;
@@ -8,11 +8,19 @@ where
 	TMotion: Component,
 {
 	fn context_changed(&self) -> bool {
-		match self {
-			MovementContext::Movement(movement) => movement.is_changed(),
-			MovementContext::JustRemoved => true,
-			MovementContext::Empty => false,
-		}
+		let motion_changed = || match &self.motion {
+			MotionState::Movement(movement) => movement.is_changed(),
+			MotionState::JustRemoved => true,
+			MotionState::Empty => false,
+		};
+		let speed_changed = || {
+			self.current_speed
+				.as_ref()
+				.map(|s| s.is_changed())
+				.unwrap_or(false)
+		};
+
+		motion_changed() || speed_changed()
 	}
 }
 
@@ -40,7 +48,7 @@ pub(crate) struct JustRemovedMovements(pub(crate) HashSet<Entity>);
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::system_param::movement_param::MovementParam;
+	use crate::{components::config::SpeedIndex, system_param::movement_param::MovementParam};
 	use common::traits::{accessors::get::GetContext, handles_movement::Movement};
 	use testing::SingleThreadedApp;
 
@@ -80,6 +88,19 @@ mod tests {
 	fn is_changed_when_movement_added() {
 		let mut app = setup();
 		let entity = app.world_mut().spawn(_Motion).id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&_ContextChanged(true)),
+			app.world().entity(entity).get::<_ContextChanged>()
+		);
+	}
+
+	#[test]
+	fn is_changed_when_speed_index_added() {
+		let mut app = setup();
+		let entity = app.world_mut().spawn(SpeedIndex::default()).id();
 
 		app.update();
 

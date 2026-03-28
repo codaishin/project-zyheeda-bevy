@@ -23,7 +23,7 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{
-		components::movement_path::MovementPath,
+		components::{config::Config, movement_path::MovementPath},
 		system_param::movement_param::MovementParamMut,
 	};
 	use bevy::{
@@ -33,7 +33,7 @@ mod tests {
 	};
 	use common::traits::{
 		accessors::get::GetContextMut,
-		handles_movement::Movement,
+		handles_movement::ConfiguredMovement,
 		thread_safe::ThreadSafe,
 	};
 	use test_case::test_case;
@@ -52,12 +52,13 @@ mod tests {
 		target: impl Into<MovementTarget> + Copy + ThreadSafe,
 	) -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let entity = app.world_mut().spawn_empty().id();
+		let entity = app.world_mut().spawn(Config::default()).id();
 
 		app.world_mut()
 			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
 				let mut ctx =
-					MovementParamMut::get_context_mut(&mut p, Movement { entity }).unwrap();
+					MovementParamMut::get_context_mut(&mut p, ConfiguredMovement { entity })
+						.unwrap();
 				ctx.start(target);
 			})?;
 
@@ -71,12 +72,13 @@ mod tests {
 	#[test]
 	fn insert_stopped() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let entity = app.world_mut().spawn_empty().id();
+		let entity = app.world_mut().spawn(Config::default()).id();
 
 		app.world_mut()
 			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
 				let mut ctx =
-					MovementParamMut::get_context_mut(&mut p, Movement { entity }).unwrap();
+					MovementParamMut::get_context_mut(&mut p, ConfiguredMovement { entity })
+						.unwrap();
 				ctx.start(Vec3::new(1., 2., 3.));
 			})?;
 

@@ -1,9 +1,9 @@
 use crate::{components::enemy::Enemy, systems::player::animate_movement::Move};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
-	accessors::get::{GetChangedContext, GetContext, GetContextMut},
+	accessors::get::{GetChangedContext, GetContext, GetContextMut, View},
 	handles_animations::{ActiveAnimationsMut, AnimationKey, Animations, AnimationsUnprepared},
-	handles_movement::{CurrentMovement, Movement},
+	handles_movement::{Movement, MovementTarget},
 };
 use std::collections::HashSet;
 
@@ -14,7 +14,7 @@ impl Enemy {
 		enemies: Query<Entity, With<Self>>,
 	) -> Result<(), Vec<AnimationsUnprepared>>
 	where
-		TMovement: for<'c> GetContext<Movement, TContext<'c>: CurrentMovement>,
+		TMovement: for<'c> GetContext<Movement, TContext<'c>: View<Option<MovementTarget>>>,
 		TAnimations: for<'c> GetContextMut<Animations, TContext<'c>: ActiveAnimationsMut>,
 	{
 		let animate_movement = |entity| {
@@ -29,7 +29,7 @@ impl Enemy {
 				Ok(movement_animations) => movement_animations,
 			};
 
-			match movement.current_movement() {
+			match movement.view() {
 				Some(_) => *movement_animations = HashSet::from([AnimationKey::Run]),
 				None => movement_animations.clear(),
 			};
@@ -89,7 +89,10 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Enemy::default(),
-				_Movement(Some(MovementTarget::Dir(Dir3::X))),
+				_Movement {
+					target: Some(MovementTarget::Dir(Dir3::X)),
+					..default()
+				},
 				_Animations::default(),
 			))
 			.id();
@@ -112,7 +115,10 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Enemy::default(),
-				_Movement(Some(MovementTarget::Dir(Dir3::X))),
+				_Movement {
+					target: Some(MovementTarget::Dir(Dir3::X)),
+					..default()
+				},
 				_Animations::Prepared(HashMap::from([(
 					Move.into(),
 					HashSet::from([AnimationKey::Walk]),
@@ -138,7 +144,10 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Enemy::default(),
-				_Movement(Some(MovementTarget::Dir(Dir3::X))),
+				_Movement {
+					target: Some(MovementTarget::Dir(Dir3::X)),
+					..default()
+				},
 				_Animations::default(),
 			))
 			.id();
@@ -163,7 +172,10 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Enemy::default(),
-				_Movement(Some(MovementTarget::Dir(Dir3::X))),
+				_Movement {
+					target: Some(MovementTarget::Dir(Dir3::X)),
+					..default()
+				},
 				_Animations::Prepared(HashMap::from([(
 					Move.into(),
 					HashSet::from([AnimationKey::Run]),
@@ -172,7 +184,9 @@ mod tests {
 			.id();
 
 		app.update();
-		app.world_mut().entity_mut(entity).insert(_Movement(None));
+		app.world_mut()
+			.entity_mut(entity)
+			.insert(_Movement::default());
 		app.update();
 
 		assert_eq!(
@@ -190,7 +204,10 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				_Movement(Some(MovementTarget::Dir(Dir3::X))),
+				_Movement {
+					target: Some(MovementTarget::Dir(Dir3::X)),
+					..default()
+				},
 				_Animations::default(),
 			))
 			.id();
@@ -210,7 +227,10 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Enemy::default(),
-				_Movement(Some(MovementTarget::Dir(Dir3::X))),
+				_Movement {
+					target: Some(MovementTarget::Dir(Dir3::X)),
+					..default()
+				},
 			))
 			.id();
 		app.world_mut()

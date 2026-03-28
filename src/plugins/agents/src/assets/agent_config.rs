@@ -1,6 +1,5 @@
 pub(crate) mod dto;
 
-use crate::components::movement_config::MovementSpeed;
 use bevy::prelude::*;
 use common::{
 	tools::{Units, action_key::slot::SlotKey, bone_name::BoneName, path::Path},
@@ -8,6 +7,7 @@ use common::{
 		accessors::get::View,
 		handles_animations::{AffectedAnimationBones, Animation, AnimationKey, AnimationMaskBits},
 		handles_custom_assets::AssetFolderPath,
+		handles_movement::MovementSpeed,
 		handles_physics::PhysicalDefaultAttributes,
 		handles_skill_physics::SkillSpawner,
 		loadout::ItemName,

@@ -9,7 +9,6 @@ use crate::{
 		agent_config::AgentConfig,
 		animate_idle::AnimateIdle,
 		enemy::{Enemy, attack_phase::EnemyAttackPhase, void_sphere::VoidSphere},
-		movement_config::MovementConfig,
 		player::Player,
 		player_camera::PlayerCamera,
 	},
@@ -33,7 +32,12 @@ use common::{
 			LoadoutPrepParam,
 		},
 		handles_map_generation::{HandlesMapGeneration, NewMapAgentParamMut},
-		handles_movement::{HandlesMovement, MovementSystemParam, MovementSystemParamMut},
+		handles_movement::{
+			HandlesMovement,
+			MovementSystemConfigParam,
+			MovementSystemParam,
+			MovementSystemParamMut,
+		},
 		handles_orientation::{FacingSystemParamMut, HandlesOrientation},
 		handles_physics::{
 			HandlesPhysicalAttributes,
@@ -131,8 +135,6 @@ where
 		>(app);
 		app.init_asset::<AgentConfigAsset>();
 
-		TMovement::register_movement::<MovementConfig>(app);
-
 		TPhysics::mark_as_effect_target::<Agent>(app);
 		app.add_systems(
 			Startup,
@@ -144,6 +146,7 @@ where
 				LoadoutPrepParam<TLoadout>,
 				SkillSpawnPointsMut<TPhysics>,
 				AnimationsSystemParamMut<TAnimations>,
+				MovementSystemConfigParam<TMovement>,
 				TPhysics::TDefaultAttributes,
 			>,
 		);
@@ -152,7 +155,6 @@ where
 		TSaveGame::register_savable_component::<Agent>(app);
 		TSaveGame::register_savable_component::<Enemy>(app);
 		TSaveGame::register_savable_component::<PlayerCamera>(app);
-		TSaveGame::register_savable_component::<MovementConfig>(app);
 		TSaveGame::register_savable_component::<EnemyAttackPhase>(app);
 		app.register_required_components::<Agent, TSaveGame::TSaveEntityMarker>();
 
@@ -174,7 +176,10 @@ where
 						RaycastSystemParam<TPhysics>,
 						MovementSystemParamMut<TMovement>,
 					>,
-					Player::toggle_speed::<InputSystemParam<TInput>>,
+					Player::toggle_speed::<
+						InputSystemParam<TInput>,
+						MovementSystemParamMut<TMovement>,
+					>,
 					Player::animate_movement::<
 						MovementSystemParam<TMovement>,
 						AnimationsSystemParamMut<TAnimations>,
@@ -207,7 +212,8 @@ where
 			)
 				.chain()
 				.run_if(in_state(GameState::Play))
-				.after_plugin(TInput::SYSTEMS),
+				.after_plugin(TInput::SYSTEMS)
+				.after_plugin(TMovement::SYSTEMS),
 		);
 	}
 }
