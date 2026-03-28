@@ -212,7 +212,8 @@ where
 			)
 				.chain()
 				.run_if(in_state(GameState::Play))
-				.after_plugin(TInput::SYSTEMS),
+				.after_plugin(TInput::SYSTEMS)
+				.after_plugin(TMovement::SYSTEMS),
 		);
 	}
 }

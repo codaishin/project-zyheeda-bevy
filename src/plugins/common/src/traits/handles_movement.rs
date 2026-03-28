@@ -1,12 +1,15 @@
 use crate::{
 	tools::{Units, UnitsPerSecond, speed::Speed},
-	traits::accessors::get::{GetContext, GetContextMut, View, ViewField},
+	traits::{
+		accessors::get::{GetContext, GetContextMut, View, ViewField},
+		system_set_definition::SystemSetDefinition,
+	},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
 use serde::{Deserialize, Serialize};
 use std::ops::DerefMut;
 
-pub trait HandlesMovement {
+pub trait HandlesMovement: SystemSetDefinition {
 	type TMovement<'w, 's>: SystemParam
 		+ for<'c> GetContext<Movement, TContext<'c>: CurrentMovement>;
 	type TMovementMut<'w, 's>: SystemParam
