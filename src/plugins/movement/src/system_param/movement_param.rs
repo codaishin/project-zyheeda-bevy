@@ -5,7 +5,7 @@ mod stop_movement;
 mod toggle_speed;
 
 use crate::{
-	components::config::{Config, CurrentMovementSpeed},
+	components::config::{Config, SpeedIndex},
 	system_param::movement_param::context_changed::JustRemovedMovements,
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
@@ -52,8 +52,7 @@ where
 	TMotion: Component,
 {
 	commands: ZyheedaCommands<'w, 's>,
-	motions:
-		Query<'w, 's, (Option<&'static TMotion>, &'static mut CurrentMovementSpeed), With<Config>>,
+	motions: Query<'w, 's, (Option<&'static TMotion>, &'static mut SpeedIndex), With<Config>>,
 }
 
 impl<TMotion> GetContextMut<ConfiguredMovement> for MovementParamMut<'_, '_, TMotion>
@@ -92,7 +91,7 @@ where
 {
 	entity: ZyheedaEntityCommands<'ctx>,
 	motion: Option<&'ctx TMotion>,
-	current_speed: Mut<'ctx, CurrentMovementSpeed>,
+	current_speed: Mut<'ctx, SpeedIndex>,
 }
 
 #[cfg(test)]

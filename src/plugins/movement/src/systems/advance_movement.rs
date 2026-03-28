@@ -1,26 +1,28 @@
-use crate::traits::movement_update::MovementUpdate;
+use crate::{
+	components::config::{Config, SpeedIndex},
+	traits::movement_update::MovementUpdate,
+};
 use bevy::{ecs::query::QueryFilter, prelude::*};
 use common::{
 	tools::{Done, speed::Speed},
-	traits::accessors::get::{TryApplyOn, View},
+	traits::accessors::get::TryApplyOn,
 	zyheeda_commands::ZyheedaCommands,
 };
 
 impl<T> AdvanceMovement for T where T: QueryFilter {}
 
 pub(crate) trait AdvanceMovement: QueryFilter + Sized {
-	fn advance<TMovement, TConfig>(
+	fn advance<TMovement>(
 		mut commands: ZyheedaCommands,
-		mut agents: Query<(Entity, TMovement::TComponents, &TConfig), Self>,
+		mut agents: Query<(Entity, TMovement::TComponents, &Config, &SpeedIndex), Self>,
 	) where
 		TMovement: MovementUpdate,
-		TConfig: Component + View<Speed>,
 	{
-		for (entity, components, config) in &mut agents {
+		for (entity, components, config, speed_index) in &mut agents {
 			commands.try_apply_on(&entity, |mut e| {
 				let e = &mut e;
 
-				if let Done(false) = TMovement::update(e, components, Speed(config.view())) {
+				if let Done(false) = TMovement::update(e, components, Speed(config[*speed_index])) {
 					return;
 				};
 
@@ -35,18 +37,10 @@ mod tests {
 	use super::*;
 	use common::{
 		tools::{Done, UnitsPerSecond, speed::Speed},
+		traits::handles_movement::MovementSpeed,
 		zyheeda_commands::ZyheedaEntityCommands,
 	};
 	use testing::SingleThreadedApp;
-
-	#[derive(Component, Default)]
-	struct _Config(Speed);
-
-	impl View<Speed> for _Config {
-		fn view(&self) -> UnitsPerSecond {
-			self.0.0
-		}
-	}
 
 	#[derive(Component, PartialEq, Debug, Clone, Copy)]
 	struct _Stop;
@@ -75,15 +69,18 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, Without::<_DoNotMove>::advance::<_Movement, _Config>);
+		app.add_systems(Update, Without::<_DoNotMove>::advance::<_Movement>);
 
 		app
 	}
 
 	#[test]
-	fn apply_speed() {
+	fn apply_fixed_speed() {
 		let mut app = setup();
-		let agent = _Config(Speed(UnitsPerSecond::from(11.)));
+		let agent = Config {
+			speed: MovementSpeed::Fixed(UnitsPerSecond::from(11.)),
+			..default()
+		};
 		let movement = _Movement(false.into());
 		let agent = app.world_mut().spawn((agent, movement)).id();
 
@@ -96,9 +93,48 @@ mod tests {
 	}
 
 	#[test]
+	fn apply_dynamic_default_speed() {
+		let mut app = setup();
+		let agent = Config {
+			speed: MovementSpeed::Variable([UnitsPerSecond::from(22.), UnitsPerSecond::from(33.)]),
+			..default()
+		};
+		let movement = _Movement(false.into());
+		let agent = app.world_mut().spawn((agent, movement)).id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&_Speed(Speed(UnitsPerSecond::from(22.)),)),
+			app.world().entity(agent).get::<_Speed>()
+		);
+	}
+
+	#[test]
+	fn apply_dynamic_toggled_speed() {
+		let mut app = setup();
+		let agent = Config {
+			speed: MovementSpeed::Variable([UnitsPerSecond::from(22.), UnitsPerSecond::from(33.)]),
+			..default()
+		};
+		let movement = _Movement(false.into());
+		let agent = app
+			.world_mut()
+			.spawn((agent, movement, SpeedIndex::Toggled))
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&_Speed(Speed(UnitsPerSecond::from(33.)),)),
+			app.world().entity(agent).get::<_Speed>()
+		);
+	}
+
+	#[test]
 	fn use_stop_when_done() {
 		let mut app = setup();
-		let agent = _Config::default();
+		let agent = Config::default();
 		let movement = _Movement(Done::from(true));
 		let agent = app.world_mut().spawn((agent, movement)).id();
 
@@ -110,7 +146,7 @@ mod tests {
 	#[test]
 	fn keep_movement_when_not_done() {
 		let mut app = setup();
-		let agent = _Config::default();
+		let agent = Config::default();
 		let movement = _Movement(Done::from(false));
 		let agent = app.world_mut().spawn((agent, movement)).id();
 
@@ -127,7 +163,7 @@ mod tests {
 		let mut app = setup();
 		let agent = app
 			.world_mut()
-			.spawn((_Config::default(), _Movement(Done::from(false)), _DoNotMove))
+			.spawn((Config::default(), _Movement(Done::from(false)), _DoNotMove))
 			.id();
 
 		app.update();

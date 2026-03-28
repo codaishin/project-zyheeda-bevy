@@ -1,7 +1,4 @@
-use crate::{
-	components::config::CurrentMovementSpeed,
-	system_param::movement_param::MovementContextMut,
-};
+use crate::{components::config::SpeedIndex, system_param::movement_param::MovementContextMut};
 use bevy::prelude::*;
 use common::traits::handles_movement::ToggleSpeed;
 
@@ -11,8 +8,8 @@ where
 {
 	fn toggle_speed(&mut self) {
 		*self.current_speed = match *self.current_speed {
-			CurrentMovementSpeed::First => CurrentMovementSpeed::Second,
-			CurrentMovementSpeed::Second => CurrentMovementSpeed::First,
+			SpeedIndex::Default => SpeedIndex::Toggled,
+			SpeedIndex::Toggled => SpeedIndex::Default,
 		}
 	}
 }
@@ -23,7 +20,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::{
-			config::{Config, CurrentMovementSpeed},
+			config::{Config, SpeedIndex},
 			movement_path::MovementPath,
 		},
 		system_param::movement_param::MovementParamMut,
@@ -55,8 +52,8 @@ mod tests {
 			})?;
 
 		assert_eq!(
-			Some(&CurrentMovementSpeed::Second),
-			app.world().entity(entity).get::<CurrentMovementSpeed>(),
+			Some(&SpeedIndex::Toggled),
+			app.world().entity(entity).get::<SpeedIndex>(),
 		);
 		Ok(())
 	}
@@ -81,8 +78,8 @@ mod tests {
 			})?;
 
 		assert_eq!(
-			Some(&CurrentMovementSpeed::First),
-			app.world().entity(entity).get::<CurrentMovementSpeed>(),
+			Some(&SpeedIndex::Default),
+			app.world().entity(entity).get::<SpeedIndex>(),
 		);
 		Ok(())
 	}
