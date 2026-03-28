@@ -161,6 +161,4 @@ where
 	type TMovement<'w, 's> = MovementParam<'w, 's, TPhysics::TCharacterMotion>;
 	type TMovementMut<'w, 's> = MovementParamMut<'w, 's, TPhysics::TCharacterMotion>;
 	type TMovementConfig<'w, 's> = MovementConfigParamMut<'w, 's>;
-
-	fn register_movement<TMovementDefinition>(_: &mut App) {}
 }

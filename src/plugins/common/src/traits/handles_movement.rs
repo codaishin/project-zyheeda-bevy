@@ -1,5 +1,5 @@
 use crate::{
-	tools::{Units, UnitsPerSecond, speed::Speed},
+	tools::{Units, UnitsPerSecond},
 	traits::{
 		accessors::get::{GetContext, GetContextMut, View, ViewField},
 		system_set_definition::SystemSetDefinition,
@@ -16,13 +16,6 @@ pub trait HandlesMovement: SystemSetDefinition {
 		+ for<'c> GetContextMut<ConfiguredMovement, TContext<'c>: ControlMovement>;
 	type TMovementConfig<'w, 's>: SystemParam
 		+ for<'c> GetContextMut<NotConfiguredMovement, TContext<'c>: ConfigureMovement>;
-
-	/// Register movement execution via the provided movement definition.
-	/// Without doing this an implementing plugin might not execute any movement
-	/// at all.
-	fn register_movement<TMovementDefinition>(app: &mut App)
-	where
-		TMovementDefinition: Component + View<Speed> + View<RequiredClearance> + View<GroundOffset>;
 }
 
 pub type MovementSystemParam<'w, 's, T> = <T as HandlesMovement>::TMovement<'w, 's>;
@@ -32,20 +25,6 @@ pub type MovementSystemConfigParam<'w, 's, T> = <T as HandlesMovement>::TMovemen
 pub trait ControlMovement: StartMovement + StopMovement + ToggleSpeed + CurrentMovement {}
 
 impl<T> ControlMovement for T where T: StartMovement + StopMovement + ToggleSpeed + CurrentMovement {}
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct RequiredClearance;
-
-impl ViewField for RequiredClearance {
-	type TValue<'a> = Units;
-}
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct GroundOffset;
-
-impl ViewField for GroundOffset {
-	type TValue<'a> = Vec3;
-}
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum MovementTarget {
