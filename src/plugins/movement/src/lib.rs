@@ -9,12 +9,14 @@ mod debug;
 
 use crate::{
 	components::{
+		config::CurrentMovementSpeed,
 		facing::SetFace,
 		movable::Movable,
 		ongoing_movement::{IsMoving, OngoingMovement},
 	},
 	system_param::{
 		face_param::FaceParamMut,
+		movement_config_param::MovementConfigParamMut,
 		movement_param::{MovementParam, MovementParamMut, context_changed::JustRemovedMovements},
 	},
 	systems::{
@@ -98,6 +100,7 @@ where
 		TSaveGame::register_savable_component::<SetFaceOverride>(app);
 		TSaveGame::register_savable_component::<OngoingMovement>(app);
 		TSaveGame::register_savable_component::<MovementPath>(app);
+		TSaveGame::register_savable_component::<CurrentMovementSpeed>(app);
 
 		#[cfg(debug_assertions)]
 		debug::draw(app);
@@ -148,6 +151,7 @@ where
 {
 	type TMovement<'w, 's> = MovementParam<'w, 's, TPhysics::TCharacterMotion>;
 	type TMovementMut<'w, 's> = MovementParamMut<'w, 's, TPhysics::TCharacterMotion>;
+	type TMovementConfig<'w, 's> = MovementConfigParamMut<'w, 's>;
 
 	fn register_movement<TMovementDefinition>(app: &mut App)
 	where

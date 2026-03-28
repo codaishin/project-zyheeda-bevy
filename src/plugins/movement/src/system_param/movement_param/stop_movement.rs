@@ -20,17 +20,14 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{
-		components::movement_path::MovementPath,
+		components::{config::Config, movement_path::MovementPath},
 		system_param::movement_param::MovementParamMut,
 	};
 	use bevy::{
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
 	};
-	use common::traits::{
-		accessors::get::GetContextMut,
-		handles_movement::Movement as MovementMarker,
-	};
+	use common::traits::{accessors::get::GetContextMut, handles_movement::ConfiguredMovement};
 	use testing::SingleThreadedApp;
 
 	#[derive(Component)]
@@ -45,13 +42,17 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(MovementPath::target(Vec3::new(1., 2., 3.)))
+			.spawn((
+				Config::default(),
+				MovementPath::target(Vec3::new(1., 2., 3.)),
+			))
 			.id();
 
 		app.world_mut()
 			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
 				let mut ctx =
-					MovementParamMut::get_context_mut(&mut p, MovementMarker { entity }).unwrap();
+					MovementParamMut::get_context_mut(&mut p, ConfiguredMovement { entity })
+						.unwrap();
 				ctx.stop();
 			})?;
 
@@ -67,13 +68,17 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(MovementPath::target(Vec3::new(1., 2., 3.)))
+			.spawn((
+				Config::default(),
+				MovementPath::target(Vec3::new(1., 2., 3.)),
+			))
 			.id();
 
 		app.world_mut()
 			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
 				let mut ctx =
-					MovementParamMut::get_context_mut(&mut p, MovementMarker { entity }).unwrap();
+					MovementParamMut::get_context_mut(&mut p, ConfiguredMovement { entity })
+						.unwrap();
 				ctx.stop();
 			})?;
 

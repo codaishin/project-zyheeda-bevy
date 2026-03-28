@@ -1,5 +1,5 @@
 use crate::{
-	tools::{Units, speed::Speed},
+	tools::{Units, UnitsPerSecond, speed::Speed},
 	traits::accessors::get::{GetContext, GetContextMut, View, ViewField},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
@@ -10,7 +10,9 @@ pub trait HandlesMovement {
 	type TMovement<'w, 's>: SystemParam
 		+ for<'c> GetContext<Movement, TContext<'c>: CurrentMovement>;
 	type TMovementMut<'w, 's>: SystemParam
-		+ for<'c> GetContextMut<Movement, TContext<'c>: ControlMovement>;
+		+ for<'c> GetContextMut<ConfiguredMovement, TContext<'c>: ControlMovement>;
+	type TMovementConfig<'w, 's>: SystemParam
+		+ for<'c> GetContextMut<NotConfiguredMovement, TContext<'c>: ConfigureMovement>;
 
 	/// Register movement execution via the provided movement definition.
 	/// Without doing this an implementing plugin might not execute any movement
@@ -22,10 +24,11 @@ pub trait HandlesMovement {
 
 pub type MovementSystemParam<'w, 's, T> = <T as HandlesMovement>::TMovement<'w, 's>;
 pub type MovementSystemParamMut<'w, 's, T> = <T as HandlesMovement>::TMovementMut<'w, 's>;
+pub type MovementSystemConfigParam<'w, 's, T> = <T as HandlesMovement>::TMovementConfig<'w, 's>;
 
 pub trait ControlMovement: StartMovement + StopMovement + CurrentMovement {}
 
-impl<T> ControlMovement for T where T: StartMovement + StopMovement + CurrentMovement {}
+impl<T> ControlMovement for T where T: StartMovement + StopMovement + ToggleSpeed + CurrentMovement {}
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct RequiredClearance;
@@ -63,6 +66,32 @@ impl ViewField for MovementTarget {
 	type TValue<'a> = Self;
 }
 
+pub trait ConfigureMovement {
+	fn configure(&mut self, speed: MovementSpeed, required_clearance: Units, ground_offset: Vec3);
+}
+
+impl<T> ConfigureMovement for T
+where
+	T: DerefMut<Target: ConfigureMovement>,
+{
+	fn configure(&mut self, speed: MovementSpeed, required_clearance: Units, ground_offset: Vec3) {
+		self.deref_mut()
+			.configure(speed, required_clearance, ground_offset);
+	}
+}
+
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+pub enum MovementSpeed {
+	Fixed(UnitsPerSecond),
+	Variable([UnitsPerSecond; 2]),
+}
+
+impl Default for MovementSpeed {
+	fn default() -> Self {
+		Self::Fixed(UnitsPerSecond::from_u8(1))
+	}
+}
+
 pub trait StartMovement {
 	fn start<T>(&mut self, target: T)
 	where
@@ -94,6 +123,19 @@ where
 	}
 }
 
+pub trait ToggleSpeed {
+	fn toggle_speed(&mut self);
+}
+
+impl<T> ToggleSpeed for T
+where
+	T: DerefMut<Target: ToggleSpeed>,
+{
+	fn toggle_speed(&mut self) {
+		self.deref_mut().toggle_speed();
+	}
+}
+
 pub trait CurrentMovement {
 	fn current_movement(&self) -> Option<MovementTarget>;
 }
@@ -113,6 +155,26 @@ pub struct Movement {
 
 impl From<Movement> for Entity {
 	fn from(Movement { entity }: Movement) -> Self {
+		entity
+	}
+}
+
+pub struct ConfiguredMovement {
+	pub entity: Entity,
+}
+
+impl From<ConfiguredMovement> for Entity {
+	fn from(ConfiguredMovement { entity }: ConfiguredMovement) -> Self {
+		entity
+	}
+}
+
+pub struct NotConfiguredMovement {
+	pub entity: Entity,
+}
+
+impl From<NotConfiguredMovement> for Entity {
+	fn from(NotConfiguredMovement { entity }: NotConfiguredMovement) -> Self {
 		entity
 	}
 }

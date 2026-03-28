@@ -2,7 +2,7 @@ use crate::components::enemy::{Enemy, chasing::Chasing};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
 	accessors::get::GetContextMut,
-	handles_movement::{CurrentMovement, Movement, MovementTarget, StartMovement, StopMovement},
+	handles_movement::{CurrentMovement, ConfiguredMovement, MovementTarget, StartMovement, StopMovement},
 };
 
 impl Enemy {
@@ -12,12 +12,12 @@ impl Enemy {
 		transforms: Query<&Transform>,
 	) where
 		TMovement: for<'c> GetContextMut<
-				Movement,
+				ConfiguredMovement,
 				TContext<'c>: StartMovement + StopMovement + CurrentMovement,
 			>,
 	{
 		for (entity, chasing) in &enemies {
-			let ctx = TMovement::get_context_mut(&mut movement, Movement { entity });
+			let ctx = TMovement::get_context_mut(&mut movement, ConfiguredMovement { entity });
 			let Some(mut ctx) = ctx else {
 				continue;
 			};
