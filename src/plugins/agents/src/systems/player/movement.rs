@@ -24,7 +24,8 @@ impl Player {
 	) where
 		for<'w, 's> TInput: SystemParam<Item<'w, 's>: GetAllInputStates>,
 		for<'w, 's> TRaycast: SystemParam<Item<'w, 's>: Raycast<MouseTerrainHover>>,
-		for<'c> TMovement: GetContextMut<ConfiguredMovement, TContext<'c>: StartMovement + StopMovement>,
+		for<'c> TMovement:
+			GetContextMut<ConfiguredMovement, TContext<'c>: StartMovement + StopMovement>,
 	{
 		let Some(cam_transform) = cameras.iter().next() else {
 			return;
@@ -32,7 +33,8 @@ impl Player {
 		let inputs = || input.get_all_input_states::<MovementKey>();
 
 		for entity in &players {
-			let Some(mut ctx) = TMovement::get_context_mut(&mut m, ConfiguredMovement { entity }) else {
+			let Some(mut ctx) = TMovement::get_context_mut(&mut m, ConfiguredMovement { entity })
+			else {
 				continue;
 			};
 
