@@ -3,7 +3,6 @@ use crate::{
 	components::{
 		agent::{AgentTransformDirty, ApplyAgentConfig},
 		agent_config::AgentConfig,
-		movement_config::MovementConfig,
 	},
 };
 use bevy::{
@@ -21,6 +20,7 @@ use common::{
 			insert_default_loadout::{InsertDefaultLoadout, NotLoadedOut},
 			register_loadout_bones::{NoBonesRegistered, RegisterLoadoutBones},
 		},
+		handles_movement::{ConfigureMovement, NotConfiguredMovement},
 		handles_physics::PhysicalDefaultAttributes,
 		handles_skill_physics::{RegisterDefinition, SkillSpawnPoints},
 		loadout::ItemName,
@@ -30,10 +30,11 @@ use common::{
 use std::{iter::Enumerate, slice::Iter};
 
 impl ApplyAgentConfig {
-	pub(crate) fn system<TLoadout, TSkills, TAnimations, TAttributes>(
+	pub(crate) fn system<TLoadout, TSkills, TAnimations, TMovement, TAttributes>(
 		mut loadout_param: StaticSystemParam<TLoadout>,
 		mut skills_param: StaticSystemParam<TSkills>,
 		mut animations_param: StaticSystemParam<TAnimations>,
+		mut movement: StaticSystemParam<TMovement>,
 		mut commands: ZyheedaCommands,
 		agents: Query<
 			(
@@ -53,6 +54,8 @@ impl ApplyAgentConfig {
 			SystemParam + for<'c> GetContextMut<SkillSpawnPoints, TContext<'c>: RegisterDefinition>,
 		TAnimations:
 			SystemParam + for<'c> GetContextMut<Animations, TContext<'c>: RegisterAnimations>,
+		TMovement: SystemParam
+			+ for<'c> GetContextMut<NotConfiguredMovement, TContext<'c>: ConfigureMovement>,
 		TAttributes: Component + From<PhysicalDefaultAttributes>,
 	{
 		for (entity, AgentConfig { config_handle }, mut transform, transform_dirty) in agents {
@@ -84,6 +87,15 @@ impl ApplyAgentConfig {
 				ctx.register_animations(&config.animations, &config.animation_mask_groups);
 			}
 
+			let not_configured = NotConfiguredMovement { entity };
+			if let Some(mut ctx) = TMovement::get_context_mut(&mut movement, not_configured) {
+				ctx.configure(
+					config.speed.with_fastest_left(),
+					config.required_clearance,
+					config.ground_offset,
+				);
+			}
+
 			if transform_dirty.is_some() {
 				transform.translation += config.ground_offset;
 			}
@@ -97,14 +109,7 @@ impl ApplyAgentConfig {
 						func(&mut e);
 					}
 				};
-				e.try_insert_if_new((
-					TAttributes::from(config.attributes),
-					MovementConfig {
-						required_clearance: config.required_clearance,
-						speed: config.speed,
-						ground_offset: config.ground_offset,
-					},
-				));
+				e.try_insert_if_new(TAttributes::from(config.attributes));
 				e.try_remove::<(Self, AgentTransformDirty)>();
 			});
 		}
@@ -156,10 +161,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		assets::agent_config::{Bones, Loadout},
-		components::{
-			agent::AgentTransformDirty,
-			movement_config::{MovementConfig, MovementSpeed},
-		},
+		components::agent::AgentTransformDirty,
 	};
 	use common::{
 		attributes::{effect_target::EffectTarget, health::Health},
@@ -181,6 +183,7 @@ mod tests {
 				AnimationPath,
 				PlayMode,
 			},
+			handles_movement::MovementSpeed,
 			handles_skill_physics::SkillSpawner,
 		},
 		zyheeda_commands::ZyheedaEntityCommands,
@@ -287,6 +290,24 @@ mod tests {
 		}
 	}
 
+	#[derive(Component, NestedMocks)]
+	struct _Movement {
+		mock: Mock_Movement,
+	}
+
+	#[automock]
+	impl ConfigureMovement for _Movement {
+		fn configure(
+			&mut self,
+			speed: MovementSpeed,
+			required_clearance: Units,
+			ground_offset: Vec3,
+		) {
+			self.mock
+				.configure(speed, required_clearance, ground_offset);
+		}
+	}
+
 	#[derive(Component, Debug, PartialEq)]
 	struct _Attributes(PhysicalDefaultAttributes);
 
@@ -312,11 +333,13 @@ mod tests {
 					Query<&mut _Loadout>,
 					Query<&mut _Skills>,
 					Query<&mut _Animations>,
+					Query<&mut _Movement>,
 					_Attributes,
 				>,
 				IsChanged::<_Loadout>::detect,
 				IsChanged::<_Skills>::detect,
 				IsChanged::<_Animations>::detect,
+				IsChanged::<_Movement>::detect,
 				IsChanged::<AssetModel>::detect,
 				IsChanged::<_Attributes>::detect,
 				IsChanged::<Transform>::detect,
@@ -490,6 +513,71 @@ mod tests {
 		}
 	}
 
+	mod movement {
+		use super::*;
+
+		#[test]
+		fn configure() {
+			let config_handle = new_handle();
+			let config = AgentConfigAsset {
+				required_clearance: Units::from_u8(12),
+				speed: MovementSpeed::Fixed(UnitsPerSecond::from_u8(21)),
+				ground_offset: Vec3::new(1., 2., 3.),
+				..default()
+			};
+			let mut app = setup([(&config_handle, config.clone())]);
+			app.world_mut().spawn((
+				ApplyAgentConfig,
+				Transform::default(),
+				AgentConfig { config_handle },
+				_Movement::new().with_mock(move |mock| {
+					mock.expect_configure()
+						.times(1)
+						.with(
+							eq(config.speed),
+							eq(config.required_clearance),
+							eq(config.ground_offset),
+						)
+						.return_const(());
+				}),
+			));
+
+			app.update();
+		}
+
+		#[test]
+		fn configure_fastest_left() {
+			let config_handle = new_handle();
+			let config = AgentConfigAsset {
+				required_clearance: Units::from_u8(12),
+				speed: MovementSpeed::Variable([
+					UnitsPerSecond::from_u8(11),
+					UnitsPerSecond::from_u8(21),
+				]),
+				ground_offset: Vec3::new(1., 2., 3.),
+				..default()
+			};
+			let mut app = setup([(&config_handle, config.clone())]);
+			app.world_mut().spawn((
+				ApplyAgentConfig,
+				Transform::default(),
+				AgentConfig { config_handle },
+				_Movement::new().with_mock(move |mock| {
+					mock.expect_configure()
+						.times(1)
+						.with(
+							eq(config.speed.with_fastest_left()),
+							eq(config.required_clearance),
+							eq(config.ground_offset),
+						)
+						.return_const(());
+				}),
+			));
+
+			app.update();
+		}
+	}
+
 	mod model {
 		use super::*;
 
@@ -547,67 +635,6 @@ mod tests {
 			app.update();
 
 			assert_eq!(Some(&_Model), app.world().entity(entity).get::<_Model>());
-		}
-	}
-
-	mod movement_config {
-		use super::*;
-
-		#[test]
-		fn insert_movement_config() {
-			let config_handle = new_handle();
-			let config = AgentConfigAsset {
-				required_clearance: Units::from_u8(12),
-				speed: MovementSpeed::FixedWalk(UnitsPerSecond::from_u8(21)),
-				ground_offset: Vec3::new(1., 2., 3.),
-				..default()
-			};
-			let mut app = setup([(&config_handle, config)]);
-			let entity = app
-				.world_mut()
-				.spawn((ApplyAgentConfig, AgentConfig { config_handle }))
-				.id();
-
-			app.update();
-
-			assert_eq!(
-				Some(&MovementConfig {
-					required_clearance: Units::from_u8(12),
-					speed: MovementSpeed::FixedWalk(UnitsPerSecond::from_u8(21)),
-					ground_offset: Vec3::new(1., 2., 3.),
-				}),
-				app.world().entity(entity).get::<MovementConfig>(),
-			);
-		}
-
-		#[test]
-		fn do_not_override_movement_config() {
-			let config_handle = new_handle();
-			let config = AgentConfigAsset::default();
-			let mut app = setup([(&config_handle, config)]);
-			let entity = app
-				.world_mut()
-				.spawn((
-					ApplyAgentConfig,
-					AgentConfig { config_handle },
-					MovementConfig {
-						required_clearance: Units::from_u8(12),
-						speed: MovementSpeed::FixedWalk(UnitsPerSecond::from_u8(21)),
-						ground_offset: Vec3::new(1., 2., 3.),
-					},
-				))
-				.id();
-
-			app.update();
-
-			assert_eq!(
-				Some(&MovementConfig {
-					required_clearance: Units::from_u8(12),
-					speed: MovementSpeed::FixedWalk(UnitsPerSecond::from_u8(21)),
-					ground_offset: Vec3::new(1., 2., 3.),
-				}),
-				app.world().entity(entity).get::<MovementConfig>(),
-			);
 		}
 	}
 

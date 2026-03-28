@@ -37,7 +37,7 @@ mod tests {
 	use super::*;
 	use common::{
 		tools::{Done, UnitsPerSecond, speed::Speed},
-		traits::handles_movement::MovementSpeed,
+		traits::handles_movement::{MovementSpeed, SpeedToggle},
 		zyheeda_commands::ZyheedaEntityCommands,
 	};
 	use testing::SingleThreadedApp;
@@ -120,7 +120,7 @@ mod tests {
 		let movement = _Movement(false.into());
 		let agent = app
 			.world_mut()
-			.spawn((agent, movement, SpeedIndex::Toggled))
+			.spawn((agent, movement, SpeedIndex(SpeedToggle::Right)))
 			.id();
 
 		app.update();

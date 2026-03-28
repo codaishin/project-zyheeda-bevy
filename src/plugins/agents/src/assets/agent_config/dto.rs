@@ -1,6 +1,6 @@
 use crate::{
 	assets::agent_config::{AgentConfigAsset, AgentModel, Bones, Loadout},
-	components::{enemy::void_sphere::VoidSphere, movement_config::MovementSpeed},
+	components::enemy::void_sphere::VoidSphere,
 };
 use bevy::prelude::*;
 use common::{
@@ -9,6 +9,7 @@ use common::{
 	traits::{
 		handles_animations::{AffectedAnimationBones, Animation, AnimationKey, AnimationMaskBits},
 		handles_custom_assets::{AssetFileExtensions, TryLoadFrom},
+		handles_movement::MovementSpeed,
 		handles_physics::PhysicalDefaultAttributes,
 	},
 };

@@ -23,6 +23,7 @@ where
 	TMotion: Component,
 {
 	movements: Query<'w, 's, Ref<'static, TMotion>>,
+	speed_index: Query<'w, 's, Ref<'static, SpeedIndex>>,
 	just_removed_movements: Res<'w, JustRemovedMovements>,
 }
 
@@ -36,13 +37,17 @@ where
 		param: &'ctx MovementParam<TMotion>,
 		Movement { entity }: Movement,
 	) -> Option<Self::TContext<'ctx>> {
-		let ctx = match param.movements.get(entity) {
-			Ok(movement) => MovementContext::Movement(movement),
-			_ if param.just_removed_movements.0.contains(&entity) => MovementContext::JustRemoved,
-			_ => MovementContext::Empty,
+		let motion = match param.movements.get(entity) {
+			Ok(movement) => MotionState::Movement(movement),
+			_ if param.just_removed_movements.0.contains(&entity) => MotionState::JustRemoved,
+			_ => MotionState::Empty,
 		};
+		let speed_index = param.speed_index.get(entity).ok();
 
-		Some(ctx)
+		Some(MovementContext {
+			motion,
+			current_speed: speed_index,
+		})
 	}
 }
 
@@ -52,7 +57,15 @@ where
 	TMotion: Component,
 {
 	commands: ZyheedaCommands<'w, 's>,
-	motions: Query<'w, 's, (Option<&'static TMotion>, &'static mut SpeedIndex), With<Config>>,
+	motions: Query<
+		'w,
+		's,
+		(
+			Option<&'static TMotion>,
+			&'static Config,
+			&'static mut SpeedIndex,
+		),
+	>,
 }
 
 impl<TMotion> GetContextMut<ConfiguredMovement> for MovementParamMut<'_, '_, TMotion>
@@ -65,18 +78,27 @@ where
 		param: &'ctx mut MovementParamMut<TMotion>,
 		ConfiguredMovement { entity }: ConfiguredMovement,
 	) -> Option<Self::TContext<'ctx>> {
-		let (motion, current_speed) = param.motions.get_mut(entity).ok()?;
+		let (motion, config, current_speed) = param.motions.get_mut(entity).ok()?;
 		let entity = param.commands.get_mut(&entity)?;
 
 		Some(MovementContextMut {
 			entity,
 			motion,
+			config,
 			current_speed,
 		})
 	}
 }
 
-pub enum MovementContext<'ctx, TMotion>
+pub struct MovementContext<'ctx, TMotion>
+where
+	TMotion: Component,
+{
+	motion: MotionState<'ctx, TMotion>,
+	current_speed: Option<Ref<'ctx, SpeedIndex>>,
+}
+
+pub(crate) enum MotionState<'ctx, TMotion>
 where
 	TMotion: Component,
 {
@@ -91,6 +113,7 @@ where
 {
 	entity: ZyheedaEntityCommands<'ctx>,
 	motion: Option<&'ctx TMotion>,
+	config: &'ctx Config,
 	current_speed: Mut<'ctx, SpeedIndex>,
 }
 

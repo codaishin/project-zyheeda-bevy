@@ -3,21 +3,17 @@ use crate::{
 	components::{config::Config, movement_path::Mode},
 };
 use bevy::{ecs::query::QueryFilter, prelude::*};
-use common::{
-	traits::{
-		accessors::get::{TryApplyOn, View},
-		handles_map_generation::GroundPosition,
-		handles_path_finding::ComputePath,
-	},
-	zyheeda_commands::ZyheedaCommands,
+use common::traits::{
+	accessors::get::View,
+	handles_map_generation::GroundPosition,
+	handles_path_finding::ComputePath,
 };
 use std::collections::VecDeque;
 
 type MoveComponents<TGetComputer> = (
-	Entity,
 	&'static Config,
 	&'static GlobalTransform,
-	&'static MovementPath,
+	&'static mut MovementPath,
 	&'static TGetComputer,
 );
 
@@ -25,25 +21,21 @@ impl<T> ComputePathSystem for T where T: QueryFilter {}
 
 pub(crate) trait ComputePathSystem: QueryFilter + Sized {
 	fn compute<TComputer, TGetComputer>(
-		mut commands: ZyheedaCommands,
 		movements: Query<MoveComponents<TGetComputer>, Self>,
 		computers: Query<&TComputer>,
 	) where
 		TComputer: Component + ComputePath,
 		TGetComputer: Component + View<Entity>,
 	{
-		for (entity, config, transform, path, get_computer) in &movements {
+		for (config, transform, mut path, get_computer) in movements {
 			let Ok(computer) = computers.get(get_computer.view()) else {
 				continue;
 			};
 			let Mode::PathTarget(Some(target)) = path.0 else {
 				continue;
 			};
-			let path = compute_path(computer, transform, target, config);
 
-			commands.try_apply_on(&entity, |mut e| {
-				e.try_insert(MovementPath::path(path));
-			});
+			*path = MovementPath::path(compute_path(computer, transform, target, config));
 		}
 	}
 }

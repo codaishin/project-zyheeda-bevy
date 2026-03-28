@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use common::{
 	tools::{Units, UnitsPerSecond},
-	traits::handles_movement::MovementSpeed,
+	traits::handles_movement::{MovementSpeed, SpeedToggle},
 };
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
@@ -18,15 +18,15 @@ pub(crate) struct Config {
 impl Index<SpeedIndex> for Config {
 	type Output = UnitsPerSecond;
 
-	fn index(&self, index: SpeedIndex) -> &Self::Output {
-		let [default, toggled] = match &self.speed {
+	fn index(&self, SpeedIndex(toggle): SpeedIndex) -> &Self::Output {
+		let [left, right] = match &self.speed {
 			MovementSpeed::Fixed(speed) => return speed,
 			MovementSpeed::Variable(variable) => variable,
 		};
 
-		match index {
-			SpeedIndex::Default => default,
-			SpeedIndex::Toggled => toggled,
+		match toggle {
+			SpeedToggle::Left => left,
+			SpeedToggle::Right => right,
 		}
 	}
 }
@@ -35,8 +35,4 @@ impl Index<SpeedIndex> for Config {
 	Component, SavableComponent, Debug, PartialEq, Default, Clone, Copy, Serialize, Deserialize,
 )]
 #[savable_component(id = "current movement speed")]
-pub(crate) enum SpeedIndex {
-	#[default]
-	Default,
-	Toggled,
-}
+pub(crate) struct SpeedIndex(pub(crate) SpeedToggle);

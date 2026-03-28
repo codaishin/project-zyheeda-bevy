@@ -5,7 +5,7 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	tools::{Done, speed::Speed},
-	traits::handles_movement::{CurrentMovement, MovementTarget},
+	traits::{accessors::get::View, handles_movement::MovementTarget},
 	zyheeda_commands::ZyheedaEntityCommands,
 };
 use macros::SavableComponent;
@@ -79,8 +79,8 @@ impl MovementUpdate for MovementPath {
 	}
 }
 
-impl CurrentMovement for MovementPath {
-	fn current_movement(&self) -> Option<MovementTarget> {
+impl View<Option<MovementTarget>> for MovementPath {
+	fn view(&self) -> Option<MovementTarget> {
 		match &self.0 {
 			Mode::Direction(dir) => Some(MovementTarget::Dir(*dir)),
 			Mode::PathTarget(target) => target.as_ref().copied().map(MovementTarget::Point),
@@ -143,7 +143,7 @@ mod test_with_path {
 
 			assert_eq!(
 				Some(MovementTarget::Point(Vec3::new(1., 2., 3.))),
-				path.current_movement(),
+				path.view(),
 			);
 		}
 
@@ -151,7 +151,7 @@ mod test_with_path {
 		fn direction() {
 			let path = MovementPath::direction(Dir3::X);
 
-			assert_eq!(Some(MovementTarget::Dir(Dir3::X)), path.current_movement());
+			assert_eq!(Some(MovementTarget::Dir(Dir3::X)), path.view());
 		}
 
 		#[test]
@@ -160,7 +160,7 @@ mod test_with_path {
 
 			assert_eq!(
 				Some(MovementTarget::Point(Vec3::new(3., 4., 5.))),
-				path.current_movement(),
+				path.view(),
 			);
 		}
 
@@ -168,7 +168,7 @@ mod test_with_path {
 		fn stop() {
 			let path = MovementPath::stop();
 
-			assert_eq!(None, path.current_movement());
+			assert_eq!(None, path.view());
 		}
 	}
 

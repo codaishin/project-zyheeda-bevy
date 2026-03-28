@@ -1,8 +1,8 @@
 use crate::components::enemy::{Enemy, chasing::Chasing};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
-	accessors::get::GetContextMut,
-	handles_movement::{CurrentMovement, ConfiguredMovement, MovementTarget, StartMovement, StopMovement},
+	accessors::get::{GetContextMut, View},
+	handles_movement::{ConfiguredMovement, MovementTarget, StartMovement, StopMovement},
 };
 
 impl Enemy {
@@ -13,16 +13,16 @@ impl Enemy {
 	) where
 		TMovement: for<'c> GetContextMut<
 				ConfiguredMovement,
-				TContext<'c>: StartMovement + StopMovement + CurrentMovement,
+				TContext<'c>: StartMovement + StopMovement + View<Option<MovementTarget>>,
 			>,
 	{
 		for (entity, chasing) in &enemies {
-			let ctx = TMovement::get_context_mut(&mut movement, ConfiguredMovement { entity });
-			let Some(mut ctx) = ctx else {
+			let key = ConfiguredMovement { entity };
+			let Some(mut ctx) = TMovement::get_context_mut(&mut movement, key) else {
 				continue;
 			};
 
-			match (chasing, ctx.current_movement()) {
+			match (chasing, ctx.view()) {
 				(None, Some(_)) => {
 					ctx.stop();
 				}
@@ -30,9 +30,11 @@ impl Enemy {
 					let Ok(player) = transforms.get(*player) else {
 						continue;
 					};
+
 					if current_movement == Some(MovementTarget::Point(player.translation)) {
 						continue;
 					}
+
 					ctx.start(player.translation);
 				}
 				_ => {}
@@ -70,9 +72,9 @@ mod tests {
 		}
 	}
 
-	impl CurrentMovement for _Movement {
-		fn current_movement(&self) -> Option<MovementTarget> {
-			self.mock.current_movement()
+	impl View<Option<MovementTarget>> for _Movement {
+		fn view(&self) -> Option<MovementTarget> {
+			self.mock.view()
 		}
 	}
 
@@ -84,8 +86,8 @@ mod tests {
 		impl StopMovement for _Movement {
 			fn stop(&mut self);
 		}
-		impl CurrentMovement for _Movement {
-			fn current_movement(&self) -> Option<MovementTarget>;
+		impl View<Option<MovementTarget>> for _Movement {
+			fn view(&self) -> Option<MovementTarget>;
 		}
 	}
 
@@ -115,8 +117,7 @@ mod tests {
 					.once()
 					.with(eq(Vec3::new(1., 2., 3.)))
 					.return_const(());
-				mock.expect_current_movement()
-					.return_const(current_movement);
+				mock.expect_view().return_const(current_movement);
 			}),
 		));
 
@@ -137,7 +138,7 @@ mod tests {
 				mock.expect_start::<Vec3>().never();
 				mock.expect_start::<Dir3>().never();
 				mock.expect_stop().once().return_const(());
-				mock.expect_current_movement()
+				mock.expect_view()
 					.return_const(Some(MovementTarget::Point(Vec3::ONE)));
 			}),
 		));
@@ -161,7 +162,7 @@ mod tests {
 				mock.expect_start::<Vec3>().never();
 				mock.expect_start::<Dir3>().never();
 				mock.expect_stop().never();
-				mock.expect_current_movement()
+				mock.expect_view()
 					.return_const(MovementTarget::Point(Vec3::new(1., 2., 3.)));
 			}),
 		));
@@ -182,7 +183,7 @@ mod tests {
 				mock.expect_start::<Vec3>().never();
 				mock.expect_start::<Dir3>().never();
 				mock.expect_stop().never();
-				mock.expect_current_movement().return_const(None);
+				mock.expect_view().return_const(None);
 			}),
 		));
 

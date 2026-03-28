@@ -1,5 +1,6 @@
 mod assets;
 mod components;
+mod deref;
 mod entity;
 mod handle;
 mod option;

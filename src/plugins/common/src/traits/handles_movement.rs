@@ -4,7 +4,7 @@ use crate::{
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
 use serde::{Deserialize, Serialize};
-use std::ops::{Deref, DerefMut};
+use std::ops::DerefMut;
 
 pub trait HandlesMovement {
 	type TMovement<'w, 's>: SystemParam
@@ -26,7 +26,7 @@ pub type MovementSystemParam<'w, 's, T> = <T as HandlesMovement>::TMovement<'w, 
 pub type MovementSystemParamMut<'w, 's, T> = <T as HandlesMovement>::TMovementMut<'w, 's>;
 pub type MovementSystemConfigParam<'w, 's, T> = <T as HandlesMovement>::TMovementConfig<'w, 's>;
 
-pub trait ControlMovement: StartMovement + StopMovement + CurrentMovement {}
+pub trait ControlMovement: StartMovement + StopMovement + ToggleSpeed + CurrentMovement {}
 
 impl<T> ControlMovement for T where T: StartMovement + StopMovement + ToggleSpeed + CurrentMovement {}
 
@@ -86,6 +86,15 @@ pub enum MovementSpeed {
 	Variable([UnitsPerSecond; 2]),
 }
 
+impl MovementSpeed {
+	pub fn with_fastest_left(self) -> Self {
+		match self {
+			Self::Variable([slow, fast]) if *slow < *fast => Self::Variable([fast, slow]),
+			speed => speed,
+		}
+	}
+}
+
 impl Default for MovementSpeed {
 	fn default() -> Self {
 		Self::Fixed(UnitsPerSecond::from_u8(1))
@@ -124,30 +133,32 @@ where
 }
 
 pub trait ToggleSpeed {
-	fn toggle_speed(&mut self);
+	fn toggle_speed(&mut self) -> SpeedToggle;
 }
 
 impl<T> ToggleSpeed for T
 where
 	T: DerefMut<Target: ToggleSpeed>,
 {
-	fn toggle_speed(&mut self) {
-		self.deref_mut().toggle_speed();
+	fn toggle_speed(&mut self) -> SpeedToggle {
+		self.deref_mut().toggle_speed()
 	}
 }
 
-pub trait CurrentMovement {
-	fn current_movement(&self) -> Option<MovementTarget>;
+#[derive(Debug, PartialEq, Default, Clone, Copy, Serialize, Deserialize)]
+pub enum SpeedToggle {
+	#[default]
+	Left,
+	Right,
 }
 
-impl<T> CurrentMovement for T
-where
-	T: Deref<Target: CurrentMovement>,
-{
-	fn current_movement(&self) -> Option<MovementTarget> {
-		self.deref().current_movement()
-	}
+impl ViewField for SpeedToggle {
+	type TValue<'a> = Self;
 }
+
+pub trait CurrentMovement: View<Option<MovementTarget>> + View<SpeedToggle> {}
+
+impl<T> CurrentMovement for T where T: View<Option<MovementTarget>> + View<SpeedToggle> {}
 
 pub struct Movement {
 	pub entity: Entity,
@@ -176,5 +187,49 @@ pub struct NotConfiguredMovement {
 impl From<NotConfiguredMovement> for Entity {
 	fn from(NotConfiguredMovement { entity }: NotConfiguredMovement) -> Self {
 		entity
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	mod movement_speed {
+		use super::*;
+
+		#[test]
+		fn with_fastest_left_switch() {
+			let movement_speed =
+				MovementSpeed::Variable([UnitsPerSecond::from_u8(11), UnitsPerSecond::from_u8(22)]);
+
+			let sorted = movement_speed.with_fastest_left();
+
+			assert_eq!(
+				MovementSpeed::Variable([UnitsPerSecond::from_u8(22), UnitsPerSecond::from_u8(11)]),
+				sorted,
+			);
+		}
+
+		#[test]
+		fn with_fastest_left_unchanged() {
+			let movement_speed =
+				MovementSpeed::Variable([UnitsPerSecond::from_u8(22), UnitsPerSecond::from_u8(11)]);
+
+			let sorted = movement_speed.with_fastest_left();
+
+			assert_eq!(
+				MovementSpeed::Variable([UnitsPerSecond::from_u8(22), UnitsPerSecond::from_u8(11)]),
+				sorted,
+			);
+		}
+
+		#[test]
+		fn with_fastest_left_fixed() {
+			let movement_speed = MovementSpeed::Fixed(UnitsPerSecond::from_u8(22));
+
+			let sorted = movement_speed.with_fastest_left();
+
+			assert_eq!(MovementSpeed::Fixed(UnitsPerSecond::from_u8(22)), sorted);
+		}
 	}
 }
