@@ -30,6 +30,7 @@ where
 {
 	context: StaticSystemParam<'w, 's, T>,
 	interaction_child_colliders: Query<'w, 's, &'static ChildCollider<InteractionTarget>>,
+	rigid_body_child_colliders: Query<'w, 's, &'static ChildCollider<RigidBody>>,
 	no_mouse_hovers: Query<'w, 's, (), With<NoMouseHover>>,
 	world_cams: Query<'w, 's, &'static mut WorldCamera>,
 }

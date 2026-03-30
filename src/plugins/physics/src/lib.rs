@@ -149,6 +149,7 @@ where
 			// Colliders/Bodies
 			.add_prefab_observer::<ColliderShape, ()>()
 			.add_observer(ChildCollider::<InteractionTarget>::link)
+			.add_observer(ChildCollider::<RigidBody>::link)
 			.add_systems(
 				PostUpdate,
 				(
