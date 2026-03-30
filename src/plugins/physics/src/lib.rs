@@ -151,9 +151,9 @@ where
 			.add_observer(ChildCollider::<InteractionTarget>::link)
 			.add_observer(ChildCollider::<RigidBody>::link)
 			.add_systems(
-				PostUpdate,
+				Update,
 				(
-					PhysicalBody::prefab.after(TransformSystems::Propagate),
+					PhysicalBody::prefab,
 					AsyncCollider::insert_collider.pipe(OnError::log),
 				),
 			)
