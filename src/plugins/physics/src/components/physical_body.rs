@@ -14,7 +14,7 @@ use common::{
 	errors::Unreachable,
 	traits::{
 		handles_physics::physical_bodies::{Body, PhysicsType},
-		prefab::{Prefab, PrefabEntityCommands, Reapply},
+		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
 
@@ -37,8 +37,6 @@ impl From<Body> for PhysicalBody {
 impl Prefab<()> for PhysicalBody {
 	type TError = Unreachable;
 	type TSystemParam<'w, 's> = ();
-
-	const REAPPLY: Reapply = Reapply::Always;
 
 	fn insert_prefab_components(
 		&self,
@@ -191,26 +189,6 @@ mod tests {
 				filters: GENERIC_COLLISION_GROUP | RAY_GROUP
 			}),
 			app.world().entity(entity).get::<CollisionGroups>(),
-		);
-	}
-
-	#[test]
-	fn reinsert_collider() {
-		let mut app = setup();
-		let shape = Shape::Sphere {
-			radius: Units::from(42.),
-		};
-		let entity = app
-			.world_mut()
-			.spawn(PhysicalBody(Body::from_shape(Shape::Sphere {
-				radius: Units::from(11.),
-			})))
-			.insert(PhysicalBody(Body::from(shape)))
-			.id();
-
-		assert_eq!(
-			Some(&ColliderShape::from(shape)),
-			app.world().entity(entity).get::<ColliderShape>(),
 		);
 	}
 }
