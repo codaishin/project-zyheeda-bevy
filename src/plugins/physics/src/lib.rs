@@ -25,7 +25,6 @@ use crate::{
 		ground_target::GroundTarget,
 		interaction_target::InteractionTarget,
 		lifetime::{LifetimeTiedTo, TiedLifetimes},
-		no_hover::NoMouseHover,
 		physical_body::PhysicalBody,
 		prevent_tunneling::PreventTunneling,
 		set_velocity_forward::SetVelocityForward,
@@ -249,7 +248,6 @@ pub struct PhysicsSystems;
 
 impl<TDependencies> HandlesRaycast for PhysicsPlugin<TDependencies> {
 	type TWorldCamera = WorldCamera;
-	type TNoMouseHover = NoMouseHover;
 	type TRaycast<'world, 'state> = RayCaster<'world, 'state>;
 }
 
