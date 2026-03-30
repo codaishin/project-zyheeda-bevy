@@ -19,11 +19,11 @@ use crate::{
 		blockable::Blockable,
 		character_gravity::CharacterGravity,
 		character_motion::ApplyCharacterMotion,
-		collider::ColliderShape,
+		collider::{ChildCollider, ColliderShape},
 		default_attributes::DefaultAttributes,
 		effects::{Effects, force::ForceEffect},
 		ground_target::GroundTarget,
-		interaction_target::{ColliderOfInteractionTarget, InteractionTarget},
+		interaction_target::InteractionTarget,
 		lifetime::{LifetimeTiedTo, TiedLifetimes},
 		no_hover::NoMouseHover,
 		physical_body::PhysicalBody,
@@ -148,7 +148,8 @@ where
 			.add_observer(Skill::prefab)
 			// Colliders/Bodies
 			.add_prefab_observer::<ColliderShape, ()>()
-			.add_observer(ColliderOfInteractionTarget::link)
+			.add_observer(ChildCollider::<InteractionTarget>::link)
+			.add_observer(ChildCollider::<RigidBody>::link)
 			.add_systems(
 				PostUpdate,
 				(

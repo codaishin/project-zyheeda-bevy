@@ -4,8 +4,8 @@ use crate::{
 		RayFilter,
 		blockable::Blockable,
 		blocker_types::BlockerTypes,
-		collider::ColliderShape,
-		interaction_target::ColliderOfInteractionTarget,
+		collider::{ChildCollider, ColliderShape},
+		interaction_target::InteractionTarget,
 		skill_transform::SkillTransforms,
 	},
 	messages::BeamInteraction,
@@ -39,7 +39,7 @@ impl Blockable {
 		objects: Query<(Entity, &Self, &SkillTransforms, &GlobalTransform)>,
 		transforms_and_colliders: Query<(&mut Transform, Option<&ColliderShape>)>,
 		blockers: Query<&BlockerTypes>,
-		interaction_colliders: Query<&ColliderOfInteractionTarget>,
+		interaction_colliders: Query<&ChildCollider<InteractionTarget>>,
 		commands: ZyheedaCommands,
 	) -> Result<(), BeamError> {
 		Self::beam_interactions_internal(
@@ -59,7 +59,7 @@ impl Blockable {
 		objects: Query<(Entity, &Self, &SkillTransforms, &GlobalTransform)>,
 		mut transforms_and_colliders: Query<(&mut Transform, Option<&ColliderShape>)>,
 		blockers: Query<&BlockerTypes>,
-		interaction_colliders: Query<&ColliderOfInteractionTarget>,
+		interaction_colliders: Query<&ChildCollider<InteractionTarget>>,
 		mut commands: ZyheedaCommands,
 	) -> Result<(), BeamError<TCasterError>>
 	where
@@ -153,11 +153,11 @@ impl Blockable {
 	fn blocked(
 		hit: &RayHit,
 		blockers: Query<&BlockerTypes>,
-		interaction_colliders: Query<&ColliderOfInteractionTarget>,
+		interaction_colliders: Query<&ChildCollider<InteractionTarget>>,
 		blocked_by: &HashSet<Blocker>,
 	) -> bool {
 		let entity = match interaction_colliders.get(hit.entity) {
-			Ok(ColliderOfInteractionTarget(entity)) => *entity,
+			Ok(ChildCollider { root, .. }) => *root,
 			Err(_) => hit.entity,
 		};
 
@@ -203,11 +203,7 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{
-		components::{
-			blocker_types::BlockerTypes,
-			interaction_target::ColliderOfInteractionTarget,
-			skill_transform::SkillTransformOf,
-		},
+		components::{blocker_types::BlockerTypes, skill_transform::SkillTransformOf},
 		messages::BeamInteraction,
 		traits::ray_cast::{CastRayContinuouslySorted, InvalidIntersections, RayHit},
 	};
@@ -418,7 +414,9 @@ mod tests {
 							Blocker::Physical,
 						])))
 						.id();
-					let collider = world.spawn(ColliderOfInteractionTarget(blocker)).id();
+					let collider = world
+						.spawn(ChildCollider::<InteractionTarget>::of(blocker))
+						.id();
 					mock.expect_cast_ray_continuously_sorted()
 						.return_const(Ok(Sorted::from([
 							RayHit {
