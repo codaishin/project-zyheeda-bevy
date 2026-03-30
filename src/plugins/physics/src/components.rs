@@ -13,7 +13,6 @@ pub(crate) mod immobilized;
 pub(crate) mod interaction_target;
 pub(crate) mod lifetime;
 pub(crate) mod mount_points;
-pub(crate) mod no_hover;
 pub(crate) mod ongoing_effects;
 pub(crate) mod physical_body;
 pub(crate) mod prevent_tunneling;

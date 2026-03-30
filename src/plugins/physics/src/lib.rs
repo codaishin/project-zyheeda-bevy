@@ -25,7 +25,6 @@ use crate::{
 		ground_target::GroundTarget,
 		interaction_target::InteractionTarget,
 		lifetime::{LifetimeTiedTo, TiedLifetimes},
-		no_hover::NoMouseHover,
 		physical_body::PhysicalBody,
 		prevent_tunneling::PreventTunneling,
 		set_velocity_forward::SetVelocityForward,
@@ -148,15 +147,10 @@ where
 			.add_observer(Skill::prefab)
 			// Colliders/Bodies
 			.add_prefab_observer::<ColliderShape, ()>()
+			.add_prefab_observer::<PhysicalBody, ()>()
 			.add_observer(ChildCollider::<InteractionTarget>::link)
 			.add_observer(ChildCollider::<RigidBody>::link)
-			.add_systems(
-				PostUpdate,
-				(
-					PhysicalBody::prefab.after(TransformSystems::Propagate),
-					AsyncCollider::insert_collider.pipe(OnError::log),
-				),
-			)
+			.add_systems(Update, AsyncCollider::insert_collider.pipe(OnError::log))
 			// All effects
 			.add_observer(Effects::insert)
 			// Deal health damage
@@ -249,7 +243,6 @@ pub struct PhysicsSystems;
 
 impl<TDependencies> HandlesRaycast for PhysicsPlugin<TDependencies> {
 	type TWorldCamera = WorldCamera;
-	type TNoMouseHover = NoMouseHover;
 	type TRaycast<'world, 'state> = RayCaster<'world, 'state>;
 }
 

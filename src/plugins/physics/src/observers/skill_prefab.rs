@@ -1,6 +1,6 @@
 use crate::components::{
 	blockable::Blockable,
-	collider::ColliderShape,
+	collider::{ColliderShape, GENERIC_COLLISION_GROUP, RAY_GROUP},
 	effects::Effects,
 	skill::{ContactInteractionTarget, ProjectionInteractionTarget},
 	skill_transform::SkillTransformOf,
@@ -33,6 +33,10 @@ pub(crate) trait SkillPrefab:
 		let rigid_body = skill.apply_motion_prefab(&mut entity);
 		let (obj, cont_model, cont_collider, cont_effects) = skill.get_contact_prefab();
 		let (proj_model, proj_collider, proj_effects) = skill.get_projection_prefab();
+		let collision_group = CollisionGroups {
+			memberships: GENERIC_COLLISION_GROUP,
+			filters: GENERIC_COLLISION_GROUP | RAY_GROUP,
+		};
 
 		entity.try_insert((
 			rigid_body,
@@ -47,6 +51,7 @@ pub(crate) trait SkillPrefab:
 				),
 				(
 					SkillTransformOf(root),
+					collision_group,
 					cont_collider.transform,
 					cont_collider.shape,
 					Sensor,
@@ -62,6 +67,7 @@ pub(crate) trait SkillPrefab:
 						),
 						(
 							SkillTransformOf(root),
+							collision_group,
 							proj_collider.transform,
 							proj_collider.shape,
 							Sensor,
@@ -370,8 +376,16 @@ mod tests {
 						radius: Units::from(42.),
 					})),
 					Some(&Transform::from_xyz(1., 2., 3.)),
+					Some(&CollisionGroups {
+						memberships: GENERIC_COLLISION_GROUP,
+						filters: GENERIC_COLLISION_GROUP | RAY_GROUP,
+					})
 				),
-				(collider.get::<ColliderShape>(), collider.get::<Transform>()),
+				(
+					collider.get::<ColliderShape>(),
+					collider.get::<Transform>(),
+					collider.get::<CollisionGroups>(),
+				),
 			);
 		}
 
@@ -487,8 +501,16 @@ mod tests {
 						radius: Units::from(42.),
 					})),
 					Some(&Transform::from_xyz(1., 2., 3.)),
+					Some(&CollisionGroups {
+						memberships: GENERIC_COLLISION_GROUP,
+						filters: GENERIC_COLLISION_GROUP | RAY_GROUP,
+					})
 				),
-				(collider.get::<ColliderShape>(), collider.get::<Transform>()),
+				(
+					collider.get::<ColliderShape>(),
+					collider.get::<Transform>(),
+					collider.get::<CollisionGroups>(),
+				),
 			);
 		}
 
