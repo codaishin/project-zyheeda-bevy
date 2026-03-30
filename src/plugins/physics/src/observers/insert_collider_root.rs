@@ -1,13 +1,16 @@
-use crate::components::interaction_target::{ColliderOfInteractionTarget, InteractionTarget};
+use crate::components::collider::ChildCollider;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
-impl ColliderOfInteractionTarget {
+impl<T> ChildCollider<T>
+where
+	T: Component,
+{
 	pub(crate) fn link(
 		trigger: On<Add, Collider>,
 		mut commands: ZyheedaCommands,
-		collider_roots: Query<Entity, With<InteractionTarget>>,
+		collider_roots: Query<Entity, With<T>>,
 		ancestors: Query<&ChildOf>,
 	) {
 		let get_target_in_ancestor_of = |entity| {
@@ -21,7 +24,7 @@ impl ColliderOfInteractionTarget {
 		};
 
 		commands.try_apply_on(&entity, |mut e| {
-			e.try_insert(ColliderOfInteractionTarget(target));
+			e.try_insert(ChildCollider::<T>::of(target));
 		});
 	}
 }
@@ -31,10 +34,13 @@ mod tests {
 	use super::*;
 	use testing::SingleThreadedApp;
 
+	#[derive(Component, Debug, PartialEq)]
+	struct _Component;
+
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_observer(ColliderOfInteractionTarget::link);
+		app.add_observer(ChildCollider::<_Component>::link);
 
 		app
 	}
@@ -42,7 +48,7 @@ mod tests {
 	#[test]
 	fn insert_when_collider_on_child_of_target() {
 		let mut app = setup();
-		let entity = app.world_mut().spawn(InteractionTarget).id();
+		let entity = app.world_mut().spawn(_Component).id();
 
 		let child = app
 			.world_mut()
@@ -50,17 +56,17 @@ mod tests {
 			.id();
 
 		assert_eq!(
-			Some(&ColliderOfInteractionTarget(entity)),
+			Some(&ChildCollider::<_Component>::of(entity)),
 			app.world()
 				.entity(child)
-				.get::<ColliderOfInteractionTarget>()
+				.get::<ChildCollider::<_Component>>()
 		);
 	}
 
 	#[test]
 	fn insert_when_collider_on_child_of_child_of_target() {
 		let mut app = setup();
-		let entity = app.world_mut().spawn(InteractionTarget).id();
+		let entity = app.world_mut().spawn(_Component).id();
 		let child = app.world_mut().spawn(ChildOf(entity)).id();
 
 		let child_child = app
@@ -69,10 +75,10 @@ mod tests {
 			.id();
 
 		assert_eq!(
-			Some(&ColliderOfInteractionTarget(entity)),
+			Some(&ChildCollider::<_Component>::of(entity)),
 			app.world()
 				.entity(child_child)
-				.get::<ColliderOfInteractionTarget>()
+				.get::<ChildCollider::<_Component>>()
 		);
 	}
 
@@ -84,7 +90,7 @@ mod tests {
 		impl _Changed {
 			fn system(
 				mut commands: Commands,
-				colliders: Query<(), Changed<ColliderOfInteractionTarget>>,
+				colliders: Query<(), Changed<ChildCollider<_Component>>>,
 			) {
 				commands.insert_resource(_Changed(colliders.iter().count() > 0));
 			}
@@ -95,7 +101,7 @@ mod tests {
 
 		let entity = app
 			.world_mut()
-			.spawn((InteractionTarget, Collider::default()))
+			.spawn((_Component, Collider::default()))
 			.id();
 		app.update();
 		app.world_mut()

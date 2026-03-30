@@ -7,7 +7,8 @@ pub mod read_rapier_context;
 pub mod system_input;
 
 use crate::components::{
-	interaction_target::ColliderOfInteractionTarget,
+	collider::ChildCollider,
+	interaction_target::InteractionTarget,
 	no_hover::NoMouseHover,
 	world_camera::WorldCamera,
 };
@@ -28,7 +29,7 @@ where
 	T: SystemParam + 'static,
 {
 	context: StaticSystemParam<'w, 's, T>,
-	interaction_colliders: Query<'w, 's, &'static ColliderOfInteractionTarget>,
+	interaction_child_colliders: Query<'w, 's, &'static ChildCollider<InteractionTarget>>,
 	no_mouse_hovers: Query<'w, 's, (), With<NoMouseHover>>,
 	world_cams: Query<'w, 's, &'static mut WorldCamera>,
 }
