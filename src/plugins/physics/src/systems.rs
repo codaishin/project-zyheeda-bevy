@@ -9,7 +9,6 @@ pub(crate) mod interactions;
 pub(crate) mod life;
 pub(crate) mod mark_anchor_dirty;
 pub(crate) mod ongoing_interactions;
-pub(crate) mod physical_bodies_prefab;
 pub(crate) mod prevent_tunneling;
 pub(crate) mod set_velocity_forward;
 pub(crate) mod when_traveled;

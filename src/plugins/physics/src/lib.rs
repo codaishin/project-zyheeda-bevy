@@ -147,15 +147,10 @@ where
 			.add_observer(Skill::prefab)
 			// Colliders/Bodies
 			.add_prefab_observer::<ColliderShape, ()>()
+			.add_prefab_observer::<PhysicalBody, ()>()
 			.add_observer(ChildCollider::<InteractionTarget>::link)
 			.add_observer(ChildCollider::<RigidBody>::link)
-			.add_systems(
-				Update,
-				(
-					PhysicalBody::prefab,
-					AsyncCollider::insert_collider.pipe(OnError::log),
-				),
-			)
+			.add_systems(Update, AsyncCollider::insert_collider.pipe(OnError::log))
 			// All effects
 			.add_observer(Effects::insert)
 			// Deal health damage

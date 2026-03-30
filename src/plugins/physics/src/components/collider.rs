@@ -17,6 +17,7 @@ use std::marker::PhantomData;
 pub(crate) const GENERIC_COLLISION_GROUP: Group = Group::GROUP_1;
 pub(crate) const TERRAIN_GROUP: Group = Group::GROUP_2;
 pub(crate) const RAY_GROUP: Group = Group::GROUP_3;
+pub(crate) const MOUSE_HOVERABLE_GROUP: Group = Group::GROUP_4;
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
 #[component(immutable)]

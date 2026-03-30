@@ -1,4 +1,8 @@
-use crate::{components::collider::ChildCollider, traits::ray_cast::RayCaster};
+use crate::{
+	components::collider::{ChildCollider, MOUSE_HOVERABLE_GROUP, RAY_GROUP},
+	traits::ray_cast::RayCaster,
+};
+use bevy::prelude::*;
 use bevy_rapier3d::prelude::{Real, *};
 use common::traits::handles_physics::{Raycast, RaycastHit, SolidObjects};
 
@@ -13,10 +17,6 @@ impl Raycast<SolidObjects> for RayCaster<'_, '_> {
 	) -> Option<RaycastHit> {
 		let ray_caster = self.context.single().ok()?;
 		let exclude = |e| {
-			if only_hoverable && self.no_mouse_hovers.contains(e) {
-				return false;
-			}
-
 			if exclude.contains(&e) {
 				return false;
 			}
@@ -37,14 +37,21 @@ impl Raycast<SolidObjects> for RayCaster<'_, '_> {
 
 			true
 		};
+		let filter = QueryFilter {
+			flags: QueryFilterFlags::EXCLUDE_SENSORS,
+			predicate: Some(&exclude),
+			groups: Some(CollisionGroups {
+				memberships: RAY_GROUP,
+				filters: match only_hoverable {
+					true => MOUSE_HOVERABLE_GROUP,
+					false => Group::all(),
+				},
+			}),
+			..default()
+		};
 
-		let (entity, time_of_impact) = ray_caster.cast_ray(
-			ray.origin,
-			*ray.direction,
-			Real::MAX,
-			true,
-			QueryFilter::default().exclude_sensors().predicate(&exclude),
-		)?;
+		let (entity, time_of_impact) =
+			ray_caster.cast_ray(ray.origin, *ray.direction, Real::MAX, true, filter)?;
 
 		if let Ok(ChildCollider { root, .. }) = self.interaction_child_colliders.get(entity) {
 			return Some(RaycastHit {
@@ -72,12 +79,11 @@ mod tests {
 	use super::*;
 	use crate::{
 		PhysicsPlugin,
-		components::{interaction_target::InteractionTarget, no_hover::NoMouseHover},
+		components::{collider::MOUSE_HOVERABLE_GROUP, interaction_target::InteractionTarget},
 	};
 	use bevy::{
 		ecs::system::{RunSystemError, RunSystemOnce},
 		mesh::MeshPlugin,
-		prelude::*,
 		scene::ScenePlugin,
 	};
 	use common::traits::handles_physics::RaycastSystemParam;
@@ -291,7 +297,7 @@ mod tests {
 		TMarker: Component + Copy,
 	{
 		let mut app = setup();
-		let b = app
+		let a = app
 			.world_mut()
 			.spawn((
 				maker,
@@ -299,11 +305,11 @@ mod tests {
 				children![(Transform::default(), Collider::ball(0.5))],
 			))
 			.id();
-		let a = app
+		let b = app
 			.world_mut()
 			.spawn((
-				maker,
-				Transform::default(),
+				RigidBody::Fixed,
+				Transform::from_xyz(0., -10., 0.),
 				children![(Transform::default(), Collider::ball(0.5))],
 			))
 			.id();
@@ -324,11 +330,11 @@ mod tests {
 	}
 
 	#[test]
-	fn ignore_entities_with_non_hover_component() -> Result<(), RunSystemError> {
+	fn apply_only_hoverable_filter_true() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		app.world_mut().spawn((
 			RigidBody::Fixed,
-			NoMouseHover,
+			CollisionGroups::new(Group::all() & !MOUSE_HOVERABLE_GROUP, RAY_GROUP),
 			Transform::default(),
 			Collider::ball(0.5),
 		));
@@ -363,13 +369,13 @@ mod tests {
 	}
 
 	#[test]
-	fn do_not_ignore_entities_with_non_hover_component() -> Result<(), RunSystemError> {
+	fn apply_only_hoverable_filter_false() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
 			.spawn((
 				RigidBody::Fixed,
-				NoMouseHover,
+				CollisionGroups::new(Group::all() & !MOUSE_HOVERABLE_GROUP, RAY_GROUP),
 				Transform::default(),
 				Collider::ball(0.5),
 			))
@@ -395,6 +401,46 @@ mod tests {
 			Some(RaycastHit {
 				entity,
 				time_of_impact: 0.5
+			}),
+			hit,
+		);
+		Ok(())
+	}
+
+	#[test_case(true; "only hoverable")]
+	#[test_case(false; "also non hoverable")]
+	fn ignore_bodies_that_do_not_filter_rays(only_hoverable: bool) -> Result<(), RunSystemError> {
+		let mut app = setup();
+		app.world_mut().spawn((
+			RigidBody::Fixed,
+			CollisionGroups::new(Group::all(), Group::all() & !RAY_GROUP),
+			Transform::default(),
+			Collider::ball(0.5),
+		));
+		let entity = app
+			.world_mut()
+			.spawn((
+				RigidBody::Fixed,
+				Transform::from_xyz(0., -1., 0.),
+				Collider::ball(0.5),
+			))
+			.id();
+		app.update();
+
+		let hit = app.world_mut().run_system_once(
+			move |mut ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
+				ray_caster.raycast(SolidObjects {
+					ray: Ray3d::new(Vec3::Y, Dir3::NEG_Y),
+					exclude: vec![],
+					only_hoverable,
+				})
+			},
+		)?;
+
+		assert_eq!(
+			Some(RaycastHit {
+				entity,
+				time_of_impact: 1.5
 			}),
 			hit,
 		);
