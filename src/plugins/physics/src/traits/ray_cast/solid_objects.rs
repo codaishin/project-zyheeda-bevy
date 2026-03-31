@@ -16,30 +16,10 @@ impl Raycast<SolidObjects> for RayCaster<'_, '_> {
 		}: SolidObjects,
 	) -> Option<RaycastHit> {
 		let ray_caster = self.context.single().ok()?;
-		let exclude = |e| {
-			if exclude.contains(&e) {
-				return false;
-			}
-
-			match self.interaction_child_colliders.get(e) {
-				Ok(ChildCollider { root, .. }) if exclude.contains(root) => {
-					return false;
-				}
-				_ => {}
-			};
-
-			match self.rigid_body_child_colliders.get(e) {
-				Ok(ChildCollider { root, .. }) if exclude.contains(root) => {
-					return false;
-				}
-				_ => {}
-			};
-
-			true
-		};
+		let not_excluded = self.not_excluded(exclude);
 		let filter = QueryFilter {
 			flags: QueryFilterFlags::EXCLUDE_SENSORS,
-			predicate: Some(&exclude),
+			predicate: Some(&not_excluded),
 			groups: Some(CollisionGroups {
 				memberships: RAY_GROUP,
 				filters: match only_hoverable {
@@ -71,6 +51,32 @@ impl Raycast<SolidObjects> for RayCaster<'_, '_> {
 			entity,
 			time_of_impact,
 		})
+	}
+}
+
+impl RayCaster<'_, '_> {
+	fn not_excluded(&self, exclude: Vec<Entity>) -> impl Fn(Entity) -> bool {
+		move |entity| {
+			if exclude.contains(&entity) {
+				return false;
+			}
+
+			match self.interaction_child_colliders.get(entity) {
+				Ok(ChildCollider { root, .. }) if exclude.contains(root) => {
+					return false;
+				}
+				_ => {}
+			};
+
+			match self.rigid_body_child_colliders.get(entity) {
+				Ok(ChildCollider { root, .. }) if exclude.contains(root) => {
+					return false;
+				}
+				_ => {}
+			};
+
+			true
+		}
 	}
 }
 
