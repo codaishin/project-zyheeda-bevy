@@ -38,7 +38,6 @@ use common::{
 		handles_physics::{
 			HandlesAllPhysicalEffects,
 			HandlesMotion,
-			HandlesPhysicalObjects,
 			HandlesRaycast,
 			RaycastSystemParam,
 		},
@@ -60,7 +59,7 @@ where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + SystemSetDefinition + HandlesAnimations,
 	TPhysics: ThreadSafe
-		+ HandlesPhysicalObjects
+		+ SystemSetDefinition
 		+ HandlesMotion
 		+ HandlesAllPhysicalEffects
 		+ HandlesRaycast,
@@ -85,7 +84,7 @@ where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + SystemSetDefinition + HandlesAnimations,
 	TPhysics: ThreadSafe
-		+ HandlesPhysicalObjects
+		+ SystemSetDefinition
 		+ HandlesMotion
 		+ HandlesAllPhysicalEffects
 		+ HandlesRaycast,
@@ -152,7 +151,7 @@ where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + SystemSetDefinition + HandlesAnimations,
 	TPhysics: ThreadSafe
-		+ HandlesPhysicalObjects
+		+ SystemSetDefinition
 		+ HandlesMotion
 		+ HandlesAllPhysicalEffects
 		+ HandlesRaycast,

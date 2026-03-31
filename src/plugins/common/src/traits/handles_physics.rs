@@ -8,7 +8,6 @@ use crate::{
 	traits::{
 		accessors::get::{View, ViewField},
 		handles_physics::physical_bodies::Blocker,
-		system_set_definition::SystemSetDefinition,
 	},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
@@ -59,10 +58,6 @@ pub trait RaycastResult {
 
 pub trait HandlesPhysicalAttributes {
 	type TDefaultAttributes: Component + From<PhysicalDefaultAttributes>;
-}
-
-pub trait HandlesPhysicalObjects: SystemSetDefinition {
-	type TPhysicalObjectComponent: Component + From<PhysicalObject>;
 }
 
 pub trait HandlesMotion {

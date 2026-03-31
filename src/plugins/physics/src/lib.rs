@@ -61,7 +61,6 @@ use common::{
 			HandlesMotion,
 			HandlesPhysicalAttributes,
 			HandlesPhysicalEffectTargets,
-			HandlesPhysicalObjects,
 			HandlesRaycast,
 			physical_bodies::HandlesPhysicalBodies,
 		},
@@ -248,10 +247,6 @@ impl<TDependencies> HandlesRaycast for PhysicsPlugin<TDependencies> {
 
 impl<TDependencies> HandlesPhysicalAttributes for PhysicsPlugin<TDependencies> {
 	type TDefaultAttributes = DefaultAttributes;
-}
-
-impl<TDependencies> HandlesPhysicalObjects for PhysicsPlugin<TDependencies> {
-	type TPhysicalObjectComponent = Blockable;
 }
 
 impl<TDependencies> SystemSetDefinition for PhysicsPlugin<TDependencies> {
