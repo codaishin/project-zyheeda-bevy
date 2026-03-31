@@ -54,7 +54,7 @@ const MOUSE_LEFT: MouseButton = MouseButton::Left;
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::tools::action_key::{ActionKey, slot::PlayerSlot};
+	use common::tools::action_key::{ActionKey, slot::HandSlot};
 	use testing::{SingleThreadedApp, set_input};
 
 	fn setup() -> App {
@@ -76,7 +76,7 @@ mod tests {
 			let panel = app.world_mut().spawn(Interaction::None).id();
 			app.insert_resource(MouseOverride::Active {
 				panel,
-				action: ActionKey::from(PlayerSlot::LOWER_L),
+				action: ActionKey::from(HandSlot::Left),
 				input_state: None,
 			});
 			set_input!(app, just_pressed(MOUSE_LEFT));
@@ -86,7 +86,7 @@ mod tests {
 			assert_eq!(
 				&MouseOverride::Active {
 					panel,
-					action: ActionKey::from(PlayerSlot::LOWER_L),
+					action: ActionKey::from(HandSlot::Left),
 					input_state: Some(InputState::just_pressed()),
 				},
 				app.world().resource::<MouseOverride>()
@@ -99,7 +99,7 @@ mod tests {
 			let panel = app.world_mut().spawn(Interaction::None).id();
 			app.insert_resource(MouseOverride::Active {
 				panel,
-				action: ActionKey::from(PlayerSlot::LOWER_L),
+				action: ActionKey::from(HandSlot::Left),
 				input_state: None,
 			});
 			set_input!(app, pressed(MOUSE_LEFT));
@@ -109,7 +109,7 @@ mod tests {
 			assert_eq!(
 				&MouseOverride::Active {
 					panel,
-					action: ActionKey::from(PlayerSlot::LOWER_L),
+					action: ActionKey::from(HandSlot::Left),
 					input_state: Some(InputState::pressed()),
 				},
 				app.world().resource::<MouseOverride>()
@@ -122,7 +122,7 @@ mod tests {
 			let panel = app.world_mut().spawn(Interaction::None).id();
 			app.insert_resource(MouseOverride::Active {
 				panel,
-				action: ActionKey::from(PlayerSlot::LOWER_L),
+				action: ActionKey::from(HandSlot::Left),
 				input_state: None,
 			});
 			set_input!(app, just_released(MOUSE_LEFT));
@@ -132,7 +132,7 @@ mod tests {
 			assert_eq!(
 				&MouseOverride::Active {
 					panel,
-					action: ActionKey::from(PlayerSlot::LOWER_L),
+					action: ActionKey::from(HandSlot::Left),
 					input_state: Some(InputState::just_released()),
 				},
 				app.world().resource::<MouseOverride>()
@@ -146,7 +146,7 @@ mod tests {
 			let panel = app.world_mut().spawn(interaction).id();
 			app.insert_resource(MouseOverride::Active {
 				panel,
-				action: ActionKey::from(PlayerSlot::LOWER_L),
+				action: ActionKey::from(HandSlot::Left),
 				input_state: None,
 			});
 			set_input!(app, just_pressed(MOUSE_LEFT));
@@ -156,7 +156,7 @@ mod tests {
 			assert_eq!(
 				&MouseOverride::Active {
 					panel,
-					action: ActionKey::from(PlayerSlot::LOWER_L),
+					action: ActionKey::from(HandSlot::Left),
 					input_state: None,
 				},
 				app.world().resource::<MouseOverride>()
@@ -171,7 +171,7 @@ mod tests {
 			app.world_mut().spawn(interaction);
 			app.insert_resource(MouseOverride::Active {
 				panel,
-				action: ActionKey::from(PlayerSlot::LOWER_L),
+				action: ActionKey::from(HandSlot::Left),
 				input_state: None,
 			});
 			set_input!(app, just_pressed(MOUSE_LEFT));
@@ -181,7 +181,7 @@ mod tests {
 			assert_eq!(
 				&MouseOverride::Active {
 					panel,
-					action: ActionKey::from(PlayerSlot::LOWER_L),
+					action: ActionKey::from(HandSlot::Left),
 					input_state: None,
 				},
 				app.world().resource::<MouseOverride>()
@@ -198,7 +198,7 @@ mod tests {
 			let panel = app.world_mut().spawn(Interaction::None).id();
 			app.insert_resource(MouseOverride::Active {
 				panel,
-				action: ActionKey::from(PlayerSlot::UPPER_L),
+				action: ActionKey::from(HandSlot::Left),
 				input_state: Some(InputState::just_released()),
 			});
 
@@ -216,7 +216,7 @@ mod tests {
 			let panel = app.world_mut().spawn(Interaction::None).id();
 			app.insert_resource(MouseOverride::Active {
 				panel,
-				action: ActionKey::from(PlayerSlot::UPPER_L),
+				action: ActionKey::from(HandSlot::Left),
 				input_state: Some(InputState::released()),
 			});
 

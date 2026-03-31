@@ -51,14 +51,14 @@ mod tests {
 	use bevy::{asset::AssetPath, prelude::*};
 	use common::{
 		components::persistent_entity::PersistentEntity,
-		tools::action_key::slot::{PlayerSlot, Side, SlotKey},
+		tools::action_key::slot::{HandSlot, SlotKey},
 		traits::handles_skill_physics::{SkillShape, shield::Shield},
 	};
 	use test_case::test_case;
 
 	fn start_spawn_shield() -> ActiveSkill {
 		ActiveSkill::Start {
-			slot_key: SlotKey::from(PlayerSlot::Lower(Side::Left)),
+			slot_key: SlotKey::from(HandSlot::Left),
 			shape: SkillBehaviorConfig::from_shape(SkillShape::Shield(Shield)),
 		}
 	}

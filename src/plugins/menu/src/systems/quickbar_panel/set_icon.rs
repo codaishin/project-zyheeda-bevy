@@ -68,7 +68,7 @@ mod tests {
 		tools::PanelState,
 	};
 	use common::{
-		tools::{action_key::slot::PlayerSlot, skill_execution::SkillExecution},
+		tools::{action_key::slot::HandSlot, skill_execution::SkillExecution},
 		traits::{accessors::get::View, handles_loadout::LoadoutKey, handles_localization::Token},
 	};
 	use std::collections::HashMap;
@@ -144,14 +144,14 @@ mod tests {
 		app.world_mut().spawn((
 			_Agent,
 			_Skills(HashMap::from([(
-				LoadoutKey::from(PlayerSlot::LOWER_R),
+				LoadoutKey::from(HandSlot::Right),
 				item.clone(),
 			)])),
 		));
 		let panel = app
 			.world_mut()
 			.spawn(QuickbarPanel {
-				key: PlayerSlot::LOWER_R,
+				key: HandSlot::Right,
 				state: PanelState::Empty,
 			})
 			.id();
@@ -175,7 +175,7 @@ mod tests {
 		app.world_mut().spawn((
 			_Agent,
 			_Skills(HashMap::from([(
-				LoadoutKey::from(PlayerSlot::LOWER_R),
+				LoadoutKey::from(HandSlot::Right),
 				item.clone(),
 			)])),
 		));
@@ -183,7 +183,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				QuickbarPanel {
-					key: PlayerSlot::LOWER_R,
+					key: HandSlot::Right,
 					state: PanelState::Empty,
 				},
 				Icon::Loaded(image.clone()),
@@ -209,14 +209,14 @@ mod tests {
 		app.world_mut().spawn((
 			_Agent,
 			_Skills(HashMap::from([(
-				LoadoutKey::from(PlayerSlot::LOWER_R),
+				LoadoutKey::from(HandSlot::Right),
 				item.clone(),
 			)])),
 		));
 		let panel = app
 			.world_mut()
 			.spawn(QuickbarPanel {
-				key: PlayerSlot::LOWER_R,
+				key: HandSlot::Right,
 				state: PanelState::Empty,
 			})
 			.id();
@@ -240,14 +240,14 @@ mod tests {
 		app.world_mut().spawn((
 			_Agent,
 			_Skills(HashMap::from([(
-				LoadoutKey::from(PlayerSlot::LOWER_R),
+				LoadoutKey::from(HandSlot::Right),
 				item.clone(),
 			)])),
 		));
 		let panel = app
 			.world_mut()
 			.spawn(QuickbarPanel {
-				key: PlayerSlot::LOWER_R,
+				key: HandSlot::Right,
 				state: PanelState::Empty,
 			})
 			.id();
@@ -272,14 +272,14 @@ mod tests {
 		app.world_mut().spawn((
 			_Agent,
 			_Skills(HashMap::from([(
-				LoadoutKey::from(PlayerSlot::LOWER_R),
+				LoadoutKey::from(HandSlot::Right),
 				item.clone(),
 			)])),
 		));
 		let panel = app
 			.world_mut()
 			.spawn(QuickbarPanel {
-				key: PlayerSlot::LOWER_R,
+				key: HandSlot::Right,
 				state: PanelState::Empty,
 			})
 			.id();
@@ -303,13 +303,13 @@ mod tests {
 		};
 		let mut app = setup();
 		app.world_mut().spawn(_Skills(HashMap::from([(
-			LoadoutKey::from(PlayerSlot::LOWER_R),
+			LoadoutKey::from(HandSlot::Right),
 			item.clone(),
 		)])));
 		let panel = app
 			.world_mut()
 			.spawn(QuickbarPanel {
-				key: PlayerSlot::LOWER_R,
+				key: HandSlot::Right,
 				state: PanelState::Empty,
 			})
 			.id();

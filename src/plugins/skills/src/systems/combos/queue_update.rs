@@ -56,7 +56,7 @@ mod tests {
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{
 		tools::{
-			action_key::slot::{PlayerSlot, Side, SlotKey},
+			action_key::slot::{HandSlot, SlotKey},
 			item_type::ItemType,
 		},
 		traits::handles_localization::Token,
@@ -132,14 +132,14 @@ mod tests {
 	fn call_advance_with_matching_slot_key_and_item_type() -> Result<(), RunSystemError> {
 		let (slots, items) = setup_slots([
 			(
-				SlotKey::from(PlayerSlot::Lower(Side::Right)),
+				SlotKey::from(HandSlot::Right),
 				Some(Item {
 					item_type: ItemType::ForceEssence,
 					..default()
 				}),
 			),
 			(
-				SlotKey::from(PlayerSlot::Lower(Side::Left)),
+				SlotKey::from(HandSlot::Left),
 				Some(Item {
 					item_type: ItemType::Pistol,
 					..default()
@@ -152,26 +152,23 @@ mod tests {
 				mock.expect_advance_combo()
 					.times(1)
 					.with(
-						eq(SlotKey::from(PlayerSlot::Lower(Side::Right))),
+						eq(SlotKey::from(HandSlot::Right)),
 						eq(ItemType::ForceEssence),
 					)
 					.return_const(Skill::default());
 				mock.expect_advance_combo()
 					.times(1)
-					.with(
-						eq(SlotKey::from(PlayerSlot::Lower(Side::Left))),
-						eq(ItemType::Pistol),
-					)
+					.with(eq(SlotKey::from(HandSlot::Left)), eq(ItemType::Pistol))
 					.return_const(Skill::default());
 			}),
 			_Queue {
 				added: vec![
 					QueuedSkill {
-						key: SlotKey::from(PlayerSlot::Lower(Side::Right)),
+						key: SlotKey::from(HandSlot::Right),
 						..default()
 					},
 					QueuedSkill {
-						key: SlotKey::from(PlayerSlot::Lower(Side::Left)),
+						key: SlotKey::from(HandSlot::Left),
 						..default()
 					},
 				],

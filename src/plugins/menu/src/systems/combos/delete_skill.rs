@@ -39,7 +39,7 @@ fn pressed((.., interaction): &(&DeleteSkill, &Interaction)) -> bool {
 mod tests {
 	use super::*;
 	use common::{
-		tools::action_key::slot::{PlayerSlot, SlotKey},
+		tools::action_key::slot::{HandSlot, SlotKey},
 		traits::handles_loadout::combos::Combo,
 	};
 	use macros::NestedMocks;
@@ -84,8 +84,8 @@ mod tests {
 					.times(1)
 					.with(eq(vec![(
 						vec![
-							SlotKey::from(PlayerSlot::LOWER_L),
-							SlotKey::from(PlayerSlot::LOWER_R),
+							SlotKey::from(HandSlot::Left),
+							SlotKey::from(HandSlot::Right),
 						],
 						None,
 					)]))
@@ -95,8 +95,8 @@ mod tests {
 		app.world_mut().spawn((
 			DeleteSkill {
 				key_path: vec![
-					SlotKey::from(PlayerSlot::LOWER_L),
-					SlotKey::from(PlayerSlot::LOWER_R),
+					SlotKey::from(HandSlot::Left),
+					SlotKey::from(HandSlot::Right),
 				],
 			},
 			Interaction::Pressed,
@@ -117,8 +117,8 @@ mod tests {
 		app.world_mut().spawn((
 			DeleteSkill {
 				key_path: vec![
-					SlotKey::from(PlayerSlot::LOWER_L),
-					SlotKey::from(PlayerSlot::LOWER_R),
+					SlotKey::from(HandSlot::Left),
+					SlotKey::from(HandSlot::Right),
 				],
 			},
 			Interaction::None,
@@ -136,8 +136,8 @@ mod tests {
 		app.world_mut().spawn((
 			DeleteSkill {
 				key_path: vec![
-					SlotKey::from(PlayerSlot::LOWER_L),
-					SlotKey::from(PlayerSlot::LOWER_R),
+					SlotKey::from(HandSlot::Left),
+					SlotKey::from(HandSlot::Right),
 				],
 			},
 			Interaction::Pressed,

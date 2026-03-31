@@ -4,7 +4,7 @@ use bevy::{
 	prelude::*,
 };
 use common::{
-	tools::action_key::slot::{PlayerSlot, SlotKey},
+	tools::action_key::slot::{HandSlot, SlotKey},
 	traits::{
 		accessors::get::GetContextMut,
 		handles_input::{GetAllInputStates, InputState},
@@ -23,7 +23,7 @@ impl Player {
 	{
 		let held = || {
 			input
-				.get_all_input_states::<PlayerSlot>()
+				.get_all_input_states::<HandSlot>()
 				.filter_map(|(key, state)| match state {
 					InputState::Pressed { .. } => Some(key),
 					_ => None,
@@ -52,7 +52,7 @@ mod tests {
 	use common::{
 		tools::action_key::{
 			ActionKey,
-			slot::{PlayerSlot, SlotKey},
+			slot::{HandSlot, SlotKey},
 		},
 		traits::{handles_input::InputState, handles_loadout::HeldSkills, iteration::IterFinite},
 	};
@@ -129,13 +129,13 @@ mod tests {
 	#[test_case(InputState::just_pressed(); "on just pressed")]
 	#[test_case(InputState::pressed(); "on pressed")]
 	fn insert_held_skill(state: InputState) {
-		let mut app = setup(_Input::from(std::iter::once((PlayerSlot::UPPER_L, state))));
+		let mut app = setup(_Input::from(std::iter::once((HandSlot::Left, state))));
 		let entity = app.world_mut().spawn((Player, _Loadout::default())).id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&_Loadout::from([SlotKey::from(PlayerSlot::UPPER_L)])),
+			Some(&_Loadout::from([SlotKey::from(HandSlot::Left)])),
 			app.world().entity(entity).get::<_Loadout>(),
 		);
 	}
@@ -143,16 +143,16 @@ mod tests {
 	#[test_case(InputState::just_pressed(); "on just pressed")]
 	#[test_case(InputState::pressed(); "on pressed")]
 	fn override_held_skills(state: InputState) {
-		let mut app = setup(_Input::from(std::iter::once((PlayerSlot::UPPER_L, state))));
+		let mut app = setup(_Input::from(std::iter::once((HandSlot::Left, state))));
 		let entity = app
 			.world_mut()
-			.spawn((Player, _Loadout::from([SlotKey::from(PlayerSlot::UPPER_R)])))
+			.spawn((Player, _Loadout::from([SlotKey::from(HandSlot::Right)])))
 			.id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&_Loadout::from([SlotKey::from(PlayerSlot::UPPER_L)])),
+			Some(&_Loadout::from([SlotKey::from(HandSlot::Left)])),
 			app.world().entity(entity).get::<_Loadout>(),
 		);
 	}
@@ -160,7 +160,7 @@ mod tests {
 	#[test]
 	fn do_nothing_if_player_missing() {
 		let mut app = setup(_Input::from(std::iter::once((
-			PlayerSlot::UPPER_L,
+			HandSlot::Left,
 			InputState::pressed(),
 		))));
 		let entity = app.world_mut().spawn(_Loadout::default()).id();
@@ -176,10 +176,10 @@ mod tests {
 	#[test_case(InputState::just_pressed(); "on just pressed")]
 	#[test_case(InputState::pressed(); "on pressed")]
 	fn do_nothing_if_current_held_would_not_change(state: InputState) {
-		let mut app = setup(_Input::from(std::iter::once((PlayerSlot::UPPER_L, state))));
+		let mut app = setup(_Input::from(std::iter::once((HandSlot::Left, state))));
 		let entity = app
 			.world_mut()
-			.spawn((Player, _Loadout::from([SlotKey::from(PlayerSlot::UPPER_L)])))
+			.spawn((Player, _Loadout::from([SlotKey::from(HandSlot::Left)])))
 			.id();
 
 		app.update();

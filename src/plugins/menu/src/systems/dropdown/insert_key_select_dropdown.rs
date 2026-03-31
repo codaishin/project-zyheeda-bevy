@@ -62,7 +62,7 @@ fn insert_key_select_dropdown<TAgent, TLoadout, TExtra>(
 mod tests {
 	use super::*;
 	use crate::components::key_select_dropdown_command::ExcludeKeys;
-	use common::tools::action_key::slot::PlayerSlot;
+	use common::tools::action_key::slot::HandSlot;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::collections::HashSet;
@@ -127,8 +127,8 @@ mod tests {
 	#[test]
 	fn spawn_component() {
 		let key_path = vec![
-			SlotKey::from(PlayerSlot::UPPER_L),
-			SlotKey::from(PlayerSlot::LOWER_R),
+			SlotKey::from(HandSlot::Left),
+			SlotKey::from(HandSlot::Right),
 		];
 		let mut app = setup();
 		app.world_mut().spawn((
@@ -137,7 +137,7 @@ mod tests {
 				mock.expect_next_keys()
 					.times(1)
 					.with(eq(key_path.clone()))
-					.return_const(HashSet::from([SlotKey::from(PlayerSlot::UPPER_L)]));
+					.return_const(HashSet::from([SlotKey::from(HandSlot::Left)]));
 			}),
 		));
 		let entity = app
@@ -152,7 +152,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&_Component(ExcludeKeys(HashSet::from([SlotKey::from(
-				PlayerSlot::UPPER_L
+				HandSlot::Left
 			)])))),
 			app.world().entity(entity).get::<_Component>()
 		)
@@ -219,8 +219,8 @@ mod tests {
 	#[test]
 	fn do_nothing_if_agent_missing() {
 		let key_path = vec![
-			SlotKey::from(PlayerSlot::UPPER_L),
-			SlotKey::from(PlayerSlot::LOWER_R),
+			SlotKey::from(HandSlot::Left),
+			SlotKey::from(HandSlot::Right),
 		];
 		let mut app = setup();
 		app.world_mut().spawn(_Combos::new().with_mock(|mock| {

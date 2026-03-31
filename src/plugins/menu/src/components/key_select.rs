@@ -5,7 +5,7 @@ use super::{
 };
 use crate::traits::{GetComponent, GetKey, insert_ui_content::InsertUiContent};
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
-use common::tools::action_key::slot::{PlayerSlot, SlotKey};
+use common::tools::action_key::slot::{HandSlot, SlotKey};
 
 #[derive(Debug, PartialEq, Clone)]
 pub(crate) struct AppendSkill {
@@ -38,17 +38,17 @@ where
 		let Some(component) = self.component(()) else {
 			return;
 		};
-		let Some(key) = self.extra.get_key(&self.key_path) else {
+		let Some(slot_key) = self.extra.get_key(&self.key_path) else {
 			return;
 		};
-		let Ok(player_slot) = PlayerSlot::try_from(*key) else {
+		let Ok(hand_slot) = HandSlot::try_from(*slot_key) else {
 			return;
 		};
 
 		parent
 			.spawn((component, ComboOverview::skill_key_button()))
 			.with_children(|parent| {
-				parent.spawn(ComboOverview::skill_key_text(player_slot));
+				parent.spawn(ComboOverview::skill_key_text(hand_slot));
 			});
 	}
 }

@@ -66,7 +66,7 @@ mod tests {
 	use super::*;
 	use crate::components::dropdown::Dropdown;
 	use common::{
-		tools::action_key::slot::{PlayerSlot, Side, SlotKey},
+		tools::action_key::slot::{HandSlot, SlotKey},
 		traits::{accessors::get::View, handles_localization::Token},
 	};
 	use std::collections::HashMap;
@@ -148,13 +148,13 @@ mod tests {
 		let dropdown = app
 			.world_mut()
 			.spawn(SkillSelectDropdownCommand::<_Layout>::new(vec![
-				SlotKey::from(PlayerSlot::LOWER_R),
+				SlotKey::from(HandSlot::Right),
 			]))
 			.id();
 		app.world_mut().spawn((
 			_Agent,
 			_Slots(HashMap::from([(
-				SlotKey::from(PlayerSlot::LOWER_R),
+				SlotKey::from(HandSlot::Right),
 				vec![_Skill {
 					id: "my skill id",
 					token: Token::from("my skill"),
@@ -174,7 +174,7 @@ mod tests {
 							token: Token::from("my skill"),
 							icon
 						},
-						vec![SlotKey::from(PlayerSlot::Lower(Side::Right))],
+						vec![SlotKey::from(HandSlot::Right)],
 					)
 				]
 			}),
@@ -190,11 +190,11 @@ mod tests {
 		let dropdown = app
 			.world_mut()
 			.spawn(SkillSelectDropdownCommand::<_Layout>::new(vec![
-				SlotKey::from(PlayerSlot::LOWER_R),
+				SlotKey::from(HandSlot::Right),
 			]))
 			.id();
 		app.world_mut().spawn(_Slots(HashMap::from([(
-			SlotKey::from(PlayerSlot::LOWER_R),
+			SlotKey::from(HandSlot::Right),
 			vec![_Skill {
 				id: "my skill id",
 				token: Token::from("my skill"),
@@ -218,15 +218,12 @@ mod tests {
 		let dropdown = app
 			.world_mut()
 			.spawn(SkillSelectDropdownCommand::<_Layout>::new(vec![
-				SlotKey::from(PlayerSlot::LOWER_R),
+				SlotKey::from(HandSlot::Right),
 			]))
 			.id();
 		app.world_mut().spawn((
 			_Agent,
-			_Slots(HashMap::from([(
-				SlotKey::from(PlayerSlot::LOWER_R),
-				vec![],
-			)])),
+			_Slots(HashMap::from([(SlotKey::from(HandSlot::Right), vec![])])),
 		));
 
 		app.update();

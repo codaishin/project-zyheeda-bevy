@@ -212,7 +212,7 @@ mod tests {
 
 	mod mouse_override {
 		use super::*;
-		use common::tools::action_key::slot::PlayerSlot;
+		use common::tools::action_key::slot::HandSlot;
 		use test_case::test_case;
 		use testing::fake_entity;
 
@@ -226,13 +226,13 @@ mod tests {
 			}));
 			app.insert_resource(MouseOverride::Active {
 				panel: fake_entity!(42),
-				action: ActionKey::from(PlayerSlot::LOWER_L),
+				action: ActionKey::from(HandSlot::Left),
 				input_state: None,
 			});
 			set_input!(app, pressed(LEFT_MOUSE));
 
 			let state = app.world_mut().run_system_once(|input: _Input| {
-				input.get_input_state(ActionKey::from(PlayerSlot::UPPER_R))
+				input.get_input_state(ActionKey::from(HandSlot::Right))
 			})?;
 
 			assert_eq!(InputState::released(), state);
@@ -260,7 +260,7 @@ mod tests {
 		#[test_case(InputState::pressed(); "pressed")]
 		#[test_case(InputState::just_released(); "just released")]
 		fn return_override_key_input_state(input_state: InputState) -> Result<(), RunSystemError> {
-			let action = ActionKey::from(PlayerSlot::UPPER_L);
+			let action = ActionKey::from(HandSlot::Left);
 			let mut app = setup(_Map::new().with_mock(|mock| {
 				mock.expect_get_input::<ActionKey>().never();
 			}));

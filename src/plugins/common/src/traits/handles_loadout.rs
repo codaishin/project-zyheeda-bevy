@@ -7,7 +7,7 @@ pub mod skills;
 
 use crate::{
 	tools::{
-		action_key::slot::{PlayerSlot, SlotKey},
+		action_key::slot::{HandSlot, SlotKey},
 		inventory_key::InventoryKey,
 	},
 	traits::{
@@ -79,8 +79,8 @@ impl From<SlotKey> for LoadoutKey {
 	}
 }
 
-impl From<PlayerSlot> for LoadoutKey {
-	fn from(key: PlayerSlot) -> Self {
+impl From<HandSlot> for LoadoutKey {
+	fn from(key: HandSlot) -> Self {
 		Self::Slot(SlotKey::from(key))
 	}
 }

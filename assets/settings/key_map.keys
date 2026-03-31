@@ -50,9 +50,7 @@
     ],
     [
       {
-        "Slot": {
-          "Upper": "Left"
-        }
+        "Slot": "Left"
       },
       {
         "MouseButton": "Left"
@@ -60,29 +58,7 @@
     ],
     [
       {
-        "Slot": {
-          "Lower": "Left"
-        }
-      },
-      {
-        "KeyCode": "KeyQ"
-      }
-    ],
-    [
-      {
-        "Slot": {
-          "Lower": "Right"
-        }
-      },
-      {
-        "KeyCode": "KeyE"
-      }
-    ],
-    [
-      {
-        "Slot": {
-          "Upper": "Right"
-        }
+        "Slot": "Right"
       },
       {
         "MouseButton": "Right"

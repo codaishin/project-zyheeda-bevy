@@ -69,7 +69,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{tools::action_key::slot::PlayerSlot, traits::handles_localization::Token};
+	use common::{tools::action_key::slot::HandSlot, traits::handles_localization::Token};
 	use macros::{NestedMocks, simple_mock};
 	use mockall::{automock, predicate::eq};
 	use std::collections::HashMap;
@@ -194,16 +194,16 @@ mod tests {
 		);
 
 		let skills = _Skills(HashMap::from([(
-			SlotKey::from(PlayerSlot::UPPER_R),
+			SlotKey::from(HandSlot::Right),
 			item.clone(),
 		)]));
 		app.world_mut().spawn((
 			skills,
 			HeldSlots::<Current>::from([
-				SlotKey::from(PlayerSlot::LOWER_R),
-				SlotKey::from(PlayerSlot::UPPER_R),
+				SlotKey::from(HandSlot::Left),
+				SlotKey::from(HandSlot::Right),
 			]),
-			HeldSlots::<Old>::from([SlotKey::from(PlayerSlot::LOWER_L)]),
+			HeldSlots::<Old>::from([SlotKey::from(HandSlot::Left)]),
 			_Enqueue::new().with_mock(|mock| {
 				mock.expect_enqueue()
 					.times(1)
@@ -212,7 +212,7 @@ mod tests {
 							token: Token::from("my skill"),
 							..default()
 						},
-						SlotKey::from(PlayerSlot::UPPER_R),
+						SlotKey::from(HandSlot::Right),
 					)))
 					.return_const(());
 			}),
@@ -226,24 +226,24 @@ mod tests {
 		let mut app = setup::<_Enqueue>(vec![], vec![]);
 		app.world_mut().spawn((
 			_Skills::default(),
-			HeldSlots::<Current>::from([SlotKey::from(PlayerSlot::LOWER_R)]),
+			HeldSlots::<Current>::from([SlotKey::from(HandSlot::Left)]),
 			HeldSlots::<Old>::from([]),
 			_Enqueue {
 				queued: HashMap::from([
 					(
-						SlotKey::from(PlayerSlot::LOWER_L),
+						SlotKey::from(HandSlot::Right),
 						Mock_SkillQueued::new_mock(|mock| {
 							mock.expect_release_skill().times(1).return_const(());
 							mock.expect_view()
-								.return_const(SlotKey::from(PlayerSlot::LOWER_L));
+								.return_const(SlotKey::from(HandSlot::Right));
 						}),
 					),
 					(
-						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(HandSlot::Left),
 						Mock_SkillQueued::new_mock(|mock| {
 							mock.expect_release_skill().never().return_const(());
 							mock.expect_view()
-								.return_const(SlotKey::from(PlayerSlot::LOWER_R));
+								.return_const(SlotKey::from(HandSlot::Left));
 						}),
 					),
 				]),
