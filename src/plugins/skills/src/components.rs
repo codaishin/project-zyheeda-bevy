@@ -1,5 +1,4 @@
 pub(crate) mod active_skill;
-pub(crate) mod bone_definitions;
 pub(crate) mod combo_node;
 pub(crate) mod combos;
 pub(crate) mod combos_time_out;
@@ -8,4 +7,5 @@ pub(crate) mod inventory;
 pub(crate) mod loadout;
 pub(crate) mod model_render;
 pub(crate) mod queue;
+pub(crate) mod slot_definitions;
 pub(crate) mod slots;

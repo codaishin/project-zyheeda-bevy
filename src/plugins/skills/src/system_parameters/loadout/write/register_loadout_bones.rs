@@ -1,5 +1,5 @@
 use crate::{
-	components::bone_definitions::BoneDefinitions,
+	components::slot_definitions::SlotDefinitions,
 	system_parameters::loadout::LoadoutPrep,
 };
 use common::{
@@ -19,7 +19,7 @@ impl GetContextMut<NoBonesRegistered> for LoadoutPrep<'_, '_> {
 		param: &'ctx mut LoadoutPrep,
 		NoBonesRegistered { entity }: NoBonesRegistered,
 	) -> Option<Self::TContext<'ctx>> {
-		if param.bone_definitions.contains(entity) {
+		if param.slot_definitions.contains(entity) {
 			return None;
 		}
 
@@ -40,7 +40,7 @@ impl RegisterLoadoutBones for PrepareLoadoutBones<'_> {
 		hands: HashMap<BoneName, SlotKey>,
 		essences: HashMap<MeshName, SlotKey>,
 	) {
-		self.entity.try_insert(BoneDefinitions {
+		self.entity.try_insert(SlotDefinitions {
 			forearms,
 			hands,
 			essences,
@@ -52,7 +52,7 @@ impl RegisterLoadoutBones for PrepareLoadoutBones<'_> {
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::components::bone_definitions::BoneDefinitions;
+	use crate::components::slot_definitions::SlotDefinitions;
 	use bevy::{
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
@@ -84,12 +84,12 @@ mod tests {
 		})?;
 
 		assert_eq!(
-			Some(&BoneDefinitions {
+			Some(&SlotDefinitions {
 				forearms: HashMap::from([(BoneName::from("a"), SlotKey(0))]),
 				hands: HashMap::from([(BoneName::from("b"), SlotKey(1))]),
 				essences: HashMap::from([(MeshName::from("c"), SlotKey(2))]),
 			}),
-			app.world().entity(entity).get::<BoneDefinitions>()
+			app.world().entity(entity).get::<SlotDefinitions>()
 		);
 		Ok(())
 	}
@@ -97,7 +97,7 @@ mod tests {
 	#[test]
 	fn context_is_none_when_bones_registered() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let entity = app.world_mut().spawn(BoneDefinitions::default()).id();
+		let entity = app.world_mut().spawn(SlotDefinitions::default()).id();
 
 		let ctx_is_none = app.world_mut().run_system_once(move |mut p: LoadoutPrep| {
 			LoadoutPrep::get_context_mut(&mut p, NoBonesRegistered { entity }).is_none()
