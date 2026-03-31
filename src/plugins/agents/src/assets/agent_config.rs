@@ -2,7 +2,13 @@ pub(crate) mod dto;
 
 use bevy::prelude::*;
 use common::{
-	tools::{Units, action_key::slot::SlotKey, bone_name::BoneName, path::Path},
+	tools::{
+		Units,
+		action_key::slot::SlotKey,
+		bone_name::BoneName,
+		mesh_name::MeshName,
+		path::Path,
+	},
 	traits::{
 		accessors::get::View,
 		handles_animations::{AffectedAnimationBones, Animation, AnimationKey, AnimationMaskBits},
@@ -53,7 +59,7 @@ pub(crate) struct Bones {
 	pub(crate) spawners: HashMap<BoneName, SkillSpawner>,
 	pub(crate) hand_slots: HashMap<BoneName, SlotKey>,
 	pub(crate) forearm_slots: HashMap<BoneName, SlotKey>,
-	pub(crate) essence_slots: HashMap<BoneName, SlotKey>,
+	pub(crate) essence_slots: HashMap<MeshName, SlotKey>,
 }
 
 #[derive(Debug, Clone)]

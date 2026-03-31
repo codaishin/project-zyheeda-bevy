@@ -43,7 +43,7 @@ pub struct VoidSphere;
 type LazyBoneName = LazyLock<BoneName>;
 
 /// We use the same name for hand/forearm/essence slots.
-static ALL_PURPOSE_SLOT_BONE: LazyBoneName = LazyLock::new(|| BoneName::from("slot"));
+static ALL_PURPOSE_SLOT_BONE: &str = "slot";
 static SKILL_SPAWN: LazyBoneName = LazyLock::new(|| BoneName::from("skill_spawn"));
 static SKILL_SPAWN_NEUTRAL: LazyBoneName = LazyLock::new(|| BoneName::from("skill_spawn_neutral"));
 
@@ -103,9 +103,9 @@ impl VoidSphere {
 					SkillSpawner::Slot(VoidSphere::SLOT_KEY),
 				),
 			]),
-			hand_slots: HashMap::from([(ALL_PURPOSE_SLOT_BONE.clone(), VoidSphere::SLOT_KEY)]),
-			forearm_slots: HashMap::from([(ALL_PURPOSE_SLOT_BONE.clone(), VoidSphere::SLOT_KEY)]),
-			essence_slots: HashMap::from([(ALL_PURPOSE_SLOT_BONE.clone(), VoidSphere::SLOT_KEY)]),
+			hand_slots: HashMap::from([(ALL_PURPOSE_SLOT_BONE.into(), VoidSphere::SLOT_KEY)]),
+			forearm_slots: HashMap::from([(ALL_PURPOSE_SLOT_BONE.into(), VoidSphere::SLOT_KEY)]),
+			essence_slots: HashMap::from([(ALL_PURPOSE_SLOT_BONE.into(), VoidSphere::SLOT_KEY)]),
 		}
 	}
 }
@@ -157,7 +157,7 @@ where
 			// One unified slot bone
 			.with_child((
 				Transform::from_translation(Self::INNER_MODEL_OFFSET + Self::SLOT_OFFSET),
-				Name::from(ALL_PURPOSE_SLOT_BONE.clone()),
+				Name::from(ALL_PURPOSE_SLOT_BONE),
 			))
 			// Skill spawn directly on slot offset
 			.with_child((

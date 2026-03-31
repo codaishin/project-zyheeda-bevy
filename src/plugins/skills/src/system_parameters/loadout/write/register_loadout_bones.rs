@@ -3,7 +3,7 @@ use crate::{
 	system_parameters::loadout::LoadoutPrep,
 };
 use common::{
-	tools::{action_key::slot::SlotKey, bone_name::BoneName},
+	tools::{action_key::slot::SlotKey, bone_name::BoneName, mesh_name::MeshName},
 	traits::{
 		accessors::get::{GetContextMut, GetMut},
 		handles_loadout::register_loadout_bones::{NoBonesRegistered, RegisterLoadoutBones},
@@ -38,7 +38,7 @@ impl RegisterLoadoutBones for PrepareLoadoutBones<'_> {
 		&mut self,
 		forearms: HashMap<BoneName, SlotKey>,
 		hands: HashMap<BoneName, SlotKey>,
-		essences: HashMap<BoneName, SlotKey>,
+		essences: HashMap<MeshName, SlotKey>,
 	) {
 		self.entity.try_insert(BoneDefinitions {
 			forearms,
@@ -79,7 +79,7 @@ mod tests {
 			ctx.register_loadout_bones(
 				HashMap::from([(BoneName::from("a"), SlotKey(0))]),
 				HashMap::from([(BoneName::from("b"), SlotKey(1))]),
-				HashMap::from([(BoneName::from("c"), SlotKey(2))]),
+				HashMap::from([(MeshName::from("c"), SlotKey(2))]),
 			);
 		})?;
 
@@ -87,7 +87,7 @@ mod tests {
 			Some(&BoneDefinitions {
 				forearms: HashMap::from([(BoneName::from("a"), SlotKey(0))]),
 				hands: HashMap::from([(BoneName::from("b"), SlotKey(1))]),
-				essences: HashMap::from([(BoneName::from("c"), SlotKey(2))]),
+				essences: HashMap::from([(MeshName::from("c"), SlotKey(2))]),
 			}),
 			app.world().entity(entity).get::<BoneDefinitions>()
 		);

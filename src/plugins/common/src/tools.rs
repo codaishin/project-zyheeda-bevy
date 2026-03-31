@@ -8,6 +8,7 @@ pub mod inventory_key;
 pub mod is_not;
 pub mod item_type;
 pub mod iter_helpers;
+pub mod mesh_name;
 pub mod ordered_hash_map;
 pub mod path;
 pub mod plugin_system_set;

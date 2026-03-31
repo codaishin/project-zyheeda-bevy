@@ -172,6 +172,7 @@ mod tests {
 			action_key::slot::SlotKey,
 			bone_name::BoneName,
 			inventory_key::InventoryKey,
+			mesh_name::MeshName,
 			path::Path,
 		},
 		traits::{
@@ -226,7 +227,7 @@ mod tests {
 				&mut self,
 				forearms: HashMap<BoneName, SlotKey>,
 				hands: HashMap<BoneName, SlotKey>,
-				essences: HashMap<BoneName, SlotKey>,
+				essences: HashMap<MeshName, SlotKey>,
 			) {
 				self.register_loadout_bones(forearms, hands, essences);
 			}
@@ -239,7 +240,7 @@ mod tests {
 			&mut self,
 			forearms: HashMap<BoneName, SlotKey>,
 			hands: HashMap<BoneName, SlotKey>,
-			essences: HashMap<BoneName, SlotKey>,
+			essences: HashMap<MeshName, SlotKey>,
 		) {
 			self.bones.register_loadout_bones(forearms, hands, essences);
 		}
@@ -406,7 +407,7 @@ mod tests {
 					spawners: HashMap::from([]),
 					forearm_slots: HashMap::from([(BoneName::from("a"), SlotKey(0))]),
 					hand_slots: HashMap::from([(BoneName::from("b"), SlotKey(1))]),
-					essence_slots: HashMap::from([(BoneName::from("c"), SlotKey(2))]),
+					essence_slots: HashMap::from([(MeshName::from("c"), SlotKey(2))]),
 				},
 				..default()
 			};
@@ -422,7 +423,7 @@ mod tests {
 							.with(
 								eq(HashMap::from([(BoneName::from("a"), SlotKey(0))])),
 								eq(HashMap::from([(BoneName::from("b"), SlotKey(1))])),
-								eq(HashMap::from([(BoneName::from("c"), SlotKey(2))])),
+								eq(HashMap::from([(MeshName::from("c"), SlotKey(2))])),
 							)
 							.return_const(());
 					}),
