@@ -45,7 +45,6 @@ use common::{
 			HandlesRaycast,
 			PhysicsConfigMut,
 			RaycastSystemParam,
-			physical_bodies::HandlesPhysicalBodies,
 		},
 		handles_player::{HandlesPlayer, PlayerMainCamera},
 		handles_saving::HandlesSaving,
@@ -78,7 +77,6 @@ where
 	TPhysics: ThreadSafe
 		+ HandlesPhysicalEffectTargets
 		+ HandlesPhysicsConfig
-		+ HandlesPhysicalBodies
 		+ HandlesRaycast
 		+ HandlesPhysicalSkillSpawnPoints,
 	TAnimations: ThreadSafe + HandlesAnimations,
@@ -119,7 +117,6 @@ where
 	TPhysics: ThreadSafe
 		+ HandlesPhysicalEffectTargets
 		+ HandlesPhysicsConfig
-		+ HandlesPhysicalBodies
 		+ HandlesRaycast
 		+ HandlesPhysicalSkillSpawnPoints,
 	TAnimations: ThreadSafe + HandlesAnimations,
@@ -161,8 +158,7 @@ where
 
 		// # Prefabs
 		app.add_prefab_observer::<Agent, ()>();
-		app.add_prefab_observer::<Player, TPhysics>();
-		app.add_prefab_observer::<VoidSphere, TPhysics>();
+		app.add_prefab_observer::<VoidSphere, ()>();
 
 		// # Behaviors
 		app.register_required_components::<PlayerCamera, TPhysics::TWorldCamera>();

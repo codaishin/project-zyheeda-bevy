@@ -20,10 +20,7 @@ use common::{
 		handles_enemies::EnemyType,
 		handles_map_generation::AgentType,
 		handles_movement::MovementSpeed,
-		handles_physics::{
-			PhysicalDefaultAttributes,
-			physical_bodies::{Blocker, Body, HandlesPhysicalBodies, PhysicsType, Shape},
-		},
+		handles_physics::PhysicalDefaultAttributes,
 		handles_skill_physics::SkillSpawner,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
@@ -116,10 +113,7 @@ impl From<VoidSphere> for AgentType {
 	}
 }
 
-impl<TPhysics> Prefab<TPhysics> for VoidSphere
-where
-	TPhysics: HandlesPhysicalBodies,
-{
+impl Prefab<()> for VoidSphere {
 	type TError = Unreachable;
 	type TSystemParam<'w, 's> = ();
 
@@ -128,16 +122,7 @@ where
 		entity: &mut impl PrefabEntityCommands,
 		_: StaticSystemParam<()>,
 	) -> Result<(), Unreachable> {
-		let shape = Shape::Capsule {
-			half_y: Units::from(Self::INNER_MODEL_OFFSET.y),
-			radius: Units::from(Self::OUTER_RADIUS),
-		};
-		let body = Body::from_shape(shape)
-			.with_physics_type(PhysicsType::Agent)
-			.with_blocker_types([Blocker::Character]);
-
 		entity
-			.try_insert_if_new(TPhysics::TBody::from(body))
 			.with_child((
 				Transform::from_translation(Self::INNER_MODEL_OFFSET),
 				VoidSpherePart::Core,

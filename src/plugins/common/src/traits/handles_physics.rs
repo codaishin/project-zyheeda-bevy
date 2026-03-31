@@ -7,7 +7,7 @@ use crate::{
 	tools::{Done, Units, speed::Speed},
 	traits::{
 		accessors::get::{GetContextMut, View, ViewField},
-		handles_physics::physical_bodies::Blocker,
+		handles_physics::physical_bodies::{Blocker, Body},
 	},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
@@ -58,7 +58,8 @@ pub trait RaycastResult {
 
 pub trait HandlesPhysicsConfig {
 	type TConfigMut<'w, 's>: SystemParam
-		+ for<'c> GetContextMut<NoDefaultAttributes, TContext<'c>: ConfigureDefaultAttributes>;
+		+ for<'c> GetContextMut<NoDefaultAttributes, TContext<'c>: ConfigureDefaultAttributes>
+		+ for<'c> GetContextMut<NoBodyConfigured, TContext<'c>: ConfigureBody>;
 }
 
 pub type PhysicsConfigMut<'w, 's, T> = <T as HandlesPhysicsConfig>::TConfigMut<'w, 's>;
@@ -83,6 +84,29 @@ where
 {
 	fn configure_default_attributes(&mut self, default: PhysicalDefaultAttributes) {
 		self.deref_mut().configure_default_attributes(default);
+	}
+}
+
+pub struct NoBodyConfigured {
+	pub entity: Entity,
+}
+
+impl From<NoBodyConfigured> for Entity {
+	fn from(NoBodyConfigured { entity }: NoBodyConfigured) -> Self {
+		entity
+	}
+}
+
+pub trait ConfigureBody {
+	fn configure_body(&mut self, body: Body);
+}
+
+impl<T> ConfigureBody for T
+where
+	T: DerefMut<Target: ConfigureBody>,
+{
+	fn configure_body(&mut self, body: Body) {
+		self.deref_mut().configure_body(body);
 	}
 }
 

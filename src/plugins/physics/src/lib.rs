@@ -63,7 +63,6 @@ use common::{
 			HandlesPhysicalEffectTargets,
 			HandlesPhysicsConfig,
 			HandlesRaycast,
-			physical_bodies::HandlesPhysicalBodies,
 		},
 		handles_saving::HandlesSaving,
 		handles_skill_physics::{
@@ -267,10 +266,6 @@ impl<TDependencies> HandlesPhysicalEffectTargets for PhysicsPlugin<TDependencies
 
 impl<TDependencies> HandlesMotion for PhysicsPlugin<TDependencies> {
 	type TCharacterMotion = ApplyCharacterMotion;
-}
-
-impl<TDependencies> HandlesPhysicalBodies for PhysicsPlugin<TDependencies> {
-	type TBody = PhysicalBody;
 }
 
 impl<TDependencies> HandlesPhysicalSkillSpawnPoints for PhysicsPlugin<TDependencies> {

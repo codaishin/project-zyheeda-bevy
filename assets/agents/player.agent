@@ -36,7 +36,7 @@
 	"model": {
 		"Asset": {
 			"model_path": "models/player.glb",
-			"required_movement_clearance": 0.5,
+			"required_movement_clearance": 0.2,
 			"movement_speed": {
 				"Variable": [
 					1.5,
