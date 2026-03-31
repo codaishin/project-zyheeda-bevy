@@ -43,11 +43,11 @@ type LazyBoneName = LazyLock<BoneName>;
 static ALL_PURPOSE_SLOT_BONE: &str = "slot";
 static SKILL_SPAWN: LazyBoneName = LazyLock::new(|| BoneName::from("skill_spawn"));
 static SKILL_SPAWN_NEUTRAL: LazyBoneName = LazyLock::new(|| BoneName::from("skill_spawn_neutral"));
+static COLLIDER_GROUND_OFFSET: LazyLock<Units> = LazyLock::new(|| Units::from(0.6));
 
 impl VoidSphere {
 	const SLOT_KEY: SlotKey = SlotKey(0);
 
-	const COLLIDER_GROUND_OFFSET: Vec3 = Vec3::new(0., 0.6, 0.);
 	const INNER_MODEL_OFFSET: Vec3 = Vec3::new(0., 0.2, 0.);
 	const INNER_RADIUS: f32 = 0.3;
 	const OUTER_RADIUS: f32 = 0.4;
@@ -75,7 +75,7 @@ impl VoidSphere {
 				e.try_insert(Self);
 			}),
 			bones: Self::bones(),
-			ground_offset: Self::COLLIDER_GROUND_OFFSET,
+			ground_offset: *COLLIDER_GROUND_OFFSET,
 			required_clearance: Units::from(Self::OUTER_RADIUS),
 			speed: MovementSpeed::Fixed(UnitsPerSecond::from_u8(1)),
 			animations: HashMap::from([]),

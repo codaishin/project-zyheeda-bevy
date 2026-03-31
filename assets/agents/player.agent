@@ -43,11 +43,7 @@
 					0.75
 				]
 			},
-			"ground_offset": [
-				0,
-				0.65,
-				0
-			],
+			"ground_offset": 0.65,
 			"bones": {
 				"spawners": {
 					"skill_spawn": "Neutral",

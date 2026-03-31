@@ -115,7 +115,7 @@ impl ApplyAgentConfig {
 			if let Some(mut ctx) = TPhysics::get_context_mut(&mut physics, no_body) {
 				ctx.configure_body(Body {
 					shape: Shape::Capsule {
-						half_y: Units::from(config.ground_offset.y - *config.required_clearance),
+						half_y: Units::from(*config.ground_offset - *config.required_clearance),
 						radius: config.required_clearance,
 					},
 					physics_type: PhysicsType::Agent,
@@ -124,7 +124,7 @@ impl ApplyAgentConfig {
 			}
 
 			if transform_dirty.is_some() {
-				transform.translation += config.ground_offset;
+				transform.translation.y += *config.ground_offset;
 			}
 
 			commands.try_apply_on(&entity, |mut e| {
@@ -329,7 +329,7 @@ mod tests {
 			&mut self,
 			speed: MovementSpeed,
 			required_clearance: Units,
-			ground_offset: Vec3,
+			ground_offset: Units,
 		) {
 			self.mock
 				.configure(speed, required_clearance, ground_offset);
@@ -577,7 +577,7 @@ mod tests {
 			let config = AgentConfigAsset {
 				required_clearance: Units::from_u8(12),
 				speed: MovementSpeed::Fixed(UnitsPerSecond::from_u8(21)),
-				ground_offset: Vec3::new(1., 2., 3.),
+				ground_offset: Units::from(2.),
 				..default()
 			};
 			let mut app = setup([(&config_handle, config.clone())]);
@@ -609,7 +609,7 @@ mod tests {
 					UnitsPerSecond::from_u8(11),
 					UnitsPerSecond::from_u8(21),
 				]),
-				ground_offset: Vec3::new(1., 2., 3.),
+				ground_offset: Units::from(2.),
 				..default()
 			};
 			let mut app = setup([(&config_handle, config.clone())]);
@@ -700,7 +700,7 @@ mod tests {
 		fn update_transform() {
 			let config_handle = new_handle();
 			let config = AgentConfigAsset {
-				ground_offset: Vec3::new(5., 6., 7.),
+				ground_offset: Units::from(6.),
 				..default()
 			};
 			let mut app = setup([(&config_handle, config)]);
@@ -717,7 +717,7 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(&Transform::from_xyz(6., 8., 10.)),
+				Some(&Transform::from_xyz(1., 8., 3.)),
 				app.world().entity(entity).get::<Transform>()
 			);
 		}
@@ -726,7 +726,7 @@ mod tests {
 		fn do_not_update_transform_when_agent_transform_not_dirty() {
 			let config_handle = new_handle();
 			let config = AgentConfigAsset {
-				ground_offset: Vec3::new(5., 6., 7.),
+				ground_offset: Units::from(6.),
 				..default()
 			};
 			let mut app = setup([(&config_handle, config)]);
@@ -751,7 +751,7 @@ mod tests {
 		fn remove_transform_dirty_marker() {
 			let config_handle = new_handle();
 			let config = AgentConfigAsset {
-				ground_offset: Vec3::new(5., 6., 7.),
+				ground_offset: Units::from(6.),
 				..default()
 			};
 			let mut app = setup([(&config_handle, config)]);
@@ -811,7 +811,7 @@ mod tests {
 		#[test]
 		fn config_body() {
 			let config_handle = new_handle();
-			let ground_offset = Vec3::new(1., 2., 3.);
+			let ground_offset = Units::from(2.);
 			let required_clearance = Units::from(0.5);
 			let mut app = setup([(
 				&config_handle,

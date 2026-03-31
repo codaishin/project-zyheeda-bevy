@@ -32,7 +32,7 @@ pub(crate) enum ModelConfig {
 		bones: Bones,
 		movement_speed: MovementSpeed,
 		required_movement_clearance: Units,
-		ground_offset: Vec3,
+		ground_offset: Units,
 		#[serde(with = "as_vec")]
 		animations: HashMap<AnimationKey, Animation>,
 		animation_mask_groups: HashMap<AnimationMaskBits, AffectedAnimationBones>,
