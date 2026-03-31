@@ -81,7 +81,7 @@ where
 	}
 
 	fn item_load(&self, app: &mut App) {
-		TLoading::register_custom_assets::<Item, ItemDto>(app);
+		TLoading::register_custom_folder_assets::<Item, ItemDto, LoadingGame>(app);
 	}
 
 	fn loadout(&self, app: &mut App) {
