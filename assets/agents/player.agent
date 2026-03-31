@@ -10,9 +10,7 @@
 	"loadout": {
 		"inventory": [
 			"pistol",
-			"pistol",
-			"pistol",
-			"pistol"
+			"force_essence"
 		],
 		"slots": [
 			[
@@ -21,14 +19,6 @@
 			],
 			[
 				1,
-				"pistol"
-			],
-			[
-				2,
-				"force_essence"
-			],
-			[
-				3,
 				"force_essence"
 			]
 		]
@@ -39,44 +29,32 @@
 			"required_movement_clearance": 0.2,
 			"movement_speed": {
 				"Variable": [
-					1.5,
-					0.75
+					3,
+					0.9
 				]
 			},
-			"ground_offset": 0.65,
+			"ground_offset": 0.6,
 			"bones": {
 				"spawners": {
 					"skill_spawn": "Neutral",
-					"skill_spawn_top.L": {
+					"skill_spawn.L": {
 						"Slot": 0
 					},
-					"skill_spawn_bottom.L": {
+					"skill_spawn.R": {
 						"Slot": 1
-					},
-					"skill_spawn_bottom.R": {
-						"Slot": 2
-					},
-					"skill_spawn_top.R": {
-						"Slot": 3
 					}
 				},
 				"hand_slots": {
-					"top_hand_slot.L": 0,
-					"bottom_hand_slot.L": 1,
-					"bottom_hand_slot.R": 2,
-					"top_hand_slot.R": 3
+					"hand_slot.L": 0,
+					"hand_slot.R": 1
 				},
 				"forearm_slots": {
-					"top_forearm.L": 0,
-					"bottom_forearm.L": 1,
-					"bottom_forearm.R": 2,
-					"top_forearm.R": 3
+					"forearm.L": 0,
+					"forearm.R": 1
 				},
 				"essence_slots": {
-					"ArmTopLeftData": 0,
-					"ArmBottomLeftData": 1,
-					"ArmBottomRightData": 2,
-					"ArmTopRightData": 3
+					"arm.L": 0,
+					"arm.R": 1
 				}
 			},
 			"animations": [
@@ -87,17 +65,22 @@
 							"Single": "models/player.glb#Animation1"
 						},
 						"play_mode": "Repeat",
-						"mask_groups": "11111"
+						"mask_groups": "111"
 					}
 				],
 				[
 					"Walk",
 					{
 						"path": {
-							"Single": "models/player.glb#Animation2"
+							"Directional": {
+								"forward": "models/player.glb#Animation2",
+								"backward": "models/player.glb#Animation3",
+								"left": "models/player.glb#Animation4",
+								"right": "models/player.glb#Animation5"
+							}
 						},
 						"play_mode": "Repeat",
-						"mask_groups": "11111"
+						"mask_groups": "111"
 					}
 				],
 				[
@@ -105,14 +88,14 @@
 					{
 						"path": {
 							"Directional": {
-								"forward": "models/player.glb#Animation3",
-								"backward": "models/player.glb#Animation4",
-								"right": "models/player.glb#Animation5",
-								"left": "models/player.glb#Animation6"
+								"forward": "models/player.glb#Animation6",
+								"backward": "models/player.glb#Animation7",
+								"left": "models/player.glb#Animation8",
+								"right": "models/player.glb#Animation9"
 							}
 						},
 						"play_mode": "Repeat",
-						"mask_groups": "11111"
+						"mask_groups": "111"
 					}
 				],
 				[
@@ -121,10 +104,10 @@
 					},
 					{
 						"path": {
-							"Single": "models/player.glb#Animation9"
+							"Single": "models/player.glb#Animation10"
 						},
 						"play_mode": "Repeat",
-						"mask_groups": "00010"
+						"mask_groups": "010"
 					}
 				],
 				[
@@ -133,58 +116,26 @@
 					},
 					{
 						"path": {
-							"Single": "models/player.glb#Animation7"
+							"Single": "models/player.glb#Animation11"
 						},
 						"play_mode": "Repeat",
-						"mask_groups": "00100"
-					}
-				],
-				[
-					{
-						"Skill": 2
-					},
-					{
-						"path": {
-							"Single": "models/player.glb#Animation8"
-						},
-						"play_mode": "Repeat",
-						"mask_groups": "01000"
-					}
-				],
-				[
-					{
-						"Skill": 3
-					},
-					{
-						"path": {
-							"Single": "models/player.glb#Animation10"
-						},
-						"play_mode": "Repeat",
-						"mask_groups": "10000"
+						"mask_groups": "100"
 					}
 				]
 			],
 			"animation_mask_groups": {
-				"00001": {
+				"001": {
 					"from_root": "metarig",
 					"until_exclusive": [
-						"top_shoulder.L",
-						"top_shoulder.R",
-						"bottom_shoulder.L",
-						"bottom_shoulder.R"
+						"shoulder.L",
+						"shoulder.R"
 					]
 				},
-				"00010": {
-					"from_root": "top_shoulder.L"
+				"010": {
+					"from_root": "shoulder.L"
 				},
-				"00100": {
-					"from_root": "bottom_shoulder.L"
-				},
-				"01000": {
-					"from_root": "bottom_shoulder.R"
-				},
-				"10000": {
-					"from_root": "top_shoulder.R"
+				"100": {
+					"from_root": "shoulder.R"
 				}
 			}
 		}
