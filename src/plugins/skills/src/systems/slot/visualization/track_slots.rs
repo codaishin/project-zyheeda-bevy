@@ -1,18 +1,18 @@
 use crate::components::slots::visualization::SlotVisualization;
 use bevy::prelude::*;
-use common::traits::{bone_key::BoneKey, thread_safe::ThreadSafe};
+use common::traits::thread_safe::ThreadSafe;
 use std::hash::Hash;
 
-impl<TKey> SlotVisualization<TKey>
+impl<TSlot> SlotVisualization<TSlot>
 where
-	TKey: Eq + Hash + ThreadSafe,
+	TSlot: Eq + Hash + ThreadSafe,
 {
 	pub(crate) fn track_slots_for<TAgent>(
 		mut agents: Query<(&TAgent, &mut Self)>,
 		names: Query<(Entity, &Name), Added<Name>>,
 		parents: Query<&ChildOf>,
 	) where
-		TAgent: Component + BoneKey<TKey>,
+		TAgent: Component + GetSlotDefinition<TSlot>,
 	{
 		for (entity, name) in names {
 			let Some(parent) = parents.iter_ancestors(entity).find(|p| agents.contains(*p)) else {
@@ -21,12 +21,16 @@ where
 			let Ok((agent, mut slots)) = agents.get_mut(parent) else {
 				continue;
 			};
-			let Some(key) = agent.bone_key(name.as_str()) else {
+			let Some(slot) = agent.get_slot_definition(name) else {
 				continue;
 			};
-			slots.slots.insert(key, entity);
+			slots.slots.insert(slot, entity);
 		}
 	}
+}
+
+pub(crate) trait GetSlotDefinition<T> {
+	fn get_slot_definition(&self, name: &str) -> Option<T>;
 }
 
 #[cfg(test)]
@@ -41,9 +45,9 @@ mod tests {
 	#[require(SlotVisualization<_Key>)]
 	struct _Agent;
 
-	impl BoneKey<_Key> for _Agent {
-		fn bone_key(&self, bone_name: &str) -> Option<_Key> {
-			match bone_name {
+	impl GetSlotDefinition<_Key> for _Agent {
+		fn get_slot_definition(&self, key: &str) -> Option<_Key> {
+			match key {
 				"key" => Some(_Key),
 				_ => None,
 			}

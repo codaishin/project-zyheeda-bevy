@@ -3,10 +3,10 @@ pub(crate) mod write;
 
 use crate::{
 	components::{
-		bone_definitions::BoneDefinitions,
 		combos::Combos,
 		inventory::Inventory,
 		queue::Queue,
+		slot_definitions::SlotDefinitions,
 		slots::Slots,
 	},
 	item::Item,
@@ -42,5 +42,5 @@ pub struct LoadoutPrep<'w, 's> {
 	commands: ZyheedaCommands<'w, 's>,
 	slots: Query<'w, 's, &'static mut Slots>,
 	inventories: Query<'w, 's, &'static mut Inventory>,
-	bone_definitions: Query<'w, 's, (), With<BoneDefinitions>>,
+	slot_definitions: Query<'w, 's, (), With<SlotDefinitions>>,
 }

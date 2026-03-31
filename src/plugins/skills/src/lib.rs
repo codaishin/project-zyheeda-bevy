@@ -7,11 +7,11 @@ mod traits;
 
 use crate::{
 	components::{
-		bone_definitions::BoneDefinitions,
 		combos::dto::CombosDto,
 		combos_time_out::dto::CombosTimeOutDto,
 		held_slots::{Current, HeldSlots, Old},
 		queue::dto::QueueDto,
+		slot_definitions::SlotDefinitions,
 		slots::visualization::SlotVisualization,
 	},
 	skills::SkillId,
@@ -92,11 +92,11 @@ where
 		app.add_systems(
 			Update,
 			(
-				SlotVisualization::<HandSlot>::track_slots_for::<BoneDefinitions>,
+				SlotVisualization::<HandSlot>::track_slots_for::<SlotDefinitions>,
 				SlotVisualization::<HandSlot>::visualize_items,
-				SlotVisualization::<ForearmSlot>::track_slots_for::<BoneDefinitions>,
+				SlotVisualization::<ForearmSlot>::track_slots_for::<SlotDefinitions>,
 				SlotVisualization::<ForearmSlot>::visualize_items,
-				SlotVisualization::<EssenceSlot>::track_slots_for::<BoneDefinitions>,
+				SlotVisualization::<EssenceSlot>::track_slots_for::<SlotDefinitions>,
 				SlotVisualization::<EssenceSlot>::visualize_items,
 			)
 				.chain(),

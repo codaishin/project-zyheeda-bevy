@@ -3,7 +3,6 @@ pub mod add_asset;
 pub mod after_plugin;
 pub mod asset_marker;
 pub mod automatic_transitions;
-pub mod bone_key;
 pub mod clear;
 pub mod collect_reversed;
 pub mod delta;

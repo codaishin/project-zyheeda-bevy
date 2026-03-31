@@ -1,4 +1,4 @@
-use crate::tools::{action_key::slot::SlotKey, bone_name::BoneName};
+use crate::tools::{action_key::slot::SlotKey, bone_name::BoneName, mesh_name::MeshName};
 use bevy::prelude::*;
 use std::{collections::HashMap, ops::DerefMut};
 
@@ -17,7 +17,7 @@ pub trait RegisterLoadoutBones {
 		&mut self,
 		forearms: HashMap<BoneName, SlotKey>,
 		hands: HashMap<BoneName, SlotKey>,
-		essences: HashMap<BoneName, SlotKey>,
+		essences: HashMap<MeshName, SlotKey>,
 	);
 }
 
@@ -29,7 +29,7 @@ where
 		&mut self,
 		forearms: HashMap<BoneName, SlotKey>,
 		hands: HashMap<BoneName, SlotKey>,
-		essences: HashMap<BoneName, SlotKey>,
+		essences: HashMap<MeshName, SlotKey>,
 	) {
 		self.deref_mut()
 			.register_loadout_bones(forearms, hands, essences);
