@@ -8,9 +8,10 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	components::{asset_model::AssetModel, essence::Essence},
-	tools::item_type::ItemType,
+	tools::{item_type::ItemType, path::Path},
 	traits::{
 		accessors::get::View,
+		handles_custom_assets::AssetFolderPath,
 		handles_localization::Token,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
 	},
@@ -34,6 +35,12 @@ impl View<ItemType> for Item {
 impl View<Option<Handle<Skill>>> for Item {
 	fn view(&self) -> Option<&'_ Handle<Skill>> {
 		self.skill.as_ref()
+	}
+}
+
+impl AssetFolderPath for Item {
+	fn asset_folder_path() -> Path {
+		Path::from("items")
 	}
 }
 

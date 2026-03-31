@@ -43,6 +43,6 @@ impl TryLoadFrom<ItemDto> for Item {
 
 impl AssetFileExtensions for ItemDto {
 	fn asset_file_extensions() -> &'static [&'static str] {
-		&[".item"]
+		&["item"]
 	}
 }
