@@ -40,9 +40,10 @@ use common::{
 		},
 		handles_orientation::{FacingSystemParamMut, HandlesOrientation},
 		handles_physics::{
-			HandlesPhysicalAttributes,
 			HandlesPhysicalEffectTargets,
+			HandlesPhysicsConfig,
 			HandlesRaycast,
+			PhysicsConfigMut,
 			RaycastSystemParam,
 			physical_bodies::HandlesPhysicalBodies,
 		},
@@ -76,7 +77,7 @@ where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe
 		+ HandlesPhysicalEffectTargets
-		+ HandlesPhysicalAttributes
+		+ HandlesPhysicsConfig
 		+ HandlesPhysicalBodies
 		+ HandlesRaycast
 		+ HandlesPhysicalSkillSpawnPoints,
@@ -117,7 +118,7 @@ where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe
 		+ HandlesPhysicalEffectTargets
-		+ HandlesPhysicalAttributes
+		+ HandlesPhysicsConfig
 		+ HandlesPhysicalBodies
 		+ HandlesRaycast
 		+ HandlesPhysicalSkillSpawnPoints,
@@ -147,7 +148,7 @@ where
 				SkillSpawnPointsMut<TPhysics>,
 				AnimationsSystemParamMut<TAnimations>,
 				MovementSystemConfigParam<TMovement>,
-				TPhysics::TDefaultAttributes,
+				PhysicsConfigMut<TPhysics>,
 			>,
 		);
 

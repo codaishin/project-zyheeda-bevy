@@ -6,7 +6,7 @@ use crate::{
 	toi,
 	tools::{Done, Units, speed::Speed},
 	traits::{
-		accessors::get::{View, ViewField},
+		accessors::get::{GetContextMut, View, ViewField},
 		handles_physics::physical_bodies::Blocker,
 	},
 };
@@ -56,8 +56,34 @@ pub trait RaycastResult {
 	type TResult;
 }
 
-pub trait HandlesPhysicalAttributes {
-	type TDefaultAttributes: Component + From<PhysicalDefaultAttributes>;
+pub trait HandlesPhysicsConfig {
+	type TConfigMut<'w, 's>: SystemParam
+		+ for<'c> GetContextMut<NoDefaultAttributes, TContext<'c>: ConfigureDefaultAttributes>;
+}
+
+pub type PhysicsConfigMut<'w, 's, T> = <T as HandlesPhysicsConfig>::TConfigMut<'w, 's>;
+
+pub struct NoDefaultAttributes {
+	pub entity: Entity,
+}
+
+impl From<NoDefaultAttributes> for Entity {
+	fn from(NoDefaultAttributes { entity }: NoDefaultAttributes) -> Self {
+		entity
+	}
+}
+
+pub trait ConfigureDefaultAttributes {
+	fn configure_default_attributes(&mut self, default: PhysicalDefaultAttributes);
+}
+
+impl<T> ConfigureDefaultAttributes for T
+where
+	T: DerefMut<Target: ConfigureDefaultAttributes>,
+{
+	fn configure_default_attributes(&mut self, default: PhysicalDefaultAttributes) {
+		self.deref_mut().configure_default_attributes(default);
+	}
 }
 
 pub trait HandlesMotion {

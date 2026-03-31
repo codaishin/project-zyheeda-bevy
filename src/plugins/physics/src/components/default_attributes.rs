@@ -7,7 +7,7 @@ use common::{
 };
 
 #[derive(Component, Debug, PartialEq)]
-pub struct DefaultAttributes(PhysicalDefaultAttributes);
+pub(crate) struct DefaultAttributes(pub(crate) PhysicalDefaultAttributes);
 
 impl From<PhysicalDefaultAttributes> for DefaultAttributes {
 	fn from(attributes: PhysicalDefaultAttributes) -> Self {

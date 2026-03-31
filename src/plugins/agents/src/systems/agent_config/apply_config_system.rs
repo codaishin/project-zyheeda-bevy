@@ -21,7 +21,7 @@ use common::{
 			register_loadout_bones::{NoBonesRegistered, RegisterLoadoutBones},
 		},
 		handles_movement::{ConfigureMovement, NotConfiguredMovement},
-		handles_physics::PhysicalDefaultAttributes,
+		handles_physics::{ConfigureDefaultAttributes, NoDefaultAttributes},
 		handles_skill_physics::{RegisterDefinition, SkillSpawnPoints},
 		loadout::ItemName,
 	},
@@ -30,11 +30,13 @@ use common::{
 use std::{iter::Enumerate, slice::Iter};
 
 impl ApplyAgentConfig {
-	pub(crate) fn system<TLoadout, TSkills, TAnimations, TMovement, TAttributes>(
+	#[allow(clippy::too_many_arguments)]
+	pub(crate) fn system<TLoadout, TSkills, TAnimations, TMovement, TPhysics>(
 		mut loadout_param: StaticSystemParam<TLoadout>,
 		mut skills_param: StaticSystemParam<TSkills>,
 		mut animations_param: StaticSystemParam<TAnimations>,
 		mut movement: StaticSystemParam<TMovement>,
+		mut physics: StaticSystemParam<TPhysics>,
 		mut commands: ZyheedaCommands,
 		agents: Query<
 			(
@@ -56,7 +58,8 @@ impl ApplyAgentConfig {
 			SystemParam + for<'c> GetContextMut<Animations, TContext<'c>: RegisterAnimations>,
 		TMovement: SystemParam
 			+ for<'c> GetContextMut<NotConfiguredMovement, TContext<'c>: ConfigureMovement>,
-		TAttributes: Component + From<PhysicalDefaultAttributes>,
+		TPhysics: SystemParam
+			+ for<'c> GetContextMut<NoDefaultAttributes, TContext<'c>: ConfigureDefaultAttributes>,
 	{
 		for (entity, AgentConfig { config_handle }, mut transform, transform_dirty) in agents {
 			let Some(config) = configs.get(config_handle) else {
@@ -96,6 +99,11 @@ impl ApplyAgentConfig {
 				);
 			}
 
+			let no_default_attr = NoDefaultAttributes { entity };
+			if let Some(mut ctx) = TPhysics::get_context_mut(&mut physics, no_default_attr) {
+				ctx.configure_default_attributes(config.attributes);
+			}
+
 			if transform_dirty.is_some() {
 				transform.translation += config.ground_offset;
 			}
@@ -109,7 +117,6 @@ impl ApplyAgentConfig {
 						func(&mut e);
 					}
 				};
-				e.try_insert_if_new(TAttributes::from(config.attributes));
 				e.try_remove::<(Self, AgentTransformDirty)>();
 			});
 		}
@@ -185,6 +192,7 @@ mod tests {
 				PlayMode,
 			},
 			handles_movement::MovementSpeed,
+			handles_physics::PhysicalDefaultAttributes,
 			handles_skill_physics::SkillSpawner,
 		},
 		zyheeda_commands::ZyheedaEntityCommands,
@@ -309,12 +317,23 @@ mod tests {
 		}
 	}
 
-	#[derive(Component, Debug, PartialEq)]
-	struct _Attributes(PhysicalDefaultAttributes);
+	#[derive(Component, NestedMocks)]
+	struct _Attributes {
+		mock: Mock_Attributes,
+	}
 
-	impl From<PhysicalDefaultAttributes> for _Attributes {
-		fn from(attributes: PhysicalDefaultAttributes) -> Self {
-			Self(attributes)
+	impl Default for _Attributes {
+		fn default() -> Self {
+			Self::new().with_mock(|mock| {
+				mock.expect_configure_default_attributes().return_const(());
+			})
+		}
+	}
+
+	#[automock]
+	impl ConfigureDefaultAttributes for _Attributes {
+		fn configure_default_attributes(&mut self, default: PhysicalDefaultAttributes) {
+			self.mock.configure_default_attributes(default);
 		}
 	}
 
@@ -335,7 +354,7 @@ mod tests {
 					Query<&mut _Skills>,
 					Query<&mut _Animations>,
 					Query<&mut _Movement>,
-					_Attributes,
+					Query<&mut _Attributes>,
 				>,
 				IsChanged::<_Loadout>::detect,
 				IsChanged::<_Skills>::detect,
@@ -738,21 +757,19 @@ mod tests {
 					..default()
 				},
 			)]);
-			let entity = app
-				.world_mut()
-				.spawn((
-					ApplyAgentConfig,
-					Transform::default(),
-					AgentConfig { config_handle },
-				))
-				.id();
+			app.world_mut().spawn((
+				ApplyAgentConfig,
+				Transform::default(),
+				AgentConfig { config_handle },
+				_Attributes::new().with_mock(|mock| {
+					mock.expect_configure_default_attributes()
+						.once()
+						.with(eq(attributes))
+						.return_const(());
+				}),
+			));
 
 			app.update();
-
-			assert_eq!(
-				Some(&_Attributes(attributes)),
-				app.world().entity(entity).get::<_Attributes>(),
-			);
 		}
 	}
 
@@ -776,6 +793,7 @@ mod tests {
 				_Loadout::default(),
 				_Skills::default(),
 				_Animations::default(),
+				_Attributes::default(),
 			))
 			.id();
 
@@ -817,6 +835,7 @@ mod tests {
 				_Loadout::default(),
 				_Skills::default(),
 				_Animations::default(),
+				_Attributes::default(),
 			))
 			.id();
 

@@ -37,6 +37,7 @@ use crate::{
 	observers::{skill_prefab::SkillPrefab, update_blockers::UpdateBlockersObserver},
 	resources::ongoing_interactions::OngoingInteractions,
 	system_params::{
+		config::ConfigParamMut,
 		skill_spawner::SkillSpawnerMut,
 		update_ongoing_interactions::UpdateOngoingInteractions,
 	},
@@ -59,8 +60,8 @@ use common::{
 		delta::Delta,
 		handles_physics::{
 			HandlesMotion,
-			HandlesPhysicalAttributes,
 			HandlesPhysicalEffectTargets,
+			HandlesPhysicsConfig,
 			HandlesRaycast,
 			physical_bodies::HandlesPhysicalBodies,
 		},
@@ -245,8 +246,8 @@ impl<TDependencies> HandlesRaycast for PhysicsPlugin<TDependencies> {
 	type TRaycast<'world, 'state> = RayCaster<'world, 'state>;
 }
 
-impl<TDependencies> HandlesPhysicalAttributes for PhysicsPlugin<TDependencies> {
-	type TDefaultAttributes = DefaultAttributes;
+impl<TDependencies> HandlesPhysicsConfig for PhysicsPlugin<TDependencies> {
+	type TConfigMut<'w, 's> = ConfigParamMut<'w, 's>;
 }
 
 impl<TDependencies> SystemSetDefinition for PhysicsPlugin<TDependencies> {
