@@ -49,14 +49,14 @@ impl ViewField for MovementTarget {
 }
 
 pub trait ConfigureMovement {
-	fn configure(&mut self, speed: MovementSpeed, required_clearance: Units, ground_offset: Vec3);
+	fn configure(&mut self, speed: MovementSpeed, required_clearance: Units, ground_offset: Units);
 }
 
 impl<T> ConfigureMovement for T
 where
 	T: DerefMut<Target: ConfigureMovement>,
 {
-	fn configure(&mut self, speed: MovementSpeed, required_clearance: Units, ground_offset: Vec3) {
+	fn configure(&mut self, speed: MovementSpeed, required_clearance: Units, ground_offset: Units) {
 		self.deref_mut()
 			.configure(speed, required_clearance, ground_offset);
 	}

@@ -2,13 +2,8 @@ use crate::{
 	tools::Units,
 	traits::iteration::{Iter, IterFinite},
 };
-use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
-
-pub trait HandlesPhysicalBodies {
-	type TBody: Component + From<Body>;
-}
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Body {

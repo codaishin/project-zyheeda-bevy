@@ -6,9 +6,8 @@ use crate::{
 	toi,
 	tools::{Done, Units, speed::Speed},
 	traits::{
-		accessors::get::{View, ViewField},
-		handles_physics::physical_bodies::Blocker,
-		system_set_definition::SystemSetDefinition,
+		accessors::get::{GetContextMut, View, ViewField},
+		handles_physics::physical_bodies::{Blocker, Body},
 	},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
@@ -57,12 +56,58 @@ pub trait RaycastResult {
 	type TResult;
 }
 
-pub trait HandlesPhysicalAttributes {
-	type TDefaultAttributes: Component + From<PhysicalDefaultAttributes>;
+pub trait HandlesPhysicsConfig {
+	type TConfigMut<'w, 's>: SystemParam
+		+ for<'c> GetContextMut<NoDefaultAttributes, TContext<'c>: ConfigureDefaultAttributes>
+		+ for<'c> GetContextMut<NoBodyConfigured, TContext<'c>: ConfigureBody>;
 }
 
-pub trait HandlesPhysicalObjects: SystemSetDefinition {
-	type TPhysicalObjectComponent: Component + From<PhysicalObject>;
+pub type PhysicsConfigMut<'w, 's, T> = <T as HandlesPhysicsConfig>::TConfigMut<'w, 's>;
+
+pub struct NoDefaultAttributes {
+	pub entity: Entity,
+}
+
+impl From<NoDefaultAttributes> for Entity {
+	fn from(NoDefaultAttributes { entity }: NoDefaultAttributes) -> Self {
+		entity
+	}
+}
+
+pub trait ConfigureDefaultAttributes {
+	fn configure_default_attributes(&mut self, default: PhysicalDefaultAttributes);
+}
+
+impl<T> ConfigureDefaultAttributes for T
+where
+	T: DerefMut<Target: ConfigureDefaultAttributes>,
+{
+	fn configure_default_attributes(&mut self, default: PhysicalDefaultAttributes) {
+		self.deref_mut().configure_default_attributes(default);
+	}
+}
+
+pub struct NoBodyConfigured {
+	pub entity: Entity,
+}
+
+impl From<NoBodyConfigured> for Entity {
+	fn from(NoBodyConfigured { entity }: NoBodyConfigured) -> Self {
+		entity
+	}
+}
+
+pub trait ConfigureBody {
+	fn configure_body(&mut self, body: Body);
+}
+
+impl<T> ConfigureBody for T
+where
+	T: DerefMut<Target: ConfigureBody>,
+{
+	fn configure_body(&mut self, body: Body) {
+		self.deref_mut().configure_body(body);
+	}
 }
 
 pub trait HandlesMotion {

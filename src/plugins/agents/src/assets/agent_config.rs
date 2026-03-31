@@ -28,7 +28,7 @@ pub struct AgentConfigAsset {
 	pub(crate) loadout: Loadout,
 	pub(crate) bones: Bones,
 	pub(crate) agent_model: AgentModel,
-	pub(crate) ground_offset: Vec3,
+	pub(crate) ground_offset: Units,
 	pub(crate) required_clearance: Units,
 	pub(crate) speed: MovementSpeed,
 	pub(crate) attributes: PhysicalDefaultAttributes,

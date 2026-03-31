@@ -40,11 +40,11 @@ use common::{
 		},
 		handles_orientation::{FacingSystemParamMut, HandlesOrientation},
 		handles_physics::{
-			HandlesPhysicalAttributes,
 			HandlesPhysicalEffectTargets,
+			HandlesPhysicsConfig,
 			HandlesRaycast,
+			PhysicsConfigMut,
 			RaycastSystemParam,
-			physical_bodies::HandlesPhysicalBodies,
 		},
 		handles_player::{HandlesPlayer, PlayerMainCamera},
 		handles_saving::HandlesSaving,
@@ -76,8 +76,7 @@ where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe
 		+ HandlesPhysicalEffectTargets
-		+ HandlesPhysicalAttributes
-		+ HandlesPhysicalBodies
+		+ HandlesPhysicsConfig
 		+ HandlesRaycast
 		+ HandlesPhysicalSkillSpawnPoints,
 	TAnimations: ThreadSafe + HandlesAnimations,
@@ -117,8 +116,7 @@ where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe
 		+ HandlesPhysicalEffectTargets
-		+ HandlesPhysicalAttributes
-		+ HandlesPhysicalBodies
+		+ HandlesPhysicsConfig
 		+ HandlesRaycast
 		+ HandlesPhysicalSkillSpawnPoints,
 	TAnimations: ThreadSafe + HandlesAnimations,
@@ -147,7 +145,7 @@ where
 				SkillSpawnPointsMut<TPhysics>,
 				AnimationsSystemParamMut<TAnimations>,
 				MovementSystemConfigParam<TMovement>,
-				TPhysics::TDefaultAttributes,
+				PhysicsConfigMut<TPhysics>,
 			>,
 		);
 
@@ -160,8 +158,7 @@ where
 
 		// # Prefabs
 		app.add_prefab_observer::<Agent, ()>();
-		app.add_prefab_observer::<Player, TPhysics>();
-		app.add_prefab_observer::<VoidSphere, TPhysics>();
+		app.add_prefab_observer::<VoidSphere, ()>();
 
 		// # Behaviors
 		app.register_required_components::<PlayerCamera, TPhysics::TWorldCamera>();

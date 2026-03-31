@@ -1,29 +1,10 @@
-use bevy::{ecs::system::StaticSystemParam, prelude::*};
-use common::{
-	errors::Unreachable,
-	tools::Units,
-	traits::{
-		handles_animations::AnimationPriority,
-		handles_map_generation::AgentType,
-		handles_physics::physical_bodies::{
-			Blocker,
-			Body,
-			HandlesPhysicalBodies,
-			PhysicsType,
-			Shape,
-		},
-		prefab::{Prefab, PrefabEntityCommands},
-	},
-};
-use std::sync::LazyLock;
+use bevy::prelude::*;
+use common::traits::{handles_animations::AnimationPriority, handles_map_generation::AgentType};
 
 #[derive(Component, Default, Debug, PartialEq, Clone)]
 #[component(immutable)]
 #[require(Name = "Player")]
 pub struct Player;
-
-static PLAYER_COLLIDER_RADIUS: LazyLock<Units> = LazyLock::new(|| Units::from(0.2));
-static PLAYER_COLLIDER_HEIGHT: LazyLock<Units> = LazyLock::new(|| Units::from(0.4));
 
 impl From<Player> for AgentType {
 	fn from(_: Player) -> Self {
@@ -36,31 +17,5 @@ struct Idle;
 impl From<Idle> for AnimationPriority {
 	fn from(_: Idle) -> Self {
 		AnimationPriority::Low
-	}
-}
-
-impl<TPhysics> Prefab<TPhysics> for Player
-where
-	TPhysics: HandlesPhysicalBodies,
-{
-	type TError = Unreachable;
-	type TSystemParam<'w, 's> = ();
-
-	fn insert_prefab_components(
-		&self,
-		entity: &mut impl PrefabEntityCommands,
-		_: StaticSystemParam<()>,
-	) -> Result<(), Unreachable> {
-		let shape = Shape::Capsule {
-			half_y: *PLAYER_COLLIDER_HEIGHT,
-			radius: *PLAYER_COLLIDER_RADIUS,
-		};
-		let body = Body::from_shape(shape)
-			.with_physics_type(PhysicsType::Agent)
-			.with_blocker_types([Blocker::Character]);
-
-		entity.try_insert_if_new(TPhysics::TBody::from(body));
-
-		Ok(())
 	}
 }

@@ -33,8 +33,9 @@ use common::{
 		handles_lights::HandlesLights,
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInApp},
 		handles_map_generation::{AgentType, HandlesMapGeneration},
-		handles_physics::{HandlesRaycast, physical_bodies::HandlesPhysicalBodies},
+		handles_physics::{HandlesPhysicsConfig, HandlesRaycast, PhysicsConfigMut},
 		handles_saving::HandlesSaving,
+		prefab::AddPrefabObserver,
 		spawn::Spawn,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
@@ -50,7 +51,7 @@ impl<TLoading, TSavegame, TLights, TPhysics>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesRaycast + HandlesPhysicalBodies,
+	TPhysics: ThreadSafe + HandlesRaycast + HandlesPhysicsConfig,
 	TLights: ThreadSafe + HandlesLights,
 {
 	const SPAWNERS: &[(&str, AgentType)] = &[
@@ -70,7 +71,7 @@ impl<TLoading, TSavegame, TLights, TPhysics> Plugin
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesRaycast + HandlesPhysicalBodies,
+	TPhysics: ThreadSafe + HandlesRaycast + HandlesPhysicsConfig,
 	TLights: ThreadSafe + HandlesLights,
 {
 	fn build(&self, app: &mut App) {
@@ -90,8 +91,8 @@ where
 
 		app.init_resource::<AgentPrefab>()
 			.register_required_components::<Map, TSavegame::TSaveEntityMarker>()
-			.register_required_components_with::<MeshCollider, TPhysics::TBody>(MeshCollider::body)
 			.add_systems(OnEnter(GameState::NewGame), BayMap::spawn)
+			.add_prefab_observer::<MeshCollider, PhysicsConfigMut<TPhysics>>()
 			.add_observer(NavMesh::identify_by_prefix(Self::NAV_MESH_PREFIX))
 			.add_observer(MeshCollider::identify_by_prefix(Self::MESH_COLLIDER_PREFIX))
 			.add_observer(AgentSpawner::identify_by_prefix_map(Self::SPAWNERS))

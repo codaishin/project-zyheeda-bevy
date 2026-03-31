@@ -11,7 +11,7 @@ use bevy::{
 };
 use common::{
 	components::asset_model::AssetModel,
-	tools::{action_key::slot::SlotKey, inventory_key::InventoryKey},
+	tools::{Units, action_key::slot::SlotKey, inventory_key::InventoryKey},
 	traits::{
 		accessors::get::{GetContextMut, TryApplyOn},
 		handles_animations::{Animations, RegisterAnimations},
@@ -21,20 +21,28 @@ use common::{
 			register_loadout_bones::{NoBonesRegistered, RegisterLoadoutBones},
 		},
 		handles_movement::{ConfigureMovement, NotConfiguredMovement},
-		handles_physics::PhysicalDefaultAttributes,
+		handles_physics::{
+			ConfigureBody,
+			ConfigureDefaultAttributes,
+			NoBodyConfigured,
+			NoDefaultAttributes,
+			physical_bodies::{Blocker, Body, PhysicsType, Shape},
+		},
 		handles_skill_physics::{RegisterDefinition, SkillSpawnPoints},
 		loadout::ItemName,
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
-use std::{iter::Enumerate, slice::Iter};
+use std::{collections::HashSet, iter::Enumerate, slice::Iter};
 
 impl ApplyAgentConfig {
-	pub(crate) fn system<TLoadout, TSkills, TAnimations, TMovement, TAttributes>(
+	#[allow(clippy::too_many_arguments)]
+	pub(crate) fn system<TLoadout, TSkills, TAnimations, TMovement, TPhysics>(
 		mut loadout_param: StaticSystemParam<TLoadout>,
 		mut skills_param: StaticSystemParam<TSkills>,
 		mut animations_param: StaticSystemParam<TAnimations>,
 		mut movement: StaticSystemParam<TMovement>,
+		mut physics: StaticSystemParam<TPhysics>,
 		mut commands: ZyheedaCommands,
 		agents: Query<
 			(
@@ -56,7 +64,9 @@ impl ApplyAgentConfig {
 			SystemParam + for<'c> GetContextMut<Animations, TContext<'c>: RegisterAnimations>,
 		TMovement: SystemParam
 			+ for<'c> GetContextMut<NotConfiguredMovement, TContext<'c>: ConfigureMovement>,
-		TAttributes: Component + From<PhysicalDefaultAttributes>,
+		TPhysics: SystemParam
+			+ for<'c> GetContextMut<NoDefaultAttributes, TContext<'c>: ConfigureDefaultAttributes>
+			+ for<'c> GetContextMut<NoBodyConfigured, TContext<'c>: ConfigureBody>,
 	{
 		for (entity, AgentConfig { config_handle }, mut transform, transform_dirty) in agents {
 			let Some(config) = configs.get(config_handle) else {
@@ -96,8 +106,25 @@ impl ApplyAgentConfig {
 				);
 			}
 
+			let no_default_attr = NoDefaultAttributes { entity };
+			if let Some(mut ctx) = TPhysics::get_context_mut(&mut physics, no_default_attr) {
+				ctx.configure_default_attributes(config.attributes);
+			}
+
+			let no_body = NoBodyConfigured { entity };
+			if let Some(mut ctx) = TPhysics::get_context_mut(&mut physics, no_body) {
+				ctx.configure_body(Body {
+					shape: Shape::Capsule {
+						half_y: Units::from(*config.ground_offset - *config.required_clearance),
+						radius: config.required_clearance,
+					},
+					physics_type: PhysicsType::Agent,
+					blocker_types: HashSet::from([Blocker::Character]),
+				});
+			}
+
 			if transform_dirty.is_some() {
-				transform.translation += config.ground_offset;
+				transform.translation.y += *config.ground_offset;
 			}
 
 			commands.try_apply_on(&entity, |mut e| {
@@ -109,7 +136,6 @@ impl ApplyAgentConfig {
 						func(&mut e);
 					}
 				};
-				e.try_insert_if_new(TAttributes::from(config.attributes));
 				e.try_remove::<(Self, AgentTransformDirty)>();
 			});
 		}
@@ -185,12 +211,13 @@ mod tests {
 				PlayMode,
 			},
 			handles_movement::MovementSpeed,
+			handles_physics::{PhysicalDefaultAttributes, physical_bodies::Body},
 			handles_skill_physics::SkillSpawner,
 		},
 		zyheeda_commands::ZyheedaEntityCommands,
 	};
 	use macros::{NestedMocks, simple_mock};
-	use mockall::{automock, predicate::eq};
+	use mockall::{automock, mock, predicate::eq};
 	use std::collections::HashMap;
 	use testing::{IsChanged, Mock, NestedMocks, SingleThreadedApp, new_handle};
 
@@ -302,19 +329,46 @@ mod tests {
 			&mut self,
 			speed: MovementSpeed,
 			required_clearance: Units,
-			ground_offset: Vec3,
+			ground_offset: Units,
 		) {
 			self.mock
 				.configure(speed, required_clearance, ground_offset);
 		}
 	}
 
-	#[derive(Component, Debug, PartialEq)]
-	struct _Attributes(PhysicalDefaultAttributes);
+	#[derive(Component, NestedMocks)]
+	struct _Physics {
+		mock: Mock_Physics,
+	}
 
-	impl From<PhysicalDefaultAttributes> for _Attributes {
-		fn from(attributes: PhysicalDefaultAttributes) -> Self {
-			Self(attributes)
+	impl Default for _Physics {
+		fn default() -> Self {
+			Self::new().with_mock(|mock| {
+				mock.expect_configure_default_attributes().return_const(());
+				mock.expect_configure_body().return_const(());
+			})
+		}
+	}
+
+	impl ConfigureDefaultAttributes for _Physics {
+		fn configure_default_attributes(&mut self, default: PhysicalDefaultAttributes) {
+			self.mock.configure_default_attributes(default);
+		}
+	}
+
+	impl ConfigureBody for _Physics {
+		fn configure_body(&mut self, body: Body) {
+			self.mock.configure_body(body);
+		}
+	}
+
+	mock! {
+		_Physics {}
+		impl ConfigureDefaultAttributes for _Physics {
+			fn configure_default_attributes(&mut self, default: PhysicalDefaultAttributes);
+		}
+		impl ConfigureBody for _Physics {
+			fn configure_body(&mut self, body: Body);
 		}
 	}
 
@@ -335,14 +389,14 @@ mod tests {
 					Query<&mut _Skills>,
 					Query<&mut _Animations>,
 					Query<&mut _Movement>,
-					_Attributes,
+					Query<&mut _Physics>,
 				>,
 				IsChanged::<_Loadout>::detect,
 				IsChanged::<_Skills>::detect,
 				IsChanged::<_Animations>::detect,
 				IsChanged::<_Movement>::detect,
 				IsChanged::<AssetModel>::detect,
-				IsChanged::<_Attributes>::detect,
+				IsChanged::<_Physics>::detect,
 				IsChanged::<Transform>::detect,
 			)
 				.chain(),
@@ -523,7 +577,7 @@ mod tests {
 			let config = AgentConfigAsset {
 				required_clearance: Units::from_u8(12),
 				speed: MovementSpeed::Fixed(UnitsPerSecond::from_u8(21)),
-				ground_offset: Vec3::new(1., 2., 3.),
+				ground_offset: Units::from(2.),
 				..default()
 			};
 			let mut app = setup([(&config_handle, config.clone())]);
@@ -555,7 +609,7 @@ mod tests {
 					UnitsPerSecond::from_u8(11),
 					UnitsPerSecond::from_u8(21),
 				]),
-				ground_offset: Vec3::new(1., 2., 3.),
+				ground_offset: Units::from(2.),
 				..default()
 			};
 			let mut app = setup([(&config_handle, config.clone())]);
@@ -646,7 +700,7 @@ mod tests {
 		fn update_transform() {
 			let config_handle = new_handle();
 			let config = AgentConfigAsset {
-				ground_offset: Vec3::new(5., 6., 7.),
+				ground_offset: Units::from(6.),
 				..default()
 			};
 			let mut app = setup([(&config_handle, config)]);
@@ -663,7 +717,7 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(&Transform::from_xyz(6., 8., 10.)),
+				Some(&Transform::from_xyz(1., 8., 3.)),
 				app.world().entity(entity).get::<Transform>()
 			);
 		}
@@ -672,7 +726,7 @@ mod tests {
 		fn do_not_update_transform_when_agent_transform_not_dirty() {
 			let config_handle = new_handle();
 			let config = AgentConfigAsset {
-				ground_offset: Vec3::new(5., 6., 7.),
+				ground_offset: Units::from(6.),
 				..default()
 			};
 			let mut app = setup([(&config_handle, config)]);
@@ -697,7 +751,7 @@ mod tests {
 		fn remove_transform_dirty_marker() {
 			let config_handle = new_handle();
 			let config = AgentConfigAsset {
-				ground_offset: Vec3::new(5., 6., 7.),
+				ground_offset: Units::from(6.),
 				..default()
 			};
 			let mut app = setup([(&config_handle, config)]);
@@ -720,11 +774,11 @@ mod tests {
 		}
 	}
 
-	mod attributes {
+	mod physics {
 		use super::*;
 
 		#[test]
-		fn insert_attributes() {
+		fn config_default_attributes() {
 			let config_handle = new_handle();
 			let attributes = PhysicalDefaultAttributes {
 				health: Health::new(100.),
@@ -738,21 +792,58 @@ mod tests {
 					..default()
 				},
 			)]);
-			let entity = app
-				.world_mut()
-				.spawn((
-					ApplyAgentConfig,
-					Transform::default(),
-					AgentConfig { config_handle },
-				))
-				.id();
+			app.world_mut().spawn((
+				ApplyAgentConfig,
+				Transform::default(),
+				AgentConfig { config_handle },
+				_Physics::new().with_mock(|mock| {
+					mock.expect_configure_body().return_const(());
+					mock.expect_configure_default_attributes()
+						.once()
+						.with(eq(attributes))
+						.return_const(());
+				}),
+			));
 
 			app.update();
+		}
 
-			assert_eq!(
-				Some(&_Attributes(attributes)),
-				app.world().entity(entity).get::<_Attributes>(),
-			);
+		#[test]
+		fn config_body() {
+			let config_handle = new_handle();
+			let ground_offset = Units::from(2.);
+			let required_clearance = Units::from(0.5);
+			let mut app = setup([(
+				&config_handle,
+				AgentConfigAsset {
+					ground_offset,
+					required_clearance,
+					..default()
+				},
+			)]);
+			app.world_mut().spawn((
+				ApplyAgentConfig,
+				Transform::default(),
+				AgentConfig { config_handle },
+				_Physics::new().with_mock(|mock| {
+					let expected_body = Body {
+						shape: Shape::Capsule {
+							half_y: Units::from(1.5),
+							radius: Units::from(0.5),
+						},
+						physics_type: PhysicsType::Agent,
+						blocker_types: HashSet::from([Blocker::Character]),
+					};
+
+					mock.expect_configure_default_attributes().return_const(());
+					mock.expect_configure_body()
+						.once()
+						.with(eq(expected_body))
+						.return_const(());
+				}),
+			));
+
+			app.update();
 		}
 	}
 
@@ -776,6 +867,7 @@ mod tests {
 				_Loadout::default(),
 				_Skills::default(),
 				_Animations::default(),
+				_Physics::default(),
 			))
 			.id();
 
@@ -796,7 +888,7 @@ mod tests {
 				app.world().entity(entity).get::<IsChanged<_Skills>>(),
 				app.world().entity(entity).get::<IsChanged<_Animations>>(),
 				app.world().entity(entity).get::<IsChanged<AssetModel>>(),
-				app.world().entity(entity).get::<IsChanged<_Attributes>>(),
+				app.world().entity(entity).get::<IsChanged<_Physics>>(),
 				app.world().entity(entity).get::<IsChanged<Transform>>(),
 			),
 		);
@@ -817,6 +909,7 @@ mod tests {
 				_Loadout::default(),
 				_Skills::default(),
 				_Animations::default(),
+				_Physics::default(),
 			))
 			.id();
 
@@ -845,7 +938,7 @@ mod tests {
 				app.world().entity(entity).get::<IsChanged<_Skills>>(),
 				app.world().entity(entity).get::<IsChanged<_Animations>>(),
 				app.world().entity(entity).get::<IsChanged<AssetModel>>(),
-				app.world().entity(entity).get::<IsChanged<_Attributes>>(),
+				app.world().entity(entity).get::<IsChanged<_Physics>>(),
 				app.world().entity(entity).get::<IsChanged<Transform>>(),
 			),
 		);

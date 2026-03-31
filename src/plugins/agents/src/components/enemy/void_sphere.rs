@@ -20,10 +20,7 @@ use common::{
 		handles_enemies::EnemyType,
 		handles_map_generation::AgentType,
 		handles_movement::MovementSpeed,
-		handles_physics::{
-			PhysicalDefaultAttributes,
-			physical_bodies::{Blocker, Body, HandlesPhysicalBodies, PhysicsType, Shape},
-		},
+		handles_physics::PhysicalDefaultAttributes,
 		handles_skill_physics::SkillSpawner,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
@@ -46,11 +43,11 @@ type LazyBoneName = LazyLock<BoneName>;
 static ALL_PURPOSE_SLOT_BONE: &str = "slot";
 static SKILL_SPAWN: LazyBoneName = LazyLock::new(|| BoneName::from("skill_spawn"));
 static SKILL_SPAWN_NEUTRAL: LazyBoneName = LazyLock::new(|| BoneName::from("skill_spawn_neutral"));
+static COLLIDER_GROUND_OFFSET: LazyLock<Units> = LazyLock::new(|| Units::from(0.6));
 
 impl VoidSphere {
 	const SLOT_KEY: SlotKey = SlotKey(0);
 
-	const COLLIDER_GROUND_OFFSET: Vec3 = Vec3::new(0., 0.6, 0.);
 	const INNER_MODEL_OFFSET: Vec3 = Vec3::new(0., 0.2, 0.);
 	const INNER_RADIUS: f32 = 0.3;
 	const OUTER_RADIUS: f32 = 0.4;
@@ -78,7 +75,7 @@ impl VoidSphere {
 				e.try_insert(Self);
 			}),
 			bones: Self::bones(),
-			ground_offset: Self::COLLIDER_GROUND_OFFSET,
+			ground_offset: *COLLIDER_GROUND_OFFSET,
 			required_clearance: Units::from(Self::OUTER_RADIUS),
 			speed: MovementSpeed::Fixed(UnitsPerSecond::from_u8(1)),
 			animations: HashMap::from([]),
@@ -116,10 +113,7 @@ impl From<VoidSphere> for AgentType {
 	}
 }
 
-impl<TPhysics> Prefab<TPhysics> for VoidSphere
-where
-	TPhysics: HandlesPhysicalBodies,
-{
+impl Prefab<()> for VoidSphere {
 	type TError = Unreachable;
 	type TSystemParam<'w, 's> = ();
 
@@ -128,16 +122,7 @@ where
 		entity: &mut impl PrefabEntityCommands,
 		_: StaticSystemParam<()>,
 	) -> Result<(), Unreachable> {
-		let shape = Shape::Capsule {
-			half_y: Units::from(Self::INNER_MODEL_OFFSET.y),
-			radius: Units::from(Self::OUTER_RADIUS),
-		};
-		let body = Body::from_shape(shape)
-			.with_physics_type(PhysicsType::Agent)
-			.with_blocker_types([Blocker::Character]);
-
 		entity
-			.try_insert_if_new(TPhysics::TBody::from(body))
 			.with_child((
 				Transform::from_translation(Self::INNER_MODEL_OFFSET),
 				VoidSpherePart::Core,

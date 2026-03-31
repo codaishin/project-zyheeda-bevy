@@ -2,14 +2,13 @@ use crate::{
 	components::config::Config,
 	system_param::movement_config_param::MovementConfigContextMut,
 };
-use bevy::prelude::*;
 use common::{
 	tools::Units,
 	traits::handles_movement::{ConfigureMovement, MovementSpeed},
 };
 
 impl ConfigureMovement for MovementConfigContextMut<'_> {
-	fn configure(&mut self, speed: MovementSpeed, required_clearance: Units, ground_offset: Vec3) {
+	fn configure(&mut self, speed: MovementSpeed, required_clearance: Units, ground_offset: Units) {
 		self.entity.try_insert(Config {
 			speed,
 			required_clearance,
@@ -23,7 +22,10 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::system_param::movement_config_param::MovementConfigParamMut;
-	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
+	use bevy::{
+		ecs::system::{RunSystemError, RunSystemOnce},
+		prelude::*,
+	};
 	use common::{
 		tools::UnitsPerSecond,
 		traits::{accessors::get::GetContextMut, handles_movement::NotConfiguredMovement},
@@ -49,7 +51,7 @@ mod tests {
 				ctx.configure(
 					MovementSpeed::Fixed(UnitsPerSecond::from_u8(11)),
 					Units::from_u8(2),
-					Vec3::new(1., 2., 3.),
+					Units::from_u8(5),
 				);
 			})?;
 
@@ -57,7 +59,7 @@ mod tests {
 			Some(&Config {
 				speed: MovementSpeed::Fixed(UnitsPerSecond::from_u8(11)),
 				required_clearance: Units::from_u8(2),
-				ground_offset: Vec3::new(1., 2., 3.),
+				ground_offset: Units::from_u8(5),
 			}),
 			app.world().entity(entity).get::<Config>(),
 		);

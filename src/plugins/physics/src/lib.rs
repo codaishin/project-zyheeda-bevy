@@ -37,6 +37,7 @@ use crate::{
 	observers::{skill_prefab::SkillPrefab, update_blockers::UpdateBlockersObserver},
 	resources::ongoing_interactions::OngoingInteractions,
 	system_params::{
+		config::ConfigParamMut,
 		skill_spawner::SkillSpawnerMut,
 		update_ongoing_interactions::UpdateOngoingInteractions,
 	},
@@ -59,11 +60,9 @@ use common::{
 		delta::Delta,
 		handles_physics::{
 			HandlesMotion,
-			HandlesPhysicalAttributes,
 			HandlesPhysicalEffectTargets,
-			HandlesPhysicalObjects,
+			HandlesPhysicsConfig,
 			HandlesRaycast,
-			physical_bodies::HandlesPhysicalBodies,
 		},
 		handles_saving::HandlesSaving,
 		handles_skill_physics::{
@@ -246,12 +245,8 @@ impl<TDependencies> HandlesRaycast for PhysicsPlugin<TDependencies> {
 	type TRaycast<'world, 'state> = RayCaster<'world, 'state>;
 }
 
-impl<TDependencies> HandlesPhysicalAttributes for PhysicsPlugin<TDependencies> {
-	type TDefaultAttributes = DefaultAttributes;
-}
-
-impl<TDependencies> HandlesPhysicalObjects for PhysicsPlugin<TDependencies> {
-	type TPhysicalObjectComponent = Blockable;
+impl<TDependencies> HandlesPhysicsConfig for PhysicsPlugin<TDependencies> {
+	type TConfigMut<'w, 's> = ConfigParamMut<'w, 's>;
 }
 
 impl<TDependencies> SystemSetDefinition for PhysicsPlugin<TDependencies> {
@@ -271,10 +266,6 @@ impl<TDependencies> HandlesPhysicalEffectTargets for PhysicsPlugin<TDependencies
 
 impl<TDependencies> HandlesMotion for PhysicsPlugin<TDependencies> {
 	type TCharacterMotion = ApplyCharacterMotion;
-}
-
-impl<TDependencies> HandlesPhysicalBodies for PhysicsPlugin<TDependencies> {
-	type TBody = PhysicalBody;
 }
 
 impl<TDependencies> HandlesPhysicalSkillSpawnPoints for PhysicsPlugin<TDependencies> {

@@ -57,7 +57,9 @@ where
 	let Some(path) = computer.compute_path(start, end, *required_clearance) else {
 		return VecDeque::from([]);
 	};
-	let mut path = path.map(|GroundPosition(v)| v + ground_offset).peekable();
+	let mut path = path
+		.map(|GroundPosition(v)| v.with_y(v.y + **ground_offset))
+		.peekable();
 
 	match path.peek() {
 		Some(first) if first.xz() == start.xz() => VecDeque::from_iter(path.skip(1)),
@@ -194,7 +196,7 @@ mod tests {
 				.spawn((
 					_ExecComputation,
 					Config {
-						ground_offset: Vec3::new(1., 2., 3.),
+						ground_offset: Units::from(2.),
 						..default()
 					},
 					MovementPath::target(Vec3::default()),
@@ -207,9 +209,9 @@ mod tests {
 
 			assert_eq!(
 				Some(&MovementPath::path([
-					Vec3::splat(1.) + Vec3::new(1., 2., 3.),
-					Vec3::splat(2.) + Vec3::new(1., 2., 3.),
-					Vec3::splat(3.) + Vec3::new(1., 2., 3.),
+					Vec3::splat(1.) + Vec3::new(0., 2., 0.),
+					Vec3::splat(2.) + Vec3::new(0., 2., 0.),
+					Vec3::splat(3.) + Vec3::new(0., 2., 0.),
 				])),
 				app.world().entity(entity).get::<MovementPath>()
 			);

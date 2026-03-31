@@ -12,7 +12,7 @@ use std::ops::Index;
 pub(crate) struct Config {
 	pub(crate) speed: MovementSpeed,
 	pub(crate) required_clearance: Units,
-	pub(crate) ground_offset: Vec3,
+	pub(crate) ground_offset: Units,
 }
 
 impl Index<SpeedIndex> for Config {
