@@ -1,7 +1,4 @@
-use crate::{
-	components::{movement_path::MovementPath, ongoing_movement::OngoingMovement},
-	system_param::movement_param::MovementContextMut,
-};
+use crate::{components::movement::Movement, system_param::movement_param::MovementContextMut};
 use bevy::ecs::component::Component;
 use common::traits::handles_movement::StopMovement;
 
@@ -10,8 +7,7 @@ where
 	TMotion: Component,
 {
 	fn stop(&mut self) {
-		self.entity
-			.try_insert((MovementPath::stop(), OngoingMovement::Stop));
+		self.entity.try_insert(Movement::None);
 	}
 }
 
@@ -19,10 +15,7 @@ where
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::{
-		components::{config::Config, movement_path::MovementPath},
-		system_param::movement_param::MovementParamMut,
-	};
+	use crate::{components::config::Config, system_param::movement_param::MovementParamMut};
 	use bevy::{
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
@@ -38,15 +31,9 @@ mod tests {
 	}
 
 	#[test]
-	fn insert_path_stop() -> Result<(), RunSystemError> {
+	fn insert_movement_none() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				Config::default(),
-				MovementPath::target(Vec3::new(1., 2., 3.)),
-			))
-			.id();
+		let entity = app.world_mut().spawn(Config::default()).id();
 
 		app.world_mut()
 			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
@@ -57,34 +44,8 @@ mod tests {
 			})?;
 
 		assert_eq!(
-			Some(&MovementPath::stop()),
-			app.world().entity(entity).get::<MovementPath>(),
-		);
-		Ok(())
-	}
-
-	#[test]
-	fn insert_movement_stop() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				Config::default(),
-				MovementPath::target(Vec3::new(1., 2., 3.)),
-			))
-			.id();
-
-		app.world_mut()
-			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
-				let mut ctx =
-					MovementParamMut::get_context_mut(&mut p, ConfiguredMovement { entity })
-						.unwrap();
-				ctx.stop();
-			})?;
-
-		assert_eq!(
-			Some(&OngoingMovement::Stop),
-			app.world().entity(entity).get::<OngoingMovement>(),
+			Some(&Movement::None),
+			app.world().entity(entity).get::<Movement>(),
 		);
 		Ok(())
 	}

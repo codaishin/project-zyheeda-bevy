@@ -23,10 +23,7 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{
-		components::{
-			config::{Config, SpeedIndex},
-			movement_path::MovementPath,
-		},
+		components::config::{Config, SpeedIndex},
 		system_param::movement_param::MovementParamMut,
 	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
@@ -81,16 +78,13 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((
-				Config {
-					speed: MovementSpeed::Variable([
-						UnitsPerSecond::from_u8(1),
-						UnitsPerSecond::from_u8(2),
-					]),
-					..default()
-				},
-				MovementPath::target(Vec3::new(1., 2., 3.)),
-			))
+			.spawn(Config {
+				speed: MovementSpeed::Variable([
+					UnitsPerSecond::from_u8(1),
+					UnitsPerSecond::from_u8(2),
+				]),
+				..default()
+			})
 			.id();
 
 		let toggled =

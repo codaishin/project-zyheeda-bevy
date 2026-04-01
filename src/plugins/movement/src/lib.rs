@@ -1,8 +1,6 @@
 mod components;
-mod observers;
 mod system_param;
 mod systems;
-mod traits;
 
 #[cfg(debug_assertions)]
 mod debug;
@@ -12,7 +10,6 @@ use crate::{
 		config::{Config, SpeedIndex},
 		facing::SetFace,
 		movement::Movement,
-		ongoing_movement::{IsMoving, OngoingMovement},
 	},
 	system_param::{
 		face_param::FaceParamMut,
@@ -20,8 +17,8 @@ use crate::{
 		movement_param::{MovementParam, MovementParamMut, context_changed::JustRemovedMovements},
 	},
 	systems::{
-		advance_movement::AdvanceMovement,
 		set_forward_animation_direction::SetForwardAnimationDirection,
+		set_movement_facing::SetFaceSystem,
 	},
 };
 use bevy::prelude::*;
@@ -46,7 +43,7 @@ use common::{
 		thread_safe::ThreadSafe,
 	},
 };
-use components::{facing::SetFaceOverride, movement_path::MovementPath};
+use components::facing::SetFaceOverride;
 use std::marker::PhantomData;
 use systems::face::execute_face::execute_face;
 
@@ -94,39 +91,32 @@ where
 		TSaveGame::register_savable_component::<SetFace>(app);
 		TSaveGame::register_savable_component::<SetFaceOverride>(app);
 		TSaveGame::register_savable_component::<Movement>(app);
-		TSaveGame::register_savable_component::<OngoingMovement>(app);
-		TSaveGame::register_savable_component::<MovementPath>(app);
 		TSaveGame::register_savable_component::<SpeedIndex>(app);
 
 		#[cfg(debug_assertions)]
-		debug::draw(app);
+		debug::draw::<TPhysics::TCharacterMotion>(app);
 
-		app.init_resource::<JustRemovedMovements>()
-			.add_observer(IsMoving::mark)
-			.add_observer(IsMoving::unmark_stale)
-			.add_systems(
-				Update,
-				(
-					Movement::compute_path::<TPathing::TComputePath, TPathing::TComputerRef>,
-					Movement::apply::<TPhysics::TCharacterMotion>,
-					Without::<IsMoving>::advance::<MovementPath>,
-					With::<IsMoving>::advance::<(OngoingMovement, TPhysics::TCharacterMotion)>,
-					With::<Config>::set_forward_animation_direction::<
-						TPhysics::TCharacterMotion,
-						AnimationsSystemParamMut<TAnimations>,
-					>,
-					OngoingMovement::set_facing,
-					SetFace::get_faces.pipe(execute_face::<RaycastSystemParam<TPhysics>>),
-					MovementParam::<TPhysics::TCharacterMotion>::update_just_removed,
-				)
-					.chain()
-					.in_set(MovementSystems)
-					.after_plugin(TInput::SYSTEMS)
-					.after_plugin(TAnimations::SYSTEMS)
-					.after_plugin(TPathing::SYSTEMS)
-					.after_plugin(TPhysics::SYSTEMS)
-					.run_if(in_state(GameState::Play)),
-			);
+		app.init_resource::<JustRemovedMovements>().add_systems(
+			Update,
+			(
+				Movement::compute_path::<TPathing::TComputePath, TPathing::TComputerRef>,
+				Movement::apply::<TPhysics::TCharacterMotion>,
+				With::<Config>::set_forward_animation_direction::<
+					TPhysics::TCharacterMotion,
+					AnimationsSystemParamMut<TAnimations>,
+				>,
+				TPhysics::TCharacterMotion::set_facing,
+				SetFace::get_faces.pipe(execute_face::<RaycastSystemParam<TPhysics>>),
+				MovementParam::<TPhysics::TCharacterMotion>::update_just_removed,
+			)
+				.chain()
+				.in_set(MovementSystems)
+				.after_plugin(TInput::SYSTEMS)
+				.after_plugin(TAnimations::SYSTEMS)
+				.after_plugin(TPathing::SYSTEMS)
+				.after_plugin(TPhysics::SYSTEMS)
+				.run_if(in_state(GameState::Play)),
+		);
 	}
 }
 
