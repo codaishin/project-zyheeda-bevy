@@ -1,4 +1,5 @@
 pub(crate) mod advance_movement;
+pub(crate) mod apply_motion;
 pub(crate) mod compute_path;
 pub(crate) mod face;
 pub(crate) mod set_forward_animation_direction;

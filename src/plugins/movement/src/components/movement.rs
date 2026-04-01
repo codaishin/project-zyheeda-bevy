@@ -8,6 +8,6 @@ use std::collections::VecDeque;
 pub(crate) enum Movement {
 	None,
 	Direction(Dir3),
-	Target(Dir3),
+	Target(Vec3),
 	Path(VecDeque<Vec3>),
 }

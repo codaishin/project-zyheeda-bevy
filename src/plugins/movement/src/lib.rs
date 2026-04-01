@@ -112,6 +112,7 @@ where
 						TPathing::TComputePath,
 						TPathing::TComputerRef,
 					>,
+					Movement::apply::<TPhysics::TCharacterMotion>,
 					Without::<IsMoving>::advance::<MovementPath>,
 					With::<IsMoving>::advance::<(OngoingMovement, TPhysics::TCharacterMotion)>,
 					With::<Config>::set_forward_animation_direction::<
