@@ -12,7 +12,11 @@ use crate::{
 		movement_config_param::MovementConfigParamMut,
 		movement_param::{MovementParam, MovementParamMut, context_changed::JustRemovedMovements},
 	},
-	systems::{animate_forward::SetForwardAnimationDirection, set_movement_facing::SetFaceSystem},
+	systems::{
+		animate_forward::SetForwardAnimationDirection,
+		set_movement_facing::SetFaceSystem,
+		update_speed::UpdateSpeed,
+	},
 };
 use bevy::prelude::*;
 use common::{
@@ -94,6 +98,7 @@ where
 			(
 				Movement::compute_path::<TPathing::TComputePath, TPathing::TComputerRef>,
 				Movement::apply::<TPhysics::TCharacterMotion>,
+				TPhysics::TCharacterMotion::update_speed,
 				TPhysics::TCharacterMotion::animate_forward::<AnimationsSystemParamMut<TAnimations>>,
 				TPhysics::TCharacterMotion::set_facing,
 				SetFace::get_faces.pipe(execute_face::<RaycastSystemParam<TPhysics>>),
