@@ -4,7 +4,7 @@ use crate::{
 	attributes::{effect_target::EffectTarget, health::Health},
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
 	toi,
-	tools::{Done, Units, speed::Speed},
+	tools::{Units, speed::Speed},
 	traits::{
 		accessors::get::{GetContextMut, View, ViewField},
 		handles_physics::physical_bodies::{Blocker, Body},
@@ -116,14 +116,14 @@ pub trait HandlesMotion {
 	///
 	/// Implementors must make sure this works on top level entities. No guarantees are made for
 	/// entities that are a child of other entities.
-	type TCharacterMotion: Component + From<CharacterMotion> + View<Done> + View<CharacterMotion>;
+	type TCharacterMotion: Component + From<CharacterMotion> + View<CharacterMotion>;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum CharacterMotion {
 	Direction { speed: Speed, direction: Dir3 },
 	ToTarget { speed: Speed, target: Vec3 },
-	Stop,
+	Done,
 }
 
 impl ViewField for CharacterMotion {

@@ -20,52 +20,60 @@ impl Movement {
 		TMotion: Component + From<CharacterMotion> + View<CharacterMotion>,
 	{
 		for (entity, mut movement, config, speed_index, current_motion) in movements {
-			let Some(motion) = movement.get_motion(config, speed_index) else {
+			let Some(motion) = movement.get_motion(config, speed_index, current_motion) else {
 				continue;
 			};
 
-			if matches(current_motion, motion) {
-				continue;
-			}
-
-			movement.update();
 			commands.try_apply_on(&entity, |mut e| {
 				e.try_insert(TMotion::from(motion));
 			});
 		}
 	}
 
-	fn get_motion(&self, config: &Config, speed_index: &SpeedIndex) -> Option<CharacterMotion> {
-		match self {
-			Movement::None => Some(CharacterMotion::Stop),
-			Movement::Direction(direction) => Some(CharacterMotion::Direction {
-				speed: Speed(config[*speed_index]),
-				direction: *direction,
-			}),
-			Movement::Target(target) => Some(CharacterMotion::ToTarget {
-				speed: Speed(config[*speed_index]),
-				target: *target,
-			}),
-			Movement::Path(path) => Some(CharacterMotion::ToTarget {
-				speed: Speed(config[*speed_index]),
-				target: path.front().copied()?,
-			}),
+	fn get_motion<TMotion>(
+		&mut self,
+		config: &Config,
+		speed_index: &SpeedIndex,
+		current_motion: Option<&TMotion>,
+	) -> Option<CharacterMotion>
+	where
+		TMotion: View<CharacterMotion>,
+	{
+		match (self, current_motion.map(|m| m.view())) {
+			(Movement::None, current_motion) => match current_motion {
+				Some(CharacterMotion::Done) => None,
+				_ => Some(CharacterMotion::Done),
+			},
+			(Movement::Direction(direction), current_motion) => {
+				let motion = CharacterMotion::Direction {
+					speed: Speed(config[*speed_index]),
+					direction: *direction,
+				};
+
+				match current_motion {
+					Some(current_motion) if current_motion == motion => None,
+					_ => Some(motion),
+				}
+			}
+			(Movement::Target(target), current_motion) => {
+				let motion = CharacterMotion::ToTarget {
+					speed: Speed(config[*speed_index]),
+					target: *target,
+				};
+
+				match current_motion {
+					Some(current_motion) if current_motion == motion => None,
+					_ => Some(motion),
+				}
+			}
+			(Movement::Path(path), None | Some(CharacterMotion::Done)) => {
+				Some(CharacterMotion::ToTarget {
+					speed: Speed(config[*speed_index]),
+					target: path.pop_front()?,
+				})
+			}
+			_ => None,
 		}
-	}
-
-	fn update(&mut self) {
-		let Movement::Path(path) = self else {
-			return;
-		};
-
-		path.pop_front();
-	}
-}
-
-fn matches(a: Option<&impl View<CharacterMotion>>, b: CharacterMotion) -> bool {
-	match a {
-		Some(a) => a.view() == b,
-		None => false,
 	}
 }
 
@@ -128,7 +136,7 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(&_Motion::from(CharacterMotion::Stop)),
+				Some(&_Motion::from(CharacterMotion::Done)),
 				app.world().entity(entity).get::<_Motion>(),
 			);
 		}
@@ -308,7 +316,7 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(&_Motion::from(CharacterMotion::Stop)),
+				Some(&_Motion::from(CharacterMotion::Done)),
 				app.world().entity(entity).get::<_Motion>(),
 			);
 		}
@@ -369,14 +377,17 @@ mod tests {
 			);
 		}
 
-		#[test_case([Vec3::Z, Vec3::Z], IsChanged::FALSE; "not when same target")]
-		#[test_case([Vec3::Z, Vec3::X], IsChanged::TRUE; "when motion changed")]
-		fn reapply_path(targets: [Vec3; 2], is_changed: IsChanged<_Motion>) {
+		#[test]
+		fn do_apply_path_when_motion_not_done() {
 			let mut app = setup();
 			let entity = app
 				.world_mut()
 				.spawn((
-					Movement::Path(VecDeque::from([targets[0], Vec3::new(1., 2., 3.)])),
+					_Motion(CharacterMotion::Direction {
+						speed: Speed(SLOW),
+						direction: Dir3::NEG_Y,
+					}),
+					Movement::Path(VecDeque::from([Vec3::new(1., 2., 3.)])),
 					SpeedIndex(SpeedToggle::Left),
 					Config {
 						speed: MovementSpeed::Fixed(SLOW),
@@ -386,31 +397,30 @@ mod tests {
 				.id();
 
 			app.update();
-			app.world_mut()
-				.entity_mut(entity)
-				.insert(Movement::Path(VecDeque::from([
-					targets[1],
-					Vec3::new(1., 2., 3.),
-				])));
-			app.update();
 
 			assert_eq!(
-				Some(&is_changed),
-				app.world().entity(entity).get::<IsChanged<_Motion>>(),
+				(
+					Some(&_Motion(CharacterMotion::Direction {
+						speed: Speed(SLOW),
+						direction: Dir3::NEG_Y,
+					})),
+					Some(&Movement::Path(VecDeque::from([Vec3::new(1., 2., 3.)])))
+				),
+				(
+					app.world().entity(entity).get::<_Motion>(),
+					app.world().entity(entity).get::<Movement>(),
+				)
 			);
 		}
 	}
 
 	#[test]
-	fn do_not_dequeue_path_when_motion_matches_first_path_item() {
+	fn apply_path_when_motion_done() {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
 			.spawn((
-				_Motion(CharacterMotion::ToTarget {
-					speed: Speed(SLOW),
-					target: Vec3::new(1., 2., 3.),
-				}),
+				_Motion(CharacterMotion::Done),
 				Movement::Path(VecDeque::from([Vec3::new(1., 2., 3.)])),
 				SpeedIndex(SpeedToggle::Left),
 				Config {
@@ -423,8 +433,17 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&Movement::Path(VecDeque::from([Vec3::new(1., 2., 3.)]))),
-			app.world().entity(entity).get::<Movement>(),
+			(
+				Some(&_Motion(CharacterMotion::ToTarget {
+					speed: Speed(SLOW),
+					target: Vec3::new(1., 2., 3.),
+				})),
+				Some(&Movement::Path(VecDeque::from([])))
+			),
+			(
+				app.world().entity(entity).get::<_Motion>(),
+				app.world().entity(entity).get::<Movement>(),
+			)
 		);
 	}
 }

@@ -13,21 +13,14 @@ impl ApplyCharacterMotion {
 		motions: Query<(Entity, &Self, &Transform), With<IsInMotion>>,
 	) {
 		for (entity, apply, transform) in motions {
-			if !is_done(&apply.motion, transform, delta) {
+			if !is_done(&apply.0, transform, delta) {
 				continue;
 			}
 
 			commands.try_apply_on(&entity, |mut e| {
-				e.try_insert(apply.is_done());
+				e.try_insert(Self(CharacterMotion::Done));
 				e.try_remove::<IsInMotion>();
 			});
-		}
-	}
-
-	fn is_done(&self) -> Self {
-		Self {
-			motion: self.motion,
-			is_done: true,
 		}
 	}
 }
@@ -35,7 +28,7 @@ impl ApplyCharacterMotion {
 fn is_done(motion: &CharacterMotion, transform: &Transform, delta: Duration) -> bool {
 	let (speed, target) = match motion {
 		CharacterMotion::Direction { .. } => return false,
-		CharacterMotion::Stop => return true,
+		CharacterMotion::Done => return true,
 		CharacterMotion::ToTarget { speed, target } => (speed, target),
 	};
 
@@ -77,26 +70,23 @@ mod tests {
 	}
 
 	#[test]
-	fn set_done_when_target_is_stop() {
+	fn remain_done_when_target_is_stop() {
 		let mut app = setup(Duration::default());
 		let entity = app
 			.world_mut()
 			.spawn((
 				Transform::default(),
-				ApplyCharacterMotion::from(CharacterMotion::Stop),
+				ApplyCharacterMotion::from(CharacterMotion::Done),
 			))
 			.id();
 
 		app.update();
 
 		assert_eq!(
-			(Some(true), None),
+			(Some(&ApplyCharacterMotion(CharacterMotion::Done)), None),
 			(
-				app.world()
-					.entity(entity)
-					.get::<ApplyCharacterMotion>()
-					.map(|m| m.is_done),
-				app.world().entity(entity).get::<IsInMotion>()
+				app.world().entity(entity).get::<ApplyCharacterMotion>(),
+				app.world().entity(entity).get::<IsInMotion>(),
 			)
 		);
 	}
@@ -118,13 +108,10 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			(Some(true), None),
+			(Some(&ApplyCharacterMotion(CharacterMotion::Done)), None),
 			(
-				app.world()
-					.entity(entity)
-					.get::<ApplyCharacterMotion>()
-					.map(|m| m.is_done),
-				app.world().entity(entity).get::<IsInMotion>()
+				app.world().entity(entity).get::<ApplyCharacterMotion>(),
+				app.world().entity(entity).get::<IsInMotion>(),
 			)
 		);
 	}
@@ -146,12 +133,15 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			(Some(false), Some(&IsInMotion)),
 			(
-				app.world()
-					.entity(entity)
-					.get::<ApplyCharacterMotion>()
-					.map(|m| m.is_done),
+				Some(&ApplyCharacterMotion::from(CharacterMotion::ToTarget {
+					speed: Speed(UnitsPerSecond::from(1.)),
+					target: Vec3::new(10., 2., 3.),
+				})),
+				Some(&IsInMotion)
+			),
+			(
+				app.world().entity(entity).get::<ApplyCharacterMotion>(),
 				app.world().entity(entity).get::<IsInMotion>()
 			)
 		);
@@ -174,12 +164,9 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			(Some(true), None),
+			(Some(&ApplyCharacterMotion(CharacterMotion::Done)), None),
 			(
-				app.world()
-					.entity(entity)
-					.get::<ApplyCharacterMotion>()
-					.map(|m| m.is_done),
+				app.world().entity(entity).get::<ApplyCharacterMotion>(),
 				app.world().entity(entity).get::<IsInMotion>()
 			)
 		);
@@ -202,13 +189,10 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			(Some(true), None),
+			(Some(&ApplyCharacterMotion(CharacterMotion::Done)), None),
 			(
-				app.world()
-					.entity(entity)
-					.get::<ApplyCharacterMotion>()
-					.map(|m| m.is_done),
-				app.world().entity(entity).get::<IsInMotion>()
+				app.world().entity(entity).get::<ApplyCharacterMotion>(),
+				app.world().entity(entity).get::<IsInMotion>(),
 			)
 		);
 	}

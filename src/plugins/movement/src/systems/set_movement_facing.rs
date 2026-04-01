@@ -32,7 +32,7 @@ pub(crate) trait SetFaceSystem: Component + View<CharacterMotion> + Sized {
 					CharacterMotion::Direction { direction, .. } => {
 						e.try_insert(SetFace(Face::Direction(direction)));
 					}
-					CharacterMotion::Stop => {
+					CharacterMotion::Done => {
 						e.try_remove::<SetFace>();
 					}
 				};
@@ -73,7 +73,7 @@ mod tests {
 		}
 
 		fn stop() -> Self {
-			Self(CharacterMotion::Stop)
+			Self(CharacterMotion::Done)
 		}
 	}
 

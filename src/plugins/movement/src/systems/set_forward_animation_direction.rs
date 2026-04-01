@@ -42,7 +42,7 @@ where
 		CharacterMotion::ToTarget { target, .. } => {
 			Dir3::try_from(target - transform.translation).ok()
 		}
-		CharacterMotion::Stop => None,
+		CharacterMotion::Done => None,
 	}
 }
 

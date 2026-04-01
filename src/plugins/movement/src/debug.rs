@@ -16,7 +16,7 @@ where
 {
 	for (transform, motion, movement) in paths {
 		let mut current = match motion.view() {
-			CharacterMotion::Stop => continue,
+			CharacterMotion::Done => continue,
 			CharacterMotion::Direction { direction, speed } => {
 				let target = transform.translation + direction * *speed;
 				gizmos.arrow(transform.translation, target, LIGHT_CYAN);
