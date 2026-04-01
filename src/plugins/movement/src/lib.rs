@@ -11,6 +11,7 @@ use crate::{
 	components::{
 		config::{Config, SpeedIndex},
 		facing::SetFace,
+		movement::Movement,
 		ongoing_movement::{IsMoving, OngoingMovement},
 	},
 	system_param::{
@@ -93,6 +94,7 @@ where
 	fn build(&self, app: &mut App) {
 		TSaveGame::register_savable_component::<SetFace>(app);
 		TSaveGame::register_savable_component::<SetFaceOverride>(app);
+		TSaveGame::register_savable_component::<Movement>(app);
 		TSaveGame::register_savable_component::<OngoingMovement>(app);
 		TSaveGame::register_savable_component::<MovementPath>(app);
 		TSaveGame::register_savable_component::<SpeedIndex>(app);
