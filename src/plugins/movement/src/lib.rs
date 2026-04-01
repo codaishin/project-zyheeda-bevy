@@ -21,7 +21,6 @@ use crate::{
 	},
 	systems::{
 		advance_movement::AdvanceMovement,
-		compute_path::ComputePathSystem,
 		set_forward_animation_direction::SetForwardAnimationDirection,
 	},
 };
@@ -108,10 +107,7 @@ where
 			.add_systems(
 				Update,
 				(
-					Changed::<MovementPath>::compute::<
-						TPathing::TComputePath,
-						TPathing::TComputerRef,
-					>,
+					Movement::compute_path::<TPathing::TComputePath, TPathing::TComputerRef>,
 					Movement::apply::<TPhysics::TCharacterMotion>,
 					Without::<IsMoving>::advance::<MovementPath>,
 					With::<IsMoving>::advance::<(OngoingMovement, TPhysics::TCharacterMotion)>,

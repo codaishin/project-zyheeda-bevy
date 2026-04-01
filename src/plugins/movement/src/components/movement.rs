@@ -11,3 +11,10 @@ pub(crate) enum Movement {
 	Target(Vec3),
 	Path(VecDeque<Vec3>),
 }
+
+#[cfg(test)]
+impl Movement {
+	pub(crate) fn path(path: impl Into<VecDeque<Vec3>>) -> Self {
+		Self::Path(path.into())
+	}
+}
