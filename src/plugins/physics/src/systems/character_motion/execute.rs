@@ -16,7 +16,7 @@ impl ApplyCharacterMotion {
 			(Without<Immobilized>, With<IsInMotion>),
 		>,
 	) {
-		for (mut character, transform, Self { motion, .. }) in characters {
+		for (mut character, transform, Self(motion)) in characters {
 			let translation = match motion {
 				CharacterMotion::Direction { speed, direction } => {
 					*direction * **speed * delta.as_secs_f32()
@@ -27,7 +27,7 @@ impl ApplyCharacterMotion {
 						.unwrap_or_default()
 						* **speed * delta.as_secs_f32()
 				}
-				CharacterMotion::Stop => continue,
+				CharacterMotion::Done => continue,
 			};
 
 			character.translation = Some(translation);

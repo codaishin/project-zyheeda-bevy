@@ -19,7 +19,7 @@ where
 		match movement.view() {
 			CharacterMotion::Direction { direction, .. } => Some(MovementTarget::Dir(direction)),
 			CharacterMotion::ToTarget { target, .. } => Some(MovementTarget::Point(target)),
-			CharacterMotion::Stop => None,
+			CharacterMotion::Done => None,
 		}
 	}
 }
@@ -44,7 +44,7 @@ where
 		match self.motion?.view() {
 			CharacterMotion::Direction { direction, .. } => Some(MovementTarget::Dir(direction)),
 			CharacterMotion::ToTarget { target, .. } => Some(MovementTarget::Point(target)),
-			CharacterMotion::Stop => None,
+			CharacterMotion::Done => None,
 		}
 	}
 }

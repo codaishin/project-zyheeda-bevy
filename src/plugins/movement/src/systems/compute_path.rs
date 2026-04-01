@@ -1,8 +1,8 @@
-use crate::{
-	MovementPath,
-	components::{config::Config, movement_path::Mode},
+use crate::components::{
+	config::Config,
+	movement::{Movement, MovementPath},
 };
-use bevy::{ecs::query::QueryFilter, prelude::*};
+use bevy::prelude::*;
 use common::traits::{
 	accessors::get::View,
 	handles_map_generation::GroundPosition,
@@ -13,29 +13,29 @@ use std::collections::VecDeque;
 type MoveComponents<TGetComputer> = (
 	&'static Config,
 	&'static GlobalTransform,
-	&'static mut MovementPath,
+	&'static mut Movement,
 	&'static TGetComputer,
 );
 
-impl<T> ComputePathSystem for T where T: QueryFilter {}
-
-pub(crate) trait ComputePathSystem: QueryFilter + Sized {
-	fn compute<TComputer, TGetComputer>(
-		movements: Query<MoveComponents<TGetComputer>, Self>,
+impl Movement {
+	pub(crate) fn compute_path<TComputer, TGetComputer>(
+		movements: Query<MoveComponents<TGetComputer>>,
 		computers: Query<&TComputer>,
 	) where
 		TComputer: Component + ComputePath,
 		TGetComputer: Component + View<Entity>,
 	{
 		for (config, transform, mut path, get_computer) in movements {
+			let Movement::Target(target) = path.as_ref() else {
+				continue;
+			};
 			let Ok(computer) = computers.get(get_computer.view()) else {
 				continue;
 			};
-			let Mode::PathTarget(Some(target)) = path.0 else {
-				continue;
-			};
 
-			*path = MovementPath::path(compute_path(computer, transform, target, config));
+			*path = Movement::Path(MovementPath::from(compute_path(
+				computer, transform, *target, config,
+			)));
 		}
 	}
 }
@@ -75,9 +75,6 @@ mod tests {
 	use mockall::{automock, predicate::eq};
 	use std::collections::VecDeque;
 	use testing::{NestedMocks, SingleThreadedApp, assert_no_panic};
-
-	#[derive(Component)]
-	struct _ExecComputation;
 
 	#[derive(Debug, PartialEq, Default)]
 	struct _MoveMethod;
@@ -131,10 +128,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(
-			Update,
-			With::<_ExecComputation>::compute::<_ComputePath, _GetComputer>,
-		);
+		app.add_systems(Update, Movement::compute_path::<_ComputePath, _GetComputer>);
 
 		app
 	}
@@ -158,9 +152,8 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn((
-					_ExecComputation,
 					Config::default(),
-					MovementPath::target(Vec3::default()),
+					Movement::Target(Vec3::default()),
 					GlobalTransform::default(),
 					_GetComputer(computer),
 				))
@@ -169,12 +162,12 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(&MovementPath::path([
+				Some(&Movement::Path(MovementPath::from([
 					Vec3::splat(1.),
 					Vec3::splat(2.),
 					Vec3::splat(3.),
-				])),
-				app.world().entity(entity).get::<MovementPath>()
+				]))),
+				app.world().entity(entity).get::<Movement>()
 			);
 		}
 
@@ -194,12 +187,11 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn((
-					_ExecComputation,
 					Config {
 						ground_offset: Units::from(2.),
 						..default()
 					},
-					MovementPath::target(Vec3::default()),
+					Movement::Target(Vec3::default()),
 					GlobalTransform::from_xyz(0., 11., 0.),
 					_GetComputer(computer),
 				))
@@ -208,12 +200,12 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(&MovementPath::path([
+				Some(&Movement::Path(MovementPath::from([
 					Vec3::splat(1.) + Vec3::new(0., 2., 0.),
 					Vec3::splat(2.) + Vec3::new(0., 2., 0.),
 					Vec3::splat(3.) + Vec3::new(0., 2., 0.),
-				])),
-				app.world().entity(entity).get::<MovementPath>()
+				]))),
+				app.world().entity(entity).get::<Movement>()
 			);
 		}
 
@@ -229,9 +221,8 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn((
-					_ExecComputation,
 					Config::default(),
-					MovementPath::target(Vec3::default()),
+					Movement::Target(Vec3::default()),
 					GlobalTransform::default(),
 					_GetComputer(computer),
 				))
@@ -240,8 +231,8 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(&MovementPath::path([])),
-				app.world().entity(entity).get::<MovementPath>()
+				Some(&Movement::Path(MovementPath::from([]))),
+				app.world().entity(entity).get::<Movement>()
 			);
 		}
 
@@ -261,9 +252,8 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn((
-					_ExecComputation,
 					Config::default(),
-					MovementPath::target(Vec3::default()),
+					Movement::Target(Vec3::default()),
 					GlobalTransform::from_translation(Vec3::new(1., 0., 1.)),
 					_GetComputer(computer),
 				))
@@ -272,8 +262,11 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(&MovementPath::path([Vec3::splat(2.), Vec3::splat(3.)])),
-				app.world().entity(entity).get::<MovementPath>()
+				Some(&Movement::Path(MovementPath::from([
+					Vec3::splat(2.),
+					Vec3::splat(3.)
+				]))),
+				app.world().entity(entity).get::<Movement>()
 			);
 		}
 
@@ -287,12 +280,11 @@ mod tests {
 				}))
 				.id();
 			app.world_mut().spawn((
-				_ExecComputation,
 				Config {
 					required_clearance: Units::from_u8(1),
 					..default()
 				},
-				MovementPath::target(Vec3::default()),
+				Movement::Target(Vec3::default()),
 				GlobalTransform::default(),
 				_GetComputer(computer),
 			));
@@ -317,12 +309,11 @@ mod tests {
 				}))
 				.id();
 			app.world_mut().spawn((
-				_ExecComputation,
 				Config {
 					required_clearance: Units::from_u8(42),
 					..default()
 				},
-				MovementPath::target(Vec3::new(4., 5., 6.)),
+				Movement::Target(Vec3::new(4., 5., 6.)),
 				GlobalTransform::from_xyz(1., 2., 3.),
 				_GetComputer(computer),
 			));
@@ -345,9 +336,8 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn((
-					_ExecComputation,
 					Config::default(),
-					MovementPath::direction(Dir3::NEG_Z),
+					Movement::Direction(Dir3::NEG_Z),
 					GlobalTransform::default(),
 					_GetComputer(computer),
 				))
@@ -356,36 +346,9 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(&MovementPath::direction(Dir3::NEG_Z)),
-				app.world().entity(entity).get::<MovementPath>()
+				Some(&Movement::Direction(Dir3::NEG_Z)),
+				app.world().entity(entity).get::<Movement>()
 			);
-		}
-	}
-
-	mod update_control {
-		use super::*;
-
-		#[test]
-		fn do_nothing_when_query_filter_does_not_apply() {
-			let mut app = setup();
-			let computer = app
-				.world_mut()
-				.spawn(_ComputePath::new().with_mock(|mock| {
-					mock.expect_compute_path().never().return_const(None);
-				}))
-				.id();
-			app.world_mut().spawn((
-				// NO `_ExecComputation``
-				Config {
-					required_clearance: Units::from_u8(1),
-					..default()
-				},
-				MovementPath::target(Vec3::default()),
-				GlobalTransform::default(),
-				_GetComputer(computer),
-			));
-
-			app.update();
 		}
 	}
 }

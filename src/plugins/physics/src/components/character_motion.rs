@@ -1,8 +1,5 @@
 use bevy::prelude::*;
-use common::{
-	tools::Done,
-	traits::{accessors::get::View, handles_physics::CharacterMotion},
-};
+use common::traits::{accessors::get::View, handles_physics::CharacterMotion};
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
@@ -13,36 +10,24 @@ use testing::ApproxEqual;
 #[component(immutable)]
 #[savable_component(id = "apply character motion")]
 #[require(IsInMotion)]
-pub struct ApplyCharacterMotion {
-	pub(crate) motion: CharacterMotion,
-	pub(crate) is_done: bool,
-}
+pub struct ApplyCharacterMotion(pub(crate) CharacterMotion);
 
 impl From<CharacterMotion> for ApplyCharacterMotion {
 	fn from(motion: CharacterMotion) -> Self {
-		Self {
-			motion,
-			is_done: false,
-		}
+		Self(motion)
 	}
 }
 
 impl View<CharacterMotion> for ApplyCharacterMotion {
 	fn view(&self) -> CharacterMotion {
-		self.motion
-	}
-}
-
-impl View<Done> for ApplyCharacterMotion {
-	fn view(&self) -> bool {
-		self.is_done
+		self.0
 	}
 }
 
 #[cfg(test)]
 impl ApproxEqual<f32> for ApplyCharacterMotion {
 	fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
-		approx_equal(&self.motion, &other.motion, tolerance) && self.is_done == other.is_done
+		approx_equal(&self.0, &other.0, tolerance)
 	}
 }
 
@@ -57,7 +42,7 @@ macro_rules! remaining_character_motion_permutations {
 		(
 			CharacterMotion::Direction { .. }
 				| CharacterMotion::ToTarget { .. }
-				| CharacterMotion::Stop,
+				| CharacterMotion::Done,
 			_,
 		)
 	};
@@ -87,7 +72,7 @@ fn approx_equal(a: &CharacterMotion, b: &CharacterMotion, tolerance: &f32) -> bo
 				target: target_b,
 			},
 		) => speed_a.approx_equal(speed_b, tolerance) && target_a.approx_equal(target_b, tolerance),
-		(CharacterMotion::Stop, CharacterMotion::Stop) => true,
+		(CharacterMotion::Done, CharacterMotion::Done) => true,
 		remaining_character_motion_permutations!() => false,
 	}
 }
