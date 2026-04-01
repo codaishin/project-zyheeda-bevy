@@ -32,7 +32,7 @@ where
 			continue;
 		};
 
-		for wp in remaining_path {
+		for wp in remaining_path.iter() {
 			gizmos.arrow(current, *wp, LIGHT_CYAN);
 			current = *wp;
 		}

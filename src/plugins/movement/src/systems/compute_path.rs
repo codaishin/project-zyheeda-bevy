@@ -1,4 +1,7 @@
-use crate::components::{config::Config, movement::Movement};
+use crate::components::{
+	config::Config,
+	movement::{Movement, MovementPath},
+};
 use bevy::prelude::*;
 use common::traits::{
 	accessors::get::View,
@@ -30,7 +33,9 @@ impl Movement {
 				continue;
 			};
 
-			*path = Movement::Path(compute_path(computer, transform, *target, config));
+			*path = Movement::Path(MovementPath::from(compute_path(
+				computer, transform, *target, config,
+			)));
 		}
 	}
 }
@@ -157,11 +162,11 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(&Movement::path([
+				Some(&Movement::Path(MovementPath::from([
 					Vec3::splat(1.),
 					Vec3::splat(2.),
 					Vec3::splat(3.),
-				])),
+				]))),
 				app.world().entity(entity).get::<Movement>()
 			);
 		}
@@ -195,11 +200,11 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(&Movement::path([
+				Some(&Movement::Path(MovementPath::from([
 					Vec3::splat(1.) + Vec3::new(0., 2., 0.),
 					Vec3::splat(2.) + Vec3::new(0., 2., 0.),
 					Vec3::splat(3.) + Vec3::new(0., 2., 0.),
-				])),
+				]))),
 				app.world().entity(entity).get::<Movement>()
 			);
 		}
@@ -226,7 +231,7 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(&Movement::path([])),
+				Some(&Movement::Path(MovementPath::from([]))),
 				app.world().entity(entity).get::<Movement>()
 			);
 		}
@@ -257,7 +262,10 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(&Movement::path([Vec3::splat(2.), Vec3::splat(3.)])),
+				Some(&Movement::Path(MovementPath::from([
+					Vec3::splat(2.),
+					Vec3::splat(3.)
+				]))),
 				app.world().entity(entity).get::<Movement>()
 			);
 		}

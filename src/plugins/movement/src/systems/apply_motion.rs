@@ -39,12 +39,14 @@ impl Movement {
 	where
 		TMotion: View<CharacterMotion>,
 	{
-		match (self, current_motion.map(|m| m.view())) {
-			(Movement::None, current_motion) => match current_motion {
+		let current_motion = current_motion.map(|m| m.view());
+
+		match self {
+			Movement::None => match current_motion {
 				Some(CharacterMotion::Done) => None,
 				_ => Some(CharacterMotion::Done),
 			},
-			(Movement::Direction(direction), current_motion) => {
+			Movement::Direction(direction) => {
 				let motion = CharacterMotion::Direction {
 					speed: Speed(config[*speed_index]),
 					direction: *direction,
@@ -55,7 +57,7 @@ impl Movement {
 					_ => Some(motion),
 				}
 			}
-			(Movement::Target(target), current_motion) => {
+			Movement::Target(target) => {
 				let motion = CharacterMotion::ToTarget {
 					speed: Speed(config[*speed_index]),
 					target: *target,
@@ -66,7 +68,7 @@ impl Movement {
 					_ => Some(motion),
 				}
 			}
-			(Movement::Path(path), None | Some(CharacterMotion::Done)) => {
+			Movement::Path(path) if path.is_new() || is_none_or_done(current_motion) => {
 				Some(CharacterMotion::ToTarget {
 					speed: Speed(config[*speed_index]),
 					target: path.pop_front()?,
@@ -77,15 +79,21 @@ impl Movement {
 	}
 }
 
+fn is_none_or_done(motion: Option<CharacterMotion>) -> bool {
+	matches!(motion, Some(CharacterMotion::Done) | None)
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::config::{Config, SpeedIndex};
+	use crate::components::{
+		config::{Config, SpeedIndex},
+		movement::MovementPath,
+	};
 	use common::{
 		tools::{UnitsPerSecond, speed::Speed},
 		traits::handles_movement::{MovementSpeed, SpeedToggle},
 	};
-	use std::collections::VecDeque;
 	use testing::{IsChanged, SingleThreadedApp};
 
 	#[derive(Component, Debug, PartialEq)]
@@ -118,6 +126,7 @@ mod tests {
 	const FAST: UnitsPerSecond = UnitsPerSecond::from_u8(11);
 
 	mod without_motion {
+
 		use super::*;
 		use test_case::test_case;
 
@@ -202,7 +211,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn((
-					Movement::Path(VecDeque::from([
+					Movement::Path(MovementPath::from([
 						Vec3::new(1., 2., 3.),
 						Vec3::new(3., 4., 5.),
 					])),
@@ -231,7 +240,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn((
-					Movement::Path(VecDeque::from([])),
+					Movement::Path(MovementPath::from([])),
 					SpeedIndex(SpeedToggle::Right),
 					Config::default(),
 				))
@@ -248,7 +257,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn((
-					Movement::Path(VecDeque::from([
+					Movement::Path(MovementPath::from([
 						Vec3::new(1., 2., 3.),
 						Vec3::new(3., 4., 5.),
 					])),
@@ -260,7 +269,9 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(&Movement::Path(VecDeque::from([Vec3::new(3., 4., 5.)]))),
+				Some(&Movement::Path(
+					MovementPath::from([Vec3::new(3., 4., 5.)]).not_new()
+				)),
 				app.world().entity(entity).get::<Movement>(),
 			);
 		}
@@ -377,17 +388,56 @@ mod tests {
 			);
 		}
 
+		mod path_not_new {
+			use super::*;
+
+			#[test]
+			fn do_not_apply_path_when_motion_not_done() {
+				let mut app = setup();
+				let entity = app
+					.world_mut()
+					.spawn((
+						_Motion(CharacterMotion::Direction {
+							speed: Speed(SLOW),
+							direction: Dir3::NEG_Y,
+						}),
+						Movement::Path(MovementPath::from([Vec3::new(1., 2., 3.)]).not_new()),
+						SpeedIndex(SpeedToggle::Left),
+						Config {
+							speed: MovementSpeed::Fixed(SLOW),
+							..default()
+						},
+					))
+					.id();
+
+				app.update();
+
+				assert_eq!(
+					(
+						Some(&_Motion(CharacterMotion::Direction {
+							speed: Speed(SLOW),
+							direction: Dir3::NEG_Y,
+						})),
+						Some(&Movement::Path(
+							MovementPath::from([Vec3::new(1., 2., 3.)]).not_new()
+						))
+					),
+					(
+						app.world().entity(entity).get::<_Motion>(),
+						app.world().entity(entity).get::<Movement>(),
+					)
+				);
+			}
+		}
+
 		#[test]
-		fn do_apply_path_when_motion_not_done() {
+		fn apply_path_when_motion_done() {
 			let mut app = setup();
 			let entity = app
 				.world_mut()
 				.spawn((
-					_Motion(CharacterMotion::Direction {
-						speed: Speed(SLOW),
-						direction: Dir3::NEG_Y,
-					}),
-					Movement::Path(VecDeque::from([Vec3::new(1., 2., 3.)])),
+					_Motion(CharacterMotion::Done),
+					Movement::Path(MovementPath::from([Vec3::new(1., 2., 3.)]).not_new()),
 					SpeedIndex(SpeedToggle::Left),
 					Config {
 						speed: MovementSpeed::Fixed(SLOW),
@@ -400,11 +450,11 @@ mod tests {
 
 			assert_eq!(
 				(
-					Some(&_Motion(CharacterMotion::Direction {
+					Some(&_Motion(CharacterMotion::ToTarget {
 						speed: Speed(SLOW),
-						direction: Dir3::NEG_Y,
+						target: Vec3::new(1., 2., 3.),
 					})),
-					Some(&Movement::Path(VecDeque::from([Vec3::new(1., 2., 3.)])))
+					Some(&Movement::Path(MovementPath::from([]).not_new()))
 				),
 				(
 					app.world().entity(entity).get::<_Motion>(),
@@ -412,38 +462,45 @@ mod tests {
 				)
 			);
 		}
-	}
 
-	#[test]
-	fn apply_path_when_motion_done() {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				_Motion(CharacterMotion::Done),
-				Movement::Path(VecDeque::from([Vec3::new(1., 2., 3.)])),
-				SpeedIndex(SpeedToggle::Left),
-				Config {
-					speed: MovementSpeed::Fixed(SLOW),
-					..default()
-				},
-			))
-			.id();
+		mod path_new {
+			use super::*;
 
-		app.update();
+			#[test]
+			fn apply_path_when_motion_not_done_and_movement_new() {
+				let mut app = setup();
+				let entity = app
+					.world_mut()
+					.spawn((
+						_Motion(CharacterMotion::Direction {
+							speed: Speed(SLOW),
+							direction: Dir3::NEG_Y,
+						}),
+						Movement::Path(MovementPath::from([Vec3::new(1., 2., 3.)])),
+						SpeedIndex(SpeedToggle::Left),
+						Config {
+							speed: MovementSpeed::Fixed(SLOW),
+							..default()
+						},
+					))
+					.id();
 
-		assert_eq!(
-			(
-				Some(&_Motion(CharacterMotion::ToTarget {
-					speed: Speed(SLOW),
-					target: Vec3::new(1., 2., 3.),
-				})),
-				Some(&Movement::Path(VecDeque::from([])))
-			),
-			(
-				app.world().entity(entity).get::<_Motion>(),
-				app.world().entity(entity).get::<Movement>(),
-			)
-		);
+				app.update();
+
+				assert_eq!(
+					(
+						Some(&_Motion(CharacterMotion::ToTarget {
+							speed: Speed(SLOW),
+							target: Vec3::new(1., 2., 3.),
+						})),
+						Some(&Movement::Path(MovementPath::from([]).not_new()))
+					),
+					(
+						app.world().entity(entity).get::<_Motion>(),
+						app.world().entity(entity).get::<Movement>(),
+					)
+				);
+			}
+		}
 	}
 }
