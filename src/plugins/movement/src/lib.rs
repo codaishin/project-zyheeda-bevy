@@ -6,20 +6,13 @@ mod systems;
 mod debug;
 
 use crate::{
-	components::{
-		config::{Config, SpeedIndex},
-		facing::SetFace,
-		movement::Movement,
-	},
+	components::{config::SpeedIndex, facing::SetFace, movement::Movement},
 	system_param::{
 		face_param::FaceParamMut,
 		movement_config_param::MovementConfigParamMut,
 		movement_param::{MovementParam, MovementParamMut, context_changed::JustRemovedMovements},
 	},
-	systems::{
-		set_forward_animation_direction::SetForwardAnimationDirection,
-		set_movement_facing::SetFaceSystem,
-	},
+	systems::{animate_forward::SetForwardAnimationDirection, set_movement_facing::SetFaceSystem},
 };
 use bevy::prelude::*;
 use common::{
@@ -101,10 +94,7 @@ where
 			(
 				Movement::compute_path::<TPathing::TComputePath, TPathing::TComputerRef>,
 				Movement::apply::<TPhysics::TCharacterMotion>,
-				With::<Config>::set_forward_animation_direction::<
-					TPhysics::TCharacterMotion,
-					AnimationsSystemParamMut<TAnimations>,
-				>,
+				TPhysics::TCharacterMotion::animate_forward::<AnimationsSystemParamMut<TAnimations>>,
 				TPhysics::TCharacterMotion::set_facing,
 				SetFace::get_faces.pipe(execute_face::<RaycastSystemParam<TPhysics>>),
 				MovementParam::<TPhysics::TCharacterMotion>::update_just_removed,

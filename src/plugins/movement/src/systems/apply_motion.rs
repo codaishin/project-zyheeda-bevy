@@ -68,7 +68,7 @@ impl Movement {
 					_ => Some(motion),
 				}
 			}
-			Movement::Path(path) if path.is_new() || is_none_or_done(current_motion) => {
+			Movement::Path(path) if path.is_new() || is_inactive(current_motion) => {
 				Some(CharacterMotion::ToTarget {
 					speed: Speed(config[*speed_index]),
 					target: path.pop_front()?,
@@ -79,7 +79,7 @@ impl Movement {
 	}
 }
 
-fn is_none_or_done(motion: Option<CharacterMotion>) -> bool {
+fn is_inactive(motion: Option<CharacterMotion>) -> bool {
 	matches!(motion, Some(CharacterMotion::Done) | None)
 }
 
