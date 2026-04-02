@@ -51,7 +51,6 @@ impl GroundTarget {
 				.raycast(MouseHover::NO_EXCLUDES)
 				.and_then(mouse_hover_translation(transforms))
 				.map(Transform::from_translation),
-			SkillTarget::Ground(point) => Some(Transform::from_translation(point)),
 			SkillTarget::Entity(persistent_entity) => commands
 				.get(&persistent_entity)
 				.and_then(|e| transforms.get(e).map(|t| t.translation).ok())
@@ -132,24 +131,6 @@ mod tests {
 		app.add_systems(Update, GroundTarget::set_position::<ResMut<_RayCaster>>);
 
 		app
-	}
-
-	#[test]
-	fn set_to_ground_target() {
-		let mut app = setup();
-		let caster = SkillCaster::default();
-		app.world_mut().spawn((Transform::default(), *caster));
-		let entity = app
-			.world_mut()
-			.spawn(GroundTarget::with_caster(caster).with_target(Vec3::new(1., 2., 3.)))
-			.id();
-
-		app.update();
-
-		assert_eq!(
-			Some(&Transform::from_xyz(1., 2., 3.)),
-			app.world().entity(entity).get::<Transform>(),
-		)
 	}
 
 	#[test]
@@ -259,12 +240,15 @@ mod tests {
 	fn limit_by_max_range() {
 		let mut app = setup();
 		let caster = SkillCaster::default();
+		let target = PersistentEntity::default();
 		app.world_mut().spawn((Transform::default(), *caster));
+		app.world_mut()
+			.spawn((Transform::from_xyz(6., 0., 8.), target));
 		let entity = app
 			.world_mut()
 			.spawn(
 				GroundTarget::with_caster(caster)
-					.with_target(Vec3::new(6., 0., 8.))
+					.with_target(target)
 					.with_max_range(Units::from(5.)),
 			)
 			.id();
@@ -281,13 +265,16 @@ mod tests {
 	fn limit_by_max_range_when_caster_offset_from_zero() {
 		let mut app = setup();
 		let caster = SkillCaster::default();
+		let target = PersistentEntity::default();
 		app.world_mut()
 			.spawn((Transform::from_xyz(1., 0., 0.), *caster));
+		app.world_mut()
+			.spawn((Transform::from_xyz(7., 0., 8.), target));
 		let entity = app
 			.world_mut()
 			.spawn(
 				GroundTarget::with_caster(caster)
-					.with_target(Vec3::new(7., 0., 8.))
+					.with_target(target)
 					.with_max_range(Units::from(5.)),
 			)
 			.id();
@@ -304,12 +291,15 @@ mod tests {
 	fn do_not_limit_by_max_range_when_caster_has_no_transform() {
 		let mut app = setup();
 		let caster = SkillCaster::default();
+		let target = PersistentEntity::default();
 		app.world_mut().spawn(*caster);
+		app.world_mut()
+			.spawn((Transform::from_xyz(6., 0., 8.), target));
 		let entity = app
 			.world_mut()
 			.spawn(
 				GroundTarget::with_caster(caster)
-					.with_target(Vec3::new(6., 0., 8.))
+					.with_target(target)
 					.with_max_range(Units::from(5.)),
 			)
 			.id();
@@ -326,13 +316,16 @@ mod tests {
 	fn set_forward_to_caster_forward() {
 		let mut app = setup();
 		let caster = SkillCaster::default();
+		let target = PersistentEntity::default();
 		app.world_mut().spawn((
 			Transform::default().looking_to(Vec3::new(3., 0., 4.), Vec3::Y),
 			*caster,
 		));
+		app.world_mut()
+			.spawn((Transform::from_xyz(1., 0., 1.), target));
 		let entity = app
 			.world_mut()
-			.spawn(GroundTarget::with_caster(caster).with_target(Vec3::new(1., 0., 1.)))
+			.spawn(GroundTarget::with_caster(caster).with_target(target))
 			.id();
 
 		app.update();
@@ -348,10 +341,13 @@ mod tests {
 	fn only_set_transform_when_added() {
 		let mut app = setup();
 		let caster = SkillCaster::default();
+		let target = PersistentEntity::default();
 		app.world_mut().spawn((Transform::default(), *caster));
+		app.world_mut()
+			.spawn((Transform::from_xyz(1., 0., 1.), target));
 		let entity = app
 			.world_mut()
-			.spawn(GroundTarget::with_caster(caster).with_target(Vec3::new(1., 0., 1.)))
+			.spawn(GroundTarget::with_caster(caster).with_target(target))
 			.id();
 
 		app.update();

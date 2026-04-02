@@ -35,7 +35,7 @@ use common::{
 		handles_load_tracking::HandlesLoadTracking,
 		handles_loadout::HandlesLoadout,
 		handles_orientation::{FacingSystemParamMut, HandlesOrientation},
-		handles_physics::{HandlesAllPhysicalEffects, HandlesRaycast, RaycastSystemParam},
+		handles_physics::HandlesAllPhysicalEffects,
 		handles_saving::HandlesSaving,
 		handles_skill_physics::{HandlesSkillPhysics, SkillSpawnerMut},
 		system_set_definition::SystemSetDefinition,
@@ -67,7 +67,7 @@ impl<TSaveGame, TPhysics, TLoading, TMovement>
 	SkillsPlugin<(TSaveGame, TPhysics, TLoading, TMovement)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillPhysics + HandlesRaycast,
+	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillPhysics,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
 	TMovement: ThreadSafe + HandlesOrientation + SystemSetDefinition,
 {
@@ -116,7 +116,7 @@ where
 				Combos::update::<Queue>,
 				flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
 				schedule_active_skill::<Queue, FacingSystemParamMut<TMovement>, ActiveSkill, Virtual>,
-				ActiveSkill::execute::<SkillSpawnerMut<TPhysics>, RaycastSystemParam<TPhysics>>,
+				ActiveSkill::execute::<SkillSpawnerMut<TPhysics>>,
 				flush::<Queue>,
 				HeldSlots::<Old>::update_from::<Current>,
 			)
@@ -131,7 +131,7 @@ impl<TSaveGame, TPhysics, TLoading, TMovement> Plugin
 	for SkillsPlugin<(TSaveGame, TPhysics, TLoading, TMovement)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillPhysics + HandlesRaycast,
+	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillPhysics,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
 	TMovement: ThreadSafe + HandlesOrientation + SystemSetDefinition,
 {

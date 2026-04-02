@@ -158,14 +158,7 @@ impl Deref for SkillCaster {
 pub enum SkillTarget {
 	#[default]
 	Cursor,
-	Ground(Vec3),
 	Entity(PersistentEntity),
-}
-
-impl From<Vec3> for SkillTarget {
-	fn from(ground: Vec3) -> Self {
-		Self::Ground(ground)
-	}
 }
 
 impl From<PersistentEntity> for SkillTarget {
