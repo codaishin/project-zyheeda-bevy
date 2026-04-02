@@ -43,10 +43,6 @@ pub trait HandlesPhysicalSkillComponents {
 }
 
 pub trait HandlesNewPhysicalSkill {
-	/// Skill spawner
-	///
-	/// Implementations of this are likely to use [`Commands`]. Insertion of skill components/effects
-	/// and despawning should be handled through this [`SystemParam`].
 	type TSkillSpawnerMut<'world, 'state>: for<'w, 's> SystemParam<Item<'w, 's>: Spawn + Despawn>;
 }
 
