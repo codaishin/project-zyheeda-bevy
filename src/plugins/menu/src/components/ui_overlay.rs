@@ -1,7 +1,7 @@
 use super::{Quickbar, input_label::InputLabel, quickbar_panel::QuickbarPanel};
 use crate::traits::{LoadUi, colors::PanelColors, insert_ui_content::InsertUiContent};
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
-use common::{tools::action_key::slot::PlayerSlot, traits::iteration::IterFinite};
+use common::{tools::action_key::slot::HandSlot, traits::iteration::IterFinite};
 
 #[derive(Component)]
 #[require(Node = Self::full_screen())]
@@ -44,13 +44,13 @@ fn add_quickbar(parent: &mut RelatedSpawnerCommands<ChildOf>) {
 			},
 		))
 		.with_children(|quickbar| {
-			for slot_key in PlayerSlot::iterator() {
+			for slot_key in HandSlot::iterator() {
 				add_slot(quickbar, slot_key);
 			}
 		});
 }
 
-fn add_slot(quickbar: &mut RelatedSpawnerCommands<ChildOf>, key: PlayerSlot) {
+fn add_slot(quickbar: &mut RelatedSpawnerCommands<ChildOf>, key: HandSlot) {
 	let slot_desc_text_size = 22.;
 	let slot_desc_size = 30.;
 	let slot_desc_border = 2.;

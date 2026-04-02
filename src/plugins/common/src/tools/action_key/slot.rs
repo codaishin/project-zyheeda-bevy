@@ -20,44 +20,30 @@ impl ViewField for SlotKey {
 	type TValue<'a> = Self;
 }
 
-#[derive(Clone, Copy, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
-pub enum PlayerSlot {
-	Upper(Side),
-	Lower(Side),
+#[derive(Clone, Copy, Eq, Hash, PartialEq, Debug, Serialize, Deserialize, Default)]
+pub enum HandSlot {
+	#[default]
+	Left,
+	Right,
 }
 
-impl PlayerSlot {
-	pub const UPPER_L: Self = Self::Upper(Side::Left);
-	pub const UPPER_R: Self = Self::Upper(Side::Right);
-	pub const LOWER_L: Self = Self::Lower(Side::Left);
-	pub const LOWER_R: Self = Self::Lower(Side::Right);
-}
-
-impl Default for PlayerSlot {
-	fn default() -> Self {
-		Self::Lower(Side::Right)
-	}
-}
-
-impl From<PlayerSlot> for UserInput {
-	fn from(value: PlayerSlot) -> Self {
+impl From<HandSlot> for UserInput {
+	fn from(value: HandSlot) -> Self {
 		match value {
-			PlayerSlot::Upper(Side::Left) => Self::from(KeyCode::Digit1),
-			PlayerSlot::Lower(Side::Left) => Self::from(KeyCode::Digit2),
-			PlayerSlot::Lower(Side::Right) => Self::from(KeyCode::Digit3),
-			PlayerSlot::Upper(Side::Right) => Self::from(KeyCode::Digit4),
+			HandSlot::Left => Self::from(KeyCode::Digit1),
+			HandSlot::Right => Self::from(KeyCode::Digit2),
 		}
 	}
 }
 
-impl From<PlayerSlot> for ActionKey {
-	fn from(key: PlayerSlot) -> Self {
+impl From<HandSlot> for ActionKey {
+	fn from(key: HandSlot) -> Self {
 		Self::Slot(key)
 	}
 }
 
-impl TryFrom<ActionKey> for PlayerSlot {
-	type Error = IsNot<PlayerSlot>;
+impl TryFrom<ActionKey> for HandSlot {
+	type Error = IsNot<HandSlot>;
 
 	fn try_from(key: ActionKey) -> Result<Self, Self::Error> {
 		match key {
@@ -67,76 +53,68 @@ impl TryFrom<ActionKey> for PlayerSlot {
 	}
 }
 
-impl From<PlayerSlot> for Token {
-	fn from(value: PlayerSlot) -> Self {
+impl From<HandSlot> for Token {
+	fn from(value: HandSlot) -> Self {
 		match value {
-			PlayerSlot::Upper(Side::Left) => Token::from("slot-key-top-hand-left"),
-			PlayerSlot::Upper(Side::Right) => Token::from("slot-key-top-hand-right"),
-			PlayerSlot::Lower(Side::Left) => Token::from("slot-key-btm-hand-left"),
-			PlayerSlot::Lower(Side::Right) => Token::from("slot-key-btm-hand-right"),
+			HandSlot::Left => Token::from("slot-key-hand-left"),
+			HandSlot::Right => Token::from("slot-key-hand-right"),
 		}
 	}
 }
 
-impl IterFinite for PlayerSlot {
+impl IterFinite for HandSlot {
 	fn iterator() -> Iter<Self> {
-		Iter(Some(PlayerSlot::Upper(Side::Left)))
+		Iter(Some(HandSlot::Left))
 	}
 
 	fn next(current: &Iter<Self>) -> Option<Self> {
 		match current.0? {
-			PlayerSlot::Upper(Side::Left) => Some(PlayerSlot::Lower(Side::Left)),
-			PlayerSlot::Lower(Side::Left) => Some(PlayerSlot::Lower(Side::Right)),
-			PlayerSlot::Lower(Side::Right) => Some(PlayerSlot::Upper(Side::Right)),
-			PlayerSlot::Upper(Side::Right) => None,
+			HandSlot::Left => Some(HandSlot::Right),
+			HandSlot::Right => None,
 		}
 	}
 }
 
-impl InvalidUserInput for PlayerSlot {
+impl InvalidUserInput for HandSlot {
 	fn invalid_input(&self) -> &[UserInput] {
 		&[]
 	}
 }
 
-impl From<PlayerSlot> for SlotKey {
-	fn from(slot: PlayerSlot) -> Self {
+impl From<HandSlot> for SlotKey {
+	fn from(slot: HandSlot) -> Self {
 		Self(match slot {
-			PlayerSlot::Upper(Side::Left) => 0,
-			PlayerSlot::Lower(Side::Left) => 1,
-			PlayerSlot::Lower(Side::Right) => 2,
-			PlayerSlot::Upper(Side::Right) => 3,
+			HandSlot::Left => 0,
+			HandSlot::Right => 1,
 		})
 	}
 }
 
-impl TryFrom<SlotKey> for PlayerSlot {
-	type Error = NoValidAgentKey<PlayerSlot>;
+impl TryFrom<SlotKey> for HandSlot {
+	type Error = NoValidAgentKey<HandSlot>;
 
 	fn try_from(slot_key: SlotKey) -> Result<Self, Self::Error> {
 		match slot_key {
-			SlotKey(0) => Ok(PlayerSlot::Upper(Side::Left)),
-			SlotKey(1) => Ok(PlayerSlot::Lower(Side::Left)),
-			SlotKey(2) => Ok(PlayerSlot::Lower(Side::Right)),
-			SlotKey(3) => Ok(PlayerSlot::Upper(Side::Right)),
+			SlotKey(0) => Ok(HandSlot::Left),
+			SlotKey(1) => Ok(HandSlot::Right),
 			slot_key => Err(NoValidAgentKey::for_key(slot_key)),
 		}
 	}
 }
 
-impl PartialEq<PlayerSlot> for SlotKey {
-	fn eq(&self, other: &PlayerSlot) -> bool {
+impl PartialEq<HandSlot> for SlotKey {
+	fn eq(&self, other: &HandSlot) -> bool {
 		self == &SlotKey::from(*other)
 	}
 }
 
-impl PartialEq<SlotKey> for PlayerSlot {
+impl PartialEq<SlotKey> for HandSlot {
 	fn eq(&self, other: &SlotKey) -> bool {
 		&SlotKey::from(*self) == other
 	}
 }
 
-impl ViewField for PlayerSlot {
+impl ViewField for HandSlot {
 	type TValue<'a> = Self;
 }
 
@@ -177,52 +155,37 @@ impl<T> ErrorData for NoValidAgentKey<T> {
 	}
 }
 
-#[derive(Clone, Copy, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
-pub enum Side {
-	Right,
-	Left,
-}
-
 #[cfg(test)]
-mod test_player_slot {
+mod test_hand_slot {
 	use super::*;
 
 	#[test]
 	fn iter_all_keys() {
 		assert_eq!(
-			vec![
-				PlayerSlot::Upper(Side::Left),
-				PlayerSlot::Lower(Side::Left),
-				PlayerSlot::Lower(Side::Right),
-				PlayerSlot::Upper(Side::Right),
-			],
-			PlayerSlot::iterator().collect::<Vec<_>>()
+			vec![HandSlot::Left, HandSlot::Right],
+			HandSlot::iterator().collect::<Vec<_>>()
 		);
 	}
 
 	#[test]
-	fn player_key_to_slot_key() {
+	fn hand_key_to_slot_key() {
 		assert_eq!(
-			vec![SlotKey(0), SlotKey(1), SlotKey(2), SlotKey(3)],
-			PlayerSlot::iterator()
-				.map(SlotKey::from)
-				.collect::<Vec<_>>()
+			vec![SlotKey(0), SlotKey(1)],
+			HandSlot::iterator().map(SlotKey::from).collect::<Vec<_>>()
 		);
 	}
 
 	#[test]
-	fn slot_key_to_player_key() {
+	fn slot_key_to_hand_key() {
 		assert_eq!(
 			vec![
-				Ok(PlayerSlot::Upper(Side::Left)),
-				Ok(PlayerSlot::Lower(Side::Left)),
-				Ok(PlayerSlot::Lower(Side::Right)),
-				Ok(PlayerSlot::Upper(Side::Right)),
-				Err(NoValidAgentKey::for_key(SlotKey(4))),
+				Ok(HandSlot::Left),
+				Ok(HandSlot::Right),
+				Err(NoValidAgentKey::for_key(SlotKey(2))),
 			],
-			[SlotKey(0), SlotKey(1), SlotKey(2), SlotKey(3), SlotKey(4)]
+			[SlotKey(0), SlotKey(1), SlotKey(2)]
 				.into_iter()
-				.map(PlayerSlot::try_from)
+				.map(HandSlot::try_from)
 				.collect::<Vec<_>>(),
 		);
 	}

@@ -132,7 +132,7 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use common::{
-		tools::action_key::slot::{PlayerSlot, Side},
+		tools::action_key::slot::HandSlot,
 		traits::handles_skill_physics::{SkillShape, shield::Shield},
 	};
 	use macros::{NestedMocks, simple_mock};
@@ -342,10 +342,7 @@ mod tests {
 					.times(1)
 					.withf(|slot_key, start| {
 						assert_eq!(
-							(
-								&SlotKey::from(PlayerSlot::Upper(Side::Left)),
-								&skill_behavior(no_wrap)
-							),
+							(&SlotKey::from(HandSlot::Left), &skill_behavior(no_wrap)),
 							(slot_key, start),
 						);
 						true
@@ -357,7 +354,7 @@ mod tests {
 					Mock_Skill::new_mock(|mock| {
 						mock.expect_behavior().returning(|| {
 							(
-								SlotKey::from(PlayerSlot::Upper(Side::Left)),
+								SlotKey::from(HandSlot::Left),
 								skill_behavior(RunSkillBehavior::OnActive),
 							)
 						});
@@ -386,10 +383,7 @@ mod tests {
 					.times(1)
 					.withf(|slot_key, start| {
 						assert_eq!(
-							(
-								&SlotKey::from(PlayerSlot::Lower(Side::Left)),
-								&skill_behavior(no_wrap)
-							),
+							(&SlotKey::from(HandSlot::Right), &skill_behavior(no_wrap)),
 							(slot_key, start),
 						);
 						true
@@ -401,7 +395,7 @@ mod tests {
 					Mock_Skill::new_mock(|mock| {
 						mock.expect_behavior().returning(|| {
 							(
-								SlotKey::from(PlayerSlot::Lower(Side::Left)),
+								SlotKey::from(HandSlot::Right),
 								skill_behavior(RunSkillBehavior::OnAim),
 							)
 						});

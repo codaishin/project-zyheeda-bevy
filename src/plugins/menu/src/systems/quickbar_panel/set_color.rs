@@ -100,7 +100,7 @@ mod tests {
 	use crate::components::{ColorOverride, dispatch_text_color::DispatchTextColor};
 	use bevy::state::app::StatesPlugin;
 	use common::{
-		tools::action_key::slot::PlayerSlot,
+		tools::action_key::slot::HandSlot,
 		traits::{
 			handles_loadout::{
 				LoadoutKey,
@@ -186,7 +186,7 @@ mod tests {
 		app.world_mut().spawn((
 			_Agent,
 			_Skills(HashMap::from([(
-				LoadoutKey::from(PlayerSlot::LOWER_L),
+				LoadoutKey::from(HandSlot::Left),
 				_Skill(SkillExecution::Active),
 			)])),
 		));
@@ -197,7 +197,7 @@ mod tests {
 				_ActionKeyButton {
 					mouse_overridden: false,
 				},
-				QuickbarPanel::from(PlayerSlot::LOWER_L),
+				QuickbarPanel::from(HandSlot::Left),
 			))
 			.id();
 
@@ -227,7 +227,7 @@ mod tests {
 				_ActionKeyButton {
 					mouse_overridden: false,
 				},
-				QuickbarPanel::from(PlayerSlot::LOWER_L),
+				QuickbarPanel::from(HandSlot::Left),
 			))
 			.id();
 
@@ -247,7 +247,7 @@ mod tests {
 		app.world_mut().spawn((
 			_Agent,
 			_Skills(HashMap::from([(
-				LoadoutKey::from(PlayerSlot::LOWER_L),
+				LoadoutKey::from(HandSlot::Left),
 				_Skill(SkillExecution::None),
 			)])),
 		));
@@ -258,7 +258,7 @@ mod tests {
 				_ActionKeyButton {
 					mouse_overridden: false,
 				},
-				QuickbarPanel::from(PlayerSlot::LOWER_L),
+				QuickbarPanel::from(HandSlot::Left),
 			))
 			.id();
 
@@ -278,7 +278,7 @@ mod tests {
 		app.world_mut().spawn((
 			_Agent,
 			_Skills(HashMap::from([(
-				LoadoutKey::from(PlayerSlot::LOWER_L),
+				LoadoutKey::from(HandSlot::Left),
 				_Skill(SkillExecution::None),
 			)])),
 		));
@@ -289,7 +289,7 @@ mod tests {
 				_ActionKeyButton {
 					mouse_overridden: true,
 				},
-				QuickbarPanel::from(PlayerSlot::LOWER_L),
+				QuickbarPanel::from(HandSlot::Left),
 			))
 			.id();
 
@@ -316,7 +316,7 @@ mod tests {
 		app.world_mut().spawn((
 			_Agent,
 			_Skills(HashMap::from([(
-				LoadoutKey::from(PlayerSlot::LOWER_L),
+				LoadoutKey::from(HandSlot::Left),
 				_Skill(SkillExecution::Queued),
 			)])),
 		));
@@ -327,7 +327,7 @@ mod tests {
 				_ActionKeyButton {
 					mouse_overridden: false,
 				},
-				QuickbarPanel::from(PlayerSlot::LOWER_L),
+				QuickbarPanel::from(HandSlot::Left),
 			))
 			.id();
 
@@ -350,7 +350,7 @@ mod tests {
 	fn do_nothing_if_slots_has_no_agent() {
 		let mut app = setup();
 		app.world_mut().spawn(_Skills(HashMap::from([(
-			LoadoutKey::from(PlayerSlot::LOWER_L),
+			LoadoutKey::from(HandSlot::Left),
 			_Skill(SkillExecution::Active),
 		)])));
 		let panel = app
@@ -360,7 +360,7 @@ mod tests {
 				_ActionKeyButton {
 					mouse_overridden: false,
 				},
-				QuickbarPanel::from(PlayerSlot::LOWER_L),
+				QuickbarPanel::from(HandSlot::Left),
 			))
 			.id();
 

@@ -33,7 +33,7 @@ mod tests {
 	use super::*;
 	use crate::resources::mouse_override::MouseOverride;
 	use common::{
-		tools::action_key::{ActionKey, slot::PlayerSlot},
+		tools::action_key::{ActionKey, slot::HandSlot},
 		traits::handles_input::InputState,
 	};
 	use test_case::test_case;
@@ -68,7 +68,7 @@ mod tests {
 			.spawn((
 				Interaction::Pressed,
 				ActionKeyInteraction {
-					action_key: ActionKey::from(PlayerSlot::UPPER_L),
+					action_key: ActionKey::from(HandSlot::Left),
 					override_active: false,
 				},
 			))
@@ -79,7 +79,7 @@ mod tests {
 		assert_eq!(
 			&MouseOverride::Active {
 				panel: entity,
-				action: ActionKey::from(PlayerSlot::UPPER_L),
+				action: ActionKey::from(HandSlot::Left),
 				input_state: None
 			},
 			app.world().resource::<MouseOverride>()
@@ -110,7 +110,7 @@ mod tests {
 	fn set_when_mouse_override_set_to_other_panel() {
 		let mut app = setup(MouseOverride::Active {
 			panel: fake_entity!(42),
-			action: ActionKey::from(PlayerSlot::LOWER_R),
+			action: ActionKey::from(HandSlot::Right),
 			input_state: None,
 		});
 		let entity = app
@@ -118,7 +118,7 @@ mod tests {
 			.spawn((
 				Interaction::Pressed,
 				ActionKeyInteraction {
-					action_key: ActionKey::from(PlayerSlot::UPPER_L),
+					action_key: ActionKey::from(HandSlot::Left),
 					override_active: false,
 				},
 			))
@@ -129,7 +129,7 @@ mod tests {
 		assert_eq!(
 			&MouseOverride::Active {
 				panel: entity,
-				action: ActionKey::from(PlayerSlot::UPPER_L),
+				action: ActionKey::from(HandSlot::Left),
 				input_state: None
 			},
 			app.world().resource::<MouseOverride>()

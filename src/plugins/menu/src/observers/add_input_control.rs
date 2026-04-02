@@ -29,7 +29,7 @@ impl QuickbarPanel {
 mod tests {
 	use super::*;
 	use crate::tools::PanelState;
-	use common::tools::action_key::{ActionKey, slot::PlayerSlot};
+	use common::tools::action_key::{ActionKey, slot::HandSlot};
 	use testing::SingleThreadedApp;
 
 	#[derive(Component, Debug, PartialEq)]
@@ -53,12 +53,12 @@ mod tests {
 	fn add_ui_input_primer() {
 		let mut app = setup();
 		let entity = app.world_mut().spawn(QuickbarPanel {
-			key: PlayerSlot::UPPER_L,
+			key: HandSlot::Left,
 			state: PanelState::Empty,
 		});
 
 		assert_eq!(
-			Some(&_ActionKeyButton(ActionKey::from(PlayerSlot::UPPER_L))),
+			Some(&_ActionKeyButton(ActionKey::from(HandSlot::Left))),
 			entity.get::<_ActionKeyButton>()
 		);
 	}

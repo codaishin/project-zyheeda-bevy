@@ -1,10 +1,10 @@
 use bevy::prelude::*;
-use common::tools::action_key::slot::PlayerSlot;
+use common::tools::action_key::slot::HandSlot;
 
 #[derive(Component, Debug, PartialEq)]
 #[require(Node = Self::node(), TextFont = Self::text_font())]
 pub struct InputLabel {
-	pub key: PlayerSlot,
+	pub key: HandSlot,
 }
 
 impl InputLabel {

@@ -22,7 +22,7 @@ use crate::{
 };
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{
-	tools::action_key::slot::{PlayerSlot, SlotKey},
+	tools::action_key::slot::{HandSlot, SlotKey},
 	traits::{
 		accessors::get::{View, ViewOf},
 		handles_loadout::skills::{GetSkillId, SkillIcon, SkillToken},
@@ -257,7 +257,7 @@ impl ComboOverview<()> {
 		)
 	}
 
-	pub(crate) fn skill_key_text(key: PlayerSlot) -> (Node, TextLayout, InputLabel) {
+	pub(crate) fn skill_key_text(key: HandSlot) -> (Node, TextLayout, InputLabel) {
 		(
 			Node {
 				width: Val::from(
@@ -690,7 +690,7 @@ fn add_key<TLocalization>(
 	let Some(skill_key) = key_path.last() else {
 		return;
 	};
-	let Ok(player_slot) = PlayerSlot::try_from(*skill_key) else {
+	let Ok(hand_slot) = HandSlot::try_from(*skill_key) else {
 		return;
 	};
 
@@ -700,7 +700,7 @@ fn add_key<TLocalization>(
 			parent
 				.spawn(ComboOverview::skill_key_button())
 				.with_children(|parent| {
-					parent.spawn(ComboOverview::skill_key_text(player_slot));
+					parent.spawn(ComboOverview::skill_key_text(hand_slot));
 				});
 		});
 }
@@ -762,7 +762,7 @@ fn add_delete_button<TLocalization>(
 mod tests {
 	use super::*;
 	use crate::traits::build_combo_tree_layout::ComboTreeElement;
-	use common::{tools::action_key::slot::PlayerSlot, traits::load_asset::mock::MockAssetServer};
+	use common::{tools::action_key::slot::HandSlot, traits::load_asset::mock::MockAssetServer};
 	use testing::new_handle;
 
 	#[test]
@@ -774,7 +774,7 @@ mod tests {
 				token: Token::from("my skill"),
 				icon: icon.clone(),
 			},
-			key_path: vec![SlotKey::from(PlayerSlot::LOWER_R)],
+			key_path: vec![SlotKey::from(HandSlot::Right)],
 		}]];
 		let mut combo_overview = ComboOverview::default();
 
@@ -787,7 +787,7 @@ mod tests {
 					token: Token::from("my skill"),
 					icon,
 				},
-				key_path: vec![SlotKey::from(PlayerSlot::LOWER_R)],
+				key_path: vec![SlotKey::from(HandSlot::Right)],
 			}]],
 			combo_overview.layout,
 		);

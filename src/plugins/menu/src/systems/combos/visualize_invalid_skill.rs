@@ -58,7 +58,7 @@ mod tests {
 	use super::*;
 	use crate::components::combo_overview::ComboSkill;
 	use common::{
-		tools::action_key::slot::{PlayerSlot, SlotKey},
+		tools::action_key::slot::{HandSlot, SlotKey},
 		traits::{
 			accessors::get::View,
 			handles_loadout::skills::{SkillIcon, SkillToken},
@@ -151,7 +151,7 @@ mod tests {
 		app.world_mut().spawn((
 			_Agent,
 			_Slots(HashMap::from([(
-				SlotKey::from(PlayerSlot::LOWER_R),
+				SlotKey::from(HandSlot::Right),
 				vec![_Skill("compatible")],
 			)])),
 		));
@@ -160,8 +160,8 @@ mod tests {
 			.spawn(ComboSkillButton::<DropdownTrigger, &'static str>::new(
 				combo_skill("incompatible"),
 				vec![
-					SlotKey::from(PlayerSlot::LOWER_L),
-					SlotKey::from(PlayerSlot::LOWER_R),
+					SlotKey::from(HandSlot::Left),
+					SlotKey::from(HandSlot::Right),
 				],
 			))
 			.id();
@@ -180,7 +180,7 @@ mod tests {
 		app.world_mut().spawn((
 			_Agent,
 			_Slots(HashMap::from([(
-				SlotKey::from(PlayerSlot::LOWER_R),
+				SlotKey::from(HandSlot::Right),
 				vec![_Skill("compatible")],
 			)])),
 		));
@@ -189,8 +189,8 @@ mod tests {
 			.spawn(ComboSkillButton::<DropdownTrigger, &'static str>::new(
 				combo_skill("compatible"),
 				vec![
-					SlotKey::from(PlayerSlot::LOWER_L),
-					SlotKey::from(PlayerSlot::LOWER_R),
+					SlotKey::from(HandSlot::Left),
+					SlotKey::from(HandSlot::Right),
 				],
 			))
 			.id();
@@ -206,7 +206,7 @@ mod tests {
 		app.world_mut().spawn((
 			_Agent,
 			_Slots(HashMap::from([(
-				SlotKey::from(PlayerSlot::LOWER_R),
+				SlotKey::from(HandSlot::Right),
 				vec![_Skill("compatible")],
 			)])),
 		));
@@ -215,8 +215,8 @@ mod tests {
 			.spawn(ComboSkillButton::<DropdownTrigger, &'static str>::new(
 				combo_skill("incompatible"),
 				vec![
-					SlotKey::from(PlayerSlot::LOWER_L),
-					SlotKey::from(PlayerSlot::LOWER_R),
+					SlotKey::from(HandSlot::Left),
+					SlotKey::from(HandSlot::Right),
 				],
 			))
 			.id();
@@ -232,7 +232,7 @@ mod tests {
 	fn do_nothing_if_agent_missing() {
 		let mut app = setup();
 		app.world_mut().spawn(_Slots(HashMap::from([(
-			SlotKey::from(PlayerSlot::LOWER_R),
+			SlotKey::from(HandSlot::Right),
 			vec![_Skill("compatible")],
 		)])));
 		let skill = app
@@ -240,8 +240,8 @@ mod tests {
 			.spawn(ComboSkillButton::<DropdownTrigger, &'static str>::new(
 				combo_skill("incompatible"),
 				vec![
-					SlotKey::from(PlayerSlot::LOWER_L),
-					SlotKey::from(PlayerSlot::LOWER_R),
+					SlotKey::from(HandSlot::Left),
+					SlotKey::from(HandSlot::Right),
 				],
 			))
 			.id();

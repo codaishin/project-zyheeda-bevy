@@ -20,13 +20,13 @@ use bevy::{reflect::TypePath, utils::default};
 use camera_key::CameraKey;
 use movement::MovementKey;
 use serde::{Deserialize, Serialize};
-use slot::PlayerSlot;
+use slot::HandSlot;
 use user_input::UserInput;
 
 #[derive(TypePath, Clone, Copy, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
 pub enum ActionKey {
 	Movement(MovementKey),
-	Slot(PlayerSlot),
+	Slot(HandSlot),
 	Menu(MenuState),
 	Camera(CameraKey),
 	Save(SaveKey),
@@ -103,7 +103,7 @@ mod tests {
 		assert_eq!(
 			std::iter::empty()
 				.chain(MovementKey::iterator().map(ActionKey::from))
-				.chain(PlayerSlot::iterator().map(ActionKey::from))
+				.chain(HandSlot::iterator().map(ActionKey::from))
 				.chain(MenuState::iterator().map(ActionKey::from))
 				.chain(CameraKey::iterator().map(ActionKey::from))
 				.chain(SaveKey::iterator().map(ActionKey::from))
@@ -117,7 +117,7 @@ mod tests {
 		assert_eq_unordered!(
 			std::iter::empty()
 				.chain(MovementKey::iterator().map(UserInput::from))
-				.chain(PlayerSlot::iterator().map(UserInput::from))
+				.chain(HandSlot::iterator().map(UserInput::from))
 				.chain(MenuState::iterator().map(UserInput::from))
 				.chain(CameraKey::iterator().map(UserInput::from))
 				.chain(SaveKey::iterator().map(UserInput::from))
@@ -140,7 +140,7 @@ mod tests {
 		assert_eq!(
 			std::iter::empty()
 				.chain(MovementKey::iterator().map(pair_with_invalid_input))
-				.chain(PlayerSlot::iterator().map(pair_with_invalid_input))
+				.chain(HandSlot::iterator().map(pair_with_invalid_input))
 				.chain(MenuState::iterator().map(pair_with_invalid_input))
 				.chain(CameraKey::iterator().map(pair_with_invalid_input))
 				.chain(SaveKey::iterator().map(pair_with_invalid_input))

@@ -134,7 +134,7 @@ where
 mod tests {
 	use super::*;
 	use bevy::utils::default;
-	use common::{tools::action_key::slot::PlayerSlot, traits::handles_localization::Token};
+	use common::{tools::action_key::slot::HandSlot, traits::handles_localization::Token};
 	use macros::simple_mock;
 	use mockall::predicate::eq;
 	use std::collections::HashMap;
@@ -166,7 +166,7 @@ mod tests {
 
 	#[test]
 	fn return_skill() {
-		let trigger = SlotKey::from(PlayerSlot::LOWER_L);
+		let trigger = SlotKey::from(HandSlot::Left);
 		let item_type = ItemType::ForceEssence;
 		let combos = Combos::new(_Next(HashMap::from([(
 			(trigger, item_type),
@@ -191,7 +191,7 @@ mod tests {
 
 	#[test]
 	fn use_combo_used_in_set_next_combo() {
-		let trigger = SlotKey::from(PlayerSlot::LOWER_L);
+		let trigger = SlotKey::from(HandSlot::Left);
 		let item_type = ItemType::ForceEssence;
 		let first = _Next::default();
 		let next = _Next(HashMap::from([(
@@ -219,7 +219,7 @@ mod tests {
 
 	#[test]
 	fn use_original_when_next_combo_returns_none() {
-		let trigger = SlotKey::from(PlayerSlot::LOWER_L);
+		let trigger = SlotKey::from(HandSlot::Left);
 		let item_type = ItemType::ForceEssence;
 		let first = _Next(HashMap::from([(
 			(trigger, item_type),
@@ -263,8 +263,8 @@ mod tests {
 		};
 		let combos_vec = vec![vec![(
 			vec![
-				SlotKey::from(PlayerSlot::LOWER_L),
-				SlotKey::from(PlayerSlot::LOWER_R),
+				SlotKey::from(HandSlot::Left),
+				SlotKey::from(HandSlot::Right),
 			],
 			skill,
 		)]];
@@ -289,23 +289,23 @@ mod tests {
 				mock.expect_next_keys()
 					.times(1)
 					.with(eq([
-						SlotKey::from(PlayerSlot::LOWER_R),
-						SlotKey::from(PlayerSlot::UPPER_L),
+						SlotKey::from(HandSlot::Right),
+						SlotKey::from(HandSlot::Right),
 					]))
 					.return_const(HashSet::from([
-						SlotKey::from(PlayerSlot::LOWER_L),
-						SlotKey::from(PlayerSlot::LOWER_R),
+						SlotKey::from(HandSlot::Left),
+						SlotKey::from(HandSlot::Right),
 					]));
 			}));
 
 			assert_eq!(
 				HashSet::from([
-					SlotKey::from(PlayerSlot::LOWER_L),
-					SlotKey::from(PlayerSlot::LOWER_R)
+					SlotKey::from(HandSlot::Left),
+					SlotKey::from(HandSlot::Right)
 				]),
 				combos.next_keys(&[
-					SlotKey::from(PlayerSlot::LOWER_R),
-					SlotKey::from(PlayerSlot::UPPER_L)
+					SlotKey::from(HandSlot::Right),
+					SlotKey::from(HandSlot::Right)
 				]),
 			);
 		}
@@ -334,7 +334,7 @@ mod tests {
 
 			combos.update_combo_skills(
 				[(
-					vec![SlotKey::from(PlayerSlot::LOWER_R)],
+					vec![SlotKey::from(HandSlot::Right)],
 					Some(&Skill {
 						token: Token::from("my skill"),
 						..default()
@@ -345,7 +345,7 @@ mod tests {
 
 			assert_eq!(
 				vec![(
-					vec![SlotKey::from(PlayerSlot::LOWER_R)],
+					vec![SlotKey::from(HandSlot::Right)],
 					Some(Skill {
 						token: Token::from("my skill"),
 						..default()

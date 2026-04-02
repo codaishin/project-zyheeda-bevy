@@ -55,7 +55,7 @@ mod tests {
 		tools::PanelState,
 	};
 	use common::{
-		tools::action_key::slot::PlayerSlot,
+		tools::action_key::slot::HandSlot,
 		traits::{
 			handles_loadout::{LoadoutKey, items::ItemToken},
 			handles_localization::Token,
@@ -123,13 +123,13 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((
 			_Agent,
-			_Container::from([(PlayerSlot::UPPER_L, _Item(TOKEN.clone()))]),
+			_Container::from([(HandSlot::Left, _Item(TOKEN.clone()))]),
 		));
 		let panel = app
 			.world_mut()
 			.spawn((
 				InventoryPanel(PanelState::Empty),
-				KeyedPanel::from(PlayerSlot::UPPER_L),
+				KeyedPanel::from(HandSlot::Left),
 			))
 			.id();
 
@@ -146,13 +146,13 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((
 			_Agent,
-			_Container::from([(PlayerSlot::UPPER_L, _Item(TOKEN.clone()))]),
+			_Container::from([(HandSlot::Left, _Item(TOKEN.clone()))]),
 		));
 		let panel = app
 			.world_mut()
 			.spawn((
 				InventoryPanel(PanelState::Empty),
-				KeyedPanel::from(PlayerSlot::UPPER_L),
+				KeyedPanel::from(HandSlot::Left),
 			))
 			.id();
 
@@ -172,7 +172,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				InventoryPanel(PanelState::Filled),
-				KeyedPanel::from(PlayerSlot::UPPER_L),
+				KeyedPanel::from(HandSlot::Left),
 			))
 			.id();
 
@@ -187,15 +187,13 @@ mod tests {
 	#[test]
 	fn do_nothing_if_agent_missing() {
 		let mut app = setup();
-		app.world_mut().spawn(_Container::from([(
-			PlayerSlot::UPPER_L,
-			_Item(TOKEN.clone()),
-		)]));
+		app.world_mut()
+			.spawn(_Container::from([(HandSlot::Left, _Item(TOKEN.clone()))]));
 		let panel = app
 			.world_mut()
 			.spawn((
 				InventoryPanel(PanelState::Empty),
-				KeyedPanel::from(PlayerSlot::UPPER_L),
+				KeyedPanel::from(HandSlot::Left),
 			))
 			.id();
 

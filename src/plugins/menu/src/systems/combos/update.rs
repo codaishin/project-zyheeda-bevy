@@ -47,7 +47,7 @@ mod tests {
 	use super::*;
 	use crate::components::combo_overview::ComboSkill;
 	use common::{
-		tools::action_key::slot::{PlayerSlot, SlotKey},
+		tools::action_key::slot::{HandSlot, SlotKey},
 		traits::{handles_loadout::combos::Combo, handles_localization::Token},
 	};
 	use macros::NestedMocks;
@@ -97,7 +97,7 @@ mod tests {
 		app.world_mut().spawn((
 			ComboSkillButton::<DropdownItem<_Layout>, _Id>::new(
 				SKILL.clone(),
-				vec![SlotKey::from(PlayerSlot::LOWER_L)],
+				vec![SlotKey::from(HandSlot::Left)],
 			),
 			Interaction::Pressed,
 		));
@@ -106,10 +106,7 @@ mod tests {
 			_Combos::new().with_mock(|mock| {
 				mock.expect_update_combos()
 					.times(1)
-					.with(eq(vec![(
-						vec![SlotKey::from(PlayerSlot::LOWER_L)],
-						Some(_Id),
-					)]))
+					.with(eq(vec![(vec![SlotKey::from(HandSlot::Left)], Some(_Id))]))
 					.return_const(());
 			}),
 		));
@@ -123,7 +120,7 @@ mod tests {
 		app.world_mut().spawn((
 			ComboSkillButton::<DropdownItem<_Layout>, _Id>::new(
 				SKILL.clone(),
-				vec![SlotKey::from(PlayerSlot::LOWER_L)],
+				vec![SlotKey::from(HandSlot::Left)],
 			),
 			Interaction::Hovered,
 		));
@@ -143,7 +140,7 @@ mod tests {
 		app.world_mut().spawn((
 			ComboSkillButton::<DropdownItem<_Layout>, _Id>::new(
 				SKILL.clone(),
-				vec![SlotKey::from(PlayerSlot::LOWER_L)],
+				vec![SlotKey::from(HandSlot::Left)],
 			),
 			Interaction::Pressed,
 		));

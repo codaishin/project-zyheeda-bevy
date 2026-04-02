@@ -43,7 +43,7 @@ mod tests {
 	use crate::components::icon::Icon;
 	use bevy::app::{App, Update};
 	use common::{
-		tools::action_key::{ActionKey, slot::PlayerSlot, user_input::UserInput},
+		tools::action_key::{ActionKey, slot::HandSlot, user_input::UserInput},
 		traits::handles_localization::Token,
 	};
 	use macros::NestedMocks;
@@ -80,13 +80,13 @@ mod tests {
 		let mut app = setup(_Input::new().with_mock(|mock| {
 			mock.expect_get_input()
 				.times(1)
-				.with(eq(PlayerSlot::UPPER_L))
+				.with(eq(HandSlot::Left))
 				.return_const(UserInput::from(KeyCode::ArrowUp));
 		}));
 		let id = app
 			.world_mut()
 			.spawn(InputLabel {
-				key: PlayerSlot::UPPER_L,
+				key: HandSlot::Left,
 			})
 			.id();
 
@@ -104,13 +104,13 @@ mod tests {
 	#[test]
 	fn add_icon_fallback_label() {
 		let mut app = setup(_Input::new().with_mock(|mock| {
-			mock.expect_get_input::<PlayerSlot>()
+			mock.expect_get_input::<HandSlot>()
 				.return_const(UserInput::from(KeyCode::ArrowUp));
 		}));
 		let id = app
 			.world_mut()
 			.spawn(InputLabel {
-				key: PlayerSlot::UPPER_L,
+				key: HandSlot::Left,
 			})
 			.id();
 
@@ -125,13 +125,13 @@ mod tests {
 	#[test]
 	fn do_not_add_icon_if_not_added() {
 		let mut app = setup(_Input::new().with_mock(|mock| {
-			mock.expect_get_input::<PlayerSlot>()
+			mock.expect_get_input::<HandSlot>()
 				.return_const(UserInput::from(KeyCode::ArrowUp));
 		}));
 		let id = app
 			.world_mut()
 			.spawn(InputLabel {
-				key: PlayerSlot::UPPER_L,
+				key: HandSlot::Left,
 			})
 			.id();
 

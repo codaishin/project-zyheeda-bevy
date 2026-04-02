@@ -33,10 +33,8 @@ key-bindings-menus = Miscellaneous
 key-bindings-camera = Camera
 key-bindings-savegame = Save Game
 
-slot-key-top-hand-left = Top Hand Left
-slot-key-top-hand-right = Top Hand Right
-slot-key-btm-hand-left = Bottom Hand Left
-slot-key-btm-hand-right = Bottom Hand Right
+slot-key-hand-left = Left Hand
+slot-key-hand-right = Right Hand
 
 movement-key-forward = Move forward
 movement-key-backward = Move backward

@@ -4,13 +4,13 @@ use crate::{
 };
 use bevy::{color::Color, ecs::component::Component};
 use common::{
-	tools::action_key::slot::{PlayerSlot, SlotKey},
+	tools::action_key::slot::{HandSlot, SlotKey},
 	traits::accessors::get::View,
 };
 
 #[derive(Component)]
 pub struct QuickbarPanel {
-	pub key: PlayerSlot,
+	pub key: HandSlot,
 	pub state: PanelState,
 }
 
@@ -35,8 +35,8 @@ impl QuickbarPanel {
 	};
 }
 
-impl From<PlayerSlot> for QuickbarPanel {
-	fn from(key: PlayerSlot) -> Self {
+impl From<HandSlot> for QuickbarPanel {
+	fn from(key: HandSlot) -> Self {
 		Self {
 			key,
 			state: PanelState::Empty,
@@ -50,8 +50,8 @@ impl View<PanelState> for QuickbarPanel {
 	}
 }
 
-impl View<PlayerSlot> for QuickbarPanel {
-	fn view(&self) -> PlayerSlot {
+impl View<HandSlot> for QuickbarPanel {
+	fn view(&self) -> HandSlot {
 		self.key
 	}
 }
@@ -69,12 +69,12 @@ impl HasPanelColors for QuickbarPanel {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{tools::action_key::slot::Side, traits::accessors::get::ViewOf};
+	use common::traits::accessors::get::ViewOf;
 
 	#[test]
 	fn get_empty() {
 		let panel = QuickbarPanel {
-			key: PlayerSlot::Lower(Side::Right),
+			key: HandSlot::Right,
 			state: PanelState::Empty,
 		};
 		assert_eq!(PanelState::Empty, panel.view_of::<PanelState>());
@@ -83,32 +83,29 @@ mod tests {
 	#[test]
 	fn get_filled() {
 		let panel = QuickbarPanel {
-			key: PlayerSlot::Lower(Side::Right),
+			key: HandSlot::Right,
 			state: PanelState::Filled,
 		};
 		assert_eq!(PanelState::Filled, panel.view_of::<PanelState>());
 	}
 
 	#[test]
-	fn get_player_slot() {
+	fn get_hand_slot() {
 		let panel = QuickbarPanel {
-			key: PlayerSlot::Lower(Side::Left),
+			key: HandSlot::Left,
 			state: PanelState::Empty,
 		};
 
-		assert_eq!(PlayerSlot::Lower(Side::Left), panel.view_of::<PlayerSlot>());
+		assert_eq!(HandSlot::Left, panel.view_of::<HandSlot>());
 	}
 
 	#[test]
 	fn get_slot_key() {
 		let panel = QuickbarPanel {
-			key: PlayerSlot::Lower(Side::Left),
+			key: HandSlot::Left,
 			state: PanelState::Empty,
 		};
 
-		assert_eq!(
-			SlotKey::from(PlayerSlot::Lower(Side::Left)),
-			panel.view_of::<SlotKey>(),
-		);
+		assert_eq!(SlotKey::from(HandSlot::Left), panel.view_of::<SlotKey>(),);
 	}
 }
