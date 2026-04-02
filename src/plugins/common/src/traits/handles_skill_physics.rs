@@ -154,16 +154,12 @@ impl Deref for SkillCaster {
 	}
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Default, Clone, Copy, Serialize, Deserialize)]
 pub enum SkillTarget {
+	#[default]
+	Cursor,
 	Ground(Vec3),
 	Entity(PersistentEntity),
-}
-
-impl Default for SkillTarget {
-	fn default() -> Self {
-		Self::Ground(Vec3::default())
-	}
 }
 
 impl From<Vec3> for SkillTarget {

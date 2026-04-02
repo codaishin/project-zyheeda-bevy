@@ -39,6 +39,7 @@ impl GroundTarget {
 		transforms: Query<&Transform>,
 	) -> Option<Transform> {
 		match self.target {
+			SkillTarget::Cursor => None,
 			SkillTarget::Ground(point) => Some(Transform::from_translation(point)),
 			SkillTarget::Entity(persistent_entity) => commands
 				.get(&persistent_entity)
