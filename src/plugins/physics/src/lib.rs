@@ -38,6 +38,7 @@ use crate::{
 	resources::ongoing_interactions::OngoingInteractions,
 	system_params::{
 		config::ConfigParamMut,
+		ray_caster::RayCaster,
 		skill_spawner::SkillSpawnerMut,
 		update_ongoing_interactions::UpdateOngoingInteractions,
 	},
@@ -49,7 +50,6 @@ use crate::{
 			push_ongoing_collisions::PushOngoingCollisions,
 		},
 	},
-	traits::ray_cast::RayCaster,
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;

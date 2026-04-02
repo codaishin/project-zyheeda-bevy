@@ -1,4 +1,4 @@
-use crate::traits::ray_cast::RayCaster;
+use crate::system_params::ray_caster::RayCaster;
 use common::traits::handles_physics::{MouseTerrainHover, MouseTerrainPoint, Raycast, Terrain};
 
 impl Raycast<MouseTerrainHover> for RayCaster<'_, '_> {

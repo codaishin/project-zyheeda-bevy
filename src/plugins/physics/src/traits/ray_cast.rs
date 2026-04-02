@@ -1,37 +1,13 @@
-mod mouse_hover;
-mod mouse_terrain_hover;
-mod solid_objects;
-mod terrain;
-
 pub mod read_rapier_context;
 pub mod system_input;
 
-use crate::components::{
-	collider::ChildCollider,
-	interaction_target::InteractionTarget,
-	world_camera::WorldCamera,
-};
-use bevy::{
-	ecs::system::{StaticSystemParam, SystemParam},
-	prelude::*,
-};
+use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
 	errors::{ErrorData, Level},
 	traits::handles_physics::{IsNaN, TimeOfImpact},
 };
 use zyheeda_core::prelude::Sorted;
-
-#[derive(SystemParam)]
-pub struct RayCaster<'w, 's, T = ReadRapierContext<'static, 'static>>
-where
-	T: SystemParam + 'static,
-{
-	context: StaticSystemParam<'w, 's, T>,
-	interaction_child_colliders: Query<'w, 's, &'static ChildCollider<InteractionTarget>>,
-	rigid_body_child_colliders: Query<'w, 's, &'static ChildCollider<RigidBody>>,
-	world_cams: Query<'w, 's, &'static mut WorldCamera>,
-}
 
 pub trait GetContinuousSortedRayCaster<TRayData> {
 	type TError;

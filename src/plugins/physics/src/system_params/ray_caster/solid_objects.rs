@@ -1,6 +1,6 @@
 use crate::{
 	components::collider::{ChildCollider, MOUSE_HOVERABLE_GROUP, RAY_GROUP},
-	traits::ray_cast::RayCaster,
+	system_params::ray_caster::RayCaster,
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{Real, *};
