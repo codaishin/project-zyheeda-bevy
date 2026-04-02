@@ -41,7 +41,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Anchor::to_target(PersistentEntity::default()).on_spawner(SkillSpawner::Neutral))
+			.spawn(Anchor::attach_to(PersistentEntity::default()).on(SkillSpawner::Neutral))
 			.remove::<AnchorDirty>()
 			.id();
 
@@ -68,7 +68,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Anchor::to_target(PersistentEntity::default()).on_spawner(SkillSpawner::Neutral))
+			.spawn(Anchor::attach_to(PersistentEntity::default()).on(SkillSpawner::Neutral))
 			.remove::<AnchorDirty>()
 			.id();
 
@@ -86,7 +86,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Anchor::to_target(PersistentEntity::default()).on_spawner(SkillSpawner::Neutral))
+			.spawn(Anchor::attach_to(PersistentEntity::default()).on(SkillSpawner::Neutral))
 			.remove::<AnchorDirty>()
 			.id();
 

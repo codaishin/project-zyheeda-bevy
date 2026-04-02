@@ -7,24 +7,24 @@ use common::{
 #[derive(Component, Debug, PartialEq)]
 #[require(Transform, AnchorDirty)]
 pub(crate) struct Anchor {
-	pub(crate) target: PersistentEntity,
-	pub(crate) skill_spawner: SkillSpawner,
-	pub(crate) use_target_rotation: bool,
+	pub(crate) attached_to: PersistentEntity,
+	pub(crate) attach_point: SkillSpawner,
+	pub(crate) use_attached_rotation: bool,
 	pub(crate) persistent: bool,
 }
 
 impl Anchor {
-	pub(crate) fn to_target<TEntity>(target: TEntity) -> AnchorTarget
+	pub(crate) fn attach_to<TEntity>(entity: TEntity) -> AnchorAttachment
 	where
 		TEntity: Into<PersistentEntity>,
 	{
-		AnchorTarget {
-			target: target.into(),
+		AnchorAttachment {
+			attached_to: entity.into(),
 		}
 	}
 
-	pub(crate) fn with_target_rotation(mut self) -> Self {
-		self.use_target_rotation = true;
+	pub(crate) fn with_attached_rotation(mut self) -> Self {
+		self.use_attached_rotation = true;
 		self
 	}
 
@@ -41,7 +41,7 @@ impl Anchor {
 
 impl View<PersistentEntity> for Anchor {
 	fn view(&self) -> PersistentEntity {
-		self.target
+		self.attached_to
 	}
 }
 
@@ -49,16 +49,16 @@ impl View<PersistentEntity> for Anchor {
 #[component(immutable)]
 pub(crate) struct AnchorDirty;
 
-pub(crate) struct AnchorTarget {
-	target: PersistentEntity,
+pub(crate) struct AnchorAttachment {
+	attached_to: PersistentEntity,
 }
 
-impl AnchorTarget {
-	pub(crate) fn on_spawner(self, spawner: SkillSpawner) -> Anchor {
+impl AnchorAttachment {
+	pub(crate) fn on(self, attach_point: SkillSpawner) -> Anchor {
 		Anchor {
-			target: self.target,
-			skill_spawner: spawner,
-			use_target_rotation: false,
+			attached_to: self.attached_to,
+			attach_point,
+			use_attached_rotation: false,
 			persistent: false,
 		}
 	}

@@ -53,32 +53,32 @@ impl AnchorDirty {
 			}
 		});
 
-		let Some(target) = commands.get(&anchor.target) else {
-			return Err(AnchorError::TargetNotFound(anchor.target));
+		let Some(attached_to) = commands.get(&anchor.attached_to) else {
+			return Err(AnchorError::AttachedToNotFound(anchor.attached_to));
 		};
 
-		let mount_point = match lookup.get_mount_point(target, anchor.skill_spawner) {
-			Ok(mount_point) => mount_point,
+		let mount = match lookup.get_mount_point(attached_to, anchor.attach_point) {
+			Ok(mount) => mount,
 			Err(error) => return Err(AnchorError::MountError(error)),
 		};
 
-		let Ok(target_transform) = transforms.get(target) else {
-			return Err(AnchorError::RootHasNoTransform(anchor.target));
+		let Ok(attached_to_transform) = transforms.get(attached_to) else {
+			return Err(AnchorError::AttachedToNoTransform(anchor.attached_to));
 		};
 
-		let Ok(mount_point_transform) = transforms.get(mount_point) else {
-			return Err(AnchorError::MountHasNoTransform(mount_point));
+		let Ok(mount_transform) = transforms.get(mount) else {
+			return Err(AnchorError::MountHasNoTransform(mount));
 		};
 
-		let mount_point_translation = mount_point_transform.translation();
-		if mount_point_translation.is_nan() {
-			return Err(AnchorError::MountTranslationIsNan(mount_point));
+		let mount_translation = mount_transform.translation();
+		if mount_translation.is_nan() {
+			return Err(AnchorError::MountTranslationIsNan(mount));
 		}
 
-		anchor_transform.translation = mount_point_translation;
-		let rotation = match anchor.use_target_rotation {
-			true => target_transform.rotation(),
-			false => mount_point_transform.rotation(),
+		anchor_transform.translation = mount_translation;
+		let rotation = match anchor.use_attached_rotation {
+			true => attached_to_transform.rotation(),
+			false => mount_transform.rotation(),
 		};
 		anchor_transform.rotation = rotation;
 
@@ -89,8 +89,8 @@ impl AnchorDirty {
 #[derive(Debug, PartialEq)]
 pub(crate) enum AnchorError<TMountError> {
 	MountError(TMountError),
-	TargetNotFound(PersistentEntity),
-	RootHasNoTransform(PersistentEntity),
+	AttachedToNotFound(PersistentEntity),
+	AttachedToNoTransform(PersistentEntity),
 	MountHasNoTransform(Entity),
 	MountTranslationIsNan(Entity),
 }
@@ -102,8 +102,8 @@ where
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			AnchorError::MountError(error) => write!(f, "{error}"),
-			AnchorError::TargetNotFound(e) => write!(f, "{e:?}: Anchor target not found"),
-			AnchorError::RootHasNoTransform(e) => write!(f, "{e:?}: Has no transform"),
+			AnchorError::AttachedToNotFound(e) => write!(f, "{e:?}: Anchor target not found"),
+			AnchorError::AttachedToNoTransform(e) => write!(f, "{e:?}: Has no transform"),
 			AnchorError::MountHasNoTransform(e) => write!(f, "{e}: Has no transform"),
 			AnchorError::MountTranslationIsNan(e) => write!(f, "{e}: Translation is NaN"),
 		}
@@ -205,7 +205,7 @@ mod tests {
 
 		let anchor = app
 			.world_mut()
-			.spawn(Anchor::to_target(*AGENT).on_spawner(spawner_key))
+			.spawn(Anchor::attach_to(*AGENT).on(spawner_key))
 			.id();
 
 		assert_eq!(
@@ -234,7 +234,7 @@ mod tests {
 
 		let anchor = app
 			.world_mut()
-			.spawn(Anchor::to_target(*AGENT).on_spawner(spawner_key));
+			.spawn(Anchor::attach_to(*AGENT).on(spawner_key));
 
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 11., 9.).looking_to(Dir3::NEG_Z, Dir3::Y)),
@@ -262,9 +262,9 @@ mod tests {
 		});
 
 		let anchor = app.world_mut().spawn(
-			Anchor::to_target(*AGENT)
-				.on_spawner(spawner_key)
-				.with_target_rotation(),
+			Anchor::attach_to(*AGENT)
+				.on(spawner_key)
+				.with_attached_rotation(),
 		);
 
 		assert_eq!(
@@ -296,7 +296,7 @@ mod tests {
 
 		let anchor = app
 			.world_mut()
-			.spawn(Anchor::to_target(*AGENT).on_spawner(spawner_key));
+			.spawn(Anchor::attach_to(*AGENT).on(spawner_key));
 
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 11., 9.)),
@@ -322,7 +322,7 @@ mod tests {
 
 		let anchor = app
 			.world_mut()
-			.spawn(Anchor::to_target(*AGENT).on_spawner(spawner_key).once());
+			.spawn(Anchor::attach_to(*AGENT).on(spawner_key).once());
 
 		assert!(!anchor.contains::<AnchorDirty>());
 	}
@@ -345,7 +345,7 @@ mod tests {
 
 		let anchor = app
 			.world_mut()
-			.spawn(Anchor::to_target(*AGENT).on_spawner(spawner_key).always());
+			.spawn(Anchor::attach_to(*AGENT).on(spawner_key).always());
 
 		assert!(!anchor.contains::<AnchorDirty>());
 	}
@@ -368,7 +368,7 @@ mod tests {
 
 		let anchor = app
 			.world_mut()
-			.spawn(Anchor::to_target(*AGENT).on_spawner(spawner_key).once());
+			.spawn(Anchor::attach_to(*AGENT).on(spawner_key).once());
 
 		assert!(!anchor.contains::<Anchor>());
 	}
@@ -391,7 +391,7 @@ mod tests {
 
 		let anchor = app
 			.world_mut()
-			.spawn(Anchor::to_target(*AGENT).on_spawner(spawner_key).always());
+			.spawn(Anchor::attach_to(*AGENT).on(spawner_key).always());
 
 		assert!(anchor.contains::<Anchor>());
 	}
@@ -403,7 +403,7 @@ mod tests {
 
 		let anchor = app
 			.world_mut()
-			.spawn(Anchor::to_target(*AGENT).on_spawner(spawner_key).once());
+			.spawn(Anchor::attach_to(*AGENT).on(spawner_key).once());
 
 		assert_eq!(
 			(false, false),
@@ -420,10 +420,10 @@ mod tests {
 		let spawner_key = SkillSpawner::Slot(SlotKey(22));
 
 		app.world_mut()
-			.spawn(Anchor::to_target(*AGENT).on_spawner(spawner_key));
+			.spawn(Anchor::attach_to(*AGENT).on(spawner_key));
 
 		assert_eq!(
-			&_Result(Err(AnchorError::TargetNotFound(*AGENT))),
+			&_Result(Err(AnchorError::AttachedToNotFound(*AGENT))),
 			app.world().resource::<_Result>(),
 		);
 	}
@@ -435,7 +435,7 @@ mod tests {
 		app.world_mut().spawn(*AGENT);
 
 		app.world_mut()
-			.spawn(Anchor::to_target(*AGENT).on_spawner(spawner_key));
+			.spawn(Anchor::attach_to(*AGENT).on(spawner_key));
 
 		assert_eq!(
 			&_Result(Err(AnchorError::MountError(_Error))),
@@ -454,10 +454,10 @@ mod tests {
 		});
 
 		app.world_mut()
-			.spawn(Anchor::to_target(*AGENT).on_spawner(spawner_key));
+			.spawn(Anchor::attach_to(*AGENT).on(spawner_key));
 
 		assert_eq!(
-			&_Result(Err(AnchorError::RootHasNoTransform(*AGENT))),
+			&_Result(Err(AnchorError::AttachedToNoTransform(*AGENT))),
 			app.world().resource::<_Result>(),
 		);
 	}
@@ -476,7 +476,7 @@ mod tests {
 		});
 
 		app.world_mut()
-			.spawn(Anchor::to_target(*AGENT).on_spawner(spawner_key));
+			.spawn(Anchor::attach_to(*AGENT).on(spawner_key));
 
 		assert_eq!(
 			&_Result(Err(AnchorError::MountHasNoTransform(mount_point))),
@@ -501,7 +501,7 @@ mod tests {
 		});
 
 		app.world_mut()
-			.spawn(Anchor::to_target(*AGENT).on_spawner(spawner_key));
+			.spawn(Anchor::attach_to(*AGENT).on(spawner_key));
 
 		assert_eq!(
 			&_Result(Err(AnchorError::MountTranslationIsNan(mount_point))),
