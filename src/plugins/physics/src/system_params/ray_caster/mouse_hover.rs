@@ -1,4 +1,4 @@
-use crate::traits::ray_cast::RayCaster;
+use crate::system_params::ray_caster::RayCaster;
 use bevy::{
 	ecs::system::SystemParam,
 	math::{Ray3d, Vec3},
