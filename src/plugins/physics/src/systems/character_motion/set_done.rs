@@ -25,6 +25,8 @@ impl ApplyCharacterMotion {
 	}
 }
 
+const ALLOWED_HEIGHT_DIFFERENCE: f32 = 0.5;
+
 fn is_done(motion: &CharacterMotion, transform: &Transform, delta: Duration) -> bool {
 	let (speed, target) = match motion {
 		CharacterMotion::Direction { .. } => return false,
@@ -36,7 +38,11 @@ fn is_done(motion: &CharacterMotion, transform: &Transform, delta: Duration) -> 
 		return true;
 	}
 
-	let distance_to_target = (target - transform.translation).length();
+	if (target.y - transform.translation.y).abs() > ALLOWED_HEIGHT_DIFFERENCE {
+		return false;
+	}
+
+	let distance_to_target = (target.xz() - transform.translation.xz()).length();
 	let distance_traveled_per_frame = delta.as_secs_f32() * **speed;
 
 	distance_to_target < distance_traveled_per_frame
@@ -70,7 +76,7 @@ mod tests {
 	}
 
 	#[test]
-	fn remain_done_when_target_is_stop() {
+	fn remain_done_when_done() {
 		let mut app = setup(Duration::default());
 		let entity = app
 			.world_mut()
@@ -92,7 +98,7 @@ mod tests {
 	}
 
 	#[test]
-	fn set_done_when_target_is_translation() {
+	fn set_done_when_translation_matches_target() {
 		let mut app = setup(Duration::default());
 		let entity = app
 			.world_mut()
@@ -117,7 +123,7 @@ mod tests {
 	}
 
 	#[test]
-	fn do_not_set_done_when_target_is_not_translation() {
+	fn do_not_set_done_when_translation_does_not_match_target() {
 		let mut app = setup(Duration::default());
 		let entity = app
 			.world_mut()
@@ -148,7 +154,7 @@ mod tests {
 	}
 
 	#[test]
-	fn set_done_when_target_one_delta_away_from_target() {
+	fn set_done_when_one_delta_away_from_target() {
 		let mut app = setup(Duration::from_millis(100));
 		let entity = app
 			.world_mut()
@@ -173,7 +179,7 @@ mod tests {
 	}
 
 	#[test]
-	fn set_done_when_target_one_delta_away_from_target_accounting_for_speed() {
+	fn set_done_when_one_delta_away_from_target_accounting_for_speed() {
 		let mut app = setup(Duration::from_millis(100));
 		let entity = app
 			.world_mut()
@@ -193,6 +199,62 @@ mod tests {
 			(
 				app.world().entity(entity).get::<ApplyCharacterMotion>(),
 				app.world().entity(entity).get::<IsInMotion>(),
+			)
+		);
+	}
+
+	#[test]
+	fn set_done_when_one_delta_away_from_target_on_different_height() {
+		let mut app = setup(Duration::from_millis(100));
+		let entity = app
+			.world_mut()
+			.spawn((
+				Transform::from_xyz(1., 2., 3.),
+				ApplyCharacterMotion::from(CharacterMotion::ToTarget {
+					speed: Speed(UnitsPerSecond::from(1.)),
+					target: Vec3::new(1.099, 2. + ALLOWED_HEIGHT_DIFFERENCE, 3.),
+				}),
+			))
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			(Some(&ApplyCharacterMotion(CharacterMotion::Done)), None),
+			(
+				app.world().entity(entity).get::<ApplyCharacterMotion>(),
+				app.world().entity(entity).get::<IsInMotion>()
+			)
+		);
+	}
+
+	#[test]
+	fn do_not_set_done_when_one_delta_away_from_target_on_large_different_height() {
+		let mut app = setup(Duration::from_millis(100));
+		let entity = app
+			.world_mut()
+			.spawn((
+				Transform::from_xyz(1., 2., 3.),
+				ApplyCharacterMotion::from(CharacterMotion::ToTarget {
+					speed: Speed(UnitsPerSecond::from(1.)),
+					target: Vec3::new(1.099, 2. + ALLOWED_HEIGHT_DIFFERENCE + 0.1, 3.),
+				}),
+			))
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			(
+				Some(&ApplyCharacterMotion(CharacterMotion::ToTarget {
+					speed: Speed(UnitsPerSecond::from(1.)),
+					target: Vec3::new(1.099, 2. + ALLOWED_HEIGHT_DIFFERENCE + 0.1, 3.),
+				})),
+				Some(&IsInMotion)
+			),
+			(
+				app.world().entity(entity).get::<ApplyCharacterMotion>(),
+				app.world().entity(entity).get::<IsInMotion>()
 			)
 		);
 	}
