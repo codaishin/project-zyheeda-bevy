@@ -1,33 +1,40 @@
 use crate::components::ground_target::GroundTarget;
-use bevy::prelude::*;
+use bevy::{
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
+};
 use common::{
 	traits::{
 		accessors::get::{Get, TryApplyOn},
+		handles_physics::{MouseHover, MouseHoversOver, Raycast},
 		handles_skill_physics::SkillTarget,
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
 
 impl GroundTarget {
-	pub(crate) fn set_position(
-		mut commands: ZyheedaCommands,
+	pub(crate) fn set_position<TRayCaster>(
+		mut cmd: ZyheedaCommands,
 		transforms: Query<&Transform>,
 		ground_targets: Query<(Entity, &GroundTarget), Added<GroundTarget>>,
-	) {
-		for (entity, ground_target) in &ground_targets {
-			let Some(mut transform) = ground_target.transform(&commands, transforms) else {
+		mut ray_caster: StaticSystemParam<TRayCaster>,
+	) where
+		TRayCaster: for<'w, 's> SystemParam<Item<'w, 's>: Raycast<MouseHover>>,
+	{
+		for (entity, target) in &ground_targets {
+			let Some(mut transform) = target.transform(&cmd, transforms, &mut ray_caster) else {
 				continue;
 			};
-			let Some(caster) = commands.get(&ground_target.caster.0) else {
+			let Some(caster) = cmd.get(&target.caster.0) else {
 				continue;
 			};
 
 			if let Ok(caster) = transforms.get(caster) {
-				ground_target.correct_for_max_range(&mut transform, caster);
+				target.correct_for_max_range(&mut transform, caster);
 				Self::sync_forward(&mut transform, caster);
 			}
 
-			commands.try_apply_on(&entity, |mut e| {
+			cmd.try_apply_on(&entity, |mut e| {
 				e.try_insert(transform);
 			});
 		}
@@ -37,14 +44,18 @@ impl GroundTarget {
 		&self,
 		commands: &ZyheedaCommands,
 		transforms: Query<&Transform>,
+		ray_caster: &mut impl Raycast<MouseHover>,
 	) -> Option<Transform> {
 		match self.target {
-			SkillTarget::Cursor => None,
+			SkillTarget::Cursor => ray_caster
+				.raycast(MouseHover::NO_EXCLUDES)
+				.and_then(mouse_hover_translation(transforms))
+				.map(Transform::from_translation),
 			SkillTarget::Ground(point) => Some(Transform::from_translation(point)),
 			SkillTarget::Entity(persistent_entity) => commands
 				.get(&persistent_entity)
-				.and_then(|e| transforms.get(e).ok())
-				.map(|t| Transform::from_translation(t.translation)),
+				.and_then(|e| transforms.get(e).map(|t| t.translation).ok())
+				.map(Transform::from_translation),
 		}
 	}
 
@@ -64,6 +75,17 @@ impl GroundTarget {
 	}
 }
 
+fn mouse_hover_translation(
+	transforms: Query<&Transform>,
+) -> impl Fn(MouseHoversOver) -> Option<Vec3> {
+	move |mouse_hover| match mouse_hover {
+		MouseHoversOver::Terrain { point } => Some(point),
+		MouseHoversOver::Object { entity, .. } => {
+			transforms.get(entity).map(|t| t.translation).ok()
+		}
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	#![allow(clippy::unwrap_used)]
@@ -72,17 +94,42 @@ mod tests {
 		components::persistent_entity::PersistentEntity,
 		tools::Units,
 		traits::{
+			handles_physics::MouseHoversOver,
 			handles_skill_physics::SkillCaster,
 			register_persistent_entities::RegisterPersistentEntities,
 		},
 	};
-	use testing::{SingleThreadedApp, assert_eq_approx};
+	use macros::NestedMocks;
+	use mockall::automock;
+	use std::f32::consts::PI;
+	use testing::{NestedMocks, SingleThreadedApp, assert_eq_approx};
+
+	#[derive(Resource, NestedMocks)]
+	struct _RayCaster {
+		mock: Mock_RayCaster,
+	}
+
+	impl Default for _RayCaster {
+		fn default() -> Self {
+			Self::new().with_mock(|mock| {
+				mock.expect_raycast().return_const(None);
+			})
+		}
+	}
+
+	#[automock]
+	impl Raycast<MouseHover> for _RayCaster {
+		fn raycast(&mut self, args: MouseHover) -> Option<MouseHoversOver> {
+			self.mock.raycast(args)
+		}
+	}
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.register_persistent_entities();
-		app.add_systems(Update, GroundTarget::set_position);
+		app.init_resource::<_RayCaster>();
+		app.add_systems(Update, GroundTarget::set_position::<ResMut<_RayCaster>>);
 
 		app
 	}
@@ -95,6 +142,65 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(GroundTarget::with_caster(caster).with_target(Vec3::new(1., 2., 3.)))
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&Transform::from_xyz(1., 2., 3.)),
+			app.world().entity(entity).get::<Transform>(),
+		)
+	}
+
+	#[test]
+	fn set_to_cursor_terrain() {
+		let mut app = setup();
+		let caster = SkillCaster::default();
+		app.world_mut().spawn((Transform::default(), *caster));
+		app.insert_resource(_RayCaster::new().with_mock(|mock| {
+			mock.expect_raycast()
+				.once()
+				.return_const(MouseHoversOver::Terrain {
+					point: Vec3::new(1., 2., 3.),
+				});
+		}));
+		let entity = app
+			.world_mut()
+			.spawn(GroundTarget::with_caster(caster).with_target(SkillTarget::Cursor))
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&Transform::from_xyz(1., 2., 3.)),
+			app.world().entity(entity).get::<Transform>(),
+		)
+	}
+
+	#[test]
+	fn set_to_cursor_entity_translation() {
+		let mut app = setup();
+		let caster = SkillCaster::default();
+		let cursor_entity = app
+			.world_mut()
+			.spawn(Transform {
+				translation: Vec3::new(1., 2., 3.),
+				rotation: Quat::from_rotation_x(PI),
+				scale: Vec3::splat(42.),
+			})
+			.id();
+		app.world_mut().spawn((Transform::default(), *caster));
+		app.insert_resource(_RayCaster::new().with_mock(|mock| {
+			mock.expect_raycast()
+				.once()
+				.return_const(MouseHoversOver::Object {
+					entity: cursor_entity,
+					point: Vec3::ZERO,
+				});
+		}));
+		let entity = app
+			.world_mut()
+			.spawn(GroundTarget::with_caster(caster).with_target(SkillTarget::Cursor))
 			.id();
 
 		app.update();
