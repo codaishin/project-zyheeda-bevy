@@ -1,8 +1,10 @@
+use crate::components::target::Target;
 use bevy::prelude::*;
 use common::tools::action_key::slot::SlotKey;
 use std::{collections::HashSet, marker::PhantomData};
 
 #[derive(Component, Debug, PartialEq)]
+#[require(Target)]
 pub(crate) struct HeldSlots<TFrame> {
 	pub(crate) slots: HashSet<SlotKey>,
 	_f: PhantomData<fn() -> TFrame>,

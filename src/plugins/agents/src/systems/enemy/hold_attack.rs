@@ -41,7 +41,13 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::components::enemy::attack_phase::EnemyAttackPhase;
-	use common::{tools::action_key::slot::SlotKey, traits::handles_loadout::HeldSkills};
+	use common::{
+		tools::action_key::slot::SlotKey,
+		traits::{
+			handles_loadout::{CurrentTarget, CurrentTargetMut, HeldSkills},
+			handles_skill_physics::SkillTarget,
+		},
+	};
 	use std::{collections::HashSet, time::Duration};
 	use testing::SingleThreadedApp;
 
@@ -63,6 +69,18 @@ mod tests {
 	impl HeldSkillsMut for _Loadout {
 		fn held_skills_mut(&mut self) -> &mut HashSet<SlotKey> {
 			&mut self.0
+		}
+	}
+
+	impl CurrentTarget for _Loadout {
+		fn current_target(&self) -> Option<&SkillTarget> {
+			panic!("NOT USED HERE")
+		}
+	}
+
+	impl CurrentTargetMut for _Loadout {
+		fn current_target_mut(&mut self) -> &mut Option<SkillTarget> {
+			panic!("NOT USED HERE")
 		}
 	}
 

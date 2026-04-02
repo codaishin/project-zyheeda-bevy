@@ -54,7 +54,12 @@ mod tests {
 			ActionKey,
 			slot::{HandSlot, SlotKey},
 		},
-		traits::{handles_input::InputState, handles_loadout::HeldSkills, iteration::IterFinite},
+		traits::{
+			handles_input::InputState,
+			handles_loadout::{CurrentTarget, CurrentTargetMut, HeldSkills},
+			handles_skill_physics::SkillTarget,
+			iteration::IterFinite,
+		},
 	};
 	use mockall::automock;
 	use std::collections::{HashMap, HashSet};
@@ -107,6 +112,18 @@ mod tests {
 	impl HeldSkillsMut for _Loadout {
 		fn held_skills_mut(&mut self) -> &mut HashSet<SlotKey> {
 			&mut self.0
+		}
+	}
+
+	impl CurrentTarget for _Loadout {
+		fn current_target(&self) -> Option<&SkillTarget> {
+			panic!("NOT USED HERE")
+		}
+	}
+
+	impl CurrentTargetMut for _Loadout {
+		fn current_target_mut(&mut self) -> &mut Option<SkillTarget> {
+			panic!("NOT USED HERE")
 		}
 	}
 
