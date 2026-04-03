@@ -8,7 +8,8 @@ use common::{
 	traits::{
 		accessors::get::GetContextMut,
 		handles_input::{GetAllInputStates, InputState},
-		handles_loadout::{HeldSkills, HeldSkillsMut, skills::Skills},
+		handles_loadout::{CurrentTargetMut, HeldSkills, HeldSkillsMut, skills::Skills},
+		handles_skill_physics::SkillTarget,
 	},
 };
 
@@ -41,6 +42,7 @@ impl Player {
 				continue;
 			}
 
+			*ctx.current_target_mut() = Some(SkillTarget::Cursor);
 			*ctx.held_skills_mut() = new_held_skills;
 		}
 	}
@@ -95,35 +97,48 @@ mod tests {
 	}
 
 	#[derive(Component, Debug, PartialEq, Default)]
-	struct _Loadout(HashSet<SlotKey>);
+	struct _Loadout {
+		slots: HashSet<SlotKey>,
+		target: Option<SkillTarget>,
+	}
+
+	impl _Loadout {
+		fn with_target(mut self, target: Option<SkillTarget>) -> Self {
+			self.target = target;
+			self
+		}
+	}
 
 	impl<const N: usize> From<[SlotKey; N]> for _Loadout {
 		fn from(slots: [SlotKey; N]) -> Self {
-			Self(HashSet::from(slots))
+			Self {
+				slots: HashSet::from(slots),
+				target: None,
+			}
 		}
 	}
 
 	impl HeldSkills for _Loadout {
 		fn held_skills(&self) -> &HashSet<SlotKey> {
-			&self.0
+			&self.slots
 		}
 	}
 
 	impl HeldSkillsMut for _Loadout {
 		fn held_skills_mut(&mut self) -> &mut HashSet<SlotKey> {
-			&mut self.0
+			&mut self.slots
 		}
 	}
 
 	impl CurrentTarget for _Loadout {
 		fn current_target(&self) -> Option<&SkillTarget> {
-			panic!("NOT USED HERE")
+			self.target.as_ref()
 		}
 	}
 
 	impl CurrentTargetMut for _Loadout {
 		fn current_target_mut(&mut self) -> &mut Option<SkillTarget> {
-			panic!("NOT USED HERE")
+			&mut self.target
 		}
 	}
 
@@ -145,14 +160,17 @@ mod tests {
 
 	#[test_case(InputState::just_pressed(); "on just pressed")]
 	#[test_case(InputState::pressed(); "on pressed")]
-	fn insert_held_skill(state: InputState) {
+	fn set_held_skills(state: InputState) {
 		let mut app = setup(_Input::from(std::iter::once((HandSlot::Left, state))));
 		let entity = app.world_mut().spawn((Player, _Loadout::default())).id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&_Loadout::from([SlotKey::from(HandSlot::Left)])),
+			Some(
+				&_Loadout::from([SlotKey::from(HandSlot::Left)])
+					.with_target(Some(SkillTarget::Cursor))
+			),
 			app.world().entity(entity).get::<_Loadout>(),
 		);
 	}
@@ -169,7 +187,10 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Loadout::from([SlotKey::from(HandSlot::Left)])),
+			Some(
+				&_Loadout::from([SlotKey::from(HandSlot::Left)])
+					.with_target(Some(SkillTarget::Cursor))
+			),
 			app.world().entity(entity).get::<_Loadout>(),
 		);
 	}

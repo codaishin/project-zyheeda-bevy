@@ -7,6 +7,7 @@ use bevy::{
 	prelude::*,
 };
 use common::{
+	components::persistent_entity::PersistentEntity,
 	traits::{
 		accessors::get::TryApplyOn,
 		handles_physics::{Raycast, SolidObjects},
@@ -18,12 +19,12 @@ impl Enemy {
 	pub(crate) fn attack_decision<TRaycast>(
 		mut commands: ZyheedaCommands,
 		mut raycast: StaticSystemParam<TRaycast>,
-		players: Query<(Entity, &Transform), With<Player>>,
+		players: Query<(Entity, &PersistentEntity, &Transform), With<Player>>,
 		enemies: Query<(Entity, &Self, &Transform)>,
 	) where
 		TRaycast: for<'w, 's> SystemParam<Item<'w, 's>: Raycast<SolidObjects>>,
 	{
-		let Ok((player, player_transform)) = players.single() else {
+		let Ok((player, persistent_player, player_transform)) = players.single() else {
 			return;
 		};
 
@@ -46,11 +47,11 @@ impl Enemy {
 				match hit {
 					Some(hit) => Some(Attacking {
 						has_los: hit.entity == player,
-						player,
+						player: *persistent_player,
 					}),
 					None => Some(Attacking {
 						has_los: false,
-						player,
+						player: *persistent_player,
 					}),
 				}
 			};
@@ -70,6 +71,8 @@ impl Enemy {
 #[cfg(test)]
 mod tests {
 	#![allow(clippy::unwrap_used)]
+	use std::sync::LazyLock;
+
 	use super::*;
 	use crate::components::{enemy::attacking::Attacking, player::Player};
 	use common::{tools::Units, traits::handles_physics::RaycastHit};
@@ -97,12 +100,14 @@ mod tests {
 		app
 	}
 
+	static PLAYER: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
+
 	#[test]
 	fn in_attack_range() {
 		let mut app = setup();
 		let player = app
 			.world_mut()
-			.spawn((Player, Transform::from_xyz(1., 2., 3.)))
+			.spawn((Player, *PLAYER, Transform::from_xyz(1., 2., 3.)))
 			.id();
 		let enemy = app
 			.world_mut()
@@ -137,7 +142,7 @@ mod tests {
 		assert_eq!(
 			Some(&Attacking {
 				has_los: true,
-				player
+				player: *PLAYER,
 			}),
 			app.world().entity(enemy).get::<Attacking>(),
 		);
@@ -146,10 +151,8 @@ mod tests {
 	#[test]
 	fn in_attack_range_without_los() {
 		let mut app = setup();
-		let player = app
-			.world_mut()
-			.spawn((Player, Transform::from_xyz(1., 2., 3.)))
-			.id();
+		app.world_mut()
+			.spawn((Player, *PLAYER, Transform::from_xyz(1., 2., 3.)));
 		let enemy = app
 			.world_mut()
 			.spawn((
@@ -169,7 +172,7 @@ mod tests {
 		assert_eq!(
 			Some(&Attacking {
 				has_los: false,
-				player
+				player: *PLAYER,
 			}),
 			app.world().entity(enemy).get::<Attacking>(),
 		);
@@ -178,10 +181,8 @@ mod tests {
 	#[test]
 	fn in_attack_range_without_los_due_to_other_entity_in_the_way() {
 		let mut app = setup();
-		let player = app
-			.world_mut()
-			.spawn((Player, Transform::from_xyz(1., 2., 3.)))
-			.id();
+		app.world_mut()
+			.spawn((Player, *PLAYER, Transform::from_xyz(1., 2., 3.)));
 		let other = app.world_mut().spawn_empty().id();
 		let enemy = app
 			.world_mut()
@@ -205,7 +206,7 @@ mod tests {
 		assert_eq!(
 			Some(&Attacking {
 				has_los: false,
-				player
+				player: *PLAYER,
 			}),
 			app.world().entity(enemy).get::<Attacking>(),
 		);
@@ -215,7 +216,7 @@ mod tests {
 	fn not_in_attack_range() {
 		let mut app = setup();
 		app.world_mut()
-			.spawn((Player, Transform::from_xyz(1., 2., 3.)));
+			.spawn((Player, *PLAYER, Transform::from_xyz(1., 2., 3.)));
 		let enemy = app
 			.world_mut()
 			.spawn((
@@ -238,10 +239,8 @@ mod tests {
 	#[test]
 	fn out_of_attack_range() {
 		let mut app = setup();
-		let player = app
-			.world_mut()
-			.spawn((Player, Transform::from_xyz(1., 2., 3.)))
-			.id();
+		app.world_mut()
+			.spawn((Player, *PLAYER, Transform::from_xyz(1., 2., 3.)));
 		let enemy = app
 			.world_mut()
 			.spawn((
@@ -252,7 +251,7 @@ mod tests {
 				Transform::from_xyz(1., 2., 8.1),
 				Attacking {
 					has_los: false,
-					player,
+					player: *PLAYER,
 				},
 			))
 			.id();

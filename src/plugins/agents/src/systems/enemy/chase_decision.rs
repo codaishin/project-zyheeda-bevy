@@ -44,12 +44,14 @@ impl Enemy {
 
 #[cfg(test)]
 mod tests {
+	use std::sync::LazyLock;
+
 	use super::*;
 	use crate::components::{
 		enemy::{attacking::Attacking, chasing::Chasing},
 		player::Player,
 	};
-	use common::tools::Units;
+	use common::{components::persistent_entity::PersistentEntity, tools::Units};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -60,12 +62,14 @@ mod tests {
 		app
 	}
 
+	static PLAYER: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
+
 	#[test]
 	fn chase_when_inside_aggro_range() {
 		let mut app = setup();
 		let player = app
 			.world_mut()
-			.spawn((Player, Transform::from_xyz(1., 2., 3.)))
+			.spawn((Player, *PLAYER, Transform::from_xyz(1., 2., 3.)))
 			.id();
 		let enemy = app
 			.world_mut()
@@ -90,7 +94,7 @@ mod tests {
 	fn do_not_chase_when_outside_aggro_range() {
 		let mut app = setup();
 		app.world_mut()
-			.spawn((Player, Transform::from_xyz(1., 2., 3.)));
+			.spawn((Player, *PLAYER, Transform::from_xyz(1., 2., 3.)));
 		let enemy = app
 			.world_mut()
 			.spawn((
@@ -111,7 +115,7 @@ mod tests {
 	fn do_not_chase_when_inside_min_distance() {
 		let mut app = setup();
 		app.world_mut()
-			.spawn((Player, Transform::from_xyz(1., 2., 3.)));
+			.spawn((Player, *PLAYER, Transform::from_xyz(1., 2., 3.)));
 		let enemy = app
 			.world_mut()
 			.spawn((
@@ -134,7 +138,7 @@ mod tests {
 		let mut app = setup();
 		let player = app
 			.world_mut()
-			.spawn((Player, Transform::from_xyz(1., 2., 3.)))
+			.spawn((Player, *PLAYER, Transform::from_xyz(1., 2., 3.)))
 			.id();
 		let enemy = app
 			.world_mut()
@@ -147,7 +151,7 @@ mod tests {
 				Transform::from_xyz(1., 2., 4.9),
 				Attacking {
 					has_los: false,
-					player,
+					player: *PLAYER,
 				},
 			))
 			.id();
@@ -163,10 +167,8 @@ mod tests {
 	#[test]
 	fn do_not_chase_when_inside_min_range_but_attacking_with_los() {
 		let mut app = setup();
-		let player = app
-			.world_mut()
-			.spawn((Player, Transform::from_xyz(1., 2., 3.)))
-			.id();
+		app.world_mut()
+			.spawn((Player, *PLAYER, Transform::from_xyz(1., 2., 3.)));
 		let enemy = app
 			.world_mut()
 			.spawn((
@@ -178,7 +180,7 @@ mod tests {
 				Transform::from_xyz(1., 2., 4.9),
 				Attacking {
 					has_los: true,
-					player,
+					player: *PLAYER,
 				},
 			))
 			.id();
@@ -193,7 +195,7 @@ mod tests {
 		let mut app = setup();
 		let player = app
 			.world_mut()
-			.spawn((Player, Transform::from_xyz(1., 2., 3.)))
+			.spawn((Player, *PLAYER, Transform::from_xyz(1., 2., 3.)))
 			.id();
 		let enemy = app
 			.world_mut()
