@@ -75,7 +75,7 @@ mod tests {
 		let face = Face::Translation(Vec3::new(1., 2., 3.));
 		let agent = app
 			.world_mut()
-			.spawn((SetFace(Face::Target), SetFaceOverride(face)))
+			.spawn((SetFace(Face::Cursor), SetFaceOverride(face)))
 			.id();
 
 		app.update();
@@ -90,7 +90,7 @@ mod tests {
 		let mut app = setup();
 		let agent = app
 			.world_mut()
-			.spawn(SetFace(Face::Target))
+			.spawn(SetFace(Face::Cursor))
 			.remove::<CanFace>()
 			.id();
 
