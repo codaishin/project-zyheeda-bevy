@@ -38,7 +38,7 @@ use common::{
 			MovementSystemParam,
 			MovementSystemParamMut,
 		},
-		handles_orientation::{FacingSystemParamMut, HandlesOrientation},
+		handles_orientation::HandlesOrientation,
 		handles_physics::{
 			HandlesPhysicalEffectTargets,
 			HandlesPhysicsConfig,
@@ -162,8 +162,6 @@ where
 
 		// # Behaviors
 		app.register_required_components::<PlayerCamera, TPhysics::TWorldCamera>();
-		app.add_observer(Player::register_target_definition::<FacingSystemParamMut<TMovement>>);
-		app.add_observer(Enemy::register_target_definition::<FacingSystemParamMut<TMovement>>);
 		app.add_systems(
 			Update,
 			(

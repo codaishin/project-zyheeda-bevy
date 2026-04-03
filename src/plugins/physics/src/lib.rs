@@ -195,7 +195,7 @@ where
 				(
 					// Skill spawning/lifetime
 					(
-						GroundTarget::set_position,
+						GroundTarget::set_position::<RayCaster>,
 						DestroyAfterDistanceTraveled::system,
 						SetVelocityForward::system,
 					)

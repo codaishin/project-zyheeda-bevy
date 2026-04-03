@@ -5307,6 +5307,7 @@ dependencies = [
  "testing",
  "tracing",
  "uuid",
+ "zyheeda_core",
 ]
 
 [[package]]

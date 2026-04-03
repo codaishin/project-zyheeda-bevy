@@ -20,6 +20,7 @@ use crate::{
 			register_loadout_bones::{NoBonesRegistered, RegisterLoadoutBones},
 			skills::{ReadSkills, Skills},
 		},
+		handles_skill_physics::SkillTarget,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -113,28 +114,54 @@ pub struct ActiveSkill {
 	pub animate: bool,
 }
 
-pub trait HeldSkills {
+pub trait HeldSkills: CurrentTarget {
 	fn held_skills(&self) -> &HashSet<SlotKey>;
 }
 
 impl<T> HeldSkills for T
 where
-	T: Deref<Target: HeldSkills>,
+	T: CurrentTarget + Deref<Target: HeldSkills>,
 {
 	fn held_skills(&self) -> &HashSet<SlotKey> {
 		self.deref().held_skills()
 	}
 }
 
-pub trait HeldSkillsMut: HeldSkills {
+pub trait HeldSkillsMut: HeldSkills + CurrentTargetMut {
 	fn held_skills_mut(&mut self) -> &mut HashSet<SlotKey>;
 }
 
 impl<T> HeldSkillsMut for T
 where
-	T: DerefMut<Target: HeldSkillsMut>,
+	T: CurrentTargetMut + DerefMut<Target: HeldSkillsMut>,
 {
 	fn held_skills_mut(&mut self) -> &mut HashSet<SlotKey> {
 		self.deref_mut().held_skills_mut()
+	}
+}
+
+pub trait CurrentTarget {
+	fn current_target(&self) -> Option<&SkillTarget>;
+}
+
+impl<T> CurrentTarget for T
+where
+	T: Deref<Target: CurrentTarget>,
+{
+	fn current_target(&self) -> Option<&SkillTarget> {
+		self.deref().current_target()
+	}
+}
+
+pub trait CurrentTargetMut: CurrentTarget {
+	fn current_target_mut(&mut self) -> &mut Option<SkillTarget>;
+}
+
+impl<T> CurrentTargetMut for T
+where
+	T: CurrentTarget + DerefMut<Target: CurrentTargetMut>,
+{
+	fn current_target_mut(&mut self) -> &mut Option<SkillTarget> {
+		self.deref_mut().current_target_mut()
 	}
 }

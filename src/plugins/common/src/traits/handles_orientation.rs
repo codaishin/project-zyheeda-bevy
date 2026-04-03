@@ -8,7 +8,7 @@ use std::ops::DerefMut;
 
 pub trait HandlesOrientation {
 	type TFaceSystemParam<'w, 's>: SystemParam
-		+ for<'c> GetContextMut<Facing, TContext<'c>: OverrideFace + RegisterFaceTargetDefinition>;
+		+ for<'c> GetContextMut<Facing, TContext<'c>: OverrideFace>;
 }
 
 pub type FacingSystemParamMut<'w, 's, T> = <T as HandlesOrientation>::TFaceSystemParam<'w, 's>;
@@ -41,31 +41,11 @@ where
 	}
 }
 
-pub trait RegisterFaceTargetDefinition {
-	fn register(&mut self, face_target_is: FaceTargetIs);
-}
-
-impl<T> RegisterFaceTargetDefinition for T
-where
-	T: DerefMut<Target: RegisterFaceTargetDefinition>,
-{
-	fn register(&mut self, face_target_is: FaceTargetIs) {
-		self.deref_mut().register(face_target_is);
-	}
-}
-
 #[derive(Default, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum Face {
 	#[default]
-	/// This dependents on [`FaceTargetIs`] for the corresponding entity
-	Target,
+	Cursor,
 	Entity(PersistentEntity),
 	Translation(Vec3),
 	Direction(Dir3),
-}
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum FaceTargetIs {
-	Cursor,
-	Entity(Entity),
 }

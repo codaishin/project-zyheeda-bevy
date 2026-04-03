@@ -1,5 +1,4 @@
 mod override_face;
-mod register_face_target_definition;
 
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::{

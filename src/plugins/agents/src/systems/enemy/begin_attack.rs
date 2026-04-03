@@ -31,7 +31,10 @@ impl Enemy {
 mod tests {
 	use super::*;
 	use crate::components::enemy::{attack_phase::EnemyAttackPhase, attacking::Attacking};
-	use common::tools::action_key::slot::SlotKey;
+	use common::{
+		components::persistent_entity::PersistentEntity,
+		tools::action_key::slot::SlotKey,
+	};
 	use std::time::Duration;
 	use testing::SingleThreadedApp;
 
@@ -46,7 +49,6 @@ mod tests {
 	#[test]
 	fn attack_player_when_in_attack_range() {
 		let mut app = setup();
-		let player = app.world_mut().spawn_empty().id();
 		let enemy = app
 			.world_mut()
 			.spawn((
@@ -57,7 +59,7 @@ mod tests {
 				},
 				Attacking {
 					has_los: true,
-					player,
+					player: PersistentEntity::default(),
 				},
 			))
 			.id();
@@ -76,7 +78,6 @@ mod tests {
 	#[test]
 	fn do_not_attack_player_when_no_los() {
 		let mut app = setup();
-		let player = app.world_mut().spawn_empty().id();
 		let enemy = app
 			.world_mut()
 			.spawn((
@@ -86,7 +87,7 @@ mod tests {
 				},
 				Attacking {
 					has_los: false,
-					player,
+					player: PersistentEntity::default(),
 				},
 			))
 			.id();
@@ -99,7 +100,6 @@ mod tests {
 	#[test]
 	fn do_not_attack_player_when_already_attacking() {
 		let mut app = setup();
-		let player = app.world_mut().spawn_empty().id();
 		let enemy = app
 			.world_mut()
 			.spawn((
@@ -109,7 +109,7 @@ mod tests {
 				},
 				Attacking {
 					has_los: true,
-					player,
+					player: PersistentEntity::default(),
 				},
 				EnemyAttackPhase::HoldSkill {
 					key: SlotKey(22),

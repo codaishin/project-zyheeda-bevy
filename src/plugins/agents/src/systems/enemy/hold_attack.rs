@@ -1,29 +1,31 @@
-use crate::components::enemy::{Enemy, attack_phase::EnemyAttackPhase};
+use crate::components::enemy::{Enemy, attack_phase::EnemyAttackPhase, attacking::Attacking};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
 	accessors::get::GetContextMut,
-	handles_loadout::{HeldSkillsMut, skills::Skills},
+	handles_loadout::{CurrentTargetMut, HeldSkillsMut, skills::Skills},
+	handles_skill_physics::SkillTarget,
 };
 
 impl Enemy {
 	pub(crate) fn hold_attack<TLoadout>(
 		mut skills: StaticSystemParam<TLoadout>,
-		attacking: Query<(Entity, &EnemyAttackPhase), Changed<EnemyAttackPhase>>,
+		attacking: Query<(Entity, &EnemyAttackPhase, &Attacking), Changed<EnemyAttackPhase>>,
 		mut stopped_attacking: RemovedComponents<EnemyAttackPhase>,
 	) where
 		TLoadout: for<'c> GetContextMut<Skills, TContext<'c>: HeldSkillsMut>,
 	{
-		for (entity, phase) in &attacking {
+		for (entity, phase, Attacking { player, .. }) in &attacking {
 			let Some(mut ctx) = TLoadout::get_context_mut(&mut skills, Skills { entity }) else {
 				continue;
 			};
-			let held_skills = ctx.held_skills_mut();
+			ctx.held_skills_mut().clear();
 
-			held_skills.clear();
 			let EnemyAttackPhase::HoldSkill { key, .. } = phase else {
 				continue;
 			};
-			held_skills.insert(*key);
+
+			ctx.held_skills_mut().insert(*key);
+			*ctx.current_target_mut() = Some(SkillTarget::Entity(*player));
 		}
 
 		for entity in stopped_attacking.read() {
@@ -41,28 +43,60 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::components::enemy::attack_phase::EnemyAttackPhase;
-	use common::{tools::action_key::slot::SlotKey, traits::handles_loadout::HeldSkills};
-	use std::{collections::HashSet, time::Duration};
+	use common::{
+		components::persistent_entity::PersistentEntity,
+		tools::action_key::slot::SlotKey,
+		traits::{
+			handles_loadout::{CurrentTarget, CurrentTargetMut, HeldSkills},
+			handles_skill_physics::SkillTarget,
+		},
+	};
+	use std::{collections::HashSet, sync::LazyLock, time::Duration};
 	use testing::SingleThreadedApp;
 
 	#[derive(Component, Debug, PartialEq, Default)]
-	struct _Loadout(HashSet<SlotKey>);
+	struct _Loadout {
+		slots: HashSet<SlotKey>,
+		target: Option<SkillTarget>,
+	}
+
+	impl _Loadout {
+		fn with_target(mut self, target: Option<SkillTarget>) -> Self {
+			self.target = target;
+			self
+		}
+	}
 
 	impl<const N: usize> From<[SlotKey; N]> for _Loadout {
 		fn from(slots: [SlotKey; N]) -> Self {
-			Self(HashSet::from(slots))
+			Self {
+				slots: HashSet::from(slots),
+				target: None,
+			}
 		}
 	}
 
 	impl HeldSkills for _Loadout {
 		fn held_skills(&self) -> &HashSet<SlotKey> {
-			&self.0
+			&self.slots
 		}
 	}
 
 	impl HeldSkillsMut for _Loadout {
 		fn held_skills_mut(&mut self) -> &mut HashSet<SlotKey> {
-			&mut self.0
+			&mut self.slots
+		}
+	}
+
+	impl CurrentTarget for _Loadout {
+		fn current_target(&self) -> Option<&SkillTarget> {
+			self.target.as_ref()
+		}
+	}
+
+	impl CurrentTargetMut for _Loadout {
+		fn current_target_mut(&mut self) -> &mut Option<SkillTarget> {
+			&mut self.target
 		}
 	}
 
@@ -74,12 +108,18 @@ mod tests {
 		app
 	}
 
+	static PLAYER: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
+
 	#[test]
 	fn insert_held_skill() {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
 			.spawn((
+				Attacking {
+					player: *PLAYER,
+					has_los: true,
+				},
 				EnemyAttackPhase::HoldSkill {
 					key: SlotKey(42),
 					holding: Duration::default(),
@@ -91,7 +131,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Loadout::from([SlotKey(42)])),
+			Some(&_Loadout::from([SlotKey(42)]).with_target(Some(SkillTarget::Entity(*PLAYER)))),
 			app.world().entity(entity).get::<_Loadout>(),
 		);
 	}
@@ -102,6 +142,10 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
+				Attacking {
+					player: *PLAYER,
+					has_los: true,
+				},
 				EnemyAttackPhase::HoldSkill {
 					key: SlotKey(42),
 					holding: Duration::default(),
@@ -113,7 +157,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Loadout::from([SlotKey(42)])),
+			Some(&_Loadout::from([SlotKey(42)]).with_target(Some(SkillTarget::Entity(*PLAYER)))),
 			app.world().entity(entity).get::<_Loadout>(),
 		);
 	}
@@ -124,6 +168,10 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
+				Attacking {
+					player: *PLAYER,
+					has_los: true,
+				},
 				EnemyAttackPhase::Cooldown(Duration::ZERO),
 				_Loadout::from([SlotKey(11)]),
 			))
@@ -143,6 +191,10 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
+				Attacking {
+					player: *PLAYER,
+					has_los: true,
+				},
 				EnemyAttackPhase::HoldSkill {
 					key: SlotKey(42),
 					holding: Duration::default(),
@@ -158,7 +210,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Loadout::default()),
+			Some(&_Loadout::default().with_target(Some(SkillTarget::Entity(*PLAYER)))),
 			app.world().entity(entity).get::<_Loadout>(),
 		);
 	}
@@ -169,6 +221,10 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
+				Attacking {
+					player: *PLAYER,
+					has_los: true,
+				},
 				EnemyAttackPhase::HoldSkill {
 					key: SlotKey(42),
 					holding: Duration::default(),
@@ -182,12 +238,12 @@ mod tests {
 			.entity_mut(entity)
 			.get_mut::<_Loadout>()
 			.unwrap()
-			.0
+			.slots
 			.clear();
 		app.update();
 
 		assert_eq!(
-			Some(&_Loadout::default()),
+			Some(&_Loadout::default().with_target(Some(SkillTarget::Entity(*PLAYER)))),
 			app.world().entity(entity).get::<_Loadout>(),
 		);
 	}
@@ -198,6 +254,10 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
+				Attacking {
+					player: *PLAYER,
+					has_los: true,
+				},
 				EnemyAttackPhase::HoldSkill {
 					key: SlotKey(42),
 					holding: Duration::default(),
@@ -211,7 +271,7 @@ mod tests {
 			.entity_mut(entity)
 			.get_mut::<_Loadout>()
 			.unwrap()
-			.0
+			.slots
 			.clear();
 		app.world_mut()
 			.entity_mut(entity)
@@ -220,7 +280,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Loadout::from([SlotKey(42)])),
+			Some(&_Loadout::from([SlotKey(42)]).with_target(Some(SkillTarget::Entity(*PLAYER)))),
 			app.world().entity(entity).get::<_Loadout>(),
 		);
 	}

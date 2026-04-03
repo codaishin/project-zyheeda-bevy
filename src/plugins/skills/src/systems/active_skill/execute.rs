@@ -1,5 +1,5 @@
 use crate::{
-	components::active_skill::ActiveSkill,
+	components::{active_skill::ActiveSkill, target::Target},
 	skills::shape::OnSkillStop,
 	traits::spawn_skill::SpawnSkill,
 };
@@ -10,8 +10,7 @@ use bevy::{
 use common::{
 	components::persistent_entity::PersistentEntity,
 	traits::{
-		handles_physics::{MouseHover, MouseHoversOver, Raycast},
-		handles_skill_physics::{Despawn, SkillCaster, SkillEntity, SkillSpawner, SkillTarget},
+		handles_skill_physics::{Despawn, SkillCaster, SkillEntity, SkillSpawner},
 		thread_safe::ThreadSafe,
 	},
 };
@@ -20,29 +19,27 @@ impl<TConfig> ActiveSkill<TConfig>
 where
 	TConfig: ThreadSafe + Clone,
 {
-	pub(crate) fn execute<TSpawn, TRaycast>(
+	pub(crate) fn execute<TSpawn>(
 		mut spawn: StaticSystemParam<TSpawn>,
-		mut ray_cast: StaticSystemParam<TRaycast>,
-		mut agents: Query<(Entity, &mut Self)>,
+		mut agents: Query<(Entity, &mut Self, &Target)>,
 		persistent_entities: Query<&PersistentEntity>,
 	) where
 		TSpawn: for<'w, 's> SystemParam<Item<'w, 's>: SpawnSkill<TConfig> + Despawn>,
-		TRaycast: for<'w, 's> SystemParam<Item<'w, 's>: Raycast<MouseHover>>,
 	{
-		for (entity, mut skill_executer) in &mut agents {
+		for (entity, mut skill_executer, Target(target)) in &mut agents {
 			match skill_executer.as_ref() {
 				Self::Start { slot_key, shape } => {
-					let Some(target) = get_target(&mut ray_cast, &persistent_entities) else {
+					let Ok(entity) = persistent_entities.get(entity) else {
 						continue;
 					};
-					let Ok(entity) = persistent_entities.get(entity) else {
+					let Some(target) = target else {
 						continue;
 					};
 					let on_stop_skill = spawn.spawn_skill(
 						shape.clone(),
 						SkillCaster(*entity),
 						SkillSpawner::Slot(*slot_key),
-						target,
+						*target,
 					);
 					match on_stop_skill {
 						OnSkillStop::Ignore => *skill_executer = Self::Idle,
@@ -59,57 +56,23 @@ where
 	}
 }
 
-fn get_target<TRaycast>(
-	ray_cast: &mut StaticSystemParam<TRaycast>,
-	persistent_entities: &Query<&PersistentEntity>,
-) -> Option<SkillTarget>
-where
-	TRaycast: for<'w, 's> SystemParam<Item<'w, 's>: Raycast<MouseHover>>,
-{
-	match ray_cast.raycast(MouseHover::NO_EXCLUDES)? {
-		MouseHoversOver::Terrain { point } => Some(SkillTarget::from(point)),
-		MouseHoversOver::Object { entity, .. } => persistent_entities
-			.get(entity)
-			.ok()
-			.map(|e| SkillTarget::from(*e)),
-	}
-}
-
 #[cfg(test)]
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use common::{CommonPlugin, tools::action_key::slot::SlotKey};
+	use common::{
+		CommonPlugin,
+		tools::action_key::slot::SlotKey,
+		traits::handles_skill_physics::SkillTarget,
+	};
 	use macros::NestedMocks;
-	use mockall::{automock, mock, predicate::eq};
+	use mockall::{mock, predicate::eq};
 	use std::sync::LazyLock;
 	use test_case::test_case;
 	use testing::{IsChanged, NestedMocks, SingleThreadedApp};
 
 	#[derive(Debug, PartialEq, Clone)]
 	struct _Config;
-
-	#[derive(Resource, NestedMocks)]
-	struct _RayCaster {
-		mock: Mock_RayCaster,
-	}
-
-	impl Default for _RayCaster {
-		fn default() -> Self {
-			let mut mock = Mock_RayCaster::new();
-			mock.expect_raycast()
-				.return_const(MouseHoversOver::Terrain { point: Vec3::ZERO });
-
-			Self { mock }
-		}
-	}
-
-	#[automock]
-	impl Raycast<MouseHover> for _RayCaster {
-		fn raycast(&mut self, args: MouseHover) -> Option<MouseHoversOver> {
-			self.mock.raycast(args)
-		}
-	}
 
 	#[derive(Resource, NestedMocks)]
 	struct _Spawner {
@@ -150,16 +113,15 @@ mod tests {
 		}
 	}
 
-	fn setup(ray_caster: _RayCaster, spawner: _Spawner) -> App {
+	fn setup(spawner: _Spawner) -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.insert_resource(ray_caster);
 		app.insert_resource(spawner);
 		app.add_plugins(CommonPlugin);
 		app.add_systems(
 			Update,
 			(
-				ActiveSkill::<_Config>::execute::<ResMut<_Spawner>, ResMut<_RayCaster>>,
+				ActiveSkill::<_Config>::execute::<ResMut<_Spawner>>,
 				IsChanged::<ActiveSkill<_Config>>::detect,
 			)
 				.chain(),
@@ -173,55 +135,11 @@ mod tests {
 	static TARGET: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
 
 	#[test]
-	fn spawn_started_skill_on_ground() {
-		let mut app = setup(
-			_RayCaster::new().with_mock(|mock| {
-				mock.expect_raycast()
-					.return_const(MouseHoversOver::Terrain {
-						point: Vec3::new(1., 2., 3.),
-					});
-			}),
-			_Spawner::new().with_mock(assert_call_spawn),
-		);
+	fn spawn_started_skill() {
+		let mut app = setup(_Spawner::new().with_mock(assert_call_spawn));
 		app.world_mut().spawn((
 			*CASTER,
-			ActiveSkill::Start {
-				slot_key: SlotKey(11),
-				shape: _Config,
-			},
-		));
-
-		app.update();
-
-		fn assert_call_spawn(mock: &mut Mock_Spawner) {
-			mock.expect_spawn_skill()
-				.once()
-				.with(
-					eq(_Config),
-					eq(SkillCaster(*CASTER)),
-					eq(SkillSpawner::Slot(SlotKey(11))),
-					eq(SkillTarget::Ground(Vec3::new(1., 2., 3.))),
-				)
-				.return_const(OnSkillStop::Ignore);
-			mock.expect_despawn().return_const(());
-		}
-	}
-
-	#[test]
-	fn spawn_started_skill_on_object() {
-		let mut app = setup(
-			_RayCaster::default(),
-			_Spawner::new().with_mock(assert_call_spawn),
-		);
-		let target = app.world_mut().spawn(*TARGET).id();
-		app.insert_resource(_RayCaster::new().with_mock(|mock| {
-			mock.expect_raycast().return_const(MouseHoversOver::Object {
-				entity: target,
-				point: Vec3::ZERO,
-			});
-		}));
-		app.world_mut().spawn((
-			*CASTER,
+			Target(Some(SkillTarget::Entity(*TARGET))),
 			ActiveSkill::Start {
 				slot_key: SlotKey(11),
 				shape: _Config,
@@ -247,22 +165,15 @@ mod tests {
 	#[test_case(OnSkillStop::Ignore, ActiveSkill::Idle; "idle")]
 	#[test_case(OnSkillStop::Stop(*SKILL), ActiveSkill::Stoppable(*SKILL); "stoppable")]
 	fn set_started_to(on_skill_stop: OnSkillStop, expected: ActiveSkill<_Config>) {
-		let mut app = setup(
-			_RayCaster::new().with_mock(|mock| {
-				mock.expect_raycast()
-					.return_const(MouseHoversOver::Terrain {
-						point: Vec3::new(1., 2., 3.),
-					});
-			}),
-			_Spawner::new().with_mock(|mock| {
-				mock.expect_spawn_skill().return_const(on_skill_stop);
-				mock.expect_despawn().return_const(());
-			}),
-		);
+		let mut app = setup(_Spawner::new().with_mock(|mock| {
+			mock.expect_spawn_skill().return_const(on_skill_stop);
+			mock.expect_despawn().return_const(());
+		}));
 		let entity = app
 			.world_mut()
 			.spawn((
 				*CASTER,
+				Target(Some(SkillTarget::Entity(*TARGET))),
 				ActiveSkill::Start {
 					slot_key: SlotKey(11),
 					shape: _Config,
@@ -280,12 +191,12 @@ mod tests {
 
 	#[test]
 	fn despawn_stopped_skill() {
-		let mut app = setup(
-			_RayCaster::default(),
-			_Spawner::new().with_mock(assert_call_despawn),
-		);
-		app.world_mut()
-			.spawn((*CASTER, ActiveSkill::<_Config>::Stop(*SKILL)));
+		let mut app = setup(_Spawner::new().with_mock(assert_call_despawn));
+		app.world_mut().spawn((
+			*CASTER,
+			Target(Some(SkillTarget::Entity(*TARGET))),
+			ActiveSkill::<_Config>::Stop(*SKILL),
+		));
 
 		app.update();
 
@@ -300,21 +211,17 @@ mod tests {
 
 	#[test]
 	fn set_stopped_to_idle() {
-		let mut app = setup(
-			_RayCaster::new().with_mock(|mock| {
-				mock.expect_raycast()
-					.return_const(MouseHoversOver::Terrain {
-						point: Vec3::new(1., 2., 3.),
-					});
-			}),
-			_Spawner::new().with_mock(|mock| {
-				mock.expect_spawn_skill().return_const(OnSkillStop::Ignore);
-				mock.expect_despawn().return_const(());
-			}),
-		);
+		let mut app = setup(_Spawner::new().with_mock(|mock| {
+			mock.expect_spawn_skill().return_const(OnSkillStop::Ignore);
+			mock.expect_despawn().return_const(());
+		}));
 		let entity = app
 			.world_mut()
-			.spawn((*CASTER, ActiveSkill::<_Config>::Stop(*SKILL)))
+			.spawn((
+				*CASTER,
+				Target(Some(SkillTarget::Entity(*TARGET))),
+				ActiveSkill::<_Config>::Stop(*SKILL),
+			))
 			.id();
 
 		app.update();
@@ -325,49 +232,21 @@ mod tests {
 		);
 	}
 
-	#[test]
-	fn call_raycast_with_no_excludes() {
-		let mut app = setup(
-			_RayCaster::new().with_mock(assert_call_with_no_excludes),
-			_Spawner::new().with_mock(|mock| {
-				mock.expect_spawn_skill().return_const(OnSkillStop::Ignore);
-				mock.expect_despawn().return_const(());
-			}),
-		);
-		app.world_mut().spawn((
-			*CASTER,
-			ActiveSkill::Start {
-				slot_key: SlotKey(11),
-				shape: _Config,
-			},
-		));
-
-		app.update();
-
-		fn assert_call_with_no_excludes(mock: &mut Mock_RayCaster) {
-			mock.expect_raycast()
-				.once()
-				.with(eq(MouseHover::NO_EXCLUDES))
-				.return_const(MouseHoversOver::Terrain { point: Vec3::ZERO });
-		}
-	}
-
 	#[test_case(ActiveSkill::Idle; "idle")]
 	#[test_case(ActiveSkill::Stoppable(*SKILL); "stoppable")]
 	fn do_not_change(executor: ActiveSkill<_Config>) {
-		let mut app = setup(
-			_RayCaster::new().with_mock(|mock| {
-				mock.expect_raycast()
-					.return_const(MouseHoversOver::Terrain {
-						point: Vec3::new(1., 2., 3.),
-					});
-			}),
-			_Spawner::new().with_mock(|mock| {
-				mock.expect_spawn_skill().return_const(OnSkillStop::Ignore);
-				mock.expect_despawn().return_const(());
-			}),
-		);
-		let entity = app.world_mut().spawn((*CASTER, executor)).id();
+		let mut app = setup(_Spawner::new().with_mock(|mock| {
+			mock.expect_spawn_skill().return_const(OnSkillStop::Ignore);
+			mock.expect_despawn().return_const(());
+		}));
+		let entity = app
+			.world_mut()
+			.spawn((
+				*CASTER,
+				Target(Some(SkillTarget::Entity(*TARGET))),
+				executor,
+			))
+			.id();
 
 		app.update();
 		app.update();
