@@ -1,7 +1,10 @@
 use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
-	traits::{accessors::get::View, handles_skill_physics::SkillSpawner},
+	traits::{
+		accessors::get::View,
+		handles_skill_physics::{SkillSpawner, SkillTarget},
+	},
 };
 
 #[derive(Component, Debug, PartialEq)]
@@ -9,7 +12,7 @@ use common::{
 pub(crate) struct Anchor {
 	pub(crate) attached_to: PersistentEntity,
 	pub(crate) attach_point: SkillSpawner,
-	pub(crate) use_attached_rotation: bool,
+	pub(crate) rotation: AnchorRotation,
 	pub(crate) persistent: bool,
 }
 
@@ -24,7 +27,12 @@ impl Anchor {
 	}
 
 	pub(crate) fn with_attached_rotation(mut self) -> Self {
-		self.use_attached_rotation = true;
+		self.rotation = AnchorRotation::OfAttachedTo;
+		self
+	}
+
+	pub(crate) fn looking_at(mut self, target: SkillTarget) -> Self {
+		self.rotation = AnchorRotation::LookingAt(target);
 		self
 	}
 
@@ -58,8 +66,15 @@ impl AnchorAttachment {
 		Anchor {
 			attached_to: self.attached_to,
 			attach_point,
-			use_attached_rotation: false,
+			rotation: AnchorRotation::OfMount,
 			persistent: false,
 		}
 	}
+}
+
+#[derive(Debug, PartialEq)]
+pub(crate) enum AnchorRotation {
+	OfMount,
+	OfAttachedTo,
+	LookingAt(SkillTarget),
 }
