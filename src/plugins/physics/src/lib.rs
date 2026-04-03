@@ -188,7 +188,7 @@ where
 			.add_message::<BeamInteraction>()
 			.init_resource::<OngoingInteractions>()
 			// Anchor
-			.add_observer(AnchorDirty::process.pipe(OnError::log))
+			.add_observer(AnchorDirty::process::<RayCaster>.pipe(OnError::log))
 			.add_systems(Update, Anchor::mark_dirty.in_set(PhysicsSystems))
 			.add_systems(
 				Update,
