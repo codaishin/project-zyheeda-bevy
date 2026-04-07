@@ -6,6 +6,7 @@ use crate::{
 	},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
+use macros::EntityKey;
 use serde::{Deserialize, Serialize};
 use std::ops::DerefMut;
 
@@ -142,34 +143,19 @@ pub trait CurrentMovement: View<Option<MovementTarget>> + View<SpeedToggle> {}
 
 impl<T> CurrentMovement for T where T: View<Option<MovementTarget>> + View<SpeedToggle> {}
 
+#[derive(EntityKey)]
 pub struct Movement {
 	pub entity: Entity,
 }
 
-impl From<Movement> for Entity {
-	fn from(Movement { entity }: Movement) -> Self {
-		entity
-	}
-}
-
+#[derive(EntityKey)]
 pub struct ConfiguredMovement {
 	pub entity: Entity,
 }
 
-impl From<ConfiguredMovement> for Entity {
-	fn from(ConfiguredMovement { entity }: ConfiguredMovement) -> Self {
-		entity
-	}
-}
-
+#[derive(EntityKey)]
 pub struct NotConfiguredMovement {
 	pub entity: Entity,
-}
-
-impl From<NotConfiguredMovement> for Entity {
-	fn from(NotConfiguredMovement { entity }: NotConfiguredMovement) -> Self {
-		entity
-	}
 }
 
 #[cfg(test)]

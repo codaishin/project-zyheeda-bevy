@@ -21,6 +21,7 @@ use bevy::{
 	ecs::{entity::Entity, system::SystemParam},
 	prelude::*,
 };
+use macros::EntityKey;
 use serde::{Deserialize, Serialize};
 use std::{
 	collections::HashMap,
@@ -82,14 +83,9 @@ pub trait HandlesPhysicalSkillSpawnPoints {
 pub type SkillSpawnPointsMut<'w, 's, T> =
 	<T as HandlesPhysicalSkillSpawnPoints>::TSkillSpawnPointsMut<'w, 's>;
 
+#[derive(EntityKey)]
 pub struct SkillSpawnPoints {
 	pub entity: Entity,
-}
-
-impl From<SkillSpawnPoints> for Entity {
-	fn from(SkillSpawnPoints { entity }: SkillSpawnPoints) -> Self {
-		entity
-	}
 }
 
 pub trait RegisterDefinition {

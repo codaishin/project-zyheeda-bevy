@@ -6,6 +6,7 @@ use crate::{
 	},
 };
 use bevy::{ecs::component::Mutable, prelude::*};
+use macros::EntityKey;
 use std::{
 	collections::HashSet,
 	ops::{Deref, DerefMut},
@@ -13,14 +14,9 @@ use std::{
 
 pub type Combo<TKey, TSkill> = Vec<(Vec<TKey>, TSkill)>;
 
+#[derive(EntityKey)]
 pub struct Combos {
 	pub entity: Entity,
-}
-
-impl From<Combos> for Entity {
-	fn from(Combos { entity }: Combos) -> Self {
-		entity
-	}
 }
 
 pub trait NextConfiguredKeys<TKey> {

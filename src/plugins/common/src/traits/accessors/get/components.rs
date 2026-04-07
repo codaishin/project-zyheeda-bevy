@@ -1,4 +1,4 @@
-use crate::traits::accessors::get::{ContextChanged, GetContext, GetContextMut};
+use crate::traits::accessors::get::{ContextChanged, GetContext, GetContextMut, View};
 use bevy::{ecs::component::Mutable, prelude::*};
 
 impl<T> ContextChanged for Ref<'_, T>
@@ -13,19 +13,19 @@ where
 impl<T, TKey> GetContext<TKey> for Query<'_, '_, Ref<'static, T>>
 where
 	T: Component,
-	TKey: Into<Entity>,
+	TKey: View<Entity>,
 {
 	type TContext<'ctx> = Ref<'ctx, T>;
 
 	fn get_context<'ctx>(query: &'ctx Query<Ref<T>>, key: TKey) -> Option<Self::TContext<'ctx>> {
-		query.get(key.into()).ok()
+		query.get(key.view()).ok()
 	}
 }
 
 impl<T, TKey> GetContextMut<TKey> for Query<'_, '_, Mut<'static, T>>
 where
 	T: Component<Mutability = Mutable>,
-	TKey: Into<Entity>,
+	TKey: View<Entity>,
 {
 	type TContext<'ctx> = Mut<'ctx, T>;
 
@@ -33,14 +33,14 @@ where
 		query: &'ctx mut Query<Mut<T>>,
 		key: TKey,
 	) -> Option<Self::TContext<'ctx>> {
-		query.get_mut(key.into()).ok()
+		query.get_mut(key.view()).ok()
 	}
 }
 
 impl<T, TKey> GetContextMut<TKey> for Query<'_, '_, &'static mut T>
 where
 	T: Component<Mutability = Mutable>,
-	TKey: Into<Entity>,
+	TKey: View<Entity>,
 {
 	type TContext<'ctx> = Mut<'ctx, T>;
 
@@ -49,6 +49,6 @@ where
 
 		key: TKey,
 	) -> Option<Self::TContext<'ctx>> {
-		query.get_mut(key.into()).ok()
+		query.get_mut(key.view()).ok()
 	}
 }

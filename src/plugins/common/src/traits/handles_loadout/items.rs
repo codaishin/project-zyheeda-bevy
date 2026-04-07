@@ -4,16 +4,12 @@ use crate::traits::{
 	handles_localization::Token,
 };
 use bevy::prelude::*;
+use macros::EntityKey;
 use std::ops::{Deref, DerefMut};
 
+#[derive(EntityKey)]
 pub struct Items {
 	pub entity: Entity,
-}
-
-impl From<Items> for Entity {
-	fn from(Items { entity }: Items) -> Self {
-		entity
-	}
 }
 
 pub struct ItemToken;

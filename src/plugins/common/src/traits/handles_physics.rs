@@ -11,6 +11,7 @@ use crate::{
 	},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
+use macros::EntityKey;
 use serde::{Deserialize, Serialize};
 use std::{
 	collections::HashSet,
@@ -64,14 +65,9 @@ pub trait HandlesPhysicsConfig {
 
 pub type PhysicsConfigMut<'w, 's, T> = <T as HandlesPhysicsConfig>::TConfigMut<'w, 's>;
 
+#[derive(EntityKey)]
 pub struct NoDefaultAttributes {
 	pub entity: Entity,
-}
-
-impl From<NoDefaultAttributes> for Entity {
-	fn from(NoDefaultAttributes { entity }: NoDefaultAttributes) -> Self {
-		entity
-	}
 }
 
 pub trait ConfigureDefaultAttributes {
@@ -87,14 +83,9 @@ where
 	}
 }
 
+#[derive(EntityKey)]
 pub struct NoBodyConfigured {
 	pub entity: Entity,
-}
-
-impl From<NoBodyConfigured> for Entity {
-	fn from(NoBodyConfigured { entity }: NoBodyConfigured) -> Self {
-		entity
-	}
 }
 
 pub trait ConfigureBody {
