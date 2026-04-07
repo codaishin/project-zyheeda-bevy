@@ -1,28 +1,16 @@
-use crate::{
-	components::movement_direction::MovementDirection,
-	system_params::animations::AnimationsContextMut,
-};
+use crate::system_params::animations::AnimationsContextMut;
 use bevy::prelude::*;
 use common::traits::handles_animations::{MoveDirection, MoveDirectionMut};
 
 impl MoveDirection for AnimationsContextMut<'_> {
 	fn move_direction(&self) -> Option<Dir3> {
-		self.movement_direction
+		self.movement_direction.0
 	}
 }
 
 impl MoveDirectionMut for AnimationsContextMut<'_> {
 	fn move_direction_mut(&mut self) -> &mut Option<Dir3> {
-		&mut self.movement_direction
-	}
-}
-
-impl Drop for AnimationsContextMut<'_> {
-	fn drop(&mut self) {
-		match self.movement_direction {
-			Some(dir) => self.entity.try_insert(MovementDirection(dir)),
-			None => self.entity.try_remove::<MovementDirection>(),
-		};
+		&mut self.movement_direction.0
 	}
 }
 
@@ -31,7 +19,10 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{
-		components::animation_dispatch::AnimationDispatch,
+		components::{
+			animation_dispatch::AnimationDispatch,
+			movement_direction::MovementDirection,
+		},
 		system_params::animations::AnimationsParamMut,
 	};
 	use bevy::{
@@ -65,7 +56,7 @@ mod tests {
 			.spawn((
 				AnimationDispatch::default(),
 				GlobalTransform::default(),
-				MovementDirection(Dir3::NEG_Z),
+				MovementDirection(Some(Dir3::NEG_Z)),
 			))
 			.id();
 
@@ -94,7 +85,7 @@ mod tests {
 			})?;
 
 		assert_eq!(
-			Some(&MovementDirection(Dir3::NEG_Z)),
+			Some(&MovementDirection(Some(Dir3::NEG_Z))),
 			app.world().entity(entity).get::<MovementDirection>(),
 		);
 		Ok(())
@@ -108,7 +99,7 @@ mod tests {
 			.spawn((
 				AnimationDispatch::default(),
 				GlobalTransform::default(),
-				MovementDirection(Dir3::NEG_Z),
+				MovementDirection(Some(Dir3::NEG_Z)),
 			))
 			.id();
 
@@ -119,7 +110,10 @@ mod tests {
 				*ctx.move_direction_mut() = None;
 			})?;
 
-		assert_eq!(None, app.world().entity(entity).get::<MovementDirection>());
+		assert_eq!(
+			Some(&MovementDirection(None)),
+			app.world().entity(entity).get::<MovementDirection>()
+		);
 		Ok(())
 	}
 }

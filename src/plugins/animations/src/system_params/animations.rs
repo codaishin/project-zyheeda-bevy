@@ -27,8 +27,14 @@ pub struct AnimationsParamMut<
 {
 	commands: ZyheedaCommands<'w, 's>,
 	asset_server: ResMut<'w, TAnimationServer>,
-	dispatchers: Query<'w, 's, &'static mut AnimationDispatch>,
-	movement_directions: Query<'w, 's, &'static MovementDirection>,
+	animators: Query<
+		'w,
+		's,
+		(
+			&'static mut AnimationDispatch,
+			&'static mut MovementDirection,
+		),
+	>,
 	graphs: ResMut<'w, Assets<TAnimationGraph>>,
 }
 
@@ -44,7 +50,7 @@ where
 		param: &'ctx mut AnimationsParamMut<TAnimationServer, TAnimationGraph>,
 		WithoutAnimations { entity }: WithoutAnimations,
 	) -> Option<Self::TContext<'ctx>> {
-		if param.dispatchers.contains(entity) {
+		if param.animators.contains(entity) {
 			return None;
 		}
 
@@ -72,13 +78,9 @@ where
 		param: &'ctx mut AnimationsParamMut<TAnimationServer, TAnimationGraph>,
 		animations: Animations,
 	) -> Option<Self::TContext<'ctx>> {
-		let entity = param.commands.get_mut(&animations.entity)?;
-		let dispatch = param.dispatchers.get_mut(animations.entity).ok()?;
-		let movement_direction = param.movement_directions.get(animations.entity).ok();
-		let movement_direction = movement_direction.map(|MovementDirection(d)| *d);
+		let (dispatch, movement_direction) = param.animators.get_mut(animations.entity).ok()?;
 
 		Some(AnimationsContextMut {
-			entity,
 			dispatch,
 			movement_direction,
 		})
@@ -98,7 +100,6 @@ pub struct AnimationsRegisterContextMut<
 }
 
 pub struct AnimationsContextMut<'a> {
-	entity: ZyheedaEntityCommands<'a>,
 	dispatch: Mut<'a, AnimationDispatch>,
-	movement_direction: Option<Dir3>,
+	movement_direction: Mut<'a, MovementDirection>,
 }

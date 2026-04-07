@@ -44,11 +44,15 @@ fn set_directional_animation_weights<TDispatch, TGraph>(
 	TDispatch: Component + AnimationPlayers + GetAllActiveAnimations,
 	TGraph: Asset + GetNodeMut + WrapHandle,
 {
-	for (dispatch, MovementDirection(direction), transform, lookup) in &agents {
+	for (dispatch, movement_direction, transform, lookup) in &agents {
 		let forward = transform.forward();
 		let backward = transform.back();
 		let left = transform.left();
 		let right = transform.right();
+
+		let MovementDirection(Some(direction)) = movement_direction else {
+			continue;
+		};
 
 		for entity in dispatch.animation_players() {
 			let Ok(player) = players.get(entity) else {
@@ -244,7 +248,7 @@ mod tests {
 				players: vec![player],
 				animations: vec![AnimationKey::Walk],
 			},
-			MovementDirection(direction),
+			MovementDirection(Some(direction)),
 			lookup,
 		));
 
@@ -293,7 +297,7 @@ mod tests {
 				players: vec![player],
 				animations: vec![AnimationKey::Walk],
 			},
-			MovementDirection(direction),
+			MovementDirection(Some(direction)),
 			lookup,
 		));
 
@@ -348,7 +352,7 @@ mod tests {
 				players: vec![player],
 				animations: vec![AnimationKey::Walk],
 			},
-			MovementDirection(direction),
+			MovementDirection(Some(direction)),
 			lookup,
 		));
 
@@ -398,7 +402,7 @@ mod tests {
 				players: vec![player],
 				animations: vec![AnimationKey::Walk],
 			},
-			MovementDirection(Dir3::new(Vec3::new(-0.039663114, 0.0, -0.9992131)).unwrap()),
+			MovementDirection(Dir3::new(Vec3::new(-0.039663114, 0.0, -0.9992131)).ok()),
 			lookup,
 		));
 
