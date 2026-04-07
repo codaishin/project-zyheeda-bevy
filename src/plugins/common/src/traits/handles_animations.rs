@@ -20,7 +20,8 @@ pub trait HandlesAnimations {
 	type TAnimationsMut<'w, 's>: SystemParam
 		+ for<'c> GetContextMut<WithoutAnimations, TContext<'c>: RegisterAnimations>
 		+ for<'c> GetContextMut<Animations, TContext<'c>: ActiveAnimationsMut>
-		+ for<'c> GetContextMut<Animations, TContext<'c>: MoveDirectionMut>;
+		+ for<'c> GetContextMut<Animations, TContext<'c>: GetMoveDirectionMut>
+		+ for<'c> GetContextMut<Animations, TContext<'c>: GetForwardPitchMut>;
 }
 
 #[derive(EntityKey)]
@@ -93,30 +94,38 @@ where
 	}
 }
 
-pub trait MoveDirection {
-	fn move_direction(&self) -> Option<Dir3>;
+pub trait GetMoveDirection {
+	fn get_move_direction(&self) -> Option<Dir3>;
 }
 
-impl<T> MoveDirection for T
+impl<T> GetMoveDirection for T
 where
-	T: Deref<Target: MoveDirection>,
+	T: Deref<Target: GetMoveDirection>,
 {
-	fn move_direction(&self) -> Option<Dir3> {
-		self.deref().move_direction()
+	fn get_move_direction(&self) -> Option<Dir3> {
+		self.deref().get_move_direction()
 	}
 }
 
-pub trait MoveDirectionMut: MoveDirection {
-	fn move_direction_mut(&mut self) -> &mut Option<Dir3>;
+pub trait GetMoveDirectionMut: GetMoveDirection {
+	fn get_move_direction_mut(&mut self) -> &mut Option<Dir3>;
 }
 
-impl<T> MoveDirectionMut for T
+impl<T> GetMoveDirectionMut for T
 where
-	T: DerefMut<Target: MoveDirectionMut>,
+	T: DerefMut<Target: GetMoveDirectionMut>,
 {
-	fn move_direction_mut(&mut self) -> &mut Option<Dir3> {
-		self.deref_mut().move_direction_mut()
+	fn get_move_direction_mut(&mut self) -> &mut Option<Dir3> {
+		self.deref_mut().get_move_direction_mut()
 	}
+}
+
+pub trait GetForwardPitch {
+	fn get_forward_pitch(&self) -> Option<DirForwardPitch>;
+}
+
+pub trait GetForwardPitchMut: GetForwardPitch {
+	fn get_forward_pitch_mut(&mut self) -> &mut Option<DirForwardPitch>;
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
@@ -151,9 +160,13 @@ pub struct PitchedForward {
 #[in_range(low = >0., high = 1.)]
 pub struct ForwardPitch(f32);
 
+impl ForwardPitch {
+	pub const MAX: Self = Self(1.);
+}
+
 impl Default for ForwardPitch {
 	fn default() -> Self {
-		Self(1.)
+		Self::MAX
 	}
 }
 
@@ -168,6 +181,12 @@ impl Hash for ForwardPitch {
 
 		bits.hash(state);
 	}
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum DirForwardPitch {
+	Up(ForwardPitch),
+	Down(ForwardPitch),
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]

@@ -1,7 +1,7 @@
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
 	accessors::get::{GetContextMut, View},
-	handles_animations::{Animations, MoveDirectionMut},
+	handles_animations::{Animations, GetMoveDirectionMut},
 	handles_physics::CharacterMotion,
 };
 
@@ -14,7 +14,7 @@ pub(crate) trait SetForwardAnimationDirection:
 		mut animations: StaticSystemParam<TAnimations>,
 		movements: Query<(Entity, &Self, &Transform), Changed<Self>>,
 	) where
-		TAnimations: for<'c> GetContextMut<Animations, TContext<'c>: MoveDirectionMut>,
+		TAnimations: for<'c> GetContextMut<Animations, TContext<'c>: GetMoveDirectionMut>,
 	{
 		for (entity, movement, transform) in &movements {
 			let key = Animations { entity };
@@ -26,7 +26,7 @@ pub(crate) trait SetForwardAnimationDirection:
 				continue;
 			};
 
-			*animations.move_direction_mut() = Some(forward);
+			*animations.get_move_direction_mut() = Some(forward);
 		}
 	}
 }
@@ -48,7 +48,7 @@ where
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use common::{tools::speed::Speed, traits::handles_animations::MoveDirection};
+	use common::{tools::speed::Speed, traits::handles_animations::GetMoveDirection};
 	use testing::SingleThreadedApp;
 
 	#[derive(Component)]
@@ -63,14 +63,14 @@ mod tests {
 	#[derive(Component, Debug, PartialEq)]
 	struct _Animations(Option<Dir3>);
 
-	impl MoveDirection for _Animations {
-		fn move_direction(&self) -> Option<Dir3> {
+	impl GetMoveDirection for _Animations {
+		fn get_move_direction(&self) -> Option<Dir3> {
 			self.0
 		}
 	}
 
-	impl MoveDirectionMut for _Animations {
-		fn move_direction_mut(&mut self) -> &mut Option<Dir3> {
+	impl GetMoveDirectionMut for _Animations {
+		fn get_move_direction_mut(&mut self) -> &mut Option<Dir3> {
 			&mut self.0
 		}
 	}

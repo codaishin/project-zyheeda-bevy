@@ -1,7 +1,7 @@
 use crate::{
 	components::{
 		animation_lookup::{AnimationClips, AnimationLookup},
-		movement_direction::MovementDirection,
+		current_movement_direction::CurrentMovementDirection,
 	},
 	traits::{AnimationPlayers, GetAllActiveAnimations, asset_server::animation_graph::GetNodeMut},
 };
@@ -21,7 +21,7 @@ pub(crate) trait SetDirectionalAnimationWeights:
 		graphs: ResMut<Assets<AnimationGraph>>,
 		agents: Query<(
 			&Self,
-			&MovementDirection,
+			&CurrentMovementDirection,
 			&GlobalTransform,
 			&AnimationLookup,
 		)>,
@@ -35,7 +35,7 @@ fn set_directional_animation_weights<TDispatch, TGraph>(
 	mut graphs: ResMut<Assets<TGraph>>,
 	agents: Query<(
 		&TDispatch,
-		&MovementDirection,
+		&CurrentMovementDirection,
 		&GlobalTransform,
 		&AnimationLookup,
 	)>,
@@ -50,7 +50,7 @@ fn set_directional_animation_weights<TDispatch, TGraph>(
 		let left = transform.left();
 		let right = transform.right();
 
-		let MovementDirection(Some(direction)) = movement_direction else {
+		let CurrentMovementDirection(Some(direction)) = movement_direction else {
 			continue;
 		};
 
@@ -248,7 +248,7 @@ mod tests {
 				players: vec![player],
 				animations: vec![AnimationKey::Walk],
 			},
-			MovementDirection(Some(direction)),
+			CurrentMovementDirection(Some(direction)),
 			lookup,
 		));
 
@@ -297,7 +297,7 @@ mod tests {
 				players: vec![player],
 				animations: vec![AnimationKey::Walk],
 			},
-			MovementDirection(Some(direction)),
+			CurrentMovementDirection(Some(direction)),
 			lookup,
 		));
 
@@ -352,7 +352,7 @@ mod tests {
 				players: vec![player],
 				animations: vec![AnimationKey::Walk],
 			},
-			MovementDirection(Some(direction)),
+			CurrentMovementDirection(Some(direction)),
 			lookup,
 		));
 
@@ -402,7 +402,7 @@ mod tests {
 				players: vec![player],
 				animations: vec![AnimationKey::Walk],
 			},
-			MovementDirection(Dir3::new(Vec3::new(-0.039663114, 0.0, -0.9992131)).ok()),
+			CurrentMovementDirection(Dir3::new(Vec3::new(-0.039663114, 0.0, -0.9992131)).ok()),
 			lookup,
 		));
 
