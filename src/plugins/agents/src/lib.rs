@@ -178,8 +178,7 @@ where
 					Player::animate_movement::<
 						MovementSystemParam<TMovement>,
 						AnimationsSystemParamMut<TAnimations>,
-					>
-						.pipe(OnError::log),
+					>,
 					Player::use_skills::<InputSystemParam<TInput>, LoadoutActivityMutParam<TLoadout>>,
 				)
 					.chain(),
@@ -190,8 +189,7 @@ where
 					Enemy::animate_movement::<
 						MovementSystemParam<TMovement>,
 						AnimationsSystemParamMut<TAnimations>,
-					>
-						.pipe(OnError::log),
+					>,
 					ring_rotation,
 					Enemy::begin_attack,
 					Enemy::hold_attack::<LoadoutActivityMutParam<TLoadout>>,
@@ -202,8 +200,7 @@ where
 				AgentConfig::animate_skills::<
 					LoadoutActivityParam<TLoadout>,
 					AnimationsSystemParamMut<TAnimations>,
-				>
-					.pipe(OnError::log),
+				>,
 			)
 				.chain()
 				.run_if(in_state(GameState::Play))

@@ -2,7 +2,7 @@ use crate::{components::enemy::Enemy, systems::player::animate_movement::Move};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
 	accessors::get::{GetChangedContext, GetContext, GetContextMut, View},
-	handles_animations::{ActiveAnimationsMut, AnimationKey, Animations, AnimationsUnprepared},
+	handles_animations::{ActiveAnimationsMut, AnimationKey, Animations},
 	handles_movement::{Movement, MovementTarget},
 };
 use std::collections::HashSet;
@@ -12,41 +12,28 @@ impl Enemy {
 		movement: StaticSystemParam<TMovement>,
 		mut animations: StaticSystemParam<TAnimations>,
 		enemies: Query<Entity, With<Self>>,
-	) -> Result<(), Vec<AnimationsUnprepared>>
-	where
+	) where
 		TMovement: for<'c> GetContext<Movement, TContext<'c>: View<Option<MovementTarget>>>,
 		TAnimations: for<'c> GetContextMut<Animations, TContext<'c>: ActiveAnimationsMut>,
 	{
-		let animate_movement = |entity| {
+		for entity in enemies {
 			let key = Movement { entity };
-			let movement = TMovement::get_changed_context(&movement, key)?;
+			let Some(movement) = TMovement::get_changed_context(&movement, key) else {
+				continue;
+			};
 
 			let key = Animations { entity };
-			let mut animations = TAnimations::get_context_mut(&mut animations, key)?;
-
-			let movement_animations = match animations.active_animations_mut(Move) {
-				Err(error) => return Some(error),
-				Ok(movement_animations) => movement_animations,
+			let Some(mut animations) = TAnimations::get_context_mut(&mut animations, key) else {
+				continue;
 			};
+
+			let movement_animations = animations.active_animations_mut(Move);
 
 			match movement.view() {
 				Some(_) => *movement_animations = HashSet::from([AnimationKey::Run]),
 				None => movement_animations.clear(),
 			};
-
-			None
-		};
-
-		let errors = enemies
-			.iter()
-			.filter_map(animate_movement)
-			.collect::<Vec<_>>();
-
-		if !errors.is_empty() {
-			return Err(errors);
 		}
-
-		Ok(())
 	}
 }
 
@@ -54,11 +41,7 @@ impl Enemy {
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::systems::player::animate_movement::tests::{
-		_AnimationErrors,
-		_Animations,
-		_Movement,
-	};
+	use crate::systems::player::animate_movement::tests::{_Animations, _Movement};
 	use common::traits::{handles_animations::AnimationKey, handles_movement::MovementTarget};
 	use std::collections::{HashMap, HashSet};
 	use testing::SingleThreadedApp;
@@ -68,15 +51,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			Enemy::animate_movement::<Query<Ref<_Movement>>, Query<Mut<_Animations>>>.pipe(
-				|In(errors), mut commands: Commands| {
-					let Err(errors) = errors else {
-						return;
-					};
-
-					commands.insert_resource(_AnimationErrors(errors));
-				},
-			),
+			Enemy::animate_movement::<Query<Ref<_Movement>>, Query<Mut<_Animations>>>,
 		);
 
 		app
@@ -100,7 +75,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Animations::Prepared(HashMap::from([(
+			Some(&_Animations(HashMap::from([(
 				Move.into(),
 				HashSet::from([AnimationKey::Run]),
 			)]))),
@@ -119,7 +94,7 @@ mod tests {
 					target: Some(MovementTarget::Dir(Dir3::X)),
 					..default()
 				},
-				_Animations::Prepared(HashMap::from([(
+				_Animations(HashMap::from([(
 					Move.into(),
 					HashSet::from([AnimationKey::Walk]),
 				)])),
@@ -129,7 +104,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Animations::Prepared(HashMap::from([(
+			Some(&_Animations(HashMap::from([(
 				Move.into(),
 				HashSet::from([AnimationKey::Run]),
 			)]))),
@@ -176,7 +151,7 @@ mod tests {
 					target: Some(MovementTarget::Dir(Dir3::X)),
 					..default()
 				},
-				_Animations::Prepared(HashMap::from([(
+				_Animations(HashMap::from([(
 					Move.into(),
 					HashSet::from([AnimationKey::Run]),
 				)])),
@@ -190,7 +165,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Animations::Prepared(HashMap::from([(
+			Some(&_Animations(HashMap::from([(
 				Move.into(),
 				HashSet::from([])
 			)]))),
@@ -217,31 +192,6 @@ mod tests {
 		assert_eq!(
 			Some(&_Animations::default()),
 			app.world().entity(entity).get::<_Animations>(),
-		);
-	}
-
-	#[test]
-	fn return_error() {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				Enemy::default(),
-				_Movement {
-					target: Some(MovementTarget::Dir(Dir3::X)),
-					..default()
-				},
-			))
-			.id();
-		app.world_mut()
-			.entity_mut(entity)
-			.insert(_Animations::Unprepared(entity));
-
-		app.update();
-
-		assert_eq!(
-			Some(&_AnimationErrors(vec![AnimationsUnprepared { entity }])),
-			app.world().get_resource::<_AnimationErrors>(),
 		);
 	}
 }

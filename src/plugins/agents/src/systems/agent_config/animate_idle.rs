@@ -22,11 +22,8 @@ impl AnimateIdle {
 			let Some(mut animations) = TAnimations::get_context_mut(&mut animations, key) else {
 				continue;
 			};
-			let Ok(movement_animations) = animations.active_animations_mut(Idle) else {
-				continue;
-			};
 
-			*movement_animations = HashSet::from([AnimationKey::Idle]);
+			*animations.active_animations_mut(Idle) = HashSet::from([AnimationKey::Idle]);
 			commands.try_apply_on(&entity, |mut e| {
 				e.try_remove::<Self>();
 			});
@@ -69,7 +66,7 @@ mod test {
 		app.update();
 
 		assert_eq!(
-			Some(&_Animations::Prepared(HashMap::from([(
+			Some(&_Animations(HashMap::from([(
 				Idle.into(),
 				HashSet::from([AnimationKey::Idle])
 			)]))),
@@ -84,7 +81,7 @@ mod test {
 			.world_mut()
 			.spawn((
 				AnimateIdle,
-				_Animations::Prepared(HashMap::from([(
+				_Animations(HashMap::from([(
 					Idle.into(),
 					HashSet::from([AnimationKey::Walk]),
 				)])),
@@ -94,7 +91,7 @@ mod test {
 		app.update();
 
 		assert_eq!(
-			Some(&_Animations::Prepared(HashMap::from([(
+			Some(&_Animations(HashMap::from([(
 				Idle.into(),
 				HashSet::from([AnimationKey::Idle])
 			)]))),
@@ -132,22 +129,6 @@ mod test {
 	fn do_not_remove_animate_idle_component_when_animations_for_entity_are_missing() {
 		let mut app = setup();
 		let entity = app.world_mut().spawn(AnimateIdle).id();
-
-		app.update();
-
-		assert_eq!(
-			Some(&AnimateIdle),
-			app.world().entity(entity).get::<AnimateIdle>(),
-		);
-	}
-
-	#[test]
-	fn do_not_remove_animate_idle_component_when_animations_unprepared() {
-		let mut app = setup();
-		let entity = app.world_mut().spawn(AnimateIdle).id();
-		app.world_mut()
-			.entity_mut(entity)
-			.insert(_Animations::Unprepared(entity));
 
 		app.update();
 

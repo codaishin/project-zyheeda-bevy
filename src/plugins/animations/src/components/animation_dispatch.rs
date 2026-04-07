@@ -1,7 +1,10 @@
 mod dto;
 
 use crate::{
-	components::animation_dispatch::dto::AnimationDispatchDto,
+	components::{
+		animation_dispatch::dto::AnimationDispatchDto,
+		movement_direction::MovementDirection,
+	},
 	traits::{
 		AnimationPlayers,
 		AnimationPlayersWithoutGraph,
@@ -24,6 +27,7 @@ use std::{
 };
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
+#[require(MovementDirection)]
 #[savable_component(id = "animation dispatch", dto = AnimationDispatchDto)]
 pub struct AnimationDispatch {
 	pub(crate) animation_players: HashSet<Entity>,

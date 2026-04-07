@@ -2,13 +2,7 @@ use crate::components::player::Player;
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
 	accessors::get::{GetChangedContext, GetContext, GetContextMut, View, ViewOf},
-	handles_animations::{
-		ActiveAnimationsMut,
-		AnimationKey,
-		AnimationPriority,
-		Animations,
-		AnimationsUnprepared,
-	},
+	handles_animations::{ActiveAnimationsMut, AnimationKey, AnimationPriority, Animations},
 	handles_movement::{CurrentMovement, Movement, MovementTarget, SpeedToggle},
 };
 use std::collections::HashSet;
@@ -18,41 +12,28 @@ impl Player {
 		movement: StaticSystemParam<TMovement>,
 		mut animations: StaticSystemParam<TAnimations>,
 		players: Query<Entity, With<Self>>,
-	) -> Result<(), Vec<AnimationsUnprepared>>
-	where
+	) where
 		TMovement: for<'c> GetContext<Movement, TContext<'c>: CurrentMovement>,
 		TAnimations: for<'c> GetContextMut<Animations, TContext<'c>: ActiveAnimationsMut>,
 	{
-		let animate_movement = |entity| {
+		for entity in players {
 			let key = Movement { entity };
-			let movement = TMovement::get_changed_context(&movement, key)?;
+			let Some(movement) = TMovement::get_changed_context(&movement, key) else {
+				continue;
+			};
 
 			let key = Animations { entity };
-			let mut animations = TAnimations::get_context_mut(&mut animations, key)?;
-
-			let movement_animations = match animations.active_animations_mut(Move) {
-				Err(error) => return Some(error),
-				Ok(movement_animations) => movement_animations,
+			let Some(mut animations) = TAnimations::get_context_mut(&mut animations, key) else {
+				continue;
 			};
+
+			let movement_animations = animations.active_animations_mut(Move);
 
 			match movement.view_of::<Option<MovementTarget>>() {
 				Some(_) => Self::start_run_or_walk_animation(movement_animations, movement),
 				None => Self::stop_move_animations(movement_animations),
 			}
-
-			None
-		};
-
-		let errors = players
-			.iter()
-			.filter_map(animate_movement)
-			.collect::<Vec<_>>();
-
-		if !errors.is_empty() {
-			return Err(errors);
 		}
-
-		Ok(())
 	}
 
 	fn start_run_or_walk_animation(
@@ -87,12 +68,7 @@ pub(crate) mod tests {
 	use super::*;
 	use common::traits::{
 		accessors::get::View,
-		handles_animations::{
-			ActiveAnimations,
-			AnimationKey,
-			AnimationPriority,
-			AnimationsUnprepared,
-		},
+		handles_animations::{ActiveAnimations, AnimationKey, AnimationPriority},
 		handles_movement::MovementTarget,
 	};
 	use std::{collections::HashMap, sync::LazyLock};
@@ -119,66 +95,33 @@ pub(crate) mod tests {
 
 	static EMPTY: LazyLock<HashSet<AnimationKey>> = LazyLock::new(HashSet::default);
 
-	#[derive(Component, Debug, PartialEq)]
-	pub(crate) enum _Animations {
-		Unprepared(Entity),
-		Prepared(HashMap<AnimationPriority, HashSet<AnimationKey>>),
-	}
-
-	impl Default for _Animations {
-		fn default() -> Self {
-			Self::Prepared(HashMap::default())
-		}
-	}
+	#[derive(Component, Debug, PartialEq, Default)]
+	pub(crate) struct _Animations(pub(crate) HashMap<AnimationPriority, HashSet<AnimationKey>>);
 
 	impl ActiveAnimations for _Animations {
-		fn active_animations<TLayer>(
-			&self,
-			layer: TLayer,
-		) -> Result<&HashSet<AnimationKey>, AnimationsUnprepared>
+		fn active_animations<TLayer>(&self, layer: TLayer) -> &HashSet<AnimationKey>
 		where
 			TLayer: Into<AnimationPriority>,
 		{
-			match self {
-				_Animations::Unprepared(entity) => Err(AnimationsUnprepared { entity: *entity }),
-				_Animations::Prepared(hash_map) => {
-					Ok(hash_map.get(&layer.into()).unwrap_or(&*EMPTY))
-				}
-			}
+			self.0.get(&layer.into()).unwrap_or(&*EMPTY)
 		}
 	}
 
 	impl ActiveAnimationsMut for _Animations {
-		fn active_animations_mut<TLayer>(
-			&mut self,
-			layer: TLayer,
-		) -> Result<&mut HashSet<AnimationKey>, AnimationsUnprepared>
+		fn active_animations_mut<TLayer>(&mut self, layer: TLayer) -> &mut HashSet<AnimationKey>
 		where
 			TLayer: Into<AnimationPriority>,
 		{
-			match self {
-				_Animations::Unprepared(entity) => Err(AnimationsUnprepared { entity: *entity }),
-				_Animations::Prepared(hash_map) => Ok(hash_map.entry(layer.into()).or_default()),
-			}
+			self.0.entry(layer.into()).or_default()
 		}
 	}
-
-	#[derive(Resource, Debug, PartialEq)]
-	pub(crate) struct _AnimationErrors(pub(crate) Vec<AnimationsUnprepared>);
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.add_systems(
 			Update,
-			Player::animate_movement::<Query<Ref<_Movement>>, Query<Mut<_Animations>>>.pipe(
-				|In(errors), mut commands: Commands| {
-					let Err(errors) = errors else {
-						return;
-					};
-					commands.insert_resource(_AnimationErrors(errors));
-				},
-			),
+			Player::animate_movement::<Query<Ref<_Movement>>, Query<Mut<_Animations>>>,
 		);
 
 		app
@@ -203,7 +146,7 @@ pub(crate) mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Animations::Prepared(HashMap::from([(
+			Some(&_Animations(HashMap::from([(
 				Move.into(),
 				HashSet::from([animation])
 			)]))),
@@ -220,7 +163,7 @@ pub(crate) mod tests {
 			.spawn((
 				Player,
 				movement,
-				_Animations::Prepared(HashMap::from([(
+				_Animations(HashMap::from([(
 					Move.into(),
 					HashSet::from([AnimationKey::Idle]),
 				)])),
@@ -230,7 +173,7 @@ pub(crate) mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Animations::Prepared(HashMap::from([(
+			Some(&_Animations(HashMap::from([(
 				Move.into(),
 				HashSet::from([animation])
 			)]))),
@@ -277,7 +220,7 @@ pub(crate) mod tests {
 					target: Some(MovementTarget::Dir(Dir3::X)),
 					..default()
 				},
-				_Animations::Prepared(HashMap::from([(
+				_Animations(HashMap::from([(
 					Move.into(),
 					HashSet::from([AnimationKey::Idle]),
 				)])),
@@ -291,7 +234,7 @@ pub(crate) mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Animations::Prepared(HashMap::from([(
+			Some(&_Animations(HashMap::from([(
 				Move.into(),
 				HashSet::from([]),
 			)])),),
@@ -318,31 +261,6 @@ pub(crate) mod tests {
 		assert_eq!(
 			Some(&_Animations::default()),
 			app.world().entity(entity).get::<_Animations>(),
-		);
-	}
-
-	#[test]
-	fn return_error() {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				Player,
-				_Movement {
-					target: Some(MovementTarget::Dir(Dir3::X)),
-					..default()
-				},
-			))
-			.id();
-		app.world_mut()
-			.entity_mut(entity)
-			.insert(_Animations::Unprepared(entity));
-
-		app.update();
-
-		assert_eq!(
-			Some(&_AnimationErrors(vec![AnimationsUnprepared { entity }])),
-			app.world().get_resource::<_AnimationErrors>(),
 		);
 	}
 }

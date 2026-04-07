@@ -3,7 +3,7 @@ use crate::{
 		animation_dispatch::AnimationDispatch,
 		animation_lookup::{AnimationClips, AnimationLookup, AnimationLookupData},
 	},
-	system_params::animations::AnimationsContextMut,
+	system_params::animations::AnimationsRegisterContextMut,
 	traits::LoadAnimationAssets,
 };
 use bevy::prelude::*;
@@ -19,7 +19,7 @@ use common::traits::{
 };
 use std::collections::HashMap;
 
-impl<TServer, TGraph> RegisterAnimations for AnimationsContextMut<'_, TServer, TGraph>
+impl<TServer, TGraph> RegisterAnimations for AnimationsRegisterContextMut<'_, TServer, TGraph>
 where
 	TGraph: Asset + WrapHandle + Sync + Send + 'static,
 	TServer: Resource + LoadAnimationAssets<TGraph, AnimationClips>,
@@ -77,8 +77,8 @@ mod tests {
 			handles_animations::{
 				AffectedAnimationBones,
 				AnimationPath,
-				Animations as AnimationsKey,
 				PlayMode,
+				WithoutAnimations,
 			},
 			wrap_handle::GetHandle,
 		},
@@ -144,7 +144,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once(move |mut p: AnimationsParamMut<_Server, _Graph>| {
-				let key = AnimationsKey { entity };
+				let key = WithoutAnimations { entity };
 				let mut ctx = AnimationsParamMut::get_context_mut(&mut p, key).unwrap();
 				ctx.register_animations(&HashMap::default(), &HashMap::default());
 			})?;
@@ -163,7 +163,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once(move |mut p: AnimationsParamMut<_Server, _Graph>| {
-				let key = AnimationsKey { entity };
+				let key = WithoutAnimations { entity };
 				let mut ctx = AnimationsParamMut::get_context_mut(&mut p, key).unwrap();
 				ctx.register_animations(&HashMap::default(), &HashMap::default());
 			})?;
@@ -212,7 +212,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once(move |mut p: AnimationsParamMut<_Server, _Graph>| {
-				let key = AnimationsKey { entity };
+				let key = WithoutAnimations { entity };
 				let mut ctx = AnimationsParamMut::get_context_mut(&mut p, key).unwrap();
 				let a = Animation {
 					path: AnimationPath::from("path/a"),
@@ -316,6 +316,24 @@ mod tests {
 			}),
 			app.world().entity(entity).get::<AnimationLookup>()
 		);
+		Ok(())
+	}
+
+	#[test]
+	fn no_context_when_animation_dispatch_present() -> Result<(), RunSystemError> {
+		let mut app = setup(_Server::new().with_mock(|mock| {
+			mock.expect_load_animation_assets()
+				.return_const((_Graph, HashMap::default()));
+		}));
+		let entity = app.world_mut().spawn(AnimationDispatch::default()).id();
+
+		let ctx = app.world_mut().run_system_once(
+			move |mut p: AnimationsParamMut<_Server, _Graph>| {
+				AnimationsParamMut::get_context_mut(&mut p, WithoutAnimations { entity }).is_some()
+			},
+		)?;
+
+		assert!(!ctx);
 		Ok(())
 	}
 }

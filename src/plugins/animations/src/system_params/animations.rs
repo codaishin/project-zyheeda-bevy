@@ -10,7 +10,7 @@ use bevy::{ecs::system::SystemParam, prelude::*};
 use common::{
 	traits::{
 		accessors::get::{GetContextMut, GetMut},
-		handles_animations::Animations,
+		handles_animations::{Animations, WithoutAnimations},
 	},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
@@ -27,9 +27,43 @@ pub struct AnimationsParamMut<
 {
 	commands: ZyheedaCommands<'w, 's>,
 	asset_server: ResMut<'w, TAnimationServer>,
-	dispatchers: Query<'w, 's, &'static mut AnimationDispatch>,
-	movement_directions: Query<'w, 's, &'static MovementDirection>,
+	animators: Query<
+		'w,
+		's,
+		(
+			&'static mut AnimationDispatch,
+			&'static mut MovementDirection,
+		),
+	>,
 	graphs: ResMut<'w, Assets<TAnimationGraph>>,
+}
+
+impl<TAnimationServer, TAnimationGraph> GetContextMut<WithoutAnimations>
+	for AnimationsParamMut<'_, '_, TAnimationServer, TAnimationGraph>
+where
+	TAnimationServer: Resource,
+	TAnimationGraph: Asset,
+{
+	type TContext<'ctx> = AnimationsRegisterContextMut<'ctx, TAnimationServer, TAnimationGraph>;
+
+	fn get_context_mut<'ctx>(
+		param: &'ctx mut AnimationsParamMut<TAnimationServer, TAnimationGraph>,
+		WithoutAnimations { entity }: WithoutAnimations,
+	) -> Option<Self::TContext<'ctx>> {
+		if param.animators.contains(entity) {
+			return None;
+		}
+
+		let entity = param.commands.get_mut(&entity)?;
+		let asset_server = &mut param.asset_server;
+		let graphs = &mut param.graphs;
+
+		Some(AnimationsRegisterContextMut {
+			entity,
+			asset_server,
+			graphs,
+		})
+	}
 }
 
 impl<TAnimationServer, TAnimationGraph> GetContextMut<Animations>
@@ -38,36 +72,34 @@ where
 	TAnimationServer: Resource,
 	TAnimationGraph: Asset,
 {
-	type TContext<'ctx> = AnimationsContextMut<'ctx, TAnimationServer, TAnimationGraph>;
+	type TContext<'ctx> = AnimationsContextMut<'ctx>;
 
 	fn get_context_mut<'ctx>(
 		param: &'ctx mut AnimationsParamMut<TAnimationServer, TAnimationGraph>,
 		animations: Animations,
 	) -> Option<Self::TContext<'ctx>> {
-		let entity = param.commands.get_mut(&animations.entity)?;
-		let dispatch = param.dispatchers.get_mut(animations.entity).ok();
-		let movement_direction = param.movement_directions.get(animations.entity).ok();
-		let movement_direction = movement_direction.map(|MovementDirection(d)| *d);
-		let asset_server = &mut param.asset_server;
-		let graphs = &mut param.graphs;
+		let (dispatch, movement_direction) = param.animators.get_mut(animations.entity).ok()?;
 
 		Some(AnimationsContextMut {
-			entity,
 			dispatch,
 			movement_direction,
-			asset_server,
-			graphs,
 		})
 	}
 }
 
-pub struct AnimationsContextMut<'a, TLoadAnimations = AssetServer, TAnimationGraph = AnimationGraph>
-where
+pub struct AnimationsRegisterContextMut<
+	'a,
+	TLoadAnimations = AssetServer,
+	TAnimationGraph = AnimationGraph,
+> where
 	TAnimationGraph: Asset,
 {
 	entity: ZyheedaEntityCommands<'a>,
-	dispatch: Option<Mut<'a, AnimationDispatch>>,
-	movement_direction: Option<Dir3>,
 	asset_server: &'a mut TLoadAnimations,
 	graphs: &'a mut Assets<TAnimationGraph>,
+}
+
+pub struct AnimationsContextMut<'a> {
+	dispatch: Mut<'a, AnimationDispatch>,
+	movement_direction: Mut<'a, MovementDirection>,
 }

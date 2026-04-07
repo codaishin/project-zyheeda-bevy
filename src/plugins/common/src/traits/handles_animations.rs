@@ -1,7 +1,6 @@
 mod priority_order;
 
 use crate::{
-	errors::{ErrorData, Level},
 	tools::{action_key::slot::SlotKey, bone_name::BoneName, path::Path},
 	traits::{
 		accessors::get::GetContextMut,
@@ -12,15 +11,24 @@ use bevy::{ecs::system::SystemParam, prelude::*};
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Error};
 use std::{
 	collections::{HashMap, HashSet},
-	fmt::Display,
 	ops::{Deref, DerefMut},
 };
 
 pub trait HandlesAnimations {
 	type TAnimationsMut<'w, 's>: SystemParam
-		+ for<'c> GetContextMut<Animations, TContext<'c>: RegisterAnimations>
+		+ for<'c> GetContextMut<WithoutAnimations, TContext<'c>: RegisterAnimations>
 		+ for<'c> GetContextMut<Animations, TContext<'c>: ActiveAnimationsMut>
 		+ for<'c> GetContextMut<Animations, TContext<'c>: MoveDirectionMut>;
+}
+
+pub struct WithoutAnimations {
+	pub entity: Entity,
+}
+
+impl From<WithoutAnimations> for Entity {
+	fn from(WithoutAnimations { entity }: WithoutAnimations) -> Self {
+		entity
+	}
 }
 
 pub struct Animations {
@@ -58,10 +66,7 @@ where
 }
 
 pub trait ActiveAnimations {
-	fn active_animations<TLayer>(
-		&self,
-		layer: TLayer,
-	) -> Result<&HashSet<AnimationKey>, AnimationsUnprepared>
+	fn active_animations<TLayer>(&self, layer: TLayer) -> &HashSet<AnimationKey>
 	where
 		TLayer: Into<AnimationPriority>;
 }
@@ -70,10 +75,7 @@ impl<T> ActiveAnimations for T
 where
 	T: Deref<Target: ActiveAnimations>,
 {
-	fn active_animations<TLayer>(
-		&self,
-		layer: TLayer,
-	) -> Result<&HashSet<AnimationKey>, AnimationsUnprepared>
+	fn active_animations<TLayer>(&self, layer: TLayer) -> &HashSet<AnimationKey>
 	where
 		TLayer: Into<AnimationPriority>,
 	{
@@ -82,10 +84,7 @@ where
 }
 
 pub trait ActiveAnimationsMut: ActiveAnimations {
-	fn active_animations_mut<TLayer>(
-		&mut self,
-		layer: TLayer,
-	) -> Result<&mut HashSet<AnimationKey>, AnimationsUnprepared>
+	fn active_animations_mut<TLayer>(&mut self, layer: TLayer) -> &mut HashSet<AnimationKey>
 	where
 		TLayer: Into<AnimationPriority>;
 }
@@ -94,36 +93,11 @@ impl<T> ActiveAnimationsMut for T
 where
 	T: DerefMut<Target: ActiveAnimationsMut>,
 {
-	fn active_animations_mut<TLayer>(
-		&mut self,
-		layer: TLayer,
-	) -> Result<&mut HashSet<AnimationKey>, AnimationsUnprepared>
+	fn active_animations_mut<TLayer>(&mut self, layer: TLayer) -> &mut HashSet<AnimationKey>
 	where
 		TLayer: Into<AnimationPriority>,
 	{
 		self.deref_mut().active_animations_mut(layer)
-	}
-}
-
-#[derive(Debug, PartialEq)]
-pub struct AnimationsUnprepared {
-	pub entity: Entity,
-}
-
-impl ErrorData for AnimationsUnprepared {
-	fn level(&self) -> Level {
-		Level::Error
-	}
-
-	fn label() -> impl Display {
-		"Animations unprepared"
-	}
-
-	fn into_details(self) -> impl Display {
-		format!(
-			"Tried to retrieve animations for {:?}, but animations have not been registered (yet)",
-			self.entity
-		)
 	}
 }
 
