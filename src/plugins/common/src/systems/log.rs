@@ -1,6 +1,5 @@
-use crate::errors::{ErrorData, Level};
+use crate::errors::ErrorData;
 use bevy::ecs::system::In;
-use tracing::{error, field::display, warn};
 
 pub struct OnError;
 
@@ -40,7 +39,7 @@ where
 		match self {
 			Ok(value) => value,
 			Err(error) => {
-				output(error);
+				output::log(error);
 				fallback()
 			}
 		}
@@ -61,20 +60,38 @@ where
 	}
 }
 
-fn output<TError>(error: TError)
-where
-	TError: ErrorData,
-{
-	let level = error.level();
-	let label = TError::label();
-	let details = display(error.into_details());
+#[cfg(not(test))]
+pub(crate) mod output {
+	use super::*;
+	use crate::errors::Level;
+	use tracing::{error, field::display, warn};
 
-	match level {
-		Level::Error => {
-			error!(details, "{label}");
+	pub(crate) fn log<TError>(error: TError)
+	where
+		TError: ErrorData,
+	{
+		let level = error.level();
+		let label = TError::label();
+		let details = display(error.into_details());
+
+		match level {
+			Level::Error => {
+				error!(details, "{label}");
+			}
+			Level::Warning => {
+				warn!(details, "{label}");
+			}
 		}
-		Level::Warning => {
-			warn!(details, "{label}");
-		}
+	}
+}
+
+#[cfg(test)]
+pub(crate) mod output {
+	use super::*;
+
+	pub(crate) fn log<TError>(_: TError)
+	where
+		TError: ErrorData,
+	{
 	}
 }

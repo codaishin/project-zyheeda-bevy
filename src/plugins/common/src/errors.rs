@@ -13,7 +13,7 @@ use std::{
 };
 use zyheeda_core::write_iter;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Level {
 	Warning,
 	Error,

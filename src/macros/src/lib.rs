@@ -634,3 +634,25 @@ pub fn simple_mock(tokens: TokenStream) -> TokenStream {
 		}
 	})
 }
+
+/// Derives `View<Entity>` for the given struct based on an `entity` field.
+///
+/// This is useful for `GetContext(Mut)` traits, which have blanket implementations
+/// for `Queries` when used with keys that implement `View<Entity>`.
+#[proc_macro_derive(EntityKey)]
+pub fn entity_key(input: TokenStream) -> TokenStream {
+	let input = parse_macro_input!(input as DeriveInput);
+	let ident = input.ident;
+	let common = match crate_root("common") {
+		Ok(common) => common,
+		Err(error) => return error,
+	};
+
+	TokenStream::from(quote! {
+		impl #common::traits::accessors::get::View<bevy::prelude::Entity> for #ident {
+			fn view(&self) -> bevy::prelude::Entity {
+				self.entity
+			}
+		}
+	})
+}

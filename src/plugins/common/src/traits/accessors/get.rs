@@ -7,7 +7,16 @@ mod option;
 mod ray;
 mod result;
 
-use bevy::ecs::system::{SystemParam, SystemParamItem};
+use bevy::{
+	ecs::system::{SystemParam, SystemParamItem},
+	prelude::*,
+};
+use std::{any::type_name, fmt::Display, marker::PhantomData};
+
+use crate::{
+	errors::{ErrorData, Level},
+	systems::log::output,
+};
 
 pub trait Get<TKey> {
 	type TValue;
@@ -79,6 +88,117 @@ pub trait GetContextMut<TKey>: SystemParam {
 		param: &'ctx mut SystemParamItem<Self>,
 		key: TKey,
 	) -> Option<Self::TContext<'ctx>>;
+}
+
+impl<T, TKey> GetContext<Logged<TKey>> for T
+where
+	T: GetContext<TKey>,
+	TKey: View<Entity>,
+{
+	type TContext<'ctx> = T::TContext<'ctx>;
+
+	fn get_context<'ctx>(
+		param: &'ctx SystemParamItem<Self>,
+		Logged { key, level }: Logged<TKey>,
+	) -> Option<Self::TContext<'ctx>> {
+		let entity = key.view();
+		let ctx = T::get_context(param, key);
+
+		if ctx.is_none() {
+			output::log(MissingContext {
+				entity,
+				level,
+				_key: PhantomData::<TKey>,
+			});
+		}
+
+		ctx
+	}
+}
+
+impl<T, TKey> GetContextMut<Logged<TKey>> for T
+where
+	T: GetContextMut<TKey>,
+	TKey: View<Entity>,
+{
+	type TContext<'ctx> = T::TContext<'ctx>;
+
+	fn get_context_mut<'ctx>(
+		param: &'ctx mut SystemParamItem<Self>,
+		Logged { key, level }: Logged<TKey>,
+	) -> Option<Self::TContext<'ctx>> {
+		let entity = key.view();
+		let ctx = T::get_context_mut(param, key);
+
+		if ctx.is_none() {
+			output::log(MissingContext {
+				entity,
+				level,
+				_key: PhantomData::<TKey>,
+			});
+		}
+
+		ctx
+	}
+}
+
+/// A wrapper for [`GetContext`] and [`GetContextMut`] keys.
+///
+/// Both traits have a blanket implementation to log [`None`] cases.
+pub struct Logged<TKey>
+where
+	TKey: View<Entity>,
+{
+	pub key: TKey,
+	pub level: Level,
+}
+
+impl<TKey> Logged<TKey>
+where
+	TKey: View<Entity>,
+{
+	pub fn key(key: TKey) -> Self {
+		Self {
+			key,
+			level: Level::Error,
+		}
+	}
+
+	pub fn with_level(mut self, level: Level) -> Self {
+		self.level = level;
+		self
+	}
+}
+
+struct MissingContext<TKey> {
+	entity: Entity,
+	level: Level,
+	_key: PhantomData<TKey>,
+}
+
+impl<TKey> Display for MissingContext<TKey> {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(
+			f,
+			"{}: missing context `{}`",
+			self.entity,
+			type_name::<TKey>()
+		)
+	}
+}
+
+impl<TKey> ErrorData for MissingContext<TKey> {
+	fn level(&self) -> Level {
+		self.level
+	}
+
+	fn label() -> impl Display {
+		"Missing Context Error"
+	}
+
+	fn into_details(self) -> impl Display {
+		self
+	}
 }
 
 pub trait TryApplyOn<'a, TKey>: GetMut<TKey> + 'a {

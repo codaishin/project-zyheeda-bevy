@@ -8,6 +8,7 @@ use crate::{
 	},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
+use macros::EntityKey;
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Error};
 use std::{
 	collections::{HashMap, HashSet},
@@ -21,24 +22,14 @@ pub trait HandlesAnimations {
 		+ for<'c> GetContextMut<Animations, TContext<'c>: MoveDirectionMut>;
 }
 
+#[derive(EntityKey)]
 pub struct WithoutAnimations {
 	pub entity: Entity,
 }
 
-impl From<WithoutAnimations> for Entity {
-	fn from(WithoutAnimations { entity }: WithoutAnimations) -> Self {
-		entity
-	}
-}
-
+#[derive(EntityKey)]
 pub struct Animations {
 	pub entity: Entity,
-}
-
-impl From<Animations> for Entity {
-	fn from(Animations { entity }: Animations) -> Self {
-		entity
-	}
 }
 
 pub type AnimationsSystemParamMut<'w, 's, T> = <T as HandlesAnimations>::TAnimationsMut<'w, 's>;

@@ -1,15 +1,11 @@
 use crate::traits::{handles_loadout::LoadoutKey, loadout::ItemName};
 use bevy::prelude::*;
+use macros::EntityKey;
 use std::ops::DerefMut;
 
+#[derive(EntityKey)]
 pub struct NotLoadedOut {
 	pub entity: Entity,
-}
-
-impl From<NotLoadedOut> for Entity {
-	fn from(NotLoadedOut { entity }: NotLoadedOut) -> Self {
-		entity
-	}
 }
 
 pub trait InsertDefaultLoadout {

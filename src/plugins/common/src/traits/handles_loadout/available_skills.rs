@@ -6,16 +6,12 @@ use crate::{
 	},
 };
 use bevy::prelude::*;
+use macros::EntityKey;
 use std::ops::Deref;
 
+#[derive(EntityKey)]
 pub struct AvailableSkills {
 	pub entity: Entity,
-}
-
-impl From<AvailableSkills> for Entity {
-	fn from(AvailableSkills { entity }: AvailableSkills) -> Self {
-		entity
-	}
 }
 
 pub trait ReadAvailableSkills<TSkillID> {

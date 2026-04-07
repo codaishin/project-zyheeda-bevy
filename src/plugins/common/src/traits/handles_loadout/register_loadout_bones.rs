@@ -1,15 +1,11 @@
 use crate::tools::{action_key::slot::SlotKey, bone_name::BoneName, mesh_name::MeshName};
 use bevy::prelude::*;
+use macros::EntityKey;
 use std::{collections::HashMap, ops::DerefMut};
 
+#[derive(EntityKey)]
 pub struct NoBonesRegistered {
 	pub entity: Entity,
-}
-
-impl From<NoBonesRegistered> for Entity {
-	fn from(NoBonesRegistered { entity }: NoBonesRegistered) -> Self {
-		entity
-	}
 }
 
 pub trait RegisterLoadoutBones {

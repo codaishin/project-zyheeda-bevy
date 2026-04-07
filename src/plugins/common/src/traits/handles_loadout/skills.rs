@@ -7,16 +7,12 @@ use crate::{
 	},
 };
 use bevy::prelude::*;
+use macros::EntityKey;
 use std::ops::Deref;
 
+#[derive(EntityKey)]
 pub struct Skills {
 	pub entity: Entity,
-}
-
-impl From<Skills> for Entity {
-	fn from(Skills { entity }: Skills) -> Self {
-		entity
-	}
 }
 
 pub struct SkillToken;
