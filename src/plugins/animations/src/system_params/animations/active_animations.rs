@@ -4,41 +4,24 @@ use common::traits::handles_animations::{
 	ActiveAnimationsMut,
 	AnimationKey,
 	AnimationPriority,
-	AnimationsUnprepared,
 };
 use std::collections::HashSet;
 
 impl ActiveAnimations for AnimationsContextMut<'_> {
-	fn active_animations<TLayer>(
-		&self,
-		layer: TLayer,
-	) -> Result<&HashSet<AnimationKey>, AnimationsUnprepared>
+	fn active_animations<TLayer>(&self, layer: TLayer) -> &HashSet<AnimationKey>
 	where
 		TLayer: Into<AnimationPriority>,
 	{
-		match &self.dispatch {
-			Some(dispatch) => Ok(dispatch.slot(layer)),
-			None => Err(AnimationsUnprepared {
-				entity: self.entity.id(),
-			}),
-		}
+		self.dispatch.slot(layer)
 	}
 }
 
 impl ActiveAnimationsMut for AnimationsContextMut<'_> {
-	fn active_animations_mut<TLayer>(
-		&mut self,
-		layer: TLayer,
-	) -> Result<&mut HashSet<AnimationKey>, AnimationsUnprepared>
+	fn active_animations_mut<TLayer>(&mut self, layer: TLayer) -> &mut HashSet<AnimationKey>
 	where
 		TLayer: Into<AnimationPriority>,
 	{
-		match &mut self.dispatch {
-			Some(dispatch) => Ok(dispatch.slot_mut(layer)),
-			None => Err(AnimationsUnprepared {
-				entity: self.entity.id(),
-			}),
-		}
+		self.dispatch.slot_mut(layer)
 	}
 }
 
@@ -99,7 +82,6 @@ mod tests {
 				let key = Animations { entity };
 				let mut ctx = AnimationsParamMut::get_context_mut(&mut p, key).unwrap();
 				ctx.active_animations_mut(animation_priority)
-					.unwrap()
 					.extend(animations);
 			})?;
 
@@ -127,7 +109,7 @@ mod tests {
 				let ctx = AnimationsParamMut::get_context_mut(&mut p, key).unwrap();
 
 				assert_eq!(
-					Ok(&HashSet::from(animations)),
+					&HashSet::from(animations),
 					ctx.active_animations(animation_priority)
 				);
 			})

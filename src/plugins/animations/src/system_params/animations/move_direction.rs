@@ -30,7 +30,10 @@ impl Drop for AnimationsContextMut<'_> {
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::system_params::animations::AnimationsParamMut;
+	use crate::{
+		components::animation_dispatch::AnimationDispatch,
+		system_params::animations::AnimationsParamMut,
+	};
 	use bevy::{
 		animation::graph::AnimationGraph,
 		asset::Assets,
@@ -59,7 +62,11 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((GlobalTransform::default(), MovementDirection(Dir3::NEG_Z)))
+			.spawn((
+				AnimationDispatch::default(),
+				GlobalTransform::default(),
+				MovementDirection(Dir3::NEG_Z),
+			))
 			.id();
 
 		app.world_mut()
@@ -74,7 +81,10 @@ mod tests {
 	#[test]
 	fn set_movement_direction() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let entity = app.world_mut().spawn(GlobalTransform::default()).id();
+		let entity = app
+			.world_mut()
+			.spawn((AnimationDispatch::default(), GlobalTransform::default()))
+			.id();
 
 		app.world_mut()
 			.run_system_once(move |mut p: AnimationsParamMut<_Server>| {
@@ -95,7 +105,11 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((GlobalTransform::default(), MovementDirection(Dir3::NEG_Z)))
+			.spawn((
+				AnimationDispatch::default(),
+				GlobalTransform::default(),
+				MovementDirection(Dir3::NEG_Z),
+			))
 			.id();
 
 		app.world_mut()

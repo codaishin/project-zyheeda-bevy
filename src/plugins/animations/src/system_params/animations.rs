@@ -73,7 +73,7 @@ where
 		animations: Animations,
 	) -> Option<Self::TContext<'ctx>> {
 		let entity = param.commands.get_mut(&animations.entity)?;
-		let dispatch = param.dispatchers.get_mut(animations.entity).ok();
+		let dispatch = param.dispatchers.get_mut(animations.entity).ok()?;
 		let movement_direction = param.movement_directions.get(animations.entity).ok();
 		let movement_direction = movement_direction.map(|MovementDirection(d)| *d);
 
@@ -99,6 +99,6 @@ pub struct AnimationsRegisterContextMut<
 
 pub struct AnimationsContextMut<'a> {
 	entity: ZyheedaEntityCommands<'a>,
-	dispatch: Option<Mut<'a, AnimationDispatch>>,
+	dispatch: Mut<'a, AnimationDispatch>,
 	movement_direction: Option<Dir3>,
 }
