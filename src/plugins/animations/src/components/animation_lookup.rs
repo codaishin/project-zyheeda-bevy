@@ -1,6 +1,12 @@
 use bevy::prelude::*;
 use common::traits::{
-	handles_animations::{AffectedAnimationBones, AnimationKey, AnimationMaskBits, PlayMode},
+	handles_animations::{
+		AffectedAnimationBones,
+		AnimationKey,
+		AnimationMaskBits,
+		ForwardPitch,
+		PlayMode,
+	},
 	iterate::Iterate,
 };
 use std::collections::HashMap;
@@ -31,6 +37,7 @@ pub(crate) struct AnimationLookupData<TAnimations = AnimationClips> {
 pub(crate) enum AnimationClips {
 	Single(AnimationNodeIndex),
 	Directional(DirectionalIndices),
+	PitchedForward(PitchedForwardIndices),
 }
 
 impl Default for AnimationClips {
@@ -50,10 +57,17 @@ impl<'a> Iterate<'a> for AnimationClips {
 
 #[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
 pub(crate) struct DirectionalIndices {
-	pub forward: AnimationNodeIndex,
-	pub backward: AnimationNodeIndex,
-	pub left: AnimationNodeIndex,
-	pub right: AnimationNodeIndex,
+	pub(crate) forward: AnimationNodeIndex,
+	pub(crate) backward: AnimationNodeIndex,
+	pub(crate) left: AnimationNodeIndex,
+	pub(crate) right: AnimationNodeIndex,
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
+pub(crate) struct PitchedForwardIndices {
+	pub(crate) neutral: AnimationNodeIndex,
+	pub(crate) up: (ForwardPitch, AnimationNodeIndex),
+	pub(crate) down: (ForwardPitch, AnimationNodeIndex),
 }
 
 pub struct Iter<'a> {

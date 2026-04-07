@@ -8,10 +8,11 @@ use crate::{
 	},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
-use macros::EntityKey;
+use macros::{EntityKey, InRange};
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Error};
 use std::{
 	collections::{HashMap, HashSet},
+	hash::Hash,
 	ops::{Deref, DerefMut},
 };
 
@@ -122,6 +123,7 @@ where
 pub enum AnimationPath {
 	Single(Path),
 	Directional(Directional),
+	PitchedForward(PitchedForward),
 }
 
 impl From<&'static str> for AnimationPath {
@@ -136,6 +138,36 @@ pub struct Directional {
 	pub backward: Path,
 	pub left: Path,
 	pub right: Path,
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
+pub struct PitchedForward {
+	pub neutral: Path,
+	pub up: (ForwardPitch, Path),
+	pub down: (ForwardPitch, Path),
+}
+
+#[derive(InRange, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[in_range(low = >0., high = 1.)]
+pub struct ForwardPitch(f32);
+
+impl Default for ForwardPitch {
+	fn default() -> Self {
+		Self(1.)
+	}
+}
+
+impl Eq for ForwardPitch {}
+
+impl Hash for ForwardPitch {
+	fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+		let bits = match self.0 {
+			0.0 => 0,
+			v => v.to_bits(),
+		};
+
+		bits.hash(state);
+	}
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]

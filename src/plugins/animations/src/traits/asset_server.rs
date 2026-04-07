@@ -1,12 +1,16 @@
 pub(crate) mod animation_graph;
 
 use super::LoadAnimationAssets;
-use crate::components::animation_lookup::{AnimationClips, DirectionalIndices};
+use crate::components::animation_lookup::{
+	AnimationClips,
+	DirectionalIndices,
+	PitchedForwardIndices,
+};
 use bevy::prelude::*;
 use common::{
 	tools::path::Path,
 	traits::{
-		handles_animations::{AnimationPath, Directional},
+		handles_animations::{AnimationPath, Directional, PitchedForward},
 		load_asset::LoadAsset,
 	},
 };
@@ -46,16 +50,34 @@ where
 				let index = graph.add_clip(clip, 1., blend_node);
 				AnimationClips::Single(index)
 			}
-			AnimationPath::Directional(direction_paths) => {
+			AnimationPath::Directional(paths) => {
 				let blend_node = graph.add_blend(1., blend_node);
 				let mut animations = DirectionalIndices::default();
 
-				for (animation, path) in iter_parallel(&mut animations, direction_paths) {
+				for (animation, path) in iter_parallel(&mut animations, paths) {
 					let clip = server.load_asset(path);
 					*animation = graph.add_clip(clip, 0., blend_node);
 				}
 
 				AnimationClips::Directional(animations)
+			}
+			AnimationPath::PitchedForward(paths) => {
+				let blend_node = graph.add_blend(1., blend_node);
+
+				let PitchedForward {
+					neutral,
+					up: (up_pitch, up_path),
+					down: (down_pitch, down_path),
+				} = paths;
+				let neutral = server.load_asset(neutral);
+				let up = server.load_asset(up_path);
+				let down = server.load_asset(down_path);
+
+				AnimationClips::PitchedForward(PitchedForwardIndices {
+					neutral: graph.add_clip(neutral, 0., blend_node),
+					up: (*up_pitch, graph.add_clip(up, 0., blend_node)),
+					down: (*down_pitch, graph.add_clip(down, 0., blend_node)),
+				})
 			}
 		};
 		(animation, animations)
@@ -90,7 +112,11 @@ trait AnimationGraphTrait {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::load_asset::mock::MockAssetServer;
+	use crate::components::animation_lookup::PitchedForwardIndices;
+	use common::traits::{
+		handles_animations::{ForwardPitch, PitchedForward},
+		load_asset::mock::MockAssetServer,
+	};
 	use mockall::{mock, predicate::eq};
 	use testing::new_handle;
 
@@ -377,6 +403,138 @@ mod tests {
 						backward: AnimationNodeIndex::new(2),
 						left: AnimationNodeIndex::new(3),
 						right: AnimationNodeIndex::new(4)
+					})
+				)]),
+				map
+			);
+		}
+	}
+
+	mod pitched_animation_asset {
+		#![allow(clippy::unwrap_used)]
+		use super::*;
+		use std::sync::LazyLock;
+
+		#[test]
+		fn load_assets() {
+			setup_graph!(|_| {});
+			let neutral = "neutral";
+			let up = "up";
+			let down = "down";
+			let mut server = MockAssetServer::default();
+
+			let _: _AnimAssets =
+				server.load_animation_assets(vec![AnimationPath::PitchedForward(PitchedForward {
+					neutral: Path::from(neutral),
+					up: (ForwardPitch::default(), Path::from(up)),
+					down: (ForwardPitch::default(), Path::from(down)),
+				})]);
+
+			assert_eq!(
+				(1, 1, 1),
+				(server.calls(up), server.calls(down), server.calls(neutral)),
+			)
+		}
+
+		#[test]
+		fn add_loaded_clips_to_graph() {
+			static NEUTRAL: LazyLock<Handle<AnimationClip>> = LazyLock::new(new_handle);
+			static UP: LazyLock<Handle<AnimationClip>> = LazyLock::new(new_handle);
+			static DOWN: LazyLock<Handle<AnimationClip>> = LazyLock::new(new_handle);
+			setup_graph!(|mock| {
+				mock.expect_add_additive_blend()
+					.return_const(AnimationNodeIndex::new(11));
+				mock.expect_add_blend()
+					.times(1)
+					.with(eq(1.), eq(AnimationNodeIndex::new(11)))
+					.return_const(AnimationNodeIndex::new(4242));
+				mock.expect_add_clip()
+					.times(1)
+					.with(
+						eq(NEUTRAL.clone()),
+						eq(0.),
+						eq(AnimationNodeIndex::new(4242)),
+					)
+					.return_const(AnimationNodeIndex::default());
+				mock.expect_add_clip()
+					.times(1)
+					.with(eq(UP.clone()), eq(0.), eq(AnimationNodeIndex::new(4242)))
+					.return_const(AnimationNodeIndex::default());
+				mock.expect_add_clip()
+					.times(1)
+					.with(eq(DOWN.clone()), eq(0.), eq(AnimationNodeIndex::new(4242)))
+					.return_const(AnimationNodeIndex::default());
+			});
+			let neutral = "neutral";
+			let up = "up";
+			let down = "down";
+			let mut server = MockAssetServer::default()
+				.path(neutral)
+				.returns(NEUTRAL.clone())
+				.path(up)
+				.returns(UP.clone())
+				.path(down)
+				.returns(DOWN.clone());
+
+			let _: _AnimAssets =
+				server.load_animation_assets(vec![AnimationPath::PitchedForward(PitchedForward {
+					neutral: Path::from(neutral),
+					up: (ForwardPitch::default(), Path::from(up)),
+					down: (ForwardPitch::default(), Path::from(down)),
+				})]);
+		}
+
+		#[test]
+		fn return_animation_node_indices() {
+			static NEUTRAL: LazyLock<Handle<AnimationClip>> = LazyLock::new(new_handle);
+			static UP: LazyLock<Handle<AnimationClip>> = LazyLock::new(new_handle);
+			static DOWN: LazyLock<Handle<AnimationClip>> = LazyLock::new(new_handle);
+			setup_graph!(|mock| {
+				mock.expect_add_clip()
+					.with(
+						eq(NEUTRAL.clone()),
+						eq(0.),
+						eq(AnimationNodeIndex::default()),
+					)
+					.return_const(AnimationNodeIndex::new(1));
+				mock.expect_add_clip()
+					.with(eq(UP.clone()), eq(0.), eq(AnimationNodeIndex::default()))
+					.return_const(AnimationNodeIndex::new(2));
+				mock.expect_add_clip()
+					.with(eq(DOWN.clone()), eq(0.), eq(AnimationNodeIndex::default()))
+					.return_const(AnimationNodeIndex::new(3));
+			});
+			let neutral = "neutral";
+			let up = "up";
+			let down = "down";
+			let mut server = MockAssetServer::default()
+				.path(neutral)
+				.returns(NEUTRAL.clone())
+				.path(up)
+				.returns(UP.clone())
+				.path(down)
+				.returns(DOWN.clone());
+			let asset = AnimationPath::PitchedForward(PitchedForward {
+				neutral: Path::from(neutral),
+				up: (ForwardPitch::try_from(0.9).unwrap(), Path::from(up)),
+				down: (ForwardPitch::try_from(0.3).unwrap(), Path::from(down)),
+			});
+
+			let (_, map): _AnimAssets = server.load_animation_assets(vec![asset.clone()]);
+
+			assert_eq!(
+				HashMap::from([(
+					asset,
+					AnimationClips::PitchedForward(PitchedForwardIndices {
+						neutral: AnimationNodeIndex::new(1),
+						up: (
+							ForwardPitch::try_from(0.9).unwrap(),
+							AnimationNodeIndex::new(2)
+						),
+						down: (
+							ForwardPitch::try_from(0.3).unwrap(),
+							AnimationNodeIndex::new(3)
+						),
 					})
 				)]),
 				map
