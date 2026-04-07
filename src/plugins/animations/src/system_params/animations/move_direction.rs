@@ -5,22 +5,19 @@ use crate::{
 use bevy::prelude::*;
 use common::traits::handles_animations::{MoveDirection, MoveDirectionMut};
 
-impl<TServer> MoveDirection for AnimationsContextMut<'_, TServer> {
+impl MoveDirection for AnimationsContextMut<'_> {
 	fn move_direction(&self) -> Option<Dir3> {
 		self.movement_direction
 	}
 }
 
-impl<TServer> MoveDirectionMut for AnimationsContextMut<'_, TServer> {
+impl MoveDirectionMut for AnimationsContextMut<'_> {
 	fn move_direction_mut(&mut self) -> &mut Option<Dir3> {
 		&mut self.movement_direction
 	}
 }
 
-impl<TServer, TAnimationGraph> Drop for AnimationsContextMut<'_, TServer, TAnimationGraph>
-where
-	TAnimationGraph: Asset,
-{
+impl Drop for AnimationsContextMut<'_> {
 	fn drop(&mut self) {
 		match self.movement_direction {
 			Some(dir) => self.entity.try_insert(MovementDirection(dir)),

@@ -14,7 +14,7 @@ use common::{
 	tools::{Units, action_key::slot::SlotKey, inventory_key::InventoryKey},
 	traits::{
 		accessors::get::{GetContextMut, TryApplyOn},
-		handles_animations::{Animations, RegisterAnimations},
+		handles_animations::{RegisterAnimations, WithoutAnimations},
 		handles_loadout::{
 			LoadoutKey,
 			insert_default_loadout::{InsertDefaultLoadout, NotLoadedOut},
@@ -60,8 +60,8 @@ impl ApplyAgentConfig {
 			+ for<'c> GetContextMut<NoBonesRegistered, TContext<'c>: RegisterLoadoutBones>,
 		TSkills:
 			SystemParam + for<'c> GetContextMut<SkillSpawnPoints, TContext<'c>: RegisterDefinition>,
-		TAnimations:
-			SystemParam + for<'c> GetContextMut<Animations, TContext<'c>: RegisterAnimations>,
+		TAnimations: SystemParam
+			+ for<'c> GetContextMut<WithoutAnimations, TContext<'c>: RegisterAnimations>,
 		TMovement: SystemParam
 			+ for<'c> GetContextMut<NotConfiguredMovement, TContext<'c>: ConfigureMovement>,
 		TPhysics: SystemParam
@@ -92,7 +92,7 @@ impl ApplyAgentConfig {
 				ctx.register_definition(config.bones.spawners.clone());
 			};
 
-			let animations = Animations { entity };
+			let animations = WithoutAnimations { entity };
 			if let Some(mut ctx) = TAnimations::get_context_mut(&mut animations_param, animations) {
 				ctx.register_animations(&config.animations, &config.animation_mask_groups);
 			}

@@ -8,7 +8,7 @@ use common::traits::handles_animations::{
 };
 use std::collections::HashSet;
 
-impl<TServer> ActiveAnimations for AnimationsContextMut<'_, TServer> {
+impl ActiveAnimations for AnimationsContextMut<'_> {
 	fn active_animations<TLayer>(
 		&self,
 		layer: TLayer,
@@ -25,7 +25,7 @@ impl<TServer> ActiveAnimations for AnimationsContextMut<'_, TServer> {
 	}
 }
 
-impl<TServer> ActiveAnimationsMut for AnimationsContextMut<'_, TServer> {
+impl ActiveAnimationsMut for AnimationsContextMut<'_> {
 	fn active_animations_mut<TLayer>(
 		&mut self,
 		layer: TLayer,

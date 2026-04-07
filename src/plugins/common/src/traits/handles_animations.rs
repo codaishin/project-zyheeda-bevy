@@ -18,9 +18,19 @@ use std::{
 
 pub trait HandlesAnimations {
 	type TAnimationsMut<'w, 's>: SystemParam
-		+ for<'c> GetContextMut<Animations, TContext<'c>: RegisterAnimations>
+		+ for<'c> GetContextMut<WithoutAnimations, TContext<'c>: RegisterAnimations>
 		+ for<'c> GetContextMut<Animations, TContext<'c>: ActiveAnimationsMut>
 		+ for<'c> GetContextMut<Animations, TContext<'c>: MoveDirectionMut>;
+}
+
+pub struct WithoutAnimations {
+	pub entity: Entity,
+}
+
+impl From<WithoutAnimations> for Entity {
+	fn from(WithoutAnimations { entity }: WithoutAnimations) -> Self {
+		entity
+	}
 }
 
 pub struct Animations {
