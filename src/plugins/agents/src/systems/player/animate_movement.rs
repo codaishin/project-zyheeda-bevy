@@ -1,9 +1,12 @@
 use crate::components::player::Player;
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
-use common::traits::{
-	accessors::get::{GetChangedContext, GetContext, GetContextMut, View, ViewOf},
-	handles_animations::{ActiveAnimationsMut, AnimationKey, AnimationPriority, Animations},
-	handles_movement::{CurrentMovement, Movement, MovementTarget, SpeedToggle},
+use common::{
+	errors::Level,
+	traits::{
+		accessors::get::{GetChangedContext, GetContext, GetContextMut, Logged, View, ViewOf},
+		handles_animations::{ActiveAnimationsMut, AnimationKey, AnimationPriority, Animations},
+		handles_movement::{CurrentMovement, Movement, MovementTarget, SpeedToggle},
+	},
 };
 use std::collections::HashSet;
 
@@ -13,16 +16,16 @@ impl Player {
 		mut animations: StaticSystemParam<TAnimations>,
 		players: Query<Entity, With<Self>>,
 	) where
-		TMovement: for<'c> GetContext<Movement, TContext<'c>: CurrentMovement>,
-		TAnimations: for<'c> GetContextMut<Animations, TContext<'c>: ActiveAnimationsMut>,
+		TMovement: for<'c> GetContext<Logged<Movement>, TContext<'c>: CurrentMovement>,
+		TAnimations: for<'c> GetContextMut<Logged<Animations>, TContext<'c>: ActiveAnimationsMut>,
 	{
 		for entity in players {
-			let key = Movement { entity };
+			let key = Logged::key(Movement { entity }).with_level(Level::Error);
 			let Some(movement) = TMovement::get_changed_context(&movement, key) else {
 				continue;
 			};
 
-			let key = Animations { entity };
+			let key = Logged::key(Animations { entity }).with_level(Level::Error);
 			let Some(mut animations) = TAnimations::get_context_mut(&mut animations, key) else {
 				continue;
 			};

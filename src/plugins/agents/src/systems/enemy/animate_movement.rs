@@ -1,9 +1,12 @@
 use crate::{components::enemy::Enemy, systems::player::animate_movement::Move};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
-use common::traits::{
-	accessors::get::{GetChangedContext, GetContext, GetContextMut, View},
-	handles_animations::{ActiveAnimationsMut, AnimationKey, Animations},
-	handles_movement::{Movement, MovementTarget},
+use common::{
+	errors::Level,
+	traits::{
+		accessors::get::{GetChangedContext, GetContext, GetContextMut, Logged, View},
+		handles_animations::{ActiveAnimationsMut, AnimationKey, Animations},
+		handles_movement::{Movement, MovementTarget},
+	},
 };
 use std::collections::HashSet;
 
@@ -13,16 +16,16 @@ impl Enemy {
 		mut animations: StaticSystemParam<TAnimations>,
 		enemies: Query<Entity, With<Self>>,
 	) where
-		TMovement: for<'c> GetContext<Movement, TContext<'c>: View<Option<MovementTarget>>>,
-		TAnimations: for<'c> GetContextMut<Animations, TContext<'c>: ActiveAnimationsMut>,
+		TMovement: for<'c> GetContext<Logged<Movement>, TContext<'c>: View<Option<MovementTarget>>>,
+		TAnimations: for<'c> GetContextMut<Logged<Animations>, TContext<'c>: ActiveAnimationsMut>,
 	{
 		for entity in enemies {
-			let key = Movement { entity };
+			let key = Logged::key(Movement { entity }).with_level(Level::Error);
 			let Some(movement) = TMovement::get_changed_context(&movement, key) else {
 				continue;
 			};
 
-			let key = Animations { entity };
+			let key = Logged::key(Animations { entity }).with_level(Level::Error);
 			let Some(mut animations) = TAnimations::get_context_mut(&mut animations, key) else {
 				continue;
 			};
