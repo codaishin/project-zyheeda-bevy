@@ -13,6 +13,7 @@ use crate::{
 	systems::{
 		play_animation_clip::PlayAnimationClip,
 		set_directional_animation_weights::SetDirectionalAnimationWeights,
+		set_pitch_animation_weights::SetPitchAnimationWeights,
 	},
 };
 use bevy::{prelude::*, scene::SceneInstanceReady};
@@ -60,6 +61,7 @@ where
 				AnimationDispatch::distribute_player_components::<AnimationGraphHandle>,
 				AnimationDispatch::play_animation_clip::<&mut AnimationPlayer>,
 				AnimationDispatch::set_directional_animation_weights,
+				AnimationDispatch::set_pitch_animation_weights,
 			)
 				.chain()
 				.in_set(AnimationSystems),
