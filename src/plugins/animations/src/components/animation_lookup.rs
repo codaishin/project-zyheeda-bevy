@@ -1,6 +1,12 @@
 use bevy::prelude::*;
 use common::traits::{
-	handles_animations::{AffectedAnimationBones, AnimationKey, AnimationMaskBits, PlayMode},
+	handles_animations::{
+		AffectedAnimationBones,
+		AnimationKey,
+		AnimationMaskBits,
+		ForwardPitch,
+		PlayMode,
+	},
 	iterate::Iterate,
 };
 use std::collections::HashMap;
@@ -31,6 +37,7 @@ pub(crate) struct AnimationLookupData<TAnimations = AnimationClips> {
 pub(crate) enum AnimationClips {
 	Single(AnimationNodeIndex),
 	Directional(DirectionalIndices),
+	PitchedForward(PitchedForwardIndices),
 }
 
 impl Default for AnimationClips {
@@ -50,10 +57,17 @@ impl<'a> Iterate<'a> for AnimationClips {
 
 #[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
 pub(crate) struct DirectionalIndices {
-	pub forward: AnimationNodeIndex,
-	pub backward: AnimationNodeIndex,
-	pub left: AnimationNodeIndex,
-	pub right: AnimationNodeIndex,
+	pub(crate) forward: AnimationNodeIndex,
+	pub(crate) backward: AnimationNodeIndex,
+	pub(crate) left: AnimationNodeIndex,
+	pub(crate) right: AnimationNodeIndex,
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
+pub(crate) struct PitchedForwardIndices {
+	pub(crate) neutral: AnimationNodeIndex,
+	pub(crate) up: (ForwardPitch, AnimationNodeIndex),
+	pub(crate) down: (ForwardPitch, AnimationNodeIndex),
 }
 
 pub struct Iter<'a> {
@@ -74,16 +88,20 @@ impl<'a> Iterator for Iter<'a> {
 	type Item = &'a AnimationNodeIndex;
 
 	fn next(&mut self) -> Option<Self::Item> {
+		use AnimationClips::{Directional, PitchedForward, Single};
 		let index = self.index;
 
 		self.index += 1;
 
-		match (self.animations, index) {
-			(AnimationClips::Single(node_index), 0) => Some(node_index),
-			(AnimationClips::Directional(DirectionalIndices { forward, .. }), 0) => Some(forward),
-			(AnimationClips::Directional(DirectionalIndices { backward, .. }), 1) => Some(backward),
-			(AnimationClips::Directional(DirectionalIndices { left, .. }), 2) => Some(left),
-			(AnimationClips::Directional(DirectionalIndices { right, .. }), 3) => Some(right),
+		match (index, self.animations) {
+			(0, Single(node_index)) => Some(node_index),
+			(0, Directional(DirectionalIndices { forward, .. })) => Some(forward),
+			(1, Directional(DirectionalIndices { backward, .. })) => Some(backward),
+			(2, Directional(DirectionalIndices { left, .. })) => Some(left),
+			(3, Directional(DirectionalIndices { right, .. })) => Some(right),
+			(0, PitchedForward(PitchedForwardIndices { neutral, .. })) => Some(neutral),
+			(1, PitchedForward(PitchedForwardIndices { up, .. })) => Some(&up.1),
+			(2, PitchedForward(PitchedForwardIndices { down, .. })) => Some(&down.1),
 			_ => None,
 		}
 	}
@@ -118,6 +136,24 @@ mod tests {
 				&AnimationNodeIndex::new(20),
 				&AnimationNodeIndex::new(9),
 				&AnimationNodeIndex::new(555),
+			],
+			animations.iterate().take(5).collect::<Vec<_>>()
+		)
+	}
+
+	#[test]
+	fn iter_pitch_animations() {
+		let animations = AnimationClips::PitchedForward(PitchedForwardIndices {
+			neutral: AnimationNodeIndex::new(11),
+			up: (ForwardPitch::MAX, AnimationNodeIndex::new(42)),
+			down: (ForwardPitch::MAX, AnimationNodeIndex::new(100)),
+		});
+
+		assert_eq!(
+			vec![
+				&AnimationNodeIndex::new(11),
+				&AnimationNodeIndex::new(42),
+				&AnimationNodeIndex::new(100),
 			],
 			animations.iterate().take(5).collect::<Vec<_>>()
 		)

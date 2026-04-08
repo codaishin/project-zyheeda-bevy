@@ -8,10 +8,11 @@ use crate::{
 	},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
-use macros::EntityKey;
+use macros::{EntityKey, InRange};
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Error};
 use std::{
 	collections::{HashMap, HashSet},
+	hash::Hash,
 	ops::{Deref, DerefMut},
 };
 
@@ -19,7 +20,8 @@ pub trait HandlesAnimations {
 	type TAnimationsMut<'w, 's>: SystemParam
 		+ for<'c> GetContextMut<WithoutAnimations, TContext<'c>: RegisterAnimations>
 		+ for<'c> GetContextMut<Animations, TContext<'c>: ActiveAnimationsMut>
-		+ for<'c> GetContextMut<Animations, TContext<'c>: MoveDirectionMut>;
+		+ for<'c> GetContextMut<Animations, TContext<'c>: GetMoveDirectionMut>
+		+ for<'c> GetContextMut<Animations, TContext<'c>: GetForwardPitchMut>;
 }
 
 #[derive(EntityKey)]
@@ -92,29 +94,55 @@ where
 	}
 }
 
-pub trait MoveDirection {
-	fn move_direction(&self) -> Option<Dir3>;
+pub trait GetMoveDirection {
+	fn get_move_direction(&self) -> Option<Dir3>;
 }
 
-impl<T> MoveDirection for T
+impl<T> GetMoveDirection for T
 where
-	T: Deref<Target: MoveDirection>,
+	T: Deref<Target: GetMoveDirection>,
 {
-	fn move_direction(&self) -> Option<Dir3> {
-		self.deref().move_direction()
+	fn get_move_direction(&self) -> Option<Dir3> {
+		self.deref().get_move_direction()
 	}
 }
 
-pub trait MoveDirectionMut: MoveDirection {
-	fn move_direction_mut(&mut self) -> &mut Option<Dir3>;
+pub trait GetMoveDirectionMut: GetMoveDirection {
+	fn get_move_direction_mut(&mut self) -> &mut Option<Dir3>;
 }
 
-impl<T> MoveDirectionMut for T
+impl<T> GetMoveDirectionMut for T
 where
-	T: DerefMut<Target: MoveDirectionMut>,
+	T: DerefMut<Target: GetMoveDirectionMut>,
 {
-	fn move_direction_mut(&mut self) -> &mut Option<Dir3> {
-		self.deref_mut().move_direction_mut()
+	fn get_move_direction_mut(&mut self) -> &mut Option<Dir3> {
+		self.deref_mut().get_move_direction_mut()
+	}
+}
+
+pub trait GetForwardPitch {
+	fn get_forward_pitch(&self) -> Option<DirForwardPitch>;
+}
+
+impl<T> GetForwardPitch for T
+where
+	T: Deref<Target: GetForwardPitch>,
+{
+	fn get_forward_pitch(&self) -> Option<DirForwardPitch> {
+		self.deref().get_forward_pitch()
+	}
+}
+
+pub trait GetForwardPitchMut: GetForwardPitch {
+	fn get_forward_pitch_mut(&mut self) -> &mut Option<DirForwardPitch>;
+}
+
+impl<T> GetForwardPitchMut for T
+where
+	T: DerefMut<Target: GetForwardPitchMut>,
+{
+	fn get_forward_pitch_mut(&mut self) -> &mut Option<DirForwardPitch> {
+		self.deref_mut().get_forward_pitch_mut()
 	}
 }
 
@@ -122,6 +150,7 @@ where
 pub enum AnimationPath {
 	Single(Path),
 	Directional(Directional),
+	PitchedForward(PitchedForward),
 }
 
 impl From<&'static str> for AnimationPath {
@@ -136,6 +165,46 @@ pub struct Directional {
 	pub backward: Path,
 	pub left: Path,
 	pub right: Path,
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
+pub struct PitchedForward {
+	pub neutral: Path,
+	pub up: (ForwardPitch, Path),
+	pub down: (ForwardPitch, Path),
+}
+
+#[derive(InRange, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[in_range(low = >0., high = 1.)]
+pub struct ForwardPitch(f32);
+
+impl ForwardPitch {
+	pub const MAX: Self = Self(1.);
+}
+
+impl Default for ForwardPitch {
+	fn default() -> Self {
+		Self::MAX
+	}
+}
+
+impl Eq for ForwardPitch {}
+
+impl Hash for ForwardPitch {
+	fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+		let bits = match self.0 {
+			0.0 => 0,
+			v => v.to_bits(),
+		};
+
+		bits.hash(state);
+	}
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum DirForwardPitch {
+	Up(ForwardPitch),
+	Down(ForwardPitch),
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]

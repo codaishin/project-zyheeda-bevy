@@ -294,6 +294,12 @@ pub struct MouseHover {
 
 impl MouseHover {
 	pub const NO_EXCLUDES: Self = Self { exclude: vec![] };
+
+	pub fn excluding(exclude: impl IntoIterator<Item = Entity>) -> Self {
+		Self {
+			exclude: Vec::from_iter(exclude),
+		}
+	}
 }
 
 impl RaycastResult for MouseHover {

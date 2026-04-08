@@ -13,6 +13,7 @@ use crate::{
 		queue::dto::QueueDto,
 		slot_definitions::SlotDefinitions,
 		slots::visualization::SlotVisualization,
+		target::Target,
 	},
 	skills::SkillId,
 	system_parameters::{
@@ -31,11 +32,12 @@ use common::{
 	states::game_state::{GameState, LoadingGame},
 	traits::{
 		after_plugin::AfterPlugin,
+		handles_animations::{AnimationsSystemParamMut, HandlesAnimations},
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
 		handles_load_tracking::HandlesLoadTracking,
 		handles_loadout::HandlesLoadout,
 		handles_orientation::{FacingSystemParamMut, HandlesOrientation},
-		handles_physics::HandlesAllPhysicalEffects,
+		handles_physics::{HandlesAllPhysicalEffects, HandlesRaycast, RaycastSystemParam},
 		handles_saving::HandlesSaving,
 		handles_skill_physics::{HandlesSkillPhysics, SkillSpawnerMut},
 		system_set_definition::SystemSetDefinition,
@@ -63,16 +65,23 @@ use systems::{
 
 pub struct SkillsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSaveGame, TPhysics, TLoading, TMovement>
-	SkillsPlugin<(TSaveGame, TPhysics, TLoading, TMovement)>
+impl<TSaveGame, TAnimations, TPhysics, TLoading, TMovement>
+	SkillsPlugin<(TSaveGame, TAnimations, TPhysics, TLoading, TMovement)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillPhysics,
+	TAnimations: ThreadSafe + HandlesAnimations,
+	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillPhysics + HandlesRaycast,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
 	TMovement: ThreadSafe + HandlesOrientation + SystemSetDefinition,
 {
 	#[allow(clippy::too_many_arguments)]
-	pub fn from_plugins(_: &TSaveGame, _: &TPhysics, _: &TLoading, _: &TMovement) -> Self {
+	pub fn from_plugins(
+		_: &TSaveGame,
+		_: &TAnimations,
+		_: &TPhysics,
+		_: &TLoading,
+		_: &TMovement,
+	) -> Self {
 		Self(PhantomData)
 	}
 
@@ -119,6 +128,10 @@ where
 				ActiveSkill::execute::<SkillSpawnerMut<TPhysics>>,
 				flush::<Queue>,
 				HeldSlots::<Old>::update_from::<Current>,
+				Target::update_pitch::<
+					RaycastSystemParam<TPhysics>,
+					AnimationsSystemParamMut<TAnimations>,
+				>,
 			)
 				.chain()
 				.after_plugin(TMovement::SYSTEMS)
@@ -127,11 +140,12 @@ where
 	}
 }
 
-impl<TSaveGame, TPhysics, TLoading, TMovement> Plugin
-	for SkillsPlugin<(TSaveGame, TPhysics, TLoading, TMovement)>
+impl<TSaveGame, TAnimations, TPhysics, TLoading, TMovement> Plugin
+	for SkillsPlugin<(TSaveGame, TAnimations, TPhysics, TLoading, TMovement)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillPhysics,
+	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillPhysics + HandlesRaycast,
+	TAnimations: ThreadSafe + HandlesAnimations,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
 	TMovement: ThreadSafe + HandlesOrientation + SystemSetDefinition,
 {

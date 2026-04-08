@@ -1,10 +1,12 @@
 pub(crate) mod active_animations;
-mod move_direction;
+mod get_forward_pitch;
+mod get_move_direction;
 mod register_animations;
 
 use crate::components::{
 	animation_dispatch::AnimationDispatch,
-	movement_direction::MovementDirection,
+	current_forward_pitch::CurrentForwardPitch,
+	current_movement_direction::CurrentMovementDirection,
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::{
@@ -32,7 +34,8 @@ pub struct AnimationsParamMut<
 		's,
 		(
 			&'static mut AnimationDispatch,
-			&'static mut MovementDirection,
+			&'static mut CurrentMovementDirection,
+			&'static mut CurrentForwardPitch,
 		),
 	>,
 	graphs: ResMut<'w, Assets<TAnimationGraph>>,
@@ -78,11 +81,13 @@ where
 		param: &'ctx mut AnimationsParamMut<TAnimationServer, TAnimationGraph>,
 		animations: Animations,
 	) -> Option<Self::TContext<'ctx>> {
-		let (dispatch, movement_direction) = param.animators.get_mut(animations.entity).ok()?;
+		let (dispatch, movement_direction, forward_pitch) =
+			param.animators.get_mut(animations.entity).ok()?;
 
 		Some(AnimationsContextMut {
 			dispatch,
 			movement_direction,
+			forward_pitch,
 		})
 	}
 }
@@ -101,5 +106,6 @@ pub struct AnimationsRegisterContextMut<
 
 pub struct AnimationsContextMut<'a> {
 	dispatch: Mut<'a, AnimationDispatch>,
-	movement_direction: Mut<'a, MovementDirection>,
+	movement_direction: Mut<'a, CurrentMovementDirection>,
+	forward_pitch: Mut<'a, CurrentForwardPitch>,
 }

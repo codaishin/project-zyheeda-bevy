@@ -1,59 +1,60 @@
 use crate::{
 	components::{
 		animation_lookup::{AnimationClips, AnimationLookup},
-		current_movement_direction::CurrentMovementDirection,
+		current_forward_pitch::CurrentForwardPitch,
 	},
 	traits::{AnimationPlayers, GetAllActiveAnimations, asset_server::animation_graph::GetNodeMut},
 };
 use bevy::prelude::*;
-use common::traits::wrap_handle::{GetHandle, WrapHandle};
-use std::f32::consts::FRAC_PI_2;
+use common::traits::{
+	handles_animations::DirForwardPitch,
+	wrap_handle::{GetHandle, WrapHandle},
+};
 
-impl<T> SetDirectionalAnimationWeights for T where
-	T: Component + AnimationPlayers + GetAllActiveAnimations
-{
-}
+impl<T> SetPitchAnimationWeights for T where T: Component + AnimationPlayers + GetAllActiveAnimations
+{}
 
-pub(crate) trait SetDirectionalAnimationWeights:
+pub(crate) trait SetPitchAnimationWeights:
 	Component + AnimationPlayers + GetAllActiveAnimations + Sized
 {
-	fn set_directional_animation_weights(
+	fn set_pitch_animation_weights(
 		graphs: ResMut<Assets<AnimationGraph>>,
-		agents: Query<(
-			&Self,
-			&CurrentMovementDirection,
-			&GlobalTransform,
-			&AnimationLookup,
-		)>,
+		agents: Query<(&Self, &CurrentForwardPitch, &AnimationLookup)>,
 		players: Query<&AnimationGraphHandle>,
 	) {
-		set_directional_animation_weights(graphs, agents, players)
+		set_pitch_animation_weights(graphs, agents, players)
 	}
 }
 
-fn set_directional_animation_weights<TDispatch, TGraph>(
+macro_rules! set {
+	($value:expr, $graph:expr, $($clip:expr),+ $(,)?) => {
+		$({
+			if let Some(animation) = $graph.get_node_mut($clip) {
+				animation.weight = $value;
+			}
+		})+
+	};
+}
+
+macro_rules! blend {
+	($pitch:expr, $graph:expr, $neutral_clip:expr, $pitched_clip:expr) => {{
+		let (max_pitch, pitch_node) = $pitched_clip;
+		let pitch = **$pitch;
+		let scale = 1. / *max_pitch;
+		set!((1. - pitch * scale).clamp(0., 1.), $graph, $neutral_clip);
+		set!((pitch * scale).clamp(0., 1.), $graph, pitch_node);
+	}};
+}
+
+fn set_pitch_animation_weights<TDispatch, TGraph>(
 	mut graphs: ResMut<Assets<TGraph>>,
-	agents: Query<(
-		&TDispatch,
-		&CurrentMovementDirection,
-		&GlobalTransform,
-		&AnimationLookup,
-	)>,
+	agents: Query<(&TDispatch, &CurrentForwardPitch, &AnimationLookup)>,
 	players: Query<&TGraph::TComponent>,
 ) where
 	TDispatch: Component + AnimationPlayers + GetAllActiveAnimations,
 	TGraph: Asset + GetNodeMut + WrapHandle,
 {
-	for (dispatch, movement_direction, transform, lookup) in &agents {
-		let forward = transform.forward();
-		let backward = transform.back();
-		let left = transform.left();
-		let right = transform.right();
-
-		let CurrentMovementDirection(Some(direction)) = movement_direction else {
-			continue;
-		};
-
+	for (dispatch, CurrentForwardPitch(pitch), lookup) in &agents {
 		for entity in dispatch.animation_players() {
 			let Ok(player) = players.get(entity) else {
 				continue;
@@ -66,40 +67,27 @@ fn set_directional_animation_weights<TDispatch, TGraph>(
 				let Some(data) = lookup.animations.get(animation) else {
 					continue;
 				};
-				let AnimationClips::Directional(directions) = &data.animation_clips else {
+				let AnimationClips::PitchedForward(pitched_clips) = &data.animation_clips else {
 					continue;
 				};
 
-				if let Some(animation) = graph.get_node_mut(directions.forward) {
-					animation.weight = weight(forward, *direction);
-				}
-				if let Some(animation) = graph.get_node_mut(directions.backward) {
-					animation.weight = weight(backward, *direction);
-				}
-				if let Some(animation) = graph.get_node_mut(directions.left) {
-					animation.weight = weight(left, *direction);
-				}
-				if let Some(animation) = graph.get_node_mut(directions.right) {
-					animation.weight = weight(right, *direction);
+				match pitch {
+					None => {
+						set!(1., graph, pitched_clips.neutral);
+						set!(0., graph, pitched_clips.up.1, pitched_clips.down.1);
+					}
+					Some(DirForwardPitch::Up(pitch)) => {
+						blend!(pitch, graph, pitched_clips.neutral, pitched_clips.up);
+						set!(0., graph, pitched_clips.down.1);
+					}
+					Some(DirForwardPitch::Down(pitch)) => {
+						blend!(pitch, graph, pitched_clips.neutral, pitched_clips.down);
+						set!(0., graph, pitched_clips.up.1);
+					}
 				}
 			}
 		}
 	}
-}
-
-fn weight(body_direction: Dir3, move_direction: Dir3) -> f32 {
-	let dot = body_direction.dot(*move_direction);
-
-	if dot <= 0. {
-		return 0.;
-	}
-
-	if dot >= 1. {
-		return 1.;
-	}
-
-	let angle = dot.acos();
-	1.0 - angle / FRAC_PI_2
 }
 
 #[cfg(test)]
@@ -109,12 +97,15 @@ mod tests {
 	use crate::components::animation_lookup::{
 		AnimationClips,
 		AnimationLookupData,
-		DirectionalIndices,
+		PitchedForwardIndices,
 	};
-	use common::traits::{
-		handles_animations::AnimationKey,
-		iterate::Iterate,
-		wrap_handle::{GetHandle, WrapHandle},
+	use common::{
+		tools::action_key::slot::SlotKey,
+		traits::{
+			handles_animations::{AnimationKey, ForwardPitch},
+			iterate::Iterate,
+			wrap_handle::{GetHandle, WrapHandle},
+		},
 	};
 	use std::{collections::HashMap, slice::Iter, vec::IntoIter};
 	use test_case::test_case;
@@ -201,19 +192,15 @@ mod tests {
 
 		_ = graphs.insert(graph_handle, graph);
 		app.insert_resource(graphs);
-		app.add_systems(
-			Update,
-			set_directional_animation_weights::<_Dispatch, _Graph>,
-		);
+		app.add_systems(Update, set_pitch_animation_weights::<_Dispatch, _Graph>);
 
 		app
 	}
 
-	#[test_case(Dir3::NEG_Z, [1., 0., 0., 0.]; "forward")]
-	#[test_case(Dir3::Z, [0., 1., 0., 0.]; "backward")]
-	#[test_case(Dir3::NEG_X, [0., 0., 1., 0.]; "left")]
-	#[test_case(Dir3::X, [0., 0., 0., 1.]; "right")]
-	fn apply_weights_for_direction(direction: Dir3, expected_weights: [f32; 4]) {
+	#[test_case(None, [1., 0., 0.]; "neutral")]
+	#[test_case(Some(DirForwardPitch::Up(ForwardPitch::MAX)), [0., 1., 0.]; "up")]
+	#[test_case(Some(DirForwardPitch::Down(ForwardPitch::MAX)), [0., 0., 1.]; "down")]
+	fn apply_full_weights(pitch: Option<DirForwardPitch>, expected_weights: [f32; 3]) {
 		let initial_weights = || {
 			expected_weights
 				.map(|weight| match weight {
@@ -226,13 +213,12 @@ mod tests {
 		let handle = new_handle();
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
-				AnimationKey::Walk,
+				AnimationKey::Skill(SlotKey(11)),
 				AnimationLookupData {
-					animation_clips: AnimationClips::Directional(DirectionalIndices {
-						forward: AnimationNodeIndex::new(0),
-						backward: AnimationNodeIndex::new(1),
-						left: AnimationNodeIndex::new(2),
-						right: AnimationNodeIndex::new(3),
+					animation_clips: AnimationClips::PitchedForward(PitchedForwardIndices {
+						neutral: AnimationNodeIndex::new(0),
+						up: (ForwardPitch::MAX, AnimationNodeIndex::new(1)),
+						down: (ForwardPitch::MAX, AnimationNodeIndex::new(2)),
 					}),
 					..default()
 				},
@@ -243,12 +229,11 @@ mod tests {
 		let mut app = setup(&lookup, weights, &handle);
 		let player = app.world_mut().spawn(_GraphComponent(handle.clone())).id();
 		app.world_mut().spawn((
-			GlobalTransform::default(),
 			_Dispatch {
 				players: vec![player],
-				animations: vec![AnimationKey::Walk],
+				animations: vec![AnimationKey::Skill(SlotKey(11))],
 			},
-			CurrentMovementDirection(Some(direction)),
+			CurrentForwardPitch(pitch),
 			lookup,
 		));
 
@@ -262,97 +247,50 @@ mod tests {
 				graph.nodes.get(&0).unwrap().weight,
 				graph.nodes.get(&1).unwrap().weight,
 				graph.nodes.get(&2).unwrap().weight,
-				graph.nodes.get(&3).unwrap().weight
 			],
 			f32::EPSILON
 		);
 	}
 
-	#[test_case(Dir3::X, [1., 0., 0., 0.]; "forward")]
-	#[test_case(Dir3::NEG_X, [0., 1., 0., 0.]; "backward")]
-	#[test_case(Dir3::NEG_Z, [0., 0., 1., 0.]; "left")]
-	#[test_case(Dir3::Z, [0., 0., 0., 1.]; "right")]
-	fn looking_right_apply_weights_for_direction(direction: Dir3, expected_weights: [f32; 4]) {
-		let handle = new_handle();
-		let lookup = AnimationLookup {
-			animations: HashMap::from([(
-				AnimationKey::Walk,
-				AnimationLookupData {
-					animation_clips: AnimationClips::Directional(DirectionalIndices {
-						forward: AnimationNodeIndex::new(0),
-						backward: AnimationNodeIndex::new(1),
-						left: AnimationNodeIndex::new(2),
-						right: AnimationNodeIndex::new(3),
-					}),
-					..default()
-				},
-			)]),
-			..default()
-		};
-		let mut app = setup(&lookup, HashMap::from([]), &handle);
-		let player = app.world_mut().spawn(_GraphComponent(handle.clone())).id();
-		app.world_mut().spawn((
-			GlobalTransform::from(Transform::default().looking_to(Dir3::X, Vec3::Y)),
-			_Dispatch {
-				players: vec![player],
-				animations: vec![AnimationKey::Walk],
-			},
-			CurrentMovementDirection(Some(direction)),
-			lookup,
-		));
-
-		app.update();
-
-		let graphs = app.world().resource::<Assets<_Graph>>();
-		let graph = graphs.get(&handle).unwrap();
-		assert_eq_approx!(
-			expected_weights,
-			[
-				graph.nodes.get(&0).unwrap().weight,
-				graph.nodes.get(&1).unwrap().weight,
-				graph.nodes.get(&2).unwrap().weight,
-				graph.nodes.get(&3).unwrap().weight
-			],
-			f32::EPSILON
-		);
-	}
-
-	#[test_case(Dir3::NEG_Z, [0.5, 0., 0.5, 0.]; "global forward")]
-	#[test_case(Dir3::Z, [0., 0.5, 0., 0.5]; "global backward")]
-	#[test_case(Dir3::NEG_X, [0., 0.5, 0.5, 0.]; "global left")]
-	#[test_case(Dir3::X, [0.5, 0., 0., 0.5]; "global right")]
-	fn looking_forward_right_apply_weights_for_direction(
-		direction: Dir3,
-		expected_weights: [f32; 4],
+	#[test_case(Some(DirForwardPitch::Up(ForwardPitch::try_from(0.3).unwrap())), [0.7, 0.3, 0.]; "up")]
+	#[test_case(Some(DirForwardPitch::Down(ForwardPitch::try_from(0.3).unwrap())), [0.7, 0., 0.3]; "down")]
+	fn apply_blended_weights_when_configured_with_max_pitch(
+		pitch: Option<DirForwardPitch>,
+		expected_weights: [f32; 3],
 	) {
+		let initial_weights = || {
+			expected_weights
+				.map(|weight| match weight {
+					0. => 1.,
+					_ => 0.,
+				})
+				.into_iter()
+				.enumerate()
+		};
 		let handle = new_handle();
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
-				AnimationKey::Walk,
+				AnimationKey::Skill(SlotKey(11)),
 				AnimationLookupData {
-					animation_clips: AnimationClips::Directional(DirectionalIndices {
-						forward: AnimationNodeIndex::new(0),
-						backward: AnimationNodeIndex::new(1),
-						left: AnimationNodeIndex::new(2),
-						right: AnimationNodeIndex::new(3),
+					animation_clips: AnimationClips::PitchedForward(PitchedForwardIndices {
+						neutral: AnimationNodeIndex::new(0),
+						up: (ForwardPitch::MAX, AnimationNodeIndex::new(1)),
+						down: (ForwardPitch::MAX, AnimationNodeIndex::new(2)),
 					}),
 					..default()
 				},
 			)]),
 			..default()
 		};
-		let mut app = setup(&lookup, HashMap::from([]), &handle);
+		let weights = HashMap::from_iter(initial_weights());
+		let mut app = setup(&lookup, weights, &handle);
 		let player = app.world_mut().spawn(_GraphComponent(handle.clone())).id();
 		app.world_mut().spawn((
-			GlobalTransform::from(
-				Transform::default()
-					.looking_to(Dir3::new(Vec3::new(1., 0., -1.)).unwrap(), Vec3::Y),
-			),
 			_Dispatch {
 				players: vec![player],
-				animations: vec![AnimationKey::Walk],
+				animations: vec![AnimationKey::Skill(SlotKey(11))],
 			},
-			CurrentMovementDirection(Some(direction)),
+			CurrentForwardPitch(pitch),
 			lookup,
 		));
 
@@ -366,43 +304,56 @@ mod tests {
 				graph.nodes.get(&0).unwrap().weight,
 				graph.nodes.get(&1).unwrap().weight,
 				graph.nodes.get(&2).unwrap().weight,
-				graph.nodes.get(&3).unwrap().weight
 			],
 			f32::EPSILON
 		);
 	}
 
-	#[test]
-	fn prevent_weight_nan_for_close_directions_round_error() {
+	#[test_case(Some(DirForwardPitch::Up(ForwardPitch::try_from(0.2).unwrap())), [0.75, 0.25, 0.]; "up")]
+	#[test_case(Some(DirForwardPitch::Down(ForwardPitch::try_from(0.2).unwrap())), [0.75, 0., 0.25]; "down")]
+	fn apply_blended_weights_when_configured_with_less_than_max_pitch(
+		pitch: Option<DirForwardPitch>,
+		expected_weights: [f32; 3],
+	) {
+		let initial_weights = || {
+			expected_weights
+				.map(|weight| match weight {
+					0. => 1.,
+					_ => 0.,
+				})
+				.into_iter()
+				.enumerate()
+		};
 		let handle = new_handle();
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
-				AnimationKey::Walk,
+				AnimationKey::Skill(SlotKey(11)),
 				AnimationLookupData {
-					animation_clips: AnimationClips::Directional(DirectionalIndices {
-						forward: AnimationNodeIndex::new(0),
-						backward: AnimationNodeIndex::new(1),
-						left: AnimationNodeIndex::new(2),
-						right: AnimationNodeIndex::new(3),
+					animation_clips: AnimationClips::PitchedForward(PitchedForwardIndices {
+						neutral: AnimationNodeIndex::new(0),
+						up: (
+							ForwardPitch::try_from(0.8).unwrap(),
+							AnimationNodeIndex::new(1),
+						),
+						down: (
+							ForwardPitch::try_from(0.8).unwrap(),
+							AnimationNodeIndex::new(2),
+						),
 					}),
 					..default()
 				},
 			)]),
 			..default()
 		};
-		let mut app = setup(&lookup, HashMap::from([]), &handle);
+		let weights = HashMap::from_iter(initial_weights());
+		let mut app = setup(&lookup, weights, &handle);
 		let player = app.world_mut().spawn(_GraphComponent(handle.clone())).id();
 		app.world_mut().spawn((
-			GlobalTransform::from(Transform::default().looking_to(
-				// taken from production, when causing a NaN weight
-				Dir3::new(Vec3::new(-0.039663047, -0.0, -0.9992132)).unwrap(),
-				Vec3::Y,
-			)),
 			_Dispatch {
 				players: vec![player],
-				animations: vec![AnimationKey::Walk],
+				animations: vec![AnimationKey::Skill(SlotKey(11))],
 			},
-			CurrentMovementDirection(Dir3::new(Vec3::new(-0.039663114, 0.0, -0.9992131)).ok()),
+			CurrentForwardPitch(pitch),
 			lookup,
 		));
 
@@ -411,12 +362,74 @@ mod tests {
 		let graphs = app.world().resource::<Assets<_Graph>>();
 		let graph = graphs.get(&handle).unwrap();
 		assert_eq_approx!(
-			[1., 0., 0., 0.],
+			expected_weights,
 			[
 				graph.nodes.get(&0).unwrap().weight,
 				graph.nodes.get(&1).unwrap().weight,
 				graph.nodes.get(&2).unwrap().weight,
-				graph.nodes.get(&3).unwrap().weight
+			],
+			f32::EPSILON
+		);
+	}
+
+	#[test_case(Some(DirForwardPitch::Up(ForwardPitch::try_from(0.9).unwrap())), [0., 1., 0.]; "up")]
+	#[test_case(Some(DirForwardPitch::Down(ForwardPitch::try_from(0.9).unwrap())), [0., 0., 1.]; "down")]
+	fn apply_clamped_blended_weights_when_configured_with_less_than_max_pitch(
+		pitch: Option<DirForwardPitch>,
+		expected_weights: [f32; 3],
+	) {
+		let initial_weights = || {
+			expected_weights
+				.map(|weight| match weight {
+					0. => 1.,
+					_ => 0.,
+				})
+				.into_iter()
+				.enumerate()
+		};
+		let handle = new_handle();
+		let lookup = AnimationLookup {
+			animations: HashMap::from([(
+				AnimationKey::Skill(SlotKey(11)),
+				AnimationLookupData {
+					animation_clips: AnimationClips::PitchedForward(PitchedForwardIndices {
+						neutral: AnimationNodeIndex::new(0),
+						up: (
+							ForwardPitch::try_from(0.8).unwrap(),
+							AnimationNodeIndex::new(1),
+						),
+						down: (
+							ForwardPitch::try_from(0.8).unwrap(),
+							AnimationNodeIndex::new(2),
+						),
+					}),
+					..default()
+				},
+			)]),
+			..default()
+		};
+		let weights = HashMap::from_iter(initial_weights());
+		let mut app = setup(&lookup, weights, &handle);
+		let player = app.world_mut().spawn(_GraphComponent(handle.clone())).id();
+		app.world_mut().spawn((
+			_Dispatch {
+				players: vec![player],
+				animations: vec![AnimationKey::Skill(SlotKey(11))],
+			},
+			CurrentForwardPitch(pitch),
+			lookup,
+		));
+
+		app.update();
+
+		let graphs = app.world().resource::<Assets<_Graph>>();
+		let graph = graphs.get(&handle).unwrap();
+		assert_eq_approx!(
+			expected_weights,
+			[
+				graph.nodes.get(&0).unwrap().weight,
+				graph.nodes.get(&1).unwrap().weight,
+				graph.nodes.get(&2).unwrap().weight,
 			],
 			f32::EPSILON
 		);
