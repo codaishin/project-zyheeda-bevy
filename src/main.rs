@@ -55,7 +55,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let movement =
 		MovementPlugin::from_plugins(&input, &savegame, &animations, &physics, &path_finding);
 	let graphics = GraphicsPlugin::from_plugins(&loading, &savegame, &physics);
-	let skills = SkillsPlugin::from_plugins(&savegame, &physics, &loading, &movement);
+	let skills = SkillsPlugin::from_plugins(&savegame, &animations, &physics, &loading, &movement);
 	let agents = AgentsPlugin::from_plugins(
 		&loading,
 		&input,

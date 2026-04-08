@@ -124,8 +124,26 @@ pub trait GetForwardPitch {
 	fn get_forward_pitch(&self) -> Option<DirForwardPitch>;
 }
 
+impl<T> GetForwardPitch for T
+where
+	T: Deref<Target: GetForwardPitch>,
+{
+	fn get_forward_pitch(&self) -> Option<DirForwardPitch> {
+		self.deref().get_forward_pitch()
+	}
+}
+
 pub trait GetForwardPitchMut: GetForwardPitch {
 	fn get_forward_pitch_mut(&mut self) -> &mut Option<DirForwardPitch>;
+}
+
+impl<T> GetForwardPitchMut for T
+where
+	T: DerefMut<Target: GetForwardPitchMut>,
+{
+	fn get_forward_pitch_mut(&mut self) -> &mut Option<DirForwardPitch> {
+		self.deref_mut().get_forward_pitch_mut()
+	}
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
