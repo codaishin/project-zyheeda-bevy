@@ -15,7 +15,7 @@ use crate::{
 		slots::visualization::SlotVisualization,
 		target::Target,
 	},
-	skills::SkillId,
+	skills::{SkillId, behaviors::SkillBehaviorConfig},
 	system_parameters::{
 		loadout::{
 			LoadoutPrep,
@@ -125,7 +125,7 @@ where
 				Combos::update::<Queue>,
 				flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
 				schedule_active_skill::<Queue, FacingSystemParamMut<TMovement>, ActiveSkill, Virtual>,
-				ActiveSkill::execute::<SkillSpawnerMut<TPhysics>>,
+				ActiveSkill::<SkillBehaviorConfig>::execute::<SkillSpawnerMut<TPhysics>>,
 				flush::<Queue>,
 				HeldSlots::<Old>::update_from::<Current>,
 				Target::update_pitch::<

@@ -1,66 +1,127 @@
-use crate::{
-	skills::{behaviors::SkillBehaviorConfig, shape::OnSkillStop},
-	traits::spawn_skill::SpawnSkill,
-};
-use common::traits::handles_skill_physics::{
-	SkillCaster,
-	SkillShape,
-	SkillSpawner,
-	SkillTarget,
-	Spawn,
-	SpawnArgs,
+use crate::{skills::shape::OnSkillStop, traits::spawn_skill::SpawnSkill};
+use common::{
+	components::persistent_entity::PersistentEntity,
+	tools::action_key::slot::SlotKey,
+	traits::handles_skill_physics::{
+		Effect,
+		SkillCaster,
+		SkillShape,
+		SkillSpawner,
+		SkillTarget,
+		Spawn,
+		SpawnArgs,
+	},
 };
 
-impl<T> SpawnSkill<SkillBehaviorConfig> for T
+impl<T, TConfig> SpawnSkill<TConfig> for T
 where
 	T: Spawn,
+	TConfig: SkillConfigData,
 {
 	fn spawn_skill(
 		&mut self,
-		config: SkillBehaviorConfig,
+		config: TConfig,
 		caster: SkillCaster,
-		spawner: SkillSpawner,
+		slot: SlotKey,
 		target: SkillTarget,
 	) -> OnSkillStop {
-		let entity = self.spawn(SpawnArgs {
-			shape: &config.shape,
-			contact_effects: &config.contact,
-			projection_effects: &config.projection,
+		let spawner = if config.use_neutral_spawn() {
+			SkillSpawner::Neutral
+		} else {
+			SkillSpawner::Slot(slot)
+		};
+
+		let skill = self.spawn(SpawnArgs {
+			shape: config.shape(),
+			contact_effects: config.contact_effects(),
+			projection_effects: config.projection_effects(),
 			caster,
 			spawner,
 			target,
 		});
 
-		match config.shape {
-			SkillShape::Shield(..) | SkillShape::Beam(..) => OnSkillStop::Stop(entity),
-			_ => OnSkillStop::Ignore,
-		}
+		config.on_skill_stop(skill)
 	}
+}
+
+pub(crate) trait SkillConfigData {
+	fn use_neutral_spawn(&self) -> bool;
+	fn shape(&self) -> &'_ SkillShape;
+	fn contact_effects(&self) -> &'_ [Effect];
+	fn projection_effects(&self) -> &'_ [Effect];
+	fn on_skill_stop(&self, skill: PersistentEntity) -> OnSkillStop;
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use bevy::prelude::default;
 	use common::{
 		components::persistent_entity::PersistentEntity,
 		effects::force::Force,
 		tools::{Units, action_key::slot::SlotKey},
-		traits::{
-			handles_physics::physical_bodies::Blockers,
-			handles_skill_physics::{
-				Effect,
-				SkillShape,
-				beam::Beam,
-				ground_target::SphereAoE,
-				shield::Shield,
-			},
-		},
+		traits::handles_skill_physics::{Effect, SkillShape, ground_target::SphereAoE},
 	};
 	use macros::simple_mock;
 	use std::time::Duration;
 	use test_case::test_case;
 	use testing::Mock;
 	use uuid::uuid;
+
+	struct _Config {
+		use_neutral_spawn: bool,
+		shape: SkillShape,
+		contact: Vec<Effect>,
+		projection: Vec<Effect>,
+		on_skill_stop: fn(PersistentEntity) -> OnSkillStop,
+	}
+
+	impl _Config {
+		const DEFAULT: Self = Self {
+			use_neutral_spawn: false,
+			shape: SkillShape::SphereAoE(SphereAoE {
+				max_range: Units::from_u8(u8::MAX),
+				radius: Units::from_u8(1),
+				lifetime: Some(Duration::from_secs(1)),
+			}),
+			contact: vec![],
+			projection: vec![],
+			on_skill_stop: |_| OnSkillStop::Ignore,
+		};
+
+		const fn using_neutral_spawn(mut self, use_neutral_spawn: bool) -> Self {
+			self.use_neutral_spawn = use_neutral_spawn;
+			self
+		}
+	}
+
+	impl Default for _Config {
+		fn default() -> Self {
+			Self::DEFAULT
+		}
+	}
+
+	impl SkillConfigData for _Config {
+		fn use_neutral_spawn(&self) -> bool {
+			self.use_neutral_spawn
+		}
+
+		fn shape(&self) -> &'_ SkillShape {
+			&self.shape
+		}
+
+		fn contact_effects(&self) -> &'_ [Effect] {
+			&self.contact
+		}
+
+		fn projection_effects(&self) -> &'_ [Effect] {
+			&self.projection
+		}
+
+		fn on_skill_stop(&self, skill: PersistentEntity) -> OnSkillStop {
+			(self.on_skill_stop)(skill)
+		}
+	}
 
 	simple_mock! {
 		_Spawn {}
@@ -69,38 +130,28 @@ mod tests {
 		}
 	}
 
-	const fn ground_target(radius: u8, lifetime: Option<Duration>) -> SkillBehaviorConfig {
-		SkillBehaviorConfig::from_shape(SkillShape::SphereAoE(SphereAoE {
-			max_range: Units::from_u8(u8::MAX),
-			radius: Units::from_u8(radius),
-			lifetime,
-		}))
-	}
-
-	const SHIELD: SkillBehaviorConfig = SkillBehaviorConfig::from_shape(SkillShape::Shield(Shield));
-
 	static CASTER: SkillCaster = SkillCaster(PersistentEntity::from_uuid(uuid!(
 		"91409ebe-e94d-43b2-8dc1-53949e4f0dc2"
 	)));
-	const SPAWNER: SkillSpawner = SkillSpawner::Slot(SlotKey(123));
+	const SLOT: SlotKey = SlotKey(123);
 	static TARGET: SkillTarget = SkillTarget::Entity(PersistentEntity::from_uuid(uuid!(
 		"d0032d1c-a840-4ea5-9047-86f88a0437dc"
 	)));
 
 	#[test]
-	fn spawn_contact_and_projection() {
-		const CONFIG: SkillBehaviorConfig = ground_target(11, None);
+	fn spawn_contact_and_projection_on_slot() {
+		const CONFIG: _Config = _Config::DEFAULT.using_neutral_spawn(false);
 		const ARGS: SpawnArgs = SpawnArgs {
 			shape: &CONFIG.shape,
 			caster: CASTER,
-			spawner: SPAWNER,
+			spawner: SkillSpawner::Slot(SLOT),
 			target: TARGET,
 			contact_effects: &[],
 			projection_effects: &[],
 		};
 		let mut spawn = Mock_Spawn::new_mock(assert_contact_and_projection_used);
 
-		spawn.spawn_skill(CONFIG, CASTER, SPAWNER, TARGET);
+		spawn.spawn_skill(CONFIG, CASTER, SLOT, TARGET);
 
 		fn assert_contact_and_projection_used(mock: &mut Mock_Spawn) {
 			mock.expect_spawn()
@@ -110,39 +161,55 @@ mod tests {
 		}
 	}
 
-	#[test_case(SkillShape::Shield(Shield); "shield")]
-	#[test_case(SkillShape::Beam(Beam {range: Units::ZERO, blocked_by: Blockers::All}); "beam")]
-	fn return_stoppable(shape: SkillShape) {
-		let config = SkillBehaviorConfig::from_shape(shape);
+	#[test]
+	fn spawn_contact_and_projection_on_neutral() {
+		const CONFIG: _Config = _Config::DEFAULT.using_neutral_spawn(true);
+		const ARGS: SpawnArgs = SpawnArgs {
+			shape: &CONFIG.shape,
+			caster: CASTER,
+			spawner: SkillSpawner::Neutral,
+			target: TARGET,
+			contact_effects: &[],
+			projection_effects: &[],
+		};
+		let mut spawn = Mock_Spawn::new_mock(assert_contact_and_projection_used);
+
+		spawn.spawn_skill(CONFIG, CASTER, SLOT, TARGET);
+
+		fn assert_contact_and_projection_used(mock: &mut Mock_Spawn) {
+			mock.expect_spawn()
+				.once()
+				.withf(|args| args == &ARGS)
+				.return_const(PersistentEntity::default());
+		}
+	}
+
+	#[test_case(|_| OnSkillStop::Ignore; "infinite")]
+	#[test_case(OnSkillStop::Stop; "with lifetime")]
+	fn return_skill_stop(on_skill_stop: fn(PersistentEntity) -> OnSkillStop) {
 		let entity = PersistentEntity::default();
+		let config = _Config {
+			on_skill_stop,
+			..default()
+		};
 		let mut spawn = Mock_Spawn::new_mock(move |mock| {
 			mock.expect_spawn().return_const(entity);
 		});
 
-		let on_skill_stop = spawn.spawn_skill(config, CASTER, SPAWNER, TARGET);
+		let result = spawn.spawn_skill(config, CASTER, SLOT, TARGET);
 
-		assert_eq!(OnSkillStop::Stop(entity), on_skill_stop);
-	}
-
-	#[test_case(ground_target(1, None); "infinite")]
-	#[test_case(ground_target(1, Some(Duration::ZERO)); "with lifetime")]
-	fn return_non_stoppable(config: SkillBehaviorConfig) {
-		let mut spawn = Mock_Spawn::new_mock(move |mock| {
-			mock.expect_spawn()
-				.return_const(PersistentEntity::default());
-		});
-
-		let on_skill_stop = spawn.spawn_skill(config, CASTER, SPAWNER, TARGET);
-
-		assert_eq!(OnSkillStop::Ignore, on_skill_stop);
+		assert_eq!(on_skill_stop(entity), result);
 	}
 
 	#[test]
 	fn add_contact_effect() {
-		let config = SHIELD.with_contact_effects(vec![Effect::Force(Force)]);
+		let config = _Config {
+			contact: vec![Effect::Force(Force)],
+			..default()
+		};
 		let mut spawn = Mock_Spawn::new_mock(assert_added_effects);
 
-		spawn.spawn_skill(config, CASTER, SPAWNER, TARGET);
+		spawn.spawn_skill(config, CASTER, SLOT, TARGET);
 
 		fn assert_added_effects(mock: &mut Mock_Spawn) {
 			mock.expect_spawn()
@@ -154,10 +221,13 @@ mod tests {
 
 	#[test]
 	fn add_projection_effect() {
-		let config = SHIELD.with_projection_effects(vec![Effect::Force(Force)]);
+		let config = _Config {
+			projection: vec![Effect::Force(Force)],
+			..default()
+		};
 		let mut spawn = Mock_Spawn::new_mock(assert_added_effects);
 
-		spawn.spawn_skill(config, CASTER, SPAWNER, TARGET);
+		spawn.spawn_skill(config, CASTER, SLOT, TARGET);
 
 		fn assert_added_effects(mock: &mut Mock_Spawn) {
 			mock.expect_spawn()

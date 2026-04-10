@@ -10,7 +10,7 @@ use bevy::{
 use common::{
 	components::persistent_entity::PersistentEntity,
 	traits::{
-		handles_skill_physics::{Despawn, SkillCaster, SkillEntity, SkillSpawner},
+		handles_skill_physics::{Despawn, SkillCaster, SkillEntity},
 		thread_safe::ThreadSafe,
 	},
 };
@@ -35,12 +35,8 @@ where
 					let Some(target) = target else {
 						continue;
 					};
-					let on_stop_skill = spawn.spawn_skill(
-						shape.clone(),
-						SkillCaster(*entity),
-						SkillSpawner::Slot(*slot_key),
-						*target,
-					);
+					let on_stop_skill =
+						spawn.spawn_skill(shape.clone(), SkillCaster(*entity), *slot_key, *target);
 					match on_stop_skill {
 						OnSkillStop::Ignore => *skill_executer = Self::Idle,
 						OnSkillStop::Stop(skill) => *skill_executer = Self::Stoppable(skill),
@@ -84,10 +80,10 @@ mod tests {
 			&mut self,
 			config: _Config,
 			caster: SkillCaster,
-			spawner: SkillSpawner,
+			slot: SlotKey,
 			target: SkillTarget,
 		) -> OnSkillStop {
-			self.mock.spawn_skill(config, caster, spawner, target)
+			self.mock.spawn_skill(config, caster, slot, target)
 		}
 	}
 
@@ -104,7 +100,7 @@ mod tests {
 				&mut self,
 				config: _Config,
 				caster: SkillCaster,
-				spawner: SkillSpawner,
+				slot: SlotKey,
 				target: SkillTarget,
 			) -> OnSkillStop;
 		}
@@ -154,7 +150,7 @@ mod tests {
 				.with(
 					eq(_Config),
 					eq(SkillCaster(*CASTER)),
-					eq(SkillSpawner::Slot(SlotKey(11))),
+					eq(SlotKey(11)),
 					eq(SkillTarget::Entity(*TARGET)),
 				)
 				.return_const(OnSkillStop::Ignore);
