@@ -18,7 +18,7 @@ impl Target {
 	pub(crate) fn update_pitch<TRayCast, TAnimations>(
 		mut animations: StaticSystemParam<TAnimations>,
 		mut ray_caster: StaticSystemParam<TRayCast>,
-		targets: Query<(Entity, &Self, &GlobalTransform), Changed<Self>>,
+		targets: Query<(Entity, &Self, &GlobalTransform)>,
 		transforms: Query<&GlobalTransform>,
 		commands: ZyheedaCommands,
 	) where
@@ -322,57 +322,5 @@ mod tests {
 		}));
 
 		app.update();
-	}
-
-	#[test]
-	fn act_only_once() {
-		let mut app = setup();
-		let translation = Vec3::new(10., 2., 0.);
-		let entity = app
-			.world_mut()
-			.spawn((
-				Target(Some(SkillTarget::Cursor)),
-				GlobalTransform::from_translation(translation),
-				_Animations {
-					forward_pitch: None,
-				},
-			))
-			.id();
-
-		app.update();
-		app.update();
-
-		assert_eq!(
-			Some(&IsChanged::FALSE),
-			app.world().entity(entity).get::<IsChanged<_Animations>>(),
-		);
-	}
-
-	#[test]
-	fn act_again_if_changed() {
-		let mut app = setup();
-		let translation = Vec3::new(10., 2., 0.);
-		let entity = app
-			.world_mut()
-			.spawn((
-				Target(Some(SkillTarget::Cursor)),
-				GlobalTransform::from_translation(translation),
-				_Animations {
-					forward_pitch: None,
-				},
-			))
-			.id();
-
-		app.update();
-		app.world_mut()
-			.entity_mut(entity)
-			.get_mut::<Target>()
-			.as_deref_mut();
-		app.update();
-
-		assert_eq!(
-			Some(&IsChanged::TRUE),
-			app.world().entity(entity).get::<IsChanged<_Animations>>(),
-		);
 	}
 }
