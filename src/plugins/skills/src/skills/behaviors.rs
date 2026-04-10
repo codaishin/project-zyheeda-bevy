@@ -1,7 +1,11 @@
 pub(crate) mod dto;
 
+use crate::{skills::shape::OnSkillStop, traits::spawn_skill::extension::SkillConfigData};
 use bevy::prelude::*;
-use common::traits::handles_skill_physics::{Effect, SkillShape};
+use common::{
+	components::persistent_entity::PersistentEntity,
+	traits::handles_skill_physics::{Effect, SkillShape},
+};
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct SkillBehaviorConfig {
@@ -19,22 +23,32 @@ impl SkillBehaviorConfig {
 			projection: vec![],
 		}
 	}
+}
 
-	#[cfg(test)]
-	pub(crate) fn with_contact_effects(self, contact: Vec<Effect>) -> Self {
-		Self {
-			shape: self.shape,
-			contact,
-			projection: self.projection,
-		}
+impl SkillConfigData for SkillBehaviorConfig {
+	fn use_neutral_spawn(&self) -> bool {
+		matches!(
+			&self.shape,
+			SkillShape::Shield(_) | SkillShape::SphereAoE(_)
+		)
 	}
 
-	#[cfg(test)]
-	pub(crate) fn with_projection_effects(self, projection: Vec<Effect>) -> Self {
-		Self {
-			shape: self.shape,
-			contact: self.contact,
-			projection,
+	fn shape(&self) -> &'_ SkillShape {
+		&self.shape
+	}
+
+	fn contact_effects(&self) -> &'_ [Effect] {
+		&self.contact
+	}
+
+	fn projection_effects(&self) -> &'_ [Effect] {
+		&self.projection
+	}
+
+	fn on_skill_stop(&self, skill: PersistentEntity) -> OnSkillStop {
+		match &self.shape {
+			SkillShape::Beam(_) | SkillShape::Shield(_) => OnSkillStop::Stop(skill),
+			_ => OnSkillStop::Ignore,
 		}
 	}
 }
