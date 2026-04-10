@@ -104,7 +104,17 @@
 					},
 					{
 						"path": {
-							"Single": "models/player.glb#Animation10"
+							"PitchedForward": {
+								"neutral": "models/player.glb#Animation10",
+								"up": [
+									0.5,
+									"models/player.glb#Animation11"
+								],
+								"down": [
+									0.5,
+									"models/player.glb#Animation12"
+								]
+							}
 						},
 						"play_mode": "Repeat",
 						"mask_groups": "010"
@@ -116,7 +126,17 @@
 					},
 					{
 						"path": {
-							"Single": "models/player.glb#Animation11"
+							"PitchedForward": {
+								"neutral": "models/player.glb#Animation13",
+								"up": [
+									0.5,
+									"models/player.glb#Animation14"
+								],
+								"down": [
+									0.5,
+									"models/player.glb#Animation15"
+								]
+							}
 						},
 						"play_mode": "Repeat",
 						"mask_groups": "100"
