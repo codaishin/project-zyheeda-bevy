@@ -26,6 +26,9 @@ pub(crate) trait SetPitchAnimationWeights:
 	}
 }
 
+/// Using a min neutral animation weight to prevent odd deformations.
+const MIN_NEUTRAL_WEIGHT: f32 = 1e-6;
+
 macro_rules! set {
 	($value:expr, $graph:expr, $($clip:expr),+ $(,)?) => {
 		$({
@@ -38,11 +41,13 @@ macro_rules! set {
 
 macro_rules! blend {
 	($pitch:expr, $graph:expr, $neutral_clip:expr, $pitched_clip:expr) => {{
-		let (max_pitch, pitch_node) = $pitched_clip;
-		let pitch = **$pitch;
-		let scale = 1. / *max_pitch;
-		set!((1. - pitch * scale).clamp(0., 1.), $graph, $neutral_clip);
-		set!((pitch * scale).clamp(0., 1.), $graph, pitch_node);
+		let (max_pitch, pitched_clip) = $pitched_clip;
+		let offset = **$pitch / *max_pitch;
+		let neutral_weight = (1. - offset).clamp(MIN_NEUTRAL_WEIGHT, 1.);
+		let pitched_weight = offset.clamp(0., 1.);
+
+		set!(neutral_weight, $graph, $neutral_clip);
+		set!(pitched_weight, $graph, pitched_clip);
 	}};
 }
 
@@ -198,8 +203,8 @@ mod tests {
 	}
 
 	#[test_case(None, [1., 0., 0.]; "neutral")]
-	#[test_case(Some(DirForwardPitch::Up(ForwardPitch::MAX)), [0., 1., 0.]; "up")]
-	#[test_case(Some(DirForwardPitch::Down(ForwardPitch::MAX)), [0., 0., 1.]; "down")]
+	#[test_case(Some(DirForwardPitch::Up(ForwardPitch::MAX)), [MIN_NEUTRAL_WEIGHT, 1., 0.]; "up")]
+	#[test_case(Some(DirForwardPitch::Down(ForwardPitch::MAX)), [MIN_NEUTRAL_WEIGHT, 0., 1.]; "down")]
 	fn apply_full_weights(pitch: Option<DirForwardPitch>, expected_weights: [f32; 3]) {
 		let initial_weights = || {
 			expected_weights
@@ -372,8 +377,8 @@ mod tests {
 		);
 	}
 
-	#[test_case(Some(DirForwardPitch::Up(ForwardPitch::try_from(0.9).unwrap())), [0., 1., 0.]; "up")]
-	#[test_case(Some(DirForwardPitch::Down(ForwardPitch::try_from(0.9).unwrap())), [0., 0., 1.]; "down")]
+	#[test_case(Some(DirForwardPitch::Up(ForwardPitch::try_from(0.9).unwrap())), [MIN_NEUTRAL_WEIGHT, 1., 0.]; "up")]
+	#[test_case(Some(DirForwardPitch::Down(ForwardPitch::try_from(0.9).unwrap())), [MIN_NEUTRAL_WEIGHT, 0., 1.]; "down")]
 	fn apply_clamped_blended_weights_when_configured_with_less_than_max_pitch(
 		pitch: Option<DirForwardPitch>,
 		expected_weights: [f32; 3],
