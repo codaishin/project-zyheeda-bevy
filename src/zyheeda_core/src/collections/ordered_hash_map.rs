@@ -1,4 +1,3 @@
-use bevy::prelude::default;
 use std::{
 	collections::{
 		HashMap,
@@ -97,8 +96,8 @@ where
 {
 	fn default() -> Self {
 		Self {
-			map: default(),
-			order: default(),
+			map: Default::default(),
+			order: Default::default(),
 		}
 	}
 }

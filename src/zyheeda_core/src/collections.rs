@@ -1,3 +1,2 @@
+pub mod ordered_hash_map;
 pub mod sorted;
-
-pub use sorted::Sorted;
