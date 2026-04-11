@@ -8,7 +8,7 @@ use common::{
 		handles_movement::{Movement, MovementTarget},
 	},
 };
-use std::collections::HashSet;
+use zyheeda_core::prelude::OrderedSet;
 
 impl Enemy {
 	pub(crate) fn animate_movement<TMovement, TAnimations>(
@@ -33,7 +33,7 @@ impl Enemy {
 			let movement_animations = animations.active_animations_mut(Move);
 
 			match movement.view() {
-				Some(_) => *movement_animations = HashSet::from([AnimationKey::Run]),
+				Some(_) => *movement_animations = OrderedSet::from([AnimationKey::Run]),
 				None => movement_animations.clear(),
 			};
 		}
@@ -46,7 +46,7 @@ mod tests {
 	use super::*;
 	use crate::systems::player::animate_movement::tests::{_Animations, _Movement};
 	use common::traits::{handles_animations::AnimationKey, handles_movement::MovementTarget};
-	use std::collections::{HashMap, HashSet};
+	use std::collections::HashMap;
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -80,7 +80,7 @@ mod tests {
 		assert_eq!(
 			Some(&_Animations(HashMap::from([(
 				Move.into(),
-				HashSet::from([AnimationKey::Run]),
+				OrderedSet::from([AnimationKey::Run]),
 			)]))),
 			app.world().entity(entity).get::<_Animations>(),
 		);
@@ -99,7 +99,7 @@ mod tests {
 				},
 				_Animations(HashMap::from([(
 					Move.into(),
-					HashSet::from([AnimationKey::Walk]),
+					OrderedSet::from([AnimationKey::Walk]),
 				)])),
 			))
 			.id();
@@ -109,7 +109,7 @@ mod tests {
 		assert_eq!(
 			Some(&_Animations(HashMap::from([(
 				Move.into(),
-				HashSet::from([AnimationKey::Run]),
+				OrderedSet::from([AnimationKey::Run]),
 			)]))),
 			app.world().entity(entity).get::<_Animations>(),
 		);
@@ -156,7 +156,7 @@ mod tests {
 				},
 				_Animations(HashMap::from([(
 					Move.into(),
-					HashSet::from([AnimationKey::Run]),
+					OrderedSet::from([AnimationKey::Run]),
 				)])),
 			))
 			.id();
@@ -170,7 +170,7 @@ mod tests {
 		assert_eq!(
 			Some(&_Animations(HashMap::from([(
 				Move.into(),
-				HashSet::from([])
+				OrderedSet::from([])
 			)]))),
 			app.world().entity(entity).get::<_Animations>(),
 		);

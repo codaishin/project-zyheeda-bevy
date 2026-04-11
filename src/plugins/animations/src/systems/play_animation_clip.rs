@@ -5,11 +5,11 @@ use crate::{
 	},
 	traits::{
 		AnimationPlayers,
-		GetActiveAnimations,
 		IsPlaying,
 		RepeatAnimation,
 		ReplayAnimation,
 		StopAnimation,
+		YoungestToOldestActiveAnimations,
 		asset_server::animation_graph::GetNodeMut,
 	},
 };
@@ -23,13 +23,13 @@ use common::traits::{
 use std::collections::HashSet;
 
 impl<TDispatch> PlayAnimationClip for TDispatch where
-	TDispatch: Component + AnimationPlayers + GetActiveAnimations
+	TDispatch: Component + AnimationPlayers + YoungestToOldestActiveAnimations
 {
 }
 
 pub(crate) trait PlayAnimationClip
 where
-	Self: Component + AnimationPlayers + GetActiveAnimations + Sized,
+	Self: Component + AnimationPlayers + YoungestToOldestActiveAnimations + Sized,
 {
 	#[allow(clippy::type_complexity)]
 	fn play_animation_clip<TAnimationPlayer>(
@@ -65,7 +65,7 @@ fn play_animation_clip<TAnimationPlayer, TDispatch, TGraph, TAnimations>(
 ) where
 	TAnimationPlayer: QueryData,
 	TGraph: Asset + GetNodeMut + WrapHandle,
-	TDispatch: Component + AnimationPlayers + GetActiveAnimations,
+	TDispatch: Component + AnimationPlayers + YoungestToOldestActiveAnimations,
 	for<'a> TAnimations: ThreadSafe + Iterate<'a, TItem = &'a AnimationNodeIndex>,
 	for<'w, 's> TAnimationPlayer::Item<'w, 's>: IsPlaying<AnimationNodeIndex>
 		+ ReplayAnimation<AnimationNodeIndex>
@@ -107,7 +107,7 @@ where
 	TPlayer: IsPlaying<AnimationNodeIndex>
 		+ ReplayAnimation<AnimationNodeIndex>
 		+ RepeatAnimation<AnimationNodeIndex>,
-	TDispatcher: GetActiveAnimations,
+	TDispatcher: YoungestToOldestActiveAnimations,
 	TGraph: Asset + GetNodeMut,
 	for<'a> TAnimations: Iterate<'a, TItem = &'a AnimationNodeIndex>,
 {
@@ -117,7 +117,7 @@ where
 	for priority in AnimationPriority::ordered_descending() {
 		let blocked_by_higher_priority = higher_priority_mask;
 
-		for key in dispatcher.get_active_animations(priority) {
+		for key in dispatcher.youngest_to_oldest_active_animations(priority) {
 			let Some(animation_data) = lookup.animations.get(key) else {
 				continue;
 			};
@@ -203,17 +203,20 @@ mod tests {
 		}
 	}
 
-	impl GetActiveAnimations for _AnimationDispatch {
+	impl YoungestToOldestActiveAnimations for _AnimationDispatch {
 		type TIter<'a>
 			= Iter<'a, AnimationKey>
 		where
 			Self: 'a;
 
-		fn get_active_animations<TPriority>(&self, priority: TPriority) -> Self::TIter<'_>
+		fn youngest_to_oldest_active_animations<TPriority>(
+			&self,
+			priority: TPriority,
+		) -> Self::TIter<'_>
 		where
 			TPriority: Into<AnimationPriority> + 'static,
 		{
-			self.mock.get_active_animations(priority)
+			self.mock.youngest_to_oldest_active_animations(priority)
 		}
 	}
 
@@ -224,13 +227,13 @@ mod tests {
 
 			fn animation_players(&self) -> _Iter;
 		}
-		impl GetActiveAnimations for _AnimationDispatch {
+		impl YoungestToOldestActiveAnimations for _AnimationDispatch {
 			type TIter<'a>
 				= Iter<'a, AnimationKey>
 			where
 				Self: 'a;
 
-			fn get_active_animations<TPriority>(&self, priority: TPriority) -> Iter<'static, AnimationKey>
+			fn youngest_to_oldest_active_animations<TPriority>(&self, priority: TPriority) -> Iter<'static, AnimationKey>
 			where
 				TPriority: Into<AnimationPriority> + 'static;
 		}
@@ -456,10 +459,10 @@ mod tests {
 			_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![AnimationKey::Walk]));
-				mock.expect_get_active_animations::<AnimationPriority>()
+				mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
 					.return_const(leak_iterator(vec![]));
 			}),
 			lookup,
@@ -511,10 +514,10 @@ mod tests {
 			_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![AnimationKey::Walk]));
-				mock.expect_get_active_animations::<AnimationPriority>()
+				mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
 					.return_const(leak_iterator(vec![]));
 			}),
 			lookup,
@@ -617,19 +620,19 @@ mod tests {
 			_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![
 						AnimationKey::Skill(SlotKey(11)),
 						AnimationKey::Skill(SlotKey(12)),
 					]));
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::Medium))
 					.return_const(leak_iterator(vec![
 						AnimationKey::Skill(SlotKey(21)),
 						AnimationKey::Skill(SlotKey(22)),
 					]));
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::Low))
 					.return_const(leak_iterator(vec![
 						AnimationKey::Skill(SlotKey(31)),
@@ -686,10 +689,10 @@ mod tests {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
 
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![AnimationKey::Walk]));
-				mock.expect_get_active_animations::<AnimationPriority>()
+				mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
 					.return_const(leak_iterator(vec![]));
 			}),
 			lookup,
@@ -744,7 +747,7 @@ mod tests {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
 
-				mock.expect_get_active_animations::<AnimationPriority>()
+				mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
 					.return_const(leak_iterator(vec![]));
 			}),
 			lookup,
@@ -791,10 +794,10 @@ mod tests {
 			_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![AnimationKey::Walk]));
-				mock.expect_get_active_animations::<AnimationPriority>()
+				mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
 					.return_const(leak_iterator(vec![]));
 			}),
 			lookup,
@@ -837,10 +840,10 @@ mod tests {
 				_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 					mock.expect_animation_players()
 						.return_const(_Iter::from([animation_player]));
-					mock.expect_get_active_animations()
+					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::High))
 						.return_const(leak_iterator(vec![AnimationKey::Walk]));
-					mock.expect_get_active_animations::<AnimationPriority>()
+					mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
 						.return_const(leak_iterator(vec![]));
 				}),
 				lookup,
@@ -940,19 +943,19 @@ mod tests {
 			_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![
 						AnimationKey::Skill(SlotKey(11)),
 						AnimationKey::Skill(SlotKey(12)),
 					]));
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::Medium))
 					.return_const(leak_iterator(vec![
 						AnimationKey::Skill(SlotKey(21)),
 						AnimationKey::Skill(SlotKey(22)),
 					]));
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::Low))
 					.return_const(leak_iterator(vec![
 						AnimationKey::Skill(SlotKey(31)),
@@ -1066,19 +1069,19 @@ mod tests {
 			_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![
 						AnimationKey::Skill(SlotKey(11)),
 						AnimationKey::Skill(SlotKey(12)),
 					]));
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::Medium))
 					.return_const(leak_iterator(vec![
 						AnimationKey::Skill(SlotKey(21)),
 						AnimationKey::Skill(SlotKey(22)),
 					]));
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::Low))
 					.return_const(leak_iterator(vec![
 						AnimationKey::Skill(SlotKey(31)),
@@ -1172,13 +1175,13 @@ mod tests {
 			_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![AnimationKey::Skill(SlotKey(1))]));
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::Medium))
 					.return_const(leak_iterator(vec![AnimationKey::Skill(SlotKey(2))]));
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::Low))
 					.return_const(leak_iterator(vec![]));
 			}),
@@ -1233,7 +1236,7 @@ mod tests {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
 
-				mock.expect_get_active_animations::<AnimationPriority>()
+				mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
 					.return_const(leak_iterator(vec![]));
 			}),
 			lookup,
