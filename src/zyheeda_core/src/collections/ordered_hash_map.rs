@@ -169,11 +169,8 @@ where
 		let key = self.order.next()?;
 		let value = self.map.get_mut(key)?;
 
-		// Safety: The compiler cannot reason about disjointed mutable references here.
-		// We are fine as long as `order` produces unique keys.
-		// A streaming iterator - that uses `&'a mut self` - wouldn't have this problem.
-		// It would tie each yielded value to the lifetime of the iterator not the implicit
-		// lifetime of the function call.
+		// Safety:
+		// As long as `order` produces unique keys we produce disjointed mutable references.
 		Some((key, unsafe { &mut *(value as *mut TValue) }))
 	}
 }
