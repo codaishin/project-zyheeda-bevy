@@ -1,6 +1,6 @@
 pub use crate::{
 	collections::{
-		ordered_hash_map::{Entry, OrderedHashMap},
+		ordered::{Entry, OrderedHashMap, OrderedSet},
 		ring_buffer::RingBuffer,
 		sorted::Sorted,
 	},

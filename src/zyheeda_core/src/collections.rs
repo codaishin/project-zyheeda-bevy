@@ -1,3 +1,3 @@
-pub mod ordered_hash_map;
+pub mod ordered;
 pub mod ring_buffer;
 pub mod sorted;

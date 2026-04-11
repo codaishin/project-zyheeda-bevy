@@ -18,7 +18,7 @@ use common::{
 	},
 };
 use std::{cmp::Ordering, collections::HashSet};
-use zyheeda_core::{collections::ordered_hash_map::IntoIter, prelude::*};
+use zyheeda_core::{collections::ordered::IntoIter, prelude::*};
 
 #[derive(Component, Clone, PartialEq, Debug)]
 pub struct ComboNode<TSkill = Skill>(OrderedHashMap<SlotKey, (TSkill, ComboNode<TSkill>)>);
