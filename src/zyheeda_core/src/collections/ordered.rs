@@ -1,4 +1,3 @@
-use bevy::prelude::default;
 use std::{
 	collections::{
 		HashMap,
@@ -29,10 +28,9 @@ impl<TKey, TValue> OrderedHashMap<TKey, TValue>
 where
 	TKey: Eq + Hash + Copy,
 {
-	/// Inserts a key-value pair into the map.
+	/// Inserts a key-value pair.
 	///
-	/// Will cause this key to be last in the insertion order, even if the
-	/// key-value pair was already contained.
+	/// Will cause this key to be last in the insertion order, even if it was already contained.
 	pub fn insert(&mut self, key: TKey, value: TValue) {
 		self.order.push_back_unique(key);
 		self.map.insert(key, value);
@@ -97,8 +95,8 @@ where
 {
 	fn default() -> Self {
 		Self {
-			map: default(),
-			order: default(),
+			map: Default::default(),
+			order: Default::default(),
 		}
 	}
 }
@@ -130,6 +128,68 @@ where
 		}
 
 		map
+	}
+}
+
+/// A container containing unique items, which retains insertion order.
+///
+/// Removal and Insertion are `O(n)` operations.
+#[derive(Debug, PartialEq, Clone)]
+pub struct OrderedSet<T>
+where
+	T: PartialEq,
+{
+	values: keys::Unique<T>,
+}
+
+impl<T> OrderedSet<T>
+where
+	T: PartialEq,
+{
+	/// Inserts a value.
+	///
+	/// Will cause this value to be last in the insertion order, even if it was already contained.
+	pub fn insert(&mut self, value: T) {
+		self.values.push_back_unique(value);
+	}
+
+	pub fn remove(&mut self, value: &T) {
+		self.values.remove(value);
+	}
+
+	pub fn iter(&self) -> std::slice::Iter<'_, T> {
+		self.values.iter()
+	}
+
+	pub fn is_empty(&self) -> bool {
+		self.values.is_empty()
+	}
+}
+
+impl<T> Default for OrderedSet<T>
+where
+	T: PartialEq,
+{
+	fn default() -> Self {
+		Self {
+			values: Default::default(),
+		}
+	}
+}
+
+impl<TIter, T> From<TIter> for OrderedSet<T>
+where
+	TIter: IntoIterator<Item = T>,
+	T: PartialEq,
+{
+	fn from(iter: TIter) -> Self {
+		let mut set = Self::default();
+
+		for value in iter {
+			set.insert(value);
+		}
+
+		set
 	}
 }
 
@@ -170,11 +230,8 @@ where
 		let key = self.order.next()?;
 		let value = self.map.get_mut(key)?;
 
-		// Safety: The compiler cannot reason about disjointed mutable references here.
-		// We are fine as long as `order` produces unique keys.
-		// A streaming iterator - that uses `&'a mut self` - wouldn't have this problem.
-		// It would tie each yielded value to the lifetime of the iterator not the implicit
-		// lifetime of the function call.
+		// Safety:
+		// As long as `order` produces unique keys we produce disjointed mutable references.
 		Some((key, unsafe { &mut *(value as *mut TValue) }))
 	}
 }
