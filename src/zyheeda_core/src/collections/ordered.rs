@@ -73,7 +73,7 @@ where
 		}
 	}
 
-	pub fn keys(&self) -> std::slice::Iter<'_, TKey> {
+	pub fn keys(&self) -> UniqueIter<'_, TKey> {
 		self.order.iter()
 	}
 
@@ -157,7 +157,7 @@ where
 		self.values.remove(value);
 	}
 
-	pub fn iter(&self) -> std::slice::Iter<'_, T> {
+	pub fn iter(&self) -> UniqueIter<'_, T> {
 		self.values.iter()
 	}
 
@@ -195,7 +195,7 @@ where
 
 pub struct Iter<'a, TKey, TValue> {
 	map: &'a HashMap<TKey, TValue>,
-	order: std::slice::Iter<'a, TKey>,
+	order: UniqueIter<'a, TKey>,
 }
 
 impl<'a, TKey, TValue> Iterator for Iter<'a, TKey, TValue>
@@ -217,7 +217,7 @@ where
 	TKey: 'a + Eq + Hash,
 {
 	map: &'a mut HashMap<TKey, TValue>,
-	order: std::slice::Iter<'a, TKey>,
+	order: UniqueIter<'a, TKey>,
 }
 
 impl<'a, TKey, TValue> Iterator for IterMut<'a, TKey, TValue>
@@ -260,10 +260,7 @@ where
 	type Item = (TKey, TValue);
 
 	fn next(&mut self) -> Option<Self::Item> {
-		if self.0.order.is_empty() {
-			return None;
-		}
-		let key = self.0.order.pop_front();
+		let key = self.0.order.pop_front()?;
 		let value = self.0.map.remove(&key)?;
 		Some((key, value))
 	}
@@ -274,7 +271,7 @@ where
 	TKey: Eq + Hash,
 {
 	map: &'a HashMap<TKey, TValue>,
-	order: std::slice::Iter<'a, TKey>,
+	order: UniqueIter<'a, TKey>,
 }
 
 impl<'a, TKey, TValue> Iterator for Values<'a, TKey, TValue>
@@ -348,14 +345,14 @@ where
 	}
 }
 
-mod keys {
+pub type UniqueIter<'a, T> = std::collections::vec_deque::Iter<'a, T>;
 
-	/// Holds unique values like a [`HashSet`](std::collections::HashSet),
-	/// but retains insertion order.
+mod keys {
+	/// Holds unique values, but retains insertion order.
 	///
 	/// Removal and Insertion are `O(n)` operations.
 	#[derive(Debug, PartialEq, Clone)]
-	pub(super) struct Unique<TKey>(Vec<TKey>)
+	pub(super) struct Unique<TKey>(std::collections::VecDeque<TKey>)
 	where
 		TKey: PartialEq;
 
@@ -369,18 +366,24 @@ mod keys {
 
 		pub(super) fn push_back_unique(&mut self, key: TKey) {
 			self.remove(&key);
-			self.0.push(key);
+			self.0.push_back(key);
 		}
 
 		pub(super) fn remove(&mut self, key: &TKey) {
-			self.0.retain(|k| k != key);
+			// It is enough to find the first hit, because we run this before each insertion.
+			// There is always just one matching item contained.
+			let Some(i) = self.0.iter().position(|k| k == key) else {
+				return;
+			};
+
+			self.0.remove(i);
 		}
 
-		pub(super) fn pop_front(&mut self) -> TKey {
-			self.0.remove(0)
+		pub(super) fn pop_front(&mut self) -> Option<TKey> {
+			self.0.pop_front()
 		}
 
-		pub(super) fn iter(&self) -> std::slice::Iter<'_, TKey> {
+		pub(super) fn iter(&self) -> super::UniqueIter<'_, TKey> {
 			self.0.iter()
 		}
 	}
@@ -390,7 +393,7 @@ mod keys {
 		TKey: PartialEq,
 	{
 		fn default() -> Self {
-			Self(Vec::default())
+			Self(std::collections::VecDeque::default())
 		}
 	}
 }
@@ -468,11 +471,23 @@ mod tests {
 		map.insert("first", 0);
 		map.insert("second", 1);
 		map.insert("first", 2);
+		map.insert("first", 3);
 
 		assert_eq!(
-			vec![(&"second", &1), (&"first", &2),],
+			vec![(&"second", &1), (&"first", &3)],
 			map.iter().collect::<Vec<_>>()
 		)
+	}
+
+	#[test]
+	fn remove_key() {
+		let mut map = OrderedHashMap::<&'static str, u32>::default();
+
+		map.insert("first", 0);
+		map.insert("second", 1);
+		map.remove(&"first");
+
+		assert_eq!(vec![(&"second", &1)], map.iter().collect::<Vec<_>>())
 	}
 
 	#[test]
