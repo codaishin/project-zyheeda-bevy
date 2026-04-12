@@ -1,6 +1,11 @@
+mod keys;
+
+use serde::{Deserialize, Serialize, de::Error};
 use std::{
+	any::type_name,
 	collections::{
 		HashMap,
+		HashSet,
 		hash_map::{
 			Entry as HashMapEntry,
 			OccupiedEntry as HashMapOccupiedEntry,
@@ -39,6 +44,11 @@ where
 	pub fn remove(&mut self, key: &TKey) -> Option<TValue> {
 		self.order.remove(key);
 		self.map.remove(key)
+	}
+
+	pub fn clear(&mut self) {
+		self.order.clear();
+		self.map.clear();
 	}
 
 	pub fn get(&self, key: &TKey) -> Option<&TValue> {
@@ -131,65 +141,44 @@ where
 	}
 }
 
-/// A container containing unique items, which retains insertion order.
-///
-/// Removal and Insertion are `O(n)` operations.
-#[derive(Debug, PartialEq, Clone)]
-pub struct OrderedSet<T>
+impl<TKey, TValue> Serialize for OrderedHashMap<TKey, TValue>
 where
-	T: PartialEq,
+	TKey: Eq + Hash + Copy + Serialize,
+	TValue: Serialize,
 {
-	values: keys::Unique<T>,
-}
-
-impl<T> OrderedSet<T>
-where
-	T: PartialEq,
-{
-	/// Inserts a value.
-	///
-	/// Will cause this value to be last in the insertion order, even if it was already contained.
-	pub fn insert(&mut self, value: T) {
-		self.values.push_back_unique(value);
-	}
-
-	pub fn remove(&mut self, value: &T) {
-		self.values.remove(value);
-	}
-
-	pub fn iter(&self) -> UniqueIter<'_, T> {
-		self.values.iter()
-	}
-
-	pub fn is_empty(&self) -> bool {
-		self.values.is_empty()
+	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+	where
+		S: serde::Serializer,
+	{
+		let ordered = self.iter().collect::<Vec<_>>();
+		ordered.serialize(serializer)
 	}
 }
 
-impl<T> Default for OrderedSet<T>
+impl<'de, TKey, TValue> Deserialize<'de> for OrderedHashMap<TKey, TValue>
 where
-	T: PartialEq,
+	TKey: Eq + Hash + Copy + Deserialize<'de>,
+	TValue: Deserialize<'de>,
 {
-	fn default() -> Self {
-		Self {
-			values: Default::default(),
-		}
-	}
-}
+	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+	where
+		D: serde::Deserializer<'de>,
+	{
+		let raw = Vec::<(TKey, TValue)>::deserialize(deserializer)?;
+		let mut unique = HashSet::<TKey>::default();
+		let mut map = Self::default();
 
-impl<TIter, T> From<TIter> for OrderedSet<T>
-where
-	TIter: IntoIterator<Item = T>,
-	T: PartialEq,
-{
-	fn from(iter: TIter) -> Self {
-		let mut set = Self::default();
-
-		for value in iter {
-			set.insert(value);
+		for (key, value) in raw {
+			if !unique.insert(key) {
+				return Err(Error::custom(format!(
+					"{}: encountered duplicate key",
+					type_name::<Self>()
+				)));
+			}
+			map.insert(key, value);
 		}
 
-		set
+		Ok(map)
 	}
 }
 
@@ -345,62 +334,93 @@ where
 	}
 }
 
-pub type UniqueIter<'a, T> = std::collections::vec_deque::Iter<'a, T>;
+/// A container containing unique items, which retains insertion order.
+///
+/// Removal and Insertion are `O(n)` operations.
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+pub struct OrderedSet<T>
+where
+	T: PartialEq,
+{
+	values: keys::Unique<T>,
+}
 
-mod keys {
-	/// Holds unique values, but retains insertion order.
+impl<T> OrderedSet<T>
+where
+	T: PartialEq,
+{
+	pub const EMPTY: Self = Self {
+		values: keys::Unique::EMPTY,
+	};
+
+	/// Inserts a value.
 	///
-	/// Removal and Insertion are `O(n)` operations.
-	#[derive(Debug, PartialEq, Clone)]
-	pub(super) struct Unique<TKey>(std::collections::VecDeque<TKey>)
-	where
-		TKey: PartialEq;
-
-	impl<TKey> Unique<TKey>
-	where
-		TKey: PartialEq,
-	{
-		pub(super) fn is_empty(&self) -> bool {
-			self.0.is_empty()
-		}
-
-		pub(super) fn push_back_unique(&mut self, key: TKey) {
-			self.remove(&key);
-			self.0.push_back(key);
-		}
-
-		pub(super) fn remove(&mut self, key: &TKey) {
-			// It is enough to find the first hit, because we run this before each insertion.
-			// There is always just one matching item contained.
-			let Some(i) = self.0.iter().position(|k| k == key) else {
-				return;
-			};
-
-			self.0.remove(i);
-		}
-
-		pub(super) fn pop_front(&mut self) -> Option<TKey> {
-			self.0.pop_front()
-		}
-
-		pub(super) fn iter(&self) -> super::UniqueIter<'_, TKey> {
-			self.0.iter()
-		}
+	/// Will cause this value to be last in the insertion order, even if it was already contained.
+	pub fn insert(&mut self, value: T) {
+		self.values.push_back_unique(value);
 	}
 
-	impl<TKey> Default for Unique<TKey>
-	where
-		TKey: PartialEq,
-	{
-		fn default() -> Self {
-			Self(std::collections::VecDeque::default())
+	pub fn remove(&mut self, value: &T) {
+		self.values.remove(value);
+	}
+
+	pub fn clear(&mut self) {
+		self.values.clear();
+	}
+
+	pub fn iter(&self) -> UniqueIter<'_, T> {
+		self.values.iter()
+	}
+
+	pub fn is_empty(&self) -> bool {
+		self.values.is_empty()
+	}
+}
+
+impl<T> Default for OrderedSet<T>
+where
+	T: PartialEq,
+{
+	fn default() -> Self {
+		Self {
+			values: Default::default(),
 		}
 	}
 }
 
+impl<TIter, T> From<TIter> for OrderedSet<T>
+where
+	TIter: IntoIterator<Item = T>,
+	T: PartialEq,
+{
+	fn from(iter: TIter) -> Self {
+		let mut set = Self::default();
+
+		for value in iter {
+			set.insert(value);
+		}
+
+		set
+	}
+}
+
+impl<T> Extend<T> for OrderedSet<T>
+where
+	T: PartialEq,
+{
+	fn extend<TIter: IntoIterator<Item = T>>(&mut self, iter: TIter) {
+		for item in iter {
+			self.insert(item);
+		}
+	}
+}
+
+pub type UniqueIter<'a, T> = std::collections::vec_deque::Iter<'a, T>;
+
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use serde_json::{Error, from_value, json, to_value};
 
 	macro_rules! repeat {
 		($count:expr, $code:expr) => {
@@ -488,6 +508,17 @@ mod tests {
 		map.remove(&"first");
 
 		assert_eq!(vec![(&"second", &1)], map.iter().collect::<Vec<_>>())
+	}
+
+	#[test]
+	fn clear() {
+		let mut map = OrderedHashMap::<&'static str, u32>::default();
+
+		map.insert("first", 0);
+		map.insert("second", 1);
+		map.clear();
+
+		assert_eq!((true, true), (map.order.is_empty(), map.map.is_empty()));
 	}
 
 	#[test]
@@ -695,5 +726,41 @@ mod tests {
 		let empty = OrderedHashMap::<u32, u32>::from([]);
 
 		assert_eq!((false, true), (filled.is_empty(), empty.is_empty()));
+	}
+
+	#[test]
+	fn serialize() -> Result<(), Error> {
+		let map = OrderedHashMap::from([(1, "a"), (2, "b"), (3, "c")]);
+
+		let value = to_value(map)?;
+
+		assert_eq!(json!([(1, "a"), (2, "b"), (3, "c")]), value);
+		Ok(())
+	}
+
+	#[test]
+	fn deserialize() -> Result<(), Error> {
+		let json = json!([(1, "a"), (2, "b"), (3, "c")]);
+
+		let map = from_value::<OrderedHashMap<u8, String>>(json)?;
+
+		assert_eq!(
+			OrderedHashMap::from([
+				(1, "a".to_owned()),
+				(2, "b".to_owned()),
+				(3, "c".to_owned()),
+			]),
+			map
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn deserialize_rejection_on_non_unique() {
+		let json = json!([(1, "a"), (2, "b"), (2, "b"), (3, "c")]);
+
+		let map = from_value::<OrderedHashMap<u8, String>>(json);
+
+		assert!(map.is_err());
 	}
 }
