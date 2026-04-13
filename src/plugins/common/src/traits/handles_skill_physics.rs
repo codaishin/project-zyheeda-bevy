@@ -146,17 +146,29 @@ impl Deref for SkillCaster {
 	}
 }
 
-#[derive(Debug, PartialEq, Default, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum SkillTarget {
-	#[default]
-	Cursor,
+	Cursor(Cursor),
 	Entity(PersistentEntity),
+}
+
+impl Default for SkillTarget {
+	fn default() -> Self {
+		Self::Cursor(Cursor::default())
+	}
 }
 
 impl From<PersistentEntity> for SkillTarget {
 	fn from(entity: PersistentEntity) -> Self {
 		Self::Entity(entity)
 	}
+}
+
+#[derive(Debug, PartialEq, Default, Clone, Copy, Serialize, Deserialize)]
+pub enum Cursor {
+	#[default]
+	Direction,
+	TerrainHover,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Default, Serialize, Deserialize)]

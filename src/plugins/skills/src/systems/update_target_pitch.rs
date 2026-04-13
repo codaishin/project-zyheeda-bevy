@@ -51,7 +51,7 @@ impl Target {
 				let target = transforms.get(target).ok()?.translation();
 				get_pitch(transform, target)
 			}
-			SkillTarget::Cursor => match ray_cast.raycast(MouseHover::excluding([entity]))? {
+			SkillTarget::Cursor(_) => match ray_cast.raycast(MouseHover::excluding([entity]))? {
 				MouseHoversOver::Terrain { point } => get_pitch(transform, point),
 				MouseHoversOver::Object { entity, .. } => {
 					let target = transforms.get(entity).ok()?.translation();
@@ -82,7 +82,7 @@ mod tests {
 		components::persistent_entity::PersistentEntity,
 		traits::{
 			handles_animations::{ForwardPitch, GetForwardPitch},
-			handles_skill_physics::SkillTarget,
+			handles_skill_physics::{Cursor, SkillTarget},
 		},
 	};
 	use macros::NestedMocks;
@@ -232,7 +232,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Target(Some(SkillTarget::Cursor)),
+				Target(Some(SkillTarget::Cursor(Cursor::TerrainHover))),
 				GlobalTransform::from_translation(translation),
 				_Animations {
 					forward_pitch: None,
@@ -273,7 +273,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Target(Some(SkillTarget::Cursor)),
+				Target(Some(SkillTarget::Cursor(Cursor::TerrainHover))),
 				GlobalTransform::from_translation(translation),
 				_Animations {
 					forward_pitch: None,
@@ -306,7 +306,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Target(Some(SkillTarget::Cursor)),
+				Target(Some(SkillTarget::Cursor(Cursor::TerrainHover))),
 				GlobalTransform::from_translation(translation),
 				_Animations {
 					forward_pitch: None,

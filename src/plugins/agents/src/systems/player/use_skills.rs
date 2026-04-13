@@ -9,7 +9,7 @@ use common::{
 		accessors::get::GetContextMut,
 		handles_input::{GetAllInputStates, InputState},
 		handles_loadout::{CurrentTargetMut, HeldSkills, HeldSkillsMut, skills::Skills},
-		handles_skill_physics::SkillTarget,
+		handles_skill_physics::{Cursor, SkillTarget},
 	},
 };
 
@@ -42,7 +42,7 @@ impl Player {
 				continue;
 			}
 
-			*ctx.current_target_mut() = Some(SkillTarget::Cursor);
+			*ctx.current_target_mut() = Some(SkillTarget::Cursor(Cursor::TerrainHover));
 			*ctx.held_skills_mut() = new_held_skills;
 		}
 	}
@@ -169,7 +169,7 @@ mod tests {
 		assert_eq!(
 			Some(
 				&_Loadout::from([SlotKey::from(HandSlot::Left)])
-					.with_target(Some(SkillTarget::Cursor))
+					.with_target(Some(SkillTarget::Cursor(Cursor::TerrainHover)))
 			),
 			app.world().entity(entity).get::<_Loadout>(),
 		);
@@ -189,7 +189,7 @@ mod tests {
 		assert_eq!(
 			Some(
 				&_Loadout::from([SlotKey::from(HandSlot::Left)])
-					.with_target(Some(SkillTarget::Cursor))
+					.with_target(Some(SkillTarget::Cursor(Cursor::TerrainHover)))
 			),
 			app.world().entity(entity).get::<_Loadout>(),
 		);

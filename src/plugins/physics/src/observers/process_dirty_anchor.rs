@@ -92,7 +92,7 @@ impl AnchorDirty {
 			AnchorRotation::OfMount => {
 				anchor_transform.rotation = mount_transform.rotation();
 			}
-			AnchorRotation::LookingAt(SkillTarget::Cursor) => {
+			AnchorRotation::LookingAt(SkillTarget::Cursor(_)) => {
 				let hover = MouseHover {
 					exclude: vec![attached_to],
 				};
@@ -179,7 +179,7 @@ mod tests {
 		tools::action_key::slot::SlotKey,
 		traits::{
 			handles_physics::MouseHoversOver,
-			handles_skill_physics::SkillSpawner,
+			handles_skill_physics::{Cursor, SkillSpawner},
 			register_persistent_entities::RegisterPersistentEntities,
 		},
 	};
@@ -401,7 +401,7 @@ mod tests {
 		let anchor = app.world_mut().spawn(
 			Anchor::attach_to(*AGENT)
 				.on(spawner_key)
-				.looking_at(SkillTarget::Cursor),
+				.looking_at(SkillTarget::Cursor(Cursor::TerrainHover)),
 		);
 
 		assert_eq!(
@@ -444,7 +444,7 @@ mod tests {
 		let anchor = app.world_mut().spawn(
 			Anchor::attach_to(*AGENT)
 				.on(spawner_key)
-				.looking_at(SkillTarget::Cursor),
+				.looking_at(SkillTarget::Cursor(Cursor::TerrainHover)),
 		);
 
 		assert_eq!(
