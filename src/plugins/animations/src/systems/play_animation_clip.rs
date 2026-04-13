@@ -5,11 +5,11 @@ use crate::{
 	},
 	traits::{
 		AnimationPlayers,
-		GetActiveAnimations,
 		IsPlaying,
 		RepeatAnimation,
 		ReplayAnimation,
 		StopAnimation,
+		YoungestToOldestActiveAnimations,
 		asset_server::animation_graph::GetNodeMut,
 	},
 };
@@ -23,13 +23,13 @@ use common::traits::{
 use std::collections::HashSet;
 
 impl<TDispatch> PlayAnimationClip for TDispatch where
-	TDispatch: Component + AnimationPlayers + GetActiveAnimations
+	TDispatch: Component + AnimationPlayers + YoungestToOldestActiveAnimations
 {
 }
 
 pub(crate) trait PlayAnimationClip
 where
-	Self: Component + AnimationPlayers + GetActiveAnimations + Sized,
+	Self: Component + AnimationPlayers + YoungestToOldestActiveAnimations + Sized,
 {
 	#[allow(clippy::type_complexity)]
 	fn play_animation_clip<TAnimationPlayer>(
@@ -65,7 +65,7 @@ fn play_animation_clip<TAnimationPlayer, TDispatch, TGraph, TAnimations>(
 ) where
 	TAnimationPlayer: QueryData,
 	TGraph: Asset + GetNodeMut + WrapHandle,
-	TDispatch: Component + AnimationPlayers + GetActiveAnimations,
+	TDispatch: Component + AnimationPlayers + YoungestToOldestActiveAnimations,
 	for<'a> TAnimations: ThreadSafe + Iterate<'a, TItem = &'a AnimationNodeIndex>,
 	for<'w, 's> TAnimationPlayer::Item<'w, 's>: IsPlaying<AnimationNodeIndex>
 		+ ReplayAnimation<AnimationNodeIndex>
@@ -107,31 +107,28 @@ where
 	TPlayer: IsPlaying<AnimationNodeIndex>
 		+ ReplayAnimation<AnimationNodeIndex>
 		+ RepeatAnimation<AnimationNodeIndex>,
-	TDispatcher: GetActiveAnimations,
+	TDispatcher: YoungestToOldestActiveAnimations,
 	TGraph: Asset + GetNodeMut,
 	for<'a> TAnimations: Iterate<'a, TItem = &'a AnimationNodeIndex>,
 {
-	let mut higher_priority_mask = 0;
+	let mut blocked = 0;
 	let mut active_animations = HashSet::default();
 
 	for priority in AnimationPriority::ordered_descending() {
-		let blocked_by_higher_priority = higher_priority_mask;
-
-		for key in dispatcher.get_active_animations(priority) {
+		for key in dispatcher.youngest_to_oldest_active_animations(priority) {
 			let Some(animation_data) = lookup.animations.get(key) else {
 				continue;
 			};
+			let mask = animation_data.mask.to_animation_mask();
 
 			for id in animation_data.animation_clips.iterate() {
 				let Some(animation_node) = graph.get_node_mut(*id) else {
 					continue;
 				};
 
-				let mask = animation_data.mask.to_animation_mask();
 				active_animations.insert(*id);
 				animation_node.remove_mask(mask);
-				animation_node.add_mask(blocked_by_higher_priority);
-				add(&mut higher_priority_mask, mask);
+				animation_node.add_mask(blocked);
 
 				if player.is_playing(*id) {
 					continue;
@@ -142,6 +139,8 @@ where
 					PlayMode::Replay => player.replay(*id),
 				}
 			}
+
+			blocked |= mask;
 		}
 	}
 
@@ -162,10 +161,6 @@ fn stop<'a, TPlayer, TGraph>(
 		}
 		player.stop_animation(*animation_id);
 	}
-}
-
-fn add(dst: &mut AnimationMask, src: AnimationMask) {
-	*dst |= src;
 }
 
 #[cfg(test)]
@@ -203,17 +198,20 @@ mod tests {
 		}
 	}
 
-	impl GetActiveAnimations for _AnimationDispatch {
+	impl YoungestToOldestActiveAnimations for _AnimationDispatch {
 		type TIter<'a>
 			= Iter<'a, AnimationKey>
 		where
 			Self: 'a;
 
-		fn get_active_animations<TPriority>(&self, priority: TPriority) -> Self::TIter<'_>
+		fn youngest_to_oldest_active_animations<TPriority>(
+			&self,
+			priority: TPriority,
+		) -> Self::TIter<'_>
 		where
 			TPriority: Into<AnimationPriority> + 'static,
 		{
-			self.mock.get_active_animations(priority)
+			self.mock.youngest_to_oldest_active_animations(priority)
 		}
 	}
 
@@ -224,13 +222,13 @@ mod tests {
 
 			fn animation_players(&self) -> _Iter;
 		}
-		impl GetActiveAnimations for _AnimationDispatch {
+		impl YoungestToOldestActiveAnimations for _AnimationDispatch {
 			type TIter<'a>
 				= Iter<'a, AnimationKey>
 			where
 				Self: 'a;
 
-			fn get_active_animations<TPriority>(&self, priority: TPriority) -> Iter<'static, AnimationKey>
+			fn youngest_to_oldest_active_animations<TPriority>(&self, priority: TPriority) -> Iter<'static, AnimationKey>
 			where
 				TPriority: Into<AnimationPriority> + 'static;
 		}
@@ -240,19 +238,19 @@ mod tests {
 	#[derive(Clone, Default)]
 	struct _Animations(Vec<AnimationNodeIndex>);
 
+	impl _Animations {
+		fn from_indices(indices: impl IntoIterator<Item = usize>) -> Self {
+			let animations = Vec::from_iter(indices.into_iter().map(AnimationNodeIndex::new));
+			Self(animations)
+		}
+	}
+
 	impl<'a> Iterate<'a> for _Animations {
 		type TItem = &'a AnimationNodeIndex;
 		type TIter = Iter<'a, AnimationNodeIndex>;
 
 		fn iterate(&'a self) -> Iter<'a, AnimationNodeIndex> {
 			self.0.iter()
-		}
-	}
-
-	impl From<&[AnimationNodeIndex]> for _Animations {
-		fn from(animations: &[AnimationNodeIndex]) -> Self {
-			let animations = Vec::from_iter(animations.iter().copied());
-			Self(animations)
 		}
 	}
 
@@ -266,6 +264,16 @@ mod tests {
 	#[derive(Asset, TypePath, Default)]
 	struct _Graph {
 		nodes: HashMap<usize, AnimationGraphNode>,
+	}
+
+	impl _Graph {
+		fn get_masks(&self, indices: impl IntoIterator<Item = usize>) -> Vec<AnimationMask> {
+			indices
+				.into_iter()
+				.filter_map(|i| self.nodes.get(&i))
+				.map(|n| n.mask)
+				.collect()
+		}
 	}
 
 	impl WrapHandle for _Graph {
@@ -380,7 +388,7 @@ mod tests {
 	macro_rules! binary_str {
 		($a:expr) => {{
 			let values = $a
-				.into_iter()
+				.iter()
 				.map(|v| format!("{v:b}"))
 				.collect::<Vec<_>>()
 				.join(", ");
@@ -431,16 +439,11 @@ mod tests {
 	#[test]
 	fn repeat_animation() {
 		let handle = new_handle();
-		let indices = vec![
-			AnimationNodeIndex::new(1),
-			AnimationNodeIndex::new(2),
-			AnimationNodeIndex::new(3),
-		];
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
 				AnimationKey::Walk,
 				AnimationLookupData {
-					animation_clips: _Animations::from(&indices),
+					animation_clips: _Animations::from_indices([1, 2, 3]),
 					play_mode: PlayMode::Repeat,
 					..default()
 				},
@@ -450,16 +453,16 @@ mod tests {
 		let mut app = setup!(&lookup, &handle);
 		let animation_player = app
 			.world_mut()
-			.spawn(_AnimationPlayer::new().with_mock(assert_repeat(indices)))
+			.spawn(_AnimationPlayer::new().with_mock(assert_repeat([1, 2, 3])))
 			.id();
 		app.world_mut().spawn((
 			_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![AnimationKey::Walk]));
-				mock.expect_get_active_animations::<AnimationPriority>()
+				mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
 					.return_const(leak_iterator(vec![]));
 			}),
 			lookup,
@@ -468,14 +471,16 @@ mod tests {
 
 		app.update();
 
-		fn assert_repeat(indices: Vec<AnimationNodeIndex>) -> impl Fn(&mut Mock_AnimationPlayer) {
+		fn assert_repeat(
+			indices: impl Clone + IntoIterator<Item = usize>,
+		) -> impl Fn(&mut Mock_AnimationPlayer) {
 			move |mock| {
 				mock.expect_is_playing().return_const(false);
 				mock.expect_replay().never().return_const(());
 				for index in indices.clone() {
 					mock.expect_repeat()
 						.times(1)
-						.with(eq(index))
+						.with(eq(AnimationNodeIndex::new(index)))
 						.return_const(());
 				}
 				mock.expect_stop_animation().never().return_const(());
@@ -486,16 +491,11 @@ mod tests {
 	#[test]
 	fn replay_animation() {
 		let handle = new_handle();
-		let indices = vec![
-			AnimationNodeIndex::new(1),
-			AnimationNodeIndex::new(2),
-			AnimationNodeIndex::new(3),
-		];
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
 				AnimationKey::Walk,
 				AnimationLookupData {
-					animation_clips: _Animations::from(&indices),
+					animation_clips: _Animations::from_indices([1, 2, 3]),
 					play_mode: PlayMode::Replay,
 					..default()
 				},
@@ -505,16 +505,16 @@ mod tests {
 		let mut app = setup!(&lookup, &handle);
 		let animation_player = app
 			.world_mut()
-			.spawn(_AnimationPlayer::new().with_mock(assert_replay(indices)))
+			.spawn(_AnimationPlayer::new().with_mock(assert_replay([1, 2, 3])))
 			.id();
 		app.world_mut().spawn((
 			_AnimationDispatch::new().with_mock(|mock| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![AnimationKey::Walk]));
-				mock.expect_get_active_animations::<AnimationPriority>()
+				mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
 					.return_const(leak_iterator(vec![]));
 			}),
 			lookup,
@@ -523,14 +523,16 @@ mod tests {
 
 		app.update();
 
-		fn assert_replay(indices: Vec<AnimationNodeIndex>) -> impl Fn(&mut Mock_AnimationPlayer) {
+		fn assert_replay(
+			indices: impl Clone + IntoIterator<Item = usize>,
+		) -> impl Fn(&mut Mock_AnimationPlayer) {
 			move |mock| {
 				mock.expect_is_playing().return_const(false);
 				mock.expect_repeat().never().return_const(());
 				for index in indices.clone() {
 					mock.expect_replay()
 						.times(1)
-						.with(eq(index))
+						.with(eq(AnimationNodeIndex::new(index)))
 						.return_const(());
 				}
 				mock.expect_stop_animation().never().return_const(());
@@ -541,26 +543,12 @@ mod tests {
 	#[test]
 	fn play_all_animations() {
 		let handle = new_handle();
-		let indices = vec![
-			AnimationNodeIndex::new(1),
-			AnimationNodeIndex::new(2),
-			AnimationNodeIndex::new(3),
-			AnimationNodeIndex::new(4),
-			AnimationNodeIndex::new(5),
-			AnimationNodeIndex::new(6),
-			AnimationNodeIndex::new(7),
-			AnimationNodeIndex::new(8),
-			AnimationNodeIndex::new(9),
-			AnimationNodeIndex::new(10),
-			AnimationNodeIndex::new(11),
-			AnimationNodeIndex::new(12),
-		];
 		let lookup = AnimationLookup {
 			animations: HashMap::from([
 				(
 					AnimationKey::Skill(SlotKey(11)),
 					AnimationLookupData {
-						animation_clips: _Animations::from(&indices[0..=1]),
+						animation_clips: _Animations::from_indices([0, 1]),
 						play_mode: PlayMode::Replay,
 						mask: AnimationMaskBits::zero(),
 					},
@@ -568,7 +556,7 @@ mod tests {
 				(
 					AnimationKey::Skill(SlotKey(12)),
 					AnimationLookupData {
-						animation_clips: _Animations::from(&indices[2..=3]),
+						animation_clips: _Animations::from_indices([2, 3]),
 						play_mode: PlayMode::Replay,
 						mask: AnimationMaskBits::zero(),
 					},
@@ -576,7 +564,7 @@ mod tests {
 				(
 					AnimationKey::Skill(SlotKey(21)),
 					AnimationLookupData {
-						animation_clips: _Animations::from(&indices[4..=5]),
+						animation_clips: _Animations::from_indices([4, 5]),
 						play_mode: PlayMode::Replay,
 						mask: AnimationMaskBits::zero(),
 					},
@@ -584,7 +572,7 @@ mod tests {
 				(
 					AnimationKey::Skill(SlotKey(22)),
 					AnimationLookupData {
-						animation_clips: _Animations::from(&indices[6..=7]),
+						animation_clips: _Animations::from_indices([6, 7]),
 						play_mode: PlayMode::Replay,
 						mask: AnimationMaskBits::zero(),
 					},
@@ -592,7 +580,7 @@ mod tests {
 				(
 					AnimationKey::Skill(SlotKey(31)),
 					AnimationLookupData {
-						animation_clips: _Animations::from(&indices[8..=9]),
+						animation_clips: _Animations::from_indices([8, 9]),
 						play_mode: PlayMode::Replay,
 						mask: AnimationMaskBits::zero(),
 					},
@@ -600,7 +588,7 @@ mod tests {
 				(
 					AnimationKey::Skill(SlotKey(32)),
 					AnimationLookupData {
-						animation_clips: _Animations::from(&indices[10..=11]),
+						animation_clips: _Animations::from_indices([10, 11]),
 						play_mode: PlayMode::Replay,
 						mask: AnimationMaskBits::zero(),
 					},
@@ -611,25 +599,25 @@ mod tests {
 		let mut app = setup!(&lookup, &handle);
 		let animation_player = app
 			.world_mut()
-			.spawn(_AnimationPlayer::new().with_mock(assert_repeat(indices)))
+			.spawn(_AnimationPlayer::new().with_mock(assert_repeat(0..=11)))
 			.id();
 		app.world_mut().spawn((
 			_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![
 						AnimationKey::Skill(SlotKey(11)),
 						AnimationKey::Skill(SlotKey(12)),
 					]));
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::Medium))
 					.return_const(leak_iterator(vec![
 						AnimationKey::Skill(SlotKey(21)),
 						AnimationKey::Skill(SlotKey(22)),
 					]));
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::Low))
 					.return_const(leak_iterator(vec![
 						AnimationKey::Skill(SlotKey(31)),
@@ -642,14 +630,16 @@ mod tests {
 
 		app.update();
 
-		fn assert_repeat(indices: Vec<AnimationNodeIndex>) -> impl Fn(&mut Mock_AnimationPlayer) {
+		fn assert_repeat(
+			indices: impl Clone + IntoIterator<Item = usize>,
+		) -> impl Fn(&mut Mock_AnimationPlayer) {
 			move |mock| {
 				mock.expect_is_playing().return_const(false);
 				mock.expect_repeat().never().return_const(());
-				for index in indices.clone() {
+				for index in indices.clone().into_iter() {
 					mock.expect_replay()
 						.times(1)
-						.with(eq(index))
+						.with(eq(AnimationNodeIndex::new(index)))
 						.return_const(());
 				}
 				mock.expect_stop_animation().return_const(());
@@ -660,16 +650,11 @@ mod tests {
 	#[test]
 	fn do_not_play_animation_which_is_playing() {
 		let handle = new_handle();
-		let indices = vec![
-			AnimationNodeIndex::new(1),
-			AnimationNodeIndex::new(2),
-			AnimationNodeIndex::new(3),
-		];
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
 				AnimationKey::Walk,
 				AnimationLookupData {
-					animation_clips: _Animations::from(&indices),
+					animation_clips: _Animations::from_indices([1, 2, 3]),
 					play_mode: PlayMode::Repeat,
 					..default()
 				},
@@ -679,17 +664,17 @@ mod tests {
 		let mut app = setup!(&lookup, &handle);
 		let animation_player = app
 			.world_mut()
-			.spawn(_AnimationPlayer::new().with_mock(assert_not_playing(indices)))
+			.spawn(_AnimationPlayer::new().with_mock(assert_not_playing([1, 2, 3])))
 			.id();
 		app.world_mut().spawn((
 			_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
 
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![AnimationKey::Walk]));
-				mock.expect_get_active_animations::<AnimationPriority>()
+				mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
 					.return_const(leak_iterator(vec![]));
 			}),
 			lookup,
@@ -699,13 +684,13 @@ mod tests {
 		app.update();
 
 		fn assert_not_playing(
-			indices: Vec<AnimationNodeIndex>,
+			indices: impl Clone + IntoIterator<Item = usize>,
 		) -> impl Fn(&mut Mock_AnimationPlayer) {
 			move |mock| {
-				for i in indices.clone() {
+				for index in indices.clone() {
 					mock.expect_is_playing()
 						.times(1)
-						.with(eq(i))
+						.with(eq(AnimationNodeIndex::new(index)))
 						.return_const(true);
 				}
 				mock.expect_replay().never().return_const(());
@@ -718,16 +703,11 @@ mod tests {
 	#[test]
 	fn stop_playing_animation_not_returned_in_dispatcher() {
 		let handle = new_handle();
-		let indices = vec![
-			AnimationNodeIndex::new(1),
-			AnimationNodeIndex::new(2),
-			AnimationNodeIndex::new(3),
-		];
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
 				AnimationKey::Walk,
 				AnimationLookupData {
-					animation_clips: _Animations::from(&indices),
+					animation_clips: _Animations::from_indices([1, 2, 3]),
 					play_mode: PlayMode::Repeat,
 					..default()
 				},
@@ -737,14 +717,14 @@ mod tests {
 		let mut app = setup!(&lookup, &handle);
 		let animation_player = app
 			.world_mut()
-			.spawn(_AnimationPlayer::new().with_mock(assert_stop(indices)))
+			.spawn(_AnimationPlayer::new().with_mock(assert_stop([1, 2, 3])))
 			.id();
 		app.world_mut().spawn((
 			_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
 
-				mock.expect_get_active_animations::<AnimationPriority>()
+				mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
 					.return_const(leak_iterator(vec![]));
 			}),
 			lookup,
@@ -753,15 +733,17 @@ mod tests {
 
 		app.update();
 
-		fn assert_stop(indices: Vec<AnimationNodeIndex>) -> impl Fn(&mut Mock_AnimationPlayer) {
+		fn assert_stop(
+			indices: impl Clone + IntoIterator<Item = usize>,
+		) -> impl Fn(&mut Mock_AnimationPlayer) {
 			move |mock| {
 				mock.expect_is_playing().return_const(false);
 				mock.expect_replay().return_const(());
 				mock.expect_repeat().return_const(());
-				for i in indices.clone() {
+				for index in indices.clone() {
 					mock.expect_stop_animation()
 						.times(1)
-						.with(eq(i))
+						.with(eq(AnimationNodeIndex::new(index)))
 						.return_const(());
 				}
 			}
@@ -775,7 +757,7 @@ mod tests {
 			animations: HashMap::from([(
 				AnimationKey::Walk,
 				AnimationLookupData {
-					animation_clips: _Animations::from(&vec![AnimationNodeIndex::new(1)]),
+					animation_clips: _Animations::from_indices([1]),
 					play_mode: PlayMode::Repeat,
 					..default()
 				},
@@ -791,10 +773,10 @@ mod tests {
 			_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![AnimationKey::Walk]));
-				mock.expect_get_active_animations::<AnimationPriority>()
+				mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
 					.return_const(leak_iterator(vec![]));
 			}),
 			lookup,
@@ -819,7 +801,7 @@ mod tests {
 			animations: HashMap::from([(
 				AnimationKey::Walk,
 				AnimationLookupData {
-					animation_clips: _Animations::from(&vec![AnimationNodeIndex::new(1)]),
+					animation_clips: _Animations::from_indices([1]),
 					play_mode: PlayMode::Repeat,
 					..default()
 				},
@@ -837,10 +819,10 @@ mod tests {
 				_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 					mock.expect_animation_players()
 						.return_const(_Iter::from([animation_player]));
-					mock.expect_get_active_animations()
+					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::High))
 						.return_const(leak_iterator(vec![AnimationKey::Walk]));
-					mock.expect_get_active_animations::<AnimationPriority>()
+					mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
 						.return_const(leak_iterator(vec![]));
 				}),
 				lookup,
@@ -865,28 +847,14 @@ mod tests {
 	}
 
 	#[test]
-	fn mask_depending_on_priority() {
+	fn mask_depending_on_priority_and_in_layer_order() {
 		let handle = new_handle();
-		let indices = [
-			AnimationNodeIndex::new(1),
-			AnimationNodeIndex::new(2),
-			AnimationNodeIndex::new(3),
-			AnimationNodeIndex::new(4),
-			AnimationNodeIndex::new(5),
-			AnimationNodeIndex::new(6),
-			AnimationNodeIndex::new(7),
-			AnimationNodeIndex::new(8),
-			AnimationNodeIndex::new(9),
-			AnimationNodeIndex::new(10),
-			AnimationNodeIndex::new(11),
-			AnimationNodeIndex::new(12),
-		];
 		let lookup = AnimationLookup {
 			animations: HashMap::from([
 				(
 					AnimationKey::Skill(SlotKey(11)),
 					AnimationLookupData {
-						animation_clips: _Animations::from(&indices[0..=1]),
+						animation_clips: _Animations::from_indices([0, 1]),
 						play_mode: PlayMode::Replay,
 						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 					},
@@ -894,7 +862,7 @@ mod tests {
 				(
 					AnimationKey::Skill(SlotKey(12)),
 					AnimationLookupData {
-						animation_clips: _Animations::from(&indices[2..=3]),
+						animation_clips: _Animations::from_indices([2, 3]),
 						play_mode: PlayMode::Replay,
 						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(1)),
 					},
@@ -902,7 +870,7 @@ mod tests {
 				(
 					AnimationKey::Skill(SlotKey(21)),
 					AnimationLookupData {
-						animation_clips: _Animations::from(&indices[4..=5]),
+						animation_clips: _Animations::from_indices([4, 5]),
 						play_mode: PlayMode::Replay,
 						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
 					},
@@ -910,7 +878,7 @@ mod tests {
 				(
 					AnimationKey::Skill(SlotKey(22)),
 					AnimationLookupData {
-						animation_clips: _Animations::from(&indices[6..=7]),
+						animation_clips: _Animations::from_indices([6, 7]),
 						play_mode: PlayMode::Replay,
 						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(3)),
 					},
@@ -918,7 +886,7 @@ mod tests {
 				(
 					AnimationKey::Skill(SlotKey(31)),
 					AnimationLookupData {
-						animation_clips: _Animations::from(&indices[8..=9]),
+						animation_clips: _Animations::from_indices([8, 9]),
 						play_mode: PlayMode::Replay,
 						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(4)),
 					},
@@ -926,7 +894,7 @@ mod tests {
 				(
 					AnimationKey::Skill(SlotKey(32)),
 					AnimationLookupData {
-						animation_clips: _Animations::from(&indices[10..=11]),
+						animation_clips: _Animations::from_indices([10, 11]),
 						play_mode: PlayMode::Replay,
 						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(5)),
 					},
@@ -940,19 +908,19 @@ mod tests {
 			_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![
 						AnimationKey::Skill(SlotKey(11)),
 						AnimationKey::Skill(SlotKey(12)),
 					]));
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::Medium))
 					.return_const(leak_iterator(vec![
 						AnimationKey::Skill(SlotKey(21)),
 						AnimationKey::Skill(SlotKey(22)),
 					]));
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::Low))
 					.return_const(leak_iterator(vec![
 						AnimationKey::Skill(SlotKey(31)),
@@ -970,16 +938,16 @@ mod tests {
 			.resource::<Assets<_Graph>>()
 			.get(&handle)
 			.unwrap();
-		let masks = &indices
-			.iter()
-			.map(|i| graph.nodes.get(&i.index()).unwrap().mask)
-			.collect::<Vec<_>>();
-		// each priority has 2 assets each with 2 animations
-		//   -> 4 animations masked by higher priority mask per priority
-		let expected = &std::iter::repeat_n(0b000000, 4)
-			.chain(std::iter::repeat_n(0b000011, 4))
-			.chain(std::iter::repeat_n(0b001111, 4))
-			.collect::<Vec<_>>();
+		let masks = graph.get_masks(0..=11);
+		#[rustfmt::skip]
+		let expected = vec![
+			0b000000, 0b000000, // unblocked, uses mask: `0b000001``
+			0b000001, 0b000001, // blocked by first in layer, uses mask: `0b000010`
+			0b000011, 0b000011, // blocked by high layer, uses mask: `0b000100`
+			0b000111, 0b000111, // blocked by high layer and first in layer, uses mask: `0b001000`
+			0b001111, 0b001111, // blocked by high and mid layer, uses mask: `0b010000`
+			0b011111, 0b011111, // blocked by all above
+		];
 		assert_eq!(
 			expected,
 			masks,
@@ -992,26 +960,12 @@ mod tests {
 	#[test]
 	fn unmask_depending_on_priority() {
 		let handle = new_handle();
-		let indices = [
-			AnimationNodeIndex::new(1),
-			AnimationNodeIndex::new(2),
-			AnimationNodeIndex::new(3),
-			AnimationNodeIndex::new(4),
-			AnimationNodeIndex::new(5),
-			AnimationNodeIndex::new(6),
-			AnimationNodeIndex::new(7),
-			AnimationNodeIndex::new(8),
-			AnimationNodeIndex::new(9),
-			AnimationNodeIndex::new(10),
-			AnimationNodeIndex::new(11),
-			AnimationNodeIndex::new(12),
-		];
 		let lookup = AnimationLookup {
 			animations: HashMap::from([
 				(
 					AnimationKey::Skill(SlotKey(11)),
 					AnimationLookupData {
-						animation_clips: _Animations::from(&indices[0..=1]),
+						animation_clips: _Animations::from_indices([0, 1]),
 						play_mode: PlayMode::Replay,
 						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 					},
@@ -1019,7 +973,7 @@ mod tests {
 				(
 					AnimationKey::Skill(SlotKey(12)),
 					AnimationLookupData {
-						animation_clips: _Animations::from(&indices[2..=3]),
+						animation_clips: _Animations::from_indices([2, 3]),
 						play_mode: PlayMode::Replay,
 						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(1)),
 					},
@@ -1027,7 +981,7 @@ mod tests {
 				(
 					AnimationKey::Skill(SlotKey(21)),
 					AnimationLookupData {
-						animation_clips: _Animations::from(&indices[4..=5]),
+						animation_clips: _Animations::from_indices([4, 5]),
 						play_mode: PlayMode::Replay,
 						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
 					},
@@ -1035,7 +989,7 @@ mod tests {
 				(
 					AnimationKey::Skill(SlotKey(22)),
 					AnimationLookupData {
-						animation_clips: _Animations::from(&indices[6..=7]),
+						animation_clips: _Animations::from_indices([6, 7]),
 						play_mode: PlayMode::Replay,
 						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(3)),
 					},
@@ -1043,7 +997,7 @@ mod tests {
 				(
 					AnimationKey::Skill(SlotKey(31)),
 					AnimationLookupData {
-						animation_clips: _Animations::from(&indices[8..=9]),
+						animation_clips: _Animations::from_indices([8, 9]),
 						play_mode: PlayMode::Replay,
 						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(4)),
 					},
@@ -1051,7 +1005,7 @@ mod tests {
 				(
 					AnimationKey::Skill(SlotKey(32)),
 					AnimationLookupData {
-						animation_clips: _Animations::from(&indices[10..=11]),
+						animation_clips: _Animations::from_indices([10, 11]),
 						play_mode: PlayMode::Replay,
 						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(5)),
 					},
@@ -1066,19 +1020,19 @@ mod tests {
 			_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![
 						AnimationKey::Skill(SlotKey(11)),
 						AnimationKey::Skill(SlotKey(12)),
 					]));
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::Medium))
 					.return_const(leak_iterator(vec![
 						AnimationKey::Skill(SlotKey(21)),
 						AnimationKey::Skill(SlotKey(22)),
 					]));
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::Low))
 					.return_const(leak_iterator(vec![
 						AnimationKey::Skill(SlotKey(31)),
@@ -1096,13 +1050,8 @@ mod tests {
 			.resource::<Assets<_Graph>>()
 			.get(&handle)
 			.unwrap();
-		let masks = &indices
-			.iter()
-			.map(|i| graph.nodes.get(&i.index()).unwrap().mask)
-			.collect::<Vec<_>>();
-		// each asset has 2 animations
-		//   -> 2 animations masked per asset
-		let expected = &std::iter::repeat_n(0b111110, 2)
+		let masks = graph.get_masks(0..=11);
+		let expected = std::iter::repeat_n(0b111110, 2)
 			.chain(std::iter::repeat_n(0b111101, 2))
 			.chain(std::iter::repeat_n(0b111011, 2))
 			.chain(std::iter::repeat_n(0b110111, 2))
@@ -1121,18 +1070,12 @@ mod tests {
 	#[test]
 	fn set_mask_for_already_playing_animation() {
 		let handle = new_handle();
-		let indices = [
-			AnimationNodeIndex::new(1),
-			AnimationNodeIndex::new(2),
-			AnimationNodeIndex::new(3),
-			AnimationNodeIndex::new(4),
-		];
 		let lookup = AnimationLookup {
 			animations: HashMap::from([
 				(
 					AnimationKey::Skill(SlotKey(1)),
 					AnimationLookupData {
-						animation_clips: _Animations::from(&indices[0..=1]),
+						animation_clips: _Animations::from_indices([0, 1]),
 						play_mode: PlayMode::Replay,
 						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 					},
@@ -1140,7 +1083,7 @@ mod tests {
 				(
 					AnimationKey::Skill(SlotKey(2)),
 					AnimationLookupData {
-						animation_clips: _Animations::from(&indices[2..=3]),
+						animation_clips: _Animations::from_indices([2, 3]),
 						play_mode: PlayMode::Replay,
 						mask: AnimationMaskBits::zero()
 							.with_set(bit_mask_index!(0))
@@ -1157,10 +1100,10 @@ mod tests {
 			.world_mut()
 			.spawn(_AnimationPlayer::new().with_mock(|mock| {
 				mock.expect_is_playing()
-					.with(eq(indices[2]))
+					.with(eq(AnimationNodeIndex::new(2)))
 					.return_const(true);
 				mock.expect_is_playing()
-					.with(eq(indices[3]))
+					.with(eq(AnimationNodeIndex::new(3)))
 					.return_const(true);
 				mock.expect_is_playing().return_const(false);
 				mock.expect_repeat().return_const(());
@@ -1172,13 +1115,13 @@ mod tests {
 			_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::High))
 					.return_const(leak_iterator(vec![AnimationKey::Skill(SlotKey(1))]));
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::Medium))
 					.return_const(leak_iterator(vec![AnimationKey::Skill(SlotKey(2))]));
-				mock.expect_get_active_animations()
+				mock.expect_youngest_to_oldest_active_animations()
 					.with(eq(AnimationPriority::Low))
 					.return_const(leak_iterator(vec![]));
 			}),
@@ -1193,13 +1136,8 @@ mod tests {
 			.resource::<Assets<_Graph>>()
 			.get(&handle)
 			.unwrap();
-		let masks = &indices
-			.iter()
-			.map(|i| graph.nodes.get(&i.index()).unwrap().mask)
-			.collect::<Vec<_>>();
-		// each asset has 2 animations
-		//   -> 2 animations masked per asset
-		let expected = &std::iter::repeat_n(0b111110, 2)
+		let masks = graph.get_masks(0..=3);
+		let expected = std::iter::repeat_n(0b111110, 2)
 			.chain(std::iter::repeat_n(0b111001, 2))
 			.collect::<Vec<_>>();
 		assert_eq!(
@@ -1214,12 +1152,11 @@ mod tests {
 	#[test]
 	fn completely_mask_animations_not_returned_by_dispatcher() {
 		let handle = new_handle();
-		let indices = vec![AnimationNodeIndex::new(1), AnimationNodeIndex::new(2)];
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
 				AnimationKey::Walk,
 				AnimationLookupData {
-					animation_clips: _Animations::from(&indices),
+					animation_clips: _Animations::from_indices([1, 2]),
 					play_mode: PlayMode::Repeat,
 					..default()
 				},
@@ -1233,7 +1170,7 @@ mod tests {
 				mock.expect_animation_players()
 					.return_const(_Iter::from([animation_player]));
 
-				mock.expect_get_active_animations::<AnimationPriority>()
+				mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
 					.return_const(leak_iterator(vec![]));
 			}),
 			lookup,
@@ -1247,11 +1184,8 @@ mod tests {
 			.resource::<Assets<_Graph>>()
 			.get(&handle)
 			.unwrap();
-		let masks = &indices
-			.iter()
-			.map(|i| graph.nodes.get(&i.index()).unwrap().mask)
-			.collect::<Vec<_>>();
-		let expected = &vec![AnimationMask::MAX, AnimationMask::MAX];
+		let masks = graph.get_masks([1, 2]);
+		let expected = vec![AnimationMask::MAX, AnimationMask::MAX];
 		assert_eq!(
 			expected,
 			masks,

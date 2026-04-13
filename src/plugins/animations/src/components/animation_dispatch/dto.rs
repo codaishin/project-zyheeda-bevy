@@ -5,14 +5,14 @@ use common::{
 	traits::{handles_animations::AnimationKey, handles_custom_assets::TryLoadFrom},
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use zyheeda_core::prelude::*;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct AnimationDispatchDto {
 	priorities: (
-		HashSet<AnimationKey>,
-		HashSet<AnimationKey>,
-		HashSet<AnimationKey>,
+		OrderedSet<AnimationKey>,
+		OrderedSet<AnimationKey>,
+		OrderedSet<AnimationKey>,
 	),
 }
 

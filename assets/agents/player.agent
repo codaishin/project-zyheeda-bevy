@@ -65,7 +65,7 @@
 							"Single": "models/player.glb#Animation1"
 						},
 						"play_mode": "Repeat",
-						"mask_groups": "111"
+						"mask_groups": "1111"
 					}
 				],
 				[
@@ -80,7 +80,7 @@
 							}
 						},
 						"play_mode": "Repeat",
-						"mask_groups": "111"
+						"mask_groups": "1111"
 					}
 				],
 				[
@@ -95,7 +95,7 @@
 							}
 						},
 						"play_mode": "Repeat",
-						"mask_groups": "111"
+						"mask_groups": "1111"
 					}
 				],
 				[
@@ -117,7 +117,7 @@
 							}
 						},
 						"play_mode": "Repeat",
-						"mask_groups": "010"
+						"mask_groups": "1010"
 					}
 				],
 				[
@@ -139,23 +139,27 @@
 							}
 						},
 						"play_mode": "Repeat",
-						"mask_groups": "100"
+						"mask_groups": "1100"
 					}
 				]
 			],
 			"animation_mask_groups": {
-				"001": {
+				"0001": {
 					"from_root": "metarig",
 					"until_exclusive": [
 						"shoulder.L",
-						"shoulder.R"
+						"shoulder.R",
+						"spine.004"
 					]
 				},
-				"010": {
+				"0010": {
 					"from_root": "shoulder.L"
 				},
-				"100": {
+				"0100": {
 					"from_root": "shoulder.R"
+				},
+				"1000": {
+					"from_root": "spine.004"
 				}
 			}
 		}

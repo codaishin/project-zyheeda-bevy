@@ -7,7 +7,7 @@ use common::{
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
-use std::collections::HashSet;
+use zyheeda_core::prelude::*;
 
 impl AnimateIdle {
 	pub(crate) fn execute<TAnimations>(
@@ -23,7 +23,7 @@ impl AnimateIdle {
 				continue;
 			};
 
-			*animations.active_animations_mut(Idle) = HashSet::from([AnimationKey::Idle]);
+			*animations.active_animations_mut(Idle) = OrderedSet::from([AnimationKey::Idle]);
 			commands.try_apply_on(&entity, |mut e| {
 				e.try_remove::<Self>();
 			});
@@ -44,7 +44,7 @@ mod test {
 	use super::*;
 	use crate::systems::player::animate_movement::tests::_Animations;
 	use common::traits::handles_animations::AnimationKey;
-	use std::collections::{HashMap, HashSet};
+	use std::collections::HashMap;
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -68,7 +68,7 @@ mod test {
 		assert_eq!(
 			Some(&_Animations(HashMap::from([(
 				Idle.into(),
-				HashSet::from([AnimationKey::Idle])
+				OrderedSet::from([AnimationKey::Idle])
 			)]))),
 			app.world().entity(entity).get::<_Animations>()
 		);
@@ -83,7 +83,7 @@ mod test {
 				AnimateIdle,
 				_Animations(HashMap::from([(
 					Idle.into(),
-					HashSet::from([AnimationKey::Walk]),
+					OrderedSet::from([AnimationKey::Walk]),
 				)])),
 			))
 			.id();
@@ -93,7 +93,7 @@ mod test {
 		assert_eq!(
 			Some(&_Animations(HashMap::from([(
 				Idle.into(),
-				HashSet::from([AnimationKey::Idle])
+				OrderedSet::from([AnimationKey::Idle])
 			)]))),
 			app.world().entity(entity).get::<_Animations>()
 		);

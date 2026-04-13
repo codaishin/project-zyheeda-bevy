@@ -9,8 +9,8 @@ use crate::{
 	traits::{
 		AnimationPlayers,
 		AnimationPlayersWithoutGraph,
-		GetActiveAnimations,
 		GetAllActiveAnimations,
+		YoungestToOldestActiveAnimations,
 	},
 };
 use bevy::prelude::*;
@@ -20,12 +20,11 @@ use common::traits::{
 };
 use macros::SavableComponent;
 use std::{
-	collections::{
-		HashSet,
-		hash_set::{IntoIter, Iter},
-	},
+	collections::{HashSet, hash_set::IntoIter},
 	fmt::Debug,
+	iter::Rev,
 };
+use zyheeda_core::prelude::*;
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
 #[require(CurrentMovementDirection, CurrentForwardPitch)]
@@ -34,14 +33,14 @@ pub struct AnimationDispatch {
 	pub(crate) animation_players: HashSet<Entity>,
 	animation_handles: HashSet<Entity>,
 	priorities: (
-		HashSet<AnimationKey>,
-		HashSet<AnimationKey>,
-		HashSet<AnimationKey>,
+		OrderedSet<AnimationKey>,
+		OrderedSet<AnimationKey>,
+		OrderedSet<AnimationKey>,
 	),
 }
 
 impl AnimationDispatch {
-	pub(crate) fn slot_mut<TLayer>(&mut self, layer: TLayer) -> &mut HashSet<AnimationKey>
+	pub(crate) fn slot_mut<TLayer>(&mut self, layer: TLayer) -> &mut OrderedSet<AnimationKey>
 	where
 		TLayer: Into<AnimationPriority>,
 	{
@@ -52,7 +51,7 @@ impl AnimationDispatch {
 		}
 	}
 
-	pub(crate) fn slot<TLayer>(&self, layer: TLayer) -> &HashSet<AnimationKey>
+	pub(crate) fn slot<TLayer>(&self, layer: TLayer) -> &OrderedSet<AnimationKey>
 	where
 		TLayer: Into<AnimationPriority>,
 	{
@@ -132,17 +131,20 @@ impl AnimationPlayersWithoutGraph for AnimationDispatch {
 	}
 }
 
-impl GetActiveAnimations for AnimationDispatch {
+impl YoungestToOldestActiveAnimations for AnimationDispatch {
 	type TIter<'a>
-		= Iter<'a, AnimationKey>
+		= Rev<UniqueIter<'a, AnimationKey>>
 	where
 		Self: 'a;
 
-	fn get_active_animations<TPriority>(&self, priority: TPriority) -> Self::TIter<'_>
+	fn youngest_to_oldest_active_animations<TPriority>(
+		&self,
+		priority: TPriority,
+	) -> Self::TIter<'_>
 	where
 		TPriority: Into<AnimationPriority>,
 	{
-		self.slot(priority).iter()
+		self.slot(priority).iter().rev()
 	}
 }
 
@@ -162,9 +164,9 @@ impl GetAllActiveAnimations for AnimationDispatch {
 }
 
 pub struct IterAllAnimations<'a>(
-	Iter<'a, AnimationKey>,
-	Iter<'a, AnimationKey>,
-	Iter<'a, AnimationKey>,
+	UniqueIter<'a, AnimationKey>,
+	UniqueIter<'a, AnimationKey>,
+	UniqueIter<'a, AnimationKey>,
 );
 
 impl<'a> Iterator for IterAllAnimations<'a> {
@@ -339,19 +341,19 @@ mod tests {
 			animation_players: default(),
 			animation_handles: default(),
 			priorities: (
-				HashSet::from([
+				OrderedSet::from([
 					AnimationKey::Skill(SlotKey(1)),
 					AnimationKey::Skill(SlotKey(2)),
 					AnimationKey::Skill(SlotKey(3)),
 				]),
-				HashSet::from([
+				OrderedSet::from([
 					AnimationKey::Skill(SlotKey(4)),
 					AnimationKey::Skill(SlotKey(5)),
 					AnimationKey::Skill(SlotKey(6)),
 				]),
-				HashSet::from([
+				OrderedSet::from([
 					AnimationKey::Skill(SlotKey(7)),
-					AnimationKey::Skill(SlotKey(9)),
+					AnimationKey::Skill(SlotKey(8)),
 					AnimationKey::Skill(SlotKey(9)),
 				]),
 			),
@@ -366,7 +368,7 @@ mod tests {
 				AnimationKey::Skill(SlotKey(5)),
 				AnimationKey::Skill(SlotKey(6)),
 				AnimationKey::Skill(SlotKey(7)),
-				AnimationKey::Skill(SlotKey(9)),
+				AnimationKey::Skill(SlotKey(8)),
 				AnimationKey::Skill(SlotKey(9)),
 			]),
 			dispatch
@@ -374,5 +376,61 @@ mod tests {
 				.copied()
 				.collect::<HashSet<_>>()
 		)
+	}
+
+	#[test]
+	fn iter_youngest_to_oldest() {
+		let dispatch = AnimationDispatch {
+			animation_players: default(),
+			animation_handles: default(),
+			priorities: (
+				OrderedSet::from([
+					AnimationKey::Skill(SlotKey(1)),
+					AnimationKey::Skill(SlotKey(2)),
+					AnimationKey::Skill(SlotKey(3)),
+				]),
+				OrderedSet::from([
+					AnimationKey::Skill(SlotKey(4)),
+					AnimationKey::Skill(SlotKey(5)),
+					AnimationKey::Skill(SlotKey(6)),
+				]),
+				OrderedSet::from([
+					AnimationKey::Skill(SlotKey(7)),
+					AnimationKey::Skill(SlotKey(8)),
+					AnimationKey::Skill(SlotKey(9)),
+				]),
+			),
+		};
+
+		assert_eq!(
+			(
+				vec![
+					&AnimationKey::Skill(SlotKey(3)),
+					&AnimationKey::Skill(SlotKey(2)),
+					&AnimationKey::Skill(SlotKey(1)),
+				],
+				vec![
+					&AnimationKey::Skill(SlotKey(6)),
+					&AnimationKey::Skill(SlotKey(5)),
+					&AnimationKey::Skill(SlotKey(4)),
+				],
+				vec![
+					&AnimationKey::Skill(SlotKey(9)),
+					&AnimationKey::Skill(SlotKey(8)),
+					&AnimationKey::Skill(SlotKey(7)),
+				],
+			),
+			(
+				dispatch
+					.youngest_to_oldest_active_animations(AnimationPriority::High)
+					.collect::<Vec<_>>(),
+				dispatch
+					.youngest_to_oldest_active_animations(AnimationPriority::Medium)
+					.collect::<Vec<_>>(),
+				dispatch
+					.youngest_to_oldest_active_animations(AnimationPriority::Low)
+					.collect::<Vec<_>>(),
+			)
+		);
 	}
 }

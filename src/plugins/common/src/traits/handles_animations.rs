@@ -15,6 +15,7 @@ use std::{
 	hash::Hash,
 	ops::{Deref, DerefMut},
 };
+use zyheeda_core::prelude::OrderedSet;
 
 pub trait HandlesAnimations {
 	type TAnimationsMut<'w, 's>: SystemParam
@@ -59,7 +60,7 @@ where
 }
 
 pub trait ActiveAnimations {
-	fn active_animations<TLayer>(&self, layer: TLayer) -> &HashSet<AnimationKey>
+	fn active_animations<TLayer>(&self, layer: TLayer) -> &OrderedSet<AnimationKey>
 	where
 		TLayer: Into<AnimationPriority>;
 }
@@ -68,7 +69,7 @@ impl<T> ActiveAnimations for T
 where
 	T: Deref<Target: ActiveAnimations>,
 {
-	fn active_animations<TLayer>(&self, layer: TLayer) -> &HashSet<AnimationKey>
+	fn active_animations<TLayer>(&self, layer: TLayer) -> &OrderedSet<AnimationKey>
 	where
 		TLayer: Into<AnimationPriority>,
 	{
@@ -77,7 +78,7 @@ where
 }
 
 pub trait ActiveAnimationsMut: ActiveAnimations {
-	fn active_animations_mut<TLayer>(&mut self, layer: TLayer) -> &mut HashSet<AnimationKey>
+	fn active_animations_mut<TLayer>(&mut self, layer: TLayer) -> &mut OrderedSet<AnimationKey>
 	where
 		TLayer: Into<AnimationPriority>;
 }
@@ -86,7 +87,7 @@ impl<T> ActiveAnimationsMut for T
 where
 	T: DerefMut<Target: ActiveAnimationsMut>,
 {
-	fn active_animations_mut<TLayer>(&mut self, layer: TLayer) -> &mut HashSet<AnimationKey>
+	fn active_animations_mut<TLayer>(&mut self, layer: TLayer) -> &mut OrderedSet<AnimationKey>
 	where
 		TLayer: Into<AnimationPriority>,
 	{

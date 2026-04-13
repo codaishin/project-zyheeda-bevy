@@ -14,12 +14,15 @@ pub(crate) trait LoadAnimationAssets<TGraph, TIndices> {
 	) -> (TGraph, HashMap<AnimationPath, TIndices>);
 }
 
-pub trait GetActiveAnimations {
+pub trait YoungestToOldestActiveAnimations {
 	type TIter<'a>: Iterator<Item = &'a AnimationKey>
 	where
 		Self: 'a;
 
-	fn get_active_animations<TPriority>(&self, priority: TPriority) -> Self::TIter<'_>
+	fn youngest_to_oldest_active_animations<TPriority>(
+		&self,
+		priority: TPriority,
+	) -> Self::TIter<'_>
 	where
 		TPriority: Into<AnimationPriority> + 'static;
 }

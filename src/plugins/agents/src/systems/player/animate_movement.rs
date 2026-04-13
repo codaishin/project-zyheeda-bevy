@@ -8,7 +8,7 @@ use common::{
 		handles_movement::{CurrentMovement, Movement, MovementTarget, SpeedToggle},
 	},
 };
-use std::collections::HashSet;
+use zyheeda_core::prelude::OrderedSet;
 
 impl Player {
 	pub(crate) fn animate_movement<TMovement, TAnimations>(
@@ -40,7 +40,7 @@ impl Player {
 	}
 
 	fn start_run_or_walk_animation(
-		movement_animations: &mut HashSet<AnimationKey>,
+		movement_animations: &mut OrderedSet<AnimationKey>,
 		config: impl View<SpeedToggle>,
 	) {
 		let walk_or_run = match config.view() {
@@ -48,10 +48,10 @@ impl Player {
 			SpeedToggle::Right => AnimationKey::Walk,
 		};
 
-		*movement_animations = HashSet::from([walk_or_run]);
+		*movement_animations = OrderedSet::from([walk_or_run]);
 	}
 
-	fn stop_move_animations(movement_animations: &mut HashSet<AnimationKey>) {
+	fn stop_move_animations(movement_animations: &mut OrderedSet<AnimationKey>) {
 		movement_animations.clear();
 	}
 }
@@ -74,7 +74,7 @@ pub(crate) mod tests {
 		handles_animations::{ActiveAnimations, AnimationKey, AnimationPriority},
 		handles_movement::MovementTarget,
 	};
-	use std::{collections::HashMap, sync::LazyLock};
+	use std::collections::HashMap;
 	use test_case::test_case;
 	use testing::SingleThreadedApp;
 
@@ -96,22 +96,22 @@ pub(crate) mod tests {
 		}
 	}
 
-	static EMPTY: LazyLock<HashSet<AnimationKey>> = LazyLock::new(HashSet::default);
+	const EMPTY: &OrderedSet<AnimationKey> = &OrderedSet::EMPTY;
 
 	#[derive(Component, Debug, PartialEq, Default)]
-	pub(crate) struct _Animations(pub(crate) HashMap<AnimationPriority, HashSet<AnimationKey>>);
+	pub(crate) struct _Animations(pub(crate) HashMap<AnimationPriority, OrderedSet<AnimationKey>>);
 
 	impl ActiveAnimations for _Animations {
-		fn active_animations<TLayer>(&self, layer: TLayer) -> &HashSet<AnimationKey>
+		fn active_animations<TLayer>(&self, layer: TLayer) -> &OrderedSet<AnimationKey>
 		where
 			TLayer: Into<AnimationPriority>,
 		{
-			self.0.get(&layer.into()).unwrap_or(&*EMPTY)
+			self.0.get(&layer.into()).unwrap_or(EMPTY)
 		}
 	}
 
 	impl ActiveAnimationsMut for _Animations {
-		fn active_animations_mut<TLayer>(&mut self, layer: TLayer) -> &mut HashSet<AnimationKey>
+		fn active_animations_mut<TLayer>(&mut self, layer: TLayer) -> &mut OrderedSet<AnimationKey>
 		where
 			TLayer: Into<AnimationPriority>,
 		{
@@ -151,7 +151,7 @@ pub(crate) mod tests {
 		assert_eq!(
 			Some(&_Animations(HashMap::from([(
 				Move.into(),
-				HashSet::from([animation])
+				OrderedSet::from([animation])
 			)]))),
 			app.world().entity(entity).get::<_Animations>(),
 		);
@@ -168,7 +168,7 @@ pub(crate) mod tests {
 				movement,
 				_Animations(HashMap::from([(
 					Move.into(),
-					HashSet::from([AnimationKey::Idle]),
+					OrderedSet::from([AnimationKey::Idle]),
 				)])),
 			))
 			.id();
@@ -178,7 +178,7 @@ pub(crate) mod tests {
 		assert_eq!(
 			Some(&_Animations(HashMap::from([(
 				Move.into(),
-				HashSet::from([animation])
+				OrderedSet::from([animation])
 			)]))),
 			app.world().entity(entity).get::<_Animations>(),
 		);
@@ -225,7 +225,7 @@ pub(crate) mod tests {
 				},
 				_Animations(HashMap::from([(
 					Move.into(),
-					HashSet::from([AnimationKey::Idle]),
+					OrderedSet::from([AnimationKey::Idle]),
 				)])),
 			))
 			.id();
@@ -239,7 +239,7 @@ pub(crate) mod tests {
 		assert_eq!(
 			Some(&_Animations(HashMap::from([(
 				Move.into(),
-				HashSet::from([]),
+				OrderedSet::from([]),
 			)])),),
 			app.world().entity(entity).get::<_Animations>(),
 		);

@@ -5,10 +5,10 @@ use common::traits::handles_animations::{
 	AnimationKey,
 	AnimationPriority,
 };
-use std::collections::HashSet;
+use zyheeda_core::prelude::*;
 
 impl ActiveAnimations for AnimationsContextMut<'_> {
-	fn active_animations<TLayer>(&self, layer: TLayer) -> &HashSet<AnimationKey>
+	fn active_animations<TLayer>(&self, layer: TLayer) -> &OrderedSet<AnimationKey>
 	where
 		TLayer: Into<AnimationPriority>,
 	{
@@ -17,7 +17,7 @@ impl ActiveAnimations for AnimationsContextMut<'_> {
 }
 
 impl ActiveAnimationsMut for AnimationsContextMut<'_> {
-	fn active_animations_mut<TLayer>(&mut self, layer: TLayer) -> &mut HashSet<AnimationKey>
+	fn active_animations_mut<TLayer>(&mut self, layer: TLayer) -> &mut OrderedSet<AnimationKey>
 	where
 		TLayer: Into<AnimationPriority>,
 	{
@@ -109,7 +109,7 @@ mod tests {
 				let ctx = AnimationsParamMut::get_context_mut(&mut p, key).unwrap();
 
 				assert_eq!(
-					&HashSet::from(animations),
+					&OrderedSet::from(animations),
 					ctx.active_animations(animation_priority)
 				);
 			})

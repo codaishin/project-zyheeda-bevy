@@ -70,12 +70,9 @@ mod tests {
 			handles_loadout::{ActiveSkill, ActiveSkills},
 		},
 	};
-	use std::{
-		collections::{HashMap, HashSet},
-		iter::Copied,
-		slice::Iter,
-	};
+	use std::{collections::HashMap, iter::Copied, slice::Iter};
 	use testing::{SingleThreadedApp, new_handle};
+	use zyheeda_core::prelude::*;
 
 	#[derive(Component)]
 	struct _Loadout {
@@ -134,7 +131,7 @@ mod tests {
 		assert_eq!(
 			Some(&_Animations(HashMap::from([(
 				AnimationPriority::High,
-				HashSet::from([
+				OrderedSet::from([
 					AnimationKey::Skill(SlotKey(42)),
 					AnimationKey::Skill(SlotKey(11)),
 				])
@@ -173,7 +170,7 @@ mod tests {
 		assert_eq!(
 			Some(&_Animations(HashMap::from([(
 				AnimationPriority::High,
-				HashSet::from([AnimationKey::Skill(SlotKey(42))])
+				OrderedSet::from([AnimationKey::Skill(SlotKey(42))])
 			)]))),
 			app.world().entity(entity).get::<_Animations>(),
 		);
@@ -190,14 +187,17 @@ mod tests {
 				},
 				_Loadout { active: vec![] },
 				_Animations(HashMap::from([
-					(AnimationPriority::Low, HashSet::from([AnimationKey::Idle])),
+					(
+						AnimationPriority::Low,
+						OrderedSet::from([AnimationKey::Idle]),
+					),
 					(
 						AnimationPriority::Medium,
-						HashSet::from([AnimationKey::Run]),
+						OrderedSet::from([AnimationKey::Run]),
 					),
 					(
 						AnimationPriority::High,
-						HashSet::from([
+						OrderedSet::from([
 							AnimationKey::Skill(SlotKey(42)),
 							AnimationKey::Skill(SlotKey(11)),
 						]),
@@ -210,12 +210,15 @@ mod tests {
 
 		assert_eq!(
 			Some(&_Animations(HashMap::from([
-				(AnimationPriority::Low, HashSet::from([AnimationKey::Idle])),
+				(
+					AnimationPriority::Low,
+					OrderedSet::from([AnimationKey::Idle])
+				),
 				(
 					AnimationPriority::Medium,
-					HashSet::from([AnimationKey::Run]),
+					OrderedSet::from([AnimationKey::Run]),
 				),
-				(AnimationPriority::High, HashSet::from([]),),
+				(AnimationPriority::High, OrderedSet::from([]),),
 			])),),
 			app.world().entity(entity).get::<_Animations>(),
 		);
@@ -306,7 +309,7 @@ mod tests {
 		assert_eq!(
 			Some(&_Animations(HashMap::from([(
 				AnimationPriority::High,
-				HashSet::from([AnimationKey::Skill(SlotKey(42))])
+				OrderedSet::from([AnimationKey::Skill(SlotKey(42))])
 			)]))),
 			app.world().entity(entity).get::<_Animations>(),
 		);
