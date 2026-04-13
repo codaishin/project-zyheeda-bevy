@@ -48,7 +48,7 @@ impl GroundTarget {
 	) -> Option<Transform> {
 		match self.target {
 			SkillTarget::Cursor(_) => ray_caster
-				.raycast(MouseHover::NO_EXCLUDES)
+				.raycast(MouseHover::TERRAIN_WITHOUT_EXCLUDES)
 				.and_then(mouse_hover_translation(transforms))
 				.map(Transform::from_translation),
 			SkillTarget::Entity(persistent_entity) => commands

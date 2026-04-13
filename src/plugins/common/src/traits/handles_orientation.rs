@@ -1,6 +1,6 @@
 use crate::{
 	components::persistent_entity::PersistentEntity,
-	traits::accessors::get::GetContextMut,
+	traits::{accessors::get::GetContextMut, handles_skill_physics::Cursor},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
 use macros::EntityKey;
@@ -37,11 +37,16 @@ where
 	}
 }
 
-#[derive(Default, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum Face {
-	#[default]
-	Cursor,
+	Cursor(Cursor),
 	Entity(PersistentEntity),
 	Translation(Vec3),
 	Direction(Dir3),
+}
+
+impl Default for Face {
+	fn default() -> Self {
+		Self::Cursor(Cursor::default())
+	}
 }

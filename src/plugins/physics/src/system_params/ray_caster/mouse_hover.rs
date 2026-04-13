@@ -16,7 +16,7 @@ where
 	T: SystemParam + 'static,
 	Self: Raycast<SolidObjects> + Raycast<Terrain>,
 {
-	fn raycast(&mut self, MouseHover { exclude }: MouseHover) -> Option<MouseHoversOver> {
+	fn raycast(&mut self, MouseHover { exclude, .. }: MouseHover) -> Option<MouseHoversOver> {
 		let cam = self.world_cams.single_mut().ok()?;
 		let ray = cam.ray?;
 
@@ -74,7 +74,7 @@ mod tests {
 	};
 	use common::{
 		toi,
-		traits::handles_physics::{RaycastHit, TimeOfImpact},
+		traits::handles_physics::{HoverMode, RaycastHit, TimeOfImpact},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -169,6 +169,7 @@ mod tests {
 			.run_system_once(move |mut ray_caster: _RayCaster| {
 				let hit = ray_caster.raycast(MouseHover {
 					exclude: vec![exclude],
+					mode: HoverMode::ColliderOrTerrain,
 				});
 
 				assert_eq!(
@@ -210,6 +211,7 @@ mod tests {
 			.run_system_once(move |mut ray_caster: _RayCaster| {
 				let hit = ray_caster.raycast(MouseHover {
 					exclude: vec![exclude],
+					mode: HoverMode::ColliderOrTerrain,
 				});
 
 				assert_eq!(
@@ -253,6 +255,7 @@ mod tests {
 			.run_system_once(move |mut ray_caster: _RayCaster| {
 				let hit = ray_caster.raycast(MouseHover {
 					exclude: vec![exclude],
+					mode: HoverMode::ColliderOrTerrain,
 				});
 
 				assert_eq!(
@@ -294,6 +297,7 @@ mod tests {
 			.run_system_once(move |mut ray_caster: _RayCaster| {
 				let hit = ray_caster.raycast(MouseHover {
 					exclude: vec![exclude],
+					mode: HoverMode::ColliderOrTerrain,
 				});
 
 				assert_eq!(
@@ -338,6 +342,7 @@ mod tests {
 			.run_system_once(move |mut ray_caster: _RayCaster| {
 				ray_caster.raycast(MouseHover {
 					exclude: vec![exclude],
+					mode: HoverMode::ColliderOrTerrain,
 				});
 			})?;
 

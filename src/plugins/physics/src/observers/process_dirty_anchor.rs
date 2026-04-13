@@ -12,7 +12,7 @@ use common::{
 	errors::{ErrorData, Level},
 	traits::{
 		accessors::get::{Get, TryApplyOn},
-		handles_physics::{MouseHover, MouseHoversOver, Raycast},
+		handles_physics::{HoverMode, MouseHover, MouseHoversOver, Raycast},
 		handles_skill_physics::{SkillSpawner, SkillTarget},
 	},
 	zyheeda_commands::ZyheedaCommands,
@@ -95,6 +95,7 @@ impl AnchorDirty {
 			AnchorRotation::LookingAt(SkillTarget::Cursor(_)) => {
 				let hover = MouseHover {
 					exclude: vec![attached_to],
+					mode: HoverMode::ColliderOrTerrain,
 				};
 				let Some(hit) = ray_caster.raycast(hover) else {
 					return Ok(());
@@ -178,7 +179,7 @@ mod tests {
 		components::persistent_entity::PersistentEntity,
 		tools::action_key::slot::SlotKey,
 		traits::{
-			handles_physics::MouseHoversOver,
+			handles_physics::{HoverMode, MouseHoversOver},
 			handles_skill_physics::{Cursor, SkillSpawner},
 			register_persistent_entities::RegisterPersistentEntities,
 		},
@@ -392,6 +393,7 @@ mod tests {
 				.once()
 				.with(eq(MouseHover {
 					exclude: vec![agent],
+					mode: HoverMode::ColliderOrTerrain,
 				}))
 				.return_const(MouseHoversOver::Terrain {
 					point: Vec3::new(11., 22., 33.),
@@ -434,6 +436,7 @@ mod tests {
 				.once()
 				.with(eq(MouseHover {
 					exclude: vec![agent],
+					mode: HoverMode::ColliderOrTerrain,
 				}))
 				.return_const(MouseHoversOver::Object {
 					entity: target,

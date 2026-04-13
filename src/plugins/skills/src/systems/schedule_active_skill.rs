@@ -82,7 +82,7 @@ where
 
 	if states.contains(&StateMeta::Entering(SkillState::Aim)) {
 		match skill_target {
-			SkillTarget::Cursor(..) => facing.override_face(Face::Cursor),
+			SkillTarget::Cursor(cursor) => facing.override_face(Face::Cursor(*cursor)),
 			SkillTarget::Entity(target) => facing.override_face(Face::Entity(*target)),
 		}
 		schedule_start(&mut skill_executer, skill, try_run_on_aim);
@@ -518,8 +518,8 @@ mod tests {
 	}
 
 	#[test_case(SkillTarget::Entity(*TARGET), Face::Entity(*TARGET); "target")]
-	#[test_case(SkillTarget::Cursor(Cursor::Direction), Face::Cursor; "cursor direction")]
-	#[test_case(SkillTarget::Cursor(Cursor::TerrainHover), Face::Cursor; "cursor terrain hover")]
+	#[test_case(SkillTarget::Cursor(Cursor::Direction), Face::Cursor(Cursor::Direction); "cursor direction")]
+	#[test_case(SkillTarget::Cursor(Cursor::TerrainHover), Face::Cursor(Cursor::TerrainHover); "cursor terrain hover")]
 	fn apply_facing(target: SkillTarget, face: Face) -> Result<(), MissingLastUpdate> {
 		let (mut app, agent) = setup()?;
 		app.world_mut().entity_mut(agent).insert((
@@ -581,8 +581,8 @@ mod tests {
 	}
 
 	#[test_case(SkillTarget::Entity(*TARGET), Face::Entity(*TARGET); "target")]
-	#[test_case(SkillTarget::Cursor(Cursor::Direction), Face::Cursor; "cursor direction")]
-	#[test_case(SkillTarget::Cursor(Cursor::TerrainHover), Face::Cursor; "cursor terrain override")]
+	#[test_case(SkillTarget::Cursor(Cursor::Direction), Face::Cursor(Cursor::Direction); "cursor direction")]
+	#[test_case(SkillTarget::Cursor(Cursor::TerrainHover), Face::Cursor(Cursor::TerrainHover); "cursor terrain override")]
 	fn apply_facing_override_when_beginning_to_aim(
 		target: SkillTarget,
 		face: Face,

@@ -287,23 +287,40 @@ pub struct RaycastHit {
 	pub time_of_impact: f32,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub struct MouseHover {
+	pub mode: HoverMode,
 	pub exclude: Vec<Entity>,
 }
 
 impl MouseHover {
-	pub const NO_EXCLUDES: Self = Self { exclude: vec![] };
+	pub const TERRAIN_WITHOUT_EXCLUDES: Self = Self {
+		exclude: vec![],
+		mode: HoverMode::ColliderOrTerrain,
+	};
 
 	pub fn excluding(exclude: impl IntoIterator<Item = Entity>) -> Self {
 		Self {
 			exclude: Vec::from_iter(exclude),
+			..default()
 		}
+	}
+
+	pub fn with_mode(mut self, mode: HoverMode) -> Self {
+		self.mode = mode;
+		self
 	}
 }
 
 impl RaycastResult for MouseHover {
 	type TResult = Option<MouseHoversOver>;
+}
+
+#[derive(Debug, PartialEq, Default)]
+pub enum HoverMode {
+	#[default]
+	ColliderOrTerrain,
+	ColliderOrDirectionFrom(Vec3),
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
