@@ -8,7 +8,7 @@ use common::{
 		accessors::get::{Get, GetContextMut},
 		handles_animations::{Animations, DirForwardPitch, ForwardPitch, GetForwardPitchMut},
 		handles_physics::{MouseHover, MouseHoversOver, Raycast},
-		handles_skill_physics::SkillTarget,
+		handles_skill_physics::{Cursor, SkillTarget},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -51,13 +51,16 @@ impl Target {
 				let target = transforms.get(target).ok()?.translation();
 				get_pitch(transform, target)
 			}
-			SkillTarget::Cursor(_) => match ray_cast.raycast(MouseHover::excluding([entity]))? {
-				MouseHoversOver::Point(point) => get_pitch(transform, point),
-				MouseHoversOver::Object { entity, .. } => {
-					let target = transforms.get(entity).ok()?.translation();
-					get_pitch(transform, target)
+			SkillTarget::Cursor(Cursor::TerrainHover) => {
+				match ray_cast.raycast(MouseHover::excluding([entity]))? {
+					MouseHoversOver::Point(point) => get_pitch(transform, point),
+					MouseHoversOver::Object { entity, .. } => {
+						let target = transforms.get(entity).ok()?.translation();
+						get_pitch(transform, target)
+					}
 				}
-			},
+			}
+			SkillTarget::Cursor(Cursor::Direction) => None,
 		}
 	}
 }
@@ -291,6 +294,35 @@ mod tests {
 		assert_eq_approx!(
 			Some(&_Animations {
 				forward_pitch: forward_pitch.into()
+			}),
+			app.world().entity(entity).get::<_Animations>(),
+			1e-5,
+		);
+	}
+
+	#[test]
+	fn set_not_pitch_for_directional_cursor() {
+		let mut app = setup();
+		let entity = app
+			.world_mut()
+			.spawn((
+				Target(Some(SkillTarget::Cursor(Cursor::Direction))),
+				GlobalTransform::default(),
+				_Animations {
+					forward_pitch: Some(DirForwardPitch::Up(ForwardPitch::MAX)),
+				},
+			))
+			.id();
+		app.insert_resource(_RayCast::new().with_mock(|mock| {
+			mock.expect_raycast()
+				.return_const(Some(MouseHoversOver::Point(Vec3::new(1., 2., 3.))));
+		}));
+
+		app.update();
+
+		assert_eq_approx!(
+			Some(&_Animations {
+				forward_pitch: None
 			}),
 			app.world().entity(entity).get::<_Animations>(),
 			1e-5,
