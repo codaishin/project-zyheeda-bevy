@@ -47,6 +47,12 @@ impl<const N: usize> VecNotNan<N> {
 	}
 }
 
+impl<const N: usize> Default for VecNotNan<N> {
+	fn default() -> Self {
+		Self([0.0; N])
+	}
+}
+
 impl<const N: usize> Eq for VecNotNan<N> {}
 
 impl<const N: usize> Hash for VecNotNan<N> {

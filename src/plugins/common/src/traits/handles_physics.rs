@@ -4,7 +4,7 @@ use crate::{
 	attributes::{effect_target::EffectTarget, health::Health},
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
 	toi,
-	tools::{Units, speed::Speed},
+	tools::{Units, speed::Speed, vec_not_nan::VecNotNan},
 	traits::{
 		accessors::get::{GetContextMut, View, ViewField},
 		handles_physics::physical_bodies::{Blocker, Body},
@@ -287,7 +287,7 @@ pub struct RaycastHit {
 	pub time_of_impact: f32,
 }
 
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Eq, Hash, Default, Clone)]
 pub struct MouseHover {
 	pub mode: HoverMode,
 	pub exclude: Vec<Entity>,
@@ -316,18 +316,26 @@ impl RaycastResult for MouseHover {
 	type TResult = Option<MouseHoversOver>;
 }
 
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
 pub enum HoverMode {
 	#[default]
 	ColliderOrTerrain,
-	ColliderOrDirectionFrom(Vec3),
+	ColliderOrDirectionFrom(VecNotNan<3>),
+}
+
+impl HoverMode {
+	pub fn collider_or_direction_from(Vec3 { x, y, z }: Vec3) -> Option<Self> {
+		let vec = VecNotNan::try_from_coords([x, y, z]).ok()?;
+
+		Some(Self::ColliderOrDirectionFrom(vec))
+	}
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum MouseHoversOver {
-	/// Hovering over terrain on the given point
-	Terrain { point: Vec3 },
-	/// Hovering an entity on the given point (which may not be the entities translation)
+	/// Hovering over a point
+	Point(Vec3),
+	/// Hovering an entity on the point (which may not be the entities translation)
 	Object { entity: Entity, point: Vec3 },
 }
 

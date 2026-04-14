@@ -15,7 +15,7 @@ impl WorldCamera {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::handles_physics::MouseHoversOver;
+	use common::traits::handles_physics::{MouseHover, MouseHoversOver};
 	use std::collections::HashMap;
 	use testing::{IsChanged, SingleThreadedApp};
 
@@ -37,10 +37,8 @@ mod tests {
 			.world_mut()
 			.spawn(WorldCamera {
 				mouse_hover: HashMap::from([(
-					vec![],
-					MouseHoversOver::Terrain {
-						point: Vec3::default(),
-					},
+					MouseHover::default(),
+					MouseHoversOver::Point(Vec3::default()),
 				)]),
 				..default()
 			})

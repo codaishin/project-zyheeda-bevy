@@ -52,7 +52,7 @@ impl Target {
 				get_pitch(transform, target)
 			}
 			SkillTarget::Cursor(_) => match ray_cast.raycast(MouseHover::excluding([entity]))? {
-				MouseHoversOver::Terrain { point } => get_pitch(transform, point),
+				MouseHoversOver::Point(point) => get_pitch(transform, point),
 				MouseHoversOver::Object { entity, .. } => {
 					let target = transforms.get(entity).ok()?.translation();
 					get_pitch(transform, target)
@@ -241,9 +241,7 @@ mod tests {
 			.id();
 		app.insert_resource(_RayCast::new().with_mock(|mock| {
 			mock.expect_raycast()
-				.return_const(Some(MouseHoversOver::Terrain {
-					point: translation + offset,
-				}));
+				.return_const(Some(MouseHoversOver::Point(translation + offset)));
 		}));
 
 		app.update();

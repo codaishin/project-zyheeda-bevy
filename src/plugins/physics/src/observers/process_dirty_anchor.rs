@@ -101,7 +101,7 @@ impl AnchorDirty {
 					return Ok(());
 				};
 				let target = match hit {
-					MouseHoversOver::Terrain { point } => point,
+					MouseHoversOver::Point(point) => point,
 					MouseHoversOver::Object { entity, .. } => {
 						let Ok(target) = transforms.get(entity) else {
 							return Err(AnchorError::EntityWithoutTransform(entity));
@@ -395,9 +395,7 @@ mod tests {
 					exclude: vec![agent],
 					mode: HoverMode::ColliderOrTerrain,
 				}))
-				.return_const(MouseHoversOver::Terrain {
-					point: Vec3::new(11., 22., 33.),
-				});
+				.return_const(MouseHoversOver::Point(Vec3::new(11., 22., 33.)));
 		}));
 
 		let anchor = app.world_mut().spawn(

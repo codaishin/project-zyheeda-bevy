@@ -78,7 +78,7 @@ fn mouse_hover_translation(
 	transforms: Query<&Transform>,
 ) -> impl Fn(MouseHoversOver) -> Option<Vec3> {
 	move |mouse_hover| match mouse_hover {
-		MouseHoversOver::Terrain { point } => Some(point),
+		MouseHoversOver::Point(point) => Some(point),
 		MouseHoversOver::Object { entity, .. } => {
 			transforms.get(entity).map(|t| t.translation).ok()
 		}
@@ -143,9 +143,7 @@ mod tests {
 		app.insert_resource(_RayCaster::new().with_mock(|mock| {
 			mock.expect_raycast()
 				.once()
-				.return_const(MouseHoversOver::Terrain {
-					point: Vec3::new(1., 2., 3.),
-				});
+				.return_const(MouseHoversOver::Point(Vec3::new(1., 2., 3.)));
 		}));
 		let entity = app
 			.world_mut()
