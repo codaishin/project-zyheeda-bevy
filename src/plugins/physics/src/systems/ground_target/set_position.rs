@@ -47,8 +47,8 @@ impl GroundTarget {
 		ray_caster: &mut impl Raycast<MouseHover>,
 	) -> Option<Transform> {
 		match self.target {
-			SkillTarget::Cursor => ray_caster
-				.raycast(MouseHover::NO_EXCLUDES)
+			SkillTarget::Cursor(_) => ray_caster
+				.raycast(MouseHover::TERRAIN_WITHOUT_EXCLUDES)
 				.and_then(mouse_hover_translation(transforms))
 				.map(Transform::from_translation),
 			SkillTarget::Entity(persistent_entity) => commands
@@ -78,7 +78,7 @@ fn mouse_hover_translation(
 	transforms: Query<&Transform>,
 ) -> impl Fn(MouseHoversOver) -> Option<Vec3> {
 	move |mouse_hover| match mouse_hover {
-		MouseHoversOver::Terrain { point } => Some(point),
+		MouseHoversOver::Point(point) => Some(point),
 		MouseHoversOver::Object { entity, .. } => {
 			transforms.get(entity).map(|t| t.translation).ok()
 		}
@@ -94,13 +94,14 @@ mod tests {
 		tools::Units,
 		traits::{
 			handles_physics::MouseHoversOver,
-			handles_skill_physics::SkillCaster,
+			handles_skill_physics::{Cursor, SkillCaster},
 			register_persistent_entities::RegisterPersistentEntities,
 		},
 	};
 	use macros::NestedMocks;
 	use mockall::automock;
 	use std::f32::consts::PI;
+	use test_case::test_case;
 	use testing::{NestedMocks, SingleThreadedApp, assert_eq_approx};
 
 	#[derive(Resource, NestedMocks)]
@@ -133,21 +134,20 @@ mod tests {
 		app
 	}
 
-	#[test]
-	fn set_to_cursor_terrain() {
+	#[test_case(Cursor::Direction; "cursor direction")]
+	#[test_case(Cursor::TerrainHover; "cursor terrain hover")]
+	fn set_to_cursor_terrain(cursor: Cursor) {
 		let mut app = setup();
 		let caster = SkillCaster::default();
 		app.world_mut().spawn((Transform::default(), *caster));
 		app.insert_resource(_RayCaster::new().with_mock(|mock| {
 			mock.expect_raycast()
 				.once()
-				.return_const(MouseHoversOver::Terrain {
-					point: Vec3::new(1., 2., 3.),
-				});
+				.return_const(MouseHoversOver::Point(Vec3::new(1., 2., 3.)));
 		}));
 		let entity = app
 			.world_mut()
-			.spawn(GroundTarget::with_caster(caster).with_target(SkillTarget::Cursor))
+			.spawn(GroundTarget::with_caster(caster).with_target(SkillTarget::Cursor(cursor)))
 			.id();
 
 		app.update();
@@ -158,8 +158,9 @@ mod tests {
 		)
 	}
 
-	#[test]
-	fn set_to_cursor_entity_translation() {
+	#[test_case(Cursor::Direction; "cursor direction")]
+	#[test_case(Cursor::TerrainHover; "cursor terrain hover")]
+	fn set_to_cursor_entity_translation(cursor: Cursor) {
 		let mut app = setup();
 		let caster = SkillCaster::default();
 		let cursor_entity = app
@@ -181,7 +182,7 @@ mod tests {
 		}));
 		let entity = app
 			.world_mut()
-			.spawn(GroundTarget::with_caster(caster).with_target(SkillTarget::Cursor))
+			.spawn(GroundTarget::with_caster(caster).with_target(SkillTarget::Cursor(cursor)))
 			.id();
 
 		app.update();

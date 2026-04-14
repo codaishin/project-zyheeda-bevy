@@ -24,6 +24,7 @@ fn face_value(
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use common::traits::handles_skill_physics::Cursor;
 	use testing::SingleThreadedApp;
 
 	#[derive(Component, Debug, PartialEq)]
@@ -75,7 +76,10 @@ mod tests {
 		let face = Face::Translation(Vec3::new(1., 2., 3.));
 		let agent = app
 			.world_mut()
-			.spawn((SetFace(Face::Cursor), SetFaceOverride(face)))
+			.spawn((
+				SetFace(Face::Cursor(Cursor::default())),
+				SetFaceOverride(face),
+			))
 			.id();
 
 		app.update();
@@ -90,7 +94,7 @@ mod tests {
 		let mut app = setup();
 		let agent = app
 			.world_mut()
-			.spawn(SetFace(Face::Cursor))
+			.spawn(SetFace(Face::Cursor(Cursor::default())))
 			.remove::<CanFace>()
 			.id();
 

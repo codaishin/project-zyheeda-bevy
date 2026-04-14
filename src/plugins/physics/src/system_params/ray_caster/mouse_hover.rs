@@ -1,14 +1,19 @@
 use crate::system_params::ray_caster::RayCaster;
 use bevy::{
 	ecs::system::SystemParam,
-	math::{Ray3d, Vec3},
+	math::{Dir3, Ray3d, Vec3, primitives::InfinitePlane3d},
 };
-use common::traits::handles_physics::{
-	MouseHover,
-	MouseHoversOver,
-	Raycast,
-	SolidObjects,
-	Terrain,
+use common::{
+	tools::vec_not_nan::VecNotNan,
+	traits::handles_physics::{
+		HoverMode,
+		MouseHover,
+		MouseHoversOver,
+		Raycast,
+		SolidObjects,
+		Terrain,
+		TimeOfImpact,
+	},
 };
 
 impl<T> Raycast<MouseHover> for RayCaster<'_, '_, T>
@@ -16,40 +21,41 @@ where
 	T: SystemParam + 'static,
 	Self: Raycast<SolidObjects> + Raycast<Terrain>,
 {
-	fn raycast(&mut self, MouseHover { exclude }: MouseHover) -> Option<MouseHoversOver> {
-		let cam = self.world_cams.single_mut().ok()?;
+	fn raycast(&mut self, mouse_hover: MouseHover) -> Option<MouseHoversOver> {
+		let cam = self.world_cams.single().ok()?;
 		let ray = cam.ray?;
 
-		if let Some(cached) = cam.mouse_hover.get(&exclude) {
+		if let Some(cached) = cam.mouse_hover.get(&mouse_hover) {
 			return Some(*cached);
 		}
 
 		let object_hit = self.raycast(SolidObjects {
 			ray,
-			exclude: exclude.clone(),
+			exclude: mouse_hover.exclude.clone(),
 			only_hoverable: true,
 		});
+		let plane_hit = match mouse_hover.mode {
+			HoverMode::ColliderOrTerrain => None,
+			HoverMode::ColliderOrDirectionFrom(plane) => intersect_horizontal_plane(ray, plane),
+		};
 		let ground_hit = self.raycast(Terrain { ray });
-		let hover = match (object_hit, ground_hit) {
-			(None, None) => return None,
-			(None, Some(time_of_impact)) => MouseHoversOver::Terrain {
-				point: point(ray, *time_of_impact),
-			},
-			(Some(object), Some(ground_time_of_impact))
-				if object.time_of_impact > *ground_time_of_impact =>
-			{
-				MouseHoversOver::Terrain {
-					point: point(ray, *ground_time_of_impact),
-				}
+		let hover = match (object_hit, plane_hit, ground_hit) {
+			(None, None, None) => return None,
+			(None, Some(toi), _) | (None, _, Some(toi)) => MouseHoversOver::Point(point(ray, *toi)),
+			(Some(object), Some(toi), Some(ground_toi)) if object.time_of_impact > *ground_toi => {
+				MouseHoversOver::Point(point(ray, *toi))
 			}
-			(Some(object), _) => MouseHoversOver::Object {
+			(Some(object), None, Some(toi)) if object.time_of_impact > *toi => {
+				MouseHoversOver::Point(point(ray, *toi))
+			}
+			(Some(object), ..) => MouseHoversOver::Object {
 				entity: object.entity,
 				point: point(ray, object.time_of_impact),
 			},
 		};
 
 		let mut cam = self.world_cams.single_mut().ok()?;
-		cam.mouse_hover.insert(exclude, hover);
+		cam.mouse_hover.insert(mouse_hover.clone(), hover);
 
 		Some(hover)
 	}
@@ -57,6 +63,12 @@ where
 
 fn point(ray: Ray3d, toi: f32) -> Vec3 {
 	ray.origin + ray.direction * toi
+}
+
+fn intersect_horizontal_plane(ray: Ray3d, plane_origin: VecNotNan<3>) -> Option<TimeOfImpact> {
+	let toi = ray.intersect_plane(plane_origin.into(), InfinitePlane3d { normal: Dir3::Y })?;
+
+	TimeOfImpact::try_from_f32(toi).ok()
 }
 
 #[cfg(test)]
@@ -74,7 +86,9 @@ mod tests {
 	};
 	use common::{
 		toi,
-		traits::handles_physics::{RaycastHit, TimeOfImpact},
+		tools::Units,
+		traits::handles_physics::{HoverMode, RaycastHit, TimeOfImpact},
+		vec3_not_nan,
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -137,223 +151,365 @@ mod tests {
 		(app, cam)
 	}
 
-	#[test]
-	fn return_object_hit() -> Result<(), RunSystemError> {
-		let ray = Ray3d {
-			origin: Vec3::new(1., 2., 3.),
-			direction: Dir3::NEG_Y,
-		};
-		let exclude = fake_entity!(444);
-		let (mut app, _) = setup(
-			ray,
-			_Objects::new().with_mock(|mock| {
-				mock.expect_raycast()
-					.with(eq(SolidObjects {
-						ray,
+	mod terrain_mode {
+		use super::*;
+
+		#[test]
+		fn return_object_hit() -> Result<(), RunSystemError> {
+			let ray = Ray3d {
+				origin: Vec3::new(1., 2., 3.),
+				direction: Dir3::NEG_Y,
+			};
+			let exclude = fake_entity!(444);
+			let (mut app, _) = setup(
+				ray,
+				_Objects::new().with_mock(|mock| {
+					mock.expect_raycast()
+						.with(eq(SolidObjects {
+							ray,
+							exclude: vec![exclude],
+							only_hoverable: true,
+						}))
+						.return_const(RaycastHit {
+							entity: fake_entity!(123),
+							time_of_impact: 42.,
+						});
+				}),
+				_Ground::new().with_mock(|mock| {
+					mock.expect_raycast()
+						.with(eq(Terrain { ray }))
+						.return_const(toi!(44.));
+				}),
+			);
+
+			app.world_mut()
+				.run_system_once(move |mut ray_caster: _RayCaster| {
+					let hit = ray_caster.raycast(MouseHover {
 						exclude: vec![exclude],
-						only_hoverable: true,
-					}))
-					.return_const(RaycastHit {
-						entity: fake_entity!(123),
-						time_of_impact: 42.,
+						mode: HoverMode::ColliderOrTerrain,
 					});
-			}),
-			_Ground::new().with_mock(|mock| {
-				mock.expect_raycast()
-					.with(eq(Terrain { ray }))
-					.return_const(toi!(44.));
-			}),
-		);
 
-		app.world_mut()
-			.run_system_once(move |mut ray_caster: _RayCaster| {
-				let hit = ray_caster.raycast(MouseHover {
-					exclude: vec![exclude],
-				});
+					assert_eq!(
+						Some(MouseHoversOver::Object {
+							entity: fake_entity!(123),
+							point: Vec3::new(1., -40., 3.),
+						}),
+						hit,
+					);
+				})
+		}
 
-				assert_eq!(
-					Some(MouseHoversOver::Object {
-						entity: fake_entity!(123),
-						point: Vec3::new(1., -40., 3.),
-					}),
-					hit,
-				);
-			})
-	}
+		#[test]
+		fn return_ground_hit_when_no_object_hit() -> Result<(), RunSystemError> {
+			let ray = Ray3d {
+				origin: Vec3::new(1., 2., 3.),
+				direction: Dir3::NEG_Y,
+			};
+			let exclude = fake_entity!(444);
+			let (mut app, _) = setup(
+				ray,
+				_Objects::new().with_mock(|mock| {
+					mock.expect_raycast()
+						.with(eq(SolidObjects {
+							ray,
+							exclude: vec![exclude],
+							only_hoverable: true,
+						}))
+						.return_const(None);
+				}),
+				_Ground::new().with_mock(|mock| {
+					mock.expect_raycast()
+						.with(eq(Terrain { ray }))
+						.return_const(toi!(44.));
+				}),
+			);
 
-	#[test]
-	fn return_ground_hit_when_no_object_hit() -> Result<(), RunSystemError> {
-		let ray = Ray3d {
-			origin: Vec3::new(1., 2., 3.),
-			direction: Dir3::NEG_Y,
-		};
-		let exclude = fake_entity!(444);
-		let (mut app, _) = setup(
-			ray,
-			_Objects::new().with_mock(|mock| {
-				mock.expect_raycast()
-					.with(eq(SolidObjects {
-						ray,
+			app.world_mut()
+				.run_system_once(move |mut ray_caster: _RayCaster| {
+					let hit = ray_caster.raycast(MouseHover {
 						exclude: vec![exclude],
-						only_hoverable: true,
-					}))
-					.return_const(None);
-			}),
-			_Ground::new().with_mock(|mock| {
-				mock.expect_raycast()
-					.with(eq(Terrain { ray }))
-					.return_const(toi!(44.));
-			}),
-		);
-
-		app.world_mut()
-			.run_system_once(move |mut ray_caster: _RayCaster| {
-				let hit = ray_caster.raycast(MouseHover {
-					exclude: vec![exclude],
-				});
-
-				assert_eq!(
-					Some(MouseHoversOver::Terrain {
-						point: Vec3::new(1., -42., 3.)
-					}),
-					hit,
-				);
-			})
-	}
-
-	#[test]
-	fn return_ground_hit_when_no_object_further_away_than_ground() -> Result<(), RunSystemError> {
-		let ray = Ray3d {
-			origin: Vec3::new(1., 2., 3.),
-			direction: Dir3::NEG_Y,
-		};
-		let exclude = fake_entity!(444);
-		let (mut app, _) = setup(
-			ray,
-			_Objects::new().with_mock(|mock| {
-				mock.expect_raycast()
-					.with(eq(SolidObjects {
-						ray,
-						exclude: vec![exclude],
-						only_hoverable: true,
-					}))
-					.return_const(RaycastHit {
-						entity: fake_entity!(123),
-						time_of_impact: 100.,
+						mode: HoverMode::ColliderOrTerrain,
 					});
-			}),
-			_Ground::new().with_mock(|mock| {
-				mock.expect_raycast()
-					.with(eq(Terrain { ray }))
-					.return_const(toi!(44.));
-			}),
-		);
 
-		app.world_mut()
-			.run_system_once(move |mut ray_caster: _RayCaster| {
-				let hit = ray_caster.raycast(MouseHover {
-					exclude: vec![exclude],
-				});
+					assert_eq!(Some(MouseHoversOver::Point(Vec3::new(1., -42., 3.))), hit,);
+				})
+		}
 
-				assert_eq!(
-					Some(MouseHoversOver::Terrain {
-						point: Vec3::new(1., -42., 3.)
-					}),
-					hit,
-				);
-			})
-	}
+		#[test]
+		fn return_ground_hit_when_no_object_further_away_than_ground() -> Result<(), RunSystemError>
+		{
+			let ray = Ray3d {
+				origin: Vec3::new(1., 2., 3.),
+				direction: Dir3::NEG_Y,
+			};
+			let exclude = fake_entity!(444);
+			let (mut app, _) = setup(
+				ray,
+				_Objects::new().with_mock(|mock| {
+					mock.expect_raycast()
+						.with(eq(SolidObjects {
+							ray,
+							exclude: vec![exclude],
+							only_hoverable: true,
+						}))
+						.return_const(RaycastHit {
+							entity: fake_entity!(123),
+							time_of_impact: 100.,
+						});
+				}),
+				_Ground::new().with_mock(|mock| {
+					mock.expect_raycast()
+						.with(eq(Terrain { ray }))
+						.return_const(toi!(44.));
+				}),
+			);
 
-	#[test]
-	fn return_cached_mouse_hover() -> Result<(), RunSystemError> {
-		let ray = Ray3d {
-			origin: Vec3::new(1., 2., 3.),
-			direction: Dir3::NEG_Y,
-		};
-		let exclude = fake_entity!(444);
-		let (mut app, cam) = setup(
-			ray,
-			_Objects::new().with_mock(|mock| {
-				mock.expect_raycast().never();
-			}),
-			_Ground::new().with_mock(|mock| {
-				mock.expect_raycast().never();
-			}),
-		);
-		let mut cam = app.world_mut().entity_mut(cam);
-		let mut cam = cam.get_mut::<WorldCamera>().unwrap();
-		cam.mouse_hover.insert(
-			vec![exclude],
-			MouseHoversOver::Object {
-				entity: fake_entity!(321),
-				point: Vec3::new(4., 11., 2.),
-			},
-		);
-
-		app.world_mut()
-			.run_system_once(move |mut ray_caster: _RayCaster| {
-				let hit = ray_caster.raycast(MouseHover {
-					exclude: vec![exclude],
-				});
-
-				assert_eq!(
-					Some(MouseHoversOver::Object {
-						entity: fake_entity!(321),
-						point: Vec3::new(4., 11., 2.),
-					}),
-					hit,
-				);
-			})
-	}
-
-	#[test]
-	fn store_new_hit_in_world_camera() -> Result<(), RunSystemError> {
-		let ray = Ray3d {
-			origin: Vec3::new(1., 2., 3.),
-			direction: Dir3::NEG_Y,
-		};
-		let exclude = fake_entity!(444);
-		let (mut app, cam) = setup(
-			ray,
-			_Objects::new().with_mock(|mock| {
-				mock.expect_raycast()
-					.with(eq(SolidObjects {
-						ray,
+			app.world_mut()
+				.run_system_once(move |mut ray_caster: _RayCaster| {
+					let hit = ray_caster.raycast(MouseHover {
 						exclude: vec![exclude],
-						only_hoverable: true,
-					}))
-					.return_const(RaycastHit {
-						entity: fake_entity!(123),
-						time_of_impact: 42.,
+						mode: HoverMode::ColliderOrTerrain,
 					});
-			}),
-			_Ground::new().with_mock(|mock| {
-				mock.expect_raycast()
-					.with(eq(Terrain { ray }))
-					.return_const(toi!(44.));
-			}),
-		);
 
-		app.world_mut()
-			.run_system_once(move |mut ray_caster: _RayCaster| {
-				ray_caster.raycast(MouseHover {
+					assert_eq!(Some(MouseHoversOver::Point(Vec3::new(1., -42., 3.))), hit,);
+				})
+		}
+	}
+
+	mod direction_mode {
+		use super::*;
+
+		#[test]
+		fn return_direction_hit() -> Result<(), RunSystemError> {
+			let ray = Ray3d {
+				origin: Vec3::new(1., 20., 3.),
+				direction: Dir3::NEG_Y,
+			};
+			let exclude = fake_entity!(444);
+			let (mut app, _) = setup(
+				ray,
+				_Objects::new().with_mock(|mock| {
+					mock.expect_raycast().return_const(None);
+				}),
+				_Ground::new().with_mock(|mock| {
+					mock.expect_raycast().return_const(None);
+				}),
+			);
+
+			app.world_mut()
+				.run_system_once(move |mut ray_caster: _RayCaster| {
+					let hit = ray_caster.raycast(MouseHover {
+						exclude: vec![exclude],
+						mode: HoverMode::ColliderOrDirectionFrom(vec3_not_nan!(0., 10., 0.)),
+					});
+
+					assert_eq!(Some(MouseHoversOver::Point(Vec3::new(1., 10., 3.))), hit);
+				})
+		}
+
+		#[test]
+		fn return_direction_hit_when_ground_hit() -> Result<(), RunSystemError> {
+			let ray = Ray3d {
+				origin: Vec3::new(1., 20., 3.),
+				direction: Dir3::NEG_Y,
+			};
+			let exclude = fake_entity!(444);
+			let (mut app, _) = setup(
+				ray,
+				_Objects::new().with_mock(|mock| {
+					mock.expect_raycast().return_const(None);
+				}),
+				_Ground::new().with_mock(|mock| {
+					mock.expect_raycast()
+						.return_const(Some(TimeOfImpact::from(Units::from(1.))));
+				}),
+			);
+
+			app.world_mut()
+				.run_system_once(move |mut ray_caster: _RayCaster| {
+					let hit = ray_caster.raycast(MouseHover {
+						exclude: vec![exclude],
+						mode: HoverMode::ColliderOrDirectionFrom(vec3_not_nan!(0., 10., 0.)),
+					});
+
+					assert_eq!(Some(MouseHoversOver::Point(Vec3::new(1., 10., 3.))), hit);
+				})
+		}
+
+		#[test]
+		fn return_object_hit_when_ground_hit_further_away() -> Result<(), RunSystemError> {
+			let ray = Ray3d {
+				origin: Vec3::new(1., 20., 3.),
+				direction: Dir3::NEG_Y,
+			};
+			let exclude = fake_entity!(444);
+			let (mut app, _) = setup(
+				ray,
+				_Objects::new().with_mock(|mock| {
+					mock.expect_raycast().return_const(Some(RaycastHit {
+						entity: fake_entity!(555),
+						time_of_impact: 12.,
+					}));
+				}),
+				_Ground::new().with_mock(|mock| {
+					mock.expect_raycast()
+						.return_const(Some(TimeOfImpact::from(Units::from(15.))));
+				}),
+			);
+
+			app.world_mut()
+				.run_system_once(move |mut ray_caster: _RayCaster| {
+					let hit = ray_caster.raycast(MouseHover {
+						exclude: vec![exclude],
+						mode: HoverMode::ColliderOrDirectionFrom(vec3_not_nan!(0., 10., 0.)),
+					});
+
+					assert_eq!(
+						Some(MouseHoversOver::Object {
+							entity: fake_entity!(555),
+							point: Vec3::new(1., 8., 3.)
+						}),
+						hit
+					);
+				})
+		}
+
+		#[test]
+		fn return_direction_hit_when_object_hit_further_away_than_ground_hit()
+		-> Result<(), RunSystemError> {
+			let ray = Ray3d {
+				origin: Vec3::new(1., 20., 3.),
+				direction: Dir3::NEG_Y,
+			};
+			let exclude = fake_entity!(444);
+			let (mut app, _) = setup(
+				ray,
+				_Objects::new().with_mock(|mock| {
+					mock.expect_raycast().return_const(Some(RaycastHit {
+						entity: fake_entity!(555),
+						time_of_impact: 15.,
+					}));
+				}),
+				_Ground::new().with_mock(|mock| {
+					mock.expect_raycast()
+						.return_const(Some(TimeOfImpact::from(Units::from(12.))));
+				}),
+			);
+
+			app.world_mut()
+				.run_system_once(move |mut ray_caster: _RayCaster| {
+					let hit = ray_caster.raycast(MouseHover {
+						exclude: vec![exclude],
+						mode: HoverMode::ColliderOrDirectionFrom(vec3_not_nan!(0., 10., 0.)),
+					});
+
+					assert_eq!(Some(MouseHoversOver::Point(Vec3::new(1., 10., 3.))), hit);
+				})
+		}
+	}
+
+	mod cache {
+		use super::*;
+
+		#[test]
+		fn return_cached_mouse_hover() -> Result<(), RunSystemError> {
+			let ray = Ray3d {
+				origin: Vec3::new(1., 2., 3.),
+				direction: Dir3::NEG_Y,
+			};
+			let exclude = fake_entity!(444);
+			let (mut app, cam) = setup(
+				ray,
+				_Objects::new().with_mock(|mock| {
+					mock.expect_raycast().never();
+				}),
+				_Ground::new().with_mock(|mock| {
+					mock.expect_raycast().never();
+				}),
+			);
+			let mut cam = app.world_mut().entity_mut(cam);
+			let mut cam = cam.get_mut::<WorldCamera>().unwrap();
+			cam.mouse_hover.insert(
+				MouseHover {
 					exclude: vec![exclude],
-				});
-			})?;
+					mode: HoverMode::ColliderOrTerrain,
+				},
+				MouseHoversOver::Object {
+					entity: fake_entity!(321),
+					point: Vec3::new(4., 11., 2.),
+				},
+			);
 
-		assert_eq!(
-			Some(&WorldCamera {
-				mouse_hover: HashMap::from([(
-					vec![exclude],
-					MouseHoversOver::Object {
-						entity: fake_entity!(123),
-						point: Vec3::new(1., -40., 3.),
-					}
-				)]),
-				ray: Some(ray),
-			}),
-			app.world().entity(cam).get::<WorldCamera>(),
-		);
-		Ok(())
+			app.world_mut()
+				.run_system_once(move |mut ray_caster: _RayCaster| {
+					let hit = ray_caster.raycast(MouseHover {
+						exclude: vec![exclude],
+						mode: HoverMode::ColliderOrTerrain,
+					});
+
+					assert_eq!(
+						Some(MouseHoversOver::Object {
+							entity: fake_entity!(321),
+							point: Vec3::new(4., 11., 2.),
+						}),
+						hit,
+					);
+				})
+		}
+
+		#[test]
+		fn store_new_hit_in_world_camera() -> Result<(), RunSystemError> {
+			let ray = Ray3d {
+				origin: Vec3::new(1., 2., 3.),
+				direction: Dir3::NEG_Y,
+			};
+			let exclude = fake_entity!(444);
+			let (mut app, cam) = setup(
+				ray,
+				_Objects::new().with_mock(|mock| {
+					mock.expect_raycast()
+						.with(eq(SolidObjects {
+							ray,
+							exclude: vec![exclude],
+							only_hoverable: true,
+						}))
+						.return_const(RaycastHit {
+							entity: fake_entity!(123),
+							time_of_impact: 42.,
+						});
+				}),
+				_Ground::new().with_mock(|mock| {
+					mock.expect_raycast()
+						.with(eq(Terrain { ray }))
+						.return_const(toi!(44.));
+				}),
+			);
+
+			app.world_mut()
+				.run_system_once(move |mut ray_caster: _RayCaster| {
+					ray_caster.raycast(MouseHover {
+						exclude: vec![exclude],
+						mode: HoverMode::ColliderOrTerrain,
+					});
+				})?;
+
+			assert_eq!(
+				Some(&WorldCamera {
+					mouse_hover: HashMap::from([(
+						MouseHover {
+							exclude: vec![exclude],
+							mode: HoverMode::ColliderOrTerrain,
+						},
+						MouseHoversOver::Object {
+							entity: fake_entity!(123),
+							point: Vec3::new(1., -40., 3.),
+						}
+					)]),
+					ray: Some(ray),
+				}),
+				app.world().entity(cam).get::<WorldCamera>(),
+			);
+			Ok(())
+		}
 	}
 }

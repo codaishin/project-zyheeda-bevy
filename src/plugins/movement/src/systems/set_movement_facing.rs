@@ -158,7 +158,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((_Motion::stop(), SetFace(Face::Cursor)))
+			.spawn((_Motion::stop(), SetFace(Face::default())))
 			.id();
 
 		app.update();
@@ -171,7 +171,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((_Motion::direction(Dir3::NEG_X), SetFace(Face::Cursor)))
+			.spawn((_Motion::direction(Dir3::NEG_X), SetFace(Face::default())))
 			.id();
 
 		app.update();
@@ -186,7 +186,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((_Motion::direction(Dir3::NEG_X), SetFace(Face::Cursor)))
+			.spawn((_Motion::direction(Dir3::NEG_X), SetFace(Face::default())))
 			.id();
 
 		app.update();
