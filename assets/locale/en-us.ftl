@@ -32,9 +32,12 @@ key-bindings-movement = Movement
 key-bindings-menus = Miscellaneous
 key-bindings-camera = Camera
 key-bindings-savegame = Save Game
+key-bindings-targeting = Targeting
 
 slot-key-hand-left = Left Hand
 slot-key-hand-right = Right Hand
+
+terrain-targeting = Terrain Targeting
 
 movement-key-forward = Move forward
 movement-key-backward = Move backward
@@ -104,6 +107,7 @@ key-code-f-12 = F12
 key-code-escape = Escape
 key-code-numpad-subtract = Numpad -
 key-code-space = Space
+key-code-shift-left = Left Shift
 
 mouse-button-left = Left Mouse Button
 mouse-button-right = Right Mouse Button

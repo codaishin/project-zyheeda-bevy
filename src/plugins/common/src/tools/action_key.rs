@@ -2,12 +2,13 @@ pub mod camera_key;
 pub mod movement;
 pub mod save_key;
 pub mod slot;
+pub mod targeting;
 pub mod user_input;
 
 use crate::{
 	states::menu_state::MenuState,
 	tools::{
-		action_key::save_key::SaveKey,
+		action_key::{save_key::SaveKey, targeting::TerrainTargeting},
 		iter_helpers::{first, next},
 	},
 	traits::{
@@ -27,6 +28,7 @@ use user_input::UserInput;
 pub enum ActionKey {
 	Movement(MovementKey),
 	Slot(HandSlot),
+	Targeting(TerrainTargeting),
 	Menu(MenuState),
 	Camera(CameraKey),
 	Save(SaveKey),
@@ -43,6 +45,7 @@ impl From<ActionKey> for UserInput {
 		match key {
 			ActionKey::Movement(key) => Self::from(key),
 			ActionKey::Slot(key) => Self::from(key),
+			ActionKey::Targeting(key) => Self::from(key),
 			ActionKey::Menu(key) => Self::from(key),
 			ActionKey::Camera(key) => Self::from(key),
 			ActionKey::Save(key) => Self::from(key),
@@ -55,6 +58,7 @@ impl From<ActionKey> for Token {
 		match value {
 			ActionKey::Movement(key) => Self::from(key),
 			ActionKey::Slot(key) => Self::from(key),
+			ActionKey::Targeting(key) => Self::from(key),
 			ActionKey::Menu(key) => Self::from(key),
 			ActionKey::Camera(key) => Self::from(key),
 			ActionKey::Save(key) => Self::from(key),
@@ -70,7 +74,8 @@ impl IterFinite for ActionKey {
 	fn next(current: &Iter<Self>) -> Option<Self> {
 		match current.0? {
 			ActionKey::Movement(key) => next(ActionKey::Movement, key).or(first(ActionKey::Slot)),
-			ActionKey::Slot(key) => next(ActionKey::Slot, key).or(first(ActionKey::Menu)),
+			ActionKey::Slot(key) => next(ActionKey::Slot, key).or(first(ActionKey::Targeting)),
+			ActionKey::Targeting(key) => next(ActionKey::Targeting, key).or(first(ActionKey::Menu)),
 			ActionKey::Menu(key) => next(ActionKey::Menu, key).or(first(ActionKey::Camera)),
 			ActionKey::Camera(key) => next(ActionKey::Camera, key).or(first(ActionKey::Save)),
 			ActionKey::Save(key) => next(ActionKey::Save, key),
@@ -83,6 +88,7 @@ impl InvalidUserInput for ActionKey {
 		match self {
 			ActionKey::Movement(key) => key.invalid_input(),
 			ActionKey::Slot(key) => key.invalid_input(),
+			ActionKey::Targeting(key) => key.invalid_input(),
 			ActionKey::Menu(key) => key.invalid_input(),
 			ActionKey::Camera(key) => key.invalid_input(),
 			ActionKey::Save(key) => key.invalid_input(),
@@ -104,6 +110,7 @@ mod tests {
 			std::iter::empty()
 				.chain(MovementKey::iterator().map(ActionKey::from))
 				.chain(HandSlot::iterator().map(ActionKey::from))
+				.chain(TerrainTargeting::iterator().map(ActionKey::from))
 				.chain(MenuState::iterator().map(ActionKey::from))
 				.chain(CameraKey::iterator().map(ActionKey::from))
 				.chain(SaveKey::iterator().map(ActionKey::from))
@@ -118,6 +125,7 @@ mod tests {
 			std::iter::empty()
 				.chain(MovementKey::iterator().map(UserInput::from))
 				.chain(HandSlot::iterator().map(UserInput::from))
+				.chain(TerrainTargeting::iterator().map(UserInput::from))
 				.chain(MenuState::iterator().map(UserInput::from))
 				.chain(CameraKey::iterator().map(UserInput::from))
 				.chain(SaveKey::iterator().map(UserInput::from))
@@ -141,6 +149,7 @@ mod tests {
 			std::iter::empty()
 				.chain(MovementKey::iterator().map(pair_with_invalid_input))
 				.chain(HandSlot::iterator().map(pair_with_invalid_input))
+				.chain(TerrainTargeting::iterator().map(pair_with_invalid_input))
 				.chain(MenuState::iterator().map(pair_with_invalid_input))
 				.chain(CameraKey::iterator().map(pair_with_invalid_input))
 				.chain(SaveKey::iterator().map(pair_with_invalid_input))
