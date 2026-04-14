@@ -10,10 +10,11 @@ use bevy::{
 use common::{
 	components::persistent_entity::PersistentEntity,
 	errors::{ErrorData, Level},
+	tools::vec_not_nan::VecNotNan,
 	traits::{
 		accessors::get::{Get, TryApplyOn},
 		handles_physics::{HoverMode, MouseHover, MouseHoversOver, Raycast},
-		handles_skill_physics::{SkillSpawner, SkillTarget},
+		handles_skill_physics::{Cursor, SkillSpawner, SkillTarget},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -79,12 +80,12 @@ impl AnchorDirty {
 			return Err(AnchorError::EntityWithoutTransform(mount));
 		};
 
-		let mount_translation = mount_transform.translation();
-		if mount_translation.is_nan() {
-			return Err(AnchorError::TranslationNaN(mount));
-		}
+		let mount_translation = match VecNotNan::try_from(mount_transform.translation()) {
+			Ok(v) => v,
+			Err(_) => return Err(AnchorError::TranslationNaN(mount)),
+		};
 
-		anchor_transform.translation = mount_translation;
+		anchor_transform.translation = Vec3::from(mount_translation);
 		match anchor.rotation {
 			AnchorRotation::OfAttachedTo => {
 				anchor_transform.rotation = attached_to_transform.rotation();
@@ -92,10 +93,13 @@ impl AnchorDirty {
 			AnchorRotation::OfMount => {
 				anchor_transform.rotation = mount_transform.rotation();
 			}
-			AnchorRotation::LookingAt(SkillTarget::Cursor(_)) => {
+			AnchorRotation::LookingAt(SkillTarget::Cursor(cursor)) => {
 				let hover = MouseHover {
 					exclude: vec![attached_to],
-					mode: HoverMode::ColliderOrTerrain,
+					mode: match cursor {
+						Cursor::Direction => HoverMode::ColliderOrDirectionFrom(mount_translation),
+						Cursor::TerrainHover => HoverMode::ColliderOrTerrain,
+					},
 				};
 				let Some(hit) = ray_caster.raycast(hover) else {
 					return Ok(());
@@ -177,16 +181,18 @@ mod tests {
 	use super::*;
 	use common::{
 		components::persistent_entity::PersistentEntity,
-		tools::action_key::slot::SlotKey,
+		tools::{action_key::slot::SlotKey, vec_not_nan::VecNotNan},
 		traits::{
 			handles_physics::{HoverMode, MouseHoversOver},
 			handles_skill_physics::{Cursor, SkillSpawner},
 			register_persistent_entities::RegisterPersistentEntities,
 		},
+		vec3_not_nan,
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::{collections::HashMap, sync::LazyLock};
+	use test_case::test_case;
 	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Resource)]
@@ -373,8 +379,9 @@ mod tests {
 		);
 	}
 
-	#[test]
-	fn look_at_cursor_over_terrain() {
+	#[test_case(Cursor::TerrainHover, |_|HoverMode::ColliderOrTerrain; "terrain")]
+	#[test_case(Cursor::Direction ,HoverMode::ColliderOrDirectionFrom; "direction")]
+	fn look_at_cursor_over_terrain(cursor: Cursor, mode: fn(VecNotNan<3>) -> HoverMode) {
 		let mut app = setup();
 		let spawner_key = SkillSpawner::Slot(SlotKey(22));
 		let agent = app
@@ -393,7 +400,7 @@ mod tests {
 				.once()
 				.with(eq(MouseHover {
 					exclude: vec![agent],
-					mode: HoverMode::ColliderOrTerrain,
+					mode: mode(vec3_not_nan!(4., 11., 9.)),
 				}))
 				.return_const(MouseHoversOver::Point(Vec3::new(11., 22., 33.)));
 		}));
@@ -401,7 +408,7 @@ mod tests {
 		let anchor = app.world_mut().spawn(
 			Anchor::attach_to(*AGENT)
 				.on(spawner_key)
-				.looking_at(SkillTarget::Cursor(Cursor::TerrainHover)),
+				.looking_at(SkillTarget::Cursor(cursor)),
 		);
 
 		assert_eq!(
@@ -410,8 +417,9 @@ mod tests {
 		);
 	}
 
-	#[test]
-	fn look_at_cursor_over_object() {
+	#[test_case(Cursor::TerrainHover, |_|HoverMode::ColliderOrTerrain; "terrain")]
+	#[test_case(Cursor::Direction ,HoverMode::ColliderOrDirectionFrom; "direction")]
+	fn look_at_cursor_over_object(cursor: Cursor, mode: fn(VecNotNan<3>) -> HoverMode) {
 		let mut app = setup();
 		let spawner_key = SkillSpawner::Slot(SlotKey(22));
 		let agent = app
@@ -434,7 +442,7 @@ mod tests {
 				.once()
 				.with(eq(MouseHover {
 					exclude: vec![agent],
-					mode: HoverMode::ColliderOrTerrain,
+					mode: mode(vec3_not_nan!(4., 11., 9.)),
 				}))
 				.return_const(MouseHoversOver::Object {
 					entity: target,
@@ -445,7 +453,7 @@ mod tests {
 		let anchor = app.world_mut().spawn(
 			Anchor::attach_to(*AGENT)
 				.on(spawner_key)
-				.looking_at(SkillTarget::Cursor(Cursor::TerrainHover)),
+				.looking_at(SkillTarget::Cursor(cursor)),
 		);
 
 		assert_eq!(
