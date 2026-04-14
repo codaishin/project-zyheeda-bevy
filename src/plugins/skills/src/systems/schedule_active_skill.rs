@@ -80,11 +80,16 @@ where
 	let skill = &mut skill;
 	let states = skill.updated_states(delta);
 
-	if states.contains(&StateMeta::Entering(SkillState::Aim)) {
+	if states.contains(&StateMeta::Entering(SkillState::Aim))
+		|| states.contains(&StateMeta::In(SkillState::Aim))
+	{
 		match skill_target {
 			SkillTarget::Cursor(cursor) => facing.override_face(Face::Cursor(*cursor)),
 			SkillTarget::Entity(target) => facing.override_face(Face::Entity(*target)),
 		}
+	}
+
+	if states.contains(&StateMeta::Entering(SkillState::Aim)) {
 		schedule_start(&mut skill_executer, skill, try_run_on_aim);
 	}
 
@@ -517,22 +522,27 @@ mod tests {
 		Ok(())
 	}
 
-	#[test_case(SkillTarget::Entity(*TARGET), Face::Entity(*TARGET); "target")]
-	#[test_case(SkillTarget::Cursor(Cursor::Direction), Face::Cursor(Cursor::Direction); "cursor direction")]
-	#[test_case(SkillTarget::Cursor(Cursor::TerrainHover), Face::Cursor(Cursor::TerrainHover); "cursor terrain hover")]
-	fn apply_facing(target: SkillTarget, face: Face) -> Result<(), MissingLastUpdate> {
+	#[test_case(SkillTarget::Entity(*TARGET), Face::Entity(*TARGET), StateMeta::Entering; "target on enter aim")]
+	#[test_case(SkillTarget::Cursor(Cursor::Direction), Face::Cursor(Cursor::Direction), StateMeta::Entering; "cursor direction on enter aim")]
+	#[test_case(SkillTarget::Cursor(Cursor::TerrainHover), Face::Cursor(Cursor::TerrainHover), StateMeta::Entering; "cursor terrain hover on enter aim")]
+	#[test_case(SkillTarget::Entity(*TARGET), Face::Entity(*TARGET), StateMeta::In; "target on in aim")]
+	#[test_case(SkillTarget::Cursor(Cursor::Direction), Face::Cursor(Cursor::Direction), StateMeta::In; "cursor direction on in aim")]
+	#[test_case(SkillTarget::Cursor(Cursor::TerrainHover), Face::Cursor(Cursor::TerrainHover), StateMeta::In; "cursor terrain hover on in aim")]
+	fn apply_facing(
+		target: SkillTarget,
+		face: Face,
+		meta: fn(SkillState) -> StateMeta<SkillState>,
+	) -> Result<(), MissingLastUpdate> {
 		let (mut app, agent) = setup()?;
 		app.world_mut().entity_mut(agent).insert((
 			Target(Some(target)),
 			_Dequeue {
-				active: Some(Box::new(|| {
+				active: Some(Box::new(move || {
 					Mock_Skill::new_mock(|mock| {
 						mock.expect_behavior()
 							.return_const((SlotKey(0), RunSkillBehavior::default()));
 						mock.expect_updated_states().return_const(
-							HashSet::<StateMeta<SkillState>>::from([StateMeta::Entering(
-								SkillState::Aim,
-							)]),
+							HashSet::<StateMeta<SkillState>>::from([meta(SkillState::Aim)]),
 						);
 					})
 				})),
@@ -551,54 +561,27 @@ mod tests {
 		Ok(())
 	}
 
-	#[test]
-	fn do_not_apply_facing_when_not_beginning_to_aim() -> Result<(), MissingLastUpdate> {
-		let (mut app, agent) = setup()?;
-		app.world_mut().entity_mut(agent).insert((
-			Target(Some(SkillTarget::Cursor(Cursor::Direction))),
-			_Dequeue {
-				active: Some(Box::new(|| {
-					Mock_Skill::new_mock(|mock| {
-						mock.expect_behavior()
-							.return_const((SlotKey(0), RunSkillBehavior::default()));
-						mock.expect_updated_states().return_const(
-							HashSet::<StateMeta<SkillState>>::from([StateMeta::In(
-								SkillState::Aim,
-							)]),
-						);
-					})
-				})),
-			},
-			Transform::default(),
-			_Facing::new().with_mock(|mock| {
-				mock.expect_override_face().never();
-				mock.expect_stop_override_face().never();
-			}),
-		));
-
-		app.update();
-		Ok(())
-	}
-
-	#[test_case(SkillTarget::Entity(*TARGET), Face::Entity(*TARGET); "target")]
-	#[test_case(SkillTarget::Cursor(Cursor::Direction), Face::Cursor(Cursor::Direction); "cursor direction")]
-	#[test_case(SkillTarget::Cursor(Cursor::TerrainHover), Face::Cursor(Cursor::TerrainHover); "cursor terrain override")]
+	#[test_case(SkillTarget::Entity(*TARGET), Face::Entity(*TARGET), StateMeta::Entering; "target on enter aim")]
+	#[test_case(SkillTarget::Cursor(Cursor::Direction), Face::Cursor(Cursor::Direction), StateMeta::Entering; "cursor direction on enter aim")]
+	#[test_case(SkillTarget::Cursor(Cursor::TerrainHover), Face::Cursor(Cursor::TerrainHover), StateMeta::Entering; "cursor terrain hover on enter aim")]
+	#[test_case(SkillTarget::Entity(*TARGET), Face::Entity(*TARGET), StateMeta::In; "target on in aim")]
+	#[test_case(SkillTarget::Cursor(Cursor::Direction), Face::Cursor(Cursor::Direction), StateMeta::In; "cursor direction on in aim")]
+	#[test_case(SkillTarget::Cursor(Cursor::TerrainHover), Face::Cursor(Cursor::TerrainHover), StateMeta::In; "cursor terrain hover on in aim")]
 	fn apply_facing_override_when_beginning_to_aim(
 		target: SkillTarget,
 		face: Face,
+		meta: fn(SkillState) -> StateMeta<SkillState>,
 	) -> Result<(), MissingLastUpdate> {
 		let (mut app, agent) = setup()?;
 		app.world_mut().entity_mut(agent).insert((
 			Target(Some(target)),
 			_Dequeue {
-				active: Some(Box::new(|| {
+				active: Some(Box::new(move || {
 					Mock_Skill::new_mock(|mock| {
 						mock.expect_behavior()
 							.return_const((SlotKey(0), RunSkillBehavior::default()));
 						mock.expect_updated_states().return_const(
-							HashSet::<StateMeta<SkillState>>::from([StateMeta::Entering(
-								SkillState::Aim,
-							)]),
+							HashSet::<StateMeta<SkillState>>::from([meta(SkillState::Aim)]),
 						);
 					})
 				})),
