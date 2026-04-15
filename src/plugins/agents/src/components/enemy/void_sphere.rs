@@ -21,7 +21,7 @@ use common::{
 		handles_map_generation::AgentType,
 		handles_movement::MovementSpeed,
 		handles_physics::PhysicalDefaultAttributes,
-		handles_skill_physics::SkillSpawner,
+		handles_skill_physics::SkillMount,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
@@ -41,8 +41,8 @@ type LazyBoneName = LazyLock<BoneName>;
 
 /// We use the same name for hand/forearm/essence slots.
 static ALL_PURPOSE_SLOT_BONE: &str = "slot";
-static SKILL_SPAWN: LazyBoneName = LazyLock::new(|| BoneName::from("skill_spawn"));
-static SKILL_SPAWN_NEUTRAL: LazyBoneName = LazyLock::new(|| BoneName::from("skill_spawn_neutral"));
+static SKILL_MOUNT: LazyBoneName = LazyLock::new(|| BoneName::from("skill_spawn"));
+static SKILL_MOUNT_NEUTRAL: LazyBoneName = LazyLock::new(|| BoneName::from("skill_spawn_neutral"));
 static COLLIDER_GROUND_OFFSET: LazyLock<Units> = LazyLock::new(|| Units::from(0.6));
 
 impl VoidSphere {
@@ -93,12 +93,9 @@ impl VoidSphere {
 
 	fn bones() -> Bones {
 		Bones {
-			spawners: HashMap::from([
-				(SKILL_SPAWN_NEUTRAL.clone(), SkillSpawner::Neutral),
-				(
-					SKILL_SPAWN.clone(),
-					SkillSpawner::Slot(VoidSphere::SLOT_KEY),
-				),
+			skill_mounts: HashMap::from([
+				(SKILL_MOUNT_NEUTRAL.clone(), SkillMount::Neutral),
+				(SKILL_MOUNT.clone(), SkillMount::Slot(VoidSphere::SLOT_KEY)),
 			]),
 			hand_slots: HashMap::from([(ALL_PURPOSE_SLOT_BONE.into(), VoidSphere::SLOT_KEY)]),
 			forearm_slots: HashMap::from([(ALL_PURPOSE_SLOT_BONE.into(), VoidSphere::SLOT_KEY)]),
@@ -147,12 +144,12 @@ impl Prefab<()> for VoidSphere {
 			// Skill spawn directly on slot offset
 			.with_child((
 				Transform::from_translation(Self::INNER_MODEL_OFFSET + Self::SLOT_OFFSET),
-				Name::from(SKILL_SPAWN.clone()),
+				Name::from(SKILL_MOUNT.clone()),
 			))
 			// Neutral skill spawn directly on slot offset
 			.with_child((
 				Transform::from_translation(Self::INNER_MODEL_OFFSET + Self::SLOT_OFFSET),
-				Name::from(SKILL_SPAWN_NEUTRAL.clone()),
+				Name::from(SKILL_MOUNT_NEUTRAL.clone()),
 			));
 
 		Ok(())

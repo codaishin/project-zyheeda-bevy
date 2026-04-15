@@ -5,8 +5,8 @@ use common::{
 	traits::handles_skill_physics::{
 		Effect,
 		SkillCaster,
+		SkillMount,
 		SkillShape,
-		SkillSpawner,
 		SkillTarget,
 		Spawn,
 		SpawnArgs,
@@ -25,10 +25,10 @@ where
 		slot: SlotKey,
 		target: SkillTarget,
 	) -> OnSkillStop {
-		let spawner = if config.use_neutral_spawn() {
-			SkillSpawner::Neutral
+		let mount = if config.use_neutral_mount() {
+			SkillMount::Neutral
 		} else {
-			SkillSpawner::Slot(slot)
+			SkillMount::Slot(slot)
 		};
 
 		let skill = self.spawn(SpawnArgs {
@@ -36,7 +36,7 @@ where
 			contact_effects: config.contact_effects(),
 			projection_effects: config.projection_effects(),
 			caster,
-			spawner,
+			mount,
 			target,
 		});
 
@@ -45,7 +45,7 @@ where
 }
 
 pub(crate) trait SkillConfigData {
-	fn use_neutral_spawn(&self) -> bool;
+	fn use_neutral_mount(&self) -> bool;
 	fn shape(&self) -> &'_ SkillShape;
 	fn contact_effects(&self) -> &'_ [Effect];
 	fn projection_effects(&self) -> &'_ [Effect];
@@ -102,7 +102,7 @@ mod tests {
 	}
 
 	impl SkillConfigData for _Config {
-		fn use_neutral_spawn(&self) -> bool {
+		fn use_neutral_mount(&self) -> bool {
 			self.use_neutral_spawn
 		}
 
@@ -144,7 +144,7 @@ mod tests {
 		const ARGS: SpawnArgs = SpawnArgs {
 			shape: &CONFIG.shape,
 			caster: CASTER,
-			spawner: SkillSpawner::Slot(SLOT),
+			mount: SkillMount::Slot(SLOT),
 			target: TARGET,
 			contact_effects: &[],
 			projection_effects: &[],
@@ -167,7 +167,7 @@ mod tests {
 		const ARGS: SpawnArgs = SpawnArgs {
 			shape: &CONFIG.shape,
 			caster: CASTER,
-			spawner: SkillSpawner::Neutral,
+			mount: SkillMount::Neutral,
 			target: TARGET,
 			contact_effects: &[],
 			projection_effects: &[],

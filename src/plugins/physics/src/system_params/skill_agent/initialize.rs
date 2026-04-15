@@ -1,15 +1,15 @@
 use crate::{
 	components::mount_points::MountPointsDefinition,
-	system_params::skill_spawner::SpawnPointContextMut,
+	system_params::skill_agent::SkillAgentInitializerContext,
 };
 use common::{
 	tools::bone_name::BoneName,
-	traits::handles_skill_physics::{RegisterDefinition, SkillSpawner},
+	traits::handles_skill_physics::{Initialize, SkillMount},
 };
 use std::collections::HashMap;
 
-impl RegisterDefinition for SpawnPointContextMut<'_> {
-	fn register_definition(&mut self, definition: HashMap<BoneName, SkillSpawner>) {
+impl Initialize for SkillAgentInitializerContext<'_> {
+	fn initialize(&mut self, definition: HashMap<BoneName, SkillMount>) {
 		self.entity.try_insert(MountPointsDefinition(definition));
 	}
 }
@@ -18,14 +18,14 @@ impl RegisterDefinition for SpawnPointContextMut<'_> {
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::system_params::skill_spawner::SkillSpawnerMut;
+	use crate::system_params::skill_agent::SkillAgentMut;
 	use bevy::{
 		app::{App, Update},
 		ecs::system::{RunSystemError, RunSystemOnce},
 	};
 	use common::{
 		tools::action_key::slot::SlotKey,
-		traits::{accessors::get::GetContextMut, handles_skill_physics::SkillSpawnPoints},
+		traits::{accessors::get::GetContextMut, handles_skill_physics::NotInitializedAgent},
 	};
 	use testing::SingleThreadedApp;
 
@@ -38,24 +38,24 @@ mod tests {
 		let mut app = setup();
 		let entity = app.world_mut().spawn_empty().id();
 		let map = HashMap::from([
-			(BoneName::from("a"), SkillSpawner::Neutral),
-			(BoneName::from("b"), SkillSpawner::Slot(SlotKey(42))),
+			(BoneName::from("a"), SkillMount::Neutral),
+			(BoneName::from("b"), SkillMount::Slot(SlotKey(42))),
 		]);
 		let map_clone = map.clone();
 
 		app.world_mut()
-			.run_system_once(move |mut p: SkillSpawnerMut| {
+			.run_system_once(move |mut p: SkillAgentMut| {
 				let mut ctx =
-					SkillSpawnerMut::get_context_mut(&mut p, SkillSpawnPoints { entity }).unwrap();
+					SkillAgentMut::get_context_mut(&mut p, NotInitializedAgent { entity }).unwrap();
 
-				ctx.register_definition(map_clone.clone());
+				ctx.initialize(map_clone.clone());
 			})?;
 
 		assert_eq!(
 			Some(&MountPointsDefinition(map)),
 			app.world()
 				.entity(entity)
-				.get::<MountPointsDefinition<SkillSpawner>>(),
+				.get::<MountPointsDefinition<SkillMount>>(),
 		);
 		Ok(())
 	}

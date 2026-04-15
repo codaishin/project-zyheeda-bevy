@@ -14,7 +14,7 @@ use common::{
 	traits::{
 		accessors::get::{Get, TryApplyOn},
 		handles_physics::{HoverMode, MouseHover, MouseHoversOver, Raycast},
-		handles_skill_physics::{Cursor, SkillSpawner, SkillTarget},
+		handles_skill_physics::{Cursor, SkillMount, SkillTarget},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -24,11 +24,11 @@ impl AnchorDirty {
 	pub(crate) fn process<TRayCaster>(
 		on_add: On<Add, Self>,
 		commands: ZyheedaCommands,
-		lookup: StaticSystemParam<MountPointsLookup<SkillSpawner>>,
+		lookup: StaticSystemParam<MountPointsLookup<SkillMount>>,
 		ray_caster: StaticSystemParam<TRayCaster>,
 		agents: Query<(&Anchor, &mut Transform)>,
 		transforms: Query<&GlobalTransform>,
-	) -> Result<(), AnchorError<MountPointError<SkillSpawner>>>
+	) -> Result<(), AnchorError<MountPointError<SkillMount>>>
 	where
 		TRayCaster: for<'w, 's> SystemParam<Item<'w, 's>: Raycast<MouseHover>>,
 	{
@@ -44,9 +44,8 @@ impl AnchorDirty {
 		transforms: Query<&GlobalTransform>,
 	) -> Result<(), AnchorError<TMountError>>
 	where
-		TLookup: for<'w, 's> SystemParam<
-			Item<'w, 's>: GetMountPoint<SkillSpawner, TError = TMountError>,
-		>,
+		TLookup:
+			for<'w, 's> SystemParam<Item<'w, 's>: GetMountPoint<SkillMount, TError = TMountError>>,
 		TRayCaster: for<'w, 's> SystemParam<Item<'w, 's>: Raycast<MouseHover>>,
 	{
 		let Ok((anchor, mut anchor_transform)) = agents.get_mut(on_add.entity) else {
@@ -65,7 +64,7 @@ impl AnchorDirty {
 			return Err(AnchorError::EntityNotFound(anchor.attached_to));
 		};
 
-		let mount = match lookup.get_mount_point(attached_to, anchor.attach_point) {
+		let mount = match lookup.get_mount_point(attached_to, anchor.mount) {
 			Ok(mount) => mount,
 			Err(error) => return Err(AnchorError::MountError(error)),
 		};
@@ -184,7 +183,7 @@ mod tests {
 		tools::{action_key::slot::SlotKey, vec_not_nan::VecNotNan},
 		traits::{
 			handles_physics::{HoverMode, MouseHoversOver},
-			handles_skill_physics::{Cursor, SkillSpawner},
+			handles_skill_physics::{Cursor, SkillMount},
 			register_persistent_entities::RegisterPersistentEntities,
 		},
 		vec3_not_nan,
@@ -197,16 +196,16 @@ mod tests {
 
 	#[derive(Resource)]
 	struct _Lookup {
-		mount_points: HashMap<(SkillSpawner, Entity), Entity>,
+		mount_points: HashMap<(SkillMount, Entity), Entity>,
 	}
 
-	impl GetMountPoint<SkillSpawner> for ResMut<'_, _Lookup> {
+	impl GetMountPoint<SkillMount> for ResMut<'_, _Lookup> {
 		type TError = _Error;
 
 		fn get_mount_point(
 			&mut self,
 			root: Entity,
-			key: SkillSpawner,
+			key: SkillMount,
 		) -> Result<Entity, Self::TError> {
 			match self.mount_points.get(&(key, root)) {
 				Some(entity) => Ok(*entity),
@@ -264,7 +263,7 @@ mod tests {
 
 	#[test]
 	fn copy_location_translation() {
-		let spawner_key = SkillSpawner::Slot(SlotKey(22));
+		let spawner_key = SkillMount::Slot(SlotKey(22));
 		let mut app = setup();
 		let agent = app
 			.world_mut()
@@ -292,7 +291,7 @@ mod tests {
 	#[test]
 	fn copy_location_rotation_of_mount_point() {
 		let mut app = setup();
-		let spawner_key = SkillSpawner::Slot(SlotKey(22));
+		let spawner_key = SkillMount::Slot(SlotKey(22));
 		let agent = app
 			.world_mut()
 			.spawn((*AGENT, GlobalTransform::default()))
@@ -320,7 +319,7 @@ mod tests {
 	#[test]
 	fn copy_rotation_of_anchor() {
 		let mut app = setup();
-		let spawner_key = SkillSpawner::Slot(SlotKey(22));
+		let spawner_key = SkillMount::Slot(SlotKey(22));
 		let agent = app
 			.world_mut()
 			.spawn((
@@ -351,7 +350,7 @@ mod tests {
 	#[test]
 	fn look_at_target() {
 		let mut app = setup();
-		let spawner_key = SkillSpawner::Slot(SlotKey(22));
+		let spawner_key = SkillMount::Slot(SlotKey(22));
 		let agent = app
 			.world_mut()
 			.spawn((*AGENT, GlobalTransform::default()))
@@ -383,7 +382,7 @@ mod tests {
 	#[test_case(Cursor::Direction ,HoverMode::ColliderOrDirectionFrom; "direction")]
 	fn look_at_cursor_over_terrain(cursor: Cursor, mode: fn(VecNotNan<3>) -> HoverMode) {
 		let mut app = setup();
-		let spawner_key = SkillSpawner::Slot(SlotKey(22));
+		let spawner_key = SkillMount::Slot(SlotKey(22));
 		let agent = app
 			.world_mut()
 			.spawn((*AGENT, GlobalTransform::default()))
@@ -421,7 +420,7 @@ mod tests {
 	#[test_case(Cursor::Direction ,HoverMode::ColliderOrDirectionFrom; "direction")]
 	fn look_at_cursor_over_object(cursor: Cursor, mode: fn(VecNotNan<3>) -> HoverMode) {
 		let mut app = setup();
-		let spawner_key = SkillSpawner::Slot(SlotKey(22));
+		let spawner_key = SkillMount::Slot(SlotKey(22));
 		let agent = app
 			.world_mut()
 			.spawn((*AGENT, GlobalTransform::default()))
@@ -465,7 +464,7 @@ mod tests {
 	#[test]
 	fn do_not_change_scale() {
 		let mut app = setup();
-		let spawner_key = SkillSpawner::Slot(SlotKey(22));
+		let spawner_key = SkillMount::Slot(SlotKey(22));
 		let agent = app
 			.world_mut()
 			.spawn((
@@ -496,7 +495,7 @@ mod tests {
 	#[test]
 	fn remove_dirty_marker_on_one_time_anchor() {
 		let mut app = setup();
-		let spawner_key = SkillSpawner::Slot(SlotKey(22));
+		let spawner_key = SkillMount::Slot(SlotKey(22));
 		let agent = app
 			.world_mut()
 			.spawn((*AGENT, GlobalTransform::default()))
@@ -519,7 +518,7 @@ mod tests {
 	#[test]
 	fn remove_dirty_marker_on_persistent_anchor() {
 		let mut app = setup();
-		let spawner_key = SkillSpawner::Slot(SlotKey(22));
+		let spawner_key = SkillMount::Slot(SlotKey(22));
 		let agent = app
 			.world_mut()
 			.spawn((*AGENT, GlobalTransform::default()))
@@ -542,7 +541,7 @@ mod tests {
 	#[test]
 	fn remove_one_time_anchor() {
 		let mut app = setup();
-		let spawner_key = SkillSpawner::Slot(SlotKey(22));
+		let spawner_key = SkillMount::Slot(SlotKey(22));
 		let agent = app
 			.world_mut()
 			.spawn((*AGENT, GlobalTransform::default()))
@@ -565,7 +564,7 @@ mod tests {
 	#[test]
 	fn do_not_remove_persistent_anchor() {
 		let mut app = setup();
-		let spawner_key = SkillSpawner::Slot(SlotKey(22));
+		let spawner_key = SkillMount::Slot(SlotKey(22));
 		let agent = app
 			.world_mut()
 			.spawn((*AGENT, GlobalTransform::default()))
@@ -588,7 +587,7 @@ mod tests {
 	#[test]
 	fn remove_components_in_error_case() {
 		let mut app = setup();
-		let spawner_key = SkillSpawner::Slot(SlotKey(22));
+		let spawner_key = SkillMount::Slot(SlotKey(22));
 
 		let anchor = app
 			.world_mut()
@@ -606,7 +605,7 @@ mod tests {
 	#[test]
 	fn return_target_error() {
 		let mut app = setup();
-		let spawner_key = SkillSpawner::Slot(SlotKey(22));
+		let spawner_key = SkillMount::Slot(SlotKey(22));
 
 		app.world_mut()
 			.spawn(Anchor::attach_to(*AGENT).on(spawner_key));
@@ -620,7 +619,7 @@ mod tests {
 	#[test]
 	fn return_mount_error() {
 		let mut app = setup();
-		let spawner_key = SkillSpawner::Slot(SlotKey(22));
+		let spawner_key = SkillMount::Slot(SlotKey(22));
 		app.world_mut().spawn(*AGENT);
 
 		app.world_mut()
@@ -635,7 +634,7 @@ mod tests {
 	#[test]
 	fn return_root_no_transform_error() {
 		let mut app = setup();
-		let spawner_key = SkillSpawner::Slot(SlotKey(22));
+		let spawner_key = SkillMount::Slot(SlotKey(22));
 		let agent = app.world_mut().spawn(*AGENT).id();
 		let mount_point = app.world_mut().spawn_empty().id();
 		app.insert_resource(_Lookup {
@@ -654,7 +653,7 @@ mod tests {
 	#[test]
 	fn return_mount_point_no_transform_error() {
 		let mut app = setup();
-		let spawner_key = SkillSpawner::Slot(SlotKey(22));
+		let spawner_key = SkillMount::Slot(SlotKey(22));
 		let agent = app
 			.world_mut()
 			.spawn((*AGENT, GlobalTransform::default()))
@@ -676,7 +675,7 @@ mod tests {
 	#[test]
 	fn return_mount_point_transform_nan_error() {
 		let mut app = setup();
-		let spawner_key = SkillSpawner::Slot(SlotKey(22));
+		let spawner_key = SkillMount::Slot(SlotKey(22));
 		let agent = app
 			.world_mut()
 			.spawn((*AGENT, GlobalTransform::default()))

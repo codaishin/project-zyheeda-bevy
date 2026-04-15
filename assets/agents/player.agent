@@ -35,7 +35,7 @@
 			},
 			"ground_offset": 0.6,
 			"bones": {
-				"spawners": {
+				"skill_mounts": {
 					"skill_spawn": "Neutral",
 					"skill_spawn.L": {
 						"Slot": 0

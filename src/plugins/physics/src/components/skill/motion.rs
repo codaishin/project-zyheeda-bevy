@@ -47,7 +47,7 @@ impl ApplyMotionPrefab for Skill {
 				if self.created_from == CreatedFrom::Spawn {
 					entity.try_insert((
 						Anchor::attach_to(self.caster.0)
-							.on(self.spawner)
+							.on(self.mount)
 							.looking_at(self.target)
 							.once(),
 						SetVelocityForward(PROJECTILE_SPEED),
@@ -59,7 +59,7 @@ impl ApplyMotionPrefab for Skill {
 			SkillShape::Beam(..) => {
 				entity.try_insert(
 					Anchor::attach_to(self.caster.0)
-						.on(self.spawner)
+						.on(self.mount)
 						.looking_at(self.target)
 						.always(),
 				);
@@ -69,7 +69,7 @@ impl ApplyMotionPrefab for Skill {
 			SkillShape::Shield(..) => {
 				entity.try_insert(
 					Anchor::attach_to(self.caster.0)
-						.on(self.spawner)
+						.on(self.mount)
 						.with_attached_rotation()
 						.always(),
 				);

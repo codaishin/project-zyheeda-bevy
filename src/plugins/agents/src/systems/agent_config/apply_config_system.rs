@@ -28,7 +28,7 @@ use common::{
 			NoDefaultAttributes,
 			physical_bodies::{Blocker, Body, PhysicsType, Shape},
 		},
-		handles_skill_physics::{RegisterDefinition, SkillSpawnPoints},
+		handles_skill_physics::{Initialize, NotInitializedAgent},
 		loadout::ItemName,
 	},
 	zyheeda_commands::ZyheedaCommands,
@@ -58,8 +58,7 @@ impl ApplyAgentConfig {
 		TLoadout: SystemParam
 			+ for<'c> GetContextMut<NotLoadedOut, TContext<'c>: InsertDefaultLoadout>
 			+ for<'c> GetContextMut<NoBonesRegistered, TContext<'c>: RegisterLoadoutBones>,
-		TSkills:
-			SystemParam + for<'c> GetContextMut<SkillSpawnPoints, TContext<'c>: RegisterDefinition>,
+		TSkills: SystemParam + for<'c> GetContextMut<NotInitializedAgent, TContext<'c>: Initialize>,
 		TAnimations: SystemParam
 			+ for<'c> GetContextMut<WithoutAnimations, TContext<'c>: RegisterAnimations>,
 		TMovement: SystemParam
@@ -87,9 +86,9 @@ impl ApplyAgentConfig {
 				);
 			};
 
-			let skill_spawn_points = SkillSpawnPoints { entity };
-			if let Some(mut ctx) = TSkills::get_context_mut(&mut skills_param, skill_spawn_points) {
-				ctx.register_definition(config.bones.spawners.clone());
+			let not_initialized = NotInitializedAgent { entity };
+			if let Some(mut ctx) = TSkills::get_context_mut(&mut skills_param, not_initialized) {
+				ctx.initialize(config.bones.skill_mounts.clone());
 			};
 
 			let animations = WithoutAnimations { entity };
@@ -212,7 +211,7 @@ mod tests {
 			},
 			handles_movement::MovementSpeed,
 			handles_physics::{PhysicalDefaultAttributes, physical_bodies::Body},
-			handles_skill_physics::SkillSpawner,
+			handles_skill_physics::SkillMount,
 		},
 		zyheeda_commands::ZyheedaEntityCommands,
 	};
@@ -281,15 +280,15 @@ mod tests {
 	impl Default for _Skills {
 		fn default() -> Self {
 			Self::new().with_mock(|mock| {
-				mock.expect_register_definition().return_const(());
+				mock.expect_initialize().return_const(());
 			})
 		}
 	}
 
 	#[automock]
-	impl RegisterDefinition for _Skills {
-		fn register_definition(&mut self, definition: HashMap<BoneName, SkillSpawner>) {
-			self.mock.register_definition(definition);
+	impl Initialize for _Skills {
+		fn initialize(&mut self, definition: HashMap<BoneName, SkillMount>) {
+			self.mock.initialize(definition);
 		}
 	}
 
@@ -458,7 +457,7 @@ mod tests {
 			let config_handle = new_handle();
 			let config = AgentConfigAsset {
 				bones: Bones {
-					spawners: HashMap::from([]),
+					skill_mounts: HashMap::from([]),
 					forearm_slots: HashMap::from([(BoneName::from("a"), SlotKey(0))]),
 					hand_slots: HashMap::from([(BoneName::from("b"), SlotKey(1))]),
 					essence_slots: HashMap::from([(MeshName::from("c"), SlotKey(2))]),
@@ -497,9 +496,9 @@ mod tests {
 			let config_handle = new_handle();
 			let asset = AgentConfigAsset {
 				bones: Bones {
-					spawners: HashMap::from([
-						(BoneName::from("a"), SkillSpawner::Neutral),
-						(BoneName::from("b"), SkillSpawner::Slot(SlotKey(42))),
+					skill_mounts: HashMap::from([
+						(BoneName::from("a"), SkillMount::Neutral),
+						(BoneName::from("b"), SkillMount::Slot(SlotKey(42))),
 					]),
 					..default()
 				},
@@ -511,11 +510,11 @@ mod tests {
 				Transform::default(),
 				AgentConfig { config_handle },
 				_Skills::new().with_mock(|mock| {
-					mock.expect_register_definition()
+					mock.expect_initialize()
 						.once()
 						.with(eq(HashMap::from([
-							(BoneName::from("a"), SkillSpawner::Neutral),
-							(BoneName::from("b"), SkillSpawner::Slot(SlotKey(42))),
+							(BoneName::from("a"), SkillMount::Neutral),
+							(BoneName::from("b"), SkillMount::Slot(SlotKey(42))),
 						])))
 						.return_const(());
 				}),

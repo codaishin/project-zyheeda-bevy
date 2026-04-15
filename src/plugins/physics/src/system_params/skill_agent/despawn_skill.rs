@@ -1,10 +1,10 @@
-use crate::system_params::skill_spawner::SkillSpawnerMut;
+use crate::system_params::skill_agent::SkillAgentMut;
 use common::traits::{
 	accessors::get::GetMut,
 	handles_skill_physics::{Despawn, SkillEntity},
 };
 
-impl Despawn for SkillSpawnerMut<'_, '_> {
+impl Despawn for SkillAgentMut<'_, '_> {
 	fn despawn(&mut self, SkillEntity(entity): SkillEntity) {
 		let Some(entity) = self.commands.get_mut(&entity) else {
 			return;
@@ -31,8 +31,8 @@ mod tests {
 		components::persistent_entity::PersistentEntity,
 		traits::handles_skill_physics::{
 			SkillCaster,
+			SkillMount,
 			SkillShape,
-			SkillSpawner,
 			SkillTarget,
 			shield::Shield,
 		},
@@ -54,7 +54,7 @@ mod tests {
 			contact_effects: vec![],
 			projection_effects: vec![],
 			caster: SkillCaster(PersistentEntity::default()),
-			spawner: SkillSpawner::Neutral,
+			mount: SkillMount::Neutral,
 			target: SkillTarget::Entity(PersistentEntity::default()),
 		}
 	}
@@ -66,7 +66,7 @@ mod tests {
 		let entity = app.world_mut().spawn((skill(), persistent_entity)).id();
 
 		app.world_mut()
-			.run_system_once(move |mut p: SkillSpawnerMut| {
+			.run_system_once(move |mut p: SkillAgentMut| {
 				p.despawn(SkillEntity(persistent_entity));
 			})?;
 
@@ -81,7 +81,7 @@ mod tests {
 		let entity = app.world_mut().spawn(persistent_entity).id();
 
 		app.world_mut()
-			.run_system_once(move |mut p: SkillSpawnerMut| {
+			.run_system_once(move |mut p: SkillAgentMut| {
 				p.despawn(SkillEntity(persistent_entity));
 			})?;
 

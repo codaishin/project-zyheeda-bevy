@@ -39,7 +39,7 @@ use crate::{
 	system_params::{
 		config::ConfigParamMut,
 		ray_caster::RayCaster,
-		skill_spawner::SkillSpawnerMut,
+		skill_agent::SkillAgentMut,
 		update_ongoing_interactions::UpdateOngoingInteractions,
 	},
 	systems::{
@@ -67,8 +67,8 @@ use common::{
 		handles_saving::HandlesSaving,
 		handles_skill_physics::{
 			HandlesNewPhysicalSkill,
+			HandlesPhysicalSkillAgent,
 			HandlesPhysicalSkillComponents,
-			HandlesPhysicalSkillSpawnPoints,
 		},
 		prefab::AddPrefabObserver,
 		system_set_definition::SystemSetDefinition,
@@ -268,12 +268,12 @@ impl<TDependencies> HandlesMotion for PhysicsPlugin<TDependencies> {
 	type TCharacterMotion = ApplyCharacterMotion;
 }
 
-impl<TDependencies> HandlesPhysicalSkillSpawnPoints for PhysicsPlugin<TDependencies> {
-	type TSkillSpawnPointsMut<'w, 's> = SkillSpawnerMut<'w, 's>;
+impl<TDependencies> HandlesPhysicalSkillAgent for PhysicsPlugin<TDependencies> {
+	type TAgentMut<'w, 's> = SkillAgentMut<'w, 's>;
 }
 
 impl<TDependencies> HandlesNewPhysicalSkill for PhysicsPlugin<TDependencies> {
-	type TSkillSpawnerMut<'w, 's> = SkillSpawnerMut<'w, 's>;
+	type TSkillSpawnerMut<'w, 's> = SkillAgentMut<'w, 's>;
 }
 
 impl<TDependencies> HandlesPhysicalSkillComponents for PhysicsPlugin<TDependencies> {

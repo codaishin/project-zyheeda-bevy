@@ -13,7 +13,7 @@ use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
 	tools::{Units, UnitsPerSecond},
-	traits::handles_skill_physics::{Effect, SkillCaster, SkillShape, SkillSpawner, SkillTarget},
+	traits::handles_skill_physics::{Effect, SkillCaster, SkillMount, SkillShape, SkillTarget},
 };
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
@@ -28,7 +28,7 @@ pub struct Skill {
 	pub(crate) contact_effects: Vec<Effect>,
 	pub(crate) projection_effects: Vec<Effect>,
 	pub(crate) caster: SkillCaster,
-	pub(crate) spawner: SkillSpawner,
+	pub(crate) mount: SkillMount,
 	pub(crate) target: SkillTarget,
 }
 

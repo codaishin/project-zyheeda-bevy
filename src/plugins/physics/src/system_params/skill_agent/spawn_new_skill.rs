@@ -1,13 +1,13 @@
 use crate::{
 	components::skill::{CreatedFrom, Skill},
-	system_params::skill_spawner::SkillSpawnerMut,
+	system_params::skill_agent::SkillAgentMut,
 };
 use common::{
 	components::persistent_entity::PersistentEntity,
 	traits::handles_skill_physics::{Spawn, SpawnArgs},
 };
 
-impl Spawn for SkillSpawnerMut<'_, '_> {
+impl Spawn for SkillAgentMut<'_, '_> {
 	fn spawn(&mut self, args: SpawnArgs) -> PersistentEntity {
 		let persistent_entity = PersistentEntity::default();
 
@@ -18,7 +18,7 @@ impl Spawn for SkillSpawnerMut<'_, '_> {
 				contact_effects: args.contact_effects.to_vec(),
 				projection_effects: args.projection_effects.to_vec(),
 				caster: args.caster,
-				spawner: args.spawner,
+				mount: args.mount,
 				target: args.target,
 			},
 			persistent_entity,
@@ -32,7 +32,7 @@ impl Spawn for SkillSpawnerMut<'_, '_> {
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::system_params::skill_spawner::SkillSpawnerMut;
+	use crate::system_params::skill_agent::SkillAgentMut;
 	use bevy::{
 		asset::uuid::uuid,
 		ecs::system::{RunSystemError, RunSystemOnce},
@@ -42,8 +42,8 @@ mod tests {
 		CommonPlugin,
 		traits::handles_skill_physics::{
 			SkillCaster,
+			SkillMount,
 			SkillShape,
-			SkillSpawner,
 			SkillTarget,
 			shield::Shield,
 		},
@@ -65,7 +65,7 @@ mod tests {
 		caster: SkillCaster(PersistentEntity::from_uuid(uuid!(
 			"3db021df-666e-4858-8fc4-845d0639a2e7"
 		))),
-		spawner: SkillSpawner::Neutral,
+		mount: SkillMount::Neutral,
 		target: SkillTarget::Entity(PersistentEntity::from_uuid(uuid!(
 			"ae8d9c8c-cc4b-4ea0-a20d-f63992a9173f"
 		))),
@@ -79,7 +79,7 @@ mod tests {
 			let mut app = setup();
 
 			app.world_mut()
-				.run_system_once(move |mut p: SkillSpawnerMut| {
+				.run_system_once(move |mut p: SkillAgentMut| {
 					p.spawn(ARGS);
 				})?;
 
@@ -95,7 +95,7 @@ mod tests {
 			let mut app = setup();
 
 			app.world_mut()
-				.run_system_once(move |mut p: SkillSpawnerMut| {
+				.run_system_once(move |mut p: SkillAgentMut| {
 					p.spawn(ARGS);
 				})?;
 
@@ -110,7 +110,7 @@ mod tests {
 					contact_effects: ARGS.contact_effects.to_vec(),
 					projection_effects: ARGS.projection_effects.to_vec(),
 					caster: ARGS.caster,
-					spawner: ARGS.spawner,
+					mount: ARGS.mount,
 					target: ARGS.target
 				},
 				skill
@@ -128,7 +128,7 @@ mod tests {
 
 			let root = app
 				.world_mut()
-				.run_system_once(move |mut p: SkillSpawnerMut| p.spawn(ARGS))?;
+				.run_system_once(move |mut p: SkillAgentMut| p.spawn(ARGS))?;
 
 			let mut skills = app.world_mut().query::<&PersistentEntity>();
 			let [skill] = assert_count!(1, skills.iter(app.world()));

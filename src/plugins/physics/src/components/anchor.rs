@@ -3,7 +3,7 @@ use common::{
 	components::persistent_entity::PersistentEntity,
 	traits::{
 		accessors::get::View,
-		handles_skill_physics::{SkillSpawner, SkillTarget},
+		handles_skill_physics::{SkillMount, SkillTarget},
 	},
 };
 
@@ -11,7 +11,7 @@ use common::{
 #[require(Transform, AnchorDirty)]
 pub(crate) struct Anchor {
 	pub(crate) attached_to: PersistentEntity,
-	pub(crate) attach_point: SkillSpawner,
+	pub(crate) mount: SkillMount,
 	pub(crate) rotation: AnchorRotation,
 	pub(crate) persistent: bool,
 }
@@ -62,10 +62,10 @@ pub(crate) struct AnchorAttachment {
 }
 
 impl AnchorAttachment {
-	pub(crate) fn on(self, attach_point: SkillSpawner) -> Anchor {
+	pub(crate) fn on(self, mount: SkillMount) -> Anchor {
 		Anchor {
 			attached_to: self.attached_to,
-			attach_point,
+			mount,
 			rotation: AnchorRotation::OfMount,
 			persistent: false,
 		}

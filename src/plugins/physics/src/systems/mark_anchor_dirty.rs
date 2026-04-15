@@ -21,7 +21,7 @@ mod tests {
 	use crate::components::anchor::AnchorDirty;
 	use common::{
 		components::persistent_entity::PersistentEntity,
-		traits::handles_skill_physics::SkillSpawner,
+		traits::handles_skill_physics::SkillMount,
 	};
 	use testing::{IsChanged, SingleThreadedApp};
 
@@ -41,7 +41,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Anchor::attach_to(PersistentEntity::default()).on(SkillSpawner::Neutral))
+			.spawn(Anchor::attach_to(PersistentEntity::default()).on(SkillMount::Neutral))
 			.remove::<AnchorDirty>()
 			.id();
 
@@ -68,7 +68,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Anchor::attach_to(PersistentEntity::default()).on(SkillSpawner::Neutral))
+			.spawn(Anchor::attach_to(PersistentEntity::default()).on(SkillMount::Neutral))
 			.remove::<AnchorDirty>()
 			.id();
 
@@ -86,7 +86,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Anchor::attach_to(PersistentEntity::default()).on(SkillSpawner::Neutral))
+			.spawn(Anchor::attach_to(PersistentEntity::default()).on(SkillMount::Neutral))
 			.remove::<AnchorDirty>()
 			.id();
 
