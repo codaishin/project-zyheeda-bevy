@@ -1,5 +1,5 @@
 use crate::{
-	components::mount_points::MountPointsDefinition,
+	components::{mount_points::MountPointsDefinition, target::Target},
 	system_params::skill_agent::SkillAgentInitializerContext,
 };
 use common::{
@@ -10,7 +10,8 @@ use std::collections::HashMap;
 
 impl Initialize for SkillAgentInitializerContext<'_> {
 	fn initialize(&mut self, definition: HashMap<BoneName, SkillMount>) {
-		self.entity.try_insert(MountPointsDefinition(definition));
+		self.entity
+			.try_insert((MountPointsDefinition(definition), Target(None)));
 	}
 }
 
@@ -18,7 +19,7 @@ impl Initialize for SkillAgentInitializerContext<'_> {
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::system_params::skill_agent::SkillAgentMut;
+	use crate::{components::target::Target, system_params::skill_agent::SkillAgentMut};
 	use bevy::{
 		app::{App, Update},
 		ecs::system::{RunSystemError, RunSystemOnce},
@@ -56,6 +57,28 @@ mod tests {
 			app.world()
 				.entity(entity)
 				.get::<MountPointsDefinition<SkillMount>>(),
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn insert_target() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let entity = app.world_mut().spawn_empty().id();
+		let map = HashMap::from([]);
+		let map_clone = map.clone();
+
+		app.world_mut()
+			.run_system_once(move |mut p: SkillAgentMut| {
+				let mut ctx =
+					SkillAgentMut::get_context_mut(&mut p, NotInitializedAgent { entity }).unwrap();
+
+				ctx.initialize(map_clone.clone());
+			})?;
+
+		assert_eq!(
+			Some(&Target(None)),
+			app.world().entity(entity).get::<Target>(),
 		);
 		Ok(())
 	}
