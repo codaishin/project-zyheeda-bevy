@@ -29,7 +29,6 @@ impl ApplyMotionPrefab for Skill {
 				entity.try_insert(GroundTarget {
 					caster: self.caster,
 					max_cast_range: *max_range,
-					target: self.target,
 				});
 
 				RigidBody::Fixed

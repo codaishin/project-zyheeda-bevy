@@ -1,13 +1,9 @@
 use bevy::prelude::*;
-use common::{
-	tools::Units,
-	traits::handles_skill_physics::{SkillCaster, SkillTarget},
-};
+use common::{tools::Units, traits::handles_skill_physics::SkillCaster};
 
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct GroundTarget {
 	pub caster: SkillCaster,
-	pub target: SkillTarget,
 	pub max_cast_range: Units,
 }
 
@@ -16,15 +12,8 @@ impl GroundTarget {
 	pub(crate) fn with_caster(caster: SkillCaster) -> Self {
 		GroundTarget {
 			caster,
-			target: SkillTarget::default(),
 			max_cast_range: Units::from(f32::INFINITY),
 		}
-	}
-
-	#[cfg(test)]
-	pub(crate) fn with_target(mut self, target: impl Into<SkillTarget>) -> Self {
-		self.target = target.into();
-		self
 	}
 
 	#[cfg(test)]

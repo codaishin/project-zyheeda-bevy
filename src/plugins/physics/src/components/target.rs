@@ -1,5 +1,20 @@
 use bevy::prelude::*;
-use common::traits::handles_skill_physics::SkillTarget;
+use common::{
+	components::persistent_entity::PersistentEntity,
+	traits::handles_skill_physics::{Cursor, SkillTarget},
+};
 
 #[derive(Component, Debug, PartialEq, Default)]
 pub(crate) struct Target(pub(crate) Option<SkillTarget>);
+
+impl From<PersistentEntity> for Target {
+	fn from(entity: PersistentEntity) -> Self {
+		Self(Some(SkillTarget::Entity(entity)))
+	}
+}
+
+impl From<Cursor> for Target {
+	fn from(cursor: Cursor) -> Self {
+		Self(Some(SkillTarget::Cursor(cursor)))
+	}
+}
