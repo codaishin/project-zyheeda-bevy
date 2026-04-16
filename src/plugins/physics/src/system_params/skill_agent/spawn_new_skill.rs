@@ -30,7 +30,7 @@ impl Spawn for SkillAgentMut<'_, '_> {
 #[cfg(test)]
 mod tests {
 	#![allow(clippy::unwrap_used)]
-	use super::*;
+	use super::{Spawn, *};
 	use crate::system_params::skill_agent::SkillAgentMut;
 	use bevy::{
 		ecs::system::{RunSystemError, RunSystemOnce},
