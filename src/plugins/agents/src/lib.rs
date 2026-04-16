@@ -179,7 +179,11 @@ where
 						MovementSystemParam<TMovement>,
 						AnimationsSystemParamMut<TAnimations>,
 					>,
-					Player::use_skills::<InputSystemParam<TInput>, LoadoutActivityMutParam<TLoadout>>,
+					Player::use_skills::<
+						InputSystemParam<TInput>,
+						SkillAgentMut<TPhysics>,
+						LoadoutActivityMutParam<TLoadout>,
+					>,
 				)
 					.chain(),
 				(
@@ -192,7 +196,7 @@ where
 					>,
 					ring_rotation,
 					Enemy::begin_attack,
-					Enemy::hold_attack::<LoadoutActivityMutParam<TLoadout>>,
+					Enemy::hold_attack::<SkillAgentMut<TPhysics>, LoadoutActivityMutParam<TLoadout>>,
 					Update::delta.pipe(Enemy::advance_attack_phase),
 				)
 					.chain(),

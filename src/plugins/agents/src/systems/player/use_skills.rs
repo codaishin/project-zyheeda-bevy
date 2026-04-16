@@ -18,17 +18,19 @@ use common::{
 			HeldSkillsMut,
 			skills::Skills,
 		},
-		handles_skill_physics::{Cursor, SkillTarget},
+		handles_skill_physics::{Cursor, InitializedAgent, SkillTarget, Target, TargetMut},
 	},
 };
 
 impl Player {
-	pub(crate) fn use_skills<TInput, TLoadout>(
-		mut skills: StaticSystemParam<TLoadout>,
+	pub(crate) fn use_skills<TInput, TPhysics, TLoadout>(
+		mut loadout: StaticSystemParam<TLoadout>,
+		mut physics: StaticSystemParam<TPhysics>,
 		input: StaticSystemParam<TInput>,
 		players: Query<Entity, With<Self>>,
 	) where
 		TInput: for<'w, 's> SystemParam<Item<'w, 's>: GetAllInputStates>,
+		TPhysics: for<'c> GetContextMut<InitializedAgent, TContext<'c>: TargetMut>,
 		TLoadout: for<'c> GetContextMut<Skills, TContext<'c>: HeldSkillsMut>,
 	{
 		let held = || {
@@ -55,19 +57,26 @@ impl Player {
 		};
 
 		for entity in &players {
-			let Some(mut ctx) = TLoadout::get_context_mut(&mut skills, Skills { entity }) else {
-				continue;
+			let skill_target = SkillTarget::Cursor(get_cursor());
+
+			let agent = InitializedAgent { entity };
+			if let Some(mut ctx) = TPhysics::get_context_mut(&mut physics, agent)
+				&& ctx.target() != Some(&skill_target)
+			{
+				*ctx.target_mut() = Some(skill_target);
 			};
 
-			let cursor = get_cursor();
-			if ctx.current_target() != Some(&SkillTarget::Cursor(cursor)) {
-				*ctx.current_target_mut() = Some(SkillTarget::Cursor(cursor));
-			}
+			let skills = Skills { entity };
+			if let Some(mut ctx) = TLoadout::get_context_mut(&mut loadout, skills) {
+				if ctx.current_target() != Some(&skill_target) {
+					*ctx.current_target_mut() = Some(skill_target);
+				}
 
-			let new_held_skills = held().map(SlotKey::from).collect();
-			if ctx.held_skills() != &new_held_skills {
-				*ctx.held_skills_mut() = new_held_skills;
-			}
+				let new_held_skills = held().map(SlotKey::from).collect();
+				if ctx.held_skills() != &new_held_skills {
+					*ctx.held_skills_mut() = new_held_skills;
+				}
+			};
 		}
 	}
 }
@@ -83,14 +92,14 @@ mod tests {
 		traits::{
 			handles_input::InputState,
 			handles_loadout::{CurrentTarget, CurrentTargetMut, HeldSkills},
-			handles_skill_physics::SkillTarget,
+			handles_skill_physics::{SkillTarget, Target},
 			iteration::IterFinite,
 		},
 	};
 	use mockall::automock;
 	use std::collections::{HashMap, HashSet};
 	use test_case::test_case;
-	use testing::SingleThreadedApp;
+	use testing::{IsChanged, SingleThreadedApp};
 
 	#[derive(Resource)]
 	struct _Input(HashMap<ActionKey, InputState>);
@@ -112,6 +121,23 @@ mod tests {
 			TAction: Into<ActionKey> + IterFinite + 'static,
 		{
 			TAction::iterator().filter_map(|a| Some((a, self.0.get(&a.into()).copied()?)))
+		}
+	}
+
+	#[derive(Component, Debug, PartialEq, Default)]
+	struct _Physics {
+		target: Option<SkillTarget>,
+	}
+
+	impl Target for _Physics {
+		fn target(&self) -> Option<&SkillTarget> {
+			self.target.as_ref()
+		}
+	}
+
+	impl TargetMut for _Physics {
+		fn target_mut(&mut self) -> &mut Option<SkillTarget> {
+			&mut self.target
 		}
 	}
 
@@ -182,7 +208,8 @@ mod tests {
 			Update,
 			(
 				_Loadout::reset_change_states,
-				Player::use_skills::<Res<_Input>, Query<&mut _Loadout>>,
+				Player::use_skills::<Res<_Input>, Query<&mut _Physics>, Query<&mut _Loadout>>,
+				IsChanged::<_Physics>::detect,
 			)
 				.chain(),
 		);
@@ -228,6 +255,22 @@ mod tests {
 						.with_target(Some(SkillTarget::Cursor(Cursor::Direction)))
 				),
 				app.world().entity(entity).get::<_Loadout>(),
+			);
+		}
+
+		#[test_case(InputState::just_pressed(); "on just pressed")]
+		#[test_case(InputState::pressed(); "on pressed")]
+		fn set_skill_target(state: InputState) {
+			let mut app = setup(_Input::from([(ActionKey::from(HandSlot::Left), state)]));
+			let entity = app.world_mut().spawn((Player, _Physics::default())).id();
+
+			app.update();
+
+			assert_eq!(
+				Some(&_Physics {
+					target: Some(SkillTarget::Cursor(Cursor::Direction))
+				}),
+				app.world().entity(entity).get::<_Physics>(),
 			);
 		}
 	}
@@ -277,6 +320,25 @@ mod tests {
 						.with_target(Some(SkillTarget::Cursor(Cursor::TerrainHover)))
 				),
 				app.world().entity(entity).get::<_Loadout>(),
+			);
+		}
+
+		#[test_case(InputState::just_pressed(); "on just pressed")]
+		#[test_case(InputState::pressed(); "on pressed")]
+		fn set_skill_target(state: InputState) {
+			let mut app = setup(_Input::from([
+				(ActionKey::from(HandSlot::Left), state),
+				(ActionKey::from(TerrainTargeting), state),
+			]));
+			let entity = app.world_mut().spawn((Player, _Physics::default())).id();
+
+			app.update();
+
+			assert_eq!(
+				Some(&_Physics {
+					target: Some(SkillTarget::Cursor(Cursor::TerrainHover))
+				}),
+				app.world().entity(entity).get::<_Physics>(),
 			);
 		}
 	}
@@ -385,6 +447,29 @@ mod tests {
 				.entity(entity)
 				.get::<_Loadout>()
 				.map(|l| l.target_dereferenced),
+		);
+	}
+
+	#[test_case(InputState::just_pressed(); "on just pressed")]
+	#[test_case(InputState::pressed(); "on pressed")]
+	fn do_not_deref_physics_if_target_would_not_change(state: InputState) {
+		let mut app = setup(_Input::from(std::iter::once((HandSlot::Left, state))));
+		let entity = app
+			.world_mut()
+			.spawn((
+				Player,
+				_Physics {
+					target: Some(SkillTarget::Cursor(Cursor::Direction)),
+				},
+			))
+			.id();
+
+		app.update();
+		app.update();
+
+		assert_eq!(
+			Some(&IsChanged::FALSE),
+			app.world().entity(entity).get::<IsChanged<_Physics>>(),
 		);
 	}
 }
