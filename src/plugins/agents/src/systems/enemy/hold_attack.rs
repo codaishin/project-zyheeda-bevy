@@ -2,7 +2,7 @@ use crate::components::enemy::{Enemy, attack_phase::EnemyAttackPhase, attacking:
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
 	accessors::get::GetContextMut,
-	handles_loadout::{CurrentTargetMut, HeldSkillsMut, skills::Skills},
+	handles_loadout::{HeldSkillsMut, skills::Skills},
 	handles_skill_physics::{InitializedAgent, SkillTarget, TargetMut},
 };
 
@@ -23,13 +23,14 @@ impl Enemy {
 			}
 
 			let skills = Skills { entity };
-			if let Some(mut ctx) = TLoadout::get_context_mut(&mut loadout, skills) {
-				ctx.held_skills_mut().clear();
+			let Some(mut ctx) = TLoadout::get_context_mut(&mut loadout, skills) else {
+				continue;
+			};
 
-				if let EnemyAttackPhase::HoldSkill { key, .. } = phase {
-					ctx.held_skills_mut().insert(*key);
-					*ctx.current_target_mut() = Some(SkillTarget::Entity(*player));
-				};
+			ctx.held_skills_mut().clear();
+
+			if let EnemyAttackPhase::HoldSkill { key, .. } = phase {
+				ctx.held_skills_mut().insert(*key);
 			};
 		}
 
@@ -53,7 +54,7 @@ mod tests {
 		components::persistent_entity::PersistentEntity,
 		tools::action_key::slot::SlotKey,
 		traits::{
-			handles_loadout::{CurrentTarget, CurrentTargetMut, HeldSkills},
+			handles_loadout::HeldSkills,
 			handles_skill_physics::{SkillTarget, Target},
 		},
 	};
@@ -80,21 +81,12 @@ mod tests {
 	#[derive(Component, Debug, PartialEq, Default)]
 	struct _Loadout {
 		slots: HashSet<SlotKey>,
-		target: Option<SkillTarget>,
-	}
-
-	impl _Loadout {
-		fn with_target(mut self, target: Option<SkillTarget>) -> Self {
-			self.target = target;
-			self
-		}
 	}
 
 	impl<const N: usize> From<[SlotKey; N]> for _Loadout {
 		fn from(slots: [SlotKey; N]) -> Self {
 			Self {
 				slots: HashSet::from(slots),
-				target: None,
 			}
 		}
 	}
@@ -108,18 +100,6 @@ mod tests {
 	impl HeldSkillsMut for _Loadout {
 		fn held_skills_mut(&mut self) -> &mut HashSet<SlotKey> {
 			&mut self.slots
-		}
-	}
-
-	impl CurrentTarget for _Loadout {
-		fn current_target(&self) -> Option<&SkillTarget> {
-			self.target.as_ref()
-		}
-	}
-
-	impl CurrentTargetMut for _Loadout {
-		fn current_target_mut(&mut self) -> &mut Option<SkillTarget> {
-			&mut self.target
 		}
 	}
 
@@ -185,7 +165,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Loadout::from([SlotKey(42)]).with_target(Some(SkillTarget::Entity(*PLAYER)))),
+			Some(&_Loadout::from([SlotKey(42)])),
 			app.world().entity(entity).get::<_Loadout>(),
 		);
 	}
@@ -211,7 +191,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Loadout::from([SlotKey(42)]).with_target(Some(SkillTarget::Entity(*PLAYER)))),
+			Some(&_Loadout::from([SlotKey(42)])),
 			app.world().entity(entity).get::<_Loadout>(),
 		);
 	}
@@ -264,7 +244,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Loadout::default().with_target(Some(SkillTarget::Entity(*PLAYER)))),
+			Some(&_Loadout::default()),
 			app.world().entity(entity).get::<_Loadout>(),
 		);
 	}
@@ -297,7 +277,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Loadout::default().with_target(Some(SkillTarget::Entity(*PLAYER)))),
+			Some(&_Loadout::default()),
 			app.world().entity(entity).get::<_Loadout>(),
 		);
 	}
@@ -334,7 +314,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Loadout::from([SlotKey(42)]).with_target(Some(SkillTarget::Entity(*PLAYER)))),
+			Some(&_Loadout::from([SlotKey(42)])),
 			app.world().entity(entity).get::<_Loadout>(),
 		);
 	}

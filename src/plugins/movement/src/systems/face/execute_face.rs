@@ -5,29 +5,33 @@ use bevy::{
 use common::{
 	self,
 	traits::{
-		accessors::get::Get,
+		accessors::get::{Get, GetContext},
 		handles_orientation::Face,
 		handles_physics::{HoverMode, MouseHover, MouseHoversOver, Raycast},
-		handles_skill_physics::Cursor,
+		handles_skill_physics::{Cursor, InitializedAgent, SkillTarget, Target},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
 use std::ops::DerefMut;
 
-pub(crate) fn execute_face<TMouseHover>(
+pub(crate) fn execute_face<TMouseHover, TTarget>(
 	In(faces): In<Vec<(Entity, Face)>>,
 	mut transforms: Query<&mut Transform>,
 	commands: ZyheedaCommands,
 	mut hover: StaticSystemParam<TMouseHover>,
+	target: StaticSystemParam<TTarget>,
 ) where
 	TMouseHover: for<'w, 's> SystemParam<Item<'w, 's>: Raycast<MouseHover>>,
+	TTarget: for<'c> GetContext<InitializedAgent, TContext<'c>: Target>,
 {
 	for (entity, face) in faces {
 		let target = match face {
 			Face::Translation(translation) => Some(translation),
-			Face::Cursor(cursor) => get_target(entity, cursor, hover.deref_mut(), &transforms),
-			Face::Entity(entity) => get_translation(commands.get(&entity), &transforms),
 			Face::Direction(dir) => get_translation(Some(entity), &transforms).map(|tr| tr + *dir),
+			Face::Entity(entity) => get_translation(commands.get(&entity), &transforms),
+			Face::SkillTarget => {
+				get_target(entity, &target, hover.deref_mut(), &transforms, &commands)
+			}
 		};
 		let Some(target) = target else {
 			continue;
@@ -47,15 +51,25 @@ fn apply_facing(transforms: &mut Query<&mut Transform>, id: Entity, target: Vec3
 	transform.look_at(target, Vec3::Y);
 }
 
-fn get_target<TMouseHover>(
+fn get_target<TMouseHover, TTarget>(
 	entity: Entity,
-	cursor: Cursor,
+	target: &StaticSystemParam<TTarget>,
 	hover: &mut TMouseHover,
 	transforms: &Query<&mut Transform>,
+	commands: &ZyheedaCommands,
 ) -> Option<Vec3>
 where
 	TMouseHover: Raycast<MouseHover>,
+	TTarget: for<'c> GetContext<InitializedAgent, TContext<'c>: Target>,
 {
+	let ctx = TTarget::get_context(target, InitializedAgent { entity })?;
+	let target = ctx.target()?;
+
+	let cursor = match target {
+		SkillTarget::Entity(entity) => return get_translation(commands.get(entity), transforms),
+		SkillTarget::Cursor(cursor) => cursor,
+	};
+
 	let transform = transforms.get(entity).ok()?;
 	let hover = hover.raycast(MouseHover {
 		exclude: vec![entity],
@@ -67,10 +81,7 @@ where
 
 	match hover {
 		MouseHoversOver::Point(point) => Some(point),
-		MouseHoversOver::Object { entity, .. } => transforms
-			.get(entity)
-			.map(|transform| transform.translation)
-			.ok(),
+		MouseHoversOver::Object { entity, .. } => get_translation(Some(entity), transforms),
 	}
 }
 
@@ -110,6 +121,15 @@ mod tests {
 	}
 
 	#[derive(Component)]
+	struct _Target(Option<SkillTarget>);
+
+	impl Target for _Target {
+		fn target(&self) -> Option<&SkillTarget> {
+			self.0.as_ref()
+		}
+	}
+
+	#[derive(Component)]
 	struct _Face(Face);
 
 	fn read_faces(query: Query<(Entity, &_Face)>) -> Vec<(Entity, Face)> {
@@ -120,7 +140,10 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.register_persistent_entities();
-		app.add_systems(Update, read_faces.pipe(execute_face::<ResMut<_RayCast>>));
+		app.add_systems(
+			Update,
+			read_faces.pipe(execute_face::<ResMut<_RayCast>, Query<Ref<_Target>>>),
+		);
 		app.insert_resource(_RayCast::new().with_mock(|mock| {
 			mock.expect_raycast().never();
 		}));
@@ -130,11 +153,15 @@ mod tests {
 
 	#[test_case(Cursor::Direction, HoverMode::ColliderOrDirectionFrom; "direction")]
 	#[test_case(Cursor::TerrainHover, |_| HoverMode::ColliderOrTerrain; "terrain hover")]
-	fn do_face_cursor_hover_point(cursor: Cursor, mode: fn(VecNotNan<3>) -> HoverMode) {
+	fn do_face_target_cursor_hover_point(cursor: Cursor, mode: fn(VecNotNan<3>) -> HoverMode) {
 		let mut app = setup();
 		let agent = app
 			.world_mut()
-			.spawn((Transform::from_xyz(4., 2., 6.), _Face(Face::Cursor(cursor))))
+			.spawn((
+				Transform::from_xyz(4., 2., 6.),
+				_Face(Face::SkillTarget),
+				_Target(Some(SkillTarget::Cursor(cursor))),
+			))
 			.id();
 		app.insert_resource(_RayCast::new().with_mock(|mock| {
 			mock.expect_raycast()
@@ -155,12 +182,16 @@ mod tests {
 
 	#[test_case(Cursor::Direction, HoverMode::ColliderOrDirectionFrom; "direction")]
 	#[test_case(Cursor::TerrainHover, |_| HoverMode::ColliderOrTerrain; "terrain hover")]
-	fn face_cursor_hover_entity(cursor: Cursor, mode: fn(VecNotNan<3>) -> HoverMode) {
+	fn face_target_cursor_hover_entity(cursor: Cursor, mode: fn(VecNotNan<3>) -> HoverMode) {
 		let mut app = setup();
 		let entity = app.world_mut().spawn(Transform::from_xyz(6., 5., 20.)).id();
 		let agent = app
 			.world_mut()
-			.spawn((Transform::from_xyz(4., 5., 6.), _Face(Face::Cursor(cursor))))
+			.spawn((
+				Transform::from_xyz(4., 5., 6.),
+				_Face(Face::SkillTarget),
+				_Target(Some(SkillTarget::Cursor(cursor))),
+			))
 			.id();
 		app.insert_resource(_RayCast::new().with_mock(|mock| {
 			mock.expect_raycast()
@@ -184,11 +215,15 @@ mod tests {
 
 	#[test_case(Cursor::Direction, HoverMode::ColliderOrDirectionFrom; "direction")]
 	#[test_case(Cursor::TerrainHover, |_| HoverMode::ColliderOrTerrain; "terrain hover")]
-	fn face_cursor_hover_ground(cursor: Cursor, mode: fn(VecNotNan<3>) -> HoverMode) {
+	fn face_target_cursor_hover_ground(cursor: Cursor, mode: fn(VecNotNan<3>) -> HoverMode) {
 		let mut app = setup();
 		let agent = app
 			.world_mut()
-			.spawn((Transform::from_xyz(4., 5., 6.), _Face(Face::Cursor(cursor))))
+			.spawn((
+				Transform::from_xyz(4., 5., 6.),
+				_Face(Face::SkillTarget),
+				_Target(Some(SkillTarget::Cursor(cursor))),
+			))
 			.id();
 		app.insert_resource(_RayCast::new().with_mock(|mock| {
 			mock.expect_raycast()
@@ -198,6 +233,29 @@ mod tests {
 				}))
 				.return_const(MouseHoversOver::Point(Vec3::new(6., 3., 7.)));
 		}));
+
+		app.update();
+
+		assert_eq!(
+			Some(&Transform::from_xyz(4., 5., 6.).looking_at(Vec3::new(6., 5., 7.), Vec3::Y)),
+			app.world().entity(agent).get::<Transform>()
+		);
+	}
+
+	#[test]
+	fn face_target_entity() {
+		let mut app = setup();
+		let target = PersistentEntity::default();
+		app.world_mut()
+			.spawn((target, Transform::from_xyz(6., 5., 7.)));
+		let agent = app
+			.world_mut()
+			.spawn((
+				Transform::from_xyz(4., 5., 6.),
+				_Face(Face::SkillTarget),
+				_Target(Some(SkillTarget::Entity(target))),
+			))
+			.id();
 
 		app.update();
 

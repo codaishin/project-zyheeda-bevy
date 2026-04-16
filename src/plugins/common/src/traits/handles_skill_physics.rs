@@ -8,7 +8,7 @@ use crate::{
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
 	tools::{Index, action_key::slot::SlotKey, bone_name::BoneName},
 	traits::{
-		accessors::get::GetContextMut,
+		accessors::get::{GetContext, GetContextMut},
 		handles_skill_physics::{
 			beam::Beam,
 			ground_target::SphereAoE,
@@ -76,11 +76,13 @@ where
 }
 
 pub trait HandlesPhysicalSkillAgent {
+	type TAgent<'w, 's>: SystemParam + for<'c> GetContext<InitializedAgent, TContext<'c>: Target>;
 	type TAgentMut<'w, 's>: SystemParam
 		+ for<'c> GetContextMut<NotInitializedAgent, TContext<'c>: Initialize>
 		+ for<'c> GetContextMut<InitializedAgent, TContext<'c>: TargetMut>;
 }
 
+pub type SkillAgent<'w, 's, T> = <T as HandlesPhysicalSkillAgent>::TAgent<'w, 's>;
 pub type SkillAgentMut<'w, 's, T> = <T as HandlesPhysicalSkillAgent>::TAgentMut<'w, 's>;
 
 #[derive(EntityKey)]
@@ -142,7 +144,6 @@ pub struct SpawnArgs<'a> {
 	pub projection_effects: &'a [Effect],
 	pub caster: SkillCaster,
 	pub mount: SkillMount,
-	pub target: SkillTarget,
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]

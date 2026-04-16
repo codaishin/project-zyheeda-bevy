@@ -19,11 +19,7 @@ mod tests {
 		app::{App, Update},
 		ecs::system::{RunSystemError, RunSystemOnce},
 	};
-	use common::traits::{
-		accessors::get::GetContextMut,
-		handles_orientation::Facing,
-		handles_skill_physics::Cursor,
-	};
+	use common::traits::{accessors::get::GetContextMut, handles_orientation::Facing};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -38,11 +34,11 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut p: FaceParamMut| {
 				let mut ctx = FaceParamMut::get_context_mut(&mut p, Facing { entity }).unwrap();
-				ctx.override_face(Face::Cursor(Cursor::TerrainHover));
+				ctx.override_face(Face::SkillTarget);
 			})?;
 
 		assert_eq!(
-			Some(&SetFaceOverride(Face::Cursor(Cursor::TerrainHover))),
+			Some(&SetFaceOverride(Face::SkillTarget)),
 			app.world().entity(entity).get::<SetFaceOverride>(),
 		);
 		Ok(())

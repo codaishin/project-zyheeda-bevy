@@ -13,7 +13,7 @@ use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
 	tools::{Units, UnitsPerSecond},
-	traits::handles_skill_physics::{Effect, SkillCaster, SkillMount, SkillShape, SkillTarget},
+	traits::handles_skill_physics::{Effect, SkillCaster, SkillMount, SkillShape},
 };
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
@@ -29,7 +29,6 @@ pub struct Skill {
 	pub(crate) projection_effects: Vec<Effect>,
 	pub(crate) caster: SkillCaster,
 	pub(crate) mount: SkillMount,
-	pub(crate) target: SkillTarget,
 }
 
 #[derive(Component, Debug, PartialEq)]

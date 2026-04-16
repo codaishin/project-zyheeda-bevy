@@ -40,7 +40,7 @@ use crate::{
 	system_params::{
 		config::ConfigParamMut,
 		ray_caster::RayCaster,
-		skill_agent::SkillAgentMut,
+		skill_agent::{SkillAgent, SkillAgentMut},
 		update_ongoing_interactions::UpdateOngoingInteractions,
 	},
 	systems::{
@@ -111,6 +111,7 @@ where
 
 		TSaveGame::register_savable_component::<ApplyCharacterMotion>(app);
 		TSaveGame::register_savable_component::<Skill>(app);
+		TSaveGame::register_savable_component::<Target>(app);
 		TSaveGame::register_savable_component::<LinearVelocity>(app);
 		TSaveGame::register_savable_component::<CharacterGravity>(app);
 
@@ -278,6 +279,7 @@ impl<TDependencies> HandlesMotion for PhysicsPlugin<TDependencies> {
 }
 
 impl<TDependencies> HandlesPhysicalSkillAgent for PhysicsPlugin<TDependencies> {
+	type TAgent<'w, 's> = SkillAgent<'w, 's>;
 	type TAgentMut<'w, 's> = SkillAgentMut<'w, 's>;
 }
 

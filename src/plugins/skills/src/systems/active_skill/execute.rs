@@ -1,5 +1,5 @@
 use crate::{
-	components::{active_skill::ActiveSkill, target::Target},
+	components::active_skill::ActiveSkill,
 	skills::shape::OnSkillStop,
 	traits::spawn_skill::SpawnSkill,
 };
@@ -21,22 +21,19 @@ where
 {
 	pub(crate) fn execute<TSpawn>(
 		mut spawn: StaticSystemParam<TSpawn>,
-		mut agents: Query<(Entity, &mut Self, &Target)>,
+		mut agents: Query<(Entity, &mut Self)>,
 		persistent_entities: Query<&PersistentEntity>,
 	) where
 		TSpawn: for<'w, 's> SystemParam<Item<'w, 's>: SpawnSkill<TConfig> + Despawn>,
 	{
-		for (entity, mut skill_executer, Target(target)) in &mut agents {
+		for (entity, mut skill_executer) in &mut agents {
 			match skill_executer.as_ref() {
 				Self::Start { slot_key, shape } => {
 					let Ok(entity) = persistent_entities.get(entity) else {
 						continue;
 					};
-					let Some(target) = target else {
-						continue;
-					};
 					let on_stop_skill =
-						spawn.spawn_skill(shape.clone(), SkillCaster(*entity), *slot_key, *target);
+						spawn.spawn_skill(shape.clone(), SkillCaster(*entity), *slot_key);
 					match on_stop_skill {
 						OnSkillStop::Ignore => *skill_executer = Self::Idle,
 						OnSkillStop::Stop(skill) => *skill_executer = Self::Stoppable(skill),
@@ -56,11 +53,7 @@ where
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use common::{
-		CommonPlugin,
-		tools::action_key::slot::SlotKey,
-		traits::handles_skill_physics::SkillTarget,
-	};
+	use common::{CommonPlugin, tools::action_key::slot::SlotKey};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
 	use std::sync::LazyLock;
@@ -81,9 +74,8 @@ mod tests {
 			config: _Config,
 			caster: SkillCaster,
 			slot: SlotKey,
-			target: SkillTarget,
 		) -> OnSkillStop {
-			self.mock.spawn_skill(config, caster, slot, target)
+			self.mock.spawn_skill(config, caster, slot)
 		}
 	}
 
@@ -101,7 +93,6 @@ mod tests {
 				config: _Config,
 				caster: SkillCaster,
 				slot: SlotKey,
-				target: SkillTarget,
 			) -> OnSkillStop;
 		}
 		impl Despawn for _Spawner {
@@ -128,14 +119,12 @@ mod tests {
 
 	static CASTER: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
 	static SKILL: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
-	static TARGET: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
 
 	#[test]
 	fn spawn_started_skill() {
 		let mut app = setup(_Spawner::new().with_mock(assert_call_spawn));
 		app.world_mut().spawn((
 			*CASTER,
-			Target(Some(SkillTarget::Entity(*TARGET))),
 			ActiveSkill::Start {
 				slot_key: SlotKey(11),
 				shape: _Config,
@@ -147,12 +136,7 @@ mod tests {
 		fn assert_call_spawn(mock: &mut Mock_Spawner) {
 			mock.expect_spawn_skill()
 				.once()
-				.with(
-					eq(_Config),
-					eq(SkillCaster(*CASTER)),
-					eq(SlotKey(11)),
-					eq(SkillTarget::Entity(*TARGET)),
-				)
+				.with(eq(_Config), eq(SkillCaster(*CASTER)), eq(SlotKey(11)))
 				.return_const(OnSkillStop::Ignore);
 			mock.expect_despawn().return_const(());
 		}
@@ -169,7 +153,6 @@ mod tests {
 			.world_mut()
 			.spawn((
 				*CASTER,
-				Target(Some(SkillTarget::Entity(*TARGET))),
 				ActiveSkill::Start {
 					slot_key: SlotKey(11),
 					shape: _Config,
@@ -188,11 +171,8 @@ mod tests {
 	#[test]
 	fn despawn_stopped_skill() {
 		let mut app = setup(_Spawner::new().with_mock(assert_call_despawn));
-		app.world_mut().spawn((
-			*CASTER,
-			Target(Some(SkillTarget::Entity(*TARGET))),
-			ActiveSkill::<_Config>::Stop(*SKILL),
-		));
+		app.world_mut()
+			.spawn((*CASTER, ActiveSkill::<_Config>::Stop(*SKILL)));
 
 		app.update();
 
@@ -213,11 +193,7 @@ mod tests {
 		}));
 		let entity = app
 			.world_mut()
-			.spawn((
-				*CASTER,
-				Target(Some(SkillTarget::Entity(*TARGET))),
-				ActiveSkill::<_Config>::Stop(*SKILL),
-			))
+			.spawn((*CASTER, ActiveSkill::<_Config>::Stop(*SKILL)))
 			.id();
 
 		app.update();
@@ -235,14 +211,7 @@ mod tests {
 			mock.expect_spawn_skill().return_const(OnSkillStop::Ignore);
 			mock.expect_despawn().return_const(());
 		}));
-		let entity = app
-			.world_mut()
-			.spawn((
-				*CASTER,
-				Target(Some(SkillTarget::Entity(*TARGET))),
-				executor,
-			))
-			.id();
+		let entity = app.world_mut().spawn((*CASTER, executor)).id();
 
 		app.update();
 		app.update();

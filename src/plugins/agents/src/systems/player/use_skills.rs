@@ -11,13 +11,7 @@ use common::{
 	traits::{
 		accessors::get::GetContextMut,
 		handles_input::{GetAllInputStates, InputState},
-		handles_loadout::{
-			CurrentTarget,
-			CurrentTargetMut,
-			HeldSkills,
-			HeldSkillsMut,
-			skills::Skills,
-		},
+		handles_loadout::{HeldSkills, HeldSkillsMut, skills::Skills},
 		handles_skill_physics::{Cursor, InitializedAgent, SkillTarget, Target, TargetMut},
 	},
 };
@@ -58,6 +52,7 @@ impl Player {
 
 		for entity in &players {
 			let skill_target = SkillTarget::Cursor(get_cursor());
+			let new_held_skills = held().map(SlotKey::from).collect();
 
 			let agent = InitializedAgent { entity };
 			if let Some(mut ctx) = TPhysics::get_context_mut(&mut physics, agent)
@@ -67,15 +62,10 @@ impl Player {
 			};
 
 			let skills = Skills { entity };
-			if let Some(mut ctx) = TLoadout::get_context_mut(&mut loadout, skills) {
-				if ctx.current_target() != Some(&skill_target) {
-					*ctx.current_target_mut() = Some(skill_target);
-				}
-
-				let new_held_skills = held().map(SlotKey::from).collect();
-				if ctx.held_skills() != &new_held_skills {
-					*ctx.held_skills_mut() = new_held_skills;
-				}
+			if let Some(mut ctx) = TLoadout::get_context_mut(&mut loadout, skills)
+				&& ctx.held_skills() != &new_held_skills
+			{
+				*ctx.held_skills_mut() = new_held_skills;
 			};
 		}
 	}
@@ -91,7 +81,7 @@ mod tests {
 		},
 		traits::{
 			handles_input::InputState,
-			handles_loadout::{CurrentTarget, CurrentTargetMut, HeldSkills},
+			handles_loadout::HeldSkills,
 			handles_skill_physics::{SkillTarget, Target},
 			iteration::IterFinite,
 		},
@@ -143,33 +133,13 @@ mod tests {
 
 	#[derive(Component, Debug, PartialEq, Default)]
 	struct _Loadout {
-		slots_dereferenced: bool,
 		slots: HashSet<SlotKey>,
-		target_dereferenced: bool,
-		target: Option<SkillTarget>,
-	}
-
-	impl _Loadout {
-		fn with_target(mut self, target: Option<SkillTarget>) -> Self {
-			self.target = target;
-			self
-		}
-
-		fn reset_change_states(loadout: Query<&mut Self>) {
-			for mut loadout in loadout {
-				loadout.slots_dereferenced = false;
-				loadout.target_dereferenced = false;
-			}
-		}
 	}
 
 	impl<const N: usize> From<[SlotKey; N]> for _Loadout {
 		fn from(slots: [SlotKey; N]) -> Self {
 			Self {
-				slots_dereferenced: true,
 				slots: HashSet::from(slots),
-				target_dereferenced: true,
-				target: None,
 			}
 		}
 	}
@@ -182,21 +152,7 @@ mod tests {
 
 	impl HeldSkillsMut for _Loadout {
 		fn held_skills_mut(&mut self) -> &mut HashSet<SlotKey> {
-			self.slots_dereferenced = true;
 			&mut self.slots
-		}
-	}
-
-	impl CurrentTarget for _Loadout {
-		fn current_target(&self) -> Option<&SkillTarget> {
-			self.target.as_ref()
-		}
-	}
-
-	impl CurrentTargetMut for _Loadout {
-		fn current_target_mut(&mut self) -> &mut Option<SkillTarget> {
-			self.target_dereferenced = true;
-			&mut self.target
 		}
 	}
 
@@ -207,9 +163,9 @@ mod tests {
 		app.add_systems(
 			Update,
 			(
-				_Loadout::reset_change_states,
 				Player::use_skills::<Res<_Input>, Query<&mut _Physics>, Query<&mut _Loadout>>,
 				IsChanged::<_Physics>::detect,
+				IsChanged::<_Loadout>::detect,
 			)
 				.chain(),
 		);
@@ -230,10 +186,7 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(
-					&_Loadout::from([SlotKey::from(HandSlot::Left)])
-						.with_target(Some(SkillTarget::Cursor(Cursor::Direction)))
-				),
+				Some(&_Loadout::from([SlotKey::from(HandSlot::Left)])),
 				app.world().entity(entity).get::<_Loadout>(),
 			);
 		}
@@ -250,10 +203,7 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(
-					&_Loadout::from([SlotKey::from(HandSlot::Left)])
-						.with_target(Some(SkillTarget::Cursor(Cursor::Direction)))
-				),
+				Some(&_Loadout::from([SlotKey::from(HandSlot::Left)])),
 				app.world().entity(entity).get::<_Loadout>(),
 			);
 		}
@@ -292,10 +242,7 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(
-					&_Loadout::from([SlotKey::from(HandSlot::Left)])
-						.with_target(Some(SkillTarget::Cursor(Cursor::TerrainHover)))
-				),
+				Some(&_Loadout::from([SlotKey::from(HandSlot::Left)])),
 				app.world().entity(entity).get::<_Loadout>(),
 			);
 		}
@@ -315,10 +262,7 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(
-					&_Loadout::from([SlotKey::from(HandSlot::Left)])
-						.with_target(Some(SkillTarget::Cursor(Cursor::TerrainHover)))
-				),
+				Some(&_Loadout::from([SlotKey::from(HandSlot::Left)])),
 				app.world().entity(entity).get::<_Loadout>(),
 			);
 		}
@@ -361,7 +305,7 @@ mod tests {
 
 	#[test_case(InputState::just_pressed(); "on just pressed")]
 	#[test_case(InputState::pressed(); "on pressed")]
-	fn do_not_deref_slots_if_they_would_not_change(state: InputState) {
+	fn do_not_change_loadout_if_it_would_not_change(state: InputState) {
 		let mut app = setup(_Input::from(std::iter::once((HandSlot::Left, state))));
 		let entity = app
 			.world_mut()
@@ -372,81 +316,8 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(false),
-			app.world()
-				.entity(entity)
-				.get::<_Loadout>()
-				.map(|l| l.slots_dereferenced),
-		);
-	}
-
-	#[test_case(InputState::just_pressed(); "on just pressed")]
-	#[test_case(InputState::pressed(); "on pressed")]
-	fn change_slots_if_target_would_not_change(state: InputState) {
-		let mut app = setup(_Input::from(std::iter::once((HandSlot::Left, state))));
-		let entity = app
-			.world_mut()
-			.spawn((Player, _Loadout::from([SlotKey::from(HandSlot::Left)])))
-			.id();
-
-		app.update();
-		let mut input = app.world_mut().resource_mut::<_Input>();
-		input.0.insert(ActionKey::from(HandSlot::Right), state);
-		app.update();
-
-		assert_eq!(
-			Some(&HashSet::from([
-				SlotKey::from(HandSlot::Left),
-				SlotKey::from(HandSlot::Right)
-			])),
-			app.world()
-				.entity(entity)
-				.get::<_Loadout>()
-				.map(|l| &l.slots),
-		);
-	}
-
-	#[test_case(InputState::just_pressed(); "on just pressed")]
-	#[test_case(InputState::pressed(); "on pressed")]
-	fn change_target_even_if_skills_do_not_change(state: InputState) {
-		let mut app = setup(_Input::from(std::iter::once((HandSlot::Left, state))));
-		let entity = app
-			.world_mut()
-			.spawn((Player, _Loadout::from([SlotKey::from(HandSlot::Left)])))
-			.id();
-
-		app.update();
-		let mut input = app.world_mut().resource_mut::<_Input>();
-		input.0.insert(ActionKey::from(TerrainTargeting), state);
-		app.update();
-
-		assert_eq!(
-			Some(SkillTarget::Cursor(Cursor::TerrainHover)),
-			app.world()
-				.entity(entity)
-				.get::<_Loadout>()
-				.and_then(|l| l.target),
-		);
-	}
-
-	#[test_case(InputState::just_pressed(); "on just pressed")]
-	#[test_case(InputState::pressed(); "on pressed")]
-	fn do_not_deref_target_if_would_not_change(state: InputState) {
-		let mut app = setup(_Input::from(std::iter::once((HandSlot::Left, state))));
-		let entity = app
-			.world_mut()
-			.spawn((Player, _Loadout::from([SlotKey::from(HandSlot::Left)])))
-			.id();
-
-		app.update();
-		app.update();
-
-		assert_eq!(
-			Some(false),
-			app.world()
-				.entity(entity)
-				.get::<_Loadout>()
-				.map(|l| l.target_dereferenced),
+			Some(&IsChanged::FALSE),
+			app.world().entity(entity).get::<IsChanged<_Loadout>>(),
 		);
 	}
 

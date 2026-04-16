@@ -1,5 +1,4 @@
 use crate::{
-	components::target::Target,
 	skills::{RunSkillBehavior, SkillState, behaviors::SkillBehaviorConfig},
 	traits::{Flush, GetActiveSkill, GetSkillBehavior, Schedule},
 };
@@ -12,7 +11,6 @@ use common::{
 	traits::{
 		accessors::get::GetContextMut,
 		handles_orientation::{Face, Facing, OverrideFace},
-		handles_skill_physics::SkillTarget,
 		state_duration::{StateMeta, UpdatedStates},
 		thread_safe::ThreadSafe,
 	},
@@ -27,7 +25,7 @@ enum Advancement {
 
 pub(crate) fn schedule_active_skill<TGetSkill, TFacing, TActiveSkill, TTime>(
 	time: Res<Time<TTime>>,
-	mut agents: Query<(Entity, &mut TGetSkill, &mut TActiveSkill, &Target)>,
+	mut agents: Query<(Entity, &mut TGetSkill, &mut TActiveSkill)>,
 	mut facing: StaticSystemParam<TFacing>,
 ) where
 	TGetSkill: GetActiveSkill<SkillState> + Component<Mutability = Mutable>,
@@ -37,15 +35,12 @@ pub(crate) fn schedule_active_skill<TGetSkill, TFacing, TActiveSkill, TTime>(
 {
 	let delta = time.delta();
 
-	for (entity, mut dequeue, skill_executer, Target(target)) in &mut agents {
+	for (entity, mut dequeue, skill_executer) in &mut agents {
 		let Some(mut ctx) = TFacing::get_context_mut(&mut facing, Facing { entity }) else {
 			continue;
 		};
-		let Some(target) = target else {
-			continue;
-		};
 		let advancement = match dequeue.get_active() {
-			Some(skill) => advance(skill, skill_executer, target, delta, &mut ctx),
+			Some(skill) => advance(skill, skill_executer, delta, &mut ctx),
 			None => clear_side_effects(&mut ctx),
 		};
 
@@ -69,7 +64,6 @@ where
 fn advance<TFacing, TSkillExecutor>(
 	mut skill: impl GetSkillBehavior + UpdatedStates<SkillState>,
 	mut skill_executer: Mut<TSkillExecutor>,
-	skill_target: &SkillTarget,
 	delta: Duration,
 	facing: &mut TFacing,
 ) -> Advancement
@@ -83,10 +77,7 @@ where
 	if states.contains(&StateMeta::Entering(SkillState::Aim))
 		|| states.contains(&StateMeta::In(SkillState::Aim))
 	{
-		match skill_target {
-			SkillTarget::Cursor(cursor) => facing.override_face(Face::Cursor(*cursor)),
-			SkillTarget::Entity(target) => facing.override_face(Face::Entity(*target)),
-		}
+		facing.override_face(Face::SkillTarget);
 	}
 
 	if states.contains(&StateMeta::Entering(SkillState::Aim)) {
@@ -146,13 +137,12 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use common::{
-		components::persistent_entity::PersistentEntity,
 		tools::action_key::slot::HandSlot,
-		traits::handles_skill_physics::{Cursor, SkillShape, shield::Shield},
+		traits::handles_skill_physics::{SkillShape, shield::Shield},
 	};
 	use macros::{NestedMocks, simple_mock};
 	use mockall::{automock, mock, predicate::eq};
-	use std::{collections::HashSet, sync::LazyLock};
+	use std::collections::HashSet;
 	use test_case::test_case;
 	use testing::{IsChanged, MissingLastUpdate, Mock, NestedMocks, SingleThreadedApp, TickTime};
 
@@ -246,8 +236,6 @@ mod tests {
 		wrapper(SkillBehaviorConfig::from_shape(SkillShape::Shield(Shield)))
 	}
 
-	static TARGET: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
-
 	fn setup() -> Result<(App, Entity), MissingLastUpdate> {
 		let mut app = App::new().single_threaded(Update);
 		let agent = app
@@ -273,7 +261,6 @@ mod tests {
 	fn call_update_with_delta() -> Result<(), MissingLastUpdate> {
 		let (mut app, agent) = setup()?;
 		app.world_mut().entity_mut(agent).insert((
-			Target(Some(SkillTarget::Cursor(Cursor::Direction))),
 			_Dequeue {
 				active: Some(Box::new(|| {
 					Mock_Skill::new_mock(|mock| {
@@ -299,7 +286,6 @@ mod tests {
 	fn clear_queue_of_active() -> Result<(), MissingLastUpdate> {
 		let (mut app, agent) = setup()?;
 		app.world_mut().entity_mut(agent).insert((
-			Target(Some(SkillTarget::Cursor(Cursor::Direction))),
 			_Dequeue {
 				active: Some(Box::new(|| {
 					Mock_Skill::new_mock(|mock| {
@@ -327,7 +313,6 @@ mod tests {
 	fn do_not_remove_skill_when_not_done() -> Result<(), MissingLastUpdate> {
 		let (mut app, agent) = setup()?;
 		app.world_mut().entity_mut(agent).insert((
-			Target(Some(SkillTarget::Cursor(Cursor::Direction))),
 			_Dequeue {
 				active: Some(Box::new(|| {
 					Mock_Skill::new_mock(|mock| {
@@ -357,7 +342,6 @@ mod tests {
 	fn run_on_active() -> Result<(), MissingLastUpdate> {
 		let (mut app, agent) = setup()?;
 		app.world_mut().entity_mut(agent).insert((
-			Target(Some(SkillTarget::Cursor(Cursor::Direction))),
 			_Executor::new().with_mock(|mock| {
 				mock.expect_flush().return_const(());
 				mock.expect_schedule()
@@ -399,7 +383,6 @@ mod tests {
 	fn run_on_aim() -> Result<(), MissingLastUpdate> {
 		let (mut app, agent) = setup()?;
 		app.world_mut().entity_mut(agent).insert((
-			Target(Some(SkillTarget::Cursor(Cursor::Direction))),
 			_Executor::new().with_mock(|mock| {
 				mock.expect_flush().return_const(());
 				mock.expect_schedule()
@@ -441,7 +424,6 @@ mod tests {
 	fn do_not_run_when_not_activating_this_frame() -> Result<(), MissingLastUpdate> {
 		let (mut app, agent) = setup()?;
 		app.world_mut().entity_mut(agent).insert((
-			Target(Some(SkillTarget::Cursor(Cursor::Direction))),
 			_Dequeue {
 				active: Some(Box::new(|| {
 					Mock_Skill::new_mock(|mock| {
@@ -468,7 +450,6 @@ mod tests {
 	fn flush() -> Result<(), MissingLastUpdate> {
 		let (mut app, agent) = setup()?;
 		app.world_mut().entity_mut(agent).insert((
-			Target(Some(SkillTarget::Cursor(Cursor::Direction))),
 			_Executor::new().with_mock(|mock| {
 				mock.expect_schedule().return_const(());
 				mock.expect_flush().times(1).return_const(());
@@ -496,7 +477,6 @@ mod tests {
 	fn do_not_stop_when_not_done() -> Result<(), MissingLastUpdate> {
 		let (mut app, agent) = setup()?;
 		app.world_mut().entity_mut(agent).insert((
-			Target(Some(SkillTarget::Cursor(Cursor::Direction))),
 			_Executor::new().with_mock(|mock| {
 				mock.expect_schedule().return_const(());
 				mock.expect_flush().never().return_const(());
@@ -522,20 +502,13 @@ mod tests {
 		Ok(())
 	}
 
-	#[test_case(SkillTarget::Entity(*TARGET), Face::Entity(*TARGET), StateMeta::Entering; "target on enter aim")]
-	#[test_case(SkillTarget::Cursor(Cursor::Direction), Face::Cursor(Cursor::Direction), StateMeta::Entering; "cursor direction on enter aim")]
-	#[test_case(SkillTarget::Cursor(Cursor::TerrainHover), Face::Cursor(Cursor::TerrainHover), StateMeta::Entering; "cursor terrain hover on enter aim")]
-	#[test_case(SkillTarget::Entity(*TARGET), Face::Entity(*TARGET), StateMeta::In; "target on in aim")]
-	#[test_case(SkillTarget::Cursor(Cursor::Direction), Face::Cursor(Cursor::Direction), StateMeta::In; "cursor direction on in aim")]
-	#[test_case(SkillTarget::Cursor(Cursor::TerrainHover), Face::Cursor(Cursor::TerrainHover), StateMeta::In; "cursor terrain hover on in aim")]
-	fn apply_facing(
-		target: SkillTarget,
-		face: Face,
+	#[test_case(StateMeta::Entering; "begin")]
+	#[test_case(StateMeta::In; "continuation")]
+	fn apply_skill_target_facing_on_aim(
 		meta: fn(SkillState) -> StateMeta<SkillState>,
 	) -> Result<(), MissingLastUpdate> {
 		let (mut app, agent) = setup()?;
 		app.world_mut().entity_mut(agent).insert((
-			Target(Some(target)),
 			_Dequeue {
 				active: Some(Box::new(move || {
 					Mock_Skill::new_mock(|mock| {
@@ -551,46 +524,7 @@ mod tests {
 			_Facing::new().with_mock(|mock| {
 				mock.expect_override_face()
 					.times(1)
-					.with(eq(face))
-					.return_const(());
-				mock.expect_stop_override_face().never();
-			}),
-		));
-
-		app.update();
-		Ok(())
-	}
-
-	#[test_case(SkillTarget::Entity(*TARGET), Face::Entity(*TARGET), StateMeta::Entering; "target on enter aim")]
-	#[test_case(SkillTarget::Cursor(Cursor::Direction), Face::Cursor(Cursor::Direction), StateMeta::Entering; "cursor direction on enter aim")]
-	#[test_case(SkillTarget::Cursor(Cursor::TerrainHover), Face::Cursor(Cursor::TerrainHover), StateMeta::Entering; "cursor terrain hover on enter aim")]
-	#[test_case(SkillTarget::Entity(*TARGET), Face::Entity(*TARGET), StateMeta::In; "target on in aim")]
-	#[test_case(SkillTarget::Cursor(Cursor::Direction), Face::Cursor(Cursor::Direction), StateMeta::In; "cursor direction on in aim")]
-	#[test_case(SkillTarget::Cursor(Cursor::TerrainHover), Face::Cursor(Cursor::TerrainHover), StateMeta::In; "cursor terrain hover on in aim")]
-	fn apply_facing_override_when_beginning_to_aim(
-		target: SkillTarget,
-		face: Face,
-		meta: fn(SkillState) -> StateMeta<SkillState>,
-	) -> Result<(), MissingLastUpdate> {
-		let (mut app, agent) = setup()?;
-		app.world_mut().entity_mut(agent).insert((
-			Target(Some(target)),
-			_Dequeue {
-				active: Some(Box::new(move || {
-					Mock_Skill::new_mock(|mock| {
-						mock.expect_behavior()
-							.return_const((SlotKey(0), RunSkillBehavior::default()));
-						mock.expect_updated_states().return_const(
-							HashSet::<StateMeta<SkillState>>::from([meta(SkillState::Aim)]),
-						);
-					})
-				})),
-			},
-			Transform::from_xyz(-1., -2., -3.),
-			_Facing::new().with_mock(|mock| {
-				mock.expect_override_face()
-					.times(1)
-					.with(eq(face))
+					.with(eq(Face::SkillTarget))
 					.return_const(());
 				mock.expect_stop_override_face().never();
 			}),
@@ -604,7 +538,6 @@ mod tests {
 	fn stop_facing_override_when_no_skills_active() -> Result<(), MissingLastUpdate> {
 		let (mut app, agent) = setup()?;
 		app.world_mut().entity_mut(agent).insert((
-			Target(Some(SkillTarget::Cursor(Cursor::Direction))),
 			_Dequeue { active: None },
 			Transform::from_xyz(-1., -2., -3.),
 			_Facing::new().with_mock(|mock| {

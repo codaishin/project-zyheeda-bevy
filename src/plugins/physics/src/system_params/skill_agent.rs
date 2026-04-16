@@ -7,11 +7,29 @@ use crate::components::{skill::Skill, target::Target};
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::{
 	traits::{
-		accessors::get::{GetContextMut, GetMut},
+		accessors::get::{ContextChanged, GetContext, GetContextMut, GetMut},
 		handles_skill_physics::{InitializedAgent, NotInitializedAgent},
 	},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
+
+#[derive(SystemParam)]
+pub struct SkillAgent<'w, 's> {
+	targets: Query<'w, 's, Ref<'static, Target>>,
+}
+
+impl GetContext<InitializedAgent> for SkillAgent<'_, '_> {
+	type TContext<'ctx> = SkillAgentContext<'ctx>;
+
+	fn get_context<'ctx>(
+		param: &'ctx SkillAgent,
+		InitializedAgent { entity }: InitializedAgent,
+	) -> Option<Self::TContext<'ctx>> {
+		Some(SkillAgentContext {
+			target: param.targets.get(entity).ok()?,
+		})
+	}
+}
 
 #[derive(SystemParam)]
 pub struct SkillAgentMut<'w, 's> {
@@ -47,6 +65,16 @@ impl GetContextMut<InitializedAgent> for SkillAgentMut<'_, '_> {
 		let target = param.targets.get_mut(entity).ok()?;
 
 		Some(SkillAgentContextMut { target })
+	}
+}
+
+pub struct SkillAgentContext<'ctx> {
+	target: Ref<'ctx, Target>,
+}
+
+impl ContextChanged for SkillAgentContext<'_> {
+	fn context_changed(&self) -> bool {
+		self.target.is_changed()
 	}
 }
 

@@ -3,7 +3,7 @@ use common::{
 	errors::Unreachable,
 	traits::{
 		handles_custom_assets::TryLoadFrom,
-		handles_skill_physics::{Effect, SkillCaster, SkillMount, SkillShape, SkillTarget},
+		handles_skill_physics::{Effect, SkillCaster, SkillMount, SkillShape},
 	},
 };
 use serde::{Deserialize, Serialize};
@@ -15,7 +15,6 @@ pub struct SkillDto {
 	pub(crate) projection_effects: Vec<Effect>,
 	pub(crate) caster: SkillCaster,
 	pub(crate) mount: SkillMount,
-	pub(crate) target: SkillTarget,
 }
 
 impl From<Skill> for SkillDto {
@@ -26,7 +25,6 @@ impl From<Skill> for SkillDto {
 			projection_effects: skill.projection_effects,
 			caster: skill.caster,
 			mount: skill.mount,
-			target: skill.target,
 		}
 	}
 }
@@ -45,7 +43,6 @@ impl TryLoadFrom<SkillDto> for Skill {
 			projection_effects: dto.projection_effects,
 			caster: dto.caster,
 			mount: dto.mount,
-			target: dto.target,
 		})
 	}
 }

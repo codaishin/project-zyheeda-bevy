@@ -19,7 +19,6 @@ impl Spawn for SkillAgentMut<'_, '_> {
 				projection_effects: args.projection_effects.to_vec(),
 				caster: args.caster,
 				mount: args.mount,
-				target: args.target,
 			},
 			persistent_entity,
 		));
@@ -34,20 +33,14 @@ mod tests {
 	use super::*;
 	use crate::system_params::skill_agent::SkillAgentMut;
 	use bevy::{
-		asset::uuid::uuid,
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
 	};
 	use common::{
 		CommonPlugin,
-		traits::handles_skill_physics::{
-			SkillCaster,
-			SkillMount,
-			SkillShape,
-			SkillTarget,
-			shield::Shield,
-		},
+		traits::handles_skill_physics::{SkillCaster, SkillMount, SkillShape, shield::Shield},
 	};
+	use std::sync::LazyLock;
 	use testing::{SingleThreadedApp, assert_count};
 
 	fn setup() -> App {
@@ -58,18 +51,13 @@ mod tests {
 		app
 	}
 
-	const ARGS: SpawnArgs = SpawnArgs {
+	static ARGS: LazyLock<SpawnArgs> = LazyLock::new(|| SpawnArgs {
 		shape: &SkillShape::Shield(Shield),
 		contact_effects: &[],
 		projection_effects: &[],
-		caster: SkillCaster(PersistentEntity::from_uuid(uuid!(
-			"3db021df-666e-4858-8fc4-845d0639a2e7"
-		))),
+		caster: SkillCaster(PersistentEntity::default()),
 		mount: SkillMount::Neutral,
-		target: SkillTarget::Entity(PersistentEntity::from_uuid(uuid!(
-			"ae8d9c8c-cc4b-4ea0-a20d-f63992a9173f"
-		))),
-	};
+	});
 
 	mod spawn {
 		use super::*;
@@ -80,7 +68,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |mut p: SkillAgentMut| {
-					p.spawn(ARGS);
+					p.spawn(*ARGS);
 				})?;
 
 			let mut skills = app
@@ -96,7 +84,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |mut p: SkillAgentMut| {
-					p.spawn(ARGS);
+					p.spawn(*ARGS);
 				})?;
 
 			let mut skills = app
@@ -111,7 +99,6 @@ mod tests {
 					projection_effects: ARGS.projection_effects.to_vec(),
 					caster: ARGS.caster,
 					mount: ARGS.mount,
-					target: ARGS.target
 				},
 				skill
 			);
@@ -128,7 +115,7 @@ mod tests {
 
 			let root = app
 				.world_mut()
-				.run_system_once(move |mut p: SkillAgentMut| p.spawn(ARGS))?;
+				.run_system_once(move |mut p: SkillAgentMut| p.spawn(*ARGS))?;
 
 			let mut skills = app.world_mut().query::<&PersistentEntity>();
 			let [skill] = assert_count!(1, skills.iter(app.world()));

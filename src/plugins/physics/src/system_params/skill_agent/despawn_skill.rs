@@ -29,13 +29,7 @@ mod tests {
 	use common::{
 		CommonPlugin,
 		components::persistent_entity::PersistentEntity,
-		traits::handles_skill_physics::{
-			SkillCaster,
-			SkillMount,
-			SkillShape,
-			SkillTarget,
-			shield::Shield,
-		},
+		traits::handles_skill_physics::{SkillCaster, SkillMount, SkillShape, shield::Shield},
 	};
 	use testing::SingleThreadedApp;
 
@@ -55,7 +49,6 @@ mod tests {
 			projection_effects: vec![],
 			caster: SkillCaster(PersistentEntity::default()),
 			mount: SkillMount::Neutral,
-			target: SkillTarget::Entity(PersistentEntity::default()),
 		}
 	}
 
