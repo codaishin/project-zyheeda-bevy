@@ -19,6 +19,7 @@ pub(crate) mod prevent_tunneling;
 pub(crate) mod set_velocity_forward;
 pub(crate) mod skill;
 pub(crate) mod skill_transform;
+pub(crate) mod target;
 pub(crate) mod velocity;
 pub(crate) mod when_traveled;
 pub(crate) mod world_camera;

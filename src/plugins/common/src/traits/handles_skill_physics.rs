@@ -8,7 +8,7 @@ use crate::{
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
 	tools::{Index, action_key::slot::SlotKey, bone_name::BoneName},
 	traits::{
-		accessors::get::GetContextMut,
+		accessors::get::{GetContext, GetContextMut},
 		handles_skill_physics::{
 			beam::Beam,
 			ground_target::SphereAoE,
@@ -29,12 +29,12 @@ use std::{
 };
 
 pub trait HandlesSkillPhysics:
-	HandlesNewPhysicalSkill + HandlesPhysicalSkillSpawnPoints + HandlesPhysicalSkillComponents
+	HandlesNewPhysicalSkill + HandlesPhysicalSkillAgent + HandlesPhysicalSkillComponents
 {
 }
 
 impl<T> HandlesSkillPhysics for T where
-	T: HandlesNewPhysicalSkill + HandlesPhysicalSkillSpawnPoints + HandlesPhysicalSkillComponents
+	T: HandlesNewPhysicalSkill + HandlesPhysicalSkillAgent + HandlesPhysicalSkillComponents
 {
 }
 
@@ -75,29 +75,62 @@ where
 	}
 }
 
-pub trait HandlesPhysicalSkillSpawnPoints {
-	type TSkillSpawnPointsMut<'w, 's>: SystemParam
-		+ for<'c> GetContextMut<SkillSpawnPoints, TContext<'c>: RegisterDefinition>;
+pub trait HandlesPhysicalSkillAgent {
+	type TAgent<'w, 's>: SystemParam + for<'c> GetContext<InitializedAgent, TContext<'c>: Target>;
+	type TAgentMut<'w, 's>: SystemParam
+		+ for<'c> GetContextMut<NotInitializedAgent, TContext<'c>: Initialize>
+		+ for<'c> GetContextMut<InitializedAgent, TContext<'c>: TargetMut>;
 }
 
-pub type SkillSpawnPointsMut<'w, 's, T> =
-	<T as HandlesPhysicalSkillSpawnPoints>::TSkillSpawnPointsMut<'w, 's>;
+pub type SkillAgent<'w, 's, T> = <T as HandlesPhysicalSkillAgent>::TAgent<'w, 's>;
+pub type SkillAgentMut<'w, 's, T> = <T as HandlesPhysicalSkillAgent>::TAgentMut<'w, 's>;
 
 #[derive(EntityKey)]
-pub struct SkillSpawnPoints {
+pub struct NotInitializedAgent {
 	pub entity: Entity,
 }
 
-pub trait RegisterDefinition {
-	fn register_definition(&mut self, definition: HashMap<BoneName, SkillSpawner>);
+#[derive(EntityKey)]
+pub struct InitializedAgent {
+	pub entity: Entity,
 }
 
-impl<T> RegisterDefinition for T
+pub trait Initialize {
+	fn initialize(&mut self, definition: HashMap<BoneName, SkillMount>);
+}
+
+impl<T> Initialize for T
 where
-	T: DerefMut<Target: RegisterDefinition>,
+	T: DerefMut<Target: Initialize>,
 {
-	fn register_definition(&mut self, definition: HashMap<BoneName, SkillSpawner>) {
-		self.deref_mut().register_definition(definition);
+	fn initialize(&mut self, definition: HashMap<BoneName, SkillMount>) {
+		self.deref_mut().initialize(definition);
+	}
+}
+
+pub trait Target {
+	fn target(&self) -> Option<&SkillTarget>;
+}
+
+impl<T> Target for T
+where
+	T: Deref<Target: Target>,
+{
+	fn target(&self) -> Option<&SkillTarget> {
+		self.deref().target()
+	}
+}
+
+pub trait TargetMut: Target {
+	fn target_mut(&mut self) -> &mut Option<SkillTarget>;
+}
+
+impl<T> TargetMut for T
+where
+	T: DerefMut<Target: TargetMut>,
+{
+	fn target_mut(&mut self) -> &mut Option<SkillTarget> {
+		self.deref_mut().target_mut()
 	}
 }
 
@@ -110,8 +143,7 @@ pub struct SpawnArgs<'a> {
 	pub contact_effects: &'a [Effect],
 	pub projection_effects: &'a [Effect],
 	pub caster: SkillCaster,
-	pub spawner: SkillSpawner,
-	pub target: SkillTarget,
+	pub mount: SkillMount,
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -172,17 +204,17 @@ pub enum Cursor {
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Default, Serialize, Deserialize)]
-pub enum SkillSpawner {
+pub enum SkillMount {
 	#[default]
 	Neutral,
 	Slot(SlotKey),
 }
 
-impl From<SkillSpawner> for Index<usize> {
-	fn from(value: SkillSpawner) -> Self {
+impl From<SkillMount> for Index<usize> {
+	fn from(value: SkillMount) -> Self {
 		match value {
-			SkillSpawner::Neutral => Index(0),
-			SkillSpawner::Slot(SlotKey(slot)) => Index(slot as usize + 1),
+			SkillMount::Neutral => Index(0),
+			SkillMount::Slot(SlotKey(slot)) => Index(slot as usize + 1),
 		}
 	}
 }
@@ -195,10 +227,10 @@ mod tests {
 	#[test]
 	fn to_index() {
 		let indices = [
-			SkillSpawner::Neutral,
-			SkillSpawner::Slot(SlotKey(0)),
-			SkillSpawner::Slot(SlotKey(42)),
-			SkillSpawner::Slot(SlotKey(255)),
+			SkillMount::Neutral,
+			SkillMount::Slot(SlotKey(0)),
+			SkillMount::Slot(SlotKey(42)),
+			SkillMount::Slot(SlotKey(255)),
 		]
 		.into_iter()
 		.map(Index::from)

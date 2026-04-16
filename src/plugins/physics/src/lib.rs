@@ -29,6 +29,7 @@ use crate::{
 		prevent_tunneling::PreventTunneling,
 		set_velocity_forward::SetVelocityForward,
 		skill::{ContactInteractionTarget, ProjectionInteractionTarget, Skill},
+		target::Target,
 		velocity::LinearVelocity,
 		when_traveled::DestroyAfterDistanceTraveled,
 		world_camera::WorldCamera,
@@ -39,7 +40,7 @@ use crate::{
 	system_params::{
 		config::ConfigParamMut,
 		ray_caster::RayCaster,
-		skill_spawner::SkillSpawnerMut,
+		skill_agent::{SkillAgent, SkillAgentMut},
 		update_ongoing_interactions::UpdateOngoingInteractions,
 	},
 	systems::{
@@ -58,6 +59,7 @@ use common::{
 	tools::plugin_system_set::PluginSystemSet,
 	traits::{
 		delta::Delta,
+		handles_animations::{AnimationsSystemParamMut, HandlesAnimations},
 		handles_physics::{
 			HandlesMotion,
 			HandlesPhysicalEffectTargets,
@@ -67,8 +69,8 @@ use common::{
 		handles_saving::HandlesSaving,
 		handles_skill_physics::{
 			HandlesNewPhysicalSkill,
+			HandlesPhysicalSkillAgent,
 			HandlesPhysicalSkillComponents,
-			HandlesPhysicalSkillSpawnPoints,
 		},
 		prefab::AddPrefabObserver,
 		system_set_definition::SystemSetDefinition,
@@ -85,11 +87,12 @@ pub struct PhysicsPlugin<TDependencies> {
 	_p: PhantomData<TDependencies>,
 }
 
-impl<TSaveGame> PhysicsPlugin<TSaveGame>
+impl<TSaveGame, TAnimations> PhysicsPlugin<(TSaveGame, TAnimations)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
+	TAnimations: ThreadSafe + HandlesAnimations,
 {
-	pub fn new(target_fps: u32, _: &TSaveGame) -> Self {
+	pub fn new(target_fps: u32, _: &TSaveGame, _: &TAnimations) -> Self {
 		Self {
 			target_fps,
 			_p: PhantomData,
@@ -97,9 +100,10 @@ where
 	}
 }
 
-impl<TSaveGame> Plugin for PhysicsPlugin<TSaveGame>
+impl<TSaveGame, TAnimations> Plugin for PhysicsPlugin<(TSaveGame, TAnimations)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
+	TAnimations: ThreadSafe + HandlesAnimations,
 {
 	fn build(&self, app: &mut App) {
 		#[cfg(debug_assertions)]
@@ -107,6 +111,7 @@ where
 
 		TSaveGame::register_savable_component::<ApplyCharacterMotion>(app);
 		TSaveGame::register_savable_component::<Skill>(app);
+		TSaveGame::register_savable_component::<Target>(app);
 		TSaveGame::register_savable_component::<LinearVelocity>(app);
 		TSaveGame::register_savable_component::<CharacterGravity>(app);
 
@@ -140,6 +145,11 @@ where
 				)
 					.chain()
 					.in_set(PhysicsSystems),
+			)
+			// Animations
+			.add_systems(
+				Update,
+				Target::update_pitch::<RayCaster, AnimationsSystemParamMut<TAnimations>>,
 			)
 			// Skills
 			.register_required_components::<Skill, TSaveGame::TSaveEntityMarker>()
@@ -268,12 +278,13 @@ impl<TDependencies> HandlesMotion for PhysicsPlugin<TDependencies> {
 	type TCharacterMotion = ApplyCharacterMotion;
 }
 
-impl<TDependencies> HandlesPhysicalSkillSpawnPoints for PhysicsPlugin<TDependencies> {
-	type TSkillSpawnPointsMut<'w, 's> = SkillSpawnerMut<'w, 's>;
+impl<TDependencies> HandlesPhysicalSkillAgent for PhysicsPlugin<TDependencies> {
+	type TAgent<'w, 's> = SkillAgent<'w, 's>;
+	type TAgentMut<'w, 's> = SkillAgentMut<'w, 's>;
 }
 
 impl<TDependencies> HandlesNewPhysicalSkill for PhysicsPlugin<TDependencies> {
-	type TSkillSpawnerMut<'w, 's> = SkillSpawnerMut<'w, 's>;
+	type TSkillSpawnerMut<'w, 's> = SkillAgentMut<'w, 's>;
 }
 
 impl<TDependencies> HandlesPhysicalSkillComponents for PhysicsPlugin<TDependencies> {

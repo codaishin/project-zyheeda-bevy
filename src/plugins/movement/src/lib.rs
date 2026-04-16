@@ -36,6 +36,7 @@ use common::{
 			RaycastSystemParam,
 		},
 		handles_saving::HandlesSaving,
+		handles_skill_physics::{HandlesSkillPhysics, SkillAgent},
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 	},
@@ -56,7 +57,8 @@ where
 		+ SystemSetDefinition
 		+ HandlesMotion
 		+ HandlesAllPhysicalEffects
-		+ HandlesRaycast,
+		+ HandlesRaycast
+		+ HandlesSkillPhysics,
 	TPathing: ThreadSafe + HandlesPathFinding,
 {
 	#[allow(clippy::too_many_arguments)]
@@ -81,7 +83,8 @@ where
 		+ SystemSetDefinition
 		+ HandlesMotion
 		+ HandlesAllPhysicalEffects
-		+ HandlesRaycast,
+		+ HandlesRaycast
+		+ HandlesSkillPhysics,
 	TPathing: ThreadSafe + HandlesPathFinding,
 {
 	fn build(&self, app: &mut App) {
@@ -101,7 +104,8 @@ where
 				TPhysics::TCharacterMotion::update_speed,
 				TPhysics::TCharacterMotion::animate_forward::<AnimationsSystemParamMut<TAnimations>>,
 				TPhysics::TCharacterMotion::set_facing,
-				SetFace::get_faces.pipe(execute_face::<RaycastSystemParam<TPhysics>>),
+				SetFace::get_faces
+					.pipe(execute_face::<RaycastSystemParam<TPhysics>, SkillAgent<TPhysics>>),
 				MovementParam::<TPhysics::TCharacterMotion>::update_just_removed,
 			)
 				.chain()

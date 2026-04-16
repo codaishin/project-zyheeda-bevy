@@ -26,7 +26,7 @@ impl SkillBehaviorConfig {
 }
 
 impl SkillConfigData for SkillBehaviorConfig {
-	fn use_neutral_spawn(&self) -> bool {
+	fn use_neutral_mount(&self) -> bool {
 		matches!(
 			&self.shape,
 			SkillShape::Shield(_) | SkillShape::SphereAoE(_)

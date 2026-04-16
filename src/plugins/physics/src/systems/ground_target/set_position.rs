@@ -1,4 +1,4 @@
-use crate::components::ground_target::GroundTarget;
+use crate::components::{ground_target::GroundTarget, target::Target};
 use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
@@ -16,21 +16,27 @@ impl GroundTarget {
 	pub(crate) fn set_position<TRayCaster>(
 		mut cmd: ZyheedaCommands,
 		transforms: Query<&Transform>,
+		targets: Query<&Target>,
 		ground_targets: Query<(Entity, &GroundTarget), Added<GroundTarget>>,
 		mut ray_caster: StaticSystemParam<TRayCaster>,
 	) where
 		TRayCaster: for<'w, 's> SystemParam<Item<'w, 's>: Raycast<MouseHover>>,
 	{
-		for (entity, target) in &ground_targets {
-			let Some(mut transform) = target.transform(&cmd, transforms, &mut ray_caster) else {
+		for (entity, ground_target) in &ground_targets {
+			let Some(caster) = cmd.get(&ground_target.caster.0) else {
 				continue;
 			};
-			let Some(caster) = cmd.get(&target.caster.0) else {
+			let Ok(Target(Some(target))) = targets.get(caster) else {
+				continue;
+			};
+
+			let transform = ground_target.transform(&cmd, transforms, *target, &mut ray_caster);
+			let Some(mut transform) = transform else {
 				continue;
 			};
 
 			if let Ok(caster) = transforms.get(caster) {
-				target.correct_for_max_range(&mut transform, caster);
+				ground_target.correct_for_max_range(&mut transform, caster);
 				Self::sync_forward(&mut transform, caster);
 			}
 
@@ -44,9 +50,10 @@ impl GroundTarget {
 		&self,
 		commands: &ZyheedaCommands,
 		transforms: Query<&Transform>,
+		target: SkillTarget,
 		ray_caster: &mut impl Raycast<MouseHover>,
 	) -> Option<Transform> {
-		match self.target {
+		match target {
 			SkillTarget::Cursor(_) => ray_caster
 				.raycast(MouseHover::TERRAIN_WITHOUT_EXCLUDES)
 				.and_then(mouse_hover_translation(transforms))
@@ -88,6 +95,8 @@ fn mouse_hover_translation(
 #[cfg(test)]
 mod tests {
 	#![allow(clippy::unwrap_used)]
+	use crate::components::target::Target;
+
 	use super::*;
 	use common::{
 		components::persistent_entity::PersistentEntity,
@@ -139,7 +148,8 @@ mod tests {
 	fn set_to_cursor_terrain(cursor: Cursor) {
 		let mut app = setup();
 		let caster = SkillCaster::default();
-		app.world_mut().spawn((Transform::default(), *caster));
+		app.world_mut()
+			.spawn((Transform::default(), *caster, Target::from(cursor)));
 		app.insert_resource(_RayCaster::new().with_mock(|mock| {
 			mock.expect_raycast()
 				.once()
@@ -147,7 +157,7 @@ mod tests {
 		}));
 		let entity = app
 			.world_mut()
-			.spawn(GroundTarget::with_caster(caster).with_target(SkillTarget::Cursor(cursor)))
+			.spawn(GroundTarget::with_caster(caster))
 			.id();
 
 		app.update();
@@ -171,7 +181,8 @@ mod tests {
 				scale: Vec3::splat(42.),
 			})
 			.id();
-		app.world_mut().spawn((Transform::default(), *caster));
+		app.world_mut()
+			.spawn((Transform::default(), *caster, Target::from(cursor)));
 		app.insert_resource(_RayCaster::new().with_mock(|mock| {
 			mock.expect_raycast()
 				.once()
@@ -182,7 +193,7 @@ mod tests {
 		}));
 		let entity = app
 			.world_mut()
-			.spawn(GroundTarget::with_caster(caster).with_target(SkillTarget::Cursor(cursor)))
+			.spawn(GroundTarget::with_caster(caster))
 			.id();
 
 		app.update();
@@ -198,12 +209,13 @@ mod tests {
 		let mut app = setup();
 		let caster = SkillCaster::default();
 		let target = PersistentEntity::default();
-		app.world_mut().spawn((Transform::default(), *caster));
+		app.world_mut()
+			.spawn((Transform::default(), *caster, Target::from(target)));
 		app.world_mut()
 			.spawn((Transform::from_xyz(3., 7., -1.), target));
 		let entity = app
 			.world_mut()
-			.spawn(GroundTarget::with_caster(caster).with_target(target))
+			.spawn(GroundTarget::with_caster(caster))
 			.id();
 
 		app.update();
@@ -219,14 +231,15 @@ mod tests {
 		let mut app = setup();
 		let caster = SkillCaster::default();
 		let target = PersistentEntity::default();
-		app.world_mut().spawn((Transform::default(), *caster));
+		app.world_mut()
+			.spawn((Transform::default(), *caster, Target::from(target)));
 		app.world_mut().spawn((
 			Transform::from_xyz(3., 7., -1.).with_scale(Vec3::splat(42.)),
 			target,
 		));
 		let entity = app
 			.world_mut()
-			.spawn(GroundTarget::with_caster(caster).with_target(target))
+			.spawn(GroundTarget::with_caster(caster))
 			.id();
 
 		app.update();
@@ -242,16 +255,13 @@ mod tests {
 		let mut app = setup();
 		let caster = SkillCaster::default();
 		let target = PersistentEntity::default();
-		app.world_mut().spawn((Transform::default(), *caster));
+		app.world_mut()
+			.spawn((Transform::default(), *caster, Target::from(target)));
 		app.world_mut()
 			.spawn((Transform::from_xyz(6., 0., 8.), target));
 		let entity = app
 			.world_mut()
-			.spawn(
-				GroundTarget::with_caster(caster)
-					.with_target(target)
-					.with_max_range(Units::from(5.)),
-			)
+			.spawn(GroundTarget::with_caster(caster).with_max_range(Units::from(5.)))
 			.id();
 
 		app.update();
@@ -267,17 +277,16 @@ mod tests {
 		let mut app = setup();
 		let caster = SkillCaster::default();
 		let target = PersistentEntity::default();
-		app.world_mut()
-			.spawn((Transform::from_xyz(1., 0., 0.), *caster));
+		app.world_mut().spawn((
+			Transform::from_xyz(1., 0., 0.),
+			*caster,
+			Target::from(target),
+		));
 		app.world_mut()
 			.spawn((Transform::from_xyz(7., 0., 8.), target));
 		let entity = app
 			.world_mut()
-			.spawn(
-				GroundTarget::with_caster(caster)
-					.with_target(target)
-					.with_max_range(Units::from(5.)),
-			)
+			.spawn(GroundTarget::with_caster(caster).with_max_range(Units::from(5.)))
 			.id();
 
 		app.update();
@@ -293,16 +302,12 @@ mod tests {
 		let mut app = setup();
 		let caster = SkillCaster::default();
 		let target = PersistentEntity::default();
-		app.world_mut().spawn(*caster);
+		app.world_mut().spawn((*caster, Target::from(target)));
 		app.world_mut()
 			.spawn((Transform::from_xyz(6., 0., 8.), target));
 		let entity = app
 			.world_mut()
-			.spawn(
-				GroundTarget::with_caster(caster)
-					.with_target(target)
-					.with_max_range(Units::from(5.)),
-			)
+			.spawn(GroundTarget::with_caster(caster).with_max_range(Units::from(5.)))
 			.id();
 
 		app.update();
@@ -321,12 +326,13 @@ mod tests {
 		app.world_mut().spawn((
 			Transform::default().looking_to(Vec3::new(3., 0., 4.), Vec3::Y),
 			*caster,
+			Target::from(target),
 		));
 		app.world_mut()
 			.spawn((Transform::from_xyz(1., 0., 1.), target));
 		let entity = app
 			.world_mut()
-			.spawn(GroundTarget::with_caster(caster).with_target(target))
+			.spawn(GroundTarget::with_caster(caster))
 			.id();
 
 		app.update();
@@ -343,12 +349,13 @@ mod tests {
 		let mut app = setup();
 		let caster = SkillCaster::default();
 		let target = PersistentEntity::default();
-		app.world_mut().spawn((Transform::default(), *caster));
+		app.world_mut()
+			.spawn((Transform::default(), *caster, Target::from(target)));
 		app.world_mut()
 			.spawn((Transform::from_xyz(1., 0., 1.), target));
 		let entity = app
 			.world_mut()
-			.spawn(GroundTarget::with_caster(caster).with_target(target))
+			.spawn(GroundTarget::with_caster(caster))
 			.id();
 
 		app.update();

@@ -2,34 +2,41 @@ use crate::components::enemy::{Enemy, attack_phase::EnemyAttackPhase, attacking:
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
 	accessors::get::GetContextMut,
-	handles_loadout::{CurrentTargetMut, HeldSkillsMut, skills::Skills},
-	handles_skill_physics::SkillTarget,
+	handles_loadout::{HeldSkillsMut, skills::Skills},
+	handles_skill_physics::{InitializedAgent, SkillTarget, TargetMut},
 };
 
 impl Enemy {
-	pub(crate) fn hold_attack<TLoadout>(
-		mut skills: StaticSystemParam<TLoadout>,
+	pub(crate) fn hold_attack<TPhysics, TLoadout>(
+		mut physics: StaticSystemParam<TPhysics>,
+		mut loadout: StaticSystemParam<TLoadout>,
 		attacking: Query<(Entity, &EnemyAttackPhase, &Attacking), Changed<EnemyAttackPhase>>,
 		mut stopped_attacking: RemovedComponents<EnemyAttackPhase>,
 	) where
+		TPhysics: for<'c> GetContextMut<InitializedAgent, TContext<'c>: TargetMut>,
 		TLoadout: for<'c> GetContextMut<Skills, TContext<'c>: HeldSkillsMut>,
 	{
 		for (entity, phase, Attacking { player, .. }) in &attacking {
-			let Some(mut ctx) = TLoadout::get_context_mut(&mut skills, Skills { entity }) else {
+			let agent = InitializedAgent { entity };
+			if let Some(mut ctx) = TPhysics::get_context_mut(&mut physics, agent) {
+				*ctx.target_mut() = Some(SkillTarget::Entity(*player));
+			}
+
+			let skills = Skills { entity };
+			let Some(mut ctx) = TLoadout::get_context_mut(&mut loadout, skills) else {
 				continue;
 			};
+
 			ctx.held_skills_mut().clear();
 
-			let EnemyAttackPhase::HoldSkill { key, .. } = phase else {
-				continue;
+			if let EnemyAttackPhase::HoldSkill { key, .. } = phase {
+				ctx.held_skills_mut().insert(*key);
 			};
-
-			ctx.held_skills_mut().insert(*key);
-			*ctx.current_target_mut() = Some(SkillTarget::Entity(*player));
 		}
 
 		for entity in stopped_attacking.read() {
-			let Some(mut ctx) = TLoadout::get_context_mut(&mut skills, Skills { entity }) else {
+			let skills = Skills { entity };
+			let Some(mut ctx) = TLoadout::get_context_mut(&mut loadout, skills) else {
 				continue;
 			};
 
@@ -47,31 +54,39 @@ mod tests {
 		components::persistent_entity::PersistentEntity,
 		tools::action_key::slot::SlotKey,
 		traits::{
-			handles_loadout::{CurrentTarget, CurrentTargetMut, HeldSkills},
-			handles_skill_physics::SkillTarget,
+			handles_loadout::HeldSkills,
+			handles_skill_physics::{SkillTarget, Target},
 		},
 	};
 	use std::{collections::HashSet, sync::LazyLock, time::Duration};
 	use testing::SingleThreadedApp;
 
 	#[derive(Component, Debug, PartialEq, Default)]
-	struct _Loadout {
-		slots: HashSet<SlotKey>,
+	struct _Physics {
 		target: Option<SkillTarget>,
 	}
 
-	impl _Loadout {
-		fn with_target(mut self, target: Option<SkillTarget>) -> Self {
-			self.target = target;
-			self
+	impl Target for _Physics {
+		fn target(&self) -> Option<&SkillTarget> {
+			self.target.as_ref()
 		}
+	}
+
+	impl TargetMut for _Physics {
+		fn target_mut(&mut self) -> &mut Option<SkillTarget> {
+			&mut self.target
+		}
+	}
+
+	#[derive(Component, Debug, PartialEq, Default)]
+	struct _Loadout {
+		slots: HashSet<SlotKey>,
 	}
 
 	impl<const N: usize> From<[SlotKey; N]> for _Loadout {
 		fn from(slots: [SlotKey; N]) -> Self {
 			Self {
 				slots: HashSet::from(slots),
-				target: None,
 			}
 		}
 	}
@@ -88,27 +103,46 @@ mod tests {
 		}
 	}
 
-	impl CurrentTarget for _Loadout {
-		fn current_target(&self) -> Option<&SkillTarget> {
-			self.target.as_ref()
-		}
-	}
-
-	impl CurrentTargetMut for _Loadout {
-		fn current_target_mut(&mut self) -> &mut Option<SkillTarget> {
-			&mut self.target
-		}
-	}
-
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, Enemy::hold_attack::<Query<&mut _Loadout>>);
+		app.add_systems(
+			Update,
+			Enemy::hold_attack::<Query<&mut _Physics>, Query<&mut _Loadout>>,
+		);
 
 		app
 	}
 
 	static PLAYER: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
+
+	#[test]
+	fn set_target() {
+		let mut app = setup();
+		let entity = app
+			.world_mut()
+			.spawn((
+				Attacking {
+					player: *PLAYER,
+					has_los: true,
+				},
+				EnemyAttackPhase::HoldSkill {
+					key: SlotKey(42),
+					holding: Duration::default(),
+				},
+				_Physics::default(),
+			))
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&_Physics {
+				target: Some(SkillTarget::Entity(*PLAYER))
+			}),
+			app.world().entity(entity).get::<_Physics>(),
+		);
+	}
 
 	#[test]
 	fn insert_held_skill() {
@@ -131,7 +165,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Loadout::from([SlotKey(42)]).with_target(Some(SkillTarget::Entity(*PLAYER)))),
+			Some(&_Loadout::from([SlotKey(42)])),
 			app.world().entity(entity).get::<_Loadout>(),
 		);
 	}
@@ -157,7 +191,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Loadout::from([SlotKey(42)]).with_target(Some(SkillTarget::Entity(*PLAYER)))),
+			Some(&_Loadout::from([SlotKey(42)])),
 			app.world().entity(entity).get::<_Loadout>(),
 		);
 	}
@@ -210,7 +244,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Loadout::default().with_target(Some(SkillTarget::Entity(*PLAYER)))),
+			Some(&_Loadout::default()),
 			app.world().entity(entity).get::<_Loadout>(),
 		);
 	}
@@ -243,7 +277,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Loadout::default().with_target(Some(SkillTarget::Entity(*PLAYER)))),
+			Some(&_Loadout::default()),
 			app.world().entity(entity).get::<_Loadout>(),
 		);
 	}
@@ -280,7 +314,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&_Loadout::from([SlotKey(42)]).with_target(Some(SkillTarget::Entity(*PLAYER)))),
+			Some(&_Loadout::from([SlotKey(42)])),
 			app.world().entity(entity).get::<_Loadout>(),
 		);
 	}

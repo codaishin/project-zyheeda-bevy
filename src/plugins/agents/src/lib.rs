@@ -48,7 +48,7 @@ use common::{
 		},
 		handles_player::{HandlesPlayer, PlayerMainCamera},
 		handles_saving::HandlesSaving,
-		handles_skill_physics::{HandlesPhysicalSkillSpawnPoints, SkillSpawnPointsMut},
+		handles_skill_physics::{HandlesPhysicalSkillAgent, SkillAgentMut},
 		prefab::AddPrefabObserver,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
@@ -78,7 +78,7 @@ where
 		+ HandlesPhysicalEffectTargets
 		+ HandlesPhysicsConfig
 		+ HandlesRaycast
-		+ HandlesPhysicalSkillSpawnPoints,
+		+ HandlesPhysicalSkillAgent,
 	TAnimations: ThreadSafe + HandlesAnimations,
 	TMaps: ThreadSafe + HandlesMapGeneration,
 	TMovement: ThreadSafe + HandlesMovement + HandlesOrientation,
@@ -118,7 +118,7 @@ where
 		+ HandlesPhysicalEffectTargets
 		+ HandlesPhysicsConfig
 		+ HandlesRaycast
-		+ HandlesPhysicalSkillSpawnPoints,
+		+ HandlesPhysicalSkillAgent,
 	TAnimations: ThreadSafe + HandlesAnimations,
 	TMaps: ThreadSafe + HandlesMapGeneration,
 	TMovement: ThreadSafe + HandlesMovement + HandlesOrientation,
@@ -142,7 +142,7 @@ where
 			Update,
 			ApplyAgentConfig::system::<
 				LoadoutPrepParam<TLoadout>,
-				SkillSpawnPointsMut<TPhysics>,
+				SkillAgentMut<TPhysics>,
 				AnimationsSystemParamMut<TAnimations>,
 				MovementSystemConfigParam<TMovement>,
 				PhysicsConfigMut<TPhysics>,
@@ -179,7 +179,11 @@ where
 						MovementSystemParam<TMovement>,
 						AnimationsSystemParamMut<TAnimations>,
 					>,
-					Player::use_skills::<InputSystemParam<TInput>, LoadoutActivityMutParam<TLoadout>>,
+					Player::use_skills::<
+						InputSystemParam<TInput>,
+						SkillAgentMut<TPhysics>,
+						LoadoutActivityMutParam<TLoadout>,
+					>,
 				)
 					.chain(),
 				(
@@ -192,7 +196,7 @@ where
 					>,
 					ring_rotation,
 					Enemy::begin_attack,
-					Enemy::hold_attack::<LoadoutActivityMutParam<TLoadout>>,
+					Enemy::hold_attack::<SkillAgentMut<TPhysics>, LoadoutActivityMutParam<TLoadout>>,
 					Update::delta.pipe(Enemy::advance_attack_phase),
 				)
 					.chain(),

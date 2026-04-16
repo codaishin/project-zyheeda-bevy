@@ -4,7 +4,6 @@ mod write;
 use crate::components::{
 	held_slots::{Current, HeldSlots},
 	queue::Queue,
-	target::Target,
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::traits::{
@@ -16,15 +15,7 @@ use zyheeda_core::prelude::*;
 #[derive(SystemParam)]
 pub struct LoadoutActivityReader<'w, 's> {
 	#[allow(clippy::type_complexity)]
-	loadout: Query<
-		'w,
-		's,
-		(
-			Ref<'static, Queue>,
-			Ref<'static, HeldSlots<Current>>,
-			Ref<'static, Target>,
-		),
-	>,
+	loadout: Query<'w, 's, (Ref<'static, Queue>, Ref<'static, HeldSlots<Current>>)>,
 }
 
 impl GetContext<Skills> for LoadoutActivityReader<'_, '_> {
@@ -34,31 +25,26 @@ impl GetContext<Skills> for LoadoutActivityReader<'_, '_> {
 		param: &'ctx LoadoutActivityReader,
 		Skills { entity }: Skills,
 	) -> Option<Self::TContext<'ctx>> {
-		let (queue, held_slots, target) = param.loadout.get(entity).ok()?;
+		let (queue, held_slots) = param.loadout.get(entity).ok()?;
 
-		Some(LoadoutActivityReadContext {
-			queue,
-			held_slots,
-			target,
-		})
+		Some(LoadoutActivityReadContext { queue, held_slots })
 	}
 }
 
 pub struct LoadoutActivityReadContext<'a> {
 	queue: Ref<'a, Queue>,
 	held_slots: Ref<'a, HeldSlots<Current>>,
-	target: Ref<'a, Target>,
 }
 
 impl ContextChanged for LoadoutActivityReadContext<'_> {
 	fn context_changed(&self) -> bool {
-		any!(is_changed(self.queue, self.held_slots, self.target))
+		any!(is_changed(self.queue, self.held_slots))
 	}
 }
 
 #[derive(SystemParam)]
 pub struct LoadoutActivityWriter<'w, 's> {
-	held_slots: Query<'w, 's, (&'static mut HeldSlots<Current>, &'static mut Target)>,
+	held_slots: Query<'w, 's, &'static mut HeldSlots<Current>>,
 }
 
 impl GetContextMut<Skills> for LoadoutActivityWriter<'_, '_> {
@@ -68,13 +54,12 @@ impl GetContextMut<Skills> for LoadoutActivityWriter<'_, '_> {
 		param: &'ctx mut LoadoutActivityWriter,
 		Skills { entity }: Skills,
 	) -> Option<Self::TContext<'ctx>> {
-		let (held_slots, target) = param.held_slots.get_mut(entity).ok()?;
+		let held_slots = param.held_slots.get_mut(entity).ok()?;
 
-		Some(LoadoutActivityWriteContext { held_slots, target })
+		Some(LoadoutActivityWriteContext { held_slots })
 	}
 }
 
 pub struct LoadoutActivityWriteContext<'a> {
 	held_slots: Mut<'a, HeldSlots<Current>>,
-	target: Mut<'a, Target>,
 }
