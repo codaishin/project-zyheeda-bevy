@@ -1,10 +1,7 @@
 use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
-	traits::{
-		accessors::get::View,
-		handles_skill_physics::{SkillMount, SkillTarget},
-	},
+	traits::{accessors::get::View, handles_skill_physics::SkillMount},
 };
 
 #[derive(Component, Debug, PartialEq)]
@@ -31,8 +28,8 @@ impl Anchor {
 		self
 	}
 
-	pub(crate) fn looking_at(mut self, target: SkillTarget) -> Self {
-		self.rotation = AnchorRotation::LookingAt(target);
+	pub(crate) fn looking_at_skill_target(mut self) -> Self {
+		self.rotation = AnchorRotation::LookingAtSkillTarget;
 		self
 	}
 
@@ -76,5 +73,5 @@ impl AnchorAttachment {
 pub(crate) enum AnchorRotation {
 	OfMount,
 	OfAttachedTo,
-	LookingAt(SkillTarget),
+	LookingAtSkillTarget,
 }

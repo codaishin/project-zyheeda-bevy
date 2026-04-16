@@ -47,7 +47,7 @@ impl ApplyMotionPrefab for Skill {
 					entity.try_insert((
 						Anchor::attach_to(self.caster.0)
 							.on(self.mount)
-							.looking_at(self.target)
+							.looking_at_skill_target()
 							.once(),
 						SetVelocityForward(PROJECTILE_SPEED),
 					));
@@ -59,7 +59,7 @@ impl ApplyMotionPrefab for Skill {
 				entity.try_insert(
 					Anchor::attach_to(self.caster.0)
 						.on(self.mount)
-						.looking_at(self.target)
+						.looking_at_skill_target()
 						.always(),
 				);
 
