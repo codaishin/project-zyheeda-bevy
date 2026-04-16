@@ -11,5 +11,6 @@ pub(crate) mod mark_anchor_dirty;
 pub(crate) mod ongoing_interactions;
 pub(crate) mod prevent_tunneling;
 pub(crate) mod set_velocity_forward;
+pub(crate) mod update_target_pitch;
 pub(crate) mod when_traveled;
 pub(crate) mod world_camera;

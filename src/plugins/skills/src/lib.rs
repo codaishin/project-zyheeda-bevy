@@ -13,7 +13,6 @@ use crate::{
 		queue::dto::QueueDto,
 		slot_definitions::SlotDefinitions,
 		slots::visualization::SlotVisualization,
-		target::Target,
 	},
 	skills::{SkillId, behaviors::SkillBehaviorConfig},
 	system_parameters::{
@@ -32,12 +31,12 @@ use common::{
 	states::game_state::{GameState, LoadingGame},
 	traits::{
 		after_plugin::AfterPlugin,
-		handles_animations::{AnimationsSystemParamMut, HandlesAnimations},
+		handles_animations::HandlesAnimations,
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
 		handles_load_tracking::HandlesLoadTracking,
 		handles_loadout::HandlesLoadout,
 		handles_orientation::{FacingSystemParamMut, HandlesOrientation},
-		handles_physics::{HandlesAllPhysicalEffects, HandlesRaycast, RaycastSystemParam},
+		handles_physics::{HandlesAllPhysicalEffects, HandlesRaycast},
 		handles_saving::HandlesSaving,
 		handles_skill_physics::{HandlesSkillPhysics, SkillSpawnerMut},
 		system_set_definition::SystemSetDefinition,
@@ -128,10 +127,6 @@ where
 				ActiveSkill::<SkillBehaviorConfig>::execute::<SkillSpawnerMut<TPhysics>>,
 				flush::<Queue>,
 				HeldSlots::<Old>::update_from::<Current>,
-				Target::update_pitch::<
-					RaycastSystemParam<TPhysics>,
-					AnimationsSystemParamMut<TAnimations>,
-				>,
 			)
 				.chain()
 				.after_plugin(TMovement::SYSTEMS)

@@ -29,6 +29,7 @@ use crate::{
 		prevent_tunneling::PreventTunneling,
 		set_velocity_forward::SetVelocityForward,
 		skill::{ContactInteractionTarget, ProjectionInteractionTarget, Skill},
+		target::Target,
 		velocity::LinearVelocity,
 		when_traveled::DestroyAfterDistanceTraveled,
 		world_camera::WorldCamera,
@@ -58,6 +59,7 @@ use common::{
 	tools::plugin_system_set::PluginSystemSet,
 	traits::{
 		delta::Delta,
+		handles_animations::{AnimationsSystemParamMut, HandlesAnimations},
 		handles_physics::{
 			HandlesMotion,
 			HandlesPhysicalEffectTargets,
@@ -85,11 +87,12 @@ pub struct PhysicsPlugin<TDependencies> {
 	_p: PhantomData<TDependencies>,
 }
 
-impl<TSaveGame> PhysicsPlugin<TSaveGame>
+impl<TSaveGame, TAnimations> PhysicsPlugin<(TSaveGame, TAnimations)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
+	TAnimations: ThreadSafe + HandlesAnimations,
 {
-	pub fn new(target_fps: u32, _: &TSaveGame) -> Self {
+	pub fn new(target_fps: u32, _: &TSaveGame, _: &TAnimations) -> Self {
 		Self {
 			target_fps,
 			_p: PhantomData,
@@ -97,9 +100,10 @@ where
 	}
 }
 
-impl<TSaveGame> Plugin for PhysicsPlugin<TSaveGame>
+impl<TSaveGame, TAnimations> Plugin for PhysicsPlugin<(TSaveGame, TAnimations)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
+	TAnimations: ThreadSafe + HandlesAnimations,
 {
 	fn build(&self, app: &mut App) {
 		#[cfg(debug_assertions)]
@@ -140,6 +144,11 @@ where
 				)
 					.chain()
 					.in_set(PhysicsSystems),
+			)
+			// Animations
+			.add_systems(
+				Update,
+				Target::update_pitch::<RayCaster, AnimationsSystemParamMut<TAnimations>>,
 			)
 			// Skills
 			.register_required_components::<Skill, TSaveGame::TSaveEntityMarker>()
