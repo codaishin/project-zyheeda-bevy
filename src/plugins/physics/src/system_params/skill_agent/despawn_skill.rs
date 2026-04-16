@@ -20,7 +20,7 @@ impl Despawn for SkillAgentMut<'_, '_> {
 
 #[cfg(test)]
 mod tests {
-	use super::*;
+	use super::{Despawn, *};
 	use crate::components::skill::{CreatedFrom, Skill};
 	use bevy::{
 		ecs::system::{RunSystemError, RunSystemOnce},

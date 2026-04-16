@@ -6,17 +6,13 @@ pub(crate) fn adjust_global_z_index(
 	mut commands: ZyheedaCommands,
 	global_z_tops: Query<(Entity, Ref<GlobalZIndexTop>)>,
 ) {
-	let mut top_z_index = global_z_tops
-		.iter()
-		.filter(is_not_new)
-		.count()
-		.try_into()
-		.unwrap_or_default();
+	let top_z_index = global_z_tops.iter().filter(is_not_new).count() as i32;
+	let new_indices = (top_z_index + 1)..;
+	let new_global_z_tops = global_z_tops.iter().filter(is_new);
 
-	for (entity, ..) in global_z_tops.iter().filter(is_new) {
-		top_z_index += 1;
+	for (index, (entity, ..)) in new_indices.zip(new_global_z_tops) {
 		commands.try_apply_on(&entity, |mut e| {
-			e.try_insert(GlobalZIndex(top_z_index));
+			e.try_insert(GlobalZIndex(index));
 		});
 	}
 }
