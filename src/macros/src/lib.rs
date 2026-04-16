@@ -16,6 +16,7 @@ use syn::{
 	braced,
 	parse::{Parse, ParseStream},
 	parse_macro_input,
+	parse_quote,
 	spanned::Spanned,
 };
 
@@ -283,7 +284,7 @@ pub fn derive_in_range(input: TokenStream) -> TokenStream {
 		Err(error) => return error,
 	};
 	let name = &input.ident;
-	let (impl_generics, type_generics, where_clause) = &input.generics.split_for_impl();
+	let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
 	let Some([field]) = get_unnamed_fields(&input) else {
 		return TokenStream::from(
@@ -377,8 +378,22 @@ pub fn derive_in_range(input: TokenStream) -> TokenStream {
 	};
 	let high = high.expr;
 
+	let mut de_generics = input.generics.clone();
+	de_generics.params.insert(0, parse_quote!('de));
+	de_generics
+		.where_clause
+		.get_or_insert(syn::WhereClause {
+			where_token: Default::default(),
+			predicates: syn::punctuated::Punctuated::new(),
+		})
+		.predicates
+		.push(syn::parse_quote! {
+			#ty: serde::Deserialize<'de>
+		});
+	let (de_impl_generics, _, de_where_clause) = de_generics.split_for_impl();
+
 	TokenStream::from(quote! {
-		impl #impl_generics #name #type_generics #where_clause {
+		impl #impl_generics #name #ty_generics #where_clause {
 			const LIMITS: (#ty, #ty) = match (#low, #high) {
 				(l, h) if l < h => (l, h),
 				_ => panic!("`InBetween: low` must be lesser than `high`")
@@ -405,7 +420,7 @@ pub fn derive_in_range(input: TokenStream) -> TokenStream {
 			}
 		}
 
-		impl #impl_generics TryFrom<#ty> for #name #type_generics #where_clause {
+		impl #impl_generics TryFrom<#ty> for #name #ty_generics #where_clause {
 			type Error = #core::errors::NotInRange<#ty>;
 
 			fn try_from(value: #ty) -> Result<Self, Self::Error> {
@@ -413,11 +428,24 @@ pub fn derive_in_range(input: TokenStream) -> TokenStream {
 			}
 		}
 
-		impl #impl_generics std::ops::Deref for #name #type_generics #where_clause {
+		impl #impl_generics std::ops::Deref for #name #ty_generics #where_clause {
 			type Target = #ty;
 
 			fn deref(&self) -> &Self::Target {
 				&self.0
+			}
+		}
+
+		impl #de_impl_generics serde::Deserialize<'de> for #name #ty_generics #de_where_clause {
+			fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+			where
+				D: serde::Deserializer<'de> {
+				let inner = #ty::deserialize(deserializer)?;
+
+				Self::try_from(inner).map_err(|_| serde::de::Error::custom(format!(
+					"value outside of accepted range for {}",
+					std::any::type_name::<Self>(),
+				)))
 			}
 		}
 	})
