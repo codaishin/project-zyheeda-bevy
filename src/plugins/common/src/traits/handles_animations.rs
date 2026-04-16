@@ -175,7 +175,7 @@ pub struct PitchedForward {
 	pub down: (ForwardPitch, Path),
 }
 
-#[derive(InRange, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[derive(InRange, Debug, PartialEq, Clone, Copy, Serialize)]
 #[in_range(low = >0., high = 1.)]
 pub struct ForwardPitch(f32);
 

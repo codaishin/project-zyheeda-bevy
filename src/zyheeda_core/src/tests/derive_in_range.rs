@@ -1,5 +1,6 @@
 use crate::errors::{Limit, NotInRange};
 use macros::{InRange, new_valid};
+use serde_json::{Error, Value, from_value, json};
 use std::{fmt::Debug, ops::Deref};
 use test_case::test_case;
 
@@ -152,4 +153,40 @@ fn too_small_display() {
 #[test]
 fn new_valid_ok() {
 	assert_eq!(_Exclusive10To100(12), new_valid!(_Exclusive10To100, 12));
+}
+
+#[test_case(json!(10), 10; "10")]
+#[test_case(json!(50), 50; "50")]
+#[test_case(json!(100), 100; "100")]
+fn deserialize_inclusive(json: Value, inner: i32) -> Result<(), Error> {
+	let value = from_value::<_Inclusive10To100>(json)?;
+
+	assert_eq!(_Inclusive10To100(inner), value);
+	Ok(())
+}
+
+#[test_case(json!(9); "9")]
+#[test_case(json!(101); "101")]
+fn deserialize_inclusive_error(json: Value) {
+	let value = from_value::<_Inclusive10To100>(json);
+
+	assert!(value.is_err());
+}
+
+#[test_case(json!(11), 11; "11")]
+#[test_case(json!(50), 50; "50")]
+#[test_case(json!(99), 99; "99")]
+fn deserialize_exclusive(json: Value, inner: i32) -> Result<(), Error> {
+	let value = from_value::<_Exclusive10To100>(json)?;
+
+	assert_eq!(_Exclusive10To100(inner), value);
+	Ok(())
+}
+
+#[test_case(json!(10); "10")]
+#[test_case(json!(100); "100")]
+fn deserialize_exclusive_error(json: Value) {
+	let value = from_value::<_Exclusive10To100>(json);
+
+	assert!(value.is_err());
 }
