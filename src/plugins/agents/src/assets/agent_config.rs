@@ -23,6 +23,7 @@ pub struct AgentConfigAsset {
 	pub(crate) bones: Bones,
 	pub(crate) model: AgentModel,
 	pub(crate) required_clearance: RequiredClearance,
+	pub(crate) center_height: f32,
 	pub(crate) speed: MovementSpeed,
 	pub(crate) attributes: PhysicalDefaultAttributes,
 	pub(crate) animations: HashMap<AnimationKey, Animation>,

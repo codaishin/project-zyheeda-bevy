@@ -112,13 +112,14 @@ impl ApplyAgentConfig {
 					*config.required_clearance.vertical - *config.required_clearance.horizontal,
 				);
 				let radius = config.required_clearance.horizontal;
+				let center_offset = config.center_height - *config.required_clearance.vertical;
 				ctx.configure_body(
 					Body {
 						shape: Shape::Capsule { half_y, radius },
 						physics_type: PhysicsType::Agent,
 						blocker_types: HashSet::from([Blocker::Character]),
 					},
-					0.,
+					center_offset,
 				);
 			}
 
@@ -817,10 +818,12 @@ mod tests {
 				horizontal: Units::from(0.5),
 				vertical: Units::from(2.),
 			};
+			let center_height = 3.5;
 			let mut app = setup([(
 				&config_handle,
 				AgentConfigAsset {
 					required_clearance,
+					center_height,
 					..default()
 				},
 			)]);
@@ -837,11 +840,12 @@ mod tests {
 						physics_type: PhysicsType::Agent,
 						blocker_types: HashSet::from([Blocker::Character]),
 					};
+					let expected_center_offset = 1.5;
 
 					mock.expect_configure_default_attributes().return_const(());
 					mock.expect_configure_body()
 						.once()
-						.with(eq(expected_body), eq(0.))
+						.with(eq(expected_body), eq(expected_center_offset))
 						.return_const(());
 				}),
 			));
