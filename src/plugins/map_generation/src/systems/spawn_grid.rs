@@ -153,7 +153,7 @@ mod tests {
 		asset::RenderAssetUsages,
 		mesh::{Indices, MeshAccessError, PrimitiveTopology},
 	};
-	use common::{tools::vec_not_nan::VecNotNan, vec3_not_nan};
+	use common::{tools::vec_not_nan::VecNotNan, vec_not_nan};
 	use testing::{IsChanged, SingleThreadedApp, new_handle};
 
 	impl<TError> PartialEq for NavMeshError<TError>
@@ -299,14 +299,14 @@ mod tests {
 				Some(&Grid::from(_Graph {
 					triangles: vec![
 						[
-							vec3_not_nan!(0.5, 0., -0.5),
-							vec3_not_nan!(-0.5, 0., 0.5),
-							vec3_not_nan!(-0.5, 0., -0.5),
+							vec_not_nan!(0.5, 0., -0.5),
+							vec_not_nan!(-0.5, 0., 0.5),
+							vec_not_nan!(-0.5, 0., -0.5),
 						],
 						[
-							vec3_not_nan!(0.5, 0., 0.5),
-							vec3_not_nan!(0.5, 0., -0.5),
-							vec3_not_nan!(-0.5, 0., 0.5),
+							vec_not_nan!(0.5, 0., 0.5),
+							vec_not_nan!(0.5, 0., -0.5),
+							vec_not_nan!(-0.5, 0., 0.5),
 						],
 					]
 				})),
@@ -350,9 +350,9 @@ mod tests {
 			(
 				Some(&Grid::from(_Graph {
 					triangles: vec![[
-						vec3_not_nan!(0.5, 0., -0.5),
-						vec3_not_nan!(-0.5, 0., 0.5),
-						vec3_not_nan!(-0.5, 0., -0.5),
+						vec_not_nan!(0.5, 0., -0.5),
+						vec_not_nan!(-0.5, 0., 0.5),
+						vec_not_nan!(-0.5, 0., -0.5),
 					]]
 				})),
 				&_Result(Err(vec![NavMeshError::HasNaNVertices { entity }]))

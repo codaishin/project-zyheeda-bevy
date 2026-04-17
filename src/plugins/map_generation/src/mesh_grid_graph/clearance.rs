@@ -117,16 +117,16 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::mesh_grid_graph::test::neighbors;
-	use common::vec3_not_nan;
+	use common::vec_not_nan;
 
 	#[test]
 	fn set_first_border_node() {
 		let mut graph = MeshGridGraph {
 			vertices: vec![
-				vec3_not_nan!(0., 0., 0.),
-				vec3_not_nan!(0., 0., 1.),
-				vec3_not_nan!(1., 0., 0.),
-				vec3_not_nan!(1., 0., 1.),
+				vec_not_nan!(0., 0., 0.),
+				vec_not_nan!(0., 0., 1.),
+				vec_not_nan!(1., 0., 0.),
+				vec_not_nan!(1., 0., 1.),
 			],
 			neighbors: neighbors![[], [], [], []],
 			clearance: vec![
@@ -144,10 +144,10 @@ mod tests {
 		assert_eq!(
 			MeshGridGraph {
 				vertices: vec![
-					vec3_not_nan!(0., 0., 0.),
-					vec3_not_nan!(0., 0., 1.),
-					vec3_not_nan!(1., 0., 0.),
-					vec3_not_nan!(1., 0., 1.),
+					vec_not_nan!(0., 0., 0.),
+					vec_not_nan!(0., 0., 1.),
+					vec_not_nan!(1., 0., 0.),
+					vec_not_nan!(1., 0., 1.),
 				],
 				neighbors: neighbors![[], [], [], []],
 				clearance: vec![
@@ -166,10 +166,10 @@ mod tests {
 	fn set_all_border_nodes() {
 		let mut graph = MeshGridGraph {
 			vertices: vec![
-				vec3_not_nan!(0., 0., 0.),
-				vec3_not_nan!(0., 0., 1.),
-				vec3_not_nan!(1., 0., 0.),
-				vec3_not_nan!(1., 0., 1.),
+				vec_not_nan!(0., 0., 0.),
+				vec_not_nan!(0., 0., 1.),
+				vec_not_nan!(1., 0., 0.),
+				vec_not_nan!(1., 0., 1.),
 			],
 			neighbors: neighbors![[], [], [], []],
 			clearance: vec![
@@ -188,10 +188,10 @@ mod tests {
 		assert_eq!(
 			MeshGridGraph {
 				vertices: vec![
-					vec3_not_nan!(0., 0., 0.),
-					vec3_not_nan!(0., 0., 1.),
-					vec3_not_nan!(1., 0., 0.),
-					vec3_not_nan!(1., 0., 1.),
+					vec_not_nan!(0., 0., 0.),
+					vec_not_nan!(0., 0., 1.),
+					vec_not_nan!(1., 0., 0.),
+					vec_not_nan!(1., 0., 1.),
 				],
 				neighbors: neighbors![[], [], [], []],
 				clearance: vec![
@@ -210,10 +210,10 @@ mod tests {
 	fn set_neighbors() {
 		let mut graph = MeshGridGraph {
 			vertices: vec![
-				vec3_not_nan!(0., 0., 0.),
-				vec3_not_nan!(0., 0., 1.),
-				vec3_not_nan!(1., 0., 0.),
-				vec3_not_nan!(1., 0., 1.),
+				vec_not_nan!(0., 0., 0.),
+				vec_not_nan!(0., 0., 1.),
+				vec_not_nan!(1., 0., 0.),
+				vec_not_nan!(1., 0., 1.),
 			],
 			neighbors: neighbors![[1, 3], [0], [], []],
 			clearance: vec![
@@ -234,10 +234,10 @@ mod tests {
 		assert_eq!(
 			MeshGridGraph {
 				vertices: vec![
-					vec3_not_nan!(0., 0., 0.),
-					vec3_not_nan!(0., 0., 1.),
-					vec3_not_nan!(1., 0., 0.),
-					vec3_not_nan!(1., 0., 1.),
+					vec_not_nan!(0., 0., 0.),
+					vec_not_nan!(0., 0., 1.),
+					vec_not_nan!(1., 0., 0.),
+					vec_not_nan!(1., 0., 1.),
 				],
 				neighbors: neighbors![[1, 3], [0], [], []],
 				clearance: vec![
@@ -256,10 +256,10 @@ mod tests {
 	fn set_neighbors_from_all_borders() {
 		let mut graph = MeshGridGraph {
 			vertices: vec![
-				vec3_not_nan!(0., 0., 0.),
-				vec3_not_nan!(0., 0., 1.),
-				vec3_not_nan!(1., 0., 0.),
-				vec3_not_nan!(1., 0., 1.),
+				vec_not_nan!(0., 0., 0.),
+				vec_not_nan!(0., 0., 1.),
+				vec_not_nan!(1., 0., 0.),
+				vec_not_nan!(1., 0., 1.),
 			],
 			neighbors: neighbors![[1, 3], [0, 2], [1, 3], [0, 2]],
 			clearance: vec![
@@ -282,10 +282,10 @@ mod tests {
 		assert_eq!(
 			MeshGridGraph {
 				vertices: vec![
-					vec3_not_nan!(0., 0., 0.),
-					vec3_not_nan!(0., 0., 1.),
-					vec3_not_nan!(1., 0., 0.),
-					vec3_not_nan!(1., 0., 1.),
+					vec_not_nan!(0., 0., 0.),
+					vec_not_nan!(0., 0., 1.),
+					vec_not_nan!(1., 0., 0.),
+					vec_not_nan!(1., 0., 1.),
 				],
 				neighbors: neighbors![[1, 3], [0, 2], [1, 3], [0, 2]],
 				clearance: vec![
@@ -304,10 +304,10 @@ mod tests {
 	fn set_neighbors_of_neighbors_of_border() {
 		let mut graph = MeshGridGraph {
 			vertices: vec![
-				vec3_not_nan!(0., 0., 0.),
-				vec3_not_nan!(0., 0., 1.),
-				vec3_not_nan!(1., 0., 0.),
-				vec3_not_nan!(1., 0., 1.),
+				vec_not_nan!(0., 0., 0.),
+				vec_not_nan!(0., 0., 1.),
+				vec_not_nan!(1., 0., 0.),
+				vec_not_nan!(1., 0., 1.),
 			],
 			neighbors: neighbors![[1], [0, 2], [1, 3], [2]],
 			clearance: vec![
@@ -327,10 +327,10 @@ mod tests {
 		assert_eq!(
 			MeshGridGraph {
 				vertices: vec![
-					vec3_not_nan!(0., 0., 0.),
-					vec3_not_nan!(0., 0., 1.),
-					vec3_not_nan!(1., 0., 0.),
-					vec3_not_nan!(1., 0., 1.),
+					vec_not_nan!(0., 0., 0.),
+					vec_not_nan!(0., 0., 1.),
+					vec_not_nan!(1., 0., 0.),
+					vec_not_nan!(1., 0., 1.),
 				],
 				neighbors: neighbors![[1], [0, 2], [1, 3], [2]],
 				clearance: vec![
@@ -349,10 +349,10 @@ mod tests {
 	fn preemptive_disregard_of_stale_values() {
 		let mut graph = MeshGridGraph {
 			vertices: vec![
-				vec3_not_nan!(0., 0., 0.),
-				vec3_not_nan!(0., 0., 1.),
-				vec3_not_nan!(1., 0., 0.),
-				vec3_not_nan!(1., 0., 1.),
+				vec_not_nan!(0., 0., 0.),
+				vec_not_nan!(0., 0., 1.),
+				vec_not_nan!(1., 0., 0.),
+				vec_not_nan!(1., 0., 1.),
 			],
 			neighbors: neighbors![[1, 3], [0, 2], [1, 3], [0, 2]],
 			clearance: vec![
@@ -379,10 +379,10 @@ mod tests {
 	fn use_best_value_first() {
 		let mut graph = MeshGridGraph {
 			vertices: vec![
-				vec3_not_nan!(0., 0., 0.),
-				vec3_not_nan!(0., 0., 1.),
-				vec3_not_nan!(0., 0., 2.),
-				vec3_not_nan!(0., 0., 3.),
+				vec_not_nan!(0., 0., 0.),
+				vec_not_nan!(0., 0., 1.),
+				vec_not_nan!(0., 0., 2.),
+				vec_not_nan!(0., 0., 3.),
 			],
 			neighbors: neighbors![[3], [3], [3], [0, 1, 2]],
 			clearance: vec![
@@ -403,10 +403,10 @@ mod tests {
 		assert_eq!(
 			MeshGridGraph {
 				vertices: vec![
-					vec3_not_nan!(0., 0., 0.),
-					vec3_not_nan!(0., 0., 1.),
-					vec3_not_nan!(0., 0., 2.),
-					vec3_not_nan!(0., 0., 3.),
+					vec_not_nan!(0., 0., 0.),
+					vec_not_nan!(0., 0., 1.),
+					vec_not_nan!(0., 0., 2.),
+					vec_not_nan!(0., 0., 3.),
 				],
 				neighbors: neighbors![[3], [3], [3], [0, 1, 2]],
 				clearance: vec![

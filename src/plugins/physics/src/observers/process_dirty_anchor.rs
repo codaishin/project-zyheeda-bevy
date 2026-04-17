@@ -220,7 +220,7 @@ mod tests {
 			handles_skill_physics::{Cursor, SkillMount},
 			register_persistent_entities::RegisterPersistentEntities,
 		},
-		vec3_not_nan,
+		vec_not_nan,
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -442,7 +442,7 @@ mod tests {
 				.once()
 				.with(eq(MouseHover {
 					exclude: vec![agent],
-					mode: mode(vec3_not_nan!(4., 11., 9.)),
+					mode: mode(vec_not_nan!(4., 11., 9.)),
 				}))
 				.return_const(MouseHoversOver::Point(Vec3::new(11., 22., 33.)));
 		}));
@@ -488,7 +488,7 @@ mod tests {
 				.once()
 				.with(eq(MouseHover {
 					exclude: vec![agent],
-					mode: mode(vec3_not_nan!(4., 11., 9.)),
+					mode: mode(vec_not_nan!(4., 11., 9.)),
 				}))
 				.return_const(MouseHoversOver::Object {
 					entity: target,

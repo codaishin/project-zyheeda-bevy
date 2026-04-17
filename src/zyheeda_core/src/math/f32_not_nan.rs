@@ -16,6 +16,20 @@ impl F32NotNan {
 	}
 }
 
+#[macro_export]
+macro_rules! f32_not_nan {
+	($value:literal) => {{
+		const F32_NOT_NAN: $crate::prelude::F32NotNan =
+			match $crate::prelude::F32NotNan::try_from_f32($value) {
+				Ok(v) => v,
+				Err(_) => panic!("The f32 value is not a number"),
+			};
+		F32_NOT_NAN
+	}};
+}
+
+pub use f32_not_nan;
+
 impl TryFrom<f32> for F32NotNan {
 	type Error = IsNaN;
 
@@ -96,5 +110,12 @@ mod tests {
 		let value = yaml_serde::from_str::<F32NotNan>(yaml);
 
 		assert!(value.is_err());
+	}
+
+	#[test]
+	fn macro_ok() {
+		const V: F32NotNan = f32_not_nan!(11.);
+
+		assert_eq!(F32NotNan(11.), V);
 	}
 }

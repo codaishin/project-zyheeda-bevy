@@ -1,29 +1,13 @@
 use bevy::prelude::*;
 use std::{cmp::Ordering, hash::Hash, ops::Deref};
-use zyheeda_core::prelude::F32NotNan;
+use zyheeda_core::prelude::*;
 
 #[macro_export]
-macro_rules! vec3_not_nan {
-	($x:literal, $y:literal, $z:literal $(,)?) => {{
-		const VEC: $crate::tools::vec_not_nan::VecNotNan<3> =
-			match $crate::tools::vec_not_nan::VecNotNan::try_from_array([$x, $y, $z]) {
-				Ok(vec) => vec,
-				Err(_) => panic!("Vector is `NaN`"),
-			};
-
-		VEC
-	}};
-}
-#[macro_export]
-macro_rules! vec2_not_nan {
-	($x:literal, $y:literal $(,)?) => {{
-		const VEC: $crate::tools::vec_not_nan::VecNotNan<2> =
-			match $crate::tools::vec_not_nan::VecNotNan::try_from_array([$x, $y]) {
-				Ok(vec) => vec,
-				Err(_) => panic!("Vector is `NaN`"),
-			};
-
-		VEC
+macro_rules! vec_not_nan {
+	($($c:literal),+ $(,)?) => {{
+		$crate::tools::vec_not_nan::VecNotNan([
+			$(zyheeda_core::prelude::f32_not_nan!($c),)+
+		])
 	}};
 }
 
@@ -155,11 +139,7 @@ mod tests {
 		let node = VecNotNan::try_from(Vec3::new(1., 2., 3.));
 
 		assert_eq!(
-			Ok(VecNotNan([
-				F32NotNan::try_from_f32(1.).unwrap(),
-				F32NotNan::try_from_f32(2.).unwrap(),
-				F32NotNan::try_from_f32(3.).unwrap(),
-			])),
+			Ok(const { VecNotNan([f32_not_nan!(1.), f32_not_nan!(2.), f32_not_nan!(3.),]) }),
 			node
 		);
 	}
