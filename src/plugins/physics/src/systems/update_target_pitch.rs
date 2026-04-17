@@ -1,4 +1,7 @@
-use crate::components::{center_offset::CenterOffset, target::Target};
+use crate::components::{
+	center_offset::{CenterOffset, ComputeOffsetTranslation},
+	target::Target,
+};
 use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
@@ -57,7 +60,7 @@ impl Target {
 			SkillTarget::Entity(entity) => {
 				let target = commands.get(entity)?;
 				let (target_transform, target_offset) = transforms.get(target).ok()?;
-				let target = with_offset(target_transform, target_offset);
+				let target = target_offset.compute_translation(target_transform);
 				get_pitch(transform, offset, target)
 			}
 			SkillTarget::Cursor(Cursor::TerrainHover) => {
@@ -65,7 +68,7 @@ impl Target {
 					MouseHoversOver::Point(point) => get_pitch(transform, offset, point),
 					MouseHoversOver::Object { entity, .. } => {
 						let (target_transform, target_offset) = transforms.get(entity).ok()?;
-						let target = with_offset(target_transform, target_offset);
+						let target = target_offset.compute_translation(target_transform);
 						get_pitch(transform, offset, target)
 					}
 				}
@@ -80,20 +83,13 @@ fn get_pitch(
 	offset: Option<&CenterOffset>,
 	to: Vec3,
 ) -> Option<DirForwardPitch> {
-	let dir = (to - with_offset(transform, offset)).try_normalize()?;
+	let dir = (to - offset.compute_translation(transform)).try_normalize()?;
 	let pitch = ForwardPitch::try_from((dir.y.asin() / FRAC_PI_2).abs()).ok()?;
 
 	if dir.y > 0. {
 		Some(DirForwardPitch::Up(pitch))
 	} else {
 		Some(DirForwardPitch::Down(pitch))
-	}
-}
-
-fn with_offset(transform: &GlobalTransform, offset: Option<&CenterOffset>) -> Vec3 {
-	match offset {
-		Some(CenterOffset(offset)) => transform.translation() + Vec3::new(0., *offset, 0.),
-		None => transform.translation(),
 	}
 }
 

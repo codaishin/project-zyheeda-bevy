@@ -1,6 +1,7 @@
 use crate::{
 	components::{
 		anchor::{Anchor, AnchorDirty, AnchorRotation},
+		center_offset::{CenterOffset, ComputeOffsetTranslation},
 		target::Target,
 	},
 	system_params::mount_points_lookup::{MountPointsLookup, get_mount_point::MountPointError},
@@ -30,7 +31,7 @@ impl AnchorDirty {
 		ray_caster: StaticSystemParam<TRayCaster>,
 		agents: Query<(&Anchor, &mut Transform)>,
 		targets: Query<&Target>,
-		transforms: Query<&GlobalTransform>,
+		transforms: Query<(&GlobalTransform, Option<&CenterOffset>)>,
 	) -> Result<(), AnchorError<MountPointError<SkillMount>>>
 	where
 		TRayCaster: for<'w, 's> SystemParam<Item<'w, 's>: Raycast<MouseHover>>,
@@ -47,7 +48,7 @@ impl AnchorDirty {
 		ray_caster: StaticSystemParam<TRayCaster>,
 		mut agents: Query<(&Anchor, &mut Transform)>,
 		targets: Query<&Target>,
-		transforms: Query<&GlobalTransform>,
+		transforms: Query<(&GlobalTransform, Option<&CenterOffset>)>,
 	) -> Result<(), AnchorError<TMountError>>
 	where
 		TLookup:
@@ -75,11 +76,11 @@ impl AnchorDirty {
 			Err(error) => return Err(AnchorError::MountError(error)),
 		};
 
-		let Ok(attached_to_transform) = transforms.get(attached_to) else {
+		let Ok((attached_to_transform, _)) = transforms.get(attached_to) else {
 			return Err(AnchorError::EntityWithoutTransform(attached_to));
 		};
 
-		let Ok(mount_transform) = transforms.get(mount) else {
+		let Ok((mount_transform, _)) = transforms.get(mount) else {
 			return Err(AnchorError::EntityWithoutTransform(mount));
 		};
 
@@ -118,7 +119,7 @@ fn look_at_skill_target<TRayCaster, TMountError>(
 	mut ray_caster: StaticSystemParam<TRayCaster>,
 	commands: ZyheedaCommands,
 	targets: Query<&Target>,
-	transforms: Query<&GlobalTransform>,
+	transforms: Query<(&GlobalTransform, Option<&CenterOffset>)>,
 	attached_to: Entity,
 	mount: Entity,
 ) -> Result<(), AnchorError<TMountError>>
@@ -144,11 +145,11 @@ where
 			let target = match hit {
 				MouseHoversOver::Point(point) => point,
 				MouseHoversOver::Object { entity, .. } => {
-					let Ok(target) = transforms.get(entity) else {
+					let Ok((target, offset)) = transforms.get(entity) else {
 						return Err(AnchorError::EntityWithoutTransform(entity));
 					};
 
-					target.translation()
+					offset.compute_translation(target)
 				}
 			};
 
@@ -158,11 +159,11 @@ where
 			let Some(target) = commands.get(&entity) else {
 				return Err(AnchorError::EntityNotFound(entity));
 			};
-			let Ok(target) = transforms.get(target) else {
+			let Ok((target, offset)) = transforms.get(target) else {
 				return Err(AnchorError::EntityWithoutTransform(target));
 			};
 
-			anchor_transform.look_at(target.translation(), Vec3::Y);
+			anchor_transform.look_at(offset.compute_translation(target), Vec3::Y);
 		}
 	}
 
@@ -417,6 +418,45 @@ mod tests {
 		);
 	}
 
+	#[test]
+	fn look_at_target_with_offset() {
+		let mut app = setup();
+		let spawner_key = SkillMount::Slot(SlotKey(22));
+		let target = PersistentEntity::default();
+		let agent = app
+			.world_mut()
+			.spawn((
+				*AGENT,
+				GlobalTransform::default(),
+				Target(Some(SkillTarget::Entity(target))),
+			))
+			.id();
+		let mount_point = app
+			.world_mut()
+			.spawn(GlobalTransform::from_xyz(4., 11., 9.))
+			.id();
+		app.insert_resource(_Lookup {
+			mount_points: HashMap::from([((spawner_key, agent), mount_point)]),
+		});
+
+		app.world_mut().spawn((
+			target,
+			GlobalTransform::from_xyz(11., -20., 3.),
+			CenterOffset(5.),
+		));
+
+		let anchor = app.world_mut().spawn(
+			Anchor::attach_to(*AGENT)
+				.on(spawner_key)
+				.looking_at_skill_target(),
+		);
+
+		assert_eq!(
+			Some(&Transform::from_xyz(4., 11., 9.).looking_at(Vec3::new(11., -15., 3.), Vec3::Y)),
+			anchor.get::<Transform>(),
+		);
+	}
+
 	#[test_case(Cursor::TerrainHover, |_|HoverMode::ColliderOrTerrain; "terrain")]
 	#[test_case(Cursor::Direction ,HoverMode::ColliderOrDirectionFrom; "direction")]
 	fn look_at_cursor_over_terrain(cursor: Cursor, mode: fn(Entity) -> HoverMode) {
@@ -504,6 +544,55 @@ mod tests {
 
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 11., 9.).looking_at(Vec3::new(11., 22., 33.), Vec3::Y)),
+			anchor.get::<Transform>(),
+		);
+	}
+
+	#[test_case(Cursor::TerrainHover, |_|HoverMode::ColliderOrTerrain; "terrain")]
+	#[test_case(Cursor::Direction ,HoverMode::ColliderOrDirectionFrom; "direction")]
+	fn look_at_cursor_over_object_with_pitch(cursor: Cursor, mode: fn(Entity) -> HoverMode) {
+		let mut app = setup();
+		let spawner_key = SkillMount::Slot(SlotKey(22));
+		let agent = app
+			.world_mut()
+			.spawn((
+				*AGENT,
+				GlobalTransform::default(),
+				Target(Some(SkillTarget::Cursor(cursor))),
+			))
+			.id();
+		let mount_point = app
+			.world_mut()
+			.spawn(GlobalTransform::from_xyz(4., 11., 9.))
+			.id();
+		app.insert_resource(_Lookup {
+			mount_points: HashMap::from([((spawner_key, agent), mount_point)]),
+		});
+		let target = app
+			.world_mut()
+			.spawn((GlobalTransform::from_xyz(11., 22., 33.), CenterOffset(5.)))
+			.id();
+		app.insert_resource(_RayCaster::new().with_mock(|mock| {
+			mock.expect_raycast()
+				.once()
+				.with(eq(MouseHover {
+					exclude: vec![agent],
+					mode: mode(mount_point),
+				}))
+				.return_const(MouseHoversOver::Object {
+					entity: target,
+					point: Vec3::ZERO,
+				});
+		}));
+
+		let anchor = app.world_mut().spawn(
+			Anchor::attach_to(*AGENT)
+				.on(spawner_key)
+				.looking_at_skill_target(),
+		);
+
+		assert_eq!(
+			Some(&Transform::from_xyz(4., 11., 9.).looking_at(Vec3::new(11., 27., 33.), Vec3::Y)),
 			anchor.get::<Transform>(),
 		);
 	}
