@@ -1,4 +1,4 @@
-use crate::components::target::Target;
+use crate::components::{center_offset::CenterOffset, target::Target};
 use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
@@ -18,20 +18,27 @@ impl Target {
 	pub(crate) fn update_pitch<TRayCast, TAnimations>(
 		mut animations: StaticSystemParam<TAnimations>,
 		mut ray_caster: StaticSystemParam<TRayCast>,
-		targets: Query<(Entity, &Self, &GlobalTransform)>,
-		transforms: Query<&GlobalTransform>,
+		targets: Query<(Entity, &Self, &GlobalTransform, Option<&CenterOffset>)>,
+		transforms: Query<(&GlobalTransform, Option<&CenterOffset>)>,
 		commands: ZyheedaCommands,
 	) where
 		for<'w, 's> TRayCast: SystemParam<Item<'w, 's>: Raycast<MouseHover>>,
 		for<'c> TAnimations:
 			SystemParam + GetContextMut<Animations, TContext<'c>: GetForwardPitchMut>,
 	{
-		for (entity, target, transform) in targets {
+		for (entity, target, transform, offset) in targets {
 			let key = Animations { entity };
 			let Some(mut ctx) = TAnimations::get_context_mut(&mut animations, key) else {
 				continue;
 			};
-			let pitch = target.get_pitch(entity, transform, transforms, &commands, &mut ray_caster);
+			let pitch = target.get_pitch(
+				entity,
+				transform,
+				offset,
+				transforms,
+				&commands,
+				&mut ray_caster,
+			);
 
 			*ctx.get_forward_pitch_mut() = pitch;
 		}
@@ -41,22 +48,23 @@ impl Target {
 		&self,
 		entity: Entity,
 		transform: &GlobalTransform,
-		transforms: Query<&GlobalTransform>,
+		offset: Option<&CenterOffset>,
+		transforms: Query<(&GlobalTransform, Option<&CenterOffset>)>,
 		commands: &ZyheedaCommands,
 		ray_cast: &mut impl Raycast<MouseHover>,
 	) -> Option<DirForwardPitch> {
 		match self.0.as_ref()? {
 			SkillTarget::Entity(entity) => {
 				let target = commands.get(entity)?;
-				let target = transforms.get(target).ok()?.translation();
-				get_pitch(transform, target)
+				let target = transforms.get(target).ok()?.0.translation();
+				get_pitch(transform, offset, target)
 			}
 			SkillTarget::Cursor(Cursor::TerrainHover) => {
 				match ray_cast.raycast(MouseHover::excluding([entity]))? {
-					MouseHoversOver::Point(point) => get_pitch(transform, point),
+					MouseHoversOver::Point(point) => get_pitch(transform, offset, point),
 					MouseHoversOver::Object { entity, .. } => {
-						let target = transforms.get(entity).ok()?.translation();
-						get_pitch(transform, target)
+						let target = transforms.get(entity).ok()?.0.translation();
+						get_pitch(transform, offset, target)
 					}
 				}
 			}
@@ -65,8 +73,16 @@ impl Target {
 	}
 }
 
-fn get_pitch(transform: &GlobalTransform, to: Vec3) -> Option<DirForwardPitch> {
-	let dir = (to - transform.translation()).try_normalize()?;
+fn get_pitch(
+	transform: &GlobalTransform,
+	offset: Option<&CenterOffset>,
+	to: Vec3,
+) -> Option<DirForwardPitch> {
+	let origin = match offset {
+		Some(CenterOffset(offset)) => transform.translation() + Vec3::new(0., *offset, 0.),
+		None => transform.translation(),
+	};
+	let dir = (to - origin).try_normalize()?;
 	let pitch = ForwardPitch::try_from((dir.y.asin() / FRAC_PI_2).abs()).ok()?;
 
 	if dir.y > 0. {
@@ -228,6 +244,47 @@ mod tests {
 	#[test_case(-45., ForwardPitch::try_from(0.5).ok().map(DirForwardPitch::Down); "45 degrees down")]
 	#[test_case(90., DirForwardPitch::Up(ForwardPitch::MAX); "90 degrees up")]
 	#[test_case(-90., DirForwardPitch::Down(ForwardPitch::MAX); "90 degrees down")]
+	fn set_target_entity_pitch_with_offset(
+		angle: f32,
+		forward_pitch: impl Into<Option<DirForwardPitch>>,
+	) {
+		let mut app = setup();
+		let translation = Vec3::new(10., 2., 0.);
+		let offset = Quat::from_rotation_x(angle.to_radians()).mul_vec3(Vec3::new(0., 0., -30.));
+		let target_entity = PersistentEntity::default();
+		let entity = app
+			.world_mut()
+			.spawn((
+				Target(Some(SkillTarget::Entity(target_entity))),
+				CenterOffset(3.),
+				GlobalTransform::from_translation(translation),
+				_Animations {
+					forward_pitch: None,
+				},
+			))
+			.id();
+
+		app.world_mut().spawn((
+			target_entity,
+			GlobalTransform::from_translation(translation + Vec3::new(0., 3., 0.) + offset),
+		));
+
+		app.update();
+
+		assert_eq_approx!(
+			Some(&_Animations {
+				forward_pitch: forward_pitch.into()
+			}),
+			app.world().entity(entity).get::<_Animations>(),
+			1e-5,
+		);
+	}
+
+	#[test_case(0., None; "0 degrees")]
+	#[test_case(45., ForwardPitch::try_from(0.5).ok().map(DirForwardPitch::Up); "45 degrees up")]
+	#[test_case(-45., ForwardPitch::try_from(0.5).ok().map(DirForwardPitch::Down); "45 degrees down")]
+	#[test_case(90., DirForwardPitch::Up(ForwardPitch::MAX); "90 degrees up")]
+	#[test_case(-90., DirForwardPitch::Down(ForwardPitch::MAX); "90 degrees down")]
 	fn set_cursor_terrain_hit_pitch(angle: f32, forward_pitch: impl Into<Option<DirForwardPitch>>) {
 		let mut app = setup();
 		let translation = Vec3::new(10., 2., 0.);
@@ -245,6 +302,47 @@ mod tests {
 		app.insert_resource(_RayCast::new().with_mock(|mock| {
 			mock.expect_raycast()
 				.return_const(Some(MouseHoversOver::Point(translation + offset)));
+		}));
+
+		app.update();
+
+		assert_eq_approx!(
+			Some(&_Animations {
+				forward_pitch: forward_pitch.into()
+			}),
+			app.world().entity(entity).get::<_Animations>(),
+			1e-5,
+		);
+	}
+
+	#[test_case(0., None; "0 degrees")]
+	#[test_case(45., ForwardPitch::try_from(0.5).ok().map(DirForwardPitch::Up); "45 degrees up")]
+	#[test_case(-45., ForwardPitch::try_from(0.5).ok().map(DirForwardPitch::Down); "45 degrees down")]
+	#[test_case(90., DirForwardPitch::Up(ForwardPitch::MAX); "90 degrees up")]
+	#[test_case(-90., DirForwardPitch::Down(ForwardPitch::MAX); "90 degrees down")]
+	fn set_cursor_terrain_hit_pitch_with_offset(
+		angle: f32,
+		forward_pitch: impl Into<Option<DirForwardPitch>>,
+	) {
+		let mut app = setup();
+		let translation = Vec3::new(10., 2., 0.);
+		let offset = Quat::from_rotation_x(angle.to_radians()).mul_vec3(Vec3::new(0., 0., -30.));
+		let entity = app
+			.world_mut()
+			.spawn((
+				Target(Some(SkillTarget::Cursor(Cursor::TerrainHover))),
+				GlobalTransform::from_translation(translation),
+				CenterOffset(3.),
+				_Animations {
+					forward_pitch: None,
+				},
+			))
+			.id();
+		app.insert_resource(_RayCast::new().with_mock(|mock| {
+			mock.expect_raycast()
+				.return_const(Some(MouseHoversOver::Point(
+					translation + Vec3::new(0., 3., 0.) + offset,
+				)));
 		}));
 
 		app.update();
@@ -300,8 +398,56 @@ mod tests {
 		);
 	}
 
+	#[test_case(0., None; "0 degrees")]
+	#[test_case(45., ForwardPitch::try_from(0.5).ok().map(DirForwardPitch::Up); "45 degrees up")]
+	#[test_case(-45., ForwardPitch::try_from(0.5).ok().map(DirForwardPitch::Down); "45 degrees down")]
+	#[test_case(90., DirForwardPitch::Up(ForwardPitch::MAX); "90 degrees up")]
+	#[test_case(-90., DirForwardPitch::Down(ForwardPitch::MAX); "90 degrees down")]
+	fn set_cursor_entity_hit_pitch_with_offset(
+		angle: f32,
+		forward_pitch: impl Into<Option<DirForwardPitch>>,
+	) {
+		let mut app = setup();
+		let translation = Vec3::new(10., 2., 0.);
+		let offset = Quat::from_rotation_x(angle.to_radians()).mul_vec3(Vec3::new(0., 0., -30.));
+		let target = app
+			.world_mut()
+			.spawn(GlobalTransform::from_translation(
+				translation + Vec3::new(0., 3., 0.) + offset,
+			))
+			.id();
+		let entity = app
+			.world_mut()
+			.spawn((
+				Target(Some(SkillTarget::Cursor(Cursor::TerrainHover))),
+				GlobalTransform::from_translation(translation),
+				CenterOffset(3.),
+				_Animations {
+					forward_pitch: None,
+				},
+			))
+			.id();
+		app.insert_resource(_RayCast::new().with_mock(|mock| {
+			mock.expect_raycast()
+				.return_const(Some(MouseHoversOver::Object {
+					entity: target,
+					point: Vec3::ZERO,
+				}));
+		}));
+
+		app.update();
+
+		assert_eq_approx!(
+			Some(&_Animations {
+				forward_pitch: forward_pitch.into()
+			}),
+			app.world().entity(entity).get::<_Animations>(),
+			1e-5,
+		);
+	}
+
 	#[test]
-	fn set_not_pitch_for_directional_cursor() {
+	fn do_not_set_pitch_for_directional_cursor() {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
