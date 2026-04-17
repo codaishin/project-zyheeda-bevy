@@ -2,13 +2,10 @@ use crate::{
 	components::{center_offset::CenterOffset, physical_body::PhysicalBody},
 	system_params::config::ConfigContextMut,
 };
-use common::{
-	tools::Units,
-	traits::handles_physics::{ConfigureBody, physical_bodies::Body},
-};
+use common::traits::handles_physics::{ConfigureBody, physical_bodies::Body};
 
 impl ConfigureBody for ConfigContextMut<'_> {
-	fn configure_body(&mut self, body: Body, center_offset: Units) {
+	fn configure_body(&mut self, body: Body, center_offset: f32) {
 		self.entity
 			.try_insert((PhysicalBody(body), CenterOffset(center_offset)));
 	}
@@ -26,12 +23,9 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
 	};
-	use common::{
-		tools::Units,
-		traits::{
-			accessors::get::GetContextMut,
-			handles_physics::{NoBodyConfigured, physical_bodies::Shape},
-		},
+	use common::traits::{
+		accessors::get::GetContextMut,
+		handles_physics::{NoBodyConfigured, physical_bodies::Shape},
 	};
 	use testing::SingleThreadedApp;
 
@@ -48,7 +42,7 @@ mod tests {
 			.run_system_once(move |mut p: ConfigParamMut| {
 				let key = NoBodyConfigured { entity };
 				let mut ctx = ConfigParamMut::get_context_mut(&mut p, key).unwrap();
-				ctx.configure_body(Body::from_shape(Shape::StaticGltfMesh3d), Units::ZERO);
+				ctx.configure_body(Body::from_shape(Shape::StaticGltfMesh3d), 0.);
 			})?;
 
 		assert_eq!(
@@ -67,11 +61,11 @@ mod tests {
 			.run_system_once(move |mut p: ConfigParamMut| {
 				let key = NoBodyConfigured { entity };
 				let mut ctx = ConfigParamMut::get_context_mut(&mut p, key).unwrap();
-				ctx.configure_body(Body::from_shape(Shape::StaticGltfMesh3d), Units::from(11.));
+				ctx.configure_body(Body::from_shape(Shape::StaticGltfMesh3d), 11.);
 			})?;
 
 		assert_eq!(
-			Some(&CenterOffset(Units::from(11.))),
+			Some(&CenterOffset(11.)),
 			app.world().entity(entity).get::<CenterOffset>(),
 		);
 		Ok(())

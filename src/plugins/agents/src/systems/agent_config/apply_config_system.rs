@@ -118,7 +118,7 @@ impl ApplyAgentConfig {
 						physics_type: PhysicsType::Agent,
 						blocker_types: HashSet::from([Blocker::Character]),
 					},
-					Units::ZERO,
+					0.,
 				);
 			}
 
@@ -350,7 +350,7 @@ mod tests {
 	}
 
 	impl ConfigureBody for _Physics {
-		fn configure_body(&mut self, body: Body, center_offset: Units) {
+		fn configure_body(&mut self, body: Body, center_offset: f32) {
 			self.mock.configure_body(body, center_offset);
 		}
 	}
@@ -361,7 +361,7 @@ mod tests {
 			fn configure_default_attributes(&mut self, default: PhysicalDefaultAttributes);
 		}
 		impl ConfigureBody for _Physics {
-			fn configure_body(&mut self, body: Body, center_offset: Units);
+			fn configure_body(&mut self, body: Body, center_offset: f32);
 		}
 	}
 
@@ -841,7 +841,7 @@ mod tests {
 					mock.expect_configure_default_attributes().return_const(());
 					mock.expect_configure_body()
 						.once()
-						.with(eq(expected_body), eq(Units::ZERO))
+						.with(eq(expected_body), eq(0.))
 						.return_const(());
 				}),
 			));

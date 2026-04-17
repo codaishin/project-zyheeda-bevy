@@ -89,14 +89,14 @@ pub struct NoBodyConfigured {
 }
 
 pub trait ConfigureBody {
-	fn configure_body(&mut self, body: Body, center_offset: Units);
+	fn configure_body(&mut self, body: Body, center_offset: f32);
 }
 
 impl<T> ConfigureBody for T
 where
 	T: DerefMut<Target: ConfigureBody>,
 {
-	fn configure_body(&mut self, body: Body, center_offset: Units) {
+	fn configure_body(&mut self, body: Body, center_offset: f32) {
 		self.deref_mut().configure_body(body, center_offset);
 	}
 }
