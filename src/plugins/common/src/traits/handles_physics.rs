@@ -325,7 +325,7 @@ pub enum HoverMode {
 
 impl HoverMode {
 	pub fn collider_or_direction_from(Vec3 { x, y, z }: Vec3) -> Option<Self> {
-		let vec = VecNotNan::try_from_coords([x, y, z]).ok()?;
+		let vec = VecNotNan::try_from_array([x, y, z]).ok()?;
 
 		Some(Self::ColliderOrDirectionFrom(vec))
 	}

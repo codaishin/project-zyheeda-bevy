@@ -1,18 +1,26 @@
 use serde::{Deserialize, Serialize};
-use std::fmt::Display;
+use std::{fmt::Display, ops::Deref};
 
-#[derive(Debug, PartialEq, Clone, Copy, Serialize)]
+#[derive(Debug, PartialEq, Clone, Copy, Default, Serialize)]
 pub struct F32NotNan(f32);
 
-impl TryFrom<f32> for F32NotNan {
-	type Error = IsNaN;
+impl F32NotNan {
+	pub const ZERO: Self = Self(0.);
 
-	fn try_from(value: f32) -> Result<Self, Self::Error> {
+	pub const fn try_from_f32(value: f32) -> Result<Self, IsNaN> {
 		if value.is_nan() {
 			return Err(IsNaN);
 		}
 
 		Ok(Self(value))
+	}
+}
+
+impl TryFrom<f32> for F32NotNan {
+	type Error = IsNaN;
+
+	fn try_from(value: f32) -> Result<Self, Self::Error> {
+		Self::try_from_f32(value)
 	}
 }
 
@@ -24,6 +32,14 @@ impl<'de> Deserialize<'de> for F32NotNan {
 		let value = f32::deserialize(deserializer)?;
 
 		F32NotNan::try_from(value).map_err(IsNaN::into_serde_error)
+	}
+}
+
+impl Deref for F32NotNan {
+	type Target = f32;
+
+	fn deref(&self) -> &Self::Target {
+		&self.0
 	}
 }
 

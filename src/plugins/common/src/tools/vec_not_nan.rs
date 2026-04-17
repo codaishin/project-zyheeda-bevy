@@ -1,11 +1,12 @@
 use bevy::prelude::*;
-use std::{cmp::Ordering, hash::Hash};
+use std::{cmp::Ordering, hash::Hash, ops::Deref};
+use zyheeda_core::prelude::F32NotNan;
 
 #[macro_export]
 macro_rules! vec3_not_nan {
 	($x:literal, $y:literal, $z:literal $(,)?) => {{
 		const VEC: $crate::tools::vec_not_nan::VecNotNan<3> =
-			match $crate::tools::vec_not_nan::VecNotNan::try_from_coords([$x, $y, $z]) {
+			match $crate::tools::vec_not_nan::VecNotNan::try_from_array([$x, $y, $z]) {
 				Ok(vec) => vec,
 				Err(_) => panic!("Vector is `NaN`"),
 			};
@@ -17,7 +18,7 @@ macro_rules! vec3_not_nan {
 macro_rules! vec2_not_nan {
 	($x:literal, $y:literal $(,)?) => {{
 		const VEC: $crate::tools::vec_not_nan::VecNotNan<2> =
-			match $crate::tools::vec_not_nan::VecNotNan::try_from_coords([$x, $y]) {
+			match $crate::tools::vec_not_nan::VecNotNan::try_from_array([$x, $y]) {
 				Ok(vec) => vec,
 				Err(_) => panic!("Vector is `NaN`"),
 			};
@@ -27,18 +28,21 @@ macro_rules! vec2_not_nan {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub struct VecNotNan<const N: usize>([f32; N]);
+pub struct VecNotNan<const N: usize>(pub [F32NotNan; N]);
 
 impl<const N: usize> VecNotNan<N> {
-	pub const ZERO: Self = Self([0.; N]);
+	pub const ZERO: Self = Self([F32NotNan::ZERO; N]);
 
-	pub const fn try_from_coords(vec: [f32; N]) -> Result<Self, IsNaN<N>> {
+	pub const fn try_from_array(array: [f32; N]) -> Result<Self, IsNaN<N>> {
+		let mut vec = [F32NotNan::ZERO; N];
 		let mut i = 0;
 
 		while i < N {
-			if vec[i].is_nan() {
-				return Err(IsNaN(vec));
-			}
+			let Ok(value) = F32NotNan::try_from_f32(array[i]) else {
+				return Err(IsNaN(array));
+			};
+
+			vec[i] = value;
 
 			i += 1;
 		}
@@ -49,7 +53,7 @@ impl<const N: usize> VecNotNan<N> {
 
 impl<const N: usize> Default for VecNotNan<N> {
 	fn default() -> Self {
-		Self([0.0; N])
+		Self([F32NotNan::ZERO; N])
 	}
 }
 
@@ -59,7 +63,7 @@ impl<const N: usize> Hash for VecNotNan<N> {
 	fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
 		for v in self.0 {
 			let bits = match v {
-				0.0 => 0,
+				F32NotNan::ZERO => 0,
 				v => v.to_bits(),
 			};
 
@@ -87,31 +91,31 @@ impl TryFrom<Vec3> for VecNotNan<3> {
 	type Error = IsNaN<3>;
 
 	fn try_from(vec: Vec3) -> Result<Self, Self::Error> {
-		Self::try_from_coords(vec.to_array())
+		Self::try_from_array(vec.to_array())
 	}
 }
 
 impl From<VecNotNan<3>> for Vec3 {
 	fn from(VecNotNan(vec): VecNotNan<3>) -> Self {
-		Vec3::from_array(vec)
+		Vec3::from_array(vec.map(|v| *v.deref()))
 	}
 }
 
 impl From<&'_ VecNotNan<3>> for Vec3 {
-	fn from(VecNotNan(vec): &VecNotNan<3>) -> Self {
-		Vec3::from_array(*vec)
+	fn from(vec: &VecNotNan<3>) -> Self {
+		Vec3::from(*vec)
 	}
 }
 
 impl From<VecNotNan<2>> for Vec2 {
 	fn from(VecNotNan(vec): VecNotNan<2>) -> Self {
-		Vec2::from_array(vec)
+		Vec2::from_array(vec.map(|v| *v.deref()))
 	}
 }
 
 impl From<&'_ VecNotNan<2>> for Vec2 {
-	fn from(VecNotNan(vec): &VecNotNan<2>) -> Self {
-		Vec2::from_array(*vec)
+	fn from(vec: &VecNotNan<2>) -> Self {
+		Vec2::from(*vec)
 	}
 }
 
@@ -135,6 +139,7 @@ impl<const N: usize> PartialEq for IsNaN<N> {
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use std::hash::{DefaultHasher, Hasher};
 	use test_case::test_case;
@@ -149,7 +154,14 @@ mod tests {
 	fn crate_node() {
 		let node = VecNotNan::try_from(Vec3::new(1., 2., 3.));
 
-		assert_eq!(Ok(VecNotNan([1., 2., 3.])), node);
+		assert_eq!(
+			Ok(VecNotNan([
+				F32NotNan::try_from_f32(1.).unwrap(),
+				F32NotNan::try_from_f32(2.).unwrap(),
+				F32NotNan::try_from_f32(3.).unwrap(),
+			])),
+			node
+		);
 	}
 
 	#[test]
