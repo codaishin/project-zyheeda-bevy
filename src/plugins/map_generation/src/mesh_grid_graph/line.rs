@@ -122,7 +122,7 @@ impl Iterator for IterSuccessorsOrdered {
 mod tests {
 	use super::*;
 	use crate::mesh_grid_graph::test::neighbors;
-	use common::vec3_not_nan;
+	use common::vec_not_nan;
 
 	/// ```
 	/// a — n1
@@ -133,12 +133,12 @@ mod tests {
 	/// ```
 	#[test]
 	fn line_walks_towards_target() {
-		let a = vec3_not_nan!(0., 0., 0.);
-		let n1 = vec3_not_nan!(1., 0., 0.);
-		let n2 = vec3_not_nan!(1., 0., 1.);
-		let n3 = vec3_not_nan!(2., 0., 1.);
-		let n4 = vec3_not_nan!(2., 0., 2.);
-		let b = vec3_not_nan!(3., 0., 2.);
+		let a = vec_not_nan!(0., 0., 0.);
+		let n1 = vec_not_nan!(1., 0., 0.);
+		let n2 = vec_not_nan!(1., 0., 1.);
+		let n3 = vec_not_nan!(2., 0., 1.);
+		let n4 = vec_not_nan!(2., 0., 2.);
+		let b = vec_not_nan!(3., 0., 2.);
 		let graph = MeshGridGraph {
 			vertices: vec![a, n1, n2, n3, n4, b],
 			neighbors: neighbors![
@@ -187,26 +187,26 @@ mod tests {
 	#[test]
 	fn line_uses_closest_wedge_towards_target_with_surrounding_nodes() {
 		let vertices = [
-			vec3_not_nan!(0., 0., 0.),
-			vec3_not_nan!(1., 0., 0.),
-			vec3_not_nan!(2., 0., 0.),
-			vec3_not_nan!(3., 0., 0.),
-			vec3_not_nan!(4., 0., 0.),
-			vec3_not_nan!(0., 0., 1.),
-			vec3_not_nan!(1., 0., 1.),
-			vec3_not_nan!(2., 0., 1.),
-			vec3_not_nan!(3., 0., 1.),
-			vec3_not_nan!(4., 0., 1.),
-			vec3_not_nan!(0., 0., 2.),
-			vec3_not_nan!(1., 0., 2.),
-			vec3_not_nan!(2., 0., 2.),
-			vec3_not_nan!(3., 0., 2.),
-			vec3_not_nan!(4., 0., 2.),
-			vec3_not_nan!(0., 0., 3.),
-			vec3_not_nan!(1., 0., 3.),
-			vec3_not_nan!(2., 0., 3.),
-			vec3_not_nan!(3., 0., 3.),
-			vec3_not_nan!(4., 0., 3.),
+			vec_not_nan!(0., 0., 0.),
+			vec_not_nan!(1., 0., 0.),
+			vec_not_nan!(2., 0., 0.),
+			vec_not_nan!(3., 0., 0.),
+			vec_not_nan!(4., 0., 0.),
+			vec_not_nan!(0., 0., 1.),
+			vec_not_nan!(1., 0., 1.),
+			vec_not_nan!(2., 0., 1.),
+			vec_not_nan!(3., 0., 1.),
+			vec_not_nan!(4., 0., 1.),
+			vec_not_nan!(0., 0., 2.),
+			vec_not_nan!(1., 0., 2.),
+			vec_not_nan!(2., 0., 2.),
+			vec_not_nan!(3., 0., 2.),
+			vec_not_nan!(4., 0., 2.),
+			vec_not_nan!(0., 0., 3.),
+			vec_not_nan!(1., 0., 3.),
+			vec_not_nan!(2., 0., 3.),
+			vec_not_nan!(3., 0., 3.),
+			vec_not_nan!(4., 0., 3.),
 		];
 		let graph = MeshGridGraph {
 			vertices: Vec::from(vertices),
@@ -264,11 +264,11 @@ mod tests {
 	/// ```
 	#[test]
 	fn line_disregards_stale_nodes() {
-		let a = vec3_not_nan!(0., 0., 0.);
-		let n1 = vec3_not_nan!(1., 0., 0.3);
-		let n2 = vec3_not_nan!(1., 0., -0.3);
-		let n3 = vec3_not_nan!(2., 0., -0.5);
-		let b = vec3_not_nan!(2., 0., 0.);
+		let a = vec_not_nan!(0., 0., 0.);
+		let n1 = vec_not_nan!(1., 0., 0.3);
+		let n2 = vec_not_nan!(1., 0., -0.3);
+		let n3 = vec_not_nan!(2., 0., -0.5);
+		let b = vec_not_nan!(2., 0., 0.);
 		let graph = MeshGridGraph {
 			vertices: vec![a, n1, n2, n3, b],
 			neighbors: neighbors![[1, 2], [0, 2, 4], [0, 1, 3], [2], [1]],
@@ -297,12 +297,12 @@ mod tests {
 	/// ```
 	#[test]
 	fn stop_line_when_clearance_too_low() {
-		let a = vec3_not_nan!(0., 0., 0.);
-		let n1 = vec3_not_nan!(1., 0., 0.);
-		let n2 = vec3_not_nan!(1., 0., 1.);
-		let n3 = vec3_not_nan!(2., 0., 1.);
-		let n4 = vec3_not_nan!(2., 0., 2.);
-		let b = vec3_not_nan!(3., 0., 2.);
+		let a = vec_not_nan!(0., 0., 0.);
+		let n1 = vec_not_nan!(1., 0., 0.);
+		let n2 = vec_not_nan!(1., 0., 1.);
+		let n3 = vec_not_nan!(2., 0., 1.);
+		let n4 = vec_not_nan!(2., 0., 2.);
+		let b = vec_not_nan!(3., 0., 2.);
 		let graph = MeshGridGraph {
 			vertices: vec![a, n1, n2, n3, n4, b],
 			neighbors: neighbors![
@@ -348,10 +348,10 @@ mod tests {
 	/// ```
 	#[test]
 	fn explore_all_nodes_if_multiple_are_valid() {
-		let a = vec3_not_nan!(0., 0., 0.);
-		let n1 = vec3_not_nan!(1., 0., -1.);
-		let n2 = vec3_not_nan!(1., 0., 1.);
-		let b = vec3_not_nan!(2., 0., 0.);
+		let a = vec_not_nan!(0., 0., 0.);
+		let n1 = vec_not_nan!(1., 0., -1.);
+		let n2 = vec_not_nan!(1., 0., 1.);
+		let b = vec_not_nan!(2., 0., 0.);
 		let graph = MeshGridGraph {
 			vertices: vec![a, n1, n2, b],
 			neighbors: neighbors![[1, 2], [0, 2, 3], [0, 1, 3], [1, 2]],
@@ -388,10 +388,10 @@ mod tests {
 	/// ```
 	#[test]
 	fn explore_all_nodes_if_multiple_are_valid_allowing_for_some_epsilon() {
-		let a = vec3_not_nan!(0., 0., 0.);
-		let n1 = vec3_not_nan!(1., 0., -1.0000001);
-		let n2 = vec3_not_nan!(1., 0., 1.);
-		let b = vec3_not_nan!(2., 0., 0.);
+		let a = vec_not_nan!(0., 0., 0.);
+		let n1 = vec_not_nan!(1., 0., -1.0000001);
+		let n2 = vec_not_nan!(1., 0., 1.);
+		let b = vec_not_nan!(2., 0., 0.);
 		let graph = MeshGridGraph {
 			vertices: vec![a, n1, n2, b],
 			neighbors: neighbors![[1, 2], [0, 2, 3], [0, 1, 3], [1, 2]],
@@ -428,11 +428,11 @@ mod tests {
 	/// ```
 	#[test]
 	fn do_not_revisit_nodes() {
-		let a = vec3_not_nan!(0., 0., 0.);
-		let n1 = vec3_not_nan!(1., 0., -1.);
-		let n2 = vec3_not_nan!(1., 0., 1.);
-		let n3 = vec3_not_nan!(2., 0., 0.);
-		let b = vec3_not_nan!(3., 0., 0.);
+		let a = vec_not_nan!(0., 0., 0.);
+		let n1 = vec_not_nan!(1., 0., -1.);
+		let n2 = vec_not_nan!(1., 0., 1.);
+		let n3 = vec_not_nan!(2., 0., 0.);
+		let b = vec_not_nan!(3., 0., 0.);
 		let graph = MeshGridGraph {
 			vertices: vec![a, n1, n2, n3, b],
 			neighbors: neighbors![[1, 2], [0, 2, 3], [0, 1, 3], [1, 2, 4], [3]],
@@ -464,12 +464,12 @@ mod tests {
 	/// ```
 	#[test]
 	fn no_line_when_no_clearance_even_when_zero_clearance_required() {
-		let a = vec3_not_nan!(0., 0., 0.);
-		let n1 = vec3_not_nan!(1., 0., 0.);
-		let n2 = vec3_not_nan!(1., 0., 1.);
-		let n3 = vec3_not_nan!(2., 0., 1.);
-		let n4 = vec3_not_nan!(2., 0., 2.);
-		let b = vec3_not_nan!(3., 0., 2.);
+		let a = vec_not_nan!(0., 0., 0.);
+		let n1 = vec_not_nan!(1., 0., 0.);
+		let n2 = vec_not_nan!(1., 0., 1.);
+		let n3 = vec_not_nan!(2., 0., 1.);
+		let n4 = vec_not_nan!(2., 0., 2.);
+		let b = vec_not_nan!(3., 0., 2.);
 		let graph = MeshGridGraph {
 			vertices: vec![a, n1, n2, n3, n4, b],
 			neighbors: neighbors![

@@ -314,7 +314,7 @@ impl Display for TriangleEdgeError {
 mod test {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use common::vec3_not_nan;
+	use common::vec_not_nan;
 
 	macro_rules! neighbors {
 		(node($($n:expr),* $(,)?)) => {
@@ -372,9 +372,9 @@ mod test {
 		/// ```
 		#[test]
 		fn set_nodes_of_one_triangle() {
-			let a = vec3_not_nan!(0., 0., 0.);
-			let b = vec3_not_nan!(1., 0., 0.);
-			let c = vec3_not_nan!(1., 0., 1.);
+			let a = vec_not_nan!(0., 0., 0.);
+			let b = vec_not_nan!(1., 0., 0.);
+			let c = vec_not_nan!(1., 0., 1.);
 
 			let graph = MeshGridGraph::try_from_triangles([[a, b, c]].into_iter());
 
@@ -396,10 +396,10 @@ mod test {
 		/// ```
 		#[test]
 		fn set_nodes_of_two_connected_triangles() {
-			let a = vec3_not_nan!(0., 0., 0.);
-			let b = vec3_not_nan!(1., 0., 0.);
-			let c = vec3_not_nan!(1., 0., 1.);
-			let d = vec3_not_nan!(0., 0., 1.);
+			let a = vec_not_nan!(0., 0., 0.);
+			let b = vec_not_nan!(1., 0., 0.);
+			let c = vec_not_nan!(1., 0., 1.);
+			let d = vec_not_nan!(0., 0., 1.);
 
 			let graph = MeshGridGraph::try_from_triangles([[a, b, c], [a, c, d]].into_iter());
 
@@ -421,10 +421,10 @@ mod test {
 		/// ```
 		#[test]
 		fn set_nodes_of_two_connected_triangles_when_edge_reversed() {
-			let a = vec3_not_nan!(0., 0., 0.);
-			let b = vec3_not_nan!(1., 0., 0.);
-			let c = vec3_not_nan!(1., 0., 1.);
-			let d = vec3_not_nan!(0., 0., 1.);
+			let a = vec_not_nan!(0., 0., 0.);
+			let b = vec_not_nan!(1., 0., 0.);
+			let c = vec_not_nan!(1., 0., 1.);
+			let d = vec_not_nan!(0., 0., 1.);
 
 			let graph = MeshGridGraph::try_from_triangles([[a, b, c], [c, a, d]].into_iter());
 
@@ -446,8 +446,8 @@ mod test {
 		/// ```
 		#[test]
 		fn prevent_node_neighbor_self_reference() {
-			let a = vec3_not_nan!(0., 0., 0.);
-			let b = vec3_not_nan!(1., 0., 0.);
+			let a = vec_not_nan!(0., 0., 0.);
+			let b = vec_not_nan!(1., 0., 0.);
 
 			let graph = MeshGridGraph::try_from_triangles([[a, b, b]].into_iter());
 
@@ -471,10 +471,10 @@ mod test {
 		/// ```
 		#[test]
 		fn do_not_connect_across_shared_edge_when_concave() {
-			let a = vec3_not_nan!(0., 0., 0.);
-			let b = vec3_not_nan!(1., 0., 0.1);
-			let c = vec3_not_nan!(1., 0., 1.1);
-			let d = vec3_not_nan!(2., 0., 0.);
+			let a = vec_not_nan!(0., 0., 0.);
+			let b = vec_not_nan!(1., 0., 0.1);
+			let c = vec_not_nan!(1., 0., 1.1);
+			let d = vec_not_nan!(2., 0., 0.);
 
 			let graph = MeshGridGraph::try_from_triangles([[a, b, c], [b, c, d]].into_iter());
 
@@ -498,10 +498,10 @@ mod test {
 		/// ```
 		#[test]
 		fn do_not_connect_across_shared_edge_when_concave_reversed() {
-			let a = vec3_not_nan!(0., 0., 1.1);
-			let b = vec3_not_nan!(1., 0., 0.);
-			let c = vec3_not_nan!(1., 0., 1.);
-			let d = vec3_not_nan!(2., 0., 1.1);
+			let a = vec_not_nan!(0., 0., 1.1);
+			let b = vec_not_nan!(1., 0., 0.);
+			let c = vec_not_nan!(1., 0., 1.);
+			let d = vec_not_nan!(2., 0., 1.1);
 
 			let graph = MeshGridGraph::try_from_triangles([[a, b, c], [b, c, d]].into_iter());
 
@@ -538,12 +538,12 @@ mod test {
 		/// ```
 		#[test]
 		fn do_not_connect_nodes_on_acute_angles() {
-			let a = vec3_not_nan!(0., 0., 0.);
-			let b = vec3_not_nan!(1., 0., 0.);
-			let c = vec3_not_nan!(1., 0., 1.);
-			let d = vec3_not_nan!(0., 0., 1.);
-			let e = vec3_not_nan!(2., 0., 0.);
-			let f = vec3_not_nan!(2., 0., 1.);
+			let a = vec_not_nan!(0., 0., 0.);
+			let b = vec_not_nan!(1., 0., 0.);
+			let c = vec_not_nan!(1., 0., 1.);
+			let d = vec_not_nan!(0., 0., 1.);
+			let e = vec_not_nan!(2., 0., 0.);
+			let f = vec_not_nan!(2., 0., 1.);
 
 			let graph = MeshGridGraph::try_from_triangles(
 				[[a, b, c], [a, d, c], [b, e, f], [b, c, f]].into_iter(),
@@ -574,10 +574,10 @@ mod test {
 		/// ```
 		#[test]
 		fn set_nodes_of_two_connected_triangles_within_minimal_error() {
-			let a = vec3_not_nan!(0., 0., 0.);
-			let b = vec3_not_nan!(1., 0., -1e-6);
-			let c = vec3_not_nan!(1., 0., 1.);
-			let d = vec3_not_nan!(0., 0., 1.);
+			let a = vec_not_nan!(0., 0., 0.);
+			let b = vec_not_nan!(1., 0., -1e-6);
+			let c = vec_not_nan!(1., 0., 1.);
+			let d = vec_not_nan!(0., 0., 1.);
 
 			let graph = MeshGridGraph::try_from_triangles([[a, b, c], [a, c, d]].into_iter());
 
@@ -601,12 +601,12 @@ mod test {
 		/// ```
 		#[test]
 		fn identify_clearance() {
-			let inner = vec3_not_nan!(0., 0., 0.);
+			let inner = vec_not_nan!(0., 0., 0.);
 			let boundary_vertices = [
-				vec3_not_nan!(-1., 0., 0.),
-				vec3_not_nan!(0., 0., -1.),
-				vec3_not_nan!(1., 0., 0.),
-				vec3_not_nan!(0., 0., 1.),
+				vec_not_nan!(-1., 0., 0.),
+				vec_not_nan!(0., 0., -1.),
+				vec_not_nan!(1., 0., 0.),
+				vec_not_nan!(0., 0., 1.),
 			];
 			let triangles = [
 				[inner, boundary_vertices[0], boundary_vertices[1]],
@@ -655,91 +655,91 @@ mod test {
 			let triangles = [
 				// A0
 				[
-					vec3_not_nan!(0., 0., 0.),
-					vec3_not_nan!(0., 0., 1.),
-					vec3_not_nan!(1., 0., 0.),
+					vec_not_nan!(0., 0., 0.),
+					vec_not_nan!(0., 0., 1.),
+					vec_not_nan!(1., 0., 0.),
 				],
 				[
-					vec3_not_nan!(0., 0., 1.),
-					vec3_not_nan!(1., 0., 0.),
-					vec3_not_nan!(1., 0., 1.),
+					vec_not_nan!(0., 0., 1.),
+					vec_not_nan!(1., 0., 0.),
+					vec_not_nan!(1., 0., 1.),
 				],
 				// B0
 				[
-					vec3_not_nan!(1., 0., 0.),
-					vec3_not_nan!(1., 0., 1.),
-					vec3_not_nan!(2., 0., 0.),
+					vec_not_nan!(1., 0., 0.),
+					vec_not_nan!(1., 0., 1.),
+					vec_not_nan!(2., 0., 0.),
 				],
 				[
-					vec3_not_nan!(1., 0., 1.),
-					vec3_not_nan!(2., 0., 0.),
-					vec3_not_nan!(2., 0., 1.),
+					vec_not_nan!(1., 0., 1.),
+					vec_not_nan!(2., 0., 0.),
+					vec_not_nan!(2., 0., 1.),
 				],
 				// C0
 				[
-					vec3_not_nan!(2., 0., 0.),
-					vec3_not_nan!(2., 0., 1.),
-					vec3_not_nan!(3., 0., 0.),
+					vec_not_nan!(2., 0., 0.),
+					vec_not_nan!(2., 0., 1.),
+					vec_not_nan!(3., 0., 0.),
 				],
 				[
-					vec3_not_nan!(2., 0., 1.),
-					vec3_not_nan!(3., 0., 0.),
-					vec3_not_nan!(3., 0., 1.),
+					vec_not_nan!(2., 0., 1.),
+					vec_not_nan!(3., 0., 0.),
+					vec_not_nan!(3., 0., 1.),
 				],
 				// A1
 				[
-					vec3_not_nan!(0., 0., 1.),
-					vec3_not_nan!(0., 0., 2.),
-					vec3_not_nan!(1., 0., 1.),
+					vec_not_nan!(0., 0., 1.),
+					vec_not_nan!(0., 0., 2.),
+					vec_not_nan!(1., 0., 1.),
 				],
 				[
-					vec3_not_nan!(0., 0., 2.),
-					vec3_not_nan!(1., 0., 1.),
-					vec3_not_nan!(1., 0., 2.),
+					vec_not_nan!(0., 0., 2.),
+					vec_not_nan!(1., 0., 1.),
+					vec_not_nan!(1., 0., 2.),
 				],
 				// B1
 				[
-					vec3_not_nan!(1., 0., 1.),
-					vec3_not_nan!(1., 0., 2.),
-					vec3_not_nan!(2., 0., 1.),
+					vec_not_nan!(1., 0., 1.),
+					vec_not_nan!(1., 0., 2.),
+					vec_not_nan!(2., 0., 1.),
 				],
 				[
-					vec3_not_nan!(1., 0., 2.),
-					vec3_not_nan!(2., 0., 1.),
-					vec3_not_nan!(2., 0., 2.),
+					vec_not_nan!(1., 0., 2.),
+					vec_not_nan!(2., 0., 1.),
+					vec_not_nan!(2., 0., 2.),
 				],
 				// C1
 				[
-					vec3_not_nan!(2., 0., 1.),
-					vec3_not_nan!(2., 0., 2.),
-					vec3_not_nan!(3., 0., 1.),
+					vec_not_nan!(2., 0., 1.),
+					vec_not_nan!(2., 0., 2.),
+					vec_not_nan!(3., 0., 1.),
 				],
 				[
-					vec3_not_nan!(2., 0., 2.),
-					vec3_not_nan!(3., 0., 1.),
-					vec3_not_nan!(3., 0., 2.),
+					vec_not_nan!(2., 0., 2.),
+					vec_not_nan!(3., 0., 1.),
+					vec_not_nan!(3., 0., 2.),
 				],
 				// A2
 				[
-					vec3_not_nan!(0., 0., 2.),
-					vec3_not_nan!(0., 0., 3.),
-					vec3_not_nan!(1., 0., 2.),
+					vec_not_nan!(0., 0., 2.),
+					vec_not_nan!(0., 0., 3.),
+					vec_not_nan!(1., 0., 2.),
 				],
 				[
-					vec3_not_nan!(0., 0., 3.),
-					vec3_not_nan!(1., 0., 2.),
-					vec3_not_nan!(1., 0., 3.),
+					vec_not_nan!(0., 0., 3.),
+					vec_not_nan!(1., 0., 2.),
+					vec_not_nan!(1., 0., 3.),
 				],
 				// C2
 				[
-					vec3_not_nan!(2., 0., 2.),
-					vec3_not_nan!(3., 0., 2.),
-					vec3_not_nan!(2., 0., 3.),
+					vec_not_nan!(2., 0., 2.),
+					vec_not_nan!(3., 0., 2.),
+					vec_not_nan!(2., 0., 3.),
 				],
 				[
-					vec3_not_nan!(3., 0., 2.),
-					vec3_not_nan!(2., 0., 3.),
-					vec3_not_nan!(3., 0., 3.),
+					vec_not_nan!(3., 0., 2.),
+					vec_not_nan!(2., 0., 3.),
+					vec_not_nan!(3., 0., 3.),
 				],
 			];
 
@@ -788,179 +788,179 @@ mod test {
 			let triangles = [
 				// A0
 				[
-					vec3_not_nan!(0., 0., 0.),
-					vec3_not_nan!(0., 0., 1.),
-					vec3_not_nan!(1., 0., 0.),
+					vec_not_nan!(0., 0., 0.),
+					vec_not_nan!(0., 0., 1.),
+					vec_not_nan!(1., 0., 0.),
 				],
 				[
-					vec3_not_nan!(0., 0., 1.),
-					vec3_not_nan!(1., 0., 0.),
-					vec3_not_nan!(1., 0., 1.),
+					vec_not_nan!(0., 0., 1.),
+					vec_not_nan!(1., 0., 0.),
+					vec_not_nan!(1., 0., 1.),
 				],
 				// B0
 				[
-					vec3_not_nan!(1., 0., 0.),
-					vec3_not_nan!(1., 0., 1.),
-					vec3_not_nan!(2., 0., 0.),
+					vec_not_nan!(1., 0., 0.),
+					vec_not_nan!(1., 0., 1.),
+					vec_not_nan!(2., 0., 0.),
 				],
 				[
-					vec3_not_nan!(1., 0., 1.),
-					vec3_not_nan!(2., 0., 0.),
-					vec3_not_nan!(2., 0., 1.),
+					vec_not_nan!(1., 0., 1.),
+					vec_not_nan!(2., 0., 0.),
+					vec_not_nan!(2., 0., 1.),
 				],
 				// C0
 				[
-					vec3_not_nan!(2., 0., 0.),
-					vec3_not_nan!(2., 0., 1.),
-					vec3_not_nan!(3., 0., 0.),
+					vec_not_nan!(2., 0., 0.),
+					vec_not_nan!(2., 0., 1.),
+					vec_not_nan!(3., 0., 0.),
 				],
 				[
-					vec3_not_nan!(2., 0., 1.),
-					vec3_not_nan!(3., 0., 0.),
-					vec3_not_nan!(3., 0., 1.),
+					vec_not_nan!(2., 0., 1.),
+					vec_not_nan!(3., 0., 0.),
+					vec_not_nan!(3., 0., 1.),
 				],
 				// D0
 				[
-					vec3_not_nan!(3., 0., 0.),
-					vec3_not_nan!(3., 0., 1.),
-					vec3_not_nan!(4., 0., 0.),
+					vec_not_nan!(3., 0., 0.),
+					vec_not_nan!(3., 0., 1.),
+					vec_not_nan!(4., 0., 0.),
 				],
 				[
-					vec3_not_nan!(3., 0., 1.),
-					vec3_not_nan!(4., 0., 0.),
-					vec3_not_nan!(4., 0., 1.),
+					vec_not_nan!(3., 0., 1.),
+					vec_not_nan!(4., 0., 0.),
+					vec_not_nan!(4., 0., 1.),
 				],
 				// A1
 				[
-					vec3_not_nan!(0., 0., 1.),
-					vec3_not_nan!(0., 0., 2.),
-					vec3_not_nan!(1., 0., 1.),
+					vec_not_nan!(0., 0., 1.),
+					vec_not_nan!(0., 0., 2.),
+					vec_not_nan!(1., 0., 1.),
 				],
 				[
-					vec3_not_nan!(0., 0., 2.),
-					vec3_not_nan!(1., 0., 1.),
-					vec3_not_nan!(1., 0., 2.),
+					vec_not_nan!(0., 0., 2.),
+					vec_not_nan!(1., 0., 1.),
+					vec_not_nan!(1., 0., 2.),
 				],
 				// B1
 				[
-					vec3_not_nan!(1., 0., 1.),
-					vec3_not_nan!(1., 0., 2.),
-					vec3_not_nan!(2., 0., 1.),
+					vec_not_nan!(1., 0., 1.),
+					vec_not_nan!(1., 0., 2.),
+					vec_not_nan!(2., 0., 1.),
 				],
 				[
-					vec3_not_nan!(1., 0., 2.),
-					vec3_not_nan!(2., 0., 1.),
-					vec3_not_nan!(2., 0., 2.),
+					vec_not_nan!(1., 0., 2.),
+					vec_not_nan!(2., 0., 1.),
+					vec_not_nan!(2., 0., 2.),
 				],
 				// C1
 				[
-					vec3_not_nan!(2., 0., 1.),
-					vec3_not_nan!(2., 0., 2.),
-					vec3_not_nan!(3., 0., 1.),
+					vec_not_nan!(2., 0., 1.),
+					vec_not_nan!(2., 0., 2.),
+					vec_not_nan!(3., 0., 1.),
 				],
 				[
-					vec3_not_nan!(2., 0., 2.),
-					vec3_not_nan!(3., 0., 1.),
-					vec3_not_nan!(3., 0., 2.),
+					vec_not_nan!(2., 0., 2.),
+					vec_not_nan!(3., 0., 1.),
+					vec_not_nan!(3., 0., 2.),
 				],
 				// D1
 				[
-					vec3_not_nan!(3., 0., 1.),
-					vec3_not_nan!(3., 0., 2.),
-					vec3_not_nan!(4., 0., 1.),
+					vec_not_nan!(3., 0., 1.),
+					vec_not_nan!(3., 0., 2.),
+					vec_not_nan!(4., 0., 1.),
 				],
 				[
-					vec3_not_nan!(3., 0., 2.),
-					vec3_not_nan!(4., 0., 1.),
-					vec3_not_nan!(4., 0., 2.),
+					vec_not_nan!(3., 0., 2.),
+					vec_not_nan!(4., 0., 1.),
+					vec_not_nan!(4., 0., 2.),
 				],
 				// A2
 				[
-					vec3_not_nan!(0., 0., 2.),
-					vec3_not_nan!(0., 0., 3.),
-					vec3_not_nan!(1., 0., 2.),
+					vec_not_nan!(0., 0., 2.),
+					vec_not_nan!(0., 0., 3.),
+					vec_not_nan!(1., 0., 2.),
 				],
 				[
-					vec3_not_nan!(0., 0., 3.),
-					vec3_not_nan!(1., 0., 2.),
-					vec3_not_nan!(1., 0., 3.),
+					vec_not_nan!(0., 0., 3.),
+					vec_not_nan!(1., 0., 2.),
+					vec_not_nan!(1., 0., 3.),
 				],
 				// B2
 				[
-					vec3_not_nan!(1., 0., 2.),
-					vec3_not_nan!(1., 0., 3.),
-					vec3_not_nan!(2., 0., 2.),
+					vec_not_nan!(1., 0., 2.),
+					vec_not_nan!(1., 0., 3.),
+					vec_not_nan!(2., 0., 2.),
 				],
 				[
-					vec3_not_nan!(1., 0., 3.),
-					vec3_not_nan!(2., 0., 2.),
-					vec3_not_nan!(2., 0., 3.),
+					vec_not_nan!(1., 0., 3.),
+					vec_not_nan!(2., 0., 2.),
+					vec_not_nan!(2., 0., 3.),
 				],
 				// C2
 				[
-					vec3_not_nan!(2., 0., 2.),
-					vec3_not_nan!(2., 0., 3.),
-					vec3_not_nan!(3., 0., 2.),
+					vec_not_nan!(2., 0., 2.),
+					vec_not_nan!(2., 0., 3.),
+					vec_not_nan!(3., 0., 2.),
 				],
 				[
-					vec3_not_nan!(2., 0., 3.),
-					vec3_not_nan!(3., 0., 2.),
-					vec3_not_nan!(3., 0., 3.),
+					vec_not_nan!(2., 0., 3.),
+					vec_not_nan!(3., 0., 2.),
+					vec_not_nan!(3., 0., 3.),
 				],
 				// D2
 				[
-					vec3_not_nan!(3., 0., 2.),
-					vec3_not_nan!(3., 0., 3.),
-					vec3_not_nan!(4., 0., 2.),
+					vec_not_nan!(3., 0., 2.),
+					vec_not_nan!(3., 0., 3.),
+					vec_not_nan!(4., 0., 2.),
 				],
 				[
-					vec3_not_nan!(3., 0., 3.),
-					vec3_not_nan!(4., 0., 2.),
-					vec3_not_nan!(4., 0., 3.),
+					vec_not_nan!(3., 0., 3.),
+					vec_not_nan!(4., 0., 2.),
+					vec_not_nan!(4., 0., 3.),
 				],
 				// A3
 				[
-					vec3_not_nan!(0., 0., 3.),
-					vec3_not_nan!(0., 0., 4.),
-					vec3_not_nan!(1., 0., 3.),
+					vec_not_nan!(0., 0., 3.),
+					vec_not_nan!(0., 0., 4.),
+					vec_not_nan!(1., 0., 3.),
 				],
 				[
-					vec3_not_nan!(0., 0., 4.),
-					vec3_not_nan!(1., 0., 3.),
-					vec3_not_nan!(1., 0., 4.),
+					vec_not_nan!(0., 0., 4.),
+					vec_not_nan!(1., 0., 3.),
+					vec_not_nan!(1., 0., 4.),
 				],
 				// B3
 				[
-					vec3_not_nan!(1., 0., 3.),
-					vec3_not_nan!(1., 0., 4.),
-					vec3_not_nan!(2., 0., 3.),
+					vec_not_nan!(1., 0., 3.),
+					vec_not_nan!(1., 0., 4.),
+					vec_not_nan!(2., 0., 3.),
 				],
 				[
-					vec3_not_nan!(1., 0., 4.),
-					vec3_not_nan!(2., 0., 3.),
-					vec3_not_nan!(2., 0., 4.),
+					vec_not_nan!(1., 0., 4.),
+					vec_not_nan!(2., 0., 3.),
+					vec_not_nan!(2., 0., 4.),
 				],
 				// C3
 				[
-					vec3_not_nan!(2., 0., 3.),
-					vec3_not_nan!(2., 0., 4.),
-					vec3_not_nan!(3., 0., 3.),
+					vec_not_nan!(2., 0., 3.),
+					vec_not_nan!(2., 0., 4.),
+					vec_not_nan!(3., 0., 3.),
 				],
 				[
-					vec3_not_nan!(2., 0., 4.),
-					vec3_not_nan!(3., 0., 3.),
-					vec3_not_nan!(3., 0., 4.),
+					vec_not_nan!(2., 0., 4.),
+					vec_not_nan!(3., 0., 3.),
+					vec_not_nan!(3., 0., 4.),
 				],
 				// D3
 				[
-					vec3_not_nan!(3., 0., 3.),
-					vec3_not_nan!(3., 0., 4.),
-					vec3_not_nan!(4., 0., 3.),
+					vec_not_nan!(3., 0., 3.),
+					vec_not_nan!(3., 0., 4.),
+					vec_not_nan!(4., 0., 3.),
 				],
 				[
-					vec3_not_nan!(3., 0., 4.),
-					vec3_not_nan!(4., 0., 3.),
-					vec3_not_nan!(4., 0., 4.),
+					vec_not_nan!(3., 0., 4.),
+					vec_not_nan!(4., 0., 3.),
+					vec_not_nan!(4., 0., 4.),
 				],
 			];
 
@@ -1002,20 +1002,20 @@ mod test {
 			);
 		}
 
-		#[test_case([vec3_not_nan!(1., 2., 5.), vec3_not_nan!(1., 2., 6.), vec3_not_nan!(1., 2., 7.)]; "3")]
-		#[test_case([vec3_not_nan!(1., 2., 5.), vec3_not_nan!(1., 2., 6.), vec3_not_nan!(1., 2., 7.), vec3_not_nan!(1., 2., 8.)]; "4")]
+		#[test_case([vec_not_nan!(1., 2., 5.), vec_not_nan!(1., 2., 6.), vec_not_nan!(1., 2., 7.)]; "3")]
+		#[test_case([vec_not_nan!(1., 2., 5.), vec_not_nan!(1., 2., 6.), vec_not_nan!(1., 2., 7.), vec_not_nan!(1., 2., 8.)]; "4")]
 		fn return_error_when_more_than_2_triangles_share_same_edge<const N: usize>(
 			other_vertices: [VecNotNan<3>; N],
 		) {
-			let edge = (vec3_not_nan!(1., 2., 3.), vec3_not_nan!(1., 2., 4.));
+			let edge = (vec_not_nan!(1., 2., 3.), vec_not_nan!(1., 2., 4.));
 			let triangles = other_vertices.map(|o| [edge.0, edge.1, o]);
 
 			let graph = MeshGridGraph::try_from_triangles(triangles.into_iter());
 
 			assert_eq!(
 				Err(TriangleEdgeError(
-					vec3_not_nan!(1., 2., 3.),
-					vec3_not_nan!(1., 2., 4.)
+					vec_not_nan!(1., 2., 3.),
+					vec_not_nan!(1., 2., 4.)
 				)),
 				graph,
 			);
@@ -1028,7 +1028,7 @@ mod test {
 		#[test]
 		fn get_exact_translation() {
 			let graph = MeshGridGraph {
-				vertices: vec![vec3_not_nan!(1., 2., 3.), vec3_not_nan!(4., 5., 6.)],
+				vertices: vec![vec_not_nan!(1., 2., 3.), vec_not_nan!(4., 5., 6.)],
 				neighbors: neighbors![[], []],
 				clearance: vec![Clearance::INFINITY; 2],
 				..default()
@@ -1042,7 +1042,7 @@ mod test {
 		#[test]
 		fn get_closest_translation() {
 			let graph = MeshGridGraph {
-				vertices: vec![vec3_not_nan!(10., 2., 3.), vec3_not_nan!(1., 2., 3.)],
+				vertices: vec![vec_not_nan!(10., 2., 3.), vec_not_nan!(1., 2., 3.)],
 				neighbors: neighbors![[], []],
 				clearance: vec![Clearance::INFINITY; 2],
 				..default()
@@ -1057,9 +1057,9 @@ mod test {
 		fn get_closest_translation_with_non_zero_clearance() {
 			let graph = MeshGridGraph {
 				vertices: vec![
-					vec3_not_nan!(10., 2., 3.),
-					vec3_not_nan!(1., 2., 3.),
-					vec3_not_nan!(1., 2., 2.),
+					vec_not_nan!(10., 2., 3.),
+					vec_not_nan!(1., 2., 3.),
+					vec_not_nan!(1., 2., 2.),
 				],
 				neighbors: neighbors![[], [], []],
 				clearance: vec![Clearance::INFINITY, Clearance::NONE, Clearance::INFINITY],
@@ -1078,7 +1078,7 @@ mod test {
 		#[test]
 		fn neighbors_as_successors() {
 			let graph = MeshGridGraph {
-				vertices: vec![vec3_not_nan!(1., 2., 3.)],
+				vertices: vec![vec_not_nan!(1., 2., 3.)],
 				neighbors: neighbors![[1, 2]],
 				clearance: vec![Clearance::INFINITY; 2],
 				..default()
@@ -1096,9 +1096,9 @@ mod test {
 	fn setup_graph(max_los_fn: fn(LoSParams, &MeshGridGraph) -> Option<NodeId>) -> MeshGridGraph {
 		MeshGridGraph {
 			vertices: vec![
-				vec3_not_nan!(0., 0., 0.),
-				vec3_not_nan!(1., 0., 0.),
-				vec3_not_nan!(1., 0., 1.),
+				vec_not_nan!(0., 0., 0.),
+				vec_not_nan!(1., 0., 0.),
+				vec_not_nan!(1., 0., 1.),
 			],
 			neighbors: vec![vec![]; 3],
 			clearance: vec![Clearance::INFINITY; 3],

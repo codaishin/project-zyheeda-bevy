@@ -101,7 +101,7 @@ mod tests {
 		components::persistent_entity::PersistentEntity,
 		tools::vec_not_nan::VecNotNan,
 		traits::register_persistent_entities::RegisterPersistentEntities,
-		vec3_not_nan,
+		vec_not_nan,
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -167,7 +167,7 @@ mod tests {
 			mock.expect_raycast()
 				.with(eq(MouseHover {
 					exclude: vec![agent],
-					mode: mode(vec3_not_nan!(4., 2., 6.)),
+					mode: mode(vec_not_nan!(4., 2., 6.)),
 				}))
 				.return_const(MouseHoversOver::Point(Vec3::new(1., 2., 3.)));
 		}));
@@ -197,7 +197,7 @@ mod tests {
 			mock.expect_raycast()
 				.with(eq(MouseHover {
 					exclude: vec![agent],
-					mode: mode(vec3_not_nan!(4., 5., 6.)),
+					mode: mode(vec_not_nan!(4., 5., 6.)),
 				}))
 				.return_const(MouseHoversOver::Object {
 					entity,
@@ -229,7 +229,7 @@ mod tests {
 			mock.expect_raycast()
 				.with(eq(MouseHover {
 					exclude: vec![agent],
-					mode: mode(vec3_not_nan!(4., 5., 6.)),
+					mode: mode(vec_not_nan!(4., 5., 6.)),
 				}))
 				.return_const(MouseHoversOver::Point(Vec3::new(6., 3., 7.)));
 		}));

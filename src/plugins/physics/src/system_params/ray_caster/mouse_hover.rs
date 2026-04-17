@@ -88,7 +88,7 @@ mod tests {
 		toi,
 		tools::Units,
 		traits::handles_physics::{HoverMode, RaycastHit, TimeOfImpact},
-		vec3_not_nan,
+		vec_not_nan,
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -300,7 +300,7 @@ mod tests {
 				.run_system_once(move |mut ray_caster: _RayCaster| {
 					let hit = ray_caster.raycast(MouseHover {
 						exclude: vec![exclude],
-						mode: HoverMode::ColliderOrDirectionFrom(vec3_not_nan!(0., 10., 0.)),
+						mode: HoverMode::ColliderOrDirectionFrom(vec_not_nan!(0., 10., 0.)),
 					});
 
 					assert_eq!(Some(MouseHoversOver::Point(Vec3::new(1., 10., 3.))), hit);
@@ -329,7 +329,7 @@ mod tests {
 				.run_system_once(move |mut ray_caster: _RayCaster| {
 					let hit = ray_caster.raycast(MouseHover {
 						exclude: vec![exclude],
-						mode: HoverMode::ColliderOrDirectionFrom(vec3_not_nan!(0., 10., 0.)),
+						mode: HoverMode::ColliderOrDirectionFrom(vec_not_nan!(0., 10., 0.)),
 					});
 
 					assert_eq!(Some(MouseHoversOver::Point(Vec3::new(1., 10., 3.))), hit);
@@ -361,7 +361,7 @@ mod tests {
 				.run_system_once(move |mut ray_caster: _RayCaster| {
 					let hit = ray_caster.raycast(MouseHover {
 						exclude: vec![exclude],
-						mode: HoverMode::ColliderOrDirectionFrom(vec3_not_nan!(0., 10., 0.)),
+						mode: HoverMode::ColliderOrDirectionFrom(vec_not_nan!(0., 10., 0.)),
 					});
 
 					assert_eq!(
@@ -400,7 +400,7 @@ mod tests {
 				.run_system_once(move |mut ray_caster: _RayCaster| {
 					let hit = ray_caster.raycast(MouseHover {
 						exclude: vec![exclude],
-						mode: HoverMode::ColliderOrDirectionFrom(vec3_not_nan!(0., 10., 0.)),
+						mode: HoverMode::ColliderOrDirectionFrom(vec_not_nan!(0., 10., 0.)),
 					});
 
 					assert_eq!(Some(MouseHoversOver::Point(Vec3::new(1., 10., 3.))), hit);
