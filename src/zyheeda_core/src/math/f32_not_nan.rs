@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::{fmt::Display, ops::Deref};
+use std::{cmp::Ordering, fmt::Display, hash::Hash, ops::Deref};
 
 #[derive(Debug, PartialEq, Clone, Copy, Default, Serialize)]
 pub struct F32NotNan(f32);
@@ -57,6 +57,34 @@ impl Deref for F32NotNan {
 	}
 }
 
+impl Eq for F32NotNan {}
+
+impl Hash for F32NotNan {
+	fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+		let bits = match self.0 {
+			0. => 0,
+			v => v.to_bits(),
+		};
+
+		bits.hash(state);
+	}
+}
+
+impl Ord for F32NotNan {
+	fn cmp(&self, other: &Self) -> Ordering {
+		match (self.0, other.0) {
+			(0., 0.) => Ordering::Equal,
+			(a, b) => a.total_cmp(&b),
+		}
+	}
+}
+
+impl PartialOrd for F32NotNan {
+	fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+		Some(self.cmp(other))
+	}
+}
+
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct IsNaN;
 
@@ -78,6 +106,11 @@ impl Display for IsNaN {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use std::{
+		cmp::Ordering,
+		hash::{DefaultHasher, Hasher},
+	};
+	use test_case::test_case;
 
 	#[test]
 	fn try_from_ok() {
@@ -117,5 +150,29 @@ mod tests {
 		const V: F32NotNan = f32_not_nan!(11.);
 
 		assert_eq!(F32NotNan(11.), V);
+	}
+
+	fn hash(node: impl Hash) -> u64 {
+		let mut hasher = DefaultHasher::new();
+		node.hash(&mut hasher);
+		hasher.finish()
+	}
+
+	#[test]
+	fn hash_value() {
+		assert_eq!(hash(11f32.to_bits()), hash(F32NotNan(11.)));
+	}
+
+	#[test]
+	fn hash_zero() {
+		assert_eq!(hash(F32NotNan(-0.)), hash(F32NotNan(0.)));
+	}
+
+	#[test_case(F32NotNan(11.), F32NotNan(10.), Ordering::Greater; "11 greater 10")]
+	#[test_case(F32NotNan(10.), F32NotNan(11.), Ordering::Less; "10 less 11")]
+	#[test_case(F32NotNan(11.), F32NotNan(11.), Ordering::Equal; "11 equal 11")]
+	#[test_case(F32NotNan(-0.), F32NotNan(0.), Ordering::Equal; "0 equal 0")]
+	fn order(a: F32NotNan, b: F32NotNan, ordering: Ordering) {
+		assert_eq!(ordering, a.cmp(&b))
 	}
 }

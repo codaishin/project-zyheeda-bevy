@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use std::{cmp::Ordering, hash::Hash};
+use std::hash::Hash;
 use zyheeda_core::prelude::*;
 
 #[macro_export]
@@ -11,7 +11,7 @@ macro_rules! vec_not_nan {
 	}};
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone, Copy)]
 pub struct VecNotNan<const N: usize>(pub [F32NotNan; N]);
 
 impl<const N: usize> VecNotNan<N> {
@@ -21,36 +21,6 @@ impl<const N: usize> VecNotNan<N> {
 impl<const N: usize> Default for VecNotNan<N> {
 	fn default() -> Self {
 		Self([F32NotNan::ZERO; N])
-	}
-}
-
-impl<const N: usize> Eq for VecNotNan<N> {}
-
-impl<const N: usize> Hash for VecNotNan<N> {
-	fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-		for v in self.0 {
-			let bits = match v {
-				F32NotNan::ZERO => 0,
-				v => v.to_bits(),
-			};
-
-			bits.hash(state);
-		}
-	}
-}
-
-impl<const N: usize> Ord for VecNotNan<N> {
-	fn cmp(&self, other: &Self) -> Ordering {
-		self.0
-			.iter()
-			.zip(other.0)
-			.fold(Ordering::Equal, |acc, (a, b)| acc.then(a.total_cmp(&b)))
-	}
-}
-
-impl<const N: usize> PartialOrd for VecNotNan<N> {
-	fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-		Some(self.cmp(other))
 	}
 }
 
@@ -126,14 +96,6 @@ impl<const N: usize> PartialEq for IsNaN<N> {
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use std::hash::{DefaultHasher, Hasher};
-	use test_case::test_case;
-
-	fn hash<const N: usize>(node: VecNotNan<N>) -> u64 {
-		let mut hasher = DefaultHasher::new();
-		node.hash(&mut hasher);
-		hasher.finish()
-	}
 
 	#[test]
 	fn crate_node() {
@@ -150,36 +112,5 @@ mod tests {
 		let node = VecNotNan::try_from(Vec3::NAN);
 
 		assert_eq!(Err(IsNaN([f32::NAN, f32::NAN, f32::NAN])), node);
-	}
-
-	#[test_case(Vec3::new(1., 2., 3.), Vec3::new(-1., 2., 3.); "x differs")]
-	#[test_case(Vec3::new(1., 2., 3.), Vec3::new(1., -2., 3.); "y differs")]
-	#[test_case(Vec3::new(1., 2., 3.), Vec3::new(1., 2., -3.); "z differs")]
-	fn hashes_differ(a: Vec3, b: Vec3) -> Result<(), IsNaN<3>> {
-		let a = VecNotNan::try_from(a)?;
-		let b = VecNotNan::try_from(b)?;
-
-		assert_ne!(hash(a), hash(b));
-		Ok(())
-	}
-
-	#[test]
-	fn hashes_match() -> Result<(), IsNaN<3>> {
-		let a = VecNotNan::try_from(Vec3::new(1., 2., 3.))?;
-		let b = VecNotNan::try_from(Vec3::new(1., 2., 3.))?;
-
-		assert_eq!(hash(a), hash(b));
-		Ok(())
-	}
-
-	#[test_case(Vec3::new(-0., 2., 3.); "x zero")]
-	#[test_case(Vec3::new(1., -0., 3.); "y zero")]
-	#[test_case(Vec3::new(1., 2., -0.); "z zero")]
-	fn hashes_match_with_zero(v: Vec3) -> Result<(), IsNaN<3>> {
-		let a = VecNotNan::try_from(v)?;
-		let b = VecNotNan::try_from(v.abs())?;
-
-		assert_eq!(hash(a), hash(b));
-		Ok(())
 	}
 }
