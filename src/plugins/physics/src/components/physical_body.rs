@@ -1,5 +1,6 @@
 use crate::components::{
 	blocker_types::BlockerTypes,
+	center_offset::CenterOffset,
 	collider::{
 		ColliderShape,
 		GENERIC_COLLISION_GROUP,
@@ -20,6 +21,7 @@ use common::{
 
 #[derive(Component, Debug, PartialEq)]
 #[component(immutable)]
+#[require(CenterOffset)]
 pub struct PhysicalBody(pub(crate) Body);
 
 impl PhysicalBody {

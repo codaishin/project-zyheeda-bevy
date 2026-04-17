@@ -3,6 +3,7 @@ pub(crate) mod anchor;
 pub(crate) mod async_collider;
 pub(crate) mod blockable;
 pub(crate) mod blocker_types;
+pub(crate) mod center_offset;
 pub(crate) mod character_gravity;
 pub(crate) mod character_motion;
 pub(crate) mod collider;
