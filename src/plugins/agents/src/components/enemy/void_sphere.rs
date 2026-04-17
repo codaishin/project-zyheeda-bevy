@@ -19,7 +19,7 @@ use common::{
 	traits::{
 		handles_enemies::EnemyType,
 		handles_map_generation::AgentType,
-		handles_movement::MovementSpeed,
+		handles_movement::{MovementSpeed, RequiredClearance},
 		handles_physics::PhysicalDefaultAttributes,
 		handles_skill_physics::SkillMount,
 		prefab::{Prefab, PrefabEntityCommands},
@@ -71,12 +71,14 @@ impl VoidSphere {
 		AgentConfigAsset {
 			loadout,
 			attributes,
-			agent_model: AgentModel::Procedural(|e| {
+			model: AgentModel::Procedural(|e| {
 				e.try_insert(Self);
 			}),
 			bones: Self::bones(),
-			ground_offset: *COLLIDER_GROUND_OFFSET,
-			required_clearance: Units::from(Self::OUTER_RADIUS),
+			required_clearance: RequiredClearance {
+				vertical: *COLLIDER_GROUND_OFFSET,
+				horizontal: Units::from(Self::OUTER_RADIUS),
+			},
 			speed: MovementSpeed::Fixed(UnitsPerSecond::from_u8(1)),
 			animations: HashMap::from([]),
 			animation_mask_groups: HashMap::from([]),

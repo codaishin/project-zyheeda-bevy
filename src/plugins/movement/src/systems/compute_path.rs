@@ -45,20 +45,18 @@ fn compute_path<TComputer>(
 	transform: &GlobalTransform,
 	end: Vec3,
 	Config {
-		required_clearance,
-		ground_offset,
-		..
+		required_clearance, ..
 	}: &Config,
 ) -> VecDeque<Vec3>
 where
 	TComputer: ComputePath,
 {
 	let start = transform.translation();
-	let Some(path) = computer.compute_path(start, end, *required_clearance) else {
+	let Some(path) = computer.compute_path(start, end, required_clearance.horizontal) else {
 		return VecDeque::from([]);
 	};
 	let mut path = path
-		.map(|GroundPosition(v)| v.with_y(v.y + **ground_offset))
+		.map(|GroundPosition(v)| v.with_y(v.y + *required_clearance.vertical))
 		.peekable();
 
 	match path.peek() {
@@ -134,6 +132,8 @@ mod tests {
 	}
 
 	mod path {
+		use common::traits::handles_movement::RequiredClearance;
+
 		use super::*;
 
 		#[test]
@@ -188,7 +188,10 @@ mod tests {
 				.world_mut()
 				.spawn((
 					Config {
-						ground_offset: Units::from(2.),
+						required_clearance: RequiredClearance {
+							vertical: Units::from_u8(2),
+							horizontal: Units::from_u8(1),
+						},
 						..default()
 					},
 					Movement::Target(Vec3::default()),
@@ -281,7 +284,10 @@ mod tests {
 				.id();
 			app.world_mut().spawn((
 				Config {
-					required_clearance: Units::from_u8(1),
+					required_clearance: RequiredClearance {
+						vertical: Units::from_u8(2),
+						horizontal: Units::from_u8(1),
+					},
 					..default()
 				},
 				Movement::Target(Vec3::default()),
@@ -310,7 +316,10 @@ mod tests {
 				.id();
 			app.world_mut().spawn((
 				Config {
-					required_clearance: Units::from_u8(42),
+					required_clearance: RequiredClearance {
+						vertical: Units::from_u8(100),
+						horizontal: Units::from_u8(42),
+					},
 					..default()
 				},
 				Movement::Target(Vec3::new(4., 5., 6.)),
