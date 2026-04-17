@@ -112,14 +112,17 @@ impl ApplyAgentConfig {
 
 			let no_body = NoBodyConfigured { entity };
 			if let Some(mut ctx) = TPhysics::get_context_mut(&mut physics, no_body) {
-				ctx.configure_body(Body {
-					shape: Shape::Capsule {
-						half_y: Units::from(*config.ground_offset - *config.required_clearance),
-						radius: config.required_clearance,
+				ctx.configure_body(
+					Body {
+						shape: Shape::Capsule {
+							half_y: Units::from(*config.ground_offset - *config.required_clearance),
+							radius: config.required_clearance,
+						},
+						physics_type: PhysicsType::Agent,
+						blocker_types: HashSet::from([Blocker::Character]),
 					},
-					physics_type: PhysicsType::Agent,
-					blocker_types: HashSet::from([Blocker::Character]),
-				});
+					Units::ZERO,
+				);
 			}
 
 			if transform_dirty.is_some() {
@@ -356,8 +359,8 @@ mod tests {
 	}
 
 	impl ConfigureBody for _Physics {
-		fn configure_body(&mut self, body: Body) {
-			self.mock.configure_body(body);
+		fn configure_body(&mut self, body: Body, center_offset: Units) {
+			self.mock.configure_body(body, center_offset);
 		}
 	}
 
@@ -367,7 +370,7 @@ mod tests {
 			fn configure_default_attributes(&mut self, default: PhysicalDefaultAttributes);
 		}
 		impl ConfigureBody for _Physics {
-			fn configure_body(&mut self, body: Body);
+			fn configure_body(&mut self, body: Body, center_offset: Units);
 		}
 	}
 
@@ -837,7 +840,7 @@ mod tests {
 					mock.expect_configure_default_attributes().return_const(());
 					mock.expect_configure_body()
 						.once()
-						.with(eq(expected_body))
+						.with(eq(expected_body), eq(Units::ZERO))
 						.return_const(());
 				}),
 			));

@@ -1,6 +1,7 @@
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	errors::{ErrorData, Level},
+	tools::Units,
 	traits::{
 		accessors::get::GetContextMut,
 		handles_physics::{
@@ -40,6 +41,7 @@ where
 			Body::from_shape(Shape::StaticGltfMesh3d)
 				.with_physics_type(PhysicsType::Terrain)
 				.with_blocker_types(Blocker::Physical),
+			Units::ZERO,
 		);
 
 		Ok(())
