@@ -4,7 +4,7 @@ use crate::{
 	attributes::{effect_target::EffectTarget, health::Health},
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
 	toi,
-	tools::{Units, speed::Speed, vec_not_nan::VecNotNan},
+	tools::{Units, speed::Speed},
 	traits::{
 		accessors::get::{GetContextMut, View, ViewField},
 		handles_physics::physical_bodies::{Blocker, Body},
@@ -320,13 +320,7 @@ impl RaycastResult for MouseHover {
 pub enum HoverMode {
 	#[default]
 	ColliderOrTerrain,
-	ColliderOrDirectionFrom(VecNotNan<3>),
-}
-
-impl HoverMode {
-	pub fn collider_or_direction_from(vec: Vec3) -> Option<Self> {
-		Some(Self::ColliderOrDirectionFrom(vec.try_into().ok()?))
-	}
+	ColliderOrDirectionFrom(Entity),
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]

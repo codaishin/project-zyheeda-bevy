@@ -70,11 +70,10 @@ where
 		SkillTarget::Cursor(cursor) => cursor,
 	};
 
-	let transform = transforms.get(entity).ok()?;
 	let hover = hover.raycast(MouseHover {
 		exclude: vec![entity],
 		mode: match cursor {
-			Cursor::Direction => HoverMode::collider_or_direction_from(transform.translation)?,
+			Cursor::Direction => HoverMode::ColliderOrDirectionFrom(entity),
 			Cursor::TerrainHover => HoverMode::ColliderOrTerrain,
 		},
 	})?;
@@ -99,9 +98,7 @@ mod tests {
 	};
 	use common::{
 		components::persistent_entity::PersistentEntity,
-		tools::vec_not_nan::VecNotNan,
 		traits::register_persistent_entities::RegisterPersistentEntities,
-		vec_not_nan,
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -153,7 +150,7 @@ mod tests {
 
 	#[test_case(Cursor::Direction, HoverMode::ColliderOrDirectionFrom; "direction")]
 	#[test_case(Cursor::TerrainHover, |_| HoverMode::ColliderOrTerrain; "terrain hover")]
-	fn do_face_target_cursor_hover_point(cursor: Cursor, mode: fn(VecNotNan<3>) -> HoverMode) {
+	fn do_face_target_cursor_hover_point(cursor: Cursor, mode: fn(Entity) -> HoverMode) {
 		let mut app = setup();
 		let agent = app
 			.world_mut()
@@ -167,7 +164,7 @@ mod tests {
 			mock.expect_raycast()
 				.with(eq(MouseHover {
 					exclude: vec![agent],
-					mode: mode(vec_not_nan!(4., 2., 6.)),
+					mode: mode(agent),
 				}))
 				.return_const(MouseHoversOver::Point(Vec3::new(1., 2., 3.)));
 		}));
@@ -182,7 +179,7 @@ mod tests {
 
 	#[test_case(Cursor::Direction, HoverMode::ColliderOrDirectionFrom; "direction")]
 	#[test_case(Cursor::TerrainHover, |_| HoverMode::ColliderOrTerrain; "terrain hover")]
-	fn face_target_cursor_hover_entity(cursor: Cursor, mode: fn(VecNotNan<3>) -> HoverMode) {
+	fn face_target_cursor_hover_entity(cursor: Cursor, mode: fn(Entity) -> HoverMode) {
 		let mut app = setup();
 		let entity = app.world_mut().spawn(Transform::from_xyz(6., 5., 20.)).id();
 		let agent = app
@@ -197,7 +194,7 @@ mod tests {
 			mock.expect_raycast()
 				.with(eq(MouseHover {
 					exclude: vec![agent],
-					mode: mode(vec_not_nan!(4., 5., 6.)),
+					mode: mode(agent),
 				}))
 				.return_const(MouseHoversOver::Object {
 					entity,
@@ -215,7 +212,7 @@ mod tests {
 
 	#[test_case(Cursor::Direction, HoverMode::ColliderOrDirectionFrom; "direction")]
 	#[test_case(Cursor::TerrainHover, |_| HoverMode::ColliderOrTerrain; "terrain hover")]
-	fn face_target_cursor_hover_ground(cursor: Cursor, mode: fn(VecNotNan<3>) -> HoverMode) {
+	fn face_target_cursor_hover_ground(cursor: Cursor, mode: fn(Entity) -> HoverMode) {
 		let mut app = setup();
 		let agent = app
 			.world_mut()
@@ -229,7 +226,7 @@ mod tests {
 			mock.expect_raycast()
 				.with(eq(MouseHover {
 					exclude: vec![agent],
-					mode: mode(vec_not_nan!(4., 5., 6.)),
+					mode: mode(agent),
 				}))
 				.return_const(MouseHoversOver::Point(Vec3::new(6., 3., 7.)));
 		}));

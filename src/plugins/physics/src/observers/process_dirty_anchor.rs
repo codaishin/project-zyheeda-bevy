@@ -13,7 +13,6 @@ use bevy::{
 use common::{
 	components::persistent_entity::PersistentEntity,
 	errors::{ErrorData, Level},
-	tools::vec_not_nan::{IsNaN, VecNotNan},
 	traits::{
 		accessors::get::{Get, TryApplyOn},
 		handles_physics::{HoverMode, MouseHover, MouseHoversOver, Raycast},
@@ -84,10 +83,12 @@ impl AnchorDirty {
 			return Err(AnchorError::EntityWithoutTransform(mount));
 		};
 
-		let mount_translation = VecNotNan::try_from(mount_transform.translation())
-			.map_err(|_: IsNaN<3>| AnchorError::TranslationNaN(mount))?;
+		let mount_translation = mount_transform.translation();
+		if mount_translation.is_nan() {
+			return Err(AnchorError::TranslationNaN(mount));
+		}
 
-		transform.translation = Vec3::from(mount_translation);
+		transform.translation = mount_translation;
 		match anchor.rotation {
 			AnchorRotation::OfAttachedTo => match_rotation(transform, attached_to_transform),
 			AnchorRotation::OfMount => match_rotation(transform, mount_transform),
@@ -98,7 +99,7 @@ impl AnchorDirty {
 				targets,
 				transforms,
 				attached_to,
-				mount_translation,
+				mount,
 			),
 		}
 	}
@@ -119,7 +120,7 @@ fn look_at_skill_target<TRayCaster, TMountError>(
 	targets: Query<&Target>,
 	transforms: Query<&GlobalTransform>,
 	attached_to: Entity,
-	translation: VecNotNan<3>,
+	mount: Entity,
 ) -> Result<(), AnchorError<TMountError>>
 where
 	TRayCaster: for<'w, 's> SystemParam<Item<'w, 's>: Raycast<MouseHover>>,
@@ -133,7 +134,7 @@ where
 			let hover = MouseHover {
 				exclude: vec![attached_to],
 				mode: match cursor {
-					Cursor::Direction => HoverMode::ColliderOrDirectionFrom(translation),
+					Cursor::Direction => HoverMode::ColliderOrDirectionFrom(mount),
 					Cursor::TerrainHover => HoverMode::ColliderOrTerrain,
 				},
 			};
@@ -214,13 +215,12 @@ mod tests {
 	use super::*;
 	use common::{
 		components::persistent_entity::PersistentEntity,
-		tools::{action_key::slot::SlotKey, vec_not_nan::VecNotNan},
+		tools::action_key::slot::SlotKey,
 		traits::{
 			handles_physics::{HoverMode, MouseHoversOver},
 			handles_skill_physics::{Cursor, SkillMount},
 			register_persistent_entities::RegisterPersistentEntities,
 		},
-		vec_not_nan,
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -419,7 +419,7 @@ mod tests {
 
 	#[test_case(Cursor::TerrainHover, |_|HoverMode::ColliderOrTerrain; "terrain")]
 	#[test_case(Cursor::Direction ,HoverMode::ColliderOrDirectionFrom; "direction")]
-	fn look_at_cursor_over_terrain(cursor: Cursor, mode: fn(VecNotNan<3>) -> HoverMode) {
+	fn look_at_cursor_over_terrain(cursor: Cursor, mode: fn(Entity) -> HoverMode) {
 		let mut app = setup();
 		let spawner_key = SkillMount::Slot(SlotKey(22));
 		let agent = app
@@ -442,7 +442,7 @@ mod tests {
 				.once()
 				.with(eq(MouseHover {
 					exclude: vec![agent],
-					mode: mode(vec_not_nan!(4., 11., 9.)),
+					mode: mode(mount_point),
 				}))
 				.return_const(MouseHoversOver::Point(Vec3::new(11., 22., 33.)));
 		}));
@@ -461,7 +461,7 @@ mod tests {
 
 	#[test_case(Cursor::TerrainHover, |_|HoverMode::ColliderOrTerrain; "terrain")]
 	#[test_case(Cursor::Direction ,HoverMode::ColliderOrDirectionFrom; "direction")]
-	fn look_at_cursor_over_object(cursor: Cursor, mode: fn(VecNotNan<3>) -> HoverMode) {
+	fn look_at_cursor_over_object(cursor: Cursor, mode: fn(Entity) -> HoverMode) {
 		let mut app = setup();
 		let spawner_key = SkillMount::Slot(SlotKey(22));
 		let agent = app
@@ -488,7 +488,7 @@ mod tests {
 				.once()
 				.with(eq(MouseHover {
 					exclude: vec![agent],
-					mode: mode(vec_not_nan!(4., 11., 9.)),
+					mode: mode(mount_point),
 				}))
 				.return_const(MouseHoversOver::Object {
 					entity: target,
