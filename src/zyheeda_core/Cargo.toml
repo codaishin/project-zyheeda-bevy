@@ -17,3 +17,4 @@ mockall.workspace = true
 serde_json.workspace = true
 test-case.workspace = true
 testing.workspace = true
+yaml_serde.workspace = true

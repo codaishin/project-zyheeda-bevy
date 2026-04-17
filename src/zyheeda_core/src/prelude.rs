@@ -7,6 +7,7 @@ pub use crate::{
 	errors::*,
 	logger::*,
 	macros::{all::*, any::*, none::*, write_iter::*},
+	math::f32_not_nan::F32NotNan,
 	serialization::*,
 	yields::*,
 };

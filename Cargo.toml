@@ -18,6 +18,7 @@ tracing = "0.1.41"
 unic-langid = { version = "0.9.6", features = ["macros"] }
 uuid = "1.16.0"
 test-case = "3.3.1"
+yaml_serde = "0.10"
 
 # internal
 common = { path = "src/plugins/common" }
@@ -82,6 +83,7 @@ zyheeda_core.workspace = true
 # external
 mockall.workspace = true
 test-case.workspace = true
+yaml_serde.workspace = true
 
 # internal
 testing.workspace = true
