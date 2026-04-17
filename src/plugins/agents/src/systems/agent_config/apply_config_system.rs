@@ -98,11 +98,7 @@ impl ApplyAgentConfig {
 
 			let not_configured = NotConfiguredMovement { entity };
 			if let Some(mut ctx) = TMovement::get_context_mut(&mut movement, not_configured) {
-				ctx.configure(
-					config.speed.with_fastest_left(),
-					config.required_clearance,
-					config.ground_offset,
-				);
+				ctx.configure(config.speed.with_fastest_left(), config.required_clearance);
 			}
 
 			let no_default_attr = NoDefaultAttributes { entity };
@@ -112,22 +108,27 @@ impl ApplyAgentConfig {
 
 			let no_body = NoBodyConfigured { entity };
 			if let Some(mut ctx) = TPhysics::get_context_mut(&mut physics, no_body) {
-				ctx.configure_body(Body {
-					shape: Shape::Capsule {
-						half_y: Units::from(*config.ground_offset - *config.required_clearance),
-						radius: config.required_clearance,
+				let half_y = Units::from(
+					*config.required_clearance.vertical - *config.required_clearance.horizontal,
+				);
+				let radius = config.required_clearance.horizontal;
+				let center_offset = config.center_height - *config.required_clearance.vertical;
+				ctx.configure_body(
+					Body {
+						shape: Shape::Capsule { half_y, radius },
+						physics_type: PhysicsType::Agent,
+						blocker_types: HashSet::from([Blocker::Character]),
 					},
-					physics_type: PhysicsType::Agent,
-					blocker_types: HashSet::from([Blocker::Character]),
-				});
+					center_offset,
+				);
 			}
 
 			if transform_dirty.is_some() {
-				transform.translation.y += *config.ground_offset;
+				transform.translation.y += *config.required_clearance.vertical;
 			}
 
 			commands.try_apply_on(&entity, |mut e| {
-				match &config.agent_model {
+				match &config.model {
 					AgentModel::Asset(path) => {
 						e.try_insert(AssetModel::path(path));
 					}
@@ -209,7 +210,7 @@ mod tests {
 				AnimationPath,
 				PlayMode,
 			},
-			handles_movement::MovementSpeed,
+			handles_movement::{MovementSpeed, RequiredClearance},
 			handles_physics::{PhysicalDefaultAttributes, physical_bodies::Body},
 			handles_skill_physics::SkillMount,
 		},
@@ -324,14 +325,8 @@ mod tests {
 
 	#[automock]
 	impl ConfigureMovement for _Movement {
-		fn configure(
-			&mut self,
-			speed: MovementSpeed,
-			required_clearance: Units,
-			ground_offset: Units,
-		) {
-			self.mock
-				.configure(speed, required_clearance, ground_offset);
+		fn configure(&mut self, speed: MovementSpeed, required_clearance: RequiredClearance) {
+			self.mock.configure(speed, required_clearance);
 		}
 	}
 
@@ -356,8 +351,8 @@ mod tests {
 	}
 
 	impl ConfigureBody for _Physics {
-		fn configure_body(&mut self, body: Body) {
-			self.mock.configure_body(body);
+		fn configure_body(&mut self, body: Body, center_offset: f32) {
+			self.mock.configure_body(body, center_offset);
 		}
 	}
 
@@ -367,7 +362,7 @@ mod tests {
 			fn configure_default_attributes(&mut self, default: PhysicalDefaultAttributes);
 		}
 		impl ConfigureBody for _Physics {
-			fn configure_body(&mut self, body: Body);
+			fn configure_body(&mut self, body: Body, center_offset: f32);
 		}
 	}
 
@@ -574,9 +569,12 @@ mod tests {
 		fn configure() {
 			let config_handle = new_handle();
 			let config = AgentConfigAsset {
-				required_clearance: Units::from_u8(12),
+				required_clearance: RequiredClearance {
+					horizontal: Units::from_u8(12),
+					vertical: Units::from(2.),
+				},
 				speed: MovementSpeed::Fixed(UnitsPerSecond::from_u8(21)),
-				ground_offset: Units::from(2.),
+
 				..default()
 			};
 			let mut app = setup([(&config_handle, config.clone())]);
@@ -587,11 +585,7 @@ mod tests {
 				_Movement::new().with_mock(move |mock| {
 					mock.expect_configure()
 						.times(1)
-						.with(
-							eq(config.speed),
-							eq(config.required_clearance),
-							eq(config.ground_offset),
-						)
+						.with(eq(config.speed), eq(config.required_clearance))
 						.return_const(());
 				}),
 			));
@@ -603,12 +597,14 @@ mod tests {
 		fn configure_fastest_left() {
 			let config_handle = new_handle();
 			let config = AgentConfigAsset {
-				required_clearance: Units::from_u8(12),
+				required_clearance: RequiredClearance {
+					horizontal: Units::from_u8(12),
+					vertical: Units::from(2.),
+				},
 				speed: MovementSpeed::Variable([
 					UnitsPerSecond::from_u8(11),
 					UnitsPerSecond::from_u8(21),
 				]),
-				ground_offset: Units::from(2.),
 				..default()
 			};
 			let mut app = setup([(&config_handle, config.clone())]);
@@ -622,7 +618,6 @@ mod tests {
 						.with(
 							eq(config.speed.with_fastest_left()),
 							eq(config.required_clearance),
-							eq(config.ground_offset),
 						)
 						.return_const(());
 				}),
@@ -639,7 +634,7 @@ mod tests {
 		fn insert_asset_model() {
 			let config_handle = new_handle();
 			let config = AgentConfigAsset {
-				agent_model: AgentModel::from("my/path"),
+				model: AgentModel::from("my/path"),
 				..default()
 			};
 			let mut app = setup([(&config_handle, config)]);
@@ -673,7 +668,7 @@ mod tests {
 		fn insert_procedural_model() {
 			let config_handle = new_handle();
 			let config = AgentConfigAsset {
-				agent_model: AgentModel::Procedural(_Model::insert),
+				model: AgentModel::Procedural(_Model::insert),
 				..default()
 			};
 			let mut app = setup([(&config_handle, config)]);
@@ -699,7 +694,10 @@ mod tests {
 		fn update_transform() {
 			let config_handle = new_handle();
 			let config = AgentConfigAsset {
-				ground_offset: Units::from(6.),
+				required_clearance: RequiredClearance {
+					horizontal: Units::from_u8(12),
+					vertical: Units::from(6.),
+				},
 				..default()
 			};
 			let mut app = setup([(&config_handle, config)]);
@@ -725,7 +723,10 @@ mod tests {
 		fn do_not_update_transform_when_agent_transform_not_dirty() {
 			let config_handle = new_handle();
 			let config = AgentConfigAsset {
-				ground_offset: Units::from(6.),
+				required_clearance: RequiredClearance {
+					horizontal: Units::from_u8(12),
+					vertical: Units::from(6.),
+				},
 				..default()
 			};
 			let mut app = setup([(&config_handle, config)]);
@@ -750,7 +751,10 @@ mod tests {
 		fn remove_transform_dirty_marker() {
 			let config_handle = new_handle();
 			let config = AgentConfigAsset {
-				ground_offset: Units::from(6.),
+				required_clearance: RequiredClearance {
+					horizontal: Units::from_u8(12),
+					vertical: Units::from(6.),
+				},
 				..default()
 			};
 			let mut app = setup([(&config_handle, config)]);
@@ -810,13 +814,16 @@ mod tests {
 		#[test]
 		fn config_body() {
 			let config_handle = new_handle();
-			let ground_offset = Units::from(2.);
-			let required_clearance = Units::from(0.5);
+			let required_clearance = RequiredClearance {
+				horizontal: Units::from(0.5),
+				vertical: Units::from(2.),
+			};
+			let center_height = 3.5;
 			let mut app = setup([(
 				&config_handle,
 				AgentConfigAsset {
-					ground_offset,
 					required_clearance,
+					center_height,
 					..default()
 				},
 			)]);
@@ -833,11 +840,12 @@ mod tests {
 						physics_type: PhysicsType::Agent,
 						blocker_types: HashSet::from([Blocker::Character]),
 					};
+					let expected_center_offset = 1.5;
 
 					mock.expect_configure_default_attributes().return_const(());
 					mock.expect_configure_body()
 						.once()
-						.with(eq(expected_body))
+						.with(eq(expected_body), eq(expected_center_offset))
 						.return_const(());
 				}),
 			));
@@ -852,7 +860,7 @@ mod tests {
 		let mut app = setup([(
 			&config_handle,
 			AgentConfigAsset {
-				agent_model: AgentModel::from("my/path"),
+				model: AgentModel::from("my/path"),
 				..default()
 			},
 		)]);
@@ -917,7 +925,7 @@ mod tests {
 		_ = configs.insert(
 			&config_handle,
 			AgentConfigAsset {
-				agent_model: AgentModel::from("my/path"),
+				model: AgentModel::from("my/path"),
 				..default()
 			},
 		);

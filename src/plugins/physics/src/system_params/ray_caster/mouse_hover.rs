@@ -1,19 +1,13 @@
-use crate::system_params::ray_caster::RayCaster;
-use bevy::{
-	ecs::system::SystemParam,
-	math::{Dir3, Ray3d, Vec3, primitives::InfinitePlane3d},
-};
-use common::{
-	tools::vec_not_nan::VecNotNan,
-	traits::handles_physics::{
-		HoverMode,
-		MouseHover,
-		MouseHoversOver,
-		Raycast,
-		SolidObjects,
-		Terrain,
-		TimeOfImpact,
-	},
+use crate::{components::center_offset::CenterOffset, system_params::ray_caster::RayCaster};
+use bevy::{ecs::system::SystemParam, prelude::*};
+use common::traits::handles_physics::{
+	HoverMode,
+	MouseHover,
+	MouseHoversOver,
+	Raycast,
+	SolidObjects,
+	Terrain,
+	TimeOfImpact,
 };
 
 impl<T> Raycast<MouseHover> for RayCaster<'_, '_, T>
@@ -36,7 +30,7 @@ where
 		});
 		let plane_hit = match mouse_hover.mode {
 			HoverMode::ColliderOrTerrain => None,
-			HoverMode::ColliderOrDirectionFrom(plane) => intersect_horizontal_plane(ray, plane),
+			HoverMode::ColliderOrDirectionFrom(entity) => self.hit_horizontal_plane(ray, entity),
 		};
 		let ground_hit = self.raycast(Terrain { ray });
 		let hover = match (object_hit, plane_hit, ground_hit) {
@@ -61,14 +55,27 @@ where
 	}
 }
 
-fn point(ray: Ray3d, toi: f32) -> Vec3 {
-	ray.origin + ray.direction * toi
+impl<T> RayCaster<'_, '_, T>
+where
+	T: SystemParam,
+{
+	fn hit_horizontal_plane(&self, ray: Ray3d, entity: Entity) -> Option<TimeOfImpact> {
+		let Ok((transform, offset)) = self.transforms.get(entity) else {
+			return None;
+		};
+
+		let plane_origin = match offset {
+			Some(CenterOffset(offset)) => transform.translation() + Vec3::new(0., *offset, 0.),
+			None => transform.translation(),
+		};
+
+		ray.intersect_plane(plane_origin, InfinitePlane3d { normal: Dir3::Y })
+			.and_then(|toi| TimeOfImpact::try_from_f32(toi).ok())
+	}
 }
 
-fn intersect_horizontal_plane(ray: Ray3d, plane_origin: VecNotNan<3>) -> Option<TimeOfImpact> {
-	let toi = ray.intersect_plane(plane_origin.into(), InfinitePlane3d { normal: Dir3::Y })?;
-
-	TimeOfImpact::try_from_f32(toi).ok()
+fn point(ray: Ray3d, toi: f32) -> Vec3 {
+	ray.origin + ray.direction * toi
 }
 
 #[cfg(test)]
@@ -82,13 +89,11 @@ mod tests {
 			resource::Resource,
 			system::{RunSystemError, RunSystemOnce},
 		},
-		prelude::*,
 	};
 	use common::{
 		toi,
 		tools::Units,
 		traits::handles_physics::{HoverMode, RaycastHit, TimeOfImpact},
-		vec_not_nan,
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -277,6 +282,8 @@ mod tests {
 	}
 
 	mod direction_mode {
+		use crate::components::center_offset::CenterOffset;
+
 		use super::*;
 
 		#[test]
@@ -295,15 +302,51 @@ mod tests {
 					mock.expect_raycast().return_const(None);
 				}),
 			);
+			let entity = app
+				.world_mut()
+				.spawn(GlobalTransform::from_xyz(0., 10., 0.))
+				.id();
 
 			app.world_mut()
 				.run_system_once(move |mut ray_caster: _RayCaster| {
 					let hit = ray_caster.raycast(MouseHover {
 						exclude: vec![exclude],
-						mode: HoverMode::ColliderOrDirectionFrom(vec_not_nan!(0., 10., 0.)),
+						mode: HoverMode::ColliderOrDirectionFrom(entity),
 					});
 
 					assert_eq!(Some(MouseHoversOver::Point(Vec3::new(1., 10., 3.))), hit);
+				})
+		}
+
+		#[test]
+		fn return_direction_hit_with_center_offset() -> Result<(), RunSystemError> {
+			let ray = Ray3d {
+				origin: Vec3::new(1., 20., 3.),
+				direction: Dir3::NEG_Y,
+			};
+			let exclude = fake_entity!(444);
+			let (mut app, _) = setup(
+				ray,
+				_Objects::new().with_mock(|mock| {
+					mock.expect_raycast().return_const(None);
+				}),
+				_Ground::new().with_mock(|mock| {
+					mock.expect_raycast().return_const(None);
+				}),
+			);
+			let entity = app
+				.world_mut()
+				.spawn((GlobalTransform::from_xyz(0., 10., 0.), CenterOffset(1.)))
+				.id();
+
+			app.world_mut()
+				.run_system_once(move |mut ray_caster: _RayCaster| {
+					let hit = ray_caster.raycast(MouseHover {
+						exclude: vec![exclude],
+						mode: HoverMode::ColliderOrDirectionFrom(entity),
+					});
+
+					assert_eq!(Some(MouseHoversOver::Point(Vec3::new(1., 11., 3.))), hit);
 				})
 		}
 
@@ -324,12 +367,16 @@ mod tests {
 						.return_const(Some(TimeOfImpact::from(Units::from(1.))));
 				}),
 			);
+			let entity = app
+				.world_mut()
+				.spawn(GlobalTransform::from_xyz(0., 10., 0.))
+				.id();
 
 			app.world_mut()
 				.run_system_once(move |mut ray_caster: _RayCaster| {
 					let hit = ray_caster.raycast(MouseHover {
 						exclude: vec![exclude],
-						mode: HoverMode::ColliderOrDirectionFrom(vec_not_nan!(0., 10., 0.)),
+						mode: HoverMode::ColliderOrDirectionFrom(entity),
 					});
 
 					assert_eq!(Some(MouseHoversOver::Point(Vec3::new(1., 10., 3.))), hit);
@@ -356,12 +403,16 @@ mod tests {
 						.return_const(Some(TimeOfImpact::from(Units::from(15.))));
 				}),
 			);
+			let entity = app
+				.world_mut()
+				.spawn(GlobalTransform::from_xyz(0., 10., 0.))
+				.id();
 
 			app.world_mut()
 				.run_system_once(move |mut ray_caster: _RayCaster| {
 					let hit = ray_caster.raycast(MouseHover {
 						exclude: vec![exclude],
-						mode: HoverMode::ColliderOrDirectionFrom(vec_not_nan!(0., 10., 0.)),
+						mode: HoverMode::ColliderOrDirectionFrom(entity),
 					});
 
 					assert_eq!(
@@ -395,12 +446,16 @@ mod tests {
 						.return_const(Some(TimeOfImpact::from(Units::from(12.))));
 				}),
 			);
+			let entity = app
+				.world_mut()
+				.spawn(GlobalTransform::from_xyz(0., 10., 0.))
+				.id();
 
 			app.world_mut()
 				.run_system_once(move |mut ray_caster: _RayCaster| {
 					let hit = ray_caster.raycast(MouseHover {
 						exclude: vec![exclude],
-						mode: HoverMode::ColliderOrDirectionFrom(vec_not_nan!(0., 10., 0.)),
+						mode: HoverMode::ColliderOrDirectionFrom(entity),
 					});
 
 					assert_eq!(Some(MouseHoversOver::Point(Vec3::new(1., 10., 3.))), hit);

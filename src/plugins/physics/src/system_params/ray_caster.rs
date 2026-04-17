@@ -4,6 +4,7 @@ mod solid_objects;
 mod terrain;
 
 use crate::components::{
+	center_offset::CenterOffset,
 	collider::ChildCollider,
 	interaction_target::InteractionTarget,
 	world_camera::WorldCamera,
@@ -22,5 +23,6 @@ where
 	context: StaticSystemParam<'w, 's, T>,
 	interaction_child_colliders: Query<'w, 's, &'static ChildCollider<InteractionTarget>>,
 	rigid_body_child_colliders: Query<'w, 's, &'static ChildCollider<RigidBody>>,
+	transforms: Query<'w, 's, (&'static GlobalTransform, Option<&'static CenterOffset>)>,
 	world_cams: Query<'w, 's, &'static mut WorldCamera>,
 }

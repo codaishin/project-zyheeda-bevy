@@ -2,17 +2,13 @@ use crate::{
 	components::config::Config,
 	system_param::movement_config_param::MovementConfigContextMut,
 };
-use common::{
-	tools::Units,
-	traits::handles_movement::{ConfigureMovement, MovementSpeed},
-};
+use common::traits::handles_movement::{ConfigureMovement, MovementSpeed, RequiredClearance};
 
 impl ConfigureMovement for MovementConfigContextMut<'_> {
-	fn configure(&mut self, speed: MovementSpeed, required_clearance: Units, ground_offset: Units) {
+	fn configure(&mut self, speed: MovementSpeed, required_clearance: RequiredClearance) {
 		self.entity.try_insert(Config {
 			speed,
 			required_clearance,
-			ground_offset,
 		});
 	}
 }
@@ -27,7 +23,7 @@ mod tests {
 		prelude::*,
 	};
 	use common::{
-		tools::UnitsPerSecond,
+		tools::{Units, UnitsPerSecond},
 		traits::{accessors::get::GetContextMut, handles_movement::NotConfiguredMovement},
 	};
 	use testing::SingleThreadedApp;
@@ -50,16 +46,20 @@ mod tests {
 				.unwrap();
 				ctx.configure(
 					MovementSpeed::Fixed(UnitsPerSecond::from_u8(11)),
-					Units::from_u8(2),
-					Units::from_u8(5),
+					RequiredClearance {
+						vertical: Units::from_u8(5),
+						horizontal: Units::from_u8(2),
+					},
 				);
 			})?;
 
 		assert_eq!(
 			Some(&Config {
 				speed: MovementSpeed::Fixed(UnitsPerSecond::from_u8(11)),
-				required_clearance: Units::from_u8(2),
-				ground_offset: Units::from_u8(5),
+				required_clearance: RequiredClearance {
+					vertical: Units::from_u8(5),
+					horizontal: Units::from_u8(2),
+				},
 			}),
 			app.world().entity(entity).get::<Config>(),
 		);

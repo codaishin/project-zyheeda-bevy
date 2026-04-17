@@ -50,16 +50,15 @@ impl ViewField for MovementTarget {
 }
 
 pub trait ConfigureMovement {
-	fn configure(&mut self, speed: MovementSpeed, required_clearance: Units, ground_offset: Units);
+	fn configure(&mut self, speed: MovementSpeed, required_clearance: RequiredClearance);
 }
 
 impl<T> ConfigureMovement for T
 where
 	T: DerefMut<Target: ConfigureMovement>,
 {
-	fn configure(&mut self, speed: MovementSpeed, required_clearance: Units, ground_offset: Units) {
-		self.deref_mut()
-			.configure(speed, required_clearance, ground_offset);
+	fn configure(&mut self, speed: MovementSpeed, required_clearance: RequiredClearance) {
+		self.deref_mut().configure(speed, required_clearance);
 	}
 }
 
@@ -82,6 +81,12 @@ impl Default for MovementSpeed {
 	fn default() -> Self {
 		Self::Fixed(UnitsPerSecond::from_u8(1))
 	}
+}
+
+#[derive(Debug, PartialEq, Default, Clone, Copy, Serialize, Deserialize)]
+pub struct RequiredClearance {
+	pub vertical: Units,
+	pub horizontal: Units,
 }
 
 pub trait StartMovement {

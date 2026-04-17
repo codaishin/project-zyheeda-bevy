@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use common::{
-	tools::{Units, UnitsPerSecond},
-	traits::handles_movement::{MovementSpeed, SpeedToggle},
+	tools::UnitsPerSecond,
+	traits::handles_movement::{MovementSpeed, RequiredClearance, SpeedToggle},
 };
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
@@ -11,8 +11,7 @@ use std::ops::Index;
 #[require(SpeedIndex)]
 pub(crate) struct Config {
 	pub(crate) speed: MovementSpeed,
-	pub(crate) required_clearance: Units,
-	pub(crate) ground_offset: Units,
+	pub(crate) required_clearance: RequiredClearance,
 }
 
 impl Index<SpeedIndex> for Config {

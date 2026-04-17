@@ -1,11 +1,10 @@
 use crate::{
-	assets::agent_config::{AgentConfigAsset, AgentModel, Bones, Loadout},
+	assets::agent_config::{AgentConfigAsset, AgentModel, Bones, Loadout, RequiredClearance},
 	components::enemy::void_sphere::VoidSphere,
 };
 use bevy::prelude::*;
 use common::{
 	errors::Unreachable,
-	tools::Units,
 	traits::{
 		handles_animations::{AffectedAnimationBones, Animation, AnimationKey, AnimationMaskBits},
 		handles_custom_assets::{AssetFileExtensions, TryLoadFrom},
@@ -31,8 +30,8 @@ pub(crate) enum ModelConfig {
 		model_path: String,
 		bones: Bones,
 		movement_speed: MovementSpeed,
-		required_movement_clearance: Units,
-		ground_offset: Units,
+		required_clearance: RequiredClearance,
+		center_height: f32,
 		#[serde(with = "as_vec")]
 		animations: HashMap<AnimationKey, Animation>,
 		animation_mask_groups: HashMap<AnimationMaskBits, AffectedAnimationBones>,
@@ -64,16 +63,16 @@ impl TryLoadFrom<AgentConfigDto> for AgentConfigAsset {
 				model_path,
 				bones,
 				movement_speed,
-				required_movement_clearance,
-				ground_offset,
+				required_clearance,
+				center_height,
 				animations,
 				animation_mask_groups,
 			} => Ok(AgentConfigAsset {
 				loadout,
 				bones,
-				agent_model: AgentModel::Asset(model_path),
-				ground_offset,
-				required_clearance: required_movement_clearance,
+				model: AgentModel::Asset(model_path),
+				required_clearance,
+				center_height,
 				speed: movement_speed,
 				attributes,
 				animations,

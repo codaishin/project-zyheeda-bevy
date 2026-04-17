@@ -2,18 +2,12 @@ pub(crate) mod dto;
 
 use bevy::prelude::*;
 use common::{
-	tools::{
-		Units,
-		action_key::slot::SlotKey,
-		bone_name::BoneName,
-		mesh_name::MeshName,
-		path::Path,
-	},
+	tools::{action_key::slot::SlotKey, bone_name::BoneName, mesh_name::MeshName, path::Path},
 	traits::{
 		accessors::get::View,
 		handles_animations::{AffectedAnimationBones, Animation, AnimationKey, AnimationMaskBits},
 		handles_custom_assets::AssetFolderPath,
-		handles_movement::MovementSpeed,
+		handles_movement::{MovementSpeed, RequiredClearance},
 		handles_physics::PhysicalDefaultAttributes,
 		handles_skill_physics::SkillMount,
 		loadout::ItemName,
@@ -27,9 +21,9 @@ use std::collections::HashMap;
 pub struct AgentConfigAsset {
 	pub(crate) loadout: Loadout,
 	pub(crate) bones: Bones,
-	pub(crate) agent_model: AgentModel,
-	pub(crate) ground_offset: Units,
-	pub(crate) required_clearance: Units,
+	pub(crate) model: AgentModel,
+	pub(crate) required_clearance: RequiredClearance,
+	pub(crate) center_height: f32,
 	pub(crate) speed: MovementSpeed,
 	pub(crate) attributes: PhysicalDefaultAttributes,
 	pub(crate) animations: HashMap<AnimationKey, Animation>,

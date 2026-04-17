@@ -19,7 +19,7 @@ use common::{
 	traits::{
 		handles_enemies::EnemyType,
 		handles_map_generation::AgentType,
-		handles_movement::MovementSpeed,
+		handles_movement::{MovementSpeed, RequiredClearance},
 		handles_physics::PhysicalDefaultAttributes,
 		handles_skill_physics::SkillMount,
 		prefab::{Prefab, PrefabEntityCommands},
@@ -43,12 +43,12 @@ type LazyBoneName = LazyLock<BoneName>;
 static ALL_PURPOSE_SLOT_BONE: &str = "slot";
 static SKILL_MOUNT: LazyBoneName = LazyLock::new(|| BoneName::from("skill_spawn"));
 static SKILL_MOUNT_NEUTRAL: LazyBoneName = LazyLock::new(|| BoneName::from("skill_spawn_neutral"));
-static COLLIDER_GROUND_OFFSET: LazyLock<Units> = LazyLock::new(|| Units::from(0.6));
 
 impl VoidSphere {
 	const SLOT_KEY: SlotKey = SlotKey(0);
 
-	const INNER_MODEL_OFFSET: Vec3 = Vec3::new(0., 0.2, 0.);
+	const COLLIDER_GROUND_OFFSET: f32 = 0.6;
+	const INNER_MODEL_OFFSET: f32 = 0.2;
 	const INNER_RADIUS: f32 = 0.3;
 	const OUTER_RADIUS: f32 = 0.4;
 	const TORUS_RADIUS: f32 = 0.35;
@@ -71,12 +71,15 @@ impl VoidSphere {
 		AgentConfigAsset {
 			loadout,
 			attributes,
-			agent_model: AgentModel::Procedural(|e| {
+			model: AgentModel::Procedural(|e| {
 				e.try_insert(Self);
 			}),
 			bones: Self::bones(),
-			ground_offset: *COLLIDER_GROUND_OFFSET,
-			required_clearance: Units::from(Self::OUTER_RADIUS),
+			required_clearance: RequiredClearance {
+				vertical: Units::from(Self::COLLIDER_GROUND_OFFSET),
+				horizontal: Units::from(Self::OUTER_RADIUS),
+			},
+			center_height: Self::COLLIDER_GROUND_OFFSET + Self::INNER_MODEL_OFFSET,
 			speed: MovementSpeed::Fixed(UnitsPerSecond::from_u8(1)),
 			animations: HashMap::from([]),
 			animation_mask_groups: HashMap::from([]),
@@ -121,34 +124,34 @@ impl Prefab<()> for VoidSphere {
 	) -> Result<(), Unreachable> {
 		entity
 			.with_child((
-				Transform::from_translation(Self::INNER_MODEL_OFFSET),
+				Transform::from_translation(Vec3::ZERO.with_y(Self::INNER_MODEL_OFFSET)),
 				VoidSpherePart::Core,
 				VoidSphereCore,
 			))
 			.with_child((
-				Transform::from_translation(Self::INNER_MODEL_OFFSET),
+				Transform::from_translation(Vec3::ZERO.with_y(Self::INNER_MODEL_OFFSET)),
 				VoidSpherePart::RingA(UnitsPerSecond::from(3.6_f32.to_radians())),
 				VoidSphereRing,
 			))
 			.with_child((
-				Transform::from_translation(Self::INNER_MODEL_OFFSET)
+				Transform::from_translation(Vec3::ZERO.with_y(Self::INNER_MODEL_OFFSET))
 					.with_rotation(Quat::from_rotation_z(90_f32.to_radians())),
 				VoidSpherePart::RingB(UnitsPerSecond::from(2.4_f32.to_radians())),
 				VoidSphereRing,
 			))
 			// One unified slot bone
 			.with_child((
-				Transform::from_translation(Self::INNER_MODEL_OFFSET + Self::SLOT_OFFSET),
+				Transform::from_translation(Vec3::Y * Self::INNER_MODEL_OFFSET + Self::SLOT_OFFSET),
 				Name::from(ALL_PURPOSE_SLOT_BONE),
 			))
 			// Skill spawn directly on slot offset
 			.with_child((
-				Transform::from_translation(Self::INNER_MODEL_OFFSET + Self::SLOT_OFFSET),
+				Transform::from_translation(Vec3::Y * Self::INNER_MODEL_OFFSET + Self::SLOT_OFFSET),
 				Name::from(SKILL_MOUNT.clone()),
 			))
 			// Neutral skill spawn directly on slot offset
 			.with_child((
-				Transform::from_translation(Self::INNER_MODEL_OFFSET + Self::SLOT_OFFSET),
+				Transform::from_translation(Vec3::Y * Self::INNER_MODEL_OFFSET + Self::SLOT_OFFSET),
 				Name::from(SKILL_MOUNT_NEUTRAL.clone()),
 			));
 

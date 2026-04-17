@@ -26,14 +26,17 @@
 	"model": {
 		"Asset": {
 			"model_path": "models/player.glb",
-			"required_movement_clearance": 0.2,
 			"movement_speed": {
 				"Variable": [
 					3,
 					0.9
 				]
 			},
-			"ground_offset": 0.6,
+			"required_clearance": {
+				"vertical": 0.65,
+				"horizontal": 0.2
+			},
+			"center_height": 1,
 			"bones": {
 				"skill_mounts": {
 					"skill_spawn": "Neutral",

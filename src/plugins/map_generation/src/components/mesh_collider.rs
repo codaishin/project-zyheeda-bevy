@@ -40,11 +40,14 @@ where
 			Body::from_shape(Shape::StaticGltfMesh3d)
 				.with_physics_type(PhysicsType::Terrain)
 				.with_blocker_types(Blocker::Physical),
+			NO_CENTER_OFFSET,
 		);
 
 		Ok(())
 	}
 }
+
+const NO_CENTER_OFFSET: f32 = 0.;
 
 #[derive(Debug, PartialEq)]
 pub struct HasAlreadyBody {
