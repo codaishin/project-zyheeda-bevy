@@ -9,6 +9,6 @@ pub use crate::{
 	macros::{all::*, any::*, none::*, write_iter::*},
 	math::f32_not_nan::{F32NotNan, f32_not_nan},
 	serialization::*,
-	strings::normalized_name::NormalizedName,
+	strings::normalized_name::NormalizedNameLazy,
 	yields::*,
 };

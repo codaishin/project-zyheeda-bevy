@@ -4,7 +4,7 @@ use crate::{
 	zyheeda_commands::ZyheedaCommands,
 };
 use bevy::{gltf::GltfMeshName, prelude::*};
-use zyheeda_core::prelude::NormalizedName;
+use zyheeda_core::prelude::NormalizedNameLazy;
 
 impl AssetMeshName {
 	pub(crate) fn insert(
@@ -17,7 +17,7 @@ impl AssetMeshName {
 		};
 
 		commands.try_apply_on(&inserted_name.entity, |mut e| {
-			e.try_insert(AssetMeshName(NormalizedName::from(name.clone())));
+			e.try_insert(AssetMeshName(NormalizedNameLazy::from(name.clone())));
 		});
 	}
 }
@@ -26,7 +26,7 @@ impl AssetMeshName {
 mod tests {
 	use super::*;
 	use testing::SingleThreadedApp;
-	use zyheeda_core::prelude::NormalizedName;
+	use zyheeda_core::prelude::NormalizedNameLazy;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -43,7 +43,7 @@ mod tests {
 		let entity = app.world_mut().spawn(GltfMeshName("name".to_owned()));
 
 		assert_eq!(
-			Some(&AssetMeshName(NormalizedName::from("name".to_owned()))),
+			Some(&AssetMeshName(NormalizedNameLazy::from("name".to_owned()))),
 			entity.get::<AssetMeshName>(),
 		);
 	}
@@ -56,7 +56,7 @@ mod tests {
 		entity.insert(GltfMeshName("other name".to_owned()));
 
 		assert_eq!(
-			Some(&AssetMeshName(NormalizedName::from(
+			Some(&AssetMeshName(NormalizedNameLazy::from(
 				"other name".to_owned()
 			))),
 			entity.get::<AssetMeshName>(),
