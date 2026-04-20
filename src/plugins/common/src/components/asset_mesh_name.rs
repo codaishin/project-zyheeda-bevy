@@ -8,3 +8,9 @@ use zyheeda_core::prelude::NormalizedName;
 #[derive(Component, Debug, PartialEq)]
 #[component(immutable)]
 pub struct AssetMeshName(pub NormalizedName<String>);
+
+impl AssetMeshName {
+	pub fn normalized(name: impl Into<String>) -> Self {
+		Self(NormalizedName::from_name(name.into()))
+	}
+}
