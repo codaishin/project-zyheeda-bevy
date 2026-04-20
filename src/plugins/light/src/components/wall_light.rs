@@ -1,4 +1,4 @@
-use crate::observers::insert::TargetMeshName;
+use crate::observers::get_insert_system::TargetMeshName;
 use bevy::prelude::*;
 use zyheeda_core::prelude::NormalizedNameLazy;
 
