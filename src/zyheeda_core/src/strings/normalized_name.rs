@@ -4,8 +4,10 @@ use std::{fmt::Display, ops::Deref, sync::OnceLock};
 /// - removing numbered suffixes like `.001`
 /// - streamlining different ways of word separation like CamelCase, snake_case, using dots or
 ///   spaces.
+///
+/// It is lazy and constructed on first read to allow instantiation in `const` contexts.
 #[derive(Debug, Clone)]
-pub struct NormalizedName<TName = &'static str>
+pub struct NormalizedNameLazy<TName = &'static str>
 where
 	TName: Deref<Target = str>,
 {
@@ -13,7 +15,7 @@ where
 	normalized: OnceLock<String>,
 }
 
-impl<TName> NormalizedName<TName>
+impl<TName> NormalizedNameLazy<TName>
 where
 	TName: Deref<Target = str>,
 {
@@ -43,7 +45,7 @@ where
 	}
 }
 
-impl<TName> From<TName> for NormalizedName<TName>
+impl<TName> From<TName> for NormalizedNameLazy<TName>
 where
 	TName: Deref<Target = str>,
 {
@@ -52,16 +54,16 @@ where
 	}
 }
 
-impl<TName> From<NormalizedName<TName>> for String
+impl<TName> From<NormalizedNameLazy<TName>> for String
 where
 	TName: Deref<Target = str>,
 {
-	fn from(name: NormalizedName<TName>) -> Self {
+	fn from(name: NormalizedNameLazy<TName>) -> Self {
 		name.to_owned()
 	}
 }
 
-impl<TName> Deref for NormalizedName<TName>
+impl<TName> Deref for NormalizedNameLazy<TName>
 where
 	TName: Deref<Target = str>,
 {
@@ -72,7 +74,7 @@ where
 	}
 }
 
-impl<TName> Display for NormalizedName<TName>
+impl<TName> Display for NormalizedNameLazy<TName>
 where
 	TName: Deref<Target = str>,
 {
@@ -81,12 +83,12 @@ where
 	}
 }
 
-impl<TLeft, TRight> PartialEq<NormalizedName<TRight>> for NormalizedName<TLeft>
+impl<TLeft, TRight> PartialEq<NormalizedNameLazy<TRight>> for NormalizedNameLazy<TLeft>
 where
 	TLeft: Deref<Target = str>,
 	TRight: Deref<Target = str>,
 {
-	fn eq(&self, other: &NormalizedName<TRight>) -> bool {
+	fn eq(&self, other: &NormalizedNameLazy<TRight>) -> bool {
 		self.as_str() == other.as_str()
 	}
 }
@@ -108,7 +110,7 @@ mod tests {
 	#[test_case("001", "001"; "with only digits")]
 	#[test_case(".001", "001"; "with only suffix leading with a dot")]
 	fn normalize_name(name: &str, expected: &str) {
-		let name = NormalizedName::from(name);
+		let name = NormalizedNameLazy::from(name);
 
 		assert_eq!(
 			(
@@ -132,8 +134,8 @@ mod tests {
 	#[test_case("name", String::from("name"); "when types differ")]
 	#[test_case("my_name", String::from("my name"); "when types and values differ")]
 	fn partial_eq(l: impl Deref<Target = str> + Debug, r: impl Deref<Target = str> + Debug) {
-		let l = NormalizedName::from_name(l);
-		let r = NormalizedName::from_name(r);
+		let l = NormalizedNameLazy::from_name(l);
+		let r = NormalizedNameLazy::from_name(r);
 
 		assert_eq!(l, r);
 	}

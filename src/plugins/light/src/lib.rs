@@ -1,12 +1,16 @@
 mod components;
+mod observers;
 mod systems;
 
-use crate::components::global_light::GlobalLight;
-use bevy::{color::palettes::css::WHITE, prelude::*};
+use crate::{
+	components::wall_light::WallLight,
+	observers::get_insert_system::GetInsertObserver,
+	systems::set_visibility::SetVisibility,
+};
+use bevy::{camera::visibility::VisibilitySystems, color::palettes::css::WHITE, prelude::*};
 use common::traits::{
 	handles_lights::HandlesLights,
 	handles_saving::HandlesSaving,
-	register_derived_component::RegisterDerivedComponent,
 	thread_safe::ThreadSafe,
 };
 use std::marker::PhantomData;
@@ -27,11 +31,12 @@ where
 	TSavegame: ThreadSafe + HandlesSaving,
 {
 	fn build(&self, app: &mut App) {
-		TSavegame::register_savable_component::<GlobalLight>(app);
-
-		app.register_required_components::<GlobalLight, TSavegame::TSaveEntityMarker>()
-			.register_derived_component::<GlobalLight, DirectionalLight>()
-			.add_systems(Startup, GlobalLight::spawn(Self::DEFAULT_LIGHT));
+		app.insert_resource(GlobalAmbientLight::NONE)
+			.add_observer(WallLight::get_insert_observer())
+			.add_systems(
+				PostUpdate,
+				WallLight::set_visibility.in_set(VisibilitySystems::CheckVisibility),
+			);
 	}
 }
 

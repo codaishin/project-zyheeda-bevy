@@ -1,1 +1,1 @@
-pub(crate) mod spawn_global_light;
+pub(crate) mod set_visibility;
