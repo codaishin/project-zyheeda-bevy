@@ -12,7 +12,12 @@ pub mod traits;
 pub mod zyheeda_commands;
 
 use crate::{
-	components::{child_of_persistent::ChildOfPersistent, lifetime::Lifetime, model::Model},
+	components::{
+		asset_mesh_name::AssetMeshName,
+		child_of_persistent::ChildOfPersistent,
+		lifetime::Lifetime,
+		model::Model,
+	},
 	states::game_state::GameState,
 	traits::{
 		register_controlled_state::RegisterControlledState,
@@ -47,6 +52,7 @@ fn asset_loading(app: &mut App) {
 	app.add_observer(AssetModel::load);
 	app.add_observer(InsertAsset::<Mesh>::apply);
 	app.add_observer(InsertAsset::<StandardMaterial>::apply);
+	app.add_observer(AssetMeshName::insert);
 }
 
 fn life_cycles(app: &mut App) {
