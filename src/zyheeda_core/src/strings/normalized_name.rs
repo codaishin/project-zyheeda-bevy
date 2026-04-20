@@ -1,8 +1,9 @@
 use std::{fmt::Display, ops::Deref, sync::OnceLock};
 
 /// Normalizes names by:
-/// - converting to lowercase
-/// - removing characters listed in [`REMOVE_CHARS`](Self::REMOVE_CHARS)
+/// - removing numbered suffixes like `.001`
+/// - streamlining different ways of word separation like CamelCase, snake_case, using dots or
+///   spaces.
 #[derive(Debug, Clone)]
 pub struct NormalizedName<TName = &'static str>
 where
@@ -16,7 +17,7 @@ impl<TName> NormalizedName<TName>
 where
 	TName: Deref<Target = str>,
 {
-	const REMOVE_CHARS: &'static [char] = &['_', ' '];
+	const REMOVE_CHARS: &'static [char] = &['_', ' ', '.'];
 
 	pub const fn from_name(name: TName) -> Self {
 		Self {
@@ -26,8 +27,15 @@ where
 	}
 
 	pub fn as_str(&self) -> &'_ str {
-		self.normalized
-			.get_or_init(|| self.name.to_lowercase().replace(Self::REMOVE_CHARS, ""))
+		self.normalized.get_or_init(|| {
+			let name = match self.name.rsplit_once('.') {
+				Some(("", suffix)) => suffix,
+				Some((name, suffix)) if suffix.chars().all(|c| c.is_ascii_digit()) => name,
+				_ => &self.name,
+			};
+
+			name.to_lowercase().replace(Self::REMOVE_CHARS, "")
+		})
 	}
 
 	pub fn to_owned(&self) -> String {
@@ -92,7 +100,13 @@ mod tests {
 	#[test_case("normalized", "normalized"; "unchanged")]
 	#[test_case("CamelCase", "camelcase"; "camel case")]
 	#[test_case("snake_case", "snakecase"; "snake case")]
-	#[test_case("name with spaces", "namewithspaces"; "spaced")]
+	#[test_case("dotted.name", "dottedname"; "with dots")]
+	#[test_case("name with spaces", "namewithspaces"; "with spaces")]
+	#[test_case("normalized.001", "normalized"; "with number suffix leading with a dot")]
+	#[test_case("number_42_is_best", "number42isbest"; "with non suffix digits")]
+	#[test_case("normalized001", "normalized001"; "with digits at the end without leading dot")]
+	#[test_case("001", "001"; "with only digits")]
+	#[test_case(".001", "001"; "with only suffix leading with a dot")]
 	fn normalize_name(name: &str, expected: &str) {
 		let name = NormalizedName::from(name);
 
