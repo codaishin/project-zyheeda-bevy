@@ -1,13 +1,19 @@
 use crate::{
-	components::{center_offset::CenterOffset, physical_body::PhysicalBody},
+	components::{
+		offset::{AimOffset, CenterOffset},
+		physical_body::PhysicalBody,
+	},
 	system_params::config::ConfigContextMut,
 };
-use common::traits::handles_physics::{ConfigureBody, physical_bodies::Body};
+use common::traits::handles_physics::{ConfigureBody, TranslationOffsets, physical_bodies::Body};
 
 impl ConfigureBody for ConfigContextMut<'_> {
-	fn configure_body(&mut self, body: Body, center_offset: f32) {
-		self.entity
-			.try_insert((PhysicalBody(body), CenterOffset(center_offset)));
+	fn configure_body(&mut self, body: Body, offsets: TranslationOffsets) {
+		self.entity.try_insert((
+			PhysicalBody(body),
+			AimOffset(offsets.aim),
+			CenterOffset(offsets.center),
+		));
 	}
 }
 
@@ -16,7 +22,10 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{
-		components::{center_offset::CenterOffset, physical_body::PhysicalBody},
+		components::{
+			offset::{AimOffset, CenterOffset},
+			physical_body::PhysicalBody,
+		},
 		system_params::config::ConfigParamMut,
 	};
 	use bevy::{
@@ -42,7 +51,10 @@ mod tests {
 			.run_system_once(move |mut p: ConfigParamMut| {
 				let key = NoBodyConfigured { entity };
 				let mut ctx = ConfigParamMut::get_context_mut(&mut p, key).unwrap();
-				ctx.configure_body(Body::from_shape(Shape::StaticGltfMesh3d), 0.);
+				ctx.configure_body(
+					Body::from_shape(Shape::StaticGltfMesh3d),
+					TranslationOffsets::ZERO,
+				);
 			})?;
 
 		assert_eq!(
@@ -53,7 +65,7 @@ mod tests {
 	}
 
 	#[test]
-	fn insert_offset() -> Result<(), RunSystemError> {
+	fn insert_offsets() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let entity = app.world_mut().spawn_empty().id();
 
@@ -61,12 +73,21 @@ mod tests {
 			.run_system_once(move |mut p: ConfigParamMut| {
 				let key = NoBodyConfigured { entity };
 				let mut ctx = ConfigParamMut::get_context_mut(&mut p, key).unwrap();
-				ctx.configure_body(Body::from_shape(Shape::StaticGltfMesh3d), 11.);
+				ctx.configure_body(
+					Body::from_shape(Shape::StaticGltfMesh3d),
+					TranslationOffsets {
+						aim: 11.,
+						center: 12.,
+					},
+				);
 			})?;
 
 		assert_eq!(
-			Some(&CenterOffset(11.)),
-			app.world().entity(entity).get::<CenterOffset>(),
+			(Some(&AimOffset(11.)), Some(&CenterOffset(12.)),),
+			(
+				app.world().entity(entity).get::<AimOffset>(),
+				app.world().entity(entity).get::<CenterOffset>(),
+			)
 		);
 		Ok(())
 	}

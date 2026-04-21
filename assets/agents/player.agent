@@ -36,7 +36,10 @@
 				"vertical": 0.65,
 				"horizontal": 0.2
 			},
-			"center_height": 1,
+			"height_levels": {
+				"center": 0.65,
+				"aim": 1
+			},
 			"bones": {
 				"skill_mounts": {
 					"skill_spawn": "Neutral",

@@ -23,7 +23,7 @@ pub struct AgentConfigAsset {
 	pub(crate) bones: Bones,
 	pub(crate) model: AgentModel,
 	pub(crate) required_clearance: RequiredClearance,
-	pub(crate) center_height: f32,
+	pub(crate) height_levels: HeightLevels,
 	pub(crate) speed: MovementSpeed,
 	pub(crate) attributes: PhysicalDefaultAttributes,
 	pub(crate) animations: HashMap<AnimationKey, Animation>,
@@ -82,4 +82,10 @@ impl PartialEq for AgentModel {
 			_ => false,
 		}
 	}
+}
+
+#[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+pub(crate) struct HeightLevels {
+	pub(crate) aim: f32,
+	pub(crate) center: f32,
 }

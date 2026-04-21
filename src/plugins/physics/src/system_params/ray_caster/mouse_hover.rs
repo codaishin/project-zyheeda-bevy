@@ -1,4 +1,4 @@
-use crate::{components::center_offset::CenterOffset, system_params::ray_caster::RayCaster};
+use crate::{components::offset::AimOffset, system_params::ray_caster::RayCaster};
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::traits::handles_physics::{
 	HoverMode,
@@ -65,7 +65,7 @@ where
 		};
 
 		let plane_origin = match offset {
-			Some(CenterOffset(offset)) => transform.translation() + Vec3::new(0., *offset, 0.),
+			Some(AimOffset(offset)) => transform.translation() + Vec3::new(0., *offset, 0.),
 			None => transform.translation(),
 		};
 
@@ -282,7 +282,7 @@ mod tests {
 	}
 
 	mod direction_mode {
-		use crate::components::center_offset::CenterOffset;
+		use crate::components::offset::AimOffset;
 
 		use super::*;
 
@@ -336,7 +336,7 @@ mod tests {
 			);
 			let entity = app
 				.world_mut()
-				.spawn((GlobalTransform::from_xyz(0., 10., 0.), CenterOffset(1.)))
+				.spawn((GlobalTransform::from_xyz(0., 10., 0.), AimOffset(1.)))
 				.id();
 
 			app.world_mut()

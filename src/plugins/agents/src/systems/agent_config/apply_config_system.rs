@@ -26,6 +26,7 @@ use common::{
 			ConfigureDefaultAttributes,
 			NoBodyConfigured,
 			NoDefaultAttributes,
+			TranslationOffsets,
 			physical_bodies::{Blocker, Body, PhysicsType, Shape},
 		},
 		handles_skill_physics::{Initialize, NotInitializedAgent},
@@ -112,14 +113,15 @@ impl ApplyAgentConfig {
 					*config.required_clearance.vertical - *config.required_clearance.horizontal,
 				);
 				let radius = config.required_clearance.horizontal;
-				let center_offset = config.center_height - *config.required_clearance.vertical;
+				let center = config.height_levels.center - *config.required_clearance.vertical;
+				let aim = config.height_levels.aim - *config.required_clearance.vertical;
 				ctx.configure_body(
 					Body {
 						shape: Shape::Capsule { half_y, radius },
 						physics_type: PhysicsType::Agent,
 						blocker_types: HashSet::from([Blocker::Character]),
 					},
-					center_offset,
+					TranslationOffsets { center, aim },
 				);
 			}
 
@@ -351,8 +353,8 @@ mod tests {
 	}
 
 	impl ConfigureBody for _Physics {
-		fn configure_body(&mut self, body: Body, center_offset: f32) {
-			self.mock.configure_body(body, center_offset);
+		fn configure_body(&mut self, body: Body, offsets: TranslationOffsets) {
+			self.mock.configure_body(body, offsets);
 		}
 	}
 
@@ -362,7 +364,7 @@ mod tests {
 			fn configure_default_attributes(&mut self, default: PhysicalDefaultAttributes);
 		}
 		impl ConfigureBody for _Physics {
-			fn configure_body(&mut self, body: Body, center_offset: f32);
+			fn configure_body(&mut self, body: Body, offset: TranslationOffsets);
 		}
 	}
 
@@ -778,6 +780,8 @@ mod tests {
 	}
 
 	mod physics {
+		use crate::assets::agent_config::HeightLevels;
+
 		use super::*;
 
 		#[test]
@@ -818,12 +822,13 @@ mod tests {
 				horizontal: Units::from(0.5),
 				vertical: Units::from(2.),
 			};
-			let center_height = 3.5;
+			let center = 3.5;
+			let aim = 3.3;
 			let mut app = setup([(
 				&config_handle,
 				AgentConfigAsset {
 					required_clearance,
-					center_height,
+					height_levels: HeightLevels { center, aim },
 					..default()
 				},
 			)]);
@@ -840,12 +845,17 @@ mod tests {
 						physics_type: PhysicsType::Agent,
 						blocker_types: HashSet::from([Blocker::Character]),
 					};
-					let expected_center_offset = 1.5;
 
 					mock.expect_configure_default_attributes().return_const(());
 					mock.expect_configure_body()
 						.once()
-						.with(eq(expected_body), eq(expected_center_offset))
+						.with(
+							eq(expected_body),
+							eq(TranslationOffsets {
+								center: 1.5,
+								aim: 1.3,
+							}),
+						)
 						.return_const(());
 				}),
 			));

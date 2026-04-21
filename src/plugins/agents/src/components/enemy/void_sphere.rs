@@ -1,5 +1,5 @@
 use crate::{
-	assets::agent_config::{AgentConfigAsset, AgentModel, Bones, Loadout},
+	assets::agent_config::{AgentConfigAsset, AgentModel, Bones, HeightLevels, Loadout},
 	components::enemy::{Enemy, attack_config::EnemyAttackConfig},
 };
 use bevy::{
@@ -79,7 +79,10 @@ impl VoidSphere {
 				vertical: Units::from(Self::COLLIDER_GROUND_OFFSET),
 				horizontal: Units::from(Self::OUTER_RADIUS),
 			},
-			center_height: Self::COLLIDER_GROUND_OFFSET + Self::INNER_MODEL_OFFSET,
+			height_levels: HeightLevels {
+				aim: Self::COLLIDER_GROUND_OFFSET + Self::INNER_MODEL_OFFSET,
+				center: Self::COLLIDER_GROUND_OFFSET + Self::INNER_MODEL_OFFSET,
+			},
 			speed: MovementSpeed::Fixed(UnitsPerSecond::from_u8(1)),
 			animations: HashMap::from([]),
 			animation_mask_groups: HashMap::from([]),

@@ -1,6 +1,5 @@
 use crate::components::{
 	blocker_types::BlockerTypes,
-	center_offset::CenterOffset,
 	collider::{
 		ColliderShape,
 		GENERIC_COLLISION_GROUP,
@@ -8,6 +7,7 @@ use crate::components::{
 		RAY_GROUP,
 		TERRAIN_GROUP,
 	},
+	offset::{AimOffset, CenterOffset},
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use bevy_rapier3d::prelude::*;
@@ -21,7 +21,7 @@ use common::{
 
 #[derive(Component, Debug, PartialEq)]
 #[component(immutable)]
-#[require(CenterOffset)]
+#[require(AimOffset, CenterOffset)]
 pub struct PhysicalBody(pub(crate) Body);
 
 impl PhysicalBody {

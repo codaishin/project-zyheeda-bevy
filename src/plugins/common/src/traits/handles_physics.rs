@@ -89,15 +89,28 @@ pub struct NoBodyConfigured {
 }
 
 pub trait ConfigureBody {
-	fn configure_body(&mut self, body: Body, center_offset: f32);
+	fn configure_body(&mut self, body: Body, offsets: TranslationOffsets);
+}
+
+#[derive(Debug, PartialEq, Default, Clone)]
+pub struct TranslationOffsets {
+	pub aim: f32,
+	pub center: f32,
+}
+
+impl TranslationOffsets {
+	pub const ZERO: Self = Self {
+		aim: 0.,
+		center: 0.,
+	};
 }
 
 impl<T> ConfigureBody for T
 where
 	T: DerefMut<Target: ConfigureBody>,
 {
-	fn configure_body(&mut self, body: Body, center_offset: f32) {
-		self.deref_mut().configure_body(body, center_offset);
+	fn configure_body(&mut self, body: Body, offsets: TranslationOffsets) {
+		self.deref_mut().configure_body(body, offsets);
 	}
 }
 

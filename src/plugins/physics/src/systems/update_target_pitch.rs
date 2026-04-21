@@ -1,5 +1,5 @@
 use crate::components::{
-	center_offset::{CenterOffset, ComputeOffsetTranslation},
+	offset::{AimOffset, ComputeOffsetTranslation},
 	target::Target,
 };
 use bevy::{
@@ -21,8 +21,8 @@ impl Target {
 	pub(crate) fn update_pitch<TRayCast, TAnimations>(
 		mut animations: StaticSystemParam<TAnimations>,
 		mut ray_caster: StaticSystemParam<TRayCast>,
-		targets: Query<(Entity, &Self, &GlobalTransform, Option<&CenterOffset>)>,
-		transforms: Query<(&GlobalTransform, Option<&CenterOffset>)>,
+		targets: Query<(Entity, &Self, &GlobalTransform, Option<&AimOffset>)>,
+		transforms: Query<(&GlobalTransform, Option<&AimOffset>)>,
 		commands: ZyheedaCommands,
 	) where
 		for<'w, 's> TRayCast: SystemParam<Item<'w, 's>: Raycast<MouseHover>>,
@@ -51,8 +51,8 @@ impl Target {
 		&self,
 		entity: Entity,
 		transform: &GlobalTransform,
-		offset: Option<&CenterOffset>,
-		transforms: Query<(&GlobalTransform, Option<&CenterOffset>)>,
+		offset: Option<&AimOffset>,
+		transforms: Query<(&GlobalTransform, Option<&AimOffset>)>,
 		commands: &ZyheedaCommands,
 		ray_cast: &mut impl Raycast<MouseHover>,
 	) -> Option<DirForwardPitch> {
@@ -80,7 +80,7 @@ impl Target {
 
 fn get_pitch(
 	transform: &GlobalTransform,
-	offset: Option<&CenterOffset>,
+	offset: Option<&AimOffset>,
 	to: Vec3,
 ) -> Option<DirForwardPitch> {
 	let dir = (to - offset.compute_translation(transform)).try_normalize()?;
@@ -257,7 +257,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Target(Some(SkillTarget::Entity(target_entity))),
-				CenterOffset(3.),
+				AimOffset(3.),
 				GlobalTransform::from_translation(translation),
 				_Animations {
 					forward_pitch: None,
@@ -308,7 +308,7 @@ mod tests {
 		app.world_mut().spawn((
 			target_entity,
 			GlobalTransform::from_translation(translation + Vec3::new(0., -3., 0.) + offset),
-			CenterOffset(3.),
+			AimOffset(3.),
 		));
 
 		app.update();
@@ -374,7 +374,7 @@ mod tests {
 			.spawn((
 				Target(Some(SkillTarget::Cursor(Cursor::TerrainHover))),
 				GlobalTransform::from_translation(translation),
-				CenterOffset(3.),
+				AimOffset(3.),
 				_Animations {
 					forward_pitch: None,
 				},
@@ -463,7 +463,7 @@ mod tests {
 			.spawn((
 				Target(Some(SkillTarget::Cursor(Cursor::TerrainHover))),
 				GlobalTransform::from_translation(translation),
-				CenterOffset(3.),
+				AimOffset(3.),
 				_Animations {
 					forward_pitch: None,
 				},
@@ -504,7 +504,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				GlobalTransform::from_translation(translation + Vec3::new(0., -3., 0.) + offset),
-				CenterOffset(3.),
+				AimOffset(3.),
 			))
 			.id();
 		let entity = app

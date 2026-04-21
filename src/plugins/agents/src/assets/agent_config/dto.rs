@@ -1,5 +1,12 @@
 use crate::{
-	assets::agent_config::{AgentConfigAsset, AgentModel, Bones, Loadout, RequiredClearance},
+	assets::agent_config::{
+		AgentConfigAsset,
+		AgentModel,
+		Bones,
+		HeightLevels,
+		Loadout,
+		RequiredClearance,
+	},
 	components::enemy::void_sphere::VoidSphere,
 };
 use bevy::prelude::*;
@@ -31,7 +38,7 @@ pub(crate) enum ModelConfig {
 		bones: Bones,
 		movement_speed: MovementSpeed,
 		required_clearance: RequiredClearance,
-		center_height: f32,
+		height_levels: HeightLevels,
 		#[serde(with = "as_vec")]
 		animations: HashMap<AnimationKey, Animation>,
 		animation_mask_groups: HashMap<AnimationMaskBits, AffectedAnimationBones>,
@@ -64,7 +71,7 @@ impl TryLoadFrom<AgentConfigDto> for AgentConfigAsset {
 				bones,
 				movement_speed,
 				required_clearance,
-				center_height,
+				height_levels,
 				animations,
 				animation_mask_groups,
 			} => Ok(AgentConfigAsset {
@@ -72,7 +79,7 @@ impl TryLoadFrom<AgentConfigDto> for AgentConfigAsset {
 				bones,
 				model: AgentModel::Asset(model_path),
 				required_clearance,
-				center_height,
+				height_levels,
 				speed: movement_speed,
 				attributes,
 				animations,

@@ -1,7 +1,7 @@
 use crate::{
 	components::{
 		anchor::{Anchor, AnchorDirty, AnchorRotation},
-		center_offset::{CenterOffset, ComputeOffsetTranslation},
+		offset::{AimOffset, ComputeOffsetTranslation},
 		target::Target,
 	},
 	system_params::mount_points_lookup::{MountPointsLookup, get_mount_point::MountPointError},
@@ -31,7 +31,7 @@ impl AnchorDirty {
 		ray_caster: StaticSystemParam<TRayCaster>,
 		agents: Query<(&Anchor, &mut Transform)>,
 		targets: Query<&Target>,
-		transforms: Query<(&GlobalTransform, Option<&CenterOffset>)>,
+		transforms: Query<(&GlobalTransform, Option<&AimOffset>)>,
 	) -> Result<(), AnchorError<MountPointError<SkillMount>>>
 	where
 		TRayCaster: for<'w, 's> SystemParam<Item<'w, 's>: Raycast<MouseHover>>,
@@ -48,7 +48,7 @@ impl AnchorDirty {
 		ray_caster: StaticSystemParam<TRayCaster>,
 		mut agents: Query<(&Anchor, &mut Transform)>,
 		targets: Query<&Target>,
-		transforms: Query<(&GlobalTransform, Option<&CenterOffset>)>,
+		transforms: Query<(&GlobalTransform, Option<&AimOffset>)>,
 	) -> Result<(), AnchorError<TMountError>>
 	where
 		TLookup:
@@ -119,7 +119,7 @@ fn look_at_skill_target<TRayCaster, TMountError>(
 	mut ray_caster: StaticSystemParam<TRayCaster>,
 	commands: ZyheedaCommands,
 	targets: Query<&Target>,
-	transforms: Query<(&GlobalTransform, Option<&CenterOffset>)>,
+	transforms: Query<(&GlobalTransform, Option<&AimOffset>)>,
 	attached_to: Entity,
 	mount: Entity,
 ) -> Result<(), AnchorError<TMountError>>
@@ -442,7 +442,7 @@ mod tests {
 		app.world_mut().spawn((
 			target,
 			GlobalTransform::from_xyz(11., -20., 3.),
-			CenterOffset(5.),
+			AimOffset(5.),
 		));
 
 		let anchor = app.world_mut().spawn(
@@ -570,7 +570,7 @@ mod tests {
 		});
 		let target = app
 			.world_mut()
-			.spawn((GlobalTransform::from_xyz(11., 22., 33.), CenterOffset(5.)))
+			.spawn((GlobalTransform::from_xyz(11., 22., 33.), AimOffset(5.)))
 			.id();
 		app.insert_resource(_RayCaster::new().with_mock(|mock| {
 			mock.expect_raycast()
