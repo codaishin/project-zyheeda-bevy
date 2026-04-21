@@ -6,6 +6,7 @@ use common::{
 		handles_physics::{
 			ConfigureBody,
 			NoBodyConfigured,
+			TranslationOffsets,
 			physical_bodies::{Blocker, Body, PhysicsType, Shape},
 		},
 		prefab::{Prefab, PrefabEntityCommands},
@@ -40,14 +41,12 @@ where
 			Body::from_shape(Shape::StaticGltfMesh3d)
 				.with_physics_type(PhysicsType::Terrain)
 				.with_blocker_types(Blocker::Physical),
-			NO_CENTER_OFFSET,
+			TranslationOffsets::ZERO,
 		);
 
 		Ok(())
 	}
 }
-
-const NO_CENTER_OFFSET: f32 = 0.;
 
 #[derive(Debug, PartialEq)]
 pub struct HasAlreadyBody {

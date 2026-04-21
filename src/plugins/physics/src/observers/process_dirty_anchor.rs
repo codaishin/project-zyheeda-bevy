@@ -1,7 +1,7 @@
 use crate::{
 	components::{
 		anchor::{Anchor, AnchorDirty, AnchorRotation},
-		center_offset::{CenterOffset, ComputeOffsetTranslation},
+		offset::{CenterOffset, ComputeOffsetTranslation},
 		target::Target,
 	},
 	system_params::mount_points_lookup::{MountPointsLookup, get_mount_point::MountPointError},

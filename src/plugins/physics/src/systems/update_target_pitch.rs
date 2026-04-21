@@ -1,5 +1,5 @@
 use crate::components::{
-	center_offset::{CenterOffset, ComputeOffsetTranslation},
+	offset::{AimOffset, CenterOffset, ComputeOffsetTranslation},
 	target::Target,
 };
 use bevy::{
@@ -21,7 +21,7 @@ impl Target {
 	pub(crate) fn update_pitch<TRayCast, TAnimations>(
 		mut animations: StaticSystemParam<TAnimations>,
 		mut ray_caster: StaticSystemParam<TRayCast>,
-		targets: Query<(Entity, &Self, &GlobalTransform, Option<&CenterOffset>)>,
+		targets: Query<(Entity, &Self, &GlobalTransform, Option<&AimOffset>)>,
 		transforms: Query<(&GlobalTransform, Option<&CenterOffset>)>,
 		commands: ZyheedaCommands,
 	) where
@@ -51,7 +51,7 @@ impl Target {
 		&self,
 		entity: Entity,
 		transform: &GlobalTransform,
-		offset: Option<&CenterOffset>,
+		offset: Option<&AimOffset>,
 		transforms: Query<(&GlobalTransform, Option<&CenterOffset>)>,
 		commands: &ZyheedaCommands,
 		ray_cast: &mut impl Raycast<MouseHover>,
@@ -80,7 +80,7 @@ impl Target {
 
 fn get_pitch(
 	transform: &GlobalTransform,
-	offset: Option<&CenterOffset>,
+	offset: Option<&AimOffset>,
 	to: Vec3,
 ) -> Option<DirForwardPitch> {
 	let dir = (to - offset.compute_translation(transform)).try_normalize()?;
@@ -257,7 +257,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Target(Some(SkillTarget::Entity(target_entity))),
-				CenterOffset(3.),
+				AimOffset(3.),
 				GlobalTransform::from_translation(translation),
 				_Animations {
 					forward_pitch: None,
@@ -374,7 +374,7 @@ mod tests {
 			.spawn((
 				Target(Some(SkillTarget::Cursor(Cursor::TerrainHover))),
 				GlobalTransform::from_translation(translation),
-				CenterOffset(3.),
+				AimOffset(3.),
 				_Animations {
 					forward_pitch: None,
 				},
@@ -463,7 +463,7 @@ mod tests {
 			.spawn((
 				Target(Some(SkillTarget::Cursor(Cursor::TerrainHover))),
 				GlobalTransform::from_translation(translation),
-				CenterOffset(3.),
+				AimOffset(3.),
 				_Animations {
 					forward_pitch: None,
 				},
