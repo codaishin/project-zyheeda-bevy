@@ -1,5 +1,5 @@
 use crate::components::{
-	offset::{AimOffset, ComputeOffsetTranslation},
+	offset::{AimOffset, CenterOffset, ComputeOffsetTranslation},
 	target::Target,
 };
 use bevy::{
@@ -22,7 +22,7 @@ impl Target {
 		mut animations: StaticSystemParam<TAnimations>,
 		mut ray_caster: StaticSystemParam<TRayCast>,
 		targets: Query<(Entity, &Self, &GlobalTransform, Option<&AimOffset>)>,
-		transforms: Query<(&GlobalTransform, Option<&AimOffset>)>,
+		transforms: Query<(&GlobalTransform, Option<&CenterOffset>)>,
 		commands: ZyheedaCommands,
 	) where
 		for<'w, 's> TRayCast: SystemParam<Item<'w, 's>: Raycast<MouseHover>>,
@@ -52,7 +52,7 @@ impl Target {
 		entity: Entity,
 		transform: &GlobalTransform,
 		offset: Option<&AimOffset>,
-		transforms: Query<(&GlobalTransform, Option<&AimOffset>)>,
+		transforms: Query<(&GlobalTransform, Option<&CenterOffset>)>,
 		commands: &ZyheedaCommands,
 		ray_cast: &mut impl Raycast<MouseHover>,
 	) -> Option<DirForwardPitch> {
@@ -308,7 +308,7 @@ mod tests {
 		app.world_mut().spawn((
 			target_entity,
 			GlobalTransform::from_translation(translation + Vec3::new(0., -3., 0.) + offset),
-			AimOffset(3.),
+			CenterOffset(3.),
 		));
 
 		app.update();
@@ -504,7 +504,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				GlobalTransform::from_translation(translation + Vec3::new(0., -3., 0.) + offset),
-				AimOffset(3.),
+				CenterOffset(3.),
 			))
 			.id();
 		let entity = app

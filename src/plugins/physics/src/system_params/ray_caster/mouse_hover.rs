@@ -1,4 +1,4 @@
-use crate::{components::offset::AimOffset, system_params::ray_caster::RayCaster};
+use crate::{components::offset::ComputeOffsetTranslation, system_params::ray_caster::RayCaster};
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::traits::handles_physics::{
 	HoverMode,
@@ -64,12 +64,10 @@ where
 			return None;
 		};
 
-		let plane_origin = match offset {
-			Some(AimOffset(offset)) => transform.translation() + Vec3::new(0., *offset, 0.),
-			None => transform.translation(),
-		};
+		let plane_origin = offset.compute_translation(transform);
+		let plane = InfinitePlane3d { normal: Dir3::Y };
 
-		ray.intersect_plane(plane_origin, InfinitePlane3d { normal: Dir3::Y })
+		ray.intersect_plane(plane_origin, plane)
 			.and_then(|toi| TimeOfImpact::try_from_f32(toi).ok())
 	}
 }
@@ -282,9 +280,8 @@ mod tests {
 	}
 
 	mod direction_mode {
-		use crate::components::offset::AimOffset;
-
 		use super::*;
+		use crate::components::offset::AimOffset;
 
 		#[test]
 		fn return_direction_hit() -> Result<(), RunSystemError> {
@@ -319,7 +316,7 @@ mod tests {
 		}
 
 		#[test]
-		fn return_direction_hit_with_center_offset() -> Result<(), RunSystemError> {
+		fn return_direction_hit_with_aim_offset() -> Result<(), RunSystemError> {
 			let ray = Ray3d {
 				origin: Vec3::new(1., 20., 3.),
 				direction: Dir3::NEG_Y,
