@@ -9,7 +9,7 @@ use crate::{
 			HALF_FORWARD,
 			ICO_SPHERE_HALF,
 			PROJECTILE_PROJECTION_RADIUS,
-			SHIELD_PROJECTION_SCALE,
+			SHIELD_SCALE,
 			SPHERE_MODEL,
 			Skill,
 		},
@@ -83,12 +83,12 @@ impl GetProjectionPrefab for Skill {
 			SkillShape::Shield(Shield) => (
 				SubModel {
 					model: Model::Asset(AssetModel::path(ICO_SPHERE_HALF)),
-					transform: Transform::from_scale(SHIELD_PROJECTION_SCALE),
+					transform: Transform::from_scale(SHIELD_SCALE),
 				},
 				ProjectionCollider {
 					shape: ColliderShape::CustomAsset {
 						mesh: ICO_SPHERE_HALF,
-						scale: ColliderScale::Relative(SHIELD_PROJECTION_SCALE),
+						scale: ColliderScale::Relative(SHIELD_SCALE),
 						collider_type: ColliderType::Convex,
 					},
 					transform: Transform::default(),

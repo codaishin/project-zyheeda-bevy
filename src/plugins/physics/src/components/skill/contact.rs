@@ -1,5 +1,6 @@
 use crate::{
 	components::{
+		async_collider::ColliderType,
 		collider::ColliderShape,
 		effects::Effects,
 		skill::{
@@ -9,6 +10,7 @@ use crate::{
 			PROJECTILE_CONTACT_RADIUS,
 			SHIELD_CONTACT_COLLIDER,
 			SHIELD_MODEL,
+			SHIELD_SCALE,
 			SPHERE_MODEL,
 			Skill,
 		},
@@ -16,6 +18,7 @@ use crate::{
 	observers::skill_prefab::{ContactCollider, GetContactPrefab, SubModel},
 };
 use bevy::prelude::*;
+use bevy_rapier3d::prelude::ColliderScale;
 use common::{
 	components::{asset_model::AssetModel, insert_asset::InsertAsset, model::Model},
 	tools::Units,
@@ -96,10 +99,14 @@ impl GetContactPrefab for Skill {
 				},
 				SubModel {
 					model: Model::Asset(AssetModel::path(SHIELD_MODEL)),
-					transform: Transform::default(),
+					transform: Transform::from_scale(SHIELD_SCALE),
 				},
 				ContactCollider {
-					shape: *SHIELD_CONTACT_COLLIDER,
+					shape: ColliderShape::CustomAsset {
+						mesh: SHIELD_CONTACT_COLLIDER,
+						scale: ColliderScale::Relative(SHIELD_SCALE),
+						collider_type: ColliderType::Concave,
+					},
 					transform: Transform::default(),
 				},
 			),

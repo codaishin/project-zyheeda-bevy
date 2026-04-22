@@ -4,11 +4,7 @@ mod lifetime;
 mod motion;
 mod projection;
 
-use crate::components::{
-	collider::ColliderShape,
-	interaction_target::InteractionTarget,
-	skill::dto::SkillDto,
-};
+use crate::components::{interaction_target::InteractionTarget, skill::dto::SkillDto};
 use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
@@ -17,7 +13,6 @@ use common::{
 };
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
-use std::sync::LazyLock;
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
 #[require(PersistentEntity, Transform, Visibility)]
@@ -68,15 +63,11 @@ const HALF_FORWARD: Transform = Transform::from_translation(Vec3 {
 });
 
 const SHIELD_MODEL: &str = "models/shield.glb";
-static SHIELD_CONTACT_COLLIDER: LazyLock<ColliderShape> = LazyLock::new(|| ColliderShape::Cuboid {
-	half_x: Units::from(0.5),
-	half_y: Units::from(0.5),
-	half_z: Units::from(0.05),
-});
-const SHIELD_PROJECTION_SCALE: Vec3 = Vec3 {
-	x: 2.,
-	y: 2.,
-	z: 2.,
+const SHIELD_CONTACT_COLLIDER: &str = "models/shield_collider.glb#Mesh0/Primitive0";
+const SHIELD_SCALE: Vec3 = Vec3 {
+	x: 1.7,
+	y: 1.7,
+	z: 1.7,
 };
 
 const ICO_SPHERE_HALF: &str = "models/icosphere_half.glb#Mesh0/Primitive0";
