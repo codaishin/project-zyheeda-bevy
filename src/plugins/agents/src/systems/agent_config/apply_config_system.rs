@@ -494,7 +494,7 @@ mod tests {
 			let asset = AgentConfigAsset {
 				bones: Bones {
 					skill_mounts: HashMap::from([
-						(BoneName::from("a"), SkillMount::Neutral),
+						(BoneName::from("a"), SkillMount::NeutralSlot),
 						(BoneName::from("b"), SkillMount::Slot(SlotKey(42))),
 					]),
 					..default()
@@ -510,7 +510,7 @@ mod tests {
 					mock.expect_initialize()
 						.once()
 						.with(eq(HashMap::from([
-							(BoneName::from("a"), SkillMount::Neutral),
+							(BoneName::from("a"), SkillMount::NeutralSlot),
 							(BoneName::from("b"), SkillMount::Slot(SlotKey(42))),
 						])))
 						.return_const(());

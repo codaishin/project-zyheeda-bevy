@@ -39,7 +39,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app.world_mut().spawn_empty().id();
 		let map = HashMap::from([
-			(BoneName::from("a"), SkillMount::Neutral),
+			(BoneName::from("a"), SkillMount::NeutralSlot),
 			(BoneName::from("b"), SkillMount::Slot(SlotKey(42))),
 		]);
 		let map_clone = map.clone();

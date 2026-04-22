@@ -19,7 +19,7 @@ where
 {
 	fn spawn_skill(&mut self, config: TConfig, caster: SkillCaster, slot: SlotKey) -> OnSkillStop {
 		let mount = if config.use_neutral_mount() {
-			SkillMount::Neutral
+			SkillMount::NeutralSlot
 		} else {
 			SkillMount::Slot(slot)
 		};
@@ -155,7 +155,7 @@ mod tests {
 		const ARGS: SpawnArgs = SpawnArgs {
 			shape: &CONFIG.shape,
 			caster: CASTER,
-			mount: SkillMount::Neutral,
+			mount: SkillMount::NeutralSlot,
 			contact_effects: &[],
 			projection_effects: &[],
 		};

@@ -42,7 +42,7 @@
 			},
 			"bones": {
 				"skill_mounts": {
-					"skill_spawn": "Neutral",
+					"skill_spawn": "NeutralSlot",
 					"skill_spawn.L": {
 						"Slot": 0
 					},

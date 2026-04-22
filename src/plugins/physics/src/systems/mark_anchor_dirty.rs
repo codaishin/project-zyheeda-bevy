@@ -41,7 +41,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Anchor::attach_to(PersistentEntity::default()).on(SkillMount::Neutral))
+			.spawn(Anchor::attach_to(PersistentEntity::default()).on(SkillMount::NeutralSlot))
 			.remove::<AnchorDirty>()
 			.id();
 
@@ -68,7 +68,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Anchor::attach_to(PersistentEntity::default()).on(SkillMount::Neutral))
+			.spawn(Anchor::attach_to(PersistentEntity::default()).on(SkillMount::NeutralSlot))
 			.remove::<AnchorDirty>()
 			.id();
 
@@ -86,7 +86,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Anchor::attach_to(PersistentEntity::default()).on(SkillMount::Neutral))
+			.spawn(Anchor::attach_to(PersistentEntity::default()).on(SkillMount::NeutralSlot))
 			.remove::<AnchorDirty>()
 			.id();
 
