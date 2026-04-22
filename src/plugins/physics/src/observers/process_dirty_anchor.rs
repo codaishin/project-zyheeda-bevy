@@ -17,7 +17,7 @@ use common::{
 	traits::{
 		accessors::get::{Get, TryApplyOn},
 		handles_physics::{HoverMode, MouseHover, MouseHoversOver, Raycast},
-		handles_skill_physics::{Cursor, SkillMount, SkillTarget},
+		handles_skill_physics::{Cursor, SkillMount, SkillMountBone, SkillTarget},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -27,12 +27,12 @@ impl AnchorDirty {
 	pub(crate) fn process<TRayCaster>(
 		on_add: On<Add, Self>,
 		commands: ZyheedaCommands,
-		lookup: StaticSystemParam<MountPointsLookup<SkillMount>>,
+		lookup: StaticSystemParam<MountPointsLookup<SkillMountBone>>,
 		ray_caster: StaticSystemParam<TRayCaster>,
 		agents: Query<(&Anchor, &mut Transform)>,
 		targets: Query<&Target>,
 		transforms: Query<(&GlobalTransform, Option<&CenterOffset>)>,
-	) -> Result<(), AnchorError<MountPointError<SkillMount>>>
+	) -> Result<(), AnchorError<MountPointError<SkillMountBone>>>
 	where
 		TRayCaster: for<'w, 's> SystemParam<Item<'w, 's>: Raycast<MouseHover>>,
 	{
@@ -51,8 +51,9 @@ impl AnchorDirty {
 		transforms: Query<(&GlobalTransform, Option<&CenterOffset>)>,
 	) -> Result<(), AnchorError<TMountError>>
 	where
-		TLookup:
-			for<'w, 's> SystemParam<Item<'w, 's>: GetMountPoint<SkillMount, TError = TMountError>>,
+		TLookup: for<'w, 's> SystemParam<
+			Item<'w, 's>: GetMountPoint<SkillMountBone, TError = TMountError>,
+		>,
 		TRayCaster: for<'w, 's> SystemParam<Item<'w, 's>: Raycast<MouseHover>>,
 	{
 		let Ok((anchor, mut transform)) = agents.get_mut(on_add.entity) else {
@@ -71,16 +72,19 @@ impl AnchorDirty {
 			return Err(AnchorError::EntityNotFound(anchor.attached_to));
 		};
 
-		let mount = match lookup.get_mount_point(attached_to, anchor.mount) {
-			Ok(mount) => mount,
-			Err(error) => return Err(AnchorError::MountError(error)),
+		let mount = match anchor.mount {
+			SkillMount::Center => attached_to,
+			SkillMount::Bone(bone) => match lookup.get_mount_point(attached_to, bone) {
+				Ok(mount) => mount,
+				Err(error) => return Err(AnchorError::MountError(error)),
+			},
 		};
 
 		let Ok((attached_to_transform, _)) = transforms.get(attached_to) else {
 			return Err(AnchorError::EntityWithoutTransform(attached_to));
 		};
 
-		let Ok((mount_transform, _)) = transforms.get(mount) else {
+		let Ok((mount_transform, offset)) = transforms.get(mount) else {
 			return Err(AnchorError::EntityWithoutTransform(mount));
 		};
 
@@ -89,7 +93,7 @@ impl AnchorDirty {
 			return Err(AnchorError::TranslationNaN(mount));
 		}
 
-		transform.translation = mount_translation;
+		transform.translation = offset.compute_translation(mount_transform);
 		match anchor.rotation {
 			AnchorRotation::OfAttachedTo => match_rotation(transform, attached_to_transform),
 			AnchorRotation::OfMount => match_rotation(transform, mount_transform),
@@ -219,28 +223,27 @@ mod tests {
 		tools::action_key::slot::SlotKey,
 		traits::{
 			handles_physics::{HoverMode, MouseHoversOver},
-			handles_skill_physics::{Cursor, SkillMount},
+			handles_skill_physics::{Cursor, SkillMountBone},
 			register_persistent_entities::RegisterPersistentEntities,
 		},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::{collections::HashMap, sync::LazyLock};
-	use test_case::test_case;
 	use testing::{NestedMocks, SingleThreadedApp};
 
 	#[derive(Resource)]
 	struct _Lookup {
-		mount_points: HashMap<(SkillMount, Entity), Entity>,
+		mount_points: HashMap<(SkillMountBone, Entity), Entity>,
 	}
 
-	impl GetMountPoint<SkillMount> for ResMut<'_, _Lookup> {
+	impl GetMountPoint<SkillMountBone> for ResMut<'_, _Lookup> {
 		type TError = _Error;
 
 		fn get_mount_point(
 			&mut self,
 			root: Entity,
-			key: SkillMount,
+			key: SkillMountBone,
 		) -> Result<Entity, Self::TError> {
 			match self.mount_points.get(&(key, root)) {
 				Some(entity) => Ok(*entity),
@@ -298,23 +301,23 @@ mod tests {
 
 	#[test]
 	fn copy_location_translation() {
-		let spawner_key = SkillMount::Slot(SlotKey(22));
+		let bone = SkillMountBone::Slot(SlotKey(22));
 		let mut app = setup();
 		let agent = app
 			.world_mut()
 			.spawn((*AGENT, GlobalTransform::default()))
 			.id();
-		let mount_point = app
+		let mount_entity = app
 			.world_mut()
 			.spawn(GlobalTransform::from_xyz(4., 11., 9.))
 			.id();
 		app.insert_resource(_Lookup {
-			mount_points: HashMap::from([((spawner_key, agent), mount_point)]),
+			mount_points: HashMap::from([((bone, agent), mount_entity)]),
 		});
 
 		let anchor = app
 			.world_mut()
-			.spawn(Anchor::attach_to(*AGENT).on(spawner_key))
+			.spawn(Anchor::attach_to(*AGENT).on(SkillMount::Bone(bone)))
 			.id();
 
 		assert_eq!(
@@ -326,24 +329,24 @@ mod tests {
 	#[test]
 	fn copy_location_rotation_of_mount_point() {
 		let mut app = setup();
-		let spawner_key = SkillMount::Slot(SlotKey(22));
+		let bone = SkillMountBone::Slot(SlotKey(22));
 		let agent = app
 			.world_mut()
 			.spawn((*AGENT, GlobalTransform::default()))
 			.id();
-		let mount_point = app
+		let mount_entity = app
 			.world_mut()
 			.spawn(GlobalTransform::from(
 				Transform::from_xyz(4., 11., 9.).looking_to(Dir3::NEG_Z, Dir3::Y),
 			))
 			.id();
 		app.insert_resource(_Lookup {
-			mount_points: HashMap::from([((spawner_key, agent), mount_point)]),
+			mount_points: HashMap::from([((bone, agent), mount_entity)]),
 		});
 
 		let anchor = app
 			.world_mut()
-			.spawn(Anchor::attach_to(*AGENT).on(spawner_key));
+			.spawn(Anchor::attach_to(*AGENT).on(SkillMount::Bone(bone)));
 
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 11., 9.).looking_to(Dir3::NEG_Z, Dir3::Y)),
@@ -352,9 +355,40 @@ mod tests {
 	}
 
 	#[test]
+	fn copy_location_rotation_of_mount_point_with_offset() {
+		let mut app = setup();
+		let bone = SkillMountBone::Slot(SlotKey(22));
+		let agent = app
+			.world_mut()
+			.spawn((*AGENT, GlobalTransform::default()))
+			.id();
+		let mount_entity = app
+			.world_mut()
+			.spawn((
+				GlobalTransform::from(
+					Transform::from_xyz(4., 11., 9.).looking_to(Dir3::NEG_Z, Dir3::Y),
+				),
+				CenterOffset(5.),
+			))
+			.id();
+		app.insert_resource(_Lookup {
+			mount_points: HashMap::from([((bone, agent), mount_entity)]),
+		});
+
+		let anchor = app
+			.world_mut()
+			.spawn(Anchor::attach_to(*AGENT).on(SkillMount::Bone(bone)));
+
+		assert_eq!(
+			Some(&Transform::from_xyz(4., 16., 9.).looking_to(Dir3::NEG_Z, Dir3::Y)),
+			anchor.get::<Transform>(),
+		);
+	}
+
+	#[test]
 	fn copy_rotation_of_anchor() {
 		let mut app = setup();
-		let spawner_key = SkillMount::Slot(SlotKey(22));
+		let bone = SkillMountBone::Slot(SlotKey(22));
 		let agent = app
 			.world_mut()
 			.spawn((
@@ -362,17 +396,17 @@ mod tests {
 				GlobalTransform::from(Transform::default().looking_to(Dir3::NEG_Z, Dir3::Y)),
 			))
 			.id();
-		let mount_point = app
+		let mount_entity = app
 			.world_mut()
 			.spawn(GlobalTransform::from_xyz(4., 11., 9.))
 			.id();
 		app.insert_resource(_Lookup {
-			mount_points: HashMap::from([((spawner_key, agent), mount_point)]),
+			mount_points: HashMap::from([((bone, agent), mount_entity)]),
 		});
 
 		let anchor = app.world_mut().spawn(
 			Anchor::attach_to(*AGENT)
-				.on(spawner_key)
+				.on(SkillMount::Bone(bone))
 				.with_attached_rotation(),
 		);
 
@@ -385,7 +419,7 @@ mod tests {
 	#[test]
 	fn look_at_target() {
 		let mut app = setup();
-		let spawner_key = SkillMount::Slot(SlotKey(22));
+		let bone = SkillMountBone::Slot(SlotKey(22));
 		let target = PersistentEntity::default();
 		let agent = app
 			.world_mut()
@@ -395,12 +429,12 @@ mod tests {
 				Target(Some(SkillTarget::Entity(target))),
 			))
 			.id();
-		let mount_point = app
+		let mount_entity = app
 			.world_mut()
 			.spawn(GlobalTransform::from_xyz(4., 11., 9.))
 			.id();
 		app.insert_resource(_Lookup {
-			mount_points: HashMap::from([((spawner_key, agent), mount_point)]),
+			mount_points: HashMap::from([((bone, agent), mount_entity)]),
 		});
 
 		app.world_mut()
@@ -408,7 +442,7 @@ mod tests {
 
 		let anchor = app.world_mut().spawn(
 			Anchor::attach_to(*AGENT)
-				.on(spawner_key)
+				.on(SkillMount::Bone(bone))
 				.looking_at_skill_target(),
 		);
 
@@ -418,189 +452,357 @@ mod tests {
 		);
 	}
 
-	#[test]
-	fn look_at_target_with_offset() {
-		let mut app = setup();
-		let spawner_key = SkillMount::Slot(SlotKey(22));
-		let target = PersistentEntity::default();
-		let agent = app
-			.world_mut()
-			.spawn((
+	mod mounted_on_bone {
+		use super::*;
+		use test_case::test_case;
+
+		const BONE: SkillMountBone = SkillMountBone::Slot(SlotKey(22));
+
+		#[test]
+		fn look_at_target_with_offset() {
+			let mut app = setup();
+			let target = PersistentEntity::default();
+			let agent = app
+				.world_mut()
+				.spawn((
+					*AGENT,
+					GlobalTransform::default(),
+					Target(Some(SkillTarget::Entity(target))),
+				))
+				.id();
+			let mount_entity = app
+				.world_mut()
+				.spawn(GlobalTransform::from_xyz(4., 11., 9.))
+				.id();
+			app.insert_resource(_Lookup {
+				mount_points: HashMap::from([((BONE, agent), mount_entity)]),
+			});
+
+			app.world_mut().spawn((
+				target,
+				GlobalTransform::from_xyz(11., -20., 3.),
+				CenterOffset(5.),
+			));
+
+			let anchor = app.world_mut().spawn(
+				Anchor::attach_to(*AGENT)
+					.on(SkillMount::Bone(BONE))
+					.looking_at_skill_target(),
+			);
+
+			assert_eq!(
+				Some(
+					&Transform::from_xyz(4., 11., 9.).looking_at(Vec3::new(11., -15., 3.), Vec3::Y)
+				),
+				anchor.get::<Transform>(),
+			);
+		}
+
+		#[test_case(Cursor::TerrainHover, |_| HoverMode::ColliderOrTerrain; "terrain")]
+		#[test_case(Cursor::Direction , HoverMode::ColliderOrDirectionFrom; "direction")]
+		fn look_at_cursor_over_terrain(cursor: Cursor, mode: fn(Entity) -> HoverMode) {
+			let mut app = setup();
+			let agent = app
+				.world_mut()
+				.spawn((
+					*AGENT,
+					GlobalTransform::default(),
+					Target(Some(SkillTarget::Cursor(cursor))),
+				))
+				.id();
+			let mount_entity = app
+				.world_mut()
+				.spawn(GlobalTransform::from_xyz(4., 11., 9.))
+				.id();
+			app.insert_resource(_Lookup {
+				mount_points: HashMap::from([((BONE, agent), mount_entity)]),
+			});
+			app.insert_resource(_RayCaster::new().with_mock(|mock| {
+				mock.expect_raycast()
+					.once()
+					.with(eq(MouseHover {
+						exclude: vec![agent],
+						mode: mode(mount_entity),
+					}))
+					.return_const(MouseHoversOver::Point(Vec3::new(11., 22., 33.)));
+			}));
+
+			let anchor = app.world_mut().spawn(
+				Anchor::attach_to(*AGENT)
+					.on(SkillMount::Bone(BONE))
+					.looking_at_skill_target(),
+			);
+
+			assert_eq!(
+				Some(
+					&Transform::from_xyz(4., 11., 9.).looking_at(Vec3::new(11., 22., 33.), Vec3::Y)
+				),
+				anchor.get::<Transform>(),
+			);
+		}
+
+		#[test_case(Cursor::TerrainHover, |_| HoverMode::ColliderOrTerrain; "terrain")]
+		#[test_case(Cursor::Direction , HoverMode::ColliderOrDirectionFrom; "direction")]
+		fn look_at_cursor_over_object(cursor: Cursor, mode: fn(Entity) -> HoverMode) {
+			let mut app = setup();
+			let agent = app
+				.world_mut()
+				.spawn((
+					*AGENT,
+					GlobalTransform::default(),
+					Target(Some(SkillTarget::Cursor(cursor))),
+				))
+				.id();
+			let mount_entity = app
+				.world_mut()
+				.spawn(GlobalTransform::from_xyz(4., 11., 9.))
+				.id();
+			app.insert_resource(_Lookup {
+				mount_points: HashMap::from([((BONE, agent), mount_entity)]),
+			});
+			let target = app
+				.world_mut()
+				.spawn(GlobalTransform::from_xyz(11., 22., 33.))
+				.id();
+			app.insert_resource(_RayCaster::new().with_mock(|mock| {
+				mock.expect_raycast()
+					.once()
+					.with(eq(MouseHover {
+						exclude: vec![agent],
+						mode: mode(mount_entity),
+					}))
+					.return_const(MouseHoversOver::Object {
+						entity: target,
+						point: Vec3::ZERO,
+					});
+			}));
+
+			let anchor = app.world_mut().spawn(
+				Anchor::attach_to(*AGENT)
+					.on(SkillMount::Bone(BONE))
+					.looking_at_skill_target(),
+			);
+
+			assert_eq!(
+				Some(
+					&Transform::from_xyz(4., 11., 9.).looking_at(Vec3::new(11., 22., 33.), Vec3::Y)
+				),
+				anchor.get::<Transform>(),
+			);
+		}
+
+		#[test_case(Cursor::TerrainHover, |_| HoverMode::ColliderOrTerrain; "terrain")]
+		#[test_case(Cursor::Direction , HoverMode::ColliderOrDirectionFrom; "direction")]
+		fn look_at_cursor_over_object_with_pitch(cursor: Cursor, mode: fn(Entity) -> HoverMode) {
+			let mut app = setup();
+			let agent = app
+				.world_mut()
+				.spawn((
+					*AGENT,
+					GlobalTransform::default(),
+					Target(Some(SkillTarget::Cursor(cursor))),
+				))
+				.id();
+			let mount_entity = app
+				.world_mut()
+				.spawn(GlobalTransform::from_xyz(4., 11., 9.))
+				.id();
+			app.insert_resource(_Lookup {
+				mount_points: HashMap::from([((BONE, agent), mount_entity)]),
+			});
+			let target = app
+				.world_mut()
+				.spawn((GlobalTransform::from_xyz(11., 22., 33.), CenterOffset(5.)))
+				.id();
+			app.insert_resource(_RayCaster::new().with_mock(|mock| {
+				mock.expect_raycast()
+					.once()
+					.with(eq(MouseHover {
+						exclude: vec![agent],
+						mode: mode(mount_entity),
+					}))
+					.return_const(MouseHoversOver::Object {
+						entity: target,
+						point: Vec3::ZERO,
+					});
+			}));
+
+			let anchor = app.world_mut().spawn(
+				Anchor::attach_to(*AGENT)
+					.on(SkillMount::Bone(BONE))
+					.looking_at_skill_target(),
+			);
+
+			assert_eq!(
+				Some(
+					&Transform::from_xyz(4., 11., 9.).looking_at(Vec3::new(11., 27., 33.), Vec3::Y)
+				),
+				anchor.get::<Transform>(),
+			);
+		}
+	}
+
+	mod mounted_on_center {
+		use super::*;
+		use test_case::test_case;
+
+		#[test]
+		fn look_at_target_with_offset() {
+			let mut app = setup();
+			let target = PersistentEntity::default();
+			app.world_mut().spawn((
 				*AGENT,
-				GlobalTransform::default(),
+				GlobalTransform::from_xyz(4., 11., 9.),
 				Target(Some(SkillTarget::Entity(target))),
-			))
-			.id();
-		let mount_point = app
-			.world_mut()
-			.spawn(GlobalTransform::from_xyz(4., 11., 9.))
-			.id();
-		app.insert_resource(_Lookup {
-			mount_points: HashMap::from([((spawner_key, agent), mount_point)]),
-		});
+			));
 
-		app.world_mut().spawn((
-			target,
-			GlobalTransform::from_xyz(11., -20., 3.),
-			CenterOffset(5.),
-		));
+			app.world_mut().spawn((
+				target,
+				GlobalTransform::from_xyz(11., -20., 3.),
+				CenterOffset(5.),
+			));
 
-		let anchor = app.world_mut().spawn(
-			Anchor::attach_to(*AGENT)
-				.on(spawner_key)
-				.looking_at_skill_target(),
-		);
+			let anchor = app.world_mut().spawn(
+				Anchor::attach_to(*AGENT)
+					.on(SkillMount::Center)
+					.looking_at_skill_target(),
+			);
 
-		assert_eq!(
-			Some(&Transform::from_xyz(4., 11., 9.).looking_at(Vec3::new(11., -15., 3.), Vec3::Y)),
-			anchor.get::<Transform>(),
-		);
-	}
+			assert_eq!(
+				Some(
+					&Transform::from_xyz(4., 11., 9.).looking_at(Vec3::new(11., -15., 3.), Vec3::Y)
+				),
+				anchor.get::<Transform>(),
+			);
+		}
 
-	#[test_case(Cursor::TerrainHover, |_|HoverMode::ColliderOrTerrain; "terrain")]
-	#[test_case(Cursor::Direction ,HoverMode::ColliderOrDirectionFrom; "direction")]
-	fn look_at_cursor_over_terrain(cursor: Cursor, mode: fn(Entity) -> HoverMode) {
-		let mut app = setup();
-		let spawner_key = SkillMount::Slot(SlotKey(22));
-		let agent = app
-			.world_mut()
-			.spawn((
-				*AGENT,
-				GlobalTransform::default(),
-				Target(Some(SkillTarget::Cursor(cursor))),
-			))
-			.id();
-		let mount_point = app
-			.world_mut()
-			.spawn(GlobalTransform::from_xyz(4., 11., 9.))
-			.id();
-		app.insert_resource(_Lookup {
-			mount_points: HashMap::from([((spawner_key, agent), mount_point)]),
-		});
-		app.insert_resource(_RayCaster::new().with_mock(|mock| {
-			mock.expect_raycast()
-				.once()
-				.with(eq(MouseHover {
-					exclude: vec![agent],
-					mode: mode(mount_point),
-				}))
-				.return_const(MouseHoversOver::Point(Vec3::new(11., 22., 33.)));
-		}));
+		#[test_case(Cursor::TerrainHover, |_| HoverMode::ColliderOrTerrain; "terrain")]
+		#[test_case(Cursor::Direction , HoverMode::ColliderOrDirectionFrom; "direction")]
+		fn look_at_cursor_over_terrain(cursor: Cursor, mode: fn(Entity) -> HoverMode) {
+			let mut app = setup();
+			let agent = app
+				.world_mut()
+				.spawn((
+					*AGENT,
+					GlobalTransform::from_xyz(4., 11., 9.),
+					Target(Some(SkillTarget::Cursor(cursor))),
+				))
+				.id();
+			app.insert_resource(_RayCaster::new().with_mock(|mock| {
+				mock.expect_raycast()
+					.once()
+					.with(eq(MouseHover {
+						exclude: vec![agent],
+						mode: mode(agent),
+					}))
+					.return_const(MouseHoversOver::Point(Vec3::new(11., 22., 33.)));
+			}));
 
-		let anchor = app.world_mut().spawn(
-			Anchor::attach_to(*AGENT)
-				.on(spawner_key)
-				.looking_at_skill_target(),
-		);
+			let anchor = app.world_mut().spawn(
+				Anchor::attach_to(*AGENT)
+					.on(SkillMount::Center)
+					.looking_at_skill_target(),
+			);
 
-		assert_eq!(
-			Some(&Transform::from_xyz(4., 11., 9.).looking_at(Vec3::new(11., 22., 33.), Vec3::Y)),
-			anchor.get::<Transform>(),
-		);
-	}
+			assert_eq!(
+				Some(
+					&Transform::from_xyz(4., 11., 9.).looking_at(Vec3::new(11., 22., 33.), Vec3::Y)
+				),
+				anchor.get::<Transform>(),
+			);
+		}
 
-	#[test_case(Cursor::TerrainHover, |_|HoverMode::ColliderOrTerrain; "terrain")]
-	#[test_case(Cursor::Direction ,HoverMode::ColliderOrDirectionFrom; "direction")]
-	fn look_at_cursor_over_object(cursor: Cursor, mode: fn(Entity) -> HoverMode) {
-		let mut app = setup();
-		let spawner_key = SkillMount::Slot(SlotKey(22));
-		let agent = app
-			.world_mut()
-			.spawn((
-				*AGENT,
-				GlobalTransform::default(),
-				Target(Some(SkillTarget::Cursor(cursor))),
-			))
-			.id();
-		let mount_point = app
-			.world_mut()
-			.spawn(GlobalTransform::from_xyz(4., 11., 9.))
-			.id();
-		app.insert_resource(_Lookup {
-			mount_points: HashMap::from([((spawner_key, agent), mount_point)]),
-		});
-		let target = app
-			.world_mut()
-			.spawn(GlobalTransform::from_xyz(11., 22., 33.))
-			.id();
-		app.insert_resource(_RayCaster::new().with_mock(|mock| {
-			mock.expect_raycast()
-				.once()
-				.with(eq(MouseHover {
-					exclude: vec![agent],
-					mode: mode(mount_point),
-				}))
-				.return_const(MouseHoversOver::Object {
-					entity: target,
-					point: Vec3::ZERO,
-				});
-		}));
+		#[test_case(Cursor::TerrainHover, |_| HoverMode::ColliderOrTerrain; "terrain")]
+		#[test_case(Cursor::Direction , HoverMode::ColliderOrDirectionFrom; "direction")]
+		fn look_at_cursor_over_object(cursor: Cursor, mode: fn(Entity) -> HoverMode) {
+			let mut app = setup();
+			let agent = app
+				.world_mut()
+				.spawn((
+					*AGENT,
+					GlobalTransform::from_xyz(4., 11., 9.),
+					Target(Some(SkillTarget::Cursor(cursor))),
+				))
+				.id();
+			let target = app
+				.world_mut()
+				.spawn(GlobalTransform::from_xyz(11., 22., 33.))
+				.id();
+			app.insert_resource(_RayCaster::new().with_mock(|mock| {
+				mock.expect_raycast()
+					.once()
+					.with(eq(MouseHover {
+						exclude: vec![agent],
+						mode: mode(agent),
+					}))
+					.return_const(MouseHoversOver::Object {
+						entity: target,
+						point: Vec3::ZERO,
+					});
+			}));
 
-		let anchor = app.world_mut().spawn(
-			Anchor::attach_to(*AGENT)
-				.on(spawner_key)
-				.looking_at_skill_target(),
-		);
+			let anchor = app.world_mut().spawn(
+				Anchor::attach_to(*AGENT)
+					.on(SkillMount::Center)
+					.looking_at_skill_target(),
+			);
 
-		assert_eq!(
-			Some(&Transform::from_xyz(4., 11., 9.).looking_at(Vec3::new(11., 22., 33.), Vec3::Y)),
-			anchor.get::<Transform>(),
-		);
-	}
+			assert_eq!(
+				Some(
+					&Transform::from_xyz(4., 11., 9.).looking_at(Vec3::new(11., 22., 33.), Vec3::Y)
+				),
+				anchor.get::<Transform>(),
+			);
+		}
 
-	#[test_case(Cursor::TerrainHover, |_|HoverMode::ColliderOrTerrain; "terrain")]
-	#[test_case(Cursor::Direction ,HoverMode::ColliderOrDirectionFrom; "direction")]
-	fn look_at_cursor_over_object_with_pitch(cursor: Cursor, mode: fn(Entity) -> HoverMode) {
-		let mut app = setup();
-		let spawner_key = SkillMount::Slot(SlotKey(22));
-		let agent = app
-			.world_mut()
-			.spawn((
-				*AGENT,
-				GlobalTransform::default(),
-				Target(Some(SkillTarget::Cursor(cursor))),
-			))
-			.id();
-		let mount_point = app
-			.world_mut()
-			.spawn(GlobalTransform::from_xyz(4., 11., 9.))
-			.id();
-		app.insert_resource(_Lookup {
-			mount_points: HashMap::from([((spawner_key, agent), mount_point)]),
-		});
-		let target = app
-			.world_mut()
-			.spawn((GlobalTransform::from_xyz(11., 22., 33.), CenterOffset(5.)))
-			.id();
-		app.insert_resource(_RayCaster::new().with_mock(|mock| {
-			mock.expect_raycast()
-				.once()
-				.with(eq(MouseHover {
-					exclude: vec![agent],
-					mode: mode(mount_point),
-				}))
-				.return_const(MouseHoversOver::Object {
-					entity: target,
-					point: Vec3::ZERO,
-				});
-		}));
+		#[test_case(Cursor::TerrainHover, |_| HoverMode::ColliderOrTerrain; "terrain")]
+		#[test_case(Cursor::Direction , HoverMode::ColliderOrDirectionFrom; "direction")]
+		fn look_at_cursor_over_object_with_pitch(cursor: Cursor, mode: fn(Entity) -> HoverMode) {
+			let mut app = setup();
+			let agent = app
+				.world_mut()
+				.spawn((
+					*AGENT,
+					GlobalTransform::from_xyz(4., 11., 9.),
+					Target(Some(SkillTarget::Cursor(cursor))),
+				))
+				.id();
+			let target = app
+				.world_mut()
+				.spawn((GlobalTransform::from_xyz(11., 22., 33.), CenterOffset(5.)))
+				.id();
+			app.insert_resource(_RayCaster::new().with_mock(|mock| {
+				mock.expect_raycast()
+					.once()
+					.with(eq(MouseHover {
+						exclude: vec![agent],
+						mode: mode(agent),
+					}))
+					.return_const(MouseHoversOver::Object {
+						entity: target,
+						point: Vec3::ZERO,
+					});
+			}));
 
-		let anchor = app.world_mut().spawn(
-			Anchor::attach_to(*AGENT)
-				.on(spawner_key)
-				.looking_at_skill_target(),
-		);
+			let anchor = app.world_mut().spawn(
+				Anchor::attach_to(*AGENT)
+					.on(SkillMount::Center)
+					.looking_at_skill_target(),
+			);
 
-		assert_eq!(
-			Some(&Transform::from_xyz(4., 11., 9.).looking_at(Vec3::new(11., 27., 33.), Vec3::Y)),
-			anchor.get::<Transform>(),
-		);
+			assert_eq!(
+				Some(
+					&Transform::from_xyz(4., 11., 9.).looking_at(Vec3::new(11., 27., 33.), Vec3::Y)
+				),
+				anchor.get::<Transform>(),
+			);
+		}
 	}
 
 	#[test]
 	fn do_not_change_scale() {
 		let mut app = setup();
-		let spawner_key = SkillMount::Slot(SlotKey(22));
+		let bone = SkillMountBone::Slot(SlotKey(22));
 		let agent = app
 			.world_mut()
 			.spawn((
@@ -608,19 +810,19 @@ mod tests {
 				GlobalTransform::from(Transform::default().with_scale(Vec3::splat(2.))),
 			))
 			.id();
-		let mount_point = app
+		let mount_entity = app
 			.world_mut()
 			.spawn(GlobalTransform::from(
 				Transform::from_xyz(4., 11., 9.).with_scale(Vec3::splat(2.)),
 			))
 			.id();
 		app.insert_resource(_Lookup {
-			mount_points: HashMap::from([((spawner_key, agent), mount_point)]),
+			mount_points: HashMap::from([((bone, agent), mount_entity)]),
 		});
 
 		let anchor = app
 			.world_mut()
-			.spawn(Anchor::attach_to(*AGENT).on(spawner_key));
+			.spawn(Anchor::attach_to(*AGENT).on(SkillMount::Bone(bone)));
 
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 11., 9.)),
@@ -631,22 +833,22 @@ mod tests {
 	#[test]
 	fn remove_dirty_marker_on_one_time_anchor() {
 		let mut app = setup();
-		let spawner_key = SkillMount::Slot(SlotKey(22));
+		let bone = SkillMountBone::Slot(SlotKey(22));
 		let agent = app
 			.world_mut()
 			.spawn((*AGENT, GlobalTransform::default()))
 			.id();
-		let mount_point = app
+		let mount_entity = app
 			.world_mut()
 			.spawn(GlobalTransform::from_xyz(4., 11., 9.))
 			.id();
 		app.insert_resource(_Lookup {
-			mount_points: HashMap::from([((spawner_key, agent), mount_point)]),
+			mount_points: HashMap::from([((bone, agent), mount_entity)]),
 		});
 
 		let anchor = app
 			.world_mut()
-			.spawn(Anchor::attach_to(*AGENT).on(spawner_key).once());
+			.spawn(Anchor::attach_to(*AGENT).on(SkillMount::Bone(bone)).once());
 
 		assert!(!anchor.contains::<AnchorDirty>());
 	}
@@ -654,22 +856,24 @@ mod tests {
 	#[test]
 	fn remove_dirty_marker_on_persistent_anchor() {
 		let mut app = setup();
-		let spawner_key = SkillMount::Slot(SlotKey(22));
+		let bone = SkillMountBone::Slot(SlotKey(22));
 		let agent = app
 			.world_mut()
 			.spawn((*AGENT, GlobalTransform::default()))
 			.id();
-		let mount_point = app
+		let mount_entity = app
 			.world_mut()
 			.spawn(GlobalTransform::from_xyz(4., 11., 9.))
 			.id();
 		app.insert_resource(_Lookup {
-			mount_points: HashMap::from([((spawner_key, agent), mount_point)]),
+			mount_points: HashMap::from([((bone, agent), mount_entity)]),
 		});
 
-		let anchor = app
-			.world_mut()
-			.spawn(Anchor::attach_to(*AGENT).on(spawner_key).always());
+		let anchor = app.world_mut().spawn(
+			Anchor::attach_to(*AGENT)
+				.on(SkillMount::Bone(bone))
+				.always(),
+		);
 
 		assert!(!anchor.contains::<AnchorDirty>());
 	}
@@ -677,22 +881,22 @@ mod tests {
 	#[test]
 	fn remove_one_time_anchor() {
 		let mut app = setup();
-		let spawner_key = SkillMount::Slot(SlotKey(22));
+		let bone = SkillMountBone::Slot(SlotKey(22));
 		let agent = app
 			.world_mut()
 			.spawn((*AGENT, GlobalTransform::default()))
 			.id();
-		let mount_point = app
+		let mount_entity = app
 			.world_mut()
 			.spawn(GlobalTransform::from_xyz(4., 11., 9.))
 			.id();
 		app.insert_resource(_Lookup {
-			mount_points: HashMap::from([((spawner_key, agent), mount_point)]),
+			mount_points: HashMap::from([((bone, agent), mount_entity)]),
 		});
 
 		let anchor = app
 			.world_mut()
-			.spawn(Anchor::attach_to(*AGENT).on(spawner_key).once());
+			.spawn(Anchor::attach_to(*AGENT).on(SkillMount::Bone(bone)).once());
 
 		assert!(!anchor.contains::<Anchor>());
 	}
@@ -700,22 +904,24 @@ mod tests {
 	#[test]
 	fn do_not_remove_persistent_anchor() {
 		let mut app = setup();
-		let spawner_key = SkillMount::Slot(SlotKey(22));
+		let bone = SkillMountBone::Slot(SlotKey(22));
 		let agent = app
 			.world_mut()
 			.spawn((*AGENT, GlobalTransform::default()))
 			.id();
-		let mount_point = app
+		let mount_entity = app
 			.world_mut()
 			.spawn(GlobalTransform::from_xyz(4., 11., 9.))
 			.id();
 		app.insert_resource(_Lookup {
-			mount_points: HashMap::from([((spawner_key, agent), mount_point)]),
+			mount_points: HashMap::from([((bone, agent), mount_entity)]),
 		});
 
-		let anchor = app
-			.world_mut()
-			.spawn(Anchor::attach_to(*AGENT).on(spawner_key).always());
+		let anchor = app.world_mut().spawn(
+			Anchor::attach_to(*AGENT)
+				.on(SkillMount::Bone(bone))
+				.always(),
+		);
 
 		assert!(anchor.contains::<Anchor>());
 	}
@@ -723,11 +929,11 @@ mod tests {
 	#[test]
 	fn remove_components_in_error_case() {
 		let mut app = setup();
-		let spawner_key = SkillMount::Slot(SlotKey(22));
+		let bone = SkillMountBone::Slot(SlotKey(22));
 
 		let anchor = app
 			.world_mut()
-			.spawn(Anchor::attach_to(*AGENT).on(spawner_key).once());
+			.spawn(Anchor::attach_to(*AGENT).on(SkillMount::Bone(bone)).once());
 
 		assert_eq!(
 			(false, false),
@@ -741,10 +947,10 @@ mod tests {
 	#[test]
 	fn return_target_error() {
 		let mut app = setup();
-		let spawner_key = SkillMount::Slot(SlotKey(22));
+		let bone = SkillMountBone::Slot(SlotKey(22));
 
 		app.world_mut()
-			.spawn(Anchor::attach_to(*AGENT).on(spawner_key));
+			.spawn(Anchor::attach_to(*AGENT).on(SkillMount::Bone(bone)));
 
 		assert_eq!(
 			&_Result(Err(AnchorError::EntityNotFound(*AGENT))),
@@ -755,11 +961,11 @@ mod tests {
 	#[test]
 	fn return_mount_error() {
 		let mut app = setup();
-		let spawner_key = SkillMount::Slot(SlotKey(22));
+		let bone = SkillMountBone::Slot(SlotKey(22));
 		app.world_mut().spawn(*AGENT);
 
 		app.world_mut()
-			.spawn(Anchor::attach_to(*AGENT).on(spawner_key));
+			.spawn(Anchor::attach_to(*AGENT).on(SkillMount::Bone(bone)));
 
 		assert_eq!(
 			&_Result(Err(AnchorError::MountError(_Error))),
@@ -770,15 +976,15 @@ mod tests {
 	#[test]
 	fn return_root_no_transform_error() {
 		let mut app = setup();
-		let spawner_key = SkillMount::Slot(SlotKey(22));
+		let bone = SkillMountBone::Slot(SlotKey(22));
 		let agent = app.world_mut().spawn(*AGENT).id();
-		let mount_point = app.world_mut().spawn_empty().id();
+		let mount_entity = app.world_mut().spawn_empty().id();
 		app.insert_resource(_Lookup {
-			mount_points: HashMap::from([((spawner_key, agent), mount_point)]),
+			mount_points: HashMap::from([((bone, agent), mount_entity)]),
 		});
 
 		app.world_mut()
-			.spawn(Anchor::attach_to(*AGENT).on(spawner_key));
+			.spawn(Anchor::attach_to(*AGENT).on(SkillMount::Bone(bone)));
 
 		assert_eq!(
 			&_Result(Err(AnchorError::EntityWithoutTransform(agent))),
@@ -789,21 +995,21 @@ mod tests {
 	#[test]
 	fn return_mount_point_no_transform_error() {
 		let mut app = setup();
-		let spawner_key = SkillMount::Slot(SlotKey(22));
+		let bone = SkillMountBone::Slot(SlotKey(22));
 		let agent = app
 			.world_mut()
 			.spawn((*AGENT, GlobalTransform::default()))
 			.id();
-		let mount_point = app.world_mut().spawn_empty().id();
+		let mount_entity = app.world_mut().spawn_empty().id();
 		app.insert_resource(_Lookup {
-			mount_points: HashMap::from([((spawner_key, agent), mount_point)]),
+			mount_points: HashMap::from([((bone, agent), mount_entity)]),
 		});
 
 		app.world_mut()
-			.spawn(Anchor::attach_to(*AGENT).on(spawner_key));
+			.spawn(Anchor::attach_to(*AGENT).on(SkillMount::Bone(bone)));
 
 		assert_eq!(
-			&_Result(Err(AnchorError::EntityWithoutTransform(mount_point))),
+			&_Result(Err(AnchorError::EntityWithoutTransform(mount_entity))),
 			app.world().resource::<_Result>(),
 		);
 	}
@@ -811,24 +1017,24 @@ mod tests {
 	#[test]
 	fn return_mount_point_transform_nan_error() {
 		let mut app = setup();
-		let spawner_key = SkillMount::Slot(SlotKey(22));
+		let bone = SkillMountBone::Slot(SlotKey(22));
 		let agent = app
 			.world_mut()
 			.spawn((*AGENT, GlobalTransform::default()))
 			.id();
-		let mount_point = app
+		let mount_entity = app
 			.world_mut()
 			.spawn(GlobalTransform::from_translation(Vec3::NAN))
 			.id();
 		app.insert_resource(_Lookup {
-			mount_points: HashMap::from([((spawner_key, agent), mount_point)]),
+			mount_points: HashMap::from([((bone, agent), mount_entity)]),
 		});
 
 		app.world_mut()
-			.spawn(Anchor::attach_to(*AGENT).on(spawner_key));
+			.spawn(Anchor::attach_to(*AGENT).on(SkillMount::Bone(bone)));
 
 		assert_eq!(
-			&_Result(Err(AnchorError::TranslationNaN(mount_point))),
+			&_Result(Err(AnchorError::TranslationNaN(mount_entity))),
 			app.world().resource::<_Result>(),
 		);
 	}
@@ -836,22 +1042,22 @@ mod tests {
 	#[test]
 	fn return_no_target_error() {
 		let mut app = setup();
-		let spawner_key = SkillMount::Slot(SlotKey(22));
+		let bone = SkillMountBone::Slot(SlotKey(22));
 		let agent = app
 			.world_mut()
 			.spawn((*AGENT, GlobalTransform::default()))
 			.id();
-		let mount_point = app
+		let mount_entity = app
 			.world_mut()
 			.spawn(GlobalTransform::from_xyz(4., 11., 9.))
 			.id();
 		app.insert_resource(_Lookup {
-			mount_points: HashMap::from([((spawner_key, agent), mount_point)]),
+			mount_points: HashMap::from([((bone, agent), mount_entity)]),
 		});
 
 		app.world_mut().spawn(
 			Anchor::attach_to(*AGENT)
-				.on(spawner_key)
+				.on(SkillMount::Bone(bone))
 				.looking_at_skill_target(),
 		);
 

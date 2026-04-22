@@ -18,18 +18,12 @@ where
 	TConfig: SkillConfigData,
 {
 	fn spawn_skill(&mut self, config: TConfig, caster: SkillCaster, slot: SlotKey) -> OnSkillStop {
-		let mount = if config.use_neutral_mount() {
-			SkillMount::NeutralSlot
-		} else {
-			SkillMount::Slot(slot)
-		};
-
 		let skill = self.spawn(SpawnArgs {
 			shape: config.shape(),
+			mount: config.mount(slot),
 			contact_effects: config.contact_effects(),
 			projection_effects: config.projection_effects(),
 			caster,
-			mount,
 		});
 
 		config.on_skill_stop(skill)
@@ -37,7 +31,7 @@ where
 }
 
 pub(crate) trait SkillConfigData {
-	fn use_neutral_mount(&self) -> bool;
+	fn mount(&self, slot: SlotKey) -> SkillMount;
 	fn shape(&self) -> &'_ SkillShape;
 	fn contact_effects(&self) -> &'_ [Effect];
 	fn projection_effects(&self) -> &'_ [Effect];
@@ -55,22 +49,20 @@ mod tests {
 		traits::handles_skill_physics::{Effect, SkillShape, ground_target::SphereAoE},
 	};
 	use macros::simple_mock;
-	use std::time::Duration;
+	use std::{sync::LazyLock, time::Duration};
 	use test_case::test_case;
 	use testing::Mock;
-	use uuid::uuid;
 
 	struct _Config {
-		use_neutral_spawn: bool,
 		shape: SkillShape,
 		contact: Vec<Effect>,
 		projection: Vec<Effect>,
+		mount: fn(SlotKey) -> SkillMount,
 		on_skill_stop: fn(PersistentEntity) -> OnSkillStop,
 	}
 
 	impl _Config {
 		const DEFAULT: Self = Self {
-			use_neutral_spawn: false,
 			shape: SkillShape::SphereAoE(SphereAoE {
 				max_range: Units::from_u8(u8::MAX),
 				radius: Units::from_u8(1),
@@ -78,13 +70,9 @@ mod tests {
 			}),
 			contact: vec![],
 			projection: vec![],
+			mount: |_| SkillMount::Center,
 			on_skill_stop: |_| OnSkillStop::Ignore,
 		};
-
-		const fn using_neutral_spawn(mut self, use_neutral_spawn: bool) -> Self {
-			self.use_neutral_spawn = use_neutral_spawn;
-			self
-		}
 	}
 
 	impl Default for _Config {
@@ -94,8 +82,8 @@ mod tests {
 	}
 
 	impl SkillConfigData for _Config {
-		fn use_neutral_mount(&self) -> bool {
-			self.use_neutral_spawn
+		fn mount(&self, slot: SlotKey) -> SkillMount {
+			(self.mount)(slot)
 		}
 
 		fn shape(&self) -> &'_ SkillShape {
@@ -122,52 +110,34 @@ mod tests {
 		}
 	}
 
-	static CASTER: SkillCaster = SkillCaster(PersistentEntity::from_uuid(uuid!(
-		"91409ebe-e94d-43b2-8dc1-53949e4f0dc2"
-	)));
+	static CASTER: LazyLock<SkillCaster> =
+		LazyLock::new(|| SkillCaster(PersistentEntity::default()));
 	const SLOT: SlotKey = SlotKey(123);
 
-	#[test]
-	fn spawn_contact_and_projection_on_slot() {
-		const CONFIG: _Config = _Config::DEFAULT.using_neutral_spawn(false);
-		const ARGS: SpawnArgs = SpawnArgs {
-			shape: &CONFIG.shape,
-			caster: CASTER,
-			mount: SkillMount::Slot(SLOT),
-			contact_effects: &[],
-			projection_effects: &[],
-		};
-		let mut spawn = Mock_Spawn::new_mock(assert_contact_and_projection_used);
+	#[test_case(SkillMount::slot; "slot")]
+	#[test_case(|_| SkillMount::center(); "center")]
+	#[test_case(|_| SkillMount::neutral_slot(); "neutral")]
+	fn spawn_on_mount(mount: fn(SlotKey) -> SkillMount) {
+		let config = _Config { mount, ..default() };
+		let mut spawn = Mock_Spawn::new_mock(assert_mount(mount));
 
-		spawn.spawn_skill(CONFIG, CASTER, SLOT);
+		spawn.spawn_skill(config, *CASTER, SLOT);
 
-		fn assert_contact_and_projection_used(mock: &mut Mock_Spawn) {
-			mock.expect_spawn()
-				.once()
-				.withf(|args| args == &ARGS)
-				.return_const(PersistentEntity::default());
-		}
-	}
-
-	#[test]
-	fn spawn_contact_and_projection_on_neutral() {
-		const CONFIG: _Config = _Config::DEFAULT.using_neutral_spawn(true);
-		const ARGS: SpawnArgs = SpawnArgs {
-			shape: &CONFIG.shape,
-			caster: CASTER,
-			mount: SkillMount::NeutralSlot,
-			contact_effects: &[],
-			projection_effects: &[],
-		};
-		let mut spawn = Mock_Spawn::new_mock(assert_contact_and_projection_used);
-
-		spawn.spawn_skill(CONFIG, CASTER, SLOT);
-
-		fn assert_contact_and_projection_used(mock: &mut Mock_Spawn) {
-			mock.expect_spawn()
-				.once()
-				.withf(|args| args == &ARGS)
-				.return_const(PersistentEntity::default());
+		fn assert_mount(mount: fn(SlotKey) -> SkillMount) -> impl FnMut(&mut Mock_Spawn) {
+			move |mock| {
+				mock.expect_spawn()
+					.once()
+					.withf(move |args| {
+						args == &SpawnArgs {
+							shape: &_Config::DEFAULT.shape,
+							caster: *CASTER,
+							mount: mount(SLOT),
+							contact_effects: &[],
+							projection_effects: &[],
+						}
+					})
+					.return_const(PersistentEntity::default());
+			}
 		}
 	}
 
@@ -183,7 +153,7 @@ mod tests {
 			mock.expect_spawn().return_const(entity);
 		});
 
-		let result = spawn.spawn_skill(config, CASTER, SLOT);
+		let result = spawn.spawn_skill(config, *CASTER, SLOT);
 
 		assert_eq!(on_skill_stop(entity), result);
 	}
@@ -196,7 +166,7 @@ mod tests {
 		};
 		let mut spawn = Mock_Spawn::new_mock(assert_added_effects);
 
-		spawn.spawn_skill(config, CASTER, SLOT);
+		spawn.spawn_skill(config, *CASTER, SLOT);
 
 		fn assert_added_effects(mock: &mut Mock_Spawn) {
 			mock.expect_spawn()
@@ -214,7 +184,7 @@ mod tests {
 		};
 		let mut spawn = Mock_Spawn::new_mock(assert_added_effects);
 
-		spawn.spawn_skill(config, CASTER, SLOT);
+		spawn.spawn_skill(config, *CASTER, SLOT);
 
 		fn assert_added_effects(mock: &mut Mock_Spawn) {
 			mock.expect_spawn()

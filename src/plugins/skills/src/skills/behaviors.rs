@@ -4,7 +4,8 @@ use crate::{skills::shape::OnSkillStop, traits::spawn_skill::extension::SkillCon
 use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
-	traits::handles_skill_physics::{Effect, SkillShape},
+	tools::action_key::slot::SlotKey,
+	traits::handles_skill_physics::{Effect, SkillMount, SkillShape},
 };
 
 #[derive(PartialEq, Debug, Clone)]
@@ -26,11 +27,11 @@ impl SkillBehaviorConfig {
 }
 
 impl SkillConfigData for SkillBehaviorConfig {
-	fn use_neutral_mount(&self) -> bool {
-		matches!(
-			&self.shape,
-			SkillShape::Shield(_) | SkillShape::SphereAoE(_)
-		)
+	fn mount(&self, slot: SlotKey) -> SkillMount {
+		match &self.shape {
+			SkillShape::SphereAoE(_) | SkillShape::Shield(_) => SkillMount::Center,
+			SkillShape::Projectile(_) | SkillShape::Beam(_) => SkillMount::slot(slot),
+		}
 	}
 
 	fn shape(&self) -> &'_ SkillShape {

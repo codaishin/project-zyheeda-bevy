@@ -56,7 +56,7 @@ mod tests {
 		contact_effects: &[],
 		projection_effects: &[],
 		caster: SkillCaster(PersistentEntity::default()),
-		mount: SkillMount::NeutralSlot,
+		mount: SkillMount::Center,
 	});
 
 	mod spawn {

@@ -96,14 +96,14 @@ pub struct InitializedAgent {
 }
 
 pub trait Initialize {
-	fn initialize(&mut self, definition: HashMap<BoneName, SkillMount>);
+	fn initialize(&mut self, definition: HashMap<BoneName, SkillMountBone>);
 }
 
 impl<T> Initialize for T
 where
 	T: DerefMut<Target: Initialize>,
 {
-	fn initialize(&mut self, definition: HashMap<BoneName, SkillMount>) {
+	fn initialize(&mut self, definition: HashMap<BoneName, SkillMountBone>) {
 		self.deref_mut().initialize(definition);
 	}
 }
@@ -207,6 +207,26 @@ pub enum Cursor {
 pub enum SkillMount {
 	#[default]
 	Center,
+	Bone(SkillMountBone),
+}
+
+impl SkillMount {
+	pub const fn center() -> Self {
+		Self::Center
+	}
+
+	pub const fn neutral_slot() -> Self {
+		Self::Bone(SkillMountBone::NeutralSlot)
+	}
+
+	pub const fn slot(key: SlotKey) -> Self {
+		Self::Bone(SkillMountBone::Slot(key))
+	}
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Default, Serialize, Deserialize)]
+pub enum SkillMountBone {
+	#[default]
 	NeutralSlot,
 	Slot(SlotKey),
 }
