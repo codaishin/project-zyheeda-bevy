@@ -62,12 +62,14 @@ const HALF_FORWARD: Transform = Transform::from_translation(Vec3 {
 	z: -0.5,
 });
 
-const SHIELD_MODEL: &str = "models/shield.glb";
-const SHIELD_CONTACT_COLLIDER: &str = "models/shield_collider.glb#Mesh0/Primitive0";
+const SHIELD_CONTACT_MODEL: &str = "models/shield/contact.glb";
+const SHIELD_CONTACT_COLLIDER: &str = "models/shield/contact_collider.glb#Mesh0/Primitive0";
+const SHIELD_PROJECTION_MODEL: &str = "models/shield/projection.glb";
+const SHIELD_PROJECTION_COLLIDER: &str = "models/shield/projection_collider.glb#Mesh0/Primitive0";
+
+//FIXME: Should not be necessary, see: https://github.com/codaishin/project-zyheeda-bevy/issues/761
 const SHIELD_SCALE: Vec3 = Vec3 {
 	x: 1.7,
 	y: 1.7,
 	z: 1.7,
 };
-
-const ICO_SPHERE_HALF: &str = "models/icosphere_half.glb#Mesh0/Primitive0";

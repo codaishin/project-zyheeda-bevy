@@ -9,7 +9,7 @@ use crate::{
 			HALF_FORWARD,
 			PROJECTILE_CONTACT_RADIUS,
 			SHIELD_CONTACT_COLLIDER,
-			SHIELD_MODEL,
+			SHIELD_CONTACT_MODEL,
 			SHIELD_SCALE,
 			SPHERE_MODEL,
 			Skill,
@@ -98,7 +98,7 @@ impl GetContactPrefab for Skill {
 					destroyed_by: Blocker::none(),
 				},
 				SubModel {
-					model: Model::Asset(AssetModel::path(SHIELD_MODEL)),
+					model: Model::Asset(AssetModel::path(SHIELD_CONTACT_MODEL)),
 					transform: Transform::from_scale(SHIELD_SCALE),
 				},
 				ContactCollider {
