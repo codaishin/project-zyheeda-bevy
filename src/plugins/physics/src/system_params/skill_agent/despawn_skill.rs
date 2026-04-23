@@ -48,7 +48,7 @@ mod tests {
 			contact_effects: vec![],
 			projection_effects: vec![],
 			caster: SkillCaster(PersistentEntity::default()),
-			mount: SkillMount::Neutral,
+			mount: SkillMount::Center,
 		}
 	}
 

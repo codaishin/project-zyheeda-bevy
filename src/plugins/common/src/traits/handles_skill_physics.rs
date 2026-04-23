@@ -6,7 +6,7 @@ pub mod shield;
 use crate::{
 	components::persistent_entity::PersistentEntity,
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
-	tools::{Index, action_key::slot::SlotKey, bone_name::BoneName},
+	tools::{action_key::slot::SlotKey, bone_name::BoneName},
 	traits::{
 		accessors::get::{GetContext, GetContextMut},
 		handles_skill_physics::{
@@ -96,14 +96,14 @@ pub struct InitializedAgent {
 }
 
 pub trait Initialize {
-	fn initialize(&mut self, definition: HashMap<BoneName, SkillMount>);
+	fn initialize(&mut self, definition: HashMap<BoneName, SkillMountBone>);
 }
 
 impl<T> Initialize for T
 where
 	T: DerefMut<Target: Initialize>,
 {
-	fn initialize(&mut self, definition: HashMap<BoneName, SkillMount>) {
+	fn initialize(&mut self, definition: HashMap<BoneName, SkillMountBone>) {
 		self.deref_mut().initialize(definition);
 	}
 }
@@ -206,39 +206,27 @@ pub enum Cursor {
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Default, Serialize, Deserialize)]
 pub enum SkillMount {
 	#[default]
-	Neutral,
+	Center,
+	Bone(SkillMountBone),
+}
+
+impl SkillMount {
+	pub const fn center() -> Self {
+		Self::Center
+	}
+
+	pub const fn neutral_slot() -> Self {
+		Self::Bone(SkillMountBone::NeutralSlot)
+	}
+
+	pub const fn slot(key: SlotKey) -> Self {
+		Self::Bone(SkillMountBone::Slot(key))
+	}
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Default, Serialize, Deserialize)]
+pub enum SkillMountBone {
+	#[default]
+	NeutralSlot,
 	Slot(SlotKey),
-}
-
-impl From<SkillMount> for Index<usize> {
-	fn from(value: SkillMount) -> Self {
-		match value {
-			SkillMount::Neutral => Index(0),
-			SkillMount::Slot(SlotKey(slot)) => Index(slot as usize + 1),
-		}
-	}
-}
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-	use bevy::platform::collections::HashSet;
-
-	#[test]
-	fn to_index() {
-		let indices = [
-			SkillMount::Neutral,
-			SkillMount::Slot(SlotKey(0)),
-			SkillMount::Slot(SlotKey(42)),
-			SkillMount::Slot(SlotKey(255)),
-		]
-		.into_iter()
-		.map(Index::from)
-		.collect::<HashSet<_>>();
-
-		assert_eq!(
-			HashSet::from([Index(0), Index(1), Index(43), Index(256)]),
-			indices
-		);
-	}
 }

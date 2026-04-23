@@ -4,12 +4,12 @@ use crate::{
 };
 use common::{
 	tools::bone_name::BoneName,
-	traits::handles_skill_physics::{Initialize, SkillMount},
+	traits::handles_skill_physics::{Initialize, SkillMountBone},
 };
 use std::collections::HashMap;
 
 impl Initialize for SkillAgentInitializerContext<'_> {
-	fn initialize(&mut self, definition: HashMap<BoneName, SkillMount>) {
+	fn initialize(&mut self, definition: HashMap<BoneName, SkillMountBone>) {
 		self.entity
 			.try_insert((MountPointsDefinition(definition), Target(None)));
 	}
@@ -39,8 +39,8 @@ mod tests {
 		let mut app = setup();
 		let entity = app.world_mut().spawn_empty().id();
 		let map = HashMap::from([
-			(BoneName::from("a"), SkillMount::Neutral),
-			(BoneName::from("b"), SkillMount::Slot(SlotKey(42))),
+			(BoneName::from("a"), SkillMountBone::NeutralSlot),
+			(BoneName::from("b"), SkillMountBone::Slot(SlotKey(42))),
 		]);
 		let map_clone = map.clone();
 
@@ -56,7 +56,7 @@ mod tests {
 			Some(&MountPointsDefinition(map)),
 			app.world()
 				.entity(entity)
-				.get::<MountPointsDefinition<SkillMount>>(),
+				.get::<MountPointsDefinition<SkillMountBone>>(),
 		);
 		Ok(())
 	}

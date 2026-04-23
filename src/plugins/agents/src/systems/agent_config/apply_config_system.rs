@@ -214,7 +214,7 @@ mod tests {
 			},
 			handles_movement::{MovementSpeed, RequiredClearance},
 			handles_physics::{PhysicalDefaultAttributes, physical_bodies::Body},
-			handles_skill_physics::SkillMount,
+			handles_skill_physics::SkillMountBone,
 		},
 		zyheeda_commands::ZyheedaEntityCommands,
 	};
@@ -290,7 +290,7 @@ mod tests {
 
 	#[automock]
 	impl Initialize for _Skills {
-		fn initialize(&mut self, definition: HashMap<BoneName, SkillMount>) {
+		fn initialize(&mut self, definition: HashMap<BoneName, SkillMountBone>) {
 			self.mock.initialize(definition);
 		}
 	}
@@ -494,8 +494,8 @@ mod tests {
 			let asset = AgentConfigAsset {
 				bones: Bones {
 					skill_mounts: HashMap::from([
-						(BoneName::from("a"), SkillMount::Neutral),
-						(BoneName::from("b"), SkillMount::Slot(SlotKey(42))),
+						(BoneName::from("a"), SkillMountBone::NeutralSlot),
+						(BoneName::from("b"), SkillMountBone::Slot(SlotKey(42))),
 					]),
 					..default()
 				},
@@ -510,8 +510,8 @@ mod tests {
 					mock.expect_initialize()
 						.once()
 						.with(eq(HashMap::from([
-							(BoneName::from("a"), SkillMount::Neutral),
-							(BoneName::from("b"), SkillMount::Slot(SlotKey(42))),
+							(BoneName::from("a"), SkillMountBone::NeutralSlot),
+							(BoneName::from("b"), SkillMountBone::Slot(SlotKey(42))),
 						])))
 						.return_const(());
 				}),

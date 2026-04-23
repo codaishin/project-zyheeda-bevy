@@ -21,7 +21,7 @@ use common::{
 		handles_map_generation::AgentType,
 		handles_movement::{MovementSpeed, RequiredClearance},
 		handles_physics::PhysicalDefaultAttributes,
-		handles_skill_physics::SkillMount,
+		handles_skill_physics::SkillMountBone,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
@@ -100,8 +100,11 @@ impl VoidSphere {
 	fn bones() -> Bones {
 		Bones {
 			skill_mounts: HashMap::from([
-				(SKILL_MOUNT_NEUTRAL.clone(), SkillMount::Neutral),
-				(SKILL_MOUNT.clone(), SkillMount::Slot(VoidSphere::SLOT_KEY)),
+				(SKILL_MOUNT_NEUTRAL.clone(), SkillMountBone::NeutralSlot),
+				(
+					SKILL_MOUNT.clone(),
+					SkillMountBone::Slot(VoidSphere::SLOT_KEY),
+				),
 			]),
 			hand_slots: HashMap::from([(ALL_PURPOSE_SLOT_BONE.into(), VoidSphere::SLOT_KEY)]),
 			forearm_slots: HashMap::from([(ALL_PURPOSE_SLOT_BONE.into(), VoidSphere::SLOT_KEY)]),

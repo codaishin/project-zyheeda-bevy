@@ -53,6 +53,8 @@ impl From<Handle<Mesh>> for Source {
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) enum ColliderType {
+	/// All line segments between any two points on the surface remain inside or on the mesh
 	Convex,
+	/// Some line segments between two points on the surface do not remain inside or on the mesh
 	Concave,
 }

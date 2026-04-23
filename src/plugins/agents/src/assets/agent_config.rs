@@ -9,7 +9,7 @@ use common::{
 		handles_custom_assets::AssetFolderPath,
 		handles_movement::{MovementSpeed, RequiredClearance},
 		handles_physics::PhysicalDefaultAttributes,
-		handles_skill_physics::SkillMount,
+		handles_skill_physics::SkillMountBone,
 		loadout::ItemName,
 	},
 	zyheeda_commands::ZyheedaEntityCommands,
@@ -50,7 +50,7 @@ pub(crate) struct Loadout {
 
 #[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
 pub(crate) struct Bones {
-	pub(crate) skill_mounts: HashMap<BoneName, SkillMount>,
+	pub(crate) skill_mounts: HashMap<BoneName, SkillMountBone>,
 	pub(crate) hand_slots: HashMap<BoneName, SlotKey>,
 	pub(crate) forearm_slots: HashMap<BoneName, SlotKey>,
 	pub(crate) essence_slots: HashMap<MeshName, SlotKey>,
