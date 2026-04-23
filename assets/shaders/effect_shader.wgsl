@@ -1,0 +1,88 @@
+#import bevy_pbr::forward_io::VertexOutput
+#import bevy_pbr::mesh_view_bindings::view
+#import bevy_pbr::view_transformations::position_world_to_ndc
+#import bevy_pbr::view_transformations::ndc_to_uv
+#import bevy_pbr::mesh_view_bindings
+#import bevy_render::globals::Globals
+#import "shaders/helpers.wgsl"::fresnel
+
+@group(0) @binding(11) var<uniform> globals: Globals;
+
+@group(#{MATERIAL_BIND_GROUP}) @binding(0) var first_pass_texture: texture_2d<f32>;
+@group(#{MATERIAL_BIND_GROUP}) @binding(1) var first_pass_sampler: sampler;
+@group(#{MATERIAL_BIND_GROUP}) @binding(2) var<uniform> base_color: vec4<f32>;
+@group(#{MATERIAL_BIND_GROUP}) @binding(3) var<uniform> fresnel_color: vec4<f32>;
+@group(#{MATERIAL_BIND_GROUP}) @binding(4) var<uniform> effect_flags: u32;
+
+struct PulseParams {
+    speed: f32,
+    frequency: f32,
+}
+
+struct FresnelParams {
+    power: f32,
+}
+
+const COLOR_EFFECT: u32 = 1 << 0;
+const FRESNEL_EFFECT: u32 = 1 << 1;
+const DISTORTION_EFFECT: u32 = 1 << 2;
+
+@fragment
+fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
+    var output = vec4(0.);
+
+    if (effect_flags & COLOR_EFFECT) != 0u {
+        output = base_color;
+    }
+
+    if (effect_flags & FRESNEL_EFFECT) != 0u {
+        output += fresnel_effect(mesh);
+    }
+
+    if (effect_flags & DISTORTION_EFFECT) != 0u {
+        output += distortion_effect(mesh);
+    }
+
+    return output;
+}
+
+fn fresnel_effect(mesh: VertexOutput) -> vec4<f32> {
+    let fresnel = fresnel(mesh, 5.);
+
+    return vec4(fresnel_color.rgb, fresnel_color.a * fresnel);
+}
+
+fn distortion_effect(mesh: VertexOutput) -> vec4<f32> {
+    var pulse_params: PulseParams;
+    pulse_params.speed = .6;
+    pulse_params.frequency = 5.;
+
+    let fresnel = fresnel(mesh, 0.2);
+    let pulse = pulse_inwards(pulse_params, fresnel);
+    let uv = offset_uv_position(mesh, pulse);
+    let color = textureSample(first_pass_texture, first_pass_sampler, uv);
+
+    return vec4(color.rgb, 0.5);
+}
+
+fn pulse_inwards(params: PulseParams, value: f32) -> f32 {
+    // I am sure there is a better way to do this, but this get's the job done.
+    let offset = params.frequency * (globals.time * params.speed + value);
+    return 1. - abs(sin(offset));
+}
+
+fn offset_uv_position(mesh: VertexOutput, offset: f32) -> vec2<f32> {
+    let v_offset = normalize(project_onto_view(mesh, mesh.world_normal));
+    return position_world_to_uv(mesh.world_position.xyz + v_offset * offset);
+}
+
+fn project_onto_view(mesh: VertexOutput, v: vec3<f32>) -> vec3<f32> {
+    let view_normal = normalize(view.world_position - mesh.world_position.xyz);
+    let v_onto_view_plane_normal = dot(v, view_normal) * view_normal;
+    return v - v_onto_view_plane_normal;
+}
+
+fn position_world_to_uv(world_position: vec3<f32>) -> vec2<f32> {
+    let ndc = position_world_to_ndc(world_position).xy;
+    return ndc_to_uv(ndc);
+}
