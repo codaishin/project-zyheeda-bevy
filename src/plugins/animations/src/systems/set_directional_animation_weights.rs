@@ -1,26 +1,25 @@
 use crate::{
 	components::{
+		animation_dispatch::AnimationPlayers,
 		animation_lookup::{AnimationClips, AnimationLookup},
 		current_movement_direction::CurrentMovementDirection,
 	},
-	traits::{AnimationPlayers, GetAllActiveAnimations, asset_server::animation_graph::GetNodeMut},
+	traits::{GetAllActiveAnimations, asset_server::animation_graph::GetNodeMut},
 };
 use bevy::prelude::*;
 use common::traits::wrap_handle::{GetHandle, WrapHandle};
 use std::f32::consts::FRAC_PI_2;
 
-impl<T> SetDirectionalAnimationWeights for T where
-	T: Component + AnimationPlayers + GetAllActiveAnimations
-{
-}
+impl<T> SetDirectionalAnimationWeights for T where T: Component + GetAllActiveAnimations {}
 
 pub(crate) trait SetDirectionalAnimationWeights:
-	Component + AnimationPlayers + GetAllActiveAnimations + Sized
+	Component + GetAllActiveAnimations + Sized
 {
 	fn set_directional_animation_weights(
 		graphs: ResMut<Assets<AnimationGraph>>,
 		agents: Query<(
 			&Self,
+			&AnimationPlayers,
 			&CurrentMovementDirection,
 			&GlobalTransform,
 			&AnimationLookup,
@@ -35,16 +34,17 @@ fn set_directional_animation_weights<TDispatch, TGraph>(
 	mut graphs: ResMut<Assets<TGraph>>,
 	agents: Query<(
 		&TDispatch,
+		&AnimationPlayers,
 		&CurrentMovementDirection,
 		&GlobalTransform,
 		&AnimationLookup,
 	)>,
 	players: Query<&TGraph::TComponent>,
 ) where
-	TDispatch: Component + AnimationPlayers + GetAllActiveAnimations,
+	TDispatch: Component + GetAllActiveAnimations,
 	TGraph: Asset + GetNodeMut + WrapHandle,
 {
-	for (dispatch, movement_direction, transform, lookup) in &agents {
+	for (dispatch, animation_players, movement_direction, transform, lookup) in &agents {
 		let forward = transform.forward();
 		let backward = transform.back();
 		let left = transform.left();
@@ -54,7 +54,7 @@ fn set_directional_animation_weights<TDispatch, TGraph>(
 			continue;
 		};
 
-		for entity in dispatch.animation_players() {
+		for entity in animation_players.iter() {
 			let Ok(player) = players.get(entity) else {
 				continue;
 			};
@@ -106,32 +106,22 @@ fn weight(body_direction: Dir3, move_direction: Dir3) -> f32 {
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::components::animation_lookup::{
-		AnimationClips,
-		AnimationLookupData,
-		DirectionalIndices,
+	use crate::components::{
+		animation_dispatch::AnimationPlayerOf,
+		animation_lookup::{AnimationClips, AnimationLookupData, DirectionalIndices},
 	};
 	use common::traits::{
 		handles_animations::AnimationKey,
 		iterate::Iterate,
 		wrap_handle::{GetHandle, WrapHandle},
 	};
-	use std::{collections::HashMap, slice::Iter, vec::IntoIter};
+	use std::{collections::HashMap, slice::Iter};
 	use test_case::test_case;
 	use testing::{SingleThreadedApp, assert_eq_approx, new_handle};
 
 	#[derive(Component)]
 	struct _Dispatch {
-		players: Vec<Entity>,
 		animations: Vec<AnimationKey>,
-	}
-
-	impl AnimationPlayers for _Dispatch {
-		type TIter = IntoIter<Entity>;
-
-		fn animation_players(&self) -> Self::TIter {
-			self.players.clone().into_iter()
-		}
 	}
 
 	impl GetAllActiveAnimations for _Dispatch {
@@ -241,16 +231,19 @@ mod tests {
 		};
 		let weights = HashMap::from_iter(initial_weights());
 		let mut app = setup(&lookup, weights, &handle);
-		let player = app.world_mut().spawn(_GraphComponent(handle.clone())).id();
-		app.world_mut().spawn((
-			GlobalTransform::default(),
-			_Dispatch {
-				players: vec![player],
-				animations: vec![AnimationKey::Walk],
-			},
-			CurrentMovementDirection(Some(direction)),
-			lookup,
-		));
+		let agent = app
+			.world_mut()
+			.spawn((
+				GlobalTransform::default(),
+				_Dispatch {
+					animations: vec![AnimationKey::Walk],
+				},
+				CurrentMovementDirection(Some(direction)),
+				lookup,
+			))
+			.id();
+		app.world_mut()
+			.spawn((_GraphComponent(handle.clone()), AnimationPlayerOf(agent)));
 
 		app.update();
 
@@ -290,16 +283,19 @@ mod tests {
 			..default()
 		};
 		let mut app = setup(&lookup, HashMap::from([]), &handle);
-		let player = app.world_mut().spawn(_GraphComponent(handle.clone())).id();
-		app.world_mut().spawn((
-			GlobalTransform::from(Transform::default().looking_to(Dir3::X, Vec3::Y)),
-			_Dispatch {
-				players: vec![player],
-				animations: vec![AnimationKey::Walk],
-			},
-			CurrentMovementDirection(Some(direction)),
-			lookup,
-		));
+		let agent = app
+			.world_mut()
+			.spawn((
+				GlobalTransform::from(Transform::default().looking_to(Dir3::X, Vec3::Y)),
+				_Dispatch {
+					animations: vec![AnimationKey::Walk],
+				},
+				CurrentMovementDirection(Some(direction)),
+				lookup,
+			))
+			.id();
+		app.world_mut()
+			.spawn((_GraphComponent(handle.clone()), AnimationPlayerOf(agent)));
 
 		app.update();
 
@@ -342,19 +338,22 @@ mod tests {
 			..default()
 		};
 		let mut app = setup(&lookup, HashMap::from([]), &handle);
-		let player = app.world_mut().spawn(_GraphComponent(handle.clone())).id();
-		app.world_mut().spawn((
-			GlobalTransform::from(
-				Transform::default()
-					.looking_to(Dir3::new(Vec3::new(1., 0., -1.)).unwrap(), Vec3::Y),
-			),
-			_Dispatch {
-				players: vec![player],
-				animations: vec![AnimationKey::Walk],
-			},
-			CurrentMovementDirection(Some(direction)),
-			lookup,
-		));
+		let agent = app
+			.world_mut()
+			.spawn((
+				GlobalTransform::from(
+					Transform::default()
+						.looking_to(Dir3::new(Vec3::new(1., 0., -1.)).unwrap(), Vec3::Y),
+				),
+				_Dispatch {
+					animations: vec![AnimationKey::Walk],
+				},
+				CurrentMovementDirection(Some(direction)),
+				lookup,
+			))
+			.id();
+		app.world_mut()
+			.spawn((_GraphComponent(handle.clone()), AnimationPlayerOf(agent)));
 
 		app.update();
 
@@ -391,20 +390,23 @@ mod tests {
 			..default()
 		};
 		let mut app = setup(&lookup, HashMap::from([]), &handle);
-		let player = app.world_mut().spawn(_GraphComponent(handle.clone())).id();
-		app.world_mut().spawn((
-			GlobalTransform::from(Transform::default().looking_to(
-				// taken from production, when causing a NaN weight
-				Dir3::new(Vec3::new(-0.039663047, -0.0, -0.9992132)).unwrap(),
-				Vec3::Y,
-			)),
-			_Dispatch {
-				players: vec![player],
-				animations: vec![AnimationKey::Walk],
-			},
-			CurrentMovementDirection(Dir3::new(Vec3::new(-0.039663114, 0.0, -0.9992131)).ok()),
-			lookup,
-		));
+		let agent = app
+			.world_mut()
+			.spawn((
+				GlobalTransform::from(Transform::default().looking_to(
+					// taken from production, when causing a NaN weight
+					Dir3::new(Vec3::new(-0.039663047, -0.0, -0.9992132)).unwrap(),
+					Vec3::Y,
+				)),
+				_Dispatch {
+					animations: vec![AnimationKey::Walk],
+				},
+				CurrentMovementDirection(Dir3::new(Vec3::new(-0.039663114, 0.0, -0.9992131)).ok()),
+				lookup,
+			))
+			.id();
+		app.world_mut()
+			.spawn((_GraphComponent(handle.clone()), AnimationPlayerOf(agent)));
 
 		app.update();
 

@@ -1,37 +1,21 @@
-mod dto;
-
 use crate::{
 	components::{
-		animation_dispatch::dto::AnimationDispatchDto,
 		current_forward_pitch::CurrentForwardPitch,
 		current_movement_direction::CurrentMovementDirection,
 	},
-	traits::{
-		AnimationPlayers,
-		AnimationPlayersWithoutGraph,
-		GetAllActiveAnimations,
-		YoungestToOldestActiveAnimations,
-	},
+	traits::{GetAllActiveAnimations, YoungestToOldestActiveAnimations},
 };
-use bevy::prelude::*;
-use common::traits::{
-	handles_animations::{AnimationKey, AnimationPriority},
-	track::{IsTracking, Track, Untrack},
-};
+use bevy::{ecs::entity::EntityHashSet, prelude::*};
+use common::traits::handles_animations::{AnimationKey, AnimationPriority};
 use macros::SavableComponent;
-use std::{
-	collections::{HashSet, hash_set::IntoIter},
-	fmt::Debug,
-	iter::Rev,
-};
+use serde::{Deserialize, Serialize};
+use std::{fmt::Debug, iter::Rev};
 use zyheeda_core::prelude::*;
 
-#[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[require(CurrentMovementDirection, CurrentForwardPitch)]
-#[savable_component(id = "animation dispatch", dto = AnimationDispatchDto)]
+#[savable_component(id = "animation dispatch")]
 pub struct AnimationDispatch {
-	pub(crate) animation_players: HashSet<Entity>,
-	animation_handles: HashSet<Entity>,
 	priorities: (
 		OrderedSet<AnimationKey>,
 		OrderedSet<AnimationKey>,
@@ -66,68 +50,8 @@ impl AnimationDispatch {
 impl Default for AnimationDispatch {
 	fn default() -> Self {
 		Self {
-			animation_players: default(),
-			animation_handles: default(),
 			priorities: default(),
 		}
-	}
-}
-
-impl Track<AnimationPlayer> for AnimationDispatch {
-	fn track(&mut self, entity: Entity, _: &AnimationPlayer) {
-		self.animation_players.insert(entity);
-	}
-}
-
-impl IsTracking<AnimationPlayer> for AnimationDispatch {
-	fn is_tracking(&self, entity: &Entity) -> bool {
-		self.animation_players.contains(entity)
-	}
-}
-
-impl Untrack<AnimationPlayer> for AnimationDispatch {
-	fn untrack(&mut self, entity: &Entity) {
-		self.animation_players.remove(entity);
-	}
-}
-
-impl Track<AnimationGraphHandle> for AnimationDispatch {
-	fn track(&mut self, entity: Entity, _: &AnimationGraphHandle) {
-		self.animation_handles.insert(entity);
-	}
-}
-
-impl IsTracking<AnimationGraphHandle> for AnimationDispatch {
-	fn is_tracking(&self, entity: &Entity) -> bool {
-		self.animation_handles.contains(entity)
-	}
-}
-
-impl Untrack<AnimationGraphHandle> for AnimationDispatch {
-	fn untrack(&mut self, entity: &Entity) {
-		self.animation_handles.remove(entity);
-	}
-}
-
-impl AnimationPlayers for AnimationDispatch {
-	type TIter = IntoIter<Entity>;
-
-	fn animation_players(&self) -> Self::TIter {
-		self.animation_players.clone().into_iter()
-	}
-}
-
-impl AnimationPlayersWithoutGraph for AnimationDispatch {
-	type TIter = std::vec::IntoIter<Entity>;
-
-	fn animation_players_without_graph(&self) -> Self::TIter {
-		let entities = self
-			.animation_players
-			.iter()
-			.filter(|e| !self.animation_handles.contains(e))
-			.copied()
-			.collect::<Vec<_>>();
-		entities.into_iter()
 	}
 }
 
@@ -187,250 +111,18 @@ impl<'a> Iterator for IterAllAnimations<'a> {
 	}
 }
 
-#[cfg(test)]
-mod tests {
-	use super::*;
-	use bevy::prelude::default;
-	use common::tools::action_key::slot::SlotKey;
-	use testing::fake_entity;
+#[derive(Component, Debug, PartialEq)]
+#[relationship_target(relationship = AnimationPlayerOf)]
+pub(crate) struct AnimationPlayers(EntityHashSet);
 
-	struct _Lo;
+#[derive(Component, Debug, PartialEq)]
+#[relationship(relationship_target = AnimationPlayers)]
+pub(crate) struct AnimationPlayerOf(pub(crate) Entity);
 
-	impl From<_Lo> for AnimationPriority {
-		fn from(_: _Lo) -> Self {
-			AnimationPriority::Low
-		}
-	}
-	struct _Me;
+#[derive(Component, Debug, PartialEq)]
+#[relationship_target(relationship = AnimationGraphOf)]
+pub(crate) struct AnimationGraphs(EntityHashSet);
 
-	impl From<_Me> for AnimationPriority {
-		fn from(_: _Me) -> Self {
-			AnimationPriority::Medium
-		}
-	}
-
-	struct _Hi;
-
-	impl From<_Hi> for AnimationPriority {
-		fn from(_: _Hi) -> Self {
-			AnimationPriority::High
-		}
-	}
-
-	fn as_track<TComponent>(
-		tracker: &mut (impl Track<TComponent> + IsTracking<TComponent> + Untrack<TComponent>),
-	) -> &mut (impl Track<TComponent> + IsTracking<TComponent> + Untrack<TComponent>)
-	where
-		AnimationDispatch: Track<TComponent> + IsTracking<TComponent> + Untrack<TComponent>,
-	{
-		tracker
-	}
-
-	#[test]
-	fn track_animation_player() {
-		let dispatch = &mut AnimationDispatch::default();
-		as_track::<AnimationPlayer>(dispatch).track(fake_entity!(1), &AnimationPlayer::default());
-		as_track::<AnimationPlayer>(dispatch).track(fake_entity!(2), &AnimationPlayer::default());
-
-		assert_eq!(
-			HashSet::from([fake_entity!(1), fake_entity!(2)]),
-			dispatch.animation_players
-		)
-	}
-
-	#[test]
-	fn untrack_animation_player() {
-		let dispatch = &mut AnimationDispatch {
-			animation_players: HashSet::from([fake_entity!(1), fake_entity!(2)]),
-			..default()
-		};
-		as_track::<AnimationPlayer>(dispatch).untrack(&fake_entity!(1));
-
-		assert_eq!(HashSet::from([fake_entity!(2)]), dispatch.animation_players)
-	}
-
-	#[test]
-	fn is_tracking_animation_player() {
-		let dispatch = &mut AnimationDispatch {
-			animation_players: HashSet::from([fake_entity!(1), fake_entity!(2)]),
-			..default()
-		};
-
-		assert_eq!(
-			[true, false],
-			[
-				as_track::<AnimationPlayer>(dispatch).is_tracking(&fake_entity!(2)),
-				as_track::<AnimationPlayer>(dispatch).is_tracking(&fake_entity!(3)),
-			]
-		)
-	}
-
-	#[test]
-	fn track_animation_graph() {
-		let dispatch = &mut AnimationDispatch::default();
-		as_track::<AnimationGraphHandle>(dispatch)
-			.track(fake_entity!(1), &AnimationGraphHandle::default());
-		as_track::<AnimationGraphHandle>(dispatch)
-			.track(fake_entity!(2), &AnimationGraphHandle::default());
-
-		assert_eq!(
-			HashSet::from([fake_entity!(1), fake_entity!(2)]),
-			dispatch.animation_handles
-		)
-	}
-
-	#[test]
-	fn untrack_animation_graph() {
-		let dispatch = &mut AnimationDispatch {
-			animation_handles: HashSet::from([fake_entity!(1), fake_entity!(2)]),
-			..default()
-		};
-		as_track::<AnimationGraphHandle>(dispatch).untrack(&fake_entity!(1));
-
-		assert_eq!(HashSet::from([fake_entity!(2)]), dispatch.animation_handles)
-	}
-
-	#[test]
-	fn is_tracking_animation_graph() {
-		let dispatch = &mut AnimationDispatch {
-			animation_handles: HashSet::from([fake_entity!(1), fake_entity!(2)]),
-			..default()
-		};
-
-		assert_eq!(
-			[true, false],
-			[
-				as_track::<AnimationGraphHandle>(dispatch).is_tracking(&fake_entity!(2)),
-				as_track::<AnimationGraphHandle>(dispatch).is_tracking(&fake_entity!(3)),
-			]
-		)
-	}
-
-	#[test]
-	fn iterate_animation_players() {
-		let dispatch = AnimationDispatch {
-			animation_players: HashSet::from([fake_entity!(1), fake_entity!(2)]),
-			..default()
-		};
-
-		assert_eq!(
-			HashSet::from([fake_entity!(1), fake_entity!(2)]),
-			dispatch.animation_players().collect::<HashSet<_>>(),
-		)
-	}
-
-	#[test]
-	fn iterate_animation_players_without_transitions() {
-		let dispatch = AnimationDispatch {
-			animation_players: HashSet::from([fake_entity!(1), fake_entity!(2), fake_entity!(3)]),
-			animation_handles: HashSet::from([fake_entity!(2)]),
-			..default()
-		};
-
-		assert_eq!(
-			HashSet::from([fake_entity!(1), fake_entity!(3)]),
-			dispatch
-				.animation_players_without_graph()
-				.collect::<HashSet<_>>(),
-		)
-	}
-
-	#[test]
-	fn iter_all() {
-		let dispatch = AnimationDispatch {
-			animation_players: default(),
-			animation_handles: default(),
-			priorities: (
-				OrderedSet::from([
-					AnimationKey::Skill(SlotKey(1)),
-					AnimationKey::Skill(SlotKey(2)),
-					AnimationKey::Skill(SlotKey(3)),
-				]),
-				OrderedSet::from([
-					AnimationKey::Skill(SlotKey(4)),
-					AnimationKey::Skill(SlotKey(5)),
-					AnimationKey::Skill(SlotKey(6)),
-				]),
-				OrderedSet::from([
-					AnimationKey::Skill(SlotKey(7)),
-					AnimationKey::Skill(SlotKey(8)),
-					AnimationKey::Skill(SlotKey(9)),
-				]),
-			),
-		};
-
-		assert_eq!(
-			HashSet::from([
-				AnimationKey::Skill(SlotKey(1)),
-				AnimationKey::Skill(SlotKey(2)),
-				AnimationKey::Skill(SlotKey(3)),
-				AnimationKey::Skill(SlotKey(4)),
-				AnimationKey::Skill(SlotKey(5)),
-				AnimationKey::Skill(SlotKey(6)),
-				AnimationKey::Skill(SlotKey(7)),
-				AnimationKey::Skill(SlotKey(8)),
-				AnimationKey::Skill(SlotKey(9)),
-			]),
-			dispatch
-				.get_all_active_animations()
-				.copied()
-				.collect::<HashSet<_>>()
-		)
-	}
-
-	#[test]
-	fn iter_youngest_to_oldest() {
-		let dispatch = AnimationDispatch {
-			animation_players: default(),
-			animation_handles: default(),
-			priorities: (
-				OrderedSet::from([
-					AnimationKey::Skill(SlotKey(1)),
-					AnimationKey::Skill(SlotKey(2)),
-					AnimationKey::Skill(SlotKey(3)),
-				]),
-				OrderedSet::from([
-					AnimationKey::Skill(SlotKey(4)),
-					AnimationKey::Skill(SlotKey(5)),
-					AnimationKey::Skill(SlotKey(6)),
-				]),
-				OrderedSet::from([
-					AnimationKey::Skill(SlotKey(7)),
-					AnimationKey::Skill(SlotKey(8)),
-					AnimationKey::Skill(SlotKey(9)),
-				]),
-			),
-		};
-
-		assert_eq!(
-			(
-				vec![
-					&AnimationKey::Skill(SlotKey(3)),
-					&AnimationKey::Skill(SlotKey(2)),
-					&AnimationKey::Skill(SlotKey(1)),
-				],
-				vec![
-					&AnimationKey::Skill(SlotKey(6)),
-					&AnimationKey::Skill(SlotKey(5)),
-					&AnimationKey::Skill(SlotKey(4)),
-				],
-				vec![
-					&AnimationKey::Skill(SlotKey(9)),
-					&AnimationKey::Skill(SlotKey(8)),
-					&AnimationKey::Skill(SlotKey(7)),
-				],
-			),
-			(
-				dispatch
-					.youngest_to_oldest_active_animations(AnimationPriority::High)
-					.collect::<Vec<_>>(),
-				dispatch
-					.youngest_to_oldest_active_animations(AnimationPriority::Medium)
-					.collect::<Vec<_>>(),
-				dispatch
-					.youngest_to_oldest_active_animations(AnimationPriority::Low)
-					.collect::<Vec<_>>(),
-			)
-		);
-	}
-}
+#[derive(Component, Debug, PartialEq)]
+#[relationship(relationship_target = AnimationGraphs)]
+pub(crate) struct AnimationGraphOf(pub(crate) Entity);

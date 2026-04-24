@@ -1,5 +1,5 @@
 use crate::{
-	components::effect_shaders_target::{EffectShaderHandle, EffectShadersTarget},
+	components::effect_shaders_target::{EffectShaderHandle, EffectShaders},
 	resources::first_pass_image::FirstPassImage,
 	traits::get_effect_material::GetEffectMaterial,
 };
@@ -8,7 +8,7 @@ use common::traits::handles_physics::{Effect, HandlesPhysicalEffect};
 
 pub(crate) fn add_effect_shader<TPhysics, TEffect>(
 	mut materials: ResMut<Assets<TEffect::TMaterial>>,
-	mut effect_shaders: Query<&mut EffectShadersTarget, Added<TPhysics::TEffectComponent>>,
+	mut effect_shaders: Query<&mut EffectShaders, Added<TPhysics::TEffectComponent>>,
 	first_pass_image: Res<FirstPassImage>,
 ) where
 	TPhysics: HandlesPhysicalEffect<TEffect>,
@@ -24,7 +24,7 @@ pub(crate) fn add_effect_shader<TPhysics, TEffect>(
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::components::effect_shaders_target::EffectShadersTarget;
+	use crate::components::effect_shaders_target::EffectShaders;
 	use bevy::{asset::UntypedAssetId, render::render_resource::AsBindGroup};
 	use testing::{SingleThreadedApp, new_handle};
 
@@ -84,7 +84,7 @@ mod tests {
 			.collect::<Vec<_>>()
 	}
 
-	fn shader_effect_ids(effect_shaders: &EffectShadersTarget) -> Vec<UntypedAssetId> {
+	fn shader_effect_ids(effect_shaders: &EffectShaders) -> Vec<UntypedAssetId> {
 		effect_shaders
 			.shaders
 			.iter()
@@ -97,17 +97,13 @@ mod tests {
 		let mut app = setup(new_handle::<Image>());
 		let shaders = app
 			.world_mut()
-			.spawn((EffectShadersTarget::default(), _EffectComponent))
+			.spawn((EffectShaders::default(), _EffectComponent))
 			.id();
 
 		app.update();
 
 		let materials = app.world().resource::<Assets<_Material>>();
-		let shaders = app
-			.world()
-			.entity(shaders)
-			.get::<EffectShadersTarget>()
-			.unwrap();
+		let shaders = app.world().entity(shaders).get::<EffectShaders>().unwrap();
 		assert_eq!(
 			(1, materials_ids(materials)),
 			(shaders.shaders.len(), shader_effect_ids(shaders))
@@ -119,18 +115,14 @@ mod tests {
 		let mut app = setup(new_handle::<Image>());
 		let shaders = app
 			.world_mut()
-			.spawn((EffectShadersTarget::default(), _EffectComponent))
+			.spawn((EffectShaders::default(), _EffectComponent))
 			.id();
 
 		app.update();
 		app.update();
 
 		let materials = app.world().resource::<Assets<_Material>>();
-		let shaders = app
-			.world()
-			.entity(shaders)
-			.get::<EffectShadersTarget>()
-			.unwrap();
+		let shaders = app.world().entity(shaders).get::<EffectShaders>().unwrap();
 		assert_eq!(
 			(1, materials_ids(materials)),
 			(shaders.shaders.len(), shader_effect_ids(shaders))
@@ -142,7 +134,7 @@ mod tests {
 		let first_pass = new_handle::<Image>();
 		let mut app = setup(first_pass.clone());
 		app.world_mut()
-			.spawn((EffectShadersTarget::default(), _EffectComponent));
+			.spawn((EffectShaders::default(), _EffectComponent));
 
 		app.update();
 

@@ -1,10 +1,9 @@
 use crate::{
 	components::{
-		animation_dispatch::AnimationDispatch,
+		animation_dispatch::{AnimationDispatch, AnimationPlayers},
 		animation_lookup::{AnimationLookup, AnimationLookupData},
 	},
 	traits::{
-		AnimationPlayers,
 		IsPlaying,
 		RepeatAnimation,
 		ReplayAnimation,
@@ -23,19 +22,24 @@ use common::traits::{
 use std::collections::HashSet;
 
 impl<TDispatch> PlayAnimationClip for TDispatch where
-	TDispatch: Component + AnimationPlayers + YoungestToOldestActiveAnimations
+	TDispatch: Component + YoungestToOldestActiveAnimations
 {
 }
 
 pub(crate) trait PlayAnimationClip
 where
-	Self: Component + AnimationPlayers + YoungestToOldestActiveAnimations + Sized,
+	Self: Component + YoungestToOldestActiveAnimations + Sized,
 {
 	#[allow(clippy::type_complexity)]
 	fn play_animation_clip<TAnimationPlayer>(
 		players: Query<TAnimationPlayer>,
 		dispatchers: Query<
-			(&AnimationDispatch, &AnimationLookup, &AnimationGraphHandle),
+			(
+				&AnimationDispatch,
+				&AnimationPlayers,
+				&AnimationLookup,
+				&AnimationGraphHandle,
+			),
 			Changed<AnimationDispatch>,
 		>,
 		graphs: ResMut<Assets<AnimationGraph>>,
@@ -56,6 +60,7 @@ fn play_animation_clip<TAnimationPlayer, TDispatch, TGraph, TAnimations>(
 	agents: Query<
 		(
 			&TDispatch,
+			&AnimationPlayers,
 			&AnimationLookup<TAnimations>,
 			&TGraph::TComponent,
 		),
@@ -65,15 +70,15 @@ fn play_animation_clip<TAnimationPlayer, TDispatch, TGraph, TAnimations>(
 ) where
 	TAnimationPlayer: QueryData,
 	TGraph: Asset + GetNodeMut + WrapHandle,
-	TDispatch: Component + AnimationPlayers + YoungestToOldestActiveAnimations,
+	TDispatch: Component + YoungestToOldestActiveAnimations,
 	for<'a> TAnimations: ThreadSafe + Iterate<'a, TItem = &'a AnimationNodeIndex>,
 	for<'w, 's> TAnimationPlayer::Item<'w, 's>: IsPlaying<AnimationNodeIndex>
 		+ ReplayAnimation<AnimationNodeIndex>
 		+ RepeatAnimation<AnimationNodeIndex>
 		+ StopAnimation<AnimationNodeIndex>,
 {
-	for (dispatcher, lookup, graph_component) in &agents {
-		for entity in dispatcher.animation_players() {
+	for (dispatcher, animation_players, lookup, graph_component) in &agents {
+		for entity in animation_players.iter() {
 			let Ok(mut player) = players.get_mut(entity) else {
 				continue;
 			};
@@ -167,7 +172,7 @@ fn stop<'a, TPlayer, TGraph>(
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::test_tools::leak_iterator;
+	use crate::{components::animation_dispatch::AnimationPlayerOf, test_tools::leak_iterator};
 	use common::{
 		bit_mask_index,
 		tools::action_key::slot::SlotKey,
@@ -190,14 +195,6 @@ mod tests {
 		mock: Mock_AnimationDispatch,
 	}
 
-	impl AnimationPlayers for _AnimationDispatch {
-		type TIter = _Iter;
-
-		fn animation_players(&self) -> Self::TIter {
-			self.mock.animation_players()
-		}
-	}
-
 	impl YoungestToOldestActiveAnimations for _AnimationDispatch {
 		type TIter<'a>
 			= Iter<'a, AnimationKey>
@@ -217,11 +214,6 @@ mod tests {
 
 	mock! {
 		_AnimationDispatch {}
-		impl AnimationPlayers for _AnimationDispatch {
-			type TIter = _Iter;
-
-			fn animation_players(&self) -> _Iter;
-		}
 		impl YoungestToOldestActiveAnimations for _AnimationDispatch {
 			type TIter<'a>
 				= Iter<'a, AnimationKey>
@@ -451,22 +443,23 @@ mod tests {
 			..default()
 		};
 		let mut app = setup!(&lookup, &handle);
-		let animation_player = app
+		let agent = app
 			.world_mut()
-			.spawn(_AnimationPlayer::new().with_mock(assert_repeat([1, 2, 3])))
+			.spawn((
+				_AnimationDispatch::new().with_mock(|mock| {
+					mock.expect_youngest_to_oldest_active_animations()
+						.with(eq(AnimationPriority::High))
+						.return_const(leak_iterator(vec![AnimationKey::Walk]));
+					mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
+						.return_const(leak_iterator(vec![]));
+				}),
+				lookup,
+				_GraphComponent(handle),
+			))
 			.id();
 		app.world_mut().spawn((
-			_AnimationDispatch::new().with_mock(|mock| {
-				mock.expect_animation_players()
-					.return_const(_Iter::from([animation_player]));
-				mock.expect_youngest_to_oldest_active_animations()
-					.with(eq(AnimationPriority::High))
-					.return_const(leak_iterator(vec![AnimationKey::Walk]));
-				mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
-					.return_const(leak_iterator(vec![]));
-			}),
-			lookup,
-			_GraphComponent(handle),
+			_AnimationPlayer::new().with_mock(assert_repeat([1, 2, 3])),
+			AnimationPlayerOf(agent),
 		));
 
 		app.update();
@@ -503,22 +496,23 @@ mod tests {
 			..default()
 		};
 		let mut app = setup!(&lookup, &handle);
-		let animation_player = app
+		let agent = app
 			.world_mut()
-			.spawn(_AnimationPlayer::new().with_mock(assert_replay([1, 2, 3])))
+			.spawn((
+				_AnimationDispatch::new().with_mock(|mock| {
+					mock.expect_youngest_to_oldest_active_animations()
+						.with(eq(AnimationPriority::High))
+						.return_const(leak_iterator(vec![AnimationKey::Walk]));
+					mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
+						.return_const(leak_iterator(vec![]));
+				}),
+				lookup,
+				_GraphComponent(handle),
+			))
 			.id();
 		app.world_mut().spawn((
-			_AnimationDispatch::new().with_mock(|mock| {
-				mock.expect_animation_players()
-					.return_const(_Iter::from([animation_player]));
-				mock.expect_youngest_to_oldest_active_animations()
-					.with(eq(AnimationPriority::High))
-					.return_const(leak_iterator(vec![AnimationKey::Walk]));
-				mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
-					.return_const(leak_iterator(vec![]));
-			}),
-			lookup,
-			_GraphComponent(handle),
+			_AnimationPlayer::new().with_mock(assert_replay([1, 2, 3])),
+			AnimationPlayerOf(agent),
 		));
 
 		app.update();
@@ -597,35 +591,36 @@ mod tests {
 			..default()
 		};
 		let mut app = setup!(&lookup, &handle);
-		let animation_player = app
+		let agent = app
 			.world_mut()
-			.spawn(_AnimationPlayer::new().with_mock(assert_repeat(0..=11)))
+			.spawn((
+				_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
+					mock.expect_youngest_to_oldest_active_animations()
+						.with(eq(AnimationPriority::High))
+						.return_const(leak_iterator(vec![
+							AnimationKey::Skill(SlotKey(11)),
+							AnimationKey::Skill(SlotKey(12)),
+						]));
+					mock.expect_youngest_to_oldest_active_animations()
+						.with(eq(AnimationPriority::Medium))
+						.return_const(leak_iterator(vec![
+							AnimationKey::Skill(SlotKey(21)),
+							AnimationKey::Skill(SlotKey(22)),
+						]));
+					mock.expect_youngest_to_oldest_active_animations()
+						.with(eq(AnimationPriority::Low))
+						.return_const(leak_iterator(vec![
+							AnimationKey::Skill(SlotKey(31)),
+							AnimationKey::Skill(SlotKey(32)),
+						]));
+				}),
+				lookup,
+				_GraphComponent(handle),
+			))
 			.id();
 		app.world_mut().spawn((
-			_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
-				mock.expect_animation_players()
-					.return_const(_Iter::from([animation_player]));
-				mock.expect_youngest_to_oldest_active_animations()
-					.with(eq(AnimationPriority::High))
-					.return_const(leak_iterator(vec![
-						AnimationKey::Skill(SlotKey(11)),
-						AnimationKey::Skill(SlotKey(12)),
-					]));
-				mock.expect_youngest_to_oldest_active_animations()
-					.with(eq(AnimationPriority::Medium))
-					.return_const(leak_iterator(vec![
-						AnimationKey::Skill(SlotKey(21)),
-						AnimationKey::Skill(SlotKey(22)),
-					]));
-				mock.expect_youngest_to_oldest_active_animations()
-					.with(eq(AnimationPriority::Low))
-					.return_const(leak_iterator(vec![
-						AnimationKey::Skill(SlotKey(31)),
-						AnimationKey::Skill(SlotKey(32)),
-					]));
-			}),
-			lookup,
-			_GraphComponent(handle),
+			_AnimationPlayer::new().with_mock(assert_repeat(0..=11)),
+			AnimationPlayerOf(agent),
 		));
 
 		app.update();
@@ -662,23 +657,23 @@ mod tests {
 			..default()
 		};
 		let mut app = setup!(&lookup, &handle);
-		let animation_player = app
+		let agent = app
 			.world_mut()
-			.spawn(_AnimationPlayer::new().with_mock(assert_not_playing([1, 2, 3])))
+			.spawn((
+				_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
+					mock.expect_youngest_to_oldest_active_animations()
+						.with(eq(AnimationPriority::High))
+						.return_const(leak_iterator(vec![AnimationKey::Walk]));
+					mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
+						.return_const(leak_iterator(vec![]));
+				}),
+				lookup,
+				_GraphComponent(handle),
+			))
 			.id();
 		app.world_mut().spawn((
-			_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
-				mock.expect_animation_players()
-					.return_const(_Iter::from([animation_player]));
-
-				mock.expect_youngest_to_oldest_active_animations()
-					.with(eq(AnimationPriority::High))
-					.return_const(leak_iterator(vec![AnimationKey::Walk]));
-				mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
-					.return_const(leak_iterator(vec![]));
-			}),
-			lookup,
-			_GraphComponent(handle),
+			_AnimationPlayer::new().with_mock(assert_not_playing([1, 2, 3])),
+			AnimationPlayerOf(agent),
 		));
 
 		app.update();
@@ -715,20 +710,20 @@ mod tests {
 			..default()
 		};
 		let mut app = setup!(&lookup, &handle);
-		let animation_player = app
+		let agent = app
 			.world_mut()
-			.spawn(_AnimationPlayer::new().with_mock(assert_stop([1, 2, 3])))
+			.spawn((
+				_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
+					mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
+						.return_const(leak_iterator(vec![]));
+				}),
+				lookup,
+				_GraphComponent(handle),
+			))
 			.id();
 		app.world_mut().spawn((
-			_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
-				mock.expect_animation_players()
-					.return_const(_Iter::from([animation_player]));
-
-				mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
-					.return_const(leak_iterator(vec![]));
-			}),
-			lookup,
-			_GraphComponent(handle),
+			_AnimationPlayer::new().with_mock(assert_stop([1, 2, 3])),
+			AnimationPlayerOf(agent),
 		));
 
 		app.update();
@@ -765,22 +760,23 @@ mod tests {
 			..default()
 		};
 		let mut app = setup!(&lookup, &handle);
-		let animation_player = app
+		let agent = app
 			.world_mut()
-			.spawn(_AnimationPlayer::new().with_mock(assert_repeat_once))
+			.spawn((
+				_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
+					mock.expect_youngest_to_oldest_active_animations()
+						.with(eq(AnimationPriority::High))
+						.return_const(leak_iterator(vec![AnimationKey::Walk]));
+					mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
+						.return_const(leak_iterator(vec![]));
+				}),
+				lookup,
+				_GraphComponent(handle),
+			))
 			.id();
 		app.world_mut().spawn((
-			_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
-				mock.expect_animation_players()
-					.return_const(_Iter::from([animation_player]));
-				mock.expect_youngest_to_oldest_active_animations()
-					.with(eq(AnimationPriority::High))
-					.return_const(leak_iterator(vec![AnimationKey::Walk]));
-				mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
-					.return_const(leak_iterator(vec![]));
-			}),
-			lookup,
-			_GraphComponent(handle),
+			_AnimationPlayer::new().with_mock(assert_repeat_once),
+			AnimationPlayerOf(agent),
 		));
 
 		app.update();
@@ -809,16 +805,10 @@ mod tests {
 			..default()
 		};
 		let mut app = setup!(&lookup, &handle);
-		let animation_player = app
-			.world_mut()
-			.spawn(_AnimationPlayer::new().with_mock(assert_repeat_twice))
-			.id();
 		let agent = app
 			.world_mut()
 			.spawn((
 				_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
-					mock.expect_animation_players()
-						.return_const(_Iter::from([animation_player]));
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::High))
 						.return_const(leak_iterator(vec![AnimationKey::Walk]));
@@ -829,6 +819,10 @@ mod tests {
 				_GraphComponent(handle),
 			))
 			.id();
+		app.world_mut().spawn((
+			_AnimationPlayer::new().with_mock(assert_repeat_twice),
+			AnimationPlayerOf(agent),
+		));
 
 		app.update();
 		app.world_mut()
@@ -903,33 +897,35 @@ mod tests {
 			..default()
 		};
 		let mut app = setup!(&lookup, &handle);
-		let animation_player = app.world_mut().spawn(_AnimationPlayer::default()).id();
-		app.world_mut().spawn((
-			_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
-				mock.expect_animation_players()
-					.return_const(_Iter::from([animation_player]));
-				mock.expect_youngest_to_oldest_active_animations()
-					.with(eq(AnimationPriority::High))
-					.return_const(leak_iterator(vec![
-						AnimationKey::Skill(SlotKey(11)),
-						AnimationKey::Skill(SlotKey(12)),
-					]));
-				mock.expect_youngest_to_oldest_active_animations()
-					.with(eq(AnimationPriority::Medium))
-					.return_const(leak_iterator(vec![
-						AnimationKey::Skill(SlotKey(21)),
-						AnimationKey::Skill(SlotKey(22)),
-					]));
-				mock.expect_youngest_to_oldest_active_animations()
-					.with(eq(AnimationPriority::Low))
-					.return_const(leak_iterator(vec![
-						AnimationKey::Skill(SlotKey(31)),
-						AnimationKey::Skill(SlotKey(32)),
-					]));
-			}),
-			lookup,
-			_GraphComponent(handle.clone()),
-		));
+		let agent = app
+			.world_mut()
+			.spawn((
+				_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
+					mock.expect_youngest_to_oldest_active_animations()
+						.with(eq(AnimationPriority::High))
+						.return_const(leak_iterator(vec![
+							AnimationKey::Skill(SlotKey(11)),
+							AnimationKey::Skill(SlotKey(12)),
+						]));
+					mock.expect_youngest_to_oldest_active_animations()
+						.with(eq(AnimationPriority::Medium))
+						.return_const(leak_iterator(vec![
+							AnimationKey::Skill(SlotKey(21)),
+							AnimationKey::Skill(SlotKey(22)),
+						]));
+					mock.expect_youngest_to_oldest_active_animations()
+						.with(eq(AnimationPriority::Low))
+						.return_const(leak_iterator(vec![
+							AnimationKey::Skill(SlotKey(31)),
+							AnimationKey::Skill(SlotKey(32)),
+						]));
+				}),
+				lookup,
+				_GraphComponent(handle.clone()),
+			))
+			.id();
+		app.world_mut()
+			.spawn((_AnimationPlayer::default(), AnimationPlayerOf(agent)));
 
 		app.update();
 
@@ -1015,33 +1011,35 @@ mod tests {
 		};
 		let initial_mask = 0b111111;
 		let mut app = setup!(&lookup, &handle, initial_mask);
-		let animation_player = app.world_mut().spawn(_AnimationPlayer::default()).id();
-		app.world_mut().spawn((
-			_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
-				mock.expect_animation_players()
-					.return_const(_Iter::from([animation_player]));
-				mock.expect_youngest_to_oldest_active_animations()
-					.with(eq(AnimationPriority::High))
-					.return_const(leak_iterator(vec![
-						AnimationKey::Skill(SlotKey(11)),
-						AnimationKey::Skill(SlotKey(12)),
-					]));
-				mock.expect_youngest_to_oldest_active_animations()
-					.with(eq(AnimationPriority::Medium))
-					.return_const(leak_iterator(vec![
-						AnimationKey::Skill(SlotKey(21)),
-						AnimationKey::Skill(SlotKey(22)),
-					]));
-				mock.expect_youngest_to_oldest_active_animations()
-					.with(eq(AnimationPriority::Low))
-					.return_const(leak_iterator(vec![
-						AnimationKey::Skill(SlotKey(31)),
-						AnimationKey::Skill(SlotKey(32)),
-					]));
-			}),
-			lookup,
-			_GraphComponent(handle.clone()),
-		));
+		let agent = app
+			.world_mut()
+			.spawn((
+				_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
+					mock.expect_youngest_to_oldest_active_animations()
+						.with(eq(AnimationPriority::High))
+						.return_const(leak_iterator(vec![
+							AnimationKey::Skill(SlotKey(11)),
+							AnimationKey::Skill(SlotKey(12)),
+						]));
+					mock.expect_youngest_to_oldest_active_animations()
+						.with(eq(AnimationPriority::Medium))
+						.return_const(leak_iterator(vec![
+							AnimationKey::Skill(SlotKey(21)),
+							AnimationKey::Skill(SlotKey(22)),
+						]));
+					mock.expect_youngest_to_oldest_active_animations()
+						.with(eq(AnimationPriority::Low))
+						.return_const(leak_iterator(vec![
+							AnimationKey::Skill(SlotKey(31)),
+							AnimationKey::Skill(SlotKey(32)),
+						]));
+				}),
+				lookup,
+				_GraphComponent(handle.clone()),
+			))
+			.id();
+		app.world_mut()
+			.spawn((_AnimationPlayer::default(), AnimationPlayerOf(agent)));
 
 		app.update();
 
@@ -1096,9 +1094,26 @@ mod tests {
 		};
 		let initial_mask = 0b111111;
 		let mut app = setup!(&lookup, &handle, initial_mask);
-		let animation_player = app
+		let agent = app
 			.world_mut()
-			.spawn(_AnimationPlayer::new().with_mock(|mock| {
+			.spawn((
+				_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
+					mock.expect_youngest_to_oldest_active_animations()
+						.with(eq(AnimationPriority::High))
+						.return_const(leak_iterator(vec![AnimationKey::Skill(SlotKey(1))]));
+					mock.expect_youngest_to_oldest_active_animations()
+						.with(eq(AnimationPriority::Medium))
+						.return_const(leak_iterator(vec![AnimationKey::Skill(SlotKey(2))]));
+					mock.expect_youngest_to_oldest_active_animations()
+						.with(eq(AnimationPriority::Low))
+						.return_const(leak_iterator(vec![]));
+				}),
+				lookup,
+				_GraphComponent(handle.clone()),
+			))
+			.id();
+		app.world_mut().spawn((
+			_AnimationPlayer::new().with_mock(|mock| {
 				mock.expect_is_playing()
 					.with(eq(AnimationNodeIndex::new(2)))
 					.return_const(true);
@@ -1109,24 +1124,8 @@ mod tests {
 				mock.expect_repeat().return_const(());
 				mock.expect_replay().return_const(());
 				mock.expect_stop_animation().return_const(());
-			}))
-			.id();
-		app.world_mut().spawn((
-			_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
-				mock.expect_animation_players()
-					.return_const(_Iter::from([animation_player]));
-				mock.expect_youngest_to_oldest_active_animations()
-					.with(eq(AnimationPriority::High))
-					.return_const(leak_iterator(vec![AnimationKey::Skill(SlotKey(1))]));
-				mock.expect_youngest_to_oldest_active_animations()
-					.with(eq(AnimationPriority::Medium))
-					.return_const(leak_iterator(vec![AnimationKey::Skill(SlotKey(2))]));
-				mock.expect_youngest_to_oldest_active_animations()
-					.with(eq(AnimationPriority::Low))
-					.return_const(leak_iterator(vec![]));
 			}),
-			lookup,
-			_GraphComponent(handle.clone()),
+			AnimationPlayerOf(agent),
 		));
 
 		app.update();
@@ -1164,18 +1163,19 @@ mod tests {
 			..default()
 		};
 		let mut app = setup!(&lookup, &handle);
-		let animation_player = app.world_mut().spawn(_AnimationPlayer::default()).id();
-		app.world_mut().spawn((
-			_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
-				mock.expect_animation_players()
-					.return_const(_Iter::from([animation_player]));
-
-				mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
-					.return_const(leak_iterator(vec![]));
-			}),
-			lookup,
-			_GraphComponent(handle.clone()),
-		));
+		let agent = app
+			.world_mut()
+			.spawn((
+				_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
+					mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
+						.return_const(leak_iterator(vec![]));
+				}),
+				lookup,
+				_GraphComponent(handle.clone()),
+			))
+			.id();
+		app.world_mut()
+			.spawn((_AnimationPlayer::default(), AnimationPlayerOf(agent)));
 
 		app.update();
 

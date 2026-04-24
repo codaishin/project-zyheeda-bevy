@@ -1,20 +1,20 @@
-use crate::components::effect_shaders_target::EffectShadersTarget;
+use crate::components::effect_shaders_target::EffectShaderMeshes;
 use bevy::{camera::visibility::RenderLayers, prelude::*};
 use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
 pub(crate) fn insert_effect_shader_render_layers<TPass>(
 	pass: TPass,
-) -> impl Fn(ZyheedaCommands, Query<&EffectShadersTarget, Changed<EffectShadersTarget>>)
+) -> impl Fn(ZyheedaCommands, Query<&EffectShaderMeshes, Changed<EffectShaderMeshes>>)
 where
 	TPass: Into<RenderLayers>,
 {
 	let layer = pass.into();
 
 	move |mut commands: ZyheedaCommands,
-	      shader_targets: Query<&EffectShadersTarget, Changed<EffectShadersTarget>>| {
-		for EffectShadersTarget { meshes, .. } in &shader_targets {
+	      shader_meshes: Query<&EffectShaderMeshes, Changed<EffectShaderMeshes>>| {
+		for meshes in shader_meshes {
 			for entity in meshes.iter() {
-				commands.try_apply_on(entity, |mut e| {
+				commands.try_apply_on(&entity, |mut e| {
 					e.try_insert(layer.clone());
 				});
 			}
@@ -25,12 +25,8 @@ where
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::components::effect_shaders_target::EffectShadersTarget;
-	use bevy::{
-		app::{App, Update},
-		utils::default,
-	};
-	use std::collections::HashSet;
+	use crate::components::effect_shaders_target::EffectShaderMeshOf;
+	use bevy::app::{App, Update};
 	use testing::SingleThreadedApp;
 
 	fn setup<TPass>(pass: TPass) -> App
@@ -55,15 +51,12 @@ mod test {
 	#[test]
 	fn insert_render_layer_on_related_entities() {
 		let mut app = setup(_Pass::<4>);
+		let root = app.world_mut().spawn_empty().id();
 		let entities = [
-			app.world_mut().spawn_empty().id(),
-			app.world_mut().spawn_empty().id(),
-			app.world_mut().spawn_empty().id(),
+			app.world_mut().spawn(EffectShaderMeshOf(root)).id(),
+			app.world_mut().spawn(EffectShaderMeshOf(root)).id(),
+			app.world_mut().spawn(EffectShaderMeshOf(root)).id(),
 		];
-		app.world_mut().spawn(EffectShadersTarget {
-			meshes: HashSet::from(entities),
-			..default()
-		});
 
 		app.update();
 
@@ -82,15 +75,12 @@ mod test {
 	#[test]
 	fn insert_render_layer_on_related_entities_only_once() {
 		let mut app = setup(_Pass::<4>);
+		let root = app.world_mut().spawn_empty().id();
 		let entities = [
-			app.world_mut().spawn_empty().id(),
-			app.world_mut().spawn_empty().id(),
-			app.world_mut().spawn_empty().id(),
+			app.world_mut().spawn(EffectShaderMeshOf(root)).id(),
+			app.world_mut().spawn(EffectShaderMeshOf(root)).id(),
+			app.world_mut().spawn(EffectShaderMeshOf(root)).id(),
 		];
-		app.world_mut().spawn(EffectShadersTarget {
-			meshes: HashSet::from(entities),
-			..default()
-		});
 
 		app.update();
 		for entity in entities {
@@ -109,23 +99,17 @@ mod test {
 	#[test]
 	fn insert_render_layer_on_related_entities_again_when_shader_targets_change() {
 		let mut app = setup(_Pass::<4>);
+		let root = app.world_mut().spawn_empty().id();
 		let entities = [
-			app.world_mut().spawn_empty().id(),
-			app.world_mut().spawn_empty().id(),
-			app.world_mut().spawn_empty().id(),
+			app.world_mut().spawn(EffectShaderMeshOf(root)).id(),
+			app.world_mut().spawn(EffectShaderMeshOf(root)).id(),
+			app.world_mut().spawn(EffectShaderMeshOf(root)).id(),
 		];
-		let shader_targets = app
-			.world_mut()
-			.spawn(EffectShadersTarget {
-				meshes: HashSet::from(entities),
-				..default()
-			})
-			.id();
 
 		app.update();
 		app.world_mut()
-			.entity_mut(shader_targets)
-			.get_mut::<EffectShadersTarget>()
+			.entity_mut(root)
+			.get_mut::<EffectShaderMeshes>()
 			.as_deref_mut(); // tell bevy to mark this as changed
 		for entity in entities {
 			app.world_mut().entity_mut(entity).remove::<RenderLayers>();

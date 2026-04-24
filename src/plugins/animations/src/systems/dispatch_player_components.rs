@@ -1,23 +1,14 @@
-use crate::traits::AnimationPlayersWithoutGraph;
+use crate::components::animation_dispatch::{AnimationDispatch, AnimationPlayers};
 use bevy::prelude::*;
 use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
-impl<T> DispatchPlayerComponents for T where
-	for<'a> T: Component + AnimationPlayersWithoutGraph + Sized
-{
-}
-
-pub(crate) trait DispatchPlayerComponents:
-	Component + AnimationPlayersWithoutGraph + Sized
-{
-	fn distribute_player_components<TGraphComponent>(
+impl AnimationDispatch {
+	pub(crate) fn distribute_player_components(
 		mut commands: ZyheedaCommands,
-		agents: Query<(&Self, &TGraphComponent), Changed<Self>>,
-	) where
-		TGraphComponent: Component + Clone,
-	{
-		for (dispatcher, graph_component) in &agents {
-			for entity in dispatcher.animation_players_without_graph() {
+		agents: Query<(&AnimationPlayers, &AnimationGraphHandle), Changed<AnimationPlayers>>,
+	) {
+		for (animation_players, graph_component) in &agents {
+			for entity in animation_players.iter() {
 				commands.try_apply_on(&entity, |mut e| {
 					e.try_insert((AnimationTransitions::default(), graph_component.clone()));
 				});
@@ -28,33 +19,15 @@ pub(crate) trait DispatchPlayerComponents:
 
 #[cfg(test)]
 mod tests {
+	use crate::components::animation_dispatch::AnimationPlayerOf;
+
 	use super::*;
-	use std::vec::IntoIter;
-	use testing::SingleThreadedApp;
-
-	#[derive(Component)]
-	struct _Dispatch {
-		players: Vec<Entity>,
-	}
-
-	impl AnimationPlayersWithoutGraph for _Dispatch {
-		type TIter = IntoIter<Entity>;
-
-		fn animation_players_without_graph(&self) -> Self::TIter {
-			self.players.clone().into_iter()
-		}
-	}
-
-	#[derive(Component, Debug, PartialEq, Clone)]
-	struct _GraphComponent;
+	use testing::{SingleThreadedApp, new_handle};
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(
-			Update,
-			_Dispatch::distribute_player_components::<_GraphComponent>,
-		);
+		app.add_systems(Update, AnimationDispatch::distribute_player_components);
 
 		app
 	}
@@ -62,13 +35,11 @@ mod tests {
 	#[test]
 	fn add_transitions() {
 		let mut app = setup();
-		let player = app.world_mut().spawn_empty().id();
-		app.world_mut().spawn((
-			_Dispatch {
-				players: vec![player],
-			},
-			_GraphComponent,
-		));
+		let agent = app
+			.world_mut()
+			.spawn(AnimationGraphHandle(new_handle()))
+			.id();
+		let player = app.world_mut().spawn(AnimationPlayerOf(agent)).id();
 
 		app.update();
 
@@ -82,34 +53,34 @@ mod tests {
 	#[test]
 	fn clone_graph_component() {
 		let mut app = setup();
-		let player = app.world_mut().spawn_empty().id();
-		app.world_mut().spawn((
-			_Dispatch {
-				players: vec![player],
-			},
-			_GraphComponent,
-		));
+		let handle = new_handle();
+		let agent = app
+			.world_mut()
+			.spawn(AnimationGraphHandle(handle.clone()))
+			.id();
+		let player = app.world_mut().spawn(AnimationPlayerOf(agent)).id();
 
 		app.update();
 
-		assert!(app.world().entity(player).contains::<_GraphComponent>());
+		assert_eq!(
+			Some(&AnimationGraphHandle(handle)),
+			app.world().entity(player).get::<AnimationGraphHandle>()
+		);
 	}
 
 	#[test]
 	fn act_only_once() {
 		let mut app = setup();
-		let player = app.world_mut().spawn_empty().id();
-		app.world_mut().spawn((
-			_Dispatch {
-				players: vec![player],
-			},
-			_GraphComponent,
-		));
+		let agent = app
+			.world_mut()
+			.spawn(AnimationGraphHandle(new_handle()))
+			.id();
+		let player = app.world_mut().spawn(AnimationPlayerOf(agent)).id();
 
 		app.update();
 		app.world_mut()
 			.entity_mut(player)
-			.remove::<(AnimationTransitions, _GraphComponent)>();
+			.remove::<(AnimationTransitions, AnimationGraphHandle)>();
 		app.update();
 
 		assert_eq!(
@@ -118,32 +89,29 @@ mod tests {
 				app.world()
 					.entity(player)
 					.contains::<AnimationTransitions>(),
-				app.world().entity(player).contains::<_GraphComponent>(),
+				app.world()
+					.entity(player)
+					.contains::<AnimationGraphHandle>(),
 			]
 		);
 	}
 
 	#[test]
-	fn act_again_when_dispatch_changed() {
+	fn act_again_when_animation_players_changed() {
 		let mut app = setup();
-		let player = app.world_mut().spawn_empty().id();
-		let dispatch = app
+		let agent = app
 			.world_mut()
-			.spawn((
-				_Dispatch {
-					players: vec![player],
-				},
-				_GraphComponent,
-			))
+			.spawn(AnimationGraphHandle(new_handle()))
 			.id();
+		let player = app.world_mut().spawn(AnimationPlayerOf(agent)).id();
 
 		app.update();
 		app.world_mut()
 			.entity_mut(player)
 			.remove::<(AnimationTransitions, AnimationGraphHandle)>();
 		app.world_mut()
-			.entity_mut(dispatch)
-			.get_mut::<_Dispatch>()
+			.entity_mut(agent)
+			.get_mut::<AnimationPlayers>()
 			.as_deref_mut();
 		app.update();
 
@@ -153,7 +121,9 @@ mod tests {
 				app.world()
 					.entity(player)
 					.contains::<AnimationTransitions>(),
-				app.world().entity(player).contains::<_GraphComponent>(),
+				app.world()
+					.entity(player)
+					.contains::<AnimationGraphHandle>(),
 			]
 		);
 	}

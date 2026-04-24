@@ -1,9 +1,10 @@
 use crate::{
 	components::{
+		animation_dispatch::AnimationPlayers,
 		animation_lookup::{AnimationClips, AnimationLookup},
 		current_forward_pitch::CurrentForwardPitch,
 	},
-	traits::{AnimationPlayers, GetAllActiveAnimations, asset_server::animation_graph::GetNodeMut},
+	traits::{GetAllActiveAnimations, asset_server::animation_graph::GetNodeMut},
 };
 use bevy::prelude::*;
 use common::traits::{
@@ -11,15 +12,19 @@ use common::traits::{
 	wrap_handle::{GetHandle, WrapHandle},
 };
 
-impl<T> SetPitchAnimationWeights for T where T: Component + AnimationPlayers + GetAllActiveAnimations
-{}
+impl<T> SetPitchAnimationWeights for T where T: Component + GetAllActiveAnimations {}
 
 pub(crate) trait SetPitchAnimationWeights:
-	Component + AnimationPlayers + GetAllActiveAnimations + Sized
+	Component + GetAllActiveAnimations + Sized
 {
 	fn set_pitch_animation_weights(
 		graphs: ResMut<Assets<AnimationGraph>>,
-		agents: Query<(&Self, &CurrentForwardPitch, &AnimationLookup)>,
+		agents: Query<(
+			&Self,
+			&AnimationPlayers,
+			&CurrentForwardPitch,
+			&AnimationLookup,
+		)>,
 		players: Query<&AnimationGraphHandle>,
 	) {
 		set_pitch_animation_weights(graphs, agents, players)
@@ -53,14 +58,19 @@ macro_rules! blend {
 
 fn set_pitch_animation_weights<TDispatch, TGraph>(
 	mut graphs: ResMut<Assets<TGraph>>,
-	agents: Query<(&TDispatch, &CurrentForwardPitch, &AnimationLookup)>,
+	agents: Query<(
+		&TDispatch,
+		&AnimationPlayers,
+		&CurrentForwardPitch,
+		&AnimationLookup,
+	)>,
 	players: Query<&TGraph::TComponent>,
 ) where
-	TDispatch: Component + AnimationPlayers + GetAllActiveAnimations,
+	TDispatch: Component + GetAllActiveAnimations,
 	TGraph: Asset + GetNodeMut + WrapHandle,
 {
-	for (dispatch, CurrentForwardPitch(pitch), lookup) in &agents {
-		for entity in dispatch.animation_players() {
+	for (dispatch, animation_players, CurrentForwardPitch(pitch), lookup) in &agents {
+		for entity in animation_players.iter() {
 			let Ok(player) = players.get(entity) else {
 				continue;
 			};
@@ -99,10 +109,9 @@ fn set_pitch_animation_weights<TDispatch, TGraph>(
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::components::animation_lookup::{
-		AnimationClips,
-		AnimationLookupData,
-		PitchedForwardIndices,
+	use crate::components::{
+		animation_dispatch::AnimationPlayerOf,
+		animation_lookup::{AnimationClips, AnimationLookupData, PitchedForwardIndices},
 	};
 	use common::{
 		tools::action_key::slot::SlotKey,
@@ -112,22 +121,13 @@ mod tests {
 			wrap_handle::{GetHandle, WrapHandle},
 		},
 	};
-	use std::{collections::HashMap, slice::Iter, vec::IntoIter};
+	use std::{collections::HashMap, slice::Iter};
 	use test_case::test_case;
 	use testing::{SingleThreadedApp, assert_eq_approx, new_handle};
 
 	#[derive(Component)]
 	struct _Dispatch {
-		players: Vec<Entity>,
 		animations: Vec<AnimationKey>,
-	}
-
-	impl AnimationPlayers for _Dispatch {
-		type TIter = IntoIter<Entity>;
-
-		fn animation_players(&self) -> Self::TIter {
-			self.players.clone().into_iter()
-		}
 	}
 
 	impl GetAllActiveAnimations for _Dispatch {
@@ -232,15 +232,18 @@ mod tests {
 		};
 		let weights = HashMap::from_iter(initial_weights());
 		let mut app = setup(&lookup, weights, &handle);
-		let player = app.world_mut().spawn(_GraphComponent(handle.clone())).id();
-		app.world_mut().spawn((
-			_Dispatch {
-				players: vec![player],
-				animations: vec![AnimationKey::Skill(SlotKey(11))],
-			},
-			CurrentForwardPitch(pitch),
-			lookup,
-		));
+		let agent = app
+			.world_mut()
+			.spawn((
+				_Dispatch {
+					animations: vec![AnimationKey::Skill(SlotKey(11))],
+				},
+				CurrentForwardPitch(pitch),
+				lookup,
+			))
+			.id();
+		app.world_mut()
+			.spawn((_GraphComponent(handle.clone()), AnimationPlayerOf(agent)));
 
 		app.update();
 
@@ -289,15 +292,18 @@ mod tests {
 		};
 		let weights = HashMap::from_iter(initial_weights());
 		let mut app = setup(&lookup, weights, &handle);
-		let player = app.world_mut().spawn(_GraphComponent(handle.clone())).id();
-		app.world_mut().spawn((
-			_Dispatch {
-				players: vec![player],
-				animations: vec![AnimationKey::Skill(SlotKey(11))],
-			},
-			CurrentForwardPitch(pitch),
-			lookup,
-		));
+		let agent = app
+			.world_mut()
+			.spawn((
+				_Dispatch {
+					animations: vec![AnimationKey::Skill(SlotKey(11))],
+				},
+				CurrentForwardPitch(pitch),
+				lookup,
+			))
+			.id();
+		app.world_mut()
+			.spawn((_GraphComponent(handle.clone()), AnimationPlayerOf(agent)));
 
 		app.update();
 
@@ -352,15 +358,18 @@ mod tests {
 		};
 		let weights = HashMap::from_iter(initial_weights());
 		let mut app = setup(&lookup, weights, &handle);
-		let player = app.world_mut().spawn(_GraphComponent(handle.clone())).id();
-		app.world_mut().spawn((
-			_Dispatch {
-				players: vec![player],
-				animations: vec![AnimationKey::Skill(SlotKey(11))],
-			},
-			CurrentForwardPitch(pitch),
-			lookup,
-		));
+		let agent = app
+			.world_mut()
+			.spawn((
+				_Dispatch {
+					animations: vec![AnimationKey::Skill(SlotKey(11))],
+				},
+				CurrentForwardPitch(pitch),
+				lookup,
+			))
+			.id();
+		app.world_mut()
+			.spawn((_GraphComponent(handle.clone()), AnimationPlayerOf(agent)));
 
 		app.update();
 
@@ -415,15 +424,18 @@ mod tests {
 		};
 		let weights = HashMap::from_iter(initial_weights());
 		let mut app = setup(&lookup, weights, &handle);
-		let player = app.world_mut().spawn(_GraphComponent(handle.clone())).id();
-		app.world_mut().spawn((
-			_Dispatch {
-				players: vec![player],
-				animations: vec![AnimationKey::Skill(SlotKey(11))],
-			},
-			CurrentForwardPitch(pitch),
-			lookup,
-		));
+		let agent = app
+			.world_mut()
+			.spawn((
+				_Dispatch {
+					animations: vec![AnimationKey::Skill(SlotKey(11))],
+				},
+				CurrentForwardPitch(pitch),
+				lookup,
+			))
+			.id();
+		app.world_mut()
+			.spawn((_GraphComponent(handle.clone()), AnimationPlayerOf(agent)));
 
 		app.update();
 

@@ -50,19 +50,3 @@ pub trait RepeatAnimation<TIndex> {
 pub trait StopAnimation<TIndex> {
 	fn stop_animation(&mut self, index: TIndex);
 }
-
-pub trait AnimationPlayers
-where
-	Self::TIter: Iterator<Item = Entity>,
-{
-	type TIter;
-	fn animation_players(&self) -> Self::TIter;
-}
-
-pub trait AnimationPlayersWithoutGraph
-where
-	Self::TIter: Iterator<Item = Entity>,
-{
-	type TIter;
-	fn animation_players_without_graph(&self) -> Self::TIter;
-}
