@@ -1,6 +1,6 @@
 use self::first_pass_image::FirstPassImage;
 use crate::{
-	components::effect_shaders_target::{EffectShaderHandle, EffectShadersTarget},
+	components::effect_shaders_target::{EffectShaderHandle, EffectShaders},
 	resources::first_pass_image,
 	traits::get_effect_material::GetEffectMaterial,
 };
@@ -10,15 +10,9 @@ use common::traits::handles_physics::{Effect, HandlesPhysicalEffect};
 #[allow(clippy::type_complexity)]
 pub(crate) fn add_child_effect_shader<TPhysics, TEffect>(
 	mut materials: ResMut<Assets<TEffect::TMaterial>>,
-	mut effect_shaders_targets: Query<&mut EffectShadersTarget>,
+	mut effect_shaders_targets: Query<&mut EffectShaders>,
 	first_pass_image: Res<FirstPassImage>,
-	effect_shaders: Query<
-		Entity,
-		(
-			Added<TPhysics::TEffectComponent>,
-			Without<EffectShadersTarget>,
-		),
-	>,
+	effect_shaders: Query<Entity, (Added<TPhysics::TEffectComponent>, Without<EffectShaders>)>,
 	children: Query<&ChildOf>,
 ) where
 	TEffect: GetEffectMaterial + Effect,
@@ -45,7 +39,7 @@ pub(crate) fn add_child_effect_shader<TPhysics, TEffect>(
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::components::effect_shaders_target::EffectShadersTarget;
+	use crate::components::effect_shaders_target::EffectShaders;
 	use bevy::{asset::UntypedAssetId, render::render_resource::AsBindGroup};
 	use testing::{SingleThreadedApp, new_handle};
 
@@ -105,7 +99,7 @@ mod tests {
 			.collect::<Vec<_>>()
 	}
 
-	fn shader_effect_ids(effect_shaders: &EffectShadersTarget) -> Vec<UntypedAssetId> {
+	fn shader_effect_ids(effect_shaders: &EffectShaders) -> Vec<UntypedAssetId> {
 		effect_shaders
 			.shaders
 			.iter()
@@ -116,7 +110,7 @@ mod tests {
 	#[test]
 	fn add_child_effect_shader_to_effect_shaders() {
 		let mut app = setup(new_handle::<Image>());
-		let shaders = app.world_mut().spawn(EffectShadersTarget::default()).id();
+		let shaders = app.world_mut().spawn(EffectShaders::default()).id();
 		app.world_mut()
 			.spawn(_EffectComponent)
 			.insert(ChildOf(shaders));
@@ -124,11 +118,7 @@ mod tests {
 		app.update();
 
 		let materials = app.world().resource::<Assets<_Material>>();
-		let shaders = app
-			.world()
-			.entity(shaders)
-			.get::<EffectShadersTarget>()
-			.unwrap();
+		let shaders = app.world().entity(shaders).get::<EffectShaders>().unwrap();
 		assert_eq!(
 			(1, materials_ids(materials)),
 			(shaders.shaders.len(), shader_effect_ids(shaders))
@@ -138,25 +128,21 @@ mod tests {
 	#[test]
 	fn do_not_add_child_effect_shader_to_effect_shaders_when_child_has_effect_shaders() {
 		let mut app = setup(new_handle::<Image>());
-		let shaders = app.world_mut().spawn(EffectShadersTarget::default()).id();
+		let shaders = app.world_mut().spawn(EffectShaders::default()).id();
 		app.world_mut()
-			.spawn((EffectShadersTarget::default(), _EffectComponent))
+			.spawn((EffectShaders::default(), _EffectComponent))
 			.insert(ChildOf(shaders));
 
 		app.update();
 
-		let shaders = app
-			.world()
-			.entity(shaders)
-			.get::<EffectShadersTarget>()
-			.unwrap();
+		let shaders = app.world().entity(shaders).get::<EffectShaders>().unwrap();
 		assert_eq!(vec![] as Vec<UntypedAssetId>, shader_effect_ids(shaders));
 	}
 
 	#[test]
 	fn add_deep_child_effect_shader_to_effect_shaders() {
 		let mut app = setup(new_handle::<Image>());
-		let shaders = app.world_mut().spawn(EffectShadersTarget::default()).id();
+		let shaders = app.world_mut().spawn(EffectShaders::default()).id();
 		let child = app.world_mut().spawn_empty().insert(ChildOf(shaders)).id();
 		app.world_mut()
 			.spawn(_EffectComponent)
@@ -165,11 +151,7 @@ mod tests {
 		app.update();
 
 		let materials = app.world().resource::<Assets<_Material>>();
-		let shaders = app
-			.world()
-			.entity(shaders)
-			.get::<EffectShadersTarget>()
-			.unwrap();
+		let shaders = app.world().entity(shaders).get::<EffectShaders>().unwrap();
 		assert_eq!(
 			(1, materials_ids(materials)),
 			(shaders.shaders.len(), shader_effect_ids(shaders))
@@ -179,7 +161,7 @@ mod tests {
 	#[test]
 	fn add_child_effect_shader_to_effect_shaders_only_once() {
 		let mut app = setup(new_handle::<Image>());
-		let shaders = app.world_mut().spawn(EffectShadersTarget::default()).id();
+		let shaders = app.world_mut().spawn(EffectShaders::default()).id();
 		app.world_mut()
 			.spawn(_EffectComponent)
 			.insert(ChildOf(shaders));
@@ -188,11 +170,7 @@ mod tests {
 		app.update();
 
 		let materials = app.world().resource::<Assets<_Material>>();
-		let shaders = app
-			.world()
-			.entity(shaders)
-			.get::<EffectShadersTarget>()
-			.unwrap();
+		let shaders = app.world().entity(shaders).get::<EffectShaders>().unwrap();
 		assert_eq!(
 			(1, materials_ids(materials)),
 			(shaders.shaders.len(), shader_effect_ids(shaders))
@@ -202,10 +180,10 @@ mod tests {
 	#[test]
 	fn only_add_effect_shader_to_effect_shaders_component_in_closest_parent() {
 		let mut app = setup(new_handle::<Image>());
-		let parent = app.world_mut().spawn(EffectShadersTarget::default()).id();
+		let parent = app.world_mut().spawn(EffectShaders::default()).id();
 		let child = app
 			.world_mut()
-			.spawn(EffectShadersTarget::default())
+			.spawn(EffectShaders::default())
 			.insert(ChildOf(parent))
 			.id();
 		app.world_mut()
@@ -215,16 +193,8 @@ mod tests {
 		app.update();
 
 		let materials = app.world().resource::<Assets<_Material>>();
-		let parent_shaders = app
-			.world()
-			.entity(parent)
-			.get::<EffectShadersTarget>()
-			.unwrap();
-		let child_shaders = app
-			.world()
-			.entity(child)
-			.get::<EffectShadersTarget>()
-			.unwrap();
+		let parent_shaders = app.world().entity(parent).get::<EffectShaders>().unwrap();
+		let child_shaders = app.world().entity(child).get::<EffectShaders>().unwrap();
 		assert_eq!(
 			(0, 1, materials_ids(materials)),
 			(
@@ -239,7 +209,7 @@ mod tests {
 	fn assign_first_pass_image_handle() {
 		let first_pass = new_handle::<Image>();
 		let mut app = setup(first_pass.clone());
-		let shaders = app.world_mut().spawn(EffectShadersTarget::default()).id();
+		let shaders = app.world_mut().spawn(EffectShaders::default()).id();
 		app.world_mut()
 			.spawn(_EffectComponent)
 			.insert(ChildOf(shaders));

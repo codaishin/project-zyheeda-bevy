@@ -1,5 +1,5 @@
 use crate::{
-	components::effect_shaders_target::{EffectShaderHandle, EffectShadersTarget},
+	components::effect_shaders_target::{EffectShaderHandle, EffectShaderMeshes, EffectShaders},
 	traits::{
 		insert_protected_effect_shader::InsertProtectedEffectShader,
 		remove_protected_effect_shader::RemoveProtectedEffectShader,
@@ -12,16 +12,17 @@ use common::{
 };
 use std::collections::HashSet;
 
+#[allow(clippy::type_complexity)]
 pub(crate) fn instantiate_effect_shaders(
 	mut commands: ZyheedaCommands,
 	effect_shaders: Query<
-		(Entity, &EffectShadersTarget, Option<&Active>),
-		Changed<EffectShadersTarget>,
+		(Entity, &EffectShaders, &EffectShaderMeshes, Option<&Active>),
+		Or<(Changed<EffectShaders>, Changed<EffectShaderMeshes>)>,
 	>,
 ) {
-	for (entity, effect_shaders, active) in &effect_shaders {
-		clear(&mut commands, effect_shaders, active);
-		instantiate(&mut commands, effect_shaders);
+	for (entity, effect_shaders, meshes, active) in &effect_shaders {
+		clear(&mut commands, meshes, active);
+		instantiate(&mut commands, effect_shaders, meshes);
 		commands.try_apply_on(&entity, |mut e| {
 			e.try_insert(Active(effect_shaders.shaders.clone()));
 		});
@@ -33,7 +34,7 @@ pub(crate) struct Active(HashSet<EffectShaderHandle>);
 
 fn clear(
 	commands: &mut ZyheedaCommands,
-	effect_shaders: &EffectShadersTarget,
+	effect_shaders: &EffectShaderMeshes,
 	active: Option<&Active>,
 ) {
 	let Some(Active(shaders)) = active else {
@@ -41,8 +42,8 @@ fn clear(
 	};
 
 	for shader in shaders {
-		for entity in &effect_shaders.meshes {
-			let Some(mut entity) = commands.get_mut(entity) else {
+		for entity in effect_shaders.iter() {
+			let Some(mut entity) = commands.get_mut(&entity) else {
 				continue;
 			};
 
@@ -51,10 +52,14 @@ fn clear(
 	}
 }
 
-fn instantiate(commands: &mut ZyheedaCommands, effect_shaders: &EffectShadersTarget) {
+fn instantiate(
+	commands: &mut ZyheedaCommands,
+	effect_shaders: &EffectShaders,
+	meshes: &EffectShaderMeshes,
+) {
 	for shader in &effect_shaders.shaders {
-		for entity in &effect_shaders.meshes {
-			let Some(mut entity) = commands.get_mut(entity) else {
+		for entity in meshes.iter() {
+			let Some(mut entity) = commands.get_mut(&entity) else {
 				continue;
 			};
 
@@ -67,7 +72,11 @@ fn instantiate(commands: &mut ZyheedaCommands, effect_shaders: &EffectShadersTar
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::components::effect_shaders_target::{EffectShaderHandle, EffectShadersTarget};
+	use crate::components::effect_shaders_target::{
+		EffectShaderHandle,
+		EffectShaderMeshOf,
+		EffectShaders,
+	};
 	use bevy::render::render_resource::AsBindGroup;
 	use common::components::protected::Protected;
 	use std::collections::HashSet;
@@ -93,14 +102,13 @@ mod tests {
 	#[test]
 	fn insert_single_shader_effect() {
 		let mut app = setup();
-		let mesh_entity = app.world_mut().spawn_empty().id();
 		let handle = new_handle::<_Shader1>();
 		let shader = EffectShaderHandle::from(handle.clone());
-		let shaders = EffectShadersTarget {
-			meshes: HashSet::from([mesh_entity]),
+		let shaders = EffectShaders {
 			shaders: HashSet::from([shader]),
 		};
-		app.world_mut().spawn(shaders);
+		let root = app.world_mut().spawn(shaders).id();
+		let mesh_entity = app.world_mut().spawn(EffectShaderMeshOf(root)).id();
 
 		app.update();
 
@@ -123,20 +131,19 @@ mod tests {
 	#[test]
 	fn pair_each_mesh_with_one_shader() {
 		let mut app = setup();
-		let mesh_entities = [
-			app.world_mut().spawn_empty().id(),
-			app.world_mut().spawn_empty().id(),
-		];
 		let shader1 = new_handle::<_Shader1>();
 		let shader2 = new_handle::<_Shader2>();
-		let shaders = EffectShadersTarget {
-			meshes: HashSet::from(mesh_entities),
+		let shaders = EffectShaders {
 			shaders: HashSet::from([
 				EffectShaderHandle::from(shader1.clone()),
 				EffectShaderHandle::from(shader2.clone()),
 			]),
 		};
-		app.world_mut().spawn(shaders);
+		let root = app.world_mut().spawn(shaders).id();
+		let mesh_entities = [
+			app.world_mut().spawn(EffectShaderMeshOf(root)).id(),
+			app.world_mut().spawn(EffectShaderMeshOf(root)).id(),
+		];
 
 		app.update();
 
@@ -175,12 +182,11 @@ mod tests {
 	#[test]
 	fn do_not_add_shaders_twice() {
 		let mut app = setup();
-		let mesh_entity = app.world_mut().spawn_empty().id();
-		let shaders = EffectShadersTarget {
-			meshes: HashSet::from([mesh_entity]),
+		let shaders = EffectShaders {
 			shaders: HashSet::from([EffectShaderHandle::from(new_handle::<_Shader1>())]),
 		};
-		app.world_mut().spawn(shaders);
+		let root = app.world_mut().spawn(shaders).id();
+		let mesh_entity = app.world_mut().spawn(EffectShaderMeshOf(root)).id();
 
 		app.update();
 
@@ -199,22 +205,21 @@ mod tests {
 	}
 
 	#[test]
-	fn add_shaders_when_effect_shaders_mutably_dereferenced() {
+	fn add_shaders_when_effect_shaders_changed() {
 		let mut app = setup();
-		let mesh_entity = app.world_mut().spawn_empty().id();
 		let shader1 = new_handle::<_Shader1>();
 		let shader2 = new_handle::<_Shader2>();
-		let shaders = EffectShadersTarget {
-			meshes: HashSet::from([mesh_entity]),
+		let shaders = EffectShaders {
 			shaders: HashSet::from([EffectShaderHandle::from(shader1)]),
 		};
-		let entity = app.world_mut().spawn(shaders).id();
+		let root = app.world_mut().spawn(shaders).id();
+		let mesh_entity = app.world_mut().spawn(EffectShaderMeshOf(root)).id();
 
 		app.update();
 
 		app.world_mut()
-			.entity_mut(entity)
-			.get_mut::<EffectShadersTarget>()
+			.entity_mut(root)
+			.get_mut::<EffectShaders>()
 			.unwrap()
 			.shaders = HashSet::from([EffectShaderHandle::from(shader2.clone())]);
 
@@ -230,6 +235,34 @@ mod tests {
 					.entity(mesh_entity)
 					.get::<MeshMaterial3d<_Shader2>>(),
 			)
+		);
+	}
+
+	#[test]
+	fn add_shaders_when_effect_shader_meshes_mutably_dereferenced() {
+		let mut app = setup();
+		let shader = new_handle::<_Shader1>();
+		let shaders = EffectShaders {
+			shaders: HashSet::from([EffectShaderHandle::from(shader.clone())]),
+		};
+		let root = app.world_mut().spawn(shaders).id();
+		let mesh_entity = app.world_mut().spawn(EffectShaderMeshOf(root)).id();
+
+		app.update();
+		app.world_mut()
+			.entity_mut(root)
+			.get_mut::<EffectShaderMeshes>()
+			.as_deref_mut();
+		app.world_mut()
+			.entity_mut(mesh_entity)
+			.remove::<MeshMaterial3d<_Shader1>>();
+		app.update();
+
+		assert_eq!(
+			Some(&MeshMaterial3d(shader)),
+			app.world()
+				.entity(mesh_entity)
+				.get::<MeshMaterial3d<_Shader1>>(),
 		);
 	}
 }

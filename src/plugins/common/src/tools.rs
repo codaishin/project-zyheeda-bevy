@@ -16,8 +16,6 @@ pub mod speed;
 pub mod swap_key;
 pub mod vec_not_nan;
 
-pub(crate) mod get_recursively;
-
 use crate::traits::accessors::get::ViewField;
 use bevy::prelude::Entity;
 use macros::ClampZeroPositive;

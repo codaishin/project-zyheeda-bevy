@@ -2,40 +2,25 @@ use crate::traits::{
 	insert_protected_effect_shader::InsertProtectedEffectShader,
 	remove_protected_effect_shader::RemoveProtectedEffectShader,
 };
-use bevy::prelude::*;
-use common::{
-	components::protected::Protected,
-	traits::track::{IsTracking, Track, Untrack},
-	zyheeda_commands::ZyheedaEntityCommands,
-};
+use bevy::{ecs::entity::EntityHashSet, prelude::*};
+use common::{components::protected::Protected, zyheeda_commands::ZyheedaEntityCommands};
 use std::{collections::HashSet, hash::Hash};
 
 #[cfg(test)]
 use bevy::asset::UntypedAssetId;
 
 #[derive(Component, Default)]
-pub struct EffectShadersTarget {
-	pub(crate) meshes: HashSet<Entity>,
+pub(crate) struct EffectShaders {
 	pub(crate) shaders: HashSet<EffectShaderHandle>,
 }
 
-impl Track<Mesh3d> for EffectShadersTarget {
-	fn track(&mut self, entity: Entity, _: &Mesh3d) {
-		self.meshes.insert(entity);
-	}
-}
+#[derive(Component, Default)]
+#[relationship_target(relationship = EffectShaderMeshOf)]
+pub(crate) struct EffectShaderMeshes(EntityHashSet);
 
-impl IsTracking<Mesh3d> for EffectShadersTarget {
-	fn is_tracking(&self, entity: &Entity) -> bool {
-		self.meshes.contains(entity)
-	}
-}
-
-impl Untrack<Mesh3d> for EffectShadersTarget {
-	fn untrack(&mut self, entity: &Entity) {
-		self.meshes.remove(entity);
-	}
-}
+#[derive(Component)]
+#[relationship(relationship_target = EffectShaderMeshes)]
+pub(crate) struct EffectShaderMeshOf(pub(crate) Entity);
 
 #[derive(Debug, Eq, Clone)]
 pub(crate) struct EffectShaderHandle {
@@ -117,57 +102,7 @@ mod tests {
 		render::render_resource::AsBindGroup,
 	};
 	use common::{traits::accessors::get::GetMut, zyheeda_commands::ZyheedaCommands};
-	use testing::{fake_entity, new_handle};
-
-	#[test]
-	fn push_mesh_handle() {
-		let mut shader = EffectShadersTarget::default();
-		let entity = fake_entity!(42);
-
-		shader.track(entity, &Mesh3d(new_handle()));
-
-		assert_eq!(HashSet::from([entity]), shader.meshes);
-	}
-
-	#[test]
-	fn push_mesh_handles() {
-		let mut shader = EffectShadersTarget::default();
-		let entities = [fake_entity!(11), fake_entity!(66)];
-
-		for entity in &entities {
-			shader.track(*entity, &Mesh3d(new_handle()));
-		}
-
-		assert_eq!(HashSet::from(entities), shader.meshes);
-	}
-
-	#[test]
-	fn remove_mesh_handles() {
-		let mut shader = EffectShadersTarget {
-			meshes: HashSet::from([fake_entity!(11), fake_entity!(66)]),
-			..default()
-		};
-
-		shader.untrack(&fake_entity!(66));
-
-		assert_eq!(HashSet::from([fake_entity!(11)]), shader.meshes);
-	}
-
-	#[test]
-	fn contains_mesh_handles() {
-		let shader = EffectShadersTarget {
-			meshes: HashSet::from([fake_entity!(11)]),
-			..default()
-		};
-
-		assert_eq!(
-			[true, false],
-			[
-				shader.is_tracking(&fake_entity!(11)),
-				shader.is_tracking(&fake_entity!(12))
-			]
-		);
-	}
+	use testing::new_handle;
 
 	#[derive(Asset, TypePath, Clone, AsBindGroup, Debug, PartialEq)]
 	struct _Asset {}

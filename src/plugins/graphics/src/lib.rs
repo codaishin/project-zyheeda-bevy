@@ -16,7 +16,7 @@ use common::{
 	components::essence::Essence,
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
 	states::game_state::LoadingGame,
-	systems::{remove_components::Remove, track_components::TrackComponentInSelfAndChildren},
+	systems::{link_children::LinkDescendants, remove_components::Remove},
 	traits::{
 		handles_graphics::{FirstPassCamera, UiCamera, WorldCameras},
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInSubApp},
@@ -31,7 +31,7 @@ use common::{
 use components::{
 	camera_labels::{FirstPass, SecondPass, Ui, WorldCamera},
 	effect_shaders::{EffectShader, damage_effect_shaders::DamageEffectShaders},
-	effect_shaders_target::EffectShadersTarget,
+	effect_shaders_target::EffectShaders,
 	material_override::MaterialOverride,
 };
 use materials::essence_material::EssenceMaterial;
@@ -46,6 +46,8 @@ use systems::{
 	spawn_cameras::spawn_cameras,
 };
 use traits::get_effect_material::GetEffectMaterial;
+
+use crate::components::effect_shaders_target::EffectShaderMeshOf;
 
 pub struct GraphicsPlugin<TDependencies>(PhantomData<TDependencies>);
 
@@ -69,17 +71,15 @@ where
 		register_custom_effect_shader::<TPhysics, Gravity>(app);
 		register_effect_shader::<TPhysics, HealthDamage>(app);
 
-		app.register_required_components::<TPhysics::TSkillContact, EffectShadersTarget>()
-			.register_required_components::<TPhysics::TSkillProjection, EffectShadersTarget>()
+		app.register_required_components::<TPhysics::TSkillContact, EffectShaders>()
+			.register_required_components::<TPhysics::TSkillProjection, EffectShaders>()
 			.register_required_components::<EffectShader<HealthDamage>, DamageEffectShaders>()
 			.add_prefab_observer::<DamageEffectShaders, ()>()
 			.add_systems(
 				PostUpdate,
 				(
-					EffectShadersTarget::remove_from_self_and_children::<
-						MeshMaterial3d<StandardMaterial>,
-					>,
-					EffectShadersTarget::track_in_self_and_children::<Mesh3d>().system(),
+					EffectShaders::remove_from_self_and_children::<MeshMaterial3d<StandardMaterial>>,
+					EffectShaders::link_descendants::<EffectShaderMeshOf, Added<Mesh3d>>,
 					instantiate_effect_shaders,
 					insert_effect_shader_render_layers(SecondPass),
 				)

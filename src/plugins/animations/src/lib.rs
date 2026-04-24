@@ -8,7 +8,11 @@ mod traits;
 pub(crate) mod test_tools;
 
 use crate::{
-	components::{animation_lookup::AnimationClips, setup_animations::SetupAnimations},
+	components::{
+		animation_dispatch::{AnimationGraphOf, AnimationPlayerOf},
+		animation_lookup::AnimationClips,
+		setup_animations::SetupAnimations,
+	},
 	system_params::animations::AnimationsParamMut,
 	systems::{
 		play_animation_clip::PlayAnimationClip,
@@ -18,7 +22,7 @@ use crate::{
 };
 use bevy::{prelude::*, scene::SceneInstanceReady};
 use common::{
-	systems::track_components::TrackComponentInSelfAndChildren,
+	systems::link_children::LinkDescendants,
 	tools::plugin_system_set::PluginSystemSet,
 	traits::{
 		handles_animations::HandlesAnimations,
@@ -29,7 +33,6 @@ use common::{
 };
 use components::animation_dispatch::AnimationDispatch;
 use std::marker::PhantomData;
-use systems::dispatch_player_components::DispatchPlayerComponents;
 
 pub struct AnimationsPlugin<TDependencies>(PhantomData<TDependencies>);
 
@@ -56,9 +59,9 @@ where
 				SetupAnimations::init_bone_groups::<AnimationGraphHandle>,
 				SetupAnimations::remove_unused_animation_targets::<AnimationGraphHandle>,
 				SetupAnimations::stop,
-				AnimationDispatch::track_in_self_and_children::<AnimationPlayer>().system(),
-				AnimationDispatch::track_in_self_and_children::<AnimationGraphHandle>().system(),
-				AnimationDispatch::distribute_player_components::<AnimationGraphHandle>,
+				AnimationDispatch::link_descendants::<AnimationPlayerOf, Added<AnimationPlayer>>,
+				AnimationDispatch::link_descendants::<AnimationGraphOf, Added<AnimationGraphHandle>>,
+				AnimationDispatch::distribute_player_components,
 				AnimationDispatch::play_animation_clip::<&mut AnimationPlayer>,
 				AnimationDispatch::set_directional_animation_weights,
 				AnimationDispatch::set_pitch_animation_weights,
