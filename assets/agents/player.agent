@@ -8,29 +8,17 @@
 		"force_interaction": "Affected"
 	},
 	"loadout": {
-		"inventory": [
-			"pistol",
-			"force_essence"
-		],
+		"inventory": ["pistol", "force_essence"],
 		"slots": [
-			[
-				0,
-				"pistol"
-			],
-			[
-				1,
-				"force_essence"
-			]
+			[0, "pistol"],
+			[1, "force_essence"]
 		]
 	},
 	"model": {
 		"Asset": {
 			"model_path": "models/player.glb",
 			"movement_speed": {
-				"Variable": [
-					3,
-					0.9
-				]
+				"Variable": [3, 0.9]
 			},
 			"required_clearance": {
 				"vertical": 0.65,
@@ -115,14 +103,8 @@
 						"path": {
 							"PitchedForward": {
 								"neutral": "models/player.glb#Animation10",
-								"up": [
-									0.5,
-									"models/player.glb#Animation11"
-								],
-								"down": [
-									1.0,
-									"models/player.glb#Animation12"
-								]
+								"up": [0.5, "models/player.glb#Animation11"],
+								"down": [1.0, "models/player.glb#Animation12"]
 							}
 						},
 						"play_mode": "Repeat",
@@ -140,14 +122,8 @@
 						"path": {
 							"PitchedForward": {
 								"neutral": "models/player.glb#Animation13",
-								"up": [
-									0.5,
-									"models/player.glb#Animation14"
-								],
-								"down": [
-									1.0,
-									"models/player.glb#Animation15"
-								]
+								"up": [0.5, "models/player.glb#Animation14"],
+								"down": [1.0, "models/player.glb#Animation15"]
 							}
 						},
 						"play_mode": "Repeat",
@@ -188,11 +164,7 @@
 			"animation_mask_groups": {
 				"0001": {
 					"from_root": "metarig",
-					"until_exclusive": [
-						"shoulder.L",
-						"shoulder.R",
-						"spine.004"
-					]
+					"until_exclusive": ["shoulder.L", "shoulder.R", "spine.004"]
 				},
 				"0010": {
 					"from_root": "shoulder.L"

@@ -15,17 +15,12 @@
 			},
 			"contact": [
 				{
-					"HealthDamage": [
-						10,
-						"OncePerSecond"
-					]
+					"HealthDamage": [10, "OncePerSecond"]
 				}
 			],
 			"projection": []
 		}
 	},
-	"is_usable_with": [
-		"VoidBeam"
-	],
+	"is_usable_with": ["VoidBeam"],
 	"icon": "icons/beam.png"
 }

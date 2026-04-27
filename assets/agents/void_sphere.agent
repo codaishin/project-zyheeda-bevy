@@ -9,12 +9,7 @@
 	},
 	"loadout": {
 		"inventory": [],
-		"slots": [
-			[
-				0,
-				"void_beam"
-			]
-		]
+		"slots": [[0, "void_beam"]]
 	},
 	"model": {
 		"Procedural": "VoidSphere"

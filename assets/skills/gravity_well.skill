@@ -27,8 +27,6 @@
 			]
 		}
 	},
-	"is_usable_with": [
-		"ForceEssence"
-	],
+	"is_usable_with": ["ForceEssence"],
 	"icon": "icons/gravity_well.png"
 }
