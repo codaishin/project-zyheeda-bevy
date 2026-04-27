@@ -1,6 +1,6 @@
 use bevy::{prelude::*, render::render_resource::AsBindGroup, shader::ShaderRef};
 
-#[derive(Asset, TypePath, AsBindGroup, Clone)]
+#[derive(Asset, TypePath, AsBindGroup, Debug, PartialEq, Clone)]
 pub(crate) struct EffectMaterial {
 	#[texture(0)]
 	#[sampler(1)]
@@ -27,20 +27,21 @@ impl EffectMaterial {
 		alpha: 0.,
 	};
 
-	pub(crate) fn add_effect(&mut self, effect: EffectFlag) {
-		if let EffectFlag::Fresnel(color) = effect {
-			self.fresnel_color = color;
+	pub(crate) fn from_first_pass(first_pass: Handle<Image>) -> Self {
+		Self {
+			first_pass,
+			..default()
+		}
+	}
+
+	pub(crate) fn add_flag(&mut self, effect: EffectFlag) {
+		match effect {
+			EffectFlag::BaseColor(base_color) => self.base_color = base_color,
+			EffectFlag::Fresnel(fresnel_color) => self.fresnel_color = fresnel_color,
+			EffectFlag::Distortion => {}
 		}
 
 		self.set_flag_internal(effect, true);
-	}
-
-	pub(crate) fn remove_effect(&mut self, effect: EffectFlag) {
-		if let EffectFlag::Fresnel(_) = effect {
-			self.fresnel_color = Self::DEFAULT_COLOR.into();
-		}
-
-		self.set_flag_internal(effect, false);
 	}
 
 	fn set_flag_internal(&mut self, flag: impl Into<u32>, to: bool) {
@@ -62,15 +63,6 @@ impl Default for EffectMaterial {
 	}
 }
 
-impl From<FirstPassImage> for EffectMaterial {
-	fn from(FirstPassImage(first_pass): FirstPassImage) -> Self {
-		Self {
-			first_pass,
-			..default()
-		}
-	}
-}
-
 impl Material for EffectMaterial {
 	fn fragment_shader() -> ShaderRef {
 		"shaders/effect_shader.wgsl".into()
@@ -86,13 +78,20 @@ impl Material for EffectMaterial {
 }
 
 #[derive(Debug, PartialEq)]
-pub(crate) struct FirstPassImage(pub(crate) Handle<Image>);
-
-#[derive(Debug, PartialEq)]
 pub(crate) enum EffectFlag {
 	BaseColor(LinearRgba),
 	Fresnel(LinearRgba),
 	Distortion,
+}
+
+impl EffectFlag {
+	pub(crate) fn fresnel(color: impl Into<LinearRgba>) -> Self {
+		Self::Fresnel(color.into())
+	}
+
+	pub(crate) fn base_color(color: impl Into<LinearRgba>) -> Self {
+		Self::BaseColor(color.into())
+	}
 }
 
 impl From<EffectFlag> for u32 {
