@@ -13,13 +13,13 @@ pub(crate) struct HeldSlots {
 
 impl HeldSlots {
 	/// Rotate current to old keys.
-	pub(crate) fn rotate(&mut self) {
+	pub(super) fn rotate(&mut self) {
 		std::mem::swap(&mut self.previous, &mut self.current);
 
 		self.current.clear();
 	}
 
-	pub(crate) fn iter_new(&self) -> IterNew<'_> {
+	pub(super) fn iter_new(&self) -> IterNew<'_> {
 		IterNew {
 			previous: &self.previous,
 			current: self.current.iter(),

@@ -3,11 +3,9 @@ pub(crate) mod visualization;
 mod dto;
 
 use crate::{
-	components::{
-		held_slots::HeldSlots,
-		slots::{dto::SlotsDto, visualization::SlotVisualization},
-	},
+	components::slots::{dto::SlotsDto, visualization::SlotVisualization},
 	item::Item,
+	systems::enqueue::held_slots::HeldSlots,
 };
 use bevy::{asset::Handle, prelude::*};
 use common::{

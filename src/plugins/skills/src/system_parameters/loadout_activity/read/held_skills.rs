@@ -13,8 +13,9 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{
-		components::{held_slots::HeldSlots, queue::Queue},
+		components::queue::Queue,
 		system_parameters::loadout_activity::LoadoutActivityReader,
+		systems::enqueue::held_slots::HeldSlots,
 	};
 	use bevy::{
 		ecs::system::{RunSystemError, RunSystemOnce},

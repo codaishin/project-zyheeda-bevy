@@ -1,7 +1,7 @@
 mod read;
 mod write;
 
-use crate::components::{held_slots::HeldSlots, queue::Queue};
+use crate::{components::queue::Queue, systems::enqueue::held_slots::HeldSlots};
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::traits::{
 	accessors::get::{ContextChanged, GetContext, GetContextMut},

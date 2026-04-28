@@ -2,7 +2,6 @@ pub(crate) mod active_skill;
 pub(crate) mod combo_node;
 pub(crate) mod combos;
 pub(crate) mod combos_time_out;
-pub(crate) mod held_slots;
 pub(crate) mod inventory;
 pub(crate) mod loadout;
 pub(crate) mod model_render;

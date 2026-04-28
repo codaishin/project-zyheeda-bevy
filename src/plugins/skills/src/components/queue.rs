@@ -2,8 +2,8 @@ pub(crate) mod dto;
 
 use crate::{
 	QueueDto,
-	components::held_slots::HeldSlots,
 	skills::{QueuedSkill, RunSkillBehavior, Skill, SkillMode, SkillState},
+	systems::enqueue::held_slots::HeldSlots,
 	traits::{Enqueue, Flush, GetActiveSkill, GetSkillBehavior, IterAddedMut, IterHoldingMut},
 };
 use bevy::prelude::*;

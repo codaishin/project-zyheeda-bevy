@@ -1,5 +1,6 @@
+pub(crate) mod held_slots;
+
 use crate::{
-	components::held_slots::HeldSlots,
 	item::Item,
 	skills::Skill,
 	traits::{Enqueue, IterHoldingMut, ReleaseSkill},
@@ -9,6 +10,7 @@ use common::{
 	tools::action_key::slot::SlotKey,
 	traits::accessors::get::{GetRef, View},
 };
+use held_slots::HeldSlots;
 
 impl<T> EnqueueSystem for T where
 	T: Component<Mutability = Mutable>
