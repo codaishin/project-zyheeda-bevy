@@ -5,49 +5,40 @@ mod resources;
 mod systems;
 mod traits;
 
+use crate::{
+	components::effect_material_config::EffectShaderMeshOf,
+	materials::effect_material::EffectMaterial,
+};
 use bevy::{
 	prelude::*,
-	render::{
-		RenderApp,
-		render_resource::{AsBindGroup, PipelineCache},
-	},
+	render::{RenderApp, render_resource::PipelineCache},
 };
 use common::{
 	components::essence::Essence,
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
 	states::game_state::LoadingGame,
-	systems::{link_children::LinkDescendants, remove_components::Remove},
+	systems::link_children::LinkDescendants,
 	traits::{
+		after_plugin::AfterPlugin,
 		handles_graphics::{FirstPassCamera, UiCamera, WorldCameras},
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInSubApp},
-		handles_physics::{Effect, HandlesAllPhysicalEffects, HandlesPhysicalEffect},
+		handles_physics::HandlesAllPhysicalEffects,
 		handles_saving::HandlesSaving,
 		handles_skill_physics::HandlesSkillPhysics,
-		prefab::AddPrefabObserver,
 		register_derived_component::RegisterDerivedComponent,
+		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 	},
 };
 use components::{
 	camera_labels::{FirstPass, SecondPass, Ui, WorldCamera},
-	effect_shaders::{EffectShader, damage_effect_shaders::DamageEffectShaders},
-	effect_shaders_target::EffectShaders,
+	effect_material_config::EffectShader,
 	material_override::MaterialOverride,
 };
 use materials::essence_material::EssenceMaterial;
 use resources::{first_pass_image::FirstPassImage, window_size::WindowSize};
 use std::{hash::Hash, marker::PhantomData};
-use systems::{
-	add_child_effect_shader::add_child_effect_shader,
-	add_effect_shader::add_effect_shader,
-	insert_effect_shader_render_layers::insert_effect_shader_render_layers,
-	instantiate_effect_shaders::instantiate_effect_shaders,
-	no_waiting_pipelines::no_waiting_pipelines,
-	spawn_cameras::spawn_cameras,
-};
-use traits::get_effect_material::GetEffectMaterial;
-
-use crate::components::effect_shaders_target::EffectShaderMeshOf;
+use systems::{no_waiting_pipelines::no_waiting_pipelines, spawn_cameras::spawn_cameras};
 
 pub struct GraphicsPlugin<TDependencies>(PhantomData<TDependencies>);
 
@@ -55,7 +46,7 @@ impl<TLoading, TSavegame, TPhysics> GraphicsPlugin<(TLoading, TSavegame, TPhysic
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillPhysics,
+	TPhysics: ThreadSafe + SystemSetDefinition + HandlesAllPhysicalEffects + HandlesSkillPhysics,
 {
 	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TPhysics) -> Self {
 		Self(PhantomData)
@@ -66,24 +57,21 @@ where
 			.in_sub_app(app, RenderApp, ExtractSchedule, no_waiting_pipelines);
 	}
 
-	fn effect_shaders(app: &mut App) {
-		register_custom_effect_shader::<TPhysics, Force>(app);
-		register_custom_effect_shader::<TPhysics, Gravity>(app);
-		register_effect_shader::<TPhysics, HealthDamage>(app);
-
-		app.register_required_components::<TPhysics::TSkillContact, EffectShaders>()
-			.register_required_components::<TPhysics::TSkillProjection, EffectShaders>()
-			.register_required_components::<EffectShader<HealthDamage>, DamageEffectShaders>()
-			.add_prefab_observer::<DamageEffectShaders, ()>()
+	fn effect_shading(app: &mut App) {
+		app.add_plugins(MaterialPlugin::<EffectMaterial>::default())
+			.add_observer(EffectShader::add_to::<TPhysics::TSkillContact>)
+			.add_observer(EffectShader::add_to::<TPhysics::TSkillProjection>)
 			.add_systems(
-				PostUpdate,
+				Update,
 				(
-					EffectShaders::remove_from_self_and_children::<MeshMaterial3d<StandardMaterial>>,
-					EffectShaders::link_descendants::<EffectShaderMeshOf, Added<Mesh3d>>,
-					instantiate_effect_shaders,
-					insert_effect_shader_render_layers(SecondPass),
+					EffectShader::modify_material::<TPhysics, Force>,
+					EffectShader::modify_material::<TPhysics, Gravity>,
+					EffectShader::modify_material::<TPhysics, HealthDamage>,
+					EffectShader::link_descendants::<EffectShaderMeshOf, Added<Mesh3d>>,
+					EffectShader::propagate(SecondPass),
 				)
-					.chain(),
+					.chain()
+					.after_plugin(TPhysics::SYSTEMS),
 			);
 	}
 
@@ -114,11 +102,11 @@ impl<TLoading, TSavegame, TPhysics> Plugin for GraphicsPlugin<(TLoading, TSavega
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillPhysics,
+	TPhysics: ThreadSafe + SystemSetDefinition + HandlesAllPhysicalEffects + HandlesSkillPhysics,
 {
 	fn build(&self, app: &mut App) {
 		Self::track_render_pipeline_ready(app);
-		Self::effect_shaders(app);
+		Self::effect_shading(app);
 		Self::essence_material(app);
 		Self::cameras(app);
 	}
@@ -143,32 +131,6 @@ impl RegisterShader for App {
 
 		self.add_plugins(MaterialPlugin::<TMaterial>::default())
 	}
-}
-
-fn register_custom_effect_shader<TPhysics, TEffect>(app: &mut App)
-where
-	TPhysics: HandlesPhysicalEffect<TEffect> + 'static,
-	TEffect: GetEffectMaterial + Effect + ThreadSafe,
-	TEffect::TMaterial: Material,
-	<TEffect::TMaterial as AsBindGroup>::Data: PartialEq + Eq + Hash + Clone,
-{
-	app.register_shader::<TEffect::TMaterial>();
-	register_effect_shader::<TPhysics, TEffect>(app);
-}
-
-fn register_effect_shader<TPhysics, TEffect>(app: &mut App)
-where
-	TPhysics: HandlesPhysicalEffect<TEffect> + 'static,
-	TEffect: GetEffectMaterial + Effect + ThreadSafe,
-{
-	app.register_required_components::<TPhysics::TEffectComponent, EffectShader<TEffect>>();
-	app.add_systems(
-		Update,
-		(
-			add_effect_shader::<TPhysics, TEffect>,
-			add_child_effect_shader::<TPhysics, TEffect>,
-		),
-	);
 }
 
 impl<TDependencies> UiCamera for GraphicsPlugin<TDependencies> {

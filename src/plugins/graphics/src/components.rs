@@ -1,5 +1,3 @@
 pub(crate) mod camera_labels;
-pub(crate) mod effect_shaders;
-
-pub mod effect_shaders_target;
-pub mod material_override;
+pub(crate) mod effect_material_config;
+pub(crate) mod material_override;

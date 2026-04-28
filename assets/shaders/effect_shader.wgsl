@@ -10,6 +10,9 @@
 
 @group(#{MATERIAL_BIND_GROUP}) @binding(0) var first_pass_texture: texture_2d<f32>;
 @group(#{MATERIAL_BIND_GROUP}) @binding(1) var first_pass_sampler: sampler;
+@group(#{MATERIAL_BIND_GROUP}) @binding(2) var<uniform> base_color: vec4<f32>;
+@group(#{MATERIAL_BIND_GROUP}) @binding(3) var<uniform> fresnel_color: vec4<f32>;
+@group(#{MATERIAL_BIND_GROUP}) @binding(4) var<uniform> effect_flags: u32;
 
 struct PulseParams {
     speed: f32,
@@ -20,8 +23,36 @@ struct FresnelParams {
     power: f32,
 }
 
+const COLOR_EFFECT: u32 = 1 << 0;
+const FRESNEL_EFFECT: u32 = 1 << 1;
+const DISTORTION_EFFECT: u32 = 1 << 2;
+
 @fragment
 fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
+    var output = vec4(0.);
+
+    if (effect_flags & COLOR_EFFECT) != 0u {
+        output = base_color;
+    }
+
+    if (effect_flags & FRESNEL_EFFECT) != 0u {
+        output += fresnel_effect(mesh);
+    }
+
+    if (effect_flags & DISTORTION_EFFECT) != 0u {
+        output += distortion_effect(mesh);
+    }
+
+    return output;
+}
+
+fn fresnel_effect(mesh: VertexOutput) -> vec4<f32> {
+    let fresnel = fresnel(mesh, 5.);
+
+    return vec4(fresnel_color.rgb, fresnel_color.a * fresnel);
+}
+
+fn distortion_effect(mesh: VertexOutput) -> vec4<f32> {
     var pulse_params: PulseParams;
     pulse_params.speed = .6;
     pulse_params.frequency = 5.;
