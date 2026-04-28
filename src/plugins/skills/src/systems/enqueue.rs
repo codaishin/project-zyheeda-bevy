@@ -1,5 +1,6 @@
+pub(crate) mod held_slots;
+
 use crate::{
-	components::held_slots::{Current, HeldSlots, Old},
 	item::Item,
 	skills::Skill,
 	traits::{Enqueue, IterHoldingMut, ReleaseSkill},
@@ -9,6 +10,7 @@ use common::{
 	tools::action_key::slot::SlotKey,
 	traits::accessors::get::{GetRef, View},
 };
+use held_slots::HeldSlots;
 
 impl<T> EnqueueSystem for T where
 	T: Component<Mutability = Mutable>
@@ -24,15 +26,14 @@ pub(crate) trait EnqueueSystem:
 	+ Sized
 {
 	fn enqueue_system<TSlots>(
-		mut agents: Query<(&mut Self, &TSlots, &HeldSlots<Current>, &HeldSlots<Old>)>,
+		agents: Query<(&mut Self, &TSlots, &mut HeldSlots)>,
 		items: Res<Assets<Item>>,
 		skills: Res<Assets<Skill>>,
 	) where
 		for<'a> TSlots: GetRef<SlotKey, TValue<'a> = &'a Handle<Item>> + Component,
 	{
-		for (mut queue, slots, current_active, old_active) in &mut agents {
-			let is_new = |s: &&SlotKey| !old_active.slots.contains(s);
-			for key in current_active.slots.iter().filter(is_new) {
+		for (mut queue, slots, mut held_slots) in agents {
+			for key in held_slots.iter_new() {
 				let Some(skill) = get_skill(key, slots, &items, &skills) else {
 					continue;
 				};
@@ -41,11 +42,13 @@ pub(crate) trait EnqueueSystem:
 
 			for skill in queue.iter_holding_mut() {
 				let key = skill.view();
-				if current_active.slots.contains(&key) {
+				if held_slots.contains(&key) {
 					continue;
 				}
 				skill.release_skill();
 			}
+
+			held_slots.rotate();
 		}
 	}
 }
@@ -197,13 +200,15 @@ mod tests {
 			SlotKey::from(HandSlot::Right),
 			item.clone(),
 		)]));
+		let mut held_slots = HeldSlots::from([SlotKey::from(HandSlot::Left)]);
+		held_slots.rotate();
+		held_slots.extend([
+			SlotKey::from(HandSlot::Left),
+			SlotKey::from(HandSlot::Right),
+		]);
 		app.world_mut().spawn((
 			skills,
-			HeldSlots::<Current>::from([
-				SlotKey::from(HandSlot::Left),
-				SlotKey::from(HandSlot::Right),
-			]),
-			HeldSlots::<Old>::from([SlotKey::from(HandSlot::Left)]),
+			held_slots,
 			_Enqueue::new().with_mock(|mock| {
 				mock.expect_enqueue()
 					.times(1)
@@ -226,8 +231,7 @@ mod tests {
 		let mut app = setup::<_Enqueue>(vec![], vec![]);
 		app.world_mut().spawn((
 			_Skills::default(),
-			HeldSlots::<Current>::from([SlotKey::from(HandSlot::Left)]),
-			HeldSlots::<Old>::from([]),
+			HeldSlots::from([SlotKey::from(HandSlot::Left)]),
 			_Enqueue {
 				queued: HashMap::from([
 					(
@@ -251,5 +255,29 @@ mod tests {
 		));
 
 		app.update();
+	}
+
+	#[test]
+	fn rotate_held_slots() {
+		let mut app = setup::<_Enqueue>(vec![], vec![]);
+		let entity = app
+			.world_mut()
+			.spawn((
+				_Skills::default(),
+				HeldSlots::from([SlotKey::from(HandSlot::Left)]),
+				_Enqueue {
+					queued: HashMap::from([]),
+				},
+			))
+			.id();
+
+		app.update();
+
+		let mut expected = HeldSlots::from([SlotKey::from(HandSlot::Left)]);
+		expected.rotate();
+		assert_eq!(
+			Some(&expected),
+			app.world().entity(entity).get::<HeldSlots>(),
+		);
 	}
 }

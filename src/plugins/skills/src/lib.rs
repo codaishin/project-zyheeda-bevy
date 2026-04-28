@@ -9,7 +9,6 @@ use crate::{
 	components::{
 		combos::dto::CombosDto,
 		combos_time_out::dto::CombosTimeOutDto,
-		held_slots::{Current, HeldSlots, Old},
 		queue::dto::QueueDto,
 		slot_definitions::SlotDefinitions,
 		slots::visualization::SlotVisualization,
@@ -126,7 +125,6 @@ where
 				schedule_active_skill::<Queue, FacingSystemParamMut<TMovement>, ActiveSkill, Virtual>,
 				ActiveSkill::<SkillBehaviorConfig>::execute::<SkillSpawnerMut<TPhysics>>,
 				flush::<Queue>,
-				HeldSlots::<Old>::update_from::<Current>,
 			)
 				.chain()
 				.after_plugin(TMovement::SYSTEMS)

@@ -7,13 +7,13 @@ use std::collections::HashSet;
 
 impl HeldSkills for LoadoutActivityWriteContext<'_> {
 	fn held_skills(&self) -> &HashSet<SlotKey> {
-		&self.held_slots.slots
+		&self.held_slots
 	}
 }
 
 impl HeldSkillsMut for LoadoutActivityWriteContext<'_> {
 	fn held_skills_mut(&mut self) -> &mut HashSet<SlotKey> {
-		&mut self.held_slots.slots
+		&mut self.held_slots
 	}
 }
 
@@ -22,8 +22,8 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{
-		components::held_slots::{Current, HeldSlots},
 		system_parameters::loadout_activity::LoadoutActivityWriter,
+		systems::enqueue::held_slots::HeldSlots,
 	};
 	use bevy::{
 		ecs::system::{RunSystemError, RunSystemOnce},
@@ -41,7 +41,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((HeldSlots::<Current>::from([SlotKey(0), SlotKey(1)]),))
+			.spawn(HeldSlots::from([SlotKey(0), SlotKey(1)]))
 			.id();
 
 		let active_skills =
@@ -61,7 +61,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((HeldSlots::<Current>::from([SlotKey(0), SlotKey(1)]),))
+			.spawn(HeldSlots::from([SlotKey(0), SlotKey(1)]))
 			.id();
 
 		app.world_mut()
@@ -73,7 +73,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&HeldSlots::from([SlotKey(0), SlotKey(1), SlotKey(2)])),
-			app.world().entity(entity).get::<HeldSlots<Current>>(),
+			app.world().entity(entity).get::<HeldSlots>(),
 		);
 		Ok(())
 	}

@@ -1,10 +1,7 @@
 mod read;
 mod write;
 
-use crate::components::{
-	held_slots::{Current, HeldSlots},
-	queue::Queue,
-};
+use crate::{components::queue::Queue, systems::enqueue::held_slots::HeldSlots};
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::traits::{
 	accessors::get::{ContextChanged, GetContext, GetContextMut},
@@ -15,7 +12,7 @@ use zyheeda_core::prelude::*;
 #[derive(SystemParam)]
 pub struct LoadoutActivityReader<'w, 's> {
 	#[allow(clippy::type_complexity)]
-	loadout: Query<'w, 's, (Ref<'static, Queue>, Ref<'static, HeldSlots<Current>>)>,
+	loadout: Query<'w, 's, (Ref<'static, Queue>, Ref<'static, HeldSlots>)>,
 }
 
 impl GetContext<Skills> for LoadoutActivityReader<'_, '_> {
@@ -33,7 +30,7 @@ impl GetContext<Skills> for LoadoutActivityReader<'_, '_> {
 
 pub struct LoadoutActivityReadContext<'a> {
 	queue: Ref<'a, Queue>,
-	held_slots: Ref<'a, HeldSlots<Current>>,
+	held_slots: Ref<'a, HeldSlots>,
 }
 
 impl ContextChanged for LoadoutActivityReadContext<'_> {
@@ -44,7 +41,7 @@ impl ContextChanged for LoadoutActivityReadContext<'_> {
 
 #[derive(SystemParam)]
 pub struct LoadoutActivityWriter<'w, 's> {
-	held_slots: Query<'w, 's, &'static mut HeldSlots<Current>>,
+	held_slots: Query<'w, 's, &'static mut HeldSlots>,
 }
 
 impl GetContextMut<Skills> for LoadoutActivityWriter<'_, '_> {
@@ -61,5 +58,5 @@ impl GetContextMut<Skills> for LoadoutActivityWriter<'_, '_> {
 }
 
 pub struct LoadoutActivityWriteContext<'a> {
-	held_slots: Mut<'a, HeldSlots<Current>>,
+	held_slots: Mut<'a, HeldSlots>,
 }

@@ -3,11 +3,9 @@ pub(crate) mod visualization;
 mod dto;
 
 use crate::{
-	components::{
-		held_slots::{Current, HeldSlots, Old},
-		slots::{dto::SlotsDto, visualization::SlotVisualization},
-	},
+	components::slots::{dto::SlotsDto, visualization::SlotVisualization},
 	item::Item,
+	systems::enqueue::held_slots::HeldSlots,
 };
 use bevy::{asset::Handle, prelude::*};
 use common::{
@@ -26,8 +24,7 @@ use std::{collections::HashMap, fmt::Debug};
 	SlotVisualization<HandSlot>,
 	SlotVisualization<ForearmSlot>,
 	SlotVisualization<EssenceSlot>,
-	HeldSlots<Current>,
-	HeldSlots<Old>,
+	HeldSlots,
 )]
 #[savable_component(id = "slots", dto = SlotsDto)]
 pub struct Slots {
