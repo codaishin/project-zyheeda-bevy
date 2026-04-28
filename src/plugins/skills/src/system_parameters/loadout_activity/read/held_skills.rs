@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 impl HeldSkills for LoadoutActivityReadContext<'_> {
 	fn held_skills(&self) -> &HashSet<SlotKey> {
-		&self.held_slots.slots
+		&self.held_slots
 	}
 }
 
@@ -13,10 +13,7 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{
-		components::{
-			held_slots::{Current, HeldSlots},
-			queue::Queue,
-		},
+		components::{held_slots::HeldSlots, queue::Queue},
 		system_parameters::loadout_activity::LoadoutActivityReader,
 	};
 	use bevy::{
@@ -35,10 +32,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((
-				HeldSlots::<Current>::from([SlotKey(0), SlotKey(1)]),
-				Queue::default(),
-			))
+			.spawn((HeldSlots::from([SlotKey(0), SlotKey(1)]), Queue::default()))
 			.id();
 
 		let active_skills = app
