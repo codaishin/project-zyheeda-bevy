@@ -125,12 +125,11 @@ mod tests {
 					active: vec![
 						ActiveSkill {
 							key: SlotKey(42),
-							animation: Some(SkillAnimation::Shoot),
+							animation: Some(SkillAnimation::Aim),
 						},
 						ActiveSkill {
 							key: SlotKey(11),
-							// FIXME: use different animation once `SkillAnimations` has more variants
-							animation: Some(SkillAnimation::Shoot),
+							animation: Some(SkillAnimation::Block),
 						},
 					],
 				},
@@ -146,11 +145,11 @@ mod tests {
 				OrderedSet::from([
 					AnimationKey::Skill {
 						slot: SlotKey(42),
-						animation: SkillAnimation::Shoot
+						animation: SkillAnimation::Aim
 					},
 					AnimationKey::Skill {
 						slot: SlotKey(11),
-						animation: SkillAnimation::Shoot
+						animation: SkillAnimation::Block
 					},
 				])
 			)]))),
@@ -171,7 +170,7 @@ mod tests {
 					active: vec![
 						ActiveSkill {
 							key: SlotKey(42),
-							animation: Some(SkillAnimation::Shoot),
+							animation: Some(SkillAnimation::Aim),
 						},
 						ActiveSkill {
 							key: SlotKey(11),
@@ -190,7 +189,7 @@ mod tests {
 				AnimationPriority::High,
 				OrderedSet::from([AnimationKey::Skill {
 					slot: SlotKey(42),
-					animation: SkillAnimation::Shoot
+					animation: SkillAnimation::Aim
 				}])
 			)]))),
 			app.world().entity(entity).get::<_Animations>(),
@@ -221,11 +220,11 @@ mod tests {
 						OrderedSet::from([
 							AnimationKey::Skill {
 								slot: SlotKey(42),
-								animation: SkillAnimation::Shoot,
+								animation: SkillAnimation::Aim,
 							},
 							AnimationKey::Skill {
 								slot: SlotKey(11),
-								animation: SkillAnimation::Shoot,
+								animation: SkillAnimation::Aim,
 							},
 						]),
 					),
@@ -260,7 +259,7 @@ mod tests {
 				_Loadout {
 					active: vec![ActiveSkill {
 						key: SlotKey(42),
-						animation: Some(SkillAnimation::Shoot),
+						animation: Some(SkillAnimation::Aim),
 					}],
 				},
 				_Animations::default(),
@@ -287,7 +286,7 @@ mod tests {
 				_Loadout {
 					active: vec![ActiveSkill {
 						key: SlotKey(42),
-						animation: Some(SkillAnimation::Shoot),
+						animation: Some(SkillAnimation::Aim),
 					}],
 				},
 				_Animations::default(),
@@ -318,7 +317,7 @@ mod tests {
 				_Loadout {
 					active: vec![ActiveSkill {
 						key: SlotKey(42),
-						animation: Some(SkillAnimation::Shoot),
+						animation: Some(SkillAnimation::Aim),
 					}],
 				},
 				_Animations::default(),
@@ -338,7 +337,7 @@ mod tests {
 				AnimationPriority::High,
 				OrderedSet::from([AnimationKey::Skill {
 					slot: SlotKey(42),
-					animation: SkillAnimation::Shoot
+					animation: SkillAnimation::Aim
 				}])
 			)]))),
 			app.world().entity(entity).get::<_Animations>(),

@@ -220,7 +220,7 @@ mod tests {
 			animations: HashMap::from([(
 				AnimationKey::Skill {
 					slot: SlotKey(11),
-					animation: SkillAnimation::Shoot,
+					animation: SkillAnimation::Aim,
 				},
 				AnimationLookupData {
 					animation_clips: AnimationClips::PitchedForward(PitchedForwardIndices {
@@ -241,7 +241,7 @@ mod tests {
 				_Dispatch {
 					animations: vec![AnimationKey::Skill {
 						slot: SlotKey(11),
-						animation: SkillAnimation::Shoot,
+						animation: SkillAnimation::Aim,
 					}],
 				},
 				CurrentForwardPitch(pitch),
@@ -286,7 +286,7 @@ mod tests {
 			animations: HashMap::from([(
 				AnimationKey::Skill {
 					slot: SlotKey(11),
-					animation: SkillAnimation::Shoot,
+					animation: SkillAnimation::Aim,
 				},
 				AnimationLookupData {
 					animation_clips: AnimationClips::PitchedForward(PitchedForwardIndices {
@@ -307,7 +307,7 @@ mod tests {
 				_Dispatch {
 					animations: vec![AnimationKey::Skill {
 						slot: SlotKey(11),
-						animation: SkillAnimation::Shoot,
+						animation: SkillAnimation::Aim,
 					}],
 				},
 				CurrentForwardPitch(pitch),
@@ -352,7 +352,7 @@ mod tests {
 			animations: HashMap::from([(
 				AnimationKey::Skill {
 					slot: SlotKey(11),
-					animation: SkillAnimation::Shoot,
+					animation: SkillAnimation::Aim,
 				},
 				AnimationLookupData {
 					animation_clips: AnimationClips::PitchedForward(PitchedForwardIndices {
@@ -379,7 +379,7 @@ mod tests {
 				_Dispatch {
 					animations: vec![AnimationKey::Skill {
 						slot: SlotKey(11),
-						animation: SkillAnimation::Shoot,
+						animation: SkillAnimation::Aim,
 					}],
 				},
 				CurrentForwardPitch(pitch),
@@ -424,7 +424,7 @@ mod tests {
 			animations: HashMap::from([(
 				AnimationKey::Skill {
 					slot: SlotKey(11),
-					animation: SkillAnimation::Shoot,
+					animation: SkillAnimation::Aim,
 				},
 				AnimationLookupData {
 					animation_clips: AnimationClips::PitchedForward(PitchedForwardIndices {
@@ -451,7 +451,7 @@ mod tests {
 				_Dispatch {
 					animations: vec![AnimationKey::Skill {
 						slot: SlotKey(11),
-						animation: SkillAnimation::Shoot,
+						animation: SkillAnimation::Aim,
 					}],
 				},
 				CurrentForwardPitch(pitch),

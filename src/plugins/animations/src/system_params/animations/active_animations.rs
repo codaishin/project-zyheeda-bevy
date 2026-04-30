@@ -81,7 +81,7 @@ mod tests {
 			AnimationKey::Run,
 			AnimationKey::Skill {
 				slot: SlotKey(11),
-				animation: SkillAnimation::Shoot,
+				animation: SkillAnimation::Aim,
 			},
 		];
 		let entity = app.world_mut().spawn(AnimationDispatch::default()).id();
@@ -110,7 +110,7 @@ mod tests {
 			AnimationKey::Run,
 			AnimationKey::Skill {
 				slot: SlotKey(11),
-				animation: SkillAnimation::Shoot,
+				animation: SkillAnimation::Aim,
 			},
 		];
 		let entity = app

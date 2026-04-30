@@ -238,7 +238,7 @@ mod tests {
 						(
 							AnimationKey::Skill {
 								slot: SlotKey(42),
-								animation: SkillAnimation::Shoot,
+								animation: SkillAnimation::Aim,
 							},
 							c,
 						),
@@ -291,7 +291,7 @@ mod tests {
 					(
 						AnimationKey::Skill {
 							slot: SlotKey(42),
-							animation: SkillAnimation::Shoot,
+							animation: SkillAnimation::Aim,
 						},
 						AnimationLookupData {
 							animation_clips: AnimationClips::Single(AnimationNodeIndex::new(3)),

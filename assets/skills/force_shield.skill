@@ -4,7 +4,7 @@
 	"cast_time": {
 		"seconds": 0.2
 	},
-	"animation": "Shoot",
+	"animation": "Block",
 	"behavior": {
 		"OnAim": {
 			"shape": {

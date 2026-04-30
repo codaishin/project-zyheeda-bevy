@@ -108,7 +108,7 @@
 					{
 						"Skill": {
 							"slot": 0,
-							"animation": "Shoot"
+							"animation": "Aim"
 						}
 					},
 					{
@@ -133,7 +133,7 @@
 					{
 						"Skill": {
 							"slot": 1,
-							"animation": "Shoot"
+							"animation": "Aim"
 						}
 					},
 					{

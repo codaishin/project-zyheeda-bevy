@@ -318,7 +318,8 @@ pub enum AnimationKey {
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
 pub enum SkillAnimation {
-	Shoot,
+	Aim,
+	Block,
 }
 
 mod bits_conversion {

@@ -128,7 +128,7 @@ mod tests {
 			.world_mut()
 			.spawn(Queue::from([QueuedSkill::new(
 				Skill {
-					animation: Some(SkillAnimation::Shoot),
+					animation: Some(SkillAnimation::Aim),
 					..default()
 				},
 				SlotKey(42),
@@ -145,7 +145,7 @@ mod tests {
 		assert_eq!(
 			vec![ActiveSkill {
 				key: SlotKey(42),
-				animation: Some(SkillAnimation::Shoot),
+				animation: Some(SkillAnimation::Aim),
 			}],
 			active_skills
 		);

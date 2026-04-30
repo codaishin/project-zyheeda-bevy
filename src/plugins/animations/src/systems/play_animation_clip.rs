@@ -542,7 +542,7 @@ mod tests {
 				(
 					AnimationKey::Skill {
 						slot: SlotKey(11),
-						animation: SkillAnimation::Shoot,
+						animation: SkillAnimation::Aim,
 					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([0, 1]),
@@ -553,7 +553,7 @@ mod tests {
 				(
 					AnimationKey::Skill {
 						slot: SlotKey(12),
-						animation: SkillAnimation::Shoot,
+						animation: SkillAnimation::Aim,
 					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([2, 3]),
@@ -564,7 +564,7 @@ mod tests {
 				(
 					AnimationKey::Skill {
 						slot: SlotKey(21),
-						animation: SkillAnimation::Shoot,
+						animation: SkillAnimation::Aim,
 					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([4, 5]),
@@ -575,7 +575,7 @@ mod tests {
 				(
 					AnimationKey::Skill {
 						slot: SlotKey(22),
-						animation: SkillAnimation::Shoot,
+						animation: SkillAnimation::Aim,
 					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([6, 7]),
@@ -586,7 +586,7 @@ mod tests {
 				(
 					AnimationKey::Skill {
 						slot: SlotKey(31),
-						animation: SkillAnimation::Shoot,
+						animation: SkillAnimation::Aim,
 					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([8, 9]),
@@ -597,7 +597,7 @@ mod tests {
 				(
 					AnimationKey::Skill {
 						slot: SlotKey(32),
-						animation: SkillAnimation::Shoot,
+						animation: SkillAnimation::Aim,
 					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([10, 11]),
@@ -618,11 +618,11 @@ mod tests {
 						.return_const(leak_iterator(vec![
 							AnimationKey::Skill {
 								slot: SlotKey(11),
-								animation: SkillAnimation::Shoot,
+								animation: SkillAnimation::Aim,
 							},
 							AnimationKey::Skill {
 								slot: SlotKey(12),
-								animation: SkillAnimation::Shoot,
+								animation: SkillAnimation::Aim,
 							},
 						]));
 					mock.expect_youngest_to_oldest_active_animations()
@@ -630,11 +630,11 @@ mod tests {
 						.return_const(leak_iterator(vec![
 							AnimationKey::Skill {
 								slot: SlotKey(21),
-								animation: SkillAnimation::Shoot,
+								animation: SkillAnimation::Aim,
 							},
 							AnimationKey::Skill {
 								slot: SlotKey(22),
-								animation: SkillAnimation::Shoot,
+								animation: SkillAnimation::Aim,
 							},
 						]));
 					mock.expect_youngest_to_oldest_active_animations()
@@ -642,11 +642,11 @@ mod tests {
 						.return_const(leak_iterator(vec![
 							AnimationKey::Skill {
 								slot: SlotKey(31),
-								animation: SkillAnimation::Shoot,
+								animation: SkillAnimation::Aim,
 							},
 							AnimationKey::Skill {
 								slot: SlotKey(32),
-								animation: SkillAnimation::Shoot,
+								animation: SkillAnimation::Aim,
 							},
 						]));
 				}),
@@ -884,7 +884,7 @@ mod tests {
 				(
 					AnimationKey::Skill {
 						slot: SlotKey(11),
-						animation: SkillAnimation::Shoot,
+						animation: SkillAnimation::Aim,
 					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([0, 1]),
@@ -895,7 +895,7 @@ mod tests {
 				(
 					AnimationKey::Skill {
 						slot: SlotKey(12),
-						animation: SkillAnimation::Shoot,
+						animation: SkillAnimation::Aim,
 					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([2, 3]),
@@ -906,7 +906,7 @@ mod tests {
 				(
 					AnimationKey::Skill {
 						slot: SlotKey(21),
-						animation: SkillAnimation::Shoot,
+						animation: SkillAnimation::Aim,
 					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([4, 5]),
@@ -917,7 +917,7 @@ mod tests {
 				(
 					AnimationKey::Skill {
 						slot: SlotKey(22),
-						animation: SkillAnimation::Shoot,
+						animation: SkillAnimation::Aim,
 					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([6, 7]),
@@ -928,7 +928,7 @@ mod tests {
 				(
 					AnimationKey::Skill {
 						slot: SlotKey(31),
-						animation: SkillAnimation::Shoot,
+						animation: SkillAnimation::Aim,
 					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([8, 9]),
@@ -939,7 +939,7 @@ mod tests {
 				(
 					AnimationKey::Skill {
 						slot: SlotKey(32),
-						animation: SkillAnimation::Shoot,
+						animation: SkillAnimation::Aim,
 					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([10, 11]),
@@ -960,11 +960,11 @@ mod tests {
 						.return_const(leak_iterator(vec![
 							AnimationKey::Skill {
 								slot: SlotKey(11),
-								animation: SkillAnimation::Shoot,
+								animation: SkillAnimation::Aim,
 							},
 							AnimationKey::Skill {
 								slot: SlotKey(12),
-								animation: SkillAnimation::Shoot,
+								animation: SkillAnimation::Aim,
 							},
 						]));
 					mock.expect_youngest_to_oldest_active_animations()
@@ -972,11 +972,11 @@ mod tests {
 						.return_const(leak_iterator(vec![
 							AnimationKey::Skill {
 								slot: SlotKey(21),
-								animation: SkillAnimation::Shoot,
+								animation: SkillAnimation::Aim,
 							},
 							AnimationKey::Skill {
 								slot: SlotKey(22),
-								animation: SkillAnimation::Shoot,
+								animation: SkillAnimation::Aim,
 							},
 						]));
 					mock.expect_youngest_to_oldest_active_animations()
@@ -984,11 +984,11 @@ mod tests {
 						.return_const(leak_iterator(vec![
 							AnimationKey::Skill {
 								slot: SlotKey(31),
-								animation: SkillAnimation::Shoot,
+								animation: SkillAnimation::Aim,
 							},
 							AnimationKey::Skill {
 								slot: SlotKey(32),
-								animation: SkillAnimation::Shoot,
+								animation: SkillAnimation::Aim,
 							},
 						]));
 				}),
@@ -1033,7 +1033,7 @@ mod tests {
 				(
 					AnimationKey::Skill {
 						slot: SlotKey(11),
-						animation: SkillAnimation::Shoot,
+						animation: SkillAnimation::Aim,
 					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([0, 1]),
@@ -1044,7 +1044,7 @@ mod tests {
 				(
 					AnimationKey::Skill {
 						slot: SlotKey(12),
-						animation: SkillAnimation::Shoot,
+						animation: SkillAnimation::Aim,
 					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([2, 3]),
@@ -1055,7 +1055,7 @@ mod tests {
 				(
 					AnimationKey::Skill {
 						slot: SlotKey(21),
-						animation: SkillAnimation::Shoot,
+						animation: SkillAnimation::Aim,
 					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([4, 5]),
@@ -1066,7 +1066,7 @@ mod tests {
 				(
 					AnimationKey::Skill {
 						slot: SlotKey(22),
-						animation: SkillAnimation::Shoot,
+						animation: SkillAnimation::Aim,
 					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([6, 7]),
@@ -1077,7 +1077,7 @@ mod tests {
 				(
 					AnimationKey::Skill {
 						slot: SlotKey(31),
-						animation: SkillAnimation::Shoot,
+						animation: SkillAnimation::Aim,
 					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([8, 9]),
@@ -1088,7 +1088,7 @@ mod tests {
 				(
 					AnimationKey::Skill {
 						slot: SlotKey(32),
-						animation: SkillAnimation::Shoot,
+						animation: SkillAnimation::Aim,
 					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([10, 11]),
@@ -1110,11 +1110,11 @@ mod tests {
 						.return_const(leak_iterator(vec![
 							AnimationKey::Skill {
 								slot: SlotKey(11),
-								animation: SkillAnimation::Shoot,
+								animation: SkillAnimation::Aim,
 							},
 							AnimationKey::Skill {
 								slot: SlotKey(12),
-								animation: SkillAnimation::Shoot,
+								animation: SkillAnimation::Aim,
 							},
 						]));
 					mock.expect_youngest_to_oldest_active_animations()
@@ -1122,11 +1122,11 @@ mod tests {
 						.return_const(leak_iterator(vec![
 							AnimationKey::Skill {
 								slot: SlotKey(21),
-								animation: SkillAnimation::Shoot,
+								animation: SkillAnimation::Aim,
 							},
 							AnimationKey::Skill {
 								slot: SlotKey(22),
-								animation: SkillAnimation::Shoot,
+								animation: SkillAnimation::Aim,
 							},
 						]));
 					mock.expect_youngest_to_oldest_active_animations()
@@ -1134,11 +1134,11 @@ mod tests {
 						.return_const(leak_iterator(vec![
 							AnimationKey::Skill {
 								slot: SlotKey(31),
-								animation: SkillAnimation::Shoot,
+								animation: SkillAnimation::Aim,
 							},
 							AnimationKey::Skill {
 								slot: SlotKey(32),
-								animation: SkillAnimation::Shoot,
+								animation: SkillAnimation::Aim,
 							},
 						]));
 				}),
@@ -1181,7 +1181,7 @@ mod tests {
 				(
 					AnimationKey::Skill {
 						slot: SlotKey(1),
-						animation: SkillAnimation::Shoot,
+						animation: SkillAnimation::Aim,
 					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([0, 1]),
@@ -1192,7 +1192,7 @@ mod tests {
 				(
 					AnimationKey::Skill {
 						slot: SlotKey(2),
-						animation: SkillAnimation::Shoot,
+						animation: SkillAnimation::Aim,
 					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([2, 3]),
@@ -1216,13 +1216,13 @@ mod tests {
 						.with(eq(AnimationPriority::High))
 						.return_const(leak_iterator(vec![AnimationKey::Skill {
 							slot: SlotKey(1),
-							animation: SkillAnimation::Shoot,
+							animation: SkillAnimation::Aim,
 						}]));
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::Medium))
 						.return_const(leak_iterator(vec![AnimationKey::Skill {
 							slot: SlotKey(2),
-							animation: SkillAnimation::Shoot,
+							animation: SkillAnimation::Aim,
 						}]));
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::Low))
