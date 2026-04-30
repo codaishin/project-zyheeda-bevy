@@ -153,6 +153,36 @@
 						"play_mode": "Repeat",
 						"mask_groups": "1100"
 					}
+				],
+				[
+					{
+						"Skill": {
+							"slot": 0,
+							"animation": "Block"
+						}
+					},
+					{
+						"path": {
+							"Single": "models/player.glb#Animation16"
+						},
+						"play_mode": "Repeat",
+						"mask_groups": "1010"
+					}
+				],
+				[
+					{
+						"Skill": {
+							"slot": 1,
+							"animation": "Block"
+						}
+					},
+					{
+						"path": {
+							"Single": "models/player.glb#Animation17"
+						},
+						"play_mode": "Repeat",
+						"mask_groups": "1100"
+					}
 				]
 			],
 			"animation_mask_groups": {
