@@ -1,13 +1,16 @@
 use crate::{
 	components::{
 		animation_dispatch::AnimationPlayers,
-		animation_lookup::{AnimationClips, AnimationLookup},
+		animation_lookup::AnimationLookup,
 		current_movement_direction::CurrentMovementDirection,
 	},
-	traits::{GetAllActiveAnimations, asset_server::animation_graph::GetNodeMut},
+	traits::{GetAllActiveAnimations, animation_graph::GetNodeMut},
 };
 use bevy::prelude::*;
-use common::traits::wrap_handle::{GetHandle, WrapHandle};
+use common::traits::{
+	handles_animations::AnimationClips,
+	wrap_handle::{GetHandle, WrapHandle},
+};
 use std::f32::consts::FRAC_PI_2;
 
 impl<T> SetDirectionalAnimationWeights for T where T: Component + GetAllActiveAnimations {}
@@ -66,7 +69,7 @@ fn set_directional_animation_weights<TDispatch, TGraph>(
 				let Some(data) = lookup.animations.get(animation) else {
 					continue;
 				};
-				let AnimationClips::Directional(directions) = &data.animation_clips else {
+				let AnimationClips::Directional(directions) = &data.clips else {
 					continue;
 				};
 
@@ -106,12 +109,9 @@ fn weight(body_direction: Dir3, move_direction: Dir3) -> f32 {
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::components::{
-		animation_dispatch::AnimationPlayerOf,
-		animation_lookup::{AnimationClips, AnimationLookupData, DirectionalIndices},
-	};
+	use crate::components::animation_dispatch::AnimationPlayerOf;
 	use common::traits::{
-		handles_animations::AnimationKey,
+		handles_animations::{Animation, AnimationKey, Directional},
 		iterate::Iterate,
 		wrap_handle::{GetHandle, WrapHandle},
 	};
@@ -178,7 +178,7 @@ mod tests {
 		let mut graph = _Graph::default();
 
 		for data in lookup.animations.values() {
-			for animation in data.animation_clips.iterate() {
+			for animation in data.clips.iterate() {
 				graph.nodes.insert(
 					animation.index(),
 					AnimationGraphNode {
@@ -217,8 +217,8 @@ mod tests {
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
 				AnimationKey::Walk,
-				AnimationLookupData {
-					animation_clips: AnimationClips::Directional(DirectionalIndices {
+				Animation {
+					clips: AnimationClips::Directional(Directional {
 						forward: AnimationNodeIndex::new(0),
 						backward: AnimationNodeIndex::new(1),
 						left: AnimationNodeIndex::new(2),
@@ -270,8 +270,8 @@ mod tests {
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
 				AnimationKey::Walk,
-				AnimationLookupData {
-					animation_clips: AnimationClips::Directional(DirectionalIndices {
+				Animation {
+					clips: AnimationClips::Directional(Directional {
 						forward: AnimationNodeIndex::new(0),
 						backward: AnimationNodeIndex::new(1),
 						left: AnimationNodeIndex::new(2),
@@ -325,8 +325,8 @@ mod tests {
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
 				AnimationKey::Walk,
-				AnimationLookupData {
-					animation_clips: AnimationClips::Directional(DirectionalIndices {
+				Animation {
+					clips: AnimationClips::Directional(Directional {
 						forward: AnimationNodeIndex::new(0),
 						backward: AnimationNodeIndex::new(1),
 						left: AnimationNodeIndex::new(2),
@@ -377,8 +377,8 @@ mod tests {
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
 				AnimationKey::Walk,
-				AnimationLookupData {
-					animation_clips: AnimationClips::Directional(DirectionalIndices {
+				Animation {
+					clips: AnimationClips::Directional(Directional {
 						forward: AnimationNodeIndex::new(0),
 						backward: AnimationNodeIndex::new(1),
 						left: AnimationNodeIndex::new(2),

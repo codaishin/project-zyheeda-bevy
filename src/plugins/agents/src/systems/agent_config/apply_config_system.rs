@@ -207,9 +207,9 @@ mod tests {
 			handles_animations::{
 				AffectedAnimationBones,
 				Animation,
+				AnimationClips,
 				AnimationKey,
 				AnimationMaskBits,
-				AnimationPath,
 				PlayMode,
 			},
 			handles_movement::{MovementSpeed, RequiredClearance},
@@ -529,7 +529,7 @@ mod tests {
 			let animations = HashMap::from([(
 				AnimationKey::Run,
 				Animation {
-					path: AnimationPath::Single(Path::from("my/path")),
+					clips: AnimationClips::Single(Path::from("my/path")),
 					play_mode: PlayMode::Replay,
 					mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(42)),
 				},

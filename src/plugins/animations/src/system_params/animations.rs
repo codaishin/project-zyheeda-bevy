@@ -18,17 +18,11 @@ use common::{
 };
 
 #[derive(SystemParam)]
-pub struct AnimationsParamMut<
-	'w,
-	's,
-	TAnimationServer = AssetServer,
-	TAnimationGraph = AnimationGraph,
-> where
-	TAnimationServer: Resource,
+pub struct AnimationsParamMut<'w, 's, TAnimationGraph = AnimationGraph>
+where
 	TAnimationGraph: Asset,
 {
 	commands: ZyheedaCommands<'w, 's>,
-	asset_server: ResMut<'w, TAnimationServer>,
 	animators: Query<
 		'w,
 		's,
@@ -41,16 +35,15 @@ pub struct AnimationsParamMut<
 	graphs: ResMut<'w, Assets<TAnimationGraph>>,
 }
 
-impl<TAnimationServer, TAnimationGraph> GetContextMut<WithoutAnimations>
-	for AnimationsParamMut<'_, '_, TAnimationServer, TAnimationGraph>
+impl<TAnimationGraph> GetContextMut<WithoutAnimations>
+	for AnimationsParamMut<'_, '_, TAnimationGraph>
 where
-	TAnimationServer: Resource,
 	TAnimationGraph: Asset,
 {
-	type TContext<'ctx> = AnimationsRegisterContextMut<'ctx, TAnimationServer, TAnimationGraph>;
+	type TContext<'ctx> = AnimationsRegisterContextMut<'ctx, TAnimationGraph>;
 
 	fn get_context_mut<'ctx>(
-		param: &'ctx mut AnimationsParamMut<TAnimationServer, TAnimationGraph>,
+		param: &'ctx mut AnimationsParamMut<TAnimationGraph>,
 		WithoutAnimations { entity }: WithoutAnimations,
 	) -> Option<Self::TContext<'ctx>> {
 		if param.animators.contains(entity) {
@@ -58,27 +51,20 @@ where
 		}
 
 		let entity = param.commands.get_mut(&entity)?;
-		let asset_server = &mut param.asset_server;
 		let graphs = &mut param.graphs;
 
-		Some(AnimationsRegisterContextMut {
-			entity,
-			asset_server,
-			graphs,
-		})
+		Some(AnimationsRegisterContextMut { entity, graphs })
 	}
 }
 
-impl<TAnimationServer, TAnimationGraph> GetContextMut<Animations>
-	for AnimationsParamMut<'_, '_, TAnimationServer, TAnimationGraph>
+impl<TAnimationGraph> GetContextMut<Animations> for AnimationsParamMut<'_, '_, TAnimationGraph>
 where
-	TAnimationServer: Resource,
 	TAnimationGraph: Asset,
 {
 	type TContext<'ctx> = AnimationsContextMut<'ctx>;
 
 	fn get_context_mut<'ctx>(
-		param: &'ctx mut AnimationsParamMut<TAnimationServer, TAnimationGraph>,
+		param: &'ctx mut AnimationsParamMut<TAnimationGraph>,
 		animations: Animations,
 	) -> Option<Self::TContext<'ctx>> {
 		let (dispatch, movement_direction, forward_pitch) =
@@ -92,15 +78,11 @@ where
 	}
 }
 
-pub struct AnimationsRegisterContextMut<
-	'a,
-	TLoadAnimations = AssetServer,
-	TAnimationGraph = AnimationGraph,
-> where
+pub struct AnimationsRegisterContextMut<'a, TAnimationGraph = AnimationGraph>
+where
 	TAnimationGraph: Asset,
 {
 	entity: ZyheedaEntityCommands<'a>,
-	asset_server: &'a mut TLoadAnimations,
 	graphs: &'a mut Assets<TAnimationGraph>,
 }
 

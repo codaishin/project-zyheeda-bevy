@@ -1,16 +1,14 @@
 use crate::{
-	components::{
-		animation_dispatch::AnimationDispatch,
-		animation_lookup::{AnimationClips, AnimationLookup, AnimationLookupData},
-	},
+	components::{animation_dispatch::AnimationDispatch, animation_lookup::AnimationLookup},
 	system_params::animations::AnimationsRegisterContextMut,
-	traits::LoadAnimationAssets,
+	traits::InsertClips,
 };
 use bevy::prelude::*;
 use common::traits::{
 	handles_animations::{
 		AffectedAnimationBones,
 		Animation,
+		AnimationClips,
 		AnimationKey,
 		AnimationMaskBits,
 		RegisterAnimations,
@@ -19,45 +17,41 @@ use common::traits::{
 };
 use std::collections::HashMap;
 
-impl<TServer, TGraph> RegisterAnimations for AnimationsRegisterContextMut<'_, TServer, TGraph>
+impl<TGraph> RegisterAnimations for AnimationsRegisterContextMut<'_, TGraph>
 where
-	TGraph: Asset + WrapHandle + Sync + Send + 'static,
-	TServer: Resource + LoadAnimationAssets<TGraph, AnimationClips>,
+	TGraph: Asset + WrapHandle + InsertClips<AnimationClips<AnimationNodeIndex>>,
 {
 	fn register_animations(
 		&mut self,
 		animations: &HashMap<AnimationKey, Animation>,
 		animation_mask_groups: &HashMap<AnimationMaskBits, AffectedAnimationBones>,
 	) {
-		let animation_paths = animations
-			.values()
-			.map(|Animation { path, .. }| path.clone())
-			.collect::<Vec<_>>();
-		let animation_mask_groups = animation_mask_groups.clone();
-		let (graph, new_clips) = self.asset_server.load_animation_assets(animation_paths);
-		let animations = animations
-			.iter()
-			.filter_map(move |(key, animation)| {
-				let animation_clips = new_clips.get(&animation.path)?;
-				let data = AnimationLookupData {
-					animation_clips: *animation_clips,
-					play_mode: animation.play_mode,
-					mask: animation.mask_groups,
-				};
-
-				Some((*key, data))
-			})
-			.collect();
+		let (mut graph, buffer) = TGraph::with_buffer();
+		let insert_into_graph = |animation: &Animation| Animation {
+			clips: graph.insert_clips(&buffer, animation.clips.clone()),
+			play_mode: animation.play_mode,
+			mask_groups: animation.mask_groups,
+		};
 
 		self.entity.try_insert((
 			AnimationDispatch::default(),
 			AnimationLookup {
-				animations,
-				animation_mask_groups,
+				animation_mask_groups: animation_mask_groups.clone(),
+				animations: map_animations(animations, insert_into_graph),
 			},
 			TGraph::wrap_handle(self.graphs.add(graph)),
 		));
 	}
+}
+
+fn map_animations(
+	animations: &HashMap<AnimationKey, Animation>,
+	mut f: impl FnMut(&Animation) -> Animation<AnimationClips<AnimationNodeIndex>>,
+) -> HashMap<AnimationKey, Animation<AnimationClips<AnimationNodeIndex>>> {
+	animations
+		.iter()
+		.map(|(key, animation)| (*key, f(animation)))
+		.collect()
 }
 
 #[cfg(test)]
@@ -76,7 +70,7 @@ mod tests {
 			accessors::get::GetContextMut,
 			handles_animations::{
 				AffectedAnimationBones,
-				AnimationPath,
+				AnimationClips,
 				PlayMode,
 				SkillAnimation,
 				WithoutAnimations,
@@ -84,28 +78,39 @@ mod tests {
 			wrap_handle::GetHandle,
 		},
 	};
-	use macros::NestedMocks;
-	use mockall::automock;
-	use std::collections::HashSet;
-	use testing::{NestedMocks, SingleThreadedApp};
+	use std::{collections::HashSet, sync::LazyLock};
+	use testing::{SingleThreadedApp, new_handle};
 
-	#[derive(Resource, NestedMocks)]
-	struct _Server {
-		mock: Mock_Server,
-	}
+	static CLIP_A: LazyLock<Handle<AnimationClip>> = LazyLock::new(new_handle);
+	static CLIP_B: LazyLock<Handle<AnimationClip>> = LazyLock::new(new_handle);
+	static CLIP_C: LazyLock<Handle<AnimationClip>> = LazyLock::new(new_handle);
 
-	#[automock]
-	impl LoadAnimationAssets<_Graph, AnimationClips> for _Server {
-		fn load_animation_assets(
+	#[derive(Asset, TypePath, Debug, PartialEq)]
+	struct _Graph(Vec<Handle<AnimationClip>>);
+
+	impl InsertClips<AnimationClips<AnimationNodeIndex>> for _Graph {
+		type TBuffer = ();
+
+		fn with_buffer() -> (Self, ()) {
+			(Self(vec![]), ())
+		}
+
+		fn insert_clips(
 			&mut self,
-			animations: Vec<AnimationPath>,
-		) -> (_Graph, HashMap<AnimationPath, AnimationClips>) {
-			self.mock.load_animation_assets(animations)
+			_: &(),
+			animations: AnimationClips,
+		) -> AnimationClips<AnimationNodeIndex> {
+			animations.map(|clip| {
+				self.0.push(clip.clone());
+				AnimationNodeIndex::new(match clip {
+					c if c == *CLIP_A => 0,
+					c if c == *CLIP_B => 1,
+					c if c == *CLIP_C => 2,
+					_ => 666,
+				})
+			})
 		}
 	}
-
-	#[derive(Debug, PartialEq, Clone, TypePath, Asset)]
-	struct _Graph;
 
 	impl WrapHandle for _Graph {
 		type TComponent = _GraphComponent;
@@ -126,10 +131,9 @@ mod tests {
 		}
 	}
 
-	fn setup(server: _Server) -> App {
+	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.insert_resource(server);
 		app.insert_resource(Assets::<_Graph>::default());
 
 		app
@@ -137,14 +141,11 @@ mod tests {
 
 	#[test]
 	fn add_animation_graph() -> Result<(), RunSystemError> {
-		let mut app = setup(_Server::new().with_mock(|mock| {
-			mock.expect_load_animation_assets()
-				.return_const((_Graph, HashMap::default()));
-		}));
+		let mut app = setup();
 		let entity = app.world_mut().spawn_empty().id();
 
 		app.world_mut()
-			.run_system_once(move |mut p: AnimationsParamMut<_Server, _Graph>| {
+			.run_system_once(move |mut p: AnimationsParamMut<_Graph>| {
 				let key = WithoutAnimations { entity };
 				let mut ctx = AnimationsParamMut::get_context_mut(&mut p, key).unwrap();
 				ctx.register_animations(&HashMap::default(), &HashMap::default());
@@ -156,14 +157,11 @@ mod tests {
 
 	#[test]
 	fn add_animation_dispatch() -> Result<(), RunSystemError> {
-		let mut app = setup(_Server::new().with_mock(|mock| {
-			mock.expect_load_animation_assets()
-				.return_const((_Graph, HashMap::default()));
-		}));
+		let mut app = setup();
 		let entity = app.world_mut().spawn_empty().id();
 
 		app.world_mut()
-			.run_system_once(move |mut p: AnimationsParamMut<_Server, _Graph>| {
+			.run_system_once(move |mut p: AnimationsParamMut<_Graph>| {
 				let key = WithoutAnimations { entity };
 				let mut ctx = AnimationsParamMut::get_context_mut(&mut p, key).unwrap();
 				ctx.register_animations(&HashMap::default(), &HashMap::default());
@@ -177,56 +175,104 @@ mod tests {
 	}
 
 	#[test]
-	fn add_animation_lookup() -> Result<(), RunSystemError> {
-		let mut app = setup(_Server::new().with_mock(|mock| {
-			mock.expect_load_animation_assets()
-				.withf(|paths| {
-					assert_eq!(
-						HashSet::from([
-							&AnimationPath::from("path/a"),
-							&AnimationPath::from("path/b"),
-							&AnimationPath::from("path/c"),
-						]),
-						HashSet::from_iter(paths)
-					);
-					true
-				})
-				.return_const((
-					_Graph,
-					HashMap::from([
-						(
-							AnimationPath::from("path/a"),
-							AnimationClips::Single(AnimationNodeIndex::new(1)),
-						),
-						(
-							AnimationPath::from("path/b"),
-							AnimationClips::Single(AnimationNodeIndex::new(2)),
-						),
-						(
-							AnimationPath::from("path/c"),
-							AnimationClips::Single(AnimationNodeIndex::new(3)),
-						),
-					]),
-				));
-		}));
+	fn insert_animation_graph_asset() -> Result<(), RunSystemError> {
+		let mut app = setup();
 		let entity = app.world_mut().spawn_empty().id();
 
 		app.world_mut()
-			.run_system_once(move |mut p: AnimationsParamMut<_Server, _Graph>| {
+			.run_system_once(move |mut p: AnimationsParamMut<_Graph>| {
 				let key = WithoutAnimations { entity };
 				let mut ctx = AnimationsParamMut::get_context_mut(&mut p, key).unwrap();
 				let a = Animation {
-					path: AnimationPath::from("path/a"),
+					clips: AnimationClips::Single(CLIP_A.clone()),
 					play_mode: PlayMode::Repeat,
 					mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 				};
 				let b = Animation {
-					path: AnimationPath::from("path/b"),
+					clips: AnimationClips::Single(CLIP_B.clone()),
 					play_mode: PlayMode::Repeat,
 					mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(1)),
 				};
 				let c = Animation {
-					path: AnimationPath::from("path/c"),
+					clips: AnimationClips::Single(CLIP_C.clone()),
+					play_mode: PlayMode::Replay,
+					mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
+				};
+
+				ctx.register_animations(
+					&HashMap::from([
+						(AnimationKey::Idle, a),
+						(AnimationKey::Walk, b),
+						(
+							AnimationKey::Skill {
+								slot: SlotKey(42),
+								animation: SkillAnimation::Aim,
+							},
+							c,
+						),
+					]),
+					&HashMap::from([
+						(
+							AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
+							AffectedAnimationBones {
+								from_root: BoneName::from("root a"),
+								..default()
+							},
+						),
+						(
+							AnimationMaskBits::zero().with_set(bit_mask_index!(1)),
+							AffectedAnimationBones {
+								from_root: BoneName::from("root b"),
+								..default()
+							},
+						),
+						(
+							AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
+							AffectedAnimationBones {
+								from_root: BoneName::from("root c"),
+								..default()
+							},
+						),
+					]),
+				);
+			})?;
+
+		assert_eq!(
+			Some(HashSet::from([
+				CLIP_A.clone(),
+				CLIP_B.clone(),
+				CLIP_C.clone()
+			])),
+			app.world()
+				.resource::<Assets<_Graph>>()
+				.iter()
+				.next()
+				.map(|(_, g)| g.0.iter().cloned().collect::<HashSet<_>>()),
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn add_animation_lookup() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let entity = app.world_mut().spawn_empty().id();
+
+		app.world_mut()
+			.run_system_once(move |mut p: AnimationsParamMut<_Graph>| {
+				let key = WithoutAnimations { entity };
+				let mut ctx = AnimationsParamMut::get_context_mut(&mut p, key).unwrap();
+				let a = Animation {
+					clips: AnimationClips::Single(CLIP_A.clone()),
+					play_mode: PlayMode::Repeat,
+					mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
+				};
+				let b = Animation {
+					clips: AnimationClips::Single(CLIP_B.clone()),
+					play_mode: PlayMode::Repeat,
+					mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(1)),
+				};
+				let c = Animation {
+					clips: AnimationClips::Single(CLIP_C.clone()),
 					play_mode: PlayMode::Replay,
 					mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
 				};
@@ -274,18 +320,18 @@ mod tests {
 				animations: HashMap::from([
 					(
 						AnimationKey::Idle,
-						AnimationLookupData {
-							animation_clips: AnimationClips::Single(AnimationNodeIndex::new(1)),
+						Animation {
+							clips: AnimationClips::Single(AnimationNodeIndex::new(0)),
 							play_mode: PlayMode::Repeat,
-							mask: AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
+							mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 						},
 					),
 					(
 						AnimationKey::Walk,
-						AnimationLookupData {
-							animation_clips: AnimationClips::Single(AnimationNodeIndex::new(2)),
+						Animation {
+							clips: AnimationClips::Single(AnimationNodeIndex::new(1)),
 							play_mode: PlayMode::Repeat,
-							mask: AnimationMaskBits::zero().with_set(bit_mask_index!(1)),
+							mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(1)),
 						},
 					),
 					(
@@ -293,10 +339,10 @@ mod tests {
 							slot: SlotKey(42),
 							animation: SkillAnimation::Aim,
 						},
-						AnimationLookupData {
-							animation_clips: AnimationClips::Single(AnimationNodeIndex::new(3)),
+						Animation {
+							clips: AnimationClips::Single(AnimationNodeIndex::new(2)),
 							play_mode: PlayMode::Replay,
-							mask: AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
+							mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
 						},
 					),
 				]),
@@ -331,17 +377,14 @@ mod tests {
 
 	#[test]
 	fn no_context_when_animation_dispatch_present() -> Result<(), RunSystemError> {
-		let mut app = setup(_Server::new().with_mock(|mock| {
-			mock.expect_load_animation_assets()
-				.return_const((_Graph, HashMap::default()));
-		}));
+		let mut app = setup();
 		let entity = app.world_mut().spawn(AnimationDispatch::default()).id();
 
-		let ctx = app.world_mut().run_system_once(
-			move |mut p: AnimationsParamMut<_Server, _Graph>| {
+		let ctx = app
+			.world_mut()
+			.run_system_once(move |mut p: AnimationsParamMut<_Graph>| {
 				AnimationsParamMut::get_context_mut(&mut p, WithoutAnimations { entity }).is_some()
-			},
-		)?;
+			})?;
 
 		assert!(!ctx);
 		Ok(())

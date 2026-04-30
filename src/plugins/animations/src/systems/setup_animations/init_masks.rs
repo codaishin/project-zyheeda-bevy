@@ -1,6 +1,6 @@
 use crate::{
 	components::{animation_lookup::AnimationLookup, setup_animations::SetupAnimations},
-	traits::asset_server::animation_graph::GetNodeMut,
+	traits::animation_graph::GetNodeMut,
 };
 use bevy::prelude::*;
 use common::traits::{iterate::Iterate, thread_safe::ThreadSafe, wrap_handle::GetHandle};
@@ -20,7 +20,7 @@ impl SetupAnimations {
 			};
 
 			for data in lookup.animations.values() {
-				for clip in data.animation_clips.iterate() {
+				for clip in data.clips.iterate() {
 					let Some(node) = graph.get_node_mut(*clip) else {
 						continue;
 					};
@@ -35,8 +35,8 @@ impl SetupAnimations {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::animation_lookup::{AnimationLookup, AnimationLookupData};
-	use common::traits::handles_animations::AnimationKey;
+	use crate::components::animation_lookup::AnimationLookup;
+	use common::traits::handles_animations::{Animation, AnimationKey};
 	use std::{collections::HashMap, slice::Iter};
 	use testing::{SingleThreadedApp, new_handle};
 
@@ -64,9 +64,9 @@ mod tests {
 	}
 
 	#[derive(Default)]
-	struct _Animations(Vec<AnimationNodeIndex>);
+	struct _Clips(Vec<AnimationNodeIndex>);
 
-	impl<'a> Iterate<'a> for _Animations {
+	impl<'a> Iterate<'a> for _Clips {
 		type TItem = &'a AnimationNodeIndex;
 		type TIter = Iter<'a, AnimationNodeIndex>;
 
@@ -84,10 +84,7 @@ mod tests {
 		}
 
 		app.insert_resource(asset_resource);
-		app.add_systems(
-			Update,
-			SetupAnimations::init_masks::<_Component, _Animations>,
-		);
+		app.add_systems(Update, SetupAnimations::init_masks::<_Component, _Clips>);
 
 		app
 	}
@@ -104,8 +101,8 @@ mod tests {
 			AnimationLookup {
 				animations: HashMap::from([(
 					AnimationKey::Run,
-					AnimationLookupData {
-						animation_clips: _Animations(vec![AnimationNodeIndex::new(42)]),
+					Animation {
+						clips: _Clips(vec![AnimationNodeIndex::new(42)]),
 						..default()
 					},
 				)]),
@@ -139,8 +136,8 @@ mod tests {
 			AnimationLookup {
 				animations: HashMap::from([(
 					AnimationKey::Run,
-					AnimationLookupData {
-						animation_clips: _Animations(vec![AnimationNodeIndex::new(42)]),
+					Animation {
+						clips: _Clips(vec![AnimationNodeIndex::new(42)]),
 						..default()
 					},
 				)]),

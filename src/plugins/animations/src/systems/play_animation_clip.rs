@@ -1,7 +1,7 @@
 use crate::{
 	components::{
 		animation_dispatch::{AnimationDispatch, AnimationPlayers},
-		animation_lookup::{AnimationLookup, AnimationLookupData},
+		animation_lookup::AnimationLookup,
 	},
 	traits::{
 		IsPlaying,
@@ -9,12 +9,12 @@ use crate::{
 		ReplayAnimation,
 		StopAnimation,
 		YoungestToOldestActiveAnimations,
-		asset_server::animation_graph::GetNodeMut,
+		animation_graph::GetNodeMut,
 	},
 };
 use bevy::{ecs::query::QueryData, prelude::*};
 use common::traits::{
-	handles_animations::{AnimationPriority, PlayMode},
+	handles_animations::{Animation, AnimationPriority, PlayMode},
 	iterate::Iterate,
 	thread_safe::ThreadSafe,
 	wrap_handle::{GetHandle, WrapHandle},
@@ -55,13 +55,13 @@ where
 }
 
 #[allow(clippy::type_complexity)]
-fn play_animation_clip<TAnimationPlayer, TDispatch, TGraph, TAnimations>(
+fn play_animation_clip<TAnimationPlayer, TDispatch, TGraph, TClips>(
 	mut players: Query<TAnimationPlayer>,
 	agents: Query<
 		(
 			&TDispatch,
 			&AnimationPlayers,
-			&AnimationLookup<TAnimations>,
+			&AnimationLookup<TClips>,
 			&TGraph::TComponent,
 		),
 		Changed<TDispatch>,
@@ -71,7 +71,7 @@ fn play_animation_clip<TAnimationPlayer, TDispatch, TGraph, TAnimations>(
 	TAnimationPlayer: QueryData,
 	TGraph: Asset + GetNodeMut + WrapHandle,
 	TDispatch: Component + YoungestToOldestActiveAnimations,
-	for<'a> TAnimations: ThreadSafe + Iterate<'a, TItem = &'a AnimationNodeIndex>,
+	for<'a> TClips: ThreadSafe + Iterate<'a, TItem = &'a AnimationNodeIndex>,
 	for<'w, 's> TAnimationPlayer::Item<'w, 's>: IsPlaying<AnimationNodeIndex>
 		+ ReplayAnimation<AnimationNodeIndex>
 		+ RepeatAnimation<AnimationNodeIndex>
@@ -89,12 +89,12 @@ fn play_animation_clip<TAnimationPlayer, TDispatch, TGraph, TAnimations>(
 			let inactive_animations = lookup
 				.animations
 				.values()
-				.filter_map(|data: &AnimationLookupData<TAnimations>| {
+				.filter_map(|data: &Animation<TClips>| {
 					let is_active = |clip| active_animations.contains(clip);
-					if data.animation_clips.iterate().any(is_active) {
+					if data.clips.iterate().any(is_active) {
 						return None;
 					}
-					Some(data.animation_clips.iterate())
+					Some(data.clips.iterate())
 				})
 				.flatten();
 			stop(player, graph, inactive_animations);
@@ -124,9 +124,9 @@ where
 			let Some(animation_data) = lookup.animations.get(key) else {
 				continue;
 			};
-			let mask = animation_data.mask.to_animation_mask();
+			let mask = animation_data.mask_groups.to_animation_mask();
 
-			for id in animation_data.animation_clips.iterate() {
+			for id in animation_data.clips.iterate() {
 				let Some(animation_node) = graph.get_node_mut(*id) else {
 					continue;
 				};
@@ -407,7 +407,7 @@ mod tests {
 		let mut graph = _Graph::default();
 
 		for data in lookup.animations.values() {
-			for animation in data.animation_clips.iterate() {
+			for animation in data.clips.iterate() {
 				graph.nodes.insert(
 					animation.index(),
 					AnimationGraphNode {
@@ -434,8 +434,8 @@ mod tests {
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
 				AnimationKey::Walk,
-				AnimationLookupData {
-					animation_clips: _Animations::from_indices([1, 2, 3]),
+				Animation {
+					clips: _Animations::from_indices([1, 2, 3]),
 					play_mode: PlayMode::Repeat,
 					..default()
 				},
@@ -487,8 +487,8 @@ mod tests {
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
 				AnimationKey::Walk,
-				AnimationLookupData {
-					animation_clips: _Animations::from_indices([1, 2, 3]),
+				Animation {
+					clips: _Animations::from_indices([1, 2, 3]),
 					play_mode: PlayMode::Replay,
 					..default()
 				},
@@ -544,10 +544,10 @@ mod tests {
 						slot: SlotKey(11),
 						animation: SkillAnimation::Aim,
 					},
-					AnimationLookupData {
-						animation_clips: _Animations::from_indices([0, 1]),
+					Animation {
+						clips: _Animations::from_indices([0, 1]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits::zero(),
+						mask_groups: AnimationMaskBits::zero(),
 					},
 				),
 				(
@@ -555,10 +555,10 @@ mod tests {
 						slot: SlotKey(12),
 						animation: SkillAnimation::Aim,
 					},
-					AnimationLookupData {
-						animation_clips: _Animations::from_indices([2, 3]),
+					Animation {
+						clips: _Animations::from_indices([2, 3]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits::zero(),
+						mask_groups: AnimationMaskBits::zero(),
 					},
 				),
 				(
@@ -566,10 +566,10 @@ mod tests {
 						slot: SlotKey(21),
 						animation: SkillAnimation::Aim,
 					},
-					AnimationLookupData {
-						animation_clips: _Animations::from_indices([4, 5]),
+					Animation {
+						clips: _Animations::from_indices([4, 5]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits::zero(),
+						mask_groups: AnimationMaskBits::zero(),
 					},
 				),
 				(
@@ -577,10 +577,10 @@ mod tests {
 						slot: SlotKey(22),
 						animation: SkillAnimation::Aim,
 					},
-					AnimationLookupData {
-						animation_clips: _Animations::from_indices([6, 7]),
+					Animation {
+						clips: _Animations::from_indices([6, 7]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits::zero(),
+						mask_groups: AnimationMaskBits::zero(),
 					},
 				),
 				(
@@ -588,10 +588,10 @@ mod tests {
 						slot: SlotKey(31),
 						animation: SkillAnimation::Aim,
 					},
-					AnimationLookupData {
-						animation_clips: _Animations::from_indices([8, 9]),
+					Animation {
+						clips: _Animations::from_indices([8, 9]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits::zero(),
+						mask_groups: AnimationMaskBits::zero(),
 					},
 				),
 				(
@@ -599,10 +599,10 @@ mod tests {
 						slot: SlotKey(32),
 						animation: SkillAnimation::Aim,
 					},
-					AnimationLookupData {
-						animation_clips: _Animations::from_indices([10, 11]),
+					Animation {
+						clips: _Animations::from_indices([10, 11]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits::zero(),
+						mask_groups: AnimationMaskBits::zero(),
 					},
 				),
 			]),
@@ -684,8 +684,8 @@ mod tests {
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
 				AnimationKey::Walk,
-				AnimationLookupData {
-					animation_clips: _Animations::from_indices([1, 2, 3]),
+				Animation {
+					clips: _Animations::from_indices([1, 2, 3]),
 					play_mode: PlayMode::Repeat,
 					..default()
 				},
@@ -737,8 +737,8 @@ mod tests {
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
 				AnimationKey::Walk,
-				AnimationLookupData {
-					animation_clips: _Animations::from_indices([1, 2, 3]),
+				Animation {
+					clips: _Animations::from_indices([1, 2, 3]),
 					play_mode: PlayMode::Repeat,
 					..default()
 				},
@@ -787,8 +787,8 @@ mod tests {
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
 				AnimationKey::Walk,
-				AnimationLookupData {
-					animation_clips: _Animations::from_indices([1]),
+				Animation {
+					clips: _Animations::from_indices([1]),
 					play_mode: PlayMode::Repeat,
 					..default()
 				},
@@ -832,8 +832,8 @@ mod tests {
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
 				AnimationKey::Walk,
-				AnimationLookupData {
-					animation_clips: _Animations::from_indices([1]),
+				Animation {
+					clips: _Animations::from_indices([1]),
 					play_mode: PlayMode::Repeat,
 					..default()
 				},
@@ -886,10 +886,10 @@ mod tests {
 						slot: SlotKey(11),
 						animation: SkillAnimation::Aim,
 					},
-					AnimationLookupData {
-						animation_clips: _Animations::from_indices([0, 1]),
+					Animation {
+						clips: _Animations::from_indices([0, 1]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
+						mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 					},
 				),
 				(
@@ -897,10 +897,10 @@ mod tests {
 						slot: SlotKey(12),
 						animation: SkillAnimation::Aim,
 					},
-					AnimationLookupData {
-						animation_clips: _Animations::from_indices([2, 3]),
+					Animation {
+						clips: _Animations::from_indices([2, 3]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(1)),
+						mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(1)),
 					},
 				),
 				(
@@ -908,10 +908,10 @@ mod tests {
 						slot: SlotKey(21),
 						animation: SkillAnimation::Aim,
 					},
-					AnimationLookupData {
-						animation_clips: _Animations::from_indices([4, 5]),
+					Animation {
+						clips: _Animations::from_indices([4, 5]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
+						mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
 					},
 				),
 				(
@@ -919,10 +919,10 @@ mod tests {
 						slot: SlotKey(22),
 						animation: SkillAnimation::Aim,
 					},
-					AnimationLookupData {
-						animation_clips: _Animations::from_indices([6, 7]),
+					Animation {
+						clips: _Animations::from_indices([6, 7]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(3)),
+						mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(3)),
 					},
 				),
 				(
@@ -930,10 +930,10 @@ mod tests {
 						slot: SlotKey(31),
 						animation: SkillAnimation::Aim,
 					},
-					AnimationLookupData {
-						animation_clips: _Animations::from_indices([8, 9]),
+					Animation {
+						clips: _Animations::from_indices([8, 9]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(4)),
+						mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(4)),
 					},
 				),
 				(
@@ -941,10 +941,10 @@ mod tests {
 						slot: SlotKey(32),
 						animation: SkillAnimation::Aim,
 					},
-					AnimationLookupData {
-						animation_clips: _Animations::from_indices([10, 11]),
+					Animation {
+						clips: _Animations::from_indices([10, 11]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(5)),
+						mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(5)),
 					},
 				),
 			]),
@@ -1035,10 +1035,10 @@ mod tests {
 						slot: SlotKey(11),
 						animation: SkillAnimation::Aim,
 					},
-					AnimationLookupData {
-						animation_clips: _Animations::from_indices([0, 1]),
+					Animation {
+						clips: _Animations::from_indices([0, 1]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
+						mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 					},
 				),
 				(
@@ -1046,10 +1046,10 @@ mod tests {
 						slot: SlotKey(12),
 						animation: SkillAnimation::Aim,
 					},
-					AnimationLookupData {
-						animation_clips: _Animations::from_indices([2, 3]),
+					Animation {
+						clips: _Animations::from_indices([2, 3]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(1)),
+						mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(1)),
 					},
 				),
 				(
@@ -1057,10 +1057,10 @@ mod tests {
 						slot: SlotKey(21),
 						animation: SkillAnimation::Aim,
 					},
-					AnimationLookupData {
-						animation_clips: _Animations::from_indices([4, 5]),
+					Animation {
+						clips: _Animations::from_indices([4, 5]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
+						mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
 					},
 				),
 				(
@@ -1068,10 +1068,10 @@ mod tests {
 						slot: SlotKey(22),
 						animation: SkillAnimation::Aim,
 					},
-					AnimationLookupData {
-						animation_clips: _Animations::from_indices([6, 7]),
+					Animation {
+						clips: _Animations::from_indices([6, 7]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(3)),
+						mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(3)),
 					},
 				),
 				(
@@ -1079,10 +1079,10 @@ mod tests {
 						slot: SlotKey(31),
 						animation: SkillAnimation::Aim,
 					},
-					AnimationLookupData {
-						animation_clips: _Animations::from_indices([8, 9]),
+					Animation {
+						clips: _Animations::from_indices([8, 9]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(4)),
+						mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(4)),
 					},
 				),
 				(
@@ -1090,10 +1090,10 @@ mod tests {
 						slot: SlotKey(32),
 						animation: SkillAnimation::Aim,
 					},
-					AnimationLookupData {
-						animation_clips: _Animations::from_indices([10, 11]),
+					Animation {
+						clips: _Animations::from_indices([10, 11]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(5)),
+						mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(5)),
 					},
 				),
 			]),
@@ -1183,10 +1183,10 @@ mod tests {
 						slot: SlotKey(1),
 						animation: SkillAnimation::Aim,
 					},
-					AnimationLookupData {
-						animation_clips: _Animations::from_indices([0, 1]),
+					Animation {
+						clips: _Animations::from_indices([0, 1]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
+						mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 					},
 				),
 				(
@@ -1194,10 +1194,10 @@ mod tests {
 						slot: SlotKey(2),
 						animation: SkillAnimation::Aim,
 					},
-					AnimationLookupData {
-						animation_clips: _Animations::from_indices([2, 3]),
+					Animation {
+						clips: _Animations::from_indices([2, 3]),
 						play_mode: PlayMode::Replay,
-						mask: AnimationMaskBits::zero()
+						mask_groups: AnimationMaskBits::zero()
 							.with_set(bit_mask_index!(0))
 							.with_set(bit_mask_index!(1))
 							.with_set(bit_mask_index!(2)),
@@ -1274,8 +1274,8 @@ mod tests {
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
 				AnimationKey::Walk,
-				AnimationLookupData {
-					animation_clips: _Animations::from_indices([1, 2]),
+				Animation {
+					clips: _Animations::from_indices([1, 2]),
 					play_mode: PlayMode::Repeat,
 					..default()
 				},

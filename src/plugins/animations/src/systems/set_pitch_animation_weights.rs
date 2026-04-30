@@ -1,14 +1,14 @@
 use crate::{
 	components::{
 		animation_dispatch::AnimationPlayers,
-		animation_lookup::{AnimationClips, AnimationLookup},
+		animation_lookup::AnimationLookup,
 		current_forward_pitch::CurrentForwardPitch,
 	},
-	traits::{GetAllActiveAnimations, asset_server::animation_graph::GetNodeMut},
+	traits::{GetAllActiveAnimations, animation_graph::GetNodeMut},
 };
 use bevy::prelude::*;
 use common::traits::{
-	handles_animations::DirForwardPitch,
+	handles_animations::{AnimationClips, DirForwardPitch},
 	wrap_handle::{GetHandle, WrapHandle},
 };
 
@@ -82,7 +82,7 @@ fn set_pitch_animation_weights<TDispatch, TGraph>(
 				let Some(data) = lookup.animations.get(animation) else {
 					continue;
 				};
-				let AnimationClips::PitchedForward(pitched_clips) = &data.animation_clips else {
+				let AnimationClips::PitchedForward(pitched_clips) = &data.clips else {
 					continue;
 				};
 
@@ -109,14 +109,17 @@ fn set_pitch_animation_weights<TDispatch, TGraph>(
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::components::{
-		animation_dispatch::AnimationPlayerOf,
-		animation_lookup::{AnimationClips, AnimationLookupData, PitchedForwardIndices},
-	};
+	use crate::components::animation_dispatch::AnimationPlayerOf;
 	use common::{
 		tools::action_key::slot::SlotKey,
 		traits::{
-			handles_animations::{AnimationKey, ForwardPitch, SkillAnimation},
+			handles_animations::{
+				Animation,
+				AnimationKey,
+				ForwardPitch,
+				PitchedForward,
+				SkillAnimation,
+			},
 			iterate::Iterate,
 			wrap_handle::{GetHandle, WrapHandle},
 		},
@@ -184,7 +187,7 @@ mod tests {
 		let mut graph = _Graph::default();
 
 		for data in lookup.animations.values() {
-			for animation in data.animation_clips.iterate() {
+			for animation in data.clips.iterate() {
 				graph.nodes.insert(
 					animation.index(),
 					AnimationGraphNode {
@@ -222,8 +225,8 @@ mod tests {
 					slot: SlotKey(11),
 					animation: SkillAnimation::Aim,
 				},
-				AnimationLookupData {
-					animation_clips: AnimationClips::PitchedForward(PitchedForwardIndices {
+				Animation {
+					clips: AnimationClips::PitchedForward(PitchedForward {
 						neutral: AnimationNodeIndex::new(0),
 						up: (ForwardPitch::MAX, AnimationNodeIndex::new(1)),
 						down: (ForwardPitch::MAX, AnimationNodeIndex::new(2)),
@@ -288,8 +291,8 @@ mod tests {
 					slot: SlotKey(11),
 					animation: SkillAnimation::Aim,
 				},
-				AnimationLookupData {
-					animation_clips: AnimationClips::PitchedForward(PitchedForwardIndices {
+				Animation {
+					clips: AnimationClips::PitchedForward(PitchedForward {
 						neutral: AnimationNodeIndex::new(0),
 						up: (ForwardPitch::MAX, AnimationNodeIndex::new(1)),
 						down: (ForwardPitch::MAX, AnimationNodeIndex::new(2)),
@@ -354,8 +357,8 @@ mod tests {
 					slot: SlotKey(11),
 					animation: SkillAnimation::Aim,
 				},
-				AnimationLookupData {
-					animation_clips: AnimationClips::PitchedForward(PitchedForwardIndices {
+				Animation {
+					clips: AnimationClips::PitchedForward(PitchedForward {
 						neutral: AnimationNodeIndex::new(0),
 						up: (
 							ForwardPitch::try_from(0.8).unwrap(),
@@ -426,8 +429,8 @@ mod tests {
 					slot: SlotKey(11),
 					animation: SkillAnimation::Aim,
 				},
-				AnimationLookupData {
-					animation_clips: AnimationClips::PitchedForward(PitchedForwardIndices {
+				Animation {
+					clips: AnimationClips::PitchedForward(PitchedForward {
 						neutral: AnimationNodeIndex::new(0),
 						up: (
 							ForwardPitch::try_from(0.8).unwrap(),

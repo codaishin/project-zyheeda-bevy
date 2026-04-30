@@ -28,21 +28,14 @@ mod tests {
 	use bevy::{
 		animation::graph::AnimationGraph,
 		asset::Assets,
-		ecs::{
-			resource::Resource,
-			system::{RunSystemError, RunSystemOnce},
-		},
+		ecs::system::{RunSystemError, RunSystemOnce},
 	};
 	use common::traits::{accessors::get::GetContextMut, handles_animations::Animations};
 	use testing::SingleThreadedApp;
 
-	#[derive(Resource)]
-	struct _Server;
-
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.insert_resource(_Server);
 		app.insert_resource(Assets::<AnimationGraph>::default());
 
 		app
@@ -61,7 +54,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once(move |mut p: AnimationsParamMut<_Server>| {
+			.run_system_once(move |mut p: AnimationsParamMut| {
 				let key = Animations { entity };
 				let ctx = AnimationsParamMut::get_context_mut(&mut p, key).unwrap();
 
@@ -78,7 +71,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once(move |mut p: AnimationsParamMut<_Server>| {
+			.run_system_once(move |mut p: AnimationsParamMut| {
 				let key = Animations { entity };
 				let mut ctx = AnimationsParamMut::get_context_mut(&mut p, key).unwrap();
 				*ctx.get_move_direction_mut() = Some(Dir3::NEG_Z);
