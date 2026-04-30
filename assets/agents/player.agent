@@ -106,7 +106,10 @@
 				],
 				[
 					{
-						"Skill": 0
+						"Skill": {
+							"slot": 0,
+							"animation": "Shoot"
+						}
 					},
 					{
 						"path": {
@@ -128,7 +131,10 @@
 				],
 				[
 					{
-						"Skill": 1
+						"Skill": {
+							"slot": 1,
+							"animation": "Shoot"
+						}
 					},
 					{
 						"path": {

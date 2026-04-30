@@ -78,6 +78,7 @@ mod tests {
 				AffectedAnimationBones,
 				AnimationPath,
 				PlayMode,
+				SkillAnimation,
 				WithoutAnimations,
 			},
 			wrap_handle::GetHandle,
@@ -234,7 +235,13 @@ mod tests {
 					&HashMap::from([
 						(AnimationKey::Idle, a),
 						(AnimationKey::Walk, b),
-						(AnimationKey::Skill(SlotKey(42)), c),
+						(
+							AnimationKey::Skill {
+								slot: SlotKey(42),
+								animation: SkillAnimation::Shoot,
+							},
+							c,
+						),
 					]),
 					&HashMap::from([
 						(
@@ -282,7 +289,10 @@ mod tests {
 						},
 					),
 					(
-						AnimationKey::Skill(SlotKey(42)),
+						AnimationKey::Skill {
+							slot: SlotKey(42),
+							animation: SkillAnimation::Shoot,
+						},
 						AnimationLookupData {
 							animation_clips: AnimationClips::Single(AnimationNodeIndex::new(3)),
 							play_mode: PlayMode::Replay,

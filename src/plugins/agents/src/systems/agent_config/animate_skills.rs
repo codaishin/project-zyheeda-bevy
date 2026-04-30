@@ -2,7 +2,13 @@ use crate::components::agent_config::AgentConfig;
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
 	accessors::get::{GetChangedContext, GetContext, GetContextMut},
-	handles_animations::{ActiveAnimationsMut, AnimationKey, AnimationPriority, Animations},
+	handles_animations::{
+		ActiveAnimationsMut,
+		AnimationKey,
+		AnimationPriority,
+		Animations,
+		SkillAnimation,
+	},
 	handles_loadout::{ActiveSkill, ActiveSkills, skills::Skills},
 };
 
@@ -31,9 +37,15 @@ impl AgentConfig {
 			let mut skills_to_animate = loadout.active_skills().filter(should_animate);
 			match skills_to_animate.next() {
 				Some(first) => {
-					active_animations.insert(AnimationKey::Skill(first.key));
+					active_animations.insert(AnimationKey::Skill {
+						slot: first.key,
+						animation: SkillAnimation::Shoot,
+					});
 					for remaining in skills_to_animate {
-						active_animations.insert(AnimationKey::Skill(remaining.key));
+						active_animations.insert(AnimationKey::Skill {
+							slot: remaining.key,
+							animation: SkillAnimation::Shoot,
+						});
 					}
 				}
 				None => {
@@ -132,8 +144,14 @@ mod tests {
 			Some(&_Animations(HashMap::from([(
 				AnimationPriority::High,
 				OrderedSet::from([
-					AnimationKey::Skill(SlotKey(42)),
-					AnimationKey::Skill(SlotKey(11)),
+					AnimationKey::Skill {
+						slot: SlotKey(42),
+						animation: SkillAnimation::Shoot
+					},
+					AnimationKey::Skill {
+						slot: SlotKey(11),
+						animation: SkillAnimation::Shoot
+					},
 				])
 			)]))),
 			app.world().entity(entity).get::<_Animations>(),
@@ -170,7 +188,10 @@ mod tests {
 		assert_eq!(
 			Some(&_Animations(HashMap::from([(
 				AnimationPriority::High,
-				OrderedSet::from([AnimationKey::Skill(SlotKey(42))])
+				OrderedSet::from([AnimationKey::Skill {
+					slot: SlotKey(42),
+					animation: SkillAnimation::Shoot
+				}])
 			)]))),
 			app.world().entity(entity).get::<_Animations>(),
 		);
@@ -198,8 +219,14 @@ mod tests {
 					(
 						AnimationPriority::High,
 						OrderedSet::from([
-							AnimationKey::Skill(SlotKey(42)),
-							AnimationKey::Skill(SlotKey(11)),
+							AnimationKey::Skill {
+								slot: SlotKey(42),
+								animation: SkillAnimation::Shoot,
+							},
+							AnimationKey::Skill {
+								slot: SlotKey(11),
+								animation: SkillAnimation::Shoot,
+							},
 						]),
 					),
 				])),
@@ -309,7 +336,10 @@ mod tests {
 		assert_eq!(
 			Some(&_Animations(HashMap::from([(
 				AnimationPriority::High,
-				OrderedSet::from([AnimationKey::Skill(SlotKey(42))])
+				OrderedSet::from([AnimationKey::Skill {
+					slot: SlotKey(42),
+					animation: SkillAnimation::Shoot
+				}])
 			)]))),
 			app.world().entity(entity).get::<_Animations>(),
 		);
