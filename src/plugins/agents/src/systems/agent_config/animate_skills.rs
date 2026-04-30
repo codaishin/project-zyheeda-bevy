@@ -1,9 +1,18 @@
 use crate::components::agent_config::AgentConfig;
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
-use common::traits::{
-	accessors::get::{GetChangedContext, GetContext, GetContextMut},
-	handles_animations::{ActiveAnimationsMut, AnimationKey, AnimationPriority, Animations},
-	handles_loadout::{ActiveSkill, ActiveSkills, skills::Skills},
+use common::{
+	tools::action_key::slot::SlotKey,
+	traits::{
+		accessors::get::{GetChangedContext, GetContext, GetContextMut},
+		handles_animations::{
+			ActiveAnimationsMut,
+			AnimationKey,
+			AnimationPriority,
+			Animations,
+			SkillAnimation,
+		},
+		handles_loadout::{ActiveSkill, ActiveSkills, skills::Skills},
+	},
 };
 
 impl AgentConfig {
@@ -28,12 +37,12 @@ impl AgentConfig {
 
 			let active_animations = animations.active_animations_mut(SkillAnimations);
 
-			let mut skills_to_animate = loadout.active_skills().filter(should_animate);
+			let mut skills_to_animate = loadout.active_skills().filter_map(with_animation);
 			match skills_to_animate.next() {
-				Some(first) => {
-					active_animations.insert(AnimationKey::Skill(first.key));
-					for remaining in skills_to_animate {
-						active_animations.insert(AnimationKey::Skill(remaining.key));
+				Some((slot, animation)) => {
+					active_animations.insert(AnimationKey::Skill { slot, animation });
+					for (slot, animation) in skills_to_animate {
+						active_animations.insert(AnimationKey::Skill { slot, animation });
 					}
 				}
 				None => {
@@ -44,8 +53,10 @@ impl AgentConfig {
 	}
 }
 
-fn should_animate(ActiveSkill { animate, .. }: &ActiveSkill) -> bool {
-	*animate
+fn with_animation(
+	ActiveSkill { key, animation }: ActiveSkill,
+) -> Option<(SlotKey, SkillAnimation)> {
+	Some((key, animation?))
 }
 
 struct SkillAnimations;
@@ -114,11 +125,11 @@ mod tests {
 					active: vec![
 						ActiveSkill {
 							key: SlotKey(42),
-							animate: true,
+							animation: Some(SkillAnimation::Aim),
 						},
 						ActiveSkill {
 							key: SlotKey(11),
-							animate: true,
+							animation: Some(SkillAnimation::Block),
 						},
 					],
 				},
@@ -132,8 +143,14 @@ mod tests {
 			Some(&_Animations(HashMap::from([(
 				AnimationPriority::High,
 				OrderedSet::from([
-					AnimationKey::Skill(SlotKey(42)),
-					AnimationKey::Skill(SlotKey(11)),
+					AnimationKey::Skill {
+						slot: SlotKey(42),
+						animation: SkillAnimation::Aim
+					},
+					AnimationKey::Skill {
+						slot: SlotKey(11),
+						animation: SkillAnimation::Block
+					},
 				])
 			)]))),
 			app.world().entity(entity).get::<_Animations>(),
@@ -153,11 +170,11 @@ mod tests {
 					active: vec![
 						ActiveSkill {
 							key: SlotKey(42),
-							animate: true,
+							animation: Some(SkillAnimation::Aim),
 						},
 						ActiveSkill {
 							key: SlotKey(11),
-							animate: false,
+							animation: None,
 						},
 					],
 				},
@@ -170,7 +187,10 @@ mod tests {
 		assert_eq!(
 			Some(&_Animations(HashMap::from([(
 				AnimationPriority::High,
-				OrderedSet::from([AnimationKey::Skill(SlotKey(42))])
+				OrderedSet::from([AnimationKey::Skill {
+					slot: SlotKey(42),
+					animation: SkillAnimation::Aim
+				}])
 			)]))),
 			app.world().entity(entity).get::<_Animations>(),
 		);
@@ -198,8 +218,14 @@ mod tests {
 					(
 						AnimationPriority::High,
 						OrderedSet::from([
-							AnimationKey::Skill(SlotKey(42)),
-							AnimationKey::Skill(SlotKey(11)),
+							AnimationKey::Skill {
+								slot: SlotKey(42),
+								animation: SkillAnimation::Aim,
+							},
+							AnimationKey::Skill {
+								slot: SlotKey(11),
+								animation: SkillAnimation::Aim,
+							},
 						]),
 					),
 				])),
@@ -233,7 +259,7 @@ mod tests {
 				_Loadout {
 					active: vec![ActiveSkill {
 						key: SlotKey(42),
-						animate: true,
+						animation: Some(SkillAnimation::Aim),
 					}],
 				},
 				_Animations::default(),
@@ -260,7 +286,7 @@ mod tests {
 				_Loadout {
 					active: vec![ActiveSkill {
 						key: SlotKey(42),
-						animate: true,
+						animation: Some(SkillAnimation::Aim),
 					}],
 				},
 				_Animations::default(),
@@ -291,7 +317,7 @@ mod tests {
 				_Loadout {
 					active: vec![ActiveSkill {
 						key: SlotKey(42),
-						animate: true,
+						animation: Some(SkillAnimation::Aim),
 					}],
 				},
 				_Animations::default(),
@@ -309,7 +335,10 @@ mod tests {
 		assert_eq!(
 			Some(&_Animations(HashMap::from([(
 				AnimationPriority::High,
-				OrderedSet::from([AnimationKey::Skill(SlotKey(42))])
+				OrderedSet::from([AnimationKey::Skill {
+					slot: SlotKey(42),
+					animation: SkillAnimation::Aim
+				}])
 			)]))),
 			app.world().entity(entity).get::<_Animations>(),
 		);

@@ -310,7 +310,16 @@ pub enum AnimationKey {
 	Idle,
 	Walk,
 	Run,
-	Skill(SlotKey),
+	Skill {
+		slot: SlotKey,
+		animation: SkillAnimation,
+	},
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
+pub enum SkillAnimation {
+	Aim,
+	Block,
 }
 
 mod bits_conversion {

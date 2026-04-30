@@ -12,6 +12,7 @@ use common::{
 	},
 	traits::{
 		accessors::get::View,
+		handles_animations::SkillAnimation,
 		handles_custom_assets::AssetFolderPath,
 		handles_loadout::skills::{GetSkillId, SkillIcon, SkillToken},
 		handles_localization::Token,
@@ -34,7 +35,7 @@ pub struct Skill {
 	pub(crate) id: SkillId,
 	pub(crate) token: Token,
 	pub(crate) cast_time: Duration,
-	pub(crate) animate: bool,
+	pub(crate) animation: Option<SkillAnimation>,
 	pub(crate) behavior: RunSkillBehavior,
 	pub(crate) compatible_items: CompatibleItems,
 	pub(crate) icon: Handle<Image>,

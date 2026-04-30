@@ -33,7 +33,7 @@ impl Iterator for ActiveSkillsIter<'_> {
 
 		Some(ActiveSkill {
 			key: queued.key,
-			animate: queued.skill.animate,
+			animation: queued.skill.animation,
 		})
 	}
 }
@@ -53,7 +53,11 @@ mod tests {
 	};
 	use common::{
 		tools::action_key::slot::SlotKey,
-		traits::{accessors::get::GetContext, handles_loadout::skills::Skills},
+		traits::{
+			accessors::get::GetContext,
+			handles_animations::SkillAnimation,
+			handles_loadout::skills::Skills,
+		},
 	};
 	use testing::SingleThreadedApp;
 
@@ -82,7 +86,7 @@ mod tests {
 		assert_eq!(
 			vec![ActiveSkill {
 				key: SlotKey(42),
-				animate: false,
+				animation: None,
 			}],
 			active_skills
 		);
@@ -110,7 +114,7 @@ mod tests {
 		assert_eq!(
 			vec![ActiveSkill {
 				key: SlotKey(42),
-				animate: false,
+				animation: None,
 			}],
 			active_skills
 		);
@@ -124,7 +128,7 @@ mod tests {
 			.world_mut()
 			.spawn(Queue::from([QueuedSkill::new(
 				Skill {
-					animate: true,
+					animation: Some(SkillAnimation::Aim),
 					..default()
 				},
 				SlotKey(42),
@@ -141,7 +145,7 @@ mod tests {
 		assert_eq!(
 			vec![ActiveSkill {
 				key: SlotKey(42),
-				animate: true,
+				animation: Some(SkillAnimation::Aim),
 			}],
 			active_skills
 		);

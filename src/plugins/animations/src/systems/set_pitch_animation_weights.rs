@@ -116,7 +116,7 @@ mod tests {
 	use common::{
 		tools::action_key::slot::SlotKey,
 		traits::{
-			handles_animations::{AnimationKey, ForwardPitch},
+			handles_animations::{AnimationKey, ForwardPitch, SkillAnimation},
 			iterate::Iterate,
 			wrap_handle::{GetHandle, WrapHandle},
 		},
@@ -218,7 +218,10 @@ mod tests {
 		let handle = new_handle();
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
-				AnimationKey::Skill(SlotKey(11)),
+				AnimationKey::Skill {
+					slot: SlotKey(11),
+					animation: SkillAnimation::Aim,
+				},
 				AnimationLookupData {
 					animation_clips: AnimationClips::PitchedForward(PitchedForwardIndices {
 						neutral: AnimationNodeIndex::new(0),
@@ -236,7 +239,10 @@ mod tests {
 			.world_mut()
 			.spawn((
 				_Dispatch {
-					animations: vec![AnimationKey::Skill(SlotKey(11))],
+					animations: vec![AnimationKey::Skill {
+						slot: SlotKey(11),
+						animation: SkillAnimation::Aim,
+					}],
 				},
 				CurrentForwardPitch(pitch),
 				lookup,
@@ -278,7 +284,10 @@ mod tests {
 		let handle = new_handle();
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
-				AnimationKey::Skill(SlotKey(11)),
+				AnimationKey::Skill {
+					slot: SlotKey(11),
+					animation: SkillAnimation::Aim,
+				},
 				AnimationLookupData {
 					animation_clips: AnimationClips::PitchedForward(PitchedForwardIndices {
 						neutral: AnimationNodeIndex::new(0),
@@ -296,7 +305,10 @@ mod tests {
 			.world_mut()
 			.spawn((
 				_Dispatch {
-					animations: vec![AnimationKey::Skill(SlotKey(11))],
+					animations: vec![AnimationKey::Skill {
+						slot: SlotKey(11),
+						animation: SkillAnimation::Aim,
+					}],
 				},
 				CurrentForwardPitch(pitch),
 				lookup,
@@ -338,7 +350,10 @@ mod tests {
 		let handle = new_handle();
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
-				AnimationKey::Skill(SlotKey(11)),
+				AnimationKey::Skill {
+					slot: SlotKey(11),
+					animation: SkillAnimation::Aim,
+				},
 				AnimationLookupData {
 					animation_clips: AnimationClips::PitchedForward(PitchedForwardIndices {
 						neutral: AnimationNodeIndex::new(0),
@@ -362,7 +377,10 @@ mod tests {
 			.world_mut()
 			.spawn((
 				_Dispatch {
-					animations: vec![AnimationKey::Skill(SlotKey(11))],
+					animations: vec![AnimationKey::Skill {
+						slot: SlotKey(11),
+						animation: SkillAnimation::Aim,
+					}],
 				},
 				CurrentForwardPitch(pitch),
 				lookup,
@@ -404,7 +422,10 @@ mod tests {
 		let handle = new_handle();
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
-				AnimationKey::Skill(SlotKey(11)),
+				AnimationKey::Skill {
+					slot: SlotKey(11),
+					animation: SkillAnimation::Aim,
+				},
 				AnimationLookupData {
 					animation_clips: AnimationClips::PitchedForward(PitchedForwardIndices {
 						neutral: AnimationNodeIndex::new(0),
@@ -428,7 +449,10 @@ mod tests {
 			.world_mut()
 			.spawn((
 				_Dispatch {
-					animations: vec![AnimationKey::Skill(SlotKey(11))],
+					animations: vec![AnimationKey::Skill {
+						slot: SlotKey(11),
+						animation: SkillAnimation::Aim,
+					}],
 				},
 				CurrentForwardPitch(pitch),
 				lookup,

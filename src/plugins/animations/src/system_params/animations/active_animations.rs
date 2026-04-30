@@ -39,7 +39,10 @@ mod tests {
 	};
 	use common::{
 		tools::action_key::slot::SlotKey,
-		traits::{accessors::get::GetContextMut, handles_animations::Animations},
+		traits::{
+			accessors::get::GetContextMut,
+			handles_animations::{Animations, SkillAnimation},
+		},
 	};
 	use test_case::test_case;
 	use testing::SingleThreadedApp;
@@ -74,7 +77,13 @@ mod tests {
 	#[test_case(AnimationPriority::High; "high")]
 	fn get_mut_animations(animation_priority: AnimationPriority) -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let animations = [AnimationKey::Run, AnimationKey::Skill(SlotKey(11))];
+		let animations = [
+			AnimationKey::Run,
+			AnimationKey::Skill {
+				slot: SlotKey(11),
+				animation: SkillAnimation::Aim,
+			},
+		];
 		let entity = app.world_mut().spawn(AnimationDispatch::default()).id();
 
 		app.world_mut()
@@ -97,7 +106,13 @@ mod tests {
 	#[test_case(AnimationPriority::High; "high")]
 	fn get_animations(animation_priority: AnimationPriority) -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let animations = [AnimationKey::Run, AnimationKey::Skill(SlotKey(11))];
+		let animations = [
+			AnimationKey::Run,
+			AnimationKey::Skill {
+				slot: SlotKey(11),
+				animation: SkillAnimation::Aim,
+			},
+		];
 		let entity = app
 			.world_mut()
 			.spawn(dispatch_with([(animation_priority, animations)]))

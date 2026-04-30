@@ -176,7 +176,7 @@ mod tests {
 	use common::{
 		bit_mask_index,
 		tools::action_key::slot::SlotKey,
-		traits::handles_animations::{AnimationKey, AnimationMaskBits},
+		traits::handles_animations::{AnimationKey, AnimationMaskBits, SkillAnimation},
 	};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
@@ -540,7 +540,10 @@ mod tests {
 		let lookup = AnimationLookup {
 			animations: HashMap::from([
 				(
-					AnimationKey::Skill(SlotKey(11)),
+					AnimationKey::Skill {
+						slot: SlotKey(11),
+						animation: SkillAnimation::Aim,
+					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([0, 1]),
 						play_mode: PlayMode::Replay,
@@ -548,7 +551,10 @@ mod tests {
 					},
 				),
 				(
-					AnimationKey::Skill(SlotKey(12)),
+					AnimationKey::Skill {
+						slot: SlotKey(12),
+						animation: SkillAnimation::Aim,
+					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([2, 3]),
 						play_mode: PlayMode::Replay,
@@ -556,7 +562,10 @@ mod tests {
 					},
 				),
 				(
-					AnimationKey::Skill(SlotKey(21)),
+					AnimationKey::Skill {
+						slot: SlotKey(21),
+						animation: SkillAnimation::Aim,
+					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([4, 5]),
 						play_mode: PlayMode::Replay,
@@ -564,7 +573,10 @@ mod tests {
 					},
 				),
 				(
-					AnimationKey::Skill(SlotKey(22)),
+					AnimationKey::Skill {
+						slot: SlotKey(22),
+						animation: SkillAnimation::Aim,
+					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([6, 7]),
 						play_mode: PlayMode::Replay,
@@ -572,7 +584,10 @@ mod tests {
 					},
 				),
 				(
-					AnimationKey::Skill(SlotKey(31)),
+					AnimationKey::Skill {
+						slot: SlotKey(31),
+						animation: SkillAnimation::Aim,
+					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([8, 9]),
 						play_mode: PlayMode::Replay,
@@ -580,7 +595,10 @@ mod tests {
 					},
 				),
 				(
-					AnimationKey::Skill(SlotKey(32)),
+					AnimationKey::Skill {
+						slot: SlotKey(32),
+						animation: SkillAnimation::Aim,
+					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([10, 11]),
 						play_mode: PlayMode::Replay,
@@ -598,20 +616,38 @@ mod tests {
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::High))
 						.return_const(leak_iterator(vec![
-							AnimationKey::Skill(SlotKey(11)),
-							AnimationKey::Skill(SlotKey(12)),
+							AnimationKey::Skill {
+								slot: SlotKey(11),
+								animation: SkillAnimation::Aim,
+							},
+							AnimationKey::Skill {
+								slot: SlotKey(12),
+								animation: SkillAnimation::Aim,
+							},
 						]));
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::Medium))
 						.return_const(leak_iterator(vec![
-							AnimationKey::Skill(SlotKey(21)),
-							AnimationKey::Skill(SlotKey(22)),
+							AnimationKey::Skill {
+								slot: SlotKey(21),
+								animation: SkillAnimation::Aim,
+							},
+							AnimationKey::Skill {
+								slot: SlotKey(22),
+								animation: SkillAnimation::Aim,
+							},
 						]));
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::Low))
 						.return_const(leak_iterator(vec![
-							AnimationKey::Skill(SlotKey(31)),
-							AnimationKey::Skill(SlotKey(32)),
+							AnimationKey::Skill {
+								slot: SlotKey(31),
+								animation: SkillAnimation::Aim,
+							},
+							AnimationKey::Skill {
+								slot: SlotKey(32),
+								animation: SkillAnimation::Aim,
+							},
 						]));
 				}),
 				lookup,
@@ -846,7 +882,10 @@ mod tests {
 		let lookup = AnimationLookup {
 			animations: HashMap::from([
 				(
-					AnimationKey::Skill(SlotKey(11)),
+					AnimationKey::Skill {
+						slot: SlotKey(11),
+						animation: SkillAnimation::Aim,
+					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([0, 1]),
 						play_mode: PlayMode::Replay,
@@ -854,7 +893,10 @@ mod tests {
 					},
 				),
 				(
-					AnimationKey::Skill(SlotKey(12)),
+					AnimationKey::Skill {
+						slot: SlotKey(12),
+						animation: SkillAnimation::Aim,
+					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([2, 3]),
 						play_mode: PlayMode::Replay,
@@ -862,7 +904,10 @@ mod tests {
 					},
 				),
 				(
-					AnimationKey::Skill(SlotKey(21)),
+					AnimationKey::Skill {
+						slot: SlotKey(21),
+						animation: SkillAnimation::Aim,
+					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([4, 5]),
 						play_mode: PlayMode::Replay,
@@ -870,7 +915,10 @@ mod tests {
 					},
 				),
 				(
-					AnimationKey::Skill(SlotKey(22)),
+					AnimationKey::Skill {
+						slot: SlotKey(22),
+						animation: SkillAnimation::Aim,
+					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([6, 7]),
 						play_mode: PlayMode::Replay,
@@ -878,7 +926,10 @@ mod tests {
 					},
 				),
 				(
-					AnimationKey::Skill(SlotKey(31)),
+					AnimationKey::Skill {
+						slot: SlotKey(31),
+						animation: SkillAnimation::Aim,
+					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([8, 9]),
 						play_mode: PlayMode::Replay,
@@ -886,7 +937,10 @@ mod tests {
 					},
 				),
 				(
-					AnimationKey::Skill(SlotKey(32)),
+					AnimationKey::Skill {
+						slot: SlotKey(32),
+						animation: SkillAnimation::Aim,
+					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([10, 11]),
 						play_mode: PlayMode::Replay,
@@ -904,20 +958,38 @@ mod tests {
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::High))
 						.return_const(leak_iterator(vec![
-							AnimationKey::Skill(SlotKey(11)),
-							AnimationKey::Skill(SlotKey(12)),
+							AnimationKey::Skill {
+								slot: SlotKey(11),
+								animation: SkillAnimation::Aim,
+							},
+							AnimationKey::Skill {
+								slot: SlotKey(12),
+								animation: SkillAnimation::Aim,
+							},
 						]));
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::Medium))
 						.return_const(leak_iterator(vec![
-							AnimationKey::Skill(SlotKey(21)),
-							AnimationKey::Skill(SlotKey(22)),
+							AnimationKey::Skill {
+								slot: SlotKey(21),
+								animation: SkillAnimation::Aim,
+							},
+							AnimationKey::Skill {
+								slot: SlotKey(22),
+								animation: SkillAnimation::Aim,
+							},
 						]));
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::Low))
 						.return_const(leak_iterator(vec![
-							AnimationKey::Skill(SlotKey(31)),
-							AnimationKey::Skill(SlotKey(32)),
+							AnimationKey::Skill {
+								slot: SlotKey(31),
+								animation: SkillAnimation::Aim,
+							},
+							AnimationKey::Skill {
+								slot: SlotKey(32),
+								animation: SkillAnimation::Aim,
+							},
 						]));
 				}),
 				lookup,
@@ -959,7 +1031,10 @@ mod tests {
 		let lookup = AnimationLookup {
 			animations: HashMap::from([
 				(
-					AnimationKey::Skill(SlotKey(11)),
+					AnimationKey::Skill {
+						slot: SlotKey(11),
+						animation: SkillAnimation::Aim,
+					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([0, 1]),
 						play_mode: PlayMode::Replay,
@@ -967,7 +1042,10 @@ mod tests {
 					},
 				),
 				(
-					AnimationKey::Skill(SlotKey(12)),
+					AnimationKey::Skill {
+						slot: SlotKey(12),
+						animation: SkillAnimation::Aim,
+					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([2, 3]),
 						play_mode: PlayMode::Replay,
@@ -975,7 +1053,10 @@ mod tests {
 					},
 				),
 				(
-					AnimationKey::Skill(SlotKey(21)),
+					AnimationKey::Skill {
+						slot: SlotKey(21),
+						animation: SkillAnimation::Aim,
+					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([4, 5]),
 						play_mode: PlayMode::Replay,
@@ -983,7 +1064,10 @@ mod tests {
 					},
 				),
 				(
-					AnimationKey::Skill(SlotKey(22)),
+					AnimationKey::Skill {
+						slot: SlotKey(22),
+						animation: SkillAnimation::Aim,
+					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([6, 7]),
 						play_mode: PlayMode::Replay,
@@ -991,7 +1075,10 @@ mod tests {
 					},
 				),
 				(
-					AnimationKey::Skill(SlotKey(31)),
+					AnimationKey::Skill {
+						slot: SlotKey(31),
+						animation: SkillAnimation::Aim,
+					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([8, 9]),
 						play_mode: PlayMode::Replay,
@@ -999,7 +1086,10 @@ mod tests {
 					},
 				),
 				(
-					AnimationKey::Skill(SlotKey(32)),
+					AnimationKey::Skill {
+						slot: SlotKey(32),
+						animation: SkillAnimation::Aim,
+					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([10, 11]),
 						play_mode: PlayMode::Replay,
@@ -1018,20 +1108,38 @@ mod tests {
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::High))
 						.return_const(leak_iterator(vec![
-							AnimationKey::Skill(SlotKey(11)),
-							AnimationKey::Skill(SlotKey(12)),
+							AnimationKey::Skill {
+								slot: SlotKey(11),
+								animation: SkillAnimation::Aim,
+							},
+							AnimationKey::Skill {
+								slot: SlotKey(12),
+								animation: SkillAnimation::Aim,
+							},
 						]));
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::Medium))
 						.return_const(leak_iterator(vec![
-							AnimationKey::Skill(SlotKey(21)),
-							AnimationKey::Skill(SlotKey(22)),
+							AnimationKey::Skill {
+								slot: SlotKey(21),
+								animation: SkillAnimation::Aim,
+							},
+							AnimationKey::Skill {
+								slot: SlotKey(22),
+								animation: SkillAnimation::Aim,
+							},
 						]));
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::Low))
 						.return_const(leak_iterator(vec![
-							AnimationKey::Skill(SlotKey(31)),
-							AnimationKey::Skill(SlotKey(32)),
+							AnimationKey::Skill {
+								slot: SlotKey(31),
+								animation: SkillAnimation::Aim,
+							},
+							AnimationKey::Skill {
+								slot: SlotKey(32),
+								animation: SkillAnimation::Aim,
+							},
 						]));
 				}),
 				lookup,
@@ -1071,7 +1179,10 @@ mod tests {
 		let lookup = AnimationLookup {
 			animations: HashMap::from([
 				(
-					AnimationKey::Skill(SlotKey(1)),
+					AnimationKey::Skill {
+						slot: SlotKey(1),
+						animation: SkillAnimation::Aim,
+					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([0, 1]),
 						play_mode: PlayMode::Replay,
@@ -1079,7 +1190,10 @@ mod tests {
 					},
 				),
 				(
-					AnimationKey::Skill(SlotKey(2)),
+					AnimationKey::Skill {
+						slot: SlotKey(2),
+						animation: SkillAnimation::Aim,
+					},
 					AnimationLookupData {
 						animation_clips: _Animations::from_indices([2, 3]),
 						play_mode: PlayMode::Replay,
@@ -1100,10 +1214,16 @@ mod tests {
 				_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::High))
-						.return_const(leak_iterator(vec![AnimationKey::Skill(SlotKey(1))]));
+						.return_const(leak_iterator(vec![AnimationKey::Skill {
+							slot: SlotKey(1),
+							animation: SkillAnimation::Aim,
+						}]));
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::Medium))
-						.return_const(leak_iterator(vec![AnimationKey::Skill(SlotKey(2))]));
+						.return_const(leak_iterator(vec![AnimationKey::Skill {
+							slot: SlotKey(2),
+							animation: SkillAnimation::Aim,
+						}]));
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::Low))
 						.return_const(leak_iterator(vec![]));
