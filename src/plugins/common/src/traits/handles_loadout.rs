@@ -12,6 +12,7 @@ use crate::{
 	},
 	traits::{
 		accessors::get::{GetContext, GetContextMut},
+		handles_animations::SkillAnimation,
 		handles_loadout::{
 			available_skills::{AvailableSkills, ReadAvailableSkills},
 			combos::{Combos, ReadCombos, UpdateCombos},
@@ -110,7 +111,7 @@ where
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct ActiveSkill {
 	pub key: SlotKey,
-	pub animate: bool,
+	pub animation: Option<SkillAnimation>,
 }
 
 pub trait HeldSkills {
