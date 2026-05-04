@@ -132,7 +132,7 @@ impl ApplyAgentConfig {
 			commands.try_apply_on(&entity, |mut e| {
 				match &config.model {
 					AgentModel::Asset(path) => {
-						e.try_insert(AssetModel::path(path));
+						e.try_insert(AssetModel::scene(path));
 					}
 					AgentModel::Procedural(func) => {
 						func(&mut e);
@@ -652,7 +652,7 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(&AssetModel::from("my/path")),
+				Some(&AssetModel::scene("my/path")),
 				app.world().entity(entity).get::<AssetModel>()
 			);
 		}

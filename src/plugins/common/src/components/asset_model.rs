@@ -11,25 +11,16 @@ pub struct AssetModel {
 pub(crate) enum Model {
 	#[default]
 	None,
-	Path(String),
-}
-
-impl<T> From<T> for AssetModel
-where
-	T: Into<String>,
-{
-	fn from(path: T) -> Self {
-		Self::path(path)
-	}
+	Scene(String),
 }
 
 impl AssetModel {
-	pub fn path<T>(path: T) -> Self
+	pub fn scene<T>(path: T) -> Self
 	where
 		T: Into<String>,
 	{
 		Self {
-			model: Model::Path(path.into()),
+			model: Model::Scene(path.into()),
 		}
 	}
 

@@ -36,7 +36,7 @@ fn load_asset_model<TServer>(
 
 	let handle = match &asset_model.model {
 		Model::None => Handle::<Scene>::default(),
-		Model::Path(path) => {
+		Model::Scene(path) => {
 			asset_server.load_asset(GltfAssetLabel::Scene(0).from_asset(path.clone()))
 		}
 	};
@@ -70,7 +70,7 @@ mod tests {
 				.returns(handle.clone()),
 		);
 
-		let model = app.world_mut().spawn(AssetModel::path(path)).id();
+		let model = app.world_mut().spawn(AssetModel::scene(path)).id();
 
 		assert_eq!(
 			Some(&SceneRoot(handle)),
@@ -94,7 +94,10 @@ mod tests {
 	fn remove_asset_model_component() {
 		let mut app = setup(MockAssetServer::default());
 
-		let model = app.world_mut().spawn(AssetModel::path("my/model.glb")).id();
+		let model = app
+			.world_mut()
+			.spawn(AssetModel::scene("my/model.glb"))
+			.id();
 
 		assert_eq!(None, app.world().entity(model).get::<AssetModel>(),);
 	}

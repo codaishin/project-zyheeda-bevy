@@ -327,7 +327,7 @@ mod tests {
 					contact: (
 						_Skill::default_object(),
 						SubModel {
-							model: Model::Asset(AssetModel::from("asset/path")),
+							model: Model::Asset(AssetModel::scene("asset/path")),
 							transform: Transform::from_xyz(1., 2., 3.),
 						},
 						_Skill::default_contact_collider(),
@@ -340,7 +340,7 @@ mod tests {
 			let [model, ..] = assert_children_count!(3, app, skill);
 			assert_eq!(
 				(
-					Some(&Model::Asset(AssetModel::from("asset/path"))),
+					Some(&Model::Asset(AssetModel::scene("asset/path"))),
 					Some(&Transform::from_xyz(1., 2., 3.))
 				),
 				(model.get::<Model>(), model.get::<Transform>(),),
@@ -451,7 +451,7 @@ mod tests {
 				.spawn(_Skill {
 					projection: (
 						SubModel {
-							model: Model::Asset(AssetModel::from("asset/path")),
+							model: Model::Asset(AssetModel::scene("asset/path")),
 							transform: Transform::from_xyz(1., 2., 3.),
 						},
 						_Skill::default_projection_collider(),
@@ -465,7 +465,7 @@ mod tests {
 			let [model, ..] = assert_children_count!(2, app, projection);
 			assert_eq!(
 				(
-					Some(&Model::Asset(AssetModel::from("asset/path"))),
+					Some(&Model::Asset(AssetModel::scene("asset/path"))),
 					Some(&Transform::from_xyz(1., 2., 3.))
 				),
 				(model.get::<Model>(), model.get::<Transform>(),),

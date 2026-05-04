@@ -49,10 +49,10 @@ mod tests {
 
 		let entity = app
 			.world_mut()
-			.spawn(Model::Asset(AssetModel::from("asset/path")));
+			.spawn(Model::Asset(AssetModel::scene("asset/path")));
 
 		assert_eq!(
-			Some(&AssetModel::from("asset/path")),
+			Some(&AssetModel::scene("asset/path")),
 			entity.get::<AssetModel>()
 		);
 	}
@@ -81,7 +81,7 @@ mod tests {
 
 		let entity = app
 			.world_mut()
-			.spawn(Model::Asset(AssetModel::from("asset/path")));
+			.spawn(Model::Asset(AssetModel::scene("asset/path")));
 
 		assert_eq!(None, entity.get::<Model>());
 	}

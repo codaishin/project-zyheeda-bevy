@@ -36,7 +36,7 @@ impl GetProjectionPrefab for Skill {
 		let (model, collider) = match &self.shape {
 			SkillShape::SphereAoE(SphereAoE { radius, .. }) => (
 				SubModel {
-					model: Model::Asset(AssetModel::path(SPHERE_MODEL)),
+					model: Model::Asset(AssetModel::scene(SPHERE_MODEL)),
 					transform: Transform::from_scale(Vec3::splat(**radius * 2.)),
 				},
 				ProjectionCollider {
@@ -49,7 +49,7 @@ impl GetProjectionPrefab for Skill {
 			),
 			SkillShape::Projectile(..) => (
 				SubModel {
-					model: Model::Asset(AssetModel::path(SPHERE_MODEL)),
+					model: Model::Asset(AssetModel::scene(SPHERE_MODEL)),
 					transform: Transform::from_scale(Vec3::splat(
 						PROJECTILE_PROJECTION_RADIUS * 2.,
 					)),
@@ -83,7 +83,7 @@ impl GetProjectionPrefab for Skill {
 			),
 			SkillShape::Shield(Shield) => (
 				SubModel {
-					model: Model::Asset(AssetModel::path(SHIELD_PROJECTION_MODEL)),
+					model: Model::Asset(AssetModel::scene(SHIELD_PROJECTION_MODEL)),
 					transform: Transform::from_scale(SHIELD_SCALE),
 				},
 				ProjectionCollider {
