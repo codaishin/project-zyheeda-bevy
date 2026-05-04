@@ -37,7 +37,7 @@ mod tests {
 	fn false_if_not_scene_loaded() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		app.world_mut()
-			.spawn((Map::default(), AssetModel::path("my/path")));
+			.spawn((Map::default(), AssetModel::scene("my/path")));
 
 		let loaded = app
 			.world_mut()
@@ -51,7 +51,7 @@ mod tests {
 	fn true_if_scene_loaded() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		app.world_mut()
-			.spawn((Map::default(), AssetModel::path("my/path"), _SceneLoaded));
+			.spawn((Map::default(), AssetModel::scene("my/path"), _SceneLoaded));
 
 		let loaded = app
 			.world_mut()
@@ -64,7 +64,7 @@ mod tests {
 	#[test]
 	fn ignore_non_map_components() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		app.world_mut().spawn(AssetModel::path("my/path"));
+		app.world_mut().spawn(AssetModel::scene("my/path"));
 
 		let loaded = app
 			.world_mut()

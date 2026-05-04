@@ -10,7 +10,7 @@ use bevy::{
 	prelude::*,
 };
 use common::{
-	components::asset_model::AssetModel,
+	components::asset_model::{AssetModel, SceneId, UseGltfLookup},
 	tools::{Units, action_key::slot::SlotKey, inventory_key::InventoryKey},
 	traits::{
 		accessors::get::{GetContextMut, TryApplyOn},
@@ -132,7 +132,7 @@ impl ApplyAgentConfig {
 			commands.try_apply_on(&entity, |mut e| {
 				match &config.model {
 					AgentModel::Asset(path) => {
-						e.try_insert(AssetModel::path(path));
+						e.try_insert(AssetModel::scene((path, SceneId(0), UseGltfLookup(true))));
 					}
 					AgentModel::Procedural(func) => {
 						func(&mut e);
@@ -652,7 +652,11 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(&AssetModel::from("my/path")),
+				Some(&AssetModel::scene((
+					"my/path",
+					SceneId(0),
+					UseGltfLookup(true)
+				))),
 				app.world().entity(entity).get::<AssetModel>()
 			);
 		}

@@ -23,7 +23,7 @@ use bevy::prelude::*;
 ///
 /// Various functionalities, including pausing and automatic state transitions
 /// require:
-/// - either [`CommonPlugin`](crate::CommonPlugin): `app.add_plugins(CommonPlugin)`
+/// - either [`CommonPlugin`](crate::CommonPlugin): `app.add_plugins(CommonPlugin::with_asset_loading(true|false))`
 /// - or [`RegisterControlledState`](crate::traits::register_controlled_state::RegisterControlledState):
 ///   `app.register_controlled_state::<GameState>()`
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Copy, Default, States)]

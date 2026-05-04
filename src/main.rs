@@ -79,7 +79,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let camera_control = CameraControlPlugin::from_plugins(&input, &savegame, &agents, &graphics);
 
 	app.add_plugins(DefaultPlugins)
-		.add_plugins(CommonPlugin)
+		.add_plugins(CommonPlugin::with_asset_loading(true))
 		.add_plugins(FrameLimiterPlugin {
 			target_fps: TARGET_FPS,
 		})

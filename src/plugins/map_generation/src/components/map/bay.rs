@@ -6,5 +6,5 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
 #[savable_component(id = "bay map")]
-#[require(Map, Name = "BayMap", AssetModel = AssetModel::path("maps/bay.glb"))]
+#[require(Map, Name = "BayMap", AssetModel = AssetModel::scene("maps/bay.glb"))]
 pub(crate) struct BayMap;

@@ -87,7 +87,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_plugins(CommonPlugin);
+		app.add_plugins(CommonPlugin::with_asset_loading(false));
 
 		app
 	}

@@ -104,7 +104,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.insert_resource(spawner);
-		app.add_plugins(CommonPlugin);
+		app.add_plugins(CommonPlugin::with_asset_loading(false));
 		app.add_systems(
 			Update,
 			(

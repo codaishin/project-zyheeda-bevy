@@ -43,7 +43,7 @@ impl GetContactPrefab for Skill {
 					destroyed_by: Blocker::none(),
 				},
 				SubModel {
-					model: Model::Asset(AssetModel::path(SPHERE_MODEL)),
+					model: Model::Asset(AssetModel::scene(SPHERE_MODEL)),
 					transform: Transform::from_scale(Vec3::splat(**radius * 2.)),
 				},
 				ContactCollider {
@@ -59,7 +59,7 @@ impl GetContactPrefab for Skill {
 					destroyed_by: destroyed_by.clone().into(),
 				},
 				SubModel {
-					model: Model::Asset(AssetModel::path(SPHERE_MODEL)),
+					model: Model::Asset(AssetModel::scene(SPHERE_MODEL)),
 					transform: Transform::from_scale(Vec3::splat(PROJECTILE_CONTACT_RADIUS * 2.)),
 				},
 				ContactCollider {
@@ -98,7 +98,7 @@ impl GetContactPrefab for Skill {
 					destroyed_by: Blocker::none(),
 				},
 				SubModel {
-					model: Model::Asset(AssetModel::path(SHIELD_CONTACT_MODEL)),
+					model: Model::Asset(AssetModel::scene(SHIELD_CONTACT_MODEL)),
 					transform: Transform::from_scale(SHIELD_SCALE),
 				},
 				ContactCollider {
