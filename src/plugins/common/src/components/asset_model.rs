@@ -1,5 +1,8 @@
 use crate::{
-	components::{gltf_root::GltfRoot, load_model::LoadModel},
+	components::{
+		gltf::{GltfLookup, GltfScene},
+		load_model::LoadModel,
+	},
 	errors::Unreachable,
 	traits::{
 		load_asset::LoadAsset,
@@ -48,7 +51,7 @@ where
 		match &self.scene {
 			Some(scene) if *scene.use_gltf => {
 				let gltf = asset_server.load_asset(scene.asset_path.clone());
-				entity.try_insert(GltfRoot { gltf, id: scene.id });
+				entity.try_insert((GltfLookup(gltf), GltfScene(scene.id)));
 			}
 			Some(scene) => {
 				let root = asset_server.load_asset(
@@ -76,10 +79,11 @@ impl Deref for SceneId {
 	}
 }
 
+/// Whether or not to add [`GltfLookup`] to the entity
 #[derive(Debug, PartialEq, Default, Clone, Copy, Serialize, Deserialize)]
-pub struct UseGltf(pub bool);
+pub struct UseGltfLookup(pub bool);
 
-impl Deref for UseGltf {
+impl Deref for UseGltfLookup {
 	type Target = bool;
 
 	fn deref(&self) -> &Self::Target {
@@ -91,12 +95,12 @@ impl Deref for UseGltf {
 pub struct Scene {
 	pub asset_path: String,
 	pub id: SceneId,
-	pub use_gltf: UseGltf,
+	pub use_gltf: UseGltfLookup,
 }
 
 impl Scene {
 	pub const DEFAULT_SCENE_ID: SceneId = SceneId(0);
-	pub const DEFAULT_GLTF_USAGE: UseGltf = UseGltf(false);
+	pub const DEFAULT_GLTF_USAGE: UseGltfLookup = UseGltfLookup(false);
 }
 
 impl From<String> for Scene {
@@ -142,11 +146,11 @@ where
 	}
 }
 
-impl<T> From<(T, SceneId, UseGltf)> for Scene
+impl<T> From<(T, SceneId, UseGltfLookup)> for Scene
 where
 	T: Into<String>,
 {
-	fn from((asset_path, id, use_gltf): (T, SceneId, UseGltf)) -> Self {
+	fn from((asset_path, id, use_gltf): (T, SceneId, UseGltfLookup)) -> Self {
 		Self {
 			asset_path: asset_path.into(),
 			id,
@@ -209,12 +213,15 @@ mod tests {
 
 		let model = app
 			.world_mut()
-			.spawn(AssetModel::scene((asset_path, id, UseGltf(true))))
+			.spawn(AssetModel::scene((asset_path, id, UseGltfLookup(true))))
 			.id();
 
 		assert_eq!(
-			Some(&GltfRoot { gltf: handle, id }),
-			app.world().entity(model).get::<GltfRoot>(),
+			(Some(&GltfLookup(handle)), Some(&GltfScene(id))),
+			(
+				app.world().entity(model).get::<GltfLookup>(),
+				app.world().entity(model).get::<GltfScene>(),
+			)
 		);
 	}
 

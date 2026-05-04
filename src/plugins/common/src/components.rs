@@ -9,5 +9,5 @@ pub mod persistent_entity;
 pub mod protected;
 pub mod ui_node_for;
 
-pub(crate) mod gltf_root;
+pub(crate) mod gltf;
 pub(crate) mod load_model;

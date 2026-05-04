@@ -1,6 +1,6 @@
 use crate::{
 	components::{
-		gltf_root::GltfRoot,
+		gltf::{GltfLookup, GltfScene},
 		load_model::{GltfSceneError, LoadModel},
 	},
 	traits::accessors::get::TryApplyOn,
@@ -8,13 +8,13 @@ use crate::{
 };
 use bevy::prelude::*;
 
-impl GltfRoot {
+impl GltfLookup {
 	pub(crate) fn trigger_model_load(
 		mut commands: ZyheedaCommands,
 		assets: Res<Assets<Gltf>>,
-		scenes: Query<(Entity, &GltfRoot), Without<LoadModel>>,
+		scenes: Query<(Entity, &GltfLookup, &GltfScene), Without<LoadModel>>,
 	) {
-		for (entity, GltfRoot { gltf, id }) in scenes {
+		for (entity, GltfLookup(gltf), GltfScene(id)) in scenes {
 			let Some(gltf) = assets.get(gltf) else {
 				continue;
 			};
@@ -69,7 +69,7 @@ mod tests {
 		}
 
 		app.insert_resource(model_assets);
-		app.add_systems(Update, GltfRoot::trigger_model_load);
+		app.add_systems(Update, GltfLookup::trigger_model_load);
 
 		app
 	}
@@ -81,7 +81,10 @@ mod tests {
 		let handle = new_handle();
 		let gltf = gltf(scenes.clone());
 		let mut app = setup([(&handle, gltf)]);
-		let entity = app.world_mut().spawn(GltfRoot { gltf: handle, id }).id();
+		let entity = app
+			.world_mut()
+			.spawn((GltfLookup(handle), GltfScene(id)))
+			.id();
 
 		app.update();
 
@@ -99,10 +102,7 @@ mod tests {
 		let mut app = setup([(&handle, gltf)]);
 		let entity = app
 			.world_mut()
-			.spawn(GltfRoot {
-				gltf: handle,
-				id: SceneId(3),
-			})
+			.spawn((GltfLookup(handle), GltfScene(SceneId(3))))
 			.id();
 
 		app.update();
@@ -126,10 +126,8 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				GltfRoot {
-					gltf: handle,
-					id: SceneId(0),
-				},
+				GltfLookup(handle),
+				GltfScene(SceneId(0)),
 				LoadModel::Scene(current_scene.clone()),
 			))
 			.id();

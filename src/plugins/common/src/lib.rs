@@ -15,7 +15,7 @@ use crate::{
 	components::{
 		asset_mesh_name::AssetMeshName,
 		child_of_persistent::ChildOfPersistent,
-		gltf_root::GltfRoot,
+		gltf::GltfLookup,
 		lifetime::Lifetime,
 		load_model::LoadModel,
 		model::Model,
@@ -58,7 +58,7 @@ fn asset_loading(app: &mut App) {
 	app.add_observer(InsertAsset::<Mesh>::apply);
 	app.add_observer(InsertAsset::<StandardMaterial>::apply);
 	app.add_observer(AssetMeshName::insert);
-	app.add_systems(Update, GltfRoot::trigger_model_load);
+	app.add_systems(Update, GltfLookup::trigger_model_load);
 }
 
 fn life_cycles(app: &mut App) {
