@@ -143,7 +143,6 @@ where
 			ApplyAgentConfig::system::<
 				LoadoutPrepParam<TLoadout>,
 				SkillAgentMut<TPhysics>,
-				AnimationsSystemParamMut<TAnimations>,
 				MovementSystemConfigParam<TMovement>,
 				PhysicsConfigMut<TPhysics>,
 			>,

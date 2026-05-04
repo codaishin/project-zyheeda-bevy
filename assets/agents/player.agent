@@ -67,7 +67,7 @@
 				[
 					"Idle",
 					{
-						"name": {
+						"clips": {
 							"Single": "Idle"
 						},
 						"play_mode": "Repeat",
@@ -77,7 +77,7 @@
 				[
 					"Walk",
 					{
-						"name": {
+						"clips": {
 							"Directional": {
 								"forward": "Walk.F",
 								"backward": "Walk.B",
@@ -92,7 +92,7 @@
 				[
 					"Run",
 					{
-						"name": {
+						"clips": {
 							"Directional": {
 								"forward": "Run.F",
 								"backward": "Run.B",
@@ -112,7 +112,7 @@
 						}
 					},
 					{
-						"name": {
+						"clips": {
 							"PitchedForward": {
 								"neutral": "Aim.L",
 								"up": [
@@ -137,7 +137,7 @@
 						}
 					},
 					{
-						"name": {
+						"clips": {
 							"PitchedForward": {
 								"neutral": "Aim.R",
 								"up": [
@@ -162,7 +162,7 @@
 						}
 					},
 					{
-						"name": {
+						"clips": {
 							"Single": "Block.L"
 						},
 						"play_mode": "Repeat",
@@ -177,7 +177,7 @@
 						}
 					},
 					{
-						"name": {
+						"clips": {
 							"Single": "Block.R"
 						},
 						"play_mode": "Repeat",

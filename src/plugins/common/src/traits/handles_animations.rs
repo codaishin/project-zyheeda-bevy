@@ -179,6 +179,61 @@ impl<T> AnimationClips<T> {
 			}
 		}
 	}
+
+	pub fn try_map_option<U>(self, mut f: impl FnMut(T) -> Option<U>) -> Option<AnimationClips<U>> {
+		let clips = match self {
+			AnimationClips::Single(clip) => AnimationClips::Single(f(clip)?),
+			AnimationClips::Directional(Directional {
+				forward,
+				backward,
+				left,
+				right,
+			}) => AnimationClips::Directional(Directional {
+				forward: f(forward)?,
+				backward: f(backward)?,
+				left: f(left)?,
+				right: f(right)?,
+			}),
+			AnimationClips::PitchedForward(PitchedForward { neutral, up, down }) => {
+				AnimationClips::PitchedForward(PitchedForward {
+					neutral: f(neutral)?,
+					up: (up.0, f(up.1)?),
+					down: (down.0, f(down.1)?),
+				})
+			}
+		};
+
+		Some(clips)
+	}
+
+	pub fn try_map_result<U, E>(
+		self,
+		mut f: impl FnMut(T) -> Result<U, E>,
+	) -> Result<AnimationClips<U>, E> {
+		let clips = match self {
+			AnimationClips::Single(clip) => AnimationClips::Single(f(clip)?),
+			AnimationClips::Directional(Directional {
+				forward,
+				backward,
+				left,
+				right,
+			}) => AnimationClips::Directional(Directional {
+				forward: f(forward)?,
+				backward: f(backward)?,
+				left: f(left)?,
+				right: f(right)?,
+			}),
+			AnimationClips::PitchedForward(PitchedForward { neutral, up, down }) => {
+				AnimationClips::PitchedForward(PitchedForward {
+					neutral: f(neutral)?,
+					up: (up.0, f(up.1)?),
+					down: (down.0, f(down.1)?),
+				})
+			}
+		};
+
+		Ok(clips)
+	}
 }
 
 impl<T> Default for AnimationClips<T>

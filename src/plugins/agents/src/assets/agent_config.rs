@@ -5,7 +5,13 @@ use common::{
 	tools::{action_key::slot::SlotKey, bone_name::BoneName, mesh_name::MeshName, path::Path},
 	traits::{
 		accessors::get::View,
-		handles_animations::{AffectedAnimationBones, Animation, AnimationKey, AnimationMaskBits},
+		handles_animations::{
+			AffectedAnimationBones,
+			Animation,
+			AnimationClips,
+			AnimationKey,
+			AnimationMaskBits,
+		},
 		handles_custom_assets::AssetFolderPath,
 		handles_movement::{MovementSpeed, RequiredClearance},
 		handles_physics::PhysicalDefaultAttributes,
@@ -26,7 +32,7 @@ pub struct AgentConfigAsset {
 	pub(crate) height_levels: HeightLevels,
 	pub(crate) speed: MovementSpeed,
 	pub(crate) attributes: PhysicalDefaultAttributes,
-	pub(crate) animations: HashMap<AnimationKey, Animation>,
+	pub(crate) animations: HashMap<AnimationKey, Animation<AnimationClips<String>>>,
 	pub(crate) animation_mask_groups: HashMap<AnimationMaskBits, AffectedAnimationBones>,
 }
 
