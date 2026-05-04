@@ -1,5 +1,5 @@
 use crate::{
-	components::asset_model::{AssetModel, Model},
+	components::asset_model::{AssetModel, Scene},
 	traits::{accessors::get::GetMut, load_asset::LoadAsset},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -34,10 +34,10 @@ fn load_asset_model<TServer>(
 		return;
 	};
 
-	let handle = match &asset_model.model {
-		Model::None => Handle::<Scene>::default(),
-		Model::Scene(path) => {
-			asset_server.load_asset(GltfAssetLabel::Scene(0).from_asset(path.clone()))
+	let handle = match &asset_model.scene {
+		None => Handle::default(),
+		Some(Scene { asset_path, id }) => {
+			asset_server.load_asset(GltfAssetLabel::Scene(*id).from_asset(asset_path.clone()))
 		}
 	};
 
@@ -49,6 +49,7 @@ fn load_asset_model<TServer>(
 mod tests {
 	use super::*;
 	use crate::traits::load_asset::mock::MockAssetServer;
+	use test_case::test_case;
 	use testing::new_handle;
 
 	fn setup(asset_server: MockAssetServer) -> App {
@@ -60,17 +61,21 @@ mod tests {
 		app
 	}
 
-	#[test]
-	fn load_asset() {
+	#[test_case(0; "0")]
+	#[test_case(11; "11")]
+	fn load_asset_scene(id: usize) {
 		let handle = new_handle();
-		let path = "my/model.glb";
+		let asset_path = "my/model.glb";
 		let mut app = setup(
 			MockAssetServer::default()
-				.path(GltfAssetLabel::Scene(0).from_asset(path))
+				.path(GltfAssetLabel::Scene(id).from_asset(asset_path))
 				.returns(handle.clone()),
 		);
 
-		let model = app.world_mut().spawn(AssetModel::scene(path)).id();
+		let model = app
+			.world_mut()
+			.spawn(AssetModel::scene((asset_path, id)))
+			.id();
 
 		assert_eq!(
 			Some(&SceneRoot(handle)),
