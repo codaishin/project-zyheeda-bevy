@@ -45,7 +45,7 @@ use uuid::Uuid;
 /// }
 ///
 /// let mut app = App::new();
-/// app.register_persistent_entities(); // use `app.add_plugins(CommonPlugin);` for production code
+/// app.register_persistent_entities(); // use `app.add_plugins(CommonPlugin::with_asset_loading(true));` for production code
 /// app.add_systems(Update, Seeker::set_target_name);
 ///
 /// let target_persistent_entity = PersistentEntity::default();
