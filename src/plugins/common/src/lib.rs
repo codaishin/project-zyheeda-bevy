@@ -15,11 +15,15 @@ use crate::{
 	components::{
 		asset_mesh_name::AssetMeshName,
 		child_of_persistent::ChildOfPersistent,
+		gltf_root::GltfRoot,
 		lifetime::Lifetime,
+		load_model::LoadModel,
 		model::Model,
 	},
 	states::game_state::GameState,
+	systems::log::OnError,
 	traits::{
+		prefab::AddPrefabObserver,
 		register_controlled_state::RegisterControlledState,
 		register_persistent_entities::RegisterPersistentEntities,
 	},
@@ -48,11 +52,13 @@ fn persistent_entities(app: &mut App) {
 }
 
 fn asset_loading(app: &mut App) {
+	app.add_prefab_observer::<AssetModel, AssetServer>();
 	app.add_observer(Model::insert);
-	app.add_observer(AssetModel::load);
+	app.add_observer(LoadModel::execute.pipe(OnError::log));
 	app.add_observer(InsertAsset::<Mesh>::apply);
 	app.add_observer(InsertAsset::<StandardMaterial>::apply);
 	app.add_observer(AssetMeshName::insert);
+	app.add_systems(Update, GltfRoot::trigger_model_load);
 }
 
 fn life_cycles(app: &mut App) {

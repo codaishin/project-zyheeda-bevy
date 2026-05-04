@@ -8,3 +8,6 @@ pub mod model;
 pub mod persistent_entity;
 pub mod protected;
 pub mod ui_node_for;
+
+pub(crate) mod gltf_root;
+pub(crate) mod load_model;
