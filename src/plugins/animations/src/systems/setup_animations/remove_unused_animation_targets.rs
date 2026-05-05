@@ -48,7 +48,7 @@ impl SetupAnimations {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::animation_lookup::AnimationClips;
+	use common::traits::handles_animations::AnimationClips;
 	use testing::{SingleThreadedApp, new_handle};
 
 	#[derive(Component)]
@@ -98,7 +98,7 @@ mod tests {
 			.spawn((
 				_Graph(handle),
 				SetupAnimations,
-				AnimationLookup::<AnimationClips>::default(),
+				AnimationLookup::<AnimationClips<AnimationNodeIndex>>::default(),
 			))
 			.id();
 		let targets = [
@@ -150,7 +150,7 @@ mod tests {
 			.spawn((
 				_Graph(handle),
 				SetupAnimations,
-				AnimationLookup::<AnimationClips>::default(),
+				AnimationLookup::<AnimationClips<AnimationNodeIndex>>::default(),
 			))
 			.id();
 		let targets = [
@@ -206,7 +206,7 @@ mod tests {
 			.spawn((
 				_Graph(handle),
 				SetupAnimations,
-				AnimationLookup::<AnimationClips>::default(),
+				AnimationLookup::<AnimationClips<AnimationNodeIndex>>::default(),
 			))
 			.id();
 		let targets = [
@@ -253,7 +253,7 @@ mod tests {
 			.spawn((
 				_Graph(handle),
 				SetupAnimations,
-				AnimationLookup::<AnimationClips>::default(),
+				AnimationLookup::<AnimationClips<AnimationNodeIndex>>::default(),
 			))
 			.id();
 		let other = app.world_mut().spawn_empty().id();
@@ -305,7 +305,7 @@ mod tests {
 			.spawn((
 				_Graph(handle),
 				SetupAnimations,
-				AnimationLookup::<AnimationClips>::default(),
+				AnimationLookup::<AnimationClips<AnimationNodeIndex>>::default(),
 			))
 			.id();
 		let targets = used_targets.map(|id| app.world_mut().spawn((id, AnimatedBy(player))).id());
@@ -332,7 +332,10 @@ mod tests {
 		let mut app = setup(&handle, new_graph(used_targets));
 		let player = app
 			.world_mut()
-			.spawn((_Graph(handle), AnimationLookup::<AnimationClips>::default()))
+			.spawn((
+				_Graph(handle),
+				AnimationLookup::<AnimationClips<AnimationNodeIndex>>::default(),
+			))
 			.id();
 		let targets = [
 			app.world_mut()

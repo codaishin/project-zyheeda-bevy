@@ -47,9 +47,6 @@ mod tests {
 	use test_case::test_case;
 	use testing::SingleThreadedApp;
 
-	#[derive(Resource)]
-	struct _Server;
-
 	fn dispatch_with<TAnimations, TLayer, TKeys>(animations: TAnimations) -> AnimationDispatch
 	where
 		TAnimations: IntoIterator<Item = (TLayer, TKeys)>,
@@ -66,7 +63,6 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.insert_resource(_Server);
 		app.insert_resource(Assets::<AnimationGraph>::default());
 
 		app
@@ -87,7 +83,7 @@ mod tests {
 		let entity = app.world_mut().spawn(AnimationDispatch::default()).id();
 
 		app.world_mut()
-			.run_system_once(move |mut p: AnimationsParamMut<_Server>| {
+			.run_system_once(move |mut p: AnimationsParamMut| {
 				let key = Animations { entity };
 				let mut ctx = AnimationsParamMut::get_context_mut(&mut p, key).unwrap();
 				ctx.active_animations_mut(animation_priority)
@@ -119,7 +115,7 @@ mod tests {
 			.id();
 
 		app.world_mut()
-			.run_system_once(move |mut p: AnimationsParamMut<_Server>| {
+			.run_system_once(move |mut p: AnimationsParamMut| {
 				let key = Animations { entity };
 				let ctx = AnimationsParamMut::get_context_mut(&mut p, key).unwrap();
 

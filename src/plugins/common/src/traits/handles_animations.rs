@@ -1,10 +1,11 @@
 mod priority_order;
 
 use crate::{
-	tools::{action_key::slot::SlotKey, bone_name::BoneName, path::Path},
+	tools::{action_key::slot::SlotKey, bone_name::BoneName},
 	traits::{
 		accessors::get::GetContextMut,
 		handles_animations::priority_order::DescendingAnimationPriorities,
+		iterate::Iterate,
 	},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
@@ -148,36 +149,157 @@ where
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
-pub enum AnimationPath {
-	Single(Path),
-	Directional(Directional),
-	PitchedForward(PitchedForward),
+pub enum AnimationClips<T = Handle<AnimationClip>> {
+	Single(T),
+	Directional(Directional<T>),
+	PitchedForward(PitchedForward<T>),
 }
 
-impl From<&'static str> for AnimationPath {
+impl<T> AnimationClips<T> {
+	pub fn map<U>(self, mut f: impl FnMut(T) -> U) -> AnimationClips<U> {
+		match self {
+			AnimationClips::Single(clip) => AnimationClips::Single(f(clip)),
+			AnimationClips::Directional(Directional {
+				forward,
+				backward,
+				left,
+				right,
+			}) => AnimationClips::Directional(Directional {
+				forward: f(forward),
+				backward: f(backward),
+				left: f(left),
+				right: f(right),
+			}),
+			AnimationClips::PitchedForward(PitchedForward { neutral, up, down }) => {
+				AnimationClips::PitchedForward(PitchedForward {
+					neutral: f(neutral),
+					up: (up.0, f(up.1)),
+					down: (down.0, f(down.1)),
+				})
+			}
+		}
+	}
+
+	pub fn try_map_option<U>(self, mut f: impl FnMut(T) -> Option<U>) -> Option<AnimationClips<U>> {
+		let clips = match self {
+			AnimationClips::Single(clip) => AnimationClips::Single(f(clip)?),
+			AnimationClips::Directional(Directional {
+				forward,
+				backward,
+				left,
+				right,
+			}) => AnimationClips::Directional(Directional {
+				forward: f(forward)?,
+				backward: f(backward)?,
+				left: f(left)?,
+				right: f(right)?,
+			}),
+			AnimationClips::PitchedForward(PitchedForward { neutral, up, down }) => {
+				AnimationClips::PitchedForward(PitchedForward {
+					neutral: f(neutral)?,
+					up: (up.0, f(up.1)?),
+					down: (down.0, f(down.1)?),
+				})
+			}
+		};
+
+		Some(clips)
+	}
+
+	pub fn try_map_result<U, E>(
+		self,
+		mut f: impl FnMut(T) -> Result<U, E>,
+	) -> Result<AnimationClips<U>, E> {
+		let clips = match self {
+			AnimationClips::Single(clip) => AnimationClips::Single(f(clip)?),
+			AnimationClips::Directional(Directional {
+				forward,
+				backward,
+				left,
+				right,
+			}) => AnimationClips::Directional(Directional {
+				forward: f(forward)?,
+				backward: f(backward)?,
+				left: f(left)?,
+				right: f(right)?,
+			}),
+			AnimationClips::PitchedForward(PitchedForward { neutral, up, down }) => {
+				AnimationClips::PitchedForward(PitchedForward {
+					neutral: f(neutral)?,
+					up: (up.0, f(up.1)?),
+					down: (down.0, f(down.1)?),
+				})
+			}
+		};
+
+		Ok(clips)
+	}
+}
+
+impl<T> Default for AnimationClips<T>
+where
+	T: Default,
+{
+	fn default() -> Self {
+		Self::Single(T::default())
+	}
+}
+
+impl<T> From<&'static str> for AnimationClips<T>
+where
+	T: From<&'static str>,
+{
 	fn from(path: &'static str) -> Self {
-		Self::Single(Path::from(path))
+		Self::Single(T::from(path))
+	}
+}
+
+impl<'a, T> Iterate<'a> for AnimationClips<T>
+where
+	Self: 'a,
+{
+	type TItem = &'a T;
+	type TIter = Iter<'a, T>;
+
+	fn iterate(&'a self) -> Self::TIter {
+		Iter {
+			clips: self,
+			index: 0,
+		}
 	}
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
-pub struct Directional {
-	pub forward: Path,
-	pub backward: Path,
-	pub left: Path,
-	pub right: Path,
+pub struct Directional<T = Handle<AnimationClip>> {
+	pub forward: T,
+	pub backward: T,
+	pub left: T,
+	pub right: T,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
-pub struct PitchedForward {
-	pub neutral: Path,
-	pub up: (ForwardPitch, Path),
-	pub down: (ForwardPitch, Path),
+pub struct PitchedForward<T = Handle<AnimationClip>> {
+	pub neutral: T,
+	pub up: (ForwardPitch, T),
+	pub down: (ForwardPitch, T),
 }
 
 #[derive(InRange, Debug, PartialEq, Clone, Copy, Serialize)]
 #[in_range(low = >0., high = 1.)]
 pub struct ForwardPitch(f32);
+
+#[macro_export]
+macro_rules! forward_pitch {
+	($v:literal) => {{
+		const P: $crate::traits::handles_animations::ForwardPitch =
+			match $crate::traits::handles_animations::ForwardPitch::try_new($v) {
+				Ok(v) => v,
+				Err(_) => panic!("value out of range"),
+			};
+
+		P
+	}};
+}
 
 impl ForwardPitch {
 	pub const MAX: Self = Self(1.);
@@ -208,6 +330,33 @@ pub enum DirForwardPitch {
 	Down(ForwardPitch),
 }
 
+pub struct Iter<'a, T> {
+	clips: &'a AnimationClips<T>,
+	index: usize,
+}
+
+impl<'a, T> Iterator for Iter<'a, T> {
+	type Item = &'a T;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		let i = self.index;
+
+		self.index += 1;
+
+		match (i, self.clips) {
+			(0, AnimationClips::Single(clip)) => Some(clip),
+			(0, AnimationClips::Directional(Directional { forward, .. })) => Some(forward),
+			(1, AnimationClips::Directional(Directional { backward, .. })) => Some(backward),
+			(2, AnimationClips::Directional(Directional { left, .. })) => Some(left),
+			(3, AnimationClips::Directional(Directional { right, .. })) => Some(right),
+			(0, AnimationClips::PitchedForward(PitchedForward { neutral, .. })) => Some(neutral),
+			(1, AnimationClips::PitchedForward(PitchedForward { up, .. })) => Some(&up.1),
+			(2, AnimationClips::PitchedForward(PitchedForward { down, .. })) => Some(&down.1),
+			_ => None,
+		}
+	}
+}
+
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum AnimationPriority {
 	High,
@@ -228,9 +377,9 @@ pub enum PlayMode {
 	Repeat,
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct Animation {
-	pub path: AnimationPath,
+#[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+pub struct Animation<TClips = AnimationClips<Handle<AnimationClip>>> {
+	pub clips: TClips,
 	pub play_mode: PlayMode,
 	pub mask_groups: AnimationMaskBits,
 }
@@ -462,6 +611,46 @@ mod tests {
 				}),
 				value
 			);
+		}
+	}
+
+	mod animation_clips {
+		use super::*;
+
+		#[test]
+		fn iter_single_clip() {
+			let clips = AnimationClips::Single("single");
+
+			let clips = clips.iterate().take(10).copied().collect::<Vec<_>>();
+
+			assert_eq!(vec!["single"], clips)
+		}
+
+		#[test]
+		fn iter_directional_clips() {
+			let clips = AnimationClips::Directional(Directional {
+				forward: "f",
+				backward: "b",
+				left: "l",
+				right: "r",
+			});
+
+			let clips = clips.iterate().take(10).copied().collect::<Vec<_>>();
+
+			assert_eq!(vec!["f", "b", "l", "r"], clips)
+		}
+
+		#[test]
+		fn iter_pitched_clips() {
+			let clips = AnimationClips::PitchedForward(PitchedForward {
+				neutral: "n",
+				up: (ForwardPitch::MAX, "u"),
+				down: (ForwardPitch::MAX, "d"),
+			});
+
+			let clips = clips.iterate().take(10).copied().collect::<Vec<_>>();
+
+			assert_eq!(vec!["n", "u", "d"], clips)
 		}
 	}
 }

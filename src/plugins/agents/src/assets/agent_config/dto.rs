@@ -13,7 +13,13 @@ use bevy::prelude::*;
 use common::{
 	errors::Unreachable,
 	traits::{
-		handles_animations::{AffectedAnimationBones, Animation, AnimationKey, AnimationMaskBits},
+		handles_animations::{
+			AffectedAnimationBones,
+			Animation,
+			AnimationClips,
+			AnimationKey,
+			AnimationMaskBits,
+		},
 		handles_custom_assets::{AssetFileExtensions, TryLoadFrom},
 		handles_movement::MovementSpeed,
 		handles_physics::PhysicalDefaultAttributes,
@@ -40,7 +46,7 @@ pub(crate) enum ModelConfig {
 		required_clearance: RequiredClearance,
 		height_levels: HeightLevels,
 		#[serde(with = "as_vec")]
-		animations: HashMap<AnimationKey, Animation>,
+		animations: HashMap<AnimationKey, Animation<AnimationClips<String>>>,
 		animation_mask_groups: HashMap<AnimationMaskBits, AffectedAnimationBones>,
 	},
 	Procedural(ProceduralModel),

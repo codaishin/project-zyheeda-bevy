@@ -14,7 +14,6 @@ use common::{
 	tools::{Units, action_key::slot::SlotKey, inventory_key::InventoryKey},
 	traits::{
 		accessors::get::{GetContextMut, TryApplyOn},
-		handles_animations::{RegisterAnimations, WithoutAnimations},
 		handles_loadout::{
 			LoadoutKey,
 			insert_default_loadout::{InsertDefaultLoadout, NotLoadedOut},
@@ -38,10 +37,9 @@ use std::{collections::HashSet, iter::Enumerate, slice::Iter};
 
 impl ApplyAgentConfig {
 	#[allow(clippy::too_many_arguments)]
-	pub(crate) fn system<TLoadout, TSkills, TAnimations, TMovement, TPhysics>(
+	pub(crate) fn system<TLoadout, TSkills, TMovement, TPhysics>(
 		mut loadout_param: StaticSystemParam<TLoadout>,
 		mut skills_param: StaticSystemParam<TSkills>,
-		mut animations_param: StaticSystemParam<TAnimations>,
 		mut movement: StaticSystemParam<TMovement>,
 		mut physics: StaticSystemParam<TPhysics>,
 		mut commands: ZyheedaCommands,
@@ -60,8 +58,6 @@ impl ApplyAgentConfig {
 			+ for<'c> GetContextMut<NotLoadedOut, TContext<'c>: InsertDefaultLoadout>
 			+ for<'c> GetContextMut<NoBonesRegistered, TContext<'c>: RegisterLoadoutBones>,
 		TSkills: SystemParam + for<'c> GetContextMut<NotInitializedAgent, TContext<'c>: Initialize>,
-		TAnimations: SystemParam
-			+ for<'c> GetContextMut<WithoutAnimations, TContext<'c>: RegisterAnimations>,
 		TMovement: SystemParam
 			+ for<'c> GetContextMut<NotConfiguredMovement, TContext<'c>: ConfigureMovement>,
 		TPhysics: SystemParam
@@ -91,11 +87,6 @@ impl ApplyAgentConfig {
 			if let Some(mut ctx) = TSkills::get_context_mut(&mut skills_param, not_initialized) {
 				ctx.initialize(config.bones.skill_mounts.clone());
 			};
-
-			let animations = WithoutAnimations { entity };
-			if let Some(mut ctx) = TAnimations::get_context_mut(&mut animations_param, animations) {
-				ctx.register_animations(&config.animations, &config.animation_mask_groups);
-			}
 
 			let not_configured = NotConfiguredMovement { entity };
 			if let Some(mut ctx) = TMovement::get_context_mut(&mut movement, not_configured) {
@@ -193,7 +184,6 @@ mod tests {
 	};
 	use common::{
 		attributes::{effect_target::EffectTarget, health::Health},
-		bit_mask_index,
 		tools::{
 			Units,
 			UnitsPerSecond,
@@ -201,17 +191,8 @@ mod tests {
 			bone_name::BoneName,
 			inventory_key::InventoryKey,
 			mesh_name::MeshName,
-			path::Path,
 		},
 		traits::{
-			handles_animations::{
-				AffectedAnimationBones,
-				Animation,
-				AnimationKey,
-				AnimationMaskBits,
-				AnimationPath,
-				PlayMode,
-			},
 			handles_movement::{MovementSpeed, RequiredClearance},
 			handles_physics::{PhysicalDefaultAttributes, physical_bodies::Body},
 			handles_skill_physics::SkillMountBone,
@@ -296,31 +277,6 @@ mod tests {
 	}
 
 	#[derive(Component, NestedMocks)]
-	struct _Animations {
-		mock: Mock_Animations,
-	}
-
-	impl Default for _Animations {
-		fn default() -> Self {
-			Self::new().with_mock(|mock| {
-				mock.expect_register_animations().return_const(());
-			})
-		}
-	}
-
-	#[automock]
-	impl RegisterAnimations for _Animations {
-		fn register_animations(
-			&mut self,
-			animations: &HashMap<AnimationKey, Animation>,
-			animation_mask_groups: &HashMap<AnimationMaskBits, AffectedAnimationBones>,
-		) {
-			self.mock
-				.register_animations(animations, animation_mask_groups);
-		}
-	}
-
-	#[derive(Component, NestedMocks)]
 	struct _Movement {
 		mock: Mock_Movement,
 	}
@@ -383,13 +339,11 @@ mod tests {
 				ApplyAgentConfig::system::<
 					Query<&mut _Loadout>,
 					Query<&mut _Skills>,
-					Query<&mut _Animations>,
 					Query<&mut _Movement>,
 					Query<&mut _Physics>,
 				>,
 				IsChanged::<_Loadout>::detect,
 				IsChanged::<_Skills>::detect,
-				IsChanged::<_Animations>::detect,
 				IsChanged::<_Movement>::detect,
 				IsChanged::<AssetModel>::detect,
 				IsChanged::<_Physics>::detect,
@@ -513,49 +467,6 @@ mod tests {
 							(BoneName::from("a"), SkillMountBone::NeutralSlot),
 							(BoneName::from("b"), SkillMountBone::Slot(SlotKey(42))),
 						])))
-						.return_const(());
-				}),
-			));
-
-			app.update();
-		}
-	}
-
-	mod animations {
-		use super::*;
-
-		#[test]
-		fn set_animations() {
-			let animations = HashMap::from([(
-				AnimationKey::Run,
-				Animation {
-					path: AnimationPath::Single(Path::from("my/path")),
-					play_mode: PlayMode::Replay,
-					mask_groups: AnimationMaskBits::zero().with_set(bit_mask_index!(42)),
-				},
-			)]);
-			let animation_mask_groups = HashMap::from([(
-				AnimationMaskBits::zero().with_set(bit_mask_index!(4)),
-				AffectedAnimationBones {
-					from_root: BoneName::from("root"),
-					..default()
-				},
-			)]);
-			let config_handle = new_handle();
-			let asset = AgentConfigAsset {
-				animations: animations.clone(),
-				animation_mask_groups: animation_mask_groups.clone(),
-				..default()
-			};
-			let mut app = setup([(&config_handle, asset)]);
-			app.world_mut().spawn((
-				ApplyAgentConfig,
-				Transform::default(),
-				AgentConfig { config_handle },
-				_Animations::new().with_mock(move |mock| {
-					mock.expect_register_animations()
-						.times(1)
-						.with(eq(animations.clone()), eq(animation_mask_groups.clone()))
 						.return_const(());
 				}),
 			));
@@ -887,7 +798,6 @@ mod tests {
 				AgentConfig { config_handle },
 				_Loadout::default(),
 				_Skills::default(),
-				_Animations::default(),
 				_Physics::default(),
 			))
 			.id();
@@ -902,12 +812,10 @@ mod tests {
 				Some(&IsChanged::FALSE),
 				Some(&IsChanged::FALSE),
 				Some(&IsChanged::FALSE),
-				Some(&IsChanged::FALSE),
 			),
 			(
 				app.world().entity(entity).get::<IsChanged<_Loadout>>(),
 				app.world().entity(entity).get::<IsChanged<_Skills>>(),
-				app.world().entity(entity).get::<IsChanged<_Animations>>(),
 				app.world().entity(entity).get::<IsChanged<AssetModel>>(),
 				app.world().entity(entity).get::<IsChanged<_Physics>>(),
 				app.world().entity(entity).get::<IsChanged<Transform>>(),
@@ -929,7 +837,6 @@ mod tests {
 				},
 				_Loadout::default(),
 				_Skills::default(),
-				_Animations::default(),
 				_Physics::default(),
 			))
 			.id();
@@ -952,12 +859,10 @@ mod tests {
 				Some(&IsChanged::TRUE),
 				Some(&IsChanged::TRUE),
 				Some(&IsChanged::TRUE),
-				Some(&IsChanged::TRUE),
 			),
 			(
 				app.world().entity(entity).get::<IsChanged<_Loadout>>(),
 				app.world().entity(entity).get::<IsChanged<_Skills>>(),
-				app.world().entity(entity).get::<IsChanged<_Animations>>(),
 				app.world().entity(entity).get::<IsChanged<AssetModel>>(),
 				app.world().entity(entity).get::<IsChanged<_Physics>>(),
 				app.world().entity(entity).get::<IsChanged<Transform>>(),

@@ -115,11 +115,10 @@ fn root_bone<'a>(
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::components::animation_lookup::AnimationClips;
 	use bevy::{animation::AnimationTargetId, platform::collections::HashMap as BevyHashMap};
 	use common::{
 		bit_mask_index,
-		traits::handles_animations::{AffectedAnimationBones, AnimationMaskBits},
+		traits::handles_animations::{AffectedAnimationBones, AnimationClips, AnimationMaskBits},
 	};
 	use std::collections::HashMap;
 	use testing::{SingleThreadedApp, new_handle};
@@ -157,7 +156,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup::<AnimationClips> {
+				AnimationLookup::<AnimationClips<AnimationNodeIndex>> {
 					animation_mask_groups: HashMap::from([(
 						AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 						AffectedAnimationBones {
@@ -194,7 +193,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup::<AnimationClips> {
+				AnimationLookup::<AnimationClips<AnimationNodeIndex>> {
 					animation_mask_groups: HashMap::from([
 						(
 							AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
@@ -240,7 +239,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup::<AnimationClips> {
+				AnimationLookup::<AnimationClips<AnimationNodeIndex>> {
 					animation_mask_groups: HashMap::from([(
 						AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 						AffectedAnimationBones {
@@ -283,7 +282,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup::<AnimationClips> {
+				AnimationLookup::<AnimationClips<AnimationNodeIndex>> {
 					animation_mask_groups: HashMap::from([(
 						AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 						AffectedAnimationBones {
@@ -329,7 +328,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup::<AnimationClips> {
+				AnimationLookup::<AnimationClips<AnimationNodeIndex>> {
 					animation_mask_groups: HashMap::from([(
 						AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 						AffectedAnimationBones {
@@ -409,7 +408,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup::<AnimationClips> {
+				AnimationLookup::<AnimationClips<AnimationNodeIndex>> {
 					animation_mask_groups: HashMap::from([(
 						AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 						AffectedAnimationBones {
@@ -486,7 +485,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup::<AnimationClips> {
+				AnimationLookup::<AnimationClips<AnimationNodeIndex>> {
 					animation_mask_groups: HashMap::from([(
 						AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 						AffectedAnimationBones {
@@ -562,7 +561,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup::<AnimationClips> {
+				AnimationLookup::<AnimationClips<AnimationNodeIndex>> {
 					animation_mask_groups: HashMap::from([(
 						AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 						AffectedAnimationBones {
@@ -603,7 +602,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup::<AnimationClips> {
+				AnimationLookup::<AnimationClips<AnimationNodeIndex>> {
 					animation_mask_groups: HashMap::from([(
 						AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 						AffectedAnimationBones {
@@ -653,7 +652,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				AnimationLookup::<AnimationClips> {
+				AnimationLookup::<AnimationClips<AnimationNodeIndex>> {
 					animation_mask_groups: HashMap::from([(
 						AnimationMaskBits::zero().with_set(bit_mask_index!(0)),
 						AffectedAnimationBones {

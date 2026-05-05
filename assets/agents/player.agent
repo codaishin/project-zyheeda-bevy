@@ -67,8 +67,8 @@
 				[
 					"Idle",
 					{
-						"path": {
-							"Single": "models/player.glb#Animation1"
+						"clips": {
+							"Single": "Idle"
 						},
 						"play_mode": "Repeat",
 						"mask_groups": "1111"
@@ -77,12 +77,12 @@
 				[
 					"Walk",
 					{
-						"path": {
+						"clips": {
 							"Directional": {
-								"forward": "models/player.glb#Animation2",
-								"backward": "models/player.glb#Animation3",
-								"left": "models/player.glb#Animation4",
-								"right": "models/player.glb#Animation5"
+								"forward": "Walk.F",
+								"backward": "Walk.B",
+								"left": "Walk.L",
+								"right": "Walk.R"
 							}
 						},
 						"play_mode": "Repeat",
@@ -92,12 +92,12 @@
 				[
 					"Run",
 					{
-						"path": {
+						"clips": {
 							"Directional": {
-								"forward": "models/player.glb#Animation6",
-								"backward": "models/player.glb#Animation7",
-								"left": "models/player.glb#Animation8",
-								"right": "models/player.glb#Animation9"
+								"forward": "Run.F",
+								"backward": "Run.B",
+								"left": "Run.L",
+								"right": "Run.R"
 							}
 						},
 						"play_mode": "Repeat",
@@ -112,16 +112,16 @@
 						}
 					},
 					{
-						"path": {
+						"clips": {
 							"PitchedForward": {
-								"neutral": "models/player.glb#Animation10",
+								"neutral": "Aim.L",
 								"up": [
 									0.5,
-									"models/player.glb#Animation11"
+									"AimUp.L"
 								],
 								"down": [
 									1.0,
-									"models/player.glb#Animation12"
+									"AimDown.L"
 								]
 							}
 						},
@@ -137,16 +137,16 @@
 						}
 					},
 					{
-						"path": {
+						"clips": {
 							"PitchedForward": {
-								"neutral": "models/player.glb#Animation13",
+								"neutral": "Aim.R",
 								"up": [
 									0.5,
-									"models/player.glb#Animation14"
+									"AimUp.R"
 								],
 								"down": [
 									1.0,
-									"models/player.glb#Animation15"
+									"AimDown.R"
 								]
 							}
 						},
@@ -162,8 +162,8 @@
 						}
 					},
 					{
-						"path": {
-							"Single": "models/player.glb#Animation16"
+						"clips": {
+							"Single": "Block.L"
 						},
 						"play_mode": "Repeat",
 						"mask_groups": "1010"
@@ -177,8 +177,8 @@
 						}
 					},
 					{
-						"path": {
-							"Single": "models/player.glb#Animation17"
+						"clips": {
+							"Single": "Block.R"
 						},
 						"play_mode": "Repeat",
 						"mask_groups": "1100"

@@ -10,7 +10,6 @@ pub(crate) mod test_tools;
 use crate::{
 	components::{
 		animation_dispatch::{AnimationGraphOf, AnimationPlayerOf},
-		animation_lookup::AnimationClips,
 		setup_animations::SetupAnimations,
 	},
 	system_params::animations::AnimationsParamMut,
@@ -25,7 +24,7 @@ use common::{
 	systems::link_children::LinkDescendants,
 	tools::plugin_system_set::PluginSystemSet,
 	traits::{
-		handles_animations::HandlesAnimations,
+		handles_animations::{AnimationClips, HandlesAnimations},
 		handles_saving::HandlesSaving,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
@@ -55,7 +54,10 @@ where
 		app.add_systems(
 			Update,
 			(
-				SetupAnimations::init_masks::<AnimationGraphHandle, AnimationClips>,
+				SetupAnimations::init_masks::<
+					AnimationGraphHandle,
+					AnimationClips<AnimationNodeIndex>,
+				>,
 				SetupAnimations::init_bone_groups::<AnimationGraphHandle>,
 				SetupAnimations::remove_unused_animation_targets::<AnimationGraphHandle>,
 				SetupAnimations::stop,

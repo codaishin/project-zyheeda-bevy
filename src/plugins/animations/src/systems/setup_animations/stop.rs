@@ -18,7 +18,7 @@ impl SetupAnimations {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::animation_lookup::AnimationClips;
+	use common::traits::handles_animations::AnimationClips;
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -35,7 +35,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				AnimationLookup::<AnimationClips>::default(),
+				AnimationLookup::<AnimationClips<AnimationNodeIndex>>::default(),
 				SetupAnimations,
 			))
 			.id();

@@ -1,17 +1,16 @@
+pub(crate) mod animation_graph;
 pub(crate) mod animation_player;
-pub(crate) mod asset_server;
 pub(crate) mod player_idle;
 pub(crate) mod tuple_animation_player_transitions;
 
-use bevy::prelude::*;
-use common::traits::handles_animations::{AnimationKey, AnimationPath, AnimationPriority};
-use std::collections::HashMap;
+use common::traits::handles_animations::{AnimationClips, AnimationKey, AnimationPriority};
 
-pub(crate) trait LoadAnimationAssets<TGraph, TIndices> {
-	fn load_animation_assets(
-		&mut self,
-		animations: Vec<AnimationPath>,
-	) -> (TGraph, HashMap<AnimationPath, TIndices>);
+pub(crate) trait InsertClips<TIndex>: Sized {
+	type TBuffer;
+
+	fn with_buffer() -> (Self, Self::TBuffer);
+
+	fn insert_clips(&mut self, data: &Self::TBuffer, animations: AnimationClips) -> TIndex;
 }
 
 pub trait YoungestToOldestActiveAnimations {
