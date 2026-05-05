@@ -1,6 +1,7 @@
 use crate::{
 	components::{
 		gltf::{GltfLookup, GltfScene},
+		insert_asset::InsertAsset,
 		load_model::LoadModel,
 	},
 	errors::Unreachable,
@@ -13,11 +14,14 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 
-#[derive(Component, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+#[derive(Component, Debug, Default, PartialEq, Clone)]
 #[require(Transform, Visibility)]
 #[component(immutable)]
-pub struct AssetModel {
-	pub(crate) scene: Option<Scene>,
+pub enum AssetModel {
+	#[default]
+	None,
+	Scene(Scene),
+	Mesh(InsertAsset<Mesh>),
 }
 
 impl AssetModel {
@@ -25,13 +29,15 @@ impl AssetModel {
 	where
 		T: Into<Scene>,
 	{
-		Self {
-			scene: Some(params.into()),
-		}
+		Self::Scene(params.into())
 	}
 
 	pub fn none() -> Self {
-		Self { scene: None }
+		Self::None
+	}
+
+	pub fn mesh(mesh: InsertAsset<Mesh>) -> Self {
+		Self::Mesh(mesh)
 	}
 }
 
@@ -48,19 +54,22 @@ where
 		entity: &mut impl PrefabEntityCommands,
 		mut asset_server: StaticSystemParam<ResMut<TAssetServer>>,
 	) -> Result<(), Self::TError> {
-		match &self.scene {
-			Some(scene) if *scene.use_gltf => {
+		match &self {
+			Self::Scene(scene) if *scene.use_gltf => {
 				let gltf = asset_server.load_asset(scene.asset_path.clone());
 				entity.try_insert((GltfLookup(gltf), GltfScene(scene.id)));
 			}
-			Some(scene) => {
+			Self::Scene(scene) => {
 				let root = asset_server.load_asset(
 					GltfAssetLabel::Scene(*scene.id).from_asset(scene.asset_path.clone()),
 				);
 				entity.try_insert(LoadModel::Scene(root));
 			}
-			None => {
+			Self::None => {
 				entity.try_insert(LoadModel::Scene(Handle::default()));
+			}
+			Self::Mesh(insert_mesh) => {
+				entity.try_insert(insert_mesh.clone());
 			}
 		};
 
@@ -162,10 +171,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		components::load_model::LoadModel,
-		traits::{load_asset::mock::MockAssetServer, prefab::AddPrefabObserver},
-	};
+	use crate::traits::{load_asset::mock::MockAssetServer, prefab::AddPrefabObserver};
 	use test_case::test_case;
 	use testing::{SingleThreadedApp, new_handle};
 
@@ -234,6 +240,22 @@ mod tests {
 		assert_eq!(
 			Some(&LoadModel::Scene(Handle::default())),
 			app.world().entity(model).get::<LoadModel>(),
+		);
+	}
+
+	#[test]
+	fn insert_procedural() {
+		let mut app = setup(MockAssetServer::default());
+		let insert_mesh = InsertAsset::unique(|| Sphere::new(3.).into());
+
+		let model = app
+			.world_mut()
+			.spawn(AssetModel::mesh(insert_mesh.clone()))
+			.id();
+
+		assert_eq!(
+			Some(&insert_mesh),
+			app.world().entity(model).get::<InsertAsset<Mesh>>(),
 		);
 	}
 }
