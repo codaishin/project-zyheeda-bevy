@@ -1,7 +1,7 @@
 use crate::{
 	assets::agent_config::{AgentConfigAsset, AgentModel, Loadout},
 	components::{
-		agent::{AgentTransformDirty, ApplyAgentConfig},
+		agent::{AgentTransformDirty, ApplyAgentAnimations, ApplyAgentConfig},
 		agent_config::AgentConfig,
 	},
 };
@@ -129,6 +129,7 @@ impl ApplyAgentConfig {
 						func(&mut e);
 					}
 				};
+				e.try_insert(ApplyAgentAnimations);
 				e.try_remove::<(Self, AgentTransformDirty)>();
 			});
 		}
@@ -202,6 +203,7 @@ mod tests {
 	use macros::{NestedMocks, simple_mock};
 	use mockall::{automock, mock, predicate::eq};
 	use std::collections::HashMap;
+	use test_case::test_case;
 	use testing::{IsChanged, Mock, NestedMocks, SingleThreadedApp, new_handle};
 
 	#[derive(Component)]
@@ -691,9 +693,8 @@ mod tests {
 	}
 
 	mod physics {
-		use crate::assets::agent_config::HeightLevels;
-
 		use super::*;
+		use crate::assets::agent_config::HeightLevels;
 
 		#[test]
 		fn config_default_attributes() {
@@ -773,6 +774,30 @@ mod tests {
 
 			app.update();
 		}
+	}
+
+	#[test_case(AgentModel::from("my/path"))]
+	#[test_case(AgentModel::Procedural(|_| {}))]
+	fn insert_animate_agent_animations(model: AgentModel) {
+		let config_handle = new_handle();
+		let mut app = setup([(&config_handle, AgentConfigAsset { model, ..default() })]);
+		let entity = app
+			.world_mut()
+			.spawn((
+				ApplyAgentConfig,
+				Transform::default(),
+				AgentTransformDirty,
+				AgentConfig { config_handle },
+			))
+			.id();
+
+		app.update();
+		app.update();
+
+		assert_eq!(
+			Some(&ApplyAgentAnimations),
+			app.world().entity(entity).get::<ApplyAgentAnimations>(),
+		);
 	}
 
 	#[test]

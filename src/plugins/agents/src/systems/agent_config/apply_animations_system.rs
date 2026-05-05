@@ -29,14 +29,14 @@ impl ApplyAgentAnimations {
 		mut animations: StaticSystemParam<TAnimations>,
 		configs: Res<Assets<AgentConfigAsset>>,
 		models: Res<Assets<Gltf>>,
-		agents: Query<(Entity, &AgentConfig, &GltfLookup), With<Self>>,
-	) -> Result<(), Vec<AnimationsMissing>>
+		agents: Query<(Entity, &AgentConfig, Option<&GltfLookup>), With<Self>>,
+	) -> Result<(), Vec<RegisterAnimationsError>>
 	where
 		TAnimations: for<'c> GetContextMut<WithoutAnimations, TContext<'c>: RegisterAnimations>,
 	{
 		let mut errors = vec![];
 
-		for (entity, AgentConfig { config_handle }, GltfLookup(gltf)) in agents {
+		for (entity, AgentConfig { config_handle }, gltf) in agents {
 			let key = WithoutAnimations { entity };
 			let Some(mut ctx) = TAnimations::get_context_mut(&mut animations, key) else {
 				continue;
@@ -46,23 +46,34 @@ impl ApplyAgentAnimations {
 				continue;
 			};
 
-			let Some(gltf) = models.get(gltf) else {
-				continue;
+			let animations = match gltf {
+				Some(GltfLookup(gltf)) => {
+					let Some(gltf) = models.get(gltf) else {
+						continue;
+					};
+
+					let mut missing = HashSet::new();
+					let animations = config
+						.animations
+						.iter()
+						.filter_map(get_clips(gltf, &mut missing))
+						.collect::<HashMap<_, _>>();
+					if !missing.is_empty() {
+						errors.push(RegisterAnimationsError::MissingAnimations {
+							entity,
+							missing,
+							available: gltf.named_animations.keys().cloned().collect(),
+						});
+					}
+					animations
+				}
+				None => {
+					if !config.animations.is_empty() {
+						errors.push(RegisterAnimationsError::GltfLookupMissing(entity));
+					}
+					HashMap::new()
+				}
 			};
-
-			let mut missing = HashSet::new();
-			let animations = config
-				.animations
-				.iter()
-				.filter_map(get_clips(gltf, &mut missing))
-				.collect::<HashMap<_, _>>();
-
-			if !missing.is_empty() {
-				errors.push(AnimationsMissing {
-					missing,
-					available: gltf.named_animations.keys().cloned().collect(),
-				});
-			}
 
 			ctx.register_animations(&animations, &config.animation_mask_groups);
 			commands.try_apply_on(&entity, |mut e| {
@@ -106,29 +117,48 @@ fn get_clips(
 }
 
 #[derive(Debug, PartialEq)]
-pub(crate) struct AnimationsMissing {
-	missing: HashSet<String>,
-	available: HashSet<Box<str>>,
+pub(crate) enum RegisterAnimationsError {
+	MissingAnimations {
+		entity: Entity,
+		missing: HashSet<String>,
+		available: HashSet<Box<str>>,
+	},
+	GltfLookupMissing(Entity),
 }
 
-impl Display for AnimationsMissing {
+impl Display for RegisterAnimationsError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(
-			f,
-			"Missing animation: [{}]. Available animations: [{}].",
-			Vec::from_iter(self.missing.iter().cloned()).join(", "),
-			Vec::from_iter(self.available.iter().cloned()).join(", ")
-		)
+		match self {
+			RegisterAnimationsError::MissingAnimations {
+				entity,
+				missing,
+				available,
+			} => {
+				write!(
+					f,
+					"{}: Missing animation: [{}]. Available animations: [{}].",
+					entity,
+					Vec::from_iter(missing.iter().cloned()).join(", "),
+					Vec::from_iter(available.iter().cloned()).join(", ")
+				)
+			}
+			RegisterAnimationsError::GltfLookupMissing(entity) => {
+				write!(
+					f,
+					"{entity}: missing gltf lookup component, which is required if the agent has animations"
+				)
+			}
+		}
 	}
 }
 
-impl ErrorData for AnimationsMissing {
+impl ErrorData for RegisterAnimationsError {
 	fn level(&self) -> Level {
 		Level::Error
 	}
 
 	fn label() -> impl Display {
-		"Animations Missing"
+		"Register Animations Error"
 	}
 
 	fn into_details(self) -> impl Display {
@@ -182,7 +212,7 @@ mod tests {
 	}
 
 	#[derive(Resource, Debug, PartialEq)]
-	struct _Result(Result<(), Vec<AnimationsMissing>>);
+	struct _Result(Result<(), Vec<RegisterAnimationsError>>);
 
 	fn setup<const C: usize, const M: usize>(
 		configs: [(&Handle<AgentConfigAsset>, AgentConfigAsset); C],
@@ -295,6 +325,153 @@ mod tests {
 	}
 
 	#[test]
+	fn register_animations_delayed() {
+		static CLIP: LazyLock<Handle<AnimationClip>> = LazyLock::new(new_handle);
+		let config = AgentConfigAsset {
+			animations: HashMap::from([(
+				AnimationKey::Run,
+				Animation {
+					clips: AnimationClips::Single("Run".to_owned()),
+					..default()
+				},
+			)]),
+			animation_mask_groups: HashMap::from([(
+				AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
+				AffectedAnimationBones {
+					from_root: BoneName::from("root"),
+					until_exclusive: [].into(),
+				},
+			)]),
+			..default()
+		};
+		let config_handle = new_handle();
+		let gltf_handle = new_handle();
+		let gltf = gltf([("Run", CLIP.clone())]);
+		let mut app = setup([(&config_handle, config)], []);
+		app.world_mut().spawn((
+			ApplyAgentAnimations,
+			GltfLookup(gltf_handle.clone()),
+			AgentConfig { config_handle },
+			_Animations::new().with_mock(assert_animations_registered),
+		));
+
+		app.update();
+		_ = app
+			.world_mut()
+			.resource_mut::<Assets<Gltf>>()
+			.insert(&gltf_handle, gltf);
+		app.update();
+
+		fn assert_animations_registered(mock: &mut Mock_Animations) {
+			mock.expect_register_animations()
+				.once()
+				.with(
+					eq(HashMap::from([(
+						AnimationKey::Run,
+						Animation {
+							clips: AnimationClips::Single(CLIP.clone()),
+							..default()
+						},
+					)])),
+					eq(HashMap::from([(
+						AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
+						AffectedAnimationBones {
+							from_root: BoneName::from("root"),
+							until_exclusive: [].into(),
+						},
+					)])),
+				)
+				.return_const(());
+		}
+	}
+
+	#[test]
+	fn no_gltf_lookup_required_when_animations_empty() {
+		let config_handle = new_handle();
+		let config = AgentConfigAsset {
+			animations: HashMap::from([]),
+			animation_mask_groups: HashMap::from([(
+				AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
+				AffectedAnimationBones {
+					from_root: BoneName::from("root"),
+					until_exclusive: [].into(),
+				},
+			)]),
+			..default()
+		};
+		let mut app = setup([(&config_handle, config)], []);
+		app.world_mut().spawn((
+			ApplyAgentAnimations,
+			AgentConfig { config_handle },
+			_Animations::new().with_mock(assert_animations_registered),
+		));
+
+		app.update();
+
+		fn assert_animations_registered(mock: &mut Mock_Animations) {
+			mock.expect_register_animations()
+				.once()
+				.with(
+					eq(HashMap::from([])),
+					eq(HashMap::from([(
+						AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
+						AffectedAnimationBones {
+							from_root: BoneName::from("root"),
+							until_exclusive: [].into(),
+						},
+					)])),
+				)
+				.return_const(());
+		}
+	}
+
+	#[test]
+	fn set_empty_animations_when_no_gltf_lookup() {
+		let config_handle = new_handle();
+		let config = AgentConfigAsset {
+			animations: HashMap::from([(
+				AnimationKey::Run,
+				Animation {
+					clips: AnimationClips::Single("Run".to_owned()),
+					..default()
+				},
+			)]),
+			animation_mask_groups: HashMap::from([(
+				AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
+				AffectedAnimationBones {
+					from_root: BoneName::from("root"),
+					until_exclusive: [].into(),
+				},
+			)]),
+			..default()
+		};
+		let mut app = setup([(&config_handle, config)], []);
+		app.world_mut().spawn((
+			ApplyAgentAnimations,
+			AgentConfig { config_handle },
+			_Animations::new().with_mock(assert_animations_registered),
+		));
+
+		app.update();
+
+		fn assert_animations_registered(mock: &mut Mock_Animations) {
+			mock.expect_register_animations()
+				.once()
+				.with(
+					eq(HashMap::from([])),
+					eq(HashMap::from([(
+						AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
+						AffectedAnimationBones {
+							from_root: BoneName::from("root"),
+							until_exclusive: [].into(),
+						},
+					)])),
+				)
+				.return_const(());
+		}
+	}
+
+	#[test]
 	fn remove_apply_agent_animations_marker() {
 		let config_handle = new_handle();
 		let gltf_handle = new_handle();
@@ -374,22 +551,62 @@ mod tests {
 		let gltf_handle = new_handle();
 		let gltf = gltf([("Run", new_handle())]);
 		let mut app = setup([(&config_handle, config)], [(&gltf_handle, gltf)]);
-		app.world_mut().spawn((
-			ApplyAgentAnimations,
-			GltfLookup(gltf_handle),
-			AgentConfig { config_handle },
-			_Animations::new().with_mock(|mock| {
-				mock.expect_register_animations().return_const(());
-			}),
-		));
+		let entity = app
+			.world_mut()
+			.spawn((
+				ApplyAgentAnimations,
+				GltfLookup(gltf_handle),
+				AgentConfig { config_handle },
+				_Animations::new().with_mock(|mock| {
+					mock.expect_register_animations().return_const(());
+				}),
+			))
+			.id();
 
 		app.update();
 
 		assert_eq!(
-			&_Result(Err(vec![AnimationsMissing {
+			&_Result(Err(vec![RegisterAnimationsError::MissingAnimations {
+				entity,
 				missing: HashSet::from(["Walk".to_owned(), "Idle".to_owned()]),
 				available: HashSet::from([Box::from("Run")]),
 			}])),
+			app.world().resource::<_Result>()
+		);
+	}
+
+	#[test]
+	fn return_gltf_lookup_missing() {
+		let config = AgentConfigAsset {
+			animations: HashMap::from([(
+				AnimationKey::Run,
+				Animation {
+					clips: AnimationClips::Single("Run".to_owned()),
+					..default()
+				},
+			)]),
+			animation_mask_groups: HashMap::from([]),
+			..default()
+		};
+		let config_handle = new_handle();
+		let mut app = setup([(&config_handle, config)], []);
+		let entity = app
+			.world_mut()
+			.spawn((
+				ApplyAgentAnimations,
+				AgentConfig { config_handle },
+				_Animations::new().with_mock(|mock| {
+					mock.expect_register_animations().return_const(());
+				}),
+			))
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			&_Result(Err(vec![RegisterAnimationsError::GltfLookupMissing(
+				entity
+			)])),
 			app.world().resource::<_Result>()
 		);
 	}
@@ -434,6 +651,28 @@ mod tests {
 		app.world_mut().spawn((
 			ApplyAgentAnimations,
 			GltfLookup(gltf_handle),
+			AgentConfig { config_handle },
+			_Animations::new().with_mock(|mock| {
+				mock.expect_register_animations().return_const(());
+			}),
+		));
+
+		app.update();
+
+		assert_eq!(&_Result(Ok(())), app.world().resource::<_Result>());
+	}
+
+	#[test]
+	fn return_ok_when_no_gltf_lookup_and_no_animations() {
+		let config = AgentConfigAsset {
+			animations: HashMap::from([]),
+			animation_mask_groups: HashMap::from([]),
+			..default()
+		};
+		let config_handle = new_handle();
+		let mut app = setup([(&config_handle, config)], []);
+		app.world_mut().spawn((
+			ApplyAgentAnimations,
 			AgentConfig { config_handle },
 			_Animations::new().with_mock(|mock| {
 				mock.expect_register_animations().return_const(());
