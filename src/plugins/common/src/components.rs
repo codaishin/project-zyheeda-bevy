@@ -5,7 +5,6 @@ pub mod essence;
 pub mod gltf;
 pub mod insert_asset;
 pub mod lifetime;
-pub mod model;
 pub mod persistent_entity;
 pub mod protected;
 pub mod ui_node_for;

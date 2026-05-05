@@ -18,7 +18,6 @@ use crate::{
 		gltf::GltfLookup,
 		lifetime::Lifetime,
 		load_model::LoadModel,
-		model::Model,
 	},
 	states::game_state::GameState,
 	systems::log::OnError,
@@ -70,7 +69,6 @@ fn life_cycles(app: &mut App) {
 
 fn asset_loading(app: &mut App) {
 	app.add_prefab_observer::<AssetModel, AssetServer>();
-	app.add_observer(Model::insert);
 	app.add_observer(LoadModel::execute.pipe(OnError::log));
 	app.add_observer(InsertAsset::<Mesh>::apply);
 	app.add_observer(InsertAsset::<StandardMaterial>::apply);

@@ -64,7 +64,7 @@ impl VisualizeItem for ForearmSlot {
 				model: ModelRender::Forearm(path),
 				..
 			}) => AssetModel::scene(path),
-			_ => AssetModel::none(),
+			_ => AssetModel::None,
 		}
 	}
 }
@@ -78,7 +78,7 @@ impl VisualizeItem for HandSlot {
 				model: ModelRender::Hand(path),
 				..
 			}) => AssetModel::scene(path),
-			_ => AssetModel::none(),
+			_ => AssetModel::None,
 		}
 	}
 }

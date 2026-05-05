@@ -31,14 +31,6 @@ impl AssetModel {
 	{
 		Self::Scene(params.into())
 	}
-
-	pub fn none() -> Self {
-		Self::None
-	}
-
-	pub fn mesh(mesh: InsertAsset<Mesh>) -> Self {
-		Self::Mesh(mesh)
-	}
 }
 
 impl<TAssetServer> Prefab<TAssetServer> for AssetModel
@@ -235,7 +227,7 @@ mod tests {
 	fn load_default_asset_when_set_to_none() {
 		let mut app = setup(MockAssetServer::default());
 
-		let model = app.world_mut().spawn(AssetModel::none()).id();
+		let model = app.world_mut().spawn(AssetModel::None).id();
 
 		assert_eq!(
 			Some(&LoadModel::Scene(Handle::default())),
@@ -250,7 +242,7 @@ mod tests {
 
 		let model = app
 			.world_mut()
-			.spawn(AssetModel::mesh(insert_mesh.clone()))
+			.spawn(AssetModel::Mesh(insert_mesh.clone()))
 			.id();
 
 		assert_eq!(
