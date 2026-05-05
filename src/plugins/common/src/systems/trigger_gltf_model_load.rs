@@ -1,7 +1,7 @@
 use crate::{
 	components::{
 		gltf::{GltfLookup, GltfScene},
-		load_model::{GltfSceneError, LoadModel},
+		load_scene::{GltfSceneError, LoadScene},
 	},
 	traits::accessors::get::TryApplyOn,
 	zyheeda_commands::ZyheedaCommands,
@@ -12,7 +12,7 @@ impl GltfLookup {
 	pub(crate) fn trigger_model_load(
 		mut commands: ZyheedaCommands,
 		assets: Res<Assets<Gltf>>,
-		scenes: Query<(Entity, &GltfLookup, &GltfScene), Without<LoadModel>>,
+		scenes: Query<(Entity, &GltfLookup, &GltfScene), Without<LoadScene>>,
 	) {
 		for (entity, GltfLookup(gltf), GltfScene(id)) in scenes {
 			let Some(gltf) = assets.get(gltf) else {
@@ -20,8 +20,8 @@ impl GltfLookup {
 			};
 
 			let load = match gltf.scenes.get(**id) {
-				Some(scene) => LoadModel::Scene(scene.clone()),
-				None => LoadModel::GltfError(GltfSceneError {
+				Some(scene) => LoadScene::Scene(scene.clone()),
+				None => LoadScene::GltfError(GltfSceneError {
 					scene_count: gltf.scenes.len(),
 					requested_id: **id,
 				}),
@@ -37,7 +37,7 @@ impl GltfLookup {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::asset_model::SceneId;
+	use crate::components::model::SceneId;
 	use test_case::test_case;
 	use testing::{SingleThreadedApp, new_handle};
 
@@ -89,8 +89,8 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&LoadModel::Scene(scenes[*id].clone())),
-			app.world().entity(entity).get::<LoadModel>()
+			Some(&LoadScene::Scene(scenes[*id].clone())),
+			app.world().entity(entity).get::<LoadScene>()
 		)
 	}
 
@@ -108,11 +108,11 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&LoadModel::GltfError(GltfSceneError {
+			Some(&LoadScene::GltfError(GltfSceneError {
 				scene_count: 3,
 				requested_id: 3,
 			})),
-			app.world().entity(entity).get::<LoadModel>()
+			app.world().entity(entity).get::<LoadScene>()
 		)
 	}
 
@@ -128,15 +128,15 @@ mod tests {
 			.spawn((
 				GltfLookup(handle),
 				GltfScene(SceneId(0)),
-				LoadModel::Scene(current_scene.clone()),
+				LoadScene::Scene(current_scene.clone()),
 			))
 			.id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&LoadModel::Scene(current_scene)),
-			app.world().entity(entity).get::<LoadModel>()
+			Some(&LoadScene::Scene(current_scene)),
+			app.world().entity(entity).get::<LoadScene>()
 		)
 	}
 }

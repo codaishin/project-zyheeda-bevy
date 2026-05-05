@@ -10,7 +10,7 @@ use bevy::{
 	prelude::*,
 };
 use common::{
-	components::asset_model::{AssetModel, SceneId, UseGltfLookup},
+	components::model::{Model, SceneId, UseGltfLookup},
 	tools::{Units, action_key::slot::SlotKey, inventory_key::InventoryKey},
 	traits::{
 		accessors::get::{GetContextMut, TryApplyOn},
@@ -123,7 +123,7 @@ impl ApplyAgentConfig {
 			commands.try_apply_on(&entity, |mut e| {
 				match &config.model {
 					AgentModel::Asset(path) => {
-						e.try_insert(AssetModel::scene((path, SceneId(0), UseGltfLookup(true))));
+						e.try_insert(Model::scene((path, SceneId(0), UseGltfLookup(true))));
 					}
 					AgentModel::Procedural(func) => {
 						func(&mut e);
@@ -345,7 +345,7 @@ mod tests {
 				IsChanged::<_Loadout>::detect,
 				IsChanged::<_Skills>::detect,
 				IsChanged::<_Movement>::detect,
-				IsChanged::<AssetModel>::detect,
+				IsChanged::<Model>::detect,
 				IsChanged::<_Physics>::detect,
 				IsChanged::<Transform>::detect,
 			)
@@ -563,12 +563,8 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(&AssetModel::scene((
-					"my/path",
-					SceneId(0),
-					UseGltfLookup(true)
-				))),
-				app.world().entity(entity).get::<AssetModel>()
+				Some(&Model::scene(("my/path", SceneId(0), UseGltfLookup(true)))),
+				app.world().entity(entity).get::<Model>()
 			);
 		}
 
@@ -816,7 +812,7 @@ mod tests {
 			(
 				app.world().entity(entity).get::<IsChanged<_Loadout>>(),
 				app.world().entity(entity).get::<IsChanged<_Skills>>(),
-				app.world().entity(entity).get::<IsChanged<AssetModel>>(),
+				app.world().entity(entity).get::<IsChanged<Model>>(),
 				app.world().entity(entity).get::<IsChanged<_Physics>>(),
 				app.world().entity(entity).get::<IsChanged<Transform>>(),
 			),
@@ -863,7 +859,7 @@ mod tests {
 			(
 				app.world().entity(entity).get::<IsChanged<_Loadout>>(),
 				app.world().entity(entity).get::<IsChanged<_Skills>>(),
-				app.world().entity(entity).get::<IsChanged<AssetModel>>(),
+				app.world().entity(entity).get::<IsChanged<Model>>(),
 				app.world().entity(entity).get::<IsChanged<_Physics>>(),
 				app.world().entity(entity).get::<IsChanged<Transform>>(),
 			),

@@ -4,7 +4,7 @@ use std::fmt::Display;
 
 #[derive(Component, Debug, PartialEq)]
 #[component(immutable)]
-pub(crate) enum LoadModel {
+pub(crate) enum LoadScene {
 	Scene(Handle<Scene>),
 	GltfError(GltfSceneError),
 }

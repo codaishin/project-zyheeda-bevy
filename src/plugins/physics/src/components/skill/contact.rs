@@ -20,7 +20,7 @@ use crate::{
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::ColliderScale;
 use common::{
-	components::{asset_model::AssetModel, insert_asset::InsertAsset, model::Model},
+	components::{insert_asset::InsertAsset, model::Model},
 	tools::Units,
 	traits::{
 		handles_physics::{PhysicalObject, physical_bodies::Blocker},
@@ -43,7 +43,7 @@ impl GetContactPrefab for Skill {
 					destroyed_by: Blocker::none(),
 				},
 				SubModel {
-					model: Model::Asset(AssetModel::scene(SPHERE_MODEL)),
+					model: Model::scene(SPHERE_MODEL),
 					transform: Transform::from_scale(Vec3::splat(**radius * 2.)),
 				},
 				ContactCollider {
@@ -59,7 +59,7 @@ impl GetContactPrefab for Skill {
 					destroyed_by: destroyed_by.clone().into(),
 				},
 				SubModel {
-					model: Model::Asset(AssetModel::scene(SPHERE_MODEL)),
+					model: Model::scene(SPHERE_MODEL),
 					transform: Transform::from_scale(Vec3::splat(PROJECTILE_CONTACT_RADIUS * 2.)),
 				},
 				ContactCollider {
@@ -76,7 +76,7 @@ impl GetContactPrefab for Skill {
 					blocked_by: blocked_by.clone().into(),
 				},
 				SubModel {
-					model: Model::Procedural(InsertAsset::shared::<Beam>(BEAM_MODEL)),
+					model: Model::Mesh(InsertAsset::shared::<Beam>(BEAM_MODEL)),
 					transform: HALF_FORWARD
 						.with_scale(Vec3 {
 							x: BEAM_CONTACT_RADIUS * 2.,
@@ -98,7 +98,7 @@ impl GetContactPrefab for Skill {
 					destroyed_by: Blocker::none(),
 				},
 				SubModel {
-					model: Model::Asset(AssetModel::scene(SHIELD_CONTACT_MODEL)),
+					model: Model::scene(SHIELD_CONTACT_MODEL),
 					transform: Transform::from_scale(SHIELD_SCALE),
 				},
 				ContactCollider {

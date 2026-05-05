@@ -1,16 +1,16 @@
 use crate::components::map::Map;
 use bevy::{prelude::*, scene::SceneInstance};
-use common::{components::asset_model::AssetModel, traits::handles_load_tracking::Loaded};
+use common::{components::model::Model, traits::handles_load_tracking::Loaded};
 
 impl Map {
 	pub(crate) fn is_loaded(
-		maps: Query<Option<&SceneInstance>, (With<Self>, With<AssetModel>)>,
+		maps: Query<Option<&SceneInstance>, (With<Self>, With<Model>)>,
 	) -> Loaded {
 		Self::is_loaded_internal(maps)
 	}
 
 	fn is_loaded_internal<TSceneLoaded>(
-		maps: Query<Option<&TSceneLoaded>, (With<Self>, With<AssetModel>)>,
+		maps: Query<Option<&TSceneLoaded>, (With<Self>, With<Model>)>,
 	) -> Loaded
 	where
 		TSceneLoaded: Component,
@@ -23,7 +23,7 @@ impl Map {
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::components::asset_model::AssetModel;
+	use common::components::model::Model;
 	use testing::SingleThreadedApp;
 
 	#[derive(Component)]
@@ -37,7 +37,7 @@ mod tests {
 	fn false_if_not_scene_loaded() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		app.world_mut()
-			.spawn((Map::default(), AssetModel::scene("my/path")));
+			.spawn((Map::default(), Model::scene("my/path")));
 
 		let loaded = app
 			.world_mut()
@@ -51,7 +51,7 @@ mod tests {
 	fn true_if_scene_loaded() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		app.world_mut()
-			.spawn((Map::default(), AssetModel::scene("my/path"), _SceneLoaded));
+			.spawn((Map::default(), Model::scene("my/path"), _SceneLoaded));
 
 		let loaded = app
 			.world_mut()
@@ -64,7 +64,7 @@ mod tests {
 	#[test]
 	fn ignore_non_map_components() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		app.world_mut().spawn(AssetModel::scene("my/path"));
+		app.world_mut().spawn(Model::scene("my/path"));
 
 		let loaded = app
 			.world_mut()

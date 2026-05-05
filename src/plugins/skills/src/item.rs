@@ -7,7 +7,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	components::{asset_model::AssetModel, essence::Essence},
+	components::{essence::Essence, model::Model},
 	tools::{item_type::ItemType, path::Path},
 	traits::{
 		accessors::get::View,
@@ -56,29 +56,29 @@ impl VisualizeItem for EssenceSlot {
 }
 
 impl VisualizeItem for ForearmSlot {
-	type TComponent = AssetModel;
+	type TComponent = Model;
 
 	fn visualize(item: Option<&Item>) -> Self::TComponent {
 		match item {
 			Some(Item {
 				model: ModelRender::Forearm(path),
 				..
-			}) => AssetModel::scene(path),
-			_ => AssetModel::none(),
+			}) => Model::scene(path),
+			_ => Model::None,
 		}
 	}
 }
 
 impl VisualizeItem for HandSlot {
-	type TComponent = AssetModel;
+	type TComponent = Model;
 
 	fn visualize(item: Option<&Item>) -> Self::TComponent {
 		match item {
 			Some(Item {
 				model: ModelRender::Hand(path),
 				..
-			}) => AssetModel::scene(path),
-			_ => AssetModel::none(),
+			}) => Model::scene(path),
+			_ => Model::None,
 		}
 	}
 }
