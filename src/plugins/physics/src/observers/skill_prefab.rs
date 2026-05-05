@@ -8,7 +8,7 @@ use crate::components::{
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::{asset_model::AssetModel, lifetime::Lifetime},
+	components::{lifetime::Lifetime, model::Model},
 	traits::{accessors::get::GetMut, handles_physics::PhysicalObject},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
@@ -103,7 +103,7 @@ pub(crate) trait ApplyMotionPrefab {
 
 #[derive(Debug, PartialEq, Clone)]
 pub(crate) struct SubModel {
-	pub(crate) model: AssetModel,
+	pub(crate) model: Model,
 	pub(crate) transform: Transform,
 }
 
@@ -124,7 +124,7 @@ mod tests {
 	use super::*;
 	use crate::components::{skill::ContactInteractionTarget, skill_transform::SkillTransformOf};
 	use common::{
-		components::asset_model::AssetModel,
+		components::model::Model,
 		effects::force::Force,
 		tools::Units,
 		traits::{
@@ -155,7 +155,7 @@ mod tests {
 
 		fn default_model() -> SubModel {
 			SubModel {
-				model: AssetModel::None,
+				model: Model::None,
 				transform: Transform::default(),
 			}
 		}
@@ -327,7 +327,7 @@ mod tests {
 					contact: (
 						_Skill::default_object(),
 						SubModel {
-							model: AssetModel::scene("asset/path"),
+							model: Model::scene("asset/path"),
 							transform: Transform::from_xyz(1., 2., 3.),
 						},
 						_Skill::default_contact_collider(),
@@ -340,10 +340,10 @@ mod tests {
 			let [model, ..] = assert_children_count!(3, app, skill);
 			assert_eq!(
 				(
-					Some(&AssetModel::scene("asset/path")),
+					Some(&Model::scene("asset/path")),
 					Some(&Transform::from_xyz(1., 2., 3.))
 				),
-				(model.get::<AssetModel>(), model.get::<Transform>(),),
+				(model.get::<Model>(), model.get::<Transform>(),),
 			);
 		}
 
@@ -451,7 +451,7 @@ mod tests {
 				.spawn(_Skill {
 					projection: (
 						SubModel {
-							model: AssetModel::scene("asset/path"),
+							model: Model::scene("asset/path"),
 							transform: Transform::from_xyz(1., 2., 3.),
 						},
 						_Skill::default_projection_collider(),
@@ -465,10 +465,10 @@ mod tests {
 			let [model, ..] = assert_children_count!(2, app, projection);
 			assert_eq!(
 				(
-					Some(&AssetModel::scene("asset/path")),
+					Some(&Model::scene("asset/path")),
 					Some(&Transform::from_xyz(1., 2., 3.))
 				),
-				(model.get::<AssetModel>(), model.get::<Transform>(),),
+				(model.get::<Model>(), model.get::<Transform>(),),
 			);
 		}
 

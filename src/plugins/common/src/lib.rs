@@ -17,7 +17,7 @@ use crate::{
 		child_of_persistent::ChildOfPersistent,
 		gltf::GltfLookup,
 		lifetime::Lifetime,
-		load_model::LoadModel,
+		load_scene::LoadScene,
 	},
 	states::game_state::GameState,
 	systems::log::OnError,
@@ -28,7 +28,7 @@ use crate::{
 	},
 };
 use bevy::prelude::*;
-use components::{asset_model::AssetModel, insert_asset::InsertAsset};
+use components::{insert_asset::InsertAsset, model::Model};
 
 pub struct CommonPlugin {
 	with_asset_loading: bool,
@@ -68,8 +68,8 @@ fn life_cycles(app: &mut App) {
 }
 
 fn asset_loading(app: &mut App) {
-	app.add_prefab_observer::<AssetModel, AssetServer>();
-	app.add_observer(LoadModel::execute.pipe(OnError::log));
+	app.add_prefab_observer::<Model, AssetServer>();
+	app.add_observer(LoadScene::execute.pipe(OnError::log));
 	app.add_observer(InsertAsset::<Mesh>::apply);
 	app.add_observer(InsertAsset::<StandardMaterial>::apply);
 	app.add_observer(AssetMeshName::insert);

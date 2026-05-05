@@ -1,4 +1,4 @@
-use crate::components::asset_model::SceneId;
+use crate::components::model::SceneId;
 use bevy::prelude::*;
 
 #[derive(Component, Debug, PartialEq)]

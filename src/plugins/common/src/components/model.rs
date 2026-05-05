@@ -2,7 +2,7 @@ use crate::{
 	components::{
 		gltf::{GltfLookup, GltfScene},
 		insert_asset::InsertAsset,
-		load_model::LoadModel,
+		load_scene::LoadScene,
 	},
 	errors::Unreachable,
 	traits::{
@@ -17,14 +17,14 @@ use std::ops::Deref;
 #[derive(Component, Debug, Default, PartialEq, Clone)]
 #[require(Transform, Visibility)]
 #[component(immutable)]
-pub enum AssetModel {
+pub enum Model {
 	#[default]
 	None,
 	Scene(Scene),
 	Mesh(InsertAsset<Mesh>),
 }
 
-impl AssetModel {
+impl Model {
 	pub fn scene<T>(params: T) -> Self
 	where
 		T: Into<Scene>,
@@ -33,7 +33,7 @@ impl AssetModel {
 	}
 }
 
-impl<TAssetServer> Prefab<TAssetServer> for AssetModel
+impl<TAssetServer> Prefab<TAssetServer> for Model
 where
 	TAssetServer: Resource + LoadAsset,
 {
@@ -55,10 +55,10 @@ where
 				let root = asset_server.load_asset(
 					GltfAssetLabel::Scene(*scene.id).from_asset(scene.asset_path.clone()),
 				);
-				entity.try_insert(LoadModel::Scene(root));
+				entity.try_insert(LoadScene::Scene(root));
 			}
 			Self::None => {
-				entity.try_insert(LoadModel::Scene(Handle::default()));
+				entity.try_insert(LoadScene::Scene(Handle::default()));
 			}
 			Self::Mesh(insert_mesh) => {
 				entity.try_insert(insert_mesh.clone());
@@ -171,7 +171,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.insert_resource(asset_server);
-		app.add_prefab_observer::<AssetModel, MockAssetServer>();
+		app.add_prefab_observer::<Model, MockAssetServer>();
 
 		app
 	}
@@ -187,14 +187,11 @@ mod tests {
 				.returns(handle.clone()),
 		);
 
-		let model = app
-			.world_mut()
-			.spawn(AssetModel::scene((asset_path, id)))
-			.id();
+		let model = app.world_mut().spawn(Model::scene((asset_path, id))).id();
 
 		assert_eq!(
-			Some(&LoadModel::Scene(handle)),
-			app.world().entity(model).get::<LoadModel>(),
+			Some(&LoadScene::Scene(handle)),
+			app.world().entity(model).get::<LoadScene>(),
 		);
 	}
 
@@ -211,7 +208,7 @@ mod tests {
 
 		let model = app
 			.world_mut()
-			.spawn(AssetModel::scene((asset_path, id, UseGltfLookup(true))))
+			.spawn(Model::scene((asset_path, id, UseGltfLookup(true))))
 			.id();
 
 		assert_eq!(
@@ -227,11 +224,11 @@ mod tests {
 	fn load_default_asset_when_set_to_none() {
 		let mut app = setup(MockAssetServer::default());
 
-		let model = app.world_mut().spawn(AssetModel::None).id();
+		let model = app.world_mut().spawn(Model::None).id();
 
 		assert_eq!(
-			Some(&LoadModel::Scene(Handle::default())),
-			app.world().entity(model).get::<LoadModel>(),
+			Some(&LoadScene::Scene(Handle::default())),
+			app.world().entity(model).get::<LoadScene>(),
 		);
 	}
 
@@ -240,10 +237,7 @@ mod tests {
 		let mut app = setup(MockAssetServer::default());
 		let insert_mesh = InsertAsset::unique(|| Sphere::new(3.).into());
 
-		let model = app
-			.world_mut()
-			.spawn(AssetModel::Mesh(insert_mesh.clone()))
-			.id();
+		let model = app.world_mut().spawn(Model::Mesh(insert_mesh.clone())).id();
 
 		assert_eq!(
 			Some(&insert_mesh),

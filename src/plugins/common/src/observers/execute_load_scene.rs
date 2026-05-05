@@ -1,15 +1,15 @@
 use crate::{
-	components::load_model::{GltfSceneError, LoadModel},
+	components::load_scene::{GltfSceneError, LoadScene},
 	traits::accessors::get::GetMut,
 	zyheeda_commands::ZyheedaCommands,
 };
 use bevy::prelude::*;
 
-impl LoadModel {
+impl LoadScene {
 	pub(crate) fn execute(
-		trigger: On<Add, LoadModel>,
+		trigger: On<Add, LoadScene>,
 		mut commands: ZyheedaCommands,
-		scenes: Query<&LoadModel>,
+		scenes: Query<&LoadScene>,
 	) -> Result<(), GltfSceneError> {
 		let entity = trigger.entity;
 
@@ -22,8 +22,8 @@ impl LoadModel {
 		};
 
 		match scene {
-			LoadModel::GltfError(err) => return Err(*err),
-			LoadModel::Scene(handle) => entity.try_insert(SceneRoot(handle.clone())),
+			LoadScene::GltfError(err) => return Err(*err),
+			LoadScene::Scene(handle) => entity.try_insert(SceneRoot(handle.clone())),
 		};
 
 		Ok(())
@@ -41,7 +41,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new();
 
-		app.add_observer(LoadModel::execute.pipe(|In(r), mut c: Commands| {
+		app.add_observer(LoadScene::execute.pipe(|In(r), mut c: Commands| {
 			c.insert_resource(_Result(r));
 		}));
 
@@ -53,7 +53,7 @@ mod tests {
 		let handle = new_handle();
 		let mut app = setup();
 
-		let model = app.world_mut().spawn(LoadModel::Scene(handle.clone()));
+		let model = app.world_mut().spawn(LoadScene::Scene(handle.clone()));
 
 		assert_eq!(Some(&SceneRoot(handle)), model.get::<SceneRoot>());
 	}
@@ -62,7 +62,7 @@ mod tests {
 	fn return_ok() {
 		let mut app = setup();
 
-		app.world_mut().spawn(LoadModel::Scene(new_handle()));
+		app.world_mut().spawn(LoadScene::Scene(new_handle()));
 
 		assert_eq!(&_Result(Ok(())), app.world().resource::<_Result>(),);
 	}
@@ -71,7 +71,7 @@ mod tests {
 	fn return_error() {
 		let mut app = setup();
 
-		app.world_mut().spawn(LoadModel::GltfError(GltfSceneError {
+		app.world_mut().spawn(LoadScene::GltfError(GltfSceneError {
 			scene_count: 10,
 			requested_id: 100,
 		}));
@@ -90,8 +90,8 @@ mod tests {
 		let handle = new_handle();
 		let mut app = setup();
 
-		let mut model = app.world_mut().spawn(LoadModel::Scene(handle.clone()));
-		model.insert(LoadModel::Scene(new_handle()));
+		let mut model = app.world_mut().spawn(LoadScene::Scene(handle.clone()));
+		model.insert(LoadScene::Scene(new_handle()));
 
 		assert_eq!(Some(&SceneRoot(handle)), model.get::<SceneRoot>());
 	}
