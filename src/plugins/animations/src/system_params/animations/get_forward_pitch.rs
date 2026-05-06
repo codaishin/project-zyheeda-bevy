@@ -20,6 +20,7 @@ mod tests {
 	use crate::{
 		components::{
 			animation_dispatch::AnimationDispatch,
+			animation_lookup::AnimationLookup,
 			current_forward_pitch::CurrentForwardPitch,
 		},
 		system_params::animations::AnimationsParamMut,
@@ -30,7 +31,7 @@ mod tests {
 	};
 	use common::traits::{
 		accessors::get::GetContextMut,
-		handles_animations::{Animations, ForwardPitch},
+		handles_animations::{AnimationClips, Animations, ForwardPitch},
 	};
 	use testing::SingleThreadedApp;
 
@@ -48,6 +49,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
+				AnimationLookup::<AnimationClips<AnimationNodeIndex>>::default(),
 				AnimationDispatch::default(),
 				GlobalTransform::default(),
 				CurrentForwardPitch(Some(DirForwardPitch::Up(
@@ -73,7 +75,11 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((AnimationDispatch::default(), GlobalTransform::default()))
+			.spawn((
+				AnimationLookup::<AnimationClips<AnimationNodeIndex>>::default(),
+				AnimationDispatch::default(),
+				GlobalTransform::default(),
+			))
 			.id();
 
 		app.world_mut()

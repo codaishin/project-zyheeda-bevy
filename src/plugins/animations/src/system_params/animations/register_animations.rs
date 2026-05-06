@@ -1,5 +1,5 @@
 use crate::{
-	components::{animation_dispatch::AnimationDispatch, animation_lookup::AnimationLookup},
+	components::animation_lookup::AnimationLookup,
 	system_params::animations::AnimationsRegisterContextMut,
 	traits::InsertClips,
 };
@@ -34,7 +34,6 @@ where
 		};
 
 		self.entity.try_insert((
-			AnimationDispatch::default(),
 			AnimationLookup {
 				animation_mask_groups: animation_mask_groups.clone(),
 				animations: map_animations(animations, insert_into_graph),
@@ -372,21 +371,6 @@ mod tests {
 			}),
 			app.world().entity(entity).get::<AnimationLookup>()
 		);
-		Ok(())
-	}
-
-	#[test]
-	fn no_context_when_animation_dispatch_present() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		let entity = app.world_mut().spawn(AnimationDispatch::default()).id();
-
-		let ctx = app
-			.world_mut()
-			.run_system_once(move |mut p: AnimationsParamMut<_Graph>| {
-				AnimationsParamMut::get_context_mut(&mut p, WithoutAnimations { entity }).is_some()
-			})?;
-
-		assert!(!ctx);
 		Ok(())
 	}
 }
