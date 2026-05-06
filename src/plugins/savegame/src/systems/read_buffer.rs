@@ -197,9 +197,9 @@ mod tests {
 		}
 
 		fn id(&self) -> &UniqueComponentId {
-			static A: UniqueComponentId = UniqueComponentId::Id("a");
-			static B: UniqueComponentId = UniqueComponentId::Id("b");
-			static COUNT_A: UniqueComponentId = UniqueComponentId::Id("count a");
+			static A: UniqueComponentId = UniqueComponentId::from_str("a");
+			static B: UniqueComponentId = UniqueComponentId::from_str("b");
+			static COUNT_A: UniqueComponentId = UniqueComponentId::from_str("count a");
 
 			match self {
 				_FakeHandler::A => &A,
