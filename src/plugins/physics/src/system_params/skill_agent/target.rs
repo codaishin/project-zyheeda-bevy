@@ -35,7 +35,7 @@ mod tests {
 		components::persistent_entity::PersistentEntity,
 		traits::{
 			accessors::get::{GetContext, GetContextMut},
-			handles_skill_physics::{InitializedAgent, SkillMount, Target as _},
+			handles_skill_physics::{InitializedAgent, SkillMountBone, Target as _},
 		},
 	};
 	use testing::SingleThreadedApp;
@@ -52,7 +52,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Target(Some(SkillTarget::Entity(target_entity))),
-				MountPointsDefinition::<SkillMount>::default(),
+				MountPointsDefinition::<SkillMountBone>::default(),
 			))
 			.id();
 
@@ -74,7 +74,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Target(Some(SkillTarget::Entity(target_entity))),
-				MountPointsDefinition::<SkillMount>::default(),
+				MountPointsDefinition::<SkillMountBone>::default(),
 			))
 			.id();
 
@@ -96,7 +96,10 @@ mod tests {
 		let target_entity = PersistentEntity::default();
 		let entity = app
 			.world_mut()
-			.spawn((Target(None), MountPointsDefinition::<SkillMount>::default()))
+			.spawn((
+				Target(None),
+				MountPointsDefinition::<SkillMountBone>::default(),
+			))
 			.id();
 
 		app.world_mut()
