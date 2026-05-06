@@ -21,6 +21,7 @@ mod tests {
 	use crate::{
 		components::{
 			animation_dispatch::AnimationDispatch,
+			animation_lookup::AnimationLookup,
 			current_movement_direction::CurrentMovementDirection,
 		},
 		system_params::animations::AnimationsParamMut,
@@ -30,7 +31,10 @@ mod tests {
 		asset::Assets,
 		ecs::system::{RunSystemError, RunSystemOnce},
 	};
-	use common::traits::{accessors::get::GetContextMut, handles_animations::Animations};
+	use common::traits::{
+		accessors::get::GetContextMut,
+		handles_animations::{AnimationClips, Animations},
+	};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -47,6 +51,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
+				AnimationLookup::<AnimationClips<AnimationNodeIndex>>::default(),
 				AnimationDispatch::default(),
 				GlobalTransform::default(),
 				CurrentMovementDirection(Some(Dir3::NEG_Z)),
@@ -67,7 +72,11 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((AnimationDispatch::default(), GlobalTransform::default()))
+			.spawn((
+				AnimationLookup::<AnimationClips<AnimationNodeIndex>>::default(),
+				AnimationDispatch::default(),
+				GlobalTransform::default(),
+			))
 			.id();
 
 		app.world_mut()

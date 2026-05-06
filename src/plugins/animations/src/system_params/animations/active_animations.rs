@@ -30,7 +30,7 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{
-		components::animation_dispatch::AnimationDispatch,
+		components::{animation_dispatch::AnimationDispatch, animation_lookup::AnimationLookup},
 		system_params::animations::AnimationsParamMut,
 	};
 	use bevy::{
@@ -41,7 +41,7 @@ mod tests {
 		tools::action_key::slot::SlotKey,
 		traits::{
 			accessors::get::GetContextMut,
-			handles_animations::{Animations, SkillAnimation},
+			handles_animations::{AnimationClips, Animations, SkillAnimation},
 		},
 	};
 	use test_case::test_case;
@@ -80,7 +80,10 @@ mod tests {
 				animation: SkillAnimation::Aim,
 			},
 		];
-		let entity = app.world_mut().spawn(AnimationDispatch::default()).id();
+		let entity = app
+			.world_mut()
+			.spawn(AnimationLookup::<AnimationClips<AnimationNodeIndex>>::default())
+			.id();
 
 		app.world_mut()
 			.run_system_once(move |mut p: AnimationsParamMut| {
@@ -111,7 +114,10 @@ mod tests {
 		];
 		let entity = app
 			.world_mut()
-			.spawn(dispatch_with([(animation_priority, animations)]))
+			.spawn((
+				AnimationLookup::<AnimationClips<AnimationNodeIndex>>::default(),
+				dispatch_with([(animation_priority, animations)]),
+			))
 			.id();
 
 		app.world_mut()
