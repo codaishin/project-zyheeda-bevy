@@ -11,7 +11,7 @@ use crate::{
 		map::{
 			Map,
 			agents::AgentsLoaded,
-			bay::BayMap,
+			level::Level,
 			objects::{MapObject, PersistentMapObject},
 		},
 		map_agents::{GridAgent, GridAgentOf},
@@ -82,16 +82,17 @@ where
 
 		TSavegame::register_savable_component::<AgentsLoaded>(app);
 		TSavegame::register_savable_component::<Map>(app);
-		TSavegame::register_savable_component::<BayMap>(app);
 		TSavegame::register_savable_component::<PersistentMapObject>(app);
 		TSavegame::register_savable_component::<GridAgent>(app);
+
+		TSavegame::register_savable_component::<Level<0>>(app);
 
 		#[cfg(debug_assertions)]
 		crate::mesh_grid_graph::debug::draw(app);
 
 		app.init_resource::<AgentPrefab>()
 			.register_required_components::<Map, TSavegame::TSaveEntityMarker>()
-			.add_systems(OnEnter(GameState::NewGame), BayMap::spawn)
+			.add_systems(OnEnter(GameState::NewGame), Level::<0>::spawn)
 			.add_prefab_observer::<MeshCollider, PhysicsConfigMut<TPhysics>>()
 			.add_observer(NavMesh::identify_by_prefix(Self::NAV_MESH_PREFIX))
 			.add_observer(MeshCollider::identify_by_prefix(Self::MESH_COLLIDER_PREFIX))

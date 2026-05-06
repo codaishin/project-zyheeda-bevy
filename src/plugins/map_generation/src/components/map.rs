@@ -1,5 +1,5 @@
 pub(crate) mod agents;
-pub(crate) mod bay;
+pub(crate) mod level;
 pub(crate) mod objects;
 
 use crate::components::map::objects::MapObjects;
