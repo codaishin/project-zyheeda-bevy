@@ -113,7 +113,7 @@ where
 				continue;
 			};
 			for handler in handlers {
-				let Some(component) = components.remove(&*handler.id()) else {
+				let Some(component) = components.remove(&**handler.id()) else {
 					continue;
 				};
 				let Err(err) = handler.insert_component(&mut entity, component, assets) else {
@@ -196,12 +196,16 @@ mod tests {
 			Ok(())
 		}
 
-		fn id(&self) -> UniqueComponentId {
+		fn id(&self) -> &UniqueComponentId {
+			static A: UniqueComponentId = UniqueComponentId::Id("a");
+			static B: UniqueComponentId = UniqueComponentId::Id("b");
+			static COUNT_A: UniqueComponentId = UniqueComponentId::Id("count a");
+
 			match self {
-				_FakeHandler::A => "a".into(),
-				_FakeHandler::B => "b".into(),
-				_FakeHandler::CountA => "count a".into(),
-				_FakeHandler::ErrorForA => "a".into(),
+				_FakeHandler::A => &A,
+				_FakeHandler::B => &B,
+				_FakeHandler::CountA => &COUNT_A,
+				_FakeHandler::ErrorForA => &A,
 			}
 		}
 	}

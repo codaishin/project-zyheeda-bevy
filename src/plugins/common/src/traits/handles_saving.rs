@@ -3,7 +3,7 @@ mod external;
 use crate::{errors::Unreachable, traits::handles_custom_assets::TryLoadFrom};
 use bevy::prelude::*;
 use serde::{Serialize, de::DeserializeOwned};
-use std::ops::Deref;
+use std::{hash::Hash, ops::Deref, sync::OnceLock};
 
 pub trait HandlesSaving {
 	type TSaveEntityMarker: Component + Default;
@@ -51,12 +51,50 @@ pub trait SavableComponent:
 /// - must be enforced by users of `SavableComponent`.
 /// - is likely essential. Meaning that uniqueness violations may crash the application, thus,
 ///   checking on app startup is desired.
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub struct UniqueComponentId(&'static str);
+#[derive(Debug, Eq, Clone)]
+pub enum UniqueComponentId {
+	Id(&'static str),
+	IdLazy {
+		id: OnceLock<String>,
+		f: fn() -> String,
+	},
+}
+
+use UniqueComponentId::{Id, IdLazy};
 
 impl UniqueComponentId {
 	pub const fn from_str(id: &'static str) -> Self {
-		Self(id)
+		Id(id)
+	}
+
+	pub const fn from_lazy(f: fn() -> String) -> Self {
+		IdLazy {
+			id: OnceLock::new(),
+			f,
+		}
+	}
+}
+
+impl PartialEq for UniqueComponentId {
+	fn eq(&self, other: &Self) -> bool {
+		match (self, other) {
+			(Id(l), Id(r)) => l == r,
+			(Id(id_str), IdLazy { id, f }) | (IdLazy { id, f }, Id(id_str)) => {
+				id_str == id.get_or_init(f)
+			}
+			(IdLazy { id: id_l, f: f_l }, IdLazy { id: id_r, f: f_r }) => {
+				id_l.get_or_init(f_l) == id_r.get_or_init(f_r)
+			}
+		}
+	}
+}
+
+impl Hash for UniqueComponentId {
+	fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+		match self {
+			Id(id) => id.hash(state),
+			IdLazy { id, f } => id.get_or_init(f).hash(state),
+		}
 	}
 }
 
@@ -64,7 +102,10 @@ impl Deref for UniqueComponentId {
 	type Target = str;
 
 	fn deref(&self) -> &Self::Target {
-		self.0
+		match self {
+			Id(id) => id,
+			IdLazy { id, f } => id.get_or_init(f),
+		}
 	}
 }
 
@@ -75,8 +116,11 @@ impl From<&'static str> for UniqueComponentId {
 }
 
 impl From<&UniqueComponentId> for String {
-	fn from(UniqueComponentId(id): &UniqueComponentId) -> Self {
-		(*id).to_owned()
+	fn from(id: &UniqueComponentId) -> Self {
+		match id {
+			Id(r) => (*r).to_owned(),
+			IdLazy { id, f } => id.get_or_init(f).clone(),
+		}
 	}
 }
 
