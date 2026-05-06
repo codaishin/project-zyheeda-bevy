@@ -24,19 +24,19 @@ where
 impl SavableComponent for OngoingEffects<HealthDamageEffect, Life> {
 	type TDto = Self;
 
-	const ID: UniqueComponentId = UniqueComponentId("ongoing health damage effects");
+	const ID: UniqueComponentId = UniqueComponentId::from_str("ongoing health damage effects");
 }
 
 impl SavableComponent for OngoingEffects<GravityEffect, GravityAffected> {
 	type TDto = Self;
 
-	const ID: UniqueComponentId = UniqueComponentId("ongoing gravity effects");
+	const ID: UniqueComponentId = UniqueComponentId::from_str("ongoing gravity effects");
 }
 
 impl SavableComponent for OngoingEffects<ForceEffect, ForceAffected> {
 	type TDto = Self;
 
-	const ID: UniqueComponentId = UniqueComponentId("ongoing force effects");
+	const ID: UniqueComponentId = UniqueComponentId::from_str("ongoing force effects");
 }
 
 impl<TActor, TTarget> Clone for OngoingEffects<TActor, TTarget>

@@ -106,8 +106,8 @@ where
 		(self.insert_fn)(entity, components, asset_server)
 	}
 
-	fn id(&self) -> UniqueComponentId {
-		self.component_id
+	fn id(&self) -> &UniqueComponentId {
+		&self.component_id
 	}
 }
 
@@ -405,7 +405,7 @@ mod tests {
 		fn get_component_name() {
 			let handler = ComponentHandler::<_LoadAsset>::new::<_A>();
 
-			assert_eq!(_A::ID, handler.id());
+			assert_eq!(&_A::ID, handler.id());
 		}
 	}
 }

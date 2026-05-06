@@ -6,7 +6,7 @@ macro_rules! impl_savable_with_high_priority {
 			type TDto = $ty;
 			const PRIORITY: bool = true;
 			const ID: $crate::traits::handles_saving::UniqueComponentId =
-				$crate::traits::handles_saving::UniqueComponentId($id);
+				$crate::traits::handles_saving::UniqueComponentId::from_str($id);
 		}
 	};
 }

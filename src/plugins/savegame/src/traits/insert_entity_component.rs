@@ -8,7 +8,7 @@ where
 	type TComponent;
 	type TError;
 
-	fn id(&self) -> UniqueComponentId;
+	fn id(&self) -> &UniqueComponentId;
 	fn insert_component(
 		&self,
 		entity: &mut EntityCommands,

@@ -520,7 +520,7 @@ pub fn derive_savable_component(input: TokenStream) -> TokenStream {
 		Some(id) => {
 			quote! {
 				const ID: #common::traits::handles_saving::UniqueComponentId =
-					#common::traits::handles_saving::UniqueComponentId(#id);
+					#common::traits::handles_saving::UniqueComponentId::from_str(#id);
 			}
 		}
 		None => {
