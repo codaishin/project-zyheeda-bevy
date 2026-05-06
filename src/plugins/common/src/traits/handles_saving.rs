@@ -52,7 +52,13 @@ pub trait SavableComponent:
 /// - is likely essential. Meaning that uniqueness violations may crash the application, thus,
 ///   checking on app startup is desired.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub struct UniqueComponentId(pub &'static str);
+pub struct UniqueComponentId(&'static str);
+
+impl UniqueComponentId {
+	pub const fn from_str(id: &'static str) -> Self {
+		Self(id)
+	}
+}
 
 impl Deref for UniqueComponentId {
 	type Target = str;
@@ -64,7 +70,7 @@ impl Deref for UniqueComponentId {
 
 impl From<&'static str> for UniqueComponentId {
 	fn from(id: &'static str) -> Self {
-		Self(id)
+		Self::from_str(id)
 	}
 }
 
