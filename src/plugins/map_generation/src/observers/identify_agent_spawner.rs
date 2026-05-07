@@ -29,7 +29,7 @@ impl AgentSpawner {
 			};
 
 			commands.try_apply_on(&added_name.entity, |mut e| {
-				e.try_insert(AgentSpawner (*agent_type));
+				e.try_insert((AgentSpawner (*agent_type), Visibility::Hidden));
 			});
 		};
 
@@ -84,6 +84,24 @@ mod tests {
 			app.world()
 				.entity(entities)
 				.map(|e| e.get::<AgentSpawner>())
+		);
+	}
+
+	#[test]
+	fn insert_visibility_hidden() {
+		let mut app = setup(&[
+			("AA", AgentType::Player),
+			("BB", AgentType::Enemy(EnemyType::VoidSphere)),
+		]);
+
+		let entities = [
+			app.world_mut().spawn(gltf_mesh_name!("AA")).id(),
+			app.world_mut().spawn(gltf_mesh_name!("BB")).id(),
+		];
+
+		assert_eq!(
+			[Some(&Visibility::Hidden), Some(&Visibility::Hidden)],
+			app.world().entity(entities).map(|e| e.get::<Visibility>()),
 		);
 	}
 
