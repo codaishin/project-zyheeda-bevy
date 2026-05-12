@@ -3,9 +3,8 @@ mod observers;
 mod systems;
 
 use crate::{
-	components::wall_light::WallLight,
+	components::{corridor_light::CorridorLight, light::Light, wall_light::WallLight},
 	observers::get_insert_system::GetInsertObserver,
-	systems::set_visibility::SetVisibility,
 };
 use bevy::{camera::visibility::VisibilitySystems, color::palettes::css::WHITE, prelude::*};
 use common::traits::{
@@ -33,9 +32,10 @@ where
 	fn build(&self, app: &mut App) {
 		app.insert_resource(GlobalAmbientLight::NONE)
 			.add_observer(WallLight::get_insert_observer())
+			.add_observer(CorridorLight::get_insert_observer())
 			.add_systems(
 				PostUpdate,
-				WallLight::set_visibility.in_set(VisibilitySystems::CheckVisibility),
+				Light::set_visibility.in_set(VisibilitySystems::CheckVisibility),
 			);
 	}
 }

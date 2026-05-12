@@ -1,9 +1,9 @@
-use crate::observers::get_insert_system::TargetMeshName;
+use crate::{components::light::Light, observers::get_insert_system::TargetMeshName};
 use bevy::prelude::*;
 use zyheeda_core::prelude::NormalizedNameLazy;
 
 #[derive(Component, Debug, PartialEq, Default)]
-#[require(SpotLight = Self)]
+#[require(Light, SpotLight = Self)]
 pub(crate) struct WallLight;
 
 impl From<WallLight> for SpotLight {
