@@ -1,5 +1,6 @@
 use bevy::prelude::*;
-use zyheeda_core::prelude::NormalizedNameLazy;
+use std::ops::Deref;
+use zyheeda_core::prelude::NormalizedName;
 
 /// Represents a normalized asset mesh name.
 ///
@@ -7,10 +8,10 @@ use zyheeda_core::prelude::NormalizedNameLazy;
 /// [`GltfMeshName`](bevy::gltf::GltfMeshName) is inserted .
 #[derive(Component, Debug, PartialEq)]
 #[component(immutable)]
-pub struct AssetMeshName(pub NormalizedNameLazy<String>);
+pub struct AssetMeshName(pub NormalizedName);
 
 impl AssetMeshName {
-	pub fn normalized(name: impl Into<String>) -> Self {
-		Self(NormalizedNameLazy::from_name(name.into()))
+	pub fn normalized(name: impl Deref<Target = str>) -> Self {
+		Self(NormalizedName::from(name))
 	}
 }

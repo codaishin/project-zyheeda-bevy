@@ -1,7 +1,7 @@
 use crate::{components::light::Light, observers::get_insert_system::TargetMeshName};
 use bevy::{color::palettes::css::ANTIQUE_WHITE, prelude::*};
 use common::components::insert_asset::InsertAsset;
-use zyheeda_core::prelude::NormalizedNameLazy;
+use zyheeda_core::prelude::NormalizedName;
 
 #[derive(Component, Debug, PartialEq, Default)]
 #[require(Light, SpotLight = Self, InsertAsset<StandardMaterial> = Self)]
@@ -37,7 +37,7 @@ impl From<CorridorLight> for InsertAsset<StandardMaterial> {
 }
 
 impl TargetMeshName for CorridorLight {
-	fn target_mesh_name() -> NormalizedNameLazy {
-		const { NormalizedNameLazy::from_name("CorridorLight") }
+	fn target_mesh_name() -> NormalizedName {
+		NormalizedName::from("CorridorLight")
 	}
 }
