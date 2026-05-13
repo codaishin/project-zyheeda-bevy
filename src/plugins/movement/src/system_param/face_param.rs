@@ -14,7 +14,7 @@ pub struct FaceParamMut<'w, 's> {
 	commands: ZyheedaCommands<'w, 's>,
 }
 
-impl GetContextMut<Facing> for FaceParamMut<'_, '_> {
+impl GetContextMut<Facing> for FaceParamMut<'static, 'static> {
 	type TContext<'ctx> = FaceContextMut<'ctx>;
 
 	fn get_context_mut<'ctx>(

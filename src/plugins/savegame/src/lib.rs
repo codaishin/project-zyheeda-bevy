@@ -28,7 +28,7 @@ use common::{
 	tools::action_key::{ActionKey, save_key::SaveKey},
 	traits::{
 		after_plugin::AfterPlugin,
-		handles_input::{HandlesInput, InputSystemParam},
+		handles_input::HandlesInput,
 		handles_saving::{HandlesSaving, SavableComponent},
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
@@ -84,11 +84,11 @@ where
 		let quick_save = Arc::new(Mutex::new(SaveContext::from(FileIO::with_file(
 			quick_save_file,
 		))));
-		let trigger_quick_save = InputSystemParam::<TInput>::trigger(
+		let trigger_quick_save = TInput::TInput::trigger(
 			ActionKey::Save(SaveKey::QuickSave),
 			GameState::Save(SaveState::Save),
 		);
-		let trigger_quick_load_attempt = InputSystemParam::<TInput>::trigger(
+		let trigger_quick_load_attempt = TInput::TInput::trigger(
 			ActionKey::Save(SaveKey::QuickLoad),
 			GameState::Save(SaveState::AttemptLoad),
 		);

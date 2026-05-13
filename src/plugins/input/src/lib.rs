@@ -87,9 +87,9 @@ impl<TDependencies> HandlesActionKeyButton for InputPlugin<TDependencies> {
 }
 
 impl<TDependencies> HandlesInput for InputPlugin<TDependencies> {
-	type TInput<'world, 'state> = Input<'world, 'state, Res<'static, KeyMap>>;
+	type TInput = Input<'static, 'static, Res<'static, KeyMap>>;
 }
 
 impl<TDependencies> HandlesInputMut for InputPlugin<TDependencies> {
-	type TInputMut<'world, 'state> = Input<'world, 'state, ResMut<'static, KeyMap>>;
+	type TInputMut = Input<'static, 'static, ResMut<'static, KeyMap>>;
 }

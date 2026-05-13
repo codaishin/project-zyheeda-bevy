@@ -44,20 +44,14 @@ use common::{
 	tools::{action_key::ActionKey, path::Path},
 	traits::{
 		handles_graphics::UiCamera,
-		handles_input::{
-			HandlesActionKeyButton,
-			HandlesInput,
-			HandlesInputMut,
-			InputMutSystemParam,
-			InputSystemParam,
-		},
+		handles_input::{HandlesActionKeyButton, HandlesInput, HandlesInputMut},
 		handles_load_tracking::{
 			AssetsProgress,
 			DependenciesProgress,
 			HandlesLoadTracking,
 			LoadGroup,
 		},
-		handles_loadout::{HandlesLoadout, LoadoutMutParam, LoadoutParam},
+		handles_loadout::HandlesLoadout,
 		handles_localization::{HandlesLocalization, Token, localized::Localized},
 		handles_player::HandlesPlayer,
 		handles_saving::HandlesSaving,
@@ -179,7 +173,7 @@ where
 			Update,
 			(
 				PreventMenuChange::menus_unchangeable_when_present,
-				set_state_from_input::<MenuState, InputSystemParam<TInput>>
+				set_state_from_input::<MenuState, TInput::TInput>
 					.run_if(changeable_and_not_loading),
 			)
 				.chain(),
@@ -242,11 +236,11 @@ where
 			.add_systems(
 				Update,
 				(
-					QuickbarPanel::set_icon::<TPlayers::TPlayer, LoadoutParam<TLoadout>>,
+					QuickbarPanel::set_icon::<TPlayers::TPlayer, TLoadout::TLoadout>,
 					QuickbarPanel::set_color::<
 						TPlayers::TPlayer,
 						TInput::TActionKeyButton,
-						LoadoutParam<TLoadout>,
+						TLoadout::TLoadout,
 					>,
 					panel_colors::<QuickbarPanel>,
 				)
@@ -273,40 +267,37 @@ where
 			(
 				ComboOverview::update_from::<
 					TPlayers::TPlayer,
-					LoadoutParam<TLoadout>,
+					TLoadout::TLoadout,
 					TLoadout::TSkillID,
 				>,
-				KeySelectDropdownCommand::insert_dropdown::<
-					TPlayers::TPlayer,
-					LoadoutParam<TLoadout>,
-				>,
+				KeySelectDropdownCommand::insert_dropdown::<TPlayers::TPlayer, TLoadout::TLoadout>,
 				SkillSelectDropdownCommand::<Vertical>::insert_dropdown::<
 					TPlayers::TPlayer,
-					LoadoutParam<TLoadout>,
+					TLoadout::TLoadout,
 					TLoadout::TSkillID,
 				>,
 				SkillSelectDropdownCommand::<Horizontal>::insert_dropdown::<
 					TPlayers::TPlayer,
-					LoadoutParam<TLoadout>,
+					TLoadout::TLoadout,
 					TLoadout::TSkillID,
 				>,
 				VerticalItem::<TLoadout::TSkillID>::update::<
 					TPlayers::TPlayer,
-					LoadoutMutParam<TLoadout>,
+					TLoadout::TLoadoutMut,
 				>,
 				HorizontalItem::<TLoadout::TSkillID>::update::<
 					TPlayers::TPlayer,
-					LoadoutMutParam<TLoadout>,
+					TLoadout::TLoadoutMut,
 				>,
 				DeleteSkill::from_combos::<
 					TPlayers::TPlayer,
-					LoadoutMutParam<TLoadout>,
+					TLoadout::TLoadoutMut,
 					TLoadout::TSkillID,
 				>,
 				Trigger::<TLoadout::TSkillID>::visualize_invalid::<
 					Unusable,
 					TPlayers::TPlayer,
-					LoadoutParam<TLoadout>,
+					TLoadout::TLoadout,
 				>,
 			)
 				.chain()
@@ -323,10 +314,10 @@ where
 		.add_systems(
 			Update,
 			(
-				InventoryPanel::set_label::<TPlayers::TPlayer, LoadoutParam<TLoadout>>,
+				InventoryPanel::set_label::<TPlayers::TPlayer, TLoadout::TLoadout>,
 				panel_colors::<InventoryPanel>,
 				drag_item::<TPlayers::TPlayer>,
-				drop_item::<TPlayers::TPlayer, LoadoutMutParam<TLoadout>>,
+				drop_item::<TPlayers::TPlayer, TLoadout::TLoadoutMut>,
 			)
 				.chain()
 				.run_if(in_state(inventory)),
@@ -348,12 +339,12 @@ where
 			.add_systems(
 				Update,
 				(
-					SettingsScreen::set_key_bindings_from::<InputSystemParam<TInput>>,
+					SettingsScreen::set_key_bindings_from::<TInput::TInput>,
 					KeyBindAction::render_ui::<TLocalization::TLocalizationServer>,
 					KeyBindInput::render_ui::<TLocalization::TLocalizationServer>,
 					KeyBindInput::rebind_on_click,
 					KeyRebindInput::render_ui::<TLocalization::TLocalizationServer>,
-					KeyRebindInput::rebind_apply::<InputMutSystemParam<TInput>>,
+					KeyRebindInput::rebind_apply::<TInput::TInputMut>,
 				)
 					.run_if(in_state(settings)),
 			);
@@ -374,7 +365,7 @@ where
 					DispatchTextColor::apply,
 					UIDisabled::apply,
 					(
-						InputLabel::icon::<InputSystemParam<TInput>>("icons/keys"),
+						InputLabel::icon::<TInput::TInput>("icons/keys"),
 						Icon::load_image,
 						Icon::insert_image,
 						UILabel::icon_tooltip,

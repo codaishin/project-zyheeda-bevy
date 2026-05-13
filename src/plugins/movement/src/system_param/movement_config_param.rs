@@ -16,7 +16,7 @@ pub struct MovementConfigParamMut<'w, 's> {
 	configured: Query<'w, 's, (), With<Config>>,
 }
 
-impl GetContextMut<NotConfiguredMovement> for MovementConfigParamMut<'_, '_> {
+impl GetContextMut<NotConfiguredMovement> for MovementConfigParamMut<'static, 'static> {
 	type TContext<'ctx> = MovementConfigContextMut<'ctx>;
 
 	fn get_context_mut<'ctx>(

@@ -13,7 +13,7 @@ use common::{
 	},
 };
 
-impl GetContextMut<CombosMarker> for LoadoutWriter<'_, '_> {
+impl GetContextMut<CombosMarker> for LoadoutWriter<'static, 'static> {
 	type TContext<'ctx> = CombosMut<'ctx>;
 
 	fn get_context_mut<'ctx>(

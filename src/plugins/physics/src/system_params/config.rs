@@ -18,7 +18,7 @@ pub struct ConfigParamMut<'w, 's> {
 	commands: ZyheedaCommands<'w, 's>,
 }
 
-impl GetContextMut<NoDefaultAttributes> for ConfigParamMut<'_, '_> {
+impl GetContextMut<NoDefaultAttributes> for ConfigParamMut<'static, 'static> {
 	type TContext<'ctx> = ConfigContextMut<'ctx>;
 
 	fn get_context_mut<'ctx>(
@@ -35,7 +35,7 @@ impl GetContextMut<NoDefaultAttributes> for ConfigParamMut<'_, '_> {
 	}
 }
 
-impl GetContextMut<NoBodyConfigured> for ConfigParamMut<'_, '_> {
+impl GetContextMut<NoBodyConfigured> for ConfigParamMut<'static, 'static> {
 	type TContext<'ctx> = ConfigContextMut<'ctx>;
 
 	fn get_context_mut<'ctx>(

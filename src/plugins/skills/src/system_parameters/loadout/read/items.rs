@@ -16,7 +16,7 @@ use common::{
 	},
 };
 
-impl GetContext<Items> for LoadoutReader<'_, '_> {
+impl GetContext<Items> for LoadoutReader<'static, 'static> {
 	type TContext<'ctx> = ItemsView<'ctx>;
 
 	fn get_context<'ctx>(

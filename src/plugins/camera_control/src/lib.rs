@@ -9,7 +9,7 @@ use common::{
 	traits::{
 		after_plugin::AfterPlugin,
 		handles_graphics::{FirstPassCamera, WorldCameras},
-		handles_input::{HandlesInput, InputSystemParam},
+		handles_input::HandlesInput,
 		handles_player::{HandlesPlayer, PlayerMainCamera},
 		handles_saving::HandlesSaving,
 		system_set_definition::SystemSetDefinition,
@@ -55,7 +55,7 @@ where
 			Update,
 			(
 				TGraphics::TWorldCameras::set_to_orbit::<TPlayers::TPlayer>.pipe(OnError::log),
-				move_on_orbit::<OrbitPlayer, InputSystemParam<TInput>>,
+				move_on_orbit::<OrbitPlayer, TInput::TInput>,
 				move_with_target::<OrbitPlayer>,
 			)
 				.chain()

@@ -34,10 +34,10 @@ use common::{
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
 		handles_load_tracking::HandlesLoadTracking,
 		handles_loadout::HandlesLoadout,
-		handles_orientation::{FacingSystemParamMut, HandlesOrientation},
+		handles_orientation::HandlesOrientation,
 		handles_physics::{HandlesAllPhysicalEffects, HandlesRaycast},
 		handles_saving::HandlesSaving,
-		handles_skill_physics::{HandlesSkillPhysics, SkillSpawnerMut},
+		handles_skill_physics::HandlesSkillPhysics,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
@@ -122,8 +122,8 @@ where
 				Queue::enqueue_system::<Slots>,
 				Combos::update::<Queue>,
 				flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
-				schedule_active_skill::<Queue, FacingSystemParamMut<TMovement>, ActiveSkill, Virtual>,
-				ActiveSkill::<SkillBehaviorConfig>::execute::<SkillSpawnerMut<TPhysics>>,
+				schedule_active_skill::<Queue, TMovement::TFaceSystemParam, ActiveSkill, Virtual>,
+				ActiveSkill::<SkillBehaviorConfig>::execute::<TPhysics::TSkillSpawnerMut>,
 				flush::<Queue>,
 			)
 				.chain()
@@ -152,9 +152,9 @@ where
 
 impl<TDependencies> HandlesLoadout for SkillsPlugin<TDependencies> {
 	type TSkillID = SkillId;
-	type TLoadoutPrep<'w, 's> = LoadoutPrep<'w, 's>;
-	type TLoadout<'w, 's> = LoadoutReader<'w, 's>;
-	type TLoadoutMut<'w, 's> = LoadoutWriter<'w, 's>;
-	type TLoadoutActivity<'w, 's> = LoadoutActivityReader<'w, 's>;
-	type TLoadoutActivityMut<'w, 's> = LoadoutActivityWriter<'w, 's>;
+	type TLoadoutPrep = LoadoutPrep<'static, 'static>;
+	type TLoadout = LoadoutReader<'static, 'static>;
+	type TLoadoutMut = LoadoutWriter<'static, 'static>;
+	type TLoadoutActivity = LoadoutActivityReader<'static, 'static>;
+	type TLoadoutActivityMut = LoadoutActivityWriter<'static, 'static>;
 }

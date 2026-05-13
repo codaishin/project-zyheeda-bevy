@@ -34,33 +34,27 @@ use std::{
 pub trait HandlesLoadout {
 	type TSkillID: Debug + PartialEq + Copy + ThreadSafe;
 
-	type TLoadoutPrep<'w, 's>: SystemParam
+	type TLoadoutPrep: SystemParam
 		+ for<'c> GetContextMut<NotLoadedOut, TContext<'c>: InsertDefaultLoadout>
 		+ for<'c> GetContextMut<NoBonesRegistered, TContext<'c>: RegisterLoadoutBones>;
 
-	type TLoadout<'w, 's>: SystemParam
+	type TLoadout: SystemParam
 		+ for<'c> GetContext<Items, TContext<'c>: ReadItems>
 		+ for<'c> GetContext<Skills, TContext<'c>: ReadSkills>
 		+ for<'c> GetContext<Combos, TContext<'c>: ReadCombos<Self::TSkillID>>
 		+ for<'c> GetContext<AvailableSkills, TContext<'c>: ReadAvailableSkills<Self::TSkillID>>;
 
-	type TLoadoutMut<'w, 's>: SystemParam
+	type TLoadoutMut: SystemParam
 		+ for<'c> GetContextMut<Items, TContext<'c>: SwapItems>
 		+ for<'c> GetContextMut<Combos, TContext<'c>: UpdateCombos<Self::TSkillID>>;
 
-	type TLoadoutActivity<'w, 's>: SystemParam
+	type TLoadoutActivity: SystemParam
 		+ for<'c> GetContext<Skills, TContext<'c>: ActiveSkills>
 		+ for<'c> GetContext<Skills, TContext<'c>: HeldSkills>;
 
-	type TLoadoutActivityMut<'w, 's>: SystemParam
+	type TLoadoutActivityMut: SystemParam
 		+ for<'c> GetContextMut<Skills, TContext<'c>: HeldSkillsMut>;
 }
-
-pub type LoadoutPrepParam<'w, 's, T> = <T as HandlesLoadout>::TLoadoutPrep<'w, 's>;
-pub type LoadoutParam<'w, 's, T> = <T as HandlesLoadout>::TLoadout<'w, 's>;
-pub type LoadoutMutParam<'w, 's, T> = <T as HandlesLoadout>::TLoadoutMut<'w, 's>;
-pub type LoadoutActivityParam<'w, 's, T> = <T as HandlesLoadout>::TLoadoutActivity<'w, 's>;
-pub type LoadoutActivityMutParam<'w, 's, T> = <T as HandlesLoadout>::TLoadoutActivityMut<'w, 's>;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum LoadoutKey {

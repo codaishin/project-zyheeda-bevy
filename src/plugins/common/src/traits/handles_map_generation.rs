@@ -17,7 +17,7 @@ use std::{
 };
 
 pub trait HandlesMapGeneration: SystemSetDefinition {
-	type TNewMapAgent<'w, 's>: SystemParam
+	type TNewMapAgent: SystemParam
 		+ for<'c> GetContextMut<AgentPrefab, TContext<'c>: SetMapAgentPrefab>;
 
 	type TGraph: Graph + for<'a> From<&'a Self::TMap> + ThreadSafe;
@@ -25,8 +25,6 @@ pub trait HandlesMapGeneration: SystemSetDefinition {
 	type TMap: Component;
 	type TMapRef: Component + View<Entity>;
 }
-
-pub type NewMapAgentParamMut<'w, 's, TMaps> = <TMaps as HandlesMapGeneration>::TNewMapAgent<'w, 's>;
 
 pub trait Graph:
 	GraphNode<TNNode = Self::TNode>

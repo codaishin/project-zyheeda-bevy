@@ -11,17 +11,12 @@ use serde::{Deserialize, Serialize};
 use std::ops::DerefMut;
 
 pub trait HandlesMovement: SystemSetDefinition {
-	type TMovement<'w, 's>: SystemParam
-		+ for<'c> GetContext<Movement, TContext<'c>: CurrentMovement>;
-	type TMovementMut<'w, 's>: SystemParam
+	type TMovement: SystemParam + for<'c> GetContext<Movement, TContext<'c>: CurrentMovement>;
+	type TMovementMut: SystemParam
 		+ for<'c> GetContextMut<ConfiguredMovement, TContext<'c>: ControlMovement>;
-	type TMovementConfig<'w, 's>: SystemParam
+	type TMovementConfig: SystemParam
 		+ for<'c> GetContextMut<NotConfiguredMovement, TContext<'c>: ConfigureMovement>;
 }
-
-pub type MovementSystemParam<'w, 's, T> = <T as HandlesMovement>::TMovement<'w, 's>;
-pub type MovementSystemParamMut<'w, 's, T> = <T as HandlesMovement>::TMovementMut<'w, 's>;
-pub type MovementSystemConfigParam<'w, 's, T> = <T as HandlesMovement>::TMovementConfig<'w, 's>;
 
 pub trait ControlMovement: StartMovement + StopMovement + ToggleSpeed + CurrentMovement {}
 

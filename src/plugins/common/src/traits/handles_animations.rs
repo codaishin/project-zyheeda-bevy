@@ -19,7 +19,7 @@ use std::{
 use zyheeda_core::prelude::OrderedSet;
 
 pub trait HandlesAnimations {
-	type TAnimationsMut<'w, 's>: SystemParam
+	type TAnimationsMut: SystemParam
 		+ for<'c> GetContextMut<WithoutAnimations, TContext<'c>: RegisterAnimations>
 		+ for<'c> GetContextMut<Animations, TContext<'c>: ActiveAnimationsMut>
 		+ for<'c> GetContextMut<Animations, TContext<'c>: GetMoveDirectionMut>
@@ -35,8 +35,6 @@ pub struct WithoutAnimations {
 pub struct Animations {
 	pub entity: Entity,
 }
-
-pub type AnimationsSystemParamMut<'w, 's, T> = <T as HandlesAnimations>::TAnimationsMut<'w, 's>;
 
 pub trait RegisterAnimations {
 	fn register_animations(

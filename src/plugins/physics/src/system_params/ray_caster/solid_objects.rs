@@ -83,16 +83,15 @@ impl RayCaster<'_, '_> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{
-		PhysicsPlugin,
-		components::{collider::MOUSE_HOVERABLE_GROUP, interaction_target::InteractionTarget},
+	use crate::components::{
+		collider::MOUSE_HOVERABLE_GROUP,
+		interaction_target::InteractionTarget,
 	};
 	use bevy::{
 		ecs::system::{RunSystemError, RunSystemOnce},
 		mesh::MeshPlugin,
 		scene::ScenePlugin,
 	};
-	use common::traits::handles_physics::RaycastSystemParam;
 	use test_case::test_case;
 	use testing::SingleThreadedApp;
 
@@ -122,15 +121,15 @@ mod tests {
 			.id();
 		app.update();
 
-		let hit = app.world_mut().run_system_once(
-			|mut ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
+		let hit = app
+			.world_mut()
+			.run_system_once(|mut ray_caster: RayCaster| {
 				ray_caster.raycast(SolidObjects {
 					ray: Ray3d::new(Vec3::Y, Dir3::NEG_Y),
 					exclude: vec![],
 					only_hoverable: false,
 				})
-			},
-		)?;
+			})?;
 
 		assert_eq!(
 			Some(RaycastHit {
@@ -155,15 +154,15 @@ mod tests {
 		app.world_mut().spawn(());
 		app.update();
 
-		let hit = app.world_mut().run_system_once(
-			|mut ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
+		let hit = app
+			.world_mut()
+			.run_system_once(|mut ray_caster: RayCaster| {
 				ray_caster.raycast(SolidObjects {
 					ray: Ray3d::new(Vec3::Y, Dir3::NEG_Y),
 					exclude: vec![],
 					only_hoverable: false,
 				})
-			},
-		)?;
+			})?;
 
 		assert_eq!(
 			Some(RaycastHit {
@@ -188,15 +187,15 @@ mod tests {
 		app.world_mut().spawn(());
 		app.update();
 
-		let hit = app.world_mut().run_system_once(
-			|mut ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
+		let hit = app
+			.world_mut()
+			.run_system_once(|mut ray_caster: RayCaster| {
 				ray_caster.raycast(SolidObjects {
 					ray: Ray3d::new(Vec3::Y, Dir3::NEG_Y),
 					exclude: vec![],
 					only_hoverable: false,
 				})
-			},
-		)?;
+			})?;
 
 		assert_eq!(
 			Some(RaycastHit {
@@ -224,15 +223,15 @@ mod tests {
 		app.world_mut().spawn(());
 		app.update();
 
-		let hit = app.world_mut().run_system_once(
-			|mut ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
+		let hit = app
+			.world_mut()
+			.run_system_once(|mut ray_caster: RayCaster| {
 				ray_caster.raycast(SolidObjects {
 					ray: Ray3d::new(Vec3::Y, Dir3::NEG_Y),
 					exclude: vec![],
 					only_hoverable: false,
 				})
-			},
-		)?;
+			})?;
 
 		assert_eq!(
 			Some(RaycastHit {
@@ -255,15 +254,15 @@ mod tests {
 		));
 		app.update();
 
-		let hit = app.world_mut().run_system_once(
-			|mut ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
+		let hit = app
+			.world_mut()
+			.run_system_once(|mut ray_caster: RayCaster| {
 				ray_caster.raycast(SolidObjects {
 					ray: Ray3d::new(Vec3::Y, Dir3::NEG_Y),
 					exclude: vec![],
 					only_hoverable: false,
 				})
-			},
-		)?;
+			})?;
 
 		assert_eq!(None, hit);
 		Ok(())
@@ -282,15 +281,15 @@ mod tests {
 			.id();
 		app.update();
 
-		let hit = app.world_mut().run_system_once(
-			move |mut ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
+		let hit = app
+			.world_mut()
+			.run_system_once(move |mut ray_caster: RayCaster| {
 				ray_caster.raycast(SolidObjects {
 					ray: Ray3d::new(Vec3::Y, Dir3::NEG_Y),
 					exclude: vec![a, b],
 					only_hoverable: false,
 				})
-			},
-		)?;
+			})?;
 
 		assert_eq!(None, hit);
 		Ok(())
@@ -321,15 +320,15 @@ mod tests {
 			.id();
 		app.update();
 
-		let hit = app.world_mut().run_system_once(
-			move |mut ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
+		let hit = app
+			.world_mut()
+			.run_system_once(move |mut ray_caster: RayCaster| {
 				ray_caster.raycast(SolidObjects {
 					ray: Ray3d::new(Vec3::Y, Dir3::NEG_Y),
 					exclude: vec![a, b],
 					only_hoverable: false,
 				})
-			},
-		)?;
+			})?;
 
 		assert_eq!(None, hit);
 		Ok(())
@@ -354,15 +353,15 @@ mod tests {
 			.id();
 		app.update();
 
-		let hit = app.world_mut().run_system_once(
-			move |mut ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
+		let hit = app
+			.world_mut()
+			.run_system_once(move |mut ray_caster: RayCaster| {
 				ray_caster.raycast(SolidObjects {
 					ray: Ray3d::new(Vec3::Y, Dir3::NEG_Y),
 					exclude: vec![],
 					only_hoverable: true,
 				})
-			},
-		)?;
+			})?;
 
 		assert_eq!(
 			Some(RaycastHit {
@@ -393,15 +392,15 @@ mod tests {
 		));
 		app.update();
 
-		let hit = app.world_mut().run_system_once(
-			move |mut ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
+		let hit = app
+			.world_mut()
+			.run_system_once(move |mut ray_caster: RayCaster| {
 				ray_caster.raycast(SolidObjects {
 					ray: Ray3d::new(Vec3::Y, Dir3::NEG_Y),
 					exclude: vec![],
 					only_hoverable: false,
 				})
-			},
-		)?;
+			})?;
 
 		assert_eq!(
 			Some(RaycastHit {
@@ -433,15 +432,15 @@ mod tests {
 			.id();
 		app.update();
 
-		let hit = app.world_mut().run_system_once(
-			move |mut ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
+		let hit = app
+			.world_mut()
+			.run_system_once(move |mut ray_caster: RayCaster| {
 				ray_caster.raycast(SolidObjects {
 					ray: Ray3d::new(Vec3::Y, Dir3::NEG_Y),
 					exclude: vec![],
 					only_hoverable,
 				})
-			},
-		)?;
+			})?;
 
 		assert_eq!(
 			Some(RaycastHit {

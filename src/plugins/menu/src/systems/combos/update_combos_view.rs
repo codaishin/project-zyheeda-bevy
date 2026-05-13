@@ -69,7 +69,7 @@ mod tests {
 	#[derive(SystemParam)]
 	struct _Param<'w, 's>(Query<'w, 's, Ref<'static, _Combos>>);
 
-	impl GetContext<Combos> for _Param<'_, '_> {
+	impl GetContext<Combos> for _Param<'static, 'static> {
 		type TContext<'ctx> = _CombosContext<'ctx>;
 
 		fn get_context<'ctx>(

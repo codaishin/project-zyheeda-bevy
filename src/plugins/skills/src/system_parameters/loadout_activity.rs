@@ -15,7 +15,7 @@ pub struct LoadoutActivityReader<'w, 's> {
 	loadout: Query<'w, 's, (Ref<'static, Queue>, Ref<'static, HeldSlots>)>,
 }
 
-impl GetContext<Skills> for LoadoutActivityReader<'_, '_> {
+impl GetContext<Skills> for LoadoutActivityReader<'static, 'static> {
 	type TContext<'ctx> = LoadoutActivityReadContext<'ctx>;
 
 	fn get_context<'ctx>(
@@ -44,7 +44,7 @@ pub struct LoadoutActivityWriter<'w, 's> {
 	held_slots: Query<'w, 's, &'static mut HeldSlots>,
 }
 
-impl GetContextMut<Skills> for LoadoutActivityWriter<'_, '_> {
+impl GetContextMut<Skills> for LoadoutActivityWriter<'static, 'static> {
 	type TContext<'ctx> = LoadoutActivityWriteContext<'ctx>;
 
 	fn get_context_mut<'ctx>(

@@ -14,7 +14,7 @@ use common::{
 };
 use std::{collections::HashSet, ops::Deref};
 
-impl GetContext<CombosMarker> for LoadoutReader<'_, '_> {
+impl GetContext<CombosMarker> for LoadoutReader<'static, 'static> {
 	type TContext<'ctx> = CombosView<'ctx>;
 
 	fn get_context<'ctx>(

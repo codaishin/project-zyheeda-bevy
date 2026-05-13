@@ -84,5 +84,5 @@ impl<TDependencies> SystemSetDefinition for AnimationsPlugin<TDependencies> {
 }
 
 impl<TDependencies> HandlesAnimations for AnimationsPlugin<TDependencies> {
-	type TAnimationsMut<'w, 's> = AnimationsParamMut<'w, 's>;
+	type TAnimationsMut = AnimationsParamMut<'static, 'static>;
 }
