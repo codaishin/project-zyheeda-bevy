@@ -1,6 +1,6 @@
 use crate::{components::light::Light, observers::get_insert_system::TargetMeshName};
 use bevy::prelude::*;
-use zyheeda_core::prelude::NormalizedNameLazy;
+use zyheeda_core::prelude::NormalizedName;
 
 #[derive(Component, Debug, PartialEq, Default)]
 #[require(Light, SpotLight = Self)]
@@ -19,7 +19,7 @@ impl From<WallLight> for SpotLight {
 }
 
 impl TargetMeshName for WallLight {
-	fn target_mesh_name() -> NormalizedNameLazy {
-		const { NormalizedNameLazy::from_name("WallLight") }
+	fn target_mesh_name() -> NormalizedName {
+		NormalizedName::from("WallLight")
 	}
 }

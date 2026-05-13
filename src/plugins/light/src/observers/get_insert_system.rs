@@ -36,7 +36,7 @@ pub(crate) trait GetInsertObserver: Component + Default + TargetMeshName {
 }
 
 pub(crate) trait TargetMeshName {
-	fn target_mesh_name() -> NormalizedNameLazy;
+	fn target_mesh_name() -> NormalizedName;
 }
 
 #[cfg(test)]
@@ -49,8 +49,8 @@ mod tests {
 	struct _Component;
 
 	impl TargetMeshName for _Component {
-		fn target_mesh_name() -> NormalizedNameLazy {
-			NormalizedNameLazy::from_name("TargetName")
+		fn target_mesh_name() -> NormalizedName {
+			NormalizedName::from("TargetName")
 		}
 	}
 
