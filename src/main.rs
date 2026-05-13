@@ -7,6 +7,7 @@ use common::CommonPlugin;
 use frame_limiter::FrameLimiterPlugin;
 use graphics::GraphicsPlugin;
 use input::InputPlugin;
+use interactive::InteractivePlugin;
 use light::LightPlugin;
 use loading::LoadingPlugin;
 use loadout::LoadoutPlugin;
@@ -51,6 +52,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let physics = PhysicsPlugin::new(TARGET_FPS, &savegame, &animations);
 	let light = LightPlugin::from_plugin(&savegame);
 	let map_generation = MapGenerationPlugin::from_plugins(&loading, &savegame, &physics, &light);
+	let interactive = InteractivePlugin;
 	let path_finding = PathFindingPlugin::from_plugin(&map_generation);
 	let movement =
 		MovementPlugin::from_plugins(&input, &savegame, &animations, &physics, &path_finding);
@@ -78,28 +80,31 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	);
 	let bars = BarsPlugin::from_plugins(&agents, &physics, &graphics);
 	let camera_control = CameraControlPlugin::from_plugins(&input, &savegame, &agents, &graphics);
+	let frame_limiter = FrameLimiterPlugin {
+		target_fps: TARGET_FPS,
+	};
+	let common = CommonPlugin::with_asset_loading(true);
 
 	app.add_plugins(DefaultPlugins)
-		.add_plugins(CommonPlugin::with_asset_loading(true))
-		.add_plugins(FrameLimiterPlugin {
-			target_fps: TARGET_FPS,
-		})
 		.add_plugins(agents)
 		.add_plugins(animations)
 		.add_plugins(bars)
-		.add_plugins(movement)
 		.add_plugins(camera_control)
+		.add_plugins(common)
+		.add_plugins(frame_limiter)
 		.add_plugins(graphics)
-		.add_plugins(physics)
+		.add_plugins(input)
+		.add_plugins(interactive)
 		.add_plugins(light)
 		.add_plugins(loading)
+		.add_plugins(loadout)
 		.add_plugins(localization)
 		.add_plugins(map_generation)
 		.add_plugins(menus)
+		.add_plugins(movement)
 		.add_plugins(path_finding)
+		.add_plugins(physics)
 		.add_plugins(savegame)
-		.add_plugins(input)
-		.add_plugins(loadout)
 		.insert_resource(ClearColor(Color::BLACK));
 
 	Ok(())

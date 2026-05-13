@@ -1,0 +1,21 @@
+[package]
+name = "interactive"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+# external
+bevy.workspace = true
+
+# internal
+common.workspace = true
+macros.workspace = true
+zyheeda_core.workspace = true
+
+[dev-dependencies]
+# external
+mockall.workspace = true
+test-case.workspace = true
+
+# internal
+testing.workspace = true

@@ -71,6 +71,7 @@ menu = { path = "src/plugins/menu" }
 movement = { path = "src/plugins/movement" }
 graphics = { path = "src/plugins/graphics" }
 input = { path = "src/plugins/input" }
+interactive = { path = "src/plugins/interactive" }
 path_finding = { path = "src/plugins/path_finding" }
 physics = { path = "src/plugins/physics" }
 savegame = { path = "src/plugins/savegame" }
