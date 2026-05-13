@@ -16,6 +16,7 @@ use std::{any::type_name, fmt::Display, marker::PhantomData};
 use crate::{
 	errors::{ErrorData, Level},
 	systems::log::output,
+	traits::thread_safe::ThreadSafe,
 };
 
 pub trait Get<TKey> {
@@ -39,7 +40,7 @@ pub trait ContextChanged {
 /// Retrieve a context for data inspection.
 ///
 /// It is up to the implementor, what kind of system parameters are involved.
-pub trait GetContext<TKey>: SystemParam {
+pub trait GetContext<TKey>: SystemParam + ThreadSafe {
 	type TContext<'ctx>: ContextChanged;
 
 	fn get_context<'ctx>(
@@ -81,7 +82,7 @@ pub trait GetMut<TKey> {
 /// Retrieve a context for data mutation.
 ///
 /// It is up to the implementor, what kind of system parameters are involved.
-pub trait GetContextMut<TKey>: SystemParam {
+pub trait GetContextMut<TKey>: SystemParam + ThreadSafe {
 	type TContext<'ctx>;
 
 	fn get_context_mut<'ctx>(

@@ -69,7 +69,7 @@ impl DefaultLoadout<'_> {
 	}
 }
 
-impl GetContextMut<NotLoadedOut> for LoadoutPrep<'_, '_> {
+impl GetContextMut<NotLoadedOut> for LoadoutPrep<'static, 'static> {
 	type TContext<'ctx> = DefaultLoadout<'ctx>;
 
 	fn get_context_mut<'ctx>(

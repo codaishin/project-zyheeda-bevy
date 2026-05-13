@@ -38,7 +38,7 @@ where
 }
 
 impl<TAnimationGraph> GetContextMut<WithoutAnimations>
-	for AnimationsParamMut<'_, '_, TAnimationGraph>
+	for AnimationsParamMut<'static, 'static, TAnimationGraph>
 where
 	TAnimationGraph: Asset,
 {
@@ -59,7 +59,8 @@ where
 	}
 }
 
-impl<TAnimationGraph> GetContextMut<Animations> for AnimationsParamMut<'_, '_, TAnimationGraph>
+impl<TAnimationGraph> GetContextMut<Animations>
+	for AnimationsParamMut<'static, 'static, TAnimationGraph>
 where
 	TAnimationGraph: Asset,
 {

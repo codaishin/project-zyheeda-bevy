@@ -44,10 +44,8 @@ pub trait HandlesPhysicalSkillComponents {
 }
 
 pub trait HandlesNewPhysicalSkill {
-	type TSkillSpawnerMut<'world, 'state>: for<'w, 's> SystemParam<Item<'w, 's>: Spawn + Despawn>;
+	type TSkillSpawnerMut: for<'w, 's> SystemParam<Item<'w, 's>: Spawn + Despawn>;
 }
-
-pub type SkillSpawnerMut<'w, 's, T> = <T as HandlesNewPhysicalSkill>::TSkillSpawnerMut<'w, 's>;
 
 pub trait Spawn {
 	fn spawn(&mut self, args: SpawnArgs<'_>) -> PersistentEntity;
@@ -76,14 +74,11 @@ where
 }
 
 pub trait HandlesPhysicalSkillAgent {
-	type TAgent<'w, 's>: SystemParam + for<'c> GetContext<InitializedAgent, TContext<'c>: Target>;
-	type TAgentMut<'w, 's>: SystemParam
+	type TAgent: SystemParam + for<'c> GetContext<InitializedAgent, TContext<'c>: Target>;
+	type TAgentMut: SystemParam
 		+ for<'c> GetContextMut<NotInitializedAgent, TContext<'c>: Initialize>
 		+ for<'c> GetContextMut<InitializedAgent, TContext<'c>: TargetMut>;
 }
-
-pub type SkillAgent<'w, 's, T> = <T as HandlesPhysicalSkillAgent>::TAgent<'w, 's>;
-pub type SkillAgentMut<'w, 's, T> = <T as HandlesPhysicalSkillAgent>::TAgentMut<'w, 's>;
 
 #[derive(EntityKey)]
 pub struct NotInitializedAgent {

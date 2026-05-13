@@ -27,7 +27,7 @@ impl SetMapAgentPrefab for &mut AgentPrefab {
 	}
 }
 
-impl GetContextMut<AgentPrefabMarker> for SetAgentPrefab<'_> {
+impl GetContextMut<AgentPrefabMarker> for SetAgentPrefab<'static> {
 	type TContext<'ctx> = &'ctx mut AgentPrefab;
 
 	fn get_context_mut<'ctx>(

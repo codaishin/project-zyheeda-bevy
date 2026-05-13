@@ -21,34 +21,18 @@ use common::{
 		after_plugin::AfterPlugin,
 		delta::Delta,
 		handles_agents::HandlesAgents,
-		handles_animations::{AnimationsSystemParamMut, HandlesAnimations},
+		handles_animations::HandlesAnimations,
 		handles_custom_assets::HandlesCustomFolderAssets,
 		handles_enemies::HandlesEnemies,
-		handles_input::{HandlesInput, InputSystemParam},
-		handles_loadout::{
-			HandlesLoadout,
-			LoadoutActivityMutParam,
-			LoadoutActivityParam,
-			LoadoutPrepParam,
-		},
-		handles_map_generation::{HandlesMapGeneration, NewMapAgentParamMut},
-		handles_movement::{
-			HandlesMovement,
-			MovementSystemConfigParam,
-			MovementSystemParam,
-			MovementSystemParamMut,
-		},
+		handles_input::HandlesInput,
+		handles_loadout::HandlesLoadout,
+		handles_map_generation::HandlesMapGeneration,
+		handles_movement::HandlesMovement,
 		handles_orientation::HandlesOrientation,
-		handles_physics::{
-			HandlesPhysicalEffectTargets,
-			HandlesPhysicsConfig,
-			HandlesRaycast,
-			PhysicsConfigMut,
-			RaycastSystemParam,
-		},
+		handles_physics::{HandlesPhysicalEffectTargets, HandlesPhysicsConfig, HandlesRaycast},
 		handles_player::{HandlesPlayer, PlayerMainCamera},
 		handles_saving::HandlesSaving,
-		handles_skill_physics::{HandlesPhysicalSkillAgent, SkillAgentMut},
+		handles_skill_physics::HandlesPhysicalSkillAgent,
 		prefab::AddPrefabObserver,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
@@ -136,19 +120,18 @@ where
 		TPhysics::mark_as_effect_target::<Agent>(app);
 		app.add_systems(
 			Startup,
-			Agent::configure_map_prefab::<NewMapAgentParamMut<TMaps>>.pipe(OnError::log),
+			Agent::configure_map_prefab::<TMaps::TNewMapAgent>.pipe(OnError::log),
 		);
 		app.add_systems(
 			Update,
 			(
 				ApplyAgentConfig::system::<
-					LoadoutPrepParam<TLoadout>,
-					SkillAgentMut<TPhysics>,
-					MovementSystemConfigParam<TMovement>,
-					PhysicsConfigMut<TPhysics>,
+					TLoadout::TLoadoutPrep,
+					TPhysics::TAgentMut,
+					TMovement::TMovementConfig,
+					TPhysics::TConfigMut,
 				>,
-				ApplyAgentAnimations::system::<AnimationsSystemParamMut<TAnimations>>
-					.pipe(OnError::log),
+				ApplyAgentAnimations::system::<TAnimations::TAnimationsMut>.pipe(OnError::log),
 			),
 		);
 
@@ -169,44 +152,31 @@ where
 			Update,
 			(
 				(
-					Player::movement::<
-						InputSystemParam<TInput>,
-						RaycastSystemParam<TPhysics>,
-						MovementSystemParamMut<TMovement>,
-					>,
-					Player::toggle_speed::<
-						InputSystemParam<TInput>,
-						MovementSystemParamMut<TMovement>,
-					>,
-					Player::animate_movement::<
-						MovementSystemParam<TMovement>,
-						AnimationsSystemParamMut<TAnimations>,
-					>,
+					Player::movement::<TInput::TInput, TPhysics::TRaycast, TMovement::TMovementMut>,
+					Player::toggle_speed::<TInput::TInput, TMovement::TMovementMut>,
+					Player::animate_movement::<TMovement::TMovement, TAnimations::TAnimationsMut>,
 					Player::use_skills::<
-						InputSystemParam<TInput>,
-						SkillAgentMut<TPhysics>,
-						LoadoutActivityMutParam<TLoadout>,
+						TInput::TInput,
+						TPhysics::TAgentMut,
+						TLoadout::TLoadoutActivityMut,
 					>,
 				)
 					.chain(),
 				(
-					Enemy::attack_decision::<RaycastSystemParam<TPhysics>>,
+					Enemy::attack_decision::<TPhysics::TRaycast>,
 					Enemy::chase_decision,
-					Enemy::chase_player::<MovementSystemParamMut<TMovement>>,
-					Enemy::animate_movement::<
-						MovementSystemParam<TMovement>,
-						AnimationsSystemParamMut<TAnimations>,
-					>,
+					Enemy::chase_player::<TMovement::TMovementMut>,
+					Enemy::animate_movement::<TMovement::TMovement, TAnimations::TAnimationsMut>,
 					ring_rotation,
 					Enemy::begin_attack,
-					Enemy::hold_attack::<SkillAgentMut<TPhysics>, LoadoutActivityMutParam<TLoadout>>,
+					Enemy::hold_attack::<TPhysics::TAgentMut, TLoadout::TLoadoutActivityMut>,
 					Update::delta.pipe(Enemy::advance_attack_phase),
 				)
 					.chain(),
-				AnimateIdle::execute::<AnimationsSystemParamMut<TAnimations>>,
+				AnimateIdle::execute::<TAnimations::TAnimationsMut>,
 				AgentConfig::animate_skills::<
-					LoadoutActivityParam<TLoadout>,
-					AnimationsSystemParamMut<TAnimations>,
+					TLoadout::TLoadoutActivity,
+					TAnimations::TAnimationsMut,
 				>,
 			)
 				.chain()

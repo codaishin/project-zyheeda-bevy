@@ -25,16 +25,12 @@ pub trait HandlesRaycast {
 
 	/// Raycast system parameter. [`MouseHover`] raycast requires that `Self::TWorldCamera` is being
 	/// attached to the actual camera.
-	type TRaycast<'world, 'state>: SystemParam
+	type TRaycast: SystemParam
 		+ for<'w, 's> SystemParam<Item<'w, 's>: Raycast<SolidObjects>>
 		+ for<'w, 's> SystemParam<Item<'w, 's>: Raycast<Terrain>>
 		+ for<'w, 's> SystemParam<Item<'w, 's>: Raycast<MouseTerrainHover>>
 		+ for<'w, 's> SystemParam<Item<'w, 's>: Raycast<MouseHover>>;
 }
-
-/// Helper type to designate [`HandlesRaycast::TRaycast`] as a [`SystemParam`] implementation for a
-/// given generic system constraint
-pub type RaycastSystemParam<'w, 's, T> = <T as HandlesRaycast>::TRaycast<'w, 's>;
 
 pub trait Raycast<TArgs>
 where
@@ -58,12 +54,10 @@ pub trait RaycastResult {
 }
 
 pub trait HandlesPhysicsConfig {
-	type TConfigMut<'w, 's>: SystemParam
+	type TConfigMut: SystemParam
 		+ for<'c> GetContextMut<NoDefaultAttributes, TContext<'c>: ConfigureDefaultAttributes>
 		+ for<'c> GetContextMut<NoBodyConfigured, TContext<'c>: ConfigureBody>;
 }
-
-pub type PhysicsConfigMut<'w, 's, T> = <T as HandlesPhysicsConfig>::TConfigMut<'w, 's>;
 
 #[derive(EntityKey)]
 pub struct NoDefaultAttributes {

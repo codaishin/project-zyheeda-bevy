@@ -12,7 +12,7 @@ use common::{
 };
 use std::collections::HashMap;
 
-impl GetContextMut<NoBonesRegistered> for LoadoutPrep<'_, '_> {
+impl GetContextMut<NoBonesRegistered> for LoadoutPrep<'static, 'static> {
 	type TContext<'ctx> = PrepareLoadoutBones<'ctx>;
 
 	fn get_context_mut<'ctx>(

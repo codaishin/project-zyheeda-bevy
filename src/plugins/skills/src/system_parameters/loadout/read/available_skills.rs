@@ -17,7 +17,7 @@ use common::{
 	},
 };
 
-impl GetContext<AvailableSkills> for LoadoutReader<'_, '_> {
+impl GetContext<AvailableSkills> for LoadoutReader<'static, 'static> {
 	type TContext<'ctx> = AvailableSkillsView<'ctx>;
 
 	fn get_context<'ctx>(

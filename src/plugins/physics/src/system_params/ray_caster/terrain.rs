@@ -28,13 +28,12 @@ impl Raycast<Terrain> for RayCaster<'_, '_> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::PhysicsPlugin;
 	use bevy::{
 		ecs::system::{RunSystemError, RunSystemOnce},
 		mesh::MeshPlugin,
 		scene::ScenePlugin,
 	};
-	use common::{tools::Units, traits::handles_physics::RaycastSystemParam};
+	use common::tools::Units;
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -65,11 +64,11 @@ mod tests {
 		));
 		app.update();
 
-		let hit = app.world_mut().run_system_once(
-			move |mut ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
+		let hit = app
+			.world_mut()
+			.run_system_once(move |mut ray_caster: RayCaster| {
 				ray_caster.raycast(Terrain { ray })
-			},
-		)?;
+			})?;
 
 		assert_eq!(Some(TimeOfImpact::from(Units::from(0.5))), hit);
 		Ok(())
@@ -91,11 +90,11 @@ mod tests {
 		));
 		app.update();
 
-		let hit = app.world_mut().run_system_once(
-			move |mut ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
+		let hit = app
+			.world_mut()
+			.run_system_once(move |mut ray_caster: RayCaster| {
 				ray_caster.raycast(Terrain { ray })
-			},
-		)?;
+			})?;
 
 		assert_eq!(None, hit);
 		Ok(())
@@ -117,11 +116,11 @@ mod tests {
 		));
 		app.update();
 
-		let hit = app.world_mut().run_system_once(
-			move |mut ray_caster: RaycastSystemParam<PhysicsPlugin<()>>| {
+		let hit = app
+			.world_mut()
+			.run_system_once(move |mut ray_caster: RayCaster| {
 				ray_caster.raycast(Terrain { ray })
-			},
-		)?;
+			})?;
 
 		assert_eq!(None, hit);
 		Ok(())

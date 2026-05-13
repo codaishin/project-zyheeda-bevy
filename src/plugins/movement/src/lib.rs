@@ -24,19 +24,14 @@ use common::{
 	tools::plugin_system_set::PluginSystemSet,
 	traits::{
 		after_plugin::AfterPlugin,
-		handles_animations::{AnimationsSystemParamMut, HandlesAnimations},
+		handles_animations::HandlesAnimations,
 		handles_input::HandlesInput,
 		handles_movement::HandlesMovement,
 		handles_orientation::HandlesOrientation,
 		handles_path_finding::HandlesPathFinding,
-		handles_physics::{
-			HandlesAllPhysicalEffects,
-			HandlesMotion,
-			HandlesRaycast,
-			RaycastSystemParam,
-		},
+		handles_physics::{HandlesAllPhysicalEffects, HandlesMotion, HandlesRaycast},
 		handles_saving::HandlesSaving,
-		handles_skill_physics::{HandlesSkillPhysics, SkillAgent},
+		handles_skill_physics::HandlesSkillPhysics,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 	},
@@ -102,10 +97,9 @@ where
 				Movement::compute_path::<TPathing::TComputePath, TPathing::TComputerRef>,
 				Movement::apply::<TPhysics::TCharacterMotion>,
 				TPhysics::TCharacterMotion::update_speed,
-				TPhysics::TCharacterMotion::animate_forward::<AnimationsSystemParamMut<TAnimations>>,
+				TPhysics::TCharacterMotion::animate_forward::<TAnimations::TAnimationsMut>,
 				TPhysics::TCharacterMotion::set_facing,
-				SetFace::get_faces
-					.pipe(execute_face::<RaycastSystemParam<TPhysics>, SkillAgent<TPhysics>>),
+				SetFace::get_faces.pipe(execute_face::<TPhysics::TRaycast, TPhysics::TAgent>),
 				MovementParam::<TPhysics::TCharacterMotion>::update_just_removed,
 			)
 				.chain()
@@ -120,7 +114,7 @@ where
 }
 
 impl<TDependencies> HandlesOrientation for MovementPlugin<TDependencies> {
-	type TFaceSystemParam<'w, 's> = FaceParamMut<'w, 's>;
+	type TFaceSystemParam = FaceParamMut<'static, 'static>;
 }
 
 #[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
@@ -145,7 +139,7 @@ where
 		+ HandlesRaycast,
 	TPathing: ThreadSafe + HandlesPathFinding,
 {
-	type TMovement<'w, 's> = MovementParam<'w, 's, TPhysics::TCharacterMotion>;
-	type TMovementMut<'w, 's> = MovementParamMut<'w, 's, TPhysics::TCharacterMotion>;
-	type TMovementConfig<'w, 's> = MovementConfigParamMut<'w, 's>;
+	type TMovement = MovementParam<'static, 'static, TPhysics::TCharacterMotion>;
+	type TMovementMut = MovementParamMut<'static, 'static, TPhysics::TCharacterMotion>;
+	type TMovementConfig = MovementConfigParamMut<'static, 'static>;
 }

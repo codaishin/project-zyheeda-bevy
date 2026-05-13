@@ -14,7 +14,7 @@ use common::{
 	},
 };
 
-impl GetContextMut<Items> for LoadoutWriter<'_, '_> {
+impl GetContextMut<Items> for LoadoutWriter<'static, 'static> {
 	type TContext<'ctx> = ItemsMut<'ctx>;
 
 	fn get_context_mut<'ctx>(

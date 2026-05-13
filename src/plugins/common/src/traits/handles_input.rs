@@ -25,27 +25,19 @@ impl ViewField for MouseOverrideActive {
 }
 
 pub trait HandlesInput {
-	type TInput<'world, 'state>: SystemParam
+	type TInput: SystemParam
 		+ for<'w, 's> SystemParam<Item<'w, 's>: GetInput + GetAllInputs + InputSetupChanged>
 		+ for<'w, 's> SystemParam<Item<'w, 's>: GetInputState + GetAllInputStates>
 		+ for<'w, 's> SystemParam<Item<'w, 's>: GetRawUserInput>;
 }
 
 pub trait HandlesInputMut {
-	type TInputMut<'world, 'state>: SystemParam
+	type TInputMut: SystemParam
 		+ for<'w, 's> SystemParam<Item<'w, 's>: GetInput + GetAllInputs + InputSetupChanged>
 		+ for<'w, 's> SystemParam<Item<'w, 's>: GetInputState + GetAllInputStates>
 		+ for<'w, 's> SystemParam<Item<'w, 's>: GetRawUserInput>
 		+ for<'w, 's> SystemParam<Item<'w, 's>: UpdateKey>;
 }
-
-/// Helper type to designate [`HandlesInput::TInput`] as a [`SystemParam`] implementation for a
-/// given generic system constraint
-pub type InputSystemParam<'w, 's, T> = <T as HandlesInput>::TInput<'w, 's>;
-
-/// Helper type to designate [`HandlesInputMut::TInputMut`] as a [`SystemParam`] implementation for a
-/// given generic system constraint
-pub type InputMutSystemParam<'w, 's, T> = <T as HandlesInputMut>::TInputMut<'w, 's>;
 
 pub trait UpdateKey {
 	fn update_key<TAction>(&mut self, action: TAction, input: UserInput)

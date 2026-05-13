@@ -59,7 +59,7 @@ use common::{
 	tools::plugin_system_set::PluginSystemSet,
 	traits::{
 		delta::Delta,
-		handles_animations::{AnimationsSystemParamMut, HandlesAnimations},
+		handles_animations::HandlesAnimations,
 		handles_physics::{
 			HandlesMotion,
 			HandlesPhysicalEffectTargets,
@@ -149,7 +149,7 @@ where
 			// Animations
 			.add_systems(
 				Update,
-				Target::update_pitch::<RayCaster, AnimationsSystemParamMut<TAnimations>>,
+				Target::update_pitch::<RayCaster, TAnimations::TAnimationsMut>,
 			)
 			// Skills
 			.register_required_components::<Skill, TSaveGame::TSaveEntityMarker>()
@@ -252,11 +252,11 @@ pub struct PhysicsSystems;
 
 impl<TDependencies> HandlesRaycast for PhysicsPlugin<TDependencies> {
 	type TWorldCamera = WorldCamera;
-	type TRaycast<'world, 'state> = RayCaster<'world, 'state>;
+	type TRaycast = RayCaster<'static, 'static>;
 }
 
 impl<TDependencies> HandlesPhysicsConfig for PhysicsPlugin<TDependencies> {
-	type TConfigMut<'w, 's> = ConfigParamMut<'w, 's>;
+	type TConfigMut = ConfigParamMut<'static, 'static>;
 }
 
 impl<TDependencies> SystemSetDefinition for PhysicsPlugin<TDependencies> {
@@ -279,12 +279,12 @@ impl<TDependencies> HandlesMotion for PhysicsPlugin<TDependencies> {
 }
 
 impl<TDependencies> HandlesPhysicalSkillAgent for PhysicsPlugin<TDependencies> {
-	type TAgent<'w, 's> = SkillAgent<'w, 's>;
-	type TAgentMut<'w, 's> = SkillAgentMut<'w, 's>;
+	type TAgent = SkillAgent<'static, 'static>;
+	type TAgentMut = SkillAgentMut<'static, 'static>;
 }
 
 impl<TDependencies> HandlesNewPhysicalSkill for PhysicsPlugin<TDependencies> {
-	type TSkillSpawnerMut<'w, 's> = SkillAgentMut<'w, 's>;
+	type TSkillSpawnerMut = SkillAgentMut<'static, 'static>;
 }
 
 impl<TDependencies> HandlesPhysicalSkillComponents for PhysicsPlugin<TDependencies> {

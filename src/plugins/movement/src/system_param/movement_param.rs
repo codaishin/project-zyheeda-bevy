@@ -27,7 +27,7 @@ where
 	just_removed_movements: Res<'w, JustRemovedMovements>,
 }
 
-impl<TMotion> GetContext<Movement> for MovementParam<'_, '_, TMotion>
+impl<TMotion> GetContext<Movement> for MovementParam<'static, 'static, TMotion>
 where
 	TMotion: Component,
 {
@@ -68,7 +68,7 @@ where
 	>,
 }
 
-impl<TMotion> GetContextMut<ConfiguredMovement> for MovementParamMut<'_, '_, TMotion>
+impl<TMotion> GetContextMut<ConfiguredMovement> for MovementParamMut<'static, 'static, TMotion>
 where
 	TMotion: Component,
 {

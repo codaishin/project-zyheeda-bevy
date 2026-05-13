@@ -33,7 +33,7 @@ use common::{
 		handles_lights::HandlesLights,
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInApp},
 		handles_map_generation::{AgentType, HandlesMapGeneration},
-		handles_physics::{HandlesPhysicsConfig, HandlesRaycast, PhysicsConfigMut},
+		handles_physics::{HandlesPhysicsConfig, HandlesRaycast},
 		handles_saving::HandlesSaving,
 		prefab::AddPrefabObserver,
 		spawn::Spawn,
@@ -93,7 +93,7 @@ where
 		app.init_resource::<AgentPrefab>()
 			.register_required_components::<Map, TSavegame::TSaveEntityMarker>()
 			.add_systems(OnEnter(GameState::NewGame), Level::<0>::spawn)
-			.add_prefab_observer::<MeshCollider, PhysicsConfigMut<TPhysics>>()
+			.add_prefab_observer::<MeshCollider, TPhysics::TConfigMut>()
 			.add_observer(NavMesh::identify_by_prefix(Self::NAV_MESH_PREFIX))
 			.add_observer(MeshCollider::identify_by_prefix(Self::MESH_COLLIDER_PREFIX))
 			.add_observer(AgentSpawner::identify_by_prefix_map(Self::SPAWNERS))
@@ -116,7 +116,7 @@ where
 pub struct MapSystems;
 
 impl<TDependencies> HandlesMapGeneration for MapGenerationPlugin<TDependencies> {
-	type TNewMapAgent<'w, 's> = SetAgentPrefab<'w>;
+	type TNewMapAgent = SetAgentPrefab<'static>;
 
 	type TGraph = MeshGridGraph;
 

@@ -10,7 +10,7 @@ where
 	}
 }
 
-impl<T, TKey> GetContext<TKey> for Query<'_, '_, Ref<'static, T>>
+impl<T, TKey> GetContext<TKey> for Query<'static, 'static, Ref<'static, T>>
 where
 	T: Component,
 	TKey: View<Entity>,
@@ -22,7 +22,7 @@ where
 	}
 }
 
-impl<T, TKey> GetContextMut<TKey> for Query<'_, '_, Mut<'static, T>>
+impl<T, TKey> GetContextMut<TKey> for Query<'static, 'static, Mut<'static, T>>
 where
 	T: Component<Mutability = Mutable>,
 	TKey: View<Entity>,
@@ -37,7 +37,7 @@ where
 	}
 }
 
-impl<T, TKey> GetContextMut<TKey> for Query<'_, '_, &'static mut T>
+impl<T, TKey> GetContextMut<TKey> for Query<'static, 'static, &'static mut T>
 where
 	T: Component<Mutability = Mutable>,
 	TKey: View<Entity>,

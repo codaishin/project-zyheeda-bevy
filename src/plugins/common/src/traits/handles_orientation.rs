@@ -8,11 +8,8 @@ use serde::{Deserialize, Serialize};
 use std::ops::DerefMut;
 
 pub trait HandlesOrientation {
-	type TFaceSystemParam<'w, 's>: SystemParam
-		+ for<'c> GetContextMut<Facing, TContext<'c>: OverrideFace>;
+	type TFaceSystemParam: SystemParam + for<'c> GetContextMut<Facing, TContext<'c>: OverrideFace>;
 }
-
-pub type FacingSystemParamMut<'w, 's, T> = <T as HandlesOrientation>::TFaceSystemParam<'w, 's>;
 
 #[derive(EntityKey)]
 pub struct Facing {

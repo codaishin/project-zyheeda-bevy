@@ -18,7 +18,7 @@ pub struct SkillAgent<'w, 's> {
 	targets: Query<'w, 's, Ref<'static, Target>>,
 }
 
-impl GetContext<InitializedAgent> for SkillAgent<'_, '_> {
+impl GetContext<InitializedAgent> for SkillAgent<'static, 'static> {
 	type TContext<'ctx> = SkillAgentContext<'ctx>;
 
 	fn get_context<'ctx>(
@@ -39,7 +39,7 @@ pub struct SkillAgentMut<'w, 's> {
 	commands: ZyheedaCommands<'w, 's>,
 }
 
-impl GetContextMut<NotInitializedAgent> for SkillAgentMut<'_, '_> {
+impl GetContextMut<NotInitializedAgent> for SkillAgentMut<'static, 'static> {
 	type TContext<'ctx> = SkillAgentInitializerContext<'ctx>;
 
 	fn get_context_mut<'ctx>(
@@ -56,7 +56,7 @@ impl GetContextMut<NotInitializedAgent> for SkillAgentMut<'_, '_> {
 	}
 }
 
-impl GetContextMut<InitializedAgent> for SkillAgentMut<'_, '_> {
+impl GetContextMut<InitializedAgent> for SkillAgentMut<'static, 'static> {
 	type TContext<'ctx> = SkillAgentContextMut<'ctx>;
 
 	fn get_context_mut<'ctx>(
