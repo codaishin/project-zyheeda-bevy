@@ -19,7 +19,7 @@ use crate::{
 		nav_mesh::NavMesh,
 	},
 	mesh_grid_graph::MeshGridGraph,
-	observers::identify_by_prefix::IdentifyByPrefix,
+	observers::{identify_by_prefix::IdentifyByPrefix, identify_interactive::IdentifyInteractive},
 	resources::agents::prefab::AgentPrefab,
 	system_params::set_agent_prefab::SetAgentPrefab,
 };
@@ -30,6 +30,7 @@ use common::{
 	tools::plugin_system_set::PluginSystemSet,
 	traits::{
 		handles_enemies::EnemyType,
+		handles_interactive::{Door, HandlesInteractive, Interactive},
 		handles_lights::HandlesLights,
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInApp},
 		handles_map_generation::{AgentType, HandlesMapGeneration},
@@ -43,15 +44,17 @@ use common::{
 };
 use components::grid::Grid;
 use std::marker::PhantomData;
+use zyheeda_core::strings::normalized_name::NormalizedName;
 
 pub struct MapGenerationPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TSavegame, TLights, TPhysics>
-	MapGenerationPlugin<(TLoading, TSavegame, TLights, TPhysics)>
+impl<TLoading, TSavegame, TPhysics, TInteractive, TLights>
+	MapGenerationPlugin<(TLoading, TSavegame, TPhysics, TInteractive, TLights)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesRaycast + HandlesPhysicsConfig,
+	TInteractive: ThreadSafe + HandlesInteractive,
 	TLights: ThreadSafe + HandlesLights,
 {
 	const SPAWNERS: &[(&str, AgentType)] = &[
@@ -60,18 +63,29 @@ where
 	];
 	const MESH_COLLIDER_PREFIX: &str = "Collider";
 	const NAV_MESH_PREFIX: &str = "NavMesh";
+	const INTERACTIVE: &[(GetNormalizedName, Interactive)] = &[(
+		|| NormalizedName::from("PlaceholderSlideDoor"),
+		Interactive::Door(Door::SlideDoor),
+	)];
 
-	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TPhysics, _: &TLights) -> Self {
+	pub fn from_plugins(
+		_: &TLoading,
+		_: &TSavegame,
+		_: &TPhysics,
+		_: &TInteractive,
+		_: &TLights,
+	) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLoading, TSavegame, TLights, TPhysics> Plugin
-	for MapGenerationPlugin<(TLoading, TSavegame, TLights, TPhysics)>
+impl<TLoading, TSavegame, TPhysics, TInteractive, TLights> Plugin
+	for MapGenerationPlugin<(TLoading, TSavegame, TPhysics, TInteractive, TLights)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesRaycast + HandlesPhysicsConfig,
+	TInteractive: ThreadSafe + HandlesInteractive,
 	TLights: ThreadSafe + HandlesLights,
 {
 	fn build(&self, app: &mut App) {
@@ -84,7 +98,6 @@ where
 		TSavegame::register_savable_component::<Map>(app);
 		TSavegame::register_savable_component::<PersistentMapObject>(app);
 		TSavegame::register_savable_component::<GridAgent>(app);
-
 		TSavegame::register_savable_component::<Level<0>>(app);
 
 		#[cfg(debug_assertions)]
@@ -98,6 +111,9 @@ where
 			.add_observer(MeshCollider::identify_by_prefix(Self::MESH_COLLIDER_PREFIX))
 			.add_observer(AgentSpawner::identify_by_prefix_map(Self::SPAWNERS))
 			.add_observer(SpawnerActive::remove_when_map_created_from_save)
+			.add_observer(TInteractive::TInteractiveMut::identify_interactive(
+				Self::INTERACTIVE,
+			))
 			.add_systems(
 				Update,
 				(
@@ -111,6 +127,8 @@ where
 			);
 	}
 }
+
+type GetNormalizedName = fn() -> NormalizedName;
 
 #[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone)]
 pub struct MapSystems;
