@@ -145,17 +145,18 @@ struct AssetPathInput(std::path::PathBuf);
 
 impl Parse for AssetPathInput {
 	fn parse(input: ParseStream) -> syn::Result<Self> {
+		let error = |msg| Error::new(input.span(), msg);
 		let segments = Punctuated::<LitStr, Token![,]>::parse_terminated(input)?;
-		let path = segments.iter().fold(PathBuf::new(), |acc, segment| {
+		let path = segments.iter().try_fold(PathBuf::new(), |path, segment| {
 			match segment.value().trim_matches('/') {
-				s if s.starts_with(".") => acc.with_added_extension(&s[1..]),
-				s => acc.join(s),
+				"" => Err(error("No path segment may be empty")),
+				s if s.starts_with(".") => Ok(path.with_added_extension(&s[1..])),
+				s => Ok(path.join(s)),
 			}
-		});
-		let error = |msg| Err(Error::new(input.span(), msg));
+		})?;
 
 		if segments.is_empty() {
-			return error("Path must not be empty");
+			return Err(error("Path must not be empty"));
 		}
 
 		Ok(Self(path))
