@@ -1,0 +1,34 @@
+{
+	"id": "d4ca0a60-ab63-4f23-a190-5637ec724429",
+	"token": "skill-gravity-well",
+	"cast_time": {
+		"seconds": 0.2
+	},
+	"animation": "Aim",
+	"behavior": {
+		"OnActive": {
+			"shape": {
+				"GroundTargetedAoe": {
+					"lifetime": {
+						"seconds": 5
+					},
+					"max_range": 10,
+					"radius": 2
+				}
+			},
+			"contact": [],
+			"projection": [
+				{
+					"Gravity": {
+						"strength": 2,
+						"effect_applies": "Always"
+					}
+				}
+			]
+		}
+	},
+	"is_usable_with": [
+		"ForceEssence"
+	],
+	"icon": "items/force_essence/skills/gravity_well/icon.png"
+}

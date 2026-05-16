@@ -14,7 +14,7 @@ use common::{
 	},
 	zyheeda_commands::ZyheedaEntityCommands,
 };
-use macros::{SavableComponent, agent_asset};
+use macros::{SavableComponent, asset_path};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
@@ -74,13 +74,13 @@ impl Prefab<()> for Agent {
 			AgentType::Player => entity.try_insert((
 				Player,
 				AgentConfig {
-					config_handle: assets.load(agent_asset!("player")),
+					config_handle: assets.load(asset_path!("agents/player/meta.agent")),
 				},
 			)),
 			AgentType::Enemy(EnemyType::VoidSphere) => entity.try_insert((
 				VoidSphere,
 				AgentConfig {
-					config_handle: assets.load(agent_asset!("void_sphere")),
+					config_handle: assets.load(asset_path!("agents/void_sphere/meta.agent")),
 				},
 			)),
 		};

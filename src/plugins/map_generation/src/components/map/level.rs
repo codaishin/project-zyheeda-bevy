@@ -31,8 +31,8 @@ impl<const L: i8> From<Level<L>> for Name {
 impl<const L: i8> From<Level<L>> for Model {
 	fn from(_: Level<L>) -> Self {
 		match L {
-			l if l < 0 => Model::scene(format!("maps/level_neg_{}.glb", l.abs())),
-			l => Model::scene(format!("maps/level_{}.glb", l)),
+			l if l < 0 => Model::scene(format!("maps/levels/neg_{}/model.glb", l.abs())),
+			l => Model::scene(format!("maps/levels/{}/model.glb", l)),
 		}
 	}
 }

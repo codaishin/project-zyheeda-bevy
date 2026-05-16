@@ -1,0 +1,30 @@
+{
+	"id": "78c5508b-6860-4773-9c03-f32317c449e2",
+	"token": "skill-pistol-projectile",
+	"cast_time": {
+		"seconds": 0.2
+	},
+	"animation": "Aim",
+	"behavior": {
+		"OnActive": {
+			"shape": {
+				"Projectile": {
+					"destroyed_by": "All"
+				}
+			},
+			"contact": [
+				{
+					"HealthDamage": [
+						1,
+						"Once"
+					]
+				}
+			],
+			"projection": []
+		}
+	},
+	"is_usable_with": [
+		"Pistol"
+	],
+	"icon": "items/pistol/skills/projectile/icon.png"
+}

@@ -1,5 +1,5 @@
 use crate::{
-	assets::agent_config::{AgentConfigAsset, AgentModel, Bones, HeightLevels, Loadout},
+	assets::agent_meta::{AgentMeta, AgentModel, Bones, HeightLevels, Loadout},
 	components::enemy::{Enemy, attack_config::EnemyAttackConfig},
 };
 use bevy::{
@@ -64,11 +64,8 @@ impl VoidSphere {
 		}
 	}
 
-	pub(crate) fn config(
-		loadout: Loadout,
-		attributes: PhysicalDefaultAttributes,
-	) -> AgentConfigAsset {
-		AgentConfigAsset {
+	pub(crate) fn config(loadout: Loadout, attributes: PhysicalDefaultAttributes) -> AgentMeta {
+		AgentMeta {
 			loadout,
 			attributes,
 			model: AgentModel::Procedural(|e| {

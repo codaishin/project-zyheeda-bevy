@@ -1,0 +1,31 @@
+{
+	"id": "784ebf06-565d-41c5-99a1-b09df51f1c0b",
+	"token": "skill-pistol-beam",
+	"cast_time": {
+		"seconds": 0.2
+	},
+	"animation": "Aim",
+	"behavior": {
+		"OnAim": {
+			"shape": {
+				"Beam": {
+					"range": 20,
+					"blocked_by": "All"
+				}
+			},
+			"contact": [
+				{
+					"HealthDamage": [
+						1,
+						"OncePerSecond"
+					]
+				}
+			],
+			"projection": []
+		}
+	},
+	"is_usable_with": [
+		"Pistol"
+	],
+	"icon": "generic/icons/beam.png"
+}

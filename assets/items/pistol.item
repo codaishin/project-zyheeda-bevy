@@ -1,9 +1,0 @@
-{
-	"token": "item-plasma-pistol",
-	"model": {
-		"Hand": "models/pistol.glb"
-	},
-	"essence": "None",
-	"skill": "skills/pistol/projectile.skill",
-	"item_type": "Pistol"
-}

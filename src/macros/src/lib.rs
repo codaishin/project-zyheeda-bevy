@@ -1,5 +1,6 @@
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
+use std::path::PathBuf;
 use syn::{
 	Data,
 	DeriveInput,
@@ -10,6 +11,7 @@ use syn::{
 	Ident,
 	ItemImpl,
 	Lit,
+	LitStr,
 	Path,
 	Token,
 	Type,
@@ -17,6 +19,7 @@ use syn::{
 	parse::{Parse, ParseStream},
 	parse_macro_input,
 	parse_quote,
+	punctuated::Punctuated,
 	spanned::Spanned,
 };
 
@@ -138,69 +141,62 @@ fn get_fields(
 		.map(|field| (field.ident.as_ref(), &field.ty)))
 }
 
-#[proc_macro]
-pub fn skill_asset(input: TokenStream) -> TokenStream {
-	let Ok(syn::Lit::Str(literal)) = syn::parse::<syn::Lit>(input.clone()) else {
-		return TokenStream::from(quote! {
-			compile_error!("Only string literals are accepted")
-		});
-	};
+struct AssetPathInput(std::path::PathBuf);
 
-	let asset_path = format!("skills/{}.skill", literal.value());
-	let path = format!("assets/{asset_path}");
+impl Parse for AssetPathInput {
+	fn parse(input: ParseStream) -> syn::Result<Self> {
+		let error = |msg| Error::new(input.span(), msg);
+		let segments = Punctuated::<LitStr, Token![,]>::parse_terminated(input)?;
+		let path = segments.iter().try_fold(PathBuf::new(), |path, segment| {
+			match segment.value().trim_matches('/') {
+				"" => Err(error("No path segment may be empty")),
+				s if s.starts_with(".") => Ok(path.with_added_extension(&s[1..])),
+				s => Ok(path.join(s)),
+			}
+		})?;
 
-	if !std::path::Path::new(&path).exists() {
-		return TokenStream::from(quote! {
-			compile_error!("No skill with that name found in `assets/skills/`")
-		});
+		if segments.is_empty() {
+			return Err(error("Path must not be empty"));
+		}
+
+		Ok(Self(path))
 	}
-
-	TokenStream::from(quote! {
-		#asset_path
-	})
 }
 
+/// Validate that the given asset path exists in `assets/` at compile time.
+///
+/// Returns a fully constructed path from one or more string literals.
+///
+/// # Example:
+/// ```ignore
+/// /// single path
+/// assert_eq!("my/asset.file", macros::asset_path!("my/asset.file"));
+///
+/// /// composition of segments
+/// assert_eq!("my/asset.file", macros::asset_path!("my", "asset.file"));
+///
+/// /// composition of segments with redundant slashes
+/// assert_eq!("my/asset.file", macros::asset_path!("/my/", "/asset.file"));
+///
+/// /// extension as a segment
+/// assert_eq!("my/asset.file", macros::asset_path!("my/asset", ".file"));
+/// ```
 #[proc_macro]
-pub fn item_asset(input: TokenStream) -> TokenStream {
-	let Ok(syn::Lit::Str(literal)) = syn::parse::<syn::Lit>(input.clone()) else {
-		return TokenStream::from(quote! {
-			compile_error!("Only string literals are accepted")
-		});
-	};
+pub fn asset_path(input: TokenStream) -> TokenStream {
+	let AssetPathInput(ref path) = syn::parse_macro_input!(input);
 
-	let asset_path = format!("items/{}.item", literal.value());
-	let path = format!("assets/{asset_path}");
+	let assets = std::path::Path::new("assets");
 
-	if !std::path::Path::new(&path).exists() {
+	if !assets.join(path).exists() {
+		let error = format!("No asset `{}` found in `assets/`", path.to_string_lossy());
 		return TokenStream::from(quote! {
-			compile_error!("No item with that name found in `assets/items/`")
+			compile_error!(#error)
 		});
 	}
 
+	let path = path.to_string_lossy();
 	TokenStream::from(quote! {
-		#asset_path
-	})
-}
-
-#[proc_macro]
-pub fn agent_asset(input: TokenStream) -> TokenStream {
-	let Ok(syn::Lit::Str(literal)) = syn::parse::<syn::Lit>(input.clone()) else {
-		return TokenStream::from(quote! {
-			compile_error!("Only string literals are accepted")
-		});
-	};
-
-	let asset_path = format!("agents/{}.agent", literal.value());
-	let path = format!("assets/{asset_path}");
-
-	if !std::path::Path::new(&path).exists() {
-		return TokenStream::from(quote! {
-			compile_error!("No agent with that name found in `assets/agents/`")
-		});
-	}
-
-	TokenStream::from(quote! {
-		#asset_path
+		#path
 	})
 }
 

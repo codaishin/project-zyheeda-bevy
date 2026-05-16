@@ -1,0 +1,31 @@
+{
+	"id": "ae488a7d-a61f-4017-91da-5582901d2e21",
+	"token": "skill-void-beam",
+	"cast_time": {
+		"seconds": 0.2
+	},
+	"animation": "Aim",
+	"behavior": {
+		"OnAim": {
+			"shape": {
+				"Beam": {
+					"range": 20,
+					"blocked_by": "All"
+				}
+			},
+			"contact": [
+				{
+					"HealthDamage": [
+						10,
+						"OncePerSecond"
+					]
+				}
+			],
+			"projection": []
+		}
+	},
+	"is_usable_with": [
+		"VoidBeam"
+	],
+	"icon": "generic/icons/beam.png"
+}

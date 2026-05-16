@@ -1,5 +1,5 @@
 use crate::{
-	assets::agent_config::AgentConfigAsset,
+	assets::agent_meta::AgentMeta,
 	components::{agent::ApplyAgentAnimations, agent_config::AgentConfig},
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
@@ -27,7 +27,7 @@ impl ApplyAgentAnimations {
 	pub(crate) fn system<TAnimations>(
 		mut commands: ZyheedaCommands,
 		mut animations: StaticSystemParam<TAnimations>,
-		configs: Res<Assets<AgentConfigAsset>>,
+		configs: Res<Assets<AgentMeta>>,
 		models: Res<Assets<Gltf>>,
 		agents: Query<(Entity, &AgentConfig, Option<&GltfLookup>), With<Self>>,
 	) -> Result<(), Vec<RegisterAnimationsError>>
@@ -169,7 +169,7 @@ impl ErrorData for RegisterAnimationsError {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{assets::agent_config::AgentConfigAsset, components::agent_config::AgentConfig};
+	use crate::{assets::agent_meta::AgentMeta, components::agent_config::AgentConfig};
 	use common::{
 		bit_mask_index,
 		tools::bone_name::BoneName,
@@ -215,7 +215,7 @@ mod tests {
 	struct _Result(Result<(), Vec<RegisterAnimationsError>>);
 
 	fn setup<const C: usize, const M: usize>(
-		configs: [(&Handle<AgentConfigAsset>, AgentConfigAsset); C],
+		configs: [(&Handle<AgentMeta>, AgentMeta); C],
 		models: [(&Handle<Gltf>, Gltf); M],
 	) -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -271,7 +271,7 @@ mod tests {
 	#[test]
 	fn register_animations() {
 		static CLIP: LazyLock<Handle<AnimationClip>> = LazyLock::new(new_handle);
-		let config = AgentConfigAsset {
+		let config = AgentMeta {
 			animations: HashMap::from([(
 				AnimationKey::Run,
 				Animation {
@@ -327,7 +327,7 @@ mod tests {
 	#[test]
 	fn register_animations_delayed() {
 		static CLIP: LazyLock<Handle<AnimationClip>> = LazyLock::new(new_handle);
-		let config = AgentConfigAsset {
+		let config = AgentMeta {
 			animations: HashMap::from([(
 				AnimationKey::Run,
 				Animation {
@@ -388,7 +388,7 @@ mod tests {
 	#[test]
 	fn no_gltf_lookup_required_when_animations_empty() {
 		let config_handle = new_handle();
-		let config = AgentConfigAsset {
+		let config = AgentMeta {
 			animations: HashMap::from([]),
 			animation_mask_groups: HashMap::from([(
 				AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
@@ -428,7 +428,7 @@ mod tests {
 	#[test]
 	fn set_empty_animations_when_no_gltf_lookup() {
 		let config_handle = new_handle();
-		let config = AgentConfigAsset {
+		let config = AgentMeta {
 			animations: HashMap::from([(
 				AnimationKey::Run,
 				Animation {
@@ -476,7 +476,7 @@ mod tests {
 		let config_handle = new_handle();
 		let gltf_handle = new_handle();
 		let mut app = setup(
-			[(&config_handle, AgentConfigAsset::default())],
+			[(&config_handle, AgentMeta::default())],
 			[(&gltf_handle, gltf([]))],
 		);
 		let entity = app
@@ -502,7 +502,7 @@ mod tests {
 		let config_handle = new_handle();
 		let gltf_handle = new_handle();
 		let mut app = setup(
-			[(&config_handle, AgentConfigAsset::default())],
+			[(&config_handle, AgentMeta::default())],
 			[(&gltf_handle, gltf([]))],
 		);
 		app.world_mut().spawn((
@@ -520,7 +520,7 @@ mod tests {
 
 	#[test]
 	fn return_animations_missing() {
-		let config = AgentConfigAsset {
+		let config = AgentMeta {
 			animations: HashMap::from([
 				(
 					AnimationKey::Walk,
@@ -577,7 +577,7 @@ mod tests {
 
 	#[test]
 	fn return_gltf_lookup_missing() {
-		let config = AgentConfigAsset {
+		let config = AgentMeta {
 			animations: HashMap::from([(
 				AnimationKey::Run,
 				Animation {
@@ -613,7 +613,7 @@ mod tests {
 
 	#[test]
 	fn return_ok_when_all_animations_found() {
-		let config = AgentConfigAsset {
+		let config = AgentMeta {
 			animations: HashMap::from([
 				(
 					AnimationKey::Walk,
@@ -664,7 +664,7 @@ mod tests {
 
 	#[test]
 	fn return_ok_when_no_gltf_lookup_and_no_animations() {
-		let config = AgentConfigAsset {
+		let config = AgentMeta {
 			animations: HashMap::from([]),
 			animation_mask_groups: HashMap::from([]),
 			..default()

@@ -1,0 +1,7 @@
+{
+	"token": "item-force-essence",
+	"model": "None",
+	"essence": "Force",
+	"skill": "items/force_essence/skills/shield/meta.skill",
+	"item_type": "ForceEssence"
+}

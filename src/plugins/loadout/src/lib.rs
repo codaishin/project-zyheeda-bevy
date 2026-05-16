@@ -1,0 +1,160 @@
+mod components;
+mod item;
+mod skills;
+mod system_parameters;
+mod systems;
+mod traits;
+
+use crate::{
+	components::{
+		combos::dto::CombosDto,
+		combos_time_out::dto::CombosTimeOutDto,
+		queue::dto::QueueDto,
+		slot_definitions::SlotDefinitions,
+		slots::visualization::SlotVisualization,
+	},
+	skills::{SkillId, behaviors::SkillBehaviorConfig},
+	system_parameters::{
+		loadout::{
+			LoadoutPrep,
+			LoadoutReader,
+			LoadoutWriter,
+			write::insert_default_loadout::DefaultLoadout,
+		},
+		loadout_activity::{LoadoutActivityReader, LoadoutActivityWriter},
+	},
+	systems::enqueue::EnqueueSystem,
+};
+use bevy::prelude::*;
+use common::{
+	states::game_state::{GameState, LoadingGame},
+	traits::{
+		after_plugin::AfterPlugin,
+		handles_animations::HandlesAnimations,
+		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
+		handles_load_tracking::HandlesLoadTracking,
+		handles_loadout::HandlesLoadout,
+		handles_orientation::HandlesOrientation,
+		handles_physics::{HandlesAllPhysicalEffects, HandlesRaycast},
+		handles_saving::HandlesSaving,
+		handles_skill_physics::HandlesSkillPhysics,
+		system_set_definition::SystemSetDefinition,
+		thread_safe::ThreadSafe,
+		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
+	},
+};
+use components::{
+	active_skill::ActiveSkill,
+	combos::Combos,
+	combos_time_out::CombosTimeOut,
+	inventory::Inventory,
+	queue::Queue,
+	slots::Slots,
+};
+use item::{Item, dto::ItemDto};
+use skills::{Skill, dto::SkillDto};
+use std::marker::PhantomData;
+use systems::{
+	combos::queue_update::ComboQueueUpdate,
+	flush::flush,
+	flush_skill_combos::flush_skill_combos,
+	schedule_active_skill::schedule_active_skill,
+};
+
+pub struct LoadoutPlugin<TDependencies>(PhantomData<TDependencies>);
+
+impl<TSaveGame, TAnimations, TPhysics, TLoading, TMovement>
+	LoadoutPlugin<(TSaveGame, TAnimations, TPhysics, TLoading, TMovement)>
+where
+	TSaveGame: ThreadSafe + HandlesSaving,
+	TAnimations: ThreadSafe + HandlesAnimations,
+	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillPhysics + HandlesRaycast,
+	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
+	TMovement: ThreadSafe + HandlesOrientation + SystemSetDefinition,
+{
+	#[allow(clippy::too_many_arguments)]
+	pub fn from_plugins(
+		_: &TSaveGame,
+		_: &TAnimations,
+		_: &TPhysics,
+		_: &TLoading,
+		_: &TMovement,
+	) -> Self {
+		Self(PhantomData)
+	}
+
+	fn skill_load(&self, app: &mut App) {
+		TLoading::register_custom_folder_assets::<Skill, SkillDto, LoadingGame>(app);
+	}
+
+	fn item_load(&self, app: &mut App) {
+		TLoading::register_custom_folder_assets::<Item, ItemDto, LoadingGame>(app);
+	}
+
+	fn loadout(&self, app: &mut App) {
+		TSaveGame::register_savable_component::<Inventory>(app);
+		TSaveGame::register_savable_component::<Slots>(app);
+
+		app.add_observer(DefaultLoadout::insert::<AssetServer>);
+		app.add_systems(
+			Update,
+			(
+				SlotVisualization::<HandSlot>::track_slots_for::<SlotDefinitions>,
+				SlotVisualization::<HandSlot>::visualize_items,
+				SlotVisualization::<ForearmSlot>::track_slots_for::<SlotDefinitions>,
+				SlotVisualization::<ForearmSlot>::visualize_items,
+				SlotVisualization::<EssenceSlot>::track_slots_for::<SlotDefinitions>,
+				SlotVisualization::<EssenceSlot>::visualize_items,
+			)
+				.chain(),
+		);
+	}
+
+	fn skill_execution(&self, app: &mut App) {
+		TSaveGame::register_savable_component::<CombosTimeOut>(app);
+		TSaveGame::register_savable_component::<Combos>(app);
+		TSaveGame::register_savable_component::<Queue>(app);
+		TSaveGame::register_savable_component::<ActiveSkill>(app);
+
+		app.add_systems(
+			Update,
+			(
+				Queue::enqueue_system::<Slots>,
+				Combos::update::<Queue>,
+				flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
+				schedule_active_skill::<Queue, TMovement::TFaceSystemParam, ActiveSkill, Virtual>,
+				ActiveSkill::<SkillBehaviorConfig>::execute::<TPhysics::TSkillSpawnerMut>,
+				flush::<Queue>,
+			)
+				.chain()
+				.after_plugin(TMovement::SYSTEMS)
+				.run_if(in_state(GameState::Play)),
+		);
+	}
+}
+
+impl<TSaveGame, TAnimations, TPhysics, TLoading, TMovement> Plugin
+	for LoadoutPlugin<(TSaveGame, TAnimations, TPhysics, TLoading, TMovement)>
+where
+	TSaveGame: ThreadSafe + HandlesSaving,
+	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillPhysics + HandlesRaycast,
+	TAnimations: ThreadSafe + HandlesAnimations,
+	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
+	TMovement: ThreadSafe + HandlesOrientation + SystemSetDefinition,
+{
+	fn build(&self, app: &mut App) {
+		self.skill_load(app);
+		self.item_load(app);
+		self.loadout(app);
+		self.skill_execution(app);
+	}
+}
+
+impl<TDependencies> HandlesLoadout for LoadoutPlugin<TDependencies> {
+	type TSkillID = SkillId;
+	type TLoadoutPrep = LoadoutPrep<'static, 'static>;
+	type TLoadout = LoadoutReader<'static, 'static>;
+	type TLoadoutMut = LoadoutWriter<'static, 'static>;
+	type TLoadoutActivity = LoadoutActivityReader<'static, 'static>;
+	type TLoadoutActivityMut = LoadoutActivityWriter<'static, 'static>;
+}

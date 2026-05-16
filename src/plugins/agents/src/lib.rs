@@ -3,7 +3,7 @@ mod components;
 mod systems;
 
 use crate::{
-	assets::agent_config::{AgentConfigAsset, dto::AgentConfigDto},
+	assets::agent_meta::{AgentMeta, dto::AgentConfigDto},
 	components::{
 		agent::{Agent, ApplyAgentAnimations, ApplyAgentConfig},
 		agent_config::AgentConfig,
@@ -110,12 +110,10 @@ where
 {
 	fn build(&self, app: &mut App) {
 		// # Load Agent
-		TLoading::register_custom_folder_assets::<
-			AgentConfigAsset,
-			AgentConfigDto,
-			LoadingEssentialAssets,
-		>(app);
-		app.init_asset::<AgentConfigAsset>();
+		TLoading::register_custom_folder_assets::<AgentMeta, AgentConfigDto, LoadingEssentialAssets>(
+			app,
+		);
+		app.init_asset::<AgentMeta>();
 
 		TPhysics::mark_as_effect_target::<Agent>(app);
 		app.add_systems(
