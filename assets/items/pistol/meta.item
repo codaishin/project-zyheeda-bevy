@@ -4,6 +4,6 @@
 		"Hand": "items/pistol/model.glb"
 	},
 	"essence": "None",
-	"skill": "skills/pistol/projectile.skill",
+	"skill": "items/pistol/skills/projectile/meta.skill",
 	"item_type": "Pistol"
 }

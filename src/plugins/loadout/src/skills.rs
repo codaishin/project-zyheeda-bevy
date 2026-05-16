@@ -52,7 +52,7 @@ impl Display for Skill {
 
 impl AssetFolderPath for Skill {
 	fn asset_folder_path() -> Path {
-		Path::from("skills")
+		Path::from("items")
 	}
 }
 

@@ -127,13 +127,13 @@ mod tests {
 		];
 		let mut app = setup(
 			MockAssetServer::default()
-				.path("items/item_0.item")
+				.path("items/item_0/meta.item")
 				.returns(handles[0].clone())
-				.path("items/item_1.item")
+				.path("items/item_1/meta.item")
 				.returns(handles[1].clone())
-				.path("items/item_2.item")
+				.path("items/item_2/meta.item")
 				.returns(handles[2].clone())
-				.path("items/item_3.item")
+				.path("items/item_3/meta.item")
 				.returns(handles[3].clone()),
 		);
 		let entity = app.world_mut().spawn_empty().id();
@@ -180,9 +180,9 @@ mod tests {
 		let handles = [new_handle::<Item>(), new_handle::<Item>()];
 		let mut app = setup(
 			MockAssetServer::default()
-				.path("items/item_0.item")
+				.path("items/item_0/meta.item")
 				.returns(handles[0].clone())
-				.path("items/item_1.item")
+				.path("items/item_1/meta.item")
 				.returns(handles[1].clone()),
 		);
 		let entity = app.world_mut().spawn_empty().id();
@@ -244,15 +244,15 @@ mod tests {
 		];
 		let mut app = setup(
 			MockAssetServer::default()
-				.path("items/item_0.item")
+				.path("items/item_0/meta.item")
 				.returns(handles[0].clone())
-				.path("items/item_1.item")
+				.path("items/item_1/meta.item")
 				.returns(handles[1].clone())
-				.path("items/item_2.item")
+				.path("items/item_2/meta.item")
 				.returns(handles[2].clone())
-				.path("items/item_3.item")
+				.path("items/item_3/meta.item")
 				.returns(handles[3].clone())
-				.path("items/item_4.item")
+				.path("items/item_4/meta.item")
 				.returns(handles[4].clone()),
 		);
 		let entity = app
@@ -304,15 +304,15 @@ mod tests {
 		];
 		let mut app = setup(
 			MockAssetServer::default()
-				.path("items/item_0.item")
+				.path("items/item_0/meta.item")
 				.returns(handles[0].clone())
-				.path("items/item_1.item")
+				.path("items/item_1/meta.item")
 				.returns(handles[1].clone())
-				.path("items/item_2.item")
+				.path("items/item_2/meta.item")
 				.returns(handles[2].clone())
-				.path("items/item_3.item")
+				.path("items/item_3/meta.item")
 				.returns(handles[3].clone())
-				.path("items/item_4.item")
+				.path("items/item_4/meta.item")
 				.returns(handles[4].clone()),
 		);
 		let entity = app

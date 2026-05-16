@@ -61,10 +61,10 @@ use systems::{
 	schedule_active_skill::schedule_active_skill,
 };
 
-pub struct SkillsPlugin<TDependencies>(PhantomData<TDependencies>);
+pub struct LoadoutPlugin<TDependencies>(PhantomData<TDependencies>);
 
 impl<TSaveGame, TAnimations, TPhysics, TLoading, TMovement>
-	SkillsPlugin<(TSaveGame, TAnimations, TPhysics, TLoading, TMovement)>
+	LoadoutPlugin<(TSaveGame, TAnimations, TPhysics, TLoading, TMovement)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + HandlesAnimations,
@@ -134,7 +134,7 @@ where
 }
 
 impl<TSaveGame, TAnimations, TPhysics, TLoading, TMovement> Plugin
-	for SkillsPlugin<(TSaveGame, TAnimations, TPhysics, TLoading, TMovement)>
+	for LoadoutPlugin<(TSaveGame, TAnimations, TPhysics, TLoading, TMovement)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillPhysics + HandlesRaycast,
@@ -150,7 +150,7 @@ where
 	}
 }
 
-impl<TDependencies> HandlesLoadout for SkillsPlugin<TDependencies> {
+impl<TDependencies> HandlesLoadout for LoadoutPlugin<TDependencies> {
 	type TSkillID = SkillId;
 	type TLoadoutPrep = LoadoutPrep<'static, 'static>;
 	type TLoadout = LoadoutReader<'static, 'static>;

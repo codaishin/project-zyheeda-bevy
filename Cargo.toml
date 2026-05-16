@@ -64,6 +64,7 @@ common.workspace = true
 frame_limiter = { path = "src/plugins/frame_limiter" }
 light = { path = "src/plugins/light" }
 loading = { path = "src/plugins/loading" }
+loadout = { path = "src/plugins/loadout" }
 localization = { path = "src/plugins/localization" }
 map_generation = { path = "src/plugins/map_generation" }
 menu = { path = "src/plugins/menu" }
@@ -73,7 +74,6 @@ input = { path = "src/plugins/input" }
 path_finding = { path = "src/plugins/path_finding" }
 physics = { path = "src/plugins/physics" }
 savegame = { path = "src/plugins/savegame" }
-skills = { path = "src/plugins/skills" }
 
 # internal crates
 macros.workspace = true

@@ -3642,6 +3642,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "loadout"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "common",
+ "macros",
+ "mockall",
+ "serde",
+ "test-case",
+ "testing",
+ "tracing",
+ "uuid",
+ "zyheeda_core",
+]
+
+[[package]]
 name = "localization"
 version = "0.1.0"
 dependencies = [
@@ -4809,6 +4825,7 @@ dependencies = [
  "input",
  "light",
  "loading",
+ "loadout",
  "localization",
  "macros",
  "map_generation",
@@ -4820,7 +4837,6 @@ dependencies = [
  "savegame",
  "serde",
  "serde_json",
- "skills",
  "test-case",
  "testing",
  "tracing",
@@ -5304,22 +5320,6 @@ name = "simd-adler32"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d66dc143e6b11c1eddc06d5c423cfc97062865baf299914ab64caa38182078fe"
-
-[[package]]
-name = "skills"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "common",
- "macros",
- "mockall",
- "serde",
- "test-case",
- "testing",
- "tracing",
- "uuid",
- "zyheeda_core",
-]
 
 [[package]]
 name = "skrifa"

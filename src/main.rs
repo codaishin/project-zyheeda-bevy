@@ -9,6 +9,7 @@ use graphics::GraphicsPlugin;
 use input::InputPlugin;
 use light::LightPlugin;
 use loading::LoadingPlugin;
+use loadout::LoadoutPlugin;
 use localization::LocalizationPlugin;
 use map_generation::MapGenerationPlugin;
 use menu::MenuPlugin;
@@ -16,7 +17,6 @@ use movement::MovementPlugin;
 use path_finding::PathFindingPlugin;
 use physics::PhysicsPlugin;
 use savegame::SavegamePlugin;
-use skills::SkillsPlugin;
 use std::{
 	env::home_dir,
 	process::{ExitCode, Termination},
@@ -55,7 +55,8 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let movement =
 		MovementPlugin::from_plugins(&input, &savegame, &animations, &physics, &path_finding);
 	let graphics = GraphicsPlugin::from_plugins(&loading, &savegame, &physics);
-	let skills = SkillsPlugin::from_plugins(&savegame, &animations, &physics, &loading, &movement);
+	let loadout =
+		LoadoutPlugin::from_plugins(&savegame, &animations, &physics, &loading, &movement);
 	let agents = AgentsPlugin::from_plugins(
 		&loading,
 		&input,
@@ -64,7 +65,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		&animations,
 		&map_generation,
 		&movement,
-		&skills,
+		&loadout,
 	);
 	let menus = MenuPlugin::from_plugins(
 		&loading,
@@ -73,7 +74,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		&localization,
 		&graphics,
 		&agents,
-		&skills,
+		&loadout,
 	);
 	let bars = BarsPlugin::from_plugins(&agents, &physics, &graphics);
 	let camera_control = CameraControlPlugin::from_plugins(&input, &savegame, &agents, &graphics);
@@ -98,7 +99,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		.add_plugins(path_finding)
 		.add_plugins(savegame)
 		.add_plugins(input)
-		.add_plugins(skills)
+		.add_plugins(loadout)
 		.insert_resource(ClearColor(Color::BLACK));
 
 	Ok(())

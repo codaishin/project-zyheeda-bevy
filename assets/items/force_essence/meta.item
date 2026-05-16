@@ -2,6 +2,6 @@
 	"token": "item-force-essence",
 	"model": "None",
 	"essence": "Force",
-	"skill": "skills/force_shield.skill",
+	"skill": "items/force_essence/skills/shield/meta.skill",
 	"item_type": "ForceEssence"
 }
