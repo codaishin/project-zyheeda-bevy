@@ -25,7 +25,7 @@
 	},
 	"model": {
 		"Asset": {
-			"model_path": "models/player.glb",
+			"model_path": "agents/player/model.glb",
 			"movement_speed": {
 				"Variable": [
 					3,

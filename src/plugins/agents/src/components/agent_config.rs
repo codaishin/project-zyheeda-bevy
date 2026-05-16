@@ -1,4 +1,4 @@
-use crate::{assets::agent_config::AgentConfigAsset, components::animate_idle::AnimateIdle};
+use crate::{assets::agent_meta::AgentMeta, components::animate_idle::AnimateIdle};
 use bevy::prelude::*;
 use common::components::persistent_entity::PersistentEntity;
 
@@ -6,5 +6,5 @@ use common::components::persistent_entity::PersistentEntity;
 #[component(immutable)]
 #[require(PersistentEntity, Transform, Visibility, AnimateIdle)]
 pub struct AgentConfig {
-	pub(crate) config_handle: Handle<AgentConfigAsset>,
+	pub(crate) config_handle: Handle<AgentMeta>,
 }

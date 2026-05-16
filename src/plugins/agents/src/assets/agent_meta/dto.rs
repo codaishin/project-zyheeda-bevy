@@ -1,12 +1,5 @@
 use crate::{
-	assets::agent_config::{
-		AgentConfigAsset,
-		AgentModel,
-		Bones,
-		HeightLevels,
-		Loadout,
-		RequiredClearance,
-	},
+	assets::agent_meta::{AgentMeta, AgentModel, Bones, HeightLevels, Loadout, RequiredClearance},
 	components::enemy::void_sphere::VoidSphere,
 };
 use bevy::prelude::*;
@@ -57,7 +50,7 @@ pub(crate) enum ProceduralModel {
 	VoidSphere,
 }
 
-impl TryLoadFrom<AgentConfigDto> for AgentConfigAsset {
+impl TryLoadFrom<AgentConfigDto> for AgentMeta {
 	type TInstantiationError = Unreachable;
 
 	fn try_load_from<TLoadAsset>(
@@ -80,7 +73,7 @@ impl TryLoadFrom<AgentConfigDto> for AgentConfigAsset {
 				height_levels,
 				animations,
 				animation_mask_groups,
-			} => Ok(AgentConfigAsset {
+			} => Ok(AgentMeta {
 				loadout,
 				bones,
 				model: AgentModel::Asset(model_path),

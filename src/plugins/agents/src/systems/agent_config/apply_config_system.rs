@@ -1,5 +1,5 @@
 use crate::{
-	assets::agent_config::{AgentConfigAsset, AgentModel, Loadout},
+	assets::agent_meta::{AgentMeta, AgentModel, Loadout},
 	components::{
 		agent::{AgentTransformDirty, ApplyAgentAnimations, ApplyAgentConfig},
 		agent_config::AgentConfig,
@@ -52,7 +52,7 @@ impl ApplyAgentConfig {
 			),
 			With<Self>,
 		>,
-		configs: Res<Assets<AgentConfigAsset>>,
+		configs: Res<Assets<AgentMeta>>,
 	) where
 		TLoadout: SystemParam
 			+ for<'c> GetContextMut<NotLoadedOut, TContext<'c>: InsertDefaultLoadout>
@@ -180,7 +180,7 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{
-		assets::agent_config::{Bones, Loadout},
+		assets::agent_meta::{Bones, Loadout},
 		components::agent::AgentTransformDirty,
 	};
 	use common::{
@@ -326,7 +326,7 @@ mod tests {
 		}
 	}
 
-	fn setup<const N: usize>(configs: [(&Handle<AgentConfigAsset>, AgentConfigAsset); N]) -> App {
+	fn setup<const N: usize>(configs: [(&Handle<AgentMeta>, AgentMeta); N]) -> App {
 		let mut app = App::new().single_threaded(Update);
 		let mut config_assets = Assets::default();
 
@@ -363,7 +363,7 @@ mod tests {
 		#[test]
 		fn insert_default_loadout() {
 			let config_handle = new_handle();
-			let config = AgentConfigAsset {
+			let config = AgentMeta {
 				loadout: Loadout {
 					inventory: vec![Some(ItemName::from("inventory.item"))],
 					slots: vec![(SlotKey(42), Some(ItemName::from("slot.item")))],
@@ -408,7 +408,7 @@ mod tests {
 		#[test]
 		fn register_bones() {
 			let config_handle = new_handle();
-			let config = AgentConfigAsset {
+			let config = AgentMeta {
 				bones: Bones {
 					skill_mounts: HashMap::from([]),
 					forearm_slots: HashMap::from([(BoneName::from("a"), SlotKey(0))]),
@@ -447,7 +447,7 @@ mod tests {
 		#[test]
 		fn insert_spawners_definition() {
 			let config_handle = new_handle();
-			let asset = AgentConfigAsset {
+			let asset = AgentMeta {
 				bones: Bones {
 					skill_mounts: HashMap::from([
 						(BoneName::from("a"), SkillMountBone::NeutralSlot),
@@ -483,7 +483,7 @@ mod tests {
 		#[test]
 		fn configure() {
 			let config_handle = new_handle();
-			let config = AgentConfigAsset {
+			let config = AgentMeta {
 				required_clearance: RequiredClearance {
 					horizontal: Units::from_u8(12),
 					vertical: Units::from(2.),
@@ -511,7 +511,7 @@ mod tests {
 		#[test]
 		fn configure_fastest_left() {
 			let config_handle = new_handle();
-			let config = AgentConfigAsset {
+			let config = AgentMeta {
 				required_clearance: RequiredClearance {
 					horizontal: Units::from_u8(12),
 					vertical: Units::from(2.),
@@ -548,7 +548,7 @@ mod tests {
 		#[test]
 		fn insert_asset_model() {
 			let config_handle = new_handle();
-			let config = AgentConfigAsset {
+			let config = AgentMeta {
 				model: AgentModel::from("my/path"),
 				..default()
 			};
@@ -582,7 +582,7 @@ mod tests {
 		#[test]
 		fn insert_procedural_model() {
 			let config_handle = new_handle();
-			let config = AgentConfigAsset {
+			let config = AgentMeta {
 				model: AgentModel::Procedural(_Model::insert),
 				..default()
 			};
@@ -608,7 +608,7 @@ mod tests {
 		#[test]
 		fn update_transform() {
 			let config_handle = new_handle();
-			let config = AgentConfigAsset {
+			let config = AgentMeta {
 				required_clearance: RequiredClearance {
 					horizontal: Units::from_u8(12),
 					vertical: Units::from(6.),
@@ -637,7 +637,7 @@ mod tests {
 		#[test]
 		fn do_not_update_transform_when_agent_transform_not_dirty() {
 			let config_handle = new_handle();
-			let config = AgentConfigAsset {
+			let config = AgentMeta {
 				required_clearance: RequiredClearance {
 					horizontal: Units::from_u8(12),
 					vertical: Units::from(6.),
@@ -665,7 +665,7 @@ mod tests {
 		#[test]
 		fn remove_transform_dirty_marker() {
 			let config_handle = new_handle();
-			let config = AgentConfigAsset {
+			let config = AgentMeta {
 				required_clearance: RequiredClearance {
 					horizontal: Units::from_u8(12),
 					vertical: Units::from(6.),
@@ -694,7 +694,7 @@ mod tests {
 
 	mod physics {
 		use super::*;
-		use crate::assets::agent_config::HeightLevels;
+		use crate::assets::agent_meta::HeightLevels;
 
 		#[test]
 		fn config_default_attributes() {
@@ -706,7 +706,7 @@ mod tests {
 			};
 			let mut app = setup([(
 				&config_handle,
-				AgentConfigAsset {
+				AgentMeta {
 					attributes,
 					..default()
 				},
@@ -738,7 +738,7 @@ mod tests {
 			let aim = 3.3;
 			let mut app = setup([(
 				&config_handle,
-				AgentConfigAsset {
+				AgentMeta {
 					required_clearance,
 					height_levels: HeightLevels { center, aim },
 					..default()
@@ -780,7 +780,7 @@ mod tests {
 	#[test_case(AgentModel::Procedural(|_| {}))]
 	fn insert_animate_agent_animations(model: AgentModel) {
 		let config_handle = new_handle();
-		let mut app = setup([(&config_handle, AgentConfigAsset { model, ..default() })]);
+		let mut app = setup([(&config_handle, AgentMeta { model, ..default() })]);
 		let entity = app
 			.world_mut()
 			.spawn((
@@ -805,7 +805,7 @@ mod tests {
 		let config_handle = new_handle();
 		let mut app = setup([(
 			&config_handle,
-			AgentConfigAsset {
+			AgentMeta {
 				model: AgentModel::from("my/path"),
 				..default()
 			},
@@ -863,10 +863,10 @@ mod tests {
 			.id();
 
 		app.update();
-		let mut configs = app.world_mut().resource_mut::<Assets<AgentConfigAsset>>();
+		let mut configs = app.world_mut().resource_mut::<Assets<AgentMeta>>();
 		_ = configs.insert(
 			&config_handle,
-			AgentConfigAsset {
+			AgentMeta {
 				model: AgentModel::from("my/path"),
 				..default()
 			},

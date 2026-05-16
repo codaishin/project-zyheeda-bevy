@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Asset, TypePath, Debug, PartialEq, Default, Clone)]
-pub struct AgentConfigAsset {
+pub struct AgentMeta {
 	pub(crate) loadout: Loadout,
 	pub(crate) bones: Bones,
 	pub(crate) model: AgentModel,
@@ -36,13 +36,13 @@ pub struct AgentConfigAsset {
 	pub(crate) animation_mask_groups: HashMap<AnimationMaskBits, AffectedAnimationBones>,
 }
 
-impl AssetFolderPath for AgentConfigAsset {
+impl AssetFolderPath for AgentMeta {
 	fn asset_folder_path() -> Path {
 		Path::from("agents")
 	}
 }
 
-impl View<PhysicalDefaultAttributes> for AgentConfigAsset {
+impl View<PhysicalDefaultAttributes> for AgentMeta {
 	fn view(&self) -> PhysicalDefaultAttributes {
 		self.attributes
 	}

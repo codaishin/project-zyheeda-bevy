@@ -71,7 +71,7 @@ impl From<SkillAnimations> for AnimationPriority {
 mod tests {
 	use super::*;
 	use crate::{
-		assets::agent_config::AgentConfigAsset,
+		assets::agent_meta::AgentMeta,
 		systems::player::animate_movement::tests::_Animations,
 	};
 	use common::{
@@ -119,7 +119,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				AgentConfig {
-					config_handle: new_handle::<AgentConfigAsset>(),
+					config_handle: new_handle::<AgentMeta>(),
 				},
 				_Loadout {
 					active: vec![
@@ -164,7 +164,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				AgentConfig {
-					config_handle: new_handle::<AgentConfigAsset>(),
+					config_handle: new_handle::<AgentMeta>(),
 				},
 				_Loadout {
 					active: vec![
@@ -203,7 +203,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				AgentConfig {
-					config_handle: new_handle::<AgentConfigAsset>(),
+					config_handle: new_handle::<AgentMeta>(),
 				},
 				_Loadout { active: vec![] },
 				_Animations(HashMap::from([
@@ -281,7 +281,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				AgentConfig {
-					config_handle: new_handle::<AgentConfigAsset>(),
+					config_handle: new_handle::<AgentMeta>(),
 				},
 				_Loadout {
 					active: vec![ActiveSkill {
@@ -312,7 +312,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				AgentConfig {
-					config_handle: new_handle::<AgentConfigAsset>(),
+					config_handle: new_handle::<AgentMeta>(),
 				},
 				_Loadout {
 					active: vec![ActiveSkill {
