@@ -1,7 +1,7 @@
 {
 	"token": "item-plasma-pistol",
 	"model": {
-		"Hand": "models/pistol.glb"
+		"Hand": "items/pistol/model.glb"
 	},
 	"essence": "None",
 	"skill": "skills/pistol/projectile.skill",

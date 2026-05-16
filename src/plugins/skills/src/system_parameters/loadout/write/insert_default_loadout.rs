@@ -34,7 +34,7 @@ pub struct DefaultLoadout<'ctx> {
 
 impl DefaultLoadout<'_> {
 	fn asset_path(name: &ItemName) -> String {
-		format!("items/{name}.item")
+		format!("items/{name}/meta.item")
 	}
 
 	pub(crate) fn insert<TAssetServer>(
