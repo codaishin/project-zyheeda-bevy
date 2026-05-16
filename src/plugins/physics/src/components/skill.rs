@@ -11,7 +11,7 @@ use common::{
 	tools::{Units, UnitsPerSecond},
 	traits::handles_skill_physics::{Effect, SkillCaster, SkillMount, SkillShape},
 };
-use macros::SavableComponent;
+use macros::{SavableComponent, asset_path};
 use serde::{Deserialize, Serialize};
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
@@ -62,10 +62,19 @@ const HALF_FORWARD: Transform = Transform::from_translation(Vec3 {
 	z: -0.5,
 });
 
-const SHIELD_CONTACT_MODEL: &str = "models/shield/contact.glb";
-const SHIELD_CONTACT_COLLIDER: &str = "models/shield/contact_collider.glb#Mesh0/Primitive0";
-const SHIELD_PROJECTION_MODEL: &str = "models/shield/projection.glb";
-const SHIELD_PROJECTION_COLLIDER: &str = "models/shield/projection_collider.glb#Mesh0/Primitive0";
+macro_rules! shield_path {
+	(asset($asset:literal)) => {
+		asset_path!("items/force_essence/skills/shield", $asset, ".glb")
+	};
+	(mesh($asset:literal)) => {
+		concat!(shield_path!(asset($asset)), "#Mesh0/Primitive0")
+	};
+}
+
+const SHIELD_CONTACT_MODEL: &str = shield_path!(asset("contact"));
+const SHIELD_CONTACT_COLLIDER: &str = shield_path!(mesh("contact_collider"));
+const SHIELD_PROJECTION_MODEL: &str = shield_path!(asset("projection"));
+const SHIELD_PROJECTION_COLLIDER: &str = shield_path!(mesh("projection_collider"));
 
 //FIXME: Should not be necessary, see: https://github.com/codaishin/project-zyheeda-bevy/issues/761
 const SHIELD_SCALE: Vec3 = Vec3 {
