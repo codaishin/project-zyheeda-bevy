@@ -84,6 +84,7 @@ use components::{
 	ui_overlay::UIOverlay,
 };
 use events::DropdownMessage;
+use macros::asset_path;
 use states::menus_change_able::MenusChangeable;
 use std::{marker::PhantomData, time::Duration};
 use systems::{
@@ -365,7 +366,7 @@ where
 					DispatchTextColor::apply,
 					UIDisabled::apply,
 					(
-						InputLabel::icon::<TInput::TInput>("icons/keys"),
+						InputLabel::icon::<TInput::TInput>(asset_path!("generic/icons")),
 						Icon::load_image,
 						Icon::insert_image,
 						UILabel::icon_tooltip,

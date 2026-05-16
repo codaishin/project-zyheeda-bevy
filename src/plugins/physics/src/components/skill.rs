@@ -40,7 +40,7 @@ pub(crate) enum CreatedFrom {
 	Save,
 }
 
-const SPHERE_MODEL: &str = "models/sphere.glb";
+const SPHERE_MODEL: &str = asset_path!("generic/models/sphere.glb");
 
 const BEAM_MODEL: fn() -> Mesh = || {
 	Mesh::from(Cylinder {

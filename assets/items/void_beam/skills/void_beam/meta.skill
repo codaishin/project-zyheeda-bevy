@@ -27,5 +27,5 @@
 	"is_usable_with": [
 		"VoidBeam"
 	],
-	"icon": "icons/beam.png"
+	"icon": "items/pistol/skills/beam/icon.png"
 }

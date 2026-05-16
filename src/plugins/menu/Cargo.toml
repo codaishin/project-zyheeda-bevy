@@ -10,6 +10,7 @@ tracing.workspace = true
 uuid.workspace = true
 
 # internal
+macros.workspace = true
 common.workspace = true
 
 [dev-dependencies]
@@ -18,5 +19,4 @@ mockall.workspace = true
 test-case.workspace = true
 
 # internal
-macros.workspace = true
 testing.workspace = true

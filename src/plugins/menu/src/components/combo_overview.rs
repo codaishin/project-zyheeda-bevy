@@ -31,6 +31,7 @@ use common::{
 		thread_safe::ThreadSafe,
 	},
 };
+use macros::asset_path;
 
 #[derive(Component, Debug, PartialEq)]
 #[require(
@@ -64,7 +65,7 @@ where
 {
 	fn load_ui(images: &mut TAssetServer) -> Self {
 		ComboOverview {
-			new_skill_icon: images.load_asset("icons/empty.png"),
+			new_skill_icon: images.load_asset(asset_path!("generic/icons/empty.png")),
 			..default()
 		}
 	}
@@ -797,7 +798,7 @@ mod tests {
 	fn load_ui_with_asset_handle() {
 		let new_skill_icon = new_handle();
 		let mut server = MockAssetServer::default()
-			.path("icons/empty.png")
+			.path("generic/icons/empty.png")
 			.returns(new_skill_icon.clone());
 
 		let combos = ComboOverview::<()>::load_ui(&mut server);

@@ -158,17 +158,15 @@ impl Parse for AssetPathInput {
 			return error("Path must not be empty");
 		}
 
-		if path.extension().is_none() {
-			return error(&format!("No file extension given for `{:?}`", path));
-		}
-
 		Ok(Self(path))
 	}
 }
 
 /// Validate that the given asset path exists in `assets/` at compile time.
 ///
-/// # Examples:
+/// Returns a fully constructed path from one or more string literals.
+///
+/// # Example:
 /// ```ignore
 /// /// single path
 /// assert_eq!("my/asset.file", macros::asset_path!("my/asset.file"));

@@ -26,5 +26,5 @@
 	"is_usable_with": [
 		"Pistol"
 	],
-	"icon": "icons/projectile.png"
+	"icon": "items/pistol/skills/projectile/icon.png"
 }

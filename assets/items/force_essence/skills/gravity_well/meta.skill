@@ -30,5 +30,5 @@
 	"is_usable_with": [
 		"ForceEssence"
 	],
-	"icon": "icons/gravity_well.png"
+	"icon": "items/force_essence/skills/gravity_well/icon.png"
 }
