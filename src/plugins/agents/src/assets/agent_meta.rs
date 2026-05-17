@@ -20,6 +20,7 @@ use common::{
 	},
 	zyheeda_commands::ZyheedaEntityCommands,
 };
+use macros::asset_path;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -38,7 +39,7 @@ pub struct AgentMeta {
 
 impl AssetFolderPath for AgentMeta {
 	fn asset_folder_path() -> Path {
-		Path::from("agents")
+		Path::from(asset_path!("agents"))
 	}
 }
 
