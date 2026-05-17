@@ -8,9 +8,9 @@ use common::{
 		handles_animations::{
 			AffectedAnimationBones,
 			Animation,
-			AnimationClips,
 			AnimationKey,
 			AnimationMaskBits,
+			AnimationNames,
 		},
 		handles_custom_assets::AssetFolderPath,
 		handles_movement::{MovementSpeed, RequiredClearance},
@@ -33,7 +33,7 @@ pub struct AgentMeta {
 	pub(crate) height_levels: HeightLevels,
 	pub(crate) speed: MovementSpeed,
 	pub(crate) attributes: PhysicalDefaultAttributes,
-	pub(crate) animations: HashMap<AnimationKey, Animation<AnimationClips<String>>>,
+	pub(crate) animations: HashMap<AnimationKey, Animation<AnimationNames>>,
 	pub(crate) animation_mask_groups: HashMap<AnimationMaskBits, AffectedAnimationBones>,
 }
 

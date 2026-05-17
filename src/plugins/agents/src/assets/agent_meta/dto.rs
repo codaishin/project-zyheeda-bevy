@@ -9,9 +9,9 @@ use common::{
 		handles_animations::{
 			AffectedAnimationBones,
 			Animation,
-			AnimationClips,
 			AnimationKey,
 			AnimationMaskBits,
+			AnimationNames,
 		},
 		handles_custom_assets::{AssetFileExtensions, TryLoadFrom},
 		handles_movement::MovementSpeed,
@@ -39,7 +39,7 @@ pub(crate) enum ModelConfig {
 		required_clearance: RequiredClearance,
 		height_levels: HeightLevels,
 		#[serde(with = "as_vec")]
-		animations: HashMap<AnimationKey, Animation<AnimationClips<String>>>,
+		animations: HashMap<AnimationKey, Animation<AnimationNames>>,
 		animation_mask_groups: HashMap<AnimationMaskBits, AffectedAnimationBones>,
 	},
 	Procedural(ProceduralModel),
