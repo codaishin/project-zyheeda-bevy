@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 use bevy::{
 	ecs::schedule::{ExecutorKind, ScheduleLabel},
 	prelude::*,

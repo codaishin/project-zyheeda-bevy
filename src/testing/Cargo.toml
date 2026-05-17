@@ -7,3 +7,7 @@ edition.workspace = true
 # external
 bevy.workspace = true
 uuid.workspace = true
+
+[dev-dependencies]
+#internal
+macros.workspace = true

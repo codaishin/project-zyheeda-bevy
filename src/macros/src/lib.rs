@@ -16,6 +16,7 @@ use syn::{
 	Token,
 	Type,
 	braced,
+	parenthesized,
 	parse::{Parse, ParseStream},
 	parse_macro_input,
 	parse_quote,
@@ -197,6 +198,130 @@ pub fn asset_path(input: TokenStream) -> TokenStream {
 	let path = path.to_string_lossy();
 	TokenStream::from(quote! {
 		#path
+	})
+}
+
+struct ProcessStrInput {
+	value: String,
+	rules: Punctuated<Rule, Token![,]>,
+}
+
+impl Parse for ProcessStrInput {
+	fn parse(input: ParseStream) -> syn::Result<Self> {
+		let value = input.parse::<LitStr>()?.value();
+
+		match input.parse::<Option<Token![,]>>()? {
+			Some(_) => Ok(Self {
+				value,
+				rules: Punctuated::<Rule, Token![,]>::parse_terminated(input)?,
+			}),
+			None => Ok(Self {
+				value,
+				rules: Punctuated::new(),
+			}),
+		}
+	}
+}
+
+enum Rule {
+	Remove(Vec<String>),
+	TrimNumericSuffix(String),
+	ToLowercase,
+}
+
+type RuleCstr = fn(ParseStream) -> syn::Result<Rule>;
+
+impl Rule {
+	const IDENTIFIERS: [(&str, RuleCstr); 3] = [
+		("remove", Rule::remove_str),
+		("to_lowercase", Rule::to_lowercase),
+		("trim_numeric_suffix", Rule::trim_numeric_suffix),
+	];
+
+	fn remove_str(input: ParseStream) -> syn::Result<Rule> {
+		let content;
+		parenthesized!(content in input);
+		let values = Punctuated::<LitStr, Token![,]>::parse_terminated(&content)?
+			.iter()
+			.map(|s| s.value())
+			.collect();
+		Ok(Self::Remove(values))
+	}
+
+	fn to_lowercase(_: ParseStream) -> syn::Result<Rule> {
+		Ok(Self::ToLowercase)
+	}
+
+	fn trim_numeric_suffix(input: ParseStream) -> syn::Result<Rule> {
+		let content;
+		parenthesized!(content in input);
+		let delimiter = content.parse::<LitStr>()?;
+		Ok(Self::TrimNumericSuffix(delimiter.value()))
+	}
+}
+
+impl Parse for Rule {
+	fn parse(input: ParseStream) -> syn::Result<Self> {
+		let ident = input.parse::<Ident>()?;
+		let ident = ident.to_string();
+
+		match Self::IDENTIFIERS.iter().find(|(i, _)| *i == ident.as_str()) {
+			Some((_, cstr)) => cstr(input),
+			_ => Err(Error::new(
+				input.span(),
+				format!(
+					"`{}` is an invalid operation\nallowed:\n{}\n",
+					ident,
+					Self::IDENTIFIERS
+						.map(|(i, _)| format!("  `{i}`"))
+						.join("\n")
+				),
+			)),
+		}
+	}
+}
+
+/// Process literal string by applying rules at compile time.
+///
+/// # Example:
+/// ```ignore
+/// const V: &str = process_str!(
+///   "ABC.123A",
+///   to_lowercase,
+///   remove("a", "B"),
+///   trim_numeric_suffix("."),
+/// );
+///
+/// assert_eq!("bc", V);
+/// ```
+#[proc_macro]
+pub fn process_str(input: TokenStream) -> TokenStream {
+	let ProcessStrInput { mut value, rules } = syn::parse_macro_input!(input);
+
+	for rule in rules {
+		match rule {
+			Rule::Remove(items) => {
+				for item in items {
+					value = value.replace(&item, "");
+				}
+			}
+			Rule::ToLowercase => {
+				value = value.to_lowercase();
+			}
+			Rule::TrimNumericSuffix(delimiter) => {
+				value = match value.rsplit_once(&delimiter) {
+					Some(("", suffix)) => format!(".{suffix}"),
+					Some((prefix, suffix)) if suffix.chars().all(|c| c.is_ascii_digit()) => {
+						prefix.to_owned()
+					}
+					_ => value,
+				}
+			}
+		}
+	}
+
+	TokenStream::from(quote! {
+		#value
 	})
 }
 
