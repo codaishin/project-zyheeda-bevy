@@ -12,6 +12,7 @@ use bevy::{ecs::system::SystemParam, prelude::*};
 use macros::{EntityKey, InRange};
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Error};
 use std::{
+	borrow::{Borrow, Cow},
 	collections::{HashMap, HashSet},
 	hash::Hash,
 	ops::{Deref, DerefMut},
@@ -354,6 +355,44 @@ impl<'a, T> Iterator for Iter<'a, T> {
 		}
 	}
 }
+
+#[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Serialize, Deserialize)]
+pub struct AnimationName(Cow<'static, str>);
+
+impl AnimationName {
+	pub const fn owned(name: String) -> Self {
+		Self(Cow::Owned(name))
+	}
+
+	pub const fn borrowed(name: &'static str) -> Self {
+		Self(Cow::Borrowed(name))
+	}
+}
+
+impl<T> From<T> for AnimationName
+where
+	T: Into<Cow<'static, str>>,
+{
+	fn from(name: T) -> Self {
+		Self(name.into())
+	}
+}
+
+impl Deref for AnimationName {
+	type Target = str;
+
+	fn deref(&self) -> &Self::Target {
+		self.0.deref()
+	}
+}
+
+impl Borrow<str> for AnimationName {
+	fn borrow(&self) -> &str {
+		self.0.borrow()
+	}
+}
+
+pub type AnimationNames = AnimationClips<AnimationName>;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum AnimationPriority {

@@ -8,9 +8,9 @@ use common::{
 		handles_animations::{
 			AffectedAnimationBones,
 			Animation,
-			AnimationClips,
 			AnimationKey,
 			AnimationMaskBits,
+			AnimationNames,
 		},
 		handles_custom_assets::AssetFolderPath,
 		handles_movement::{MovementSpeed, RequiredClearance},
@@ -20,6 +20,7 @@ use common::{
 	},
 	zyheeda_commands::ZyheedaEntityCommands,
 };
+use macros::asset_path;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -32,13 +33,13 @@ pub struct AgentMeta {
 	pub(crate) height_levels: HeightLevels,
 	pub(crate) speed: MovementSpeed,
 	pub(crate) attributes: PhysicalDefaultAttributes,
-	pub(crate) animations: HashMap<AnimationKey, Animation<AnimationClips<String>>>,
+	pub(crate) animations: HashMap<AnimationKey, Animation<AnimationNames>>,
 	pub(crate) animation_mask_groups: HashMap<AnimationMaskBits, AffectedAnimationBones>,
 }
 
 impl AssetFolderPath for AgentMeta {
 	fn asset_folder_path() -> Path {
-		Path::from("agents")
+		Path::from(asset_path!("agents"))
 	}
 }
 

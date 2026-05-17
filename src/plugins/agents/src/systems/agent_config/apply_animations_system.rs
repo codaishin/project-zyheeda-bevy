@@ -10,8 +10,9 @@ use common::{
 		accessors::get::{GetContextMut, TryApplyOn},
 		handles_animations::{
 			Animation,
-			AnimationClips,
 			AnimationKey,
+			AnimationName,
+			AnimationNames,
 			RegisterAnimations,
 			WithoutAnimations,
 		},
@@ -89,15 +90,15 @@ impl ApplyAgentAnimations {
 	}
 }
 
-type AnimationKeyAndNames<'a> = (&'a AnimationKey, &'a Animation<AnimationClips<String>>);
+type AnimationKeyAndNames<'a> = (&'a AnimationKey, &'a Animation<AnimationNames>);
 type AnimationKeyAndClips = (AnimationKey, Animation);
 
 fn get_clips(
 	gltf: &Gltf,
-	missing: &mut HashSet<String>,
+	missing: &mut HashSet<AnimationName>,
 ) -> impl FnMut(AnimationKeyAndNames) -> Option<AnimationKeyAndClips> {
 	|(key, animation)| {
-		let get_clips = |name: String| match gltf.named_animations.get(name.as_str()) {
+		let get_clips = |name: AnimationName| match gltf.named_animations.get(&*name) {
 			Some(clip) => Some(clip.clone()),
 			None => {
 				missing.insert(name);
@@ -120,7 +121,7 @@ fn get_clips(
 pub(crate) enum RegisterAnimationsError {
 	MissingAnimations {
 		entity: Entity,
-		missing: HashSet<String>,
+		missing: HashSet<AnimationName>,
 		available: HashSet<Box<str>>,
 	},
 	GltfLookupMissing(Entity),
@@ -275,7 +276,7 @@ mod tests {
 			animations: HashMap::from([(
 				AnimationKey::Run,
 				Animation {
-					clips: AnimationClips::Single("Run".to_owned()),
+					clips: AnimationClips::Single(AnimationName::from("Run")),
 					..default()
 				},
 			)]),
@@ -331,7 +332,7 @@ mod tests {
 			animations: HashMap::from([(
 				AnimationKey::Run,
 				Animation {
-					clips: AnimationClips::Single("Run".to_owned()),
+					clips: AnimationClips::Single(AnimationName::from("Run")),
 					..default()
 				},
 			)]),
@@ -432,7 +433,7 @@ mod tests {
 			animations: HashMap::from([(
 				AnimationKey::Run,
 				Animation {
-					clips: AnimationClips::Single("Run".to_owned()),
+					clips: AnimationClips::Single(AnimationName::from("Run")),
 					..default()
 				},
 			)]),
@@ -525,21 +526,21 @@ mod tests {
 				(
 					AnimationKey::Walk,
 					Animation {
-						clips: AnimationClips::Single("Walk".to_owned()),
+						clips: AnimationClips::Single(AnimationName::from("Walk")),
 						..default()
 					},
 				),
 				(
 					AnimationKey::Run,
 					Animation {
-						clips: AnimationClips::Single("Run".to_owned()),
+						clips: AnimationClips::Single(AnimationName::from("Run")),
 						..default()
 					},
 				),
 				(
 					AnimationKey::Idle,
 					Animation {
-						clips: AnimationClips::Single("Idle".to_owned()),
+						clips: AnimationClips::Single(AnimationName::from("Idle")),
 						..default()
 					},
 				),
@@ -568,7 +569,7 @@ mod tests {
 		assert_eq!(
 			&_Result(Err(vec![RegisterAnimationsError::MissingAnimations {
 				entity,
-				missing: HashSet::from(["Walk".to_owned(), "Idle".to_owned()]),
+				missing: HashSet::from([AnimationName::from("Walk"), AnimationName::from("Idle")]),
 				available: HashSet::from([Box::from("Run")]),
 			}])),
 			app.world().resource::<_Result>()
@@ -581,7 +582,7 @@ mod tests {
 			animations: HashMap::from([(
 				AnimationKey::Run,
 				Animation {
-					clips: AnimationClips::Single("Run".to_owned()),
+					clips: AnimationClips::Single(AnimationName::from("Run")),
 					..default()
 				},
 			)]),
@@ -618,21 +619,21 @@ mod tests {
 				(
 					AnimationKey::Walk,
 					Animation {
-						clips: AnimationClips::Single("Walk".to_owned()),
+						clips: AnimationClips::Single(AnimationName::from("Walk")),
 						..default()
 					},
 				),
 				(
 					AnimationKey::Run,
 					Animation {
-						clips: AnimationClips::Single("Run".to_owned()),
+						clips: AnimationClips::Single(AnimationName::from("Run")),
 						..default()
 					},
 				),
 				(
 					AnimationKey::Idle,
 					Animation {
-						clips: AnimationClips::Single("Idle".to_owned()),
+						clips: AnimationClips::Single(AnimationName::from("Idle")),
 						..default()
 					},
 				),
