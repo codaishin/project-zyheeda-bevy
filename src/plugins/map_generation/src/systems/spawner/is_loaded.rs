@@ -1,8 +1,15 @@
-use crate::components::{agent_spawner::AgentSpawner, spawner_active::SpawnerActive};
+use crate::components::{spawner::Spawner, spawner_active::SpawnerActive};
 use bevy::prelude::*;
-use common::traits::handles_load_tracking::Loaded;
+use common::traits::{
+	handles_load_tracking::Loaded,
+	handles_map_generation::PrefabType,
+	thread_safe::ThreadSafe,
+};
 
-impl AgentSpawner {
+impl<T> Spawner<T>
+where
+	T: PrefabType + ThreadSafe,
+{
 	pub(crate) fn is_loaded(loaders: Query<Option<&SpawnerActive>, With<Self>>) -> Loaded {
 		Loaded(loaders.iter().all(|active| active.is_none()))
 	}
@@ -22,9 +29,11 @@ mod tests {
 	#[test]
 	fn not_loaded_when_active() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		app.world_mut().spawn(AgentSpawner(AgentType::Player));
+		app.world_mut().spawn(Spawner(AgentType::Player));
 
-		let loaded = app.world_mut().run_system_once(AgentSpawner::is_loaded)?;
+		let loaded = app
+			.world_mut()
+			.run_system_once(Spawner::<AgentType>::is_loaded)?;
 
 		assert_eq!(Loaded(false), loaded);
 		Ok(())
@@ -33,10 +42,12 @@ mod tests {
 	#[test]
 	fn loaded_when_inactive() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let mut entity = app.world_mut().spawn(AgentSpawner(AgentType::Player));
+		let mut entity = app.world_mut().spawn(Spawner(AgentType::Player));
 		entity.remove::<SpawnerActive>();
 
-		let loaded = app.world_mut().run_system_once(AgentSpawner::is_loaded)?;
+		let loaded = app
+			.world_mut()
+			.run_system_once(Spawner::<AgentType>::is_loaded)?;
 
 		assert_eq!(Loaded(true), loaded);
 		Ok(())
@@ -47,7 +58,9 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn(SpawnerActive);
 
-		let loaded = app.world_mut().run_system_once(AgentSpawner::is_loaded)?;
+		let loaded = app
+			.world_mut()
+			.run_system_once(Spawner::<AgentType>::is_loaded)?;
 
 		assert_eq!(Loaded(true), loaded);
 		Ok(())

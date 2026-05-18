@@ -1,1 +1,1 @@
-pub(crate) mod interactive_role;
+pub(crate) mod interactive;

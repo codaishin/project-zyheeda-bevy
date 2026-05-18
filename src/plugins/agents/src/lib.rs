@@ -109,7 +109,7 @@ where
 
 		app.add_systems(
 			Startup,
-			Agent::configure_map_prefab::<TMaps::TNewMapAgent>.pipe(OnError::log),
+			Agent::configure_map_prefab::<TMaps::TMapPrefabs>.pipe(OnError::log),
 		);
 		app.add_systems(
 			Update,

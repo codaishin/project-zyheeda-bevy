@@ -9,7 +9,7 @@ use common::{
 	traits::{
 		accessors::get::{GetContextMut, View},
 		handles_enemies::EnemyType,
-		handles_map_generation::{AgentPrefab, AgentType, GroundPosition, SetMapAgentPrefab},
+		handles_map_generation::{AgentType, GroundPosition, MapPrefabs, SetPrefab},
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 	zyheeda_commands::ZyheedaEntityCommands,
@@ -43,9 +43,10 @@ impl Agent {
 		mut new_agent: StaticSystemParam<TNewMapAgent>,
 	) -> Result<(), NoPrefabContext>
 	where
-		TNewMapAgent: for<'c> GetContextMut<AgentPrefab, TContext<'c>: SetMapAgentPrefab>,
+		TNewMapAgent:
+			for<'c> GetContextMut<MapPrefabs<AgentType>, TContext<'c>: SetPrefab<AgentType>>,
 	{
-		let Some(mut ctx) = TNewMapAgent::get_context_mut(&mut new_agent, AgentPrefab) else {
+		let Some(mut ctx) = TNewMapAgent::get_context_mut(&mut new_agent, MapPrefabs::KEY) else {
 			return Err(NoPrefabContext);
 		};
 
