@@ -409,6 +409,7 @@ impl AnimationPriority {
 #[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Copy, Serialize, Deserialize)]
 pub enum PlayMode {
 	#[default]
+	Once,
 	Replay,
 	Repeat,
 }
