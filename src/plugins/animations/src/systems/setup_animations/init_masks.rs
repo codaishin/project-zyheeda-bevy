@@ -3,7 +3,8 @@ use crate::{
 	traits::animation_graph::GetNodeMut,
 };
 use bevy::prelude::*;
-use common::traits::{iterate::Iterate, thread_safe::ThreadSafe, wrap_handle::GetHandle};
+use common::traits::{thread_safe::ThreadSafe, wrap_handle::GetHandle};
+use zyheeda_core::prelude::*;
 
 impl SetupAnimations {
 	pub(crate) fn init_masks<TGraph, TAnimations>(

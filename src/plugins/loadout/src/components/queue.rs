@@ -7,16 +7,14 @@ use crate::{
 	traits::{Enqueue, Flush, GetActiveSkill, GetSkillBehavior, IterAddedMut, IterHoldingMut},
 };
 use bevy::prelude::*;
-use common::{
-	tools::action_key::slot::SlotKey,
-	traits::{iterate::Iterate, state_duration::StateDuration},
-};
+use common::{tools::action_key::slot::SlotKey, traits::state_duration::StateDuration};
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::{
 	collections::{VecDeque, vec_deque::Iter},
 	time::Duration,
 };
+use zyheeda_core::prelude::*;
 
 #[derive(PartialEq, Debug, Default, Clone, Serialize, Deserialize)]
 enum State {

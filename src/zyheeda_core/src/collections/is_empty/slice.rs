@@ -1,6 +1,6 @@
-use crate::traits::is_empty::IsEmpty;
+use super::IsEmpty;
 
-impl<T> IsEmpty for Vec<T> {
+impl<T> IsEmpty for [T] {
 	fn is_empty(&self) -> bool {
 		self.is_empty()
 	}
@@ -12,11 +12,11 @@ mod tests {
 
 	#[test]
 	fn is_empty() {
-		assert!(IsEmpty::is_empty(&vec![] as &Vec<i32>));
+		assert!(IsEmpty::is_empty(&[] as &[i32]));
 	}
 
 	#[test]
 	fn is_not_empty() {
-		assert!(!IsEmpty::is_empty(&vec![11]));
+		assert!(!IsEmpty::is_empty(&[11] as &[i32]));
 	}
 }

@@ -12,12 +12,12 @@ use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
 		accessors::get::GetRef,
-		iterate::Iterate,
 		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
 	},
 };
 use macros::SavableComponent;
 use std::{collections::HashMap, fmt::Debug};
+use zyheeda_core::prelude::*;
 
 #[derive(Component, SavableComponent, PartialEq, Debug, Clone)]
 #[require(

@@ -14,7 +14,6 @@ use common::{
 		accessors::get::{GetMut, GetRef},
 		handles_loadout::combos::{Combo, GetCombosOrdered, NextConfiguredKeys},
 		insert::TryInsert,
-		iterate::Iterate,
 	},
 };
 use std::{cmp::Ordering, collections::HashSet};

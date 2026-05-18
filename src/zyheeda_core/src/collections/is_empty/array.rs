@@ -1,4 +1,4 @@
-use crate::traits::is_empty::IsEmpty;
+use super::IsEmpty;
 
 impl<const N: usize, T> IsEmpty for [T; N] {
 	fn is_empty(&self) -> bool {

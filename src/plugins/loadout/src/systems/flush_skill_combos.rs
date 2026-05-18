@@ -3,8 +3,9 @@ use crate::{
 	traits::{Flush, is_timed_out::IsTimedOut},
 };
 use bevy::{ecs::component::Mutable, prelude::*};
-use common::traits::{iterate::Iterate, update_cumulative::CumulativeUpdate};
+use common::traits::update_cumulative::CumulativeUpdate;
 use std::time::Duration;
+use zyheeda_core::prelude::*;
 
 pub(crate) fn flush_skill_combos<TCombos, TComboTimeout, TTime, TQueue>(
 	mut agents: Query<(&mut TCombos, Option<&mut TComboTimeout>, &TQueue)>,
