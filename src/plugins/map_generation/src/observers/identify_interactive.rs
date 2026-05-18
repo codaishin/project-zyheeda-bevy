@@ -1,54 +1,37 @@
-use crate::GetNormalizedName;
-use bevy::{
-	ecs::system::{IntoObserverSystem, StaticSystemParam},
-	prelude::*,
-};
-use common::traits::{
-	accessors::get::GetContextMut,
-	handles_interactive::{Interactive, SetInteractive, SetInteractiveRole},
-	thread_safe::ThreadSafe,
+use crate::{GetNormalizedName, components::interactive_spawner::InteractiveSpawner};
+use bevy::{ecs::system::IntoObserverSystem, gltf::GltfMeshName, prelude::*};
+use common::{
+	traits::{accessors::get::TryApplyOn, handles_interactive::Interactive},
+	zyheeda_commands::ZyheedaCommands,
 };
 use std::collections::HashMap;
 use zyheeda_core::strings::normalized_name::NormalizedName;
 
-impl<T> IdentifyInteractive for T where
-	T: for<'c> GetContextMut<SetInteractive, TContext<'c>: SetInteractiveRole> + ThreadSafe
-{
-}
-
-pub(crate) trait IdentifyInteractive:
-	for<'c> GetContextMut<SetInteractive, TContext<'c>: SetInteractiveRole> + ThreadSafe
-{
-	fn identify_interactive(
-		lookup: &[(GetNormalizedName, Interactive)],
-	) -> impl IntoObserverSystem<Add, Name, ()> {
-		let lookup = lookup
+impl InteractiveSpawner {
+	pub(crate) fn identify(
+		agent_types: &[(GetNormalizedName, Interactive)],
+	) -> impl IntoObserverSystem<Add, GltfMeshName, ()> {
+		let interactive_types = agent_types
 			.iter()
 			.map(|(n, i)| (n(), *i))
-			.collect::<HashMap<NormalizedName, Interactive>>();
+			.collect::<HashMap<_, _>>();
 
 		#[rustfmt::skip]
 		let observer = move |
-			added_name: On<Add, Name>,
-		  names: Query<&Name>,
-		  mut interactive_param: StaticSystemParam<Self>
+			added_name: On<Add, GltfMeshName>,
+			names: Query<&GltfMeshName>,
+			mut commands: ZyheedaCommands,
 		| {
-			let entity = added_name.entity;
-
-			let Ok(name) = names.get(entity) else {
+			let Ok(GltfMeshName(name)) = names.get(added_name.entity) else {
+				return;
+			};
+			let Some(interactive_type) = interactive_types.get(&NormalizedName::from(name.as_str())) else {
 				return;
 			};
 
-			let Some(role) = lookup.get(&NormalizedName::from(name.as_str())) else {
-				return;
-			};
-
-			let key = SetInteractive { entity };
-			let Some(mut ctx) = Self::get_context_mut(&mut interactive_param, key) else {
-				return;
-			};
-
-			ctx.set_interactive_role(*role);
+			commands.try_apply_on(&added_name.entity, |mut e| {
+				e.try_insert((InteractiveSpawner(*interactive_type), Visibility::Hidden));
+			});
 		};
 
 		IntoObserverSystem::into_system(observer)
@@ -59,53 +42,67 @@ pub(crate) trait IdentifyInteractive:
 mod tests {
 	use super::*;
 	use common::traits::handles_interactive::Door;
-	use test_case::test_case;
 	use testing::SingleThreadedApp;
-	use zyheeda_core::strings::normalized_name::NormalizedName;
-	#[derive(Component, Debug, PartialEq)]
-	struct _Interactive(Option<Interactive>);
 
-	impl SetInteractiveRole for _Interactive {
-		fn set_interactive_role(&mut self, role: Interactive) {
-			self.0 = Some(role);
-		}
+	macro_rules! gltf_mesh_name {
+		($name:expr) => {
+			GltfMeshName($name.to_owned())
+		};
 	}
 
-	fn setup(names: &[(GetNormalizedName, Interactive)]) -> App {
+	fn setup(config: &[(GetNormalizedName, Interactive)]) -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_observer(Query::<&mut _Interactive>::identify_interactive(names));
+		app.add_observer(InteractiveSpawner::identify(config));
 
 		app
 	}
 
-	#[test_case(Interactive::Door(Door::SlideDoor); "slide door")]
-	fn set_role(role: Interactive) {
-		let mut app = setup(&[(|| NormalizedName::from("aa"), role)]);
+	#[test]
+	fn insert_spawner() {
+		let mut app = setup(&[(
+			|| NormalizedName::from("AA"),
+			Interactive::Door(Door::SlideDoor),
+		)]);
 
-		let entity = app
-			.world_mut()
-			.spawn((Name::from("aa"), _Interactive(None)));
+		let entities = [app.world_mut().spawn(gltf_mesh_name!("AA")).id()];
 
 		assert_eq!(
-			Some(&_Interactive(Some(role))),
-			entity.get::<_Interactive>(),
+			[Some(&InteractiveSpawner(Interactive::Door(
+				Door::SlideDoor
+			)))],
+			app.world()
+				.entity(entities)
+				.map(|e| e.get::<InteractiveSpawner>())
+		);
+	}
+
+	#[test]
+	fn insert_visibility_hidden() {
+		let mut app = setup(&[(
+			|| NormalizedName::from("AA"),
+			Interactive::Door(Door::SlideDoor),
+		)]);
+
+		let entities = [app.world_mut().spawn(gltf_mesh_name!("AA")).id()];
+
+		assert_eq!(
+			[Some(&Visibility::Hidden)],
+			app.world().entity(entities).map(|e| e.get::<Visibility>()),
 		);
 	}
 
 	#[test]
 	fn act_only_once() {
 		let mut app = setup(&[(
-			|| NormalizedName::from("aa"),
+			|| NormalizedName::from("AA"),
 			Interactive::Door(Door::SlideDoor),
 		)]);
 
-		let mut entity = app
-			.world_mut()
-			.spawn((Name::from("aa"), _Interactive(None)));
-		entity.insert(_Interactive(None));
-		entity.insert(Name::from("aa"));
+		let mut entity = app.world_mut().spawn(gltf_mesh_name!("AA"));
+		entity.remove::<InteractiveSpawner>();
+		entity.insert(gltf_mesh_name!("BB"));
 
-		assert_eq!(Some(&_Interactive(None)), entity.get::<_Interactive>());
+		assert_eq!(None, entity.get::<InteractiveSpawner>());
 	}
 }

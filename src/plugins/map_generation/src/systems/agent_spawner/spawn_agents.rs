@@ -1,8 +1,9 @@
 use crate::{
 	components::{
-		agent_spawner::{AgentSpawner, SpawnerActive},
+		agent_spawner::AgentSpawner,
 		map::objects::{MapObjectOf, PersistentMapObject},
 		map_agents::GridAgent,
+		spawner_active::SpawnerActive,
 	},
 	resources::agents::prefab::AgentPrefab,
 };
@@ -41,7 +42,7 @@ impl AgentSpawner {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{agent_spawner::SpawnerActive, map::objects::MapObjectOf};
+	use crate::components::map::objects::MapObjectOf;
 	use common::{
 		components::persistent_entity::PersistentEntity,
 		traits::{handles_enemies::EnemyType, handles_map_generation::AgentType},

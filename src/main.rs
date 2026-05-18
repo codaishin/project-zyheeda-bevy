@@ -52,8 +52,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let physics = PhysicsPlugin::new(TARGET_FPS, &savegame, &animations);
 	let light = LightPlugin::from_plugin(&savegame);
 	let interactive = InteractivePlugin::from_plugin(&loading);
-	let map_generation =
-		MapGenerationPlugin::from_plugins(&loading, &savegame, &physics, &interactive, &light);
+	let map_generation = MapGenerationPlugin::from_plugins(&loading, &savegame, &physics, &light);
 	let path_finding = PathFindingPlugin::from_plugin(&map_generation);
 	let movement =
 		MovementPlugin::from_plugins(&input, &savegame, &animations, &physics, &path_finding);

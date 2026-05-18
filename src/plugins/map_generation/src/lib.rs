@@ -7,7 +7,8 @@ mod systems;
 
 use crate::{
 	components::{
-		agent_spawner::{AgentSpawner, SpawnerActive},
+		agent_spawner::AgentSpawner,
+		interactive_spawner::InteractiveSpawner,
 		map::{
 			Map,
 			agents::AgentsLoaded,
@@ -17,9 +18,10 @@ use crate::{
 		map_agents::{GridAgent, GridAgentOf},
 		mesh_collider::MeshCollider,
 		nav_mesh::NavMesh,
+		spawner_active::SpawnerActive,
 	},
 	mesh_grid_graph::MeshGridGraph,
-	observers::{identify_by_prefix::IdentifyByPrefix, identify_interactive::IdentifyInteractive},
+	observers::identify_by_prefix::IdentifyByPrefix,
 	resources::agents::prefab::AgentPrefab,
 	system_params::set_agent_prefab::SetAgentPrefab,
 };
@@ -30,7 +32,7 @@ use common::{
 	tools::plugin_system_set::PluginSystemSet,
 	traits::{
 		handles_enemies::EnemyType,
-		handles_interactive::{Door, HandlesInteractive, Interactive},
+		handles_interactive::{Door, Interactive},
 		handles_lights::HandlesLights,
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInApp},
 		handles_map_generation::{AgentType, HandlesMapGeneration},
@@ -48,44 +50,36 @@ use zyheeda_core::strings::normalized_name::NormalizedName;
 
 pub struct MapGenerationPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TSavegame, TPhysics, TInteractive, TLights>
-	MapGenerationPlugin<(TLoading, TSavegame, TPhysics, TInteractive, TLights)>
+impl<TLoading, TSavegame, TPhysics, TLights>
+	MapGenerationPlugin<(TLoading, TSavegame, TPhysics, TLights)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesRaycast + HandlesPhysicsConfig,
-	TInteractive: ThreadSafe + HandlesInteractive,
 	TLights: ThreadSafe + HandlesLights,
 {
-	const SPAWNERS: &[(&str, AgentType)] = &[
+	const AGENT_SPAWNERS: &[(&str, AgentType)] = &[
 		("PlayerSpawn", AgentType::Player),
 		("VoidSphereSpawn", AgentType::Enemy(EnemyType::VoidSphere)),
 	];
 	const MESH_COLLIDER_PREFIX: &str = "Collider";
 	const NAV_MESH_PREFIX: &str = "NavMesh";
-	const INTERACTIVE: &[(GetNormalizedName, Interactive)] = &[(
-		|| NormalizedName::from("PlaceholderSlideDoor"),
+	const INTERACTIVE_SPAWNERS: &[(GetNormalizedName, Interactive)] = &[(
+		|| NormalizedName::from("SlideDoorSpawn"),
 		Interactive::Door(Door::SlideDoor),
 	)];
 
-	pub fn from_plugins(
-		_: &TLoading,
-		_: &TSavegame,
-		_: &TPhysics,
-		_: &TInteractive,
-		_: &TLights,
-	) -> Self {
+	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TPhysics, _: &TLights) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLoading, TSavegame, TPhysics, TInteractive, TLights> Plugin
-	for MapGenerationPlugin<(TLoading, TSavegame, TPhysics, TInteractive, TLights)>
+impl<TLoading, TSavegame, TPhysics, TLights> Plugin
+	for MapGenerationPlugin<(TLoading, TSavegame, TPhysics, TLights)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesRaycast + HandlesPhysicsConfig,
-	TInteractive: ThreadSafe + HandlesInteractive,
 	TLights: ThreadSafe + HandlesLights,
 {
 	fn build(&self, app: &mut App) {
@@ -109,11 +103,9 @@ where
 			.add_prefab_observer::<MeshCollider, TPhysics::TConfigMut>()
 			.add_observer(NavMesh::identify_by_prefix(Self::NAV_MESH_PREFIX))
 			.add_observer(MeshCollider::identify_by_prefix(Self::MESH_COLLIDER_PREFIX))
-			.add_observer(AgentSpawner::identify_by_prefix_map(Self::SPAWNERS))
+			.add_observer(AgentSpawner::identify_by_prefix_map(Self::AGENT_SPAWNERS))
+			.add_observer(InteractiveSpawner::identify(Self::INTERACTIVE_SPAWNERS))
 			.add_observer(SpawnerActive::remove_when_map_created_from_save)
-			.add_observer(TInteractive::TInteractiveMut::identify_interactive(
-				Self::INTERACTIVE,
-			))
 			.add_systems(
 				Update,
 				(

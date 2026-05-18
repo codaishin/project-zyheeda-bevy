@@ -1,4 +1,4 @@
-use crate::components::agent_spawner::{AgentSpawner, SpawnerActive};
+use crate::components::{agent_spawner::AgentSpawner, spawner_active::SpawnerActive};
 use bevy::prelude::*;
 use common::traits::handles_load_tracking::Loaded;
 
@@ -11,7 +11,6 @@ impl AgentSpawner {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::agent_spawner::SpawnerActive;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::traits::handles_map_generation::AgentType;
 	use testing::SingleThreadedApp;

@@ -29,7 +29,7 @@ impl AgentSpawner {
 			};
 
 			commands.try_apply_on(&added_name.entity, |mut e| {
-				e.try_insert((AgentSpawner (*agent_type), Visibility::Hidden));
+				e.try_insert((AgentSpawner(*agent_type), Visibility::Hidden));
 			});
 		};
 
