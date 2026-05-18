@@ -1,4 +1,5 @@
 use super::{IsPlaying, RepeatAnimation, ReplayAnimation, StopAnimation};
+use crate::traits::PlayAnimation;
 use bevy::prelude::*;
 
 impl IsPlaying<AnimationNodeIndex> for Mut<'_, AnimationPlayer> {
@@ -7,15 +8,21 @@ impl IsPlaying<AnimationNodeIndex> for Mut<'_, AnimationPlayer> {
 	}
 }
 
+impl PlayAnimation<AnimationNodeIndex> for Mut<'_, AnimationPlayer> {
+	fn play(&mut self, index: AnimationNodeIndex) {
+		AnimationPlayer::play(self, index);
+	}
+}
+
 impl ReplayAnimation<AnimationNodeIndex> for Mut<'_, AnimationPlayer> {
 	fn replay(&mut self, index: AnimationNodeIndex) {
-		self.play(index).replay();
+		AnimationPlayer::play(self, index).replay();
 	}
 }
 
 impl RepeatAnimation<AnimationNodeIndex> for Mut<'_, AnimationPlayer> {
 	fn repeat(&mut self, index: AnimationNodeIndex) {
-		self.play(index).repeat();
+		AnimationPlayer::play(self, index).repeat();
 	}
 }
 

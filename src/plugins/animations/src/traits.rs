@@ -38,6 +38,10 @@ pub trait IsPlaying<TIndex> {
 	fn is_playing(&self, index: TIndex) -> bool;
 }
 
+pub trait PlayAnimation<TIndex> {
+	fn play(&mut self, index: TIndex);
+}
+
 pub trait ReplayAnimation<TIndex> {
 	fn replay(&mut self, index: TIndex);
 }
