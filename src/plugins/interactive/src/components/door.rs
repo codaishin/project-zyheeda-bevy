@@ -1,6 +1,7 @@
 use crate::{assets::door_meta::DoorMeta, components::door_meta_handle::DoorMetaHandle};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
+	components::model::{Model, SceneId, UseGltfLookup},
 	errors::Unreachable,
 	systems::register_animations::AnimationsMarker,
 	traits::{
@@ -27,6 +28,11 @@ impl Prefab<()> for Door {
 		let bundle = match self.0 {
 			DoorType::SlideDoor => (
 				Name::from("SlideDoor"),
+				Model::scene((
+					asset_path!("maps/assets/slide_door/model.glb"),
+					SceneId(0),
+					UseGltfLookup(true),
+				)),
 				DoorMetaHandle(assets.load(asset_path!("maps/assets/slide_door/meta.door"))),
 			),
 		};
