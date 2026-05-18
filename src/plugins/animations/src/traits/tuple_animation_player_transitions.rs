@@ -1,6 +1,4 @@
-use crate::traits::PlayAnimation;
-
-use super::{IsPlaying, RepeatAnimation, ReplayAnimation};
+use crate::traits::{IsPlaying, UpdateAnimation};
 use bevy::prelude::*;
 use std::time::Duration;
 
@@ -9,31 +7,29 @@ type AnimationPlayerComponents<'a> = (Mut<'a, AnimationPlayer>, Mut<'a, Animatio
 impl IsPlaying<AnimationNodeIndex> for AnimationPlayerComponents<'_> {
 	fn is_playing(&self, index: AnimationNodeIndex) -> bool {
 		let (player, _) = self;
-		player.is_playing_animation(index)
+		player.is_playing(index)
 	}
 }
 
-impl PlayAnimation<AnimationNodeIndex> for AnimationPlayerComponents<'_> {
-	fn play(&mut self, index: AnimationNodeIndex) {
-		let (player, transitions) = self;
-		transitions.play(player, index, Duration::from_millis(100));
-	}
-}
+impl UpdateAnimation<AnimationNodeIndex> for AnimationPlayerComponents<'_> {
+	fn update_animation(&mut self, index: AnimationNodeIndex, seek: super::SetTo) {
+		const TRANSITION: Duration = Duration::from_millis(100);
 
-impl ReplayAnimation<AnimationNodeIndex> for AnimationPlayerComponents<'_> {
-	fn replay(&mut self, index: AnimationNodeIndex) {
 		let (player, transitions) = self;
-		transitions
-			.play(player, index, Duration::from_millis(100))
-			.replay();
-	}
-}
 
-impl RepeatAnimation<AnimationNodeIndex> for AnimationPlayerComponents<'_> {
-	fn repeat(&mut self, index: AnimationNodeIndex) {
-		let (player, transitions) = self;
-		transitions
-			.play(player, index, Duration::from_millis(100))
-			.repeat();
+		match seek {
+			super::SetTo::Play => {
+				transitions.play(player, index, TRANSITION);
+			}
+			super::SetTo::Replay => {
+				transitions.play(player, index, TRANSITION).replay();
+			}
+			super::SetTo::Repeat => {
+				transitions.play(player, index, TRANSITION).repeat();
+			}
+			super::SetTo::Stop => {
+				player.update_animation(index, super::SetTo::Stop);
+			}
+		}
 	}
 }

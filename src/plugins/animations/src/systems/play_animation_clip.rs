@@ -5,10 +5,8 @@ use crate::{
 	},
 	traits::{
 		IsPlaying,
-		PlayAnimation,
-		RepeatAnimation,
-		ReplayAnimation,
-		StopAnimation,
+		SetTo,
+		UpdateAnimation,
 		YoungestToOldestActiveAnimations,
 		animation_graph::GetNodeMut,
 	},
@@ -47,10 +45,7 @@ where
 	) where
 		TAnimationPlayer: QueryData
 			+ for<'w, 's> QueryData<Item<'w, 's>: IsPlaying<AnimationNodeIndex>>
-			+ for<'w, 's> QueryData<Item<'w, 's>: PlayAnimation<AnimationNodeIndex>>
-			+ for<'w, 's> QueryData<Item<'w, 's>: ReplayAnimation<AnimationNodeIndex>>
-			+ for<'w, 's> QueryData<Item<'w, 's>: RepeatAnimation<AnimationNodeIndex>>
-			+ for<'w, 's> QueryData<Item<'w, 's>: StopAnimation<AnimationNodeIndex>>,
+			+ for<'w, 's> QueryData<Item<'w, 's>: UpdateAnimation<AnimationNodeIndex>>,
 	{
 		play_animation_clip(players, dispatchers, graphs)
 	}
@@ -74,11 +69,8 @@ fn play_animation_clip<TAnimationPlayer, TDispatch, TGraph, TClips>(
 	TGraph: Asset + GetNodeMut + WrapHandle,
 	TDispatch: Component + YoungestToOldestActiveAnimations,
 	for<'a> TClips: ThreadSafe + Iterate<'a, TItem = &'a AnimationNodeIndex>,
-	for<'w, 's> TAnimationPlayer::Item<'w, 's>: IsPlaying<AnimationNodeIndex>
-		+ PlayAnimation<AnimationNodeIndex>
-		+ ReplayAnimation<AnimationNodeIndex>
-		+ RepeatAnimation<AnimationNodeIndex>
-		+ StopAnimation<AnimationNodeIndex>,
+	for<'w, 's> TAnimationPlayer::Item<'w, 's>:
+		IsPlaying<AnimationNodeIndex> + UpdateAnimation<AnimationNodeIndex>,
 {
 	for (dispatcher, animation_players, lookup, graph_component) in &agents {
 		for entity in animation_players.iter() {
@@ -88,7 +80,7 @@ fn play_animation_clip<TAnimationPlayer, TDispatch, TGraph, TClips>(
 			let Some(graph) = graphs.get_mut(graph_component.get_handle()) else {
 				continue;
 			};
-			let active_animations = play_active(graph, &mut player, lookup, dispatcher);
+			let active_animations = play(graph, &mut player, lookup, dispatcher);
 			let inactive_animations = lookup
 				.animations
 				.values()
@@ -105,17 +97,14 @@ fn play_animation_clip<TAnimationPlayer, TDispatch, TGraph, TClips>(
 	}
 }
 
-fn play_active<TPlayer, TDispatcher, TGraph, TAnimations>(
+fn play<TPlayer, TDispatcher, TGraph, TAnimations>(
 	graph: &mut TGraph,
 	player: &mut TPlayer,
 	lookup: &AnimationLookup<TAnimations>,
 	dispatcher: &TDispatcher,
 ) -> HashSet<AnimationNodeIndex>
 where
-	TPlayer: IsPlaying<AnimationNodeIndex>
-		+ PlayAnimation<AnimationNodeIndex>
-		+ ReplayAnimation<AnimationNodeIndex>
-		+ RepeatAnimation<AnimationNodeIndex>,
+	TPlayer: IsPlaying<AnimationNodeIndex> + UpdateAnimation<AnimationNodeIndex>,
 	TDispatcher: YoungestToOldestActiveAnimations,
 	TGraph: Asset + GetNodeMut,
 	for<'a> TAnimations: Iterate<'a, TItem = &'a AnimationNodeIndex>,
@@ -143,11 +132,13 @@ where
 					continue;
 				}
 
-				match animation_data.play_mode {
-					PlayMode::Once => player.play(*id),
-					PlayMode::Repeat => player.repeat(*id),
-					PlayMode::Replay => player.replay(*id),
-				}
+				let set_to = match animation_data.play_mode {
+					PlayMode::Once => SetTo::Play,
+					PlayMode::Repeat => SetTo::Repeat,
+					PlayMode::Replay => SetTo::Replay,
+				};
+
+				player.update_animation(*id, set_to)
 			}
 
 			blocked |= mask;
@@ -162,14 +153,14 @@ fn stop<'a, TPlayer, TGraph>(
 	graph: &mut TGraph,
 	animations: impl Iterator<Item = &'a AnimationNodeIndex>,
 ) where
-	TPlayer: StopAnimation<AnimationNodeIndex>,
+	TPlayer: UpdateAnimation<AnimationNodeIndex>,
 	TGraph: GetNodeMut,
 {
 	for animation_id in animations {
 		if let Some(node) = graph.get_node_mut(*animation_id) {
 			node.add_mask(AnimationMask::MAX);
 		}
-		player.stop_animation(*animation_id);
+		player.update_animation(*animation_id, SetTo::Stop);
 	}
 }
 
@@ -334,10 +325,8 @@ mod tests {
 	impl Default for _AnimationPlayer {
 		fn default() -> Self {
 			let mut mock = Mock_AnimationPlayer::default();
-			mock.expect_replay().return_const(());
-			mock.expect_repeat().return_const(());
-			mock.expect_stop_animation().return_const(());
 			mock.expect_is_playing().return_const(false);
+			mock.expect_update_animation().return_const(());
 			Self { mock }
 		}
 	}
@@ -348,46 +337,19 @@ mod tests {
 		}
 	}
 
-	impl PlayAnimation<AnimationNodeIndex> for Mut<'_, _AnimationPlayer> {
-		fn play(&mut self, index: AnimationNodeIndex) {
-			self.mock.play(index);
-		}
-	}
-
-	impl ReplayAnimation<AnimationNodeIndex> for Mut<'_, _AnimationPlayer> {
-		fn replay(&mut self, index: AnimationNodeIndex) {
-			self.mock.replay(index)
-		}
-	}
-
-	impl RepeatAnimation<AnimationNodeIndex> for Mut<'_, _AnimationPlayer> {
-		fn repeat(&mut self, index: AnimationNodeIndex) {
-			self.mock.repeat(index)
-		}
-	}
-
-	impl StopAnimation<AnimationNodeIndex> for Mut<'_, _AnimationPlayer> {
-		fn stop_animation(&mut self, index: AnimationNodeIndex) {
-			self.mock.stop_animation(index)
+	impl UpdateAnimation<AnimationNodeIndex> for Mut<'_, _AnimationPlayer> {
+		fn update_animation(&mut self, index: AnimationNodeIndex, seek: SetTo) {
+			self.mock.update_animation(index, seek);
 		}
 	}
 
 	mock! {
 		_AnimationPlayer {}
-		impl PlayAnimation<AnimationNodeIndex> for _AnimationPlayer {
-			fn play(&mut self, index: AnimationNodeIndex);
-		}
-		impl ReplayAnimation<AnimationNodeIndex> for _AnimationPlayer {
-			fn replay(&mut self, index: AnimationNodeIndex);
-		}
-		impl RepeatAnimation<AnimationNodeIndex> for _AnimationPlayer {
-			fn repeat(&mut self, index: AnimationNodeIndex);
-		}
-		impl StopAnimation<AnimationNodeIndex> for _AnimationPlayer{
-			fn stop_animation(&mut self, index: AnimationNodeIndex);
-		}
 		impl IsPlaying<AnimationNodeIndex> for _AnimationPlayer {
 			fn is_playing(&self, index: AnimationNodeIndex) -> bool;
+		}
+		impl UpdateAnimation<AnimationNodeIndex> for _AnimationPlayer {
+			fn update_animation(&mut self, index: AnimationNodeIndex, seek: SetTo);
 		}
 	}
 
@@ -482,16 +444,13 @@ mod tests {
 			indices: impl Clone + IntoIterator<Item = usize>,
 		) -> impl Fn(&mut Mock_AnimationPlayer) {
 			move |mock| {
-				mock.expect_is_playing().return_const(false);
-				mock.expect_replay().never().return_const(());
-				mock.expect_repeat().never().return_const(());
 				for index in indices.clone() {
-					mock.expect_play()
+					mock.expect_is_playing().return_const(false);
+					mock.expect_update_animation()
 						.times(1)
-						.with(eq(AnimationNodeIndex::new(index)))
+						.with(eq(AnimationNodeIndex::new(index)), eq(SetTo::Play))
 						.return_const(());
 				}
-				mock.expect_stop_animation().never().return_const(());
 			}
 		}
 	}
@@ -537,15 +496,12 @@ mod tests {
 		) -> impl Fn(&mut Mock_AnimationPlayer) {
 			move |mock| {
 				mock.expect_is_playing().return_const(false);
-				mock.expect_play().never().return_const(());
-				mock.expect_replay().never().return_const(());
 				for index in indices.clone() {
-					mock.expect_repeat()
+					mock.expect_update_animation()
 						.times(1)
-						.with(eq(AnimationNodeIndex::new(index)))
+						.with(eq(AnimationNodeIndex::new(index)), eq(SetTo::Repeat))
 						.return_const(());
 				}
-				mock.expect_stop_animation().never().return_const(());
 			}
 		}
 	}
@@ -591,15 +547,12 @@ mod tests {
 		) -> impl Fn(&mut Mock_AnimationPlayer) {
 			move |mock| {
 				mock.expect_is_playing().return_const(false);
-				mock.expect_play().never().return_const(());
-				mock.expect_repeat().never().return_const(());
 				for index in indices.clone() {
-					mock.expect_replay()
+					mock.expect_update_animation()
 						.times(1)
-						.with(eq(AnimationNodeIndex::new(index)))
+						.with(eq(AnimationNodeIndex::new(index)), eq(SetTo::Replay))
 						.return_const(());
 				}
-				mock.expect_stop_animation().never().return_const(());
 			}
 		}
 	}
@@ -725,32 +678,29 @@ mod tests {
 			))
 			.id();
 		app.world_mut().spawn((
-			_AnimationPlayer::new().with_mock(assert_repeat(0..=11)),
+			_AnimationPlayer::new().with_mock(assert_replay(0..=11)),
 			AnimationPlayerOf(agent),
 		));
 
 		app.update();
 
-		fn assert_repeat(
+		fn assert_replay(
 			indices: impl Clone + IntoIterator<Item = usize>,
 		) -> impl Fn(&mut Mock_AnimationPlayer) {
 			move |mock| {
 				mock.expect_is_playing().return_const(false);
-				mock.expect_play().never().return_const(());
-				mock.expect_repeat().never().return_const(());
 				for index in indices.clone().into_iter() {
-					mock.expect_replay()
+					mock.expect_update_animation()
 						.times(1)
-						.with(eq(AnimationNodeIndex::new(index)))
+						.with(eq(AnimationNodeIndex::new(index)), eq(SetTo::Replay))
 						.return_const(());
 				}
-				mock.expect_stop_animation().return_const(());
 			}
 		}
 	}
 
 	#[test]
-	fn do_not_play_animation_which_is_playing() {
+	fn do_not_update_animation_when_playing() {
 		let handle = new_handle();
 		let lookup = AnimationLookup {
 			animations: HashMap::from([(
@@ -795,10 +745,7 @@ mod tests {
 						.with(eq(AnimationNodeIndex::new(index)))
 						.return_const(true);
 				}
-				mock.expect_play().never().return_const(());
-				mock.expect_replay().never().return_const(());
-				mock.expect_repeat().never().return_const(());
-				mock.expect_stop_animation().never().return_const(());
+				mock.expect_update_animation().never().return_const(());
 			}
 		}
 	}
@@ -840,14 +787,10 @@ mod tests {
 			indices: impl Clone + IntoIterator<Item = usize>,
 		) -> impl Fn(&mut Mock_AnimationPlayer) {
 			move |mock| {
-				mock.expect_is_playing().return_const(false);
-				mock.expect_play().never().return_const(());
-				mock.expect_replay().return_const(());
-				mock.expect_repeat().return_const(());
 				for index in indices.clone() {
-					mock.expect_stop_animation()
+					mock.expect_update_animation()
 						.times(1)
-						.with(eq(AnimationNodeIndex::new(index)))
+						.with(eq(AnimationNodeIndex::new(index)), eq(SetTo::Stop))
 						.return_const(());
 				}
 			}
@@ -893,10 +836,10 @@ mod tests {
 
 		fn assert_repeat_once(mock: &mut Mock_AnimationPlayer) {
 			mock.expect_is_playing().return_const(false);
-			mock.expect_play().never().return_const(());
-			mock.expect_replay().never().return_const(());
-			mock.expect_repeat().times(1).return_const(());
-			mock.expect_stop_animation().never().return_const(());
+			mock.expect_update_animation()
+				.with(eq(AnimationNodeIndex::new(1)), eq(SetTo::Repeat))
+				.once()
+				.return_const(());
 		}
 	}
 
@@ -944,10 +887,10 @@ mod tests {
 
 		fn assert_repeat_twice(mock: &mut Mock_AnimationPlayer) {
 			mock.expect_is_playing().return_const(false);
-			mock.expect_play().never().return_const(());
-			mock.expect_replay().never().return_const(());
-			mock.expect_repeat().times(2).return_const(());
-			mock.expect_stop_animation().never().return_const(());
+			mock.expect_update_animation()
+				.with(eq(AnimationNodeIndex::new(1)), eq(SetTo::Repeat))
+				.times(2)
+				.return_const(());
 		}
 	}
 
@@ -1316,10 +1259,7 @@ mod tests {
 					.with(eq(AnimationNodeIndex::new(3)))
 					.return_const(true);
 				mock.expect_is_playing().return_const(false);
-				mock.expect_play().never().return_const(());
-				mock.expect_repeat().return_const(());
-				mock.expect_replay().return_const(());
-				mock.expect_stop_animation().return_const(());
+				mock.expect_update_animation().return_const(());
 			}),
 			AnimationPlayerOf(agent),
 		));
