@@ -11,6 +11,8 @@ use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
+use crate::components::door::Door;
+
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[component(immutable)]
 #[savable_component(id = "interactive")]
@@ -28,6 +30,10 @@ impl Interactive {
 			Transform::from_translation(translation),
 			Self { interactive_type },
 		));
+
+		match interactive_type {
+			InteractiveType::Door(door_type) => entity.try_insert(Door(door_type)),
+		};
 	}
 
 	pub(crate) fn configure_map_prefab<TNewMapAgent>(

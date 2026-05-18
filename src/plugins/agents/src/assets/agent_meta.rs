@@ -2,6 +2,7 @@ pub(crate) mod dto;
 
 use bevy::prelude::*;
 use common::{
+	systems::register_animations::{AnimationConfig, AnimationKeyAndNames, AnimationMaskAndBones},
 	tools::{action_key::slot::SlotKey, bone_name::BoneName, mesh_name::MeshName, path::Path},
 	traits::{
 		accessors::get::View,
@@ -47,6 +48,20 @@ impl AssetFolderPath for AgentMeta {
 impl View<PhysicalDefaultAttributes> for AgentMeta {
 	fn view(&self) -> PhysicalDefaultAttributes {
 		self.attributes
+	}
+}
+
+impl AnimationConfig for AgentMeta {
+	fn animations(&self) -> impl ExactSizeIterator<Item = AnimationKeyAndNames> {
+		self.animations
+			.iter()
+			.map(|(key, names)| (*key, names.clone()))
+	}
+
+	fn masks(&self) -> impl ExactSizeIterator<Item = AnimationMaskAndBones> {
+		self.animation_mask_groups
+			.iter()
+			.map(|(mask, bones)| (*mask, bones.clone()))
 	}
 }
 

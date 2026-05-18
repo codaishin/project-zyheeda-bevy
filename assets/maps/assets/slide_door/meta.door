@@ -1,0 +1,23 @@
+{
+	"animations": {
+		"open": {
+			"clips": {
+				"Single": "Open"
+			},
+			"play_mode": "Repeat",
+			"mask_groups": "1"
+		},
+		"close": {
+			"clips": {
+				"Single": "Close"
+			},
+			"play_mode": "Repeat",
+			"mask_groups": "1"
+		}
+	},
+	"animation_mask_groups": {
+		"1": {
+			"from_root": "SlideDoor"
+		}
+	}
+}

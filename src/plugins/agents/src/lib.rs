@@ -16,7 +16,7 @@ use crate::{
 use bevy::prelude::*;
 use common::{
 	states::game_state::{GameState, LoadingEssentialAssets},
-	systems::log::OnError,
+	systems::{log::OnError, register_animations::RegisterAnimationsSystem},
 	traits::{
 		after_plugin::AfterPlugin,
 		delta::Delta,
@@ -120,7 +120,8 @@ where
 					TMovement::TMovementConfig,
 					TPhysics::TConfigMut,
 				>,
-				ApplyAgentAnimations::system::<TAnimations::TAnimationsMut>.pipe(OnError::log),
+				ApplyAgentAnimations::register_animations_system::<TAnimations::TAnimationsMut>
+					.pipe(OnError::log),
 			),
 		);
 

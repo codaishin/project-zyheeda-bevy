@@ -1,11 +1,11 @@
-use crate::components::{
-	agent_config::AgentConfig,
-	enemy::void_sphere::VoidSphere,
-	player::Player,
+use crate::{
+	assets::agent_meta::AgentMeta,
+	components::{agent_config::AgentConfig, enemy::void_sphere::VoidSphere, player::Player},
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	errors::{ErrorData, Level, Unreachable},
+	systems::register_animations::AnimationsMarker,
 	traits::{
 		accessors::get::{GetContextMut, View},
 		handles_enemies::EnemyType,
@@ -95,6 +95,11 @@ pub(crate) struct ApplyAgentConfig;
 
 #[derive(Component, Debug, PartialEq, Default)]
 pub(crate) struct ApplyAgentAnimations;
+
+impl AnimationsMarker for ApplyAgentAnimations {
+	type TConfig = AgentMeta;
+	type TConfigComponent = AgentConfig;
+}
 
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct AgentTransformDirty;

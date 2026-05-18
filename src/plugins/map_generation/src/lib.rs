@@ -33,7 +33,7 @@ use common::{
 		handles_enemies::EnemyType,
 		handles_lights::HandlesLights,
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInApp},
-		handles_map_generation::{AgentType, Door, HandlesMapGeneration, InteractiveType},
+		handles_map_generation::{AgentType, DoorType, HandlesMapGeneration, InteractiveType},
 		handles_physics::{HandlesPhysicsConfig, HandlesRaycast},
 		handles_saving::HandlesSaving,
 		prefab::AddPrefabObserver,
@@ -63,12 +63,12 @@ where
 			AgentType::Enemy(EnemyType::VoidSphere),
 		),
 	];
-	const MESH_COLLIDER_PREFIX: &str = "Collider";
-	const NAV_MESH_PREFIX: &str = "NavMesh";
 	const INTERACTIVE_SPAWNERS: &[(GetNormalizedName, InteractiveType)] = &[(
 		|| NormalizedName::from("SlideDoorSpawn"),
-		InteractiveType::Door(Door::SlideDoor),
+		InteractiveType::Door(DoorType::SlideDoor),
 	)];
+	const MESH_COLLIDER_PREFIX: &str = "Collider";
+	const NAV_MESH_PREFIX: &str = "NavMesh";
 
 	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TPhysics, _: &TLights) -> Self {
 		Self(PhantomData)

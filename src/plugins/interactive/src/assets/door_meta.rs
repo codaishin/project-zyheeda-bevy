@@ -1,8 +1,15 @@
-use bevy::prelude::*;
+use bevy::{platform::collections::HashMap, prelude::*};
 use common::{
+	systems::register_animations::{AnimationConfig, AnimationKeyAndNames, AnimationMaskAndBones},
 	tools::path::Path,
 	traits::{
-		handles_animations::AnimationName,
+		handles_animations::{
+			AffectedAnimationBones,
+			Animation,
+			AnimationKey,
+			AnimationMaskBits,
+			AnimationNames,
+		},
 		handles_custom_assets::{AssetFileExtensions, AssetFolderPath},
 	},
 };
@@ -12,6 +19,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Asset, TypePath, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
 pub(crate) struct DoorMeta {
 	animations: DoorAnimations,
+	animation_mask_groups: HashMap<AnimationMaskBits, AffectedAnimationBones>,
 }
 
 impl AssetFolderPath for DoorMeta {
@@ -26,8 +34,24 @@ impl AssetFileExtensions for DoorMeta {
 	}
 }
 
+impl AnimationConfig for DoorMeta {
+	fn animations(&self) -> impl ExactSizeIterator<Item = AnimationKeyAndNames> {
+		[
+			(AnimationKey::Open, self.animations.open.clone()),
+			(AnimationKey::Close, self.animations.close.clone()),
+		]
+		.into_iter()
+	}
+
+	fn masks(&self) -> impl ExactSizeIterator<Item = AnimationMaskAndBones> {
+		self.animation_mask_groups
+			.iter()
+			.map(|(mask, bones)| (*mask, bones.clone()))
+	}
+}
+
 #[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
 pub(crate) struct DoorAnimations {
-	open: AnimationName,
-	close: AnimationName,
+	open: Animation<AnimationNames>,
+	close: Animation<AnimationNames>,
 }
