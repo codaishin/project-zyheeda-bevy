@@ -2,7 +2,7 @@ use super::IsEmpty;
 
 impl<const N: usize, T> IsEmpty for [T; N] {
 	fn is_empty(&self) -> bool {
-		N == 0
+		const { N == 0 }
 	}
 }
 
