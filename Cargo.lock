@@ -3393,6 +3393,7 @@ dependencies = [
  "common",
  "macros",
  "mockall",
+ "serde",
  "test-case",
  "testing",
  "zyheeda_core",

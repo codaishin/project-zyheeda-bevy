@@ -1,16 +1,41 @@
+mod assets;
 mod components;
 mod system_params;
 
-use crate::system_params::interactive::InteractiveMut;
+use crate::{assets::door_meta::DoorMeta, system_params::interactive::InteractiveMut};
 use bevy::prelude::*;
-use common::traits::handles_interactive::HandlesInteractive;
+use common::{
+	states::game_state::LoadingEssentialAssets,
+	traits::{
+		handles_custom_assets::HandlesCustomFolderAssets,
+		handles_interactive::HandlesInteractive,
+		thread_safe::ThreadSafe,
+	},
+};
+use std::marker::PhantomData;
 
-pub struct InteractivePlugin;
+pub struct InteractivePlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl Plugin for InteractivePlugin {
-	fn build(&self, _: &mut App) {}
+impl<TLoading> InteractivePlugin<TLoading>
+where
+	TLoading: ThreadSafe + HandlesCustomFolderAssets,
+{
+	pub fn from_plugin(_: &TLoading) -> Self {
+		Self(PhantomData)
+	}
 }
 
-impl HandlesInteractive for InteractivePlugin {
+impl<TLoading> Plugin for InteractivePlugin<TLoading>
+where
+	TLoading: ThreadSafe + HandlesCustomFolderAssets,
+{
+	fn build(&self, app: &mut App) {
+		TLoading::register_custom_folder_assets::<DoorMeta, DoorMeta, LoadingEssentialAssets>(app);
+
+		app.init_asset::<DoorMeta>();
+	}
+}
+
+impl<TDependencies> HandlesInteractive for InteractivePlugin<TDependencies> {
 	type TInteractiveMut = InteractiveMut<'static, 'static>;
 }
