@@ -1,6 +1,6 @@
-pub mod array;
-pub mod slice;
-pub mod vec;
+mod array;
+mod slice;
+mod vec;
 
 pub trait Iterate<'a>: 'a
 where
