@@ -5,7 +5,6 @@ use crate::{
 	traits::{
 		accessors::get::GetContextMut,
 		handles_animations::priority_order::DescendingAnimationPriorities,
-		iterate::Iterate,
 	},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
@@ -17,7 +16,7 @@ use std::{
 	hash::Hash,
 	ops::{Deref, DerefMut},
 };
-use zyheeda_core::prelude::OrderedSet;
+use zyheeda_core::prelude::*;
 
 pub trait HandlesAnimations {
 	type TAnimationsMut: SystemParam

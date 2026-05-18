@@ -1,5 +1,7 @@
 pub use crate::{
 	collections::{
+		is_empty::IsEmpty,
+		iterate::Iterate,
 		ordered::{Entry, OrderedHashMap, OrderedSet, UniqueIter},
 		ring_buffer::RingBuffer,
 		sorted::Sorted,

@@ -2,9 +2,10 @@ mod dto;
 
 use crate::{components::inventory::dto::InventoryDto, item::Item};
 use bevy::prelude::*;
-use common::{tools::inventory_key::InventoryKey, traits::iterate::Iterate};
+use common::tools::inventory_key::InventoryKey;
 use macros::SavableComponent;
 use std::iter::Enumerate;
+use zyheeda_core::prelude::*;
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Default, Clone)]
 #[savable_component(id = "inventory", dto = InventoryDto)]
