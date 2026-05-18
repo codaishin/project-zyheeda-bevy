@@ -13,7 +13,7 @@ use macros::asset_path;
 
 #[derive(Component, Debug, PartialEq)]
 #[component(immutable)]
-#[require(DoorMetaHandle, ApplyDoorAnimations, Transform)]
+#[require(DoorMetaHandle, Transform, ApplyDoorAnimations, ApplyDoorFrame)]
 pub(crate) struct Door(pub(crate) DoorType);
 
 impl Prefab<()> for Door {
@@ -50,3 +50,6 @@ impl AnimationsMarker for ApplyDoorAnimations {
 	type TConfig = DoorMeta;
 	type TConfigComponent = DoorMetaHandle;
 }
+
+#[derive(Component, Debug, PartialEq, Default)]
+pub(crate) struct ApplyDoorFrame;

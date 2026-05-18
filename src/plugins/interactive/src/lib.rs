@@ -1,10 +1,11 @@
 mod assets;
 mod components;
+mod systems;
 
 use crate::{
 	assets::door_meta::DoorMeta,
 	components::{
-		door::{ApplyDoorAnimations, Door},
+		door::{ApplyDoorAnimations, ApplyDoorFrame, Door},
 		interactive::Interactive,
 	},
 };
@@ -16,6 +17,7 @@ use common::{
 		handles_animations::HandlesAnimations,
 		handles_custom_assets::HandlesCustomFolderAssets,
 		handles_map_generation::HandlesMapGeneration,
+		handles_physics::HandlesPhysicsConfig,
 		prefab::AddPrefabObserver,
 		thread_safe::ThreadSafe,
 	},
@@ -24,20 +26,24 @@ use std::marker::PhantomData;
 
 pub struct InteractivePlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TMaps, TAnimations> InteractivePlugin<(TLoading, TMaps, TAnimations)>
+impl<TLoading, TPhysics, TMaps, TAnimations>
+	InteractivePlugin<(TLoading, TPhysics, TMaps, TAnimations)>
 where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
+	TPhysics: ThreadSafe + HandlesPhysicsConfig,
 	TMaps: ThreadSafe + HandlesMapGeneration,
 	TAnimations: ThreadSafe + HandlesAnimations,
 {
-	pub fn from_plugin(_: &TLoading, _: &TMaps, _: &TAnimations) -> Self {
+	pub fn from_plugin(_: &TLoading, _: &TPhysics, _: &TMaps, _: &TAnimations) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLoading, TMaps, TAnimations> Plugin for InteractivePlugin<(TLoading, TMaps, TAnimations)>
+impl<TLoading, TPhysics, TMaps, TAnimations> Plugin
+	for InteractivePlugin<(TLoading, TPhysics, TMaps, TAnimations)>
 where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
+	TPhysics: ThreadSafe + HandlesPhysicsConfig,
 	TMaps: ThreadSafe + HandlesMapGeneration,
 	TAnimations: ThreadSafe + HandlesAnimations,
 {
@@ -47,13 +53,16 @@ where
 		app.init_asset::<DoorMeta>()
 			.add_prefab_observer::<Door, ()>()
 			.add_systems(
-				Update,
+				Startup,
 				Interactive::configure_map_prefab::<TMaps::TMapPrefabs>.pipe(OnError::log),
 			)
 			.add_systems(
 				Update,
-				ApplyDoorAnimations::register_animations_system::<TAnimations::TAnimationsMut>
-					.pipe(OnError::log),
+				(
+					ApplyDoorFrame::apply::<TPhysics::TConfigMut>,
+					ApplyDoorAnimations::register_animations_system::<TAnimations::TAnimationsMut>
+						.pipe(OnError::log),
+				),
 			);
 	}
 }

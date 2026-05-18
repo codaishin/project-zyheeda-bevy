@@ -27,11 +27,12 @@
 		"Asset": {
 			"model_path": "agents/player/model.glb",
 			"interactive_detection_shape": {
-				"forward_offset": 0.4,
+				"forward_offset": 0.3,
 				"shape": {
-					"Cylinder": {
+					"Cuboid": {
+						"half_x": 0.2,
 						"half_y": 0.65,
-						"radius": 0.3
+						"half_z": 0.3
 					}
 				}
 			},

@@ -13,9 +13,9 @@ pub struct BodyConfig {
 }
 
 impl BodyConfig {
-	pub fn from_shape(shape: Shape) -> Self {
+	pub fn from_shape(shape: impl Into<Shape>) -> Self {
 		Self {
-			shape,
+			shape: shape.into(),
 			physics_type: PhysicsType::Terrain(HashSet::from([Blocker::Physical])),
 			sub_frames: vec![],
 		}

@@ -10,3 +10,9 @@ impl View<Handle<DoorMeta>> for DoorMetaHandle {
 		&self.0
 	}
 }
+
+impl From<&'_ DoorMetaHandle> for AssetId<DoorMeta> {
+	fn from(DoorMetaHandle(handle): &'_ DoorMetaHandle) -> Self {
+		handle.id()
+	}
+}

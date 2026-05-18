@@ -11,6 +11,7 @@ use common::{
 			AnimationNames,
 		},
 		handles_custom_assets::{AssetFileExtensions, AssetFolderPath},
+		handles_physics::physical_bodies::ShapeParameters,
 	},
 };
 use macros::asset_path;
@@ -18,8 +19,9 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Asset, TypePath, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
 pub(crate) struct DoorMeta {
-	animations: DoorAnimations,
-	animation_mask_groups: HashMap<AnimationMaskBits, AffectedAnimationBones>,
+	pub(crate) animations: DoorAnimations,
+	pub(crate) animation_mask_groups: HashMap<AnimationMaskBits, AffectedAnimationBones>,
+	pub(crate) interactive_detection_shape: ShapeParameters,
 }
 
 impl AssetFolderPath for DoorMeta {
