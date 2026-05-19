@@ -1,5 +1,5 @@
-use super::{IsPlaying, RepeatAnimation, ReplayAnimation, StopAnimation};
-use crate::traits::PlayAnimation;
+use super::UpdateAnimation;
+use crate::traits::IsPlaying;
 use bevy::prelude::*;
 
 impl IsPlaying<AnimationNodeIndex> for Mut<'_, AnimationPlayer> {
@@ -8,26 +8,22 @@ impl IsPlaying<AnimationNodeIndex> for Mut<'_, AnimationPlayer> {
 	}
 }
 
-impl PlayAnimation<AnimationNodeIndex> for Mut<'_, AnimationPlayer> {
-	fn play(&mut self, index: AnimationNodeIndex) {
-		AnimationPlayer::play(self, index);
-	}
-}
+impl UpdateAnimation<AnimationNodeIndex> for Mut<'_, AnimationPlayer> {
+	fn update_animation(&mut self, index: AnimationNodeIndex, seek: super::SetTo) {
+		match seek {
+			super::SetTo::Play => {
+				self.play(index);
+			}
+			super::SetTo::Replay => {
+				self.play(index).replay();
+			}
+			super::SetTo::Repeat => {
+				self.play(index).repeat();
+			}
 
-impl ReplayAnimation<AnimationNodeIndex> for Mut<'_, AnimationPlayer> {
-	fn replay(&mut self, index: AnimationNodeIndex) {
-		AnimationPlayer::play(self, index).replay();
-	}
-}
-
-impl RepeatAnimation<AnimationNodeIndex> for Mut<'_, AnimationPlayer> {
-	fn repeat(&mut self, index: AnimationNodeIndex) {
-		AnimationPlayer::play(self, index).repeat();
-	}
-}
-
-impl StopAnimation<AnimationNodeIndex> for Mut<'_, AnimationPlayer> {
-	fn stop_animation(&mut self, index: AnimationNodeIndex) {
-		self.stop(index);
+			super::SetTo::Stop => {
+				self.stop(index);
+			}
+		}
 	}
 }
