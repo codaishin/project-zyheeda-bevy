@@ -110,6 +110,7 @@ impl ApplyAgentConfig {
 					Body {
 						shape: Shape::Parameters(ShapeParameters::Capsule { half_y, radius }),
 						physics_type: PhysicsType::Agent(HashSet::from([Blocker::Character])),
+						sub_frames: vec![],
 					},
 					TranslationOffsets { center, aim },
 				);
@@ -756,6 +757,7 @@ mod tests {
 							radius: Units::from(0.5),
 						}),
 						physics_type: PhysicsType::Agent(HashSet::from([Blocker::Character])),
+						sub_frames: vec![],
 					};
 
 					mock.expect_configure_default_attributes().return_const(());

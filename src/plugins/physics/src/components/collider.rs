@@ -51,12 +51,15 @@ pub(crate) enum ColliderShape {
 	},
 }
 
-impl From<Shape> for ColliderShape {
-	fn from(shape: Shape) -> Self {
+impl<T> From<T> for ColliderShape
+where
+	T: Into<Shape>,
+{
+	fn from(shape: T) -> Self {
 		use Shape::{Parameters, StaticGltfMesh3d};
 		use ShapeParameters::{Capsule, Cuboid, Cylinder, Sphere};
 
-		match shape {
+		match shape.into() {
 			Parameters(Sphere { radius }) => ColliderShape::Sphere {
 				radius,
 				hollow: false,

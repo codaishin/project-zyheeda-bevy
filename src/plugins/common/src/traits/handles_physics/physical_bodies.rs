@@ -9,6 +9,7 @@ use std::collections::HashSet;
 pub struct Body {
 	pub shape: Shape,
 	pub physics_type: PhysicsType,
+	pub sub_frames: Vec<InteractiveFrame>,
 }
 
 impl Body {
@@ -16,11 +17,17 @@ impl Body {
 		Self {
 			shape,
 			physics_type: PhysicsType::Terrain(HashSet::from([Blocker::Physical])),
+			sub_frames: vec![],
 		}
 	}
 
 	pub fn with_physics_type(mut self, physics_type: PhysicsType) -> Self {
 		self.physics_type = physics_type;
+		self
+	}
+
+	pub fn with_sub_frames(mut self, body_parts: impl Into<Vec<InteractiveFrame>>) -> Self {
+		self.sub_frames = body_parts.into();
 		self
 	}
 }
@@ -31,6 +38,9 @@ impl From<Shape> for Body {
 	}
 }
 
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+pub struct InteractiveFrame(pub ShapeParameters);
+
 /// Shape definition. Used to describe physics colliders.
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum Shape {
@@ -38,6 +48,12 @@ pub enum Shape {
 	Parameters(ShapeParameters),
 	/// Use the [`Entity`]'s [`Mesh3d`] for a static collider
 	StaticGltfMesh3d,
+}
+
+impl From<ShapeParameters> for Shape {
+	fn from(shape: ShapeParameters) -> Self {
+		Self::Parameters(shape)
+	}
 }
 
 /// Shape parameters for a static collider.
