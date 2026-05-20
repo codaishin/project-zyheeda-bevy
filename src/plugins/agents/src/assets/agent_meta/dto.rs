@@ -15,7 +15,7 @@ use common::{
 		},
 		handles_custom_assets::{AssetFileExtensions, TryLoadFrom},
 		handles_movement::MovementSpeed,
-		handles_physics::PhysicalDefaultAttributes,
+		handles_physics::{PhysicalDefaultAttributes, physical_bodies::InteractiveFrame},
 	},
 };
 use serde::{Deserialize, Serialize};
@@ -34,6 +34,7 @@ pub struct AgentConfigDto {
 pub(crate) enum ModelConfig {
 	Asset {
 		model_path: String,
+		interactive_detection_shape: InteractiveFrame,
 		bones: Bones,
 		movement_speed: MovementSpeed,
 		required_clearance: RequiredClearance,
@@ -67,6 +68,7 @@ impl TryLoadFrom<AgentConfigDto> for AgentMeta {
 			}
 			ModelConfig::Asset {
 				model_path,
+				interactive_detection_shape,
 				bones,
 				movement_speed,
 				required_clearance,
@@ -77,6 +79,7 @@ impl TryLoadFrom<AgentConfigDto> for AgentMeta {
 				loadout,
 				bones,
 				model: AgentModel::Asset(model_path),
+				interactive_detection_shape,
 				required_clearance,
 				height_levels,
 				speed: movement_speed,

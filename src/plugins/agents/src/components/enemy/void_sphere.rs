@@ -20,7 +20,10 @@ use common::{
 		handles_enemies::EnemyType,
 		handles_map_generation::AgentType,
 		handles_movement::{MovementSpeed, RequiredClearance},
-		handles_physics::PhysicalDefaultAttributes,
+		handles_physics::{
+			PhysicalDefaultAttributes,
+			physical_bodies::{InteractiveFrame, ShapeParameters},
+		},
 		handles_skill_physics::SkillMountBone,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
@@ -53,6 +56,7 @@ impl VoidSphere {
 	const OUTER_RADIUS: f32 = 0.4;
 	const TORUS_RADIUS: f32 = 0.35;
 	const TORUS_RING_RADIUS: f32 = Self::OUTER_RADIUS - Self::TORUS_RADIUS;
+	const INTERACTIVE_DETECTION_DISTANCE: f32 = 0.1;
 
 	const SLOT_OFFSET: Vec3 = Vec3::new(0., 0., -(Self::OUTER_RADIUS + Self::TORUS_RING_RADIUS));
 
@@ -71,6 +75,13 @@ impl VoidSphere {
 			model: AgentModel::Procedural(|e| {
 				e.try_insert(Self);
 			}),
+			interactive_detection_shape: InteractiveFrame {
+				forward_offset: Units::ZERO,
+				shape: ShapeParameters::Cylinder {
+					half_y: Units::from(Self::COLLIDER_GROUND_OFFSET),
+					radius: Units::from(Self::OUTER_RADIUS + Self::INTERACTIVE_DETECTION_DISTANCE),
+				},
+			},
 			bones: Self::bones(),
 			required_clearance: RequiredClearance {
 				vertical: Units::from(Self::COLLIDER_GROUND_OFFSET),
