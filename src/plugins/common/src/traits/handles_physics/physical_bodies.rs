@@ -9,15 +9,15 @@ use std::collections::HashSet;
 pub struct Body {
 	pub shape: Shape,
 	pub physics_type: PhysicsType,
-	pub blocker_types: HashSet<Blocker>,
+	pub sub_frames: Vec<InteractiveFrame>,
 }
 
 impl Body {
 	pub fn from_shape(shape: Shape) -> Self {
 		Self {
 			shape,
-			physics_type: PhysicsType::Terrain,
-			blocker_types: HashSet::from([Blocker::Physical]),
+			physics_type: PhysicsType::Terrain(HashSet::from([Blocker::Physical])),
+			sub_frames: vec![],
 		}
 	}
 
@@ -26,11 +26,8 @@ impl Body {
 		self
 	}
 
-	pub fn with_blocker_types<TBlocks>(mut self, blocks: TBlocks) -> Self
-	where
-		TBlocks: IntoIterator<Item = Blocker>,
-	{
-		self.blocker_types = HashSet::from_iter(blocks);
+	pub fn with_sub_frames(mut self, body_parts: impl Into<Vec<InteractiveFrame>>) -> Self {
+		self.sub_frames = body_parts.into();
 		self
 	}
 }
@@ -41,7 +38,25 @@ impl From<Shape> for Body {
 	}
 }
 
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+pub struct InteractiveFrame(pub ShapeParameters);
+
 /// Shape definition. Used to describe physics colliders.
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+pub enum Shape {
+	/// Use the given parameters for a static collider
+	Parameters(ShapeParameters),
+	/// Use the [`Entity`]'s [`Mesh3d`] for a static collider
+	StaticGltfMesh3d,
+}
+
+impl From<ShapeParameters> for Shape {
+	fn from(shape: ShapeParameters) -> Self {
+		Self::Parameters(shape)
+	}
+}
+
+/// Shape parameters for a static collider.
 ///
 /// Coordinates are in line with the bevy coordinate system.
 /// So without rotations they are:
@@ -53,7 +68,7 @@ impl From<Shape> for Body {
 /// be interpreted additively in order to prevent illogical value combinations.
 /// For instance a capsule collider's full height is composed of `2 * half_y + 2 * radius`.
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
-pub enum Shape {
+pub enum ShapeParameters {
 	Sphere {
 		radius: Units,
 	},
@@ -70,14 +85,13 @@ pub enum Shape {
 		half_y: Units,
 		radius: Units,
 	},
-	/// Use the [`Entity`]'s [`Mesh3d`] for a static collider
-	StaticGltfMesh3d,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum PhysicsType {
-	Agent,
-	Terrain,
+	Agent(HashSet<Blocker>),
+	Terrain(HashSet<Blocker>),
+	InteractiveFrame,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]

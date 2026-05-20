@@ -8,7 +8,7 @@ use common::{
 	errors::Unreachable,
 	tools::Units,
 	traits::{
-		handles_physics::physical_bodies::Shape,
+		handles_physics::physical_bodies::{Shape, ShapeParameters},
 		prefab::{Prefab, PrefabEntityCommands, Reapply},
 	},
 };
@@ -18,6 +18,7 @@ pub(crate) const GENERIC_COLLISION_GROUP: Group = Group::GROUP_1;
 pub(crate) const TERRAIN_GROUP: Group = Group::GROUP_2;
 pub(crate) const RAY_GROUP: Group = Group::GROUP_3;
 pub(crate) const MOUSE_HOVERABLE_GROUP: Group = Group::GROUP_4;
+pub(crate) const INTERACTIVE_GROUP: Group = Group::GROUP_5;
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
 #[component(immutable)]
@@ -50,25 +51,31 @@ pub(crate) enum ColliderShape {
 	},
 }
 
-impl From<Shape> for ColliderShape {
-	fn from(value: Shape) -> Self {
-		match value {
-			Shape::Sphere { radius } => Self::Sphere {
+impl<T> From<T> for ColliderShape
+where
+	T: Into<Shape>,
+{
+	fn from(shape: T) -> Self {
+		use Shape::{Parameters, StaticGltfMesh3d};
+		use ShapeParameters::{Capsule, Cuboid, Cylinder, Sphere};
+
+		match shape.into() {
+			Parameters(Sphere { radius }) => ColliderShape::Sphere {
 				radius,
 				hollow: false,
 			},
-			Shape::Cuboid {
+			Parameters(Cuboid {
 				half_x,
 				half_y,
 				half_z,
-			} => Self::Cuboid {
+			}) => ColliderShape::Cuboid {
 				half_x,
 				half_y,
 				half_z,
 			},
-			Shape::Capsule { half_y, radius } => Self::Capsule { half_y, radius },
-			Shape::Cylinder { half_y, radius } => Self::Cylinder { half_y, radius },
-			Shape::StaticGltfMesh3d => Self::EntityMesh {
+			Parameters(Capsule { half_y, radius }) => ColliderShape::Capsule { half_y, radius },
+			Parameters(Cylinder { half_y, radius }) => ColliderShape::Cylinder { half_y, radius },
+			StaticGltfMesh3d => Self::EntityMesh {
 				collider_type: ColliderType::Concave,
 			},
 		}

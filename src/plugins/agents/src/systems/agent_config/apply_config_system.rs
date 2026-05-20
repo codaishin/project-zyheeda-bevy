@@ -26,7 +26,7 @@ use common::{
 			NoBodyConfigured,
 			NoDefaultAttributes,
 			TranslationOffsets,
-			physical_bodies::{Blocker, Body, PhysicsType, Shape},
+			physical_bodies::{Blocker, Body, PhysicsType, Shape, ShapeParameters},
 		},
 		handles_skill_physics::{Initialize, NotInitializedAgent},
 		loadout::ItemName,
@@ -108,9 +108,9 @@ impl ApplyAgentConfig {
 				let aim = config.height_levels.aim - *config.required_clearance.vertical;
 				ctx.configure_body(
 					Body {
-						shape: Shape::Capsule { half_y, radius },
-						physics_type: PhysicsType::Agent,
-						blocker_types: HashSet::from([Blocker::Character]),
+						shape: Shape::Parameters(ShapeParameters::Capsule { half_y, radius }),
+						physics_type: PhysicsType::Agent(HashSet::from([Blocker::Character])),
+						sub_frames: vec![],
 					},
 					TranslationOffsets { center, aim },
 				);
@@ -693,6 +693,8 @@ mod tests {
 	}
 
 	mod physics {
+		use common::traits::handles_physics::physical_bodies::ShapeParameters;
+
 		use super::*;
 		use crate::assets::agent_meta::HeightLevels;
 
@@ -750,12 +752,12 @@ mod tests {
 				AgentConfig { config_handle },
 				_Physics::new().with_mock(|mock| {
 					let expected_body = Body {
-						shape: Shape::Capsule {
+						shape: Shape::Parameters(ShapeParameters::Capsule {
 							half_y: Units::from(1.5),
 							radius: Units::from(0.5),
-						},
-						physics_type: PhysicsType::Agent,
-						blocker_types: HashSet::from([Blocker::Character]),
+						}),
+						physics_type: PhysicsType::Agent(HashSet::from([Blocker::Character])),
+						sub_frames: vec![],
 					};
 
 					mock.expect_configure_default_attributes().return_const(());
