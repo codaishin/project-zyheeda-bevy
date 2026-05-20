@@ -39,7 +39,30 @@ impl From<Shape> for Body {
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct InteractiveFrame(pub ShapeParameters);
+pub struct InteractiveFrame {
+	pub forward_offset: Units,
+	pub shape: ShapeParameters,
+}
+
+impl InteractiveFrame {
+	pub const fn from_shape(shape: ShapeParameters) -> Self {
+		Self {
+			shape,
+			forward_offset: Units::ZERO,
+		}
+	}
+
+	pub const fn with_forward_offset(mut self, forward_offset: Units) -> Self {
+		self.forward_offset = forward_offset;
+		self
+	}
+}
+
+impl From<ShapeParameters> for InteractiveFrame {
+	fn from(shape: ShapeParameters) -> Self {
+		Self::from_shape(shape)
+	}
+}
 
 /// Shape definition. Used to describe physics colliders.
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
