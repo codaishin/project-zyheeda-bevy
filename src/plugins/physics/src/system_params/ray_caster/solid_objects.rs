@@ -33,7 +33,7 @@ impl Raycast<SolidObjects> for RayCaster<'_, '_> {
 		let (entity, time_of_impact) =
 			ray_caster.cast_ray(ray.origin, *ray.direction, Real::MAX, true, filter)?;
 
-		if let Ok(ChildCollider { root, .. }) = self.interaction_child_colliders.get(entity) {
+		if let Ok(ChildCollider { root, .. }) = self.effect_target_child_colliders.get(entity) {
 			return Some(RaycastHit {
 				entity: *root,
 				time_of_impact,
@@ -61,7 +61,7 @@ impl RayCaster<'_, '_> {
 				return false;
 			}
 
-			match self.interaction_child_colliders.get(entity) {
+			match self.effect_target_child_colliders.get(entity) {
 				Ok(ChildCollider { root, .. }) if exclude.contains(root) => {
 					return false;
 				}
@@ -83,30 +83,19 @@ impl RayCaster<'_, '_> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{
-		collider::MOUSE_HOVERABLE_GROUP,
-		interaction_target::InteractionTarget,
+	use crate::{
+		components::{collider::MOUSE_HOVERABLE_GROUP, effect_target::EffectTarget},
+		tests::TestCollisionsPlugin,
 	};
-	use bevy::{
-		ecs::system::{RunSystemError, RunSystemOnce},
-		mesh::MeshPlugin,
-		scene::ScenePlugin,
-	};
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use test_case::test_case;
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_plugins((
-			MinimalPlugins,
-			TransformPlugin,
-			AssetPlugin::default(),
-			MeshPlugin,
-			ScenePlugin,
-			RapierPhysicsPlugin::<NoUserData>::default(),
-		));
-		app.add_observer(ChildCollider::<InteractionTarget>::link);
+		app.add_plugins(TestCollisionsPlugin);
+		app.add_observer(ChildCollider::<EffectTarget>::link);
 		app.add_observer(ChildCollider::<RigidBody>::link);
 
 		app
@@ -147,7 +136,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				InteractionTarget,
+				EffectTarget,
 				children![(Transform::default(), Collider::ball(0.5))],
 			))
 			.id();
@@ -213,7 +202,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				InteractionTarget,
+				EffectTarget,
 				children![(
 					RigidBody::Fixed,
 					children![(Transform::default(), Collider::ball(0.5))]
@@ -296,7 +285,7 @@ mod tests {
 	}
 
 	#[test_case(RigidBody::Fixed; "rigid body")]
-	#[test_case(InteractionTarget; "interaction target")]
+	#[test_case(EffectTarget; "interaction target")]
 	fn ignore_child_entities<TMarker>(maker: TMarker) -> Result<(), RunSystemError>
 	where
 		TMarker: Component + Copy,

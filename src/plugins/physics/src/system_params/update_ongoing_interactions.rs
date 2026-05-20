@@ -1,5 +1,5 @@
 use crate::{
-	components::{collider::ChildCollider, interaction_target::InteractionTarget},
+	components::{collider::ChildCollider, effect_target::EffectTarget},
 	resources::ongoing_interactions::OngoingInteractions,
 	traits::send_collision_interaction::PushOngoingInteraction,
 };
@@ -8,7 +8,7 @@ use bevy::{ecs::system::SystemParam, prelude::*};
 #[derive(SystemParam)]
 pub(crate) struct UpdateOngoingInteractions<'w, 's> {
 	events: ResMut<'w, OngoingInteractions>,
-	interaction_colliders: Query<'w, 's, &'static ChildCollider<InteractionTarget>>,
+	interaction_colliders: Query<'w, 's, &'static ChildCollider<EffectTarget>>,
 }
 
 impl PushOngoingInteraction for UpdateOngoingInteractions<'_, '_> {
@@ -72,10 +72,10 @@ mod tests {
 		];
 		let colliders = [
 			app.world_mut()
-				.spawn(ChildCollider::<InteractionTarget>::of(roots[0]))
+				.spawn(ChildCollider::<EffectTarget>::of(roots[0]))
 				.id(),
 			app.world_mut()
-				.spawn(ChildCollider::<InteractionTarget>::of(roots[1]))
+				.spawn(ChildCollider::<EffectTarget>::of(roots[1]))
 				.id(),
 		];
 

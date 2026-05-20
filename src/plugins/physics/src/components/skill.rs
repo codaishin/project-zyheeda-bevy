@@ -4,7 +4,7 @@ mod lifetime;
 mod motion;
 mod projection;
 
-use crate::components::{interaction_target::InteractionTarget, skill::dto::SkillDto};
+use crate::components::{effect_target::EffectTarget, skill::dto::SkillDto};
 use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
@@ -27,11 +27,11 @@ pub struct Skill {
 }
 
 #[derive(Component, Debug, PartialEq)]
-#[require(InteractionTarget, Transform, Visibility)]
+#[require(EffectTarget, Transform, Visibility)]
 pub struct ContactInteractionTarget;
 
 #[derive(Component, Debug, PartialEq)]
-#[require(InteractionTarget, Transform, Visibility)]
+#[require(EffectTarget, Transform, Visibility)]
 pub struct ProjectionInteractionTarget;
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]

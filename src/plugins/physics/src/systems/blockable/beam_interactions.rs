@@ -5,7 +5,7 @@ use crate::{
 		blockable::Blockable,
 		blocker_types::BlockerTypes,
 		collider::{ChildCollider, ColliderShape},
-		interaction_target::InteractionTarget,
+		effect_target::EffectTarget,
 		skill_transform::SkillTransforms,
 	},
 	messages::BeamInteraction,
@@ -39,7 +39,7 @@ impl Blockable {
 		objects: Query<(Entity, &Self, &SkillTransforms, &GlobalTransform)>,
 		transforms_and_colliders: Query<(&mut Transform, Option<&ColliderShape>)>,
 		blockers: Query<&BlockerTypes>,
-		interaction_colliders: Query<&ChildCollider<InteractionTarget>>,
+		effect_target_colliders: Query<&ChildCollider<EffectTarget>>,
 		commands: ZyheedaCommands,
 	) -> Result<(), BeamError> {
 		Self::beam_interactions_internal(
@@ -48,7 +48,7 @@ impl Blockable {
 			objects,
 			transforms_and_colliders,
 			blockers,
-			interaction_colliders,
+			effect_target_colliders,
 			commands,
 		)
 	}
@@ -59,7 +59,7 @@ impl Blockable {
 		objects: Query<(Entity, &Self, &SkillTransforms, &GlobalTransform)>,
 		mut transforms_and_colliders: Query<(&mut Transform, Option<&ColliderShape>)>,
 		blockers: Query<&BlockerTypes>,
-		interaction_colliders: Query<&ChildCollider<InteractionTarget>>,
+		interaction_colliders: Query<&ChildCollider<EffectTarget>>,
 		mut commands: ZyheedaCommands,
 	) -> Result<(), BeamError<TCasterError>>
 	where
@@ -153,7 +153,7 @@ impl Blockable {
 	fn blocked(
 		hit: &RayHit,
 		blockers: Query<&BlockerTypes>,
-		interaction_colliders: Query<&ChildCollider<InteractionTarget>>,
+		interaction_colliders: Query<&ChildCollider<EffectTarget>>,
 		blocked_by: &HashSet<Blocker>,
 	) -> bool {
 		let entity = match interaction_colliders.get(hit.entity) {
@@ -414,9 +414,7 @@ mod tests {
 							Blocker::Physical,
 						])))
 						.id();
-					let collider = world
-						.spawn(ChildCollider::<InteractionTarget>::of(blocker))
-						.id();
+					let collider = world.spawn(ChildCollider::<EffectTarget>::of(blocker)).id();
 					mock.expect_cast_ray_continuously_sorted()
 						.return_const(Ok(Sorted::from([
 							RayHit {

@@ -5,7 +5,7 @@ mod terrain;
 
 use crate::components::{
 	collider::ChildCollider,
-	interaction_target::InteractionTarget,
+	effect_target::EffectTarget,
 	offset::AimOffset,
 	world_camera::WorldCamera,
 };
@@ -21,7 +21,7 @@ where
 	T: SystemParam + 'static,
 {
 	context: StaticSystemParam<'w, 's, T>,
-	interaction_child_colliders: Query<'w, 's, &'static ChildCollider<InteractionTarget>>,
+	effect_target_child_colliders: Query<'w, 's, &'static ChildCollider<EffectTarget>>,
 	rigid_body_child_colliders: Query<'w, 's, &'static ChildCollider<RigidBody>>,
 	transforms: Query<'w, 's, (&'static GlobalTransform, Option<&'static AimOffset>)>,
 	world_cams: Query<'w, 's, &'static mut WorldCamera>,

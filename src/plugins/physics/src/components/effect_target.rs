@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 use common::components::persistent_entity::PersistentEntity;
 
-/// Marks an entity as the target for interactions like damaging effects, healing, etc.
+/// Marks an entity as the target for effects like damage, healing, etc.
 #[derive(Component, PartialEq, Debug, Default, Clone, Copy)]
 #[component(immutable)]
 #[require(PersistentEntity)]
-pub(crate) struct InteractionTarget;
+pub(crate) struct EffectTarget;
