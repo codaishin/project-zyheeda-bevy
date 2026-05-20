@@ -38,7 +38,7 @@ impl From<Shape> for Body {
 	}
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Default, Clone, Copy, Serialize, Deserialize)]
 pub struct InteractiveFrame {
 	pub forward_offset: Units,
 	pub shape: ShapeParameters,
@@ -108,6 +108,14 @@ pub enum ShapeParameters {
 		half_y: Units,
 		radius: Units,
 	},
+}
+
+impl Default for ShapeParameters {
+	fn default() -> Self {
+		Self::Sphere {
+			radius: Units::from(0.5),
+		}
+	}
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]

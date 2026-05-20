@@ -110,7 +110,7 @@ impl ApplyAgentConfig {
 					Body {
 						shape: Shape::Parameters(ShapeParameters::Capsule { half_y, radius }),
 						physics_type: PhysicsType::Agent(HashSet::from([Blocker::Character])),
-						sub_frames: vec![],
+						sub_frames: vec![config.interactive_detection_shape],
 					},
 					TranslationOffsets { center, aim },
 				);
@@ -693,7 +693,7 @@ mod tests {
 	}
 
 	mod physics {
-		use common::traits::handles_physics::physical_bodies::ShapeParameters;
+		use common::traits::handles_physics::physical_bodies::{InteractiveFrame, ShapeParameters};
 
 		use super::*;
 		use crate::assets::agent_meta::HeightLevels;
@@ -738,11 +738,18 @@ mod tests {
 			};
 			let center = 3.5;
 			let aim = 3.3;
+			let interactive_detection_shape = InteractiveFrame {
+				forward_offset: Units::from(42.),
+				shape: ShapeParameters::Sphere {
+					radius: Units::from(11.),
+				},
+			};
 			let mut app = setup([(
 				&config_handle,
 				AgentMeta {
 					required_clearance,
 					height_levels: HeightLevels { center, aim },
+					interactive_detection_shape,
 					..default()
 				},
 			)]);
@@ -757,7 +764,7 @@ mod tests {
 							radius: Units::from(0.5),
 						}),
 						physics_type: PhysicsType::Agent(HashSet::from([Blocker::Character])),
-						sub_frames: vec![],
+						sub_frames: vec![interactive_detection_shape],
 					};
 
 					mock.expect_configure_default_attributes().return_const(());
