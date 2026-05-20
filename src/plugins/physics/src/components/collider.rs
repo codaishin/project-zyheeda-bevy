@@ -12,6 +12,7 @@ use common::{
 		prefab::{Prefab, PrefabEntityCommands, Reapply},
 	},
 };
+use macros::asset_path;
 use std::marker::PhantomData;
 
 pub(crate) const GENERIC_COLLISION_GROUP: Group = Group::GROUP_1;
@@ -109,7 +110,10 @@ impl Prefab<()> for ColliderShape {
 				radius,
 				hollow: true,
 			} => SyncOrAsync::Async(AsyncCollider {
-				source: Source::Path("models/icosphere.glb#Mesh0/Primitive0"),
+				source: Source::Path(concat!(
+					asset_path!("generic/models/icosphere.glb"),
+					"#Mesh0/Primitive0"
+				)),
 				scale: Some(ColliderScale::Absolute(Vec3::splat(*radius * 2.))),
 				collider_type: ColliderType::Concave,
 			}),
