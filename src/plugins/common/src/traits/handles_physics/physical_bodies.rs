@@ -32,6 +32,15 @@ impl From<Shape> for Body {
 }
 
 /// Shape definition. Used to describe physics colliders.
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+pub enum Shape {
+	/// Use the given parameters for a static collider
+	Parameters(ShapeParameters),
+	/// Use the [`Entity`]'s [`Mesh3d`] for a static collider
+	StaticGltfMesh3d,
+}
+
+/// Shape parameters for a static collider.
 ///
 /// Coordinates are in line with the bevy coordinate system.
 /// So without rotations they are:
@@ -43,7 +52,7 @@ impl From<Shape> for Body {
 /// be interpreted additively in order to prevent illogical value combinations.
 /// For instance a capsule collider's full height is composed of `2 * half_y + 2 * radius`.
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
-pub enum Shape {
+pub enum ShapeParameters {
 	Sphere {
 		radius: Units,
 	},
@@ -60,8 +69,6 @@ pub enum Shape {
 		half_y: Units,
 		radius: Units,
 	},
-	/// Use the [`Entity`]'s [`Mesh3d`] for a static collider
-	StaticGltfMesh3d,
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]

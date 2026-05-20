@@ -88,7 +88,7 @@ mod tests {
 	use common::{
 		tools::Units,
 		traits::{
-			handles_physics::physical_bodies::{Blocker, Body, Shape},
+			handles_physics::physical_bodies::{Blocker, Body, Shape, ShapeParameters},
 			prefab::AddPrefabObserver,
 		},
 	};
@@ -107,9 +107,9 @@ mod tests {
 	#[test]
 	fn insert_collider() {
 		let mut app = setup();
-		let shape = Shape::Sphere {
+		let shape = Shape::Parameters(ShapeParameters::Sphere {
 			radius: Units::from(42.),
-		};
+		});
 		let entity = app
 			.world_mut()
 			.spawn(PhysicalBody(Body::from_shape(shape)))
@@ -132,9 +132,9 @@ mod tests {
 		collision_types: Option<&ActiveCollisionTypes>,
 	) {
 		let mut app = setup();
-		let shape = Shape::Sphere {
+		let shape = Shape::Parameters(ShapeParameters::Sphere {
 			radius: Units::from(42.),
-		};
+		});
 		let entity = app
 			.world_mut()
 			.spawn(PhysicalBody(
@@ -168,9 +168,9 @@ mod tests {
 		blocks: fn(HashSet<Blocker>) -> Option<HashSet<Blocker>>,
 	) {
 		let mut app = setup();
-		let shape = Shape::Sphere {
+		let shape = Shape::Parameters(ShapeParameters::Sphere {
 			radius: Units::from(42.),
-		};
+		});
 		let entity = app
 			.world_mut()
 			.spawn(PhysicalBody(Body::from_shape(shape).with_physics_type(
@@ -192,9 +192,9 @@ mod tests {
 		memberships: Group,
 	) {
 		let mut app = setup();
-		let shape = Shape::Sphere {
+		let shape = Shape::Parameters(ShapeParameters::Sphere {
 			radius: Units::from(42.),
-		};
+		});
 		let entity = app
 			.world_mut()
 			.spawn(PhysicalBody(
@@ -216,9 +216,9 @@ mod tests {
 	#[test_case(|_| PhysicsType::InteractiveFrame, Some(&Sensor); "interactive object")]
 	fn insert_sensor(physics_type: fn(HashSet<Blocker>) -> PhysicsType, sensor: Option<&Sensor>) {
 		let mut app = setup();
-		let shape = Shape::Sphere {
+		let shape = Shape::Parameters(ShapeParameters::Sphere {
 			radius: Units::from(42.),
-		};
+		});
 		let entity = app
 			.world_mut()
 			.spawn(PhysicalBody(

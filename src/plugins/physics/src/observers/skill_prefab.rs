@@ -128,7 +128,10 @@ mod tests {
 		effects::force::Force,
 		tools::Units,
 		traits::{
-			handles_physics::{PhysicalObject, physical_bodies::Shape},
+			handles_physics::{
+				PhysicalObject,
+				physical_bodies::{Shape, ShapeParameters},
+			},
 			handles_skill_physics::Effect,
 		},
 	};
@@ -162,18 +165,18 @@ mod tests {
 
 		fn default_contact_collider() -> ContactCollider {
 			ContactCollider {
-				shape: ColliderShape::from(Shape::Sphere {
+				shape: ColliderShape::from(Shape::Parameters(ShapeParameters::Sphere {
 					radius: Units::ZERO,
-				}),
+				})),
 				transform: Transform::default(),
 			}
 		}
 
 		fn default_projection_collider() -> ProjectionCollider {
 			ProjectionCollider {
-				shape: ColliderShape::from(Shape::Sphere {
+				shape: ColliderShape::from(Shape::Parameters(ShapeParameters::Sphere {
 					radius: Units::from(1.),
-				}),
+				})),
 				transform: Transform::default(),
 			}
 		}
@@ -358,9 +361,11 @@ mod tests {
 						_Skill::default_object(),
 						_Skill::default_model(),
 						ContactCollider {
-							shape: ColliderShape::from(Shape::Sphere {
-								radius: Units::from(42.),
-							}),
+							shape: ColliderShape::from(Shape::Parameters(
+								ShapeParameters::Sphere {
+									radius: Units::from(42.),
+								},
+							)),
 							transform: Transform::from_xyz(1., 2., 3.),
 						},
 						_Skill::default_effects(),
@@ -372,9 +377,11 @@ mod tests {
 			let [_, collider, _] = assert_children_count!(3, app, skill);
 			assert_eq!(
 				(
-					Some(&ColliderShape::from(Shape::Sphere {
-						radius: Units::from(42.),
-					})),
+					Some(&ColliderShape::from(Shape::Parameters(
+						ShapeParameters::Sphere {
+							radius: Units::from(42.),
+						}
+					))),
 					Some(&Transform::from_xyz(1., 2., 3.)),
 					Some(&CollisionGroups {
 						memberships: GENERIC_COLLISION_GROUP,
@@ -482,9 +489,11 @@ mod tests {
 					projection: (
 						_Skill::default_model(),
 						ProjectionCollider {
-							shape: ColliderShape::from(Shape::Sphere {
-								radius: Units::from(42.),
-							}),
+							shape: ColliderShape::from(Shape::Parameters(
+								ShapeParameters::Sphere {
+									radius: Units::from(42.),
+								},
+							)),
 							transform: Transform::from_xyz(1., 2., 3.),
 						},
 						_Skill::default_effects(),
@@ -497,9 +506,11 @@ mod tests {
 			let [.., collider] = assert_children_count!(2, app, projection);
 			assert_eq!(
 				(
-					Some(&ColliderShape::from(Shape::Sphere {
-						radius: Units::from(42.),
-					})),
+					Some(&ColliderShape::from(Shape::Parameters(
+						ShapeParameters::Sphere {
+							radius: Units::from(42.),
+						}
+					))),
 					Some(&Transform::from_xyz(1., 2., 3.)),
 					Some(&CollisionGroups {
 						memberships: GENERIC_COLLISION_GROUP,
