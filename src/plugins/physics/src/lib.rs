@@ -26,7 +26,6 @@ use crate::{
 		interaction_target::InteractionTarget,
 		lifetime::{LifetimeTiedTo, TiedLifetimes},
 		physical_body::PhysicalBody,
-		prevent_tunneling::PreventTunneling,
 		set_velocity_forward::SetVelocityForward,
 		skill::{ContactInteractionTarget, ProjectionInteractionTarget, Skill},
 		target::Target,
@@ -46,10 +45,7 @@ use crate::{
 	systems::{
 		apply_pull::ApplyPull,
 		insert_affected::InsertAffected,
-		interactions::{
-			push_beam_interactions::PushBeamInteractions,
-			push_ongoing_collisions::PushOngoingCollisions,
-		},
+		interactions::push_ongoing_collisions::PushOngoingCollisions,
 	},
 };
 use bevy::prelude::*;
@@ -196,7 +192,7 @@ where
 			// Apply interactions
 			.add_message::<RayEvent>()
 			.add_message::<BeamInteraction>()
-			.init_resource::<OngoingInteractions>()
+			.init_resource::<OngoingInteractions<EffectTarget>>()
 			// Anchor
 			.add_observer(AnchorDirty::process::<RayCaster>.pipe(OnError::log))
 			.add_systems(Update, Anchor::mark_dirty.in_set(PhysicsSystems))
@@ -213,12 +209,12 @@ where
 					// Physical effects
 					(
 						Blockable::beam_interactions.pipe(OnError::log),
-						OngoingInteractions::clear,
-						UpdateOngoingInteractions::push_beam_interactions,
+						OngoingInteractions::<EffectTarget>::clear,
+						UpdateOngoingInteractions::<EffectTarget>::push_beam_interactions,
 						Update::delta
-							.pipe(PreventTunneling::system)
+							.pipe(UpdateOngoingInteractions::<EffectTarget>::prevent_tunneling)
 							.pipe(OnError::log),
-						UpdateOngoingInteractions::push_ongoing_collisions,
+						UpdateOngoingInteractions::<EffectTarget>::push_ongoing_collisions,
 					)
 						.chain(),
 				)

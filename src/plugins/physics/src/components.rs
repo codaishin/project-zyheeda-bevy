@@ -72,18 +72,11 @@ impl ApproxEqual<f32> for RayCasterArgs {
 }
 
 #[derive(Default, Debug, PartialEq, Clone)]
-pub struct RayFilter {
-	flags: Option<QueryFilterFlags>,
-	groups: Option<CollisionGroups>,
-	exclude_collider: Option<Entity>,
-	exclude_rigid_body: Option<Entity>,
-}
-
-impl RayFilter {
-	pub(crate) fn exclude_rigid_body(mut self, entity: Entity) -> Self {
-		self.exclude_rigid_body = Some(entity);
-		self
-	}
+pub(crate) struct RayFilter {
+	pub(crate) flags: Option<QueryFilterFlags>,
+	pub(crate) groups: Option<CollisionGroups>,
+	pub(crate) exclude_collider: Option<Entity>,
+	pub(crate) exclude_rigid_body: Option<Entity>,
 }
 
 #[derive(Debug, PartialEq)]

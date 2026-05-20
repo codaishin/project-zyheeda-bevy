@@ -1,32 +1,41 @@
 use crate::{
-	components::{collider::ChildCollider, effect_target::EffectTarget},
+	components::collider::ChildCollider,
 	resources::ongoing_interactions::OngoingInteractions,
 	traits::send_collision_interaction::PushOngoingInteraction,
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
 
 #[derive(SystemParam)]
-pub(crate) struct UpdateOngoingInteractions<'w, 's> {
-	events: ResMut<'w, OngoingInteractions>,
-	interaction_colliders: Query<'w, 's, &'static ChildCollider<EffectTarget>>,
+pub(crate) struct UpdateOngoingInteractions<'w, 's, T>
+where
+	T: Component,
+{
+	interactions: ResMut<'w, OngoingInteractions<T>>,
+	child_colliders: Query<'w, 's, &'static ChildCollider<T>>,
 }
 
-impl PushOngoingInteraction for UpdateOngoingInteractions<'_, '_> {
-	fn push_ongoing_interaction(&mut self, actor: Entity, target: Entity) {
-		let actor = self.get_root(actor);
-		let target = self.get_root(target);
-		let targets = self.events.targets.entry(actor).or_default();
-
-		targets.insert(target);
-	}
-}
-
-impl UpdateOngoingInteractions<'_, '_> {
+impl<T> UpdateOngoingInteractions<'_, '_, T>
+where
+	T: Component,
+{
 	fn get_root(&self, entity: Entity) -> Entity {
-		match self.interaction_colliders.get(entity) {
+		match self.child_colliders.get(entity) {
 			Ok(ChildCollider { root, .. }) => *root,
 			Err(_) => entity,
 		}
+	}
+}
+
+impl<T> PushOngoingInteraction for UpdateOngoingInteractions<'_, '_, T>
+where
+	T: Component,
+{
+	fn push_ongoing_interaction(&mut self, actor: Entity, target: Entity) {
+		let actor = self.get_root(actor);
+		let target = self.get_root(target);
+		let targets = self.interactions.targets.entry(actor).or_default();
+
+		targets.insert(target);
 	}
 }
 
@@ -34,13 +43,16 @@ impl UpdateOngoingInteractions<'_, '_> {
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use std::collections::{HashMap, HashSet};
+	use std::collections::HashSet;
 	use testing::{SingleThreadedApp, fake_entity};
+
+	#[derive(Component, Debug, PartialEq)]
+	struct _C;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.init_resource::<OngoingInteractions>();
+		app.init_resource::<OngoingInteractions<_C>>();
 
 		app
 	}
@@ -50,15 +62,13 @@ mod tests {
 		let mut app = setup();
 
 		app.world_mut()
-			.run_system_once(move |mut sender: UpdateOngoingInteractions| {
+			.run_system_once(move |mut sender: UpdateOngoingInteractions<_C>| {
 				sender.push_ongoing_interaction(fake_entity!(1), fake_entity!(2));
 			})?;
 
 		assert_eq!(
-			&OngoingInteractions {
-				targets: HashMap::from([(fake_entity!(1), HashSet::from([fake_entity!(2)]))])
-			},
-			app.world().resource::<OngoingInteractions>()
+			&OngoingInteractions::from([(fake_entity!(1), HashSet::from([fake_entity!(2)]))]),
+			app.world().resource::<OngoingInteractions<_C>>()
 		);
 		Ok(())
 	}
@@ -72,23 +82,21 @@ mod tests {
 		];
 		let colliders = [
 			app.world_mut()
-				.spawn(ChildCollider::<EffectTarget>::of(roots[0]))
+				.spawn(ChildCollider::<_C>::of(roots[0]))
 				.id(),
 			app.world_mut()
-				.spawn(ChildCollider::<EffectTarget>::of(roots[1]))
+				.spawn(ChildCollider::<_C>::of(roots[1]))
 				.id(),
 		];
 
 		app.world_mut()
-			.run_system_once(move |mut sender: UpdateOngoingInteractions| {
+			.run_system_once(move |mut sender: UpdateOngoingInteractions<_C>| {
 				sender.push_ongoing_interaction(colliders[0], colliders[1]);
 			})?;
 
 		assert_eq!(
-			&OngoingInteractions {
-				targets: HashMap::from([(roots[0], HashSet::from([roots[1]]))])
-			},
-			app.world().resource::<OngoingInteractions>()
+			&OngoingInteractions::from([(roots[0], HashSet::from([roots[1]]))]),
+			app.world().resource::<OngoingInteractions<_C>>()
 		);
 		Ok(())
 	}
@@ -97,22 +105,22 @@ mod tests {
 	fn do_not_override_existing_entries() -> Result<(), RunSystemError> {
 		let mut app = setup();
 
-		app.world_mut().insert_resource(OngoingInteractions {
-			targets: HashMap::from([(fake_entity!(1), HashSet::from([fake_entity!(11)]))]),
-		});
 		app.world_mut()
-			.run_system_once(move |mut sender: UpdateOngoingInteractions| {
+			.insert_resource(OngoingInteractions::<_C>::from([(
+				fake_entity!(1),
+				HashSet::from([fake_entity!(11)]),
+			)]));
+		app.world_mut()
+			.run_system_once(move |mut sender: UpdateOngoingInteractions<_C>| {
 				sender.push_ongoing_interaction(fake_entity!(1), fake_entity!(2));
 			})?;
 
 		assert_eq!(
-			&OngoingInteractions {
-				targets: HashMap::from([(
-					fake_entity!(1),
-					HashSet::from([fake_entity!(11), fake_entity!(2)])
-				)])
-			},
-			app.world().resource::<OngoingInteractions>()
+			&OngoingInteractions::from([(
+				fake_entity!(1),
+				HashSet::from([fake_entity!(11), fake_entity!(2)])
+			)]),
+			app.world().resource::<OngoingInteractions<_C>>()
 		);
 		Ok(())
 	}

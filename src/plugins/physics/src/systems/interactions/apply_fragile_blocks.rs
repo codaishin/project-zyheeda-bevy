@@ -1,5 +1,5 @@
 use crate::{
-	components::{blockable::Blockable, blocker_types::BlockerTypes},
+	components::{blockable::Blockable, blocker_types::BlockerTypes, effect_target::EffectTarget},
 	resources::ongoing_interactions::OngoingInteractions,
 };
 use bevy::prelude::*;
@@ -10,7 +10,7 @@ use common::{
 
 pub(crate) fn apply_fragile_blocks(
 	mut commands: ZyheedaCommands,
-	ongoing_interactions: Res<OngoingInteractions>,
+	ongoing_interactions: Res<OngoingInteractions<EffectTarget>>,
 	fragiles: Query<(Entity, &Blockable)>,
 	blockers: Query<&BlockerTypes>,
 ) {
@@ -46,13 +46,13 @@ mod tests {
 		tools::Units,
 		traits::handles_physics::{PhysicalObject::Beam, physical_bodies::Blocker},
 	};
-	use std::collections::{HashMap, HashSet};
+	use std::collections::HashSet;
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.init_resource::<OngoingInteractions>();
+		app.init_resource::<OngoingInteractions<EffectTarget>>();
 		app.add_systems(Update, apply_fragile_blocks);
 
 		app
@@ -71,9 +71,10 @@ mod tests {
 			.world_mut()
 			.spawn(BlockerTypes::from([Blocker::Physical]))
 			.id();
-		app.insert_resource(OngoingInteractions {
-			targets: HashMap::from([(blocker, HashSet::from([fragile]))]),
-		});
+		app.insert_resource(OngoingInteractions::<EffectTarget>::from([(
+			blocker,
+			HashSet::from([fragile]),
+		)]));
 
 		app.update();
 
@@ -94,9 +95,10 @@ mod tests {
 			.world_mut()
 			.spawn(BlockerTypes::from([Blocker::Physical]))
 			.id();
-		app.insert_resource(OngoingInteractions {
-			targets: HashMap::from([(blocker, HashSet::from([fragile]))]),
-		});
+		app.insert_resource(OngoingInteractions::<EffectTarget>::from([(
+			blocker,
+			HashSet::from([fragile]),
+		)]));
 
 		app.update();
 
@@ -116,9 +118,10 @@ mod tests {
 			.world_mut()
 			.spawn(BlockerTypes::from([Blocker::Force]))
 			.id();
-		app.insert_resource(OngoingInteractions {
-			targets: HashMap::from([(blocker, HashSet::from([fragile]))]),
-		});
+		app.insert_resource(OngoingInteractions::<EffectTarget>::from([(
+			blocker,
+			HashSet::from([fragile]),
+		)]));
 
 		app.update();
 

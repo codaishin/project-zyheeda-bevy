@@ -1,5 +1,7 @@
 use crate::{
+	components::effect_target::EffectTarget,
 	messages::BeamInteraction,
+	system_params::update_ongoing_interactions::UpdateOngoingInteractions,
 	traits::send_collision_interaction::PushOngoingInteraction,
 };
 use bevy::{
@@ -7,21 +9,23 @@ use bevy::{
 	prelude::*,
 };
 
-impl<T> PushBeamInteractions for T where
-	T: for<'w, 's> SystemParam<Item<'w, 's>: PushOngoingInteraction>
-{
+impl UpdateOngoingInteractions<'_, '_, EffectTarget> {
+	pub(crate) fn push_beam_interactions(
+		ongoing_interactions: StaticSystemParam<Self>,
+		beam_interactions: MessageReader<BeamInteraction>,
+	) {
+		push_beam_interactions_internal(ongoing_interactions, beam_interactions)
+	}
 }
 
-pub trait PushBeamInteractions:
-	for<'w, 's> SystemParam<Item<'w, 's>: PushOngoingInteraction>
+fn push_beam_interactions_internal<T>(
+	mut ongoing_interactions: StaticSystemParam<T>,
+	mut beam_interactions: MessageReader<BeamInteraction>,
+) where
+	T: for<'w, 's> SystemParam<Item<'w, 's>: PushOngoingInteraction>,
 {
-	fn push_beam_interactions(
-		mut ongoing_interactions: StaticSystemParam<Self>,
-		mut beam_interactions: MessageReader<BeamInteraction>,
-	) {
-		for BeamInteraction { beam, intersects } in beam_interactions.read() {
-			ongoing_interactions.push_ongoing_interaction(*beam, *intersects);
-		}
+	for BeamInteraction { beam, intersects } in beam_interactions.read() {
+		ongoing_interactions.push_ongoing_interaction(*beam, *intersects);
 	}
 }
 
@@ -64,7 +68,10 @@ mod tests {
 
 		app.add_message::<BeamInteraction>();
 		app.init_resource::<_OngoingCollisions>();
-		app.add_systems(Update, ResMut::<_OngoingCollisions>::push_beam_interactions);
+		app.add_systems(
+			Update,
+			push_beam_interactions_internal::<ResMut<_OngoingCollisions>>,
+		);
 
 		app
 	}

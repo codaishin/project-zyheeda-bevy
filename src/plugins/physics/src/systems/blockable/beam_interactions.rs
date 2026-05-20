@@ -4,7 +4,7 @@ use crate::{
 		RayFilter,
 		blockable::Blockable,
 		blocker_types::BlockerTypes,
-		collider::{ChildCollider, ColliderShape},
+		collider::{ChildCollider, ColliderShape, GENERIC_COLLISION_GROUP, RAY_GROUP},
 		effect_target::EffectTarget,
 		skill_transform::SkillTransforms,
 	},
@@ -20,7 +20,7 @@ use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use bevy_rapier3d::plugin::ReadRapierContext;
+use bevy_rapier3d::{geometry::CollisionGroups, plugin::ReadRapierContext};
 use common::{
 	errors::{ErrorData, Level},
 	tools::Units,
@@ -146,7 +146,13 @@ impl Blockable {
 			direction: transform.forward(),
 			max_toi: TimeOfImpact::from(range),
 			solid: true,
-			filter: RayFilter::default(),
+			filter: RayFilter {
+				groups: Some(CollisionGroups {
+					memberships: RAY_GROUP,
+					filters: GENERIC_COLLISION_GROUP,
+				}),
+				..default()
+			},
 		}
 	}
 
@@ -297,7 +303,13 @@ mod tests {
 						direction: Dir3::NEG_Y,
 						max_toi: toi!(11000.),
 						solid: true,
-						filter: RayFilter::default(),
+						filter: RayFilter {
+							groups: Some(CollisionGroups {
+								memberships: RAY_GROUP,
+								filters: GENERIC_COLLISION_GROUP,
+							}),
+							..default()
+						},
 					}))
 					.return_const(Ok(Sorted::from([])));
 			}

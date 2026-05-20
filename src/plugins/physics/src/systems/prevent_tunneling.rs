@@ -1,5 +1,11 @@
 use crate::{
-	components::{RayCasterArgs, RayFilter, prevent_tunneling::PreventTunneling},
+	components::{
+		RayCasterArgs,
+		RayFilter,
+		collider::{GENERIC_COLLISION_GROUP, RAY_GROUP},
+		effect_target::EffectTarget,
+		prevent_tunneling::PreventTunneling,
+	},
 	system_params::update_ongoing_interactions::UpdateOngoingInteractions,
 	traits::{
 		ray_cast::{CastRayContinuouslySorted, GetContinuousSortedRayCaster, InvalidIntersections},
@@ -17,83 +23,90 @@ use common::{
 };
 use std::time::Duration;
 
-impl PreventTunneling {
-	pub(crate) fn system(
+impl UpdateOngoingInteractions<'_, '_, EffectTarget> {
+	pub(crate) fn prevent_tunneling(
 		delta: In<Duration>,
 		cast_ray: StaticSystemParam<ReadRapierContext>,
-		interactions: StaticSystemParam<UpdateOngoingInteractions>,
-		colliders: Query<(Entity, &Self, &Velocity, &GlobalTransform)>,
+		interactions: StaticSystemParam<Self>,
+		colliders: Query<(Entity, &PreventTunneling, &Velocity, &GlobalTransform)>,
 	) -> Result<(), TunnelingRayError> {
-		Self::system_internal(delta, cast_ray, interactions, colliders)
+		system_internal(delta, cast_ray, interactions, colliders)
 	}
+}
 
-	fn system_internal<TGetRayCaster, TCasterError, TInteractions>(
-		In(delta): In<Duration>,
-		cast_ray: StaticSystemParam<TGetRayCaster>,
-		mut interactions: StaticSystemParam<TInteractions>,
-		colliders: Query<(Entity, &Self, &Velocity, &GlobalTransform)>,
-	) -> Result<(), TunnelingRayError<TCasterError>>
-	where
-		TGetRayCaster: for<'w, 's> SystemParam<
-			Item<'w, 's>: GetContinuousSortedRayCaster<RayCasterArgs, TError = TCasterError>,
-		>,
-		TInteractions: for<'w, 's> SystemParam<Item<'w, 's>: PushOngoingInteraction>,
-	{
-		let cast_ray = match cast_ray.get_continuous_sorted_ray_caster() {
-			Ok(cast_ray) => cast_ray,
-			Err(error) => return Err(TunnelingRayError::NoRayCaster(error)),
+fn system_internal<TInteractions, TGetRayCaster, TCasterError>(
+	In(delta): In<Duration>,
+	cast_ray: StaticSystemParam<TGetRayCaster>,
+	mut interactions: StaticSystemParam<TInteractions>,
+	colliders: Query<(Entity, &PreventTunneling, &Velocity, &GlobalTransform)>,
+) -> Result<(), TunnelingRayError<TCasterError>>
+where
+	TGetRayCaster: for<'w, 's> SystemParam<
+		Item<'w, 's>: GetContinuousSortedRayCaster<RayCasterArgs, TError = TCasterError>,
+	>,
+	TInteractions: for<'w, 's> SystemParam<Item<'w, 's>: PushOngoingInteraction>,
+{
+	let cast_ray = match cast_ray.get_continuous_sorted_ray_caster() {
+		Ok(cast_ray) => cast_ray,
+		Err(error) => return Err(TunnelingRayError::NoRayCaster(error)),
+	};
+	let delta_secs = delta.as_secs_f32();
+	let mut invalid_rays = vec![];
+
+	for (entity, PreventTunneling { leading_edge }, velocity, transform) in colliders {
+		let max_toi = velocity.linvel.length() * delta_secs;
+		let Ok(max_toi) = TimeOfImpact::try_from_f32(max_toi) else {
+			invalid_rays.push(InvalidRay {
+				entity,
+				invalid_intersections: InvalidIntersections(vec![]),
+				invalid_forward: Some(InvalidForward {
+					delta_secs,
+					velocity: *velocity,
+				}),
+			});
+			continue;
 		};
-		let delta_secs = delta.as_secs_f32();
-		let mut invalid_rays = vec![];
-
-		for (entity, PreventTunneling { leading_edge }, velocity, transform) in colliders {
-			let max_toi = velocity.linvel.length() * delta_secs;
-			let Ok(max_toi) = TimeOfImpact::try_from_f32(max_toi) else {
+		let Ok(direction) = Dir3::try_from(velocity.linvel) else {
+			continue;
+		};
+		let origin = transform.translation() + direction * **leading_edge;
+		let ray = RayCasterArgs {
+			max_toi,
+			direction,
+			origin,
+			solid: true,
+			filter: RayFilter {
+				exclude_rigid_body: Some(entity),
+				groups: Some(CollisionGroups {
+					memberships: RAY_GROUP,
+					filters: GENERIC_COLLISION_GROUP,
+				}),
+				..default()
+			},
+		};
+		let hits = match cast_ray.cast_ray_continuously_sorted(&ray) {
+			Ok(hits) => hits,
+			Err(invalid_intersections) => {
 				invalid_rays.push(InvalidRay {
 					entity,
-					invalid_intersections: InvalidIntersections(vec![]),
-					invalid_forward: Some(InvalidForward {
-						delta_secs,
-						velocity: *velocity,
-					}),
+					invalid_intersections,
+					invalid_forward: None,
 				});
 				continue;
-			};
-			let Ok(direction) = Dir3::try_from(velocity.linvel) else {
-				continue;
-			};
-			let origin = transform.translation() + direction * **leading_edge;
-			let ray = RayCasterArgs {
-				max_toi,
-				direction,
-				origin,
-				solid: true,
-				filter: RayFilter::default().exclude_rigid_body(entity),
-			};
-			let hits = match cast_ray.cast_ray_continuously_sorted(&ray) {
-				Ok(hits) => hits,
-				Err(invalid_intersections) => {
-					invalid_rays.push(InvalidRay {
-						entity,
-						invalid_intersections,
-						invalid_forward: None,
-					});
-					continue;
-				}
-			};
-
-			for hit in hits {
-				interactions.push_ongoing_interaction(hit.entity, entity);
-				interactions.push_ongoing_interaction(entity, hit.entity);
 			}
-		}
+		};
 
-		if !invalid_rays.is_empty() {
-			return Err(TunnelingRayError::InvalidRays(invalid_rays));
+		for hit in hits {
+			interactions.push_ongoing_interaction(hit.entity, entity);
+			interactions.push_ongoing_interaction(entity, hit.entity);
 		}
-
-		Ok(())
 	}
+
+	if !invalid_rays.is_empty() {
+		return Err(TunnelingRayError::InvalidRays(invalid_rays));
+	}
+
+	Ok(())
 }
 
 #[derive(Debug, PartialEq)]
@@ -268,11 +281,7 @@ mod tests {
 		}));
 
 		_ = app.world_mut().run_system_once_with(
-			PreventTunneling::system_internal::<
-				Res<_GetRayCaster>,
-				_Error,
-				ResMut<_OngoingCollisions>,
-			>,
+			system_internal::<ResMut<_OngoingCollisions>, Res<_GetRayCaster>, _Error>,
 			Duration::from_secs(1),
 		)?;
 
@@ -302,7 +311,14 @@ mod tests {
 								origin: Vec3::new(1., 2., 3.) + Vec3::new(4., 5., 6.).normalize(),
 								direction: Dir3::try_from(Vec3::new(4., 5., 6.).normalize())
 									.unwrap(),
-								filter: RayFilter::default().exclude_rigid_body(entity),
+								filter: RayFilter {
+									exclude_rigid_body: Some(entity),
+									groups: Some(CollisionGroups {
+										memberships: RAY_GROUP,
+										filters: GENERIC_COLLISION_GROUP,
+									}),
+									..default()
+								},
 								solid: true,
 								max_toi: TimeOfImpact::from(Units::from(
 									Vec3::new(4., 5., 6.).length() * 0.5
@@ -319,11 +335,7 @@ mod tests {
 		});
 
 		_ = app.world_mut().run_system_once_with(
-			PreventTunneling::system_internal::<
-				Res<_GetRayCaster>,
-				_Error,
-				ResMut<_OngoingCollisions>,
-			>,
+			system_internal::<ResMut<_OngoingCollisions>, Res<_GetRayCaster>, _Error>,
 			Duration::from_millis(500),
 		)?;
 
@@ -338,11 +350,7 @@ mod tests {
 		});
 
 		let result = app.world_mut().run_system_once_with(
-			PreventTunneling::system_internal::<
-				Res<_GetRayCaster>,
-				_Error,
-				ResMut<_OngoingCollisions>,
-			>,
+			system_internal::<ResMut<_OngoingCollisions>, Res<_GetRayCaster>, _Error>,
 			Duration::from_secs(1),
 		)?;
 
@@ -367,11 +375,7 @@ mod tests {
 			.id();
 
 		let result = app.world_mut().run_system_once_with(
-			PreventTunneling::system_internal::<
-				Res<_GetRayCaster>,
-				_Error,
-				ResMut<_OngoingCollisions>,
-			>,
+			system_internal::<ResMut<_OngoingCollisions>, Res<_GetRayCaster>, _Error>,
 			Duration::from_secs(2),
 		)?;
 
@@ -406,11 +410,7 @@ mod tests {
 			.id();
 
 		let result = app.world_mut().run_system_once_with(
-			PreventTunneling::system_internal::<
-				Res<_GetRayCaster>,
-				_Error,
-				ResMut<_OngoingCollisions>,
-			>,
+			system_internal::<ResMut<_OngoingCollisions>, Res<_GetRayCaster>, _Error>,
 			Duration::from_secs(1),
 		)?;
 
@@ -439,11 +439,7 @@ mod tests {
 		));
 
 		let result = app.world_mut().run_system_once_with(
-			PreventTunneling::system_internal::<
-				Res<_GetRayCaster>,
-				_Error,
-				ResMut<_OngoingCollisions>,
-			>,
+			system_internal::<ResMut<_OngoingCollisions>, Res<_GetRayCaster>, _Error>,
 			Duration::from_secs(1),
 		)?;
 
