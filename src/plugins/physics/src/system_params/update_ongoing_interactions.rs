@@ -33,7 +33,7 @@ where
 	fn push_ongoing_interaction(&mut self, actor: Entity, target: Entity) {
 		let actor = self.get_root(actor);
 		let target = self.get_root(target);
-		let targets = self.interactions.targets.entry(actor).or_default();
+		let targets = self.interactions.interactions.entry(actor).or_default();
 
 		targets.insert(target);
 	}

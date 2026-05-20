@@ -6,7 +6,7 @@ use crate::{
 	toi,
 	tools::{Units, speed::Speed},
 	traits::{
-		accessors::get::{GetContextMut, View, ViewField},
+		accessors::get::{GetContext, GetContextMut, View, ViewField},
 		handles_physics::physical_bodies::{Blocker, Body},
 	},
 };
@@ -86,6 +86,15 @@ pub trait ConfigureBody {
 	fn configure_body(&mut self, body: Body, offsets: TranslationOffsets);
 }
 
+impl<T> ConfigureBody for T
+where
+	T: DerefMut<Target: ConfigureBody>,
+{
+	fn configure_body(&mut self, body: Body, offsets: TranslationOffsets) {
+		self.deref_mut().configure_body(body, offsets);
+	}
+}
+
 #[derive(Debug, PartialEq, Default, Clone)]
 pub struct TranslationOffsets {
 	pub aim: f32,
@@ -99,13 +108,22 @@ impl TranslationOffsets {
 	};
 }
 
-impl<T> ConfigureBody for T
-where
-	T: DerefMut<Target: ConfigureBody>,
-{
-	fn configure_body(&mut self, body: Body, offsets: TranslationOffsets) {
-		self.deref_mut().configure_body(body, offsets);
-	}
+pub trait HandlesInteractiveDetection {
+	type TInteractive: SystemParam
+		+ for<'c> GetContext<HasInteractiveFrame, TContext<'c>: OverlapsWith>;
+}
+
+#[derive(EntityKey)]
+pub struct HasInteractiveFrame {
+	pub entity: Entity,
+}
+
+pub trait OverlapsWith {
+	type TIter<'a>: Iterator<Item = Entity>
+	where
+		Self: 'a;
+
+	fn interacts_with(&self) -> Self::TIter<'_>;
 }
 
 pub trait HandlesMotion {

@@ -7,6 +7,9 @@ mod system_params;
 mod systems;
 mod traits;
 
+#[cfg(test)]
+mod tests;
+
 #[cfg(debug_assertions)]
 mod debug;
 
@@ -21,11 +24,11 @@ use crate::{
 		character_motion::ApplyCharacterMotion,
 		collider::{ChildCollider, ColliderShape},
 		default_attributes::DefaultAttributes,
+		effect_target::EffectTarget,
 		effects::{Effects, force::ForceEffect},
 		ground_target::GroundTarget,
-		interaction_target::InteractionTarget,
 		lifetime::{LifetimeTiedTo, TiedLifetimes},
-		physical_body::PhysicalBody,
+		physical_body::{Interactive, PhysicalBody},
 		set_velocity_forward::SetVelocityForward,
 		skill::{ContactInteractionTarget, ProjectionInteractionTarget, Skill},
 		target::Target,
@@ -38,6 +41,7 @@ use crate::{
 	resources::ongoing_interactions::OngoingInteractions,
 	system_params::{
 		config::ConfigParamMut,
+		interactive::InteractiveParam,
 		ray_caster::RayCaster,
 		skill_agent::{SkillAgent, SkillAgentMut},
 		update_ongoing_interactions::UpdateOngoingInteractions,
@@ -57,6 +61,7 @@ use common::{
 		delta::Delta,
 		handles_animations::HandlesAnimations,
 		handles_physics::{
+			HandlesInteractiveDetection,
 			HandlesMotion,
 			HandlesPhysicalEffectTargets,
 			HandlesPhysicsConfig,
@@ -153,9 +158,14 @@ where
 			// Colliders/Bodies
 			.add_prefab_observer::<ColliderShape, ()>()
 			.add_prefab_observer::<PhysicalBody, ()>()
-			.add_observer(ChildCollider::<InteractionTarget>::link)
+			.add_observer(ChildCollider::<EffectTarget>::link)
 			.add_observer(ChildCollider::<RigidBody>::link)
+			.add_observer(ChildCollider::<Interactive>::link)
 			.add_systems(Update, AsyncCollider::insert_collider.pipe(OnError::log))
+			.add_message::<RayEvent>()
+			.add_message::<BeamInteraction>()
+			.init_resource::<OngoingInteractions<EffectTarget>>()
+			.init_resource::<OngoingInteractions<Interactive>>()
 			// All effects
 			.add_observer(Effects::insert)
 			// Deal health damage
@@ -189,10 +199,6 @@ where
 			// General Lifetime relationship
 			.add_observer(LifetimeTiedTo::insert_on::<Anchor>)
 			.add_observer(TiedLifetimes::despawn_relationships_on_remove)
-			// Apply interactions
-			.add_message::<RayEvent>()
-			.add_message::<BeamInteraction>()
-			.init_resource::<OngoingInteractions<EffectTarget>>()
 			// Anchor
 			.add_observer(AnchorDirty::process::<RayCaster>.pipe(OnError::log))
 			.add_systems(Update, Anchor::mark_dirty.in_set(PhysicsSystems))
@@ -217,6 +223,8 @@ where
 						UpdateOngoingInteractions::<EffectTarget>::push_ongoing_collisions,
 					)
 						.chain(),
+					// Collect interactive collisions
+					UpdateOngoingInteractions::<Interactive>::push_ongoing_collisions,
 				)
 					.chain()
 					.in_set(CollisionSystems),
@@ -266,7 +274,7 @@ impl<TDependencies> HandlesPhysicalEffectTargets for PhysicsPlugin<TDependencies
 	where
 		T: Component,
 	{
-		app.register_required_components::<T, InteractionTarget>();
+		app.register_required_components::<T, EffectTarget>();
 	}
 }
 
@@ -286,4 +294,8 @@ impl<TDependencies> HandlesNewPhysicalSkill for PhysicsPlugin<TDependencies> {
 impl<TDependencies> HandlesPhysicalSkillComponents for PhysicsPlugin<TDependencies> {
 	type TSkillContact = ContactInteractionTarget;
 	type TSkillProjection = ProjectionInteractionTarget;
+}
+
+impl<TDependencies> HandlesInteractiveDetection for PhysicsPlugin<TDependencies> {
+	type TInteractive = InteractiveParam<'static>;
 }

@@ -7,7 +7,7 @@ where
 	T: ThreadSafe,
 {
 	pub(crate) fn clear(mut interactions: ResMut<Self>) {
-		interactions.targets.clear();
+		interactions.interactions.clear();
 	}
 }
 

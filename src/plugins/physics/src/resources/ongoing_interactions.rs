@@ -6,14 +6,14 @@ use std::{
 
 #[derive(Resource, Debug, PartialEq)]
 pub(crate) struct OngoingInteractions<T> {
-	pub(crate) targets: HashMap<Entity, HashSet<Entity>>,
+	pub(crate) interactions: HashMap<Entity, HashSet<Entity>>,
 	_p: PhantomData<T>,
 }
 
 impl<T> Default for OngoingInteractions<T> {
 	fn default() -> Self {
 		Self {
-			targets: HashMap::default(),
+			interactions: HashMap::default(),
 			_p: PhantomData,
 		}
 	}
@@ -25,7 +25,7 @@ where
 {
 	fn from(target: TEntities) -> Self {
 		Self {
-			targets: target.into(),
+			interactions: target.into(),
 			_p: PhantomData,
 		}
 	}

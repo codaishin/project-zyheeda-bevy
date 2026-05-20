@@ -33,7 +33,7 @@ pub(crate) trait ActOnSystem: Component<Mutability = Mutable> + Sized {
 	{
 		for (entity, persistent_entity, mut actor, mut ongoing_effects) in &mut actors {
 			let interaction_targets = ongoing_interactions
-				.targets
+				.interactions
 				.get(&entity)
 				.unwrap_or_else(empty);
 

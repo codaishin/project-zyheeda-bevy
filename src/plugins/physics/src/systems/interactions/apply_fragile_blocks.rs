@@ -14,7 +14,7 @@ pub(crate) fn apply_fragile_blocks(
 	fragiles: Query<(Entity, &Blockable)>,
 	blockers: Query<&BlockerTypes>,
 ) {
-	for (blocker, blocked) in &ongoing_interactions.targets {
+	for (blocker, blocked) in &ongoing_interactions.interactions {
 		for blocked in blocked {
 			let Some(fragile) = is_fragile(blocked, blocker, &fragiles, &blockers) else {
 				continue;

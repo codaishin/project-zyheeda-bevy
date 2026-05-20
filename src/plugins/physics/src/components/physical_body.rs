@@ -1,7 +1,6 @@
 use crate::components::{
 	blocker_types::BlockerTypes,
 	collider::{
-		ChildCollider,
 		ColliderShape,
 		GENERIC_COLLISION_GROUP,
 		INTERACTIVE_GROUP,
@@ -26,6 +25,45 @@ use common::{
 #[require(AimOffset, CenterOffset)]
 pub struct PhysicalBody(pub(crate) Body);
 
+impl PhysicalBody {
+	fn agent() -> impl Bundle {
+		(
+			RigidBody::KinematicPositionBased,
+			CollidingEntities::default(),
+			ActiveEvents::COLLISION_EVENTS,
+			ActiveCollisionTypes::all(),
+			KinematicCharacterController::default(),
+			CollisionGroups {
+				memberships: generic_and(MOUSE_HOVERABLE_GROUP),
+				filters: generic_and(RAY_GROUP),
+			},
+		)
+	}
+
+	fn terrain() -> impl Bundle {
+		(
+			RigidBody::Fixed,
+			CollisionGroups {
+				memberships: generic_and(TERRAIN_GROUP),
+				filters: generic_and(RAY_GROUP),
+			},
+		)
+	}
+
+	fn interactive() -> impl Bundle {
+		(
+			Sensor,
+			CollidingEntities::default(),
+			ActiveEvents::COLLISION_EVENTS,
+			ActiveCollisionTypes::all(),
+			CollisionGroups {
+				memberships: INTERACTIVE_GROUP,
+				filters: INTERACTIVE_GROUP | RAY_GROUP,
+			},
+		)
+	}
+}
+
 impl From<Body> for PhysicalBody {
 	fn from(body: Body) -> Self {
 		Self(body)
@@ -49,23 +87,23 @@ impl Prefab<()> for PhysicalBody {
 
 		match physics_type {
 			PhysicsType::Agent(blockers) => {
-				entity.try_insert((Agent, BlockerTypes(blockers.clone())));
+				entity.try_insert((Self::agent(), BlockerTypes(blockers.clone())));
 			}
 			PhysicsType::Terrain(blockers) => {
-				entity.try_insert((Terrain, BlockerTypes(blockers.clone())));
+				entity.try_insert((Self::terrain(), BlockerTypes(blockers.clone())));
 			}
 			PhysicsType::InteractiveFrame => {
-				entity.try_insert((Interactive, RigidBody::Fixed));
+				entity.try_insert((Self::interactive(), RigidBody::Fixed, Interactive));
 			}
 		};
 
 		entity.try_insert(ColliderShape::from(*shape));
 
 		for sub_frame in sub_frames {
+			entity.try_insert(Interactive);
 			entity.with_child((
-				Interactive,
+				Self::interactive(),
 				Transform::from_xyz(0., 0., -*sub_frame.forward_offset),
-				ChildCollider::<Self>::of(entity.entity_id()),
 				ColliderShape::from(sub_frame.shape),
 			));
 		}
@@ -74,46 +112,12 @@ impl Prefab<()> for PhysicalBody {
 	}
 }
 
+#[derive(Component, Debug, PartialEq, Default)]
+pub(crate) struct Interactive;
+
 fn generic_and(group: Group) -> Group {
 	GENERIC_COLLISION_GROUP | group
 }
-
-#[derive(Component, Debug, PartialEq)]
-#[require(
-	RigidBody::KinematicPositionBased,
-	CollidingEntities,
-	ActiveEvents::COLLISION_EVENTS,
-	ActiveCollisionTypes::all(),
-	KinematicCharacterController,
-	CollisionGroups {
-		memberships: generic_and(MOUSE_HOVERABLE_GROUP),
-		filters: generic_and(RAY_GROUP),
-	},
-)]
-pub(crate) struct Agent;
-
-#[derive(Component, Debug, PartialEq)]
-#[require(
-	RigidBody::Fixed,
-	CollisionGroups {
-		memberships: generic_and(TERRAIN_GROUP),
-		filters: generic_and(RAY_GROUP),
-	}
-)]
-pub(crate) struct Terrain;
-
-#[derive(Component, Debug, PartialEq)]
-#[require(
-	Sensor,
-	CollidingEntities,
-	ActiveEvents::COLLISION_EVENTS,
-	ActiveCollisionTypes::all(),
-	CollisionGroups {
-		memberships: INTERACTIVE_GROUP,
-		filters: INTERACTIVE_GROUP | RAY_GROUP,
-	}
-)]
-pub(crate) struct Interactive;
 
 #[cfg(test)]
 mod tests {
@@ -158,6 +162,22 @@ mod tests {
 			);
 		}
 
+		#[test_case(PhysicsType::Terrain, false; "terrain as not interactive")]
+		#[test_case(PhysicsType::Agent, false; "agent")]
+		#[test_case(|_| PhysicsType::InteractiveFrame, true; "interactive frame")]
+		fn mark(physics_type: fn(HashSet<Blocker>) -> PhysicsType, is_interactive: bool) {
+			let mut app = setup();
+			let shape = Shape::Parameters(ShapeParameters::Sphere {
+				radius: Units::from(42.),
+			});
+
+			let entity = app.world_mut().spawn(PhysicalBody(
+				Body::from_shape(shape).with_physics_type(physics_type(HashSet::default())),
+			));
+
+			assert_eq!(is_interactive, entity.contains::<Interactive>());
+		}
+
 		#[test_case(PhysicsType::Terrain, RigidBody::Fixed, false, false, None, None; "terrain")]
 		#[test_case(PhysicsType::Agent, RigidBody::KinematicPositionBased, true, true, Some(&ActiveEvents::COLLISION_EVENTS), Some(&ActiveCollisionTypes::all()); "agent")]
 		#[test_case(|_| PhysicsType::InteractiveFrame, RigidBody::Fixed, false, true, Some(&ActiveEvents::COLLISION_EVENTS), Some(&ActiveCollisionTypes::all()); "interactive frame")]
@@ -194,25 +214,6 @@ mod tests {
 					entity.get::<ActiveCollisionTypes>(),
 				)
 			);
-		}
-
-		#[test_case(PhysicsType::Terrain, |e| e.contains::<Terrain>(); "terrain")]
-		#[test_case(PhysicsType::Agent, |e| e.contains::<Agent>(); "agent")]
-		#[test_case(|_| PhysicsType::InteractiveFrame, |e| e.contains::<Interactive>(); "interactive frame")]
-		fn insert_marker_type(
-			physics_type: fn(HashSet<Blocker>) -> PhysicsType,
-			has_marker: fn(EntityWorldMut<'_>) -> bool,
-		) {
-			let mut app = setup();
-			let shape = Shape::Parameters(ShapeParameters::Sphere {
-				radius: Units::from(42.),
-			});
-
-			let entity = app.world_mut().spawn(PhysicalBody(
-				Body::from_shape(shape).with_physics_type(physics_type(HashSet::default())),
-			));
-
-			assert!(has_marker(entity));
 		}
 
 		#[test_case(PhysicsType::Terrain, Some; "terrain")]
@@ -287,7 +288,6 @@ mod tests {
 
 	mod sub_frames {
 		use super::*;
-		use crate::components::collider::ChildCollider;
 		use common::traits::handles_physics::physical_bodies::InteractiveFrame;
 		use testing::assert_children_count;
 
@@ -371,43 +371,18 @@ mod tests {
 		}
 
 		#[test]
-		fn insert_marker() {
+		fn mark_parent_as_interactive() {
 			let mut app = setup();
 			let shape = ShapeParameters::Sphere {
 				radius: Units::from(42.),
 			};
 
-			let entity = app
-				.world_mut()
-				.spawn(PhysicalBody(
-					Body::from_shape(Shape::StaticGltfMesh3d)
-						.with_sub_frames([InteractiveFrame::from(shape)]),
-				))
-				.id();
+			let entity = app.world_mut().spawn(PhysicalBody(
+				Body::from_shape(Shape::StaticGltfMesh3d)
+					.with_sub_frames([InteractiveFrame::from(shape)]),
+			));
 
-			let [child] = assert_children_count!(1, app, entity);
-			assert!(child.contains::<Interactive>());
-		}
-
-		#[test]
-		fn insert_child() {
-			let mut app = setup();
-			let shape = ShapeParameters::Sphere {
-				radius: Units::from(42.),
-			};
-			let entity = app
-				.world_mut()
-				.spawn(PhysicalBody(
-					Body::from_shape(Shape::StaticGltfMesh3d)
-						.with_sub_frames([InteractiveFrame::from(shape)]),
-				))
-				.id();
-
-			let [child] = assert_children_count!(1, app, entity);
-			assert_eq!(
-				(Some(&ChildCollider::<PhysicalBody>::of(entity))),
-				(child.get::<ChildCollider::<PhysicalBody>>()),
-			);
+			assert!(entity.contains::<Interactive>());
 		}
 
 		#[test]
