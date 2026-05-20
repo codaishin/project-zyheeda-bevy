@@ -15,7 +15,7 @@ use bevy_rapier3d::prelude::*;
 use common::{
 	errors::Unreachable,
 	traits::{
-		handles_physics::physical_bodies::{Body, InteractiveFrame, PhysicsType},
+		handles_physics::physical_bodies::{Body, PhysicsType},
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
@@ -92,9 +92,10 @@ impl Prefab<()> for PhysicalBody {
 
 		entity.try_insert(ColliderShape::from(*shape));
 
-		for InteractiveFrame(shape) in sub_frames {
+		for sub_frame in sub_frames {
 			entity.with_child((
-				ColliderShape::from(*shape),
+				Transform::from_xyz(0., 0., -*sub_frame.forward_offset),
+				ColliderShape::from(sub_frame.shape),
 				Sensor,
 				ActiveEvents::COLLISION_EVENTS,
 				ActiveCollisionTypes::all(),
@@ -273,7 +274,7 @@ mod tests {
 				.world_mut()
 				.spawn(PhysicalBody(
 					Body::from_shape(Shape::StaticGltfMesh3d)
-						.with_sub_frames([InteractiveFrame(shape)]),
+						.with_sub_frames([InteractiveFrame::from(shape)]),
 				))
 				.id();
 
@@ -281,6 +282,28 @@ mod tests {
 			assert_eq!(
 				Some(&ColliderShape::from(shape)),
 				child.get::<ColliderShape>(),
+			);
+		}
+
+		#[test]
+		fn insert_transform() {
+			let mut app = setup();
+			let shape = ShapeParameters::Sphere {
+				radius: Units::from(42.),
+			};
+			let entity = app
+				.world_mut()
+				.spawn(PhysicalBody(
+					Body::from_shape(Shape::StaticGltfMesh3d).with_sub_frames([
+						InteractiveFrame::from(shape).with_forward_offset(Units::from(11.)),
+					]),
+				))
+				.id();
+
+			let [child] = assert_children_count!(1, app, entity);
+			assert_eq!(
+				Some(&Transform::from_xyz(0., 0., -11.)),
+				child.get::<Transform>(),
 			);
 		}
 
@@ -294,7 +317,7 @@ mod tests {
 				.world_mut()
 				.spawn(PhysicalBody(
 					Body::from_shape(Shape::StaticGltfMesh3d)
-						.with_sub_frames([InteractiveFrame(shape)]),
+						.with_sub_frames([InteractiveFrame::from(shape)]),
 				))
 				.id();
 
@@ -325,7 +348,7 @@ mod tests {
 				.world_mut()
 				.spawn(PhysicalBody(
 					Body::from_shape(Shape::StaticGltfMesh3d)
-						.with_sub_frames([InteractiveFrame(shape)]),
+						.with_sub_frames([InteractiveFrame::from(shape)]),
 				))
 				.id();
 
@@ -350,7 +373,7 @@ mod tests {
 				.world_mut()
 				.spawn(PhysicalBody(
 					Body::from_shape(Shape::StaticGltfMesh3d)
-						.with_sub_frames([InteractiveFrame(shape)]),
+						.with_sub_frames([InteractiveFrame::from(shape)]),
 				))
 				.id();
 
