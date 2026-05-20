@@ -78,6 +78,7 @@ pub enum Shape {
 pub enum PhysicsType {
 	Agent,
 	Terrain,
+	InteractiveFrame,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]

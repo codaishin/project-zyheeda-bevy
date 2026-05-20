@@ -3,6 +3,7 @@ use crate::components::{
 	collider::{
 		ColliderShape,
 		GENERIC_COLLISION_GROUP,
+		INTERACTIVE_GROUP,
 		MOUSE_HOVERABLE_GROUP,
 		RAY_GROUP,
 		TERRAIN_GROUP,
@@ -46,12 +47,8 @@ impl Prefab<()> for PhysicalBody {
 		_: StaticSystemParam<()>,
 	) -> Result<(), Self::TError> {
 		let Self(Body { physics_type, .. }) = self;
-		let groups = match physics_type {
-			PhysicsType::Agent => GENERIC_COLLISION_GROUP | MOUSE_HOVERABLE_GROUP,
-			PhysicsType::Terrain => GENERIC_COLLISION_GROUP | TERRAIN_GROUP,
-		};
 
-		match self.0.physics_type {
+		let specific_memberships = match physics_type {
 			PhysicsType::Agent => {
 				entity.try_insert((
 					RigidBody::KinematicPositionBased,
@@ -59,15 +56,24 @@ impl Prefab<()> for PhysicalBody {
 					ActiveCollisionTypes::all(),
 					Self::agent_controller(),
 				));
+				MOUSE_HOVERABLE_GROUP
 			}
 			PhysicsType::Terrain => {
 				entity.try_insert(RigidBody::Fixed);
+				TERRAIN_GROUP
+			}
+			PhysicsType::InteractiveFrame => {
+				entity.try_insert((RigidBody::Fixed, Sensor));
+				INTERACTIVE_GROUP
 			}
 		};
 
 		entity.try_insert((
 			BlockerTypes(self.0.blocker_types.clone()),
-			CollisionGroups::new(groups, GENERIC_COLLISION_GROUP | RAY_GROUP),
+			CollisionGroups {
+				memberships: GENERIC_COLLISION_GROUP | specific_memberships,
+				filters: GENERIC_COLLISION_GROUP | RAY_GROUP,
+			},
 			ColliderShape::from(self.0.shape),
 		));
 
@@ -78,6 +84,7 @@ impl Prefab<()> for PhysicalBody {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::components::collider::INTERACTIVE_GROUP;
 	use common::{
 		tools::Units,
 		traits::{
@@ -115,6 +122,7 @@ mod tests {
 
 	#[test_case(PhysicsType::Terrain, RigidBody::Fixed, false, None, None; "terrain")]
 	#[test_case(PhysicsType::Agent, RigidBody::KinematicPositionBased, true, Some(&ActiveEvents::COLLISION_EVENTS), Some(&ActiveCollisionTypes::all()); "agent")]
+	#[test_case(PhysicsType::InteractiveFrame, RigidBody::Fixed, false, None, None; "interactive object")]
 	fn insert_physics_constraints(
 		physics_type: PhysicsType,
 		rigid_body: RigidBody,
@@ -173,6 +181,7 @@ mod tests {
 
 	#[test_case(PhysicsType::Terrain, GENERIC_COLLISION_GROUP | TERRAIN_GROUP; "terrain")]
 	#[test_case(PhysicsType::Agent, GENERIC_COLLISION_GROUP | MOUSE_HOVERABLE_GROUP; "agent")]
+	#[test_case(PhysicsType::InteractiveFrame, GENERIC_COLLISION_GROUP | INTERACTIVE_GROUP; "interactive object")]
 	fn insert_collision_groups(physics_type: PhysicsType, memberships: Group) {
 		let mut app = setup();
 		let shape = Shape::Sphere {
@@ -192,5 +201,23 @@ mod tests {
 			}),
 			app.world().entity(entity).get::<CollisionGroups>(),
 		);
+	}
+
+	#[test_case(PhysicsType::Terrain, false; "terrain")]
+	#[test_case(PhysicsType::Agent, false; "agent")]
+	#[test_case(PhysicsType::InteractiveFrame, true; "interactive object")]
+	fn insert_sensor(physics_type: PhysicsType, has_sensor: bool) {
+		let mut app = setup();
+		let shape = Shape::Sphere {
+			radius: Units::from(42.),
+		};
+		let entity = app
+			.world_mut()
+			.spawn(PhysicalBody(
+				Body::from_shape(shape).with_physics_type(physics_type),
+			))
+			.id();
+
+		assert_eq!(has_sensor, app.world().entity(entity).contains::<Sensor>());
 	}
 }
