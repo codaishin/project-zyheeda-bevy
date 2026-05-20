@@ -52,7 +52,7 @@ impl Prefab<()> for PhysicalBody {
 			sub_frames,
 		}) = self;
 
-		let specific_memberships_group = match physics_type {
+		match physics_type {
 			PhysicsType::Agent(blockers) => {
 				entity.try_insert((
 					RigidBody::KinematicPositionBased,
@@ -60,12 +60,21 @@ impl Prefab<()> for PhysicalBody {
 					ActiveEvents::COLLISION_EVENTS,
 					ActiveCollisionTypes::all(),
 					Self::agent_controller(),
+					CollisionGroups {
+						memberships: generic_and(MOUSE_HOVERABLE_GROUP),
+						filters: generic_and(RAY_GROUP),
+					},
 				));
-				MOUSE_HOVERABLE_GROUP
 			}
 			PhysicsType::Terrain(blockers) => {
-				entity.try_insert((RigidBody::Fixed, BlockerTypes(blockers.clone())));
-				TERRAIN_GROUP
+				entity.try_insert((
+					RigidBody::Fixed,
+					BlockerTypes(blockers.clone()),
+					CollisionGroups {
+						memberships: generic_and(TERRAIN_GROUP),
+						filters: generic_and(RAY_GROUP),
+					},
+				));
 			}
 			PhysicsType::InteractiveFrame => {
 				entity.try_insert((
@@ -73,18 +82,15 @@ impl Prefab<()> for PhysicalBody {
 					Sensor,
 					ActiveEvents::COLLISION_EVENTS,
 					ActiveCollisionTypes::all(),
+					CollisionGroups {
+						memberships: INTERACTIVE_GROUP,
+						filters: INTERACTIVE_GROUP | RAY_GROUP,
+					},
 				));
-				INTERACTIVE_GROUP
 			}
 		};
 
-		entity.try_insert((
-			CollisionGroups {
-				memberships: generic_and(specific_memberships_group),
-				filters: generic_and(RAY_GROUP),
-			},
-			ColliderShape::from(*shape),
-		));
+		entity.try_insert(ColliderShape::from(*shape));
 
 		for InteractiveFrame(shape) in sub_frames {
 			entity.with_child((
@@ -93,8 +99,8 @@ impl Prefab<()> for PhysicalBody {
 				ActiveEvents::COLLISION_EVENTS,
 				ActiveCollisionTypes::all(),
 				CollisionGroups {
-					memberships: generic_and(INTERACTIVE_GROUP),
-					filters: generic_and(RAY_GROUP),
+					memberships: INTERACTIVE_GROUP,
+					filters: INTERACTIVE_GROUP | RAY_GROUP,
 				},
 			));
 		}
@@ -207,12 +213,13 @@ mod tests {
 			);
 		}
 
-		#[test_case(PhysicsType::Terrain, GENERIC_COLLISION_GROUP | TERRAIN_GROUP; "terrain")]
-		#[test_case(PhysicsType::Agent, GENERIC_COLLISION_GROUP | MOUSE_HOVERABLE_GROUP; "agent")]
-		#[test_case(|_| PhysicsType::InteractiveFrame, GENERIC_COLLISION_GROUP | INTERACTIVE_GROUP; "interactive frame")]
+		#[test_case(PhysicsType::Terrain, generic_and(TERRAIN_GROUP) , generic_and(RAY_GROUP); "terrain")]
+		#[test_case(PhysicsType::Agent, generic_and(MOUSE_HOVERABLE_GROUP), generic_and(RAY_GROUP); "agent")]
+		#[test_case(|_| PhysicsType::InteractiveFrame, INTERACTIVE_GROUP, INTERACTIVE_GROUP | RAY_GROUP; "interactive frame")]
 		fn insert_collision_groups(
 			physics_type: fn(HashSet<Blocker>) -> PhysicsType,
 			memberships: Group,
+			filters: Group,
 		) {
 			let mut app = setup();
 			let shape = Shape::Parameters(ShapeParameters::Sphere {
@@ -225,7 +232,7 @@ mod tests {
 			assert_eq!(
 				Some(&CollisionGroups {
 					memberships,
-					filters: GENERIC_COLLISION_GROUP | RAY_GROUP
+					filters
 				}),
 				entity.get::<CollisionGroups>(),
 			);
@@ -325,8 +332,8 @@ mod tests {
 			let [child] = assert_children_count!(1, app, entity);
 			assert_eq!(
 				Some(&CollisionGroups {
-					memberships: GENERIC_COLLISION_GROUP | INTERACTIVE_GROUP,
-					filters: GENERIC_COLLISION_GROUP | RAY_GROUP
+					memberships: INTERACTIVE_GROUP,
+					filters: INTERACTIVE_GROUP | RAY_GROUP,
 				}),
 				child.get::<CollisionGroups>(),
 			);
