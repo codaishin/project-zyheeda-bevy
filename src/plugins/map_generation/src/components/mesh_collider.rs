@@ -12,7 +12,7 @@ use common::{
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
-use std::fmt::Display;
+use std::{collections::HashSet, fmt::Display};
 
 #[derive(Component, Debug, PartialEq, Default)]
 #[component(immutable)]
@@ -39,8 +39,7 @@ where
 
 		ctx.configure_body(
 			Body::from_shape(Shape::StaticGltfMesh3d)
-				.with_physics_type(PhysicsType::Terrain)
-				.with_blocker_types(Blocker::Physical),
+				.with_physics_type(PhysicsType::Terrain(HashSet::from([Blocker::Physical]))),
 			TranslationOffsets::ZERO,
 		);
 

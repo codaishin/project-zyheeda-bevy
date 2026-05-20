@@ -9,28 +9,18 @@ use std::collections::HashSet;
 pub struct Body {
 	pub shape: Shape,
 	pub physics_type: PhysicsType,
-	pub blocker_types: HashSet<Blocker>,
 }
 
 impl Body {
 	pub fn from_shape(shape: Shape) -> Self {
 		Self {
 			shape,
-			physics_type: PhysicsType::Terrain,
-			blocker_types: HashSet::from([Blocker::Physical]),
+			physics_type: PhysicsType::Terrain(HashSet::from([Blocker::Physical])),
 		}
 	}
 
 	pub fn with_physics_type(mut self, physics_type: PhysicsType) -> Self {
 		self.physics_type = physics_type;
-		self
-	}
-
-	pub fn with_blocker_types<TBlocks>(mut self, blocks: TBlocks) -> Self
-	where
-		TBlocks: IntoIterator<Item = Blocker>,
-	{
-		self.blocker_types = HashSet::from_iter(blocks);
 		self
 	}
 }
@@ -74,10 +64,10 @@ pub enum Shape {
 	StaticGltfMesh3d,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum PhysicsType {
-	Agent,
-	Terrain,
+	Agent(HashSet<Blocker>),
+	Terrain(HashSet<Blocker>),
 	InteractiveFrame,
 }
 

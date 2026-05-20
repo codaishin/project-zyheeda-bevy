@@ -109,8 +109,7 @@ impl ApplyAgentConfig {
 				ctx.configure_body(
 					Body {
 						shape: Shape::Capsule { half_y, radius },
-						physics_type: PhysicsType::Agent,
-						blocker_types: HashSet::from([Blocker::Character]),
+						physics_type: PhysicsType::Agent(HashSet::from([Blocker::Character])),
 					},
 					TranslationOffsets { center, aim },
 				);
@@ -754,8 +753,7 @@ mod tests {
 							half_y: Units::from(1.5),
 							radius: Units::from(0.5),
 						},
-						physics_type: PhysicsType::Agent,
-						blocker_types: HashSet::from([Blocker::Character]),
+						physics_type: PhysicsType::Agent(HashSet::from([Blocker::Character])),
 					};
 
 					mock.expect_configure_default_attributes().return_const(());
