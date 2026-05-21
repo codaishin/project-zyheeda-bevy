@@ -80,7 +80,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.add_plugins(TestCollisionsPlugin);
-		app.add_observer(ColliderRoot::link_children);
+		app.add_systems(Update, ColliderRoot::link_children);
 
 		app
 	}

@@ -158,7 +158,6 @@ where
 			// Colliders/Bodies
 			.add_prefab_observer::<ColliderShape, ()>()
 			.add_prefab_observer::<Body, ()>()
-			.add_observer(ColliderRoot::link_children)
 			.add_systems(Update, AsyncCollider::insert_collider.pipe(OnError::log))
 			.add_message::<RayEvent>()
 			.init_resource::<OngoingInteractions<Physical>>()
@@ -202,6 +201,8 @@ where
 			.add_systems(
 				Update,
 				(
+					// pre bake collider child relations
+					ColliderRoot::link_children,
 					// Skill spawning/lifetime
 					(
 						GroundTarget::set_position::<RayCaster>,
