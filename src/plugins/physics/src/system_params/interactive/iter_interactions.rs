@@ -1,15 +1,15 @@
 use crate::system_params::interactive::InteractiveContext;
 use bevy::prelude::*;
-use common::traits::handles_physics::OverlapsWith;
+use common::traits::handles_physics::IterInteractions;
 use std::{collections::hash_set::Iter, iter::Copied};
 
-impl OverlapsWith for InteractiveContext<'_> {
+impl IterInteractions for InteractiveContext<'_> {
 	type TIter<'a>
 		= Copied<Iter<'a, Entity>>
 	where
 		Self: 'a;
 
-	fn interacts_with(&self) -> Self::TIter<'_> {
+	fn iter_interactions(&self) -> Self::TIter<'_> {
 		self.interactions.iter().copied()
 	}
 }
@@ -30,7 +30,7 @@ mod tests {
 	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use bevy_rapier3d::prelude::*;
-	use common::traits::{accessors::get::GetContext, handles_physics::HasInteractiveFrame};
+	use common::traits::{accessors::get::GetContext, handles_physics::IsInteracting};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -80,9 +80,8 @@ mod tests {
 		let interactions = app
 			.world_mut()
 			.run_system_once(move |i: InteractiveParam| {
-				let ctx =
-					InteractiveParam::get_context(&i, HasInteractiveFrame { entity: a }).unwrap();
-				ctx.interacts_with().collect::<Vec<_>>()
+				let ctx = InteractiveParam::get_context(&i, IsInteracting { entity: a }).unwrap();
+				ctx.iter_interactions().collect::<Vec<_>>()
 			})?;
 
 		assert_eq!(vec![b], interactions);
@@ -115,9 +114,8 @@ mod tests {
 		let interactions = app
 			.world_mut()
 			.run_system_once(move |i: InteractiveParam| {
-				let ctx =
-					InteractiveParam::get_context(&i, HasInteractiveFrame { entity: a }).unwrap();
-				ctx.interacts_with().collect::<Vec<_>>()
+				let ctx = InteractiveParam::get_context(&i, IsInteracting { entity: a }).unwrap();
+				ctx.iter_interactions().collect::<Vec<_>>()
 			})?;
 
 		assert_eq!(vec![b], interactions);

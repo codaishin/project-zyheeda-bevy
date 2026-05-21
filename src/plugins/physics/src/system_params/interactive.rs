@@ -1,4 +1,4 @@
-mod overlaps_with;
+mod iter_interactions;
 
 use crate::{
 	components::markers::Interactive,
@@ -10,7 +10,7 @@ use bevy::{
 };
 use common::traits::{
 	accessors::get::{ContextChanged, GetContext},
-	handles_physics::HasInteractiveFrame,
+	handles_physics::IsInteracting,
 };
 use std::collections::HashSet;
 
@@ -19,12 +19,12 @@ pub struct InteractiveParam<'w> {
 	child_colliders: Res<'w, OngoingInteractions<Interactive>>,
 }
 
-impl GetContext<HasInteractiveFrame> for InteractiveParam<'static> {
+impl GetContext<IsInteracting> for InteractiveParam<'static> {
 	type TContext<'ctx> = InteractiveContext<'ctx>;
 
 	fn get_context<'ctx>(
 		param: &'ctx SystemParamItem<Self>,
-		HasInteractiveFrame { entity }: HasInteractiveFrame,
+		IsInteracting { entity }: IsInteracting,
 	) -> Option<Self::TContext<'ctx>> {
 		Some(InteractiveContext {
 			interactions: param.child_colliders.interactions.get(&entity)?,

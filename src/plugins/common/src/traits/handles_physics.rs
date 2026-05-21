@@ -110,20 +110,20 @@ impl TranslationOffsets {
 
 pub trait HandlesInteractiveDetection {
 	type TInteractive: SystemParam
-		+ for<'c> GetContext<HasInteractiveFrame, TContext<'c>: OverlapsWith>;
+		+ for<'c> GetContext<IsInteracting, TContext<'c>: IterInteractions>;
 }
 
 #[derive(EntityKey)]
-pub struct HasInteractiveFrame {
+pub struct IsInteracting {
 	pub entity: Entity,
 }
 
-pub trait OverlapsWith {
+pub trait IterInteractions {
 	type TIter<'a>: Iterator<Item = Entity>
 	where
 		Self: 'a;
 
-	fn interacts_with(&self) -> Self::TIter<'_>;
+	fn iter_interactions(&self) -> Self::TIter<'_>;
 }
 
 pub trait HandlesMotion {
