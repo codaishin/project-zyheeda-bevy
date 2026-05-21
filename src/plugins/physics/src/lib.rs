@@ -63,7 +63,6 @@ use common::{
 		handles_physics::{
 			HandlesInteractiveDetection,
 			HandlesMotion,
-			HandlesPhysicalEffectTargets,
 			HandlesPhysicsConfig,
 			HandlesRaycast,
 		},
@@ -269,15 +268,6 @@ impl<TDependencies> SystemSetDefinition for PhysicsPlugin<TDependencies> {
 	type TSystemSet = PhysicsSystems;
 
 	const SYSTEMS: PluginSystemSet<Self::TSystemSet> = PluginSystemSet::from_set(PhysicsSystems);
-}
-
-impl<TDependencies> HandlesPhysicalEffectTargets for PhysicsPlugin<TDependencies> {
-	fn mark_as_effect_target<T>(app: &mut App)
-	where
-		T: Component,
-	{
-		app.register_required_components::<T, Physical>();
-	}
 }
 
 impl<TDependencies> HandlesMotion for PhysicsPlugin<TDependencies> {
