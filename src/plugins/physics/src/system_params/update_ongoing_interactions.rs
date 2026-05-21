@@ -1,5 +1,5 @@
 use crate::{
-	components::collider::ChildCollider,
+	components::collider::ChildColliderOf,
 	resources::ongoing_interactions::OngoingInteractions,
 	traits::send_collision_interaction::PushOngoingInteraction,
 };
@@ -11,8 +11,7 @@ where
 	T: Component,
 {
 	interactions: ResMut<'w, OngoingInteractions<T>>,
-	child_colliders: Query<'w, 's, &'static ChildCollider<T>>,
-	markers: Query<'w, 's, (), With<T>>,
+	markers: Query<'w, 's, Option<&'static ChildColliderOf>, With<T>>,
 }
 
 impl<T> UpdateOngoingInteractions<'_, '_, T>
@@ -20,9 +19,9 @@ where
 	T: Component,
 {
 	fn get_root(&self, entity: Entity) -> Option<Entity> {
-		match self.child_colliders.get(entity) {
-			Ok(ChildCollider { root, .. }) => Some(*root),
-			Err(_) if self.markers.contains(entity) => Some(entity),
+		match self.markers.get(entity) {
+			Ok(Some(ChildColliderOf(root))) => Some(*root),
+			Ok(None) => Some(entity),
 			Err(_) => None,
 		}
 	}
@@ -111,15 +110,15 @@ mod tests {
 	fn add_entity_roots() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let roots = [
-			app.world_mut().spawn(_Marker).id(),
-			app.world_mut().spawn(_Marker).id(),
+			app.world_mut().spawn_empty().id(),
+			app.world_mut().spawn_empty().id(),
 		];
 		let colliders = [
 			app.world_mut()
-				.spawn(ChildCollider::<_Marker>::of(roots[0]))
+				.spawn((ChildColliderOf(roots[0]), _Marker))
 				.id(),
 			app.world_mut()
-				.spawn(ChildCollider::<_Marker>::of(roots[1]))
+				.spawn((ChildColliderOf(roots[1]), _Marker))
 				.id(),
 		];
 

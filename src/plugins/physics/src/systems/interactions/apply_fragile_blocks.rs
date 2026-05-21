@@ -1,5 +1,5 @@
 use crate::{
-	components::{blockable::Blockable, blocker_types::BlockerTypes, markers::Physical},
+	components::{blockable::Blockable, blocker_types::BlockerTypes, collision_domains::Physical},
 	resources::ongoing_interactions::OngoingInteractions,
 };
 use bevy::prelude::*;

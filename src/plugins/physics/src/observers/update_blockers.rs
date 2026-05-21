@@ -5,7 +5,7 @@ use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaComman
 impl<T> UpdateBlockersObserver for T where T: Component + UpdateBlockers {}
 
 pub(crate) trait UpdateBlockersObserver: Component + Sized + UpdateBlockers {
-	fn update_blockers(
+	fn update_blockers_observer(
 		on_insert: On<Insert, Self>,
 		mut commands: ZyheedaCommands,
 		mut effects: Query<(&Self, Option<&mut BlockerTypes>)>,
@@ -17,11 +17,11 @@ pub(crate) trait UpdateBlockersObserver: Component + Sized + UpdateBlockers {
 
 		match blockers {
 			Some(mut blockers) => {
-				effect.update(&mut blockers);
+				effect.update_blockers(&mut blockers);
 			}
 			None => {
 				let mut blockers = BlockerTypes::default();
-				effect.update(&mut blockers);
+				effect.update_blockers(&mut blockers);
 				commands.try_apply_on(&entity, |mut e| {
 					e.try_insert(blockers);
 				});
@@ -39,7 +39,7 @@ mod tests {
 	struct _Effect(Blocker);
 
 	impl UpdateBlockers for _Effect {
-		fn update(&self, BlockerTypes(blockers): &mut BlockerTypes) {
+		fn update_blockers(&self, BlockerTypes(blockers): &mut BlockerTypes) {
 			blockers.insert(self.0);
 		}
 	}
@@ -47,7 +47,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new();
 
-		app.add_observer(_Effect::update_blockers);
+		app.add_observer(_Effect::update_blockers_observer);
 
 		app
 	}

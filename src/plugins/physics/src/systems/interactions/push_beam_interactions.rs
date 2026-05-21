@@ -1,5 +1,5 @@
 use crate::{
-	components::markers::Physical,
+	components::collision_domains::Physical,
 	messages::BeamInteraction,
 	system_params::update_ongoing_interactions::UpdateOngoingInteractions,
 	traits::send_collision_interaction::PushOngoingInteraction,

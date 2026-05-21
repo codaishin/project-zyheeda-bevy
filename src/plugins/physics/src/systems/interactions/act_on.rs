@@ -1,5 +1,5 @@
 use crate::{
-	components::{markers::Physical, ongoing_effects::OngoingEffects},
+	components::{collision_domains::Physical, ongoing_effects::OngoingEffects},
 	resources::ongoing_interactions::OngoingInteractions,
 	traits::act_on::ActOn,
 };

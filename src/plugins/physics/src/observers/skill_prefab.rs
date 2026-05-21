@@ -1,6 +1,7 @@
 use crate::components::{
 	blockable::Blockable,
 	collider::{ColliderShape, GENERIC_COLLISION_GROUP, RAY_GROUP},
+	collision_domains::Physical,
 	effects::Effects,
 	skill::{SkillContactRoot, SkillProjectionRoot},
 	skill_transform::SkillTransformOf,
@@ -39,8 +40,8 @@ pub(crate) trait SkillPrefab:
 		};
 
 		entity.try_insert((
-			rigid_body,
 			Blockable(obj),
+			rigid_body,
 			SkillContactRoot,
 			cont_effects,
 			children![
@@ -54,6 +55,7 @@ pub(crate) trait SkillPrefab:
 					collision_group,
 					cont_collider.transform,
 					cont_collider.shape,
+					Physical::Contact,
 					Sensor,
 				),
 				(
@@ -70,6 +72,7 @@ pub(crate) trait SkillPrefab:
 							collision_group,
 							proj_collider.transform,
 							proj_collider.shape,
+							Physical::Projection,
 							Sensor,
 						),
 					]
@@ -374,6 +377,7 @@ mod tests {
 			let [_, collider, _] = assert_children_count!(3, app, skill);
 			assert_eq!(
 				(
+					Some(&Physical::Contact),
 					Some(&ColliderShape::from(Shape::Parameters(
 						ShapeParameters::Sphere {
 							radius: Units::from(42.),
@@ -386,6 +390,7 @@ mod tests {
 					})
 				),
 				(
+					collider.get::<Physical>(),
 					collider.get::<ColliderShape>(),
 					collider.get::<Transform>(),
 					collider.get::<CollisionGroups>(),
@@ -503,6 +508,7 @@ mod tests {
 			let [.., collider] = assert_children_count!(2, app, projection);
 			assert_eq!(
 				(
+					Some(&Physical::Projection),
 					Some(&ColliderShape::from(Shape::Parameters(
 						ShapeParameters::Sphere {
 							radius: Units::from(42.),
@@ -515,6 +521,7 @@ mod tests {
 					})
 				),
 				(
+					collider.get::<Physical>(),
 					collider.get::<ColliderShape>(),
 					collider.get::<Transform>(),
 					collider.get::<CollisionGroups>(),

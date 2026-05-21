@@ -23,12 +23,12 @@ use crate::{
 		body::Body,
 		character_gravity::CharacterGravity,
 		character_motion::ApplyCharacterMotion,
-		collider::{ChildCollider, ColliderShape},
+		collider::{ChildColliderOf, ColliderShape},
+		collision_domains::{Interactive, Physical},
 		default_attributes::DefaultAttributes,
 		effects::{Effects, force::ForceEffect},
 		ground_target::GroundTarget,
 		lifetime::{LifetimeTiedTo, TiedLifetimes},
-		markers::{Interactive, Physical},
 		set_velocity_forward::SetVelocityForward,
 		skill::{Skill, SkillContactRoot, SkillProjectionRoot},
 		target::Target,
@@ -157,7 +157,7 @@ where
 			// Colliders/Bodies
 			.add_prefab_observer::<ColliderShape, ()>()
 			.add_prefab_observer::<Body, ()>()
-			.add_observer(ChildCollider::<Physical>::link)
+			.add_observer(ChildColliderOf::link)
 			.add_systems(Update, AsyncCollider::insert_collider.pipe(OnError::log))
 			.add_message::<RayEvent>()
 			.add_message::<BeamInteraction>()
@@ -167,7 +167,7 @@ where
 			.add_observer(Effects::insert)
 			// Deal health damage
 			.add_physics::<HealthDamageEffect, Life, TSaveGame>()
-			.add_observer(HealthDamageEffect::update_blockers)
+			.add_observer(HealthDamageEffect::update_blockers_observer)
 			.add_systems(
 				Update,
 				(Life::insert_from::<DefaultAttributes>, Life::despawn_dead)
@@ -176,7 +176,7 @@ where
 			)
 			// Apply gravity effect
 			.add_physics::<GravityEffect, GravityAffected, TSaveGame>()
-			.add_observer(GravityEffect::update_blockers)
+			.add_observer(GravityEffect::update_blockers_observer)
 			.add_systems(
 				Update,
 				(
@@ -188,7 +188,7 @@ where
 			)
 			// Apply force effect
 			.add_physics::<ForceEffect, ForceAffected, TSaveGame>()
-			.add_observer(ForceEffect::update_blockers)
+			.add_observer(ForceEffect::update_blockers_observer)
 			.add_systems(
 				Update,
 				ForceAffected::insert_from::<DefaultAttributes>.in_set(PhysicsSystems),

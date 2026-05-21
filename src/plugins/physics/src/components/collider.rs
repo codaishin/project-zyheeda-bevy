@@ -13,7 +13,6 @@ use common::{
 	},
 };
 use macros::asset_path;
-use std::marker::PhantomData;
 
 pub(crate) const GENERIC_COLLISION_GROUP: Group = Group::GROUP_1;
 pub(crate) const TERRAIN_GROUP: Group = Group::GROUP_2;
@@ -158,41 +157,14 @@ enum SyncOrAsync {
 	Async(AsyncCollider),
 }
 
-/// Links a [`Collider`] entity to the corresponding `T` entity.
 #[derive(Component, PartialEq, Debug)]
-#[relationship(relationship_target = Colliders<T>)]
+#[relationship(relationship_target = Colliders)]
 #[require(Collider, Transform, ActiveEvents, ActiveCollisionTypes)]
-pub(crate) struct ChildCollider<T>
-where
-	T: Component,
-{
-	#[relationship]
-	pub(crate) root: Entity,
-	_p: PhantomData<T>,
-}
-
-impl<T> ChildCollider<T>
-where
-	T: Component,
-{
-	pub(crate) const fn of(entity: Entity) -> Self {
-		Self {
-			root: entity,
-			_p: PhantomData,
-		}
-	}
-}
+pub(crate) struct ChildColliderOf(pub(crate) Entity);
 
 #[derive(Component, PartialEq, Debug)]
-#[relationship_target(relationship = ChildCollider<T>)]
-pub(crate) struct Colliders<T>
-where
-	T: Component,
-{
-	#[relationship]
-	entities: EntityHashSet,
-	_p: PhantomData<T>,
-}
+#[relationship_target(relationship = ChildColliderOf)]
+pub(crate) struct Colliders(EntityHashSet);
 
 #[cfg(test)]
 mod tests {

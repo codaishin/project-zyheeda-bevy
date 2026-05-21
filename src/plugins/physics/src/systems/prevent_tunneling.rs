@@ -3,7 +3,7 @@ use crate::{
 		RayCasterArgs,
 		RayFilter,
 		collider::{GENERIC_COLLISION_GROUP, RAY_GROUP},
-		markers::Physical,
+		collision_domains::Physical,
 		prevent_tunneling::PreventTunneling,
 	},
 	system_params::update_ongoing_interactions::UpdateOngoingInteractions,

@@ -1,7 +1,7 @@
 mod iter_interactions;
 
 use crate::{
-	components::markers::Interactive,
+	components::collision_domains::Interactive,
 	resources::ongoing_interactions::OngoingInteractions,
 };
 use bevy::{

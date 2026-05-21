@@ -4,8 +4,8 @@ use crate::{
 		RayFilter,
 		blockable::Blockable,
 		blocker_types::BlockerTypes,
-		collider::{ChildCollider, ColliderShape, GENERIC_COLLISION_GROUP, RAY_GROUP},
-		markers::Physical,
+		collider::{ChildColliderOf, ColliderShape, GENERIC_COLLISION_GROUP, RAY_GROUP},
+		collision_domains::Physical,
 		skill_transform::SkillTransforms,
 	},
 	messages::BeamInteraction,
@@ -39,7 +39,7 @@ impl Blockable {
 		objects: Query<(Entity, &Self, &SkillTransforms, &GlobalTransform)>,
 		transforms_and_colliders: Query<(&mut Transform, Option<&ColliderShape>)>,
 		blockers: Query<&BlockerTypes>,
-		effect_target_colliders: Query<&ChildCollider<Physical>>,
+		contacts: Query<(Option<&ChildColliderOf>, &Physical)>,
 		commands: ZyheedaCommands,
 	) -> Result<(), BeamError> {
 		Self::beam_interactions_internal(
@@ -48,7 +48,7 @@ impl Blockable {
 			objects,
 			transforms_and_colliders,
 			blockers,
-			effect_target_colliders,
+			contacts,
 			commands,
 		)
 	}
@@ -59,7 +59,7 @@ impl Blockable {
 		objects: Query<(Entity, &Self, &SkillTransforms, &GlobalTransform)>,
 		mut transforms_and_colliders: Query<(&mut Transform, Option<&ColliderShape>)>,
 		blockers: Query<&BlockerTypes>,
-		interaction_colliders: Query<&ChildCollider<Physical>>,
+		contacts: Query<(Option<&ChildColliderOf>, &Physical)>,
 		mut commands: ZyheedaCommands,
 	) -> Result<(), BeamError<TCasterError>>
 	where
@@ -97,7 +97,7 @@ impl Blockable {
 					intersects: hit.entity,
 				});
 
-				if Self::blocked(&hit, blockers, interaction_colliders, blocked_by) {
+				if Self::blocked(&hit, blockers, blocked_by, contacts) {
 					toi = hit.toi;
 					break;
 				}
@@ -159,12 +159,13 @@ impl Blockable {
 	fn blocked(
 		hit: &RayHit,
 		blockers: Query<&BlockerTypes>,
-		interaction_colliders: Query<&ChildCollider<Physical>>,
 		blocked_by: &HashSet<Blocker>,
+		contacts: Query<(Option<&ChildColliderOf>, &Physical)>,
 	) -> bool {
-		let entity = match interaction_colliders.get(hit.entity) {
-			Ok(ChildCollider { root, .. }) => *root,
-			Err(_) => hit.entity,
+		let entity = match contacts.get(hit.entity) {
+			Ok((Some(ChildColliderOf(root)), Physical::Contact)) => *root,
+			Ok((None, Physical::Contact)) => hit.entity,
+			_ => return false,
 		};
 
 		let Ok(BlockerTypes(blockers)) = blockers.get(entity) else {
@@ -209,7 +210,12 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{
-		components::{blocker_types::BlockerTypes, skill_transform::SkillTransformOf},
+		components::{
+			blocker_types::BlockerTypes,
+			collider::ChildColliderOf,
+			collision_domains::Physical,
+			skill_transform::SkillTransformOf,
+		},
 		messages::BeamInteraction,
 		traits::ray_cast::{CastRayContinuouslySorted, InvalidIntersections, RayHit},
 	};
@@ -285,6 +291,7 @@ mod tests {
 				GlobalTransform::from(
 					Transform::from_xyz(1., 2., 3.).looking_to(Dir3::NEG_Y, Vec3::Y),
 				),
+				Physical::Contact,
 				Blockable(PhysicalObject::Beam {
 					range: Units::from(11000.),
 					blocked_by: HashSet::from([]),
@@ -343,10 +350,13 @@ mod tests {
 			});
 			let entity = app
 				.world_mut()
-				.spawn(Blockable(PhysicalObject::Beam {
-					range: Units::from(11000.),
-					blocked_by: HashSet::from([]),
-				}))
+				.spawn((
+					Blockable(PhysicalObject::Beam {
+						range: Units::from(11000.),
+						blocked_by: HashSet::from([]),
+					}),
+					Physical::Contact,
+				))
 				.id();
 			let skill_transform = app.world_mut().spawn(SkillTransformOf(entity)).id();
 
@@ -370,10 +380,10 @@ mod tests {
 			let mut app = setup(|world| {
 				Mock_RayCaster::new_mock(|mock| {
 					let blocker = world
-						.spawn(BlockerTypes(HashSet::from([
-							Blocker::Force,
-							Blocker::Physical,
-						])))
+						.spawn((
+							BlockerTypes(HashSet::from([Blocker::Force, Blocker::Physical])),
+							Physical::Contact,
+						))
 						.id();
 					mock.expect_cast_ray_continuously_sorted()
 						.return_const(Ok(Sorted::from([
@@ -394,10 +404,13 @@ mod tests {
 			});
 			let entity = app
 				.world_mut()
-				.spawn(Blockable(PhysicalObject::Beam {
-					range: Units::from(11000.),
-					blocked_by: HashSet::from([Blocker::Force, Blocker::Character]),
-				}))
+				.spawn((
+					Blockable(PhysicalObject::Beam {
+						range: Units::from(11000.),
+						blocked_by: HashSet::from([Blocker::Force, Blocker::Character]),
+					}),
+					Physical::Contact,
+				))
 				.id();
 			let skill_transform = app.world_mut().spawn(SkillTransformOf(entity)).id();
 
@@ -417,7 +430,7 @@ mod tests {
 		}
 
 		#[test]
-		fn update_to_reach_first_block_via_interaction_collider() -> Result<(), RunSystemError> {
+		fn update_to_reach_first_block_via_child_collider() -> Result<(), RunSystemError> {
 			let mut app = setup(|world| {
 				Mock_RayCaster::new_mock(|mock| {
 					let blocker = world
@@ -426,7 +439,9 @@ mod tests {
 							Blocker::Physical,
 						])))
 						.id();
-					let collider = world.spawn(ChildCollider::<Physical>::of(blocker)).id();
+					let collider = world
+						.spawn((ChildColliderOf(blocker), Physical::Contact))
+						.id();
 					mock.expect_cast_ray_continuously_sorted()
 						.return_const(Ok(Sorted::from([
 							RayHit {
@@ -473,7 +488,10 @@ mod tests {
 			let mut app = setup(|world| {
 				Mock_RayCaster::new_mock(|mock| {
 					let blocker = world
-						.spawn(BlockerTypes(HashSet::from([Blocker::Physical])))
+						.spawn((
+							BlockerTypes(HashSet::from([Blocker::Physical])),
+							Physical::Contact,
+						))
 						.id();
 					mock.expect_cast_ray_continuously_sorted()
 						.return_const(Ok(Sorted::from([
@@ -483,6 +501,112 @@ mod tests {
 							},
 							RayHit {
 								entity: blocker,
+								toi: toi!(110.),
+							},
+							RayHit {
+								entity: fake_entity!(40),
+								toi: toi!(1100.),
+							},
+						])));
+				})
+			});
+			let entity = app
+				.world_mut()
+				.spawn(Blockable(PhysicalObject::Beam {
+					range: Units::from(11000.),
+					blocked_by: HashSet::from([Blocker::Force, Blocker::Character]),
+				}))
+				.id();
+			let skill_transform = app.world_mut().spawn(SkillTransformOf(entity)).id();
+
+			_ = app.world_mut().run_system_once(
+				Blockable::beam_interactions_internal::<Res<_GetRayCaster>, Unreachable>,
+			)?;
+
+			assert_eq!(
+				Some(&Transform {
+					translation: Vec3::ZERO.with_z(-5500.),
+					scale: Vec3::ONE.with_y(11000.),
+					..default()
+				}),
+				app.world().entity(skill_transform).get::<Transform>(),
+			);
+			Ok(())
+		}
+
+		#[test]
+		fn update_to_reach_max_length_if_not_physical_contact() -> Result<(), RunSystemError> {
+			let mut app = setup(|world| {
+				Mock_RayCaster::new_mock(|mock| {
+					let blocker = world
+						.spawn((
+							BlockerTypes(HashSet::from([Blocker::Physical])),
+							Physical::Projection,
+						))
+						.id();
+					mock.expect_cast_ray_continuously_sorted()
+						.return_const(Ok(Sorted::from([
+							RayHit {
+								entity: fake_entity!(42),
+								toi: toi!(11.),
+							},
+							RayHit {
+								entity: blocker,
+								toi: toi!(110.),
+							},
+							RayHit {
+								entity: fake_entity!(40),
+								toi: toi!(1100.),
+							},
+						])));
+				})
+			});
+			let entity = app
+				.world_mut()
+				.spawn(Blockable(PhysicalObject::Beam {
+					range: Units::from(11000.),
+					blocked_by: HashSet::from([Blocker::Force, Blocker::Character]),
+				}))
+				.id();
+			let skill_transform = app.world_mut().spawn(SkillTransformOf(entity)).id();
+
+			_ = app.world_mut().run_system_once(
+				Blockable::beam_interactions_internal::<Res<_GetRayCaster>, Unreachable>,
+			)?;
+
+			assert_eq!(
+				Some(&Transform {
+					translation: Vec3::ZERO.with_z(-5500.),
+					scale: Vec3::ONE.with_y(11000.),
+					..default()
+				}),
+				app.world().entity(skill_transform).get::<Transform>(),
+			);
+			Ok(())
+		}
+
+		#[test]
+		fn update_to_reach_max_length_if_child_collider_is_not_contact()
+		-> Result<(), RunSystemError> {
+			let mut app = setup(|world| {
+				Mock_RayCaster::new_mock(|mock| {
+					let blocker = world
+						.spawn(BlockerTypes(HashSet::from([
+							Blocker::Force,
+							Blocker::Physical,
+						])))
+						.id();
+					let collider = world
+						.spawn((ChildColliderOf(blocker), Physical::Projection))
+						.id();
+					mock.expect_cast_ray_continuously_sorted()
+						.return_const(Ok(Sorted::from([
+							RayHit {
+								entity: fake_entity!(42),
+								toi: toi!(11.),
+							},
+							RayHit {
+								entity: collider,
 								toi: toi!(110.),
 							},
 							RayHit {
@@ -677,9 +801,8 @@ mod tests {
 	}
 
 	mod beam_interaction_events {
-		use testing::assert_count;
-
 		use super::*;
+		use testing::assert_count;
 
 		#[test]
 		fn send_event_for_each_hit() -> Result<(), RunSystemError> {
@@ -739,10 +862,10 @@ mod tests {
 			let mut app = setup(|world| {
 				Mock_RayCaster::new_mock(|mock| {
 					let blocker = world
-						.spawn(BlockerTypes(HashSet::from([
-							Blocker::Physical,
-							Blocker::Force,
-						])))
+						.spawn((
+							BlockerTypes(HashSet::from([Blocker::Physical, Blocker::Force])),
+							Physical::Contact,
+						))
 						.id();
 
 					mock.expect_cast_ray_continuously_sorted()

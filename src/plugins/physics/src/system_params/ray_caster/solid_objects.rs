@@ -1,5 +1,5 @@
 use crate::{
-	components::collider::{ChildCollider, MOUSE_HOVERABLE_GROUP, RAY_GROUP},
+	components::collider::{ChildColliderOf, MOUSE_HOVERABLE_GROUP, RAY_GROUP},
 	system_params::ray_caster::RayCaster,
 };
 use bevy::prelude::*;
@@ -33,7 +33,7 @@ impl Raycast<SolidObjects> for RayCaster<'_, '_> {
 		let (entity, time_of_impact) =
 			ray_caster.cast_ray(ray.origin, *ray.direction, Real::MAX, true, filter)?;
 
-		if let Ok(ChildCollider { root, .. }) = self.physical_child_colliders.get(entity) {
+		if let Ok(ChildColliderOf(root)) = self.child_colliders.get(entity) {
 			return Some(RaycastHit {
 				entity: *root,
 				time_of_impact,
@@ -55,8 +55,8 @@ impl RayCaster<'_, '_> {
 			}
 
 			!matches!(
-				self.physical_child_colliders.get(entity),
-				Ok(ChildCollider { root, .. }) if exclude.contains(root),
+				self.child_colliders.get(entity),
+				Ok(ChildColliderOf(root)) if exclude.contains(root),
 			)
 		}
 	}
@@ -66,7 +66,7 @@ impl RayCaster<'_, '_> {
 mod tests {
 	use super::*;
 	use crate::{
-		components::{collider::MOUSE_HOVERABLE_GROUP, markers::Physical},
+		components::{collider::MOUSE_HOVERABLE_GROUP, collision_domains::Physical},
 		tests::TestCollisionsPlugin,
 	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
@@ -77,7 +77,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.add_plugins(TestCollisionsPlugin);
-		app.add_observer(ChildCollider::<Physical>::link);
+		app.add_observer(ChildColliderOf::link);
 
 		app
 	}
@@ -117,8 +117,8 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				Physical,
-				children![(Transform::default(), Collider::ball(0.5))],
+				RigidBody::Fixed,
+				children![(Transform::default(), Physical::Contact, Collider::ball(0.5))],
 			))
 			.id();
 		app.world_mut().spawn(());
@@ -150,11 +150,12 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				Physical,
-				children![(
-					RigidBody::Fixed,
-					children![(Transform::default(), Collider::ball(0.5))]
-				)],
+				RigidBody::Fixed,
+				children![children![(
+					Physical::Contact,
+					Transform::default(),
+					Collider::ball(0.5)
+				)]],
 			))
 			.id();
 		app.world_mut().spawn(());
@@ -238,17 +239,17 @@ mod tests {
 		let a = app
 			.world_mut()
 			.spawn((
-				Physical,
+				RigidBody::Fixed,
 				Transform::default(),
-				children![(Transform::default(), Collider::ball(0.5))],
+				children![(Transform::default(), Physical::Contact, Collider::ball(0.5))],
 			))
 			.id();
 		let b = app
 			.world_mut()
 			.spawn((
-				Physical,
+				RigidBody::Fixed,
 				Transform::from_xyz(0., -10., 0.),
-				children![(Transform::default(), Collider::ball(0.5))],
+				children![(Transform::default(), Physical::Contact, Collider::ball(0.5))],
 			))
 			.id();
 		app.update();

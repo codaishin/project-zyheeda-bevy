@@ -1,7 +1,6 @@
 use crate::components::{
 	blocker_types::BlockerTypes,
 	collider::{
-		ChildCollider,
 		ColliderShape,
 		GENERIC_COLLISION_GROUP,
 		INTERACTIVE_GROUP,
@@ -9,7 +8,7 @@ use crate::components::{
 		RAY_GROUP,
 		TERRAIN_GROUP,
 	},
-	markers::{Interactive, Physical},
+	collision_domains::{Interactive, Physical},
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use bevy_rapier3d::prelude::*;
@@ -28,6 +27,7 @@ pub struct Body(pub(crate) BodyConfig);
 impl Body {
 	fn agent() -> impl Bundle {
 		(
+			Physical::Contact,
 			RigidBody::KinematicPositionBased,
 			CollidingEntities::default(),
 			ActiveEvents::COLLISION_EVENTS,
@@ -42,6 +42,7 @@ impl Body {
 
 	fn terrain() -> impl Bundle {
 		(
+			Physical::Contact,
 			RigidBody::Fixed,
 			CollisionGroups {
 				memberships: generic_and(TERRAIN_GROUP),
@@ -52,6 +53,7 @@ impl Body {
 
 	fn interactive() -> impl Bundle {
 		(
+			Interactive,
 			Sensor,
 			CollidingEntities::default(),
 			ActiveEvents::COLLISION_EVENTS,
@@ -87,13 +89,13 @@ impl Prefab<()> for Body {
 
 		match physics_type {
 			PhysicsType::Agent(blockers) => {
-				entity.try_insert((Self::agent(), Physical, BlockerTypes(blockers.clone())));
+				entity.try_insert((Self::agent(), BlockerTypes(blockers.clone())));
 			}
 			PhysicsType::Terrain(blockers) => {
-				entity.try_insert((Self::terrain(), Physical, BlockerTypes(blockers.clone())));
+				entity.try_insert((Self::terrain(), BlockerTypes(blockers.clone())));
 			}
 			PhysicsType::InteractiveFrame => {
-				entity.try_insert((Self::interactive(), Interactive, RigidBody::Fixed));
+				entity.try_insert((Self::interactive(), RigidBody::Fixed));
 			}
 		};
 
@@ -102,7 +104,6 @@ impl Prefab<()> for Body {
 		for sub_frame in sub_frames {
 			entity.with_child((
 				Self::interactive(),
-				ChildCollider::<Interactive>::of(entity.entity_id()),
 				Transform::from_xyz(0., 0., -*sub_frame.forward_offset),
 				ColliderShape::from(sub_frame.shape),
 			));
@@ -138,7 +139,7 @@ mod tests {
 	}
 
 	mod body {
-		use crate::components::markers::Physical;
+		use crate::components::collision_domains::Physical;
 
 		use super::*;
 		use test_case::test_case;
@@ -373,7 +374,7 @@ mod tests {
 		}
 
 		#[test]
-		fn mark_as_interactive_child_collider() {
+		fn mark_as_interactive() {
 			let mut app = setup();
 			let shape = ShapeParameters::Sphere {
 				radius: Units::from(42.),
@@ -388,10 +389,7 @@ mod tests {
 				.id();
 
 			let [child] = assert_children_count!(1, app, entity);
-			assert_eq!(
-				Some(&ChildCollider::of(entity)),
-				child.get::<ChildCollider::<Interactive>>()
-			);
+			assert_eq!(Some(&Interactive), child.get::<Interactive>());
 		}
 
 		#[test]
