@@ -8,7 +8,6 @@ use crate::{
 		collision_domains::Physical,
 		skill_transform::SkillTransforms,
 	},
-	messages::BeamInteraction,
 	traits::ray_cast::{
 		CastRayContinuouslySorted,
 		GetContinuousSortedRayCaster,
@@ -34,7 +33,6 @@ use std::{collections::HashSet, fmt::Debug};
 
 impl Blockable {
 	pub(crate) fn beam_interactions(
-		beam_interactions: MessageWriter<BeamInteraction>,
 		cast_ray: StaticSystemParam<ReadRapierContext>,
 		objects: Query<(Entity, &Self, &SkillTransforms, &GlobalTransform)>,
 		transforms_and_colliders: Query<(&mut Transform, Option<&ColliderShape>)>,
@@ -43,7 +41,6 @@ impl Blockable {
 		commands: ZyheedaCommands,
 	) -> Result<(), BeamError> {
 		Self::beam_interactions_internal(
-			beam_interactions,
 			cast_ray,
 			objects,
 			transforms_and_colliders,
@@ -54,7 +51,6 @@ impl Blockable {
 	}
 
 	fn beam_interactions_internal<TGetRayCaster, TCasterError>(
-		mut beam_interactions: MessageWriter<BeamInteraction>,
 		cast_ray: StaticSystemParam<TGetRayCaster>,
 		objects: Query<(Entity, &Self, &SkillTransforms, &GlobalTransform)>,
 		mut transforms_and_colliders: Query<(&mut Transform, Option<&ColliderShape>)>,
@@ -90,17 +86,10 @@ impl Blockable {
 				}
 			};
 			let mut toi = ray.max_toi;
+			let is_blocked = |hit: &RayHit| Self::blocked(hit, blockers, blocked_by, contacts);
 
-			for hit in hits {
-				beam_interactions.write(BeamInteraction {
-					beam: entity,
-					intersects: hit.entity,
-				});
-
-				if Self::blocked(&hit, blockers, blocked_by, contacts) {
-					toi = hit.toi;
-					break;
-				}
+			if let Some(blocked) = hits.into_iter().find(is_blocked) {
+				toi = blocked.toi;
 			}
 
 			for entity in skill_transforms.iter() {
@@ -216,7 +205,6 @@ mod tests {
 			collision_domains::Physical,
 			skill_transform::SkillTransformOf,
 		},
-		messages::BeamInteraction,
 		traits::ray_cast::{CastRayContinuouslySorted, InvalidIntersections, RayHit},
 	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
@@ -229,7 +217,7 @@ mod tests {
 	use macros::simple_mock;
 	use mockall::predicate::eq;
 	use std::collections::HashSet;
-	use testing::{Mock, SingleThreadedApp, fake_entity, get_current_update_messages};
+	use testing::{Mock, SingleThreadedApp, fake_entity};
 	use zyheeda_core::prelude::Sorted;
 
 	#[derive(Resource)]
@@ -275,7 +263,6 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 		let mock = new_mock(app.world_mut());
 
-		app.add_message::<BeamInteraction>();
 		app.insert_resource(_GetRayCaster { mock });
 
 		app
@@ -795,124 +782,6 @@ mod tests {
 				app.world()
 					.entity(skill_transform)
 					.get::<IsChanged<ColliderShape>>(),
-			);
-			Ok(())
-		}
-	}
-
-	mod beam_interaction_events {
-		use super::*;
-		use testing::assert_count;
-
-		#[test]
-		fn send_event_for_each_hit() -> Result<(), RunSystemError> {
-			let mut app = setup(|_| {
-				Mock_RayCaster::new_mock(|mock| {
-					mock.expect_cast_ray_continuously_sorted()
-						.return_const(Ok(Sorted::from([
-							RayHit {
-								entity: fake_entity!(42),
-								toi: toi!(11.),
-							},
-							RayHit {
-								entity: fake_entity!(41),
-								toi: toi!(110.),
-							},
-							RayHit {
-								entity: fake_entity!(40),
-								toi: toi!(1100.),
-							},
-						])));
-				})
-			});
-			let entity = app
-				.world_mut()
-				.spawn(Blockable(PhysicalObject::Beam {
-					range: Units::from(11000.),
-					blocked_by: HashSet::from([]),
-				}))
-				.id();
-
-			_ = app.world_mut().run_system_once(
-				Blockable::beam_interactions_internal::<Res<_GetRayCaster>, Unreachable>,
-			)?;
-
-			assert_eq!(
-				vec![
-					&BeamInteraction {
-						beam: entity,
-						intersects: fake_entity!(42)
-					},
-					&BeamInteraction {
-						beam: entity,
-						intersects: fake_entity!(41)
-					},
-					&BeamInteraction {
-						beam: entity,
-						intersects: fake_entity!(40)
-					},
-				],
-				get_current_update_messages!(app, BeamInteraction).collect::<Vec<_>>(),
-			);
-			Ok(())
-		}
-
-		#[test]
-		fn send_event_for_each_hit_until_blocked() -> Result<(), RunSystemError> {
-			let mut app = setup(|world| {
-				Mock_RayCaster::new_mock(|mock| {
-					let blocker = world
-						.spawn((
-							BlockerTypes(HashSet::from([Blocker::Physical, Blocker::Force])),
-							Physical::Contact,
-						))
-						.id();
-
-					mock.expect_cast_ray_continuously_sorted()
-						.return_const(Ok(Sorted::from([
-							RayHit {
-								entity: fake_entity!(42),
-								toi: toi!(11.),
-							},
-							RayHit {
-								entity: blocker,
-								toi: toi!(110.),
-							},
-							RayHit {
-								entity: fake_entity!(40),
-								toi: toi!(1100.),
-							},
-						])));
-				})
-			});
-			let entity = app
-				.world_mut()
-				.spawn(Blockable(PhysicalObject::Beam {
-					range: Units::from(11000.),
-					blocked_by: HashSet::from([Blocker::Physical, Blocker::Character]),
-				}))
-				.id();
-
-			_ = app.world_mut().run_system_once(
-				Blockable::beam_interactions_internal::<Res<_GetRayCaster>, Unreachable>,
-			)?;
-
-			let mut blockers = app
-				.world_mut()
-				.query_filtered::<Entity, With<BlockerTypes>>();
-			let [blocker] = assert_count!(1, blockers.iter(app.world()));
-			assert_eq!(
-				vec![
-					&BeamInteraction {
-						beam: entity,
-						intersects: fake_entity!(42)
-					},
-					&BeamInteraction {
-						beam: entity,
-						intersects: blocker
-					},
-				],
-				get_current_update_messages!(app, BeamInteraction).collect::<Vec<_>>(),
 			);
 			Ok(())
 		}

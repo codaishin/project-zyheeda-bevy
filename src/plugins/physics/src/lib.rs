@@ -36,7 +36,7 @@ use crate::{
 		when_traveled::DestroyAfterDistanceTraveled,
 		world_camera::WorldCamera,
 	},
-	messages::{BeamInteraction, RayEvent},
+	messages::RayEvent,
 	observers::{skill_prefab::SkillPrefab, update_blockers::UpdateBlockersObserver},
 	resources::ongoing_interactions::OngoingInteractions,
 	system_params::{
@@ -161,7 +161,6 @@ where
 			.add_observer(ColliderRoot::link_children)
 			.add_systems(Update, AsyncCollider::insert_collider.pipe(OnError::log))
 			.add_message::<RayEvent>()
-			.add_message::<BeamInteraction>()
 			.init_resource::<OngoingInteractions<Physical>>()
 			.init_resource::<OngoingInteractions<Interactive>>()
 			// All effects
@@ -214,7 +213,6 @@ where
 					(
 						Blockable::beam_interactions.pipe(OnError::log),
 						OngoingInteractions::<Physical>::clear,
-						UpdateOngoingInteractions::<Physical>::push_beam_interactions,
 						Update::delta
 							.pipe(UpdateOngoingInteractions::<Physical>::prevent_tunneling)
 							.pipe(OnError::log),
