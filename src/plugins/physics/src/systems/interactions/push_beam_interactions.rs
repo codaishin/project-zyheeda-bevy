@@ -2,7 +2,7 @@ use crate::{
 	components::collision_domains::Physical,
 	messages::BeamInteraction,
 	system_params::update_ongoing_interactions::UpdateOngoingInteractions,
-	traits::send_collision_interaction::PushOngoingInteraction,
+	traits::send_collision_interaction::PushInteractingColliders,
 };
 use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
@@ -22,10 +22,10 @@ fn push_beam_interactions_internal<T>(
 	mut ongoing_interactions: StaticSystemParam<T>,
 	mut beam_interactions: MessageReader<BeamInteraction>,
 ) where
-	T: for<'w, 's> SystemParam<Item<'w, 's>: PushOngoingInteraction>,
+	T: for<'w, 's> SystemParam<Item<'w, 's>: PushInteractingColliders>,
 {
 	for BeamInteraction { beam, intersects } in beam_interactions.read() {
-		ongoing_interactions.push_ongoing_interaction(*beam, *intersects);
+		ongoing_interactions.push_interacting_colliders(*beam, *intersects);
 	}
 }
 
@@ -45,21 +45,21 @@ mod tests {
 	impl Default for _OngoingCollisions {
 		fn default() -> Self {
 			Self::new().with_mock(|mock| {
-				mock.expect_push_ongoing_interaction().return_const(());
+				mock.expect_push_interacting_colliders().return_const(());
 			})
 		}
 	}
 
-	impl PushOngoingInteraction for ResMut<'_, _OngoingCollisions> {
-		fn push_ongoing_interaction(&mut self, a: Entity, b: Entity) {
-			self.mock.push_ongoing_interaction(a, b);
+	impl PushInteractingColliders for ResMut<'_, _OngoingCollisions> {
+		fn push_interacting_colliders(&mut self, a: Entity, b: Entity) {
+			self.mock.push_interacting_colliders(a, b);
 		}
 	}
 
 	#[automock]
-	impl PushOngoingInteraction for _OngoingCollisions {
-		fn push_ongoing_interaction(&mut self, a: Entity, b: Entity) {
-			self.mock.push_ongoing_interaction(a, b);
+	impl PushInteractingColliders for _OngoingCollisions {
+		fn push_interacting_colliders(&mut self, a: Entity, b: Entity) {
+			self.mock.push_interacting_colliders(a, b);
 		}
 	}
 
@@ -88,7 +88,7 @@ mod tests {
 
 		app.world_mut()
 			.insert_resource(_OngoingCollisions::new().with_mock(move |mock| {
-				mock.expect_push_ongoing_interaction()
+				mock.expect_push_interacting_colliders()
 					.with(eq(actor), eq(target))
 					.once()
 					.return_const(());

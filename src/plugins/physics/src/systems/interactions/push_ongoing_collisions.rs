@@ -1,4 +1,4 @@
-use crate::traits::send_collision_interaction::PushOngoingInteraction;
+use crate::traits::send_collision_interaction::PushInteractingColliders;
 use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
@@ -6,12 +6,12 @@ use bevy::{
 use bevy_rapier3d::prelude::CollidingEntities;
 
 impl<T> PushOngoingCollisions for T where
-	T: for<'w, 's> SystemParam<Item<'w, 's>: PushOngoingInteraction>
+	T: for<'w, 's> SystemParam<Item<'w, 's>: PushInteractingColliders>
 {
 }
 
 pub trait PushOngoingCollisions:
-	for<'w, 's> SystemParam<Item<'w, 's>: PushOngoingInteraction>
+	for<'w, 's> SystemParam<Item<'w, 's>: PushInteractingColliders>
 {
 	fn push_ongoing_collisions(
 		mut ongoing_interactions: StaticSystemParam<Self>,
@@ -19,7 +19,7 @@ pub trait PushOngoingCollisions:
 	) {
 		for (actor, targets) in &collisions {
 			for target in targets.iter() {
-				ongoing_interactions.push_ongoing_interaction(actor, target);
+				ongoing_interactions.push_interacting_colliders(actor, target);
 			}
 		}
 	}
@@ -45,21 +45,21 @@ mod tests {
 	impl Default for _OngoingCollisions {
 		fn default() -> Self {
 			Self::new().with_mock(|mock| {
-				mock.expect_push_ongoing_interaction().return_const(());
+				mock.expect_push_interacting_colliders().return_const(());
 			})
 		}
 	}
 
-	impl PushOngoingInteraction for ResMut<'_, _OngoingCollisions> {
-		fn push_ongoing_interaction(&mut self, a: Entity, b: Entity) {
-			self.mock.push_ongoing_interaction(a, b);
+	impl PushInteractingColliders for ResMut<'_, _OngoingCollisions> {
+		fn push_interacting_colliders(&mut self, a: Entity, b: Entity) {
+			self.mock.push_interacting_colliders(a, b);
 		}
 	}
 
 	#[automock]
-	impl PushOngoingInteraction for _OngoingCollisions {
-		fn push_ongoing_interaction(&mut self, a: Entity, b: Entity) {
-			self.mock.push_ongoing_interaction(a, b);
+	impl PushInteractingColliders for _OngoingCollisions {
+		fn push_interacting_colliders(&mut self, a: Entity, b: Entity) {
+			self.mock.push_interacting_colliders(a, b);
 		}
 	}
 
@@ -97,7 +97,7 @@ mod tests {
 
 		app.world_mut()
 			.insert_resource(_OngoingCollisions::new().with_mock(move |mock| {
-				mock.expect_push_ongoing_interaction()
+				mock.expect_push_interacting_colliders()
 					.with(eq(actor), eq(target))
 					.once()
 					.return_const(());
@@ -119,7 +119,7 @@ mod tests {
 
 		app.world_mut()
 			.insert_resource(_OngoingCollisions::new().with_mock(move |mock| {
-				mock.expect_push_ongoing_interaction()
+				mock.expect_push_interacting_colliders()
 					.with(eq(actor), eq(target))
 					.times(3)
 					.return_const(());
@@ -143,7 +143,7 @@ mod tests {
 
 		app.world_mut()
 			.insert_resource(_OngoingCollisions::new().with_mock(move |mock| {
-				mock.expect_push_ongoing_interaction()
+				mock.expect_push_interacting_colliders()
 					.with(eq(actor), eq(target))
 					.times(2)
 					.return_const(());
