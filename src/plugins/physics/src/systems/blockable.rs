@@ -1,1 +1,1 @@
-pub(crate) mod beam_interactions;
+pub(crate) mod apply_beam_blocks;

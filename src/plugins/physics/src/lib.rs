@@ -23,12 +23,12 @@ use crate::{
 		body::Body,
 		character_gravity::CharacterGravity,
 		character_motion::ApplyCharacterMotion,
-		collider::{ChildCollider, ColliderShape},
+		collider::{ColliderRoot, ColliderShape},
+		collision_domains::{Interactive, Physical},
 		default_attributes::DefaultAttributes,
 		effects::{Effects, force::ForceEffect},
 		ground_target::GroundTarget,
 		lifetime::{LifetimeTiedTo, TiedLifetimes},
-		markers::{Interactive, Physical},
 		set_velocity_forward::SetVelocityForward,
 		skill::{Skill, SkillContactRoot, SkillProjectionRoot},
 		target::Target,
@@ -36,7 +36,7 @@ use crate::{
 		when_traveled::DestroyAfterDistanceTraveled,
 		world_camera::WorldCamera,
 	},
-	messages::{BeamInteraction, RayEvent},
+	messages::RayEvent,
 	observers::{skill_prefab::SkillPrefab, update_blockers::UpdateBlockersObserver},
 	resources::ongoing_interactions::OngoingInteractions,
 	system_params::{
@@ -63,7 +63,6 @@ use common::{
 		handles_physics::{
 			HandlesInteractiveDetection,
 			HandlesMotion,
-			HandlesPhysicalEffectTargets,
 			HandlesPhysicsConfig,
 			HandlesRaycast,
 		},
@@ -119,6 +118,7 @@ where
 		app
 			// Rapier
 			.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
+			.register_required_components::<RigidBody, ColliderRoot>()
 			.add_systems(
 				Startup,
 				set_rapier_time_step(Duration::from_secs(1) / self.target_fps),
@@ -158,17 +158,15 @@ where
 			// Colliders/Bodies
 			.add_prefab_observer::<ColliderShape, ()>()
 			.add_prefab_observer::<Body, ()>()
-			.add_observer(ChildCollider::<Physical>::link)
 			.add_systems(Update, AsyncCollider::insert_collider.pipe(OnError::log))
 			.add_message::<RayEvent>()
-			.add_message::<BeamInteraction>()
 			.init_resource::<OngoingInteractions<Physical>>()
 			.init_resource::<OngoingInteractions<Interactive>>()
 			// All effects
 			.add_observer(Effects::insert)
 			// Deal health damage
 			.add_physics::<HealthDamageEffect, Life, TSaveGame>()
-			.add_observer(HealthDamageEffect::update_blockers)
+			.add_observer(HealthDamageEffect::update_blockers_observer)
 			.add_systems(
 				Update,
 				(Life::insert_from::<DefaultAttributes>, Life::despawn_dead)
@@ -177,7 +175,7 @@ where
 			)
 			// Apply gravity effect
 			.add_physics::<GravityEffect, GravityAffected, TSaveGame>()
-			.add_observer(GravityEffect::update_blockers)
+			.add_observer(GravityEffect::update_blockers_observer)
 			.add_systems(
 				Update,
 				(
@@ -189,7 +187,7 @@ where
 			)
 			// Apply force effect
 			.add_physics::<ForceEffect, ForceAffected, TSaveGame>()
-			.add_observer(ForceEffect::update_blockers)
+			.add_observer(ForceEffect::update_blockers_observer)
 			.add_systems(
 				Update,
 				ForceAffected::insert_from::<DefaultAttributes>.in_set(PhysicsSystems),
@@ -203,6 +201,8 @@ where
 			.add_systems(
 				Update,
 				(
+					// pre bake collider child relations
+					ColliderRoot::link_children,
 					// Skill spawning/lifetime
 					(
 						GroundTarget::set_position::<RayCaster>,
@@ -212,9 +212,8 @@ where
 						.chain(),
 					// Collect physical collections
 					(
-						Blockable::beam_interactions.pipe(OnError::log),
+						Blockable::apply_beam_blocks.pipe(OnError::log),
 						OngoingInteractions::<Physical>::clear,
-						UpdateOngoingInteractions::<Physical>::push_beam_interactions,
 						Update::delta
 							.pipe(UpdateOngoingInteractions::<Physical>::prevent_tunneling)
 							.pipe(OnError::log),
@@ -269,15 +268,6 @@ impl<TDependencies> SystemSetDefinition for PhysicsPlugin<TDependencies> {
 	type TSystemSet = PhysicsSystems;
 
 	const SYSTEMS: PluginSystemSet<Self::TSystemSet> = PluginSystemSet::from_set(PhysicsSystems);
-}
-
-impl<TDependencies> HandlesPhysicalEffectTargets for PhysicsPlugin<TDependencies> {
-	fn mark_as_effect_target<T>(app: &mut App)
-	where
-		T: Component,
-	{
-		app.register_required_components::<T, Physical>();
-	}
 }
 
 impl<TDependencies> HandlesMotion for PhysicsPlugin<TDependencies> {

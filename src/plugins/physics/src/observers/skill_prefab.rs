@@ -1,14 +1,16 @@
 use crate::components::{
 	blockable::Blockable,
 	collider::{ColliderShape, GENERIC_COLLISION_GROUP, RAY_GROUP},
+	collision_domains::Physical,
 	effects::Effects,
+	persistent_root::PersistentRoot,
 	skill::{SkillContactRoot, SkillProjectionRoot},
 	skill_transform::SkillTransformOf,
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{
-	components::{lifetime::Lifetime, model::Model},
+	components::{lifetime::Lifetime, model::Model, persistent_entity::PersistentEntity},
 	traits::{accessors::get::GetMut, handles_physics::PhysicalObject},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
@@ -22,12 +24,16 @@ impl<T> SkillPrefab for T where
 pub(crate) trait SkillPrefab:
 	Component + GetLifetime + GetContactPrefab + GetProjectionPrefab + ApplyMotionPrefab + Sized
 {
-	fn prefab(on_insert: On<Insert, Self>, mut commands: ZyheedaCommands, skills: Query<&Self>) {
+	fn prefab(
+		on_insert: On<Insert, Self>,
+		mut commands: ZyheedaCommands,
+		skills: Query<(&Self, &PersistentEntity)>,
+	) {
 		let root = on_insert.entity;
 		let Some(mut entity) = commands.get_mut(&root) else {
 			return;
 		};
-		let Ok(skill) = skills.get(entity.id()) else {
+		let Ok((skill, persistent_entity)) = skills.get(entity.id()) else {
 			return;
 		};
 		let rigid_body = skill.apply_motion_prefab(&mut entity);
@@ -39,8 +45,9 @@ pub(crate) trait SkillPrefab:
 		};
 
 		entity.try_insert((
-			rigid_body,
+			PersistentRoot(*persistent_entity),
 			Blockable(obj),
+			rigid_body,
 			SkillContactRoot,
 			cont_effects,
 			children![
@@ -54,9 +61,11 @@ pub(crate) trait SkillPrefab:
 					collision_group,
 					cont_collider.transform,
 					cont_collider.shape,
+					Physical::Contact,
 					Sensor,
 				),
 				(
+					PersistentRoot(*persistent_entity),
 					SkillProjectionRoot,
 					proj_effects,
 					children![
@@ -70,6 +79,7 @@ pub(crate) trait SkillPrefab:
 							collision_group,
 							proj_collider.transform,
 							proj_collider.shape,
+							Physical::Projection,
 							Sensor,
 						),
 					]
@@ -122,9 +132,13 @@ pub(crate) struct ContactCollider {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{skill::SkillContactRoot, skill_transform::SkillTransformOf};
+	use crate::components::{
+		persistent_root::PersistentRoot,
+		skill::SkillContactRoot,
+		skill_transform::SkillTransformOf,
+	};
 	use common::{
-		components::model::Model,
+		components::{model::Model, persistent_entity::PersistentEntity},
 		effects::force::Force,
 		tools::Units,
 		traits::{
@@ -135,13 +149,16 @@ mod tests {
 			handles_skill_physics::Effect,
 		},
 	};
-	use std::collections::HashSet;
+	use std::{collections::HashSet, sync::LazyLock};
 	use testing::{SingleThreadedApp, assert_children_count};
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Motion;
 
+	static SKILL: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
+
 	#[derive(Component)]
+	#[require(PersistentEntity = *SKILL)]
 	struct _Skill {
 		rigid_body: RigidBody,
 		lifetime: Option<Duration>,
@@ -318,6 +335,15 @@ mod tests {
 		use super::*;
 
 		#[test]
+		fn insert_persistent_root() {
+			let mut app = setup();
+
+			let skill = app.world_mut().spawn(_Skill::default());
+
+			assert_eq!(Some(&PersistentRoot(*SKILL)), skill.get::<PersistentRoot>(),)
+		}
+
+		#[test]
 		fn spawn_model_child() {
 			let mut app = setup();
 
@@ -374,6 +400,7 @@ mod tests {
 			let [_, collider, _] = assert_children_count!(3, app, skill);
 			assert_eq!(
 				(
+					Some(&Physical::Contact),
 					Some(&ColliderShape::from(Shape::Parameters(
 						ShapeParameters::Sphere {
 							radius: Units::from(42.),
@@ -386,6 +413,7 @@ mod tests {
 					})
 				),
 				(
+					collider.get::<Physical>(),
 					collider.get::<ColliderShape>(),
 					collider.get::<Transform>(),
 					collider.get::<CollisionGroups>(),
@@ -447,6 +475,19 @@ mod tests {
 		use super::*;
 
 		#[test]
+		fn insert_persistent_root() {
+			let mut app = setup();
+
+			let skill = app.world_mut().spawn(_Skill::default()).id();
+
+			let [projection] = assert_projection_count!(1, app, skill);
+			assert_eq!(
+				Some(&PersistentRoot(*SKILL)),
+				app.world().entity(projection).get::<PersistentRoot>(),
+			);
+		}
+
+		#[test]
 		fn spawn_model_child() {
 			let mut app = setup();
 
@@ -503,6 +544,7 @@ mod tests {
 			let [.., collider] = assert_children_count!(2, app, projection);
 			assert_eq!(
 				(
+					Some(&Physical::Projection),
 					Some(&ColliderShape::from(Shape::Parameters(
 						ShapeParameters::Sphere {
 							radius: Units::from(42.),
@@ -515,6 +557,7 @@ mod tests {
 					})
 				),
 				(
+					collider.get::<Physical>(),
 					collider.get::<ColliderShape>(),
 					collider.get::<Transform>(),
 					collider.get::<CollisionGroups>(),

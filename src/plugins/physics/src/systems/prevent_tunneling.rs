@@ -2,14 +2,14 @@ use crate::{
 	components::{
 		RayCasterArgs,
 		RayFilter,
-		collider::{GENERIC_COLLISION_GROUP, RAY_GROUP},
-		markers::Physical,
+		collider::{Colliders, GENERIC_COLLISION_GROUP, RAY_GROUP},
+		collision_domains::Physical,
 		prevent_tunneling::PreventTunneling,
 	},
 	system_params::update_ongoing_interactions::UpdateOngoingInteractions,
 	traits::{
 		ray_cast::{CastRayContinuouslySorted, GetContinuousSortedRayCaster, InvalidIntersections},
-		send_collision_interaction::PushOngoingInteraction,
+		send_collision_interaction::PushInteractingColliders,
 	},
 };
 use bevy::{
@@ -28,9 +28,17 @@ impl UpdateOngoingInteractions<'_, '_, Physical> {
 		delta: In<Duration>,
 		cast_ray: StaticSystemParam<ReadRapierContext>,
 		interactions: StaticSystemParam<Self>,
-		colliders: Query<(Entity, &PreventTunneling, &Velocity, &GlobalTransform)>,
+		colliders: Query<(
+			Entity,
+			&PreventTunneling,
+			&Velocity,
+			&GlobalTransform,
+			&Colliders,
+		)>,
+
+		physical: Query<&Physical>,
 	) -> Result<(), TunnelingRayError> {
-		system_internal(delta, cast_ray, interactions, colliders)
+		system_internal(delta, cast_ray, interactions, colliders, physical)
 	}
 }
 
@@ -38,13 +46,21 @@ fn system_internal<TInteractions, TGetRayCaster, TCasterError>(
 	In(delta): In<Duration>,
 	cast_ray: StaticSystemParam<TGetRayCaster>,
 	mut interactions: StaticSystemParam<TInteractions>,
-	colliders: Query<(Entity, &PreventTunneling, &Velocity, &GlobalTransform)>,
+	entities: Query<(
+		Entity,
+		&PreventTunneling,
+		&Velocity,
+		&GlobalTransform,
+		&Colliders,
+	)>,
+
+	physical: Query<&Physical>,
 ) -> Result<(), TunnelingRayError<TCasterError>>
 where
 	TGetRayCaster: for<'w, 's> SystemParam<
 		Item<'w, 's>: GetContinuousSortedRayCaster<RayCasterArgs, TError = TCasterError>,
 	>,
-	TInteractions: for<'w, 's> SystemParam<Item<'w, 's>: PushOngoingInteraction>,
+	TInteractions: for<'w, 's> SystemParam<Item<'w, 's>: PushInteractingColliders>,
 {
 	let cast_ray = match cast_ray.get_continuous_sorted_ray_caster() {
 		Ok(cast_ray) => cast_ray,
@@ -53,7 +69,7 @@ where
 	let delta_secs = delta.as_secs_f32();
 	let mut invalid_rays = vec![];
 
-	for (entity, PreventTunneling { leading_edge }, velocity, transform) in colliders {
+	for (entity, PreventTunneling { leading_edge }, velocity, transform, colliders) in entities {
 		let max_toi = velocity.linvel.length() * delta_secs;
 		let Ok(max_toi) = TimeOfImpact::try_from_f32(max_toi) else {
 			invalid_rays.push(InvalidRay {
@@ -96,9 +112,15 @@ where
 			}
 		};
 
-		for hit in hits {
-			interactions.push_ongoing_interaction(hit.entity, entity);
-			interactions.push_ongoing_interaction(entity, hit.entity);
+		for entity in colliders.iter() {
+			let Ok(Physical::Contact) = physical.get(entity) else {
+				continue;
+			};
+
+			for hit in hits.iter() {
+				interactions.push_interacting_colliders(hit.entity, entity);
+				interactions.push_interacting_colliders(entity, hit.entity);
+			}
 		}
 	}
 
@@ -150,7 +172,10 @@ pub(crate) struct InvalidForward {
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::traits::ray_cast::{InvalidIntersections, RayHit};
+	use crate::{
+		components::collider::ChildColliderOf,
+		traits::ray_cast::{InvalidIntersections, RayHit},
+	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{tools::Units, traits::handles_physics::TimeOfImpact};
 	use core::f32;
@@ -222,21 +247,21 @@ mod tests {
 	impl Default for _OngoingCollisions {
 		fn default() -> Self {
 			Self::new().with_mock(|mock| {
-				mock.expect_push_ongoing_interaction().return_const(());
+				mock.expect_push_interacting_colliders().return_const(());
 			})
 		}
 	}
 
-	impl PushOngoingInteraction for ResMut<'_, _OngoingCollisions> {
-		fn push_ongoing_interaction(&mut self, a: Entity, b: Entity) {
-			self.mock.push_ongoing_interaction(a, b);
+	impl PushInteractingColliders for ResMut<'_, _OngoingCollisions> {
+		fn push_interacting_colliders(&mut self, a: Entity, b: Entity) {
+			self.mock.push_interacting_colliders(a, b);
 		}
 	}
 
 	#[automock]
-	impl PushOngoingInteraction for _OngoingCollisions {
-		fn push_ongoing_interaction(&mut self, a: Entity, b: Entity) {
-			self.mock.push_ongoing_interaction(a, b);
+	impl PushInteractingColliders for _OngoingCollisions {
+		fn push_interacting_colliders(&mut self, a: Entity, b: Entity) {
+			self.mock.push_interacting_colliders(a, b);
 		}
 	}
 
@@ -250,16 +275,8 @@ mod tests {
 	}
 
 	#[test]
-	fn push_interactions() -> Result<(), RunSystemError> {
-		let mut app = setup(Some(Mock_RayCaster::new_mock(|mock| {
-			let mut hits = Sorted::default();
-			hits.push(RayHit {
-				entity: fake_entity!(123),
-				toi: TimeOfImpact::from(Units::from_u8(42)),
-			});
-			mock.expect_cast_ray_continuously_sorted()
-				.return_const(Ok(hits));
-		})));
+	fn push_physical_contact_colliders() -> Result<(), RunSystemError> {
+		let mut app = setup(None);
 		let entity = app
 			.world_mut()
 			.spawn((
@@ -269,14 +286,60 @@ mod tests {
 				Velocity::linear(Vec3::X),
 			))
 			.id();
+		let collider = app
+			.world_mut()
+			.spawn((ChildColliderOf(entity), Physical::Contact))
+			.id();
+		app.insert_resource(_GetRayCaster {
+			mock: Some(Mock_RayCaster::new_mock(|mock| {
+				mock.expect_cast_ray_continuously_sorted()
+					.return_const(Ok(Sorted::from([RayHit {
+						entity: fake_entity!(123),
+						toi: TimeOfImpact::from(Units::from_u8(42)),
+					}])));
+			})),
+		});
 		app.insert_resource(_OngoingCollisions::new().with_mock(|mock| {
-			mock.expect_push_ongoing_interaction()
+			mock.expect_push_interacting_colliders()
 				.times(1)
-				.with(eq(entity), eq(fake_entity!(123)))
+				.with(eq(collider), eq(fake_entity!(123)))
 				.return_const(());
-			mock.expect_push_ongoing_interaction()
+			mock.expect_push_interacting_colliders()
 				.times(1)
-				.with(eq(fake_entity!(123)), eq(entity))
+				.with(eq(fake_entity!(123)), eq(collider))
+				.return_const(());
+		}));
+
+		_ = app.world_mut().run_system_once_with(
+			system_internal::<ResMut<_OngoingCollisions>, Res<_GetRayCaster>, _Error>,
+			Duration::from_secs(1),
+		)?;
+
+		Ok(())
+	}
+
+	#[test]
+	fn do_not_push_physical_projection_colliders() -> Result<(), RunSystemError> {
+		let mut app = setup(None);
+		app.world_mut().spawn((
+			PreventTunneling {
+				leading_edge: Units::from_u8(1),
+			},
+			Velocity::linear(Vec3::X),
+			related!(Colliders[Physical::Projection]),
+		));
+		app.insert_resource(_GetRayCaster {
+			mock: Some(Mock_RayCaster::new_mock(|mock| {
+				mock.expect_cast_ray_continuously_sorted()
+					.return_const(Ok(Sorted::from([RayHit {
+						entity: fake_entity!(123),
+						toi: TimeOfImpact::from(Units::from_u8(42)),
+					}])));
+			})),
+		});
+		app.insert_resource(_OngoingCollisions::new().with_mock(|mock| {
+			mock.expect_push_interacting_colliders()
+				.never()
 				.return_const(());
 		}));
 
@@ -299,6 +362,7 @@ mod tests {
 				PreventTunneling {
 					leading_edge: Units::from_u8(1),
 				},
+				related!(Colliders[]),
 			))
 			.id();
 		app.world_mut().insert_resource(_GetRayCaster {
@@ -371,6 +435,7 @@ mod tests {
 					leading_edge: Units::from_u8(1),
 				},
 				Velocity::linear(Vec3::new(f32::NAN, 2., 3.)),
+				related!(Colliders[]),
 			))
 			.id();
 
@@ -406,6 +471,7 @@ mod tests {
 					leading_edge: Units::from_u8(1),
 				},
 				Velocity::linear(Vec3::X),
+				related!(Colliders[]),
 			))
 			.id();
 
@@ -436,6 +502,7 @@ mod tests {
 				leading_edge: Units::from_u8(1),
 			},
 			Velocity::linear(Vec3::X),
+			related!(Colliders[]),
 		));
 
 		let result = app.world_mut().run_system_once_with(

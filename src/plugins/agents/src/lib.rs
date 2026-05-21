@@ -29,7 +29,7 @@ use common::{
 		handles_map_generation::HandlesMapGeneration,
 		handles_movement::HandlesMovement,
 		handles_orientation::HandlesOrientation,
-		handles_physics::{HandlesPhysicalEffectTargets, HandlesPhysicsConfig, HandlesRaycast},
+		handles_physics::{HandlesPhysicsConfig, HandlesRaycast},
 		handles_player::{HandlesPlayer, PlayerMainCamera},
 		handles_saving::HandlesSaving,
 		handles_skill_physics::HandlesPhysicalSkillAgent,
@@ -58,11 +58,7 @@ where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe
-		+ HandlesPhysicalEffectTargets
-		+ HandlesPhysicsConfig
-		+ HandlesRaycast
-		+ HandlesPhysicalSkillAgent,
+	TPhysics: ThreadSafe + HandlesPhysicsConfig + HandlesRaycast + HandlesPhysicalSkillAgent,
 	TAnimations: ThreadSafe + HandlesAnimations,
 	TMaps: ThreadSafe + HandlesMapGeneration,
 	TMovement: ThreadSafe + HandlesMovement + HandlesOrientation,
@@ -98,11 +94,7 @@ where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe
-		+ HandlesPhysicalEffectTargets
-		+ HandlesPhysicsConfig
-		+ HandlesRaycast
-		+ HandlesPhysicalSkillAgent,
+	TPhysics: ThreadSafe + HandlesPhysicsConfig + HandlesRaycast + HandlesPhysicalSkillAgent,
 	TAnimations: ThreadSafe + HandlesAnimations,
 	TMaps: ThreadSafe + HandlesMapGeneration,
 	TMovement: ThreadSafe + HandlesMovement + HandlesOrientation,
@@ -115,7 +107,6 @@ where
 		);
 		app.init_asset::<AgentMeta>();
 
-		TPhysics::mark_as_effect_target::<Agent>(app);
 		app.add_systems(
 			Startup,
 			Agent::configure_map_prefab::<TMaps::TNewMapAgent>.pipe(OnError::log),

@@ -1,5 +1,9 @@
 use crate::{
-	components::{markers::Physical, ongoing_effects::OngoingEffects},
+	components::{
+		collision_domains::Physical,
+		ongoing_effects::OngoingEffects,
+		persistent_root::PersistentRoot,
+	},
 	resources::ongoing_interactions::OngoingInteractions,
 	traits::act_on::ActOn,
 };
@@ -13,7 +17,7 @@ use std::{collections::HashSet, sync::LazyLock, time::Duration};
 
 type Components<'a, TActor, TTarget> = (
 	Entity,
-	&'a PersistentEntity,
+	&'a PersistentRoot,
 	&'a mut TActor,
 	&'a mut OngoingEffects<TActor, TTarget>,
 );
@@ -31,7 +35,7 @@ pub(crate) trait ActOnSystem: Component<Mutability = Mutable> + Sized {
 		Self: ActOn<TTarget>,
 		TTarget: Component<Mutability = Mutable>,
 	{
-		for (entity, persistent_entity, mut actor, mut ongoing_effects) in &mut actors {
+		for (entity, PersistentRoot(root), mut actor, mut ongoing_effects) in &mut actors {
 			let interaction_targets = ongoing_interactions
 				.interactions
 				.get(&entity)
@@ -50,8 +54,8 @@ pub(crate) trait ActOnSystem: Component<Mutability = Mutable> + Sized {
 				};
 
 				match ongoing_effects.entities.insert(*persistent_target_entity) {
-					true => actor.on_begin_interaction(*persistent_entity, &mut target),
-					false => actor.on_repeated_interaction(*persistent_entity, &mut target, delta),
+					true => actor.on_begin_interaction(*root, &mut target),
+					false => actor.on_repeated_interaction(*root, &mut target, delta),
 				}
 			}
 		}
@@ -81,7 +85,7 @@ mod tests {
 	static ACTOR: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
 
 	#[derive(Component, NestedMocks)]
-	#[require(PersistentEntity = *ACTOR)]
+	#[require(PersistentRoot(*ACTOR))]
 	pub struct _Actor {
 		mock: Mock_Actor,
 	}

@@ -7,6 +7,7 @@ pub(crate) mod ground_target;
 pub(crate) mod insert_affected;
 pub(crate) mod interactions;
 pub(crate) mod life;
+pub(crate) mod link_to_collider_root;
 pub(crate) mod mark_anchor_dirty;
 pub(crate) mod ongoing_interactions;
 pub(crate) mod prevent_tunneling;

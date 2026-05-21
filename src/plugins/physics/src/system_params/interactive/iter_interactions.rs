@@ -19,7 +19,7 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{
-		components::{collider::ChildCollider, markers::Interactive},
+		components::{collider::ChildColliderOf, collision_domains::Interactive},
 		resources::ongoing_interactions::OngoingInteractions,
 		system_params::{
 			interactive::InteractiveParam,
@@ -94,7 +94,8 @@ mod tests {
 		let a = app.world_mut().spawn(RigidBody::Dynamic).id();
 		let b = app.world_mut().spawn(RigidBody::Dynamic).id();
 		app.world_mut().spawn((
-			ChildCollider::<Interactive>::of(a),
+			ChildColliderOf(a),
+			Interactive,
 			RigidBody::Dynamic,
 			Transform::from_xyz(-0.1, 0., 0.),
 			CollidingEntities::default(),
@@ -102,7 +103,8 @@ mod tests {
 			ActiveEvents::COLLISION_EVENTS,
 		));
 		app.world_mut().spawn((
-			ChildCollider::<Interactive>::of(b),
+			ChildColliderOf(b),
+			Interactive,
 			RigidBody::Dynamic,
 			Transform::from_xyz(0.1, 0., 0.),
 			Collider::ball(1.),

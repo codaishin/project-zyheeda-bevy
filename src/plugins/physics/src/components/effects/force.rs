@@ -28,7 +28,7 @@ impl<TDependencies> HandlesPhysicalEffect<Force> for PhysicsPlugin<TDependencies
 }
 
 impl UpdateBlockers for ForceEffect {
-	fn update(&self, BlockerTypes(blockers): &mut BlockerTypes) {
+	fn update_blockers(&self, BlockerTypes(blockers): &mut BlockerTypes) {
 		blockers.insert(Blocker::Force);
 	}
 }

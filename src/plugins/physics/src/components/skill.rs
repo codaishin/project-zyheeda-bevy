@@ -4,7 +4,7 @@ mod lifetime;
 mod motion;
 mod projection;
 
-use crate::components::{markers::Physical, skill::dto::SkillDto};
+use crate::components::{collider::ColliderRoot, skill::dto::SkillDto};
 use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
@@ -27,11 +27,11 @@ pub struct Skill {
 }
 
 #[derive(Component, Debug, PartialEq)]
-#[require(Physical, Transform, Visibility)]
+#[require(ColliderRoot, Transform, Visibility)]
 pub struct SkillContactRoot;
 
 #[derive(Component, Debug, PartialEq)]
-#[require(Physical, Transform, Visibility)]
+#[require(ColliderRoot, Transform, Visibility)]
 pub struct SkillProjectionRoot;
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]

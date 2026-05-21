@@ -1,5 +1,5 @@
 use bevy::prelude::*;
 
-pub(crate) trait PushOngoingInteraction {
-	fn push_ongoing_interaction(&mut self, actor: Entity, target: Entity);
+pub(crate) trait PushInteractingColliders {
+	fn push_interacting_colliders(&mut self, actor: Entity, target: Entity);
 }
