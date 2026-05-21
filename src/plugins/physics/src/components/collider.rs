@@ -157,6 +157,9 @@ enum SyncOrAsync {
 	Async(AsyncCollider),
 }
 
+#[derive(Component, PartialEq, Debug, Default)]
+pub(crate) struct ColliderRoot;
+
 #[derive(Component, PartialEq, Debug)]
 #[relationship(relationship_target = Colliders)]
 #[require(Collider, Transform, ActiveEvents, ActiveCollisionTypes)]

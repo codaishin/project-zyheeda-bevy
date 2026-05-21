@@ -23,7 +23,7 @@ use crate::{
 		body::Body,
 		character_gravity::CharacterGravity,
 		character_motion::ApplyCharacterMotion,
-		collider::{ChildColliderOf, ColliderShape},
+		collider::{ColliderRoot, ColliderShape},
 		collision_domains::{Interactive, Physical},
 		default_attributes::DefaultAttributes,
 		effects::{Effects, force::ForceEffect},
@@ -118,6 +118,7 @@ where
 		app
 			// Rapier
 			.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
+			.register_required_components::<RigidBody, ColliderRoot>()
 			.add_systems(
 				Startup,
 				set_rapier_time_step(Duration::from_secs(1) / self.target_fps),
@@ -157,7 +158,7 @@ where
 			// Colliders/Bodies
 			.add_prefab_observer::<ColliderShape, ()>()
 			.add_prefab_observer::<Body, ()>()
-			.add_observer(ChildColliderOf::link)
+			.add_observer(ColliderRoot::link_children)
 			.add_systems(Update, AsyncCollider::insert_collider.pipe(OnError::log))
 			.add_message::<RayEvent>()
 			.add_message::<BeamInteraction>()

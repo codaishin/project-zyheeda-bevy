@@ -1,13 +1,13 @@
-use crate::components::collider::ChildColliderOf;
+use crate::components::collider::{ChildColliderOf, ColliderRoot};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
-impl ChildColliderOf {
-	pub(crate) fn link(
+impl ColliderRoot {
+	pub(crate) fn link_children(
 		trigger: On<Add, Collider>,
 		mut commands: ZyheedaCommands,
-		collider_roots: Query<Entity, With<RigidBody>>,
+		collider_roots: Query<Entity, With<Self>>,
 		ancestors: Query<&ChildOf>,
 	) {
 		let get_target_in_ancestor_of = |entity| {
@@ -34,7 +34,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_observer(ChildColliderOf::link);
+		app.add_observer(ColliderRoot::link_children);
 
 		app
 	}
@@ -42,7 +42,7 @@ mod tests {
 	#[test]
 	fn insert_when_collider_on_child_of_target() {
 		let mut app = setup();
-		let entity = app.world_mut().spawn(RigidBody::Fixed).id();
+		let entity = app.world_mut().spawn(ColliderRoot).id();
 
 		let child = app
 			.world_mut()
@@ -58,7 +58,7 @@ mod tests {
 	#[test]
 	fn insert_when_collider_on_child_of_child_of_target() {
 		let mut app = setup();
-		let entity = app.world_mut().spawn(RigidBody::Fixed).id();
+		let entity = app.world_mut().spawn(ColliderRoot).id();
 		let child = app.world_mut().spawn(ChildOf(entity)).id();
 
 		let child_child = app
@@ -88,7 +88,7 @@ mod tests {
 
 		let entity = app
 			.world_mut()
-			.spawn((RigidBody::Fixed, Collider::default()))
+			.spawn((ColliderRoot, Collider::default()))
 			.id();
 		app.update();
 		app.world_mut()

@@ -66,7 +66,10 @@ impl RayCaster<'_, '_> {
 mod tests {
 	use super::*;
 	use crate::{
-		components::{collider::MOUSE_HOVERABLE_GROUP, collision_domains::Physical},
+		components::{
+			collider::{ColliderRoot, MOUSE_HOVERABLE_GROUP},
+			collision_domains::Physical,
+		},
 		tests::TestCollisionsPlugin,
 	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
@@ -77,7 +80,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.add_plugins(TestCollisionsPlugin);
-		app.add_observer(ChildColliderOf::link);
+		app.add_observer(ColliderRoot::link_children);
 
 		app
 	}
@@ -87,7 +90,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((RigidBody::Fixed, Transform::default(), Collider::ball(0.5)))
+			.spawn((ColliderRoot, Transform::default(), Collider::ball(0.5)))
 			.id();
 		app.update();
 
@@ -117,7 +120,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				RigidBody::Fixed,
+				ColliderRoot,
 				children![(Transform::default(), Physical::Contact, Collider::ball(0.5))],
 			))
 			.id();
@@ -150,7 +153,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				RigidBody::Fixed,
+				ColliderRoot,
 				children![children![(
 					Physical::Contact,
 					Transform::default(),
@@ -185,7 +188,7 @@ mod tests {
 	fn ignore_sensor() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		app.world_mut().spawn((
-			RigidBody::Fixed,
+			ColliderRoot,
 			Transform::default(),
 			Collider::ball(0.5),
 			Sensor,
@@ -239,7 +242,7 @@ mod tests {
 		let a = app
 			.world_mut()
 			.spawn((
-				RigidBody::Fixed,
+				ColliderRoot,
 				Transform::default(),
 				children![(Transform::default(), Physical::Contact, Collider::ball(0.5))],
 			))
@@ -247,7 +250,7 @@ mod tests {
 		let b = app
 			.world_mut()
 			.spawn((
-				RigidBody::Fixed,
+				ColliderRoot,
 				Transform::from_xyz(0., -10., 0.),
 				children![(Transform::default(), Physical::Contact, Collider::ball(0.5))],
 			))
@@ -272,7 +275,7 @@ mod tests {
 	fn apply_only_hoverable_filter_true() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		app.world_mut().spawn((
-			RigidBody::Fixed,
+			ColliderRoot,
 			CollisionGroups::new(Group::all() & !MOUSE_HOVERABLE_GROUP, RAY_GROUP),
 			Transform::default(),
 			Collider::ball(0.5),
@@ -280,7 +283,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				RigidBody::Fixed,
+				ColliderRoot,
 				Transform::from_xyz(0., -1., 0.),
 				Collider::ball(0.5),
 			))
@@ -313,14 +316,14 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				RigidBody::Fixed,
+				ColliderRoot,
 				CollisionGroups::new(Group::all() & !MOUSE_HOVERABLE_GROUP, RAY_GROUP),
 				Transform::default(),
 				Collider::ball(0.5),
 			))
 			.id();
 		app.world_mut().spawn((
-			RigidBody::Fixed,
+			ColliderRoot,
 			Transform::from_xyz(0., -1., 0.),
 			Collider::ball(0.5),
 		));
@@ -351,7 +354,7 @@ mod tests {
 	fn ignore_bodies_that_do_not_filter_rays(only_hoverable: bool) -> Result<(), RunSystemError> {
 		let mut app = setup();
 		app.world_mut().spawn((
-			RigidBody::Fixed,
+			ColliderRoot,
 			CollisionGroups::new(Group::all(), Group::all() & !RAY_GROUP),
 			Transform::default(),
 			Collider::ball(0.5),
@@ -359,7 +362,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				RigidBody::Fixed,
+				ColliderRoot,
 				Transform::from_xyz(0., -1., 0.),
 				Collider::ball(0.5),
 			))
