@@ -211,7 +211,7 @@ where
 						.chain(),
 					// Collect physical collections
 					(
-						Blockable::beam_interactions.pipe(OnError::log),
+						Blockable::apply_beam_blocks.pipe(OnError::log),
 						OngoingInteractions::<Physical>::clear,
 						Update::delta
 							.pipe(UpdateOngoingInteractions::<Physical>::prevent_tunneling)

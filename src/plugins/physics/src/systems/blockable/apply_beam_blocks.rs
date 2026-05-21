@@ -31,8 +31,10 @@ use common::{
 };
 use std::{collections::HashSet, fmt::Debug};
 
+const BIAS: f32 = 0.01;
+
 impl Blockable {
-	pub(crate) fn beam_interactions(
+	pub(crate) fn apply_beam_blocks(
 		cast_ray: StaticSystemParam<ReadRapierContext>,
 		objects: Query<(Entity, &Self, &SkillTransforms, &GlobalTransform)>,
 		transforms_and_colliders: Query<(&mut Transform, Option<&ColliderShape>)>,
@@ -40,7 +42,7 @@ impl Blockable {
 		contacts: Query<(Option<&ChildColliderOf>, &Physical)>,
 		commands: ZyheedaCommands,
 	) -> Result<(), BeamError> {
-		Self::beam_interactions_internal(
+		Self::apply_beam_blocks_internal(
 			cast_ray,
 			objects,
 			transforms_and_colliders,
@@ -50,7 +52,7 @@ impl Blockable {
 		)
 	}
 
-	fn beam_interactions_internal<TGetRayCaster, TCasterError>(
+	fn apply_beam_blocks_internal<TGetRayCaster, TCasterError>(
 		cast_ray: StaticSystemParam<TGetRayCaster>,
 		objects: Query<(Entity, &Self, &SkillTransforms, &GlobalTransform)>,
 		mut transforms_and_colliders: Query<(&mut Transform, Option<&ColliderShape>)>,
@@ -89,7 +91,8 @@ impl Blockable {
 			let is_blocked = |hit: &RayHit| Self::blocked(hit, blockers, blocked_by, contacts);
 
 			if let Some(blocked) = hits.into_iter().find(is_blocked) {
-				toi = blocked.toi;
+				let new_toi = (*blocked.toi + BIAS).clamp(0., *ray.max_toi);
+				toi = TimeOfImpact::from(Units::from(new_toi));
 			}
 
 			for entity in skill_transforms.iter() {
@@ -286,7 +289,7 @@ mod tests {
 			));
 
 			_ = app.world_mut().run_system_once(
-				Blockable::beam_interactions_internal::<Res<_GetRayCaster>, Unreachable>,
+				Blockable::apply_beam_blocks_internal::<Res<_GetRayCaster>, Unreachable>,
 			)?;
 
 			fn assert_call_args(mock: &mut Mock_RayCaster) {
@@ -348,7 +351,7 @@ mod tests {
 			let skill_transform = app.world_mut().spawn(SkillTransformOf(entity)).id();
 
 			_ = app.world_mut().run_system_once(
-				Blockable::beam_interactions_internal::<Res<_GetRayCaster>, Unreachable>,
+				Blockable::apply_beam_blocks_internal::<Res<_GetRayCaster>, Unreachable>,
 			)?;
 
 			assert_eq!(
@@ -402,13 +405,13 @@ mod tests {
 			let skill_transform = app.world_mut().spawn(SkillTransformOf(entity)).id();
 
 			_ = app.world_mut().run_system_once(
-				Blockable::beam_interactions_internal::<Res<_GetRayCaster>, Unreachable>,
+				Blockable::apply_beam_blocks_internal::<Res<_GetRayCaster>, Unreachable>,
 			)?;
 
 			assert_eq!(
 				Some(&Transform {
-					translation: Vec3::ZERO.with_z(-55.),
-					scale: Vec3::ONE.with_y(110.),
+					translation: Vec3::ZERO.with_z(-55. - BIAS / 2.),
+					scale: Vec3::ONE.with_y(110. + BIAS),
 					..default()
 				}),
 				app.world().entity(skill_transform).get::<Transform>(),
@@ -456,13 +459,13 @@ mod tests {
 			let skill_transform = app.world_mut().spawn(SkillTransformOf(entity)).id();
 
 			_ = app.world_mut().run_system_once(
-				Blockable::beam_interactions_internal::<Res<_GetRayCaster>, Unreachable>,
+				Blockable::apply_beam_blocks_internal::<Res<_GetRayCaster>, Unreachable>,
 			)?;
 
 			assert_eq!(
 				Some(&Transform {
-					translation: Vec3::ZERO.with_z(-55.),
-					scale: Vec3::ONE.with_y(110.),
+					translation: Vec3::ZERO.with_z(-55. - BIAS / 2.),
+					scale: Vec3::ONE.with_y(110. + BIAS),
 					..default()
 				}),
 				app.world().entity(skill_transform).get::<Transform>(),
@@ -507,7 +510,7 @@ mod tests {
 			let skill_transform = app.world_mut().spawn(SkillTransformOf(entity)).id();
 
 			_ = app.world_mut().run_system_once(
-				Blockable::beam_interactions_internal::<Res<_GetRayCaster>, Unreachable>,
+				Blockable::apply_beam_blocks_internal::<Res<_GetRayCaster>, Unreachable>,
 			)?;
 
 			assert_eq!(
@@ -558,7 +561,7 @@ mod tests {
 			let skill_transform = app.world_mut().spawn(SkillTransformOf(entity)).id();
 
 			_ = app.world_mut().run_system_once(
-				Blockable::beam_interactions_internal::<Res<_GetRayCaster>, Unreachable>,
+				Blockable::apply_beam_blocks_internal::<Res<_GetRayCaster>, Unreachable>,
 			)?;
 
 			assert_eq!(
@@ -613,7 +616,7 @@ mod tests {
 			let skill_transform = app.world_mut().spawn(SkillTransformOf(entity)).id();
 
 			_ = app.world_mut().run_system_once(
-				Blockable::beam_interactions_internal::<Res<_GetRayCaster>, Unreachable>,
+				Blockable::apply_beam_blocks_internal::<Res<_GetRayCaster>, Unreachable>,
 			)?;
 
 			assert_eq!(
@@ -645,7 +648,51 @@ mod tests {
 			let skill_transform = app.world_mut().spawn(SkillTransformOf(entity)).id();
 
 			_ = app.world_mut().run_system_once(
-				Blockable::beam_interactions_internal::<Res<_GetRayCaster>, Unreachable>,
+				Blockable::apply_beam_blocks_internal::<Res<_GetRayCaster>, Unreachable>,
+			)?;
+
+			assert_eq!(
+				Some(&Transform {
+					translation: Vec3::ZERO.with_z(-5500.),
+					scale: Vec3::ONE.with_y(11000.),
+					..default()
+				}),
+				app.world().entity(skill_transform).get::<Transform>(),
+			);
+			Ok(())
+		}
+
+		#[test]
+		fn clamp_to_max_range_on_block() -> Result<(), RunSystemError> {
+			let mut app = setup(|world| {
+				Mock_RayCaster::new_mock(|mock| {
+					let blocker = world
+						.spawn((
+							BlockerTypes(HashSet::from([Blocker::Force, Blocker::Physical])),
+							Physical::Contact,
+						))
+						.id();
+					mock.expect_cast_ray_continuously_sorted()
+						.return_const(Ok(Sorted::from([RayHit {
+							entity: blocker,
+							toi: toi!(11000.),
+						}])));
+				})
+			});
+			let entity = app
+				.world_mut()
+				.spawn((
+					Blockable(PhysicalObject::Beam {
+						range: Units::from(11000.),
+						blocked_by: HashSet::from([Blocker::Force, Blocker::Character]),
+					}),
+					Physical::Contact,
+				))
+				.id();
+			let skill_transform = app.world_mut().spawn(SkillTransformOf(entity)).id();
+
+			_ = app.world_mut().run_system_once(
+				Blockable::apply_beam_blocks_internal::<Res<_GetRayCaster>, Unreachable>,
 			)?;
 
 			assert_eq!(
@@ -704,7 +751,7 @@ mod tests {
 				.id();
 
 			_ = app.world_mut().run_system_once(
-				Blockable::beam_interactions_internal::<Res<_GetRayCaster>, Unreachable>,
+				Blockable::apply_beam_blocks_internal::<Res<_GetRayCaster>, Unreachable>,
 			)?;
 
 			assert_eq!(
@@ -768,7 +815,7 @@ mod tests {
 			app.add_systems(
 				Update,
 				(
-					Blockable::beam_interactions_internal::<Res<_GetRayCaster>, Unreachable>
+					Blockable::apply_beam_blocks_internal::<Res<_GetRayCaster>, Unreachable>
 						.pipe(|In(_)| {}),
 					IsChanged::<ColliderShape>::detect,
 				)
@@ -807,7 +854,7 @@ mod tests {
 				.id();
 
 			let result = app.world_mut().run_system_once(
-				Blockable::beam_interactions_internal::<Res<_GetRayCaster>, Unreachable>,
+				Blockable::apply_beam_blocks_internal::<Res<_GetRayCaster>, Unreachable>,
 			)?;
 
 			assert_eq!(
@@ -834,7 +881,7 @@ mod tests {
 			}));
 
 			let result = app.world_mut().run_system_once(
-				Blockable::beam_interactions_internal::<Res<_GetRayCaster>, Unreachable>,
+				Blockable::apply_beam_blocks_internal::<Res<_GetRayCaster>, Unreachable>,
 			)?;
 
 			assert!(result.is_ok());
@@ -886,7 +933,7 @@ mod tests {
 			}));
 
 			let result = app.world_mut().run_system_once(
-				Blockable::beam_interactions_internal::<_FaultyRayCaster, _CasterError>,
+				Blockable::apply_beam_blocks_internal::<_FaultyRayCaster, _CasterError>,
 			)?;
 
 			assert_eq!(Err(BeamError::NoRayCaster(_CasterError)), result);
