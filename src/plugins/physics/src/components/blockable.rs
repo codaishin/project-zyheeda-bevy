@@ -1,9 +1,9 @@
-use crate::components::{interaction_target::InteractionTarget, skill_transform::SkillTransforms};
+use crate::components::{markers::Physical, skill_transform::SkillTransforms};
 use bevy::prelude::*;
 use common::traits::handles_physics::PhysicalObject;
 
 #[derive(Component, Debug, PartialEq, Clone)]
-#[require(InteractionTarget, GlobalTransform, SkillTransforms)]
+#[require(Physical, GlobalTransform, SkillTransforms)]
 pub struct Blockable(pub(crate) PhysicalObject);
 
 impl From<PhysicalObject> for Blockable {

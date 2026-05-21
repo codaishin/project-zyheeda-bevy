@@ -6,13 +6,13 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct Body {
+pub struct BodyConfig {
 	pub shape: Shape,
 	pub physics_type: PhysicsType,
 	pub sub_frames: Vec<InteractiveFrame>,
 }
 
-impl Body {
+impl BodyConfig {
 	pub fn from_shape(shape: Shape) -> Self {
 		Self {
 			shape,
@@ -32,7 +32,7 @@ impl Body {
 	}
 }
 
-impl From<Shape> for Body {
+impl From<Shape> for BodyConfig {
 	fn from(shape: Shape) -> Self {
 		Self::from_shape(shape)
 	}

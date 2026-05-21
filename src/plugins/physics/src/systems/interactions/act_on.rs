@@ -1,5 +1,5 @@
 use crate::{
-	components::ongoing_effects::OngoingEffects,
+	components::{markers::Physical, ongoing_effects::OngoingEffects},
 	resources::ongoing_interactions::OngoingInteractions,
 	traits::act_on::ActOn,
 };
@@ -24,7 +24,7 @@ pub(crate) trait ActOnSystem: Component<Mutability = Mutable> + Sized {
 	fn act_on<TTarget>(
 		In(delta): In<Duration>,
 		commands: ZyheedaCommands,
-		ongoing_interactions: Res<OngoingInteractions>,
+		ongoing_interactions: Res<OngoingInteractions<Physical>>,
 		mut actors: Query<Components<Self, TTarget>>,
 		mut targets: Query<(&PersistentEntity, &mut TTarget)>,
 	) where
@@ -33,7 +33,7 @@ pub(crate) trait ActOnSystem: Component<Mutability = Mutable> + Sized {
 	{
 		for (entity, persistent_entity, mut actor, mut ongoing_effects) in &mut actors {
 			let interaction_targets = ongoing_interactions
-				.targets
+				.interactions
 				.get(&entity)
 				.unwrap_or_else(empty);
 
@@ -65,11 +65,6 @@ fn empty<'a>() -> &'a HashSet<Entity> {
 
 #[cfg(test)]
 mod tests {
-	use std::{
-		collections::{HashMap, HashSet},
-		sync::LazyLock,
-	};
-
 	use super::*;
 	use crate::traits::update_blockers::UpdateBlockers;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
@@ -80,6 +75,7 @@ mod tests {
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
+	use std::{collections::HashSet, sync::LazyLock};
 	use testing::{NestedMocks, SingleThreadedApp};
 
 	static ACTOR: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
@@ -120,7 +116,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.add_plugins(CommonPlugin::with_asset_loading(false));
-		app.init_resource::<OngoingInteractions>();
+		app.init_resource::<OngoingInteractions<Physical>>();
 		app.register_persistent_entities();
 
 		app
@@ -134,9 +130,10 @@ mod tests {
 			.world_mut()
 			.spawn(OngoingEffects::<_Actor, _Target>::default())
 			.id();
-		app.insert_resource(OngoingInteractions {
-			targets: HashMap::from([(entity, HashSet::from([target]))]),
-		});
+		app.insert_resource(OngoingInteractions::<Physical>::from([(
+			entity,
+			HashSet::from([target]),
+		)]));
 
 		app.world_mut()
 			.entity_mut(entity)
@@ -160,9 +157,10 @@ mod tests {
 			.world_mut()
 			.spawn(OngoingEffects::<_Actor, _Target>::default())
 			.id();
-		app.insert_resource(OngoingInteractions {
-			targets: HashMap::from([(entity, HashSet::from([target]))]),
-		});
+		app.insert_resource(OngoingInteractions::<Physical>::from([(
+			entity,
+			HashSet::from([target]),
+		)]));
 		app.world_mut()
 			.entity_mut(entity)
 			.insert(_Actor::new().with_mock(|mock| {
@@ -190,9 +188,10 @@ mod tests {
 			.world_mut()
 			.spawn(OngoingEffects::<_Actor, _Target>::from([*TARGET]))
 			.id();
-		app.insert_resource(OngoingInteractions {
-			targets: HashMap::from([(entity, HashSet::from([target]))]),
-		});
+		app.insert_resource(OngoingInteractions::<Physical>::from([(
+			entity,
+			HashSet::from([target]),
+		)]));
 		app.world_mut()
 			.entity_mut(entity)
 			.insert(_Actor::new().with_mock(|mock| {
@@ -231,9 +230,10 @@ mod tests {
 				))
 				.id();
 			app.world_mut().spawn(not_interacting);
-			app.world_mut().insert_resource(OngoingInteractions {
-				targets: HashMap::from([(entity, HashSet::from(interacting_entities))]),
-			});
+			app.insert_resource(OngoingInteractions::<Physical>::from([(
+				entity,
+				HashSet::from(interacting_entities),
+			)]));
 
 			app.world_mut()
 				.run_system_once_with(_Actor::act_on::<_Target>, Duration::from_millis(42))?;
@@ -296,9 +296,10 @@ mod tests {
 					}),
 				))
 				.id();
-			app.world_mut().insert_resource(OngoingInteractions {
-				targets: HashMap::from([(entity, HashSet::from(interacting_entities))]),
-			});
+			app.insert_resource(OngoingInteractions::<Physical>::from([(
+				entity,
+				HashSet::from(interacting_entities),
+			)]));
 
 			app.world_mut()
 				.run_system_once_with(_Actor::act_on::<_Target>, Duration::from_millis(42))?;

@@ -2,7 +2,7 @@ use crate::components::{
 	blockable::Blockable,
 	collider::{ColliderShape, GENERIC_COLLISION_GROUP, RAY_GROUP},
 	effects::Effects,
-	skill::{ContactInteractionTarget, ProjectionInteractionTarget},
+	skill::{SkillContactRoot, SkillProjectionRoot},
 	skill_transform::SkillTransformOf,
 };
 use bevy::prelude::*;
@@ -41,7 +41,7 @@ pub(crate) trait SkillPrefab:
 		entity.try_insert((
 			rigid_body,
 			Blockable(obj),
-			ContactInteractionTarget,
+			SkillContactRoot,
 			cont_effects,
 			children![
 				(
@@ -57,7 +57,7 @@ pub(crate) trait SkillPrefab:
 					Sensor,
 				),
 				(
-					ProjectionInteractionTarget,
+					SkillProjectionRoot,
 					proj_effects,
 					children![
 						(
@@ -122,7 +122,7 @@ pub(crate) struct ContactCollider {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{skill::ContactInteractionTarget, skill_transform::SkillTransformOf};
+	use crate::components::{skill::SkillContactRoot, skill_transform::SkillTransformOf};
 	use common::{
 		components::model::Model,
 		effects::force::Force,
@@ -234,7 +234,7 @@ mod tests {
 	macro_rules! assert_projection_count {
 		($count:literal, $app:expr, $skill:expr) => {
 			assert_children_count!($count, $app, $skill, |e| {
-				if e.contains::<ProjectionInteractionTarget>() {
+				if e.contains::<SkillProjectionRoot>() {
 					Some(e.id())
 				} else {
 					None
@@ -301,10 +301,7 @@ mod tests {
 
 			let skill = app.world_mut().spawn(_Skill::default());
 
-			assert_eq!(
-				Some(&ContactInteractionTarget),
-				skill.get::<ContactInteractionTarget>()
-			);
+			assert_eq!(Some(&SkillContactRoot), skill.get::<SkillContactRoot>());
 		}
 
 		#[test]

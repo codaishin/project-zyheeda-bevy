@@ -7,6 +7,9 @@ mod system_params;
 mod systems;
 mod traits;
 
+#[cfg(test)]
+mod tests;
+
 #[cfg(debug_assertions)]
 mod debug;
 
@@ -17,18 +20,17 @@ use crate::{
 		anchor::{Anchor, AnchorDirty},
 		async_collider::AsyncCollider,
 		blockable::Blockable,
+		body::Body,
 		character_gravity::CharacterGravity,
 		character_motion::ApplyCharacterMotion,
 		collider::{ChildCollider, ColliderShape},
 		default_attributes::DefaultAttributes,
 		effects::{Effects, force::ForceEffect},
 		ground_target::GroundTarget,
-		interaction_target::InteractionTarget,
 		lifetime::{LifetimeTiedTo, TiedLifetimes},
-		physical_body::PhysicalBody,
-		prevent_tunneling::PreventTunneling,
+		markers::{Interactive, Physical},
 		set_velocity_forward::SetVelocityForward,
-		skill::{ContactInteractionTarget, ProjectionInteractionTarget, Skill},
+		skill::{Skill, SkillContactRoot, SkillProjectionRoot},
 		target::Target,
 		velocity::LinearVelocity,
 		when_traveled::DestroyAfterDistanceTraveled,
@@ -39,6 +41,7 @@ use crate::{
 	resources::ongoing_interactions::OngoingInteractions,
 	system_params::{
 		config::ConfigParamMut,
+		interactive::InteractiveParam,
 		ray_caster::RayCaster,
 		skill_agent::{SkillAgent, SkillAgentMut},
 		update_ongoing_interactions::UpdateOngoingInteractions,
@@ -46,10 +49,7 @@ use crate::{
 	systems::{
 		apply_pull::ApplyPull,
 		insert_affected::InsertAffected,
-		interactions::{
-			push_beam_interactions::PushBeamInteractions,
-			push_ongoing_collisions::PushOngoingCollisions,
-		},
+		interactions::push_ongoing_collisions::PushOngoingCollisions,
 	},
 };
 use bevy::prelude::*;
@@ -61,6 +61,7 @@ use common::{
 		delta::Delta,
 		handles_animations::HandlesAnimations,
 		handles_physics::{
+			HandlesInteractiveDetection,
 			HandlesMotion,
 			HandlesPhysicalEffectTargets,
 			HandlesPhysicsConfig,
@@ -156,10 +157,13 @@ where
 			.add_observer(Skill::prefab)
 			// Colliders/Bodies
 			.add_prefab_observer::<ColliderShape, ()>()
-			.add_prefab_observer::<PhysicalBody, ()>()
-			.add_observer(ChildCollider::<InteractionTarget>::link)
-			.add_observer(ChildCollider::<RigidBody>::link)
+			.add_prefab_observer::<Body, ()>()
+			.add_observer(ChildCollider::<Physical>::link)
 			.add_systems(Update, AsyncCollider::insert_collider.pipe(OnError::log))
+			.add_message::<RayEvent>()
+			.add_message::<BeamInteraction>()
+			.init_resource::<OngoingInteractions<Physical>>()
+			.init_resource::<OngoingInteractions<Interactive>>()
 			// All effects
 			.add_observer(Effects::insert)
 			// Deal health damage
@@ -193,10 +197,6 @@ where
 			// General Lifetime relationship
 			.add_observer(LifetimeTiedTo::insert_on::<Anchor>)
 			.add_observer(TiedLifetimes::despawn_relationships_on_remove)
-			// Apply interactions
-			.add_message::<RayEvent>()
-			.add_message::<BeamInteraction>()
-			.init_resource::<OngoingInteractions>()
 			// Anchor
 			.add_observer(AnchorDirty::process::<RayCaster>.pipe(OnError::log))
 			.add_systems(Update, Anchor::mark_dirty.in_set(PhysicsSystems))
@@ -210,15 +210,21 @@ where
 						SetVelocityForward::system,
 					)
 						.chain(),
-					// Physical effects
+					// Collect physical collections
 					(
 						Blockable::beam_interactions.pipe(OnError::log),
-						OngoingInteractions::clear,
-						UpdateOngoingInteractions::push_beam_interactions,
+						OngoingInteractions::<Physical>::clear,
+						UpdateOngoingInteractions::<Physical>::push_beam_interactions,
 						Update::delta
-							.pipe(PreventTunneling::system)
+							.pipe(UpdateOngoingInteractions::<Physical>::prevent_tunneling)
 							.pipe(OnError::log),
-						UpdateOngoingInteractions::push_ongoing_collisions,
+						UpdateOngoingInteractions::<Physical>::push_ongoing_collisions,
+					)
+						.chain(),
+					// Collect interactive collisions
+					(
+						OngoingInteractions::<Interactive>::clear,
+						UpdateOngoingInteractions::<Interactive>::push_ongoing_collisions,
 					)
 						.chain(),
 				)
@@ -270,7 +276,7 @@ impl<TDependencies> HandlesPhysicalEffectTargets for PhysicsPlugin<TDependencies
 	where
 		T: Component,
 	{
-		app.register_required_components::<T, InteractionTarget>();
+		app.register_required_components::<T, Physical>();
 	}
 }
 
@@ -288,6 +294,10 @@ impl<TDependencies> HandlesNewPhysicalSkill for PhysicsPlugin<TDependencies> {
 }
 
 impl<TDependencies> HandlesPhysicalSkillComponents for PhysicsPlugin<TDependencies> {
-	type TSkillContact = ContactInteractionTarget;
-	type TSkillProjection = ProjectionInteractionTarget;
+	type TSkillContact = SkillContactRoot;
+	type TSkillProjection = SkillProjectionRoot;
+}
+
+impl<TDependencies> HandlesInteractiveDetection for PhysicsPlugin<TDependencies> {
+	type TInteractive = InteractiveParam<'static>;
 }

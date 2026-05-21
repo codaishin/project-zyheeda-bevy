@@ -4,8 +4,8 @@ use crate::{
 		RayFilter,
 		blockable::Blockable,
 		blocker_types::BlockerTypes,
-		collider::{ChildCollider, ColliderShape},
-		interaction_target::InteractionTarget,
+		collider::{ChildCollider, ColliderShape, GENERIC_COLLISION_GROUP, RAY_GROUP},
+		markers::Physical,
 		skill_transform::SkillTransforms,
 	},
 	messages::BeamInteraction,
@@ -20,7 +20,7 @@ use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use bevy_rapier3d::plugin::ReadRapierContext;
+use bevy_rapier3d::{geometry::CollisionGroups, plugin::ReadRapierContext};
 use common::{
 	errors::{ErrorData, Level},
 	tools::Units,
@@ -39,7 +39,7 @@ impl Blockable {
 		objects: Query<(Entity, &Self, &SkillTransforms, &GlobalTransform)>,
 		transforms_and_colliders: Query<(&mut Transform, Option<&ColliderShape>)>,
 		blockers: Query<&BlockerTypes>,
-		interaction_colliders: Query<&ChildCollider<InteractionTarget>>,
+		effect_target_colliders: Query<&ChildCollider<Physical>>,
 		commands: ZyheedaCommands,
 	) -> Result<(), BeamError> {
 		Self::beam_interactions_internal(
@@ -48,7 +48,7 @@ impl Blockable {
 			objects,
 			transforms_and_colliders,
 			blockers,
-			interaction_colliders,
+			effect_target_colliders,
 			commands,
 		)
 	}
@@ -59,7 +59,7 @@ impl Blockable {
 		objects: Query<(Entity, &Self, &SkillTransforms, &GlobalTransform)>,
 		mut transforms_and_colliders: Query<(&mut Transform, Option<&ColliderShape>)>,
 		blockers: Query<&BlockerTypes>,
-		interaction_colliders: Query<&ChildCollider<InteractionTarget>>,
+		interaction_colliders: Query<&ChildCollider<Physical>>,
 		mut commands: ZyheedaCommands,
 	) -> Result<(), BeamError<TCasterError>>
 	where
@@ -146,14 +146,20 @@ impl Blockable {
 			direction: transform.forward(),
 			max_toi: TimeOfImpact::from(range),
 			solid: true,
-			filter: RayFilter::default(),
+			filter: RayFilter {
+				groups: Some(CollisionGroups {
+					memberships: RAY_GROUP,
+					filters: GENERIC_COLLISION_GROUP,
+				}),
+				..default()
+			},
 		}
 	}
 
 	fn blocked(
 		hit: &RayHit,
 		blockers: Query<&BlockerTypes>,
-		interaction_colliders: Query<&ChildCollider<InteractionTarget>>,
+		interaction_colliders: Query<&ChildCollider<Physical>>,
 		blocked_by: &HashSet<Blocker>,
 	) -> bool {
 		let entity = match interaction_colliders.get(hit.entity) {
@@ -212,7 +218,7 @@ mod tests {
 		errors::Unreachable,
 		toi,
 		tools::Units,
-		traits::handles_physics::{PhysicalObject, physical_bodies::Blocker},
+		traits::handles_physics::physical_bodies::Blocker,
 	};
 	use macros::simple_mock;
 	use mockall::predicate::eq;
@@ -297,7 +303,13 @@ mod tests {
 						direction: Dir3::NEG_Y,
 						max_toi: toi!(11000.),
 						solid: true,
-						filter: RayFilter::default(),
+						filter: RayFilter {
+							groups: Some(CollisionGroups {
+								memberships: RAY_GROUP,
+								filters: GENERIC_COLLISION_GROUP,
+							}),
+							..default()
+						},
 					}))
 					.return_const(Ok(Sorted::from([])));
 			}
@@ -414,9 +426,7 @@ mod tests {
 							Blocker::Physical,
 						])))
 						.id();
-					let collider = world
-						.spawn(ChildCollider::<InteractionTarget>::of(blocker))
-						.id();
+					let collider = world.spawn(ChildCollider::<Physical>::of(blocker)).id();
 					mock.expect_cast_ray_continuously_sorted()
 						.return_const(Ok(Sorted::from([
 							RayHit {

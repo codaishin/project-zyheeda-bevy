@@ -3,6 +3,7 @@ pub(crate) mod anchor;
 pub(crate) mod async_collider;
 pub(crate) mod blockable;
 pub(crate) mod blocker_types;
+pub(crate) mod body;
 pub(crate) mod character_gravity;
 pub(crate) mod character_motion;
 pub(crate) mod collider;
@@ -10,12 +11,11 @@ pub(crate) mod default_attributes;
 pub(crate) mod effects;
 pub(crate) mod ground_target;
 pub(crate) mod immobilized;
-pub(crate) mod interaction_target;
 pub(crate) mod lifetime;
+pub(crate) mod markers;
 pub(crate) mod mount_points;
 pub(crate) mod offset;
 pub(crate) mod ongoing_effects;
-pub(crate) mod physical_body;
 pub(crate) mod prevent_tunneling;
 pub(crate) mod set_velocity_forward;
 pub(crate) mod skill;
@@ -72,18 +72,11 @@ impl ApproxEqual<f32> for RayCasterArgs {
 }
 
 #[derive(Default, Debug, PartialEq, Clone)]
-pub struct RayFilter {
-	flags: Option<QueryFilterFlags>,
-	groups: Option<CollisionGroups>,
-	exclude_collider: Option<Entity>,
-	exclude_rigid_body: Option<Entity>,
-}
-
-impl RayFilter {
-	pub(crate) fn exclude_rigid_body(mut self, entity: Entity) -> Self {
-		self.exclude_rigid_body = Some(entity);
-		self
-	}
+pub(crate) struct RayFilter {
+	pub(crate) flags: Option<QueryFilterFlags>,
+	pub(crate) groups: Option<CollisionGroups>,
+	pub(crate) exclude_collider: Option<Entity>,
+	pub(crate) exclude_rigid_body: Option<Entity>,
 }
 
 #[derive(Debug, PartialEq)]

@@ -6,8 +6,8 @@ use crate::{
 	toi,
 	tools::{Units, speed::Speed},
 	traits::{
-		accessors::get::{GetContextMut, View, ViewField},
-		handles_physics::physical_bodies::{Blocker, Body},
+		accessors::get::{GetContext, GetContextMut, View, ViewField},
+		handles_physics::physical_bodies::{Blocker, BodyConfig},
 	},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
@@ -83,7 +83,16 @@ pub struct NoBodyConfigured {
 }
 
 pub trait ConfigureBody {
-	fn configure_body(&mut self, body: Body, offsets: TranslationOffsets);
+	fn configure_body(&mut self, body: BodyConfig, offsets: TranslationOffsets);
+}
+
+impl<T> ConfigureBody for T
+where
+	T: DerefMut<Target: ConfigureBody>,
+{
+	fn configure_body(&mut self, body: BodyConfig, offsets: TranslationOffsets) {
+		self.deref_mut().configure_body(body, offsets);
+	}
 }
 
 #[derive(Debug, PartialEq, Default, Clone)]
@@ -99,13 +108,22 @@ impl TranslationOffsets {
 	};
 }
 
-impl<T> ConfigureBody for T
-where
-	T: DerefMut<Target: ConfigureBody>,
-{
-	fn configure_body(&mut self, body: Body, offsets: TranslationOffsets) {
-		self.deref_mut().configure_body(body, offsets);
-	}
+pub trait HandlesInteractiveDetection {
+	type TInteractive: SystemParam
+		+ for<'c> GetContext<IsInteracting, TContext<'c>: IterInteractions>;
+}
+
+#[derive(EntityKey)]
+pub struct IsInteracting {
+	pub entity: Entity,
+}
+
+pub trait IterInteractions {
+	type TIter<'a>: Iterator<Item = Entity>
+	where
+		Self: 'a;
+
+	fn iter_interactions(&self) -> Self::TIter<'_>;
 }
 
 pub trait HandlesMotion {
