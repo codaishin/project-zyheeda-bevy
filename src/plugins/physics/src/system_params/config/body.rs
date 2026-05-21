@@ -1,16 +1,20 @@
 use crate::{
 	components::{
+		body::Body,
 		offset::{AimOffset, CenterOffset},
-		physical_body::PhysicalBody,
 	},
 	system_params::config::ConfigContextMut,
 };
-use common::traits::handles_physics::{ConfigureBody, TranslationOffsets, physical_bodies::Body};
+use common::traits::handles_physics::{
+	ConfigureBody,
+	TranslationOffsets,
+	physical_bodies::BodyConfig,
+};
 
 impl ConfigureBody for ConfigContextMut<'_> {
-	fn configure_body(&mut self, body: Body, offsets: TranslationOffsets) {
+	fn configure_body(&mut self, body: BodyConfig, offsets: TranslationOffsets) {
 		self.entity.try_insert((
-			PhysicalBody(body),
+			Body(body),
 			AimOffset(offsets.aim),
 			CenterOffset(offsets.center),
 		));
@@ -22,10 +26,7 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{
-		components::{
-			offset::{AimOffset, CenterOffset},
-			physical_body::PhysicalBody,
-		},
+		components::offset::{AimOffset, CenterOffset},
 		system_params::config::ConfigParamMut,
 	};
 	use bevy::{
@@ -52,14 +53,14 @@ mod tests {
 				let key = NoBodyConfigured { entity };
 				let mut ctx = ConfigParamMut::get_context_mut(&mut p, key).unwrap();
 				ctx.configure_body(
-					Body::from_shape(Shape::StaticGltfMesh3d),
+					BodyConfig::from_shape(Shape::StaticGltfMesh3d),
 					TranslationOffsets::ZERO,
 				);
 			})?;
 
 		assert_eq!(
-			Some(&PhysicalBody(Body::from_shape(Shape::StaticGltfMesh3d))),
-			app.world().entity(entity).get::<PhysicalBody>(),
+			Some(&Body(BodyConfig::from_shape(Shape::StaticGltfMesh3d))),
+			app.world().entity(entity).get::<Body>(),
 		);
 		Ok(())
 	}
@@ -74,7 +75,7 @@ mod tests {
 				let key = NoBodyConfigured { entity };
 				let mut ctx = ConfigParamMut::get_context_mut(&mut p, key).unwrap();
 				ctx.configure_body(
-					Body::from_shape(Shape::StaticGltfMesh3d),
+					BodyConfig::from_shape(Shape::StaticGltfMesh3d),
 					TranslationOffsets {
 						aim: 11.,
 						center: 12.,

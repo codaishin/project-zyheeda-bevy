@@ -1,5 +1,5 @@
 use crate::{
-	components::{blockable::Blockable, blocker_types::BlockerTypes, effect_target::EffectTarget},
+	components::{blockable::Blockable, blocker_types::BlockerTypes, markers::Physical},
 	resources::ongoing_interactions::OngoingInteractions,
 };
 use bevy::prelude::*;
@@ -10,7 +10,7 @@ use common::{
 
 pub(crate) fn apply_fragile_blocks(
 	mut commands: ZyheedaCommands,
-	ongoing_interactions: Res<OngoingInteractions<EffectTarget>>,
+	ongoing_interactions: Res<OngoingInteractions<Physical>>,
 	fragiles: Query<(Entity, &Blockable)>,
 	blockers: Query<&BlockerTypes>,
 ) {
@@ -52,7 +52,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.init_resource::<OngoingInteractions<EffectTarget>>();
+		app.init_resource::<OngoingInteractions<Physical>>();
 		app.add_systems(Update, apply_fragile_blocks);
 
 		app
@@ -71,7 +71,7 @@ mod tests {
 			.world_mut()
 			.spawn(BlockerTypes::from([Blocker::Physical]))
 			.id();
-		app.insert_resource(OngoingInteractions::<EffectTarget>::from([(
+		app.insert_resource(OngoingInteractions::<Physical>::from([(
 			blocker,
 			HashSet::from([fragile]),
 		)]));
@@ -95,7 +95,7 @@ mod tests {
 			.world_mut()
 			.spawn(BlockerTypes::from([Blocker::Physical]))
 			.id();
-		app.insert_resource(OngoingInteractions::<EffectTarget>::from([(
+		app.insert_resource(OngoingInteractions::<Physical>::from([(
 			blocker,
 			HashSet::from([fragile]),
 		)]));
@@ -118,7 +118,7 @@ mod tests {
 			.world_mut()
 			.spawn(BlockerTypes::from([Blocker::Force]))
 			.id();
-		app.insert_resource(OngoingInteractions::<EffectTarget>::from([(
+		app.insert_resource(OngoingInteractions::<Physical>::from([(
 			blocker,
 			HashSet::from([fragile]),
 		)]));

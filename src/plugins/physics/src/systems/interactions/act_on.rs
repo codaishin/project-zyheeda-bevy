@@ -1,5 +1,5 @@
 use crate::{
-	components::{effect_target::EffectTarget, ongoing_effects::OngoingEffects},
+	components::{markers::Physical, ongoing_effects::OngoingEffects},
 	resources::ongoing_interactions::OngoingInteractions,
 	traits::act_on::ActOn,
 };
@@ -24,7 +24,7 @@ pub(crate) trait ActOnSystem: Component<Mutability = Mutable> + Sized {
 	fn act_on<TTarget>(
 		In(delta): In<Duration>,
 		commands: ZyheedaCommands,
-		ongoing_interactions: Res<OngoingInteractions<EffectTarget>>,
+		ongoing_interactions: Res<OngoingInteractions<Physical>>,
 		mut actors: Query<Components<Self, TTarget>>,
 		mut targets: Query<(&PersistentEntity, &mut TTarget)>,
 	) where
@@ -116,7 +116,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.add_plugins(CommonPlugin::with_asset_loading(false));
-		app.init_resource::<OngoingInteractions<EffectTarget>>();
+		app.init_resource::<OngoingInteractions<Physical>>();
 		app.register_persistent_entities();
 
 		app
@@ -130,7 +130,7 @@ mod tests {
 			.world_mut()
 			.spawn(OngoingEffects::<_Actor, _Target>::default())
 			.id();
-		app.insert_resource(OngoingInteractions::<EffectTarget>::from([(
+		app.insert_resource(OngoingInteractions::<Physical>::from([(
 			entity,
 			HashSet::from([target]),
 		)]));
@@ -157,7 +157,7 @@ mod tests {
 			.world_mut()
 			.spawn(OngoingEffects::<_Actor, _Target>::default())
 			.id();
-		app.insert_resource(OngoingInteractions::<EffectTarget>::from([(
+		app.insert_resource(OngoingInteractions::<Physical>::from([(
 			entity,
 			HashSet::from([target]),
 		)]));
@@ -188,7 +188,7 @@ mod tests {
 			.world_mut()
 			.spawn(OngoingEffects::<_Actor, _Target>::from([*TARGET]))
 			.id();
-		app.insert_resource(OngoingInteractions::<EffectTarget>::from([(
+		app.insert_resource(OngoingInteractions::<Physical>::from([(
 			entity,
 			HashSet::from([target]),
 		)]));
@@ -230,7 +230,7 @@ mod tests {
 				))
 				.id();
 			app.world_mut().spawn(not_interacting);
-			app.insert_resource(OngoingInteractions::<EffectTarget>::from([(
+			app.insert_resource(OngoingInteractions::<Physical>::from([(
 				entity,
 				HashSet::from(interacting_entities),
 			)]));
@@ -296,7 +296,7 @@ mod tests {
 					}),
 				))
 				.id();
-			app.insert_resource(OngoingInteractions::<EffectTarget>::from([(
+			app.insert_resource(OngoingInteractions::<Physical>::from([(
 				entity,
 				HashSet::from(interacting_entities),
 			)]));

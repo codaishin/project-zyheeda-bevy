@@ -33,14 +33,7 @@ impl Raycast<SolidObjects> for RayCaster<'_, '_> {
 		let (entity, time_of_impact) =
 			ray_caster.cast_ray(ray.origin, *ray.direction, Real::MAX, true, filter)?;
 
-		if let Ok(ChildCollider { root, .. }) = self.effect_target_child_colliders.get(entity) {
-			return Some(RaycastHit {
-				entity: *root,
-				time_of_impact,
-			});
-		};
-
-		if let Ok(ChildCollider { root, .. }) = self.rigid_body_child_colliders.get(entity) {
+		if let Ok(ChildCollider { root, .. }) = self.physical_child_colliders.get(entity) {
 			return Some(RaycastHit {
 				entity: *root,
 				time_of_impact,
@@ -61,21 +54,10 @@ impl RayCaster<'_, '_> {
 				return false;
 			}
 
-			match self.effect_target_child_colliders.get(entity) {
-				Ok(ChildCollider { root, .. }) if exclude.contains(root) => {
-					return false;
-				}
-				_ => {}
-			};
-
-			match self.rigid_body_child_colliders.get(entity) {
-				Ok(ChildCollider { root, .. }) if exclude.contains(root) => {
-					return false;
-				}
-				_ => {}
-			};
-
-			true
+			!matches!(
+				self.physical_child_colliders.get(entity),
+				Ok(ChildCollider { root, .. }) if exclude.contains(root),
+			)
 		}
 	}
 }
@@ -84,7 +66,7 @@ impl RayCaster<'_, '_> {
 mod tests {
 	use super::*;
 	use crate::{
-		components::{collider::MOUSE_HOVERABLE_GROUP, effect_target::EffectTarget},
+		components::{collider::MOUSE_HOVERABLE_GROUP, markers::Physical},
 		tests::TestCollisionsPlugin,
 	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
@@ -95,8 +77,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.add_plugins(TestCollisionsPlugin);
-		app.add_observer(ChildCollider::<EffectTarget>::link);
-		app.add_observer(ChildCollider::<RigidBody>::link);
+		app.add_observer(ChildCollider::<Physical>::link);
 
 		app
 	}
@@ -136,40 +117,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				EffectTarget,
-				children![(Transform::default(), Collider::ball(0.5))],
-			))
-			.id();
-		app.world_mut().spawn(());
-		app.update();
-
-		let hit = app
-			.world_mut()
-			.run_system_once(|mut ray_caster: RayCaster| {
-				ray_caster.raycast(SolidObjects {
-					ray: Ray3d::new(Vec3::Y, Dir3::NEG_Y),
-					exclude: vec![],
-					only_hoverable: false,
-				})
-			})?;
-
-		assert_eq!(
-			Some(RaycastHit {
-				entity: root,
-				time_of_impact: 0.5,
-			}),
-			hit,
-		);
-		Ok(())
-	}
-
-	#[test]
-	fn hit_object_rigid_body_root() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		let root = app
-			.world_mut()
-			.spawn((
-				RigidBody::Fixed,
+				Physical,
 				children![(Transform::default(), Collider::ball(0.5))],
 			))
 			.id();
@@ -202,7 +150,7 @@ mod tests {
 		let root = app
 			.world_mut()
 			.spawn((
-				EffectTarget,
+				Physical,
 				children![(
 					RigidBody::Fixed,
 					children![(Transform::default(), Collider::ball(0.5))]
@@ -284,17 +232,13 @@ mod tests {
 		Ok(())
 	}
 
-	#[test_case(RigidBody::Fixed; "rigid body")]
-	#[test_case(EffectTarget; "interaction target")]
-	fn ignore_child_entities<TMarker>(maker: TMarker) -> Result<(), RunSystemError>
-	where
-		TMarker: Component + Copy,
-	{
+	#[test]
+	fn ignore_child_entities() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let a = app
 			.world_mut()
 			.spawn((
-				maker,
+				Physical,
 				Transform::default(),
 				children![(Transform::default(), Collider::ball(0.5))],
 			))
@@ -302,7 +246,7 @@ mod tests {
 		let b = app
 			.world_mut()
 			.spawn((
-				RigidBody::Fixed,
+				Physical,
 				Transform::from_xyz(0., -10., 0.),
 				children![(Transform::default(), Collider::ball(0.5))],
 			))

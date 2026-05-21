@@ -26,7 +26,7 @@ use common::{
 			NoBodyConfigured,
 			NoDefaultAttributes,
 			TranslationOffsets,
-			physical_bodies::{Blocker, Body, PhysicsType, Shape, ShapeParameters},
+			physical_bodies::{Blocker, BodyConfig, PhysicsType, Shape, ShapeParameters},
 		},
 		handles_skill_physics::{Initialize, NotInitializedAgent},
 		loadout::ItemName,
@@ -107,7 +107,7 @@ impl ApplyAgentConfig {
 				let center = config.height_levels.center - *config.required_clearance.vertical;
 				let aim = config.height_levels.aim - *config.required_clearance.vertical;
 				ctx.configure_body(
-					Body {
+					BodyConfig {
 						shape: Shape::Parameters(ShapeParameters::Capsule { half_y, radius }),
 						physics_type: PhysicsType::Agent(HashSet::from([Blocker::Character])),
 						sub_frames: vec![config.interactive_detection_shape],
@@ -195,7 +195,7 @@ mod tests {
 		},
 		traits::{
 			handles_movement::{MovementSpeed, RequiredClearance},
-			handles_physics::{PhysicalDefaultAttributes, physical_bodies::Body},
+			handles_physics::{PhysicalDefaultAttributes, physical_bodies::BodyConfig},
 			handles_skill_physics::SkillMountBone,
 		},
 		zyheeda_commands::ZyheedaEntityCommands,
@@ -311,7 +311,7 @@ mod tests {
 	}
 
 	impl ConfigureBody for _Physics {
-		fn configure_body(&mut self, body: Body, offsets: TranslationOffsets) {
+		fn configure_body(&mut self, body: BodyConfig, offsets: TranslationOffsets) {
 			self.mock.configure_body(body, offsets);
 		}
 	}
@@ -322,7 +322,7 @@ mod tests {
 			fn configure_default_attributes(&mut self, default: PhysicalDefaultAttributes);
 		}
 		impl ConfigureBody for _Physics {
-			fn configure_body(&mut self, body: Body, offset: TranslationOffsets);
+			fn configure_body(&mut self, body: BodyConfig, offset: TranslationOffsets);
 		}
 	}
 
@@ -758,7 +758,7 @@ mod tests {
 				Transform::default(),
 				AgentConfig { config_handle },
 				_Physics::new().with_mock(|mock| {
-					let expected_body = Body {
+					let expected_body = BodyConfig {
 						shape: Shape::Parameters(ShapeParameters::Capsule {
 							half_y: Units::from(1.5),
 							radius: Units::from(0.5),

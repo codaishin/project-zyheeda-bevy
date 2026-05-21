@@ -1,7 +1,7 @@
 mod body;
 mod default_attributes;
 
-use crate::components::{default_attributes::DefaultAttributes, physical_body::PhysicalBody};
+use crate::components::{body::Body, default_attributes::DefaultAttributes};
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::{
 	traits::{
@@ -14,7 +14,7 @@ use common::{
 #[derive(SystemParam)]
 pub struct ConfigParamMut<'w, 's> {
 	default_attributes: Query<'w, 's, (), With<DefaultAttributes>>,
-	bodies: Query<'w, 's, (), With<PhysicalBody>>,
+	bodies: Query<'w, 's, (), With<Body>>,
 	commands: ZyheedaCommands<'w, 's>,
 }
 
@@ -62,7 +62,7 @@ mod tests {
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::traits::handles_physics::{
 		PhysicalDefaultAttributes,
-		physical_bodies::{Body, Shape},
+		physical_bodies::{BodyConfig, Shape},
 	};
 	use testing::SingleThreadedApp;
 
@@ -136,7 +136,7 @@ mod tests {
 			let mut app = setup();
 			let entity = app
 				.world_mut()
-				.spawn(PhysicalBody(Body::from_shape(Shape::StaticGltfMesh3d)))
+				.spawn(Body(BodyConfig::from_shape(Shape::StaticGltfMesh3d)))
 				.id();
 
 			let ctx_entity = app

@@ -1,6 +1,7 @@
 use crate::components::{
 	blocker_types::BlockerTypes,
 	collider::{
+		ChildCollider,
 		ColliderShape,
 		GENERIC_COLLISION_GROUP,
 		INTERACTIVE_GROUP,
@@ -8,24 +9,23 @@ use crate::components::{
 		RAY_GROUP,
 		TERRAIN_GROUP,
 	},
-	offset::{AimOffset, CenterOffset},
+	markers::{Interactive, Physical},
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::{
 	errors::Unreachable,
 	traits::{
-		handles_physics::physical_bodies::{Body, PhysicsType},
+		handles_physics::physical_bodies::{BodyConfig, PhysicsType},
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
 
 #[derive(Component, Debug, PartialEq)]
 #[component(immutable)]
-#[require(AimOffset, CenterOffset)]
-pub struct PhysicalBody(pub(crate) Body);
+pub struct Body(pub(crate) BodyConfig);
 
-impl PhysicalBody {
+impl Body {
 	fn agent() -> impl Bundle {
 		(
 			RigidBody::KinematicPositionBased,
@@ -64,13 +64,13 @@ impl PhysicalBody {
 	}
 }
 
-impl From<Body> for PhysicalBody {
-	fn from(body: Body) -> Self {
+impl From<BodyConfig> for Body {
+	fn from(body: BodyConfig) -> Self {
 		Self(body)
 	}
 }
 
-impl Prefab<()> for PhysicalBody {
+impl Prefab<()> for Body {
 	type TError = Unreachable;
 	type TSystemParam<'w, 's> = ();
 
@@ -79,7 +79,7 @@ impl Prefab<()> for PhysicalBody {
 		entity: &mut impl PrefabEntityCommands,
 		_: StaticSystemParam<()>,
 	) -> Result<(), Self::TError> {
-		let Self(Body {
+		let Self(BodyConfig {
 			physics_type,
 			shape,
 			sub_frames,
@@ -87,22 +87,22 @@ impl Prefab<()> for PhysicalBody {
 
 		match physics_type {
 			PhysicsType::Agent(blockers) => {
-				entity.try_insert((Self::agent(), BlockerTypes(blockers.clone())));
+				entity.try_insert((Self::agent(), Physical, BlockerTypes(blockers.clone())));
 			}
 			PhysicsType::Terrain(blockers) => {
-				entity.try_insert((Self::terrain(), BlockerTypes(blockers.clone())));
+				entity.try_insert((Self::terrain(), Physical, BlockerTypes(blockers.clone())));
 			}
 			PhysicsType::InteractiveFrame => {
-				entity.try_insert((Self::interactive(), RigidBody::Fixed, Interactive));
+				entity.try_insert((Self::interactive(), Interactive, RigidBody::Fixed));
 			}
 		};
 
 		entity.try_insert(ColliderShape::from(*shape));
 
 		for sub_frame in sub_frames {
-			entity.try_insert(Interactive);
 			entity.with_child((
 				Self::interactive(),
+				ChildCollider::<Interactive>::of(entity.entity_id()),
 				Transform::from_xyz(0., 0., -*sub_frame.forward_offset),
 				ColliderShape::from(sub_frame.shape),
 			));
@@ -111,9 +111,6 @@ impl Prefab<()> for PhysicalBody {
 		Ok(())
 	}
 }
-
-#[derive(Component, Debug, PartialEq, Default)]
-pub(crate) struct Interactive;
 
 fn generic_and(group: Group) -> Group {
 	GENERIC_COLLISION_GROUP | group
@@ -125,7 +122,7 @@ mod tests {
 	use common::{
 		tools::Units,
 		traits::{
-			handles_physics::physical_bodies::{Blocker, Body, Shape, ShapeParameters},
+			handles_physics::physical_bodies::{Blocker, BodyConfig, Shape, ShapeParameters},
 			prefab::AddPrefabObserver,
 		},
 	};
@@ -135,12 +132,14 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_prefab_observer::<PhysicalBody, ()>();
+		app.add_prefab_observer::<Body, ()>();
 
 		app
 	}
 
 	mod body {
+		use crate::components::markers::Physical;
+
 		use super::*;
 		use test_case::test_case;
 
@@ -153,7 +152,7 @@ mod tests {
 
 			let entity = app
 				.world_mut()
-				.spawn(PhysicalBody(Body::from_shape(shape)))
+				.spawn(Body(BodyConfig::from_shape(shape)))
 				.id();
 
 			assert_eq!(
@@ -162,20 +161,23 @@ mod tests {
 			);
 		}
 
-		#[test_case(PhysicsType::Terrain, false; "terrain as not interactive")]
-		#[test_case(PhysicsType::Agent, false; "agent")]
-		#[test_case(|_| PhysicsType::InteractiveFrame, true; "interactive frame")]
-		fn mark(physics_type: fn(HashSet<Blocker>) -> PhysicsType, is_interactive: bool) {
+		#[test_case(PhysicsType::Terrain, |e| e.contains::<Physical>(); "terrain as physical")]
+		#[test_case(PhysicsType::Agent, |e| e.contains::<Physical>(); "agent as physical")]
+		#[test_case(|_| PhysicsType::InteractiveFrame, |e| e.contains::<Interactive>(); "interactive frame as interactive")]
+		fn mark(
+			physics_type: fn(HashSet<Blocker>) -> PhysicsType,
+			marker: fn(EntityWorldMut) -> bool,
+		) {
 			let mut app = setup();
 			let shape = Shape::Parameters(ShapeParameters::Sphere {
 				radius: Units::from(42.),
 			});
 
-			let entity = app.world_mut().spawn(PhysicalBody(
-				Body::from_shape(shape).with_physics_type(physics_type(HashSet::default())),
+			let entity = app.world_mut().spawn(Body(
+				BodyConfig::from_shape(shape).with_physics_type(physics_type(HashSet::default())),
 			));
 
-			assert_eq!(is_interactive, entity.contains::<Interactive>());
+			assert!(marker(entity));
 		}
 
 		#[test_case(PhysicsType::Terrain, RigidBody::Fixed, false, false, None, None; "terrain")]
@@ -194,8 +196,8 @@ mod tests {
 				radius: Units::from(42.),
 			});
 
-			let entity = app.world_mut().spawn(PhysicalBody(
-				Body::from_shape(shape).with_physics_type(physics_type(HashSet::default())),
+			let entity = app.world_mut().spawn(Body(
+				BodyConfig::from_shape(shape).with_physics_type(physics_type(HashSet::default())),
 			));
 
 			assert_eq!(
@@ -230,7 +232,7 @@ mod tests {
 
 			let entity =
 				app.world_mut()
-					.spawn(PhysicalBody(Body::from_shape(shape).with_physics_type(
+					.spawn(Body(BodyConfig::from_shape(shape).with_physics_type(
 						physics_type(HashSet::from([Blocker::Force, Blocker::Physical])),
 					)));
 
@@ -253,8 +255,8 @@ mod tests {
 				radius: Units::from(42.),
 			});
 
-			let entity = app.world_mut().spawn(PhysicalBody(
-				Body::from_shape(shape).with_physics_type(physics_type(HashSet::default())),
+			let entity = app.world_mut().spawn(Body(
+				BodyConfig::from_shape(shape).with_physics_type(physics_type(HashSet::default())),
 			));
 
 			assert_eq!(
@@ -278,8 +280,8 @@ mod tests {
 				radius: Units::from(42.),
 			});
 
-			let entity = app.world_mut().spawn(PhysicalBody(
-				Body::from_shape(shape).with_physics_type(physics_type(HashSet::default())),
+			let entity = app.world_mut().spawn(Body(
+				BodyConfig::from_shape(shape).with_physics_type(physics_type(HashSet::default())),
 			));
 
 			assert_eq!(sensor, entity.get::<Sensor>());
@@ -300,8 +302,8 @@ mod tests {
 
 			let entity = app
 				.world_mut()
-				.spawn(PhysicalBody(
-					Body::from_shape(Shape::StaticGltfMesh3d)
+				.spawn(Body(
+					BodyConfig::from_shape(Shape::StaticGltfMesh3d)
 						.with_sub_frames([InteractiveFrame::from(shape)]),
 				))
 				.id();
@@ -322,8 +324,8 @@ mod tests {
 
 			let entity = app
 				.world_mut()
-				.spawn(PhysicalBody(
-					Body::from_shape(Shape::StaticGltfMesh3d).with_sub_frames([
+				.spawn(Body(
+					BodyConfig::from_shape(Shape::StaticGltfMesh3d).with_sub_frames([
 						InteractiveFrame::from(shape).with_forward_offset(Units::from(11.)),
 					]),
 				))
@@ -345,8 +347,8 @@ mod tests {
 
 			let entity = app
 				.world_mut()
-				.spawn(PhysicalBody(
-					Body::from_shape(Shape::StaticGltfMesh3d)
+				.spawn(Body(
+					BodyConfig::from_shape(Shape::StaticGltfMesh3d)
 						.with_sub_frames([InteractiveFrame::from(shape)]),
 				))
 				.id();
@@ -371,18 +373,25 @@ mod tests {
 		}
 
 		#[test]
-		fn mark_parent_as_interactive() {
+		fn mark_as_interactive_child_collider() {
 			let mut app = setup();
 			let shape = ShapeParameters::Sphere {
 				radius: Units::from(42.),
 			};
 
-			let entity = app.world_mut().spawn(PhysicalBody(
-				Body::from_shape(Shape::StaticGltfMesh3d)
-					.with_sub_frames([InteractiveFrame::from(shape)]),
-			));
+			let entity = app
+				.world_mut()
+				.spawn(Body(
+					BodyConfig::from_shape(Shape::StaticGltfMesh3d)
+						.with_sub_frames([InteractiveFrame::from(shape)]),
+				))
+				.id();
 
-			assert!(entity.contains::<Interactive>());
+			let [child] = assert_children_count!(1, app, entity);
+			assert_eq!(
+				Some(&ChildCollider::of(entity)),
+				child.get::<ChildCollider::<Interactive>>()
+			);
 		}
 
 		#[test]
@@ -393,8 +402,8 @@ mod tests {
 			};
 			let entity = app
 				.world_mut()
-				.spawn(PhysicalBody(
-					Body::from_shape(Shape::StaticGltfMesh3d)
+				.spawn(Body(
+					BodyConfig::from_shape(Shape::StaticGltfMesh3d)
 						.with_sub_frames([InteractiveFrame::from(shape)]),
 				))
 				.id();
@@ -418,8 +427,8 @@ mod tests {
 
 			let entity = app
 				.world_mut()
-				.spawn(PhysicalBody(
-					Body::from_shape(Shape::StaticGltfMesh3d)
+				.spawn(Body(
+					BodyConfig::from_shape(Shape::StaticGltfMesh3d)
 						.with_sub_frames([InteractiveFrame::from(shape)]),
 				))
 				.id();

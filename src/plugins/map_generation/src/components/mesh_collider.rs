@@ -7,7 +7,7 @@ use common::{
 			ConfigureBody,
 			NoBodyConfigured,
 			TranslationOffsets,
-			physical_bodies::{Blocker, Body, PhysicsType, Shape},
+			physical_bodies::{Blocker, BodyConfig, PhysicsType, Shape},
 		},
 		prefab::{Prefab, PrefabEntityCommands},
 	},
@@ -38,7 +38,7 @@ where
 		};
 
 		ctx.configure_body(
-			Body::from_shape(Shape::StaticGltfMesh3d)
+			BodyConfig::from_shape(Shape::StaticGltfMesh3d)
 				.with_physics_type(PhysicsType::Terrain(HashSet::from([Blocker::Physical]))),
 			TranslationOffsets::ZERO,
 		);

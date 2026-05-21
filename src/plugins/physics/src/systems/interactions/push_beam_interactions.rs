@@ -1,5 +1,5 @@
 use crate::{
-	components::effect_target::EffectTarget,
+	components::markers::Physical,
 	messages::BeamInteraction,
 	system_params::update_ongoing_interactions::UpdateOngoingInteractions,
 	traits::send_collision_interaction::PushOngoingInteraction,
@@ -9,7 +9,7 @@ use bevy::{
 	prelude::*,
 };
 
-impl UpdateOngoingInteractions<'_, '_, EffectTarget> {
+impl UpdateOngoingInteractions<'_, '_, Physical> {
 	pub(crate) fn push_beam_interactions(
 		ongoing_interactions: StaticSystemParam<Self>,
 		beam_interactions: MessageReader<BeamInteraction>,

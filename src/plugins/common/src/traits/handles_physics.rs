@@ -7,7 +7,7 @@ use crate::{
 	tools::{Units, speed::Speed},
 	traits::{
 		accessors::get::{GetContext, GetContextMut, View, ViewField},
-		handles_physics::physical_bodies::{Blocker, Body},
+		handles_physics::physical_bodies::{Blocker, BodyConfig},
 	},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
@@ -83,14 +83,14 @@ pub struct NoBodyConfigured {
 }
 
 pub trait ConfigureBody {
-	fn configure_body(&mut self, body: Body, offsets: TranslationOffsets);
+	fn configure_body(&mut self, body: BodyConfig, offsets: TranslationOffsets);
 }
 
 impl<T> ConfigureBody for T
 where
 	T: DerefMut<Target: ConfigureBody>,
 {
-	fn configure_body(&mut self, body: Body, offsets: TranslationOffsets) {
+	fn configure_body(&mut self, body: BodyConfig, offsets: TranslationOffsets) {
 		self.deref_mut().configure_body(body, offsets);
 	}
 }

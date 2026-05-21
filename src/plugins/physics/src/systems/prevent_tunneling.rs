@@ -3,7 +3,7 @@ use crate::{
 		RayCasterArgs,
 		RayFilter,
 		collider::{GENERIC_COLLISION_GROUP, RAY_GROUP},
-		effect_target::EffectTarget,
+		markers::Physical,
 		prevent_tunneling::PreventTunneling,
 	},
 	system_params::update_ongoing_interactions::UpdateOngoingInteractions,
@@ -23,7 +23,7 @@ use common::{
 };
 use std::time::Duration;
 
-impl UpdateOngoingInteractions<'_, '_, EffectTarget> {
+impl UpdateOngoingInteractions<'_, '_, Physical> {
 	pub(crate) fn prevent_tunneling(
 		delta: In<Duration>,
 		cast_ray: StaticSystemParam<ReadRapierContext>,

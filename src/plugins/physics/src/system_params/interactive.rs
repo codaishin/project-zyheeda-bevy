@@ -1,7 +1,7 @@
 mod overlaps_with;
 
 use crate::{
-	components::physical_body::Interactive,
+	components::markers::Interactive,
 	resources::ongoing_interactions::OngoingInteractions,
 };
 use bevy::{

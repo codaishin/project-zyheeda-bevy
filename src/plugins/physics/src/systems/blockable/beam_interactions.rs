@@ -5,7 +5,7 @@ use crate::{
 		blockable::Blockable,
 		blocker_types::BlockerTypes,
 		collider::{ChildCollider, ColliderShape, GENERIC_COLLISION_GROUP, RAY_GROUP},
-		effect_target::EffectTarget,
+		markers::Physical,
 		skill_transform::SkillTransforms,
 	},
 	messages::BeamInteraction,
@@ -39,7 +39,7 @@ impl Blockable {
 		objects: Query<(Entity, &Self, &SkillTransforms, &GlobalTransform)>,
 		transforms_and_colliders: Query<(&mut Transform, Option<&ColliderShape>)>,
 		blockers: Query<&BlockerTypes>,
-		effect_target_colliders: Query<&ChildCollider<EffectTarget>>,
+		effect_target_colliders: Query<&ChildCollider<Physical>>,
 		commands: ZyheedaCommands,
 	) -> Result<(), BeamError> {
 		Self::beam_interactions_internal(
@@ -59,7 +59,7 @@ impl Blockable {
 		objects: Query<(Entity, &Self, &SkillTransforms, &GlobalTransform)>,
 		mut transforms_and_colliders: Query<(&mut Transform, Option<&ColliderShape>)>,
 		blockers: Query<&BlockerTypes>,
-		interaction_colliders: Query<&ChildCollider<EffectTarget>>,
+		interaction_colliders: Query<&ChildCollider<Physical>>,
 		mut commands: ZyheedaCommands,
 	) -> Result<(), BeamError<TCasterError>>
 	where
@@ -159,7 +159,7 @@ impl Blockable {
 	fn blocked(
 		hit: &RayHit,
 		blockers: Query<&BlockerTypes>,
-		interaction_colliders: Query<&ChildCollider<EffectTarget>>,
+		interaction_colliders: Query<&ChildCollider<Physical>>,
 		blocked_by: &HashSet<Blocker>,
 	) -> bool {
 		let entity = match interaction_colliders.get(hit.entity) {
@@ -218,7 +218,7 @@ mod tests {
 		errors::Unreachable,
 		toi,
 		tools::Units,
-		traits::handles_physics::{PhysicalObject, physical_bodies::Blocker},
+		traits::handles_physics::physical_bodies::Blocker,
 	};
 	use macros::simple_mock;
 	use mockall::predicate::eq;
@@ -426,7 +426,7 @@ mod tests {
 							Blocker::Physical,
 						])))
 						.id();
-					let collider = world.spawn(ChildCollider::<EffectTarget>::of(blocker)).id();
+					let collider = world.spawn(ChildCollider::<Physical>::of(blocker)).id();
 					mock.expect_cast_ray_continuously_sorted()
 						.return_const(Ok(Sorted::from([
 							RayHit {

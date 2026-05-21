@@ -19,7 +19,7 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{
-		components::{collider::ChildCollider, physical_body::Interactive},
+		components::{collider::ChildCollider, markers::Interactive},
 		resources::ongoing_interactions::OngoingInteractions,
 		system_params::{
 			interactive::InteractiveParam,

@@ -20,17 +20,17 @@ use crate::{
 		anchor::{Anchor, AnchorDirty},
 		async_collider::AsyncCollider,
 		blockable::Blockable,
+		body::Body,
 		character_gravity::CharacterGravity,
 		character_motion::ApplyCharacterMotion,
 		collider::{ChildCollider, ColliderShape},
 		default_attributes::DefaultAttributes,
-		effect_target::EffectTarget,
 		effects::{Effects, force::ForceEffect},
 		ground_target::GroundTarget,
 		lifetime::{LifetimeTiedTo, TiedLifetimes},
-		physical_body::{Interactive, PhysicalBody},
+		markers::{Interactive, Physical},
 		set_velocity_forward::SetVelocityForward,
-		skill::{ContactInteractionTarget, ProjectionInteractionTarget, Skill},
+		skill::{Skill, SkillContactRoot, SkillProjectionRoot},
 		target::Target,
 		velocity::LinearVelocity,
 		when_traveled::DestroyAfterDistanceTraveled,
@@ -157,14 +157,12 @@ where
 			.add_observer(Skill::prefab)
 			// Colliders/Bodies
 			.add_prefab_observer::<ColliderShape, ()>()
-			.add_prefab_observer::<PhysicalBody, ()>()
-			.add_observer(ChildCollider::<EffectTarget>::link)
-			.add_observer(ChildCollider::<RigidBody>::link)
-			.add_observer(ChildCollider::<Interactive>::link)
+			.add_prefab_observer::<Body, ()>()
+			.add_observer(ChildCollider::<Physical>::link)
 			.add_systems(Update, AsyncCollider::insert_collider.pipe(OnError::log))
 			.add_message::<RayEvent>()
 			.add_message::<BeamInteraction>()
-			.init_resource::<OngoingInteractions<EffectTarget>>()
+			.init_resource::<OngoingInteractions<Physical>>()
 			.init_resource::<OngoingInteractions<Interactive>>()
 			// All effects
 			.add_observer(Effects::insert)
@@ -212,19 +210,23 @@ where
 						SetVelocityForward::system,
 					)
 						.chain(),
-					// Physical effects
+					// Collect physical collections
 					(
 						Blockable::beam_interactions.pipe(OnError::log),
-						OngoingInteractions::<EffectTarget>::clear,
-						UpdateOngoingInteractions::<EffectTarget>::push_beam_interactions,
+						OngoingInteractions::<Physical>::clear,
+						UpdateOngoingInteractions::<Physical>::push_beam_interactions,
 						Update::delta
-							.pipe(UpdateOngoingInteractions::<EffectTarget>::prevent_tunneling)
+							.pipe(UpdateOngoingInteractions::<Physical>::prevent_tunneling)
 							.pipe(OnError::log),
-						UpdateOngoingInteractions::<EffectTarget>::push_ongoing_collisions,
+						UpdateOngoingInteractions::<Physical>::push_ongoing_collisions,
 					)
 						.chain(),
 					// Collect interactive collisions
-					UpdateOngoingInteractions::<Interactive>::push_ongoing_collisions,
+					(
+						OngoingInteractions::<Interactive>::clear,
+						UpdateOngoingInteractions::<Interactive>::push_ongoing_collisions,
+					)
+						.chain(),
 				)
 					.chain()
 					.in_set(CollisionSystems),
@@ -274,7 +276,7 @@ impl<TDependencies> HandlesPhysicalEffectTargets for PhysicsPlugin<TDependencies
 	where
 		T: Component,
 	{
-		app.register_required_components::<T, EffectTarget>();
+		app.register_required_components::<T, Physical>();
 	}
 }
 
@@ -292,8 +294,8 @@ impl<TDependencies> HandlesNewPhysicalSkill for PhysicsPlugin<TDependencies> {
 }
 
 impl<TDependencies> HandlesPhysicalSkillComponents for PhysicsPlugin<TDependencies> {
-	type TSkillContact = ContactInteractionTarget;
-	type TSkillProjection = ProjectionInteractionTarget;
+	type TSkillContact = SkillContactRoot;
+	type TSkillProjection = SkillProjectionRoot;
 }
 
 impl<TDependencies> HandlesInteractiveDetection for PhysicsPlugin<TDependencies> {
