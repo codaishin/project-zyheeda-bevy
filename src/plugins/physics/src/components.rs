@@ -16,6 +16,7 @@ pub(crate) mod lifetime;
 pub(crate) mod mount_points;
 pub(crate) mod offset;
 pub(crate) mod ongoing_effects;
+pub(crate) mod persistent_root;
 pub(crate) mod prevent_tunneling;
 pub(crate) mod set_velocity_forward;
 pub(crate) mod skill;
