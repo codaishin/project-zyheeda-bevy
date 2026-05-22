@@ -22,9 +22,9 @@
 	},
 	"interactive_detection_shape": {
 		"Cuboid": {
-			"half_x": 1.2,
+			"half_x": 1.0,
 			"half_y": 1.0,
-			"half_z": 0.4
+			"half_z": 0.6
 		}
 	}
 }
