@@ -18,7 +18,7 @@ impl<T> SetPrefab<T> for &mut PrefabRegister<T>
 where
 	T: PrefabType,
 {
-	fn set_map_agent_prefab(&mut self, prefab: fn(ZyheedaEntityCommands, T::TTranslation, T)) {
+	fn set_prefab(&mut self, prefab: fn(ZyheedaEntityCommands, T::TTranslation, T)) {
 		**self = PrefabRegister(prefab);
 	}
 }

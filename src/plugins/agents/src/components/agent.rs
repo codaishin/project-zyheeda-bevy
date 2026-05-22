@@ -50,7 +50,7 @@ impl Agent {
 			return Err(NoPrefabContext);
 		};
 
-		ctx.set_map_agent_prefab(Self::map_prefab);
+		ctx.set_prefab(Self::map_prefab);
 
 		Ok(())
 	}
