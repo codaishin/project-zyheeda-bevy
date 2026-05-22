@@ -1,15 +1,15 @@
-use crate::components::{
-	agent_config::AgentConfig,
-	enemy::void_sphere::VoidSphere,
-	player::Player,
+use crate::{
+	assets::agent_meta::AgentMeta,
+	components::{agent_config::AgentConfig, enemy::void_sphere::VoidSphere, player::Player},
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	errors::{ErrorData, Level, Unreachable},
+	systems::register_animations::AnimationsMarker,
 	traits::{
 		accessors::get::{GetContextMut, View},
 		handles_enemies::EnemyType,
-		handles_map_generation::{AgentPrefab, AgentType, GroundPosition, SetMapAgentPrefab},
+		handles_map_generation::{AgentType, GroundPosition, MapPrefabs, SetPrefab},
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 	zyheeda_commands::ZyheedaEntityCommands,
@@ -43,13 +43,14 @@ impl Agent {
 		mut new_agent: StaticSystemParam<TNewMapAgent>,
 	) -> Result<(), NoPrefabContext>
 	where
-		TNewMapAgent: for<'c> GetContextMut<AgentPrefab, TContext<'c>: SetMapAgentPrefab>,
+		TNewMapAgent:
+			for<'c> GetContextMut<MapPrefabs<AgentType>, TContext<'c>: SetPrefab<AgentType>>,
 	{
-		let Some(mut ctx) = TNewMapAgent::get_context_mut(&mut new_agent, AgentPrefab) else {
+		let Some(mut ctx) = TNewMapAgent::get_context_mut(&mut new_agent, MapPrefabs::KEY) else {
 			return Err(NoPrefabContext);
 		};
 
-		ctx.set_map_agent_prefab(Self::map_prefab);
+		ctx.set_prefab(Self::map_prefab);
 
 		Ok(())
 	}
@@ -94,6 +95,11 @@ pub(crate) struct ApplyAgentConfig;
 
 #[derive(Component, Debug, PartialEq, Default)]
 pub(crate) struct ApplyAgentAnimations;
+
+impl AnimationsMarker for ApplyAgentAnimations {
+	type TConfig = AgentMeta;
+	type TConfigComponent = AgentConfig;
+}
 
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct AgentTransformDirty;

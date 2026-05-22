@@ -35,6 +35,7 @@
 		"*.item": "json",
 		"*.keys": "json",
 		"*.agent": "json",
+		"*.door": "json",
 	},
 	"editor.semanticTokenColorCustomizations": {
 		"rules": {

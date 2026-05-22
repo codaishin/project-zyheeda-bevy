@@ -13,12 +13,14 @@ use serde::{Deserialize, Serialize};
 use std::{
 	fmt::Debug,
 	hash::Hash,
+	marker::PhantomData,
 	ops::{Deref, DerefMut},
 };
 
 pub trait HandlesMapGeneration: SystemSetDefinition {
-	type TNewMapAgent: SystemParam
-		+ for<'c> GetContextMut<AgentPrefab, TContext<'c>: SetMapAgentPrefab>;
+	type TMapPrefabs: SystemParam
+		+ for<'c> GetContextMut<MapPrefabs<AgentType>, TContext<'c>: SetPrefab<AgentType>>
+		+ for<'c> GetContextMut<MapPrefabs<InteractiveType>, TContext<'c>: SetPrefab<InteractiveType>>;
 
 	type TGraph: Graph + for<'a> From<&'a Self::TMap> + ThreadSafe;
 
@@ -111,14 +113,22 @@ impl DerefMut for GroundPosition {
 	}
 }
 
-pub trait SetMapAgentPrefab {
-	fn set_map_agent_prefab(
-		&mut self,
-		prefab: fn(ZyheedaEntityCommands, GroundPosition, AgentType),
-	);
+pub trait SetPrefab<T>
+where
+	T: PrefabType,
+{
+	fn set_prefab(&mut self, prefab: fn(ZyheedaEntityCommands, T::TTranslation, T));
 }
 
-pub struct AgentPrefab;
+pub trait PrefabType {
+	type TTranslation;
+}
+
+pub struct MapPrefabs<T>(PhantomData<T>);
+
+impl<T> MapPrefabs<T> {
+	pub const KEY: Self = Self(PhantomData);
+}
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum NaivePath {
@@ -135,4 +145,22 @@ pub enum AgentType {
 
 impl ViewField for AgentType {
 	type TValue<'a> = Self;
+}
+
+impl PrefabType for AgentType {
+	type TTranslation = GroundPosition;
+}
+
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+pub enum InteractiveType {
+	Door(DoorType),
+}
+
+impl PrefabType for InteractiveType {
+	type TTranslation = Vec3;
+}
+
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+pub enum DoorType {
+	SlideDoor,
 }

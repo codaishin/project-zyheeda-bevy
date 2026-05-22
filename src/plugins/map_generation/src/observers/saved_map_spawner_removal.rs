@@ -1,6 +1,6 @@
 use crate::components::{
-	agent_spawner::SpawnerActive,
 	map::{Map, objects::MapObjectOf},
+	spawner_active::SpawnerActive,
 };
 use bevy::prelude::*;
 use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};

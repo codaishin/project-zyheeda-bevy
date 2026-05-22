@@ -4,7 +4,7 @@ use std::{fmt::Display, ops::Deref};
 /// - removing numbered suffixes like `.001`
 /// - streamlining different ways of word separation like CamelCase, snake_case, using dots or
 ///   spaces.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct NormalizedName(String);
 
 impl NormalizedName {

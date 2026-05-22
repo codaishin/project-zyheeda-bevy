@@ -1,5 +1,6 @@
 pub mod link_children;
 pub mod log;
+pub mod register_animations;
 pub mod remove_components;
 
 pub(crate) mod lifetime;

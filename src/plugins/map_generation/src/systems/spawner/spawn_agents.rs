@@ -1,24 +1,33 @@
 use crate::{
 	components::{
-		agent_spawner::{AgentSpawner, SpawnerActive},
 		map::objects::{MapObjectOf, PersistentMapObject},
 		map_agents::GridAgent,
+		spawner::Spawner,
+		spawner_active::SpawnerActive,
 	},
-	resources::agents::prefab::AgentPrefab,
+	resources::agents::prefab::PrefabRegister,
 };
 use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
-	traits::{accessors::get::TryApplyOn, handles_map_generation::GroundPosition},
+	traits::{
+		accessors::get::TryApplyOn,
+		handles_map_generation::PrefabType,
+		thread_safe::ThreadSafe,
+	},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
 
-impl AgentSpawner {
-	pub(crate) fn spawn_agent(
+impl<T> Spawner<T>
+where
+	T: PrefabType + Copy + ThreadSafe,
+	T::TTranslation: From<Vec3>,
+{
+	pub(crate) fn execute(
 		mut commands: ZyheedaCommands,
 		spawners: Query<(Entity, &Self, &GlobalTransform, &MapObjectOf), With<SpawnerActive>>,
 		maps: Query<&PersistentEntity>,
-		agent_prefabs: Res<AgentPrefab>,
+		agent_prefabs: Res<PrefabRegister<T>>,
 	) {
 		for (entity, Self(agent_type), transform, MapObjectOf(map)) in spawners {
 			let Ok(map) = maps.get(*map).copied() else {
@@ -27,7 +36,7 @@ impl AgentSpawner {
 			let agent = commands.spawn((*transform, GridAgent, PersistentMapObject { map }));
 			agent_prefabs.apply(
 				ZyheedaEntityCommands::from(agent),
-				GroundPosition(transform.translation()),
+				T::TTranslation::from(transform.translation()),
 				*agent_type,
 			);
 
@@ -41,10 +50,13 @@ impl AgentSpawner {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{agent_spawner::SpawnerActive, map::objects::MapObjectOf};
+	use crate::components::map::objects::MapObjectOf;
 	use common::{
 		components::persistent_entity::PersistentEntity,
-		traits::{handles_enemies::EnemyType, handles_map_generation::AgentType},
+		traits::{
+			handles_enemies::EnemyType,
+			handles_map_generation::{AgentType, GroundPosition},
+		},
 	};
 	use testing::{SingleThreadedApp, assert_count};
 
@@ -57,7 +69,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.insert_resource(AgentPrefab(
+		app.insert_resource(PrefabRegister(
 			|mut e, GroundPosition(ground_position), agent_type| {
 				e.try_insert(_Agent {
 					ground_position,
@@ -65,7 +77,7 @@ mod tests {
 				});
 			},
 		));
-		app.add_systems(Update, AgentSpawner::spawn_agent);
+		app.add_systems(Update, Spawner::<AgentType>::execute);
 
 		app
 	}
@@ -76,12 +88,12 @@ mod tests {
 		let map = app.world_mut().spawn(PersistentEntity::default()).id();
 		app.world_mut().spawn((
 			MapObjectOf(map),
-			AgentSpawner(AgentType::Player),
+			Spawner(AgentType::Player),
 			GlobalTransform::from_xyz(1., 2., 3.),
 		));
 		app.world_mut().spawn((
 			MapObjectOf(map),
-			AgentSpawner(AgentType::Enemy(EnemyType::VoidSphere)),
+			Spawner(AgentType::Enemy(EnemyType::VoidSphere)),
 			GlobalTransform::from_xyz(4., 5., 6.),
 		));
 
@@ -110,12 +122,12 @@ mod tests {
 		let map = app.world_mut().spawn(PersistentEntity::default()).id();
 		app.world_mut().spawn((
 			MapObjectOf(map),
-			AgentSpawner(AgentType::Player),
+			Spawner(AgentType::Player),
 			GlobalTransform::from_xyz(1., 2., 3.),
 		));
 		app.world_mut().spawn((
 			MapObjectOf(map),
-			AgentSpawner(AgentType::Enemy(EnemyType::VoidSphere)),
+			Spawner(AgentType::Enemy(EnemyType::VoidSphere)),
 			GlobalTransform::from_xyz(4., 5., 6.),
 		));
 
@@ -132,12 +144,12 @@ mod tests {
 		let map = app.world_mut().spawn(PersistentEntity::default()).id();
 		app.world_mut().spawn((
 			MapObjectOf(map),
-			AgentSpawner(AgentType::Player),
+			Spawner(AgentType::Player),
 			GlobalTransform::from(Transform::from_xyz(1., 2., 3.).looking_to(Dir3::X, Dir3::Y)),
 		));
 		app.world_mut().spawn((
 			MapObjectOf(map),
-			AgentSpawner(AgentType::Enemy(EnemyType::VoidSphere)),
+			Spawner(AgentType::Enemy(EnemyType::VoidSphere)),
 			GlobalTransform::from(Transform::from_xyz(4., 5., 6.).looking_to(Dir3::Z, Dir3::Y)),
 		));
 
@@ -145,7 +157,7 @@ mod tests {
 
 		let mut agents = app
 			.world_mut()
-			.query_filtered::<&GlobalTransform, Without<AgentSpawner>>();
+			.query_filtered::<&GlobalTransform, Without<Spawner<AgentType>>>();
 		let agents = assert_count!(2, agents.iter(app.world()));
 		assert_eq!(
 			[
@@ -167,7 +179,7 @@ mod tests {
 		let map = app.world_mut().spawn(map_persistent).id();
 		app.world_mut().spawn((
 			MapObjectOf(map),
-			AgentSpawner(AgentType::Player),
+			Spawner(AgentType::Player),
 			GlobalTransform::from_xyz(1., 2., 3.),
 		));
 
@@ -191,7 +203,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				MapObjectOf(map),
-				AgentSpawner(AgentType::Player),
+				Spawner(AgentType::Player),
 				GlobalTransform::default(),
 			))
 			.id();
@@ -207,7 +219,7 @@ mod tests {
 		let map = app.world_mut().spawn(PersistentEntity::default()).id();
 		let mut entity = app.world_mut().spawn((
 			MapObjectOf(map),
-			AgentSpawner(AgentType::Player),
+			Spawner(AgentType::Player),
 			GlobalTransform::default(),
 		));
 		entity.remove::<SpawnerActive>();

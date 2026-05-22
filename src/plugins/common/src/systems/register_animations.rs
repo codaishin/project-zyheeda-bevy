@@ -1,16 +1,13 @@
 use crate::{
-	assets::agent_meta::AgentMeta,
-	components::{agent::ApplyAgentAnimations, agent_config::AgentConfig},
-};
-use bevy::{ecs::system::StaticSystemParam, prelude::*};
-use common::{
 	components::gltf::GltfLookup,
-	errors::{ErrorData, Level},
+	errors::{ErrorData, Level, Unreachable},
 	traits::{
-		accessors::get::{GetContextMut, TryApplyOn},
+		accessors::get::{GetContextMut, TryApplyOn, View},
 		handles_animations::{
+			AffectedAnimationBones,
 			Animation,
 			AnimationKey,
+			AnimationMaskBits,
 			AnimationName,
 			AnimationNames,
 			RegisterAnimations,
@@ -19,35 +16,50 @@ use common::{
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
+use bevy::{
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
+};
 use std::{
+	any::type_name,
 	collections::{HashMap, HashSet},
 	fmt::Display,
+	marker::PhantomData,
 };
 
-impl ApplyAgentAnimations {
-	pub(crate) fn system<TAnimations>(
+impl<T> RegisterAnimationsSystem for T where T: AnimationsMarker {}
+
+pub trait RegisterAnimationsSystem: AnimationsMarker + Sized {
+	/// Reusable system to register animations and animation masks when `Self` is present on
+	/// an entity for which animations and masks have not been registered yet. After registration
+	/// `Self` is removed.
+	///
+	/// Returns a collection of per entity errors.
+	#[allow(clippy::type_complexity)]
+	fn register_animations_system<TAnimations>(
 		mut commands: ZyheedaCommands,
 		mut animations: StaticSystemParam<TAnimations>,
-		configs: Res<Assets<AgentMeta>>,
+		configs: Res<Assets<Self::TConfig>>,
 		models: Res<Assets<Gltf>>,
-		agents: Query<(Entity, &AgentConfig, Option<&GltfLookup>), With<Self>>,
-	) -> Result<(), Vec<RegisterAnimationsError>>
+		agents: Query<(Entity, &Self::TConfigComponent, Option<&GltfLookup>), With<Self>>,
+	) -> Result<(), Vec<RegisterAnimationsError<Self>>>
 	where
-		TAnimations: for<'c> GetContextMut<WithoutAnimations, TContext<'c>: RegisterAnimations>,
+		TAnimations: SystemParam
+			+ for<'c> GetContextMut<WithoutAnimations, TContext<'c>: RegisterAnimations>,
 	{
 		let mut errors = vec![];
 
-		for (entity, AgentConfig { config_handle }, gltf) in agents {
+		for (entity, config, gltf) in agents {
 			let key = WithoutAnimations { entity };
 			let Some(mut ctx) = TAnimations::get_context_mut(&mut animations, key) else {
 				continue;
 			};
 
-			let Some(config) = configs.get(config_handle) else {
+			let Some(config) = configs.get(config.view()) else {
 				continue;
 			};
 
-			let animations = match gltf {
+			let (animations, masks) = match gltf {
 				Some(GltfLookup(gltf)) => {
 					let Some(gltf) = models.get(gltf) else {
 						continue;
@@ -55,8 +67,7 @@ impl ApplyAgentAnimations {
 
 					let mut missing = HashSet::new();
 					let animations = config
-						.animations
-						.iter()
+						.animations()
 						.filter_map(get_clips(gltf, &mut missing))
 						.collect::<HashMap<_, _>>();
 					if !missing.is_empty() {
@@ -66,17 +77,17 @@ impl ApplyAgentAnimations {
 							available: gltf.named_animations.keys().cloned().collect(),
 						});
 					}
-					animations
+					(animations, config.masks().collect())
 				}
 				None => {
-					if !config.animations.is_empty() {
-						errors.push(RegisterAnimationsError::GltfLookupMissing(entity));
+					if config.animations().len() != 0 {
+						errors.push(RegisterAnimationsError::GltfLookupMissing { entity });
 					}
-					HashMap::new()
+					(HashMap::new(), HashMap::new())
 				}
 			};
 
-			ctx.register_animations(&animations, &config.animation_mask_groups);
+			ctx.register_animations(&animations, &masks);
 			commands.try_apply_on(&entity, |mut e| {
 				e.try_remove::<Self>();
 			});
@@ -90,7 +101,19 @@ impl ApplyAgentAnimations {
 	}
 }
 
-type AnimationKeyAndNames<'a> = (&'a AnimationKey, &'a Animation<AnimationNames>);
+pub trait AnimationsMarker: Component {
+	type TConfig: Asset + AnimationConfig;
+	type TConfigComponent: Component + View<Handle<Self::TConfig>>;
+}
+
+pub trait AnimationConfig {
+	fn animations(&self) -> impl ExactSizeIterator<Item = AnimationKeyAndNames>;
+	fn masks(&self) -> impl ExactSizeIterator<Item = AnimationMaskAndBones>;
+}
+
+pub type AnimationKeyAndNames = (AnimationKey, Animation<AnimationNames>);
+pub type AnimationMaskAndBones = (AnimationMaskBits, AffectedAnimationBones);
+
 type AnimationKeyAndClips = (AnimationKey, Animation);
 
 fn get_clips(
@@ -107,7 +130,7 @@ fn get_clips(
 		};
 
 		Some((
-			*key,
+			key,
 			Animation {
 				clips: animation.clips.clone().try_map_option(get_clips)?,
 				play_mode: animation.play_mode,
@@ -117,17 +140,20 @@ fn get_clips(
 	}
 }
 
-#[derive(Debug, PartialEq)]
-pub(crate) enum RegisterAnimationsError {
+#[derive(Debug, PartialEq, Clone)]
+pub enum RegisterAnimationsError<T> {
 	MissingAnimations {
 		entity: Entity,
 		missing: HashSet<AnimationName>,
 		available: HashSet<Box<str>>,
 	},
-	GltfLookupMissing(Entity),
+	GltfLookupMissing {
+		entity: Entity,
+	},
+	_P((PhantomData<T>, Unreachable)),
 }
 
-impl Display for RegisterAnimationsError {
+impl<T> Display for RegisterAnimationsError<T> {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			RegisterAnimationsError::MissingAnimations {
@@ -143,17 +169,21 @@ impl Display for RegisterAnimationsError {
 					Vec::from_iter(available.iter().cloned()).join(", ")
 				)
 			}
-			RegisterAnimationsError::GltfLookupMissing(entity) => {
+			RegisterAnimationsError::GltfLookupMissing { entity } => {
 				write!(
 					f,
-					"{entity}: missing gltf lookup component, which is required if the agent has animations"
+					"{}: missing {}, which is required for {}",
+					entity,
+					type_name::<GltfLookup>(),
+					type_name::<T>()
 				)
 			}
+			RegisterAnimationsError::_P(_) => unreachable!(),
 		}
 	}
 }
 
-impl ErrorData for RegisterAnimationsError {
+impl<T> ErrorData for RegisterAnimationsError<T> {
 	fn level(&self) -> Level {
 		Level::Error
 	}
@@ -170,21 +200,14 @@ impl ErrorData for RegisterAnimationsError {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{assets::agent_meta::AgentMeta, components::agent_config::AgentConfig};
-	use common::{
+	use crate::{
 		bit_mask_index,
 		tools::bone_name::BoneName,
-		traits::handles_animations::{
-			AffectedAnimationBones,
-			Animation,
-			AnimationClips,
-			AnimationKey,
-			AnimationMaskBits,
-		},
+		traits::handles_animations::AnimationClips,
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
-	use std::{collections::HashMap, sync::LazyLock};
+	use std::sync::LazyLock;
 	use testing::{NestedMocks, SingleThreadedApp, new_handle};
 
 	#[derive(Component, NestedMocks)]
@@ -212,11 +235,44 @@ mod tests {
 		}
 	}
 
+	#[derive(Component, Debug, PartialEq)]
+	struct _Maker;
+
+	impl AnimationsMarker for _Maker {
+		type TConfig = _Config;
+		type TConfigComponent = _ConfigHandle;
+	}
+
+	#[derive(Asset, TypePath, Default)]
+	struct _Config {
+		animations: Vec<AnimationKeyAndNames>,
+		masks: Vec<AnimationMaskAndBones>,
+	}
+
+	impl AnimationConfig for _Config {
+		fn animations(&self) -> impl ExactSizeIterator<Item = AnimationKeyAndNames> {
+			self.animations.iter().cloned()
+		}
+
+		fn masks(&self) -> impl ExactSizeIterator<Item = AnimationMaskAndBones> {
+			self.masks.iter().cloned()
+		}
+	}
+
+	#[derive(Component)]
+	struct _ConfigHandle(Handle<_Config>);
+
+	impl View<Handle<_Config>> for _ConfigHandle {
+		fn view(&self) -> &'_ Handle<_Config> {
+			&self.0
+		}
+	}
+
 	#[derive(Resource, Debug, PartialEq)]
-	struct _Result(Result<(), Vec<RegisterAnimationsError>>);
+	struct _Result(Result<(), Vec<RegisterAnimationsError<_Maker>>>);
 
 	fn setup<const C: usize, const M: usize>(
-		configs: [(&Handle<AgentMeta>, AgentMeta); C],
+		configs: [(&Handle<_Config>, _Config); C],
 		models: [(&Handle<Gltf>, Gltf); M],
 	) -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -235,7 +291,7 @@ mod tests {
 		app.insert_resource(model_assets);
 		app.add_systems(
 			Update,
-			ApplyAgentAnimations::system::<Query<&mut _Animations>>.pipe(
+			_Maker::register_animations_system::<Query<&mut _Animations>>.pipe(
 				|In(r), mut c: Commands| {
 					c.insert_resource(_Result(r));
 				},
@@ -272,31 +328,30 @@ mod tests {
 	#[test]
 	fn register_animations() {
 		static CLIP: LazyLock<Handle<AnimationClip>> = LazyLock::new(new_handle);
-		let config = AgentMeta {
-			animations: HashMap::from([(
+		let config = _Config {
+			animations: Vec::from([(
 				AnimationKey::Run,
 				Animation {
 					clips: AnimationClips::Single(AnimationName::from("Run")),
 					..default()
 				},
 			)]),
-			animation_mask_groups: HashMap::from([(
+			masks: Vec::from([(
 				AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
 				AffectedAnimationBones {
 					from_root: BoneName::from("root"),
 					until_exclusive: [].into(),
 				},
 			)]),
-			..default()
 		};
 		let config_handle = new_handle();
 		let gltf_handle = new_handle();
 		let gltf = gltf([("Run", CLIP.clone())]);
 		let mut app = setup([(&config_handle, config)], [(&gltf_handle, gltf)]);
 		app.world_mut().spawn((
-			ApplyAgentAnimations,
+			_Maker,
 			GltfLookup(gltf_handle),
-			AgentConfig { config_handle },
+			_ConfigHandle(config_handle),
 			_Animations::new().with_mock(assert_animations_registered),
 		));
 
@@ -328,31 +383,30 @@ mod tests {
 	#[test]
 	fn register_animations_delayed() {
 		static CLIP: LazyLock<Handle<AnimationClip>> = LazyLock::new(new_handle);
-		let config = AgentMeta {
-			animations: HashMap::from([(
+		let config = _Config {
+			animations: Vec::from([(
 				AnimationKey::Run,
 				Animation {
 					clips: AnimationClips::Single(AnimationName::from("Run")),
 					..default()
 				},
 			)]),
-			animation_mask_groups: HashMap::from([(
+			masks: Vec::from([(
 				AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
 				AffectedAnimationBones {
 					from_root: BoneName::from("root"),
 					until_exclusive: [].into(),
 				},
 			)]),
-			..default()
 		};
 		let config_handle = new_handle();
 		let gltf_handle = new_handle();
 		let gltf = gltf([("Run", CLIP.clone())]);
 		let mut app = setup([(&config_handle, config)], []);
 		app.world_mut().spawn((
-			ApplyAgentAnimations,
+			_Maker,
 			GltfLookup(gltf_handle.clone()),
-			AgentConfig { config_handle },
+			_ConfigHandle(config_handle),
 			_Animations::new().with_mock(assert_animations_registered),
 		));
 
@@ -389,21 +443,20 @@ mod tests {
 	#[test]
 	fn no_gltf_lookup_required_when_animations_empty() {
 		let config_handle = new_handle();
-		let config = AgentMeta {
-			animations: HashMap::from([]),
-			animation_mask_groups: HashMap::from([(
+		let config = _Config {
+			animations: Vec::from([]),
+			masks: Vec::from([(
 				AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
 				AffectedAnimationBones {
 					from_root: BoneName::from("root"),
 					until_exclusive: [].into(),
 				},
 			)]),
-			..default()
 		};
 		let mut app = setup([(&config_handle, config)], []);
 		app.world_mut().spawn((
-			ApplyAgentAnimations,
-			AgentConfig { config_handle },
+			_Maker,
+			_ConfigHandle(config_handle),
 			_Animations::new().with_mock(assert_animations_registered),
 		));
 
@@ -412,16 +465,7 @@ mod tests {
 		fn assert_animations_registered(mock: &mut Mock_Animations) {
 			mock.expect_register_animations()
 				.once()
-				.with(
-					eq(HashMap::from([])),
-					eq(HashMap::from([(
-						AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
-						AffectedAnimationBones {
-							from_root: BoneName::from("root"),
-							until_exclusive: [].into(),
-						},
-					)])),
-				)
+				.with(eq(HashMap::from([])), eq(HashMap::from([])))
 				.return_const(());
 		}
 	}
@@ -429,27 +473,26 @@ mod tests {
 	#[test]
 	fn set_empty_animations_when_no_gltf_lookup() {
 		let config_handle = new_handle();
-		let config = AgentMeta {
-			animations: HashMap::from([(
+		let config = _Config {
+			animations: Vec::from([(
 				AnimationKey::Run,
 				Animation {
 					clips: AnimationClips::Single(AnimationName::from("Run")),
 					..default()
 				},
 			)]),
-			animation_mask_groups: HashMap::from([(
+			masks: Vec::from([(
 				AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
 				AffectedAnimationBones {
 					from_root: BoneName::from("root"),
 					until_exclusive: [].into(),
 				},
 			)]),
-			..default()
 		};
 		let mut app = setup([(&config_handle, config)], []);
 		app.world_mut().spawn((
-			ApplyAgentAnimations,
-			AgentConfig { config_handle },
+			_Maker,
+			_ConfigHandle(config_handle),
 			_Animations::new().with_mock(assert_animations_registered),
 		));
 
@@ -458,16 +501,7 @@ mod tests {
 		fn assert_animations_registered(mock: &mut Mock_Animations) {
 			mock.expect_register_animations()
 				.once()
-				.with(
-					eq(HashMap::from([])),
-					eq(HashMap::from([(
-						AnimationMaskBits::zero().with_set(bit_mask_index!(2)),
-						AffectedAnimationBones {
-							from_root: BoneName::from("root"),
-							until_exclusive: [].into(),
-						},
-					)])),
-				)
+				.with(eq(HashMap::from([])), eq(HashMap::from([])))
 				.return_const(());
 		}
 	}
@@ -477,25 +511,22 @@ mod tests {
 		let config_handle = new_handle();
 		let gltf_handle = new_handle();
 		let mut app = setup(
-			[(&config_handle, AgentMeta::default())],
+			[(&config_handle, _Config::default())],
 			[(&gltf_handle, gltf([]))],
 		);
 		let entity = app
 			.world_mut()
 			.spawn((
-				ApplyAgentAnimations,
+				_Maker,
 				GltfLookup(gltf_handle),
-				AgentConfig { config_handle },
+				_ConfigHandle(config_handle),
 				_Animations::default(),
 			))
 			.id();
 
 		app.update();
 
-		assert_eq!(
-			None,
-			app.world().entity(entity).get::<ApplyAgentAnimations>()
-		);
+		assert_eq!(None, app.world().entity(entity).get::<_Maker>());
 	}
 
 	#[test]
@@ -503,12 +534,12 @@ mod tests {
 		let config_handle = new_handle();
 		let gltf_handle = new_handle();
 		let mut app = setup(
-			[(&config_handle, AgentMeta::default())],
+			[(&config_handle, _Config::default())],
 			[(&gltf_handle, gltf([]))],
 		);
 		app.world_mut().spawn((
 			GltfLookup(gltf_handle),
-			AgentConfig { config_handle },
+			_ConfigHandle(config_handle),
 			_Animations::new().with_mock(assert_register_not_called),
 		));
 
@@ -521,8 +552,8 @@ mod tests {
 
 	#[test]
 	fn return_animations_missing() {
-		let config = AgentMeta {
-			animations: HashMap::from([
+		let config = _Config {
+			animations: Vec::from([
 				(
 					AnimationKey::Walk,
 					Animation {
@@ -545,7 +576,6 @@ mod tests {
 					},
 				),
 			]),
-			animation_mask_groups: HashMap::from([]),
 			..default()
 		};
 		let config_handle = new_handle();
@@ -555,9 +585,9 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				ApplyAgentAnimations,
+				_Maker,
 				GltfLookup(gltf_handle),
-				AgentConfig { config_handle },
+				_ConfigHandle(config_handle),
 				_Animations::new().with_mock(|mock| {
 					mock.expect_register_animations().return_const(());
 				}),
@@ -578,15 +608,14 @@ mod tests {
 
 	#[test]
 	fn return_gltf_lookup_missing() {
-		let config = AgentMeta {
-			animations: HashMap::from([(
+		let config = _Config {
+			animations: Vec::from([(
 				AnimationKey::Run,
 				Animation {
 					clips: AnimationClips::Single(AnimationName::from("Run")),
 					..default()
 				},
 			)]),
-			animation_mask_groups: HashMap::from([]),
 			..default()
 		};
 		let config_handle = new_handle();
@@ -594,8 +623,8 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				ApplyAgentAnimations,
-				AgentConfig { config_handle },
+				_Maker,
+				_ConfigHandle(config_handle),
 				_Animations::new().with_mock(|mock| {
 					mock.expect_register_animations().return_const(());
 				}),
@@ -605,17 +634,17 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			&_Result(Err(vec![RegisterAnimationsError::GltfLookupMissing(
+			&_Result(Err(vec![RegisterAnimationsError::GltfLookupMissing {
 				entity
-			)])),
+			}])),
 			app.world().resource::<_Result>()
 		);
 	}
 
 	#[test]
 	fn return_ok_when_all_animations_found() {
-		let config = AgentMeta {
-			animations: HashMap::from([
+		let config = _Config {
+			animations: Vec::from([
 				(
 					AnimationKey::Walk,
 					Animation {
@@ -638,7 +667,6 @@ mod tests {
 					},
 				),
 			]),
-			animation_mask_groups: HashMap::from([]),
 			..default()
 		};
 		let config_handle = new_handle();
@@ -650,9 +678,9 @@ mod tests {
 		]);
 		let mut app = setup([(&config_handle, config)], [(&gltf_handle, gltf)]);
 		app.world_mut().spawn((
-			ApplyAgentAnimations,
+			_Maker,
 			GltfLookup(gltf_handle),
-			AgentConfig { config_handle },
+			_ConfigHandle(config_handle),
 			_Animations::new().with_mock(|mock| {
 				mock.expect_register_animations().return_const(());
 			}),
@@ -665,16 +693,11 @@ mod tests {
 
 	#[test]
 	fn return_ok_when_no_gltf_lookup_and_no_animations() {
-		let config = AgentMeta {
-			animations: HashMap::from([]),
-			animation_mask_groups: HashMap::from([]),
-			..default()
-		};
 		let config_handle = new_handle();
-		let mut app = setup([(&config_handle, config)], []);
+		let mut app = setup([(&config_handle, _Config::default())], []);
 		app.world_mut().spawn((
-			ApplyAgentAnimations,
-			AgentConfig { config_handle },
+			_Maker,
+			_ConfigHandle(config_handle),
 			_Animations::new().with_mock(|mock| {
 				mock.expect_register_animations().return_const(());
 			}),

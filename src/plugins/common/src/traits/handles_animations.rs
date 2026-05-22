@@ -500,6 +500,8 @@ pub enum AnimationKey {
 		slot: SlotKey,
 		animation: SkillAnimation,
 	},
+	Open,
+	Close,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]

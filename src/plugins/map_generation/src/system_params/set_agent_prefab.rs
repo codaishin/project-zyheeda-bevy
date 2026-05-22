@@ -1,39 +1,46 @@
-use crate::resources::agents::prefab::AgentPrefab;
+use crate::resources::agents::prefab::PrefabRegister;
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::{
 	traits::{
 		accessors::get::GetContextMut,
-		handles_map_generation::{
-			AgentPrefab as AgentPrefabMarker,
-			AgentType,
-			GroundPosition,
-			SetMapAgentPrefab,
-		},
+		handles_map_generation::{AgentType, InteractiveType, MapPrefabs, PrefabType, SetPrefab},
 	},
 	zyheeda_commands::ZyheedaEntityCommands,
 };
 
 #[derive(SystemParam, Debug)]
 pub struct SetAgentPrefab<'w> {
-	prefab: ResMut<'w, AgentPrefab>,
+	agent_prefabs: ResMut<'w, PrefabRegister<AgentType>>,
+	interactive_prefabs: ResMut<'w, PrefabRegister<InteractiveType>>,
 }
 
-impl SetMapAgentPrefab for &mut AgentPrefab {
-	fn set_map_agent_prefab(
-		&mut self,
-		prefab: fn(ZyheedaEntityCommands, GroundPosition, AgentType),
-	) {
-		**self = AgentPrefab(prefab);
+impl<T> SetPrefab<T> for &mut PrefabRegister<T>
+where
+	T: PrefabType,
+{
+	fn set_prefab(&mut self, prefab: fn(ZyheedaEntityCommands, T::TTranslation, T)) {
+		**self = PrefabRegister(prefab);
 	}
 }
 
-impl GetContextMut<AgentPrefabMarker> for SetAgentPrefab<'static> {
-	type TContext<'ctx> = &'ctx mut AgentPrefab;
+impl GetContextMut<MapPrefabs<AgentType>> for SetAgentPrefab<'static> {
+	type TContext<'ctx> = &'ctx mut PrefabRegister<AgentType>;
 
 	fn get_context_mut<'ctx>(
 		param: &'ctx mut SetAgentPrefab,
-		_: AgentPrefabMarker,
+		_: MapPrefabs<AgentType>,
 	) -> Option<Self::TContext<'ctx>> {
-		Some(param.prefab.as_mut())
+		Some(param.agent_prefabs.as_mut())
+	}
+}
+
+impl GetContextMut<MapPrefabs<InteractiveType>> for SetAgentPrefab<'static> {
+	type TContext<'ctx> = &'ctx mut PrefabRegister<InteractiveType>;
+
+	fn get_context_mut<'ctx>(
+		param: &'ctx mut SetAgentPrefab,
+		_: MapPrefabs<InteractiveType>,
+	) -> Option<Self::TContext<'ctx>> {
+		Some(param.interactive_prefabs.as_mut())
 	}
 }

@@ -1,0 +1,30 @@
+{
+	"animations": {
+		"open": {
+			"clips": {
+				"Single": "Open"
+			},
+			"play_mode": "Once",
+			"mask_groups": "1"
+		},
+		"close": {
+			"clips": {
+				"Single": "Close"
+			},
+			"play_mode": "Once",
+			"mask_groups": "1"
+		}
+	},
+	"animation_mask_groups": {
+		"1": {
+			"from_root": "SlideDoor"
+		}
+	},
+	"interactive_detection_shape": {
+		"Cuboid": {
+			"half_x": 1.0,
+			"half_y": 1.0,
+			"half_z": 0.6
+		}
+	}
+}
