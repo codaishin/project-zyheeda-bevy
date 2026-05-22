@@ -14,11 +14,13 @@ use common::{
 	states::game_state::LoadingEssentialAssets,
 	systems::{log::OnError, register_animations::RegisterAnimationsSystem},
 	traits::{
+		after_plugin::AfterPlugin,
 		handles_animations::HandlesAnimations,
 		handles_custom_assets::HandlesCustomFolderAssets,
 		handles_map_generation::HandlesMapGeneration,
-		handles_physics::HandlesPhysicsConfig,
+		handles_physics::{HandlesInteractiveDetection, HandlesPhysicsConfig},
 		prefab::AddPrefabObserver,
+		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -30,7 +32,7 @@ impl<TLoading, TPhysics, TMaps, TAnimations>
 	InteractivePlugin<(TLoading, TPhysics, TMaps, TAnimations)>
 where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
-	TPhysics: ThreadSafe + HandlesPhysicsConfig,
+	TPhysics: ThreadSafe + HandlesPhysicsConfig + HandlesInteractiveDetection + SystemSetDefinition,
 	TMaps: ThreadSafe + HandlesMapGeneration,
 	TAnimations: ThreadSafe + HandlesAnimations,
 {
@@ -43,7 +45,7 @@ impl<TLoading, TPhysics, TMaps, TAnimations> Plugin
 	for InteractivePlugin<(TLoading, TPhysics, TMaps, TAnimations)>
 where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
-	TPhysics: ThreadSafe + HandlesPhysicsConfig,
+	TPhysics: ThreadSafe + HandlesPhysicsConfig + HandlesInteractiveDetection + SystemSetDefinition,
 	TMaps: ThreadSafe + HandlesMapGeneration,
 	TAnimations: ThreadSafe + HandlesAnimations,
 {
@@ -62,7 +64,10 @@ where
 					ApplyDoorFrame::apply::<TPhysics::TConfigMut>,
 					ApplyDoorAnimations::register_animations_system::<TAnimations::TAnimationsMut>
 						.pipe(OnError::log),
-				),
+					Door::animate::<TPhysics::TInteractive, TAnimations::TAnimationsMut>,
+				)
+					.chain()
+					.after_plugin(TPhysics::SYSTEMS),
 			);
 	}
 }

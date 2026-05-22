@@ -126,6 +126,20 @@ pub trait IterInteractions {
 	fn iter_interactions(&self) -> Self::TIter<'_>;
 }
 
+impl<T> IterInteractions for T
+where
+	T: Deref<Target: IterInteractions>,
+{
+	type TIter<'a>
+		= <T::Target as IterInteractions>::TIter<'a>
+	where
+		Self: 'a;
+
+	fn iter_interactions(&self) -> Self::TIter<'_> {
+		self.deref().iter_interactions()
+	}
+}
+
 pub trait HandlesMotion {
 	/// The component controlling physical motion of characters and related physical and collider
 	/// computations.
