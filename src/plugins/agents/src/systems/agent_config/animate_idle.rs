@@ -2,7 +2,7 @@ use crate::components::animate_idle::AnimateIdle;
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	traits::{
-		accessors::get::{GetContextMut, TryApplyOn},
+		accessors::get::{TryApplyOn, TryGetContextMut},
 		handles_animations::{ActiveAnimationsMut, AnimationKey, AnimationPriority, Animations},
 	},
 	zyheeda_commands::ZyheedaCommands,
@@ -15,11 +15,12 @@ impl AnimateIdle {
 		mut animations: StaticSystemParam<TAnimations>,
 		idlers: Query<Entity, With<Self>>,
 	) where
-		TAnimations: for<'c> GetContextMut<Animations, TContext<'c>: ActiveAnimationsMut>,
+		TAnimations: for<'c> TryGetContextMut<Animations, TContext<'c>: ActiveAnimationsMut>,
 	{
 		for entity in &idlers {
 			let key = Animations { entity };
-			let Some(mut animations) = TAnimations::get_context_mut(&mut animations, key) else {
+			let Some(mut animations) = TAnimations::try_get_context_mut(&mut animations, key)
+			else {
 				continue;
 			};
 

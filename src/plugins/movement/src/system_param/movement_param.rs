@@ -11,7 +11,7 @@ use crate::{
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::{
 	traits::{
-		accessors::get::{GetContext, GetContextMut, GetMut},
+		accessors::get::{GetMut, TryGetContext, TryGetContextMut},
 		handles_movement::{ConfiguredMovement, Movement},
 	},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
@@ -27,13 +27,13 @@ where
 	just_removed_movements: Res<'w, JustRemovedMovements>,
 }
 
-impl<TMotion> GetContext<Movement> for MovementParam<'static, 'static, TMotion>
+impl<TMotion> TryGetContext<Movement> for MovementParam<'static, 'static, TMotion>
 where
 	TMotion: Component,
 {
 	type TContext<'ctx> = MovementContext<'ctx, TMotion>;
 
-	fn get_context<'ctx>(
+	fn try_get_context<'ctx>(
 		param: &'ctx MovementParam<TMotion>,
 		Movement { entity }: Movement,
 	) -> Option<Self::TContext<'ctx>> {
@@ -68,13 +68,13 @@ where
 	>,
 }
 
-impl<TMotion> GetContextMut<ConfiguredMovement> for MovementParamMut<'static, 'static, TMotion>
+impl<TMotion> TryGetContextMut<ConfiguredMovement> for MovementParamMut<'static, 'static, TMotion>
 where
 	TMotion: Component,
 {
 	type TContext<'ctx> = MovementContextMut<'ctx, TMotion>;
 
-	fn get_context_mut<'ctx>(
+	fn try_get_context_mut<'ctx>(
 		param: &'ctx mut MovementParamMut<TMotion>,
 		ConfiguredMovement { entity }: ConfiguredMovement,
 	) -> Option<Self::TContext<'ctx>> {
@@ -139,7 +139,7 @@ mod tests {
 		let ctx = app
 			.world_mut()
 			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
-				let ctx = MovementParamMut::<_Motion>::get_context_mut(
+				let ctx = MovementParamMut::<_Motion>::try_get_context_mut(
 					&mut p,
 					ConfiguredMovement { entity },
 				);
@@ -158,7 +158,7 @@ mod tests {
 		let ctx = app
 			.world_mut()
 			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
-				let ctx = MovementParamMut::<_Motion>::get_context_mut(
+				let ctx = MovementParamMut::<_Motion>::try_get_context_mut(
 					&mut p,
 					ConfiguredMovement { entity },
 				);

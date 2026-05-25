@@ -34,7 +34,7 @@ mod tests {
 		prelude::*,
 	};
 	use common::traits::{
-		accessors::get::GetContextMut,
+		accessors::get::TryGetContextMut,
 		handles_physics::{NoBodyConfigured, physical_bodies::Shape},
 	};
 	use testing::SingleThreadedApp;
@@ -51,7 +51,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut p: ConfigParamMut| {
 				let key = NoBodyConfigured { entity };
-				let mut ctx = ConfigParamMut::get_context_mut(&mut p, key).unwrap();
+				let mut ctx = ConfigParamMut::try_get_context_mut(&mut p, key).unwrap();
 				ctx.configure_body(
 					BodyConfig::from_shape(Shape::StaticGltfMesh3d),
 					TranslationOffsets::ZERO,
@@ -73,7 +73,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut p: ConfigParamMut| {
 				let key = NoBodyConfigured { entity };
-				let mut ctx = ConfigParamMut::get_context_mut(&mut p, key).unwrap();
+				let mut ctx = ConfigParamMut::try_get_context_mut(&mut p, key).unwrap();
 				ctx.configure_body(
 					BodyConfig::from_shape(Shape::StaticGltfMesh3d),
 					TranslationOffsets {

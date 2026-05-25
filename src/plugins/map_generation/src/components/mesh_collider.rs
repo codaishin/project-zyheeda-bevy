@@ -2,7 +2,7 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	errors::{ErrorData, Level},
 	traits::{
-		accessors::get::GetContextMut,
+		accessors::get::TryGetContextMut,
 		handles_physics::{
 			ConfigureBody,
 			NoBodyConfigured,
@@ -20,7 +20,7 @@ pub(crate) struct MeshCollider;
 
 impl<TPhysics> Prefab<TPhysics> for MeshCollider
 where
-	for<'c> TPhysics: GetContextMut<NoBodyConfigured, TContext<'c>: ConfigureBody>,
+	for<'c> TPhysics: TryGetContextMut<NoBodyConfigured, TContext<'c>: ConfigureBody>,
 {
 	type TError = HasAlreadyBody;
 	type TSystemParam<'w, 's> = TPhysics;
@@ -33,7 +33,7 @@ where
 		let entity = entity.entity_id();
 		let key = NoBodyConfigured { entity };
 
-		let Some(mut ctx) = TPhysics::get_context_mut(&mut physics, key) else {
+		let Some(mut ctx) = TPhysics::try_get_context_mut(&mut physics, key) else {
 			return Ok(());
 		};
 

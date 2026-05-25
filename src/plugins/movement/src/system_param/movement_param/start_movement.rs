@@ -25,7 +25,7 @@ mod tests {
 		prelude::*,
 	};
 	use common::traits::{
-		accessors::get::GetContextMut,
+		accessors::get::TryGetContextMut,
 		handles_movement::ConfiguredMovement,
 		thread_safe::ThreadSafe,
 	};
@@ -50,7 +50,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
 				let mut ctx =
-					MovementParamMut::get_context_mut(&mut p, ConfiguredMovement { entity })
+					MovementParamMut::try_get_context_mut(&mut p, ConfiguredMovement { entity })
 						.unwrap();
 				ctx.start(target);
 			})?;

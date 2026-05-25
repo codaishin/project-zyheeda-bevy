@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use common::{
 	tools::inventory_key::InventoryKey,
 	traits::{
-		accessors::get::{GetContextMut, GetMut, TryApplyOn},
+		accessors::get::{GetMut, TryApplyOn, TryGetContextMut},
 		handles_loadout::{
 			LoadoutKey,
 			insert_default_loadout::{InsertDefaultLoadout, NotLoadedOut},
@@ -69,10 +69,10 @@ impl DefaultLoadout<'_> {
 	}
 }
 
-impl GetContextMut<NotLoadedOut> for LoadoutPrep<'static, 'static> {
+impl TryGetContextMut<NotLoadedOut> for LoadoutPrep<'static, 'static> {
 	type TContext<'ctx> = DefaultLoadout<'ctx>;
 
-	fn get_context_mut<'ctx>(
+	fn try_get_context_mut<'ctx>(
 		param: &'ctx mut LoadoutPrep,
 		NotLoadedOut { entity }: NotLoadedOut,
 	) -> Option<Self::TContext<'ctx>> {
@@ -141,7 +141,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut loadout: LoadoutPrep| {
 				let key = NotLoadedOut { entity };
-				let mut ctx = LoadoutPrep::get_context_mut(&mut loadout, key).unwrap();
+				let mut ctx = LoadoutPrep::try_get_context_mut(&mut loadout, key).unwrap();
 				ctx.insert_default_loadout([
 					(
 						LoadoutKey::from(InventoryKey(0)),
@@ -190,7 +190,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut loadout: LoadoutPrep| {
 				let key = NotLoadedOut { entity };
-				let mut ctx = LoadoutPrep::get_context_mut(&mut loadout, key).unwrap();
+				let mut ctx = LoadoutPrep::try_get_context_mut(&mut loadout, key).unwrap();
 				ctx.insert_default_loadout([
 					(
 						LoadoutKey::from(InventoryKey(3)),
@@ -226,7 +226,7 @@ mod tests {
 		let ctx_is_none = app
 			.world_mut()
 			.run_system_once(move |mut loadout: LoadoutPrep| {
-				LoadoutPrep::get_context_mut(&mut loadout, NotLoadedOut { entity }).is_none()
+				LoadoutPrep::try_get_context_mut(&mut loadout, NotLoadedOut { entity }).is_none()
 			})?;
 
 		assert!(ctx_is_none);
@@ -266,7 +266,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut loadout: LoadoutPrep| {
 				let key = NotLoadedOut { entity };
-				let mut ctx = LoadoutPrep::get_context_mut(&mut loadout, key).unwrap();
+				let mut ctx = LoadoutPrep::try_get_context_mut(&mut loadout, key).unwrap();
 				ctx.insert_default_loadout([
 					(LoadoutKey::from(SlotKey(2)), Some(ItemName::from("item_2"))),
 					(LoadoutKey::from(SlotKey(3)), Some(ItemName::from("item_3"))),
@@ -326,7 +326,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut loadout: LoadoutPrep| {
 				let key = NotLoadedOut { entity };
-				let mut ctx = LoadoutPrep::get_context_mut(&mut loadout, key).unwrap();
+				let mut ctx = LoadoutPrep::try_get_context_mut(&mut loadout, key).unwrap();
 				ctx.insert_default_loadout([
 					(
 						LoadoutKey::from(InventoryKey(2)),
@@ -364,7 +364,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut loadout: LoadoutPrep| {
 				let key = NotLoadedOut { entity };
-				let mut ctx = LoadoutPrep::get_context_mut(&mut loadout, key).unwrap();
+				let mut ctx = LoadoutPrep::try_get_context_mut(&mut loadout, key).unwrap();
 				ctx.insert_default_loadout([]);
 			})?;
 

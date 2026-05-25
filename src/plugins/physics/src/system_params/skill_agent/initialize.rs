@@ -26,7 +26,7 @@ mod tests {
 	};
 	use common::{
 		tools::action_key::slot::SlotKey,
-		traits::{accessors::get::GetContextMut, handles_skill_physics::NotInitializedAgent},
+		traits::{accessors::get::TryGetContextMut, handles_skill_physics::NotInitializedAgent},
 	};
 	use testing::SingleThreadedApp;
 
@@ -47,7 +47,8 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut p: SkillAgentMut| {
 				let mut ctx =
-					SkillAgentMut::get_context_mut(&mut p, NotInitializedAgent { entity }).unwrap();
+					SkillAgentMut::try_get_context_mut(&mut p, NotInitializedAgent { entity })
+						.unwrap();
 
 				ctx.initialize(map_clone.clone());
 			})?;
@@ -71,7 +72,8 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut p: SkillAgentMut| {
 				let mut ctx =
-					SkillAgentMut::get_context_mut(&mut p, NotInitializedAgent { entity }).unwrap();
+					SkillAgentMut::try_get_context_mut(&mut p, NotInitializedAgent { entity })
+						.unwrap();
 
 				ctx.initialize(map_clone.clone());
 			})?;

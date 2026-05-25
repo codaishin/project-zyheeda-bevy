@@ -6,7 +6,7 @@ use crate::{
 	toi,
 	tools::{Units, speed::Speed},
 	traits::{
-		accessors::get::{GetContext, GetContextMut, View, ViewField},
+		accessors::get::{TryGetContext, TryGetContextMut, View, ViewField},
 		handles_physics::physical_bodies::{Blocker, BodyConfig},
 	},
 };
@@ -55,8 +55,8 @@ pub trait RaycastResult {
 
 pub trait HandlesPhysicsConfig {
 	type TConfigMut: SystemParam
-		+ for<'c> GetContextMut<NoDefaultAttributes, TContext<'c>: ConfigureDefaultAttributes>
-		+ for<'c> GetContextMut<NoBodyConfigured, TContext<'c>: ConfigureBody>;
+		+ for<'c> TryGetContextMut<NoDefaultAttributes, TContext<'c>: ConfigureDefaultAttributes>
+		+ for<'c> TryGetContextMut<NoBodyConfigured, TContext<'c>: ConfigureBody>;
 }
 
 #[derive(EntityKey)]
@@ -110,7 +110,7 @@ impl TranslationOffsets {
 
 pub trait HandlesInteractiveDetection {
 	type TInteractive: SystemParam
-		+ for<'c> GetContext<IsInteracting, TContext<'c>: IterInteractions>;
+		+ for<'c> TryGetContext<IsInteracting, TContext<'c>: IterInteractions>;
 }
 
 #[derive(EntityKey)]

@@ -2,7 +2,7 @@ use super::thread_safe::ThreadSafe;
 use crate::{
 	tools::Units,
 	traits::{
-		accessors::get::{GetContextMut, View, ViewField},
+		accessors::get::{TryGetContextMut, View, ViewField},
 		handles_enemies::EnemyType,
 		system_set_definition::SystemSetDefinition,
 	},
@@ -19,8 +19,11 @@ use std::{
 
 pub trait HandlesMapGeneration: SystemSetDefinition {
 	type TMapPrefabs: SystemParam
-		+ for<'c> GetContextMut<MapPrefabs<AgentType>, TContext<'c>: SetPrefab<AgentType>>
-		+ for<'c> GetContextMut<MapPrefabs<InteractiveType>, TContext<'c>: SetPrefab<InteractiveType>>;
+		+ for<'c> TryGetContextMut<MapPrefabs<AgentType>, TContext<'c>: SetPrefab<AgentType>>
+		+ for<'c> TryGetContextMut<
+			MapPrefabs<InteractiveType>,
+			TContext<'c>: SetPrefab<InteractiveType>,
+		>;
 
 	type TGraph: Graph + for<'a> From<&'a Self::TMap> + ThreadSafe;
 

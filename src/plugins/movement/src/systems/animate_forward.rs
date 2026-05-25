@@ -1,6 +1,6 @@
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
-	accessors::get::{GetContextMut, View},
+	accessors::get::{TryGetContextMut, View},
 	handles_animations::{Animations, GetMoveDirectionMut},
 	handles_physics::CharacterMotion,
 };
@@ -14,7 +14,7 @@ pub(crate) trait SetForwardAnimationDirection:
 		mut animations: StaticSystemParam<TAnimations>,
 		movements: Query<(Entity, &Self, &Transform), Changed<Self>>,
 	) where
-		TAnimations: for<'c> GetContextMut<Animations, TContext<'c>: GetMoveDirectionMut>,
+		TAnimations: for<'c> TryGetContextMut<Animations, TContext<'c>: GetMoveDirectionMut>,
 	{
 		for (entity, movement, transform) in &movements {
 			let key = Animations { entity };
@@ -22,7 +22,8 @@ pub(crate) trait SetForwardAnimationDirection:
 			let Some(forward) = get_forward_direction(movement, transform) else {
 				continue;
 			};
-			let Some(mut animations) = TAnimations::get_context_mut(&mut animations, key) else {
+			let Some(mut animations) = TAnimations::try_get_context_mut(&mut animations, key)
+			else {
 				continue;
 			};
 

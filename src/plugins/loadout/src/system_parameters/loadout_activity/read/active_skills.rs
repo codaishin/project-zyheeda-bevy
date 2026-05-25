@@ -52,7 +52,7 @@ mod tests {
 	use common::{
 		tools::action_key::slot::SlotKey,
 		traits::{
-			accessors::get::GetContext,
+			accessors::get::TryGetContext,
 			handles_animations::SkillAnimation,
 			handles_loadout::skills::Skills,
 		},
@@ -77,7 +77,7 @@ mod tests {
 		let active_skills = app
 			.world_mut()
 			.run_system_once(move |p: LoadoutActivityReader| {
-				let ctx = LoadoutActivityReader::get_context(&p, Skills { entity }).unwrap();
+				let ctx = LoadoutActivityReader::try_get_context(&p, Skills { entity }).unwrap();
 				ctx.active_skills().collect::<Vec<_>>()
 			})?;
 
@@ -105,7 +105,7 @@ mod tests {
 		let active_skills = app
 			.world_mut()
 			.run_system_once(move |p: LoadoutActivityReader| {
-				let ctx = LoadoutActivityReader::get_context(&p, Skills { entity }).unwrap();
+				let ctx = LoadoutActivityReader::try_get_context(&p, Skills { entity }).unwrap();
 				ctx.active_skills().collect::<Vec<_>>()
 			})?;
 
@@ -136,7 +136,7 @@ mod tests {
 		let active_skills = app
 			.world_mut()
 			.run_system_once(move |p: LoadoutActivityReader| {
-				let ctx = LoadoutActivityReader::get_context(&p, Skills { entity }).unwrap();
+				let ctx = LoadoutActivityReader::try_get_context(&p, Skills { entity }).unwrap();
 				ctx.active_skills().collect::<Vec<_>>()
 			})?;
 

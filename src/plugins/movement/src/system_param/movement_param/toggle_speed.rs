@@ -30,7 +30,7 @@ mod tests {
 	use common::{
 		tools::UnitsPerSecond,
 		traits::{
-			accessors::get::GetContextMut,
+			accessors::get::TryGetContextMut,
 			handles_movement::{ConfiguredMovement as MovementMarker, MovementSpeed},
 		},
 	};
@@ -61,7 +61,7 @@ mod tests {
 			app.world_mut()
 				.run_system_once(move |mut p: MovementParamMut<_Motion>| {
 					let mut ctx =
-						MovementParamMut::get_context_mut(&mut p, MovementMarker { entity })
+						MovementParamMut::try_get_context_mut(&mut p, MovementMarker { entity })
 							.unwrap();
 					ctx.toggle_speed()
 				})?;
@@ -91,7 +91,7 @@ mod tests {
 			app.world_mut()
 				.run_system_once(move |mut p: MovementParamMut<_Motion>| {
 					let mut ctx =
-						MovementParamMut::get_context_mut(&mut p, MovementMarker { entity })
+						MovementParamMut::try_get_context_mut(&mut p, MovementMarker { entity })
 							.unwrap();
 					ctx.toggle_speed();
 					ctx.toggle_speed()
@@ -119,7 +119,7 @@ mod tests {
 			app.world_mut()
 				.run_system_once(move |mut p: MovementParamMut<_Motion>| {
 					let mut ctx =
-						MovementParamMut::get_context_mut(&mut p, MovementMarker { entity })
+						MovementParamMut::try_get_context_mut(&mut p, MovementMarker { entity })
 							.unwrap();
 					ctx.toggle_speed()
 				})?;
@@ -149,7 +149,7 @@ mod tests {
 			app.world_mut()
 				.run_system_once(move |mut p: MovementParamMut<_Motion>| {
 					let mut ctx =
-						MovementParamMut::get_context_mut(&mut p, MovementMarker { entity })
+						MovementParamMut::try_get_context_mut(&mut p, MovementMarker { entity })
 							.unwrap();
 					ctx.toggle_speed()
 				})?;

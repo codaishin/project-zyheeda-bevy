@@ -25,7 +25,7 @@ mod tests {
 	};
 	use common::{
 		attributes::{effect_target::EffectTarget, health::Health},
-		traits::{accessors::get::GetContextMut, handles_physics::NoDefaultAttributes},
+		traits::{accessors::get::TryGetContextMut, handles_physics::NoDefaultAttributes},
 	};
 	use testing::SingleThreadedApp;
 
@@ -41,7 +41,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut p: ConfigParamMut| {
 				let key = NoDefaultAttributes { entity };
-				let mut ctx = ConfigParamMut::get_context_mut(&mut p, key).unwrap();
+				let mut ctx = ConfigParamMut::try_get_context_mut(&mut p, key).unwrap();
 				ctx.configure_default_attributes(PhysicalDefaultAttributes {
 					health: Health::new(11.),
 					force_interaction: EffectTarget::Affected,

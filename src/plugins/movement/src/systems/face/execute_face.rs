@@ -5,7 +5,7 @@ use bevy::{
 use common::{
 	self,
 	traits::{
-		accessors::get::{Get, GetContext},
+		accessors::get::{Get, TryGetContext},
 		handles_orientation::Face,
 		handles_physics::{HoverMode, MouseHover, MouseHoversOver, Raycast},
 		handles_skill_physics::{Cursor, InitializedAgent, SkillTarget, Target},
@@ -22,7 +22,7 @@ pub(crate) fn execute_face<TMouseHover, TTarget>(
 	target: StaticSystemParam<TTarget>,
 ) where
 	TMouseHover: for<'w, 's> SystemParam<Item<'w, 's>: Raycast<MouseHover>>,
-	TTarget: for<'c> GetContext<InitializedAgent, TContext<'c>: Target>,
+	TTarget: for<'c> TryGetContext<InitializedAgent, TContext<'c>: Target>,
 {
 	for (entity, face) in faces {
 		let target = match face {
@@ -60,9 +60,9 @@ fn get_target<TMouseHover, TTarget>(
 ) -> Option<Vec3>
 where
 	TMouseHover: Raycast<MouseHover>,
-	TTarget: for<'c> GetContext<InitializedAgent, TContext<'c>: Target>,
+	TTarget: for<'c> TryGetContext<InitializedAgent, TContext<'c>: Target>,
 {
-	let ctx = TTarget::get_context(target, InitializedAgent { entity })?;
+	let ctx = TTarget::try_get_context(target, InitializedAgent { entity })?;
 	let target = ctx.target()?;
 
 	let cursor = match target {

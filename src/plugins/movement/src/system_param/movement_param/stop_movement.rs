@@ -20,7 +20,7 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
 	};
-	use common::traits::{accessors::get::GetContextMut, handles_movement::ConfiguredMovement};
+	use common::traits::{accessors::get::TryGetContextMut, handles_movement::ConfiguredMovement};
 	use testing::SingleThreadedApp;
 
 	#[derive(Component)]
@@ -38,7 +38,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut p: MovementParamMut<_Motion>| {
 				let mut ctx =
-					MovementParamMut::get_context_mut(&mut p, ConfiguredMovement { entity })
+					MovementParamMut::try_get_context_mut(&mut p, ConfiguredMovement { entity })
 						.unwrap();
 				ctx.stop();
 			})?;

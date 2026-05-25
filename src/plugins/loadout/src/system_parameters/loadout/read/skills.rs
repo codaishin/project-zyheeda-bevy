@@ -9,7 +9,7 @@ use bevy::prelude::*;
 use common::{
 	tools::{inventory_key::InventoryKey, skill_execution::SkillExecution},
 	traits::{
-		accessors::get::{ContextChanged, GetContext, View},
+		accessors::get::{ContextChanged, TryGetContext, View},
 		handles_loadout::{
 			LoadoutKey,
 			skills::{ReadSkills, SkillIcon, SkillToken, Skills},
@@ -19,10 +19,10 @@ use common::{
 };
 use zyheeda_core::prelude::*;
 
-impl GetContext<Skills> for LoadoutReader<'static, 'static> {
+impl TryGetContext<Skills> for LoadoutReader<'static, 'static> {
 	type TContext<'ctx> = SkillsView<'ctx>;
 
-	fn get_context<'ctx>(
+	fn try_get_context<'ctx>(
 		param: &'ctx LoadoutReader,
 		Skills { entity }: Skills,
 	) -> Option<Self::TContext<'ctx>> {
@@ -205,7 +205,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |loadout: LoadoutReader| {
-					let ctx = LoadoutReader::get_context(&loadout, Skills { entity }).unwrap();
+					let ctx = LoadoutReader::try_get_context(&loadout, Skills { entity }).unwrap();
 					let item = ctx.get_skill(InventoryKey(3));
 
 					assert_eq!(
@@ -246,7 +246,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |loadout: LoadoutReader| {
-					let ctx = LoadoutReader::get_context(&loadout, Skills { entity }).unwrap();
+					let ctx = LoadoutReader::try_get_context(&loadout, Skills { entity }).unwrap();
 					let item = ctx.get_skill(SlotKey(11));
 
 					assert_eq!(
@@ -302,7 +302,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |loadout: LoadoutReader| {
-					let ctx = LoadoutReader::get_context(&loadout, Skills { entity }).unwrap();
+					let ctx = LoadoutReader::try_get_context(&loadout, Skills { entity }).unwrap();
 					let item = ctx.get_skill(SlotKey(11));
 
 					assert_eq!(
@@ -351,7 +351,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |loadout: LoadoutReader| {
-					let ctx = LoadoutReader::get_context(&loadout, Skills { entity }).unwrap();
+					let ctx = LoadoutReader::try_get_context(&loadout, Skills { entity }).unwrap();
 					let item = ctx.get_skill(SlotKey(11));
 
 					assert_eq!(
@@ -411,7 +411,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |loadout: LoadoutReader| {
-					let ctx = LoadoutReader::get_context(&loadout, Skills { entity }).unwrap();
+					let ctx = LoadoutReader::try_get_context(&loadout, Skills { entity }).unwrap();
 					let item = ctx.get_skill(SlotKey(11));
 
 					assert_eq!(
@@ -465,7 +465,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |loadout: LoadoutReader| {
-					let ctx = LoadoutReader::get_context(&loadout, Skills { entity }).unwrap();
+					let ctx = LoadoutReader::try_get_context(&loadout, Skills { entity }).unwrap();
 					let item = ctx.get_skill(SlotKey(11));
 
 					assert_eq!(

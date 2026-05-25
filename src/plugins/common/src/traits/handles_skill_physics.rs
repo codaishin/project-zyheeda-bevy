@@ -8,7 +8,7 @@ use crate::{
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
 	tools::{action_key::slot::SlotKey, bone_name::BoneName},
 	traits::{
-		accessors::get::{GetContext, GetContextMut},
+		accessors::get::{TryGetContext, TryGetContextMut},
 		handles_skill_physics::{
 			beam::Beam,
 			ground_target::SphereAoE,
@@ -74,10 +74,10 @@ where
 }
 
 pub trait HandlesPhysicalSkillAgent {
-	type TAgent: SystemParam + for<'c> GetContext<InitializedAgent, TContext<'c>: Target>;
+	type TAgent: SystemParam + for<'c> TryGetContext<InitializedAgent, TContext<'c>: Target>;
 	type TAgentMut: SystemParam
-		+ for<'c> GetContextMut<NotInitializedAgent, TContext<'c>: Initialize>
-		+ for<'c> GetContextMut<InitializedAgent, TContext<'c>: TargetMut>;
+		+ for<'c> TryGetContextMut<NotInitializedAgent, TContext<'c>: Initialize>
+		+ for<'c> TryGetContextMut<InitializedAgent, TContext<'c>: TargetMut>;
 }
 
 #[derive(EntityKey)]

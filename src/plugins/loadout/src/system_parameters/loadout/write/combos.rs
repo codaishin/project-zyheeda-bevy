@@ -8,15 +8,15 @@ use bevy::prelude::*;
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::GetContextMut,
+		accessors::get::TryGetContextMut,
 		handles_loadout::combos::{Combo, Combos as CombosMarker, UpdateCombos},
 	},
 };
 
-impl GetContextMut<CombosMarker> for LoadoutWriter<'static, 'static> {
+impl TryGetContextMut<CombosMarker> for LoadoutWriter<'static, 'static> {
 	type TContext<'ctx> = CombosMut<'ctx>;
 
-	fn get_context_mut<'ctx>(
+	fn try_get_context_mut<'ctx>(
 		param: &'ctx mut LoadoutWriter,
 		CombosMarker { entity }: CombosMarker,
 	) -> Option<Self::TContext<'ctx>> {

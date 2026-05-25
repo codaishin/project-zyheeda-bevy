@@ -32,7 +32,7 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 	};
 	use common::traits::{
-		accessors::get::GetContextMut,
+		accessors::get::TryGetContextMut,
 		handles_animations::{AnimationClips, Animations},
 	};
 	use testing::SingleThreadedApp;
@@ -61,7 +61,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut p: AnimationsParamMut| {
 				let key = Animations { entity };
-				let ctx = AnimationsParamMut::get_context_mut(&mut p, key).unwrap();
+				let ctx = AnimationsParamMut::try_get_context_mut(&mut p, key).unwrap();
 
 				assert_eq!(Some(Dir3::NEG_Z), ctx.get_move_direction());
 			})
@@ -82,7 +82,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut p: AnimationsParamMut| {
 				let key = Animations { entity };
-				let mut ctx = AnimationsParamMut::get_context_mut(&mut p, key).unwrap();
+				let mut ctx = AnimationsParamMut::try_get_context_mut(&mut p, key).unwrap();
 				*ctx.get_move_direction_mut() = Some(Dir3::NEG_Z);
 			})?;
 

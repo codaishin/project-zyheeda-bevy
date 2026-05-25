@@ -9,7 +9,7 @@ use bevy::{
 	prelude::*,
 };
 use common::traits::{
-	accessors::get::{ContextChanged, GetContext},
+	accessors::get::{ContextChanged, TryGetContext},
 	handles_physics::IsInteracting,
 };
 use std::collections::HashSet;
@@ -19,10 +19,10 @@ pub struct InteractiveParam<'w> {
 	child_colliders: Res<'w, OngoingInteractions<Interactive>>,
 }
 
-impl GetContext<IsInteracting> for InteractiveParam<'static> {
+impl TryGetContext<IsInteracting> for InteractiveParam<'static> {
 	type TContext<'ctx> = InteractiveContext<'ctx>;
 
-	fn get_context<'ctx>(
+	fn try_get_context<'ctx>(
 		param: &'ctx SystemParamItem<Self>,
 		IsInteracting { entity }: IsInteracting,
 	) -> Option<Self::TContext<'ctx>> {

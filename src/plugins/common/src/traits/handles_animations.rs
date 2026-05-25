@@ -3,7 +3,7 @@ mod priority_order;
 use crate::{
 	tools::{action_key::slot::SlotKey, bone_name::BoneName},
 	traits::{
-		accessors::get::GetContextMut,
+		accessors::get::TryGetContextMut,
 		handles_animations::priority_order::DescendingAnimationPriorities,
 	},
 };
@@ -20,10 +20,10 @@ use zyheeda_core::prelude::*;
 
 pub trait HandlesAnimations {
 	type TAnimationsMut: SystemParam
-		+ for<'c> GetContextMut<WithoutAnimations, TContext<'c>: RegisterAnimations>
-		+ for<'c> GetContextMut<Animations, TContext<'c>: ActiveAnimationsMut>
-		+ for<'c> GetContextMut<Animations, TContext<'c>: GetMoveDirectionMut>
-		+ for<'c> GetContextMut<Animations, TContext<'c>: GetForwardPitchMut>;
+		+ for<'c> TryGetContextMut<WithoutAnimations, TContext<'c>: RegisterAnimations>
+		+ for<'c> TryGetContextMut<Animations, TContext<'c>: ActiveAnimationsMut>
+		+ for<'c> TryGetContextMut<Animations, TContext<'c>: GetMoveDirectionMut>
+		+ for<'c> TryGetContextMut<Animations, TContext<'c>: GetForwardPitchMut>;
 }
 
 #[derive(EntityKey)]

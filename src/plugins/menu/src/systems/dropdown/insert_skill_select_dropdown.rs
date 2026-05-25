@@ -7,7 +7,7 @@ use crate::components::{
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	traits::{
-		accessors::get::{GetContext, TryApplyOn, ViewOf},
+		accessors::get::{TryApplyOn, TryGetContext, ViewOf},
 		handles_loadout::{
 			available_skills::{AvailableSkills, ReadAvailableSkills},
 			skills::{GetSkillId, SkillIcon, SkillToken},
@@ -28,14 +28,15 @@ impl<TLayout> SkillSelectDropdownCommand<TLayout> {
 		TLayout: ThreadSafe + Sized,
 		TAgent: Component,
 		TId: Debug + PartialEq + Clone + ThreadSafe,
-		TLoadout: for<'c> GetContext<AvailableSkills, TContext<'c>: ReadAvailableSkills<TId>>,
+		TLoadout: for<'c> TryGetContext<AvailableSkills, TContext<'c>: ReadAvailableSkills<TId>>,
 	{
 		for entity in &agents {
 			for (dropdown_entity, command) in &dropdown_commands {
 				let Some(key) = command.key_path.last() else {
 					continue;
 				};
-				let Some(ctx) = TLoadout::get_context(&param, AvailableSkills { entity }) else {
+				let Some(ctx) = TLoadout::try_get_context(&param, AvailableSkills { entity })
+				else {
 					continue;
 				};
 				let items = ctx

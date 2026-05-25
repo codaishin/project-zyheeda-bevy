@@ -4,7 +4,7 @@ mod write;
 use crate::{components::queue::Queue, systems::enqueue::held_slots::HeldSlots};
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::traits::{
-	accessors::get::{ContextChanged, GetContext, GetContextMut},
+	accessors::get::{ContextChanged, TryGetContext, TryGetContextMut},
 	handles_loadout::skills::Skills,
 };
 use zyheeda_core::prelude::*;
@@ -15,10 +15,10 @@ pub struct LoadoutActivityReader<'w, 's> {
 	loadout: Query<'w, 's, (Ref<'static, Queue>, Ref<'static, HeldSlots>)>,
 }
 
-impl GetContext<Skills> for LoadoutActivityReader<'static, 'static> {
+impl TryGetContext<Skills> for LoadoutActivityReader<'static, 'static> {
 	type TContext<'ctx> = LoadoutActivityReadContext<'ctx>;
 
-	fn get_context<'ctx>(
+	fn try_get_context<'ctx>(
 		param: &'ctx LoadoutActivityReader,
 		Skills { entity }: Skills,
 	) -> Option<Self::TContext<'ctx>> {
@@ -44,10 +44,10 @@ pub struct LoadoutActivityWriter<'w, 's> {
 	held_slots: Query<'w, 's, &'static mut HeldSlots>,
 }
 
-impl GetContextMut<Skills> for LoadoutActivityWriter<'static, 'static> {
+impl TryGetContextMut<Skills> for LoadoutActivityWriter<'static, 'static> {
 	type TContext<'ctx> = LoadoutActivityWriteContext<'ctx>;
 
-	fn get_context_mut<'ctx>(
+	fn try_get_context_mut<'ctx>(
 		param: &'ctx mut LoadoutActivityWriter,
 		Skills { entity }: Skills,
 	) -> Option<Self::TContext<'ctx>> {

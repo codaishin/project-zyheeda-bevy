@@ -5,17 +5,17 @@ use crate::{
 use common::{
 	tools::{action_key::slot::SlotKey, bone_name::BoneName, mesh_name::MeshName},
 	traits::{
-		accessors::get::{GetContextMut, GetMut},
+		accessors::get::{GetMut, TryGetContextMut},
 		handles_loadout::register_loadout_bones::{NoBonesRegistered, RegisterLoadoutBones},
 	},
 	zyheeda_commands::ZyheedaEntityCommands,
 };
 use std::collections::HashMap;
 
-impl GetContextMut<NoBonesRegistered> for LoadoutPrep<'static, 'static> {
+impl TryGetContextMut<NoBonesRegistered> for LoadoutPrep<'static, 'static> {
 	type TContext<'ctx> = PrepareLoadoutBones<'ctx>;
 
-	fn get_context_mut<'ctx>(
+	fn try_get_context_mut<'ctx>(
 		param: &'ctx mut LoadoutPrep,
 		NoBonesRegistered { entity }: NoBonesRegistered,
 	) -> Option<Self::TContext<'ctx>> {
@@ -75,7 +75,7 @@ mod tests {
 
 		app.world_mut().run_system_once(move |mut p: LoadoutPrep| {
 			let key = NoBonesRegistered { entity };
-			let mut ctx = LoadoutPrep::get_context_mut(&mut p, key).unwrap();
+			let mut ctx = LoadoutPrep::try_get_context_mut(&mut p, key).unwrap();
 			ctx.register_loadout_bones(
 				HashMap::from([(BoneName::from("a"), SlotKey(0))]),
 				HashMap::from([(BoneName::from("b"), SlotKey(1))]),
@@ -100,7 +100,7 @@ mod tests {
 		let entity = app.world_mut().spawn(SlotDefinitions::default()).id();
 
 		let ctx_is_none = app.world_mut().run_system_once(move |mut p: LoadoutPrep| {
-			LoadoutPrep::get_context_mut(&mut p, NoBonesRegistered { entity }).is_none()
+			LoadoutPrep::try_get_context_mut(&mut p, NoBonesRegistered { entity }).is_none()
 		})?;
 
 		assert!(ctx_is_none);

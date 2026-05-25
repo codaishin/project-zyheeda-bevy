@@ -4,7 +4,7 @@ use crate::components::config::Config;
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::{
 	traits::{
-		accessors::get::{GetContextMut, GetMut},
+		accessors::get::{GetMut, TryGetContextMut},
 		handles_movement::NotConfiguredMovement,
 	},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
@@ -16,10 +16,10 @@ pub struct MovementConfigParamMut<'w, 's> {
 	configured: Query<'w, 's, (), With<Config>>,
 }
 
-impl GetContextMut<NotConfiguredMovement> for MovementConfigParamMut<'static, 'static> {
+impl TryGetContextMut<NotConfiguredMovement> for MovementConfigParamMut<'static, 'static> {
 	type TContext<'ctx> = MovementConfigContextMut<'ctx>;
 
-	fn get_context_mut<'ctx>(
+	fn try_get_context_mut<'ctx>(
 		param: &'ctx mut bevy::ecs::system::SystemParamItem<Self>,
 		NotConfiguredMovement { entity }: NotConfiguredMovement,
 	) -> Option<Self::TContext<'ctx>> {
@@ -56,7 +56,7 @@ mod tests {
 		let ctx = app
 			.world_mut()
 			.run_system_once(move |mut p: MovementConfigParamMut| {
-				let ctx = MovementConfigParamMut::get_context_mut(
+				let ctx = MovementConfigParamMut::try_get_context_mut(
 					&mut p,
 					NotConfiguredMovement { entity },
 				);
@@ -75,7 +75,7 @@ mod tests {
 		let ctx = app
 			.world_mut()
 			.run_system_once(move |mut p: MovementConfigParamMut| {
-				let ctx = MovementConfigParamMut::get_context_mut(
+				let ctx = MovementConfigParamMut::try_get_context_mut(
 					&mut p,
 					NotConfiguredMovement { entity },
 				);

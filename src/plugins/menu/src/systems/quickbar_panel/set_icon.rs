@@ -2,7 +2,7 @@ use crate::components::{icon::Icon, label::UILabel, quickbar_panel::QuickbarPane
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	traits::{
-		accessors::get::{GetContext, TryApplyOn, ViewOf},
+		accessors::get::{TryApplyOn, TryGetContext, ViewOf},
 		handles_loadout::skills::{ReadSkills, SkillIcon, SkillToken, Skills},
 		handles_localization::Token,
 	},
@@ -17,10 +17,10 @@ impl QuickbarPanel {
 		agents: Query<Entity, With<TAgent>>,
 	) where
 		TAgent: Component,
-		TLoadout: for<'c> GetContext<Skills, TContext<'c>: ReadSkills>,
+		TLoadout: for<'c> TryGetContext<Skills, TContext<'c>: ReadSkills>,
 	{
 		for entity in &agents {
-			let Some(ctx) = TLoadout::get_context(&param, Skills { entity }) else {
+			let Some(ctx) = TLoadout::try_get_context(&param, Skills { entity }) else {
 				continue;
 			};
 

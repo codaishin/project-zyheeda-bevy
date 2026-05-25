@@ -5,7 +5,7 @@ use crate::{
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	traits::{
-		accessors::get::{GetContextMut, TryApplyOn},
+		accessors::get::{TryApplyOn, TryGetContextMut},
 		handles_physics::{
 			ConfigureBody,
 			NoBodyConfigured,
@@ -23,7 +23,7 @@ impl ApplyDoorFrame {
 		mut commands: ZyheedaCommands,
 		mut body: StaticSystemParam<TBody>,
 	) where
-		TBody: for<'c> GetContextMut<NoBodyConfigured, TContext<'c>: ConfigureBody>,
+		TBody: for<'c> TryGetContextMut<NoBodyConfigured, TContext<'c>: ConfigureBody>,
 	{
 		for (entity, handle) in doors {
 			let Some(meta) = assets.get(handle) else {
@@ -35,7 +35,7 @@ impl ApplyDoorFrame {
 			});
 
 			let key = NoBodyConfigured { entity };
-			let Some(mut ctx) = TBody::get_context_mut(&mut body, key) else {
+			let Some(mut ctx) = TBody::try_get_context_mut(&mut body, key) else {
 				continue;
 			};
 

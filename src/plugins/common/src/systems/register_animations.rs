@@ -2,7 +2,7 @@ use crate::{
 	components::gltf::GltfLookup,
 	errors::{ErrorData, Level, Unreachable},
 	traits::{
-		accessors::get::{GetContextMut, TryApplyOn, View},
+		accessors::get::{TryApplyOn, TryGetContextMut, View},
 		handles_animations::{
 			AffectedAnimationBones,
 			Animation,
@@ -45,13 +45,13 @@ pub trait RegisterAnimationsSystem: AnimationsMarker + Sized {
 	) -> Result<(), Vec<RegisterAnimationsError<Self>>>
 	where
 		TAnimations: SystemParam
-			+ for<'c> GetContextMut<WithoutAnimations, TContext<'c>: RegisterAnimations>,
+			+ for<'c> TryGetContextMut<WithoutAnimations, TContext<'c>: RegisterAnimations>,
 	{
 		let mut errors = vec![];
 
 		for (entity, config, gltf) in agents {
 			let key = WithoutAnimations { entity };
-			let Some(mut ctx) = TAnimations::get_context_mut(&mut animations, key) else {
+			let Some(mut ctx) = TAnimations::try_get_context_mut(&mut animations, key) else {
 				continue;
 			};
 

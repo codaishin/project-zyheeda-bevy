@@ -8,7 +8,7 @@ use bevy::prelude::*;
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::{ContextChanged, GetContext, View},
+		accessors::get::{ContextChanged, TryGetContext, View},
 		handles_loadout::{
 			available_skills::{AvailableSkills, ReadAvailableSkills},
 			skills::{GetSkillId, SkillIcon, SkillToken},
@@ -17,10 +17,10 @@ use common::{
 	},
 };
 
-impl GetContext<AvailableSkills> for LoadoutReader<'static, 'static> {
+impl TryGetContext<AvailableSkills> for LoadoutReader<'static, 'static> {
 	type TContext<'ctx> = AvailableSkillsView<'ctx>;
 
-	fn get_context<'ctx>(
+	fn try_get_context<'ctx>(
 		param: &'ctx LoadoutReader,
 		AvailableSkills { entity }: AvailableSkills,
 	) -> Option<Self::TContext<'ctx>> {
@@ -213,8 +213,8 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |loadout: LoadoutReader| {
-					let ctx =
-						LoadoutReader::get_context(&loadout, AvailableSkills { entity }).unwrap();
+					let ctx = LoadoutReader::try_get_context(&loadout, AvailableSkills { entity })
+						.unwrap();
 					let skills = ctx.get_available_skills(SlotKey(44));
 
 					assert_eq_unordered!(

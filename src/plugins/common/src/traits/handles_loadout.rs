@@ -11,7 +11,7 @@ use crate::{
 		inventory_key::InventoryKey,
 	},
 	traits::{
-		accessors::get::{GetContext, GetContextMut},
+		accessors::get::{TryGetContext, TryGetContextMut},
 		handles_animations::SkillAnimation,
 		handles_loadout::{
 			available_skills::{AvailableSkills, ReadAvailableSkills},
@@ -35,25 +35,25 @@ pub trait HandlesLoadout {
 	type TSkillID: Debug + PartialEq + Copy + ThreadSafe;
 
 	type TLoadoutPrep: SystemParam
-		+ for<'c> GetContextMut<NotLoadedOut, TContext<'c>: InsertDefaultLoadout>
-		+ for<'c> GetContextMut<NoBonesRegistered, TContext<'c>: RegisterLoadoutBones>;
+		+ for<'c> TryGetContextMut<NotLoadedOut, TContext<'c>: InsertDefaultLoadout>
+		+ for<'c> TryGetContextMut<NoBonesRegistered, TContext<'c>: RegisterLoadoutBones>;
 
 	type TLoadout: SystemParam
-		+ for<'c> GetContext<Items, TContext<'c>: ReadItems>
-		+ for<'c> GetContext<Skills, TContext<'c>: ReadSkills>
-		+ for<'c> GetContext<Combos, TContext<'c>: ReadCombos<Self::TSkillID>>
-		+ for<'c> GetContext<AvailableSkills, TContext<'c>: ReadAvailableSkills<Self::TSkillID>>;
+		+ for<'c> TryGetContext<Items, TContext<'c>: ReadItems>
+		+ for<'c> TryGetContext<Skills, TContext<'c>: ReadSkills>
+		+ for<'c> TryGetContext<Combos, TContext<'c>: ReadCombos<Self::TSkillID>>
+		+ for<'c> TryGetContext<AvailableSkills, TContext<'c>: ReadAvailableSkills<Self::TSkillID>>;
 
 	type TLoadoutMut: SystemParam
-		+ for<'c> GetContextMut<Items, TContext<'c>: SwapItems>
-		+ for<'c> GetContextMut<Combos, TContext<'c>: UpdateCombos<Self::TSkillID>>;
+		+ for<'c> TryGetContextMut<Items, TContext<'c>: SwapItems>
+		+ for<'c> TryGetContextMut<Combos, TContext<'c>: UpdateCombos<Self::TSkillID>>;
 
 	type TLoadoutActivity: SystemParam
-		+ for<'c> GetContext<Skills, TContext<'c>: ActiveSkills>
-		+ for<'c> GetContext<Skills, TContext<'c>: HeldSkills>;
+		+ for<'c> TryGetContext<Skills, TContext<'c>: ActiveSkills>
+		+ for<'c> TryGetContext<Skills, TContext<'c>: HeldSkills>;
 
 	type TLoadoutActivityMut: SystemParam
-		+ for<'c> GetContextMut<Skills, TContext<'c>: HeldSkillsMut>;
+		+ for<'c> TryGetContextMut<Skills, TContext<'c>: HeldSkillsMut>;
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]

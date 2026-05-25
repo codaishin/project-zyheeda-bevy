@@ -7,7 +7,7 @@ use bevy::prelude::*;
 use common::{
 	tools::inventory_key::InventoryKey,
 	traits::{
-		accessors::get::{ContextChanged, GetContext, View},
+		accessors::get::{ContextChanged, TryGetContext, View},
 		handles_loadout::{
 			LoadoutKey,
 			items::{ItemToken, Items, ReadItems},
@@ -16,10 +16,10 @@ use common::{
 	},
 };
 
-impl GetContext<Items> for LoadoutReader<'static, 'static> {
+impl TryGetContext<Items> for LoadoutReader<'static, 'static> {
 	type TContext<'ctx> = ItemsView<'ctx>;
 
-	fn get_context<'ctx>(
+	fn try_get_context<'ctx>(
 		param: &'ctx LoadoutReader,
 		Items { entity }: Items,
 	) -> Option<Self::TContext<'ctx>> {
@@ -125,7 +125,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |loadout: LoadoutReader| {
-					let ctx = LoadoutReader::get_context(&loadout, Items { entity }).unwrap();
+					let ctx = LoadoutReader::try_get_context(&loadout, Items { entity }).unwrap();
 					let item = ctx.get_item(SlotKey(11));
 
 					assert_eq!(
@@ -157,7 +157,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |loadout: LoadoutReader| {
-					let ctx = LoadoutReader::get_context(&loadout, Items { entity }).unwrap();
+					let ctx = LoadoutReader::try_get_context(&loadout, Items { entity }).unwrap();
 					let item = ctx.get_item(InventoryKey(3));
 
 					assert_eq!(

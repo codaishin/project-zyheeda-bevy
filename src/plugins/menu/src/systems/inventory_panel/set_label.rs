@@ -5,7 +5,7 @@ use crate::{
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	traits::{
-		accessors::get::{GetContext, TryApplyOn, View},
+		accessors::get::{TryApplyOn, TryGetContext, View},
 		handles_loadout::items::{Items, ReadItems},
 	},
 	zyheeda_commands::ZyheedaCommands,
@@ -19,10 +19,10 @@ impl InventoryPanel {
 		param: StaticSystemParam<TLoadout>,
 	) where
 		TAgent: Component,
-		TLoadout: for<'c> GetContext<Items, TContext<'c>: ReadItems>,
+		TLoadout: for<'c> TryGetContext<Items, TContext<'c>: ReadItems>,
 	{
 		for entity in &agents {
-			let Some(ctx) = TLoadout::get_context(&param, Items { entity }) else {
+			let Some(ctx) = TLoadout::try_get_context(&param, Items { entity }) else {
 				continue;
 			};
 

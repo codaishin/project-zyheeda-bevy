@@ -2,7 +2,7 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	errors::{ErrorData, Level},
 	traits::{
-		accessors::get::GetContextMut,
+		accessors::get::TryGetContextMut,
 		handles_map_generation::{InteractiveType, MapPrefabs, SetPrefab},
 	},
 	zyheeda_commands::ZyheedaEntityCommands,
@@ -40,12 +40,13 @@ impl Interactive {
 		mut new_agent: StaticSystemParam<TNewMapAgent>,
 	) -> Result<(), NoPrefabContext>
 	where
-		TNewMapAgent: for<'c> GetContextMut<
+		TNewMapAgent: for<'c> TryGetContextMut<
 				MapPrefabs<InteractiveType>,
 				TContext<'c>: SetPrefab<InteractiveType>,
 			>,
 	{
-		let Some(mut ctx) = TNewMapAgent::get_context_mut(&mut new_agent, MapPrefabs::KEY) else {
+		let Some(mut ctx) = TNewMapAgent::try_get_context_mut(&mut new_agent, MapPrefabs::KEY)
+		else {
 			return Err(NoPrefabContext);
 		};
 

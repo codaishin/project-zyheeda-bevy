@@ -21,7 +21,7 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
 	};
-	use common::traits::{accessors::get::GetContext, handles_loadout::skills::Skills};
+	use common::traits::{accessors::get::TryGetContext, handles_loadout::skills::Skills};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -39,7 +39,7 @@ mod tests {
 		let active_skills = app
 			.world_mut()
 			.run_system_once(move |l: LoadoutActivityReader| {
-				let ctx = LoadoutActivityReader::get_context(&l, Skills { entity }).unwrap();
+				let ctx = LoadoutActivityReader::try_get_context(&l, Skills { entity }).unwrap();
 				ctx.held_skills().clone()
 			})?;
 
