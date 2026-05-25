@@ -49,28 +49,6 @@ pub trait TryGetContext<TKey>: SystemParam + ThreadSafe {
 	) -> Option<Self::TContext<'ctx>>;
 }
 
-pub trait GetChangedContext<TKey>: TryGetContext<TKey> {
-	fn get_changed_context<'ctx>(
-		param: &'ctx SystemParamItem<Self>,
-		key: TKey,
-	) -> Option<Self::TContext<'ctx>>;
-}
-
-impl<T, TKey> GetChangedContext<TKey> for T
-where
-	T: TryGetContext<TKey>,
-{
-	fn get_changed_context<'ctx>(
-		param: &'ctx SystemParamItem<Self>,
-		key: TKey,
-	) -> Option<Self::TContext<'ctx>> {
-		match T::try_get_context(param, key) {
-			Some(ctx) if ctx.context_changed() => Some(ctx),
-			_ => None,
-		}
-	}
-}
-
 pub trait GetMut<TKey> {
 	type TValue<'a>
 	where
@@ -143,7 +121,7 @@ where
 	}
 }
 
-/// A wrapper for [`GetContext`] and [`GetContextMut`] keys.
+/// A wrapper for [`TryGetContext`] and [`TryGetContextMut`] keys.
 ///
 /// Both traits have a blanket implementation to log [`None`] cases.
 pub struct Logged<TKey>

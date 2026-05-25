@@ -3,14 +3,7 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	errors::Level,
 	traits::{
-		accessors::get::{
-			GetChangedContext,
-			Logged,
-			TryGetContext,
-			TryGetContextMut,
-			View,
-			ViewOf,
-		},
+		accessors::get::{ContextChanged, Logged, TryGetContext, TryGetContextMut, View, ViewOf},
 		handles_animations::{ActiveAnimationsMut, AnimationKey, AnimationPriority, Animations},
 		handles_movement::{CurrentMovement, Movement, MovementTarget, SpeedToggle},
 	},
@@ -29,9 +22,12 @@ impl Player {
 	{
 		for entity in players {
 			let key = Logged::key(Movement { entity }).with_level(Level::Error);
-			let Some(movement) = TMovement::get_changed_context(&movement, key) else {
+			let Some(movement) = TMovement::try_get_context(&movement, key) else {
 				continue;
 			};
+			if !movement.context_changed() {
+				continue;
+			}
 
 			let key = Logged::key(Animations { entity }).with_level(Level::Error);
 			let Some(mut animations) = TAnimations::try_get_context_mut(&mut animations, key)
