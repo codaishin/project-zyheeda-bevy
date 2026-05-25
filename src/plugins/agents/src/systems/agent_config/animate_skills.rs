@@ -3,7 +3,7 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::{GetChangedContext, TryGetContext, TryGetContextMut},
+		accessors::get::{ContextChanged, TryGetContext, TryGetContextMut},
 		handles_animations::{
 			ActiveAnimationsMut,
 			AnimationKey,
@@ -26,9 +26,12 @@ impl AgentConfig {
 	{
 		for entity in agents {
 			let key = Skills { entity };
-			let Some(loadout) = TLoadout::get_changed_context(&loadout, key) else {
+			let Some(loadout) = TLoadout::try_get_context(&loadout, key) else {
 				continue;
 			};
+			if !loadout.context_changed() {
+				continue;
+			}
 
 			let key = Animations { entity };
 			let Some(mut animations) = TAnimations::try_get_context_mut(&mut animations, key)

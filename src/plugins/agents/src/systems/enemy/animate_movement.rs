@@ -3,7 +3,7 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	errors::Level,
 	traits::{
-		accessors::get::{GetChangedContext, Logged, TryGetContext, TryGetContextMut, View},
+		accessors::get::{ContextChanged, Logged, TryGetContext, TryGetContextMut, View},
 		handles_animations::{ActiveAnimationsMut, AnimationKey, Animations},
 		handles_movement::{Movement, MovementTarget},
 	},
@@ -23,9 +23,12 @@ impl Enemy {
 	{
 		for entity in enemies {
 			let key = Logged::key(Movement { entity }).with_level(Level::Error);
-			let Some(movement) = TMovement::get_changed_context(&movement, key) else {
+			let Some(movement) = TMovement::try_get_context(&movement, key) else {
 				continue;
 			};
+			if !movement.context_changed() {
+				continue;
+			}
 
 			let key = Logged::key(Animations { entity }).with_level(Level::Error);
 			let Some(mut animations) = TAnimations::try_get_context_mut(&mut animations, key)
