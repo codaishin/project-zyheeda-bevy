@@ -8,7 +8,7 @@ use bevy::{
 };
 use common::{
 	traits::{
-		accessors::get::{Get, GetContextMut},
+		accessors::get::{Get, TryGetContextMut},
 		handles_animations::{Animations, DirForwardPitch, ForwardPitch, GetForwardPitchMut},
 		handles_physics::{MouseHover, MouseHoversOver, Raycast},
 		handles_skill_physics::{Cursor, SkillTarget},
@@ -27,11 +27,11 @@ impl Target {
 	) where
 		for<'w, 's> TRayCast: SystemParam<Item<'w, 's>: Raycast<MouseHover>>,
 		for<'c> TAnimations:
-			SystemParam + GetContextMut<Animations, TContext<'c>: GetForwardPitchMut>,
+			SystemParam + TryGetContextMut<Animations, TContext<'c>: GetForwardPitchMut>,
 	{
 		for (entity, target, transform, offset) in targets {
 			let key = Animations { entity };
-			let Some(mut ctx) = TAnimations::get_context_mut(&mut animations, key) else {
+			let Some(mut ctx) = TAnimations::try_get_context_mut(&mut animations, key) else {
 				continue;
 			};
 			let pitch = target.get_pitch(

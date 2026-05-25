@@ -1,7 +1,7 @@
 use crate::{
 	tools::{Units, UnitsPerSecond},
 	traits::{
-		accessors::get::{GetContext, GetContextMut, View, ViewField},
+		accessors::get::{TryGetContext, TryGetContextMut, View, ViewField},
 		system_set_definition::SystemSetDefinition,
 	},
 };
@@ -11,11 +11,11 @@ use serde::{Deserialize, Serialize};
 use std::ops::DerefMut;
 
 pub trait HandlesMovement: SystemSetDefinition {
-	type TMovement: SystemParam + for<'c> GetContext<Movement, TContext<'c>: CurrentMovement>;
+	type TMovement: SystemParam + for<'c> TryGetContext<Movement, TContext<'c>: CurrentMovement>;
 	type TMovementMut: SystemParam
-		+ for<'c> GetContextMut<ConfiguredMovement, TContext<'c>: ControlMovement>;
+		+ for<'c> TryGetContextMut<ConfiguredMovement, TContext<'c>: ControlMovement>;
 	type TMovementConfig: SystemParam
-		+ for<'c> GetContextMut<NotConfiguredMovement, TContext<'c>: ConfigureMovement>;
+		+ for<'c> TryGetContextMut<NotConfiguredMovement, TContext<'c>: ConfigureMovement>;
 }
 
 pub trait ControlMovement: StartMovement + StopMovement + ToggleSpeed + CurrentMovement {}

@@ -40,7 +40,7 @@ mod tests {
 	use common::{
 		tools::action_key::slot::SlotKey,
 		traits::{
-			accessors::get::GetContextMut,
+			accessors::get::TryGetContextMut,
 			handles_animations::{AnimationClips, Animations, SkillAnimation},
 		},
 	};
@@ -88,7 +88,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut p: AnimationsParamMut| {
 				let key = Animations { entity };
-				let mut ctx = AnimationsParamMut::get_context_mut(&mut p, key).unwrap();
+				let mut ctx = AnimationsParamMut::try_get_context_mut(&mut p, key).unwrap();
 				ctx.active_animations_mut(animation_priority)
 					.extend(animations);
 			})?;
@@ -123,7 +123,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut p: AnimationsParamMut| {
 				let key = Animations { entity };
-				let ctx = AnimationsParamMut::get_context_mut(&mut p, key).unwrap();
+				let ctx = AnimationsParamMut::try_get_context_mut(&mut p, key).unwrap();
 
 				assert_eq!(
 					&OrderedSet::from(animations),

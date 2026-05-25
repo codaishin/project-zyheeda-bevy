@@ -66,7 +66,7 @@ mod tests {
 		bit_mask_index,
 		tools::{action_key::slot::SlotKey, bone_name::BoneName},
 		traits::{
-			accessors::get::GetContextMut,
+			accessors::get::TryGetContextMut,
 			handles_animations::{
 				AffectedAnimationBones,
 				AnimationClips,
@@ -146,7 +146,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut p: AnimationsParamMut<_Graph>| {
 				let key = WithoutAnimations { entity };
-				let mut ctx = AnimationsParamMut::get_context_mut(&mut p, key).unwrap();
+				let mut ctx = AnimationsParamMut::try_get_context_mut(&mut p, key).unwrap();
 				ctx.register_animations(&HashMap::default(), &HashMap::default());
 			})?;
 
@@ -162,7 +162,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut p: AnimationsParamMut<_Graph>| {
 				let key = WithoutAnimations { entity };
-				let mut ctx = AnimationsParamMut::get_context_mut(&mut p, key).unwrap();
+				let mut ctx = AnimationsParamMut::try_get_context_mut(&mut p, key).unwrap();
 				ctx.register_animations(&HashMap::default(), &HashMap::default());
 			})?;
 
@@ -181,7 +181,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut p: AnimationsParamMut<_Graph>| {
 				let key = WithoutAnimations { entity };
-				let mut ctx = AnimationsParamMut::get_context_mut(&mut p, key).unwrap();
+				let mut ctx = AnimationsParamMut::try_get_context_mut(&mut p, key).unwrap();
 				let a = Animation {
 					clips: AnimationClips::Single(CLIP_A.clone()),
 					play_mode: PlayMode::Repeat,
@@ -259,7 +259,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut p: AnimationsParamMut<_Graph>| {
 				let key = WithoutAnimations { entity };
-				let mut ctx = AnimationsParamMut::get_context_mut(&mut p, key).unwrap();
+				let mut ctx = AnimationsParamMut::try_get_context_mut(&mut p, key).unwrap();
 				let a = Animation {
 					clips: AnimationClips::Single(CLIP_A.clone()),
 					play_mode: PlayMode::Repeat,

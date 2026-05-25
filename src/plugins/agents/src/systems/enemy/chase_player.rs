@@ -1,7 +1,7 @@
 use crate::components::enemy::{Enemy, chasing::Chasing};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
-	accessors::get::{GetContextMut, View},
+	accessors::get::{TryGetContextMut, View},
 	handles_movement::{ConfiguredMovement, MovementTarget, StartMovement, StopMovement},
 };
 
@@ -11,14 +11,14 @@ impl Enemy {
 		enemies: Query<(Entity, Option<&Chasing>), With<Self>>,
 		transforms: Query<&Transform>,
 	) where
-		TMovement: for<'c> GetContextMut<
+		TMovement: for<'c> TryGetContextMut<
 				ConfiguredMovement,
 				TContext<'c>: StartMovement + StopMovement + View<Option<MovementTarget>>,
 			>,
 	{
 		for (entity, chasing) in &enemies {
 			let key = ConfiguredMovement { entity };
-			let Some(mut ctx) = TMovement::get_context_mut(&mut movement, key) else {
+			let Some(mut ctx) = TMovement::try_get_context_mut(&mut movement, key) else {
 				continue;
 			};
 

@@ -5,7 +5,7 @@ use crate::components::{body::Body, default_attributes::DefaultAttributes};
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::{
 	traits::{
-		accessors::get::{GetContextMut, GetMut},
+		accessors::get::{GetMut, TryGetContextMut},
 		handles_physics::{NoBodyConfigured, NoDefaultAttributes},
 	},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
@@ -18,10 +18,10 @@ pub struct ConfigParamMut<'w, 's> {
 	commands: ZyheedaCommands<'w, 's>,
 }
 
-impl GetContextMut<NoDefaultAttributes> for ConfigParamMut<'static, 'static> {
+impl TryGetContextMut<NoDefaultAttributes> for ConfigParamMut<'static, 'static> {
 	type TContext<'ctx> = ConfigContextMut<'ctx>;
 
-	fn get_context_mut<'ctx>(
+	fn try_get_context_mut<'ctx>(
 		param: &'ctx mut ConfigParamMut,
 		NoDefaultAttributes { entity }: NoDefaultAttributes,
 	) -> Option<Self::TContext<'ctx>> {
@@ -35,10 +35,10 @@ impl GetContextMut<NoDefaultAttributes> for ConfigParamMut<'static, 'static> {
 	}
 }
 
-impl GetContextMut<NoBodyConfigured> for ConfigParamMut<'static, 'static> {
+impl TryGetContextMut<NoBodyConfigured> for ConfigParamMut<'static, 'static> {
 	type TContext<'ctx> = ConfigContextMut<'ctx>;
 
-	fn get_context_mut<'ctx>(
+	fn try_get_context_mut<'ctx>(
 		param: &'ctx mut bevy::ecs::system::SystemParamItem<Self>,
 		NoBodyConfigured { entity }: NoBodyConfigured,
 	) -> Option<Self::TContext<'ctx>> {
@@ -82,7 +82,7 @@ mod tests {
 				.world_mut()
 				.run_system_once(move |mut p: ConfigParamMut| {
 					let key = NoDefaultAttributes { entity };
-					let ctx = ConfigParamMut::get_context_mut(&mut p, key);
+					let ctx = ConfigParamMut::try_get_context_mut(&mut p, key);
 					ctx.map(|c| c.entity.id())
 				})?;
 
@@ -102,7 +102,7 @@ mod tests {
 				.world_mut()
 				.run_system_once(move |mut p: ConfigParamMut| {
 					let key = NoDefaultAttributes { entity };
-					let ctx = ConfigParamMut::get_context_mut(&mut p, key);
+					let ctx = ConfigParamMut::try_get_context_mut(&mut p, key);
 					ctx.map(|c| c.entity.id())
 				})?;
 
@@ -123,7 +123,7 @@ mod tests {
 				.world_mut()
 				.run_system_once(move |mut p: ConfigParamMut| {
 					let key = NoBodyConfigured { entity };
-					let ctx = ConfigParamMut::get_context_mut(&mut p, key);
+					let ctx = ConfigParamMut::try_get_context_mut(&mut p, key);
 					ctx.map(|c| c.entity.id())
 				})?;
 
@@ -143,7 +143,7 @@ mod tests {
 				.world_mut()
 				.run_system_once(move |mut p: ConfigParamMut| {
 					let key = NoBodyConfigured { entity };
-					let ctx = ConfigParamMut::get_context_mut(&mut p, key);
+					let ctx = ConfigParamMut::try_get_context_mut(&mut p, key);
 					ctx.map(|c| c.entity.id())
 				})?;
 

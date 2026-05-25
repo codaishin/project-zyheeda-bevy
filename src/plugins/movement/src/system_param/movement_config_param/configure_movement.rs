@@ -24,7 +24,7 @@ mod tests {
 	};
 	use common::{
 		tools::{Units, UnitsPerSecond},
-		traits::{accessors::get::GetContextMut, handles_movement::NotConfiguredMovement},
+		traits::{accessors::get::TryGetContextMut, handles_movement::NotConfiguredMovement},
 	};
 	use testing::SingleThreadedApp;
 
@@ -39,7 +39,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once(move |mut p: MovementConfigParamMut| {
-				let mut ctx = MovementConfigParamMut::get_context_mut(
+				let mut ctx = MovementConfigParamMut::try_get_context_mut(
 					&mut p,
 					NotConfiguredMovement { entity },
 				)

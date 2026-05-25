@@ -3,7 +3,7 @@ mod override_face;
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::{
 	traits::{
-		accessors::get::{GetContextMut, GetMut},
+		accessors::get::{GetMut, TryGetContextMut},
 		handles_orientation::Facing,
 	},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
@@ -14,10 +14,10 @@ pub struct FaceParamMut<'w, 's> {
 	commands: ZyheedaCommands<'w, 's>,
 }
 
-impl GetContextMut<Facing> for FaceParamMut<'static, 'static> {
+impl TryGetContextMut<Facing> for FaceParamMut<'static, 'static> {
 	type TContext<'ctx> = FaceContextMut<'ctx>;
 
-	fn get_context_mut<'ctx>(
+	fn try_get_context_mut<'ctx>(
 		param: &'ctx mut FaceParamMut,
 		Facing { entity }: Facing,
 	) -> Option<Self::TContext<'ctx>> {

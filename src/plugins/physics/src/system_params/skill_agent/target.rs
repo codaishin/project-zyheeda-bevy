@@ -34,7 +34,7 @@ mod tests {
 	use common::{
 		components::persistent_entity::PersistentEntity,
 		traits::{
-			accessors::get::{GetContext, GetContextMut},
+			accessors::get::{TryGetContext, TryGetContextMut},
 			handles_skill_physics::{InitializedAgent, SkillMountBone, Target as _},
 		},
 	};
@@ -58,7 +58,7 @@ mod tests {
 
 		let target = app.world_mut().run_system_once(move |p: SkillAgent| {
 			let key = InitializedAgent { entity };
-			let ctx = SkillAgent::get_context(&p, key).unwrap();
+			let ctx = SkillAgent::try_get_context(&p, key).unwrap();
 			ctx.target().copied()
 		})?;
 
@@ -82,7 +82,7 @@ mod tests {
 			.world_mut()
 			.run_system_once(move |mut p: SkillAgentMut| {
 				let key = InitializedAgent { entity };
-				let ctx = SkillAgentMut::get_context_mut(&mut p, key).unwrap();
+				let ctx = SkillAgentMut::try_get_context_mut(&mut p, key).unwrap();
 				ctx.target().copied()
 			})?;
 
@@ -105,7 +105,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut p: SkillAgentMut| {
 				let key = InitializedAgent { entity };
-				let mut ctx = SkillAgentMut::get_context_mut(&mut p, key).unwrap();
+				let mut ctx = SkillAgentMut::try_get_context_mut(&mut p, key).unwrap();
 				*ctx.target_mut() = Some(SkillTarget::Entity(target_entity));
 			})?;
 

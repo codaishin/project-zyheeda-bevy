@@ -1,7 +1,7 @@
 use crate::components::door::Door;
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
-	accessors::get::{GetContext, GetContextMut},
+	accessors::get::{TryGetContext, TryGetContextMut},
 	handles_animations::{ActiveAnimationsMut, AnimationKey, AnimationPriority, Animations},
 	handles_physics::{IsInteracting, IterInteractions},
 };
@@ -13,15 +13,16 @@ impl Door {
 		interactions: StaticSystemParam<TInteractions>,
 		mut animations: StaticSystemParam<TAnimations>,
 	) where
-		TInteractions: for<'c> GetContext<IsInteracting, TContext<'c>: IterInteractions>,
-		TAnimations: for<'c> GetContextMut<Animations, TContext<'c>: ActiveAnimationsMut>,
+		TInteractions: for<'c> TryGetContext<IsInteracting, TContext<'c>: IterInteractions>,
+		TAnimations: for<'c> TryGetContextMut<Animations, TContext<'c>: ActiveAnimationsMut>,
 	{
 		for entity in doors {
 			let key = IsInteracting { entity };
-			let interactions = TInteractions::get_context(&interactions, key);
+			let interactions = TInteractions::try_get_context(&interactions, key);
 
 			let key = Animations { entity };
-			let Some(mut animations) = TAnimations::get_context_mut(&mut animations, key) else {
+			let Some(mut animations) = TAnimations::try_get_context_mut(&mut animations, key)
+			else {
 				continue;
 			};
 

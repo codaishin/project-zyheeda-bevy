@@ -29,7 +29,7 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
 	};
-	use common::traits::{accessors::get::GetContextMut, handles_loadout::skills::Skills};
+	use common::traits::{accessors::get::TryGetContextMut, handles_loadout::skills::Skills};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -47,8 +47,8 @@ mod tests {
 		let active_skills =
 			app.world_mut()
 				.run_system_once(move |mut l: LoadoutActivityWriter| {
-					let ctx =
-						LoadoutActivityWriter::get_context_mut(&mut l, Skills { entity }).unwrap();
+					let ctx = LoadoutActivityWriter::try_get_context_mut(&mut l, Skills { entity })
+						.unwrap();
 					ctx.held_skills().clone()
 				})?;
 
@@ -67,7 +67,7 @@ mod tests {
 		app.world_mut()
 			.run_system_once(move |mut l: LoadoutActivityWriter| {
 				let mut ctx =
-					LoadoutActivityWriter::get_context_mut(&mut l, Skills { entity }).unwrap();
+					LoadoutActivityWriter::try_get_context_mut(&mut l, Skills { entity }).unwrap();
 				ctx.held_skills_mut().insert(SlotKey(2));
 			})?;
 

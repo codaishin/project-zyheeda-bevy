@@ -7,7 +7,7 @@ use crate::components::{mount_points::MountPointsDefinition, skill::Skill, targe
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::{
 	traits::{
-		accessors::get::{ContextChanged, GetContext, GetContextMut, GetMut},
+		accessors::get::{ContextChanged, GetMut, TryGetContext, TryGetContextMut},
 		handles_skill_physics::{InitializedAgent, NotInitializedAgent, SkillMountBone},
 	},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
@@ -18,10 +18,10 @@ pub struct SkillAgent<'w, 's> {
 	targets: Query<'w, 's, Ref<'static, Target>>,
 }
 
-impl GetContext<InitializedAgent> for SkillAgent<'static, 'static> {
+impl TryGetContext<InitializedAgent> for SkillAgent<'static, 'static> {
 	type TContext<'ctx> = SkillAgentContext<'ctx>;
 
-	fn get_context<'ctx>(
+	fn try_get_context<'ctx>(
 		param: &'ctx SkillAgent,
 		InitializedAgent { entity }: InitializedAgent,
 	) -> Option<Self::TContext<'ctx>> {
@@ -39,10 +39,10 @@ pub struct SkillAgentMut<'w, 's> {
 	commands: ZyheedaCommands<'w, 's>,
 }
 
-impl GetContextMut<NotInitializedAgent> for SkillAgentMut<'static, 'static> {
+impl TryGetContextMut<NotInitializedAgent> for SkillAgentMut<'static, 'static> {
 	type TContext<'ctx> = SkillAgentInitializerContext<'ctx>;
 
-	fn get_context_mut<'ctx>(
+	fn try_get_context_mut<'ctx>(
 		param: &'ctx mut SkillAgentMut,
 		NotInitializedAgent { entity }: NotInitializedAgent,
 	) -> Option<Self::TContext<'ctx>> {
@@ -56,10 +56,10 @@ impl GetContextMut<NotInitializedAgent> for SkillAgentMut<'static, 'static> {
 	}
 }
 
-impl GetContextMut<InitializedAgent> for SkillAgentMut<'static, 'static> {
+impl TryGetContextMut<InitializedAgent> for SkillAgentMut<'static, 'static> {
 	type TContext<'ctx> = SkillAgentContextMut<'ctx>;
 
-	fn get_context_mut<'ctx>(
+	fn try_get_context_mut<'ctx>(
 		param: &'ctx mut SkillAgentMut,
 		InitializedAgent { entity }: InitializedAgent,
 	) -> Option<Self::TContext<'ctx>> {
@@ -116,7 +116,8 @@ mod tests {
 			let ctx = app
 				.world_mut()
 				.run_system_once(move |mut p: SkillAgentMut| {
-					SkillAgentMut::get_context_mut(&mut p, NotInitializedAgent { entity }).is_some()
+					SkillAgentMut::try_get_context_mut(&mut p, NotInitializedAgent { entity })
+						.is_some()
 				})?;
 
 			assert!(ctx);
@@ -131,7 +132,8 @@ mod tests {
 			let ctx = app
 				.world_mut()
 				.run_system_once(move |mut p: SkillAgentMut| {
-					SkillAgentMut::get_context_mut(&mut p, NotInitializedAgent { entity }).is_some()
+					SkillAgentMut::try_get_context_mut(&mut p, NotInitializedAgent { entity })
+						.is_some()
 				})?;
 
 			assert!(ctx);
@@ -152,7 +154,8 @@ mod tests {
 			let ctx = app
 				.world_mut()
 				.run_system_once(move |mut p: SkillAgentMut| {
-					SkillAgentMut::get_context_mut(&mut p, NotInitializedAgent { entity }).is_some()
+					SkillAgentMut::try_get_context_mut(&mut p, NotInitializedAgent { entity })
+						.is_some()
 				})?;
 
 			assert!(!ctx);
@@ -174,7 +177,8 @@ mod tests {
 			let ctx = app
 				.world_mut()
 				.run_system_once(move |mut p: SkillAgentMut| {
-					SkillAgentMut::get_context_mut(&mut p, InitializedAgent { entity }).is_some()
+					SkillAgentMut::try_get_context_mut(&mut p, InitializedAgent { entity })
+						.is_some()
 				})?;
 
 			assert!(!ctx);
@@ -189,7 +193,8 @@ mod tests {
 			let ctx = app
 				.world_mut()
 				.run_system_once(move |mut p: SkillAgentMut| {
-					SkillAgentMut::get_context_mut(&mut p, InitializedAgent { entity }).is_some()
+					SkillAgentMut::try_get_context_mut(&mut p, InitializedAgent { entity })
+						.is_some()
 				})?;
 
 			assert!(!ctx);
@@ -210,7 +215,8 @@ mod tests {
 			let ctx = app
 				.world_mut()
 				.run_system_once(move |mut p: SkillAgentMut| {
-					SkillAgentMut::get_context_mut(&mut p, InitializedAgent { entity }).is_some()
+					SkillAgentMut::try_get_context_mut(&mut p, InitializedAgent { entity })
+						.is_some()
 				})?;
 
 			assert!(ctx);

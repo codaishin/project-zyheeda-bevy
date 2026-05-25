@@ -10,7 +10,7 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	tools::skill_execution::SkillExecution,
 	traits::{
-		accessors::get::{GetContext, TryApplyOn, View, ViewOf},
+		accessors::get::{TryApplyOn, TryGetContext, View, ViewOf},
 		handles_input::MouseOverrideActive,
 		handles_loadout::skills::{ReadSkills, Skills},
 	},
@@ -26,7 +26,7 @@ impl QuickbarPanel {
 	) where
 		TAgent: Component,
 		TActionKeyButton: Component + View<MouseOverrideActive>,
-		TLoadout: for<'c> GetContext<Skills, TContext<'c>: ReadSkills>,
+		TLoadout: for<'c> TryGetContext<Skills, TContext<'c>: ReadSkills>,
 	{
 		set_color(commands, buttons, agents, param)
 	}
@@ -40,10 +40,10 @@ fn set_color<TAgent, TActionKeyButton, TLoadout>(
 ) where
 	TAgent: Component,
 	TActionKeyButton: Component + View<MouseOverrideActive>,
-	TLoadout: for<'c> GetContext<Skills, TContext<'c>: ReadSkills>,
+	TLoadout: for<'c> TryGetContext<Skills, TContext<'c>: ReadSkills>,
 {
 	for entity in &agents {
-		let Some(ctx) = TLoadout::get_context(&param, Skills { entity }) else {
+		let Some(ctx) = TLoadout::try_get_context(&param, Skills { entity }) else {
 			continue;
 		};
 

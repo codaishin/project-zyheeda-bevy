@@ -40,16 +40,16 @@ pub trait ContextChanged {
 /// Retrieve a context for data inspection.
 ///
 /// It is up to the implementor, what kind of system parameters are involved.
-pub trait GetContext<TKey>: SystemParam + ThreadSafe {
+pub trait TryGetContext<TKey>: SystemParam + ThreadSafe {
 	type TContext<'ctx>: ContextChanged;
 
-	fn get_context<'ctx>(
+	fn try_get_context<'ctx>(
 		param: &'ctx SystemParamItem<Self>,
 		key: TKey,
 	) -> Option<Self::TContext<'ctx>>;
 }
 
-pub trait GetChangedContext<TKey>: GetContext<TKey> {
+pub trait GetChangedContext<TKey>: TryGetContext<TKey> {
 	fn get_changed_context<'ctx>(
 		param: &'ctx SystemParamItem<Self>,
 		key: TKey,
@@ -58,13 +58,13 @@ pub trait GetChangedContext<TKey>: GetContext<TKey> {
 
 impl<T, TKey> GetChangedContext<TKey> for T
 where
-	T: GetContext<TKey>,
+	T: TryGetContext<TKey>,
 {
 	fn get_changed_context<'ctx>(
 		param: &'ctx SystemParamItem<Self>,
 		key: TKey,
 	) -> Option<Self::TContext<'ctx>> {
-		match T::get_context(param, key) {
+		match T::try_get_context(param, key) {
 			Some(ctx) if ctx.context_changed() => Some(ctx),
 			_ => None,
 		}
@@ -82,28 +82,28 @@ pub trait GetMut<TKey> {
 /// Retrieve a context for data mutation.
 ///
 /// It is up to the implementor, what kind of system parameters are involved.
-pub trait GetContextMut<TKey>: SystemParam + ThreadSafe {
+pub trait TryGetContextMut<TKey>: SystemParam + ThreadSafe {
 	type TContext<'ctx>;
 
-	fn get_context_mut<'ctx>(
+	fn try_get_context_mut<'ctx>(
 		param: &'ctx mut SystemParamItem<Self>,
 		key: TKey,
 	) -> Option<Self::TContext<'ctx>>;
 }
 
-impl<T, TKey> GetContext<Logged<TKey>> for T
+impl<T, TKey> TryGetContext<Logged<TKey>> for T
 where
-	T: GetContext<TKey>,
+	T: TryGetContext<TKey>,
 	TKey: View<Entity>,
 {
 	type TContext<'ctx> = T::TContext<'ctx>;
 
-	fn get_context<'ctx>(
+	fn try_get_context<'ctx>(
 		param: &'ctx SystemParamItem<Self>,
 		Logged { key, level }: Logged<TKey>,
 	) -> Option<Self::TContext<'ctx>> {
 		let entity = key.view();
-		let ctx = T::get_context(param, key);
+		let ctx = T::try_get_context(param, key);
 
 		if ctx.is_none() {
 			output::log(MissingContext {
@@ -117,19 +117,19 @@ where
 	}
 }
 
-impl<T, TKey> GetContextMut<Logged<TKey>> for T
+impl<T, TKey> TryGetContextMut<Logged<TKey>> for T
 where
-	T: GetContextMut<TKey>,
+	T: TryGetContextMut<TKey>,
 	TKey: View<Entity>,
 {
 	type TContext<'ctx> = T::TContext<'ctx>;
 
-	fn get_context_mut<'ctx>(
+	fn try_get_context_mut<'ctx>(
 		param: &'ctx mut SystemParamItem<Self>,
 		Logged { key, level }: Logged<TKey>,
 	) -> Option<Self::TContext<'ctx>> {
 		let entity = key.view();
-		let ctx = T::get_context_mut(param, key);
+		let ctx = T::try_get_context_mut(param, key);
 
 		if ctx.is_none() {
 			output::log(MissingContext {

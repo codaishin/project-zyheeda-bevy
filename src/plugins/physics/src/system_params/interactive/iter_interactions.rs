@@ -30,7 +30,7 @@ mod tests {
 	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use bevy_rapier3d::prelude::*;
-	use common::traits::{accessors::get::GetContext, handles_physics::IsInteracting};
+	use common::traits::{accessors::get::TryGetContext, handles_physics::IsInteracting};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -80,7 +80,8 @@ mod tests {
 		let interactions = app
 			.world_mut()
 			.run_system_once(move |i: InteractiveParam| {
-				let ctx = InteractiveParam::get_context(&i, IsInteracting { entity: a }).unwrap();
+				let ctx =
+					InteractiveParam::try_get_context(&i, IsInteracting { entity: a }).unwrap();
 				ctx.iter_interactions().collect::<Vec<_>>()
 			})?;
 
@@ -116,7 +117,8 @@ mod tests {
 		let interactions = app
 			.world_mut()
 			.run_system_once(move |i: InteractiveParam| {
-				let ctx = InteractiveParam::get_context(&i, IsInteracting { entity: a }).unwrap();
+				let ctx =
+					InteractiveParam::try_get_context(&i, IsInteracting { entity: a }).unwrap();
 				ctx.iter_interactions().collect::<Vec<_>>()
 			})?;
 

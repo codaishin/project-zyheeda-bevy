@@ -3,7 +3,14 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	errors::Level,
 	traits::{
-		accessors::get::{GetChangedContext, GetContext, GetContextMut, Logged, View, ViewOf},
+		accessors::get::{
+			GetChangedContext,
+			Logged,
+			TryGetContext,
+			TryGetContextMut,
+			View,
+			ViewOf,
+		},
 		handles_animations::{ActiveAnimationsMut, AnimationKey, AnimationPriority, Animations},
 		handles_movement::{CurrentMovement, Movement, MovementTarget, SpeedToggle},
 	},
@@ -16,8 +23,9 @@ impl Player {
 		mut animations: StaticSystemParam<TAnimations>,
 		players: Query<Entity, With<Self>>,
 	) where
-		TMovement: for<'c> GetContext<Logged<Movement>, TContext<'c>: CurrentMovement>,
-		TAnimations: for<'c> GetContextMut<Logged<Animations>, TContext<'c>: ActiveAnimationsMut>,
+		TMovement: for<'c> TryGetContext<Logged<Movement>, TContext<'c>: CurrentMovement>,
+		TAnimations:
+			for<'c> TryGetContextMut<Logged<Animations>, TContext<'c>: ActiveAnimationsMut>,
 	{
 		for entity in players {
 			let key = Logged::key(Movement { entity }).with_level(Level::Error);
@@ -26,7 +34,8 @@ impl Player {
 			};
 
 			let key = Logged::key(Animations { entity }).with_level(Level::Error);
-			let Some(mut animations) = TAnimations::get_context_mut(&mut animations, key) else {
+			let Some(mut animations) = TAnimations::try_get_context_mut(&mut animations, key)
+			else {
 				continue;
 			};
 

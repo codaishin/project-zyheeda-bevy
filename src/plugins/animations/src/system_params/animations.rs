@@ -12,7 +12,7 @@ use crate::components::{
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::{
 	traits::{
-		accessors::get::{GetContextMut, GetMut},
+		accessors::get::{GetMut, TryGetContextMut},
 		handles_animations::{AnimationClips, Animations, WithoutAnimations},
 	},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
@@ -37,14 +37,14 @@ where
 	graphs: ResMut<'w, Assets<TAnimationGraph>>,
 }
 
-impl<TAnimationGraph> GetContextMut<WithoutAnimations>
+impl<TAnimationGraph> TryGetContextMut<WithoutAnimations>
 	for AnimationsParamMut<'static, 'static, TAnimationGraph>
 where
 	TAnimationGraph: Asset,
 {
 	type TContext<'ctx> = AnimationsRegisterContextMut<'ctx, TAnimationGraph>;
 
-	fn get_context_mut<'ctx>(
+	fn try_get_context_mut<'ctx>(
 		param: &'ctx mut AnimationsParamMut<TAnimationGraph>,
 		WithoutAnimations { entity }: WithoutAnimations,
 	) -> Option<Self::TContext<'ctx>> {
@@ -59,14 +59,14 @@ where
 	}
 }
 
-impl<TAnimationGraph> GetContextMut<Animations>
+impl<TAnimationGraph> TryGetContextMut<Animations>
 	for AnimationsParamMut<'static, 'static, TAnimationGraph>
 where
 	TAnimationGraph: Asset,
 {
 	type TContext<'ctx> = AnimationsContextMut<'ctx>;
 
-	fn get_context_mut<'ctx>(
+	fn try_get_context_mut<'ctx>(
 		param: &'ctx mut AnimationsParamMut<TAnimationGraph>,
 		Animations { entity }: Animations,
 	) -> Option<Self::TContext<'ctx>> {
@@ -127,8 +127,11 @@ mod tests {
 			let ctx =
 				app.world_mut()
 					.run_system_once(move |mut p: AnimationsParamMut<_Graph>| {
-						AnimationsParamMut::get_context_mut(&mut p, WithoutAnimations { entity })
-							.is_some()
+						AnimationsParamMut::try_get_context_mut(
+							&mut p,
+							WithoutAnimations { entity },
+						)
+						.is_some()
 					})?;
 
 			assert!(ctx);
@@ -146,8 +149,11 @@ mod tests {
 			let ctx =
 				app.world_mut()
 					.run_system_once(move |mut p: AnimationsParamMut<_Graph>| {
-						AnimationsParamMut::get_context_mut(&mut p, WithoutAnimations { entity })
-							.is_some()
+						AnimationsParamMut::try_get_context_mut(
+							&mut p,
+							WithoutAnimations { entity },
+						)
+						.is_some()
 					})?;
 
 			assert!(!ctx);
@@ -166,7 +172,8 @@ mod tests {
 			let ctx =
 				app.world_mut()
 					.run_system_once(move |mut p: AnimationsParamMut<_Graph>| {
-						AnimationsParamMut::get_context_mut(&mut p, Animations { entity }).is_some()
+						AnimationsParamMut::try_get_context_mut(&mut p, Animations { entity })
+							.is_some()
 					})?;
 
 			assert!(!ctx);
@@ -187,7 +194,8 @@ mod tests {
 			let ctx =
 				app.world_mut()
 					.run_system_once(move |mut p: AnimationsParamMut<_Graph>| {
-						AnimationsParamMut::get_context_mut(&mut p, Animations { entity }).is_some()
+						AnimationsParamMut::try_get_context_mut(&mut p, Animations { entity })
+							.is_some()
 					})?;
 
 			assert!(ctx);

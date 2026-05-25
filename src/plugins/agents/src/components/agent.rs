@@ -7,7 +7,7 @@ use common::{
 	errors::{ErrorData, Level, Unreachable},
 	systems::register_animations::AnimationsMarker,
 	traits::{
-		accessors::get::{GetContextMut, View},
+		accessors::get::{TryGetContextMut, View},
 		handles_enemies::EnemyType,
 		handles_map_generation::{AgentType, GroundPosition, MapPrefabs, SetPrefab},
 		prefab::{Prefab, PrefabEntityCommands},
@@ -44,9 +44,10 @@ impl Agent {
 	) -> Result<(), NoPrefabContext>
 	where
 		TNewMapAgent:
-			for<'c> GetContextMut<MapPrefabs<AgentType>, TContext<'c>: SetPrefab<AgentType>>,
+			for<'c> TryGetContextMut<MapPrefabs<AgentType>, TContext<'c>: SetPrefab<AgentType>>,
 	{
-		let Some(mut ctx) = TNewMapAgent::get_context_mut(&mut new_agent, MapPrefabs::KEY) else {
+		let Some(mut ctx) = TNewMapAgent::try_get_context_mut(&mut new_agent, MapPrefabs::KEY)
+		else {
 			return Err(NoPrefabContext);
 		};
 

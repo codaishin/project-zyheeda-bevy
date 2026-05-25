@@ -1,7 +1,7 @@
 use crate::components::enemy::{Enemy, attack_phase::EnemyAttackPhase, attacking::Attacking};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
-	accessors::get::GetContextMut,
+	accessors::get::TryGetContextMut,
 	handles_loadout::{HeldSkillsMut, skills::Skills},
 	handles_skill_physics::{InitializedAgent, SkillTarget, TargetMut},
 };
@@ -13,17 +13,17 @@ impl Enemy {
 		attacking: Query<(Entity, &EnemyAttackPhase, &Attacking), Changed<EnemyAttackPhase>>,
 		mut stopped_attacking: RemovedComponents<EnemyAttackPhase>,
 	) where
-		TPhysics: for<'c> GetContextMut<InitializedAgent, TContext<'c>: TargetMut>,
-		TLoadout: for<'c> GetContextMut<Skills, TContext<'c>: HeldSkillsMut>,
+		TPhysics: for<'c> TryGetContextMut<InitializedAgent, TContext<'c>: TargetMut>,
+		TLoadout: for<'c> TryGetContextMut<Skills, TContext<'c>: HeldSkillsMut>,
 	{
 		for (entity, phase, Attacking { player, .. }) in &attacking {
 			let agent = InitializedAgent { entity };
-			if let Some(mut ctx) = TPhysics::get_context_mut(&mut physics, agent) {
+			if let Some(mut ctx) = TPhysics::try_get_context_mut(&mut physics, agent) {
 				*ctx.target_mut() = Some(SkillTarget::Entity(*player));
 			}
 
 			let skills = Skills { entity };
-			let Some(mut ctx) = TLoadout::get_context_mut(&mut loadout, skills) else {
+			let Some(mut ctx) = TLoadout::try_get_context_mut(&mut loadout, skills) else {
 				continue;
 			};
 
@@ -36,7 +36,7 @@ impl Enemy {
 
 		for entity in stopped_attacking.read() {
 			let skills = Skills { entity };
-			let Some(mut ctx) = TLoadout::get_context_mut(&mut loadout, skills) else {
+			let Some(mut ctx) = TLoadout::try_get_context_mut(&mut loadout, skills) else {
 				continue;
 			};
 

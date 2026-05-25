@@ -6,7 +6,7 @@ use bevy::{
 use common::{
 	tools::action_key::movement::MovementKey,
 	traits::{
-		accessors::get::GetContextMut,
+		accessors::get::TryGetContextMut,
 		handles_input::{GetAllInputStates, InputState},
 		handles_movement::{ConfiguredMovement, ToggleSpeed},
 	},
@@ -20,7 +20,7 @@ impl Player {
 	) where
 		for<'w, 's> TInput: SystemParam<Item<'w, 's>: GetAllInputStates>,
 		for<'c> TMovement:
-			SystemParam + GetContextMut<ConfiguredMovement, TContext<'c>: ToggleSpeed>,
+			SystemParam + TryGetContextMut<ConfiguredMovement, TContext<'c>: ToggleSpeed>,
 	{
 		let just_toggled = input
 			.get_all_input_states::<MovementKey>()
@@ -32,7 +32,7 @@ impl Player {
 
 		for entity in players {
 			let key = ConfiguredMovement { entity };
-			let Some(mut ctx) = TMovement::get_context_mut(&mut movement, key) else {
+			let Some(mut ctx) = TMovement::try_get_context_mut(&mut movement, key) else {
 				continue;
 			};
 

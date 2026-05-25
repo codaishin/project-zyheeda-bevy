@@ -13,7 +13,7 @@ use common::{
 	components::model::{Model, SceneId, UseGltfLookup},
 	tools::{Units, action_key::slot::SlotKey, inventory_key::InventoryKey},
 	traits::{
-		accessors::get::{GetContextMut, TryApplyOn},
+		accessors::get::{TryApplyOn, TryGetContextMut},
 		handles_loadout::{
 			LoadoutKey,
 			insert_default_loadout::{InsertDefaultLoadout, NotLoadedOut},
@@ -55,14 +55,15 @@ impl ApplyAgentConfig {
 		configs: Res<Assets<AgentMeta>>,
 	) where
 		TLoadout: SystemParam
-			+ for<'c> GetContextMut<NotLoadedOut, TContext<'c>: InsertDefaultLoadout>
-			+ for<'c> GetContextMut<NoBonesRegistered, TContext<'c>: RegisterLoadoutBones>,
-		TSkills: SystemParam + for<'c> GetContextMut<NotInitializedAgent, TContext<'c>: Initialize>,
+			+ for<'c> TryGetContextMut<NotLoadedOut, TContext<'c>: InsertDefaultLoadout>
+			+ for<'c> TryGetContextMut<NoBonesRegistered, TContext<'c>: RegisterLoadoutBones>,
+		TSkills:
+			SystemParam + for<'c> TryGetContextMut<NotInitializedAgent, TContext<'c>: Initialize>,
 		TMovement: SystemParam
-			+ for<'c> GetContextMut<NotConfiguredMovement, TContext<'c>: ConfigureMovement>,
+			+ for<'c> TryGetContextMut<NotConfiguredMovement, TContext<'c>: ConfigureMovement>,
 		TPhysics: SystemParam
-			+ for<'c> GetContextMut<NoDefaultAttributes, TContext<'c>: ConfigureDefaultAttributes>
-			+ for<'c> GetContextMut<NoBodyConfigured, TContext<'c>: ConfigureBody>,
+			+ for<'c> TryGetContextMut<NoDefaultAttributes, TContext<'c>: ConfigureDefaultAttributes>
+			+ for<'c> TryGetContextMut<NoBodyConfigured, TContext<'c>: ConfigureBody>,
 	{
 		for (entity, AgentConfig { config_handle }, mut transform, transform_dirty) in agents {
 			let Some(config) = configs.get(config_handle) else {
@@ -70,12 +71,14 @@ impl ApplyAgentConfig {
 			};
 
 			let no_loadout = NotLoadedOut { entity };
-			if let Some(mut ctx) = TLoadout::get_context_mut(&mut loadout_param, no_loadout) {
+			if let Some(mut ctx) = TLoadout::try_get_context_mut(&mut loadout_param, no_loadout) {
 				ctx.insert_default_loadout(&config.loadout);
 			};
 
 			let no_loadout_bones = NoBonesRegistered { entity };
-			if let Some(mut ctx) = TLoadout::get_context_mut(&mut loadout_param, no_loadout_bones) {
+			if let Some(mut ctx) =
+				TLoadout::try_get_context_mut(&mut loadout_param, no_loadout_bones)
+			{
 				ctx.register_loadout_bones(
 					config.bones.forearm_slots.clone(),
 					config.bones.hand_slots.clone(),
@@ -84,22 +87,23 @@ impl ApplyAgentConfig {
 			};
 
 			let not_initialized = NotInitializedAgent { entity };
-			if let Some(mut ctx) = TSkills::get_context_mut(&mut skills_param, not_initialized) {
+			if let Some(mut ctx) = TSkills::try_get_context_mut(&mut skills_param, not_initialized)
+			{
 				ctx.initialize(config.bones.skill_mounts.clone());
 			};
 
 			let not_configured = NotConfiguredMovement { entity };
-			if let Some(mut ctx) = TMovement::get_context_mut(&mut movement, not_configured) {
+			if let Some(mut ctx) = TMovement::try_get_context_mut(&mut movement, not_configured) {
 				ctx.configure(config.speed.with_fastest_left(), config.required_clearance);
 			}
 
 			let no_default_attr = NoDefaultAttributes { entity };
-			if let Some(mut ctx) = TPhysics::get_context_mut(&mut physics, no_default_attr) {
+			if let Some(mut ctx) = TPhysics::try_get_context_mut(&mut physics, no_default_attr) {
 				ctx.configure_default_attributes(config.attributes);
 			}
 
 			let no_body = NoBodyConfigured { entity };
-			if let Some(mut ctx) = TPhysics::get_context_mut(&mut physics, no_body) {
+			if let Some(mut ctx) = TPhysics::try_get_context_mut(&mut physics, no_body) {
 				let half_y = Units::from(
 					*config.required_clearance.vertical - *config.required_clearance.horizontal,
 				);

@@ -9,7 +9,7 @@ use bevy::{
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::GetContextMut,
+		accessors::get::TryGetContextMut,
 		handles_orientation::{Face, Facing, OverrideFace},
 		state_duration::{StateMeta, UpdatedStates},
 		thread_safe::ThreadSafe,
@@ -29,14 +29,14 @@ pub(crate) fn schedule_active_skill<TGetSkill, TFacing, TActiveSkill, TTime>(
 	mut facing: StaticSystemParam<TFacing>,
 ) where
 	TGetSkill: GetActiveSkill<SkillState> + Component<Mutability = Mutable>,
-	TFacing: for<'c> GetContextMut<Facing, TContext<'c>: OverrideFace>,
+	TFacing: for<'c> TryGetContextMut<Facing, TContext<'c>: OverrideFace>,
 	TActiveSkill: Component<Mutability = Mutable> + Schedule<SkillBehaviorConfig> + Flush,
 	TTime: Default + ThreadSafe,
 {
 	let delta = time.delta();
 
 	for (entity, mut dequeue, skill_executer) in &mut agents {
-		let Some(mut ctx) = TFacing::get_context_mut(&mut facing, Facing { entity }) else {
+		let Some(mut ctx) = TFacing::try_get_context_mut(&mut facing, Facing { entity }) else {
 			continue;
 		};
 		let advancement = match dequeue.get_active() {

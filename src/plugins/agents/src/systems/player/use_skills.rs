@@ -9,7 +9,7 @@ use common::{
 		targeting::TerrainTargeting,
 	},
 	traits::{
-		accessors::get::GetContextMut,
+		accessors::get::TryGetContextMut,
 		handles_input::{GetAllInputStates, InputState},
 		handles_loadout::{HeldSkills, HeldSkillsMut, skills::Skills},
 		handles_skill_physics::{Cursor, InitializedAgent, SkillTarget, Target, TargetMut},
@@ -24,8 +24,8 @@ impl Player {
 		players: Query<Entity, With<Self>>,
 	) where
 		TInput: for<'w, 's> SystemParam<Item<'w, 's>: GetAllInputStates>,
-		TPhysics: for<'c> GetContextMut<InitializedAgent, TContext<'c>: TargetMut>,
-		TLoadout: for<'c> GetContextMut<Skills, TContext<'c>: HeldSkillsMut>,
+		TPhysics: for<'c> TryGetContextMut<InitializedAgent, TContext<'c>: TargetMut>,
+		TLoadout: for<'c> TryGetContextMut<Skills, TContext<'c>: HeldSkillsMut>,
 	{
 		let held = || {
 			input
@@ -55,14 +55,14 @@ impl Player {
 			let new_held_skills = held().map(SlotKey::from).collect();
 
 			let agent = InitializedAgent { entity };
-			if let Some(mut ctx) = TPhysics::get_context_mut(&mut physics, agent)
+			if let Some(mut ctx) = TPhysics::try_get_context_mut(&mut physics, agent)
 				&& ctx.target() != Some(&skill_target)
 			{
 				*ctx.target_mut() = Some(skill_target);
 			};
 
 			let skills = Skills { entity };
-			if let Some(mut ctx) = TLoadout::get_context_mut(&mut loadout, skills)
+			if let Some(mut ctx) = TLoadout::try_get_context_mut(&mut loadout, skills)
 				&& ctx.held_skills() != &new_held_skills
 			{
 				*ctx.held_skills_mut() = new_held_skills;

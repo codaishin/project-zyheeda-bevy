@@ -49,7 +49,7 @@ pub(crate) struct JustRemovedMovements(pub(crate) HashSet<Entity>);
 mod tests {
 	use super::*;
 	use crate::{components::config::SpeedIndex, system_param::movement_param::MovementParam};
-	use common::traits::{accessors::get::GetContext, handles_movement::Movement};
+	use common::traits::{accessors::get::TryGetContext, handles_movement::Movement};
 	use testing::SingleThreadedApp;
 
 	#[derive(Component)]
@@ -68,7 +68,7 @@ mod tests {
 				|mut commands: Commands, m: MovementParam<_Motion>, entities: Query<Entity>| {
 					for entity in &entities {
 						let key = Movement { entity };
-						let Some(ctx) = MovementParam::get_context(&m, key) else {
+						let Some(ctx) = MovementParam::try_get_context(&m, key) else {
 							continue;
 						};
 
