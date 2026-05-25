@@ -24,7 +24,7 @@ pub fn drop_item<TAgent, TLoadout>(
 
 	for (entity, dad) in &agents {
 		let Some(mut ctx) = TLoadout::try_get_context_mut(&mut param, Items { entity }) else {
-			return;
+			continue;
 		};
 
 		for (.., keyed_panel) in panels.iter().filter(is_hovered) {
