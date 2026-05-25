@@ -121,7 +121,7 @@ where
 	}
 }
 
-/// A wrapper for [`GetContext`] and [`GetContextMut`] keys.
+/// A wrapper for [`TryGetContext`] and [`TryGetContextMut`] keys.
 ///
 /// Both traits have a blanket implementation to log [`None`] cases.
 pub struct Logged<TKey>
