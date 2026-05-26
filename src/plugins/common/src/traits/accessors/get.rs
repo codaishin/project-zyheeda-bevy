@@ -5,6 +5,7 @@ mod entity;
 mod handle;
 mod option;
 mod ray;
+mod resources;
 mod result;
 
 use bevy::{
@@ -37,9 +38,12 @@ pub trait ContextChanged {
 	fn context_changed(&self) -> bool;
 }
 
-/// Retrieve a context for data inspection.
-///
-/// It is up to the implementor, what kind of system parameters are involved.
+pub trait GetContext<TKey>: SystemParam + ThreadSafe {
+	type TContext<'ctx>: ContextChanged;
+
+	fn get_context<'ctx>(param: &'ctx SystemParamItem<Self>, key: TKey) -> Self::TContext<'ctx>;
+}
+
 pub trait TryGetContext<TKey>: SystemParam + ThreadSafe {
 	type TContext<'ctx>: ContextChanged;
 
@@ -57,9 +61,15 @@ pub trait GetMut<TKey> {
 	fn get_mut(&mut self, key: &TKey) -> Option<Self::TValue<'_>>;
 }
 
-/// Retrieve a context for data mutation.
-///
-/// It is up to the implementor, what kind of system parameters are involved.
+pub trait GetContextMut<TKey>: SystemParam + ThreadSafe {
+	type TContext<'ctx>;
+
+	fn get_context_mut<'ctx>(
+		param: &'ctx mut SystemParamItem<Self>,
+		key: TKey,
+	) -> Self::TContext<'ctx>;
+}
+
 pub trait TryGetContextMut<TKey>: SystemParam + ThreadSafe {
 	type TContext<'ctx>;
 
@@ -67,6 +77,34 @@ pub trait TryGetContextMut<TKey>: SystemParam + ThreadSafe {
 		param: &'ctx mut SystemParamItem<Self>,
 		key: TKey,
 	) -> Option<Self::TContext<'ctx>>;
+}
+
+/// A wrapper for [`TryGetContext`] and [`TryGetContextMut`] keys.
+///
+/// Both traits have a blanket implementation to log [`None`] cases.
+pub struct Logged<TKey>
+where
+	TKey: View<Entity>,
+{
+	pub key: TKey,
+	pub level: Level,
+}
+
+impl<TKey> Logged<TKey>
+where
+	TKey: View<Entity>,
+{
+	pub fn key(key: TKey) -> Self {
+		Self {
+			key,
+			level: Level::Error,
+		}
+	}
+
+	pub fn with_level(mut self, level: Level) -> Self {
+		self.level = level;
+		self
+	}
 }
 
 impl<T, TKey> TryGetContext<Logged<TKey>> for T
@@ -118,34 +156,6 @@ where
 		}
 
 		ctx
-	}
-}
-
-/// A wrapper for [`TryGetContext`] and [`TryGetContextMut`] keys.
-///
-/// Both traits have a blanket implementation to log [`None`] cases.
-pub struct Logged<TKey>
-where
-	TKey: View<Entity>,
-{
-	pub key: TKey,
-	pub level: Level,
-}
-
-impl<TKey> Logged<TKey>
-where
-	TKey: View<Entity>,
-{
-	pub fn key(key: TKey) -> Self {
-		Self {
-			key,
-			level: Level::Error,
-		}
-	}
-
-	pub fn with_level(mut self, level: Level) -> Self {
-		self.level = level;
-		self
 	}
 }
 
