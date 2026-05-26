@@ -9,26 +9,32 @@ use bevy::{
 	prelude::*,
 };
 use common::traits::{
-	accessors::get::{ContextChanged, TryGetContext},
-	handles_physics::IsInteracting,
+	accessors::get::{ContextChanged, GetContext},
+	handles_physics::Interactions,
 };
-use std::collections::HashSet;
+use std::{collections::HashSet, sync::LazyLock};
 
 #[derive(SystemParam, Debug)]
 pub struct InteractiveParam<'w> {
 	child_colliders: Res<'w, OngoingInteractions<Interactive>>,
 }
 
-impl TryGetContext<IsInteracting> for InteractiveParam<'static> {
+static EMPTY: LazyLock<HashSet<Entity>> = LazyLock::new(HashSet::default);
+
+impl GetContext<Interactions> for InteractiveParam<'static> {
 	type TContext<'ctx> = InteractiveContext<'ctx>;
 
-	fn try_get_context<'ctx>(
+	fn get_context<'ctx>(
 		param: &'ctx SystemParamItem<Self>,
-		IsInteracting { entity }: IsInteracting,
-	) -> Option<Self::TContext<'ctx>> {
-		Some(InteractiveContext {
-			interactions: param.child_colliders.interactions.get(&entity)?,
-		})
+		Interactions { entity }: Interactions,
+	) -> Self::TContext<'ctx> {
+		InteractiveContext {
+			interactions: param
+				.child_colliders
+				.interactions
+				.get(&entity)
+				.unwrap_or(&*EMPTY),
+		}
 	}
 }
 
