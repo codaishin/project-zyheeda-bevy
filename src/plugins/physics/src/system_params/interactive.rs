@@ -2,42 +2,44 @@ mod iter_interactions;
 
 use crate::{
 	components::collision_domains::Interactive,
-	resources::ongoing_interactions::OngoingInteractions,
+	resources::root_collisions::RootCollisions,
 };
 use bevy::{
 	ecs::system::{SystemParam, SystemParamItem},
 	prelude::*,
 };
 use common::traits::{
-	accessors::get::{ContextChanged, TryGetContext},
-	handles_physics::IsInteracting,
+	accessors::get::{ContextChanged, GetContext},
+	handles_physics::Interactions,
 };
 use std::collections::HashSet;
 
 #[derive(SystemParam, Debug)]
 pub struct InteractiveParam<'w> {
-	child_colliders: Res<'w, OngoingInteractions<Interactive>>,
+	root_interactions: Res<'w, RootCollisions<Interactive>>,
 }
 
-impl TryGetContext<IsInteracting> for InteractiveParam<'static> {
+impl GetContext<Interactions> for InteractiveParam<'static> {
 	type TContext<'ctx> = InteractiveContext<'ctx>;
 
-	fn try_get_context<'ctx>(
+	fn get_context<'ctx>(
 		param: &'ctx SystemParamItem<Self>,
-		IsInteracting { entity }: IsInteracting,
-	) -> Option<Self::TContext<'ctx>> {
-		Some(InteractiveContext {
-			interactions: param.child_colliders.interactions.get(&entity)?,
-		})
+		Interactions { entity }: Interactions,
+	) -> Self::TContext<'ctx> {
+		InteractiveContext {
+			changed: param.root_interactions.changed(&entity),
+			interactions: param.root_interactions.ongoing(&entity),
+		}
 	}
 }
 
 pub struct InteractiveContext<'ctx> {
+	changed: bool,
 	interactions: &'ctx HashSet<Entity>,
 }
 
 impl ContextChanged for InteractiveContext<'_> {
 	fn context_changed(&self) -> bool {
-		true
+		self.changed
 	}
 }

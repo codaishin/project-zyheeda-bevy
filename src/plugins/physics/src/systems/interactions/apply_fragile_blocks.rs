@@ -1,6 +1,6 @@
 use crate::{
 	components::{blockable::Blockable, blocker_types::BlockerTypes, collision_domains::Physical},
-	resources::ongoing_interactions::OngoingInteractions,
+	resources::root_collisions::RootCollisions,
 };
 use bevy::prelude::*;
 use common::{
@@ -10,11 +10,11 @@ use common::{
 
 pub(crate) fn apply_fragile_blocks(
 	mut commands: ZyheedaCommands,
-	ongoing_interactions: Res<OngoingInteractions<Physical>>,
+	ongoing_interactions: Res<RootCollisions<Physical>>,
 	fragiles: Query<(Entity, &Blockable)>,
 	blockers: Query<&BlockerTypes>,
 ) {
-	for (blocker, blocked) in &ongoing_interactions.interactions {
+	for (blocker, blocked) in &ongoing_interactions {
 		for blocked in blocked {
 			let Some(fragile) = is_fragile(blocked, blocker, &fragiles, &blockers) else {
 				continue;
@@ -52,7 +52,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.init_resource::<OngoingInteractions<Physical>>();
+		app.init_resource::<RootCollisions<Physical>>();
 		app.add_systems(Update, apply_fragile_blocks);
 
 		app
@@ -71,7 +71,7 @@ mod tests {
 			.world_mut()
 			.spawn(BlockerTypes::from([Blocker::Physical]))
 			.id();
-		app.insert_resource(OngoingInteractions::<Physical>::from([(
+		app.insert_resource(RootCollisions::<Physical>::from([(
 			blocker,
 			HashSet::from([fragile]),
 		)]));
@@ -95,7 +95,7 @@ mod tests {
 			.world_mut()
 			.spawn(BlockerTypes::from([Blocker::Physical]))
 			.id();
-		app.insert_resource(OngoingInteractions::<Physical>::from([(
+		app.insert_resource(RootCollisions::<Physical>::from([(
 			blocker,
 			HashSet::from([fragile]),
 		)]));
@@ -118,7 +118,7 @@ mod tests {
 			.world_mut()
 			.spawn(BlockerTypes::from([Blocker::Force]))
 			.id();
-		app.insert_resource(OngoingInteractions::<Physical>::from([(
+		app.insert_resource(RootCollisions::<Physical>::from([(
 			blocker,
 			HashSet::from([fragile]),
 		)]));

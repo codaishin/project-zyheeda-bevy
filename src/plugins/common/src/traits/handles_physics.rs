@@ -6,7 +6,7 @@ use crate::{
 	toi,
 	tools::{Units, speed::Speed},
 	traits::{
-		accessors::get::{TryGetContext, TryGetContextMut, View, ViewField},
+		accessors::get::{GetContext, TryGetContextMut, View, ViewField},
 		handles_physics::physical_bodies::{Blocker, BodyConfig},
 	},
 };
@@ -110,16 +110,11 @@ impl TranslationOffsets {
 
 pub trait HandlesInteractiveDetection {
 	type TInteractive: SystemParam
-		+ for<'c> TryGetContext<IsInteracting, TContext<'c>: IterInteractions>;
-}
-
-#[derive(EntityKey)]
-pub struct IsInteracting {
-	pub entity: Entity,
+		+ for<'c> GetContext<Interactions, TContext<'c>: IterInteractions>;
 }
 
 pub trait IterInteractions {
-	type TIter<'a>: Iterator<Item = Entity>
+	type TIter<'a>: ExactSizeIterator<Item = Entity>
 	where
 		Self: 'a;
 
@@ -138,6 +133,11 @@ where
 	fn iter_interactions(&self) -> Self::TIter<'_> {
 		self.deref().iter_interactions()
 	}
+}
+
+#[derive(EntityKey)]
+pub struct Interactions {
+	pub entity: Entity,
 }
 
 pub trait HandlesMotion {

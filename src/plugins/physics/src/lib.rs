@@ -38,13 +38,13 @@ use crate::{
 	},
 	messages::RayEvent,
 	observers::{skill_prefab::SkillPrefab, update_blockers::UpdateBlockersObserver},
-	resources::ongoing_interactions::OngoingInteractions,
+	resources::root_collisions::RootCollisions,
 	system_params::{
 		config::ConfigParamMut,
 		interactive::InteractiveParam,
 		ray_caster::RayCaster,
 		skill_agent::{SkillAgent, SkillAgentMut},
-		update_ongoing_interactions::UpdateOngoingInteractions,
+		update_root_collisions::UpdateRootCollisions,
 	},
 	systems::{
 		apply_pull::ApplyPull,
@@ -160,8 +160,8 @@ where
 			.add_prefab_observer::<Body, ()>()
 			.add_systems(Update, AsyncCollider::insert_collider.pipe(OnError::log))
 			.add_message::<RayEvent>()
-			.init_resource::<OngoingInteractions<Physical>>()
-			.init_resource::<OngoingInteractions<Interactive>>()
+			.init_resource::<RootCollisions<Physical>>()
+			.init_resource::<RootCollisions<Interactive>>()
 			// All effects
 			.add_observer(Effects::insert)
 			// Deal health damage
@@ -213,17 +213,17 @@ where
 					// Collect physical collections
 					(
 						Blockable::apply_beam_blocks.pipe(OnError::log),
-						OngoingInteractions::<Physical>::clear,
+						RootCollisions::<Physical>::clear,
 						Update::delta
-							.pipe(UpdateOngoingInteractions::<Physical>::prevent_tunneling)
+							.pipe(UpdateRootCollisions::<Physical>::prevent_tunneling)
 							.pipe(OnError::log),
-						UpdateOngoingInteractions::<Physical>::push_ongoing_collisions,
+						UpdateRootCollisions::<Physical>::push_ongoing_collisions,
 					)
 						.chain(),
 					// Collect interactive collisions
 					(
-						OngoingInteractions::<Interactive>::clear,
-						UpdateOngoingInteractions::<Interactive>::push_ongoing_collisions,
+						RootCollisions::<Interactive>::clear,
+						UpdateRootCollisions::<Interactive>::push_ongoing_collisions,
 					)
 						.chain(),
 				)

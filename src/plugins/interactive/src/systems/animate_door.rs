@@ -1,9 +1,9 @@
 use crate::components::door::Door;
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::traits::{
-	accessors::get::{TryGetContext, TryGetContextMut},
+	accessors::get::{ContextChanged, GetContext, TryGetContextMut},
 	handles_animations::{ActiveAnimationsMut, AnimationKey, AnimationPriority, Animations},
-	handles_physics::{IsInteracting, IterInteractions},
+	handles_physics::{Interactions, IterInteractions},
 };
 use zyheeda_core::collections::ordered::OrderedSet;
 
@@ -13,12 +13,15 @@ impl Door {
 		interactions: StaticSystemParam<TInteractions>,
 		mut animations: StaticSystemParam<TAnimations>,
 	) where
-		TInteractions: for<'c> TryGetContext<IsInteracting, TContext<'c>: IterInteractions>,
+		TInteractions: for<'c> GetContext<Interactions, TContext<'c>: IterInteractions>,
 		TAnimations: for<'c> TryGetContextMut<Animations, TContext<'c>: ActiveAnimationsMut>,
 	{
 		for entity in doors {
-			let key = IsInteracting { entity };
-			let interactions = TInteractions::try_get_context(&interactions, key);
+			let key = Interactions { entity };
+			let interactions = TInteractions::get_context(&interactions, key);
+			if !interactions.context_changed() {
+				continue;
+			}
 
 			let key = Animations { entity };
 			let Some(mut animations) = TAnimations::try_get_context_mut(&mut animations, key)
@@ -26,18 +29,14 @@ impl Door {
 				continue;
 			};
 
-			let animation = match interactions {
-				Some(interactions) if !empty(&interactions) => AnimationKey::Open,
-				_ => AnimationKey::Close,
+			let animation = match interactions.iter_interactions().len() {
+				0 => AnimationKey::Close,
+				_ => AnimationKey::Open,
 			};
 
 			*animations.active_animations_mut(OpenClose) = OrderedSet::from([animation]);
 		}
 	}
-}
-
-fn empty(interactions: &impl IterInteractions) -> bool {
-	interactions.iter_interactions().next().is_none()
 }
 
 struct OpenClose;
@@ -55,16 +54,16 @@ mod tests {
 		handles_animations::{ActiveAnimations, AnimationKey, AnimationPriority},
 		handles_map_generation::DoorType,
 	};
-	use std::{collections::HashMap, iter::Copied};
+	use std::{collections::HashMap, iter::Copied, ops::DerefMut, slice::Iter};
 	use testing::{IsChanged, SingleThreadedApp, fake_entity};
 	use zyheeda_core::collections::ordered::OrderedSet;
 
-	#[derive(Component, Default)]
+	#[derive(Resource, Default)]
 	struct _Interaction(Vec<Entity>);
 
 	impl IterInteractions for _Interaction {
 		type TIter<'a>
-			= Copied<std::slice::Iter<'a, Entity>>
+			= Copied<Iter<'a, Entity>>
 		where
 			Self: 'a;
 
@@ -96,13 +95,14 @@ mod tests {
 		}
 	}
 
-	fn setup() -> App {
+	fn setup(interactions: _Interaction) -> App {
 		let mut app = App::new().single_threaded(Update);
 
+		app.insert_resource(interactions);
 		app.add_systems(
 			Update,
 			(
-				Door::animate::<Query<Ref<_Interaction>>, Query<&mut _Animations>>,
+				Door::animate::<Res<_Interaction>, Query<&mut _Animations>>,
 				IsChanged::<_Animations>::detect,
 			)
 				.chain(),
@@ -113,12 +113,11 @@ mod tests {
 
 	#[test]
 	fn play_only_open_when_interacting() {
-		let mut app = setup();
+		let mut app = setup(_Interaction(vec![fake_entity!(42)]));
 		let entity = app
 			.world_mut()
 			.spawn((
 				Door(DoorType::SlideDoor),
-				_Interaction(vec![fake_entity!(42)]),
 				_Animations(HashMap::from([(
 					AnimationPriority::High,
 					OrderedSet::from([AnimationKey::Close, AnimationKey::Idle]),
@@ -138,38 +137,12 @@ mod tests {
 	}
 
 	#[test]
-	fn play_only_close_when_not_interacting() {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				Door(DoorType::SlideDoor),
-				_Animations(HashMap::from([(
-					AnimationPriority::High,
-					OrderedSet::from([AnimationKey::Open, AnimationKey::Idle]),
-				)])),
-			))
-			.id();
-
-		app.update();
-
-		assert_eq!(
-			Some(&_Animations(HashMap::from([(
-				AnimationPriority::High,
-				OrderedSet::from([AnimationKey::Close])
-			)]))),
-			app.world().entity(entity).get::<_Animations>(),
-		);
-	}
-
-	#[test]
 	fn play_only_close_when_interactions_empty() {
-		let mut app = setup();
+		let mut app = setup(_Interaction::default());
 		let entity = app
 			.world_mut()
 			.spawn((
 				Door(DoorType::SlideDoor),
-				_Interaction::default(),
 				_Animations(HashMap::from([(
 					AnimationPriority::High,
 					OrderedSet::from([AnimationKey::Open, AnimationKey::Idle]),
@@ -190,16 +163,57 @@ mod tests {
 
 	#[test]
 	fn do_nothing_when_door_missing() {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((_Interaction(vec![fake_entity!(42)]), _Animations::default()))
-			.id();
+		let mut app = setup(_Interaction(vec![fake_entity!(42)]));
+		let entity = app.world_mut().spawn(_Animations::default()).id();
 
 		app.update();
 
 		assert_eq!(
 			Some(&_Animations::default()),
+			app.world().entity(entity).get::<_Animations>(),
+		);
+	}
+
+	#[test]
+	fn act_only_once() {
+		let mut app = setup(_Interaction(vec![fake_entity!(42)]));
+		let entity = app
+			.world_mut()
+			.spawn((Door(DoorType::SlideDoor), _Animations::default()))
+			.id();
+
+		app.update();
+		app.world_mut()
+			.entity_mut(entity)
+			.insert(_Animations::default());
+		app.update();
+
+		assert_eq!(
+			Some(&_Animations::default()),
+			app.world().entity(entity).get::<_Animations>(),
+		);
+	}
+
+	#[test]
+	fn act_again_if_interactions_changed() {
+		let mut app = setup(_Interaction(vec![fake_entity!(42)]));
+		let entity = app
+			.world_mut()
+			.spawn((Door(DoorType::SlideDoor), _Animations::default()))
+			.id();
+
+		app.update();
+		app.world_mut()
+			.entity_mut(entity)
+			.insert(_Animations::default());
+		app.world_mut().resource_mut::<_Interaction>().deref_mut();
+		app.update();
+
+		assert_eq!(
+			Some(&_Animations(HashMap::from([(
+				AnimationPriority::High,
+				OrderedSet::from([AnimationKey::Open]),
+			)]))),
 			app.world().entity(entity).get::<_Animations>(),
 		);
 	}
