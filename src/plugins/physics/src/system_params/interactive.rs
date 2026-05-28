@@ -2,7 +2,7 @@ mod iter_interactions;
 
 use crate::{
 	components::collision_domains::Interactive,
-	resources::ongoing_interactions::OngoingInteractions,
+	resources::root_collisions::RootCollisions,
 };
 use bevy::{
 	ecs::system::{SystemParam, SystemParamItem},
@@ -12,14 +12,12 @@ use common::traits::{
 	accessors::get::{ContextChanged, GetContext},
 	handles_physics::Interactions,
 };
-use std::{collections::HashSet, sync::LazyLock};
+use std::collections::HashSet;
 
 #[derive(SystemParam, Debug)]
 pub struct InteractiveParam<'w> {
-	child_colliders: Res<'w, OngoingInteractions<Interactive>>,
+	root_interactions: Res<'w, RootCollisions<Interactive>>,
 }
-
-static EMPTY: LazyLock<HashSet<Entity>> = LazyLock::new(HashSet::default);
 
 impl GetContext<Interactions> for InteractiveParam<'static> {
 	type TContext<'ctx> = InteractiveContext<'ctx>;
@@ -29,21 +27,19 @@ impl GetContext<Interactions> for InteractiveParam<'static> {
 		Interactions { entity }: Interactions,
 	) -> Self::TContext<'ctx> {
 		InteractiveContext {
-			interactions: param
-				.child_colliders
-				.interactions
-				.get(&entity)
-				.unwrap_or(&*EMPTY),
+			changed: param.root_interactions.changed(&entity),
+			interactions: param.root_interactions.ongoing(&entity),
 		}
 	}
 }
 
 pub struct InteractiveContext<'ctx> {
+	changed: bool,
 	interactions: &'ctx HashSet<Entity>,
 }
 
 impl ContextChanged for InteractiveContext<'_> {
 	fn context_changed(&self) -> bool {
-		true
+		self.changed
 	}
 }

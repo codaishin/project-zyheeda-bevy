@@ -4,7 +4,7 @@ use crate::{
 		ongoing_effects::OngoingEffects,
 		persistent_root::PersistentRoot,
 	},
-	resources::ongoing_interactions::OngoingInteractions,
+	resources::root_collisions::RootCollisions,
 	traits::act_on::ActOn,
 };
 use bevy::{ecs::component::Mutable, prelude::*};
@@ -13,7 +13,7 @@ use common::{
 	traits::accessors::get::Get,
 	zyheeda_commands::ZyheedaCommands,
 };
-use std::{collections::HashSet, sync::LazyLock, time::Duration};
+use std::time::Duration;
 
 type Components<'a, TActor, TTarget> = (
 	Entity,
@@ -28,7 +28,7 @@ pub(crate) trait ActOnSystem: Component<Mutability = Mutable> + Sized {
 	fn act_on<TTarget>(
 		In(delta): In<Duration>,
 		commands: ZyheedaCommands,
-		ongoing_interactions: Res<OngoingInteractions<Physical>>,
+		ongoing_interactions: Res<RootCollisions<Physical>>,
 		mut actors: Query<Components<Self, TTarget>>,
 		mut targets: Query<(&PersistentEntity, &mut TTarget)>,
 	) where
@@ -36,10 +36,7 @@ pub(crate) trait ActOnSystem: Component<Mutability = Mutable> + Sized {
 		TTarget: Component<Mutability = Mutable>,
 	{
 		for (entity, PersistentRoot(root), mut actor, mut ongoing_effects) in &mut actors {
-			let interaction_targets = ongoing_interactions
-				.interactions
-				.get(&entity)
-				.unwrap_or_else(empty);
+			let interaction_targets = ongoing_interactions.ongoing(&entity);
 
 			ongoing_effects.entities.retain(|persistent_target| {
 				match commands.get(persistent_target) {
@@ -60,11 +57,6 @@ pub(crate) trait ActOnSystem: Component<Mutability = Mutable> + Sized {
 			}
 		}
 	}
-}
-
-fn empty<'a>() -> &'a HashSet<Entity> {
-	static EMPTY: LazyLock<HashSet<Entity>> = LazyLock::new(HashSet::default);
-	&EMPTY
 }
 
 #[cfg(test)]
@@ -120,7 +112,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.add_plugins(CommonPlugin::with_asset_loading(false));
-		app.init_resource::<OngoingInteractions<Physical>>();
+		app.init_resource::<RootCollisions<Physical>>();
 		app.register_persistent_entities();
 
 		app
@@ -134,7 +126,7 @@ mod tests {
 			.world_mut()
 			.spawn(OngoingEffects::<_Actor, _Target>::default())
 			.id();
-		app.insert_resource(OngoingInteractions::<Physical>::from([(
+		app.insert_resource(RootCollisions::<Physical>::from([(
 			entity,
 			HashSet::from([target]),
 		)]));
@@ -161,7 +153,7 @@ mod tests {
 			.world_mut()
 			.spawn(OngoingEffects::<_Actor, _Target>::default())
 			.id();
-		app.insert_resource(OngoingInteractions::<Physical>::from([(
+		app.insert_resource(RootCollisions::<Physical>::from([(
 			entity,
 			HashSet::from([target]),
 		)]));
@@ -192,7 +184,7 @@ mod tests {
 			.world_mut()
 			.spawn(OngoingEffects::<_Actor, _Target>::from([*TARGET]))
 			.id();
-		app.insert_resource(OngoingInteractions::<Physical>::from([(
+		app.insert_resource(RootCollisions::<Physical>::from([(
 			entity,
 			HashSet::from([target]),
 		)]));
@@ -234,7 +226,7 @@ mod tests {
 				))
 				.id();
 			app.world_mut().spawn(not_interacting);
-			app.insert_resource(OngoingInteractions::<Physical>::from([(
+			app.insert_resource(RootCollisions::<Physical>::from([(
 				entity,
 				HashSet::from(interacting_entities),
 			)]));
@@ -300,7 +292,7 @@ mod tests {
 					}),
 				))
 				.id();
-			app.insert_resource(OngoingInteractions::<Physical>::from([(
+			app.insert_resource(RootCollisions::<Physical>::from([(
 				entity,
 				HashSet::from(interacting_entities),
 			)]));

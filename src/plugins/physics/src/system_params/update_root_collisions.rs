@@ -1,20 +1,20 @@
 use crate::{
 	components::collider::ChildColliderOf,
-	resources::ongoing_interactions::OngoingInteractions,
+	resources::root_collisions::RootCollisions,
 	traits::send_collision_interaction::PushInteractingColliders,
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
 
 #[derive(SystemParam)]
-pub(crate) struct UpdateOngoingInteractions<'w, 's, T>
+pub(crate) struct UpdateRootCollisions<'w, 's, T>
 where
 	T: Component,
 {
-	interactions: ResMut<'w, OngoingInteractions<T>>,
+	interactions: ResMut<'w, RootCollisions<T>>,
 	markers: Query<'w, 's, Option<&'static ChildColliderOf>, With<T>>,
 }
 
-impl<T> UpdateOngoingInteractions<'_, '_, T>
+impl<T> UpdateRootCollisions<'_, '_, T>
 where
 	T: Component,
 {
@@ -27,7 +27,7 @@ where
 	}
 }
 
-impl<T> PushInteractingColliders for UpdateOngoingInteractions<'_, '_, T>
+impl<T> PushInteractingColliders for UpdateRootCollisions<'_, '_, T>
 where
 	T: Component,
 {
@@ -38,9 +38,8 @@ where
 		let Some(target) = self.get_root(target) else {
 			return;
 		};
-		let targets = self.interactions.interactions.entry(actor).or_default();
 
-		targets.insert(target);
+		self.interactions.update(actor, [target]);
 	}
 }
 
@@ -58,7 +57,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.init_resource::<OngoingInteractions<_Marker>>();
+		app.init_resource::<RootCollisions<_Marker>>();
 
 		app
 	}
@@ -69,15 +68,14 @@ mod tests {
 		let a = app.world_mut().spawn(_Marker).id();
 		let b = app.world_mut().spawn(_Marker).id();
 
-		app.world_mut().run_system_once(
-			move |mut sender: UpdateOngoingInteractions<_Marker>| {
+		app.world_mut()
+			.run_system_once(move |mut sender: UpdateRootCollisions<_Marker>| {
 				sender.push_interacting_colliders(a, b);
-			},
-		)?;
+			})?;
 
 		assert_eq!(
-			&OngoingInteractions::from([(a, HashSet::from([b]))]),
-			app.world().resource::<OngoingInteractions<_Marker>>()
+			&RootCollisions::from([(a, HashSet::from([b]))]),
+			app.world().resource::<RootCollisions<_Marker>>()
 		);
 		Ok(())
 	}
@@ -93,15 +91,14 @@ mod tests {
 		let a = app.world_mut().spawn(bundle_a).id();
 		let b = app.world_mut().spawn(bundle_b).id();
 
-		app.world_mut().run_system_once(
-			move |mut sender: UpdateOngoingInteractions<_Marker>| {
+		app.world_mut()
+			.run_system_once(move |mut sender: UpdateRootCollisions<_Marker>| {
 				sender.push_interacting_colliders(a, b);
-			},
-		)?;
+			})?;
 
 		assert_eq!(
-			&OngoingInteractions::from([]),
-			app.world().resource::<OngoingInteractions<_Marker>>()
+			&RootCollisions::from([]),
+			app.world().resource::<RootCollisions<_Marker>>()
 		);
 		Ok(())
 	}
@@ -122,15 +119,14 @@ mod tests {
 				.id(),
 		];
 
-		app.world_mut().run_system_once(
-			move |mut sender: UpdateOngoingInteractions<_Marker>| {
+		app.world_mut()
+			.run_system_once(move |mut sender: UpdateRootCollisions<_Marker>| {
 				sender.push_interacting_colliders(colliders[0], colliders[1]);
-			},
-		)?;
+			})?;
 
 		assert_eq!(
-			&OngoingInteractions::from([(roots[0], HashSet::from([roots[1]]))]),
-			app.world().resource::<OngoingInteractions<_Marker>>()
+			&RootCollisions::from([(roots[0], HashSet::from([roots[1]]))]),
+			app.world().resource::<RootCollisions<_Marker>>()
 		);
 		Ok(())
 	}
@@ -143,19 +139,15 @@ mod tests {
 		let c = app.world_mut().spawn(_Marker).id();
 
 		app.world_mut()
-			.insert_resource(OngoingInteractions::<_Marker>::from([(
-				a,
-				HashSet::from([b]),
-			)]));
-		app.world_mut().run_system_once(
-			move |mut sender: UpdateOngoingInteractions<_Marker>| {
+			.insert_resource(RootCollisions::<_Marker>::from([(a, HashSet::from([b]))]));
+		app.world_mut()
+			.run_system_once(move |mut sender: UpdateRootCollisions<_Marker>| {
 				sender.push_interacting_colliders(a, c);
-			},
-		)?;
+			})?;
 
 		assert_eq!(
-			&OngoingInteractions::from([(a, HashSet::from([b, c]))]),
-			app.world().resource::<OngoingInteractions<_Marker>>()
+			&RootCollisions::from([(a, HashSet::from([b, c]))]),
+			app.world().resource::<RootCollisions<_Marker>>()
 		);
 		Ok(())
 	}

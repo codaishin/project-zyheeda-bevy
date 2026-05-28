@@ -6,7 +6,7 @@ use crate::{
 		collision_domains::Physical,
 		prevent_tunneling::PreventTunneling,
 	},
-	system_params::update_ongoing_interactions::UpdateOngoingInteractions,
+	system_params::update_root_collisions::UpdateRootCollisions,
 	traits::{
 		ray_cast::{CastRayContinuouslySorted, GetContinuousSortedRayCaster, InvalidIntersections},
 		send_collision_interaction::PushInteractingColliders,
@@ -23,7 +23,7 @@ use common::{
 };
 use std::time::Duration;
 
-impl UpdateOngoingInteractions<'_, '_, Physical> {
+impl UpdateRootCollisions<'_, '_, Physical> {
 	pub(crate) fn prevent_tunneling(
 		delta: In<Duration>,
 		cast_ray: StaticSystemParam<ReadRapierContext>,

@@ -19,10 +19,10 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::{collider::ChildColliderOf, collision_domains::Interactive},
-		resources::ongoing_interactions::OngoingInteractions,
+		resources::root_collisions::RootCollisions,
 		system_params::{
 			interactive::InteractiveParam,
-			update_ongoing_interactions::UpdateOngoingInteractions,
+			update_root_collisions::UpdateRootCollisions,
 		},
 		systems::interactions::push_ongoing_collisions::PushOngoingCollisions,
 		tests::TestCollisionsPlugin,
@@ -36,12 +36,12 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.add_plugins(TestCollisionsPlugin);
-		app.init_resource::<OngoingInteractions<Interactive>>();
+		app.init_resource::<RootCollisions<Interactive>>();
 		app.add_systems(
 			Update,
 			(
-				OngoingInteractions::<Interactive>::clear,
-				UpdateOngoingInteractions::<Interactive>::push_ongoing_collisions,
+				RootCollisions::<Interactive>::clear,
+				UpdateRootCollisions::<Interactive>::push_ongoing_collisions,
 			)
 				.chain(),
 		);
