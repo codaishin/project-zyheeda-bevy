@@ -11,7 +11,7 @@ use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
-use crate::components::door::Door;
+use crate::components::{container::Container, door::Door};
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[component(immutable)]
@@ -32,7 +32,8 @@ impl Interactive {
 		));
 
 		match interactive_type {
-			InteractiveType::Door(door_type) => entity.try_insert(Door(door_type)),
+			InteractiveType::Door => entity.try_insert(Door),
+			InteractiveType::Container => entity.try_insert(Container),
 		};
 	}
 
