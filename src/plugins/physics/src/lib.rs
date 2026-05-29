@@ -289,5 +289,5 @@ impl<TDependencies> HandlesPhysicalSkillComponents for PhysicsPlugin<TDependenci
 }
 
 impl<TDependencies> HandlesInteractiveDetection for PhysicsPlugin<TDependencies> {
-	type TInteractive = InteractiveParam<'static>;
+	type TInteractions = InteractiveParam<'static>;
 }

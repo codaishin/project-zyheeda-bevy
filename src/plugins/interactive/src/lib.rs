@@ -16,6 +16,7 @@ use bevy::prelude::*;
 use common::{
 	states::game_state::LoadingEssentialAssets,
 	systems::{log::OnError, register_animations::RegisterAnimationsSystem},
+	tools::plugin_system_set::PluginSystemSet,
 	traits::{
 		after_plugin::AfterPlugin,
 		handles_animations::HandlesAnimations,
@@ -67,14 +68,26 @@ where
 			.add_systems(
 				Update,
 				(
+					Interactive::reset_when_no_interactions::<TPhysics::TInteractions>,
 					ApplyDoorFrame::apply::<TPhysics::TConfigMut>,
 					ApplyDoorAnimations::register_animations_system::<TAnimations::TAnimationsMut>
 						.pipe(OnError::log),
 				)
 					.chain()
+					.in_set(InteractiveSystems)
 					.after_plugin(TPhysics::SYSTEMS),
 			);
 	}
+}
+
+#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub struct InteractiveSystems;
+
+impl<TDependencies> SystemSetDefinition for InteractivePlugin<TDependencies> {
+	type TSystemSet = InteractiveSystems;
+
+	const SYSTEMS: PluginSystemSet<Self::TSystemSet> =
+		PluginSystemSet::from_set(InteractiveSystems);
 }
 
 impl<TDependencies> HandlesInteractive for InteractivePlugin<TDependencies> {
