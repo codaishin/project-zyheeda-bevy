@@ -5,3 +5,4 @@ pub(crate) mod begin_attack;
 pub(crate) mod chase_decision;
 pub(crate) mod chase_player;
 pub(crate) mod hold_attack;
+pub(crate) mod open_doors;

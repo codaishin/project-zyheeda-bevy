@@ -1,5 +1,6 @@
 mod assets;
 mod components;
+mod observers;
 mod system_params;
 mod systems;
 
@@ -9,12 +10,13 @@ use crate::{
 		door::{ApplyDoorAnimations, ApplyDoorFrame, Door},
 		interactive::Interactive,
 	},
-	system_params::interactive_param::InteractiveParam,
+	system_params::interactive_param::{InteractiveParam, InteractiveParamMut},
 };
 use bevy::prelude::*;
 use common::{
 	states::game_state::LoadingEssentialAssets,
 	systems::{log::OnError, register_animations::RegisterAnimationsSystem},
+	tools::plugin_system_set::PluginSystemSet,
 	traits::{
 		after_plugin::AfterPlugin,
 		handles_animations::HandlesAnimations,
@@ -57,6 +59,8 @@ where
 
 		app.init_asset::<DoorMeta>()
 			.add_prefab_observer::<Door, ()>()
+			.add_observer(Door::animate_open::<TAnimations::TAnimationsMut>)
+			.add_observer(Door::animate_close::<TAnimations::TAnimationsMut>)
 			.add_systems(
 				Startup,
 				Interactive::configure_map_prefab::<TMaps::TMapPrefabs>.pipe(OnError::log),
@@ -64,17 +68,29 @@ where
 			.add_systems(
 				Update,
 				(
+					Interactive::reset_when_no_interactions::<TPhysics::TInteractions>,
 					ApplyDoorFrame::apply::<TPhysics::TConfigMut>,
 					ApplyDoorAnimations::register_animations_system::<TAnimations::TAnimationsMut>
 						.pipe(OnError::log),
-					Door::animate::<TPhysics::TInteractive, TAnimations::TAnimationsMut>,
 				)
 					.chain()
+					.in_set(InteractiveSystems)
 					.after_plugin(TPhysics::SYSTEMS),
 			);
 	}
 }
 
+#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub struct InteractiveSystems;
+
+impl<TDependencies> SystemSetDefinition for InteractivePlugin<TDependencies> {
+	type TSystemSet = InteractiveSystems;
+
+	const SYSTEMS: PluginSystemSet<Self::TSystemSet> =
+		PluginSystemSet::from_set(InteractiveSystems);
+}
+
 impl<TDependencies> HandlesInteractive for InteractivePlugin<TDependencies> {
 	type TInteractive = InteractiveParam<'static, 'static>;
+	type TInteractiveMut = InteractiveParamMut<'static, 'static>;
 }

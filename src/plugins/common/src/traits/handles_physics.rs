@@ -109,7 +109,7 @@ impl TranslationOffsets {
 }
 
 pub trait HandlesInteractiveDetection {
-	type TInteractive: SystemParam
+	type TInteractions: SystemParam
 		+ for<'c> GetContext<Interactions, TContext<'c>: IterInteractions>;
 }
 

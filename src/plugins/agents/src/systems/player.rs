@@ -1,4 +1,5 @@
 pub(crate) mod animate_movement;
 pub(crate) mod movement;
+pub(crate) mod toggle_interactive;
 pub(crate) mod toggle_speed;
 pub(crate) mod use_skills;
