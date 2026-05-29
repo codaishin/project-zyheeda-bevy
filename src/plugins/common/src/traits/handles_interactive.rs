@@ -18,7 +18,7 @@ pub trait InspectInteractive: View<InteractiveType> + View<InteractiveState> {}
 
 impl<T> InspectInteractive for T where T: View<InteractiveType> + View<InteractiveState> {}
 
-pub trait SetInteractiveState: View<InteractiveState> {
+pub trait SetInteractiveState: InspectInteractive {
 	fn set_interactive_state(&mut self, interactive_state: InteractiveState);
 }
 

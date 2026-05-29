@@ -59,6 +59,7 @@ mod tests {
 			accessors::get::View,
 			handles_input::InputState,
 			handles_interactive::InteractiveState,
+			handles_map_generation::InteractiveType,
 		},
 	};
 	use macros::NestedMocks;
@@ -104,6 +105,12 @@ mod tests {
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Interactive(InteractiveState);
+
+	impl View<InteractiveType> for _Interactive {
+		fn view(&self) -> InteractiveType {
+			panic!("SHOULD NOT BE USED")
+		}
+	}
 
 	impl View<InteractiveState> for _Interactive {
 		fn view(&self) -> InteractiveState {

@@ -65,7 +65,7 @@ where
 		+ HandlesRaycast
 		+ HandlesPhysicalSkillAgent
 		+ HandlesInteractiveDetection,
-	TInteractive: ThreadSafe + HandlesInteractive,
+	TInteractive: ThreadSafe + SystemSetDefinition + HandlesInteractive,
 	TAnimations: ThreadSafe + HandlesAnimations,
 	TMaps: ThreadSafe + HandlesMapGeneration,
 	TMovement: ThreadSafe + HandlesMovement + HandlesOrientation,
@@ -109,7 +109,7 @@ where
 		+ HandlesRaycast
 		+ HandlesPhysicalSkillAgent
 		+ HandlesInteractiveDetection,
-	TInteractive: ThreadSafe + HandlesInteractive,
+	TInteractive: ThreadSafe + SystemSetDefinition + HandlesInteractive,
 	TAnimations: ThreadSafe + HandlesAnimations,
 	TMaps: ThreadSafe + HandlesMapGeneration,
 	TMovement: ThreadSafe + HandlesMovement + HandlesOrientation,
@@ -178,6 +178,7 @@ where
 					Enemy::chase_player::<TMovement::TMovementMut>,
 					Enemy::animate_movement::<TMovement::TMovement, TAnimations::TAnimationsMut>,
 					ring_rotation,
+					Enemy::open_doors::<TPhysics::TInteractions, TInteractive::TInteractiveMut>,
 					Enemy::begin_attack,
 					Enemy::hold_attack::<TPhysics::TAgentMut, TLoadout::TLoadoutActivityMut>,
 					Update::delta.pipe(Enemy::advance_attack_phase),
@@ -192,7 +193,8 @@ where
 				.chain()
 				.run_if(in_state(GameState::Play))
 				.after_plugin(TInput::SYSTEMS)
-				.after_plugin(TMovement::SYSTEMS),
+				.after_plugin(TMovement::SYSTEMS)
+				.after_plugin(TInteractive::SYSTEMS),
 		);
 	}
 }

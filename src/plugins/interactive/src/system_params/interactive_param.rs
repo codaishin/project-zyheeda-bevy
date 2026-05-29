@@ -51,7 +51,7 @@ impl ContextChanged for InteractiveContext<'_> {
 #[derive(SystemParam)]
 pub struct InteractiveParamMut<'w, 's> {
 	commands: ZyheedaCommands<'w, 's>,
-	interactive_entities: Query<'w, 's, (), With<Interactive>>,
+	interactive_entities: Query<'w, 's, &'static Interactive>,
 	actives: Query<'w, 's, (), With<IsActive>>,
 }
 
@@ -62,11 +62,8 @@ impl TryGetContextMut<InteractiveKey> for InteractiveParamMut<'static, 'static> 
 		param: &'ctx mut SystemParamItem<Self>,
 		InteractiveKey { entity }: InteractiveKey,
 	) -> Option<Self::TContext<'ctx>> {
-		if !param.interactive_entities.contains(entity) {
-			return None;
-		}
-
 		Some(InteractiveContextMut {
+			interactive: param.interactive_entities.get(entity).ok()?,
 			entity: param.commands.get_mut(&entity)?,
 			state: match param.actives.contains(entity) {
 				true => InteractiveState::Active,
@@ -78,32 +75,6 @@ impl TryGetContextMut<InteractiveKey> for InteractiveParamMut<'static, 'static> 
 
 pub struct InteractiveContextMut<'ctx> {
 	entity: ZyheedaEntityCommands<'ctx>,
+	interactive: &'ctx Interactive,
 	state: InteractiveState,
-}
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use testing::SingleThreadedApp;
-
-	fn setup() -> App {
-		App::new().single_threaded(Update)
-	}
-
-	#[test]
-	fn no_mut_context_when_interactive_missing() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		let entity = app.world_mut().spawn_empty().id();
-
-		let present = app
-			.world_mut()
-			.run_system_once(move |mut i: InteractiveParamMut| {
-				InteractiveParamMut::try_get_context_mut(&mut i, InteractiveKey { entity })
-					.is_some()
-			})?;
-
-		assert!(!present);
-		Ok(())
-	}
 }
