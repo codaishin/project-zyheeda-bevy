@@ -15,6 +15,7 @@ use common::{
 	tools::action_key::{
 		ActionKey,
 		camera_key::CameraKey,
+		miscellaneous::Miscellaneous,
 		movement::MovementKey,
 		save_key::SaveKey,
 		slot::HandSlot,
@@ -159,6 +160,7 @@ impl InsertUiContent for SettingsScreen {
 				Self::add_title(parent, localize, "key-bindings");
 				self.add_section::<HandSlot>(parent, localize, "key-bindings-slots");
 				self.add_section::<TerrainTargeting>(parent, localize, "key-bindings-targeting");
+				self.add_section::<Miscellaneous>(parent, localize, "key-bindings-miscellaneous");
 				self.add_section::<MovementKey>(parent, localize, "key-bindings-movement");
 				self.add_section::<MenuState>(parent, localize, "key-bindings-menus");
 				self.add_section::<CameraKey>(parent, localize, "key-bindings-camera");

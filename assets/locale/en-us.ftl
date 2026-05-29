@@ -33,11 +33,14 @@ key-bindings-menus = Miscellaneous
 key-bindings-camera = Camera
 key-bindings-savegame = Save Game
 key-bindings-targeting = Targeting
+key-bindings-miscellaneous = Miscellaneous
 
 slot-key-hand-left = Left Hand
 slot-key-hand-right = Right Hand
 
 terrain-targeting = Terrain Targeting
+
+interact = Interact
 
 movement-key-forward = Move forward
 movement-key-backward = Move backward
