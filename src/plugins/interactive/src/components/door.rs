@@ -4,17 +4,14 @@ use common::{
 	components::model::{Model, SceneId, UseGltfLookup},
 	errors::Unreachable,
 	systems::register_animations::AnimationsMarker,
-	traits::{
-		handles_map_generation::DoorType,
-		prefab::{Prefab, PrefabEntityCommands},
-	},
+	traits::prefab::{Prefab, PrefabEntityCommands},
 };
 use macros::asset_path;
 
 #[derive(Component, Debug, PartialEq)]
 #[component(immutable)]
 #[require(DoorMetaHandle, Transform, ApplyDoorAnimations, ApplyDoorFrame)]
-pub(crate) struct Door(pub(crate) DoorType);
+pub(crate) struct Door;
 
 impl Prefab<()> for Door {
 	type TError = Unreachable;
@@ -25,19 +22,15 @@ impl Prefab<()> for Door {
 		entity: &mut impl PrefabEntityCommands,
 		assets: StaticSystemParam<Res<AssetServer>>,
 	) -> Result<(), Self::TError> {
-		let bundle = match self.0 {
-			DoorType::SlideDoor => (
-				Name::from("SlideDoor"),
-				Model::scene((
-					asset_path!("maps/assets/slide_door/model.glb"),
-					SceneId(0),
-					UseGltfLookup(true),
-				)),
-				DoorMetaHandle(assets.load(asset_path!("maps/assets/slide_door/meta.door"))),
-			),
-		};
-
-		entity.try_insert(bundle);
+		entity.try_insert((
+			Name::from("SlideDoor"),
+			Model::scene((
+				asset_path!("maps/assets/slide_door/model.glb"),
+				SceneId(0),
+				UseGltfLookup(true),
+			)),
+			DoorMetaHandle(assets.load(asset_path!("maps/assets/slide_door/meta.door"))),
+		));
 
 		Ok(())
 	}

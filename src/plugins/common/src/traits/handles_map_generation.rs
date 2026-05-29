@@ -156,14 +156,10 @@ impl PrefabType for AgentType {
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum InteractiveType {
-	Door(DoorType),
+	Door,
+	Container,
 }
 
 impl PrefabType for InteractiveType {
 	type TTranslation = Vec3;
-}
-
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
-pub enum DoorType {
-	SlideDoor,
 }

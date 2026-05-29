@@ -50,10 +50,7 @@ impl From<OpenClose> for AnimationPriority {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::{
-		handles_animations::{ActiveAnimations, AnimationKey, AnimationPriority},
-		handles_map_generation::DoorType,
-	};
+	use common::traits::handles_animations::{ActiveAnimations, AnimationKey, AnimationPriority};
 	use std::{collections::HashMap, iter::Copied, ops::DerefMut, slice::Iter};
 	use testing::{IsChanged, SingleThreadedApp, fake_entity};
 	use zyheeda_core::collections::ordered::OrderedSet;
@@ -117,7 +114,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Door(DoorType::SlideDoor),
+				Door,
 				_Animations(HashMap::from([(
 					AnimationPriority::High,
 					OrderedSet::from([AnimationKey::Close, AnimationKey::Idle]),
@@ -142,7 +139,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Door(DoorType::SlideDoor),
+				Door,
 				_Animations(HashMap::from([(
 					AnimationPriority::High,
 					OrderedSet::from([AnimationKey::Open, AnimationKey::Idle]),
@@ -177,10 +174,7 @@ mod tests {
 	#[test]
 	fn act_only_once() {
 		let mut app = setup(_Interaction(vec![fake_entity!(42)]));
-		let entity = app
-			.world_mut()
-			.spawn((Door(DoorType::SlideDoor), _Animations::default()))
-			.id();
+		let entity = app.world_mut().spawn((Door, _Animations::default())).id();
 
 		app.update();
 		app.world_mut()
@@ -197,10 +191,7 @@ mod tests {
 	#[test]
 	fn act_again_if_interactions_changed() {
 		let mut app = setup(_Interaction(vec![fake_entity!(42)]));
-		let entity = app
-			.world_mut()
-			.spawn((Door(DoorType::SlideDoor), _Animations::default()))
-			.id();
+		let entity = app.world_mut().spawn((Door, _Animations::default())).id();
 
 		app.update();
 		app.world_mut()

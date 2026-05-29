@@ -33,7 +33,7 @@ use common::{
 		handles_enemies::EnemyType,
 		handles_lights::HandlesLights,
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInApp},
-		handles_map_generation::{AgentType, DoorType, HandlesMapGeneration, InteractiveType},
+		handles_map_generation::{AgentType, HandlesMapGeneration, InteractiveType},
 		handles_physics::{HandlesPhysicsConfig, HandlesRaycast},
 		handles_saving::HandlesSaving,
 		prefab::AddPrefabObserver,
@@ -65,7 +65,7 @@ where
 	];
 	const INTERACTIVE_SPAWNERS: &[(GetNormalizedName, InteractiveType)] = &[(
 		|| NormalizedName::from("SlideDoorSpawn"),
-		InteractiveType::Door(DoorType::SlideDoor),
+		InteractiveType::Door,
 	)];
 	const MESH_COLLIDER_PREFIX: &str = "Collider";
 	const NAV_MESH_PREFIX: &str = "NavMesh";
