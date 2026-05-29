@@ -1,5 +1,6 @@
 mod assets;
 mod components;
+mod observers;
 mod system_params;
 mod systems;
 
@@ -57,6 +58,8 @@ where
 
 		app.init_asset::<DoorMeta>()
 			.add_prefab_observer::<Door, ()>()
+			.add_observer(Door::animate_open::<TAnimations::TAnimationsMut>)
+			.add_observer(Door::animate_close::<TAnimations::TAnimationsMut>)
 			.add_systems(
 				Startup,
 				Interactive::configure_map_prefab::<TMaps::TMapPrefabs>.pipe(OnError::log),
@@ -67,7 +70,6 @@ where
 					ApplyDoorFrame::apply::<TPhysics::TConfigMut>,
 					ApplyDoorAnimations::register_animations_system::<TAnimations::TAnimationsMut>
 						.pipe(OnError::log),
-					Door::animate::<TPhysics::TInteractive, TAnimations::TAnimationsMut>,
 				)
 					.chain()
 					.after_plugin(TPhysics::SYSTEMS),
