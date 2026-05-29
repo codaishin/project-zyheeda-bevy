@@ -160,6 +160,10 @@ pub enum InteractiveType {
 	Container,
 }
 
+impl ViewField for InteractiveType {
+	type TValue<'a> = Self;
+}
+
 impl PrefabType for InteractiveType {
 	type TTranslation = Vec3;
 }

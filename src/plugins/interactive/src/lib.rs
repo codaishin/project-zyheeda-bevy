@@ -1,5 +1,6 @@
 mod assets;
 mod components;
+mod system_params;
 mod systems;
 
 use crate::{
@@ -8,6 +9,7 @@ use crate::{
 		door::{ApplyDoorAnimations, ApplyDoorFrame, Door},
 		interactive::Interactive,
 	},
+	system_params::interactive_param::InteractiveParam,
 };
 use bevy::prelude::*;
 use common::{
@@ -17,6 +19,7 @@ use common::{
 		after_plugin::AfterPlugin,
 		handles_animations::HandlesAnimations,
 		handles_custom_assets::HandlesCustomFolderAssets,
+		handles_interactive::HandlesInteractive,
 		handles_map_generation::HandlesMapGeneration,
 		handles_physics::{HandlesInteractiveDetection, HandlesPhysicsConfig},
 		prefab::AddPrefabObserver,
@@ -70,4 +73,8 @@ where
 					.after_plugin(TPhysics::SYSTEMS),
 			);
 	}
+}
+
+impl<TDependencies> HandlesInteractive for InteractivePlugin<TDependencies> {
+	type TInteractive = InteractiveParam<'static, 'static>;
 }
