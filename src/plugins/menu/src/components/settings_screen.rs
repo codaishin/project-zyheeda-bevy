@@ -75,10 +75,10 @@ impl SettingsScreen {
 	fn add_section<T>(
 		&self,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
+		keys: impl IntoIterator<Item = T>,
 		localize: &(impl Localize + ThreadSafe),
 		title: impl Into<Token>,
 	) where
-		T: IterFinite,
 		ActionKey: From<T>,
 	{
 		parent
@@ -95,26 +95,30 @@ impl SettingsScreen {
 			))
 			.with_children(|parent| {
 				Self::add_section_title(parent, localize, title);
-				self.add_key_bindings::<T>(parent);
+				self.add_key_bindings(parent, keys);
 			});
 	}
 
-	fn add_key_bindings<T>(&self, parent: &mut RelatedSpawnerCommands<ChildOf>)
-	where
-		T: IterFinite,
+	fn add_key_bindings<T>(
+		&self,
+		parent: &mut RelatedSpawnerCommands<ChildOf>,
+		keys: impl IntoIterator<Item = T>,
+	) where
 		ActionKey: From<T>,
 	{
-		for (action, input) in self.keys::<T>() {
+		for (action, input) in self.keys(keys) {
 			Self::add_key_row(parent, action, input);
 		}
 	}
 
-	fn keys<T>(&self) -> impl Iterator<Item = (ActionKey, UserInput)>
+	fn keys<T>(
+		&self,
+		keys: impl IntoIterator<Item = T>,
+	) -> impl Iterator<Item = (ActionKey, UserInput)>
 	where
-		T: IterFinite,
 		ActionKey: From<T>,
 	{
-		T::iterator()
+		keys.into_iter()
 			.map(ActionKey::from)
 			.filter_map(|key| Some((key, *self.key_bindings.get(&key)?)))
 	}
@@ -158,13 +162,39 @@ impl InsertUiContent for SettingsScreen {
 			})
 			.with_children(|parent| {
 				Self::add_title(parent, localize, "key-bindings");
-				self.add_section::<HandSlot>(parent, localize, "key-bindings-slots");
-				self.add_section::<TerrainTargeting>(parent, localize, "key-bindings-targeting");
-				self.add_section::<Miscellaneous>(parent, localize, "key-bindings-miscellaneous");
-				self.add_section::<MovementKey>(parent, localize, "key-bindings-movement");
-				self.add_section::<MenuState>(parent, localize, "key-bindings-menus");
-				self.add_section::<CameraKey>(parent, localize, "key-bindings-camera");
-				self.add_section::<SaveKey>(parent, localize, "key-bindings-savegame");
+				self.add_section(parent, HandSlot::iterator(), localize, "key-bindings-slots");
+				self.add_section(
+					parent,
+					TerrainTargeting::iterator(),
+					localize,
+					"key-bindings-targeting",
+				);
+				self.add_section(
+					parent,
+					MovementKey::iterator(),
+					localize,
+					"key-bindings-movement",
+				);
+				self.add_section(
+					parent,
+					Miscellaneous::iterator()
+						.map(ActionKey::from)
+						.chain(MenuState::iterator().map(ActionKey::from)),
+					localize,
+					"key-bindings-miscellaneous",
+				);
+				self.add_section(
+					parent,
+					CameraKey::iterator(),
+					localize,
+					"key-bindings-camera",
+				);
+				self.add_section(
+					parent,
+					SaveKey::iterator(),
+					localize,
+					"key-bindings-savegame",
+				);
 			});
 	}
 }

@@ -29,11 +29,10 @@ paused = Paused
 key-bindings = Key Bindings
 key-bindings-slots = Slots
 key-bindings-movement = Movement
-key-bindings-menus = Miscellaneous
+key-bindings-miscellaneous = Miscellaneous
 key-bindings-camera = Camera
 key-bindings-savegame = Save Game
 key-bindings-targeting = Targeting
-key-bindings-miscellaneous = Miscellaneous
 
 slot-key-hand-left = Left Hand
 slot-key-hand-right = Right Hand
