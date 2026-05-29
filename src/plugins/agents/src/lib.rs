@@ -25,11 +25,12 @@ use common::{
 		handles_custom_assets::HandlesCustomFolderAssets,
 		handles_enemies::HandlesEnemies,
 		handles_input::HandlesInput,
+		handles_interactive::HandlesInteractive,
 		handles_loadout::HandlesLoadout,
 		handles_map_generation::HandlesMapGeneration,
 		handles_movement::HandlesMovement,
 		handles_orientation::HandlesOrientation,
-		handles_physics::{HandlesPhysicsConfig, HandlesRaycast},
+		handles_physics::{HandlesInteractiveDetection, HandlesPhysicsConfig, HandlesRaycast},
 		handles_player::{HandlesPlayer, PlayerMainCamera},
 		handles_saving::HandlesSaving,
 		handles_skill_physics::HandlesPhysicalSkillAgent,
@@ -43,12 +44,13 @@ use systems::void_sphere::ring_rotation::ring_rotation;
 
 pub struct AgentsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TMaps, TMovement, TLoadout>
+impl<TLoading, TInput, TSaveGame, TPhysics, TInteractive, TAnimations, TMaps, TMovement, TLoadout>
 	AgentsPlugin<(
 		TLoading,
 		TInput,
 		TSaveGame,
 		TPhysics,
+		TInteractive,
 		TAnimations,
 		TMaps,
 		TMovement,
@@ -58,7 +60,12 @@ where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesPhysicsConfig + HandlesRaycast + HandlesPhysicalSkillAgent,
+	TPhysics: ThreadSafe
+		+ HandlesPhysicsConfig
+		+ HandlesRaycast
+		+ HandlesPhysicalSkillAgent
+		+ HandlesInteractiveDetection,
+	TInteractive: ThreadSafe + HandlesInteractive,
 	TAnimations: ThreadSafe + HandlesAnimations,
 	TMaps: ThreadSafe + HandlesMapGeneration,
 	TMovement: ThreadSafe + HandlesMovement + HandlesOrientation,
@@ -70,6 +77,7 @@ where
 		_: &TInput,
 		_: &TSaveGame,
 		_: &TPhysics,
+		_: &TInteractive,
 		_: &TAnimations,
 		_: &TMaps,
 		_: &TMovement,
@@ -79,12 +87,14 @@ where
 	}
 }
 
-impl<TLoading, TInput, TSaveGame, TPhysics, TAnimations, TMaps, TMovement, TLoadout> Plugin
+impl<TLoading, TInput, TSaveGame, TPhysics, TInteractive, TAnimations, TMaps, TMovement, TLoadout>
+	Plugin
 	for AgentsPlugin<(
 		TLoading,
 		TInput,
 		TSaveGame,
 		TPhysics,
+		TInteractive,
 		TAnimations,
 		TMaps,
 		TMovement,
@@ -94,7 +104,12 @@ where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + HandlesPhysicsConfig + HandlesRaycast + HandlesPhysicalSkillAgent,
+	TPhysics: ThreadSafe
+		+ HandlesPhysicsConfig
+		+ HandlesRaycast
+		+ HandlesPhysicalSkillAgent
+		+ HandlesInteractiveDetection,
+	TInteractive: ThreadSafe + HandlesInteractive,
 	TAnimations: ThreadSafe + HandlesAnimations,
 	TMaps: ThreadSafe + HandlesMapGeneration,
 	TMovement: ThreadSafe + HandlesMovement + HandlesOrientation,
@@ -145,6 +160,11 @@ where
 					Player::movement::<TInput::TInput, TPhysics::TRaycast, TMovement::TMovementMut>,
 					Player::toggle_speed::<TInput::TInput, TMovement::TMovementMut>,
 					Player::animate_movement::<TMovement::TMovement, TAnimations::TAnimationsMut>,
+					Player::toggle_interactive::<
+						TInput::TInput,
+						TPhysics::TInteractions,
+						TInteractive::TInteractiveMut,
+					>,
 					Player::use_skills::<
 						TInput::TInput,
 						TPhysics::TAgentMut,

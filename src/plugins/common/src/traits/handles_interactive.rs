@@ -4,6 +4,7 @@ use crate::traits::{
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
 use macros::EntityKey;
+use std::ops::DerefMut;
 
 pub trait HandlesInteractive {
 	type TInteractive: SystemParam
@@ -19,6 +20,15 @@ impl<T> InspectInteractive for T where T: View<InteractiveType> + View<Interacti
 
 pub trait SetInteractiveState: View<InteractiveState> {
 	fn set_interactive_state(&mut self, interactive_state: InteractiveState);
+}
+
+impl<T> SetInteractiveState for T
+where
+	T: DerefMut<Target: SetInteractiveState>,
+{
+	fn set_interactive_state(&mut self, interactive_state: InteractiveState) {
+		self.deref_mut().set_interactive_state(interactive_state);
+	}
 }
 
 #[derive(EntityKey)]
