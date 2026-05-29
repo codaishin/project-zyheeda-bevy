@@ -10,7 +10,7 @@ use crate::{
 		door::{ApplyDoorAnimations, ApplyDoorFrame, Door},
 		interactive::Interactive,
 	},
-	system_params::interactive_param::InteractiveParam,
+	system_params::interactive_param::{InteractiveParam, InteractiveParamMut},
 };
 use bevy::prelude::*;
 use common::{
@@ -79,4 +79,5 @@ where
 
 impl<TDependencies> HandlesInteractive for InteractivePlugin<TDependencies> {
 	type TInteractive = InteractiveParam<'static, 'static>;
+	type TInteractiveMut = InteractiveParamMut<'static, 'static>;
 }

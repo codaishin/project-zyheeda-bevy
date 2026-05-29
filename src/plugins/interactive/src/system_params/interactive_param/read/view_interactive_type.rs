@@ -19,7 +19,7 @@ mod tests {
 		prelude::*,
 	};
 	use common::traits::{
-		accessors::get::TryGetContext,
+		accessors::get::{TryGetContext, ViewOf},
 		handles_interactive::Interactive as InteractiveKey,
 	};
 	use test_case::test_case;
@@ -31,14 +31,15 @@ mod tests {
 
 	#[test_case(InteractiveType::Door;  "door")]
 	#[test_case(InteractiveType::Container;  "container")]
-	fn get_slide_door(interactive_type: InteractiveType) -> Result<(), RunSystemError> {
+	fn get_door(interactive_type: InteractiveType) -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let entity = app.world_mut().spawn(Interactive { interactive_type }).id();
 
 		let got = app
 			.world_mut()
 			.run_system_once(move |i: InteractiveParam| {
-				InteractiveParam::try_get_context(&i, InteractiveKey { entity }).map(|c| c.view())
+				InteractiveParam::try_get_context(&i, InteractiveKey { entity })
+					.map(|c| c.view_of::<InteractiveType>())
 			})?;
 
 		assert_eq!(Some(interactive_type), got);
