@@ -11,7 +11,7 @@ use std::{
 
 impl<T> WriteBufferSystem for T {}
 
-pub trait WriteBufferSystem {
+pub(crate) trait WriteBufferSystem {
 	fn write_buffer_system(
 		context: Arc<Mutex<Self>>,
 	) -> impl Fn(&mut World) -> Result<(), SerializationOrLockError>
