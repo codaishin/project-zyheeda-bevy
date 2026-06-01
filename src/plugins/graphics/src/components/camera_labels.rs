@@ -1,6 +1,7 @@
-use crate::components::model_render_layers::ModelRenderLayers;
+use crate::{OutlineSettings, components::model_render_layers::ModelRenderLayers};
 use bevy::{
 	camera::visibility::RenderLayers,
+	color::palettes::tailwind::GREEN_600,
 	core_pipeline::tonemapping::Tonemapping,
 	post_process::bloom::Bloom,
 	prelude::*,
@@ -9,14 +10,14 @@ use bevy::{
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
-const FIRST_PASS: usize = 0;
-const SECOND_PASS: usize = 1;
-const OUTLINE_PASS: usize = 2;
+const WORLD_PASS: usize = 0;
+const OUTLINE_PASS: usize = 1;
+const COMPOSITE_PASS: usize = 2;
 const UI_PASS: usize = 3;
 
 #[derive(Component, Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
 #[require(Camera3d)]
-pub struct WorldCamera;
+pub struct SceneCamera;
 
 #[derive(
 	Component,
@@ -31,86 +32,84 @@ pub struct WorldCamera;
 	Serialize,
 	Deserialize,
 )]
-#[savable_component(id = "1st pass camera")]
+#[savable_component(id = "world pass camera")]
 #[require(
-	WorldCamera,
-	Tonemapping = Self,
-	RenderLayers = Self,
-	Hdr,
-	Bloom
-)]
-pub struct FirstPass;
-
-impl From<FirstPass> for Tonemapping {
-	fn from(_: FirstPass) -> Self {
-		Tonemapping::None
-	}
-}
-
-impl From<FirstPass> for RenderLayers {
-	fn from(_: FirstPass) -> Self {
-		Self::layer(FIRST_PASS)
-	}
-}
-
-impl From<FirstPass> for ModelRenderLayers {
-	fn from(_: FirstPass) -> Self {
-		ModelRenderLayers::from(FIRST_PASS)
-	}
-}
-
-#[derive(
-	Component,
-	SavableComponent,
-	Debug,
-	PartialEq,
-	Eq,
-	Hash,
-	Default,
-	Clone,
-	Copy,
-	Serialize,
-	Deserialize,
-)]
-#[savable_component(id = "2nd pass camera")]
-#[require(
-	WorldCamera,
+	SceneCamera,
 	Camera = Self,
-	Tonemapping = Self,
 	RenderLayers = Self,
+	Tonemapping = Self,
 	Hdr,
 	Bloom,
 )]
-pub struct SecondPass;
+pub struct WorldPass;
 
-impl From<SecondPass> for Camera {
-	fn from(_: SecondPass) -> Self {
+impl From<WorldPass> for Camera {
+	fn from(_: WorldPass) -> Self {
 		Camera {
-			order: SECOND_PASS as isize,
+			order: WORLD_PASS as isize,
 			..default()
 		}
 	}
 }
 
-impl From<SecondPass> for Tonemapping {
-	fn from(_: SecondPass) -> Self {
-		Tonemapping::TonyMcMapface
+impl From<WorldPass> for RenderLayers {
+	fn from(_: WorldPass) -> Self {
+		Self::layer(WORLD_PASS)
 	}
 }
 
-impl From<SecondPass> for RenderLayers {
-	fn from(_: SecondPass) -> Self {
-		RenderLayers::from_layers(&[FIRST_PASS, SECOND_PASS])
+impl From<WorldPass> for Tonemapping {
+	fn from(_: WorldPass) -> Self {
+		Tonemapping::None
 	}
 }
 
-impl From<SecondPass> for ModelRenderLayers {
-	fn from(_: SecondPass) -> Self {
-		ModelRenderLayers::from(SECOND_PASS)
+impl From<WorldPass> for ModelRenderLayers {
+	fn from(_: WorldPass) -> Self {
+		ModelRenderLayers::from(WORLD_PASS)
 	}
 }
 
+#[derive(
+	Component,
+	SavableComponent,
+	Debug,
+	PartialEq,
+	Eq,
+	Hash,
+	Default,
+	Clone,
+	Copy,
+	Serialize,
+	Deserialize,
+)]
+#[savable_component(id = "outline pass camera")]
+#[require(
+	SceneCamera,
+	Camera = Self,
+	RenderLayers = Self,
+	Tonemapping = Self,
+)]
 pub(crate) struct OutlinePass;
+
+impl From<OutlinePass> for Camera {
+	fn from(_: OutlinePass) -> Self {
+		Camera {
+			order: OUTLINE_PASS as isize,
+			// Clear color needs to have an alpha of `0.0`, because the outline shading tests against
+			// the alpha. If we want the full color on the outline pass result, we also need some light
+			// on the outline render layer.
+			clear_color: Color::NONE.into(),
+			..default()
+		}
+	}
+}
+
+impl From<OutlinePass> for RenderLayers {
+	fn from(_: OutlinePass) -> Self {
+		RenderLayers::layer(OUTLINE_PASS)
+	}
+}
 
 impl From<OutlinePass> for ModelRenderLayers {
 	fn from(_: OutlinePass) -> Self {
@@ -118,6 +117,12 @@ impl From<OutlinePass> for ModelRenderLayers {
 	}
 }
 
+impl From<OutlinePass> for Tonemapping {
+	fn from(_: OutlinePass) -> Self {
+		Tonemapping::None
+	}
+}
+
 #[derive(
 	Component,
 	SavableComponent,
@@ -131,12 +136,72 @@ impl From<OutlinePass> for ModelRenderLayers {
 	Serialize,
 	Deserialize,
 )]
-#[savable_component(id = "ui camera")]
+#[savable_component(id = "composite pass camera")]
 #[require(
-	WorldCamera,
+	SceneCamera,
+	OutlineSettings = Self,
 	Camera = Self,
-	Tonemapping = Self,
 	RenderLayers = Self,
+	Tonemapping = Self,
+	Hdr,
+	Bloom,
+)]
+pub(crate) struct CompositePass;
+
+impl From<CompositePass> for Camera {
+	fn from(_: CompositePass) -> Self {
+		Camera {
+			order: COMPOSITE_PASS as isize,
+			..default()
+		}
+	}
+}
+
+impl From<CompositePass> for Tonemapping {
+	fn from(_: CompositePass) -> Self {
+		Tonemapping::TonyMcMapface
+	}
+}
+
+impl From<CompositePass> for RenderLayers {
+	fn from(_: CompositePass) -> Self {
+		RenderLayers::from_layers(&[WORLD_PASS, COMPOSITE_PASS])
+	}
+}
+
+impl From<CompositePass> for ModelRenderLayers {
+	fn from(_: CompositePass) -> Self {
+		ModelRenderLayers::from(COMPOSITE_PASS)
+	}
+}
+
+impl From<CompositePass> for OutlineSettings {
+	fn from(_: CompositePass) -> Self {
+		OutlineSettings {
+			color: GREEN_600.into(),
+		}
+	}
+}
+
+#[derive(
+	Component,
+	SavableComponent,
+	Debug,
+	PartialEq,
+	Eq,
+	Hash,
+	Default,
+	Clone,
+	Copy,
+	Serialize,
+	Deserialize,
+)]
+#[savable_component(id = "ui pass camera")]
+#[require(
+	SceneCamera,
+	Camera = Self,
+	RenderLayers = Self,
+	Tonemapping = Self,
 	Hdr,
 )]
 pub struct Ui;
@@ -151,14 +216,14 @@ impl From<Ui> for Camera {
 	}
 }
 
-impl From<Ui> for Tonemapping {
-	fn from(_: Ui) -> Self {
-		Tonemapping::None
-	}
-}
-
 impl From<Ui> for RenderLayers {
 	fn from(_: Ui) -> Self {
 		RenderLayers::layer(UI_PASS)
+	}
+}
+
+impl From<Ui> for Tonemapping {
+	fn from(_: Ui) -> Self {
+		Tonemapping::None
 	}
 }

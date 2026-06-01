@@ -1,3 +1,3 @@
 pub(crate) mod add_effect_shader;
-pub(crate) mod insert_first_pass_camera;
+pub(crate) mod insert_render_target;
 pub(crate) mod update_essence_shader;

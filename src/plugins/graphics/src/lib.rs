@@ -7,13 +7,50 @@ mod systems;
 mod traits;
 
 use crate::{
-	components::{child_meshes::ChildMeshOf, model_render_layers::ModelRenderLayers},
+	components::{
+		camera_labels::OutlinePass,
+		child_meshes::ChildMeshOf,
+		model_render_layers::ModelRenderLayers,
+	},
 	materials::effect_material::EffectMaterial,
+	observers::insert_render_target::InsertRenderTarget,
 	system_params::highlight::{HighlightParam, HighlightParamMut},
 };
 use bevy::{
+	core_pipeline::{
+		FullscreenShader,
+		core_3d::graph::{Core3d, Node3d},
+	},
+	ecs::query::QueryItem,
 	prelude::*,
-	render::{RenderApp, render_resource::PipelineCache},
+	render::{
+		RenderApp,
+		RenderStartup,
+		extract_component::{
+			ComponentUniforms,
+			DynamicUniformIndex,
+			ExtractComponent,
+			ExtractComponentPlugin,
+			UniformComponentPlugin,
+		},
+		extract_resource::ExtractResourcePlugin,
+		render_asset::RenderAssets,
+		render_graph::{
+			NodeRunError,
+			RenderGraphContext,
+			RenderGraphExt,
+			RenderLabel,
+			ViewNode,
+			ViewNodeRunner,
+		},
+		render_resource::{
+			binding_types::{sampler, texture_2d, uniform_buffer},
+			*,
+		},
+		renderer::{RenderContext, RenderDevice},
+		texture::GpuImage,
+		view::ViewTarget,
+	},
 };
 use common::{
 	components::essence::Essence,
@@ -33,12 +70,12 @@ use common::{
 	},
 };
 use components::{
-	camera_labels::{FirstPass, SecondPass, Ui, WorldCamera},
+	camera_labels::{CompositePass, SceneCamera, Ui, WorldPass},
 	effect_material_handle::EffectMaterialHandle,
 	material_override::MaterialOverride,
 };
 use materials::essence_material::EssenceMaterial;
-use resources::{first_pass_image::FirstPassImage, window_size::WindowSize};
+use resources::{camera_render_target::CameraRenderTarget, window_size::WindowSize};
 use std::{hash::Hash, marker::PhantomData};
 use systems::{no_waiting_pipelines::no_waiting_pipelines, spawn_cameras::spawn_cameras};
 
@@ -103,7 +140,7 @@ where
 					EffectMaterialHandle::modify_material::<TPhysics, Gravity>,
 					EffectMaterialHandle::modify_material::<TPhysics, HealthDamage>,
 					EffectMaterialHandle::propagate_material,
-					ModelRenderLayers::populate_missing_with(FirstPass),
+					ModelRenderLayers::populate_missing_with(WorldPass),
 					ModelRenderLayers::propagate_layers,
 				)
 					.chain()
@@ -112,19 +149,52 @@ where
 	}
 
 	fn cameras(&self, app: &mut App) {
-		app.register_required_components::<WorldCamera, TSavegame::TSaveEntityMarker>();
-		TSavegame::register_savable_component::<FirstPass>(app);
-		TSavegame::register_savable_component::<SecondPass>(app);
+		app.register_required_components::<SceneCamera, TSavegame::TSaveEntityMarker>();
+		TSavegame::register_savable_component::<WorldPass>(app);
+		TSavegame::register_savable_component::<OutlinePass>(app);
+		TSavegame::register_savable_component::<CompositePass>(app);
 		TSavegame::register_savable_component::<Ui>(app);
 
 		app.init_resource::<WindowSize>()
+			.add_plugins(ExtractResourcePlugin::<CameraRenderTarget<OutlinePass>>::default())
+			.add_plugins(ExtractComponentPlugin::<OutlineSettings>::default())
+			.add_plugins(UniformComponentPlugin::<OutlineSettings>::default())
 			.register_required_components_with::<Ui, TDebugCam>(self.debug_cam)
-			.add_observer(FirstPass::insert_camera)
-			.add_systems(Startup, FirstPassImage::instantiate)
+			.add_observer(WorldPass::insert_render_target)
+			.add_observer(OutlinePass::insert_render_target)
+			.add_systems(
+				Startup,
+				(
+					CameraRenderTarget::<WorldPass>::instantiate,
+					CameraRenderTarget::<OutlinePass>::instantiate,
+				),
+			)
 			.add_systems(PostStartup, spawn_cameras)
 			.add_systems(
 				First,
-				(WindowSize::update, FirstPassImage::<Image>::update_size).chain(),
+				(
+					WindowSize::update,
+					CameraRenderTarget::<WorldPass>::update_size,
+					CameraRenderTarget::<OutlinePass>::update_size,
+				)
+					.chain(),
+			);
+
+		let Some(render_app) = app.get_sub_app_mut(RenderApp) else {
+			// FIXME: ERROR?
+			return;
+		};
+
+		render_app
+			.add_systems(RenderStartup, init_post_process_pipeline)
+			.add_render_graph_node::<ViewNodeRunner<PostProcessNode>>(Core3d, PostProcessLabel)
+			.add_render_graph_edges(
+				Core3d,
+				(
+					Node3d::Tonemapping,
+					PostProcessLabel,
+					Node3d::EndMainPassPostProcessing,
+				),
 			);
 	}
 }
@@ -170,14 +240,164 @@ impl<TDebugCam, TDependencies> UiCamera for GraphicsPlugin<TDebugCam, TDependenc
 }
 
 impl<TDebugCam, TDependencies> FirstPassCamera for GraphicsPlugin<TDebugCam, TDependencies> {
-	type TFirstPassCamera = FirstPass;
+	type TFirstPassCamera = WorldPass;
 }
 
 impl<TDebugCam, TDependencies> WorldCameras for GraphicsPlugin<TDebugCam, TDependencies> {
-	type TWorldCameras = WorldCamera;
+	type TWorldCameras = SceneCamera;
 }
 
 impl<TDebugCam, TDependencies> HandlesGraphics for GraphicsPlugin<TDebugCam, TDependencies> {
 	type THighlight = HighlightParam<'static, 'static>;
 	type THighlightMut = HighlightParamMut<'static, 'static>;
+}
+
+// FIXME:: MOVE STUFF BELLOW TO PROPER MODULES
+
+const SHADER_ASSET_PATH: &str = "shaders/post_processing.wgsl";
+
+#[derive(Component, Default, Clone, Copy, ExtractComponent, ShaderType)]
+struct OutlineSettings {
+	color: LinearRgba,
+}
+
+#[derive(Resource)]
+struct PostProcessPipeline {
+	layout: BindGroupLayoutDescriptor,
+	sampler: Sampler,
+	pipeline_id: CachedRenderPipelineId,
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, RenderLabel)]
+struct PostProcessLabel;
+
+#[derive(Default)]
+struct PostProcessNode;
+
+impl ViewNode for PostProcessNode {
+	type ViewQuery = (
+		&'static ViewTarget,
+		&'static DynamicUniformIndex<OutlineSettings>,
+	);
+
+	fn run(
+		&self,
+		_: &mut RenderGraphContext,
+		render_context: &mut RenderContext,
+		(view_target, settings_index): QueryItem<Self::ViewQuery>,
+		world: &World,
+	) -> Result<(), NodeRunError> {
+		// Get render pipeline
+		let Some(post_process_pipeline) = world.get_resource::<PostProcessPipeline>() else {
+			// FIXME: ERROR?
+			return Ok(());
+		};
+		let Some(cache) = world.get_resource::<PipelineCache>() else {
+			// FIXME: ERROR?
+			return Ok(());
+		};
+		let Some(pipeline) = cache.get_render_pipeline(post_process_pipeline.pipeline_id) else {
+			// FIXME: ERROR?
+			return Ok(());
+		};
+
+		// get `PostProcessSettings` as bindings
+		let Some(settings) = world.get_resource::<ComponentUniforms<OutlineSettings>>() else {
+			// FIXME: ERROR?
+			return Ok(());
+		};
+		let Some(settings_binding) = settings.uniforms().binding() else {
+			// FIXME: ERROR?
+			return Ok(());
+		};
+
+		// get outline target texture
+		let Some(gpu_images) = world.get_resource::<RenderAssets<GpuImage>>() else {
+			// FIXME: ERROR?
+			return Ok(());
+		};
+		let Some(outline) = world.get_resource::<CameraRenderTarget<OutlinePass>>() else {
+			// FIXME: ERROR?
+			return Ok(());
+		};
+		let Some(outline_gpu) = gpu_images.get(&outline.handle) else {
+			// FIXME: ERROR?
+			return Ok(());
+		};
+
+		let post_process = view_target.post_process_write();
+		let bind_group = render_context.render_device().create_bind_group(
+			"post_process_bind_group",
+			&cache.get_bind_group_layout(&post_process_pipeline.layout),
+			&BindGroupEntries::sequential((
+				post_process.source,
+				&post_process_pipeline.sampler,
+				&outline_gpu.texture_view,
+				&outline_gpu.sampler,
+				settings_binding.clone(),
+			)),
+		);
+
+		let mut render_pass = render_context.begin_tracked_render_pass(RenderPassDescriptor {
+			label: Some("post_process_pass"),
+			color_attachments: &[Some(RenderPassColorAttachment {
+				view: post_process.destination,
+				depth_slice: None,
+				resolve_target: None,
+				ops: Operations::default(),
+			})],
+			depth_stencil_attachment: None,
+			timestamp_writes: None,
+			occlusion_query_set: None,
+		});
+
+		render_pass.set_render_pipeline(pipeline);
+		render_pass.set_bind_group(0, &bind_group, &[settings_index.index()]);
+		render_pass.draw(0..3, 0..1);
+
+		Ok(())
+	}
+}
+
+fn init_post_process_pipeline(
+	mut commands: Commands,
+	render_device: Res<RenderDevice>,
+	asset_server: Res<AssetServer>,
+	fullscreen_shader: Res<FullscreenShader>,
+	pipeline_cache: Res<PipelineCache>,
+) {
+	let layout = BindGroupLayoutDescriptor::new(
+		"post_process_bind_group_layout",
+		&BindGroupLayoutEntries::sequential(
+			ShaderStages::FRAGMENT,
+			(
+				texture_2d(TextureSampleType::Float { filterable: true }),
+				sampler(SamplerBindingType::Filtering),
+				texture_2d(TextureSampleType::Float { filterable: true }),
+				sampler(SamplerBindingType::Filtering),
+				uniform_buffer::<OutlineSettings>(true),
+			),
+		),
+	);
+	let pipeline_id = pipeline_cache.queue_render_pipeline(RenderPipelineDescriptor {
+		label: Some("post_process_pipeline".into()),
+		layout: vec![layout.clone()],
+		vertex: fullscreen_shader.to_vertex_state(),
+		fragment: Some(FragmentState {
+			shader: asset_server.load(SHADER_ASSET_PATH),
+			targets: vec![Some(ColorTargetState {
+				format: TextureFormat::Rgba16Float,
+				blend: None,
+				write_mask: ColorWrites::ALL,
+			})],
+			..default()
+		}),
+		..default()
+	});
+
+	commands.insert_resource(PostProcessPipeline {
+		layout,
+		sampler: render_device.create_sampler(&SamplerDescriptor::default()),
+		pipeline_id,
+	});
 }

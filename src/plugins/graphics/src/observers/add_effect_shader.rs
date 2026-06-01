@@ -1,7 +1,7 @@
 use crate::{
-	components::effect_material_handle::EffectMaterialHandle,
+	components::{camera_labels::WorldPass, effect_material_handle::EffectMaterialHandle},
 	materials::effect_material::EffectMaterial,
-	resources::first_pass_image::FirstPassImage,
+	resources::camera_render_target::CameraRenderTarget,
 };
 use bevy::prelude::*;
 use common::{traits::accessors::get::GetMut, zyheeda_commands::ZyheedaCommands};
@@ -11,7 +11,7 @@ impl EffectMaterialHandle {
 		on_add: On<Add, TComponent>,
 		mut materials: ResMut<Assets<EffectMaterial>>,
 		mut commands: ZyheedaCommands,
-		first_pass_image: Res<FirstPassImage>,
+		first_pass_image: Res<CameraRenderTarget<WorldPass>>,
 	) where
 		TComponent: Component,
 	{
@@ -39,7 +39,7 @@ mod tests {
 	fn setup(first_pass: Handle<Image>) -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.insert_resource(FirstPassImage { handle: first_pass });
+		app.insert_resource(CameraRenderTarget::<WorldPass>::from(first_pass));
 		app.init_resource::<Assets<EffectMaterial>>();
 		app.add_observer(EffectMaterialHandle::add_to::<_Component>);
 

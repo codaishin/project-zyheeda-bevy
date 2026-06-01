@@ -3,18 +3,28 @@ use crate::traits::resize::Resize;
 use bevy::{
 	asset::RenderAssetUsages,
 	prelude::*,
-	render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages},
+	render::{
+		extract_resource::ExtractResource,
+		render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages},
+	},
 };
+use common::traits::thread_safe::ThreadSafe;
+use std::marker::PhantomData;
 
-#[derive(Resource, Debug, PartialEq)]
-pub(crate) struct FirstPassImage<TImage = Image>
+#[derive(Resource, Debug, PartialEq, Clone, ExtractResource)]
+pub(crate) struct CameraRenderTarget<T, TImage = Image>
 where
+	T: ThreadSafe,
 	TImage: Asset + Resize,
 {
 	pub(crate) handle: Handle<TImage>,
+	_p: PhantomData<T>,
 }
 
-impl FirstPassImage {
+impl<T> CameraRenderTarget<T>
+where
+	T: ThreadSafe,
+{
 	pub(crate) fn instantiate(mut images: ResMut<Assets<Image>>, mut commands: Commands) {
 		let mut image = Image::new_fill(
 			Extent3d::default(),
@@ -29,12 +39,14 @@ impl FirstPassImage {
 
 		commands.insert_resource(Self {
 			handle: images.add(image),
+			_p: PhantomData::<T>,
 		});
 	}
 }
 
-impl<TImage> FirstPassImage<TImage>
+impl<T, TImage> CameraRenderTarget<T, TImage>
 where
+	T: ThreadSafe,
 	TImage: Asset + Resize,
 {
 	pub(crate) fn update_size(
@@ -66,6 +78,19 @@ where
 	}
 }
 
+impl<T, TImage> From<Handle<TImage>> for CameraRenderTarget<T, TImage>
+where
+	T: ThreadSafe,
+	TImage: Asset + Resize,
+{
+	fn from(handle: Handle<TImage>) -> Self {
+		Self {
+			handle,
+			_p: PhantomData,
+		}
+	}
+}
+
 #[cfg(test)]
 mod test {
 	#![allow(clippy::unwrap_used)]
@@ -78,6 +103,8 @@ mod test {
 		sync::{Arc, Mutex},
 	};
 	use testing::{NestedMocks, SingleThreadedApp, is_changed_resource};
+
+	struct _T;
 
 	#[derive(Asset, TypePath, NestedMocks)]
 	struct _Image {
@@ -94,12 +121,10 @@ mod test {
 	fn setup(image: _Image) -> App {
 		let mut app = App::new().single_threaded(Update);
 		let mut images = Assets::<_Image>::default();
-		let first_pass_image = FirstPassImage {
-			handle: images.add(image),
-		};
+		let first_pass_image = CameraRenderTarget::<_T, _Image>::from(images.add(image));
 		app.insert_resource(images);
 		app.insert_resource(first_pass_image);
-		app.add_systems(Update, FirstPassImage::<_Image>::update_size);
+		app.add_systems(Update, CameraRenderTarget::<_T, _Image>::update_size);
 
 		app
 	}

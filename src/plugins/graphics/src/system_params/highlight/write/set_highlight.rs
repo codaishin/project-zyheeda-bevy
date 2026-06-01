@@ -21,7 +21,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::{
-			camera_labels::{OutlinePass, SecondPass},
+			camera_labels::{CompositePass, OutlinePass},
 			model_render_layers::ModelRenderLayers,
 		},
 		system_params::highlight::HighlightParamMut,
@@ -42,7 +42,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(ModelRenderLayers::from(SecondPass))
+			.spawn(ModelRenderLayers::from(CompositePass))
 			.id();
 
 		app.world_mut()
@@ -52,7 +52,7 @@ mod tests {
 				ctx.set_highlight(Highlight::Interacting);
 			})?;
 
-		let mut expected = ModelRenderLayers::from(SecondPass);
+		let mut expected = ModelRenderLayers::from(CompositePass);
 		expected.add_layers(ModelRenderLayers::from(OutlinePass));
 		assert_eq!(
 			Some(&expected),
@@ -64,7 +64,7 @@ mod tests {
 	#[test]
 	fn remove_highlight() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let mut layers = ModelRenderLayers::from(SecondPass);
+		let mut layers = ModelRenderLayers::from(CompositePass);
 		layers.add_layers(ModelRenderLayers::from(OutlinePass));
 		let entity = app.world_mut().spawn(layers).id();
 
@@ -76,7 +76,7 @@ mod tests {
 			})?;
 
 		assert_eq!(
-			Some(&ModelRenderLayers::from(SecondPass)),
+			Some(&ModelRenderLayers::from(CompositePass)),
 			app.world().entity(entity).get::<ModelRenderLayers>()
 		);
 		Ok(())
