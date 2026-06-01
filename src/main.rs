@@ -2,6 +2,7 @@ use agents::AgentsPlugin;
 use animations::AnimationsPlugin;
 use bars::BarsPlugin;
 use bevy::prelude::*;
+use bevy_inspector_egui::bevy_egui;
 use camera_control::CameraControlPlugin;
 use common::CommonPlugin;
 use frame_limiter::FrameLimiterPlugin;
@@ -55,7 +56,12 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let path_finding = PathFindingPlugin::from_plugin(&map_generation);
 	let movement =
 		MovementPlugin::from_plugins(&input, &savegame, &animations, &physics, &path_finding);
-	let graphics = GraphicsPlugin::from_plugins(&loading, &savegame, &physics);
+	let graphics = GraphicsPlugin::new(
+		|| bevy_egui::PrimaryEguiContext,
+		&loading,
+		&savegame,
+		&physics,
+	);
 	let loadout =
 		LoadoutPlugin::from_plugins(&savegame, &animations, &physics, &loading, &movement);
 	let interactive =
@@ -164,6 +170,10 @@ pub mod debug_utils {
 
 	pub fn prepare_debug(app: &mut App) {
 		app.insert_resource(ShowGizmos::No)
+			.insert_resource(bevy_egui::EguiGlobalSettings {
+				auto_create_primary_context: false,
+				..Default::default()
+			})
 			.add_plugins(EguiPlugin::default())
 			.add_plugins(WorldInspectorPlugin::new())
 			.add_systems(Update, toggle_gizmos)
