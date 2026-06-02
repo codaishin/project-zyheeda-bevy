@@ -19,3 +19,6 @@ test-case.workspace = true
 
 # internal
 testing.workspace = true
+
+[features]
+debug-utils = []

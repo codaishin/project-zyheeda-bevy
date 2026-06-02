@@ -8,7 +8,6 @@ edition = "2024"
 [workspace.dependencies]
 # external
 bevy = { version = "0.18.1", features = ["serialize"] }
-bevy-inspector-egui = "0.36.0"
 fluent = "0.16.1"
 fluent-syntax = "0.11.1"
 mockall = "=0.13.1"
@@ -38,6 +37,9 @@ opt-level = 1
 [profile.dev.package."*"]
 opt-level = 3
 
+[features]
+debug-utils = ["graphics/debug-utils", "dep:bevy-inspector-egui"]
+
 [package]
 name = "project-zyheeda"
 version.workspace = true
@@ -46,7 +48,7 @@ edition.workspace = true
 [dependencies]
 # external
 bevy.workspace = true
-bevy-inspector-egui.workspace = true
+bevy-inspector-egui = { version = "0.36.0", optional = true }
 fluent.workspace = true
 fluent-syntax.workspace = true
 serde.workspace = true

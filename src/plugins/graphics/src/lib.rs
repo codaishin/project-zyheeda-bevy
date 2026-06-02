@@ -40,16 +40,43 @@ use resources::{first_pass_image::FirstPassImage, window_size::WindowSize};
 use std::{hash::Hash, marker::PhantomData};
 use systems::{no_waiting_pipelines::no_waiting_pipelines, spawn_cameras::spawn_cameras};
 
-pub struct GraphicsPlugin<TDependencies>(PhantomData<TDependencies>);
+#[cfg(not(feature = "debug-utils"))]
+use components::no_debug_cam::NoDebugCam;
 
-impl<TLoading, TSavegame, TPhysics> GraphicsPlugin<(TLoading, TSavegame, TPhysics)>
+pub struct GraphicsPlugin<TDebugCam, TDependencies> {
+	debug_cam: fn() -> TDebugCam,
+	_p: PhantomData<TDependencies>,
+}
+
+#[cfg(not(feature = "debug-utils"))]
+impl<TLoading, TSavegame, TPhysics> GraphicsPlugin<NoDebugCam, (TLoading, TSavegame, TPhysics)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + SystemSetDefinition + HandlesAllPhysicalEffects + HandlesSkillPhysics,
 {
 	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TPhysics) -> Self {
-		Self(PhantomData)
+		Self {
+			debug_cam: || NoDebugCam,
+			_p: PhantomData,
+		}
+	}
+}
+
+impl<TDebugCam, TLoading, TSavegame, TPhysics>
+	GraphicsPlugin<TDebugCam, (TLoading, TSavegame, TPhysics)>
+where
+	TDebugCam: Component,
+	TLoading: ThreadSafe + HandlesLoadTracking,
+	TSavegame: ThreadSafe + HandlesSaving,
+	TPhysics: ThreadSafe + SystemSetDefinition + HandlesAllPhysicalEffects + HandlesSkillPhysics,
+{
+	#[cfg(feature = "debug-utils")]
+	pub fn new(debug_cam: fn() -> TDebugCam, _: &TLoading, _: &TSavegame, _: &TPhysics) -> Self {
+		Self {
+			debug_cam,
+			_p: PhantomData,
+		}
 	}
 
 	fn track_render_pipeline_ready(app: &mut App) {
@@ -81,13 +108,14 @@ where
 			.add_observer(MaterialOverride::update_essence_shader);
 	}
 
-	fn cameras(app: &mut App) {
+	fn cameras(&self, app: &mut App) {
 		app.register_required_components::<WorldCamera, TSavegame::TSaveEntityMarker>();
 		TSavegame::register_savable_component::<FirstPass>(app);
 		TSavegame::register_savable_component::<SecondPass>(app);
 		TSavegame::register_savable_component::<Ui>(app);
 
 		app.init_resource::<WindowSize>()
+			.register_required_components_with::<SecondPass, TDebugCam>(self.debug_cam)
 			.add_observer(FirstPass::insert_camera)
 			.add_systems(Startup, FirstPassImage::instantiate)
 			.add_systems(PostStartup, spawn_cameras)
@@ -98,8 +126,10 @@ where
 	}
 }
 
-impl<TLoading, TSavegame, TPhysics> Plugin for GraphicsPlugin<(TLoading, TSavegame, TPhysics)>
+impl<TDebugCam, TLoading, TSavegame, TPhysics> Plugin
+	for GraphicsPlugin<TDebugCam, (TLoading, TSavegame, TPhysics)>
 where
+	TDebugCam: Component,
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + SystemSetDefinition + HandlesAllPhysicalEffects + HandlesSkillPhysics,
@@ -108,7 +138,7 @@ where
 		Self::track_render_pipeline_ready(app);
 		Self::effect_shading(app);
 		Self::essence_material(app);
-		Self::cameras(app);
+		self.cameras(app);
 	}
 }
 
@@ -133,14 +163,14 @@ impl RegisterShader for App {
 	}
 }
 
-impl<TDependencies> UiCamera for GraphicsPlugin<TDependencies> {
+impl<TDebugCam, TDependencies> UiCamera for GraphicsPlugin<TDebugCam, TDependencies> {
 	type TUiCamera = Ui;
 }
 
-impl<TDependencies> FirstPassCamera for GraphicsPlugin<TDependencies> {
+impl<TDebugCam, TDependencies> FirstPassCamera for GraphicsPlugin<TDebugCam, TDependencies> {
 	type TFirstPassCamera = FirstPass;
 }
 
-impl<TDependencies> WorldCameras for GraphicsPlugin<TDependencies> {
+impl<TDebugCam, TDependencies> WorldCameras for GraphicsPlugin<TDebugCam, TDependencies> {
 	type TWorldCameras = WorldCamera;
 }
