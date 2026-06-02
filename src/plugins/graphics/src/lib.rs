@@ -40,9 +40,27 @@ use resources::{first_pass_image::FirstPassImage, window_size::WindowSize};
 use std::{hash::Hash, marker::PhantomData};
 use systems::{no_waiting_pipelines::no_waiting_pipelines, spawn_cameras::spawn_cameras};
 
+#[cfg(not(feature = "debug-utils"))]
+use components::no_debug_cam::NoDebugCam;
+
 pub struct GraphicsPlugin<TDebugCam, TDependencies> {
 	debug_cam: fn() -> TDebugCam,
 	_p: PhantomData<TDependencies>,
+}
+
+#[cfg(not(feature = "debug-utils"))]
+impl<TLoading, TSavegame, TPhysics> GraphicsPlugin<NoDebugCam, (TLoading, TSavegame, TPhysics)>
+where
+	TLoading: ThreadSafe + HandlesLoadTracking,
+	TSavegame: ThreadSafe + HandlesSaving,
+	TPhysics: ThreadSafe + SystemSetDefinition + HandlesAllPhysicalEffects + HandlesSkillPhysics,
+{
+	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TPhysics) -> Self {
+		Self {
+			debug_cam: || NoDebugCam,
+			_p: PhantomData,
+		}
+	}
 }
 
 impl<TDebugCam, TLoading, TSavegame, TPhysics>
@@ -53,6 +71,7 @@ where
 	TSavegame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + SystemSetDefinition + HandlesAllPhysicalEffects + HandlesSkillPhysics,
 {
+	#[cfg(feature = "debug-utils")]
 	pub fn new(debug_cam: fn() -> TDebugCam, _: &TLoading, _: &TSavegame, _: &TPhysics) -> Self {
 		Self {
 			debug_cam,

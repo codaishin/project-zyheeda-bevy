@@ -2,7 +2,6 @@ use agents::AgentsPlugin;
 use animations::AnimationsPlugin;
 use bars::BarsPlugin;
 use bevy::prelude::*;
-use bevy_inspector_egui::bevy_egui;
 use camera_control::CameraControlPlugin;
 use common::CommonPlugin;
 use frame_limiter::FrameLimiterPlugin;
@@ -31,7 +30,7 @@ fn main() -> ZyheedaAppExit {
 		return ZyheedaAppExit::from(error);
 	}
 
-	#[cfg(debug_assertions)]
+	#[cfg(feature = "debug-utils")]
 	debug_utils::prepare_debug(app);
 
 	ZyheedaAppExit::from(app.run())
@@ -56,12 +55,18 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let path_finding = PathFindingPlugin::from_plugin(&map_generation);
 	let movement =
 		MovementPlugin::from_plugins(&input, &savegame, &animations, &physics, &path_finding);
+
+	#[cfg(feature = "debug-utils")]
 	let graphics = GraphicsPlugin::new(
-		|| bevy_egui::PrimaryEguiContext,
+		|| bevy_inspector_egui::bevy_egui::PrimaryEguiContext,
 		&loading,
 		&savegame,
 		&physics,
 	);
+
+	#[cfg(not(feature = "debug-utils"))]
+	let graphics = GraphicsPlugin::from_plugins(&loading, &savegame, &physics);
+
 	let loadout =
 		LoadoutPlugin::from_plugins(&savegame, &animations, &physics, &loading, &movement);
 	let interactive =
@@ -160,10 +165,10 @@ impl From<ZyheedaAppError> for ExitCode {
 	}
 }
 
-#[cfg(debug_assertions)]
+#[cfg(feature = "debug-utils")]
 pub mod debug_utils {
 	use super::*;
-	use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
+	use bevy_inspector_egui::{bevy_egui, bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
 	use std::ops::Not;
 
 	const FORWARD_GIZMO_COLOR: Color = Color::srgb(0., 0., 1.);
