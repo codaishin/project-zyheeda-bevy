@@ -1,31 +1,20 @@
-use crate::{
-	traits::{accessors::get::TryApplyOn, thread_safe::ThreadSafe},
-	zyheeda_commands::ZyheedaCommands,
-};
+use crate::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 use bevy::{
 	ecs::{query::QueryFilter, relationship::Relationship},
 	prelude::*,
 };
 
-impl<TRelationshipTarget> LinkDescendants for TRelationshipTarget where
-	TRelationshipTarget: Component
-{
-}
+impl<TFilter> LinkToTarget for TFilter where TFilter: QueryFilter {}
 
-pub trait LinkDescendants: Component + Sized {
-	/// Links descendant entities with a matching filter to an ancestor with `Self` via the provided
-	/// relationship component.
-	///
-	/// It is recommended not to use the corresponding relationship target for `Self`, because bevy
-	/// removes empty relationship target components.
-	fn link_descendants<TRelationship, TFilter>(
+pub trait LinkToTarget: QueryFilter + Sized {
+	fn link_to<TTarget, TRelationship>(
 		mut commands: ZyheedaCommands,
-		relationship_targets: Query<(), With<Self>>,
-		candidates: Query<Entity, TFilter>,
+		relationship_targets: Query<(), With<TTarget>>,
+		candidates: Query<Entity, Self>,
 		ancestors: Query<&ChildOf>,
 	) where
+		TTarget: Component,
 		TRelationship: Relationship,
-		TFilter: QueryFilter + ThreadSafe,
 	{
 		for candidate in candidates {
 			let target_ancestor = ancestors
@@ -53,6 +42,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::traits::thread_safe::ThreadSafe;
 	use bevy::ecs::entity::EntityHashSet;
 	use testing::SingleThreadedApp;
 
@@ -73,7 +63,7 @@ mod tests {
 	{
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, _RootMarker::link_descendants::<_NodeOf, TFilter>);
+		app.add_systems(Update, TFilter::link_to::<_RootMarker, _NodeOf>);
 
 		app
 	}

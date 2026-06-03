@@ -21,7 +21,7 @@ use crate::{
 };
 use bevy::{prelude::*, scene::SceneInstanceReady};
 use common::{
-	systems::link_children::LinkDescendants,
+	systems::link::to_target::LinkToTarget,
 	tools::plugin_system_set::PluginSystemSet,
 	traits::{
 		handles_animations::{AnimationClips, HandlesAnimations},
@@ -49,6 +49,9 @@ where
 	TSavegame: ThreadSafe + HandlesSaving,
 {
 	fn build(&self, app: &mut App) {
+		type UnlinkedPlayer = (Added<AnimationPlayer>, Without<AnimationPlayerOf>);
+		type UnlinkedGraph = (Added<AnimationGraphHandle>, Without<AnimationGraphOf>);
+
 		TSavegame::register_savable_component::<AnimationDispatch>(app);
 		app.add_observer(SetupAnimations::insert_when::<SceneInstanceReady>);
 		app.add_systems(
@@ -61,8 +64,8 @@ where
 				SetupAnimations::init_bone_groups::<AnimationGraphHandle>,
 				SetupAnimations::remove_unused_animation_targets::<AnimationGraphHandle>,
 				SetupAnimations::stop,
-				AnimationDispatch::link_descendants::<AnimationPlayerOf, Added<AnimationPlayer>>,
-				AnimationDispatch::link_descendants::<AnimationGraphOf, Added<AnimationGraphHandle>>,
+				UnlinkedPlayer::link_to::<AnimationDispatch, AnimationPlayerOf>,
+				UnlinkedGraph::link_to::<AnimationDispatch, AnimationGraphOf>,
 				AnimationDispatch::distribute_player_components,
 				AnimationDispatch::play_animation_clip::<&mut AnimationPlayer>,
 				AnimationDispatch::set_directional_animation_weights,
