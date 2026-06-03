@@ -17,7 +17,7 @@ use common::{
 	components::essence::Essence,
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
 	states::game_state::LoadingGame,
-	systems::link_children::LinkDescendants,
+	systems::link_to_target::LinkToTarget,
 	traits::{
 		after_plugin::AfterPlugin,
 		handles_graphics::{FirstPassCamera, UiCamera, WorldCameras},
@@ -85,16 +85,18 @@ where
 	}
 
 	fn effect_shading(app: &mut App) {
+		type UnlinkedEffectShader = (Added<Mesh3d>, Without<EffectShaderMeshOf>);
+
 		app.add_plugins(MaterialPlugin::<EffectMaterial>::default())
 			.add_observer(EffectShader::add_to::<TPhysics::TSkillContact>)
 			.add_observer(EffectShader::add_to::<TPhysics::TSkillProjection>)
 			.add_systems(
 				Update,
 				(
+					UnlinkedEffectShader::link_to::<EffectShader, EffectShaderMeshOf>,
 					EffectShader::modify_material::<TPhysics, Force>,
 					EffectShader::modify_material::<TPhysics, Gravity>,
 					EffectShader::modify_material::<TPhysics, HealthDamage>,
-					EffectShader::link_descendants::<EffectShaderMeshOf, Added<Mesh3d>>,
 					EffectShader::propagate(SecondPass),
 				)
 					.chain()
