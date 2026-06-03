@@ -118,7 +118,7 @@ where
 		TSavegame::register_savable_component::<Ui>(app);
 
 		app.init_resource::<WindowSize>()
-			.register_required_components_with::<SecondPass, TDebugCam>(self.debug_cam)
+			.register_required_components_with::<Ui, TDebugCam>(self.debug_cam)
 			.add_observer(FirstPass::insert_camera)
 			.add_systems(Startup, FirstPassImage::instantiate)
 			.add_systems(PostStartup, spawn_cameras)
