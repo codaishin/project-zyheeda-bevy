@@ -1,3 +1,4 @@
+pub mod link_to_root;
 pub mod link_to_target;
 pub mod log;
 pub mod register_animations;
