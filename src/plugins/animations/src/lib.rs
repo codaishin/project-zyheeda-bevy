@@ -21,7 +21,7 @@ use crate::{
 };
 use bevy::{prelude::*, scene::SceneInstanceReady};
 use common::{
-	systems::link_to_target::LinkToTarget,
+	systems::link::to_target::LinkToTarget,
 	tools::plugin_system_set::PluginSystemSet,
 	traits::{
 		handles_animations::{AnimationClips, HandlesAnimations},

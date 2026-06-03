@@ -17,7 +17,7 @@ use common::{
 	components::essence::Essence,
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
 	states::game_state::LoadingGame,
-	systems::link_to_target::LinkToTarget,
+	systems::link::to_target::LinkToTarget,
 	traits::{
 		after_plugin::AfterPlugin,
 		handles_graphics::{FirstPassCamera, UiCamera, WorldCameras},

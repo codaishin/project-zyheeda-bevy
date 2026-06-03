@@ -1,5 +1,4 @@
-pub mod link_to_root;
-pub mod link_to_target;
+pub mod link;
 pub mod log;
 pub mod register_animations;
 pub mod remove_components;
