@@ -1,19 +1,23 @@
 use bevy::{camera::visibility::Layer, prelude::*};
-use std::collections::{HashSet, hash_set::Iter as HashSetIter};
+use std::collections::{
+	HashSet,
+	hash_set::{IntoIter as HashSetIntoIter, Iter as HashSetIter},
+};
 
-#[derive(Component, Debug, PartialEq)]
+#[derive(Component, Debug, PartialEq, Clone)]
 pub(crate) struct PassLayers {
 	layer: Layer,
 	additional_layers: HashSet<Layer>,
 }
 
 impl PassLayers {
-	pub(crate) fn add_layer(&mut self, layer: Layer) {
-		if self.layer == layer {
-			return;
-		}
+	pub(crate) fn add_layers<T>(&mut self, layers: T)
+	where
+		T: IntoIterator<Item = Layer>,
+	{
+		let not_main_layer = layers.into_iter().filter(|layer| layer != &self.layer);
 
-		self.additional_layers.insert(layer);
+		self.additional_layers.extend(not_main_layer);
 	}
 
 	pub(crate) fn reset(&mut self) {
@@ -24,8 +28,13 @@ impl PassLayers {
 		self.into_iter()
 	}
 
-	pub(crate) fn contains(&self, layer: &Layer) -> bool {
-		&self.layer == layer || self.additional_layers.contains(layer)
+	pub(crate) fn contains_all<'a, T>(&'a self, layers: T) -> bool
+	where
+		T: IntoIterator<Item = &'a Layer>,
+	{
+		let miss = |layer| &self.layer != layer && !self.additional_layers.contains(layer);
+
+		!layers.into_iter().any(miss)
 	}
 }
 
@@ -39,32 +48,57 @@ impl From<Layer> for PassLayers {
 }
 
 impl<'a> IntoIterator for &'a PassLayers {
-	type Item = Layer;
+	type Item = &'a Layer;
 	type IntoIter = Iter<'a>;
 
 	fn into_iter(self) -> Self::IntoIter {
 		Iter {
-			layers: self,
-			additional_layers: None,
+			layer: Some(&self.layer),
+			additional_layers: self.additional_layers.iter(),
+		}
+	}
+}
+
+impl IntoIterator for PassLayers {
+	type Item = Layer;
+	type IntoIter = IntoIter;
+
+	fn into_iter(self) -> Self::IntoIter {
+		IntoIter {
+			layer: Some(self.layer),
+			additional_layers: self.additional_layers.into_iter(),
 		}
 	}
 }
 
 pub(crate) struct Iter<'a> {
-	layers: &'a PassLayers,
-	additional_layers: Option<HashSetIter<'a, Layer>>,
+	layer: Option<&'a Layer>,
+	additional_layers: HashSetIter<'a, Layer>,
 }
 
-impl Iterator for Iter<'_> {
+impl<'a> Iterator for Iter<'a> {
+	type Item = &'a Layer;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		match self.layer.take() {
+			Some(layer) => Some(layer),
+			None => self.additional_layers.next(),
+		}
+	}
+}
+
+pub(crate) struct IntoIter {
+	layer: Option<Layer>,
+	additional_layers: HashSetIntoIter<Layer>,
+}
+
+impl Iterator for IntoIter {
 	type Item = Layer;
 
 	fn next(&mut self) -> Option<Self::Item> {
-		match &mut self.additional_layers {
-			None => {
-				self.additional_layers = Some(self.layers.additional_layers.iter());
-				Some(self.layers.layer)
-			}
-			Some(it) => it.next().copied(),
+		match self.layer.take() {
+			Some(layer) => Some(layer),
+			None => self.additional_layers.next(),
 		}
 	}
 }
@@ -72,7 +106,6 @@ impl Iterator for Iter<'_> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::camera::visibility::RenderLayers;
 	use testing::assert_count;
 
 	#[test]
@@ -80,8 +113,8 @@ mod tests {
 		let pass_layer = PassLayers::from(42);
 
 		assert_eq!(
-			RenderLayers::layer(42),
-			RenderLayers::from_iter(&pass_layer)
+			HashSet::from([42]),
+			pass_layer.into_iter().collect::<HashSet<_>>(),
 		);
 	}
 
@@ -89,12 +122,12 @@ mod tests {
 	fn multiple_layers() {
 		let mut pass_layer = PassLayers::from(42);
 
-		pass_layer.add_layer(11);
-		pass_layer.add_layer(22);
+		pass_layer.add_layers([11]);
+		pass_layer.add_layers([22]);
 
 		assert_eq!(
-			RenderLayers::from_layers(&[42, 11, 22]),
-			RenderLayers::from_iter(&pass_layer),
+			HashSet::from([42, 11, 22]),
+			pass_layer.into_iter().collect::<HashSet<_>>(),
 		);
 	}
 
@@ -102,7 +135,7 @@ mod tests {
 	fn do_not_base_layer() {
 		let mut pass_layer = PassLayers::from(42);
 
-		pass_layer.add_layer(42);
+		pass_layer.add_layers([42]);
 
 		assert_count!(1, pass_layer.iter());
 	}
@@ -111,8 +144,8 @@ mod tests {
 	fn do_not_repeat_added_layers() {
 		let mut pass_layer = PassLayers::from(42);
 
-		pass_layer.add_layer(11);
-		pass_layer.add_layer(11);
+		pass_layer.add_layers([11]);
+		pass_layer.add_layers([11]);
 
 		assert_count!(2, pass_layer.iter());
 	}
@@ -121,13 +154,26 @@ mod tests {
 	fn reset() {
 		let mut pass_layer = PassLayers::from(42);
 
-		pass_layer.add_layer(11);
-		pass_layer.add_layer(22);
+		pass_layer.add_layers([11]);
+		pass_layer.add_layers([22]);
 		pass_layer.reset();
 
 		assert_eq!(
-			RenderLayers::layer(42),
-			RenderLayers::from_iter(&pass_layer),
+			HashSet::from([42]),
+			pass_layer.into_iter().collect::<HashSet<_>>(),
+		);
+	}
+
+	#[test]
+	fn into_iter_ref() {
+		let mut pass_layer = PassLayers::from(42);
+
+		pass_layer.add_layers([11]);
+		pass_layer.add_layers([22]);
+
+		assert_eq!(
+			HashSet::from([42, 11, 22]),
+			(&pass_layer).into_iter().copied().collect::<HashSet<_>>(),
 		);
 	}
 
@@ -135,31 +181,55 @@ mod tests {
 	fn contains_layer() {
 		let pass_layer = PassLayers::from(42);
 
-		assert!(pass_layer.contains(&42));
+		assert!(pass_layer.contains_all(&[42]));
 	}
 
 	#[test]
 	fn does_not_contain_layer() {
 		let pass_layer = PassLayers::from(42);
 
-		assert!(!pass_layer.contains(&11));
+		assert!(!pass_layer.contains_all(&[11]));
 	}
 
 	#[test]
 	fn contains_additional_layer() {
 		let mut pass_layer = PassLayers::from(42);
 
-		pass_layer.add_layer(11);
+		pass_layer.add_layers([11]);
 
-		assert!(pass_layer.contains(&11));
+		assert!(pass_layer.contains_all(&[11]));
 	}
 
 	#[test]
 	fn does_not_contain_additional_layer() {
 		let mut pass_layer = PassLayers::from(42);
 
-		pass_layer.add_layer(11);
+		pass_layer.add_layers([11]);
 
-		assert!(!pass_layer.contains(&22));
+		assert!(!pass_layer.contains_all(&[22]));
+	}
+
+	#[test]
+	fn contains_mixed() {
+		let mut pass_layer = PassLayers::from(42);
+		pass_layer.add_layers([11]);
+
+		assert!(pass_layer.contains_all(&[42, 11]));
+	}
+
+	#[test]
+	fn does_not_contain_mixed_main_miss() {
+		let mut pass_layer = PassLayers::from(42);
+		pass_layer.add_layers([11]);
+
+		assert!(!pass_layer.contains_all(&[3, 11]));
+	}
+
+	#[test]
+	fn does_not_contain_mixed_additional_miss() {
+		let mut pass_layer = PassLayers::from(42);
+		pass_layer.add_layers([11]);
+
+		assert!(!pass_layer.contains_all(&[42, 3]));
 	}
 }

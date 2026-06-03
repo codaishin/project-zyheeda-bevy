@@ -2,12 +2,14 @@ mod components;
 mod materials;
 mod observers;
 mod resources;
+mod system_params;
 mod systems;
 mod traits;
 
 use crate::{
 	components::{child_meshes::ChildMeshOf, pass_layer::PassLayers},
 	materials::effect_material::EffectMaterial,
+	system_params::highlight::{HighlightParam, HighlightParamMut},
 };
 use bevy::{
 	prelude::*,
@@ -20,7 +22,7 @@ use common::{
 	systems::link::to_target::LinkToTarget,
 	traits::{
 		after_plugin::AfterPlugin,
-		handles_graphics::{FirstPassCamera, UiCamera, WorldCameras},
+		handles_graphics::{FirstPassCamera, HandlesGraphics, UiCamera, WorldCameras},
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInSubApp},
 		handles_physics::HandlesAllPhysicalEffects,
 		handles_saving::HandlesSaving,
@@ -172,4 +174,9 @@ impl<TDebugCam, TDependencies> FirstPassCamera for GraphicsPlugin<TDebugCam, TDe
 
 impl<TDebugCam, TDependencies> WorldCameras for GraphicsPlugin<TDebugCam, TDependencies> {
 	type TWorldCameras = WorldCamera;
+}
+
+impl<TDebugCam, TDependencies> HandlesGraphics for GraphicsPlugin<TDebugCam, TDependencies> {
+	type THighlight = HighlightParam<'static, 'static>;
+	type THighlightMut = HighlightParamMut<'static, 'static>;
 }

@@ -11,7 +11,8 @@ use serde::{Deserialize, Serialize};
 
 const FIRST_PASS: usize = 0;
 const SECOND_PASS: usize = 1;
-const UI_PASS: usize = 2;
+const OUTLINE_PASS: usize = 2;
+const UI_PASS: usize = 3;
 
 #[derive(Component, Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
 #[require(Camera3d)]
@@ -106,6 +107,14 @@ impl From<SecondPass> for RenderLayers {
 impl From<SecondPass> for PassLayers {
 	fn from(_: SecondPass) -> Self {
 		PassLayers::from(SECOND_PASS)
+	}
+}
+
+pub(crate) struct OutlinePass;
+
+impl From<OutlinePass> for PassLayers {
+	fn from(_: OutlinePass) -> Self {
+		PassLayers::from(OUTLINE_PASS)
 	}
 }
 
