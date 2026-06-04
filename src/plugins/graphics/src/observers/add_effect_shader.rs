@@ -1,12 +1,12 @@
 use crate::{
-	components::effect_material_config::EffectShader,
+	components::effect_material_handle::EffectMaterialHandle,
 	materials::effect_material::EffectMaterial,
 	resources::first_pass_image::FirstPassImage,
 };
 use bevy::prelude::*;
 use common::{traits::accessors::get::GetMut, zyheeda_commands::ZyheedaCommands};
 
-impl EffectShader {
+impl EffectMaterialHandle {
 	pub(crate) fn add_to<TComponent>(
 		on_add: On<Add, TComponent>,
 		mut materials: ResMut<Assets<EffectMaterial>>,
@@ -20,11 +20,11 @@ impl EffectShader {
 		};
 
 		let material = EffectMaterial::from_first_pass(first_pass_image.handle.clone());
-		let shader = EffectShader {
+		let material = EffectMaterialHandle {
 			material: materials.add(material),
 		};
 
-		entity.try_insert((shader, Visibility::Hidden));
+		entity.try_insert((material, Visibility::Hidden));
 	}
 }
 
@@ -41,25 +41,25 @@ mod tests {
 
 		app.insert_resource(FirstPassImage { handle: first_pass });
 		app.init_resource::<Assets<EffectMaterial>>();
-		app.add_observer(EffectShader::add_to::<_Component>);
+		app.add_observer(EffectMaterialHandle::add_to::<_Component>);
 
 		app
 	}
 
 	#[test]
-	fn insert_shader() {
+	fn insert_material() {
 		let mut app = setup(new_handle());
 
 		let entity = app.world_mut().spawn(_Component);
 
-		assert!(entity.contains::<EffectShader>());
+		assert!(entity.contains::<EffectMaterialHandle>());
 	}
 
 	macro_rules! get_material {
 		($app:expr, $entity:expr) => {
 			$app.world()
 				.entity($entity)
-				.get::<EffectShader>()
+				.get::<EffectMaterialHandle>()
 				.and_then(|shader| {
 					$app.world()
 						.resource::<Assets<EffectMaterial>>()
@@ -69,7 +69,7 @@ mod tests {
 	}
 
 	#[test]
-	fn inserted_shader_has_first_pass_image() {
+	fn inserted_material_has_first_pass_image() {
 		let first_pass = new_handle();
 		let mut app = setup(first_pass.clone());
 
@@ -102,9 +102,9 @@ mod tests {
 		let mut app = setup(new_handle());
 
 		let mut entity = app.world_mut().spawn(_Component);
-		entity.remove::<EffectShader>();
+		entity.remove::<EffectMaterialHandle>();
 		entity.insert(_Component);
 
-		assert!(!entity.contains::<EffectShader>());
+		assert!(!entity.contains::<EffectMaterialHandle>());
 	}
 }

@@ -3,20 +3,25 @@ use crate::{
 	traits::UIBarColors,
 };
 use bevy::prelude::*;
-use common::components::ui_node_for::UiNodeFor;
+use common::{components::ui_node_for::UiNodeFor, traits::thread_safe::ThreadSafe};
 
 const BASE_DIMENSIONS: Vec2 = Vec2::new(100., 10.);
 
-pub(crate) fn render_bar<T: Send + Sync + 'static>(
+pub(crate) fn render_bar<T, TCamera>(
 	mut commands: Commands,
 	mut bars: Query<(Entity, &Bar, &mut BarValues<T>)>,
 	mut styles: Query<&mut Node>,
+	cameras: Query<Entity, With<TCamera>>,
 ) where
+	T: ThreadSafe,
 	BarValues<T>: UIBarColors,
+	TCamera: Component,
 {
+	let cam = cameras.single().ok();
+
 	for (bar_id, bar, bar_values) in &mut bars {
 		match (bar.position, bar_values.ui) {
-			(Some(position), None) => add_ui(&mut commands, bar_id, bar, bar_values, position),
+			(Some(position), None) => add_ui(&mut commands, bar_id, bar, bar_values, position, cam),
 			(Some(position), Some(ui)) => update_ui(&mut styles, ui, bar, bar_values, position),
 			_ => noop(),
 		}
@@ -29,24 +34,27 @@ fn add_ui<T: Send + Sync + 'static>(
 	bar: &Bar,
 	mut bar_values: Mut<BarValues<T>>,
 	position: Vec2,
+	camera: Option<Entity>,
 ) where
 	BarValues<T>: UIBarColors,
 {
 	let scaled_dimension = BASE_DIMENSIONS * bar.scale;
-	let background = commands
-		.spawn((
-			UiNodeFor::<Bar>::with(bar_id),
-			Node {
-				width: Val::Px(scaled_dimension.x),
-				height: Val::Px(scaled_dimension.y),
-				position_type: PositionType::Absolute,
-				left: Val::Px(position.x - scaled_dimension.x / 2.),
-				top: Val::Px(position.y - scaled_dimension.y / 2.),
-				..default()
-			},
-			BackgroundColor::from(BarValues::<T>::background_color()),
-		))
-		.id();
+	let mut background = commands.spawn((
+		UiNodeFor::<Bar>::with(bar_id),
+		Node {
+			width: Val::Px(scaled_dimension.x),
+			height: Val::Px(scaled_dimension.y),
+			position_type: PositionType::Absolute,
+			left: Val::Px(position.x - scaled_dimension.x / 2.),
+			top: Val::Px(position.y - scaled_dimension.y / 2.),
+			..default()
+		},
+		BackgroundColor::from(BarValues::<T>::background_color()),
+	));
+	if let Some(camera) = camera {
+		background.insert(UiTargetCamera(camera));
+	}
+	let background = background.id();
 	let foreground = commands
 		.spawn((
 			Node {
@@ -86,9 +94,11 @@ fn noop() {}
 #[cfg(test)]
 mod tests {
 	#![allow(clippy::unwrap_used)]
-	use testing::assert_count;
-
 	use super::*;
+	use testing::{SingleThreadedApp, assert_count};
+
+	#[derive(Component)]
+	struct _Camera;
 
 	struct _Display;
 
@@ -102,11 +112,17 @@ mod tests {
 		}
 	}
 
+	fn setup() -> App {
+		let mut app = App::new().single_threaded(Update);
+
+		app.add_systems(Update, render_bar::<_Display, _Camera>);
+
+		app
+	}
+
 	#[test]
 	fn add_node_bundle() {
-		let mut app = App::new();
-		app.add_systems(Update, render_bar::<_Display>);
-
+		let mut app = setup();
 		let bar = Bar {
 			position: Some(default()),
 			..default()
@@ -136,10 +152,28 @@ mod tests {
 	}
 
 	#[test]
-	fn add_ownership_on_top_node() {
-		let mut app = App::new();
-		app.add_systems(Update, render_bar::<_Display>);
+	fn add_camera_target() {
+		let mut app = setup();
+		let bar = Bar {
+			position: Some(default()),
+			..default()
+		};
+		let bar_values = BarValues::<_Display>::new(0., 0.);
+		let camera = app.world_mut().spawn(_Camera).id();
+		app.world_mut().spawn((bar, bar_values));
 
+		app.update();
+
+		let mut top = app
+			.world_mut()
+			.query_filtered::<&UiTargetCamera, (With<Node>, Without<ChildOf>)>();
+		let [UiTargetCamera(target_camera)] = assert_count!(1, top.iter(app.world()));
+		assert_eq!(&camera, target_camera);
+	}
+
+	#[test]
+	fn add_ownership_on_top_node() {
+		let mut app = setup();
 		let bar = Bar {
 			position: Some(default()),
 			..default()
@@ -158,9 +192,7 @@ mod tests {
 
 	#[test]
 	fn set_dimensions() {
-		let mut app = App::new();
-		app.add_systems(Update, render_bar::<_Display>);
-
+		let mut app = setup();
 		let bar = Bar {
 			scale: 1.,
 			position: Some(default()),
@@ -181,9 +213,7 @@ mod tests {
 
 	#[test]
 	fn set_dimensions_scaled() {
-		let mut app = App::new();
-		app.add_systems(Update, render_bar::<_Display>);
-
+		let mut app = setup();
 		let bar = Bar {
 			scale: 2.,
 			position: Some(default()),
@@ -207,9 +237,7 @@ mod tests {
 
 	#[test]
 	fn set_position() {
-		let mut app = App::new();
-		app.add_systems(Update, render_bar::<_Display>);
-
+		let mut app = setup();
 		let bar = Bar {
 			scale: 1.,
 			position: Some(Vec2::new(300., 400.)),
@@ -234,9 +262,7 @@ mod tests {
 
 	#[test]
 	fn set_position_scaled() {
-		let mut app = App::new();
-		app.add_systems(Update, render_bar::<_Display>);
-
+		let mut app = setup();
 		let bar = Bar {
 			scale: 2.,
 			position: Some(Vec2::new(300., 400.)),
@@ -261,9 +287,7 @@ mod tests {
 
 	#[test]
 	fn set_background_color() {
-		let mut app = App::new();
-		app.add_systems(Update, render_bar::<_Display>);
-
+		let mut app = setup();
 		let bar = Bar {
 			position: Some(default()),
 			..default()
@@ -282,9 +306,7 @@ mod tests {
 
 	#[test]
 	fn set_foreground_color() {
-		let mut app = App::new();
-		app.add_systems(Update, render_bar::<_Display>);
-
+		let mut app = setup();
 		let bar = Bar {
 			position: Some(default()),
 			..default()
@@ -303,9 +325,7 @@ mod tests {
 
 	#[test]
 	fn set_fill() {
-		let mut app = App::new();
-		app.add_systems(Update, render_bar::<_Display>);
-
+		let mut app = setup();
 		let bar = Bar {
 			position: Some(default()),
 			..default()
@@ -322,9 +342,7 @@ mod tests {
 
 	#[test]
 	fn update_position() {
-		let mut app = App::new();
-		app.add_systems(Update, render_bar::<_Display>);
-
+		let mut app = setup();
 		let bar = Bar {
 			scale: 1.,
 			position: Some(Vec2::new(300., 400.)),
@@ -354,9 +372,7 @@ mod tests {
 
 	#[test]
 	fn update_position_scaled() {
-		let mut app = App::new();
-		app.add_systems(Update, render_bar::<_Display>);
-
+		let mut app = setup();
 		let bar = Bar {
 			scale: 2.,
 			position: Some(Vec2::new(300., 400.)),
@@ -386,9 +402,7 @@ mod tests {
 
 	#[test]
 	fn update_fill() {
-		let mut app = App::new();
-		app.add_systems(Update, render_bar::<_Display>);
-
+		let mut app = setup();
 		let bar = Bar {
 			position: Some(default()),
 			..default()

@@ -1,5 +1,4 @@
-use crate::traits::handles_graphics::StaticRenderLayers;
-use bevy::{camera::visibility::RenderLayers, prelude::*};
+use bevy::prelude::*;
 use std::marker::PhantomData;
 
 #[derive(Component, Debug, PartialEq)]
@@ -14,33 +13,5 @@ impl<T> UiNodeFor<T> {
 			owner,
 			owner_type: PhantomData,
 		}
-	}
-
-	pub fn render_layer<TUiCamera>() -> RenderLayers
-	where
-		TUiCamera: StaticRenderLayers,
-	{
-		TUiCamera::render_layers()
-	}
-}
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-
-	#[test]
-	fn ui_node_set_render_layer() {
-		struct _T;
-
-		impl StaticRenderLayers for _T {
-			fn render_layers() -> RenderLayers {
-				RenderLayers::layer(42)
-			}
-		}
-
-		assert_eq!(
-			RenderLayers::layer(42),
-			UiNodeFor::<()>::render_layer::<_T>()
-		);
 	}
 }

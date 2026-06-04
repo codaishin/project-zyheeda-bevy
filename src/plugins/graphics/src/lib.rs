@@ -6,7 +6,7 @@ mod systems;
 mod traits;
 
 use crate::{
-	components::effect_material_config::EffectShaderMeshOf,
+	components::{child_meshes::ChildMeshOf, pass_layer::PassLayers},
 	materials::effect_material::EffectMaterial,
 };
 use bevy::{
@@ -32,7 +32,7 @@ use common::{
 };
 use components::{
 	camera_labels::{FirstPass, SecondPass, Ui, WorldCamera},
-	effect_material_config::EffectShader,
+	effect_material_handle::EffectMaterialHandle,
 	material_override::MaterialOverride,
 };
 use materials::essence_material::EssenceMaterial;
@@ -84,30 +84,28 @@ where
 			.in_sub_app(app, RenderApp, ExtractSchedule, no_waiting_pipelines);
 	}
 
-	fn effect_shading(app: &mut App) {
-		type UnlinkedEffectShader = (Added<Mesh3d>, Without<EffectShaderMeshOf>);
+	fn shading(app: &mut App) {
+		type UnlinkedMeshes = (Added<Mesh3d>, Without<ChildMeshOf>);
 
 		app.add_plugins(MaterialPlugin::<EffectMaterial>::default())
-			.add_observer(EffectShader::add_to::<TPhysics::TSkillContact>)
-			.add_observer(EffectShader::add_to::<TPhysics::TSkillProjection>)
+			.register_derived_component::<Essence, MaterialOverride>()
+			.register_shader::<EssenceMaterial>()
+			.add_observer(MaterialOverride::update_essence_shader)
+			.add_observer(EffectMaterialHandle::add_to::<TPhysics::TSkillContact>)
+			.add_observer(EffectMaterialHandle::add_to::<TPhysics::TSkillProjection>)
 			.add_systems(
 				Update,
 				(
-					UnlinkedEffectShader::link_to::<EffectShader, EffectShaderMeshOf>,
-					EffectShader::modify_material::<TPhysics, Force>,
-					EffectShader::modify_material::<TPhysics, Gravity>,
-					EffectShader::modify_material::<TPhysics, HealthDamage>,
-					EffectShader::propagate(SecondPass),
+					UnlinkedMeshes::link_to::<PassLayers, ChildMeshOf>,
+					EffectMaterialHandle::modify_material::<TPhysics, Force>,
+					EffectMaterialHandle::modify_material::<TPhysics, Gravity>,
+					EffectMaterialHandle::modify_material::<TPhysics, HealthDamage>,
+					EffectMaterialHandle::propagate_material,
+					PassLayers::propagate_layer,
 				)
 					.chain()
 					.after_plugin(TPhysics::SYSTEMS),
 			);
-	}
-
-	fn essence_material(app: &mut App) {
-		app.register_derived_component::<Essence, MaterialOverride>()
-			.register_shader::<EssenceMaterial>()
-			.add_observer(MaterialOverride::update_essence_shader);
 	}
 
 	fn cameras(&self, app: &mut App) {
@@ -138,8 +136,7 @@ where
 {
 	fn build(&self, app: &mut App) {
 		Self::track_render_pipeline_ready(app);
-		Self::effect_shading(app);
-		Self::essence_material(app);
+		Self::shading(app);
 		self.cameras(app);
 	}
 }

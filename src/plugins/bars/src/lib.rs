@@ -4,12 +4,11 @@ mod traits;
 
 use bevy::{
 	app::{App, Plugin, Update},
-	camera::{Camera, visibility::RenderLayers},
+	camera::Camera,
 	ecs::schedule::IntoScheduleConfigs,
 };
 use common::{
 	attributes::health::Health,
-	components::ui_node_for::UiNodeFor,
 	traits::{
 		handles_agents::HandlesAgents,
 		handles_graphics::UiCamera,
@@ -44,11 +43,9 @@ where
 	fn build(&self, app: &mut App) {
 		let update_life_bars =
 			bar::<TPhysics::TAffectedComponent, Health, Camera, TGraphics::TUiCamera>;
-		let render_life_bars = render_bar::<Health>;
-		let render_layer = UiNodeFor::<Bar>::render_layer::<TGraphics::TUiCamera>;
+		let render_life_bars = render_bar::<Health, TGraphics::TUiCamera>;
 
 		app.register_required_components::<TAgents::TAgent, Bar>();
-		app.register_required_components_with::<UiNodeFor<Bar>, RenderLayers>(render_layer);
 
 		app.manage_ownership::<Bar>(Update);
 		app.add_systems(Update, (update_life_bars, render_life_bars).chain());

@@ -1,11 +1,7 @@
-use bevy::{camera::visibility::RenderLayers, prelude::Component};
-
-pub trait StaticRenderLayers {
-	fn render_layers() -> RenderLayers;
-}
+use bevy::prelude::*;
 
 pub trait UiCamera {
-	type TUiCamera: Component + StaticRenderLayers;
+	type TUiCamera: Component;
 }
 
 pub trait FirstPassCamera {

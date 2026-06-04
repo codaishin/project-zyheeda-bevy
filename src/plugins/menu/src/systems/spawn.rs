@@ -1,23 +1,30 @@
 use crate::traits::LoadUi;
 use bevy::prelude::*;
-use common::traits::{handles_graphics::StaticRenderLayers, load_asset::LoadAsset};
+use common::{traits::load_asset::LoadAsset, zyheeda_commands::ZyheedaCommands};
 
-pub fn spawn<TComponent, TServer, TGraphics>(mut commands: Commands, mut images: ResMut<TServer>)
-where
+pub fn spawn<TComponent, TServer, TCameras>(
+	mut commands: ZyheedaCommands,
+	mut images: ResMut<TServer>,
+	cameras: Query<Entity, With<TCameras>>,
+) where
 	TComponent: LoadUi<TServer> + Component,
 	TServer: Resource + LoadAsset,
-	TGraphics: StaticRenderLayers,
+	TCameras: Component,
 {
 	let component = TComponent::load_ui(images.as_mut());
 
-	commands.spawn((component, TGraphics::render_layers()));
+	let mut entity = commands.spawn(component);
+
+	if let Ok(camera) = cameras.single() {
+		entity.insert(UiTargetCamera(camera));
+	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy::{asset::AssetPath, camera::visibility::RenderLayers};
-	use testing::assert_count;
+	use bevy::asset::AssetPath;
+	use testing::{SingleThreadedApp, assert_count};
 
 	#[derive(Component, Resource, Default)]
 	struct _Server;
@@ -41,20 +48,22 @@ mod tests {
 		}
 	}
 
-	struct _Graphics;
+	#[derive(Component)]
+	struct _Camera;
 
-	impl StaticRenderLayers for _Graphics {
-		fn render_layers() -> RenderLayers {
-			RenderLayers::layer(11)
-		}
+	fn setup() -> App {
+		let mut app = App::new().single_threaded(Update);
+
+		app.init_resource::<_Server>();
+		app.add_systems(Update, spawn::<_Component, _Server, _Camera>);
+
+		app
 	}
 
 	#[test]
 	fn spawn_component() {
-		let mut app = App::new();
+		let mut app = setup();
 
-		app.init_resource::<_Server>();
-		app.add_systems(Update, spawn::<_Component, _Server, _Graphics>);
 		app.update();
 
 		let mut components = app.world_mut().query_filtered::<(), With<_Component>>();
@@ -62,19 +71,16 @@ mod tests {
 	}
 
 	#[test]
-	fn spawn_render_layer() {
-		let mut app = App::new();
+	fn set_ui_target_camera() {
+		let mut app = setup();
+		let camera = app.world_mut().spawn(_Camera).id();
 
-		app.init_resource::<_Server>();
-		app.add_systems(Update, spawn::<_Component, _Server, _Graphics>);
 		app.update();
 
-		let mut render_layers = app.world_mut().query::<&RenderLayers>();
-		assert_count!(
-			1,
-			render_layers
-				.iter(app.world())
-				.filter(|r| r == &&RenderLayers::layer(11))
-		);
+		let mut components = app
+			.world_mut()
+			.query_filtered::<&UiTargetCamera, With<_Component>>();
+		let [UiTargetCamera(target_camera)] = assert_count!(1, components.iter(app.world()));
+		assert_eq!(&camera, target_camera);
 	}
 }

@@ -14,12 +14,7 @@ use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{
 	states::game_state::GameState,
 	tools::Index,
-	traits::{
-		handles_graphics::StaticRenderLayers,
-		handles_localization::Localize,
-		iteration::IterFinite,
-		thread_safe::ThreadSafe,
-	},
+	traits::{handles_localization::Localize, iteration::IterFinite, thread_safe::ThreadSafe},
 };
 use std::{fmt::Debug, marker::PhantomData, time::Duration};
 
@@ -94,7 +89,7 @@ fn update_state_time<TState>(
 pub fn setup_run_time_display<TLocalization, TGraphics>(app: &mut App)
 where
 	TLocalization: Localize + Resource,
-	TGraphics: StaticRenderLayers + 'static,
+	TGraphics: Component,
 {
 	for state in GameState::iterator() {
 		app.add_ui::<StateTime<GameState>, TLocalization, TGraphics>(state);

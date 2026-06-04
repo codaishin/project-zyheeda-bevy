@@ -1,3 +1,4 @@
+use crate::components::pass_layer::PassLayers;
 use bevy::{
 	camera::visibility::RenderLayers,
 	core_pipeline::tonemapping::Tonemapping,
@@ -5,9 +6,12 @@ use bevy::{
 	prelude::*,
 	render::view::Hdr,
 };
-use common::traits::handles_graphics::StaticRenderLayers;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
+
+const FIRST_PASS: usize = 0;
+const SECOND_PASS: usize = 1;
+const UI_PASS: usize = 2;
 
 #[derive(Component, Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
 #[require(Camera3d)]
@@ -27,12 +31,30 @@ pub struct WorldCamera;
 	Deserialize,
 )]
 #[savable_component(id = "1st pass camera")]
-#[require(WorldCamera, Hdr, Tonemapping = Self, Bloom)]
+#[require(
+	WorldCamera,
+	Tonemapping = Self,
+	RenderLayers = Self,
+	Hdr,
+	Bloom
+)]
 pub struct FirstPass;
 
 impl From<FirstPass> for Tonemapping {
 	fn from(_: FirstPass) -> Self {
 		Tonemapping::None
+	}
+}
+
+impl From<FirstPass> for RenderLayers {
+	fn from(_: FirstPass) -> Self {
+		Self::layer(FIRST_PASS)
+	}
+}
+
+impl From<FirstPass> for PassLayers {
+	fn from(_: FirstPass) -> Self {
+		PassLayers::from(FIRST_PASS)
 	}
 }
 
@@ -52,26 +74,18 @@ impl From<FirstPass> for Tonemapping {
 #[savable_component(id = "2nd pass camera")]
 #[require(
 	WorldCamera,
-	Hdr,
 	Camera = Self,
 	Tonemapping = Self,
+	RenderLayers = Self,
+	Hdr,
 	Bloom,
-	RenderLayers = Self::with_default_layer(),
 )]
 pub struct SecondPass;
-
-impl SecondPass {
-	const ORDER: usize = 1;
-
-	fn with_default_layer() -> RenderLayers {
-		RenderLayers::from_layers(&[0, Self::ORDER])
-	}
-}
 
 impl From<SecondPass> for Camera {
 	fn from(_: SecondPass) -> Self {
 		Camera {
-			order: SecondPass::ORDER as isize,
+			order: SECOND_PASS as isize,
 			..default()
 		}
 	}
@@ -79,13 +93,19 @@ impl From<SecondPass> for Camera {
 
 impl From<SecondPass> for Tonemapping {
 	fn from(_: SecondPass) -> Self {
-		const { Tonemapping::TonyMcMapface }
+		Tonemapping::TonyMcMapface
 	}
 }
 
 impl From<SecondPass> for RenderLayers {
 	fn from(_: SecondPass) -> Self {
-		const { RenderLayers::layer(SecondPass::ORDER) }
+		RenderLayers::from_layers(&[FIRST_PASS, SECOND_PASS])
+	}
+}
+
+impl From<SecondPass> for PassLayers {
+	fn from(_: SecondPass) -> Self {
+		PassLayers::from(SECOND_PASS)
 	}
 }
 
@@ -105,21 +125,17 @@ impl From<SecondPass> for RenderLayers {
 #[savable_component(id = "ui camera")]
 #[require(
 	WorldCamera,
-	Hdr,
 	Camera = Self,
 	Tonemapping = Self,
 	RenderLayers = Self,
+	Hdr,
 )]
 pub struct Ui;
-
-impl Ui {
-	const ORDER: usize = 2;
-}
 
 impl From<Ui> for Camera {
 	fn from(_: Ui) -> Self {
 		Camera {
-			order: Ui::ORDER as isize,
+			order: UI_PASS as isize,
 			clear_color: ClearColorConfig::None,
 			..default()
 		}
@@ -134,12 +150,6 @@ impl From<Ui> for Tonemapping {
 
 impl From<Ui> for RenderLayers {
 	fn from(_: Ui) -> Self {
-		const { RenderLayers::layer(Ui::ORDER) }
-	}
-}
-
-impl StaticRenderLayers for Ui {
-	fn render_layers() -> RenderLayers {
-		RenderLayers::from(Ui)
+		RenderLayers::layer(UI_PASS)
 	}
 }
