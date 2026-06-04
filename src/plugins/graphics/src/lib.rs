@@ -6,7 +6,7 @@ mod systems;
 mod traits;
 
 use crate::{
-	components::{child_meshes::ChildMeshOf, pass_layer::PassLayer},
+	components::{child_meshes::ChildMeshOf, pass_layer::PassLayers},
 	materials::effect_material::EffectMaterial,
 };
 use bevy::{
@@ -96,11 +96,12 @@ where
 			.add_systems(
 				Update,
 				(
-					UnlinkedMeshes::link_to::<PassLayer, ChildMeshOf>,
+					UnlinkedMeshes::link_to::<PassLayers, ChildMeshOf>,
 					EffectMaterialHandle::modify_material::<TPhysics, Force>,
 					EffectMaterialHandle::modify_material::<TPhysics, Gravity>,
 					EffectMaterialHandle::modify_material::<TPhysics, HealthDamage>,
 					EffectMaterialHandle::propagate_material,
+					PassLayers::propagate_layer,
 				)
 					.chain()
 					.after_plugin(TPhysics::SYSTEMS),
