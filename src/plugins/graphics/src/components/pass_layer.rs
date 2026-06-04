@@ -4,7 +4,7 @@ use bevy::{
 };
 
 #[derive(Component, Debug, PartialEq)]
-pub(crate) struct PassLayers {
+pub struct PassLayers {
 	layer: Layer,
 }
 

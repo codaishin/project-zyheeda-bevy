@@ -6,7 +6,6 @@ use bevy::{
 	prelude::*,
 	render::view::Hdr,
 };
-use common::traits::handles_graphics::StaticRenderLayers;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
@@ -152,11 +151,5 @@ impl From<Ui> for Tonemapping {
 impl From<Ui> for RenderLayers {
 	fn from(_: Ui) -> Self {
 		RenderLayers::layer(UI_PASS)
-	}
-}
-
-impl StaticRenderLayers for Ui {
-	fn render_layers() -> RenderLayers {
-		RenderLayers::from(Ui)
 	}
 }
