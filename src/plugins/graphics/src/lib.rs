@@ -6,7 +6,7 @@ mod systems;
 mod traits;
 
 use crate::{
-	components::effect_material_config::EffectShaderMeshOf,
+	components::effect_material_handle::EffectMeshOf,
 	materials::effect_material::EffectMaterial,
 };
 use bevy::{
@@ -32,7 +32,7 @@ use common::{
 };
 use components::{
 	camera_labels::{FirstPass, SecondPass, Ui, WorldCamera},
-	effect_material_config::EffectShader,
+	effect_material_handle::EffectMaterialHandle,
 	material_override::MaterialOverride,
 };
 use materials::essence_material::EssenceMaterial;
@@ -85,19 +85,19 @@ where
 	}
 
 	fn effect_shading(app: &mut App) {
-		type UnlinkedEffectShader = (Added<Mesh3d>, Without<EffectShaderMeshOf>);
+		type UnlinkedEffectMeshes = (Added<Mesh3d>, Without<EffectMeshOf>);
 
 		app.add_plugins(MaterialPlugin::<EffectMaterial>::default())
-			.add_observer(EffectShader::add_to::<TPhysics::TSkillContact>)
-			.add_observer(EffectShader::add_to::<TPhysics::TSkillProjection>)
+			.add_observer(EffectMaterialHandle::add_to::<TPhysics::TSkillContact>)
+			.add_observer(EffectMaterialHandle::add_to::<TPhysics::TSkillProjection>)
 			.add_systems(
 				Update,
 				(
-					UnlinkedEffectShader::link_to::<EffectShader, EffectShaderMeshOf>,
-					EffectShader::modify_material::<TPhysics, Force>,
-					EffectShader::modify_material::<TPhysics, Gravity>,
-					EffectShader::modify_material::<TPhysics, HealthDamage>,
-					EffectShader::propagate(SecondPass),
+					UnlinkedEffectMeshes::link_to::<EffectMaterialHandle, EffectMeshOf>,
+					EffectMaterialHandle::modify_material::<TPhysics, Force>,
+					EffectMaterialHandle::modify_material::<TPhysics, Gravity>,
+					EffectMaterialHandle::modify_material::<TPhysics, HealthDamage>,
+					EffectMaterialHandle::propagate(SecondPass),
 				)
 					.chain()
 					.after_plugin(TPhysics::SYSTEMS),

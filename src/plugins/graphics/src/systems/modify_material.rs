@@ -1,12 +1,12 @@
 use crate::{
-	components::effect_material_config::EffectShader,
+	components::effect_material_handle::EffectMaterialHandle,
 	materials::effect_material::EffectMaterial,
 	traits::modify_material::ModifyMaterial,
 };
 use bevy::prelude::*;
 use common::traits::handles_physics::{Effect, HandlesPhysicalEffect};
 
-impl EffectShader {
+impl EffectMaterialHandle {
 	pub(crate) fn modify_material<TPhysics, TEffect>(
 		shaders: Query<&Self, Added<TPhysics::TEffectComponent>>,
 		materials: ResMut<Assets<EffectMaterial>>,
@@ -24,7 +24,7 @@ impl EffectShader {
 		TEffectComponent: Component,
 		TEffect: ModifyMaterial + 'static,
 	{
-		for EffectShader { material } in shaders {
+		for EffectMaterialHandle { material } in shaders {
 			let Some(material) = materials.get_mut(material) else {
 				continue;
 			};
@@ -64,7 +64,7 @@ mod tests {
 		app.insert_resource(material_assets);
 		app.add_systems(
 			Update,
-			EffectShader::modify_material_internal::<_Component, _Effect>,
+			EffectMaterialHandle::modify_material_internal::<_Component, _Effect>,
 		);
 
 		app
@@ -77,7 +77,7 @@ mod tests {
 		let material = EffectMaterial::from_first_pass(first_pass.clone());
 		let mut app = setup([(&handle, material)]);
 		app.world_mut().spawn((
-			EffectShader {
+			EffectMaterialHandle {
 				material: handle.clone(),
 			},
 			_Component,
@@ -101,7 +101,7 @@ mod tests {
 		let handle = new_handle();
 		let material = EffectMaterial::from_first_pass(first_pass.clone());
 		let mut app = setup([(&handle, material)]);
-		app.world_mut().spawn(EffectShader {
+		app.world_mut().spawn(EffectMaterialHandle {
 			material: handle.clone(),
 		});
 
@@ -122,7 +122,7 @@ mod tests {
 		let material = EffectMaterial::from_first_pass(first_pass.clone());
 		let mut app = setup([(&handle, material)]);
 		app.world_mut().spawn((
-			EffectShader {
+			EffectMaterialHandle {
 				material: handle.clone(),
 			},
 			_Component,
