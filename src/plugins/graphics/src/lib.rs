@@ -6,7 +6,7 @@ mod systems;
 mod traits;
 
 use crate::{
-	components::effect_material_handle::EffectMeshOf,
+	components::{child_meshes::ChildMeshOf, pass_layer::PassLayer},
 	materials::effect_material::EffectMaterial,
 };
 use bevy::{
@@ -84,30 +84,27 @@ where
 			.in_sub_app(app, RenderApp, ExtractSchedule, no_waiting_pipelines);
 	}
 
-	fn effect_shading(app: &mut App) {
-		type UnlinkedEffectMeshes = (Added<Mesh3d>, Without<EffectMeshOf>);
+	fn shading(app: &mut App) {
+		type UnlinkedMeshes = (Added<Mesh3d>, Without<ChildMeshOf>);
 
 		app.add_plugins(MaterialPlugin::<EffectMaterial>::default())
+			.register_derived_component::<Essence, MaterialOverride>()
+			.register_shader::<EssenceMaterial>()
+			.add_observer(MaterialOverride::update_essence_shader)
 			.add_observer(EffectMaterialHandle::add_to::<TPhysics::TSkillContact>)
 			.add_observer(EffectMaterialHandle::add_to::<TPhysics::TSkillProjection>)
 			.add_systems(
 				Update,
 				(
-					UnlinkedEffectMeshes::link_to::<EffectMaterialHandle, EffectMeshOf>,
+					UnlinkedMeshes::link_to::<PassLayer, ChildMeshOf>,
 					EffectMaterialHandle::modify_material::<TPhysics, Force>,
 					EffectMaterialHandle::modify_material::<TPhysics, Gravity>,
 					EffectMaterialHandle::modify_material::<TPhysics, HealthDamage>,
-					EffectMaterialHandle::propagate(SecondPass),
+					EffectMaterialHandle::propagate_material,
 				)
 					.chain()
 					.after_plugin(TPhysics::SYSTEMS),
 			);
-	}
-
-	fn essence_material(app: &mut App) {
-		app.register_derived_component::<Essence, MaterialOverride>()
-			.register_shader::<EssenceMaterial>()
-			.add_observer(MaterialOverride::update_essence_shader);
 	}
 
 	fn cameras(&self, app: &mut App) {
@@ -138,8 +135,7 @@ where
 {
 	fn build(&self, app: &mut App) {
 		Self::track_render_pipeline_ready(app);
-		Self::effect_shading(app);
-		Self::essence_material(app);
+		Self::shading(app);
 		self.cameras(app);
 	}
 }

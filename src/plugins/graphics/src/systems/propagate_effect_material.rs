@@ -1,28 +1,21 @@
-use crate::components::effect_material_handle::{EffectMaterialHandle, EffectMeshes};
-use bevy::{camera::visibility::RenderLayers, prelude::*};
+use crate::components::{child_meshes::ChildMeshes, effect_material_handle::EffectMaterialHandle};
+use bevy::prelude::*;
 use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
 impl EffectMaterialHandle {
-	pub(crate) fn propagate(layers: impl Into<RenderLayers>) -> impl IntoSystem<(), (), ()> {
-		let layers = layers.into();
-
-		#[rustfmt::skip]
-		let system = move |
-			mut commands: ZyheedaCommands,
-			meshes: Query<(&Self, &mut Visibility, &EffectMeshes), Changed<EffectMeshes>>
-		| {
-			for (Self { material }, mut visibility, shader_meshes) in meshes {
-				for entity in shader_meshes.iter() {
-					commands.try_apply_on(&entity, |mut e| {
-						e.try_remove::<MeshMaterial3d<StandardMaterial>>();
-						e.try_insert((layers.clone(), MeshMaterial3d(material.clone())));
-					});
-				}
-				*visibility = Visibility::Visible;
+	pub(crate) fn propagate_material(
+		mut commands: ZyheedaCommands,
+		meshes: Query<(&Self, &mut Visibility, &ChildMeshes), Changed<ChildMeshes>>,
+	) {
+		for (Self { material }, mut visibility, child_meshes) in meshes {
+			for entity in child_meshes.iter() {
+				commands.try_apply_on(&entity, |mut e| {
+					e.try_remove::<MeshMaterial3d<StandardMaterial>>();
+					e.try_insert(MeshMaterial3d(material.clone()));
+				});
 			}
-		};
-
-		IntoSystem::into_system(system)
+			*visibility = Visibility::Visible;
+		}
 	}
 }
 
@@ -30,15 +23,15 @@ impl EffectMaterialHandle {
 mod tests {
 	use super::*;
 	use crate::{
-		components::effect_material_handle::EffectMeshOf,
+		components::child_meshes::ChildMeshOf,
 		materials::effect_material::EffectMaterial,
 	};
 	use testing::{SingleThreadedApp, new_handle};
 
-	fn setup(layers: impl Into<RenderLayers>) -> App {
+	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, EffectMaterialHandle::propagate(layers));
+		app.add_systems(Update, EffectMaterialHandle::propagate_material);
 
 		app
 	}
@@ -46,14 +39,14 @@ mod tests {
 	#[test]
 	fn propagate_material() {
 		let material = new_handle();
-		let mut app = setup(RenderLayers::default());
+		let mut app = setup();
 		let entity = app
 			.world_mut()
 			.spawn(EffectMaterialHandle {
 				material: material.clone(),
 			})
 			.id();
-		let child = app.world_mut().spawn(EffectMeshOf(entity)).id();
+		let child = app.world_mut().spawn(ChildMeshOf(entity)).id();
 
 		app.update();
 
@@ -66,27 +59,13 @@ mod tests {
 	}
 
 	#[test]
-	fn propagate_render_layer() {
-		let mut app = setup(RenderLayers::layer(3));
-		let entity = app.world_mut().spawn(EffectMaterialHandle::default()).id();
-		let child = app.world_mut().spawn(EffectMeshOf(entity)).id();
-
-		app.update();
-
-		assert_eq!(
-			Some(&RenderLayers::layer(3)),
-			app.world().entity(child).get::<RenderLayers>(),
-		);
-	}
-
-	#[test]
 	fn remove_standard_material() {
-		let mut app = setup(RenderLayers::default());
+		let mut app = setup();
 		let entity = app.world_mut().spawn(EffectMaterialHandle::default()).id();
 		let child = app
 			.world_mut()
 			.spawn((
-				EffectMeshOf(entity),
+				ChildMeshOf(entity),
 				MeshMaterial3d(new_handle::<StandardMaterial>()),
 			))
 			.id();
@@ -103,10 +82,10 @@ mod tests {
 
 	#[test]
 	fn set_visibility_to_visible() {
-		let mut app = setup(RenderLayers::default());
+		let mut app = setup();
 		let entity = app.world_mut().spawn(EffectMaterialHandle::default()).id();
 		app.world_mut().spawn((
-			EffectMeshOf(entity),
+			ChildMeshOf(entity),
 			MeshMaterial3d(new_handle::<StandardMaterial>()),
 		));
 
@@ -120,9 +99,9 @@ mod tests {
 
 	#[test]
 	fn act_only_once() {
-		let mut app = setup(RenderLayers::default());
+		let mut app = setup();
 		let entity = app.world_mut().spawn(EffectMaterialHandle::default()).id();
-		let child = app.world_mut().spawn(EffectMeshOf(entity)).id();
+		let child = app.world_mut().spawn(ChildMeshOf(entity)).id();
 
 		app.update();
 		app.world_mut()
@@ -141,14 +120,14 @@ mod tests {
 	#[test]
 	fn act_only_once_again_if_children_changed() {
 		let material = new_handle();
-		let mut app = setup(RenderLayers::default());
+		let mut app = setup();
 		let entity = app
 			.world_mut()
 			.spawn(EffectMaterialHandle {
 				material: material.clone(),
 			})
 			.id();
-		let child = app.world_mut().spawn(EffectMeshOf(entity)).id();
+		let child = app.world_mut().spawn(ChildMeshOf(entity)).id();
 
 		app.update();
 		app.world_mut()
@@ -156,7 +135,7 @@ mod tests {
 			.remove::<MeshMaterial3d<EffectMaterial>>();
 		app.world_mut()
 			.entity_mut(entity)
-			.get_mut::<EffectMeshes>()
+			.get_mut::<ChildMeshes>()
 			.as_deref_mut();
 		app.update();
 
