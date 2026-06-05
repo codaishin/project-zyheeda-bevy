@@ -12,7 +12,7 @@ impl PassLayers {
 		for (root, pass_layers, children) in layers {
 			for entity in iter(root, children) {
 				commands.try_apply_on(&entity, |mut e| {
-					e.try_insert(RenderLayers::from(pass_layers));
+					e.try_insert(RenderLayers::from_iter(pass_layers));
 				});
 			}
 		}
