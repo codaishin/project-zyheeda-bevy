@@ -24,6 +24,7 @@ use common::{
 		handles_animations::HandlesAnimations,
 		handles_custom_assets::HandlesCustomFolderAssets,
 		handles_enemies::HandlesEnemies,
+		handles_graphics::HandlesGraphics,
 		handles_input::HandlesInput,
 		handles_interactive::HandlesInteractive,
 		handles_loadout::HandlesLoadout,
@@ -44,12 +45,24 @@ use systems::void_sphere::ring_rotation::ring_rotation;
 
 pub struct AgentsPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TInput, TSaveGame, TPhysics, TInteractive, TAnimations, TMaps, TMovement, TLoadout>
+impl<
+	TLoading,
+	TInput,
+	TSaveGame,
+	TPhysics,
+	TGraphics,
+	TInteractive,
+	TAnimations,
+	TMaps,
+	TMovement,
+	TLoadout,
+>
 	AgentsPlugin<(
 		TLoading,
 		TInput,
 		TSaveGame,
 		TPhysics,
+		TGraphics,
 		TInteractive,
 		TAnimations,
 		TMaps,
@@ -65,6 +78,7 @@ where
 		+ HandlesRaycast
 		+ HandlesPhysicalSkillAgent
 		+ HandlesInteractiveDetection,
+	TGraphics: ThreadSafe + HandlesGraphics,
 	TInteractive: ThreadSafe + SystemSetDefinition + HandlesInteractive,
 	TAnimations: ThreadSafe + HandlesAnimations,
 	TMaps: ThreadSafe + HandlesMapGeneration,
@@ -77,6 +91,7 @@ where
 		_: &TInput,
 		_: &TSaveGame,
 		_: &TPhysics,
+		_: &TGraphics,
 		_: &TInteractive,
 		_: &TAnimations,
 		_: &TMaps,
@@ -87,13 +102,24 @@ where
 	}
 }
 
-impl<TLoading, TInput, TSaveGame, TPhysics, TInteractive, TAnimations, TMaps, TMovement, TLoadout>
-	Plugin
+impl<
+	TLoading,
+	TInput,
+	TSaveGame,
+	TPhysics,
+	TGraphics,
+	TInteractive,
+	TAnimations,
+	TMaps,
+	TMovement,
+	TLoadout,
+> Plugin
 	for AgentsPlugin<(
 		TLoading,
 		TInput,
 		TSaveGame,
 		TPhysics,
+		TGraphics,
 		TInteractive,
 		TAnimations,
 		TMaps,
@@ -109,6 +135,7 @@ where
 		+ HandlesRaycast
 		+ HandlesPhysicalSkillAgent
 		+ HandlesInteractiveDetection,
+	TGraphics: ThreadSafe + HandlesGraphics,
 	TInteractive: ThreadSafe + SystemSetDefinition + HandlesInteractive,
 	TAnimations: ThreadSafe + HandlesAnimations,
 	TMaps: ThreadSafe + HandlesMapGeneration,
@@ -160,6 +187,10 @@ where
 					Player::movement::<TInput::TInput, TPhysics::TRaycast, TMovement::TMovementMut>,
 					Player::toggle_speed::<TInput::TInput, TMovement::TMovementMut>,
 					Player::animate_movement::<TMovement::TMovement, TAnimations::TAnimationsMut>,
+					Player::highlight_interactive::<
+						TPhysics::TInteractions,
+						TGraphics::THighlightMut,
+					>,
 					Player::toggle_interactive::<
 						TInput::TInput,
 						TPhysics::TInteractions,
