@@ -103,6 +103,7 @@ where
 					EffectMaterialHandle::modify_material::<TPhysics, Gravity>,
 					EffectMaterialHandle::modify_material::<TPhysics, HealthDamage>,
 					EffectMaterialHandle::propagate_material,
+					PassLayers::populate_missing_with(FirstPass),
 					PassLayers::propagate_layer,
 				)
 					.chain()
