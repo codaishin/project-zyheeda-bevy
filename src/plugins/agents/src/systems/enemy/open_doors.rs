@@ -4,7 +4,7 @@ use common::traits::{
 	accessors::get::{GetContext, TryGetContextMut, ViewOf},
 	handles_interactive::{Interactive, InteractiveState, SetInteractiveState},
 	handles_map_generation::InteractiveType,
-	handles_physics::{Interactions, IterInteractions},
+	handles_physics::{InteractionsOngoing, IterInteractions},
 };
 
 impl Enemy {
@@ -13,11 +13,11 @@ impl Enemy {
 		physics: StaticSystemParam<TPhysics>,
 		enemies: Query<Entity, With<Self>>,
 	) where
-		TPhysics: for<'c> GetContext<Interactions, TContext<'c>: IterInteractions>,
+		TPhysics: for<'c> GetContext<InteractionsOngoing, TContext<'c>: IterInteractions>,
 		TInteractive: for<'c> TryGetContextMut<Interactive, TContext<'c>: SetInteractiveState>,
 	{
 		for entity in enemies {
-			let key = Interactions { entity };
+			let key = InteractionsOngoing { entity };
 			let interactions = TPhysics::get_context(&physics, key);
 
 			for entity in interactions.iter_interactions() {

@@ -34,6 +34,13 @@ impl<T> RootCollisions<T> {
 		self.ongoing.get(entity).unwrap_or(&*EMPTY)
 	}
 
+	pub(crate) fn just_stopped(&self, entity: &Entity) -> HashSet<Entity> {
+		let ongoing = self.ongoing.get(entity).unwrap_or(&*EMPTY);
+		let old = self.old.get(entity).unwrap_or(&*EMPTY);
+
+		HashSet::from_iter(old.iter().filter(|old| !ongoing.contains(old)).copied())
+	}
+
 	pub(crate) fn changed(&self, entity: &Entity) -> bool {
 		self.old.get(entity) != self.ongoing.get(entity)
 	}
@@ -175,6 +182,37 @@ mod tests {
 				interactions.ongoing(&fake_entity!(1)),
 				interactions.changed(&fake_entity!(1))
 			)
+		);
+	}
+
+	#[test]
+	fn iterate_just_stopped() {
+		let mut interactions = RootCollisions::<()>::default();
+
+		interactions.update(
+			fake_entity!(1),
+			[
+				fake_entity!(2),
+				fake_entity!(3),
+				fake_entity!(4),
+				fake_entity!(5),
+				fake_entity!(6),
+			],
+		);
+		interactions.rotate();
+		interactions.update(
+			fake_entity!(1),
+			[
+				fake_entity!(2),
+				fake_entity!(3),
+				fake_entity!(5),
+				fake_entity!(6),
+			],
+		);
+
+		assert_eq!(
+			HashSet::from([fake_entity!(4)]),
+			interactions.just_stopped(&fake_entity!(1)),
 		);
 	}
 }

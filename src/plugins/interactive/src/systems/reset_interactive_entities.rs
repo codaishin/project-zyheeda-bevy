@@ -6,7 +6,7 @@ use bevy::{
 use common::{
 	traits::{
 		accessors::get::{ContextChanged, GetContext, TryApplyOn},
-		handles_physics::{Interactions, IterInteractions},
+		handles_physics::{InteractionsOngoing, IterInteractions},
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -18,10 +18,10 @@ impl Interactive {
 		interactions: StaticSystemParam<TInteractions>,
 	) where
 		TInteractions:
-			SystemParam + for<'c> GetContext<Interactions, TContext<'c>: IterInteractions>,
+			SystemParam + for<'c> GetContext<InteractionsOngoing, TContext<'c>: IterInteractions>,
 	{
 		for entity in interactive_entities {
-			let ctx = TInteractions::get_context(&interactions, Interactions { entity });
+			let ctx = TInteractions::get_context(&interactions, InteractionsOngoing { entity });
 
 			if !ctx.context_changed() {
 				continue;
