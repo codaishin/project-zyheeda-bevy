@@ -2,12 +2,14 @@ mod components;
 mod materials;
 mod observers;
 mod resources;
+mod system_params;
 mod systems;
 mod traits;
 
 use crate::{
-	components::{child_meshes::ChildMeshOf, pass_layer::PassLayers},
+	components::{child_meshes::ChildMeshOf, model_render_layers::ModelRenderLayers},
 	materials::effect_material::EffectMaterial,
+	system_params::highlight::{HighlightParam, HighlightParamMut},
 };
 use bevy::{
 	prelude::*,
@@ -20,7 +22,7 @@ use common::{
 	systems::link::to_target::LinkToTarget,
 	traits::{
 		after_plugin::AfterPlugin,
-		handles_graphics::{FirstPassCamera, UiCamera, WorldCameras},
+		handles_graphics::{FirstPassCamera, HandlesGraphics, UiCamera, WorldCameras},
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInSubApp},
 		handles_physics::HandlesAllPhysicalEffects,
 		handles_saving::HandlesSaving,
@@ -96,12 +98,13 @@ where
 			.add_systems(
 				Update,
 				(
-					UnlinkedMeshes::link_to::<PassLayers, ChildMeshOf>,
+					UnlinkedMeshes::link_to::<ModelRenderLayers, ChildMeshOf>,
 					EffectMaterialHandle::modify_material::<TPhysics, Force>,
 					EffectMaterialHandle::modify_material::<TPhysics, Gravity>,
 					EffectMaterialHandle::modify_material::<TPhysics, HealthDamage>,
 					EffectMaterialHandle::propagate_material,
-					PassLayers::propagate_layer,
+					ModelRenderLayers::populate_missing_with(FirstPass),
+					ModelRenderLayers::propagate_layers,
 				)
 					.chain()
 					.after_plugin(TPhysics::SYSTEMS),
@@ -172,4 +175,9 @@ impl<TDebugCam, TDependencies> FirstPassCamera for GraphicsPlugin<TDebugCam, TDe
 
 impl<TDebugCam, TDependencies> WorldCameras for GraphicsPlugin<TDebugCam, TDependencies> {
 	type TWorldCameras = WorldCamera;
+}
+
+impl<TDebugCam, TDependencies> HandlesGraphics for GraphicsPlugin<TDebugCam, TDependencies> {
+	type THighlight = HighlightParam<'static, 'static>;
+	type THighlightMut = HighlightParamMut<'static, 'static>;
 }

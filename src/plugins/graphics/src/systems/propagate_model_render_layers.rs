@@ -1,18 +1,21 @@
-use crate::components::{child_meshes::ChildMeshes, pass_layer::PassLayers};
+use crate::components::{child_meshes::ChildMeshes, model_render_layers::ModelRenderLayers};
 use bevy::{camera::visibility::RenderLayers, prelude::*};
 use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
-type PassLayerOrChildMeshesChanged = Or<(Changed<PassLayers>, Changed<ChildMeshes>)>;
+type PassLayerOrChildMeshesChanged = Or<(Changed<ModelRenderLayers>, Changed<ChildMeshes>)>;
 
-impl PassLayers {
-	pub(crate) fn propagate_layer(
+impl ModelRenderLayers {
+	pub(crate) fn propagate_layers(
 		mut commands: ZyheedaCommands,
-		layers: Query<(Entity, &PassLayers, Option<&ChildMeshes>), PassLayerOrChildMeshesChanged>,
+		layers: Query<
+			(Entity, &ModelRenderLayers, Option<&ChildMeshes>),
+			PassLayerOrChildMeshesChanged,
+		>,
 	) {
 		for (root, pass_layers, children) in layers {
 			for entity in iter(root, children) {
 				commands.try_apply_on(&entity, |mut e| {
-					e.try_insert(RenderLayers::from(pass_layers));
+					e.try_insert(RenderLayers::from_iter(pass_layers.iter().copied()));
 				});
 			}
 		}
@@ -33,7 +36,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, PassLayers::propagate_layer);
+		app.add_systems(Update, ModelRenderLayers::propagate_layers);
 
 		app
 	}
@@ -41,7 +44,7 @@ mod tests {
 	#[test]
 	fn set_layer_on_root() {
 		let mut app = setup();
-		let entity = app.world_mut().spawn(PassLayers::from(2)).id();
+		let entity = app.world_mut().spawn(ModelRenderLayers::from(2)).id();
 
 		app.update();
 
@@ -54,7 +57,7 @@ mod tests {
 	#[test]
 	fn set_layer_on_child() {
 		let mut app = setup();
-		let parent = app.world_mut().spawn(PassLayers::from(2)).id();
+		let parent = app.world_mut().spawn(ModelRenderLayers::from(2)).id();
 		let child = app.world_mut().spawn(ChildMeshOf(parent)).id();
 
 		app.update();
@@ -68,7 +71,7 @@ mod tests {
 	#[test]
 	fn act_only_once() {
 		let mut app = setup();
-		let parent = app.world_mut().spawn(PassLayers::from(2)).id();
+		let parent = app.world_mut().spawn(ModelRenderLayers::from(2)).id();
 		let child = app.world_mut().spawn(ChildMeshOf(parent)).id();
 
 		app.update();
@@ -88,14 +91,14 @@ mod tests {
 	#[test]
 	fn act_again_if_pass_layer_changed() {
 		let mut app = setup();
-		let parent = app.world_mut().spawn(PassLayers::from(2)).id();
+		let parent = app.world_mut().spawn(ModelRenderLayers::from(2)).id();
 		let child = app.world_mut().spawn(ChildMeshOf(parent)).id();
 
 		app.update();
 		app.world_mut()
 			.entity_mut(parent)
 			.remove::<RenderLayers>()
-			.get_mut::<PassLayers>()
+			.get_mut::<ModelRenderLayers>()
 			.as_deref_mut();
 		app.world_mut().entity_mut(child).remove::<RenderLayers>();
 		app.update();
@@ -112,7 +115,7 @@ mod tests {
 	#[test]
 	fn act_again_if_children_changed() {
 		let mut app = setup();
-		let parent = app.world_mut().spawn(PassLayers::from(2)).id();
+		let parent = app.world_mut().spawn(ModelRenderLayers::from(2)).id();
 		let child = app.world_mut().spawn(ChildMeshOf(parent)).id();
 
 		app.update();
