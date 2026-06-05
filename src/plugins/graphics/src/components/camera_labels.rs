@@ -1,4 +1,4 @@
-use crate::components::pass_layer::PassLayers;
+use crate::components::model_render_layers::ModelRenderLayers;
 use bevy::{
 	camera::visibility::RenderLayers,
 	core_pipeline::tonemapping::Tonemapping,
@@ -53,9 +53,9 @@ impl From<FirstPass> for RenderLayers {
 	}
 }
 
-impl From<FirstPass> for PassLayers {
+impl From<FirstPass> for ModelRenderLayers {
 	fn from(_: FirstPass) -> Self {
-		PassLayers::from(FIRST_PASS)
+		ModelRenderLayers::from(FIRST_PASS)
 	}
 }
 
@@ -104,17 +104,17 @@ impl From<SecondPass> for RenderLayers {
 	}
 }
 
-impl From<SecondPass> for PassLayers {
+impl From<SecondPass> for ModelRenderLayers {
 	fn from(_: SecondPass) -> Self {
-		PassLayers::from(SECOND_PASS)
+		ModelRenderLayers::from(SECOND_PASS)
 	}
 }
 
 pub(crate) struct OutlinePass;
 
-impl From<OutlinePass> for PassLayers {
+impl From<OutlinePass> for ModelRenderLayers {
 	fn from(_: OutlinePass) -> Self {
-		PassLayers::from(OUTLINE_PASS)
+		ModelRenderLayers::from(OUTLINE_PASS)
 	}
 }
 

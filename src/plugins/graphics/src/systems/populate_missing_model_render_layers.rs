@@ -1,23 +1,23 @@
-use crate::components::pass_layer::PassLayers;
+use crate::components::model_render_layers::ModelRenderLayers;
 use bevy::prelude::*;
 use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
-type NeedsPassLayers = (
+type NeedsModelRenderLayers = (
 	With<Visibility>,
-	Without<PassLayers>,
+	Without<ModelRenderLayers>,
 	Without<ChildOf>,
 	Without<Node>,
 	Without<Camera>,
 );
 
-impl PassLayers {
+impl ModelRenderLayers {
 	pub(crate) fn populate_missing_with(
-		layer: impl Into<PassLayers>,
+		layer: impl Into<ModelRenderLayers>,
 	) -> impl IntoSystem<(), (), ()> {
 		let layer = layer.into();
 
 		IntoSystem::into_system(
-			move |mut commands: ZyheedaCommands, roots: Query<Entity, NeedsPassLayers>| {
+			move |mut commands: ZyheedaCommands, roots: Query<Entity, NeedsModelRenderLayers>| {
 				for entity in roots {
 					commands.try_apply_on(&entity, |mut e| {
 						e.try_insert(layer.clone());
@@ -33,14 +33,14 @@ mod tests {
 	use super::*;
 	use testing::{IsChanged, SingleThreadedApp};
 
-	fn setup(layer: impl Into<PassLayers>) -> App {
+	fn setup(layer: impl Into<ModelRenderLayers>) -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.add_systems(
 			Update,
 			(
-				PassLayers::populate_missing_with(layer),
-				IsChanged::<PassLayers>::detect,
+				ModelRenderLayers::populate_missing_with(layer),
+				IsChanged::<ModelRenderLayers>::detect,
 			)
 				.chain(),
 		);
@@ -56,8 +56,8 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&PassLayers::from(22)),
-			app.world().entity(entity).get::<PassLayers>(),
+			Some(&ModelRenderLayers::from(22)),
+			app.world().entity(entity).get::<ModelRenderLayers>(),
 		);
 	}
 
@@ -68,7 +68,7 @@ mod tests {
 
 		app.update();
 
-		assert_eq!(None, app.world().entity(entity).get::<PassLayers>());
+		assert_eq!(None, app.world().entity(entity).get::<ModelRenderLayers>());
 	}
 
 	#[test]
@@ -82,7 +82,7 @@ mod tests {
 
 		app.update();
 
-		assert_eq!(None, app.world().entity(entity).get::<PassLayers>());
+		assert_eq!(None, app.world().entity(entity).get::<ModelRenderLayers>());
 	}
 
 	#[test]
@@ -95,7 +95,7 @@ mod tests {
 
 		app.update();
 
-		assert_eq!(None, app.world().entity(entity).get::<PassLayers>());
+		assert_eq!(None, app.world().entity(entity).get::<ModelRenderLayers>());
 	}
 
 	#[test]
@@ -108,7 +108,7 @@ mod tests {
 
 		app.update();
 
-		assert_eq!(None, app.world().entity(entity).get::<PassLayers>());
+		assert_eq!(None, app.world().entity(entity).get::<ModelRenderLayers>());
 	}
 
 	#[test]
@@ -121,7 +121,9 @@ mod tests {
 
 		assert_eq!(
 			Some(&IsChanged::FALSE),
-			app.world().entity(entity).get::<IsChanged<PassLayers>>(),
+			app.world()
+				.entity(entity)
+				.get::<IsChanged<ModelRenderLayers>>(),
 		);
 	}
 
@@ -131,12 +133,14 @@ mod tests {
 		let entity = app.world_mut().spawn(Visibility::default()).id();
 
 		app.update();
-		app.world_mut().entity_mut(entity).remove::<PassLayers>();
+		app.world_mut()
+			.entity_mut(entity)
+			.remove::<ModelRenderLayers>();
 		app.update();
 
 		assert_eq!(
-			Some(&PassLayers::from(22)),
-			app.world().entity(entity).get::<PassLayers>(),
+			Some(&ModelRenderLayers::from(22)),
+			app.world().entity(entity).get::<ModelRenderLayers>(),
 		);
 	}
 }

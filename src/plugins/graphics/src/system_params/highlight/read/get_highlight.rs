@@ -1,5 +1,5 @@
 use crate::{
-	components::{camera_labels::OutlinePass, pass_layer::PassLayers},
+	components::{camera_labels::OutlinePass, model_render_layers::ModelRenderLayers},
 	system_params::highlight::HighlightContext,
 };
 use common::traits::handles_graphics::{GetHighlight, Highlight};
@@ -7,8 +7,8 @@ use common::traits::handles_graphics::{GetHighlight, Highlight};
 impl GetHighlight for HighlightContext<'_> {
 	fn get_highlight(&self) -> Highlight {
 		let outlined = self
-			.pass_layers
-			.contains_all(&PassLayers::from(OutlinePass));
+			.model_render_layers
+			.contains_all(&ModelRenderLayers::from(OutlinePass));
 
 		if outlined {
 			Highlight::Interacting
@@ -24,7 +24,7 @@ mod tests {
 	use crate::{
 		components::{
 			camera_labels::{OutlinePass, SecondPass},
-			pass_layer::PassLayers,
+			model_render_layers::ModelRenderLayers,
 		},
 		system_params::highlight::HighlightParam,
 	};
@@ -42,7 +42,10 @@ mod tests {
 	#[test]
 	fn no_highlight() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let entity = app.world_mut().spawn(PassLayers::from(SecondPass)).id();
+		let entity = app
+			.world_mut()
+			.spawn(ModelRenderLayers::from(SecondPass))
+			.id();
 
 		let highlight = app.world_mut().run_system_once(move |h: HighlightParam| {
 			HighlightParam::try_get_context(&h, Visual { entity }).map(|c| c.get_highlight())
@@ -55,7 +58,10 @@ mod tests {
 	#[test]
 	fn highlight() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let entity = app.world_mut().spawn(PassLayers::from(OutlinePass)).id();
+		let entity = app
+			.world_mut()
+			.spawn(ModelRenderLayers::from(OutlinePass))
+			.id();
 
 		let highlight = app.world_mut().run_system_once(move |h: HighlightParam| {
 			HighlightParam::try_get_context(&h, Visual { entity }).map(|c| c.get_highlight())

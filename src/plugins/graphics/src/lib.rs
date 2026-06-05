@@ -7,7 +7,7 @@ mod systems;
 mod traits;
 
 use crate::{
-	components::{child_meshes::ChildMeshOf, pass_layer::PassLayers},
+	components::{child_meshes::ChildMeshOf, model_render_layers::ModelRenderLayers},
 	materials::effect_material::EffectMaterial,
 	system_params::highlight::{HighlightParam, HighlightParamMut},
 };
@@ -98,13 +98,13 @@ where
 			.add_systems(
 				Update,
 				(
-					UnlinkedMeshes::link_to::<PassLayers, ChildMeshOf>,
+					UnlinkedMeshes::link_to::<ModelRenderLayers, ChildMeshOf>,
 					EffectMaterialHandle::modify_material::<TPhysics, Force>,
 					EffectMaterialHandle::modify_material::<TPhysics, Gravity>,
 					EffectMaterialHandle::modify_material::<TPhysics, HealthDamage>,
 					EffectMaterialHandle::propagate_material,
-					PassLayers::populate_missing_with(FirstPass),
-					PassLayers::propagate_layer,
+					ModelRenderLayers::populate_missing_with(FirstPass),
+					ModelRenderLayers::propagate_layers,
 				)
 					.chain()
 					.after_plugin(TPhysics::SYSTEMS),

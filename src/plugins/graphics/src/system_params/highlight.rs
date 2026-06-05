@@ -1,7 +1,7 @@
 mod read;
 mod write;
 
-use crate::components::pass_layer::PassLayers;
+use crate::components::model_render_layers::ModelRenderLayers;
 use bevy::{
 	ecs::system::{SystemParam, SystemParamItem},
 	prelude::*,
@@ -13,7 +13,7 @@ use common::traits::{
 
 #[derive(SystemParam)]
 pub struct HighlightParam<'w, 's> {
-	layers: Query<'w, 's, Ref<'static, PassLayers>>,
+	model_render_layers: Query<'w, 's, Ref<'static, ModelRenderLayers>>,
 }
 
 impl TryGetContext<Visual> for HighlightParam<'static, 'static> {
@@ -23,25 +23,27 @@ impl TryGetContext<Visual> for HighlightParam<'static, 'static> {
 		param: &'ctx SystemParamItem<Self>,
 		Visual { entity }: Visual,
 	) -> Option<Self::TContext<'ctx>> {
-		let pass_layers = param.layers.get(entity).ok()?;
+		let model_render_layers = param.model_render_layers.get(entity).ok()?;
 
-		Some(HighlightContext { pass_layers })
+		Some(HighlightContext {
+			model_render_layers,
+		})
 	}
 }
 
 pub struct HighlightContext<'ctx> {
-	pass_layers: Ref<'ctx, PassLayers>,
+	model_render_layers: Ref<'ctx, ModelRenderLayers>,
 }
 
 impl ContextChanged for HighlightContext<'_> {
 	fn context_changed(&self) -> bool {
-		self.pass_layers.is_changed()
+		self.model_render_layers.is_changed()
 	}
 }
 
 #[derive(SystemParam)]
 pub struct HighlightParamMut<'w, 's> {
-	entities: Query<'w, 's, &'static mut PassLayers>,
+	model_render_layers: Query<'w, 's, &'static mut ModelRenderLayers>,
 }
 
 impl TryGetContextMut<Visual> for HighlightParamMut<'static, 'static> {
@@ -51,12 +53,14 @@ impl TryGetContextMut<Visual> for HighlightParamMut<'static, 'static> {
 		param: &'ctx mut SystemParamItem<Self>,
 		Visual { entity }: Visual,
 	) -> Option<Self::TContext<'ctx>> {
-		let pass_layers = param.entities.get_mut(entity).ok()?;
+		let pass_layers = param.model_render_layers.get_mut(entity).ok()?;
 
-		Some(HighlightContextMut { pass_layers })
+		Some(HighlightContextMut {
+			model_render_layers: pass_layers,
+		})
 	}
 }
 
 pub struct HighlightContextMut<'ctx> {
-	pass_layers: Mut<'ctx, PassLayers>,
+	model_render_layers: Mut<'ctx, ModelRenderLayers>,
 }

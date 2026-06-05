@@ -1,5 +1,5 @@
 use crate::{
-	components::{camera_labels::OutlinePass, pass_layer::PassLayers},
+	components::{camera_labels::OutlinePass, model_render_layers::ModelRenderLayers},
 	system_params::highlight::HighlightContextMut,
 };
 use common::traits::handles_graphics::{Highlight, SetHighlight};
@@ -7,8 +7,10 @@ use common::traits::handles_graphics::{Highlight, SetHighlight};
 impl SetHighlight for HighlightContextMut<'_> {
 	fn set_highlight(&mut self, highlight: Highlight) {
 		match highlight {
-			Highlight::None => self.pass_layers.reset(),
-			Highlight::Interacting => self.pass_layers.add_layers(PassLayers::from(OutlinePass)),
+			Highlight::None => self.model_render_layers.reset(),
+			Highlight::Interacting => self
+				.model_render_layers
+				.add_layers(ModelRenderLayers::from(OutlinePass)),
 		}
 	}
 }
@@ -20,7 +22,7 @@ mod tests {
 	use crate::{
 		components::{
 			camera_labels::{OutlinePass, SecondPass},
-			pass_layer::PassLayers,
+			model_render_layers::ModelRenderLayers,
 		},
 		system_params::highlight::HighlightParamMut,
 	};
@@ -38,7 +40,10 @@ mod tests {
 	#[test]
 	fn set_highlight() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let entity = app.world_mut().spawn(PassLayers::from(SecondPass)).id();
+		let entity = app
+			.world_mut()
+			.spawn(ModelRenderLayers::from(SecondPass))
+			.id();
 
 		app.world_mut()
 			.run_system_once(move |mut h: HighlightParamMut| {
@@ -47,11 +52,11 @@ mod tests {
 				ctx.set_highlight(Highlight::Interacting);
 			})?;
 
-		let mut expected = PassLayers::from(SecondPass);
-		expected.add_layers(PassLayers::from(OutlinePass));
+		let mut expected = ModelRenderLayers::from(SecondPass);
+		expected.add_layers(ModelRenderLayers::from(OutlinePass));
 		assert_eq!(
 			Some(&expected),
-			app.world().entity(entity).get::<PassLayers>()
+			app.world().entity(entity).get::<ModelRenderLayers>()
 		);
 		Ok(())
 	}
@@ -59,8 +64,8 @@ mod tests {
 	#[test]
 	fn remove_highlight() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let mut layers = PassLayers::from(SecondPass);
-		layers.add_layers(PassLayers::from(OutlinePass));
+		let mut layers = ModelRenderLayers::from(SecondPass);
+		layers.add_layers(ModelRenderLayers::from(OutlinePass));
 		let entity = app.world_mut().spawn(layers).id();
 
 		app.world_mut()
@@ -71,8 +76,8 @@ mod tests {
 			})?;
 
 		assert_eq!(
-			Some(&PassLayers::from(SecondPass)),
-			app.world().entity(entity).get::<PassLayers>()
+			Some(&ModelRenderLayers::from(SecondPass)),
+			app.world().entity(entity).get::<ModelRenderLayers>()
 		);
 		Ok(())
 	}
