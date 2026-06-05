@@ -9,7 +9,7 @@ use common::{
 		accessors::get::{GetContext, TryGetContextMut, ViewOf},
 		handles_input::{GetInputState, InputState},
 		handles_interactive::{Interactive, InteractiveState, SetInteractiveState},
-		handles_physics::{Interactions, IterInteractions},
+		handles_physics::{InteractionsOngoing, IterInteractions},
 	},
 };
 
@@ -21,7 +21,7 @@ impl Player {
 		players: Query<Entity, With<Self>>,
 	) where
 		TInput: for<'w, 's> SystemParam<Item<'w, 's>: GetInputState>,
-		TPhysics: for<'c> GetContext<Interactions, TContext<'c>: IterInteractions>,
+		TPhysics: for<'c> GetContext<InteractionsOngoing, TContext<'c>: IterInteractions>,
 		TInteractive: for<'c> TryGetContextMut<Interactive, TContext<'c>: SetInteractiveState>,
 	{
 		if input.get_input_state(Miscellaneous::Interact) != InputState::just_released() {
@@ -29,7 +29,7 @@ impl Player {
 		}
 
 		for entity in players {
-			let key = Interactions { entity };
+			let key = InteractionsOngoing { entity };
 			let interactions = TPhysics::get_context(&physics, key);
 
 			for entity in interactions.iter_interactions() {

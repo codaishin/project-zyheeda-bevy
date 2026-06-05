@@ -1,16 +1,16 @@
-use crate::system_params::interactive::InteractiveContext;
+use crate::system_params::interactive::JustStoppedInteractionsContext;
 use bevy::prelude::*;
 use common::traits::handles_physics::IterInteractions;
 use std::{collections::hash_set::Iter, iter::Copied};
 
-impl IterInteractions for InteractiveContext<'_> {
+impl IterInteractions for JustStoppedInteractionsContext {
 	type TIter<'a>
 		= Copied<Iter<'a, Entity>>
 	where
 		Self: 'a;
 
 	fn iter_interactions(&self) -> Self::TIter<'_> {
-		self.interactions.iter().copied()
+		self.just_stopped.iter().copied()
 	}
 }
 
@@ -18,7 +18,7 @@ impl IterInteractions for InteractiveContext<'_> {
 mod tests {
 	use super::*;
 	use crate::{
-		components::{collider::ChildColliderOf, collision_domains::Interactive},
+		components::collision_domains::Interactive,
 		resources::root_collisions::RootCollisions,
 		system_params::{
 			interactive::InteractiveParam,
@@ -29,7 +29,7 @@ mod tests {
 	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use bevy_rapier3d::prelude::*;
-	use common::traits::{accessors::get::GetContext, handles_physics::InteractionsOngoing};
+	use common::traits::{accessors::get::GetContext, handles_physics::InteractionsJustStopped};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -50,7 +50,7 @@ mod tests {
 	}
 
 	#[test]
-	fn return_overlapping_entities() -> Result<(), RunSystemError> {
+	fn return_entities_that_stopped_interacting() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let a = app
 			.world_mut()
@@ -77,50 +77,13 @@ mod tests {
 			.id();
 		app.update();
 		app.update();
-
-		let interactions = app
-			.world_mut()
-			.run_system_once(move |i: InteractiveParam| {
-				InteractiveParam::get_context(&i, InteractionsOngoing { entity: a })
-					.iter_interactions()
-					.collect::<Vec<_>>()
-			})?;
-
-		assert_eq!(vec![b], interactions);
-		Ok(())
-	}
-
-	#[test]
-	fn return_overlapping_root_entities() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		let a = app.world_mut().spawn(RigidBody::Fixed).id();
-		let b = app.world_mut().spawn(RigidBody::Fixed).id();
-		app.world_mut().spawn((
-			ChildColliderOf(a),
-			Interactive,
-			RigidBody::Fixed,
-			Transform::from_xyz(-0.1, 0., 0.),
-			CollidingEntities::default(),
-			Collider::ball(1.),
-			ActiveCollisionTypes::STATIC_STATIC,
-			ActiveEvents::COLLISION_EVENTS,
-		));
-		app.world_mut().spawn((
-			ChildColliderOf(b),
-			Interactive,
-			RigidBody::Fixed,
-			Transform::from_xyz(0.1, 0., 0.),
-			Collider::ball(1.),
-			ActiveCollisionTypes::STATIC_STATIC,
-			ActiveEvents::COLLISION_EVENTS,
-		));
-		app.update();
+		app.world_mut().entity_mut(b).despawn();
 		app.update();
 
 		let interactions = app
 			.world_mut()
 			.run_system_once(move |i: InteractiveParam| {
-				InteractiveParam::get_context(&i, InteractionsOngoing { entity: a })
+				InteractiveParam::get_context(&i, InteractionsJustStopped { entity: a })
 					.iter_interactions()
 					.collect::<Vec<_>>()
 			})?;
