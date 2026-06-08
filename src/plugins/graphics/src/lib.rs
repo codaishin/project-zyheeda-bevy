@@ -180,12 +180,7 @@ where
 					.chain(),
 			);
 
-		let Some(render_app) = app.get_sub_app_mut(RenderApp) else {
-			// FIXME: ERROR?
-			return;
-		};
-
-		render_app
+		app.sub_app_mut(RenderApp)
 			.add_systems(RenderStartup, init_post_process_pipeline)
 			.add_render_graph_node::<ViewNodeRunner<PostProcessNode>>(Core3d, PostProcessLabel)
 			.add_render_graph_edges(

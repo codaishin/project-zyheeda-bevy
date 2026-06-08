@@ -20,11 +20,7 @@ pub(super) fn init(app: &mut App) {
 		.add_systems(Update, MeasureFps::system::<()>)
 		.add_systems(FixedUpdate, MeasureFps::system::<Fixed>);
 
-	let Some(render_app) = app.get_sub_app_mut(RenderApp) else {
-		return;
-	};
-
-	render_app
+	app.sub_app_mut(RenderApp)
 		.insert_resource(fps_render)
 		.add_systems(Render, MeasureFps::system::<Render>);
 }
