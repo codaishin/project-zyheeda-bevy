@@ -8,17 +8,16 @@ mod ray;
 mod resources;
 mod result;
 
+use crate::{
+	error_logger::{ErrorLogger, Log},
+	errors::{ErrorData, Level},
+	traits::thread_safe::ThreadSafe,
+};
 use bevy::{
 	ecs::system::{SystemParam, SystemParamItem},
 	prelude::*,
 };
 use std::{any::type_name, fmt::Display, marker::PhantomData};
-
-use crate::{
-	errors::{ErrorData, Level},
-	systems::log::output,
-	traits::thread_safe::ThreadSafe,
-};
 
 pub trait Get<TKey> {
 	type TValue;
@@ -110,7 +109,7 @@ where
 impl<T, TKey> TryGetContext<Logged<TKey>> for T
 where
 	T: TryGetContext<TKey>,
-	TKey: View<Entity>,
+	TKey: View<Entity> + 'static,
 {
 	type TContext<'ctx> = T::TContext<'ctx>;
 
@@ -122,7 +121,7 @@ where
 		let ctx = T::try_get_context(param, key);
 
 		if ctx.is_none() {
-			output::log(MissingContext {
+			ErrorLogger.log(MissingContext {
 				entity,
 				level,
 				_key: PhantomData::<TKey>,
@@ -136,7 +135,7 @@ where
 impl<T, TKey> TryGetContextMut<Logged<TKey>> for T
 where
 	T: TryGetContextMut<TKey>,
-	TKey: View<Entity>,
+	TKey: View<Entity> + 'static,
 {
 	type TContext<'ctx> = T::TContext<'ctx>;
 
@@ -148,7 +147,7 @@ where
 		let ctx = T::try_get_context_mut(param, key);
 
 		if ctx.is_none() {
-			output::log(MissingContext {
+			ErrorLogger.log(MissingContext {
 				entity,
 				level,
 				_key: PhantomData::<TKey>,
@@ -176,7 +175,10 @@ impl<TKey> Display for MissingContext<TKey> {
 	}
 }
 
-impl<TKey> ErrorData for MissingContext<TKey> {
+impl<TKey> ErrorData for MissingContext<TKey>
+where
+	TKey: 'static,
+{
 	fn level(&self) -> Level {
 		self.level
 	}

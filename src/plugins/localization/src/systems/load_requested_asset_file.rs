@@ -2,28 +2,34 @@ use crate::traits::{
 	current_locale::CurrentLocaleMut,
 	update_current_locale::UpdateCurrentLocaleFromFile,
 };
-use bevy::prelude::*;
+use bevy::{
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
+};
 use common::{tools::path::Path, traits::load_asset::LoadAsset};
 use std::path::PathBuf;
 
 impl<T> LoadRequestedAssetFile for T where
-	T: UpdateCurrentLocaleFromFile + CurrentLocaleMut + Resource
+	T: for<'w, 's> SystemParam<Item<'w, 's>: UpdateCurrentLocaleFromFile + CurrentLocaleMut>
 {
 }
 
 pub(crate) trait LoadRequestedAssetFile:
-	UpdateCurrentLocaleFromFile + CurrentLocaleMut + Resource + Sized
+	for<'w, 's> SystemParam<Item<'w, 's>: UpdateCurrentLocaleFromFile + CurrentLocaleMut> + Sized
 {
-	fn load_requested_asset_file(root_path: Path) -> impl Fn(ResMut<Self>, ResMut<AssetServer>) {
+	fn load_requested_asset_file(
+		root_path: Path,
+	) -> impl Fn(StaticSystemParam<Self>, ResMut<AssetServer>) {
 		load_requested_asset_file::<Self, AssetServer>(root_path)
 	}
 }
 
 fn load_requested_asset_file<TFtlServer, TAssetServer>(
 	root_path: Path,
-) -> impl Fn(ResMut<TFtlServer>, ResMut<TAssetServer>)
+) -> impl Fn(StaticSystemParam<TFtlServer>, ResMut<TAssetServer>)
 where
-	TFtlServer: UpdateCurrentLocaleFromFile + CurrentLocaleMut + Resource,
+	TFtlServer:
+		for<'w, 's> SystemParam<Item<'w, 's>: UpdateCurrentLocaleFromFile + CurrentLocaleMut>,
 	TAssetServer: LoadAsset + Resource,
 {
 	move |mut ftl_server, mut asset_server| {
@@ -72,7 +78,7 @@ mod test {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
-			load_requested_asset_file::<_FtlServer, MockAssetServer>(root_path),
+			load_requested_asset_file::<ResMut<_FtlServer>, MockAssetServer>(root_path),
 		);
 		app.insert_resource(asset_server);
 

@@ -2,6 +2,7 @@ pub mod attributes;
 pub mod components;
 pub mod dto;
 pub mod effects;
+pub mod error_logger;
 pub mod errors;
 pub mod observers;
 pub mod resources;

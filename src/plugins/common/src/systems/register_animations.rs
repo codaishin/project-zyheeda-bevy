@@ -183,7 +183,10 @@ impl<T> Display for RegisterAnimationsError<T> {
 	}
 }
 
-impl<T> ErrorData for RegisterAnimationsError<T> {
+impl<T> ErrorData for RegisterAnimationsError<T>
+where
+	T: 'static,
+{
 	fn level(&self) -> Level {
 		Level::Error
 	}

@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use crate::{
 	components::{
 		GlobalZIndexTop,
@@ -6,7 +8,13 @@ use crate::{
 	tools::Layout,
 	traits::{GetLayout, GetRootNode, insert_ui_content::InsertUiContent},
 };
-use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
+use bevy::{
+	ecs::{
+		relationship::RelatedSpawnerCommands,
+		system::{StaticSystemParam, SystemParam},
+	},
+	prelude::*,
+};
 use common::{
 	tools::Focus,
 	traits::{handles_localization::Localize, thread_safe::ThreadSafe},
@@ -15,10 +23,10 @@ use common::{
 pub(crate) fn dropdown_spawn_focused<TLocalization, TItem>(
 	focus: In<Focus>,
 	mut commands: Commands,
-	localization: Res<TLocalization>,
+	localization: StaticSystemParam<TLocalization>,
 	dropdowns: Query<(Entity, &Dropdown<TItem>)>,
 ) where
-	TLocalization: Localize + Resource,
+	TLocalization: for<'w, 's> SystemParam<Item<'w, 's>: Localize> + ThreadSafe,
 	TItem: InsertUiContent + Sync + Send + 'static,
 	Dropdown<TItem>: GetRootNode + GetLayout,
 {
@@ -45,7 +53,7 @@ pub(crate) fn dropdown_spawn_focused<TLocalization, TItem>(
 					container_node
 						.spawn(get_node(dropdown))
 						.with_children(|dropdown_node| {
-							spawn_items(localization.as_ref(), dropdown_node, dropdown)
+							spawn_items(localization.deref(), dropdown_node, dropdown)
 						});
 				});
 		});
@@ -91,7 +99,7 @@ fn spawn_items<TLocalization, TItem>(
 	dropdown: &Dropdown<TItem>,
 ) where
 	TItem: InsertUiContent,
-	TLocalization: Localize + ThreadSafe,
+	TLocalization: Localize,
 {
 	for item in &dropdown.items {
 		dropdown_node
@@ -249,7 +257,7 @@ mod tests {
 		app.add_systems(
 			Update,
 			(|focus: Res<_In>| focus.0.clone())
-				.pipe(dropdown_spawn_focused::<_Localization, TItem>),
+				.pipe(dropdown_spawn_focused::<Res<_Localization>, TItem>),
 		);
 
 		app

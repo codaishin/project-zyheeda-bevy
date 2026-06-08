@@ -10,7 +10,10 @@ use crate::{
 };
 #[cfg(debug_assertions)]
 use crate::{AddUI, traits::insert_ui_content::InsertUiContent};
-use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
+use bevy::{
+	ecs::{relationship::RelatedSpawnerCommands, system::SystemParam},
+	prelude::*,
+};
 use common::{
 	states::game_state::GameState,
 	tools::Index,
@@ -88,7 +91,7 @@ fn update_state_time<TState>(
 
 pub fn setup_run_time_display<TLocalization, TGraphics>(app: &mut App)
 where
-	TLocalization: Localize + Resource,
+	TLocalization: for<'w, 's> SystemParam<Item<'w, 's>: Localize> + ThreadSafe,
 	TGraphics: Component,
 {
 	for state in GameState::iterator() {
@@ -321,7 +324,7 @@ fn get_button_options<TLayout: ThreadSafe, TExtra: ThreadSafe + Default>(
 
 pub fn setup_dropdown_test<TLocalization>(app: &mut App)
 where
-	TLocalization: Localize + Resource,
+	TLocalization: for<'w, 's> SystemParam<Item<'w, 's>: Localize> + ThreadSafe,
 {
 	app.add_tooltip::<TLocalization, ButtonTooltip>()
 		.add_dropdown::<TLocalization, ButtonOption<SingleRow>>()

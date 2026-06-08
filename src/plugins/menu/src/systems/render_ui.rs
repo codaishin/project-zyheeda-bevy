@@ -1,23 +1,28 @@
+use std::ops::Deref;
+
 use crate::traits::insert_ui_content::InsertUiContent;
-use bevy::prelude::*;
-use common::traits::handles_localization::Localize;
+use bevy::{
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
+};
+use common::traits::{handles_localization::Localize, thread_safe::ThreadSafe};
 
 impl<T> RenderUi for T where T: InsertUiContent + Component {}
 
 pub(crate) trait RenderUi: InsertUiContent + Component + Sized {
 	fn render_ui<TLocalization>(
 		mut commands: Commands,
-		localize: Res<TLocalization>,
+		localize: StaticSystemParam<TLocalization>,
 		components: Query<(Entity, &Self), Added<Self>>,
 	) where
-		TLocalization: Localize + Resource,
+		TLocalization: for<'w, 's> SystemParam<Item<'w, 's>: Localize> + ThreadSafe,
 	{
 		for (entity, component) in &components {
 			let Ok(mut entity) = commands.get_entity(entity) else {
 				continue;
 			};
 			entity.with_children(|parent| {
-				component.insert_ui_content(localize.as_ref(), parent);
+				component.insert_ui_content(localize.deref(), parent);
 			});
 		}
 	}
@@ -27,10 +32,7 @@ pub(crate) trait RenderUi: InsertUiContent + Component + Sized {
 mod tests {
 	use super::*;
 	use bevy::ecs::relationship::RelatedSpawnerCommands;
-	use common::traits::{
-		handles_localization::{LocalizationResult, Token, localized::Localized},
-		thread_safe::ThreadSafe,
-	};
+	use common::traits::handles_localization::{LocalizationResult, Token, localized::Localized};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use testing::{NestedMocks, SingleThreadedApp, assert_children_count};
@@ -44,7 +46,7 @@ mod tests {
 			localization: &TLocalization,
 			parent: &mut RelatedSpawnerCommands<ChildOf>,
 		) where
-			TLocalization: Localize + ThreadSafe,
+			TLocalization: Localize,
 		{
 			parent.spawn(Text::from(
 				localization.localize(&Token::from("a")).or_token(),
@@ -68,7 +70,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.insert_resource(localize);
-		app.add_systems(Update, _Component::render_ui::<_Localize>);
+		app.add_systems(Update, _Component::render_ui::<Res<_Localize>>);
 
 		app
 	}

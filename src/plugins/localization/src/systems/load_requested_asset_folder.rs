@@ -2,28 +2,34 @@ use crate::traits::{
 	current_locale::CurrentLocaleMut,
 	update_current_locale::UpdateCurrentLocaleFromFolder,
 };
-use bevy::prelude::*;
+use bevy::{
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
+};
 use common::{tools::path::Path, traits::load_folder_assets::LoadFolderAssets};
 use std::path::PathBuf;
 
 impl<T> LoadRequestedAssetFolder for T where
-	T: UpdateCurrentLocaleFromFolder + CurrentLocaleMut + Resource
+	T: for<'w, 'c> SystemParam<Item<'w, 'c>: UpdateCurrentLocaleFromFolder + CurrentLocaleMut>
 {
 }
 
 pub(crate) trait LoadRequestedAssetFolder:
-	UpdateCurrentLocaleFromFolder + CurrentLocaleMut + Resource + Sized
+	for<'w, 'c> SystemParam<Item<'w, 'c>: UpdateCurrentLocaleFromFolder + CurrentLocaleMut> + Sized
 {
-	fn load_requested_asset_folder(root_path: Path) -> impl Fn(ResMut<Self>, Res<AssetServer>) {
+	fn load_requested_asset_folder(
+		root_path: Path,
+	) -> impl Fn(StaticSystemParam<Self>, Res<AssetServer>) {
 		load_requested_asset_folder::<Self, AssetServer>(root_path)
 	}
 }
 
 fn load_requested_asset_folder<TFtlServer, TAssetServer>(
 	root_path: Path,
-) -> impl Fn(ResMut<TFtlServer>, Res<TAssetServer>)
+) -> impl Fn(StaticSystemParam<TFtlServer>, Res<TAssetServer>)
 where
-	TFtlServer: UpdateCurrentLocaleFromFolder + CurrentLocaleMut + Resource,
+	TFtlServer:
+		for<'w, 'c> SystemParam<Item<'w, 'c>: UpdateCurrentLocaleFromFolder + CurrentLocaleMut>,
 	TAssetServer: LoadFolderAssets + Resource,
 {
 	move |mut ftl_server, asset_server| {
@@ -72,7 +78,7 @@ mod test {
 		let mut app = App::new().single_threaded(Update);
 		app.add_systems(
 			Update,
-			load_requested_asset_folder::<_FtlServer, MockFolderAssetServer>(root_path),
+			load_requested_asset_folder::<ResMut<_FtlServer>, MockFolderAssetServer>(root_path),
 		);
 		app.insert_resource(asset_server);
 

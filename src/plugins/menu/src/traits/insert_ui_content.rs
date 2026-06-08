@@ -1,5 +1,5 @@
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
-use common::traits::{handles_localization::Localize, thread_safe::ThreadSafe};
+use common::traits::handles_localization::Localize;
 
 pub trait InsertUiContent {
 	fn insert_ui_content<TLocalization>(
@@ -7,5 +7,5 @@ pub trait InsertUiContent {
 		localization: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
-		TLocalization: Localize + ThreadSafe;
+		TLocalization: Localize;
 }

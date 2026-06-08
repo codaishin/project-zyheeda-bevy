@@ -5,7 +5,7 @@ use crate::{
 	components::tooltip::{TooltipContent, TooltipUiConfig},
 	systems::{tooltip::tooltip, tooltip_visibility::tooltip_visibility},
 };
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemParam, prelude::*};
 use common::traits::{handles_localization::Localize, thread_safe::ThreadSafe};
 
 pub(crate) trait AddTooltip {
@@ -13,7 +13,7 @@ pub(crate) trait AddTooltip {
 	where
 		T: TooltipUiConfig + ThreadSafe,
 		Tooltip<T>: InsertUiContent,
-		TLocalization: Localize + Resource;
+		TLocalization: for<'w, 's> SystemParam<Item<'w, 's>: Localize> + ThreadSafe;
 }
 
 impl AddTooltip for App {
@@ -21,7 +21,7 @@ impl AddTooltip for App {
 	where
 		T: TooltipUiConfig + ThreadSafe,
 		Tooltip<T>: InsertUiContent,
-		TLocalization: Localize + Resource,
+		TLocalization: for<'w, 's> SystemParam<Item<'w, 's>: Localize> + ThreadSafe,
 	{
 		self.add_systems(
 			Update,

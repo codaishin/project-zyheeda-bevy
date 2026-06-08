@@ -36,12 +36,7 @@ mod integration_tests {
 				commands.try_apply_on(&entity, |e| e.try_despawn());
 			})?;
 
-		assert!(
-			app.world()
-				.resource::<PersistentEntities>()
-				.entities
-				.is_empty()
-		);
+		assert!(app.world().resource::<PersistentEntities>().0.is_empty());
 		Ok(())
 	}
 
@@ -59,12 +54,7 @@ mod integration_tests {
 				entity.try_despawn();
 			})?;
 
-		assert!(
-			app.world()
-				.resource::<PersistentEntities>()
-				.entities
-				.is_empty()
-		);
+		assert!(app.world().resource::<PersistentEntities>().0.is_empty());
 		Ok(())
 	}
 }

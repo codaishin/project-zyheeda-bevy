@@ -3,10 +3,7 @@ use crate::{
 	traits::{LoadUi, insert_ui_content::InsertUiContent},
 };
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
-use common::traits::{
-	handles_localization::{Localize, LocalizeToken},
-	thread_safe::ThreadSafe,
-};
+use common::traits::handles_localization::{Localize, LocalizeToken};
 
 #[derive(Component, Debug, PartialEq)]
 #[require(MenuBackground)]
@@ -24,7 +21,7 @@ impl InsertUiContent for PauseMenu {
 		localization: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
-		TLocalization: Localize + ThreadSafe,
+		TLocalization: Localize,
 	{
 		parent.spawn((
 			Text::from(localization.localize_token("paused").or_token()),

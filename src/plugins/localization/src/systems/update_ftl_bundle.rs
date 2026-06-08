@@ -3,7 +3,11 @@ use crate::{
 	resources::ftl_server::Locale,
 	traits::current_locale::CurrentLocaleMut,
 };
-use bevy::{asset::LoadedFolder, prelude::*};
+use bevy::{
+	asset::LoadedFolder,
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
+};
 use common::{
 	errors::{ErrorData, Level},
 	traits::or_ok::OrOk,
@@ -14,11 +18,13 @@ use std::fmt::Display;
 use unic_langid::LanguageIdentifier;
 use zyheeda_core::write_iter;
 
-impl<T> UpdateFtlBundle for T where T: Resource + CurrentLocaleMut {}
+impl<T> UpdateFtlBundle for T where T: for<'w, 's> SystemParam<Item<'w, 's>: CurrentLocaleMut> {}
 
-pub(crate) trait UpdateFtlBundle: Resource + CurrentLocaleMut {
+pub(crate) trait UpdateFtlBundle:
+	for<'w, 's> SystemParam<Item<'w, 's>: CurrentLocaleMut>
+{
 	fn update_ftl_bundle(
-		mut server: ResMut<Self>,
+		mut server: StaticSystemParam<Self>,
 		mut messages: MessageReader<AssetEvent<Ftl>>,
 		files: Res<Assets<Ftl>>,
 		mut folders: ResMut<Assets<LoadedFolder>>,
@@ -225,7 +231,7 @@ mod tests {
 		app.insert_resource(folder_assets);
 		app.add_systems(
 			Update,
-			_FtlServer::update_ftl_bundle.pipe(|In(result), mut commands: Commands| {
+			ResMut::<_FtlServer>::update_ftl_bundle.pipe(|In(result), mut commands: Commands| {
 				commands.insert_resource(_Result(result))
 			}),
 		);

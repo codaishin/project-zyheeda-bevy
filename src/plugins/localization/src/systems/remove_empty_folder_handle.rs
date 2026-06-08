@@ -1,19 +1,31 @@
 use crate::traits::current_locale::CurrentLocaleMut;
-use bevy::{asset::LoadedFolder, prelude::*};
+use bevy::{
+	asset::LoadedFolder,
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
+};
 
-impl<T> RemoveEmptyFolderHandle for T where T: CurrentLocaleMut + Resource {}
+impl<T> RemoveEmptyFolderHandle for T where
+	T: for<'w, 's> SystemParam<Item<'w, 's>: CurrentLocaleMut>
+{
+}
 
-pub(crate) trait RemoveEmptyFolderHandle: CurrentLocaleMut + Resource + Sized {
-	fn remove_empty_folder_handle(ftl_server: ResMut<Self>, folders: Res<Assets<LoadedFolder>>) {
+pub(crate) trait RemoveEmptyFolderHandle:
+	for<'w, 's> SystemParam<Item<'w, 's>: CurrentLocaleMut> + Sized
+{
+	fn remove_empty_folder_handle(
+		ftl_server: StaticSystemParam<Self>,
+		folders: Res<Assets<LoadedFolder>>,
+	) {
 		remove_empty_folder(ftl_server, folders)
 	}
 }
 
 fn remove_empty_folder<TFtlServer>(
-	mut ftl_server: ResMut<TFtlServer>,
+	mut ftl_server: StaticSystemParam<TFtlServer>,
 	folders: Res<Assets<LoadedFolder>>,
 ) where
-	TFtlServer: CurrentLocaleMut + Resource,
+	TFtlServer: for<'w, 's> SystemParam<Item<'w, 's>: CurrentLocaleMut>,
 {
 	let locale = ftl_server.current_locale_mut();
 
@@ -57,7 +69,7 @@ mod tests {
 
 		app.insert_resource(folder_assets);
 		app.insert_resource(ftl_server);
-		app.add_systems(Update, remove_empty_folder::<_FtlServer>);
+		app.add_systems(Update, remove_empty_folder::<ResMut<_FtlServer>>);
 
 		app
 	}

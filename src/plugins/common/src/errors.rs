@@ -8,8 +8,10 @@ use std::{
 	convert::Infallible,
 	error::Error as StdError,
 	fmt::{Debug, Display},
+	hash::Hash,
 	io::Error as IoError,
 	marker::PhantomData,
+	time::Duration,
 };
 use zyheeda_core::write_iter;
 
@@ -154,7 +156,10 @@ enum Found {
 	Multiple,
 }
 
-impl<T> ErrorData for UniqueViolation<T> {
+impl<T> ErrorData for UniqueViolation<T>
+where
+	T: 'static,
+{
 	fn level(&self) -> Level {
 		Level::Error
 	}
@@ -168,9 +173,15 @@ impl<T> ErrorData for UniqueViolation<T> {
 	}
 }
 
-pub trait ErrorData {
+pub trait ErrorData: 'static {
+	fn rate_limit() -> Option<Duration> {
+		const { None }
+	}
+
 	fn level(&self) -> Level;
+
 	fn label() -> impl Display;
+
 	fn into_details(self) -> impl Display;
 }
 

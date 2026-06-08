@@ -40,9 +40,9 @@ pub(crate) struct MouseVec2(pub(crate) Vec2);
 
 pub(crate) trait SpawnTooltips<T, TLocalization>
 where
-	T: TooltipUiConfig + ThreadSafe,
+	T: TooltipUiConfig,
 	Tooltip<T>: InsertUiContent,
-	TLocalization: Localize + ThreadSafe,
+	TLocalization: Localize,
 {
 	fn spawn(
 		&self,

@@ -6,32 +6,36 @@ use crate::{
 		update_current_locale::{UpdateCurrentLocaleFromFile, UpdateCurrentLocaleFromFolder},
 	},
 };
-use bevy::{asset::LoadedFolder, prelude::*};
-use common::traits::{
-	handles_load_tracking::Loaded,
-	handles_localization::{
-		LocalizationResult,
-		Localize,
-		SetLocalization,
-		Token,
-		localized::Localized,
+use bevy::{
+	asset::LoadedFolder,
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
+};
+use common::{
+	error_logger::{ErrorLogger, Log},
+	errors::{ErrorData, Level},
+	traits::{
+		handles_load_tracking::Loaded,
+		handles_localization::{
+			LocalizationResult,
+			Localize,
+			SetLocalization,
+			Token,
+			localized::Localized,
+		},
+		thread_safe::ThreadSafe,
 	},
 };
 use fluent::{FluentError, FluentResource, concurrent::FluentBundle};
 use std::fmt::Display;
 use unic_langid::LanguageIdentifier;
-use zyheeda_core::logger::{Log, Logger};
 
 #[derive(Resource)]
-pub struct FtlServer<TLogger = Logger>
-where
-	TLogger: Log,
-{
+pub struct FtlServer {
 	fallback: Locale,
 	current: Option<Locale>,
 	update_file: bool,
 	update_folder: bool,
-	logger: TLogger,
 }
 
 impl FtlServer {
@@ -41,6 +45,10 @@ impl FtlServer {
 		}
 
 		Loaded(ftl_server.fallback.file.is_none() && ftl_server.fallback.folder.is_none())
+	}
+
+	fn get_current(&mut self) -> &mut Locale {
+		self.current.as_mut().unwrap_or(&mut self.fallback)
 	}
 }
 
@@ -54,85 +62,89 @@ impl From<LanguageIdentifier> for FtlServer {
 				bundle: None,
 			},
 			current: None,
-			logger: Logger,
 			update_file: true,
 			update_folder: true,
 		}
 	}
 }
 
-impl CurrentLocaleMut for FtlServer {
+#[derive(SystemParam)]
+pub struct FtlServerParam<'w, 's, TLogger = ErrorLogger>
+where
+	TLogger: SystemParam + ThreadSafe,
+{
+	server: ResMut<'w, FtlServer>,
+	logger: StaticSystemParam<'w, 's, TLogger>,
+}
+
+impl<TLogger> CurrentLocaleMut for FtlServerParam<'_, '_, TLogger>
+where
+	TLogger: SystemParam + ThreadSafe,
+{
 	fn current_locale_mut(&mut self) -> &mut Locale {
-		self.current.as_mut().unwrap_or(&mut self.fallback)
+		self.server.get_current()
 	}
 }
 
-impl SetLocalization for FtlServer {
+impl<'w, 's, TLogger> SetLocalization for FtlServerParam<'w, 's, TLogger>
+where
+	TLogger: for<'w2, 's2> SystemParam<Item<'w2, 's2>: Log> + ThreadSafe,
+{
 	fn set_localization(&mut self, language: LanguageIdentifier) {
-		if language == self.fallback.ln {
-			self.current = None;
-			self.update_file = false;
-			self.update_folder = false;
+		if language == self.server.fallback.ln {
+			self.server.current = None;
+			self.server.update_file = false;
+			self.server.update_folder = false;
 			return;
 		}
 
-		if matches!(self.current.as_ref(), Some(current) if current.ln == language) {
+		if matches!(self.server.current.as_ref(), Some(current) if current.ln == language) {
 			return;
 		}
 
-		self.current = Some(Locale {
+		self.server.current = Some(Locale {
 			ln: language,
 			file: None,
 			folder: None,
 			bundle: None,
 		});
-		self.update_file = true;
-		self.update_folder = true;
+		self.server.update_file = true;
+		self.server.update_folder = true;
 	}
 }
 
-const LOCALIZATION_ERROR: &str = "Localization error";
-
-impl<TLogger> Localize for FtlServer<TLogger>
+impl<'w, 's, TLogger> Localize for FtlServerParam<'w, 's, TLogger>
 where
-	TLogger: Log,
+	TLogger: for<'w2, 's2> SystemParam<Item<'w2, 's2>: Log> + ThreadSafe,
 {
 	fn localize(&self, token: &Token) -> LocalizationResult {
-		let (current, locales) = match self.current.as_ref() {
-			Some(current) => (current, vec![current, &self.fallback]),
-			None => (&self.fallback, vec![&self.fallback]),
+		let (current, locales) = match self.server.current.as_ref() {
+			Some(current) => (current, vec![current, &self.server.fallback]),
+			None => (&self.server.fallback, vec![&self.server.fallback]),
 		};
 		let str = &**token;
 		let localize = |locale: &&Locale| {
 			if locale.ln != current.ln {
-				self.logger.log_warning(
-					LOCALIZATION_ERROR,
-					FtlError::FallbackAttempt {
-						token: current.ln_token(str),
-						fallback: locale.ln.clone(),
-					},
-				);
+				self.logger.log(FtlError::FallbackAttempt {
+					token: current.ln_token(str),
+					fallback: locale.ln.clone(),
+				});
 			}
 
 			let Some(bundle) = locale.bundle.as_ref() else {
-				self.logger
-					.log_error(LOCALIZATION_ERROR, FtlError::NoBundle(locale.ln.clone()));
+				self.logger.log(FtlError::NoBundle(locale.ln.clone()));
 				return None;
 			};
 
 			let Some(msg) = bundle.get_message(str) else {
-				self.logger.log_error(
-					LOCALIZATION_ERROR,
-					FtlError::NoMessageFor(locale.ln_token(str)),
-				);
+				self.logger
+					.log(FtlError::NoMessageFor(locale.ln_token(str)));
 				return None;
 			};
 
 			let Some(pattern) = msg.value() else {
-				self.logger.log_error(
-					LOCALIZATION_ERROR,
-					FtlError::NoPatternFor(locale.ln_token(str)),
-				);
+				self.logger
+					.log(FtlError::NoPatternFor(locale.ln_token(str)));
 				return None;
 			};
 
@@ -140,13 +152,10 @@ where
 			let localized = bundle.format_pattern(pattern, None, &mut fluent_errors);
 
 			if !fluent_errors.is_empty() {
-				self.logger.log_error(
-					LOCALIZATION_ERROR,
-					FtlError::FluentErrors {
-						token: locale.ln_token(str),
-						errors: fluent_errors,
-					},
-				);
+				self.logger.log(FtlError::FluentErrors {
+					token: locale.ln_token(str),
+					errors: fluent_errors,
+				});
 			}
 
 			Some(Localized::from(localized))
@@ -159,15 +168,21 @@ where
 	}
 }
 
-impl UpdateCurrentLocaleFromFile for FtlServer {
+impl<TLogger> UpdateCurrentLocaleFromFile for FtlServerParam<'_, '_, TLogger>
+where
+	TLogger: SystemParam + ThreadSafe,
+{
 	fn update_current_locale_from_file(&mut self) -> &mut bool {
-		&mut self.update_file
+		&mut self.server.update_file
 	}
 }
 
-impl UpdateCurrentLocaleFromFolder for FtlServer {
+impl<TLogger> UpdateCurrentLocaleFromFolder for FtlServerParam<'_, '_, TLogger>
+where
+	TLogger: SystemParam + ThreadSafe,
+{
 	fn update_current_locale_from_folder(&mut self) -> &mut bool {
-		&mut self.update_folder
+		&mut self.server.update_folder
 	}
 }
 
@@ -218,6 +233,23 @@ impl Display for FtlError {
 	}
 }
 
+impl ErrorData for FtlError {
+	fn level(&self) -> Level {
+		match self {
+			FtlError::FallbackAttempt { .. } => const { Level::Warning },
+			_ => const { Level::Error },
+		}
+	}
+
+	fn label() -> impl Display {
+		const { "Localization error" }
+	}
+
+	fn into_details(self) -> impl Display {
+		self
+	}
+}
+
 #[derive(Debug, PartialEq)]
 pub struct LnToken {
 	value: String,
@@ -235,217 +267,273 @@ mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use fluent::resolver::{ResolverError, errors::ReferenceKind};
-	use macros::simple_mock;
-	use mockall::predicate::eq;
-	use testing::{Mock, SingleThreadedApp, new_handle};
+	use macros::NestedMocks;
+	use mockall::{automock, predicate::eq};
+	use testing::{NestedMocks, SingleThreadedApp, new_handle};
 	use unic_langid::langid;
 
-	simple_mock! {
-		_Logger {}
-		impl Log for _Logger {
-			fn log_warning<TDetails>(&self, label: &str, details: TDetails) where TDetails: 'static;
-			fn log_error<TDetails>(&self, label: &str, details: TDetails) where TDetails: 'static;
+	#[derive(Resource, NestedMocks)]
+	struct _Logger {
+		mock: Mock_Logger,
+	}
+
+	#[automock]
+	impl Log for _Logger {
+		fn log<TError>(&self, error: TError)
+		where
+			TError: ErrorData,
+		{
+			self.mock.log(error)
 		}
 	}
 
-	#[test]
-	fn current_locale_mut_only_fallback() {
-		let mut server = FtlServer {
-			fallback: Locale {
-				ln: langid!("en"),
-				file: None,
-				folder: None,
-				bundle: None,
-			},
-			current: None,
-			logger: Logger,
-			update_file: false,
-			update_folder: false,
-		};
-
-		let current = server.current_locale_mut();
-
-		assert_eq!(langid!("en"), current.ln);
+	impl Default for _Logger {
+		fn default() -> Self {
+			Self::new().with_mock(|mock| {
+				mock.expect_log::<FtlError>().return_const(());
+			})
+		}
 	}
 
-	#[test]
-	fn current_locale_mut_with_current_field_set() {
-		let mut server = FtlServer {
-			fallback: Locale {
-				ln: langid!("en"),
-				file: None,
-				folder: None,
-				bundle: None,
-			},
-			current: Some(Locale {
-				ln: langid!("fr"),
-				file: None,
-				folder: None,
-				bundle: None,
-			}),
-			logger: Logger,
-			update_file: false,
-			update_folder: false,
-		};
+	type _LoggerParam = Res<'static, _Logger>;
 
-		let current = server.current_locale_mut();
-
-		assert_eq!(langid!("fr"), current.ln);
-	}
-
-	#[test]
-	fn set_localization() {
-		let mut server = FtlServer {
-			fallback: Locale {
-				ln: langid!("en"),
-				file: None,
-				folder: None,
-				bundle: None,
-			},
-			current: None,
-			logger: Logger,
-			update_file: false,
-			update_folder: false,
-		};
-
-		server.set_localization(langid!("jp"));
-
-		assert_eq!(
-			(true, &langid!("jp")),
-			(
-				*server.update_current_locale_from_folder(),
-				&server.current_locale_mut().ln
-			)
-		);
-	}
-
-	#[test]
-	fn set_localization_to_fallback() {
-		let mut server = FtlServer {
-			fallback: Locale {
-				ln: langid!("en"),
-				file: None,
-				folder: None,
-				bundle: None,
-			},
-			current: Some(Locale {
-				ln: langid!("jp"),
-				file: None,
-				folder: None,
-				bundle: None,
-			}),
-			logger: Logger,
-			update_file: false,
-			update_folder: false,
-		};
-
-		server.set_localization(langid!("en"));
-
-		assert_eq!(
-			(false, &langid!("en")),
-			(
-				*server.update_current_locale_from_folder(),
-				&server.current_locale_mut().ln
-			)
-		);
-	}
-
-	#[test]
-	fn do_nothing_when_setting_to_current_localization() {
-		let file = new_handle();
-		let folder = new_handle();
-		let mut server = FtlServer {
-			fallback: Locale {
-				ln: langid!("en"),
-				file: None,
-				folder: None,
-				bundle: None,
-			},
-			current: Some(Locale {
-				ln: langid!("jp"),
-				file: Some(file.clone()),
-				folder: Some(folder.clone()),
-				bundle: Some(FluentBundle::new_concurrent(vec![langid!("jp")])),
-			}),
-			logger: Logger,
-			update_file: false,
-			update_folder: false,
-		};
-
-		server.set_localization(langid!("jp"));
-
-		let update = *server.update_current_locale_from_folder();
-		let locale = &server.current_locale_mut();
-		assert_eq!(
-			(false, &langid!("jp"), &Some(file), &Some(folder), true),
-			(
-				update,
-				&locale.ln,
-				&locale.file,
-				&locale.folder,
-				locale.bundle.is_some(),
-			)
-		);
-	}
-
-	#[test]
-	fn override_current_localization() {
-		let mut server = FtlServer {
-			fallback: Locale {
-				ln: langid!("en"),
-				file: None,
-				folder: None,
-				bundle: None,
-			},
-			current: Some(Locale {
-				ln: langid!("fr"),
-				file: Some(new_handle()),
-				folder: Some(new_handle()),
-				bundle: Some(FluentBundle::new_concurrent(vec![langid!("jp")])),
-			}),
-			logger: Logger,
-			update_file: false,
-			update_folder: false,
-		};
-
-		server.set_localization(langid!("jp"));
-
-		let update = *server.update_current_locale_from_folder();
-		let locale = &server.current_locale_mut();
-		assert_eq!(
-			(true, &langid!("jp"), &None, &None, false),
-			(
-				update,
-				&locale.ln,
-				&locale.file,
-				&locale.folder,
-				locale.bundle.is_some(),
-			)
-		);
-	}
-
-	fn setup(server: FtlServer) -> App {
+	fn setup(server: FtlServer, logger: _Logger) -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.insert_resource(server);
+		app.insert_resource(logger);
 
 		app
 	}
 
 	#[test]
-	fn fallback_loaded_if_bundle_present() -> Result<(), RunSystemError> {
-		let mut app = setup(FtlServer {
-			fallback: Locale {
-				ln: langid!("en"),
-				file: None,
-				folder: None,
-				bundle: Some(FluentBundle::new_concurrent(vec![langid!("en")])),
+	fn current_locale_mut_only_fallback() -> Result<(), RunSystemError> {
+		let mut app = setup(
+			FtlServer {
+				fallback: Locale {
+					ln: langid!("en"),
+					file: None,
+					folder: None,
+					bundle: None,
+				},
+				current: None,
+				update_file: false,
+				update_folder: false,
 			},
-			current: None,
-			logger: Logger,
-			update_file: false,
-			update_folder: false,
-		});
+			default(),
+		);
+
+		let current = app
+			.world_mut()
+			.run_system_once(|mut f: FtlServerParam<_LoggerParam>| {
+				f.current_locale_mut().ln.clone()
+			})?;
+
+		assert_eq!(langid!("en"), current);
+		Ok(())
+	}
+
+	#[test]
+	fn current_locale_mut_with_current_field_set() -> Result<(), RunSystemError> {
+		let mut app = setup(
+			FtlServer {
+				fallback: Locale {
+					ln: langid!("en"),
+					file: None,
+					folder: None,
+					bundle: None,
+				},
+				current: Some(Locale {
+					ln: langid!("fr"),
+					file: None,
+					folder: None,
+					bundle: None,
+				}),
+				update_file: false,
+				update_folder: false,
+			},
+			default(),
+		);
+
+		let current = app
+			.world_mut()
+			.run_system_once(|mut f: FtlServerParam<_LoggerParam>| {
+				f.current_locale_mut().ln.clone()
+			})?;
+
+		assert_eq!(langid!("fr"), current);
+		Ok(())
+	}
+
+	#[test]
+	fn set_localization() -> Result<(), RunSystemError> {
+		let mut app = setup(
+			FtlServer {
+				fallback: Locale {
+					ln: langid!("en"),
+					file: None,
+					folder: None,
+					bundle: None,
+				},
+				current: None,
+				update_file: false,
+				update_folder: false,
+			},
+			default(),
+		);
+
+		let current = app
+			.world_mut()
+			.run_system_once(|mut f: FtlServerParam<_LoggerParam>| {
+				f.set_localization(langid!("jp"));
+				f.current_locale_mut().ln.clone()
+			})?;
+
+		assert_eq!(langid!("jp"), current);
+		Ok(())
+	}
+
+	#[test]
+	fn set_localization_to_fallback() -> Result<(), RunSystemError> {
+		let mut app = setup(
+			FtlServer {
+				fallback: Locale {
+					ln: langid!("en"),
+					file: None,
+					folder: None,
+					bundle: None,
+				},
+				current: Some(Locale {
+					ln: langid!("jp"),
+					file: None,
+					folder: None,
+					bundle: None,
+				}),
+				update_file: false,
+				update_folder: false,
+			},
+			default(),
+		);
+
+		let current = app
+			.world_mut()
+			.run_system_once(|mut f: FtlServerParam<_LoggerParam>| {
+				f.set_localization(langid!("en"));
+				(
+					*f.update_current_locale_from_folder(),
+					f.current_locale_mut().ln.clone(),
+				)
+			})?;
+
+		assert_eq!((false, langid!("en")), current);
+		Ok(())
+	}
+
+	#[test]
+	fn do_nothing_when_setting_to_current_localization() -> Result<(), RunSystemError> {
+		let file = new_handle();
+		let folder = new_handle();
+		let mut app = setup(
+			FtlServer {
+				fallback: Locale {
+					ln: langid!("en"),
+					file: None,
+					folder: None,
+					bundle: None,
+				},
+				current: Some(Locale {
+					ln: langid!("jp"),
+					file: Some(file.clone()),
+					folder: Some(folder.clone()),
+					bundle: Some(FluentBundle::new_concurrent(vec![langid!("jp")])),
+				}),
+				update_file: false,
+				update_folder: false,
+			},
+			default(),
+		);
+
+		let current = app
+			.world_mut()
+			.run_system_once(|mut f: FtlServerParam<_LoggerParam>| {
+				f.set_localization(langid!("jp"));
+				let update = *f.update_current_locale_from_folder();
+				let current = f.current_locale_mut();
+
+				(
+					update,
+					current.ln.clone(),
+					current.file.clone(),
+					current.folder.clone(),
+					current.bundle.is_some(),
+				)
+			})?;
+
+		assert_eq!(
+			(false, langid!("jp"), Some(file), Some(folder), true),
+			current
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn override_current_localization() -> Result<(), RunSystemError> {
+		let mut app = setup(
+			FtlServer {
+				fallback: Locale {
+					ln: langid!("en"),
+					file: None,
+					folder: None,
+					bundle: None,
+				},
+				current: Some(Locale {
+					ln: langid!("fr"),
+					file: Some(new_handle()),
+					folder: Some(new_handle()),
+					bundle: Some(FluentBundle::new_concurrent(vec![langid!("jp")])),
+				}),
+				update_file: false,
+				update_folder: false,
+			},
+			default(),
+		);
+
+		let current = app
+			.world_mut()
+			.run_system_once(|mut f: FtlServerParam<_LoggerParam>| {
+				f.set_localization(langid!("jp"));
+				let update = *f.update_current_locale_from_folder();
+				let current = f.current_locale_mut();
+
+				(
+					update,
+					current.ln.clone(),
+					current.file.clone(),
+					current.folder.clone(),
+					current.bundle.is_some(),
+				)
+			})?;
+
+		assert_eq!((true, langid!("jp"), None, None, false), current);
+		Ok(())
+	}
+
+	#[test]
+	fn fallback_loaded_if_bundle_present() -> Result<(), RunSystemError> {
+		let mut app = setup(
+			FtlServer {
+				fallback: Locale {
+					ln: langid!("en"),
+					file: None,
+					folder: None,
+					bundle: Some(FluentBundle::new_concurrent(vec![langid!("en")])),
+				},
+				current: None,
+				update_file: false,
+				update_folder: false,
+			},
+			default(),
+		);
 
 		let Loaded(loaded) = app
 			.world_mut()
@@ -457,18 +545,20 @@ mod tests {
 
 	#[test]
 	fn fallback_not_loaded_if_no_bundle_present() -> Result<(), RunSystemError> {
-		let mut app = setup(FtlServer {
-			fallback: Locale {
-				ln: langid!("en"),
-				file: None,
-				folder: None,
-				bundle: None,
+		let mut app = setup(
+			FtlServer {
+				fallback: Locale {
+					ln: langid!("en"),
+					file: None,
+					folder: None,
+					bundle: None,
+				},
+				current: None,
+				update_file: false,
+				update_folder: false,
 			},
-			current: None,
-			logger: Logger,
-			update_file: false,
-			update_folder: false,
-		});
+			default(),
+		);
 
 		let Loaded(loaded) = app
 			.world_mut()
@@ -481,18 +571,20 @@ mod tests {
 	#[test]
 	fn fallback_not_loaded_if_bundle_file_and_folder_handle_present() -> Result<(), RunSystemError>
 	{
-		let mut app = setup(FtlServer {
-			fallback: Locale {
-				ln: langid!("en"),
-				file: Some(new_handle()),
-				folder: Some(new_handle()),
-				bundle: Some(FluentBundle::new_concurrent(vec![langid!("en")])),
+		let mut app = setup(
+			FtlServer {
+				fallback: Locale {
+					ln: langid!("en"),
+					file: Some(new_handle()),
+					folder: Some(new_handle()),
+					bundle: Some(FluentBundle::new_concurrent(vec![langid!("en")])),
+				},
+				current: None,
+				update_file: false,
+				update_folder: false,
 			},
-			current: None,
-			logger: Logger,
-			update_file: false,
-			update_folder: false,
-		});
+			default(),
+		);
 
 		let Loaded(loaded) = app
 			.world_mut()
@@ -504,18 +596,20 @@ mod tests {
 
 	#[test]
 	fn fallback_not_loaded_if_only_bundle_and_file_present() -> Result<(), RunSystemError> {
-		let mut app = setup(FtlServer {
-			fallback: Locale {
-				ln: langid!("en"),
-				file: Some(new_handle()),
-				folder: None,
-				bundle: Some(FluentBundle::new_concurrent(vec![langid!("en")])),
+		let mut app = setup(
+			FtlServer {
+				fallback: Locale {
+					ln: langid!("en"),
+					file: Some(new_handle()),
+					folder: None,
+					bundle: Some(FluentBundle::new_concurrent(vec![langid!("en")])),
+				},
+				current: None,
+				update_file: false,
+				update_folder: false,
 			},
-			current: None,
-			logger: Logger,
-			update_file: false,
-			update_folder: false,
-		});
+			default(),
+		);
 
 		let Loaded(loaded) = app
 			.world_mut()
@@ -527,18 +621,20 @@ mod tests {
 
 	#[test]
 	fn fallback_not_loaded_if_only_bundle_and_folder_present() -> Result<(), RunSystemError> {
-		let mut app = setup(FtlServer {
-			fallback: Locale {
-				ln: langid!("en"),
-				file: None,
-				folder: Some(new_handle()),
-				bundle: Some(FluentBundle::new_concurrent(vec![langid!("en")])),
+		let mut app = setup(
+			FtlServer {
+				fallback: Locale {
+					ln: langid!("en"),
+					file: None,
+					folder: Some(new_handle()),
+					bundle: Some(FluentBundle::new_concurrent(vec![langid!("en")])),
+				},
+				current: None,
+				update_file: false,
+				update_folder: false,
 			},
-			current: None,
-			logger: Logger,
-			update_file: false,
-			update_folder: false,
-		});
+			default(),
+		);
 
 		let Loaded(loaded) = app
 			.world_mut()
@@ -549,279 +645,283 @@ mod tests {
 	}
 
 	#[test]
-	fn localize_from_fallback() {
+	fn localize_from_fallback() -> Result<(), RunSystemError> {
 		let mut bundle = FluentBundle::new_concurrent(vec![langid!("en")]);
 		let res = match FluentResource::try_new(String::from("a = A!")) {
 			Ok(res) => res,
 			Err((res, ..)) => res,
 		};
 		_ = bundle.add_resource(res);
-		let server = FtlServer {
-			fallback: Locale {
-				ln: langid!("en"),
-				file: None,
-				folder: None,
-				bundle: Some(bundle),
+		let mut app = setup(
+			FtlServer {
+				fallback: Locale {
+					ln: langid!("en"),
+					file: None,
+					folder: None,
+					bundle: Some(bundle),
+				},
+				current: None,
+				update_file: false,
+				update_folder: false,
 			},
-			current: None,
-			logger: Mock_Logger::new_mock(|mock| {
-				mock.expect_log_error::<FtlError>().never();
-				mock.expect_log_warning::<FtlError>().never();
+			_Logger::new().with_mock(|mock| {
+				mock.expect_log::<FtlError>().never();
 			}),
-			update_file: false,
-			update_folder: false,
-		};
-
-		assert_eq!(
-			LocalizationResult::Ok(Localized::from("A!")),
-			server.localize(&Token::from("a"))
 		);
+
+		let result = app
+			.world_mut()
+			.run_system_once(|f: FtlServerParam<_LoggerParam>| f.localize(&Token::from("a")))?;
+
+		assert_eq!(LocalizationResult::Ok(Localized::from("A!")), result);
+		Ok(())
 	}
 
 	#[test]
-	fn localize_from_current() {
+	fn localize_from_current() -> Result<(), RunSystemError> {
 		let mut bundle = FluentBundle::new_concurrent(vec![langid!("en")]);
 		let res = match FluentResource::try_new(String::from("a = A!")) {
 			Ok(res) => res,
 			Err((res, ..)) => res,
 		};
 		_ = bundle.add_resource(res);
-		let server = FtlServer {
-			fallback: Locale {
-				ln: langid!("jp"),
-				file: None,
-				folder: None,
-				bundle: None,
+		let mut app = setup(
+			FtlServer {
+				fallback: Locale {
+					ln: langid!("jp"),
+					file: None,
+					folder: None,
+					bundle: None,
+				},
+				current: Some(Locale {
+					ln: langid!("en"),
+					file: None,
+					folder: None,
+					bundle: Some(bundle),
+				}),
+				update_file: false,
+				update_folder: false,
 			},
-			current: Some(Locale {
-				ln: langid!("en"),
-				file: None,
-				folder: None,
-				bundle: Some(bundle),
+			_Logger::new().with_mock(|mock| {
+				mock.expect_log::<FtlError>().never();
 			}),
-			logger: Mock_Logger::new_mock(|mock| {
-				mock.expect_log_error::<FtlError>().never();
-				mock.expect_log_warning::<FtlError>().never();
-			}),
-			update_file: false,
-			update_folder: false,
-		};
-
-		assert_eq!(
-			LocalizationResult::Ok(Localized::from("A!")),
-			server.localize(&Token::from("a"))
 		);
+
+		let result = app
+			.world_mut()
+			.run_system_once(|f: FtlServerParam<_LoggerParam>| f.localize(&Token::from("a")))?;
+
+		assert_eq!(LocalizationResult::Ok(Localized::from("A!")), result);
+		Ok(())
 	}
 
 	#[test]
-	fn no_bundle_error() {
-		let server = FtlServer {
-			fallback: Locale {
-				ln: langid!("en"),
-				file: None,
-				folder: None,
-				bundle: None,
+	fn no_bundle_error() -> Result<(), RunSystemError> {
+		let mut app = setup(
+			FtlServer {
+				fallback: Locale {
+					ln: langid!("en"),
+					file: None,
+					folder: None,
+					bundle: None,
+				},
+				current: None,
+				update_file: false,
+				update_folder: false,
 			},
-			current: None,
-			logger: Mock_Logger::new_mock(|mock| {
-				mock.expect_log_error::<FtlError>()
-					.times(1)
-					.with(
-						eq(LOCALIZATION_ERROR),
-						eq(FtlError::NoBundle(langid!("en"))),
-					)
+			_Logger::new().with_mock(|mock| {
+				mock.expect_log::<FtlError>()
+					.once()
+					.with(eq(FtlError::NoBundle(langid!("en"))))
 					.return_const(());
-				mock.expect_log_warning::<FtlError>().never();
 			}),
-			update_file: false,
-			update_folder: false,
-		};
-
-		assert_eq!(
-			LocalizationResult::Error(Token::from("a").failed()),
-			server.localize(&Token::from("a"))
 		);
+
+		let result = app
+			.world_mut()
+			.run_system_once(|f: FtlServerParam<_LoggerParam>| f.localize(&Token::from("a")))?;
+
+		assert_eq!(LocalizationResult::Error(Token::from("a").failed()), result);
+		Ok(())
 	}
 
 	#[test]
-	fn no_msg_error() {
+	fn no_msg_error() -> Result<(), RunSystemError> {
 		let mut bundle = FluentBundle::new_concurrent(vec![langid!("en")]);
 		let res = match FluentResource::try_new(String::from("a = A!")) {
 			Ok(res) => res,
 			Err((res, ..)) => res,
 		};
 		_ = bundle.add_resource(res);
-		let server = FtlServer {
-			fallback: Locale {
-				ln: langid!("en"),
-				file: None,
-				folder: None,
-				bundle: Some(bundle),
+		let mut app = setup(
+			FtlServer {
+				fallback: Locale {
+					ln: langid!("en"),
+					file: None,
+					folder: None,
+					bundle: Some(bundle),
+				},
+				current: None,
+				update_file: false,
+				update_folder: false,
 			},
-			current: None,
-			logger: Mock_Logger::new_mock(|mock| {
-				mock.expect_log_error::<FtlError>()
-					.times(1)
-					.with(
-						eq(LOCALIZATION_ERROR),
-						eq(FtlError::NoMessageFor(LnToken {
-							value: String::from("b"),
-							language: langid!("en"),
-						})),
-					)
+			_Logger::new().with_mock(|mock| {
+				mock.expect_log::<FtlError>()
+					.once()
+					.with(eq(FtlError::NoMessageFor(LnToken {
+						value: String::from("b"),
+						language: langid!("en"),
+					})))
 					.return_const(());
-				mock.expect_log_warning::<FtlError>().never();
 			}),
-			update_file: false,
-			update_folder: false,
-		};
-
-		assert_eq!(
-			LocalizationResult::Error(Token::from("b").failed()),
-			server.localize(&Token::from("b"))
 		);
+
+		let result = app
+			.world_mut()
+			.run_system_once(|f: FtlServerParam<_LoggerParam>| f.localize(&Token::from("b")))?;
+
+		assert_eq!(LocalizationResult::Error(Token::from("b").failed()), result);
+		Ok(())
 	}
 
 	#[test]
-	fn no_patter_error() {
+	fn no_patter_error() -> Result<(), RunSystemError> {
 		let mut bundle = FluentBundle::new_concurrent(vec![langid!("en")]);
 		let res = match FluentResource::try_new(String::from("a = \n  .description = my item")) {
 			Ok(res) => res,
 			Err((res, ..)) => res,
 		};
 		_ = bundle.add_resource(res);
-		let server = FtlServer {
-			fallback: Locale {
-				ln: langid!("en"),
-				file: None,
-				folder: None,
-				bundle: Some(bundle),
+		let mut app = setup(
+			FtlServer {
+				fallback: Locale {
+					ln: langid!("en"),
+					file: None,
+					folder: None,
+					bundle: Some(bundle),
+				},
+				current: None,
+				update_file: false,
+				update_folder: false,
 			},
-			current: None,
-			logger: Mock_Logger::new_mock(|mock| {
-				mock.expect_log_error::<FtlError>()
-					.times(1)
-					.with(
-						eq(LOCALIZATION_ERROR),
-						eq(FtlError::NoPatternFor(LnToken {
-							value: String::from("a"),
-							language: langid!("en"),
-						})),
-					)
+			_Logger::new().with_mock(|mock| {
+				mock.expect_log::<FtlError>()
+					.once()
+					.with(eq(FtlError::NoPatternFor(LnToken {
+						value: String::from("a"),
+						language: langid!("en"),
+					})))
 					.return_const(());
-				mock.expect_log_warning::<FtlError>().never();
 			}),
-			update_file: false,
-			update_folder: false,
-		};
-
-		assert_eq!(
-			LocalizationResult::Error(Token::from("a").failed()),
-			server.localize(&Token::from("a")),
 		);
+
+		let result = app
+			.world_mut()
+			.run_system_once(|f: FtlServerParam<_LoggerParam>| f.localize(&Token::from("a")))?;
+
+		assert_eq!(LocalizationResult::Error(Token::from("a").failed()), result);
+		Ok(())
 	}
 
 	#[test]
-	fn fluent_error() {
+	fn fluent_error() -> Result<(), RunSystemError> {
 		let mut bundle = FluentBundle::new_concurrent(vec![langid!("en")]);
 		let res = match FluentResource::try_new(String::from("a = { $a }")) {
 			Ok(res) => res,
 			Err((res, ..)) => res,
 		};
 		_ = bundle.add_resource(res);
-		let server = FtlServer {
-			fallback: Locale {
-				ln: langid!("en"),
-				file: None,
-				folder: None,
-				bundle: Some(bundle),
+		let mut app = setup(
+			FtlServer {
+				fallback: Locale {
+					ln: langid!("en"),
+					file: None,
+					folder: None,
+					bundle: Some(bundle),
+				},
+				current: None,
+				update_file: false,
+				update_folder: false,
 			},
-			current: None,
-			logger: Mock_Logger::new_mock(|mock| {
-				mock.expect_log_error::<FtlError>()
-					.times(1)
-					.with(
-						eq(LOCALIZATION_ERROR),
-						eq(FtlError::FluentErrors {
-							token: LnToken {
-								value: String::from("a"),
-								language: langid!("en"),
+			_Logger::new().with_mock(|mock| {
+				mock.expect_log::<FtlError>()
+					.once()
+					.with(eq(FtlError::FluentErrors {
+						token: LnToken {
+							value: String::from("a"),
+							language: langid!("en"),
+						},
+						errors: vec![FluentError::ResolverError(ResolverError::Reference(
+							ReferenceKind::Variable {
+								id: String::from("a"),
 							},
-							errors: vec![FluentError::ResolverError(ResolverError::Reference(
-								ReferenceKind::Variable {
-									id: String::from("a"),
-								},
-							))],
-						}),
-					)
+						))],
+					}))
 					.return_const(());
-				mock.expect_log_warning::<FtlError>().never();
 			}),
-			update_file: false,
-			update_folder: false,
-		};
-
-		assert_eq!(
-			LocalizationResult::Ok(Localized::from("{$a}")),
-			server.localize(&Token::from("a")),
 		);
+
+		let result = app
+			.world_mut()
+			.run_system_once(|f: FtlServerParam<_LoggerParam>| f.localize(&Token::from("a")))?;
+
+		assert_eq!(LocalizationResult::Ok(Localized::from("{$a}")), result);
+		Ok(())
 	}
 
 	#[test]
-	fn fallback_attempt_on_bundle_error() {
+	fn fallback_attempt_on_bundle_error() -> Result<(), RunSystemError> {
 		let mut fallback = FluentBundle::new_concurrent(vec![langid!("en")]);
 		let res = match FluentResource::try_new(String::from("a = A!")) {
 			Ok(res) => res,
 			Err((res, ..)) => res,
 		};
 		_ = fallback.add_resource(res);
-		let server = FtlServer {
-			fallback: Locale {
-				ln: langid!("en"),
-				file: None,
-				folder: None,
-				bundle: Some(fallback),
+		let mut app = setup(
+			FtlServer {
+				fallback: Locale {
+					ln: langid!("en"),
+					file: None,
+					folder: None,
+					bundle: Some(fallback),
+				},
+				current: Some(Locale {
+					ln: langid!("jp"),
+					file: None,
+					folder: None,
+					bundle: None,
+				}),
+				update_file: false,
+				update_folder: false,
 			},
-			current: Some(Locale {
-				ln: langid!("jp"),
-				file: None,
-				folder: None,
-				bundle: None,
-			}),
-			logger: Mock_Logger::new_mock(|mock| {
-				mock.expect_log_error::<FtlError>()
-					.times(1)
-					.with(
-						eq(LOCALIZATION_ERROR),
-						eq(FtlError::NoBundle(langid!("jp"))),
-					)
+			_Logger::new().with_mock(|mock| {
+				mock.expect_log::<FtlError>()
+					.once()
+					.with(eq(FtlError::NoBundle(langid!("jp"))))
 					.return_const(());
-				mock.expect_log_warning::<FtlError>()
-					.times(1)
-					.with(
-						eq(LOCALIZATION_ERROR),
-						eq(FtlError::FallbackAttempt {
-							token: LnToken {
-								value: String::from("a"),
-								language: langid!("jp"),
-							},
-							fallback: langid!("en"),
-						}),
-					)
+				mock.expect_log::<FtlError>()
+					.once()
+					.with(eq(FtlError::FallbackAttempt {
+						token: LnToken {
+							value: String::from("a"),
+							language: langid!("jp"),
+						},
+						fallback: langid!("en"),
+					}))
 					.return_const(());
 			}),
-			update_file: false,
-			update_folder: false,
-		};
-
-		assert_eq!(
-			LocalizationResult::Ok(Localized::from("A!")),
-			server.localize(&Token::from("a")),
 		);
+
+		let result = app
+			.world_mut()
+			.run_system_once(|f: FtlServerParam<_LoggerParam>| f.localize(&Token::from("a")))?;
+
+		assert_eq!(LocalizationResult::Ok(Localized::from("A!")), result);
+		Ok(())
 	}
 
 	#[test]
-	fn fallback_attempt_on_msg_error() {
+	fn fallback_attempt_on_msg_error() -> Result<(), RunSystemError> {
 		let mut fallback = FluentBundle::new_concurrent(vec![langid!("en")]);
 		let res = match FluentResource::try_new(String::from("a = A!")) {
 			Ok(res) => res,
@@ -834,56 +934,54 @@ mod tests {
 			Err((res, ..)) => res,
 		};
 		_ = current.add_resource(res);
-		let server = FtlServer {
-			fallback: Locale {
-				ln: langid!("en"),
-				file: None,
-				folder: None,
-				bundle: Some(fallback),
+		let mut app = setup(
+			FtlServer {
+				fallback: Locale {
+					ln: langid!("en"),
+					file: None,
+					folder: None,
+					bundle: Some(fallback),
+				},
+				current: Some(Locale {
+					ln: langid!("jp"),
+					file: None,
+					folder: None,
+					bundle: Some(current),
+				}),
+				update_file: false,
+				update_folder: false,
 			},
-			current: Some(Locale {
-				ln: langid!("jp"),
-				file: None,
-				folder: None,
-				bundle: Some(current),
-			}),
-			logger: Mock_Logger::new_mock(|mock| {
-				mock.expect_log_error::<FtlError>()
-					.times(1)
-					.with(
-						eq(LOCALIZATION_ERROR),
-						eq(FtlError::NoMessageFor(LnToken {
+			_Logger::new().with_mock(|mock| {
+				mock.expect_log::<FtlError>()
+					.once()
+					.with(eq(FtlError::NoMessageFor(LnToken {
+						value: String::from("a"),
+						language: langid!("jp"),
+					})))
+					.return_const(());
+				mock.expect_log::<FtlError>()
+					.once()
+					.with(eq(FtlError::FallbackAttempt {
+						token: LnToken {
 							value: String::from("a"),
 							language: langid!("jp"),
-						})),
-					)
-					.return_const(());
-				mock.expect_log_warning::<FtlError>()
-					.times(1)
-					.with(
-						eq(LOCALIZATION_ERROR),
-						eq(FtlError::FallbackAttempt {
-							token: LnToken {
-								value: String::from("a"),
-								language: langid!("jp"),
-							},
-							fallback: langid!("en"),
-						}),
-					)
+						},
+						fallback: langid!("en"),
+					}))
 					.return_const(());
 			}),
-			update_file: false,
-			update_folder: false,
-		};
-
-		assert_eq!(
-			LocalizationResult::Ok(Localized::from("A!")),
-			server.localize(&Token::from("a")),
 		);
+
+		let result = app
+			.world_mut()
+			.run_system_once(|f: FtlServerParam<_LoggerParam>| f.localize(&Token::from("a")))?;
+
+		assert_eq!(LocalizationResult::Ok(Localized::from("A!")), result);
+		Ok(())
 	}
 
 	#[test]
-	fn fallback_attempt_on_pattern_error() {
+	fn fallback_attempt_on_pattern_error() -> Result<(), RunSystemError> {
 		let mut fallback = FluentBundle::new_concurrent(vec![langid!("en")]);
 		let res = match FluentResource::try_new(String::from("a = A!")) {
 			Ok(res) => res,
@@ -896,56 +994,54 @@ mod tests {
 			Err((res, ..)) => res,
 		};
 		_ = current.add_resource(res);
-		let server = FtlServer {
-			fallback: Locale {
-				ln: langid!("en"),
-				file: None,
-				folder: None,
-				bundle: Some(fallback),
+		let mut app = setup(
+			FtlServer {
+				fallback: Locale {
+					ln: langid!("en"),
+					file: None,
+					folder: None,
+					bundle: Some(fallback),
+				},
+				current: Some(Locale {
+					ln: langid!("jp"),
+					file: None,
+					folder: None,
+					bundle: Some(current),
+				}),
+				update_file: false,
+				update_folder: false,
 			},
-			current: Some(Locale {
-				ln: langid!("jp"),
-				file: None,
-				folder: None,
-				bundle: Some(current),
-			}),
-			logger: Mock_Logger::new_mock(|mock| {
-				mock.expect_log_error::<FtlError>()
-					.times(1)
-					.with(
-						eq(LOCALIZATION_ERROR),
-						eq(FtlError::NoPatternFor(LnToken {
+			_Logger::new().with_mock(|mock| {
+				mock.expect_log::<FtlError>()
+					.once()
+					.with(eq(FtlError::NoPatternFor(LnToken {
+						value: String::from("a"),
+						language: langid!("jp"),
+					})))
+					.return_const(());
+				mock.expect_log::<FtlError>()
+					.once()
+					.with(eq(FtlError::FallbackAttempt {
+						token: LnToken {
 							value: String::from("a"),
 							language: langid!("jp"),
-						})),
-					)
-					.return_const(());
-				mock.expect_log_warning::<FtlError>()
-					.times(1)
-					.with(
-						eq(LOCALIZATION_ERROR),
-						eq(FtlError::FallbackAttempt {
-							token: LnToken {
-								value: String::from("a"),
-								language: langid!("jp"),
-							},
-							fallback: langid!("en"),
-						}),
-					)
+						},
+						fallback: langid!("en"),
+					}))
 					.return_const(());
 			}),
-			update_file: false,
-			update_folder: false,
-		};
-
-		assert_eq!(
-			LocalizationResult::Ok(Localized::from("A!")),
-			server.localize(&Token::from("a")),
 		);
+
+		let result = app
+			.world_mut()
+			.run_system_once(|f: FtlServerParam<_LoggerParam>| f.localize(&Token::from("a")))?;
+
+		assert_eq!(LocalizationResult::Ok(Localized::from("A!")), result);
+		Ok(())
 	}
 
 	#[test]
-	fn no_fallback_attempt_on_fluent_error() {
+	fn no_fallback_attempt_on_fluent_error() -> Result<(), RunSystemError> {
 		let mut fallback = FluentBundle::new_concurrent(vec![langid!("en")]);
 		let res = match FluentResource::try_new(String::from("a = A!")) {
 			Ok(res) => res,
@@ -958,46 +1054,46 @@ mod tests {
 			Err((res, ..)) => res,
 		};
 		_ = current.add_resource(res);
-		let server = FtlServer {
-			fallback: Locale {
-				ln: langid!("en"),
-				file: None,
-				folder: None,
-				bundle: Some(fallback),
+		let mut app = setup(
+			FtlServer {
+				fallback: Locale {
+					ln: langid!("en"),
+					file: None,
+					folder: None,
+					bundle: Some(fallback),
+				},
+				current: Some(Locale {
+					ln: langid!("jp"),
+					file: None,
+					folder: None,
+					bundle: Some(current),
+				}),
+				update_file: false,
+				update_folder: false,
 			},
-			current: Some(Locale {
-				ln: langid!("jp"),
-				file: None,
-				folder: None,
-				bundle: Some(current),
-			}),
-			logger: Mock_Logger::new_mock(|mock| {
-				mock.expect_log_error::<FtlError>()
-					.times(1)
-					.with(
-						eq(LOCALIZATION_ERROR),
-						eq(FtlError::FluentErrors {
-							token: LnToken {
-								value: String::from("a"),
-								language: langid!("jp"),
+			_Logger::new().with_mock(|mock| {
+				mock.expect_log::<FtlError>()
+					.once()
+					.with(eq(FtlError::FluentErrors {
+						token: LnToken {
+							value: String::from("a"),
+							language: langid!("jp"),
+						},
+						errors: vec![FluentError::ResolverError(ResolverError::Reference(
+							ReferenceKind::Variable {
+								id: String::from("a"),
 							},
-							errors: vec![FluentError::ResolverError(ResolverError::Reference(
-								ReferenceKind::Variable {
-									id: String::from("a"),
-								},
-							))],
-						}),
-					)
+						))],
+					}))
 					.return_const(());
-				mock.expect_log_warning::<FtlError>().never();
 			}),
-			update_file: false,
-			update_folder: false,
-		};
-
-		assert_eq!(
-			LocalizationResult::Ok(Localized::from("{$a}")),
-			server.localize(&Token::from("a")),
 		);
+
+		let result = app
+			.world_mut()
+			.run_system_once(|f: FtlServerParam<_LoggerParam>| f.localize(&Token::from("a")))?;
+
+		assert_eq!(LocalizationResult::Ok(Localized::from("{$a}")), result);
+		Ok(())
 	}
 }

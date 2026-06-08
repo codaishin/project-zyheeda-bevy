@@ -259,7 +259,7 @@ where
 
 impl<TAction> ErrorData for InvalidInputWarning<TAction>
 where
-	TAction: InvalidUserInput + Debug + Eq + Hash,
+	TAction: InvalidUserInput + Debug + Eq + Hash + 'static,
 {
 	fn level(&self) -> Level {
 		Level::Warning

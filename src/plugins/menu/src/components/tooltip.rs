@@ -145,7 +145,7 @@ impl<T, TLocalization> SpawnTooltips<T, TLocalization> for TooltipUIControl
 where
 	T: TooltipUiConfig + ThreadSafe,
 	Tooltip<T>: InsertUiContent,
-	TLocalization: Localize + ThreadSafe,
+	TLocalization: Localize,
 {
 	fn spawn(
 		&self,

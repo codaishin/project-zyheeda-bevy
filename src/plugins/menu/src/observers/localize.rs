@@ -1,9 +1,13 @@
 use crate::components::label::UILabel;
-use bevy::prelude::*;
+use bevy::{
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
+};
 use common::{
 	traits::{
 		accessors::get::TryApplyOn,
 		handles_localization::{Localize, Token},
+		thread_safe::ThreadSafe,
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -13,9 +17,9 @@ impl UILabel {
 		on_insert: On<Insert, UILabel<Token>>,
 		mut commands: ZyheedaCommands,
 		labels: Query<&UILabel<Token>>,
-		localizer: Res<TLocalizer>,
+		localizer: StaticSystemParam<TLocalizer>,
 	) where
-		TLocalizer: Resource + Localize,
+		TLocalizer: for<'w, 's> SystemParam<Item<'w, 's>: Localize> + ThreadSafe,
 	{
 		let entity = on_insert.entity;
 		let Ok(UILabel(token)) = labels.get(entity) else {
@@ -57,7 +61,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.insert_resource(localize);
-		app.add_observer(UILabel::localize::<_Localizer>);
+		app.add_observer(UILabel::localize::<Res<_Localizer>>);
 
 		app
 	}
