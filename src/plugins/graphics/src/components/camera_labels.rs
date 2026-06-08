@@ -1,4 +1,4 @@
-use crate::{OutlineSettings, components::model_render_layers::ModelRenderLayers};
+use crate::{PostProcessCamera, components::model_render_layers::ModelRenderLayers};
 use bevy::{
 	camera::visibility::RenderLayers,
 	color::palettes::tailwind::GREEN_600,
@@ -139,7 +139,7 @@ impl From<OutlinePass> for Tonemapping {
 #[savable_component(id = "composite pass camera")]
 #[require(
 	SceneCamera,
-	OutlineSettings = Self,
+	PostProcessCamera = Self,
 	Camera = Self,
 	RenderLayers = Self,
 	Tonemapping = Self,
@@ -175,10 +175,10 @@ impl From<CompositePass> for ModelRenderLayers {
 	}
 }
 
-impl From<CompositePass> for OutlineSettings {
+impl From<CompositePass> for PostProcessCamera {
 	fn from(_: CompositePass) -> Self {
-		OutlineSettings {
-			color: GREEN_600.into(),
+		PostProcessCamera {
+			outline_color: GREEN_600.into(),
 		}
 	}
 }
