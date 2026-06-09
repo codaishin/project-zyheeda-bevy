@@ -10,9 +10,8 @@ use std::{fmt::Display, ops::Deref, sync::Arc};
 use unic_langid::LanguageIdentifier;
 
 pub trait HandlesLocalization {
-	type TLocalizationServer: ThreadSafe
-		+ for<'w, 's> SystemParam<Item<'w, 's>: SetLocalization>
-		+ for<'w, 's> SystemParam<Item<'w, 's>: Localize>;
+	type TLocalizationServer: ThreadSafe + for<'w, 's> SystemParam<Item<'w, 's>: Localize>;
+	type TLocalizationServerMut: ThreadSafe + for<'w, 's> SystemParam<Item<'w, 's>: SetLocalization>;
 }
 
 pub trait SetLocalization {

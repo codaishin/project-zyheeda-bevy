@@ -73,44 +73,8 @@ pub struct FtlServerParam<'w, 's, TLogger = ErrorLogger>
 where
 	TLogger: SystemParam + ThreadSafe,
 {
-	server: ResMut<'w, FtlServer>,
+	server: Res<'w, FtlServer>,
 	logger: StaticSystemParam<'w, 's, TLogger>,
-}
-
-impl<TLogger> CurrentLocaleMut for FtlServerParam<'_, '_, TLogger>
-where
-	TLogger: SystemParam + ThreadSafe,
-{
-	fn current_locale_mut(&mut self) -> &mut Locale {
-		self.server.get_current()
-	}
-}
-
-impl<'w, 's, TLogger> SetLocalization for FtlServerParam<'w, 's, TLogger>
-where
-	TLogger: for<'w2, 's2> SystemParam<Item<'w2, 's2>: Log> + ThreadSafe,
-{
-	fn set_localization(&mut self, language: LanguageIdentifier) {
-		if language == self.server.fallback.ln {
-			self.server.current = None;
-			self.server.update_file = false;
-			self.server.update_folder = false;
-			return;
-		}
-
-		if matches!(self.server.current.as_ref(), Some(current) if current.ln == language) {
-			return;
-		}
-
-		self.server.current = Some(Locale {
-			ln: language,
-			file: None,
-			folder: None,
-			bundle: None,
-		});
-		self.server.update_file = true;
-		self.server.update_folder = true;
-	}
 }
 
 impl<'w, 's, TLogger> Localize for FtlServerParam<'w, 's, TLogger>
@@ -168,19 +132,48 @@ where
 	}
 }
 
-impl<TLogger> UpdateCurrentLocaleFromFile for FtlServerParam<'_, '_, TLogger>
-where
-	TLogger: SystemParam + ThreadSafe,
-{
+#[derive(SystemParam)]
+pub struct FtlServerParamMut<'w> {
+	server: ResMut<'w, FtlServer>,
+}
+
+impl CurrentLocaleMut for FtlServerParamMut<'_> {
+	fn current_locale_mut(&mut self) -> &mut Locale {
+		self.server.get_current()
+	}
+}
+
+impl<'w> SetLocalization for FtlServerParamMut<'w> {
+	fn set_localization(&mut self, language: LanguageIdentifier) {
+		if language == self.server.fallback.ln {
+			self.server.current = None;
+			self.server.update_file = false;
+			self.server.update_folder = false;
+			return;
+		}
+
+		if matches!(self.server.current.as_ref(), Some(current) if current.ln == language) {
+			return;
+		}
+
+		self.server.current = Some(Locale {
+			ln: language,
+			file: None,
+			folder: None,
+			bundle: None,
+		});
+		self.server.update_file = true;
+		self.server.update_folder = true;
+	}
+}
+
+impl UpdateCurrentLocaleFromFile for FtlServerParamMut<'_> {
 	fn update_current_locale_from_file(&mut self) -> &mut bool {
 		&mut self.server.update_file
 	}
 }
 
-impl<TLogger> UpdateCurrentLocaleFromFolder for FtlServerParam<'_, '_, TLogger>
-where
-	TLogger: SystemParam + ThreadSafe,
-{
+impl UpdateCurrentLocaleFromFolder for FtlServerParamMut<'_> {
 	fn update_current_locale_from_folder(&mut self) -> &mut bool {
 		&mut self.server.update_folder
 	}
@@ -325,9 +318,7 @@ mod tests {
 
 		let current = app
 			.world_mut()
-			.run_system_once(|mut f: FtlServerParam<_LoggerParam>| {
-				f.current_locale_mut().ln.clone()
-			})?;
+			.run_system_once(|mut f: FtlServerParamMut| f.current_locale_mut().ln.clone())?;
 
 		assert_eq!(langid!("en"), current);
 		Ok(())
@@ -357,9 +348,7 @@ mod tests {
 
 		let current = app
 			.world_mut()
-			.run_system_once(|mut f: FtlServerParam<_LoggerParam>| {
-				f.current_locale_mut().ln.clone()
-			})?;
+			.run_system_once(|mut f: FtlServerParamMut| f.current_locale_mut().ln.clone())?;
 
 		assert_eq!(langid!("fr"), current);
 		Ok(())
@@ -384,7 +373,7 @@ mod tests {
 
 		let current = app
 			.world_mut()
-			.run_system_once(|mut f: FtlServerParam<_LoggerParam>| {
+			.run_system_once(|mut f: FtlServerParamMut| {
 				f.set_localization(langid!("jp"));
 				f.current_locale_mut().ln.clone()
 			})?;
@@ -417,7 +406,7 @@ mod tests {
 
 		let current = app
 			.world_mut()
-			.run_system_once(|mut f: FtlServerParam<_LoggerParam>| {
+			.run_system_once(|mut f: FtlServerParamMut| {
 				f.set_localization(langid!("en"));
 				(
 					*f.update_current_locale_from_folder(),
@@ -455,7 +444,7 @@ mod tests {
 
 		let current = app
 			.world_mut()
-			.run_system_once(|mut f: FtlServerParam<_LoggerParam>| {
+			.run_system_once(|mut f: FtlServerParamMut| {
 				f.set_localization(langid!("jp"));
 				let update = *f.update_current_locale_from_folder();
 				let current = f.current_locale_mut();
@@ -500,7 +489,7 @@ mod tests {
 
 		let current = app
 			.world_mut()
-			.run_system_once(|mut f: FtlServerParam<_LoggerParam>| {
+			.run_system_once(|mut f: FtlServerParamMut| {
 				f.set_localization(langid!("jp"));
 				let update = *f.update_current_locale_from_folder();
 				let current = f.current_locale_mut();
