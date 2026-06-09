@@ -82,7 +82,7 @@ impl ViewNode for PostProcessNode {
 			return Ok(());
 		};
 
-		// get `PostProcessSettings` as bindings
+		// get post process setting
 		let Some(settings) = world.get_resource::<ComponentUniforms<PostProcessCamera>>() else {
 			Self::log(MissingResource::PostProcessUniforms);
 			return Ok(());

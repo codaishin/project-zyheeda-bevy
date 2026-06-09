@@ -23,7 +23,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::{
-			camera_labels::{OutlinePass, CompositePass},
+			camera_labels::{CompositePass, OutlinePass},
 			model_render_layers::ModelRenderLayers,
 		},
 		system_params::highlight::HighlightParam,
