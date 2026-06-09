@@ -7,13 +7,28 @@ mod systems;
 mod traits;
 
 use crate::{
-	components::{child_meshes::ChildMeshOf, model_render_layers::ModelRenderLayers},
+	components::{
+		camera_labels::OutlinePass,
+		child_meshes::ChildMeshOf,
+		model_render_layers::ModelRenderLayers,
+		post_process_camera::PostProcessCamera,
+	},
 	materials::effect_material::EffectMaterial,
+	observers::insert_render_target::InsertRenderTarget,
+	resources::post_process_pipeline::{PostProcessLabel, PostProcessNode, PostProcessPipeline},
 	system_params::highlight::{HighlightParam, HighlightParamMut},
 };
 use bevy::{
+	core_pipeline::core_3d::graph::Core3d,
 	prelude::*,
-	render::{RenderApp, render_resource::PipelineCache},
+	render::{
+		RenderApp,
+		RenderStartup,
+		extract_component::{ExtractComponentPlugin, UniformComponentPlugin},
+		extract_resource::ExtractResourcePlugin,
+		render_graph::{RenderGraphExt, ViewNodeRunner},
+		render_resource::*,
+	},
 };
 use common::{
 	components::essence::Essence,
@@ -33,12 +48,12 @@ use common::{
 	},
 };
 use components::{
-	camera_labels::{FirstPass, SecondPass, Ui, WorldCamera},
+	camera_labels::{CompositePass, SceneCamera, Ui, WorldPass},
 	effect_material_handle::EffectMaterialHandle,
 	material_override::MaterialOverride,
 };
 use materials::essence_material::EssenceMaterial;
-use resources::{first_pass_image::FirstPassImage, window_size::WindowSize};
+use resources::{camera_render_target::CameraRenderTarget, window_size::WindowSize};
 use std::{hash::Hash, marker::PhantomData};
 use systems::{no_waiting_pipelines::no_waiting_pipelines, spawn_cameras::spawn_cameras};
 
@@ -103,7 +118,7 @@ where
 					EffectMaterialHandle::modify_material::<TPhysics, Gravity>,
 					EffectMaterialHandle::modify_material::<TPhysics, HealthDamage>,
 					EffectMaterialHandle::propagate_material,
-					ModelRenderLayers::populate_missing_with(FirstPass),
+					ModelRenderLayers::populate_missing_with(WorldPass),
 					ModelRenderLayers::propagate_layers,
 				)
 					.chain()
@@ -112,20 +127,41 @@ where
 	}
 
 	fn cameras(&self, app: &mut App) {
-		app.register_required_components::<WorldCamera, TSavegame::TSaveEntityMarker>();
-		TSavegame::register_savable_component::<FirstPass>(app);
-		TSavegame::register_savable_component::<SecondPass>(app);
+		app.register_required_components::<SceneCamera, TSavegame::TSaveEntityMarker>();
+		TSavegame::register_savable_component::<WorldPass>(app);
+		TSavegame::register_savable_component::<OutlinePass>(app);
+		TSavegame::register_savable_component::<CompositePass>(app);
 		TSavegame::register_savable_component::<Ui>(app);
 
 		app.init_resource::<WindowSize>()
-			.register_required_components_with::<SecondPass, TDebugCam>(self.debug_cam)
-			.add_observer(FirstPass::insert_camera)
-			.add_systems(Startup, FirstPassImage::instantiate)
+			.add_plugins(ExtractResourcePlugin::<CameraRenderTarget<OutlinePass>>::default())
+			.add_plugins(ExtractComponentPlugin::<PostProcessCamera>::default())
+			.add_plugins(UniformComponentPlugin::<PostProcessCamera>::default())
+			.register_required_components_with::<Ui, TDebugCam>(self.debug_cam)
+			.add_observer(WorldPass::insert_render_target)
+			.add_observer(OutlinePass::insert_render_target)
+			.add_systems(
+				Startup,
+				(
+					CameraRenderTarget::<WorldPass>::instantiate,
+					CameraRenderTarget::<OutlinePass>::instantiate,
+				),
+			)
 			.add_systems(PostStartup, spawn_cameras)
 			.add_systems(
 				First,
-				(WindowSize::update, FirstPassImage::<Image>::update_size).chain(),
+				(
+					WindowSize::update,
+					CameraRenderTarget::<WorldPass>::update_size,
+					CameraRenderTarget::<OutlinePass>::update_size,
+				)
+					.chain(),
 			);
+
+		app.sub_app_mut(RenderApp)
+			.add_systems(RenderStartup, PostProcessPipeline::init)
+			.add_render_graph_node::<ViewNodeRunner<PostProcessNode>>(Core3d, PostProcessLabel)
+			.add_render_graph_edges(Core3d, PostProcessLabel::EDGES);
 	}
 }
 
@@ -170,11 +206,11 @@ impl<TDebugCam, TDependencies> UiCamera for GraphicsPlugin<TDebugCam, TDependenc
 }
 
 impl<TDebugCam, TDependencies> FirstPassCamera for GraphicsPlugin<TDebugCam, TDependencies> {
-	type TFirstPassCamera = FirstPass;
+	type TFirstPassCamera = WorldPass;
 }
 
 impl<TDebugCam, TDependencies> WorldCameras for GraphicsPlugin<TDebugCam, TDependencies> {
-	type TWorldCameras = WorldCamera;
+	type TWorldCameras = SceneCamera;
 }
 
 impl<TDebugCam, TDependencies> HandlesGraphics for GraphicsPlugin<TDebugCam, TDependencies> {

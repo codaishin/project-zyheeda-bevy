@@ -23,7 +23,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::{
-			camera_labels::{OutlinePass, SecondPass},
+			camera_labels::{CompositePass, OutlinePass},
 			model_render_layers::ModelRenderLayers,
 		},
 		system_params::highlight::HighlightParam,
@@ -44,7 +44,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(ModelRenderLayers::from(SecondPass))
+			.spawn(ModelRenderLayers::from(CompositePass))
 			.id();
 
 		let highlight = app.world_mut().run_system_once(move |h: HighlightParam| {

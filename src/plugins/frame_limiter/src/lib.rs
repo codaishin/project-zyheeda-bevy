@@ -44,14 +44,7 @@ impl Plugin for FrameLimiterPlugin {
 
 		app.insert_resource(Time::<Fixed>::from_duration(time_per_frame));
 
-		let Some(render_app) = app.get_sub_app_mut(RenderApp) else {
-			error!(
-				"RenderApp is unavailable. Frame limiting will not apply to rendering, only to fixed schedules."
-			);
-			return;
-		};
-
-		render_app
+		app.sub_app_mut(RenderApp)
 			.insert_resource(Sleep(time_per_frame))
 			.insert_resource(LastSleep(Instant::now()))
 			.add_systems(Render, Sleep::system.in_set(RenderSystems::Cleanup));
