@@ -25,6 +25,11 @@ use bevy::{
 		view::ViewTarget,
 	},
 };
+use common::{
+	error_logger::{ErrorLogger, Log},
+	errors::{ErrorData, Level},
+};
+use std::{fmt::Display, time::Duration};
 
 #[derive(Resource, Debug)]
 pub(crate) struct PostProcessPipeline {
@@ -44,6 +49,12 @@ impl PostProcessLabel {
 #[derive(Default, Debug, PartialEq)]
 pub(crate) struct PostProcessNode;
 
+impl PostProcessNode {
+	fn log(error: impl Into<PostProcessError>) {
+		ErrorLogger::GLOBAL.log(error.into());
+	}
+}
+
 impl ViewNode for PostProcessNode {
 	type ViewQuery = (
 		&'static ViewTarget,
@@ -54,44 +65,44 @@ impl ViewNode for PostProcessNode {
 		&self,
 		_: &mut RenderGraphContext,
 		render_context: &mut RenderContext,
-		(view_target, settings_index): QueryItem<Self::ViewQuery>,
+		(view_target, settings_index, ..): QueryItem<Self::ViewQuery>,
 		world: &World,
 	) -> Result<(), NodeRunError> {
 		// Get render pipeline
 		let Some(post_process_pipeline) = world.get_resource::<PostProcessPipeline>() else {
-			// FIXME: ERROR?
+			Self::log(MissingResource::PostProcessPipeline);
 			return Ok(());
 		};
 		let Some(cache) = world.get_resource::<PipelineCache>() else {
-			// FIXME: ERROR?
+			Self::log(MissingResource::PipeLineCache);
 			return Ok(());
 		};
 		let Some(pipeline) = cache.get_render_pipeline(post_process_pipeline.pipeline_id) else {
-			// FIXME: ERROR?
+			Self::log(MissingDerived::RenderPipeline);
 			return Ok(());
 		};
 
 		// get `PostProcessSettings` as bindings
 		let Some(settings) = world.get_resource::<ComponentUniforms<PostProcessCamera>>() else {
-			// FIXME: ERROR?
+			Self::log(MissingResource::PostProcessUniforms);
 			return Ok(());
 		};
 		let Some(settings_binding) = settings.uniforms().binding() else {
-			// FIXME: ERROR?
+			Self::log(MissingDerived::UniformBindings);
 			return Ok(());
 		};
 
 		// get outline target texture
 		let Some(gpu_images) = world.get_resource::<RenderAssets<GpuImage>>() else {
-			// FIXME: ERROR?
+			Self::log(MissingResource::RenderAssets);
 			return Ok(());
 		};
 		let Some(outline) = world.get_resource::<CameraRenderTarget<OutlinePass>>() else {
-			// FIXME: ERROR?
+			Self::log(MissingResource::RenderTargets);
 			return Ok(());
 		};
 		let Some(outline_gpu) = gpu_images.get(&outline.handle) else {
-			// FIXME: ERROR?
+			Self::log(MissingDerived::GPUImage);
 			return Ok(());
 		};
 
@@ -126,5 +137,66 @@ impl ViewNode for PostProcessNode {
 		render_pass.draw(0..3, 0..1);
 
 		Ok(())
+	}
+}
+
+#[derive(Debug, PartialEq)]
+enum PostProcessError {
+	MissingResource(MissingResource),
+	MissingDerived(MissingDerived),
+}
+
+#[derive(Debug, PartialEq)]
+enum MissingResource {
+	PostProcessPipeline,
+	PipeLineCache,
+	PostProcessUniforms,
+	RenderAssets,
+	RenderTargets,
+}
+
+impl From<MissingResource> for PostProcessError {
+	fn from(value: MissingResource) -> Self {
+		Self::MissingResource(value)
+	}
+}
+
+impl From<MissingDerived> for PostProcessError {
+	fn from(value: MissingDerived) -> Self {
+		Self::MissingDerived(value)
+	}
+}
+
+#[derive(Debug, PartialEq)]
+enum MissingDerived {
+	RenderPipeline,
+	UniformBindings,
+	GPUImage,
+}
+
+impl Display for PostProcessError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			PostProcessError::MissingResource(r) => write!(f, "missing resource {r:?}"),
+			PostProcessError::MissingDerived(d) => write!(f, "could not obtain {d:?}"),
+		}
+	}
+}
+
+impl ErrorData for PostProcessError {
+	fn rate_limit() -> Option<Duration> {
+		Some(Duration::from_secs(2))
+	}
+
+	fn level(&self) -> Level {
+		Level::Warning
+	}
+
+	fn label() -> impl std::fmt::Display {
+		"Post Process Error"
+	}
+
+	fn into_details(self) -> impl std::fmt::Display {
+		self
 	}
 }
