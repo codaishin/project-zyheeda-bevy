@@ -1,13 +1,13 @@
 use super::{LoadUi, insert_ui_content::InsertUiContent};
 use crate::systems::{despawn::despawn, spawn::spawn, update_children::update_children};
-use bevy::prelude::*;
-use common::traits::handles_localization::Localize;
+use bevy::{ecs::system::SystemParam, prelude::*};
+use common::traits::{handles_localization::Localize, thread_safe::ThreadSafe};
 
 pub(crate) trait AddUI<TState> {
 	fn add_ui<TComponent, TLocalizationServer, TUICamera>(&mut self, on_state: TState) -> &mut Self
 	where
 		TComponent: Component + LoadUi<AssetServer> + InsertUiContent,
-		TLocalizationServer: Resource + Localize,
+		TLocalizationServer: for<'w, 's> SystemParam<Item<'w, 's>: Localize> + ThreadSafe,
 		TUICamera: Component;
 }
 
@@ -18,7 +18,7 @@ where
 	fn add_ui<TComponent, TLocalizationServer, TUICamera>(&mut self, on_state: TState) -> &mut Self
 	where
 		TComponent: Component + LoadUi<AssetServer> + InsertUiContent,
-		TLocalizationServer: Resource + Localize,
+		TLocalizationServer: for<'w, 's> SystemParam<Item<'w, 's>: Localize> + ThreadSafe,
 		TUICamera: Component,
 	{
 		self.add_systems(

@@ -11,16 +11,20 @@ use crate::{
 		},
 	},
 };
-use bevy::prelude::*;
+use bevy::{
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
+};
 use common::traits::{
 	handles_localization::Localize,
 	mouse_position::MousePosition,
 	thread_safe::ThreadSafe,
 };
+use std::ops::Deref;
 
 pub(crate) fn tooltip<T, TLocalization, TUI, TUIControl, TWindow>(
 	mut commands: Commands,
-	localize: Res<TLocalization>,
+	localize: StaticSystemParam<TLocalization>,
 	ui_control: Res<TUIControl>,
 	windows: Query<&TWindow>,
 	changed_tooltip_interactions: Query<(Entity, &Tooltip<T>, &Interaction), Changed<Interaction>>,
@@ -29,13 +33,13 @@ pub(crate) fn tooltip<T, TLocalization, TUI, TUIControl, TWindow>(
 ) where
 	T: TooltipUiConfig + ThreadSafe,
 	Tooltip<T>: InsertUiContent,
-	TLocalization: Localize + Resource,
+	TLocalization: for<'w, 's> SystemParam<Item<'w, 's>: Localize>,
 	TUI: Component,
 	TUIControl: Resource
 		+ DespawnAllTooltips<TUI>
 		+ DespawnOutdatedTooltips<TUI, T>
 		+ UpdateTooltipPosition<TUI>
-		+ SpawnTooltips<T, TLocalization>,
+		+ for<'w, 's> SpawnTooltips<T, TLocalization::Item<'w, 's>>,
 	TWindow: Component + MousePosition,
 {
 	let Ok(window) = windows.single() else {
@@ -56,7 +60,7 @@ pub(crate) fn tooltip<T, TLocalization, TUI, TUIControl, TWindow>(
 	}
 
 	for (entity, tooltip, _) in changed_tooltip_interactions.iter().filter(is_hovering) {
-		ui_control.spawn(&mut commands, &localize, entity, tooltip);
+		ui_control.spawn(&mut commands, localize.deref(), entity, tooltip);
 	}
 }
 
@@ -152,11 +156,11 @@ mod tests {
 		}
 	}
 
-	impl SpawnTooltips<_T, _Localize> for _UIControl {
+	impl SpawnTooltips<_T, Res<'_, _Localize>> for _UIControl {
 		fn spawn(
 			&self,
 			commands: &mut Commands,
-			localize: &_Localize,
+			localize: &Res<_Localize>,
 			tooltip_entity: Entity,
 			tooltip: &Tooltip<_T>,
 		) where
@@ -218,7 +222,10 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<_Localize>();
 		app.insert_resource(ui_control);
-		app.add_systems(Update, tooltip::<_T, _Localize, _UI, _UIControl, _Window>);
+		app.add_systems(
+			Update,
+			tooltip::<_T, Res<_Localize>, _UI, _UIControl, _Window>,
+		);
 
 		app
 	}

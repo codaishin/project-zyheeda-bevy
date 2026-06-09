@@ -8,10 +8,7 @@ use crate::traits::{
 	ui_traits::{GetBackgroundColor, GetNode},
 };
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
-use common::traits::{
-	handles_localization::{Localize, LocalizeToken, Token},
-	thread_safe::ThreadSafe,
-};
+use common::traits::handles_localization::{Localize, LocalizeToken, Token};
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
 #[require(Node = Self::node(), BackgroundColor = Self::background_color())]
@@ -45,7 +42,7 @@ where
 		localization: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
-		TLocalization: Localize + ThreadSafe,
+		TLocalization: Localize,
 	{
 		parent.spawn((
 			Text::from(localization.localize_token(self.0).or_token()),

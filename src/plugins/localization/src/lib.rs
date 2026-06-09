@@ -5,7 +5,10 @@ mod systems;
 mod tools;
 mod traits;
 
-use crate::systems::remove_empty_folder_handle::RemoveEmptyFolderHandle;
+use crate::{
+	resources::ftl_server::{FtlServerParam, FtlServerParamMut},
+	systems::remove_empty_folder_handle::RemoveEmptyFolderHandle,
+};
 use assets::ftl::{Ftl, loader::FtlLoader};
 use bevy::prelude::*;
 use common::{
@@ -28,6 +31,9 @@ use systems::{
 	update_ftl_bundle::UpdateFtlBundle,
 };
 use unic_langid::langid;
+
+type StaticFtlServerParam = FtlServerParam<'static, 'static>;
+type StaticFtlServerParamMut = FtlServerParamMut<'static>;
 
 pub struct LocalizationPlugin<TLoading>(PhantomData<TLoading>);
 
@@ -54,16 +60,17 @@ where
 			.add_systems(
 				Update,
 				(
-					FtlServer::load_requested_asset_file(Path::from("locale")),
-					FtlServer::load_requested_asset_folder(Path::from("locale")),
-					FtlServer::remove_failed_asset_handles,
-					FtlServer::remove_empty_folder_handle,
-					FtlServer::update_ftl_bundle.pipe(OnError::log),
+					StaticFtlServerParamMut::load_requested_asset_file(Path::from("locale")),
+					StaticFtlServerParamMut::load_requested_asset_folder(Path::from("locale")),
+					StaticFtlServerParamMut::remove_failed_asset_handles,
+					StaticFtlServerParamMut::remove_empty_folder_handle,
+					StaticFtlServerParamMut::update_ftl_bundle.pipe(OnError::log),
 				),
 			);
 	}
 }
 
 impl<TDependencies> HandlesLocalization for LocalizationPlugin<TDependencies> {
-	type TLocalizationServer = FtlServer;
+	type TLocalizationServer = StaticFtlServerParam;
+	type TLocalizationServerMut = StaticFtlServerParamMut;
 }

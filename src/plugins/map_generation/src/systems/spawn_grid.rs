@@ -131,7 +131,7 @@ where
 
 impl<TError> ErrorData for NavMeshError<TError>
 where
-	TError: Display,
+	TError: Display + 'static,
 {
 	fn level(&self) -> Level {
 		Level::Error

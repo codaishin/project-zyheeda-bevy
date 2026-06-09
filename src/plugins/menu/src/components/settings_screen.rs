@@ -26,7 +26,6 @@ use common::{
 		handles_input::GetAllInputs,
 		handles_localization::{Localize, LocalizeToken, Token},
 		iteration::IterFinite,
-		thread_safe::ThreadSafe,
 	},
 };
 use key_bind::{KeyBind, action::Action, input::Input};
@@ -41,7 +40,7 @@ pub(crate) struct SettingsScreen {
 impl SettingsScreen {
 	fn add_title(
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
-		localize: &(impl Localize + ThreadSafe),
+		localize: &impl Localize,
 		title: impl Into<Token>,
 	) {
 		parent.spawn((
@@ -55,7 +54,7 @@ impl SettingsScreen {
 
 	fn add_section_title(
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
-		localize: &(impl Localize + ThreadSafe),
+		localize: &impl Localize,
 		title: impl Into<Token>,
 	) {
 		parent
@@ -76,7 +75,7 @@ impl SettingsScreen {
 		&self,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 		keys: impl IntoIterator<Item = T>,
-		localize: &(impl Localize + ThreadSafe),
+		localize: &impl Localize,
 		title: impl Into<Token>,
 	) where
 		ActionKey: From<T>,
@@ -152,7 +151,7 @@ impl InsertUiContent for SettingsScreen {
 		localize: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
-		TLocalization: Localize + ThreadSafe,
+		TLocalization: Localize,
 	{
 		parent
 			.spawn(Node {

@@ -1,27 +1,35 @@
-use crate::components::persistent_entity::PersistentEntity;
-use bevy::prelude::*;
+use crate::{
+	components::persistent_entity::PersistentEntity,
+	error_logger::{ErrorLogger, Log},
+	errors::{ErrorData, Level},
+	traits::thread_safe::ThreadSafe,
+};
+use bevy::{
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
+};
 use std::{collections::HashMap, fmt::Display};
-use zyheeda_core::logger::{Log, Logger};
-
-const ENTITY_ERROR: &str = "Entity not found";
 
 #[derive(Resource, Debug, PartialEq, Default)]
-pub struct PersistentEntities<TLogger = Logger>
+pub struct PersistentEntities(pub(crate) HashMap<PersistentEntity, Entity>);
+
+#[derive(SystemParam)]
+pub(crate) struct PersistentEntitiesParam<'w, 's, TLogger = ErrorLogger>
 where
-	TLogger: Log,
+	TLogger: SystemParam + ThreadSafe,
 {
-	pub(crate) entities: HashMap<PersistentEntity, Entity>,
-	pub(crate) logger: TLogger,
+	pub(crate) entities: Option<Res<'w, PersistentEntities>>,
+	pub(crate) logger: StaticSystemParam<'w, 's, TLogger>,
 }
 
-impl<TLogger> PersistentEntities<TLogger>
+impl<'w, 's, TLogger> PersistentEntitiesParam<'w, 's, TLogger>
 where
-	TLogger: Log,
+	TLogger: for<'w2, 's2> SystemParam<Item<'w2, 's2>: Log> + ThreadSafe,
 {
 	pub(crate) fn get_entity(&self, persistent_entity: &PersistentEntity) -> Option<Entity> {
-		let Some(entity) = self.entities.get(persistent_entity) else {
-			self.logger
-				.log_warning(ENTITY_ERROR, NoMatch(*persistent_entity));
+		let entities = self.entities.as_ref()?;
+		let Some(entity) = entities.0.get(persistent_entity) else {
+			self.logger.log(NoMatch(*persistent_entity));
 			return None;
 		};
 
@@ -39,50 +47,89 @@ impl Display for NoMatch {
 	}
 }
 
+impl ErrorData for NoMatch {
+	fn level(&self) -> crate::errors::Level {
+		Level::Warning
+	}
+
+	fn label() -> impl Display {
+		"Entity not found"
+	}
+
+	fn into_details(self) -> impl Display {
+		self
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use macros::simple_mock;
-	use mockall::predicate::eq;
-	use testing::{Mock, fake_entity};
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
+	use macros::NestedMocks;
+	use mockall::{automock, predicate::eq};
+	use testing::{NestedMocks, SingleThreadedApp, fake_entity};
 
-	simple_mock! {
-		_Logger {}
-		impl Log for _Logger {
-			fn log_warning<TDetails>(&self, label: &str, details: TDetails) where TDetails: 'static;
-			fn log_error<TDetails>(&self, label: &str, details: TDetails) where TDetails: 'static;
+	#[derive(Resource, NestedMocks)]
+	struct _Logger {
+		mock: Mock_Logger,
+	}
+
+	#[automock]
+	impl Log for _Logger {
+		fn log<TError>(&self, error: TError)
+		where
+			TError: ErrorData + 'static,
+		{
+			self.mock.log(error)
 		}
 	}
 
-	#[test]
-	fn get_entity() {
-		let target = fake_entity!(42);
-		let persistent_entity = PersistentEntity::default();
-		let persistent_entities = PersistentEntities {
-			entities: HashMap::from([(persistent_entity, target)]),
-			logger: Mock_Logger::new_mock(|mock| {
-				mock.expect_log_error::<NoMatch>().never();
-			}),
-		};
+	fn setup(entities: impl Into<HashMap<PersistentEntity, Entity>>, logger: _Logger) -> App {
+		let mut app = App::new().single_threaded(Update);
 
-		let entity = persistent_entities.get_entity(&persistent_entity);
+		app.insert_resource(PersistentEntities(entities.into()));
+		app.insert_resource(logger);
 
-		assert_eq!(Some(target), entity);
+		app
 	}
 
 	#[test]
-	fn log_misses() {
+	fn get_entity() -> Result<(), RunSystemError> {
+		let target = fake_entity!(42);
 		let persistent_entity = PersistentEntity::default();
-		let persistent_entities = PersistentEntities {
-			logger: Mock_Logger::new_mock(|mock| {
-				mock.expect_log_warning()
-					.times(1)
-					.with(eq(ENTITY_ERROR), eq(NoMatch(persistent_entity)))
+		let mut app = setup(
+			[(persistent_entity, target)],
+			_Logger::new().with_mock(|mock| {
+				mock.expect_log::<NoMatch>().never();
+			}),
+		);
+
+		let entity = app.world_mut().run_system_once(
+			move |p: PersistentEntitiesParam<Res<'static, _Logger>>| {
+				p.get_entity(&persistent_entity)
+			},
+		)?;
+
+		assert_eq!(Some(target), entity);
+		Ok(())
+	}
+
+	#[test]
+	fn log_misses() -> Result<(), RunSystemError> {
+		let persistent_entity = PersistentEntity::default();
+		let mut app = setup(
+			[],
+			_Logger::new().with_mock(|mock| {
+				mock.expect_log()
+					.once()
+					.with(eq(NoMatch(persistent_entity)))
 					.return_const(());
 			}),
-			..default()
-		};
+		);
 
-		persistent_entities.get_entity(&persistent_entity);
+		app.world_mut()
+			.run_system_once(move |p: PersistentEntitiesParam<Res<'static, _Logger>>| {
+				p.get_entity(&persistent_entity);
+			})
 	}
 }

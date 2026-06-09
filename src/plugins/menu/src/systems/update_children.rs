@@ -1,14 +1,19 @@
+use std::ops::Deref;
+
 use crate::traits::insert_ui_content::InsertUiContent;
-use bevy::prelude::*;
+use bevy::{
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
+};
 use common::traits::handles_localization::Localize;
 
 pub(crate) fn update_children<TComponent, TLocalization>(
 	mut commands: Commands,
 	components: Query<(Entity, &TComponent), Changed<TComponent>>,
-	localization_server: Res<TLocalization>,
+	localization_server: StaticSystemParam<TLocalization>,
 ) where
 	TComponent: InsertUiContent + Component,
-	TLocalization: Localize + Resource,
+	TLocalization: for<'w, 's> SystemParam<Item<'w, 's>: Localize>,
 {
 	for (entity, component) in &components {
 		let Ok(mut entity) = commands.get_entity(entity) else {
@@ -16,7 +21,7 @@ pub(crate) fn update_children<TComponent, TLocalization>(
 		};
 		entity.despawn_related::<Children>();
 		entity.with_children(|parent| {
-			component.insert_ui_content(localization_server.as_ref(), parent)
+			component.insert_ui_content(localization_server.deref(), parent)
 		});
 	}
 }
@@ -26,10 +31,7 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use bevy::ecs::relationship::RelatedSpawnerCommands;
-	use common::traits::{
-		handles_localization::{LocalizationResult, Token, localized::Localized},
-		thread_safe::ThreadSafe,
-	};
+	use common::traits::handles_localization::{LocalizationResult, Token, localized::Localized};
 	use testing::{SingleThreadedApp, assert_children_count};
 
 	#[derive(Component, Debug, PartialEq)]
@@ -50,7 +52,7 @@ mod tests {
 			localize: &TLocalization,
 			parent: &mut RelatedSpawnerCommands<ChildOf>,
 		) where
-			TLocalization: Localize + ThreadSafe,
+			TLocalization: Localize,
 		{
 			parent.spawn(_Child(
 				localize.localize(&Token::from("A")).or_string(|| "??"),
@@ -81,7 +83,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.init_resource::<_Localization>();
-		app.add_systems(Update, update_children::<_Component, _Localization>);
+		app.add_systems(Update, update_children::<_Component, Res<_Localization>>);
 
 		app
 	}

@@ -54,7 +54,7 @@ where
 
 impl<TError> ErrorData for ContextIOError<TError>
 where
-	TError: Display,
+	TError: Display + 'static,
 {
 	fn level(&self) -> Level {
 		Level::Error
@@ -125,7 +125,7 @@ where
 
 impl<TNoInsert> ErrorData for DeserializationOrLockError<TNoInsert>
 where
-	TNoInsert: Display,
+	TNoInsert: Display + 'static,
 {
 	fn level(&self) -> Level {
 		Level::Error

@@ -19,9 +19,7 @@ impl PersistentEntities {
 			return;
 		};
 
-		persistent_entities
-			.entities
-			.insert(*persistent_entity, entity);
+		persistent_entities.0.insert(*persistent_entity, entity);
 	}
 }
 
@@ -50,7 +48,7 @@ mod tests {
 			Some(&entity),
 			app.world()
 				.resource::<PersistentEntities>()
-				.entities
+				.0
 				.get(&persistent_entity)
 		);
 	}
@@ -68,7 +66,7 @@ mod tests {
 			Some(&entity),
 			app.world()
 				.resource::<PersistentEntities>()
-				.entities
+				.0
 				.get(&persistent_entity)
 		);
 	}

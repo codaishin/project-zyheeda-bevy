@@ -1,4 +1,7 @@
-use crate::errors::ErrorData;
+use crate::{
+	error_logger::{ErrorLogger, Log},
+	errors::ErrorData,
+};
 use bevy::ecs::system::In;
 
 pub struct OnError;
@@ -6,18 +9,20 @@ pub struct OnError;
 impl OnError {
 	fn void() {}
 
-	pub fn log<TIn>(result: In<TIn>) -> TIn::TOut
+	pub fn log<TIn>(result: In<TIn>, error_logger: ErrorLogger) -> TIn::TOut
 	where
 		TIn: OnErrorLogAndReturn<TValue = ()>,
 	{
-		Self::log_and_return(Self::void)(result)
+		Self::log_and_return(Self::void)(result, error_logger)
 	}
 
-	pub fn log_and_return<TIn>(fallback: fn() -> TIn::TValue) -> impl Fn(In<TIn>) -> TIn::TOut
+	pub fn log_and_return<TIn>(
+		fallback: fn() -> TIn::TValue,
+	) -> impl Fn(In<TIn>, ErrorLogger) -> TIn::TOut
 	where
 		TIn: OnErrorLogAndReturn,
 	{
-		move |In(result)| result.process(fallback)
+		move |In(result), error_logger| result.process(fallback, &error_logger)
 	}
 }
 
@@ -25,7 +30,7 @@ pub trait OnErrorLogAndReturn {
 	type TOut;
 	type TValue;
 
-	fn process(self, fallback: fn() -> Self::TValue) -> Self::TOut;
+	fn process(self, fallback: fn() -> Self::TValue, error_logger: &ErrorLogger) -> Self::TOut;
 }
 
 impl<TValue, TError> OnErrorLogAndReturn for Result<TValue, TError>
@@ -35,11 +40,11 @@ where
 	type TOut = TValue;
 	type TValue = TValue;
 
-	fn process(self, fallback: fn() -> Self::TValue) -> Self::TOut {
+	fn process(self, fallback: fn() -> Self::TValue, error_logger: &ErrorLogger) -> Self::TOut {
 		match self {
 			Ok(value) => value,
 			Err(error) => {
-				output::log(error);
+				error_logger.log(error);
 				fallback()
 			}
 		}
@@ -53,45 +58,9 @@ where
 	type TOut = Vec<TValue>;
 	type TValue = TValue;
 
-	fn process(self, fallback: fn() -> Self::TValue) -> Self::TOut {
+	fn process(self, fallback: fn() -> Self::TValue, error_logger: &ErrorLogger) -> Self::TOut {
 		self.into_iter()
-			.map(|result| result.process(fallback))
+			.map(move |result| result.process(fallback, error_logger))
 			.collect()
-	}
-}
-
-#[cfg(not(test))]
-pub(crate) mod output {
-	use super::*;
-	use crate::errors::Level;
-	use tracing::{error, field::display, warn};
-
-	pub(crate) fn log<TError>(error: TError)
-	where
-		TError: ErrorData,
-	{
-		let level = error.level();
-		let label = TError::label();
-		let details = display(error.into_details());
-
-		match level {
-			Level::Error => {
-				error!(details, "{label}");
-			}
-			Level::Warning => {
-				warn!(details, "{label}");
-			}
-		}
-	}
-}
-
-#[cfg(test)]
-pub(crate) mod output {
-	use super::*;
-
-	pub(crate) fn log<TError>(_: TError)
-	where
-		TError: ErrorData,
-	{
 	}
 }

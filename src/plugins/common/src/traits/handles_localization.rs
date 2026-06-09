@@ -3,14 +3,15 @@ pub mod localized;
 mod key_code;
 mod mouse_button;
 
-use crate::traits::accessors::get::ViewField;
-use bevy::prelude::*;
+use crate::traits::{accessors::get::ViewField, thread_safe::ThreadSafe};
+use bevy::{ecs::system::SystemParam, prelude::*};
 use localized::Localized;
 use std::{fmt::Display, ops::Deref, sync::Arc};
 use unic_langid::LanguageIdentifier;
 
 pub trait HandlesLocalization {
-	type TLocalizationServer: Resource + SetLocalization + Localize;
+	type TLocalizationServer: ThreadSafe + for<'w, 's> SystemParam<Item<'w, 's>: Localize>;
+	type TLocalizationServerMut: ThreadSafe + for<'w, 's> SystemParam<Item<'w, 's>: SetLocalization>;
 }
 
 pub trait SetLocalization {
@@ -19,6 +20,15 @@ pub trait SetLocalization {
 
 pub trait Localize {
 	fn localize(&self, token: &Token) -> LocalizationResult;
+}
+
+impl<T> Localize for T
+where
+	T: Deref<Target: Localize>,
+{
+	fn localize(&self, token: &Token) -> LocalizationResult {
+		self.deref().localize(token)
+	}
 }
 
 pub trait LocalizeToken {

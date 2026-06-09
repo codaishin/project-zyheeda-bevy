@@ -18,7 +18,7 @@ impl PersistentEntities {
 			return;
 		};
 
-		persistent_entities.entities.remove(persistent_entity);
+		persistent_entities.0.remove(persistent_entity);
 	}
 }
 
@@ -46,12 +46,7 @@ mod tests {
 
 		app.world_mut().entity_mut(entity).despawn();
 
-		assert!(
-			app.world()
-				.resource::<PersistentEntities>()
-				.entities
-				.is_empty()
-		);
+		assert!(app.world().resource::<PersistentEntities>().0.is_empty());
 	}
 
 	#[test]
@@ -66,7 +61,7 @@ mod tests {
 
 		assert_eq!(
 			HashMap::from([(persistent_entity_b, entity_b)]),
-			app.world().resource::<PersistentEntities>().entities,
+			app.world().resource::<PersistentEntities>().0,
 		);
 	}
 }

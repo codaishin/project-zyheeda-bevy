@@ -1,6 +1,6 @@
 use crate::{
 	components::persistent_entity::PersistentEntity,
-	resources::persistent_entities::PersistentEntities,
+	resources::persistent_entities::PersistentEntitiesParam,
 	traits::accessors::get::{Get, GetMut},
 };
 use bevy::{
@@ -11,7 +11,7 @@ use bevy::{
 #[derive(SystemParam)]
 pub struct ZyheedaCommands<'w, 's> {
 	commands: Commands<'w, 's>,
-	pub(crate) persistent_entities: Option<Res<'w, PersistentEntities>>,
+	pub(crate) persistent_entities: PersistentEntitiesParam<'w, 's>,
 }
 
 impl<'w, 's> ZyheedaCommands<'w, 's> {
@@ -34,13 +34,6 @@ impl<'w, 's> ZyheedaCommands<'w, 's> {
 		TEvent: for<'a> Event<Trigger<'a>: Default>,
 	{
 		self.commands.trigger(event);
-	}
-
-	pub fn reborrow(&mut self) -> ZyheedaCommands<'w, '_> {
-		ZyheedaCommands {
-			commands: self.commands.reborrow(),
-			persistent_entities: self.persistent_entities.as_ref().map(Res::clone),
-		}
 	}
 }
 
@@ -68,8 +61,7 @@ impl GetMut<PersistentEntity> for ZyheedaCommands<'_, '_> {
 	///
 	/// Failures are logged automatically.
 	fn get_mut(&mut self, entity: &PersistentEntity) -> Option<Self::TValue<'_>> {
-		let persistent_entities = self.persistent_entities.as_ref()?;
-		let entity = persistent_entities.get_entity(entity)?;
+		let entity = self.persistent_entities.get_entity(entity)?;
 		let entity = self.commands.get_entity(entity).ok()?;
 		Some(ZyheedaEntityCommands { entity })
 	}
@@ -84,8 +76,7 @@ impl Get<PersistentEntity> for ZyheedaCommands<'_, '_> {
 	///
 	/// Failures are logged automatically.
 	fn get(&self, entity: &PersistentEntity) -> Option<Self::TValue> {
-		let persistent_entities = self.persistent_entities.as_ref()?;
-		persistent_entities.get_entity(entity)
+		self.persistent_entities.get_entity(entity)
 	}
 }
 

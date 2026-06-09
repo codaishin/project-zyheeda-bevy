@@ -348,7 +348,7 @@ where
 		localize: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) where
-		TLocalization: Localize + 'static,
+		TLocalization: Localize,
 	{
 		let title = localize.localize_token("combo-skill-menu").or_token();
 
@@ -384,21 +384,21 @@ fn add_empty_combo<TLocalization>(
 	parent: &mut RelatedSpawnerCommands<ChildOf>,
 	icon: &Handle<Image>,
 ) where
-	TLocalization: Localize + 'static,
+	TLocalization: Localize,
 {
 	parent
 		.spawn(Node {
 			flex_direction: FlexDirection::Column,
 			..default()
 		})
-		.with_children(|parent| {
+		.with_children(move |parent| {
 			parent
 				.spawn(Node {
 					flex_direction: FlexDirection::Row,
 					margin: UiRect::top(Val::from(ComboOverview::SKILL_ICON_MARGIN)),
 					..default()
 				})
-				.with_children(|parent| {
+				.with_children(move |parent| {
 					AddPanel::start_combo(
 						localize,
 						parent,
@@ -415,7 +415,7 @@ fn add_combo_list<TLocalization, TId>(
 	parent: &mut RelatedSpawnerCommands<ChildOf>,
 	combo_overview: &ComboOverview<TId>,
 ) where
-	TLocalization: Localize + 'static,
+	TLocalization: Localize,
 	TId: Debug + PartialEq + Clone + ThreadSafe,
 {
 	parent
@@ -445,7 +445,7 @@ fn add_combo<TLocalization, TId>(
 	local_z: i32,
 	new_skill_icon: &Handle<Image>,
 ) where
-	TLocalization: Localize + 'static,
+	TLocalization: Localize,
 	TId: Debug + PartialEq + Clone + ThreadSafe,
 {
 	parent
@@ -469,27 +469,27 @@ fn add_combo<TLocalization, TId>(
 
 enum AddPanel<'a, TLocalization, TId>
 where
-	TLocalization: Localize + 'static,
+	TLocalization: Localize,
 	TId: Debug + PartialEq + Clone,
 {
 	StartCombo {
-		panel_overlay: PanelOverlay<TLocalization>,
-		panel_background: PanelBackground,
+		panel_overlay: PanelOverlay<'a, TLocalization>,
+		panel_background: PanelBackground<'a>,
 	},
 	Skill {
 		key_path: &'a [SlotKey],
 		skill: &'a ComboSkill<TId>,
-		panel_overlay: PanelOverlay<TLocalization>,
-		panel_background: PanelBackground,
+		panel_overlay: PanelOverlay<'a, TLocalization>,
+		panel_background: PanelBackground<'a>,
 	},
 	Empty {
-		panel_background: PanelBackground,
+		panel_background: PanelBackground<'a>,
 	},
 }
 
 impl<TLocalization> AddPanel<'_, TLocalization, ()>
 where
-	TLocalization: Localize + 'static,
+	TLocalization: Localize,
 {
 	fn start_combo(
 		localize: &TLocalization,
@@ -614,7 +614,7 @@ where
 impl<'a, TLocalization, TId> From<&'a ComboTreeElement<SlotKey, ComboSkill<TId>>>
 	for AddPanel<'a, TLocalization, TId>
 where
-	TLocalization: Localize + 'static,
+	TLocalization: Localize,
 	TId: Debug + PartialEq + Clone,
 {
 	fn from(element: &'a ComboTreeElement<SlotKey, ComboSkill<TId>>) -> Self {
@@ -651,11 +651,9 @@ where
 type InsertFunc<TLocalization> =
 	fn(&[SlotKey], &mut RelatedSpawnerCommands<ChildOf>, &TLocalization);
 
-struct PanelOverlay<TLocalization>(&'static [InsertFunc<TLocalization>])
-where
-	TLocalization: 'static;
+struct PanelOverlay<'a, TLocalization>(&'a [InsertFunc<TLocalization>]);
 
-struct PanelBackground(&'static [fn(&mut RelatedSpawnerCommands<ChildOf>)]);
+struct PanelBackground<'a>(&'a [fn(&mut RelatedSpawnerCommands<ChildOf>)]);
 
 fn add_vertical_background_line(parent: &mut RelatedSpawnerCommands<ChildOf>) {
 	parent

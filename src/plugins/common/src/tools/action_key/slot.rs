@@ -141,7 +141,10 @@ impl<T> Display for NoValidAgentKey<T> {
 	}
 }
 
-impl<T> ErrorData for NoValidAgentKey<T> {
+impl<T> ErrorData for NoValidAgentKey<T>
+where
+	T: 'static,
+{
 	fn level(&self) -> Level {
 		Level::Error
 	}

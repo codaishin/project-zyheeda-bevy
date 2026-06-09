@@ -75,7 +75,7 @@ where
 
 impl<T> ErrorData for MountPointError<T>
 where
-	T: Debug,
+	T: Debug + 'static,
 {
 	fn level(&self) -> Level {
 		Level::Error

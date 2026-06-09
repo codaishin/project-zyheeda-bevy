@@ -9,13 +9,13 @@ use crate::{
 		track_child_dropdowns::dropdown_track_child_dropdowns,
 	},
 };
-use bevy::prelude::*;
-use common::traits::handles_localization::Localize;
+use bevy::{ecs::system::SystemParam, prelude::*};
+use common::traits::{handles_localization::Localize, thread_safe::ThreadSafe};
 
 pub(crate) trait AddDropdown {
 	fn add_dropdown<TLocalization, TItem>(&mut self) -> &mut Self
 	where
-		TLocalization: Localize + Resource,
+		TLocalization: for<'w, 's> SystemParam<Item<'w, 's>: Localize> + ThreadSafe,
 		TItem: InsertUiContent + Sync + Send + 'static,
 		Dropdown<TItem>: GetRootNode + GetLayout;
 }
@@ -23,7 +23,7 @@ pub(crate) trait AddDropdown {
 impl AddDropdown for App {
 	fn add_dropdown<TLocalization, TItem>(&mut self) -> &mut Self
 	where
-		TLocalization: Localize + Resource,
+		TLocalization: for<'w, 's> SystemParam<Item<'w, 's>: Localize> + ThreadSafe,
 		TItem: InsertUiContent + Sync + Send + 'static,
 		Dropdown<TItem>: GetRootNode + GetLayout,
 	{

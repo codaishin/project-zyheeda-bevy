@@ -1,20 +1,32 @@
 use crate::traits::current_locale::CurrentLocaleMut;
-use bevy::{asset::LoadState, prelude::*};
+use bevy::{
+	asset::LoadState,
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
+};
 use common::traits::get_asset_load_state::GetAssetLoadState;
 
-impl<T> RemoveFailedAssetHandles for T where T: CurrentLocaleMut + Resource {}
+impl<T> RemoveFailedAssetHandles for T where
+	T: for<'w, 's> SystemParam<Item<'w, 's>: CurrentLocaleMut>
+{
+}
 
-pub(crate) trait RemoveFailedAssetHandles: CurrentLocaleMut + Resource + Sized {
-	fn remove_failed_asset_handles(ftl_server: ResMut<Self>, asset_server: Res<AssetServer>) {
+pub(crate) trait RemoveFailedAssetHandles:
+	for<'w, 's> SystemParam<Item<'w, 's>: CurrentLocaleMut> + Sized
+{
+	fn remove_failed_asset_handles(
+		ftl_server: StaticSystemParam<Self>,
+		asset_server: Res<AssetServer>,
+	) {
 		remove_failed_asset_handles(ftl_server, asset_server)
 	}
 }
 
 fn remove_failed_asset_handles<TFtlServer, TAssetServer>(
-	mut ftl_server: ResMut<TFtlServer>,
+	mut ftl_server: StaticSystemParam<TFtlServer>,
 	asset_server: Res<TAssetServer>,
 ) where
-	TFtlServer: CurrentLocaleMut + Resource,
+	TFtlServer: for<'w, 's> SystemParam<Item<'w, 's>: CurrentLocaleMut>,
 	TAssetServer: GetAssetLoadState + Resource,
 {
 	let locale = ftl_server.current_locale_mut();
@@ -81,7 +93,7 @@ mod tests {
 		app.insert_resource(asset_server);
 		app.add_systems(
 			Update,
-			remove_failed_asset_handles::<_FtlServer, _AssetServer>,
+			remove_failed_asset_handles::<ResMut<_FtlServer>, _AssetServer>,
 		);
 
 		app
