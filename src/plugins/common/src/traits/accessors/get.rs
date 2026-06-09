@@ -121,7 +121,7 @@ where
 		let ctx = T::try_get_context(param, key);
 
 		if ctx.is_none() {
-			ErrorLogger.log(MissingContext {
+			ErrorLogger::GLOBAL.log(MissingContext {
 				entity,
 				level,
 				_key: PhantomData::<TKey>,
@@ -147,7 +147,7 @@ where
 		let ctx = T::try_get_context_mut(param, key);
 
 		if ctx.is_none() {
-			ErrorLogger.log(MissingContext {
+			ErrorLogger::GLOBAL.log(MissingContext {
 				entity,
 				level,
 				_key: PhantomData::<TKey>,
