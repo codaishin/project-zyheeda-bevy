@@ -26,8 +26,19 @@ where
 	}
 }
 
+static CACHE: LazyLock<ErrorLoggerCache> = LazyLock::new(ErrorLoggerCache::default);
+
 #[derive(SystemParam)]
-pub struct ErrorLogger;
+pub struct ErrorLogger {
+	_p: (),
+}
+
+impl ErrorLogger {
+	/// A global logger. This works, because [`ErrorLogger`] is a fake system parameter.
+	/// However, for testability it is recommended to test against generic system parameters
+	/// implementing [`Log`] and then injecting the [`ErrorLogger`] type as dependency.
+	pub const GLOBAL: Self = Self { _p: () };
+}
 
 impl Log for ErrorLogger {
 	fn log<TError>(&self, error: TError)
@@ -123,8 +134,6 @@ mod test {
 	}
 }
 
-static CACHE: LazyLock<ErrorLoggerCache> = LazyLock::new(ErrorLoggerCache::default);
-
 #[derive(Debug, Default)]
 pub(crate) struct ErrorLoggerCache(Mutex<HashMap<TypeId, Instant>>);
 
@@ -213,7 +222,7 @@ mod tests {
 	#[test]
 	fn log_error() {
 		locked! {{
-			ErrorLogger.log(_Error);
+			ErrorLogger::GLOBAL.log(_Error);
 
 			assert_eq!(
 				vec![LogEntry {
@@ -229,8 +238,8 @@ mod tests {
 	#[test]
 	fn limit_rate() {
 		locked! {{
-			ErrorLogger.log(_LimitedError);
-			ErrorLogger.log(_LimitedError);
+			ErrorLogger::GLOBAL.log(_LimitedError);
+			ErrorLogger::GLOBAL.log(_LimitedError);
 
 			assert_eq!(
 				vec![LogEntry {
@@ -246,9 +255,9 @@ mod tests {
 	#[test]
 	fn log_again_after_rate_limit_expired() {
 		locked! {{
-			ErrorLogger.log(_LimitedError);
+			ErrorLogger::GLOBAL.log(_LimitedError);
 			thread::sleep(Duration::from_millis(750));
-			ErrorLogger.log(_LimitedError);
+			ErrorLogger::GLOBAL.log(_LimitedError);
 
 			assert_eq!(
 				vec![
@@ -271,8 +280,8 @@ mod tests {
 	#[test]
 	fn log_again_when_no_rate_limit() {
 		locked! {{
-			ErrorLogger.log(_Error);
-			ErrorLogger.log(_Error);
+			ErrorLogger::GLOBAL.log(_Error);
+			ErrorLogger::GLOBAL.log(_Error);
 
 			assert_eq!(
 				vec![
