@@ -52,7 +52,6 @@ impl<
 	TSaveGame,
 	TPhysics,
 	TGraphics,
-	TLights,
 	TInteractive,
 	TAnimations,
 	TMaps,
@@ -65,7 +64,6 @@ impl<
 		TSaveGame,
 		TPhysics,
 		TGraphics,
-		TLights,
 		TInteractive,
 		TAnimations,
 		TMaps,
@@ -81,8 +79,7 @@ where
 		+ HandlesRaycast
 		+ HandlesPhysicalSkillAgent
 		+ HandlesInteractiveDetection,
-	TGraphics: ThreadSafe + HandlesGraphics,
-	TLights: ThreadSafe + HandlesLight,
+	TGraphics: ThreadSafe + HandlesGraphics + HandlesLight,
 	TInteractive: ThreadSafe + SystemSetDefinition + HandlesInteractive,
 	TAnimations: ThreadSafe + HandlesAnimations,
 	TMaps: ThreadSafe + HandlesMapGeneration,
@@ -96,7 +93,6 @@ where
 		_: &TSaveGame,
 		_: &TPhysics,
 		_: &TGraphics,
-		_: &TLights,
 		_: &TInteractive,
 		_: &TAnimations,
 		_: &TMaps,
@@ -113,7 +109,6 @@ impl<
 	TSaveGame,
 	TPhysics,
 	TGraphics,
-	TLights,
 	TInteractive,
 	TAnimations,
 	TMaps,
@@ -126,7 +121,6 @@ impl<
 		TSaveGame,
 		TPhysics,
 		TGraphics,
-		TLights,
 		TInteractive,
 		TAnimations,
 		TMaps,
@@ -142,8 +136,7 @@ where
 		+ HandlesRaycast
 		+ HandlesPhysicalSkillAgent
 		+ HandlesInteractiveDetection,
-	TGraphics: ThreadSafe + HandlesGraphics,
-	TLights: ThreadSafe + HandlesLight,
+	TGraphics: ThreadSafe + HandlesGraphics + HandlesLight,
 	TInteractive: ThreadSafe + SystemSetDefinition + HandlesInteractive,
 	TAnimations: ThreadSafe + HandlesAnimations,
 	TMaps: ThreadSafe + HandlesMapGeneration,
@@ -183,7 +176,7 @@ where
 		app.register_required_components::<Agent, TSaveGame::TSaveEntityMarker>();
 
 		// # Prefabs
-		app.add_prefab_observer::<Player, TLights::TLightsMut>();
+		app.add_prefab_observer::<Player, TGraphics::TLightsMut>();
 		app.add_prefab_observer::<Agent, ()>();
 		app.add_prefab_observer::<VoidSphere, ()>();
 

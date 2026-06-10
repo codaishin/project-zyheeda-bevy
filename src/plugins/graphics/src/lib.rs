@@ -11,6 +11,7 @@ use crate::{
 		camera_labels::OutlinePass,
 		model_render_layers::ModelRenderLayers,
 		post_process_camera::PostProcessCamera,
+		torch_light::TorchLight,
 	},
 	materials::effect_material::EffectMaterial,
 	observers::insert_render_target::InsertRenderTarget,
@@ -18,7 +19,10 @@ use crate::{
 		depth_texture::{CopyDepthTextureNode, DepthTexture, DepthTextureLabel},
 		post_process_pipeline::{PostProcessLabel, PostProcessNode, PostProcessPipeline},
 	},
-	system_params::highlight::{HighlightParam, HighlightParamMut},
+	system_params::{
+		highlight::{HighlightParam, HighlightParamMut},
+		lights::{Lights, LightsMut},
+	},
 };
 use bevy::{
 	core_pipeline::core_3d::graph::Core3d,
@@ -39,10 +43,12 @@ use common::{
 	traits::{
 		after_plugin::AfterPlugin,
 		handles_graphics::{FirstPassCamera, HandlesGraphics, UiCamera, WorldCameras},
+		handles_light::HandlesLight,
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInSubApp},
 		handles_physics::HandlesAllPhysicalEffects,
 		handles_saving::HandlesSaving,
 		handles_skill_physics::HandlesSkillPhysics,
+		prefab::AddPrefabObserver,
 		register_derived_component::RegisterDerivedComponent,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
@@ -123,6 +129,11 @@ where
 			);
 	}
 
+	fn lights(app: &mut App) {
+		app.insert_resource(GlobalAmbientLight::NONE)
+			.add_prefab_observer::<TorchLight, ()>();
+	}
+
 	fn cameras(&self, app: &mut App) {
 		app.register_required_components::<SceneCamera, TSavegame::TSaveEntityMarker>();
 		TSavegame::register_savable_component::<WorldPass>(app);
@@ -200,6 +211,7 @@ where
 	fn build(&self, app: &mut App) {
 		Self::track_render_pipeline_ready(app);
 		Self::shading(app);
+		Self::lights(app);
 		self.cameras(app);
 	}
 }
@@ -240,4 +252,9 @@ impl<TDebugCam, TDependencies> WorldCameras for GraphicsPlugin<TDebugCam, TDepen
 impl<TDebugCam, TDependencies> HandlesGraphics for GraphicsPlugin<TDebugCam, TDependencies> {
 	type THighlight = HighlightParam<'static, 'static>;
 	type THighlightMut = HighlightParamMut<'static, 'static>;
+}
+
+impl<TDebugCam, TDependencies> HandlesLight for GraphicsPlugin<TDebugCam, TDependencies> {
+	type TLights = Lights<'static, 'static>;
+	type TLightsMut = LightsMut<'static, 'static>;
 }
