@@ -77,6 +77,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		&savegame,
 		&physics,
 		&graphics,
+		&light,
 		&interactive,
 		&animations,
 		&map_generation,
