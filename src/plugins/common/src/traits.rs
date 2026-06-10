@@ -18,7 +18,6 @@ pub mod handles_enemies;
 pub mod handles_graphics;
 pub mod handles_input;
 pub mod handles_interactive;
-pub mod handles_lights;
 pub mod handles_load_tracking;
 pub mod handles_loadout;
 pub mod handles_localization;
