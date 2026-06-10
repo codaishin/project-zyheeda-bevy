@@ -31,7 +31,6 @@ use common::{
 	tools::plugin_system_set::PluginSystemSet,
 	traits::{
 		handles_enemies::EnemyType,
-		handles_lights::HandlesLights,
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInApp},
 		handles_map_generation::{AgentType, HandlesMapGeneration, InteractiveType},
 		handles_physics::{HandlesPhysicsConfig, HandlesRaycast},
@@ -48,13 +47,11 @@ use zyheeda_core::strings::normalized_name::NormalizedName;
 
 pub struct MapGenerationPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TSavegame, TPhysics, TLights>
-	MapGenerationPlugin<(TLoading, TSavegame, TPhysics, TLights)>
+impl<TLoading, TSavegame, TPhysics> MapGenerationPlugin<(TLoading, TSavegame, TPhysics)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesRaycast + HandlesPhysicsConfig,
-	TLights: ThreadSafe + HandlesLights,
 {
 	const AGENT_SPAWNERS: &[(GetNormalizedName, AgentType)] = &[
 		(|| NormalizedName::from("PlayerSpawn"), AgentType::Player),
@@ -70,18 +67,16 @@ where
 	const MESH_COLLIDER_PREFIX: &str = "Collider";
 	const NAV_MESH_PREFIX: &str = "NavMesh";
 
-	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TPhysics, _: &TLights) -> Self {
+	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TPhysics) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLoading, TSavegame, TPhysics, TLights> Plugin
-	for MapGenerationPlugin<(TLoading, TSavegame, TPhysics, TLights)>
+impl<TLoading, TSavegame, TPhysics> Plugin for MapGenerationPlugin<(TLoading, TSavegame, TPhysics)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesRaycast + HandlesPhysicsConfig,
-	TLights: ThreadSafe + HandlesLights,
 {
 	fn build(&self, app: &mut App) {
 		TLoading::register_load_tracking::<Map, LoadingGame, AssetsProgress>()
