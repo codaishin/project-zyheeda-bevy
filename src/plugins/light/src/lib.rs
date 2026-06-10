@@ -1,12 +1,15 @@
 mod components;
 mod observers;
+mod system_params;
 mod systems;
 
 use crate::{
 	components::{corridor_light::CorridorLight, light::Light, wall_light::WallLight},
 	observers::get_insert_system::GetInsertObserver,
+	system_params::lights::{Lights, LightsMut},
 };
 use bevy::{camera::visibility::VisibilitySystems, prelude::*};
+use common::traits::handles_light::HandlesLight;
 
 pub struct LightPlugin;
 
@@ -20,4 +23,9 @@ impl Plugin for LightPlugin {
 				Light::set_visibility.in_set(VisibilitySystems::CheckVisibility),
 			);
 	}
+}
+
+impl HandlesLight for LightPlugin {
+	type Lights = Lights<'static, 'static>;
+	type LightsMut = LightsMut<'static, 'static>;
 }
