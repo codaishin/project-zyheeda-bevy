@@ -28,6 +28,8 @@ impl Prefab<()> for TorchLight {
 			0. => entity.try_remove::<PointLight>(),
 			_ => entity.try_insert(PointLight {
 				intensity: *self.intensity,
+				range: 40.,
+				radius: 1.,
 				..default()
 			}),
 		};

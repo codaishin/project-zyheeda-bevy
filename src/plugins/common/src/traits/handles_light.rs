@@ -8,8 +8,8 @@ use bevy::prelude::*;
 use macros::EntityKey;
 
 pub trait HandlesLight {
-	type Lights: for<'c> TryGetContext<TorchLight, TContext<'c>: GetLight>;
-	type LightsMut: for<'c> TryGetContextMut<TorchLight, TContext<'c>: SetLight>;
+	type TLights: for<'c> TryGetContext<TorchLight, TContext<'c>: GetLight>;
+	type TLightsMut: for<'c> TryGetContextMut<TorchLight, TContext<'c>: SetLight>;
 }
 
 #[derive(EntityKey)]
@@ -32,6 +32,12 @@ pub struct Lumen(pub Units);
 impl From<f32> for Lumen {
 	fn from(value: f32) -> Self {
 		Self(Units::from(value))
+	}
+}
+
+impl From<i32> for Lumen {
+	fn from(value: i32) -> Self {
+		Self(Units::from(value as f32))
 	}
 }
 
