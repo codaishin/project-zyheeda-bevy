@@ -64,7 +64,6 @@ bars = { path = "src/plugins/bars" }
 camera_control = { path = "src/plugins/camera_control" }
 common.workspace = true
 frame_limiter = { path = "src/plugins/frame_limiter" }
-light = { path = "src/plugins/light" }
 loading = { path = "src/plugins/loading" }
 loadout = { path = "src/plugins/loadout" }
 localization = { path = "src/plugins/localization" }

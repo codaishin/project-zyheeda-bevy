@@ -8,7 +8,6 @@ use frame_limiter::FrameLimiterPlugin;
 use graphics::GraphicsPlugin;
 use input::InputPlugin;
 use interactive::InteractivePlugin;
-use light::LightPlugin;
 use loading::LoadingPlugin;
 use loadout::LoadoutPlugin;
 use localization::LocalizationPlugin;
@@ -45,7 +44,6 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let game_dir = home.join("Games").join("Project Zyheeda");
 
 	let loading = LoadingPlugin;
-	let light = LightPlugin;
 	let input = InputPlugin::from_plugin(&loading);
 	let localization = LocalizationPlugin::from_plugin(&loading);
 	let savegame = SavegamePlugin::from_plugin(&input).with_game_directory(game_dir);
@@ -77,7 +75,6 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		&savegame,
 		&physics,
 		&graphics,
-		&light,
 		&interactive,
 		&animations,
 		&map_generation,
@@ -110,7 +107,6 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		.add_plugins(graphics)
 		.add_plugins(input)
 		.add_plugins(interactive)
-		.add_plugins(light)
 		.add_plugins(loading)
 		.add_plugins(loadout)
 		.add_plugins(localization)
