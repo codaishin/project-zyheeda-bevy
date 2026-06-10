@@ -1,14 +1,11 @@
 use crate::system_params::lights::TorchLightContextMut;
-use common::{
-	tools::Units,
-	traits::handles_light::{GetLight, Light},
-};
+use common::traits::handles_light::{GetLight, Light, Lumen};
 
 impl GetLight for TorchLightContextMut<'_> {
 	fn get_light(&self) -> Light {
 		let intensity = match self.light {
 			Some(l) => l.intensity,
-			None => Units::ZERO,
+			None => Lumen::ZERO,
 		};
 
 		Light { intensity }
@@ -23,9 +20,9 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
 	};
-	use common::{
-		tools::Units,
-		traits::{accessors::get::TryGetContextMut, handles_light::TorchLight as TorchLightKey},
+	use common::traits::{
+		accessors::get::TryGetContextMut,
+		handles_light::{Lumen, TorchLight as TorchLightKey},
 	};
 	use testing::SingleThreadedApp;
 
@@ -39,7 +36,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn(TorchLight {
-				intensity: Units::from(11.),
+				intensity: Lumen::from(11.),
 			})
 			.id();
 
@@ -49,7 +46,7 @@ mod tests {
 
 		assert_eq!(
 			Some(Light {
-				intensity: Units::from(11.)
+				intensity: Lumen::from(11.)
 			}),
 			light
 		);
@@ -67,7 +64,7 @@ mod tests {
 
 		assert_eq!(
 			Some(Light {
-				intensity: Units::ZERO
+				intensity: Lumen::ZERO
 			}),
 			light
 		);
