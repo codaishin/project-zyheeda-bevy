@@ -11,7 +11,7 @@ use crate::{
 		camera_labels::OutlinePass,
 		model_render_layers::ModelRenderLayers,
 		post_process_camera::PostProcessCamera,
-		torch_light::TorchLight,
+		roles::Player,
 	},
 	materials::effect_material::EffectMaterial,
 	observers::insert_render_target::InsertRenderTarget,
@@ -21,7 +21,7 @@ use crate::{
 	},
 	system_params::{
 		highlight::{HighlightParam, HighlightParamMut},
-		lights::{Lights, LightsMut},
+		lights::RolesParamMut,
 	},
 };
 use bevy::{
@@ -43,7 +43,6 @@ use common::{
 	traits::{
 		after_plugin::AfterPlugin,
 		handles_graphics::{FirstPassCamera, HandlesGraphics, UiCamera, WorldCameras},
-		handles_light::HandlesLight,
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInSubApp},
 		handles_physics::HandlesAllPhysicalEffects,
 		handles_saving::HandlesSaving,
@@ -131,7 +130,7 @@ where
 
 	fn lights(app: &mut App) {
 		app.insert_resource(GlobalAmbientLight::NONE)
-			.add_prefab_observer::<TorchLight, ()>();
+			.add_prefab_observer::<Player, ()>();
 	}
 
 	fn cameras(&self, app: &mut App) {
@@ -252,9 +251,5 @@ impl<TDebugCam, TDependencies> WorldCameras for GraphicsPlugin<TDebugCam, TDepen
 impl<TDebugCam, TDependencies> HandlesGraphics for GraphicsPlugin<TDebugCam, TDependencies> {
 	type THighlight = HighlightParam<'static, 'static>;
 	type THighlightMut = HighlightParamMut<'static, 'static>;
-}
-
-impl<TDebugCam, TDependencies> HandlesLight for GraphicsPlugin<TDebugCam, TDependencies> {
-	type TLights = Lights<'static, 'static>;
-	type TLightsMut = LightsMut<'static, 'static>;
+	type TRolesMut = RolesParamMut<'static, 'static>;
 }

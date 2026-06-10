@@ -6,6 +6,7 @@ use std::ops::{Deref, DerefMut};
 pub trait HandlesGraphics {
 	type THighlight: for<'c> TryGetContext<Visual, TContext<'c>: GetHighlight>;
 	type THighlightMut: for<'c> TryGetContextMut<Visual, TContext<'c>: SetHighlight>;
+	type TRolesMut: for<'c> TryGetContextMut<HasNoRole, TContext<'c>: SetRole>;
 }
 
 #[derive(EntityKey)]
@@ -55,4 +56,19 @@ pub trait FirstPassCamera {
 
 pub trait WorldCameras {
 	type TWorldCameras: Component;
+}
+
+#[derive(EntityKey)]
+pub struct HasNoRole {
+	pub entity: Entity,
+}
+
+pub trait SetRole {
+	fn set_role(&mut self, role: Role);
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum Role {
+	Player,
+	Enemy,
 }

@@ -1,68 +1,70 @@
-mod read;
-mod write;
+mod set_role;
 
-use crate::components::torch_light::TorchLight;
+use crate::components::roles::RoleAssigned;
 use bevy::{
 	ecs::system::{SystemParam, SystemParamItem},
 	prelude::*,
 };
 use common::{
 	traits::{
-		accessors::get::{ContextChanged, GetMut, TryGetContext, TryGetContextMut},
-		handles_light::TorchLight as TorchLightKey,
+		accessors::get::{GetMut, TryGetContextMut},
+		handles_graphics::HasNoRole,
 	},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
 
 #[derive(SystemParam)]
-pub struct Lights<'w, 's> {
-	lights: Query<'w, 's, Ref<'static, TorchLight>>,
-}
-
-impl TryGetContext<TorchLightKey> for Lights<'static, 'static> {
-	type TContext<'ctx> = TorchLightContext<'ctx>;
-
-	fn try_get_context<'ctx>(
-		param: &'ctx SystemParamItem<Self>,
-		TorchLightKey { entity }: TorchLightKey,
-	) -> Option<Self::TContext<'ctx>> {
-		let light = param.lights.get(entity).ok();
-
-		Some(TorchLightContext { light })
-	}
-}
-
-pub struct TorchLightContext<'ctx> {
-	light: Option<Ref<'ctx, TorchLight>>,
-}
-
-impl ContextChanged for TorchLightContext<'_> {
-	fn context_changed(&self) -> bool {
-		self.light.as_ref().is_some_and(Ref::is_changed)
-	}
-}
-
-#[derive(SystemParam)]
-pub struct LightsMut<'w, 's> {
+pub struct RolesParamMut<'w, 's> {
 	commands: ZyheedaCommands<'w, 's>,
-	lights: Query<'w, 's, &'static TorchLight>,
+	roles: Query<'w, 's, (), With<RoleAssigned>>,
 }
 
-impl TryGetContextMut<TorchLightKey> for LightsMut<'static, 'static> {
-	type TContext<'ctx> = TorchLightContextMut<'ctx>;
+impl TryGetContextMut<HasNoRole> for RolesParamMut<'static, 'static> {
+	type TContext<'ctx> = RolesContextMut<'ctx>;
 
 	fn try_get_context_mut<'ctx>(
 		param: &'ctx mut SystemParamItem<Self>,
-		TorchLightKey { entity }: TorchLightKey,
+		HasNoRole { entity }: HasNoRole,
 	) -> Option<Self::TContext<'ctx>> {
-		let light = param.lights.get(entity).ok();
+		if param.roles.contains(entity) {
+			return None;
+		}
+
 		let entity = param.commands.get_mut(&entity)?;
 
-		Some(TorchLightContextMut { entity, light })
+		Some(RolesContextMut { entity })
 	}
 }
 
-pub struct TorchLightContextMut<'ctx> {
+pub struct RolesContextMut<'ctx> {
 	entity: ZyheedaEntityCommands<'ctx>,
-	light: Option<&'ctx TorchLight>,
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::components::roles::{Enemy, Player};
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
+	use test_case::test_case;
+	use testing::SingleThreadedApp;
+
+	fn setup() -> App {
+		App::new().single_threaded(Update)
+	}
+
+	#[test_case(Player; "player")]
+	#[test_case(Enemy; "enemy")]
+	fn no_context_when_roles_set_to(role: impl Component) -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let entity = app.world_mut().spawn(role).id();
+
+		let ctx = app
+			.world_mut()
+			.run_system_once(move |mut r: RolesParamMut| {
+				RolesParamMut::try_get_context_mut(&mut r, HasNoRole { entity }).is_some()
+			})?;
+
+		assert!(!ctx);
+		Ok(())
+	}
 }

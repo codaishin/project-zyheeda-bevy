@@ -27,7 +27,6 @@ use common::{
 		handles_graphics::HandlesGraphics,
 		handles_input::HandlesInput,
 		handles_interactive::HandlesInteractive,
-		handles_light::HandlesLight,
 		handles_loadout::HandlesLoadout,
 		handles_map_generation::HandlesMapGeneration,
 		handles_movement::HandlesMovement,
@@ -79,7 +78,7 @@ where
 		+ HandlesRaycast
 		+ HandlesPhysicalSkillAgent
 		+ HandlesInteractiveDetection,
-	TGraphics: ThreadSafe + HandlesGraphics + HandlesLight,
+	TGraphics: ThreadSafe + HandlesGraphics,
 	TInteractive: ThreadSafe + SystemSetDefinition + HandlesInteractive,
 	TAnimations: ThreadSafe + HandlesAnimations,
 	TMaps: ThreadSafe + HandlesMapGeneration,
@@ -136,7 +135,7 @@ where
 		+ HandlesRaycast
 		+ HandlesPhysicalSkillAgent
 		+ HandlesInteractiveDetection,
-	TGraphics: ThreadSafe + HandlesGraphics + HandlesLight,
+	TGraphics: ThreadSafe + HandlesGraphics,
 	TInteractive: ThreadSafe + SystemSetDefinition + HandlesInteractive,
 	TAnimations: ThreadSafe + HandlesAnimations,
 	TMaps: ThreadSafe + HandlesMapGeneration,
@@ -176,7 +175,7 @@ where
 		app.register_required_components::<Agent, TSaveGame::TSaveEntityMarker>();
 
 		// # Prefabs
-		app.add_prefab_observer::<Player, TGraphics::TLightsMut>();
+		app.add_prefab_observer::<Player, TGraphics::TRolesMut>();
 		app.add_prefab_observer::<Agent, ()>();
 		app.add_prefab_observer::<VoidSphere, ()>();
 
