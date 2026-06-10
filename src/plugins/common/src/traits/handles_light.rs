@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use crate::{
 	tools::Units,
 	traits::accessors::get::{TryGetContext, TryGetContextMut},
@@ -17,7 +19,28 @@ pub struct TorchLight {
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Light {
-	pub intensity: Units,
+	pub intensity: Lumen,
+}
+
+impl Lumen {
+	pub const ZERO: Self = Self(Units::ZERO);
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct Lumen(pub Units);
+
+impl From<f32> for Lumen {
+	fn from(value: f32) -> Self {
+		Self(Units::from(value))
+	}
+}
+
+impl Deref for Lumen {
+	type Target = f32;
+
+	fn deref(&self) -> &Self::Target {
+		&self.0
+	}
 }
 
 pub trait GetLight {

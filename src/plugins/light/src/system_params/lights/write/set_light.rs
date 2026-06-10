@@ -15,9 +15,9 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
 	};
-	use common::{
-		tools::Units,
-		traits::{accessors::get::TryGetContextMut, handles_light::TorchLight as TorchLightKey},
+	use common::traits::{
+		accessors::get::TryGetContextMut,
+		handles_light::{Lumen, TorchLight as TorchLightKey},
 	};
 	use testing::SingleThreadedApp;
 
@@ -33,14 +33,14 @@ mod tests {
 		app.world_mut().run_system_once(move |mut l: LightsMut| {
 			LightsMut::try_get_context_mut(&mut l, TorchLightKey { entity }).map(|mut c| {
 				c.set_light(Light {
-					intensity: Units::from(42.),
+					intensity: Lumen::from(42.),
 				})
 			})
 		})?;
 
 		assert_eq!(
 			Some(&TorchLight {
-				intensity: Units::from(42.)
+				intensity: Lumen::from(42.)
 			}),
 			app.world().entity(entity).get::<TorchLight>(),
 		);
