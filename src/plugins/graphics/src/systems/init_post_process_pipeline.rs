@@ -36,6 +36,8 @@ impl PostProcessPipeline {
 			&BindGroupLayoutEntries::sequential(
 				ShaderStages::FRAGMENT,
 				(
+					texture_2d(TextureSampleType::Depth),
+					sampler(SamplerBindingType::Comparison),
 					texture_2d(TextureSampleType::Float { filterable: true }),
 					sampler(SamplerBindingType::Filtering),
 					texture_2d(TextureSampleType::Float { filterable: true }),

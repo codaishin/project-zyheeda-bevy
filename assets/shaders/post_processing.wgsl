@@ -1,10 +1,12 @@
 #import bevy_core_pipeline::fullscreen_vertex_shader::FullscreenVertexOutput
 
-@group(0) @binding(0) var screen_texture: texture_2d<f32>;
-@group(0) @binding(1) var screen_sampler: sampler;
-@group(0) @binding(2) var outline_texture: texture_2d<f32>;
-@group(0) @binding(3) var outline_sampler: sampler;
-@group(0) @binding(4) var<uniform> outline_settings: PostProcessSettings;
+@group(0) @binding(0) var screen_depth_texture: texture_depth_2d;
+@group(0) @binding(1) var screen_depth_sampler: sampler_comparison;
+@group(0) @binding(2) var screen_texture: texture_2d<f32>;
+@group(0) @binding(3) var screen_sampler: sampler;
+@group(0) @binding(4) var outline_texture: texture_2d<f32>;
+@group(0) @binding(5) var outline_sampler: sampler;
+@group(0) @binding(6) var<uniform> outline_settings: PostProcessSettings;
 
 struct PostProcessSettings {
     outline_color: vec4<f32>,

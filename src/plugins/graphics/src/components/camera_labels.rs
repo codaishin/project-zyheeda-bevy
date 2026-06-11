@@ -1,8 +1,8 @@
 use crate::{PostProcessCamera, components::model_render_layers::ModelRenderLayers};
 use bevy::{
-	camera::visibility::RenderLayers,
+	camera::visibility::{Layer, RenderLayers},
 	color::palettes::tailwind::GREEN_600,
-	core_pipeline::tonemapping::Tonemapping,
+	core_pipeline::{prepass::DepthPrepass, tonemapping::Tonemapping},
 	post_process::bloom::Bloom,
 	prelude::*,
 	render::view::Hdr,
@@ -10,10 +10,10 @@ use bevy::{
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
-const WORLD_PASS: usize = 0;
-const OUTLINE_PASS: usize = 1;
-const COMPOSITE_PASS: usize = 2;
-const UI_PASS: usize = 3;
+const WORLD_PASS: Layer = 0;
+const OUTLINE_PASS: Layer = 1;
+const COMPOSITE_PASS: Layer = 2;
+const UI_PASS: Layer = 3;
 
 #[derive(Component, Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
 #[require(Camera3d)]
@@ -40,6 +40,8 @@ pub struct SceneCamera;
 	Tonemapping = Self,
 	Hdr,
 	Bloom,
+	Msaa::Off,
+	DepthPrepass,
 )]
 pub struct WorldPass;
 

@@ -1,5 +1,9 @@
 use crate::{
-	components::{camera_labels::OutlinePass, post_process_camera::PostProcessCamera},
+	Depth,
+	components::{
+		camera_labels::{OutlinePass, WorldPass},
+		post_process_camera::PostProcessCamera,
+	},
 	resources::camera_render_target::CameraRenderTarget,
 };
 use bevy::{
@@ -92,9 +96,17 @@ impl ViewNode for PostProcessNode {
 			return Ok(());
 		};
 
-		// get outline target texture
+		// get target textures
 		let Some(gpu_images) = world.get_resource::<RenderAssets<GpuImage>>() else {
 			Self::log(MissingResource::RenderAssets);
+			return Ok(());
+		};
+		let Some(depth) = world.get_resource::<Depth<WorldPass>>() else {
+			Self::log(MissingResource::RenderTargets);
+			return Ok(());
+		};
+		let Some(depth_gpu) = gpu_images.get(&depth.handle) else {
+			Self::log(MissingDerived::GPUImage);
 			return Ok(());
 		};
 		let Some(outline) = world.get_resource::<CameraRenderTarget<OutlinePass>>() else {
@@ -111,6 +123,8 @@ impl ViewNode for PostProcessNode {
 			"post_process_bind_group",
 			&cache.get_bind_group_layout(&post_process_pipeline.layout),
 			&BindGroupEntries::sequential((
+				&depth_gpu.texture_view,
+				&depth_gpu.sampler,
 				post_process.source,
 				&post_process_pipeline.sampler,
 				&outline_gpu.texture_view,
