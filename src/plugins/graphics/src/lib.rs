@@ -9,7 +9,6 @@ mod traits;
 use crate::{
 	components::{
 		camera_labels::OutlinePass,
-		child_meshes::ChildMeshOf,
 		model_render_layers::ModelRenderLayers,
 		post_process_camera::PostProcessCamera,
 	},
@@ -34,7 +33,6 @@ use common::{
 	components::essence::Essence,
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
 	states::game_state::LoadingGame,
-	systems::link::to_target::LinkToTarget,
 	traits::{
 		after_plugin::AfterPlugin,
 		handles_graphics::{FirstPassCamera, HandlesGraphics, UiCamera, WorldCameras},
@@ -102,8 +100,6 @@ where
 	}
 
 	fn shading(app: &mut App) {
-		type UnlinkedMeshes = (Added<Mesh3d>, Without<ChildMeshOf>);
-
 		app.add_plugins(MaterialPlugin::<EffectMaterial>::default())
 			.register_derived_component::<Essence, MaterialOverride>()
 			.register_shader::<EssenceMaterial>()
@@ -113,13 +109,11 @@ where
 			.add_systems(
 				Update,
 				(
-					UnlinkedMeshes::link_to::<ModelRenderLayers, ChildMeshOf>,
+					ModelRenderLayers::systems(),
 					EffectMaterialHandle::modify_material::<TPhysics, Force>,
 					EffectMaterialHandle::modify_material::<TPhysics, Gravity>,
 					EffectMaterialHandle::modify_material::<TPhysics, HealthDamage>,
 					EffectMaterialHandle::propagate_material,
-					ModelRenderLayers::populate_missing_with(WorldPass),
-					ModelRenderLayers::propagate_layers,
 				)
 					.chain()
 					.after_plugin(TPhysics::SYSTEMS),
