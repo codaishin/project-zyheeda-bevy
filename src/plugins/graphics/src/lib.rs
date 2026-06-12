@@ -14,7 +14,10 @@ use crate::{
 	},
 	materials::effect_material::EffectMaterial,
 	observers::insert_render_target::InsertRenderTarget,
-	resources::post_process_pipeline::{PostProcessLabel, PostProcessNode, PostProcessPipeline},
+	resources::{
+		depth_texture::{CopyDepthTextureNode, DepthTexture, DepthTextureLabel},
+		post_process_pipeline::{PostProcessLabel, PostProcessNode, PostProcessPipeline},
+	},
 	system_params::highlight::{HighlightParam, HighlightParamMut},
 };
 use bevy::{
@@ -26,7 +29,7 @@ use bevy::{
 		extract_component::{ExtractComponentPlugin, UniformComponentPlugin},
 		extract_resource::ExtractResourcePlugin,
 		render_graph::{RenderGraphExt, ViewNodeRunner},
-		render_resource::*,
+		render_resource::PipelineCache,
 	},
 };
 use common::{
@@ -129,8 +132,18 @@ where
 
 		app.init_resource::<WindowSize>()
 			.add_plugins(ExtractResourcePlugin::<CameraRenderTarget<OutlinePass>>::default())
-			.add_plugins(ExtractComponentPlugin::<PostProcessCamera>::default())
-			.add_plugins(UniformComponentPlugin::<PostProcessCamera>::default())
+			.add_plugins((
+				ExtractComponentPlugin::<PostProcessCamera>::default(),
+				UniformComponentPlugin::<PostProcessCamera>::default(),
+			))
+			.add_plugins((
+				ExtractComponentPlugin::<WorldPass>::default(),
+				ExtractResourcePlugin::<DepthTexture<WorldPass>>::default(),
+			))
+			.add_plugins((
+				ExtractComponentPlugin::<OutlinePass>::default(),
+				ExtractResourcePlugin::<DepthTexture<OutlinePass>>::default(),
+			))
 			.register_required_components_with::<Ui, TDebugCam>(self.debug_cam)
 			.add_observer(WorldPass::insert_render_target)
 			.add_observer(OutlinePass::insert_render_target)
@@ -139,6 +152,8 @@ where
 				(
 					CameraRenderTarget::<WorldPass>::instantiate,
 					CameraRenderTarget::<OutlinePass>::instantiate,
+					DepthTexture::<WorldPass>::instantiate,
+					DepthTexture::<OutlinePass>::instantiate,
 				),
 			)
 			.add_systems(PostStartup, spawn_cameras)
@@ -148,14 +163,29 @@ where
 					WindowSize::update,
 					CameraRenderTarget::<WorldPass>::update_size,
 					CameraRenderTarget::<OutlinePass>::update_size,
+					DepthTexture::<WorldPass>::update_size,
+					DepthTexture::<OutlinePass>::update_size,
 				)
 					.chain(),
 			);
 
-		app.sub_app_mut(RenderApp)
-			.add_systems(RenderStartup, PostProcessPipeline::init)
+		let render_app = app.sub_app_mut(RenderApp);
+
+		render_app
 			.add_render_graph_node::<ViewNodeRunner<PostProcessNode>>(Core3d, PostProcessLabel)
-			.add_render_graph_edges(Core3d, PostProcessLabel::EDGES);
+			.add_render_graph_edges(Core3d, PostProcessLabel::EDGES)
+			.add_systems(RenderStartup, PostProcessPipeline::init);
+
+		render_app
+			.add_render_graph_node::<ViewNodeRunner<CopyDepthTextureNode<WorldPass>>>(
+				Core3d,
+				DepthTextureLabel::for_pass(WorldPass),
+			)
+			.add_render_graph_node::<ViewNodeRunner<CopyDepthTextureNode<OutlinePass>>>(
+				Core3d,
+				DepthTextureLabel::for_pass(OutlinePass),
+			)
+			.add_render_graph_edges(Core3d, DepthTextureLabel::LABELS);
 	}
 }
 
