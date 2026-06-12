@@ -20,6 +20,7 @@ use bevy::{
 			TextureAspect,
 			TextureDimension,
 			TextureFormat,
+			TextureUsages,
 		},
 		renderer::RenderContext,
 		texture::GpuImage,
@@ -53,8 +54,9 @@ where
 			TextureFormat::Depth32Float,
 			RenderAssetUsages::default(),
 		);
+		image.texture_descriptor.usage = TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST;
 		image.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
-			label: Some("compare sampler".to_owned()),
+			label: Some("comparison sampler".to_owned()),
 			compare: Some(ImageCompareFunction::Always),
 			..default()
 		});
@@ -66,7 +68,7 @@ where
 	}
 
 	pub(crate) fn update_size(
-		mut depth: ResMut<Self>,
+		depth: Res<Self>,
 		window_size: Res<WindowSize>,
 		mut images: ResMut<Assets<Image>>,
 	) {
@@ -82,7 +84,7 @@ where
 			return;
 		}
 
-		let Some(mut image) = images.get(&depth.handle).cloned() else {
+		let Some(image) = images.get_mut(&depth.handle) else {
 			return;
 		};
 
@@ -91,8 +93,6 @@ where
 			height,
 			depth_or_array_layers,
 		});
-
-		depth.handle = images.add(image);
 	}
 }
 
