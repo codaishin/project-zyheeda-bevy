@@ -5,7 +5,7 @@ use bevy::{
 	core_pipeline::{prepass::DepthPrepass, tonemapping::Tonemapping},
 	post_process::bloom::Bloom,
 	prelude::*,
-	render::view::Hdr,
+	render::{extract_component::ExtractComponent, view::Hdr},
 };
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
@@ -21,6 +21,7 @@ pub struct SceneCamera;
 
 #[derive(
 	Component,
+	ExtractComponent,
 	SavableComponent,
 	Debug,
 	PartialEq,
@@ -74,6 +75,7 @@ impl From<WorldPass> for ModelRenderLayers {
 
 #[derive(
 	Component,
+	ExtractComponent,
 	SavableComponent,
 	Debug,
 	PartialEq,
@@ -91,6 +93,8 @@ impl From<WorldPass> for ModelRenderLayers {
 	Camera = Self,
 	RenderLayers = Self,
 	Tonemapping = Self,
+	DepthPrepass,
+	Msaa::Off,
 )]
 pub(crate) struct OutlinePass;
 

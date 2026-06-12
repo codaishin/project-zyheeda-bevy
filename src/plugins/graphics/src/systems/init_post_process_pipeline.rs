@@ -36,12 +36,19 @@ impl PostProcessPipeline {
 			&BindGroupLayoutEntries::sequential(
 				ShaderStages::FRAGMENT,
 				(
+					// world depth
 					texture_2d(TextureSampleType::Depth),
 					sampler(SamplerBindingType::Comparison),
+					// outline depth
+					texture_2d(TextureSampleType::Depth),
+					sampler(SamplerBindingType::Comparison),
+					// screen (camera output)
 					texture_2d(TextureSampleType::Float { filterable: true }),
 					sampler(SamplerBindingType::Filtering),
+					// outline
 					texture_2d(TextureSampleType::Float { filterable: true }),
 					sampler(SamplerBindingType::Filtering),
+					// shader settings
 					uniform_buffer::<PostProcessCamera>(true),
 				),
 			),

@@ -101,11 +101,11 @@ impl ViewNode for PostProcessNode {
 			Self::log(MissingResource::RenderAssets);
 			return Ok(());
 		};
-		let Some(depth) = world.get_resource::<Depth<WorldPass>>() else {
+		let Some(world_depth) = world.get_resource::<Depth<WorldPass>>() else {
 			Self::log(MissingResource::RenderTargets);
 			return Ok(());
 		};
-		let Some(depth_gpu) = gpu_images.get(&depth.handle) else {
+		let Some(world_depth_gpu) = gpu_images.get(&world_depth.handle) else {
 			Self::log(MissingDerived::GPUImage);
 			return Ok(());
 		};
@@ -117,14 +117,24 @@ impl ViewNode for PostProcessNode {
 			Self::log(MissingDerived::GPUImage);
 			return Ok(());
 		};
+		let Some(outline_depth) = world.get_resource::<Depth<OutlinePass>>() else {
+			Self::log(MissingResource::RenderTargets);
+			return Ok(());
+		};
+		let Some(outline_depth_gpu) = gpu_images.get(&outline_depth.handle) else {
+			Self::log(MissingDerived::GPUImage);
+			return Ok(());
+		};
 
 		let post_process = view_target.post_process_write();
 		let bind_group = render_context.render_device().create_bind_group(
 			"post_process_bind_group",
 			&cache.get_bind_group_layout(&post_process_pipeline.layout),
 			&BindGroupEntries::sequential((
-				&depth_gpu.texture_view,
-				&depth_gpu.sampler,
+				&world_depth_gpu.texture_view,
+				&world_depth_gpu.sampler,
+				&outline_depth_gpu.texture_view,
+				&outline_depth_gpu.sampler,
 				post_process.source,
 				&post_process_pipeline.sampler,
 				&outline_gpu.texture_view,

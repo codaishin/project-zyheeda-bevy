@@ -26,7 +26,6 @@ use bevy::{
 	render::{
 		RenderApp,
 		RenderStartup,
-		camera::ExtractedCamera,
 		extract_component::{ExtractComponentPlugin, UniformComponentPlugin},
 		extract_resource::{ExtractResource, ExtractResourcePlugin},
 		render_asset::RenderAssets,
@@ -165,7 +164,7 @@ where
 					CameraRenderTarget::<OutlinePass>::instantiate,
 				),
 			)
-			.add_systems(PostStartup, spawn_cameras.chain())
+			.add_systems(PostStartup, spawn_cameras)
 			.add_systems(
 				First,
 				(
@@ -173,6 +172,7 @@ where
 					CameraRenderTarget::<WorldPass>::update_size,
 					CameraRenderTarget::<OutlinePass>::update_size,
 					Depth::<WorldPass>::update_size,
+					Depth::<OutlinePass>::update_size,
 				)
 					.chain(),
 			);
@@ -303,26 +303,35 @@ where
 	}
 }
 
-#[derive(RenderLabel, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-struct CopyDepthTexturePass;
+#[derive(RenderLabel, Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
+struct CopyDepthTexturePass<T>(PhantomData<T>);
 
 #[derive(Default)]
 struct DepthPrepassNode<T>(PhantomData<T>);
 
 fn depth_pre_pass(app: &mut App) {
 	app.add_plugins(ExtractResourcePlugin::<Depth<WorldPass>>::default())
-		.add_systems(Startup, Depth::<WorldPass>::init);
+		.add_plugins(ExtractResourcePlugin::<Depth<OutlinePass>>::default())
+		.add_plugins(ExtractComponentPlugin::<WorldPass>::default())
+		.add_plugins(ExtractComponentPlugin::<OutlinePass>::default())
+		.add_systems(Startup, Depth::<WorldPass>::init)
+		.add_systems(Startup, Depth::<OutlinePass>::init);
 
 	let render_app = app.sub_app_mut(RenderApp);
 	render_app.add_render_graph_node::<ViewNodeRunner<DepthPrepassNode<WorldPass>>>(
 		Core3d,
-		CopyDepthTexturePass,
+		CopyDepthTexturePass::<WorldPass>::default(),
+	);
+	render_app.add_render_graph_node::<ViewNodeRunner<DepthPrepassNode<OutlinePass>>>(
+		Core3d,
+		CopyDepthTexturePass::<OutlinePass>::default(),
 	);
 	render_app.add_render_graph_edges(
 		Core3d,
 		(
 			Node3d::EndPrepasses,
-			CopyDepthTexturePass,
+			CopyDepthTexturePass::<WorldPass>::default(),
+			CopyDepthTexturePass::<OutlinePass>::default(),
 			Node3d::MainOpaquePass,
 		),
 	);
@@ -330,21 +339,17 @@ fn depth_pre_pass(app: &mut App) {
 
 impl<T> ViewNode for DepthPrepassNode<T>
 where
-	T: ThreadSafe,
+	T: Component,
 {
-	type ViewQuery = (&'static ExtractedCamera, &'static ViewDepthTexture);
+	type ViewQuery = (&'static ViewDepthTexture, &'static T);
 
 	fn run<'w>(
 		&self,
 		_: &mut RenderGraphContext,
 		render_context: &mut RenderContext<'w>,
-		(camera, depth_texture): QueryItem<'w, '_, Self::ViewQuery>,
+		(depth_texture, ..): QueryItem<'w, '_, Self::ViewQuery>,
 		world: &'w World,
 	) -> Result<(), NodeRunError> {
-		if camera.order > 0 {
-			return Ok(());
-		};
-
 		let depth_image = world.resource::<Depth<T>>();
 		let image_assets = world.resource::<RenderAssets<GpuImage>>();
 		let Some(image) = image_assets.get(&depth_image.handle) else {
