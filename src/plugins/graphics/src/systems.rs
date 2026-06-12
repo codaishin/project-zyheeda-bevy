@@ -1,4 +1,3 @@
-pub(crate) mod init_post_process_pipeline;
 pub(crate) mod model_render_layers;
 pub(crate) mod modify_material;
 pub(crate) mod no_waiting_pipelines;

@@ -7,7 +7,7 @@ use crate::{
 	resources::camera_render_target::CameraRenderTarget,
 };
 use bevy::{
-	core_pipeline::core_3d::graph::Node3d,
+	core_pipeline::{FullscreenShader, core_3d::graph::Node3d},
 	ecs::query::QueryItem,
 	prelude::*,
 	render::{
@@ -17,14 +17,25 @@ use bevy::{
 		render_resource::{
 			BindGroupEntries,
 			BindGroupLayoutDescriptor,
+			BindGroupLayoutEntries,
 			CachedRenderPipelineId,
+			ColorTargetState,
+			ColorWrites,
+			FragmentState,
 			Operations,
 			PipelineCache,
 			RenderPassColorAttachment,
 			RenderPassDescriptor,
+			RenderPipelineDescriptor,
 			Sampler,
+			SamplerBindingType,
+			SamplerDescriptor,
+			ShaderStages,
+			TextureFormat,
+			TextureSampleType,
+			binding_types::{sampler, texture_2d, uniform_buffer},
 		},
-		renderer::RenderContext,
+		renderer::{RenderContext, RenderDevice},
 		texture::GpuImage,
 		view::ViewTarget,
 	},
@@ -32,6 +43,7 @@ use bevy::{
 use common::{
 	error_logger::{ErrorLogger, Log},
 	errors::{ErrorData, Level},
+	zyheeda_commands::ZyheedaCommands,
 };
 use std::{fmt::Display, time::Duration};
 
@@ -40,6 +52,60 @@ pub(crate) struct PostProcessPipeline {
 	pub(crate) layout: BindGroupLayoutDescriptor,
 	pub(crate) sampler: Sampler,
 	pub(crate) pipeline_id: CachedRenderPipelineId,
+}
+
+impl PostProcessPipeline {
+	pub(crate) fn init(
+		mut commands: ZyheedaCommands,
+		render_device: Res<RenderDevice>,
+		asset_server: Res<AssetServer>,
+		fullscreen_shader: Res<FullscreenShader>,
+		pipeline_cache: Res<PipelineCache>,
+	) {
+		let layout = BindGroupLayoutDescriptor::new(
+			"post_process_bind_group_layout",
+			&BindGroupLayoutEntries::sequential(
+				ShaderStages::FRAGMENT,
+				(
+					// world depth
+					texture_2d(TextureSampleType::Depth),
+					sampler(SamplerBindingType::Comparison),
+					// outline depth
+					texture_2d(TextureSampleType::Depth),
+					sampler(SamplerBindingType::Comparison),
+					// screen (camera output)
+					texture_2d(TextureSampleType::Float { filterable: true }),
+					sampler(SamplerBindingType::Filtering),
+					// outline
+					texture_2d(TextureSampleType::Float { filterable: true }),
+					sampler(SamplerBindingType::Filtering),
+					// shader settings
+					uniform_buffer::<PostProcessCamera>(true),
+				),
+			),
+		);
+		let pipeline_id = pipeline_cache.queue_render_pipeline(RenderPipelineDescriptor {
+			label: Some("post_process_pipeline".into()),
+			layout: vec![layout.clone()],
+			vertex: fullscreen_shader.to_vertex_state(),
+			fragment: Some(FragmentState {
+				shader: asset_server.load(PostProcessCamera::SHADER_PATH),
+				targets: vec![Some(ColorTargetState {
+					format: TextureFormat::Rgba16Float,
+					blend: None,
+					write_mask: ColorWrites::ALL,
+				})],
+				..default()
+			}),
+			..default()
+		});
+
+		commands.insert_resource(PostProcessPipeline {
+			layout,
+			sampler: render_device.create_sampler(&SamplerDescriptor::default()),
+			pipeline_id,
+		});
+	}
 }
 
 #[derive(RenderLabel, Debug, PartialEq, Eq, Hash, Clone)]
@@ -102,27 +168,27 @@ impl ViewNode for PostProcessNode {
 			return Ok(());
 		};
 		let Some(world_depth) = world.get_resource::<Depth<WorldPass>>() else {
-			Self::log(MissingResource::RenderTargets);
+			Self::log(MissingResource::RenderTargets(RenderPass::WorldDepth));
 			return Ok(());
 		};
 		let Some(world_depth_gpu) = gpu_images.get(&world_depth.handle) else {
-			Self::log(MissingDerived::GPUImage);
+			Self::log(MissingDerived::GPUImage(RenderPass::WorldDepth));
 			return Ok(());
 		};
 		let Some(outline) = world.get_resource::<CameraRenderTarget<OutlinePass>>() else {
-			Self::log(MissingResource::RenderTargets);
+			Self::log(MissingResource::RenderTargets(RenderPass::OutlineRender));
 			return Ok(());
 		};
 		let Some(outline_gpu) = gpu_images.get(&outline.handle) else {
-			Self::log(MissingDerived::GPUImage);
+			Self::log(MissingDerived::GPUImage(RenderPass::OutlineRender));
 			return Ok(());
 		};
 		let Some(outline_depth) = world.get_resource::<Depth<OutlinePass>>() else {
-			Self::log(MissingResource::RenderTargets);
+			Self::log(MissingResource::RenderTargets(RenderPass::OutlineDepth));
 			return Ok(());
 		};
 		let Some(outline_depth_gpu) = gpu_images.get(&outline_depth.handle) else {
-			Self::log(MissingDerived::GPUImage);
+			Self::log(MissingDerived::GPUImage(RenderPass::OutlineDepth));
 			return Ok(());
 		};
 
@@ -170,34 +236,6 @@ enum PostProcessError {
 	MissingDerived(MissingDerived),
 }
 
-#[derive(Debug, PartialEq)]
-enum MissingResource {
-	PostProcessPipeline,
-	PipeLineCache,
-	PostProcessUniforms,
-	RenderAssets,
-	RenderTargets,
-}
-
-impl From<MissingResource> for PostProcessError {
-	fn from(value: MissingResource) -> Self {
-		Self::MissingResource(value)
-	}
-}
-
-impl From<MissingDerived> for PostProcessError {
-	fn from(value: MissingDerived) -> Self {
-		Self::MissingDerived(value)
-	}
-}
-
-#[derive(Debug, PartialEq)]
-enum MissingDerived {
-	RenderPipeline,
-	UniformBindings,
-	GPUImage,
-}
-
 impl Display for PostProcessError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
@@ -223,4 +261,39 @@ impl ErrorData for PostProcessError {
 	fn into_details(self) -> impl std::fmt::Display {
 		self
 	}
+}
+
+#[derive(Debug, PartialEq)]
+enum MissingResource {
+	PostProcessPipeline,
+	PipeLineCache,
+	PostProcessUniforms,
+	RenderAssets,
+	RenderTargets(RenderPass),
+}
+
+impl From<MissingResource> for PostProcessError {
+	fn from(value: MissingResource) -> Self {
+		Self::MissingResource(value)
+	}
+}
+
+impl From<MissingDerived> for PostProcessError {
+	fn from(value: MissingDerived) -> Self {
+		Self::MissingDerived(value)
+	}
+}
+
+#[derive(Debug, PartialEq)]
+enum MissingDerived {
+	RenderPipeline,
+	UniformBindings,
+	GPUImage(RenderPass),
+}
+
+#[derive(Debug, PartialEq)]
+enum RenderPass {
+	WorldDepth,
+	OutlineRender,
+	OutlineDepth,
 }
