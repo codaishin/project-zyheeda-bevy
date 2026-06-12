@@ -1,5 +1,5 @@
 use crate::{
-	Depth,
+	DepthTexture,
 	components::{
 		camera_labels::{OutlinePass, WorldPass},
 		post_process_camera::PostProcessCamera,
@@ -167,7 +167,7 @@ impl ViewNode for PostProcessNode {
 			Self::log(MissingResource::RenderAssets);
 			return Ok(());
 		};
-		let Some(world_depth) = world.get_resource::<Depth<WorldPass>>() else {
+		let Some(world_depth) = world.get_resource::<DepthTexture<WorldPass>>() else {
 			Self::log(MissingResource::RenderTargets(RenderPass::WorldDepth));
 			return Ok(());
 		};
@@ -183,7 +183,7 @@ impl ViewNode for PostProcessNode {
 			Self::log(MissingDerived::GPUImage(RenderPass::OutlineRender));
 			return Ok(());
 		};
-		let Some(outline_depth) = world.get_resource::<Depth<OutlinePass>>() else {
+		let Some(outline_depth) = world.get_resource::<DepthTexture<OutlinePass>>() else {
 			Self::log(MissingResource::RenderTargets(RenderPass::OutlineDepth));
 			return Ok(());
 		};

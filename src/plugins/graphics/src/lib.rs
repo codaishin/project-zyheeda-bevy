@@ -14,42 +14,22 @@ use crate::{
 	},
 	materials::effect_material::EffectMaterial,
 	observers::insert_render_target::InsertRenderTarget,
-	resources::post_process_pipeline::{PostProcessLabel, PostProcessNode, PostProcessPipeline},
+	resources::{
+		depth_texture::{CopyDepthTextureNode, DepthTexture, DepthTextureLabel},
+		post_process_pipeline::{PostProcessLabel, PostProcessNode, PostProcessPipeline},
+	},
 	system_params::highlight::{HighlightParam, HighlightParamMut},
 };
 use bevy::{
-	asset::RenderAssetUsages,
-	core_pipeline::core_3d::graph::{Core3d, Node3d},
-	ecs::query::QueryItem,
-	image::{ImageCompareFunction, ImageSampler, ImageSamplerDescriptor},
+	core_pipeline::core_3d::graph::Core3d,
 	prelude::*,
 	render::{
 		RenderApp,
 		RenderStartup,
 		extract_component::{ExtractComponentPlugin, UniformComponentPlugin},
-		extract_resource::{ExtractResource, ExtractResourcePlugin},
-		render_asset::RenderAssets,
-		render_graph::{
-			NodeRunError,
-			RenderGraphContext,
-			RenderGraphExt,
-			RenderLabel,
-			ViewNode,
-			ViewNodeRunner,
-		},
-		render_resource::{
-			CommandEncoderDescriptor,
-			Extent3d,
-			Origin3d,
-			PipelineCache,
-			TexelCopyTextureInfo,
-			TextureAspect,
-			TextureDimension,
-			TextureFormat,
-		},
-		renderer::RenderContext,
-		texture::GpuImage,
-		view::ViewDepthTexture,
+		extract_resource::ExtractResourcePlugin,
+		render_graph::{RenderGraphExt, ViewNodeRunner},
+		render_resource::PipelineCache,
 	},
 };
 use common::{
@@ -152,8 +132,18 @@ where
 
 		app.init_resource::<WindowSize>()
 			.add_plugins(ExtractResourcePlugin::<CameraRenderTarget<OutlinePass>>::default())
-			.add_plugins(ExtractComponentPlugin::<PostProcessCamera>::default())
-			.add_plugins(UniformComponentPlugin::<PostProcessCamera>::default())
+			.add_plugins((
+				ExtractComponentPlugin::<PostProcessCamera>::default(),
+				UniformComponentPlugin::<PostProcessCamera>::default(),
+			))
+			.add_plugins((
+				ExtractComponentPlugin::<WorldPass>::default(),
+				ExtractResourcePlugin::<DepthTexture<WorldPass>>::default(),
+			))
+			.add_plugins((
+				ExtractComponentPlugin::<OutlinePass>::default(),
+				ExtractResourcePlugin::<DepthTexture<OutlinePass>>::default(),
+			))
 			.register_required_components_with::<Ui, TDebugCam>(self.debug_cam)
 			.add_observer(WorldPass::insert_render_target)
 			.add_observer(OutlinePass::insert_render_target)
@@ -162,6 +152,8 @@ where
 				(
 					CameraRenderTarget::<WorldPass>::instantiate,
 					CameraRenderTarget::<OutlinePass>::instantiate,
+					DepthTexture::<WorldPass>::instantiate,
+					DepthTexture::<OutlinePass>::instantiate,
 				),
 			)
 			.add_systems(PostStartup, spawn_cameras)
@@ -171,16 +163,29 @@ where
 					WindowSize::update,
 					CameraRenderTarget::<WorldPass>::update_size,
 					CameraRenderTarget::<OutlinePass>::update_size,
-					Depth::<WorldPass>::update_size,
-					Depth::<OutlinePass>::update_size,
+					DepthTexture::<WorldPass>::update_size,
+					DepthTexture::<OutlinePass>::update_size,
 				)
 					.chain(),
 			);
 
-		app.sub_app_mut(RenderApp)
-			.add_systems(RenderStartup, PostProcessPipeline::init)
+		let render_app = app.sub_app_mut(RenderApp);
+
+		render_app
 			.add_render_graph_node::<ViewNodeRunner<PostProcessNode>>(Core3d, PostProcessLabel)
-			.add_render_graph_edges(Core3d, PostProcessLabel::EDGES);
+			.add_render_graph_edges(Core3d, PostProcessLabel::EDGES)
+			.add_systems(RenderStartup, PostProcessPipeline::init);
+
+		render_app
+			.add_render_graph_node::<ViewNodeRunner<CopyDepthTextureNode<WorldPass>>>(
+				Core3d,
+				DepthTextureLabel::for_pass(WorldPass),
+			)
+			.add_render_graph_node::<ViewNodeRunner<CopyDepthTextureNode<OutlinePass>>>(
+				Core3d,
+				DepthTextureLabel::for_pass(OutlinePass),
+			)
+			.add_render_graph_edges(Core3d, DepthTextureLabel::LABELS);
 	}
 }
 
@@ -196,7 +201,6 @@ where
 		Self::track_render_pipeline_ready(app);
 		Self::shading(app);
 		self.cameras(app);
-		depth_pre_pass(app);
 	}
 }
 
@@ -236,164 +240,4 @@ impl<TDebugCam, TDependencies> WorldCameras for GraphicsPlugin<TDebugCam, TDepen
 impl<TDebugCam, TDependencies> HandlesGraphics for GraphicsPlugin<TDebugCam, TDependencies> {
 	type THighlight = HighlightParam<'static, 'static>;
 	type THighlightMut = HighlightParamMut<'static, 'static>;
-}
-
-// FIXME: Cleanup bellow
-
-#[derive(Resource, ExtractResource, Debug, PartialEq, Clone)]
-struct Depth<T>
-where
-	T: ThreadSafe,
-{
-	handle: Handle<Image>,
-	_p: PhantomData<T>,
-}
-
-impl<T> Depth<T>
-where
-	T: ThreadSafe,
-{
-	fn init(mut c: Commands, mut images: ResMut<Assets<Image>>) {
-		let mut image = Image::new_uninit(
-			Extent3d::default(),
-			TextureDimension::D2,
-			TextureFormat::Depth32Float,
-			RenderAssetUsages::default(),
-		);
-		image.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
-			label: Some("compare sampler".to_owned()),
-			compare: Some(ImageCompareFunction::Always),
-			..default()
-		});
-
-		c.insert_resource(Self {
-			handle: images.add(image),
-			_p: PhantomData,
-		});
-	}
-
-	fn update_size(
-		mut depth: ResMut<Self>,
-		window_size: Res<WindowSize>,
-		mut images: ResMut<Assets<Image>>,
-	) {
-		if !window_size.is_changed() {
-			return;
-		}
-
-		let width = window_size.width as u32;
-		let height = window_size.height as u32;
-		let depth_or_array_layers = 1;
-
-		if width == 0 || height == 0 {
-			return;
-		}
-
-		let Some(mut image) = images.get(&depth.handle).cloned() else {
-			return;
-		};
-
-		image.resize(Extent3d {
-			width,
-			height,
-			depth_or_array_layers,
-		});
-
-		depth.handle = images.add(image);
-	}
-}
-
-#[derive(RenderLabel, Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
-struct CopyDepthTexturePass<T>(PhantomData<T>);
-
-#[derive(Default)]
-struct DepthPrepassNode<T>(PhantomData<T>);
-
-fn depth_pre_pass(app: &mut App) {
-	app.add_plugins(ExtractResourcePlugin::<Depth<WorldPass>>::default())
-		.add_plugins(ExtractResourcePlugin::<Depth<OutlinePass>>::default())
-		.add_plugins(ExtractComponentPlugin::<WorldPass>::default())
-		.add_plugins(ExtractComponentPlugin::<OutlinePass>::default())
-		.add_systems(Startup, Depth::<WorldPass>::init)
-		.add_systems(Startup, Depth::<OutlinePass>::init);
-
-	let render_app = app.sub_app_mut(RenderApp);
-	render_app.add_render_graph_node::<ViewNodeRunner<DepthPrepassNode<WorldPass>>>(
-		Core3d,
-		CopyDepthTexturePass::<WorldPass>::default(),
-	);
-	render_app.add_render_graph_node::<ViewNodeRunner<DepthPrepassNode<OutlinePass>>>(
-		Core3d,
-		CopyDepthTexturePass::<OutlinePass>::default(),
-	);
-	render_app.add_render_graph_edges(
-		Core3d,
-		(
-			Node3d::EndPrepasses,
-			CopyDepthTexturePass::<WorldPass>::default(),
-			CopyDepthTexturePass::<OutlinePass>::default(),
-			Node3d::MainOpaquePass,
-		),
-	);
-}
-
-impl<T> ViewNode for DepthPrepassNode<T>
-where
-	T: Component,
-{
-	type ViewQuery = (&'static ViewDepthTexture, &'static T);
-
-	fn run<'w>(
-		&self,
-		_: &mut RenderGraphContext,
-		render_context: &mut RenderContext<'w>,
-		(depth_texture, ..): QueryItem<'w, '_, Self::ViewQuery>,
-		world: &'w World,
-	) -> Result<(), NodeRunError> {
-		let depth_image = world.resource::<Depth<T>>();
-		let image_assets = world.resource::<RenderAssets<GpuImage>>();
-		let Some(image) = image_assets.get(&depth_image.handle) else {
-			return Ok(());
-		};
-
-		let src_extend = (
-			depth_texture.texture.width(),
-			depth_texture.texture.height(),
-		);
-		let dst_extend = (image.size.width, image.size.height);
-
-		// Can happen during window resizing and would crash the pipeline, so we skip here
-		if src_extend != dst_extend {
-			return Ok(());
-		}
-
-		render_context.add_command_buffer_generation_task(move |render_device| {
-			let mut command_encoder =
-				render_device.create_command_encoder(&CommandEncoderDescriptor {
-					label: Some("copy depth to demo texture command encoder"),
-				});
-			command_encoder.push_debug_group("copy depth to demo texture");
-
-			command_encoder.copy_texture_to_texture(
-				TexelCopyTextureInfo {
-					texture: &depth_texture.texture,
-					mip_level: 0,
-					origin: Origin3d::default(),
-					aspect: TextureAspect::DepthOnly,
-				},
-				TexelCopyTextureInfo {
-					texture: &image.texture,
-					mip_level: 0,
-					origin: Origin3d::default(),
-					aspect: TextureAspect::DepthOnly,
-				},
-				image.size,
-			);
-
-			command_encoder.pop_debug_group();
-			command_encoder.finish()
-		});
-
-		Ok(())
-	}
 }
