@@ -31,8 +31,8 @@ impl Prefab<()> for Player {
 			.with_child((
 				ModelRenderLayers::from(WorldPass),
 				PointLight {
-					intensity: 10_000.,
-					range: 40.,
+					intensity: 100_000.,
+					range: 30.,
 					shadows_enabled: true,
 					..default()
 				},

@@ -128,12 +128,6 @@ where
 			);
 	}
 
-	fn roles(app: &mut App) {
-		app.insert_resource(GlobalAmbientLight::NONE)
-			.add_prefab_observer::<Player, ()>()
-			.add_prefab_observer::<Enemy, ()>();
-	}
-
 	fn cameras(&self, app: &mut App) {
 		app.register_required_components::<SceneCamera, TSavegame::TSaveEntityMarker>();
 		TSavegame::register_savable_component::<WorldPass>(app);
@@ -142,7 +136,8 @@ where
 		TSavegame::register_savable_component::<CompositePass>(app);
 		TSavegame::register_savable_component::<UiPass>(app);
 
-		app.init_resource::<WindowSize>()
+		app.insert_resource(GlobalAmbientLight::NONE)
+			.init_resource::<WindowSize>()
 			.add_plugins((
 				ExtractComponentPlugin::<PostProcessCamera>::default(),
 				UniformComponentPlugin::<PostProcessCamera>::default(),
@@ -162,6 +157,8 @@ where
 				ExtractResourcePlugin::<DepthTexture<OutlinePass>>::default(),
 			))
 			.register_required_components_with::<UiPass, TDebugCam>(self.debug_cam)
+			.add_prefab_observer::<Player, ()>()
+			.add_prefab_observer::<Enemy, ()>()
 			.add_observer(WorldPass::insert_render_target)
 			.add_observer(AgentsPass::insert_render_target)
 			.add_observer(OutlinePass::insert_render_target)
@@ -226,7 +223,6 @@ where
 	fn build(&self, app: &mut App) {
 		Self::track_render_pipeline_ready(app);
 		Self::shading(app);
-		Self::roles(app);
 		self.cameras(app);
 	}
 }

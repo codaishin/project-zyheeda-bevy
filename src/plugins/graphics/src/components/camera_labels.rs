@@ -3,6 +3,7 @@ use bevy::{
 	camera::visibility::{Layer, RenderLayers},
 	color::palettes::tailwind::GREEN_600,
 	core_pipeline::{prepass::DepthPrepass, tonemapping::Tonemapping},
+	light::light_consts::lux,
 	post_process::bloom::Bloom,
 	prelude::*,
 	render::{extract_component::ExtractComponent, view::Hdr},
@@ -40,6 +41,7 @@ pub struct SceneCamera;
 	Camera::from(Self),
 	RenderLayers::from(Self),
 	Tonemapping::from(Self),
+	DirectionalLight::from(Self),
 	Hdr,
 	Bloom,
 	Msaa::Off,
@@ -71,6 +73,15 @@ impl From<WorldPass> for Tonemapping {
 impl From<WorldPass> for ModelRenderLayers {
 	fn from(_: WorldPass) -> Self {
 		ModelRenderLayers::from(WORLD_PASS)
+	}
+}
+
+impl From<WorldPass> for DirectionalLight {
+	fn from(_: WorldPass) -> Self {
+		DirectionalLight {
+			illuminance: lux::CIVIL_TWILIGHT,
+			..default()
+		}
 	}
 }
 
@@ -186,7 +197,10 @@ impl From<AgentsPass> for Tonemapping {
 
 impl From<AgentsPass> for DirectionalLight {
 	fn from(_: AgentsPass) -> Self {
-		DirectionalLight { ..default() }
+		DirectionalLight {
+			illuminance: lux::OVERCAST_DAY,
+			..default()
+		}
 	}
 }
 
