@@ -11,9 +11,10 @@ use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 
 const WORLD_PASS: Layer = 0;
-const OUTLINE_PASS: Layer = 1;
-const COMPOSITE_PASS: Layer = 2;
-const UI_PASS: Layer = 3;
+const AGENTS_PASS: Layer = 1;
+const OUTLINE_PASS: Layer = 2;
+const COMPOSITE_PASS: Layer = 3;
+const UI_PASS: Layer = 4;
 
 #[derive(Component, Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
 #[require(Camera3d)]
@@ -36,13 +37,13 @@ pub struct SceneCamera;
 #[savable_component(id = "world pass camera")]
 #[require(
 	SceneCamera,
-	Camera = Self,
-	RenderLayers = Self,
-	Tonemapping = Self,
+	Camera::from(Self),
+	RenderLayers::from(Self),
+	Tonemapping::from(Self),
 	Hdr,
 	Bloom,
 	Msaa::Off,
-	DepthPrepass,
+	DepthPrepass
 )]
 pub struct WorldPass;
 
@@ -90,11 +91,11 @@ impl From<WorldPass> for ModelRenderLayers {
 #[savable_component(id = "outline pass camera")]
 #[require(
 	SceneCamera,
-	Camera = Self,
-	RenderLayers = Self,
-	Tonemapping = Self,
+	Camera::from(Self),
+	RenderLayers::from(Self),
+	Tonemapping::from(Self),
 	DepthPrepass,
-	Msaa::Off,
+	Msaa::Off
 )]
 pub(crate) struct OutlinePass;
 
@@ -131,6 +132,66 @@ impl From<OutlinePass> for Tonemapping {
 
 #[derive(
 	Component,
+	ExtractComponent,
+	SavableComponent,
+	Debug,
+	PartialEq,
+	Eq,
+	Hash,
+	Default,
+	Clone,
+	Copy,
+	Serialize,
+	Deserialize,
+)]
+#[savable_component(id = "agents pass camera")]
+#[require(
+	SceneCamera,
+	Camera::from(Self),
+	RenderLayers::from(Self),
+	Tonemapping::from(Self),
+	DirectionalLight::from(Self),
+	DepthPrepass,
+	Msaa::Off
+)]
+pub(crate) struct AgentsPass;
+
+impl From<AgentsPass> for Camera {
+	fn from(_: AgentsPass) -> Self {
+		Camera {
+			order: AGENTS_PASS as isize,
+			clear_color: Color::NONE.into(),
+			..default()
+		}
+	}
+}
+
+impl From<AgentsPass> for RenderLayers {
+	fn from(_: AgentsPass) -> Self {
+		RenderLayers::layer(AGENTS_PASS)
+	}
+}
+
+impl From<AgentsPass> for ModelRenderLayers {
+	fn from(_: AgentsPass) -> Self {
+		ModelRenderLayers::from(AGENTS_PASS)
+	}
+}
+
+impl From<AgentsPass> for Tonemapping {
+	fn from(_: AgentsPass) -> Self {
+		Tonemapping::None
+	}
+}
+
+impl From<AgentsPass> for DirectionalLight {
+	fn from(_: AgentsPass) -> Self {
+		DirectionalLight { ..default() }
+	}
+}
+
+#[derive(
+	Component,
 	SavableComponent,
 	Debug,
 	PartialEq,
@@ -145,12 +206,12 @@ impl From<OutlinePass> for Tonemapping {
 #[savable_component(id = "composite pass camera")]
 #[require(
 	SceneCamera,
-	PostProcessCamera = Self,
-	Camera = Self,
-	RenderLayers = Self,
-	Tonemapping = Self,
+	PostProcessCamera::from(Self),
+	Camera::from(Self),
+	RenderLayers::from(Self),
+	Tonemapping::from(Self),
 	Hdr,
-	Bloom,
+	Bloom
 )]
 pub(crate) struct CompositePass;
 
@@ -205,15 +266,15 @@ impl From<CompositePass> for PostProcessCamera {
 #[savable_component(id = "ui pass camera")]
 #[require(
 	SceneCamera,
-	Camera = Self,
-	RenderLayers = Self,
-	Tonemapping = Self,
-	Hdr,
+	Camera::from(Self),
+	RenderLayers::from(Self),
+	Tonemapping::from(Self),
+	Hdr
 )]
-pub struct Ui;
+pub struct UiPass;
 
-impl From<Ui> for Camera {
-	fn from(_: Ui) -> Self {
+impl From<UiPass> for Camera {
+	fn from(_: UiPass) -> Self {
 		Camera {
 			order: UI_PASS as isize,
 			clear_color: ClearColorConfig::None,
@@ -222,14 +283,14 @@ impl From<Ui> for Camera {
 	}
 }
 
-impl From<Ui> for RenderLayers {
-	fn from(_: Ui) -> Self {
+impl From<UiPass> for RenderLayers {
+	fn from(_: UiPass) -> Self {
 		RenderLayers::layer(UI_PASS)
 	}
 }
 
-impl From<Ui> for Tonemapping {
-	fn from(_: Ui) -> Self {
+impl From<UiPass> for Tonemapping {
+	fn from(_: UiPass) -> Self {
 		Tonemapping::None
 	}
 }

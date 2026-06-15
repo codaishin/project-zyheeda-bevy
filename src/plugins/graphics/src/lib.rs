@@ -8,10 +8,10 @@ mod traits;
 
 use crate::{
 	components::{
-		camera_labels::OutlinePass,
+		camera_labels::{AgentsPass, OutlinePass},
 		model_render_layers::ModelRenderLayers,
 		post_process_camera::PostProcessCamera,
-		roles::Player,
+		roles::{Enemy, Player},
 	},
 	materials::effect_material::EffectMaterial,
 	observers::insert_render_target::InsertRenderTarget,
@@ -54,7 +54,7 @@ use common::{
 	},
 };
 use components::{
-	camera_labels::{CompositePass, SceneCamera, Ui, WorldPass},
+	camera_labels::{CompositePass, SceneCamera, UiPass, WorldPass},
 	effect_material_handle::EffectMaterialHandle,
 	material_override::MaterialOverride,
 };
@@ -128,20 +128,21 @@ where
 			);
 	}
 
-	fn lights(app: &mut App) {
+	fn roles(app: &mut App) {
 		app.insert_resource(GlobalAmbientLight::NONE)
-			.add_prefab_observer::<Player, ()>();
+			.add_prefab_observer::<Player, ()>()
+			.add_prefab_observer::<Enemy, ()>();
 	}
 
 	fn cameras(&self, app: &mut App) {
 		app.register_required_components::<SceneCamera, TSavegame::TSaveEntityMarker>();
 		TSavegame::register_savable_component::<WorldPass>(app);
+		TSavegame::register_savable_component::<AgentsPass>(app);
 		TSavegame::register_savable_component::<OutlinePass>(app);
 		TSavegame::register_savable_component::<CompositePass>(app);
-		TSavegame::register_savable_component::<Ui>(app);
+		TSavegame::register_savable_component::<UiPass>(app);
 
 		app.init_resource::<WindowSize>()
-			.add_plugins(ExtractResourcePlugin::<CameraRenderTarget<OutlinePass>>::default())
 			.add_plugins((
 				ExtractComponentPlugin::<PostProcessCamera>::default(),
 				UniformComponentPlugin::<PostProcessCamera>::default(),
@@ -151,18 +152,27 @@ where
 				ExtractResourcePlugin::<DepthTexture<WorldPass>>::default(),
 			))
 			.add_plugins((
+				ExtractComponentPlugin::<AgentsPass>::default(),
+				ExtractResourcePlugin::<CameraRenderTarget<AgentsPass>>::default(),
+				ExtractResourcePlugin::<DepthTexture<AgentsPass>>::default(),
+			))
+			.add_plugins((
 				ExtractComponentPlugin::<OutlinePass>::default(),
+				ExtractResourcePlugin::<CameraRenderTarget<OutlinePass>>::default(),
 				ExtractResourcePlugin::<DepthTexture<OutlinePass>>::default(),
 			))
-			.register_required_components_with::<Ui, TDebugCam>(self.debug_cam)
+			.register_required_components_with::<UiPass, TDebugCam>(self.debug_cam)
 			.add_observer(WorldPass::insert_render_target)
+			.add_observer(AgentsPass::insert_render_target)
 			.add_observer(OutlinePass::insert_render_target)
 			.add_systems(
 				Startup,
 				(
 					CameraRenderTarget::<WorldPass>::instantiate,
+					CameraRenderTarget::<AgentsPass>::instantiate,
 					CameraRenderTarget::<OutlinePass>::instantiate,
 					DepthTexture::<WorldPass>::instantiate,
+					DepthTexture::<AgentsPass>::instantiate,
 					DepthTexture::<OutlinePass>::instantiate,
 				),
 			)
@@ -172,8 +182,10 @@ where
 				(
 					WindowSize::update,
 					CameraRenderTarget::<WorldPass>::update_size,
+					CameraRenderTarget::<AgentsPass>::update_size,
 					CameraRenderTarget::<OutlinePass>::update_size,
 					DepthTexture::<WorldPass>::update_size,
+					DepthTexture::<AgentsPass>::update_size,
 					DepthTexture::<OutlinePass>::update_size,
 				)
 					.chain(),
@@ -190,6 +202,10 @@ where
 			.add_render_graph_node::<ViewNodeRunner<CopyDepthTextureNode<WorldPass>>>(
 				Core3d,
 				DepthTextureLabel::for_pass(WorldPass),
+			)
+			.add_render_graph_node::<ViewNodeRunner<CopyDepthTextureNode<AgentsPass>>>(
+				Core3d,
+				DepthTextureLabel::for_pass(AgentsPass),
 			)
 			.add_render_graph_node::<ViewNodeRunner<CopyDepthTextureNode<OutlinePass>>>(
 				Core3d,
@@ -210,7 +226,7 @@ where
 	fn build(&self, app: &mut App) {
 		Self::track_render_pipeline_ready(app);
 		Self::shading(app);
-		Self::lights(app);
+		Self::roles(app);
 		self.cameras(app);
 	}
 }
@@ -237,7 +253,7 @@ impl RegisterShader for App {
 }
 
 impl<TDebugCam, TDependencies> UiCamera for GraphicsPlugin<TDebugCam, TDependencies> {
-	type TUiCamera = Ui;
+	type TUiCamera = UiPass;
 }
 
 impl<TDebugCam, TDependencies> FirstPassCamera for GraphicsPlugin<TDebugCam, TDependencies> {

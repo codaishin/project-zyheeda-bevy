@@ -1,3 +1,7 @@
+use crate::components::{
+	camera_labels::{AgentsPass, WorldPass},
+	model_render_layers::ModelRenderLayers,
+};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	errors::Unreachable,
@@ -22,12 +26,17 @@ impl Prefab<()> for Player {
 		entity: &mut impl PrefabEntityCommands,
 		_: StaticSystemParam<Self::TSystemParam<'_, '_>>,
 	) -> Result<(), Self::TError> {
-		entity.try_insert(PointLight {
-			intensity: 10_000.,
-			range: 40.,
-			radius: 1.,
-			..default()
-		});
+		entity
+			.try_insert(ModelRenderLayers::from(AgentsPass))
+			.with_child((
+				ModelRenderLayers::from(WorldPass),
+				PointLight {
+					intensity: 10_000.,
+					range: 40.,
+					shadows_enabled: true,
+					..default()
+				},
+			));
 
 		Ok(())
 	}
@@ -37,3 +46,18 @@ impl Prefab<()> for Player {
 #[component(immutable)]
 #[require(RoleAssigned)]
 pub(crate) struct Enemy;
+
+impl Prefab<()> for Enemy {
+	type TError = Unreachable;
+	type TSystemParam<'w, 's> = ();
+
+	fn insert_prefab_components(
+		&self,
+		entity: &mut impl PrefabEntityCommands,
+		_: StaticSystemParam<Self::TSystemParam<'_, '_>>,
+	) -> Result<(), Self::TError> {
+		entity.try_insert(ModelRenderLayers::from(WorldPass));
+
+		Ok(())
+	}
+}
