@@ -1,7 +1,7 @@
 use crate::{
 	DepthTexture,
 	components::{
-		camera_labels::{AgentsPass, OutlinePass, WorldPass},
+		camera_labels::{AgentsPass, OutlinePass, VisibilityPass, WorldPass},
 		post_process_camera::PostProcessCamera,
 	},
 	resources::camera_render_target::CameraRenderTarget,
@@ -80,6 +80,9 @@ impl PostProcessPipeline {
 					texture_2d(TextureSampleType::Float { filterable: true }),
 					sampler(SamplerBindingType::Filtering),
 					// agents
+					texture_2d(TextureSampleType::Float { filterable: true }),
+					sampler(SamplerBindingType::Filtering),
+					// visibility
 					texture_2d(TextureSampleType::Float { filterable: true }),
 					sampler(SamplerBindingType::Filtering),
 					// outline
@@ -189,6 +192,14 @@ impl ViewNode for PostProcessNode {
 			Self::log(MissingDerived::GPUImage(RenderPass::AgentsRender));
 			return Ok(());
 		};
+		let Some(visibility) = world.get_resource::<CameraRenderTarget<VisibilityPass>>() else {
+			Self::log(MissingResource::RenderTargets(RenderPass::VisibilityRender));
+			return Ok(());
+		};
+		let Some(visibility_gpu) = gpu_images.get(&visibility.handle) else {
+			Self::log(MissingDerived::GPUImage(RenderPass::VisibilityRender));
+			return Ok(());
+		};
 		let Some(outline) = world.get_resource::<CameraRenderTarget<OutlinePass>>() else {
 			Self::log(MissingResource::RenderTargets(RenderPass::OutlineRender));
 			return Ok(());
@@ -229,6 +240,8 @@ impl ViewNode for PostProcessNode {
 				&post_process_pipeline.sampler,
 				&agents_gpu.texture_view,
 				&agents_gpu.sampler,
+				&visibility_gpu.texture_view,
+				&visibility_gpu.sampler,
 				&outline_gpu.texture_view,
 				&outline_gpu.sampler,
 				settings_binding.clone(),
@@ -322,6 +335,7 @@ enum RenderPass {
 	WorldDepth,
 	AgentsRender,
 	AgentsDepth,
+	VisibilityRender,
 	OutlineRender,
 	OutlineDepth,
 }

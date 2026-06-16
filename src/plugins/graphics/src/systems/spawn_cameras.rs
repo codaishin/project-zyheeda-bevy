@@ -1,4 +1,11 @@
-use crate::components::camera_labels::{AgentsPass, CompositePass, OutlinePass, UiPass, WorldPass};
+use crate::components::camera_labels::{
+	AgentsPass,
+	CompositePass,
+	OutlinePass,
+	UiPass,
+	VisibilityPass,
+	WorldPass,
+};
 use bevy::prelude::*;
 
 pub(crate) fn spawn_cameras(mut commands: Commands) {
@@ -12,6 +19,12 @@ pub(crate) fn spawn_cameras(mut commands: Commands) {
 		#[cfg(debug_assertions)]
 		Name::from("Agents Camera"),
 		AgentsPass,
+	));
+
+	commands.spawn((
+		#[cfg(debug_assertions)]
+		Name::from("Visibility Camera"),
+		VisibilityPass,
 	));
 
 	commands.spawn((

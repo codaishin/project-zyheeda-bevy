@@ -13,9 +13,10 @@ use serde::{Deserialize, Serialize};
 
 const WORLD_PASS: Layer = 0;
 const AGENTS_PASS: Layer = 1;
-const OUTLINE_PASS: Layer = 2;
-const COMPOSITE_PASS: Layer = 3;
-const UI_PASS: Layer = 4;
+const VISIBILITY_PASS: Layer = 2;
+const OUTLINE_PASS: Layer = 3;
+const COMPOSITE_PASS: Layer = 4;
+const UI_PASS: Layer = 5;
 
 #[derive(Component, Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
 #[require(Camera3d)]
@@ -72,7 +73,8 @@ impl From<WorldPass> for Tonemapping {
 
 impl From<WorldPass> for ModelRenderLayers {
 	fn from(_: WorldPass) -> Self {
-		ModelRenderLayers::from(WORLD_PASS)
+		const WORLD_LAYERS: &[Layer] = &[WORLD_PASS, VISIBILITY_PASS];
+		ModelRenderLayers::from(WORLD_LAYERS)
 	}
 }
 
@@ -161,7 +163,6 @@ impl From<OutlinePass> for Tonemapping {
 	Camera::from(Self),
 	RenderLayers::from(Self),
 	Tonemapping::from(Self),
-	DirectionalLight::from(Self),
 	DepthPrepass,
 	Msaa::Off
 )]
@@ -195,12 +196,55 @@ impl From<AgentsPass> for Tonemapping {
 	}
 }
 
-impl From<AgentsPass> for DirectionalLight {
-	fn from(_: AgentsPass) -> Self {
-		DirectionalLight {
-			illuminance: lux::OVERCAST_DAY,
+#[derive(
+	Component,
+	ExtractComponent,
+	SavableComponent,
+	Debug,
+	PartialEq,
+	Eq,
+	Hash,
+	Default,
+	Clone,
+	Copy,
+	Serialize,
+	Deserialize,
+)]
+#[savable_component(id = "visibility pass camera")]
+#[require(
+	SceneCamera,
+	Camera::from(Self),
+	RenderLayers::from(Self),
+	Tonemapping::from(Self),
+	Msaa::Off
+)]
+pub(crate) struct VisibilityPass;
+
+impl From<VisibilityPass> for Camera {
+	fn from(_: VisibilityPass) -> Self {
+		Camera {
+			order: VISIBILITY_PASS as isize,
+			clear_color: Color::NONE.into(),
 			..default()
 		}
+	}
+}
+
+impl From<VisibilityPass> for RenderLayers {
+	fn from(_: VisibilityPass) -> Self {
+		RenderLayers::layer(VISIBILITY_PASS)
+	}
+}
+
+impl From<VisibilityPass> for ModelRenderLayers {
+	fn from(_: VisibilityPass) -> Self {
+		ModelRenderLayers::from(VISIBILITY_PASS)
+	}
+}
+
+impl From<VisibilityPass> for Tonemapping {
+	fn from(_: VisibilityPass) -> Self {
+		Tonemapping::None
 	}
 }
 
@@ -224,6 +268,7 @@ impl From<AgentsPass> for DirectionalLight {
 	Camera::from(Self),
 	RenderLayers::from(Self),
 	Tonemapping::from(Self),
+	DirectionalLight::from(Self),
 	Hdr,
 	Bloom
 )]
@@ -246,7 +291,7 @@ impl From<CompositePass> for Tonemapping {
 
 impl From<CompositePass> for RenderLayers {
 	fn from(_: CompositePass) -> Self {
-		RenderLayers::from_layers(&[WORLD_PASS, COMPOSITE_PASS])
+		RenderLayers::from_layers(&[WORLD_PASS, AGENTS_PASS, COMPOSITE_PASS])
 	}
 }
 
@@ -261,6 +306,12 @@ impl From<CompositePass> for PostProcessCamera {
 		PostProcessCamera {
 			outline_color: GREEN_600.into(),
 		}
+	}
+}
+
+impl From<CompositePass> for DirectionalLight {
+	fn from(_: CompositePass) -> Self {
+		DirectionalLight { ..default() }
 	}
 }
 

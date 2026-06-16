@@ -10,9 +10,11 @@
 @group(0) @binding( 7) var screen_texture_sampler: sampler;
 @group(0) @binding( 8) var agents_texture: texture_2d<f32>;
 @group(0) @binding( 9) var agents_texture_sampler: sampler;
-@group(0) @binding(10) var outline_texture: texture_2d<f32>;
-@group(0) @binding(11) var outline_texture_sampler: sampler;
-@group(0) @binding(12) var<uniform> outline_settings: PostProcessSettings;
+@group(0) @binding(10) var visibility_texture: texture_2d<f32>;
+@group(0) @binding(11) var visibility_texture_sampler: sampler;
+@group(0) @binding(12) var outline_texture: texture_2d<f32>;
+@group(0) @binding(13) var outline_texture_sampler: sampler;
+@group(0) @binding(14) var<uniform> outline_settings: PostProcessSettings;
 
 alias Kind = u32;
 
@@ -41,6 +43,7 @@ const NO_DEPTH: f32 = 0;
 const WORLD: Kind = 0;
 const AGENT: Kind = 1;
 const OUTLINED: Kind = 2;
+const BLACK = vec3<f32>(0);
 
 @fragment
 fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
@@ -99,9 +102,25 @@ fn in_front(uv: vec2<f32>) -> InFront {
 }
 
 fn screen(uv: vec2<f32>, in_front: InFront) -> vec4<f32> {
-    if in_front.kind == AGENT {
-        return textureSample(agents_texture, agents_texture_sampler, uv);
+    let screen = textureSample(screen_texture, screen_texture_sampler, uv);
+
+    if is_visible(uv) == false {
+        return screen * 0.1;
     }
 
-    return textureSample(screen_texture, screen_texture_sampler, uv);
+    return screen;
+}
+
+fn is_visible(uv: vec2<f32>) -> bool {
+    let visibility = textureSample(visibility_texture, visibility_texture_sampler, uv);
+
+    if all(visibility.rgb == BLACK) {
+        return false;
+    }
+
+    if visibility.a == 0. {
+        return false;
+    }
+
+    return true;
 }

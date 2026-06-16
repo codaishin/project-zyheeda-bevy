@@ -1,5 +1,5 @@
 use crate::components::{
-	camera_labels::{AgentsPass, WorldPass},
+	camera_labels::{AgentsPass, VisibilityPass},
 	model_render_layers::ModelRenderLayers,
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
@@ -29,10 +29,10 @@ impl Prefab<()> for Player {
 		entity
 			.try_insert(ModelRenderLayers::from(AgentsPass))
 			.with_child((
-				ModelRenderLayers::from(WorldPass),
+				ModelRenderLayers::from(VisibilityPass),
 				PointLight {
-					intensity: 100_000.,
-					range: 30.,
+					intensity: f32::MAX,
+					range: 20.,
 					shadows_enabled: true,
 					..default()
 				},
@@ -56,7 +56,7 @@ impl Prefab<()> for Enemy {
 		entity: &mut impl PrefabEntityCommands,
 		_: StaticSystemParam<Self::TSystemParam<'_, '_>>,
 	) -> Result<(), Self::TError> {
-		entity.try_insert(ModelRenderLayers::from(WorldPass));
+		entity.try_insert(ModelRenderLayers::from(AgentsPass));
 
 		Ok(())
 	}

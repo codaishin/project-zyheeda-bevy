@@ -8,7 +8,7 @@ mod traits;
 
 use crate::{
 	components::{
-		camera_labels::{AgentsPass, OutlinePass},
+		camera_labels::{AgentsPass, OutlinePass, VisibilityPass},
 		model_render_layers::ModelRenderLayers,
 		post_process_camera::PostProcessCamera,
 		roles::{Enemy, Player},
@@ -146,6 +146,7 @@ where
 				ExtractComponentPlugin::<WorldPass>::default(),
 				ExtractResourcePlugin::<DepthTexture<WorldPass>>::default(),
 			))
+			.add_plugins(ExtractResourcePlugin::<CameraRenderTarget<VisibilityPass>>::default())
 			.add_plugins((
 				ExtractComponentPlugin::<AgentsPass>::default(),
 				ExtractResourcePlugin::<CameraRenderTarget<AgentsPass>>::default(),
@@ -161,12 +162,14 @@ where
 			.add_prefab_observer::<Enemy, ()>()
 			.add_observer(WorldPass::insert_render_target)
 			.add_observer(AgentsPass::insert_render_target)
+			.add_observer(VisibilityPass::insert_render_target)
 			.add_observer(OutlinePass::insert_render_target)
 			.add_systems(
 				Startup,
 				(
 					CameraRenderTarget::<WorldPass>::instantiate,
 					CameraRenderTarget::<AgentsPass>::instantiate,
+					CameraRenderTarget::<VisibilityPass>::instantiate,
 					CameraRenderTarget::<OutlinePass>::instantiate,
 					DepthTexture::<WorldPass>::instantiate,
 					DepthTexture::<AgentsPass>::instantiate,
@@ -180,6 +183,7 @@ where
 					WindowSize::update,
 					CameraRenderTarget::<WorldPass>::update_size,
 					CameraRenderTarget::<AgentsPass>::update_size,
+					CameraRenderTarget::<VisibilityPass>::update_size,
 					CameraRenderTarget::<OutlinePass>::update_size,
 					DepthTexture::<WorldPass>::update_size,
 					DepthTexture::<AgentsPass>::update_size,
