@@ -8,7 +8,7 @@ mod traits;
 
 use crate::{
 	components::{
-		camera_labels::{AgentsPass, OutlinePass, VisibilityPass},
+		camera_labels::{AgentsPass, OutlinePass, VisibilityPass, WorldLight},
 		model_render_layers::ModelRenderLayers,
 		post_process_camera::PostProcessCamera,
 		roles::{Enemy, Player},
@@ -54,7 +54,7 @@ use common::{
 	},
 };
 use components::{
-	camera_labels::{CompositePass, SceneCamera, UiPass, WorldPass},
+	camera_labels::{CompositePass, MoveWithPlayerCam, UiPass, WorldPass},
 	effect_material_handle::EffectMaterialHandle,
 	material_override::MaterialOverride,
 };
@@ -129,12 +129,13 @@ where
 	}
 
 	fn cameras(&self, app: &mut App) {
-		app.register_required_components::<SceneCamera, TSavegame::TSaveEntityMarker>();
+		app.register_required_components::<MoveWithPlayerCam, TSavegame::TSaveEntityMarker>();
 		TSavegame::register_savable_component::<WorldPass>(app);
 		TSavegame::register_savable_component::<AgentsPass>(app);
 		TSavegame::register_savable_component::<OutlinePass>(app);
 		TSavegame::register_savable_component::<CompositePass>(app);
 		TSavegame::register_savable_component::<UiPass>(app);
+		TSavegame::register_savable_component::<WorldLight>(app);
 
 		app.insert_resource(GlobalAmbientLight::NONE)
 			.init_resource::<WindowSize>()
@@ -261,7 +262,7 @@ impl<TDebugCam, TDependencies> FirstPassCamera for GraphicsPlugin<TDebugCam, TDe
 }
 
 impl<TDebugCam, TDependencies> WorldCameras for GraphicsPlugin<TDebugCam, TDependencies> {
-	type TWorldCameras = SceneCamera;
+	type TWorldCameras = MoveWithPlayerCam;
 }
 
 impl<TDebugCam, TDependencies> HandlesGraphics for GraphicsPlugin<TDebugCam, TDependencies> {

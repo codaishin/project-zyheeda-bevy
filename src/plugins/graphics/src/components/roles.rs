@@ -34,6 +34,7 @@ impl Prefab<()> for Player {
 					intensity: f32::MAX,
 					range: 20.,
 					shadows_enabled: true,
+					shadow_normal_bias: 0.1,
 					..default()
 				},
 			));

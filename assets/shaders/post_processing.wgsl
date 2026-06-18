@@ -8,18 +8,15 @@
 @group(0) @binding( 5) var outline_depth_sampler: sampler_comparison;
 @group(0) @binding( 6) var screen_texture: texture_2d<f32>;
 @group(0) @binding( 7) var screen_texture_sampler: sampler;
-@group(0) @binding( 8) var agents_texture: texture_2d<f32>;
-@group(0) @binding( 9) var agents_texture_sampler: sampler;
-@group(0) @binding(10) var visibility_texture: texture_2d<f32>;
-@group(0) @binding(11) var visibility_texture_sampler: sampler;
-@group(0) @binding(12) var outline_texture: texture_2d<f32>;
-@group(0) @binding(13) var outline_texture_sampler: sampler;
-@group(0) @binding(14) var<uniform> outline_settings: PostProcessSettings;
+@group(0) @binding( 8) var visibility_texture: texture_2d<f32>;
+@group(0) @binding( 9) var visibility_texture_sampler: sampler;
+@group(0) @binding(10) var<uniform> settings: PostProcessSettings;
 
 alias Kind = u32;
 
 struct PostProcessSettings {
     outline_color: vec4<f32>,
+    see_through_color: vec4<f32>,
 }
 
 struct Depths {
@@ -28,7 +25,11 @@ struct Depths {
     outlined: f32,
 }
 
-struct InFront {
+struct ScreenInfo {
+    order: array<LayerInfo, 3>,
+}
+
+struct LayerInfo {
     kind: Kind,
     depth: f32,
 }
@@ -47,28 +48,26 @@ const BLACK = vec3<f32>(0);
 
 @fragment
 fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
-    let in_front = in_front(in.uv);
+    let info = info(in.uv);
 
-    if in_front.kind == OUTLINED {
-        return screen(in.uv, in_front);
+    if info.order[0].kind == OUTLINED {
+        return screen(in.uv, info);
     };
 
-    let offset = 1.1 / vec2<f32>(textureDimensions(outline_texture));
+    let offset = 1.5 / vec2<f32>(textureDimensions(outline_depth));
     for (var i = 0; i < 4; i++) {
         let probe_uv = in.uv + OFFSETS[i] * offset;
-        let in_front = in_front(probe_uv);
+        let info = info(probe_uv);
 
-        if in_front.depth == NO_DEPTH || in_front.kind != OUTLINED {
+        if info.order[0].depth == NO_DEPTH || info.order[0].kind != OUTLINED {
             continue;
         }
 
-        return outline_settings.outline_color;
+        return settings.outline_color;
     }
 
-    return screen(in.uv, in_front);
+    return screen(in.uv, info);
 }
-
-
 
 fn load_depths(uv: vec2<f32>) -> Depths {
     let pos = vec2<i32>(uv * vec2<f32>(textureDimensions(world_depth).xy));
@@ -80,47 +79,55 @@ fn load_depths(uv: vec2<f32>) -> Depths {
     );
 }
 
-fn in_front(uv: vec2<f32>) -> InFront {
+fn info(uv: vec2<f32>) -> ScreenInfo {
     let depth = load_depths(uv);
-
-    var in_front = InFront(
-        WORLD,
-        depth.world,
+    var order = array(
+        LayerInfo(WORLD, depth.world),
+        LayerInfo(AGENT, depth.agent),
+        LayerInfo(OUTLINED, depth.outlined),
     );
 
-    if depth.agent >= in_front.depth {
-        in_front.kind = AGENT;
-        in_front.depth = depth.agent;
+    if order[1].depth >= order[0].depth {
+        let tmp = order[0];
+        order[0] = order[1];
+        order[1] = tmp;
     }
 
-    if depth.outlined >= in_front.depth {
-        in_front.kind = OUTLINED;
-        in_front.depth = depth.outlined;
+    if order[2].depth >= order[1].depth {
+        let tmp = order[1];
+        order[1] = order[2];
+        order[2] = tmp;
     }
 
-    return in_front;
+    if order[1].depth >= order[0].depth {
+        let tmp = order[0];
+        order[0] = order[1];
+        order[1] = tmp;
+    }
+
+    return ScreenInfo(order);
 }
 
-fn screen(uv: vec2<f32>, in_front: InFront) -> vec4<f32> {
-    let screen = textureSample(screen_texture, screen_texture_sampler, uv);
-
-    if is_visible(uv) == false {
-        return screen * 0.1;
+fn screen(uv: vec2<f32>, info: ScreenInfo) -> vec4<f32> {
+    if info.order[1].kind == AGENT && info.order[1].depth != NO_DEPTH {
+        return settings.see_through_color;
     }
 
-    return screen;
+    return textureSample(screen_texture, screen_texture_sampler, uv) * visibility(uv);
 }
 
-fn is_visible(uv: vec2<f32>) -> bool {
+
+fn visibility(uv: vec2<f32>) -> f32 {
     let visibility = textureSample(visibility_texture, visibility_texture_sampler, uv);
 
     if all(visibility.rgb == BLACK) {
-        return false;
+        return 0.1;
     }
 
     if visibility.a == 0. {
-        return false;
+        return 0.1;
     }
 
-    return true;
+    return 1.0;
 }
+

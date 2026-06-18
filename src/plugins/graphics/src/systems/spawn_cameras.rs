@@ -4,6 +4,7 @@ use crate::components::camera_labels::{
 	OutlinePass,
 	UiPass,
 	VisibilityPass,
+	WorldLight,
 	WorldPass,
 };
 use bevy::prelude::*;
@@ -43,5 +44,11 @@ pub(crate) fn spawn_cameras(mut commands: Commands) {
 		#[cfg(debug_assertions)]
 		Name::from("UI Camera"),
 		UiPass,
+	));
+
+	commands.spawn((
+		#[cfg(debug_assertions)]
+		Name::from("World Light"),
+		WorldLight,
 	));
 }

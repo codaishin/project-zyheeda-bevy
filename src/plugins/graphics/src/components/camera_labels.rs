@@ -1,7 +1,7 @@
 use crate::{PostProcessCamera, components::model_render_layers::ModelRenderLayers};
 use bevy::{
 	camera::visibility::{Layer, RenderLayers},
-	color::palettes::tailwind::GREEN_600,
+	color::palettes::tailwind,
 	core_pipeline::{prepass::DepthPrepass, tonemapping::Tonemapping},
 	light::light_consts::lux,
 	post_process::bloom::Bloom,
@@ -19,8 +19,7 @@ const COMPOSITE_PASS: Layer = 4;
 const UI_PASS: Layer = 5;
 
 #[derive(Component, Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
-#[require(Camera3d)]
-pub struct SceneCamera;
+pub struct MoveWithPlayerCam;
 
 #[derive(
 	Component,
@@ -38,11 +37,11 @@ pub struct SceneCamera;
 )]
 #[savable_component(id = "world pass camera")]
 #[require(
-	SceneCamera,
+	Camera3d,
+	MoveWithPlayerCam,
 	Camera::from(Self),
 	RenderLayers::from(Self),
 	Tonemapping::from(Self),
-	DirectionalLight::from(Self),
 	Hdr,
 	Bloom,
 	Msaa::Off,
@@ -78,15 +77,6 @@ impl From<WorldPass> for ModelRenderLayers {
 	}
 }
 
-impl From<WorldPass> for DirectionalLight {
-	fn from(_: WorldPass) -> Self {
-		DirectionalLight {
-			illuminance: lux::CIVIL_TWILIGHT,
-			..default()
-		}
-	}
-}
-
 #[derive(
 	Component,
 	ExtractComponent,
@@ -103,7 +93,8 @@ impl From<WorldPass> for DirectionalLight {
 )]
 #[savable_component(id = "outline pass camera")]
 #[require(
-	SceneCamera,
+	Camera3d,
+	MoveWithPlayerCam,
 	Camera::from(Self),
 	RenderLayers::from(Self),
 	Tonemapping::from(Self),
@@ -159,7 +150,8 @@ impl From<OutlinePass> for Tonemapping {
 )]
 #[savable_component(id = "agents pass camera")]
 #[require(
-	SceneCamera,
+	Camera3d,
+	MoveWithPlayerCam,
 	Camera::from(Self),
 	RenderLayers::from(Self),
 	Tonemapping::from(Self),
@@ -212,11 +204,12 @@ impl From<AgentsPass> for Tonemapping {
 )]
 #[savable_component(id = "visibility pass camera")]
 #[require(
-	SceneCamera,
+	Camera3d,
+	MoveWithPlayerCam,
 	Camera::from(Self),
 	RenderLayers::from(Self),
 	Tonemapping::from(Self),
-	Msaa::Off
+	Hdr
 )]
 pub(crate) struct VisibilityPass;
 
@@ -263,12 +256,12 @@ impl From<VisibilityPass> for Tonemapping {
 )]
 #[savable_component(id = "composite pass camera")]
 #[require(
-	SceneCamera,
+	Camera3d,
+	MoveWithPlayerCam,
 	PostProcessCamera::from(Self),
 	Camera::from(Self),
 	RenderLayers::from(Self),
 	Tonemapping::from(Self),
-	DirectionalLight::from(Self),
 	Hdr,
 	Bloom
 )]
@@ -304,14 +297,45 @@ impl From<CompositePass> for ModelRenderLayers {
 impl From<CompositePass> for PostProcessCamera {
 	fn from(_: CompositePass) -> Self {
 		PostProcessCamera {
-			outline_color: GREEN_600.into(),
+			outline_color: (tailwind::GREEN_600 * 2.).into(),
+			see_through_color: tailwind::GRAY_50.into(),
 		}
 	}
 }
 
-impl From<CompositePass> for DirectionalLight {
-	fn from(_: CompositePass) -> Self {
-		DirectionalLight { ..default() }
+#[derive(
+	Component,
+	SavableComponent,
+	Debug,
+	PartialEq,
+	Eq,
+	Hash,
+	Default,
+	Clone,
+	Copy,
+	Serialize,
+	Deserialize,
+)]
+#[savable_component(id = "world light")]
+#[require(
+	MoveWithPlayerCam,
+	RenderLayers::from(Self),
+	DirectionalLight::from(Self)
+)]
+pub(crate) struct WorldLight;
+
+impl From<WorldLight> for RenderLayers {
+	fn from(_: WorldLight) -> Self {
+		RenderLayers::from_layers(&[WORLD_PASS, AGENTS_PASS])
+	}
+}
+
+impl From<WorldLight> for DirectionalLight {
+	fn from(_: WorldLight) -> Self {
+		DirectionalLight {
+			illuminance: lux::AMBIENT_DAYLIGHT,
+			..default()
+		}
 	}
 }
 
@@ -330,7 +354,8 @@ impl From<CompositePass> for DirectionalLight {
 )]
 #[savable_component(id = "ui pass camera")]
 #[require(
-	SceneCamera,
+	Camera3d,
+	MoveWithPlayerCam,
 	Camera::from(Self),
 	RenderLayers::from(Self),
 	Tonemapping::from(Self),

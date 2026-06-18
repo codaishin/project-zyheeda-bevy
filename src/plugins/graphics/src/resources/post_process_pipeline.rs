@@ -79,13 +79,7 @@ impl PostProcessPipeline {
 					// screen (post process camera output)
 					texture_2d(TextureSampleType::Float { filterable: true }),
 					sampler(SamplerBindingType::Filtering),
-					// agents
-					texture_2d(TextureSampleType::Float { filterable: true }),
-					sampler(SamplerBindingType::Filtering),
 					// visibility
-					texture_2d(TextureSampleType::Float { filterable: true }),
-					sampler(SamplerBindingType::Filtering),
-					// outline
 					texture_2d(TextureSampleType::Float { filterable: true }),
 					sampler(SamplerBindingType::Filtering),
 					// shader settings
@@ -184,28 +178,12 @@ impl ViewNode for PostProcessNode {
 			Self::log(MissingDerived::GPUImage(RenderPass::WorldDepth));
 			return Ok(());
 		};
-		let Some(agents) = world.get_resource::<CameraRenderTarget<AgentsPass>>() else {
-			Self::log(MissingResource::RenderTargets(RenderPass::AgentsRender));
-			return Ok(());
-		};
-		let Some(agents_gpu) = gpu_images.get(&agents.handle) else {
-			Self::log(MissingDerived::GPUImage(RenderPass::AgentsRender));
-			return Ok(());
-		};
 		let Some(visibility) = world.get_resource::<CameraRenderTarget<VisibilityPass>>() else {
 			Self::log(MissingResource::RenderTargets(RenderPass::VisibilityRender));
 			return Ok(());
 		};
 		let Some(visibility_gpu) = gpu_images.get(&visibility.handle) else {
 			Self::log(MissingDerived::GPUImage(RenderPass::VisibilityRender));
-			return Ok(());
-		};
-		let Some(outline) = world.get_resource::<CameraRenderTarget<OutlinePass>>() else {
-			Self::log(MissingResource::RenderTargets(RenderPass::OutlineRender));
-			return Ok(());
-		};
-		let Some(outline_gpu) = gpu_images.get(&outline.handle) else {
-			Self::log(MissingDerived::GPUImage(RenderPass::OutlineRender));
 			return Ok(());
 		};
 		let Some(agents_depth) = world.get_resource::<DepthTexture<AgentsPass>>() else {
@@ -238,12 +216,8 @@ impl ViewNode for PostProcessNode {
 				&outline_depth_gpu.sampler,
 				post_process.source,
 				&post_process_pipeline.sampler,
-				&agents_gpu.texture_view,
-				&agents_gpu.sampler,
 				&visibility_gpu.texture_view,
 				&visibility_gpu.sampler,
-				&outline_gpu.texture_view,
-				&outline_gpu.sampler,
 				settings_binding.clone(),
 			)),
 		);
@@ -333,9 +307,7 @@ enum MissingDerived {
 #[derive(Debug, PartialEq)]
 enum RenderPass {
 	WorldDepth,
-	AgentsRender,
 	AgentsDepth,
-	VisibilityRender,
-	OutlineRender,
 	OutlineDepth,
+	VisibilityRender,
 }

@@ -7,6 +7,7 @@ use macros::asset_path;
 #[derive(Component, Default, Clone, Copy, ExtractComponent, ShaderType)]
 pub(crate) struct PostProcessCamera {
 	pub(crate) outline_color: LinearRgba,
+	pub(crate) see_through_color: LinearRgba,
 }
 
 impl PostProcessCamera {
