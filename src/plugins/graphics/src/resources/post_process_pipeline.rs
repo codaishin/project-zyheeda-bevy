@@ -4,16 +4,35 @@ use crate::{
 		camera_labels::{AgentsPass, OutlinePass, VisibilityPass, WorldPass},
 		post_process_camera::PostProcessCamera,
 	},
-	resources::camera_render_target::CameraRenderTarget,
+	observers::insert_render_target::InsertRenderTarget,
+	resources::{camera_render_target::CameraRenderTarget, window_size::WindowSize},
 };
 use bevy::{
-	core_pipeline::{FullscreenShader, core_3d::graph::Node3d},
+	core_pipeline::{
+		FullscreenShader,
+		core_3d::graph::{Core3d, Node3d},
+	},
 	ecs::query::QueryItem,
 	prelude::*,
 	render::{
-		extract_component::{ComponentUniforms, DynamicUniformIndex},
+		RenderApp,
+		RenderStartup,
+		extract_component::{
+			ComponentUniforms,
+			DynamicUniformIndex,
+			ExtractComponentPlugin,
+			UniformComponentPlugin,
+		},
+		extract_resource::ExtractResourcePlugin,
 		render_asset::RenderAssets,
-		render_graph::{NodeRunError, RenderGraphContext, RenderLabel, ViewNode},
+		render_graph::{
+			NodeRunError,
+			RenderGraphContext,
+			RenderGraphExt,
+			RenderLabel,
+			ViewNode,
+			ViewNodeRunner,
+		},
 		render_resource::{
 			BindGroupEntries,
 			BindGroupLayoutDescriptor,
@@ -111,13 +130,53 @@ impl PostProcessPipeline {
 	}
 }
 
-#[derive(RenderLabel, Debug, PartialEq, Eq, Hash, Clone)]
-pub(crate) struct PostProcessLabel;
-
-impl PostProcessLabel {
-	pub(crate) const EDGES: (Node3d, Self, Node3d) =
-		(Node3d::Tonemapping, Self, Node3d::EndMainPassPostProcessing);
+pub(crate) trait SetupPostProcessPipeline {
+	fn setup_post_process_pipeline(&mut self) -> &mut Self;
 }
+
+impl SetupPostProcessPipeline for App {
+	fn setup_post_process_pipeline(&mut self) -> &mut Self {
+		let label = PostProcessLabel;
+		let edges = (
+			Node3d::Tonemapping,
+			label,
+			Node3d::EndMainPassPostProcessing,
+		);
+
+		self.add_plugins((
+			ExtractComponentPlugin::<PostProcessCamera>::default(),
+			UniformComponentPlugin::<PostProcessCamera>::default(),
+			ExtractResourcePlugin::<CameraRenderTarget<VisibilityPass>>::default(),
+		))
+		.add_observer(WorldPass::insert_render_target)
+		.add_observer(VisibilityPass::insert_render_target)
+		.add_systems(
+			Startup,
+			(
+				CameraRenderTarget::<WorldPass>::instantiate,
+				CameraRenderTarget::<VisibilityPass>::instantiate,
+			),
+		)
+		.add_systems(
+			First,
+			(
+				CameraRenderTarget::<WorldPass>::update_size,
+				CameraRenderTarget::<VisibilityPass>::update_size,
+			)
+				.after(WindowSize::update),
+		);
+
+		self.sub_app_mut(RenderApp)
+			.add_render_graph_node::<ViewNodeRunner<PostProcessNode>>(Core3d, label)
+			.add_render_graph_edges(Core3d, edges)
+			.add_systems(RenderStartup, PostProcessPipeline::init);
+
+		self
+	}
+}
+
+#[derive(RenderLabel, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub(crate) struct PostProcessLabel;
 
 #[derive(Default, Debug, PartialEq)]
 pub(crate) struct PostProcessNode;
