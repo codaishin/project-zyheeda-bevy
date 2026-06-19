@@ -144,8 +144,6 @@ where
 				UniformComponentPlugin::<PostProcessCamera>::default(),
 			))
 			.add_plugins(ExtractResourcePlugin::<CameraRenderTarget<VisibilityPass>>::default())
-			.add_plugins(ExtractResourcePlugin::<CameraRenderTarget<AgentsPass>>::default())
-			.add_plugins(ExtractResourcePlugin::<CameraRenderTarget<OutlinePass>>::default())
 			.register_required_components_with::<UiPass, TDebugCam>(self.debug_cam)
 			.copy_depth_texture::<WorldPass>()
 			.copy_depth_texture::<AgentsPass>()
@@ -154,16 +152,12 @@ where
 			.add_prefab_observer::<Enemy, ()>()
 			.add_prefab_observer::<WorldLight, ()>()
 			.add_observer(WorldPass::insert_render_target)
-			.add_observer(AgentsPass::insert_render_target)
 			.add_observer(VisibilityPass::insert_render_target)
-			.add_observer(OutlinePass::insert_render_target)
 			.add_systems(
 				Startup,
 				(
 					CameraRenderTarget::<WorldPass>::instantiate,
-					CameraRenderTarget::<AgentsPass>::instantiate,
 					CameraRenderTarget::<VisibilityPass>::instantiate,
-					CameraRenderTarget::<OutlinePass>::instantiate,
 				),
 			)
 			.add_systems(PostStartup, spawn_cameras)
@@ -172,9 +166,7 @@ where
 				(
 					WindowSize::update,
 					CameraRenderTarget::<WorldPass>::update_size,
-					CameraRenderTarget::<AgentsPass>::update_size,
 					CameraRenderTarget::<VisibilityPass>::update_size,
-					CameraRenderTarget::<OutlinePass>::update_size,
 				)
 					.chain(),
 			);
