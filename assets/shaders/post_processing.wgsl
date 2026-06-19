@@ -112,7 +112,13 @@ fn info(uv: vec2<f32>) -> ScreenInfo {
 }
 
 fn screen(uv: vec2<f32>, info: ScreenInfo) -> vec4<f32> {
-    if info.order[1].kind == AGENT && info.order[1].depth != NO_DEPTH {
+    for (var i = 1; i < 3; i++) {
+        let layer = info.order[i];
+
+        if layer.kind != AGENT || layer.depth == NO_DEPTH {
+            continue;
+        }
+
         return settings.see_through_color;
     }
 
