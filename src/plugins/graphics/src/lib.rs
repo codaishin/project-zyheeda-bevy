@@ -8,7 +8,7 @@ mod traits;
 
 use crate::{
 	components::{
-		camera_labels::{AgentsPass, OutlinePass, WorldLight},
+		camera_labels::{AgentsPass, OutlinePass, VisibilityPass, WorldLight},
 		model_render_layers::ModelRenderLayers,
 		post_process_camera::PostProcessCamera,
 		roles::{Enemy, Player},
@@ -124,6 +124,7 @@ where
 		TSavegame::register_savable_component::<WorldPass>(app);
 		TSavegame::register_savable_component::<AgentsPass>(app);
 		TSavegame::register_savable_component::<OutlinePass>(app);
+		TSavegame::register_savable_component::<VisibilityPass>(app);
 		TSavegame::register_savable_component::<CompositePass>(app);
 		TSavegame::register_savable_component::<UiPass>(app);
 		TSavegame::register_savable_component::<WorldLight>(app);
