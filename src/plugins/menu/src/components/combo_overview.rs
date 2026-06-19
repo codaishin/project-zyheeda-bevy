@@ -11,7 +11,7 @@ use super::{
 use crate::{
 	Tooltip,
 	components::{icon::Icon, label::UILabel},
-	tools::{Dimensions, Pixel},
+	tools::Dimensions,
 	traits::{
 		LoadUi,
 		UpdateCombosView,
@@ -22,7 +22,10 @@ use crate::{
 };
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{
-	tools::action_key::slot::{HandSlot, SlotKey},
+	tools::{
+		action_key::slot::{HandSlot, SlotKey},
+		pixel::Pixel,
+	},
 	traits::{
 		accessors::get::{View, ViewOf},
 		handles_loadout::skills::{GetSkillId, SkillIcon, SkillToken},

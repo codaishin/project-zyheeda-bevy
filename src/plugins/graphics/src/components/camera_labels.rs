@@ -1,12 +1,20 @@
-use crate::{PostProcessCamera, components::model_render_layers::ModelRenderLayers};
+use crate::{
+	PostProcessCamera,
+	components::{model_render_layers::ModelRenderLayers, post_process_camera::PostProcessArgs},
+};
 use bevy::{
 	camera::visibility::{Layer, RenderLayers},
 	color::palettes::tailwind,
 	core_pipeline::{prepass::DepthPrepass, tonemapping::Tonemapping},
-	light::light_consts::lux,
+	ecs::system::StaticSystemParam,
 	post_process::bloom::Bloom,
 	prelude::*,
 	render::{extract_component::ExtractComponent, view::Hdr},
+};
+use common::{
+	errors::Unreachable,
+	tools::pixel::Pixel,
+	traits::prefab::{Prefab, PrefabEntityCommands},
 };
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
@@ -296,10 +304,12 @@ impl From<CompositePass> for ModelRenderLayers {
 
 impl From<CompositePass> for PostProcessCamera {
 	fn from(_: CompositePass) -> Self {
-		PostProcessCamera {
-			outline_color: (tailwind::GREEN_600 * 2.).into(),
-			see_through_color: tailwind::GRAY_50.into(),
-		}
+		PostProcessCamera::new(PostProcessArgs {
+			outline_color: tailwind::GREEN_600 * 2.,
+			see_through_color: tailwind::GRAY_50,
+			outline_width: Pixel(1.5),
+			dark_region_light_factor: 0.01,
+		})
 	}
 }
 
@@ -317,11 +327,8 @@ impl From<CompositePass> for PostProcessCamera {
 	Deserialize,
 )]
 #[savable_component(id = "world light")]
-#[require(
-	MoveWithPlayerCam,
-	RenderLayers::from(Self),
-	DirectionalLight::from(Self)
-)]
+#[component(immutable)]
+#[require(MoveWithPlayerCam, RenderLayers::from(Self), Visibility, Transform)]
 pub(crate) struct WorldLight;
 
 impl From<WorldLight> for RenderLayers {
@@ -330,12 +337,36 @@ impl From<WorldLight> for RenderLayers {
 	}
 }
 
-impl From<WorldLight> for DirectionalLight {
-	fn from(_: WorldLight) -> Self {
-		DirectionalLight {
-			illuminance: lux::AMBIENT_DAYLIGHT,
-			..default()
-		}
+impl Prefab<()> for WorldLight {
+	type TError = Unreachable;
+	type TSystemParam<'w, 's> = ();
+
+	fn insert_prefab_components(
+		&self,
+		entity: &mut impl PrefabEntityCommands,
+		_: StaticSystemParam<()>,
+	) -> Result<(), Self::TError> {
+		let illuminance = 2500.;
+		let to_left = Quat::from_axis_angle(Vec3::Y, (-25_f32).to_radians());
+		let to_right = Quat::from_axis_angle(Vec3::Y, (25_f32).to_radians());
+
+		entity
+			.with_child((
+				Transform::default().with_rotation(to_left),
+				DirectionalLight {
+					illuminance,
+					..default()
+				},
+			))
+			.with_child((
+				Transform::default().with_rotation(to_right),
+				DirectionalLight {
+					illuminance,
+					..default()
+				},
+			));
+
+		Ok(())
 	}
 }
 

@@ -161,6 +161,7 @@ where
 			.register_required_components_with::<UiPass, TDebugCam>(self.debug_cam)
 			.add_prefab_observer::<Player, ()>()
 			.add_prefab_observer::<Enemy, ()>()
+			.add_prefab_observer::<WorldLight, ()>()
 			.add_observer(WorldPass::insert_render_target)
 			.add_observer(AgentsPass::insert_render_target)
 			.add_observer(VisibilityPass::insert_render_target)

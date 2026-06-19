@@ -13,10 +13,13 @@
 @group(0) @binding(10) var<uniform> settings: PostProcessSettings;
 
 alias Kind = u32;
+alias Pixel = f32;
 
 struct PostProcessSettings {
     outline_color: vec4<f32>,
+    outline_width: Pixel,
     see_through_color: vec4<f32>,
+    dark_region_light_factor: f32,
 }
 
 struct Depths {
@@ -54,7 +57,7 @@ fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
         return screen(in.uv, info);
     };
 
-    let offset = 1.5 / vec2<f32>(textureDimensions(outline_depth));
+    let offset = settings.outline_width / vec2<f32>(textureDimensions(outline_depth));
     for (var i = 0; i < 4; i++) {
         let probe_uv = in.uv + OFFSETS[i] * offset;
         let info = info(probe_uv);
@@ -113,21 +116,12 @@ fn screen(uv: vec2<f32>, info: ScreenInfo) -> vec4<f32> {
         return settings.see_through_color;
     }
 
-    return textureSample(screen_texture, screen_texture_sampler, uv) * visibility(uv);
-}
-
-
-fn visibility(uv: vec2<f32>) -> f32 {
     let visibility = textureSample(visibility_texture, visibility_texture_sampler, uv);
+    let screen = textureSample(screen_texture, screen_texture_sampler, uv);
 
-    if all(visibility.rgb == BLACK) {
-        return 0.1;
+    if all(visibility.rgb == BLACK) || visibility.a == 0 {
+        return screen * settings.dark_region_light_factor;
     }
 
-    if visibility.a == 0. {
-        return 0.1;
-    }
-
-    return 1.0;
+    return screen;
 }
-
