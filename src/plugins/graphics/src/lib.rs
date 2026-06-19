@@ -10,14 +10,14 @@ use crate::{
 	components::{
 		camera_labels::{AgentsPass, OutlinePass, VisibilityPass, WorldLight},
 		model_render_layers::ModelRenderLayers,
+		only_depth_prepass::OnlyDepthPrepass,
 		post_process_camera::PostProcessCamera,
 		roles::{Enemy, Player},
 	},
 	materials::effect_material::EffectMaterial,
-	observers::insert_render_target::InsertRenderTarget,
 	resources::{
-		depth_texture::{CopyDepthTextureNode, DepthTexture, DepthTextureLabel},
-		post_process_pipeline::{PostProcessLabel, PostProcessNode, PostProcessPipeline},
+		depth_texture::{CopyDepthTexture, DepthTexture},
+		post_process_pipeline::SetupPostProcessPipeline,
 	},
 	system_params::{
 		highlight::{HighlightParam, HighlightParamMut},
@@ -25,16 +25,8 @@ use crate::{
 	},
 };
 use bevy::{
-	core_pipeline::core_3d::graph::Core3d,
 	prelude::*,
-	render::{
-		RenderApp,
-		RenderStartup,
-		extract_component::{ExtractComponentPlugin, UniformComponentPlugin},
-		extract_resource::ExtractResourcePlugin,
-		render_graph::{RenderGraphExt, ViewNodeRunner},
-		render_resource::PipelineCache,
-	},
+	render::{RenderApp, render_resource::PipelineCache},
 };
 use common::{
 	components::essence::Essence,
@@ -59,7 +51,7 @@ use components::{
 	material_override::MaterialOverride,
 };
 use materials::essence_material::EssenceMaterial;
-use resources::{camera_render_target::CameraRenderTarget, window_size::WindowSize};
+use resources::window_size::WindowSize;
 use std::{hash::Hash, marker::PhantomData};
 use systems::{no_waiting_pipelines::no_waiting_pipelines, spawn_cameras::spawn_cameras};
 
@@ -133,88 +125,26 @@ where
 		TSavegame::register_savable_component::<WorldPass>(app);
 		TSavegame::register_savable_component::<AgentsPass>(app);
 		TSavegame::register_savable_component::<OutlinePass>(app);
+		TSavegame::register_savable_component::<VisibilityPass>(app);
 		TSavegame::register_savable_component::<CompositePass>(app);
 		TSavegame::register_savable_component::<UiPass>(app);
 		TSavegame::register_savable_component::<WorldLight>(app);
 
 		app.insert_resource(GlobalAmbientLight::NONE)
 			.init_resource::<WindowSize>()
-			.add_plugins((
-				ExtractComponentPlugin::<PostProcessCamera>::default(),
-				UniformComponentPlugin::<PostProcessCamera>::default(),
-			))
-			.add_plugins((
-				ExtractComponentPlugin::<WorldPass>::default(),
-				ExtractResourcePlugin::<DepthTexture<WorldPass>>::default(),
-			))
-			.add_plugins(ExtractResourcePlugin::<CameraRenderTarget<VisibilityPass>>::default())
-			.add_plugins((
-				ExtractComponentPlugin::<AgentsPass>::default(),
-				ExtractResourcePlugin::<CameraRenderTarget<AgentsPass>>::default(),
-				ExtractResourcePlugin::<DepthTexture<AgentsPass>>::default(),
-			))
-			.add_plugins((
-				ExtractComponentPlugin::<OutlinePass>::default(),
-				ExtractResourcePlugin::<CameraRenderTarget<OutlinePass>>::default(),
-				ExtractResourcePlugin::<DepthTexture<OutlinePass>>::default(),
-			))
 			.register_required_components_with::<UiPass, TDebugCam>(self.debug_cam)
+			.copy_depth_texture::<WorldPass>()
+			.copy_depth_texture::<AgentsPass>()
+			.copy_depth_texture::<OutlinePass>()
+			.setup_post_process_pipeline()
 			.add_prefab_observer::<Player, ()>()
 			.add_prefab_observer::<Enemy, ()>()
 			.add_prefab_observer::<WorldLight, ()>()
-			.add_observer(WorldPass::insert_render_target)
-			.add_observer(AgentsPass::insert_render_target)
-			.add_observer(VisibilityPass::insert_render_target)
-			.add_observer(OutlinePass::insert_render_target)
-			.add_systems(
-				Startup,
-				(
-					CameraRenderTarget::<WorldPass>::instantiate,
-					CameraRenderTarget::<AgentsPass>::instantiate,
-					CameraRenderTarget::<VisibilityPass>::instantiate,
-					CameraRenderTarget::<OutlinePass>::instantiate,
-					DepthTexture::<WorldPass>::instantiate,
-					DepthTexture::<AgentsPass>::instantiate,
-					DepthTexture::<OutlinePass>::instantiate,
-				),
-			)
 			.add_systems(PostStartup, spawn_cameras)
 			.add_systems(
 				First,
-				(
-					WindowSize::update,
-					CameraRenderTarget::<WorldPass>::update_size,
-					CameraRenderTarget::<AgentsPass>::update_size,
-					CameraRenderTarget::<VisibilityPass>::update_size,
-					CameraRenderTarget::<OutlinePass>::update_size,
-					DepthTexture::<WorldPass>::update_size,
-					DepthTexture::<AgentsPass>::update_size,
-					DepthTexture::<OutlinePass>::update_size,
-				)
-					.chain(),
+				(WindowSize::update, OnlyDepthPrepass::update_render_targets).chain(),
 			);
-
-		let render_app = app.sub_app_mut(RenderApp);
-
-		render_app
-			.add_render_graph_node::<ViewNodeRunner<PostProcessNode>>(Core3d, PostProcessLabel)
-			.add_render_graph_edges(Core3d, PostProcessLabel::EDGES)
-			.add_systems(RenderStartup, PostProcessPipeline::init);
-
-		render_app
-			.add_render_graph_node::<ViewNodeRunner<CopyDepthTextureNode<WorldPass>>>(
-				Core3d,
-				DepthTextureLabel::for_pass(WorldPass),
-			)
-			.add_render_graph_node::<ViewNodeRunner<CopyDepthTextureNode<AgentsPass>>>(
-				Core3d,
-				DepthTextureLabel::for_pass(AgentsPass),
-			)
-			.add_render_graph_node::<ViewNodeRunner<CopyDepthTextureNode<OutlinePass>>>(
-				Core3d,
-				DepthTextureLabel::for_pass(OutlinePass),
-			)
-			.add_render_graph_edges(Core3d, DepthTextureLabel::LABELS);
 	}
 }
 

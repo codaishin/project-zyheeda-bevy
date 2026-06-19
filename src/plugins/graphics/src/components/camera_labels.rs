@@ -1,6 +1,10 @@
 use crate::{
 	PostProcessCamera,
-	components::{model_render_layers::ModelRenderLayers, post_process_camera::PostProcessArgs},
+	components::{
+		model_render_layers::ModelRenderLayers,
+		only_depth_prepass::OnlyDepthPrepass,
+		post_process_camera::PostProcessArgs,
+	},
 };
 use bevy::{
 	camera::visibility::{Layer, RenderLayers},
@@ -106,7 +110,7 @@ impl From<WorldPass> for ModelRenderLayers {
 	Camera::from(Self),
 	RenderLayers::from(Self),
 	Tonemapping::from(Self),
-	DepthPrepass,
+	OnlyDepthPrepass,
 	Msaa::Off
 )]
 pub(crate) struct OutlinePass;
