@@ -1,17 +1,23 @@
-use crate::{
-	components::camera_labels::{AgentsPass, OutlinePass, WorldPass},
-	resources::window_size::WindowSize,
-};
+use crate::resources::window_size::WindowSize;
 use bevy::{
 	asset::RenderAssetUsages,
-	core_pipeline::core_3d::graph::Node3d,
+	core_pipeline::core_3d::graph::{Core3d, Node3d},
 	ecs::query::QueryItem,
 	image::{ImageCompareFunction, ImageSampler, ImageSamplerDescriptor},
 	prelude::*,
 	render::{
-		extract_resource::ExtractResource,
+		RenderApp,
+		extract_component::{ExtractComponent, ExtractComponentPlugin},
+		extract_resource::{ExtractResource, ExtractResourcePlugin},
 		render_asset::RenderAssets,
-		render_graph::{NodeRunError, RenderGraphContext, RenderLabel, ViewNode},
+		render_graph::{
+			NodeRunError,
+			RenderGraphContext,
+			RenderGraphExt,
+			RenderLabel,
+			ViewNode,
+			ViewNodeRunner,
+		},
 		render_resource::{
 			CommandEncoderDescriptor,
 			Extent3d,
@@ -32,7 +38,12 @@ use common::{
 	errors::{ErrorData, Level},
 	traits::thread_safe::ThreadSafe,
 };
-use std::{fmt::Display, marker::PhantomData, time::Duration};
+use std::{
+	fmt::{Debug, Display},
+	hash::Hash,
+	marker::PhantomData,
+	time::Duration,
+};
 
 #[derive(Resource, ExtractResource, Debug, PartialEq, Clone)]
 pub(crate) struct DepthTexture<TPass>
@@ -96,32 +107,20 @@ where
 	}
 }
 
-#[derive(RenderLabel, Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
+#[derive(RenderLabel, Debug, PartialEq, Eq, Hash, Default)]
 pub(crate) struct DepthTextureLabel<TPass>(PhantomData<TPass>);
 
-impl<TPass> DepthTextureLabel<TPass> {
-	const fn new() -> Self {
-		Self(PhantomData)
+impl<TPass> Clone for DepthTextureLabel<TPass> {
+	fn clone(&self) -> Self {
+		*self
 	}
 }
 
-impl DepthTextureLabel<()> {
-	pub(crate) const LABELS: (
-		Node3d,
-		DepthTextureLabel<WorldPass>,
-		DepthTextureLabel<AgentsPass>,
-		DepthTextureLabel<OutlinePass>,
-		Node3d,
-	) = (
-		Node3d::EndPrepasses,
-		DepthTextureLabel::<WorldPass>::new(),
-		DepthTextureLabel::<AgentsPass>::new(),
-		DepthTextureLabel::<OutlinePass>::new(),
-		Node3d::MainOpaquePass,
-	);
+impl<TPass> Copy for DepthTextureLabel<TPass> {}
 
-	pub(crate) fn for_pass<TPass>(_: TPass) -> DepthTextureLabel<TPass> {
-		DepthTextureLabel(PhantomData)
+impl<TPass> DepthTextureLabel<TPass> {
+	pub(crate) const fn new() -> Self {
+		Self(PhantomData)
 	}
 }
 
@@ -138,6 +137,38 @@ impl<T> CopyDepthTextureNode<T> {
 		let dst_extend = (dst.size.width, dst.size.height);
 
 		src_extend == dst_extend
+	}
+}
+
+pub(crate) trait CopyDepthTexture {
+	fn copy_depth_texture<TCamera>(&mut self) -> &mut Self
+	where
+		TCamera: Component + ExtractComponent + Debug + Default + Clone + Eq + Hash;
+}
+
+impl CopyDepthTexture for App {
+	fn copy_depth_texture<TCamera>(&mut self) -> &mut Self
+	where
+		TCamera: Component + ExtractComponent + Debug + Default + Clone + Eq + Hash,
+	{
+		let label = DepthTextureLabel::<TCamera>::new();
+		let edges = (Node3d::EndPrepasses, label, Node3d::MainOpaquePass);
+
+		self.add_plugins((
+			ExtractResourcePlugin::<DepthTexture<TCamera>>::default(),
+			ExtractComponentPlugin::<TCamera>::default(),
+		))
+		.add_systems(Startup, DepthTexture::<TCamera>::instantiate)
+		.add_systems(
+			First,
+			DepthTexture::<TCamera>::update_size.after(WindowSize::update),
+		);
+
+		self.sub_app_mut(RenderApp)
+			.add_render_graph_node::<ViewNodeRunner<CopyDepthTextureNode<TCamera>>>(Core3d, label)
+			.add_render_graph_edges(Core3d, edges);
+
+		self
 	}
 }
 
