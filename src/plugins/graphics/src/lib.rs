@@ -10,6 +10,7 @@ use crate::{
 	components::{
 		camera_labels::{AgentsPass, OutlinePass, VisibilityPass, WorldLight},
 		model_render_layers::ModelRenderLayers,
+		only_depth_prepass::OnlyDepthPrepass,
 		post_process_camera::PostProcessCamera,
 		roles::{Enemy, Player},
 	},
@@ -140,7 +141,10 @@ where
 			.add_prefab_observer::<Enemy, ()>()
 			.add_prefab_observer::<WorldLight, ()>()
 			.add_systems(PostStartup, spawn_cameras)
-			.add_systems(First, WindowSize::update);
+			.add_systems(
+				First,
+				(WindowSize::update, OnlyDepthPrepass::update_render_targets).chain(),
+			);
 	}
 }
 

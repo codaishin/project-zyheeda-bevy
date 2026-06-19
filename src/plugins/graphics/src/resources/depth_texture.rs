@@ -132,12 +132,32 @@ impl<T> CopyDepthTextureNode<T> {
 		ErrorLogger::GLOBAL.log(error);
 	}
 
-	fn same_dimensions(src: &ViewDepthTexture, dst: &GpuImage) -> bool {
-		let src_extend = (src.texture.width(), src.texture.height());
-		let dst_extend = (dst.size.width, dst.size.height);
+	fn dimensions_ok(
+		src: &ViewDepthTexture,
+		dst: &GpuImage,
+	) -> Result<(), (TextureDimensions, TextureDimensions)> {
+		let src_extend = TextureDimensions {
+			width: src.texture.width(),
+			height: src.texture.height(),
+		};
 
-		src_extend == dst_extend
+		let dst_extend = TextureDimensions {
+			width: dst.size.width,
+			height: dst.size.height,
+		};
+
+		if src_extend != dst_extend {
+			return Err((src_extend, dst_extend));
+		}
+
+		Ok(())
 	}
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+struct TextureDimensions {
+	width: u32,
+	height: u32,
 }
 
 pub(crate) trait CopyDepthTexture {
@@ -198,8 +218,8 @@ where
 			return Ok(());
 		};
 
-		if !Self::same_dimensions(src, dst) {
-			Self::log(CopyDepthTextureError::DimensionMismatch);
+		if let Err((src, dst)) = Self::dimensions_ok(src, dst) {
+			Self::log(CopyDepthTextureError::DimensionMismatch { src, dst });
 			return Ok(());
 		}
 
@@ -235,7 +255,10 @@ enum CopyDepthTextureError {
 	NoSourceImage,
 	NoDestinationImage,
 	NoGpuImages,
-	DimensionMismatch,
+	DimensionMismatch {
+		src: TextureDimensions,
+		dst: TextureDimensions,
+	},
 }
 
 impl Display for CopyDepthTextureError {
@@ -250,8 +273,8 @@ impl Display for CopyDepthTextureError {
 			CopyDepthTextureError::NoGpuImages => {
 				write!(f, "gpu images missing")
 			}
-			CopyDepthTextureError::DimensionMismatch => {
-				write!(f, "source and destination images have different dimensions")
+			CopyDepthTextureError::DimensionMismatch { src, dst } => {
+				write!(f, "dimensions differ: src: {src:?}, dst: {dst:?}")
 			}
 		}
 	}
