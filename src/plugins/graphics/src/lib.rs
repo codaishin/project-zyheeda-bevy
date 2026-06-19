@@ -8,9 +8,10 @@ mod traits;
 
 use crate::{
 	components::{
-		camera_labels::OutlinePass,
+		camera_labels::{AgentsPass, OutlinePass, VisibilityPass, WorldLight},
 		model_render_layers::ModelRenderLayers,
 		post_process_camera::PostProcessCamera,
+		roles::{Enemy, Player},
 	},
 	materials::effect_material::EffectMaterial,
 	observers::insert_render_target::InsertRenderTarget,
@@ -18,7 +19,10 @@ use crate::{
 		depth_texture::{CopyDepthTextureNode, DepthTexture, DepthTextureLabel},
 		post_process_pipeline::{PostProcessLabel, PostProcessNode, PostProcessPipeline},
 	},
-	system_params::highlight::{HighlightParam, HighlightParamMut},
+	system_params::{
+		highlight::{HighlightParam, HighlightParamMut},
+		lights::RolesParamMut,
+	},
 };
 use bevy::{
 	core_pipeline::core_3d::graph::Core3d,
@@ -43,13 +47,14 @@ use common::{
 		handles_physics::HandlesAllPhysicalEffects,
 		handles_saving::HandlesSaving,
 		handles_skill_physics::HandlesSkillPhysics,
+		prefab::AddPrefabObserver,
 		register_derived_component::RegisterDerivedComponent,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 	},
 };
 use components::{
-	camera_labels::{CompositePass, SceneCamera, Ui, WorldPass},
+	camera_labels::{CompositePass, MoveWithPlayerCam, UiPass, WorldPass},
 	effect_material_handle::EffectMaterialHandle,
 	material_override::MaterialOverride,
 };
@@ -124,14 +129,16 @@ where
 	}
 
 	fn cameras(&self, app: &mut App) {
-		app.register_required_components::<SceneCamera, TSavegame::TSaveEntityMarker>();
+		app.register_required_components::<MoveWithPlayerCam, TSavegame::TSaveEntityMarker>();
 		TSavegame::register_savable_component::<WorldPass>(app);
+		TSavegame::register_savable_component::<AgentsPass>(app);
 		TSavegame::register_savable_component::<OutlinePass>(app);
 		TSavegame::register_savable_component::<CompositePass>(app);
-		TSavegame::register_savable_component::<Ui>(app);
+		TSavegame::register_savable_component::<UiPass>(app);
+		TSavegame::register_savable_component::<WorldLight>(app);
 
-		app.init_resource::<WindowSize>()
-			.add_plugins(ExtractResourcePlugin::<CameraRenderTarget<OutlinePass>>::default())
+		app.insert_resource(GlobalAmbientLight::NONE)
+			.init_resource::<WindowSize>()
 			.add_plugins((
 				ExtractComponentPlugin::<PostProcessCamera>::default(),
 				UniformComponentPlugin::<PostProcessCamera>::default(),
@@ -140,19 +147,34 @@ where
 				ExtractComponentPlugin::<WorldPass>::default(),
 				ExtractResourcePlugin::<DepthTexture<WorldPass>>::default(),
 			))
+			.add_plugins(ExtractResourcePlugin::<CameraRenderTarget<VisibilityPass>>::default())
+			.add_plugins((
+				ExtractComponentPlugin::<AgentsPass>::default(),
+				ExtractResourcePlugin::<CameraRenderTarget<AgentsPass>>::default(),
+				ExtractResourcePlugin::<DepthTexture<AgentsPass>>::default(),
+			))
 			.add_plugins((
 				ExtractComponentPlugin::<OutlinePass>::default(),
+				ExtractResourcePlugin::<CameraRenderTarget<OutlinePass>>::default(),
 				ExtractResourcePlugin::<DepthTexture<OutlinePass>>::default(),
 			))
-			.register_required_components_with::<Ui, TDebugCam>(self.debug_cam)
+			.register_required_components_with::<UiPass, TDebugCam>(self.debug_cam)
+			.add_prefab_observer::<Player, ()>()
+			.add_prefab_observer::<Enemy, ()>()
+			.add_prefab_observer::<WorldLight, ()>()
 			.add_observer(WorldPass::insert_render_target)
+			.add_observer(AgentsPass::insert_render_target)
+			.add_observer(VisibilityPass::insert_render_target)
 			.add_observer(OutlinePass::insert_render_target)
 			.add_systems(
 				Startup,
 				(
 					CameraRenderTarget::<WorldPass>::instantiate,
+					CameraRenderTarget::<AgentsPass>::instantiate,
+					CameraRenderTarget::<VisibilityPass>::instantiate,
 					CameraRenderTarget::<OutlinePass>::instantiate,
 					DepthTexture::<WorldPass>::instantiate,
+					DepthTexture::<AgentsPass>::instantiate,
 					DepthTexture::<OutlinePass>::instantiate,
 				),
 			)
@@ -162,8 +184,11 @@ where
 				(
 					WindowSize::update,
 					CameraRenderTarget::<WorldPass>::update_size,
+					CameraRenderTarget::<AgentsPass>::update_size,
+					CameraRenderTarget::<VisibilityPass>::update_size,
 					CameraRenderTarget::<OutlinePass>::update_size,
 					DepthTexture::<WorldPass>::update_size,
+					DepthTexture::<AgentsPass>::update_size,
 					DepthTexture::<OutlinePass>::update_size,
 				)
 					.chain(),
@@ -180,6 +205,10 @@ where
 			.add_render_graph_node::<ViewNodeRunner<CopyDepthTextureNode<WorldPass>>>(
 				Core3d,
 				DepthTextureLabel::for_pass(WorldPass),
+			)
+			.add_render_graph_node::<ViewNodeRunner<CopyDepthTextureNode<AgentsPass>>>(
+				Core3d,
+				DepthTextureLabel::for_pass(AgentsPass),
 			)
 			.add_render_graph_node::<ViewNodeRunner<CopyDepthTextureNode<OutlinePass>>>(
 				Core3d,
@@ -226,7 +255,7 @@ impl RegisterShader for App {
 }
 
 impl<TDebugCam, TDependencies> UiCamera for GraphicsPlugin<TDebugCam, TDependencies> {
-	type TUiCamera = Ui;
+	type TUiCamera = UiPass;
 }
 
 impl<TDebugCam, TDependencies> FirstPassCamera for GraphicsPlugin<TDebugCam, TDependencies> {
@@ -234,10 +263,11 @@ impl<TDebugCam, TDependencies> FirstPassCamera for GraphicsPlugin<TDebugCam, TDe
 }
 
 impl<TDebugCam, TDependencies> WorldCameras for GraphicsPlugin<TDebugCam, TDependencies> {
-	type TWorldCameras = SceneCamera;
+	type TWorldCameras = MoveWithPlayerCam;
 }
 
 impl<TDebugCam, TDependencies> HandlesGraphics for GraphicsPlugin<TDebugCam, TDependencies> {
 	type THighlight = HighlightParam<'static, 'static>;
 	type THighlightMut = HighlightParamMut<'static, 'static>;
+	type TRolesMut = RolesParamMut<'static, 'static>;
 }

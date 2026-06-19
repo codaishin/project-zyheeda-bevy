@@ -47,14 +47,13 @@ mod regression_tests {
 
 		app.update();
 
+		let model_layers = ModelRenderLayers::from(WorldPass);
+		let render_layers = RenderLayers::from_iter(model_layers.iter().copied());
 		assert_eq!(
-			(
-				Some(&ModelRenderLayers::from(WorldPass)),
-				Some(&RenderLayers::from(WorldPass))
-			),
+			(Some(&model_layers), Some(&render_layers)),
 			(
 				app.world().entity(entity).get::<ModelRenderLayers>(),
-				app.world().entity(model).get::<RenderLayers>()
+				app.world().entity(model).get::<RenderLayers>(),
 			)
 		);
 	}

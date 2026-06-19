@@ -3602,21 +3602,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2e126dda6f34391ab7b444f9922055facc83c07a910da3eb16f1e4d9c45dc777"
 
 [[package]]
-name = "light"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "common",
- "macros",
- "mockall",
- "serde",
- "test-case",
- "testing",
- "uuid",
- "zyheeda_core",
-]
-
-[[package]]
 name = "linebender_resource_handle"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4838,7 +4823,6 @@ dependencies = [
  "graphics",
  "input",
  "interactive",
- "light",
  "loading",
  "loadout",
  "localization",

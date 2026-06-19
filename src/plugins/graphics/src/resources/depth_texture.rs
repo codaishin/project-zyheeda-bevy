@@ -1,5 +1,5 @@
 use crate::{
-	components::camera_labels::{OutlinePass, WorldPass},
+	components::camera_labels::{AgentsPass, OutlinePass, WorldPass},
 	resources::window_size::WindowSize,
 };
 use bevy::{
@@ -109,11 +109,13 @@ impl DepthTextureLabel<()> {
 	pub(crate) const LABELS: (
 		Node3d,
 		DepthTextureLabel<WorldPass>,
+		DepthTextureLabel<AgentsPass>,
 		DepthTextureLabel<OutlinePass>,
 		Node3d,
 	) = (
 		Node3d::EndPrepasses,
 		DepthTextureLabel::<WorldPass>::new(),
+		DepthTextureLabel::<AgentsPass>::new(),
 		DepthTextureLabel::<OutlinePass>::new(),
 		Node3d::MainOpaquePass,
 	);

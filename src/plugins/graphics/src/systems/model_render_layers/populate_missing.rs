@@ -8,6 +8,7 @@ type NeedsModelRenderLayers = (
 	Without<ChildOf>,
 	Without<Node>,
 	Without<Camera>,
+	Without<DirectionalLight>,
 );
 
 impl ModelRenderLayers {
@@ -104,6 +105,19 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((Camera::default(), Visibility::default()))
+			.id();
+
+		app.update();
+
+		assert_eq!(None, app.world().entity(entity).get::<ModelRenderLayers>());
+	}
+
+	#[test]
+	fn add_nothing_to_directional_lights() {
+		let mut app = setup(22);
+		let entity = app
+			.world_mut()
+			.spawn((DirectionalLight::default(), Visibility::default()))
 			.id();
 
 		app.update();

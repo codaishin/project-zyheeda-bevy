@@ -8,7 +8,6 @@ use frame_limiter::FrameLimiterPlugin;
 use graphics::GraphicsPlugin;
 use input::InputPlugin;
 use interactive::InteractivePlugin;
-use light::LightPlugin;
 use loading::LoadingPlugin;
 use loadout::LoadoutPlugin;
 use localization::LocalizationPlugin;
@@ -50,8 +49,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let savegame = SavegamePlugin::from_plugin(&input).with_game_directory(game_dir);
 	let animations = AnimationsPlugin::from_plugin(&savegame);
 	let physics = PhysicsPlugin::new(TARGET_FPS, &savegame, &animations);
-	let light = LightPlugin::from_plugin(&savegame);
-	let map_generation = MapGenerationPlugin::from_plugins(&loading, &savegame, &physics, &light);
+	let map_generation = MapGenerationPlugin::from_plugins(&loading, &savegame, &physics);
 	let path_finding = PathFindingPlugin::from_plugin(&map_generation);
 	let movement =
 		MovementPlugin::from_plugins(&input, &savegame, &animations, &physics, &path_finding);
@@ -109,7 +107,6 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		.add_plugins(graphics)
 		.add_plugins(input)
 		.add_plugins(interactive)
-		.add_plugins(light)
 		.add_plugins(loading)
 		.add_plugins(loadout)
 		.add_plugins(localization)

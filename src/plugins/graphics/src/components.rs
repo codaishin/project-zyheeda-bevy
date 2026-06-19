@@ -4,6 +4,7 @@ pub(crate) mod effect_material_handle;
 pub(crate) mod material_override;
 pub(crate) mod model_render_layers;
 pub(crate) mod post_process_camera;
+pub(crate) mod roles;
 
 #[cfg(not(feature = "debug-utils"))]
 pub mod no_debug_cam;

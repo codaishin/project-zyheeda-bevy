@@ -175,7 +175,7 @@ where
 		app.register_required_components::<Agent, TSaveGame::TSaveEntityMarker>();
 
 		// # Prefabs
-		app.add_prefab_observer::<Agent, ()>();
+		app.add_prefab_observer::<Agent, TGraphics::TRolesMut>();
 		app.add_prefab_observer::<VoidSphere, ()>();
 
 		// # Behaviors
