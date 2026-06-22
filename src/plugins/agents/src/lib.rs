@@ -179,7 +179,9 @@ where
 		app.add_prefab_observer::<VoidSphere, ()>();
 
 		// # Behaviors
-		app.register_required_components::<PlayerCamera, TPhysics::TWorldCamera>();
+		app.add_observer(
+			PlayerCamera::set_as_world_camera::<TPhysics::TRayCastMut>.pipe(OnError::log),
+		);
 		app.add_systems(
 			Update,
 			(

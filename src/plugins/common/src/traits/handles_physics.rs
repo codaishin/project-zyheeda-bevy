@@ -19,9 +19,7 @@ use std::{
 };
 
 pub trait HandlesRaycast {
-	/// Marks the world camera used in [`MouseHover`] raycasting. Only one instance may exist in
-	/// the world.
-	type TWorldCamera: Component + Default;
+	type TRayCastMut: for<'w, 's> SystemParam<Item<'w, 's>: NoWorldCameraSet>;
 
 	/// Raycast system parameter. [`MouseHover`] raycast requires that `Self::TWorldCamera` is being
 	/// attached to the actual camera.
@@ -30,6 +28,16 @@ pub trait HandlesRaycast {
 		+ for<'w, 's> SystemParam<Item<'w, 's>: Raycast<Terrain>>
 		+ for<'w, 's> SystemParam<Item<'w, 's>: Raycast<MouseTerrainHover>>
 		+ for<'w, 's> SystemParam<Item<'w, 's>: Raycast<MouseHover>>;
+}
+
+pub trait NoWorldCameraSet {
+	type TSetter: SetWorldCamera;
+
+	fn no_world_camera_set(self) -> Option<Self::TSetter>;
+}
+
+pub trait SetWorldCamera {
+	fn set_world_camera(self, entity: Entity);
 }
 
 pub trait Raycast<TArgs>
