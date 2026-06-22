@@ -4,8 +4,8 @@ use std::{
 	any::TypeId,
 	collections::{HashMap, hash_map::Entry},
 	ops::Deref,
-	sync::{LazyLock, Mutex},
-	time::Instant,
+	sync::{LazyLock, RwLock, RwLockReadGuard, RwLockWriteGuard},
+	time::{Duration, Instant},
 };
 
 pub trait Log {
@@ -39,6 +39,30 @@ impl GlobalErrorLogger {
 	/// implementing [`Log`] and then injecting the [`GlobalErrorLogger`] type as a system parameter
 	/// dependency.
 	pub const INSTANCE: Self = Self;
+
+	const LOCK_FAILED: &str = "Cannot obtain global error logger instance";
+
+	fn lock_write() -> RwLockWriteGuard<'static, ErrorLogger> {
+		// SAFETY: This only fails if another user panicked while writing, at which point the
+		//         app would have already crashed anyway
+		#[allow(clippy::expect_used)]
+		ERROR_LOGGER.write().expect(Self::LOCK_FAILED)
+	}
+
+	fn lock_read() -> RwLockReadGuard<'static, ErrorLogger> {
+		// SAFETY: This only fails if another user panicked while writing, at which point the
+		//         app would have already crashed anyway
+		#[allow(clippy::expect_used)]
+		ERROR_LOGGER.read().expect(Self::LOCK_FAILED)
+	}
+
+	pub(crate) fn remove_elapsed() {
+		if Self::lock_read().suppress.is_empty() {
+			return;
+		}
+
+		Self::lock_write().remove_elapsed();
+	}
 }
 
 impl Log for GlobalErrorLogger {
@@ -46,21 +70,17 @@ impl Log for GlobalErrorLogger {
 	where
 		TError: ErrorData,
 	{
-		// SAFETY: This only fails if another user panicked while holding the mutex.
-		#[allow(clippy::expect_used)]
-		let mut logger = ERROR_LOGGER
-			.lock()
-			.expect("Cannot obtain global error logger instance");
+		let mut logger = Self::lock_write();
 
 		logger.log(error);
 	}
 }
 
-static ERROR_LOGGER: LazyLock<Mutex<ErrorLogger>> = LazyLock::new(Mutex::default);
+static ERROR_LOGGER: LazyLock<RwLock<ErrorLogger>> = LazyLock::new(RwLock::default);
 
 #[derive(Default)]
 struct ErrorLogger {
-	suppress: HashMap<TypeId, Instant>,
+	suppress: HashMap<TypeId, (Instant, Duration)>,
 	#[cfg(test)]
 	entries: Vec<tests::LogEntry>,
 }
@@ -77,6 +97,21 @@ impl ErrorLogger {
 		self.write(error);
 	}
 
+	fn remove_elapsed(&mut self) {
+		let elapsed = self
+			.suppress
+			.iter()
+			.filter_map(|(e, (last_log, limit))| match (last_log.elapsed(), limit) {
+				(elapsed, limit) if elapsed > *limit => Some(*e),
+				_ => None,
+			})
+			.collect::<Vec<_>>();
+
+		for elapsed in elapsed {
+			self.suppress.remove(&elapsed);
+		}
+	}
+
 	fn is_suppressed<TError>(&mut self) -> bool
 	where
 		TError: ErrorData + 'static,
@@ -86,12 +121,12 @@ impl ErrorLogger {
 		};
 
 		match self.suppress.entry(TypeId::of::<TError>()) {
-			Entry::Occupied(e) if e.get().elapsed() < limit => return true,
+			Entry::Occupied(e) if e.get().0.elapsed() < limit => return true,
 			Entry::Occupied(mut e) => {
-				e.insert(Instant::now());
+				e.insert((Instant::now(), limit));
 			}
 			Entry::Vacant(e) => {
-				e.insert(Instant::now());
+				e.insert((Instant::now(), limit));
 			}
 		}
 
@@ -264,5 +299,26 @@ mod tests {
 			],
 			logger.entries,
 		);
+	}
+
+	#[test]
+	fn remove_elapsed_errors() {
+		let mut logger = ErrorLogger::default();
+
+		logger.log(_LimitedError);
+		thread::sleep(Duration::from_millis(750));
+		logger.remove_elapsed();
+
+		assert!(!logger.suppress.contains_key(&TypeId::of::<_LimitedError>()));
+	}
+
+	#[test]
+	fn do_not_remove_no_elapsed() {
+		let mut logger = ErrorLogger::default();
+
+		logger.log(_LimitedError);
+		logger.remove_elapsed();
+
+		assert!(logger.suppress.contains_key(&TypeId::of::<_LimitedError>()));
 	}
 }

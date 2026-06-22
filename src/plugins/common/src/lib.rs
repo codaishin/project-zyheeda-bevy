@@ -20,6 +20,7 @@ use crate::{
 		lifetime::Lifetime,
 		load_scene::LoadScene,
 	},
+	error_logger::GlobalErrorLogger,
 	states::game_state::GameState,
 	systems::log::OnError,
 	traits::{
@@ -75,4 +76,5 @@ fn asset_loading(app: &mut App) {
 	app.add_observer(InsertAsset::<StandardMaterial>::apply);
 	app.add_observer(AssetMeshName::insert);
 	app.add_systems(Update, GltfLookup::trigger_model_load);
+	app.add_systems(Update, GlobalErrorLogger::remove_elapsed);
 }
