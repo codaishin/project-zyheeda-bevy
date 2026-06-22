@@ -42,7 +42,7 @@ use crate::{
 	system_params::{
 		config::ConfigParamMut,
 		interactive::InteractiveParam,
-		ray_caster::RayCaster,
+		ray_caster::{RayCaster, RayCasterMut},
 		skill_agent::{SkillAgent, SkillAgentMut},
 		update_root_collisions::UpdateRootCollisions,
 	},
@@ -256,7 +256,7 @@ struct CollisionSystems;
 pub struct PhysicsSystems;
 
 impl<TDependencies> HandlesRaycast for PhysicsPlugin<TDependencies> {
-	type TWorldCamera = WorldCamera;
+	type TRayCastMut = RayCasterMut<'static, 'static>;
 	type TRaycast = RayCaster<'static, 'static>;
 }
 
