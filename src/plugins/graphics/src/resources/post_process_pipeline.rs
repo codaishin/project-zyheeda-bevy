@@ -60,7 +60,7 @@ use bevy::{
 	},
 };
 use common::{
-	error_logger::{ErrorLogger, Log},
+	error_logger::{GlobalErrorLogger, Log},
 	errors::{ErrorData, Level},
 	zyheeda_commands::ZyheedaCommands,
 };
@@ -183,7 +183,7 @@ pub(crate) struct PostProcessNode;
 
 impl PostProcessNode {
 	fn log(error: impl Into<PostProcessError>) {
-		ErrorLogger::GLOBAL.log(error.into());
+		GlobalErrorLogger::INSTANCE.log(error.into());
 	}
 }
 

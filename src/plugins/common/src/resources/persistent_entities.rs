@@ -1,6 +1,6 @@
 use crate::{
 	components::persistent_entity::PersistentEntity,
-	error_logger::{ErrorLogger, Log},
+	error_logger::{GlobalErrorLogger, Log},
 	errors::{ErrorData, Level},
 	traits::thread_safe::ThreadSafe,
 };
@@ -14,7 +14,7 @@ use std::{collections::HashMap, fmt::Display};
 pub struct PersistentEntities(pub(crate) HashMap<PersistentEntity, Entity>);
 
 #[derive(SystemParam)]
-pub(crate) struct PersistentEntitiesParam<'w, 's, TLogger = ErrorLogger>
+pub(crate) struct PersistentEntitiesParam<'w, 's, TLogger = GlobalErrorLogger>
 where
 	TLogger: SystemParam + ThreadSafe,
 {

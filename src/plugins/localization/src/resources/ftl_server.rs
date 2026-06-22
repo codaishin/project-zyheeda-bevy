@@ -12,7 +12,7 @@ use bevy::{
 	prelude::*,
 };
 use common::{
-	error_logger::{ErrorLogger, Log},
+	error_logger::{GlobalErrorLogger, Log},
 	errors::{ErrorData, Level},
 	traits::{
 		handles_load_tracking::Loaded,
@@ -69,7 +69,7 @@ impl From<LanguageIdentifier> for FtlServer {
 }
 
 #[derive(SystemParam)]
-pub struct FtlServerParam<'w, 's, TLogger = ErrorLogger>
+pub struct FtlServerParam<'w, 's, TLogger = GlobalErrorLogger>
 where
 	TLogger: SystemParam + ThreadSafe,
 {

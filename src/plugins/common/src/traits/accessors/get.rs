@@ -9,7 +9,7 @@ mod resources;
 mod result;
 
 use crate::{
-	error_logger::{ErrorLogger, Log},
+	error_logger::{GlobalErrorLogger, Log},
 	errors::{ErrorData, Level},
 	traits::thread_safe::ThreadSafe,
 };
@@ -121,7 +121,7 @@ where
 		let ctx = T::try_get_context(param, key);
 
 		if ctx.is_none() {
-			ErrorLogger::GLOBAL.log(MissingContext {
+			GlobalErrorLogger::INSTANCE.log(MissingContext {
 				entity,
 				level,
 				_key: PhantomData::<TKey>,
@@ -147,7 +147,7 @@ where
 		let ctx = T::try_get_context_mut(param, key);
 
 		if ctx.is_none() {
-			ErrorLogger::GLOBAL.log(MissingContext {
+			GlobalErrorLogger::INSTANCE.log(MissingContext {
 				entity,
 				level,
 				_key: PhantomData::<TKey>,

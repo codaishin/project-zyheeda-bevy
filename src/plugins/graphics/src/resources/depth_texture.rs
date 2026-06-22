@@ -34,7 +34,7 @@ use bevy::{
 	},
 };
 use common::{
-	error_logger::{ErrorLogger, Log},
+	error_logger::{GlobalErrorLogger, Log},
 	errors::{ErrorData, Level},
 	traits::thread_safe::ThreadSafe,
 };
@@ -129,7 +129,7 @@ pub(crate) struct CopyDepthTextureNode<T>(PhantomData<T>);
 
 impl<T> CopyDepthTextureNode<T> {
 	fn log(error: CopyDepthTextureError) {
-		ErrorLogger::GLOBAL.log(error);
+		GlobalErrorLogger::INSTANCE.log(error);
 	}
 
 	fn dimensions_ok(
