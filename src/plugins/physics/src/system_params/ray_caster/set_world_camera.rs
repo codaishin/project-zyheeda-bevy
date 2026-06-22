@@ -12,11 +12,11 @@ impl<'w, 's> NoWorldCameraSet for RayCasterMut<'w, 's> {
 	type TSetter = WorldCameraSetter<'w, 's>;
 
 	fn no_world_camera_set(self) -> Option<Self::TSetter> {
-		if !self.world_cameras.is_empty() {
+		if !self.inner.world_cameras.is_empty() {
 			return None;
 		}
 
-		Some(WorldCameraSetter(self.commands))
+		Some(WorldCameraSetter(self.inner.commands))
 	}
 }
 
