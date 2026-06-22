@@ -1,5 +1,5 @@
 use crate::{
-	error_logger::{ErrorLogger, Log},
+	error_logger::{GlobalErrorLogger, Log},
 	errors::ErrorData,
 };
 use bevy::ecs::system::In;
@@ -9,7 +9,7 @@ pub struct OnError;
 impl OnError {
 	fn void() {}
 
-	pub fn log<TIn>(result: In<TIn>, error_logger: ErrorLogger) -> TIn::TOut
+	pub fn log<TIn>(result: In<TIn>, error_logger: GlobalErrorLogger) -> TIn::TOut
 	where
 		TIn: OnErrorLogAndReturn<TValue = ()>,
 	{
@@ -18,7 +18,7 @@ impl OnError {
 
 	pub fn log_and_return<TIn>(
 		fallback: fn() -> TIn::TValue,
-	) -> impl Fn(In<TIn>, ErrorLogger) -> TIn::TOut
+	) -> impl Fn(In<TIn>, GlobalErrorLogger) -> TIn::TOut
 	where
 		TIn: OnErrorLogAndReturn,
 	{
@@ -30,7 +30,11 @@ pub trait OnErrorLogAndReturn {
 	type TOut;
 	type TValue;
 
-	fn process(self, fallback: fn() -> Self::TValue, error_logger: &ErrorLogger) -> Self::TOut;
+	fn process(
+		self,
+		fallback: fn() -> Self::TValue,
+		error_logger: &GlobalErrorLogger,
+	) -> Self::TOut;
 }
 
 impl<TValue, TError> OnErrorLogAndReturn for Result<TValue, TError>
@@ -40,7 +44,11 @@ where
 	type TOut = TValue;
 	type TValue = TValue;
 
-	fn process(self, fallback: fn() -> Self::TValue, error_logger: &ErrorLogger) -> Self::TOut {
+	fn process(
+		self,
+		fallback: fn() -> Self::TValue,
+		error_logger: &GlobalErrorLogger,
+	) -> Self::TOut {
 		match self {
 			Ok(value) => value,
 			Err(error) => {
@@ -58,7 +66,11 @@ where
 	type TOut = Vec<TValue>;
 	type TValue = TValue;
 
-	fn process(self, fallback: fn() -> Self::TValue, error_logger: &ErrorLogger) -> Self::TOut {
+	fn process(
+		self,
+		fallback: fn() -> Self::TValue,
+		error_logger: &GlobalErrorLogger,
+	) -> Self::TOut {
 		self.into_iter()
 			.map(move |result| result.process(fallback, error_logger))
 			.collect()
