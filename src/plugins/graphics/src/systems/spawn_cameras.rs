@@ -1,6 +1,7 @@
 use crate::components::camera_labels::{
 	AgentsPass,
 	CompositePass,
+	EffectLightPass,
 	OutlinePass,
 	UiPass,
 	VisibilityPass,
@@ -26,6 +27,12 @@ pub(crate) fn spawn_cameras(mut commands: Commands) {
 		#[cfg(debug_assertions)]
 		Name::from("Visibility Camera"),
 		VisibilityPass,
+	));
+
+	commands.spawn((
+		#[cfg(debug_assertions)]
+		Name::from("Effect Light Camera"),
+		EffectLightPass,
 	));
 
 	commands.spawn((

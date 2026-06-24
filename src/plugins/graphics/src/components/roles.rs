@@ -31,7 +31,7 @@ impl Prefab<()> for Player {
 			.with_child((
 				ModelRenderLayers::from(VisibilityPass),
 				PointLight {
-					intensity: 10_000_000., // Set high to guarantee fully lighting all non occluded areas
+					intensity: 1e30, // Set high to guarantee fully lighting all non occluded areas
 					range: 20.,
 					shadows_enabled: true,
 					..default()

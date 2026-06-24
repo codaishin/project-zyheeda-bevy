@@ -1,7 +1,7 @@
 use crate::{
 	DepthTexture,
 	components::{
-		camera_labels::{AgentsPass, OutlinePass, VisibilityPass, WorldPass},
+		camera_labels::{AgentsPass, EffectLightPass, OutlinePass, VisibilityPass, WorldPass},
 		post_process_camera::PostProcessCamera,
 	},
 	observers::insert_render_target::InsertRenderTarget,
@@ -101,6 +101,9 @@ impl PostProcessPipeline {
 					// visibility
 					texture_2d(TextureSampleType::Float { filterable: true }),
 					sampler(SamplerBindingType::Filtering),
+					// effect light
+					texture_2d(TextureSampleType::Float { filterable: true }),
+					sampler(SamplerBindingType::Filtering),
 					// shader settings
 					uniform_buffer::<PostProcessCamera>(true),
 				),
@@ -147,14 +150,17 @@ impl SetupPostProcessPipeline for App {
 			ExtractComponentPlugin::<PostProcessCamera>::default(),
 			UniformComponentPlugin::<PostProcessCamera>::default(),
 			ExtractResourcePlugin::<CameraRenderTarget<VisibilityPass>>::default(),
+			ExtractResourcePlugin::<CameraRenderTarget<EffectLightPass>>::default(),
 		))
 		.add_observer(WorldPass::insert_render_target)
 		.add_observer(VisibilityPass::insert_render_target)
+		.add_observer(EffectLightPass::insert_render_target)
 		.add_systems(
 			Startup,
 			(
 				CameraRenderTarget::<WorldPass>::instantiate,
 				CameraRenderTarget::<VisibilityPass>::instantiate,
+				CameraRenderTarget::<EffectLightPass>::instantiate,
 			),
 		)
 		.add_systems(
@@ -162,6 +168,7 @@ impl SetupPostProcessPipeline for App {
 			(
 				CameraRenderTarget::<WorldPass>::update_size,
 				CameraRenderTarget::<VisibilityPass>::update_size,
+				CameraRenderTarget::<EffectLightPass>::update_size,
 			)
 				.after(WindowSize::update),
 		);
@@ -200,6 +207,8 @@ impl ViewNode for PostProcessNode {
 		(view_target, settings_index, ..): QueryItem<Self::ViewQuery>,
 		world: &World,
 	) -> Result<(), NodeRunError> {
+		use RenderPass::*;
+
 		// Get render pipeline
 		let Some(post_process_pipeline) = world.get_resource::<PostProcessPipeline>() else {
 			Self::log(MissingResource::PostProcessPipeline);
@@ -230,35 +239,43 @@ impl ViewNode for PostProcessNode {
 			return Ok(());
 		};
 		let Some(world_depth) = world.get_resource::<DepthTexture<WorldPass>>() else {
-			Self::log(MissingResource::RenderTargets(RenderPass::WorldDepth));
+			Self::log(MissingResource::RenderTargets(WorldDepth));
 			return Ok(());
 		};
 		let Some(world_depth_gpu) = gpu_images.get(&world_depth.handle) else {
-			Self::log(MissingDerived::GPUImage(RenderPass::WorldDepth));
+			Self::log(MissingDerived::GPUImage(WorldDepth));
 			return Ok(());
 		};
 		let Some(visibility) = world.get_resource::<CameraRenderTarget<VisibilityPass>>() else {
-			Self::log(MissingResource::RenderTargets(RenderPass::VisibilityRender));
+			Self::log(MissingResource::RenderTargets(VisibilityRender));
 			return Ok(());
 		};
 		let Some(visibility_gpu) = gpu_images.get(&visibility.handle) else {
-			Self::log(MissingDerived::GPUImage(RenderPass::VisibilityRender));
+			Self::log(MissingDerived::GPUImage(VisibilityRender));
+			return Ok(());
+		};
+		let Some(effect_light) = world.get_resource::<CameraRenderTarget<EffectLightPass>>() else {
+			Self::log(MissingResource::RenderTargets(EffectLightRender));
+			return Ok(());
+		};
+		let Some(effect_light_gpu) = gpu_images.get(&effect_light.handle) else {
+			Self::log(MissingDerived::GPUImage(EffectLightRender));
 			return Ok(());
 		};
 		let Some(agents_depth) = world.get_resource::<DepthTexture<AgentsPass>>() else {
-			Self::log(MissingResource::RenderTargets(RenderPass::AgentsDepth));
+			Self::log(MissingResource::RenderTargets(AgentsDepth));
 			return Ok(());
 		};
 		let Some(agents_depth_gpu) = gpu_images.get(&agents_depth.handle) else {
-			Self::log(MissingDerived::GPUImage(RenderPass::AgentsDepth));
+			Self::log(MissingDerived::GPUImage(AgentsDepth));
 			return Ok(());
 		};
 		let Some(outline_depth) = world.get_resource::<DepthTexture<OutlinePass>>() else {
-			Self::log(MissingResource::RenderTargets(RenderPass::OutlineDepth));
+			Self::log(MissingResource::RenderTargets(OutlineDepth));
 			return Ok(());
 		};
 		let Some(outline_depth_gpu) = gpu_images.get(&outline_depth.handle) else {
-			Self::log(MissingDerived::GPUImage(RenderPass::OutlineDepth));
+			Self::log(MissingDerived::GPUImage(OutlineDepth));
 			return Ok(());
 		};
 
@@ -277,6 +294,8 @@ impl ViewNode for PostProcessNode {
 				&post_process_pipeline.sampler,
 				&visibility_gpu.texture_view,
 				&visibility_gpu.sampler,
+				&effect_light_gpu.texture_view,
+				&effect_light_gpu.sampler,
 				settings_binding.clone(),
 			)),
 		);
@@ -369,4 +388,5 @@ enum RenderPass {
 	AgentsDepth,
 	OutlineDepth,
 	VisibilityRender,
+	EffectLightRender,
 }
