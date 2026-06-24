@@ -10,7 +10,9 @@
 @group(0) @binding( 7) var screen_texture_sampler: sampler;
 @group(0) @binding( 8) var visibility_texture: texture_2d<f32>;
 @group(0) @binding( 9) var visibility_texture_sampler: sampler;
-@group(0) @binding(10) var<uniform> settings: PostProcessSettings;
+@group(0) @binding(10) var effect_light_texture: texture_2d<f32>;
+@group(0) @binding(11) var effect_light_texture_sampler: sampler;
+@group(0) @binding(12) var<uniform> settings: PostProcessSettings;
 
 alias Kind = u32;
 alias Pixel = f32;
@@ -121,7 +123,10 @@ fn screen(uv: vec2<f32>, info: ScreenInfo) -> vec4<f32> {
         return settings.see_through_color;
     }
 
-    let visibility = textureSample(visibility_texture, visibility_texture_sampler, uv);
+    let visibility = max(
+        textureSample(visibility_texture, visibility_texture_sampler, uv),
+        textureSample(effect_light_texture, effect_light_texture_sampler, uv),
+    );
     let min_visibility = vec4(settings.dark_region_light_factor);
 
     return textureSample(screen_texture, screen_texture_sampler, uv) * max(visibility, min_visibility);
