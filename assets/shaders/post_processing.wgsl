@@ -47,7 +47,6 @@ const NO_DEPTH: f32 = 0;
 const WORLD: Kind = 0;
 const AGENT: Kind = 1;
 const OUTLINED: Kind = 2;
-const BLACK = vec3<f32>(0);
 
 @fragment
 fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
@@ -123,11 +122,7 @@ fn screen(uv: vec2<f32>, info: ScreenInfo) -> vec4<f32> {
     }
 
     let visibility = textureSample(visibility_texture, visibility_texture_sampler, uv);
-    let screen = textureSample(screen_texture, screen_texture_sampler, uv);
+    let min_visibility = vec4(settings.dark_region_light_factor);
 
-    if all(visibility.rgb == BLACK) || visibility.a == 0 {
-        return screen * settings.dark_region_light_factor;
-    }
-
-    return screen;
+    return textureSample(screen_texture, screen_texture_sampler, uv) * max(visibility, min_visibility);
 }
