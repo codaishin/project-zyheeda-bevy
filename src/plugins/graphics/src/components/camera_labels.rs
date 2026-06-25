@@ -7,7 +7,11 @@ use crate::{
 	},
 };
 use bevy::{
-	camera::visibility::{Layer, RenderLayers},
+	camera::{
+		CameraOutputMode,
+		ComputedCameraValues,
+		visibility::{Layer, RenderLayers},
+	},
 	color::palettes::tailwind,
 	core_pipeline::{prepass::DepthPrepass, tonemapping::Tonemapping},
 	ecs::system::StaticSystemParam,
@@ -64,10 +68,10 @@ pub struct WorldPass;
 
 impl From<WorldPass> for Camera {
 	fn from(_: WorldPass) -> Self {
-		Camera {
-			order: WORLD_PASS as isize,
+		new_camera(CameraConfig {
+			order: WORLD_PASS,
 			..default()
-		}
+		})
 	}
 }
 
@@ -118,14 +122,13 @@ pub(crate) struct OutlinePass;
 
 impl From<OutlinePass> for Camera {
 	fn from(_: OutlinePass) -> Self {
-		Camera {
-			order: OUTLINE_PASS as isize,
+		new_camera(CameraConfig {
+			order: OUTLINE_PASS,
 			// Clear color needs to have an alpha of `0.0`, because the outline shading tests against
 			// the alpha. If we want the full color on the outline pass result, we also need some light
 			// on the outline render layer.
 			clear_color: Color::NONE.into(),
-			..default()
-		}
+		})
 	}
 }
 
@@ -175,11 +178,10 @@ pub(crate) struct AgentsPass;
 
 impl From<AgentsPass> for Camera {
 	fn from(_: AgentsPass) -> Self {
-		Camera {
-			order: AGENTS_PASS as isize,
+		new_camera(CameraConfig {
+			order: AGENTS_PASS,
 			clear_color: Color::NONE.into(),
-			..default()
-		}
+		})
 	}
 }
 
@@ -228,11 +230,10 @@ pub(crate) struct VisibilityPass;
 
 impl From<VisibilityPass> for Camera {
 	fn from(_: VisibilityPass) -> Self {
-		Camera {
-			order: VISIBILITY_PASS as isize,
+		new_camera(CameraConfig {
+			order: VISIBILITY_PASS,
 			clear_color: Color::NONE.into(),
-			..default()
-		}
+		})
 	}
 }
 
@@ -282,11 +283,10 @@ pub(crate) struct EffectLightPass;
 
 impl From<EffectLightPass> for Camera {
 	fn from(_: EffectLightPass) -> Self {
-		Camera {
-			order: EFFECT_LIGHT_PASS as isize,
+		new_camera(CameraConfig {
+			order: EFFECT_LIGHT_PASS,
 			clear_color: Color::NONE.into(),
-			..default()
-		}
+		})
 	}
 }
 
@@ -336,10 +336,10 @@ pub(crate) struct CompositePass;
 
 impl From<CompositePass> for Camera {
 	fn from(_: CompositePass) -> Self {
-		Camera {
-			order: COMPOSITE_PASS as isize,
+		new_camera(CameraConfig {
+			order: COMPOSITE_PASS,
 			..default()
-		}
+		})
 	}
 }
 
@@ -454,13 +454,17 @@ impl Prefab<()> for WorldLight {
 )]
 pub(crate) struct UiPass;
 
+impl UiPass {
+	pub(crate) const DEFAULT_TRANSFORM: &GlobalTransform = &GlobalTransform::IDENTITY;
+	pub(crate) const DEFAULT_CAMERA: &Camera = &new_camera(CameraConfig {
+		order: UI_PASS,
+		clear_color: ClearColorConfig::None,
+	});
+}
+
 impl From<UiPass> for Camera {
 	fn from(_: UiPass) -> Self {
-		Camera {
-			order: UI_PASS as isize,
-			clear_color: ClearColorConfig::None,
-			..default()
-		}
+		UiPass::DEFAULT_CAMERA.clone()
 	}
 }
 
@@ -473,5 +477,33 @@ impl From<UiPass> for RenderLayers {
 impl From<UiPass> for Tonemapping {
 	fn from(_: UiPass) -> Self {
 		Tonemapping::None
+	}
+}
+
+#[derive(Default)]
+struct CameraConfig {
+	order: usize,
+	clear_color: ClearColorConfig,
+}
+
+const fn new_camera(CameraConfig { order, clear_color }: CameraConfig) -> Camera {
+	Camera {
+		order: order as isize,
+		clear_color,
+		msaa_writeback: MsaaWriteback::Auto,
+		invert_culling: false,
+		is_active: true,
+		viewport: None,
+		sub_camera_view: None,
+		computed: ComputedCameraValues {
+			clip_from_view: Mat4::IDENTITY,
+			target_info: None,
+			old_sub_camera_view: None,
+			old_viewport_size: None,
+		},
+		output_mode: CameraOutputMode::Write {
+			blend_state: None,
+			clear_color: ClearColorConfig::Default,
+		},
 	}
 }

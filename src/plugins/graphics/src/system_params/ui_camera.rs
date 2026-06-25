@@ -14,7 +14,6 @@ use common::{
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
-use std::sync::LazyLock;
 
 #[derive(SystemParam)]
 pub struct UiCameraParamMut<'w, 's> {
@@ -34,8 +33,8 @@ impl GetContextMut<CameraHandle> for UiCameraParamMut<'static, 'static> {
 		let (entity, transform, camera) = param.cameras.single().unwrap_or_else(|_| {
 			(
 				commands.spawn(UiPass).id(),
-				DEFAULT_TRANSFORM_REF,
-				*DEFAULT_CAMERA_REF,
+				UiPass::DEFAULT_TRANSFORM,
+				UiPass::DEFAULT_CAMERA,
 			)
 		});
 
@@ -50,10 +49,6 @@ impl GetContextMut<CameraHandle> for UiCameraParamMut<'static, 'static> {
 		}
 	}
 }
-
-static DEFAULT_TRANSFORM_REF: &GlobalTransform = &GlobalTransform::IDENTITY;
-static DEFAULT_CAMERA: LazyLock<Camera> = LazyLock::new(|| Camera::from(UiPass));
-static DEFAULT_CAMERA_REF: LazyLock<&Camera> = LazyLock::new(|| &DEFAULT_CAMERA);
 
 pub struct UiCameraContextMut<'ctx> {
 	render_ui: Box<dyn FnMut(Entity) + 'ctx>,
