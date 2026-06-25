@@ -7,6 +7,7 @@ use bevy::{
 	prelude::*,
 };
 use common::{
+	system_params::MarkUnique,
 	traits::{
 		accessors::get::{GetContextMut, TryApplyOn},
 		handles_graphics::CameraHandle,
@@ -19,6 +20,7 @@ use std::sync::LazyLock;
 pub struct UiCameraParamMut<'w, 's> {
 	commands: ZyheedaCommands<'w, 's>,
 	cameras: Query<'w, 's, (Entity, &'static GlobalTransform, &'static Camera), With<UiPass>>,
+	_u: MarkUnique<UiCameraParamMut<'w, 's>>,
 }
 
 impl GetContextMut<CameraHandle> for UiCameraParamMut<'static, 'static> {
