@@ -64,6 +64,7 @@ pub struct MoveWithPlayerCam;
 	Msaa::Off,
 	DepthPrepass
 )]
+#[cfg_attr(debug_assertions, require(Name::from("World Camera")))]
 pub struct WorldPass;
 
 impl From<WorldPass> for Camera {
@@ -118,6 +119,7 @@ impl From<WorldPass> for ModelRenderLayers {
 	OnlyDepthPrepass,
 	Msaa::Off
 )]
+#[cfg_attr(debug_assertions, require(Name::from("Outline Camera")))]
 pub(crate) struct OutlinePass;
 
 impl From<OutlinePass> for Camera {
@@ -174,6 +176,7 @@ impl From<OutlinePass> for Tonemapping {
 	DepthPrepass,
 	Msaa::Off
 )]
+#[cfg_attr(debug_assertions, require(Name::from("Agents Camera")))]
 pub(crate) struct AgentsPass;
 
 impl From<AgentsPass> for Camera {
@@ -226,6 +229,7 @@ impl From<AgentsPass> for Tonemapping {
 	Tonemapping::from(Self),
 	Hdr
 )]
+#[cfg_attr(debug_assertions, require(Name::from("Visibility Camera")))]
 pub(crate) struct VisibilityPass;
 
 impl From<VisibilityPass> for Camera {
@@ -279,6 +283,7 @@ impl From<VisibilityPass> for Tonemapping {
 	Bloom,
 	Hdr
 )]
+#[cfg_attr(debug_assertions, require(Name::from("Effect Light Camera")))]
 pub(crate) struct EffectLightPass;
 
 impl From<EffectLightPass> for Camera {
@@ -332,6 +337,7 @@ impl From<EffectLightPass> for Tonemapping {
 	Hdr,
 	Bloom
 )]
+#[cfg_attr(debug_assertions, require(Name::from("Composite Camera")))]
 pub(crate) struct CompositePass;
 
 impl From<CompositePass> for Camera {
@@ -389,6 +395,7 @@ impl From<CompositePass> for PostProcessCamera {
 #[savable_component(id = "world light")]
 #[component(immutable)]
 #[require(MoveWithPlayerCam, RenderLayers::from(Self), Visibility, Transform)]
+#[cfg_attr(debug_assertions, require(Name::from("World Light")))]
 pub(crate) struct WorldLight;
 
 impl From<WorldLight> for RenderLayers {
@@ -452,6 +459,7 @@ impl Prefab<()> for WorldLight {
 	Tonemapping::from(Self),
 	Hdr
 )]
+#[cfg_attr(debug_assertions, require(Name::from("UI Camera")))]
 pub(crate) struct UiPass;
 
 impl UiPass {
