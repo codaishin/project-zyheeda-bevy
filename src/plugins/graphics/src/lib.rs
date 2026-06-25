@@ -22,6 +22,7 @@ use crate::{
 	system_params::{
 		highlight::{HighlightParam, HighlightParamMut},
 		lights::RolesParamMut,
+		ui_camera::UiCameraParamMut,
 	},
 };
 use bevy::{
@@ -186,7 +187,7 @@ impl RegisterShader for App {
 }
 
 impl<TDebugCam, TDependencies> UiCamera for GraphicsPlugin<TDebugCam, TDependencies> {
-	type TUiCamera = UiPass;
+	type TUiCameraMut = UiCameraParamMut<'static, 'static>;
 }
 
 impl<TDebugCam, TDependencies> FirstPassCamera for GraphicsPlugin<TDebugCam, TDependencies> {

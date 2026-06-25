@@ -2,8 +2,15 @@ use crate::{
 	components::{bar::Bar, bar_values::BarValues, ui::UI},
 	traits::UIBarColors,
 };
-use bevy::prelude::*;
-use common::{components::ui_node_for::UiNodeFor, traits::thread_safe::ThreadSafe};
+use bevy::{ecs::system::StaticSystemParam, prelude::*};
+use common::{
+	components::ui_node_for::UiNodeFor,
+	traits::{
+		accessors::get::GetContextMut,
+		handles_graphics::{CameraHandle, RenderUi},
+		thread_safe::ThreadSafe,
+	},
+};
 
 const BASE_DIMENSIONS: Vec2 = Vec2::new(100., 10.);
 
@@ -11,13 +18,13 @@ pub(crate) fn render_bar<T, TCamera>(
 	mut commands: Commands,
 	mut bars: Query<(Entity, &Bar, &mut BarValues<T>)>,
 	mut styles: Query<&mut Node>,
-	cameras: Query<Entity, With<TCamera>>,
+	mut camera: StaticSystemParam<TCamera>,
 ) where
 	T: ThreadSafe,
 	BarValues<T>: UIBarColors,
-	TCamera: Component,
+	TCamera: for<'c> GetContextMut<CameraHandle, TContext<'c>: RenderUi>,
 {
-	let cam = cameras.single().ok();
+	let cam = &mut TCamera::get_context_mut(&mut camera, CameraHandle);
 
 	for (bar_id, bar, bar_values) in &mut bars {
 		match (bar.position, bar_values.ui) {
@@ -28,33 +35,32 @@ pub(crate) fn render_bar<T, TCamera>(
 	}
 }
 
-fn add_ui<T: Send + Sync + 'static>(
+fn add_ui<T>(
 	commands: &mut Commands,
 	bar_id: Entity,
 	bar: &Bar,
 	mut bar_values: Mut<BarValues<T>>,
 	position: Vec2,
-	camera: Option<Entity>,
+	camera: &mut impl RenderUi,
 ) where
+	T: ThreadSafe,
 	BarValues<T>: UIBarColors,
 {
 	let scaled_dimension = BASE_DIMENSIONS * bar.scale;
-	let mut background = commands.spawn((
-		UiNodeFor::<Bar>::with(bar_id),
-		Node {
-			width: Val::Px(scaled_dimension.x),
-			height: Val::Px(scaled_dimension.y),
-			position_type: PositionType::Absolute,
-			left: Val::Px(position.x - scaled_dimension.x / 2.),
-			top: Val::Px(position.y - scaled_dimension.y / 2.),
-			..default()
-		},
-		BackgroundColor::from(BarValues::<T>::background_color()),
-	));
-	if let Some(camera) = camera {
-		background.insert(UiTargetCamera(camera));
-	}
-	let background = background.id();
+	let background = commands
+		.spawn((
+			UiNodeFor::<Bar>::with(bar_id),
+			Node {
+				width: Val::Px(scaled_dimension.x),
+				height: Val::Px(scaled_dimension.y),
+				position_type: PositionType::Absolute,
+				left: Val::Px(position.x - scaled_dimension.x / 2.),
+				top: Val::Px(position.y - scaled_dimension.y / 2.),
+				..default()
+			},
+			BackgroundColor::from(BarValues::<T>::background_color()),
+		))
+		.id();
 	let foreground = commands
 		.spawn((
 			Node {
@@ -66,6 +72,8 @@ fn add_ui<T: Send + Sync + 'static>(
 		))
 		.insert(ChildOf(background))
 		.id();
+
+	camera.render_ui(background);
 	bar_values.ui = Some(UI {
 		foreground,
 		background,
@@ -97,8 +105,16 @@ mod tests {
 	use super::*;
 	use testing::{SingleThreadedApp, assert_count};
 
-	#[derive(Component)]
-	struct _Camera;
+	#[derive(Resource, Default)]
+	struct _Camera {
+		renders: Vec<Entity>,
+	}
+
+	impl RenderUi for &mut _Camera {
+		fn render_ui(&mut self, ui: Entity) {
+			self.renders.push(ui);
+		}
+	}
 
 	struct _Display;
 
@@ -115,7 +131,8 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, render_bar::<_Display, _Camera>);
+		app.init_resource::<_Camera>();
+		app.add_systems(Update, render_bar::<_Display, ResMut<_Camera>>);
 
 		app
 	}
@@ -159,16 +176,15 @@ mod tests {
 			..default()
 		};
 		let bar_values = BarValues::<_Display>::new(0., 0.);
-		let camera = app.world_mut().spawn(_Camera).id();
 		app.world_mut().spawn((bar, bar_values));
 
 		app.update();
 
-		let mut top = app
+		let mut backgrounds = app
 			.world_mut()
-			.query_filtered::<&UiTargetCamera, (With<Node>, Without<ChildOf>)>();
-		let [UiTargetCamera(target_camera)] = assert_count!(1, top.iter(app.world()));
-		assert_eq!(&camera, target_camera);
+			.query_filtered::<Entity, (With<Node>, Without<ChildOf>)>();
+		let background = backgrounds.iter(app.world()).next().unwrap();
+		assert_eq!(vec![background], app.world().resource::<_Camera>().renders);
 	}
 
 	#[test]

@@ -17,7 +17,13 @@ use bevy::{
 use common::{
 	states::game_state::GameState,
 	tools::Index,
-	traits::{handles_localization::Localize, iteration::IterFinite, thread_safe::ThreadSafe},
+	traits::{
+		accessors::get::GetContextMut,
+		handles_graphics::{CameraHandle, RenderUi},
+		handles_localization::Localize,
+		iteration::IterFinite,
+		thread_safe::ThreadSafe,
+	},
 };
 use std::{fmt::Debug, marker::PhantomData, time::Duration};
 
@@ -92,7 +98,7 @@ fn update_state_time<TState>(
 pub fn setup_run_time_display<TLocalization, TGraphics>(app: &mut App)
 where
 	TLocalization: for<'w, 's> SystemParam<Item<'w, 's>: Localize> + ThreadSafe,
-	TGraphics: Component,
+	TGraphics: for<'c> GetContextMut<CameraHandle, TContext<'c>: RenderUi>,
 {
 	for state in GameState::iterator() {
 		app.add_ui::<StateTime<GameState>, TLocalization, TGraphics>(state);

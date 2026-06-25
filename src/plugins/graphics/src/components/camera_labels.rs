@@ -7,7 +7,11 @@ use crate::{
 	},
 };
 use bevy::{
-	camera::visibility::{Layer, RenderLayers},
+	camera::{
+		CameraOutputMode,
+		ComputedCameraValues,
+		visibility::{Layer, RenderLayers},
+	},
 	color::palettes::tailwind,
 	core_pipeline::{prepass::DepthPrepass, tonemapping::Tonemapping},
 	ecs::system::StaticSystemParam,
@@ -60,14 +64,15 @@ pub struct MoveWithPlayerCam;
 	Msaa::Off,
 	DepthPrepass
 )]
+#[cfg_attr(debug_assertions, require(Name::from("World Camera")))]
 pub struct WorldPass;
 
 impl From<WorldPass> for Camera {
 	fn from(_: WorldPass) -> Self {
-		Camera {
-			order: WORLD_PASS as isize,
+		new_camera(CameraConfig {
+			order: WORLD_PASS,
 			..default()
-		}
+		})
 	}
 }
 
@@ -114,18 +119,18 @@ impl From<WorldPass> for ModelRenderLayers {
 	OnlyDepthPrepass,
 	Msaa::Off
 )]
+#[cfg_attr(debug_assertions, require(Name::from("Outline Camera")))]
 pub(crate) struct OutlinePass;
 
 impl From<OutlinePass> for Camera {
 	fn from(_: OutlinePass) -> Self {
-		Camera {
-			order: OUTLINE_PASS as isize,
+		new_camera(CameraConfig {
+			order: OUTLINE_PASS,
 			// Clear color needs to have an alpha of `0.0`, because the outline shading tests against
 			// the alpha. If we want the full color on the outline pass result, we also need some light
 			// on the outline render layer.
 			clear_color: Color::NONE.into(),
-			..default()
-		}
+		})
 	}
 }
 
@@ -171,15 +176,15 @@ impl From<OutlinePass> for Tonemapping {
 	DepthPrepass,
 	Msaa::Off
 )]
+#[cfg_attr(debug_assertions, require(Name::from("Agents Camera")))]
 pub(crate) struct AgentsPass;
 
 impl From<AgentsPass> for Camera {
 	fn from(_: AgentsPass) -> Self {
-		Camera {
-			order: AGENTS_PASS as isize,
+		new_camera(CameraConfig {
+			order: AGENTS_PASS,
 			clear_color: Color::NONE.into(),
-			..default()
-		}
+		})
 	}
 }
 
@@ -224,15 +229,15 @@ impl From<AgentsPass> for Tonemapping {
 	Tonemapping::from(Self),
 	Hdr
 )]
+#[cfg_attr(debug_assertions, require(Name::from("Visibility Camera")))]
 pub(crate) struct VisibilityPass;
 
 impl From<VisibilityPass> for Camera {
 	fn from(_: VisibilityPass) -> Self {
-		Camera {
-			order: VISIBILITY_PASS as isize,
+		new_camera(CameraConfig {
+			order: VISIBILITY_PASS,
 			clear_color: Color::NONE.into(),
-			..default()
-		}
+		})
 	}
 }
 
@@ -278,15 +283,15 @@ impl From<VisibilityPass> for Tonemapping {
 	Bloom,
 	Hdr
 )]
+#[cfg_attr(debug_assertions, require(Name::from("Effect Light Camera")))]
 pub(crate) struct EffectLightPass;
 
 impl From<EffectLightPass> for Camera {
 	fn from(_: EffectLightPass) -> Self {
-		Camera {
-			order: EFFECT_LIGHT_PASS as isize,
+		new_camera(CameraConfig {
+			order: EFFECT_LIGHT_PASS,
 			clear_color: Color::NONE.into(),
-			..default()
-		}
+		})
 	}
 }
 
@@ -332,14 +337,15 @@ impl From<EffectLightPass> for Tonemapping {
 	Hdr,
 	Bloom
 )]
+#[cfg_attr(debug_assertions, require(Name::from("Composite Camera")))]
 pub(crate) struct CompositePass;
 
 impl From<CompositePass> for Camera {
 	fn from(_: CompositePass) -> Self {
-		Camera {
-			order: COMPOSITE_PASS as isize,
+		new_camera(CameraConfig {
+			order: COMPOSITE_PASS,
 			..default()
-		}
+		})
 	}
 }
 
@@ -389,6 +395,7 @@ impl From<CompositePass> for PostProcessCamera {
 #[savable_component(id = "world light")]
 #[component(immutable)]
 #[require(MoveWithPlayerCam, RenderLayers::from(Self), Visibility, Transform)]
+#[cfg_attr(debug_assertions, require(Name::from("World Light")))]
 pub(crate) struct WorldLight;
 
 impl From<WorldLight> for RenderLayers {
@@ -452,15 +459,20 @@ impl Prefab<()> for WorldLight {
 	Tonemapping::from(Self),
 	Hdr
 )]
-pub struct UiPass;
+#[cfg_attr(debug_assertions, require(Name::from("UI Camera")))]
+pub(crate) struct UiPass;
+
+impl UiPass {
+	pub(crate) const DEFAULT_TRANSFORM: &GlobalTransform = &GlobalTransform::IDENTITY;
+	pub(crate) const DEFAULT_CAMERA: &Camera = &new_camera(CameraConfig {
+		order: UI_PASS,
+		clear_color: ClearColorConfig::None,
+	});
+}
 
 impl From<UiPass> for Camera {
 	fn from(_: UiPass) -> Self {
-		Camera {
-			order: UI_PASS as isize,
-			clear_color: ClearColorConfig::None,
-			..default()
-		}
+		UiPass::DEFAULT_CAMERA.clone()
 	}
 }
 
@@ -473,5 +485,33 @@ impl From<UiPass> for RenderLayers {
 impl From<UiPass> for Tonemapping {
 	fn from(_: UiPass) -> Self {
 		Tonemapping::None
+	}
+}
+
+#[derive(Default)]
+struct CameraConfig {
+	order: usize,
+	clear_color: ClearColorConfig,
+}
+
+const fn new_camera(CameraConfig { order, clear_color }: CameraConfig) -> Camera {
+	Camera {
+		order: order as isize,
+		clear_color,
+		msaa_writeback: MsaaWriteback::Auto,
+		invert_culling: false,
+		is_active: true,
+		viewport: None,
+		sub_camera_view: None,
+		computed: ComputedCameraValues {
+			clip_from_view: Mat4::IDENTITY,
+			target_info: None,
+			old_sub_camera_view: None,
+			old_viewport_size: None,
+		},
+		output_mode: CameraOutputMode::Write {
+			blend_state: None,
+			clear_color: ClearColorConfig::Default,
+		},
 	}
 }

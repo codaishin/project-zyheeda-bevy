@@ -1,23 +1,28 @@
 use crate::traits::LoadUi;
-use bevy::prelude::*;
-use common::{traits::load_asset::LoadAsset, zyheeda_commands::ZyheedaCommands};
+use bevy::{ecs::system::StaticSystemParam, prelude::*};
+use common::{
+	traits::{
+		accessors::get::GetContextMut,
+		handles_graphics::{CameraHandle, RenderUi},
+		load_asset::LoadAsset,
+	},
+	zyheeda_commands::ZyheedaCommands,
+};
 
-pub fn spawn<TComponent, TServer, TCameras>(
+pub fn spawn<TComponent, TServer, TCamera>(
 	mut commands: ZyheedaCommands,
 	mut images: ResMut<TServer>,
-	cameras: Query<Entity, With<TCameras>>,
+	mut cameras: StaticSystemParam<TCamera>,
 ) where
 	TComponent: LoadUi<TServer> + Component,
 	TServer: Resource + LoadAsset,
-	TCameras: Component,
+	TCamera: for<'c> GetContextMut<CameraHandle, TContext<'c>: RenderUi>,
 {
-	let component = TComponent::load_ui(images.as_mut());
+	let ui = TComponent::load_ui(images.as_mut());
+	let mut camera = TCamera::get_context_mut(&mut cameras, CameraHandle);
 
-	let mut entity = commands.spawn(component);
-
-	if let Ok(camera) = cameras.single() {
-		entity.insert(UiTargetCamera(camera));
-	}
+	let ui = commands.spawn(ui).id();
+	camera.render_ui(ui);
 }
 
 #[cfg(test)]
@@ -48,14 +53,23 @@ mod tests {
 		}
 	}
 
-	#[derive(Component)]
-	struct _Camera;
+	#[derive(Resource, Default)]
+	struct _Camera {
+		renders: Vec<Entity>,
+	}
+
+	impl RenderUi for &mut _Camera {
+		fn render_ui(&mut self, ui: Entity) {
+			self.renders.push(ui);
+		}
+	}
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.init_resource::<_Server>();
-		app.add_systems(Update, spawn::<_Component, _Server, _Camera>);
+		app.init_resource::<_Camera>();
+		app.add_systems(Update, spawn::<_Component, _Server, ResMut<_Camera>>);
 
 		app
 	}
@@ -66,21 +80,18 @@ mod tests {
 
 		app.update();
 
-		let mut components = app.world_mut().query_filtered::<(), With<_Component>>();
-		assert_count!(1, components.iter(app.world()));
+		let mut uis = app.world_mut().query_filtered::<(), With<_Component>>();
+		assert_count!(1, uis.iter(app.world()));
 	}
 
 	#[test]
-	fn set_ui_target_camera() {
+	fn render_ui() {
 		let mut app = setup();
-		let camera = app.world_mut().spawn(_Camera).id();
 
 		app.update();
 
-		let mut components = app
-			.world_mut()
-			.query_filtered::<&UiTargetCamera, With<_Component>>();
-		let [UiTargetCamera(target_camera)] = assert_count!(1, components.iter(app.world()));
-		assert_eq!(&camera, target_camera);
+		let mut uis = app.world_mut().query_filtered::<Entity, With<_Component>>();
+		let [ui] = assert_count!(1, uis.iter(app.world()));
+		assert_eq!(vec![ui], app.world().resource::<_Camera>().renders);
 	}
 }

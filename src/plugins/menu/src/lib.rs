@@ -189,10 +189,10 @@ where
 		let load_dependencies = TLoading::processing_state::<TLoadGroup, DependenciesProgress>();
 
 		app
-			.add_ui::<LoadingScreen<AssetsProgress>, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
+			.add_ui::<LoadingScreen<AssetsProgress>, TLocalization::TLocalizationServer, TGraphics::TUiCameraMut>(
 				load_assets
 			)
-			.add_ui::<LoadingScreen<DependenciesProgress>, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
+			.add_ui::<LoadingScreen<DependenciesProgress>, TLocalization::TLocalizationServer, TGraphics::TUiCameraMut>(
 				load_dependencies
 			);
 	}
@@ -208,7 +208,7 @@ where
 			.pipe(StartMenuButton::set_activity(quick_load));
 
 		app.add_prefab_observer::<StartMenuButton, ()>()
-			.add_ui::<StartMenu, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
+			.add_ui::<StartMenu, TLocalization::TLocalizationServer, TGraphics::TUiCameraMut>(
 				start_menu,
 			)
 			.add_systems(
@@ -224,7 +224,7 @@ where
 	}
 
 	fn pause_menu(&self, app: &mut App) {
-		app.add_ui::<PauseMenu, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
+		app.add_ui::<PauseMenu, TLocalization::TLocalizationServer, TGraphics::TUiCameraMut>(
 			GameState::IngameMenu(MenuState::Paused),
 		);
 	}
@@ -232,7 +232,7 @@ where
 	fn ui_overlay(&self, app: &mut App) {
 		let play = GameState::Play;
 
-		app.add_ui::<UIOverlay, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(play)
+		app.add_ui::<UIOverlay, TLocalization::TLocalizationServer, TGraphics::TUiCameraMut>(play)
 			.add_observer(QuickbarPanel::add_input_control::<TInput::TActionKeyButton>)
 			.add_systems(
 				Update,
@@ -256,7 +256,7 @@ where
 
 		let combo_overview = GameState::IngameMenu(MenuState::ComboOverview);
 
-		app.add_ui::<ComboOverview<TLoadout::TSkillID>, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
+		app.add_ui::<ComboOverview<TLoadout::TSkillID>, TLocalization::TLocalizationServer, TGraphics::TUiCameraMut>(
 			combo_overview,
 		);
 		app.add_dropdown::<TLocalization::TLocalizationServer, KeySelect<AppendSkill>>();
@@ -309,7 +309,7 @@ where
 	fn inventory_screen(&self, app: &mut App) {
 		let inventory = GameState::IngameMenu(MenuState::Inventory);
 
-		app.add_ui::<InventoryScreen, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
+		app.add_ui::<InventoryScreen, TLocalization::TLocalizationServer, TGraphics::TUiCameraMut>(
 			inventory,
 		)
 		.add_systems(
@@ -334,7 +334,7 @@ where
 
 		app.register_required_components::<KeyBindInput, Interaction>()
 			.register_required_components::<KeyRebindInput, PreventMenuChange>()
-			.add_ui::<SettingsScreen, TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
+			.add_ui::<SettingsScreen, TLocalization::TLocalizationServer, TGraphics::TUiCameraMut>(
 				settings,
 			)
 			.add_systems(
@@ -415,9 +415,10 @@ where
 
 		#[cfg(debug_assertions)]
 		{
-			debug::setup_run_time_display::<TLocalization::TLocalizationServer, TGraphics::TUiCamera>(
-				app,
-			);
+			debug::setup_run_time_display::<
+				TLocalization::TLocalizationServer,
+				TGraphics::TUiCameraMut,
+			>(app);
 			debug::setup_dropdown_test::<TLocalization::TLocalizationServer>(app);
 		}
 	}
